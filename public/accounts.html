@@ -52,14 +52,14 @@ svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
-.app{display:flex;height:100vh;overflow:hidden;position:relative}
+.app{display:flex;height:calc(100vh - var(--cbk-h,0px));overflow:hidden;position:relative}   /* the kural footer (CBKural) is outside the head: it takes its height off the window */
 
 /* Sidebar */
 .side{width:248px;flex-shrink:0;height:100%;background:var(--side);border-right:1px solid var(--line-3);display:flex;flex-direction:column;transition:width .2s ease}
 .side.collapsed{width:68px}
 .side.collapsed .label{display:none}
 .side.collapsed .nav-chev{transform:rotate(180deg)}
-.brand{height:64px;padding:0 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line-3)}
+.brand{height:64px;flex-shrink:0;padding:0 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line-3)}
 .logo{width:34px;height:34px;flex-shrink:0;border-radius:8px;background:var(--accent);color:var(--accent-ink);display:flex;align-items:center;justify-content:center}
 .brand-text{display:flex;align-items:center;gap:8px;min-width:0}
 .brand-name{font-family:var(--serif);font-size:19px;font-weight:700;white-space:nowrap}
@@ -69,12 +69,20 @@ svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke
 .nav-btn.active{background:color-mix(in srgb,var(--accent) 14%,var(--side));color:var(--accent-text);font-weight:700;box-shadow:inset 3px 0 0 var(--accent)}
 .nav-btn .n{margin-left:auto;font-family:var(--mono);font-size:11px;font-weight:600;padding:1px 7px;border-radius:999px;background:var(--amber-t);color:var(--amber-i)}
 .nav-chev{transition:transform .2s ease}
+/* the menu's groups: a small heading folds its group; on the icon rail (collapsed, a ledger open, a phone) the heading is a thin line and nothing is folded */
+.nav-sec{display:flex;flex-direction:column;gap:2px}
+.nav-sec.shut .nav-btn{display:none}
+.nav-grp{display:flex;align-items:center;gap:6px;width:100%;min-height:30px;margin-top:10px;padding:4px 12px;border:0;border-radius:6px;background:none;color:var(--muted-2);font:inherit;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;text-align:left;cursor:pointer}
+.nav-grp:hover{background:var(--hover)}
+.nav-gchev{width:14px;height:14px;margin-left:auto;fill:none;stroke:currentColor;stroke-width:2;transition:transform .2s ease}
+.nav-grp[aria-expanded="false"] .nav-gchev{transform:rotate(-90deg)}
+.side.collapsed .nav-grp{min-height:0;height:1px;margin:8px 10px;padding:0;background:var(--line-3);pointer-events:none}.side.collapsed .nav-gchev{display:none}.side.collapsed .nav-sec.shut .nav-btn{display:flex}
 .side-foot{padding:8px;border-top:1px solid var(--line-3)}
 .side-foot .nav-btn{font-size:13px;color:var(--muted-2)}
 
 /* Main */
 .main{flex-grow:1;min-width:0;height:100%;overflow-y:auto}
-.top{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--ground) 96%,transparent);backdrop-filter:blur(6px);border-bottom:1px solid var(--line);padding:20px 40px 16px;display:flex;flex-direction:column;gap:16px}
+.top{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--ground) 96%,transparent);backdrop-filter:blur(6px);border-bottom:1px solid var(--line);min-height:64px;justify-content:center;padding:8px 40px;display:flex;flex-direction:column;gap:16px}
 .top-row{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
 .titles{display:flex;flex-direction:column;gap:4px;min-width:0}
 h1{margin:0;font-family:var(--serif);font-size:30px;font-weight:700;letter-spacing:-.01em}
@@ -190,10 +198,24 @@ h1{margin:0;font-family:var(--serif);font-size:30px;font-weight:700;letter-spaci
 .scroll::-webkit-scrollbar{width:10px}
 .scroll::-webkit-scrollbar-thumb{background:var(--line-3);border-radius:10px;border:3px solid var(--ground)}
 
+
+/* ⭐ THE LEDGERS VIEW (docs/design/ledgers-page): full-bleed two panes, only the rows scroll. With a ledger open the list's own title row is the header — shop · Home · avatar ride in it — so this page's header steps aside. */
+body.lg-on .main{display:flex;flex-direction:column;overflow:hidden}
+body.lg-on .content{padding:0;max-width:none;flex:1 1 auto;min-height:0;gap:0}
+body.lg-on #bk_body{height:100%;min-height:0}
+body.lg-on.lg-sel .top{display:none}
+body.lg-on .cbl-slot .who{gap:8px}
+body.lg-on .cbl-slot .home{height:34px;padding:0 10px}
+body.lg-on .cbl-slot .home .hw{display:none}
+body.lg-on .cbl-slot .shop{display:none}
+/* the menu rests as its icon rail on this view (as it does on a phone), so the list keeps the room its title row and tools row need — one line each, the head within 20% */
+@media (min-width:761px){body.lg-on .nav-grp{min-height:0;height:1px;margin:8px 10px;padding:0;background:var(--line-3);pointer-events:none}body.lg-on .nav-gchev{display:none}body.lg-on .nav-sec.shut .nav-btn{display:flex}body.lg-on .side{width:68px}body.lg-on .side .label,body.lg-on #toggleNav{display:none}body.lg-on .brand{padding:0 15px}body.lg-on .nav-btn .n{position:absolute;margin:0;transform:translate(12px,-12px);padding:0 5px}body.lg-on .nav-btn{position:relative}}
+
 /* the sidebar is an icon rail below 760px, as designed; a table becomes one card per row below 620px (SYSTEM rule 8) */
 @media (max-width:760px){
   .side{width:64px}
   .side .label,#toggleNav{display:none}
+  .nav-grp{min-height:0;height:1px;margin:8px 10px;padding:0;background:var(--line-3);pointer-events:none}.nav-gchev{display:none}.nav-sec.shut .nav-btn{display:flex}
   .brand{padding:0 15px}
   .top,.content{padding-left:16px;padding-right:16px}
   .nav-btn .n{position:absolute;margin:0;transform:translate(12px,-12px);padding:0 5px}
@@ -288,6 +310,7 @@ function go(hash){ location.href = '/app.html' + hash; }   /* api()'s 401 → th
 <script src="/app/cap-period.js"></script>   <!-- Month & year end: Closing stock · Assets & depreciation · Accruals & recurring · GST close & pay · Year close -->
 <script src="/app/cap-bank.js"></script>   <!-- Bank: the statement file is parsed in the browser and NEVER uploaded -->
 <script src="/app/one-person.js"></script>
+<script src="/app/kural.js"></script>   <!-- CBKural: the kural footer — ONE band at the foot of every CB page, mounted here the way CBAvatar is -->
 <script>
 'use strict';
 /* ═══ CB ACCOUNTS — the page. It paints; the numbers are the server's (SYSTEM rule 12). ═══════════════════════════ */
@@ -315,10 +338,15 @@ const NAV = [
   ['opening', 'Opening balances', 'M12 3v12M7 10l5 5 5-5M4 21h16'],
   ['accounts', 'Shop ledgers', 'M3 6h6l2 2h10v11H3z'],
 ];
-const TITLES = { ledgers: 'Chart of accounts', todo: 'To do' };   /* the Ledgers view keeps the designer's heading; the rest are named as the menu names them */
+/* the kural of each view (docs/design/kural-kit/kurals.json routes): one per screen. The open LEDGER picks its own (cap-books.js bkKuralFor); the API does not send `ledger.kural` yet */
+const KURAL_OF = { todo: 'accounts', daybook: 'daybook', ledgers: 'accounts', tb: 'accounts', pl: 'reports', bs: 'reports', dues: 'sales', bills: 'accounts', cheques: 'daybook', waiting: 'suspense', bank: 'suspense',
+  lock: 'month-lock', closingstock: 'period-close', assets: 'period-close', accruals: 'period-close', gstclose: 'gst', yearclose: 'period-close', packs: 'accounts', opening: 'accounts', accounts: 'accounts' };
+const TITLES = { ledgers: 'Ledgers', todo: 'To do' };   /* the Ledgers view keeps the designer's heading; the rest are named as the menu names them */
 
 /* the Ledgers' grouping (bands → groups → ledgers, decided by CODE) lives in app/cap-books.js — one copy, drawn as the folder tree */
 const $ = (id) => document.getElementById(id);
+const WHO = $('who');   /* the shop · Home · avatar: ONE node, held here — on a ledger it rides in the list's title row (BK.slotWho), everywhere else it is in the page header */
+const whoHome = () => { const row = document.querySelector('.top-row'); if (row && WHO.parentNode !== row) row.appendChild(WHO); };
 const ACC = { billTab: 'B-2100', gen: 0 };
 let SESS = null, MINE = null, ON = false;
 
@@ -331,12 +359,39 @@ function session(){
 const isOwner = () => SESSION.role === 'entity';   /* the shop's own session is its owner (routes/books.js isOwner); a co-assist is not */
 
 /* ── the chrome: sidebar, header, avatar menu ── */
+/* the menu's groups (Athi, 2026-10-03; the page never names the trade, so the first group is Books): To do alone, then four folds; the open view's group is never folded. A folded group is remembered on this device. */
+const NAV_GROUPS = [
+  ['', ['todo']],
+  ['Books', ['daybook', 'ledgers', 'tb', 'pl', 'bs']],
+  ['Every day', ['dues', 'bills', 'cheques', 'waiting', 'bank']],
+  ['Period end', ['lock', 'closingstock', 'assets', 'accruals', 'gstclose', 'yearclose']],
+  ['Setup', ['packs', 'opening', 'accounts']],
+];
+const navFolded = () => { try { return JSON.parse(localStorage.getItem('cb_acc_navfold') || '{}') || {}; } catch (_) { return {}; } };
 function navPaint(active){
-  $('nav').innerHTML = NAV.map(([id, label, d]) =>
+  const byId = Object.fromEntries(NAV.map((n) => [n[0], n])), fold = navFolded();
+  $('nav').innerHTML = NAV_GROUPS.map(([g, ids]) => {
+    const shut = !!(g && fold[g] && ids.indexOf(active) < 0);
+    const head = g ? `<button type="button" class="nav-grp" data-grp="${esc(g)}" data-testid="acc-grp-${esc(g.toLowerCase().replace(/ /g, '-'))}" aria-expanded="${!shut}"><span class="label">${esc(g)}</span><svg class="nav-gchev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>` : '';
+    return '<div class="nav-sec' + (shut ? ' shut' : '') + '">' + head + navItems(ids.map((id) => byId[id]).filter(Boolean), active) + '</div>';
+  }).join('');
+}
+function navItems(items, active){
+  return items.map(([id, label, d]) =>
     `<button type="button" class="nav-btn${id === active ? ' active' : ''}" data-testid="acc-nav-${id}" data-view="${id}" aria-label="${esc(label)}"${id === active ? ' aria-current="page"' : ''}>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"/></svg><span class="label">${esc(label)}</span>${id === 'waiting' && (BK.waiting || []).length ? `<span class="n" data-testid="acc-waiting-n">${(BK.waiting || []).length}</span>` : ''}</button>`).join('');
 }
-$('nav').addEventListener('click', (e) => { const b = e.target.closest('.nav-btn'); if (b) show(b.dataset.view); });
+$('nav').addEventListener('click', (e) => {
+  const g = e.target.closest('.nav-grp');
+  if (g) {
+    const f = navFolded(), on = document.querySelector('#nav .nav-btn.active');
+    f[g.dataset.grp] = !f[g.dataset.grp];
+    try { localStorage.setItem('cb_acc_navfold', JSON.stringify(f)); } catch (_) {}
+    navPaint(on ? on.dataset.view : '');
+    return;
+  }
+  const b = e.target.closest('.nav-btn'); if (b) show(b.dataset.view);
+});
 $('toggleNav').addEventListener('click', () => {
   const open = $('side').classList.toggle('collapsed') === false;
   $('toggleNav').setAttribute('aria-expanded', String(open));
@@ -344,8 +399,8 @@ $('toggleNav').addEventListener('click', () => {
 });
 function whoPaint(){
   const nm = SESS ? (SESS.entity || SESS.name || '') : '';
-  $('who').innerHTML = `<span class="shop" data-testid="shop-name">${esc(nm)}</span>
-    <a class="home" href="/" data-testid="acc-home">⌂ Home</a><span id="cbav"></span>`;
+  WHO.innerHTML = `<span class="shop" data-testid="shop-name">${esc(nm)}</span>
+    <a class="home" href="/" data-testid="acc-home" aria-label="Home">⌂ <span class="hw">Home</span></a><span id="cbav"></span>`;
   /* the avatar is CBAvatar: Profile opens the app's profile, Sign out is the app's (session and per-person nav memory go; the app's other tabs hear cb_sess go). No Settings here — that stays in the app. */
   CBAvatar.mount($('cbav'), { person: CBAvatar.personOf(SESS), items: ['profile', 'support', 'signout'], apiBase: CFG.API_BASE, token: SESS && SESS.token });
 }
@@ -360,17 +415,24 @@ const confirmAsk = CBConfirm;
 function chrome(view){
   const nav = NAV.find((n) => n[0] === view) || NAV[0];
   navPaint(nav[0]);
+  document.body.classList.toggle('lg-on', nav[0] === 'ledgers');
+  if (nav[0] !== 'ledgers') { document.body.classList.remove('lg-sel'); whoHome(); }
   $('title').hidden = false;
   $('title').textContent = TITLES[nav[0]] || nav[1];
   $('summary').textContent = '';
   try{ history.replaceState(null, '', '#' + nav[0]); }catch(_){}
+  if (window.CBKural) CBKural.set(KURAL_OF[nav[0]] || 'accounts');
 }
 BK.onTab = (t) => chrome(t);
+/* the Ledgers view: when a ledger is open the list's own title row IS the page header — it carries the shop · Home · avatar (BK.slotWho), and this page's header steps aside so the head stays within 20% */
+BK.slotWho = (el) => { el.appendChild(WHO); };
+BK.onLedger = (sel) => { document.body.classList.toggle('lg-sel', !!sel); if (!sel) whoHome(); };
 BK.views = { bills: (body) => accBills(body), todo: (body) => accTodo(body),
   closingstock: (b) => peStockView(b), assets: (b) => peAssetsView(b), accruals: (b) => peAccrualsView(b), gstclose: (b) => peGstView(b), yearclose: (b) => peYearView(b),
   bank: (b) => bankView(b) };   /* the Ledgers view is cap-books.js's own: the folder tree + the Task table */
 function show(view){
   if (!ON) return;
+  whoHome();
   $('content').innerHTML = '<div id="bk_body" data-testid="bk-body"></div>';
   bkTab(view, true);
 }
@@ -483,10 +545,10 @@ function cardLabels(root){
 new MutationObserver(() => cardLabels($('content'))).observe($('content'), { childList: true, subtree: true });
 
 /* ═══ THE STATES BEFORE THE LEDGER: signed out · another shop still here · the Ledger off ═══════════════════════ */
-function card(html, bad){ $('title').hidden = true; $('content').innerHTML = `<div class="card${bad ? ' bad' : ''}" data-testid="acc-card">${html}</div>`; $('summary').textContent = ''; }
+function card(html, bad){ whoHome(); document.body.classList.remove('lg-on', 'lg-sel'); $('title').hidden = true; $('content').innerHTML = `<div class="card${bad ? ' bad' : ''}" data-testid="acc-card">${html}</div>`; $('summary').textContent = ''; }
 function signedOut(why){
   SESS = null; MINE = null; ON = false; ACC.gen++;
-  $('who').innerHTML = '';
+  WHO.innerHTML = '';
   navPaint(''); $('nav').innerHTML = '';
   card(`<h2>${esc(why || 'You are signed out')}</h2><a class="act" data-testid="signin-door" href="/app.html#/login">Sign in</a>`);
 }
@@ -563,6 +625,7 @@ window.addEventListener('storage', (e) => {
 CBOnePerson.attach({ quiet: true, who: () => MINE, label: () => 'CB Accounts',
   onLeave: (by) => { location.replace('/?left=' + encodeURIComponent(by || '')); },
   onWipe: () => { location.replace('/?cleaned=1'); } });
+if (window.CBKural) CBKural.mount();
 start();
 </script>
 </body>

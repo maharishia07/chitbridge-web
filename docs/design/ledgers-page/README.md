@@ -1,8 +1,8 @@
 # Ledgers — redesign (CB Accounts › Reports › Ledgers · 2026-10-03)
 
 Built against the frozen look: `docs/design/list-standard/index.html` + `SYSTEM.md` §2–3a. Open `index.html` in a browser.
-The purple strip at the top is **PROTOTYPE ONLY — DO NOT BUILD**: it jumps to each state, switches Cream / Dark / Terminal, and
-switches the kural (தமிழ் first / English first / hidden today).
+> **Built 2026-10-03** (branch `cloud/ledgers-redesign`): see `BUILD-NOTES.md` for what was built, the API fields it lacks, and where the build differs.
+> The purple "PROTOTYPE ONLY" strip that used to sit at the top of this prototype (states · themes · kural) was deleted — it was never to be built.
 The real theme control is the avatar (all 16 themes, text size, weight, motion, fonts — unchanged from the standard).
 
 ## Files

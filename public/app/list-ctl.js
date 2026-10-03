@@ -565,7 +565,7 @@
     var cls = (o.rowClass ? safe(function () { return o.rowClass(row); }, '') : '') + (R.hl === id && o.hl !== false ? ' sel' : '');
     var cells = cols.map(function (c, i) {
       var amt = c.pin === 'end';
-      return '<div class="cbl-cell lcell' + (i === 0 ? ' first' : '') + (amt ? ' r mono strong amt' : '') + (c.num && !amt ? ' r mono' : '') + (c.mono ? ' mono' : '') + '" data-l="' + esc(i === 0 || amt ? '' : (c.label || '')) + '" role="gridcell"'
+      return '<div class="cbl-cell lcell' + (i === 0 ? ' first' : '') + (amt ? ' r mono strong amt' : '') + (c.num && !amt ? ' r mono' : '') + (c.mono ? ' mono' : '') + '" data-l="' + esc(i === 0 ? '' : (c.label || '')) + '" role="gridcell"'
         + (c.tid ? ' data-testid="' + esc(safe(function () { return c.tid(row); }, '')) + '"' : '') + '>'
         + (i === 0 && nx ? '<span class="cbl-tw" data-caret role="button" aria-label="' + esc(T(I, open ? 'Collapse' : 'Expand')) + '" aria-expanded="' + !!open + '">▸</span>' : '') + cellOf(I, c, row) + '</div>';
     }).join('');

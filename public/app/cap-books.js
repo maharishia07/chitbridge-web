@@ -80,15 +80,52 @@ function bkCss() {
     '.bkdv-segs{display:inline-flex;gap:0}',
     '.bkdv-seg[aria-pressed=true]{background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-d);font-weight:700}',
     '.bkdv-count{color:var(--grey);font-size:var(--fs-1);margin:6px 0}',
-    /* the Ledgers' tree + entries: foldersScreen's two panes (cap-folders.js _folderPanes); on a narrow pane the tree IS the way in and a chosen ledger replaces it, with a way back (cb-design: a container query, not the window's) */
-    '#bk_lt{container:lt/inline-size;min-height:0;--ftw:340px}',
-    /* the tree: one account on ONE line, its amount aligned right with Dr/Cr; the chosen one a light tint, not a block (2026-10-03) */
-    '.ltn > span:last-child{flex:none;white-space:nowrap;font-family:var(--f-num,"IBM Plex Mono",monospace);font-variant-numeric:tabular-nums;text-align:end}',
-    '.ltn.on{background:color-mix(in srgb,var(--blue-tint-bg) 45%,transparent)!important;font-weight:600!important;box-shadow:inset 3px 0 0 var(--blue-2)}',
-    /* an opened entry never cuts a line short and never scrolls sideways: its words wrap */
-    '.lt-pane .cbl-nrow > span:first-child{white-space:normal!important;overflow:visible!important;text-overflow:clip!important;overflow-wrap:anywhere}.lt-pane .cbl-next{overflow-x:hidden}',
-    '.lt-crumb{display:none}',
-    '@container lt (max-width:620px){.lt-tree{--ftw:100%}#bk_lt.has-sel .lt-tree{display:none}#bk_lt:not(.has-sel) .lt-pane{display:none}#bk_lt.has-sel .lt-crumb{display:flex;margin-bottom:6px}}',
+    /* ⭐ THE LEDGERS PAGE (docs/design/ledgers-page, 2026-10-03): two panes — the ledger tree and the list (CBList) — inside one container, so the PANE decides phone or laptop, not the window.
+       Tokens only; the tree is its own pane (more panes, not denser), the list is the Task table. */
+    '#bk_lt{container:lt/inline-size;display:flex;height:100%;min-height:min(50vh,480px)}',
+    '#bk_lt .lt-tree{width:min(var(--lt-w,320px),30%);flex:0 0 auto;display:flex;flex-direction:column;min-height:0;background:var(--page,var(--paper,#FCFAF5));border-top:1px solid var(--line)}',
+    '#bk_lt.folded .lt-tree,#bk_lt.folded .lt-rz{display:none}',
+    '#bk_lt .lt-tools{display:flex;gap:6px;align-items:center;padding:8px 10px 8px 16px}',
+    '#bk_lt .lt-search{flex:1 1 auto;min-width:0;display:flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--card);border-radius:9px;padding:0 10px;height:34px;font-size:var(--fs-2)}',
+    '#bk_lt .lt-search input{border:0;outline:0;background:none;flex:1;min-width:0;font:inherit;color:var(--ink);padding:0;margin:0;height:auto;box-shadow:none}',
+    '#bk_lt .lt-search:focus-within{border-color:var(--blue)}',
+    '#bk_lt .lt-btn{height:34px;min-height:0;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:9px;padding:0 10px;font:inherit;font-size:var(--fs-2)}',
+    '#bk_lt .lt-ico{width:34px;padding:0}',
+    '#bk_lt .lt-list{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding:2px 6px 24px 8px}',
+    '#bk_lt .lt-rz{flex:0 0 9px;margin-inline:-4px;position:relative;z-index:6;cursor:col-resize;border:0;background:none;padding:0;min-height:0}',
+    '#bk_lt .lt-rz::after{content:"";position:absolute;inset-inline-start:4px;top:0;bottom:0;width:1px;background:var(--line)}',
+    '@container lt (max-width:1100px) and (min-width:621px){#bk_lt{position:relative}#bk_lt:not(.folded) .lt-tree{position:absolute;inset:0 auto 0 0;z-index:30;width:min(var(--lt-w,320px),70%);box-shadow:var(--shadow,0 10px 28px rgba(0,0,0,.16));border-inline-end:1px solid var(--line)}#bk_lt:not(.folded) .lt-rz{display:none}#bk_lt.has-sel:not(.folded) .lt-pane{pointer-events:none}}',
+    '#bk_lt .lt-rz:hover::after,#bk_lt .lt-rz:focus-visible::after,#bk_lt .lt-rz.drag::after{width:3px;inset-inline-start:3px;background:var(--blue)}',
+    '#bk_lt .lt-pane{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column}',
+    '#bk_lt #lg_out{flex:1 1 auto;min-height:0}',
+    '#bk_lt .lt-pane > .empty,#bk_lt .lt-pane > div:not(#lg_out){margin:24px auto}',
+    '#bk_lt .lt-empty{padding:24px 12px;color:var(--grey);text-align:center;font-size:var(--fs-2)}',
+    /* a node: ONE line — a name that cannot fit WRAPS (never clipped); the figure is one fixed column so every figure lines up; the chosen one a 3 px bar and a light tint */
+    '#bk_lt .tn{display:grid;grid-template-columns:16px minmax(0,1fr) auto;align-items:start;gap:0 6px;width:100%;border:0;background:none;text-align:start;border-radius:8px;padding:6px 8px 6px calc(6px + var(--lvl,0) * 14px);position:relative;color:var(--ink);min-height:34px;font:inherit;font-size:var(--fs-2);cursor:pointer}',
+    '#bk_lt .tn:hover{background:var(--panel)}',
+    '#bk_lt .tn .tw{width:16px;text-align:center;line-height:1.45}',
+    '#bk_lt .tn .nm{min-width:0;overflow-wrap:normal;word-break:normal;hyphens:manual;line-height:1.35;padding-top:1px}',
+    '#bk_lt .tn .am{font-family:var(--f-num,"IBM Plex Mono",ui-monospace,monospace);font-variant-numeric:tabular-nums;font-size:calc(var(--fs-2) * .95);color:var(--grey);white-space:nowrap;text-align:end;min-width:var(--am-w,12ch);padding-top:2px}',
+    '#bk_lt .tn .am.nil{color:var(--faint,var(--grey));opacity:.8}',
+    '#bk_lt .tn .ck{color:var(--green);font-weight:700;margin-inline-end:4px}',
+    '#bk_lt .tn.band{font-size:var(--fs-1);font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--grey);margin-top:10px}',
+    '#bk_lt .tn.band:first-child{margin-top:2px}',
+    '#bk_lt .tn.band .am,#bk_lt .tn.grp .am{font-family:var(--f-num,"IBM Plex Mono",monospace);letter-spacing:0;text-transform:none;font-weight:400;min-width:0}',
+    '#bk_lt .tn.grp{font-weight:600;color:var(--grey)}',
+    '#bk_lt .tn.party .nm{color:var(--grey)}',
+    '#bk_lt .tn.on{background:color-mix(in srgb,var(--blue-tint-bg,var(--blue-t,#E4EEFA)) 60%,transparent);color:var(--blue-2,var(--blue-i,#174A87));font-weight:600}',
+    '#bk_lt .tn.on::before{content:"";position:absolute;inset-inline-start:0;top:6px;bottom:6px;width:3px;border-radius:3px;background:var(--blue-2,var(--blue-i,#174A87))}',
+    '#bk_lt .tn.on .nm,#bk_lt .tn.on .am{color:inherit}',
+    '#bk_lt .tn mark{background:var(--amber-t,var(--warn-tint,#FDF3DC));color:inherit;border-radius:3px;box-shadow:0 0 0 1px var(--amber-b,#EFD39A)}',
+    '#bk_lt .tn:focus-visible,#bk_lt .lt-btn:focus-visible,#bk_lt .lt-rz:focus-visible{outline:2px solid var(--blue);outline-offset:-2px}',
+    /* the opened entry: its journal never scrolls sideways (a long ledger name wraps) and its quiet facts line */
+    '#bk_lt .cbl-nrow > span:first-child{white-space:normal!important;overflow:visible!important;text-overflow:clip!important;overflow-wrap:anywhere}#bk_lt .cbl-next{overflow-x:hidden}',
+    '#bk_lt .lg-facts{display:flex;flex-wrap:wrap;gap:2px 0;color:var(--grey);font-size:var(--fs-1);margin:8px 0 0}',
+    '#bk_lt .lg-facts > span:not(:last-child)::after{content:"·";margin:0 7px;opacity:.7}',
+    /* phone: the tree is page one, the ledger page two (list → detail → back); no squeezed side panel */
+    '@container lt (max-width:620px){#bk_lt .lt-tree{width:100%;border-top:0}#bk_lt .lt-rz,#bk_lt [data-lt="fold"]{display:none}#bk_lt.has-sel .lt-tree{display:none}#bk_lt:not(.has-sel) .lt-pane{display:none}#bk_lt .tn{min-height:44px;padding-block:10px}#bk_lt .tn.band{min-height:40px}#bk_lt .lt-tools{padding:8px 16px}#bk_lt .cbl-nrow > span:not(:first-child){width:auto!important;min-width:76px;padding-inline-start:10px;white-space:nowrap}',
+    /* the ledger page's title row on a phone: ‹ title … home · avatar on line one; the period, the figures and the notice on line two (the slot dissolves so each of its buttons takes its own place) */
+    '#bk_lt .cbl-title .cbl-slot{display:contents!important}#bk_lt .cbl-title h1{flex:1 1 calc(100% - 150px);min-width:0;order:0}#bk_lt .cbl-title [data-lt="back"]{order:-1}#bk_lt .cbl-title .who{order:1}#bk_lt .cbl-title [data-lt="statement"],#bk_lt .cbl-title > .cbl-anchor,#bk_lt .cbl-title > .cbl-chip{order:2}}',
     /* on a phone the tapped view covers the rail — the way back must be visible (cb-design: .dback is desktop-hidden) */
     '#bk_back{display:none}',
     '.appwrap.m .panel.showdetail #bk_back{display:block;padding:10px 13px 0}',
@@ -664,7 +701,7 @@ function bkDvCols(c) {
 /** its next level: the gist (the lines merged by ledger), then the Dr/Cr lines — each tax and sales line with its rate, as the line carries it */
 function bkDvGistHTML(e, c) { return bkDvGist(e).map(function (x) { return esc(x.name) + ' ' + esc(bkMoney(x.amt, c)); }).join(' · '); }
 function bkDvGistText(e, c) { return bkDvGist(e).map(function (x) { return x.name + ' ' + bkMoney(x.amt, c); }).join(' · '); }
-function bkDvNext(e, c, lines, noParty) {
+function bkDvNext(e, c, lines, noParty, mine) {
   var no = esc(e.entry_no);
   var gist = bkDvGistHTML(e, c);
   /* ⭐ THE RATE (Athi, 2026-10-02): "Output CGST 6%", "Sales @12%" — as the line (the frozen invoice's) carries it, never worked out here */
@@ -673,8 +710,10 @@ function bkDvNext(e, c, lines, noParty) {
   return '<div data-testid="db-lines-' + no + '">' + (lines ? '' : '<div data-testid="db-gist-' + no + '" style="color:var(--grey);font-size:var(--fs-1);padding:2px 0 4px">' + gist + '</div>')
     + '<div style="' + grey + '">' + CBList.nextRow([esc(tx('Code')) + ' · ' + esc(tx('Ledger')), esc(tx('Debit')), esc(tx('Credit'))], [110, 110]) + '</div>'
     + (e.lines || []).map(function (l) {
-        return CBList.nextRow(['<span class="mono">' + esc(l.code) + '</span> ' + esc(l.name) + rate(l) + (l.party_name && !noParty ? ' · ' + esc(bkPartyLabel(l.party_id, l.party_name)) : ''),
+        var row = CBList.nextRow(['<span class="mono">' + esc(l.code) + '</span> ' + esc(l.name) + rate(l) + (l.party_name && !noParty ? ' · ' + esc(bkPartyLabel(l.party_id, l.party_name)) : ''),
           l.dr_minor ? esc(bkMoney(l.dr_minor, c)) : '', l.cr_minor ? esc(bkMoney(l.cr_minor, c)) : ''], [110, 110]);
+        /* the ledger you are in is bold (the Ledgers page passes its code; the Day book passes none) */
+        return mine && String(l.code) === String(mine) ? '<div class="lg-me" style="font-weight:700">' + row + '</div>' : row;
       }).join('') + '</div>';
 }
 /** the Day book's period: Today · This month · This FY · Custom — applies on pick (no Show button); bkRange('db') reads it */
@@ -788,7 +827,7 @@ var BK_LT_GROUPS = [
 ];
 /** the two control accounts open into one ledger per party: which side of /dues each takes, and its words */
 var BK_CTRL = { '1300': { side: 'rcv', by: 'By customer', all: 'All customers' }, '2100': { side: 'pay', by: 'By supplier', all: 'All suppliers' } };
-BK.lt = { open: {}, sel: null, model: null, bal: null, r: null, day: null };
+BK.lt = { open: {}, sel: null, model: null, bal: null, r: null, day: null, tq: '', w: 320, folded: null, api: null, prefs: false, noParty: false };
 function bkLtBand(code) {
   var c = String(code == null ? '' : code);
   if (/^(1300|2100)/.test(c)) return 'people';
@@ -802,11 +841,11 @@ function bkLtModel(accounts) {
   var order = BK_LT_GROUPS.map(function (g) { return g[1]; });
   (accounts || []).filter(function (a) { return !a.is_group && !/^(1300|2100)-/.test(String(a.code)); }).forEach(function (a) {
     var code = String(a.code), bid = bkLtBand(code), band = bands.filter(function (b) { return b.id === bid; })[0];
-    if (BK_CTRL[code]) { band.ctrl.push({ code: code, name: String(a.name || '') }); return; }
+    if (BK_CTRL[code]) { band.ctrl.push({ code: code, name: String(a.name || ''), short: a.short_name || a.short || '' }); return; }
     var g = BK_LT_GROUPS.filter(function (x) { return x[2].test(code); })[0], title = g ? g[1] : 'Other';
     var grp = band.groups.filter(function (x) { return x.title === title; })[0];
     if (!grp) { grp = { title: title, accts: [] }; band.groups.push(grp); }
-    grp.accts.push({ code: code, name: String(a.name || '') });
+    grp.accts.push({ code: code, name: String(a.name || ''), short: a.short_name || a.short || '' });
   });
   bands.forEach(function (b) {
     b.groups.sort(function (x, y) { return (order.indexOf(x.title) + 100 * (x.title === 'Other')) - (order.indexOf(y.title) + 100 * (y.title === 'Other')); });
@@ -821,134 +860,309 @@ async function bkBalances() {
   ((r && r.rows) || []).forEach(function (x) { map[String(x.code)] = Number(x.dr_minor || 0) - Number(x.cr_minor || 0); });
   return { map: map, cur: r && r.currency };
 }
+/**
+ * ⭐ THE SHORT NAME (docs/design/ledgers-page README, "Anything else I'd change" #2): what a name is called where a long one would wrap.
+ * The API's own `short_name` when it sends one; else the official name WITHOUT its trailing bracket ("Customers (Sundry Debtors)" → "Customers")
+ * and with its legal form shortened ("Private Limited" → "Pvt Ltd"). DISPLAY ONLY — never stored, never sent; the full name is the
+ * tooltip, and stays on bills and in CB CRM.
+ */
+function bkShort(o, name) {
+  var s = o && (o.short_name || o.short); if (s) return String(s);
+  var n = String(name == null ? '' : name).trim();
+  var t = n.replace(/\s*\([^)]*\)\s*$/, '').replace(/\bPrivate Limited\b/i, 'Pvt Ltd').replace(/\bLimited\b/i, 'Ltd').replace(/\s{2,}/g, ' ').trim();
+  return t || n;
+}
+/** a ledger's figure in the tree: "₹12,400.00 Dr" — from the ONE trial-balance read; "—" when the trial balance does not list it, never a made-up nil */
 function bkLtBal(code) {
   var b = BK.lt.bal; if (!b) return '';
   var v = b.map[code];
-  if (v === undefined) return '<span data-testid="bal-' + esc(code) + '" title="' + esc(tx('Not on the trial balance')) + '">—</span>';
-  return '<span data-testid="bal-' + esc(code) + '">' + esc(bkMoney(Math.abs(v), b.cur)) + (v ? ' <span style="color:var(--grey)">' + (v > 0 ? 'Dr' : 'Cr') + '</span>' : '') + '</span>';
+  if (v === undefined) return '<span class="am nil" data-testid="bal-' + esc(code) + '" title="' + esc(tx('Not on the trial balance')) + '">—</span>';
+  return '<span class="am' + (v ? '' : ' nil') + '" data-testid="bal-' + esc(code) + '">' + (v ? esc(bkDrCr(v, b.cur)) : '—') + '</span>';
 }
 /** the parties of a control account, from the one /dues read, ordered by party no (the ledger's key on screen) */
 function bkLtParties(ctrl) {
   return Object.keys(BK.dues || {}).map(function (k) { return BK.dues[k]; }).filter(function (p) { return bkDuesSide(p) === BK_CTRL[ctrl].side; })
     .sort(function (a, b) { return String(a.party_no || '').localeCompare(String(b.party_no || ''), undefined, { numeric: true }); });
 }
-function bkLtOpenQ() { return !!String(listCtlS('ledgers').q || '').trim(); }
-function bkLtIsOpen(id) { return bkLtOpenQ() || !!BK.lt.open[id]; }
-function bkLtToggle(id) { if (BK.lt.open[id]) delete BK.lt.open[id]; else BK.lt.open[id] = true; bkLtTreePaint(); }
-function bkLtNode(o) { o.cls = 'ltn' + (o.sel ? ' on' : ''); return _folderNode(o); }
-function bkLtTreeHTML() {
-  var q = String(listCtlS('ledgers').q || '').trim().toLowerCase(), sel = BK.lt.sel, tall = 'min-height:36px';
-  var hit = function () { return !q || Array.prototype.slice.call(arguments).join(' ').toLowerCase().indexOf(q) >= 0; };
-  var out = '';
-  (BK.lt.model || []).forEach(function (b) {
-    var inner = '', n = 0;
-    b.ctrl.forEach(function (c) {
-      var parties = bkLtParties(c.code).filter(function (p) { return hit(p.party_no, p.name, bkPartyLabel(p.party_id, p.name)); });
-      if (q && !hit(c.code, c.name) && !parties.length) return;
-      n++;
-      var open = bkLtIsOpen('ctrl:' + c.code);
-      inner += bkLtNode({ depth: 1, tid: 'lg-acc-' + c.code, sel: !!(sel && sel.code === c.code && !sel.party), icon: open ? '📂' : '📁', onclick: "bkLtPickCtrl('" + c.code + "')", style: tall,
-        label: esc(c.code) + ' · ' + esc(c.name), tail: bkLtBal(c.code) });
-      if (open) inner += parties.map(function (p) {
-        var v = Number(p.balance_minor || 0);
-        return bkLtNode({ depth: 2, tid: 'lg-party-' + p.party_id, sel: !!(sel && sel.party === p.party_id), icon: '📒', onclick: "bkLtPickParty('" + esc(p.party_id) + "','" + c.code + "')", style: tall,
-          label: esc(bkPartyLabel(p.party_id, p.name)), tail: v ? esc(bkDrCr(v, BK.duesCur)) : esc(tx('settled')) });
-      }).join('');
-    });
-    b.groups.forEach(function (g) {
-      var accts = g.accts.filter(function (a) { return hit(a.code, a.name); });
-      if (!accts.length) return;
-      n += accts.length;
-      var gid = 'group:' + b.id + '/' + b.groups.indexOf(g), open = bkLtIsOpen(gid);
-      inner += bkLtNode({ depth: 1, tid: 'lt-group-' + g.title, icon: open ? '📂' : '📁', onclick: "bkLtToggle('" + gid + "')", style: tall, label: esc(tx(g.title)), tail: String(accts.length) });
-      if (open) inner += accts.map(function (a) {
-        return bkLtNode({ depth: 2, tid: 'lg-acc-' + a.code, sel: !!(sel && sel.code === a.code && !sel.party), icon: '📒', onclick: "bkLtPick('" + a.code + "')", style: tall, label: esc(a.code) + ' · ' + esc(a.name), tail: bkLtBal(a.code) });
-      }).join('');
-    });
-    if (!inner) return;
-    var open = bkLtIsOpen('band:' + b.id);
-    out += bkLtNode({ depth: 0, tid: 'lt-band-' + b.id, icon: open ? '📂' : '📁', onclick: "bkLtToggle('band:" + b.id + "')", style: tall, label: '<b>' + esc(tx(b.title)) + '</b>', tail: String(n) }) + (open ? inner : '');
-  });
-  return out || '<div style="color:var(--grey);font-size:var(--fs-2);padding:8px 6px">' + esc(q ? tx('Nothing matches') : tx('No ledgers yet')) + '</div>';
+function bkPartyShort(id, fallback) { var d = id && BK.dues && BK.dues[id]; return bkShort(d, (d && d.name) || fallback || ''); }
+/** the last month end both sides agreed (the API sends it per party when the monthly agreement runs); nothing is drawn without it */
+function bkAgreedTo(o) { var v = o && (o.agreed_to || o.agreedTo); return v ? String(v).slice(0, 10) : ''; }
+
+/* ── what a person chose here is remembered on this device, per person: the tree's width, what is folded, the last ledger ──
+   (the API has no `ledgers` preference kind yet — CBPrefs would carry it across devices; listed in the PR) */
+function bkLtPrefKey() { var s = (typeof SESSION !== 'undefined' && SESSION) || {}; return 'cb_lt.' + (s.entityId || s.entity || '') + '.' + (s.bridgeId || s.name || ''); }
+function bkLtPrefsRead() {
+  if (BK.lt.prefs) return; BK.lt.prefs = true;
+  var v = null; try { v = JSON.parse(localStorage.getItem(bkLtPrefKey()) || 'null'); } catch (_) {}
+  v = v || {};
+  if (v.open && typeof v.open === 'object') BK.lt.open = v.open;
+  if (typeof v.w === 'number') BK.lt.w = Math.max(240, Math.min(520, v.w));
+  if (typeof v.folded === 'boolean') BK.lt.folded = v.folded;
+  if (v.last && v.last.code) BK.lt.last = v.last;
 }
-function bkLtTreePaint() { var t = document.getElementById('lt_tree'); if (t) t.innerHTML = bkLtTreeHTML(); }
+function bkLtPrefsSave() {
+  var s = BK.lt.sel;
+  try { localStorage.setItem(bkLtPrefKey(), JSON.stringify({ open: BK.lt.open, w: BK.lt.w, folded: BK.lt.folded, last: s ? { code: s.code, party: s.party || null } : (BK.lt.last || null) })); } catch (_) {}
+}
+function bkLtFolded() { if (BK.lt.over) return false; return BK.lt.folded == null ? (typeof window !== 'undefined' && window.innerWidth <= 1200) : !!BK.lt.folded; }
+/** on a narrow laptop (pane ≤ 1100 px) the tree comes back OVER the list for one pick, never beside it: the list keeps the width its tools row needs, so the head stays within 20% */
+function bkLtOverlay() { var e = document.getElementById('bk_lt'); return !!e && e.clientWidth > 620 && e.clientWidth <= 1100; }
+function bkLtNarrow() { var e = document.getElementById('bk_lt'); return !!e && e.clientWidth > 0 && e.clientWidth <= 620; }
+
+/* ── the tree: bands → groups → ledgers → parties, ONE line per node, the figure in one aligned column ── */
+function bkLtOpenNow(id, def) { if (String(BK.lt.tq || '').trim()) return true; var v = BK.lt.open[id]; return v === undefined ? def : !!v; }
+function bkLtSet(id, v) { BK.lt.open[id] = !!v; bkLtPrefsSave(); }
+function bkLtLedgerNode(a, parties) {
+  var d = !!BK_CTRL[a.code];
+  return { t: 'ledger', id: 'L:' + a.code, code: a.code, name: a.short || bkShort(null, a.name), full: a.name, ctrl: d, parties: parties || [] };
+}
+/** the nodes the person sees — the find box filters them as they type (a code finds its ledger: "6010" finds Rent; a name finds a ledger or a party) */
+function bkLtNodes() {
+  var q = String(BK.lt.tq || '').trim().toLowerCase(), out = [];
+  var hit = function () { return !q || Array.prototype.slice.call(arguments).join(' ').toLowerCase().indexOf(q) >= 0; };
+  (BK.lt.model || []).forEach(function (b) {
+    var kids = [], n = 0;
+    b.ctrl.forEach(function (c) {
+      var all = bkLtParties(c.code), self = !q || String(c.code).indexOf(q) === 0 || hit(c.name, bkShort(c, c.name));
+      var ps = all.filter(function (p) { return hit(p.party_no, p.name, bkShort(p, p.name)); });
+      if (q && !self && !ps.length) return;
+      n++;
+      kids.push(bkLtLedgerNode(c, (self && !ps.length ? all : ps).map(function (p) { return { t: 'party', id: 'P:' + p.party_id, party: p.party_id, ctrl: c.code, name: bkShort(p, p.name), full: bkPartyLabel(p.party_id, p.name), fig: Number(p.balance_minor || 0), ok: !!bkAgreedTo(p) }; })));
+    });
+    b.groups.forEach(function (g, gi) {
+      var as = g.accts.filter(function (a) { return !q || String(a.code).indexOf(q) === 0 || hit(a.name, bkShort(a, a.name)); });
+      if (!as.length) return;
+      n += as.length;
+      kids.push({ t: 'grp', id: 'G:' + b.id + '/' + gi, name: tx(g.title), tid: 'lt-group-' + g.title, count: as.length, kids: as.map(function (a) { return bkLtLedgerNode(a); }) });
+    });
+    if (kids.length) out.push({ t: 'band', id: 'B:' + b.id, name: tx(b.title), tid: 'lt-band-' + b.id, count: n, kids: kids });
+  });
+  return out;
+}
+function bkLtMark(s) {
+  var q = String(BK.lt.tq || '').trim(); if (!q) return esc(s);
+  var i = String(s).toLowerCase().indexOf(q.toLowerCase()); if (i < 0) return esc(s);
+  return esc(s.slice(0, i)) + '<mark>' + esc(s.slice(i, i + q.length)) + '</mark>' + esc(s.slice(i + q.length));
+}
+function bkLtTreeHTML() {
+  var sel = BK.lt.sel, narrow = bkLtNarrow(), h = '', c = BK.lt.bal && BK.lt.bal.cur, widest = 6;
+  var selId = sel ? (sel.party ? 'P:' + sel.party : 'L:' + sel.code) : '';
+  function amt(n) {
+    if (n.t === 'band' || n.t === 'grp') return '<span class="am">' + n.count + '</span>';
+    /* the open ledger shows no figure here: the title row beside it already does (on a phone's first page there is no title row, so it does) */
+    if (n.id === selId && !narrow) return '<span class="am"></span>';
+    if (n.t === 'party') { var t = n.fig ? bkDrCr(n.fig, BK.duesCur) : '—'; widest = Math.max(widest, t.length); return '<span class="am' + (n.fig ? '' : ' nil') + '">' + (n.ok ? '<span class="ck" aria-label="' + esc(tx('agreed')) + '" title="' + esc(tx('Agreed at the last month end')) + '">✓</span>' : '') + esc(t) + '</span>'; }
+    var b = bkLtBal(n.code); var m = /<span[^>]*>([^<]*)<\/span>/.exec(b); if (m) widest = Math.max(widest, m[1].length); return b;
+  }
+  function walk(n, lvl) {
+    var kids = n.t === 'ledger' ? n.parties.length : (n.kids || []).length, open = kids ? bkLtOpenNow(n.id, n.t === 'ledger' ? false : true) : false;
+    var tid = n.tid || (n.t === 'ledger' ? 'lg-acc-' + n.code : n.t === 'party' ? 'lg-party-' + n.party : '');
+    h += '<button type="button" class="tn ltn ' + n.t + (n.id === selId ? ' on' : '') + '" role="treeitem" data-tn="' + esc(n.id) + '"' + (n.t === 'party' ? ' data-ctrl="' + esc(n.ctrl) + '"' : '')
+      + ' aria-level="' + (lvl + 1) + '"' + (kids ? ' aria-expanded="' + open + '"' : '') + (n.t === 'ledger' || n.t === 'party' ? ' aria-selected="' + (n.id === selId) + '"' : '') + ' tabindex="-1" data-testid="' + esc(tid) + '"'
+      + (n.full && n.full !== n.name ? ' title="' + esc(n.full) + '"' : '') + ' style="--lvl:' + lvl + '"><span class="tw" aria-hidden="true">' + (kids ? (open ? '▾' : '▸') : '') + '</span><span class="nm">' + bkLtMark(n.name) + '</span>' + amt(n) + '</button>';
+    if (kids && open) (n.t === 'ledger' ? n.parties : n.kids).forEach(function (k) { walk(k, lvl + 1); });
+  }
+  bkLtNodes().forEach(function (n) { walk(n, 0); });
+  BK.lt.amW = widest + 1;
+  return h || '<div class="lt-empty">' + esc(String(BK.lt.tq || '').trim() ? txf('No ledger or party called “{q}”.', { q: String(BK.lt.tq).trim() }) : tx('No ledgers yet')) + (String(BK.lt.tq || '').trim() ? '<br><button type="button" class="lt-btn" data-lt="clear" data-testid="lt-clear">' + esc(tx('Clear')) + '</button>' : '') + '</div>';
+}
+function bkLtTreePaint(focusId) {
+  var t = document.getElementById('lt_tree'); if (!t) return;
+  var ae = document.activeElement, keep = focusId || (ae && t.contains(ae) && ae.getAttribute && ae.getAttribute('data-tn'));
+  t.innerHTML = bkLtTreeHTML(); t.style.setProperty('--am-w', (BK.lt.amW || 12) + 'ch');
+  var all = t.querySelectorAll('.tn'), f = (keep && t.querySelector('[data-tn="' + keep.replace(/"/g, '') + '"]')) || t.querySelector('.tn[aria-selected="true"]') || all[0];
+  if (f) f.tabIndex = 0;
+  if (focusId && f) f.focus();
+}
+function bkLtFocus(id) { var t = document.getElementById('lt_tree'); if (!t) return; var all = t.querySelectorAll('.tn'); Array.prototype.forEach.call(all, function (x) { x.tabIndex = -1; }); var b = t.querySelector('[data-tn="' + id + '"]'); if (b) { b.tabIndex = 0; b.focus(); } }
+function bkLtTitle() {
+  var s = BK.lt.sel; if (!s) return '';
+  if (s.party) return bkPartyShort(s.party, ((BK.lt.r && BK.lt.r.party) || {}).name);
+  var a = bkLtAcct(s.code); return a ? (a.short || bkShort(null, a.name)) : s.code;
+}
 function bkLtPaneHTML() {
   var sel = BK.lt.sel;
   if (!sel) return emptyState('📒', tx('Pick a ledger'), esc(tx('Open a group on the left, then a ledger, to see its entries.')));
-  return '<div style="padding:12px 14px"><div class="lt-crumb"><button type="button" data-testid="lt-back" onclick="bkLtBack()">‹ ' + esc(tx('Ledgers')) + '</button></div>'
-    + '<div data-testid="lg-title" style="font-weight:700;margin-bottom:6px">' + esc(sel.title || '') + '</div>'
-    + '<div id="lg_out" data-testid="lg_out"></div></div>';
+  return '<div id="lg_out" data-testid="lg_out"></div>';
 }
-function bkLtBack() { BK.lt.sel = null; var el = document.getElementById('bk_lt'); if (el) el.classList.remove('has-sel'); bkLtTreePaint(); var p = document.getElementById('lt_pane'); if (p) p.innerHTML = bkLtPaneHTML(); }
+function bkLtBack() {
+  var s = BK.lt.sel; if (s) BK.lt.last = { code: s.code, party: s.party || null };
+  if (typeof BK.onLedger === 'function') BK.onLedger(null);
+  if (BK.lt.api) { BK.lt.api.destroy(); BK.lt.api = null; }
+  BK.lt.sel = null; var el = document.getElementById('bk_lt'); if (el) el.classList.remove('has-sel', 'folded');
+  var p = document.getElementById('lt_pane'); if (p) p.innerHTML = bkLtPaneHTML();
+  bkLtTreePaint(s ? (s.party ? 'P:' + s.party : 'L:' + s.code) : null);
+}
 function bkLtOpen(sel) {
-  BK.lt.sel = sel; BK.lt.r = null; BK.lt.day = null; BK.lt.dayP = null;
-  CBList.reset('ledger');   /* an open row, a search and a filter belong to the ledger they were made in */
-  var el = document.getElementById('bk_lt'); if (el) el.classList.add('has-sel');
-  bkLtTreePaint(); var p = document.getElementById('lt_pane'); if (p) p.innerHTML = bkLtPaneHTML();
+  if (typeof BK.onLedger === 'function') BK.onLedger(sel);   /* a host page takes its own header away (accounts.html) BEFORE the title row takes the shop · Home · avatar */
+  if (BK.lt.api) { BK.lt.api.destroy(); BK.lt.api = null; }
+  BK.lt.over = false; BK.lt.sel = sel; BK.lt.r = null; BK.lt.err = null; BK.lt.day = null; BK.lt.dayP = null; BK.lt.noParty = false; BK.lt.last = { code: sel.code, party: sel.party || null };
+  ['ledger-control', 'ledger-plain', 'ledger-party'].forEach(function (k) { CBList.reset(k); });   /* an open row, a search and a filter belong to the ledger they were made in */
+  var el = document.getElementById('bk_lt'); if (el) { el.classList.add('has-sel'); el.classList.toggle('folded', bkLtFolded()); }   /* the tree folds away once a ledger is open on a narrow laptop (the person's own choice wins); with none open it is always shown */
+  bkLtPrefsSave();
+  var p = document.getElementById('lt_pane'); if (p) p.innerHTML = bkLtPaneHTML();
+  bkLtTreePaint();
+  var out = document.getElementById('lg_out'); if (out) BK.lt.api = bkLgMount(out);
+  bkKuralFor();
   bkLtLoad();
 }
 function bkLtAcct(code) { var f = null; (BK.lt.model || []).forEach(function (b) { b.ctrl.concat(b.groups.reduce(function (a, g) { return a.concat(g.accts); }, [])).forEach(function (a) { if (a.code === code) f = a; }); }); return f; }
-function bkLtPick(code) { var a = bkLtAcct(code); BK.lgAcc = code; bkLtOpen({ code: code, title: code + ' · ' + (a ? a.name : '') }); }
+function bkLtPick(code) { BK.lgAcc = code; bkLtOpen({ code: code }); }
 /** a control account: its folder opens (its parties appear) and its own ledger shows — total of the parties beside its closing */
-function bkLtPickCtrl(code) { BK.lt.open['ctrl:' + code] = true; BK.lt.open['band:people'] = true; bkLtPick(code); }
-function bkLtPickParty(id, ctrl) { BK.lgAcc = ctrl; delete BK.stmt[id]; bkLtOpen({ code: ctrl, party: id, title: bkPartyLabel(id) }); }
+function bkLtPickCtrl(code) { BK.lt.open['L:' + code] = true; BK.lt.open['B:people'] = true; bkLtPick(code); }
+function bkLtPickParty(id, ctrl) { BK.lgAcc = ctrl; delete BK.stmt[id]; BK.lt.open['L:' + ctrl] = true; bkLtOpen({ code: ctrl, party: id }); }
+/** which kural the open ledger carries (docs/design/ledgers-page README "Which kural"): the API sends no `ledger.kural` yet, so the page names the route of kurals.json; People and a first page read the page's own */
+function bkKuralFor() {
+  if (typeof CBKural === 'undefined') return;
+  var s = BK.lt.sel, code = s ? String(s.code) : '', route = 'accounts';
+  if (/^1[45]/.test(code)) route = 'daybook';                  /* Cash & bank → 520 · check every day */
+  else if (/^22[01]/.test(code)) route = 'gst';                 /* GST, TDS → 733 */
+  else if (/^29/.test(code)) route = 'suspense';                /* Suspense → 436 */
+  else if (/^[456]/.test(code)) route = 'reports';              /* Income and expenses → 754 */
+  else if (/^3/.test(code)) route = 'period-close';             /* Your capital → 385 */
+  CBKural.set(route);
+}
 async function bkLtLoad() {
-  var sel = BK.lt.sel, out = document.getElementById('lg_out'); if (!sel || !out) return;
-  out.innerHTML = '<div class="loadwrap"><span class="spin"></span> ' + tx('Reading…') + '</div>';
+  var sel = BK.lt.sel; if (!sel) return;
   try {
     var r, ctrl = BK_CTRL[sel.code];
     if (sel.party) { r = await api('booksStatement', { params: { id: sel.party } }); BK.stmt[sel.party] = r; }
-    else { var rr = await Promise.all([api('booksLedger', { params: { account: sel.code }, query: bkRange('lg') }), ctrl ? booksDuesLoad(true) : null]); r = rr[0]; if (ctrl) { bkLtTreePaint(); } }
+    else { var rr = await Promise.all([api('booksLedger', { params: { account: sel.code }, query: bkRange('lg') }), ctrl ? booksDuesLoad(true) : null]); r = rr[0]; if (ctrl) bkLtTreePaint(); }
     if (BK.lt.sel !== sel) return;
-    BK.lt.r = r; BK.lt.day = null; BK.lt.dayP = null; BK.lgR = r;
-    bkLtEntriesPaint();
-  } catch (e) { var o = document.getElementById('lg_out'); if (o) o.innerHTML = bkErr(e); }
+    BK.lt.r = r; BK.lt.err = null; BK.lt.day = null; BK.lt.dayP = null; BK.lgR = r;
+    (r.lines || []).forEach(function (l, i) { l._ix = i; });   /* a line's place in the statement is its row id */
+    if (BK.lt.api) BK.lt.api.refresh({ filters: bkLgFilters() });
+  } catch (e) { if (BK.lt.sel !== sel) return; BK.lt.err = e; if (BK.lt.api) BK.lt.api.refresh(); }
 }
-/** the list of a ledger's entries (rows = the server's statement lines); its journal is read when a row first opens */
-function bkLgCols(c, partyLead, avail) {
-  /* the columns FIT the pane (no sideways scroll): the date, the amounts and the balance are fixed, "What" takes the rest (never under 150 px; the person may still drag) */
-  var fixed = 100 + 104 + 104 + 136, whatW = Math.max(150, Math.min(420, (avail || 0) - fixed - 40));
-  var dash = '<span style="color:var(--grey)">—</span>', money = function (v) { return v ? esc(bkMoney(v, c)) : ''; };
-  return [
-    { key: 'date', label: tx('Date'), prio: 1, sort: 'date', w: 100, html: true, cell: function (l) { return esc(bkDate(l.date)); } },
-    { key: 'what', label: tx('What'), prio: 2, sort: 'what', w: whatW, html: true, tid: function (l) { return 'stmt-what-' + l._ix; }, cell: function (l) {
-        /* the entry's word, then where it came from — its bill (a link to the sheet), how it was paid, the counter, who rang it: all secondary, never where the party goes */
-        var parts = bkSourceParts(l.source, 'stmt-src-' + l._ix, c, bkEntryWord(l));
-        /* a control account's rows name their party, first and apart (a party's own ledger says it once, in its title; the Party column was dropped — it did not fit beside the amounts) */
-        var pl = partyLead ? (l.party_id ? bkPartyLabel(l.party_id, l.party_name) : (l.party_name || '')) : '';
-        return (pl ? '<b class="lg-party">' + esc(pl) + '</b><br>' : '') + bkEntryWord(l) + (parts.length ? ' <span style="color:var(--grey)">· ' + parts.join(' · ') + '</span>' : '') + bkRecordedHTML(l, 'stmt-src-' + l._ix) + (l.ref ? ' <span class="mono">' + esc(l.ref) + '</span>' : ''); } },
-    { key: 'dr', label: tx('Debit'), prio: 4, sort: 'dr', num: true, w: 104, html: true, cell: function (l) { return money(l.dr_minor); } },
-    { key: 'cr', label: tx('Credit'), prio: 5, sort: 'cr', num: true, w: 104, html: true, cell: function (l) { return money(l.cr_minor); } },
-    /* the running balance is pinned (always shown) and written Dr / Cr, never with a minus */
-    { key: 'bal', label: tx('Balance'), prio: 6, pin: 'end', num: true, w: 136, html: true, cell: function (l) { return '<b>' + esc(bkDrCr(l.running_minor, c)) + '</b>'; } },
-  ];
-}
+
+/* ── the list: a CBList declaration for the chosen ledger ── */
+var BK_NO_PARTY = 'No party';
+function bkLgKind() { var s = BK.lt.sel || {}; return s.party ? 'party' : (BK_CTRL[s.code] ? 'control' : 'plain'); }
+function bkLgDash() { return '<span style="color:var(--grey)">—</span>'; }
 function bkEntryWord(e) {
   var s = e && e.source;
   return s && s.kind === 'day' ? esc(tx('Walk-in day')) : s && s.kind === 'receipt' ? esc(tx('Received')) : esc((e && (e.narration || e.what || e.event_type)) || '');
 }
-/** a ledger's head is the CBList period chip (the Day book's presets) — picking one reads again; a party's statement has no range, so no chip */
-function bkLgHead() {
-  var p = BK.lgp || (BK.lgp = bkDbPeriod('fy')), q = bkRange('lg');
-  return { period: { label: bkDbPeriodLabel(q, p.preset), value: p.preset, custom: { from: q.from, to: q.to },
-    presets: [['month', tx('This month')], ['fy', tx('This FY (Apr–Mar)')], ['custom', tx('Custom')]],
-    onPick: function (v, range) { if (v === 'custom' && !range) return; BK.lgp = bkDbPeriod(v, range); bkLtLoad(); } } };
+/** the Details cell: the kind and the bill, ONCE ("Expense C2/26-27/0007 11:44") — the entry number, the tender, the counter and who rang it live in ⚙ and in the opened entry */
+function bkLgDetails(l) {
+  var s = l.source || {}, tid = 'stmt-src-' + l._ix, word = bkEntryWord(l), kw = BK_SRC_WORD[s.kind] ? tx(BK_SRC_WORD[s.kind]) : '';
+  var said = !!kw && String(word).trim().toLowerCase() === kw.toLowerCase(), out = word;
+  if (s.kind === 'day') { if (s.count != null) out += ' · ' + esc(txf(s.count === 1 ? '{n} bill' : '{n} bills', { n: s.count })); }
+  else if (s.ref || s.chit_id) out += (said ? ' ' : ' · ' + (kw ? esc(kw) + ' ' : '')) + bkBillPart(s, tid);
+  return out + bkRecordedHTML(l, tid) + (l.ref && !s.ref ? ' <span class="mono">' + esc(l.ref) + '</span>' : '');
 }
-function bkLgMount(el, r) {
+function bkLgCols(c, kind) {
+  var dash = bkLgDash(), ctrl = kind === 'control';
+  /* ONE flexible column (the designer's): Details takes what the others leave, so the default columns fill the pane and never spill sideways — a bill number is not broken across two lines. A width the person dragged wins (CBList remembers it). */
+  var box = document.getElementById('lg_out'), avail = box ? box.clientWidth : 0, whatW = Math.max(240, Math.min(560, avail - (112 + (ctrl ? 250 : 160) + 160) - 12));
+  var cols = [{ key: 'date', label: tx('Date'), prio: 1, sort: 'date', w: 112, html: true, cell: function (l) { return esc(bkDvFmt(String(l.date).slice(0, 10), { day: '2-digit', month: 'short' })); } }];
+  if (ctrl) cols.push({ key: 'party', label: tx('Party'), prio: 2, sort: 'party', w: 250, html: true, cell: function (l) {
+    var n = l.party_id ? bkPartyLabel(l.party_id, l.party_name) : (l.party_name || '');
+    return n ? '<b class="lg-party">' + esc(n) + '</b>' : '<span class="lg-noparty" style="color:var(--grey)">' + esc(tx(BK_NO_PARTY)) + '</span>'; } });
+  cols.push(
+    { key: 'what', label: tx('Details'), prio: ctrl ? 3 : 2, sort: 'what', w: whatW, html: true, tid: function (l) { return 'stmt-what-' + l._ix; }, cell: bkLgDetails },
+    { key: 'bal', label: tx('Balance'), prio: ctrl ? 9 : 3, sort: 'bal', num: true, w: 160, html: true, cell: function (l) { return esc(bkDrCr(l.running_minor, c)); } },
+    { key: 'entry', label: tx('Entry no.'), prio: 5, sort: 'entry', w: 170, html: true, cell: function (l) { return l.entry_no || l.ref ? '<span class="mono">' + esc(l.entry_no || l.ref) + '</span>' : dash; } },
+    { key: 'tender', label: tx('Tender'), prio: 6, w: 120, html: true, cell: function (l) { return bkHowPart(l.source, 'stmt-how-' + l._ix, c) || dash; } },
+    { key: 'counter', label: tx('Counter'), prio: 7, w: 120, html: true, cell: function (l) { var s = l.source || {}; return s.counter ? esc(counterWord(s.counter)) : dash; } },
+    { key: 'person', label: tx('Rung by'), prio: 8, w: 130, html: true, cell: function (l) { var s = l.source || {}; return s.by ? esc(s.by) + (bkIsShopName(s.by) ? ' <span style="color:var(--grey)">' + esc(tx('(owner)')) + '</span>' : '') : dash; } });
+  /* the amount is ONE column, pinned at the end, written Dr / Cr — never a minus (the Debit / Credit pair became this) */
+  cols.push({ key: 'amount', label: tx('Amount'), prio: 4, pin: 'end', sort: 'amount', num: true, w: 160, html: true, cell: function (l) {
+    return l.dr_minor ? '<b data-testid="stmt-amt-' + l._ix + '">' + esc(bkMoney(l.dr_minor, c) + ' ' + tx('Dr')) + '</b>' : l.cr_minor ? '<b data-testid="stmt-amt-' + l._ix + '">' + esc(bkMoney(l.cr_minor, c) + ' ' + tx('Cr')) + '</b>' : dash; } });
+  return cols;
+}
+/** a ledger's head is the CBList title row: the ledger's name, the period chip (the Day book's presets), ONE figures line, the notice when something needs a hand */
+function bkLgPeriodHead() {
+  var p = BK.lgp || (BK.lgp = bkDbPeriod('fy')), q = bkRange('lg');
+  var pane = document.getElementById('lt_pane'), word = { today: 'Today', month: 'This month', fy: 'This FY' }[p.preset];
+  /* the chip says the preset's name ("This FY") where the pane is too narrow for the dates — they are the chip's popover and the figures' own period */
+  return { label: word && pane && pane.clientWidth < 1100 ? tx(word) : bkDbPeriodLabel(q, p.preset), value: p.preset, custom: { from: q.from, to: q.to },
+    presets: [['today', tx('Today')], ['month', tx('This month')], ['fy', tx('This FY (Apr–Mar)')], ['custom', tx('Custom')]],
+    onPick: function (v, range) { if (v === 'custom' && !range) return; BK.lgp = bkDbPeriod(v, range); BK.lt.r = null; BK.lt.noParty = false; if (BK.lt.api) BK.lt.api.refresh(); bkLtLoad(); } };
+}
+/**
+ * ⭐ THE ONE FIGURES LINE (2026-10-03: the closing was shown three times with changing signs): "Opening ₹x Cr · Closing ₹y Cr", or "Balance ₹x Cr" once when they are the same,
+ * and for a control account "✓ parties agree". Every figure is the server's. The parties check reads the API's `parties_check` when it sends one; until it does the page makes the
+ * one comparison it always made — the parties' balances (the one /dues read) against the ledger's closing (listed in the PR as an API field).
+ */
+function bkLgFigs(r, c, sel) {
+  var op = Number(r.opening_minor || 0), cl = Number(r.closing_minor || 0), same = op === cl, parts = same ? [tx('Balance') + ' ' + bkDrCr(cl, c)] : [tx('Opening') + ' ' + bkDrCr(op, c), tx('Closing') + ' ' + bkDrCr(cl, c)], check = null;
+  if (!sel.party && BK_CTRL[sel.code]) {
+    var pc = r.parties_check, none = (r.lines || []).filter(function (l) { return !l.party_id && !l.party_name; }).length;
+    if (pc && typeof pc.agree === 'boolean') check = pc.agree ? { agree: true } : { agree: false, amount: Number(pc.amount_minor || 0), n: pc.entries != null ? Number(pc.entries) : none };
+    else { var total = bkLtParties(sel.code).reduce(function (a, p) { return a + Number(p.balance_minor || 0); }, 0); check = total === cl ? { agree: true } : { agree: false, amount: cl - total, n: none }; }
+  }
+  return { text: parts.join(' · ') + (check && check.agree ? ' · ' + tx('✓ parties agree') : ''), same: same, check: check };
+}
+function bkLgHead() {
+  var sel = BK.lt.sel; if (!sel) return null;
+  var r = BK.lt.r, own = !!sel.party, c = (r && r.currency) || BK.duesCur, h = { title: bkLtTitle(), chips: [], notices: [] };
+  if (!own) h.period = bkLgPeriodHead();
+  if (r) {
+    var f = bkLgFigs(r, c, sel);
+    h.chips.push({ tid: 'lg-sum', text: f.text });
+    var ag = own ? bkAgreedTo(r) || bkAgreedTo(BK.dues && BK.dues[sel.party]) : '';
+    if (ag) h.chips.push({ tid: 'lg-agreed', text: tx('✓ Agreed up to') + ' ' + bkDate(ag) });
+    if (f.check && !f.check.agree) {
+      h.notices.push({ cls: 'warn', tid: 'lg-parties-diff', text: BK.lt.noParty ? txf(f.check.n === 1 ? 'Showing the {n} entry with no party · Show all' : 'Showing the {n} entries with no party · Show all', { n: f.check.n })
+          : bkDrCr(f.check.amount, c) + ' ' + tx('with no party'),
+        onOpen: function () { BK.lt.noParty = !BK.lt.noParty; if (BK.lt.api) BK.lt.api.refresh(); if (BK.lt.noParty && typeof toast === 'function') toast(txf(f.check.n === 1 ? 'Showing the {n} entry with no party. Open it and pick the party.' : 'Showing the {n} entries with no party.', { n: f.check.n })); } });
+    }
+  }
+  h.slot = function (el) {
+    var x = '';
+    if (bkLtNarrow()) x += '<button type="button" class="cbl-tbtn cbl-ico" data-lt="back" data-testid="lt-back" aria-label="' + esc(tx('Back to all ledgers')) + '">‹</button>';
+    if (bkLtFolded() && !bkLtNarrow()) x += '<button type="button" class="cbl-tbtn" data-lt="unfold" data-testid="lt-unfold" aria-label="' + esc(tx('Show the ledger list')) + '">☰ ' + esc(tx('Ledgers')) + '</button>';
+    if (own) x += '<button type="button" class="cbl-tbtn" data-lt="statement" data-testid="lg-statement">' + esc(tx('Statement')) + '</button>';
+    el.innerHTML = x;
+    if (typeof BK.slotWho === 'function') BK.slotWho(el);
+  };
+  return h;
+}
+function bkLgCsv(rows, c) {
+  var pow = Math.pow(10, bkDec(c)), amt = function (m) { return (Number(m || 0) / pow).toFixed(bkDec(c)); };
+  var cell = function (v) { var s = String(v == null ? '' : v); if (/^[=+\-@]/.test(s)) s = "'" + s; return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  var out = [['date', 'details', 'party', 'entry_no', 'dr', 'cr', 'balance', 'balance_side']];
+  rows.forEach(function (l) { var s = l.source || {}, b = Number(l.running_minor || 0);
+    out.push([String(l.date).slice(0, 10), String(l.narration || l.what || s.kind || '') + (s.ref ? ' ' + s.ref : ''), l.party_name || '', l.entry_no || l.ref || '', l.dr_minor ? amt(l.dr_minor) : '', l.cr_minor ? amt(l.cr_minor) : '', amt(Math.abs(b)), b ? (b > 0 ? 'Dr' : 'Cr') : '']); });
+  return out.map(function (r) { return r.map(cell).join(','); }).join('\r\n') + '\r\n';
+}
+function bkLgDownload(rows) {
+  var r = BK.lt.r, sel = BK.lt.sel; if (!r || !sel) return;
+  var blob = new Blob(['﻿' + bkLgCsv(rows, r.currency)], { type: 'text/csv;charset=utf-8' });
+  var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'ledger-' + (sel.party || sel.code) + '.csv';
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
+}
+function bkLgMount(el) {
   var by = function (g, num) { return function (a, b) { var x = g(a), y = g(b); return num ? x - y : String(x).localeCompare(String(y), undefined, { numeric: true }); }; };
-  var c = r.currency || BK.duesCur, own = !!(BK.lt.sel && BK.lt.sel.party);
-  (r.lines || []).forEach(function (l, i) { l._ix = i; });   /* a line's place in the statement is its row id */
+  var kind = bkLgKind(), c0 = BK.duesCur;
+  var cur = function () { return (BK.lt.r && BK.lt.r.currency) || c0; };
+  var dflt = kind === 'control' ? ['date', 'party', 'what'] : kind === 'party' ? ['date', 'what', 'bal'] : ['date', 'what', 'bal'];
   return CBList.mount(el, {
-    key: 'ledger', t: tx, rows: function () { return (BK.lt.r && BK.lt.r.lines) || []; }, id: function (l) { return String(l._ix); },
-    columns: bkLgCols(c, !own && !!BK_CTRL[(BK.lt.sel || {}).code], el.clientWidth), rowTid: function (l) { return 'stmt-row-' + l._ix; },
-    defaultCols: ['date', 'what', 'dr', 'cr'],   /* what fits beside the pinned balance */
-    head: own ? null : bkLgHead,
-    search: function (l) { var s = l.source || {}; return [l.date, l.what, l.narration, l.ref, l.party_name, bkPartyLabel(l.party_id, l.party_name), s.ref, s.how, s.counter, s.by, (Number(l.dr_minor || l.cr_minor || 0) / Math.pow(10, bkDec(r.currency))).toFixed(bkDec(r.currency))].join(' '); },
-    sorts: [{ key: 'rec', label: tx('As recorded'), cmp: function () { return 0; } }, { key: 'date', label: tx('Date'), cmp: by(function (l) { return l.date; }) },
-      { key: 'what', label: tx('What'), cmp: by(function (l) { return l.what || l.narration || ''; }) }, { key: 'party', label: tx('Party'), cmp: by(function (l) { return bkPartyLabel(l.party_id, l.party_name); }) },
-      { key: 'dr', label: tx('Debit'), cmp: by(function (l) { return l.dr_minor || 0; }, true) }, { key: 'cr', label: tx('Credit'), cmp: by(function (l) { return l.cr_minor || 0; }, true) }],
+    key: 'ledger-' + kind, t: tx, view: 'grid', fill: false,   /* the pane's own layout (flex) sizes the list — it leaves room for the kural footer, which fit() (window height minus the top) would not */
+    state: function () { return BK.lt.err ? 'error' : (BK.lt.r ? undefined : 'loading'); }, error: function () { return { title: tx('This ledger could not be read.'), sub: bkWhy(BK.lt.err, tx('Nothing was lost. Try again in a moment.')) }; }, onRetry: function () { BK.lt.err = null; if (BK.lt.api) BK.lt.api.refresh(); bkLtLoad(); },
+    rows: function () { var ls = (BK.lt.r && BK.lt.r.lines) || []; return BK.lt.noParty ? ls.filter(function (l) { return !l.party_id && !l.party_name; }) : ls; },
+    id: function (l) { return String(l._ix); }, rowTid: function (l) { return 'stmt-row-' + l._ix; },
+    columns: function () { return bkLgCols(cur(), kind); }, defaultCols: dflt,
+    head: bkLgHead,
+    search: function (l) { var s = l.source || {}, c = cur(); return [l.date, l.what, l.narration, l.ref, l.entry_no, l.party_name, bkPartyLabel(l.party_id, l.party_name), s.ref, s.how, s.counter, s.by, (Number(l.dr_minor || l.cr_minor || 0) / Math.pow(10, bkDec(c))).toFixed(bkDec(c))].join(' '); },
+    searchHint: tx('Search bill, party, amount'),
+    /* newest first, like a passbook app; the ▲▼ on Date reverses it */
+    sorts: [{ key: 'date', label: tx('Newest first'), cmp: function (a, b) { return String(b.date).localeCompare(String(a.date)) || b._ix - a._ix; } },
+      { key: 'what', label: tx('Details'), cmp: by(function (l) { return l.what || l.narration || ''; }) }, { key: 'party', label: tx('Party'), cmp: by(function (l) { return bkPartyLabel(l.party_id, l.party_name); }) },
+      { key: 'entry', label: tx('Entry no.'), cmp: by(function (l) { return l.entry_no || l.ref || ''; }) }, { key: 'bal', label: tx('Balance'), cmp: by(function (l) { return Number(l.running_minor || 0); }, true) },
+      { key: 'amount', label: tx('Amount'), cmp: by(function (l) { return Number(l.dr_minor || 0) - Number(l.cr_minor || 0); }, true) }],
+    filters: bkLgFilters(),
+    /* Month · Day · None, newest first. A group head says only "n shown": the API sends no month / day totals yet, and the page adds up no money (listed in the PR) */
+    group: { default: 'month', tid: 'lg', options: [['month', 'Month'], ['day', 'Day'], ['none', 'None']],
+      by: function (l, mode) { if (mode === 'none') return null; var g = bkDvGroupOf(l.date, mode); return [g.label, g.key]; } },
+    csv: function (rows) { bkLgDownload(rows); },
     /* its journal is read once, on the first open, and the row shows it when it arrives */
-    next: function (l) { return bkLgJournal().then(function () { return bkLgNext(l, c); }); },
+    next: function (l) { return bkLgJournal().then(function () { return bkLgNext(l, cur()); }); },
+    /* Reverse this entry (insert-only: cap-entry.js asks first). The line names its entry only through the journal, so the journal is read first and a line that cannot be reversed (already reversed, or itself a reversal) says so. */
+    actions: typeof enReverse === 'function' ? [{ id: 'reverse', icon: '↩', label: 'Reverse this entry', tid: 'lg-reverse', when: function (l) { return !!(l.entry_no || l.ref || l.source_chit_id || (l.source && l.source.chit_id)); },
+      run: function (l) { bkLgJournal().then(function () { var e = bkLgEntry(l); if (!e || !e.entry_id || e.reversed_by || e.reverses_entry_id || e.event_type === 'reversal') { if (typeof toast === 'function') toast(tx('This entry cannot be reversed here.')); return; } enReverse(e.entry_id, e.entry_no); }); } }] : undefined,
+    tids: { expand: 'lg-expand-all', collapse: 'lg-collapse-all', csv: 'lg-csv', count: 'lg-count' },
     empty: { title: tx('No entries in these dates') },
   });
 }
@@ -964,35 +1178,122 @@ function bkLgJournal() {
   return (BK.lt.dayP = api('booksDaybook', { query: { from: ds[0] || bkRange('lg').from, to: ds[ds.length - 1] || bkToday() } }).then(function (d) { return d; }, function () { return { entries: [], failed: true }; })
     .then(function (d) { if (BK.lt.r === me) BK.lt.day = d; BK.lt.dayP = null; }));
 }
+/** the opened entry, in place: its journal's Dr / Cr lines (the ledger you are in is bold) and ONE quiet line of the facts no visible column already shows */
 function bkLgNext(l, c) {
-  var e = bkLgEntry(l);
+  var e = bkLgEntry(l), own = !!(BK.lt.sel && BK.lt.sel.party);
   if (!e) return '<div data-testid="stmt-lines-' + l._ix + '" style="color:var(--grey);font-size:var(--fs-1)">' + esc(tx('The journal lines of this entry are not on this page.')) + '</div>';
-  return bkDvNext(e, c, null, !!(BK.lt.sel && BK.lt.sel.party));   /* on a party's own ledger the party is said once, in the title */
+  var shown = []; try { shown = (BK.lt.api && BK.lt.api.state().cols) || []; } catch (_) { shown = []; }
+  var def = bkLgKind() === 'control' ? ['date', 'party', 'what'] : ['date', 'what', 'bal'], on = function (k) { return (shown.length ? shown : def).indexOf(k) >= 0; }, s = l.source || {}, facts = [];
+  if (!on('entry') && (l.entry_no || l.ref)) facts.push(esc(tx('Entry')) + ' <span class="mono">' + esc(l.entry_no || l.ref) + '</span>');
+  if (!on('tender') && s.how) facts.push(esc(tx(s.how)));
+  if (!on('counter') && s.counter) facts.push(esc(counterWord(s.counter)));
+  if (!on('person') && s.by) facts.push(bkRungPart(s));
+  return bkDvNext(e, c, true, own, BK.lt.sel && BK.lt.sel.code) + (facts.length ? '<div class="lg-facts" data-testid="lg-facts-' + l._ix + '">' + facts.map(function (f) { return '<span>' + f + '</span>'; }).join('') + '</div>' : '');
 }
-/** the ledger's right-hand pane: balance carried at the top, then the entries — and for a control account both figures that must agree */
-function bkLtEntriesPaint() {
-  var out = document.getElementById('lg_out'), r = BK.lt.r, sel = BK.lt.sel; if (!out || !r || !sel) return;
-  var c = r.currency || BK.duesCur, ctrl = !sel.party && BK_CTRL[sel.code], top;
-  /* ⭐ ONE line (2026-10-03: the closing was shown three times with changing signs): opening · closing in Dr / Cr, and for a control account whether its parties agree.
-     Every figure is the server's; the one check (the parties' sum against the ledger's closing) is the page's only sum. */
-  top = '<div class="bkdv-count" data-testid="lg-sum" style="display:flex;gap:6px 14px;flex-wrap:wrap;margin:4px 0 8px"><span>' + esc(tx('Opening')) + ' <b data-testid="stmt-opening">' + esc(bkDrCr(r.opening_minor, c)) + '</b></span> '
-    + '<span>' + esc(tx('Closing')) + ' <b data-testid="stmt-closing">' + esc(bkDrCr(r.closing_minor, c)) + '</b></span> ';
-  if (ctrl) {
-    var total = bkLtParties(sel.code).reduce(function (a, p) { return a + Number(p.balance_minor || 0); }, 0), closing = Number(r.closing_minor || 0);
-    top += total === closing ? '<span data-testid="lg-parties" style="color:var(--ok-2)">' + esc(tx('✓ parties agree')) + '</span>'
-      : '<span data-testid="lg-parties-diff" style="color:var(--warn-2)">' + esc(txf('parties differ by {d}', { d: bkMoney(Math.abs(total - closing), c) })) + '</span>';
+/** the tree's three behaviours — click · keyboard · find box · fold · resize — bound ONCE on the pane that holds them */
+function bkLtBind(root) {
+  root.addEventListener('click', function (ev) {
+    var t = ev.target.closest('[data-tn]'), a = ev.target.closest('[data-lt]');
+    if (t && root.contains(t)) {
+      var id = t.getAttribute('data-tn'), k = id.charAt(0), v = id.slice(2), exp = t.getAttribute('aria-expanded');
+      if (k === 'B' || k === 'G') { bkLtSet(id, !bkLtOpenNow(id, true)); bkLtTreePaint(id); return; }
+      if (k === 'L') {
+        if (exp != null && ev.target.closest('.tw')) { bkLtSet(id, exp !== 'true'); bkLtTreePaint(id); return; }
+        if (BK_CTRL[v]) bkLtPickCtrl(v); else bkLtPick(v);
+        bkLtFocus(id); return;
+      }
+      if (k === 'P') { bkLtPickParty(v, t.getAttribute('data-ctrl')); bkLtFocus(id); return; }
+    }
+    if (!a) return;
+    var d = a.getAttribute('data-lt');
+    if (d === 'clear') { BK.lt.tq = ''; var q = document.getElementById('lt_q'); if (q) { q.value = ''; q.focus(); } bkLtTreePaint(); return; }
+    if (d === 'fold') { if (bkLtOverlay()) BK.lt.over = false; else { BK.lt.folded = true; bkLtPrefsSave(); } bkLtFoldPaint(); var u = document.querySelector('[data-lt="unfold"]'); if (u) u.focus(); return; }
+    if (d === 'unfold') { if (bkLtOverlay()) BK.lt.over = true; else { BK.lt.folded = false; bkLtPrefsSave(); } bkLtFoldPaint(); var q2 = document.getElementById('lt_q'); if (q2) q2.focus(); return; }
+    if (d === 'back') { bkLtBack(); return; }
+    if (d === 'statement') { bkLgStatement(); return; }
+  });
+  root.addEventListener('input', function (ev) { if (ev.target.id === 'lt_q') { BK.lt.tq = ev.target.value; bkLtTreePaint(); } });
+  root.addEventListener('keydown', function (ev) {
+    var t = ev.target;
+    if (t.id === 'lt_q') {
+      if (ev.key === 'Escape' && BK.lt.tq) { ev.preventDefault(); BK.lt.tq = ''; t.value = ''; bkLtTreePaint(); return; }
+      if (ev.key === 'ArrowDown') { ev.preventDefault(); var f = document.querySelector('#lt_tree .tn'); if (f) bkLtFocus(f.getAttribute('data-tn')); return; }
+    }
+    if (t.getAttribute && t.getAttribute('data-tn')) {                       /* ↑ ↓ move · → open / step in · ← close / step out · Enter opens · Home / End jump */
+      var all = Array.prototype.slice.call(document.querySelectorAll('#lt_tree .tn')), i = all.indexOf(t), exp = t.getAttribute('aria-expanded'), lvl = +t.getAttribute('aria-level'), id = t.getAttribute('data-tn');
+      if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') { ev.preventDefault(); var nx = all[i + (ev.key === 'ArrowDown' ? 1 : -1)]; if (nx) bkLtFocus(nx.getAttribute('data-tn')); return; }
+      if (ev.key === 'ArrowRight') { ev.preventDefault(); if (exp === 'false') { bkLtSet(id, true); bkLtTreePaint(id); } else if (exp === 'true' && all[i + 1]) bkLtFocus(all[i + 1].getAttribute('data-tn')); return; }
+      if (ev.key === 'ArrowLeft') { ev.preventDefault(); if (exp === 'true') { bkLtSet(id, false); bkLtTreePaint(id); } else { for (var j = i - 1; j >= 0; j--) { if (+all[j].getAttribute('aria-level') < lvl) { bkLtFocus(all[j].getAttribute('data-tn')); break; } } } return; }
+      if (ev.key === 'Home') { ev.preventDefault(); bkLtFocus(all[0].getAttribute('data-tn')); return; }
+      if (ev.key === 'End') { ev.preventDefault(); bkLtFocus(all[all.length - 1].getAttribute('data-tn')); return; }
+      if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); t.click(); return; }
+    }
+    if (ev.key === 'Escape' && BK.lt.over) { BK.lt.over = false; bkLtFoldPaint(); var u = document.querySelector('[data-lt="unfold"]'); if (u) u.focus(); return; }
+    if (t.id === 'lt_rz' && (ev.key === 'ArrowLeft' || ev.key === 'ArrowRight')) { ev.preventDefault(); bkLtWidth(BK.lt.w + (ev.key === 'ArrowRight' ? 16 : -16)); }
+  });
+  var rz = root.querySelector('#lt_rz'), drag = null;
+  if (rz) {
+    rz.addEventListener('pointerdown', function (ev) { ev.preventDefault(); drag = { x: ev.clientX, w: BK.lt.w }; rz.classList.add('drag'); try { rz.setPointerCapture(ev.pointerId); } catch (_) {} });
+    rz.addEventListener('pointermove', function (ev) { if (drag) bkLtWidth(drag.w + (ev.clientX - drag.x), true); });
+    var end = function () { if (!drag) return; drag = null; rz.classList.remove('drag'); bkLtPrefsSave(); };
+    rz.addEventListener('pointerup', end); rz.addEventListener('pointercancel', end);
   }
-  out.innerHTML = top + '</div>' + ((r.lines || []).length || !sel.party ? '<div id="lg_list" data-testid="ledger-list"></div>' : emptyState('📒', tx('No entries in these dates'), ''));
-  if ((r.lines || []).length || !sel.party) bkLgMount(document.getElementById('lg_list'), r);
+}
+function bkLtWidth(w, quiet) {
+  BK.lt.w = Math.max(240, Math.min(520, Math.round(w)));
+  var el = document.getElementById('bk_lt'); if (el) el.style.setProperty('--lt-w', BK.lt.w + 'px');
+  var rz = document.getElementById('lt_rz'); if (rz) rz.setAttribute('aria-valuenow', String(BK.lt.w));
+  if (!quiet) bkLtPrefsSave();
+}
+function bkLtFoldPaint() {
+  var el = document.getElementById('bk_lt'); if (!el) return;
+  el.classList.toggle('folded', bkLtFolded() && !!BK.lt.sel);
+  if (BK.lt.api) BK.lt.api.refresh();   /* the title row's ☰ Ledgers appears / goes with the fold */
+}
+/** Statement, from a party's ledger (designer extra #5): the API has no "send the statement" route yet, so this opens the party's own statement view — CB CRM's party record, whose Ledger section already carries it */
+function bkLgStatement() {
+  var s = BK.lt.sel; if (!s || !s.party) return;
+  var d = BK.dues && BK.dues[s.party], key = (d && d.party_no) || s.party;
+  try { window.open('/crm.html#/party/' + encodeURIComponent(key), '_blank', 'noopener'); } catch (_) {}
+}
+/** the filters' options are the values the rows really carry — read when the ledger arrives, never a list the page invents */
+function bkLgFilters() {
+  var kind = bkLgKind(), parties = kind === 'control' && BK.lt.sel ? bkLtParties(BK.lt.sel.code) : [], fl = [];
+  var seen = function (f) { var s = []; ((BK.lt.r && BK.lt.r.lines) || []).forEach(function (l) { var v = f(l); if (v && s.indexOf(v) < 0) s.push(v); }); return s.sort(); };
+  if (kind === 'control') fl.push({ key: 'party', label: tx('Party'), all: tx('Party'), match: function (l, v) { return v === BK_NO_PARTY ? (!l.party_id && !l.party_name) : bkPartyLabel(l.party_id, l.party_name) === v; },
+    options: parties.map(function (p) { return bkPartyLabel(p.party_id, p.name); }).concat([BK_NO_PARTY]).map(function (v) { return { v: v, label: v === BK_NO_PARTY ? tx(BK_NO_PARTY) : v }; }) });
+  fl.push({ key: 'tender', label: tx('Tender'), all: tx('Tender'), match: function (l, v) { return (l.source || {}).how === v; }, options: seen(function (l) { return (l.source || {}).how; }).map(function (v) { return { v: v, label: tx(v) }; }) },
+    { key: 'counter', label: tx('Counter'), all: tx('Counter'), match: function (l, v) { return (l.source || {}).counter === v; }, options: seen(function (l) { return (l.source || {}).counter; }).map(function (v) { return { v: v, label: tx('Counter') + ' ' + v }; }) },
+    { key: 'person', label: tx('Rung by'), all: tx('Rung by'), match: function (l, v) { return (l.source || {}).by === v; }, options: seen(function (l) { return (l.source || {}).by; }).map(function (v) { return { v: v, label: v }; }) });
+  return fl;
+}
+/** the last ledger this person had open comes back (on a wide page; a phone opens on the tree) — only if it is still on the chart */
+function bkLtRestore() {
+  var l = BK.lt.last; if (!l || BK.lt.sel || bkLtNarrow()) return;
+  if (!bkLtAcct(l.code)) return;
+  if (l.party && !(BK.dues && BK.dues[l.party])) return;
+  BK.lt.open['B:' + bkLtBand(l.code)] = true;
+  var a = bkLtAcct(l.code), band = (BK.lt.model || []).filter(function (b) { return b.id === bkLtBand(l.code); })[0];
+  if (band && !BK_CTRL[l.code]) band.groups.forEach(function (g, gi) { if (g.accts.indexOf(a) >= 0) BK.lt.open['G:' + band.id + '/' + gi] = true; });
+  if (l.party) { BK.lt.open['L:' + l.code] = true; bkLtOpen({ code: l.code, party: l.party }); } else bkLtOpen({ code: l.code });
 }
 async function bkLedgers(body) {
   try {
     var rr = await Promise.all([api('booksAccounts'), bkBalances().catch(function () { return null; }), booksDuesLoad(true)]);
-    BK.lt.model = bkLtModel((rr[0] && rr[0].accounts) || []); BK.lt.bal = rr[1];
-    listCtl('ledgers', { rows: function () { return []; }, text: function () { return ''; }, repaint: bkLtTreePaint });
-    var search = '<div data-testid="lt-search">' + listCtlToolbarHTML('ledgers') + '</div>';
-    body.innerHTML = '<div style="height:100%;min-height:60vh">' + _folderPanes(search + '<div id="lt_tree" data-testid="lt-tree">' + bkLtTreeHTML() + '</div>', bkLtPaneHTML(), { id: 'bk_lt', cls: BK.lt.sel ? 'has-sel' : '', treeCls: 'lt-tree', paneCls: 'lt-pane', paneId: 'lt_pane' }) + '</div>';
-    if (BK.lt.sel) bkLtLoad();
+    bkLtPrefsRead();
+    BK.lt.model = bkLtModel((rr[0] && rr[0].accounts) || []); BK.lt.bal = rr[1]; BK.lt.api = null;
+    body.innerHTML = '<div id="bk_lt" class="lt' + (BK.lt.sel ? ' has-sel' : '') + '" data-testid="bk-lt" style="--lt-w:' + BK.lt.w + 'px">'
+      + '<nav class="lt-tree" aria-label="' + esc(tx('All ledgers')) + '"><div class="lt-tools" data-testid="lt-search"><div class="lt-search"><span aria-hidden="true">🔍</span><input id="lt_q" data-testid="lt-find" type="search" autocomplete="off" placeholder="' + esc(tx('Find a ledger or party')) + '" aria-label="' + esc(tx('Find a ledger or party')) + '" value="' + esc(BK.lt.tq || '') + '"></div>'
+      + '<button type="button" class="lt-btn lt-ico" data-lt="fold" data-testid="lt-fold" title="' + esc(tx('Hide this list')) + '" aria-label="' + esc(tx('Hide the ledger list')) + '">⟨</button></div>'
+      + '<div id="lt_tree" class="lt-list" data-testid="lt-tree" role="tree" aria-label="' + esc(tx('Ledgers by band')) + '"></div></nav>'
+      + '<button type="button" class="lt-rz" id="lt_rz" role="separator" aria-orientation="vertical" aria-valuemin="240" aria-valuemax="520" aria-valuenow="' + BK.lt.w + '" aria-label="' + esc(tx('Resize the ledger list (arrow keys)')) + '" title="' + esc(tx('Drag to resize')) + '"></button>'
+      + '<main class="lt-pane" id="lt_pane">' + bkLtPaneHTML() + '</main></div>';
+    var root = document.getElementById('bk_lt');
+    bkLtBind(root); bkLtTreePaint();
+    if (typeof ResizeObserver !== 'undefined') { var last = bkLtNarrow(); try { new ResizeObserver(function () { var n = bkLtNarrow(); if (n !== last) { last = n; bkLtTreePaint(); if (BK.lt.api) BK.lt.api.refresh(); } }).observe(root); } catch (_) {} }
+    var s0 = BK.lt.sel; BK.lt.sel = null;
+    if (s0 && !bkLtNarrow()) bkLtOpen(s0.party ? { code: s0.code, party: s0.party } : { code: s0.code }); else if (!s0) bkLtRestore();
+    if (typeof CBKural !== 'undefined' && !BK.lt.sel) CBKural.set('accounts');
   } catch (e) { body.innerHTML = bkErr(e); }
 }
 async function bkTB(body) {
