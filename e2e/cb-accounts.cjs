@@ -115,10 +115,10 @@ async function route(S, r) {
     if (p === '/api/books/health') { if (S.healthStatus) return J(r, S.healthStatus, { error: 'down' }); return J(r, 200, books.health({ waiting: S.waiting.map((w) => books.waitingRow({ id: w.id, chit_id: w.chit_id, ref: w.ref, reason: w.why, tries: w.tries, since: w.since })) })); }
     if (p === '/api/books/accounts' && m === 'GET') return J(r, 200, { accounts: S.accounts.map((a) => books.accountRow(Object.assign({ account_id: 'acc-' + a.code }, a))) });
     if (p === '/api/books/trial-balance') { S.last = u.searchParams.get('asOf'); return J(r, 200, books.trialBalance(S.tb, { total_dr_minor: 1940000, total_cr_minor: 1840000, balanced: false })); }
-    if ((x = p.match(/^\/api\/books\/party\/([^/]+)\/statement$/))) { const pl = PARTY_LINES[x[1]] || []; return J(r, 200, books.statement(x[1], Object.assign({ opening_minor: 0, closing_minor: pl.length ? pl[pl.length - 1].running_minor : 0, lines: pl.map((l) => ({ date: l.date, what: l.what, ref: l.ref, source_chit_id: l.source_chit_id, source: l.source, dr_minor: l.dr_minor, cr_minor: l.cr_minor, running_minor: l.running_minor })) }, S.agreed ? { agreed_to: S.agreed } : {}))); }   /* agreed_to: a field the API does not send yet — only the "when it does" test serves it */
+    if ((x = p.match(/^\/api\/books\/party\/([^/]+)\/statement$/))) { const pl = PARTY_LINES[x[1]] || []; return J(r, 200, books.statement(x[1], { opening_minor: 0, closing_minor: pl.length ? pl[pl.length - 1].running_minor : 0, lines: pl.map((l) => ({ date: l.date, what: l.what, ref: l.ref, source_chit_id: l.source_chit_id, source: l.source, dr_minor: l.dr_minor, cr_minor: l.cr_minor, running_minor: l.running_minor })) })); }
     if (p === '/api/books/ledger/1500') return J(r, 200, books.ledger('1500', 'Bank', [], { opening_minor: 500000, closing_minor: 500000 }));
     if (p === '/api/books/ledger/6010') return J(r, 200, books.ledger('6010', 'Rent', [{ date: '2026-09-03', what: 'Expense', ref: 'JV/2026-27/000005', source_chit_id: 'x1', source: { kind: 'expense', ref: 'C2/26-27/0003', chit_id: 'x1' }, dr_minor: 100000, cr_minor: 0, running_minor: 100000 }], { closing_minor: 100000 }));
-    if ((x = p.match(/^\/api\/books\/ledger\/([^/]+)$/)) && CONTROL[x[1]]) return J(r, 200, Object.assign({}, CONTROL[x[1]], { lines: CONTROL[x[1]].lines.concat((S.extra && S.extra[x[1]]) || []) }, S.closing && S.closing[x[1]] != null ? { closing_minor: S.closing[x[1]] } : {}));
+    if ((x = p.match(/^\/api\/books\/ledger\/([^/]+)$/)) && CONTROL[x[1]]) return J(r, 200, Object.assign({}, CONTROL[x[1]], { lines: CONTROL[x[1]].lines.concat(((S.extra && S.extra[x[1]]) || []).map((l) => Object.assign({ doc_date: l.date }, l))) }, S.closing && S.closing[x[1]] != null ? { closing_minor: S.closing[x[1]] } : {}));
     if ((x = p.match(/^\/api\/books\/ledger\/([^/]+)$/))) return J(r, 200, books.ledger(x[1], 'Cash', [{ date: '2026-09-02', what: 'Sale', ref: 'JV/2026-27/000001', source_chit_id: null, source: null, dr_minor: 1240000, cr_minor: 0, running_minor: 1240000 }], { closing_minor: 1240000 }));
     if (p === '/api/books/daybook') return J(r, 200, books.daybook(JOURNAL.concat([{ entry_id: 'e1', entry_no: 'JV/2026-27/000001', posting_date: TODAY, doc_date: TODAY, event_type: 'walkin_day', source_chit_id: null, reverses_entry_id: null, narration: 'Walk-in sales',
       source: books.source({ kind: 'day', counter: 'C1', count: 11, how: 'Cash', split: [{ how: 'Cash', amount_minor: 124000 }] }), lines: [{ code: '1400', name: 'Cash', party_id: null, party_name: null, dr_minor: 124000, cr_minor: 0, counter: 'C1', rate: null }, { code: '4000', name: 'Sales', party_id: null, party_name: null, dr_minor: 0, cr_minor: 124000, counter: 'C1', rate: null }] }])));
@@ -387,7 +387,7 @@ async function route(S, r) {
     let rt = await stmtText(), pc = await partyCells();
     ok(rt.length === 2 && pc.length === 2 && /^P-00002 · Chola Auto Care$/.test(pc[0]) && /^P-00001 · Ravi Stores$/.test(pc[1]), 'every 1300 row leads with its party — newest first, "P-00001 · Ravi Stores" (' + pc.join(' | ') + ')');
     ok(pc.every((t) => t && !/Mayur|Counter/.test(t)), 'no row shows the owner or the counter as its party');
-    ok(rt.every((t) => /^Sale · Bill C2\/26-27\/001[67]$/.test(t)), 'Details is the kind and the bill, once (' + rt[0] + ')');
+    ok(rt.every((t) => /^Sale · Bill C2\/26-27\/001[67]( recorded \d\d \w+)?$/.test(t)), 'Details is the kind and the bill, once (' + rt[0] + ')');
     await p.click('[data-testid="cols-btn-ledger-control"]'); await p.waitForSelector('[data-testid="cols-menu-ledger-control"]');
     const colsOff = await p.$$eval('[data-testid="cols-menu-ledger-control"] input[type=checkbox]', (c) => c.map((x) => x.getAttribute('data-testid').replace('cols-ledger-control-', '') + ':' + (x.checked ? 1 : 0)));
     ok(JSON.stringify(colsOff) === JSON.stringify(['date:1', 'party:1', 'what:1', 'entry:0', 'tender:0', 'counter:0', 'person:0', 'bal:0']) || colsOff.join() === ['date:1', 'party:1', 'what:1', 'bal:0', 'entry:0', 'tender:0', 'counter:0', 'person:0'].join(), 'the gear keeps Balance · Entry no. · Tender · Counter · Rung by (' + colsOff.join(' ') + ')');
@@ -734,11 +734,12 @@ async function route(S, r) {
     ok(/Chola Auto Care/.test(await p.textContent('.cbl-title h1')), 'the last ledger this person had open comes back (Chola Auto Care, a party\'s ledger)');
     ok(await p.locator('[data-testid="lt-band-income"]').getAttribute('aria-expanded') === 'false', 'a band they folded stays folded');
     ok(await p.evaluate(() => Object.keys(localStorage).filter((k) => /^cb_lt\./.test(k)).length === 1), 'remembered on this device under this person\'s own key (the API has no ledgers preference yet — listed in the PR)');
-    /* the agreement date, when the API sends it: a green chip in the head and a ✓ beside the party in the tree */
-    S.agreed = '2026-08-31';
+    /* the agreement date, when the API sends it (it does not yet — the contract lists no `agreed_to`): the page is handed it as the API would, and draws a green chip in the head and a ✓ beside the party in the tree */
     await p.click('[data-testid="lg-party-c1"]'); await p.waitForFunction(() => /Ravi/.test((document.querySelector('.cbl-title h1') || {}).textContent || ''));
+    await p.waitForSelector('[data-testid="stmt-row-0"]', { timeout: 8000 });
+    await p.evaluate(() => { BK.dues[Object.keys(BK.dues)[0]].agreed_to = '2026-08-31'; Object.keys(BK.dues).forEach((k) => { BK.dues[k].agreed_to = '2026-08-31'; }); BK.lt.r.agreed_to = '2026-08-31'; bkLtTreePaint(); BK.lt.api.refresh(); });
     await p.waitForSelector('[data-testid="lg-agreed"]', { timeout: 8000 }).catch(() => {});
-    ok(/Agreed up to 31 Aug 2026/.test((await p.textContent('[data-testid="lg-agreed"]').catch(() => '')) || ''), 'when the API sends the agreement date the head says "✓ Agreed up to 31 Aug 2026"');
+    ok(/Agreed up to 31 Aug 2026/.test((await p.textContent('[data-testid="lg-agreed"]').catch(() => '')) || '') && await p.locator('#lt_tree .ck').count() >= 1, 'when the API sends the agreement date the head says "✓ Agreed up to 31 Aug 2026" and the tree puts a ✓ beside the party');
     await ctx.close();
   }
 
