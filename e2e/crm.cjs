@@ -529,6 +529,10 @@ async function route(S, r) {
     await homeReady(p);
     const heads = await p.$$eval('#crm_list .cbl-hc', (h) => h.map((x) => x.innerText.replace(/[▲▼⇅]/g, '').trim()));
     ok(heads.indexOf('DUES') < 0 && JSON.stringify(heads) === JSON.stringify(['PARTY', 'LAST ACTIVITY', 'NEXT FOLLOW-UP']), 'Ledger off: no Dues column and no blank one (' + heads.join(' · ') + ')');
+    /* the Columns popover does not OFFER Dues either (the default set alone would let a Dues column slip back in through the picker) */
+    await p.click('[data-testid="cols-btn-crm-parties"]');
+    ok(await p.locator('.cbl-colrow').count() > 0 && (await p.locator('.cbl-colrow').allInnerTexts()).every((x) => !/Dues/i.test(x)), 'Ledger off: the Columns picker offers no Dues');
+    await p.keyboard.press('Escape');
     ok(await p.locator('[data-testid="crm-alert-dues"]').count() === 0 && await p.locator('[data-testid="crm-alert-followups"]').count() === 1, 'Ledger off: the late-dues alert is gone, the follow-up one stays');
     ok(await p.locator('[data-testid^="party-due-"]').count() === 0, 'Ledger off: no dues chip anywhere');
     await ctx.close();
