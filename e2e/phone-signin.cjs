@@ -135,6 +135,8 @@ async function walk(b, WEB, tag, dev, reg, opts) {
   const ctx = await b.newContext(dev);
   /* ⚠️ the ONLY thing planted: which ChitBridge to talk to. No key, no counter number, no person — a fresh device. */
   await ctx.addInitScript((a) => { try { if (!localStorage.getItem('cb_till_api')) localStorage.setItem('cb_till_api', a); } catch (_) {} }, API);
+  /* ⚠️ opts.staleKey: the phone already holds a key the shop REFUSES (2026-10-04, Athi's phone) — planted once, never over a fresh one */
+  if (opts.staleKey) await ctx.addInitScript((k) => { try { if (!localStorage.getItem('cb_till_key')) localStorage.setItem('cb_till_key', k); } catch (_) {} }, opts.staleKey);
   const p = await ctx.newPage();
   const errs = [];
   p.on('pageerror', (e) => errs.push(String(e)));
@@ -148,6 +150,14 @@ async function walk(b, WEB, tag, dev, reg, opts) {
   await p.waitForFunction(() => typeof usignOpen === 'function' && typeof becomeShop === 'function', null, { timeout: 30000 });
   await p.waitForTimeout(800);
   res.shots.push(await shot('01-open'));
+
+  /* a refused key shows the "Due to maintenance" banner over the pill — the person presses OK, as Athi did (2026-10-04) */
+  if (opts.staleKey) {
+    await p.waitForSelector('[data-testid="till-flash-x"]', { timeout: 15000 }).catch(() => {});
+    res.flashed = (await p.locator('[data-testid="till-flash"]').innerText().catch(() => '')) || '';
+    if (await p.locator('[data-testid="till-flash-x"]').count()) await tap('[data-testid="till-flash-x"]');
+    await p.waitForTimeout(400);
+  }
 
   /* the door a person sees: the "nobody signed in" pill at the top */
   await tap('[data-testid="till-who"]');
@@ -228,6 +238,7 @@ async function walk(b, WEB, tag, dev, reg, opts) {
     res.counter = await p.evaluate(() => localStorage.getItem('cb_till_id')).catch(() => null);
     res.header = await p.evaluate(() => (document.querySelector('header') || {}).innerText || '').catch(() => '');
     res.took = api.calls.filter((c) => c.u === '/api/till/enrol' && c.b.takeover).length;
+    res.enrols = api.calls.filter((c) => c.u === '/api/till/enrol').length;
     res.reg = api.REG;
     await ctx.close(); api.srv.close();
     return res;
@@ -276,11 +287,16 @@ async function walk(b, WEB, tag, dev, reg, opts) {
   console.log('     stage after the code: ' + n.afterVerify + ' · "' + n.why + '"');
   say('⭐⭐ the phone is signed in, on a counter the shop now has', n.who === 'Athi' && !!n.key && Object.keys(n.reg).length === 1, 'who=' + n.who + ' reg=' + JSON.stringify(n.reg) + ' stuck=' + (n.stuck || '-'));
 
+  console.log('\n── ⚠️⚠️⚠️ A PHONE HOLDING A KEY THE SHOP REFUSES — signs in by the person door (nobody signed in) ' + '─'.repeat(0));
+  const st = await walk(b, WEB, 'stale', PHONE, { C1: { held_by: null } }, { staleKey: 'KEY-OLD' });
+  say('⭐⭐ the sign-in spends the session on a fresh counter key (no Due-to-maintenance loop)', st.enrols >= 1 && st.key === 'KEY-C1', 'enrols=' + st.enrols + ' key=' + st.key + ' stuck=' + (st.stuck || '-') + ' ' + JSON.stringify(st.why));
+  say('and the person is signed in on it', st.who === 'Athi', 'who=' + st.who);
+
   console.log('\n── the first screen of an EMPTY shop, at phone size (for the design note) ' + '─'.repeat(0));
   console.log('     ' + (a.shots.filter((s) => /08-first/.test(s))[0] || '-') + ' · on screen: ' + JSON.stringify((a.firstScreen || {}).buttons || []));
 
-  const errs = [].concat(a.errs, d.errs, h.errs, dh.errs, n.errs);
-  console.log('\nshots: e2e/shots/phone-signin-*.png (' + [a, d, h, dh, n].reduce((s, r) => s + r.shots.length, 0) + ')');
+  const errs = [].concat(a.errs, d.errs, h.errs, dh.errs, n.errs, st.errs);
+  console.log('\nshots: e2e/shots/phone-signin-*.png (' + [a, d, h, dh, n, st].reduce((s, r) => s + r.shots.length, 0) + ')');
   say('no page errors', errs.length === 0, errs.length ? errs.join(' | ').slice(0, 300) : 'none');
   await b.close(); web.close();
   console.log('\n' + (bad ? '✗ ' + bad + ' FAILED\n' : '✓ all good\n'));
