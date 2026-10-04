@@ -3372,7 +3372,7 @@
   <div class="dlgbtns">
     <button onclick="document.getElementById('slipdlg').close()">Close</button>
     <button id="slipshare" data-testid="till-slip-share" onclick="shareSlip()" hidden>Share</button>
-    <!-- ⚠️ shown only when this device can actually print (printerReady()) — a Print button a browser can only
+    <!-- ⭐ Print is always offered (printerReady(), T67 — Athi: share AND print). Formerly hidden on a phone: a Print button a browser can only
          fail to honour is worse than none (T67: "no print or share option" was the honest state, dressed up). -->
     <button id="slipprint" class="pri" onclick="printSlip()">Print</button>
   </div>
@@ -21442,13 +21442,13 @@ function showSlip(bill, m){
   document.getElementById('slipdlg').showModal();
 }
 /**
- * ⭐ A PRINTER A BROWSER CANNOT HONOUR IS WORSE THAN NO BUTTON AT ALL (T67). autoPrint() already asks this
- * exact question before it tries to print silently; the manual Print button now asks it before it offers to.
- * ⚠️ DESKTOP KEEPS ITS SYSTEM PRINT DIALOG — only a phone, which has no PC-style agent program beside it, loses
- * the button when no printer is configured. A desktop browser can still send the slip to the OS print dialog
- * (PDF, a shared printer), which is the PC behaviour this follows.
+ * ⭐ PRINT IS ALWAYS OFFERED — SHARE BESIDE IT (T67, Athi 2026-10-04: "why can't we print from a phone — Bluetooth or
+ * a cable? share and print can be options"). A phone prints through its own print service (window.print → Android
+ * print, which many Bluetooth/USB thermal printers reach through a print plugin or helper app); a direct Bluetooth/USB
+ * "Connect printer" comes later (T67/T70). So the manual button is never hidden — only autoPrint() (silent printing)
+ * still needs the PC program.
  */
-function printerReady(){ return (HOST && HOST.mode === 'agent' && !!HOST.print) || !phoneShape(); }
+function printerReady(){ return true; }
 /** ⭐ ONE PLACE that shows or hides Print and Share on the one slip dialog every kind of slip shares (T67). */
 function slipDocButtons(printOn, shareOn){
   var pr = document.getElementById('slipprint'); if (pr) pr.style.display = printOn ? '' : 'none';

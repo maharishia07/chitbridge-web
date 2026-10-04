@@ -129,10 +129,12 @@ function webServer(){
   await shot('05-receipt');
   const receipt = await p.evaluate(() => ({
     share: !(document.getElementById('slipshare') || {}).hidden,
+    print: (function(){ const b = document.getElementById('slipprint'); return !!b && getComputedStyle(b).display !== 'none'; })(),
     title: (document.getElementById('sliptitle') || {}).textContent || '',
     lastno: window.LASTNO,
   }));
   say('⭐⭐ the receipt shows a Share control', receipt.share, 'slipshare hidden=' + !receipt.share);
+  say('⭐ and Print beside it, on a phone too (Athi: share AND print)', receipt.print, 'slipprint shown=' + receipt.print);
   say('it is the bill just rung', /C1\//.test(receipt.title), '"' + receipt.title + '"');
 
   await p.evaluate(() => { try { document.getElementById('slipdlg').close(); } catch (_) {} });
