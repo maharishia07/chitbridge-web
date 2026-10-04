@@ -6262,6 +6262,8 @@ function refreshFailed(status){
    * maintenance" names nothing the shopkeeper has to interpret, and the button (keyWord(), now "Sign in
    * again") does the same pairAgain() re-sign-in either way — [[feedback-assume-they-cannot-read]].
    */
+  /* ⚠️ a 401/403 here IS the shop refusing this key — remembered, so the next sign-in by EITHER door re-enrols (usignShopMove) */
+  if (status === 401 || status === 403) KEY_OK = false;
   if (status === 401 || status === 403 || !sh)
     return flash('🔧', 'Due to maintenance', keyWord(), function(){ pairAgain(); });
   if (!status)
@@ -24045,7 +24047,13 @@ async function usignVerify(){
  *           the old behaviour, never a new leak, because the server still scopes every call to the key held.
  */
 function usignShopMove(answer){
-  if (!paired() || (USIGN && USIGN.forceEnrol)) return 'pair';
+  /**
+   * ⚠️⚠️ [2026-10-04, a phone] A KEY THE SHOP HAS REFUSED IS NO KEY. Athi signed in through "nobody signed in" (the
+   * person door, no forceEnrol) on a phone holding a refused key: paired() said yes, so this answered 'same', the
+   * session was never spent on /api/till/enrol, and every refresh flashed "Due to maintenance" again — a loop no
+   * sign-in could break. KEY_OK is false once the shop answered 401/403 (refreshFailed, keyCheck): enrol afresh.
+   */
+  if (!paired() || (USIGN && USIGN.forceEnrol) || (typeof KEY_OK !== 'undefined' && KEY_OK === false)) return 'pair';
   var mine = S && S.entity_id;
   var theirs = ((answer && answer.identity) || {}).entity_id || null;
   if (mine && theirs && String(mine) !== String(theirs)) return 'other';
