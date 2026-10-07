@@ -50,13 +50,13 @@ function standIn(reg) {
     calls.push({ m: q.method, u, b });
     const bearer = String(q.headers.authorization || '').replace('Bearer ', '');
     const who = bearer === 'TOKEN-athi' ? PEOPLE.athi : null;
-    if (u === '/api/entities/register') {
+    if (u === '/api/entities/register' || u === '/api/signin/ask') {        /* M06: one handler, the old path an alias */
       const p = PEOPLE[String(b.user_id || b.email || '').trim().toLowerCase()];
       if (!p) return j(400, { error: 'Not found', message: 'Entity not found — check your name, User ID, or email address' });
       issued = p.user_id;                          /* ⚠️ like production: the code is NOT echoed back */
       return j(200, { message: 'Verification code sent to your email', email: 'a***@example.com' });
     }
-    if (u === '/api/entities/verify') {
+    if (u === '/api/entities/verify' || u === '/api/signin/verify') {
       const p = PEOPLE[String(b.user_id || '').trim().toLowerCase()];
       if (!p) return j(400, { error: 'Verification failed', message: 'That User ID is not recognised.' });
       if (issued !== p.user_id || b.otp !== '123456') return j(400, { error: 'Verification failed', message: 'Invalid or expired OTP' });
@@ -87,6 +87,9 @@ function standIn(reg) {
       return j(200, { key, counter: id, took_over: !!b.takeover, shop: { entity_id: 'ent-a', bridge_id: 'CB-A', name: 'Athi Stores' } });
     }
     if (u === '/api/till/snapshot') {
+      /* M08: a person session (Bearer + X-Device-Id) opens the shop with no counter block — the phone numbers under its own label */
+      if (who && q.headers['x-device-id'])
+        return j(200, { at: new Date().toISOString(), entity_id: 'ent-a', shop: { name: 'Athi Stores', bridge_id: 'CB-A' }, staff: [], items: [], till: null });
       const id = keyOf[q.headers['x-api-key']];
       if (!id) return j(401, { message: 'key refused' });
       return j(200, { at: new Date().toISOString(), entity_id: 'ent-a', shop: { name: 'Athi Stores', bridge_id: 'CB-A' },
@@ -235,7 +238,8 @@ async function walk(b, WEB, tag, dev, reg, opts) {
   async function finish() {
     res.who = await p.evaluate(() => (typeof WHO !== 'undefined' && WHO && WHO.name) || null).catch(() => null);
     res.key = await p.evaluate(() => localStorage.getItem('cb_till_key')).catch(() => null);
-    res.counter = await p.evaluate(() => localStorage.getItem('cb_till_id')).catch(() => null);
+    res.person = await p.evaluate(() => { try { return (JSON.parse(localStorage.getItem('cb_till_person') || 'null') || {}).entity_id || null; } catch (_) { return null; } }).catch(() => null);
+    res.counter = await p.evaluate(() => tillId()).catch(() => null);
     res.header = await p.evaluate(() => (document.querySelector('header') || {}).innerText || '').catch(() => '');
     res.took = api.calls.filter((c) => c.u === '/api/till/enrol' && c.b.takeover).length;
     res.enrols = api.calls.filter((c) => c.u === '/api/till/enrol').length;
@@ -262,18 +266,19 @@ async function walk(b, WEB, tag, dev, reg, opts) {
       wa.autocapitalize === 'none' && wa.autocorrect === 'off' && wa.spellcheck === 'false', JSON.stringify(wa));
   say('with the keyboard up, the code box and "Sign in" are still on screen', !!a.fitCode && !a.fitCode.out.length, a.fitCode ? 'off-screen=' + JSON.stringify(a.fitCode.out) : 'no code stage');
   say('the code box brings up the number pad and takes six digits', a.otpAttrs && a.otpAttrs.inputmode === 'numeric' && a.otpAttrs.maxlength === '6', JSON.stringify(a.otpAttrs));
-  say('⭐ user id + 123456 → the phone reloads into the shop, signed in', a.who === 'Athi' && !!a.key, 'who=' + a.who + ' key=' + a.key + ' stuck=' + (a.stuck || '-') + ' "' + a.why + '"');
+  /* ⭐ M08: a phone is a PERSON on a device — it keeps the session, mints no key, claims no counter */
+  say('⭐ user id + 123456 → the phone reloads into the shop, signed in as a person (no key)', a.who === 'Athi' && !a.key && a.person === 'ent-a' && a.enrols === 0, 'who=' + a.who + ' key=' + a.key + ' person=' + a.person + ' enrols=' + a.enrols + ' stuck=' + (a.stuck || '-') + ' "' + a.why + '"');
   say('the counter PIN step fits the phone', !a.fitPin || !a.fitPin.out.length, a.fitPin ? JSON.stringify(a.fitPin.out) : 'not offered');
 
   console.log('\n── the same walk at desktop width, for comparison ' + '─'.repeat(0));
   const d = await walk(b, WEB, 'desk-free', DESK, { C1: { held_by: null } });
-  say('desktop: user id + 123456 → signed in', d.who === 'Athi' && !!d.key, 'who=' + d.who + ' stuck=' + (d.stuck || '-'));
+  say('desktop: user id + 123456 → signed in as a person', d.who === 'Athi' && !d.key && d.person === 'ent-a', 'who=' + d.who + ' stuck=' + (d.stuck || '-'));
 
   console.log('\n── ⚠️⚠️⚠️ A FRESH PHONE, C1 ALREADY OPEN ON THE SHOP PC — the phone must get in WITHOUT knocking the PC off ' + '─'.repeat(0));
   const h = await walk(b, WEB, 'held', PHONE, { C1: { held_by: 'Shop PC' } });
   console.log('     stage after the code: ' + h.afterVerify + ' · "' + String(h.stageText || '').replace(/\s+/g, ' ').slice(0, 160) + '"');
-  say('⭐⭐ the phone is signed in', h.who === 'Athi' && !!h.key, 'who=' + h.who + ' key=' + h.key + ' stuck=' + (h.stuck || '-'));
-  say('⚠️ on a counter number of its own, not C1', !!h.counter && h.counter !== 'C1', 'counter=' + h.counter);
+  say('⭐⭐ the phone is signed in — as a person, with no key and no held/takeover stage', h.who === 'Athi' && !h.key && h.person === 'ent-a' && h.afterVerify === 'reloaded', 'who=' + h.who + ' key=' + h.key + ' person=' + h.person + ' stage=' + h.afterVerify + ' stuck=' + (h.stuck || '-'));
+  say('⚠️ on a bill prefix of its own, not C1', !!h.counter && h.counter !== 'C1' && /^D[0-9A-Z]{3}$/.test(h.counter), 'prefix=' + h.counter);
   say('⚠️ and the shop PC still holds C1 — nothing was taken over', h.took === 0 && h.reg.C1.held_by === 'Shop PC', 'takeovers=' + h.took + ' C1=' + h.reg.C1.held_by);
   say('the held stage fits the phone', !h.fitStopped || !h.fitStopped.out.length, h.fitStopped ? JSON.stringify(h.fitStopped.out) : '-');
   /* ⚠️ NOT ASSERTED, SAID: the header pill shows cb_till_name, which defaults to "Counter 1" on every fresh browser
@@ -285,11 +290,12 @@ async function walk(b, WEB, tag, dev, reg, opts) {
   console.log('\n── ⚠️⚠️ A FRESH PHONE, A SHOP WITH NO COUNTER REGISTERED YET ' + '─'.repeat(0));
   const n = await walk(b, WEB, 'nocounter', PHONE, {});
   console.log('     stage after the code: ' + n.afterVerify + ' · "' + n.why + '"');
-  say('⭐⭐ the phone is signed in, on a counter the shop now has', n.who === 'Athi' && !!n.key && Object.keys(n.reg).length === 1, 'who=' + n.who + ' reg=' + JSON.stringify(n.reg) + ' stuck=' + (n.stuck || '-'));
+  say('⭐⭐ the phone is signed in — and registers no counter at all (a phone claims none)', n.who === 'Athi' && !n.key && n.person === 'ent-a' && Object.keys(n.reg).length === 0, 'who=' + n.who + ' reg=' + JSON.stringify(n.reg) + ' stuck=' + (n.stuck || '-'));
 
   console.log('\n── ⚠️⚠️⚠️ A PHONE HOLDING A KEY THE SHOP REFUSES — signs in by the person door (nobody signed in) ' + '─'.repeat(0));
   const st = await walk(b, WEB, 'stale', PHONE, { C1: { held_by: null } }, { staleKey: 'KEY-OLD' });
-  say('⭐⭐ the sign-in spends the session on a fresh counter key (no Due-to-maintenance loop)', st.enrols >= 1 && st.key === 'KEY-C1', 'enrols=' + st.enrols + ' key=' + st.key + ' stuck=' + (st.stuck || '-') + ' ' + JSON.stringify(st.why));
+  /* ⭐ M08: the sign-in KEEPS a person session; the refused key is left where it is (its store is M10's to move) — the loop is gone */
+  say('⭐⭐ the sign-in keeps a person session — no enrol, no new key, no Due-to-maintenance loop', st.enrols === 0 && st.key === 'KEY-OLD' && st.person === 'ent-a', 'enrols=' + st.enrols + ' key=' + st.key + ' person=' + st.person + ' stuck=' + (st.stuck || '-') + ' ' + JSON.stringify(st.why));
   say('and the person is signed in on it', st.who === 'Athi', 'who=' + st.who);
 
   console.log('\n── the first screen of an EMPTY shop, at phone size (for the design note) ' + '─'.repeat(0));

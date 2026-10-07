@@ -38,8 +38,8 @@ const PEOPLE = {
     if (q.method === 'OPTIONS') { r.writeHead(204, cors); return r.end(); }
     const u = q.url.split('?')[0];
     const b = raw ? JSON.parse(raw) : {};
-    if (u === '/api/entities/register') return j(200, { message: 'sent', dev_otp: '123456' });
-    if (u === '/api/entities/verify') {
+    if ((u === '/api/entities/register' || u === '/api/signin/ask')) return j(200, { message: 'sent', dev_otp: '123456' });
+    if ((u === '/api/entities/verify' || u === '/api/signin/verify')) {
       const p = PEOPLE[b.user_id]; if (!p) return j(404, { message: 'not found' });
       return j(200, { token: 'TOKEN-' + b.user_id, identity: { identity_id: p.identity_id, bridge_id: 'CB-P', display_name: p.display_name,
                       user_id: b.user_id, identity_type: 'actor', entity_id: 'ent-x' } });

@@ -59,22 +59,27 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(70) + '· ' + d 
   });
   say('pairAgain() marks the sign-in as a forced re-enrol', forced.forcedFlag, String(forced.forcedFlag));
   say('so this sign-in DOES change the key ("pair")', forced.move === 'pair', 'move=' + forced.move);
-  let sentBody = null;
-  await p.route('**/api/till/enrol', async (route) => { sentBody = JSON.parse(route.request().postData() || '{}');
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ key: 'freshly-minted-key' }) }); });
+  /**
+   * ⭐⭐⭐ M08 (2026-10-07): a browser no longer trades the session for a key. The forced re-sign-in KEEPS the person
+   * session (cb_till_person) and reloads into the shop it names; /api/till/enrol is never called from a page, and the
+   * old, refused key is LEFT WHERE IT IS beside it (its store is moved by M10, never dropped here).
+   */
+  let enrols = 0;
+  await p.route('**/api/till/enrol', async (route) => { enrols++; await route.fulfill({ status: 410, contentType: 'application/json', body: '{}' }); });
   const nav = p.waitForEvent('load', { timeout: 30000 });
-  await p.evaluate(() => { CloudHost.api = location.origin; becomeShop({ token: 'a-real-token' }); });
+  await p.evaluate(() => { CloudHost.api = location.origin; becomeShop({ token: 'a.' + btoa(JSON.stringify({ jti: 'j1', exp: 1893456000 })) + '.s', idn: { entity_id: 'ent-x', display_name: 'X' }, who: { id: 'xo', name: 'X', entity: 'ent-x' } }); });
   await nav;
   await p.waitForFunction(() => typeof becomeShop === 'function', null, { timeout: 30000 });
-  const after = await p.evaluate(() => localStorage.getItem('cb_till_key'));
-  say('the enrol call is actually made, through the one door', !!sentBody, 'enrol body=' + JSON.stringify(sentBody));
-  say('and the OLD, refused key is replaced by the NEW one — after a reload', after === 'freshly-minted-key', '"' + after + '"');
-  say('the same counter number is asked for again, not a different one', !!(sentBody && typeof sentBody.counter === 'string' && sentBody.counter.length), '"' + (sentBody && sentBody.counter) + '"');
+  const after = await p.evaluate(() => ({ key: localStorage.getItem('cb_till_key'), person: JSON.parse(localStorage.getItem('cb_till_person') || 'null'), store: tillStore() }));
+  say('⭐ no enrol call is made — a browser keeps the person session instead (M08)', enrols === 0, 'enrol calls=' + enrols);
+  say('the session is kept, naming the shop, and the page reloaded into it', !!(after.person && after.person.entity_id === 'ent-x' && after.person.jti === 'j1'), JSON.stringify(after.person && { entity_id: after.person.entity_id, jti: after.person.jti }));
+  say('⚠️ the OLD, refused key is left exactly where it was (its store is M10\'s to move)', after.key === 'old-refused-key', '"' + after.key + '"');
+  say('and the store is now per shop + device, beside the key store', /^cb-till-ent-x-/.test(after.store), after.store);
 
   console.log('\n── ⚠️ AN UNPAIRED DEVICE STILL ENROLS — the FIRST-EVER pairing is not narrowed ' + '─'.repeat(0));
   const firstTime = await p.evaluate(() => {
-    ls.set('cb_till_key', ''); try { localStorage.removeItem('cb_till_key'); } catch (_) {}
-    CloudHost.key = null;
+    ls.set('cb_till_key', ''); try { localStorage.removeItem('cb_till_key'); localStorage.removeItem('cb_till_person'); } catch (_) {}
+    CloudHost.key = null; CloudHost.person = null;   /* M08: nor a person session */
     usignOpen();   /* not forced — a brand-new device has never met a key */
     return { move: usignShopMove({ identity: {} }) };
   });
