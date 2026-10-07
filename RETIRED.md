@@ -8,3 +8,12 @@ history — every removal carries a tag or a commit to restore from.
   green without it) · restore: `git checkout frozen-react-app-2026-10-01 -- src`.
 
 - 2026-10-01 · `public/offer-lab.html` → `public/offer-lab-next.html` · Athi found live: "offer lab opens the previous offer lab, which we have to discontinue — the new offer lab only has to be connected, retire the existing one." · `offer-lab.html` now only forwards to `offer-lab-next.html` (carrying the query string and hash); every real link (the index tile, app.html, cap-catsetup.js, cap-legend.js, combo-lab.html, till.html, conversion-lab.html) already pointed to, or now points to, `offer-lab-next.html` — the Offer Lab built on the real offers engine.
+
+- 2026-10-07 · npm advisories in dev-only build tooling (`tailwindcss` 3.x and its `braces`/`micromatch`/`fast-glob`/`chokidar`
+  chain, `vite` 5 and its `esbuild`/`postcss` chain) → not fixed, listed here · none ship: `tailwindcss` is unused by the app
+  (no Tailwind class in `public/`; the React app under `src/` was retired 2026-10-01), `vite` only builds. The fixes are major
+  bumps (`tailwindcss@4`, `vite@8`) that would touch the build for no runtime gain; `npm audit fix` (non-breaking) was applied.
+  CI (`web-ci` job `scan`) gates `npm audit --omit=dev --audit-level=high`, so a high advisory in anything that ships turns it
+  red; this dev-only set is re-checked by hand. `e2e/` (Playwright toolchain, 9 high, dev-only) is not audited in CI for the
+  same reason · restore/re-check: `npm audit` in the repo root and `e2e/`; drop `tailwindcss`, `autoprefixer` and
+  `tailwind.config.js` when Athi confirms nothing needs them.
