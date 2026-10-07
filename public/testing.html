@@ -842,6 +842,9 @@ carry a question, never a generated answer. — Test Completion Report (ISO/IEC/
     <button id="t_try" onclick="setView('try')"
       title="The engines themselves, on your own input, with no server in between to blame. Nothing here is
 recorded.">Try it</button>
+    <!-- ⭐ b292: read the Summary and the Report for ONE project. "All" is the whole board, as before. -->
+    <span id="pview" style="display:none;margin-inline-start:12px"><label for="f_pview">Project</label>
+      <select id="f_pview" onchange="setProjectView(this.value)" data-testid="project-filter"><option value="">All</option></select></span>
     <span class="tsize"><button onclick="textSize(-1)" title="Smaller text" aria-label="Smaller text">A−</button><button onclick="textSize(1)" title="Bigger text" aria-label="Bigger text">A+</button></span>
   </div>
 </div>
@@ -1002,6 +1005,11 @@ recorded.">Try it</button>
     <option value="t3" title="Claude's own ladder: everything, ~55 min. Athi decides when.">T3 · Claude, everything</option>
   </select>
   <input type="text" id="f_run" placeholder="This sitting, e.g. v2.0 before release" oninput="saveRun()">
+  <!-- ⭐ b292 · Athi, 2026-10-07: "it has to run against a project … so we can group against a sprint or project."
+       Every result tapped or posted from here carries it. Kept on this device, like the tester. -->
+  <label for="f_proj">Project</label>
+  <input type="text" id="f_proj" placeholder="e.g. 2026-10 Stage 1" maxlength="80" oninput="saveProj()" style="max-width:170px"
+    title="The sprint or project these results belong to">
   <label for="f_who">Tester</label>
   <!-- ⚠️ THE ENTITY NAME IS NOT AN ANSWER TO "who tested this". The server always records the identity off
        the token, which cannot be typed in and is the evidence; this is who was at the keyboard, which only
@@ -1127,12 +1135,28 @@ function saveWho(){
   try { if (v) localStorage.setItem('cb_tester', v); else localStorage.removeItem('cb_tester'); } catch (_) {}
 }
 
+/**
+ * ⭐ THE PROJECT (b292) — the sprint or project a result belongs to. Kept per browser like the tester, and sent
+ * with every tap and every posted run. ⚠ Before b292 is run the server records the result WITHOUT it and says so
+ * (project_not_written) — shown once, never swallowed.
+ */
+function proj(){ try { return localStorage.getItem('cb_testproject') || ''; } catch (_) { return ''; } }
+function saveProj(){
+  var v = (document.getElementById('f_proj').value || '').trim().slice(0, 80);
+  try { if (v) localStorage.setItem('cb_testproject', v); else localStorage.removeItem('cb_testproject'); } catch (_) {}
+}
+var PROJ_SAID = false;
+function projectSaid(r){
+  if (r && r.project_not_written && !PROJ_SAID) { PROJ_SAID = true; say('Recorded without the project — projects are not switched on yet.', true); }
+}
+
 function loadRun(){
   try { RUN = JSON.parse(localStorage.getItem('cb_testrun') || 'null'); } catch (_) { RUN = null; }
   if (!RUN || !RUN.id) RUN = { id: uuid(), label: '', kind: 'manual' };
   document.getElementById('f_run').value = RUN.label || '';
   document.getElementById('f_kind').value = RUN.kind || 'manual';
   document.getElementById('f_who').value = who();
+  document.getElementById('f_proj').value = proj();
 }
 function saveRun(){
   RUN.label = document.getElementById('f_run').value.trim();
@@ -1375,7 +1399,9 @@ async function importResults(input){
         run_kind: kind,
         layer: 'engine',
         run_label: files[i].name.replace(/\.xml$/i, ''),
+        project: proj() || undefined,
       }});
+      projectSaid(r);
       done++; rows += (r.recorded || 0); missed += ((r.unmatched || []).length);
       skipped += (r.skipped || 0); offBoard += ((r.not_on_board || []).length);
     } catch (e) { say('Could not post ' + files[i].name + ': ' + e.message, true); }
@@ -1845,17 +1871,42 @@ function tally(){
   h += '<span class="t pcwrap"><span class="pbar" style="width:120px;display:inline-block;vertical-align:middle">'
      + '<i style="width:' + pc + '%"></i></span> <b>' + pc + '%</b> tested'
      + '<i class="sub" style="margin-inline-start:6px">of ' + testable + ' testable</i></span>';
-  /* ⭐ how many ran NOW — the last run's own count, its time and who ran it (RUNS, read with the summary) */
+  /* ⭐ how many ran NOW — the last run's own count, its time and who ran it (RUNS, read with the summary).
+     ⭐ b292: RUNS is read with the Project filter, so with a project picked this is THAT project's last run. */
   var lr = lastRun();
-  h += '<span class="t" data-testid="ran-last"' + (lr && lr.run_label ? ' title="' + esc(lr.run_label) + '"' : '') + '>'
+  var tip = [lr && lr.run_label, PVIEW && ('Project: ' + PVIEW)].filter(Boolean).join(' · ');
+  h += '<span class="t" data-testid="ran-last"' + (tip ? ' title="' + esc(tip) + '"' : '') + '>'
      + (lr ? '<b>' + (Number(lr.total) || 0) + '</b> ran in the last run · '
           + esc(new Date(lr.finished).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }))
           + (lr.testers ? ' · ' + esc(lr.testers) : '')
-        : 'No run yet') + '</span>';
+        : (PVIEW ? 'No run in this project' : 'No run yet')) + '</span>';
   document.getElementById('tally').innerHTML = h;
 }
 
 var VIEW = 'cases', COVER = [], RUNS = [];
+/**
+ * ⭐ b292 · THE PROJECT FILTER. PVIEW '' is the whole board. It narrows the Summary (/coverage, /runs), the Report
+ * and the "ran in the last run" header — all read with ?project=. PROJECTS is every project the board has seen,
+ * from /runs, so the list does not shrink to the one you picked.
+ */
+var PVIEW = '', PROJECTS = [];
+function pq(){ return PVIEW ? '?project=' + encodeURIComponent(PVIEW) : ''; }
+function fillProjects(){
+  var s = document.getElementById('f_pview');
+  if (!s) return;
+  var h = '<option value="">All</option>';
+  var seen = PROJECTS.map(function (p) { return p.project; });
+  if (PVIEW && seen.indexOf(PVIEW) < 0) seen.unshift(PVIEW);
+  seen.forEach(function (p) { h += '<option value="' + esc(p) + '">' + esc(p) + '</option>'; });
+  s.innerHTML = h; s.value = PVIEW;
+  s.disabled = !seen.length;
+  s.title = seen.length ? 'Show one project' : 'No project recorded yet';
+}
+async function setProjectView(v){
+  PVIEW = v || '';
+  await loadSummary();
+  repaintCurrent();
+}
 
 /**
  * ⭐⭐ THE SUMMARY. Two questions, and they are not the same one:
@@ -1919,6 +1970,8 @@ function setView(v){
   /* ⭐ the case tally counts CASES — on the three document tabs it describes a tab you are not on */
   var tally = document.getElementById('tally');
   if (tally) tally.style.display = (v === 'cases' || v === 'summary') ? '' : 'none';
+  var pv = document.getElementById('pview');
+  if (pv) pv.style.display = (v === 'summary' || v === 'report') ? '' : 'none';
   document.getElementById('t_rep').className = (v === 'report') ? 'on' : '';
   document.getElementById('t_rel').className = (v === 'reliability') ? 'on' : '';
   document.getElementById('t_try').className = (v === 'try') ? 'on' : '';
@@ -1928,8 +1981,10 @@ function setView(v){
 
 async function loadSummary(){
   try {
-    var a = await call('/api/testing/coverage');
-    var b = await call('/api/testing/runs');
+    var a = await call('/api/testing/coverage' + pq());
+    var b = await call('/api/testing/runs' + pq());
+    PROJECTS = (b && b.projects) || [];
+    fillProjects();
     COVER = (a && a.areas) || [];
     /* ⚠️ on window rather than a local, because chartsHTML() is called from a repaint that does not carry it */
     window.__cover_groups = (a && a.groups) || {};
@@ -2389,7 +2444,7 @@ function reportVerdictHTML(r) {
 async function paintReport(){
   document.getElementById('main').innerHTML = '<div class="say">Building the report…</div>';
   var r;
-  try { r = await call('/api/testing/report'); }
+  try { r = await call('/api/testing/report' + pq()); }
   catch (e) { say('Could not build the report: ' + e.message, true); return; }
 
   /**
@@ -4467,9 +4522,10 @@ async function mark(k, status){
   saveRun();
   try {
     var r = await call('/api/testing/results', { method:'POST', body: {
-      run_id: RUN.id, run_label: RUN.label || null,
+      run_id: RUN.id, run_label: RUN.label || null, project: proj() || undefined,
       results: [{ case_key: k, module_key: c.module_key, status: status, tester_name: who() || undefined,
                   run_kind: RUN.kind || 'manual', layer: c.layer || null, note: note || null }] }});
+    projectSaid(r);
     /* ⚠️ take the row the SERVER wrote, not the one we hoped it would — the time and the tester come from it */
     var saved = (r.results || [])[0];
     LAST[k] = Object.assign({ case_key:k, status:status, note:note, run_kind:RUN.kind,
