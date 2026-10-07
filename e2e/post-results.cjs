@@ -34,6 +34,10 @@
  *   --file <path>    absolute, or relative to this folder as before
  *   --warn           CI mode: anything that stops the post is a GitHub ::warning:: naming why (the HTTP status),
  *                    and the exit is 0 — a board that is down must never turn a green build red
+ *
+ * ⭐ THE PROJECT (b292, 2026-10-07) — the sprint or project the run belongs to, so the board can be read per sprint:
+ *   --project "2026-10 build · Stage 1"   or env CB_BOARD_PROJECT. Empty = no project. The API's CI passes the repo
+ *   VARIABLE vars.CB_BOARD_PROJECT. Before b292 is run the server records the run WITHOUT it and says so — printed.
  */
 'use strict';
 const fs = require('fs');
@@ -48,6 +52,8 @@ const WARN = args.indexOf('--warn') >= 0;
 const token = args.filter((a, i) => !a.startsWith('--') && !(i > 0 && args[i - 1].startsWith('--') && args[i - 1] !== '--warn'))[0]
   || process.env.CB_BOARD_TOKEN;
 const KEYS = flag('keys', 'file');
+/* ⚠ the flag wins even when it is empty — CI passes --project "" when the variable is unset, and that means none */
+const PROJECT = String(flag('project', process.env.CB_BOARD_PROJECT || '') || '').trim() || undefined;
 
 /** stop: an error and exit 1 for a person; a ::warning:: and exit 0 under --warn */
 function stop(lines) {
@@ -58,7 +64,7 @@ function stop(lines) {
 
 if (!token) {
   stop(['no token (CB_BOARD_TOKEN is empty)',
-    'node post-results.cjs <token> [--kind t1] [--layer web] [--label "nightly"] [--keys file|bracket|name] [--file x.xml] [--warn]',
+    'node post-results.cjs <token> [--kind t1] [--layer web] [--label "nightly"] [--keys file|bracket|name] [--file x.xml] [--project "sprint"] [--warn]',
     'Token: the argument, or CB_BOARD_TOKEN — a key with the testing scope, or JSON.parse(localStorage.cb_sess).token']);
 }
 
@@ -92,6 +98,7 @@ if (!flag('file') && fs.existsSync(lastRun)) {
       layer: flag('layer', 'web'),
       run_label: flag('label', 'playwright ' + new Date().toISOString().slice(0, 16).replace('T', ' ')),
       build: flag('build', null),
+      project: PROJECT,
     }),
   });
   const j = await r.json().catch(() => ({}));
@@ -99,7 +106,10 @@ if (!flag('file') && fs.existsSync(lastRun)) {
 
   console.log('\n  recorded  ' + j.recorded + ' case(s)'
     + (j.folded ? '   (' + (j.recorded + (j.skipped || 0) + j.folded) + ' tests, one result per spec file)' : '')
-    + (j.skipped ? '   (' + j.skipped + ' already on this run)' : ''));
+    + (j.skipped ? '   (' + j.skipped + ' already on this run)' : '')
+    + (j.project ? '   project: ' + j.project : ''));
+  /* ⚠ asked for a project and the server could not write it (b292 not run yet) — said, in CI as a warning */
+  if (j.project_not_written) console.log((WARN ? '::warning::' : '\n  ') + j.project_not_written);
   if ((j.not_on_board || []).length) {
     /* ⚠ recorded, but no case on the board shows it — an untracked spec, or a board not rebuilt since */
     console.log('\n  ' + j.not_on_board.length + ' spec(s) are not cases on the board, so the page cannot show them:');

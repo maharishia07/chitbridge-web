@@ -3,6 +3,8 @@
  * Athi, 2026-10-07: he opened the board and saw 0 results, and nothing said how many tests the latest run touched
  * beside how many cases exist. ⭐ Against a stand-in API (the five reads the page makes on load), two runs: the newer
  * one touched two board cases, the older one a third. Ran must count the newer run only; Done counts both.
+ * ⭐ b292 (2026-10-07): the PROJECT. A Project field beside "This sitting", kept on this device and sent with a tap;
+ * a Project filter on Summary and Report that reads with ?project= — and the header follows it.
  * Run: node e2e/board-ran.cjs   · one headless browser, a static server, no network.
  */
 'use strict';
@@ -36,17 +38,27 @@ const RUNS = [
     r.writeHead(200, { 'content-type': T[path.extname(f)] || 'application/octet-stream' }); fs.createReadStream(f).pipe(r);
   });
   const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*' };
-  const asked = [];
+  const asked = [], full = [], posted = [];
+  /* ⭐ the board has seen two projects; Stage 1's own last run is the OLD one, a single result */
+  const PROJECTS = [{ project: 'Stage 2', runs: 1 }, { project: 'Stage 1', runs: 1 }];
+  const runsFor = (p) => p === 'Stage 1' ? [Object.assign({}, RUNS[1], { project: 'Stage 1' })]
+    : p === 'Stage 2' ? [Object.assign({}, RUNS[0], { project: 'Stage 2' })] : RUNS;
   const api = http.createServer((q, r) => {
     const j = (c, o) => { r.writeHead(c, Object.assign({ 'content-type': 'application/json' }, cors)); r.end(JSON.stringify(o)); };
     if (q.method === 'OPTIONS') { r.writeHead(204, cors); return r.end(); }
     if (!/^Bearer tok/.test(q.headers.authorization || '')) return j(401, { message: 'no token' });
-    const u = q.url.split('?')[0]; asked.push(u);
+    const u = q.url.split('?')[0]; asked.push(u); full.push(q.url);
+    const pj = new URL(q.url, 'http://x').searchParams.get('project');
+    if (q.method === 'POST' && u === '/api/testing/results') {
+      let t = ''; q.on('data', (c) => { t += c; });
+      return q.on('end', () => { const body = JSON.parse(t || '{}'); posted.push(body);
+        j(200, { run_id: body.run_id, project: body.project || null, recorded: 1, results: [] }); });
+    }
     if (u === '/api/testing/cases') return j(200, { cases: CASES, count: CASES.length });
     if (u === '/api/testing/results') return j(200, { results: RESULTS, count: RESULTS.length });
     if (u === '/api/testing/stale') return j(200, { stale: [] });
     if (u === '/api/testing/coverage') return j(200, { areas: [], groups: {} });
-    if (u === '/api/testing/runs') return j(200, { runs: RUNS, count: RUNS.length });
+    if (u === '/api/testing/runs') return j(200, { runs: runsFor(pj), count: runsFor(pj).length, project: pj, projects: PROJECTS });
     return j(404, { message: 'not here' });
   });
   await new Promise((res) => web.listen(0, '127.0.0.1', res));
@@ -95,6 +107,46 @@ const RUNS = [
       'head ' + m.nHead + ' · row ' + m.nRow + ' · foot ' + m.nFoot + ' · tier ' + m.tier);
     fs.mkdirSync(path.join(__dirname, 'shots'), { recursive: true });
     await p.screenshot({ path: path.join(__dirname, 'shots', 'board-ran.png'), fullPage: false }).catch(() => {});
+
+    console.log('\n── ⭐ b292: the Project field, kept on this device, sent with a tap');
+    await p.evaluate(() => { setView('cases'); });
+    const fld = await p.evaluate(() => {
+      const run = document.getElementById('f_run'), f = document.getElementById('f_proj');
+      return { there: !!f, beside: !!(f && run && run.compareDocumentPosition(f) & Node.DOCUMENT_POSITION_FOLLOWING
+        && f.parentElement === run.parentElement), label: (document.querySelector('label[for="f_proj"]') || {}).textContent };
+    });
+    say('a Project field beside "This sitting", labelled', fld.there && fld.beside && fld.label === 'Project', JSON.stringify(fld));
+    await p.fill('#f_proj', '  Stage 1 ');
+    const kept = await p.evaluate(() => localStorage.getItem('cb_testproject'));
+    say('typed → kept on this device, trimmed', kept === 'Stage 1', String(kept));
+    await p.evaluate(() => mark(CASES[3].case_key, 'pass'));
+    for (let i = 0; i < 20 && !posted.length; i++) await p.waitForTimeout(100);
+    say('a tap carries the project', posted.length === 1 && posted[0].project === 'Stage 1', JSON.stringify((posted[0] || {}).project));
+
+    console.log('\n── ⭐ b292: the Project filter — Summary and Report, and the header follows it');
+    await p.evaluate(() => { setView('summary'); });
+    await p.waitForSelector('[data-testid="project-filter"]', { state: 'visible', timeout: 10000 });
+    const opts = await p.$$eval('[data-testid="project-filter"] option', (o) => o.map((x) => x.textContent));
+    say('the projects seen, "All" first', opts.join('|') === 'All|Stage 2|Stage 1', opts.join(' | '));
+    full.length = 0;
+    await p.selectOption('[data-testid="project-filter"]', 'Stage 1');
+    await p.waitForFunction(() => /^1 ran in the last run/.test(document.querySelector('[data-testid="ran-last"]').textContent.trim()), null, { timeout: 10000 }).catch(() => {});
+    const h1 = (await p.textContent('[data-testid="ran-last"]')).replace(/\s+/g, ' ').trim();
+    say('Summary reads with ?project=', full.some((x) => x === '/api/testing/runs?project=Stage%201')
+      && full.some((x) => x === '/api/testing/coverage?project=Stage%201'), full.join(' '));
+    say('the header is Stage 1\'s last run (1), not the board\'s (2)', /^1 ran in the last run · /.test(h1), h1);
+    full.length = 0;
+    await p.evaluate(() => { setView('report'); });
+    for (let i = 0; i < 30 && !full.some((x) => /\/report/.test(x)); i++) await p.waitForTimeout(100);
+    const fv = await p.isVisible('[data-testid="project-filter"]');
+    say('Report shows the filter and reads with it', fv && full.indexOf('/api/testing/report?project=Stage%201') >= 0, full.join(' '));
+    await p.evaluate(() => { setView('cases'); });
+    say('Cases does not show it', !(await p.isVisible('[data-testid="project-filter"]')), 'hidden');
+    await p.evaluate(() => { setView('summary'); });
+    await p.selectOption('[data-testid="project-filter"]', '');
+    await p.waitForFunction(() => /^2 ran in the last run/.test(document.querySelector('[data-testid="ran-last"]').textContent.trim()), null, { timeout: 10000 }).catch(() => {});
+    const h2 = (await p.textContent('[data-testid="ran-last"]')).replace(/\s+/g, ' ').trim();
+    say('All → the whole board again', /^2 ran in the last run · /.test(h2), h2);
 
     console.log('\n── an empty board says so');
     await p.evaluate(() => { RUNS = []; repaintCurrent(); });
