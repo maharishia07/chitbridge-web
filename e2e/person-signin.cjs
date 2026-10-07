@@ -18,6 +18,12 @@
  *   T4  words per code: SESSION_EXPIRED → "Sign in to send 1 bill" (never "maintenance"); signing in again keeps the queue
  *       and the same client_ref; DEVICE_REVOKED → "The shop removed this phone" + what is kept.
  *   T5  the page's own version check reloads ONCE and clears nothing — bills, session and device id survive.
+ *   T6  ⭐⭐⭐ M09 (SPEC PR 9 "T4") OFFLINE FOR DAYS: the counter PIN locks and unlocks the phone with no line; 20 bills
+ *       are taken; the session has EXPIRED meanwhile → "Sign in to send 20 bills" (never "maintenance"); a sign-in by code
+ *       lands all 20 once, same client_refs, every bill stamped till.device_id = this phone and till.by = the person;
+ *       the token issued a day+ ago is RENEWED after the next good snapshot (new jti, old one refused).
+ *   T8  ⭐⭐ M09 (SPEC PR 9 "T5") ONE PERSON, TWO PHONES: two device ids, two prefixes, two stores, two listed sessions;
+ *       each phone's bill lands under its own device; neither signs the other out.
  *
  * Run: node e2e/person-signin.cjs         (ports from the OS; never localhost:3000, never the live site)
  */
@@ -48,6 +54,17 @@ function standIn() {
   const KEYS = { 'KEY-OLD': { counter: 'C2', closed: false }, 'KEY-PC': { counter: 'C1', closed: false } };
   const PEOPLE = { athi: { identity_id: 'ent-a', user_id: 'athi', display_name: 'Athi', identity_type: 'entity', entity_id: 'ent-a', bridge_id: 'CB-A' } };
   let issued = null;
+  const flag = { oldIat: false };                          /* M09 T6: issue the next token as if a day ago, so the page renews it */
+  /** a listed session for this person on this device, as /api/signin/verify and /renew both mint it (M05) */
+  const mint = (p, device_id, surface, iat) => {
+    const jti = crypto.randomUUID();
+    sessions[jti] = { device_id, surface, by: p.identity_id, iat, exp: iat + (surface === 'till' ? 30 : 7) * 86400 };
+    devices[device_id] = devices[device_id] || { first_seen: iat, revoked_at: null, sessions: [] };
+    devices[device_id].sessions.push(jti);
+    const token = b64u({ alg: 'none' }) + '.' + b64u({ identity_id: p.identity_id, identity_type: 'entity', display_name: p.display_name, bridge_id: p.bridge_id,
+                  kind: 'person', jti, device_id, surface, iat, exp: sessions[jti].exp }) + '.sig';
+    return { jti, token };
+  };
   const snap = (till) => ({ at: new Date().toISOString(), entity_id: 'ent-a', shop: { name: 'Athi Stores', bridge_id: 'CB-A', currency: 'INR' },
     staff: [], items: [TEA], offers: [], till });
   const srv = http.createServer(async (q, r) => {
@@ -72,6 +89,8 @@ function standIn() {
       if (String(q.headers['x-device-id'] || '') !== String(p.device_id)) return { err: [401, { error: 'Unauthorised', code: 'DEVICE_MISMATCH', message: 'This sign-in belongs to another device. Sign in on this one.' }] };
       if (devices[p.device_id] && devices[p.device_id].revoked_at) return { err: [401, { error: 'Unauthorised', code: 'DEVICE_REVOKED', message: 'The shop removed this device. Your bills are kept here; ask the owner.' }] };
       if (!sessions[p.jti]) return { err: [401, { error: 'Unauthorised', code: 'SESSION_EXPIRED', message: 'Sign in to continue.' }] };
+      /* M09: a session past its exp is refused exactly like a forgotten one (lib/person-session) */
+      if (Number(sessions[p.jti].exp) <= Math.floor(Date.now() / 1000)) return { err: [401, { error: 'Unauthorised', code: 'SESSION_EXPIRED', message: 'Sign in to continue.' }] };
       return { person: p };
     })();
     if (u === '/api/signin/ask' || u === '/api/entities/register') {
@@ -90,12 +109,7 @@ function standIn() {
       let token;
       if (device_id) {                                       /* M05: a page that names its device gets a LISTED session */
         if (devices[device_id] && devices[device_id].revoked_at) return j(401, { error: 'Unauthorised', code: 'DEVICE_REVOKED', message: 'The shop removed this device.' });
-        const jti = crypto.randomUUID(), surface = b.surface || 'web';
-        sessions[jti] = { device_id, surface, by: p.identity_id, iat: now, exp: now + (surface === 'till' ? 30 : 7) * 86400 };
-        devices[device_id] = devices[device_id] || { first_seen: now, revoked_at: null, sessions: [] };
-        devices[device_id].sessions.push(jti);
-        token = b64u({ alg: 'none' }) + '.' + b64u({ identity_id: p.identity_id, identity_type: 'entity', display_name: p.display_name, bridge_id: p.bridge_id,
-                  kind: 'person', jti, device_id, surface, iat: now, exp: sessions[jti].exp }) + '.sig';
+        token = mint(p, device_id, b.surface || 'web', flag.oldIat ? now - 25 * 3600 : now).token;
       } else token = b64u({ alg: 'none' }) + '.' + b64u({ identity_id: p.identity_id, identity_type: 'entity', iat: now, exp: now + 7 * 86400 }) + '.sig';
       return j(200, { message: 'Verified successfully', token, entity: { identity_id: p.identity_id, bridge_id: p.bridge_id, display_name: p.display_name },
         identity: { identity_id: p.identity_id, user_id: p.user_id, display_name: p.display_name, identity_type: 'entity', entity_id: p.entity_id, bridge_id: p.bridge_id } });
@@ -105,6 +119,14 @@ function standIn() {
     if (u.indexOf('/api/counters') === 0) return j(200, { counters: Object.keys(REG).map((id) => ({ id, state: REG[id].held_by ? 'open' : 'closed' })) });
     if (!who) return j(401, { error: 'Unauthorised', message: 'No token' });
     if (who.err) return j(who.err[0], who.err[1]);
+    /* M09: renew — a new jti on the same device, the old one forgotten (routes/signin.js) */
+    if (u === '/api/signin/renew') {
+      if (!who.person) return j(403, { error: 'Refused', code: 'KEY_CANNOT_SIGN_IN', message: 'A key has no session to renew.' });
+      const old = who.person.jti, s = sessions[old], pp = PEOPLE[Object.keys(PEOPLE).find((k) => PEOPLE[k].identity_id === who.person.identity_id)];
+      const m = mint(pp, s.device_id, s.surface, Math.floor(Date.now() / 1000));
+      delete sessions[old]; devices[s.device_id].sessions = devices[s.device_id].sessions.filter((x) => x !== old);
+      return j(200, { token: m.token, jti: m.jti, exp: sessions[m.jti].exp, device_id: s.device_id, surface: s.surface });
+    }
     if (u === '/api/till/snapshot')
       return j(200, snap(who.key ? { assigned_id: who.counter, counter: who.counter, counter_name: 'Counter ' + who.counter.slice(1), resume_next: 1 } : null));
     if (u === '/api/till/verify') return j(200, { ok: true, shop: 'Athi Stores' });
@@ -123,8 +145,10 @@ function standIn() {
   });
   /* what the shop PC does to the register — a phone never calls these; they happen beside it */
   const pcClaim = (id, from, takeover) => { const c = REG[id] || (REG[id] = {}); if (c.key && takeover) KEYS[c.key].closed = true; c.held_by = from; c.key = 'KEY-' + from.replace(/\s+/g, '').toUpperCase(); KEYS[c.key] = { counter: id, closed: false }; };
-  return { srv, calls, chits, sessions, devices, REG, KEYS, pcClaim,
-           revokeSession: (jti) => { delete sessions[jti]; }, revokeDevice: (d) => { (devices[d] = devices[d] || { sessions: [] }).revoked_at = Date.now(); } };
+  return { srv, calls, chits, sessions, devices, REG, KEYS, pcClaim, flag,
+           revokeSession: (jti) => { delete sessions[jti]; }, revokeDevice: (d) => { (devices[d] = devices[d] || { sessions: [] }).revoked_at = Date.now(); },
+           /** M09: the session reached its exp while the phone was away — still listed, no longer honoured */
+           expireSession: (jti) => { if (sessions[jti]) sessions[jti].exp = Math.floor(Date.now() / 1000) - 1; } };
 }
 
 function webServer(flag) {
@@ -368,9 +392,84 @@ const facts = (p) => p.evaluate(async () => ({
   flag.laterPage = false;
   await shot(p, 't5-after-version-check');
 
+  /* ── T6 ───────────────────────────────────────────────────────────────────────────────────────────────────── */
+  console.log('\n── T6 ⭐⭐⭐ M09 · OFFLINE FOR DAYS — the counter PIN unlocks with no line, 20 bills wait, the session expires, one sign-in sends them all once; a day-old token is renewed');
+  await p.evaluate(() => { try { usignClose(); } catch (_) {} Array.prototype.slice.call(document.querySelectorAll('dialog[open]')).forEach(function(d){ try { d.close(); } catch (_) {} }); });
+  await ctx.setOffline(true);
+  const callsT6 = api.calls.length;
+  await p.evaluate(() => lockNow());
+  const locked = await p.evaluate(() => ({ lock: !!LOCK, cover: !(document.getElementById('lockcover') || {}).hidden }));
+  await shot(p, 't6-locked-offline');
+  await p.evaluate(() => lockOpen());                        /* 🔓 → the one sign-in, started at the counter PIN of who locked it */
+  await p.waitForSelector('#usigndlg[open] [data-testid="till-usign-otp"]', { timeout: 10000 });
+  await p.fill('[data-testid="till-usign-otp"]', '4826');
+  await p.tap('[data-testid="till-usign-verify"]');
+  await p.waitForFunction(() => !LOCK, null, { timeout: 10000 }).catch(() => {});
+  const unlocked = await p.evaluate(() => ({ lock: !!LOCK, who: WHO && WHO.name, dlg: !!document.querySelector('#usigndlg[open]') }));
+  say('⭐⭐ with the line down the phone locks, and the counter PIN unlocks it — no network, same person', locked.lock && locked.cover && !unlocked.lock && unlocked.who === 'Athi' && api.calls.length === callsT6, JSON.stringify(unlocked) + ' calls=' + (api.calls.length - callsT6));
+  for (let i = 0; i < 20; i++) await ringBill(p);
+  const f8 = await facts(p);
+  const refsT6 = await p.evaluate(async () => ((await DB.all('queue')) || []).map((q) => q.no).sort());
+  say('20 bills taken with the line down sit in the queue, each under this phone\'s prefix', f8.queue === 20 && refsT6.length === 20 && refsT6.every((r) => r.indexOf(f1.prefix + '/') === 0), 'queue=' + f8.queue + ' first=' + refsT6[0] + ' last=' + refsT6[19]);
+  await shot(p, 't6-twenty-queued');
+  api.expireSession(f7.person.jti);                        /* …and the 30 days ran out while it was away */
+  await ctx.setOffline(false);
+  await p.evaluate(() => HOST.drain());
+  await p.waitForFunction(() => HOST && HOST.last && /Sign in to send/.test(String(HOST.last.why || '')), null, { timeout: 15000 }).catch(() => {});
+  const last6 = await p.evaluate(() => HOST.last);
+  const f9 = await facts(p);
+  say('⭐⭐⭐ the line is back, the session is past its exp → "Sign in to send 20 bills" (never "maintenance"); all 20 kept', /Sign in to send 20 bills/.test(String(last6 && last6.why)) && last6.code === 'SESSION_EXPIRED' && f9.queue === 20 && api.chits.length === chitsAfterT0 + 5, JSON.stringify(last6 && last6.why).slice(0, 80) + ' queue=' + f9.queue);
+  await p.evaluate(() => refresh().catch(function(){}));
+  await p.waitForFunction(() => /Sign in/.test((document.getElementById('flash') || {}).innerText || ''), null, { timeout: 10000 }).catch(() => {});
+  await shot(p, 't6-expired-twenty');
+  /* a sign-in by code (the PIN names a person; only the LINE can issue a session) — the token comes back a day old */
+  api.flag.oldIat = true;
+  const callsRenew = api.calls.length, jtiExpired = f7.person.jti;
+  await p.evaluate(() => pairAgain());
+  await signIn(p, 'athi'); await afterIn(p, null);
+  const landed6 = await settle(api, chitsAfterT0 + 25, 40000);
+  const f10 = await facts(p);
+  const mine6 = api.chits.slice(chitsAfterT0 + 5);
+  const allRefs = api.chits.map((c) => c.client_ref);
+  say('⭐⭐⭐ after the sign-in all 20 land — once each, the SAME client_refs the queue held, 0 duplicates', landed6 === chitsAfterT0 + 25 && f10.queue === 0 && mine6.map((c) => c.client_ref).sort().join() === refsT6.join() && new Set(allRefs).size === allRefs.length, 'landed=' + mine6.length + ' queue=' + f10.queue + ' distinct=' + new Set(allRefs).size + '/' + allRefs.length);
+  say('⭐⭐⭐ every bill carries till.device_id = this phone and till.by = the signed-in person, with the name beside it (M11 checks these)', mine6.every((c) => c.till && c.till.device_id === f1.device && c.till.by === 'ent-a' && c.till.by_name === 'Athi' && c.till.id === f1.prefix), JSON.stringify(mine6[0] && mine6[0].till));
+  const renews = api.calls.slice(callsRenew).filter((c) => c.u === '/api/signin/renew');
+  say('⭐⭐ a token issued a day+ ago was RENEWED after the next good snapshot: one call, a new jti kept in place, the old one gone', renews.length === 1 && renews[0].status === 200 && f10.person && f10.person.jti !== jtiExpired && !!api.sessions[f10.person.jti] && f10.store === f1.store && f10.who === 'Athi', 'renews=' + renews.length + ' jti new=' + (f10.person && f10.person.jti !== jtiExpired) + ' listed=' + !!(f10.person && api.sessions[f10.person.jti]));
+  api.flag.oldIat = false;
+  await p.evaluate(() => refresh().catch(function(){}));
+  await p.waitForTimeout(800);
+  say('a fresh token is not renewed again (once a day, not once a snapshot)', api.calls.filter((c) => c.u === '/api/signin/renew').length === 1, 'renews=' + api.calls.filter((c) => c.u === '/api/signin/renew').length);
+  await shot(p, 't6-sent-and-renewed');
+
+  /* ── T8 ───────────────────────────────────────────────────────────────────────────────────────────────────── */
+  console.log('\n── T8 ⭐⭐ M09 · ONE PERSON, TWO PHONES — two device ids, two prefixes, two stores; each bills under its own device');
+  const ctx2 = await b.newContext(PHONE);
+  await ctx2.addInitScript((a) => { try { if (!localStorage.getItem('cb_till_api')) localStorage.setItem('cb_till_api', a); } catch (_) {} }, API);
+  const p2 = await ctx2.newPage(); p2.on('pageerror', (e) => errs.push('T8 ' + e));
+  await p2.goto(WEB + '/till.html');
+  await p2.waitForFunction(() => typeof usignOpen === 'function' && typeof becomeShop === 'function', null, { timeout: 30000 });
+  await signIn(p2, 'athi');
+  await p2.waitForFunction(() => typeof S !== 'undefined' && S && S.shop && S.shop.name === 'Athi Stores', null, { timeout: 30000 }).catch(() => {});
+  await afterIn(p2, null);
+  const g1 = await facts(p2);
+  say('⭐⭐ the second phone is its own device: another device id, another prefix, another store, the same person', g1.who === 'Athi' && g1.device && g1.device !== f1.device && /^D[0-9A-Z]{3}$/.test(g1.prefix) && g1.prefix !== f1.prefix && g1.store !== f1.store && g1.person && g1.person.jti !== f10.person.jti, 'device2=' + g1.device + ' prefix2=' + g1.prefix + ' prefix1=' + f1.prefix);
+  const before8 = api.chits.length;
+  await ringBill(p2);
+  await ringBill(p);
+  const landed8 = await settle(api, before8 + 2);
+  const two = api.chits.slice(before8);
+  const f11 = await facts(p);
+  say('⭐⭐ each phone\'s bill lands under ITS device and prefix; neither phone was signed out', landed8 === before8 + 2 && two.some((c) => c.till.device_id === g1.device && c.client_ref.indexOf(g1.prefix + '/') === 0) && two.some((c) => c.till.device_id === f1.device && c.client_ref.indexOf(f1.prefix + '/') === 0) && f11.person.jti === f10.person.jti && !!api.sessions[f11.person.jti] && !!api.sessions[g1.person.jti], two.map((c) => c.client_ref + '@' + String(c.till.device_id).slice(0, 8)).join(' '));
+  const live = (d) => !!(api.devices[d] && !api.devices[d].revoked_at && api.devices[d].sessions.some((j) => api.sessions[j]));
+  say('the shop lists both phones as live devices of one person (T0 keyed phone signed in once too, so three are known)', live(f1.device) && live(g1.device) && Object.keys(api.devices).filter(live).length === 3, 'live=' + Object.keys(api.devices).filter(live).length + ' of ' + Object.keys(api.devices).length);
+  await shot(p2, 't8-second-phone');
+  await ctx2.close();
+
   /* ('cb-till' is the unscoped shelf a never-paired page opens before anything names a shop — as before M08) */
   const stores = await p.evaluate(async () => (indexedDB.databases ? (await indexedDB.databases()).map((d) => d.name).filter((n) => /^cb-till-/.test(n)) : []));
   say('this phone holds exactly its one person store (no key store was created beside it)', stores.length === 1 && stores[0] === f1.store, JSON.stringify(stores));
+  const fin = await facts(p);
+  say('every bill this phone ever took is still on it (5 + 20 + 1), all sent, none queued', fin.bills === 26 && fin.queue === 0, 'bills=' + fin.bills + ' queue=' + fin.queue);
   say('no page errors', errs.length === 0, errs.length ? errs.join(' | ').slice(0, 300) : 'none');
   console.log('\nshots: e2e/shots/person-signin-*.png');
   await ctx.close(); await b.close(); web.close(); api.srv.close();
