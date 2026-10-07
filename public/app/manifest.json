@@ -1,16 +1,16 @@
 {
   "_": "The utility apps the shell (public/app/shell.js) draws; index.html is its Home (N18). Shape: docs/DESIGN-NOTES-2026-10.md Part 2.4. state built = route is a utility page; workshop = it exists only inside the workshop, so no route and a dashed chip (FIT Q3, I12); coming = not built. facts = an /api URL the shell GETs, answering { lines: [ 'text' | { text, tone:'dn' } ] } (at most two lines); null = no such read exists yet, so the card shows no figure (never an invented one) — the reads each card needs are listed in the N18 PR. rail = the Home widget: facts answers { suppliers, customers, in, out, stuck } (digits); route = where Open goes; null = not drawn. Every facts URL needs its line in the API's round-trips.budget.json (I19). No 'tier' (Q5).",
   "version": 2,
-  "rail": { "route": null, "facts": null },
+  "rail": { "route": "/crm.html", "facts": "/api/facts/rail" },
   "entries": [
-    { "id": "till", "name": "Till", "route": "/till.html", "icon": "▤", "area": "selling", "state": "built", "what": "Take money at the counter.", "needs": {}, "facts": null },
+    { "id": "till", "name": "Till", "route": "/till.html", "icon": "▤", "area": "selling", "state": "built", "what": "Take money at the counter.", "needs": {}, "facts": "/api/facts/till" },
     { "id": "storefront", "name": "Storefront", "route": "/shop.html", "icon": "◇", "area": "selling", "state": "built", "what": "Your shop on the web.", "needs": { "owner": true }, "facts": null },
     { "id": "catalogue", "name": "Catalogue", "route": null, "icon": "▦", "area": "selling", "state": "workshop", "needs": {}, "facts": null },
     { "id": "stock", "name": "Stock", "route": null, "icon": "◫", "area": "selling", "state": "workshop", "needs": {}, "facts": null },
     { "id": "orders", "name": "Orders", "route": null, "icon": "↓", "area": "selling", "state": "coming", "needs": {}, "facts": null },
     { "id": "delivery", "name": "Delivery", "route": null, "icon": "→", "area": "selling", "state": "coming", "needs": {}, "facts": null },
 
-    { "id": "accounts", "name": "CB Accounts", "route": "/accounts.html", "icon": "₹", "area": "running", "state": "built", "what": "What the shop made, and what it owes.", "needs": { "money": true }, "facts": null },
+    { "id": "accounts", "name": "CB Accounts", "route": "/accounts.html", "icon": "₹", "area": "running", "state": "built", "what": "What the shop made, and what it owes.", "needs": { "money": true }, "facts": "/api/facts/accounts" },
     { "id": "crm", "name": "CB CRM", "route": "/crm.html", "icon": "◍", "area": "running", "state": "built", "what": "Who buys, and how often.", "needs": {}, "facts": null },
     { "id": "kyb", "name": "Know your business", "route": "/know-your-business.html", "icon": "◔", "area": "running", "state": "built", "what": "Check a business before you trade.", "needs": {}, "facts": null },
     { "id": "documents", "name": "Documents", "route": "/authority-forms.html", "icon": "▱", "area": "running", "state": "built", "what": "Forms for an authority.", "needs": {}, "facts": null },
@@ -20,9 +20,9 @@
     { "id": "disputes", "name": "Disputes", "route": null, "icon": "⚖", "area": "running", "state": "workshop", "needs": {}, "facts": null },
     { "id": "coassist", "name": "Co-assist", "route": null, "icon": "✦", "area": "running", "state": "workshop", "needs": {}, "facts": null },
 
-    { "id": "product-lab", "name": "Product Lab", "route": "/product-lab.html", "icon": "◈", "area": "labs", "state": "built", "what": "Cost, price, and what each one leaves you.", "needs": {}, "facts": null },
-    { "id": "offer-lab", "name": "Offer Lab", "route": "/offer-lab-next.html", "icon": "%", "area": "labs", "state": "built", "what": "Discounts, and whether they clear your margin.", "needs": {}, "facts": null },
-    { "id": "combo-lab", "name": "Combo Lab", "route": "/combo-lab.html", "icon": "▣", "area": "labs", "state": "built", "what": "Two at one price.", "needs": {}, "facts": null },
+    { "id": "product-lab", "name": "Product Lab", "route": "/product-lab.html", "icon": "◈", "area": "labs", "state": "built", "what": "Cost, price, and what each one leaves you.", "needs": {}, "facts": "/api/facts/product-lab" },
+    { "id": "offer-lab", "name": "Offer Lab", "route": "/offer-lab-next.html", "icon": "%", "area": "labs", "state": "built", "what": "Discounts, and whether they clear your margin.", "needs": {}, "facts": "/api/facts/offer-lab" },
+    { "id": "combo-lab", "name": "Combo Lab", "route": "/combo-lab.html", "icon": "▣", "area": "labs", "state": "built", "what": "Two at one price.", "needs": {}, "facts": "/api/facts/combo-lab" },
     { "id": "tax-lab", "name": "Tax Lab", "route": null, "icon": "§", "area": "labs", "state": "coming", "needs": {}, "facts": null },
     { "id": "rail-lab", "name": "Rail Lab", "route": null, "icon": "⌁", "area": "labs", "state": "coming", "needs": {}, "facts": null },
 
