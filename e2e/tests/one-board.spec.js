@@ -41,6 +41,17 @@ test('[BOARD-01] a brand-new shop sees the product board, not an empty one', asy
   const six = s.filter((x) => x.id === '6')[0] || {};
   const total = ((two.body || {}).totals || {}).total || 0;
 
+  /**
+   * ⚠️⚠️ N01 (2026-10-07): THE TOLERANCE BELOW HID THE ONE STATE THIS SPEC EXISTS TO CATCH. If the switch fell
+   * off production, the spec took the "documented fallback" branch and went GREEN — exactly "the switch is set
+   * to nothing", reported as a pass. Production runs the shared board, so an empty board is now a RED unless
+   * the deployment under test says, explicitly, that it is per-entity (CB_BOARD_PER_ENTITY=1).
+   */
+  if (n === 0 && process.env.CB_BOARD_PER_ENTITY !== '1') {
+    expect(n, 'a brand-new shop sees NO cases: TEST_BOARD_ENTITY is unset or points at an empty board. '
+      + 'Set CB_BOARD_PER_ENTITY=1 only for a deployment that is meant to be per-entity.').toBeGreaterThan(0);
+  }
+
   if (n === 0) {
     /**
      * ── THE SWITCH IS OFF — the documented fallback, and it must still be HONEST ──────────────────────────
@@ -59,7 +70,8 @@ test('[BOARD-01] a brand-new shop sees the product board, not an empty one', asy
   }
 
   /* ── the switch is on ── */
-  expect(n, 'a fresh shop can only see cases because the board is shared').toBeGreaterThan(100);
+  /* ⭐ the product board, not a handful: 1,499 is what the board held when it became shared (2026-09-13) */
+  expect(n, 'a fresh shop can only see cases because the board is shared').toBeGreaterThanOrEqual(1499);
   expect(total, 'the report must count the same board the case list returned').toBe(n);
   expect(ten.no_sign, 'a board with cases AND results is signable').toBeFalsy();
   console.log('  one board · a shop minted seconds ago sees ' + n + ' cases.');

@@ -1354,7 +1354,7 @@ async function importResults(input){
    */
   var picked = document.getElementById('f_kind').value;
   var kind = (picked === 'regression') ? 'regression' : 'unit';
-  var done = 0, rows = 0, missed = 0, skipped = 0;
+  var done = 0, rows = 0, missed = 0, skipped = 0, offBoard = 0;
   for (var i = 0; i < files.length; i++) {
     try {
       var text = await files[i].text();
@@ -1368,17 +1368,18 @@ async function importResults(input){
         run_label: files[i].name.replace(/\.xml$/i, ''),
       }});
       done++; rows += (r.recorded || 0); missed += ((r.unmatched || []).length);
-      skipped += (r.skipped || 0);
+      skipped += (r.skipped || 0); offBoard += ((r.not_on_board || []).length);
     } catch (e) { say('Could not post ' + files[i].name + ': ' + e.message, true); }
   }
   if (done) say(rows + ' result(s) recorded from ' + done + ' run(s)'
     /**
-     * ⚠️⚠️ SKIPPED IS THE ONE THAT MUST NOT BE SWALLOWED. A result is recorded against a CASE; if the cases
-     * were never loaded onto this board, every single result is skipped and the post "succeeds" with nothing
-     * written. A quiet zero there would leave somebody believing the board had their run.
+     * ⚠️⚠️ N01: THIS READ `skipped` AS "NOT ON THE BOARD", AND IT NEVER MEANT THAT. The server records a result
+     * for an unknown case and counted it as recorded; `skipped` was only a replay of the same run. So the
+     * warning that mattered never appeared. The server now names the keys it has no case for — `not_on_board`.
      */
-    + (skipped ? ' · ⚠ ' + skipped + ' skipped — those tests are not on this board yet. Press "Load the cases" '
-                 + 'first, then post again.' : '')
+    + (offBoard ? ' · ⚠ ' + offBoard + ' are not cases on this board, so nothing here shows them. Press '
+                  + '"Load the cases" first, then post again.' : '')
+    + (skipped ? ' · ' + skipped + ' were already on that run' : '')
     + (missed ? ' · ⚠ ' + missed + ' test(s) carried no case key and were reported, not dropped' : ''));
   await load();
 }
