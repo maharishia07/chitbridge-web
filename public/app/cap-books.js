@@ -43,14 +43,8 @@ if (typeof EP !== 'undefined') { Object.assign(EP, {
  *   · bkRef  — every form that records money carries ONE client_ref from the moment it opens: sent again on a retry
  *              (so the server answers with what it already kept), replaced only after the server said yes
  */
-var BK_BUSY = {};
-async function bkOnce(key, btn, fn) {
-  if (BK_BUSY[key]) return;
-  BK_BUSY[key] = true;
-  if (btn) btn.disabled = true;
-  try { return await fn(); }
-  finally { delete BK_BUSY[key]; if (btn && btn.isConnected) btn.disabled = false; }
-}
+/* ⭐ M64: WIDENED into CBAction (app/accounts-shell.js) — the guard every page shares; bkOnce keeps its name for its callers */
+function bkOnce(key, btn, fn) { return CBAction.once(key, btn, fn); }
 function bkRef() {
   var r = '';
   try { var a = new Uint8Array(8); crypto.getRandomValues(a); r = Array.prototype.map.call(a, function (b) { return ('0' + b.toString(16)).slice(-2); }).join(''); }
@@ -407,12 +401,12 @@ function payModePaint() { var c = document.getElementById('pay_chq'); if (c) c.h
 function payRecord() {
   /* ⚠️ M11: the button is dead while the call is out; a payment already recorded is never recorded again — a second
      press after the record only asks for the proposal; and every attempt from this form carries the SAME client_ref */
-  return bkOnce('pay', document.querySelector('[data-testid="pay_record"]'), async function () {
-    var why = document.getElementById('pay_why');
-    try {
+  /* ⭐ M64: through CBAction — one press one call, the outcome said in the form (pay_why), never a thrown error's text */
+  var why = document.getElementById('pay_why');
+  var amt = PAY.id ? PAY.amount : bkToMinor((document.getElementById('pay_amt') || {}).value);
+  if (!PAY.id && !(amt > 0)) { if (why) why.textContent = tx('Type the amount'); return; }
+  return CBAction.run(document.querySelector('[data-testid="pay_record"]'), async function () {
       if (!PAY.id) {
-        var amt = bkToMinor((document.getElementById('pay_amt') || {}).value);
-        if (!(amt > 0)) { if (why) why.textContent = tx('Type the amount'); return; }
         var mode = (document.getElementById('pay_mode') || {}).value;
         var body = { party_id: PAY.partyId, direction: PAY.kind === 'supplier' ? 'out' : 'in', amount_minor: amt, currency: bkCur(),
           mode: mode, reference: (document.getElementById('pay_ref') || {}).value || null, received_at: new Date().toISOString(),
@@ -424,18 +418,23 @@ function payRecord() {
         if (r && r.payment && r.payment.status === 'cheque_received') {
           bkChequeKeep({ payment_id: PAY.id, party_id: PAY.partyId, name: PAY.name, amount_minor: amt, cheque_no: body.cheque.number, cheque_bank: body.cheque.bank, cheque_date: body.cheque.date, status: 'received' });
           PAY.cheque = true;
-          document.getElementById('pay_body').innerHTML = '<p data-testid="pay_cheque_note">' + tx('Counts against bills when the cheque clears') + '</p>'
-            + '<div id="pay_chq_steps" data-testid="pay_chq_steps">' + bkChequeStepsHTML(BK.cheques[PAY.id]) + '</div><div id="chq_out" data-testid="chq_out" style="color:var(--warn-2);font-size:var(--fs-1)"></div>';
-          document.getElementById('pay_foot').innerHTML = '<button class="pri" onclick="closeModal();booksAfterPay()">' + tx('Done') + '</button>';
-          return;
+          return 'cheque';
         }
       }
-      if (PAY.cheque) return;
-      var p = await api('booksPayPropose', { params: { id: PAY.id } });
-      PAY.proposal = p;
-      payProposalPaint();
-    } catch (e) { if (why) why.textContent = bkWhy(e, tx('Could not record it')); }
-  });
+      if (PAY.cheque) return 'cheque';
+      PAY.proposal = await api('booksPayPropose', { params: { id: PAY.id } });
+      return 'proposal';
+  }, { key: 'pay', out: 'pay_why', failed: tx('Could not record it'),
+    /* recorded, but the bills to match could not be read: say THAT — Next again only asks for them (M11) */
+    onFail: function (w) { var el = document.getElementById('pay_why'); if (el) el.textContent = PAY.id ? tx('Recorded. The bills could not be read — press Next again') : w; },
+    outcome: function (v) {
+    /* the outcome IS the next step of the form, painted where the press was */
+    if (v === 'proposal') { payProposalPaint(); return; }
+    var pb = document.getElementById('pay_body'), pf = document.getElementById('pay_foot'); if (!pb || !pf) return;
+    pb.innerHTML = '<p data-testid="pay_cheque_note">' + tx('Counts against bills when the cheque clears') + '</p>'
+      + '<div id="pay_chq_steps" data-testid="pay_chq_steps">' + bkChequeStepsHTML(BK.cheques[PAY.id]) + '</div><div id="chq_out" data-testid="chq_out" style="color:var(--warn-2);font-size:var(--fs-1)"></div>';
+    pf.innerHTML = '<button class="pri" onclick="closeModal();booksAfterPay()">' + tx('Done') + '</button>';
+  } });
 }
 /** ⭐ D1: the rule PROPOSES (oldest due first); the person changes it if they want; a disputed bill cannot take anything */
 function payProposalPaint() {
@@ -1466,14 +1465,21 @@ async function bkLockDo(what, p) {
   var L = BK.lk, fy = L.fy, why = (document.getElementById('lk_why') || {}).value || '', out = document.getElementById('lk_out');
   var m = tx(BK_MONTHS[p - 1] || String(p));
   if (what !== 'lock' && !why.trim()) { if (out) out.textContent = tx('Say why — the reason is kept'); var w = document.getElementById('lk_why'); if (w) w.focus(); return; }
-  if (what === 'hard' && !(await new Promise(function (res) { confirmAsk(tx('Close for good?'), esc(txf('{m} {fy} will never open again.', { m: m, fy: fy })), tx('Close for good'), function () { res(true); }, true, function () { res(false); }); }))) return;
-  try {
-    var r = await api(what === 'unlock' ? 'booksUnlock' : 'booksLock', { params: { fy: fy, p: p }, body: { reason: why, hard: what === 'hard' } });
-    var st = r && r.period && r.period.status;
-    if (st) L.rows[fy + '|' + p] = st;   /* flip the ROW, never the whole list */
-    if (L.fy === fy) bkLockRowsPaint();
-    if (out) out.textContent = txf('{m} {fy} · {s}', { m: m, fy: fy, s: tx(BK_PERIOD_WORD[st] || 'Done') });
-  } catch (e) { if (out) out.textContent = bkWhy(e, tx('Could not change it')); }
+  /* ⭐ M64: through CBAction — ONE write per month at a time (whichever of its buttons), Close for good asks first in the
+     page's own dialog (Cancel sends nothing), and the outcome is said in lk_out beside the months */
+  var btn = document.querySelector('[data-testid="lk-' + what + '-' + p + '"]');
+  return CBAction.run(btn, function () {
+    return api(what === 'unlock' ? 'booksUnlock' : 'booksLock', { params: { fy: fy, p: p }, body: { reason: why, hard: what === 'hard' } });
+  }, {
+    key: 'lk-' + fy + '-' + p, out: 'lk_out', failed: tx('Could not change it'),
+    confirm: what === 'hard' ? { title: tx('Close for good?'), body: esc(txf('{m} {fy} will never open again.', { m: m, fy: fy })), yes: tx('Close for good') } : null,
+    outcome: function (r) {
+      var st = r && r.period && r.period.status;
+      if (st) L.rows[fy + '|' + p] = st;   /* flip the ROW, never the whole list */
+      if (L.fy === fy) bkLockRowsPaint();
+      var o = document.getElementById('lk_out'); if (o) o.textContent = txf('{m} {fy} · {s}', { m: m, fy: fy, s: tx(BK_PERIOD_WORD[st] || 'Done') });
+    },
+  });
 }
 /**
  * ⚠️⚠️ A PACK IS ITS FILE (2026-09-30, review M10). Download saved the manifest — a list of names and fingerprints —
