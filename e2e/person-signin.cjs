@@ -9,7 +9,8 @@
  * bound to X-Device-Id; a key keeps working). Every state is photographed to e2e/shots/person-signin-*.png.
  *
  *   T0  ⚠️⚠️ A PHONE THAT ALREADY HOLDS A KEY (Athi's own phone, with UNSENT bills in its key store): after the M08 page
- *       loads, the same store is read, its bills are still listed, and they still go. Nothing moved, renamed or cleared.
+ *       loads, the same store is read, its bills are still listed, and they still go under the key. Nothing moved, renamed
+ *       or cleared until the person signs in (M10, T7); the phone is asked once to sign in as itself.
  *   T1  a fresh phone signs in as a PERSON: no POST /api/till/enrol, no /api/counters, no key; a 30-day session bound to
  *       this device; the store is per shop + device.
  *   T2  the shop PC opens C1 while the phone bills 3 times: the phone never sees a 401, never hears COUNTER_HELD, its
@@ -22,6 +23,11 @@
  *       are taken; the session has EXPIRED meanwhile → "Sign in to send 20 bills" (never "maintenance"); a sign-in by code
  *       lands all 20 once, same client_refs, every bill stamped till.device_id = this phone and till.by = the person;
  *       the token issued a day+ ago is RENEWED after the next good snapshot (new jti, old one refused).
+ *   T7  ⭐⭐⭐ M10 (SPEC PR 10) THE OLD KEY STORE COMES ALONG: a keyed phone with 1 sent + 3 unsent bills signs in → the
+ *       page reloads as the person, copies every row into the person store, PROVES the copy (count + client_refs), marks
+ *       the old store moved (never deletes it), sends the 3 once under their old prefix, and only then lets cb_till_key go.
+ *       A store of another shop on the same phone is untouched. A second phone CRASHES (reload) between the copy and the
+ *       mark → the next open re-runs the copy: no loss, no duplicate; a lost mark replays the same way (0 re-sent).
  *   T8  ⭐⭐ M09 (SPEC PR 9 "T5") ONE PERSON, TWO PHONES: two device ids, two prefixes, two stores, two listed sessions;
  *       each phone's bill lands under its own device; neither signs the other out.
  *
@@ -51,7 +57,7 @@ const keyStore = (k) => { let h = 5381; for (let i = 0; i < k.length; i++) h = (
 function standIn() {
   const calls = [], chits = [], sessions = {}, devices = {};
   const REG = { C1: { held_by: 'Shop PC', key: 'KEY-PC' } };
-  const KEYS = { 'KEY-OLD': { counter: 'C2', closed: false }, 'KEY-PC': { counter: 'C1', closed: false } };
+  const KEYS = { 'KEY-OLD': { counter: 'C2', closed: false }, 'KEY-OLD2': { counter: 'C3', closed: false }, 'KEY-OLD3': { counter: 'C4', closed: false }, 'KEY-PC': { counter: 'C1', closed: false } };
   const PEOPLE = { athi: { identity_id: 'ent-a', user_id: 'athi', display_name: 'Athi', identity_type: 'entity', entity_id: 'ent-a', bridge_id: 'CB-A' } };
   let issued = null;
   const flag = { oldIat: false };                          /* M09 T6: issue the next token as if a day ago, so the page renews it */
@@ -170,6 +176,8 @@ async function ringBill(p) {
   const before = await p.evaluate(async () => ((await DB.all('bills')) || []).length);
   /* a phone sells in steps — Pick first, where the shelf and the search box are */
   await p.evaluate(() => { try { usignClose(); } catch (_) {} });
+  /* the counter must have been GIVEN its number (tillClaim, after the first snapshot) — a bill before that is refused with a dialog */
+  await p.waitForFunction(async () => { try { return (await tillGivenOK()) && shopReady().stops.length === 0; } catch (_) { return false; } }, null, { timeout: 20000 }).catch(() => {});
   if (await p.locator('[data-testid="till-step-pick"]').count()) await p.tap('[data-testid="till-step-pick"]');
   await p.waitForSelector('#q', { state: 'visible', timeout: 10000 });
   await p.fill('#q', 'Tea');
@@ -243,10 +251,12 @@ const facts = (p) => p.evaluate(async () => ({
     await p.waitForFunction(() => typeof usignOpen === 'function' && S && S.shop && S.shop.name === 'Athi Stores', null, { timeout: 30000 });
     const k0 = await facts(p);
     say('the keyed phone opens its shop by its KEY, in the key-named store', k0.key === 'KEY-OLD' && k0.store === keyStore('KEY-OLD') && !k0.person, 'store=' + k0.store + ' person=' + JSON.stringify(k0.person));
-    /* a routine sign-in on a working keyed phone: identity only — no session kept, the store does not move */
-    await signIn(p, 'athi'); await afterIn(p, null);
-    const k1 = await facts(p);
-    say('a routine sign-in on it keeps NO session and does not move the store', k1.who === 'Athi' && !k1.person && k1.store === k0.store && k1.key === 'KEY-OLD', 'who=' + k1.who + ' store=' + k1.store);
+    /* ⭐ M10: a keyed phone is asked ONCE to sign in as itself (the key path ends with M13) — and keeps billing under the key meanwhile */
+    const nudge0 = await p.evaluate(() => ((document.getElementById('flash') || {}).innerText || '').replace(/\s+/g, ' ').trim());
+    say('the keyed phone is asked once: "Sign in once with your user ID" — never "maintenance", nothing moved yet', /Sign in once with your user ID/.test(nudge0) && !/maintenance/i.test(nudge0) && k0.key === 'KEY-OLD', JSON.stringify(nudge0).slice(0, 90));
+    if (await p.locator('[data-testid="till-flash-x"]').count()) await p.tap('[data-testid="till-flash-x"]');
+    /* the phone as it is TODAY: a person signed in at the counter — identity only, no session (pre-M08) — under a KEY (G2's writer) */
+    await p.evaluate(() => usignAdopt({ id: 'athi', name: 'Athi', kind: 'entity', entity: 'ent-a' }));
     const callsBefore = api.calls.length;
     await ctx.setOffline(true);
     await ringBill(p); await ringBill(p);
@@ -260,6 +270,7 @@ const facts = (p) => p.evaluate(async () => ({
     const k3 = await facts(p);
     /* (the line is back, so load() may already have started sending — the queue is 2 or fewer, never more, never re-stamped) */
     say('⭐⭐⭐ after the reload the SAME key store is read: both bills still listed, still queued/sending', k3.store === keyStore('KEY-OLD') && k3.bills === 2 && k3.queue <= 2 && !k3.person, 'store=' + k3.store + ' bills=' + k3.bills + ' queue=' + k3.queue);
+    if (await p.locator('[data-testid="till-flash-x"]').count()) await p.tap('[data-testid="till-flash-x"]');
     await p.evaluate(() => HOST.drain());
     const landed = await settle(api, 2);
     const k4 = await facts(p);
@@ -441,6 +452,96 @@ const facts = (p) => p.evaluate(async () => ({
   say('a fresh token is not renewed again (once a day, not once a snapshot)', api.calls.filter((c) => c.u === '/api/signin/renew').length === 1, 'renews=' + api.calls.filter((c) => c.u === '/api/signin/renew').length);
   await shot(p, 't6-sent-and-renewed');
 
+  /* ── T7 ───────────────────────────────────────────────────────────────────────────────────────────────────── */
+  console.log('\n── T7 ⭐⭐⭐ M10 · A PHONE THAT HELD A KEY, WITH UNSENT BILLS — the sign-in moves its store: copy · prove · mark; sent once; key gone; nothing deleted');
+  /** a keyed phone with 1 sent + 3 unsent bills and a stranger store beside them; then the person signs in on it */
+  const keyedPhone = async (key, tag, crash) => {
+    const c = await b.newContext(PHONE);
+    await c.addInitScript((o) => { try { if (!localStorage.getItem('cb_till_api')) { localStorage.setItem('cb_till_api', o.a); localStorage.setItem('cb_till_key', o.k); } } catch (_) {} }, { a: API, k: key });
+    const q = await c.newPage(); q.on('pageerror', (e) => errs.push(tag + ' ' + e));
+    const copies = []; let crashed = false;
+    const moveLog = [];
+    q.on('console', (m) => { const t = m.text(); if (/^till-move:/.test(t)) moveLog.push(t); if (/^till-move: copied/.test(t)) { copies.push(t); if (crash && !crashed) { crashed = true; q.reload().catch(() => {}); } } });
+    const open = async () => { await q.waitForFunction(() => typeof usignOpen === 'function' && S && S.shop && S.shop.name === 'Athi Stores', null, { timeout: 30000 }); await q.waitForTimeout(400); };
+    await q.goto(WEB + '/till.html'); await open();
+    if (await q.locator('[data-testid="till-flash-x"]').count()) await q.tap('[data-testid="till-flash-x"]');
+    await q.evaluate(() => usignAdopt({ id: 'athi', name: 'Athi', kind: 'entity', entity: 'ent-a' }));   /* as today: identity, no session */
+    const before = api.chits.length;
+    await ringBill(q); await q.evaluate(() => HOST.drain()); await settle(api, before + 1);   /* one bill with the line up — sent under the key, acknowledged */
+    if (api.chits.length < before + 1) throw new Error(tag + ': the keyed phone\'s first bill never reached the stand-in — ' + JSON.stringify(await q.evaluate(async () => ({ last: HOST.last, cred: HOST.cred(), line: lineUp(), q: ((await DB.all('queue')) || []).length, qraw: ((await DB.allRaw('queue')) || []).length, bills: ((await DB.allRaw('bills')) || []).map((x) => x.no + ':' + (x._shop || '-') + ':' + (x._sent ? 'sent' : 'unsent')), owner: OWNER, busy: HOST._busy }))) + ' calls=' + api.calls.slice(-6).map((c) => c.status + ':' + c.u).join(','));
+    await q.waitForFunction(async () => ((await DB.all('bills')) || []).some((x) => x && x._sent), null, { timeout: 10000 }).catch(() => {});
+    await c.setOffline(true);
+    await ringBill(q); await ringBill(q); await ringBill(q);
+    const seeded = await facts(q);
+    const refs = await q.evaluate(async () => ((await DB.all('queue')) || []).map((x) => x.no).sort());
+    const sentRef = api.chits[before].client_ref;
+    /* a store of ANOTHER shop on the same phone — the page's own schema, owner ent-z, 2 bills, 2 queued */
+    await q.evaluate((name) => new Promise((res) => { const rq = indexedDB.open(name, 1);
+      rq.onupgradeneeded = () => { const db = rq.result; db.createObjectStore('kv'); db.createObjectStore('bills', { keyPath: 'no' }); db.createObjectStore('queue', { keyPath: 'no' }); };
+      rq.onsuccess = () => { const db = rq.result, tx = db.transaction(['kv', 'bills', 'queue'], 'readwrite'); tx.objectStore('kv').put('ent-z', 'owner');
+        ['Z9/26-27/0001', 'Z9/26-27/0002'].forEach((n) => { tx.objectStore('bills').put({ no: n, at: new Date().toISOString(), total: 5, _shop: 'ent-z' }); tx.objectStore('queue').put({ no: n, at: new Date().toISOString(), _shop: 'ent-z' }); });
+        tx.oncomplete = () => { db.close(); res(true); }; }; }), 'cb-till-' + tag + 'z');
+    /* ⚠️ meanwhile the shop CLOSED this counter's key (Athi's phone, 2026-10-04): the line returns, the drain is refused, the 3 rows are kept */
+    api.KEYS[key].closed = true;
+    await c.setOffline(false);
+    await q.evaluate(() => HOST.drain()); await q.waitForTimeout(800);
+    const refused = await facts(q);
+    const callsIn = api.calls.length;
+    /* ⭐ the person signs in on the keyed phone — the session is KEPT, the page reloads as the person, the move follows */
+    const nav = q.waitForEvent('load', { timeout: 30000 });
+    await q.evaluate(() => pairAgain());                      /* the nudge's own button: the user-ID box, whoever is on */
+    await signIn(q, 'athi');
+    await nav; await open();
+    await afterIn(q, null);
+    await q.waitForFunction((n) => !!localStorage.getItem('cb_till_moved@' + n), keyStore(key), { timeout: 30000 }).catch(() => {});
+    await settle(api, before + 4, 20000);
+    await q.waitForFunction(() => localStorage.getItem('cb_till_key') === null, null, { timeout: 15000 }).catch(() => {});
+    await q.waitForTimeout(500);
+    const peek = (n) => q.evaluate(async (nm) => { const r = await peekStore(nm); return r ? { bills: r.bills, queue: r.queue, owner: r.owner, note: JSON.parse(localStorage.getItem('cb_till_moved@' + nm) || 'null') } : null; }, n);
+    return { c, q, copies, moveLog, before, seeded, refused, refs, sentRef, callsIn, after: await facts(q), old: await peek(keyStore(key)), stranger: await peek('cb-till-' + tag + 'z'),
+             stores: await q.evaluate(async () => (await indexedDB.databases()).map((d) => d.name).filter((n) => /^cb-till-/.test(n)).sort()) };
+  };
+  const landedFrom = (r) => api.chits.slice(r.before + 1);
+  {
+    const r = await keyedPhone('KEY-OLD3', 't7', false);   /* its own key: T0 already numbered C2 under KEY-OLD */
+    say('the keyed phone had 1 bill sent under its key and 3 unsent in the KEY store (prefix C4)', r.seeded.key === 'KEY-OLD3' && r.seeded.store === keyStore('KEY-OLD3') && r.seeded.bills === 4 && r.seeded.queue === 3 && r.refs.every((x) => x.indexOf('C4/') === 0), 'bills=' + r.seeded.bills + ' queue=' + r.seeded.queue + ' refs=' + r.refs.join(','));
+    say('the key was refused when the line came back — the 3 rows stayed exactly where they were (never deleted on a 4xx)', r.refused.queue === 3 && r.refused.bills === 4 && r.refused.key === r.seeded.key, 'queue=' + r.refused.queue + ' key=' + r.refused.key);
+    say('⭐⭐⭐ the sign-in kept a person session and reloaded into the PERSON store; cb_till_key is GONE', r.after.person && r.after.person.entity_id === 'ent-a' && r.after.store === 'cb-till-ent-a-' + String(r.after.device).replace(/[^A-Za-z0-9_-]/g, '') && r.after.key === null && r.after.who === 'Athi', 'store=' + r.after.store + ' key=' + r.after.key);
+    const got = landedFrom(r);
+    say('⭐⭐⭐ the 3 unsent bills landed ONCE each, under the SAME client_refs and their old C4 prefix, stamped with this device and person', got.length === 3 && got.map((x) => x.client_ref).sort().join() === r.refs.join() && got.every((x) => x.till && x.till.device_id === r.after.device && x.till.by === 'ent-a' && x.till.id === 'C4') && new Set(api.chits.map((x) => x.client_ref)).size === api.chits.length, got.map((x) => x.client_ref).join(' '));
+    say('⭐⭐ the bill already sent under the key was NOT sent again (no POST for its client_ref after the sign-in)', !api.calls.slice(r.callsIn).some((x) => x.u === '/api/chits/send' && x.b.client_ref === r.sentRef), 'sent earlier as ' + r.sentRef);
+    say('⭐⭐⭐ PROVED, THEN MARKED: the note beside the old store names this store and what was copied (4 bills, 3 queued)', r.old && r.old.note && r.old.note.to === r.after.store && r.old.note.copied.bills === 4 && r.old.note.copied.queue === 3, JSON.stringify(r.old && r.old.note));
+    say('⭐⭐⭐ bills before = bills after: the person store holds all 4 (0 queued); the old store is KEPT, untouched (4 bills, 3 queued rows)', r.after.bills === 4 && r.after.queue === 0 && r.old && r.old.bills === 4 && r.old.queue === 3, 'new=' + r.after.bills + '/' + r.after.queue + ' old=' + (r.old && r.old.bills + '/' + r.old.queue));
+    say('⭐⭐ the other shop\'s store is untouched: 2 bills, 2 queued, owner ent-z, no moved note', r.stranger && r.stranger.bills === 2 && r.stranger.queue === 2 && r.stranger.owner === 'ent-z' && !r.stranger.note, JSON.stringify(r.stranger));
+    say('nothing was deleted: the old key store, the person store and the other shop\'s store are all still on the phone', r.stores.length === 3 && r.stores.indexOf(keyStore('KEY-OLD3')) >= 0 && r.stores.indexOf(r.after.store) >= 0 && r.stores.indexOf('cb-till-t7z') >= 0, JSON.stringify(r.stores));
+    await r.q.evaluate(() => openStorage());
+    await r.q.waitForTimeout(800);
+    const panel = await r.q.evaluate(() => ((document.getElementById('billsbody') || {}).innerText || '').replace(/\s+/g, ' '));
+    say('🩺 "What is kept here" says the old copy was moved into this counter and the other shop\'s copy is another shop\'s', /moved into this counter/.test(panel) && /another shop/.test(panel) && !/NOT SENT/.test(panel), panel.slice(panel.indexOf('Counters on this device'), panel.indexOf('Counters on this device') + 240));
+    await shot(r.q, 't7-moved');
+    await r.c.close();
+  }
+  console.log('     ⚠️ and the CRASH: a second keyed phone reloads the moment the copy is written, before the mark');
+  {
+    const r = await keyedPhone('KEY-OLD2', 't7c', true);
+    const got = landedFrom(r);
+    say('⭐⭐⭐ reloaded mid-move, the next open re-ran the copy: the 3 bills landed ONCE (same refs, C3), no duplicate anywhere', r.copies.length >= 1 && got.length === 3 && got.map((x) => x.client_ref).sort().join() === r.refs.join() && new Set(api.chits.map((x) => x.client_ref)).size === api.chits.length, 'copies=' + r.copies.length + ' (1 = the mark had landed before the reload; 2 = it had not) ' + got.map((x) => x.client_ref).join(' '));
+    const probe = await r.q.evaluate(async () => ({ store: tillStore(), moved: CloudHost._moved, key: CloudHost.key, last: HOST.last && HOST.last.why, mem: MEM.on, lastslot: localStorage.getItem('cb_till_lastslot') }));
+    say('⭐⭐⭐ no loss: person store 4 bills / 0 queued; old store kept at 4 / 3; note written; key gone', r.after.bills === 4 && r.after.queue === 0 && r.old && r.old.bills === 4 && r.old.queue === 3 && r.old.note && r.old.note.to === r.after.store && r.after.key === null, 'new=' + r.after.bills + '/' + r.after.queue + ' old=' + (r.old && r.old.bills + '/' + r.old.queue) + ' key=' + r.after.key + ' probe=' + JSON.stringify(probe));
+    console.log('     move log: ' + r.moveLog.map((l) => l.replace(/cb-till-ent-a-[0-9a-f-]+/g, 'PERSON').slice(0, 150)).join(' | '));
+    /* and a mark that never landed at all (the worst case: the rows had already been sent from here) — replayed on the next open */
+    const chitsBefore = api.chits.length, copiesBefore = r.copies.length;
+    await r.q.evaluate((n) => localStorage.removeItem('cb_till_moved@' + n), keyStore('KEY-OLD2'));
+    await r.q.reload();
+    await r.q.waitForFunction(() => typeof usignOpen === 'function' && S && S.shop && S.shop.name === 'Athi Stores', null, { timeout: 30000 });
+    await r.q.waitForFunction((n) => !!localStorage.getItem('cb_till_moved@' + n), keyStore('KEY-OLD2'), { timeout: 30000 }).catch(() => {});
+    await r.q.waitForTimeout(1500);
+    const again = await facts(r.q);
+    say('⭐⭐ a lost mark is replayed: the copy ran again, queued NOTHING (every row already sent from here), re-sent nothing, and the mark is back', r.copies.length === copiesBefore + 1 && / 0 queued/.test(r.copies[r.copies.length - 1]) && api.chits.length === chitsBefore && again.bills === 4 && again.queue === 0 && !!(await r.q.evaluate((n) => localStorage.getItem('cb_till_moved@' + n), keyStore('KEY-OLD2'))), r.copies[r.copies.length - 1] + ' chits=' + api.chits.length + '/' + chitsBefore);
+    await shot(r.q, 't7-after-crash');
+    await r.c.close();
+  }
+
   /* ── T8 ───────────────────────────────────────────────────────────────────────────────────────────────────── */
   console.log('\n── T8 ⭐⭐ M09 · ONE PERSON, TWO PHONES — two device ids, two prefixes, two stores; each bills under its own device');
   const ctx2 = await b.newContext(PHONE);
@@ -461,7 +562,7 @@ const facts = (p) => p.evaluate(async () => ({
   const f11 = await facts(p);
   say('⭐⭐ each phone\'s bill lands under ITS device and prefix; neither phone was signed out', landed8 === before8 + 2 && two.some((c) => c.till.device_id === g1.device && c.client_ref.indexOf(g1.prefix + '/') === 0) && two.some((c) => c.till.device_id === f1.device && c.client_ref.indexOf(f1.prefix + '/') === 0) && f11.person.jti === f10.person.jti && !!api.sessions[f11.person.jti] && !!api.sessions[g1.person.jti], two.map((c) => c.client_ref + '@' + String(c.till.device_id).slice(0, 8)).join(' '));
   const live = (d) => !!(api.devices[d] && !api.devices[d].revoked_at && api.devices[d].sessions.some((j) => api.sessions[j]));
-  say('the shop lists both phones as live devices of one person (T0 keyed phone signed in once too, so three are known)', live(f1.device) && live(g1.device) && Object.keys(api.devices).filter(live).length === 3, 'live=' + Object.keys(api.devices).filter(live).length + ' of ' + Object.keys(api.devices).length);
+  say('the shop lists both phones as live devices of one person (T7\'s two keyed phones signed in as well)', live(f1.device) && live(g1.device), 'live=' + Object.keys(api.devices).filter(live).length + ' of ' + Object.keys(api.devices).length);
   await shot(p2, 't8-second-phone');
   await ctx2.close();
 
