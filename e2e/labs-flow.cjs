@@ -262,19 +262,17 @@ function route(S, r) {
   }
 
   const LABS = [
-    { key: 'product', title: 'Product Lab', tile: 'lab-product', fact: 'st_prod', href: 'product-lab.html' },
-    { key: 'offer', title: 'Offer Lab', tile: 'lab-offer', fact: 'st_offer', href: 'offer-lab-next.html' },
-    { key: 'combo', title: 'Combo Lab', tile: 'lab-combo', fact: 'st_combo', href: 'combo-lab.html' },
+    /* N18: the index is the shell's Home — a Lab is a manifest card (shell-card-<id>) with its facts spot (shell-facts-<id>) */
+    { key: 'product', title: 'Product Lab', tile: 'shell-card-product-lab', fact: 'shell-facts-product-lab', href: 'product-lab.html' },
+    { key: 'offer', title: 'Offer Lab', tile: 'shell-card-offer-lab', fact: 'shell-facts-offer-lab', href: 'offer-lab-next.html' },
+    { key: 'combo', title: 'Combo Lab', tile: 'shell-card-combo-lab', fact: 'shell-facts-combo-lab', href: 'combo-lab.html' },
   ];
   const VIEWPORTS = [{ w: 1280, label: '1280' }, { w: 390, label: '390' }];
   const STATES = [{ signedOut: false, label: 'in' }, { signedOut: true, label: 'out' }];
 
-  /* ═══ index + the Tax Lab tile: every viewport, signed in AND signed out ═══════════════════════════════════
-   * ⚠️ "coming" is only guaranteed SIGNED OUT — e2e/index-page.cjs's own signed-out assertion is
-   * `/^coming$/.test(...)`, but signed in, index.html's facts() unconditionally overwrites #st_tax with the
-   * shop's real GST status (labFact('st_tax', g ? 'GST invoices' : 'no GSTIN — cash memos', ...) inside the
-   * /api/entities/me read) — proved deliberately by index-page.cjs's own "all well" case. So "is not a link"
-   * is checked in both states; "says coming" only signed out; signed in, the live text is simply recorded. */
+  /* ═══ index + the Tax Lab chip: every viewport, signed in AND signed out ═══════════════════════════════════
+   * N18: tax-lab.html does not exist, so the manifest says `coming` and the shell draws a dashed chip that names its
+   * state ("later") and is never a link — in both states, at both widths. */
   for (const st of STATES) {
     for (const vp of VIEWPORTS) {
       const h = await openCtx({ viewport: { width: vp.w, height: 900 }, signedOut: st.signedOut });
@@ -282,13 +280,13 @@ function route(S, r) {
       const label = vp.label + 'px-' + st.label;
       await p.goto(base + '/');
       await settle(p);
-      const tax = await p.locator('[data-testid="lab-tax"]').first();
+      if (vp.w < 700) await p.click('[data-testid="shell-nav-labs"]').catch(() => {});   /* a phone shows one area at a time */
+      const tax = await p.locator('[data-testid="shell-chip-tax-lab"]').first();
       const taxTag = await tax.evaluate((el) => el.tagName).catch(() => '?');
       const taxHref = await tax.getAttribute('href').catch(() => null);
-      const taxText = (await p.textContent('#st_tax').catch(() => '')) || '';
-      ok('index', taxTag !== 'A' && !taxHref, 'Tax Lab tile is not a link (' + label + ')', 'tagName=' + taxTag + ' href=' + taxHref);
-      if (st.signedOut) ok('index', /^coming$/.test(taxText.trim()), 'signed out: Tax Lab tile says "coming" (' + label + ')', 'got "' + taxText.trim() + '"');
-      else row('index', 'signed in: Tax Lab tile\'s own status text (' + label + ')', 'INFO', 'reads "' + taxText.trim() + '" (the real GST status, by design — see e2e/index-page.cjs) rather than "coming"');
+      const taxText = (await tax.locator('.tag').textContent().catch(() => '')) || '';
+      ok('index', taxTag !== 'A' && !taxHref, 'Tax Lab chip is not a link (' + label + ')', 'tagName=' + taxTag + ' href=' + taxHref);
+      ok('index', /^later$/.test(taxText.trim()), 'Tax Lab chip names its state, "later" (' + label + ')', 'got "' + taxText.trim() + '"');
       const sw = await scrollWidthOk(p, vp.w);
       ok('index', sw, 'no horizontal scroll (' + label + ')', 'document.scrollWidth exceeded ' + vp.w);
       await p.screenshot({ path: path.join(SHOTS, 'labs-flow-index-' + label + '.png'), fullPage: true });
@@ -309,13 +307,14 @@ function route(S, r) {
           await p.goto(base + '/');
           await settle(p);
           let factText = '';
+          if (vp.w < 700) await p.click('[data-testid="shell-nav-labs"]').catch(() => {});   /* a phone shows one area at a time */
           if (!st.signedOut) {
-            await p.waitForFunction((id) => ((document.getElementById(id) || {}).textContent || '').length > 0, lab.fact, { timeout: 8000 }).catch(() => {});
-            factText = (await p.textContent('#' + lab.fact).catch(() => '')) || '';
-            ok(lab.key, factText.trim().length > 0, 'index tile fact is filled (' + state + ')', 'tile #' + lab.fact + ' stayed blank — "' + factText + '"');
+            /* N18: a card's facts come from its manifest `facts` URL; the Labs have no facts read yet (named in the N18 PR), so the spot is empty by design */
+            factText = (await p.textContent('[data-testid="' + lab.fact + '"]').catch(() => '')) || '';
+            row(lab.key, 'index card facts (' + state + ')', 'INFO', factText.trim() ? 'reads "' + factText.trim() + '"' : 'empty — the Lab has no facts read in the manifest yet (never an invented figure)');
           } else {
-            factText = (await p.textContent('#' + lab.fact).catch(() => '')) || '';
-            ok(lab.key, factText.trim() === '', 'signed out: no fact leaks onto the tile (' + state + ')', 'tile showed "' + factText + '" with nobody signed in');
+            factText = (await p.textContent('[data-testid="' + lab.fact + '"]').catch(() => '')) || '';
+            ok(lab.key, factText.trim() === '', 'signed out: no fact leaks onto the card (' + state + ')', 'card showed "' + factText + '" with nobody signed in');
           }
           const shotIdx = 'labs-flow-' + lab.key + '-index-' + state + '.png';
           await p.screenshot({ path: path.join(SHOTS, shotIdx), fullPage: true });

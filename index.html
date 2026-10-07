@@ -2,12 +2,14 @@
 <html lang="en" data-tokens="list">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>ChitBridge</title>
-<!-- ⭐ THE INDEX PAGE (Athi, 2026-09-30) — docs/design/index-page/cb-index.md is the design; docs/design/SYSTEM.md is
-     the pass mark; e2e/index-page.cjs proves both. The frozen React app that lived at / is retired (src/FROZEN.md).
-     The arrangement carries the model — three boxes you live in, four Labs you visit — and every figure on it is the
-     server's, read through the same API app.html uses. A box with no fact is fine; an error string never is. -->
+<!-- ⭐ THE INDEX PAGE IS THE SHELL'S HOME (plan row N18, 2026-10-08; FIT §D Q1 · Q3 · Q5 · Q10). CBShell (public/app/shell.js) draws
+     the header, the five areas and the kural; every card is a row of public/app/manifest.json — this page writes no card by hand.
+     What this page owns is the HOME area: the alerts (one browser, one shop · the ledger's waiting posts · a counter paired to
+     another shop) and "The rail" widget. Every figure is the server's, one budgeted read each (I19); a read that does not exist yet
+     paints nothing — never a made-up number. e2e/index-page.cjs proves it at 1366 and 390.
+     The earlier design (docs/design/index-page/cb-index.md) is superseded by the shell (designs-inbox/cb-shell-2026-10-07). -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
 <style>
 /* tokens — docs/design/SYSTEM.md §2, copied, never restyled */
@@ -20,488 +22,168 @@
   --red:#C4562F; --red-t:#FBEAE3; --red-b:#E7B9A8; --red-i:#8E3517;
   --blue:#2F74C9; --blue-t:#E4EEFA; --blue-b:#B9D2EF; --blue-i:#174A87;
 }
-:root[data-themed]{--green-d:color-mix(in srgb,var(--ok-2,#0D4A2B) 80%,var(--ink))}   /* the avatar re-points --green-t and --green; the dark green text on it follows (a theme that sets --ok-2 wins the mix) */
-*{box-sizing:border-box}
-body{margin:0;background:var(--page);color:var(--ink);
-  font-family:var(--f-ui,'IBM Plex Sans',system-ui,sans-serif);font-size:calc(15px * var(--k,1));line-height:1.45}
-button,a{font:inherit;color:inherit} button{cursor:pointer}
-a.box,a.lab{text-decoration:none;cursor:pointer}
-.wrap{max-width:1080px;margin:0 auto;padding:26px 22px 60px}
+body{margin:0;background:var(--page);color:var(--ink);font-family:var(--f-ui,'IBM Plex Sans',system-ui,sans-serif)}
 
-/* ── head ─────────────────────────────────────────────────────────────── */
-.top{display:flex;align-items:center;gap:13px;margin-bottom:6px;flex-wrap:wrap}
-.brand{font-family:'Bricolage Grotesque',sans-serif;font-size:26px;font-weight:800;
-  letter-spacing:-.025em;margin:0}
-/* ⚠️ --muted, not the mock's --faint: this is read text and the pass mark is WCAG AA (--faint is 3.6:1 on the page) */
-.shop{font-size:13.5px;color:var(--muted)}
-.grow{flex:1}
-/* one sentence. The arrangement does the rest of the explaining. */
-.idea{font-size:14.5px;color:var(--muted);margin:0 0 20px;max-width:56ch}
-
-/* ── anything wrong, before anything else ─────────────────────────────── */
-.alerts{display:flex;flex-direction:column;gap:8px;margin-bottom:22px}
-.alerts:empty{display:none;margin:0;border:0}
-.al{display:flex;align-items:center;gap:11px;padding:11px 15px;border-radius:12px;font-size:13.5px}
-.al .ic{width:22px;height:22px;border-radius:7px;display:grid;place-items:center;
-  font-size:12px;font-weight:800;color:#fff;flex:0 0 auto}
+/* ── anything wrong, before anything else (the shell's alerts slot; only a failing thing earns a row) ── */
+.al{display:flex;align-items:center;gap:11px;padding:10px 14px;border-radius:12px;font-size:13.5px}
+.al .ic{width:22px;height:22px;border-radius:7px;display:grid;place-items:center;font-size:12px;font-weight:800;color:var(--card);flex:0 0 auto}
 .al b{font-weight:700}
-.al .fix{margin-left:auto;display:inline-flex;align-items:center;height:32px;padding:0 13px;border-radius:9px;
-  border:1px solid currentColor;background:rgba(255,255,255,.55);font-size:12.5px;font-weight:700;
-  white-space:nowrap;text-decoration:none}
+.al .fix{font:inherit;color:inherit;margin-left:auto;display:inline-flex;align-items:center;height:32px;padding:0 13px;border-radius:9px;
+  border:1px solid currentColor;background:var(--card);font-size:12.5px;font-weight:700;white-space:nowrap;text-decoration:none;cursor:pointer}
 .al.bad{background:var(--red-t);border:1px solid var(--red-b);color:var(--red-i)}
 .al.bad .ic{background:var(--red-i)}
 .al.warn{background:var(--amber-t);border:1px solid var(--amber-b);color:var(--amber-i)}
 .al.warn .ic{background:var(--amber-i)}
 
-/* ── the three you work in ────────────────────────────────────────────── */
-.cap{display:flex;align-items:center;gap:11px;margin:0 0 11px}
-.cap b{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:700}
-.cap i{flex:1;height:1px;background:var(--line-soft);font-style:normal}
-.cap span{font-size:12.5px;color:var(--muted)}
-
-.main{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px}
-.box{display:block;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);
-  border-radius:15px;padding:18px 19px;position:relative;transition:border-color .12s,transform .12s}
-.box:hover{border-color:var(--green);transform:translateY(-1px)}
-.box .g{width:42px;height:42px;border-radius:12px;background:var(--panel);display:grid;
-  place-items:center;font-size:19px;color:var(--muted);margin-bottom:13px}
-.box h3{font-family:'Bricolage Grotesque',sans-serif;font-size:19px;font-weight:800;
-  letter-spacing:-.015em;margin:0}
-.box .what{font-size:13.5px;color:var(--muted);margin:3px 0 0;line-height:1.35}
-.box .facts{display:flex;flex-direction:column;gap:3px;margin-top:15px;padding-top:13px;
-  border-top:1px solid var(--hair)}
-.box .facts[hidden]{display:none}
-.box .f{display:flex;align-items:baseline;gap:8px;font-size:13px;color:var(--muted)}
-.box .f b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
-  font-size:15px;font-weight:700;color:var(--ink)}
-.box .f.dn b,.box .f.dn{color:var(--amber-i)}
-.box .f.live{color:var(--green-d)} .box .f.live .dot{width:7px;height:7px;border-radius:50%;
-  background:var(--green);display:inline-block}
-.box .go{position:absolute;top:18px;right:18px;color:var(--ghost);font-size:17px}
-.box:hover .go{color:var(--green)}
-/* CB Accounts is a box with TWO things in it — the link to its page, and (while it is off) the owner's Switch on — so the
-   link is the .cover inside it, not the box itself (a button may not sit inside an <a>) */
-.box .cover{display:block;color:inherit;text-decoration:none}
-.box .cover h3{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
-.box .ledact{margin-top:14px}
-.box .ledact:empty{display:none;margin:0}
-.box .swbtn{display:inline-flex;align-items:center;height:36px;padding:0 16px;border-radius:9px;border:1px solid var(--green);
-  background:var(--green);color:#fff;font-size:13.5px;font-weight:700}
-.box .swbtn[disabled]{opacity:.6;cursor:default}
-.box .ledact .f{margin-left:10px}
-/* the Standards door (2026-10-03): a box like the three above, outside Day to day; one live fact (the register's own counts), what it is, when it was checked, Read me */
-.box.door .doorn{display:flex;flex-wrap:wrap;gap:3px 14px;margin:15px 0 0;padding-top:13px;border-top:1px solid var(--hair);font-size:13px;color:var(--muted)}
-.box.door .go::before{content:"›"}
-.box.door .doorn .c-live::before{content:"● ";color:var(--green)} .box.door .doorn .c-part::before{content:"◐ ";color:var(--amber-i)} .box.door .doorn .c-plan::before{content:"○ "}   /* the symbol is drawn, not typed: the WORD carries the status (never colour alone) and the page stays under its word count */
-.box.door .doorn b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:15px;color:var(--ink)}
-.box.door .doorf{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin:10px 0 0;font-size:12.5px;color:var(--muted)}
-.box.door .doorf a{color:var(--blue-i);text-decoration:underline;text-underline-offset:3px;padding:4px 0}
-/* the Active badge, and the lit tile: a green edge and a soft glow from the page's own tokens. Still when the reader asks for less motion. */
-.badge{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 9px;border-radius:999px;background:var(--green-t);
-  border:1px solid var(--green-b);color:var(--green-d);font-family:'IBM Plex Sans',sans-serif;font-size:11.5px;font-weight:700;letter-spacing:0}
-.badge[hidden]{display:none}
-.badge::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--green)}
-.box.lit{border-color:var(--green);box-shadow:0 0 0 1px var(--green-b),0 8px 26px rgba(22,105,63,.16)}
-@keyframes glow{50%{box-shadow:0 0 0 1px var(--green-b),0 10px 32px rgba(22,105,63,.28)}}
-@media (prefers-reduced-motion:no-preference){.box.lit{animation:glow 3.4s ease-in-out infinite}}
-
-/* ── the labs, a family, visibly different from the three ─────────────── */
-.labs{background:var(--panel);border:1px solid var(--line-soft);border-radius:16px;padding:17px 18px}
-.lgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin-top:12px}
-.lab{display:block;text-align:left;background:var(--card);border:1px solid var(--line);
-  border-radius:13px;padding:15px 16px;transition:border-color .12s,transform .12s}
-a.lab:hover{border-color:var(--green);transform:translateY(-1px)}
-.lab .g{font-size:17px;color:var(--faint);margin-bottom:9px;display:block}
-.lab b{display:block;font-size:15px;font-weight:700;letter-spacing:-.01em}
-.lab span{display:block;font-size:12.5px;color:var(--muted);margin-top:2px;line-height:1.35}
-.lab .st{display:inline-flex;align-items:center;gap:6px;margin-top:11px;font-size:12px;
-  font-weight:600;color:var(--muted);font-family:'IBM Plex Mono',monospace}
-.lab .st:empty{display:none}
-.lab .st.on{color:var(--blue-i)}
-.lab .st.dn{color:var(--amber-i)}
-
-.foot{margin-top:26px;padding-top:16px;border-top:1px solid var(--hair);
-  display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
-.foot a{color:var(--muted);text-decoration:none;font-weight:600}
-.foot a:hover{color:var(--ink);text-decoration:underline;text-underline-offset:3px}
-
-@media(max-width:860px){ .main{grid-template-columns:1fr} .lgrid{grid-template-columns:1fr 1fr} }
-@media(max-width:520px){
-  .wrap{padding:16px 14px 44px}
-  .brand{font-size:22px}
-  .lgrid{grid-template-columns:1fr}
-  .al{flex-wrap:wrap} .al .fix{margin-left:33px;width:auto}
+/* ── the rail: suppliers · the flows · customers (designs-inbox/cb-shell-2026-10-07, the Home widget) ── */
+.rail{border:1px solid var(--line);border-radius:14px;background:var(--card);padding:14px 20px 16px;position:relative;overflow:hidden;margin-bottom:16px}
+.rail::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:linear-gradient(90deg,var(--green-b),var(--green),var(--green-b))}
+.railtop{display:flex;align-items:baseline;gap:11px;margin-bottom:13px}
+.railtop h3{font-family:'Bricolage Grotesque',sans-serif;font-size:16px;font-weight:800;margin:0}
+.railtop a{margin-left:auto;font-weight:600;color:var(--green-d);text-decoration:none}
+.track{display:flex;align-items:center;position:relative}
+.track::before{content:"";position:absolute;left:7%;right:7%;top:50%;height:2px;background:repeating-linear-gradient(90deg,var(--line) 0 7px,transparent 7px 13px)}
+.node{position:relative;background:var(--card);padding:0 14px;text-align:center;flex:0 0 auto}
+.node .n{display:block;font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:21px;font-weight:700;line-height:1.1}
+.node .k{display:block;font-size:11.5px;color:var(--muted);margin-top:2px}
+.flow{position:relative;flex:1;display:flex;justify-content:center;gap:7px;flex-wrap:wrap}
+.pip{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:3px 10px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:700;color:var(--muted);white-space:nowrap}
+.pip.in{border-color:var(--blue-b);background:var(--blue-t);color:var(--blue-i)}
+.pip.out{border-color:var(--green-b);background:var(--green-t);color:var(--green-d)}
+.pip.stuck{border-color:var(--amber-b);background:var(--amber-t);color:var(--amber-i)}
+@media(max-width:700px){
+  .al{flex-wrap:wrap} .al .fix{margin-left:33px}
+  .rail{padding:12px 14px 14px}
+  .track{display:grid;grid-template-columns:1fr 1fr;row-gap:8px;column-gap:6px;align-items:center}
+  .track::before{display:none}
+  .node{padding:0}
 }
 </style>
 </head>
 <body>
-<div class="wrap">
-
-  <div class="top">
-    <h1 class="brand">ChitBridge</h1>
-    <span class="shop" id="shop" data-testid="shop-name"></span>
-    <span class="grow"></span>
-    <span id="who"></span>
-  </div>
-  <p class="idea">One shop, one set of numbers. The counter sells it, the catalogue
-    describes it, the ledger records it — and the Labs are where you work a number out
-    before any of them see it.</p>
-
-  <div class="alerts" id="notice" data-testid="notice-host"></div>
-  <div class="alerts" id="alerts" data-testid="alerts"></div>
-
-  <div class="cap"><b>Day to day</b><i></i></div>
-  <div class="main" data-testid="day-to-day">
-
-    <a class="box" data-testid="box-till" href="/till.html" target="_blank" rel="noopener">
-      <span class="go">›</span>
-      <span class="g">▤</span>
-      <h3>Till</h3>
-      <p class="what">Take money at the counter.</p>
-      <span class="facts" id="f_till" hidden></span>
-    </a>
-
-    <a class="box" data-testid="box-catalogue" href="app.html#/app/catalogue">
-      <span class="go">›</span>
-      <span class="g">▦</span>
-      <h3>Catalogue</h3>
-      <p class="what">What this shop sells, and at what price.</p>
-      <span class="facts" id="f_cat" hidden></span>
-    </a>
-
-    <div class="box" id="box_bk" data-testid="box-ledger">
-      <a class="cover" href="/accounts.html" data-testid="box-ledger-link">
-        <span class="go">›</span>
-        <span class="g">₹</span>
-        <h3>CB Accounts<span class="badge" id="bk_active" data-testid="ledger-active" hidden>Active</span></h3>
-        <p class="what">What the shop made, and what it owes.</p>
-        <span class="facts" id="f_bk" hidden></span>
-      </a>
-      <div class="ledact" id="act_bk" data-testid="ledger-act"></div>
-    </div>
-
-  </div>
-
-  <div class="labs" data-testid="labs-band">
-    <div class="cap" style="margin:0">
-      <b>Labs</b><span>Work the number out first. Nothing changes until you say so.</span><i></i>
-    </div>
-    <div class="lgrid">
-
-      <a class="lab" data-testid="lab-product" href="product-lab.html">
-        <span class="g">◈</span>
-        <b>Product Lab</b>
-        <span>Cost, price, and what each one leaves you.</span>
-        <span class="st" id="st_prod"></span>
-      </a>
-
-      <a class="lab" data-testid="lab-offer" href="offer-lab-next.html">
-        <span class="g">%</span>
-        <b>Offer Lab</b>
-        <span>Discounts, and whether they clear your margin.</span>
-        <span class="st" id="st_offer"></span>
-      </a>
-
-      <a class="lab" data-testid="lab-combo" href="combo-lab.html">
-        <span class="g">▣</span>
-        <b>Combo Lab</b>
-        <span>Two things at one price, and the choices before a bill.</span>
-        <span class="st" id="st_combo"></span>
-      </a>
-
-      <!-- tax-lab.html does not exist yet — not a link until it does -->
-      <div class="lab" data-testid="lab-tax">
-        <span class="g">§</span>
-        <b>Tax Lab</b>
-        <span>GST slabs, and what prints on a bill.</span>
-        <span class="st" id="st_tax">coming</span>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- THE STANDARDS DOOR (docs/design/standards-page) waits: the page is at 245 of its 250 words with every alert up and the box costs 25. Until Athi picks what to trim,
-       Standards (and CRM) are one-word links in the foot row below. -->
-
-  <div class="foot">
-    <a href="app.html#/app/settings" data-testid="foot-shop">Your shop</a>
-    <a href="app.html#/app/settings" data-testid="foot-counters">Counters &amp; keys</a>
-    <a href="app.html#/app/coassists" data-testid="foot-coassists">Co-assists</a>
-    <a href="app.html#/app/suppliers" data-testid="foot-suppliers">Suppliers</a>
-    <a href="app.html#/app/connectors" data-testid="foot-connectors">Connectors</a>
-    <a href="crm.html" data-testid="foot-crm">CRM</a>
-    <a href="standards.html" data-testid="foot-standards">Standards</a>
-    <span class="grow"></span>
-    <span id="prices_read" data-testid="prices-read"></span>
-  </div>
-
-</div>
+<div id="shell"></div>
 
 <script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies (engines screen) -->
-<script src="/app/avatar.js"></script>   <!-- CBAvatar: the one avatar — signed out it is the Sign in door -->
-<script src="/app/one-person.js"></script>
-<script src="/app/kural.js"></script>   <!-- CBKural: the kural footer — one band at the foot of every CB page -->
-<script src="/app/accounts-shell.js"></script>   <!-- the Ledger's switch and its confirm: ONE copy, shared with accounts.html and the app's Settings card -->
+<script src="/app/avatar.js"></script>      <!-- CBAvatar: the one avatar — signed out it is the Sign in door; the shell mounts it -->
+<script src="/app/one-person.js"></script>  <!-- CBOnePerson: one browser, one shop -->
+<script src="/app/kural.js"></script>       <!-- CBKural: the kural band; the shell gives it its place -->
+<script src="/app/shell.js"></script>       <!-- CBShell: the frame — header · five areas · kural -->
 <script>
 'use strict';
-/* The page paints; it computes nothing a counter or another page also computes (SYSTEM rule 12). Every figure
-   below is one read of the existing API. A failed read leaves its line out — never an error string (rule 4). */
+/* The page paints; it computes nothing a counter or another page also computes (SYSTEM rule 12). A failed read
+   leaves its row out — never an error string (rule 4). */
 
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 
-/* the API base, decided the same way app.html decides it (CFG.API_BASE) */
-function apiBase(){
-  try{
-    var forced = localStorage.getItem('cb_api_base');
-    if (forced) return forced === 'stage' ? 'https://chitbridge-api-production.up.railway.app' : forced;
-    var h = location.hostname;
-    if (h === 'localhost' || h === '127.0.0.1') return 'http://localhost:3000';
-  }catch(_){}
-  return 'https://chitbridge-api-production.up.railway.app';
-}
-
-/* the app's session, read the way app.html restores it — an expired token counts as signed out. WHO it is (the
-   shop's id from the signed token) is CBOnePerson's one answer, the same one the app's gate compares. */
+/* the app's session, read the way the apps restore it — an expired token counts as signed out. WHO it is (the
+   shop's id from the signed token) is CBOnePerson's one answer, the same one the apps' gate compares. */
 function session(){
   try{
     var s = JSON.parse(localStorage.getItem('cb_sess') || 'null');
     return (window.CBOnePerson && CBOnePerson.who(s)) ? s : null;
   }catch(_){ return null; }
 }
-
 var SESS = session();
 var MINE = SESS ? CBOnePerson.who(SESS) : null;
 /* every repaint starts a new generation; a read that lands for an older one paints nothing */
 var GEN = 0;
-var CUR = 'INR';
-function money(n){
-  var v = Number(n) || 0;
-  try{ return new Intl.NumberFormat('en-IN', { style:'currency', currency:CUR,
-    minimumFractionDigits:0, maximumFractionDigits: v % 1 ? 2 : 0 }).format(v); }
-  catch(_){ return String(v); }
-}
-function day(d){ try{ return new Date(d).toLocaleDateString('en-IN',{day:'numeric',month:'short'}); }catch(_){ return ''; } }
+var SHELL = null;
 
-/* one read; the {ok,data,error} envelope unwrapped; any failure is null, and null paints nothing */
+/* ⭐ THE SHELL IS THE PAGE. Home (host null): the five areas from the manifest, the header, the kural. */
+function mountShell(){
+  SHELL = CBShell.mount(document.getElementById('shell'), {
+    host: null,
+    person: SESS ? CBAvatar.personOf(SESS) : null,
+    token: SESS && SESS.token,
+    apiBase: CBShell.apiBase(),
+    kural: 'planning'
+  });
+  return SHELL;
+}
+
+/* one read; the {ok,data,error} envelope unwrapped; any failure throws, and the caller paints nothing */
 async function read(path){
   var g = GEN, never = function(){ return new Promise(function(){}); };
-  var r = await fetch(apiBase() + path, { cache:'no-store', headers:{ Authorization:'Bearer ' + SESS.token } });
+  var r = await fetch(CBShell.apiBase() + path, { cache:'no-store', headers:{ Authorization:'Bearer ' + SESS.token } });
   if (g !== GEN) return never();
   if (!r.ok) { var e = new Error(String(r.status)); e.status = r.status; throw e; }
   var j = await r.json();
   if (g !== GEN) return never();
   return (j && typeof j === 'object' && 'ok' in j && ('data' in j || 'error' in j)) ? (j.ok ? j.data : null) : j;
 }
-function quiet(p){ return read(p).catch(function(){ return null; }); }
-
-/**
- * ⭐ ONE FUNCTION for "no cost": the Catalogue box's "with no cost written down" and the Product Lab tile's
- * "without a cost" are one fact seen from two doors, and this is its only counter. They can never disagree.
- * A price/cost is stamped money ({amount,currency}) or a number — both are read.
- */
-function amountOf(v){ if (v == null) return 0; if (typeof v === 'object') v = v.amount; var n = Number(v); return isFinite(n) ? n : 0; }
-function noCostCount(items){ return (items || []).filter(function(p){ return p && p.item_data && !(amountOf(p.item_data.cost) > 0); }).length; }
-
-function factLine(hostId, html, cls){
-  var host = document.getElementById(hostId); if (!host) return;
-  var s = document.createElement('span'); s.className = 'f' + (cls ? ' ' + cls : ''); s.innerHTML = html;
-  host.appendChild(s); host.hidden = false;
-}
-function labFact(id, text, cls){
-  var el = document.getElementById(id); if (!el || !text) return;
-  el.textContent = text; if (cls) el.className = 'st ' + cls;
-}
-var ALERTS = [];
-function alert_(lvl, ic, t, s, fixText, fixHref, fixBlank){
-  ALERTS.push({ lvl: lvl, html: '<div class="al ' + lvl + '"><span class="ic">' + ic + '</span><span><b>' + esc(t) + '</b> &nbsp;' + esc(s) + '</span>'
-    + '<a class="fix" href="' + esc(fixHref) + '"' + (fixBlank ? ' target="_blank" rel="noopener"' : '') + '>' + esc(fixText) + '</a></div>' });
-}
-/* Only a failing thing earns a row; with nothing wrong this block renders nothing at all (SYSTEM rule 1).
-   What is wrong NOW (red) sits above what needs a hand (amber), whatever order the answers arrived in. */
-function alertsPaint(){
-  document.getElementById('alerts').innerHTML =
-    ALERTS.filter(function(a){ return a.lvl === 'bad'; }).concat(ALERTS.filter(function(a){ return a.lvl !== 'bad'; }))
-      .map(function(a){ return a.html; }).join('');
-}
-
 function n1(v){ var n = Number(v); return isFinite(n) ? n : null; }
 
-/* ── CB ACCOUNTS, THE THIRD BOX ──────────────────────────────────────────────────────────────────────────────
-   On → an Active badge and a lit tile, with its facts. Off → the owner gets Switch on (the same confirm and call the
-   Settings card and the CB Accounts page use: CBLedger, app/accounts-shell.js); anyone else is told it is not on yet.
-   Nothing is shown until the server has answered — a tile never asserts a state it has not read. */
-var LEDGER_ON = null;
-function ledgerState(on){
-  LEDGER_ON = on;
-  var box = document.getElementById('box_bk'), badge = document.getElementById('bk_active'), act = document.getElementById('act_bk');
-  box.classList.toggle('lit', on === true);
-  badge.hidden = on !== true;
-  act.innerHTML = '';
-  if (on !== false) return;
-  if (SESS && SESS.role === 'entity'){
-    var b = document.createElement('button'); b.type = 'button'; b.className = 'swbtn'; b.setAttribute('data-testid', 'ledger-switch-on'); b.textContent = 'Switch on';
-    b.onclick = ledgerSwitchOn; act.appendChild(b);
-  } else {
-    var s = document.createElement('span'); s.className = 'f dn'; s.style.marginLeft = '0'; s.setAttribute('data-testid', 'ledger-not-on'); s.textContent = 'Not switched on yet'; act.appendChild(s);
-  }
+/* ── ALERTS: the shell's slot. What is wrong NOW (red) sits above what needs a hand (amber), whatever order the answers
+   arrived in. With nothing wrong the slot is empty and draws nothing at all (SYSTEM rule 1). ── */
+var ALERTS = [];
+function alert_(key, lvl, ic, t, s, fixText, fixHref, fixBlank){
+  ALERTS = ALERTS.filter(function(a){ return a.key !== key; });
+  ALERTS.push({ key: key, lvl: lvl, html: '<div class="al ' + lvl + '" data-testid="' + esc(key) + '"><span class="ic">' + ic + '</span><span><b>' + esc(t) + '</b>' + (s ? ' &nbsp;' + esc(s) : '') + '</span>'
+    + '<a class="fix" href="' + esc(fixHref) + '"' + (fixBlank ? ' target="_blank" rel="noopener"' : '') + '>' + esc(fixText) + '</a></div>' });
+  alertsPaint();
 }
-function ledgerSwitchOn(){
-  var act = document.getElementById('act_bk'), btn = act.querySelector('button');
-  CBLedger.run(true, {
-    ask: CBConfirm,
-    working: function(){ btn.disabled = true; btn.textContent = 'Working…'; },
-    call: function(){
-      return fetch(apiBase() + CB_BOOKS_EP.booksEnable.p, { method: CB_BOOKS_EP.booksEnable.m, cache: 'no-store',
-        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + SESS.token }, body: '{}' })
-        .then(function(r){ if (!r.ok) { var e = new Error(String(r.status)); e.status = r.status; throw e; } });
-    },
-    done: function(){ ledgerState(true); ledgerRead(); },
-    failed: function(){
-      btn.disabled = false; btn.textContent = 'Switch on';
-      var s = document.createElement('span'); s.className = 'f dn'; s.setAttribute('data-testid', 'ledger-switch-failed'); s.textContent = 'Could not switch it on';
-      act.appendChild(s);
-    },
-  });
+function alertDrop(key){ ALERTS = ALERTS.filter(function(a){ return a.key !== key; }); alertsPaint(); }
+function alertsPaint(){
+  var host = SHELL && SHELL.slots.alerts; if (!host) return;
+  host.innerHTML = ALERTS.filter(function(a){ return a.lvl === 'bad'; }).concat(ALERTS.filter(function(a){ return a.lvl !== 'bad'; }))
+    .map(function(a){ return a.html; }).join('');
 }
-/* the Ledger's one read: /api/books/health — its facts, its alert, and which of the two states the tile is in */
-function ledgerRead(){
+
+/* the ledger's posts waiting for the owner — GET /api/books/health (budget line: I19); a 404 means the ledger is off, nothing wrong */
+function booksAlert(){
   var g = GEN;
   return read('/api/books/health').then(function(r){
     if (g !== GEN) return;
-    ledgerState(true);
-    /* /health sends { enabled, currency, walkin_grain, last_check: { at, ok, problems, posted, engines } | null, waiting } - no day the books are posted up to: the nightly check's own time is the one date it has */
-    var upTo = r && (r.last_posted_day || r.last_posted || r.up_to || (r.last_check && r.last_check.posted_to)), checkedAt = r && r.last_check && r.last_check.at;
-    var host = document.getElementById('f_bk'); host.innerHTML = ''; host.hidden = true;
-    if (upTo) factLine('f_bk', 'Ledger up to <b>' + esc(day(upTo)) + '</b>');
-    else if (checkedAt) factLine('f_bk', 'Ledger checked <b>' + esc(day(checkedAt)) + '</b>');
-    /* ⚠️ the deployed /health says enabled and nothing about days (seen live, 2026-10-01) — a ledger that is on
-       must still say SOMETHING, or the box reads exactly like one that is off */
-    else if (r && r.enabled !== false) factLine('f_bk', 'Ledger on');
     var w = ((r && r.waiting) || []).length;
-    if (w){
-      factLine('f_bk', '<b>' + w + '</b> waiting', 'dn');
-      alert_('warn', '🕗', w + ' waiting for the ledger', 'CB Accounts names each one.', 'See them', '/accounts.html#waiting');
-      alertsPaint();
-    }
-  }).catch(function(e){
-    if (g === GEN && e && e.status === 404) ledgerState(false);
+    if (w) alert_('ledger-waiting', 'warn', '🕗', w + ' waiting for the ledger', '', 'See them', '/accounts.html#waiting');
+  }).catch(function(){});
+}
+
+/* ── THE RAIL: the Home widget. Its one read and its Open target come from the manifest's `rail` (null = not drawn). ── */
+function railPaint(r){
+  var host = SHELL && SHELL.slots.home; if (!host) return;
+  var m = SHELL.manifest(), rail = (m && m.rail) || {};
+  var sup = n1(r && r.suppliers), cus = n1(r && r.customers), fin = n1(r && r.in), fout = n1(r && r.out), stuck = n1(r && r.stuck);
+  if (sup == null && cus == null) { host.innerHTML = ''; return; }
+  var pips = [];
+  if (fin != null) pips.push('<span class="pip in" data-testid="rail-in">' + fin + ' in</span>');
+  if (fout != null) pips.push('<span class="pip out" data-testid="rail-out">' + fout + ' out</span>');
+  if (stuck) pips.push('<span class="pip stuck" data-testid="rail-stuck">' + stuck + ' stuck</span>');
+  host.innerHTML = '<div class="rail" data-testid="rail"><div class="railtop"><h3>The rail</h3>'
+    + (rail.route ? '<a href="' + esc(rail.route) + '" data-testid="rail-open">Open ›</a>' : '') + '</div>'
+    + '<div class="track"><span class="node"><b class="n" data-testid="rail-suppliers">' + (sup == null ? '–' : sup) + '</b><span class="k">Suppliers</span></span>'
+    + '<span class="node"><b class="n" data-testid="rail-customers">' + (cus == null ? '–' : cus) + '</b><span class="k">Customers</span></span>'
+    + '<span class="flow">' + pips.join('') + '</span></div></div>';
+}
+function railRead(){
+  var g = GEN;
+  return SHELL.ready.then(function(){
+    if (g !== GEN || !SESS) return;
+    var m = SHELL.manifest(), rail = m && m.rail;
+    if (!rail || !rail.facts) return;                       /* no read exists yet → nothing is drawn (never a made-up number) */
+    return read(rail.facts).then(function(r){ if (g === GEN) railPaint(r); }).catch(function(){});
   });
 }
 
-async function facts(){
-  if (SESS.entity) document.getElementById('shop').textContent = SESS.entity;
-
-  /* who we are — the shop's name, its currency, and whether it holds a GSTIN */
-  quiet('/api/entities/me').then(function(r){
-    var e = (r && (r.entity || r)) || {};
-    if (e.currency_code) CUR = e.currency_code;
-    var nm = e.display_name || e.name;
-    if (nm) document.getElementById('shop').textContent = nm;
-    var g = e.gstn || e.gstin || null;
-    labFact('st_tax', g ? 'GST invoices' : 'no GSTIN — cash memos', g ? '' : 'dn');
-  });
-
-  /* Till — the shop's counters as the server holds them (GET /api/counters: each row carries its state) */
-  quiet('/api/counters').then(function(r){
-    var open = ((r && r.counters) || []).filter(function(c){ return c && (c.state === 'open' || c.open === true || c.status === 'open'); })[0];
-    if (open) factLine('f_till', '<span class="dot"></span>' + esc(open.name || open.id || 'Counter') + ' open', 'live');
-  });
-  quiet('/api/till/summary?period=day&n=1').then(function(r){
-    var row = ((r && (r.rows || r.summaries)) || [])[0] || {};
-    var bills = n1(row.count != null ? row.count : row.bills), take = n1(row.total != null ? row.total : row.takings);
-    if (bills != null && take != null)
-      factLine('f_till', '<b>' + bills + '</b> bills · <b>' + esc(money(take)) + '</b> today');
-    /* the two counter alerts ride the same summary — prices read over 24 h ago, and bills still to go up */
-    var at = r && (r.prices_read_at || r.snapshot_at);
-    if (at){
-      var ms = Date.now() - new Date(at).getTime();
-      if (isFinite(ms) && ms > 24 * 3600 * 1000)
-        alert_('bad', '!', 'Prices are ' + Math.round(ms / 3600000) + ' hours old',
-          'Read ' + day(at) + '. Bills may be wrong.', 'Re-read the shop', '/till.html', true);
-      else {
-        var hm = ''; try{ hm = new Date(at).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false}); }catch(_){}
-        if (hm) document.getElementById('prices_read').textContent = 'Prices read ' + hm + ' today';
-      }
-    }
-    var unsent = n1(r && (r.unsent != null ? r.unsent : r.queued));
-    if (unsent) alert_('warn', '↑', unsent + ' bills not sent up', 'Still on the counter.', 'Send them', '/till.html', true);
-    alertsPaint();
-  });
-
-  /* Catalogue (and the Product Lab and Combo Lab tiles ride the same one read) */
-  quiet('/api/products?limit=500').then(function(j){
-    var items = (j && (j.items || j.products || j.rows)) || (Array.isArray(j) ? j : null);
-    if (!items) return;
-    var shelves = {};
-    items.forEach(function(p){ var c = p && p.item_data && (p.item_data.category || (p.item_data.categories || [])[0]); if (c) shelves[c] = 1; });
-    factLine('f_cat', '<b>' + items.length + '</b> products · <b>' + Object.keys(shelves).length + '</b> shelves');
-    var none = noCostCount(items);
-    if (none){
-      factLine('f_cat', '<b data-testid="nocost-cat">' + none + '</b> with no cost written down', 'dn');
-      labFact('st_prod', none + ' without a cost', 'dn');
-    }
-    var mods = items.reduce(function(s, p){ return s + ((p && p.item_data && p.item_data.modifiers) || []).length; }, 0);
-    quiet('/api/combo-templates').then(function(r){
-      var combos = (r && r.templates || []).length;
-      labFact('st_combo', combos + ' combos · ' + mods + ' modifiers');
-    });
-  });
-
-  /* CB Accounts — /api/books/health; a 404 means the shop's ledger is off */
-  ledgerRead();
-
-  /* Offer Lab — the drafts on the shelf */
-  quiet('/api/definitions?kind=offer&status=draft').then(function(r){
-    var n = ((r && r.definitions) || []).length;
-    if (n) labFact('st_offer', n + (n === 1 ? ' draft waiting' : ' drafts waiting'), 'on');
-  });
+function facts(){
+  booksAlert();
+  railRead();
 }
 
-/* ── ONE BROWSER, ONE SHOP (2026-10-01) — the page asks CBOnePerson the same question the app's gate asks ── */
+/* ── ONE BROWSER, ONE SHOP (2026-10-01) — the page asks CBOnePerson the same question the apps' gate asks ── */
 
-/* the Till tile says which shop this browser's counter is paired to — read from the counter's own keys, never
-   written. Another shop's counter is amber, and the tile still opens it: the counter's own sign-in switches it. */
+/* a counter in this browser paired to ANOTHER shop earns a row (amber); paired here, or not paired, is nothing wrong.
+   Read from the counter's own keys, never written; the counter's own sign-in switches it. */
 function pairPaint(p){
-  var host = document.getElementById('f_till'); if (!host || !MINE) return;
-  var old = host.querySelector('[data-testid="till-paired"]'); if (old) old.remove();
-  var s = document.createElement('span'); s.className = 'f'; s.setAttribute('data-testid', 'till-paired');
-  if (!p || !p.paired) s.textContent = 'Not paired yet';
-  else if (p.ent === MINE.ent) s.textContent = p.counter + ' · paired to ' + (p.name || MINE.name || 'this shop');
-  else { s.className = 'f dn'; s.textContent = p.counter + ' · paired to ' + CBOnePerson.shopName(p) + ', not this shop'; }
-  host.insertBefore(s, host.firstChild); host.hidden = false;
-}
-
-function clearFacts(){
-  GEN++;
-  ['f_till','f_cat','f_bk'].forEach(function(id){ var h = document.getElementById(id); h.innerHTML = ''; h.hidden = true; });
-  ['st_prod','st_offer','st_combo'].forEach(function(id){ var el = document.getElementById(id); el.textContent = ''; el.className = 'st'; });
-  var t = document.getElementById('st_tax'); t.textContent = 'coming'; t.className = 'st';
-  document.getElementById('shop').textContent = '';
-  document.getElementById('prices_read').textContent = '';
-  ALERTS = []; document.getElementById('alerts').innerHTML = '';
-  document.getElementById('notice').innerHTML = '';
-  ledgerState(null);
-  CUR = 'INR';
-}
-
-
-/* THE AVATAR is CBAvatar (app/avatar.js) — the same control as the app and CB Accounts; signed out it draws the Sign in door */
-function avatarPaint(){
-  CBAvatar.mount(document.getElementById('who'), { person: SESS ? CBAvatar.personOf(SESS) : null, items: ['profile', 'support', 'signout'], apiBase: apiBase(), token: SESS && SESS.token });
-}
-
-/* signed out — the one door in, and (when another tab did it) one line saying why */
-function signedOut(why){
-  SESS = null; MINE = null;
-  clearFacts();
-  avatarPaint();
-  if (why) document.getElementById('alerts').innerHTML = '<div class="al warn" data-testid="signed-out-why"><span class="ic">!</span><span>'
-    + esc(why) + '</span><a class="fix" href="app.html#/login">Sign in</a></div>';
+  if (!MINE) return;
+  if (p && p.paired && p.ent !== MINE.ent)
+    alert_('till-paired', 'warn', '▤', p.counter + ' · paired to ' + CBOnePerson.shopName(p) + ', not this shop', '', 'Open the counter', '/till.html', true);
+  else alertDrop('till-paired');
 }
 
 /* another shop still here (an app tab, its unsent drafts) → the facts wait; one row each, one button each */
 function closeFirst(r){
-  var host = document.getElementById('alerts');
+  var host = SHELL.slots.alerts;
   host.innerHTML = r.others.map(function(o, i){
     return '<div class="al bad" data-testid="close-first"><span class="ic">!</span><span>' + esc(CBOnePerson.sentence(o)) + '</span>'
       + '<button class="fix" data-testid="close-first-go" data-i="' + i + '">' + esc(CBOnePerson.buttonLabel(o)) + '</button></div>';
@@ -518,21 +200,33 @@ function closeFirst(r){
 /* another shop's counter still holds unsent bills: one line, nothing to fix here — and the shop opens regardless.
    Dismissed for the rest of this tab's life (sessionStorage; a page that cannot keep it just shows it again). */
 function noticePaint(n){
-  var host = document.getElementById('notice'); host.innerHTML = '';
+  var host = SHELL.slots.alerts;
+  var old = host.querySelector('[data-testid="gate-notice"]'); if (old) old.remove();
   if (!n) return;
   var k = 'cb_notice_seen', sig = n.ent + ':' + n.unsent;
   try { if (sessionStorage.getItem(k) === sig) return; } catch (_) {}
-  host.innerHTML = '<div class="al warn" data-testid="gate-notice"><span class="ic">!</span><span>' + esc(CBOnePerson.noticeSentence(n))
-    + '</span><button class="fix" data-testid="gate-notice-x">Dismiss</button></div>';
-  host.querySelector('button').onclick = function(){ try { sessionStorage.setItem(k, sig); } catch (_) {} host.innerHTML = ''; };
+  var d = document.createElement('div'); d.className = 'al warn'; d.setAttribute('data-testid', 'gate-notice');
+  d.innerHTML = '<span class="ic">!</span><span>' + esc(CBOnePerson.noticeSentence(n)) + '</span><button class="fix" data-testid="gate-notice-x">Dismiss</button>';
+  d.querySelector('button').onclick = function(){ try { sessionStorage.setItem(k, sig); } catch (_) {} d.remove(); };
+  host.insertBefore(d, host.firstChild);
+}
+
+/* signed out — the shell draws the areas and the avatar's Sign in door; (when another tab did it) one line saying why.
+   The row's button is THE door (CBAvatar's), not a second one. */
+function signedOut(why){
+  SESS = null; MINE = null; GEN++; ALERTS = [];
+  mountShell();
+  if (!why) return;
+  var host = SHELL.slots.alerts;
+  host.innerHTML = '<div class="al warn" data-testid="signed-out-why"><span class="ic">!</span><span>' + esc(why) + '</span><button class="fix" data-testid="signed-out-go">Sign in</button></div>';
+  host.querySelector('button').onclick = function(){ var door = document.querySelector('[data-testid="signin-door"]'); if (door) door.click(); };
 }
 
 function open_(){
   if (!SESS) return signedOut('');
-  clearFacts();
+  GEN++; ALERTS = [];
   var g = GEN;
-  avatarPaint();
-  if (SESS.entity) document.getElementById('shop').textContent = SESS.entity;
+  mountShell();
   CBOnePerson.traces(MINE).then(function(r){
     if (g !== GEN || !MINE) return;
     if (r.others.length) closeFirst(r); else facts();
@@ -565,7 +259,6 @@ var Q = new URLSearchParams(location.search);
 if (Q.get('cleaned') === '1') signedOut('Signed out — this browser is being cleaned.');
 else if (Q.has('left')) signedOut('Signed out — ' + (Q.get('left') || 'another shop') + ' opened in another tab.');
 else open_();
-if (window.CBKural) CBKural.mount({ route: 'planning' });   /* the sign-in page's kural (kurals.json: placement signin) */
 </script>
 </body>
 </html>
