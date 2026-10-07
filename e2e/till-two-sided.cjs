@@ -51,8 +51,8 @@ function apiFront() {
     if (q.method === 'OPTIONS') { r.writeHead(204, cors); return r.end(); }
     const u = q.url.split('?')[0];
     const b = raw ? (() => { try { return JSON.parse(raw); } catch (_) { return {}; } })() : {};
-    if (u === '/api/entities/register') return j(200, { message: 'sent', dev_otp: '123456' });
-    if (u === '/api/entities/verify') return j(200, { token: 'T', identity: { identity_id: 'p-x', user_id: 'xclerk', display_name: 'X Clerk', identity_type: 'actor', entity_id: 'ent-x' } });
+    if ((u === '/api/entities/register' || u === '/api/signin/ask')) return j(200, { message: 'sent', dev_otp: '123456' });
+    if ((u === '/api/entities/verify' || u === '/api/signin/verify')) return j(200, { token: 'T', identity: { identity_id: 'p-x', user_id: 'xclerk', display_name: 'X Clerk', identity_type: 'actor', entity_id: 'ent-x' } });
     if (u === '/api/till/snapshot') return j(200, { books: true, at: new Date().toISOString(), version: 'x-1', entity_id: 'ent-x',
       shop: { name: 'Shop X', bridge_id: 'CB-X', currency: 'INR', pay: [{ id: 'cash', label: 'Cash' }, { id: 'upi', label: 'UPI' }] },
       till: { suggested_id: 'C1', assigned_id: 'C1' }, items: ITEMS, customers: CUSTOMERS });

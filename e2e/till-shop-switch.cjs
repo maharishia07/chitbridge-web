@@ -51,8 +51,8 @@ const PEOPLE = {
     if (q.method === 'OPTIONS') { r.writeHead(204, cors); return r.end(); }
     const u = q.url.split('?')[0];
     const b = raw ? JSON.parse(raw) : {};
-    if (u === '/api/entities/register') return j(200, { message: 'sent', dev_otp: '123456' });
-    if (u === '/api/entities/verify') {
+    if ((u === '/api/entities/register' || u === '/api/signin/ask')) return j(200, { message: 'sent', dev_otp: '123456' });
+    if ((u === '/api/entities/verify' || u === '/api/signin/verify')) {
       const p = PEOPLE[b.user_id]; if (!p) return j(404, { message: 'not found' });
       const id = { identity_id: p.identity_id, bridge_id: 'CB-P', display_name: p.display_name, user_id: p.user_id,
                    identity_type: p.identity_type };
@@ -67,7 +67,10 @@ const PEOPLE = {
     }
     if (u === '/api/till/snapshot') {
       const e = new URL(q.url, 'http://x').searchParams.get('eng'); if (e) snapEng.push(e);
-      const s = SHOPS[q.headers['x-api-key']]; if (!s) return j(401, { message: 'key refused' });
+      /* M08: a person session (Bearer TOKEN-<user>) opens that person's shop; a key opens its own, as before */
+      const bearer = String(q.headers.authorization || '').replace('Bearer TOKEN-', '');
+      const viaPerson = PEOPLE[bearer] && PEOPLE[bearer].key && q.headers['x-device-id'] ? SHOPS[PEOPLE[bearer].key] : null;
+      const s = viaPerson || SHOPS[q.headers['x-api-key']]; if (!s) return j(401, { message: 'key refused' });
       return j(200, { at: new Date().toISOString(), entity_id: s.entity_id, shop: s.shop,
         items: [{ id: s.item.toLowerCase(), name: s.item, price: 50, unit: 'nos', code: s.item }] });
     }
@@ -90,6 +93,7 @@ const PEOPLE = {
   p.on('pageerror', (e) => errs.push(String(e)));
   const shelf = () => p.evaluate(() => ({ shop: (S && S.shop && S.shop.name) || null,
     items: ((S && S.items) || []).map((i) => i.name), key: localStorage.getItem('cb_till_key'),
+    person: (function(){ try { return (JSON.parse(localStorage.getItem('cb_till_person') || 'null') || {}).entity_id || null; } catch (_) { return null; } })(),
     who: (typeof WHO !== 'undefined' && WHO && WHO.name) || null }));
   const ready = async (shop) => {
     await p.waitForFunction(() => typeof usignOpen === 'function' && typeof becomeShop === 'function', null, { timeout: 30000 });
@@ -154,7 +158,8 @@ const PEOPLE = {
   say('⚠️⚠️ and NOTHING of shop X', y.items.indexOf('XMANGO') < 0, 'XMANGO present=' + (y.items.indexOf('XMANGO') >= 0));
   const txt = await p.evaluate(() => document.body.innerText);
   say('not on the screen anywhere either', txt.indexOf('XMANGO') < 0 && txt.indexOf('Shop X') < 0, 'screen text checked');
-  say('the device holds Y\'s key now', y.key === 'KEY-Y', 'key=' + y.key);
+  /* ⭐ M08: a browser keeps Y's PERSON SESSION — no key is minted; X's key is left where it was (its store is M10's to move) */
+  say('the device bills as Y\'s person now, and X\'s key is left where it was', y.person === 'ent-y' && y.key === 'KEY-X', 'person=' + y.person + ' key=' + y.key);
   say('and the person who switched it is signed in', y.who === 'Y Owner', 'who=' + y.who);
   const stores = await p.evaluate(async () => (indexedDB.databases ? (await indexedDB.databases()).map((d) => d.name) : []));
   say('X\'s own store is KEPT, not wiped (its queue is money)', stores.filter((n) => /^cb-till-/.test(n)).length >= 2, JSON.stringify(stores));
@@ -165,7 +170,7 @@ const PEOPLE = {
   await signIn('oldsrv');
   await signedIn();
   const o = await shelf();
-  say('signed in as before, on the same counter', o.who === 'Old Server' && o.key === 'KEY-Y', 'who=' + o.who + ' key=' + o.key);
+  say('signed in as before, on the same counter (Y\'s session kept)', o.who === 'Old Server' && o.person === 'ent-y', 'who=' + o.who + ' person=' + o.person);
 
   console.log('\nconsole/page errors:', errs.length ? errs.join(' | ') : 'none');
   say('no page errors', errs.length === 0, errs.length + ' error(s)');

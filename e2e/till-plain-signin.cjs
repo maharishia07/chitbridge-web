@@ -45,7 +45,8 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(70) + '· ' + d 
     CloudHost.key = null;                    /* not paired at all — the state behind the reported screenshot */
     return shopReady().stops[0];
   });
-  say('says "due to maintenance," not a diagnosis of the key', /due to maintenance/i.test(stop.why), '"' + stop.why + '"');
+  /* ⭐ M08: a browser with NOTHING on it is a fresh phone — "sign in", never "maintenance" (that is the KEY holder's story, kept below) */
+  say('says "sign in", not "due to maintenance" and not a diagnosis of the key', /sign in/i.test(stop.why + ' ' + stop.means) && !/maintenance/i.test(stop.why), '"' + stop.why + '"');
   say('never uses the word "key" in front of the shopkeeper', !/key/i.test(stop.why) && !/key/i.test(stop.means),
     'why="' + stop.why + '" means="' + stop.means + '"');
   say('the fix button is the same plain word as keyWord()', stop.fix === 'Sign in again', '"' + stop.fix + '"');
