@@ -9,6 +9,7 @@
  *   · friendlyErr, toast         — a failure's words, and the one-line toast (host element: <div id="toast">)
  *   · CB_BOOKS_EP                — the Ledger's boot endpoints (health · status · enable · setting · dues · statement);
  *                                  app.html adds them to its EP, accounts.html to its own. cap-books.js adds the rest.
+ *   · CBAction                   — the action-state helper: busy · confirm for irreversible writes · outcome (M64)
  *   · CBLedger                   — the Ledger's SWITCH: the words, the confirm, the call, in one place. The Settings
  *                                  card (bizLedgerSwitch, cap-admin.js), the CB Accounts page and the index tile each
  *                                  paint their own box and hand this their own dialog and transport.
@@ -196,6 +197,113 @@ var CBLedger = (function () {
     }, !on);
   }
   return { words: words, call: ledgerCall, run: run };   /* a distinct inner name: e2e/screen-reads matches functions by NAME, and a bare call() matched "call(s)" in another screen's text */
+})();
+
+/**
+ * ⭐⭐ CBAction — THE ACTION-STATE HELPER (M64, 2026-10-07). Every control that WRITES goes through this, so that three
+ * promises hold everywhere instead of wherever somebody remembered them:
+ *   1  ONE PRESS, ONE WRITE. While the action is out (or its confirm is open) the button is disabled + aria-busy, and a
+ *      second press of the same action — the same `key`, even on a button a repaint replaced — is dropped.
+ *   2  AN IRREVERSIBLE WRITE ASKS FIRST, in the page's own dialog (confirmAsk in the app; CBConfirm on CB Accounts / CRM /
+ *      the index tile). Cancel, Escape or the backdrop sends nothing. Never the browser's confirm(): it blocks automation.
+ *   3  THE OUTCOME IS SAID WHERE THE ACTION HAPPENED — `out` (an element or its id beside the control) or the toast.
+ *      No silent success, no silent failure. A JavaScript error's text never reaches the person: only a server's own
+ *      reason for refusing (a 4xx with words) is shown; everything else gets the caller's `failed` sentence.
+ *
+ *   CBAction.run(button, fn, {
+ *     key,                       // the action's identity; default the button's data-testid or id
+ *     confirm: { title, body, yes, danger },   // irreversible → ask first (body is HTML; escape what you put in it)
+ *     busy,                      // optional words on the button while it works ("Recording…")
+ *     out,                       // where to say the outcome (element or id); default the toast
+ *     done,                      // the success sentence (when there is no outcome painter)
+ *     outcome(value),            // paints the result where it happened — flip the ROW, never the screen
+ *     failed,                    // the failure sentence when the server gave no reason
+ *     onFail(words, err)         // the caller shows the failure itself (e.g. into the form)
+ *   }) → Promise<{ ok, value, cancelled, skipped, error }>   — never throws
+ *
+ *   CBAction.once(key, button, fn) — the busy half alone, for a write whose caller already says its outcome
+ *   (bkOnce in cap-books.js IS this, widened from there — one guard, not two).
+ *   CBAction.words(err, fallback) — what a failure says to a person.
+ *
+ * The button carries data-action-state = busy · done · failed · idle, so a test (and a stylesheet) can read it.
+ * Every writing control and whether it uses this: docs/ACTION-STATE-SWEEP.md (node scripts/action-state-sweep.cjs).
+ */
+var CBAction = (function () {
+  var RUNNING = {};
+  function actKey(btn, o) { return (o && o.key) || (btn && (btn.getAttribute('data-testid') || btn.id)) || null; }
+  function actMark(btn, st) {
+    if (!btn || !btn.setAttribute) return;
+    btn.setAttribute('data-action-state', st);
+    if (st === 'busy') { btn.disabled = true; btn.setAttribute('aria-busy', 'true'); return; }
+    btn.removeAttribute('aria-busy');
+    if (btn.isConnected) btn.disabled = false;
+  }
+  function actTake(key, btn) {
+    if (key && RUNNING[key]) return false;
+    if (btn && btn.getAttribute && btn.getAttribute('aria-busy') === 'true') return false;
+    if (key) RUNNING[key] = true;
+    actMark(btn, 'busy');
+    return true;
+  }
+  function actFree(key, btn, st) { if (key) delete RUNNING[key]; actMark(btn, st); }
+  /** the page's own dialog → true (yes) / false (cancel). No dialog on the page = no irreversible write (never confirm()). */
+  function actAsk(c) {
+    return new Promise(function (res) {
+      var f = (typeof confirmAsk === 'function') ? confirmAsk : (typeof CBConfirm === 'function' ? CBConfirm : null);
+      if (!f) { if (typeof cblog === 'function') cblog('error', 'CBAction: no confirm dialog on this page — nothing sent'); res(false); return; }
+      f(c.title, c.body || '', c.yes || tx('Confirm'), function () { res(true); }, c.danger !== false, function () { res(false); });
+    });
+  }
+  /** what a failure SAYS. A server's own refusal (4xx with words) is meant for people; a thrown error's text is not. */
+  function actWords(e, fallback) {
+    var m = String((e && e.message) || '');
+    if (/Already working/i.test(m)) return tx('Still finishing the last one — one moment');
+    if (/session expired|sign in again/i.test(m)) return tx('Your session expired — please sign in again');
+    if (/offline|Failed to fetch|network|No answer from the server/i.test(m)) return tx('No connection — nothing was sent. Try again');
+    var st = e && e.status;
+    if (st >= 400 && st < 500 && st !== 404 && m && !/^API \d/.test(m)) return m;
+    return fallback || tx('That did not go through — try again');
+  }
+  function actSay(o, msg, lvl) {
+    var el = o.out && (typeof o.out === 'string' ? document.getElementById(o.out) : o.out);
+    if (el) { el.textContent = msg; el.setAttribute('data-tone', lvl || 'ok'); if (typeof cblog === 'function') cblog(lvl === 'error' ? 'error' : 'info', msg); return; }
+    if (typeof toast === 'function') toast(msg);
+  }
+  async function actOnce(key, btn, fn) {
+    var k = key || actKey(btn);
+    if (!actTake(k, btn)) return;
+    var st = 'failed';
+    try { var v = await fn(); st = 'done'; return v; }
+    finally { actFree(k, btn, st); }
+  }
+  async function actRun(btn, fn, o) {
+    o = o || {};
+    var k = actKey(btn, o), res = { ok: false };
+    if (!actTake(k, btn)) { res.skipped = true; return res; }
+    var label = null;
+    try {
+      if (o.confirm && !(await actAsk(o.confirm))) { res.cancelled = true; return res; }
+      if (o.busy && btn && btn.isConnected) { label = btn.innerHTML; btn.textContent = o.busy; }
+      var v = await fn();
+      res.ok = true; res.value = v;
+      if (v && v.queued) actSay(o, tx('Saved offline — it is sent when the connection is back'), 'warn');
+      else if (typeof o.outcome === 'function') {
+        /* the write HAS landed: a painter that throws must not turn it into a reported failure */
+        try { o.outcome(v); } catch (pe) { if (typeof cblog === 'function') cblog('error', 'action ' + (k || '?') + ' outcome painter: ' + ((pe && pe.message) || pe)); actSay(o, o.done || tx('Done'), 'ok'); }
+      }
+      else actSay(o, o.done || tx('Done'), 'ok');
+    } catch (e) {
+      res.error = e;
+      if (typeof cblog === 'function') cblog('error', 'action ' + (k || '?') + ' failed: ' + ((e && e.message) || e));
+      var w = actWords(e, o.failed);
+      if (typeof o.onFail === 'function') o.onFail(w, e); else actSay(o, w, 'error');
+    } finally {
+      if (label != null && btn && btn.isConnected) btn.innerHTML = label;
+      actFree(k, btn, res.ok ? 'done' : res.error ? 'failed' : 'idle');
+    }
+    return res;
+  }
+  return { run: actRun, once: actOnce, words: actWords, ask: actAsk };
 })();
 
 /**

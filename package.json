@@ -29,7 +29,8 @@
     "check:eps": "node e2e/ep-aliases.cjs",
     "check:cmdb": "node e2e/cmdb-records.cjs",
     "check:tokens": "node e2e/token-guard.cjs",
-    "check:themes": "node e2e/crm-themes.cjs"
+    "check:themes": "node e2e/crm-themes.cjs",
+    "sweep:actions": "node scripts/action-state-sweep.cjs"
   },
   "dependencies": {
     "react": "^18.2.0",
