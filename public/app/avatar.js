@@ -102,8 +102,13 @@
     Object.keys(FS_BASE).forEach(function (tok) {
       saved[tok] = r.style.getPropertyValue(tok); if (saved[tok]) r.style.removeProperty(tok);
     });
+    /* ⚠️ a page may declare its tokens in rem/em (testing.html: --fs-1:0.8125rem). parseFloat alone read that as 0.8 px, so
+       any text size but Medium drew the whole page at ~1 px (Athi, 2026-10-07). Convert to px against the root's own size. */
+    var remPx = 16;
+    try { remPx = parseFloat(root.getComputedStyle(r).fontSize) || 16; } catch (_) {}
     Object.keys(FS_BASE).forEach(function (tok) {
-      var v = cs ? parseFloat(cs.getPropertyValue(tok)) : NaN;
+      var raw = cs ? String(cs.getPropertyValue(tok)).trim() : '', v = parseFloat(raw);
+      if (/r?em$/i.test(raw)) v = v * remPx; else if (raw && !/px$/i.test(raw)) v = NaN;   /* %, calc(), vw …: fall back to FS_BASE */
       if (v > 0) { b[tok] = v; got++; } else b[tok] = FS_BASE[tok];
     });
     Object.keys(saved).forEach(function (tok) { if (saved[tok]) r.style.setProperty(tok, saved[tok]); });

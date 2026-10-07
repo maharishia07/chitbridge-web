@@ -178,6 +178,15 @@ async function run(site, o) {
     }
 
     /* ── 4 · text size multiplies the eight --fs tokens, keeps their order ── */
+    /* ⚠️ a page whose tokens are in rem (testing.html) — Large once read 0.8125rem as 0.8 px and drew the board at ~1 px (2026-10-07) */
+    if (want('size') && !o.pages) {
+      const pg = { id: 'testing', hash: '/testing.html', ready: '[data-testid="avatar"]' };
+      const ctx = await profile(1366, 800, { prefs: { cb_fs: 'l' } }), p = await open(ctx, pg);
+      await p.waitForTimeout(500);
+      const px = await p.evaluate(() => [getComputedStyle(document.documentElement).getPropertyValue('--fs-1'), getComputedStyle(document.body).fontSize]);
+      ok(parseFloat(px[0]) > 13 && /px$/.test(px[0].trim()), 'size · testing: Large turns --fs-1 (0.8125rem = 13px) into ~15px, never ~1px (' + px.join(' · ') + ')');
+      await ctx.close();
+    }
     if (want('size')) {
       for (const pg of [PAGES[0], PAGES[1], PAGES[2]].filter(inScope)) {
         const ctx = await profile(1366, 800), p = await open(ctx, pg);
