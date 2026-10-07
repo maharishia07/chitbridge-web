@@ -1,0 +1,34 @@
+{
+  "_": "The utility apps the shell (public/app/shell.js) draws. Shape: docs/DESIGN-NOTES-2026-10.md Part 2.4. state built = route is a utility page; workshop = it exists only inside the workshop, so no route and a dashed chip (FIT Q3, I12); coming = not built. facts = an /api URL that returns { lines: [...] } (none exist yet; N18). No 'tier' (Q5).",
+  "version": 1,
+  "entries": [
+    { "id": "till", "name": "Till", "route": "/till.html", "icon": "▤", "area": "selling", "state": "built", "what": "Take money at the counter.", "needs": {}, "facts": null },
+    { "id": "storefront", "name": "Storefront", "route": "/shop.html", "icon": "◇", "area": "selling", "state": "built", "what": "Your shop on the web.", "needs": { "owner": true }, "facts": null },
+    { "id": "catalogue", "name": "Catalogue", "route": null, "icon": "▦", "area": "selling", "state": "workshop", "needs": {}, "facts": null },
+    { "id": "stock", "name": "Stock", "route": null, "icon": "◫", "area": "selling", "state": "workshop", "needs": {}, "facts": null },
+    { "id": "orders", "name": "Orders", "route": null, "icon": "↓", "area": "selling", "state": "coming", "needs": {}, "facts": null },
+    { "id": "delivery", "name": "Delivery", "route": null, "icon": "→", "area": "selling", "state": "coming", "needs": {}, "facts": null },
+
+    { "id": "accounts", "name": "CB Accounts", "route": "/accounts.html", "icon": "₹", "area": "running", "state": "built", "what": "What the shop made, and what it owes.", "needs": { "money": true }, "facts": null },
+    { "id": "crm", "name": "CB CRM", "route": "/crm.html", "icon": "◍", "area": "running", "state": "built", "what": "Who buys, and how often.", "needs": {}, "facts": null },
+    { "id": "kyb", "name": "Know your business", "route": "/know-your-business.html", "icon": "◔", "area": "running", "state": "built", "what": "Check a business before you trade.", "needs": {}, "facts": null },
+    { "id": "employees", "name": "CB Employees", "route": null, "icon": "☰", "area": "running", "state": "workshop", "needs": { "owner": true }, "facts": null },
+    { "id": "network", "name": "Network", "route": null, "icon": "⌾", "area": "running", "state": "workshop", "needs": {}, "facts": null },
+    { "id": "disputes", "name": "Disputes", "route": null, "icon": "⚖", "area": "running", "state": "workshop", "needs": {}, "facts": null },
+    { "id": "coassist", "name": "Co-assist", "route": null, "icon": "✦", "area": "running", "state": "workshop", "needs": {}, "facts": null },
+    { "id": "documents", "name": "Documents", "route": null, "icon": "▱", "area": "running", "state": "workshop", "needs": {}, "facts": null },
+
+    { "id": "product-lab", "name": "Product Lab", "route": "/product-lab.html", "icon": "◈", "area": "labs", "state": "built", "what": "Cost, price, and what each one leaves you.", "needs": {}, "facts": null },
+    { "id": "offer-lab", "name": "Offer Lab", "route": "/offer-lab-next.html", "icon": "%", "area": "labs", "state": "built", "what": "Discounts, and whether they clear your margin.", "needs": {}, "facts": null },
+    { "id": "combo-lab", "name": "Combo Lab", "route": "/combo-lab.html", "icon": "▣", "area": "labs", "state": "built", "what": "Two at one price.", "needs": {}, "facts": null },
+    { "id": "tax-lab", "name": "Tax Lab", "route": "/#lab-tax", "icon": "§", "area": "labs", "state": "built", "what": "GST slabs, and what prints on a bill.", "needs": {}, "facts": null },
+
+    { "id": "standards", "name": "Standards", "route": "/standards.html", "icon": "≡", "area": "setup", "state": "built", "what": "What a chit must contain.", "needs": {}, "facts": null },
+    { "id": "shop", "name": "Your shop", "route": null, "icon": "⌂", "area": "setup", "state": "workshop", "needs": { "owner": true }, "facts": null },
+    { "id": "counters", "name": "Counters & keys", "route": null, "icon": "⚿", "area": "setup", "state": "workshop", "needs": { "owner": true }, "facts": null },
+    { "id": "connectors", "name": "Connectors", "route": null, "icon": "⇄", "area": "setup", "state": "workshop", "needs": { "owner": true }, "facts": null },
+    { "id": "compatibility", "name": "Compatibility", "route": null, "icon": "⇋", "area": "setup", "state": "coming", "needs": {}, "facts": null },
+    { "id": "governance", "name": "Governance", "route": null, "icon": "⚑", "area": "setup", "state": "coming", "needs": {}, "facts": null },
+    { "id": "plan", "name": "Plan & usage", "route": null, "icon": "◷", "area": "setup", "state": "coming", "needs": { "owner": true }, "facts": null }
+  ]
+}
