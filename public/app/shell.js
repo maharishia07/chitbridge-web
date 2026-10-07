@@ -16,7 +16,7 @@
  *     avatar    extra options passed straight to CBAvatar.mount (items, onSignOut, …)
  *     kural     the CBKural route (default 'planning'); false = no kural
  *     homeHref  where the switcher's areas point (default '/'; an area is homeHref + '#' + area)
- *   shell.slots { bell, alerts, home, work } · shell.open() · .close() · .isOpen() · .go(area) · .area() · .header() · .ready (Promise)
+ *   shell.slots { bell, alerts, home, work } · shell.open() · .close() · .isOpen() · .go(area) · .area() · .header() · .manifest() · .ready (Promise)
  *
  * WHAT IT READS: the manifest, GET /api/entities/header (N19: { business, licences[], trade_ready }) and each built entry's `facts`
  * URL. Nothing else. A 404 or a failure is an EMPTY STATE that says so — never a made-up number.
@@ -462,6 +462,7 @@
       el: el, slots: slots, mode: mode,
       open: function () { setOpen(true); }, close: function () { setOpen(false); }, isOpen: function () { return S.open; },
       go: go, area: function () { return S.area; }, header: function () { return S.header; }, headerState: function () { return S.headerState; },
+      manifest: function () { return S.manifest; },   /* N18: the Home page reads the manifest's top-level `rail` from the one copy the shell fetched — never a second fetch */
       ready: Promise.all([manP, hdrP, kuralP]).then(function () { return api; })
     };
     return api;

@@ -147,26 +147,28 @@ function route(S, r) {
   await t1.screenshot({ path: path.join(__dirname, 'shots', 'one-person-left.png') }).catch(() => {});
 
   /* ── 4 · the index shows B, and the Till tile names the counter's shop ───────────────────────────────────── */
+  /* N18: the index is the shell's Home. The shop's name is the shell's header; a card's figures come from its manifest facts read
+     (none for the Till yet). A counter paired to ANOTHER shop earns an amber alert row (only a failing thing earns a row);
+     paired here, or not paired, earns nothing. */
   const t3 = await tab('/');
-  await t3.waitForSelector('[data-testid="till-paired"]', { timeout: 15000 }).catch(() => {});
-  await t3.waitForFunction(() => /Tally Test/.test((document.querySelector('[data-testid="shop-name"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
-  ok(/Tally Test/.test(await t3.textContent('[data-testid="shop-name"]')), '4 · the index in tab 3 shows Tally Test');
-  await t3.waitForFunction(() => /7/.test((document.getElementById('f_cat') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
-  ok(/\b7\b/.test(await t3.textContent('#f_cat')), '4 · and B\'s own figures (7 products)');
-  ok((await t3.textContent('[data-testid="till-paired"]')).trim() === 'Not paired yet', '4 · Till tile: "Not paired yet" when no counter is paired');
+  await t3.waitForSelector('[data-testid="shell-shop"]', { timeout: 15000 }).catch(() => {});
+  await t3.waitForFunction(() => /Tally Test/.test((document.querySelector('[data-testid="shell-shop"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
+  ok(/Tally Test/.test(await t3.textContent('[data-testid="shell-shop"]')), '4 · the index in tab 3 shows Tally Test');
+  await t3.waitForTimeout(600);
+  ok(await t3.locator('[data-testid="till-paired"]').count() === 0, '4 · no counter paired → no row (nothing wrong)');
   const pairTo = async (ent, name) => t2.evaluate(([e, n]) => { localStorage.setItem('cb_till_shop@abc1', e); localStorage.setItem('cb_till_shopname@abc1', n);
     localStorage.setItem('cb_till_key', 'k-' + e); localStorage.setItem('cb_till_lastslot', 'cb-till-abc1'); }, [ent, name]);
   await pairTo('ent-B', 'Tally Test');
-  await t3.waitForFunction(() => /paired to Tally Test/.test((document.querySelector('[data-testid="till-paired"]') || {}).textContent || ''), null, { timeout: 5000 }).catch(() => {});
-  ok(/^Counter 1 · paired to Tally Test$/.test((await t3.textContent('[data-testid="till-paired"]')).trim()), '4 · paired here → "Counter 1 · paired to Tally Test" (repainted from the counter\'s keys, no reload)');
+  await t3.waitForTimeout(600);
+  ok(await t3.locator('[data-testid="till-paired"]').count() === 0, '4 · paired here → still no row (repainted from the counter\'s keys, no reload)');
   await pairTo('ent-C', 'Mayuri123');
   await t3.waitForFunction(() => /Mayuri123/.test((document.querySelector('[data-testid="till-paired"]') || {}).textContent || ''), null, { timeout: 5000 }).catch(() => {});
-  const amber = await t3.evaluate(() => { const e = document.querySelector('[data-testid="till-paired"]'); return { t: e.textContent.trim(), dn: e.classList.contains('dn'), c: getComputedStyle(e).color }; });
-  ok(amber.t === 'Counter 1 · paired to Mayuri123, not this shop' && amber.dn, '4 · paired elsewhere → amber "' + amber.t + '" (' + amber.c + ')');
-  ok(await t3.getAttribute('[data-testid="box-till"]', 'href') === '/till.html', '4 · and the tile still opens the counter, which offers the switch itself');
+  const amber = await t3.evaluate(() => { const e = document.querySelector('[data-testid="till-paired"]'); return e ? { t: e.textContent.replace(/\s+/g, ' ').trim(), warn: e.classList.contains('warn'), fix: (e.querySelector('.fix') || {}).getAttribute && e.querySelector('.fix').getAttribute('href') } : {}; });
+  ok(/Counter 1 · paired to Mayuri123, not this shop/.test(amber.t || '') && amber.warn, '4 · paired elsewhere → an amber row "' + amber.t + '"');
+  ok(amber.fix === '/till.html' && await t3.getAttribute('[data-testid="shell-card-till"]', 'href') === '/till.html', '4 · its button and the Till card open the counter, which offers the switch itself');
   await t3.screenshot({ path: path.join(__dirname, 'shots', 'one-person-index-amber.png') }).catch(() => {});
   await t2.evaluate(() => ['cb_till_shop@abc1', 'cb_till_shopname@abc1', 'cb_till_key', 'cb_till_lastslot'].forEach((k) => localStorage.removeItem(k)));
-  await t3.waitForFunction(() => /Not paired yet/.test((document.querySelector('[data-testid="till-paired"]') || {}).textContent || ''), null, { timeout: 5000 }).catch(() => {});
+  await t3.waitForFunction(() => !document.querySelector('[data-testid="till-paired"]'), null, { timeout: 5000 }).catch(() => {});
 
   /* ── 5 · the same shop passes cleanly ────────────────────────────────────────────────────────────────────── */
   const t4 = await tab('/app.html#/login');
