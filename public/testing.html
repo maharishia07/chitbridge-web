@@ -1101,6 +1101,15 @@ function sess(){ try { return JSON.parse(localStorage.getItem('cb_sess') || 'nul
 
 var CASES = [], LAST = {}, OPEN = {}, RUN = null, STALE = {};
 /**
+ * ⭐⭐ "HOW MANY RAN NOW" (2026-10-07). Athi looked at the board and could not tell what the last run touched — LAST
+ * keeps the WORST word per case, which is right for a verdict and says nothing about when. RAN_IN keeps, per case,
+ * the run ids its latest results came from (the same /results read, no second fetch); the newest of RUNS is "the
+ * last run". ranLast(c) is the one question both the header and the Ran column ask.
+ */
+var RAN_IN = {};
+function lastRun(){ return (typeof RUNS !== 'undefined' && RUNS && RUNS[0]) || null; }
+function ranLast(c){ var r = lastRun(); return !!(r && (RAN_IN[c.case_key] || []).indexOf(r.run_id) >= 0); }
+/**
  * ⚠️ TRUE WHEN THE BOARD HAS NOTHING TO STAND ON — no cases at all, or cases and not one result. It changes
  * what the word "None." is allowed to mean: on a worked board it is good news, on an unworked one it means
  * nobody looked, and printing the good-news wording there is how an untested product reads as a clean one.
@@ -1405,8 +1414,9 @@ async function load(){
     STALE = {};
     ((st && st.stale) || []).forEach(function (x) { STALE[x.case_key] = x; });
     CASES = a.cases || [];
-    LAST = {};
+    LAST = {}; RAN_IN = {};
     (b.results || []).forEach(function(r){
+      if (r.run_id) (RAN_IN[r.case_key] = RAN_IN[r.case_key] || []).push(r.run_id);
       /* ⭐ ONE HEADLINE PER CASE. A case may hold results at two layers; the board shows the WORST of them,
          because a green unit test beside a red counter is not a green case. */
       var cur = LAST[r.case_key];
@@ -1835,6 +1845,13 @@ function tally(){
   h += '<span class="t pcwrap"><span class="pbar" style="width:120px;display:inline-block;vertical-align:middle">'
      + '<i style="width:' + pc + '%"></i></span> <b>' + pc + '%</b> tested'
      + '<i class="sub" style="margin-inline-start:6px">of ' + testable + ' testable</i></span>';
+  /* ⭐ how many ran NOW — the last run's own count, its time and who ran it (RUNS, read with the summary) */
+  var lr = lastRun();
+  h += '<span class="t" data-testid="ran-last"' + (lr && lr.run_label ? ' title="' + esc(lr.run_label) + '"' : '') + '>'
+     + (lr ? '<b>' + (Number(lr.total) || 0) + '</b> ran in the last run · '
+          + esc(new Date(lr.finished).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }))
+          + (lr.testers ? ' · ' + esc(lr.testers) : '')
+        : 'No run yet') + '</span>';
   document.getElementById('tally').innerHTML = h;
 }
 
@@ -2935,7 +2952,7 @@ function matrixHTML(){
     { k: 'static',      label: 'Static' },
   ];
 
-  var cell = {}, rowAll = {}, rowDone = {}, colN = {}, unplaced = 0, unplacedDone = 0;
+  var cell = {}, rowAll = {}, rowDone = {}, rowRan = {}, colN = {}, unplaced = 0, unplacedDone = 0, unplacedRan = 0;
   /**
    * ⚠️⚠️ SUPPORT FILES ARE OUT OF THE DENOMINATOR, OR 100% IS UNREACHABLE FOREVER.
    *
@@ -2948,15 +2965,17 @@ function matrixHTML(){
   CASES.forEach(function(c){
     var t = c.test_type || '?';
     var done = !!LAST[c.case_key];
+    var ran = ranLast(c);
     colN[t] = (colN[t] || 0) + 1;
     var list = (c.areas || []);
-    if (!list.length) { if (testable(c)) { unplaced++; if (done) unplacedDone++; } return; }
+    if (!list.length) { if (testable(c)) { unplaced++; if (done) unplacedDone++; if (ran) unplacedRan++; } return; }
     /* ⚠️ a test reaching two areas is counted in both — the rows do not sum to the total, and the note says so */
     list.forEach(function(a){
       cell[a + '|' + t] = (cell[a + '|' + t] || 0) + 1;
       if (!testable(c)) return;
       rowAll[a] = (rowAll[a] || 0) + 1;
       if (done) rowDone[a] = (rowDone[a] || 0) + 1;
+      if (ran) rowRan[a] = (rowRan[a] || 0) + 1;
     });
   });
 
@@ -2970,11 +2989,14 @@ function matrixHTML(){
    * ⭐ pct() was already safe; only the two raw uses were not. A zero holds its place as a ZERO here, not as
    * an em dash: `—` means "nobody has", and 0 of 0 is a fact. [[feedback-silence-is-the-bug]]
    */
-  var barCell = function(done, all){
+  /* ⭐ Ran sits beside Total: of these cases, how many the LAST run touched — Done is "ever", Ran is "now" */
+  var barCell = function(done, all, ran){
     done = Number(done) || 0;
     all = Number(all) || 0;
+    ran = Number(ran) || 0;
     var q = pct(done, all);
     return '<td class="num"><b>' + all + '</b></td>'
+      + '<td class="num ran">' + (ran ? '<b>' + ran + '</b>' : '<span class="dim">0</span>') + '</td>'
       + '<td class="num">' + (done ? '<span class="big">' + done + '</span>' : '<span class="dim">0</span>') + '</td>'
       + '<td class="num">' + ((all - done) ? '<span class="warnn">' + (all - done) + '</span>' : '<span class="dim">—</span>') + '</td>'
       + '<td class="num pctcell"><div class="pbar"><i style="width:' + q + '%"></i></div>'
@@ -3032,7 +3054,9 @@ function matrixHTML(){
   /* ⭐ Athi: *"add the rules count"* — what the area CONTAINS, beside how much of it is tested. Nine rules
      with 135 tests reaching them is a different fact from 135 tests. */
   h += '<th class="num"><span>Built</span></th>'
-    + '<th class="sep"></th><th class="num"><span>Total</span></th><th class="num"><span>Done</span></th>'
+    + '<th class="sep"></th><th class="num"><span>Total</span></th>'
+    + '<th class="num" title="In the last run' + (lastRun() && lastRun().run_label ? ' — ' + esc(lastRun().run_label) : '') + '"><span>Ran</span></th>'
+    + '<th class="num"><span>Done</span></th>'
     + '<th class="num"><span>Left</span></th><th class="num"><span>Complete</span></th></tr>';
 
   var lastTier = null;
@@ -3056,7 +3080,7 @@ function matrixHTML(){
     /* ⭐ the break between the triad and what it rides on — an order is only a claim a reader can see */
     if (AREA_TIER[a] !== lastTier) {
       lastTier = AREA_TIER[a];
-      h += '<tr class="tier"><td colspan="' + (COLS.length + 6) + '">'
+      h += '<tr class="tier"><td colspan="' + (COLS.length + 8) + '">'
         + TIER_NAME[lastTier] + '</td></tr>';
     }
     var mopen = isOpenSection('mtx:' + a, 9);
@@ -3079,7 +3103,7 @@ function matrixHTML(){
     h += '<td class="num">' + (made
       ? '<b class="built">' + made.length + '</b><span class="builtwhat">' + esc(BUILT_NOUN[a] || '') + '</span>'
       : '<span class="dim">—</span>') + '</td>';
-    h += '<td class="sep"></td>' + barCell(rowDone[a] || 0, rowAll[a]).replace('<td class="num"><b>', '<td class="num tot1"><b>');
+    h += '<td class="sep"></td>' + barCell(rowDone[a] || 0, rowAll[a], rowRan[a]).replace('<td class="num"><b>', '<td class="num tot1"><b>');
     h += '</tr>';
     /**
      * ⚠️ AND AN EMPTY ROW SAYS WHY IT IS EMPTY, in the row itself. A layer with declared contents and no
@@ -3088,7 +3112,7 @@ function matrixHTML(){
      */
     if (emptyRow) {
       var mk = (CONTENTS && CONTENTS[a]) ? CONTENTS[a].length : 0;
-      h += '<tr class="tier"><td colspan="' + (COLS.length + 6) + '" '
+      h += '<tr class="tier"><td colspan="' + (COLS.length + 8) + '" '
         + 'style="background:var(--warn-tint);color:var(--warn);font-weight:400;text-transform:none;'
         + 'letter-spacing:0">'
         + '<span class="zeroflag">⚠</span> '
@@ -3144,7 +3168,7 @@ function matrixHTML(){
           + (made.length - 60) + ' more</td></tr>';
         inner += '</tbody></table>';
       }
-      h += '<tr class="acases"><td colspan="' + (COLS.length + 6)
+      h += '<tr class="acases"><td colspan="' + (COLS.length + 8)
         + '">' + inner + '</td></tr>';
     }
   });
@@ -3167,7 +3191,7 @@ function matrixHTML(){
       h += '<td class="num">' + (un ? '<span class="warnn">' + un + '</span>' : '<span class="dim">—</span>') + '</td>';
     });
     h += '<td class="num"><span class="dim">—</span></td><td class="sep"></td>'
-       + barCell(unplacedDone, unplaced) + '</tr>';
+       + barCell(unplacedDone, unplaced, unplacedRan) + '</tr>';
   }
 
   h += '<tr class="foot"><td><b>Everything</b></td>';
@@ -3179,7 +3203,7 @@ function matrixHTML(){
   });
   h += '<td class="num"><b>' + (CONTENTS ? Object.keys(CONTENTS)
         .reduce(function(t, k){ return t + CONTENTS[k].length; }, 0) : '—') + '</b></td>';
-  h += '<td class="sep"></td>' + barCell(allDone, allTestable.length) + '</tr>';
+  h += '<td class="sep"></td>' + barCell(allDone, allTestable.length, allTestable.filter(ranLast).length) + '</tr>';
   h += '</table></div>';
 
   /* ⭐ the one thing no row can ever reach, said once — six rows are the ARCHITECTURE, not an inventory */

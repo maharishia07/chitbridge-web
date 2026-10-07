@@ -25,6 +25,15 @@
  * short green run. test-results/.last-run.json says how the run ended; anything but passed/failed is refused.
  *
  * Token: the first argument, or CB_BOARD_TOKEN, so a scripted T1 run can post without a copy-paste.
+ * ⭐ For CI, mint a key with the `testing` scope (Settings → Integrations → Your keys) — it may post results and read
+ * cases, nothing else — and keep it in the CB_BOARD_TOKEN secret. A person's session token works too, and expires.
+ *
+ * ⭐⭐ ONE POSTER, NOT THREE (2026-10-07). The API's CI posts its guards with THIS file (chitbridge-api ci.yml, which
+ * checks this repo out beside it) rather than a copy of it:
+ *   --keys name      the testcase name IS the board's key (`chitbridge-api/tests/x.test.cjs`) — no prefix
+ *   --file <path>    absolute, or relative to this folder as before
+ *   --warn           CI mode: anything that stops the post is a GitHub ::warning:: naming why (the HTTP status),
+ *                    and the exit is 0 — a board that is down must never turn a green build red
  */
 'use strict';
 const fs = require('fs');
@@ -33,22 +42,28 @@ const path = require('path');
 const API = process.env.CB_API || 'https://chitbridge-api-production.up.railway.app';
 const args = process.argv.slice(2);
 const flag = (name, dflt) => { const i = args.indexOf('--' + name); return i >= 0 ? args[i + 1] : dflt; };
-/* ⚠ a flag's VALUE is not a token — `--kind t1` with the token in the environment must not post as "t1" */
-const token = args.filter((a, i) => !a.startsWith('--') && !(i > 0 && args[i - 1].startsWith('--')))[0]
+const WARN = args.indexOf('--warn') >= 0;
+/* ⚠ a flag's VALUE is not a token — `--kind t1` with the token in the environment must not post as "t1".
+   --warn takes no value, so whatever follows it is not one. */
+const token = args.filter((a, i) => !a.startsWith('--') && !(i > 0 && args[i - 1].startsWith('--') && args[i - 1] !== '--warn'))[0]
   || process.env.CB_BOARD_TOKEN;
+const KEYS = flag('keys', 'file');
+
+/** stop: an error and exit 1 for a person; a ::warning:: and exit 0 under --warn */
+function stop(lines) {
+  if (WARN) { console.log('::warning::not posted to the test board — ' + lines.filter(Boolean)[0]); process.exit(0); }
+  console.error('\n  ' + lines.filter(Boolean).join('\n  ') + '\n');
+  process.exit(1);
+}
 
 if (!token) {
-  console.error('\n  node post-results.cjs <token> [--kind t1] [--layer web] [--label "nightly"] [--keys file|bracket]');
-  console.error('  Token: the argument, or CB_BOARD_TOKEN. Open the app signed in, F12, then  JSON.parse(localStorage.cb_sess).token\n');
-  process.exit(1);
+  stop(['no token (CB_BOARD_TOKEN is empty)',
+    'node post-results.cjs <token> [--kind t1] [--layer web] [--label "nightly"] [--keys file|bracket|name] [--file x.xml] [--warn]',
+    'Token: the argument, or CB_BOARD_TOKEN — a key with the testing scope, or JSON.parse(localStorage.cb_sess).token']);
 }
 
-const file = path.join(__dirname, flag('file', 'test-results/junit.xml'));
-if (!fs.existsSync(file)) {
-  console.error('\n  No report at ' + file);
-  console.error('  Run the suite first:  npx playwright test\n');
-  process.exit(1);
-}
+const file = path.resolve(__dirname, flag('file', 'test-results/junit.xml'));
+if (!fs.existsSync(file)) stop(['no report at ' + file, 'Run the suite first:  npx playwright test']);
 
 /* ⚠️ how the run ENDED. Only the default report has its own .last-run.json beside it; a --file is taken as given. */
 const lastRun = path.join(path.dirname(file), '.last-run.json');
@@ -56,9 +71,8 @@ if (!flag('file') && fs.existsSync(lastRun)) {
   let st = '';
   try { st = JSON.parse(fs.readFileSync(lastRun, 'utf8')).status || ''; } catch (_) { st = ''; }
   if (st !== 'passed' && st !== 'failed') {
-    console.error('\n  Not posted: the last run ended "' + (st || 'unknown') + '", not passed or failed.');
-    console.error('  A run that stopped early has no verdict for the tests it never reached. Run it again.\n');
-    process.exit(1);
+    stop(['the last run ended "' + (st || 'unknown') + '", not passed or failed',
+      'A run that stopped early has no verdict for the tests it never reached. Run it again.']);
   }
 }
 
@@ -67,11 +81,13 @@ if (!flag('file') && fs.existsSync(lastRun)) {
   const r = await fetch(API + '/api/testing/results/junit', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+    /* ⚠ a hung API must not hold a CI job for six hours */
+    signal: AbortSignal.timeout(60000),
     body: JSON.stringify({
       xml,
-      /* ⭐ the spec FILE is the board's case — see the note at the top */
-      key_from: flag('keys', 'file') === 'bracket' ? undefined : 'file',
-      key_prefix: 'chitbridge-web/e2e/tests',
+      /* ⭐ the spec FILE is the board's case — see the note at the top; a guard's NAME is its own key */
+      key_from: KEYS === 'bracket' ? undefined : (KEYS === 'name' ? 'name' : 'file'),
+      key_prefix: KEYS === 'file' ? 'chitbridge-web/e2e/tests' : undefined,
       run_kind: flag('kind', 't1'),
       layer: flag('layer', 'web'),
       run_label: flag('label', 'playwright ' + new Date().toISOString().slice(0, 16).replace('T', ' ')),
@@ -79,7 +95,7 @@ if (!flag('file') && fs.existsSync(lastRun)) {
     }),
   });
   const j = await r.json().catch(() => ({}));
-  if (!r.ok) { console.error('  ' + r.status + ' ' + (j.message || j.error || '')); process.exit(1); }
+  if (!r.ok) stop(['HTTP ' + r.status + ' ' + (j.message || j.error || '')]);
 
   console.log('\n  recorded  ' + j.recorded + ' case(s)'
     + (j.folded ? '   (' + (j.recorded + (j.skipped || 0) + j.folded) + ' tests, one result per spec file)' : '')
@@ -97,4 +113,4 @@ if (!flag('file') && fs.existsSync(lastRun)) {
     if (j.unmatched.length > 12) console.log('    … and ' + (j.unmatched.length - 12) + ' more');
   }
   console.log('\n  https://chitbridge-web.vercel.app/testing.html\n');
-})().catch((e) => { console.error('  ' + e.message); process.exit(1); });
+})().catch((e) => stop([(e && e.name === 'TimeoutError' ? 'no answer in 60 s' : 'the post failed') + ' — ' + (e && e.message)]));
