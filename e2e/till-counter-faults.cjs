@@ -38,8 +38,8 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(70) + '· ' + d 
         { id: 'bun', name: 'BUN', price: 20, unit: 'nos', code: 'BUN1', category: "Baker's" },
         { id: 'mango', name: 'XMANGO', price: 50, unit: 'nos', code: 'XMANGO', category: 'Fruit' },
       ] });
-    if (u === '/api/entities/register') return j(200, { message: 'sent', dev_otp: '123456' });
-    if (u === '/api/entities/verify') return j(200, { token: 'T', identity: { identity_id: 'p-x', user_id: 'xclerk', display_name: 'X Clerk', identity_type: 'actor', entity_id: 'ent-x' } });
+    if ((u === '/api/entities/register' || u === '/api/signin/ask')) return j(200, { message: 'sent', dev_otp: '123456' });
+    if ((u === '/api/entities/verify' || u === '/api/signin/verify')) return j(200, { token: 'T', identity: { identity_id: 'p-x', user_id: 'xclerk', display_name: 'X Clerk', identity_type: 'actor', entity_id: 'ent-x' } });
     if (u === '/api/chits/send') return j(200, { chit_id: 'c1' });
     return j(200, { ok: true });
   });

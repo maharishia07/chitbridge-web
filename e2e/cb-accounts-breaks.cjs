@@ -7,13 +7,12 @@ const fs = require('fs'), path = require('path'), cp = require('child_process');
 const W = path.join(__dirname, '..');
 const CAPB = 'public/app/cap-books.js', LCTL = 'public/app/list-ctl.js';
 const AV = 'public/app/avatar.js';   /* the avatar is CBAvatar now: its Profile link and its sign-out live here, not on the page */
-const PAGE = 'public/accounts.html', IDX = 'index.html', SHELL = 'public/app/accounts-shell.js';
-const A = 'e2e/cb-accounts.cjs', I = 'e2e/index-page.cjs';
+const PAGE = 'public/accounts.html', SHELL = 'public/app/accounts-shell.js';   /* N18: the index tile is a manifest card now (e2e/index-page.cjs); its breaks left with it */
+const A = 'e2e/cb-accounts.cjs';
 const BREAKS = [
   /* the four the task names */
   ['a view goes missing from the sidebar (Bills)', PAGE, `  ['bills', 'Bills', 'M6 3h9l3 3v15H6zM9 9h6M9 13h6M9 17h4'],\n`, ``, A],
   ['a balance is fetched per row', CAPB, `BK.lt.bal = rr[1];`, `BK.lt.bal = rr[1]; (BK.lt.model || []).forEach(function (b) { b.groups.forEach(function (g) { g.accts.forEach(function (a) { api('booksLedger', { params: { account: a.code }, query: bkRange('lg') }).catch(function () {}); }); }); });`, A],
-  ['the Active badge is shown while the Ledger is off', IDX, `badge.hidden = on !== true;`, `badge.hidden = false;`, I],
   ['the one-shop gate is not attached', PAGE, `CBOnePerson.attach({ quiet: true, who: () => MINE,`, `void ({ quiet: true, who: () => MINE,`, A],
   /* party ledgers (docs/design/party-ledgers/CLOUD-TASK.md) */
   ['a statement is fetched per party row', CAPB, `function bkLtParties(ctrl) {\n`, `function bkLtParties(ctrl) {\n  Object.keys(BK.dues || {}).forEach(function (k) { api('booksStatement', { params: { id: k } }).catch(function () {}); });\n`, A],
@@ -71,13 +70,6 @@ const BREAKS = [
   ['the word accounting reaches the screen', PAGE, `<span class="brand-name">CB Accounts</span>`, `<span class="brand-name">CB Accounts accounting</span>`, A],
   ['an alert() sneaks in', PAGE, `function navTo(k){`, `function navTo(k){ alert('hi');`, A],
   ['the Switch on call is copied into the page', PAGE, `call: (on) => CBLedger.call({ api: api }, on),`, `call: (on) => api('booksEnable', { body: {} }),`, A],
-  /* the index tile */
-  ['the tile never lights', IDX, `box.classList.toggle('lit', on === true);`, `box.classList.toggle('lit', false);`, I],
-  ['a co-assist is offered Switch on on the tile', IDX, `if (SESS && SESS.role === 'entity'){`, `if (true){`, I],
-  ['the lit tile pulses for a reader who asked for less motion', IDX, `@media (prefers-reduced-motion:no-preference){.box.lit{animation:`, `@media all{.box.lit{animation:`, I],
-  ['the tile opens the old Ledger screen', IDX, `<a class="cover" href="/accounts.html" data-testid="box-ledger-link">`, `<a class="cover" href="app.html#/app/ledger" data-testid="box-ledger-link">`, I],
-  ['the tile is still called Ledger', IDX, `<h3>CB Accounts<span`, `<h3>Ledger<span`, I],
-  ['the tile sends Switch on before the owner confirms', IDX, `    ask: CBConfirm,`, `    ask: function(t, b, o, go){ go(); },`, I],
 ];
 const ONLY = process.env.BREAK_ONLY || '';
 /* BREAK_CHECK=1 only checks that every anchor still matches the source exactly once (fast — nothing is run) */

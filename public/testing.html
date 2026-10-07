@@ -2575,6 +2575,21 @@ async function paintReport(){
      * lets "we have none" pass for "not applicable", and those are opposite claims. Penetration is shown at
      * zero on purpose.
      */
+    } else if (s.id === '5a') {
+      /* ⭐ N07 — 29119-3 §5 comparison against the plan: planned · executed · passed per level, lifted from the
+         server's counts (the board's case definitions ARE the plan). Nothing here is typed or composed. */
+      var L = b.levels || [];
+      var cell = function (n) { return n ? String(n) : '<span class="dim">—</span>'; };
+      inner = '<div class="scroll"><table class="sum" data-testid="plan-table">'
+        + '<tr><th>Level</th><th class="num">Planned</th><th class="num">Executed</th><th class="num">Passed</th></tr>'
+        + L.map(function (x) {
+            return '<tr><td><b>' + esc(x.layer) + '</b></td><td class="num">' + cell(x.planned) + '</td>'
+              + '<td class="num">' + cell(x.executed) + '</td><td class="num">' + cell(x.passed) + '</td></tr>';
+          }).join('')
+        + '<tr data-testid="plan-total"><td><b>All levels</b></td><td class="num">' + cell(b.planned) + '</td>'
+        +   '<td class="num">' + cell(b.executed) + '</td><td class="num">' + cell(b.passed) + '</td></tr>'
+        + '</table></div>'
+        + (b.note ? '<span class="fine">' + esc(b.note) + '</span>' : '');
     } else if (s.id === '2b') {
       var K = b.kinds || [];
       inner = '<div class="scroll"><table class="sum">'

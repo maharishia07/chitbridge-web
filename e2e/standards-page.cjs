@@ -308,14 +308,14 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     await o2.ctx.close();
   }
 
-  /* ── 6 · THE WAY IN from the index page (a foot link while the door box waits for room in the 250-word budget), and Settings ── */
+  /* ── 6 · THE WAY IN from the index page (N18: Home is the shell; Standards is a Setup card of the manifest), and Settings ── */
   {
     const SI = { calls: [] };
     const { ctx, p } = await open(SI, { path: '/', noWait: true });
-    await p.waitForSelector('[data-testid="foot-standards"]', { timeout: 15000 });
-    ok(await p.getAttribute('[data-testid="foot-standards"]', 'href') === 'standards.html', 'the index page links Standards from its foot row');
-    ok(await p.getAttribute('[data-testid="foot-crm"]', 'href') === 'crm.html', 'and CRM beside it');
-    ok(await p.locator('[data-testid="day-to-day"] .box').count() === 3, 'the three boxes under Day to day are still three');
+    await p.waitForSelector('[data-testid="shell-card-standards"]', { timeout: 15000 });
+    ok(await p.getAttribute('[data-testid="shell-card-standards"]', 'href') === '/standards.html', 'the index page (the shell\'s Home) links Standards as a Setup card');
+    ok(await p.getAttribute('[data-testid="shell-card-crm"]', 'href') === '/crm.html', 'and CB CRM as a Running card');
+    ok(await p.locator('.cbsh-sec.setup .cbsh-box').count() === 1, 'Standards is the one built Setup card');
     await ctx.close();
   }
   {

@@ -1,339 +1,265 @@
-/* index-page.cjs — THE INDEX PAGE AT /, PROVED (docs/design/index-page/cb-index.md · docs/design/SYSTEM.md §4).
- * Pattern: books-web.cjs — Playwright, a stand-in API on this machine answering INSIDE the page; the static
- * server takes a free port from the OS. Nothing here ever reaches localhost:3000, port 7351, or the live site:
- * every /api/** call is fulfilled by ctx.route before it can leave the browser.
+#!/usr/bin/env node
+/* index-page.cjs — THE INDEX PAGE IS THE SHELL'S HOME, PROVED (index.html · public/app/manifest.json · plan row N18 · FIT §D Q1 Q3 Q5 Q10).
+ * Pattern: shell.cjs — Playwright, a stand-in API answering INSIDE the page (ctx.route), a static server on a free OS port that serves
+ * the repo-root index.html at / and public/ for everything else, exactly as it deploys. Nothing here reaches localhost:3000 or the live site.
  *
- * The six checks from the design, plus the pass mark:
- *  1  three boxes under Day to day; four labs, in a tinted band
- *  2  with no alerts the alert block renders nothing at all — no container, no border
- *  3  the Catalogue's "no cost" and the Product Lab's "without a cost" come from ONE function and agree
- *  4  every alert has a fix button
- *  5  document.scrollWidth === 390 at phone width (and no horizontal scroll at 1080)
- *  6  under 250 words on the page
- *  +  every tile's link target · signed out = the one sign-in door and NO facts, no reads · Ledger off →
- *     the third box is CB ACCOUNTS (2026-10-01): off → the owner's Switch on (one confirm, one POST /api/books/enable),
- *     "Not switched on yet" for anyone else; on → an Active badge and a lit tile · the strings "accounting"/"books of
- *     account" absent · no alert() · the old in-app Ledger door redirecting to CB Accounts (app.html#/app/ledger → /accounts.html)
- * Screenshots: e2e/shots/index-{laptop,phone,alerts,all-well}.png, index-cb-accounts-{off,active}.png
- */
+ * What it proves (exit 1 on any failure):
+ *   1  static: index.html writes no card by hand, names no workshop page ("app.html"), no "tier", no "accounting"; it mounts CBShell as Home.
+ *      the manifest: every built entry routes to a utility page that exists (never app.html); every other entry has no route (a dashed chip)
+ *   2  1366 · signed in, the shipped manifest: Home mounts the shell once (data-mode=home); one card per built entry, each linking to its
+ *      route; one dashed chip per other entry, none a link, and a click opens nothing; zero app.html hrefs outside the avatar (the allow-list)
+ *   3  1366 · every read the page makes is a budgeted one (the API's round-trips.budget.json has a line for it); a facts URL that is null
+ *      paints nothing; nothing wrong → the alerts slot draws nothing; N19 404 → the sheet's empty state (kept)
+ *   4  1366 · PLANTED manifest (facts URLs + the rail) and a planted API: each card's lines are the API's; the rail's digits are the API's;
+ *      "2 waiting for the ledger" carries its fix; a counter paired to another shop earns an amber row with its fix
+ *   5  word budget per VISIBLE area (Q10): Home ≤ 120 (with the rail and the alerts up), every other area ≤ 100 — at 1366 and at 390
+ *   6  390: scrollWidth === 390; bottom tabs, one area at a time; the kural at the foot of Home
+ *   7  signed out: not one /api call leaves the page; the cards are still drawn, no facts; the avatar is the one Sign in door;
+ *      ?left=<shop> → the row says why, and its button is that door
+ *   8  no page error; every stand-in answer for a contract route has the API's shape (e2e/lib/contract.cjs)
+ * Screenshots: e2e/shots/index-laptop.png · index-alerts.png (planted, 1366) · index-phone.png (Home, 390) · index-phone-selling.png
+ * Run one at a time:  NODE_PATH=e2e/node_modules node e2e/index-page.cjs                                                            */
 'use strict';
-const { chromium } = require('@playwright/test');
-const http = require('http'), fs = require('fs'), path = require('path');
+const path = require('path'), fs = require('fs'), http = require('http');
 const ROOT = path.join(__dirname, '..');
 const PUB = path.join(ROOT, 'public');
 const SHOTS = path.join(__dirname, 'shots');
+const C = require('./lib/contract.cjs'), books = require('./lib/books-api.cjs');
+const J = C.json;
 const T = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.webmanifest': 'application/manifest+json' };
 
-let pass = 0, fail = 0;
-const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail++; console.log('  XX  ' + m); } };
-const C = require('./lib/contract.cjs'), books = require('./lib/books-api.cjs');   /* every answer served for a route in the API contract is checked (e2e/fixtures/web-api.contract.json) */
-const J = C.json;
+/* ⭐ THE READS THE PAGE MAY MAKE: each has a line in chitbridge-api/round-trips.budget.json (DB10, I19) — or is the shell's own N19 read.
+   A new read here needs its budget line there first. */
+const BUDGETED = ['/api/entities/header', '/api/books/health',
+  '/api/entities/me'];   /* ⚠️ not this page's: CBAvatar hydrates its prefs from it on every page it mounts (public/app/avatar.js) — it has NO budget line yet (named in the N18 PR) */
 
-/* ── the stand-in: one shop's day, one figure per source ───────────────────────────────────────────────────── */
-function standIn() {
-  const today = new Date().toISOString().slice(0, 10);
-  const items = [];
-  for (let i = 0; i < 112; i++) {
-    const d = { price: { amount: 10 + i, currency: 'INR' }, cost: { amount: 6 + i, currency: 'INR' },
-      category: 'Shelf ' + (i % 7 + 1) };
-    if (i === 5) delete d.cost;                       /* the ONE item with no cost written down */
-    if (i < 5) d.modifiers = [{ name: 'M' + i }, { name: 'N' + i }];   /* 10 modifiers in all */
-    items.push({ id: 'p' + i, item_data: d });
-  }
-  return {
-    calls: [],                                        /* every /api path asked, in order */
-    me: { entity: { display_name: 'Mayur Bhavan', currency_code: 'INR', gstn: null } },
-    counters: [{ id: 'C1', name: 'Counter 1', state: 'open' }],   /* GET /api/counters view(): state open|break|opening|closed */
-    summary: { rows: [{ key: today, count: 12, total: 4280 }],
-      prices_read_at: new Date(Date.now() - 3600 * 1000).toISOString(), unsent: 0 },
-    items,
-    combos: [{ id: 'c1' }, { id: 'c2' }, { id: 'c3' }],
-    drafts: [{ definition_id: 'd1', status: 'draft' }],
-    booksOn: true,
-    health: { enabled: true, last_check: { at: '2026-09-26T02:00:00.000Z', ok: true, problems: [], posted: {}, engines: {} }, waiting: [] },   /* what /health really sends: the check's time, no posted-to day */
-    accounts: [
-      { code: '1300', name: 'Debtors', is_group: false }, { code: '1300-P00001', name: 'Ravi Stores', is_group: false },
-      { code: '2100', name: 'Creditors', is_group: false }, { code: '2100-P00003', name: 'Agro Mills', is_group: false },
-      { code: '1400', name: 'Cash', is_group: false }, { code: '1450', name: 'Bank', is_group: false },
-      { code: '2201', name: 'GST payable', is_group: false }, { code: '3000', name: 'Capital', is_group: false },
-      { code: '4000', name: 'Sales', is_group: false }, { code: '6000', name: 'Expenses', is_group: true },
-      { code: '6010', name: 'Rent', is_group: false },
-    ],
-  };
-}
-function route(S, r) {
-  const u = new URL(r.request().url()), p = u.pathname;
-  S.calls.push(p);
-  if (p === '/api/entities/me') return J(r, 200, S.me);
-  if (p === '/api/counters') return J(r, 200, { ok: true, counters: S.counters, free: 0 });
-  if (p === '/api/till/summary') return J(r, 200, S.summary);
-  if (p === '/api/products') return J(r, 200, { items: S.items });
-  if (p === '/api/combo-templates') return J(r, 200, { templates: S.combos });
-  if (p === '/api/definitions') return J(r, 200, { definitions: S.drafts });
-  if (p.startsWith('/api/books')) {
-    if (p === '/api/books/enable' && r.request().method() === 'POST') { S.enables = (S.enables || 0) + 1; S.booksOn = true; return J(r, 200, books.enable()); }
-    if (!S.booksOn) return J(r, 404, { error: 'Not found' });
-    if (p === '/api/books/health') return J(r, 200, S.health && S.health.enabled ? books.health(Object.assign({}, S.health, { waiting: (S.health.waiting || []).map((w) => books.waitingRow(w)) })) : S.health);
-    if (p === '/api/books/accounts') return J(r, 200, { accounts: S.accounts.map((a) => books.accountRow(Object.assign({ account_id: 'acc-' + a.code }, a))) });
-  }
-  if (r.request().method() === 'GET') return J(r, 200, {});
-  return J(r, 200, { ok: true });
-}
+/* a planted manifest: facts URLs on two cards, the rail with its read and its door */
+const PLANTED = { version: 2,
+  rail: { route: '/network.html', facts: '/api/facts/rail' },
+  entries: [
+    { id: 'till', name: 'Till', route: '/till.html', icon: '▤', area: 'selling', state: 'built', what: 'Take money at the counter.', facts: '/api/facts/till' },
+    { id: 'storefront', name: 'Storefront', route: '/shop.html', icon: '◇', area: 'selling', state: 'built', what: 'Your shop on the web.', facts: null },
+    { id: 'catalogue', name: 'Catalogue', route: null, icon: '▦', area: 'selling', state: 'workshop' },
+    { id: 'orders', name: 'Orders', route: null, icon: '↓', area: 'selling', state: 'coming' },
+    { id: 'accounts', name: 'CB Accounts', route: '/accounts.html', icon: '₹', area: 'running', state: 'built', what: 'What the shop made, and what it owes.', facts: '/api/facts/accounts' },
+    { id: 'crm', name: 'CB CRM', route: '/crm.html', icon: '◍', area: 'running', state: 'built', what: 'Who buys, and how often.', facts: null },
+    { id: 'product-lab', name: 'Product Lab', route: '/product-lab.html', icon: '◈', area: 'labs', state: 'built', what: 'Cost, price, and what each one leaves you.', facts: null },
+    { id: 'tax-lab', name: 'Tax Lab', route: null, icon: '§', area: 'labs', state: 'coming' },
+    { id: 'standards', name: 'Standards', route: '/standards.html', icon: '≡', area: 'setup', state: 'built', what: 'What a chit must contain.', facts: null },
+    { id: 'shop', name: 'Your shop', route: null, icon: '⌂', area: 'setup', state: 'workshop' }
+  ] };
+const FACTS = {
+  '/api/facts/till': { lines: ['12 bills · ₹4,280 today', { text: '1 not sent up', tone: 'dn' }] },
+  '/api/facts/accounts': { lines: ['Ledger up to 7 Oct'] },
+  '/api/facts/rail': { suppliers: 4, customers: 128, in: 3, out: 2, stuck: 1 }
+};
 
-(async () => {
-  fs.mkdirSync(SHOTS, { recursive: true });
-  /* '/' is the page under test (the repo-root index.html — what the build puts at dist/index.html); everything
-     else is public/, exactly as it deploys. */
+async function run() {
+  const { chromium } = require('@playwright/test');
+  const out = { pass: 0, fail: 0 };
+  const ok = (c, m) => { if (c) out.pass++; else out.fail++; console.log((c ? '  ok  ' : '  XX  ') + m); };
+
+  /* ── 1 · static ── */
+  const src = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  ok(!/app\.html/.test(src), 'static · zero "app.html" in index.html (I12)');
+  ok(!/\btier\b/i.test(src), 'static · no word "tier" (Q5)');
+  ok(!/accounting|books of account/i.test(src), 'static · neither "accounting" nor "books of account" (it is the Ledger)');
+  ok(!/class="(box|lab|cbsh-box|cbsh-sc)[" ]/.test(src) && !/data-testid="(box|lab)-/.test(src), 'static · no hand-written card: every card is a manifest row');
+  ok(/\/app\/shell\.js/.test(src) && /CBShell\.mount\(/.test(src) && /host:\s*null/.test(src), 'static · index.html mounts CBShell as Home (host null)');
+  ok(!/\balert\s*\(/.test(src), 'static · no alert()');
+  const man = JSON.parse(fs.readFileSync(path.join(PUB, 'app', 'manifest.json'), 'utf8'));
+  const exists = (r) => { const p = r.split('#')[0]; return p === '/' ? false : fs.existsSync(path.join(PUB, p)); };
+  const badBuilt = man.entries.filter((e) => e.state === 'built' && !(e.route && exists(e.route) && !/app\.html/.test(e.route))).map((e) => e.id);
+  const badRest = man.entries.filter((e) => e.state !== 'built' && e.route).map((e) => e.id);
+  ok(badBuilt.length === 0, 'manifest · every built entry routes to a utility page that exists, never app.html, never the index itself' + (badBuilt.length ? ' — not: ' + badBuilt.join(', ') : ''));
+  ok(badRest.length === 0, 'manifest · coming / workshop entries have no route (dashed chips)' + (badRest.length ? ' — routed: ' + badRest.join(', ') : ''));
+  ok(man.rail && 'route' in man.rail && 'facts' in man.rail && !/app\.html/.test(JSON.stringify(man)), 'manifest · the rail widget is declared (route · facts), and nothing names app.html');
+  const BUILT = man.entries.filter((e) => e.state === 'built'), REST = man.entries.filter((e) => e.state !== 'built');
+  for (const w of ['Catalogue', 'CB Accounts', 'Till', 'Standards', 'Suppliers', 'Co-assist', 'Connectors', 'Your shop', 'Counters & keys', 'CB CRM', 'Product Lab', 'Offer Lab', 'Combo Lab']) {
+    ok(man.entries.some((e) => e.name === w), 'manifest · the old index\'s "' + w + '" is a manifest row');
+  }
+
+  /* ── the site as it deploys: / is the repo-root index.html, everything else public/ ── */
   const srv = http.createServer((q, r) => {
     const rel = decodeURIComponent(q.url.split('?')[0]).replace(/^\/+/, '');
     const f = (!rel || rel === 'index.html') ? path.join(ROOT, 'index.html') : path.join(PUB, rel);
     if ((!f.startsWith(PUB) && f !== path.join(ROOT, 'index.html')) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { r.writeHead(404); return r.end('no'); }
-    r.writeHead(200, { 'content-type': T[path.extname(f)] || 'application/octet-stream' });
+    r.writeHead(200, { 'content-type': T[path.extname(f)] || 'application/octet-stream', 'cache-control': 'no-store' });
     fs.createReadStream(f).pipe(r);
   });
   await new Promise((r) => srv.listen(0, '127.0.0.1', r));
   const base = 'http://127.0.0.1:' + srv.address().port;
-  const b = await chromium.launch();
-  const threw = [];
+  const b = await chromium.launch(), errs = [];
 
-  async function open(S, opts) {
-    opts = opts || {};
-    const ctx = await b.newContext({ viewport: opts.viewport || { width: 1360, height: 900 }, locale: 'en-IN', timezoneId: 'Asia/Kolkata', serviceWorkers: 'block' });
+  /* the session the apps store: a signed token whose identity is the shop (CBOnePerson.who reads it) */
+  const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64').replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
+  const TOKEN = b64({ alg: 'none' }) + '.' + b64({ identity_id: 'ent-idx', identity_type: 'entity', exp: Math.floor(Date.now() / 1000) + 3600 }) + '.x';
+  const SESSION = JSON.stringify({ token: TOKEN, role: 'entity', name: 'Mayur', entity: 'Mayur Bhavan' });
+
+  async function profile(vw, vh, p) {
+    p = p || {};
+    const seen = [];
+    const ctx = await b.newContext({ viewport: { width: vw, height: vh }, locale: 'en-IN', timezoneId: 'Asia/Kolkata', serviceWorkers: 'block' });
     await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
-    await ctx.route('**/api/**', (r) => route(S, r));
-    if (!opts.signedOut) await ctx.addInitScript((roleOf) => { try {
-      const b64 = (o) => btoa(JSON.stringify(o)).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
-      const tok = b64({ alg: 'none' }) + '.' + b64({ identity_id: 'ent-idx', identity_type: 'entity', exp: Math.floor(Date.now() / 1000) + 3600 }) + '.x';
-      localStorage.setItem('cb_sess', JSON.stringify({ token: tok, role: roleOf, name: 'Mayur', entity: 'Mayur Bhavan' })); } catch (_) {} }, opts.role || 'entity');
-    const p = await ctx.newPage();
-    p.on('pageerror', (e) => threw.push(e.message));
-    await p.goto(base + (opts.path || '/'));
-    return { ctx, p };
-  }
-  const settle = (p) => p.waitForTimeout(700);
-  const words = (p) => p.evaluate(() => document.body.innerText.trim().split(/\s+/).filter(Boolean).length);
-  const noBadWords = async (p, where) => {
-    const t = await p.evaluate(() => document.body.innerText);
-    ok(!/accounting|books of account/i.test(t), where + ': "accounting" / "books of account" appear nowhere');
-  };
-
-  /* ── the page's own source: no alert(), and ONE "no cost" counter ── */
-  {
-    const src = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-    ok(!/\balert\s*\(/.test(src), 'no alert() anywhere in the page');
-    ok((src.match(/function noCostCount\(/g) || []).length === 1, 'exactly one definition of noCostCount()');
-    ok(!/accounting|books of account/i.test(src), 'the source carries neither forbidden string');
-    ok(/the ledger records it/.test(src), 'the opening sentence reads "the ledger records it"');
-  }
-
-  /* ── 1 · SIGNED IN, ALL WELL (laptop) ───────────────────────────────────────────────────────────────────── */
-  {
-    const S = standIn();
-    const { ctx, p } = await open(S);
-    await p.waitForSelector('[data-testid="nocost-cat"]', { timeout: 15000 });
-    await settle(p);
-
-    ok(await p.locator('[data-testid="day-to-day"] .box').count() === 3, 'three boxes under Day to day');
-    ok(await p.locator('[data-testid="labs-band"] .lab').count() === 4, 'four labs under Labs');
-    const tint = await p.evaluate(() => {
-      const band = getComputedStyle(document.querySelector('[data-testid="labs-band"]')).backgroundColor;
-      const page = getComputedStyle(document.body).backgroundColor;
-      return { band, page };
+    if (p.manifest) await ctx.route('**/app/manifest.json', (r) => J(r, 200, p.manifest));
+    await ctx.route('**/api/**', (r) => {
+      const u = new URL(r.request().url()); seen.push(u.pathname);
+      if (u.pathname === '/api/entities/header') return J(r, 404, { error: 'not found' });            /* N19 built, not live: the empty state stays */
+      if (u.pathname === '/api/books/health') {
+        if (p.booksOff) return J(r, 404, { error: 'Not found' });
+        return J(r, 200, books.health({ waiting: (p.waiting || []).map((w) => books.waitingRow(w)) }));
+      }
+      if (FACTS[u.pathname]) return J(r, 200, FACTS[u.pathname]);
+      return J(r, 404, { error: 'not found' });
     });
-    ok(tint.band !== tint.page && tint.band !== 'rgba(0, 0, 0, 0)', 'the labs sit in a tinted band (' + tint.band + ')');
-
-    /* 2 · nothing wrong → the alert block renders NOTHING: no box, no border, no height */
-    const al = await p.evaluate(() => {
-      const a = document.getElementById('alerts'), cs = getComputedStyle(a);
-      return { kids: a.childElementCount, disp: cs.display, h: a.offsetHeight, border: cs.borderTopWidth };
-    });
-    ok(al.kids === 0 && al.disp === 'none' && al.h === 0, 'no alerts → the block renders nothing at all (display:' + al.disp + ', height:' + al.h + ')');
-
-    /* 3 · one function, two doors, one number */
-    const catN = await p.textContent('[data-testid="nocost-cat"]');
-    const labN = await p.textContent('#st_prod');
-    ok(/^1$/.test(catN.trim()) && /^1 without a cost$/.test(labN.trim()),
-      'Catalogue "' + catN.trim() + ' with no cost written down" and Product Lab "' + labN.trim() + '" agree');
-    const one = await p.evaluate(() => typeof noCostCount === 'function'
-      && noCostCount([{ item_data: {} }, { item_data: { cost: { amount: 4 } } }, { item_data: { cost: 0 } }]) === 2);
-    ok(one, 'noCostCount is the one counter, and it counts a missing or zero cost');
-
-    /* the other live facts, each from its one source */
-    const till = await p.textContent('#f_till');
-    ok(/Counter 1 open/.test(till) && /12/.test(till) && /4,280/.test(till), 'Till: counter open · 12 bills · ₹4,280 today (' + till.replace(/\s+/g, ' ').trim() + ')');
-    const cat = await p.textContent('#f_cat');
-    ok(/112/.test(cat) && /7/.test(cat), 'Catalogue: 112 products · 7 shelves');
-    const bk = await p.textContent('#f_bk');
-    ok(/Ledger checked/.test(bk) && /26 Sep/.test(bk), 'Ledger: checked 26 Sep - the only date /health sends is last_check.at (' + bk.replace(/\s+/g, ' ').trim() + ')');
-    ok(/1 draft waiting/.test(await p.textContent('#st_offer')), 'Offer Lab: 1 draft waiting');
-    await p.waitForFunction(() => ((document.getElementById('st_combo') || {}).textContent || '').length > 0, null, { timeout: 8000 }).catch(() => {});
-    ok(/3 combos · 10 modifiers/.test(await p.textContent('#st_combo')), 'Combo Lab: 3 combos · 10 modifiers');
-    ok(/no GSTIN — cash memos/.test(await p.textContent('#st_tax')), 'Tax Lab: no GSTIN — cash memos');
-    ok(/Prices read/.test(await p.textContent('[data-testid="prices-read"]')), 'the footer says when prices were read');
-
-    /* every tile's link target */
-    const href = (t) => p.getAttribute('[data-testid="' + t + '"]', 'href');
-    ok(await href('box-till') === '/till.html' && await p.getAttribute('[data-testid="box-till"]', 'target') === '_blank', 'Till → /till.html, its own tab');
-    ok(await href('box-catalogue') === 'app.html#/app/catalogue', 'Catalogue → app.html#/app/catalogue');
-    ok(/^CB Accounts/.test((await p.textContent('[data-testid="box-ledger"] h3')).trim()), 'the third box is called CB Accounts');
-    ok(await href('box-ledger-link') === '/accounts.html', 'CB Accounts → /accounts.html, the same tab');
-    ok(await p.getAttribute('[data-testid="box-ledger-link"]', 'target') === null, 'CB Accounts opens in the same tab');
-    ok(await p.locator('[data-testid="ledger-active"]').isVisible() && (await p.textContent('[data-testid="ledger-active"]')).trim() === 'Active', 'on → an Active badge');
-    const lit = await p.evaluate(() => { const b = document.getElementById('box_bk'), cs = getComputedStyle(b), g = getComputedStyle(document.documentElement); return { lit: b.classList.contains('lit'), edge: cs.borderTopColor, glow: cs.boxShadow, green: g.getPropertyValue('--green').trim() }; });
-    ok(lit.lit && /rgb\(22, 105, 63\)/.test(lit.edge) && lit.glow !== 'none', 'on → the tile is lit: a green edge (' + lit.edge + ') and a glow');
-    ok(await p.locator('[data-testid="ledger-switch-on"]').count() === 0 && await p.locator('[data-testid="ledger-not-on"]').count() === 0, 'on → no Switch on, no "not switched on"');
-    await p.screenshot({ path: path.join(SHOTS, 'index-cb-accounts-active.png'), fullPage: true });
-    ok(await href('lab-product') === 'product-lab.html' && await href('lab-offer') === 'offer-lab-next.html' && await href('lab-combo') === 'combo-lab.html', 'each Lab tile → its own page');
-    ok(await p.evaluate(() => { const t = document.querySelector('[data-testid="lab-tax"]'); return t.tagName !== 'A' && !t.getAttribute('href'); }), 'Tax Lab is not a link — the page does not exist yet');
-    ok(await href('foot-shop') === 'app.html#/app/settings' && await href('foot-coassists') === 'app.html#/app/coassists'
-      && await href('foot-suppliers') === 'app.html#/app/suppliers' && await href('foot-connectors') === 'app.html#/app/connectors'
-      && await href('foot-counters') === 'app.html#/app/settings', 'the footer rows open the app\'s sections');
-
-    /* 6 · the word budget */
-    const w = await words(p);
-    ok(w < 250, 'under 250 words on the page (' + w + ')');
-    await noBadWords(p, 'all well');
-
-    await p.screenshot({ path: path.join(SHOTS, 'index-laptop.png'), fullPage: true });
-    await p.setViewportSize({ width: 1080, height: 800 });
-    await p.waitForTimeout(200);
-    ok(await p.evaluate(() => document.documentElement.scrollWidth) <= 1080, 'no horizontal scroll at 1080');
-    await p.screenshot({ path: path.join(SHOTS, 'index-all-well.png'), fullPage: true });
-
-    /* 5 · phone: exactly the viewport, one column each */
-    await p.setViewportSize({ width: 390, height: 844 });
-    await p.waitForTimeout(250);
-    ok(await p.evaluate(() => document.documentElement.scrollWidth) === 390, 'document.scrollWidth === 390 at phone width');
-    const cols = await p.evaluate(() => ({
-      main: getComputedStyle(document.querySelector('.main')).gridTemplateColumns.split(' ').length,
-      labs: getComputedStyle(document.querySelector('.lgrid')).gridTemplateColumns.split(' ').length,
-    }));
-    ok(cols.main === 1 && cols.labs === 1, 'boxes stack and labs go one per row on a phone');
-    await p.screenshot({ path: path.join(SHOTS, 'index-phone.png'), fullPage: true });
-    await ctx.close();
+    await ctx.addInitScript(([s, signedOut, pair]) => { try {
+      localStorage.setItem('cb_api_base', location.origin);
+      if (signedOut) localStorage.removeItem('cb_sess'); else localStorage.setItem('cb_sess', s);
+      if (pair) { localStorage.setItem('cb_till_lastslot', 'cb-till-abc1'); localStorage.setItem('cb_till_key', 'k-abc1');
+        localStorage.setItem('cb_till_shop@abc1', pair.ent); localStorage.setItem('cb_till_shopname@abc1', pair.name); }
+    } catch (_) {} }, [SESSION, !!p.signedOut, p.pair || null]);
+    return { ctx, seen };
   }
+  async function open(ctx, q) {
+    const pg = await ctx.newPage();
+    pg.on('pageerror', (e) => errs.push(String(e.message)));
+    await pg.goto(base + '/' + (q || ''));
+    await pg.waitForSelector('[data-testid="cbshell"]', { timeout: 20000 });
+    await pg.evaluate(() => window.SHELL && window.SHELL.ready);
+    await pg.waitForTimeout(400);
+    return pg;
+  }
+  const vis = (pg, sel) => pg.locator(sel).first().isVisible().catch(() => false);
+  const areaWords = (pg, a) => pg.evaluate((x) => { const s = document.querySelector('.cbsh-sec.' + x); if (!s) return -1; return (s.innerText || '').replace(/\s+/g, ' ').trim().split(' ').filter(Boolean).length; }, a);
+  const BUDGET = { home: 120, selling: 100, running: 100, labs: 100, setup: 100 };
+  /* the allow-list: whatever CBAvatar writes in its own slot (its Profile · Support doors, the Sign in door) — nothing else may name app.html */
+  const offList = (pg) => pg.$$eval('a[href*="app.html"]', (as) => as.filter((a) => !a.closest('[data-testid="shell-avatar"]')).map((a) => a.getAttribute('href')));
+  fs.mkdirSync(SHOTS, { recursive: true });
 
-  /* ── 2 · THE DAY SOMETHING IS WRONG: three alerts, each with its fix ────────────────────────────────────── */
-  {
-    const S = standIn();
-    S.summary.prices_read_at = new Date(Date.now() - 38 * 3600 * 1000).toISOString();
-    S.summary.unsent = 3;
-    /* the live /health shape (2026-10-01): enabled, no last-posted field at all — the box must still say ON */
-    S.health = { enabled: true, currency: 'INR', last_check: null,
-      waiting: [{ id: 1, reason: 'Paid by Points — there is no ledger for Points yet.' },
-                { id: 2, reason: 'September is locked.' }] };
-    const { ctx, p } = await open(S);
-    await p.waitForFunction(() => document.querySelectorAll('#alerts .al').length === 3, null, { timeout: 15000 });
-    await settle(p);
-    const n = await p.locator('#alerts .al').count();
-    ok(n === 3, 'a failing thing earns a row — three failing things, three rows (' + n + ')');
-    ok(await p.locator('#alerts .al .fix').count() === n, 'every alert carries the button that fixes it');
-    const fixes = await p.$$eval('#alerts .al .fix', (els) => els.map((e) => e.getAttribute('href')));
-    ok(fixes.every(Boolean) && fixes.filter((f) => f === '/till.html').length === 2 && fixes.indexOf('/accounts.html#waiting') >= 0,
-      'each fix button opens the place that fixes it (' + fixes.join(' · ') + ')');
-    ok(await p.evaluate(() => document.querySelector('#alerts .al').classList.contains('bad')), 'what is wrong now sits first');
-    ok(/Prices are 38 hours old/.test(await p.textContent('#alerts')), 'the price alert says how old, in hours');
-    /* rule 11: the amber fact is the SAME number as the alert above it */
-    const bk = await p.textContent('#f_bk');
-    ok(/Ledger on/.test(bk), 'a ledger that is enabled but has no posted-day field still says "Ledger on" (' + bk.replace(/\s+/g, ' ').trim() + ')');
-    ok(/2/.test(bk) && /2 waiting/.test(await p.textContent('#alerts')), 'the Ledger box\'s amber "2 waiting" is the alert\'s own number');
-    ok(!/error|failed|exception/i.test(await p.evaluate(() => document.body.innerText)), 'no error string reaches the screen');
-    const w = await words(p);
-    ok(w < 250, 'still under 250 words with every alert up (' + w + ')');
-    await p.screenshot({ path: path.join(SHOTS, 'index-alerts.png'), fullPage: true });
-    await ctx.close();
-  }
+  try {
+    /* ── 2 + 3 · 1366, signed in, the shipped manifest, nothing wrong ── */
+    {
+      const { ctx, seen } = await profile(1366, 800), pg = await open(ctx);
+      ok(await pg.locator('[data-testid="cbshell"]').count() === 1 && await pg.getAttribute('[data-testid="cbshell"]', 'data-mode') === 'home', '1366 · Home mounts the shell once, as Home');
+      ok(await pg.locator('[data-testid="shell-nav"]').count() === 1 && await pg.locator('[data-testid="shell-avatar"] [data-testid="cbavatar"]').count() === 1, '1366 · the rail of five areas and the one avatar are the shell\'s');
+      ok(await pg.locator('.cbsh-box').count() === BUILT.length && await pg.locator('.cbsh-sc').count() === REST.length, '1366 · ' + BUILT.length + ' cards and ' + REST.length + ' dashed chips — one per manifest row');
+      let hrefsOk = true;
+      for (const e of BUILT) { const h = await pg.getAttribute('[data-testid="shell-card-' + e.id + '"]', 'href'); if (h !== e.route) { hrefsOk = false; console.log('      ' + e.id + ' → ' + h); } }
+      ok(hrefsOk, '1366 · every built card links to its utility page');
+      ok((await offList(pg)).length === 0, '1366 · zero app.html hrefs outside the avatar (the allow-list: CBAvatar\'s own doors)');
+      const chips = await pg.$$eval('.cbsh-sc', (cs) => cs.map((c) => ({ id: c.dataset.testid, st: c.dataset.state, link: c.tagName === 'A' || !!c.querySelector('a'), tag: (c.querySelector('.tag') || {}).textContent })));
+      ok(chips.length && chips.every((c) => !c.link && (c.st === 'workshop' || c.st === 'coming') && c.tag), '1366 · every chip is dashed, names its state, and is not a link');
+      const before = pg.url(), pages = ctx.pages().length;
+      await pg.click('[data-testid="shell-chip-catalogue"]'); await pg.waitForTimeout(250);
+      ok(pg.url() === before && ctx.pages().length === pages, '1366 · a workshop chip opens nothing');
+      /* reads: only budgeted ones; null facts paint nothing */
+      const unbudgeted = seen.filter((p) => !BUDGETED.includes(p));
+      ok(unbudgeted.length === 0, '1366 · every read has its budget line (' + [...new Set(seen)].join(' · ') + ')' + (unbudgeted.length ? ' — not: ' + unbudgeted.join(', ') : ''));
+      ok(seen.includes('/api/books/health'), '1366 · the ledger\'s waiting posts were asked (GET /api/books/health)');
+      const factsText = await pg.$$eval('.cbsh-box .facts', (fs_) => fs_.map((f) => f.textContent.trim()).join(''));
+      ok(factsText === '', '1366 · a card whose facts read does not exist yet shows no figure');
+      const al = await pg.evaluate(() => { const a = document.querySelector('[data-slot="alerts"]'); return { kids: a.childElementCount, h: a.offsetHeight }; });
+      ok(al.kids === 0 && al.h === 0, '1366 · nothing wrong → the alerts slot draws nothing (' + al.h + 'px)');
+      ok(await pg.locator('[data-testid="rail"]').count() === 0, '1366 · the rail has no read yet → it is not drawn (never an invented number)');
+      await pg.click('[data-testid="shell-shop"]');
+      const st = await pg.locator('[data-testid="shell-sheet"]').innerText();
+      ok(await vis(pg, '[data-testid="shell-sheet-empty"]') && /not available yet/i.test(st) && !/\d/.test(st), '1366 · N19 404 → the sheet\'s empty state, no number (kept)');
+      await pg.keyboard.press('Escape');
+      ok(await pg.evaluate(() => !!document.querySelector('.cbsh-foot #cbkural')), '1366 · the kural is the footer band');
+      for (const a of Object.keys(BUDGET)) { const n = await areaWords(pg, a); ok(n >= 0 && n <= BUDGET[a], '1366 · words in ' + a + ': ' + n + ' ≤ ' + BUDGET[a]); }
+      ok(!/accounting|books of account|error|404/i.test(await pg.evaluate(() => document.body.innerText)), '1366 · no forbidden word, no error string on the screen');
+      await pg.screenshot({ path: path.join(SHOTS, 'index-laptop.png') });
+      await ctx.close();
+    }
 
-  /* ── 3 · SIGNED OUT: the three boxes, no facts, no reads, one door in ───────────────────────────────────── */
-  {
-    const S = standIn();
-    const { ctx, p } = await open(S, { signedOut: true });
-    await p.waitForSelector('[data-testid="signin-door"]', { timeout: 15000 });
-    await settle(p);
-    /* the door is CBAvatar's own Sign in link — the frozen avatar writes it absolute (/app.html#/login), the same place as the old relative one */
-    ok(await p.getAttribute('[data-testid="signin-door"]', 'href') === '/app.html#/login', 'the one sign-in door → app.html#/login');
-    ok(await p.locator('[data-testid="day-to-day"] .box').count() === 3 && await p.locator('[data-testid="labs-band"] .lab').count() === 4, 'the three boxes and four labs are still shown');
-    ok(await p.locator('.box .f').count() === 0, 'signed out: no facts');
-    ok(S.calls.length === 0, 'signed out: not one API call leaves the page (' + S.calls.length + ')');
-    ok(await p.evaluate(() => document.getElementById('alerts').childElementCount) === 0, 'signed out: no alerts either');
-    ok(/^coming$/.test((await p.textContent('#st_tax')).trim()), 'Tax Lab says "coming" and nothing else');
-    await noBadWords(p, 'signed out');
-    await ctx.close();
-  }
+    /* ── 4 · 1366, a planted manifest and a planted API: facts, the rail, the alerts ── */
+    {
+      const { ctx } = await profile(1366, 800, { manifest: PLANTED, waiting: [{ id: 1, reason: 'Paid by Points — there is no ledger for Points yet.' }, { id: 2, reason: 'September is locked.' }], pair: { ent: 'ent-C', name: 'Mayuri123' } });
+      const pg = await open(ctx);
+      await pg.waitForSelector('[data-testid="rail"]', { timeout: 8000 }).catch(() => {});
+      const f = (await pg.locator('[data-testid="shell-facts-till"]').innerText()).replace(/\s+/g, ' ');
+      ok(/12 bills · ₹4,280 today/.test(f) && /1 not sent up/.test(f), 'planted · the Till card\'s lines are the API\'s ("' + f + '")');
+      ok(/Ledger up to 7 Oct/.test(await pg.locator('[data-testid="shell-facts-accounts"]').innerText()), 'planted · the CB Accounts card\'s line is the API\'s');
+      ok((await pg.locator('[data-testid="shell-facts-crm"]').innerText()).trim() === '', 'planted · a card with facts null shows nothing');
+      const rail = await pg.evaluate(() => { const t = (s) => (document.querySelector('[data-testid="' + s + '"]') || {}).textContent; return { s: t('rail-suppliers'), c: t('rail-customers'), i: t('rail-in'), o: t('rail-out'), k: t('rail-stuck'), open: (document.querySelector('[data-testid="rail-open"]') || {}).getAttribute && document.querySelector('[data-testid="rail-open"]').getAttribute('href') }; });
+      ok(rail.s === '4' && rail.c === '128' && rail.i === '3 in' && rail.o === '2 out' && rail.k === '1 stuck', 'planted · the rail\'s digits are the API\'s (' + JSON.stringify(rail) + ')');
+      ok(rail.open === '/network.html', 'planted · the rail\'s Open goes where the manifest says');
+      const rows = await pg.$$eval('[data-slot="alerts"] .al', (els) => els.map((e) => ({ id: e.dataset.testid, lvl: e.className.replace('al ', ''), text: e.textContent.replace(/\s+/g, ' ').trim(), fix: (e.querySelector('.fix') || {}).getAttribute && e.querySelector('.fix').getAttribute('href') })));
+      const led = rows.find((r) => r.id === 'ledger-waiting'), pr = rows.find((r) => r.id === 'till-paired');
+      ok(led && /2 waiting for the ledger/.test(led.text) && led.fix === '/accounts.html#waiting', 'planted · "2 waiting for the ledger" — the alert\'s number is the API\'s, its fix opens CB Accounts (' + (led && led.text) + ')');
+      ok(pr && pr.lvl === 'warn' && /Counter 1 · paired to Mayuri123, not this shop/.test(pr.text) && pr.fix === '/till.html', 'planted · a counter paired to another shop earns an amber row with its fix (' + (pr && pr.text) + ')');
+      ok(rows.every((r) => r.fix), 'planted · every alert carries the button that fixes it');
+      for (const a of Object.keys(BUDGET)) { const n = await areaWords(pg, a); ok(n >= 0 && n <= BUDGET[a], 'planted 1366 · words in ' + a + ': ' + n + ' ≤ ' + BUDGET[a]); }
+      await pg.screenshot({ path: path.join(SHOTS, 'index-alerts.png') });
+      await ctx.close();
+    }
 
-  /* ── 4 · CB ACCOUNTS IS OFF: 404 → the owner's Switch on · anyone else "Not switched on yet" · the tile is not lit ── */
-  {
-    const S = standIn();
-    S.booksOn = false;
-    const { ctx, p } = await open(S);
-    await p.waitForSelector('[data-testid="ledger-switch-on"]', { timeout: 15000 });
-    await settle(p);
-    ok(await p.locator('[data-testid="ledger-active"]').isVisible() === false, 'off → no Active badge');
-    ok(await p.evaluate(() => !document.getElementById('box_bk').classList.contains('lit')), 'off → the tile is not lit');
-    ok(await p.locator('[data-testid="ledger-switch-on"]').isVisible(), 'off → the owner sees Switch on on the tile');
-    ok(await p.getAttribute('[data-testid="box-ledger-link"]', 'href') === '/accounts.html', 'and the tile still opens CB Accounts, which explains');
-    ok(!/404|error/i.test(await p.evaluate(() => document.body.innerText)), 'the 404 never reaches the screen');
-    await noBadWords(p, 'CB Accounts off');
-    await p.screenshot({ path: path.join(SHOTS, 'index-cb-accounts-off.png'), fullPage: true });
-    await p.click('[data-testid="ledger-switch-on"]');
-    await p.waitForSelector('[data-testid="confirm-ok"]');
-    ok(/Switch the Ledger on\?/.test(await p.textContent('[data-testid="confirm"]')), 'Switch on asks first (the same words as Settings)');
-    ok((S.enables || 0) === 0, 'nothing is sent before the owner confirms');
-    await p.click('[data-testid="confirm-ok"]');
-    await p.waitForSelector('[data-testid="ledger-active"]:not([hidden])', { timeout: 10000 });
-    await settle(p);
-    ok(S.enables === 1, 'confirming sent POST /api/books/enable exactly once (' + S.enables + ')');
-    ok(await p.locator('[data-testid="ledger-switch-on"]').count() === 0 && await p.evaluate(() => document.getElementById('box_bk').classList.contains('lit')), 'switched on → Active, lit, and the button is gone');
-    ok(/Ledger checked/.test(await p.textContent('#f_bk')), 'and its facts arrive');
-    await ctx.close();
-  }
-  {
-    const S = standIn();
-    S.booksOn = false;
-    const { ctx, p } = await open(S, { role: 'actor' });
-    await p.waitForSelector('[data-testid="ledger-not-on"]', { timeout: 15000 });
-    ok(/Not switched on yet/.test(await p.textContent('[data-testid="ledger-not-on"]')) && await p.locator('[data-testid="ledger-switch-on"]').count() === 0, 'anyone but the owner: "Not switched on yet", no button');
-    await ctx.close();
-  }
-  {
-    /* a reader who asks for less motion gets the same lit tile, standing still */
-    const S = standIn();
-    const ctx = await b.newContext({ viewport: { width: 1360, height: 900 }, reducedMotion: 'reduce', serviceWorkers: 'block' });
-    await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
-    await ctx.route('**/api/**', (r) => route(S, r));
-    await ctx.addInitScript(() => { try { const b64 = (o) => btoa(JSON.stringify(o)).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
-      localStorage.setItem('cb_sess', JSON.stringify({ token: b64({ alg: 'none' }) + '.' + b64({ identity_id: 'ent-idx', exp: Math.floor(Date.now() / 1000) + 3600 }) + '.x', role: 'entity', name: 'Mayur', entity: 'Mayur Bhavan' })); } catch (_) {} });
-    const p = await ctx.newPage(); p.on('pageerror', (e) => threw.push(e.message));
-    await p.goto(base + '/');
-    await p.waitForSelector('[data-testid="ledger-active"]:not([hidden])', { timeout: 15000 });
-    const anim = await p.evaluate(() => getComputedStyle(document.getElementById('box_bk')).animationName);
-    ok(anim === 'none' && await p.evaluate(() => document.getElementById('box_bk').classList.contains('lit')), 'reduced motion: the tile is lit and does not pulse (animation: ' + anim + ')');
-    await ctx.close();
-  }
+    /* ── 5 + 6 · 390, the same planted day: bottom tabs, one area at a time, the rail and the alerts on Home, no sideways scroll ── */
+    {
+      const { ctx } = await profile(390, 844, { manifest: PLANTED, waiting: [{ id: 1, reason: 'September is locked.' }] }), pg = await open(ctx);
+      await pg.waitForSelector('[data-testid="rail"]', { timeout: 8000 }).catch(() => {});
+      const sw = () => pg.evaluate(() => document.scrollingElement.scrollWidth);
+      ok(await sw() === 390, '390 · scrollWidth === 390 (' + await sw() + ')');
+      const nav = await pg.evaluate(() => { const r = document.querySelector('.cbsh-nav').getBoundingClientRect(); return { bottom: Math.round(r.bottom), w: Math.round(r.width) }; });
+      ok(nav.bottom === 844 && nav.w === 390, '390 · the five areas are a bottom tab bar');
+      ok(await pg.evaluate(() => [...document.querySelectorAll('.cbsh-sec')].filter((s) => s.offsetParent).map((s) => s.dataset.area).join()) === 'home', '390 · one area at a time: Home first');
+      ok(await vis(pg, '[data-testid="rail"]') && await vis(pg, '[data-testid="ledger-waiting"]'), '390 · Home shows the rail and the alert');
+      const railR = await pg.evaluate(() => { const r = document.querySelector('[data-testid="rail"]').getBoundingClientRect(); return { l: r.left, r: Math.round(r.right) }; });
+      ok(railR.l >= 0 && railR.r <= 390, '390 · the rail sits inside the screen (' + railR.l + ' → ' + railR.r + ')');
+      ok(await pg.evaluate(() => !!document.querySelector('.cbsh-sec.home .cbsh-kh #cbkural')), '390 · the kural sits at the foot of Home');
+      await pg.screenshot({ path: path.join(SHOTS, 'index-phone.png') });
+      for (const a of Object.keys(BUDGET)) {
+        await pg.click('[data-testid="shell-nav-' + a + '"]'); await pg.waitForTimeout(120);
+        const shown = await pg.evaluate(() => [...document.querySelectorAll('.cbsh-sec')].filter((s) => s.offsetParent).map((s) => s.dataset.area).join());
+        const n = await areaWords(pg, a);
+        ok(shown === a && n <= BUDGET[a] && await sw() === 390, '390 · tab ' + a + ' shows only ' + a + ', ' + n + ' words ≤ ' + BUDGET[a] + ', no sideways scroll');
+        if (a === 'selling') await pg.screenshot({ path: path.join(SHOTS, 'index-phone-selling.png') });
+      }
+      ok((await offList(pg)).length === 0, '390 · zero app.html hrefs outside the avatar');
+      await ctx.close();
+    }
 
-  /* ── 5 · THE OLD LEDGER DOOR IS CLOSED (2026-10-02, web-reads-invoice): the deep link lands on CB Accounts; the app keeps its Home ── */
-  {
-    const S = standIn();
-    const { ctx, p } = await open(S, { path: '/app.html#/app/ledger' });
-    await p.waitForURL(/\/accounts\.html/, { timeout: 20000 }).catch(() => {});
-    ok(/\/accounts\.html/.test(p.url()), 'app.html#/app/ledger lands on /accounts.html — the Ledger is CB Accounts now (the bands are drawn there: e2e/cb-accounts.cjs)');
-    await p.goto(base + '/app.html#/app');
-    await p.waitForSelector('[data-testid="nav-home"]', { timeout: 20000 }).catch(() => {});
-    ok(await p.locator('[data-testid="nav-home"]').count() === 1 && await p.getAttribute('[data-testid="nav-home"]', 'href') === '/', 'the app\'s top bar carries Home → /');
-    await noBadWords(p, 'app home');
-    await ctx.close();
-  }
+    /* ── the ledger off: a 404 is nothing wrong ── */
+    {
+      const { ctx, seen } = await profile(1366, 800, { booksOff: true }), pg = await open(ctx);
+      await pg.waitForTimeout(300);
+      ok(seen.includes('/api/books/health') && await pg.locator('[data-slot="alerts"] .al').count() === 0 && !/404/.test(await pg.evaluate(() => document.body.innerText)), 'ledger off · the 404 earns no row and never reaches the screen');
+      await ctx.close();
+    }
 
-  /* ── 6 · each Lab page's header carries Home → / ────────────────────────────────────────────────────────── */
-  for (const page of ['product-lab.html', 'offer-lab-next.html', 'combo-lab.html']) {
-    const src = fs.readFileSync(path.join(PUB, page), 'utf8');
-    ok(/data-testid="nav-home" href="\/"/.test(src), page + ': the header carries Home → /');
-  }
+    /* ── 7 · signed out ── */
+    {
+      const { ctx, seen } = await profile(1366, 800, { signedOut: true }), pg = await open(ctx);
+      ok(seen.length === 0, 'signed out · not one /api call leaves the page (' + seen.length + ')');
+      ok(await pg.locator('.cbsh-box').count() === BUILT.length && await pg.$$eval('.cbsh-box .facts', (fs_) => fs_.every((f) => f.textContent.trim() === '')), 'signed out · the cards are still drawn, with no facts');
+      ok(await pg.locator('[data-testid="signin-door"]').count() === 1 && await pg.locator('[data-testid="shell-shop"]').count() === 0, 'signed out · the avatar is the one Sign in door; no shop button');
+      ok(await pg.locator('[data-slot="alerts"] .al').count() === 0, 'signed out · no alerts');
+      ok((await offList(pg)).length === 0, 'signed out · zero app.html hrefs outside the avatar');
+      await ctx.close();
+    }
+    {
+      const { ctx, seen } = await profile(1366, 800), pg = await open(ctx, '?left=Other%20Shop');
+      const row = pg.locator('[data-testid="signed-out-why"]');
+      ok(await row.count() === 1 && /Signed out — Other Shop opened in another tab\./.test(await row.innerText()), 'left · the row says why (' + (await row.innerText().catch(() => '')).replace(/\s+/g, ' ').trim() + ')');
+      ok(await pg.locator('[data-testid="signed-out-go"]').count() === 1 && await pg.locator('[data-testid="signin-door"]').count() === 1 && seen.length === 0, 'left · its button is the avatar\'s door, and nothing was read');
+      ok((await offList(pg)).length === 0, 'left · still zero app.html hrefs outside the avatar');
+      await ctx.close();
+    }
 
-  const mine = threw.filter((m) => !/fonts|favicon/i.test(m));
-  ok(...C.finish());
-  ok(mine.length === 0, 'no page error' + (mine.length ? ' — ' + mine.slice(0, 3).join(' | ').slice(0, 300) : ''));
-  await b.close(); srv.close();
-  console.log('\n  index-page: ' + pass + ' passed, ' + fail + ' failed');
-  process.exitCode = fail ? 1 : 0;
-})().catch((e) => { console.error(e); console.log('  XX  the harness stopped: ' + e.message.split('\n')[0]); process.exit(1); });
+    ok(...C.finish());
+    const mine = errs.filter((m) => !/fonts|favicon/i.test(m));
+    ok(mine.length === 0, 'no page error' + (mine.length ? ': ' + mine.slice(0, 3).join(' | ') : ''));
+  } finally { await b.close(); srv.close(); }
+  return out;
+}
+
+module.exports = { run };
+
+if (require.main === module) {
+  (async () => {
+    console.log('  (free memory ' + (require('os').freemem() / 1073741824).toFixed(1) + ' GB)');
+    const r = await run();
+    console.log('\n  index-page: ' + r.pass + ' passed, ' + r.fail + ' failed');
+    process.exit(r.fail ? 1 : 0);
+  })().catch((e) => { console.error(e); process.exit(1); });
+}

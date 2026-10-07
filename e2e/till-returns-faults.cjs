@@ -32,8 +32,8 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(70) + '· ' + d 
       till: { suggested_id: 'C1', assigned_id: 'C1' },
       items: [{ id: 'xmango', name: 'XMANGO', price: 50, unit: 'nos', code: 'XMANGO' }] });
     if (u === '/api/till/bills') return j(200, { bills: HISTORY });
-    if (u === '/api/entities/register') return j(200, { message: 'sent', dev_otp: '123456' });
-    if (u === '/api/entities/verify') return j(200, { token: 'T', identity: { identity_id: 'p-x', user_id: 'xclerk', display_name: 'X Clerk', identity_type: 'actor', entity_id: 'ent-x' } });
+    if ((u === '/api/entities/register' || u === '/api/signin/ask')) return j(200, { message: 'sent', dev_otp: '123456' });
+    if ((u === '/api/entities/verify' || u === '/api/signin/verify')) return j(200, { token: 'T', identity: { identity_id: 'p-x', user_id: 'xclerk', display_name: 'X Clerk', identity_type: 'actor', entity_id: 'ent-x' } });
     if (u === '/api/chits/send') { try { sent.push(JSON.parse(raw)); } catch (_) {} return j(200, { chit_id: 'c' + sent.length }); }
     return j(200, { ok: true });
   });

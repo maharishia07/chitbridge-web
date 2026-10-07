@@ -1,23 +1,19 @@
-/* index-page-breaks.cjs — */ // break each index-page guard once, run the harness, restore FROM A COPY (never git checkout)
+/* index-page-breaks.cjs — break each index-page guard once, run the harness, restore FROM A COPY (never git checkout).
+ * N18: the index is the shell's Home (index.html + public/app/manifest.json); e2e/index-page.cjs is the harness.   */
 const fs = require('fs'), path = require('path'), cp = require('child_process');
 const W = path.join(__dirname, '..');
-const IDX = 'index.html', APP = 'public/app.html', CAP = 'public/app/cap-books.js';
+const IDX = 'index.html', MAN = 'public/app/manifest.json';
 const BREAKS = [
-  ['the ledger becomes the books', IDX, `the ledger records it`, `the books of account record it`],
-  ['empty alerts still draw a box', IDX, `.alerts:empty{display:none;margin:0;border:0}`, ``],
-  ['the two no-cost figures split', IDX, `labFact('st_prod', none + ' without a cost', 'dn');`, `labFact('st_prod', (none + 1) + ' without a cost', 'dn');`],
+  ['a hand-written card sneaks in', IDX, `<div id="shell"></div>`, `<div id="shell"></div><a class="cbsh-box" href="/till.html">Till</a>`],
+  ['a built card links into the workshop', MAN, `"route": "/till.html"`, `"route": "/app.html#/app/till"`],
+  ['a workshop chip grows a route', MAN, `"id": "catalogue", "name": "Catalogue", "route": null`, `"id": "catalogue", "name": "Catalogue", "route": "/crm.html"`],
+  ['the rail invents a number', IDX, `if (!rail || !rail.facts) return;`, `if (!rail) return; if (!rail.facts) return railPaint({ suppliers: 0, customers: 0 });`],
   ['an alert loses its fix button', IDX, `+ '<a class="fix" href="' + esc(fixHref) + '"' + (fixBlank ? ' target="_blank" rel="noopener"' : '') + '>' + esc(fixText) + '</a></div>' });`, `+ '</div>' });`],
-  ['the page overflows a phone', IDX, `.wrap{max-width:1080px;margin:0 auto;padding:26px 22px 60px}`, `.wrap{width:1080px;margin:0 auto;padding:26px 22px 60px}`],
-  ['the till opens in the same tab', IDX, `href="/till.html" target="_blank" rel="noopener"`, `href="/till.html"`],
-  ['tax lab pretends its page exists', IDX, `<div class="lab" data-testid="lab-tax">`, `<a class="lab" data-testid="lab-tax" href="tax-lab.html">`],
-  ['the labs lose their tint', IDX, `.labs{background:var(--panel);`, `.labs{background:var(--page);`],
-  ['the sign-in door goes elsewhere', IDX, `data-testid="signin-door" href="app.html#/login"`, `data-testid="signin-door" href="app.html"`],
-  ['the 404 reaches the screen', IDX, `if (g === GEN && e && e.status === 404) ledgerState(false);`, `if (g === GEN && e && e.status === 404) factLine('f_bk', 'Error 404', 'dn');`],
-  ['a paragraph sneaks onto the page', IDX, `One shop, one set of numbers.`, `One shop, one set of numbers. ` + new Array(80).fill('ChitBridge is a modern point of sale for the modern shop').join(' ') + `.`],
-  ['the deep link is dropped', APP, `var _deep = /^#\\/app\\/([a-z][a-z0-9-]*)$/.exec(h);`, `var _deep = null;`],
-  ['home leaves the top bar', APP, `<a data-testid="nav-home" href="/"`, `<a data-testid="nav-home-gone" href="/"`],
-  ['people band takes everything', CAP, `if (/^(1300|2100)/.test(c)) return 'people';`, `if (false) return 'people';`],
-  ['the results band vanishes', CAP, `data-testid="bk-band-results">' + tx('Results')`, `data-testid="bk-band-gone">' + tx('Results')`],
+  ['the 404 reaches the screen', IDX, `    if (w) alert_('ledger-waiting', 'warn', '🕗', w + ' waiting for the ledger', '', 'See them', '/accounts.html#waiting');\n  }).catch(function(){});`, `    if (w) alert_('ledger-waiting', 'warn', '🕗', w + ' waiting for the ledger', '', 'See them', '/accounts.html#waiting');\n  }).catch(function(e){ alert_('ledger-err', 'bad', '!', 'Error ' + e.status, '', 'Retry', '/'); });`],
+  ['the page mounts the bar, not Home', IDX, `    host: null,`, `    host: { bar: true },`],
+  ['the signed-out row grows a second door', IDX, `<button class="fix" data-testid="signed-out-go">Sign in</button>`, `<a class="fix" href="/app.html#/login" data-testid="signed-out-go">Sign in</a>`],
+  ['the word accounting reaches the page', IDX, `<h3>The rail</h3>`, `<h3>The rail (accounting)</h3>`],
+  ['the rail overflows a phone', IDX, `.rail{border:1px solid var(--line);border-radius:14px;background:var(--card);padding:14px 20px 16px;`, `.rail{min-width:600px;border:1px solid var(--line);border-radius:14px;background:var(--card);padding:14px 20px 16px;`],
 ];
 /* BREAK_ONLY=<text> runs just the breaks whose name contains it */
 const ONLY = process.env.BREAK_ONLY || '';

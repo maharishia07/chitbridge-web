@@ -36,8 +36,8 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(68) + '· ' + d 
     if (q.method === 'OPTIONS') { r.writeHead(204, cors); return r.end(); }
     const u = q.url.split('?')[0];
     const b = raw ? JSON.parse(raw) : {};
-    if (u === '/api/entities/register') { calls.register++; return j(200, { message: 'sent', dev_otp: '123456' }); }
-    if (u === '/api/entities/verify') {
+    if ((u === '/api/entities/register' || u === '/api/signin/ask')) { calls.register++; return j(200, { message: 'sent', dev_otp: '123456' }); }
+    if ((u === '/api/entities/verify' || u === '/api/signin/verify')) {
       calls.verify++;
       if (b.user_id !== 'xclerk') return j(404, { message: 'not found' });
       return j(200, { token: 'TOKEN-x', identity: { identity_id: 'p-x', bridge_id: 'CB-P', display_name: 'X Clerk',
