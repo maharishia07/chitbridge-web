@@ -1360,6 +1360,8 @@ function chit2Screen(){
     +   ' style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:8px;'
     +   'padding:3px 9px;font-size:var(--fs-1);cursor:pointer;white-space:nowrap">'
     +   tx('design 2') + ' <span style="opacity:.6">→ ' + tx('design 1') + '</span></button></div>'
+    /* N03: a chit made with a page this install does not have says so here too (CBPage, app/page.js) */
+    + ((typeof CBPage !== 'undefined') ? CBPage.noteHTML(h.business_json) : '')
     + '<div style="padding:10px 16px 0;display:flex">' + side + '</div>'
     + '<div style="padding:7px 16px 0;font-size:var(--fs-1);color:var(--grey);text-align:center">'
     + (C2.side === 'them' ? 'Both parties hold everything on this side' : 'Assignment, notes and cost — they never see this') + '</div>'
