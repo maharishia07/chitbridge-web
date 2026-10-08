@@ -96,7 +96,7 @@ svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke
 }
 .screen{flex:1;min-height:0;overflow-y:auto}
 .screen.flush{overflow:hidden;padding:0}
-.content{padding:20px 24px 120px;display:flex;flex-direction:column;gap:16px;max-width:1100px}
+.content{padding:20px 24px 120px;display:flex;flex-direction:column;gap:16px}   /* no width cap (T17): the page takes the screen; only prose is capped */
 .empty{padding:40px 20px;text-align:center;border:1px dashed var(--line-3);border-radius:14px;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:12px}
 .empty .t{font-family:var(--serif);font-size:19px;color:var(--ink);font-weight:700}
 .card{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:22px 22px 20px;max-width:560px;display:flex;flex-direction:column;gap:12px;margin:24px}
@@ -152,7 +152,7 @@ svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke
 .crm-mini:hover{background:var(--hover)}
 
 /* the record: header · identity block · Next · actions · sections */
-.rec{display:flex;flex-direction:column;gap:14px;padding:16px 24px 120px;max-width:980px}
+.rec{display:flex;flex-direction:column;gap:14px;padding:16px 24px 120px}
 .rec h1{margin:0;font-family:var(--serif);font-size:28px;font-weight:700;letter-spacing:-.01em}
 .rec .legal{color:var(--muted);font-size:13.5px}
 .rhead{display:flex;flex-direction:column;gap:6px}

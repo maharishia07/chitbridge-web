@@ -67,12 +67,12 @@ function peNote(tid, text) { return '<div class="pe-note" data-testid="' + tid +
 const peNoOwner = (what) => peNote('pe-readonly', what);
 const peField = (id, label, inner) => '<label class="pe-f"><span>' + peE(tx(label)) + '</span>' + inner + '</label>';
 const peInput = (id, val, ph, type, extra) => '<input class="inp" id="' + id + '" data-testid="' + id + '"' + (type ? ' type="' + type + '"' : ' inputmode="text"') + (ph ? ' placeholder="' + peE(ph) + '"' : '') + ' value="' + peE(val || '') + '"' + (extra || '') + '>';
-const peAmt = (id, val, ph) => peInput(id, val, ph == null ? '0.00' : ph, null, ' inputmode="decimal" autocomplete="off"');
+const peAmt = (id, val, ph) => bkMoneyInput({ id: id, text: val || '', ph: ph == null ? undefined : ph });   /* the one money input (cap-books bkMoneyInput) */
 const peSel = (id, opts, cur, extra) => '<select class="inp" id="' + id + '" data-testid="' + id + '"' + (extra || '') + '>' + opts.map((o) => '<option value="' + peE(o[0]) + '"' + (String(o[0]) === String(cur) ? ' selected' : '') + '>' + peE(tx(o[1])) + '</option>').join('') + '</select>';
 const peMODES = [['cash', 'Cash'], ['bank', 'Bank'], ['upi', 'UPI'], ['card', 'Card']];
 const peBtn = (tid, label, fn, cls) => '<button type="button" class="' + (cls || 'supact-pri') + '" data-testid="' + tid + '" onclick="' + fn + '">' + peE(tx(label)) + '</button>';
 /** a minor amount as the text of an amount field (the field is parsed back with bkToMinor — the same digits) */
-function peText(minor) { const n = Number(minor || 0) / Math.pow(10, bkDec()); return n.toFixed(bkDec()); }
+function peText(minor) { return bkMinorText(minor); }
 const peMoney = (minor) => bkMoney(minor);
 const peHeads = ['cgst', 'sgst', 'igst', 'cess'];
 
@@ -113,10 +113,10 @@ async function peStockList() {
   });
 }
 async function peStockSave(btn) {
-  const date = peVal('ps_date'), v = bkToMinor(peVal('ps_val'));
+  const date = peVal('ps_date'), v = bkMoneyMinor(peVal('ps_val'));
   if (!date || isNaN(v)) return peBad('ps_out', tx('Enter the month end and the value of the stock on hand.'));
   const body = { date, value_minor: v, method: 'manual', client_ref: peRef('stock') };
-  if (peVal('ps_nrv')) { const n = bkToMinor(peVal('ps_nrv')); if (isNaN(n)) return peBad('ps_out', tx('The lower value must be an amount.')); body.nrv_minor = n; }
+  if (peVal('ps_nrv')) { const n = bkMoneyMinor(peVal('ps_nrv')); if (isNaN(n)) return peBad('ps_out', tx('The lower value must be an amount.')); body.nrv_minor = n; }
   await bkOnce('pe-stock', btn, async () => {
     try {
       const r = await api('perStock', { body });
@@ -178,7 +178,7 @@ function peAssetForm() {
     + '</div><div class="supacts">' + peBtn('pa-save', 'Add asset', 'peAssetSave(this)') + peBtn('pa-cancel', 'Cancel', 'peEl(\'pa_form\').innerHTML=\'\'', '') + '</div><div id="pa_fout" class="pe-slot"></div></div>';
 }
 async function peAssetSave(btn) {
-  const cost = bkToMinor(peVal('pa_cost'));
+  const cost = bkMoneyMinor(peVal('pa_cost'));
   if (!peVal('pa_name') || isNaN(cost)) return peBad('pa_fout', tx('Name the asset and say what it cost.'));
   const body = { name: peVal('pa_name'), class: peVal('pa_class'), cost_minor: cost, date: peVal('pa_date'), how: peVal('pa_how'), client_ref: PE.ref.asset };
   if (peVal('pa_use')) body.put_to_use = peVal('pa_use');
@@ -203,7 +203,7 @@ function peSellForm(id) {
 }
 async function peSellSave(btn, id) {
   const body = { date: peVal('pd_date'), into: peVal('pd_into'), client_ref: PE.ref['sell' + id] };
-  if (peVal('pd_get')) { const m = bkToMinor(peVal('pd_get')); if (isNaN(m)) return peBad('pd_out', tx('What it fetched must be an amount.')); body.proceeds_minor = m; }
+  if (peVal('pd_get')) { const m = bkMoneyMinor(peVal('pd_get')); if (isNaN(m)) return peBad('pd_out', tx('What it fetched must be an amount.')); body.proceeds_minor = m; }
   await bkOnce('pe-sell-' + id, btn, async () => {
     try {
       const r = await api('perAssetSell', { params: { id }, body });
@@ -355,7 +355,7 @@ async function peRecSave(btn) {
   for (const f0 of fields) {
     const f = typeof f0 === 'string' ? { key: f0, kind: f0 } : f0; if (f.key === 'date') continue;
     const v = peVal('prf_' + f.key); if (!v) continue;
-    if (f.kind === 'amount') { const m = bkToMinor(v); if (isNaN(m)) return peBad('pr_fout', tx('The amount must be a number.')); ev.amount_minor = m; } else ev[f.key] = v;
+    if (f.kind === 'amount') { const m = bkMoneyMinor(v); if (isNaN(m)) return peBad('pr_fout', tx('The amount must be a number.')); ev.amount_minor = m; } else ev[f.key] = v;
   }
   const body = { name: peVal('pr_name'), event: ev, frequency: peVal('pr_freq'), next_on: peVal('pr_next'), auto: peVal('pr_auto') === '1' };
   if (peVal('pr_end')) body.end_on = peVal('pr_end');
@@ -408,7 +408,7 @@ async function peAccrForm() {
     + '</div><div class="supacts">' + peBtn('pc-save', 'Save', 'peAccrSave(this)') + peBtn('pc-cancel', 'Cancel', 'peEl(\'pc_form\').innerHTML=\'\'', '') + '</div><div id="pc_fout" class="pe-slot"></div></div>';
 }
 async function peAccrSave(btn) {
-  const m = bkToMinor(peVal('pc_amt'));
+  const m = bkMoneyMinor(peVal('pc_amt'));
   if (!peVal('pc_ref') || !peVal('pc_class') || isNaN(m)) return peBad('pc_fout', tx('Give it a reference, pick the expense or income, and say how much.'));
   const body = { ref: peVal('pc_ref'), kind: peVal('pc_kind'), class: peVal('pc_class'), amount_minor: m, date: peVal('pc_date'), client_ref: PE.ref.accr };
   await bkOnce('pe-accr', btn, async () => {
@@ -487,8 +487,8 @@ function peGstPayForm(r) {
 }
 async function peGstPay(btn) {
   const g = PE.gst || {}, amounts = {}, rcm = {};
-  for (const k of peHeads) { const e = peEl('pgp_' + k); if (e) { const m = bkToMinor(e.value); if (isNaN(m)) return peBad('pgp_out', tx('Each amount must be a number.')); amounts[k + '_minor'] = m; } }
-  for (const k of ['cgst', 'sgst', 'igst']) { const e = peEl('pgr_' + k); if (e) { const m = bkToMinor(e.value); if (isNaN(m)) return peBad('pgp_out', tx('Each amount must be a number.')); rcm[k + '_minor'] = m; } }
+  for (const k of peHeads) { const e = peEl('pgp_' + k); if (e) { const m = bkMoneyMinor(e.value); if (isNaN(m)) return peBad('pgp_out', tx('Each amount must be a number.')); amounts[k + '_minor'] = m; } }
+  for (const k of ['cgst', 'sgst', 'igst']) { const e = peEl('pgr_' + k); if (e) { const m = bkMoneyMinor(e.value); if (isNaN(m)) return peBad('pgp_out', tx('Each amount must be a number.')); rcm[k + '_minor'] = m; } }
   if (!peVal('pgp_ch')) return peBad('pgp_out', tx('Give the challan number (the CPIN).'));
   const body = { fy: g.fy, period: g.period, amounts, bank: peVal('pgp_bank'), challan_no: peVal('pgp_ch') };
   if (Object.keys(rcm).length) body.rcm = rcm;
