@@ -203,6 +203,73 @@ const run = (c, api) => { const st = store(); const m = E.machine(Object.assign(
     assert.strictEqual(c.person.kind, 'customer'); assert.strictEqual(c.person.shop, 'x');
   });
 
+  /* ── the till (2026-10-08): the same window, with the counter PIN book as the host's LOCAL credential ──────────────────── */
+  const book = () => {
+    const entries = { xclerk: { id: 'xclerk', name: 'X Clerk', kind: 'employee', entity: 'mayur', pin: '9173', tries: 0 } };
+    const calls = [];
+    return { entries, calls, local: {
+      find: (id) => { calls.push(['find', id]); const e = entries[String(id).trim().toLowerCase()]; return e && e.tries < 5 ? e : null; },
+      check: async (e, pin) => { calls.push(['check', e.id, pin]);
+        if (pin === e.pin) { e.tries = 0; return { ok: true, person: { id: e.id, name: e.name, kind: e.kind, entity: e.entity } }; }
+        e.tries++; return e.tries >= 5 ? { ok: false, locked: true, why: 'Locked. Sign in with a code.' } : { ok: false, why: 'Wrong PIN. ' + (5 - e.tries) + ' left.', entry: e }; },
+      has: (p) => !!entries[p && p.id],
+      save: async (sess, pin) => { calls.push(['save', sess.person.id, pin]); entries[sess.person.id] = { id: sess.person.id, name: sess.name, kind: 'employee', pin, tries: 0 }; return { ok: true }; },
+    } };
+  };
+
+  await it('⭐ the till: a counter PIN in the host\'s book is tried FIRST — nothing posted, no token, no cb_sess; onIn gets no answer', async () => {
+    const api = standIn(); const b = book(); let got = null;
+    const { m, st } = run({ need: 'person', surface: 'till', local: b.local, onIn: (s, a) => { got = [s, a]; } }, api);
+    m.typed('XClerk '); await m.go();
+    assert.strictEqual(m.state().at, 'credential'); assert.strictEqual(m.state().need, 'pin'); assert.ok(m.state().local, 'the local entry is held');
+    assert.deepStrictEqual(api.calls, [], 'the line was not asked');
+    await m.verify('123456'); assert.ok(/four digits/.test(m.state().why), 'a code in the PIN box is refused in words');
+    await m.verify('0000'); assert.ok(/Wrong PIN/.test(m.state().why)); assert.strictEqual(m.state().at, 'credential');
+    await m.verify('9173');
+    assert.strictEqual(m.state().at, 'in'); assert.strictEqual(m.state().session.token, '');
+    assert.strictEqual(st.getItem('cb_sess'), null, 'no session is kept for a local sign-in');
+    assert.ok(got && got[0].person.id === 'xclerk' && got[0].local === true && got[1] === null, 'onIn: the person, and no server answer');
+    assert.deepStrictEqual(api.calls, [], 'still nothing posted');
+  });
+
+  await it('⚠️ a locked counter PIN sends them back to the box; "Use a code instead" asks the line (and never while offline)', async () => {
+    const api = standIn(); const b = book(); let online = false;
+    const { m } = run({ need: 'person', local: b.local, online: () => online }, api);
+    b.entries.xclerk.tries = 4;
+    m.typed('xclerk'); await m.go(); await m.verify('1111');
+    assert.strictEqual(m.state().at, 'out'); assert.ok(/Locked/.test(m.state().why)); assert.strictEqual(m.state().local, null);
+    /* a usable PIN again, but the person wants the line: offline → refused silently (no dead button); online → the ask goes out */
+    b.entries.xclerk.tries = 0; m.typed('xclerk'); await m.go();
+    await m.line(); assert.strictEqual(m.state().at, 'credential'); assert.ok(m.state().local, 'offline: the PIN box stays');
+    online = true; api.P.xc = { id: 'xclerk', kind: 'actor', name: 'X Clerk', contacts: [], code: null, pin: null, claims: { identity_id: 'xc', identity_type: 'actor', display_name: 'X Clerk', parent_entity_id: 'mayur' } };
+    await m.line();
+    assert.strictEqual(api.calls[0].path, '/api/signin/ask'); assert.strictEqual(m.state().local, null); assert.strictEqual(m.state().need, 'code');
+    assert.ok(b.calls.filter((c) => c[0] === 'find').length >= 2, 'the book was consulted first each time');
+  });
+
+  await it('⭐ the till: after an online sign-in the host offers the LOCAL PIN (offerPin → setpin → save → in); "Not now" skips it; the server PIN step is not skippable', async () => {
+    const api = standIn(); const b = book();
+    const { m } = run({ need: 'person', local: b.local, onIn: () => {} }, api);
+    m.typed('athi@mayur.test'); await m.go(); await m.verify('123456');
+    assert.strictEqual(m.state().at, 'in');
+    await m.offerPin();
+    assert.strictEqual(m.state().at, 'setpin'); assert.strictEqual(m.state().localPin, true);
+    await m.setPin('123', '123'); assert.strictEqual(m.state().why, 'Counter PIN is four digits.', 'named as the counter PIN');
+    await m.later(); assert.strictEqual(m.state().at, 'in'); assert.strictEqual(b.calls.filter((c) => c[0] === 'save').length, 0);
+    await m.offerPin(); await m.setPin('4826', '4826');
+    assert.strictEqual(m.state().at, 'in'); assert.deepStrictEqual(b.calls.filter((c) => c[0] === 'save')[0], ['save', 'mayuri123', '4826']);
+    assert.strictEqual(api.calls.filter((c) => c.path === '/api/signin/pin').length, 0, 'the local PIN never reaches the server');
+    await m.offerPin(); assert.strictEqual(m.state().at, 'in', 'has() → no second offer');
+    /* the SERVER's first-time PIN (requires_pin_setup) is not a choice: later() does nothing there */
+    const e = run({ need: 'person', local: b.local }, api); e.m.typed('9000000001'); await e.m.go(); await e.m.verify('123456');
+    assert.strictEqual(e.m.state().at, 'setpin'); assert.strictEqual(e.m.state().localPin, false);
+    await e.m.later(); assert.strictEqual(e.m.state().at, 'setpin', 'the server PIN step cannot be skipped');
+    /* and a host that holds the person already (the till after a reload) may offer with a given session */
+    const r = run({ need: 'person', local: b.local }, api);
+    await r.m.offerPin({ token: '', name: 'Bala', person: { id: 'bala', kind: 'employee' } });
+    assert.strictEqual(r.m.state().at, 'setpin'); assert.strictEqual(r.m.state().localPin, true);
+  });
+
   console.log('\n' + (pass + fail) + ' checks · ' + pass + ' passed · ' + fail + ' failed\n');
   process.exit(fail ? 1 : 0);
 })();

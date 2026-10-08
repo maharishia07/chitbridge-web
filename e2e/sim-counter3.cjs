@@ -35,20 +35,20 @@ const step = (n, t) => console.log('\n\u2500\u2500 ' + n + ' \u00b7 ' + t + ' ' 
   /* ⭐ the way in, from the shelf — the same button a shopkeeper would see and press */
   await p.locator('[data-testid="till-connect"]').click();
   await p.waitForTimeout(800);
-  await p.locator('[data-testid="till-usign-who"]').fill(EMAIL);
-  await p.locator('[data-testid="till-usign-ask"]').click();
+  await p.locator('[data-testid="signin-id"]').fill(EMAIL);
+  await p.locator('[data-testid="signin-go"]').click();
   await p.waitForTimeout(4000);
 
-  const filled = await p.locator('[data-testid="till-usign-otp"]').inputValue().catch(() => '');
+  const filled = await p.locator('[data-testid="signin-code"]').inputValue().catch(() => '');
   /**
    * ⚠️⚠️ THE LIVE SERVER DOES NOT HAND THE CODE BACK, and does not email it either. Railway answers "Dev mode
    * — verification code issued": lib/dev-otp's mayExposeOtp() is false, and sendOtpEmail reports `dev`, so
    * nothing is delivered. The code is the fixed test one. A REAL person on this configuration would be stuck,
    * which is a cutover posture problem rather than a fault in the counter — flagged, not papered over.
    */
-  if (!/^\d{6}$/.test(filled)) await p.locator('[data-testid="till-usign-otp"]').fill('123456');
+  if (!/^\d{6}$/.test(filled)) await p.locator('[data-testid="signin-code"]').fill('123456');
   say('the code', true, filled ? ('prefilled: ' + filled) : 'not returned and not emailed — typed the fixed test code');
-  await p.locator('[data-testid="till-usign-verify"]').click();
+  await p.locator('[data-testid="signin-verify"]').click();
 
   /* ⚠️ the program restarts (its folder is chosen at boot from the key) and the page reloads itself */
   await p.waitForFunction(() => typeof window.paired === 'function' && window.paired(), null, { timeout: 60000 })

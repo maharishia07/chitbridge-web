@@ -62,7 +62,8 @@ function scan(label, files) {
     /* ⚠️ COMMENTS STRIPPED FIRST, then a flat test. The obvious pattern for "comments, then (function" nests a
        quantifier — `(?:\/\*[\s\S]*?\*\/\s*)*` — and on a 400 KB file that does NOT match it backtracks until it
        hangs. It did, for four minutes, before this line replaced it. */
-    const head = raw.slice(0, 4000).replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/^[ \t]*\/\/.*$/gm, ' ');
+    /* 16000, not 4000: signin-ui.js's contract header grew past 4 KB and cut its wrapper off the window (till, 2026-10-08). */
+    const head = raw.slice(0, 16000).replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/^[ \t]*\/\/.*$/gm, ' ');
     if (/^\s*\(function\b/.test(head)) continue;
     const lines = raw.split('\n');
     for (let i = 0; i < lines.length; i++) {

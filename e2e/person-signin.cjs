@@ -199,19 +199,19 @@ async function settle(api, want, ms) {
 /** the real dialog, as a person: user id → Send me a code → 123456 → Sign in */
 async function signIn(p, who) {
   if (!(await p.locator('#usigndlg[open]').count())) await p.tap('[data-testid="till-who"]');
-  await p.waitForSelector('#usigndlg[open] [data-testid="till-usign-who"]', { timeout: 10000 });
-  await p.fill('[data-testid="till-usign-who"]', who);
-  await p.tap('[data-testid="till-usign-ask"]');
-  await p.waitForSelector('[data-testid="till-usign-otp"], [data-testid="till-usign-why"]', { timeout: 10000 });
-  await p.fill('[data-testid="till-usign-otp"]', '123456');
-  await p.tap('[data-testid="till-usign-verify"]');
+  await p.waitForSelector('#usigndlg[open] [data-testid="signin-id"]', { timeout: 10000 });
+  await p.fill('[data-testid="signin-id"]', who);
+  await p.tap('[data-testid="signin-go"]');
+  await p.waitForSelector('[data-testid="signin-code"], [data-testid="signin-why"]', { timeout: 10000 });
+  await p.fill('[data-testid="signin-code"]', '123456');
+  await p.tap('[data-testid="signin-verify"]');
 }
 /** after a sign-in: choose a counter PIN if offered, then Done */
 async function afterIn(p, pin) {
-  await p.waitForSelector('[data-testid="till-usign-pin1"], [data-testid="till-usign-in"], [data-testid="till-usign-why"]', { timeout: 20000 }).catch(() => {});
-  if (await p.locator('[data-testid="till-usign-pin1"]').count()) {
-    if (pin) { await p.fill('[data-testid="till-usign-pin1"]', pin); await p.fill('[data-testid="till-usign-pin2"]', pin); await p.tap('[data-testid="till-usign-pinsave"]'); }
-    else await p.tap('[data-testid="till-usign-pinlater"]');
+  await p.waitForSelector('[data-testid="signin-pin1"], [data-testid="till-usign-in"], [data-testid="signin-why"]', { timeout: 20000 }).catch(() => {});
+  if (await p.locator('[data-testid="signin-pin1"]').count()) {
+    if (pin) { await p.fill('[data-testid="signin-pin1"]', pin); await p.fill('[data-testid="signin-pin2"]', pin); await p.tap('[data-testid="signin-pinsave"]'); }
+    else await p.tap('[data-testid="signin-later"]');
     await p.waitForSelector('[data-testid="till-usign-in"]', { timeout: 10000 }).catch(() => {});
   }
   if (await p.locator('[data-testid="till-usign-done"]').count()) await p.tap('[data-testid="till-usign-done"]');
@@ -412,9 +412,9 @@ const facts = (p) => p.evaluate(async () => ({
   const locked = await p.evaluate(() => ({ lock: !!LOCK, cover: !(document.getElementById('lockcover') || {}).hidden }));
   await shot(p, 't6-locked-offline');
   await p.evaluate(() => lockOpen());                        /* 🔓 → the one sign-in, started at the counter PIN of who locked it */
-  await p.waitForSelector('#usigndlg[open] [data-testid="till-usign-otp"]', { timeout: 10000 });
-  await p.fill('[data-testid="till-usign-otp"]', '4826');
-  await p.tap('[data-testid="till-usign-verify"]');
+  await p.waitForSelector('#usigndlg[open] [data-testid="signin-pin"]', { timeout: 10000 });
+  await p.fill('[data-testid="signin-pin"]', '4826');
+  await p.tap('[data-testid="signin-verify"]');
   await p.waitForFunction(() => !LOCK, null, { timeout: 10000 }).catch(() => {});
   const unlocked = await p.evaluate(() => ({ lock: !!LOCK, who: WHO && WHO.name, dlg: !!document.querySelector('#usigndlg[open]') }));
   say('⭐⭐ with the line down the phone locks, and the counter PIN unlocks it — no network, same person', locked.lock && locked.cover && !unlocked.lock && unlocked.who === 'Athi' && api.calls.length === callsT6, JSON.stringify(unlocked) + ' calls=' + (api.calls.length - callsT6));
