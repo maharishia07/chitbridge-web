@@ -575,8 +575,9 @@ async function route(S, r) {
   }
   {
     const { ctx, p } = await open(standIn(), { session: null });
-    await p.waitForSelector('[data-testid="signin-door"]');
-    ok(await p.getAttribute('[data-testid="signin-door"]', 'href') === '/app.html#/login', 'signed out → the one door in, and no reads');
+    /* since M14 the signed-out card mounts CBSignin in place; app.html is no longer a sign-in surface (DECISIONS 2026-10-08) */
+    await p.waitForSelector('#signin-host [data-testid="signin-id"]');
+    ok(await p.locator('a[href*="app.html#/login"]').count() === 0, 'signed out → the one sign-in window (CBSignin) opens in place, never a link to app.html');
     await ctx.close();
   }
 
@@ -598,7 +599,7 @@ async function route(S, r) {
     const other = await ctx.newPage();                       /* the `storage` event reaches OTHER documents: a second tab does the sign-in */
     await other.goto(base + '/no-such-page');
     await other.evaluate((t) => { localStorage.setItem('cb_sess', JSON.stringify({ token: t, role: 'entity', name: 'Tally', entity: 'Tally Test' })); }, tokFor({ identity_id: 'ent-T', identity_type: 'entity' }));
-    await p.waitForSelector('[data-testid="signin-door"]', { timeout: 8000 });
+    await p.waitForSelector('#signin-host [data-testid="signin-id"]', { timeout: 8000 });   /* signed out = CBSignin in place (M14) */
     ok(/Tally Test opened in another tab/.test(await p.textContent('[data-testid="acc-card"]')), 'a second shop signing in elsewhere signs this page out, and says why');
     await ctx.close();
   }
