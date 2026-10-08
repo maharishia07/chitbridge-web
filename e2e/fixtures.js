@@ -114,6 +114,10 @@ async function mintEntity(page, { role = 'business', email, name, fresh = false 
   if (await otp.waitFor({ state: 'visible', timeout: 8000 }).then(() => true).catch(() => false)) {
     const vert = page.locator('[data-testid^="reg-vertical-"]');
     if (await vert.count()) await vert.first().click().catch(() => {});
+    /* ⚠️ THE AGREE GATE (app.html, 2026-09-19): Verify stays disabled until reg-agree is ticked, and every spec sat on
+       #/register from that day (M43, 2026-10-08). Tick it BEFORE the code — ticking re-renders the form. */
+    const agree = page.getByTestId('reg-agree');
+    if (await agree.count() && !(await agree.isChecked().catch(() => true))) await agree.check().catch(() => {});
     await otp.fill(DEV_OTP).catch(() => {});
     await page.getByTestId('reg-submit').click().catch(() => {});
   }

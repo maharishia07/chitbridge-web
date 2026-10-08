@@ -30,7 +30,8 @@ const TA = /[஀-௿]/;
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail++; console.log('  XX  ' + m); } };
-const J = (r, status, o) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(o) });
+const C = require('./lib/contract.cjs'), crmApi = require('./lib/crm-api.cjs'), books = require('./lib/books-api.cjs');   /* every answer served for a route in the API contract is checked (e2e/fixtures/web-api.contract.json) */
+const J = C.json;
 const TODAY = new Date().toISOString().slice(0, 10);
 const lk = require('./lib/contrast.cjs');
 const toHex = (c) => { const m = /rgba?\((\d+)[, ]+(\d+)[, ]+(\d+)/.exec(c || ''); return m ? '#' + [m[1], m[2], m[3]].map((n) => ('0' + (+n).toString(16)).slice(-2)).join('') : null; };
@@ -50,16 +51,18 @@ async function route(S, r) {
   const q = r.request(), u = new URL(q.url()), p = u.pathname, m = q.method();
   S.calls.push(m + ' ' + p);
   if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Mayur Bhavan', currency_code: 'INR' } });
-  if (p === '/api/books/health') return J(r, 200, { enabled: true, waiting: [] });
+  if (p === '/api/books/health') return J(r, 200, books.health());
   if (p === '/api/books/todo') return J(r, 200, []);
-  if (p === '/api/books/accounts') return J(r, 200, { accounts: [{ code: '1300', name: 'Customers (Sundry Debtors)', is_group: false }, { code: '1400', name: 'Cash', is_group: false }, { code: '4000', name: 'Sales', is_group: false }] });
-  if (p === '/api/books/trial-balance') return J(r, 200, { currency: 'INR', rows: [], total_dr_minor: 0, total_cr_minor: 0 });
-  if (p === '/api/books/dues') return J(r, 200, { currency: 'INR', as_of: TODAY, parties: [] });
+  if (p === '/api/books/accounts') return J(r, 200, { accounts: [{ code: '1300', name: 'Customers (Sundry Debtors)', is_group: false }, { code: '1400', name: 'Cash', is_group: false }, { code: '4000', name: 'Sales', is_group: false }].map((a) => books.accountRow(Object.assign({ account_id: 'acc-' + a.code }, a))) });
+  if (p === '/api/books/trial-balance') return J(r, 200, books.trialBalance([]));
+  if (p === '/api/books/dues') return J(r, 200, books.dues([], { asOf: TODAY }));
   if (p === '/api/books/cheques') return J(r, 200, { currency: 'INR', cheques: [] });
-  if (p === '/api/books/daybook') return J(r, 200, { currency: 'INR', entries: S.noClose ? [] : [{ entry_id: 'e1', entry_no: 'JV/1', posting_date: TODAY, event_type: 'walkin_day', narration: 'Walk-in sales',
-    source: { kind: 'day', counter: 'C1', count: 11, how: 'Cash', split: [{ how: 'Cash', amount_minor: 124000 }] }, lines: [{ code: '1400', name: 'Cash', dr_minor: 124000, cr_minor: 0 }, { code: '4000', name: 'Sales', dr_minor: 0, cr_minor: 124000 }] }] });
-  if (p === '/api/crm/parties' && m === 'GET') return J(r, 200, { parties: fx.list.map((pp) => Array.isArray(pp.roles) ? Object.assign({}, pp, { roles: { customer: pp.roles.indexOf('customer') >= 0, supplier: pp.roles.indexOf('supplier') >= 0 } }) : pp), alerts: [] });
-  if (p === '/api/crm/followups') return J(r, 200, { followups: [], co_assists: [] });
+  if (p === '/api/books/daybook') return J(r, 200, books.daybook((S.noClose ? [] : [{ entry_id: 'e1', entry_no: 'JV/1', posting_date: TODAY, event_type: 'walkin_day', narration: 'Walk-in sales',
+    source: { kind: 'day', counter: 'C1', count: 11, how: 'Cash', split: [{ how: 'Cash', amount_minor: 124000 }] }, lines: [{ code: '1400', name: 'Cash', dr_minor: 124000, cr_minor: 0 }, { code: '4000', name: 'Sales', dr_minor: 0, cr_minor: 124000 }] }]).map(books.entry)));
+  if (p === '/api/books/pl') return J(r, 200, books.pl([], []));
+  if (p === '/api/books/periods') return J(r, 200, books.periods([]));
+  if (p === '/api/crm/parties' && m === 'GET') return J(r, 200, crmApi.list(fx.list, { records: fx.records }));
+  if (p === '/api/crm/followups') return J(r, 200, crmApi.followups([]));
   if (m === 'GET') return J(r, 200, {});
   return J(r, 200, { ok: true });
 }
@@ -301,6 +304,7 @@ async function route(S, r) {
 
   ok(threw.length === 0, 'no page error' + (threw.length ? ': ' + threw.slice(0, 3).join(' | ') : ''));
   const strange = offHost.filter((u) => !/cdnjs\.cloudflare\.com|fonts\.(googleapis|gstatic)\.com/.test(u));
+  ok(...C.finish());
   ok(strange.length === 0, 'nothing but the stand-in was reachable' + (strange.length ? ' — refused: ' + strange[0] : ''));
   await b.close(); srv.close();
   console.log('\n  kural-footer: ' + pass + ' passed, ' + fail + ' failed');
