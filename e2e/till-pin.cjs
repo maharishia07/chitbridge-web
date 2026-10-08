@@ -67,14 +67,14 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(68) + '· ' + d 
   const errs = [];
   p.on('pageerror', (e) => errs.push(String(e)));
   const who = () => p.evaluate(() => (typeof WHO !== 'undefined' && WHO && WHO.name) || null);
-  const why = () => p.locator('[data-testid="till-usign-why"]').textContent().catch(() => '');
+  const why = () => p.locator('[data-testid="signin-why"]').textContent().catch(() => '');
   const out = async () => { await p.evaluate(() => { try { usignOut(); usignClose(); } catch (_) {} }); };
   const typeWho = async (id) => {
     await p.evaluate(() => usignOpen());
-    await p.fill('[data-testid="till-usign-who"]', id);
-    await p.click('[data-testid="till-usign-ask"]');
+    await p.fill('[data-testid="signin-id"]', id);
+    await p.click('[data-testid="signin-go"]');
   };
-  const pin = async (v) => { await p.fill('[data-testid="till-usign-otp"]', v); await p.click('[data-testid="till-usign-verify"]'); };
+  const pin = async (v) => { await p.fill('[data-testid="signin-pin"]', v); await p.click('[data-testid="signin-verify"]'); };
 
   await p.goto('http://127.0.0.1:' + web.address().port + '/till.html');
   await p.waitForFunction(() => typeof usignOpen === 'function' && typeof pinBook === 'function', null, { timeout: 30000 });
@@ -83,21 +83,21 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(68) + '· ' + d 
 
   console.log('\n── ⭐ ONLINE: a real sign-in, then the counter PIN is offered and SET ' + '─'.repeat(0));
   await typeWho('xclerk');
-  await p.waitForSelector('[data-testid="till-usign-otp"]');
-  await p.click('[data-testid="till-usign-verify"]');
-  await p.waitForSelector('[data-testid="till-usign-pin1"]', { timeout: 10000 });
+  await p.waitForSelector('[data-testid="signin-pin"]');
+  await p.click('[data-testid="signin-verify"]');
+  await p.waitForSelector('[data-testid="signin-pin1"]', { timeout: 10000 });
   say('after a real sign-in, a counter PIN is offered', true, 'the "Choose a counter PIN" step is on screen');
-  await p.fill('[data-testid="till-usign-pin1"]', '1234');
-  await p.fill('[data-testid="till-usign-pin2"]', '1234');
-  await p.click('[data-testid="till-usign-pinsave"]');
+  await p.fill('[data-testid="signin-pin1"]', '1234');
+  await p.fill('[data-testid="signin-pin2"]', '1234');
+  await p.click('[data-testid="signin-pinsave"]');
   say('a run (1234) is refused', /too easy/i.test(await why()), '"' + (await why()) + '"');
-  await p.fill('[data-testid="till-usign-pin1"]', '4826');
-  await p.fill('[data-testid="till-usign-pin2"]', '4862');
-  await p.click('[data-testid="till-usign-pinsave"]');
+  await p.fill('[data-testid="signin-pin1"]', '4826');
+  await p.fill('[data-testid="signin-pin2"]', '4862');
+  await p.click('[data-testid="signin-pinsave"]');
   say('two different typings are refused', /different/i.test(await why()), '"' + (await why()) + '"');
-  await p.fill('[data-testid="till-usign-pin1"]', '4826');
-  await p.fill('[data-testid="till-usign-pin2"]', '4826');
-  await p.click('[data-testid="till-usign-pinsave"]');
+  await p.fill('[data-testid="signin-pin1"]', '4826');
+  await p.fill('[data-testid="signin-pin2"]', '4826');
+  await p.click('[data-testid="signin-pinsave"]');
   await p.waitForSelector('[data-testid="till-usign-in"]', { timeout: 10000 });
   const stored = await p.evaluate(() => localStorage.getItem(shopLs('cb_till_pins')) || '');
   say('⚠️ what is kept is a salt and a hash — the PIN itself appears nowhere', /"salt"/.test(stored) && /"hash"/.test(stored) && stored.indexOf('4826') < 0, stored.length + ' chars');
@@ -109,9 +109,9 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(68) + '· ' + d 
   const before = calls.register + calls.verify;
   say('the page knows the line is down', await p.evaluate(() => !lineUp()), 'lineUp()=false');
   await typeWho('xclerk');
-  await p.waitForSelector('[data-testid="till-usign-otp"]', { timeout: 10000 });
+  await p.waitForSelector('[data-testid="signin-pin"]', { timeout: 10000 });
   await pin('9173');
-  await p.waitForSelector('[data-testid="till-usign-why"]');
+  await p.waitForSelector('[data-testid="signin-why"]');
   say('a wrong PIN is refused, and says how many tries are left', /4 tries left/.test(await why()), '"' + (await why()) + '"');
   await pin('4826');
   await p.waitForSelector('[data-testid="till-usign-in"]', { timeout: 10000 });
@@ -122,14 +122,14 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(68) + '· ' + d 
 
   console.log('\n── ⚠️ OFFLINE, somebody with no counter PIN here — refused in words, never waved through ' + '─'.repeat(0));
   await typeWho('zed');
-  await p.waitForSelector('[data-testid="till-usign-why"]');
+  await p.waitForSelector('[data-testid="signin-why"]');
   say('no PIN on this counter + no line = nobody signed in, and it says why', /no counter PIN/i.test(await why()) && (await who()) === null, '"' + (await why()) + '"');
   await p.evaluate(() => usignClose());
 
   console.log('\n── ⚠️⚠️ THE PICKER: tapping a name asks for that person\'s PIN; a name alone signs nobody in ' + '─'.repeat(0));
   await p.evaluate(() => openWho());
   await p.click('[data-testid="till-who-p-x"]');
-  await p.waitForSelector('[data-testid="till-usign-otp"]', { timeout: 10000 });
+  await p.waitForSelector('[data-testid="signin-pin"]', { timeout: 10000 });
   say('tapping X Clerk opens the PIN box, not a signed-in counter', (await who()) === null, 'who=' + (await who()));
   await pin('4826');
   await p.waitForSelector('#askdlg[open]', { timeout: 10000 });
@@ -140,26 +140,26 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(68) + '· ' + d 
   await out();
   await p.evaluate(() => openWho());
   await p.click('[data-testid="till-who-p-z"]');
-  await p.waitForSelector('[data-testid="till-usign-why"]', { timeout: 10000 });
+  await p.waitForSelector('[data-testid="signin-why"]', { timeout: 10000 });
   say('⚠️ tapping somebody with no PIN here (offline) signs NOBODY in', (await who()) === null && /no counter PIN/i.test(await why()), '"' + (await why()) + '"');
   await p.evaluate(() => usignClose());
 
   console.log('\n── ⚠️⚠️ FIVE WRONG AND THE PIN STOPS — a right one after that is still refused ' + '─'.repeat(0));
   await typeWho('xclerk');
-  await p.waitForSelector('[data-testid="till-usign-otp"]');
+  await p.waitForSelector('[data-testid="signin-pin"]');
   /* wait on the COUNT, not on a refusal already on screen — the dialog repaints under the next typing */
   for (let i = 0; i < 5; i++) {
     const was = await p.evaluate(() => (pinBook().xclerk || {}).tries || 0);
     await pin('9' + (170 + i));
     await p.waitForFunction((w) => ((pinBook().xclerk || {}).tries || 0) > w || (pinBook().xclerk || {}).tries >= 5, was, { timeout: 10000 });
-    if (i < 4) await p.waitForSelector('[data-testid="till-usign-otp"]');
+    if (i < 4) await p.waitForSelector('[data-testid="signin-pin"]');
   }
-  await p.waitForFunction(() => /Too many/.test((document.querySelector('[data-testid="till-usign-why"]') || {}).textContent || ''), null, { timeout: 10000 });
+  await p.waitForFunction(() => /Too many/.test((document.querySelector('[data-testid="signin-why"]') || {}).textContent || ''), null, { timeout: 10000 });
   const locked = await why();
   say('the fifth wrong PIN locks it, and says the way back', /Too many wrong PINs/i.test(locked) && /internet/i.test(locked), '"' + locked + '"');
   await p.evaluate(() => usignClose());
   await typeWho('xclerk');
-  await p.waitForSelector('[data-testid="till-usign-why"]');
+  await p.waitForSelector('[data-testid="signin-why"]');
   say('the right PIN no longer opens the counter', (await who()) === null && /Too many/i.test(await why()), '"' + (await why()) + '"');
   await p.evaluate(() => usignClose());
 
@@ -167,18 +167,18 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(68) + '· ' + d 
   await ctx.setOffline(false);
   await p.waitForFunction(() => lineUp(), null, { timeout: 10000 });
   await typeWho('xclerk');
-  await p.waitForSelector('[data-testid="till-usign-otp"]');
-  await p.click('[data-testid="till-usign-verify"]');
-  await p.waitForSelector('[data-testid="till-usign-pin1"]', { timeout: 10000 });
+  await p.waitForSelector('[data-testid="signin-pin"]');
+  await p.click('[data-testid="signin-verify"]');
+  await p.waitForSelector('[data-testid="signin-pin1"]', { timeout: 10000 });
   say('a locked PIN is offered again after the online sign-in', true, 'the choose-a-PIN step is back');
-  await p.fill('[data-testid="till-usign-pin1"]', '7394');
-  await p.fill('[data-testid="till-usign-pin2"]', '7394');
-  await p.click('[data-testid="till-usign-pinsave"]');
+  await p.fill('[data-testid="signin-pin1"]', '7394');
+  await p.fill('[data-testid="signin-pin2"]', '7394');
+  await p.click('[data-testid="signin-pinsave"]');
   await p.waitForSelector('[data-testid="till-usign-in"]');
   await out();
   await ctx.setOffline(true);
   await typeWho('xclerk');
-  await p.waitForSelector('[data-testid="till-usign-otp"]');
+  await p.waitForSelector('[data-testid="signin-pin"]');
   await pin('7394');
   await p.waitForSelector('[data-testid="till-usign-in"]', { timeout: 10000 });
   say('and the new PIN works offline straight away', (await who()) === 'X Clerk', 'who=' + (await who()));

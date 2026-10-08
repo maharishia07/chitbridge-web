@@ -22,7 +22,18 @@
  *     methods: { google:true, … },  // the method SLOTS switched on by the host — hidden until a method ships AND the host says so
  *     onMethod(name),               // what a switched-on slot does (the provider flow lives here, nowhere else)
  *     registerHref,                 // OPTIONAL: the register door ("New shop? Register") — the window itself never creates an account
- *     onIn(session), onOut(),       // the page's hooks; session = { token, role, name, entity, bridgeId, person, exp, device_id, surface }
+ *     onIn(session, answer), onOut(), // the page's hooks; session = { token, role, name, entity, bridgeId, person, exp, device_id, surface };
+ *                                   //   answer = the server's verify body as it came (identity, token) — the till reads identity.entity_id
+ *     io: { post, store },          // OPTIONAL: a host's own transport and session store. io.store given → cb_sess is NEVER written here
+ *                                   //   (the till keeps cb_till_person itself, through its one door becomeShop)
+ *     local,                        // OPTIONAL (the till): a credential the HOST holds with the line down — the counter PIN book.
+ *                                   //   { find(id) → entry|null, check(entry, pin) → Promise<{ ok, why, locked, person }>,
+ *                                   //     has(person) → bool, save(person, pin) → Promise<{ ok, why }> }
+ *                                   //   go() asks find() FIRST; a hit opens the PIN box and nothing is posted; check() judges it (the
+ *                                   //   engine's pinAfter, in the host). A sign-in by local PIN carries NO token and keeps NO session.
+ *                                   //   offerPin() (called by the host from onIn, once a person proved themselves online) opens the
+ *                                   //   same setpin screen for the LOCAL book: save() keeps it, "Not now" skips it.
+ *     online,                       // OPTIONAL: () => bool. false hides "Use a code instead" — a dead button is not offered
  *     words                         // optional overrides of WORDS
  *   }) → { destroy(), state(), machine }
  *
@@ -70,6 +81,11 @@ var WORDS = {
   pinName: 'Your PIN',
   kinds: { owner: 'owner', employee: 'employee', customer: 'customer' },
   at: 'at',
+  /* the host's own credential (the till's counter PIN) — the same screens, named for what they are */
+  localPin: 'Counter PIN',
+  localWhy: 'Four digits, to sign in here without the internet.',
+  line: 'Use a code instead',
+  later: 'Not now',
 };
 
 /**
@@ -136,6 +152,8 @@ function sessionOf(r) {
 }
 /** the apps' session, stored (cb_sess) — the same keys app.html writes; then CBOnePerson.claim says whose this browser's work is */
 function keep(c, s, store) {
+  /* a sign-in by the host's LOCAL credential (the till's counter PIN) carries no token — there is no session to keep */
+  if (!s || !s.token) return;
   /* a host may hand its own store (io.store: a test, the practice lab) — then NOTHING here touches this browser's real session */
   var own = !!store;
   store = store || root.localStorage;
@@ -156,7 +174,20 @@ function machine(c, io) {
   var W = Object.assign({}, WORDS, c.words || {});
   var post = io.post || httpPost(c);
   var S = { at: 'out', typed: '', kind: '', need: '', resolved: '', sent: null, choices: [], why: '', said: '', busy: false,
-            token: null, session: null, asks: 0, verifies: 0 };
+            token: null, session: null, asks: 0, verifies: 0,
+            /* the host's local credential (c.local): the entry found for the typed id; viaLine = the person chose the line instead;
+               localPin = the setpin screen is for the LOCAL book, not the server */
+            local: null, viaLine: false, localPin: false };
+  var L = (c.local && typeof c.local.find === 'function' && typeof c.local.check === 'function') ? c.local : null;
+  function onLine() { if (typeof c.online !== 'function') return true; try { return !!c.online(); } catch (_) { return true; } }
+  /** a person proved by the host's own credential: no token, no session — an identity, exactly what a counter keeps */
+  function localSession(p) {
+    p = p || {};
+    var kind = p.kind === 'entity' ? 'owner' : (p.kind || 'employee');
+    return { token: '', role: kind === 'owner' ? 'entity' : 'actor', name: p.name || '', entity: '', bridgeId: '',
+             person: { id: p.id || null, identity_id: p.identity_id || p.id || null, kind: kind, shop: p.entity || null },
+             exp: null, device_id: null, surface: c.surface || null, jti: null, local: true };
+  }
   var subs = [];
   function emit() { subs.forEach(function (fn) { try { fn(S); } catch (_) {} }); }
   function set(p) { Object.assign(S, p); emit(); return S; }
@@ -198,6 +229,12 @@ function machine(c, io) {
     if (S.sent && S.at !== 'in' && (w.value === S.sent.typed || w.value === S.sent.id)) {
       return Promise.resolve(set({ at: 'credential', need: 'code', kind: S.sent.kind, resolved: S.sent.id, why: '', said: W.sent }));
     }
+    /* ⭐ THE HOST'S OWN CREDENTIAL FIRST (the till's counter PIN, SPEC-counter-identity §3): somebody who set one here signs in
+       with it, line or no line — the shift change that happens forty times a day needs no code in a mailbox. Nothing is posted. */
+    if (L && !S.viaLine) {
+      var e = null; try { e = L.find(w.value); } catch (_) { e = null; }
+      if (e) return Promise.resolve(set({ at: 'credential', need: 'pin', local: e, kind: e.kind || '', resolved: w.value, why: '', said: '' }));
+    }
     return askFor(w.value);
   }
   function choose(i) {
@@ -209,6 +246,20 @@ function machine(c, io) {
     if (!code.ok) { set({ why: code.why }); return Promise.resolve(S); }
     if (S.need === 'pin' && !code.isPin) { set({ why: E.pinShape('', W.pinName).why }); return Promise.resolve(S); }
     if (S.need === 'code' && code.isPin) { set({ why: 'A code is six digits.' }); return Promise.resolve(S); }
+    /* ⭐ the host judges its own credential (the engine's pinAfter, in the host's book) — no network, whatever the line is doing */
+    if (S.local && L) {
+      set({ busy: true, why: '' });
+      S.verifies++;
+      return Promise.resolve().then(function () { return L.check(S.local, code.value); }).then(function (a) {
+        a = a || {};
+        if (!a.ok) {
+          /* locked: back to the box — the line is the only way on from here */
+          if (a.locked) return set({ busy: false, at: 'out', local: null, need: '', resolved: '', why: a.why || '' });
+          return set({ busy: false, local: a.entry || S.local, why: a.why || '' });
+        }
+        return signedIn(localSession(a.person), null);
+      }, function (x) { return set({ busy: false, why: (x && x.message) || 'The PIN could not be checked.' }); });
+    }
     var body = { id: S.resolved }; body[code.isPin ? 'pin' : 'otp'] = code.value;
     set({ busy: true, why: '' });
     S.verifies++;
@@ -218,25 +269,52 @@ function machine(c, io) {
       if (r.status < 200 || r.status >= 300 || !b.token) return set({ busy: false, why: refusalOf(r) });
       var s = sessionOf(b);
       S.sent = null;                                   /* ⚠️ the code is spent: nothing here asks for it again */
-      if (b.requires_pin_setup === true) return set({ busy: false, at: 'setpin', token: b.token, session: s, said: W.setWhy });
-      return signedIn(s);
+      S.answer = b;                                    /* the verify body as it came — handed to onIn beside the session */
+      if (b.requires_pin_setup === true) return set({ busy: false, at: 'setpin', localPin: false, token: b.token, session: s, said: W.setWhy });
+      return signedIn(s, b);
     });
   }
   function setPin(a, b) {
-    var p = E.pinPair(a, b, W.pinName);
+    var p = E.pinPair(a, b, S.localPin ? W.localPin : W.pinName);
     if (!p.ok) { set({ why: p.why }); return Promise.resolve(S); }
     set({ busy: true, why: '' });
+    /* ⭐ the LOCAL book (offerPin): the host keeps it — a salt and a hash under the shop, never the PIN. Already signed in; no onIn again. */
+    if (S.localPin && L && typeof L.save === 'function') {
+      return Promise.resolve().then(function () { return L.save(S.session, p.value); }).then(function (r) {
+        if (!r || !r.ok) return set({ busy: false, why: (r && r.why) || 'The PIN could not be kept.' });
+        return set({ busy: false, at: 'in', localPin: false, said: W.signedIn(S.session.name || S.session.person.id || '') });
+      }, function (x) { return set({ busy: false, why: (x && x.message) || 'The PIN could not be kept.' }); });
+    }
     return post('/api/signin/pin', { pin: p.value, confirm_pin: p.value }, S.token).then(function (r) {
       if (r.status < 200 || r.status >= 300) return set({ busy: false, why: refusalOf(r) });
-      return signedIn(S.session);
+      return signedIn(S.session, S.answer || null);
     });
   }
-  function signedIn(s) {
+  function signedIn(s, answer) {
     keep(c, s, io.store);
-    set({ busy: false, at: 'in', session: s, token: s.token, said: W.signedIn(s.name || s.person.id || '') });
-    if (typeof c.onIn === 'function') { try { c.onIn(s); } catch (_) {} }
+    set({ busy: false, at: 'in', session: s, token: s.token, local: null, viaLine: false, said: W.signedIn(s.name || s.person.id || '') });
+    if (typeof c.onIn === 'function') { try { c.onIn(s, answer || null); } catch (_) {} }
     return S;
   }
+  /** the host asks for a LOCAL PIN to be chosen (the till, after an online sign-in, when the person has none here) — once in, only */
+  function offerPin(given) {
+    /* `given` (optional): a person the host already holds as signed in — the till after a reload, whose token went on the key */
+    if (given && S.at !== 'in') set({ at: 'in', session: given, token: given.token || null, said: W.signedIn(given.name || (given.person && given.person.id) || '') });
+    if (S.at !== 'in' || !S.session || !L || typeof L.save !== 'function') return Promise.resolve(S);
+    var has = false; try { has = typeof L.has === 'function' ? !!L.has(S.session.person) : false; } catch (_) { has = false; }
+    if (has) return Promise.resolve(S);
+    return Promise.resolve(set({ at: 'setpin', localPin: true, why: '', said: W.localWhy }));
+  }
+  /** "Not now" — only the LOCAL offer may be skipped; the server's requires_pin_setup is not a choice */
+  function later() { if (S.at === 'setpin' && S.localPin) set({ at: 'in', localPin: false, why: '' }); return Promise.resolve(S); }
+  /** "Use a code instead" — the same person, through the line (e.g. a forgotten counter PIN, reset by a real sign-in) */
+  function line() {
+    if (!S.local || !onLine()) return Promise.resolve(S);
+    var id = S.resolved; set({ local: null, viaLine: true, need: '', why: '' });
+    return askFor(id);
+  }
+  /** a sentence the host wants on the box (e.g. the picker: "no counter PIN for X yet") — words only, no state change */
+  function refuse(why) { return set({ why: String(why || '') }); }
   /** "Send a new code" — the ONE way a second code is asked for, and only while a code box is open */
   function again() {
     if (S.at !== 'credential' || S.need !== 'code' || !S.resolved) return Promise.resolve(S);
@@ -249,6 +327,7 @@ function machine(c, io) {
     onChange: function (fn) { subs.push(fn); return function () { subs = subs.filter(function (x) { return x !== fn; }); }; },
     typed: function (v) { S.typed = String(v == null ? '' : v); return S; },
     go: go, choose: choose, verify: verify, setPin: setPin, again: again, back: back,
+    offerPin: offerPin, later: later, line: line, refuse: refuse, online: onLine,
     methods: function () { return methodsOn(c); },
     words: W,
   };
@@ -291,17 +370,21 @@ function paint(host, m, c) {
       }).join('') +
       '<button type="button" class="cbsi-ln" data-cbsi="back" data-testid="signin-back">' + esc(W.back) + '</button>';
   } else if (S.at === 'credential') {
-    var pin = S.need === 'pin';
+    var pin = S.need === 'pin', local = !!S.local;
+    /* a LOCAL credential is named for what it is (the counter PIN); its one other way on is the line, offered only when there is one */
     h = '<h2>' + esc(W.title) + '</h2>' + (S.said ? '<p class="cbsi-said" data-testid="signin-said">' + esc(S.said) + '</p>' : '') + why +
-      '<label>' + esc(pin ? W.pin : W.code) + '<input name="cred" data-testid="' + (pin ? 'signin-pin' : 'signin-code') + '" type="' + (pin ? 'password' : 'text') + '" inputmode="numeric" pattern="[0-9]*" maxlength="' + (pin ? 4 : 6) + '" autocomplete="' + (pin ? 'current-password' : 'one-time-code') + '" enterkeyhint="go"></label>' +
+      '<label>' + esc(local ? W.localPin : pin ? W.pin : W.code) + '<input name="cred" data-testid="' + (pin ? 'signin-pin' : 'signin-code') + '" type="' + (pin ? 'password' : 'text') + '" inputmode="numeric" pattern="[0-9]*" maxlength="' + (pin ? 4 : 6) + '" autocomplete="' + (pin ? 'current-password' : 'one-time-code') + '" enterkeyhint="go"></label>' +
       '<button type="submit" class="cbsi-go" data-testid="signin-verify"' + busy + '>' + esc(S.busy ? W.working : W.verify) + '</button>' +
       '<div class="cbsi-row">' + (pin ? '' : '<button type="button" class="cbsi-ln" data-cbsi="again" data-testid="signin-again">' + esc(W.again) + '</button>') +
+      (local && m.online() ? '<button type="button" class="cbsi-ln" data-cbsi="line" data-testid="signin-line">' + esc(W.line) + '</button>' : '') +
       '<button type="button" class="cbsi-ln" data-cbsi="back" data-testid="signin-back">' + esc(W.back) + '</button></div>';
   } else if (S.at === 'setpin') {
-    h = '<h2>' + esc(W.setTitle) + '</h2><p class="cbsi-said">' + esc(W.setWhy) + '</p>' + why +
+    var lp = !!S.localPin;
+    h = '<h2>' + esc(lp ? W.localPin : W.setTitle) + '</h2><p class="cbsi-said">' + esc(lp ? W.localWhy : W.setWhy) + '</p>' + why +
       '<label>' + esc(W.pin1) + '<input name="pin1" data-testid="signin-pin1" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="new-password"></label>' +
       '<label>' + esc(W.pin2) + '<input name="pin2" data-testid="signin-pin2" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="new-password" enterkeyhint="done"></label>' +
-      '<button type="submit" class="cbsi-go" data-testid="signin-pinsave"' + busy + '>' + esc(S.busy ? W.working : W.save) + '</button>';
+      '<button type="submit" class="cbsi-go" data-testid="signin-pinsave"' + busy + '>' + esc(S.busy ? W.working : W.save) + '</button>' +
+      (lp ? '<button type="button" class="cbsi-ln" data-cbsi="later" data-testid="signin-later">' + esc(W.later) + '</button>' : '');
   } else if (S.at === 'in') {
     h = '<p class="cbsi-in" data-testid="signin-in">' + esc(S.said) + '</p>';
   }
@@ -338,6 +421,8 @@ function mount(host, c) {
     if (k === 'choose') m.choose(Number(t.getAttribute('data-i')));
     else if (k === 'again') m.again();
     else if (k === 'back') m.back();
+    else if (k === 'line') m.line();
+    else if (k === 'later') m.later();
     else if (k === 'method' && typeof c.onMethod === 'function') c.onMethod(t.getAttribute('data-method'));
   }
   function onInput(e) { if (host.contains(e.target) && e.target.name === 'id') m.typed(e.target.value); }
@@ -357,6 +442,7 @@ E.mount = mount;
 E.machine = machine;
 E.sessionOf = sessionOf;
 E.jwtClaims = jwtClaims;
+E.transport = httpPost;          /* the default transport, for a host that wraps it (the till: "offline" said in words first) */
 E.METHODS = METHODS;
 E.WORDS = WORDS;
 if (typeof module !== 'undefined' && module.exports) module.exports = E;

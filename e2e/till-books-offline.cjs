@@ -275,13 +275,13 @@ function apiFront(name, tillId) {
 
   const signIn = async (p) => {
     await p.evaluate(() => usignOpen());
-    await p.fill('[data-testid="till-usign-who"]', 'xclerk');
-    await p.click('[data-testid="till-usign-ask"]');
-    await p.waitForSelector('[data-testid="till-usign-otp"]');
-    if (!(await p.inputValue('[data-testid="till-usign-otp"]'))) await p.fill('[data-testid="till-usign-otp"]', '123456');
-    await p.click('[data-testid="till-usign-verify"]');
-    await p.waitForSelector('[data-testid="till-usign-in"], [data-testid="till-usign-pinlater"]', { timeout: 15000 });
-    if (await p.locator('[data-testid="till-usign-pinlater"]').count()) await p.click('[data-testid="till-usign-pinlater"]');
+    await p.fill('[data-testid="signin-id"]', 'xclerk');
+    await p.click('[data-testid="signin-go"]');
+    await p.waitForSelector('[data-testid="signin-code"]');
+    if (!(await p.inputValue('[data-testid="signin-code"]'))) await p.fill('[data-testid="signin-code"]', '123456');
+    await p.click('[data-testid="signin-verify"]');
+    await p.waitForSelector('[data-testid="till-usign-in"], [data-testid="signin-later"]', { timeout: 15000 });
+    if (await p.locator('[data-testid="signin-later"]').count()) await p.click('[data-testid="signin-later"]');
     await p.evaluate(() => usignClose());
   };
   const closeSlip = (p) => p.evaluate(() => { try { document.getElementById('slipdlg').close(); } catch (_) {} });

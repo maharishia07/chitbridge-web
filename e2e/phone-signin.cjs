@@ -145,8 +145,8 @@ async function walk(b, WEB, tag, dev, reg, opts) {
   p.on('pageerror', (e) => errs.push(String(e)));
   const shot = async (n) => { const f = 'phone-signin-' + tag + '-' + n + '.png'; await p.screenshot({ path: path.join(SHOTS, f) }); return f; };
   const tap = async (sel) => (phone ? p.tap(sel) : p.click(sel));
-  const why = async () => ((await p.locator('[data-testid="till-usign-why"]').count())
-    ? (await p.locator('[data-testid="till-usign-why"]').textContent()) : '');
+  const why = async () => ((await p.locator('[data-testid="signin-why"]').count())
+    ? (await p.locator('[data-testid="signin-why"]').textContent()) : '');
   const res = { tag, shots: [], why: '', errs };
 
   await p.goto(WEB + '/till.html');
@@ -164,9 +164,9 @@ async function walk(b, WEB, tag, dev, reg, opts) {
 
   /* the door a person sees: the "nobody signed in" pill at the top */
   await tap('[data-testid="till-who"]');
-  await p.waitForSelector('#usigndlg[open] [data-testid="till-usign-who"]', { timeout: 10000 });
+  await p.waitForSelector('#usigndlg[open] [data-testid="signin-id"]', { timeout: 10000 });
   res.fitWho = await dialogFits(p);
-  res.whoAttrs = await p.evaluate(() => { const i = document.getElementById('usign_who');
+  res.whoAttrs = await p.evaluate(() => { const i = document.querySelector('[data-testid="signin-id"]');
     return { type: i.type, autocapitalize: i.getAttribute('autocapitalize'), autocorrect: i.getAttribute('autocorrect'),
              spellcheck: i.getAttribute('spellcheck'), inputmode: i.getAttribute('inputmode'), autocomplete: i.getAttribute('autocomplete') }; });
   res.shots.push(await shot('02-door'));
@@ -177,25 +177,25 @@ async function walk(b, WEB, tag, dev, reg, opts) {
     res.fitWhoKb = await dialogFits(p);
     res.shots.push(await shot('03-keyboard'));
   }
-  await tap('[data-testid="till-usign-who"]');
+  await tap('[data-testid="signin-id"]');
   await p.keyboard.type(opts.typed || 'athi');
-  await tap('[data-testid="till-usign-ask"]');
-  await p.waitForSelector('[data-testid="till-usign-otp"], [data-testid="till-usign-why"]', { timeout: 10000 });
+  await tap('[data-testid="signin-go"]');
+  await p.waitForSelector('[data-testid="signin-code"], [data-testid="signin-why"]', { timeout: 10000 });
   res.shots.push(await shot('04-code'));
-  if (!(await p.locator('[data-testid="till-usign-otp"]').count())) { res.why = await why(); res.stuck = 'who'; return finish(); }
+  if (!(await p.locator('[data-testid="signin-code"]').count())) { res.why = await why(); res.stuck = 'who'; return finish(); }
   res.fitCode = await dialogFits(p);
-  res.otpAttrs = await p.evaluate(() => { const i = document.getElementById('usign_otp');
+  res.otpAttrs = await p.evaluate(() => { const i = document.querySelector('[data-testid="signin-code"]');
     return { type: i.type, inputmode: i.getAttribute('inputmode'), autocomplete: i.getAttribute('autocomplete'), maxlength: i.getAttribute('maxlength') }; });
-  await tap('[data-testid="till-usign-otp"]');
+  await tap('[data-testid="signin-code"]');
   await p.keyboard.type('123456');
   /* the keyboard goes down when Sign in is pressed */
   if (phone) await p.setViewportSize(PHONE.viewport);
   const nav = p.waitForEvent('load', { timeout: 15000 }).catch(() => null);
-  await tap('[data-testid="till-usign-verify"]');
+  await tap('[data-testid="signin-verify"]');
   /* either the page reloads into the shop, or the dialog stops on a stage */
   const stage = await Promise.race([
     nav.then((x) => (x ? 'reloaded' : 'no-reload')),
-    p.waitForSelector('[data-testid="till-signin-takeover"], [data-testid="till-usign-why"]', { timeout: 15000 }).then(() => 'stopped').catch(() => 'nothing'),
+    p.waitForSelector('[data-testid="till-signin-takeover"], [data-testid="signin-why"]', { timeout: 15000 }).then(() => 'stopped').catch(() => 'nothing'),
   ]);
   res.afterVerify = stage;
   if (stage === 'stopped') {
@@ -214,13 +214,13 @@ async function walk(b, WEB, tag, dev, reg, opts) {
 
   /* ⭐ reloaded into the shop — now whatever the counter asks: a counter PIN to choose */
   await p.waitForFunction(() => typeof S !== 'undefined' && S && S.shop && S.shop.name === 'Athi Stores', null, { timeout: 30000 }).catch(() => {});
-  await p.waitForSelector('[data-testid="till-usign-pin1"], [data-testid="till-usign-in"]', { timeout: 15000 }).catch(() => {});
+  await p.waitForSelector('[data-testid="signin-pin1"], [data-testid="till-usign-in"]', { timeout: 15000 }).catch(() => {});
   res.shots.push(await shot('06-after-reload'));
-  if (await p.locator('[data-testid="till-usign-pin1"]').count()) {
+  if (await p.locator('[data-testid="signin-pin1"]').count()) {
     res.fitPin = await dialogFits(p);
-    await tap('[data-testid="till-usign-pin1"]'); await p.keyboard.type('4826');
-    await tap('[data-testid="till-usign-pin2"]'); await p.keyboard.type('4826');
-    await tap('[data-testid="till-usign-pinsave"]');
+    await tap('[data-testid="signin-pin1"]'); await p.keyboard.type('4826');
+    await tap('[data-testid="signin-pin2"]'); await p.keyboard.type('4826');
+    await tap('[data-testid="signin-pinsave"]');
     await p.waitForSelector('[data-testid="till-usign-in"]', { timeout: 15000 }).catch(() => {});
     res.shots.push(await shot('07-signed-in'));
   }

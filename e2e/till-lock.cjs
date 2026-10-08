@@ -76,17 +76,17 @@ const PEOPLE = {
   /* the one dialog: a user ID, then the code (online, prefilled) or the counter PIN */
   const signIn = async (id, pinOrNull) => {
     if (!(await p.locator('#usigndlg[open]').count())) await p.evaluate(() => usignOpen());
-    await p.waitForSelector('[data-testid="till-usign-who"], [data-testid="till-usign-otp"]');
+    await p.waitForSelector('[data-testid="signin-id"], [data-testid="signin-pin"]');
     /* an unlock goes straight to the PIN of whoever locked it — for anybody else, "Someone else" */
-    const direct = await p.evaluate(() => (USIGN.local && USIGN.local.ids) || []);
+    const direct = await p.evaluate(() => (USIGN.win && USIGN.win.state().local && USIGN.win.state().local.ids) || []);
     if (direct.indexOf(id) < 0) {
-      if (await p.locator('[data-testid="till-usign-other"]').count()) await p.click('[data-testid="till-usign-other"]');
-      await p.fill('[data-testid="till-usign-who"]', id);
-      await p.click('[data-testid="till-usign-ask"]');
+      if (await p.locator('[data-testid="signin-back"]').count()) await p.click('[data-testid="signin-back"]');
+      await p.fill('[data-testid="signin-id"]', id);
+      await p.click('[data-testid="signin-go"]');
     }
-    if (pinOrNull) { await p.waitForSelector('[data-testid="till-usign-otp"]'); await p.fill('[data-testid="till-usign-otp"]', pinOrNull); }
-    else await p.waitForSelector('[data-testid="till-usign-otp"]');
-    await p.click('[data-testid="till-usign-verify"]');
+    if (pinOrNull) { await p.waitForSelector('[data-testid="signin-pin"]'); await p.fill('[data-testid="signin-pin"]', pinOrNull); }
+    else await p.waitForSelector('[data-testid="signin-pin"], [data-testid="signin-code"]');
+    await p.click('[data-testid="signin-verify"]');
   };
 
   await p.goto('http://127.0.0.1:' + web.address().port + '/till.html');
@@ -96,9 +96,9 @@ const PEOPLE = {
 
   console.log('\n── set up: X Clerk signs in online and sets a counter PIN; a bill is in hand ' + '─'.repeat(0));
   await signIn('xclerk', null);
-  await p.waitForSelector('[data-testid="till-usign-pin1"]');
-  await p.fill('[data-testid="till-usign-pin1"]', '4826'); await p.fill('[data-testid="till-usign-pin2"]', '4826');
-  await p.click('[data-testid="till-usign-pinsave"]');
+  await p.waitForSelector('[data-testid="signin-pin1"]');
+  await p.fill('[data-testid="signin-pin1"]', '4826'); await p.fill('[data-testid="signin-pin2"]', '4826');
+  await p.click('[data-testid="signin-pinsave"]');
   await p.waitForSelector('[data-testid="till-usign-done"]'); await p.click('[data-testid="till-usign-done"]');
   await p.fill('#q', 'XMANGO');
   await p.waitForSelector('[data-testid="till-add-0"]', { timeout: 20000 });
@@ -146,12 +146,12 @@ const PEOPLE = {
   console.log('\n── ⚠️ UNLOCK BY SOMEBODY WITH NO PIN, OFFLINE — refused, still locked ' + '─'.repeat(0));
   await p.click('[data-testid="till-lock"]');
   await p.click('[data-testid="till-unlock"]');
-  const straight = await p.locator('[data-testid="till-usign-otp"]').count() && await p.evaluate(() => !!USIGN.local);
-  say('🔓 goes straight to the PIN of whoever locked it', straight, 'PIN box for ' + await p.evaluate(() => USIGN.who));
-  await p.click('[data-testid="till-usign-other"]');
-  await p.fill('[data-testid="till-usign-who"]', 'zed');
-  await p.click('[data-testid="till-usign-ask"]');
-  await p.waitForSelector('[data-testid="till-usign-why"]');
+  const straight = await p.locator('[data-testid="signin-pin"]').count() && await p.evaluate(() => !!(USIGN.win && USIGN.win.state().local));
+  say('🔓 goes straight to the PIN of whoever locked it', straight, 'PIN box for ' + await p.evaluate(() => USIGN.win && USIGN.win.state().resolved));
+  await p.click('[data-testid="signin-back"]');
+  await p.fill('[data-testid="signin-id"]', 'zed');
+  await p.click('[data-testid="signin-go"]');
+  await p.waitForSelector('[data-testid="signin-why"]');
   await p.keyboard.press('Escape');
   const s5 = await st();
   say('nobody got in, and Escape on the dialog leaves the cover up', s5.locked && s5.who === 'X Clerk', 'locked=' + s5.locked);
@@ -161,8 +161,8 @@ const PEOPLE = {
   await p.waitForFunction(() => lineUp(), null, { timeout: 10000 });
   await p.click('[data-testid="till-unlock"]');
   await signIn('wclerk', null);
-  await p.waitForSelector('[data-testid="till-usign-pinlater"]', { timeout: 10000 });
-  await p.click('[data-testid="till-usign-pinlater"]');
+  await p.waitForSelector('[data-testid="signin-later"]', { timeout: 10000 });
+  await p.click('[data-testid="signin-later"]');
   await p.waitForFunction(() => document.getElementById('lockcover').hidden, null, { timeout: 10000 });
   const s6 = await st();
   say('W Clerk is on now — a new shift, not X\'s', s6.who === 'W Clerk' && s6.since !== s0.since, 'who=' + s6.who);
