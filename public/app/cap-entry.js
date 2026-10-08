@@ -44,7 +44,7 @@ function enCss() {
     + '#entrysheet .en-tile .ic{font-size:26px;line-height:1}#entrysheet .en-tile:hover,#entrysheet .en-tile:focus-visible{background:var(--gold-soft,#F7F1E4)}'
     + '#entrysheet label.en-f{display:block;margin:0 0 12px;font-weight:600}#entrysheet label.en-f>span{display:block;margin-bottom:4px;color:var(--grey,#494F56);font-size:var(--fs-1,11px)}'
     + '#entrysheet .en-f input,#entrysheet .en-f select,#entrysheet .en-ln input,#entrysheet .en-ln select{width:100%;box-sizing:border-box;min-height:44px;padding:0 10px;border:1px solid var(--line,#E7E2D8);border-radius:9px;background:var(--card,#fff);color:inherit;font:inherit}'
-    + '#entrysheet .en-ln{display:grid;grid-template-columns:minmax(0,1fr) 84px minmax(0,96px) 44px;gap:6px;margin-bottom:8px}'
+    + '#entrysheet .en-ln{display:grid;grid-template-columns:minmax(0,1fr) 84px minmax(0,132px) 44px;gap:6px;margin-bottom:8px}'
     + '#entrysheet .en-bad{margin:6px 0 12px;padding:8px 10px;border:1px solid var(--red-b,#E8B7A6);background:var(--red-t,#FBEDE8);color:var(--red-i,#8E3517);border-radius:8px}'
     + '#entrysheet .en-warn{margin:6px 0 12px;padding:8px 10px;border:1px solid var(--gold-line,#E8D9BC);background:var(--gold-soft,#F7F1E4);border-radius:8px}'
     + '#entrysheet .en-bad button,#entrysheet .en-warn button{cursor:pointer;display:block;margin-top:6px;min-height:44px;padding:0 14px;border:1px solid currentColor;border-radius:9px;background:none;color:inherit;font:inherit;font-weight:700}'
@@ -184,7 +184,7 @@ function enFieldHTML(f) {
   if (f.kind === 'ledger') return '<label class="en-f"><span>' + enE(lab) + '</span>' + enLedgerSelect(tid, v, on).replace('<select ', '<select data-testid="' + tid + '" ') + '</label>';
   if (f.kind === 'bank') return '<label class="en-f"><span>' + enE(lab) + '</span>' + (enOptions(f).length ? enSelect(tid, enOptions(f), v, on) : enLedgerSelect(tid, v, on, 'Cash & bank').replace('<select ', '<select data-testid="' + tid + '" ')) + '</label>';
   if (f.kind === 'party' || f.kind === 'asset_class' || f.kind === 'loan' || f.kind === 'choice') { var o = enOptions(f); return o.length ? wrap(enSelect(tid, o, v, on)) : wrap('<input data-testid="' + tid + '" value="' + enE(v) + '" oninput="' + on + '">'); }
-  if (f.kind === 'amount') return wrap('<input data-testid="' + tid + '" inputmode="decimal" autocomplete="off" placeholder="0.00" value="' + enE(v) + '" oninput="' + on + '" onchange="enCheckDate()">');
+  if (f.kind === 'amount') return wrap(bkMoneyInput({ id: tid, text: v == null ? '' : String(v), on: on, extra: 'onchange="enCheckDate()"' }));
   if (f.kind === 'date') return wrap('<input data-testid="' + tid + '" type="date" value="' + enE(v) + '" onchange="enSet(\'date\',this.value);enCheckDate()">') + '<div id="en_dateref">' + enRefusalHTML(EN.dateRef) + '</div>';
   if (f.kind === 'paid_by') {
     var m = (f.options && f.options.length ? enOptions(f) : [{ v: 'cash', l: tx('Cash') }, { v: 'bank', l: tx('Bank') }, { v: 'upi', l: tx('UPI') }, { v: 'cheque', l: tx('Cheque') }]);
@@ -219,7 +219,7 @@ function enLinesHTML() {
   return '<div class="en-sec">' + enE(tx('Lines')) + '</div>' + EN.lines.map(function (l, i) {
     return '<div class="en-ln" data-testid="en-line-' + i + '">' + enLedgerSelect('en_lc' + i, l.code, 'enLine(' + i + ',\'code\',this.value)').replace('<select ', '<select data-testid="en-line-code-' + i + '" ')
       + '<select data-testid="en-line-side-' + i + '" onchange="enLine(' + i + ',\'side\',this.value)"><option value="dr"' + (l.side === 'dr' ? ' selected' : '') + '>Dr</option><option value="cr"' + (l.side === 'cr' ? ' selected' : '') + '>Cr</option></select>'
-      + '<input data-testid="en-line-amt-' + i + '" inputmode="decimal" placeholder="0.00" value="' + enE(l.amt) + '" oninput="enLine(' + i + ',\'amt\',this.value)">'
+      + bkMoneyInput({ id: 'en-line-amt-' + i, text: l.amt == null ? '' : String(l.amt), on: 'enLine(' + i + ',\'amt\',this.value)' })
       + '<button type="button" class="en-btn" style="padding:0" aria-label="' + enE(tx('Remove')) + '" data-testid="en-line-del-' + i + '" onclick="enLineDel(' + i + ')"' + (EN.lines.length <= 2 ? ' disabled' : '') + '>✕</button></div>';
   }).join('') + '<button type="button" class="en-btn" data-testid="en-line-add" onclick="enLineAdd()">＋ ' + enE(tx('Add a line')) + '</button>';
 }
@@ -233,8 +233,8 @@ function enAsk(body) { var go = function () { return api('booksPreview', { body:
 function enBody() {
   var b = { event: EN.ev.kind || EN.ev.id };
   Object.keys(EN.v).forEach(function (k) { if (EN.v[k] !== '' && EN.v[k] != null) b[k] = EN.v[k]; });
-  if (EN.v.amount != null && EN.v.amount !== '') { b.amount_minor = bkToMinor(EN.v.amount); delete b.amount; }
-  if (EN.ev.kind === 'journal') b.lines = EN.lines.map(function (l) { var o = { code: l.code }; o[l.side === 'cr' ? 'cr_minor' : 'dr_minor'] = bkToMinor(l.amt); return o; });
+  if (EN.v.amount != null && EN.v.amount !== '') { b.amount_minor = bkMoneyMinor(EN.v.amount); delete b.amount; }
+  if (EN.ev.kind === 'journal') b.lines = EN.lines.map(function (l) { var o = { code: l.code }; o[l.side === 'cr' ? 'cr_minor' : 'dr_minor'] = bkMoneyMinor(l.amt); return o; });
   return b;
 }
 /** the server's refusals are plain sentences (and `code` for the first); give each a button back to the form. Nothing here decides anything. */

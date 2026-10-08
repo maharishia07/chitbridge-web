@@ -31,7 +31,7 @@ function bkbBanks(accts) {
   const main = accts.filter((a) => a.role === 'bank')[0], g = main ? main.parent_code : null;
   return accts.filter((a) => bkbIsBank(a, g) && a.active !== false);
 }
-const bkbMinorText = (m) => (Number(m || 0) / Math.pow(10, bkDec())).toFixed(bkDec());
+const bkbMinorText = (m) => bkMinorText(m);
 
 /* ── the file: read and hashed on this device ── */
 async function bkbHash(text) {

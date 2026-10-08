@@ -63,6 +63,13 @@ function bkCss() {
     '.bktab tfoot td{border-top:1px solid var(--ink);border-bottom:0}',
     '.bktab tr.bkentry td{border-top:1px solid var(--line);font-weight:600}',
     '#bk_body input[type=date].inp,#bk_body select.inp,#bk_body .supacts .inp{width:auto}',
+    /* the primary button of a pane's action row (Pay · Receive · Edit · Lock …) — once here, so accounts.html, crm.html and the app read the same */
+    '.supacts button.supact-pri,#bk_body .supacts button.supact-pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink,var(--on-accent))}',
+    /* ⭐ THE MONEY INPUT (bkMoneyInput): the symbol sits inside the field, the figure runs to the end; the box is the field's, so the symbol never wraps off */
+    '.mi{display:flex;align-items:center;gap:6px;box-sizing:border-box;width:100%;max-width:100%;min-height:44px;padding:0 12px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink)}',
+    '.mi:focus-within{border-color:var(--blue)}',
+    '.mi .mi-sym{color:var(--grey);flex:0 0 auto}',
+    '.mi input.mi-in,#entrysheet .mi input.mi-in{flex:1 1 auto;min-width:0;width:100%;min-height:0;height:auto;padding:8px 0;border:0;border-radius:0;outline:0;background:none;color:inherit;font:inherit;text-align:end;font-variant-numeric:tabular-nums;box-shadow:none}',
     /* the strip's chips: .optchip is inline-flex, which swallows the whitespace between its text and the figure */
     '.bkchip{gap:4px}',
     /* the day's to-do: one card per line on a narrow pane (flex-basis folds them at ~620px), tappable, phone first */
@@ -137,7 +144,46 @@ function bkMoney(minor, c) {
 }
 /** a balance the way a ledger writes it: the amount, then Dr or Cr — never a minus sign (the server's figure is Dr − Cr) */
 function bkDrCr(v, c) { v = Number(v || 0); return bkMoney(Math.abs(v), c) + (v ? ' ' + tx(v > 0 ? 'Dr' : 'Cr') : ''); }
+/** ⭐ A BALANCE IN WORDS, never a minus (spec T59; R30): the server's dues figure is signed, + they owe you. Chips and sentences say it; a ledger table says Dr/Cr (bkDrCr above). */
+function bkOwes(v, c) { v = Number(v || 0); return v ? tx(v > 0 ? 'they owe you' : 'you owe') + ' ' + bkMoney(Math.abs(v), c) : tx('settled'); }
 function bkToMinor(v, c) { var n = parseFloat(String(v == null ? '' : v).replace(/[^0-9.\-]/g, '')); return isFinite(n) ? Math.round(n * Math.pow(10, bkDec(c))) : NaN; }
+/**
+ * ⭐⭐ THE ONE MONEY INPUT (M36 · R16 · T16): every amount a person TYPES goes through bkMoneyInput, and every amount SHOWN goes through bkMoney / bkDrCr / bkOwes.
+ * The unit owns three things and does no money arithmetic: the SYMBOL (CBLocale.symbol), the DECIMALS (CBMoney.decimals via bkDec — 2 for INR, 0 for JPY, 3 for OMR) and
+ * MINOR UNITS out (bkMoneyRead — digits are joined as text, never multiplied). The field holds plain decimal text, so a screen's own reader (bkToMinor) still agrees with it.
+ * A bare <input inputmode="decimal"> anywhere in CB Accounts or CB CRM fails the build (e2e/money-input-guard.cjs).
+ *   o: { id, tid?, minor? | text?, cur?, ph?, on? (inline js run on input), extra? (raw attrs on the input), w? (css width of the whole field) }
+ */
+function bkMinorText(minor, c) {
+  var d = bkDec(c), n = Math.trunc(Number(minor || 0)), s = String(Math.abs(n));
+  if (!d) return (n < 0 ? '-' : '') + s;
+  s = s.padStart(d + 1, '0');
+  return (n < 0 ? '-' : '') + s.slice(0, -d) + '.' + s.slice(-d);
+}
+function bkMoneyClamp(el) {
+  var d = bkDec(el.getAttribute('data-cur')), t = String(el.value || '').replace(/[^0-9.]/g, ''), i = t.indexOf('.');
+  if (i >= 0) t = t.slice(0, i + 1) + t.slice(i + 1).replace(/\./g, '').slice(0, d);
+  if (d === 0) t = t.replace(/\./g, '');
+  if (t !== el.value) el.value = t;
+}
+function bkMoneyInput(o) {
+  var c = bkCur(o.cur), tid = o.tid || o.id, v = o.text != null ? o.text : (o.minor != null && o.minor !== '' ? bkMinorText(o.minor, c) : '');
+  var sym = ''; try { sym = CBLocale.symbol(c); } catch (_) { sym = c; }
+  return '<span class="mi"' + (o.w ? ' style="width:' + o.w + '"' : '') + '><span class="mi-sym" aria-hidden="true">' + esc(sym) + '</span>'
+    + '<input class="mi-in" id="' + o.id + '" data-testid="' + esc(tid) + '" data-money="1" data-cur="' + esc(c) + '" inputmode="decimal" autocomplete="off" placeholder="' + esc(o.ph != null ? o.ph : bkMinorText(0, c)) + '"'
+    + ' value="' + esc(v) + '" oninput="bkMoneyClamp(this);' + (o.on || '') + '"' + (o.extra ? ' ' + o.extra : '') + '></span>';
+}
+/** the text a money field holds → minor units: an integer, or NaN when it is empty, not a number, or has more decimals than the currency */
+function bkMoneyMinor(text, c) {
+  var d = bkDec(c), m = /^(\d*)(?:\.(\d*))?$/.exec(String(text == null ? '' : text).replace(/[,\s]/g, ''));
+  if (!m || (!m[1] && !m[2]) || (m[2] || '').length > d) return NaN;
+  return Number((m[1] || '0') + (m[2] || '').padEnd(d, '0'));
+}
+/** the minor units a money field (by id or element) holds — its own currency, read from the field */
+function bkMoneyRead(idOrEl) {
+  var el = typeof idOrEl === 'string' ? document.getElementById(idOrEl) : idOrEl;
+  return el ? bkMoneyMinor(el.value, el.getAttribute('data-cur')) : NaN;
+}
 function bkDate(d) { if (!d) return '—'; try { return CBLocale.date(d); } catch (_) { return String(d).slice(0, 10); } }
 function bkToday() { return new Date().toISOString().slice(0, 10); }
 /** ⭐ ONE door for a failure's words: the app's verdict table (friendlyErr, app.html) first, the screen's own fallback
@@ -186,7 +232,7 @@ function partyDueChipHTML(partyId, opts) {
   var owes = b > 0;
   return '<span class="optchip" data-testid="party-due-' + esc(partyId) + '" title="' + esc(owes ? tx('They owe you') : tx('You owe them')) + (d.oldest_due ? ' · ' + esc(tx('oldest due')) + ' ' + esc(bkDate(d.oldest_due)) : '') + '"'
     + ' style="' + (owes ? 'background:var(--warn-tint);color:var(--warn-2);border-color:var(--warn-2)' : 'background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-d)') + '">'
-    + no + (owes ? '↓ ' : '↑ ') + esc(bkMoney(Math.abs(b), BK.duesCur)) + '</span>';
+    + no + esc(bkOwes(b, BK.duesCur)) + '</span>';
 }
 /**
  * ⭐ THE PARTY BLOCK in the Customer detail and the Supplier record: who they are for the ledger (party no, legal
@@ -209,7 +255,7 @@ function partyBooksHTML(kind, partyId, row) {
     + kv(tx('Nickname'), esc(r.nickname || ''))
     + kv(tx('Tax ids'), tax)
     + kv(tx('Credit'), (r.credit_days != null ? txf('{n} days', { n: r.credit_days }) : '—') + (r.credit_limit_minor != null ? ' · ' + tx('limit') + ' ' + esc(bkMoney(r.credit_limit_minor)) : ''))
-    + kv(tx('Balance'), b ? '<b data-testid="party-balance">' + esc(bkMoney(Math.abs(b), BK.duesCur)) + '</b> <span style="color:var(--grey)">' + (b > 0 ? tx('they owe you') : tx('you owe them')) + '</span>' : '<span data-testid="party-balance" style="color:var(--grey)">' + tx('settled') + '</span>')
+    + kv(tx('Balance'), '<b data-testid="party-balance"' + (b ? '' : ' style="color:var(--grey);font-weight:400"') + '>' + esc(bkOwes(b, BK.duesCur)) + '</b>')
     + kv(tx('Oldest due'), d.oldest_due ? esc(bkDate(d.oldest_due)) : '—')
     + '<div class="supacts" style="display:flex;gap:7px;padding:9px 13px;flex-wrap:wrap">'
     + '<button data-testid="party-edit" onclick="partyEditOpen(\'' + kind + '\',\'' + esc(partyId) + '\')">' + tx('Edit') + '</button>'
@@ -297,12 +343,12 @@ function statementHTML(r, partyId) {
   var c = r && r.currency;
   var rows = ((r && r.lines) || []).map(function (l, i) {
     return '<tr' + (l.source_chit_id ? ' style="cursor:pointer" onclick="openChitSheet(\'' + esc(l.source_chit_id) + '\')"' : '') + '><td>' + esc(bkDate(l.date)) + '</td><td data-testid="stmt-what-' + i + '">' + bkEntryHead(l, 'stmt-src-' + i, c, bkPartyLabel(l.party_id || partyId || (r && r.party_id), l.party_name)) + (l.ref ? ' <span class="mono">' + esc(l.ref) + '</span>' : '') + '</td>'
-      + '<td class="num">' + (l.dr_minor ? esc(bkMoney(l.dr_minor, c)) : '') + '</td><td class="num">' + (l.cr_minor ? esc(bkMoney(l.cr_minor, c)) : '') + '</td><td class="num"><b>' + esc(bkMoney(l.running_minor, c)) + '</b></td></tr>';
+      + '<td class="num">' + (l.dr_minor ? esc(bkMoney(l.dr_minor, c)) : '') + '</td><td class="num">' + (l.cr_minor ? esc(bkMoney(l.cr_minor, c)) : '') + '</td><td class="num"><b>' + esc(bkDrCr(l.running_minor, c)) + '</b></td></tr>';
   }).join('');
   return '<table class="bktab" style="width:100%;border-collapse:collapse;font-size:var(--fs-1)"><thead><tr><th>' + tx('Date') + '</th><th>' + tx('What') + '</th><th class="num">' + tx('Debit') + '</th><th class="num">' + tx('Credit') + '</th><th class="num">' + tx('Balance') + '</th></tr></thead><tbody>'
-    + '<tr><td></td><td><i>' + tx('Opening') + '</i></td><td></td><td></td><td class="num" data-testid="stmt-opening">' + esc(bkMoney(r && r.opening_minor, c)) + '</td></tr>'
+    + '<tr><td></td><td><i>' + tx('Opening') + '</i></td><td></td><td></td><td class="num" data-testid="stmt-opening">' + esc(bkDrCr(r && r.opening_minor, c)) + '</td></tr>'
     + rows
-    + '<tr><td></td><td><b>' + tx('Closing') + '</b></td><td></td><td></td><td class="num" data-testid="stmt-closing"><b>' + esc(bkMoney(r && r.closing_minor, c)) + '</b></td></tr></tbody></table>';
+    + '<tr><td></td><td><b>' + tx('Closing') + '</b></td><td></td><td></td><td class="num" data-testid="stmt-closing"><b>' + esc(bkDrCr(r && r.closing_minor, c)) + '</b></td></tr></tbody></table>';
 }
 
 /* ── the party's own fields, edited where the party is shown ── */
@@ -337,7 +383,7 @@ function partyEditOpen(kind, partyId) {
     + '<button type="button" data-testid="pe_taxadd" style="margin-top:6px" onclick="partyTaxAdd(\'' + kind + '\',\'' + esc(partyId) + '\')">+ ' + tx('Add a tax id') + '</button></div>'
     + '<div id="pe_dup" data-testid="pe_dup" style="font-size:var(--fs-1);color:var(--warn-2)"></div>'
     + '<div style="display:flex;gap:8px"><label style="flex:1">' + tx('Credit days') + inp('pe_days', r.credit_days, '30', 'inputmode="numeric"') + '</label>'
-    + '<label style="flex:1">' + tx('Credit limit') + inp('pe_limit', r.credit_limit_minor != null ? (r.credit_limit_minor / Math.pow(10, bkDec())) : '', '', 'inputmode="decimal"') + '</label></div>'
+    + '<label style="flex:1">' + tx('Credit limit') + bkMoneyInput({ id: 'pe_limit', minor: r.credit_limit_minor != null ? r.credit_limit_minor : null, ph: '' }) + '</label></div>'
     + '<label>' + tx('State code') + inp('pe_state', r.state_code, '33') + '</label>'
     + '</div><div class="mfoot"><button onclick="closeModal()">' + tx('Cancel') + '</button><button class="pri" data-testid="pe_save" onclick="partyEditSave(\'' + kind + '\',\'' + esc(partyId) + '\')">' + tx('Save') + '</button></div>');
   partyDupCheck(kind, partyId);
@@ -365,7 +411,7 @@ async function partyEditSave(kind, partyId) {
   var listId = kind === 'supplier' ? r.supplier_list_id : r.customer_list_id;
   var lim = g('pe_limit'), days = g('pe_days');
   var body = { legal_name: g('pe_legal') || null, nickname: g('pe_nick') || null, state_code: g('pe_state') || null,
-    credit_days: days === '' ? null : parseInt(days, 10), credit_limit_minor: lim === '' ? null : bkToMinor(lim),
+    credit_days: days === '' ? null : parseInt(days, 10), credit_limit_minor: lim === '' ? null : bkMoneyMinor(lim),
     tax_ids: partyTaxRows() };
   if (document.getElementById('pe_phone')) { body.phone = g('pe_phone') || null; body.email = g('pe_email') || null; }
   if (body.credit_days != null && !(body.credit_days >= 0)) { toast(tx('Credit days: a whole number')); return; }
@@ -390,7 +436,7 @@ function payOpen(kind, partyId) {
   var r = partyRowOf(kind, partyId) || {};
   PAY = { kind: kind, partyId: partyId, name: r.nickname || r.display_name || '', ref: bkRef() };   /* one ref per opened form */
   modal('<div class="mhd"><div class="t">' + esc(kind === 'supplier' ? tx('Pay') : tx('Receive')) + ' · ' + esc(PAY.name) + '</div></div><div class="mbody" id="pay_body" style="display:flex;flex-direction:column;gap:8px">'
-    + '<label>' + tx('Amount') + '<input class="inp" id="pay_amt" data-testid="pay_amt" inputmode="decimal" style="width:100%"></label>'
+    + '<label>' + tx('Amount') + '' + bkMoneyInput({ id: 'pay_amt' }) + '</label>'
     + '<label>' + tx('How') + '<select class="inp" id="pay_mode" data-testid="pay_mode" onchange="payModePaint()"><option value="cash">' + tx('Cash') + '</option><option value="upi">UPI</option><option value="bank">' + tx('Bank') + '</option><option value="card">' + tx('Card') + '</option><option value="cheque">' + tx('Cheque') + '</option></select></label>'
     + '<label>' + tx('Reference') + '<input class="inp" id="pay_ref" data-testid="pay_ref" style="width:100%"></label>'
     + '<div id="pay_chq" hidden style="display:flex;gap:6px"><input class="inp" id="pay_chqno" data-testid="pay_chqno" placeholder="' + esc(tx('Cheque no')) + '"><input class="inp" id="pay_bank" placeholder="' + esc(tx('Bank')) + '"><input class="inp" id="pay_chqdate" type="date"></div>'
@@ -403,7 +449,7 @@ function payRecord() {
      press after the record only asks for the proposal; and every attempt from this form carries the SAME client_ref */
   /* ⭐ M64: through CBAction — one press one call, the outcome said in the form (pay_why), never a thrown error's text */
   var why = document.getElementById('pay_why');
-  var amt = PAY.id ? PAY.amount : bkToMinor((document.getElementById('pay_amt') || {}).value);
+  var amt = PAY.id ? PAY.amount : bkMoneyRead('pay_amt');
   if (!PAY.id && !(amt > 0)) { if (why) why.textContent = tx('Type the amount'); return; }
   return CBAction.run(document.querySelector('[data-testid="pay_record"]'), async function () {
       if (!PAY.id) {
@@ -444,7 +490,7 @@ function payProposalPaint() {
     + '<table class="bktab" style="width:100%;font-size:var(--fs-1)"><thead><tr><th>' + tx('Bill') + '</th><th>' + tx('Due') + '</th><th class="num">' + tx('Open') + '</th><th class="num">' + tx('Apply') + '</th></tr></thead><tbody>'
     + rows.map(function (it, i) {
         return '<tr data-testid="alloc-row-' + i + '"><td class="mono">' + esc(it.bill_no || it.against_ref) + (it.disputed ? ' <span class="optchip" style="color:var(--warn-2)">' + tx('disputed') + '</span>' : '') + '</td><td>' + esc(bkDate(it.due_date)) + '</td><td class="num">' + esc(bkMoney(it.open_minor)) + '</td>'
-          + '<td class="num"><input class="inp" data-testid="alloc-' + i + '" id="alloc_' + i + '" style="width:110px;text-align:end" inputmode="decimal" ' + (it.disputed ? 'disabled title="' + esc(tx('In dispute · settle it first')) + '"' : '') + ' value="' + esc(it.apply_minor ? (it.apply_minor / Math.pow(10, bkDec())) : '') + '" oninput="payLeftPaint()"></td></tr>';
+          + '<td class="num">' + bkMoneyInput({ id: 'alloc_' + i, tid: 'alloc-' + i, minor: it.apply_minor || null, ph: '', w: '150px', on: 'payLeftPaint()', extra: it.disputed ? 'disabled title="' + esc(tx('In dispute · settle it first')) + '"' : '' }) + '</td></tr>';
       }).join('') + '</tbody></table>'
     + '<div data-testid="pay_left" id="pay_left" style="font-size:var(--fs-1)"></div><div id="pay_why" data-testid="pay_why" style="color:var(--warn-2);font-size:var(--fs-1)"></div>';
   document.getElementById('pay_foot').innerHTML = '<button onclick="closeModal()">' + tx('Later') + '</button><button class="pri" data-testid="pay_confirm" onclick="payConfirm()">' + tx('Confirm') + '</button>';
@@ -452,14 +498,14 @@ function payProposalPaint() {
 }
 function payAllocs() {
   return ((PAY.proposal && PAY.proposal.proposal) || []).map(function (it, i) {
-    var v = (document.getElementById('alloc_' + i) || {}).value; var m = v === '' || v == null ? 0 : bkToMinor(v);
+    var v = (document.getElementById('alloc_' + i) || {}).value; var m = v === '' || v == null ? 0 : bkMoneyMinor(v);
     return { against_ref: it.against_ref, amount_minor: m, disputed: !!it.disputed, open_minor: it.open_minor };
   });
 }
 function payLeftPaint() {
   var a = payAllocs(), used = a.reduce(function (s, x) { return s + (x.amount_minor > 0 ? x.amount_minor : 0); }, 0);
   var left = PAY.amount - used, box = document.getElementById('pay_left'); if (!box) return;
-  box.textContent = left >= 0 ? txf('{amt} stays on account', { amt: bkMoney(left) }) : txf('{amt} more than was paid', { amt: bkMoney(-left) });
+  box.textContent = left >= 0 ? txf('{amt} stays on account', { amt: bkMoney(left) }) : txf('{amt} more than was paid', { amt: bkMoney(Math.abs(left)) });
   box.style.color = left < 0 ? 'var(--warn-2)' : 'var(--grey)';
 }
 async function payConfirm() {
@@ -1355,7 +1401,7 @@ async function bkStmtRead(pid, list) {
   delete BK.stmtBusy[pid]; var lst = CBList.get(list); if (lst) lst.refresh();
 }
 function bkDuesCols(c) {
-  var dash = '<span style="color:var(--grey)">—</span>', amt = function (p, v) { return esc(bkMoney(bkDuesSide(p) === 'pay' ? -Number(v) : Number(v), c)); };
+  var dash = '<span style="color:var(--grey)">—</span>', amt = function (p, v) { return esc(bkMoney(Math.abs(Number(v || 0)), c)); };   /* the group head says whose it is (You owe / They owe you) — an amount here is never signed */
   return [
     { key: 'party', label: tx('Party'), prio: 1, sort: 'party', w: 300, html: true, cell: function (p) { return esc(bkPartyLabel(p.party_id, p.name)); } },
     { key: 'due', label: tx('Total due'), prio: 2, sort: 'due', num: true, w: 150, html: true, cell: function (p) { return '<b data-b="balance">' + amt(p, p.balance_minor) + '</b>'; } },
