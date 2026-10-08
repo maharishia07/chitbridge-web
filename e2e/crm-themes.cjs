@@ -23,7 +23,8 @@ const T = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', 
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail++; console.log('  XX  ' + m); } };
-const J = (r, status, o) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(o) });
+const C = require('./lib/contract.cjs'), crmApi = require('./lib/crm-api.cjs'), books = require('./lib/books-api.cjs');   /* every answer served for a route in the API contract is checked (e2e/fixtures/web-api.contract.json) */
+const J = C.json;
 function resolve(x, now) {
   if (typeof x === 'string') { const m = /^@([+-])(\d+)(h|d)$/.exec(x); return m ? new Date(now + (m[1] === '-' ? -1 : 1) * Number(m[2]) * (m[3] === 'h' ? 3600e3 : 86400e3)).toISOString() : x; }
   if (Array.isArray(x)) return x.map((v) => resolve(v, now));
@@ -39,32 +40,32 @@ const TODAY = new Date().toISOString().slice(0, 10);
 async function route(r) {
   const q = r.request(), u = new URL(q.url()), p = u.pathname, m = q.method(); let x;
   if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Mayur Bhavan', currency_code: 'INR' } });
-  if (p === '/api/books/health') return J(r, 200, { enabled: true, waiting: [] });
+  if (p === '/api/books/health') return J(r, 200, books.health());
   if (p === '/api/books/accounts') return J(r, 200, { accounts: [
     { code: '1300', name: 'Customers (Sundry Debtors)', is_group: false }, { code: '1300-P00001', name: 'Ravi Stores', is_group: false }, { code: '2100', name: 'Suppliers (Sundry Creditors)', is_group: false },
-    { code: '1400', name: 'Cash', is_group: false }, { code: '4000', name: 'Sales', is_group: false }, { code: '6010', name: 'Rent', is_group: false }] });
-  if (p === '/api/books/trial-balance') return J(r, 200, { currency: 'INR', rows: [{ code: '1300', name: 'Customers (Sundry Debtors)', dr_minor: 600000, cr_minor: 0 }, { code: '1400', name: 'Cash', dr_minor: 1240000, cr_minor: 0 }, { code: '4000', name: 'Sales', dr_minor: 0, cr_minor: 1590000 }, { code: '6010', name: 'Rent', dr_minor: 100000, cr_minor: 0 }], total_dr_minor: 1940000, total_cr_minor: 1840000 });
-  if (p === '/api/books/daybook') return J(r, 200, { currency: 'INR', entries: [['k1', 'C2/26-27/0016', 'c1', 'Ravi Stores', 11], ['k2', 'C2/26-27/0017', 'c2', 'Chola Auto Care', 12]].map(([id, no, pid, pname, n]) => ({ entry_id: 'je' + n, entry_no: 'JV/2026-27/0000' + n, posting_date: TODAY, doc_date: TODAY, event_type: 'sale_bill', source_chit_id: id, narration: 'Sale',
+    { code: '1400', name: 'Cash', is_group: false }, { code: '4000', name: 'Sales', is_group: false }, { code: '6010', name: 'Rent', is_group: false }].map((a) => books.accountRow(Object.assign({ account_id: 'acc-' + a.code }, a))) });
+  if (p === '/api/books/trial-balance') return J(r, 200, books.trialBalance([{ code: '1300', name: 'Customers (Sundry Debtors)', dr_minor: 600000, cr_minor: 0 }, { code: '1400', name: 'Cash', dr_minor: 1240000, cr_minor: 0 }, { code: '4000', name: 'Sales', dr_minor: 0, cr_minor: 1590000 }, { code: '6010', name: 'Rent', dr_minor: 100000, cr_minor: 0 }], { total_dr_minor: 1940000, total_cr_minor: 1840000, balanced: false }));
+  if (p === '/api/books/daybook') return J(r, 200, books.daybook([['k1', 'C2/26-27/0016', 'c1', 'Ravi Stores', 11], ['k2', 'C2/26-27/0017', 'c2', 'Chola Auto Care', 12]].map(([id, no, pid, pname, n]) => ({ entry_id: 'je' + n, entry_no: 'JV/2026-27/0000' + n, posting_date: TODAY, doc_date: TODAY, event_type: 'sale_bill', source_chit_id: id, narration: 'Sale',
     source: { kind: 'bill', ref: no, chit_id: id, how: 'On credit', counter: 'C2', by: 'Mayur Bhavan' },
-    lines: [{ code: '1300', name: 'Customers (Sundry Debtors)', party_id: pid, party_name: pname, dr_minor: 300000, cr_minor: 0 }, { code: '4000', name: 'Sales', rate: 12, dr_minor: 0, cr_minor: 267857 }, { code: '2200', name: 'Output CGST', rate: 6, dr_minor: 0, cr_minor: 32143 }] })) });
+    lines: [{ code: '1300', name: 'Customers (Sundry Debtors)', party_id: pid, party_name: pname, dr_minor: 300000, cr_minor: 0 }, { code: '4000', name: 'Sales', rate: 12, dr_minor: 0, cr_minor: 267857 }, { code: '2200', name: 'Output CGST', rate: 6, dr_minor: 0, cr_minor: 32143 }] })).map(books.entry)));
+  if (p === '/api/books/todo') return J(r, 200, []);
+  if (p === '/api/books/dues') return J(r, 200, books.dues([], { asOf: TODAY }));
+  if ((x = p.match(/^\/api\/books\/party\/([^/]+)\/statement$/))) return J(r, 200, books.statement(x[1]));
   if (p.startsWith('/api/books/')) return J(r, 200, {});
   if (p === '/api/folders') return J(r, 200, { folders: [{ folder_id: 'c0000000-0000-4000-8000-00000000000b', parent_id: null, name: 'Urgent', scope: 'task', kind: 'filed', count: 1 }] });
   if (p === '/api/chits/inbox') return J(r, 200, { chits: [{ chit_id: 'ord1', purpose: 'order', manual_subject: 'Order from Chola', sender_entity_display_name: 'Chola Auto Care', current_status: 'pending', created_at: '2026-10-01T04:00:00Z', summary_json: {}, all_recipients: [] }, { chit_id: 'job1', purpose: 'general', manual_subject: 'Fix the shutter', sender_entity_display_name: 'Bills Shop', current_status: 'pending', created_at: '2026-10-01T03:00:00Z', summary_json: {}, all_recipients: [] }], total: 2, page: 1, limit: 20 });
   if (p === '/api/chits/sent') return J(r, 200, { chits: [], total: 0, page: 1, limit: 20 });
-  if (p === '/api/crm/parties' && m === 'GET') {
-    const asApi = (pp) => Array.isArray(pp.roles) ? Object.assign({}, pp, { roles: { customer: pp.roles.indexOf('customer') >= 0, supplier: pp.roles.indexOf('supplier') >= 0 } }) : pp;
-    return J(r, 200, { parties: FX.list.map(asApi), alerts: FX.alerts });
-  }
-  if ((x = p.match(/^\/api\/crm\/parties\/([^/]+)\/timeline$/))) { const tl = FX.timelines[x[1]] || { counts: { all: 0 }, entries: [] }; return J(r, 200, { entries: (tl.many || tl.entries).slice(0, 50), next_before: null, counts: tl.counts }); }
+  /* ── the CRM, answered as chitbridge-api answers it (e2e/lib/crm-api.cjs builds the shapes from the golden seed; the contract holds them) ── */
+  if (p === '/api/crm/parties' && m === 'GET') return J(r, 200, crmApi.list(FX.list, { records: FX.records }));
+  if ((x = p.match(/^\/api\/crm\/parties\/([^/]+)\/timeline$/))) return J(r, 200, crmApi.timeline(FX.timelines[x[1]] || { entries: [] }, x[1], {}));
   if ((x = p.match(/^\/api\/crm\/parties\/([^/]+)$/)) && m === 'GET') {
     const key = decodeURIComponent(x[1]); const row = FX.list.find((q2) => q2.party_id === key || q2.party_no === key);
     if (!row) return J(r, 404, { error: 'Not found' });
-    const tl = FX.timelines[row.party_id] || { counts: { all: 0 }, entries: [] };
-    return J(r, 200, Object.assign({}, row, FX.records[row.party_id] || {}, { timeline_head: (tl.many || tl.entries).slice(0, 5), counts: tl.counts }));
+    return J(r, 200, crmApi.record(FX.list, row.party_id, FX.records[row.party_id], FX.followups));
   }
   if (p === '/api/crm/followups' && m === 'GET') {
     const done = u.searchParams.get('done') === '1';
-    return J(r, 200, { followups: FX.followups.filter((f) => (done ? !!f.done_at : !f.done_at)), co_assists: FX.co_assists });
+    return J(r, 200, crmApi.followups(FX.followups.filter((f) => (done ? !!f.done_at : !f.done_at))));
   }
   if (m === 'GET') return J(r, 200, {});
   return J(r, 200, { ok: true });
@@ -106,7 +107,7 @@ const { measure } = require('./lib/theme-measure.cjs');   /* the measurement, ru
     { name: 'crm Follow-ups', url: '/crm.html', need: 'full', go: crmSteps('#/followups', '[data-testid^="crm-fu-"]'), shot: 'crm-followups' },
     { name: 'accounts Day book', url: '/accounts.html', need: 'full', go: accSteps('daybook', '[data-testid^="db-entry-"]') },
     { name: 'accounts Ledgers', url: '/accounts.html', need: 'full', go: accSteps('ledgers', '[data-testid="lt-band-people"]') },
-    { name: 'index (home)', url: '/', go: async (p) => { await p.waitForSelector('body', { timeout: 15000 }); await p.waitForTimeout(1200); } },
+    { name: 'index (home)', url: '/', go: async (p) => { await p.waitForFunction(() => document.body.innerText.trim().length > 20, null, { timeout: 15000 }); await p.waitForTimeout(1200); } },   /* the N18 shell is fixed-position: <body> has no height, so Playwright calls it hidden — wait for painted text instead */
     { name: 'app Task list', url: '/app.html#/app', go: async (p) => { await p.waitForSelector('[data-testid="nav-task"]', { timeout: 20000 }); await p.waitForTimeout(1500); } },
     { name: 'list-lab', url: '/list-lab.html', go: async (p) => { await p.waitForSelector('.cbl-row', { timeout: 15000 }); await p.waitForTimeout(300); } },
   ];
@@ -201,6 +202,7 @@ const { measure } = require('./lib/theme-measure.cjs');   /* the measurement, ru
   }
 
   ok(threw.length === 0, 'no page error' + (threw.length ? ': ' + threw[0] : ''));
+  ok(...C.finish());
   ok(offHost.length === 0, 'nothing tried to leave the browser' + (offHost.length ? ': ' + offHost[0] : ''));
   await b.close(); srv.close();
   console.log('\ncrm-themes: ' + pass + ' passed, ' + fail + ' failed');
