@@ -193,8 +193,8 @@ async function route(S, r) {
     ok(nm('P-0008') === 0 && !/Folded/.test(await text(p, '#crm_list')), 'the merged party (P-0008, merged_into P-0001) is never listed');
     ok(/Local/.test(await text(p, '[data-testid="crm-row-P-0003"]')) && /On ChitBridge/.test(await text(p, '[data-testid="crm-row-P-0001"]')) && /Walk-in/.test(await text(p, '[data-testid="crm-row-walkin-919876500021"]')), 'chips: P-0003 Local · P-0001 On ChitBridge · the walk-in Walk-in');
     const due1 = await text(p, '[data-testid="crm-row-P-0001"] [data-testid="party-due-pid-0001"]'), due2 = await text(p, '[data-testid="crm-row-P-0002"] [data-testid="party-due-pid-0002"]');
-    ok(/↑/.test(due1) && /481\.65/.test(due1) && !/P-0001/.test(due1), 'P-0001 dues: ↑ you owe them ₹481.65 — the server\'s −48165, painted, the party number not said twice (' + due1.trim() + ')');
-    ok(/↓/.test(due2) && /12,450\.00/.test(due2), 'P-0002 dues: ↓ they owe you ₹12,450.00 — ONE netted figure for both roles (' + due2.trim() + ')');
+    ok(/^you owe/.test(due1.trim()) && /481\.65/.test(due1) && !/P-0001/.test(due1), 'P-0001 dues: you owe ₹481.65 — the server\'s −48165, painted, the party number not said twice (' + due1.trim() + ')');
+    ok(/^they owe you/.test(due2.trim()) && /12,450\.00/.test(due2), 'P-0002 dues: they owe you ₹12,450.00 — ONE netted figure for both roles (' + due2.trim() + ')');
     ok(/late/i.test(await text(p, '[data-testid="crm-row-P-0001"]')), 'a late due is marked (the server said dues_overdue)');
     const heads = await p.$$eval('#crm_list .cbl-hc', (h) => h.map((x) => x.innerText.replace(/[▲▼⇅]/g, '').trim()));
     ok(JSON.stringify(heads) === JSON.stringify(['PARTY', 'DUES', 'NEXT FOLLOW-UP']), 'three columns by default: ' + heads.join(' · '));
@@ -279,7 +279,7 @@ async function route(S, r) {
     ok(await p.locator('[data-testid="crm-act-message"]').count() === 1, 'ON-CHITBRIDGE party: Message is the primary action');
     ok(/CB4M8RT2KD/.test(await text(p, '[data-testid="crm-ident"]')) && /chola-auto/.test(await text(p, '[data-testid="crm-ident"]')), 'the identity block: party no · User ID · ChitBridge ID shown together');
     const chips = await text(p, '.rchips');
-    ok(/Customer/.test(chips) && /Supplier/.test(chips) && /On ChitBridge/.test(chips) && /↓/.test(chips), 'header chips: both roles, On ChitBridge, the dues chip');
+    ok(/Customer/.test(chips) && /Supplier/.test(chips) && /On ChitBridge/.test(chips) && /they owe you/.test(chips), 'header chips: both roles, On ChitBridge, the dues chip');
     ok(/Sent/.test(await text(p, '[data-testid="crm-state-chit-ch-431"]')) && /3,864\.00/.test(await text(p, '[data-testid="crm-amt-chit-ch-431"]')), 'a chit shows its status word and amount (the API sends 3864 in MAJOR units → ₹3,864.00)');
     await p.click('[data-testid="crm-tl-chit-ch-431"]'); await p.waitForFunction(() => { const d = document.getElementById('chitsheet'); return !!(d && d.open); }, null, { timeout: 8000 }).catch(() => {});
     ok(await p.evaluate(() => { const d = document.getElementById('chitsheet'); return !!(d && d.open); }) && S.calls.some((c) => /\/api\/chits\/ch-431/.test(c)), 'an entry that is a chit opens the chit sheet in place (openChitSheet, ch-431)');
@@ -325,7 +325,7 @@ async function route(S, r) {
     await recReady(p, 'Chola Auto Care');
     ok(/Dues show when CB Accounts is on/.test(await text(p, '[data-testid="crm-sec-ledger"]')) || (await p.click('[data-testid="crm-sec-ledger"] summary'), /Dues show when CB Accounts is on/.test(await text(p, '[data-testid="crm-sec-ledger"]'))), 'Ledger off: "Dues show when CB Accounts is on"');
     ok(await p.locator('[data-testid="crm-ledger-on"]').count() === 1, 'the owner sees Switch on');
-    ok(await p.locator('[data-testid="crm-next-dues"]').count() === 0 && !/↓/.test(await text(p, '.rchips')), 'Ledger off: no dues chip and no late-dues item');
+    ok(await p.locator('[data-testid="crm-next-dues"]').count() === 0 && !/they owe you/.test(await text(p, '.rchips')), 'Ledger off: no dues chip and no late-dues item');
     await ctx.close();
   }
 
