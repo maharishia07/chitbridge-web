@@ -216,6 +216,7 @@
     '.cbav-btn{width:34px;height:34px;border-radius:50%;border:1px solid var(--av-line);background:var(--av-card);color:var(--av-ink);font-weight:700;display:grid;place-items:center;padding:0;font-size:calc(14px * var(--k,1))}' +
     '.cbav-btn[aria-expanded="true"]{outline:2px solid var(--av-blue);outline-offset:1px}' +
     '.cbav-signin{display:inline-flex;align-items:center;height:34px;padding:0 15px;border-radius:9px;background:var(--green,#16693F);color:#fff;font-size:calc(13.5px * var(--k,1));font-weight:700;text-decoration:none}' +
+    'button.cbav-signin{border:0;cursor:pointer;font-family:inherit}' +
     '.cbav-pop{position:absolute;inset-inline-end:0;top:calc(100% + 6px);z-index:1000;width:min(344px,calc(100vw - 32px));max-height:calc(100vh - 64px);overflow-y:auto;overscroll-behavior:contain;' +
     'padding:12px 14px;background:var(--av-card);color:var(--av-ink);border:1px solid var(--av-line);border-radius:12px;box-shadow:var(--av-shadow);font-size:calc(14px * var(--k,1));line-height:1.35}' +
     '.cbav-who{display:flex;gap:10px;align-items:center;padding-bottom:10px;border-bottom:1px solid var(--av-soft)}' +
@@ -327,7 +328,11 @@
     if (pop) keepTop = pop.scrollTop;
     try { var ae = doc.activeElement; if (ae && el.contains(ae)) focusKey = ae.getAttribute('data-testid'); } catch (_) {}
     if (!P) {
-      el.innerHTML = '<span class="cbav"><a class="cbav-signin" data-testid="signin-door" href="' + esc(o.signInHref || '/app.html#/login') + '">Sign in</a></span>';
+      /* ⭐ M14: a page that mounts CBSignin (index · CB Accounts · CB CRM) gives onSignIn — the door opens the one sign-in window IN PLACE.
+         Without it the door is the link it always was (the workshop's own #/login). */
+      el.innerHTML = typeof o.onSignIn === 'function'
+        ? '<span class="cbav"><button type="button" class="cbav-signin" data-testid="signin-door" data-av="signin">Sign in</button></span>'
+        : '<span class="cbav"><a class="cbav-signin" data-testid="signin-door" href="' + esc(o.signInHref || '/app.html#/login') + '">Sign in</a></span>';
       return;
     }
     var label = (P.entity || P.name || 'You') + ': your menu';
@@ -373,6 +378,7 @@
       if ((b = t.closest('[data-av]'))) {
         var k = b.getAttribute('data-av');
         if (k === 'signout') { e.preventDefault(); return signOut(); }
+        if (k === 'signin' && typeof o.onSignIn === 'function') { e.preventDefault(); return o.onSignIn(); }
         if (k === 'profile' && o.onProfile) { e.preventDefault(); openNow = false; paint(); return o.onProfile(); }
         if (k === 'settings' && o.onSettings) { e.preventDefault(); openNow = false; paint(); return o.onSettings(); }
         if (k === 'support' && o.onSupport) { e.preventDefault(); openNow = false; paint(); return o.onSupport(); }

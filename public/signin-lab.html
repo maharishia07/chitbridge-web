@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sign-in Lab</title>
+<!--
+  THE SIGN-IN WINDOW'S OWN GALLERY (M14, Athi 2026-10-08 — like list-lab.html for CBList). PRACTICE MODE: no real account, no real
+  server. This page mounts THE SAME module every app mounts — /engine/signin.js (the rules) + /app/signin-ui.js (CBSignin.mount) — with
+  nothing lab-only inside it. The stand-in ChitBridge lives HERE: window.fetch answers /api/signin/* from the planted people below,
+  exactly as routes/signin.js answers (tests/signin-contact.test.cjs is the real door's proof). The module keeps its session in a store
+  this page hands it (io.store), so practising here never signs this browser's real apps in or out.
+  Every combination: who (owner · employee .br · customer .cr · network store · auditor · accountant) × by (mobile · e-mail · user id)
+  × stage (first time → set PIN · returning PIN · locked · device removed) · one contact → two people (the chooser) · the method slots
+  (hidden as in the apps, or shown as stand-ins). After "Signed in": who, the stored id (grammar and all), kind, device, session life,
+  method — and WHAT YOU CAN DO, computed from the real sources: public/app/manifest.json (apps + needs), /engine/rail.js (R01's
+  actions by access level); what only the server decides (middleware/hat-gate.js) is said so, never guessed.
+  e2e/signin-window.cjs drives this page. Live mode against the test entity: backlog.
+-->
+<style>
+:root{
+  --page:#FCFAF5; --card:#FFFFFF; --panel:#F3EFE6; --line:#DDD6C6; --line-soft:#E6E0D2; --hair:#F0ECE2;
+  --ink:#1D1B16; --muted:#5E594D; --faint:#8A8374; --ghost:#A8A295;
+  --green:#16693F; --green-d:#0D4A2B; --green-t:#E8F4ED; --green-b:#A9D3BC;
+  --amber:#E0A020; --amber-t:#FDF3DC; --amber-b:#EFD39A; --amber-i:#7A5205;
+  --red:#C4562F; --red-t:#FBEAE3; --red-b:#E7B9A8; --red-i:#8E3517;
+  --blue:#2F74C9; --blue-t:#E4EEFA; --blue-b:#B9D2EF; --blue-i:#174A87;
+  --proto:#6B4FA0; --proto-t:#F1ECF8;
+}
+:root[data-theme="dark"]{
+  --page:#15140F; --card:#1E1C17; --panel:#26241D; --line:#3A372D; --line-soft:#322F27; --hair:#2A2721;
+  --ink:#F1ECE0; --muted:#C2BBAA; --faint:#9A9383; --ghost:#7C7668;
+  --green:#5FBF8A; --green-d:#CFEBDA; --green-t:#16301F; --green-b:#2F5E43; --amber-i:#F2C977; --amber-t:#33280F; --amber-b:#6B5320;
+  --red:#E58561; --red-t:#3A1E14; --red-b:#6E3624; --red-i:#F2A688; --blue-i:#A9CBF3; --blue-t:#16263A; --blue-b:#2E4B70;
+  --proto:#B9A2E3; --proto-t:#2A2238; color-scheme:dark }
+html,body{margin:0}
+body{background:var(--page);color:var(--ink);font:15px/1.45 'IBM Plex Sans','Segoe UI',system-ui,sans-serif}
+.proto{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:8px 16px;background:var(--proto-t);border-bottom:1px dashed var(--proto);font-size:12.5px;color:var(--proto)}
+.proto b{font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:11px}
+.proto .grp{display:flex;gap:2px;flex-wrap:wrap}
+.proto button{border:1px solid transparent;background:none;border-radius:7px;padding:4px 9px;min-height:32px;color:var(--proto);font:inherit;cursor:pointer}
+.proto button[aria-pressed="true"]{border-color:var(--proto);background:var(--card);font-weight:600}
+.wrap{max-width:1080px;margin:0 auto;padding:18px 16px 60px}
+.cols{display:grid;grid-template-columns:minmax(0,440px) minmax(0,1fr);gap:18px;align-items:start}
+@media(max-width:860px){.cols{grid-template-columns:1fr}}
+.hint{margin:0 0 12px;padding:10px 13px;border-radius:10px;background:var(--blue-t);border:1px solid var(--blue-b);color:var(--blue-i);font-size:13.5px}
+.hint code{font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:600}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:16px 18px;margin-bottom:14px}
+.panel h3{margin:0 0 10px;font-size:16px}
+.panel h4{margin:14px 0 6px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.kv{display:grid;grid-template-columns:max-content 1fr;gap:4px 14px;font-size:14px}
+.kv dt{color:var(--muted)} .kv dd{margin:0;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:13.5px}
+.row{display:flex;align-items:baseline;gap:8px;padding:5px 0;border-top:1px solid var(--hair);font-size:14px}
+.row:first-of-type{border-top:0}
+.row .n{flex:1} .row .s{font-size:12.5px;color:var(--muted)}
+.row.ok .m::before{content:"✓ ";color:var(--green)} .row.no .m::before{content:"✗ ";color:var(--red)} .row.no{color:var(--muted)}
+.row.plan{color:var(--ghost)} .row.plan .m::before{content:"○ "}
+.tag{display:inline-block;font-size:11.5px;padding:1px 7px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.tabs{display:flex;gap:4px;margin:0 0 12px}
+.tabs button{font:inherit;padding:7px 13px;min-height:40px;border:1px solid var(--line);background:var(--card);border-radius:9px;color:inherit;cursor:pointer}
+.tabs button[aria-pressed="true"]{border-color:var(--green);font-weight:700}
+.toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--ink);color:var(--page);padding:8px 14px;border-radius:9px;font-size:13.5px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="proto" id="proto" role="region" aria-label="Practice controls, not part of the product">
+  <b>Practice only</b>
+  <span>Who:</span><span class="grp" id="pWho"></span>
+  <span>By:</span><span class="grp" id="pBy"></span>
+  <span>Stage:</span><span class="grp" id="pStage"></span>
+  <span>Slots:</span><span class="grp" id="pSlots"></span>
+  <span>Device:</span><span class="grp" id="pDev"></span>
+  <span>Theme:</span><span class="grp" id="pTheme"></span>
+</div>
+<div class="wrap">
+  <div class="tabs" role="tablist"><button type="button" data-tab="window" aria-pressed="true" data-testid="tab-window">Sign in</button><button type="button" data-tab="roadmap" aria-pressed="false" data-testid="tab-roadmap">Roadmap</button></div>
+  <div id="tabWindow">
+    <div class="cols">
+      <div>
+        <p class="hint" id="hint" data-testid="lab-hint"></p>
+        <div id="signin"></div>
+      </div>
+      <div id="after" data-testid="lab-after" hidden></div>
+    </div>
+  </div>
+  <div id="tabRoadmap" hidden><div class="panel" id="roadmap" data-testid="lab-roadmap"></div></div>
+</div>
+<div class="toast" id="toast" hidden></div>
+<script src="/engine/signin.js"></script>     <!-- CBSignin: the RULES (engines signin v1.30) -->
+<script src="/app/signin-ui.js"></script>     <!-- CBSignin.mount: THE ONE WINDOW — exactly what index · CB Accounts · CB CRM mount -->
+<script src="/engine/rail.js"></script>       <!-- CBRail (R01): the actions and their refusal words, by access level -->
+<script>
+(function () {
+'use strict';
+var h = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+var $ = function (id) { return document.getElementById(id); };
+var toastT; function toast(t) { var e = $('toast'); e.textContent = t; e.hidden = false; clearTimeout(toastT); toastT = setTimeout(function () { e.hidden = true; }, 2400); }
+
+/* ═════ THE PLANTED PEOPLE — practice identities whose FIELDS drive the real rules (nothing below is a real account) ═════ */
+var SHOP = { id: 'ent-mayur', name: 'Mayur Bhavan', bridge: 'CB-MAYUR', userid: 'mayuri123' };
+var PEOPLE = {
+  owner:      { label: 'Owner', name: 'Mayur Bhavan', id: 'mayuri123', kind: 'entity', mobile: '9876543210', email: 'athi@mayur.test', userid: 'mayuri123',
+                code: '123456', access_level: 'editor', can_see_costs: true, hat: 'own' },
+  employee:   { label: 'Employee (.br)', name: 'Bala', id: 'bala@mayuri123.br', kind: 'actor', mobile: '9000000001', email: 'bala@mail.test', userid: 'bala@mayuri123.br',
+                code: '123456', pin: '4826', access_level: 'editor', can_see_costs: false, hat: 'act' },
+  customer:   { label: 'Customer (.cr)', name: 'Kavi', id: 'kavi=mail.test@mayuri123.cr', kind: 'customer', mobile: '9111111111', email: 'kavi@mail.test', userid: null,
+                code: '123123' },
+  brand:      { label: 'Network store', name: 'Athi · Chennai', id: 'athi.chennai', kind: 'entity', mobile: null, email: null, userid: 'athi.chennai',
+                code: '123456', operator: true, access_level: 'editor', can_see_costs: true, hat: 'own' },
+  auditor:    { label: 'Auditor', name: 'Meera', id: 'meera@mayuri123.br', kind: 'actor', mobile: '9222222222', email: 'meera@audit.test', userid: 'meera@mayuri123.br',
+                code: '123456', pin: '1357', access_level: 'commenter', can_see_costs: true, hat: 'audit' },
+  accountant: { label: 'Accountant', name: 'Suresh', id: 'suresh@mayuri123.br', kind: 'actor', mobile: '9333333333', email: 'suresh@ca.test', userid: 'suresh@mayuri123.br',
+                code: '123456', pin: '2468', access_level: 'viewer', can_see_costs: true, hat: 'mis' },
+  shared:     { label: 'Shared contact', name: 'Athi', id: 'athi@alpha-timers.br', kind: 'actor', mobile: '9876543210', email: 'athi@mayur.test', userid: 'athi@alpha-timers.br',
+                code: '123456', pin: '2580', access_level: 'editor', can_see_costs: false, hat: 'act', shop: { id: 'ent-alpha', name: 'Alpha Timers', bridge: 'CB-ALPHA' } },
+};
+/* roles that exist only as an idea — shown greyed, never as if they work (Athi: "planned role — not built") */
+var PLANNED_ROLES = [
+  { role: 'Waiter (restaurant)', flow: 'tables → till → bill' },
+  { role: 'Delivery rider', flow: 'orders → delivery → proof' },
+  { role: 'Kitchen', flow: 'orders → prepare → ready' },
+];
+var BY = [['mobile', 'Mobile'], ['email', 'E-mail'], ['userid', 'User ID']];
+var STAGES = [['first', 'First time'], ['returning', 'Returning'], ['locked', 'Locked'], ['removed', 'Device removed']];
+var sel = { who: 'owner', by: 'mobile', stage: 'first', slots: 'hidden', dev: 'web', tab: 'window' };
+
+/* ═════ THE STAND-IN CHITBRIDGE — window.fetch answers /api/signin/* as routes/signin.js does; everything else is real ═════ */
+var realFetch = window.fetch.bind(window);
+var LIVE = null;                         /* the people as this scenario left them (codes spent, PINs set) */
+function reset() {
+  LIVE = JSON.parse(JSON.stringify(PEOPLE));
+  if (sel.who !== 'shared') delete LIVE.shared;      /* the second person on the owner's contacts exists only in that scenario */
+  var p = LIVE[sel.who];
+  if (sel.stage === 'first') { if (p.kind === 'actor') p.pin = null; }
+  if (p.kind === 'actor' && sel.stage !== 'first' && !p.pin) p.pin = '4826';
+  p.locked = sel.stage === 'locked'; p.removed = sel.stage === 'removed';
+  LIVE.alphaOwner = { name: 'Alpha Timers', id: 'alpha-timers', kind: 'entity', code: '123456' };
+}
+var b64 = function (o) { return btoa(unescape(encodeURIComponent(JSON.stringify(o)))).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_'); };
+function tokenOf(p, device) {
+  var now = Math.floor(Date.now() / 1000), life = device ? (sel.dev === 'till' ? 30 : 7) * 86400 : 7 * 86400;
+  var c = { identity_id: 'id-' + p.id, identity_type: p.kind, display_name: p.name, bridge_id: p.kind === 'entity' ? (p.shop || SHOP).bridge : 'CB-' + p.name.toUpperCase(), iat: now, exp: now + life };
+  if (p.kind !== 'entity') { c.parent_entity_id = (p.shop || SHOP).id; c.parent_entity_name = (p.shop || SHOP).name; c.parent_bridge_id = (p.shop || SHOP).bridge; }
+  if (device) { c.kind = 'person'; c.jti = 'j-' + Math.random().toString(36).slice(2, 8); c.device_id = device; c.surface = sel.dev; }
+  return b64({ alg: 'none', typ: 'JWT' }) + '.' + b64(c) + '.practice';
+}
+function whoIs(id) {
+  id = String(id || '').trim().toLowerCase();
+  var all = Object.keys(LIVE).map(function (k) { return LIVE[k]; });
+  var exact = all.filter(function (p) { return String(p.id).toLowerCase() === id; });
+  if (exact.length) return exact;
+  return all.filter(function (p) { return [p.mobile, p.email, p.userid].filter(Boolean).some(function (c) { return String(c).toLowerCase() === id; }); });
+}
+var choicesOf = function (ps) { return ps.map(function (p) { return { id: p.id, kind: p.kind === 'actor' ? 'employee' : p.kind === 'customer' ? 'customer' : 'owner', name: p.name, shop: p.kind === 'entity' ? p.name : (p.shop || SHOP).name }; }); };
+var CALLS = [];
+function standIn(path, body, headers) {
+  var id = body.id || body.email || body.user_id, ps = whoIs(id), p = ps[0];
+  var J = function (status, b) { return { status: status, body: b }; };
+  if (path === '/api/signin/ask') {
+    if (!ps.length) return J(400, { error: 'Not found', code: 'NO_ACCOUNT', message: 'No account found — please register first' });
+    if (ps.length > 1 && !ps.every(function (x) { return x === ps[0]; })) return J(409, { error: 'Which account?', code: 'CHOOSE_IDENTITY', message: 'That contact is on more than one account. Choose one.', choices: choicesOf(ps) });
+    if (p.kind === 'actor' && p.pin) return J(200, { message: 'Enter your PIN.', use_pin: true, user_id: p.id, kind: 'actor', need: 'pin', id: p.id });
+    p.issued = p.code; p.sent = (p.sent || 0) + 1;
+    if (p.operator) return J(200, { message: 'This store signs in with the code its network operator issued.', handle: p.id, operator_issued: true, kind: 'entity', need: 'code', id: p.id });
+    return J(200, { message: p.kind === 'customer' ? (/@/.test(id) ? 'Code sent to your email' : 'Code sent to your phone') : 'Verification code sent to your email', kind: p.kind, need: 'code', id: p.id });
+  }
+  if (path === '/api/signin/verify') {
+    if (ps.length > 1) return J(409, { error: 'Which account?', code: 'CHOOSE_IDENTITY', choices: choicesOf(ps) });
+    if (!p) return J(400, { error: 'Verification failed', code: 'NO_ACCOUNT', message: 'That User ID is not recognised.' });
+    if (p.locked) return J(400, { error: 'Verification failed', message: 'Too many wrong attempts. Ask your admin to reset your PIN.' });
+    if (p.kind === 'actor' && p.pin) { if (body.pin !== p.pin) return J(400, { error: 'Verification failed', message: 'Incorrect PIN. 4 attempts remaining.' }); p.method = 'pin'; }
+    else { if (!p.issued || body.otp !== p.issued) return J(400, { error: 'Verification failed', message: 'Invalid or expired OTP' }); p.issued = null; p.method = 'code'; }
+    if (p.removed) return J(403, { error: 'Forbidden', code: 'DEVICE_REVOKED', message: 'The shop removed this device. Ask the owner.' });
+    var device = headers['X-Device-Id'] || headers['x-device-id'] || null;
+    var tok = tokenOf(p, device); p.token = tok; p.device = device;
+    return J(200, Object.assign({ message: 'Verified successfully', token: tok,
+      identity: { identity_id: 'id-' + p.id, bridge_id: 'CB', display_name: p.name, user_id: p.kind === 'customer' ? null : p.id, email: p.kind === 'customer' ? p.id : p.email, identity_type: p.kind, entity_id: (p.shop || SHOP).id } },
+      p.kind === 'actor' && !p.pin ? { requires_pin_setup: true } : {}));
+  }
+  if (path === '/api/signin/pin') {
+    var owner = Object.keys(LIVE).map(function (k) { return LIVE[k]; }).filter(function (x) { return x.token && ('Bearer ' + x.token) === (headers.Authorization || headers.authorization); })[0];
+    if (!owner) return J(401, { error: 'Unauthorized' });
+    owner.pin = body.pin; return J(200, { message: 'PIN set successfully — use PIN for future logins' });
+  }
+  return null;
+}
+window.fetch = function (url, opts) {
+  var u = String(url), m = u.match(/\/api\/signin\/(ask|verify|pin)(\?|$)/);
+  if (!m) return realFetch(url, opts);
+  var body = {}; try { body = JSON.parse((opts && opts.body) || '{}'); } catch (_) {}
+  var r = standIn('/api/signin/' + m[1], body, (opts && opts.headers) || {});
+  CALLS.push({ path: '/api/signin/' + m[1], body: body });
+  return new Promise(function (res) { setTimeout(function () { res(new Response(JSON.stringify(r.body), { status: r.status, headers: { 'content-type': 'application/json' } })); }, 120); });
+};
+
+/* ═════ MOUNT — the module exactly as the apps mount it (a store of its own, so this browser's real session is never touched) ═════ */
+var WIN = null, STORE = null, MANIFEST = null;
+function memStore() { var m = {}; return { getItem: function (k) { return k in m ? m[k] : null; }, setItem: function (k, v) { m[k] = String(v); }, removeItem: function (k) { delete m[k]; }, all: m }; }
+function mountWindow() {
+  if (WIN) WIN.destroy();
+  reset(); CALLS = []; STORE = memStore();
+  var p = LIVE[sel.who];
+  var shown = sel.slots === 'shown';
+  WIN = CBSignin.mount($('signin'), {
+    apiBase: '', surface: sel.dev === 'till' ? 'till' : 'lab',
+    need: p.kind === 'customer' ? 'customer' : 'person', shop: p.kind === 'customer' ? SHOP.id : undefined,
+    deviceId: sel.dev === 'web' ? undefined : function () { return 'dev-practice-' + sel.dev; },
+    methods: shown ? { google: true, apple: true, microsoft: true, sso: true, passkey: true } : {},
+    onMethod: shown ? function (name) { toast(CBSignin.METHODS[name].label + ' — not connected yet'); } : undefined,
+    io: { store: STORE },
+    onIn: function (s) { paintAfter(s); },
+  });
+  $('after').hidden = true; $('after').innerHTML = '';
+  paintHint();
+}
+function typedFor(p) { return sel.by === 'mobile' ? p.mobile : sel.by === 'email' ? p.email : p.userid; }
+function paintHint() {
+  var p = LIVE[sel.who], typed = typedFor(p);
+  var cred = (p.kind === 'actor' && p.pin) ? 'PIN <code>' + h(p.pin) + '</code>' : 'code <code>' + h(p.code) + '</code>' + (p.operator ? ' (from the network)' : '');
+  var extra = sel.stage === 'first' && p.kind === 'actor' ? ' · then choose a PIN' : sel.stage === 'locked' ? ' · this account is locked' : sel.stage === 'removed' ? ' · the owner removed this device' : '';
+  $('hint').innerHTML = typed ? 'Type <code data-testid="lab-typed">' + h(typed) + '</code> · ' + cred + extra
+                              : 'This ' + h(p.label.toLowerCase()) + ' has no ' + h(sel.by === 'mobile' ? 'mobile' : sel.by === 'email' ? 'e-mail' : 'user id') + '. Pick another way in.';
+  if (sel.who === 'shared' && sel.by !== 'userid') $('hint').innerHTML += ' · the owner has it too · it will ask which one you are';
+}
+
+/* ═════ AFTER "SIGNED IN": who · stored id · kind · device · session life · method — and WHAT YOU CAN DO, from the real sources ═════ */
+function manifest() {
+  if (MANIFEST) return Promise.resolve(MANIFEST);
+  return realFetch('/app/manifest.json', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (m) { MANIFEST = m; return m; });
+}
+function whoCanOpen(e) {
+  var n = e.needs || {};
+  if (n.owner) return 'owner';
+  if (n.money) return 'owner · employees who may see costs';
+  return 'everyone signed in';
+}
+function mayOpen(e, p) {
+  var n = e.needs || {};
+  if (p.kind === 'customer') return { ok: false, why: 'a customer gets the storefront only' };
+  if (n.owner && p.kind !== 'entity') return { ok: false, why: 'owner only' };
+  if (n.money && p.kind !== 'entity' && !p.can_see_costs) return { ok: false, why: 'costs hidden (can_see_costs)' };
+  return { ok: true };
+}
+function levelOf(p) { return p.kind === 'entity' ? 'editor' : (p.access_level || 'editor'); }   /* the server's lib/access.js levelOf: an owner is always an editor; absent → editor */
+function paintAfter(s) {
+  var p = LIVE[sel.who], claims = CBSignin.jwtClaims(s.token);
+  var life = claims.exp && claims.iat ? Math.round((claims.exp - claims.iat) / 86400) + ' days' : '—';
+  var kindWord = p.kind === 'entity' ? (p.operator ? 'network store (owner)' : 'owner') : p.kind === 'actor' ? 'employee' : 'customer';
+  var head = '<div class="panel" data-testid="lab-signed-in"><h3>Signed in</h3><dl class="kv">' +
+    '<dt>Who</dt><dd data-testid="lab-who">' + h(s.name) + '</dd>' +
+    '<dt>Stored id</dt><dd data-testid="lab-stored-id">' + h(p.id) + '</dd>' +
+    '<dt>Kind</dt><dd data-testid="lab-kind">' + h(kindWord) + (p.hat && p.kind === 'actor' ? ' · hat ' + h(p.hat) : '') + '</dd>' +
+    '<dt>Shop</dt><dd>' + h(s.entity) + '</dd>' +
+    '<dt>Device</dt><dd data-testid="lab-device">' + h(s.device_id ? s.device_id + ' (listed · the owner can remove it)' : 'not named · not listed') + '</dd>' +
+    '<dt>Signed in for</dt><dd data-testid="lab-life">' + h(life) + (s.surface ? ' · ' + h(s.surface) : '') + '</dd>' +
+    '<dt>Method</dt><dd data-testid="lab-method">' + h(p.method === 'pin' ? 'PIN' : 'code') + (p.kind === 'actor' && p.method === 'code' ? ' · then a PIN was set' : '') + '</dd>' +
+    '<dt>Kept as</dt><dd>' + h(Object.keys(STORE.all).join(', ') || '—') + '</dd></dl></div>';
+  var lvl = levelOf(p);
+  var me = { level: lvl }, chit = { held: true, received: 'pending' };
+  var acts = (window.CBRail && CBRail.actions) ? CBRail.actions(chit, me) : {};
+  var actRows = Object.keys(acts).map(function (a) {
+    var v = acts[a];
+    return '<div class="row ' + (v.ok ? 'ok' : 'no') + '" data-testid="lab-action" data-action="' + h(a) + '" data-ok="' + v.ok + '"><span class="m n">' + h(a.replace(/_/g, ' ')) + '</span><span class="s">' + h(v.ok ? '' : CBRail.say(v.why)) + '</span></div>';
+  }).join('');
+  manifest().then(function (m) {
+    var built = (m.entries || []).filter(function (e) { return e.state === 'built'; });
+    var appRows = built.map(function (e) {
+      var v = mayOpen(e, p);
+      return '<div class="row ' + (v.ok ? 'ok' : 'no') + '" data-testid="lab-app" data-app="' + h(e.id) + '" data-ok="' + v.ok + '"><span class="m n">' + h(e.name) + '</span><span class="s">' + h(v.ok ? (e.route || '') : v.why) + '</span></div>';
+    }).join('');
+    var planned = PLANNED_ROLES.map(function (r) { return '<div class="row plan" data-testid="lab-planned"><span class="m n">' + h(r.role) + '</span><span class="s">' + h(r.flow) + ' · planned role — not built</span></div>'; }).join('');
+    $('after').innerHTML = head +
+      '<div class="panel" data-testid="lab-can"><h3>What you can do</h3>' +
+      '<h4>Apps (manifest.json)</h4>' + appRows +
+      '<h4>Actions on a chit you hold (rail.js · level <span class="tag" data-testid="lab-level">' + h(lvl) + '</span>)</h4>' + actRows +
+      '<h4>Also</h4>' +
+      '<div class="row ' + (p.kind === 'entity' || p.can_see_costs ? 'ok' : 'no') + '" data-testid="lab-costs"><span class="m n">See costs and margins</span><span class="s">can_see_costs (lib/cost.js)</span></div>' +
+      '<div class="row" data-testid="lab-hatgate"><span class="n">Writes under the ' + h(p.hat || 'own') + ' hat</span><span class="s">decided by the server (hat-gate.js)</span></div>' +
+      '<h4>Planned roles</h4>' + planned + '</div>';
+    $('after').hidden = false;
+  });
+}
+
+/* ═════ ROADMAP — every manifest entry by state, with who can open it (read from the manifest, never typed here) ═════ */
+function paintRoadmap() {
+  manifest().then(function (m) {
+    var groups = { built: [], workshop: [], coming: [] };
+    (m.entries || []).forEach(function (e) { (groups[e.state] || (groups[e.state] = [])).push(e); });
+    $('roadmap').innerHTML = '<h3>Roadmap — ' + (m.entries || []).length + ' entries (manifest v' + h(m.version || '') + ')</h3>' + Object.keys(groups).map(function (st) {
+      return '<h4 data-testid="roadmap-group" data-state="' + h(st) + '" data-count="' + groups[st].length + '">' + h(st) + ' · ' + groups[st].length + '</h4>' + groups[st].map(function (e) {
+        return '<div class="row" data-testid="roadmap-entry" data-state="' + h(st) + '"><span class="n">' + h(e.name) + (e.area ? ' <span class="tag">' + h(e.area) + '</span>' : '') + '</span><span class="s">' + h(whoCanOpen(e)) + (e.route ? ' · ' + h(e.route) : '') + '</span></div>';
+      }).join('');
+    }).join('');
+  });
+}
+
+/* ═════ THE STRIP ═════ */
+function btns(id, list, key) {
+  $(id).innerHTML = list.map(function (x) { return '<button type="button" data-' + key + '="' + h(x[0]) + '" aria-pressed="' + (sel[key] === x[0]) + '" data-testid="lab-' + key + '-' + h(x[0]) + '">' + h(x[1]) + '</button>'; }).join('');
+}
+function paintProto() {
+  btns('pWho', Object.keys(PEOPLE).map(function (k) { return [k, PEOPLE[k].label]; }), 'who');
+  btns('pBy', BY, 'by');
+  btns('pStage', STAGES, 'stage');
+  btns('pSlots', [['hidden', 'Hidden (as in apps)'], ['shown', 'Shown as stand-ins']], 'slots');
+  btns('pDev', [['web', 'Not named (web)'], ['till', 'Named (till, 30 d)'], ['phone', 'Named (phone, 7 d)']], 'dev');
+  var dark = document.documentElement.getAttribute('data-theme') === 'dark';
+  $('pTheme').innerHTML = '<button type="button" data-theme="light" aria-pressed="' + !dark + '">Light</button><button type="button" data-theme="dark" aria-pressed="' + dark + '">Dark</button>';
+}
+document.addEventListener('click', function (ev) {
+  var t = ev.target.closest('[data-who],[data-by],[data-stage],[data-slots],[data-dev],[data-theme],[data-tab]'); if (!t) return;
+  if (t.dataset.tab) { sel.tab = t.dataset.tab; $('tabWindow').hidden = sel.tab !== 'window'; $('tabRoadmap').hidden = sel.tab !== 'roadmap';
+    document.querySelectorAll('[data-tab]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.tab === sel.tab)); }); if (sel.tab === 'roadmap') paintRoadmap(); return; }
+  if (t.dataset.theme) { if (t.dataset.theme === 'dark') document.documentElement.setAttribute('data-theme', 'dark'); else document.documentElement.removeAttribute('data-theme'); paintProto(); return; }
+  ['who', 'by', 'stage', 'slots', 'dev'].forEach(function (k) { if (t.dataset[k]) sel[k] = t.dataset[k]; });
+  paintProto(); mountWindow();
+});
+var Q = new URLSearchParams(location.search);
+['who', 'by', 'stage', 'slots', 'dev', 'tab'].forEach(function (k) { if (Q.get(k)) sel[k] = Q.get(k); });
+paintProto(); mountWindow();
+if (sel.tab === 'roadmap') { $('tabWindow').hidden = true; $('tabRoadmap').hidden = false; document.querySelectorAll('[data-tab]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.tab === 'roadmap')); }); paintRoadmap(); }
+window.__lab = { sel: sel, calls: function () { return CALLS; }, live: function () { return LIVE; }, store: function () { return STORE && STORE.all; }, window: function () { return WIN; } };
+})();
+</script>
+</body>
+</html>

@@ -440,7 +440,13 @@
       root.CBAvatar.mount($('.cbsh-av'), ao);
     } else if (root.console) root.console.error('CBShell: load /app/avatar.js before the shell — the avatar is CBAvatar, never drawn here');
     if (root.CBBell && root.CBBell.mount) root.CBBell.mount(slots.bell, { apiBase: base, token: token });
-    if (!person && mode !== 'bar' && root.CBSignin && typeof root.CBSignin.mount === 'function') root.CBSignin.mount($('.cbsh-signin'), { apiBase: base });
+    /* ⭐ M14: signed out, the shell's own slot holds THE ONE SIGN-IN WINDOW (CBSignin.mount) — the page hands its contract through
+       o.signin (surface · need · onIn · deviceId …); the avatar's Sign in door only brings the person to it. */
+    if (!person && mode !== 'bar' && root.CBSignin && typeof root.CBSignin.mount === 'function') {
+      var so = { apiBase: base, surface: 'index', need: 'person' };
+      Object.keys(o.signin || {}).forEach(function (k) { so[k] = o.signin[k]; });
+      root.CBSignin.mount($('.cbsh-signin'), so);
+    }
 
     paintBar(); paintSheet();
     if (mode === 'home') paintAreas();
