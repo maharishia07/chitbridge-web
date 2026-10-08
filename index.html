@@ -65,6 +65,8 @@ body{margin:0;background:var(--page);color:var(--ink);font-family:var(--f-ui,'IB
 
 <script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies (engines screen) -->
 <script src="/app/avatar.js"></script>      <!-- CBAvatar: the one avatar — signed out it is the Sign in door; the shell mounts it -->
+<script src="/engine/signin.js"></script>   <!-- CBSignin: the sign-in RULES (engines signin) -->
+<script src="/app/signin-ui.js"></script>   <!-- CBSignin.mount: THE ONE SIGN-IN WINDOW (M14) — the door above opens it here, in place -->
 <script src="/app/one-person.js"></script>  <!-- CBOnePerson: one browser, one shop -->
 <script src="/app/kural.js"></script>       <!-- CBKural: the kural band; the shell gives it its place -->
 <script src="/app/shell.js"></script>       <!-- CBShell: the frame — header · five areas · kural -->
@@ -96,9 +98,17 @@ function mountShell(){
     person: SESS ? CBAvatar.personOf(SESS) : null,
     token: SESS && SESS.token,
     apiBase: CBShell.apiBase(),
-    kural: 'planning'
+    kural: 'planning',
+    /* ⭐ M14: THE FRONT DOOR. Signed out, the shell's own slot holds the one sign-in window (CBSignin.mount — the same module CB Accounts,
+       CB CRM and the till mount); signed in → the Home repaints. The avatar's Sign in door brings the person to the box. */
+    signin: { surface: 'index', need: 'person', onIn: function(){ SESS = session(); MINE = SESS ? CBOnePerson.who(SESS) : null; open_(); } },
+    avatar: { onSignIn: signinOpen }
   });
   return SHELL;
+}
+function signinOpen(){
+  var i = document.querySelector('[data-testid="shell-signin"] [data-testid="signin-id"]');
+  if (i) { try { i.scrollIntoView({ block: 'center' }); } catch (_) {} i.focus(); }
 }
 
 /* one read; the {ok,data,error} envelope unwrapped; any failure throws, and the caller paints nothing */
