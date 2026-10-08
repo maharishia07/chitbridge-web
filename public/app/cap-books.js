@@ -447,9 +447,12 @@ function payOpen(kind, partyId) {
     + '<div data-testid="pay_left" id="pay_left" style="font-size:var(--fs-1)"></div>'
     + '<div id="pay_bills" data-testid="pay_bills"></div>'
     + '<div id="pay_why" data-testid="pay_why" style="color:var(--warn-2);font-size:var(--fs-1)"></div>'
-    + '</div><div class="mfoot" id="pay_foot"><button onclick="closeModal()">' + tx('Cancel') + '</button><button class="pri" data-testid="pay_record" onclick="payRecord()">' + tx('Record') + '</button></div>');
+    + '</div><div class="mfoot" id="pay_foot"><button onclick="closeModal()">' + tx('Cancel') + '</button><button class="pri" data-testid="pay_record" onclick="payRecord()">' + tx('Record') + '</button>'
+    + (kind === 'supplier' ? '' : '<button data-testid="pay_remind" onclick="payRemind()">' + tx('Not paid yet — remind me') + '</button>') + '</div>');
   payPaint();
 }
+/** "Not paid yet — remind me" (SPEC-payments D3): nothing posts; it is the Remind of the Dues row — a message on the oldest open bill */
+function payRemind() { if (!PAY) return; var id = PAY.partyId; closeModal(); return bkRemind(id, null); }
 function payDirection() { return PAY.kind === 'supplier' ? 'out' : 'in'; }
 function payMode() { return (document.getElementById('pay_mode') || {}).value; }
 function payModePaint() { var c = document.getElementById('pay_chq'), on = payMode() === 'cheque'; if (c) { c.hidden = !on; c.style.display = on ? 'flex' : ''; } payPaint(); }
@@ -1219,7 +1222,10 @@ function bkLgHead() {
     var x = '';
     if (bkLtNarrow()) x += '<button type="button" class="cbl-tbtn cbl-ico" data-lt="back" data-testid="lt-back" aria-label="' + esc(tx('Back to all ledgers')) + '">‹</button>';
     if (bkLtFolded() && !bkLtNarrow()) x += '<button type="button" class="cbl-tbtn" data-lt="unfold" data-testid="lt-unfold" aria-label="' + esc(tx('Show the ledger list')) + '">☰ ' + esc(tx('Ledgers')) + '</button>';
-    if (own) x += '<button type="button" class="cbl-tbtn" data-lt="statement" data-testid="lg-statement">' + esc(tx('Statement')) + '</button>';
+    if (own) {
+      x += '<button type="button" class="cbl-tbtn" data-lt="statement" data-testid="lg-statement">' + esc(tx('Statement')) + '</button>';
+      x += '<button type="button" class="cbl-tbtn" data-lt="pay" data-testid="lg-pay">' + esc(tx(bkPartyKind(BK.lt.sel.party, BK.lt.sel.code) === 'supplier' ? 'Pay' : 'Receive')) + '</button>';
+    }
     el.innerHTML = x;
     if (typeof BK.slotWho === 'function') BK.slotWho(el);
   };
@@ -1317,6 +1323,7 @@ function bkLtBind(root) {
     if (d === 'unfold') { if (bkLtOverlay()) BK.lt.over = true; else { BK.lt.folded = false; bkLtPrefsSave(); } bkLtFoldPaint(); var q2 = document.getElementById('lt_q'); if (q2) q2.focus(); return; }
     if (d === 'back') { bkLtBack(); return; }
     if (d === 'statement') { bkLgStatement(); return; }
+    if (d === 'pay') { var sp = BK.lt.sel && BK.lt.sel.party; if (sp) payOpen(bkPartyKind(sp, BK.lt.sel.code), sp); return; }
   });
   root.addEventListener('input', function (ev) { if (ev.target.id === 'lt_q') { BK.lt.tq = ev.target.value; bkLtTreePaint(); } });
   root.addEventListener('keydown', function (ev) {
@@ -1466,8 +1473,57 @@ function bkDuesCols(c) {
   return [
     { key: 'party', label: tx('Party'), prio: 1, sort: 'party', w: 300, html: true, cell: function (p) { return esc(bkPartyLabel(p.party_id, p.name)); } },
     { key: 'due', label: tx('Total due'), prio: 2, sort: 'due', num: true, w: 150, html: true, cell: function (p) { return '<b data-b="balance">' + amt(p, p.balance_minor) + '</b>'; } },
-    { key: 'oldest', label: tx('Oldest due'), prio: 3, sort: 'oldest', w: 130, html: true, cell: function (p) { return p.oldest_due ? esc(bkDate(p.oldest_due)) : dash; } },
+    { key: 'oldest', label: tx('Oldest due'), prio: 3, sort: 'oldest', w: 130, html: true, cell: function (p) { return p.oldest_due ? '<span data-b="due">' + esc(bkDate(p.oldest_due)) + '</span>' : dash; } },
+    { key: 'age', label: tx('Age'), prio: 4, w: 120, html: true, cell: function (p) { var a = bkDuesAge(p); return a ? '<span data-b="age">' + esc(tx(a)) + '</span>' : dash; } },
+    { key: 'act', label: '', prio: 1, pin: 'end', w: 190, html: true, cell: function (p) { return bkDuesActs(p); } },
   ];
+}
+/** the oldest age bucket the party has money in — the server's own buckets (Schedule III), in the words of BK_BUCKETS */
+function bkDuesAge(p) {
+  var cols = bkDuesSide(p) === 'pay' ? BK_BUCKETS_PAY : BK_BUCKETS, b = p.buckets || {}, w = '';
+  cols.forEach(function (k) { if (Number(b[k[0]])) w = k[1]; });
+  return w;
+}
+/** the buttons on a Dues row: Receive (or Pay) opens the ONE unit; Remind (only on what is owed to you) messages the oldest open bill */
+function bkDuesActs(p) {
+  var kind = bkPartyKind(p.party_id), id = esc(p.party_id), rcv = kind === 'customer';
+  return '<span style="display:inline-flex;gap:6px" onclick="event.stopPropagation()">'
+    + '<button type="button" class="cbl-tbtn" data-testid="dues-pay-' + id + '" onclick="event.stopPropagation();payOpen(\'' + kind + '\',\'' + id + '\')">' + esc(tx(rcv ? 'Receive' : 'Pay')) + '</button>'
+    + (rcv ? '<button type="button" class="cbl-tbtn" data-testid="dues-remind-' + id + '" onclick="event.stopPropagation();bkRemind(\'' + id + '\',this)">' + esc(tx('Remind')) + '</button>' : '') + '</span>';
+}
+/** 'customer' (you receive) or 'supplier' (you pay): the party's side from the one /dues read, else the control account that is open */
+function bkPartyKind(pid, ctrl) {
+  var d = BK.dues && BK.dues[pid], side = d ? bkDuesSide(d) : ((BK_CTRL[ctrl] || {}).side || 'rcv');
+  return side === 'pay' ? 'supplier' : 'customer';
+}
+/**
+ * ⭐ REMIND (M28) — a MESSAGE on the oldest open bill's line, through CBThread (R02). Never a new chit kind, never a new route: the oldest open bill is
+ * the engine's own (/payments/preview lists the party's open bills oldest-due first — the list the Pay unit shows), its line is the first live line of
+ * that chit, and the words are the shopkeeper's to edit before they send. The send, the busy state and the outcome are CBThread's.
+ */
+async function bkRemindTarget(pid) {
+  var r = await api('booksPayPreview', { body: { party_id: pid, direction: 'in', amount_minor: 1, currency: bkCur(), allocate: 'oldest_first' } });
+  var bill = ((r && r.proposal) || []).filter(function (b) { return Number(b.open_minor) > 0 && !b.disputed; })[0];
+  if (!bill) throw new Error('nothing open');
+  var line = null, acts = null;
+  try {
+    var ch = await api('chit', { params: { id: bill.against_ref } }); acts = ch && ch.actions;
+    var ls = ((ch && ch.live_set) || []).filter(function (e) { return e && !e.removed && e.line_id; });
+    line = ls.length ? ls[0].line_id : null;
+  } catch (_) {}
+  return { chit_id: bill.against_ref, line_id: line, actions: acts, bill: bill, currency: r.currency, party: (r.party && r.party.name) || '' };
+}
+function bkRemind(pid, btn) {
+  if (typeof CBThread === 'undefined' || !CBThread) { toast(tx('Could not open the reminder')); return; }
+  return CBAction.run(btn || null, function () { return bkRemindTarget(pid); }, { key: 'remind:' + pid, failed: tx('No open bill to remind about'), outcome: bkRemindOpen });
+}
+function bkRemindOpen(t) {
+  var name = t.party || '';
+  var text = txf('Hello {name}, a reminder: bill {no} for {amt} was due on {date}. Please pay when you can.', { name: name, no: t.bill.bill_no || '', amt: bkMoney(t.bill.open_minor, t.currency), date: bkDate(t.bill.due_date) });
+  modal('<div class="mhd"><div class="t" data-testid="remind_title">' + esc(tx('Remind')) + ' · ' + esc(name) + '</div></div><div class="mbody">'
+    + '<div data-testid="remind_for" style="font-size:var(--fs-1);margin-bottom:8px">' + esc((t.bill.bill_no || '') + ' · ' + bkMoney(t.bill.open_minor, t.currency) + ' · ' + bkDate(t.bill.due_date)) + '</div>'
+    + '<div id="remind_thread" data-testid="remind_thread"></div></div><div class="mfoot"><button onclick="closeModal()">' + tx('Close') + '</button></div>');
+  CBThread.mount('remind_thread', { chit_id: t.chit_id, line_id: t.line_id || undefined, actions: t.actions || undefined, text: text, party: name, channel: 'external', thread_type: 'external', context: { host: 'dues', source: 'remind' } });
 }
 /**
  * the bills on a party's statement, as a next level's rows — read once, on the first time its row opens (the party's own
@@ -1504,8 +1560,8 @@ async function bkDues(body) {
       key: 'dues', t: tx, rows: function () { return open; }, id: function (p) { return p.party_id; }, columns: bkDuesCols(c),
       rowTid: function (p) { return 'dues-' + p.party_id; },
       /* They owe you / You owe: one head each, the customers first */
-      group: { default: 'side', order: ['rcv', 'pay'], by: function (p) { var s = bkDuesSide(p); return [tx(s === 'rcv' ? 'They owe you' : 'You owe'), s]; },
-        fig: function (rows) { return txf(rows.length === 1 ? '{n} party' : '{n} parties', { n: rows.length }); }, headTid: function (k) { return 'dues-side-' + k; } },
+      group: { default: 'side', order: ['rcv', 'pay'], by: function (p) { var s = bkDuesSide(p); return [tx(s === 'rcv' ? 'To collect' : 'To pay'), s]; },
+        fig: function (rows) { return txf(rows.length === 1 ? '{n} party' : '{n} parties', { n: rows.length }) + ' · ' + bkOwes(rows.reduce(function (t, p) { return t + Number(p.balance_minor || 0); }, 0), c); }, headTid: function (k) { return 'dues-side-' + k; } },
       search: function (p) { return [p.party_no, p.name, bkPartyLabel(p.party_id, p.name), p.balance_minor ? (Math.abs(p.balance_minor) / Math.pow(10, bkDec(c))).toFixed(bkDec(c)) : ''].join(' '); },
       sorts: [
         { key: 'party', label: tx('Party no'), cmp: function (a, b) { return String(a.party_no || '').localeCompare(String(b.party_no || ''), undefined, { numeric: true }); } },
@@ -1513,7 +1569,7 @@ async function bkDues(body) {
         { key: 'due', label: tx('Total due'), cmp: num(function (p) { return Math.abs(p.balance_minor || 0); }) },
         { key: 'oldest', label: tx('Oldest due'), cmp: function (a, b) { return String(a.oldest_due || '9999').localeCompare(String(b.oldest_due || '9999')); } },
       ],
-      filters: [{ key: 'side', label: tx('Side'), all: tx('Both sides'), options: [{ v: 'rcv', label: tx('They owe you') }, { v: 'pay', label: tx('You owe') }], match: function (p, v) { return bkDuesSide(p) === v; } }],
+      filters: [{ key: 'side', label: tx('Side'), all: tx('Both sides'), options: [{ v: 'rcv', label: tx('To collect') }, { v: 'pay', label: tx('To pay') }], match: function (p, v) { return bkDuesSide(p) === v; } }],
       next: function (p) { return bkDuesNext(p, c); },
       empty: { title: tx('Nothing is due') },
     });
