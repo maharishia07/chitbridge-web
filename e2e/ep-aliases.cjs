@@ -47,8 +47,6 @@ const BASELINE = new Set([
   'PUT /api/actors/assign/:id|assign,unassign',
   'GET /api/actors|actors,wlActors',
   'PATCH /api/entities/profile|saveProfile,shopStatus',
-  'GET /api/chits/:id/messages|messages,msgThread,wlMsgs',
-  'POST /api/chits/:id/messages|msgReply,sendMsg,wlMsgAdd',
   'GET /api/governance/readiness/:bridge_id|readinessOf',
   'POST /api/testing/cases/import|testCaseAdd,testCaseWrite',
   'GET /api/folders/messages|misMsgs,msgInbox',

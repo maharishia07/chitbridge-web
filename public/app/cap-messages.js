@@ -17,7 +17,7 @@
  * right for a list and wrong for a conversation — you would read a reply with the question it answers missing.
  * The per-chit route already returns the full line thread; opening asks it.
  */
-var RPL = { data: null, busy: false, err: null, all: false, track: '', open: {}, full: {}, sending: {} };
+var RPL = { data: null, busy: false, err: null, all: false, track: '', open: {} };
 
 /**
  * ⭐ TASK OR ORDER — Athi, 2026-08-15: *"both task and order messages, is there a way to segregate?"*
@@ -37,8 +37,6 @@ if (typeof EP !== 'undefined') {
   Object.assign(EP, {
     msgInbox:  { m: 'GET',  p: '/api/folders/messages', ok: 'y' },
     msgMark:   { m: 'POST', p: '/api/folders/messages/:id/mark', ok: 'y' },
-    msgReply:  { m: 'POST', p: '/api/chits/:id/messages', ok: 'y' },
-    msgThread: { m: 'GET',  p: '/api/chits/:id/messages', ok: 'y' },
   });
 }
 
@@ -57,7 +55,7 @@ function msgPaint(){
   /* R02 — each open thread's reply box + conversation is CBThread; a reply refreshes the inbox (the row's preview and count) */
   if (typeof CBThread !== 'undefined') CBThread.mountAll(el, { context: { host: 'replies' }, me: (typeof SESSION !== 'undefined' && (SESSION.entity || SESSION.name)) || '', onDone: function(){ loadMessages(); } });
 }
-function msgShowAll(){ RPL.all = !RPL.all; RPL.data = null; RPL.open = {}; RPL.full = {}; loadMessages(); }
+function msgShowAll(){ RPL.all = !RPL.all; RPL.data = null; RPL.open = {}; loadMessages(); }
 function msgUnread(){ return (RPL.data || []).filter(function(m){ return !m.read_at; }).length; }
 
 /**
@@ -137,26 +135,6 @@ async function msgKeep(key, ev){
   } catch (e) { toast((e && e.message) || 'Could not change that'); }
 }
 
-async function msgSend(key){
-  var t = msgThreads().filter(function(x){ return x.key === key; })[0];
-  if (!t) return;
-  var el = document.getElementById('msg_reply_' + key.replace(/[^a-z0-9]/gi, ''));
-  var txt = el ? String(el.value).trim() : '';
-  if (!txt) { toast('Nothing to send'); return; }
-  RPL.sending[key] = true; msgPaint();
-  try {
-    /* ⚠️ THE REPLY CARRIES line_id. Losing it would land the answer on the chit as a loose remark while the
-       question it answers sits under a line — and this very screen would then file it as a separate thread. */
-    await api('msgReply', { params: { id: t.chit_id },
-      body: { message_text: txt, thread_type: 'external', line_id: t.line_id || undefined } });
-    RPL.sending[key] = false;
-    RPL.full[key] = null;                 // the thread has changed; fetch it fresh when next opened
-    toast('Sent — they can see it on their copy');
-    await loadMessages();
-    RPL.open[key] = true; await msgOpen(key);
-  } catch (e) { RPL.sending[key] = false; msgPaint(); toast((e && e.message) || 'Could not send that'); }
-}
-
 function msgWhen(s){
   if (!s) return '';
   try {
@@ -167,10 +145,6 @@ function msgWhen(s){
     return CBLocale.date(d, { day: '2-digit', month: 'short' });
   } catch (e) { return String(s).slice(0, 10); }
 }
-function msgIsMine(m){
-  return typeof ccIsSelf === 'function' && ccIsSelf(m.sender_display_name);
-}
-
 function messagesScreen(){
   var body;
   if (RPL.busy && !RPL.data) body = '<div style="padding:18px 16px;color:var(--grey);font-size:var(--fs-2)"><span class="spin"></span> checking for replies…</div>';
@@ -188,7 +162,6 @@ function messagesScreen(){
         var closed = ['completed', 'cancelled', 'rejected'].indexOf(m.chit_status) >= 0;
         var what = m.particulars ? esc(m.particulars) : esc(m.manual_subject || m.auto_subject || 'this order');
         var sub  = m.particulars ? esc(m.manual_subject || m.auto_subject || 'chit') : 'the order as a whole';
-        var full = RPL.full[t.key];
         var rid  = t.key.replace(/[^a-z0-9]/gi, '');
         return '<div data-testid="msg-thread" style="border-bottom:1px solid var(--line);' + (isNew ? 'background:var(--blue-tint-bg);' : '') + ';color:var(--on-card)">'
           + '<div onclick="msgOpen(&quot;' + t.key + '&quot;)" style="cursor:pointer;padding:11px 14px;display:flex;gap:10px;align-items:baseline">'
@@ -206,7 +179,7 @@ function messagesScreen(){
           /* ⚠️ THE FULL COUNT ONCE IT IS KNOWN. The inbox only returns unread-or-kept, so this said "3 msgs" over
              a conversation that turned out to hold 5 — a number that disagreed with the thread it labelled the
              moment you opened it. Once the thread is fetched, its own length is the truthful one. */
-          +       (function(){ var n = (RPL.full[t.key] || t.msgs).length;
+          +       (function(){ var n = t.msgs.length;
                     return n > 1 ? '<span style="font-size:var(--fs-1);color:var(--grey);flex:none">' + n + ' msgs</span>' : ''; })()
           +       '<span style="font-size:var(--fs-1);color:var(--grey);flex:none">' + esc(msgWhen(m.created_at)) + '</span>'
           +     '</div>'

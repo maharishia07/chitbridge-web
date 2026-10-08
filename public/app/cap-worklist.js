@@ -42,8 +42,6 @@ if (typeof EP !== 'undefined') {
     wlChit:    { m: 'GET',  p: '/api/chits/:id',               ok: 'y' },
     wlActors:  { m: 'GET',  p: '/api/actors',                  ok: 'y' },
     /* b155 — the INTERNAL thread, narrowed to one line. Same store the message centre uses; never a second one. */
-    wlMsgs:    { m: 'GET',  p: '/api/chits/:id/messages',       ok: 'y' },
-    wlMsgAdd:  { m: 'POST', p: '/api/chits/:id/messages',       ok: 'y' },
     /* b182 — the register on this line. Reads the line AND the order-level entries it inherits. */
     wlRaida:   { m: 'GET',  p: '/api/chits/:id/raida',           ok: 'y' },
     wlRaidaEnd:{ m: 'POST', p: '/api/chits/:id/raida/:rid/close', ok: 'y' },
@@ -565,7 +563,6 @@ function wlRender(rows, keys, depth, path){
  */
 var WLL = { row: null, det: null, actors: null, loading: false, failed: false,
   /* Two threads, kept apart in state as well as on screen — see wlThreadSec. */
-  msgs: null, msgErr: false, ext: null, extErr: false,
   /* b182 — null means NOT ASKED YET, which is not the same as an empty register. */
   raida: null, raidaErr: false, raidaBusy: false,
   raidaClosing: null, raidaDisp: null };
@@ -684,8 +681,6 @@ async function wlLine(line_id){
    * ⭐ A comment that states a rule the code half-keeps is worse than no comment — it makes the next reader
    * trust the line instead of checking it. All three are cleared here, and anything added later belongs here too.
    */
-  WLL.msgs = null; WLL.msgErr = false;
-  WLL.ext = null; WLL.extErr = false;
   WLL.raida = null; WLL.raidaErr = false; WLL.raidaClosing = null;
   wlPaintCard(true);
   try {
@@ -1090,47 +1085,13 @@ var WLTHREAD = { msg: { type: 'internal', box: 'wl_msg' }, ext: { type: 'externa
  * types a price complaint into the wrong box.
  */
 function wlThreadSec(k, title, list, err, o){
-  var n = list ? list.length : 0;
-  var loading = (list === null && !err);
-  var out = wlSecHead(k, title,
-    loading ? (WLL.tab === k ? 'checking…' : o.hint)
-      : err ? 'could not read' : (n ? n + (n === 1 ? ' message' : ' messages') : 'none yet'),
-    err ? 'var(--disp)' : o.tone);
+  var out = wlSecHead(k, title, o.hint, o.tone);   /* the count is the unit's, inside (R02) */
   if (WLL.tab !== k) return out;
   /* ⭐ R02 — the section's list AND box are CBThread (app/rail-thread.js): this line's thread on ONE channel (internal notes · the
      other party), mounted by wlPaintCard after the card paints. The audience line is the unit's — said the same way everywhere. */
   var r = WLL.row || {};
   out += '<div style="padding:2px 0 12px"><div data-rt="' + esc(JSON.stringify({ chit_id: r.chit_id, line_id: r.line_id, channel: WLTHREAD[k].type, party: (r.party_name || r.other || ''), ids: { text: 'wl-' + k + '-box', send: 'wl-' + k + '-add' } })) + '" data-testid="wl-' + k + '-thread"></div></div>';
   return out;
-}
-
-async function wlMsgLoad(k){
-  var r = WLL.row, t = WLTHREAD[k]; if (!r || !t) return;
-  var key = (k === 'msg') ? 'msgs' : 'ext', errKey = (k === 'msg') ? 'msgErr' : 'extErr';
-  try {
-    var out = await api('wlMsgs', { params: { id: r.chit_id }, query: { thread_type: t.type, line_id: r.line_id } });
-    var list = (out && (out.messages || out.items || (Array.isArray(out) ? out : []))) || [];
-    /* ⚠️ FILTERED AGAIN CLIENT-SIDE. Before b155 the server ignores line_id and returns the whole thread, so
-       without this the card would show the CHIT's messages as though they belonged to this line. */
-    WLL[key] = list.filter(function(m){ return !m.line_id || m.line_id === r.line_id; });
-  } catch (e) { WLL[errKey] = true; }
-  if (document.getElementById('modalhost')) wlPaintCard(WLL.loading);
-}
-async function wlMsgSave(k){
-  var r = WLL.row, t = WLTHREAD[k]; if (!r || !t) return;
-  var el = document.getElementById(t.box);
-  var txt = el ? String(el.value).trim() : '';
-  if (!txt) { toast('Nothing to send'); return; }
-  try {
-    await api('wlMsgAdd', { params: { id: r.chit_id },
-      body: { message_text: txt, thread_type: t.type, line_id: r.line_id } });
-    /* ⚠️ The box it was sent from is the one field that must NOT be restored, or the note reappears as though
-       it had failed to send and gets sent twice. */
-    WLL._clearBox = t.box;
-    if (k === 'msg') { WLL.msgs = null; WLL.msgErr = false; } else { WLL.ext = null; WLL.extErr = false; }
-    await wlMsgLoad(k);
-    toast(k === 'msg' ? 'Note added — team only' : 'Sent — the other party can see it');
-  } catch (e) { toast((e && e.message) || 'Could not send that'); }
 }
 
 function wlLineHTML(loading){
@@ -1339,12 +1300,12 @@ function wlLineHTML(loading){
    * lacked — which line a message is about. A thread in chit_line_assignment.note would have cost no migration
    * and been a parallel messaging system with no attachments and no per-copy replication.
    */
-  body += wlThreadSec('msg', 'Internal notes', WLL.msgs, WLL.msgErr, {
+  body += wlThreadSec('msg', 'Internal notes', null, false, {
     hint: 'team only', empty: 'no notes on this line yet', verb: 'Add note',
     placeholder: 'A note for your team about this line — what happened, what to watch for',
     foot: '🔒 Team only — the other party never sees these.', tone: null,
   });
-  body += wlThreadSec('ext', 'Message the other party', WLL.ext, WLL.extErr, {
+  body += wlThreadSec('ext', 'Message the other party', null, false, {
     hint: 'they see this', empty: 'nothing sent on this line yet', verb: 'Send',
     placeholder: 'A message about this line that the other party will see',
     /* ⚠️ STATED AS A CONSEQUENCE, NOT A CATEGORY. "External" is a word about our data model; "they will see
