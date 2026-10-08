@@ -16416,8 +16416,10 @@ function paintDetail(){const dp=document.getElementById("detailpane");if(dp){dp.
 function rtMountAll(scope){
   if(typeof CBThread==='undefined') return;
   const c=UI.detail||{}; const isCust=SESSION.role==="customer";
+  /* the OTHER party: on a copy I received that is the sender; on one I sent, the receivers (c.party) */
+  const other=(c.sender&&!chitIsSelf(null,c.sender))?c.sender:(c.party||'');
   CBThread.mountAll(scope, {
-    actions:c.actions||null, party:c.party||'', me:SESSION.entity||SESSION.name||'', kinds:isCust?["info","query"]:surfacedTypes(),
+    actions:c.actions||null, party:other, me:SESSION.entity||SESSION.name||'', kinds:isCust?["info","query"]:surfacedTypes(),
     channel:isCust?'external':'both', thread_type:isCust?'external':'internal',
     signature:SESSION.actorId?('— '+(SESSION.name||"co-assist")+'@'+(SESSION.entity||'')):'',
     decorate:(typeof disputeByline==='function')?disputeByline:null, context:{host:'app'},

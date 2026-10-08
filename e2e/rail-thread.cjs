@@ -71,6 +71,9 @@ async function route(S, r) {
   let body = {}; try { body = JSON.parse(q.postData() || '{}'); } catch (_) {}
   const me = S.me, inRoster = ROSTER.indexOf(me.entity) >= 0;
   if (m === 'GET') S.gets.push({ who: me.name, p, q: Object.fromEntries(u.searchParams) });
+  /* the Ledger is OFF for the lab shop (routes/books.js: only /status answers while off) — the contract holds those answers */
+  if (p === '/api/books/status') return J(r, 200, { migrated: true, enabled: false, walkin_grain: null });
+  if (p.startsWith('/api/books')) return J(r, 404, { error: 'Not found' });
   if (p === '/api/chits/inbox' && m === 'GET') return J(r, 200, [{ chit_id: 'lab-chit', created_at: '2026-10-01T05:00:00.000Z', all_recipients: PARTS, sender_entity_display_name: 'Ravi Stores', purpose: 'order', manual_subject: 'Lab order',
     current_status: 'pending', open_dispute_count: inRoster ? 1 : 0, resolved_dispute_count: 0, message_count: S.msgs.filter((x) => x.audience.indexOf(me.entity) >= 0 && !x.is_dispute).length, summary_json: {}, role: 'receiver', direction: 'received' }]);
   if (p === '/api/chits/lab-chit' && m === 'GET') return J(r, 200, chitAnswer(S));
@@ -189,7 +192,7 @@ async function route(S, r) {
     const whyC = await p.textContent('[data-testid="rt-host"] [data-testid="rt-why-external"]');
     ok(/comment-only/i.test(whyC) && /internally/i.test(whyC), 'C · with the engine\'s sentence: "' + whyC.trim() + '"');
     ok(await p.locator('[data-testid="rt-host"] [data-testid="msg-channel-internal"].on').count() === 1, 'C · Internal is selected');
-    await p.click('[data-testid="rt-host"] [data-testid="msg-channel-external"]');
+    await p.click('[data-testid="rt-host"] [data-testid="msg-channel-external"]', { force: true });   /* aria-disabled: Playwright would wait for it; a person can still tap it */
     ok(await p.locator('[data-testid="rt-host"] [data-testid="msg-channel-internal"].on').count() === 1, 'C · pressing the greyed External does nothing');
     await p.fill('[data-testid="rt-host"] [data-testid="msg-body"]', 'Godown has room for 4 bags');
     const n3 = posts().length;

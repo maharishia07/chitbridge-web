@@ -295,6 +295,7 @@ function mount(el, o) {
       outcome: function (v) {
         m.sent = Object.assign({}, v || {}, { message_id: (v && v.message_id) || null });
         draftClear(o); m.text = '';
+        var bx = el.querySelector('[data-rt-act="text"]'); if (bx) bx.value = '';   /* paint re-reads the box, so it is emptied in the DOM too */
         var s = o.dispute_id ? T(W.sentDisp) : body.thread_type === 'external' ? fill(T(W.sentExt), { party: o.party || T('the other party') }) : T(W.sentInt);
         var ob = out(); if (ob) { ob.textContent = s; ob.setAttribute('data-tone', 'ok'); }
         if (typeof o.onDone === 'function') { try { o.onDone(m.sent, o); } catch (_) {} }
@@ -321,7 +322,7 @@ function mount(el, o) {
       extra = extra || {};
       var ch = extra.thread_type || m.channel;
       return post(el.querySelector('[data-rt-act="send"]'), o, bodyFor(o, String(text || m.text || '').trim(), ch, extra),
-        { out: out(), outcome: function (v) { m.sent = v; draftClear(o); m.text = ''; load(m); if (typeof o.onDone === 'function') { try { o.onDone(v, o); } catch (_) {} } },
+        { out: out(), outcome: function (v) { m.sent = v; draftClear(o); m.text = ''; var bx = el.querySelector('[data-rt-act="text"]'); if (bx) bx.value = ''; load(m); if (typeof o.onDone === 'function') { try { o.onDone(v, o); } catch (_) {} } },
           onFail: function (words, e) { var d = e && e.data, ob = out(); if (ob) { ob.textContent = d && d.why ? why(d.why, d.message || words) : words; ob.setAttribute('data-tone', 'error'); } } });
     },
   };
