@@ -75,3 +75,54 @@ const enable = (o) => Object.assign({ ok: true, accounts_added: 80, fiscal_year:
 /** one account of GET /api/books/accounts */
 const accountRow = (o) => Object.assign({ account_id: 'acc', code: '1000', name: 'Account', is_group: false, tally_group: 'Group', nature: 'asset', role: null, parent_code: null, active: true }, o || {});
 Object.assign(module.exports, { waitingRow, trialBalance, pl, bs, enable, accountRow });
+
+/* ── payments (M26, chitbridge-api #57): the preview, the one-call record, the 409 ── */
+const rs = (minor) => { const v = minor / 100; return '₹' + v.toLocaleString('en-IN', { minimumFractionDigits: Number.isInteger(v) ? 0 : 2, maximumFractionDigits: 2 }); };
+/** the oldest-due-first proposal: bills = [{ against_ref, bill_no, due_date, open_minor, disputed }] (open ones), amount_minor → { proposal, apply_minor, on_account_minor, open_minor } */
+const payProposal = (bills, amount_minor) => {
+  let left = amount_minor;
+  const open = (bills || []).filter((b) => b.open_minor > 0).slice().sort((a, b) => String(a.due_date).localeCompare(String(b.due_date)) || String(a.against_ref).localeCompare(String(b.against_ref)));
+  const proposal = open.map((b) => { const a = b.disputed ? 0 : Math.min(left, b.open_minor); left -= a; return { against_ref: b.against_ref, bill_no: b.bill_no, due_date: b.due_date, open_minor: b.open_minor, apply_minor: a, disputed: !!b.disputed }; });
+  return { proposal, apply_minor: amount_minor - left, on_account_minor: left, open_minor: open.reduce((t, b) => t + b.open_minor, 0) };
+};
+/**
+ * POST /api/books/payments/preview — as lib/books.js duplicateWarnings answers it:
+ *   W1 nothing_owed  open == 0 AND the body means to settle bills (allocate 'oldest_first' or allocations) — owner 2026-10-08: not otherwise
+ *   W2 excess        amount > open, unless allocate 'none'        W3/W4: pass them in o.extra (they read the shop's last 24 h, which only the harness knows)
+ */
+const payWarnings = (prop, body, name, o) => {
+  const W = [], allocating = body.allocate === 'oldest_first' || (Array.isArray(body.allocations) && body.allocations.length > 0), out = body.direction === 'out';
+  if (prop.open_minor === 0) { if (allocating) W.push({ code: 'nothing_owed', words: 'Nothing is owed ' + (out ? 'to ' : 'by ') + name + '.' }); }
+  else if (body.allocate !== 'none' && body.amount_minor > prop.open_minor)
+    W.push({ code: 'excess', words: rs(body.amount_minor) + ' is more than the ' + rs(prop.open_minor) + ' open — ' + rs(body.amount_minor - prop.open_minor) + (out ? ' would stay with ' + name + ' as an advance.' : ' would be kept as an advance from ' + name + '.') });
+  return W.concat((o && o.extra) || []);
+};
+const payPreview = (bills, body, name, o) => {
+  const prop = payProposal(bills, body.amount_minor), n = prop.proposal.filter((p) => p.apply_minor > 0).length, parts = [];
+  if (n) parts.push(rs(prop.apply_minor) + ' settles ' + n + (n === 1 ? ' bill' : ' bills'));
+  if (prop.on_account_minor > 0) parts.push(rs(prop.on_account_minor) + (body.direction === 'out' ? ' stays with ' + name + ' as an advance' : ' is kept as an advance from ' + name));
+  return { currency: 'INR', party: { party_id: body.party_id, name }, open_minor: prop.open_minor, proposal: prop.proposal, apply_minor: prop.apply_minor, on_account_minor: prop.on_account_minor,
+    skipped: [], why: null, warnings: payWarnings(prop, body, name, o), words: parts.join(' · ') || 'Nothing to settle' };
+};
+/** the 409 a warning not named in acknowledge[] gets (nothing written) */
+const alreadyPaid = (warnings, body) => ({ code: 'ALREADY_PAID', error: 'Already paid?', message: 'Already paid? ' + warnings.map((w) => w.words).join(' ')
+  + (warnings.some((w) => w.code === 'nothing_owed' || w.code === 'excess') ? ' ' + (body.direction === 'out' ? 'Pay ' : 'Receive ') + rs(body.amount_minor) + ' again as an advance?' : ''), warnings });
+/** the 200 of POST /payments: allocations = the list the body gave, else oldest first (allocate 'oldest_first'), else none. entry_no/payment_id/balance_minor from the harness. */
+const payRecorded = (bills, body, name, o) => {
+  o = o || {};
+  const cheque = body.mode === 'cheque', noBills = cheque || body.allocate === 'none';
+  const list = noBills ? [] : (Array.isArray(body.allocations) && body.allocations.length ? body.allocations
+    : payProposal(bills, body.amount_minor).proposal.filter((p) => p.apply_minor > 0).map((p) => ({ against_ref: p.against_ref, amount_minor: p.apply_minor })));
+  const no = (ref) => ((bills || []).find((b) => b.against_ref === ref) || {}).bill_no || null;
+  const settled = list.map((a) => ({ against_ref: a.against_ref, bill_no: no(a.against_ref), amount_minor: a.amount_minor })), applied = settled.reduce((t, s) => t + s.amount_minor, 0);
+  const on_account = cheque ? 0 : body.amount_minor - applied, out = body.direction === 'out', HOW = { cash: 'cash', upi: 'by UPI', bank: 'by bank', card: 'by card', cheque: 'by cheque' };
+  let words = (out ? 'Paid ' : 'Received ') + rs(body.amount_minor) + ' ' + HOW[body.mode] + (out ? ' to ' : ' from ') + name + '.';
+  if (cheque) words += ' Held until it clears — the bills are chosen then.';
+  else if (settled.length) words += ' Settled ' + settled.length + (settled.length === 1 ? ' bill' : ' bills') + ' (' + rs(applied) + ').';
+  if (on_account > 0) words += ' ' + rs(on_account) + (out ? ' left with ' + name + ' as an advance — they owe you this.' : ' kept as an advance from ' + name + ' — you owe them this.');
+  const bal = o.balance_minor == null ? 0 : o.balance_minor;
+  return { ok: true, payment: { payment_id: o.payment_id || 'pay1', status: cheque ? 'cheque_received' : 'recorded', duplicate: false },
+    posted: posted({ entry_no: o.entry_no || 'PY/2026-27/000001' }), allocation: settled.length ? { settled: list, ok: true, items: settled.length * 2, allocated_minor: applied } : null,
+    outcome: { words, settled, applied_minor: applied, on_account_minor: on_account, balance_minor: bal, balance_words: bal ? (bal > 0 ? 'they owe you ' : 'you owe ') + rs(Math.abs(bal)) : 'settled' } };
+};
+Object.assign(module.exports, { rs, payProposal, payWarnings, payPreview, alreadyPaid, payRecorded });

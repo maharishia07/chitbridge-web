@@ -2,7 +2,7 @@
 /* e2e/action-state.cjs — M64 T1: ONE PRESS, ONE WRITE; AN IRREVERSIBLE WRITE ASKS FIRST; THE OUTCOME IS SAID WHERE IT HAPPENED.
  *
  * Drives the three controls M64 put on CBAction (public/app/accounts-shell.js), pressing the real buttons:
- *   A  Record a payment   (app.html › Customers › Receive › Next, `pay_record`)        POST /api/books/payments
+ *   A  Record a payment   (app.html › Customers › Receive › Record, `pay_record`)        POST /api/books/payments
  *   B  Lock a month       (CB Accounts › Month lock, `lk-lock-N`)                       POST /api/books/periods/:fy/:p/lock
  *   C  Close for good     (CB Accounts › Month lock, `lk-hard-N`) — IRREVERSIBLE         POST …/lock { hard:true }
  * For each: a double press sends ONE request (the stand-in holds every write 700 ms, so the second press lands while the
@@ -68,19 +68,21 @@ const SESSION = () => {
     await p.waitForSelector('[data-testid="party-books-c1"] [data-testid="party-pay"]', { timeout: 15000 });
     await p.click('[data-testid="party-books-c1"] [data-testid="party-pay"]');
     await p.fill('[data-testid="pay_amt"]', '4000');
+    await p.waitForSelector('[data-testid="alloc-0"]', { timeout: 10000 });   /* the bills table: the preview read (a POST, held like every write here) */
     const n0 = count(/^POST \/api\/books\/payments$/);
     await p.dblclick('[data-testid="pay_record"]');
     const busy = await p.evaluate(() => { const x = document.querySelector('[data-testid="pay_record"]'); return x ? [x.disabled, x.getAttribute('aria-busy'), x.getAttribute('data-action-state')].join('/') : 'gone'; });
-    ok(busy === 'true/true/busy', 'A · while the payment is out, Next is disabled + aria-busy + data-action-state=busy (' + busy + ')');
-    await p.waitForSelector('[data-testid="alloc-0"]', { timeout: 10000 }).catch(() => {});
+    ok(busy === 'true/true/busy', 'A · while the payment is out, Record is disabled + aria-busy + data-action-state=busy (' + busy + ')');
+    await p.waitForSelector('[data-testid="pay_outcome"]', { timeout: 10000 }).catch(() => {});
     await settle();
-    ok(count(/^POST \/api\/books\/payments$/) - n0 === 1, 'A · double press on Next → ONE POST /api/books/payments (' + (count(/^POST \/api\/books\/payments$/) - n0) + ')');
-    ok(count(/^POST \/api\/books\/payments\/[^/]+\/propose$/) === 1, 'A · and ONE proposal read after it');
-    ok(await p.locator('[data-testid="alloc-0"]').count() === 1 && await p.locator('[data-testid="pay_confirm"]').count() === 1, 'A · the outcome is shown where the press was: the proposal, with Confirm');
+    ok(count(/^POST \/api\/books\/payments$/) - n0 === 1, 'A · double press on Record → ONE POST /api/books/payments (' + (count(/^POST \/api\/books\/payments$/) - n0) + ')');
+    ok(count(/^POST \/api\/books\/payments\/[^/]+\/(propose|confirm)$/) === 0, 'A · and no second step: one call recorded it and settled the bills');
+    ok(await p.locator('[data-testid="pay_outcome"]').count() === 1 && await p.locator('[data-testid="pay_done"]').count() === 1, 'A · the outcome is shown where the press was: what happened, with Done');
     /* the key guard: the handler called twice in one tick (a repaint can hand the second press a NEW button) */
     await p.evaluate(() => closeModal());
     await p.click('[data-testid="party-books-c1"] [data-testid="party-pay"]');
     await p.fill('[data-testid="pay_amt"]', '100');
+    await p.waitForSelector('[data-testid="alloc-0"]', { timeout: 10000 });
     const n1 = count(/^POST \/api\/books\/payments$/);
     await p.evaluate(() => { payRecord(); payRecord(); });
     await settle(HOLD + 900);

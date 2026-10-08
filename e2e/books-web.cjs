@@ -105,30 +105,23 @@ async function route(S, r) {
     }
     if (p === '/api/books/dues') { const d = S.dues(); return J(r, 200, books.dues(d.parties, { asOf: d.as_of })); }
     if ((x = p.match(/^\/api\/books\/party\/([^/]+)\/statement$/))) { const st = S.statement(x[1]); return J(r, 200, books.statement(x[1], { opening_minor: st.opening_minor, closing_minor: st.closing_minor, lines: st.lines })); }
+    const billsOf = (id) => S.items[id].filter((i) => i.open_minor !== 0).map((i) => Object.assign({}, i, { open_minor: Math.abs(i.open_minor) }));
+    const nameOf = (id) => ((S.customers.find((c) => c.customer_identity_id === id) || {}).display_name) || ((S.suppliers.find((s) => s.supplier_entity_id === id) || {}).display_name) || 'this party';
+    if (p === '/api/books/payments/preview' && m === 'POST') return J(r, 200, books.payPreview(billsOf(body.party_id), body, nameOf(body.party_id)));
     if (p === '/api/books/payments' && m === 'POST') {
       S.payPosts.push(body);                                  /* every POST that ARRIVED, a repeat included */
+      if (S.slowRecord) await new Promise((res) => setTimeout(res, S.slowRecord));
       const per = (new Date(body.received_at).getMonth() + 9) % 12 + 1;
-      if (S.locked[per]) return J(r, 409, { error: 'That month is locked. Open it again (with a reason) to record this.' });
+      if (S.locked[per]) return J(r, 409, books.refusal('That month is locked. Open it again (with a reason) to record this.', 'PERIOD_LOCKED'));
       /* the server keeps a client_ref ONCE (the unique index): a repeat is answered with the payment it already has */
-      if (body.client_ref && S.byRef[body.client_ref]) { const was = S.byRef[body.client_ref]; return J(r, 200, { payment: { payment_id: was, status: S.payments[was].mode === 'cheque' ? 'cheque_received' : 'recorded', duplicate: true } }); }
+      if (body.client_ref && S.byRef[body.client_ref]) { const was = S.byRef[body.client_ref]; return J(r, 200, { ok: true, payment: { payment_id: was, status: S.payments[was].mode === 'cheque' ? 'cheque_received' : 'recorded', duplicate: true }, posted: { ok: true, duplicate: true, entry_id: 'e-' + was, entry_no: 'PY/2026-27/000001', posting_date: '2026-09-29' } }); }
       const id = 'pay' + (Object.keys(S.payments).length + 1); S.payments[id] = body;
       if (body.client_ref) S.byRef[body.client_ref] = id;
-      return J(r, 200, { payment: { payment_id: id, status: body.mode === 'cheque' ? 'cheque_received' : 'recorded' } });
-    }
-    if ((x = p.match(/^\/api\/books\/payments\/([^/]+)\/propose$/))) {
-      if (S.failProposeOnce) { S.failProposeOnce = false; return J(r, 500, { error: 'Try again in a moment.' }); }
-      if (S.slowPropose) await new Promise((res) => setTimeout(res, S.slowPropose));
-      const pay = S.payments[x[1]]; let left = pay.amount_minor;
-      const proposal = S.items[pay.party_id].filter((i) => i.open_minor > 0).slice().sort((a, b) => a.due_date < b.due_date ? -1 : 1)
-        .map((i) => { const a = i.disputed ? 0 : Math.min(left, i.open_minor); left -= a; return { against_ref: i.against_ref, bill_no: i.bill_no, due_date: i.due_date, open_minor: i.open_minor, apply_minor: a, disputed: !!i.disputed }; });
-      return J(r, 200, { proposal, on_account_minor: left });
-    }
-    if ((x = p.match(/^\/api\/books\/payments\/([^/]+)\/confirm$/))) {
-      S.confirms.push(body); const pay = S.payments[x[1]];
-      for (const a of body.allocations || []) { const it = S.items[pay.party_id].find((i) => i.against_ref === a.against_ref); if (!it || it.disputed) return J(r, 422, { error: 'A disputed bill cannot take a payment.' }); }
-      for (const a of body.allocations || []) { const it = S.items[pay.party_id].find((i) => i.against_ref === a.against_ref); it.orig = it.orig || it.open_minor; it.open_minor -= a.amount_minor; }
-      S.receipts[pay.party_id].push({ date: '2026-09-29', ref: pay.reference || x[1], amount: pay.amount_minor });
-      return J(r, 200, { ok: true });
+      const sign = S.items[body.party_id].some((i) => i.open_minor < 0) ? -1 : 1;
+      const out = books.payRecorded(billsOf(body.party_id), body, nameOf(body.party_id), { payment_id: id, balance_minor: 0 });
+      for (const a of (out.allocation && out.allocation.settled) || []) { const it = S.items[body.party_id].find((i) => i.against_ref === a.against_ref); it.orig = it.orig || it.open_minor; it.open_minor -= sign * a.amount_minor; }
+      if (body.mode !== 'cheque') S.receipts[body.party_id].push({ date: '2026-09-29', ref: body.reference || id, amount: body.amount_minor });
+      return J(r, 200, out);
     }
     if (p === '/api/books/trial-balance' && S.tbOff) return J(r, 200, books.trialBalance([{ code: '1300', name: 'Debtors', dr_minor: 600000, cr_minor: 0 }], { total_dr_minor: 600000, total_cr_minor: 599999, balanced: false }));
     if (p === '/api/books/trial-balance') return J(r, 200, books.trialBalance([{ code: '1300', name: 'Debtors', dr_minor: 600000, cr_minor: 0 }, { code: '4000', name: 'Sales', dr_minor: 0, cr_minor: 508475 }, { code: '2201', name: 'Output GST', dr_minor: 0, cr_minor: 91525 }]));
@@ -404,49 +397,48 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   ok(await p.locator('[data-testid="pe_save"]').count() === 0, 'saved: the form closes');
   await noAccounting(p, 'customers');
 
-  /* 5 · receive ₹4,000 from Ravi: oldest due first (disputed skipped), changed, confirmed */
+  /* 5 · receive ₹4,000 from Ravi (M27, one unit): the bills table, oldest due first (disputed skipped), changed, Record — one call */
   await p.click('[data-testid="cust-row-c1"]');
   await p.waitForSelector('[data-testid="party-books-c1"] [data-testid="party-pay"]', { timeout: 15000 });
   ok(/Receive/.test(await p.textContent('[data-testid="party-books-c1"] [data-testid="party-pay"]')), 'a customer\'s action says Receive');
   await p.click('[data-testid="party-books-c1"] [data-testid="party-pay"]');
   await p.fill('[data-testid="pay_amt"]', '4000');
-  /* ⚠️⚠️ review M11 — ONE TAP, ONE PAYMENT. The record lands, the proposal read fails, the form still says Next:
-     a second press must ask for the proposal again and must NOT record the payment a second time. */
-  S.failProposeOnce = true;
-  await p.click('[data-testid="pay_record"]');
-  await p.waitForFunction(() => ((document.querySelector('[data-testid="pay_why"]') || {}).textContent || '').trim() !== '', null, { timeout: 8000 }).catch(() => {});
-  ok(S.payPosts.length === 1 && Object.keys(S.payments).length === 1 && await p.locator('[data-testid="alloc-0"]').count() === 0, 'recorded once; the proposal could not be read, and the form says so');
-  ok(/^web-[a-z0-9]+-[0-9a-f]+$/.test(String(S.payPosts[0].client_ref || '')), 'the payment carries a client_ref made when the form opened (' + S.payPosts[0].client_ref + ')');
-  S.slowPropose = 900;
-  await p.click('[data-testid="pay_record"]');
-  await p.waitForTimeout(250);
-  const deadNow = await p.evaluate(() => { const b = document.querySelector('[data-testid="pay_record"]'); return !!(b && b.disabled); });
-  await p.evaluate(() => { payRecord(); });                  /* a third press, while that call is still out */
-  ok(deadNow, 'the button is dead while its call is out');
   await p.waitForSelector('[data-testid="alloc-0"]', { timeout: 8000 });
-  S.slowPropose = 0;
-  ok(S.payPosts.length === 1 && Object.keys(S.payments).length === 1, '⚠️⚠️ pressing Next again did NOT record the payment again (' + S.payPosts.length + ' POST, ' + Object.keys(S.payments).length + ' payment)');
+  ok(S.payPosts.length === 0 && /^Record$/.test((await p.textContent('[data-testid="pay_record"]')).trim()) && !/Later/.test(await p.evaluate(() => document.body.innerText)), 'the bills table appears from the preview with nothing recorded yet; the button says Record and there is no "Later"');
   const rows = await p.$$eval('[data-testid^="alloc-row-"]', (els) => els.map((e) => e.textContent));
   const vals = await p.$$eval('[data-testid^="alloc-"]:not([data-testid^="alloc-row"])', (els) => els.map((e) => ({ v: e.value, d: e.disabled })));
   await shot(p, '2-receive-proposal');
   ok(/INV-9/.test(rows[0]) && vals[0].d === true, 'the disputed bill (oldest) is shown and cannot take anything');
-  ok(/INV-1/.test(rows[1]) && vals[1].v === '3000' && /INV-2/.test(rows[2]) && vals[2].v === '1000', 'proposal: oldest due first — INV-1 3,000 then INV-2 1,000');
+  ok(/INV-1/.test(rows[1]) && Number(vals[1].v) === 3000 && /INV-2/.test(rows[2]) && Number(vals[2].v) === 1000, 'proposal: oldest due first — INV-1 3,000 then INV-2 1,000');
   /* ⚠️ forcing the disputed box open still cannot send an amount against it */
   await p.evaluate(() => { const e = document.getElementById('alloc_0'); e.disabled = false; e.value = '500'; });
-  await p.click('[data-testid="pay_confirm"]');
-  ok(S.confirms.length === 0 && /disputed/i.test(await p.textContent('[data-testid="pay_why"]')), 'a disputed bill is refused before anything is sent');
+  await p.click('[data-testid="pay_record"]');
+  ok(S.payPosts.length === 0 && /disputed/i.test(await p.textContent('[data-testid="pay_why"]')), 'a disputed bill is refused before anything is sent');
   await p.evaluate(() => { const e = document.getElementById('alloc_0'); e.value = ''; e.disabled = true; });
   await p.fill('[data-testid="alloc-1"]', '5000');
-  await p.click('[data-testid="pay_confirm"]');
-  ok(S.confirms.length === 0 && /more than that bill/i.test(await p.textContent('[data-testid="pay_why"]')), 'more than a bill has open is refused');
+  await p.click('[data-testid="pay_record"]');
+  ok(S.payPosts.length === 0 && /more than that bill/i.test(await p.textContent('[data-testid="pay_why"]')), 'more than a bill has open is refused');
   await p.fill('[data-testid="alloc-1"]', '2000'); await p.fill('[data-testid="alloc-2"]', '2000');
-  ok(/0\.00 stays on account/.test(await p.textContent('[data-testid="pay_left"]')), 'changed: 2,000 + 2,000, nothing left on account');
-  await p.click('[data-testid="pay_confirm"]');
-  await p.waitForSelector('[data-testid="pay_confirm"]', { state: 'detached', timeout: 8000 }).catch(() => {});
-  const c0 = S.confirms[0] || {};
-  ok(S.confirms.length === 1 && JSON.stringify(c0.allocations) === JSON.stringify([{ against_ref: 'b1', amount_minor: 200000 }, { against_ref: 'b2', amount_minor: 200000 }]), 'confirmed with the CHANGED allocation, in minor units');
+  const left = await p.textContent('[data-testid="pay_left"]');
+  ok(/settles 2 bills/.test(left) && !/advance/.test(left), 'changed: 2,000 + 2,000 — the line says 2 bills and nothing is left over (' + left + ')');
+  /* ⚠️⚠️ review M11 — ONE TAP, ONE PAYMENT: the button is dead while its call is out, and a second press records nothing */
+  S.slowRecord = 900;
+  await p.click('[data-testid="pay_record"]');
+  await p.waitForTimeout(250);
+  const deadNow = await p.evaluate(() => { const b = document.querySelector('[data-testid="pay_record"]'); return !!(b && b.disabled); });
+  await p.evaluate(() => { payRecord(); });                  /* a second press, while that call is still out */
+  ok(deadNow, 'the button is dead while its call is out');
+  await p.waitForSelector('[data-testid="pay_outcome"]', { timeout: 8000 });
+  S.slowRecord = 0;
+  ok(S.payPosts.length === 1 && Object.keys(S.payments).length === 1, '⚠️⚠️ a second press did NOT record the payment again (' + S.payPosts.length + ' POST, ' + Object.keys(S.payments).length + ' payment)');
+  ok(/^web-[a-z0-9]+-[0-9a-f]+$/.test(String(S.payPosts[0].client_ref || '')), 'the payment carries a client_ref made when the form opened (' + S.payPosts[0].client_ref + ')');
+  const c0 = S.payPosts[0] || {};
+  ok(JSON.stringify(c0.allocations) === JSON.stringify([{ against_ref: 'b1', amount_minor: 200000 }, { against_ref: 'b2', amount_minor: 200000 }]), 'recorded WITH the CHANGED allocation, in minor units, in the same call');
+  ok(/Received ₹4,000 cash from Ravi Stores\. Settled 2 bills/.test(await p.textContent('[data-testid="pay_outcome"]')) && /INV-1, INV-2/.test(await p.textContent('[data-testid="pay_settled"]')), 'the outcome says what happened and names the bills settled');
+  await p.click('[data-testid="pay_done"]');
   await p.waitForFunction(() => /3,500/.test((document.querySelector('[data-testid="party-books-c1"] [data-testid="party-balance"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
   ok(/3,500/.test(await p.textContent('[data-testid="party-books-c1"] [data-testid="party-balance"]')), 'balance repainted after the payment: 3,500');
+
 
   /* 5b · ⚠️⚠️ review M12 — a cheque: held, and its steps are offered the moment it is recorded */
   await p.click('[data-testid="party-books-c1"] [data-testid="party-pay"]');
@@ -454,7 +446,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   await p.selectOption('[data-testid="pay_mode"]', 'cheque');
   await p.fill('[data-testid="pay_chqno"]', '004512');
   await p.click('[data-testid="pay_record"]');
-  await p.waitForSelector('[data-testid="pay_cheque_note"]', { timeout: 8000 }).catch(() => {});
+  await p.waitForSelector('[data-testid="pay_chq_steps"]', { timeout: 8000 }).catch(() => {});
   const chqId = Object.keys(S.payments).find((k) => S.payments[k].mode === 'cheque');
   ok(!!chqId && S.payPosts[S.payPosts.length - 1].client_ref !== S.payPosts[0].client_ref, 'a new form has a NEW client_ref, so the cheque is its own payment');
   ok(await p.locator('[data-testid="chq-deposited-' + chqId + '"]').count() === 1 && await p.locator('[data-testid="chq-bounced-' + chqId + '"]').count() === 0
@@ -815,7 +807,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   await p.click('[data-testid="party-books-c1"] [data-testid="party-pay"]');
   await p.fill('[data-testid="pay_amt"]', '100'); await p.click('[data-testid="pay_record"]');
   await p.waitForFunction(() => /locked/.test((document.querySelector('[data-testid="pay_why"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
-  ok(/locked/.test(await p.textContent('[data-testid="pay_why"]')) && await p.locator('[data-testid="alloc-0"]').count() === 0, 'a payment in a locked month is refused, and the form says why');
+  ok(/locked/.test(await p.textContent('[data-testid="pay_why"]')) && await p.locator('[data-testid="pay_outcome"]').count() === 0, 'a payment in a locked month is refused, and the form says why');
   /* M11: pressing Next again on the SAME form is a retry — it carries the same client_ref, so the server can answer with what it kept */
   const nPosts = S.payPosts.length;
   await p.click('[data-testid="pay_record"]');
