@@ -995,7 +995,8 @@ async function apiOnce(key, {params, query, body}={}){
       cblog(res.status>=500?'error':'warn', ep.m+' '+key+' → '+res.status+(msg?' · '+msg:''));
       /* ⭐ the status rides on the error (e.status): a page that must tell "this shop has the Ledger off" (404) from "the network
          failed" (no status) — CB Accounts — can, without parsing words. The message itself is unchanged. */
-      const _fail=function(m){ const er=new Error(m); er.status=res.status; return er; };
+      /* e.data = the answer's own body (M27: a 409 ALREADY_PAID carries .warnings the payment form paints) */
+      const _fail=function(m){ const er=new Error(m); er.status=res.status; er.data=j; return er; };
       if(res.status===401){ SESSION={}; try{localStorage.removeItem("cb_token");localStorage.removeItem("cb_sess");}catch(_){} if(typeof go==="function") go("#/login"); throw _fail(msg||"Session expired — please sign in again."); }
       if(res.status===422){ throw _fail(msg||"Please check the form and try again."); }          // validation
       if(res.status>=500){ throw _fail(msg||"Server error — please try again."); }                 // generic

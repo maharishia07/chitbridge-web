@@ -49,7 +49,7 @@ const DEBT = {
   'app/cap-admin.js::intProfileMapHTML': 'the connector\'s field map (what we look for, where it came from): a fixed settings card',
   'app/cap-admin.js::intStreamsHTML': 'the connector streams card (Stream · What travels · Owner): a fixed settings card',
   'app/cap-admin.js::workRoutingHTML': 'work routing (Kind of work · Folder · Person · Team): an input grid in Settings',
-  'app/cap-books.js::payProposalPaint': 'the payment allocation form (a bill, its due, what to apply): inputs per bill inside the Receive payment modal',
+  'app/cap-books.js::payPaint': 'the payment allocation form (a bill, its due, what to apply): inputs per bill inside the Receive payment modal',
   'app/cap-catsetup.js::id': 'the tax register of the catalogue set-up (Product · slab · price): a read-only audit table',
   'app/cap-match.js::matchDetail': 'the three-way match detail (Line · counted · invoiced): a read-only comparison table',
   'app/cap-register.js::rgHead': 'the RAIDA register (15 columns, in a modal): a hand-drawn .lhead list, next to move',

@@ -19,8 +19,7 @@ if (typeof EP !== 'undefined') { Object.assign(EP, {
   booksPL:         { m: 'GET',  p: '/api/books/pl' },
   booksBS:         { m: 'GET',  p: '/api/books/bs' },
   booksPayRecord:  { m: 'POST', p: '/api/books/payments' },
-  booksPayPropose: { m: 'POST', p: '/api/books/payments/:id/propose' },
-  booksPayConfirm: { m: 'POST', p: '/api/books/payments/:id/confirm' },
+  booksPayPreview: { m: 'POST', p: '/api/books/payments/preview' },   /* M26: the bills table + the duplicate warnings; writes nothing */
   booksLock:       { m: 'POST', p: '/api/books/periods/:fy/:p/lock' },
   booksUnlock:     { m: 'POST', p: '/api/books/periods/:fy/:p/unlock' },
   booksPeriods:    { m: 'GET',  p: '/api/books/periods' },   /* every month of every year, with its status — the twelve rows of Month lock */
@@ -430,98 +429,160 @@ async function partyEditSave(kind, partyId) {
   }
 }
 
-/* ══ 2 · RECEIVE / PAY — record, see the proposal, change it if you want, confirm ═════════════════════════════ */
+/* ══ 2 · RECEIVE / PAY — ONE unit (M27, SPEC-payments §1.1 · §5): the amount, how, the bills table, the band, Record, the outcome ══
+   One call (booksPayRecord, M26) posts the payment and settles the bills together; /payments/preview paints the bills table and the
+   duplicate band. There is no "Later": "Keep it as an advance" is a switch that says what it does. The words of every warning and of
+   the outcome come from the server; this unit paints them. */
 var PAY = null;
 function payOpen(kind, partyId) {
   var r = partyRowOf(kind, partyId) || {};
-  PAY = { kind: kind, partyId: partyId, name: r.nickname || r.display_name || '', ref: bkRef() };   /* one ref per opened form */
-  modal('<div class="mhd"><div class="t">' + esc(kind === 'supplier' ? tx('Pay') : tx('Receive')) + ' · ' + esc(PAY.name) + '</div></div><div class="mbody" id="pay_body" style="display:flex;flex-direction:column;gap:8px">'
-    + '<label>' + tx('Amount') + '' + bkMoneyInput({ id: 'pay_amt' }) + '</label>'
+  PAY = { kind: kind, partyId: partyId, name: r.nickname || r.display_name || '', ref: bkRef(), seq: 0, ack: [], advice: false, preview: null };   /* one ref per opened form */
+  modal('<div class="mhd"><div class="t" id="pay_title" data-testid="pay_title">' + esc(kind === 'supplier' ? tx('Pay') : tx('Receive')) + ' · ' + esc(PAY.name) + '</div></div><div class="mbody" id="pay_body" style="display:flex;flex-direction:column;gap:8px">'
+    + '<label>' + tx('Amount') + '' + bkMoneyInput({ id: 'pay_amt', on: 'payPreviewSoon()' }) + '</label>'
     + '<label>' + tx('How') + '<select class="inp" id="pay_mode" data-testid="pay_mode" onchange="payModePaint()"><option value="cash">' + tx('Cash') + '</option><option value="upi">UPI</option><option value="bank">' + tx('Bank') + '</option><option value="card">' + tx('Card') + '</option><option value="cheque">' + tx('Cheque') + '</option></select></label>'
     + '<label>' + tx('Reference') + '<input class="inp" id="pay_ref" data-testid="pay_ref" style="width:100%"></label>'
-    + '<div id="pay_chq" hidden style="display:flex;gap:6px"><input class="inp" id="pay_chqno" data-testid="pay_chqno" placeholder="' + esc(tx('Cheque no')) + '"><input class="inp" id="pay_bank" placeholder="' + esc(tx('Bank')) + '"><input class="inp" id="pay_chqdate" type="date"></div>'
+    + '<div id="pay_chq" hidden style="gap:6px"><input class="inp" id="pay_chqno" data-testid="pay_chqno" placeholder="' + esc(tx('Cheque no')) + '"><input class="inp" id="pay_bank" placeholder="' + esc(tx('Bank')) + '"><input class="inp" id="pay_chqdate" type="date"></div>'
+    + '<div style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="pay_adv" data-testid="pay_adv" onchange="payAdvToggle()"><label for="pay_adv" style="display:inline;margin:0">' + tx('Keep as advance') + '</label></div>'
+    + '<div id="pay_band" data-testid="pay_band" role="alert" hidden class="payband" style="border:1px solid var(--warn-2);border-radius:6px;padding:8px;font-size:var(--fs-1)"></div>'
+    + '<div data-testid="pay_left" id="pay_left" style="font-size:var(--fs-1)"></div>'
+    + '<div id="pay_bills" data-testid="pay_bills"></div>'
     + '<div id="pay_why" data-testid="pay_why" style="color:var(--warn-2);font-size:var(--fs-1)"></div>'
-    + '</div><div class="mfoot" id="pay_foot"><button onclick="closeModal()">' + tx('Cancel') + '</button><button class="pri" data-testid="pay_record" onclick="payRecord()">' + tx('Next') + '</button></div>');
+    + '</div><div class="mfoot" id="pay_foot"><button onclick="closeModal()">' + tx('Cancel') + '</button><button class="pri" data-testid="pay_record" onclick="payRecord()">' + tx('Record') + '</button></div>');
+  payPaint();
 }
-function payModePaint() { var c = document.getElementById('pay_chq'); if (c) c.hidden = (document.getElementById('pay_mode') || {}).value !== 'cheque'; }
-function payRecord() {
-  /* ⚠️ M11: the button is dead while the call is out; a payment already recorded is never recorded again — a second
-     press after the record only asks for the proposal; and every attempt from this form carries the SAME client_ref */
-  /* ⭐ M64: through CBAction — one press one call, the outcome said in the form (pay_why), never a thrown error's text */
-  var why = document.getElementById('pay_why');
-  var amt = PAY.id ? PAY.amount : bkMoneyRead('pay_amt');
-  if (!PAY.id && !(amt > 0)) { if (why) why.textContent = tx('Type the amount'); return; }
-  return CBAction.run(document.querySelector('[data-testid="pay_record"]'), async function () {
-      if (!PAY.id) {
-        var mode = (document.getElementById('pay_mode') || {}).value;
-        var body = { party_id: PAY.partyId, direction: PAY.kind === 'supplier' ? 'out' : 'in', amount_minor: amt, currency: bkCur(),
-          mode: mode, reference: (document.getElementById('pay_ref') || {}).value || null, received_at: new Date().toISOString(),
-          cheque: mode === 'cheque' ? { number: (document.getElementById('pay_chqno') || {}).value || null, bank: (document.getElementById('pay_bank') || {}).value || null, date: (document.getElementById('pay_chqdate') || {}).value || null } : null,
-          client_ref: PAY.ref };
-        var r = await api('booksPayRecord', { body: body });
-        PAY.id = r && r.payment && r.payment.payment_id; PAY.amount = amt;
-        /* ⭐ C3: a cheque counts on CLEARING — nothing to match yet, and it says so; its steps are offered right here */
-        if (r && r.payment && r.payment.status === 'cheque_received') {
-          bkChequeKeep({ payment_id: PAY.id, party_id: PAY.partyId, name: PAY.name, amount_minor: amt, cheque_no: body.cheque.number, cheque_bank: body.cheque.bank, cheque_date: body.cheque.date, status: 'received' });
-          PAY.cheque = true;
-          return 'cheque';
-        }
-      }
-      if (PAY.cheque) return 'cheque';
-      PAY.proposal = await api('booksPayPropose', { params: { id: PAY.id } });
-      return 'proposal';
-  }, { key: 'pay', out: 'pay_why', failed: tx('Could not record it'),
-    /* recorded, but the bills to match could not be read: say THAT — Next again only asks for them (M11) */
-    onFail: function (w) { var el = document.getElementById('pay_why'); if (el) el.textContent = PAY.id ? tx('Recorded. The bills could not be read — press Next again') : w; },
-    outcome: function (v) {
-    /* the outcome IS the next step of the form, painted where the press was */
-    if (v === 'proposal') { payProposalPaint(); return; }
-    var pb = document.getElementById('pay_body'), pf = document.getElementById('pay_foot'); if (!pb || !pf) return;
-    pb.innerHTML = '<p data-testid="pay_cheque_note">' + tx('Counts against bills when the cheque clears') + '</p>'
-      + '<div id="pay_chq_steps" data-testid="pay_chq_steps">' + bkChequeStepsHTML(BK.cheques[PAY.id]) + '</div><div id="chq_out" data-testid="chq_out" style="color:var(--warn-2);font-size:var(--fs-1)"></div>';
-    pf.innerHTML = '<button class="pri" onclick="closeModal();booksAfterPay()">' + tx('Done') + '</button>';
-  } });
+function payDirection() { return PAY.kind === 'supplier' ? 'out' : 'in'; }
+function payMode() { return (document.getElementById('pay_mode') || {}).value; }
+function payModePaint() { var c = document.getElementById('pay_chq'), on = payMode() === 'cheque'; if (c) { c.hidden = !on; c.style.display = on ? 'flex' : ''; } payPaint(); }
+function payAdvToggle() { PAY.advice = !!(document.getElementById('pay_adv') || {}).checked; PAY.ack = []; payPreviewSoon(0); }
+/**
+ * ⭐⭐ THE ONE PLACE W1's TRIGGER LIVES (owner, 2026-10-08: W1 "nothing owed" fires ONLY when the payment carries an allocation — bills
+ * chosen). The server asks the same question of the same body (lib/books.js duplicateWarnings: `allocating`), so what this returns
+ * is what makes W1 fire or stay silent. Change it here, and only here.
+ *   · "Keep it as an advance" on, or a cheque (it settles nothing until it clears) → allocate: 'none'   — no bills meant, no W1
+ *   · bills on screen and every one set to 0                                        → allocate: 'none'   — an advance on purpose
+ *   · otherwise                                                                      → allocate: 'oldest_first' (+ the ticked list, once recorded)
+ */
+function payIntent(forRecord) {
+  if (PAY.advice || payMode() === 'cheque') return { allocate: 'none' };
+  var shown = PAY.preview && PAY.preview.proposal && PAY.preview.proposal.length, rows = forRecord ? payAllocs().filter(function (x) { return x.amount_minor > 0; }) : [];
+  if (forRecord && shown && !rows.length) return { allocate: 'none' };
+  var o = { allocate: 'oldest_first' };
+  if (rows.length) o.allocations = rows.map(function (x) { return { against_ref: x.against_ref, amount_minor: x.amount_minor }; });
+  return o;
 }
-/** ⭐ D1: the rule PROPOSES (oldest due first); the person changes it if they want; a disputed bill cannot take anything */
-function payProposalPaint() {
-  var p = PAY.proposal || {}, rows = p.proposal || [];
-  var body = document.getElementById('pay_body'); if (!body) return;
-  body.innerHTML = '<div style="font-size:var(--fs-1);color:var(--grey)">' + txf('{amt}, oldest due first — change any amount', { amt: bkMoney(PAY.amount) }) + '</div>'
+var payTimer = null;
+function payPreviewSoon(ms) { clearTimeout(payTimer); payTimer = setTimeout(payPreview, ms == null ? 300 : ms); }
+/** the bills table, the line under it and the band all come from ONE read: /payments/preview (no write) */
+async function payPreview() {
+  if (!PAY || PAY.done) return;
+  var amt = bkMoneyRead('pay_amt');
+  if (!(amt > 0)) { PAY.preview = null; PAY.ack = []; payPaint(); return; }
+  if (PAY.reading) { PAY.again = true; return; }
+  PAY.reading = true; var n = ++PAY.seq, p = PAY;
+  try {
+    var q = payIntent(false), r = await api('booksPayPreview', { body: { party_id: PAY.partyId, direction: payDirection(), amount_minor: amt, currency: bkCur(), allocate: q.allocate } });
+    if (PAY === p && n === PAY.seq) {
+      PAY.preview = r; PAY.ack = []; PAY.amount = amt;
+      /* a door that does not hold the party's list (the CRM record) learns the name from the server's own answer */
+      if (!PAY.name && r.party && r.party.name) { PAY.name = r.party.name; var ti = document.getElementById('pay_title'); if (ti) ti.textContent = (PAY.kind === 'supplier' ? tx('Pay') : tx('Receive')) + ' · ' + PAY.name; } var w = document.getElementById('pay_why'); if (w) w.textContent = ''; payPaint(); }
+  } catch (e) {
+    if (PAY === p) { var w2 = document.getElementById('pay_why'); if (w2) w2.textContent = bkWhy(e, tx('Could not read the bills')); }
+  }
+  if (PAY === p) { PAY.reading = false; if (PAY.again) { PAY.again = false; payPreview(); } }
+}
+function payOpenWarnings() { return ((PAY.preview && PAY.preview.warnings) || []).filter(function (w) { return PAY.ack.indexOf(w.code) < 0; }); }
+/** paints the three things the preview decides: the bills table, the where-the-money-goes line, the band (and whether Record may be pressed) */
+function payPaint() {
+  var pv = PAY.preview, rows = (pv && pv.proposal) || [], bills = document.getElementById('pay_bills'), band = document.getElementById('pay_band'), rec = document.querySelector('[data-testid="pay_record"]');
+  var cheque = payMode() === 'cheque', hide = PAY.advice || cheque || !rows.length;
+  if (bills) bills.innerHTML = hide ? '' : '<div style="font-size:var(--fs-1);color:var(--grey)">' + tx('Oldest bill first. Edit any amount') + '</div>'
     + '<table class="bktab" style="width:100%;font-size:var(--fs-1)"><thead><tr><th>' + tx('Bill') + '</th><th>' + tx('Due') + '</th><th class="num">' + tx('Open') + '</th><th class="num">' + tx('Apply') + '</th></tr></thead><tbody>'
     + rows.map(function (it, i) {
-        return '<tr data-testid="alloc-row-' + i + '"><td class="mono">' + esc(it.bill_no || it.against_ref) + (it.disputed ? ' <span class="optchip" style="color:var(--warn-2)">' + tx('disputed') + '</span>' : '') + '</td><td>' + esc(bkDate(it.due_date)) + '</td><td class="num">' + esc(bkMoney(it.open_minor)) + '</td>'
+        return '<tr data-testid="alloc-row-' + i + '"><td class="mono">' + esc(it.bill_no || it.against_ref) + (it.disputed ? ' <span class="optchip" style="color:var(--warn-2)">' + tx('In dispute') + '</span>' : '') + '</td><td>' + esc(bkDate(it.due_date)) + '</td><td class="num">' + esc(bkMoney(it.open_minor)) + '</td>'
           + '<td class="num">' + bkMoneyInput({ id: 'alloc_' + i, tid: 'alloc-' + i, minor: it.apply_minor || null, ph: '', w: '150px', on: 'payLeftPaint()', extra: it.disputed ? 'disabled title="' + esc(tx('In dispute · settle it first')) + '"' : '' }) + '</td></tr>';
-      }).join('') + '</tbody></table>'
-    + '<div data-testid="pay_left" id="pay_left" style="font-size:var(--fs-1)"></div><div id="pay_why" data-testid="pay_why" style="color:var(--warn-2);font-size:var(--fs-1)"></div>';
-  document.getElementById('pay_foot').innerHTML = '<button onclick="closeModal()">' + tx('Later') + '</button><button class="pri" data-testid="pay_confirm" onclick="payConfirm()">' + tx('Confirm') + '</button>';
+      }).join('') + '</tbody></table>';
   payLeftPaint();
+  var ws = payOpenWarnings();
+  if (band) {
+    band.hidden = !ws.length;
+    band.innerHTML = !ws.length ? '' : '<div data-testid="pay_band_words">' + ws.map(function (w) { return esc(w.words); }).join(' ') + (ws.some(function (w) { return w.code === 'nothing_owed' || w.code === 'excess'; })
+        ? ' ' + esc(txf(PAY.kind === 'supplier' ? 'Pay {amt} again as an advance?' : 'Receive {amt} again as an advance?', { amt: bkMoney(PAY.amount) })) : '')
+      + '</div><div style="display:flex;gap:8px;margin-top:6px"><button class="pri" data-testid="pay_ack" onclick="payRecord(true)">' + esc(PAY.kind === 'supplier' ? tx('Pay as advance') : tx('Receive as advance')) + '</button>'
+      + '<button data-testid="pay_band_cancel" onclick="closeModal()">' + tx('Cancel') + '</button></div>';
+  }
+  /* nothing records until a button IN the band is pressed */
+  if (rec && !PAY.done) rec.disabled = !!ws.length;
 }
 function payAllocs() {
-  return ((PAY.proposal && PAY.proposal.proposal) || []).map(function (it, i) {
+  if (PAY.advice || payMode() === 'cheque') return [];
+  return ((PAY.preview && PAY.preview.proposal) || []).map(function (it, i) {
     var v = (document.getElementById('alloc_' + i) || {}).value; var m = v === '' || v == null ? 0 : bkMoneyMinor(v);
     return { against_ref: it.against_ref, amount_minor: m, disputed: !!it.disputed, open_minor: it.open_minor };
   });
 }
+/** the line under the table — says where the money goes, and follows every edit */
 function payLeftPaint() {
-  var a = payAllocs(), used = a.reduce(function (s, x) { return s + (x.amount_minor > 0 ? x.amount_minor : 0); }, 0);
-  var left = PAY.amount - used, box = document.getElementById('pay_left'); if (!box) return;
-  box.textContent = left >= 0 ? txf('{amt} stays on account', { amt: bkMoney(left) }) : txf('{amt} more than was paid', { amt: bkMoney(Math.abs(left)) });
+  var box = document.getElementById('pay_left'); if (!box) return;
+  var amt = bkMoneyRead('pay_amt'), pv = PAY.preview;
+  if (!(amt > 0)) { box.textContent = tx('Type the amount'); box.style.color = 'var(--grey)'; return; }
+  if (payMode() === 'cheque') { box.textContent = tx('Counts against bills when the cheque clears'); box.style.color = 'var(--grey)'; return; }
+  var a = payAllocs(), used = a.reduce(function (s, x) { return s + (x.amount_minor > 0 ? x.amount_minor : 0); }, 0), n = a.filter(function (x) { return x.amount_minor > 0; }).length, left = amt - used, parts = [];
+  if (n) parts.push(txf(n === 1 ? '{amt} settles 1 bill' : '{amt} settles {n} bills', { amt: bkMoney(used), n: n }));
+  if (left > 0) parts.push(txf(PAY.kind === 'supplier' ? '{amt} stays with {name} as an advance' : '{amt} is kept as an advance from {name}', { amt: bkMoney(left), name: PAY.name }));
+  if (left < 0) parts.push(txf('{amt} too much', { amt: bkMoney(Math.abs(left)) }));
+  box.textContent = parts.length ? parts.join(' · ') : (pv && pv.words) || '';
   box.style.color = left < 0 ? 'var(--warn-2)' : 'var(--grey)';
 }
-async function payConfirm() {
-  var why = document.getElementById('pay_why');
+/** Record (viaBand = true: the band's "Pay as advance", which is what acknowledges the warnings). One call; the outcome replaces the form. */
+function payRecord(viaBand) {
+  /* ⚠️ M11/M64: through CBAction — one press one call; every attempt from this form carries the SAME client_ref; the outcome is said
+     in the form (pay_why), never a thrown error's text */
+  if (!PAY || PAY.done) return;
+  var why = document.getElementById('pay_why'), amt = bkMoneyRead('pay_amt');
+  if (!(amt > 0)) { if (why) why.textContent = tx('Type the amount'); return; }
+  var open = payOpenWarnings();
+  if (open.length && viaBand !== true) return;   /* the band is up: only its own buttons record */
   var a = payAllocs();
   /* the same refusals the engine makes (check), said before the round trip — the server still decides */
   var bad = a.filter(function (x) { return x.amount_minor < 0 || !isFinite(x.amount_minor) || x.amount_minor > x.open_minor || (x.disputed && x.amount_minor > 0); })[0];
   var used = a.reduce(function (s, x) { return s + (x.amount_minor > 0 ? x.amount_minor : 0); }, 0);
   if (bad) { if (why) why.textContent = bad.disputed ? tx('A disputed bill takes nothing') : tx('More than that bill has open'); return; }
-  if (used > PAY.amount) { if (why) why.textContent = tx('More applied than paid'); return; }
-  await bkOnce('payconfirm', document.querySelector('[data-testid="pay_confirm"]'), async function () {
-    try {
-      await api('booksPayConfirm', { params: { id: PAY.id }, body: { allocations: a.filter(function (x) { return x.amount_minor > 0; }).map(function (x) { return { against_ref: x.against_ref, amount_minor: x.amount_minor }; }) } });
-      closeModal(); toast(tx('Saved')); booksAfterPay();
-    } catch (e) { if (why) why.textContent = bkWhy(e, tx('Could not confirm')); }
-  });
+  if (used > amt) { if (why) why.textContent = tx('More applied than paid'); return; }
+  var ack = viaBand === true ? open.map(function (w) { return w.code; }) : PAY.ack;
+  return CBAction.run(document.querySelector('[data-testid="' + (viaBand === true ? 'pay_ack' : 'pay_record') + '"]'), async function () {
+      var mode = payMode(), q = payIntent(true);
+      var body = { party_id: PAY.partyId, direction: payDirection(), amount_minor: amt, currency: bkCur(), mode: mode, reference: (document.getElementById('pay_ref') || {}).value || null,
+        received_at: new Date().toISOString(), allocate: q.allocate, client_ref: PAY.ref,
+        cheque: mode === 'cheque' ? { number: (document.getElementById('pay_chqno') || {}).value || null, bank: (document.getElementById('pay_bank') || {}).value || null, date: (document.getElementById('pay_chqdate') || {}).value || null } : null };
+      if (q.allocations) body.allocations = q.allocations;
+      if (ack.length) body.acknowledge = ack;
+      var r = await api('booksPayRecord', { body: body });
+      PAY.amount = amt;
+      return r;
+  }, { key: 'pay', out: 'pay_why', failed: tx('Could not record it'),
+    /* the server asked "Already paid?" (a warning the preview did not have): nothing was written — the band takes its words */
+    onFail: function (w, e) {
+      if (e && e.status === 409 && e.data && e.data.warnings && e.data.warnings.length) { PAY.preview = Object.assign({}, PAY.preview || {}, { warnings: e.data.warnings }); PAY.ack = []; payPaint(); return; }
+      var el = document.getElementById('pay_why'); if (el) el.textContent = w;
+    },
+    outcome: payOutcomePaint });
+}
+/** the outcome IS the form's next state: what happened · what it means (the bills named, the balance) · Done */
+function payOutcomePaint(r) {
+  var pb = document.getElementById('pay_body'), pf = document.getElementById('pay_foot'); if (!pb || !pf || !r || !r.payment) return;
+  PAY.done = true; PAY.id = r.payment.payment_id;
+  var o = r.outcome || {}, bills = (o.settled || []).map(function (s) { return s.bill_no || s.against_ref; }), cheque = r.payment.status === 'cheque_received', html = '';
+  if (cheque) {
+    /* ⭐ C3: a cheque counts on CLEARING — nothing to match yet; its steps are offered right here */
+    bkChequeKeep({ payment_id: PAY.id, party_id: PAY.partyId, name: PAY.name, amount_minor: PAY.amount, cheque_no: (document.getElementById('pay_chqno') || {}).value || null, cheque_bank: (document.getElementById('pay_bank') || {}).value || null, cheque_date: (document.getElementById('pay_chqdate') || {}).value || null, status: 'received' });
+  }
+  html += '<p data-testid="pay_outcome" style="margin:0;font-weight:600">' + esc(o.words || (r.payment.duplicate ? tx('Already recorded') : tx('Recorded'))) + '</p>';
+  if (bills.length) html += '<p data-testid="pay_settled" style="margin:0">' + esc(txf('Settled: {bills}', { bills: bills.join(', ') })) + '</p>';
+  if (o.balance_minor != null) html += '<p data-testid="pay_balance" style="margin:0;color:var(--grey)">' + esc(txf('Balance: {bal}', { bal: bkOwes(o.balance_minor) })) + (r.posted && r.posted.entry_no ? ' · <span class="mono">' + esc(r.posted.entry_no) + '</span>' : '') + '</p>';
+  if (cheque) html += '<div id="pay_chq_steps" data-testid="pay_chq_steps">' + bkChequeStepsHTML(BK.cheques[PAY.id]) + '</div><div id="chq_out" data-testid="chq_out" style="color:var(--warn-2);font-size:var(--fs-1)"></div>';
+  pb.innerHTML = html;
+  pf.innerHTML = '<button class="pri" data-testid="pay_done" onclick="closeModal()">' + tx('Done') + '</button>';
+  booksAfterPay();   /* the statement, the dues chip and the record's header repaint now, behind the outcome */
 }
 function booksAfterPay() {
   if (PAY) { delete BK.stmt[PAY.partyId]; }
