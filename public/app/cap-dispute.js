@@ -69,29 +69,6 @@ function disputeByline(body){
   if(pm){ kind=/resolved/i.test(pm[1])?'resolved':'raised'; b=b.slice(pm[0].length); }
   return { by:by, body:b, kind:kind };
 }
-/* messagesTab → the dispute thread filter. Returns the filtered list when f==='dispute' (all dispute
- * messages, narrowed to one dispute group when a chip is selected); undefined = "not mine, Core handles
- * all/internal/external as usual". */
-function disputeFilterMsgs(visible, f, sel){
-  if(f!=='dispute') return undefined;
-  var s=(visible||[]).filter(function(m){ return m.isDispute; });
-  if(sel) s=s.filter(function(m){ return String(m.disputeId)===String(sel); });
-  return s;
-}
-/* doSendMessage → when the composer is in dispute mode, stamp the outgoing message: attach is_dispute +
- * the SELECTED (else first open) dispute_id and append the acting actor's "— name@entity" provenance.
- * Mutates mb in place, returns the decorated text; no-op returning body when not in dispute mode. */
-function disputeDecorateSend(mb, body){
-  if(!UI.msgAsDispute) return body;
-  var txt=SESSION.actorId ? (body+"  — "+(SESSION.name||"co-assist")+"@"+(SESSION.entity||"")) : body;
-  var dl=((UI.detail&&UI.detail.disputes)||[]);
-  var od=UI.msgDispSel
-    ? dl.find(function(d){ return String(d.dispute_id)===String(UI.msgDispSel)&&(d.status||'open')==='open'; })
-    : dl.find(function(d){ return (d.status||'open')==='open'; });
-  if(od){ mb.is_dispute=true; mb.dispute_id=od.dispute_id; }
-  mb.message_text=txt;
-  return txt;
-}
 /* list row → the one-glance dispute count: N open (red) · M resolved (green); '' when neither. */
 
 /* ── Advanced-search dispute filter (was inline in Core toolbar + adv modal). The ⚠ N chip surfaces on
@@ -122,7 +99,6 @@ function disputeSelect(did){
   paintDetail();
 }
 function disputeClose(){ UI.dispSel=null; UI.dispCompose=false; UI.dispFiles=[]; paintDetail(); }
-function disputeToggleCompose(){ UI.dispCompose=!UI.dispCompose; if(!UI.dispCompose)UI.dispFiles=[]; paintDetail(); }
 function dispOpp(d){ var p=disputeParties(d); return p.length?p.map(function(x){ return x.display_name||'party'; }).join(', '):nm(d.raised_by_display_name,'party'); }
 function dispOptGroup(list, label){
   if(!list.length) return '';
@@ -160,9 +136,9 @@ async function aiDisputeSummary(chitId, disputeId){
   var c=UI.detail; if(!c){ if(typeof toast==='function')toast('Open the dispute first'); return; }
   var d=((c.disputes)||[]).filter(function(x){ return String(x.dispute_id)===String(disputeId); })[0]; if(!d) return;
   if(typeof modal!=='function'||typeof _aiMd!=='function'){ if(typeof toast==='function')toast('AI unavailable here'); return; }
-  var msgs=(typeof disputeFilterMsgs==='function')?(disputeFilterMsgs((c.msgs||[]),'dispute',d.dispute_id)||[]):[];
+  var msgs=((c.dispMsgs||{})[d.dispute_id]||[]);   /* the room's rows as CBThread listed them (rtMountAll onList) */
   var ctx={ category:d.category, status:d.status, raised_by:d.raised_by_display_name, subject:c.code,
-    thread:msgs.map(function(m){ return { from:(m.from||m.sender||''), text:(m.body||m.text||'') }; }) };
+    thread:msgs.map(function(m){ return { from:(m.sender_display_name||m.from||''), text:(m.message_text||m.body||'') }; }) };
   modal('<div class="mhd"><div class="t">' + tx('✨ Summarize dispute') + '</div></div><div class="mbody" style="padding:16px"><div id="adbody" style="font-size:var(--fs-2);color:var(--grey)">✨ Summarizing — neutral &amp; factual…</div></div>', true);
   try{
     var res=await fetch(CFG.API_BASE+'/api/governance/ai-draft',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+SESSION.token},body:JSON.stringify({skill_id:'dispute-summary',context:ctx})});
@@ -179,9 +155,9 @@ async function aiDisputeSummary(chitId, disputeId){
 function aiResolutionSuggest(chitId, disputeId){
   var c=UI.detail; if(!c||typeof aiRun!=='function') return;
   var d=((c.disputes)||[]).filter(function(x){ return String(x.dispute_id)===String(disputeId); })[0]; if(!d) return;
-  var msgs=(typeof disputeFilterMsgs==='function')?(disputeFilterMsgs((c.msgs||[]),'dispute',d.dispute_id)||[]):[];
+  var msgs=((c.dispMsgs||{})[d.dispute_id]||[]);   /* the room's rows as CBThread listed them (rtMountAll onList) */
   aiRun('resolution-suggest', { category:d.category, raised_by:d.raised_by_display_name, subject:c.code,
-    thread:msgs.map(function(m){ return { from:(m.from||m.sender||''), text:(m.body||m.text||'') }; }) }, {title:'✨ Suggested resolution wording'});
+    thread:msgs.map(function(m){ return { from:(m.sender_display_name||m.from||''), text:(m.message_text||m.body||'') }; }) }, {title:'✨ Suggested resolution wording'});
 }
 /* one dispute's room: participants · own message wall (latest first, attachments) · New-message (text+attach) · Resolve */
 function disputeRoomBox(c, d){
@@ -193,49 +169,18 @@ function disputeRoomBox(c, d){
   var suggestBtn=(readonly||typeof aiRun!=='function')?'':'<button onclick="aiResolutionSuggest(\''+c.id+'\',\''+d.dispute_id+'\')" title="AI suggests neutral resolution wording — you decide whether to resolve" style="font-size:var(--fs-1);font-weight:700;border:1px solid var(--purple);background:var(--purple-tint);color:var(--purple);border-radius:6px;padding:5px 10px;cursor:pointer">' + tx('✨ Suggest wording') + '</button>';
   var resolveWrap=(resolve||suggestBtn)?'<span style="display:inline-flex;gap:6px;flex-wrap:wrap">'+suggestBtn+resolve+'</span>':'';
   var roster=[nm(d.raised_by_display_name,'—')+' (raiser)'].concat(parties.map(function(p){ return nm(p.display_name,'party'); })).join(' · ');
-  var msgs=(typeof disputeFilterMsgs==='function')?(disputeFilterMsgs((c.msgs||[]),'dispute',d.dispute_id)||[]):[];
-  msgs=msgs.slice().reverse();   // latest first (the wall)
-  var thread=msgs.length?msgs.map(function(m){ return (typeof msgBubble==='function')?msgBubble(m):''; }).join('')
-    :'<div style="font-size:var(--fs-2);color:var(--grey);padding:6px 2px">No messages in this dispute yet.</div>';
-  var to=parties.length?esc(parties.map(function(p){ return p.display_name||'party'; }).join(", ")):'participants';
-  var newBtn=readonly?'':'<button onclick="disputeToggleCompose()" style="margin-inline-start:auto;border:1px solid var(--line);background:var(--card);border-radius:9px;padding:5px 11px;font-size:var(--fs-2);cursor:pointer;color:var(--on-card)">'+(UI.dispCompose?'✕ Cancel':'✏️ New message')+'</button>';
-  var compose=(!readonly&&UI.dispCompose)?disputeComposeBox(c,d,to):'';
+  var to=parties.length?parties.map(function(p){ return p.display_name||'party'; }).join(", "):'participants';
+  /* ⭐ R02 — the room's thread IS CBThread (app/rail-thread.js), mounted by app.html's rtMountAll after the paint: dispute-scoped
+     (is_dispute + dispute_id, external only — the roster's audience), read-only once resolved; the test ids the dispute specs drive. */
+  var host='<div data-rt="'+esc(JSON.stringify({chit_id:c.id, dispute_id:d.dispute_id, channel:'external', readOnly:readonly, party:to, ids:{text:'dispute-room-input', send:'dispute-room-send'}}))+'" data-testid="rt-disp"></div>';
   return '<div style="border:1px solid #f0c9c6;border-radius:12px;padding:13px 14px">'
     +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="db-cat">'+esc(cap(d.category||''))+'</span>'
       +(parties.length?'<span style="font-size:var(--fs-2);color:var(--grey)">with '+disputeChips(parties,'dpchip')+'</span>':'')
       +'<span style="margin-inline-start:auto;display:inline-flex;gap:9px;align-items:center">'+st+resolveWrap+'</span></div>'
     +'<div style="font-size:var(--fs-2);color:var(--grey-2);margin:10px 0 2px">Participants: <b>'+esc(roster)+'</b></div>'
-    +'<div style="display:flex;align-items:center;margin:13px 0 7px"><span style="font-size:var(--fs-2);font-weight:700;color:var(--grey-2)">' + tx('Messages · latest first') + '</span>'+newBtn+'</div>'
-    +compose
-    +'<div style="border:1px solid var(--line);border-radius:9px;background:var(--card);padding:6px;max-height:340px;overflow:auto;color:var(--on-card)">'+thread+'</div></div>';
+    +'<div style="display:flex;align-items:center;margin:13px 0 7px"><span style="font-size:var(--fs-2);font-weight:700;color:var(--grey-2)">' + tx('Messages · latest first') + '</span></div>'
+    +'<div style="max-height:420px;overflow:auto">'+host+'</div></div>';
 }
-function disputeComposeBox(c, d, to){
-  return '<div style="border:1px solid #e5c9c6;border-radius:9px;padding:9px;margin-bottom:10px;background:var(--danger-tint);color:var(--on-card)">'
-    +'<div style="font-size:var(--fs-1);color:var(--disp);font-weight:700;margin-bottom:6px">New message to '+to+'</div>'
-    +'<textarea id="droom-'+d.dispute_id+'" data-testid="dispute-room-input" oninput="window.CBOffline&&CBOffline.saveDraft(\'disp.room.'+d.dispute_id+'\',this.value)" placeholder="Message — '+to+' will see this" style="width:100%;box-sizing:border-box;min-height:46px;border:1px solid var(--line);border-radius:9px;padding:7px;font:inherit;font-size:var(--fs-2);resize:vertical">'+esc((window.CBOffline&&CBOffline.loadDraft('disp.room.'+d.dispute_id))||'')+'</textarea>'
-    +'<div style="display:flex;align-items:center;gap:8px;margin-top:7px;flex-wrap:wrap">'
-      +'<label style="border:1px solid var(--line);background:var(--card);border-radius:9px;padding:6px 11px;font-size:var(--fs-2);cursor:pointer;color:var(--on-card)">' + tx('📎 Attach') + '<input type="file" multiple style="display:none" onchange="disputeAddFiles(this.files);this.value=\'\'"></label>'
-      +'<span id="dispfiles">'+disputeFileChips()+'</span>'
-      +'<button data-testid="dispute-room-send" onclick="sendDisputeMsg(\''+c.id+'\',\''+d.dispute_id+'\')" style="margin-inline-start:auto;background:var(--disp);color:var(--on-danger);border:none;border-radius:9px;padding:7px 14px;font-weight:600;cursor:pointer">' + tx('Send ↔') + '</button></div></div>';
-}
-function disputeFileChips(){ return (UI.dispFiles||[]).map(function(f,i){ return '<span style="display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:6px;padding:2px 7px;font-size:var(--fs-1);background:var(--card);margin-inline-end:4px;color:var(--on-card)">📎 '+esc(f.name.length>18?f.name.slice(0,18)+'…':f.name)+' <span onclick="disputeDelFile('+i+')" style="cursor:pointer;color:var(--grey-4)">✕</span></span>'; }).join(''); }
-function disputeAddFiles(files){ UI.dispFiles=UI.dispFiles||[]; for(var i=0;i<files.length;i++){ var f=files[i]; if(f.size>6*1024*1024){ toast(f.name+' is over 6MB — skipped.'); continue; } UI.dispFiles.push(f); } var el=document.getElementById('dispfiles'); if(el)el.innerHTML=disputeFileChips(); }
-function disputeDelFile(i){ (UI.dispFiles||[]).splice(i,1); var el=document.getElementById('dispfiles'); if(el)el.innerHTML=disputeFileChips(); }
-/* external-only send scoped to THIS dispute (is_dispute + dispute_id) + attach staged files by message_id */
-async function sendDisputeMsg(chitId, disputeId){
-  var el=document.getElementById('droom-'+disputeId); var body=(el?el.value:'').trim();
-  if(!body){ toast('Type a message first.'); return; }
-  var txt=SESSION.actorId?(body+"  — "+(SESSION.name||"co-assist")+"@"+(SESSION.entity||"")):body;
-  var mb={ thread_type:'external', message_text:txt, msg_type:'info', is_dispute:true, dispute_id:disputeId };
-  busyShow('Sending…'); var mid=null;
-  try{ var mr=await api("sendMsg",{params:{id:chitId},body:mb}); mid=mr&&mr.message_id; }catch(e){ busyHide(); toast(MSG.fail("send the message", e)); return; }
-  if(mid && (UI.dispFiles||[]).length){ busyShow('Attaching '+UI.dispFiles.length+' file(s)…'); for(var i=0;i<UI.dispFiles.length;i++){ try{ await attUpload(chitId, UI.dispFiles[i], {message_id:mid}); }catch(e){ toast('Attachment failed.'); } } }
-  if(window.CBOffline)CBOffline.clearDraft('disp.room.'+disputeId);
-  UI.dispFiles=[]; UI.dispCompose=false; UI.dispSel=disputeId;   // keep this room open after posting
-  try{ await openChit(chitId, true); }catch(_){}
-  busyHide(); paintDetail(); toast('Message sent');
-}
-
 /* Composer "reply in the dispute" toggle + per-dispute filter chips REMOVED 2026-07-05 — dispute messaging
  * moved INTO each dispute's room (see disputeRoom/sendDisputeMsg above). The general Messages tab is now
  * normal (Internal/External only, dispute messages hidden). Dispute channel = external-only, in the room. */

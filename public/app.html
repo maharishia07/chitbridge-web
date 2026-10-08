@@ -1701,6 +1701,8 @@ body.lab-only #cbtestpanel{
      copy that used to live in this file is gone. See BACKLOG-attach-ui-sweep.md for what is deliberately NOT
      swept yet and why. -->
 <script src="/app/attach-ui.js"></script>
+<script src="/engine/rail.js"></script>   <!-- CBRail: the rail engine's refusal words and their sentences (R01) — what a greyed rail action says -->
+<script src="/app/rail-thread.js"></script>   <!-- CBThread.mount: THE ONE COMPOSER + list for a chit's messages, threaded by line (R02) -->
 <!-- the shared step flow: rail, guard and footer for every screen that composes an order one step at a time -->
 <script src="/app/step-flow.js"></script>
 <!-- module 4 (LOCAL PROTOTYPE — not promoted): enhanced catalogue "face" setup (adopt/build → one face → conforming items). -->
@@ -1887,8 +1889,6 @@ const EP = {
   filters:         {m:"GET",  p:"/api/chits/inbox?kind&dispute&sort", ok:"◐"}, // inbox exists; query-param support unverified
   notifications:   {m:"GET",  p:"/api/notifications",            ok:"✓"},  // mounted (baseline-4); enhanced baseline-8/9; wired to bell — panel-fixes #1
   // §2 messages ALREADY EXIST (chits.js); §7 priority + raid-report are new (build in Phase 1):
-  messages:        {m:"GET",  p:"/api/chits/:id/messages",       ok:"✓"},  // ?type= (msg_type after fp01)
-  sendMsg:         {m:"POST", p:"/api/chits/:id/messages",       ok:"✓"},  // body {thread_type, message_text, msg_type}
   voidChit:        {m:"PUT",  p:"/api/chits/:id/void",           ok:"✓"},  // built (baseline-4)
   rollup:          {m:"GET",  p:"/api/chits/rollup",             ok:"✓"},  // built (baseline-4) — GET ?group_by=counterparty|state (was wrongly POST)
   archive:         {m:"POST", p:"/api/chits/:id/archive",        ok:"✓"},  // built (baseline-4)
@@ -2047,7 +2047,7 @@ const EP = {
   netResume:      {m:"POST", p:"/api/network/connections/:id/resume",     ok:"✓"},
   netDisconnect:  {m:"POST", p:"/api/network/connections/:id/disconnect", ok:"✓"},
 };
-Object.assign(EP, CB_BOOKS_EP, CB_SHEET_EP, CB_PARTY_EP);   /* the Ledger's boot endpoints and the party add/edit/remove/search routes — declared once, in app/accounts-shell.js, shared with accounts.html and crm.html */
+Object.assign(EP, CB_BOOKS_EP, CB_SHEET_EP, CB_PARTY_EP, CB_THREAD_EP);   /* the Ledger's boot endpoints and the party add/edit/remove/search routes — declared once, in app/accounts-shell.js, shared with accounts.html and crm.html */
 
 /* deepClone → app/helpers.js */
 /* STORE starts EMPTY. It once had a demo dataset beside it and the rule was that a demo constant must never be
@@ -16323,7 +16323,7 @@ async function openChit(id, silent){
    * exactly two things: a badge number the list already carries, and a tab most people never press. Walking
    * a folder of twenty chits meant twenty full thread reads nobody asked for.
    *
-   * ⭐ It loads when the Messages tab is opened — see msgEnsure(). Which is also the only moment the content
+   * ⭐ It loads when the Messages tab is opened — CBThread reads it when the tab mounts (rtMountAll). Which is also the only moment the content
    * is worth anything.
    */
   try{ const chitP=api("chit",{params:{id}}); const msgP=Promise.resolve(null);
@@ -16372,9 +16372,11 @@ async function openChit(id, silent){
             summary_money:((h.summary_json&&h.summary_json.money)||null), issued_at:(h.created_at||null),
             /* ⭐ MY copy's business data rides along (2026-09-06, [BOOKS-01] red): the books write-back, the payment, the delivery values —
                the GET has always sent header.business_json; the object dropped it, so every reader fell back to whatever the list row had */
-            business_json:(h.business_json||(base&&base.business_json)||null)};
+            business_json:(h.business_json||(base&&base.business_json)||null),
+            /* ⭐ R01 — the rail engine's answer "may I do X on this copy", carried so CBThread (R02) paints a refused channel greyed with its sentence */
+            actions:(r.actions||null)};
           /* ⚠ msgs starts EMPTY and _msgsLoaded stays false, so the badge falls back to the count the
-             list carried. msgEnsure() fills it the moment somebody opens the tab. */
+             list carried. CBThread hands the count back (rtMountAll onList) when the tab opens. */
           UI.detail.msgs=[];
           if(dispP){ try{ const dr=await dispP; UI.detail.disputes=(dr&&dr.disputes)||[]; }catch(_){} }
         } else { UI.detail=r; }
@@ -16402,7 +16404,34 @@ async function openChit(id, silent){
         paintDetail(); paintRowsOnly(); }
   catch(e){ const dp=document.getElementById("detailpane"); if(dp)dp.innerHTML=scrErr(e, tx('this chit'), 'openChit(' + JSON.stringify(String(id)) + ')'); }
 }
-function paintDetail(){const dp=document.getElementById("detailpane");if(dp){dp.className="detail";dp.innerHTML=detailInner();} try{stampDetailTitle();}catch(_){}}
+function paintDetail(){const dp=document.getElementById("detailpane");if(dp){dp.className="detail";dp.innerHTML=detailInner(); rtMountAll(dp);} try{stampDetailTitle();}catch(_){}}
+/**
+ * ⭐ R02 — EVERY MESSAGE THREAD ON THE DETAIL PANE IS CBThread (app/rail-thread.js), mounted into the `[data-rt]` hosts the
+ * painters leave (the Messages tab, each dispute room). The pane is painted as a string, so the unit is mounted AFTER innerHTML,
+ * on every paint; a mount keeps the typed text across a repaint. The app hands the unit only what it knows and the unit does
+ * not: the chit's `actions`, the party's name, the message kinds, the co-assist's signature, the dispute byline reader.
+ */
+function rtMountAll(scope){
+  if(typeof CBThread==='undefined') return;
+  const c=UI.detail||{}; const isCust=SESSION.role==="customer";
+  /* the OTHER party: on a copy I received that is the sender; on one I sent, the receivers (c.party) */
+  const other=(c.sender&&!chitIsSelf(null,c.sender))?c.sender:(c.party||'');
+  CBThread.mountAll(scope, {
+    actions:c.actions||null, party:other, me:SESSION.entity||SESSION.name||'', kinds:isCust?["info","query"]:surfacedTypes(),
+    channel:isCust?'external':'both', thread_type:isCust?'external':'internal',
+    signature:SESSION.actorId?('— '+(SESSION.name||"co-assist")+'@'+(SESSION.entity||'')):'',
+    decorate:(typeof disputeByline==='function')?disputeByline:null, context:{host:'app'},
+    onList:function(rows, o){
+      const d=UI.detail; if(!d||String(d.id)!==String(o.chit_id)) return;
+      if(o.dispute_id){ d.dispMsgs=d.dispMsgs||{}; d.dispMsgs[o.dispute_id]=rows; return; }   /* the room's rows, for the AI summary */
+      /* the count the tab and the row carry — repainted in place, never the whole pane (the unit is on it) */
+      d.msgN=rows.length; const i=UI.rows.findIndex(x=>x.id===d.id); if(i>=0)UI.rows[i].msgN=rows.length;
+      document.querySelectorAll('[data-testid="dtab-messages"]').forEach(b=>{ b.textContent="💬 Messages"+(rows.length?" ("+rows.length+")":""); });
+      document.querySelectorAll('[data-testid="msg-tab"]').forEach(b=>{ b.textContent="💬"+(rows.length?' '+rows.length:''); });
+    },
+    onDone:function(){ if(typeof paintRowsOnly==='function'){ try{ paintRowsOnly(); }catch(_){} } },
+  });
+}
 function backToList(){UI.mdetail=false;const p=document.getElementById("panel");if(p)p.classList.remove("showdetail");}
 /**
  * ⭐⭐ DESIGN 1 AND DESIGN 2 ARE ALTERNATIVES IN THE SAME SLOT. Athi, 2026-08-23: *"design 2 and design 1 can be
@@ -16862,17 +16891,7 @@ function detailInner(){
  * once the scope filter applies — better a number that corrects itself in front of you than one that is
  * quietly wrong.
  */
-function msgEnsure(){
-  var c = UI.detail; if (!c || !c.id || c._msgsLoaded || c._msgsLoading) return;
-  c._msgsLoading = true;
-  api('messages', { params: { id: c.id } }).then(function(m){
-    var d = UI.detail; if (!d || d.id !== c.id) return;   /* they moved on: do not paint over the new record */
-    d.msgs = (m || []).map(mapApiMsg);   /* the same mapper openChit used — one shape, one place */
-    d._msgsLoaded = true; d._msgsLoading = false;
-    paintDetail();
-  }).catch(function(){ var d = UI.detail; if (d && d.id === c.id) d._msgsLoading = false; });
-}
-function setDtab(t){UI.dtab=t; if(t==='messages') msgEnsure(); paintDetail();}
+function setDtab(t){UI.dtab=t; paintDetail();}   /* the Messages tab mounts CBThread, which reads the thread itself (rtMountAll) */
 // (a) The query-chit detail as the ASSISTANCE PAGE: reply on the chit (message) + publish the Q&A to the KB, in one act.
 function answerPublish(id){ const c=UI.detail; if(!c)return; const subj=c.code||c.subject||'';
   modal('<div class="mhd"><div class="t">🧠 Answer &amp; publish</div><div class="s">reply to the asker + add it to the knowledge base</div></div>'
@@ -16887,7 +16906,8 @@ async function doAnswerPublish(id){ const x=document.getElementById("ap_err"); i
   const q=val("ap_q"), a=val("ap_a"); const ctx=(val("ap_c")||"").split(',').map(function(s){return s.trim();}).filter(Boolean);
   if(!a.trim()){ if(x)x.textContent="Write an answer first."; return; }
   try{
-    await api("sendMsg",{params:{id},body:{thread_type:'external', message_text:a, msg_type:'info'}});   // the reply the asker sees on the chit
+    const _sent=await CBThread.send({chit_id:id, text:a, thread_type:'external'});   // the reply the asker sees on the chit — the ONE composer's send (R02)
+    if(!_sent||!_sent.message_id) throw new Error(_sent&&_sent.error&&_sent.error.message||"Could not send the reply");
     await api("assistPublish",{body:{question:q, answer:a, context:ctx}});                                // -> catalogue -> served live
     closeModal(); toast("Answered + published ✓ — now close the query when done"); openChit(id);
   }catch(e){ if(x)x.textContent=(e&&e.message)||"Failed"; } }
@@ -16910,14 +16930,8 @@ function openChitMsgs(id){ UI.dtab="messages"; markChitRead(id); openChit(id); s
  * so it is the FALLBACK, used only before the thread has been opened.
  */
 function msgCount(c){
-  if (c && c._msgsLoaded) {
-    return ((c&&c.msgs)?c.msgs:[]).filter(m=>!m.isDispute&&(SESSION.role==="customer"?m.scope==="external":true)).length;
-  }
   return Number((c && c.msgN) || 0);
 }
-function setMsgFilter(f){ UI.msgFilter=f; UI.msgDispSel=''; paintDetail(); }
-   // per-dispute thread select
-function setMsgChan(ch){ UI.msgChan=ch; paintDetail(); }
 /**
  * ⭐⭐⭐ TWO DOORS TO THE SAME COUNTER (2026-09-08). Athi: *"when someone logs in they can immediately create a desktop version and
  * get a till — that is the single most advantage."*
@@ -17069,16 +17083,8 @@ async function counterKit(){
         else toast(tx('Settings › Integrations has the download.')); }
   catch (e) { toast(tx('Could not download') + ': ' + ((e && e.message) || e)); }
 }
-function toggleCompose(){ UI.composeOpen=!UI.composeOpen; paintDetail(); if(UI.composeOpen)setTimeout(()=>{const dp=document.getElementById('detailpane'); if(dp)dp.scrollTop=0; const t=document.getElementById('msgbody');if(t)t.focus();},30); }
-function toggleMsgTypeMenu(){ UI.msgTypeMenu=!UI.msgTypeMenu; paintDetail(); }
-function toggleMsgType(k){ const s=new Set(UI.msgTypeSel||[]); s.has(k)?s.delete(k):s.add(k); UI.msgTypeSel=[...s]; paintDetail(); }
-function clearMsgTypes(){ UI.msgTypeSel=[]; UI.msgTypeMenu=false; paintDetail(); }
-function setMsgKind(k){ UI.msgKind=k; paintDetail(); }
 
 /* messages + status: real data + search + Latest/Oldest sort (latest default) ───────────────── */
-function msgSearchSort(){ return '<div class="msgss"><input id="msgsrch" class="msgsi" placeholder="Search messages" value="'+esc(UI.msgSearch||'')+'" oninput="setMsgSearch(this.value)"><button class="msgord" onclick="setMsgOrder(UI.msgOrder===\'oldest\'?\'latest\':\'oldest\')" title="Sort order">'+((UI.msgOrder==='oldest')?'↑ Oldest':'↓ Latest')+'</button></div>'; }
-function setMsgSearch(v){ clearTimeout(UI._msgT); UI._msgT=setTimeout(function(){ UI.msgSearch=(v||'').trim(); paintDetail(); var s=document.getElementById('msgsrch'); if(s){ s.focus(); var n=s.value.length; try{s.setSelectionRange(n,n);}catch(_){ } } }, 300); }
-function setMsgOrder(o){ UI.msgOrder=o; paintDetail(); }
 function fmtLogTime(ts){ try{ var d=new Date(ts); if(isNaN(d))return ''; return CBLocale.datetime(d, {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}); }catch(_){ return ''; } }
 function statusLabel(e){ var a=e.action||''; if(a==='created') return 'Created'; if(a==='message_sent') return 'Message sent'; if(a==='amended') return '✎ Amended'; if(a.indexOf('status_')===0) return 'Status → '+a.slice(7); if(e.new_status) return (a||'updated')+' → '+e.new_status; return a||'event'; }
 /* ⚠️ an amendment's detail gets more room than 80 chars: it reads `quantity "5" → "2"`, and the truncation would
@@ -17163,58 +17169,15 @@ async function booksSend(id){
   }catch(e){ toast(tx('Could not send')+': '+(e&&e.message||e)); }
 }
 function statusTabHtml(c){ var log=(c.log||[]); var sl=log.slice(); var q=(UI.statusSearch||'').toLowerCase(); if(q) sl=sl.filter(function(e){ return (String(statusLabel(e))+' '+(e.action_by_display_name||'')+' '+(e.detail||'')).toLowerCase().indexOf(q)>=0; }); var ordered=(UI.statusOrder==='oldest')?sl:sl.slice().reverse(); var inner=ordered.length?lazyWrap('status', ordered, statusEv, '<div class="msgempty">No matching history.</div>'):'<div class="msgempty">No status history yet.</div>'; return '<div class="msghd"><span class="mh-t">Lifecycle ('+log.length+')</span></div>'+statusSearchSort()+'<div class="tl">'+inner+'</div>'; }
-function msgBubble(m){ const ext=m.scope==="external"; const d=MTYPES[m.type]||MTYPES.info; const disp=m.isDispute; const _db=(typeof disputeBadge==='function')?disputeBadge(m):''; const head=_db?_db:`<span class="mbadge ${ext?'ext':'int'}">${ext?'↔ External':'🔒 Internal'}</span><span class="mtype ${d.cls}">${d.icon} ${d.label}</span>`; return `<div class="bubble ${ext?'ext':'int'}${disp?' disp':''}"><div class="bh">${head}<span class="ath">${esc(m.author)}</span>${m.byline?'<span class="ath" style="color:var(--grey);font-weight:400">&nbsp;· by '+esc(m.byline)+'</span>':''}<span class="tm">${m.at}</span>${m.unread?'<span class="unreaddot"></span>':''}</div><div class="bb">${esc(m.body)}</div>${(m.atts&&m.atts.length)?`<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px">${m.atts.map((a,i)=>`<span onclick="openMsgAtt('${m.id}',${i})" title="${esc(a.n)}" style="display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:6px;padding:2px 7px;font-size:var(--fs-1);background:var(--card);cursor:pointer;color:var(--on-card)">${attIcon(a.t)} ${esc(a.n.length>22?a.n.slice(0,22)+'…':a.n)}</span>`).join('')}</div>`:''}</div>`; }
+/* ⭐ R02 — the Messages tab IS CBThread: the host div the pane leaves, mounted by rtMountAll after the paint. Lines ride along so the
+   composer can say which line a message is about and the list can tag each row with it (threaded by line). */
 function messagesTab(c){
   markChitRead(c.id); setTimeout(refreshMsgBadge,0);
-  if(UI.msgDispSel && !((c.disputes||[]).some(function(d){return String(d.dispute_id)===String(UI.msgDispSel);}))) UI.msgDispSel='';
-  const isCust=SESSION.role==="customer";
-  const all=(c.msgs||[]); const visible=isCust?all.filter(m=>m.scope==="external"):all;
-  const f=UI.msgFilter||"all"; const sel=UI.msgTypeSel||[];
-  let shown = ((f==='internal'||f==='external')?visible.filter(m=>m.scope===f):visible).filter(m=>!m.isDispute);   // dispute msgs live in the dispute panel, not the general thread
-  if(sel.length) shown=shown.filter(m=>sel.includes(m.type||"info"));
-  const scopeFilter=isCust?"":`<div class="msgfilter"><button class="${f==='all'?'on':''}" onclick="setMsgFilter('all')">${tx('All')}</button><button class="${f==='internal'?'on':''}" onclick="setMsgFilter('internal')">${tx('🔒 Internal')}</button><button class="${f==='external'?'on':''}" onclick="setMsgFilter('external')">${tx('↔ External')}</button></div>`;
-  const tset=surfacedTypes(); const ctypes=isCust?["info","query"]:tset;
-  const typeMenu=UI.msgTypeMenu?`<div class="tdrop" onclick="event.stopPropagation()">${tset.map(k=>`<label class="tdrow"><input type="checkbox" ${sel.includes(k)?'checked':''} onchange="toggleMsgType('${k}')"> ${MTYPES[k].icon} ${MTYPES[k].label}</label>`).join("")}${sel.length?`<button class="tdclear" onclick="clearMsgTypes()">${tx('✕ Clear types')}</button>`:''}</div>`:'';
-  const typeFilter=isCust?'':`<div class="tdwrap"><button class="msgfbtn${sel.length?' on':''}" onclick="event.stopPropagation();toggleMsgTypeMenu()">⚙ Types${sel.length?' ('+sel.length+')':''} ▾</button>${typeMenu}</div>`;
-  if(UI.msgSearch){var _mq=UI.msgSearch.toLowerCase(); shown=shown.filter(function(m){return String((m.body||"")+" "+(m.author||"")).toLowerCase().indexOf(_mq)>=0;});} const ordered=(UI.msgOrder==="oldest")?shown.slice():shown.slice().reverse();
-  const thread=ordered.length?lazyWrap('msg', ordered, msgBubble, ''):`<div class="msgempty">No messages yet — use ✏️ New message above to start one.</div>`;
-  const ch=UI.msgChan||(isCust?"external":"internal"); let kind=UI.msgKind||"info"; if(!ctypes.includes(kind))kind=ctypes[0];
-  const typeSel=`<div class="typesel">${ctypes.map(k=>`<button class="${kind===k?'on '+MTYPES[k].cls:''}" title="${MTYPES[k].label}" onclick="setMsgKind('${k}')">${MTYPES[k].icon} ${MTYPES[k].short}</button>`).join("")}</div>`;
-  const open=!!UI.composeOpen;
-  const attachRow=`<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:4px 0"><label title="Attach files" style="cursor:pointer;border:1px solid var(--line);border-radius:6px;padding:3px 9px;font-size:var(--fs-1);background:var(--card);color:var(--on-card)">${tx('📎 Attach')}<input type="file" multiple style="display:none" onchange="msgAddFiles(this.files);this.value=''"></label><span id="msgfileschips">${msgChips()}</span></div>`;
-  const dispToggle=(typeof disputeToggleHtml==='function')?disputeToggleHtml(c,isCust):'';
-  const composer=isCust
-    ? `<div class="composer">${typeSel}<div class="chlabel ext">↔ External · ${c.party||'the shop'} will see this</div><textarea id="msgbody" data-testid="msg-body" oninput="window.CBOffline&&CBOffline.saveDraft('msg.${c.id}',this.value)" placeholder="Message to ${c.party||'the shop'}…">${(window.CBOffline&&CBOffline.loadDraft('msg.'+c.id))?esc(CBOffline.loadDraft('msg.'+c.id)):''}</textarea>${attachRow}<button class="send ext" data-testid="msg-send" onclick="sendMessage('${c.id}')">Send ${MTYPES[kind].label} ↔ external</button></div>`
-    : `<div class="composer"><div class="chtoggle"><button class="int ${ch==='internal'?'on':''}" data-testid="msg-channel-internal" onclick="setMsgChan('internal')">${tx('🔒 Internal')}</button><button class="ext ${ch==='external'?'on':''}" data-testid="msg-channel-external" onclick="setMsgChan('external')">${tx('↔ External')}</button></div>${typeSel}${dispToggle}<textarea id="msgbody" data-testid="msg-body" oninput="window.CBOffline&&CBOffline.saveDraft('msg.${c.id}',this.value)" placeholder="${ch==='internal'?'Note for your team — stays internal':'Message to '+recipTo(c, UI.msgAsDispute)+' — they will see this'}">${(window.CBOffline&&CBOffline.loadDraft('msg.'+c.id))?esc(CBOffline.loadDraft('msg.'+c.id)):''}</textarea>${attachRow}<button class="send ${ch==='internal'?'int':'ext'}" data-testid="msg-send" onclick="sendMessage('${c.id}')">Send ${MTYPES[kind].label} · ${ch==='internal'?'🔒 internal':'↔ external'}</button></div>`;
-  const head=`<div class="msghd"><span class="mh-t">Messages (${msgCount(c)})</span><button class="composebtn ${open?'on':''}" onclick="toggleCompose()">${open?'✕ Close':'✏️ New message'}</button></div>`;
-  return `<div class="msgtab">${head}<div class="msglist"><div class="msgfilters">${scopeFilter}${typeFilter}${msgSearchSort()}</div><div class="thread">${thread}</div>${open?`<div class="composeov" onclick="if(event.target===this)toggleCompose()"><div class="composeov-card"><div class="composeov-bar"><button class="composeov-x" onclick="toggleCompose()" title="Close" aria-label="Close">✕</button></div>${composer}</div></div>`:''}</div></div>`;
+  const lines=(c.items||[]).map(function(it,i){ const e=(it&&it[3])||{}; const id=e.line_id||(e.live&&e.live.line_id)||null; return (id&&!e.removed)?{line_id:id, label:((i+1)+' · '+String((it&&it[0])||'').slice(0,28))}:null; }).filter(Boolean);
+  return '<div class="msgtab"><div data-rt="'+esc(JSON.stringify({chit_id:c.id, lines:lines}))+'" data-testid="rt-host"></div></div>';
 }
-function msgChips(){ var fs=UI.msgFiles||[]; return fs.map(function(f,i){ return '<span style="display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:6px;padding:2px 7px;font-size:var(--fs-1);background:var(--card);color:var(--on-card)">'+attIcon(cbAttachType(f.type,f.name))+' '+esc(f.name.length>18?f.name.slice(0,18)+'…':f.name)+' <span onclick="msgDelFile('+i+')" style="cursor:pointer;color:var(--grey-4)">✕</span></span>'; }).join(''); }
-function msgAddFiles(files){ UI.msgFiles=UI.msgFiles||[]; for(var k=0;k<files.length;k++){ var f=files[k]; if(f.size>6*1024*1024){ toast(f.name+' is over 6MB — skipped.'); continue; } UI.msgFiles.push(f); } var el=document.getElementById('msgfileschips'); if(el)el.innerHTML=msgChips(); }
-function msgDelFile(i){ (UI.msgFiles||[]).splice(i,1); var el=document.getElementById('msgfileschips'); if(el)el.innerHTML=msgChips(); }
 function busyShow(msg){ var h=document.getElementById('busyhost'); if(!h){ h=document.createElement('div'); h.id='busyhost'; document.body.appendChild(h); } h.innerHTML='<div class="busyov"><div class="busybox"><span class="bspin"></span><span>'+esc(msg||'Working…')+'</span></div></div>'; }
 function busyHide(){ var h=document.getElementById('busyhost'); if(h)h.innerHTML=''; }
-function recipTo(c, isDispute){ c=c||{}; var _self=chitIsSelf; var seen={}; var all=(((c.recips)||[]).filter(function(r){return r&&r.entity_id&&!_self(r.entity_id,r.display_name)&&!seen[r.entity_id]&&(seen[r.entity_id]=1);}).map(function(r){return r.display_name||"party";})); var rn=all; if(isDispute){ var od=((c.disputes)||[]).find(function(d){return (d.status||"open")==="open";}); var dp=(((od&&od.participants)||[]).filter(function(p){return p&&!_self(p.entity_id,p.display_name);}).map(function(p){return p.display_name||"party";})); if(dp.length) rn=dp; } return rn.length?rn.join(", "):(c.party||"the other party"); }
-function sendMessage(id){
-  const el=document.getElementById('msgbody'); const body=(el?el.value:"").trim(); if(!body){ toast("Type a message first."); return; }
-  const ch=UI.msgChan||(SESSION.role==="customer"?"external":"internal");
-  if(ch==="external"){ const c=UI.detail||{}; const _from=esc(SESSION.entity||SESSION.name||'you'); const _to=esc(recipTo(c, UI.msgAsDispute)); modal(`<div class="mhd"><div class="t">${tx('↔ Send external message')}</div></div><div class="mbody"><div style="border:1px solid var(--line);border-radius:9px;overflow:hidden;font-size:var(--fs-2)"><div style="display:flex;gap:10px;padding:9px 12px;border-bottom:1px dashed var(--line)"><span style="min-width:34px;color:var(--grey);font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.4px;padding-top:2px">${tx('From')}</span><b>${_from}</b></div><div style="display:flex;gap:10px;padding:9px 12px"><span style="min-width:34px;color:var(--grey);font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.4px;padding-top:2px">To</span><b>${_to}</b></div></div><div style="font-size:var(--fs-2);color:var(--grey);margin-top:10px;line-height:1.5">This <b>crosses the edge</b> — ${_to} will see it and be notified. Internal notes never leave your team.</div></div><div class="mfoot"><button onclick="closeModal()">${tx('Cancel')}</button><button class="pri" onclick="closeModal();doSendMessage('${id}','external')">${tx('Send')}</button></div>`); }
-  else { doSendMessage(id,'internal'); }
-}
-async function doSendMessage(id, scope){
-  const el=document.getElementById('msgbody'); const body=(el?el.value:"").trim(); if(!body){ toast(MSG.msgEmpty()); return; }
-  busyShow('Sending message…');
-  let _mr; try{ var _mb={thread_type:scope,message_text:body,msg_type:UI.msgKind||"info"}; if(UI.msgAsDispute && typeof disputeDecorateSend==='function') disputeDecorateSend(_mb, body); _mr=await api("sendMsg",{params:{id},body:_mb}); if(window.CBOffline)CBOffline.clearDraft('msg.'+id); }catch(e){ busyHide(); toast(MSG.fail("send the message", e)); return; }
-  const _mid=_mr&&_mr.message_id;
-  if(_mid && (UI.msgFiles||[]).length){ busyShow(txn('Attaching {count} file…', 'Attaching {count} files…', UI.msgFiles.length)); for(const f of UI.msgFiles){ try{ await attUpload(id, f, {message_id:_mid}); }catch(e){ toast('Attachment "'+f.name+'" failed.'); } } }
-  UI.msgFiles=[];
-  UI.composeOpen=false;
-  try{ await openChit(id,true); }catch(_){}
-  const i=UI.rows.findIndex(x=>x.id===id); if(i>=0)UI.rows[i].msg=msgCount(UI.detail);
-  busyHide();
-  paintDetail(); paintRowsOnly();
-  toast(scope==='external'?MSG.msgSentExternal(UI.detail&&UI.detail.party):MSG.msgSentInternal());
-}
 function unreadCount(){ let n=0; (STORE.chits||[]).forEach(c=>{ (c.msgs||[]).forEach(m=>{ if(m.unread && (SESSION.role!=="customer"||m.scope==="external")) n++; }); }); return n; }
 function markChitRead(id){ const c=(STORE.chits||[]).find(x=>x.id==id); if(c)(c.msgs||[]).forEach(m=>m.unread=false); }
 function refreshMsgBadge(){ const n=unreadCount(); const d=document.getElementById('msgcdot'); if(d){ d.textContent=n; d.style.display=n?'flex':'none'; } }
@@ -17922,7 +17885,6 @@ async function attUpload(chit_id, file, extra){ var data_base64=await fileToB64(
 var _attUrls={};
 async function attBlobUrl(id){ if(_attUrls[id])return _attUrls[id]; var res=await fetch(CFG.API_BASE+'/api/attachments/'+id,{headers:SESSION.token?{Authorization:'Bearer '+SESSION.token}:{}}); if(!res.ok)throw new Error('attachment '+res.status); var b=await res.blob(); var u=URL.createObjectURL(b); _attUrls[id]=u; return u; }
 async function attResolveSrc(a){ try{ a.src=await attBlobUrl(a.id); if(a.t==='text'&&a.text==null){ try{ a.text=await (await fetch(a.src)).text(); }catch(_){ a.text=''; } } paintLB(); }catch(e){ /* keep icon placeholder */ } }
-function openMsgAtt(mid,i){ var m=((UI.detail&&UI.detail.msgs)||[]).find(function(x){return String(x.id)===String(mid);}); if(!m)return; UI.attGroups=UI.attGroups||{}; UI.attGroups['msg:'+mid]=(m.atts||[]); openLightbox('msg:'+mid,i); }
 /* build the visible attachment groups for the current chit: line0, line1 … + chit */
 /* ⚠️ 'text' MUST BE HERE TOO. attType learned about text and this map did not, so a .txt fell through to 📎 —
    the tile said "attachment" for the one file on the chit that is the customer's own words. */

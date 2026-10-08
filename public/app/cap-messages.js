@@ -17,7 +17,7 @@
  * right for a list and wrong for a conversation — you would read a reply with the question it answers missing.
  * The per-chit route already returns the full line thread; opening asks it.
  */
-var RPL = { data: null, busy: false, err: null, all: false, track: '', open: {}, full: {}, sending: {} };
+var RPL = { data: null, busy: false, err: null, all: false, track: '', open: {} };
 
 /**
  * ⭐ TASK OR ORDER — Athi, 2026-08-15: *"both task and order messages, is there a way to segregate?"*
@@ -37,8 +37,6 @@ if (typeof EP !== 'undefined') {
   Object.assign(EP, {
     msgInbox:  { m: 'GET',  p: '/api/folders/messages', ok: 'y' },
     msgMark:   { m: 'POST', p: '/api/folders/messages/:id/mark', ok: 'y' },
-    msgReply:  { m: 'POST', p: '/api/chits/:id/messages', ok: 'y' },
-    msgThread: { m: 'GET',  p: '/api/chits/:id/messages', ok: 'y' },
   });
 }
 
@@ -51,8 +49,13 @@ async function loadMessages(){
   RPL.busy = false; msgPaint();
   if (typeof loadReplyCount === 'function') loadReplyCount();
 }
-function msgPaint(){ var el = document.getElementById('mainbody'); if (el) el.innerHTML = messagesScreen(); }
-function msgShowAll(){ RPL.all = !RPL.all; RPL.data = null; RPL.open = {}; RPL.full = {}; loadMessages(); }
+function msgPaint(){
+  var el = document.getElementById('mainbody'); if (!el) return;
+  el.innerHTML = messagesScreen();
+  /* R02 — each open thread's reply box + conversation is CBThread; a reply refreshes the inbox (the row's preview and count) */
+  if (typeof CBThread !== 'undefined') CBThread.mountAll(el, { context: { host: 'replies' }, me: (typeof SESSION !== 'undefined' && (SESSION.entity || SESSION.name)) || '', onDone: function(){ loadMessages(); } });
+}
+function msgShowAll(){ RPL.all = !RPL.all; RPL.data = null; RPL.open = {}; loadMessages(); }
 function msgUnread(){ return (RPL.data || []).filter(function(m){ return !m.read_at; }).length; }
 
 /**
@@ -100,20 +103,7 @@ async function msgOpen(key){
   var t = msgThreads().filter(function(x){ return x.key === key; })[0];
   if (!t) return;
 
-  if (!RPL.full[key]) {
-    try {
-      var q = { thread_type: 'external' };
-      if (t.line_id) q.line_id = t.line_id;
-      var r = await api('msgThread', { params: { id: t.chit_id }, query: q });
-      var list = (r && (r.messages || r.items || (Array.isArray(r) ? r : []))) || [];
-      /* ⚠️ FILTERED AGAIN CLIENT-SIDE. Before b155 the server ignores line_id and hands back the whole chit
-         thread — without this a line conversation would silently absorb every other line's messages. */
-      RPL.full[key] = list.filter(function(m){ return (m.line_id || null) === (t.line_id || null); })
-                          .sort(function(a, b){ return String(a.created_at).localeCompare(String(b.created_at)); });
-      msgPaint();
-    } catch (e) { RPL.full[key] = null; msgPaint(); }
-  }
-
+  /* R02 — the whole conversation is read by CBThread on the open row (msgPaint mounts it); nothing is fetched here */
   var unread = t.msgs.filter(function(m){ return !m.read_at; });
   for (var i = 0; i < unread.length; i++) {
     try { await api('msgMark', { params: { id: unread[i].message_id }, body: { read: true } });
@@ -145,26 +135,6 @@ async function msgKeep(key, ev){
   } catch (e) { toast((e && e.message) || 'Could not change that'); }
 }
 
-async function msgSend(key){
-  var t = msgThreads().filter(function(x){ return x.key === key; })[0];
-  if (!t) return;
-  var el = document.getElementById('msg_reply_' + key.replace(/[^a-z0-9]/gi, ''));
-  var txt = el ? String(el.value).trim() : '';
-  if (!txt) { toast('Nothing to send'); return; }
-  RPL.sending[key] = true; msgPaint();
-  try {
-    /* ⚠️ THE REPLY CARRIES line_id. Losing it would land the answer on the chit as a loose remark while the
-       question it answers sits under a line — and this very screen would then file it as a separate thread. */
-    await api('msgReply', { params: { id: t.chit_id },
-      body: { message_text: txt, thread_type: 'external', line_id: t.line_id || undefined } });
-    RPL.sending[key] = false;
-    RPL.full[key] = null;                 // the thread has changed; fetch it fresh when next opened
-    toast('Sent — they can see it on their copy');
-    await loadMessages();
-    RPL.open[key] = true; await msgOpen(key);
-  } catch (e) { RPL.sending[key] = false; msgPaint(); toast((e && e.message) || 'Could not send that'); }
-}
-
 function msgWhen(s){
   if (!s) return '';
   try {
@@ -175,10 +145,6 @@ function msgWhen(s){
     return CBLocale.date(d, { day: '2-digit', month: 'short' });
   } catch (e) { return String(s).slice(0, 10); }
 }
-function msgIsMine(m){
-  return typeof ccIsSelf === 'function' && ccIsSelf(m.sender_display_name);
-}
-
 function messagesScreen(){
   var body;
   if (RPL.busy && !RPL.data) body = '<div style="padding:18px 16px;color:var(--grey);font-size:var(--fs-2)"><span class="spin"></span> checking for replies…</div>';
@@ -196,7 +162,6 @@ function messagesScreen(){
         var closed = ['completed', 'cancelled', 'rejected'].indexOf(m.chit_status) >= 0;
         var what = m.particulars ? esc(m.particulars) : esc(m.manual_subject || m.auto_subject || 'this order');
         var sub  = m.particulars ? esc(m.manual_subject || m.auto_subject || 'chit') : 'the order as a whole';
-        var full = RPL.full[t.key];
         var rid  = t.key.replace(/[^a-z0-9]/gi, '');
         return '<div data-testid="msg-thread" style="border-bottom:1px solid var(--line);' + (isNew ? 'background:var(--blue-tint-bg);' : '') + ';color:var(--on-card)">'
           + '<div onclick="msgOpen(&quot;' + t.key + '&quot;)" style="cursor:pointer;padding:11px 14px;display:flex;gap:10px;align-items:baseline">'
@@ -214,7 +179,7 @@ function messagesScreen(){
           /* ⚠️ THE FULL COUNT ONCE IT IS KNOWN. The inbox only returns unread-or-kept, so this said "3 msgs" over
              a conversation that turned out to hold 5 — a number that disagreed with the thread it labelled the
              moment you opened it. Once the thread is fetched, its own length is the truthful one. */
-          +       (function(){ var n = (RPL.full[t.key] || t.msgs).length;
+          +       (function(){ var n = t.msgs.length;
                     return n > 1 ? '<span style="font-size:var(--fs-1);color:var(--grey);flex:none">' + n + ' msgs</span>' : ''; })()
           +       '<span style="font-size:var(--fs-1);color:var(--grey);flex:none">' + esc(msgWhen(m.created_at)) + '</span>'
           +     '</div>'
@@ -251,33 +216,9 @@ function messagesScreen(){
                * end of a scroll, past messages you had already read. Reading is browsing; replying is the task.
                * The task goes first.
                */
-              + '<textarea id="msg_reply_' + rid + '" data-testid="msg-reply" rows="2" placeholder="Reply to ' + esc(m.sender_display_name || 'them') + '…"'
-              +   ' style="width:100%;box-sizing:border-box;font:inherit;font-size:var(--fs-3);line-height:1.5;padding:9px 11px;border:1px solid var(--line);border-radius:9px;resize:vertical"></textarea>'
-              + '<div style="display:flex;gap:10px;align-items:center;margin-top:7px">'
-              +   '<span style="font-size:var(--fs-1);color:var(--warn-2)">📤 The other party sees this, on their own copy.</span>'
-              +   '<button class="btn pri" data-testid="msg-send" onclick="msgSend(&quot;' + t.key + '&quot;)"'
-              +     ' style="width:auto;flex:0 0 auto;margin:0 0 0 auto;padding:8px 16px">' + (RPL.sending[t.key] ? 'Sending…' : 'Reply') + '</button>'
-              + '</div>'
-              /* ── the conversation, newest first, each side shaded differently ─────────────────────────────── */
-              + '<div style="border-top:1px solid var(--line-soft,#f0efec);margin-top:11px;padding-top:5px"></div>'
-              + (full === undefined ? '<div style="font-size:var(--fs-2);color:var(--grey);padding:4px 0"><span class="spin"></span> reading the conversation…</div>'
-                 : full === null ? '<div style="font-size:var(--fs-2);color:var(--disp);padding:4px 0">Could not read the rest of this conversation — the newest message is above.</div>'
-                 /**
-                  * ⭐ NEWEST FIRST — Athi, 2026-08-15: *"latest message on top, reverse order."*
-                  *
-                  * ⚠️ AND IT MATCHES THE LIST ABOVE IT. The inbox is newest-first; a thread that opened
-                  * oldest-first made the eye travel to the bottom to find the thing the row had just previewed —
-                  * two reading directions on one screen, and the reply box is at the bottom anyway.
-                  */
-                 : full.slice().reverse().map(function(x){
-                     var mine = msgIsMine(x);
-                     return '<div style="margin:6px 0;padding:8px 11px;border-radius:9px;font-size:var(--fs-2);line-height:1.5;'
-                       + (mine ? 'background:var(--blue-tint-bg);margin-inline-start:28px' : 'background:var(--warn-tint);margin-inline-end:28px') + ';color:var(--on-card)">'
-                       + '<div style="display:flex;gap:8px;align-items:baseline;margin-bottom:2px">'
-                       +   '<b style="font-size:var(--fs-1);color:' + (mine ? 'var(--blue-2)' : 'var(--warn-2)') + '">' + esc(mine ? 'You' : (x.sender_display_name || '—')) + '</b>'
-                       +   '<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">' + esc(msgWhen(x.created_at)) + '</span></div>'
-                       + '<div style="white-space:pre-wrap">' + esc(x.message_text || '') + '</div></div>';
-                   }).join(''))
+              /* ⭐ R02 — the reply box AND the conversation are CBThread (app/rail-thread.js): the line's external thread, composer on top,
+                 newest first (Athi, 2026-08-15), mounted by msgPaint after the paint. The reply carries line_id exactly as before. */
+              + '<div data-rt="' + esc(JSON.stringify({ chit_id: t.chit_id, line_id: t.line_id || null, channel: 'external', party: (m.sender_display_name || ''), ids: { text: 'msg-reply', send: 'msg-send' } })) + '" data-testid="rt-reply"></div>'
               + '</div>' : '')
           + '</div>';
       }).join('');
