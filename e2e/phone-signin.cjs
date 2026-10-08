@@ -294,8 +294,8 @@ async function walk(b, WEB, tag, dev, reg, opts) {
 
   console.log('\n── ⚠️⚠️⚠️ A PHONE HOLDING A KEY THE SHOP REFUSES — signs in by the person door (nobody signed in) ' + '─'.repeat(0));
   const st = await walk(b, WEB, 'stale', PHONE, { C1: { held_by: null } }, { staleKey: 'KEY-OLD' });
-  /* ⭐ M08: the sign-in KEEPS a person session; the refused key is left where it is (its store is M10's to move) — the loop is gone */
-  say('⭐⭐ the sign-in keeps a person session — no enrol, no new key, no Due-to-maintenance loop', st.enrols === 0 && st.key === 'KEY-OLD' && st.person === 'ent-a', 'enrols=' + st.enrols + ' key=' + st.key + ' person=' + st.person + ' stuck=' + (st.stuck || '-') + ' ' + JSON.stringify(st.why));
+  /* ⭐ M08: the sign-in KEEPS a person session — the loop is gone. M10: the refused key's store held nothing, so the key is retired (its store stays) */
+  say('⭐⭐ the sign-in keeps a person session — no enrol, no new key, no Due-to-maintenance loop; the empty refused key is retired', st.enrols === 0 && st.key === null && st.person === 'ent-a', 'enrols=' + st.enrols + ' key=' + st.key + ' person=' + st.person + ' stuck=' + (st.stuck || '-') + ' ' + JSON.stringify(st.why));
   say('and the person is signed in on it', st.who === 'Athi', 'who=' + st.who);
 
   console.log('\n── the first screen of an EMPTY shop, at phone size (for the design note) ' + '─'.repeat(0));

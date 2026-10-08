@@ -126,7 +126,8 @@ const PEOPLE = {
   await signIn('xclerk');
   await signedIn();
   const x1 = await shelf();
-  say('signed in on the same counter', x1.who === 'X Clerk' && x1.key === 'KEY-X', 'who=' + x1.who + ' key=' + x1.key);
+  /* ⭐ M10: a browser's first sign-in KEEPS the person session (same shop, reload); X's key is retired because its store owed nothing — the store itself stays */
+  say('signed in on the same counter — as X\'s person now; the key, with nothing owed in its store, is retired', x1.who === 'X Clerk' && x1.person === 'ent-x' && x1.key === null && x1.shop === 'Shop X', 'who=' + x1.who + ' person=' + x1.person + ' key=' + x1.key);
   say('no enrol call — an ordinary sign-in stays cheap', enrolled.length === 0, 'enrol calls=' + enrolled.length);
   await p.click('[data-testid="till-usign-out"]');
   await p.evaluate(() => usignClose());
@@ -141,7 +142,7 @@ const PEOPLE = {
   await p.waitForSelector('[data-testid="till-usign-why"]', { timeout: 10000 });
   const x2 = await shelf();
   say('⚠️ Y is NOT signed in on X\'s counter', x2.who === null, 'who=' + x2.who);
-  say('the counter is still X, key and shelf', x2.key === 'KEY-X' && x2.shop === 'Shop X' && x2.items.indexOf('XMANGO') >= 0, x2.key + ' · ' + x2.shop);
+  say('the counter is still X, session and shelf', x2.person === 'ent-x' && x2.shop === 'Shop X' && x2.items.indexOf('XMANGO') >= 0, x2.person + ' · ' + x2.shop);
   await p.evaluate(() => usignClose());
 
   console.log('\n── ⭐⭐⭐ SHOP Y\'s OWNER signs in and SWITCHES — the whole counter becomes Y ' + '─'.repeat(0));
@@ -159,7 +160,7 @@ const PEOPLE = {
   const txt = await p.evaluate(() => document.body.innerText);
   say('not on the screen anywhere either', txt.indexOf('XMANGO') < 0 && txt.indexOf('Shop X') < 0, 'screen text checked');
   /* ⭐ M08: a browser keeps Y's PERSON SESSION — no key is minted; X's key is left where it was (its store is M10's to move) */
-  say('the device bills as Y\'s person now, and X\'s key is left where it was', y.person === 'ent-y' && y.key === 'KEY-X', 'person=' + y.person + ' key=' + y.key);
+  say('the device bills as Y\'s person now (X\'s key was already retired; X\'s store stays)', y.person === 'ent-y' && y.key === null, 'person=' + y.person + ' key=' + y.key);
   say('and the person who switched it is signed in', y.who === 'Y Owner', 'who=' + y.who);
   const stores = await p.evaluate(async () => (indexedDB.databases ? (await indexedDB.databases()).map((d) => d.name) : []));
   say('X\'s own store is KEPT, not wiped (its queue is money)', stores.filter((n) => /^cb-till-/.test(n)).length >= 2, JSON.stringify(stores));

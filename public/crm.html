@@ -315,6 +315,8 @@ function go(hash){ location.href = '/app.html' + hash; }   /* api()'s 401 → th
 <script src="/app/cap-folders.js"></script>
 <script src="/app/cap-books.js"></script>   <!-- partyDueChipHTML · partyEditOpen · statementHTML — the party pieces the record reuses -->
 <script src="/app/one-person.js"></script>
+<script src="/engine/signin.js"></script>   <!-- CBSignin: the sign-in RULES (engines signin) -->
+<script src="/app/signin-ui.js"></script>   <!-- CBSignin.mount: THE ONE SIGN-IN WINDOW (M14) — the signed-out card mounts it -->
 <script src="/app/cap-crm.js"></script>
 <script src="/app/cap-crm-record.js"></script>
 <script src="/app/kural.js"></script>   <!-- CBKural: the kural footer — one band at the foot, outside the head; never in a message -->
@@ -371,7 +373,9 @@ function whoPaint(){
 function signedOut(why){
   SESS = null; MINE = null; CRM.gen++;
   $('who').innerHTML = ''; $('nav').innerHTML = ''; $('crumb').innerHTML = '';
-  crmCard(`<h2>${esc(why || 'You are signed out')}</h2><a class="act" data-testid="signin-door" href="/app.html#/login">Sign in</a>`);
+  /* ⭐ M14: the one sign-in window, here in the card — mobile number or e-mail, the first-time PIN step; signed in → start() */
+  crmCard(`<h2>${esc(why || 'You are signed out')}</h2><div id="signin-host" data-testid="signin-host"></div>`);
+  CBSignin.mount($('signin-host'), { apiBase: CFG.API_BASE, surface: 'crm', need: 'person', onIn: function(){ start(); } });
 }
 function closeFirst(r){
   $('nav').innerHTML = '';
