@@ -1471,11 +1471,10 @@ async function bkStmtRead(pid, list) {
 function bkDuesCols(c) {
   var dash = '<span style="color:var(--grey)">—</span>', amt = function (p, v) { return esc(bkMoney(Math.abs(Number(v || 0)), c)); };   /* the group head says whose it is (You owe / They owe you) — an amount here is never signed */
   return [
-    { key: 'party', label: tx('Party'), prio: 1, sort: 'party', w: 300, html: true, cell: function (p) { return esc(bkPartyLabel(p.party_id, p.name)); } },
-    { key: 'due', label: tx('Total due'), prio: 2, sort: 'due', num: true, w: 150, html: true, cell: function (p) { return '<b data-b="balance">' + amt(p, p.balance_minor) + '</b>'; } },
-    { key: 'oldest', label: tx('Oldest due'), prio: 3, sort: 'oldest', w: 130, html: true, cell: function (p) { return p.oldest_due ? '<span data-b="due">' + esc(bkDate(p.oldest_due)) + '</span>' : dash; } },
-    { key: 'age', label: tx('Age'), prio: 4, w: 120, html: true, cell: function (p) { var a = bkDuesAge(p); return a ? '<span data-b="age">' + esc(tx(a)) + '</span>' : dash; } },
-    { key: 'act', label: '', prio: 1, pin: 'end', w: 190, html: true, cell: function (p) { return bkDuesActs(p); } },
+    { key: 'party', label: tx('Party'), prio: 1, sort: 'party', w: 230, html: true, cell: function (p) { return esc(bkPartyLabel(p.party_id, p.name)); } },
+    { key: 'due', label: tx('Total due'), prio: 2, sort: 'due', num: true, w: 130, html: true, cell: function (p) { return '<b data-b="balance">' + amt(p, p.balance_minor) + '</b>'; } },
+    { key: 'oldest', label: tx('Oldest due'), prio: 3, sort: 'oldest', w: 220, html: true, cell: function (p) { var ag = bkDuesAge(p); return p.oldest_due ? '<span data-b="due">' + esc(bkDate(p.oldest_due)) + '</span>' + (ag ? ' <span data-b="age" style="color:var(--grey)">· ' + esc(tx(ag)) + '</span>' : '') : dash; } },
+    { key: 'act', label: '', prio: 1, pin: 'end', w: 170, html: true, cell: function (p) { return bkDuesActs(p); } },
   ];
 }
 /** the oldest age bucket the party has money in — the server's own buckets (Schedule III), in the words of BK_BUCKETS */
