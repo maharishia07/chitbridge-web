@@ -51,7 +51,12 @@ async function loadMessages(){
   RPL.busy = false; msgPaint();
   if (typeof loadReplyCount === 'function') loadReplyCount();
 }
-function msgPaint(){ var el = document.getElementById('mainbody'); if (el) el.innerHTML = messagesScreen(); }
+function msgPaint(){
+  var el = document.getElementById('mainbody'); if (!el) return;
+  el.innerHTML = messagesScreen();
+  /* R02 — each open thread's reply box + conversation is CBThread; a reply refreshes the inbox (the row's preview and count) */
+  if (typeof CBThread !== 'undefined') CBThread.mountAll(el, { context: { host: 'replies' }, me: (typeof SESSION !== 'undefined' && (SESSION.entity || SESSION.name)) || '', onDone: function(){ loadMessages(); } });
+}
 function msgShowAll(){ RPL.all = !RPL.all; RPL.data = null; RPL.open = {}; RPL.full = {}; loadMessages(); }
 function msgUnread(){ return (RPL.data || []).filter(function(m){ return !m.read_at; }).length; }
 
@@ -100,20 +105,7 @@ async function msgOpen(key){
   var t = msgThreads().filter(function(x){ return x.key === key; })[0];
   if (!t) return;
 
-  if (!RPL.full[key]) {
-    try {
-      var q = { thread_type: 'external' };
-      if (t.line_id) q.line_id = t.line_id;
-      var r = await api('msgThread', { params: { id: t.chit_id }, query: q });
-      var list = (r && (r.messages || r.items || (Array.isArray(r) ? r : []))) || [];
-      /* ⚠️ FILTERED AGAIN CLIENT-SIDE. Before b155 the server ignores line_id and hands back the whole chit
-         thread — without this a line conversation would silently absorb every other line's messages. */
-      RPL.full[key] = list.filter(function(m){ return (m.line_id || null) === (t.line_id || null); })
-                          .sort(function(a, b){ return String(a.created_at).localeCompare(String(b.created_at)); });
-      msgPaint();
-    } catch (e) { RPL.full[key] = null; msgPaint(); }
-  }
-
+  /* R02 — the whole conversation is read by CBThread on the open row (msgPaint mounts it); nothing is fetched here */
   var unread = t.msgs.filter(function(m){ return !m.read_at; });
   for (var i = 0; i < unread.length; i++) {
     try { await api('msgMark', { params: { id: unread[i].message_id }, body: { read: true } });
@@ -251,33 +243,9 @@ function messagesScreen(){
                * end of a scroll, past messages you had already read. Reading is browsing; replying is the task.
                * The task goes first.
                */
-              + '<textarea id="msg_reply_' + rid + '" data-testid="msg-reply" rows="2" placeholder="Reply to ' + esc(m.sender_display_name || 'them') + '…"'
-              +   ' style="width:100%;box-sizing:border-box;font:inherit;font-size:var(--fs-3);line-height:1.5;padding:9px 11px;border:1px solid var(--line);border-radius:9px;resize:vertical"></textarea>'
-              + '<div style="display:flex;gap:10px;align-items:center;margin-top:7px">'
-              +   '<span style="font-size:var(--fs-1);color:var(--warn-2)">📤 The other party sees this, on their own copy.</span>'
-              +   '<button class="btn pri" data-testid="msg-send" onclick="msgSend(&quot;' + t.key + '&quot;)"'
-              +     ' style="width:auto;flex:0 0 auto;margin:0 0 0 auto;padding:8px 16px">' + (RPL.sending[t.key] ? 'Sending…' : 'Reply') + '</button>'
-              + '</div>'
-              /* ── the conversation, newest first, each side shaded differently ─────────────────────────────── */
-              + '<div style="border-top:1px solid var(--line-soft,#f0efec);margin-top:11px;padding-top:5px"></div>'
-              + (full === undefined ? '<div style="font-size:var(--fs-2);color:var(--grey);padding:4px 0"><span class="spin"></span> reading the conversation…</div>'
-                 : full === null ? '<div style="font-size:var(--fs-2);color:var(--disp);padding:4px 0">Could not read the rest of this conversation — the newest message is above.</div>'
-                 /**
-                  * ⭐ NEWEST FIRST — Athi, 2026-08-15: *"latest message on top, reverse order."*
-                  *
-                  * ⚠️ AND IT MATCHES THE LIST ABOVE IT. The inbox is newest-first; a thread that opened
-                  * oldest-first made the eye travel to the bottom to find the thing the row had just previewed —
-                  * two reading directions on one screen, and the reply box is at the bottom anyway.
-                  */
-                 : full.slice().reverse().map(function(x){
-                     var mine = msgIsMine(x);
-                     return '<div style="margin:6px 0;padding:8px 11px;border-radius:9px;font-size:var(--fs-2);line-height:1.5;'
-                       + (mine ? 'background:var(--blue-tint-bg);margin-inline-start:28px' : 'background:var(--warn-tint);margin-inline-end:28px') + ';color:var(--on-card)">'
-                       + '<div style="display:flex;gap:8px;align-items:baseline;margin-bottom:2px">'
-                       +   '<b style="font-size:var(--fs-1);color:' + (mine ? 'var(--blue-2)' : 'var(--warn-2)') + '">' + esc(mine ? 'You' : (x.sender_display_name || '—')) + '</b>'
-                       +   '<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">' + esc(msgWhen(x.created_at)) + '</span></div>'
-                       + '<div style="white-space:pre-wrap">' + esc(x.message_text || '') + '</div></div>';
-                   }).join(''))
+              /* ⭐ R02 — the reply box AND the conversation are CBThread (app/rail-thread.js): the line's external thread, composer on top,
+                 newest first (Athi, 2026-08-15), mounted by msgPaint after the paint. The reply carries line_id exactly as before. */
+              + '<div data-rt="' + esc(JSON.stringify({ chit_id: t.chit_id, line_id: t.line_id || null, channel: 'external', party: (m.sender_display_name || ''), ids: { text: 'msg-reply', send: 'msg-send' } })) + '" data-testid="rt-reply"></div>'
               + '</div>' : '')
           + '</div>';
       }).join('');

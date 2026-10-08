@@ -866,6 +866,8 @@ function wlPaintCard(loading){
   /* ⚠️ AFTER everything else. makeMovable can restore geometry and re-lay the panel out; putting values back
      before that runs risks them being wiped by the very repaint they were saved from. */
   wlRestoreFields(keep);
+  /* R02 — the two thread sections are CBThread; mounted after the card's paint (and after the field restore, which repaints nothing of theirs) */
+  if (typeof CBThread !== 'undefined') CBThread.mountAll(document.getElementById('modalhost'), { context: { host: 'worklist' }, me: (typeof SESSION !== 'undefined' && (SESSION.entity || SESSION.name)) || '' });
   /* ⚠ The search box is restored with everything else, but the LIST it filters is rebuilt full. Re-applying
      the filter keeps the two consistent — otherwise the query still reads 'oil' over all 200 rows. */
   /* ⚠️ NO PICKER PAINT HERE ANY MORE. The card used to host the catalogue itself, so it had to repaint it after
@@ -879,8 +881,7 @@ function wlSec(k){
   /* ⚠️ FETCHED WHEN THE SECTION IS OPENED, not when the card is. Notes are the least-read thing on this card;
      loading them for every line someone glances at would be one request per glance for data almost nobody asks
      for. Same rule as the actor list and the history. */
-  if (WLL.tab === 'msg' && WLL.msgs === null && !WLL.msgErr) wlMsgLoad('msg');
-  if (WLL.tab === 'ext' && WLL.ext  === null && !WLL.extErr) wlMsgLoad('ext');
+  /* the two threads read themselves (CBThread, R02); the register still loads here */
   if (WLL.tab === 'raida' && WLL.raida === null && !WLL.raidaErr) wlRaidaLoad();
 }
 /**
@@ -1096,26 +1097,10 @@ function wlThreadSec(k, title, list, err, o){
       : err ? 'could not read' : (n ? n + (n === 1 ? ' message' : ' messages') : 'none yet'),
     err ? 'var(--disp)' : o.tone);
   if (WLL.tab !== k) return out;
-  out += '<div style="padding:2px 0 12px">';
-  if (loading) out += '<div style="font-size:var(--fs-2);color:var(--grey)"><span class="spin"></span> checking…</div>';
-  else if (err) out += '<div style="font-size:var(--fs-2);color:var(--disp)">Could not read these just now — this does NOT mean there are none.</div>';
-  else if (!n) out += '<div style="font-size:var(--fs-2);color:var(--grey)">Checked — ' + esc(o.empty) + '.</div>';
-  else out += list.map(function(m){
-    return '<div style="padding:6px 0;border-bottom:1px solid var(--line-soft,#f0efec);font-size:var(--fs-2)">'
-      + '<div style="display:flex;gap:8px;align-items:baseline">'
-      +   '<b style="font-size:var(--fs-2)">' + esc(m.sender_display_name || '—') + '</b>'
-      +   '<span style="margin-inline-start:auto;color:var(--grey);font-size:var(--fs-1)">' + esc(String(m.created_at || '').slice(0, 10)) + '</span></div>'
-      /* pre-wrap, because the box is three lines tall now and people use them. */
-      + '<div style="margin-top:2px;line-height:1.5;white-space:pre-wrap">' + esc(m.message_text || '') + '</div></div>';
-  }).join('');
-  out += '<div style="margin-top:10px">'
-    + wlInput(WLTHREAD[k].box, { testid: 'wl-' + k + '-box', lines: 3, placeholder: o.placeholder })
-    + '<div style="display:flex;justify-content:flex-end;margin-top:8px">'
-    +   wlBtn(o.verb, 'wl-' + k + '-add', 'wlMsgSave(&quot;' + k + '&quot;)', true) + '</div></div>'
-    /* ⚠️ SAID PLAINLY, EVERY TIME, IN BOTH PANELS. A person deciding whether to write "customer is difficult, do
-       not promise Friday" must not have to remember which box they are in. */
-    + '<div style="margin-top:7px;font-size:var(--fs-1);color:' + (o.tone || 'var(--grey)') + ';line-height:1.5">' + o.foot + '</div>'
-    + '</div>';
+  /* ⭐ R02 — the section's list AND box are CBThread (app/rail-thread.js): this line's thread on ONE channel (internal notes · the
+     other party), mounted by wlPaintCard after the card paints. The audience line is the unit's — said the same way everywhere. */
+  var r = WLL.row || {};
+  out += '<div style="padding:2px 0 12px"><div data-rt="' + esc(JSON.stringify({ chit_id: r.chit_id, line_id: r.line_id, channel: WLTHREAD[k].type, party: (r.party_name || r.other || ''), ids: { text: 'wl-' + k + '-box', send: 'wl-' + k + '-add' } })) + '" data-testid="wl-' + k + '-thread"></div></div>';
   return out;
 }
 

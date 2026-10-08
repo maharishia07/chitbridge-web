@@ -1701,6 +1701,8 @@ body.lab-only #cbtestpanel{
      copy that used to live in this file is gone. See BACKLOG-attach-ui-sweep.md for what is deliberately NOT
      swept yet and why. -->
 <script src="/app/attach-ui.js"></script>
+<script src="/engine/rail.js"></script>   <!-- CBRail: the rail engine's refusal words and their sentences (R01) — what a greyed rail action says -->
+<script src="/app/rail-thread.js"></script>   <!-- CBThread.mount: THE ONE COMPOSER + list for a chit's messages, threaded by line (R02) -->
 <!-- the shared step flow: rail, guard and footer for every screen that composes an order one step at a time -->
 <script src="/app/step-flow.js"></script>
 <!-- module 4 (LOCAL PROTOTYPE — not promoted): enhanced catalogue "face" setup (adopt/build → one face → conforming items). -->
@@ -2047,7 +2049,7 @@ const EP = {
   netResume:      {m:"POST", p:"/api/network/connections/:id/resume",     ok:"✓"},
   netDisconnect:  {m:"POST", p:"/api/network/connections/:id/disconnect", ok:"✓"},
 };
-Object.assign(EP, CB_BOOKS_EP, CB_SHEET_EP, CB_PARTY_EP);   /* the Ledger's boot endpoints and the party add/edit/remove/search routes — declared once, in app/accounts-shell.js, shared with accounts.html and crm.html */
+Object.assign(EP, CB_BOOKS_EP, CB_SHEET_EP, CB_PARTY_EP, CB_THREAD_EP);   /* the Ledger's boot endpoints and the party add/edit/remove/search routes — declared once, in app/accounts-shell.js, shared with accounts.html and crm.html */
 
 /* deepClone → app/helpers.js */
 /* STORE starts EMPTY. It once had a demo dataset beside it and the rule was that a demo constant must never be
@@ -16372,7 +16374,9 @@ async function openChit(id, silent){
             summary_money:((h.summary_json&&h.summary_json.money)||null), issued_at:(h.created_at||null),
             /* ⭐ MY copy's business data rides along (2026-09-06, [BOOKS-01] red): the books write-back, the payment, the delivery values —
                the GET has always sent header.business_json; the object dropped it, so every reader fell back to whatever the list row had */
-            business_json:(h.business_json||(base&&base.business_json)||null)};
+            business_json:(h.business_json||(base&&base.business_json)||null),
+            /* ⭐ R01 — the rail engine's answer "may I do X on this copy", carried so CBThread (R02) paints a refused channel greyed with its sentence */
+            actions:(r.actions||null)};
           /* ⚠ msgs starts EMPTY and _msgsLoaded stays false, so the badge falls back to the count the
              list carried. msgEnsure() fills it the moment somebody opens the tab. */
           UI.detail.msgs=[];
@@ -16402,7 +16406,32 @@ async function openChit(id, silent){
         paintDetail(); paintRowsOnly(); }
   catch(e){ const dp=document.getElementById("detailpane"); if(dp)dp.innerHTML=scrErr(e, tx('this chit'), 'openChit(' + JSON.stringify(String(id)) + ')'); }
 }
-function paintDetail(){const dp=document.getElementById("detailpane");if(dp){dp.className="detail";dp.innerHTML=detailInner();} try{stampDetailTitle();}catch(_){}}
+function paintDetail(){const dp=document.getElementById("detailpane");if(dp){dp.className="detail";dp.innerHTML=detailInner(); rtMountAll(dp);} try{stampDetailTitle();}catch(_){}}
+/**
+ * ⭐ R02 — EVERY MESSAGE THREAD ON THE DETAIL PANE IS CBThread (app/rail-thread.js), mounted into the `[data-rt]` hosts the
+ * painters leave (the Messages tab, each dispute room). The pane is painted as a string, so the unit is mounted AFTER innerHTML,
+ * on every paint; a mount keeps the typed text across a repaint. The app hands the unit only what it knows and the unit does
+ * not: the chit's `actions`, the party's name, the message kinds, the co-assist's signature, the dispute byline reader.
+ */
+function rtMountAll(scope){
+  if(typeof CBThread==='undefined') return;
+  const c=UI.detail||{}; const isCust=SESSION.role==="customer";
+  CBThread.mountAll(scope, {
+    actions:c.actions||null, party:c.party||'', me:SESSION.entity||SESSION.name||'', kinds:isCust?["info","query"]:surfacedTypes(),
+    channel:isCust?'external':'both', thread_type:isCust?'external':'internal',
+    signature:SESSION.actorId?('— '+(SESSION.name||"co-assist")+'@'+(SESSION.entity||'')):'',
+    decorate:(typeof disputeByline==='function')?disputeByline:null, context:{host:'app'},
+    onList:function(rows, o){
+      const d=UI.detail; if(!d||String(d.id)!==String(o.chit_id)) return;
+      if(o.dispute_id){ d.dispMsgs=d.dispMsgs||{}; d.dispMsgs[o.dispute_id]=rows; return; }   /* the room's rows, for the AI summary */
+      /* the count the tab and the row carry — repainted in place, never the whole pane (the unit is on it) */
+      d.msgN=rows.length; const i=UI.rows.findIndex(x=>x.id===d.id); if(i>=0)UI.rows[i].msgN=rows.length;
+      document.querySelectorAll('[data-testid="dtab-messages"]').forEach(b=>{ b.textContent="💬 Messages"+(rows.length?" ("+rows.length+")":""); });
+      document.querySelectorAll('[data-testid="msg-tab"]').forEach(b=>{ b.textContent="💬"+(rows.length?' '+rows.length:''); });
+    },
+    onDone:function(){ if(typeof paintRowsOnly==='function'){ try{ paintRowsOnly(); }catch(_){} } },
+  });
+}
 function backToList(){UI.mdetail=false;const p=document.getElementById("panel");if(p)p.classList.remove("showdetail");}
 /**
  * ⭐⭐ DESIGN 1 AND DESIGN 2 ARE ALTERNATIVES IN THE SAME SLOT. Athi, 2026-08-23: *"design 2 and design 1 can be
@@ -16872,7 +16901,7 @@ function msgEnsure(){
     paintDetail();
   }).catch(function(){ var d = UI.detail; if (d && d.id === c.id) d._msgsLoading = false; });
 }
-function setDtab(t){UI.dtab=t; if(t==='messages') msgEnsure(); paintDetail();}
+function setDtab(t){UI.dtab=t; paintDetail();}   /* the Messages tab mounts CBThread, which reads the thread itself (rtMountAll) */
 // (a) The query-chit detail as the ASSISTANCE PAGE: reply on the chit (message) + publish the Q&A to the KB, in one act.
 function answerPublish(id){ const c=UI.detail; if(!c)return; const subj=c.code||c.subject||'';
   modal('<div class="mhd"><div class="t">🧠 Answer &amp; publish</div><div class="s">reply to the asker + add it to the knowledge base</div></div>'
@@ -16887,7 +16916,8 @@ async function doAnswerPublish(id){ const x=document.getElementById("ap_err"); i
   const q=val("ap_q"), a=val("ap_a"); const ctx=(val("ap_c")||"").split(',').map(function(s){return s.trim();}).filter(Boolean);
   if(!a.trim()){ if(x)x.textContent="Write an answer first."; return; }
   try{
-    await api("sendMsg",{params:{id},body:{thread_type:'external', message_text:a, msg_type:'info'}});   // the reply the asker sees on the chit
+    const _sent=await CBThread.send({chit_id:id, text:a, thread_type:'external'});   // the reply the asker sees on the chit — the ONE composer's send (R02)
+    if(!_sent||!_sent.message_id) throw new Error(_sent&&_sent.error&&_sent.error.message||"Could not send the reply");
     await api("assistPublish",{body:{question:q, answer:a, context:ctx}});                                // -> catalogue -> served live
     closeModal(); toast("Answered + published ✓ — now close the query when done"); openChit(id);
   }catch(e){ if(x)x.textContent=(e&&e.message)||"Failed"; } }
@@ -17164,7 +17194,14 @@ async function booksSend(id){
 }
 function statusTabHtml(c){ var log=(c.log||[]); var sl=log.slice(); var q=(UI.statusSearch||'').toLowerCase(); if(q) sl=sl.filter(function(e){ return (String(statusLabel(e))+' '+(e.action_by_display_name||'')+' '+(e.detail||'')).toLowerCase().indexOf(q)>=0; }); var ordered=(UI.statusOrder==='oldest')?sl:sl.slice().reverse(); var inner=ordered.length?lazyWrap('status', ordered, statusEv, '<div class="msgempty">No matching history.</div>'):'<div class="msgempty">No status history yet.</div>'; return '<div class="msghd"><span class="mh-t">Lifecycle ('+log.length+')</span></div>'+statusSearchSort()+'<div class="tl">'+inner+'</div>'; }
 function msgBubble(m){ const ext=m.scope==="external"; const d=MTYPES[m.type]||MTYPES.info; const disp=m.isDispute; const _db=(typeof disputeBadge==='function')?disputeBadge(m):''; const head=_db?_db:`<span class="mbadge ${ext?'ext':'int'}">${ext?'↔ External':'🔒 Internal'}</span><span class="mtype ${d.cls}">${d.icon} ${d.label}</span>`; return `<div class="bubble ${ext?'ext':'int'}${disp?' disp':''}"><div class="bh">${head}<span class="ath">${esc(m.author)}</span>${m.byline?'<span class="ath" style="color:var(--grey);font-weight:400">&nbsp;· by '+esc(m.byline)+'</span>':''}<span class="tm">${m.at}</span>${m.unread?'<span class="unreaddot"></span>':''}</div><div class="bb">${esc(m.body)}</div>${(m.atts&&m.atts.length)?`<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px">${m.atts.map((a,i)=>`<span onclick="openMsgAtt('${m.id}',${i})" title="${esc(a.n)}" style="display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:6px;padding:2px 7px;font-size:var(--fs-1);background:var(--card);cursor:pointer;color:var(--on-card)">${attIcon(a.t)} ${esc(a.n.length>22?a.n.slice(0,22)+'…':a.n)}</span>`).join('')}</div>`:''}</div>`; }
+/* ⭐ R02 — the Messages tab IS CBThread: the host div the pane leaves, mounted by rtMountAll after the paint. Lines ride along so the
+   composer can say which line a message is about and the list can tag each row with it (threaded by line). */
 function messagesTab(c){
+  markChitRead(c.id); setTimeout(refreshMsgBadge,0);
+  const lines=(c.items||[]).map(function(it,i){ const e=(it&&it[3])||{}; const id=e.line_id||(e.live&&e.live.line_id)||null; return (id&&!e.removed)?{line_id:id, label:((i+1)+' · '+String((it&&it[0])||'').slice(0,28))}:null; }).filter(Boolean);
+  return '<div class="msgtab"><div data-rt="'+esc(JSON.stringify({chit_id:c.id, lines:lines}))+'" data-testid="rt-host"></div></div>';
+}
+function messagesTab_old(c){
   markChitRead(c.id); setTimeout(refreshMsgBadge,0);
   if(UI.msgDispSel && !((c.disputes||[]).some(function(d){return String(d.dispute_id)===String(UI.msgDispSel);}))) UI.msgDispSel='';
   const isCust=SESSION.role==="customer";

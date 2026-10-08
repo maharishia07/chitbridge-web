@@ -15,20 +15,24 @@ something needs them before any navigation happens.
 router renders a placeholder until `_capLoading` clears, which is the only reason the
 old duplicate `networkScreen()` in app.html was safe to delete.
 
-## Capabilities (26)
+## Capabilities (31)
 
 | file | loading · nav key | what it is |
 |---|---|---|
 | `cap-admin.js` | lazy · mis, profile, settings, assistreview | the "admin" capability (progressively loaded on demand) |
 | `cap-adopt.js` | lazy · on demand | TAKING A SUPPLIER'S DELIVERY INTO YOUR OWN CATALOGUE |
+| `cap-bank.js` | — | cap-bank.js — BANK on CB Accounts (Daily): a statement file is read, matched to the shop's bank ledger, and the lines the Ledger lacks are added |
 | `cap-books.js` | lazy · ledger | cap-books.js — THE LEDGER: parties, statements, payments, day book, trial balance, P&L, balance sheet, dues, month |
 | `cap-categories.js` | lazy · categories |  |
 | `cap-catsetup.js` | lazy · catsetup |  |
 | `cap-chit2.js` | lazy · on demand | DESIGN 2: the chit as LINE-LEVEL work (lazy; ensureCap('chit2')) |
 | `cap-cmdb.js` | lazy · on demand |  |
 | `cap-connector.js` | lazy · connectors | IoT / ERP connector MANAGEMENT (lazy; loaded via ensureCap('connector') on INVOCATION) |
+| `cap-crm-record.js` | — | cap-crm-record.js — CB CRM: ONE party's record, its timeline, the Log sheet, the Next block, and the party edit |
+| `cap-crm.js` | — | cap-crm.js — CB CRM: the parties list (home), follow-ups, Add party, and the plumbing every CRM screen shares |
 | `cap-definitions.js` | lazy · definitions | DEFINITIONS · the shelf a catalogue takes things off. (lazy capability) |
 | `cap-dispute.js` | lazy · disputes | the DISPUTE capability (the USP), lazy-loaded via ensureCap('dispute') |
+| `cap-entry.js` | — | cap-entry.js — ＋ ENTRY on the Day book: what happened → with whom / what → how much, when, on what paper → check and save |
 | `cap-folders.js` | lazy · folders | FOLDERS capability (lazy; loaded via ensureCap('folders')) |
 | `cap-iddocs.js` | lazy · on demand |  |
 | `cap-intake.js` | lazy · intake | THE INTAKE INBOX. Lazy via ensureCap('intake') |
@@ -36,6 +40,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-match.js` | lazy · match | THE THREE-WAY MATCH (lazy; ensureCap('match')) |
 | `cap-messages.js` | lazy · messages | REPLIES: every external conversation that still wants you, across every chit. Lazy |
 | `cap-network.js` | lazy · network | DESIGN-FIRST network builder. Lazy via ensureCap('network') |
+| `cap-period.js` | — | cap-period.js — MONTH & YEAR END on CB Accounts: Closing stock · Assets & depreciation · Accruals & recurring · GST close & pay · Year close |
 | `cap-readiness.js` | lazy · readiness | TRADE capability (lazy; ensureCap('readiness')). Two tabs: |
 | `cap-register.js` | lazy · on demand | THE REGISTER. Lazy (ensureCap('register')) |
 | `cap-service.js` | lazy · on demand | cap-service.js — a chit AS A SERVICE REQUEST. Lazy-loaded (ensureCap('service')) |
@@ -46,7 +51,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-workforce.js` | lazy · coassists | the CO-ASSIST (workforce) capability: FUNCTIONALITY only |
 | `cap-worklist.js` | lazy · on demand | MY WORK, across every chit. Lazy (ensureCap('worklist')) |
 
-## Shared (35)
+## Shared (40)
 
 | file | loading | what it is |
 |---|---|---|
@@ -63,16 +68,21 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `core.js` | eager | shared client module for the Task Panel (module 1 of the app split) |
 | `govcontext.js` | eager | ADOPTED from chitbridge-engines v1.4.0 · govcontext · sha256 b49816056f5284d60599004a4e65df388c61609bdc344a28baad169f58b86d87 — DO NOT EDIT HERE. Chan |
 | `helpers.js` | eager | generic, dependency-free helpers (module 2 of the app split) |
+| `kural.js` | — |  |
 | `list-ctl.js` | eager |  |
 | `list-legacy.js` | eager |  |
 | `locale.js` | eager | ADOPTED from chitbridge-engines v1.4.0 · locale · sha256 0f8c7bd83ec0190beb18731192fdde3c0b20dc93d0477bb52197887716aa3668 — DO NOT EDIT HERE. Change i |
 | `offers.js` | eager | ADOPTED from chitbridge-engines v1.3.0 · offers · sha256 b90632d3ffa35196adcee8722269468dc83255edd327e2ff28e3cb07f5d82dee — DO NOT EDIT HERE. Change i |
 | `one-person.js` | eager | one-person.js — ONE BROWSER, ONE SHOP AT A TIME |
+| `page.js` | eager | CBPage: WHICH DETAIL PAGE OPENS A CHIT (N03, 2026-10-07 · decisions M-D6 / M-D7) |
 | `pick.js` | eager | CBPick: open the catalogue over any screen and hand the selection back |
 | `price-resolve.js` | eager | WHICH PRICE APPLIES, AND WHY. (classic script, shared global scope) |
 | `pricing.js` | eager | ADOPTED from chitbridge-engines v1.3.0 · pricing · sha256 8fa9a3ec7cae3c049222706433c6fcfac7aaa33cae27d4a259ed60359ba208fd — DO NOT EDIT HERE. Change |
+| `rail-thread.js` | eager | rail-thread.js — CBThread.mount: ONE composer + ONE list for a chit's messages, threaded by line (R02, 2026-10-09) |
 | `screens.js` | eager | GENERATED by screens.cjs — DO NOT EDIT. Run `node screens.cjs` and commit |
 | `search.js` | eager | ADOPTED from chitbridge-engines v1.4.0 · search · sha256 3e6b74d84e1fa082d5aa7d676f53421b263beafd8c455dfe9719f7d25cd841fa — DO NOT EDIT HERE. Change i |
+| `shell.js` | — |  |
+| `signin-ui.js` | — | signin-ui.js — CBSignin.mount: THE ONE SIGN-IN WINDOW, for every app (M14, DECISIONS 2026-10-08) |
 | `step-flow.js` | eager |  |
 | `strings-ar.js` | — |  |
 | `strings-fr.js` | — |  |
@@ -80,7 +90,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `strings-ta.js` | — |  |
 | `table-resize.js` | — | drag a column edge; the width is yours and it is remembered |
 | `tax-slab.js` | eager | ADOPTED from chitbridge-engines v1.2.0 · tax-slab · sha256 439500a95910ff8bd55d4a1c422e2c4e810f509c7a6af2f1cd4e34aa239bc98d — DO NOT EDIT HERE. Change |
-| `tax.js` | eager | ADOPTED BUNDLE from chitbridge-engines · tax-packs v1.10.0 + tax v1.12.0 — DO NOT EDIT HERE. Each part below is a release, unchanged |
+| `tax.js` | eager | ADOPTED BUNDLE from chitbridge-engines · tax-packs v1.20.0 + tax v1.20.0 — DO NOT EDIT HERE. Each part below is a release, unchanged |
 | `test-menu-tree.js` | — | the product as a menu. ONE shape, two surfaces |
 | `test-verdict.js` | — | what would make this red green. ONE judgement, two surfaces |
 | `units.js` | eager | vendored VERBATIM from chitbridge-api/lib/units.js (one unit · three names: ours · UN/ECE Rec 20 · GST UQC) |
@@ -88,4 +98,4 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 
 ---
 
-*61 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*71 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*

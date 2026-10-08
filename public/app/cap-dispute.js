@@ -160,9 +160,9 @@ async function aiDisputeSummary(chitId, disputeId){
   var c=UI.detail; if(!c){ if(typeof toast==='function')toast('Open the dispute first'); return; }
   var d=((c.disputes)||[]).filter(function(x){ return String(x.dispute_id)===String(disputeId); })[0]; if(!d) return;
   if(typeof modal!=='function'||typeof _aiMd!=='function'){ if(typeof toast==='function')toast('AI unavailable here'); return; }
-  var msgs=(typeof disputeFilterMsgs==='function')?(disputeFilterMsgs((c.msgs||[]),'dispute',d.dispute_id)||[]):[];
+  var msgs=((c.dispMsgs||{})[d.dispute_id]||[]);   /* the room's rows as CBThread listed them (rtMountAll onList) */
   var ctx={ category:d.category, status:d.status, raised_by:d.raised_by_display_name, subject:c.code,
-    thread:msgs.map(function(m){ return { from:(m.from||m.sender||''), text:(m.body||m.text||'') }; }) };
+    thread:msgs.map(function(m){ return { from:(m.sender_display_name||m.from||''), text:(m.message_text||m.body||'') }; }) };
   modal('<div class="mhd"><div class="t">' + tx('✨ Summarize dispute') + '</div></div><div class="mbody" style="padding:16px"><div id="adbody" style="font-size:var(--fs-2);color:var(--grey)">✨ Summarizing — neutral &amp; factual…</div></div>', true);
   try{
     var res=await fetch(CFG.API_BASE+'/api/governance/ai-draft',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+SESSION.token},body:JSON.stringify({skill_id:'dispute-summary',context:ctx})});
@@ -179,9 +179,9 @@ async function aiDisputeSummary(chitId, disputeId){
 function aiResolutionSuggest(chitId, disputeId){
   var c=UI.detail; if(!c||typeof aiRun!=='function') return;
   var d=((c.disputes)||[]).filter(function(x){ return String(x.dispute_id)===String(disputeId); })[0]; if(!d) return;
-  var msgs=(typeof disputeFilterMsgs==='function')?(disputeFilterMsgs((c.msgs||[]),'dispute',d.dispute_id)||[]):[];
+  var msgs=((c.dispMsgs||{})[d.dispute_id]||[]);   /* the room's rows as CBThread listed them (rtMountAll onList) */
   aiRun('resolution-suggest', { category:d.category, raised_by:d.raised_by_display_name, subject:c.code,
-    thread:msgs.map(function(m){ return { from:(m.from||m.sender||''), text:(m.body||m.text||'') }; }) }, {title:'✨ Suggested resolution wording'});
+    thread:msgs.map(function(m){ return { from:(m.sender_display_name||m.from||''), text:(m.message_text||m.body||'') }; }) }, {title:'✨ Suggested resolution wording'});
 }
 /* one dispute's room: participants · own message wall (latest first, attachments) · New-message (text+attach) · Resolve */
 function disputeRoomBox(c, d){
@@ -193,21 +193,17 @@ function disputeRoomBox(c, d){
   var suggestBtn=(readonly||typeof aiRun!=='function')?'':'<button onclick="aiResolutionSuggest(\''+c.id+'\',\''+d.dispute_id+'\')" title="AI suggests neutral resolution wording — you decide whether to resolve" style="font-size:var(--fs-1);font-weight:700;border:1px solid var(--purple);background:var(--purple-tint);color:var(--purple);border-radius:6px;padding:5px 10px;cursor:pointer">' + tx('✨ Suggest wording') + '</button>';
   var resolveWrap=(resolve||suggestBtn)?'<span style="display:inline-flex;gap:6px;flex-wrap:wrap">'+suggestBtn+resolve+'</span>':'';
   var roster=[nm(d.raised_by_display_name,'—')+' (raiser)'].concat(parties.map(function(p){ return nm(p.display_name,'party'); })).join(' · ');
-  var msgs=(typeof disputeFilterMsgs==='function')?(disputeFilterMsgs((c.msgs||[]),'dispute',d.dispute_id)||[]):[];
-  msgs=msgs.slice().reverse();   // latest first (the wall)
-  var thread=msgs.length?msgs.map(function(m){ return (typeof msgBubble==='function')?msgBubble(m):''; }).join('')
-    :'<div style="font-size:var(--fs-2);color:var(--grey);padding:6px 2px">No messages in this dispute yet.</div>';
-  var to=parties.length?esc(parties.map(function(p){ return p.display_name||'party'; }).join(", ")):'participants';
-  var newBtn=readonly?'':'<button onclick="disputeToggleCompose()" style="margin-inline-start:auto;border:1px solid var(--line);background:var(--card);border-radius:9px;padding:5px 11px;font-size:var(--fs-2);cursor:pointer;color:var(--on-card)">'+(UI.dispCompose?'✕ Cancel':'✏️ New message')+'</button>';
-  var compose=(!readonly&&UI.dispCompose)?disputeComposeBox(c,d,to):'';
+  var to=parties.length?parties.map(function(p){ return p.display_name||'party'; }).join(", "):'participants';
+  /* ⭐ R02 — the room's thread IS CBThread (app/rail-thread.js), mounted by app.html's rtMountAll after the paint: dispute-scoped
+     (is_dispute + dispute_id, external only — the roster's audience), read-only once resolved; the test ids the dispute specs drive. */
+  var host='<div data-rt="'+esc(JSON.stringify({chit_id:c.id, dispute_id:d.dispute_id, channel:'external', readOnly:readonly, party:to, ids:{text:'dispute-room-input', send:'dispute-room-send'}}))+'" data-testid="rt-disp"></div>';
   return '<div style="border:1px solid #f0c9c6;border-radius:12px;padding:13px 14px">'
     +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="db-cat">'+esc(cap(d.category||''))+'</span>'
       +(parties.length?'<span style="font-size:var(--fs-2);color:var(--grey)">with '+disputeChips(parties,'dpchip')+'</span>':'')
       +'<span style="margin-inline-start:auto;display:inline-flex;gap:9px;align-items:center">'+st+resolveWrap+'</span></div>'
     +'<div style="font-size:var(--fs-2);color:var(--grey-2);margin:10px 0 2px">Participants: <b>'+esc(roster)+'</b></div>'
-    +'<div style="display:flex;align-items:center;margin:13px 0 7px"><span style="font-size:var(--fs-2);font-weight:700;color:var(--grey-2)">' + tx('Messages · latest first') + '</span>'+newBtn+'</div>'
-    +compose
-    +'<div style="border:1px solid var(--line);border-radius:9px;background:var(--card);padding:6px;max-height:340px;overflow:auto;color:var(--on-card)">'+thread+'</div></div>';
+    +'<div style="display:flex;align-items:center;margin:13px 0 7px"><span style="font-size:var(--fs-2);font-weight:700;color:var(--grey-2)">' + tx('Messages · latest first') + '</span></div>'
+    +'<div style="max-height:420px;overflow:auto">'+host+'</div></div>';
 }
 function disputeComposeBox(c, d, to){
   return '<div style="border:1px solid #e5c9c6;border-radius:9px;padding:9px;margin-bottom:10px;background:var(--danger-tint);color:var(--on-card)">'
