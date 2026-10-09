@@ -77,6 +77,7 @@ async function run() {
   ok(badBuilt.length === 0, 'manifest · every built entry routes to a utility page that exists, never app.html, never the index itself' + (badBuilt.length ? ' — not: ' + badBuilt.join(', ') : ''));
   ok(badRest.length === 0, 'manifest · coming / workshop entries have no route (dashed chips)' + (badRest.length ? ' — routed: ' + badRest.join(', ') : ''));
   ok(man.rail && 'route' in man.rail && 'facts' in man.rail && !/app\.html/.test(JSON.stringify(man)), 'manifest · the rail widget is declared (route · facts), and nothing names app.html');
+  const eff = (e) => (e.works && e.state === 'workshop' ? 'built' : e.state);   /* the roadmap's reading of a row (manifest `works`) */
   const BUILT = man.entries.filter((e) => e.state === 'built'), REST = man.entries.filter((e) => e.state !== 'built');
   for (const w of ['Catalogue', 'CB Accounts', 'Till', 'Standards', 'Suppliers', 'Co-assist', 'Connectors', 'Your shop', 'Counters & keys', 'CB CRM', 'Product Lab', 'Offer Lab', 'Combo Lab']) {
     ok(man.entries.some((e) => e.name === w), 'manifest · the old index\'s "' + w + '" is a manifest row');
@@ -261,12 +262,26 @@ async function run() {
       ok(await pg.locator('[data-testid="roadmap"]').count() === 1 && await vis(pg, '[data-testid="rm-going"] summary'), 'roadmap · signed out · it is on the page');
       await pg.click('[data-testid="rm-going"] summary'); await pg.click('[data-testid="rm-fits"] summary'); await pg.click('[data-testid="rm-rail"] summary');
       const items = await pg.$$eval('[data-testid^="rm-item-"]', (ls) => ls.map((l) => ({ id: l.dataset.testid.slice(8), st: l.dataset.state, chip: (l.querySelector('.rm-chip') || {}).textContent })));
-      ok(items.length === man.entries.length && man.entries.every((e) => items.some((i) => i.id === e.id && i.st === e.state)), 'roadmap · every item is a manifest row, with its state (' + items.length + ' of ' + man.entries.length + ')');
+      ok(items.length === man.entries.length && man.entries.every((e) => items.some((i) => i.id === e.id && i.st === (e.works && e.state === 'workshop' ? 'built' : e.state))), 'roadmap · every item is a manifest row, with its state (' + items.length + ' of ' + man.entries.length + ')');
       ok(items.every((i) => /(built|coming|workshop)$/.test(String(i.chip).trim()) && /^[✓◌⚒]/.test(String(i.chip).trim())), 'roadmap · every chip is a symbol and a word');
+      /* H12/H13/H14/H15/H17/H18/H19 — what a reader sees, and what the data says */
+      const rmText = await pg.evaluate(() => document.querySelector('[data-testid="roadmap"]').innerText);
+      ok(!/\b[MRNP][0-9]{1,3}\b/.test(rmText), 'roadmap · H12 · no plan id (M62, R06, N05, P5) is printed for a reader');
+      const plan = await pg.$$eval('[data-testid^="rm-item-"][data-plan]', (ls) => ls.map((l) => l.dataset.testid.slice(8) + '=' + l.dataset.plan));
+      ok(plan.length > 0 && plan.every((p) => /[MRN][0-9]+|P[0-9]/.test(p)), 'roadmap · H12 · the plan ids stay in the data (data-plan + tooltip) for a tester (' + plan.length + ')');
+      const byE = {}; man.entries.forEach((e) => { byE[e.id] = e; });
+      ok(!(byE.catalogue.rows || []).includes('M41') && !(byE.storefront.rows || []).includes('R06') && !(byE.standards.rows || []).includes('N05') && (byE.standards.rows || []).includes('M41'), 'roadmap · H13 · Catalogue is not M41 (Standards), Storefront is not R06 (the bell), Standards is M41 not N05');
+      ok(byE.connectors.works === true && (await pg.locator('[data-testid="rm-item-connectors"]').getAttribute('data-state')) === 'built', 'roadmap · H14 · Connectors (Tally + Zoho work) is not drawn as workshop');
+      ok(byE.governance.state === 'coming' && /Constitution v2/.test(byE.governance.fits) && /coming/.test(byE.governance.fits), 'roadmap · H15 · Governance says the rules are written and the page is coming (agrees with Constitution v2 Current)');
+      ok(await pg.locator('[data-testid="rm-fit-other"]').count() === 1 && /same chit/.test(await pg.locator('[data-testid="rm-fit-other"]').innerText()), 'roadmap · H17 · the diagram shows the OTHER business holding the same chit');
+      const attrs = await pg.$$eval('li[data-testid^="rm-attr-"]', (ls) => ls.map((l) => ({ t: l.querySelector('.rm-n').textContent, m: (l.querySelector('.rm-chip') || {}).textContent, f: (l.querySelector('.rm-f') || {}).textContent })));
+      const tbl = await pg.$$eval('[data-testid="rm-compare"] tbody tr', (rs) => rs.map((r) => ({ t: r.children[0].textContent, m: r.children[1].textContent.trim() })));
+      ok(attrs.length === 4 && attrs.every((a) => a.f && a.f.length > 20), 'roadmap · H19 · each attribute has one plain sentence (' + attrs.length + ')');
+      ok(attrs.filter((a) => a.m).every((a) => { const row = tbl[[0, 1, 3][attrs.filter((x) => x.m).indexOf(a)]]; return row && row.m.replace(/\s+/g, ' ') === a.m.replace(/\s+/g, ' '); }), 'roadmap · H18 · a headline carries the SAME mark as its row in the table');
       const groupsOk = await pg.$$eval('[data-testid^="rm-area-"]', (hs) => hs.map((h) => h.dataset.testid.slice(8)));
       ok(['selling', 'running', 'labs', 'setup'].every((a) => groupsOk.includes(a)), 'roadmap · grouped by area (' + groupsOk.join(', ') + ')');
       const sum = await pg.locator('[data-testid="rm-going"] summary').innerText();
-      ok(sum.includes(BUILT.length + ' built') && sum.includes(man.entries.filter((e) => e.state === 'coming').length + ' coming') && sum.includes(man.entries.filter((e) => e.state === 'workshop').length + ' in the workshop'), 'roadmap · the counts are the manifest\'s (' + sum.replace(/\s+/g, ' ') + ')');
+      ok(sum.includes(man.entries.filter((e) => eff(e) === 'built').length + ' built') && sum.includes(man.entries.filter((e) => eff(e) === 'coming').length + ' coming') && sum.includes(man.entries.filter((e) => eff(e) === 'workshop').length + ' in the workshop'), 'roadmap · the counts are the manifest\'s (' + sum.replace(/\s+/g, ' ') + ')');
       let routesOk = true;
       for (const e of BUILT) { const r = await ctx.request.get(base + e.route); if (r.status() !== 200) { routesOk = false; console.log('      ' + e.route + ' → ' + r.status()); } }
       ok(routesOk, 'roadmap · every built item\'s route returns 200');
@@ -276,10 +291,10 @@ async function run() {
       await pg2.close();
       ok(await pg.locator('[data-testid="roadmap"] a[href]').count() === 0, 'roadmap · it holds no link a not-built item could be opened by');
       const fitN = await pg.$$eval('[data-testid^="rm-fit-"]', (ns) => ns.map((n) => ({ id: n.dataset.testid.slice(7), st: n.dataset.state })));
-      const byId = Object.fromEntries(man.entries.map((e) => [e.id, e.state]));
+      const byId = Object.fromEntries(man.entries.map((e) => [e.id, eff(e)]));
       ok(fitN.some((n) => n.id === 'rail') && ['till', 'accounts', 'crm', 'trade', 'connectors', 'labs'].every((id) => fitN.some((n) => n.id === id)), 'roadmap · the fit diagram: the rail and its six places');
       ok(['till', 'accounts', 'crm', 'trade', 'connectors'].every((id) => fitN.find((n) => n.id === id).st === byId[id]), 'roadmap · each place is coloured by its manifest state');
-      const labsSt = man.entries.filter((e) => e.area === 'labs'), nb = labsSt.filter((e) => e.state === 'built').length;
+      const labsSt = man.entries.filter((e) => e.area === 'labs'), nb = labsSt.filter((e) => eff(e) === 'built').length;
       ok(fitN.find((n) => n.id === 'labs').st === (nb === labsSt.length ? 'built' : nb ? 'partly' : labsSt[0].state), 'roadmap · the Labs place follows its rows (' + nb + ' of ' + labsSt.length + ' built)');
       const cells = await pg.$$eval('[data-testid="rm-compare"] td:not(:first-child)', (cs) => cs.map((c) => c.textContent.trim()));
       ok(cells.length > 0 && cells.every((c) => /^(✓ yes|◐ partly|◌ planned|– no)$/.test(c)), 'roadmap · the comparison marks are symbol + word (' + cells.length + ' cells)');
@@ -308,6 +323,14 @@ async function run() {
       await pg.waitForSelector('[data-testid="rail"]', { timeout: 8000 }).catch(() => {});
       ok(await pg.locator('[data-testid="roadmap"]').count() === 1 && await pg.locator('[data-testid="rail"]').count() === 1, 'roadmap · signed in · the rail widget and the roadmap sit together');
       ok(await pg.locator('[data-testid^="rm-item-"]').count() === PLANTED.entries.length, 'roadmap · a planted manifest is drawn row for row (' + PLANTED.entries.length + ')');
+      /* H16 — signed in the page is the working app: ONE quiet fold, not three folds above the cards */
+      ok(await pg.locator('[data-testid="rm-quiet-fold"]').count() === 1 && await vis(pg, '[data-testid="rm-quiet-fold"] > summary') && !(await vis(pg, '[data-testid="rm-going"] summary')), 'roadmap · H16 · signed in: one quiet "Where we are going ›", the three folds are inside it');
+      await pg.click('[data-testid="rm-quiet-fold"] > summary');
+      ok(await vis(pg, '[data-testid="rm-going"] summary'), 'roadmap · H16 · the quiet fold opens to the same roadmap');
+      /* H1/H10/H11 — every rail number is a door to what it counts */
+      const hrefs = await pg.evaluate(() => { const h = (s) => ((document.querySelector('[data-testid="' + s + '"]') || {}).getAttribute || function () { return null; }).call(document.querySelector('[data-testid="' + s + '"]'), 'href'); return { i: h('rail-in'), o: h('rail-out'), k: h('rail-stuck'), s: h('rail-suppliers-open'), c: h('rail-customers-open') }; });
+      ok(hrefs.i === '/network.html#/chits?tab=in' && hrefs.o === '/network.html#/chits?tab=out' && hrefs.k === '/network.html#/chits?tab=stuck', 'rail · H10 · 3 in / 2 out / 1 stuck open that tab of the chits view (' + JSON.stringify(hrefs) + ')');
+      ok(hrefs.s === '/network.html#/parties?role=supplier' && hrefs.c === '/network.html#/parties?role=customer', 'rail · H11 · Suppliers / Customers open the parties list filtered to that role');
       await ctx.close();
     }
 

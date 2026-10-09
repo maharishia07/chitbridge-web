@@ -215,6 +215,8 @@
     var I = { el: el, o: o, key: key, pop: null, limit: 50, nextCache: {}, dead: false };
     var R = STATE[key] || (STATE[key] = { q: '', filt: {}, open: {}, allOpen: false, sel: {}, selMode: false, gcol: {}, hl: null });
     I.r = R;
+    /* a host may open the list already narrowed (a link from another page: Home's Suppliers -> the CRM list of suppliers): opts.preset = { filt:{ key: value } } replaces the remembered filters */
+    if (o.preset && o.preset.filt) { R.filt = {}; Object.keys(o.preset.filt).forEach(function (k) { R.filt[k] = o.preset.filt[k]; }); }
     I.s = loadChoices(I);
     el.__cbl = I;
     el.classList.add('cbl');
