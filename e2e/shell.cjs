@@ -181,7 +181,7 @@ async function run(o) {
       const nav = await pg.evaluate(() => { const r = document.querySelector('.cbsh-nav').getBoundingClientRect(); return { bottom: Math.round(r.bottom), w: Math.round(r.width) }; });
       ok(nav.bottom === 844 && nav.w === 390, '390 · the five areas are a bottom tab bar (' + JSON.stringify(nav) + ')');
       ok(await pg.evaluate(() => [...document.querySelectorAll('.cbsh-sec')].filter((s) => s.offsetParent).map((s) => s.dataset.area).join()) === 'home', '390 · one area at a time: Home');
-      ok(await pg.evaluate(() => !!document.querySelector('.cbsh-sec.home .cbsh-kh #cbkural')), '390 · the kural sits at the foot of Home');
+      ok(await pg.evaluate(() => !!document.querySelector('[data-testid="shell-pfoot"] #cbkural')), '390 · the kural sits in the footer above the tab bar (never a card in Home)');
       await pg.screenshot({ path: path.join(SHOTS, 'shell-phone.png') });
       for (const a of Object.keys(BUDGET)) {
         await pg.click('[data-testid="shell-nav-' + a + '"]'); await pg.waitForTimeout(120);

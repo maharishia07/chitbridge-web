@@ -75,7 +75,7 @@ const { standIn, route } = require('./lib/standin.cjs');
   const shown = async (p) => (await band(p).count()) === 1 && await band(p).isVisible();
   const view = async (p) => p.evaluate(() => { const e = document.querySelector('[data-testid="kural-footer"]'); if (!e) return null;
     const v = e.querySelector('[data-testid="kural-verse"]'), m = e.querySelector('[data-testid="kural-meaning"]'), no = e.querySelector('[data-testid="kural-no"]');
-    return { n: document.querySelectorAll('[data-testid="kural-footer"]').length, hidden: e.hidden, no: e.getAttribute('data-kural'), parent: e.parentElement && e.parentElement.tagName, inShellFoot: !!e.closest('[data-testid="shell-foot"], .cbsh-kh'), verse: v ? Array.from(v.querySelectorAll('.cbk-ln')).map((x) => x.textContent.replace(/\s+/g, ' ').trim()) : null,
+    return { n: document.querySelectorAll('[data-testid="kural-footer"]').length, hidden: e.hidden, no: e.getAttribute('data-kural'), parent: e.parentElement && e.parentElement.tagName, inShellFoot: !!e.closest('[data-testid="shell-foot"], [data-testid="shell-pfoot"]'), verse: v ? Array.from(v.querySelectorAll('.cbk-ln')).map((x) => x.textContent.replace(/\s+/g, ' ').trim()) : null,
       meaning: m ? m.textContent.trim() : null, text: e.innerText, cls: e.className, top: e.getBoundingClientRect().top, bottom: e.getBoundingClientRect().bottom, vh: window.innerHeight, sw: document.documentElement.scrollWidth, ih: window.innerWidth,
       inHead: !!e.closest('header,.top,.bar,.cbl-title,.titlerow'), inField: !!e.closest('textarea,input,[contenteditable],[data-testid*="compose"],[data-testid*="message"]'),
       kv: v ? { dir: getComputedStyle(e.querySelector('.cbk-body')).flexDirection || '', display: getComputedStyle(e.querySelector('.cbk-body')).display, vt: v.getBoundingClientRect().top, mt: m.getBoundingClientRect().top, vb: v.getBoundingClientRect().bottom, mo: getComputedStyle(m).opacity, vo: getComputedStyle(v).opacity } : null }; });
@@ -153,7 +153,7 @@ const { standIn, route } = require('./lib/standin.cjs');
     v = await view(ph.p);
     ok(v.kv.display === 'grid' && v.kv.vo === '1' && v.kv.mo === '0', 'phone (390): one line at a time — the couplet first, the meaning waiting in the same place');
     ok(v.sw === 390, 'phone: document.scrollWidth is 390 with the band');
-    await ph.p.clock.fastForward(7100); await ph.p.waitForTimeout(700);
+    await ph.p.waitForTimeout(500); await ph.p.clock.fastForward(7100); await ph.p.waitForTimeout(700);   /* the band now paints in the very first moments (the frame is up at once); the fake clock needs a beat before a jump reaches a timer made that early */
     v = await view(ph.p);
     ok(v.kv.mo === '1' && v.kv.vo === '0', 'phone: after 7 s the two take turns (the meaning now shows)');
     await ph.p.screenshot({ path: path.join(SHOTS, 'kural-accounts-phone-meaning.png') }).catch(() => {});

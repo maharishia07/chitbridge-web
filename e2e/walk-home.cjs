@@ -5,6 +5,8 @@
  * screen showed. Signed in as a FIXTURE shop ("Fixture Shop" / CBWALK0001): the site is served from this checkout and the API is a stand-in answering inside
  * the page, so nothing reaches localhost:3000 or the live site and nothing is written anywhere.
  * Open rows (H20 till sign-in, H34/H35 avatar doors, H12-H15 roadmap wording) are listed at the end as NOTE lines, not asserted.
+ * THE LISTS ROUND (2026-10-09): C8-C11 (CRM one line per party · the formatted mini-card · only the rows scroll), O6/C9 (an internal .cr handle is never an e-mail), Z1 (zebra rows),
+ * UI9 (no layout jump: the whole frame in the first paint, only the rows change — CRM and Home), P2-2 (the kural is ALWAYS in the footer, above the tab bar on a phone).
  *
  *   NODE_PATH=e2e/node_modules node e2e/walk-home.cjs            headless, fast
  *   node e2e/walk-home.cjs --show                                 watch it: headed, captions, green/red per step, a results page that stays open
@@ -146,6 +148,76 @@ W.run('home', async (w) => {
       return { ok: places.length === 1, saw: seen.map((x) => x.vw + 'px: ' + x.band.where).join(' | ') };
     });
   }
+  await page.setViewportSize({ width: 1280, height: 860 });
+
+  /* ── THE LISTS ROUND (2026-10-09) ── */
+  FX.list.forEach((q) => { if (q.party_no === 'P-0004') q.email = '9894055621@fixture-shop.cr'; if (q.party_no === 'P-0005') q.email = 'meena.s=outlook.com@fixture-shop.cr'; });
+  await page.setViewportSize({ width: 1366, height: 800 });
+  await goPage('/crm.html'); await page.waitForSelector('[data-testid^="crm-row-"]', { timeout: 15000 }); await page.waitForTimeout(300);
+  await w.step('C10', 'CRM -> Parties -> ONE line per party, in columns (Role · On ChitBridge · Dues · Last activity · Next follow-up), nothing stacked under the name', async () => {
+    const g = await page.evaluate(() => ({ heads: Array.from(document.querySelectorAll('#crm_list .cbl-hc')).map((h) => h.textContent.replace(/[▲▼⇅▾●]/g, '').trim()), rows: Array.from(document.querySelectorAll('#crm_list .cbl-row')).map((r) => Math.round(r.getBoundingClientRect().height)), stacked: document.querySelectorAll('#crm_list .cbl-row .l2, #crm_list .cbl-row .tag').length }));
+    return { ok: /Party/i.test(g.heads[0]) && g.heads.some((h) => /^role$/i.test(h)) && g.heads.some((h) => /on chitbridge/i.test(h)) && g.rows.length >= 5 && g.rows.every((h) => h <= 56) && g.stacked === 0, saw: 'columns ' + g.heads.join(' · ') + '; row heights ' + g.rows.join('/') + ' px; ' + g.stacked + ' chips under a name' };
+  });
+  await w.step('C11', 'CRM -> the title, views and toolbar stay put while the rows scroll', async () => {
+    const t0 = await page.evaluate(() => document.querySelector('.cbl-tools').getBoundingClientRect().top);
+    await page.evaluate(() => { const l = document.querySelector('#crm_list .cbl-list'); l.scrollTop = 300; const rs = document.querySelectorAll('#crm_list [data-row]'); rs[rs.length - 1].scrollIntoView({ block: 'end' }); });
+    const t1 = await page.evaluate(() => ({ tools: document.querySelector('.cbl-tools').getBoundingClientRect().top, scr: document.getElementById('screen').scrollTop, doc: document.documentElement.scrollTop }));
+    return { ok: t1.tools === t0 && t1.scr === 0 && t1.doc === 0, saw: 'toolbar at ' + t0 + ' px before, ' + t1.tools + ' after; the screen scrolled ' + t1.scr + ', the page ' + t1.doc };
+  });
+  await w.step('C8', 'CRM -> ▸ opens a formatted mini-card: contact · money · last chits · every action (the refused one greyed with its sentence)', async () => {
+    await page.click('[data-testid="crm-row-P-0003"] [data-caret]'); await page.waitForSelector('[data-testid="crm-mini-P-0003"]'); await page.waitForTimeout(500);
+    const g = await page.evaluate(() => ({ boxes: document.querySelectorAll('[data-testid="crm-mini-P-0003"] .mc-box').length, tel: !!document.querySelector('[data-testid="crm-mini-phone-P-0003"] a[href^="tel:"]'), acts: Array.from(document.querySelectorAll('#crm_list .cbl-next [data-act]')).map((b) => b.getAttribute('data-act') + (b.disabled ? ':off' : '')), why: (document.querySelector('[data-testid="crm-mini-message-why"]') || {}).textContent || '' }));
+    await page.click('[data-testid="crm-row-P-0003"] [data-caret]');
+    return { ok: g.boxes === 3 && g.tel && g.acts.join() === 'call,message:off,pay,followup,open' && /Not on ChitBridge/.test(g.why), saw: g.boxes + ' boxes; actions ' + g.acts.join(' ') + '; Message says "' + g.why + '"' };
+  });
+  await w.step('C9-O6', 'CRM -> an internal handle (…@fixture-shop.cr) is never shown as an e-mail — list, E-mail column, mini-card', async () => {
+    await page.click('[data-testid="cols-btn-crm-parties"]'); await page.check('[data-testid="cols-crm-parties-email"]'); await page.keyboard.press('Escape'); await page.waitForTimeout(150);
+    await page.click('[data-testid="crm-row-P-0004"] [data-caret]'); await page.waitForSelector('[data-testid="crm-mini-email-P-0004"]');
+    const t = await page.evaluate(() => document.body.textContent), mini = await txt('[data-testid="crm-mini-email-P-0004"]');
+    await page.click('[data-testid="crm-row-P-0004"] [data-caret]');
+    return { ok: !/@fixture-shop\.cr/i.test(t) && /meena\.s@outlook\.com/.test(t) && /no e-mail/.test(mini), saw: 'handle on screen: ' + /@fixture-shop\.cr/i.test(t) + '; the encoded one reads meena.s@outlook.com: ' + /meena\.s@outlook\.com/.test(t) + '; the phone handle says "' + mini + '"' };
+  });
+  await w.step('Z1', 'CRM -> every other row is a different shade, and the row under the pointer is neither', async () => {
+    const g = await page.evaluate(() => { const bg = (e) => getComputedStyle(e).backgroundColor, rs = Array.from(document.querySelectorAll('#crm_list .cbl-row')); return { a: bg(rs[0]), b: bg(rs[1]), c: bg(rs[2]) }; });
+    await page.hover('[data-testid="crm-row-P-0002"]'); await page.waitForTimeout(80);
+    const h = await page.evaluate(() => getComputedStyle(document.querySelector('[data-testid="crm-row-P-0002"]')).backgroundColor);
+    await page.mouse.move(2, 2);
+    return { ok: g.a === g.c && g.a !== g.b && h !== g.a && h !== g.b, saw: 'rows ' + g.a + ' / ' + g.b + ' / ' + g.c + '; hovered ' + h };
+  });
+  await w.step('UI9-crm', 'CRM -> slow connection: the whole frame is there first (menu, title, toolbar, header, skeleton rows, the kural\'s room); when the rows arrive nothing above them moves', async () => {
+    const slow = async (r) => { await new Promise((x) => setTimeout(x, 1500)); r.fallback(); };
+    await ctx.route('**/api/**', slow);
+    await page.goto(base + '/crm.html'); await page.waitForTimeout(450);   /* a fixed beat, before the slow line answers anything: this IS the first paint */
+    const box = () => page.evaluate(() => { const r = (s, n) => { const e = document.querySelectorAll(s)[n || 0]; if (!e) return null; const b = e.getBoundingClientRect(); return [Math.round(b.left), Math.round(b.top), Math.round(b.width), Math.round(b.height)]; };
+      return { nav: document.querySelectorAll('#nav .nav-btn').length, n0: r('#nav .nav-btn', 0), title: r('.cbl-title'), tools: r('.cbl-tools'), hdr: r('.cbl-hdr'), skel: document.querySelectorAll('.cbl-skel').length, band: r('#cbkural,#cbkural-reserve'), rows: document.querySelectorAll('.cbl-row').length }; });
+    const a = await box();
+    await page.waitForSelector('[data-testid^="crm-row-"]', { timeout: 15000 }); await page.waitForTimeout(500);
+    const z = await box(); await ctx.unroute('**/api/**', slow);
+    const same = (p, q) => !!p && !!q && p.every((v, i) => Math.abs(v - q[i]) <= 1);
+    return { ok: a.nav === 3 && !!a.title && !!a.tools && !!a.hdr && a.skel >= 5 && a.rows === 0 && !!a.band && same(a.n0, z.n0) && same(a.title, z.title) && same(a.tools, z.tools) && same(a.hdr, z.hdr), saw: 'first paint: ' + a.nav + ' menu items, title, toolbar, header, ' + a.skel + ' skeleton rows, kural room ' + (a.band && a.band[3]) + ' px; toolbar ' + JSON.stringify(a.tools) + ' → ' + JSON.stringify(z.tools) };
+  });
+  await page.setViewportSize({ width: 1366, height: 800 });
+  await w.step('UI9-home', 'Home -> the sidebar and header are in the first paint and do not move when the cards arrive', async () => {
+    const slow = async (r) => { await new Promise((x) => setTimeout(x, 1500)); r.fallback(); };
+    await ctx.route('**/app/manifest.json', slow); await ctx.route('**/api/**', slow);
+    await page.goto(base + '/'); await page.waitForSelector('[data-testid="shell-header"]', { timeout: 8000 }); await page.waitForTimeout(250);
+    const box = () => page.evaluate(() => { const r = (s, n) => { const e = document.querySelectorAll(s)[n || 0]; if (!e) return null; const b = e.getBoundingClientRect(); return [Math.round(b.left), Math.round(b.top), Math.round(b.width), Math.round(b.height)]; };
+      return { nav: document.querySelectorAll('[data-testid^="shell-nav-"]').length, n0: r('[data-testid="shell-nav-home"]'), n1: r('[data-testid="shell-nav-running"]'), hdr: r('[data-testid="shell-header"]'), title: r('.cbsh-ph'), band: r('#cbkural,#cbkural-reserve') }; });
+    const a = await box();
+    await page.waitForSelector('[data-testid="rail-suppliers"]', { timeout: 15000 }).catch(() => {}); await page.waitForTimeout(600);
+    const z = await box(); await ctx.unroute('**/app/manifest.json', slow); await ctx.unroute('**/api/**', slow);
+    const same = (p, q) => !!p && !!q && p.every((v, i) => Math.abs(v - q[i]) <= 1);
+    return { ok: a.nav >= 4 && same(a.n0, z.n0) && same(a.n1, z.n1) && same(a.hdr, z.hdr) && same(a.title, z.title) && !!a.band, saw: 'first paint: ' + a.nav + ' menu items, header ' + JSON.stringify(a.hdr) + ', title ' + JSON.stringify(a.title) + ', kural room ' + (a.band && a.band[3]) + ' px; after: menu ' + JSON.stringify([z.n0, z.n1]) + ' header ' + JSON.stringify(z.hdr) };
+  });
+  await w.step('P2-2', 'Home -> the kural is in the FOOTER on every width: under the page on a laptop, above the tab bar on a phone — never a card in the middle', async () => {
+    const where = () => page.evaluate(() => { const k = document.querySelector('#cbkural'); if (!k) return null; const nav = document.querySelector('[data-testid="shell-nav"]'), r = k.getBoundingClientRect(), n = nav && nav.getBoundingClientRect(); return { inFoot: !!k.closest('[data-testid="shell-foot"],[data-testid="shell-pfoot"]'), inSec: !!k.closest('.cbsh-sec'), bottom: Math.round(r.bottom), navTop: n ? Math.round(n.top) : null, navLeft: n ? Math.round(n.left) : null, ih: innerHeight, hidden: k.hidden }; });
+    await page.setViewportSize({ width: 390, height: 844 }); await goPage('/'); await page.waitForSelector('#cbkural:not([hidden])', { timeout: 8000 }).catch(() => {});
+    const ph = await where();
+    await page.setViewportSize({ width: 1366, height: 800 }); await goPage('/'); await page.waitForSelector('#cbkural:not([hidden])', { timeout: 8000 }).catch(() => {});
+    const lp = await where();
+    const phoneOk = ph && !ph.hidden && ph.inFoot && !ph.inSec && ph.navTop != null && ph.bottom <= ph.navTop + 1, lapOk = lp && !lp.hidden && lp.inFoot && !lp.inSec;
+    return { ok: !!phoneOk && !!lapOk, saw: 'phone: ' + JSON.stringify(ph) + ' | laptop: ' + JSON.stringify(lp) };
+  });
   await page.setViewportSize({ width: 1280, height: 860 });
 
   await w.step('M43', 'the stand-in answered every /api/books and /api/crm call as the API contract says', async () => { const [ok, saw] = C.finish(); return { ok, saw }; });

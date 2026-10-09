@@ -30,6 +30,7 @@
   if (root.CBKural) return;
   var doc = root.document;
 
+  var RES = null;   /* the room kept for the band until its verse has loaded (UI9): the page's frame does not change height when the band arrives */
   var DATA = null, LOADING = null, ROUTE = '', LEAD = 'ta', LANG = 'en', HOST = null, EL = null, TIMER = null, SECOND = false, PAUSED = false, OBS = null, BLOCKED = false;
   var SRC = '/app/kurals.json';
 
@@ -45,6 +46,7 @@
     'padding:10px 16px 10px 20px;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--k-line);color:var(--k-ink);',
     'background:repeating-linear-gradient(0deg,var(--k-hair) 0 1px,transparent 1px 6px),var(--k-panel);font-family:var(--f-ui,"IBM Plex Sans","Segoe UI",system-ui,sans-serif);line-height:1.45;text-align:start}',
     '.cbk[hidden]{display:none}',
+    '.cbk-reserve{flex:0 0 auto;width:100%;box-sizing:border-box;border-top:1px solid var(--line,#DDD6C6);background:var(--panel,#F3EFE6)}.cbk-reserve.quiet{border-top-color:transparent;background:none}',
     '.cbk *,.cbk *::before,.cbk *::after{box-sizing:border-box}',
     '.cbk button{font:inherit;color:inherit;cursor:pointer}',
     '.cbk .cbk-seal{width:34px;height:34px;color:var(--k-muted);fill:currentColor;stroke:none}',
@@ -130,10 +132,22 @@
     for (var i = 0; i < list.length; i++) { var e = list[i]; if (EL && EL.contains(e)) continue; if (e.offsetWidth || e.offsetHeight || e.getClientRects().length) return true; }
     return false;
   }
+  /** which width class the band is in, and the height it had there last time (so the room kept for it is the right size from the first paint) */
+  function wclass() { var w = root.innerWidth || 1200; return w > 1100 ? 'wide' : (w > 640 ? 'mid' : 'phone'); }
+  function reserveH() { var n = parseInt(lsGet('kural.h.' + wclass()), 10); return n > 20 ? n : ({ wide: 72, mid: 104, phone: 110 })[wclass()]; }
+  function makeRoom(h, quiet) {
+    if (!RES) { RES = doc.createElement('div'); RES.id = 'cbkural-reserve'; RES.setAttribute('aria-hidden', 'true'); RES.setAttribute('data-testid', 'kural-reserve'); (HOST || doc.body).appendChild(RES); }
+    RES.className = 'cbk-reserve' + (quiet ? ' quiet' : ''); RES.style.height = h + 'px';
+  }
+  function reserve() {
+    if (!doc || !doc.body || RES || EL) return;
+    css(); makeRoom(reserveH(), false); touch();
+  }
+  function unreserve() { if (RES) { try { RES.remove(); } catch (_) {} RES = null; } }
   function touch() {
-    if (!EL) return;
-    var h = EL.hidden ? 0 : EL.offsetHeight;
-    doc.documentElement.style.setProperty('--cbk-h', h + 'px');
+    var h = (EL && !EL.hidden ? EL.offsetHeight : 0) + (RES ? RES.offsetHeight : 0);
+    if (EL && !EL.hidden && EL.offsetHeight > 20) lsSet('kural.h.' + wclass(), String(EL.offsetHeight));
+    if (EL || RES) doc.documentElement.style.setProperty('--cbk-h', h + 'px');
   }
 
   function paint() {
@@ -144,15 +158,18 @@
       (HOST || doc.body).appendChild(EL);
       EL.addEventListener('click', onClick); EL.addEventListener('keydown', function (e) { if ((e.key === 'Enter' || e.key === ' ') && e.target.closest && e.target.closest('[data-kswap]')) { e.preventDefault(); swap(); } });
     }
-    clearInterval(TIMER); TIMER = null;
+    var prevH = EL && !EL.hidden ? EL.offsetHeight : 0;
+    /* the phone's 7 s turn-taking keeps ITS clock across repaints (a repaint must not restart the count); it is stopped below when the band is not drawn or the person is in charge */
     /* ONE place: the band is never a part of a header, a bar or a title row, whoever mounted it or moved it there (Round U, 2026-10-09) */
     if (EL.closest(HEAD_SEL)) (HOST && !HOST.closest(HEAD_SEL) ? HOST : doc.body).appendChild(EL);
     var k = find(ROUTE);
     BLOCKED = blockedNow();
-    if (!k || BLOCKED) { EL.hidden = true; EL.innerHTML = ''; EL.removeAttribute('data-kural'); touch(); return; }
+    /* a band that may not be drawn BESIDE a warning keeps its room (quiet, blank): the page does not grow and shrink as warnings come and go (UI9) */
+    if (k && BLOCKED) makeRoom(prevH > 20 ? prevH : reserveH(), true); else unreserve();
+    if (!k || BLOCKED) { clearInterval(TIMER); TIMER = null; EL.hidden = true; EL.innerHTML = ''; EL.removeAttribute('data-kural'); touch(); return; }
     EL.hidden = false; EL.setAttribute('data-kural', String(k.no));
     if (hiddenToday()) {
-      EL.className = 'cbk off'; EL.innerHTML = '<button type="button" class="cbk-show" data-kshow="1" data-testid="kural-show" aria-label="Show the kural">குறள் ' + k.no + ' ›</button>'; touch(); return;
+      clearInterval(TIMER); TIMER = null; EL.className = 'cbk off'; EL.innerHTML = '<button type="button" class="cbk-show" data-kshow="1" data-testid="kural-show" aria-label="Show the kural">குறள் ' + k.no + ' ›</button>'; touch(); return;
     }
     var m = meaning(k), verse = '<span class="cbk-v" lang="ta" data-testid="kural-verse">' + kline(k.verse[0]) + kline(k.verse[1]) + '</span>',
       mean = '<span class="cbk-m" lang="' + esc(m.lang) + '" data-testid="kural-meaning">' + esc(m.text) + '</span>';
@@ -162,7 +179,8 @@
       + '<button type="button" class="cbk-x" data-khide="1" data-testid="kural-hide" aria-label="Hide the kural for today" title="Hide for today">✕</button>';
     var phone = EL.clientWidth > 0 && EL.clientWidth <= 640, body = EL.querySelector('.cbk-body');
     if (phone) { body.setAttribute('role', 'button'); body.setAttribute('tabindex', '0'); body.setAttribute('aria-label', 'Thirukkural ' + k.no + '. Tap to switch the verse and its meaning'); }
-    if (phone && !still() && !PAUSED) TIMER = setInterval(function () { SECOND = !SECOND; EL && EL.classList.toggle('second', SECOND); }, 7000);
+    if (!(phone && !still() && !PAUSED)) { clearInterval(TIMER); TIMER = null; }
+    else if (!TIMER) TIMER = setInterval(function () { SECOND = !SECOND; EL && EL.classList.toggle('second', SECOND); }, 7000);
     touch();
   }
   function still() {
@@ -192,7 +210,7 @@
   root.CBKural = {
     mount: function (o) {
       o = o || {}; HOST = o.host || null; if (o.lead) LEAD = o.lead; else { var s = lsGet('kural.lang'); if (s === 'en' || s === 'ta') LEAD = s; }
-      ROUTE = o.route || ROUTE; LANG = lang(); watch();
+      ROUTE = o.route || ROUTE; LANG = lang(); watch(); reserve();
       return load().then(function () { paint(); return root.CBKural; });
     },
     set: function (route) { ROUTE = route || ''; SECOND = false; PAUSED = false; return load().then(function () { paint(); }); },

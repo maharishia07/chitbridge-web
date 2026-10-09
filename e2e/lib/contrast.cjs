@@ -37,4 +37,11 @@ function ratio(fg, bg) {
   return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
 }
 
-module.exports = { hex, lum, ratio };
+/** color-mix(in srgb, fg pct%, bg) as a hex — what CBList's zebra and hover shades are made of (--cl-zebra · --cl-hov), so the tool measures the colour the screen paints. */
+function mix(fg, pct, bg) {
+  const a = hex(fg), b = hex(bg);
+  if (!a || !b) return null;
+  return '#' + a.map((v, i) => Math.round(v * pct + b[i] * (1 - pct)).toString(16).padStart(2, '0')).join('');
+}
+
+module.exports = { hex, lum, ratio, mix };

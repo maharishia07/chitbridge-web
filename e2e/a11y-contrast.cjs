@@ -29,7 +29,7 @@ const src = fs.readFileSync(APP, 'utf8');
 
 /* ── colour maths ────────────────────────────────────────────────────────────────────────────────────────── */
 /* ⭐ ONE COPY, shared with till-contrast.cjs — see e2e/lib/contrast.cjs for why it moved out of this file. */
-const { hex, lum, ratio } = require('./lib/contrast.cjs');
+const { hex, lum, ratio, mix } = require('./lib/contrast.cjs');
 
 /* ── PAGE MODE (index page, 2026-09-30): `node e2e/a11y-contrast.cjs <page.html>` measures a standalone page's
  * own tokens instead of the app's themes — the same reason till-contrast.cjs exists: a page with its own :root
@@ -206,6 +206,22 @@ Object.keys(THEMES).forEach((key) => {
       check(key, g + ' on ' + r, ratio(v(g), bg), TEXT);
     });
   });
+
+  /* ⭐ ZEBRA (Athi, 2026-10-09): CBList stripes every other row with --cl-zebra = the theme's --zebra, else the ink mixed 4% into the card, and lights the hovered row with the blue mixed 8%
+     into the card (list-ctl.js; the ledger tables use the same zebra). Text must clear the SAME bar on those two grounds as on the card: the ink, the four greys, and the colours the
+     rows speak in (you'll get · you'll give · late · Dues). Measured on the colour the screen paints, not on the token's name. */
+  {
+    const zebra = v('--zebra') || mix(v('--ink'), 0.04, card), hov = mix(v('--blue'), 0.08, card);
+    [['zebra row', zebra], ['hovered row', hov]].forEach(([nm, bg]) => {
+      if (!bg) return;
+      check(key, 'ink on ' + nm, ratio(v('--ink'), bg), TEXT);
+      GREYS.forEach((g) => check(key, g + ' on ' + nm, ratio(v(g), bg), TEXT));
+      /* the colours the CRM rows speak in, as crm.html resolves them in a chosen theme: you'll get = --green-d (the theme's --ok-2 mixed 20% toward its ink), you'll give · late = --red-text (the theme's --disp mixed 22% toward its ink) */
+      const get = mix(v('--ok-2'), 0.8, v('--ink')), give = mix(v('--disp'), 0.78, v('--ink'));
+      if (get) check(key, 'you\'ll get (green-d) on ' + nm, ratio(get, bg), TEXT, 'Dues column');
+      if (give) check(key, 'you\'ll give · late (--disp) on ' + nm, ratio(give, bg), TEXT, 'Dues · Next follow-up');
+    });
+  }
 
   /* The scale must still descend. */
   const ls = GREYS.map((g) => { const c = ratio(v(g), card); return c == null ? null : c; });

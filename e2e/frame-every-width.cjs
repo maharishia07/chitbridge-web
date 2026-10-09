@@ -9,6 +9,8 @@
  *   d  the shop's name stays on one line
  *   e  the "Online" pill and the avatar never overlap
  *   f  the header line is one height across the sidebar and the main column (where the page has both)
+ *   g  NO LAYOUT JUMP (UI9, 2026-10-09) on CRM and CB Accounts: with a slow line, the menu, the title and the toolbar are in the FIRST paint and do not move when the data arrives
+ *   h  the kural is in the footer (never a card in the page), and the Group control is ONE labelled dropdown
  * Screenshots: e2e/shots/frame-<page>-<width>.png (FRAME_SHOTS=<dir> to put them elsewhere). ONLY=crm,accounts narrows the pages. */
 'use strict';
 const { chromium } = require('@playwright/test');
@@ -25,6 +27,11 @@ const OWNER = { token: b64({ alg: 'none' }) + '.' + b64({ identity_id: 'ent-M', 
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail++; console.log('  XX  ' + m); } };
 
+/* runs in the page: the boxes of the frame — what must already be there in the first paint and must not move */
+function frameBoxes() {
+  const r = (s) => { const e = document.querySelector(s); if (!e) return null; const b = e.getBoundingClientRect(); return [Math.round(b.left), Math.round(b.top), Math.round(b.width), Math.round(b.height)]; };
+  return { navN: document.querySelectorAll('#nav .nav-btn').length, nav0: r('#nav .nav-btn'), brand: r('#side .brand'), title: r('.cbl-title h1') || r('#title'), tools: r('.cbl-tools'), skel: document.querySelectorAll('.cbl-skel,.bk-skel i').length };
+}
 /* runs in the page: every measurement the checks need */
 function measure() {
   const vis = (e) => { const r = e.getBoundingClientRect(); if (r.width < 2 || r.height < 2) return false; const s = getComputedStyle(e); return s.visibility !== 'hidden' && s.display !== 'none' && +s.opacity > 0.05 && !e.closest('[hidden],dialog:not([open]),.cbsh-scrim'); };
@@ -53,10 +60,10 @@ function measure() {
   const mh = Array.from(document.querySelectorAll('.main.overbar .cbl-title,.main:not(.overbar) .bar,main > header')).filter(vis)[0];
   return {
     sw: document.documentElement.scrollWidth, iw: innerWidth, ih: innerHeight, hits: hits.slice(0, 6), nHits: hits.length,
-    band: band ? { drawn: !!br, inShellFoot: !!band.closest('[data-testid="shell-foot"],.cbsh-kh'), inHead: !!band.closest('header,.bar,.top,.topbar,.titlerow,.cbl-title,.cbsh-hd,.cbsh-head,[role=banner]'), top: br && Math.round(br.top), bottom: br && Math.round(br.bottom), w: br && Math.round(br.width), l: br && Math.round(br.left), parent: band.parentElement && (band.parentElement.tagName + '.' + band.parentElement.className) } : null,
+    band: band ? { drawn: !!br, inShellFoot: !!band.closest('[data-testid="shell-foot"],[data-testid="shell-pfoot"]'), inHead: !!band.closest('header,.bar,.top,.topbar,.titlerow,.cbl-title,.cbsh-hd,.cbsh-head,[role=banner]'), top: br && Math.round(br.top), bottom: br && Math.round(br.bottom), w: br && Math.round(br.width), l: br && Math.round(br.left), parent: band.parentElement && (band.parentElement.tagName + '.' + band.parentElement.className) } : null,
     nameLines: nr ? Math.round(nr.height / (parseFloat(getComputedStyle(name).lineHeight) || parseFloat(getComputedStyle(name).fontSize) * 1.3)) : 0,
     onlineOverAvatar: ov,
-    tool: (() => { const t = Array.from(document.querySelectorAll('.cbl-tools')).filter(vis)[0]; if (!t) return null; const kids = Array.from(t.children).filter((c) => vis(c) && !c.classList.contains('cbl-fchips')); const mids = kids.map((c) => { const r = c.getBoundingClientRect(); return r.top + r.height / 2; }); const sr = t.querySelector('input[type=search]'); const lab = t.querySelector('.cbl-glab'); return { rows: mids.filter((y) => Math.abs(y - mids[0]) > 14).length ? 2 : 1, searchW: sr ? Math.round(sr.getBoundingClientRect().width) : 0, scrollW: sr ? sr.scrollWidth : 0, ph: sr ? sr.placeholder : '', lab: lab ? vis(lab) : null, hasGroup: !!t.querySelector('.cbl-seg[data-testid^="cbl-group"]') }; })(),
+    tool: (() => { const t = Array.from(document.querySelectorAll('.cbl-tools')).filter(vis)[0]; if (!t) return null; const kids = Array.from(t.children).filter((c) => vis(c) && !c.classList.contains('cbl-fchips')); const mids = kids.map((c) => { const r = c.getBoundingClientRect(); return r.top + r.height / 2; }); const sr = t.querySelector('input[type=search]'); const lab = t.querySelector('.cbl-glab'); return { rows: mids.filter((y) => Math.abs(y - mids[0]) > 14).length ? 2 : 1, searchW: sr ? Math.round(sr.getBoundingClientRect().width) : 0, scrollW: sr ? sr.scrollWidth : 0, ph: sr ? sr.placeholder : '', lab: lab ? vis(lab) : null, hasGroup: !!t.querySelector('.cbl-seg[data-testid^="cbl-group"], .cbl-gsel') }; })(),
     sideH: sh ? Math.round(sh.getBoundingClientRect().bottom) : null, mainH: mh && sh && mh.getBoundingClientRect().left > sh.getBoundingClientRect().right - 2 ? Math.round(mh.getBoundingClientRect().bottom) : null,
   };
 }
@@ -80,16 +87,24 @@ function measure() {
       const ctx = await b.newContext({ viewport: { width: w, height: h }, locale: 'en-IN', timezoneId: 'Asia/Kolkata', serviceWorkers: 'block' });
       await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
       await ctx.route(/^https?:\/\/(?!127\.0\.0\.1)(?!fonts\.g)/, (r) => { offHost.push(r.request().url()); return r.abort(); });
-      const S = standIn();
+      const S = standIn(), slow = name === 'crm' || name === 'accounts';
       await ctx.route('**/api/**', (r) => route(S, r));
+      if (slow) await ctx.route('**/api/**', async (r) => { await new Promise((x) => setTimeout(x, 900)); r.fallback(); });   /* a slow line, to look at the first paint */
       await ctx.addInitScript((s) => { try { if (!localStorage.getItem('cb_seeded')) { localStorage.setItem('cb_seeded', '1'); localStorage.setItem('cb_sess', JSON.stringify(s)); } } catch (_) {} }, OWNER);
       const p = await ctx.newPage(), threw = [];
       p.on('pageerror', (e) => threw.push(e.message));
       await p.goto(base + url).catch(() => {});
+      let f0 = null; if (slow) { await p.waitForTimeout(400); f0 = await p.evaluate(frameBoxes); }
       await p.waitForSelector('[data-testid="kural-footer"]:not([hidden])', { timeout: 6000 }).catch(() => {});
       await p.waitForTimeout(700);
       const m = await p.evaluate(measure);
       const tag = name + ' @' + w;
+      if (slow) {
+        const f1 = await p.evaluate(frameBoxes), same = (a, b2) => !!a && !!b2 && a.every((v, i) => Math.abs(v - b2[i]) <= 1);
+        ok(f0.navN > 0 && !!f0.title && !!f0.brand && (name !== 'crm' || (!!f0.tools && f0.skel > 0)), tag + ': FIRST PAINT has the whole frame — ' + f0.navN + ' menu items, the title' + (name === 'crm' ? ', the toolbar, ' + f0.skel + ' skeleton rows' : '') + ' (data still on its way)');
+        ok(same(f0.nav0, f1.nav0) && same(f0.brand, f1.brand) && same(f0.title, f1.title) && (name !== 'crm' || same(f0.tools, f1.tools)), tag + ': when the data arrives the menu, title and toolbar do not move (' + JSON.stringify([f0.nav0, f0.title, f0.tools]) + ' → ' + JSON.stringify([f1.nav0, f1.title, f1.tools]) + ')');
+      }
+      if (name === 'index' && w <= 700) ok(await p.evaluate(() => { const k = document.querySelector('#cbkural'); return !k || k.hidden || !!k.closest('[data-testid="shell-pfoot"]'); }), tag + ': on a phone the kural is in the footer above the tab bar, never a card in Home');
       ok(m.sw <= m.iw + 1, tag + ': nothing scrolls sideways (' + m.sw + ' / ' + m.iw + ')');
       ok(m.nHits === 0, tag + ': no two controls overlap' + (m.nHits ? ' — ' + m.hits.join(' | ') : ''));
       if (m.band) {
@@ -97,7 +112,8 @@ function measure() {
         ok(!m.band.drawn || m.band.inShellFoot || (m.band.top >= 0 && m.band.bottom <= m.ih + 1 && m.band.l <= 1 && m.band.w >= w - 2), tag + ': the band is whole, full width, inside the window (x ' + m.band.l + ', y ' + m.band.top + '–' + m.band.bottom + ', ' + m.band.w + ' wide)');
       }
       ok(m.nameLines <= 1, tag + ': the shop name is on one line');
-      if (m.tool && m.tool.hasGroup) ok(m.tool.lab, tag + ': the Group by control carries its label');
+      if (m.tool && m.tool.hasGroup) ok(m.tool.lab, tag + ': the Group control carries its label');
+      if (name === 'crm') ok(await p.evaluate(() => !!document.querySelector('.cbl-tools .cbl-gsel select') && !document.querySelector('.cbl-tools .cbl-seg[data-testid^="cbl-group"]')), tag + ': Group is ONE labelled dropdown, not a row of buttons');
       if (m.tool && w >= 957 && name === 'crm') ok(m.tool.rows === 1, tag + ': the tool row is one line (' + m.tool.rows + ' rows)');
       if (m.tool && m.tool.searchW) ok(m.tool.searchW >= (m.tool.ph.length * 7.4) - 30, tag + ': the search box is wide enough for its hint "' + m.tool.ph + '" (' + m.tool.searchW + ' px)');
       ok(!m.onlineOverAvatar, tag + ': the Online pill does not sit on the avatar');

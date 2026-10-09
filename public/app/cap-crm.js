@@ -75,6 +75,15 @@ var CRM_ICON = {
 };
 function crmIcon(k) { return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + (CRM_ICON[k] || CRM_ICON.note) + '"/></svg>'; }
 
+/** ⭐ O6 / C9: the sign-in handles of people the shop keeps (phone@<shop>.cr · name=domain@<shop>.cr · …@<shop>.br) are INTERNAL. A handle that carries an e-mail (name=domain@x.cr) gives
+ *  that e-mail back; one that carries a phone or a user id has none. A real address on a country domain (…@firm.co.cr) has a dot before .cr and is left alone. Applied where the row is MAPPED, so no screen can show a handle. */
+function crmRealEmail(v) {
+  var s = String(v == null ? '' : v).trim(); if (!s) return '';
+  if (!/@[^@.\s]+\.(cr|br)$/i.test(s)) return s;
+  var local = s.slice(0, s.lastIndexOf('@')), eq = local.indexOf('=');
+  return eq > 0 && eq < local.length - 1 ? local.slice(0, eq) + '@' + local.slice(eq + 1) : '';
+}
+
 /* ── the chips: a status is an icon AND a word; the server's verdict (on_chitbridge · why_not · kind) decides, the page only words it ── */
 function crmRailChip(p) {
   if (p.kind === 'walk-in') return '<span class="tag walk" title="' + esc(tx('Phone only — points at the counter')) + '">' + crmIcon('walk') + esc(tx('Walk-in')) + '</span>';
@@ -86,19 +95,54 @@ var CRM_ROLE = { customer: 'Customer', supplier: 'Supplier' };
 function crmRoleChips(p) { return (p.roles || []).map(function (r) { return '<span class="tag role">' + esc(tx(CRM_ROLE[r] || r)) + '</span>'; }).join(''); }
 var CRM_SEG = { new: 'New', regular: 'Regular', inactive: 'Inactive', high_value: 'High value' };
 function crmSegChip(p) { return p.segment ? '<span class="tag seg">' + esc(tx(CRM_SEG[p.segment] || p.segment)) + '</span>' : ''; }
-/** the dues chip is cap-books.js's own (partyDueChipHTML); the CRM row's stored balance is mapped into its map by crmDuesMap() — the number is never summed here */
+/** ⭐ A DUE IS SAID THE WAY A SHOPKEEPER SAYS IT: "₹12,450 you'll get" (green) / "₹4,816 you'll give" (red) — a symbol AND a word AND a colour, never the colour alone.
+ *  The figure is the server's stored balance (+ they owe you), painted by bkMoney; the sign only picks the word. */
 function crmDueCell(p) {
   if (!CRM.ledger || p.balance_minor == null) return '<span class="sub">—</span>';
-  return '<span style="white-space:nowrap">' + partyDueChipHTML(p.party_id, { noNo: true }) + (p.dues_overdue ? ' <span class="late">· ' + esc(tx('late')) + '</span>' : '') + '</span>';
+  var b = Number(p.balance_minor || 0), late = p.dues_overdue ? ' <span class="late red">· ' + esc(tx('late')) + '</span>' : '';
+  var tid = ' data-testid="party-due-' + esc(p.party_id) + '"', oldest = p.oldest_due ? ' · ' + tx('oldest due') + ' ' + bkDate(p.oldest_due) : '';
+  if (!b) return '<span class="due settled"' + tid + '>' + esc(tx('Settled')) + '</span>';
+  return b > 0
+    ? '<span class="due get"' + tid + ' title="' + esc(tx('They owe you') + oldest) + '"><span aria-hidden="true">↓</span> ' + esc(bkMoney(b, CRM.currency)) + ' <span class="w">' + esc(tx("you'll get")) + '</span>' + late + '</span>'
+    : '<span class="due give"' + tid + ' title="' + esc(tx('You owe them') + oldest) + '"><span aria-hidden="true">↑</span> ' + esc(bkMoney(Math.abs(b), CRM.currency)) + ' <span class="w">' + esc(tx("you'll give")) + '</span>' + late + '</span>';
 }
+/** the next follow-up is ALWAYS on the row; an overdue one is red, says Late, and carries its date */
 function crmFuCell(p) {
   if (!p.next_followup_at) return '<span class="sub">—</span>';
-  return '<span' + (p.next_followup_late ? ' class="late"' : '') + '>' + (p.next_followup_late ? esc(tx('Late')) + ' · ' : '') + esc(crmWhen(p.next_followup_at)) + '</span>';
+  if (p.next_followup_late) return '<span class="late red" data-testid="crm-fu-late"><span aria-hidden="true">⚠</span> ' + esc(tx('Late')) + ' · ' + esc(bkDate(p.next_followup_at)) + '</span>';
+  return '<span style="white-space:nowrap">' + esc(crmWhen(p.next_followup_at)) + '</span>';
 }
+/** the party is ONE line: the name and its number — nothing stacked under it (role · connection · dues have their own columns) */
 function crmPartyCell(p) {
-  return '<div class="pcell"><div class="l1">' + (p.unread ? '<span class="udot" title="' + esc(crmPlural(p.unread, 'unread message', 'unread messages')) + '"></span>' : '')
-    + '<span class="nm" data-testid="crm-name">' + esc(p.display_name) + '</span>' + (p.party_no ? '<span class="pno" data-testid="crm-no">' + esc(p.party_no) + '</span>' : '') + '</div>'
-    + '<div class="l2">' + crmRoleChips(p) + crmRailChip(p) + '</div></div>';
+  return '<span class="pcell"><span class="l1">' + (p.unread ? '<span class="udot" title="' + esc(crmPlural(p.unread, 'unread message', 'unread messages')) + '"></span>' : '')
+    + '<span class="nm" data-testid="crm-name">' + esc(p.display_name) + '</span>' + (p.party_no ? '<span class="pno" data-testid="crm-no">' + esc(p.party_no) + '</span>' : '') + '</span></span>';
+}
+/** Role, in the shop's own words: Customer / Supplier / Both / Staff — one word per party (the Group control and the heading filter say the same words) */
+function crmRoleKey(p) {
+  var r = p.roles || [];
+  if (p.kind === 'staff' || r.indexOf('staff') >= 0 || r.indexOf('employee') >= 0) return 'staff';
+  return r.length > 1 ? 'both' : (r[0] || 'customer');
+}
+var CRM_ROLE_WORD = { customer: 'Customer', supplier: 'Supplier', both: 'Both', staff: 'Staff' };
+function crmRoleWord(p) { return tx(CRM_ROLE_WORD[crmRoleKey(p)]); }
+/** On ChitBridge: ✓ when bills, orders and messages reach them in their app, – when they do not (a word for a screen reader, the sentence on hover) */
+function crmConnected(p) { return !!p.on_chitbridge && p.kind !== 'walk-in'; }
+var CRM_CONN_TIP = 'On ChitBridge: bills, orders and messages reach them in their app';
+function crmRailCell(p) {
+  return crmConnected(p)
+    ? '<span class="conn on" data-testid="crm-conn-on" title="' + esc(tx(CRM_CONN_TIP)) + '"><span aria-hidden="true">✓</span><span class="sr-only">' + esc(tx('On ChitBridge')) + '</span></span>'
+    : '<span class="conn off" data-testid="crm-conn-off" title="' + esc(tx('Not connected: you keep their record, they do not see it in an app')) + '"><span aria-hidden="true">–</span><span class="sr-only">' + esc(tx('Not connected')) + '</span></span>';
+}
+/** the last activity: the date, and what it was (a customer's last order · a walk-in's points at the counter) */
+function crmLastCell(p) {
+  if (!p.last_at) return '<span class="sub">—</span>';
+  var what = p.kind === 'walk-in' ? tx('at the counter') : ((p.roles || []).indexOf('customer') >= 0 ? tx('order') : '');
+  return '<span style="white-space:nowrap">' + esc(crmWhen(p.last_at)) + (what ? ' <span class="sub">· ' + esc(what) + '</span>' : '') + '</span>';
+}
+function crmTermsCell(p) {
+  var t = p.terms || {}, side = t.customer || t.supplier; if (!side) return '<span class="sub">—</span>';
+  var days = side.credit_days != null ? txf('{n} days', { n: side.credit_days }) : '', lim = side.credit_limit_minor != null ? bkMoney(side.credit_limit_minor, CRM.currency) : '';
+  return (days || lim) ? esc([days, lim].filter(Boolean).join(' · ')) : '<span class="sub">—</span>';
 }
 
 /* ═══ THE READ — one call, one row per party ═════════════════════════════════════════════════════════════════════ */
@@ -109,7 +153,7 @@ function crmPartyCell(p) {
 function crmPartyFrom(p) {
   if (!p || (p.dues === undefined && !p.may_trade && !p.customer && !p.supplier)) return p;
   var q = Object.assign({}, p), c = p.customer || null, d = p.dues;
-  q.roles = crmRolesList(p.roles);
+  q.roles = crmRolesList(p.roles); q.email = crmRealEmail(p.email) || null;
   if (q.balance_minor === undefined) { q.balance_minor = d ? d.balance_minor : null; q.oldest_due = d ? d.oldest_due : null; }
   if (q.segment === undefined) q.segment = c ? c.segment : null;
   if (q.groups === undefined) q.groups = c && Array.isArray(c.groups) ? c.groups : [];
@@ -154,6 +198,7 @@ function crmNormalize(parties) {
   (parties || []).forEach(function (p) {
     p = crmPartyFrom(p);
     if (!p || p.merged_into) return;
+    p.email = crmRealEmail(p.email) || null;   /* the flat (older) shape skips crmPartyFrom's mapping: the handle is dropped here too */
     var k = p.party_id, seen = by[k];
     p.roles = crmRolesList(p.roles);
     if (seen) { (p.roles || []).forEach(function (r) { if (seen.roles.indexOf(r) < 0) seen.roles.push(r); }); return; }
@@ -221,7 +266,7 @@ function crmAddBtn() { return crmEdit() ? '<button type="button" class="act sm" 
 function crmAddFuBtn() { return crmEdit() ? '<button type="button" class="act sm" data-testid="crm-fu-add" data-crm="fuadd">+ ' + esc(tx('Add follow-up')) + '</button>' : ''; }
 function crmGo(hash, replace) { if (replace) { try { history.replaceState(null, '', hash); } catch (_) {} crmRoute(); } else location.hash = hash; }
 
-function crmRoute() {
+function crmRoute(frame) {
   var h = (location.hash || '').replace(/^#\/?/, ''), q = '', qi = h.indexOf('?');
   if (qi >= 0) { q = h.slice(qi + 1); h = h.slice(0, qi); }
   var seg = h.split('/').filter(Boolean).map(decodeURIComponent), params = {};
@@ -230,48 +275,56 @@ function crmRoute() {
   /* one kural per page (kurals.json group `crm`); the footer is the page's, never a part of a message */
   if (window.CBKural) CBKural.set(seg[0] === 'party' && seg[1] ? 'crm-party' : seg[0] === 'followups' ? 'crm-party' : 'crm-parties');
   if (seg[0] === 'party' && seg[1]) {
+    if (frame) { crmNav('parties'); return; }   /* a record reads before it can draw: only the menu is drawn first */
     CRM.route = { nav: 'parties', view: 'party', key: seg[1], sub: seg[2] || '', params: params };
     return crmRecordOpen(CRM.route);
   }
   if (seg[0] === 'chits') {
     CRM.route = { nav: 'chits', view: 'chits', sub: '', params: params };
-    crmNav('chits'); chitsHome(params);
+    crmNav('chits'); chitsHome(params, frame);
     return;
   }
   if (seg[0] === 'followups') {
     CRM.route = { nav: 'followups', view: 'followups', sub: seg[1] || '', params: params };
-    crmNav('followups'); crmFollowups();
-    if (seg[1] === 'add') crmFuAddOpen(params.party);
+    crmNav('followups'); crmFollowups(frame);
+    if (seg[1] === 'add' && !frame) crmFuAddOpen(params.party);
     return;
   }
   CRM.route = { nav: 'parties', view: 'parties', sub: seg[1] || '', params: params };
-  crmNav('parties'); crmHome();
-  if (seg[1] === 'add') crmAddOpen(params.q || '');
+  crmNav('parties'); crmHome(frame);
+  if (seg[1] === 'add' && !frame) crmAddOpen(params.q || '');
 }
 
 /* ═══ 1 · HOME — the parties list (a CBList mount: the Task table's look, one row per party) ═════════════════════ */
+/** ONE LINE PER PARTY, IN COLUMNS (Athi, 2026-10-09): Party · Role (heading filter) · On ChitBridge · Dues · Last activity · Next follow-up; the chooser adds phone · e-mail · GSTIN · segment · credit terms · city */
 function crmPartyCols() {
-  var cols = [{ key: 'party', label: 'Party', prio: 1, w: 320, sort: 'name', html: true, cell: crmPartyCell, value: function (p) { return p.display_name; } }];
-  if (CRM.ledger) cols.push({ key: 'dues', label: 'Dues', prio: 2, w: 180, sort: 'dues', html: true, cell: crmDueCell, value: function (p) { return p.balance_minor == null ? '' : p.balance_minor; } });
+  var cols = [
+    { key: 'party', label: 'Party', prio: 1, w: 270, sort: 'name', html: true, cell: crmPartyCell, value: function (p) { return p.display_name; } },
+    { key: 'role', label: 'Role', prio: 3, w: 120, sort: 'role', hfilter: 'role', cell: crmRoleWord, tid: function (p) { return 'crm-role-' + crmKey(p); }, value: function (p) { return crmRoleWord(p); } },
+    { key: 'rail', label: 'On ChitBridge', prio: 6, w: 150, sort: 'rail', hfilter: 'rail', html: true, cell: crmRailCell, value: function (p) { return crmConnected(p) ? 'a' : 'b'; } }];
+  if (CRM.ledger) cols.push({ key: 'dues', label: 'Dues', prio: 2, w: 200, sort: 'dues', html: true, cell: crmDueCell, value: function (p) { return p.balance_minor == null ? '' : p.balance_minor; } });
   cols.push(
-    { key: 'next', label: 'Next follow-up', prio: 3, w: 170, html: true, cell: crmFuCell, value: function (p) { return p.next_followup_at || ''; } },
-    { key: 'last', label: 'Last activity', prio: 4, w: 150, sort: 'last', html: true, cell: function (p) { return p.last_at ? esc(crmWhen(p.last_at)) : '<span class="sub">—</span>'; }, value: function (p) { return p.last_at || ''; } },
-    { key: 'seg', label: 'Segment · groups', prio: 5, w: 190, html: true, cell: function (p) { return (crmSegChip(p) + (p.groups || []).map(function (g) { return '<span class="tag">' + esc(g) + '</span>'; }).join(' ')) || '<span class="sub">—</span>'; }, value: function (p) { return [p.segment].concat(p.groups || []).join(' '); } },
-    { key: 'phone', label: 'Phone', prio: 6, w: 160, cell: function (p) { return p.phone || '—'; } },
-    { key: 'email', label: 'E-mail', prio: 7, w: 220, cell: function (p) { return p.email || '—'; } },
-    { key: 'gstin', label: 'GSTIN', prio: 8, w: 190, mono: true, cell: function (p) { var g = (p.tax_ids || []).filter(function (t) { return t.scheme === 'GSTIN'; })[0]; return g ? g.value : '—'; } },
-    { key: 'city', label: 'City', prio: 9, w: 140, cell: function (p) { return p.city || '—'; } });
+    { key: 'last', label: 'Last activity', prio: 5, w: 200, sort: 'last', html: true, cell: crmLastCell, value: function (p) { return p.last_at || ''; } },
+    { key: 'next', label: 'Next follow-up', prio: 4, w: 170, sort: 'next', html: true, cell: crmFuCell, value: function (p) { return p.next_followup_at || '9999'; } },
+    { key: 'phone', label: 'Phone', prio: 7, w: 160, cell: function (p) { return p.phone || '—'; } },
+    { key: 'email', label: 'E-mail', prio: 8, w: 220, cell: function (p) { return crmRealEmail(p.email) || '—'; } },
+    { key: 'gstin', label: 'GSTIN', prio: 9, w: 190, mono: true, cell: function (p) { var g = (p.tax_ids || []).filter(function (t) { return t.scheme === 'GSTIN'; })[0]; return g ? g.value : '—'; } },
+    { key: 'seg', label: 'Segment · groups', prio: 10, w: 190, html: true, cell: function (p) { return (crmSegChip(p) + (p.groups || []).map(function (g) { return '<span class="tag">' + esc(g) + '</span>'; }).join(' ')) || '<span class="sub">—</span>'; }, value: function (p) { return [p.segment].concat(p.groups || []).join(' '); } },
+    { key: 'terms', label: 'Credit terms', prio: 11, w: 170, html: true, cell: crmTermsCell, value: function (p) { var t = p.terms || {}, s = t.customer || t.supplier; return s && s.credit_days != null ? s.credit_days : ''; } },
+    { key: 'city', label: 'City', prio: 12, w: 140, cell: function (p) { return p.city || '—'; } });
   return cols;
 }
 function crmGroupNames() { var s = {}; CRM.rows.forEach(function (p) { (p.groups || []).forEach(function (g) { s[g] = 1; }); }); return Object.keys(s).sort(); }
 function crmFilters() {
   var f = [
     { key: 'role', label: tx('Role'), all: tx('All roles'), options: [{ v: 'customer', label: tx('Customers') }, { v: 'supplier', label: tx('Suppliers') }, { v: 'both', label: tx('Both') }], match: function (p, v) { return v === 'both' ? p.roles.length === 2 : p.roles.indexOf(v) >= 0; } },
-    { key: 'rail', label: tx('ChitBridge'), all: tx('All'), options: [{ v: 'on', label: tx('On ChitBridge') }, { v: 'local', label: tx('Local') }, { v: 'walk', label: tx('Walk-in') }], match: function (p, v) { return v === 'on' ? !!p.on_chitbridge : v === 'walk' ? p.kind === 'walk-in' : (!p.on_chitbridge && p.kind !== 'walk-in'); } },
+    { key: 'rail', label: tx('On ChitBridge'), all: tx('All'), options: [{ v: 'on', label: tx('On ChitBridge') }, { v: 'off', label: tx('Not connected') }], match: function (p, v) { return v === 'on' ? crmConnected(p) : !crmConnected(p); } },
     { key: 'seg', label: tx('Segment'), all: tx('Any segment'), options: Object.keys(CRM_SEG).map(function (k) { return { v: k, label: tx(CRM_SEG[k]) }; }), match: function (p, v) { return p.segment === v; } },
     { key: 'group', label: tx('Group'), all: tx('Any group'), options: crmGroupNames(), match: function (p, v) { return (p.groups || []).indexOf(v) >= 0; } },
   ];
-  if (CRM.ledger) f.push({ key: 'dues', label: tx('Dues'), all: tx('Any'), options: [{ v: 'has', label: tx('Has dues') }, { v: 'late', label: tx('Dues late') }], match: function (p, v) { return v === 'late' ? !!p.dues_overdue : !!p.balance_minor; } });
+  if (CRM.ledger) f.push({ key: 'dues', label: tx('Dues'), all: tx('Any'), options: [{ v: 'has', label: tx('Has dues') }, { v: 'late', label: tx('Dues late') }, { v: 'get', label: tx("You'll get") }, { v: 'give', label: tx("You'll give") }],
+    match: function (p, v) { var b = Number(p.balance_minor || 0); return v === 'late' ? !!p.dues_overdue : v === 'get' ? b > 0 : v === 'give' ? b < 0 : !!b; } });
+  f.push({ key: 'quiet', label: tx('Last contact'), all: tx('Any'), options: [{ v: '30', label: tx('None in 30 days') }], match: function (p) { return !p.last_at || (Date.now() - Date.parse(p.last_at)) > 30 * 86400000; } });
   f.push({ key: 'fu', label: tx('Follow-up'), all: tx('Any'), options: [{ v: 'due', label: tx('Follow-up due') }, { v: 'late', label: tx('Follow-up late') }], match: function (p, v) { return v === 'late' ? !!p.next_followup_late : !!p.next_followup_at; } });
   return f;
 }
@@ -279,6 +332,9 @@ function crmPartySorts() {
   var by = function (f, rev) { return function (a, b) { var x = f(a), y = f(b); return rev ? (y > x ? 1 : y < x ? -1 : 0) : String(x).localeCompare(String(y), undefined, { numeric: true, sensitivity: 'base' }); }; };
   return [{ key: 'name', label: tx('Name'), cmp: by(function (p) { return p.display_name; }) },
     { key: 'last', label: tx('Last activity'), cmp: by(function (p) { return p.last_at || ''; }, true) },
+    { key: 'role', label: tx('Role'), cmp: by(function (p) { return crmRoleWord(p); }) },
+    { key: 'rail', label: tx('On ChitBridge'), cmp: by(function (p) { return crmConnected(p) ? 'a' : 'b'; }) },
+    { key: 'next', label: tx('Next follow-up'), cmp: by(function (p) { return p.next_followup_at || '9999'; }) },
     { key: 'dues', label: tx('Dues'), cmp: by(function (p) { return Math.abs(p.balance_minor || 0); }, true) },   // an ordering of the server's figures, not a sum
     { key: 'newest', label: tx('Newest'), cmp: by(function (p) { return p.party_no || ''; }, true) }];
 }
@@ -289,52 +345,151 @@ function crmNotices() {
   if (CRM.ledger && du > 0) out.push({ text: crmPlural(du, 'party with late dues', 'parties with late dues') + ' · ' + tx('See dues'), cls: 'warn', tid: 'crm-alert-dues', onOpen: function () { location.href = '/accounts.html#dues'; } });
   return out;
 }
-function crmPeek(p) {
-  var g = (p.tax_ids || []).filter(function (t) { return t.scheme === 'GSTIN'; })[0];
-  var rows = [[tx('Phone'), p.phone], [tx('E-mail'), p.email], [tx('GSTIN'), g && g.value], [tx('City'), p.city], [tx('Last activity'), p.last_at && crmWhen(p.last_at)],
-    [tx('Points'), p.points && p.points.balance != null ? p.points.balance : null]].filter(function (r) { return r[1] != null && r[1] !== ''; });
-  return '<div data-testid="crm-peek-' + esc(crmKey(p)) + '">' + (rows.length ? rows.map(function (r) { return CBList.nextRow(['<span style="color:var(--muted)">' + esc(r[0]) + '</span> ' + esc(r[1])], []); }).join('') : '<div style="color:var(--muted);font-size:var(--fs-1)">' + esc(tx('Nothing more is recorded')) + '</div>') + '</div>';
+/* ═══ THE MINI-CARD — what ▸ opens in place, the same height and style on every row (Athi: "that has to be fantastic") ═════════════════
+   Three boxes (contact · money · last chits) then the action row the list unit draws. Same pattern for Chits and Follow-ups (crmMiniBox). */
+function crmMiniBox(cls, title, rows, tid) {
+  return '<section class="mc-box ' + cls + '" data-testid="' + esc(tid) + '"><h5>' + esc(tx(title)) + '</h5>' + rows.join('') + '</section>';
 }
-function crmHome() {
+function crmMiniRow(icon, html, tid) { return '<div class="mc-r"' + (tid ? ' data-testid="' + esc(tid) + '"' : '') + '><span class="ic">' + (icon ? crmIcon(icon) : '') + '</span><span class="v">' + html + '</span></div>'; }
+function crmMiniKV(label, html, tid) { return '<div class="mc-r kv"' + (tid ? ' data-testid="' + esc(tid) + '"' : '') + '><span class="k">' + esc(tx(label)) + '</span><span class="v">' + html + '</span></div>'; }
+var CRM_MINI = { chits: {}, q: [], busy: 0 };
+/** the last three chits of a party: one timeline read, only when the row is opened, at most four at a time (⇣ Expand all must not stampede the server) */
+function crmMiniChits(p) {
+  var k = p.party_id; if (CRM_MINI.chits[k]) return CRM_MINI.chits[k];
+  var go = function (resolve) {
+    CRM_MINI.busy++;
+    api('crmTimeline', { params: { id: k }, query: { limit: 20 } }).then(function (r) {
+      var all = crmEntriesFrom(r).filter(function (e) { return /^(bill|chit|payment|dispute)$/.test(e.kind); });
+      resolve(all.slice(0, 3));
+    }, function () { resolve(null); }).then(function () { CRM_MINI.busy--; var n = CRM_MINI.q.shift(); if (n) n(); });
+  };
+  CRM_MINI.chits[k] = new Promise(function (resolve) { if (CRM_MINI.busy < 4) go(resolve); else CRM_MINI.q.push(function () { go(resolve); }); });
+  return CRM_MINI.chits[k];
+}
+function crmMiniChitRows(list, key) {
+  var rows = [];
+  if (list === null) rows.push('<div class="mc-r sub">' + esc(tx("Couldn't read the chits. Open the record.")) + '</div>');
+  else (list || []).forEach(function (e, i) {
+    rows.push('<div class="mc-c"' + (e.chit_id ? ' role="button" tabindex="0" data-crm="minichit" data-id="' + esc(e.chit_id) + '"' : '') + ' data-testid="crm-mini-chit-' + esc(key) + '-' + i + '"><span class="d">' + esc(bkDate(e.at)) + '</span><span class="w">' + esc(e.line || '') + '</span><span class="a mono">'
+      + (e.amount_minor != null ? esc(bkMoney(e.amount_minor, e.currency || CRM.currency)) : '') + '</span></div>');
+  });
+  if (list && !list.length) rows.push('<div class="mc-r sub" data-testid="crm-mini-nochits-' + esc(key) + '">' + esc(tx('No chits yet')) + '</div>');
+  return rows;
+}
+function crmMini(p, list) {
+  var key = crmKey(p), ph = p.phone, em = crmRealEmail(p.email), terms = crmTermsCell(p);
+  var contact = crmMiniBox('mc-contact', 'Contact', [
+    crmMiniRow('phone', ph ? '<a href="tel:' + esc(String(ph).replace(/\s+/g, '')) + '">' + esc(ph) + '</a>' : '<span class="sub">' + esc(tx('no phone')) + '</span>', 'crm-mini-phone-' + key),
+    crmMiniRow('mail', em ? '<a href="mailto:' + esc(em) + '">' + esc(em) + '</a>' : '<span class="sub">' + esc(tx('no e-mail')) + '</span>', 'crm-mini-email-' + key),
+    crmMiniRow('pin', p.city ? esc(p.city) : '<span class="sub">' + esc(tx('no place')) + '</span>', 'crm-mini-city-' + key)], 'crm-mini-contact-' + key);
+  var money = crmMiniBox('mc-money', 'Money', [
+    '<div class="mc-big">' + (CRM.ledger && p.balance_minor != null ? crmDueCell(p) : '<span class="sub">—</span>') + '</div>',
+    crmMiniKV('Credit terms', terms, 'crm-mini-terms-' + key),
+    crmMiniKV('Oldest bill', p.oldest_due ? esc(bkDate(p.oldest_due)) : '<span class="sub">—</span>', 'crm-mini-oldest-' + key)], 'crm-mini-money-' + key);
+  var rows = list === undefined ? ['<div class="mc-r sub">' + esc(tx('Reading…')) + '</div>'] : crmMiniChitRows(list, key);
+  return '<div class="mc" data-testid="crm-mini-' + esc(key) + '">' + contact + money
+    + '<section class="mc-box mc-last" data-testid="crm-mini-last-' + esc(key) + '"><h5>' + esc(tx('Last chits')) + '</h5><div class="mc-list">' + rows.join('') + '</div></section></div>';
+}
+/** the ▸ opens at once; the last three chits fill in when the one read returns (the unit repaints a pending answer in place) */
+function crmMiniAsync(p) {
+  if (p.kind === 'walk-in' || !p.party_id) return crmMini(p, []);
+  return crmMiniChits(p).then(function (list) { return crmMini(p, list); });
+}
+/* the actions: every one SHOWN; a login that may not do one sees it greyed WITH the sentence (show-action-enable-by-role). who may is the login's role, the server refuses too. */
+function crmWhyNot(p, act) {
+  var viewer = !crmEdit(), walk = p.kind === 'walk-in', b = Number(p.balance_minor || 0);
+  if (act === 'call') return p.phone ? '' : tx('No phone number yet');
+  if (act === 'message') return viewer ? tx('Your login can only view') : (walk ? tx('Add them to your parties first') : (crmConnected(p) ? '' : tx('Not on ChitBridge — messages reach them only there')));
+  if (act === 'pay') return viewer ? tx('Your login can only view') : (walk ? tx('Add them to your parties first') : (!CRM.ledger ? tx('Switch on the Ledger first') : (!b ? tx('Nothing is due') : '')));
+  if (act === 'followup') return viewer ? tx('Your login can only view') : (walk ? tx('Add them to your parties first') : '');
+  return '';
+}
+function crmMiniActions() {
+  return [
+    { id: 'call', label: tx('Call'), icon: '📞', tid: 'crm-mini-call', why: function (p) { return crmWhyNot(p, 'call'); }, run: function (p) { location.href = 'tel:' + String(p.phone || '').replace(/\s+/g, ''); } },
+    { id: 'message', label: tx('Message'), icon: '💬', tid: 'crm-mini-message', why: function (p) { return crmWhyNot(p, 'message'); }, run: function (p) {
+        crmMiniChits(p).then(function (l) { var e = (l || []).filter(function (x) { return x.chit_id; })[0]; if (e && typeof openChitSheet === 'function') openChitSheet(e.chit_id); else toast(tx('Start a message from Chits in the app.')); }); } },
+    { id: 'pay', label: tx('Pay / Receive'), icon: '₹', tid: 'crm-mini-pay', why: function (p) { return crmWhyNot(p, 'pay'); }, run: function (p) {
+        payOpen(Number(p.balance_minor) > 0 || (p.roles || []).indexOf('supplier') < 0 ? 'customer' : 'supplier', p.party_id); } },
+    { id: 'followup', label: tx('Follow-up'), icon: '⏰', tid: 'crm-mini-followup', why: function (p) { return crmWhyNot(p, 'followup'); }, run: function (p) { crmFuAddOpen(p.party_id); } },
+    { id: 'open', label: tx('Open record'), icon: '↗', tid: 'crm-open', run: function (p) { crmGo('#/party/' + encodeURIComponent(crmKey(p))); } }];
+}
+/** the people-lists' group head: "5 parties · ₹12,450 you'll get · ₹4,816 you'll give" — the server's stored balances, added by sign; no other figure is made here */
+function crmGroupFig(rows) {
+  var get = 0, give = 0;
+  rows.forEach(function (p) { var b = Number(p.balance_minor || 0); if (b > 0) get += b; else if (b < 0) give -= b; });
+  var out = [crmPlural(rows.length, 'party', 'parties')];
+  if (CRM.ledger && get) out.push(bkMoney(get, CRM.currency) + ' ' + tx("you'll get"));
+  if (CRM.ledger && give) out.push(bkMoney(give, CRM.currency) + ' ' + tx("you'll give"));
+  return out.join(' · ');
+}
+/** the saved views: one tap sets the list's own filters */
+function crmViews() {
+  var v = [{ key: 'all', label: 'All', filt: {} }, { key: 'customers', label: 'Customers', filt: { role: 'customer' } }, { key: 'suppliers', label: 'Suppliers', filt: { role: 'supplier' } }];
+  if (CRM.ledger) v.push({ key: 'owe-me', label: 'Owe me', filt: { dues: 'get' }, tip: "Parties who owe you money" }, { key: 'i-owe', label: 'I owe', filt: { dues: 'give' }, tip: 'Parties you owe money' });
+  v.push({ key: 'quiet', label: 'No contact in 30 days', filt: { quiet: '30' } });
+  return { tid: 'crm-view', items: v };
+}
+function crmHome(frame) {
   crmBar('<strong>' + esc(tx('CB CRM')) + '</strong>', crmAddBtn(), true);
   var s = document.getElementById('screen'); s.className = 'screen flush';
   s.innerHTML = '<div id="crm_list" data-testid="crm-list"></div>';
   if (CRM.api && CRM.api.destroy) { try { CRM.api.destroy(); } catch (_) {} }
   CRM.api = CBList.mount(document.getElementById('crm_list'), {
     key: 'crm-parties', t: tx, rows: function () { return CRM.rows; }, id: function (p) { return p.party_id; }, rowTid: function (p) { return 'crm-row-' + crmKey(p); },
-    columns: crmPartyCols, defaultCols: CRM.ledger ? ['party', 'dues', 'next'] : ['party', 'last', 'next'], cardMax: 3,
+    columns: crmPartyCols, defaultCols: CRM.ledger ? ['party', 'role', 'rail', 'dues', 'last', 'next'] : ['party', 'role', 'rail', 'last', 'next'], cardMax: 4, fill: false, views: crmViews(),
     head: function () { return { title: tx('Parties'), notices: CRM.state === 'ready' ? crmNotices() : [] }; },
     state: function () { return CRM.state; }, error: function () { return crmErrWords(CRM.err, 'your parties'); }, onRetry: function () { crmLoad(); },
     empty: { title: tx('No parties yet'), sub: tx('Customers appear when you bill them; suppliers when you add them. Use + Add party.') },
     search: function (p) { return [p.display_name, p.nickname, p.legal_name, p.party_no, p.user_id, p.phone, p.email, (p.tax_ids || []).map(function (t) { return t.value; }).join(' '), (p.groups || []).join(' ')].join(' '); },
     searchHint: tx('Name, ID, phone, e-mail'),
     filters: crmFilters(), sorts: crmPartySorts(), preset: (CRM.route && CRM.route.params && /^(customer|supplier|both)$/.test(CRM.route.params.role || '')) ? { filt: { role: CRM.route.params.role } } : null,
-    group: { options: [['none', 'None'], ['rail', 'ChitBridge'], ['role', 'Role'], ['seg', 'Segment']], default: 'none', tid: 'crm-parties',
+    group: { options: [['none', 'None'], ['role', 'Role'], ['conn', 'Connection'], ['seg', 'Segment']], default: 'none', tid: 'crm-parties', as: 'select', tips: { conn: CRM_CONN_TIP },
+      fig: function (rows) { return crmGroupFig(rows); },
       by: function (p, mode) {
-        if (mode === 'rail') { var k = p.kind === 'walk-in' ? 'walk' : p.on_chitbridge ? 'on' : 'local'; return [{ on: tx('On ChitBridge'), local: tx('Local'), walk: tx('Walk-in') }[k], k]; }
-        if (mode === 'role') { var r = p.roles.length > 1 ? 'both' : p.roles[0]; return [{ both: tx('Both'), customer: tx('Customers'), supplier: tx('Suppliers') }[r], r]; }
+        if (mode === 'conn') { var on = crmConnected(p); return [on ? tx('On ChitBridge') : tx('Not connected'), on ? 'on' : 'off']; }
+        if (mode === 'role') { var r = crmRoleKey(p); return [tx(CRM_ROLE_WORD[r]), r]; }
         if (mode === 'seg') return p.segment ? [tx(CRM_SEG[p.segment] || p.segment), p.segment] : [tx('No segment'), 'none'];
         return null;
       } },
     onOpen: function (p) { crmGo('#/party/' + encodeURIComponent(crmKey(p))); },
-    next: crmPeek, actions: [{ id: 'open', label: tx('Open record'), tid: 'crm-open', run: function (p) { crmGo('#/party/' + encodeURIComponent(crmKey(p))); } }],
+    next: crmMiniAsync, nextPending: function (p) { return crmMini(p); }, actions: crmMiniActions(),
   });
+  if (frame) return;   /* the frame only: the rows are asked for once the shop is known */
   if (!CRM.loaded) crmLoad(); else crmLoad(true);
 }
 
 /* ═══ 2 · FOLLOW-UPS — the Task table, grouped Late · Today · This week · Later ══════════════════════════════════ */
 var CRM_BUCKET = { late: 'Late', today: 'Today', week: 'This week', later: 'Later' };
 function crmFuDue(f) {
-  if (f.late) return '<span class="late">' + esc(tx('Late')) + ' · ' + esc(crmDayWord(f.due_at)) + '</span>';
+  if (f.late) return '<span class="late red">⚠ ' + esc(tx('Late')) + ' · ' + esc(bkDate(f.due_at)) + '</span>';
   return esc(crmWhen(f.due_at));
 }
+function crmFuSrc(f) { return { manual: tx('Manual'), dues: tx('Dues'), interaction: tx('From a call') }[f.source] || ''; }
 function crmFuWhat(f) {
-  var who = f.assignee_left ? '<span class="late">' + esc(tx('Unassigned')) + '</span>' : esc(f.assignee_name || tx('Unassigned'));
-  var src = { manual: tx('Manual'), dues: tx('Dues'), interaction: tx('From a call') }[f.source] || '';
   var acts = f.party_removed ? '<span class="sub">' + esc(tx('No longer your party')) + '</span> <button type="button" class="crm-mini" data-crm="fudel" data-id="' + esc(f.followup_id) + '" data-testid="crm-fu-del-' + esc(f.followup_id) + '">' + esc(tx('Delete')) + '</button>'
     : (crmEdit() ? '<button type="button" class="crm-mini" data-crm="fudone" data-id="' + esc(f.followup_id) + '" data-testid="crm-fu-done-' + esc(f.followup_id) + '">' + esc(tx('Done')) + '</button>'
       + (f.assignee_left ? ' <button type="button" class="crm-mini" data-crm="fuassign" data-id="' + esc(f.followup_id) + '" data-testid="crm-fu-assign-' + esc(f.followup_id) + '">' + esc(tx('Assign')) + '</button>' : '') : '');
-  return '<div><div' + (f.party_removed ? ' class="sub"' : '') + '>' + esc(f.what) + '</div><div class="sub" style="font-size:12.5px">' + who + (src ? ' · ' + esc(src) : '') + '</div><div style="margin-top:4px;display:flex;gap:6px;flex-wrap:wrap">' + acts + '</div></div>';
+  return '<span class="fu1"><span class="fut' + (f.party_removed ? ' sub' : '') + '">' + esc(f.what) + '</span>' + (acts ? '<span class="fua">' + acts + '</span>' : '') + '</span>';
+}
+/** the follow-up's mini-card: what · when · party, then Done · Snooze · Open party (each shown; a login that may not sees it greyed with the sentence) */
+function crmFuMini(f) {
+  var key = esc(f.followup_id), who = f.assignee_left ? tx('Unassigned') : (f.assignee_name || tx('Unassigned')), p = CRM.byKey[f.party_id] || CRM.byKey[f.party_no] || null;
+  var late = f.late ? '<span class="late red">⚠ ' + esc(tx('Late')) + ' · ' + esc(bkDate(f.due_at)) + '</span>' : esc(crmWhen(f.due_at));
+  return '<div class="mc" data-testid="crm-fu-mini-' + key + '">'
+    + crmMiniBox('mc-what', 'What', [crmMiniRow('note', '<span style="white-space:normal">' + esc(f.what) + '</span>'), crmMiniKV('From', esc(crmFuSrc(f) || '—'))], 'crm-fu-mini-what-' + key)
+    + crmMiniBox('mc-when', 'When', [crmMiniKV('Due', late), crmMiniKV('Who', f.assignee_left ? '<span class="late red">' + esc(who) + '</span>' : esc(who)), crmMiniKV('Added', f.created_at ? esc(bkDate(f.created_at)) : '—')], 'crm-fu-mini-when-' + key)
+    + crmMiniBox('mc-party', 'Party', [crmMiniRow('link', '<b>' + esc(f.party_name || '—') + '</b> <span class="mono sub">' + esc(f.party_no || '') + '</span>'),
+        crmMiniRow('phone', p && p.phone ? '<a href="tel:' + esc(String(p.phone).replace(/\s+/g, '')) + '">' + esc(p.phone) + '</a>' : '<span class="sub">' + esc(tx('no phone')) + '</span>'),
+        crmMiniKV('Dues', p ? crmDueCell(p) : '<span class="sub">—</span>')], 'crm-fu-mini-party-' + key) + '</div>';
+}
+function crmFuWhyNot(f) { return !crmEdit() ? tx('Your login can only view') : (f.party_removed ? tx('No longer your party') : ''); }
+function crmFuActions() {
+  return [
+    { id: 'done', label: tx('Done'), icon: '✓', tid: 'crm-fu-mini-done', why: function (f) { return crmEdit() ? '' : tx('Your login can only view'); }, run: function (f) { crmFuAct(f.followup_id, { done: true }); } },
+    { id: 'snooze1', label: tx('Snooze') + ' · ' + tx('Tomorrow'), icon: '⏰', tid: 'crm-fu-snooze-tomorrow', why: crmFuWhyNot, run: function (f) { crmFuAct(f.followup_id, { due_at: crmSnoozeISO('tomorrow') }); } },
+    { id: 'snooze7', label: tx('Snooze') + ' · ' + tx('Next week'), icon: '⏰', tid: 'crm-fu-snooze-week', why: crmFuWhyNot, run: function (f) { crmFuAct(f.followup_id, { due_at: crmSnoozeISO('week') }); } },
+    { id: 'party', label: tx('Open party'), icon: '↗', tid: 'crm-fu-open-party', why: function (f) { return f.party_removed ? tx('No longer your party') : ''; }, run: function (f) { crmGo('#/party/' + encodeURIComponent(f.party_no || f.party_id)); } }];
 }
 async function crmFuLoad() {
   var g = ++CRM.loadGen;
@@ -360,7 +515,7 @@ function crmWatch(el, onChange) {
   });
   el.addEventListener('input', function (ev) { if (ev.target.hasAttribute && ev.target.hasAttribute('data-cbl-q')) { cur.q = String(ev.target.value || '').trim(); fire(300); } });
 }
-function crmFollowups() {
+function crmFollowups(frame) {
   crmBar('<a href="#/parties" data-testid="crm-back">‹ ' + esc(tx('Parties')) + '</a>', crmAddFuBtn(), true);
   var s = document.getElementById('screen'); s.className = 'screen flush';
   var def = crmOwner() ? 'all' : 'mine';
@@ -376,7 +531,7 @@ function crmFollowups() {
       { key: 'who', label: 'Who', prio: 4, w: 150, cell: function (f) { return f.assignee_left ? tx('Unassigned') : (f.assignee_name || '—'); } },
       { key: 'source', label: 'Source', prio: 5, w: 140, cell: function (f) { return { manual: tx('Manual'), dues: tx('Dues'), interaction: tx('From a call') }[f.source] || '—'; } },
       { key: 'created', label: 'Created', prio: 6, w: 140, sort: 'created', cell: function (f) { return f.created_at ? bkDate(f.created_at) : '—'; }, value: function (f) { return f.created_at || ''; } }],
-    defaultCols: ['due', 'what', 'party'], cardMax: 3,
+    defaultCols: ['due', 'what', 'party'], cardMax: 3, fill: false,
     head: function () {
       var open = CRM.fu.filter(function (f) { return f.bucket === 'late' || f.bucket === 'today'; }).length;
       return { title: tx('Follow-ups'), chips: CRM.fuState === 'ready' && !CRM.fuDone && CRM.fu.length && !open ? [{ text: tx('Nothing due today'), tid: 'crm-fu-nothing-today' }] : [] };
@@ -392,10 +547,10 @@ function crmFollowups() {
     sorts: [{ key: 'due', label: tx('Due'), cmp: by(function (f) { return f.due_at || ''; }) }, { key: 'party', label: tx('Party'), cmp: by(function (f) { return f.party_name || ''; }) }, { key: 'created', label: tx('Created'), cmp: by(function (f) { return f.created_at || ''; }) }],
     group: { default: 'on', tid: 'crm-fu', order: ['late', 'today', 'week', 'later'], by: function (f) { var b = f.bucket || 'later'; return [tx(CRM_BUCKET[b] || b), b]; } },
     onOpen: function (f) { if (!f.party_removed) crmGo('#/party/' + encodeURIComponent(f.party_no || f.party_id)); },
-    next: function (f) { return '<div>' + CBList.nextRow(['<span style="color:var(--muted)">' + esc(tx('Due')) + '</span> ' + esc(crmWhen(f.due_at))], []) + (crmEdit() && !f.party_removed ? '<div class="supacts" style="padding:4px 0"><button type="button" class="crm-mini" data-crm="fusnooze" data-id="' + esc(f.followup_id) + '" data-when="tomorrow" data-testid="crm-fu-snooze-tomorrow-' + esc(f.followup_id) + '">' + esc(tx('Snooze')) + ' · ' + esc(tx('Tomorrow')) + '</button><button type="button" class="crm-mini" data-crm="fusnooze" data-id="' + esc(f.followup_id) + '" data-when="week">' + esc(tx('Snooze')) + ' · ' + esc(tx('Next week')) + '</button></div>' : '') + '</div>'; },
+    next: crmFuMini, nextPending: crmFuMini, actions: crmFuActions(),
   });
   crmWatch(el, function (c) { CRM.fuScope = c.filt.scope || def; CRM.fuDone = c.filt.done === '1'; crmFuLoad(); });
-  crmFuLoad();
+  if (!frame) crmFuLoad();
 }
 async function crmFuAct(id, body, done) {
   try { await api('crmFollowSet', { params: { id: id }, body: body }); if (done) done(); toast(tx('Saved')); CRM.fu = CRM.fu.filter(function (f) { return f.followup_id !== id || !(body.done); }); crmFuLoad(); crmLoad(true); }
@@ -510,5 +665,6 @@ document.addEventListener('click', function (ev) {
   if (a === 'fupreset') { var d = new Date(); if (v === 'tomorrow') d.setDate(d.getDate() + 1); if (v === 'week') d.setDate(d.getDate() + 7); document.getElementById('crm_fu_due').value = crmLocalISO(d); return; }
   if (a === 'fupick') { FUADD.party = CRM.byKey[t.getAttribute('data-k')]; document.getElementById('crm_fu_pq').value = FUADD.party.display_name; document.getElementById('crm_fu_pres').innerHTML = ''; return; }
   if (a === 'fusave') return crmFuSave();
+  if (a === 'minichit') { ev.stopPropagation(); if (typeof openChitSheet === 'function') openChitSheet(id); return; }
   if (typeof crmRecordClick === 'function') return crmRecordClick(a, t, ev);
 });

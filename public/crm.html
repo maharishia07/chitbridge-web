@@ -36,7 +36,8 @@
   --accent-hover:#174a47; --accent-text:var(--accent); --tab-n:#e9dfc8; --shadow-menu:0 10px 24px rgba(42,36,24,.16); --shadow-toast:0 10px 24px rgba(42,36,24,.25); --scrim:rgba(42,36,24,.4); --line-side:#e2d6bc; --hover-nav:#ece1c9;
 }
 /* a chosen theme (CBAvatar stamps data-themed) re-points this page's own names; Cream is untouched (as accounts.html, web #36) */
-:root[data-themed]{--ground:var(--paper);--surface:var(--card);--side:var(--card);--sub:var(--paper);--line-2:var(--line);--line-3:var(--line);--line-side:var(--line);
+:root{--red-text:var(--red-i)}   /* the red that carries WORDS: Cream's --red-i; in a chosen theme the theme's own --disp (its --disp-2 is a border red — 3:1 in Dark) */
+:root[data-themed]{--red-text:color-mix(in srgb,var(--disp,var(--red-i)) 78%,var(--ink));--ground:var(--paper);--surface:var(--card);--side:var(--card);--sub:var(--paper);--line-2:var(--line);--line-3:var(--line);--line-side:var(--line);
   /* the names a theme does not (always) carry follow the theme's own: text steps from --ink / --grey, the accent from the theme's blue, hover from ink over the card.
      A value the theme DOES set inline (--ink-2, --hover …) wins over these, so they only fill what a theme leaves out. */
   --ink-2:var(--ink); --muted-2:var(--grey); --grey-2:var(--grey);
@@ -93,10 +94,11 @@ svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke
   .main.overbar .crumb{display:none}
   .main.overbar .home{height:32px}
   .main.overbar .act.sm{min-height:32px}
-  .main.overbar .screen .cbl-title{padding-right:440px;min-height:56px;box-sizing:border-box}   /* the title row is the header line: 56 px, the same as the sidebar's brand */
+  .main.overbar .screen .cbl:not(#_) .cbl-title{padding-right:440px;min-height:56px;box-sizing:border-box}   /* :not(#_) = the unit's own weight: the room for the bar was being out-voted (UI10) */   /* the title row is the header line: 56 px, the same as the sidebar's brand */
 }
 .screen{flex:1;min-height:0;overflow-y:auto}
-.screen.flush{overflow:hidden;padding:0}
+.screen.flush{overflow:hidden;overflow:clip;padding:0;display:flex;flex-direction:column}
+.screen.flush > #crm_list,.screen.flush > #chits_list,.screen.flush > #crm_fu{flex:1 1 auto;min-height:0;height:auto}
 .content{padding:20px 24px 120px;display:flex;flex-direction:column;gap:16px}   /* no width cap (T17): the page takes the screen; only prose is capped */
 .empty{padding:40px 20px;text-align:center;border:1px dashed var(--line-3);border-radius:14px;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:12px}
 .empty .t{font-family:var(--serif);font-size:19px;color:var(--ink);font-weight:700}
@@ -148,7 +150,31 @@ svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke
 .pcell .l2{display:flex;gap:5px;flex-wrap:wrap;margin-top:3px}
 .udot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--blue)}
 .late{color:var(--amber-i);font-weight:700}
+.late.red{color:var(--red-text)}
 .sub{color:var(--muted)}
+/* ⭐ one line per party: the name and its number, nothing stacked; Dues said the shop's way (symbol + word + colour); On ChitBridge a tick or a dash */
+.pcell{display:inline-block;vertical-align:bottom;max-width:calc(100% - 20px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pcell .l1{display:inline-flex;align-items:baseline;gap:8px;max-width:100%}
+.pcell .nm{overflow:hidden;text-overflow:ellipsis}
+.due{white-space:nowrap;font-weight:700;font-variant-numeric:tabular-nums}
+.due .w{font-weight:600;font-size:var(--fs-1)}
+.due.get{color:var(--green-d)}.due.give{color:var(--red-text)}.due.settled{color:var(--muted);font-weight:600}
+.conn{font-weight:800;font-size:16px;line-height:1}.conn.on{color:var(--green-d)}.conn.off{color:var(--muted)}
+.fu1{display:flex;align-items:center;gap:8px;min-width:0}.fut{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.fua{display:inline-flex;gap:6px;flex:0 0 auto}
+/* ⭐ THE MINI-CARD (what ▸ opens): three boxes of one height, then the action row — the same on a party, a chit and a follow-up */
+.mc{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1.5fr);gap:10px;align-items:stretch;padding:2px 0 4px}
+.mc-box{border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:8px 12px 10px;min-height:134px;min-width:0}
+.mc-box h5{margin:0 0 4px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-2);font-weight:700}
+.mc-r{display:flex;gap:8px;align-items:center;min-height:26px;font-size:13.5px;min-width:0}
+.mc-r .ic{flex:0 0 auto;display:inline-flex}.mc-r .ic svg{width:15px;height:15px;color:var(--muted)}
+.mc-r .v{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mc-r a{color:var(--accent-text)}
+.mc-r.kv{justify-content:space-between}.mc-r.kv .k{color:var(--muted);font-size:12.5px;flex:0 0 auto}
+.mc-big{min-height:34px;font-size:18px;display:flex;align-items:center}
+.mc-c{display:grid;grid-template-columns:84px minmax(0,1fr) auto;gap:8px;align-items:center;min-height:26px;font-size:13.5px;cursor:pointer;border-radius:6px;padding:0 4px;margin:0 -4px}
+.mc-c:hover{background:var(--hover)}
+.mc-c .d{color:var(--muted);font-variant-numeric:tabular-nums}.mc-c .w{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@container list (max-width:620px){.mc{grid-template-columns:minmax(0,1fr)}.mc-box{min-height:0}}
 .crm-mini{height:30px;padding:0 10px;border:1px solid var(--line-3);border-radius:8px;background:var(--surface);color:var(--ink);font-size:12.5px;font-weight:600}
 .crm-mini:hover{background:var(--hover)}
 
@@ -268,7 +294,7 @@ dialog.sheet::backdrop{background:var(--scrim)}
       <div class="logo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 11a4 4 0 1 0-8 0 4 4 0 0 0 8 0zM4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg></div>
       <div class="brand-name label">CB CRM</div>
     </div>
-    <nav class="nav" id="nav" aria-label="CB CRM"></nav>
+    <nav class="nav" id="nav" aria-label="CB CRM"><a class="nav-btn" href="#/parties" data-testid="crm-nav-parties" aria-label="Parties"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 11a4 4 0 1 0-8 0 4 4 0 0 0 8 0zM4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg><span class="label">Parties</span></a><a class="nav-btn" href="#/chits" data-testid="crm-nav-chits" aria-label="Chits"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6"/></svg><span class="label">Chits</span></a><a class="nav-btn" href="#/followups" data-testid="crm-nav-followups" aria-label="Follow-ups"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M12 7v5l3 2"/></svg><span class="label">Follow-ups</span></a></nav>
     <div class="side-foot">
       <button type="button" class="nav-btn" id="toggleNav" aria-label="Collapse sidebar" aria-expanded="true">
         <svg class="nav-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span class="label">Collapse</span>
@@ -420,6 +446,11 @@ async function start(){
   SESSION = Object.assign({ token: null }, { entityId: MINE && MINE.ent, token: SESS.token, role: SESS.role, name: SESS.name, entity: SESS.entity, bridgeId: SESS.bridgeId, duty: SESS.duty, hat: SESS.hat, shop: SESS.shop });
   const g = ++CRM.gen;
   whoPaint();
+  /* ⭐ UI9: the WHOLE frame at once — menu, title, toolbar, header and skeleton rows, the kural's room — and nothing is read yet; only the rows change when the data arrives.
+     The Ledger's Dues column is drawn if this shop had it last time (the answer below confirms it), so the header does not change under the person. */
+  try { CRM.ledger = localStorage.getItem('cb_crm_ledger') !== '0'; } catch (_) { CRM.ledger = true; }
+  const guess = CRM.ledger;
+  crmRoute(true);
   /* ⭐ ONE BROWSER, ONE SHOP: nothing is read until this browser holds no other shop's fingerprint */
   let t;
   try{ t = await CBOnePerson.traces(MINE); }catch(_){ t = { others: [] }; }
@@ -428,6 +459,7 @@ async function start(){
   /* the Ledger's one read: on → the Dues column and the dues alert exist; off (404) → neither is drawn, no blank column */
   try{ const h = await api('booksHealth'); CRM.ledger = !!(h && h.enabled !== false); }
   catch(e){ CRM.ledger = false; }
+  try { localStorage.setItem('cb_crm_ledger', CRM.ledger ? '1' : '0'); } catch (_) {}
   if (g !== CRM.gen) return;
   whoPaint();
   crmRoute();

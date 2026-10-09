@@ -164,7 +164,7 @@
     '.cbsh-sc .g{font-size:13px;color:var(--sh-ghost)}.cbsh-sc b{font-size:13px;font-weight:600}',
     '.cbsh-sc .tag{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--sh-muted);background:var(--sh-panel);border-radius:5px;padding:1px 6px}',
     '.cbsh-alerts:empty,.cbsh-home:empty,.cbsh-signin:empty{display:none}.cbsh-alerts{display:flex;flex-direction:column;gap:7px;margin-bottom:16px}',
-    '.cbsh-foot{flex:0 0 auto}.cbsh-foot:empty{display:none}.cbsh-kh:empty{display:none}',
+    '.cbsh-foot{flex:0 0 auto}.cbsh-foot:empty{display:none}.cbsh-pfoot{display:none}',
     '.cbsh-slotwork{min-height:100%}',
     /* CB SIDES (public/app/sides.js): two reference panels. From 1480 px they sit beside the work area and scroll on their own; below it they are two drawers behind the toolbar buttons, one open at a time; a phone drawer is full width */
     '.cbsh-work{position:relative}.cbsh-side,.cbsh-tools{display:none}',
@@ -199,7 +199,8 @@
     '.cbsh-box .facts{flex-direction:row;flex-wrap:wrap;gap:2px 12px;margin-top:6px;padding-top:0;border-top:0}',
     '.cbsh-labs,.cbsh-base{padding:0;background:none;border:0}',
     '.cbsh-chips{gap:7px;margin-top:12px}.cbsh-sc{padding:6px 10px}',
-    '.cbsh-kh{margin-top:14px;border-radius:13px;overflow:hidden;border:1px solid var(--sh-soft)}',
+    /* P2-2 (Athi: "kural should be in the footer"): on a phone Home the band sits in the footer ABOVE the tab bar (the work area is column-reverse, so the DOM order nav · pfoot · main reads main · pfoot · nav) */
+    '.cbsh-pfoot{display:block;flex:0 0 auto;order:0}.cbsh-pfoot:empty{display:none}',
     '}'
   ].join('');
 
@@ -271,6 +272,7 @@
           (mode === 'home' ? '<nav class="cbsh-nav" data-testid="shell-nav" aria-label="Areas">' + AREAS.map(function (a) {
             return '<button type="button" class="cbsh-nv" data-go="' + a + '" data-testid="shell-nav-' + a + '"><span class="i" aria-hidden="true">' + ICON[a] + '</span><span class="t">' + esc(W.areas[a]) + '</span></button>';
           }).join('') + '</nav>' : '') +
+          (mode === 'home' ? '<div class="cbsh-pfoot" data-testid="shell-pfoot"></div>' : '') +
           (sides ? '<aside class="cbsh-side l" data-slot="sideL"></aside>' : '') +
           '<main class="cbsh-main" data-testid="shell-main" data-tab="home"><div class="cbsh-inner">' +
             (sides ? '<div class="cbsh-tools" data-testid="shell-sidetools"><button type="button" data-slot="btnL"></button><button type="button" data-slot="btnR"></button></div>' : '') +
@@ -353,7 +355,7 @@
       if (!$('.cbsh-sec.home')) {
         box.innerHTML = '<section class="cbsh-sec home" data-area="home" data-testid="shell-area-home"><h2 class="cbsh-ph">' + esc(W.areas.home) + '</h2>' +
           '<div class="cbsh-alerts" data-slot="alerts"></div><div class="cbsh-home" data-slot="home"></div><div class="cbsh-note" data-testid="shell-noapps" hidden>' + esc(W.noApps) + '</div>' +
-          '<div class="cbsh-kh"></div></section><div class="cbsh-more"></div>';
+          '</section><div class="cbsh-more"></div>';
         slots.alerts = $('[data-slot="alerts"]'); slots.home = $('[data-slot="home"]');
       }
       $('[data-testid="shell-noapps"]').hidden = !!S.manifest || S.loadingApps;
@@ -422,7 +424,7 @@
     /* ── the kural: the footer band on a laptop; once, at the foot of Home, on a phone ── */
     function placeKural() {
       var K = root.CBKural, k = K && K.el && K.el(); if (!k) return;
-      var spot = phone.matches && mode === 'home' ? $('.cbsh-kh') : $('.cbsh-foot');
+      var spot = phone.matches && mode === 'home' ? $('.cbsh-pfoot') : $('.cbsh-foot');   /* always the footer: above the tab bar on a phone, under the page elsewhere */
       if (spot && k.parentNode !== spot) { spot.appendChild(k); if (K.refresh) K.refresh(); }
     }
 
@@ -479,7 +481,7 @@
     if (mode === 'home') { main.setAttribute('data-tab', first); mark(first); }
 
     var kuralP = (mode !== 'bar' && o.kural !== false && root.CBKural && root.CBKural.mount)
-      ? root.CBKural.mount({ route: o.kural || 'planning', host: $('.cbsh-foot') }).then(placeKural).catch(function () {}) : Promise.resolve();
+      ? root.CBKural.mount({ route: o.kural || 'planning', host: phone.matches && mode === 'home' ? $('.cbsh-pfoot') : $('.cbsh-foot') }).then(placeKural).catch(function () {}) : Promise.resolve();
 
     var manP = loadManifest().then(function (m) { S.manifest = m && m.entries ? m : { entries: [] }; }, function () { S.manifest = null; })
       .then(function () { S.loadingApps = false; })

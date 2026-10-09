@@ -16,6 +16,9 @@
  *              list-controls.cjs: a header that is not listed fails (a new hand-drawn list is caught the day it is written); a name that is
  *              listed but no longer draws one fails too (take it out — the number only goes down). Do not add a name without Athi.
  *
+ * ZEBRA (Athi, 2026-10-09: "in the CRM and ledger each line to show in alternate colors?"): one rule in the unit (every other data row, a THEME TOKEN shade, group heads · hover · selected stay
+ * distinct) and one rule for the ledger / statement tables (cap-books.js) — checked here in source and on the lab's real DOM; e2e/a11y-contrast.cjs measures the shade in all 16 themes.
+ *
  * It reads SOURCE (comments blanked, strings kept: the markup lives in strings) because the pages paint after a sign-in the harness
  * cannot give every screen; then, on the real DOM, it checks the lab: every columnheader in list-lab.html sits inside a .cbl mount.
  * e2e/list-unit-breaks.cjs proves a hand-drawn header anywhere is caught.
@@ -161,6 +164,18 @@ const unitSrc = fs.readFileSync(path.join(ROOT, 'app/list-ctl.js'), 'utf8');
 const unitHeader = /role=\\?"columnheader|role="columnheader/.test(unitSrc) && /cbl-rz/.test(unitSrc) && /aria-sort/.test(unitSrc) && /position:sticky;top:0/.test(unitSrc);
 if (!unitHeader) { fails++; say('  ✗ app/list-ctl.js no longer draws a sticky columnheader with a resize handle and aria-sort.'); }
 
+/* 2b · ZEBRA: the unit stripes its rows from a token; the statement tables carry the same stripe; no page paints a stripe of its own */
+const zUnit = /\.cbl-row\.z,\.cbl \.cbl-lrec\.z\{background:var\(--cl-zebra\)\}/.test(unitSrc) && /--cl-zebra:var\(--zebra,color-mix\(in srgb,var\(--cl-ink\) \d+%,var\(--cl-card\)\)\)/.test(unitSrc) && /\(zb \? ' z' : ''\)/.test(unitSrc);
+if (!zUnit) { fails++; say('  ✗ app/list-ctl.js no longer stripes its rows from a theme token (.cbl-row.z · --cl-zebra, with a z class on every other data row, grid and lines).'); }
+else say('  ✓ the unit stripes every other row from --cl-zebra (the theme\'s --zebra, else ink mixed into the card): no raw colour');
+const booksSrc = fs.readFileSync(path.join(ROOT, 'app/cap-books.js'), 'utf8');
+if (!/\.bktab tbody tr:nth-child\(even\)\{background:var\(--zebra,color-mix\(in srgb,var\(--ink\) \d+%,var\(--card\)\)\)\}/.test(booksSrc)) { fails++; say('  ✗ app/cap-books.js: the ledger / statement tables (.bktab) are no longer striped from the same token.'); }
+else say('  ✓ the ledger and statement tables (.bktab) carry the same stripe');
+{
+  const rawStripe = scope().filter((f) => /\.html$|\.js$/.test(f) && !/list-ctl\.js$|cap-books\.js$/.test(f)).filter((f) => /(tr|\.cbl-row|\.cbl-lrec)[^{}]*:nth-(child|of-type)\((even|odd|2n)/.test(fs.readFileSync(path.join(ROOT, f), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/var _AI_MDCSS=.*$/m, '')));   /* the AI answer's own markdown stylesheet is rendered content, not a list */
+  rawStripe.forEach((f) => { if (/accounts\.html$/.test(f)) return; fails++; say('  ✗ ' + f + ' paints a stripe of its own — the unit and cap-books.js own it (accounts.html only keeps it on the phone card, from the same token).'); });
+}
+
 /* 3 · on the real DOM: every columnheader on the lab belongs to a mount */
 (async () => {
   let pw = null; try { pw = require('@playwright/test'); } catch (_) {}
@@ -178,6 +193,9 @@ if (!unitHeader) { fails++; say('  ✗ app/list-ctl.js no longer draws a sticky 
         });
         if (r.n === 0 || r.stray || r.handles) { fails++; say('  ✗ the lab (' + k + '): ' + r.n + ' header(s), ' + r.stray + ' outside a mount, ' + r.handles + ' without a resize handle'); }
         else say('  ✓ the lab (' + k + '): ' + r.n + ' header element(s), all inside a CBList mount, each with a resize handle');
+        const z = await p.evaluate(() => { const bg = (e) => getComputedStyle(e).backgroundColor, rs = [].slice.call(document.querySelectorAll('.cbl-row:not(.sel), .cbl-lrec:not(.sel)')); return rs.length < 3 ? null : { a: bg(rs[0]), b: bg(rs[1]), c: bg(rs[2]) }; });
+        if (z && !(z.a === z.c && z.a !== z.b)) { fails++; say('  ✗ the lab (' + k + '): rows do not alternate (' + z.a + ' / ' + z.b + ' / ' + z.c + ')'); }
+        else if (z) say('  ✓ the lab (' + k + '): rows alternate (' + z.a + ' / ' + z.b + ')');
       }
     } finally { await b.close(); S.close(); }
   }

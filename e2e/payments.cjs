@@ -42,6 +42,7 @@ const OWNER = { token: claims({ identity_id: 'ent-M', identity_type: 'entity' })
 
 /* the words a balance may be written in, and what a minus in front of a figure looks like */
 const WORDS = /^(you owe|they owe you|settled)\b/i;
+const CRMWORDS = /^(↑ ₹[\d,.]+ you'll give|↓ ₹[\d,.]+ you'll get|settled)\b/i;   /* CB CRM says a due the shopkeeper's way (2026-10-09): a symbol AND a word AND a colour */
 const MINUS = /(^|[\s(>])[-−]\s?(₹|\d)/;
 
 function standIn() {
@@ -184,14 +185,14 @@ async function route(S, r) {
     await p.waitForSelector('[data-testid^="party-due-"]', { timeout: 15000 });
     const chips = await p.$$eval('[data-testid^="party-due-"]', (e) => e.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
     ok(chips.length >= 3, 'crm.html: the list shows dues chips (' + chips.length + ')');
-    ok(chips.every((t) => WORDS.test(t)), 'E9 crm.html list: every dues chip reads "you owe" / "they owe you" / "settled" (' + chips.slice(0, 3).join(' | ') + ')');
+    ok(chips.every((t) => CRMWORDS.test(t)), 'E9 crm.html list: every dues figure is said the shopkeeper way — "you will get" / "you will give" / "settled" (' + chips.slice(0, 3).join(' | ') + ')');
     ok(!MINUS.test(await bodyText(p)), 'E9 crm.html list: no minus sign in front of a figure');
     await p.click('[data-testid="crm-row-P-0001"]');
     await p.waitForSelector('[data-testid="crm-rec-name"]', { timeout: 15000 });
     await p.waitForTimeout(500);
     ok(!MINUS.test(await bodyText(p)), 'E9 crm.html record: no minus sign in front of a figure');
     const hdr = await p.$$eval('.rchips [data-testid^="party-due-"]', (e) => e.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
-    ok(hdr.length === 1 && /^you owe\s+₹\s?481\.65/.test(hdr[0]), 'E9 crm.html record: the header chip says "you owe" 481.65 for the server\'s -48165 (' + hdr.join('|') + ')');
+    ok(hdr.length === 1 && /^[↑↓]?\s*₹\s?481\.65 you'll give/.test(hdr[0]), 'E9 crm.html record: the header figure says 481.65 "you will give" for the server\'s -48165 (' + hdr.join('|') + ')');
     try { await p.click('[data-testid="crm-sec-ledger"]', { timeout: 2000 }); } catch (_) {}
     await p.waitForTimeout(600);
     ok(!MINUS.test(await bodyText(p)), 'E9 crm.html ledger section opened: still no minus');
