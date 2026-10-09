@@ -279,6 +279,18 @@ function crmRecordPaint(p, rec) {
   var led = document.getElementById('crm_ledger');
   if (led) led.innerHTML = partyBooksHTML(cu ? 'customer' : 'supplier', p.party_id, crmLedgerRow(p, rec));
 }
+/** M30-1c: after a payment, the open record's Ledger (header chip, Balance, statement) repaints from what the books now say - the Day book had the payment, this block did not */
+function crmLedgerRepaint(pid) {
+  var p = CRMR.p, rec = CRMR.rec;
+  if (!p || !rec || p.party_id !== pid || !(CRM.route && CRM.route.view === 'party' && !CRM.route.sub)) return;
+  var d = BK.dues && BK.dues[pid]; if (d && d.balance_minor != null) p.balance_minor = d.balance_minor;   /* the same row the Parties list reads */
+  /* only the three places the balance shows - never the whole record: a repaint would fold the Ledger section the person is working in */
+  var R = Object.assign({}, p, rec), has = CRM.ledger && p.balance_minor != null, rc = document.querySelector('[data-testid="crm-record"] .rchips');
+  if (rc) rc.innerHTML = crmRoleChips(R) + crmRailChip(R) + (has ? crmDueCell(p) : '') + crmSegChip(R);
+  var fact = document.querySelector('[data-testid="crm-sec-fact-ledger"]'); if (fact) fact.innerHTML = has ? crmDueCell(p) : '';
+  var led = document.getElementById('crm_ledger');
+  if (led) led.innerHTML = partyBooksHTML(rec.customer ? 'customer' : 'supplier', pid, crmLedgerRow(p, rec));
+}
 function crmLedgerRow(p, rec) {
   var side = rec.customer || rec.supplier || {};
   return { party_no: p.party_no, legal_name: p.legal_name, nickname: p.nickname, tax_ids: p.tax_ids, credit_days: side.credit_days, credit_limit_minor: side.credit_limit_minor };

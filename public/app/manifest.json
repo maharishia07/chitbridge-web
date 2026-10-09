@@ -4,8 +4,8 @@
   "rail": { "route": "/crm.html#/chits", "facts": "/api/facts/rail" },
   "entries": [
     { "id": "till", "name": "Till", "route": "/till.html", "icon": "▤", "area": "selling", "state": "built", "what": "Take money at the counter.", "rows": ["M62", "M44"], "phase": "P5 designed screens", "fits": "Takes the money; every bill goes onto the rail as a chit.", "needs": {}, "facts": "/api/facts/till" },
-    { "id": "storefront", "name": "Storefront", "route": "/shop.html", "icon": "◇", "area": "selling", "state": "built", "what": "Your shop on the web.", "rows": ["M15"], "phase": "P4 sign-in", "fits": "Orders from the web land on the rail like any other chit.", "needs": { "owner": true }, "facts": null },
-    { "id": "catalogue", "name": "Catalogue", "route": null, "icon": "▦", "area": "selling", "state": "workshop", "rows": [], "fits": "The one list of what you sell; chits and offers read it.", "needs": {}, "facts": null },
+    { "id": "storefront", "name": "Storefront", "route": "/shop.html?s={bridge_id}", "icon": "◇", "area": "selling", "state": "built", "what": "Your shop on the web.", "rows": ["M15"], "phase": "P4 sign-in", "fits": "Orders from the web land on the rail like any other chit.", "needs": { "owner": true }, "facts": null },
+    { "id": "catalogue", "name": "Catalogue", "route": null, "via": "/product-lab.html", "via_note": "Opens in Product Lab, the closest built page: Choose lists what you sell.", "icon": "▦", "area": "selling", "state": "workshop", "rows": [], "fits": "The one list of what you sell; chits and offers read it.", "needs": {}, "facts": null },
     { "id": "stock", "name": "Stock", "route": null, "icon": "◫", "area": "selling", "state": "workshop", "fits": "Counts follow the chits that move goods.", "needs": {}, "facts": null },
     { "id": "orders", "name": "Orders", "route": null, "icon": "↓", "area": "selling", "state": "coming", "fits": "Orders in and out arrive as rail chits.", "needs": {}, "facts": null },
     { "id": "delivery", "name": "Delivery", "route": null, "icon": "→", "area": "selling", "state": "coming", "fits": "Delivery steps are lines on the same chit.", "needs": {}, "facts": null },

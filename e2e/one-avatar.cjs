@@ -129,7 +129,7 @@ async function run(site, o) {
         ok(txt.split(' ').length < 95 && !/[.!?] [A-Z]/.test(txt.replace(/e\.g\./g, '')), pg.id + ' · no explanatory text (' + txt.split(' ').length + ' words, no sentence)');
         const settings = await q('nav-settings');
         if (pg.id === 'app') ok(settings === 1, 'app · Settings is in the owner\'s menu'); else ok(settings === 0, pg.id + ' · no Settings here (it stays in the app)');
-        if (pg.id === 'accounts') ok((await menu.locator('[data-testid="nav-profile"]').getAttribute('href')) === '/app.html#/app/profile', 'accounts · Profile opens the app\'s profile');
+        if (pg.id === 'accounts') ok((await menu.locator('[data-testid="nav-profile"]').getAttribute('href')) === '/know-your-business.html', 'accounts · Profile opens a customer page (Know your business), never the workshop');
         await p.keyboard.press('Escape');
         ok(!(await p.locator('[data-testid="avatar-menu"]').isVisible().catch(() => false)), pg.id + ' · Escape closes the menu');
         if (pg.id === 'app') {

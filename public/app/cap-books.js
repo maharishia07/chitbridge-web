@@ -645,10 +645,14 @@ function payOutcomePaint(r) {
   if (r.advice && typeof CBAdvice !== 'undefined') CBAdvice.mount(document.getElementById('pay_advice'), { payment_id: PAY.id, advice: r.advice, party: PAY.name, context: { host: typeof ACC !== 'undefined' ? 'accounts' : 'crm' },
     onDone: function (res) { bkAdviceFlip(PAY.id, res, null); } });
   pf.innerHTML = '<button class="pri" data-testid="pay_done" onclick="closeModal()">' + tx('Done') + '</button>';
-  booksAfterPay();   /* the statement, the dues chip and the record's header repaint now, behind the outcome */
+  booksAfterPay(r);   /* the statement, the dues chip and the record's header repaint now, behind the outcome */
 }
-function booksAfterPay() {
+function booksAfterPay(r) {
+  var pid = PAY && PAY.partyId;
   if (PAY) { delete BK.stmt[PAY.partyId]; }
+  /* M30-1c: repaint LOCALLY from the answer - the balance the record just returned is the party's balance now (same sign as the dues read: + they owe you) */
+  try { var o = r && r.outcome; if (pid && o && o.balance_minor != null) { BK.dues = BK.dues || {}; BK.dues[pid] = Object.assign({}, BK.dues[pid], { balance_minor: o.balance_minor }); } } catch (_) {}
+  try { if (pid && typeof crmLedgerRepaint === 'function') crmLedgerRepaint(pid); } catch (_) {}
   booksDuesLoad(true).then(function () {
     try { if (PAY && PAY.kind === 'supplier') { if (typeof paintSupSlide === 'function') paintSupSlide(); } else if (typeof paintCustDetail === 'function') paintCustDetail(); } catch (_) {}
   });

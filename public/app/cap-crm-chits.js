@@ -79,4 +79,6 @@ function chitsHome(params) {
     actions: [{ id: 'open', label: tx('Open chit'), tid: 'chits-open', run: function (c) { if (typeof openChitSheet === 'function') openChitSheet(c.chit_id); } }]
   });
   chitsLoad();
+  /* O4: the Home bell sends a pressed row here (crm.html#/chits?open=<chit>) - the order opens to act on, over the list */
+  if (params && /^[0-9a-f-]{36}$/i.test(params.open || '') && typeof openChitSheet === 'function') openChitSheet(params.open);
 }

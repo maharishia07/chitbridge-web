@@ -510,7 +510,7 @@ async function route(S, r) {
     /* ── 4 · THE AVATAR MENU, HOME ── */
     await p.click('[data-testid="avatar"]');
     ok(await p.locator('[data-testid="avatar-menu"]').isVisible(), 'the avatar opens the menu');
-    ok(await p.getAttribute('[data-testid="nav-profile"]', 'href') === '/app.html#/app/profile', 'Profile → the app\'s profile (app.html#/app/profile)');
+    ok(await p.getAttribute('[data-testid="nav-profile"]', 'href') === '/know-your-business.html', 'Profile → a customer page (Know your business), never the workshop');
     ok(await p.locator('[data-testid="nav-signout"]').isVisible(), 'Sign out is in the menu');
     ok(await p.evaluate(() => { const m = document.querySelector('[data-testid="avatar-menu"]'), r = m.getBoundingClientRect(), miss = [];
       for (let y = r.top + 6; y < Math.min(r.bottom, innerHeight) - 6; y += 24) for (let x = r.left + 6; x < r.right - 6; x += 40) { const e = document.elementFromPoint(x, y); if (e && !m.contains(e)) miss.push(e.className); }
@@ -525,9 +525,9 @@ async function route(S, r) {
     await p.goBack();
     await p.waitForSelector('[data-testid="acc-nav-daybook"]');
     await p.click('[data-testid="avatar"]');
-    await Promise.all([p.waitForURL(/app\.html#\/login/), p.click('[data-testid="nav-signout"]')]);
+    await Promise.all([p.waitForURL(base + '/'), p.click('[data-testid="nav-signout"]')]);
     ok(await p.evaluate(() => localStorage.getItem('cb_sess')) === null, 'Sign out removes the app\'s session (cb_sess)');
-    ok(/\/app\.html#\/login$/.test(p.url()), 'Sign out lands on the app\'s sign-in');
+    ok(new URL(p.url()).pathname === '/', 'Sign out lands on the index, the one front door (never the workshop\'s login)');
     await ctx.close();
   }
 

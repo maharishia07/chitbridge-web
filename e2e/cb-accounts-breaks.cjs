@@ -24,7 +24,7 @@ const BREAKS = [
   ['a failed read is mistaken for a Ledger that is off', PAGE, `    if (e && e.status === 404) return offCard();\n    return failedCard();`, `    return offCard();`, A],
   ['Sign out keeps the session (the avatar\'s sign-out, public/app/avatar.js)', AV, `      root.localStorage.removeItem('cb_sess');\n`, ``, A],
   ['Home goes somewhere else', PAGE, `<a class="home" href="/" data-testid="acc-home" aria-label="Home">`, `<a class="home" href="/app.html" data-testid="acc-home" aria-label="Home">`, A],
-  ['Profile goes somewhere else (the avatar\'s Profile link)', AV, `o.profileHref || '/app.html#/app/profile'`, `o.profileHref || '/app.html#/app/settings'`, A],
+  ['Profile goes somewhere else (the avatar\'s Profile link)', AV, `o.profileHref || PROFILE_HREF`, `o.profileHref || '/app.html#/app/settings'`, A],
   ['a code the design never named vanishes', CAPB, `title = g ? g[1] : 'Other';`, `title = g ? g[1] : 'Other'; if (!g) return;`, A],
   ['the step chip is decided by the page, not the server', PAGE, `data-step="\${esc(b.step || '')}">\${esc(b.label)}</span>`, `data-step="\${esc(b.step || '')}">\${esc(b.step)}</span>`, A],
   ['the phone overflows', LCTL, `.cbl .cbl-grid{min-width:0}.cbl .cbl-hdr{display:none}`, `.cbl .cbl-grid{min-width:900px}.cbl .cbl-hdr{display:none}`, A],

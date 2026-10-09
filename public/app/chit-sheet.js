@@ -62,14 +62,34 @@
       no: bill || h.manual_subject || h.auto_subject || '', at: bj.billed_at || h.created_at,
       counter: counterOfBill(bill, bj.till), by: bj.till && bj.till.by && bj.till.by.name || '',
       who: counterBill ? ((bj.customer && bj.customer.name) || T('Walk-in')) : (billRx ? ((sum.bill_received && sum.bill_received.from) || senderName) : (others.map(function (x) { return x.display_name; }).join(', ') || senderName)),
-      lines: live, bj: bj, money: moneyFor(bj, money_, cur), rec: rec
+      lines: live, bj: bj, money: moneyFor(bj, money_, cur, sum), rec: rec, order: orderDetails(sum, purpose)
     };
   }
   /* ⭐ WHAT THE CHIT IS FROZEN WITH, in one shape (summary_json.money's names + by_rate · heads · lines): the invoice the
      counter determined, read out by CBTax.moneyOf — else the header's own summary_json.money — else null. A mapping, never a sum. */
-  function moneyFor(bj, summaryMoney, cur) {
+  function moneyFor(bj, summaryMoney, cur, sum) {
     if (bj && bj.invoice && root.CBTax && root.CBTax.moneyOf) return root.CBTax.moneyOf(bj.invoice, cur);
-    return summaryMoney && Object.keys(summaryMoney).length ? summaryMoney : null;
+    if (summaryMoney && Object.keys(summaryMoney).length) return summaryMoney;
+    /* O7: an ORDER is not billed yet - the figure it was placed with is the header's own total_value (the same one the Chits list shows), read, never worked out */
+    var tv = sum && sum.total_value != null ? sum.total_value : (sum && sum.indicative_total != null ? sum.indicative_total : null);
+    return tv != null && !isNaN(Number(tv)) ? { total: Number(tv) } : null;
+  }
+  /* O8: what the customer typed at the online shop - the delivery address, the time asked for, the remark - read from summary_json.order_details (older orders keep only the coarse area) */
+  function orderDetails(sum, purpose) {
+    if (purpose !== 'order') return null;
+    var d = sum && sum.order_details || null, rd = d && d.requested_delivery || null;
+    var o = { online: !!(d && d.channel === 'online'), fulfilment: d && d.fulfilment || '', address: (d && d.address) || (sum && sum.customer_locality) || '',
+      when: rd ? [rd.date, rd.time].filter(Boolean).join(' ') : '', remark: (d && d.remark) || '' };
+    return (o.online || o.address || o.when || o.remark) ? o : null;
+  }
+  function orderHTML(m) {
+    var o = m.order; if (!o) return '';
+    var rows = [];
+    if (o.address) rows.push([o.fulfilment === 'pickup' ? 'Pick up' : 'Deliver to', o.address, 'cs-order-address']);
+    if (o.when) rows.push(['Asked for', o.when, 'cs-order-when']);
+    if (o.remark) rows.push(['Remark', o.remark, 'cs-order-remark']);
+    return '<div class="cs-order" data-testid="cs-order">' + (o.online ? '<div class="cs-online" data-testid="cs-order-online">🌐 ' + E(T('Online order')) + (o.fulfilment === 'delivery' ? ' · ' + E(T('Delivery')) : '') + '</div>' : '')
+      + rows.map(function (r) { return '<div class="cs-row"><span>' + E(T(r[0])) + '</span><b data-testid="' + r[2] + '">' + E(r[1]) + '</b></div>'; }).join('') + '</div>';
   }
   /* ⭐ A BILL I RECEIVED has its own step per shop: since the API's "bills-private" it is a `bill_step` row in the chit's
      state_log (code B-2100, step 'accepted', mine:true) — NOT the shared status, which is the seller's. The latest of mine wins. */
@@ -107,6 +127,12 @@
   };
 
   /* ── the paint ───────────────────────────────────────────────────────────────────────────────────── */
+  /* a line's own frozen total; an unbilled ORDER line that carries only price and quantity is shown as placed (price x quantity, rounded to the paisa) */
+  function lineTotal(l, m) {
+    var t = l.total != null ? l.total : (l.net != null ? l.net : (l.line_total != null ? l.line_total : l.amount));
+    if (t == null && m.purpose === 'order' && l.price != null && !isNaN(Number(l.price))) { var q = Number(l.quantity != null ? l.quantity : (l.qty != null ? l.qty : 1)); if (!isNaN(q)) t = Math.round(Number(l.price) * q * 100) / 100; }
+    return t;
+  }
   function linesHTML(m) {
     if (!m.lines.length) return '<div class="cs-mute">' + E(T('No lines on this chit')) + '</div>';
     var ml = (m.money && m.money.lines) || [];
@@ -118,7 +144,7 @@
         return '<tr data-testid="cs-line-' + i + '"><td>' + E(l.particulars || l.name || '') + offs.map(function (o) {
           return '<div class="cs-off" data-testid="cs-offer-' + i + '">' + E(o.label || T('Offer')) + ' −' + E(money(o.off, m.cur)) + '</div>'; }).join('') + '</td>'
           + '<td class="n">' + E(l.quantity != null ? l.quantity : (l.qty != null ? l.qty : '')) + (l.unit && l.unit !== 'piece' ? ' ' + E(l.unit) : '') + '</td>'
-          + '<td class="n">' + E(money(l.price, m.cur)) + '</td><td class="n">' + E(money(f ? f.total : (l.total != null ? l.total : l.net), m.cur)) + '</td></tr>';
+          + '<td class="n">' + E(money(l.price, m.cur)) + '</td><td class="n">' + E(money(f ? f.total : lineTotal(l, m), m.cur)) + '</td></tr>';
       }).join('') + '</tbody></table>';
   }
   /* the GST summary as the counter prints it (till.html taxSummaryHTML is the reference shape): the frozen by_rate, as it is held.
@@ -196,7 +222,7 @@
     d.querySelector('.cs-body').innerHTML =
       '<div class="cs-head" data-testid="cs-head">' + head + '</div>'
       + '<div class="cs-who"><span data-testid="cs-who">' + E(m.who) + '</span> <span class="cs-step" data-testid="cs-step">' + E(T(STEP[m.status] || m.status)) + '</span></div>'
-      + linesHTML(m) + gstHTML(m) + totalHTML(m) + tenderHTML(m)
+      + orderHTML(m) + linesHTML(m) + (m.purpose === 'order' && !(m.money && m.money.by_rate) ? '' : gstHTML(m)) + totalHTML(m) + tenderHTML(m)
       + (CS.note ? '<div class="cs-note" data-testid="cs-note">' + E(CS.note) + '</div>' : '')
       + (CS.useAsk ? '<div class="cs-use" data-testid="cs-use">' + billUseChoiceHTML([m], 'CBSheet.use')
         + '<button type="button" class="optchip" data-testid="cs-use-auto" onclick="CBSheet.use(\'\')">' + E(T('Let my catalogue decide')) + '</button></div>' : '');
@@ -217,7 +243,7 @@
     + '#chitsheet .cs-lines td,#chitsheet .cs-lines th{padding:4px 3px;border-bottom:1px solid var(--line,#E7E2D8);vertical-align:top}#chitsheet .n,#chitsheet th.n{text-align:end;white-space:nowrap}#chitsheet .tot td{font-weight:700}'
     + '#chitsheet .cs-off{font-size:var(--fs-1,11px);color:var(--ok,#27794c)}#chitsheet .cs-sec{margin:12px 0 4px;font-size:var(--fs-1,11px);font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--grey,#494F56)}'
     + '#chitsheet .cs-row{display:flex;justify-content:space-between;gap:10px;padding:3px 0}#chitsheet .cs-total{font-size:var(--fs-4,16px);border-top:2px solid var(--ink,#0F2E3D);margin-top:8px;padding-top:6px}'
-    + '#chitsheet .cs-mute{color:var(--grey,#494F56);font-size:var(--fs-1,11px);margin:6px 0}#chitsheet .cs-note{margin-top:10px;padding:8px 10px;border:1px solid var(--gold-line,#E8D9BC);background:var(--gold-soft,#F7F1E4);border-radius:8px}'
+    + '#chitsheet .cs-order{margin:0 0 10px;padding:8px 10px;border:1px solid var(--gold-line,#E8D9BC);background:var(--gold-soft,#F7F1E4);border-radius:8px}#chitsheet .cs-online{font-weight:700;margin-bottom:4px}#chitsheet .cs-mute{color:var(--grey,#494F56);font-size:var(--fs-1,11px);margin:6px 0}#chitsheet .cs-note{margin-top:10px;padding:8px 10px;border:1px solid var(--gold-line,#E8D9BC);background:var(--gold-soft,#F7F1E4);border-radius:8px}'
     + '#chitsheet .cs-use .optchip{cursor:pointer;min-height:44px;padding:0 12px;margin:2px 2px 2px 0}'
     + '#chitsheet .cs-acts{display:flex;gap:4px;flex-wrap:wrap;justify-content:space-around;padding:8px 8px calc(8px + env(safe-area-inset-bottom));border-top:1px solid var(--line,#E7E2D8);background:var(--paper,#FAF8F4)}'
     + '#chitsheet .cs-act{cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:68px;min-height:52px;padding:4px 6px;border:0;border-radius:8px;background:none;color:inherit;font-size:var(--fs-1,11px)}'
@@ -229,7 +255,8 @@
     var st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
     d = document.createElement('dialog'); d.id = 'chitsheet'; d.setAttribute('aria-label', T('Bill'));
     d.innerHTML = '<div class="cs-top"><span data-testid="cs-title">' + E(T('Bill')) + '</span><button type="button" data-testid="cs-close" aria-label="' + E(T('Close')) + '" onclick="CBSheet.close()">✕</button></div><div class="cs-body"></div><div class="cs-acts" data-testid="cs-acts"></div>';
-    d.addEventListener('close', function () { lock(false); CS.id = null; });
+    /* R10-4: a close event is queued; if a new chit was opened meanwhile the sheet is open again and that late event must not wipe it (the read would be dropped and the sheet stay on Reading) */
+    d.addEventListener('close', function () { if (d.open) return; lock(false); CS.id = null; });
     d.addEventListener('click', function (e) { if (e.target === d) CBSheet.close(); });
     document.body.appendChild(d);
     return d;
@@ -287,6 +314,6 @@
     if (k === 'page') { close(); var pg = typeof openChitPage === 'function' ? openChitPage : openChit; if (typeof pg === 'function') pg(id); }
   }
 
-  root.CBSheet = { moneyFor: moneyFor, moneyBlockHTML: moneyBlockHTML, open: open, close: close, act: act, use: function (u) { return move('act', u); }, actionsFor: actionsFor, model: model, titleFor: titleFor, stepWord: function (m) { return T(STEP[m.status] || m.status); } };
+  root.CBSheet = { orderHTML: orderHTML, moneyFor: moneyFor, moneyBlockHTML: moneyBlockHTML, open: open, close: close, act: act, use: function (u) { return move('act', u); }, actionsFor: actionsFor, model: model, titleFor: titleFor, stepWord: function (m) { return T(STEP[m.status] || m.status); } };
   root.openChitSheet = open;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -107,7 +107,7 @@ function mountShell(){
     kural: 'planning',
     /* ⭐ M14: THE FRONT DOOR. Signed out, the shell's own slot holds the one sign-in window (CBSignin.mount — the same module CB Accounts,
        CB CRM and the till mount); signed in → the Home repaints. The avatar's Sign in door brings the person to the box. */
-    signin: { surface: 'index', need: 'person', onIn: function(){ SESS = session(); MINE = SESS ? CBOnePerson.who(SESS) : null; open_(); } },
+    signin: { surface: 'index', need: 'person', registerHref: '/app.html#/register', /* the register page stays in the workshop for now (BACKLOG: REGISTER PAGE) */ onIn: function(){ SESS = session(); MINE = SESS ? CBOnePerson.who(SESS) : null; open_(); } },
     avatar: { onSignIn: signinOpen }
   });
   /* Home's slot: the rail widget (signed in) above the ROADMAP, which is for everyone, signed in or not, and reads no shop's figure */
