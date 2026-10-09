@@ -308,6 +308,7 @@ function go(hash){ location.href = '/app.html' + hash; }   /* api()'s 401 → th
 <script src="/app/cap-books.js"></script>
 <script src="/app/attach-ui.js"></script>   <!-- CBAttach.mount (R07): the one picker, 6 MB cap and audience rule in this one file -->
 <script src="/app/rail-thread.js"></script>
+<script src="/app/rail-advice.js"></script>   <!-- CBAdvice.mount: the payment advice OUT (M30) — Send on rail / Share off rail, the server's may painted -->
 <script src="/engine/bank-recon.js"></script>   <!-- CBBankRecon: the bank statement is read, matched and reconciled HERE, on this device (DECISIONS: Bank reconciliation runs on the shop's device) -->
 <script src="/app/cap-entry.js"></script>   <!-- ＋ Entry on the Day book: four plain steps, the server's events and preview (docs/design/manual-entry) -->
 <script src="/app/cap-period.js"></script>   <!-- Month & year end: Closing stock · Assets & depreciation · Accruals & recurring · GST close & pay · Year close -->
@@ -512,7 +513,7 @@ async function accBills(body){
 /* ═══ TO DO — what the owner has to do next. GET /api/books/todo lists the checks (docs/design/cb-accounts-ia §1): a row is a symbol · a count · the server's sentence · ONE button.
    The page decides nothing: it draws what the API sends, and opens the page the row's action names. ═══ */
 /* the API's `action.screen` → the tab that opens it. A screen with no page yet is not in here: its button says it starts after an update. */
-const TODO_SCREEN = { waiting: 'waiting', periods: 'lock', daybook: 'daybook', dues: 'dues', cheques: 'cheques', bills: 'bills', packs: 'packs', opening: 'opening',
+const TODO_SCREEN = { waiting: 'waiting', ledgers: 'ledgers', periods: 'lock', daybook: 'daybook', dues: 'dues', cheques: 'cheques', bills: 'bills', packs: 'packs', opening: 'opening',
   'closing-stock': 'closingstock', gst: 'gstclose', recurring: 'accruals', accruals: 'accruals', 'year-close': 'yearclose', assets: 'assets', bank: 'bank' };
 /* an item the server could not check (503 · not migrated yet) is not a task: it says so, and its button waits */
 const todoOff = (it) => it && (it.status === 503 || it.not_migrated === true || it.migrated === false || it.available === false);
