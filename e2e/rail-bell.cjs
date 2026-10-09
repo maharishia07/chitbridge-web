@@ -1,4 +1,4 @@
-/* rail-bell.cjs — R06: CBBell (public/app/rail-bell.js) mounted on crm.html and accounts.html, against a REAL SSE stream.
+/* rail-bell.cjs — R06: CBBell (public/app/rail-bell.js) mounted on crm.html, accounts.html and the Home shell (index.html), against a REAL SSE stream.
  * T1: a message on a chit -> the dot on crm.html within 5 s.   Invariants: the bell never polls · a notification is shown only to a
  * signed-in person of the shop (signed out / customer: no bell, no ticket, no stream).
  * A real http server serves public/ and stands in for the API (the page is pointed at it with cb_api_base); nothing leaves 127.0.0.1.
@@ -32,17 +32,31 @@ const srv = http.createServer((q, r) => {
   if (p === '/api/notifications/seen') { S.count = 0; return j(200, { ok: true }); }
   if (p === '/api/notifications/dismiss') { S.dismissed++; S.notifs = []; S.count = 0; return j(200, { ok: true }); }
   if (p.startsWith('/api/')) return j(404, { error: 'Not found' });
-  const f = path.join(PUB, decodeURIComponent(p).replace(/^\/+/, '') || 'index.html');
-  if (!f.startsWith(PUB) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { r.writeHead(404); return r.end('no'); }
+  const rel = decodeURIComponent(p).replace(/^\/+/, '');
+  const HOME = path.join(PUB, '..', 'index.html');   /* the Home shell lives at the repo root */
+  const f = (!rel || rel === 'index.html') ? HOME : path.join(PUB, rel);
+  if ((!f.startsWith(PUB) && f !== HOME) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { r.writeHead(404); return r.end('no'); }
   r.writeHead(200, { 'content-type': T[path.extname(f)] || 'application/octet-stream' }); fs.createReadStream(f).pipe(r);
 });
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const n = (re) => S.calls.filter((c) => re.test(c)).length;
 
+/* ⚠️ THIS SPEC MUST EXIT. Its stand-in holds REAL open SSE responses (S.conns), and an open response keeps node alive after srv.close();
+   a spec that never exits holds the shared e2e lock. So: every stream is ended, every socket destroyed, the browser closed with a time
+   limit, and process.exit is called in finally — whatever happened above. A hard 4-minute watchdog exits if even that hangs. */
+let b = null;
+const watchdog = setTimeout(() => { console.error('rail-bell: watchdog — exiting after 4 min'); process.exit(3); }, 240000); watchdog.unref();
+async function teardown() {
+  S.conns.splice(0).forEach((c) => { try { c.end(); } catch (_) {} });
+  try { if (typeof srv.closeAllConnections === 'function') srv.closeAllConnections(); } catch (_) {}
+  try { srv.close(); } catch (_) {}
+  if (b) await Promise.race([b.close().catch(() => {}), new Promise((r) => setTimeout(r, 10000))]);
+}
+let code = 2;
 (async () => {
   await new Promise((r) => srv.listen(0, '127.0.0.1', r));
   const base = 'http://127.0.0.1:' + srv.address().port;
-  const b = await chromium.launch();
+  b = await chromium.launch();
   const errs = [];
   async function page(sess, url) {
     const ctx = await b.newContext({ viewport: { width: 1280, height: 800 } });
@@ -104,12 +118,25 @@ const n = (re) => S.calls.filter((c) => re.test(c)).length;
   await a.waitForSelector('[data-testid="bell-dot"]', { timeout: 5000 });
   ok(S.count === before + 1, 'a push reaches accounts too');
 
+  console.log('\n-- index.html: the Home shell mounts the same bell in its own slot (no core.js: the shell hands apiBase + token) --');
+  const h = await page(OWNER, '/');
+  await h.waitForSelector('[data-testid="shell-bell"] [data-testid="bell-btn"]', { timeout: 20000 });
+  ok(await h.locator('[data-testid="shell-bell"] [data-testid="bell-btn"]').count() === 1, 'the bell is in the shell header, in its bell slot');
+  await h.waitForSelector('[data-testid="shell-bell"] [data-testid="bell-dot"]', { timeout: 5000 });
+  ok(true, 'what arrived since the last look shows as the dot on Home');
+  const d0 = n(/POST \/api\/notifications\/dismiss/);
+  await h.click('[data-testid="bell-btn"]'); await h.waitForSelector('[data-testid="bell-clear"]:not([disabled])', { timeout: 5000 });
+  await h.click('[data-testid="bell-clear"]'); await h.waitForSelector('[data-testid="confirm-ok"]', { timeout: 5000 });
+  await h.click('[data-testid="confirm-ok"]'); await h.waitForSelector('[data-testid="bell-empty"]', { timeout: 5000 });
+  ok(n(/POST \/api\/notifications\/dismiss/) === d0 + 1 && /cleared/.test(await h.textContent('[data-testid="bell-out"]')), 'Home: Clear all asks, sends one dismiss, and says Activity cleared');
+
   console.log('\n-- signed out: no bell, no ticket, no stream --');
   const tk2 = S.tickets, cn = S.conns.length;
   const o = await page(null, '/crm.html'); await wait(2500);
   ok(await o.locator('[data-testid="bell-btn"]').count() === 0 && S.tickets === tk2 && S.conns.length === cn, 'signed out: nothing drawn, nothing opened');
 
   ok(errs.length === 0, 'no page errors' + (errs.length ? ': ' + errs.slice(0, 3).join(' | ') : ''));
-  await b.close(); srv.close();
-  console.log('\n' + pass + ' passed, ' + fail + ' failed'); process.exit(fail ? 1 : 0);
-})().catch((e) => { console.error(e); process.exit(2); });
+  console.log('\n' + pass + ' passed, ' + fail + ' failed');
+  code = fail ? 1 : 0;
+})().catch((e) => { console.error(e); code = 2; })
+  .finally(async () => { await teardown(); process.exit(code); });
