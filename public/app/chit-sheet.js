@@ -168,6 +168,25 @@
   }
   function kindWord(m) { return m.counterBill ? 'Counter bill' : (m.billRx ? 'Supplier bill' : 'Task'); }
 
+  /* R10 - the rail units where the person already is. "Messages and files" is the chit's thread (CBThread, R02) and the picker (CBAttach, R07),
+     each mounted with ITS OWN api: the units decide who may post (the engine's `chit.actions`, a refusal with its `why`); this file decides nothing.
+     The host is built once per chit and moved into each repaint, so a busy repaint does not remount the unit or lose what was typed. */
+  function railMount(d, m) {
+    var body = d.querySelector('.cs-body'), id = m.id || CS.id;
+    if (!body || !id || (typeof CBThread === 'undefined' && typeof CBAttach === 'undefined')) return;
+    if (!CS.rail || CS.rail.id !== id) {
+      var el = document.createElement('div'); el.setAttribute('data-testid', 'cs-rail');
+      el.innerHTML = '<div class="cs-sec">' + E(T('Messages and files')) + '</div><div data-testid="cs-rail-attach"></div><div data-testid="cs-rail-thread"></div>';
+      CS.rail = { id: id, el: el };
+      var ch = CS.chit || {}, who = (typeof SESS !== 'undefined' && SESS) || (typeof SESSION !== 'undefined' && SESSION) || {};
+      if (typeof CBAttach !== 'undefined') CBAttach.mount(el.querySelector('[data-testid="cs-rail-attach"]'), { chit_id: id, label: T('Attach a file') });
+      if (typeof CBThread !== 'undefined') CBThread.mount(el.querySelector('[data-testid="cs-rail-thread"]'), {
+        chit_id: id, actions: ch.actions || undefined, party: m.who || '', me: who.entity || who.name || '',
+        channel: 'both', thread_type: 'external', context: { host: 'chit-sheet' } });
+    }
+    body.appendChild(CS.rail.el);
+  }
+
   function paint() {
     var d = document.getElementById('chitsheet'); if (!d) return;
     var m = CS.view, ttl = d.querySelector('[data-testid="cs-title"]');
@@ -181,6 +200,7 @@
       + (CS.note ? '<div class="cs-note" data-testid="cs-note">' + E(CS.note) + '</div>' : '')
       + (CS.useAsk ? '<div class="cs-use" data-testid="cs-use">' + billUseChoiceHTML([m], 'CBSheet.use')
         + '<button type="button" class="optchip" data-testid="cs-use-auto" onclick="CBSheet.use(\'\')">' + E(T('Let my catalogue decide')) + '</button></div>' : '');
+    railMount(d, m);
     d.querySelector('.cs-acts').innerHTML = actionsFor(m).map(function (k) {
       return '<button type="button" class="cs-act" data-testid="cs-act-' + k + '" onclick="CBSheet.act(\'' + k + '\')"' + (CS.busy ? ' disabled' : '') + ' title="' + E(T(ACT[k][1])) + '"><span class="ic" aria-hidden="true">' + ACT[k][0] + '</span><span>' + E(T(ACT[k][1])) + '</span></button>';
     }).join('');
@@ -224,7 +244,7 @@
   }
   async function open(id) {
     if (!id) return;
-    var d = ensureDlg(); CS.id = id; CS.chit = null; CS.view = null; CS.err = null; CS.note = null; CS.useAsk = false; CS.busy = false;
+    var d = ensureDlg(); CS.id = id; CS.rail = null; CS.chit = null; CS.view = null; CS.err = null; CS.note = null; CS.useAsk = false; CS.busy = false;
     paint(); lock(true);
     if (!d.open) { if (d.showModal) d.showModal(); else d.setAttribute('open', ''); }
     try { await read(id); }
@@ -264,7 +284,7 @@
       if (typeof quickDispute === 'function') quickDispute(id, { back: true });
       return;
     }
-    if (k === 'page') { close(); if (typeof openChit === 'function') openChit(id); }
+    if (k === 'page') { close(); var pg = typeof openChitPage === 'function' ? openChitPage : openChit; if (typeof pg === 'function') pg(id); }
   }
 
   root.CBSheet = { moneyFor: moneyFor, moneyBlockHTML: moneyBlockHTML, open: open, close: close, act: act, use: function (u) { return move('act', u); }, actionsFor: actionsFor, model: model, titleFor: titleFor, stepWord: function (m) { return T(STEP[m.status] || m.status); } };
