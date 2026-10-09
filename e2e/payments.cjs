@@ -1,4 +1,4 @@
-/* payments.cjs — THE PAYMENT SCREENS, PROVED (SPEC-payments-2026-10-05 §7). Cases are added as the payment rows land: E9 (M25), E1–E3 · E10 · E11 (M27), E4 (M29).
+/* payments.cjs — THE PAYMENT SCREENS, PROVED (SPEC-payments-2026-10-05 §7). Cases are added as the payment rows land: E9 (M25), E1–E3 · E10 · E11 (M27), E4 (M29), E5 · E7 (M30).
  * Pattern: crm.cjs + cb-accounts.cjs — Playwright, a stand-in API answering INSIDE the page; the static server takes a free port from the OS. Nothing here
  * reaches localhost:3000, port 7351 or the live site: every /api/** call is fulfilled by the stand-in, any other host is aborted and counted.
  *
@@ -16,6 +16,13 @@
  *  E10 the door: the CRM record's Pay button opens the ONE popup (pay_amt), the URL does not change; the popup has no "Later" (the ledger/Dues doors are M28).
  *  E11 owner 2026-10-08 — W1 fires ONLY with an allocation: nothing owed + bills meant → the band; "Keep it as an advance" (no allocation) → no band, Record works,
  *      and the POST says allocate:'none' with no allocations. The trigger lives in payIntent() (cap-books.js), the one place to change.
+ *  E5  (M30) advice OUT, on rail: the outcome panel mounts CBAdvice from the record's `advice` block (no second read); Send advice → ONE POST /api/chits/send with the
+ *      server's body (client_ref advice:pay:<id>, kind payment_advice, the bills by chit_id) then ONE PATCH /payments/:id { advice_chit_id }; "Advice sent to Agro Mills ✓";
+ *      Send greys with "already sent". A failed send → "Advice not sent — Send again", no PATCH, the button says Send again; the retry sends the SAME client_ref and lands.
+ *      The statement row paints the state chip ("✉ advice sent · delivered") and an Advice button that mounts the unit (one GET /payments/:id/advice). The To-do
+ *      `advices_to_send` row shows on the CB Accounts home with the server's words; its button opens Ledgers. A viewer sees Send greyed WITH the sentence.
+ *  E7  (M30) advice OUT, off rail (party.on_rail false): Send is greyed with "Agro Mills is not on ChitBridge — share the advice instead."; Share = Copy · WhatsApp (wa.me)
+ *      · E-mail (mailto:) carrying the words; Copy → ONE PATCH { advice_shared_at: true } → "↗ advice shared · <when>"; no chit is ever sent.
  * The stand-in answers /payments/preview and /payments the way M26 (chitbridge-api #57) does, held to e2e/fixtures/web-api.contract.json.
  * Screenshots: png/CRMLedger.png (the CRM record with its balance in words) · png/Pay.png (the one popup: bills, line, band) · png/PayOutcome.png (what happened, in words)
  */
@@ -39,7 +46,13 @@ const MINUS = /(^|[\s(>])[-−]\s?(₹|\d)/;
 
 function standIn() {
   const fx = crmApi.resolve(JSON.parse(fs.readFileSync(FX, 'utf8')), Date.now());
-  return { fx, calls: [], list: JSON.parse(JSON.stringify(fx.list)), pay: payBooks(), msgs: [], msgPosts: [] };
+  /* M30: the advice side of the books — on_rail decides send vs share; failSend = the chit rail refusing; rows = what each payment remembers */
+  return { fx, calls: [], list: JSON.parse(JSON.stringify(fx.list)), pay: payBooks(), msgs: [], msgPosts: [], adv: { on_rail: true, failSend: false, sends: [], patches: [], rows: {} } };
+}
+/** the advice block of a payment the stand-in knows (recorded here, or named by a statement line) — as routes/books.js adviceFor answers it */
+function adviceOf(S, pid) {
+  const row = S.adv.rows[pid] || (S.adv.rows[pid] = { body: { party_id: 's1', direction: 'out', amount_minor: 112000, currency: 'INR', mode: 'cash' }, settled: [{ against_ref: 'bill-a', bill_no: 'KT-0007', amount_minor: 112000 }], entry_no: 'PY/2026-27/000001', state: 'none', chit_id: null, shared_at: null });
+  return books.payAdvice(pid, row.body, NAME, { on_rail: S.adv.on_rail, state: row.state, chit_id: row.chit_id, shared_at: row.shared_at, entry_no: row.entry_no, settled: row.settled, may: S.adv.may || undefined });
 }
 const DUES = [
   { party_id: 'c1', party_no: 'P-00001', name: 'Ravi Stores', side: 'customer', balance_minor: 300000, oldest_due: '2026-08-01', disputed_minor: 0, buckets: { not_due: 0, lt_6m: 300000 } },
@@ -68,7 +81,7 @@ async function payRoute(S, r, p, m) {
   if (p === '/api/books/payments/preview' && m === 'POST') {
     S.pay.previews.push(body);
     const prop = books.payProposal(S.pay.bills, body.amount_minor);
-    await J(r, 200, books.payPreview(S.pay.bills, body, NAME, { extra: payExtras(S, body, prop) })); return true;
+    await J(r, 200, books.payPreview(S.pay.bills, body, NAME, { extra: payExtras(S, body, prop), on_rail: S.adv.on_rail })); return true;
   }
   if (p === '/api/books/payments' && m === 'POST') {
     S.pay.posts.push(body);
@@ -83,7 +96,19 @@ async function payRoute(S, r, p, m) {
     out.outcome.balance_minor = out.outcome.on_account_minor - S.pay.bills.reduce((t, b) => t + b.open_minor, 0);
     out.outcome.balance_words = books.rs(Math.abs(out.outcome.balance_minor));
     S.pay.done.push({ body, payment_id, entry_no, settled: out.outcome.settled });
+    /* M30: the record answers the advice block too — the outcome panel mounts it without a second read */
+    S.adv.rows[payment_id] = { body, settled: out.outcome.settled, entry_no, state: 'none', chit_id: null, shared_at: null };
+    out.advice = adviceOf(S, payment_id);
     await J(r, 200, out); return true;
+  }
+  let x;
+  if ((x = p.match(/^\/api\/books\/payments\/([^/]+)\/advice$/)) && m === 'GET') { S.adv.reads = (S.adv.reads || 0) + 1; await J(r, 200, Object.assign({ currency: 'INR' }, adviceOf(S, x[1]))); return true; }
+  if ((x = p.match(/^\/api\/books\/payments\/([^/]+)$/)) && m === 'PATCH') {
+    S.adv.patches.push({ id: x[1], body });
+    const row = S.adv.rows[x[1]] || (adviceOf(S, x[1]), S.adv.rows[x[1]]);
+    if (body.advice_chit_id) { if (row.chit_id && row.chit_id !== body.advice_chit_id) { await J(r, 409, { error: 'An advice is already recorded for this payment.', message: 'An advice is already recorded for this payment.', code: 'ADVICE_EXISTS', advice_chit_id: row.chit_id }); return true; } row.chit_id = body.advice_chit_id; row.state = 'sent'; }
+    if (body.advice_shared_at) { row.shared_at = row.shared_at || new Date().toISOString(); if (!row.chit_id) row.state = 'shared'; }
+    await J(r, 200, books.payPatched(x[1], { chit_id: row.chit_id, state: row.state, shared_at: row.shared_at })); return true;
   }
   return null;
 }
@@ -91,6 +116,13 @@ async function route(S, r) {
   const q = r.request(), u = new URL(q.url()), p = u.pathname, m = q.method(); let x;
   S.calls.push(m + ' ' + p);
   if (S.pay && /^\/api\/books\/payments/.test(p)) { if (await payRoute(S, r, p, m)) return; }
+  /* M30 · E5: the chit rail — the advice is a chit the page sends with the server's body; a failing rail answers 500 (then the page says "Send again") */
+  if (p === '/api/chits/send' && m === 'POST') {
+    let b = {}; try { b = JSON.parse(q.postData() || '{}'); } catch (_) {}
+    S.adv.sends.push(b);
+    if (S.adv.failSend) return J(r, 500, { error: 'Failed', message: 'The rail did not answer.' });
+    return J(r, 200, { message: 'Chit sent successfully', chit_id: 'chit-adv-' + S.adv.sends.length, auto_subject: b.manual_subject || '', is_draft: false, recipients: 1, fan_out: { to: 1, cc: 0, for: 0 }, summary: {} });
+  }
   if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Mayur Bhavan', currency_code: 'INR' } });
   if (p === '/api/books/health') return J(r, 200, books.health());
   if (p === '/api/books/dues') return J(r, 200, books.dues(DUES, { asOf: TODAY }));
@@ -119,7 +151,7 @@ async function route(S, r) {
     const row = { message_id: 'm' + S.msgPosts.length, chit_id: x[1], created_at: new Date().toISOString(), msg_type: b.msg_type || 'info', is_dispute: false, dispute_id: null, line_id: b.line_id || null, thread_type: b.thread_type, message_text: b.message_text, sender_entity_id: 'ent-M', sender_display_name: 'Mayur Bhavan', attachments: [] };
     S.msgs.push(row); return J(r, 200, { message_id: row.message_id, thread_type: row.thread_type, message_text: row.message_text, sender_display_name: row.sender_display_name, created_at: row.created_at });
   }
-  if (p === '/api/books/todo') return J(r, 200, []);
+  if (p === '/api/books/todo') return J(r, 200, S.todo || []);
   if (p === '/api/crm/parties' && m === 'GET') return J(r, 200, crmApi.list(S.list, { records: S.fx.records }));
   if ((x = p.match(/^\/api\/crm\/parties\/([^/]+)\/timeline$/))) return J(r, 200, crmApi.timeline(S.fx.timelines[decodeURIComponent(x[1])] || { entries: [] }, x[1], {}));
   if (m === 'GET') return J(r, 200, {});
@@ -405,10 +437,105 @@ async function route(S, r) {
     ok(await p.locator('[data-testid="lg-reverse"]').count() === 1, 'E4 the bill\'s own row still offers Reverse this entry (it names its entry too)');
     await ctx.close();
   }
+  /* ── E5 · M30 advice OUT, on rail: the outcome panel, Send, the failed send, the statement row, the To-do, a viewer ── */
+  {
+    const S = standIn(), { ctx, p } = await openPay('/crm.html', S);
+    await popup(p); await type(p, '2000');
+    await p.click('[data-testid="pay_record"]'); await p.waitForSelector('[data-testid="pay_outcome"]', { timeout: 8000 });
+    await p.waitForSelector('[data-testid="pay_advice"] [data-testid="adv-send"]', { timeout: 8000 });
+    ok((S.adv.reads || 0) === 0 && S.calls.filter((c) => /\/advice$/.test(c)).length === 0, 'E5 the outcome panel mounts CBAdvice from the record\'s own advice block — no second read');
+    ok(await text(p, 'adv-send') === '✉ Send advice' && !(await p.getAttribute('[data-testid="adv-send"]', 'class') || '').split(' ').includes('off') && await p.locator('[data-testid="adv-share"]').count() === 1 && (await p.getAttribute('[data-testid="adv-share"]', 'class') || '').split(' ').includes('off'),
+      'E5 on rail: Send advice is live, Share is shown greyed (every action shown; the server\'s may decides) (' + (await text(p, 'adv-send')) + ')');
+    ok(/is on ChitBridge — send the advice instead\./.test(await p.getAttribute('[data-testid="adv-share"]', 'title') || ''), 'E5 the greyed Share carries the server\'s sentence as its title');
+    await p.click('[data-testid="adv-send"]');
+    await p.waitForFunction(() => /✓/.test((document.querySelector('[data-testid="adv-out"]') || {}).textContent || ''), null, { timeout: 8000 });
+    const sent = S.adv.sends[0] || {}, bj = sent.business_json || {}, pa = bj.payment_advice || {};
+    ok(S.adv.sends.length === 1 && sent.purpose === 'general' && bj.kind === 'payment_advice' && sent.client_ref === 'advice:pay:pay1' && JSON.stringify(sent.recipients) === JSON.stringify([{ entity_id: 'pid-0001', role: 'to' }]),
+      'E5 ONE POST /api/chits/send with the server\'s body: purpose general, kind payment_advice, client_ref advice:pay:pay1, to the party (' + JSON.stringify(sent).slice(0, 160) + ')');
+    ok(pa.action === 'paid' && pa.amount_minor === 200000 && JSON.stringify((sent.line_items || []).map((l) => [l.ref_chit_id, l.applied_minor])) === JSON.stringify([['bill-a', 112000], ['bill-b', 56000], ['bill-c', 32000]]), 'E5 the body names the bills by chit_id with what each took, and the amount in minor units — the page composed none of it');
+    ok(S.adv.patches.length === 1 && S.adv.patches[0].id === 'pay1' && S.adv.patches[0].body.advice_chit_id === 'chit-adv-1', 'E5 then ONE PATCH /payments/pay1 { advice_chit_id } (' + JSON.stringify(S.adv.patches) + ')');
+    ok(await text(p, 'adv-out') === 'Advice sent to Agro Mills ✓' && await text(p, 'adv-state') === '✉ advice sent', 'E5 the outcome says it: "Advice sent to Agro Mills ✓", the state chip "✉ advice sent" (' + (await text(p, 'adv-out')) + ')');
+    ok((await p.getAttribute('[data-testid="adv-send"]', 'class') || '').split(' ').includes('off') && await text(p, 'adv-why-send') === 'An advice is already sent for this payment.', 'E5 one advice per payment: Send greys with its sentence');
+    await p.click('[data-testid="adv-send"]', { force: true }); await p.waitForTimeout(300);
+    ok(S.adv.sends.length === 1 && S.adv.patches.length === 1, 'E5 pressing the greyed Send sends nothing');
+    await p.click('[data-testid="pay_done"]');
+    /* the failed send: a second payment, the rail down */
+    S.adv.failSend = true;
+    await popup(p); await type(p, '500');
+    await p.click('[data-testid="pay_record"]'); await p.waitForSelector('[data-testid="pay_advice"] [data-testid="adv-send"]', { timeout: 8000 });
+    await p.click('[data-testid="adv-send"]');
+    await p.waitForFunction(() => /Send again/.test((document.querySelector('[data-testid="adv-out"]') || {}).textContent || ''), null, { timeout: 8000 });
+    ok(S.adv.sends.length === 2 && S.adv.patches.length === 1 && await text(p, 'adv-out') === 'Advice not sent — Send again' && await text(p, 'adv-send') === '✉ Send again' && await p.getAttribute('[data-testid="adv-send"]', 'data-action-state') === 'failed',
+      'E5 the rail refuses → "Advice not sent — Send again", NO PATCH (the row keeps Send), the button says Send again, action-state failed (' + (await text(p, 'adv-out')) + ')');
+    S.adv.failSend = false;
+    await p.click('[data-testid="adv-send"]');
+    await p.waitForFunction(() => /✓/.test((document.querySelector('[data-testid="adv-out"]') || {}).textContent || ''), null, { timeout: 8000 });
+    ok(S.adv.sends.length === 3 && S.adv.sends[2].client_ref === S.adv.sends[1].client_ref && S.adv.patches.length === 2 && S.adv.patches[1].body.advice_chit_id === 'chit-adv-3', 'E5 Send again: the SAME client_ref (the rail dedupes), then the PATCH lands');
+    await p.click('[data-testid="pay_done"]');
+    await ctx.close();
+  }
+  /* ── E5 · the statement row: the chip, the Advice button mounts the unit (one read); the To-do row; a viewer ── */
+  {
+    const S = standIn();
+    S.adv.rows.pay1 = { body: { party_id: 's1', direction: 'out', amount_minor: 112000, currency: 'INR', mode: 'cash' }, settled: [{ against_ref: 'bill-a', bill_no: 'KT-0007', amount_minor: 112000 }], entry_no: 'PY/2026-27/000001', state: 'delivered', chit_id: 'chit-adv-9', shared_at: null };
+    S.stmt = { s1: { opening_minor: 0, closing_minor: -38000, code: '2100', lines: [
+      { date: '2026-10-06', what: 'Payment made', ref: 'PY/2026-27/000001', entry_id: 'e-pay1', entry_no: 'PY/2026-27/000001', event_type: 'payment_made', payment_id: 'pay1', unapplied_minor: 0,
+        advice: { chit_id: 'chit-adv-9', state: 'delivered', shared_at: null }, party_id: 's1', source_chit_id: null, source: null, dr_minor: 112000, cr_minor: 0, running_minor: -38000 },
+      { date: '2026-10-07', what: 'Payment made', ref: 'PY/2026-27/000002', entry_id: 'e-pay2', entry_no: 'PY/2026-27/000002', event_type: 'payment_made', payment_id: 'pay2', unapplied_minor: 50000,
+        advice: { chit_id: null, state: 'none', shared_at: null }, party_id: 's1', source_chit_id: null, source: null, dr_minor: 50000, cr_minor: 0, running_minor: 12000 }] } };
+    S.todo = [books.todoRow({ kind: 'advices_to_send', count: 1, words: '1 payment has no advice yet — Agro Mills does not know you paid.', action: { label: 'Send advice', screen: 'ledgers', call: 'PATCH /api/books/payments/:id' }, items: [{ payment_id: 'pay2', party_id: 's1', name: 'Agro Mills', direction: 'out', amount_minor: 50000, currency: 'INR', received_at: '2026-10-07' }] })];
+    const { ctx, p } = await open('/accounts.html', S);
+    await p.waitForSelector('[data-testid="todo-row-advices_to_send"]', { timeout: 15000 });
+    ok(await text(p, 'todo-words-advices_to_send') === '1 payment has no advice yet — Agro Mills does not know you paid.' && await text(p, 'todo-n-advices_to_send') === '1' && await text(p, 'todo-go-advices_to_send') === 'Send advice',
+      'E5 the CB Accounts To-do shows advices_to_send with the server\'s words, the count and its button (' + (await text(p, 'todo-words-advices_to_send')) + ')');
+    await p.click('[data-testid="todo-go-advices_to_send"]'); await p.waitForSelector('[data-testid="lg-acc-2100"]', { timeout: 15000 });
+    ok(true, 'E5 its button opens Ledgers (the party\'s statement row is where the advice is sent)');
+    await p.click('[data-testid="lg-acc-2100"]'); await p.waitForSelector('[data-testid="lg-party-s1"]', { timeout: 8000 });
+    await p.click('[data-testid="lg-party-s1"]'); await p.waitForSelector('[data-testid="stmt-row-0"]', { timeout: 8000 });
+    /* the ledger numbers a row by its line's _ix, not its place on screen — read the number off the testid */
+    const rows = await p.$$eval('[data-testid^="stmt-row-"]', (e) => e.map((x) => [x.getAttribute('data-testid').slice(9), x.textContent.replace(/\s+/g, ' ').trim()]));
+    const ixOf = (re) => { const r = rows.find((x) => re.test(x[1])); return r ? r[0] : null; }, sentRow = ixOf(/PY.2026-27.000001/), noneRow = ixOf(/PY.2026-27.000002/);
+    ok(sentRow !== null && await text(p, 'stmt-' + sentRow + '-adv') === '✉ advice sent · delivered', 'E5 the sent payment\'s row reads "✉ advice sent · delivered" (' + (await text(p, 'stmt-' + sentRow + '-adv')) + ')');
+    ok(noneRow !== null && await p.locator('[data-testid="stmt-' + noneRow + '-adv"]').count() === 0 && await p.locator('[data-testid="stmt-' + noneRow + '-advbtn"]').count() === 1, 'E5 a payment with no advice shows no chip and an Advice button');
+    S.calls.length = 0;
+    await p.click('[data-testid="stmt-' + noneRow + '-advbtn"]'); await p.waitForSelector('[data-testid="adv-host"] [data-testid="adv-send"]', { timeout: 8000 });
+    ok(S.calls.filter((c) => /\/advice$/.test(c)).length === 1 && S.calls.filter((c) => /\/statement$/.test(c)).length === 0, 'E5 the Advice button mounts the unit with ONE GET /payments/pay2/advice (no statement re-read) (' + S.calls.join(', ') + ')');
+    await p.click('[data-testid="adv-host"] [data-testid="adv-send"]');
+    await p.waitForFunction(() => /✓/.test((document.querySelector('[data-testid="adv-host"] [data-testid="adv-out"]') || {}).textContent || ''), null, { timeout: 8000 });
+    ok(S.adv.sends.length === 1 && S.adv.sends[0].client_ref === 'advice:pay:pay2' && S.adv.patches.length === 1 && S.adv.patches[0].id === 'pay2', 'E5 Send from the row: the chit, then the PATCH, for THAT payment');
+    ok(await text(p, 'stmt-' + noneRow + '-adv') === '✉ advice sent' && !S.calls.some((c) => /\/statement$/.test(c)), 'E5 the row\'s chip flips locally to "✉ advice sent" — the statement was never re-read');
+    /* a viewer: the server says read_only; the unit shows Send greyed WITH the sentence, sends nothing */
+    S.adv.may = { send_advice: { ok: false, why: 'read_only', say: 'Your access is view-only. You can read this chit but not change it.' }, share_advice: { ok: false, why: 'read_only', say: 'Your access is view-only. You can read this chit but not change it.' } };
+    await p.click('[data-testid="stmt-' + sentRow + '-advbtn"]'); await p.waitForSelector('[data-testid="stmt-row-' + sentRow + '"] [data-testid="adv-host"] [data-testid="adv-send"]', { timeout: 8000 });
+    const vw = '[data-testid="stmt-row-' + sentRow + '"] [data-testid="adv-host"] ';
+    ok((await p.getAttribute(vw + '[data-testid="adv-send"]', 'class') || '').split(' ').includes('off') && /view-only/.test(await p.textContent(vw + '[data-testid="adv-why-send"]')), 'E5 a viewer: Send is shown greyed WITH the server\'s sentence (' + (await p.textContent(vw + '[data-testid="adv-why-send"]')).trim() + ')');
+    await p.click(vw + '[data-testid="adv-send"]', { force: true }); await p.waitForTimeout(300);
+    ok(S.adv.sends.length === 1 && S.adv.patches.length === 1, 'E5 the viewer\'s press sends nothing');
+    await ctx.close();
+  }
+  /* ── E7 · M30 advice OUT, off rail: Share, never a chit ── */
+  {
+    const S = standIn(); S.adv.on_rail = false;
+    const { ctx, p } = await openPay('/crm.html', S);
+    await popup(p); await type(p, '2000');
+    await p.click('[data-testid="pay_record"]'); await p.waitForSelector('[data-testid="pay_advice"] [data-testid="adv-copy"]', { timeout: 8000 });
+    ok((await p.getAttribute('[data-testid="adv-send"]', 'class') || '').split(' ').includes('off') && await text(p, 'adv-why-send') === 'Agro Mills is not on ChitBridge — share the advice instead.',
+      'E7 off rail: Send advice is shown greyed with the sentence "Agro Mills is not on ChitBridge — share the advice instead." (' + (await text(p, 'adv-why-send')) + ')');
+    const words = adviceOf(S, 'pay1').words, wa = await p.getAttribute('[data-testid="adv-wa"]', 'href'), mail = await p.getAttribute('[data-testid="adv-mail"]', 'href');
+    ok(wa === 'https://wa.me/?text=' + encodeURIComponent(words) && /^mailto:\?subject=/.test(mail) && mail.indexOf(encodeURIComponent(words)) > 0, 'E7 Share = WhatsApp (wa.me) and E-mail (mailto:) hrefs carry the words (' + words + ')');
+    await p.click('[data-testid="adv-send"]', { force: true }); await p.waitForTimeout(200);
+    ok(S.adv.sends.length === 0 && S.adv.patches.length === 0, 'E7 the greyed Send never sends a chit to nowhere');
+    await p.click('[data-testid="adv-copy"]');
+    await p.waitForFunction(() => /shared/.test((document.querySelector('[data-testid="adv-state"]') || {}).textContent || ''), null, { timeout: 8000 });
+    ok(S.adv.patches.length === 1 && S.adv.patches[0].body.advice_shared_at === true && S.adv.sends.length === 0, 'E7 Copy → ONE PATCH { advice_shared_at: true }, no chit (' + JSON.stringify(S.adv.patches) + ')');
+    ok(/^↗ advice shared · \S/.test(await text(p, 'adv-state')) && await text(p, 'adv-out') === 'Copied — paste it to Agro Mills', 'E7 the row reads "↗ advice shared · <when>"; the outcome says what to do next (' + (await text(p, 'adv-state')) + ' | ' + (await text(p, 'adv-out')) + ')');
+    await p.click('[data-testid="pay_done"]');
+    await ctx.close();
+  }
   ok(threw.length === 0, 'no page error' + (threw.length ? ' · ' + threw[0] : ''));
   ok(offHost.length === 0, 'nothing tried to leave for another host' + (offHost.length ? ' · ' + offHost[0] : ''));
   /* the payments answers (preview · record · the 409s) are held to the contract M26 sent; the E9 stand-ins' older CRM answers are not this file's to judge */
-  { const bad = C.STATE.bad.filter((b) => /books\/payments/.test(b.where)); ok(bad.length === 0 && C.STATE.routes.has('POST /api/books/payments') && C.STATE.routes.has('POST /api/books/payments/preview'), 'every payments answer the stand-in served has the keys, nesting and types of the API contract (M26)' + (bad.length ? ' - ' + bad.map((b) => b.where + ': ' + b.problems.slice(0, 3).join('; ')).join(' | ') : '')); }
+  { const bad = C.STATE.bad.filter((b) => /books\/payments/.test(b.where)); ok(bad.length === 0 && C.STATE.routes.has('POST /api/books/payments') && C.STATE.routes.has('POST /api/books/payments/preview') && C.STATE.routes.has('GET /api/books/payments/:id/advice') && C.STATE.routes.has('PATCH /api/books/payments/:id'), 'every payments answer the stand-in served has the keys, nesting and types of the API contract (M26 · M30)' + (bad.length ? ' - ' + bad.map((b) => b.where + ': ' + b.problems.slice(0, 3).join('; ')).join(' | ') : '')); }
   await b.close(); srv.close();
   console.log('\n  ' + (fail ? '✗ ' + fail + ' FAILED · ' : '✓ ') + pass + ' passed · ' + (pass + fail) + ' checks\n');
   process.exit(fail ? 1 : 0);
