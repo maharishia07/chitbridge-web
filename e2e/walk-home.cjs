@@ -15,13 +15,15 @@ const fs = require('fs'), path = require('path');
 const W = require('./lib/walk.cjs');
 const books = require('./lib/books-api.cjs'), crmApi = require('./lib/crm-api.cjs');
 const FX = crmApi.resolve(JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'golden-parties.json'), 'utf8')), Date.now());   /* the designer's golden parties: so the CRM page draws a real toolbar */
+const C = require('./lib/contract.cjs');   /* M43: every /api/books and /api/crm answer this stand-in serves is held to the API contract */
 const J = (r, status, body) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
 
 W.run('home', async (w) => {
   const { page, ctx, base } = w;
   /* the day as the log found it: 24 in, 0 out, 21 stuck; 1 supplier, 2 customers (self excluded); one posting waiting for the ledger */
   const RAIL = { suppliers: 1, customers: 2, in: 24, out: 0, stuck: 21 };
-  await ctx.route('**/api/**', (r) => {
+  await ctx.route('**/api/**', (r0) => {
+    const r = C.wrap(r0);
     const u = new URL(r.request().url());
     if (u.pathname === '/api/facts/rail') return J(r, 200, RAIL);
     if (u.pathname === '/api/books/health') return J(r, 200, books.health({ waiting: [books.waitingRow({ id: 1, reason: 'September is locked.' })] }));
@@ -145,6 +147,8 @@ W.run('home', async (w) => {
     });
   }
   await page.setViewportSize({ width: 1280, height: 860 });
+
+  await w.step('M43', 'the stand-in answered every /api/books and /api/crm call as the API contract says', async () => { const [ok, saw] = C.finish(); return { ok, saw }; });
 
   w.note('H20', 'Home -> Till card, owner signed in', 'open (BACKLOG): the till still asks to sign in - not asserted here, see walk-bill');
   w.note('H34-35', 'Avatar menu -> Profile / Support / Settings doors', 'open: the doors still go to the workshop - not asserted');
