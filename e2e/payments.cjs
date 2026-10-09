@@ -1,4 +1,4 @@
-/* payments.cjs — THE PAYMENT SCREENS, PROVED (SPEC-payments-2026-10-05 §7). Cases are added as the payment rows land: E9 (M25), E1–E3 · E10 · E11 (M27).
+/* payments.cjs — THE PAYMENT SCREENS, PROVED (SPEC-payments-2026-10-05 §7). Cases are added as the payment rows land: E9 (M25), E1–E3 · E10 · E11 (M27), E4 (M29).
  * Pattern: crm.cjs + cb-accounts.cjs — Playwright, a stand-in API answering INSIDE the page; the static server takes a free port from the OS. Nothing here
  * reaches localhost:3000, port 7351 or the live site: every /api/** call is fulfilled by the stand-in, any other host is aborted and counted.
  *
@@ -9,6 +9,8 @@
  *      dead; Cancel records nothing (the stand-in counts the POSTs); "Pay as advance" is ONE POST that carries `acknowledge`.
  *  E2  oldest first: the four bills are pre-filled in due order, each amount = the preview's apply_minor; editing one amount changes the line under the table.
  *  E3  part + advance: ₹2,000 → two bills and part of the third, no band; ₹5,000 → "₹1,279.88 stays with … as an advance"; the outcome words are exact and name the bills.
+ *  E4  (M29) reverse from the row: the ledger statement's payment row → Reverse → asks the reason → ONE POST /entries/:id/reverse; the row repaints "reversed by MJ/… — reason"
+ *      from the answer (no /daybook, no statement re-read); the toast says the bills reopened; a reversed row offers no second Reverse.
  *  E10 (M28) doors + Dues: Dues has To collect / To pay (total in words = the /dues balances), rows with age + due date + Receive/Pay (+ Remind on what is owed to you); the ledger's party view has Pay beside Statement;
  *      Remind = ONE message on the oldest open bill's line through CBThread (prefilled, editable; no new chit, nothing posted); "Not paid yet — remind me" is the same Remind; the 5,000 test run from the ledger. png/Dues.png
  *  E10 the door: the CRM record's Pay button opens the ONE popup (pay_amt), the URL does not change; the popup has no "Later" (the ledger/Dues doors are M28).
@@ -92,6 +94,14 @@ async function route(S, r) {
   if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Mayur Bhavan', currency_code: 'INR' } });
   if (p === '/api/books/health') return J(r, 200, books.health());
   if (p === '/api/books/dues') return J(r, 200, books.dues(DUES, { asOf: TODAY }));
+  /* M29 · E4: the reverse route — the stand-in records what it was asked and answers as routes/books.js does (the mirror, the bills reopened, the words) */
+  if ((x = p.match(/^\/api\/books\/entries\/([^/]+)\/reverse$/)) && m === 'POST') {
+    let b = {}; try { b = JSON.parse(q.postData() || '{}'); } catch (_) {}
+    S.reverses = S.reverses || []; S.reverses.push({ id: x[1], body: b });
+    return J(r, 200, { ok: true, entry_id: 'e-rev' + S.reverses.length, entry_no: 'MJ/2026-27/00000' + S.reverses.length, posting_date: '2026-10-06', moved: false, reverses: 'PY/2026-27/000001', reverses_entry_id: x[1], items: 3,
+      reopened: [{ against_ref: 'bill-a', bill_no: 'KT-0007' }], words: 'Reversed PY/2026-27/000001 — ₹1,120 — by MJ/2026-27/00000' + S.reverses.length + '. Reopened 1 bill (KT-0007).' });
+  }
+  if ((x = p.match(/^\/api\/books\/party\/([^/]+)\/statement$/)) && S.stmt && S.stmt[x[1]]) return J(r, 200, books.statement(x[1], S.stmt[x[1]]));
   if ((x = p.match(/^\/api\/books\/party\/([^/]+)\/statement$/))) {
     const neg = x[1] !== 'c1';
     const line = { date: '2026-09-05', what: neg ? 'Purchase' : 'Sale', ref: null, party_id: x[1], source_chit_id: null, dr_minor: neg ? 0 : 300000, cr_minor: neg ? 150000 : 0, running_minor: neg ? -150000 : 300000, source: null };
@@ -358,6 +368,41 @@ async function route(S, r) {
     ok(/₹1,279\.88 stays with .* as an advance/.test(await text(p, 'pay_left')), 'the ₹5,000 ledger test: ₹1,279.88 stays as an advance (' + (await text(p, 'pay_left')) + ')');
     await p.waitForSelector('[data-testid="pay_band"]:not([hidden])', { timeout: 8000 }); await p.click('[data-testid="pay_ack"]'); await p.waitForSelector('[data-testid="pay_outcome"]', { timeout: 8000 });
     ok(S.pay.posts.length === 1 && S.pay.posts[0].party_id === 's1' && /^Paid ₹5,000 cash to Agro Mills\. /.test(await text(p, 'pay_outcome')), 'the ₹5,000 ledger test: ONE payment is recorded for s1 and the outcome names it (' + (await text(p, 'pay_outcome')) + ')');
+    await ctx.close();
+  }
+  /* ── E4 · M29 reverse from the row: the statement's payment row → Reverse → reason → ONE POST /entries/:id/reverse; the row repaints "reversed by"; the Day book was never read ── */
+  {
+    const S = standIn();
+    /* Agro Mills' statement as the M29 api sends it: a purchase bill and the ₹1,120 payment that settled KT-0007 (the payment line names its entry) */
+    S.stmt = { s1: { opening_minor: 0, closing_minor: -38000, code: '2100', lines: [
+      { date: '2026-10-06', what: 'Payment made', ref: 'PY/2026-27/000001', entry_id: 'e-pay1', entry_no: 'PY/2026-27/000001', event_type: 'payment_made', payment_id: 'pay1', unapplied_minor: 0,
+        advice: { chit_id: null, state: 'none', shared_at: null }, party_id: 's1', source_chit_id: null, source: null, dr_minor: 112000, cr_minor: 0, running_minor: -38000 },
+      { date: '2026-09-01', what: 'Purchase', ref: 'PV/2026-27/000001', entry_id: 'e-bill1', entry_no: 'PV/2026-27/000001', event_type: 'purchase_bill', party_id: 's1', source_chit_id: 'bill-a', source: { chit_id: 'bill-a', ref: 'KT-0007' },
+        dr_minor: 0, cr_minor: 150000, running_minor: -150000 }] } };
+    const { ctx, p } = await open('/accounts.html', S);
+    await p.waitForSelector('[data-testid="acc-nav-ledgers"]', { timeout: 15000 });
+    await p.click('[data-testid="acc-nav-ledgers"]');
+    await p.waitForSelector('[data-testid="lg-acc-2100"]', { timeout: 15000 });
+    await p.click('[data-testid="lg-acc-2100"]'); await p.waitForSelector('[data-testid="lg-party-s1"]', { timeout: 8000 });
+    await p.click('[data-testid="lg-party-s1"]'); await p.waitForSelector('[data-testid="stmt-row-0"]', { timeout: 8000 });
+    ok(/PY\/2026-27\/000001/.test(await text(p, 'stmt-row-0')) && await p.locator('[data-testid="stmt-0-rev"]').count() === 0, 'E4 the payment row is there, not yet reversed (' + (await text(p, 'stmt-row-0')).slice(0, 60) + ')');
+    await p.click('[data-testid="stmt-row-0"]'); await p.waitForSelector('[data-testid="lg-reverse"]', { timeout: 8000 });
+    S.calls.length = 0;   /* from here: what REVERSE itself calls (opening a row reads its journal for the detail panel — that is the row, not the reversal) */
+    await p.click('[data-testid="lg-reverse"]'); await p.waitForSelector('[data-testid="confirm"] [data-testid="en-reason"]', { timeout: 8000 });
+    ok(/PY\/2026-27\/000001 stays as it is/.test(await text(p, 'confirm')), 'E4 Reverse asks first (M64: irreversible → confirm) and names the entry; it asks the reason');
+    ok(!S.reverses, 'E4 nothing is posted until the person confirms');
+    await p.fill('[data-testid="en-reason"]', 'Paid twice');
+    await p.click('[data-testid="confirm-ok"]');
+    await p.waitForSelector('[data-testid="stmt-0-rev"]', { timeout: 8000 });
+    ok(S.reverses && S.reverses.length === 1 && S.reverses[0].id === 'e-pay1' && S.reverses[0].body.reason === 'Paid twice' && !!S.reverses[0].body.client_ref, 'E4 ONE POST /api/books/entries/e-pay1/reverse with the reason typed (' + JSON.stringify(S.reverses) + ')');
+    ok(await text(p, 'stmt-0-rev') === 'reversed by MJ/2026-27/000001 — Paid twice', 'E4 the row repaints locally: "reversed by MJ/2026-27/000001 — Paid twice" (' + (await text(p, 'stmt-0-rev')) + ')');
+    ok(!S.calls.some((c) => /\/api\/books\/daybook/.test(c)) && !S.calls.some((c) => /\/statement$/.test(c)), 'E4 Reverse never opened the Day book and never re-read the statement: the row was repainted from the answer (' + S.calls.join(', ') + ')');
+    const toastText = await p.evaluate(() => (document.getElementById('toast') || {}).textContent || '');
+    ok(/Reopened 1 bill \(KT-0007\)/.test(toastText), 'E4 the outcome words name the bills reopened (' + toastText.trim() + ')');
+    await p.click('[data-testid="stmt-row-0"]'); await p.waitForTimeout(200); await p.click('[data-testid="stmt-row-0"]'); await p.waitForTimeout(300);
+    ok(await p.locator('[data-testid="lg-reverse"]').count() === 0, 'E4 a reversed row offers no second Reverse (a reversed entry is never edited, only mirrored — once)');
+    await p.click('[data-testid="stmt-row-1"]'); await p.waitForTimeout(300);
+    ok(await p.locator('[data-testid="lg-reverse"]').count() === 1, 'E4 the bill\'s own row still offers Reverse this entry (it names its entry too)');
     await ctx.close();
   }
   ok(threw.length === 0, 'no page error' + (threw.length ? ' · ' + threw[0] : ''));

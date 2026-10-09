@@ -326,16 +326,26 @@ function enPaintSaved(body, acts) {
 }
 
 /* ── Reverse this entry: a plain confirm, then the mirror entry (insert-only) ── */
-function enReverse(id, no, fromSheet) {
+/**
+ * ⭐ THE ONE REVERSE (M29): the confirm asks the REASON (the API wants one with every reversal), posts the mirror entry and tells the caller
+ * what came back — `done(r, why)` — so a statement row repaints itself (cap-books.js bkReverseLine) without a Day book read. The answer's
+ * `words` name the bills reopened ("Reversed PY/… by MJ/…. Reopened 2 bills (…)"); they are the API's, never composed here.
+ * The confirm sheet is removed before onOk runs, so the reason is kept as it is typed (EN.why), not read from the sheet afterwards.
+ */
+function enReverse(id, no, fromSheet, done) {
   if (!id) return;
-  confirmAsk(tx('Reverse this entry?'), enE(txf('{no} stays as it is. A new entry that cancels it is added.', { no: no || '' })), tx('Reverse'), function () {
+  EN.why = '';
+  var body = enE(txf('{no} stays as it is. A new entry that cancels it is added.', { no: no || '' }))
+    + '<input class="inp" id="en_reason" data-testid="en-reason" placeholder="' + enE(tx('Reason')) + '" aria-label="' + enE(tx('Reason')) + '" maxlength="120" style="margin-top:8px" oninput="EN.why=this.value">';
+  confirmAsk(tx('Reverse this entry?'), body, tx('Reverse'), function () {
+    var why = String(EN.why || '').trim() || tx(fromSheet ? 'Reversed from the Day book' : 'Reversed from the row');
     bkOnce('rev-' + id, null, async function () {
       EN.rev[id] = EN.rev[id] || bkRef();
       try {
-        /* the API wants a reason with every reversal (422 "A reversal needs a reason.") - it was sent none, so Reverse never worked live */
-        var r = await api('booksReverse', { params: { id: id }, body: { client_ref: EN.rev[id], reason: 'Reversed from the Day book' } });
-        delete EN.rev[id]; toast(txf('Reversed — new entry {no}', { no: (r && (r.entry_no || r.no)) || '' }));
+        var r = await api('booksReverse', { params: { id: id }, body: { client_ref: EN.rev[id], reason: why } });
+        delete EN.rev[id]; toast((r && r.words) || txf('Reversed — new entry {no}', { no: (r && (r.entry_no || r.no)) || '' }));
         if (fromSheet) enClose();
+        if (typeof done === 'function') done(r, why);
         if (typeof BK !== 'undefined' && BK.tab === 'daybook') bkTab('daybook', true);
       } catch (e) { toast(bkWhy(e, tx('Could not reverse this entry'))); }
     });
