@@ -116,6 +116,23 @@
   @media (prefers-reduced-motion:reduce){.node{transition:none}}
 </style>
 <style>.cap.warn{border-left-color:var(--warn)} a.cap:hover{box-shadow:0 0 0 1px var(--accent) inset}</style>
+<style>
+  /* View 4 · the field ledger */
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{font-family:var(--mono);font-size:12px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--ink);cursor:pointer}
+  .chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+  .chip:focus-visible,#frows tr:focus-visible,#fq:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .fbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  #fq{font:inherit;padding:6px 10px;border:1px solid var(--line);border-radius:5px;background:var(--card);color:var(--ink);min-width:220px}
+  .fgrid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:16px;align-items:start}
+  @media (max-width:900px){.fgrid{grid-template-columns:1fr}}
+  #frows tr{cursor:pointer} #frows tr:hover,#frows tr[aria-selected="true"]{background:var(--accent-soft)}
+  #fdetail dl{display:grid;grid-template-columns:120px 1fr;gap:6px 10px;margin:0;font-size:13.5px}
+  #fdetail dt{font-family:var(--mono);font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  #fdetail dd{margin:0;overflow-wrap:anywhere}
+  #fdetail ul{margin:0;padding-left:16px}
+  @media (max-width:520px){#fdetail dl{grid-template-columns:1fr}}
+</style>
 </head>
 <body>
 <!--
@@ -125,6 +142,7 @@
     View 1 · capability map        LeanIX / ServiceNow APM — tiles coloured by health
     View 2 · entry → process → exit ArchiMate — interface → function → service / data object
     View 3 · the CI record          ITIL relationships · CSDM layers · ISO/IEC 29119-3 test links
+    View 4 · the field ledger       only when the record has `fields` (CAP-FIELDS-<KIND>): filter by status, click a field
   Open as  /cmdb/record.html#CAP-SIGNIN  (the capability legend links here). No id → the list of records.
   ⚠️ Everything shown comes from the record; nothing about any capability is written in this file.
 -->
@@ -175,6 +193,17 @@
     </div>
   </section>
 
+  <section id="sec4" hidden aria-labelledby="v4">
+    <div class="sec-head"><span class="eyebrow">View 4 · Field ledger</span><h2 id="v4">Every field, and whether it earns its place</h2>
+      <span class="std">one row per field: what it means, where it is stored, who sets it, what checks it, where it is shown, what reads it, its test</span></div>
+    <div class="chips" id="fchips" role="group" aria-label="Filter fields by status"></div>
+    <div class="fbar"><label class="muted" for="fq">Find a field</label><input id="fq" type="search" placeholder="hsn, price, tax…" autocomplete="off"><span class="muted" id="fcount" aria-live="polite"></span></div>
+    <div class="fgrid">
+      <div class="tablewrap"><table id="ftable"><thead><tr><th>Field</th><th>Origin</th><th>Means</th><th>Status</th></tr></thead><tbody id="frows"></tbody></table></div>
+      <div class="detail" id="fdetail" aria-live="polite"><span class="k">Selected field</span><h3 id="fdt">Nothing selected</h3><div id="fdd" class="muted">Select a row to see where it is shown, who sets it and what reads it.</div></div>
+    </div>
+  </section>
+
   <section id="listsec" hidden aria-labelledby="lh">
     <div class="sec-head"><span class="eyebrow">CMDB</span><h2 id="lh">Every record</h2></div>
     <div class="capmap" id="list"></div>
@@ -199,7 +228,7 @@
     if (!r.ok) throw new Error(j.message || j.error || ('The server answered ' + r.status));
     return j;
   }
-  function fail(msg){ var e = $('err'); e.textContent = msg; e.hidden = false; ['sec1','sec2','sec3'].forEach(function(id){ $(id).hidden = true; }); }
+  function fail(msg){ var e = $('err'); e.textContent = msg; e.hidden = false; ['sec1','sec2','sec3','sec4'].forEach(function(id){ $(id).hidden = true; }); }
 
   var REC = null, EDGES = [], byId = {}, current = null;
 
@@ -225,7 +254,7 @@
       [(r.entries || []).length, 'ways in (entry points)'], [(r.process || []).length, 'steps that do the work'],
       [(r.exits || []).length, 'things it produces (exits)'], [passed + ' / ' + tests.length, 'tests passing'],
       [mat, 'maturity' + (r.maturity && r.maturity.set ? ' (set ' + r.maturity.set + ')' : '')]
-    ].map(function(f){ return '<div role="listitem"><b>' + esc(f[0]) + '</b><span>' + esc(f[1]) + '</span></div>'; }).join('');
+    ].concat((r.fields || []).length ? [[(r.fields || []).length, 'fields in the ledger']] : []).map(function(f){ return '<div role="listitem"><b>' + esc(f[0]) + '</b><span>' + esc(f[1]) + '</span></div>'; }).join('');
     var flags = j.flags || [];
     if (flags.length) { var fl = $('flagline'); fl.hidden = false; fl.innerHTML = '<span class="pill warn">⚠️ ' + esc(flags.join(' · ')) + '</span>'; }
 
@@ -282,7 +311,62 @@
     $('descriptor').textContent = r.descriptor || '(none)';
     $('foot').innerHTML = 'CMDB record ' + esc(j.ci) + ' · ' + esc(r.system || 'ChitBridge') + (r.spec ? ' · contract ' + esc(r.spec) : '')
       + ' · <a href="/cmdb/record.html">every record</a> · <a href="/app.html">back to ChitBridge</a>';
+    drawFields();
     draw();
+  }
+
+  /* view 4 · the field ledger (a record's `fields`, lib/cmdb.js): filter by status, find, click a field for where it is shown and set */
+  var FST = { 'ok': '✓ complete', 'shown-nowhere': '⚠ shown nowhere', 'not-settable': '⚠ shown but not settable', 'two-sources': '⚠ two sources',
+              'no-meaning': '⚠ no meaning', 'untested': '⚠ untested', 'not-used': 'not used' };
+  var FSTATE = { status: 'all', q: '', sel: null };
+  function fpill(s){ return '<span class="pill ' + (s === 'ok' ? 'ok' : (s === 'not-used' ? 'off' : 'warn')) + '">' + esc(FST[s] || s) + '</span>'; }
+  function fhas(f, s){ return f.status === s || (f.also || []).indexOf(s) >= 0; }
+  function fvisible(){
+    var q = FSTATE.q.toLowerCase();
+    return (REC.fields || []).filter(function(f){
+      if (FSTATE.status !== 'all' && !fhas(f, FSTATE.status)) return false;
+      return !q || (f.key + ' ' + f.means).toLowerCase().indexOf(q) >= 0;
+    });
+  }
+  function paintFields(){
+    var all = REC.fields || [], rows = fvisible();
+    $('fchips').innerHTML = [['all', 'All']].concat(Object.keys(FST).map(function(k){ return [k, FST[k]]; })).map(function(p){
+      var n = p[0] === 'all' ? all.length : all.filter(function(f){ return fhas(f, p[0]); }).length;
+      return n || p[0] === 'all' ? '<button type="button" class="chip" data-f="' + esc(p[0]) + '" aria-pressed="' + (FSTATE.status === p[0]) + '">' + esc(p[1]) + ' · ' + n + '</button>' : '';
+    }).join('');
+    $('fcount').textContent = rows.length + ' of ' + all.length + ' fields';
+    $('frows').innerHTML = rows.map(function(f){
+      return '<tr tabindex="0" role="button" data-k="' + esc(f.key) + '" aria-selected="' + (FSTATE.sel === f.key) + '"><td><code>' + esc(f.key) + '</code></td><td class="rel">' + esc(f.origin) + '</td><td>' + esc(f.means) + '</td><td>' + fpill(f.status)
+        + (f.also || []).map(function(a){ return ' ' + fpill(a); }).join('') + '</td></tr>';
+    }).join('') || '<tr><td colspan="4" class="muted">No field matches.</td></tr>';
+  }
+  function fList(a){ return a && a.length ? '<ul>' + a.map(function(x){ return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' : '<span class="muted">nothing</span>'; }
+  function showField(key){
+    var f = (REC.fields || []).filter(function(x){ return x.key === key; })[0]; if (!f) return;
+    FSTATE.sel = key; $('fdt').textContent = f.key;
+    $('fdd').innerHTML = '<dl>'
+      + '<dt>Status</dt><dd>' + fpill(f.status) + (f.also || []).map(function(a){ return ' ' + fpill(a); }).join('') + '</dd>'
+      + '<dt>Means</dt><dd>' + esc(f.means) + '</dd>'
+      + '<dt>Kinds</dt><dd>' + esc((f.kinds || []).join(', ')) + '</dd>'
+      + '<dt>Origin</dt><dd>' + esc(f.origin) + (f.origin_detail ? ' — ' + esc(f.origin_detail) : '') + '</dd>'
+      + '<dt>Source of truth</dt><dd>' + esc(f.source) + '</dd>'
+      + '<dt>Set by</dt><dd>' + esc(f.set_by) + '</dd>'
+      + '<dt>Validated by</dt><dd>' + esc(f.validated_by || '?') + '</dd>'
+      + '<dt>Shown in</dt><dd>' + fList(f.shown_in) + '</dd>'
+      + '<dt>Used by</dt><dd>' + fList(f.used_by) + '</dd>'
+      + '<dt>Test</dt><dd>' + esc(f.test || '?') + '</dd>'
+      + (f.inputs && f.inputs.length ? '<dt>Form inputs</dt><dd><code>' + esc(f.inputs.join(' ')) + '</code></dd>' : '')
+      + (f.finding ? '<dt>Finding</dt><dd>' + esc(f.finding) + '</dd>' : '') + '</dl>';
+    paintFields();
+  }
+  function drawFields(){
+    var has = (REC.fields || []).length > 0; $('sec4').hidden = !has; if (!has) return;
+    FSTATE = { status: 'all', q: '', sel: null };
+    paintFields();
+    $('fchips').addEventListener('click', function(e){ var b = e.target.closest('[data-f]'); if (!b) return; FSTATE.status = b.getAttribute('data-f'); paintFields(); });
+    $('fq').addEventListener('input', function(e){ FSTATE.q = e.target.value; paintFields(); });
+    $('frows').addEventListener('click', function(e){ var t = e.target.closest('[data-k]'); if (t) showField(t.getAttribute('data-k')); });
+    $('frows').addEventListener('keydown', function(e){ if (e.key !== 'Enter' && e.key !== ' ') return; var t = e.target.closest('[data-k]'); if (t) { e.preventDefault(); showField(t.getAttribute('data-k')); } });
   }
 
   function draw(){
@@ -335,7 +419,7 @@
   }
 
   async function drawList(){
-    ['sec1','sec2','sec3'].forEach(function(id){ $(id).hidden = true; });
+    ['sec1','sec2','sec3','sec4'].forEach(function(id){ $(id).hidden = true; });
     $('listsec').hidden = false; $('title').textContent = 'CMDB'; $('tags').innerHTML = '<span class="tag strong">Every record</span>';
     $('summary').textContent = 'One record per configuration item. Each opens in the three views.';
     var j = await call('/api/testing/cmdb');
