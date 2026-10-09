@@ -404,6 +404,10 @@ $('toggleNav').addEventListener('click', () => {
   $('toggleNav').setAttribute('aria-expanded', String(open));
   $('toggleNav').setAttribute('aria-label', open ? 'Collapse sidebar' : 'Expand sidebar');
 });
+/* ONE frame at every width (Round U): between 761 and 1100 px the sidebar is the icon rail, so the list's tool row has the room it needs and fits one line; the toggle still opens it */
+const railMq = window.matchMedia('(min-width:761px) and (max-width:1100px)');
+function railFit(){ const s = $('side'), t = $('toggleNav'); s.classList.toggle('collapsed', railMq.matches); const open = !s.classList.contains('collapsed'); t.setAttribute('aria-expanded', String(open)); t.setAttribute('aria-label', open ? 'Collapse sidebar' : 'Expand sidebar'); }
+if (railMq.addEventListener) railMq.addEventListener('change', railFit); railFit();
 function whoPaint(){
   const nm = SESS ? (SESS.entity || SESS.name || '') : '';
   WHO.innerHTML = `<span class="shop" data-testid="shop-name">${esc(nm)}</span>

@@ -71,12 +71,14 @@
     '.cbl button.cbl-chip.warn::after,.cbl button.cbl-chip.bad::after{content:"›";opacity:.7}',
     /* row 2 · tools */
     '.cbl .cbl-tools{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;padding:6px 20px 8px;background:var(--cl-page)}',
-    '.cbl .cbl-search{flex:1 1 220px;min-width:0;display:flex;align-items:center;gap:6px;border:1px solid var(--cl-line);background:var(--cl-card);border-radius:9px;padding:0 10px;height:34px}',
+    '.cbl .cbl-search{flex:1 1 200px;min-width:0;display:flex;align-items:center;gap:6px;border:1px solid var(--cl-line);background:var(--cl-card);border-radius:9px;padding:0 10px;height:34px}',
     '.cbl .cbl-search input{border:0;outline:0;background:none;flex:1;min-width:0;font-size:calc(14px * var(--k,1));padding:0;margin:0;height:auto;box-shadow:none}',
     '.cbl .cbl-search:focus-within{border-color:var(--cl-blue)}',
     '.cbl .cbl-tbtn{height:34px;display:inline-flex;align-items:center;gap:5px;border:1px solid var(--cl-line);background:var(--cl-card);border-radius:9px;padding:0 10px;font-size:calc(13.5px * var(--k,1));white-space:nowrap;margin:0}',
     '.cbl .cbl-tbtn[aria-pressed="true"],.cbl .cbl-tbtn.on{border-color:var(--cl-blue-b);background:var(--cl-blue-t);color:var(--cl-blue-i);font-weight:600}',
     '.cbl .cbl-tbtn .badge{background:var(--cl-blue);color:var(--cl-card);border-radius:999px;font-size:calc(11px * var(--k,1));padding:0 6px;font-weight:700}',
+    '.cbl .cbl-glab{font-size:calc(12px * var(--k,1));color:var(--cl-muted);white-space:nowrap;margin-inline-end:-2px}',
+    '@media (max-width:1100px){.cbl .cbl-tools{gap:5px 6px;padding-inline:12px}.cbl .cbl-seg button{padding:0 6px}.cbl .cbl-count{padding:0 2px}.cbl .cbl-search{flex-basis:170px}}',
     '.cbl .cbl-seg{display:inline-flex;border:1px solid var(--cl-line);border-radius:9px;overflow:hidden;background:var(--cl-card);height:34px}',
     '.cbl .cbl-seg button{border:0;background:none;padding:0 10px;font-size:calc(13.5px * var(--k,1));border-inline-start:1px solid var(--cl-soft);margin:0;border-radius:0}',
     '.cbl .cbl-seg button:first-child{border-inline-start:0}',
@@ -428,7 +430,7 @@
       h += '<span class="cbl-anchor"><button type="button" class="cbl-tbtn' + (fn ? ' on' : '') + '" data-cbl-pop="filt" id="cbl-filt-' + k + '" data-testid="cbl-filters-' + k + '" aria-haspopup="dialog" aria-expanded="' + (I.pop === 'filt') + '">' + esc(T(I, 'Filters')) + ' ▾' + (fn ? ' <span class="badge">' + fn + '</span>' : '') + '</button>' + (I.pop === 'filt' ? filtPop(I, sorts) : '') + '</span>';
     }
     var g = o.group, gm = groupMode(I);
-    if (g && (g.options || []).length > 1) h += '<span class="cbl-seg" role="group" aria-label="' + esc(T(I, 'Group by')) + '" data-testid="cbl-group-' + k + '">' + g.options.map(function (x) { return '<button type="button" data-group="' + esc(x[0]) + '"' + (g.tid ? ' data-testid="' + esc(g.tid) + '-group-' + esc(x[0]) + '"' : '') + ' aria-pressed="' + (gm === x[0]) + '">' + esc(T(I, x[1])) + '</button>'; }).join('') + '</span>';
+    if (g && (g.options || []).length > 1) h += '<span class="cbl-glab" data-testid="cbl-glab-' + k + '">' + esc(T(I, 'Group by')) + '</span><span class="cbl-seg" role="group" aria-label="' + esc(T(I, 'Group by')) + '" data-testid="cbl-group-' + k + '">' + g.options.map(function (x) { return '<button type="button" data-group="' + esc(x[0]) + '"' + (g.tid ? ' data-testid="' + esc(g.tid) + '-group-' + esc(x[0]) + '"' : '') + ' aria-pressed="' + (gm === x[0]) + '">' + esc(T(I, x[1])) + '</button>'; }).join('') + '</span>';
     if (hasNext(I)) h += '<button type="button" class="cbl-tbtn cbl-ico" data-cbl-exp data-testid="' + esc(R.allOpen ? (tids.collapse || 'cbl-expand-' + k) : (tids.expand || 'cbl-expand-' + k)) + '" title="' + esc(T(I, R.allOpen ? 'Collapse all' : 'Expand all')) + '" aria-label="' + esc(T(I, R.allOpen ? 'Collapse all' : 'Expand all')) + '" aria-pressed="' + !!R.allOpen + '">' + (R.allOpen ? '⇡' : '⇣') + '</button>';
     h += '<span class="cbl-seg" role="group" aria-label="' + esc(T(I, 'View')) + '"><button type="button" data-view="grid" data-testid="view-grid-' + k + '" title="' + esc(T(I, 'Grid: columns')) + '" aria-label="' + esc(T(I, 'Grid: columns')) + '" aria-pressed="' + (s.view === 'grid') + '">▤</button><button type="button" data-view="lines" data-testid="view-lines-' + k + '" title="' + esc(T(I, 'Lines: one line per record')) + '" aria-label="' + esc(T(I, 'Lines: one line per record')) + '" aria-pressed="' + (s.view === 'lines') + '">☰</button></span>';
     h += '<span class="cbl-anchor"><button type="button" class="cbl-tbtn cbl-ico" data-cbl-pop="cols" id="cbl-cols-' + k + '" data-testid="cols-btn-' + k + '" title="' + esc(T(I, 'Choose columns')) + '" aria-label="' + esc(T(I, 'Choose columns')) + '" aria-haspopup="dialog" aria-expanded="' + (I.pop === 'cols') + '">⚙</button>' + (I.pop === 'cols' ? colsPop(I) : '') + '</span>';

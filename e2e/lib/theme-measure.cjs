@@ -33,6 +33,7 @@ function measure() {
     if (!vis(el)) continue;
     seen.add(el);
     const cs = getComputedStyle(el); let a = 1; for (let n = el; n && n.nodeType === 1; n = n.parentElement) a *= Number(getComputedStyle(n).opacity);
+    if (a < 0.05) continue;   /* text faded out (the kural band on a phone takes turns) is not on screen */
     const g = ground(el); let fg = rgba(cs.color); fg[3] *= a; fg = over(fg, g.c);
     const size = parseFloat(cs.fontSize), w = Number(cs.fontWeight) >= 700 || cs.fontWeight === 'bold', large = size >= 24 || (size >= 18.66 && w);
     let cat = 'other'; for (const [name, sel] of CATS) { if (el.closest(sel)) { cat = name; break; } }

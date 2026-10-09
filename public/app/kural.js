@@ -123,6 +123,7 @@
   var SEAL = '<svg class="cbk-seal" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="29" stroke-width="2.5"/><ellipse cx="32" cy="13" rx="4.4" ry="3.6"/><circle cx="32" cy="22" r="6.4"/><path d="M25.8 23.5Q26 33 32 38.5Q38 33 38.2 23.5Q32 27 25.8 23.5Z"/><path d="M15.5 54Q16.5 41 26 36.8L32 40L38 36.8Q47.5 41 48.5 54Z"/></svg>';
 
   /** what is on screen that the band must not sit beside: a warning, an alert, a bad card, a dialog */
+  var HEAD_SEL = "header,.bar,.topbar,.titlerow,.cbl-title,.cbsh-hdr,[role=banner]";
   var BLOCK_SEL = '.cbl-chip.warn,.cbl-chip.bad,[role="alert"],.card.bad,.pe-bad,.pe-warn,dialog[open],.modalback,#modal.on';
   function blockedNow() {
     var list = doc.querySelectorAll(BLOCK_SEL);
@@ -144,6 +145,8 @@
       EL.addEventListener('click', onClick); EL.addEventListener('keydown', function (e) { if ((e.key === 'Enter' || e.key === ' ') && e.target.closest && e.target.closest('[data-kswap]')) { e.preventDefault(); swap(); } });
     }
     clearInterval(TIMER); TIMER = null;
+    /* ONE place: the band is never a part of a header, a bar or a title row, whoever mounted it or moved it there (Round U, 2026-10-09) */
+    if (EL.closest(HEAD_SEL)) (HOST && !HOST.closest(HEAD_SEL) ? HOST : doc.body).appendChild(EL);
     var k = find(ROUTE);
     BLOCKED = blockedNow();
     if (!k || BLOCKED) { EL.hidden = true; EL.innerHTML = ''; EL.removeAttribute('data-kural'); touch(); return; }

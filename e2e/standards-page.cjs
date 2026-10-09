@@ -143,7 +143,7 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     ok(/<title>Standards<\/title>/.test(src), 'the page is named Standards');
     ok(/CBList\.mount\(/.test(src) && /src="\/app\/list-ctl\.js"/.test(src) && /src="\/app\/cap-standards\.js"/.test(src), 'the list is a CBList mount and the register is cap-standards.js');
     ok(/stdWhyHTML\(/.test(src) && /stdRecordHTML\(/.test(src) && /stdGoto\(/.test(src), 'the sheets are the register\'s stdWhyHTML / stdRecordHTML and the app door is its stdGoto');
-    ok(!/PROTOTYPE|kural|kbar/i.test(src), 'the purple prototype strip and the kural footer are not built');
+    ok(!/PROTOTYPE|kbar/i.test(src) && src.indexOf("CBKural.mount({ route: 'planning' })") > 0 && src.indexOf('cbkural') < 0, 'no purple prototype strip; the kural band is CBKural itself, mounted once (Round U: the one frame — it sits below the page, never in the head)');
     ok(!/\bSTANDARDS\s*=\s*\[|window\.STD_PAGE/.test(src), 'the page holds no copy of the register');
     ok(/fetch\('\/data\/compat\.json'/.test(src) && /stdCompatRows\(/.test(src) && !/"system"\s*:/.test(src), 'the Compatibility rows are read from data/compat.json through stdCompatRows — the page holds none');
   }
@@ -497,7 +497,7 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     ok(fails.length === 0, 'every visible text pair, in all 16 themes + Cream, on the laptop and the phone, on the matrix · a chosen cell with a row open · both sheets, clears WCAG AA (' + fails.length + ' failing)');
   }
 
-  const other = S.calls.filter((c) => c !== 'GET /api/entities/me');
+  const other = S.calls.filter((c) => c !== 'GET /api/entities/me' && c !== 'GET /api/notifications' && c !== 'GET /api/events/ticket' && c !== 'POST /api/events/ticket');   /* the header's bell (Round U: the one frame) reads the notifications; the register is still the file */
   ok(other.length === 0, 'the Standards page reads nothing from the API — the register is the file; the only call is the avatar\'s own GET /api/entities/me (' + S.calls.length + ' of it' + (other.length ? '; ALSO ' + other[0] : '') + ')');
   ok(threw.length === 0, 'no page error' + (threw.length ? ': ' + threw[0] : ''));
   ok(offHost.length === 0, 'nothing tried to leave the browser' + (offHost.length ? ': ' + offHost[0] : ''));
