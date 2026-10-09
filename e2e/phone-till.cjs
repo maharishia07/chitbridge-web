@@ -172,7 +172,7 @@ function webServer(){
   say('the hour group reads in words, not "HH:00"', /\d{1,2}\s?(am|pm)\s?–\s?\d{1,2}\s?(am|pm)/i.test(bills.hour), '"' + bills.hour + '"');
   say('and never "(s)"', !/\(s\)/.test(bills.hour) && !/\(s\)/.test(bills.banner), 'hour="' + bills.hour + '" banner="' + bills.banner + '"');
   say('one bill today reads "The bill reached the shop"', /The bill reached the shop/.test(bills.banner), '"' + bills.banner.replace(/\s+/g, ' ') + '"');
-  say('the buttons read "Close the day" and "✕"', bills.dayclose === 'Close the day' && bills.close === '✕', '"' + bills.dayclose + '" / "' + bills.close + '"');
+  say('the buttons read "Day report" and "✕"', bills.dayclose === 'Day report' && bills.close === '✕', '"' + bills.dayclose + '" / "' + bills.close + '"');
   await p.tap('[data-testid="till-bills-close"]');
   await p.waitForTimeout(150);
   say('✕ closes Today\'s bills', !(await p.evaluate(() => (document.getElementById('billsdlg') || {}).open)), 'closed');
