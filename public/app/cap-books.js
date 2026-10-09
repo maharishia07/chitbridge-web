@@ -338,10 +338,35 @@ function bkRecordedHTML(e, tid) {
   return ' <span data-testid="' + esc(tid) + '-rec" style="color:var(--grey);font-weight:400">' + esc(txf('recorded {date}', { date: day(rec || post, { day: '2-digit', month: 'short' }) })) + '</span>';
 }
 /** opening · each movement with its running balance · closing — the shape every statement has */
+/* ── M29 · Reverse from the row ──
+ * A statement line names its entry (entry_id, M29 api), so the ONE confirm (cap-entry.js enReverse) runs from the row without a Day book read; the
+ * answer repaints THIS row — "reversed by MJ/… — reason" — and the toast says the bills reopened (the API's words). Both statement painters
+ * (the CRM record's table, the ledger's CBList) read the same line object, so the row that was pressed is the row that changes. */
+/** may this line be reversed from its row: it names its entry, is not already reversed, and is not itself a reversal */
+function bkCanReverse(l) { return !!(l && l.entry_id && !l.reversed_by && !l.reverses_entry_id && l.event_type !== 'reversal'); }
+function bkReverseLine(l, partyId) {
+  if (!bkCanReverse(l) || typeof enReverse !== 'function') return;
+  enReverse(l.entry_id, l.entry_no || l.ref, false, function (r, why) {
+    l.reversed_by = (r && r.entry_no) || '—'; l.reversed_why = why || null; if (l.payment_id) l.unapplied_minor = 0;
+    var st = partyId ? BK.stmt[partyId] : null, box = partyId ? document.getElementById('bk_stmt_' + partyId) : null;
+    if (st && box && (st.lines || []).indexOf(l) >= 0) box.innerHTML = statementHTML(st, partyId);
+    if (BK.lt && BK.lt.r && (BK.lt.r.lines || []).indexOf(l) >= 0 && BK.lt.api) BK.lt.api.refresh();
+  });
+}
+function bkStmtReverse(partyId, i) { var st = BK.stmt[partyId]; bkReverseLine(st && st.lines && st.lines[i], partyId); }
+/** the chips a line carries after M29: "reversed by MJ/… — reason" · the advice state (none → nothing) */
+function bkLineChips(l, tid) {
+  var out = '';
+  if (l && l.reversed_by) out += ' <span class="cbl-chip" data-testid="' + esc(tid) + '-rev">' + esc(tx('reversed by') + ' ' + l.reversed_by + (l.reversed_why ? ' — ' + l.reversed_why : '')) + '</span>';
+  if (l && l.advice && l.advice.state && l.advice.state !== 'none') out += ' <span class="cbl-chip" data-testid="' + esc(tid) + '-adv">' + esc(tx('advice') + ' ' + tx(l.advice.state)) + '</span>';
+  return out;
+}
 function statementHTML(r, partyId) {
-  var c = r && r.currency;
+  var c = r && r.currency, pid = partyId || (r && r.party_id) || '';
   var rows = ((r && r.lines) || []).map(function (l, i) {
-    return '<tr' + (l.source_chit_id ? ' style="cursor:pointer" onclick="openChitSheet(\'' + esc(l.source_chit_id) + '\')"' : '') + '><td>' + esc(bkDate(l.date)) + '</td><td data-testid="stmt-what-' + i + '">' + bkEntryHead(l, 'stmt-src-' + i, c, bkPartyLabel(l.party_id || partyId || (r && r.party_id), l.party_name)) + (l.ref ? ' <span class="mono">' + esc(l.ref) + '</span>' : '') + '</td>'
+    var rev = pid && l.payment_id && bkCanReverse(l) && typeof enReverse === 'function'
+      ? ' <button type="button" class="cbl-btn" data-testid="stmt-reverse-' + i + '" onclick="event.stopPropagation();bkStmtReverse(\'' + esc(pid) + '\',' + i + ')">↩ ' + esc(tx('Reverse')) + '</button>' : '';
+    return '<tr' + (l.source_chit_id ? ' style="cursor:pointer" onclick="openChitSheet(\'' + esc(l.source_chit_id) + '\')"' : '') + '><td>' + esc(bkDate(l.date)) + '</td><td data-testid="stmt-what-' + i + '">' + bkEntryHead(l, 'stmt-src-' + i, c, bkPartyLabel(l.party_id || partyId || (r && r.party_id), l.party_name)) + (l.ref ? ' <span class="mono">' + esc(l.ref) + '</span>' : '') + bkLineChips(l, 'stmt-' + i) + rev + '</td>'
       + '<td class="num">' + (l.dr_minor ? esc(bkMoney(l.dr_minor, c)) : '') + '</td><td class="num">' + (l.cr_minor ? esc(bkMoney(l.cr_minor, c)) : '') + '</td><td class="num"><b>' + esc(bkDrCr(l.running_minor, c)) + '</b></td></tr>';
   }).join('');
   return '<table class="bktab" style="width:100%;border-collapse:collapse;font-size:var(--fs-1)"><thead><tr><th>' + tx('Date') + '</th><th>' + tx('What') + '</th><th class="num">' + tx('Debit') + '</th><th class="num">' + tx('Credit') + '</th><th class="num">' + tx('Balance') + '</th></tr></thead><tbody>'
@@ -1158,7 +1183,7 @@ function bkLgDetails(l) {
   var said = !!kw && String(word).trim().toLowerCase() === kw.toLowerCase(), out = word;
   if (s.kind === 'day') { if (s.count != null) out += ' · ' + esc(txf(s.count === 1 ? '{n} bill' : '{n} bills', { n: s.count })); }
   else if (s.ref || s.chit_id) out += (said ? ' ' : ' · ' + (kw ? esc(kw) + ' ' : '')) + bkBillPart(s, tid);
-  return out + bkRecordedHTML(l, tid) + (l.ref && !s.ref ? ' <span class="mono">' + esc(l.ref) + '</span>' : '');
+  return out + bkRecordedHTML(l, tid) + (l.ref && !s.ref ? ' <span class="mono">' + esc(l.ref) + '</span>' : '') + bkLineChips(l, 'stmt-' + l._ix);
 }
 function bkLgCols(c, kind) {
   var dash = bkLgDash(), ctrl = kind === 'control';
@@ -1274,8 +1299,9 @@ function bkLgMount(el) {
     /* its journal is read once, on the first open, and the row shows it when it arrives */
     next: function (l) { return bkLgJournal().then(function () { return bkLgNext(l, cur()); }); },
     /* Reverse this entry (insert-only: cap-entry.js asks first). The line names its entry only through the journal, so the journal is read first and a line that cannot be reversed (already reversed, or itself a reversal) says so. */
-    actions: typeof enReverse === 'function' ? [{ id: 'reverse', icon: '↩', label: 'Reverse this entry', tid: 'lg-reverse', when: function (l) { return !!(l.entry_no || l.ref || l.source_chit_id || (l.source && l.source.chit_id)); },
-      run: function (l) { bkLgJournal().then(function () { var e = bkLgEntry(l); if (!e || !e.entry_id || e.reversed_by || e.reverses_entry_id || e.event_type === 'reversal') { if (typeof toast === 'function') toast(tx('This entry cannot be reversed here.')); return; } enReverse(e.entry_id, e.entry_no); }); } }] : undefined,
+    /* M29: a line that names its entry (a party statement) reverses FROM THE ROW — no Day book read, and the row repaints itself (bkReverseLine); an account ledger's line still goes through its journal */
+    actions: typeof enReverse === 'function' ? [{ id: 'reverse', icon: '↩', label: 'Reverse this entry', tid: 'lg-reverse', when: function (l) { return l.entry_id ? bkCanReverse(l) : !!(l.entry_no || l.ref || l.source_chit_id || (l.source && l.source.chit_id)); },
+      run: function (l) { if (l.entry_id) return bkReverseLine(l, BK.lt.sel && BK.lt.sel.party); bkLgJournal().then(function () { var e = bkLgEntry(l); if (!e || !e.entry_id || e.reversed_by || e.reverses_entry_id || e.event_type === 'reversal') { if (typeof toast === 'function') toast(tx('This entry cannot be reversed here.')); return; } enReverse(e.entry_id, e.entry_no); }); } }] : undefined,
     tids: { expand: 'lg-expand-all', collapse: 'lg-collapse-all', csv: 'lg-csv', count: 'lg-count' },
     empty: { title: tx('No entries in these dates') },
   });
