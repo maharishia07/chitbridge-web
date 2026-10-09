@@ -54,9 +54,21 @@ var KIND = {
   dispute_raised: ['⚑', 'raised a dispute on'], dispute_resolved: ['✅', 'resolved a dispute on'], voided: ['🚫', 'voided']
 };
 /** one row of the feed -> { i, mine, chit, who, say, subj, d, s, id } — plain text (painted through esc) */
+function money(v, cur) {
+  var x = Number(v); if (v == null || v === '' || !isFinite(x)) return '';
+  try { return typeof root.fmtMoney === 'function' ? root.fmtMoney(x, cur || 'INR') : new Intl.NumberFormat(undefined, { style: 'currency', currency: cur || 'INR' }).format(x); } catch (_) { return String(x); }
+}
 function line(n) {
   var k = KIND[n.action], subj = n.manual_subject || n.auto_subject || T(W.chit), s = '';
-  if (n.created_at) { try { s = root.CBLocale.datetime(n.created_at, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); } catch (_) { s = String(n.created_at).replace('T', ' ').slice(0, 16); } }
+  /* O3: the time is the reader's LOCAL time (the feed's created_at is UTC) - never the raw string */
+  if (n.created_at) { try { s = root.CBLocale.datetime(n.created_at, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); } catch (_) {
+    try { var dt = new Date(n.created_at); s = isNaN(dt) ? String(n.created_at).replace('T', ' ').slice(0, 16) : dt.toLocaleString(undefined, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); } catch (_2) { s = String(n.created_at).slice(0, 16); } } }
+  /* O3: a NEW incoming order is not a "delivered" - it says what it is, who sent it and what it is worth */
+  if (n.purpose === 'order' && n.action === 'delivered' && n.direction === 'received') {
+    var amt = money(n.total_value, n.currency_code), how = [n.order_channel === 'online' ? '🌐 ' + T('Online') : '', n.order_fulfilment === 'delivery' ? T('Delivery') : ''].filter(Boolean).join(' · ');
+    return { i: '🛍️', mine: !!(n.assigned_to_me || n.dispute_for_me), chit: n.chit_id || null, who: n.action_by_display_name || '', say: T('sent a new order'), subj: '',
+      d: [amt, how].filter(Boolean).join(' · '), s: s, id: n.log_id || null };
+  }
   return { i: k ? k[0] : '•', mine: !!(n.assigned_to_me || n.dispute_for_me), chit: n.chit_id || null, who: n.action_by_display_name || '',
     say: k ? k[1] : String(n.action || 'updated').replace(/_/g, ' '), subj: subj,
     d: n.detail ? String(n.detail).slice(0, 90) : (n.new_status || ''), s: s, id: n.log_id || null };
@@ -182,6 +194,8 @@ function mount(el, o) {
       if (typeof o.onOpen === 'function') o.onOpen(id);
       else if (typeof root.openChitSheet === 'function') root.openChitSheet(id);
       else if (typeof root.openChit === 'function') root.openChit(id);
+      /* O4: a page with no chit sheet (Home) sends the press to where the chit opens - never closes the list and does nothing */
+      else root.location.href = '/crm.html#/chits?open=' + encodeURIComponent(id);
       return;
     }
     var c = t.closest('[data-testid="bell-clear"]');

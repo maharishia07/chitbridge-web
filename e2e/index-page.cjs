@@ -64,14 +64,15 @@ async function run() {
 
   /* ── 1 · static ── */
   const src = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-  ok(!/app\.html/.test(src), 'static · zero "app.html" in index.html (I12)');
+  /* the sign-in window's Register link is the workshop's page until a customer register page exists (BACKLOG: REGISTER PAGE) - the ONE allowed mention */
+  ok(!/app\.html/.test(src.replace(/registerHref:\s*'\/app\.html#\/register'/, '')), 'static · zero "app.html" in index.html (I12) bar the Register link');
   ok(!/\btier\b/i.test(src), 'static · no word "tier" (Q5)');
   ok(!/accounting|books of account/i.test(src), 'static · neither "accounting" nor "books of account" (it is the Ledger)');
   ok(!/class="(box|lab|cbsh-box|cbsh-sc)[" ]/.test(src) && !/data-testid="(box|lab)-/.test(src), 'static · no hand-written card: every card is a manifest row');
   ok(/\/app\/shell\.js/.test(src) && /CBShell\.mount\(/.test(src) && /host:\s*null/.test(src), 'static · index.html mounts CBShell as Home (host null)');
   ok(!/\balert\s*\(/.test(src), 'static · no alert()');
   const man = JSON.parse(fs.readFileSync(path.join(PUB, 'app', 'manifest.json'), 'utf8'));
-  const exists = (r) => { const p = r.split('#')[0]; return p === '/' ? false : fs.existsSync(path.join(PUB, p)); };
+  const exists = (r) => { const p = r.split(/[#?]/)[0]; return p === '/' ? false : fs.existsSync(path.join(PUB, p)); };
   const badBuilt = man.entries.filter((e) => e.state === 'built' && !(e.route && exists(e.route) && !/app\.html/.test(e.route))).map((e) => e.id);
   const badRest = man.entries.filter((e) => e.state !== 'built' && e.route).map((e) => e.id);
   ok(badBuilt.length === 0, 'manifest · every built entry routes to a utility page that exists, never app.html, never the index itself' + (badBuilt.length ? ' — not: ' + badBuilt.join(', ') : ''));
@@ -98,7 +99,7 @@ async function run() {
   /* the session the apps store: a signed token whose identity is the shop (CBOnePerson.who reads it) */
   const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64').replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
   const TOKEN = b64({ alg: 'none' }) + '.' + b64({ identity_id: 'ent-idx', identity_type: 'entity', exp: Math.floor(Date.now() / 1000) + 3600 }) + '.x';
-  const SESSION = JSON.stringify({ token: TOKEN, role: 'entity', name: 'Mayur', entity: 'Mayur Bhavan' });
+  const SESSION = JSON.stringify({ token: TOKEN, role: 'entity', name: 'Mayur', entity: 'Mayur Bhavan', bridgeId: 'CBTEST1234' });
 
   async function profile(vw, vh, p) {
     p = p || {};
@@ -137,7 +138,7 @@ async function run() {
   const areaWords = (pg, a) => pg.evaluate((x) => { const s = document.querySelector('.cbsh-sec.' + x); if (!s) return -1; return (s.innerText || '').replace(/\s+/g, ' ').trim().split(' ').filter(Boolean).length; }, a);
   const BUDGET = { home: 120, selling: 100, running: 100, labs: 100, setup: 100 };
   /* the allow-list: whatever CBAvatar writes in its own slot (its Profile · Support doors, the Sign in door) — nothing else may name app.html */
-  const offList = (pg) => pg.$$eval('a[href*="app.html"]', (as) => as.filter((a) => !a.closest('[data-testid="shell-avatar"]')).map((a) => a.getAttribute('href')));
+  const offList = (pg) => pg.$$eval('a[href*="app.html"]', (as) => as.filter((a) => !a.closest('[data-testid="shell-avatar"]') && a.getAttribute('data-testid') !== 'signin-register').map((a) => a.getAttribute('href')));
   fs.mkdirSync(SHOTS, { recursive: true });
 
   try {
@@ -148,13 +149,13 @@ async function run() {
       ok(await pg.locator('[data-testid="shell-nav"]').count() === 1 && await pg.locator('[data-testid="shell-avatar"] [data-testid="cbavatar"]').count() === 1, '1366 · the rail of five areas and the one avatar are the shell\'s');
       ok(await pg.locator('.cbsh-box').count() === BUILT.length && await pg.locator('.cbsh-sc').count() === REST.length, '1366 · ' + BUILT.length + ' cards and ' + REST.length + ' dashed chips — one per manifest row');
       let hrefsOk = true;
-      for (const e of BUILT) { const h = await pg.getAttribute('[data-testid="shell-card-' + e.id + '"]', 'href'); if (h !== e.route) { hrefsOk = false; console.log('      ' + e.id + ' → ' + h); } }
+      for (const e of BUILT) { const h = await pg.getAttribute('[data-testid="shell-card-' + e.id + '"]', 'href'); if (h !== e.route.replace('{bridge_id}', 'CBTEST1234')) { hrefsOk = false; console.log('      ' + e.id + ' → ' + h); } }
       ok(hrefsOk, '1366 · every built card links to its utility page');
       ok((await offList(pg)).length === 0, '1366 · zero app.html hrefs outside the avatar (the allow-list: CBAvatar\'s own doors)');
-      const chips = await pg.$$eval('.cbsh-sc', (cs) => cs.map((c) => ({ id: c.dataset.testid, st: c.dataset.state, link: c.tagName === 'A' || !!c.querySelector('a'), tag: (c.querySelector('.tag') || {}).textContent })));
-      ok(chips.length && chips.every((c) => !c.link && (c.st === 'workshop' || c.st === 'coming') && c.tag), '1366 · every chip is dashed, names its state, and is not a link');
+      const chips = await pg.$$eval('.cbsh-sc', (cs) => cs.map((c) => ({ id: c.dataset.testid, st: c.dataset.state, link: c.tagName === 'A' || !!c.querySelector('a'), via: c.dataset.via === '1', href: c.getAttribute('href'), tag: (c.querySelector('.tag') || {}).textContent })));
+      ok(chips.length && chips.every((c) => (c.via ? /^\/[a-z-]+\.html$/.test(c.href || '') : !c.link) && (c.st === 'workshop' || c.st === 'coming') && c.tag), '1366 · every chip is dashed, names its state, and is not a link (bar a workshop item that names its closest built page: Catalogue to Product Lab)');
       const before = pg.url(), pages = ctx.pages().length;
-      await pg.click('[data-testid="shell-chip-catalogue"]'); await pg.waitForTimeout(250);
+      await pg.click('[data-testid="shell-chip-stock"]'); await pg.waitForTimeout(250);
       ok(pg.url() === before && ctx.pages().length === pages, '1366 · a workshop chip opens nothing');
       /* reads: only budgeted ones; null facts paint nothing */
       const unbudgeted = seen.filter((p) => !BUDGETED.includes(p));

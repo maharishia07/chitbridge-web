@@ -61,7 +61,7 @@ async function run(o) {
   ok(!/cap-[a-z-]+\.js|ensureCap|createElement\(\s*['"]script/.test(unit), 'static · the unit loads no application script');
   ok(!/class="avmenu"|data-testid="avatar-menu"|class="avatar"|class="av"|cbav-btn/.test(unit) && /CBAvatar\.mount|root\.CBAvatar\.mount/.test(unit), 'static · the avatar is CBAvatar mounted, never built here');
   const man = JSON.parse(fs.readFileSync(path.join(ROOT, 'public', 'app', 'manifest.json'), 'utf8'));
-  const exists = (r) => { const p = r.split('#')[0]; return p === '/' ? fs.existsSync(path.join(ROOT, 'index.html')) : fs.existsSync(path.join(ROOT, 'public', p)); };
+  const exists = (r) => { const p = r.split(/[#?]/)[0]; return p === '/' ? fs.existsSync(path.join(ROOT, 'index.html')) : fs.existsSync(path.join(ROOT, 'public', p)); };
   const badBuilt = man.entries.filter((e) => e.state === 'built' && !(e.route && exists(e.route) && !/app\.html/.test(e.route))).map((e) => e.id);
   const badRest = man.entries.filter((e) => e.state !== 'built' && e.route).map((e) => e.id);
   ok(badBuilt.length === 0, 'manifest · every built entry routes to a utility page that exists' + (badBuilt.length ? ' — not: ' + badBuilt.join(', ') : ''));

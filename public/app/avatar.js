@@ -44,6 +44,10 @@
   var THEMES = K.APP_THEMES || {};
   var has = function (o, k) { return Object.prototype.hasOwnProperty.call(o, k); };
 
+  /* H34 (Athi's black-box, 2026-10-09): a utility page never sends a customer into the workshop (app.html). There is no customer Profile or Support page yet
+     (BACKLOG), so the items point at the closest customer pages: Profile -> Know your business (its "Yourself" tab is the business's own facts),
+     Support -> Home. A page with its own handler (onProfile / onSupport) or href still wins; the workshop itself passes its own. */
+  var PROFILE_HREF = '/know-your-business.html', SUPPORT_HREF = '/';
   /* ── the facts (moved from app.html: FS_BASE · TEXT_SIZES · FONTS) ── */
   var FS_BASE = { '--fs-1': 11, '--fs-2': 12.5, '--fs-3': 14, '--fs-4': 16, '--fs-5': 20, '--fs-6': 28, '--fs-7': 36, '--fs-8': 46 };
   var TEXT_SIZES = [['s', 'Small', 0.92], ['m', 'Medium', 1], ['l', 'Large', 1.15], ['xl', 'Extra large', 1.32]];
@@ -287,13 +291,13 @@
     var up = [], down = [];
     if (has_('profile')) up.push(o.onProfile
       ? '<button type="button" data-testid="nav-profile" data-av="profile">Profile</button>'
-      : '<a data-testid="nav-profile" data-av="profile" href="' + esc(o.profileHref || '/app.html#/app/profile') + '">Profile<span aria-hidden="true">↗</span></a>');
+      : '<a data-testid="nav-profile" data-av="profile" href="' + esc(o.profileHref || PROFILE_HREF) + '">Profile<span aria-hidden="true">↗</span></a>');
     if (showSettings) up.push(o.onSettings
       ? '<button type="button" data-testid="nav-settings" data-av="settings">Settings</button>'
       : '<a data-testid="nav-settings" data-av="settings" href="' + esc(o.settingsHref || '/app.html#/app/settings') + '">Settings<span aria-hidden="true">↗</span></a>');
     if (has_('support')) down.push(o.onSupport
       ? '<button type="button" data-testid="av-support" data-av="support">Support</button>'
-      : '<a data-testid="av-support" data-av="support" href="' + esc(o.supportHref || '/app.html#/app/support') + '">Support<span aria-hidden="true">↗</span></a>');
+      : '<a data-testid="av-support" data-av="support" href="' + esc(o.supportHref || SUPPORT_HREF) + '">Support<span aria-hidden="true">↗</span></a>');
     if (has_('signout')) down.push('<button type="button" data-testid="nav-signout" data-av="signout">Sign out</button>');
 
     var fsNow = pref('fs'), w = pref('weight'), f = pref('font');
@@ -329,10 +333,10 @@
     try { var ae = doc.activeElement; if (ae && el.contains(ae)) focusKey = ae.getAttribute('data-testid'); } catch (_) {}
     if (!P) {
       /* ⭐ M14: a page that mounts CBSignin (index · CB Accounts · CB CRM) gives onSignIn — the door opens the one sign-in window IN PLACE.
-         Without it the door is the link it always was (the workshop's own #/login). */
+         Without it the door is a link to the INDEX, the front door (Athi 2026-10-09: a customer never lands in the workshop's #/login). */
       el.innerHTML = typeof o.onSignIn === 'function'
         ? '<span class="cbav"><button type="button" class="cbav-signin" data-testid="signin-door" data-av="signin">Sign in</button></span>'
-        : '<span class="cbav"><a class="cbav-signin" data-testid="signin-door" href="' + esc(o.signInHref || '/app.html#/login') + '">Sign in</a></span>';
+        : '<span class="cbav"><a class="cbav-signin" data-testid="signin-door" href="' + esc(o.signInHref || '/') + '">Sign in</a></span>';
       return;
     }
     var label = (P.entity || P.name || 'You') + ': your menu';
@@ -356,7 +360,7 @@
       root.localStorage.removeItem('cb_sess');
       Object.keys(root.localStorage).filter(function (k) { return /^cb_nav(@|$)/.test(k); }).forEach(function (k) { root.localStorage.removeItem(k); });
     } catch (_) {}
-    root.location.href = o.signInHref || '/app.html#/login';
+    root.location.href = o.signInHref || '/';
   }
 
   var wired = false;

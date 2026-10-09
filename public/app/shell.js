@@ -330,13 +330,21 @@
 
     /* ── the five areas (Home) ── */
     function entriesOf(area) { return ((S.manifest && S.manifest.entries) || []).filter(function (e) { return e && e.area === area; }); }
+    /* H22/S1: a route may name the shop it opens for ({bridge_id}: the Storefront is THIS shop's page, /shop.html?s=<id>); unresolved, the bare page */
+    function routeOf(e) {
+      var r = String(e.route || ''); if (r.indexOf('{bridge_id}') < 0) return r;
+      var bid = (person && person.bridgeId) || (sess && sess.bridgeId) || (S.header && S.header.business && S.header.business.bridge_id) || '';
+      return bid ? r.replace('{bridge_id}', encodeURIComponent(bid)) : r.split('?')[0];
+    }
     function card(e) {
-      return '<a class="cbsh-box" href="' + esc(e.route) + '" data-testid="shell-card-' + esc(e.id) + '" data-id="' + esc(e.id) + '">' +
+      return '<a class="cbsh-box" href="' + esc(routeOf(e)) + '" data-testid="shell-card-' + esc(e.id) + '" data-id="' + esc(e.id) + '">' +
         '<span class="arw" aria-hidden="true">›</span><span class="g" aria-hidden="true">' + esc(e.icon) + '</span><h4>' + esc(e.name) + '</h4>' +
         (e.what ? '<p class="what">' + esc(e.what) + '</p>' : '') + '<span class="facts" data-testid="shell-facts-' + esc(e.id) + '"></span></a>';
     }
     function chip(e) {
       var st = e.state === 'workshop' ? 'workshop' : 'coming';
+      /* H36: a workshop item with no page of its own may name the closest built page (`via`): the chip becomes a link there, still marked workshop */
+      if (e.via) return '<a class="cbsh-sc" href="' + esc(e.via) + '" data-testid="shell-chip-' + esc(e.id) + '" data-state="' + st + '" data-via="1"' + (e.via_note ? ' title="' + esc(e.via_note) + '"' : '') + '><span class="g" aria-hidden="true">' + esc(e.icon) + '</span><b>' + esc(e.name) + '</b><span class="tag">' + esc(W.tag[st]) + '</span></a>';
       return '<span class="cbsh-sc" data-testid="shell-chip-' + esc(e.id) + '" data-state="' + st + '"><span class="g" aria-hidden="true">' + esc(e.icon) + '</span><b>' + esc(e.name) + '</b><span class="tag">' + esc(W.tag[st]) + '</span></span>';
     }
     function paintAreas() {

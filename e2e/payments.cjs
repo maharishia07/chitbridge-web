@@ -323,6 +323,12 @@ async function route(S, r) {
     const ack = S.pay.posts[1] && S.pay.posts[1].acknowledge || [];
     ok(posts(S) === 2 && ack.indexOf('nothing_owed') >= 0 && ack.indexOf('same_again') >= 0 && ack.indexOf('just_settled') >= 0, '"Pay as advance" → ONE more POST, carrying acknowledge ' + JSON.stringify(ack));
     ok(/^Paid ₹3,720\.12 cash to Agro Mills\. ₹3,720\.12 left with Agro Mills as an advance/.test(await text(p, 'pay_outcome')), 'E1 the outcome says it went on as an advance (' + (await text(p, 'pay_outcome')) + ')');
+    /* M30-1c (Athi's black-box 2026-10-09): behind the box the party's Ledger said "settled" while the Day book had the payment - it repaints from the answer, and stays open */
+    const outBal = await text(p, 'pay_balance');
+    await p.click('[data-testid="pay_done"]');
+    await p.waitForTimeout(400);
+    const ledBal = await text(p, 'party-balance');
+    ok(!/settled/.test(ledBal) && /advance|owe/i.test(ledBal + outBal) && await p.locator('[data-testid="party-pay"]').isVisible(), 'M30-1c the ledger behind the box repaints with the new balance and stays open (' + ledBal + ' · answer: ' + outBal + ')');
     await ctx.close();
   }
   /* ── E11 · owner 2026-10-08: W1 only when there is an allocation ── */

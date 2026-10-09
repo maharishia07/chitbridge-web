@@ -51,6 +51,7 @@
   .note{ font-size:10.5px; color:var(--grey); }
   .netpill{ position:fixed; top:10px; right:12px; font-size:11px; font-weight:700; border-radius:999px; padding:4px 11px; z-index:50; border:1px solid var(--line); background:#fff; color:var(--ok); }
   .netpill.off{ background:#fdf6e9; color:var(--warn); border-color:#e8d9b8; }
+  @media print{ #shell{ display:none; } }
 </style>
 </head>
 <body>
@@ -60,9 +61,18 @@
   <div id="app"><div class="card"><div class="empty">Loading…</div></div></div>
 </div>
 <div id="netpill" class="netpill"></div>
+<script src="/engine/screen.js"></script>
+<script src="/app/avatar.js"></script>
+<script src="/engine/signin.js"></script>
+<script src="/app/signin-ui.js"></script>
+<script src="/app/one-person.js"></script>
+<script src="/app/accounts-shell.js"></script>
+<script src="/app/rail-bell.js"></script>
+<script src="/app/shell.js"></script>
+<script src="/app/page-frame.js"></script>   <!-- CBFrame: the shell header + the one sign-in window (H23/H24) -->
 <script src="cb-offline.js"></script>
 <script>
-var API=(new URLSearchParams(location.search).get('api'))||'https://chitbridge-api-production.up.railway.app';
+var API=(new URLSearchParams(location.search).get('api'))||(window.CBShell&&CBShell.apiBase&&CBShell.apiBase())||'https://chitbridge-api-production.up.railway.app';
 var TOK=null, TAB='yourself', _stage='email';
 function paintPill(s){var p=el('netpill');if(!p)return;if(s.online){p.className='netpill';p.textContent=s.pending?('● Online · syncing '+s.pending):'● Online';}else{p.className='netpill off';p.textContent='⚠ Offline · '+(s.pending?s.pending+' pending':'work saved locally');}}
 function saveKyb(){ if(window.CBOffline) CBOffline.saveDraft('kyb.cred',{title:(el('nc_title')||{}).value||''}); }
@@ -71,19 +81,8 @@ function el(id){return document.getElementById(id);}
 async function api(m,p,body){var h={'Content-Type':'application/json'};if(TOK)h.Authorization='Bearer '+TOK;var r=await fetch(API+p,{method:m,headers:h,body:body?JSON.stringify(body):undefined});var j=null;try{j=await r.json();}catch(e){}return{status:r.status,j:j};}
 function rungChip(r){var c=r?('r-'+r):'r-null';return '<span class="rung '+c+'">'+esc(r||'not held')+'</span>';}
 
-function loginView(msg){
-  el('app').innerHTML='<div class="card"><label>Business email</label><input id="lg_email" placeholder="you@company.com">'
-    +'<div id="otpwrap" style="display:none"><label>OTP <span class="note">(dev 123456)</span></label><input id="lg_otp" placeholder="6-digit code"></div>'
-    +'<div class="row" style="margin-top:10px"><button class="pri" id="lg_btn" onclick="doLogin()">Send code</button></div>'
-    +(msg?'<div class="err">'+esc(msg)+'</div>':'')+'</div>';
-}
-async function doLogin(){
-  var email=((el('lg_email')||{}).value||'').trim();
-  if(_stage==='email'){ if(!email.includes('@'))return; await api('POST','/api/entities/register',{email:email}); _stage='otp'; el('otpwrap').style.display=''; el('lg_btn').textContent='Open'; return; }
-  var otp=((el('lg_otp')||{}).value||'').trim();
-  var v=await api('POST','/api/entities/verify',{email:email,otp:otp});
-  if(v.status===200&&v.j&&v.j.token){ TOK=v.j.token; shell(); load(); } else { loginView((v.j&&v.j.message)||'Login failed'); _stage='email'; }
-}
+/* H23/H24: ONE sign-in. The shell above holds the one sign-in window; a session that ended is dropped and the window shows again (CBFrame.ended) - no second e-mail code here. */
+function loginView(){ CBFrame.ended(); }
 function shell(){
   el('app').innerHTML='<div class="tabs">'
     +['yourself|Yourself','position|Position','risk|Risk','field|Field'].map(function(t){var k=t.split('|')[0],l=t.split('|')[1];return '<div class="tab'+(TAB===k?' on':'')+'" onclick="go(\''+k+'\')">'+l+'</div>';}).join('')
@@ -160,7 +159,8 @@ async function runField(){
 }
 
 if(window.CBOffline){CBOffline.configure({apiBase:API,token:function(){return TOK;},onChange:paintPill});CBOffline.registerSW();}
-loginView();
+var FRAME=CBFrame.mount({app:'kyb',work:document.querySelector('.wrap')}); TOK=FRAME.token;
+if(TOK){ shell(); load(); } else { el('app').innerHTML='<div class="card"><div class="empty">Sign in above to continue.</div></div>'; }
 </script>
 </body>
 </html>

@@ -49,8 +49,8 @@ function ensureEP() {
 
 /* ── the words, one place (copy budget: a label, a verb, a sentence) ── */
 var W = {
-  send: 'Send advice', again: 'Send again', sending: 'Sending…', share: 'Share', copy: 'Copy', wa: 'WhatsApp', mail: 'E-mail',
-  sent: 'Advice sent to {party} ✓', notSent: 'Advice not sent — Send again', shared: 'Advice shared ✓', copied: 'Copied — paste it to {party}',
+  send: 'Send advice', again: 'Send again', recordAgain: 'Save again', sending: 'Sending…', share: 'Share', copy: 'Copy', wa: 'WhatsApp', mail: 'E-mail',
+  sent: 'Advice sent to {party} ✓', notSent: 'Advice not sent — Send again', notRecorded: 'Advice sent to {party}, but not saved here yet — Save again', shared: 'Advice shared ✓', copied: 'Copied — paste it to {party}',
   reading: 'Reading…', readFail: 'Could not read the advice — try again',
 };
 var STATE_WORDS = { none: '', sent: '✉ advice sent', delivered: '✉ advice sent · delivered', shared: '↗ advice shared', disputed: '⚑ advice disputed' };
@@ -103,7 +103,7 @@ function paint(m) {
   var party = (a.party && a.party.name) || o.party || T('the other party');
   var send = may(m, 'send_advice'), share = may(m, 'share_advice'), st = stateWords(a.advice);
   var sendBtn = '<button type="button" class="ra-b pri' + (send.ok ? '' : ' off') + '" data-ra-act="send" data-testid="adv-send"' + (m.failed ? ' data-action-state="failed"' : '') + (send.ok ? '' : ' aria-disabled="true" title="' + esc(send.say || '') + '"') + '>'
-    + '✉ ' + esc(T(m.failed ? W.again : W.send)) + '</button>';
+    + '✉ ' + esc(T(m.failed ? (m.sentChit ? W.recordAgain : W.again) : W.send)) + '</button>';
   var links = share.ok && a.share
     ? '<button type="button" class="ra-b" data-ra-act="copy" data-testid="adv-copy">' + esc(T(W.copy)) + '</button>'
       + '<a class="ra-b" href="' + esc(a.share.wa) + '" target="_blank" rel="noopener" data-ra-act="shared" data-testid="adv-wa">' + esc(T(W.wa)) + '</a>'
@@ -142,15 +142,21 @@ function sendPress(m, btn) {
   if (!v.ok) { say(m, v.say || '', 'error'); return Promise.resolve({ ok: false }); }
   var party = (a.party && a.party.name) || m.o.party || T('the other party');
   return CBAction.run(btn, async function () {
-    var sent = await api('createChit', { body: a.body });
-    var chit_id = sent && (sent.chit_id || (sent.chit && sent.chit.chit_id));
-    if (!chit_id) throw new Error('no chit id');
+    /* M30-2: once the chit is SENT, a failed RECORD is retried with the SAME chit - never a second advice to the party */
+    var chit_id = m.sentChit;
+    if (!chit_id) {
+      var sent = await api('createChit', { body: a.body });
+      chit_id = sent && (sent.chit_id || (sent.chit && sent.chit.chit_id));
+      if (!chit_id) throw new Error('no chit id');
+      m.sentChit = chit_id;
+    }
     var r = await api('booksPayPatch', { params: { id: m.o.payment_id }, body: { advice_chit_id: chit_id } });
     return Object.assign({ chit_id: chit_id }, (r && r.advice) || { state: 'sent', shared_at: null });
   }, { key: 'adv:' + m.o.payment_id, busy: T(W.sending), out: out(m), failed: T(W.notSent),
     outcome: function (res) { m.failed = false; settle(m, { chit_id: res.chit_id, state: res.state || 'sent', shared_at: res.shared_at || null }, fill(T(W.sent), { party: party }), 'ok'); },
     onFail: function (words, e) {
       m.failed = true;
+      if (m.sentChit) words = fill(T(W.notRecorded), { party: party });   /* the advice WENT; only the record failed */
       /* a 4xx carries the server's own refusal (its words are for people); a 5xx / a network fault keeps the unit's sentence — never a server message */
       var d = e && e.data, w = e && e.status >= 400 && e.status < 500 && d && d.message ? d.message : words;
       if (d && d.why && m.a && m.a.may) m.a.may.send_advice = { ok: false, why: d.why, say: w };
