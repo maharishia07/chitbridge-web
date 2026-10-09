@@ -93,6 +93,52 @@ W.run('home', async (w) => {
     const vis = await page.evaluate(() => { const s = document.querySelector('.cbsh-sec.running'); if (!s) return null; const r = s.getBoundingClientRect(); return r.top < window.innerHeight && r.bottom > 0; });
     return { ok: vis !== false, saw: vis === null ? 'the section is its own page' : 'the Running section is on screen' };
   });
+  /* ROUND P: CB Commerce pillar boxes - the manifest places every entry in ONE box; Home draws them in order; no new read */
+  const PIL = ['marketing', 'sales', 'finance', 'accounting', 'operations', 'people', 'trade'];
+  await w.step('P1', 'Manifest -> every entry has a pillar, and the pillars are the nine known words', async () => {
+    const known = PIL.concat(['labs', 'setup']), bad = man.entries.filter((e) => known.indexOf(e.pillar) < 0).map((e) => e.id);
+    const need = ['marketing', 'finance', 'operations', 'people', 'trade'].filter((id) => { const e = man.entries.find((x) => x.id === id); return !e || e.state === 'built' && !e.route || !e.what && id !== 'trade'; });
+    return { ok: !bad.length && !need.length, saw: bad.length ? 'no/odd pillar: ' + bad.join() : need.length ? 'missing box: ' + need.join() : man.entries.length + ' entries, all placed; the coming boxes exist' };
+  });
+  const reqs = []; const onReq = (rq) => { const u = new URL(rq.url()); if (u.pathname.indexOf('/api/') === 0) reqs.push(u.pathname); };
+  page.on('request', onReq);
+  await page.setViewportSize({ width: 1366, height: 800 }); await home(); await page.waitForTimeout(800);
+  page.off('request', onReq);
+  await w.step('P2', 'Home -> CB Commerce: the seven pillar boxes in order (four, then three), each card once, the coming boxes show no figure', async () => {
+    const r = await page.evaluate(() => {
+      const ps = [...document.querySelectorAll('.cbsh-pil')].map((p) => p.dataset.pillar);
+      const ids = [...document.querySelectorAll('[data-testid^="shell-card-"],[data-testid^="shell-chip-"]')].map((e) => e.dataset.id || e.getAttribute('data-testid').replace(/^shell-(card|chip)-/, ''));
+      const comingFacts = ['marketing', 'finance', 'operations', 'people', 'trade'].map((id) => { const c = document.querySelector('[data-testid="shell-chip-' + id + '"]'); return c ? c.innerText.replace(/\s+/g, ' ').trim() : 'MISSING ' + id; });
+      const cap = (document.querySelector('.cbsh-sec.selling .cbsh-cap b') || {}).textContent;
+      const rows = ['selling', 'running'].map((a) => [...document.querySelectorAll('.cbsh-sec.' + a + ' .cbsh-pil')].map((p) => Math.round(p.getBoundingClientRect().top)).filter((v, i, x) => x.indexOf(v) === i).length);
+      return { ps, dup: ids.filter((v, i) => ids.indexOf(v) !== i), comingFacts, cap, rows };
+    });
+    const inOrder = r.ps.join() === PIL.join();
+    const noFig = r.comingFacts.every((s) => !/\d/.test(s));
+    return { ok: inOrder && !r.dup.length && noFig && r.cap === 'CB Commerce' && r.rows.join() === '1,1', saw: 'title ' + r.cap + ' | boxes ' + r.ps.join(' > ') + ' | repeated: ' + (r.dup.join() || 'none') + ' | rows ' + r.rows.join('+') + ' | coming boxes: ' + r.comingFacts.join(' / ') };
+  });
+  await w.step('P3', 'Home -> the pillar boxes add no read: every /api call is one the manifest or Home already makes', async () => {
+    const own = new Set(man.entries.filter((e) => e.state === 'built' && e.facts).map((e) => e.facts));
+    const known = new Set(['/api/facts/rail', '/api/books/health', '/api/entities/me', '/api/entities/header', '/api/crm/parties', '/api/crm/followups', '/api/entities/sides']);
+    const strange = [...new Set(reqs)].filter((p) => !own.has(p) && !known.has(p) && !/^\/api\/(notifications|events|sides|me|session|counters|catalogue|offers|network|messages|reference)/.test(p));
+    return { ok: !strange.length && !reqs.some((p) => /finance|marketing|people|operations/.test(p)), saw: reqs.length + ' calls (' + [...new Set(reqs)].join(', ') + ')' + (strange.length ? ' - NEW: ' + strange.join() : '') };
+  });
+  const PS = path.join(__dirname, 'shots', 'pillars'); fs.mkdirSync(PS, { recursive: true });
+  await w.step('P4', 'Home at 1366 and 390 -> the boxes fit the width (no sideways scroll), shots saved', async () => {
+    const out = [];
+    for (const [vw, vh] of [[1366, 800], [390, 844]]) {
+      await page.setViewportSize({ width: vw, height: vh }); await home(); await page.waitForTimeout(500);
+      if (vw === 390) { await page.click('[data-testid="shell-nav-selling"]').catch(() => {}); await page.waitForTimeout(500); }
+      const m = await page.evaluate(() => { const mn = document.querySelector('.cbsh-main'); return { over: mn.scrollWidth - mn.clientWidth, boxes: [...document.querySelectorAll('.cbsh-pil')].filter((p) => p.offsetParent).length }; });
+      await page.screenshot({ path: path.join(PS, 'home-' + vw + '.png') });
+      if (vw === 1366) { await page.evaluate(() => { const s = document.querySelector('.cbsh-main'); if (s) s.scrollTop = 0; }); await page.screenshot({ path: path.join(PS, 'home-' + vw + '-full.png'), fullPage: true }).catch(() => {}); }
+      if (vw === 390) { await page.click('[data-testid="shell-nav-running"]').catch(() => {}); await page.waitForTimeout(400); await page.screenshot({ path: path.join(PS, 'home-390-supporting.png') }); }
+      out.push(vw + ': overflow ' + m.over + ', ' + m.boxes + ' boxes in view');
+      if (m.over > 1) return { ok: false, saw: out.join(' | ') };
+    }
+    return { ok: true, saw: out.join(' | ') };
+  });
+  await page.setViewportSize({ width: 1366, height: 800 }); await home();
   await w.step('H30', 'Shop button -> the sheet opens, Esc closes it', async () => {
     await page.click('[data-testid="shell-shop"]'); const opened = await page.locator('[data-testid="shell-sheet"]').isVisible().catch(() => false);
     await page.keyboard.press('Escape'); await page.waitForTimeout(300);
