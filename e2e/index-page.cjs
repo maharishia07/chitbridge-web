@@ -246,6 +246,68 @@ async function run() {
       await ctx.close();
     }
 
+    /* ── 8 · THE ROADMAP: drawn from the manifest, for a stranger with NO session, and no per-shop figure in it ── */
+    {
+      const rmSrc = fs.readFileSync(path.join(PUB, 'app', 'roadmap.js'), 'utf8');
+      ok(!/app\.html/.test(rmSrc) && !/fetch\(|XMLHttpRequest|localStorage|cb_sess/.test(rmSrc), 'roadmap · static · the unit names no app.html and reads no session, no storage, no /api');
+      ok(man.entries.every((e) => !rmSrc.includes("'" + e.id + "'") || ['till', 'accounts', 'crm', 'trade', 'connectors'].includes(e.id)), 'roadmap · static · no entry is hand-written in the unit (only the places of the diagram name a row)');
+      ok(man.entries.every((e) => !e.rows || Array.isArray(e.rows)) && man.entries.every((e) => !e.phase || typeof e.phase === 'string') && man.entries.every((e) => !e.fits || (typeof e.fits === 'string' && e.fits.split(' ').length <= 16)), 'roadmap · manifest · rows is a list, phase and fits are short strings');
+      ok(/rows = /.test(man._) && /phase = /.test(man._) && /fits = /.test(man._), 'roadmap · manifest · the new keys (rows · phase · fits) are in the manifest\'s own dictionary');
+      const { ctx, seen } = await profile(1366, 800, { signedOut: true }), pg = await open(ctx);
+      ok(seen.length === 0, 'roadmap · signed out · not one /api call (' + seen.length + ')');
+      ok(await pg.locator('[data-testid="roadmap"]').count() === 1 && await vis(pg, '[data-testid="rm-going"] summary'), 'roadmap · signed out · it is on the page');
+      await pg.click('[data-testid="rm-going"] summary'); await pg.click('[data-testid="rm-fits"] summary'); await pg.click('[data-testid="rm-rail"] summary');
+      const items = await pg.$$eval('[data-testid^="rm-item-"]', (ls) => ls.map((l) => ({ id: l.dataset.testid.slice(8), st: l.dataset.state, chip: (l.querySelector('.rm-chip') || {}).textContent })));
+      ok(items.length === man.entries.length && man.entries.every((e) => items.some((i) => i.id === e.id && i.st === e.state)), 'roadmap · every item is a manifest row, with its state (' + items.length + ' of ' + man.entries.length + ')');
+      ok(items.every((i) => /(built|coming|workshop)$/.test(String(i.chip).trim()) && /^[✓◌⚒]/.test(String(i.chip).trim())), 'roadmap · every chip is a symbol and a word');
+      const groupsOk = await pg.$$eval('[data-testid^="rm-area-"]', (hs) => hs.map((h) => h.dataset.testid.slice(8)));
+      ok(['selling', 'running', 'labs', 'setup'].every((a) => groupsOk.includes(a)), 'roadmap · grouped by area (' + groupsOk.join(', ') + ')');
+      const sum = await pg.locator('[data-testid="rm-going"] summary').innerText();
+      ok(sum.includes(BUILT.length + ' built') && sum.includes(man.entries.filter((e) => e.state === 'coming').length + ' coming') && sum.includes(man.entries.filter((e) => e.state === 'workshop').length + ' in the workshop'), 'roadmap · the counts are the manifest\'s (' + sum.replace(/\s+/g, ' ') + ')');
+      let routesOk = true;
+      for (const e of BUILT) { const r = await ctx.request.get(base + e.route); if (r.status() !== 200) { routesOk = false; console.log('      ' + e.route + ' → ' + r.status()); } }
+      ok(routesOk, 'roadmap · every built item\'s route returns 200');
+      const pg2 = await ctx.newPage(); const first = BUILT[0];
+      const resp = await pg2.goto(base + first.route, { waitUntil: 'domcontentloaded' }).catch(() => null);
+      ok(resp && resp.status() === 200, 'roadmap · the first built route opens (' + first.route + ')');
+      await pg2.close();
+      ok(await pg.locator('[data-testid="roadmap"] a[href]').count() === 0, 'roadmap · it holds no link a not-built item could be opened by');
+      const fitN = await pg.$$eval('[data-testid^="rm-fit-"]', (ns) => ns.map((n) => ({ id: n.dataset.testid.slice(7), st: n.dataset.state })));
+      const byId = Object.fromEntries(man.entries.map((e) => [e.id, e.state]));
+      ok(fitN.some((n) => n.id === 'rail') && ['till', 'accounts', 'crm', 'trade', 'connectors', 'labs'].every((id) => fitN.some((n) => n.id === id)), 'roadmap · the fit diagram: the rail and its six places');
+      ok(['till', 'accounts', 'crm', 'trade', 'connectors'].every((id) => fitN.find((n) => n.id === id).st === byId[id]), 'roadmap · each place is coloured by its manifest state');
+      const labsSt = man.entries.filter((e) => e.area === 'labs'), nb = labsSt.filter((e) => e.state === 'built').length;
+      ok(fitN.find((n) => n.id === 'labs').st === (nb === labsSt.length ? 'built' : nb ? 'partly' : labsSt[0].state), 'roadmap · the Labs place follows its rows (' + nb + ' of ' + labsSt.length + ' built)');
+      const cells = await pg.$$eval('[data-testid="rm-compare"] td:not(:first-child)', (cs) => cs.map((c) => c.textContent.trim()));
+      ok(cells.length > 0 && cells.every((c) => /^(✓ yes|◐ partly|◌ planned|– no)$/.test(c)), 'roadmap · the comparison marks are symbol + word (' + cells.length + ' cells)');
+      const tradeRow = await pg.$$eval('[data-testid="rm-compare"] tr', (rs) => rs.filter((r) => /across borders/.test(r.textContent)).map((r) => r.children[1].textContent.trim()));
+      ok(byId.trade === 'built' || tradeRow[0] === '◌ planned', 'roadmap · "trade across borders" is planned while CB Trade is not built');
+      const txt = await pg.evaluate(() => document.querySelector('[data-testid="roadmap"]').innerText);
+      ok(!/\b(tier|accounting|books of account|error|404)\b/i.test(txt), 'roadmap · no forbidden word');
+      ok(!/\d+ (bills|customers|suppliers)|₹/.test(txt), 'roadmap · no per-shop figure (no bills, customers, rupees)');
+      ok((await offList(pg)).length === 0, 'roadmap · signed out · zero app.html hrefs outside the avatar');
+      await pg.screenshot({ path: path.join(SHOTS, 'index-roadmap.png'), fullPage: true });
+      await ctx.close();
+    }
+    {
+      const { ctx } = await profile(390, 844, { signedOut: true }), pg = await open(ctx);
+      for (const k of ['going', 'fits', 'rail']) await pg.click('[data-testid="rm-' + k + '"] summary');
+      const sw = await pg.evaluate(() => document.scrollingElement.scrollWidth);
+      ok(sw === 390, 'roadmap · 390 · all folds open, scrollWidth === 390 (' + sw + ')');
+      const inside = await pg.evaluate(() => { const r = document.querySelector('[data-testid="rm-fit"]').getBoundingClientRect(); return r.left >= 0 && Math.round(r.right) <= 390; });
+      ok(inside, 'roadmap · 390 · the diagram sits inside the screen');
+      ok((await offList(pg)).length === 0, 'roadmap · 390 · zero app.html hrefs outside the avatar');
+      await pg.screenshot({ path: path.join(SHOTS, 'index-roadmap-phone.png'), fullPage: true });
+      await ctx.close();
+    }
+    {
+      const { ctx } = await profile(1366, 800, { manifest: PLANTED }), pg = await open(ctx);
+      await pg.waitForSelector('[data-testid="rail"]', { timeout: 8000 }).catch(() => {});
+      ok(await pg.locator('[data-testid="roadmap"]').count() === 1 && await pg.locator('[data-testid="rail"]').count() === 1, 'roadmap · signed in · the rail widget and the roadmap sit together');
+      ok(await pg.locator('[data-testid^="rm-item-"]').count() === PLANTED.entries.length, 'roadmap · a planted manifest is drawn row for row (' + PLANTED.entries.length + ')');
+      await ctx.close();
+    }
+
     ok(...C.finish());
     const mine = errs.filter((m) => !/fonts|favicon/i.test(m));
     ok(mine.length === 0, 'no page error' + (mine.length ? ': ' + mine.slice(0, 3).join(' | ') : ''));
