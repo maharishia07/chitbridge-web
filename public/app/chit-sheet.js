@@ -130,7 +130,7 @@
   /* a line's own frozen total; an unbilled ORDER line that carries only price and quantity is shown as placed (price x quantity, rounded to the paisa) */
   function lineTotal(l, m) {
     var t = l.total != null ? l.total : (l.net != null ? l.net : (l.line_total != null ? l.line_total : l.amount));
-    if (t == null && m.purpose === 'order' && l.price != null && !isNaN(Number(l.price))) { var q = Number(l.quantity != null ? l.quantity : (l.qty != null ? l.qty : 1)); if (!isNaN(q)) t = Math.round(Number(l.price) * q * 100) / 100; }
+    if (t == null && m.purpose === 'order' && l.price != null && !isNaN(Number(l.price))) { var q = Number(l.quantity != null ? l.quantity : (l.qty != null ? l.qty : 1)); if (!isNaN(q) && root.CBMoney && root.CBMoney.round) t = root.CBMoney.round(Number(l.price) * q); }   /* the one money engine rounds; without it, no figure rather than a hand-rounded one */
     return t;
   }
   function linesHTML(m) {
