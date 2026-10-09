@@ -619,6 +619,19 @@ async function route(S, r) {
     const inRows = await o2.p.$$eval('[data-testid^="chits-row-"]', (r) => r.map((x) => x.getAttribute('data-testid')));
     ok(inRows.length === 2 && inRows.every((x) => /chits-row-(s1|i1)/.test(x)), 'chits · tab=in lists the chits that came in (' + inRows.join(' ') + ')');
     await o2.ctx.close();
+    /* stuck = 0 (round 2): a chit the shop sent to ITSELF (a counter sale not yet closed, a note to self) is listed under In, said as "your own shop", and is never stuck */
+    const selfItem = it('n1', 'in', false, null, { self: true, subject: 'Counter sale C1/26-27/0007', age_days: 20, who: null });
+    const rc2 = { overdue_days: 7, truncated: false, items: [railChits.items[0], selfItem] };
+    const o4 = await open(standIn({ railChits: rc2 }), { hash: '#/chits?tab=stuck' });
+    await o4.p.waitForSelector('[data-testid^="chits-row-"]', { timeout: 15000 }); await o4.p.waitForTimeout(150);
+    const st4 = await o4.p.$$eval('[data-testid^="chits-row-"]', (r) => r.map((x) => x.getAttribute('data-testid')));
+    ok(st4.length === 1 && st4[0] === 'chits-row-s1', 'chits · a chit sent to your own shop is not on the Stuck tab (' + st4.join(' ') + ')');
+    await o4.ctx.close();
+    const o5 = await open(standIn({ railChits: rc2 }), { hash: '#/chits?tab=in' });
+    await o5.p.waitForSelector('[data-testid^="chits-row-"]', { timeout: 15000 }); await o5.p.waitForTimeout(150);
+    const n1 = await o5.p.$eval('[data-testid="chits-row-n1"]', (x) => ({ text: x.textContent, tag: !!x.querySelector('[data-testid="chits-stuck-tag"]') }));
+    ok(/your own shop/.test(n1.text) && !n1.tag, 'chits · ...it is on the In tab as "your own shop", with no Stuck tag');
+    await o5.ctx.close();
     const o3 = await open(standIn({ railChits }), { hash: '#/chits' });
     await o3.p.waitForSelector('[data-testid^="chits-row-"]', { timeout: 15000 }); await o3.p.waitForTimeout(150);
     const all = await o3.p.$$eval('[data-testid^="chits-row-"]', (r) => r.map((x) => x.getAttribute('data-testid')));
