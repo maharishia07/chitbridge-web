@@ -36,7 +36,7 @@
     areas: { home: 'Home', selling: 'Selling', running: 'Running', labs: 'Labs', setup: 'Setup' },
     caption: { selling: 'CB Commerce', running: 'Running it', labs: 'Labs', setup: 'What it all stands on' },
     sub: { labs: 'Work the number out first. Nothing changes until you say so.', setup: 'Set once, rarely touched.' },
-    tag: { coming: 'later', workshop: 'workshop' },
+    tag: { coming: 'later', workshop: 'workshop', works: 'works today' },
     yourShop: 'Your shop', business: 'The business', licences: 'Licences', trade: 'Trade ready', finish: 'Finish the checks',
     renew: 'Renew', again: 'Apply again', notAdded: 'not added', registered: 'registered', notRegistered: 'not registered',
     days: ' days', years: ' years', expired: function (d) { return 'expired ' + d + 'd ago'; }, lapsed: 'lapsed',
@@ -363,7 +363,8 @@
         (e.what ? '<p class="what">' + esc(e.what) + '</p>' : '') + '<span class="facts" data-testid="shell-facts-' + esc(e.id) + '"></span></a>';
     }
     function chip(e) {
-      var st = e.state === 'workshop' ? 'workshop' : 'coming';
+      /* H14/P2-5: a workshop row whose function WORKS today (manifest `works`, the roadmap's rule) says so - never the word workshop */
+      var st = e.state === 'workshop' ? (e.works ? 'works' : 'workshop') : 'coming';
       /* H36: a workshop item with no page of its own may name the closest built page (`via`): the chip becomes a link there, still marked workshop */
       if (e.via) return '<a class="cbsh-sc" href="' + esc(e.via) + '" data-testid="shell-chip-' + esc(e.id) + '" data-state="' + st + '" data-via="1"' + (e.via_note ? ' title="' + esc(e.via_note) + '"' : '') + '><span class="g" aria-hidden="true">' + esc(e.icon) + '</span><b>' + esc(e.name) + '</b><span class="tag">' + esc(W.tag[st]) + '</span></a>';
       return '<span class="cbsh-sc" data-testid="shell-chip-' + esc(e.id) + '" data-state="' + st + '"><span class="g" aria-hidden="true">' + esc(e.icon) + '</span><b>' + esc(e.name) + '</b><span class="tag">' + esc(W.tag[st]) + '</span></span>';

@@ -117,7 +117,7 @@ const { standIn, route } = require('./lib/standin.cjs');
     const { ctx, p } = await open(standIn());
     await p.waitForSelector('[data-testid="kural-footer"]:not([hidden])');
     const got = {};
-    for (const [tab, route_] of [['daybook', 'daybook'], ['dues', 'sales'], ['pl', 'reports'], ['lock', 'month-lock'], ['gstclose', 'gst'], ['todo', 'accounts']]) {
+    for (const [tab, route_] of [['daybook', 'daybook'], ['receivables', 'sales'], ['pl', 'reports'], ['lock', 'month-lock'], ['gstclose', 'gst'], ['todo', 'accounts']]) {
       await p.click('[data-testid="acc-nav-' + tab + '"]'); await p.waitForTimeout(500);
       const v = await view(p); got[tab] = v && !v.hidden ? v.no : 'none';
       /* a view with a warning on screen (the Day book's "Walk-ins not closed yet" is not in this stand-in) is the next test; here none is */

@@ -51,7 +51,7 @@
   var CSS = [
     '.cbl{--cl-page:var(--page,var(--paper,#FCFAF5));--cl-card:var(--card,#FFFFFF);--cl-panel:var(--panel,#F3EFE6);--cl-line:var(--line,#DDD6C6);--cl-soft:var(--line-soft,#E6E0D2);--cl-hair:var(--hair,#F0ECE2);',
     '--cl-ink:var(--ink,#1D1B16);--cl-muted:var(--muted,#5E594D);--cl-faint:var(--faint,#8A8374);--cl-ghost:var(--ghost,#A8A295);',
-    '--cl-zebra:var(--zebra,color-mix(in srgb,var(--cl-ink) 4%,var(--cl-card)));--cl-hov:color-mix(in srgb,var(--cl-blue) 8%,var(--cl-card));',
+    '--cl-gband:color-mix(in srgb,var(--cl-blue) 13%,var(--cl-page));--cl-zebra:var(--zebra,color-mix(in srgb,var(--cl-ink) 9%,var(--cl-card)));--cl-hov:color-mix(in srgb,var(--cl-blue) 8%,var(--cl-card));',
     '--cl-green:var(--green,#16693F);--cl-amber-t:var(--amber-t,#FDF3DC);--cl-amber-b:var(--amber-b,#EFD39A);--cl-amber-i:var(--amber-i,#7A5205);',
     '--cl-red-t:var(--red-t,#FBEAE3);--cl-red-b:var(--red-b,#E7B9A8);--cl-red-i:var(--red-i,#8E3517);',
     '--cl-blue:var(--blue,#2F74C9);--cl-blue-t:var(--blue-t,#E4EEFA);--cl-blue-b:var(--blue-b,#B9D2EF);--cl-blue-i:var(--blue-i,#174A87);',
@@ -159,8 +159,9 @@
     '.cbl .cbl-open>.cbl-cell>.cbl-tw,.cbl .cbl-open .cbl-tw{transform:rotate(90deg)}',
     '.cbl .cbl-link{color:var(--cl-blue);text-decoration:underline;text-underline-offset:2px;font-family:var(--cl-num);font-size:calc(13.5px * var(--k,1))}',
     '.cbl .cbl-dim{color:var(--cl-faint)}',
-    '.cbl .cbl-group{position:sticky;top:var(--cl-hdr-h,35px);z-index:3;display:flex;flex-wrap:wrap;gap:2px 8px;align-items:baseline;padding:7px 12px;background:var(--cl-page);border-bottom:1px solid var(--cl-line);font-size:calc(13.5px * var(--k,1))}',
-    '.cbl .cbl-group b{font-weight:700}.cbl .cbl-group .fig{font-family:var(--cl-num);font-size:calc(13px * var(--k,1));color:var(--cl-muted)}',
+    '.cbl .cbl-group{position:sticky;top:var(--cl-hdr-h,35px);z-index:3;display:flex;flex-wrap:wrap;gap:2px 8px;align-items:baseline;padding:6px 12px;background:var(--cl-gband);color:var(--cl-ink);border-top:1px solid var(--cl-line);border-bottom:1px solid var(--cl-line);border-inline-start:4px solid var(--cl-blue);font-size:calc(12px * var(--k,1));text-transform:uppercase;letter-spacing:.04em}',
+    '.cbl .cbl-row.ing>:first-child{padding-inline-start:28px}.cbl .cbl-lrec.ing{padding-inline-start:28px}',
+    '.cbl .cbl-group b{font-weight:700}.cbl .cbl-group .fig{font-family:var(--cl-num);font-size:calc(12px * var(--k,1));color:var(--cl-ink);text-transform:none;letter-spacing:0}',
     '.cbl .cbl-next{background:var(--cl-page);border-bottom:1px solid var(--cl-soft);padding:6px 12px 10px 38px;cursor:default;overflow-wrap:break-word;word-break:normal}',
     '.cbl .cbl-next .gist{color:var(--cl-muted);font-size:calc(13px * var(--k,1));margin-bottom:6px}',
     /* ☰ lines */
@@ -635,7 +636,7 @@
   }
   function rowHTML(I, it, cols, tpl, zb) {
     var row = it.row, id = it.id, R = I.r, nx = hasNext(I), open = nx && isOpen(I, id), o = I.o;
-    var cls = (o.rowClass ? safe(function () { return o.rowClass(row); }, '') : '') + (R.hl === id && o.hl !== false ? ' sel' : '') + (zb ? ' z' : '');
+    var cls = (o.rowClass ? safe(function () { return o.rowClass(row); }, '') : '') + (R.hl === id && o.hl !== false ? ' sel' : '') + (zb ? ' z' : '') + (it.g != null ? ' ing' : '');
     var cells = cols.map(function (c, i) {
       var amt = c.pin === 'end';
       return '<div class="cbl-cell lcell' + (i === 0 ? ' first' : '') + (amt ? ' r mono strong amt' : '') + (c.num && !amt ? ' r mono' : '') + (c.mono ? ' mono' : '') + '" data-l="' + esc(i === 0 ? '' : (c.label || '')) + '" role="gridcell"'
@@ -653,7 +654,7 @@
   }
   function lineHTML(I, it, cols, zb) {
     var row = it.row, id = it.id, nx = hasNext(I), open = nx && isOpen(I, id), o = I.o, pin = cols.filter(function (c) { return c.pin === 'end'; })[0];
-    var cls = (o.rowClass ? safe(function () { return o.rowClass(row); }, '') : '') + (I.r.hl === id && o.hl !== false ? ' sel' : '') + (zb ? ' z' : '');
+    var cls = (o.rowClass ? safe(function () { return o.rowClass(row); }, '') : '') + (I.r.hl === id && o.hl !== false ? ' sel' : '') + (zb ? ' z' : '') + (it.g != null ? ' ing' : '');
     var flow = cols.filter(function (c) { return c.pin !== 'end'; }).map(function (c) {
       var v = cellOf(I, c, row), t = plain(v);
       if (!t || t === '—') return '';

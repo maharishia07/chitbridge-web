@@ -57,6 +57,62 @@ const PAGES = [
         await ctx.close();
       }
     }
+    /* ── K4 · Know your business lists what applies to THIS business first; the rest is folded under "Other certificates" ── */
+    {
+      const mk = (title, applies, held) => ({ standard: title.toLowerCase().replace(/\W+/g, '-'), doc: 'd', title, rung: held ? 'declared' : null, held: !!held, applies, valid_until: null, expiring: false, expired: false, days_left: null });
+      const creds = [mk('FSSAI licence', true, false), mk('GST registration', true, true), mk('HACCP plan', true, false), mk('UN 38.3 battery test', false, false), mk('RoHS', false, false), mk('US FDA registration', false, false), mk('GOTS', false, false)];
+      for (const w of [1366, 390]) {
+        const ctx = await b.newContext({ viewport: { width: w, height: 900 }, serviceWorkers: 'block' });
+        await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
+        await ctx.route('**/api/**', (r) => { const u = new URL(r.request().url()); if (u.pathname === '/api/kyb/yourself') return J(r, 200, { facts: { credentials: creds, summary: { held: 1, verified: 0, documented: 0, declared: 1 } }, note: '' }); return J(r, 404, { error: 'nf' }); });
+        await ctx.addInitScript(([s]) => { try { localStorage.setItem('cb_api_base', location.origin); localStorage.setItem('cb_sess', s); } catch (_) {} }, [SESSION]);
+        const p = await ctx.newPage(), errs = [];
+        p.on('pageerror', (e) => errs.push(String(e.message)));
+        await p.goto(web.url('/know-your-business.html?api=' + encodeURIComponent(web.url('')))); await p.waitForSelector('.cred', { timeout: 10000 });
+        const mine = await p.$$eval('.card > .cred', (e) => e.map((x) => x.querySelector('.nm').textContent)), other = await p.$$eval('[data-testid="kyb-other"] .cred', (e) => e.map((x) => x.querySelector('.nm').textContent));
+        ok(mine.join() === 'FSSAI licence,GST registration,HACCP plan', 'kyb @' + w + ' · K4 · what applies to this business is listed first (' + mine.join(', ') + ')');
+        ok(other.length === 4 && await p.locator('[data-testid="kyb-other"]').evaluate((d) => !d.open) && /Other certificates \(4\)/.test(await p.locator('[data-testid="kyb-other"] summary').textContent()), 'kyb @' + w + ' · K4 · the other four are folded under "Other certificates (4)"');
+        await p.click('[data-testid="kyb-other"] summary'); await p.waitForTimeout(150);
+        ok(await p.locator('[data-testid="kyb-other"] .cred').first().isVisible(), 'kyb @' + w + ' · K4 · opening the fold shows them');
+        for (const tab of ['Position', 'Risk', 'Field', 'Yourself']) { await p.click('.tab:has-text("' + tab + '")').catch(() => {}); await p.waitForTimeout(150); }
+        ok(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'kyb @' + w + ' · K4 · no sideways scroll (every tab visited)');
+        if (w === 1366) { await p.click('.tab:has-text("Yourself")'); await p.waitForSelector('.cred'); await p.click('[data-testid="kyb-other"] summary').catch(() => {}); }
+        ok(errs.length === 0, 'kyb @' + w + ' · K4 · no script errors' + (errs.length ? ' — ' + errs[0] : ''));
+        await ctx.close();
+      }
+    }
+    /* ── K3 · Documents: "Draw from an order" is a PICK from the shop's own recent orders, not a typed chit id ── */
+    {
+      const orders = (k) => k === 'inbox' ? [{ chit_id: 'ch-in-1', purpose: 'order', auto_subject: 'Order from athi', sender_entity_display_name: 'athi', summary_json: { total_value: 90, currency_code: 'INR' }, created_at: '2026-10-09T08:00:00Z' }, { chit_id: 'ch-msg', purpose: 'general', auto_subject: 'Hello', created_at: '2026-10-08T08:00:00Z' }]
+        : [{ chit_id: 'ch-out-1', purpose: 'order', manual_subject: 'PO 14', all_recipients: [{ display_name: 'Mayur Bhavan' }, { display_name: 'Agro Mills' }], summary_json: { total_value: 5000, currency_code: 'INR' }, created_at: '2026-10-07T08:00:00Z' }];
+      for (const w of [1366, 390]) {
+        const posted = [];
+        const ctx = await b.newContext({ viewport: { width: w, height: 900 }, serviceWorkers: 'block' });
+        await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
+        await ctx.route('**/api/**', (r) => {
+          const u = new URL(r.request().url()), m = r.request().method();
+          if (u.pathname === '/api/forms') return J(r, 200, { forms: [{ key: 'gst1', title: 'GST declaration', authority: 'GST', field_count: 2 }] });
+          if (/^\/api\/chits\/(inbox|sent)$/.test(u.pathname)) return J(r, 200, { chits: orders(u.pathname.split('/').pop()), total: 2 });
+          if (u.pathname === '/api/forms/gst1/resolve' && m === 'POST') { try { posted.push(r.request().postDataJSON()); } catch (_) {} return J(r, 200, { title: 'GST declaration', authority: 'GST', ready: true, fields: [{ id: 'buyer', label: 'Buyer', required: true, value: 'athi', source: 'order', rung: 'documented' }], provenance: {}, completeness: { pct: 100 } }); }
+          return J(r, 404, { error: 'nf' });
+        });
+        await ctx.addInitScript(([s]) => { try { localStorage.setItem('cb_api_base', location.origin); localStorage.setItem('cb_sess', s); } catch (_) {} }, [SESSION]);
+        const p = await ctx.newPage(), errs = [];
+        p.on('pageerror', (e) => errs.push(String(e.message)));
+        await p.goto(web.url('/authority-forms.html?api=' + encodeURIComponent(web.url('')))); await p.waitForSelector('.formcard', { timeout: 10000 }); await p.waitForTimeout(500);
+        const kind = await p.evaluate(() => { const e = document.getElementById('ctx'); return e ? e.tagName : ''; });
+        const opts = await p.$$eval('#ctx option', (o) => o.map((x) => x.textContent.trim()));
+        ok(kind === 'SELECT' && !/chit ID|chit id/i.test(await p.locator('#app').innerText()), 'documents @' + w + ' · K3 · "Draw from an order" is a pick list, not a typed chit id');
+        ok(opts.length === 3 && /Order from athi.*athi.*90/.test(opts[1]) && /PO 14.*Agro Mills/.test(opts[2]) && !opts.some((x) => /Hello/.test(x)), 'documents @' + w + ' · K3 · it lists the shop\'s own recent orders, newest first, with who and how much (' + opts.join(' | ') + ')');
+        await p.click('.formcard'); await p.waitForSelector('#work .fld', { timeout: 8000 });
+        await p.selectOption('#ctx', 'ch-in-1'); await p.waitForTimeout(500);
+        ok(posted.some((x) => x && x.context_ref === 'ch-in-1'), 'documents @' + w + ' · K3 · picking an order fills the form from it (context_ref sent)');
+        ok(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'documents @' + w + ' · K3 · no sideways scroll');
+        await p.screenshot({ path: path.join(ROOT, 'e2e', 'shots', 'small-fixes', 'documents-order-picker-' + w + '.png') }).catch(() => {});
+        ok(errs.length === 0, 'documents @' + w + ' · K3 · no script errors' + (errs.length ? ' — ' + errs[0] : ''));
+        await ctx.close();
+      }
+    }
   } finally { await b.close(); web.srv.close(); }
   console.log('\n  page-frame: ' + out.pass + ' passed, ' + out.fail + ' failed');
   process.exit(out.fail ? 1 : 0);

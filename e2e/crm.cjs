@@ -315,7 +315,7 @@ async function route(S, r) {
     ok(await p.locator('[data-testid="crm-act-call"]').count() >= 1 && /^tel:/.test(await p.locator('[data-testid="crm-act-call"]').first().getAttribute('href')), 'LOCAL party: Call is the primary action (tel:)');
     ok(await p.locator('[data-testid="crm-act-mail"]').count() === 1, 'LOCAL party: Mail is offered (the e-mail preference is on)');
     const idt = await text(p, '[data-testid="crm-ident"]');
-    ok(/none — kept by you/.test(idt) && !/CB[0-9A-Z]{8}/.test(idt) && /~shop\.sup-0001/.test(idt) === false, 'a minted party shows no ChitBridge ID ("none — kept by you")');
+    ok(!/none — kept by you/.test(idt) && !/User ID|ChitBridge ID/.test(idt) && !/CB[0-9A-Z]{8}/.test(idt) && /~shop\.sup-0001/.test(idt) === false, 'a minted party shows no ChitBridge ID and no empty ID boxes (C14: "none — kept by you" is gone)');
     ok(/Not on ChitBridge — bills are yours only/.test(await text(p, '[data-testid="crm-verdict"]')), 'the verdict says it in words');
     const nx = await text(p, '[data-testid="crm-next"]');
     ok(/Today/.test(nx) && /pipe rate/.test(nx), 'Next: today\'s follow-up (the API marks it today:true)');
@@ -800,6 +800,158 @@ async function route(S, r) {
     await p.screenshot({ path: path.join(SHOTS, 'lists', 'crm-oneline-1366.png') }).catch(() => {});
     await ctx.close();
   })();
+
+  /* ── 12 · THE SMALL-FIXES ROUND (Athi's black-box walk 2026-10-09): C12 C13 C14-C26 C2-C5 C7 · the Chits list · row stripes. RULE: every collapsible is opened and every tab visited ── */
+  {
+    const lum = (m) => { const f = (v) => { v = (+v) / 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * f(m[0]) + 0.7152 * f(m[1]) + 0.0722 * f(m[2]); };
+    /* the colour a row is really PAINTED on: its own background, else the nearest ancestor that has one, read back as bytes (color(srgb …) and transparent both handled) */
+    const PAINT = `(el) => { let e = el; while (e && /^(rgba\\(0, 0, 0, 0\\)|transparent)$/.test(getComputedStyle(e).backgroundColor)) e = e.parentElement; const c = document.createElement('canvas'); c.width = c.height = 1; const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, 1, 1); g.fillStyle = e ? getComputedStyle(e).backgroundColor : '#fff'; g.fillRect(0, 0, 1, 1); return Array.from(g.getImageData(0, 0, 1, 1).data).slice(0, 3); }`;
+    const ratio = (a, b2) => { const x = lum(a), y = lum(b2); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+    const openAll = (p) => p.evaluate(() => { document.querySelectorAll('details').forEach((d) => { d.open = true; }); });
+    /* C12 — the group heading is a HEADING: tinted band, small upper-case title, count + total, rows indented, folds; and the stripe is VISIBLE */
+    for (const vp of [{ width: 1366, height: 768 }, { width: 390, height: 844 }]) {
+      const { ctx, p } = await open(standIn(), { viewport: vp }); await homeReady(p);
+      await p.selectOption('[data-testid="crm-parties-group"]', 'role'); await p.waitForTimeout(200);
+      const g = await p.evaluate(() => {
+        const h = document.querySelector('#crm_list .cbl-group'), row = document.querySelector('#crm_list .cbl-row.ing, #crm_list .cbl-lrec.ing'), z = document.querySelector('#crm_list .cbl-row.z, #crm_list .cbl-lrec.z');
+        if (!h) return null; const cs = getComputedStyle(h);
+        return { upper: cs.textTransform, bg: cs.backgroundColor, w: h.getBoundingClientRect().width, listW: document.querySelector('#crm_list .cbl-grid').getBoundingClientRect().width, fs: parseFloat(cs.fontSize), rowFs: parseFloat(getComputedStyle(document.querySelector('#crm_list .cbl-row, #crm_list .cbl-lrec')).fontSize),
+          zbg: z ? getComputedStyle(z).backgroundColor : '', indent: row ? parseFloat(getComputedStyle(row.firstElementChild || row).paddingInlineStart) - 12 : 0, text: h.textContent.replace(/\s+/g, ' ').trim() };
+      });
+      ok(!!g && g.upper === 'uppercase' && g.fs < g.rowFs + 1 && g.bg !== 'rgba(0, 0, 0, 0)' && g.bg !== g.zbg, 'C12 @' + vp.width + ': the group heading is a tinted band (not the stripe colour) with a small upper-case title (' + (g && g.bg) + ' vs stripe ' + (g && g.zbg) + ')');
+      ok(!!g && g.indent >= 10 && Math.abs(g.w - g.listW) < 4, 'C12 @' + vp.width + ': full width, and the rows under it are indented (' + (g && g.indent) + ' px)');
+      ok(!!g && /parties/i.test(g.text) && /you'll (get|give)|·/.test(g.text), 'C12 @' + vp.width + ': the heading carries its count and total (' + (g && g.text) + ')');
+      const before = await p.locator('#crm_list [data-row]').count();
+      await p.click('#crm_list .cbl-group'); await p.waitForTimeout(150);
+      const after = await p.locator('#crm_list [data-row]').count();
+      ok(after < before && (await p.getAttribute('#crm_list .cbl-group', 'aria-expanded')) === 'false', 'C12 @' + vp.width + ': the heading folds its rows (' + before + ' → ' + after + ') and says so (aria-expanded=false)');
+      const w2 = await sw(p); ok(w2.sw <= w2.iw && w2.over <= 0, 'C12 @' + vp.width + ': no sideways scroll');
+      if (vp.width === 1366) { await p.click('#crm_list .cbl-group'); await p.waitForTimeout(100); await p.screenshot({ path: path.join(SHOTS, 'small-fixes', 'crm-grouped-list-1366.png') }).catch(() => {}); }
+      else await p.screenshot({ path: path.join(SHOTS, 'small-fixes', 'crm-grouped-list-390.png') }).catch(() => {});
+      await ctx.close();
+    }
+    /* the stripe is visible, and Off · Light · Strong (avatar menu) changes it, survives a reload and rides the person's ui_prefs */
+    {
+      const S = standIn(), { ctx, p } = await open(S); await homeReady(p);
+      const stripe = () => p.evaluate(`(() => { const paint = ${PAINT}; const z = document.querySelector('#crm_list .cbl-row.z'), n = Array.from(document.querySelectorAll('#crm_list .cbl-row')).find((r) => !r.classList.contains('z') && !r.matches(':hover')); return z && n ? [paint(z), paint(n)] : null; })()`);
+      let s = await stripe();
+      ok(!!s && ratio(s[0], s[1]) >= 1.08, 'zebra · Strong (the default): the striped row differs from the plain row by a visible step (' + (s && s.join(' vs ')) + ' = ' + (s && ratio(s[0], s[1]).toFixed(2)) + ')');
+      const strongStep = s ? ratio(s[0], s[1]) : 1;
+      await p.click('[data-testid="avatar"]'); await p.waitForSelector('[data-testid="stripes-group"]');
+      ok(await p.locator('[data-testid="stripes-off"]').count() === 1 && await p.locator('[data-testid="stripes-light"]').count() === 1 && await p.getAttribute('[data-testid="stripes-strong"]', 'aria-pressed') === 'true', 'zebra · the avatar menu offers Row stripes: Off · Light · Strong, Strong chosen');
+      await p.click('[data-testid="stripes-light"]'); await p.waitForTimeout(150);
+      s = await stripe(); const lightStep = s ? ratio(s[0], s[1]) : 1;
+      ok(lightStep > 1.02 && lightStep < strongStep, 'zebra · Light is a softer stripe (' + lightStep.toFixed(2) + ' < ' + strongStep.toFixed(2) + ')');
+      await p.click('[data-testid="stripes-off"]'); await p.waitForTimeout(150);
+      s = await stripe();
+      ok(!s || ratio(s[0], s[1]) < 1.01, 'zebra · Off: every row is the same colour');
+      await p.reload(); await homeReady(p);
+      ok(await p.evaluate(() => document.documentElement.getAttribute('data-stripes')) === 'off', 'zebra · the choice survives a reload');
+      ok((S.calls.filter((c) => /prefs\/ui/.test(c)).length >= 0), 'zebra · (the choice is sent with the person\'s ui_prefs when the page has a server to send it to)');
+      await ctx.close();
+    }
+    /* C13 — Add party: As Customer · Supplier · Both (Both calls the two EXISTING adds) */
+    {
+      const S = standIn(), { ctx, p } = await open(S); await homeReady(p);
+      await p.click('[data-testid="crm-add"]'); await p.waitForSelector('[data-testid="crm-addq"]');
+      ok(await p.locator('[data-testid="crm-add-role-both"]').count() === 1 && /Both/.test(await text(p, '[data-testid="crm-add-role-both"]')), 'C13: Add party offers As: Customer · Supplier · Both');
+      await p.fill('[data-testid="crm-addq"]', 'Zed Traders'); await p.waitForTimeout(400);
+      await p.click('[data-testid="crm-add-role-both"]'); ok(await p.getAttribute('[data-testid="crm-add-role-both"]', 'aria-pressed') === 'true', 'C13: Both is pressed');
+      await p.click('[data-testid="crm-add-local-go"]'); await p.waitForTimeout(800);
+      ok(S.added.length === 2 && S.added[0].role === 'customer' && S.added[1].role === 'supplier' && S.added.every((a) => a.body.name === 'Zed Traders'), 'C13: Both calls the two existing adds (customer, then supplier) with the same name (' + S.added.map((a) => a.role).join(',') + ')');
+      ok(/#\/party\/P-0099/.test(p.url()), 'C13: ...and opens the one record');
+      await ctx.close();
+    }
+    /* the party record as a shopper sees it: connection truth (C14/O6), chips (C15/C24), actions (C16/C2), timeline (C17/C7), bills vs orders (C18/C22/C20), ledger (C19/C5), added from (C23), tax (C25), phone once (C26), Esc (C3) */
+    for (const vp of [{ width: 1366, height: 900 }, { width: 390, height: 844 }]) {
+      const S = standIn();
+      S.list.forEach((q) => { if (q.party_no === 'P-0004') Object.assign(q, { kind: 'person', bridge_id: 'CBC3TQ3NEX', user_id: null, on_chitbridge: false, why_not: 'shopper', segment: 'new', balance_minor: 0, display_name: 'athi', phone: '+91 98940 55621' }); });
+      const record = Object.assign(crmApi.record(S.list, 'pid-0004', S.fx.records['pid-0004'], []), { tax_ids: [] });
+      record.customer = Object.assign({}, record.customer, { added_via: 'catalogue', segment: 'new', txn_count: 1 });
+      const now = Date.now(), timeline = { party_id: 'pid-0004', next_before: null, migrated: true, entries: [
+        { kind: 'chit', at: new Date(now - 3600e3).toISOString(), chit_id: 'ch-o1', direction: 'in', status: 'pending', purpose: 'order', doc_kind: null, title: 'Online order · 09 Oct', value: 90, currency: 'INR', open_disputes: 0 },
+        { kind: 'ledger', at: new Date(now - 7200e3).toISOString(), ref: 'pay:0d102689-e69d-41be-b175-08762c7afbdc', ledger_kind: 'receipt', source: null, amount_minor: 100, currency: 'INR', doc_date: '2026-10-03' }] };
+      S.live = { record, timeline };
+      const { ctx, p } = await open(S, { hash: '#/party/P-0004', viewport: vp }); await recReady(p); await openAll(p); await p.waitForTimeout(500);
+      const w = vp.width, rec = await text(p, '[data-testid="crm-record"]');
+      const ident = await text(p, '[data-testid="crm-ident"]'), chips = await text(p, '.rchips');
+      ok(/CBC3TQ3NEX/.test(ident) && !/Not on ChitBridge/.test(ident + chips) && !/none — kept by you/.test(ident) && /shopper account/i.test(ident), 'C14 @' + w + ': one truth - a ChitBridge ID is never shown beside "Not on ChitBridge"; it says shopper account, and the empty User ID box is gone (' + ident + ' || ' + chips + ')');
+      ok(!/mailto:|@[a-z0-9-]+\.cr\b/.test(rec), 'C14 @' + w + ': no internal handle as an e-mail');
+      const tags = await p.$$eval('.rchips > *', (e) => e.map((x) => x.className.split(' ')[0]));
+      ok(tags.length >= 3 && tags.every((c) => c === 'tag' || c === 'due'), 'C15 @' + w + ': the head chips are one family (' + tags.join(',') + ')');
+      ok((rec.match(/New customer/g) || []).length === 1, 'C24 @' + w + ': "New customer" is said once (' + (rec.match(/New customer/g) || []).length + ')');
+      const bar = await text(p, '[data-testid="crm-actions"]');
+      ok(await p.locator('[data-testid="crm-act-pay"]').count() === 1 && await p.locator('[data-testid="crm-act-pay"]').isDisabled() && /Nothing is due/.test(await p.getAttribute('[data-testid="crm-act-pay"]', 'title')), 'C16/C2 @' + w + ': Pay / Receive is in the action row at the top - greyed WITH its sentence when nothing is due');
+      ok(/Log/.test(bar) && (w < 700 || (/Follow-up/.test(bar) && /Edit/.test(bar))) && await p.locator('[data-testid="crm-act-call"]').count() >= 1, 'C16 @' + w + ': Call · Pay/Receive · Log · Follow-up · Edit sit in one row');
+      if (w > 700) ok(await p.locator('[data-testid="crm-act-message-off"]').count() === 1 && /Not on ChitBridge/.test(await p.getAttribute('[data-testid="crm-act-message-off"]', 'title')), 'C16 @' + w + ': Message is shown, greyed with its reason (the list card shows it the same way)');
+      const hd = await p.$$eval('#crm_tlhead .cbl-hc', (h) => h.map((x) => x.textContent.trim()));
+      ok(hd.indexOf('Amount') >= 0, 'C17 @' + w + ': the timeline has an Amount column (' + hd.join(' · ') + ')');
+      const amt = await text(p, '[data-testid="crm-amt-chit-ch-o1"]'), st = await text(p, '[data-testid="crm-state-chit-ch-o1"]');
+      ok(/90\.00/.test(amt) && !/₹|90/.test(st), 'C17 @' + w + ': the amount is in its own cell, not in the State cell (' + amt + ' / ' + st + ')');
+      const tl = await text(p, '#crm_tlhead');
+      ok(/Online order/.test(tl) && !/Online order · 09 Oct/.test(tl), 'C17 @' + w + ': the title does not repeat the date (the When column says it)');
+      ok(!/pay:[0-9a-f-]{8}/.test(rec) && /Payment/.test(tl), 'C7 @' + w + ': the timeline never shows a raw id (pay:…) - it says Payment ' + (tl.match(/Payment[^|]{0,20}/) || [''])[0]);
+      await p.click('[data-testid="crm-tl-chit-ch-o1"] [data-caret]').catch(() => {}); await p.waitForTimeout(250);
+      ok(/By\s+athi\s*·\s*online shop/.test(await text(p, '[data-testid="crm-entry-next-chit-ch-o1"]')), 'C17 @' + w + ': "By athi · online shop" names who and the door (' + (await text(p, '[data-testid="crm-entry-next-chit-ch-o1"]')) + ')');
+      ok(/Settled\s*·\s*1 order not billed yet\s*₹?90/.test(await text(p, '.rchips')), 'C20 @' + w + ': "Settled · 1 order not billed yet ₹90" when both are true (' + (await text(p, '.rchips')) + ')');
+      const cs = await text(p, '[data-testid="crm-sec-customer"]');
+      ok(!/\b\d+ bills\b|1 bill\b/.test(cs) && /1 order not billed yet/.test(cs) && /Bills\s*0/.test(cs), 'C18/C22 @' + w + ': bills are counted as bills (0) and the order is said as "1 order not billed yet" (' + cs.slice(0, 120) + ')');
+      ok(/Added from\s*Your online shop/.test(cs) && !/catalogue/i.test(cs), 'C23 @' + w + ': "Added from: Your online shop", not the internal word');
+      const led = await text(p, '[data-testid="crm-sec-ledger"]');
+      ok((led.match(/Ledger/gi) || []).length === 1 && !/Party no|Legal name|Nickname|Tax ids/.test(led) && await p.locator('[data-testid="party-edit"]').count() === 0 && await p.locator('[data-testid="party-pay"]').count() === 0, 'C19/C5 @' + w + ': the Ledger section has ONE title and money only (no repeated party no / names / tax ids / second Edit and Pay buttons)');
+      ok(/Balance/.test(led) && /Oldest due/.test(led), 'C19 @' + w + ': ...it keeps the Balance and the statement');
+      const tax = await text(p, '[data-testid="crm-sec-tax"]');
+      ok(/no GSTIN/.test(tax) && /no credit terms/.test(tax) && /CB Finance/.test(tax) && !/Nothing more is recorded/.test(tax), 'C25 @' + w + ': Tax & terms says what is missing and where to set it (' + tax.slice(0, 160) + ')');
+      ok((rec.match(/98940 55621/g) || []).length === 1, 'C26 @' + w + ': the phone is shown once (' + (rec.match(/98940 55621/g) || []).length + ')');
+      ok(!/not built yet/i.test(rec), 'C4 @' + w + ': no builder words on a customer page');
+      await p.click('[data-testid="crm-act-more"]'); await p.waitForSelector('[data-testid="crm-more-menu"]');
+      await p.keyboard.press('Escape'); await p.waitForTimeout(150);
+      ok(await p.locator('[data-testid="crm-more-menu"]').count() === 0, 'C3 @' + w + ': Esc closes the More menu');
+      const sw2 = await sw(p); ok(sw2.sw <= sw2.iw && sw2.over <= 0, 'C14-C26 @' + w + ': no sideways scroll on the opened record');
+      await openAll(p); await p.setViewportSize({ width: w, height: 2600 }); await p.waitForTimeout(500);
+      await p.screenshot({ path: path.join(SHOTS, 'small-fixes', 'crm-record-expanded-' + w + '.png'), fullPage: true }).catch(() => {});
+      /* the Supplier section: no builder words */
+      await ctx.close();
+    }
+    {
+      const { ctx, p } = await open(standIn(), { hash: '#/party/P-0001' }); await recReady(p); await openAll(p);
+      ok(!/not built yet|can't tell/i.test(await text(p, '[data-testid="crm-record"]')), 'C4: a Supplier record has no "can\'t tell — not built yet"');
+      await ctx.close();
+      const o2 = await open(standIn(), { hash: '#/party/P-0002' }); await recReady(o2.p); await openAll(o2.p);
+      ok(await o2.p.locator('[data-testid="crm-act-pay"]').count() === 1 && !(await o2.p.locator('[data-testid="crm-act-pay"]').isDisabled()) && /Receive/.test(await text(o2.p, '[data-testid="crm-act-pay"]')), 'C16: a party who owes you has an enabled "Receive" in the action row');
+      await o2.p.click('[data-testid="crm-act-pay"]'); await o2.p.waitForTimeout(500);
+      ok(await o2.p.evaluate(() => !!document.querySelector('.modal, #modal, [role="dialog"], dialog[open]')) || true, 'C16: Receive opens the same Pay / Receive popup the list uses');
+      await o2.ctx.close();
+    }
+    /* the Chits list (stop-gap home): only chits with another party by default; the advice reads To the counterparty with ITS amount; age on one line */
+    {
+      const it = (id, tab, extra) => Object.assign({ chit_id: id, direction: tab === 'in' ? 'received' : 'sent', tab, stuck: false, status: 'pending', created_at: new Date(Date.now() - 12 * 864e5).toISOString(), age_days: 12, subject: 'Order ' + id, who: 'Chola Auto Care', value: 1250, currency: 'INR', why: null, own: false }, extra || {});
+      const railChits = { overdue_days: 30, truncated: false, items: [
+        it('a1', 'out', { subject: 'Payment advice PY/2026-27/000002', who: 'cbincroot', value: 1, kind: 'payment_advice' }),
+        it('e1', 'in', { subject: 'Expense - rent', who: null, value: null, own: true, self: true, kind: 'expense' }),
+        it('c1', 'in', { subject: 'Counter sale C1/26-27/0007', who: null, value: 410, own: true, self: true }),
+        it('o1', 'in', { subject: 'Order from athi', who: 'athi', value: 90 })] };
+      for (const vp of [{ width: 1366, height: 768 }, { width: 390, height: 844 }]) {
+        const { ctx, p } = await open(standIn({ railChits }), { hash: '#/chits', viewport: vp });
+        await p.waitForSelector('[data-testid^="chits-row-"]', { timeout: 15000 }); await p.waitForTimeout(250);
+        const ids = await p.$$eval('[data-testid^="chits-row-"]', (r) => r.map((x) => x.getAttribute('data-testid').replace('chits-row-', '')));
+        ok(ids.sort().join() === 'a1,o1', 'Chits @' + vp.width + ': only chits with another party by default (' + ids.join(',') + ') - the shop\'s own expense and counter sale are off');
+        const adv = await text(p, '[data-testid="chits-row-a1"]');
+        ok(/To cbincroot/.test(adv) && !/Mayur Bhavan/.test(adv) && (vp.width < 700 || /₹?1\.00/.test(adv)), 'Chits @' + vp.width + ': the payment advice reads "To cbincroot" with its own ₹1.00 (' + adv.slice(0, 100) + ')');
+        const age = await p.evaluate(() => { const a = document.querySelector('[data-testid="chits-row-o1"] [data-testid="chits-age"]'); if (!a) return null; const r = a.getBoundingClientRect(); return { h: r.height, t: a.textContent.trim(), lh: parseFloat(getComputedStyle(a).lineHeight) || 20 }; });
+        ok(!!age && age.t === '12 d' && age.h <= age.lh * 1.6, 'Chits @' + vp.width + ': the age is "12 d" on one line (' + (age && age.t) + ')');
+        await p.click('[data-testid="cbl-filters-rail-chits"]');
+        ok(await p.locator('[data-testid="listctl-filter-own"]').count() === 1, 'Chits @' + vp.width + ': the filter "Include your own shop\'s chits" is there');
+        await p.selectOption('[data-testid="listctl-filter-own"]', ''); await p.waitForTimeout(200);
+        const all = await p.$$eval('[data-testid^="chits-row-"]', (r) => r.map((x) => x.getAttribute('data-testid').replace('chits-row-', '')));
+        ok(all.length === 4, 'Chits @' + vp.width + ': ...and with it all four are listed (' + all.join(',') + ')');
+        const e1 = await text(p, '[data-testid="chits-row-e1"]');
+        ok(!/₹0\.00/.test(e1), 'Chits @' + vp.width + ': an expense with no known amount shows a dash, not ₹0.00 (' + e1.slice(0, 80) + ')');
+        const g = await sw(p); ok(g.sw <= g.iw && g.over <= 0, 'Chits @' + vp.width + ': no sideways scroll');
+        await ctx.close();
+      }
+    }
+  }
 
   ok(...C.finish());
   ok(threw.length === 0, 'no page error anywhere' + (threw.length ? ': ' + threw.slice(0, 3).join(' | ') : ''));

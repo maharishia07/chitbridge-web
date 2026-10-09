@@ -389,6 +389,13 @@ button{cursor:pointer}
    shell's heading and cards read straight through, looking exactly like the wrong page had loaded. Opaque
    here, and only here, so nothing behind it is ever legible again. */
 #modLabOverlay{background:var(--page)}
+/* L3 (small-fixes): the lab sits IN the page frame - the header (Combo Lab · Home · shop · avatar) stays above it - not a pop-up over an empty page.
+   It is a normal block under the header; the inert Offer Lab pieces this page carries are hidden while it is open. */
+#modLabOverlay{position:static;inset:auto;z-index:auto;padding:0 22px 60px;background:transparent;max-width:1240px;margin:0 auto}
+#modLabOverlay.on{display:block}
+#modLabOverlay .ovlpanel{width:100%;max-height:none;height:auto;border:1px solid var(--line);box-shadow:none;overflow:visible}
+body:has(#modLabOverlay.on) .wrap>:not(.top):not(#labSampleNote):not(#labqueue):not(#labtoast){display:none}
+@media(max-width:620px){#modLabOverlay{padding:0 12px 40px}#modLabOverlay .ovlpanel{height:auto;max-height:none;border-radius:var(--r)}}
 /**
  * ⭐ [found live, 2026-09-27] "the item should appear as a pop up" — the new "+ Add to another product" chip
  * opens #priceOverlay's own 'item' picker WHILE #modLabOverlay is still open underneath it, a genuinely new
@@ -929,7 +936,7 @@ function openOverlay(pickMode,pickFn){
   var t=document.getElementById('ovlTitle');
   if(t) t.textContent = pickMode==='cat' ? 'Choose a category' : pickMode==='item' ? 'Choose a product' : 'Price list';
   paintPriceOvCats(); paintPriceOvBody();
-  if(s) s.focus();
+  if(s) s.focus({preventScroll:true});
 }
 function openPriceOverlay(){ openOverlay(null,null); }
 function openPickOverlay(kind,fn){ openOverlay(kind,fn); }
@@ -1088,7 +1095,7 @@ function openModLab(){
   el.classList.add('on');
   var s=document.getElementById('modLabSearch'); if(s){ s.value=''; }
   paintModLab();
-  if(s) s.focus();
+  if(s) s.focus({preventScroll:true});
   comboLibLoad(false).then(paintModLab);   /* background — so the Combos tab's own count is right by the time it's looked at */
 }
 /** ⭐ [2026-09-27] tab switch: MODLAB.tab decides which top-level list paintModLab() shows (see its own

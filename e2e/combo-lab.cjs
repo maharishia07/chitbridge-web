@@ -43,6 +43,25 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
   say('the page boots straight into the lab, no "open" click needed', opened.onLoad, 'modLabOverlay is on from page load');
   say('the tab is titled for what it is', opened.title === 'Combo Lab', opened.title);
   say('openModLab() still exists, for a reset/reopen', opened.stillCallable, 'confirmed');
+  /* L3 (small-fixes): the lab opens IN the page frame - the header (title · Home · shop · avatar) is on screen above it, it is not a fixed pop-up over an empty page */
+  for (const vp of [{ width: 1366, height: 800 }, { width: 390, height: 844 }]) {
+    await p.setViewportSize(vp); await p.waitForTimeout(250);
+    const f = await p.evaluate(() => {
+      const vis = (e) => { if (!e) return false; const r = e.getBoundingClientRect(), cs = getComputedStyle(e); return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none'; };
+      const top = document.querySelector('.top'), ov = document.getElementById('modLabOverlay'), panel = ov && ov.querySelector('.ovlpanel');
+      const topB = top ? top.getBoundingClientRect() : null, pB = panel ? panel.getBoundingClientRect() : null;
+      /* what is painted at the header's centre is the header, not the lab's scrim */
+      const hit = topB ? document.elementFromPoint(topB.left + 20, topB.top + topB.height / 2) : null;
+      return { title: vis(document.querySelector('.top .title')), home: vis(document.querySelector('[data-testid="nav-home"]')), avatar: vis(document.querySelector('#cbav .cbav-btn, #cbav [data-testid="avatar"], #cbav button, #cbav a')),
+        pos: ov ? getComputedStyle(ov).position : '', headerHit: !!(hit && top && top.contains(hit)), below: !!(topB && pB && pB.top >= topB.bottom - 1), sw: document.documentElement.scrollWidth, iw: window.innerWidth,
+        inert: ['strip', 'steps'].every((id) => { const e = document.getElementById(id); return !e || !vis(e) || !e.innerText.trim(); }) };
+    });
+    say('L3 @' + vp.width + ': the header (title, Home, avatar) is on screen', f.title && f.home && f.avatar, JSON.stringify({ title: f.title, home: f.home, avatar: f.avatar }));
+    say('L3 @' + vp.width + ': the lab is in the page frame, not a fixed pop-up (position ' + f.pos + ')', f.pos !== 'fixed' && f.headerHit && f.below, 'header hit ' + f.headerHit + ' · lab below header ' + f.below);
+    say('L3 @' + vp.width + ': nothing of the inert Offer Lab shows, and no sideways scroll', f.inert && f.sw <= f.iw, 'scroll ' + f.sw + ' / ' + f.iw);
+    await p.screenshot({ path: path.join(__dirname, 'shots', 'small-fixes', 'combo-lab-' + vp.width + '.png') }).catch(() => {});
+  }
+  await p.setViewportSize({ width: 1280, height: 720 });
   /**
    * ⚠️⚠️ REWRITTEN FOR THE TWO-TAB REDESIGN (63d8b2a6). This used to require a table of EVERY product.
    * It is not that screen any more and should not be: the Modifiers tab lists the products that already

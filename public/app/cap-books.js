@@ -61,7 +61,7 @@ function bkCss() {
     '.bktab .num{text-align:end;font-variant-numeric:tabular-nums;white-space:nowrap}',
     '.bktab tfoot td{border-top:1px solid var(--ink);border-bottom:0}',
     /* ZEBRA (Athi, 2026-10-09) — the ledger and statement tables, the same one rule as CBList's rows: every other body row, from the theme's --zebra (else the ink mixed 4% into the card) */
-    '.bktab tbody tr:nth-child(even){background:var(--zebra,color-mix(in srgb,var(--ink) 4%,var(--card)))}',
+    '.bktab tbody tr:nth-child(even){background:var(--zebra,color-mix(in srgb,var(--ink) 9%,var(--card)))}',
     '.bktab tr.bkentry td{border-top:1px solid var(--line);font-weight:600}',
     '#bk_body input[type=date].inp,#bk_body select.inp,#bk_body .supacts .inp{width:auto}',
     /* the primary button of a pane's action row (Pay · Receive · Edit · Lock …) — once here, so accounts.html, crm.html and the app read the same */
@@ -240,7 +240,7 @@ function partyDueChipHTML(partyId, opts) {
  * name, nickname, tax ids, credit terms), what stands between you (balance, oldest due), their statement, and the
  * one action — Receive (a customer) / Pay (a supplier).
  */
-function partyBooksHTML(kind, partyId, row) {
+function partyBooksHTML(kind, partyId, row, moneyOnly) {   /* moneyOnly (the CRM record, C5/C19): the section already has its title, the head has Edit and Pay/Receive - this block is the money and the statement */
   if (!partyId) return '';
   var d = (BK.dues && BK.dues[partyId]) || {};
   var r = row || {};
@@ -249,18 +249,18 @@ function partyBooksHTML(kind, partyId, row) {
   var b = Number(d.balance_minor || 0);
   var act = kind === 'supplier' ? tx('Pay') : tx('Receive');
   setTimeout(function () { partyStatementLoad(partyId); }, 0);
-  return '<div class="sec">' + tx('Ledger') + '</div>'
+  return (moneyOnly ? '' : '<div class="sec">' + tx('Ledger') + '</div>')
     + '<div class="itab" data-testid="party-books-' + esc(partyId) + '" style="border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:12px">'
-    + kv(tx('Party no'), '<span class="mono" data-testid="party-no">' + esc(d.party_no || r.party_no || '—') + '</span>')
+    + (moneyOnly ? '' : kv(tx('Party no'), '<span class="mono" data-testid="party-no">' + esc(d.party_no || r.party_no || '—') + '</span>')
     + kv(tx('Legal name'), esc(r.legal_name || ''))
     + kv(tx('Nickname'), esc(r.nickname || ''))
-    + kv(tx('Tax ids'), tax)
+    + kv(tx('Tax ids'), tax))
     + kv(tx('Credit'), (r.credit_days != null ? txf('{n} days', { n: r.credit_days }) : '—') + (r.credit_limit_minor != null ? ' · ' + tx('limit') + ' ' + esc(bkMoney(r.credit_limit_minor)) : ''))
     + kv(tx('Balance'), '<b data-testid="party-balance"' + (b ? '' : ' style="color:var(--grey);font-weight:400"') + '>' + esc(bkOwes(b, BK.duesCur)) + '</b>')
     + kv(tx('Oldest due'), d.oldest_due ? esc(bkDate(d.oldest_due)) : '—')
-    + '<div class="supacts" style="display:flex;gap:7px;padding:9px 13px;flex-wrap:wrap">'
+    + (moneyOnly ? '' : '<div class="supacts" style="display:flex;gap:7px;padding:9px 13px;flex-wrap:wrap">'
     + '<button data-testid="party-edit" onclick="partyEditOpen(\'' + kind + '\',\'' + esc(partyId) + '\')">' + tx('Edit') + '</button>'
-    + '<button class="supact-pri" data-testid="party-pay" onclick="payOpen(\'' + kind + '\',\'' + esc(partyId) + '\')">' + act + '</button></div>'
+    + '<button class="supact-pri" data-testid="party-pay" onclick="payOpen(\'' + kind + '\',\'' + esc(partyId) + '\')">' + act + '</button></div>')
     + '<div id="bk_stmt_' + esc(partyId) + '" data-testid="party-statement" style="padding:9px 13px;font-size:var(--fs-1);color:var(--grey)">' + tx('Reading…') + '</div>'
     + '</div>';
 }
@@ -1618,7 +1618,7 @@ function bkDuesNext(p, c) {
   return '<div data-testid="dues-next-' + esc(p.party_id) + '">' + '<div style="color:var(--grey);font-size:var(--fs-1);text-transform:uppercase;padding:2px 0">' + esc(tx('Age')) + '</div>' + (rows || '<div style="color:var(--grey);font-size:var(--fs-1)">' + esc(tx('Nothing is overdue')) + '</div>')
     + '<div style="color:var(--grey);font-size:var(--fs-1);text-transform:uppercase;padding:6px 0 2px">' + esc(tx('Bills')) + '</div>' + bkPartyBillsHTML(p.party_id, 'dues', c) + '</div>';
 }
-async function bkDues(body) {
+async function bkDues(body, onlySide) {   /* onlySide 'rcv' | 'pay' (CB Accounts: Receivables / Payables) opens the same list on that side */
   try {
     var r = await api('booksDues', { query: { asOf: bkToday() } }); var c = r && r.currency; bkDuesStore(r);
     var open = ((r && r.parties) || []).filter(function (p) { return Number(p.balance_minor); });
@@ -1637,6 +1637,7 @@ async function bkDues(body) {
         { key: 'due', label: tx('Total due'), cmp: num(function (p) { return Math.abs(p.balance_minor || 0); }) },
         { key: 'oldest', label: tx('Oldest due'), cmp: function (a, b) { return String(a.oldest_due || '9999').localeCompare(String(b.oldest_due || '9999')); } },
       ],
+      preset: onlySide ? { filt: { side: onlySide } } : null,
       filters: [{ key: 'side', label: tx('Side'), all: tx('Both sides'), options: [{ v: 'rcv', label: tx('To collect') }, { v: 'pay', label: tx('To pay') }], match: function (p, v) { return bkDuesSide(p) === v; } }],
       next: function (p) { return bkDuesNext(p, c); },
       empty: { title: tx('Nothing is due') },

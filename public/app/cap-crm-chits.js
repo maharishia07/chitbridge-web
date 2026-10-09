@@ -11,7 +11,8 @@
 var CHITS = { items: [], state: 'loading', err: null, truncated: false, days: 7, api: null, gen: 0 };
 
 function chitsWhen(iso) { try { return (CBLocale.date(iso, { day: '2-digit', month: 'short' }) || '').trim(); } catch (_) { return String(iso || '').slice(0, 10); } }
-function chitsAge(c) { var d = Math.floor(Number(c.age_days) || 0); return d <= 0 ? tx('Today') : d === 1 ? tx('1 day old') : d + ' ' + tx('days old'); }
+/** the age on ONE line: "Today" / "1 d" / "12 d" (the column used to wrap "12 days old" over two lines) */
+function chitsAge(c) { var d = Math.floor(Number(c.age_days) || 0); return d <= 0 ? tx('Today') : d + ' ' + tx('d'); }
 function chitsMoney(c) {
   if (c.value == null) return '';
   try { return esc(fmtMoney(Number(c.value), c.currency || 'INR')); } catch (_) { return esc(String(c.value)); }
@@ -47,19 +48,23 @@ function chitsRefresh() { var a = CHITS.api; if (a && a.el && document.body.cont
 
 function chitsCols() {
   return [
-    { key: 'chit', label: 'Chit', prio: 1, w: 300, html: true, value: function (c) { return c.subject || c.who || ''; },
+    { key: 'chit', label: 'Chit', prio: 1, w: 420, html: true, value: function (c) { return c.subject || c.who || ''; },
       cell: function (c) { return '<span class="pcell"><span class="nm">' + esc(c.subject || tx('A chit')) + '</span>' + (c.stuck ? ' <span class="tag late red" data-testid="chits-stuck-tag"><span aria-hidden="true">⚠</span> ' + esc(tx('Stuck')) + '</span>' : '') + '</span>'; } },
-    { key: 'who', label: 'From · To', prio: 2, w: 200, value: function (c) { return chitsWho(c); }, cell: function (c) { return chitsWho(c); } },
+    { key: 'who', label: 'From · To', prio: 2, w: 260, value: function (c) { return chitsWho(c); }, cell: function (c) { return chitsWho(c); } },
     { key: 'dir', label: 'In · Out', prio: 6, w: 90, value: function (c) { return c.tab === 'in' ? tx('In') : tx('Out'); }, cell: function (c) { return c.tab === 'in' ? tx('In') : tx('Out'); } },
-    { key: 'age', label: 'Age', prio: 3, w: 120, value: function (c) { return c.age_days; }, cell: function (c) { return chitsAge(c); } },
+    { key: 'age', label: 'Age', prio: 3, w: 90, value: function (c) { return c.age_days; }, html: true, cell: function (c) { return '<span style="white-space:nowrap" data-testid="chits-age">' + esc(chitsAge(c)) + '</span>'; } },
     { key: 'when', label: 'Filed', prio: 4, w: 110, value: function (c) { return c.created_at || ''; }, cell: function (c) { return chitsWhen(c.created_at); } },
     { key: 'val', label: 'Amount', prio: 5, w: 130, html: true, value: function (c) { return c.value == null ? '' : c.value; }, cell: function (c) { return chitsMoney(c) || '<span class="sub">—</span>'; } }
   ];
 }
 function chitsFilters() {
+  /* CRM is about parties: the shop's own counter sales, expenses and credit notes are off by default (a stuck one is never hidden) */
   return [{ key: 'tab', label: tx('Show'), all: tx('Stuck, in and out'),
     options: [{ v: 'stuck', label: tx('Stuck') }, { v: 'in', label: tx('In') }, { v: 'out', label: tx('Out') }],
-    match: function (c, v) { return v === 'stuck' ? !!c.stuck : c.tab === v; } }];
+    match: function (c, v) { return v === 'stuck' ? !!c.stuck : c.tab === v; } },
+  { key: 'own', label: tx('Whose'), all: tx("Include your own shop's chits"),
+    options: [{ v: 'party', label: tx('Only chits with another party') }],
+    match: function (c) { return !c.own || !!c.stuck; } }];
 }
 function chitsNotices() {
   var n = chitsStuckCount(), out = [];
@@ -83,7 +88,7 @@ function chitsHome(params, frame) {
     state: function () { return CHITS.state; }, error: function () { return crmErrWords(CHITS.err, 'your chits'); }, onRetry: function () { chitsLoad(); },
     empty: { title: tx('Nothing open'), sub: tx('Every chit you hold has been answered or closed.') },
     search: function (c) { return [c.subject, c.who].join(' '); }, searchHint: tx('Subject or business'),
-    filters: chitsFilters(), preset: tab ? { filt: { tab: tab } } : null,
+    filters: chitsFilters(), preset: { filt: tab ? { tab: tab, own: 'party' } : { own: 'party' } },
     onOpen: function (c) { if (typeof openChitSheet === 'function') openChitSheet(c.chit_id); },
     next: chitsMini, nextPending: chitsMini,
     actions: [{ id: 'open', label: tx('Open chit'), icon: '↗', tid: 'chits-open', run: function (c) { if (typeof openChitSheet === 'function') openChitSheet(c.chit_id); } }]
