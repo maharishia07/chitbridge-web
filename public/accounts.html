@@ -290,7 +290,7 @@ const CFG = { API_BASE: (function(){
 let SESSION = { token: null, role: null, name: null, entity: null, bridgeId: null };
 const EP = {};                       /* the Ledger's boot rows come from accounts-shell.js; cap-folders.js and cap-books.js add the rest */
 let UI = { vp: 'lap', lw: 340 };     /* the two fields cap-books.js reads */
-function go(hash){ location.href = '/app.html' + hash; }   /* api()'s 401 → the app's sign-in */
+function go(){ signedOut('Your session ended. Please sign in again.'); }   /* api()'s 401 → this page's own sign-in card (CBSignin), not the app's (R10) */
 </script>
 <script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies (engines screen) -->
 <script src="/app/avatar.js"></script>   <!-- CBAvatar: the one avatar (Profile · Support · Sign out) and the look it owns — nothing of it is drawn here -->
@@ -414,7 +414,8 @@ function whoPaint(){
 }
 /* the pages of the app this page hands over to (the Day book's to-do cards, a bill) */
 function navTo(k){ location.href = '/app.html#/app/' + encodeURIComponent(k); }
-function openChit(id){ window.open('/app.html#/app/chit/' + encodeURIComponent(id), '_blank', 'noopener'); }
+function openChitPage(id){ window.open('/app.html#/app/chit/' + encodeURIComponent(id), '_blank', 'noopener'); }   /* KEPT door: the sheet's "Open page" (its home is the M53 detail page) */
+function openChit(id){ openChitSheet(id); }   /* every other chit link opens the sheet here: Messages and files are on it (R10) */
 
 /* the page's own confirm — the same <dialog> the index tile uses (accounts-shell.js); cap-books.js asks through this name */
 const confirmAsk = CBConfirm;

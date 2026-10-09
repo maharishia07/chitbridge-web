@@ -299,7 +299,7 @@ const CFG = { API_BASE: (function(){
 let SESSION = { token: null, role: null, name: null, entity: null, bridgeId: null };
 const EP = {};                       /* the Ledger's boot rows come from accounts-shell.js, the CRM's from cap-crm.js */
 let UI = { vp: 'lap', lw: 340, custs: [], sups: [] };   /* custs/sups: the rows cap-books.js's party editor reads (cap-crm.js fills them from the CRM list) */
-function go(hash){ location.href = '/app.html' + hash; }   /* api()'s 401 → the app's sign-in */
+function go(){ signedOut('Your session ended. Please sign in again.'); }   /* api()'s 401 → this page's own sign-in card (CBSignin), not the app's (R10) */
 </script>
 <script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies (engines screen) -->
 <script src="/app/avatar.js"></script>   <!-- CBAvatar: the one avatar (Profile · Support · Sign out) and the look it owns — nothing of it is drawn here -->
@@ -340,7 +340,8 @@ function session(){
 
 /* the pages of the app this page hands over to */
 function navTo(k){ location.href = '/app.html#/app/' + encodeURIComponent(k); }
-function openChit(id){ window.open('/app.html#/app/chit/' + encodeURIComponent(id), '_blank', 'noopener'); }
+function openChitPage(id){ window.open('/app.html#/app/chit/' + encodeURIComponent(id), '_blank', 'noopener'); }   /* KEPT door: the sheet's "Open page" (its home is the M53 detail page) */
+function openChit(id){ openChitSheet(id); }   /* every other chit link opens the sheet here: Messages and files are on it (R10) */
 const confirmAsk = CBConfirm;   /* the page's own confirm, as CB Accounts uses it */
 
 /* ── a sheet: the app's modal(html) / closeModal() signature on a native <dialog>, so cap-books.js's partyEditOpen opens here unchanged ── */
