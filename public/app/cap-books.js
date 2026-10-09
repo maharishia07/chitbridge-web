@@ -1223,8 +1223,10 @@ function bkLgHead() {
     if (bkLtNarrow()) x += '<button type="button" class="cbl-tbtn cbl-ico" data-lt="back" data-testid="lt-back" aria-label="' + esc(tx('Back to all ledgers')) + '">‹</button>';
     if (bkLtFolded() && !bkLtNarrow()) x += '<button type="button" class="cbl-tbtn" data-lt="unfold" data-testid="lt-unfold" aria-label="' + esc(tx('Show the ledger list')) + '">☰ ' + esc(tx('Ledgers')) + '</button>';
     if (own) {
+      x += '<span style="display:inline-flex;gap:6px;flex-wrap:nowrap">';
       x += '<button type="button" class="cbl-tbtn" data-lt="statement" data-testid="lg-statement">' + esc(tx('Statement')) + '</button>';
       x += '<button type="button" class="cbl-tbtn" data-lt="pay" data-testid="lg-pay">' + esc(tx(bkPartyKind(BK.lt.sel.party, BK.lt.sel.code) === 'supplier' ? 'Pay' : 'Receive')) + '</button>';
+      x += '</span>';
     }
     el.innerHTML = x;
     if (typeof BK.slotWho === 'function') BK.slotWho(el);
@@ -1474,7 +1476,7 @@ function bkDuesCols(c) {
     { key: 'party', label: tx('Party'), prio: 1, sort: 'party', w: 230, html: true, cell: function (p) { return esc(bkPartyLabel(p.party_id, p.name)); } },
     { key: 'due', label: tx('Total due'), prio: 2, sort: 'due', num: true, w: 130, html: true, cell: function (p) { return '<b data-b="balance">' + amt(p, p.balance_minor) + '</b>'; } },
     { key: 'oldest', label: tx('Oldest due'), prio: 3, sort: 'oldest', w: 220, html: true, cell: function (p) { var ag = bkDuesAge(p); return p.oldest_due ? '<span data-b="due">' + esc(bkDate(p.oldest_due)) + '</span>' + (ag ? ' <span data-b="age" style="color:var(--grey)">· ' + esc(tx(ag)) + '</span>' : '') : dash; } },
-    { key: 'act', label: '', prio: 1, pin: 'end', w: 170, html: true, cell: function (p) { return bkDuesActs(p); } },
+    { key: 'act', label: ' ', prio: 1, pin: 'end', w: 170, html: true, cell: function (p) { return bkDuesActs(p); } },
   ];
 }
 /** the oldest age bucket the party has money in — the server's own buckets (Schedule III), in the words of BK_BUCKETS */
