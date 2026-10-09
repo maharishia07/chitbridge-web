@@ -104,7 +104,7 @@ function crmDueCell(p) {
   if (!b) return '<span class="due settled"' + tid + '>' + esc(tx('Settled')) + '</span>';
   return b > 0
     ? '<span class="due get"' + tid + ' title="' + esc(tx('They owe you') + oldest) + '"><span aria-hidden="true">↓</span> ' + esc(bkMoney(b, CRM.currency)) + ' <span class="w">' + esc(tx("you'll get")) + '</span>' + late + '</span>'
-    : '<span class="due give"' + tid + ' title="' + esc(tx('You owe them') + oldest) + '"><span aria-hidden="true">↑</span> ' + esc(bkMoney(-b, CRM.currency)) + ' <span class="w">' + esc(tx("you'll give")) + '</span>' + late + '</span>';
+    : '<span class="due give"' + tid + ' title="' + esc(tx('You owe them') + oldest) + '"><span aria-hidden="true">↑</span> ' + esc(bkMoney(Math.abs(b), CRM.currency)) + ' <span class="w">' + esc(tx("you'll give")) + '</span>' + late + '</span>';
 }
 /** the next follow-up is ALWAYS on the row; an overdue one is red, says Late, and carries its date */
 function crmFuCell(p) {

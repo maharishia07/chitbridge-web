@@ -159,17 +159,17 @@
       EL.addEventListener('click', onClick); EL.addEventListener('keydown', function (e) { if ((e.key === 'Enter' || e.key === ' ') && e.target.closest && e.target.closest('[data-kswap]')) { e.preventDefault(); swap(); } });
     }
     var prevH = EL && !EL.hidden ? EL.offsetHeight : 0;
-    clearInterval(TIMER); TIMER = null;
+    /* the phone's 7 s turn-taking keeps ITS clock across repaints (a repaint must not restart the count); it is stopped below when the band is not drawn or the person is in charge */
     /* ONE place: the band is never a part of a header, a bar or a title row, whoever mounted it or moved it there (Round U, 2026-10-09) */
     if (EL.closest(HEAD_SEL)) (HOST && !HOST.closest(HEAD_SEL) ? HOST : doc.body).appendChild(EL);
     var k = find(ROUTE);
     BLOCKED = blockedNow();
     /* a band that may not be drawn BESIDE a warning keeps its room (quiet, blank): the page does not grow and shrink as warnings come and go (UI9) */
     if (k && BLOCKED) makeRoom(prevH > 20 ? prevH : reserveH(), true); else unreserve();
-    if (!k || BLOCKED) { EL.hidden = true; EL.innerHTML = ''; EL.removeAttribute('data-kural'); touch(); return; }
+    if (!k || BLOCKED) { clearInterval(TIMER); TIMER = null; EL.hidden = true; EL.innerHTML = ''; EL.removeAttribute('data-kural'); touch(); return; }
     EL.hidden = false; EL.setAttribute('data-kural', String(k.no));
     if (hiddenToday()) {
-      EL.className = 'cbk off'; EL.innerHTML = '<button type="button" class="cbk-show" data-kshow="1" data-testid="kural-show" aria-label="Show the kural">குறள் ' + k.no + ' ›</button>'; touch(); return;
+      clearInterval(TIMER); TIMER = null; EL.className = 'cbk off'; EL.innerHTML = '<button type="button" class="cbk-show" data-kshow="1" data-testid="kural-show" aria-label="Show the kural">குறள் ' + k.no + ' ›</button>'; touch(); return;
     }
     var m = meaning(k), verse = '<span class="cbk-v" lang="ta" data-testid="kural-verse">' + kline(k.verse[0]) + kline(k.verse[1]) + '</span>',
       mean = '<span class="cbk-m" lang="' + esc(m.lang) + '" data-testid="kural-meaning">' + esc(m.text) + '</span>';
@@ -179,7 +179,8 @@
       + '<button type="button" class="cbk-x" data-khide="1" data-testid="kural-hide" aria-label="Hide the kural for today" title="Hide for today">✕</button>';
     var phone = EL.clientWidth > 0 && EL.clientWidth <= 640, body = EL.querySelector('.cbk-body');
     if (phone) { body.setAttribute('role', 'button'); body.setAttribute('tabindex', '0'); body.setAttribute('aria-label', 'Thirukkural ' + k.no + '. Tap to switch the verse and its meaning'); }
-    if (phone && !still() && !PAUSED) TIMER = setInterval(function () { SECOND = !SECOND; EL && EL.classList.toggle('second', SECOND); }, 7000);
+    if (!(phone && !still() && !PAUSED)) { clearInterval(TIMER); TIMER = null; }
+    else if (!TIMER) TIMER = setInterval(function () { SECOND = !SECOND; EL && EL.classList.toggle('second', SECOND); }, 7000);
     touch();
   }
   function still() {

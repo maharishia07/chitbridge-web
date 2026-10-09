@@ -153,7 +153,7 @@ const { standIn, route } = require('./lib/standin.cjs');
     v = await view(ph.p);
     ok(v.kv.display === 'grid' && v.kv.vo === '1' && v.kv.mo === '0', 'phone (390): one line at a time — the couplet first, the meaning waiting in the same place');
     ok(v.sw === 390, 'phone: document.scrollWidth is 390 with the band');
-    await ph.p.clock.fastForward(7100); await ph.p.waitForTimeout(700);
+    await ph.p.waitForTimeout(500); await ph.p.clock.fastForward(7100); await ph.p.waitForTimeout(700);   /* the band now paints in the very first moments (the frame is up at once); the fake clock needs a beat before a jump reaches a timer made that early */
     v = await view(ph.p);
     ok(v.kv.mo === '1' && v.kv.vo === '0', 'phone: after 7 s the two take turns (the meaning now shows)');
     await ph.p.screenshot({ path: path.join(SHOTS, 'kural-accounts-phone-meaning.png') }).catch(() => {});
