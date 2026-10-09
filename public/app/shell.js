@@ -34,7 +34,7 @@
 
   var W = {
     areas: { home: 'Home', selling: 'Selling', running: 'Running', labs: 'Labs', setup: 'Setup' },
-    caption: { selling: 'Selling', running: 'Running it', labs: 'Labs', setup: 'What it all stands on' },
+    caption: { selling: 'CB Commerce', running: 'Running it', labs: 'Labs', setup: 'What it all stands on' },
     sub: { labs: 'Work the number out first. Nothing changes until you say so.', setup: 'Set once, rarely touched.' },
     tag: { coming: 'later', workshop: 'workshop' },
     yourShop: 'Your shop', business: 'The business', licences: 'Licences', trade: 'Trade ready', finish: 'Finish the checks',
@@ -43,6 +43,10 @@
     notYet: 'Licences and trade checks are not available yet.', loading: '…', noApps: 'The list of apps could not be read.',
     factsFailed: 'Could not read', switcher: 'Go to', close: 'Close'
   };
+  /* CB Commerce: one box per pillar. The main row sits in the Selling section, the supporting row in the Running section; a manifest entry's `pillar` decides its box (none: its area's default) */
+  var PILLARS = { selling: ['marketing', 'sales', 'finance', 'accounting'], running: ['operations', 'people', 'trade'] };
+  var PNAME = { marketing: 'Marketing', sales: 'Sales', finance: 'Finance', accounting: 'Accounting', operations: 'Operations', people: 'People', trade: 'Trade' };
+  var PDEFAULT = { selling: 'sales', running: 'accounting', labs: 'labs', setup: 'setup' };
   var AREAS = ['home', 'selling', 'running', 'labs', 'setup'];
   var ICON = { home: '⌂', selling: '▤', running: '₹', labs: '◈', setup: '⚙' };
 
@@ -158,6 +162,13 @@
     '.cbsh-sec.labs .cbsh-box .g,.cbsh-sec.setup .cbsh-box .g{width:auto;height:auto;background:none;font-size:15px;margin-bottom:6px;display:block}',
     '.cbsh-labs{background:var(--sh-panel);border:1px solid var(--sh-soft);border-radius:14px;padding:4px 16px 15px}.cbsh-labs .cbsh-cap{background:var(--sh-panel)}',
     '.cbsh-base{border:1px dashed var(--sh-line);border-radius:14px;padding:4px 16px 15px}',
+    /* CB Commerce pillar boxes: 4 across (the main row), 3 across (the supporting row), cards stacked inside */
+    '.cbsh-pils{display:grid;gap:12px;align-items:start}.cbsh-pils.n4{grid-template-columns:repeat(4,minmax(0,1fr))}.cbsh-pils.n3{grid-template-columns:repeat(3,minmax(0,1fr))}',
+    '.cbsh-pil{background:var(--sh-panel);border:1px solid var(--sh-soft);border-radius:14px;padding:10px 10px 12px;min-width:0}',
+    '.cbsh-pil h3{margin:0 2px 8px;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--sh-muted);font-weight:700}',
+    '.cbsh-pil .cbsh-grid{grid-template-columns:1fr;gap:8px}.cbsh-pil .cbsh-chips{margin-top:8px}.cbsh-pil .cbsh-grid:empty{display:none}',
+    '.cbsh-pil .cbsh-box{padding:12px 14px}',
+    '@media(max-width:1000px){.cbsh-pils.n4{grid-template-columns:repeat(2,minmax(0,1fr))}.cbsh-pils.n3{grid-template-columns:repeat(2,minmax(0,1fr))}}',
     /* dashed chips: coming · workshop (no link — I12) */
     '.cbsh-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.cbsh-chips:empty{display:none}',
     '.cbsh-sc{display:inline-flex;align-items:center;gap:9px;background:var(--sh-card);border:1px dashed var(--sh-line);border-radius:10px;padding:6px 12px;color:var(--sh-muted)}',
@@ -191,6 +202,7 @@
     '.cbsh-main[data-tab=home] .cbsh-sec.home,.cbsh-main[data-tab=selling] .cbsh-sec.selling,.cbsh-main[data-tab=running] .cbsh-sec.running,',
     '.cbsh-main[data-tab=labs] .cbsh-sec.labs,.cbsh-main[data-tab=setup] .cbsh-sec.setup{display:block}',
     '.cbsh-cap{display:none}',
+    '.cbsh-pils.n4,.cbsh-pils.n3{grid-template-columns:1fr;gap:10px}.cbsh-pil{padding:8px 0 0;background:none;border:0}.cbsh-pil h3{margin-left:2px}.cbsh-pil .cbsh-grid{gap:0}',
     '.cbsh-ph{display:block;font-family:"Bricolage Grotesque",sans-serif;font-size:21px;font-weight:800;letter-spacing:-.02em;margin:2px 2px 10px}',
     '.cbsh-grid{grid-template-columns:1fr;gap:0;border:1px solid var(--sh-line);border-radius:13px;background:var(--sh-card);overflow:hidden}',
     '.cbsh-box,.cbsh-sec.labs .cbsh-box,.cbsh-sec.setup .cbsh-box{border:0;border-radius:0;border-bottom:1px solid var(--sh-hair);padding:13px 38px 13px 14px}',
@@ -331,7 +343,14 @@
     }
 
     /* ── the five areas (Home) ── */
-    function entriesOf(area) { return ((S.manifest && S.manifest.entries) || []).filter(function (e) { return e && e.area === area; }); }
+    function pillarOf(e) { return e.pillar || PDEFAULT[e.area] || e.area; }
+    function sectionOf(e) { var p = pillarOf(e); return PILLARS.selling.indexOf(p) >= 0 ? 'selling' : PILLARS.running.indexOf(p) >= 0 ? 'running' : p; }
+    function entriesOf(area) { return ((S.manifest && S.manifest.entries) || []).filter(function (e) { return e && sectionOf(e) === area; }); }
+    /* a pillar box: its title, then the cards that have a page, then the dashed chips (coming · workshop) */
+    function pillarBox(p, list) {
+      var built = list.filter(function (e) { return e.state === 'built' && e.route; }), rest = list.filter(function (e) { return !(e.state === 'built' && e.route); });
+      return '<div class="cbsh-pil" data-pillar="' + p + '" data-testid="shell-pillar-' + p + '"><h3>' + esc(PNAME[p]) + '</h3><div class="cbsh-grid">' + built.map(card).join('') + '</div><div class="cbsh-chips">' + rest.map(chip).join('') + '</div></div>';
+    }
     /* H22/S1: a route may name the shop it opens for ({bridge_id}: the Storefront is THIS shop's page, /shop.html?s=<id>); unresolved, the bare page */
     function routeOf(e) {
       var r = String(e.route || ''); if (r.indexOf('{bridge_id}') < 0) return r;
@@ -362,6 +381,10 @@
       $('.cbsh-more').innerHTML = AREAS.slice(1).map(function (a) {
           var list = entriesOf(a), built = list.filter(function (e) { return e.state === 'built' && e.route; }), rest = list.filter(function (e) { return !(e.state === 'built' && e.route); });
           var cap = '<div class="cbsh-cap"><b>' + esc(W.caption[a]) + '</b>' + (W.sub[a] ? '<span>' + esc(W.sub[a]) + '</span>' : '') + '<i></i></div>';
+          if (PILLARS[a]) {
+            var boxes = PILLARS[a].map(function (p) { var l = list.filter(function (e) { return pillarOf(e) === p; }); return l.length ? pillarBox(p, l) : ''; }).join('');
+            return '<section class="cbsh-sec ' + a + '" data-area="' + a + '" data-testid="shell-area-' + a + '"><h2 class="cbsh-ph">' + esc(W.caption[a]) + '</h2>' + cap + '<div class="cbsh-pils n' + PILLARS[a].length + '">' + boxes + '</div></section>';
+          }
           var inner = cap + '<div class="cbsh-grid">' + built.map(card).join('') + '</div><div class="cbsh-chips">' + rest.map(chip).join('') + '</div>';
           var wrap = a === 'labs' ? '<div class="cbsh-labs">' + inner + '</div>' : a === 'setup' ? '<div class="cbsh-base">' + inner + '</div>' : inner;
           return '<section class="cbsh-sec ' + a + '" data-area="' + a + '" data-testid="shell-area-' + a + '"><h2 class="cbsh-ph">' + esc(W.caption[a]) + '</h2>' + wrap + '</section>';

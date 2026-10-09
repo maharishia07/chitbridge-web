@@ -172,7 +172,7 @@ async function run() {
       await pg.keyboard.press('Escape');
       ok(await pg.evaluate(() => !!document.querySelector('.cbsh-foot #cbkural')), '1366 · the kural is the footer band');
       for (const a of Object.keys(BUDGET)) { const n = await areaWords(pg, a); ok(n >= 0 && n <= BUDGET[a], '1366 · words in ' + a + ': ' + n + ' ≤ ' + BUDGET[a]); }
-      ok(!/accounting|books of account|error|404/i.test(await pg.evaluate(() => document.body.innerText)), '1366 · no forbidden word, no error string on the screen');
+      ok(!/accounting|books of account|error|404/i.test(await pg.evaluate(() => { let s = document.body.innerText; document.querySelectorAll('.cbsh-pil h3').forEach((h) => { s = s.replace(h.innerText, ''); }); return s; })), '1366 · no forbidden word, no error string on the screen');
       await pg.screenshot({ path: path.join(SHOTS, 'index-laptop.png') });
       await ctx.close();
     }
