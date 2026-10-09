@@ -166,6 +166,13 @@
     '.cbsh-alerts:empty,.cbsh-home:empty,.cbsh-signin:empty{display:none}.cbsh-alerts{display:flex;flex-direction:column;gap:7px;margin-bottom:16px}',
     '.cbsh-foot{flex:0 0 auto}.cbsh-foot:empty{display:none}.cbsh-kh:empty{display:none}',
     '.cbsh-slotwork{min-height:100%}',
+    /* CB SIDES (public/app/sides.js): two reference panels. From 1480 px they sit beside the work area and scroll on their own; below it they are two drawers behind the toolbar buttons, one open at a time; a phone drawer is full width */
+    '.cbsh-work{position:relative}.cbsh-side,.cbsh-tools{display:none}',
+    '@media(min-width:1480px){.cbsh.has-sides .cbsh-side{display:block;flex:0 0 300px;width:300px;align-self:flex-start;max-height:calc(100% - 24px);margin:12px 0;overflow:auto}.cbsh.has-sides .cbsh-side.l{margin-left:14px}.cbsh.has-sides .cbsh-side.r{margin-right:14px}}',
+    '@media(max-width:1479px){.cbsh.has-sides .cbsh-tools{display:flex;gap:10px;position:sticky;top:0;z-index:5;background:var(--sh-page);padding:8px 0;border-bottom:1px solid var(--sh-soft);margin-bottom:10px}.cbsh.has-sides .cbsh-tools .cbsd-btn{display:inline-block}',
+    '.cbsh.has-sides .cbsh-side.drawer{display:block;position:absolute;top:48px;bottom:0;width:min(330px,92vw);z-index:40;margin:0;border-radius:0;overflow:auto;box-shadow:0 0 30px var(--sh-shadow)}',
+    '.cbsh.has-sides .cbsh-side.l.drawer{left:var(--sh-navw)}.cbsh.has-sides .cbsh-side.r.drawer{right:0}.cbsh .cbsd-x{display:inline-block}.cbsh.has-sides .cbsh-cap{top:43px}}',
+    '@media(max-width:700px){.cbsh.has-sides .cbsh-side.drawer{left:0!important;right:0!important;width:100%}}',
     '@media(max-width:1100px){.cbsh-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.cbsh-sin{grid-template-columns:1fr 1.4fr}.cbsh-sin .cbsh-col:nth-child(3){grid-column:1/-1}}',
     /* PHONE — a different layout: bottom tabs, one area at a time, rows, the sheet drops over the page, the kural once on Home */
     '@media(max-width:700px){',
@@ -242,6 +249,10 @@
       return (b && b.name) || (person && person.entity) || (sess && sess.entity) || W.yourShop;
     };
 
+    /* CB Sides: only on Home, only signed in, only if the page loaded sides.js (the same rule as the avatar, bell and kural) */
+    var sides = mode === 'home' && !!person && !!(root.CBSides && root.CBSides.mount);
+    if (sides) el.classList.add('has-sides');
+
     el.innerHTML =
       '<header class="cbsh-hdr" data-testid="shell-header">' +
         '<div class="cbsh-bar" data-testid="shell-bar">' +
@@ -260,10 +271,13 @@
           (mode === 'home' ? '<nav class="cbsh-nav" data-testid="shell-nav" aria-label="Areas">' + AREAS.map(function (a) {
             return '<button type="button" class="cbsh-nv" data-go="' + a + '" data-testid="shell-nav-' + a + '"><span class="i" aria-hidden="true">' + ICON[a] + '</span><span class="t">' + esc(W.areas[a]) + '</span></button>';
           }).join('') + '</nav>' : '') +
+          (sides ? '<aside class="cbsh-side l" data-slot="sideL"></aside>' : '') +
           '<main class="cbsh-main" data-testid="shell-main" data-tab="home"><div class="cbsh-inner">' +
+            (sides ? '<div class="cbsh-tools" data-testid="shell-sidetools"><button type="button" data-slot="btnL"></button><button type="button" data-slot="btnR"></button></div>' : '') +
             '<div class="cbsh-signin" data-testid="shell-signin"></div>' +
             (mode === 'home' ? '<div class="cbsh-areas" data-testid="shell-areas"></div>' : '<div class="cbsh-slotwork" data-slot="work"></div>') +
           '</div></main>' +
+          (sides ? '<aside class="cbsh-side r" data-slot="sideR"></aside>' : '') +
         '</div>' +
         '<div class="cbsh-foot" data-testid="shell-foot"></div>');
 
@@ -448,6 +462,8 @@
       root.CBSignin.mount($('.cbsh-signin'), so);
     }
 
+    var sidesApi = sides ? root.CBSides.mount({ left: $('[data-slot="sideL"]'), right: $('[data-slot="sideR"]'), btnL: $('[data-slot="btnL"]'), btnR: $('[data-slot="btnR"]') }, { apiBase: base, token: token }) : null;
+
     paintBar(); paintSheet();
     if (mode === 'home') paintAreas();
     var hashArea = (root.location && (root.location.hash || '').replace('#', '')) || '';
@@ -469,7 +485,8 @@
       open: function () { setOpen(true); }, close: function () { setOpen(false); }, isOpen: function () { return S.open; },
       go: go, area: function () { return S.area; }, header: function () { return S.header; }, headerState: function () { return S.headerState; },
       manifest: function () { return S.manifest; },   /* N18: the Home page reads the manifest's top-level `rail` from the one copy the shell fetched — never a second fetch */
-      ready: Promise.all([manP, hdrP, kuralP]).then(function () { return api; })
+      sides: sidesApi,
+      ready: Promise.all([manP, hdrP, kuralP, sidesApi ? sidesApi.ready : null]).then(function () { return api; })
     };
     return api;
   }
