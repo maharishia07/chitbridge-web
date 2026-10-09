@@ -728,7 +728,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   ok(/Profit/.test(await p.textContent('[data-testid="pl-profit"]')), 'P&L shows the profit line');
   await p.click('[data-testid="acc-nav-bs"]'); await p.waitForSelector('[data-testid="bs-balanced"]', { timeout: 8000 });
   ok(/balances/.test(await p.textContent('[data-testid="bs-balanced"]')), 'balance sheet balances');
-  await p.click('[data-testid="acc-nav-dues"]'); await p.waitForSelector('[data-testid="dues-c1"]', { timeout: 8000 });
+  await p.evaluate(() => show('dues')); await p.waitForSelector('[data-testid="dues-c1"]', { timeout: 8000 });
   await shot(p, '4-dues');
   /* Dues is the Task table: a party · its total due · its oldest due; the age buckets and the disputed amount are the row's next level */
   ok(await p.locator('.lhead').count() >= 1 && await p.locator('[data-testid="dues-c1"].lrow').count() === 1, 'dues: drawn by the Task table — a party a row, not eight columns cut off at the right edge');
@@ -743,7 +743,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   await noAccounting(p, 'ledger');
 
   /* ⚠️⚠️ review M12 — the cheques held, and their steps */
-  ok(/5/.test(await p.textContent('[data-testid="acc-nav-waiting"]')), 'the Waiting view says how many are waiting, on the list itself (' + (await p.textContent('[data-testid="acc-nav-waiting"]')).trim() + ')');
+  ok(await p.locator('[data-testid="acc-nav-waiting"]').count() === 0 && await p.evaluate(() => (BK.waiting || []).length) === 5, 'Waiting is not a menu item (A1); the ledger still knows 5 posts are waiting - To do carries them');
   await p.click('[data-testid="acc-nav-cheques"]');
   await p.waitForSelector('[data-testid="chq-' + chqId + '"]', { timeout: 8000 }).catch(() => {});
   ok(await p.locator('[data-testid="chq-' + chqId + '"]').count() === 1 && /Deposited/.test(await p.textContent('[data-testid="chq-status-' + chqId + '"]').catch(() => '')), 'Cheques: the one recorded here is listed, Deposited');
@@ -781,7 +781,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   await noAccounting(p, 'cheques');
 
   /* ⚠️⚠️ review M12 — what could not be recorded is ON A SCREEN, in the server's words, with Try again */
-  await p.click('[data-testid="acc-nav-waiting"]');
+  await p.evaluate(() => show('waiting'));   /* the list is opened from To do's "waiting to be recorded" notice (no menu item since A1) */
   await p.waitForSelector('[data-testid="wait-retry"]', { timeout: 8000 }).catch(() => {});
   const waitTxt = await p.textContent('[data-testid="bk-body"]');
   ok(/Waiting to be recorded/.test(waitTxt) && /Paid by Points — there is no ledger for Points yet\./.test(waitTxt) && /September is locked\. Open it again to record this bill\./.test(waitTxt), 'Waiting to be recorded: each one with the server\'s own sentence');

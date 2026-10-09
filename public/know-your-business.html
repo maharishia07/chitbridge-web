@@ -103,10 +103,14 @@ async function renderYourself(b){
   var f=(r.j&&r.j.facts)||{}, cr=f.credentials||[], s=f.summary||{};
   var add='<div class="card"><div class="sec" style="margin-top:0">Add a credential CB doesn&rsquo;t know</div><div class="note" style="margin-bottom:6px">A village NOC, a municipal licence &mdash; anything. It lands <b>declared</b>; it rises to <b>documented</b> when you attach a real owned document. The list you add IS the roadmap.</div>'
     +'<div class="row"><input id="nc_title" placeholder="Credential name (e.g. Village Panchayat NOC)" style="flex:1;min-width:160px" value="'+esc(((window.CBOffline&&CBOffline.loadDraft('kyb.cred'))||{}).title||'')+'" oninput="saveKyb()"><button class="pri" onclick="addCred()">Add</button></div><div id="nc_err" class="err"></div></div>';
-  var list = cr.length ? cr.map(function(c){
+  /* K4: what applies to THIS business first; the rest folded under "Other certificates" (the server says which: `applies`) */
+  var mine = cr.filter(function(c){ return c.applies !== false; }), other = cr.filter(function(c){ return c.applies === false; });
+  var one = function(c){
     var exp = c.expired?'<span class="exp gone">expired</span>':(c.expiring?'<span class="exp soon">expires in '+esc(String(c.days_left))+'d</span>':'');
     return '<div class="cred"><span class="nm">'+esc(c.title)+'</span>'+(c.valid_until?'<span class="asof">to '+esc(String(c.valid_until).slice(0,10))+'</span>':'')+exp+rungChip(c.rung)+'</div>';
-  }).join('') : '<div class="empty">No credentials yet. Add one above, or gather them in Trade-ready.</div>';
+  };
+  var list = (mine.length ? mine.map(one).join('') : '<div class="empty">No credentials yet. Add one above, or gather them in Trade-ready.</div>')
+    + (other.length ? '<details class="other" data-testid="kyb-other"><summary style="cursor:pointer;font-size:12.5px;font-weight:700;padding:9px 4px">Other certificates ('+other.length+') &mdash; for other countries or trades</summary>'+other.map(one).join('')+'</details>' : '');
   b.innerHTML='<div class="card"><div class="row" style="justify-content:space-between"><b style="font-size:14px">What you hold</b><span class="note">'+(s.held||0)+' held &middot; '+(s.verified||0)+' verified &middot; '+(s.documented||0)+' documented &middot; '+(s.declared||0)+' declared'+(s.expiring?' &middot; '+s.expiring+' expiring':'')+'</span></div>'+list+'</div>'+add
     +'<div class="note" style="padding:0 4px">'+esc((r.j&&r.j.note)||'')+'</div>';
 }

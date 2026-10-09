@@ -113,7 +113,7 @@ const CHITS = Array.from({ length: 18 }, (_, i) => ({
       ok(!!d && d.rows > 0, dev + ' · Day book: #bk_dvlist is a CBList mount with ' + (d && d.rows) + ' records');
       if (d) { ok(d.headPct <= (vw <= 640 ? 30 : 20), dev + ' · Day book: the head is ' + d.headPct + '% of the window (limit ' + (vw <= 640 ? 30 : 20) + '%)'); ok(Math.abs(d.bottom - d.vh) <= 12, dev + ' · Day book: the rows area fills the window (bottom ' + d.bottom + ' of ' + d.vh + ')'); ok(!d.sideways, dev + ' · Day book: no sideways page scroll'); }
       await p.screenshot({ path: path.join(SHOTS, 'cblist-daybook-' + dev + '.png') });
-      await p.click('[data-testid="acc-nav-dues"]');
+      await p.click('[data-testid="acc-nav-receivables"]');
       await p.waitForSelector('[data-testid="dues-c1"]', { timeout: 15000 }).catch(() => {});
       await p.waitForTimeout(300);
       const u = await mounted(p, '#bkl_dues');

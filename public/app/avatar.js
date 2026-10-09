@@ -59,15 +59,16 @@
     ['mono',    'Monospace', "'Space Mono',ui-monospace,monospace", 'every character the same width']
   ];
   var MONO = FONTS[4][2];
-  var KEY = { theme: 'cb_theme', font: 'cb_font', fs: 'cb_fs', weight: 'cb_weight', motion: 'cb_motion' };
-  var DEFAULTS = { theme: 'device', font: 'default', fs: 'm', weight: 'normal', motion: 'auto' };
+  var KEY = { theme: 'cb_theme', font: 'cb_font', fs: 'cb_fs', weight: 'cb_weight', motion: 'cb_motion', stripes: 'cb_stripes' };
+  var DEFAULTS = { theme: 'device', font: 'default', fs: 'm', weight: 'normal', motion: 'auto', stripes: 'strong' };
+  var STRIPES = [['off', 'Off'], ['light', 'Light'], ['strong', 'Strong']];   /* row stripes (Excel's banded rows): Strong is the default and the list unit's own 9%; Light 5%; Off none */
 
   function lsGet(k, d) { try { return root.localStorage.getItem(k) || d; } catch (_) { return d; } }
   function lsSet(k, v) { try { root.localStorage.setItem(k, v); } catch (_) {} }
 
   /* ── what is saved ── */
   function pref(kind) { return lsGet(KEY[kind], DEFAULTS[kind]); }
-  function get() { return { theme: pref('theme'), font: pref('font'), fs: pref('fs'), weight: pref('weight'), motion: pref('motion') }; }
+  function get() { return { theme: pref('theme'), font: pref('font'), fs: pref('fs'), weight: pref('weight'), motion: pref('motion'), stripes: pref('stripes') }; }
 
   /** The theme that is actually on the page. `device` (or nothing saved) asks the operating system ONCE, at load, and is not live. */
   function themeKey() {
@@ -135,9 +136,14 @@
     /* ⚠️ an unrecognised saved value means "follow the device", never a stamp no rule matches (the health setting must not fail open) */
     if (m === 'reduce' || m === 'full') r.setAttribute('data-motion', m); else r.removeAttribute('data-motion');
   }
+  /** the ONE zebra token: the stamp picks --zebra (CSS below); Strong is no stamp, the unit's own fallback */
+  function stripesApply() {
+    var r = doc.documentElement, s = pref('stripes');
+    if (s === 'off' || s === 'light') r.setAttribute('data-stripes', s); else r.removeAttribute('data-stripes');
+  }
   function apply() {
     if (!doc || !doc.documentElement) return;
-    try { themeApply(); fontApply(); sizeApply(); weightApply(); motionApply(); } catch (_) {}
+    try { themeApply(); fontApply(); sizeApply(); weightApply(); motionApply(); stripesApply(); } catch (_) {}
   }
 
   /* ── the person's appearance follows them (b166) — silent when there is nothing to reach ── */
@@ -154,7 +160,7 @@
   var HOST = {};                                            /* what the mounted page told us (apiBase · token · sync) */
   function push() {
     if (HOST.sync === false) return;
-    var body = { theme: pref('theme'), fs: pref('fs'), motion: pref('motion') };
+    var body = { theme: pref('theme'), fs: pref('fs'), motion: pref('motion'), stripes: pref('stripes') };
     /* the app's (and CB Accounts') own door: CBPrefs debounces, queues offline and stays silent before the migration */
     try { if (typeof CBPrefs !== 'undefined' && typeof SESSION !== 'undefined' && SESSION && SESSION.token) { CBPrefs.push('ui', body); return; } } catch (_) {}
     var base = apiBaseOf(HOST), tok = tokenOf(HOST);
@@ -170,12 +176,13 @@
   /** The server wins — that is the feature — EXCEPT when it has nothing (an empty object means "never chosen"). */
   function hydrate(prefs) {
     if (!prefs || typeof prefs !== 'object') return false;
-    if (!prefs.theme && !prefs.fs && !prefs.motion) return false;
+    if (!prefs.theme && !prefs.fs && !prefs.motion && !prefs.stripes) return false;
     var changed = false;
     try {
       if (prefs.theme && (prefs.theme === 'device' || (has(THEMES, prefs.theme) && THEMES[prefs.theme])) && prefs.theme !== pref('theme')) { lsSet(KEY.theme, prefs.theme); changed = true; }
       if (prefs.fs && TEXT_SIZES.some(function (x) { return x[0] === prefs.fs; }) && prefs.fs !== pref('fs')) { lsSet(KEY.fs, prefs.fs); changed = true; }
       if (prefs.motion && ['auto', 'reduce', 'full'].indexOf(prefs.motion) >= 0 && prefs.motion !== pref('motion')) { lsSet(KEY.motion, prefs.motion); changed = true; }
+      if (prefs.stripes && STRIPES.some(function (x) { return x[0] === prefs.stripes; }) && prefs.stripes !== pref('stripes')) { lsSet(KEY.stripes, prefs.stripes); changed = true; }
       if (changed) { apply(); repaint(); }
     } catch (_) {}
     return changed;
@@ -201,9 +208,10 @@
     if (kind === 'font' && !FONTS.some(function (x) { return x[0] === value; })) return;
     if (kind === 'weight' && value !== 'normal' && value !== 'bold') return;
     if (kind === 'motion' && ['auto', 'reduce', 'full'].indexOf(value) < 0) return;
+    if (kind === 'stripes' && !STRIPES.some(function (x) { return x[0] === value; })) return;
     lsSet(KEY[kind], value);
     apply();
-    if (kind === 'theme' || kind === 'fs' || kind === 'motion') push();
+    if (kind === 'theme' || kind === 'fs' || kind === 'motion' || kind === 'stripes') push();
     repaint();
   }
 
@@ -260,6 +268,10 @@
     '--blue-t:var(--blue-tint-bg,var(--blue-tint,#E4EEFA));--blue-b:var(--blue-tint-line,#B9D2EF);--blue-i:var(--blue-d,#174A87)}' +
     /* the two preferences every page honours, written once here so no page re-declares them */
     ':root[data-motion="reduce"] *,:root[data-motion="reduce"] *::before,:root[data-motion="reduce"] *::after{animation:none!important;transition:none!important}' +
+    ':root[data-stripes="off"]{--zebra:transparent}' +
+    ':root[data-stripes="light"]{--zebra:color-mix(in srgb,var(--ink,#1D1B16) 5%,var(--card,#FFFFFF))}' +
+    '.cbav-stripes{display:flex;gap:4px;margin:0 0 8px}.cbav-stripes button{flex:1;height:34px;border:1px solid var(--av-line);background:var(--av-card);border-radius:9px;color:var(--av-ink);font-family:inherit;font-size:calc(12.5px * var(--k,1))}' +
+    '.cbav-stripes button[aria-pressed="true"]{border-color:var(--av-blue);background:var(--av-blue-t);color:var(--av-blue-i);font-weight:600}' +
     ':root[data-weight="bold"] body{font-weight:600}' +
     ':root[data-weight="bold"] :where(button,input,select,textarea){font-weight:inherit}' +
     ':root[data-weight="bold"] body :is([style*="font-weight:400"],[style*="font-weight: 400"],[style*="font-weight:500"],[style*="font-weight: 500"]){font-weight:600}';
@@ -310,7 +322,10 @@
     return '<div class="cbav-pop" role="dialog" aria-label="Your menu" data-testid="avatar-menu">' +
       '<div class="cbav-who"><span class="l">' + esc(letter(P)) + '</span><div><b>' + esc(P.name || P.entity || '') + '</b><span>' + esc(P.role || '') + '</span></div></div>' +
       (up.length ? '<div class="cbav-items">' + up.join('') + '</div>' : '') +
-      '<div class="cbav-cols"><div class="cbav-c"><h4>Appearance</h4><div class="cbav-sw" role="group" aria-label="Theme">' + swatches() + '</div></div>' +
+      '<div class="cbav-cols"><div class="cbav-c"><h4>Appearance</h4><div class="cbav-sw" role="group" aria-label="Theme">' + swatches() + '</div>' +
+      '<h4>Row stripes</h4><div class="cbav-stripes" role="group" aria-label="Row stripes" data-testid="stripes-group">' + STRIPES.map(function (x) {
+        return '<button type="button" data-testid="stripes-' + x[0] + '" data-av-stripes="' + x[0] + '" aria-pressed="' + (pref('stripes') === x[0]) + '">' + x[1] + '</button>';
+      }).join('') + '</div></div>' +
       '<div class="cbav-c"><h4>Text size</h4><div class="cbav-sizes" role="group" aria-label="Text size">' + TEXT_SIZES.map(function (x, i) {
         return '<button type="button" data-testid="fs-' + x[0] + '" data-av-fs="' + x[0] + '" aria-pressed="' + (fsNow === x[0]) + '" title="' + x[1] + ' (' + Math.round(x[2] * 100) + '%)" aria-label="' + x[1] + '" style="font-size:' + [13, 16, 20, 25][i] + 'px">A</button>';
       }).join('') + '</div>' +
@@ -376,6 +391,7 @@
       if ((b = t.closest('[data-av-theme]'))) return set('theme', b.getAttribute('data-av-theme'));
       if ((b = t.closest('[data-av-fs]'))) return set('fs', b.getAttribute('data-av-fs'));
       if ((b = t.closest('[data-av-weight]'))) return set('weight', b.getAttribute('data-av-weight'));
+      if ((b = t.closest('[data-av-stripes]'))) return set('stripes', b.getAttribute('data-av-stripes'));
       if ((b = t.closest('[data-av-font]'))) return set('font', b.getAttribute('data-av-font'));
       if ((b = t.closest('[data-av-motion]'))) return set('motion', pref('motion') === 'reduce' ? 'auto' : 'reduce');
       if ((b = t.closest('[data-av-lang]'))) { var c = b.getAttribute('data-av-lang'); if (o.languages && o.languages.onPick) o.languages.onPick(c); return; }
@@ -395,7 +411,7 @@
     });
     /* another tab changed the look: follow it (the storage event never fires in the tab that wrote) */
     root.addEventListener('storage', function (e) {
-      if (e.key === null || /^cb_(theme|font|fs|weight|motion)$/.test(e.key)) { apply(); repaint(); }
+      if (e.key === null || /^cb_(theme|font|fs|weight|motion|stripes)$/.test(e.key)) { apply(); repaint(); }
     });
   }
 
