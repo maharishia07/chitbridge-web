@@ -12,7 +12,9 @@
  *  6  the one-shop gate: another shop's fingerprint stops the page before any read; a session replaced by another shop signs it out
  *  7  phone: 390 px is an icon rail and document.scrollWidth === 390 on every view; a table is one card per row
  *  +  the page's own source: no alert(), no "accounting" / "books of account"; no page error; the designer's pairs read at AA
- * Screenshots: e2e/shots/cb-accounts-{laptop,phone,ledgers,off}.png
+ *  8  THE LISTS ROUND (Athi 2026-10-09): ZEBRA on the ledger / statement tables and on the list rows (one token shade, hover distinct) · NO LAYOUT JUMP: the whole frame (menu, title, the rows' room, the kural's
+ *     room) is in the first paint and only the rows change · the ledger entries keep their stripe on a phone card
+ * Screenshots: e2e/shots/cb-accounts-{laptop,phone,ledgers,off}.png · e2e/shots/lists/accounts-{ledger-zebra}-{1366,390}.png
  */
 'use strict';
 const { chromium } = require('@playwright/test');
@@ -169,6 +171,7 @@ async function route(S, r) {
     await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
     await ctx.route('**/api/**', (r) => route(S, r));
     if (o.session !== null) await ctx.addInitScript((s) => { try { if (!localStorage.getItem('cb_seeded')) { localStorage.setItem('cb_seeded', '1'); localStorage.setItem('cb_sess', JSON.stringify(s)); } } catch (_) {} }, o.session || OWNER);
+    if (o.delay) await ctx.route('**/api/**', async (r) => { await new Promise((x) => setTimeout(x, o.delay)); r.fallback(); });   /* a slow line: the first paint must already be the whole frame */
     if (o.seed) await ctx.addInitScript(o.seed);
     const p = await ctx.newPage();
     p.on('pageerror', (e) => threw.push(e.message));
@@ -349,6 +352,16 @@ async function route(S, r) {
     await p.waitForSelector('[data-testid="stmt-row-0"]', { timeout: 8000 });
     ok(S.calls.some((c) => /\/api\/books\/ledger\/1400/.test(c)) && (await p.textContent('.cbl-title h1')).trim() === 'Cash' && /Sale/.test(await p.textContent('[data-testid="stmt-row-0"]')), 'clicking Cash reads that ledger (GET /api/books/ledger/1400); its name is the title and its entry is a Task-table row');
     ok(await p.locator('#lg_out .lhead').count() === 1 && await p.locator('#lg_out .lrow').count() === 1 && await p.locator('#lg_out table').count() === 0, 'the entries are the Task table (.lhead / .lrow) — no table of its own');
+    /* ZEBRA on the statement table (the party / control-account statement the ledger prints) and on the list rows */
+    {
+      const z = await p.evaluate(() => {
+        const mk = (i) => ({ date: '2026-09-0' + (i + 1), what: 'Sale', ref: null, party_id: 'c1', source_chit_id: null, dr_minor: 1000 * (i + 1), cr_minor: 0, running_minor: 1000 * (i + 1) * (i + 2) / 2 });
+        const host = document.createElement('div'); host.id = '__zebra'; host.innerHTML = statementHTML({ currency: 'INR', party_id: 'c1', opening_minor: 0, closing_minor: 10000, lines: [mk(0), mk(1), mk(2), mk(3)] }, 'c1'); document.getElementById('content').appendChild(host);
+        const bg = (e) => getComputedStyle(e).backgroundColor, rs = Array.from(host.querySelectorAll('tbody tr')).map(bg); host.remove(); return rs;
+      });
+      ok(z.length >= 5 && z[0] === z[2] && z[1] === z[3] && z[0] !== z[1], 'ZEBRA: the ledger / statement table alternates its rows from one token shade (' + z.slice(0, 3).join(' / ') + ')');
+      await p.screenshot({ path: path.join(SHOTS, 'lists', 'accounts-ledger-zebra-1366.png') }).catch(() => {});
+    }
     ok(await p.locator('#who').count() === 1 && await p.locator('.cbl-title #who').count() === 1 && await p.locator('#cbav button').count() === 1, 'the shop · Home · avatar are ONE node, moved into the title row (never copied): one #who, one avatar button');
     ok(await p.locator('[data-testid="lg-sum"]').count() === 1 && /^Opening ₹0\.00 · Closing ₹12,400\.00 Dr$/.test((await p.textContent('[data-testid="lg-sum"]')).trim()), 'ONE figures line: "Opening ₹0.00 · Closing ₹12,400.00 Dr"');
     await p.click('[data-testid="lg-acc-1500"]'); await p.waitForFunction(() => /Balance/.test((document.querySelector('[data-testid="lg-sum"]') || {}).textContent || ''), null, { timeout: 8000 });
@@ -594,6 +607,7 @@ async function route(S, r) {
     await p.click('[data-testid="close-first-go"]');
     await p.waitForSelector('[data-testid="acc-nav-daybook"]', { timeout: 15000 });
     ok(await p.evaluate(() => localStorage.getItem('cb.draft.msg.c1')) === null, 'cleared → the other shop\'s draft is gone');
+    for (let i = 0; i < 40 && !S.calls.some((c) => /\/api\/books\/health/.test(c)); i++) await p.waitForTimeout(150);   /* the menu is in the first paint now; the read follows */
     ok(S.calls.some((c) => /\/api\/books\/health/.test(c)), 'and then CB Accounts opens and reads');
     /* a second shop signs in elsewhere while this page is open → this page leaves */
     const other = await ctx.newPage();                       /* the `storage` event reaches OTHER documents: a second tab does the sign-in */
@@ -774,6 +788,37 @@ async function route(S, r) {
     await p.waitForSelector('[data-testid="lg-agreed"]', { timeout: 8000 }).catch(() => {});
     ok(/Agreed up to 31 Aug 2026/.test((await p.textContent('[data-testid="lg-agreed"]').catch(() => '')) || '') && await p.locator('#lt_tree .ck').count() >= 1, 'when the API sends the agreement date the head says "✓ Agreed up to 31 Aug 2026" and the tree puts a ✓ beside the party');
     await ctx.close();
+  }
+
+  /* ── 8 · THE LISTS ROUND: no layout jump, and the ledger stripes ─────────────────────────────────────────────────────────────── */
+  for (const [w, h] of [[1366, 768], [390, 844]]) {
+    const { ctx, p } = await open(standIn(), { viewport: { width: w, height: h }, delay: 1200, path: '/accounts.html#daybook' });
+    const box = () => p.evaluate(() => { const r = (s, n) => { const e = document.querySelectorAll(s)[n || 0]; if (!e) return null; const b = e.getBoundingClientRect(); return [Math.round(b.left), Math.round(b.top), Math.round(b.width), Math.round(b.height)]; };
+      return { navN: document.querySelectorAll('#nav .nav-btn').length, nav0: r('#nav .nav-btn', 0), navLast: r('#nav .nav-btn', 19), title: r('#title'), brand: r('#side .brand'), skel: document.querySelectorAll('.bk-skel i').length, band: r('#cbkural,#cbkural-reserve'), content: r('#content'), collapse: r('#toggleNav'), titleText: (document.getElementById('title') || {}).textContent }; });
+    await p.waitForSelector('.bk-skel', { timeout: 6000 }); await p.waitForTimeout(250);
+    const a = await box(), tag = 'accounts @' + w;
+    ok(a.navN === VIEWS.length && a.titleText === 'Day book' && a.skel >= 5 && !!a.band && a.band[3] >= 40, tag + ' FIRST PAINT, data still on its way: all ' + a.navN + ' menu items, the title "' + a.titleText + '", skeleton rows (' + a.skel + '), the kural\'s room (' + (a.band && a.band[3]) + ' px)');
+    await p.waitForSelector('[data-testid^="db-entry-"]', { timeout: 15000 }); await p.waitForTimeout(700);
+    const z = await box(), same = (u, v, tol) => !!u && !!v && u.every((x, i) => Math.abs(x - v[i]) <= (tol == null ? 1 : tol));
+    ok(same(a.nav0, z.nav0) && same(a.navLast, z.navLast) && same(a.brand, z.brand) && same(a.title, z.title) && same(a.collapse, z.collapse), tag + ': when the rows arrive the menu, the title and the sidebar foot do not move (' + JSON.stringify([a.nav0, a.title, a.collapse]) + ' → ' + JSON.stringify([z.nav0, z.title, z.collapse]) + ')');
+    ok(same(a.content.slice(0, 3), z.content.slice(0, 3), 2), tag + ': the content area keeps its place and width — only its height follows the rows (' + JSON.stringify(a.content) + ' → ' + JSON.stringify(z.content) + ')');
+    await ctx.close();
+  }
+  {
+    /* a ledger with enough lines to show the stripe, on a laptop and on a phone card */
+    const extra = [LINE('k7', '2026-09-08', 'C2/26-27/0018', 'c1', 120000, 0, 720000, 'bill', 'Mayur Bhavan'), LINE('k8', '2026-09-09', 'C2/26-27/0019', 'c1', 0, 200000, 520000, 'bill', 'Mayur Bhavan'), LINE('k9', '2026-09-10', 'C2/26-27/0020', 'c1', 90000, 0, 610000, 'bill', 'Mayur Bhavan')];
+    PARTY_LINES.c1.push(...extra);
+    for (const [w, h] of [[1366, 768], [390, 844]]) {
+      const { ctx, p } = await open(standIn(), { viewport: { width: w, height: h } });
+      await p.waitForSelector('[data-testid="acc-nav-ledgers"]', { timeout: 15000 }); await p.click('[data-testid="acc-nav-ledgers"]');
+      const pk = async (id) => { if (!(await p.locator('[data-testid="' + id + '"]').isVisible())) { if (await p.locator('[data-lt="back"]').isVisible()) await p.click('[data-lt="back"]'); else if (await p.locator('[data-lt="unfold"]').isVisible()) await p.click('[data-lt="unfold"]'); await p.waitForTimeout(200); } await p.click('[data-testid="' + id + '"]'); await p.waitForFunction(() => !document.querySelector('#lg_out .cbl-skel') && document.querySelector('#lg_out .cbl-list'), null, { timeout: 8000 }); await p.waitForTimeout(250); };
+      await p.waitForSelector('[data-testid="lt-band-people"]', { timeout: 15000 }); await pk('lg-acc-1300'); await pk('lg-party-c1'); await p.waitForSelector('[data-testid="stmt-row-3"]', { timeout: 15000 }); await p.waitForTimeout(400);
+      const zb = await p.evaluate(() => { const bg = (e) => getComputedStyle(e).backgroundColor, rs = Array.from(document.querySelectorAll('[data-testid^="stmt-row-"]')); return { n: rs.length, a: bg(rs[0]), b: bg(rs[1]), c: bg(rs[2]), d: bg(rs[3]) }; });
+      ok(zb.n >= 4 && zb.a === zb.c && zb.b === zb.d && zb.a !== zb.b, 'ledger @' + w + ': the entries alternate their shade (' + zb.a + ' / ' + zb.b + ')');
+      await p.screenshot({ path: path.join(SHOTS, 'lists', 'accounts-ledger-zebra-' + w + '.png') }).catch(() => {});
+      await ctx.close();
+    }
+    PARTY_LINES.c1.length -= extra.length;
   }
 
   /* ── no page error, nothing left the machine ── */

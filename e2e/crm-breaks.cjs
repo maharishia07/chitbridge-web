@@ -19,7 +19,7 @@ const BREAKS = [
   ['the page works out a tax on the dues', HOME, `  if (!CRM.ledger || p.balance_minor == null) return '<span class="sub">—</span>';`, `  if (!CRM.ledger || p.balance_minor == null) return '<span class="sub">—</span>';\n  var _gst = p.balance_minor * 1.18;`, H],
   ['the page sums the dues of every party', HOME, `function crmNotices() {\n`, `function crmNotices() {\n  var _tot = CRM.rows.reduce(function (a, p) { return a + (p.balance_minor || 0); }, 0);\n`, H],
   /* the frozen look */
-  ['a column header is drawn by hand', HOME, `function crmHome() {\n`, `function crmHome() {\n  var _h = '<thead><tr><th>Party</th></tr></thead>';\n`, H],
+  ['a column header is drawn by hand', HOME, `function crmHome(frame) {\n`, `function crmHome(frame) {\n  var _h = '<thead><tr><th>Party</th></tr></thead>';\n`, H],
   ['a banner row sits above the list (the head grows past 20%)', HOME, `  s.innerHTML = '<div id="crm_list" data-testid="crm-list"></div>';`, `  s.innerHTML = '<div style="height:90px">banner</div><div id="crm_list" data-testid="crm-list"></div>';`, H],
   ['the page draws its own avatar', PAGE, `data-testid="avatar-slot"></span>\``, `data-testid="avatar-slot"><b class="avatar">A</b></span>\``, H],
   ['the phone overflows', PAGE, `  .content,.rec{padding-left:16px;padding-right:16px}`, `  .content,.rec{padding-left:16px;padding-right:16px;min-width:700px}`, H],
@@ -46,6 +46,10 @@ const BREAKS = [
   ['the edit sheet keeps one tax id', 'public/app/cap-books.js', `var taxes = (r.tax_ids && r.tax_ids.length) ? r.tax_ids : [{}];`, `var taxes = (r.tax_ids && r.tax_ids.length) ? [r.tax_ids[0]] : [{}];`, H],
   ['the page is no longer named CB CRM', PAGE, `<title>CB CRM</title>`, `<title>CB Accounts</title>`, H],
   ['the word accounting reaches the page', PAGE, `<div class="brand-name label">CB CRM</div>`, `<div class="brand-name label">CB CRM accounting</div>`, H],
+  /* the lists round (2026-10-09): the handle is never an e-mail · the stripe · the whole frame in the first paint */
+  ['an internal .cr handle is shown as an e-mail', HOME, `  if (!/@[^@.\\s]+\\.(cr|br)$/i.test(s)) return s;`, `  if (true) return s;`, H],
+  ['the zebra stripe is gone', 'public/app/list-ctl.js', `var zb = (zi++ % 2) === 1;`, `var zb = false; zi++;`, H],
+  ['the first paint is not the whole frame (the menu waits for the data)', PAGE, `  crmRoute(true);`, `  /* crmRoute(true); */`, H],
   ['an alert() sneaks in', HOME, `function crmOwner() {`, `function crmOwner() { alert('hi');`, H],
   ['the one-shop gate is not attached', PAGE, `CBOnePerson.attach({ quiet: true, who: () => MINE,`, `void ({ quiet: true, who: () => MINE,`, H],
 ];

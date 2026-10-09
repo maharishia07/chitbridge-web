@@ -35,7 +35,9 @@ function crmRecordFrom(rec, p) {
   r.roles = crmRolesList(r.roles);
   if (r.merged_from && typeof r.merged_from === 'object') r.merged_from = r.merged_from.party_no || r.merged_from.party_id || null;
   if (r.points && r.points.balance == null && r.points.points != null) r.points = Object.assign({}, r.points, { balance: r.points.points });
-  if (!r.contacts) { var ph = r.phone || r.otp_contact || (p && p.phone) || '', em = r.email || (p && p.email) || ''; r.contacts = { phones: ph ? [ph] : [], emails: em ? [em] : [], address: null }; }
+  if (!r.contacts) { var ph = r.phone || r.otp_contact || (p && p.phone) || '', em = crmRealEmail(r.email || (p && p.email) || ''); r.contacts = { phones: ph ? [ph] : [], emails: em ? [em] : [], address: null }; }
+  /* O6 / C9: an internal sign-in handle (…@<shop>.cr) is not an e-mail, wherever it came from */
+  if (r.contacts && Array.isArray(r.contacts.emails)) r.contacts = Object.assign({}, r.contacts, { emails: r.contacts.emails.map(crmRealEmail).filter(Boolean) });
   if (r.gstn_profile === undefined) r.gstn_profile = r.gstin && r.gstin.differs ? r.gstin.theirs : null;   // the API says "differs"; the page offers "Use theirs"
   /* the credit terms come in `terms`, one per side; the painter and the edit sheet read them off the side */
   ['customer', 'supplier'].forEach(function (s) { if (r[s] && r.terms && r.terms[s]) r[s] = Object.assign({}, r[s], r.terms[s]); });

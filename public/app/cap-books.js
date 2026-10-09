@@ -60,6 +60,8 @@ function bkCss() {
     '.bktab td{padding:5px 7px;border-bottom:1px dashed var(--line);vertical-align:top}',
     '.bktab .num{text-align:end;font-variant-numeric:tabular-nums;white-space:nowrap}',
     '.bktab tfoot td{border-top:1px solid var(--ink);border-bottom:0}',
+    /* ZEBRA (Athi, 2026-10-09) — the ledger and statement tables, the same one rule as CBList's rows: every other body row, from the theme's --zebra (else the ink mixed 4% into the card) */
+    '.bktab tbody tr:nth-child(even){background:var(--zebra,color-mix(in srgb,var(--ink) 4%,var(--card)))}',
     '.bktab tr.bkentry td{border-top:1px solid var(--line);font-weight:600}',
     '#bk_body input[type=date].inp,#bk_body select.inp,#bk_body .supacts .inp{width:auto}',
     /* the primary button of a pane's action row (Pay · Receive · Edit · Lock …) — once here, so accounts.html, crm.html and the app read the same */

@@ -16,6 +16,17 @@ function chitsMoney(c) {
   if (c.value == null) return '';
   try { return esc(fmtMoney(Number(c.value), c.currency || 'INR')); } catch (_) { return esc(String(c.value)); }
 }
+function chitsWho(c) { return (c.tab === 'in' ? tx('From') : tx('To')) + ' ' + (c.self ? tx('your own shop') : (c.who || tx('a business'))); }
+/** the chit's mini-card (same shape as a party's): the chit · the amount · why it is stuck and what to do; then Open chit */
+function chitsMini(c) {
+  var key = esc(c.chit_id);
+  return '<div class="mc" data-testid="chits-mini-' + key + '">'
+    + crmMiniBox('mc-what', 'Chit', [crmMiniRow('chit', '<b>' + esc(c.subject || tx('A chit')) + '</b>'), crmMiniKV('Who', esc(chitsWho(c))), crmMiniKV('Filed', esc(chitsWhen(c.created_at)) + ' · ' + esc(chitsAge(c)))], 'chits-mini-chit-' + key)
+    + crmMiniBox('mc-money', 'Amount', ['<div class="mc-big">' + (chitsMoney(c) || '<span class="sub">—</span>') + '</div>', crmMiniKV('Direction', esc(c.tab === 'in' ? tx('In') : tx('Out')))], 'chits-mini-amount-' + key)
+    + crmMiniBox('mc-last', c.stuck ? 'Why it is stuck' : 'Where it stands', [c.stuck && c.why
+        ? '<div class="mc-r" data-testid="chits-why" style="align-items:flex-start;min-height:0"><span class="v" style="white-space:normal;color:var(--red-text,#8E3517)">' + esc(tx(c.why)) + '</span></div><div class="mc-r sub" style="white-space:normal;min-height:0;margin-top:6px">' + esc(tx('Open it to answer, close or cancel it.')) + '</div>'
+        : '<div class="mc-r sub" style="white-space:normal">' + esc(tx('Nothing is waiting on you here.')) + '</div>'], 'chits-mini-why-' + key) + '</div>';
+}
 function chitsStuckCount() { return CHITS.items.filter(function (c) { return c.stuck; }).length; }
 
 async function chitsLoad() {
@@ -37,11 +48,9 @@ function chitsRefresh() { var a = CHITS.api; if (a && a.el && document.body.cont
 function chitsCols() {
   return [
     { key: 'chit', label: 'Chit', prio: 1, w: 300, html: true, value: function (c) { return c.subject || c.who || ''; },
-      cell: function (c) {
-        return '<div><b>' + esc(c.subject || tx('A chit')) + '</b>' + (c.stuck ? ' <span class="tag late" data-testid="chits-stuck-tag">' + esc(tx('Stuck')) + '</span>' : '')
-          + '</div><div class="sub">' + esc((c.tab === 'in' ? tx('From') : tx('To')) + ' ' + (c.self ? tx('your own shop') : (c.who || tx('a business')))) + '</div>'
-          + (c.stuck && c.why ? '<div class="sub" data-testid="chits-why" style="color:var(--amber-i,#7A5205)">' + esc(tx(c.why)) + '</div>' : ''); } },
-    { key: 'dir', label: 'In · Out', prio: 2, w: 90, value: function (c) { return c.tab === 'in' ? tx('In') : tx('Out'); }, cell: function (c) { return c.tab === 'in' ? tx('In') : tx('Out'); } },
+      cell: function (c) { return '<span class="pcell"><span class="nm">' + esc(c.subject || tx('A chit')) + '</span>' + (c.stuck ? ' <span class="tag late red" data-testid="chits-stuck-tag"><span aria-hidden="true">⚠</span> ' + esc(tx('Stuck')) + '</span>' : '') + '</span>'; } },
+    { key: 'who', label: 'From · To', prio: 2, w: 200, value: function (c) { return chitsWho(c); }, cell: function (c) { return chitsWho(c); } },
+    { key: 'dir', label: 'In · Out', prio: 6, w: 90, value: function (c) { return c.tab === 'in' ? tx('In') : tx('Out'); }, cell: function (c) { return c.tab === 'in' ? tx('In') : tx('Out'); } },
     { key: 'age', label: 'Age', prio: 3, w: 120, value: function (c) { return c.age_days; }, cell: function (c) { return chitsAge(c); } },
     { key: 'when', label: 'Filed', prio: 4, w: 110, value: function (c) { return c.created_at || ''; }, cell: function (c) { return chitsWhen(c.created_at); } },
     { key: 'val', label: 'Amount', prio: 5, w: 130, html: true, value: function (c) { return c.value == null ? '' : c.value; }, cell: function (c) { return chitsMoney(c) || '<span class="sub">—</span>'; } }
@@ -61,7 +70,7 @@ function chitsNotices() {
   return out;
 }
 
-function chitsHome(params) {
+function chitsHome(params, frame) {
   crmBar('<strong>' + esc(tx('Chits')) + '</strong>', '', true);
   var s = document.getElementById('screen'); s.className = 'screen flush';
   s.innerHTML = '<div id="chits_list" data-testid="chits-list"></div>';
@@ -69,15 +78,17 @@ function chitsHome(params) {
   var tab = params && /^(stuck|in|out)$/.test(params.tab || '') ? params.tab : null;
   CHITS.api = CBList.mount(document.getElementById('chits_list'), {
     key: 'rail-chits', t: tx, rows: function () { return CHITS.items; }, id: function (c) { return c.chit_id; }, rowTid: function (c) { return 'chits-row-' + c.chit_id; },
-    columns: chitsCols, defaultCols: ['chit', 'age', 'val'], cardMax: 3,
+    columns: chitsCols, defaultCols: ['chit', 'who', 'age', 'val'], cardMax: 3, fill: false,
     head: function () { return { title: tx('Chits'), notices: CHITS.state === 'ready' ? chitsNotices() : [] }; },
     state: function () { return CHITS.state; }, error: function () { return crmErrWords(CHITS.err, 'your chits'); }, onRetry: function () { chitsLoad(); },
     empty: { title: tx('Nothing open'), sub: tx('Every chit you hold has been answered or closed.') },
     search: function (c) { return [c.subject, c.who].join(' '); }, searchHint: tx('Subject or business'),
     filters: chitsFilters(), preset: tab ? { filt: { tab: tab } } : null,
     onOpen: function (c) { if (typeof openChitSheet === 'function') openChitSheet(c.chit_id); },
-    actions: [{ id: 'open', label: tx('Open chit'), tid: 'chits-open', run: function (c) { if (typeof openChitSheet === 'function') openChitSheet(c.chit_id); } }]
+    next: chitsMini, nextPending: chitsMini,
+    actions: [{ id: 'open', label: tx('Open chit'), icon: '↗', tid: 'chits-open', run: function (c) { if (typeof openChitSheet === 'function') openChitSheet(c.chit_id); } }]
   });
+  if (frame) return;
   chitsLoad();
   /* O4: the Home bell sends a pressed row here (crm.html#/chits?open=<chit>) - the order opens to act on, over the list */
   if (params && /^[0-9a-f-]{36}$/i.test(params.open || '') && typeof openChitSheet === 'function') openChitSheet(params.open);

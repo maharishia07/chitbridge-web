@@ -211,7 +211,7 @@ async function run() {
       ok(await vis(pg, '[data-testid="rail"]') && await vis(pg, '[data-testid="ledger-waiting"]'), '390 · Home shows the rail and the alert');
       const railR = await pg.evaluate(() => { const r = document.querySelector('[data-testid="rail"]').getBoundingClientRect(); return { l: r.left, r: Math.round(r.right) }; });
       ok(railR.l >= 0 && railR.r <= 390, '390 · the rail sits inside the screen (' + railR.l + ' → ' + railR.r + ')');
-      ok(await pg.evaluate(() => !!document.querySelector('.cbsh-sec.home .cbsh-kh #cbkural')), '390 · the kural sits at the foot of Home');
+      ok(await pg.evaluate(() => !!document.querySelector('[data-testid="shell-pfoot"] #cbkural')), '390 · the kural sits in the footer above the tab bar (never a card in Home)');
       await pg.screenshot({ path: path.join(SHOTS, 'index-phone.png') });
       for (const a of Object.keys(BUDGET)) {
         await pg.click('[data-testid="shell-nav-' + a + '"]'); await pg.waitForTimeout(120);

@@ -19,7 +19,10 @@
  *  7  ROLES: a co-assist sees no Import / Export / Merge · a viewer sees no action at all
  *  8  STATES: migration not run (409) · calls and follow-ups before b276 (503) · the list fails → Try again · Ledger off → no Dues column
  *  9  PHONE: 390 px — document.scrollWidth === 390 on every screen
- * Screenshots: e2e/shots/crm-{home,record,timeline,followups,add}-{laptop,phone}.png
+ *  10 THE LISTS ROUND (Athi 2026-10-09): ONE LINE per party in columns (Role with its heading filter · On ChitBridge · Dues "you'll get/give" · Last activity · Next follow-up red when late) ·
+ *     saved views as tabs · Group as ONE labelled dropdown (None · Role · Connection · Segment; heads show count + dues) · zebra rows · ▸ opens a formatted MINI-CARD (contact · money · last 3 chits ·
+ *     every action shown, the refused one greyed WITH its sentence) · an internal …@<shop>.cr handle is never an e-mail · only the rows scroll · the whole frame is in the first paint
+ * Screenshots: e2e/shots/crm-{home,record,timeline,followups,add}-{laptop,phone}.png · e2e/shots/lists/crm-{oneline,minicard}-{1366,390}.png
  * Playwright is not in the cloud image: `npm i @playwright/test` in a temp dir and NODE_PATH at it (the PR says so). */
 'use strict';
 const { chromium } = require('@playwright/test');
@@ -189,17 +192,27 @@ async function route(S, r) {
     ok(ids.length === 7, 'seven rows: P-0001 … P-0006 and the walk-in (' + ids.join(' ') + ')');
     ok(S0.list.filter((q) => q.party_id === 'pid-0002').length === 2, 'the stand-in READ P-0002 twice (a careless reader) …');
     ok(nm('P-0002') === 1, '… the screen draws ONE row for the party who is both customer and supplier');
-    const chola = await text(p, '[data-testid="crm-row-P-0002"]');
-    ok(/Customer/.test(chola) && /Supplier/.test(chola), 'that one row carries both role chips (Customer · Supplier)');
+    ok((await text(p, '[data-testid="crm-role-P-0002"]')).trim() === 'Both', 'that one row says Both in its Role column (customer and supplier)');
     ok(nm('P-0008') === 0 && !/Folded/.test(await text(p, '#crm_list')), 'the merged party (P-0008, merged_into P-0001) is never listed');
-    ok(/Local/.test(await text(p, '[data-testid="crm-row-P-0003"]')) && /On ChitBridge/.test(await text(p, '[data-testid="crm-row-P-0001"]')) && /Walk-in/.test(await text(p, '[data-testid="crm-row-walkin-919876500021"]')), 'chips: P-0003 Local · P-0001 On ChitBridge · the walk-in Walk-in');
+    ok(await p.locator('[data-testid="crm-row-P-0003"] [data-testid="crm-conn-off"]').count() === 1 && await p.locator('[data-testid="crm-row-P-0001"] [data-testid="crm-conn-on"]').count() === 1 && await p.locator('[data-testid="crm-row-walkin-919876500021"] [data-testid="crm-conn-off"]').count() === 1,
+      'On ChitBridge column: P-0001 ✓ · P-0003 – · the walk-in –');
+    ok((await text(p, '[data-testid="crm-role-P-0003"]')).trim() === 'Supplier' && (await text(p, '[data-testid="crm-role-P-0006"]')).trim() === 'Customer', 'Role column: P-0003 Supplier · P-0006 Customer');
+    /* ONE LINE: a row is as tall as one line of cells, and no chip, tag or second line is stacked under the name */
+    const oneLine = await p.evaluate(() => Array.from(document.querySelectorAll('#crm_list .cbl-row')).map((r) => ({ h: Math.round(r.getBoundingClientRect().height), l2: !!r.querySelector('.l2,.tag'), name: (r.querySelector('.nm') || {}).textContent })));
+    ok(oneLine.length === 7 && oneLine.every((r) => r.h <= 56 && !r.l2), 'ONE LINE per party: every row is one line high (' + oneLine.map((r) => r.h).join('/') + ' px) with no chip or second line under the name');
     const due1 = await text(p, '[data-testid="crm-row-P-0001"] [data-testid="party-due-pid-0001"]'), due2 = await text(p, '[data-testid="crm-row-P-0002"] [data-testid="party-due-pid-0002"]');
-    ok(/^you owe/.test(due1.trim()) && /481\.65/.test(due1) && !/P-0001/.test(due1), 'P-0001 dues: you owe ₹481.65 — the server\'s −48165, painted, the party number not said twice (' + due1.trim() + ')');
-    ok(/^they owe you/.test(due2.trim()) && /12,450\.00/.test(due2), 'P-0002 dues: they owe you ₹12,450.00 — ONE netted figure for both roles (' + due2.trim() + ')');
+    ok(/481\.65/.test(due1) && /you'll give/.test(due1) && /↑/.test(due1) && !/P-0001/.test(due1), 'P-0001 dues: ↑ ₹481.65 you\'ll give — the server\'s −48165, painted in the shopkeeper\'s words (' + due1.trim() + ')');
+    ok(/12,450\.00/.test(due2) && /you'll get/.test(due2) && /↓/.test(due2), 'P-0002 dues: ↓ ₹12,450.00 you\'ll get — ONE netted figure for both roles (' + due2.trim() + ')');
+    const cols2 = await p.evaluate(() => { const c = (s) => getComputedStyle(document.querySelector(s)).color; return { get: c('[data-testid="party-due-pid-0002"]'), give: c('[data-testid="party-due-pid-0001"]') }; });
+    ok(cols2.get !== cols2.give, 'symbol + word + colour: you\'ll get and you\'ll give are different colours (' + cols2.get + ' / ' + cols2.give + ') — never the colour alone');
     ok(/late/i.test(await text(p, '[data-testid="crm-row-P-0001"]')), 'a late due is marked (the server said dues_overdue)');
+    const lateFu = await p.evaluate(() => { const e = document.querySelector('[data-testid="crm-row-P-0001"] [data-testid="crm-fu-late"]'); return e ? { t: e.textContent.replace(/\s+/g, ' ').trim(), c: getComputedStyle(e).color } : null; });
+    ok(lateFu && /Late · \d/.test(lateFu.t) && lateFu.c !== cols2.get, 'an overdue follow-up shows red, says Late and carries its date (' + (lateFu && lateFu.t) + ')');
     const heads = await p.$$eval('#crm_list .cbl-hc', (h) => h.map((x) => x.innerText.replace(/[▲▼⇅]/g, '').trim()));
-    ok(JSON.stringify(heads) === JSON.stringify(['PARTY', 'DUES', 'NEXT FOLLOW-UP']), 'three columns by default: ' + heads.join(' · '));
-    ok(await p.locator('#crm_list .cbl-rz').count() === 3, 'every column has its drag handle (adjustable columns)');
+    const headsClean = heads.map((h) => h.replace(/[▾●]/g, '').trim());
+    ok(JSON.stringify(headsClean) === JSON.stringify(['PARTY', 'ROLE', 'ON CHITBRIDGE', 'DUES', 'LAST ACTIVITY', 'NEXT FOLLOW-UP']), 'the columns: ' + headsClean.join(' · ') + ' (last activity and next follow-up are always on the row)');
+    ok(await p.locator('#crm_list .cbl-rz').count() === 6, 'every column has its drag handle (adjustable columns)');
+    ok(await p.locator('#crm_list [data-hf="role"]').count() === 1 && await p.locator('#crm_list [data-hf="rail"]').count() === 1, 'Role and On ChitBridge carry their own filter in the column heading');
     /* the frozen head: title row (shop · Home · avatar slot ride in it) + tools + column header ≤ 20% of 1366×768 */
     const hd = await p.evaluate(() => { const q = (s) => document.querySelector(s), r = (e) => e ? e.getBoundingClientRect() : { top: 0, bottom: 0 }; const list = q('#crm_list .cbl-list'); return { top: r(q('#crm_list')).top, rows: r(list).top, h: innerHeight, bar: r(q('.bar')).bottom }; });
     ok((hd.rows - hd.top) <= 0.2 * hd.h, 'everything above the rows is ' + Math.round((hd.rows - hd.top)) + ' px of ' + hd.h + ' (' + Math.round(100 * (hd.rows - hd.top) / hd.h) + '%) — within 20% (the shop · Home · avatar bar rides in the title row)');
@@ -229,9 +242,57 @@ async function route(S, r) {
     ok((await rowsOf(p)).join() === 'crm-row-P-0005', 'filter Segment: Inactive → Meena');
     await p.click('[data-cbl-clearf]'); await p.waitForTimeout(100); await p.keyboard.press('Escape');
     /* a row peeks (its next level) */
-    await p.click('[data-testid="crm-row-P-0003"] [data-caret]'); await p.waitForSelector('[data-testid="crm-peek-P-0003"]');
-    ok(/98940 55621/.test(await text(p, '[data-testid="crm-peek-P-0003"]')) && /33BXRPR4410K1Z2/.test(await text(p, '[data-testid="crm-peek-P-0003"]')), 'a row peeks in place: phone, GSTIN …');
-    await p.click('[data-testid="crm-row-P-0003"] [data-caret]');
+    await p.click('[data-testid="crm-row-P-0003"] [data-caret]'); await p.waitForSelector('[data-testid="crm-mini-P-0003"]');
+    await p.waitForSelector('[data-testid="crm-mini-last-P-0003"] .mc-c, [data-testid="crm-mini-nochits-P-0003"]', { timeout: 8000 });
+    const mini = await text(p, '[data-testid="crm-mini-P-0003"]');
+    ok(/98940 55621/.test(mini) && /ravitraders\.mdu@gmail\.com/.test(mini) && /Madurai/.test(mini), 'the mini-card has a contact grid: phone · e-mail · place (' + mini.slice(0, 90) + '…)');
+    ok(await p.locator('[data-testid="crm-mini-phone-P-0003"] a[href^="tel:"]').count() === 1 && await p.locator('[data-testid="crm-mini-email-P-0003"] a[href^="mailto:"]').count() === 1, 'the phone is a tel: link and the e-mail a mailto: link');
+    ok(/you'll give/.test(await text(p, '[data-testid="crm-mini-money-P-0003"]')) && /21 days/.test(await text(p, '[data-testid="crm-mini-terms-P-0003"]')) && /\d/.test(await text(p, '[data-testid="crm-mini-oldest-P-0003"]')), 'the money box: what you\'ll give · credit terms (21 days) · the oldest bill');
+    const acts = await p.$$eval('#crm_list .cbl-next [data-act]', (b) => b.map((x) => x.getAttribute('data-act') + (x.disabled ? ':off' : '')));
+    ok(JSON.stringify(acts) === JSON.stringify(['call', 'message:off', 'pay', 'followup', 'open']), 'EVERY action is shown (Call · Message · Pay/Receive · Follow-up · Open record); Message is greyed for a party not on ChitBridge (' + acts.join(' ') + ')');
+    ok(/Not on ChitBridge/.test(await text(p, '[data-testid="crm-mini-message-why"]')) && /Not on ChitBridge/.test(await p.getAttribute('[data-testid="crm-mini-message"]', 'title')), 'the greyed Message carries its sentence, written out and on hover');
+    const h3 = await p.evaluate(() => Math.round(document.querySelector('[data-testid="crm-mini-P-0003"]').getBoundingClientRect().height));
+    await p.click('[data-testid="crm-row-P-0006"] [data-caret]'); await p.waitForSelector('[data-testid="crm-mini-P-0006"]'); await p.waitForTimeout(600);
+    const h6 = await p.evaluate(() => Math.round(document.querySelector('[data-testid="crm-mini-P-0006"]').getBoundingClientRect().height));
+    ok(Math.abs(h3 - h6) <= 1, 'the mini-card is the SAME height on every row (' + h3 + ' / ' + h6 + ' px) — once its chits have loaded or not');
+    ok(S0.calls.filter((c) => /^GET \/api\/crm\/parties\/[^/?]+\/timeline/.test(c)).length <= 2, 'the chits come from ONE timeline read per OPENED row, never per listed row');
+    await p.screenshot({ path: path.join(SHOTS, 'lists', 'crm-minicard-1366.png') }).catch(() => {});
+    await p.click('[data-testid="crm-row-P-0006"] [data-caret]'); await p.click('[data-testid="crm-row-P-0003"] [data-caret]');
+    /* ZEBRA: every other row a token shade; the hover row and a group head stay distinct */
+    const zb = await p.evaluate(() => { const bg = (e) => getComputedStyle(e).backgroundColor, rs = Array.from(document.querySelectorAll('#crm_list .cbl-row')); return { a: bg(rs[0]), b: bg(rs[1]), c: bg(rs[2]), d: bg(rs[3]) }; });
+    ok(zb.a === zb.c && zb.b === zb.d && zb.a !== zb.b, 'ZEBRA: rows alternate (' + zb.a + ' / ' + zb.b + ')');
+    await p.hover('[data-testid="crm-row-P-0002"]'); await p.waitForTimeout(80);
+    const hv = await p.evaluate(() => { const bg = (e) => getComputedStyle(e).backgroundColor, rs = Array.from(document.querySelectorAll('#crm_list .cbl-row')); return { h: bg(document.querySelector('[data-testid="crm-row-P-0002"]')), z: bg(rs[0]), o: bg(rs[1]) }; });
+    ok(hv.h !== hv.z && hv.h !== hv.o, 'the hovered row is distinct from both stripes (' + hv.h + ')');
+    await p.mouse.move(5, 5);
+    /* SAVED VIEWS as tabs: one tap sets the list\'s own filters */
+    const tabs = await p.$$eval('#crm_list [role="tab"]', (t) => t.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
+    ok(tabs.length === 6 && /^All/.test(tabs[0]) && /^Customers/.test(tabs[1]) && /^Suppliers/.test(tabs[2]) && /^Owe me/.test(tabs[3]) && /^I owe/.test(tabs[4]) && /^No contact in 30 days/.test(tabs[5]), 'views as tabs above the list: ' + tabs.join(' · '));
+    const view = async (k) => { await p.click('[data-testid="crm-view-' + k + '"]'); await p.waitForTimeout(120); return (await rowsOf(p)).map((x) => x.replace('crm-row-', '')).sort().join(','); };
+    ok(await view('owe-me') === 'P-0002,P-0006', 'Owe me → the parties whose balance the server says they owe you (' + await view('owe-me') + ')');
+    ok(await view('i-owe') === 'P-0001,P-0003', 'I owe → the parties you owe (' + await view('i-owe') + ')');
+    ok(await view('suppliers') === 'P-0001,P-0002,P-0003', 'Suppliers → every party with the supplier role, a both-roles party included');
+    ok(await view('quiet') === 'P-0005', 'No contact in 30 days → Meena (last seen 125 days ago)');
+    ok(await p.getAttribute('[data-testid="crm-view-quiet"]', 'aria-selected') === 'true', 'the lit tab is the one whose filters are in force');
+    ok((await view('all')).split(',').length === 7, 'All → the seven parties again');
+    /* the heading filter, the same filter state as Filters ▾ */
+    await p.click('[data-testid="cbl-hf-role"]'); await p.waitForSelector('[data-testid="cbl-hf-pop-role"]');
+    ok(await p.locator('[data-testid="cbl-hf-pop-role"] [role="menuitemradio"]').count() === 4, 'the Role heading offers All · Customers · Suppliers · Both');
+    await p.click('[data-testid="cbl-hf-role-supplier"]'); await p.waitForTimeout(120);
+    ok((await rowsOf(p)).join() === 'crm-row-P-0001,crm-row-P-0002,crm-row-P-0003', 'Role ▾ Suppliers (from the column heading) → the three suppliers');
+    ok(await p.getAttribute('[data-testid="crm-view-suppliers"]', 'aria-selected') === 'true', '… and the Suppliers tab lights up: one filter state');
+    await p.click('[data-testid="crm-view-all"]'); await p.waitForTimeout(100);
+    /* GROUP as ONE labelled dropdown */
+    const gsel = await p.$$eval('[data-testid="crm-parties-group"] option', (o) => o.map((x) => x.textContent.trim()));
+    ok(JSON.stringify(gsel) === JSON.stringify(['None', 'Role', 'Connection', 'Segment']) && await p.locator('#crm_list .cbl-tools .cbl-seg [data-group]').count() === 0, 'Group is one labelled dropdown: ' + gsel.join(' · ') + ' (no row of buttons)');
+    ok(/Group/.test(await text(p, '[data-testid="cbl-glab-crm-parties"]')) && /bills, orders and messages reach them/.test(await p.evaluate(() => document.querySelector('[data-testid="cbl-group-crm-parties"]').title + ' ' + Array.from(document.querySelectorAll('[data-testid="crm-parties-group"] option')).map((o) => o.title).join(' '))), 'the label says Group and Connection explains itself in one line');
+    await p.selectOption('[data-testid="crm-parties-group"]', 'conn'); await p.waitForTimeout(150);
+    const gh = await p.$$eval('#crm_list [data-g]', (g) => g.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
+    ok(gh.length === 2 && /On ChitBridge/.test(gh[0]) && /Not connected/.test(gh[1]) && /parties/.test(gh[0]) && /you'll (get|give)/.test(gh.join(' ')), 'Group ▸ Connection: heads read On ChitBridge / Not connected with their count and dues (' + gh.join(' | ') + ')');
+    await p.selectOption('[data-testid="crm-parties-group"]', 'role'); await p.waitForTimeout(150);
+    const gr = await p.$$eval('#crm_list [data-g]', (g) => g.map((x) => x.querySelector('b').textContent.trim()));
+    ok(gr.join() === 'Supplier,Both,Customer' || (gr.indexOf('Both') >= 0 && gr.indexOf('Supplier') >= 0 && gr.indexOf('Customer') >= 0), 'Group ▸ Role: the same words as the Role column (' + gr.join(' · ') + ')');
+    await p.selectOption('[data-testid="crm-parties-group"]', 'none'); await p.waitForTimeout(100);
     await bad(p, 'home');
     await p.screenshot({ path: path.join(SHOTS, 'crm-home-laptop.png') });
     /* a row opens its record; an alert opens its fix */
@@ -280,7 +341,7 @@ async function route(S, r) {
     ok(await p.locator('[data-testid="crm-act-message"]').count() === 1, 'ON-CHITBRIDGE party: Message is the primary action');
     ok(/CB4M8RT2KD/.test(await text(p, '[data-testid="crm-ident"]')) && /chola-auto/.test(await text(p, '[data-testid="crm-ident"]')), 'the identity block: party no · User ID · ChitBridge ID shown together');
     const chips = await text(p, '.rchips');
-    ok(/Customer/.test(chips) && /Supplier/.test(chips) && /On ChitBridge/.test(chips) && /they owe you/.test(chips), 'header chips: both roles, On ChitBridge, the dues chip');
+    ok(/Customer/.test(chips) && /Supplier/.test(chips) && /On ChitBridge/.test(chips) && /you'll get/.test(chips), 'header chips: both roles, On ChitBridge, the dues chip (youll get)');
     ok(/Sent/.test(await text(p, '[data-testid="crm-state-chit-ch-431"]')) && /3,864\.00/.test(await text(p, '[data-testid="crm-amt-chit-ch-431"]')), 'a chit shows its status word and amount (the API sends 3864 in MAJOR units → ₹3,864.00)');
     await p.click('[data-testid="crm-tl-chit-ch-431"]'); await p.waitForFunction(() => { const d = document.getElementById('chitsheet'); return !!(d && d.open); }, null, { timeout: 8000 }).catch(() => {});
     ok(await p.evaluate(() => { const d = document.getElementById('chitsheet'); return !!(d && d.open); }) && S.calls.some((c) => /\/api\/chits\/ch-431/.test(c)), 'an entry that is a chit opens the chit sheet in place (openChitSheet, ch-431)');
@@ -382,8 +443,10 @@ async function route(S, r) {
     const groups = await p.$$eval('#crm_fu .cbl-group b', (g) => g.map((x) => x.textContent));
     ok(JSON.stringify(groups) === JSON.stringify(['Late', 'Today', 'This week', 'Later']), 'groups Late · Today · This week · Later, late first: ' + groups.join(' · '));
     ok(S.fuQueries[0] === 'all/0', 'the owner\'s default is Everyone, open ones (?scope=all&done=0)');
-    ok(/Late/.test(await text(p, '[data-testid="crm-fu-fu-01"]')) && await p.evaluate(() => !!document.querySelector('[data-testid="crm-fu-fu-01"] .late')), 'a late follow-up is amber and says Late');
-    ok(/Unassigned/.test(await text(p, '[data-testid="crm-fu-fu-04"]')) && await p.locator('[data-testid="crm-fu-assign-fu-04"]').count() === 1, 'assignee left → "Unassigned" with Assign');
+    ok(/Late/.test(await text(p, '[data-testid="crm-fu-fu-01"]')) && await p.evaluate(() => !!document.querySelector('[data-testid="crm-fu-fu-01"] .late')), 'a late follow-up is red and says Late');
+    await p.click('[data-testid="crm-fu-fu-04"] [data-caret]'); await p.waitForSelector('[data-testid="crm-fu-mini-when-fu-04"]');
+    ok(/Unassigned/.test(await text(p, '[data-testid="crm-fu-mini-when-fu-04"]')) && await p.locator('[data-testid="crm-fu-assign-fu-04"]').count() === 1, 'assignee left → "Unassigned" (in its mini-card) with Assign (on the row)');
+    await p.click('[data-testid="crm-fu-fu-04"] [data-caret]');
     ok(/No longer your party/.test(await text(p, '[data-testid="crm-fu-fu-09"]')) && await p.locator('[data-testid="crm-fu-del-fu-09"]').count() === 1 && await p.locator('[data-testid="crm-fu-done-fu-09"]').count() === 0, 'party removed → greyed "No longer your party" with Delete');
     const heads = await p.$$eval('#crm_fu .cbl-hc', (h) => h.map((x) => x.innerText.replace(/[▲▼⇅]/g, '').trim()));
     ok(JSON.stringify(heads) === JSON.stringify(['DUE', 'WHAT', 'PARTY']), 'three columns: ' + heads.join(' · '));
@@ -392,7 +455,9 @@ async function route(S, r) {
     await p.screenshot({ path: path.join(SHOTS, 'crm-followups-laptop.png') });
     await p.click('[data-testid="crm-fu-done-fu-01"]'); await p.waitForTimeout(500);
     ok(S.fuPatch && S.fuPatch.done === true, 'Done → PATCH { done:true }');
-    await p.click('[data-testid="crm-fu-fu-03"] [data-caret]'); await p.click('[data-testid="crm-fu-snooze-tomorrow-fu-03"]'); await p.waitForTimeout(400);
+    await p.click('[data-testid="crm-fu-fu-03"] [data-caret]'); await p.waitForSelector('[data-testid="crm-fu-mini-fu-03"]');
+    ok(await p.locator('.cbl-next [data-act]').count() === 4, 'the follow-up mini-card shows every action: Done · Snooze tomorrow · Snooze next week · Open party');
+    await p.click('.cbl-next [data-testid="crm-fu-snooze-tomorrow"]'); await p.waitForTimeout(400);
     ok(S.fuPatch && S.fuPatch.due_at && !S.fuPatch.done, 'Snooze → Tomorrow sends a new due_at');
     await p.click('[data-testid="crm-fu-del-fu-09"]'); await p.waitForTimeout(400);
     ok(S.fuDeleted === 'fu-09', 'Delete removes a follow-up of a party that is no longer yours');
@@ -528,8 +593,8 @@ async function route(S, r) {
   {
     const S = standIn({ ledger: false }), { ctx, p } = await open(S);
     await homeReady(p);
-    const heads = await p.$$eval('#crm_list .cbl-hc', (h) => h.map((x) => x.innerText.replace(/[▲▼⇅]/g, '').trim()));
-    ok(heads.indexOf('DUES') < 0 && JSON.stringify(heads) === JSON.stringify(['PARTY', 'LAST ACTIVITY', 'NEXT FOLLOW-UP']), 'Ledger off: no Dues column and no blank one (' + heads.join(' · ') + ')');
+    const heads = await p.$$eval('#crm_list .cbl-hc', (h) => h.map((x) => x.innerText.replace(/[▲▼⇅▾●]/g, '').trim()));
+    ok(heads.indexOf('DUES') < 0 && JSON.stringify(heads) === JSON.stringify(['PARTY', 'ROLE', 'ON CHITBRIDGE', 'LAST ACTIVITY', 'NEXT FOLLOW-UP']), 'Ledger off: no Dues column and no blank one (' + heads.join(' · ') + ')');
     /* the Columns popover does not OFFER Dues either (the default set alone would let a Dues column slip back in through the picker) */
     await p.click('[data-testid="cols-btn-crm-parties"]');
     ok(await p.locator('.cbl-colrow').count() > 0 && (await p.locator('.cbl-colrow').allInnerTexts()).every((x) => !/Dues/i.test(x)), 'Ledger off: the Columns picker offers no Dues');
@@ -606,6 +671,9 @@ async function route(S, r) {
     await p.waitForSelector('[data-testid^="chits-row-"]', { timeout: 15000 }); await p.waitForTimeout(150);
     const rows = await p.$$eval('[data-testid^="chits-row-"]', (r) => r.map((x) => x.getAttribute('data-testid')));
     ok(rows.length === 2 && rows.every((x) => /chits-row-s[12]/.test(x)), 'chits · tab=stuck lists exactly the stuck chits (' + rows.join(' ') + ') - the number Home chips say');
+    ok(await p.locator('[data-testid="chits-why"]').count() === 0, 'chits · the row is ONE line: the reason waits in its mini-card');
+    for (const id of ['s1', 's2']) await p.click('[data-testid="chits-row-' + id + '"] [data-caret]');
+    await p.waitForSelector('[data-testid="chits-why"]');
     const why = await p.$$eval('[data-testid="chits-why"]', (e) => e.map((x) => x.textContent));
     ok(why.length === 2 && why.every((w) => /ago and (you|they) have not answered/.test(w)), 'chits · a stuck row says why, in plain words (' + why.join(' | ') + ')');
     ok(/stuck/i.test(await text(p, '[data-testid="chits-note"]')) && /not a bill until/.test(await text(p, '[data-testid="chits-note"]')), 'chits · the page says why Dues, Waiting and Bills do not show a stuck chit (A4)');
@@ -641,15 +709,97 @@ async function route(S, r) {
     const so = await open(standIn(), { hash: '#/parties?role=supplier' });
     await homeReady(so.p);
     const sup = await rowsOf(so.p);
-    const chipsOk = await so.p.$$eval('#crm_list [data-row]', (r) => r.every((x) => /Supplier/.test(x.textContent)));
+    const chipsOk = await so.p.$$eval('#crm_list [data-row]', (r) => r.every((x) => /Supplier|Both/.test(x.textContent)));
     ok(sup.length > 0 && chipsOk, 'parties · #/parties?role=supplier opens the list already filtered to suppliers (' + sup.length + ' rows, all Supplier)');
     await so.ctx.close();
     const full = await open(standIn(), { hash: '#/parties?role=customer' });
     await homeReady(full.p);
-    const cu = await full.p.$$eval('#crm_list [data-row]', (r) => r.every((x) => /Customer/.test(x.textContent)));
+    const cu = await full.p.$$eval('#crm_list [data-row]', (r) => r.every((x) => /Customer|Both/.test(x.textContent)));
     ok(cu, 'parties · #/parties?role=customer shows only customers');
     await full.ctx.close();
   }
+
+  /* ── 10 · THE LISTS ROUND ─────────────────────────────────────────────────────────────────────────────────── */
+  {
+    /* O6 / C9: an internal handle (…@<shop>.cr) is never presented as an e-mail — on the list, in the chooser's E-mail column, in the mini-card, on the record */
+    const S = standIn();
+    S.list.forEach((q) => { if (q.party_no === 'P-0004') q.email = '9894055621@mayur.cr'; if (q.party_no === 'P-0005') q.email = 'meena.s=outlook.com@mayur.cr'; });
+    S.fx.records['pid-0004'] = Object.assign({}, S.fx.records['pid-0004'] || {}, { contacts: { phones: ['+91 98940 55621'], emails: ['9894055621@mayur.cr'], address: null } });
+    const { ctx, p } = await open(S); await homeReady(p);
+    await p.click('[data-testid="cols-btn-crm-parties"]'); await p.check('[data-testid="cols-crm-parties-email"]'); await p.waitForTimeout(150); await p.keyboard.press('Escape');
+    const cell = async (no) => (await p.evaluate((n) => { const r = document.querySelector('[data-testid="crm-row-' + n + '"]'); return r ? Array.from(r.querySelectorAll('.cbl-cell')).map((c) => c.textContent.trim()).join(' | ') : ''; }, no));
+    ok(!/mayur\.cr/.test(await cell('P-0004')) && /meena\.s@outlook\.com/.test(await cell('P-0005')), 'the E-mail column: a phone handle shows no e-mail, a handle that carries an e-mail gives the real one (' + (await cell('P-0005')).slice(-34) + ')');
+    await p.click('[data-testid="crm-row-P-0004"] [data-caret]'); await p.waitForSelector('[data-testid="crm-mini-email-P-0004"]');
+    ok(/no e-mail/.test(await text(p, '[data-testid="crm-mini-email-P-0004"]')), 'the mini-card says "no e-mail" for a party whose only address is an internal handle');
+    ok(!/@[a-z0-9]+\.(cr|br)\b/i.test(await p.evaluate(() => document.body.textContent)), 'no internal …@<shop>.cr handle is anywhere on the page');
+    await hash(p, '#/party/P-0004'); await recReady(p);
+    ok(!/@[a-z0-9]+\.(cr|br)\b/i.test(await p.evaluate(() => document.body.textContent)) && await p.locator('a[href^="mailto:"]').count() === 0, 'the record: no handle either, and no mailto: link to one');
+    await ctx.close();
+  }
+  {
+    /* UI9 — NO LAYOUT JUMP: with the API slow, the first thing on screen is the WHOLE frame (menu, title, toolbar, header, skeleton rows, the kural's room); when the rows arrive only they change */
+    const S = standIn();
+    const ctx = await b.newContext({ viewport: { width: 1366, height: 768 }, locale: 'en-IN', timezoneId: 'Asia/Kolkata', serviceWorkers: 'block' });
+    await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
+    await ctx.route('**/api/**', (r) => route(S, r));
+    await ctx.route('**/api/**', async (r) => { await new Promise((x) => setTimeout(x, 1200)); r.fallback(); });
+    await ctx.addInitScript((s) => { try { if (!localStorage.getItem('cb_seeded')) { localStorage.setItem('cb_seeded', '1'); localStorage.setItem('cb_sess', JSON.stringify(s)); } } catch (_) {} }, OWNER);
+    const p = await ctx.newPage();
+    await p.goto(base + '/crm.html');
+    const box = () => p.evaluate(() => { const r = (s, n) => { const e = document.querySelectorAll(s)[n || 0]; if (!e) return null; const b = e.getBoundingClientRect(); return [Math.round(b.left), Math.round(b.top), Math.round(b.width), Math.round(b.height)]; };
+      return { navN: document.querySelectorAll('#nav .nav-btn').length, nav0: r('#nav .nav-btn', 0), nav2: r('#nav .nav-btn', 2), brand: r('#side .brand'), title: r('.cbl-title h1'), tools: r('.cbl-tools'), views: r('.cbl-views'), hdr: r('.cbl-hdr'), skel: document.querySelectorAll('.cbl-skel').length, rows: document.querySelectorAll('.cbl-row').length,
+        band: r('#cbkural,#cbkural-reserve'), list: r('.cbl-list'), collapse: r('#toggleNav') }; });
+    await p.waitForSelector('.cbl-skel', { timeout: 6000 }); await p.waitForTimeout(250);
+    const first = await box();
+    ok(first.navN === 3 && first.rows === 0 && first.skel >= 5, 'FIRST PAINT, data still on its way: the three menu items, skeleton rows (' + first.skel + '), no data row yet');
+    ok(!!first.title && !!first.tools && !!first.hdr && !!first.views, 'FIRST PAINT: the title "Parties", the views, the toolbar and the column header are all there');
+    ok(!!first.band && first.band[3] >= 40, 'FIRST PAINT: the kural\'s room is kept (' + (first.band && first.band[3]) + ' px) so the page is not shortened when it arrives');
+    await p.waitForSelector('[data-testid^="crm-row-"]', { timeout: 15000 }); await p.waitForTimeout(500);
+    const last = await box(), same = (a, b2, tol) => !!a && !!b2 && a.every((v, i) => Math.abs(v - b2[i]) <= (tol == null ? 1 : tol));
+    ok(same(first.nav0, last.nav0) && same(first.nav2, last.nav2) && same(first.brand, last.brand) && same(first.collapse, last.collapse), 'when the rows arrive the sidebar items do not move (' + JSON.stringify([first.nav0, first.nav2, first.brand, first.collapse]) + ' → ' + JSON.stringify([last.nav0, last.nav2, last.brand, last.collapse]) + ')');
+    ok(same(first.title, last.title) && same(first.views, last.views) && same(first.tools, last.tools) && same(first.hdr, last.hdr), 'when the rows arrive the title, views, toolbar and column header do not move (' + JSON.stringify([first.title, first.views, first.tools, first.hdr]) + ' → ' + JSON.stringify([last.title, last.views, last.tools, last.hdr]) + ')');
+    ok(same(first.list, last.list, 6), 'the rows area keeps its size: the kural arrives in the room kept for it (' + JSON.stringify(first.list) + ' → ' + JSON.stringify(last.list) + ')');
+    await ctx.close();
+  }
+  {
+    /* C11 — only the rows scroll: title + toolbar stay put even when a row is reached with the keyboard in a short window */
+    const { ctx, p } = await open(standIn(), { viewport: { width: 1366, height: 430 } }); await homeReady(p);
+    const t0 = await p.evaluate(() => { const r = (s) => document.querySelector(s).getBoundingClientRect().top; return { tools: r('.cbl-tools'), title: r('.cbl-title'), views: r('.cbl-views') }; });
+    await p.focus('[data-testid="crm-row-P-0001"]'); for (let i = 0; i < 6; i++) await p.keyboard.press('ArrowDown'); await p.evaluate(() => { const rs = document.querySelectorAll('#crm_list [data-row]'); rs[rs.length - 1].scrollIntoView({ block: 'end' }); }); await p.waitForTimeout(150);
+    const t1 = await p.evaluate(() => { const r = (s) => document.querySelector(s).getBoundingClientRect().top; return { tools: r('.cbl-tools'), title: r('.cbl-title'), views: r('.cbl-views'), scr: document.getElementById('screen').scrollTop, doc: document.documentElement.scrollTop, list: document.querySelector('#crm_list .cbl-list').scrollTop }; });
+    ok(t1.tools === t0.tools && t1.title === t0.title && t1.views === t0.views && t1.scr === 0 && t1.doc === 0 && t1.list > 0, 'only the rows scroll: after reaching the last row (list scrolled ' + t1.list + ' px) the title, views and toolbar are exactly where they were (' + t0.tools + ' → ' + t1.tools + ')');
+    await ctx.close();
+  }
+  {
+    /* UI10 — the warning wraps inside its own area, never under the header buttons */
+    const it = (id, tab, stuck) => ({ chit_id: id, direction: tab === 'in' ? 'received' : 'sent', status: 'pending', tab, stuck, subject: 'Chit ' + id, who: 'Somebody Traders', age_days: stuck ? 12 : 1, created_at: new Date(Date.now() - (stuck ? 12 : 1) * 86400000).toISOString(), value: 1000, currency: 'INR', why: stuck ? '12 days ago and they have not answered' : null });
+    const S = standIn({ railChits: { items: [it('s1', 'in', true), it('s2', 'out', true), it('i1', 'in', false)], overdue_days: 7, truncated: false } });
+    for (const [w, h] of [[1366, 768], [957, 800], [390, 844]]) {
+      const { ctx, p } = await open(S, { hash: '#/chits', viewport: { width: w, height: h } });
+      await p.waitForSelector('[data-testid="chits-note"]', { timeout: 15000 }); await p.waitForTimeout(250);
+      const g = await p.evaluate(() => { const n = document.querySelector('[data-testid="chits-note"]').getBoundingClientRect(), t = document.querySelector('.cbl-title').getBoundingClientRect(), wh = document.querySelector('.bar .who'), b = wh ? wh.getBoundingClientRect() : null;
+        const hit = b && Math.min(n.right, b.right) - Math.max(n.left, b.left) > 2 && Math.min(n.bottom, b.bottom) - Math.max(n.top, b.top) > 2; return { hit, right: Math.round(n.right), tr: Math.round(t.right), sw: document.documentElement.scrollWidth, iw: innerWidth, lines: Math.round(n.height / 18) }; });
+      ok(!g.hit && g.right <= g.tr + 1 && g.sw <= g.iw, 'chits @' + w + ': the warning stays in its own area (right edge ' + g.right + ' ≤ ' + g.tr + '), wraps over ' + g.lines + ' line(s), and the header buttons are clear of it');
+      await ctx.close();
+    }
+  }
+  {
+    /* the phone: one line stays a card, the mini-card stacks, nothing scrolls sideways; shots for the record */
+    const { ctx, p } = await open(standIn(), { viewport: { width: 390, height: 844 } }); await homeReady(p);
+    await p.screenshot({ path: path.join(SHOTS, 'lists', 'crm-oneline-390.png') }).catch(() => {});
+    await p.click('[data-testid="crm-row-P-0003"] [data-caret]'); await p.waitForSelector('[data-testid="crm-mini-P-0003"]'); await p.waitForTimeout(500);
+    const g = await sw(p);
+    ok(g.sw <= g.iw && g.over <= 0, 'phone 390: the opened mini-card fits (page ' + g.sw + ' / ' + g.iw + ', screen over ' + g.over + ')');
+    const stacked = await p.evaluate(() => { const bs = Array.from(document.querySelectorAll('[data-testid="crm-mini-P-0003"] .mc-box')).map((e) => e.getBoundingClientRect()); return bs.length === 3 && bs[1].top >= bs[0].bottom - 1 && bs[2].top >= bs[1].bottom - 1; });
+    ok(stacked, 'phone 390: the three boxes of the mini-card stack, one under the other');
+    await p.screenshot({ path: path.join(SHOTS, 'lists', 'crm-minicard-390.png') }).catch(() => {});
+    await ctx.close();
+  }
+  await (async () => {   /* the shots at 1366: one line per party and the opened card */
+    const { ctx, p } = await open(standIn()); await homeReady(p);
+    await p.screenshot({ path: path.join(SHOTS, 'lists', 'crm-oneline-1366.png') }).catch(() => {});
+    await ctx.close();
+  })();
 
   ok(...C.finish());
   ok(threw.length === 0, 'no page error anywhere' + (threw.length ? ': ' + threw.slice(0, 3).join(' | ') : ''));

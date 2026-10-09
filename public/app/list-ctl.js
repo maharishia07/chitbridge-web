@@ -51,6 +51,7 @@
   var CSS = [
     '.cbl{--cl-page:var(--page,var(--paper,#FCFAF5));--cl-card:var(--card,#FFFFFF);--cl-panel:var(--panel,#F3EFE6);--cl-line:var(--line,#DDD6C6);--cl-soft:var(--line-soft,#E6E0D2);--cl-hair:var(--hair,#F0ECE2);',
     '--cl-ink:var(--ink,#1D1B16);--cl-muted:var(--muted,#5E594D);--cl-faint:var(--faint,#8A8374);--cl-ghost:var(--ghost,#A8A295);',
+    '--cl-zebra:var(--zebra,color-mix(in srgb,var(--cl-ink) 4%,var(--cl-card)));--cl-hov:color-mix(in srgb,var(--cl-blue) 8%,var(--cl-card));',
     '--cl-green:var(--green,#16693F);--cl-amber-t:var(--amber-t,#FDF3DC);--cl-amber-b:var(--amber-b,#EFD39A);--cl-amber-i:var(--amber-i,#7A5205);',
     '--cl-red-t:var(--red-t,#FBEAE3);--cl-red-b:var(--red-b,#E7B9A8);--cl-red-i:var(--red-i,#8E3517);',
     '--cl-blue:var(--blue,#2F74C9);--cl-blue-t:var(--blue-t,#E4EEFA);--cl-blue-b:var(--blue-b,#B9D2EF);--cl-blue-i:var(--blue-i,#174A87);',
@@ -64,6 +65,7 @@
     '.cbl .cbl-title{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;padding:8px 20px 6px;border-bottom:1px solid var(--cl-soft);background:var(--cl-page)}',
     '.cbl .cbl-title h1{font:800 calc(24px * var(--k,1))/1.1 var(--cl-display);margin:0;letter-spacing:-.01em;text-wrap:balance;color:var(--cl-ink)}',
     '.cbl .cbl-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--cl-line);background:var(--cl-card);border-radius:999px;padding:3px 10px;margin:0;font-size:calc(13.5px * var(--k,1));white-space:nowrap}',
+    '.cbl .cbl-title .cbl-chip{white-space:normal;max-width:100%;min-width:0;text-align:start;border-radius:14px;line-height:1.3}',
     '.cbl .cbl-chip.period{font-family:var(--cl-num);font-size:calc(13px * var(--k,1))}',
     '.cbl .cbl-chip.warn{background:var(--cl-amber-t);border-color:var(--cl-amber-b);color:var(--cl-amber-i);font-weight:600}',
     '.cbl .cbl-chip.bad{background:var(--cl-red-t);border-color:var(--cl-red-b);color:var(--cl-red-i);font-weight:600}',
@@ -79,6 +81,29 @@
     '.cbl .cbl-tbtn .badge{background:var(--cl-blue);color:var(--cl-card);border-radius:999px;font-size:calc(11px * var(--k,1));padding:0 6px;font-weight:700}',
     '.cbl .cbl-glab{font-size:calc(12px * var(--k,1));color:var(--cl-muted);white-space:nowrap;margin-inline-end:-2px}',
     '@media (max-width:1100px){.cbl .cbl-tools{gap:5px 6px;padding-inline:12px}.cbl .cbl-seg button{padding:0 6px}.cbl .cbl-count{padding:0 2px}.cbl .cbl-search{flex-basis:170px}}',
+    /* GROUP as one labelled dropdown ("Group ▾ None"): opts.group.as = 'select' */
+    '.cbl .cbl-gsel{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--cl-line);background:var(--cl-card);border-radius:9px;height:34px;padding:0 6px 0 10px;margin:0}',
+    '.cbl .cbl-gsel .cbl-glab{margin:0;font-weight:600}',
+    '.cbl .cbl-gsel select{border:0;background:none;height:30px;padding:0 2px;font-size:calc(13.5px * var(--k,1));font-weight:600;color:var(--cl-ink);cursor:pointer;max-width:170px}',
+    '.cbl .cbl-gsel:focus-within{border-color:var(--cl-blue)}',
+    /* SAVED VIEWS as tabs above the tools row: one tap sets the list's own filters (no second filter engine) */
+    '.cbl .cbl-views{display:flex;align-items:center;gap:6px;padding:2px 20px 6px;background:var(--cl-page);overflow-x:auto;scrollbar-width:none}',
+    '.cbl .cbl-views::-webkit-scrollbar{display:none}',
+    '.cbl .cbl-vtab{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;height:30px;border:1px solid var(--cl-line);background:var(--cl-card);border-radius:999px;padding:0 12px;font-size:calc(13px * var(--k,1));font-weight:600;white-space:nowrap;margin:0;color:var(--cl-ink)}',
+    '.cbl .cbl-vtab .n{font-family:var(--cl-num);font-size:calc(11.5px * var(--k,1));color:var(--cl-muted);font-weight:500}',
+    '.cbl .cbl-vtab[aria-selected="true"]{background:var(--cl-ink);border-color:var(--cl-ink);color:var(--cl-page)}',
+    '.cbl .cbl-vtab[aria-selected="true"] .n{color:var(--cl-page)}',
+    /* a column heading's own filter (opts.columns[].hfilter = a filter key) */
+    '.cbl .cbl-hf{border:0;background:none;padding:0 2px;margin:0;color:var(--cl-blue-i);font-size:calc(11px * var(--k,1));line-height:1;cursor:pointer;border-radius:5px;min-width:18px;height:20px}',
+    '.cbl .cbl-hf.on{background:var(--cl-blue-t);font-weight:800}',
+    '.cbl .cbl-pop.hf{position:absolute;inset-inline-end:auto;min-width:170px;padding:6px;text-transform:none;letter-spacing:normal}',
+    '.cbl .cbl-pop.hf button{display:block;width:100%;text-align:start;border:0;background:none;border-radius:7px;padding:6px 10px;font-size:calc(13.5px * var(--k,1));color:var(--cl-ink)}',
+    '.cbl .cbl-pop.hf button:hover{background:var(--cl-hov)}',
+    '.cbl .cbl-pop.hf button[aria-checked="true"]{background:var(--cl-blue-t);color:var(--cl-blue-i);font-weight:700}',
+    /* an action that this login may not do stays on screen, greyed, with its sentence */
+    '.cbl .cbl-act{display:inline-flex;flex-direction:column;align-items:flex-start;gap:2px}',
+    '.cbl .cbl-btn:disabled{opacity:.55;cursor:not-allowed}',
+    '.cbl .cbl-why{font-size:calc(11.5px * var(--k,1));color:var(--cl-muted);max-width:26ch;line-height:1.3}',
     '.cbl .cbl-seg{display:inline-flex;border:1px solid var(--cl-line);border-radius:9px;overflow:hidden;background:var(--cl-card);height:34px}',
     '.cbl .cbl-seg button{border:0;background:none;padding:0 10px;font-size:calc(13.5px * var(--k,1));border-inline-start:1px solid var(--cl-soft);margin:0;border-radius:0}',
     '.cbl .cbl-seg button:first-child{border-inline-start:0}',
@@ -121,7 +146,9 @@
     '.cbl .cbl-rz::after{content:"";position:absolute;inset-inline-start:4px;top:6px;bottom:6px;width:1px;background:var(--cl-line)}',
     '.cbl .cbl-rz:hover::after,.cbl .cbl-rz:focus-visible::after,.cbl .cbl-rz.drag::after{width:3px;inset-inline-start:3px;background:var(--cl-blue)}',
     '.cbl .cbl-row{display:grid;align-items:center;border-bottom:1px solid var(--cl-hair);cursor:pointer;position:relative}',
-    '.cbl .cbl-row:hover{background:var(--cl-page)}',
+    /* ZEBRA (Athi, 2026-10-09): every other data row, one shade from a theme token (--zebra, else the ink mixed 4% into the card, so every theme keeps its contrast); a group head, the hover row and the selected row stay distinct; a multi-line row is ONE stripe */
+    '.cbl .cbl-row.z,.cbl .cbl-lrec.z{background:var(--cl-zebra)}',
+    '.cbl .cbl-row:hover{background:var(--cl-hov)}',
     '.cbl .cbl-row.sel{background:var(--cl-blue-t);box-shadow:inset 0 0 0 2px var(--cl-blue)}',
     '.cbl .cbl-cell{padding:8px 12px;min-width:0;overflow-wrap:break-word;word-break:normal}',
     '.cbl .cbl-cell.r{text-align:end}',
@@ -138,7 +165,7 @@
     '.cbl .cbl-next .gist{color:var(--cl-muted);font-size:calc(13px * var(--k,1));margin-bottom:6px}',
     /* ☰ lines */
     '.cbl .cbl-lrec{border-bottom:1px solid var(--cl-hair);padding:8px 12px;cursor:pointer}',
-    '.cbl .cbl-lrec:hover{background:var(--cl-page)}',
+    '.cbl .cbl-lrec:hover{background:var(--cl-hov)}',
     '.cbl .cbl-lrec.sel{background:var(--cl-blue-t);box-shadow:inset 0 0 0 2px var(--cl-blue)}',
     '.cbl .cbl-lline{display:flex;gap:4px 10px;align-items:baseline}',
     '.cbl .cbl-lflow{flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:2px 0}',
@@ -422,6 +449,7 @@
   }
   function fopts(f) { return (f.options || []).map(function (x) { return typeof x === 'object' ? x : { v: x, label: x }; }); }
   function paintTools(I) {
+    paintViews(I);
     var box = $(I, ':scope > .cbl-tools');
     if (!box) { box = root.document.createElement('div'); box.className = 'cbl-tools'; box.setAttribute('data-cbl-part', 'tools'); box.setAttribute('role', 'toolbar'); box.setAttribute('aria-label', T(I, 'View')); var l = $(I, ':scope > .cbl-list'); I.el.insertBefore(box, l); }
     var o = I.o, R = I.r, s = I.s, m = matched(I), fn = activeFilters(I).length, k = esc(I.key), sorts = sortChoices(I);
@@ -430,7 +458,10 @@
       h += '<span class="cbl-anchor"><button type="button" class="cbl-tbtn' + (fn ? ' on' : '') + '" data-cbl-pop="filt" id="cbl-filt-' + k + '" data-testid="cbl-filters-' + k + '" aria-haspopup="dialog" aria-expanded="' + (I.pop === 'filt') + '">' + esc(T(I, 'Filters')) + ' ▾' + (fn ? ' <span class="badge">' + fn + '</span>' : '') + '</button>' + (I.pop === 'filt' ? filtPop(I, sorts) : '') + '</span>';
     }
     var g = o.group, gm = groupMode(I);
-    if (g && (g.options || []).length > 1) h += '<span class="cbl-glab" data-testid="cbl-glab-' + k + '">' + esc(T(I, 'Group by')) + '</span><span class="cbl-seg" role="group" aria-label="' + esc(T(I, 'Group by')) + '" data-testid="cbl-group-' + k + '">' + g.options.map(function (x) { return '<button type="button" data-group="' + esc(x[0]) + '"' + (g.tid ? ' data-testid="' + esc(g.tid) + '-group-' + esc(x[0]) + '"' : '') + ' aria-pressed="' + (gm === x[0]) + '">' + esc(T(I, x[1])) + '</button>'; }).join('') + '</span>';
+    if (g && g.as === 'select' && (g.options || []).length > 1) {
+      h += '<label class="cbl-gsel" data-testid="cbl-group-' + k + '"' + (g.tips && g.tips[gm] ? ' title="' + esc(T(I, g.tips[gm])) + '"' : '') + '><span class="cbl-glab" data-testid="cbl-glab-' + k + '">' + esc(T(I, 'Group')) + '</span><select data-gsel id="cbl-gsel-' + k + '" data-testid="' + esc(g.tid ? g.tid + '-group' : 'cbl-gsel-' + k) + '" aria-label="' + esc(T(I, 'Group by')) + '">'
+        + g.options.map(function (x) { return '<option value="' + esc(x[0]) + '"' + (gm === x[0] ? ' selected' : '') + (g.tips && g.tips[x[0]] ? ' title="' + esc(T(I, g.tips[x[0]])) + '"' : '') + '>' + esc(T(I, x[1])) + '</option>'; }).join('') + '</select></label>';
+    } else if (g && (g.options || []).length > 1) h += '<span class="cbl-glab" data-testid="cbl-glab-' + k + '">' + esc(T(I, 'Group by')) + '</span><span class="cbl-seg" role="group" aria-label="' + esc(T(I, 'Group by')) + '" data-testid="cbl-group-' + k + '">' + g.options.map(function (x) { return '<button type="button" data-group="' + esc(x[0]) + '"' + (g.tid ? ' data-testid="' + esc(g.tid) + '-group-' + esc(x[0]) + '"' : '') + ' aria-pressed="' + (gm === x[0]) + '">' + esc(T(I, x[1])) + '</button>'; }).join('') + '</span>';
     if (hasNext(I)) h += '<button type="button" class="cbl-tbtn cbl-ico" data-cbl-exp data-testid="' + esc(R.allOpen ? (tids.collapse || 'cbl-expand-' + k) : (tids.expand || 'cbl-expand-' + k)) + '" title="' + esc(T(I, R.allOpen ? 'Collapse all' : 'Expand all')) + '" aria-label="' + esc(T(I, R.allOpen ? 'Collapse all' : 'Expand all')) + '" aria-pressed="' + !!R.allOpen + '">' + (R.allOpen ? '⇡' : '⇣') + '</button>';
     h += '<span class="cbl-seg" role="group" aria-label="' + esc(T(I, 'View')) + '"><button type="button" data-view="grid" data-testid="view-grid-' + k + '" title="' + esc(T(I, 'Grid: columns')) + '" aria-label="' + esc(T(I, 'Grid: columns')) + '" aria-pressed="' + (s.view === 'grid') + '">▤</button><button type="button" data-view="lines" data-testid="view-lines-' + k + '" title="' + esc(T(I, 'Lines: one line per record')) + '" aria-label="' + esc(T(I, 'Lines: one line per record')) + '" aria-pressed="' + (s.view === 'lines') + '">☰</button></span>';
     h += '<span class="cbl-anchor"><button type="button" class="cbl-tbtn cbl-ico" data-cbl-pop="cols" id="cbl-cols-' + k + '" data-testid="cols-btn-' + k + '" title="' + esc(T(I, 'Choose columns')) + '" aria-label="' + esc(T(I, 'Choose columns')) + '" aria-haspopup="dialog" aria-expanded="' + (I.pop === 'cols') + '">⚙</button>' + (I.pop === 'cols' ? colsPop(I) : '') + '</span>';
@@ -445,10 +476,45 @@
       var ov = fopts(f).filter(function (x) { return x.v === R.filt[f.key]; })[0];
       return '<span class="cbl-fchip">' + esc(f.label || f.key) + ': ' + esc(ov ? ov.label : R.filt[f.key]) + '<button type="button" data-unfilt="' + esc(f.key) + '" aria-label="' + esc(T(I, 'Remove {x} filter', { x: f.label || f.key })) + '">×</button></span>';
     }).join('') + '</div>';
+    if (I.pop && String(I.pop).indexOf('hf:') === 0) h += hfPop(I);
     var ae = root.document.activeElement, keepId = ae && box.contains(ae) ? ae.id : '', ss = null, se = null;
     if (keepId && ae.setSelectionRange) { try { ss = ae.selectionStart; se = ae.selectionEnd; } catch (_) {} }
     box.innerHTML = h;
     if (keepId) { var back = box.querySelector('#' + cssId(keepId)); if (back) { back.focus(); if (ss != null) { try { back.setSelectionRange(ss, se); } catch (_) {} } } }
+  }
+  /* the saved views: tabs that set the list's own filters. A tab is lit when the filters in force are exactly its own. */
+  function viewMatches(I, v, row) {
+    var fl = I.o.filters || [], ok = true;
+    Object.keys(v.filt || {}).forEach(function (fk) {
+      var f = fl.filter(function (x) { return x.key === fk; })[0];
+      if (f && ok && !safe(function () { return f.match ? f.match(row, v.filt[fk]) : row[fk] === v.filt[fk]; }, true)) ok = false;
+    });
+    return ok;
+  }
+  function viewOn(I, v) {
+    var a = I.r.filt, b = v.filt || {}, ka = Object.keys(a).filter(function (k) { return a[k]; }), kb = Object.keys(b);
+    return ka.length === kb.length && kb.every(function (k) { return a[k] === b[k]; });
+  }
+  function paintViews(I) {
+    var vs = I.o.views && I.o.views.items, box = $(I, ':scope > .cbl-views');
+    if (!vs || !vs.length || remote(I)) { if (box) box.remove(); return; }
+    if (!box) {
+      box = root.document.createElement('div'); box.className = 'cbl-views'; box.setAttribute('data-cbl-part', 'views'); box.setAttribute('role', 'tablist'); box.setAttribute('aria-label', T(I, 'Views'));
+      var tl = $(I, ':scope > .cbl-tools'), l = $(I, ':scope > .cbl-list'); I.el.insertBefore(box, tl || l);
+    }
+    var rows = allRows(I), vt = I.o.views.tid || 'views';
+    box.innerHTML = vs.map(function (v) {
+      var n = rows.filter(function (r) { return viewMatches(I, v, r); }).length, on = viewOn(I, v);
+      return '<button type="button" role="tab" class="cbl-vtab" data-view-tab="' + esc(v.key) + '" aria-selected="' + on + '" data-testid="' + esc(vt) + '-' + esc(v.key) + '"' + (v.tip ? ' title="' + esc(T(I, v.tip)) + '"' : '') + '>' + esc(T(I, v.label)) + ' <span class="n">' + n + '</span></button>';
+    }).join('');
+  }
+  /* the filter behind a column heading: a small menu of that filter's own choices (the same state as Filters ▾) */
+  function hfPop(I) {
+    var fk = String(I.pop).slice(3), f = (I.o.filters || []).filter(function (x) { return x.key === fk; })[0]; if (!f) return '';
+    var at = I.hfAt || { l: 8, t: 100 }, cur = I.r.filt[fk] || '';
+    return '<div class="cbl-pop hf" role="menu" aria-label="' + esc(f.label || fk) + '" data-testid="cbl-hf-pop-' + esc(fk) + '" style="left:' + Math.round(at.l) + 'px;top:' + Math.round(at.t) + 'px">'
+      + '<button type="button" role="menuitemradio" aria-checked="' + (!cur) + '" data-hfv="" data-hfk="' + esc(fk) + '">' + esc(f.all || T(I, 'Any')) + '</button>'
+      + fopts(f).map(function (x) { return '<button type="button" role="menuitemradio" aria-checked="' + (cur === x.v) + '" data-hfv="' + esc(x.v) + '" data-hfk="' + esc(fk) + '" data-testid="cbl-hf-' + esc(fk) + '-' + esc(x.v) + '">' + esc(x.label) + '</button>'; }).join('') + '</div>';
   }
   function sortChoices(I) {
     var out = [], seen = {};
@@ -515,19 +581,21 @@
     }
     /* the rows that can be drawn: a collapsed group's rows are not among them (so a collapsed group never leaves a "show more" behind) */
     items = items.filter(function (x) { return x.group != null || !(x.g != null && R.gcol[x.g]); });
-    var drawn = 0, total = items.filter(function (x) { return x.group == null; }).length, limit = I.limit;
+    var drawn = 0, zi = 0, total = items.filter(function (x) { return x.group == null; }).length, limit = I.limit;
     if (limit > total) limit = I.limit = Math.max(50, Math.min(limit, total));
     var body = '';
     for (var i = 0; i < items.length; i++) {
       var it = items[i];
       if (it.group != null) {
+        zi = 0;   /* the stripe starts again under each group head */
         var shut = !!R.gcol[it.gkey], gt = o.group && o.group.tid;
         body += '<div class="cbl-group" role="button" tabindex="0" aria-expanded="' + !shut + '" data-g="' + esc(it.gkey) + '"' + (gt || o.group.headTid ? ' data-testid="' + esc(o.group.headTid ? o.group.headTid(it.gkey) : gt + '-ghead-' + esc(it.gkey)) + '"' : '') + ' style="cursor:pointer"><span class="cbl-tw" aria-hidden="true">' + (shut ? '▸' : '▾') + '</span><b>' + esc(it.group) + '</b> <span class="fig"' + (gt ? ' data-testid="' + esc(gt) + '-gsum-' + esc(it.gkey) + '"' : '') + '>' + esc(it.fig) + '</span></div>';
         continue;
       }
       if (!remote(I) && drawn >= limit) break;
       drawn++;
-      body += s.view === 'grid' ? rowHTML(I, it, cols, tpl) : lineHTML(I, it, cols);
+      var zb = (zi++ % 2) === 1;   /* ZEBRA: the 2nd, 4th … data row of the list (or of its group) */
+      body += s.view === 'grid' ? rowHTML(I, it, cols, tpl, zb) : lineHTML(I, it, cols, zb);
     }
     var end;
     if (!remote(I) && drawn < total) end = '<div class="cbl-end" data-cbl-sentinel data-testid="cbl-more-' + esc(I.key) + '"><button type="button" data-cbl-more>' + esc(T(I, '↓ Show {n} more', { n: Math.min(50, total - drawn) })) + '</button> <span>' + drawn + ' ' + esc(T(I, 'of')) + ' ' + total + '</span></div>';
@@ -553,7 +621,8 @@
     return '<div class="cbl-hdr lhead" role="row" style="grid-template-columns:' + tpl + '">' + lead + cols.map(function (c) {
       var id = sortId(c), sorted = !!(st && id && st.key === id), r = !!(c.num || c.pin === 'end'), label = esc(c.label || c.key);
       return '<div class="cbl-hc lhcell' + (r ? ' r' : '') + (id ? ' sortable' : '') + '" role="columnheader" aria-sort="' + (sorted ? (st.dir === -1 ? 'descending' : 'ascending') : 'none') + '">'
-        + (id && !plainHead ? '<button type="button" class="sort" data-sort="' + esc(id) + '">' + label + ' <span class="arrow">' + (sorted ? (st.dir === -1 ? '▼' : '▲') : '⇅') + '</span></button>' : label)
+        + (id ? '<button type="button" class="sort"' + (plainHead ? ' disabled tabindex="-1"' : ' data-sort="' + esc(id) + '"') + '>' + label + ' <span class="arrow">' + (sorted ? (st.dir === -1 ? '▼' : '▲') : '⇅') + '</span></button>' : label)   /* the loading header keeps the SAME boxes (its buttons are just inert), so it does not change height when the rows arrive */
+        + (c.hfilter && !remote(I) ? '<button type="button" class="cbl-hf' + (I.r.filt[c.hfilter] ? ' on' : '') + '"' + (plainHead ? ' disabled tabindex="-1"' : ' data-hf="' + esc(c.hfilter) + '"') + ' data-testid="cbl-hf-' + esc(c.hfilter) + '" aria-haspopup="menu" aria-expanded="' + (I.pop === 'hf:' + c.hfilter) + '" aria-label="' + esc(T(I, 'Filter {x}', { x: c.label || c.key })) + '" title="' + esc(T(I, 'Filter {x}', { x: c.label || c.key })) + '">' + (I.r.filt[c.hfilter] ? '●' : '▾') + '</button>' : '')
         + (plainHead ? '' : '<button type="button" class="cbl-rz colrz" data-rz="' + esc(c.key) + '" aria-label="' + esc(T(I, 'Resize {x} column (arrow keys)', { x: c.label || c.key })) + '" title="' + esc(T(I, 'Drag to resize · double-click resets')) + '"></button>') + '</div>';
     }).join('') + '</div>';
   }
@@ -564,9 +633,9 @@
     var tid = o.rowTid ? safe(function () { return o.rowTid(row); }, '') : '';
     return (tid ? ' data-testid="' + esc(tid) + '"' : '') + a;
   }
-  function rowHTML(I, it, cols, tpl) {
+  function rowHTML(I, it, cols, tpl, zb) {
     var row = it.row, id = it.id, R = I.r, nx = hasNext(I), open = nx && isOpen(I, id), o = I.o;
-    var cls = (o.rowClass ? safe(function () { return o.rowClass(row); }, '') : '') + (R.hl === id && o.hl !== false ? ' sel' : '');
+    var cls = (o.rowClass ? safe(function () { return o.rowClass(row); }, '') : '') + (R.hl === id && o.hl !== false ? ' sel' : '') + (zb ? ' z' : '');
     var cells = cols.map(function (c, i) {
       var amt = c.pin === 'end';
       return '<div class="cbl-cell lcell' + (i === 0 ? ' first' : '') + (amt ? ' r mono strong amt' : '') + (c.num && !amt ? ' r mono' : '') + (c.mono ? ' mono' : '') + '" data-l="' + esc(i === 0 ? '' : (c.label || '')) + '" role="gridcell"'
@@ -582,9 +651,9 @@
     if (I.o.lead && safe(function () { return I.o.lead.on(); }, false)) return safe(function () { return I.o.lead.cell(row); }, '');
     return '<input type="checkbox" data-selrow="' + esc(id) + '"' + (I.r.sel[id] ? ' checked' : '') + ' aria-label="' + esc(T(I, 'Select')) + '">';
   }
-  function lineHTML(I, it, cols) {
+  function lineHTML(I, it, cols, zb) {
     var row = it.row, id = it.id, nx = hasNext(I), open = nx && isOpen(I, id), o = I.o, pin = cols.filter(function (c) { return c.pin === 'end'; })[0];
-    var cls = (o.rowClass ? safe(function () { return o.rowClass(row); }, '') : '') + (I.r.hl === id && o.hl !== false ? ' sel' : '');
+    var cls = (o.rowClass ? safe(function () { return o.rowClass(row); }, '') : '') + (I.r.hl === id && o.hl !== false ? ' sel' : '') + (zb ? ' z' : '');
     var flow = cols.filter(function (c) { return c.pin !== 'end'; }).map(function (c) {
       var v = cellOf(I, c, row), t = plain(v);
       if (!t || t === '—') return '';
@@ -606,14 +675,18 @@
       else {
         var v = safe(function () { return o.next(row, { view: I.s.view, id: id }); }, '');
         if (v && typeof v.then === 'function') {
-          inner = '<span class="cbl-dim">' + esc(T(I, 'Reading…')) + '</span>';
+          inner = o.nextPending ? safe(function () { return o.nextPending(row); }, '') : '<span class="cbl-dim">' + esc(T(I, 'Reading…')) + '</span>';   /* nextPending: the card's own shape while its answer is on the way, so it does not change height */
           I.pending = I.pending || {}; I.pending[id] = v;
         } else { inner = v == null ? '' : String(v); }
       }
     }
     var acts = (o.actions || []).filter(function (a) { return !a.when || safe(function () { return a.when(row); }, true); });
     return '<div class="cbl-next" role="row" data-next="' + esc(id) + '"><div role="cell">' + inner + '</div>'
-      + (acts.length ? '<div class="cbl-acts">' + acts.map(function (a) { return '<button type="button" class="cbl-btn" data-act="' + esc(a.id) + '" data-actrow="' + esc(id) + '"' + (a.tid ? ' data-testid="' + esc(a.tid) + '"' : '') + '>' + (a.icon ? esc(a.icon) + ' ' : '') + esc(T(I, a.label)) + '</button>'; }).join('') + '</div>' : '') + '</div>';
+      + (acts.length ? '<div class="cbl-acts">' + acts.map(function (a) {
+        var why = a.why ? safe(function () { return a.why(row); }, '') : '';   /* the page asks the server's answer for this login; a sentence = refused, shown greyed with it */
+        var btn = '<button type="button" class="cbl-btn" data-act="' + esc(a.id) + '" data-actrow="' + esc(id) + '"' + (a.tid ? ' data-testid="' + esc(a.tid) + '"' : '') + (why ? ' disabled aria-disabled="true" title="' + esc(why) + '"' : '') + '>' + (a.icon ? esc(a.icon) + ' ' : '') + esc(T(I, a.label)) + '</button>';
+        return why ? '<span class="cbl-act">' + btn + '<span class="cbl-why"' + (a.tid ? ' data-testid="' + esc(a.tid) + '-why"' : '') + '>' + esc(why) + '</span></span>' : btn;
+      }).join('') + '</div>' : '') + '</div>';
   }
   function resolveNext(I) {
     var p = I.pending; if (!p) return; I.pending = null;
@@ -707,12 +780,27 @@
     var b = t.closest('button,[data-row],input[type=checkbox],select'), R = I.r, s = I.s, o = I.o;
     var pop = t.closest('.cbl-pop');
     var hcell = t.closest('.cbl-hc');
-    if (hcell && !t.closest('.cbl-rz') && !t.closest('[data-sort]') && I.el.contains(hcell)) { var sbtn = hcell.querySelector('[data-sort]'); if (sbtn) { sbtn.click(); return; } }
+    if (hcell && !t.closest('.cbl-rz') && !t.closest('[data-sort]') && !t.closest('[data-hf]') && I.el.contains(hcell)) { var sbtn = hcell.querySelector('[data-sort]'); if (sbtn) { sbtn.click(); return; } }
     var gh = t.closest('[data-g]');
     if (gh && I.el.contains(gh) && !(b && b.hasAttribute('data-row'))) { if (I.pop) { I.pop = null; paintTitle(I); paintTools(I); } R.gcol[gh.getAttribute('data-g')] = !R.gcol[gh.getAttribute('data-g')]; paintList(I); var g2 = I.el.querySelector('[data-g="' + cssId(gh.getAttribute('data-g')) + '"]'); if (g2) g2.focus(); return; }
     if (!b) { if (I.pop && !pop) closePop(I); return; }
     if (b.hasAttribute('data-rz')) return;
     if (b.hasAttribute('data-cbl-pop')) { togglePop(I, b.getAttribute('data-cbl-pop')); return; }
+    if (b.hasAttribute('data-hf')) {
+      var er = I.el.getBoundingClientRect(), br = b.getBoundingClientRect();
+      I.hfAt = { l: Math.max(4, Math.min(br.left - er.left, er.width - 190)), t: br.bottom - er.top + 4 };
+      togglePop(I, 'hf:' + b.getAttribute('data-hf')); paintList(I); return;
+    }
+    if (b.hasAttribute('data-hfv')) {
+      var hk = b.getAttribute('data-hfk'), hv = b.getAttribute('data-hfv');
+      if (hv) R.filt[hk] = hv; else delete R.filt[hk];
+      I.pop = null; resetLimit(I); if (query(I)) { paintTools(I); paintList(I); } else paintAll(I); return;
+    }
+    if (b.hasAttribute('data-view-tab')) {
+      var vw = ((o.views && o.views.items) || []).filter(function (x) { return x.key === b.getAttribute('data-view-tab'); })[0];
+      if (vw) { R.filt = {}; Object.keys(vw.filt || {}).forEach(function (fk) { R.filt[fk] = vw.filt[fk]; }); I.pop = null; resetLimit(I); paintAll(I); }
+      return;
+    }
     if (I.pop && !pop) { /* any other click outside the popover closes it, then does its own job */ I.pop = null; paintTitle(I); paintTools(I); }
     var d = b.dataset || {};
     if (b.hasAttribute('data-period')) { var pp = head(I).period; if (pp) { I.pv = d.period; if (d.period !== 'custom') { I.pop = null; I.pv = null; } safe(function () { pp.onPick(d.period, null); }); paintTitle(I); paintTools(I); } return; }
@@ -759,6 +847,7 @@
       if (t.checked && i < 0) set.push(k); else if (!t.checked && i >= 0 && k !== topKey(I)) set.splice(i, 1);
       s.cols = set; saveChoices(I); paintTools(I); paintList(I); refocusCol(I, k); return;
     }
+    if (t.hasAttribute('data-gsel')) { s.group = t.value; resetLimit(I); saveChoices(I); if (!query(I)) { paintTools(I); paintList(I); } else paintTools(I); var gs = I.el.querySelector('#cbl-gsel-' + cssId(I.key)); if (gs) gs.focus(); return; }
     if (t.hasAttribute('data-filt')) { var fk = t.getAttribute('data-filt'); if (t.value) R.filt[fk] = t.value; else delete R.filt[fk]; resetLimit(I); if (!query(I)) { paintTools(I); paintList(I); } else paintTools(I); var f = I.el.querySelector('#cbl-f-' + cssId(I.key) + '-' + cssId(fk)); if (f) f.focus(); return; }
     if (t.hasAttribute('data-cbl-sort')) { var cur = s.sort ? s.sort.dir : 1; s.sort = { key: t.value, dir: 1 }; resetLimit(I); saveChoices(I); if (!query(I)) { paintTools(I); paintList(I); } var ss = I.el.querySelector('#cbl-sort-' + cssId(I.key)); if (ss) ss.focus(); return; }
     if (t.hasAttribute('data-selrow')) { var id = t.getAttribute('data-selrow'); if (t.checked) R.sel[id] = true; else delete R.sel[id]; paintTools(I); return; }
