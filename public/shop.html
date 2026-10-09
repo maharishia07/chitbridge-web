@@ -42,6 +42,11 @@
   .foot{ margin-top:26px; font-size:11px; color:var(--grey); text-align:center; line-height:1.6; }
   .msg{ padding:40px 16px; text-align:center; color:var(--grey); }
   .enq{ margin-top:12px; font-size:12px; color:var(--blue); }
+  /* categories: a bar of chips that WRAPS (as on the till) and a heading per section; the bar stays in reach while the list scrolls */
+  .catbar{ position:sticky; top:0; z-index:5; display:flex; flex-wrap:wrap; gap:6px; padding:8px 0; margin:0 0 6px; background:var(--paper); }
+  .catchip{ border:1px solid var(--line); background:#fff; color:var(--ink); border-radius:999px; padding:6px 13px; font:600 13px var(--font-ui); cursor:pointer; }
+  .catchip:hover,.catchip:focus-visible{ border-color:var(--accent); color:var(--accent); }
+  .cbcat-sec{ font:700 15px var(--font-ui); color:var(--ink); padding:16px 2px 6px; border-bottom:2px solid var(--accent); margin-top:6px; scroll-margin-top:110px; }
 .offbadge{display:inline-block;margin-inline-start:6px;padding:1px 7px;border-radius:999px;font-size:11px;font-weight:700;background:#fff5e0;border:1px solid #e8cf9a;color:#8a5a12;white-space:nowrap}
 </style>
 </head>
@@ -452,7 +457,7 @@ function productListHtml(data, cur){
   /* ⚠️ ONE CART, HELD. render() runs again on a region change, so the handle is released first — a create()
      without a destroy() is the leak the namespaced API could not express. */
   if (_CART) _CART.destroy();
-  _CART = CBCart.create(data, { accent:'#c0392b', soft:'#fdf3f2', symbol:_shopSym(), currency:(data.shop&&data.shop.currency_code)||'INR', from:(data.shop&&data.shop.display_name)||'',
+  _CART = CBCart.create(data, { accent:'var(--accent)', soft:'var(--blue-tint-bg)', categories:(data&&data.categories)||[], pageSize:400, sectionOf:shopSectionOf, symbol:_shopSym(), currency:(data.shop&&data.shop.currency_code)||'INR', from:(data.shop&&data.shop.display_name)||'',
     cartTitle:'Your basket', checkoutLabel:'Check out →', emptyHint:'Press + on what you want',
     noCatalogue:'This shop has nothing on display yet.',
     listEl:'p_list', barEl:'p_cart', onCheckout:function(){ shopCartOrder(); },
@@ -461,12 +466,16 @@ function productListHtml(data, cur){
        app/catalogue-ui.js — the SAME renderer as Suppliers, Compose and Network — so the tax line and the offer badge are
        the same markup everywhere. This page keeps only what the row does not know: the stock stamp and the gallery. */
     renderer:(typeof CBCatUI!=='undefined')?CBCatUI:undefined,
-    rowExtra:function(it){ /* the stock stamp is the shared row's now (catalogue-ui); this page adds only the gallery */ return productMedia(it); } });
+    /* the row already carries its own thumbnail; the full gallery belongs to the ONE-product view (?item=) only — in the list it repeated the photo at full width and printed "1 picture" (S4/S8, 2026-10-09) */
+    rowExtra:function(it){ return _ONLY ? productMedia(it) : ''; } });
+  /* the first paint is a string, so nothing watched its photos until the first repaint — an empty grey box beside every item (S4, 2026-10-09) */
+  setTimeout(function(){ try{ var l=document.getElementById('p_list'); if(l&&typeof CBCatUI!=='undefined'&&CBCatUI.observe) CBCatUI.observe(l); }catch(e){} }, 0);
   setTimeout(shopOffersSync, 0);   /* after the list is in the DOM: the offered prices on the rows, the basket summary */   /* the offer promise under the line, then the gallery — same judgement as the app (CBOffers.forLine) */   /* pictures + video under the line — same gallery as the product page */
   if (!cbLineRows(data).length) return '';
   return '<div class="sechd" style="color:var(--grey)">🗂️ Products</div>'
     + '<input id="p_search" placeholder="Search products…" value="'+esc((_CART.state()||{}).q||'')+'"'
     + ' oninput="shopPickSearch(this.value)" style="width:100%;padding:9px;border:1px solid #e7e3d8;border-radius:8px;margin:2px 0 8px;font-size:14px;box-sizing:border-box">'
+    + shopJumpHtml()
     + '<div id="p_cart">' + shopCartBarHtml() + '</div><div id="p_offers"></div>'
     + '<div id="p_list">' + shopPickListHtml(cur) + '</div>';
 }
@@ -484,6 +493,25 @@ function productListHtml(data, cur){
  * by the local run, which never reached this code because the API refuses a localhost origin. The seam again.
  */
 function _shopSym(){ var c=(_SHOPDATA&&_SHOPDATA.shop&&_SHOPDATA.shop.currency_code)||''; return (!c||c==='INR')?'₹':(c+' '); }
+/**
+ * ⭐ CATEGORIES ON THE SHOP (S7, 2026-10-09). The catalogue already sends its categories and each item's category ids; the
+ * shared cart tallies them (CBCart.categories) and the shared list draws a heading per section (opts.sectionOf). Nothing here
+ * invents a taxonomy: fewer than two categories in use → no headings, no bar, exactly as before.
+ */
+function _shopCats(){ try{ var t=_CART?CBCart.categories(_CART.ns):[]; return t.length>=2?t:[]; }catch(e){ return []; } }
+function shopSectionOf(r){
+  var t=_shopCats(); if(!t.length) return null;
+  var d=(r&&r.item&&(r.item.item_data||r.item))||{}, ids=Array.isArray(d.categories)?d.categories:Array.isArray(d.category_ids)?d.category_ids:(d.category?[d.category]:[]);
+  ids=ids.map(String).filter(Boolean);
+  for(var i=0;i<t.length;i++){ if(ids.indexOf(String(t[i].id))>=0) return {id:String(t[i].id),label:t[i].name,order:i}; }
+  return {id:'__none',label:'More from the shop',order:1e6};
+}
+function shopJumpHtml(){
+  var t=_shopCats(); if(!t.length) return '';
+  return '<div class="catbar" data-testid="shop-cat-bar">'+t.map(function(c){ var id=c.none?'__none':String(c.id);
+    return '<button type="button" class="catchip" data-testid="shop-cat-jump" onclick="shopJump(this.dataset.sec)" data-sec="'+esc(id)+'">'+esc(c.none?'More':c.name)+'</button>'; }).join('')+'</div>';
+}
+function shopJump(id){ var h=document.querySelector('[data-testid="shop-cat-head"][data-sec="'+String(id).replace(/"/g,'')+'"]'); if(h) h.scrollIntoView({behavior:'smooth',block:'start'}); }
 /* The one cart this page holds. Created in productListHtml, released before it is created again. */
 var _CART=null;
 /* ⚠️ THE FIRST PAINT MUST USE THE SAME RENDERER AS EVERY REPAINT (Athi, 2026-09-05: "when I refresh the offer details were
@@ -567,7 +595,7 @@ function shopUpiBlock(res, isCart){
   if(!amount) return '';
   var link=shopUpiLink(upi, s.display_name||s.name||'', amount, ref); var img='';
   try{ if(typeof qrcode==='function'){ var qr=qrcode(0,'M'); qr.addData(link); qr.make(); img=qr.createImgTag(4,8); img=img.replace('<img ','<img data-testid="shop-upi-qr" alt="Pay by UPI" '); } }catch(e){}
-  return '<div data-testid="shop-upi" style="margin-top:14px;padding:12px;border:1px dashed #c0392b;border-radius:12px;text-align:center"><div style="font-weight:800;font-size:14px">'+esc('Pay '+cbFmt(amount)+' by UPI')+'</div>'
+  return '<div data-testid="shop-upi" style="margin-top:14px;padding:12px;border:1px dashed var(--accent);border-radius:12px;text-align:center"><div style="font-weight:800;font-size:14px">'+esc('Pay '+cbFmt(amount)+' by UPI')+'</div>'
     +'<div style="font-size:12px;color:#6a707a;margin:4px 0 8px">'+esc('to '+upi+' · ref CB-'+String(ref).slice(0,8))+'</div>'+(img?'<div>'+img+'</div>':'')
     +'<a data-testid="shop-upi-link" href="'+esc(link)+'" style="display:inline-block;margin-top:8px;border:1px solid #3F66A6;border-radius:9px;padding:8px 14px;color:#3F66A6;font-weight:700;text-decoration:none">Open my UPI app</a>'
     +'<div style="font-size:11px;color:#6a707a;margin-top:6px">'+esc('The shop confirms the payment on its side.')+'</div></div>';
@@ -625,7 +653,7 @@ function render(data){
   var prods=(data.items||[]);
   var prodHtml = productListHtml(data, cur);
   var enq = '<div class="enq">Order with your phone or email — no account needed.</div>';
-  var previewBar = (data.preview && data.preview.visibility !== 'public') ? '<div class="msg" style="background:#fff7e6;border:1px solid #f1d28a;color:#7a5a00;border-radius:9px;padding:8px 10px;margin:0 0 8px;font-size:13px">👁️ Preview — your catalogue is <b>'+esc(data.preview.visibility||'private')+'</b>, customers cannot see this yet. Profile › Visibility › Public puts it live.</div>' : '';
+  var previewBar = (data.preview && data.preview.visibility !== 'public') ? '<div class="msg" style="background:#fff7e6;border:1px solid #f1d28a;color:#7a5a00;border-radius:9px;padding:8px 10px;margin:0 0 8px;font-size:13px">👁️ Your online shop — preview. Your catalogue is <b>'+esc(data.preview.visibility||'private')+'</b>, customers cannot see this yet. Profile › Visibility › Public puts it live.</div>' : '';
   if(_ONLY){ el('app').innerHTML = previewBar + (prods.length ? productCrumb(prods[0], data) + prodHtml + supLinkHtml()
                                                              : '<div class="msg">Not on the storefront — hidden, or another shop.</div>'); return; }
   el('app').innerHTML = head + regionBar() + finHtml + prodHtml
@@ -633,7 +661,7 @@ function render(data){
     /* ⚠️ OUTSIDE the ternary. An empty shop still has customers, and the emptier it is the more likely the
        person reading this is the one with a problem. */
     + supLinkHtml()
-    + '<div class="foot">Powered by <b>Chit &amp; Bridge</b>. Prices are set by the shop; design &amp; colour, where shown, are referenced from the brand catalogue; prices are set by the shop.</div>';
+    + '<div class="foot">Powered by <b>Chit &amp; Bridge</b>. Prices are set by the shop; design &amp; colour, where shown, are referenced from the brand catalogue.</div>';
 }
 // ── Login-first gate (storefront_access==='login'): customer signs in (phone/email + OTP) before browsing. ──
 function renderLoginGate(shop){
@@ -687,7 +715,7 @@ function supLinkHtml(){
   return '<div style="text-align:center;margin:10px 0 2px;font-size:12.5px;color:#6a707a">'
     + 'Something wrong with an order? '
     + '<a href="#" data-testid="shop-support" onclick="supOpen();return false" '
-    + 'style="color:#c0392b;font-weight:600">Report a problem to '+esc(s.display_name||'the shop')+'</a></div>';
+    + 'style="color:var(--accent);font-weight:600">Report a problem to '+esc(s.display_name||'the shop')+'</a></div>';
 }
 
 function supHost(){ var h=el('suphost'); if(!h){ h=document.createElement('div'); h.id='suphost'; document.body.appendChild(h); } return h; }
@@ -757,10 +785,10 @@ function supRender(){
   }
   var act=_sup.step==='say'
     ? '<button data-testid="shop-support-code" onclick="supSendCode()"'+(_sup.dead?' disabled':'')
-      + ' style="width:100%;border:0;border-radius:10px;padding:12px;background:'+(_sup.dead?'#c9ccd1':'#c0392b')
+      + ' style="width:100%;border:0;border-radius:10px;padding:12px;background:'+(_sup.dead?'#c9ccd1':'var(--accent)')
       + ';color:#fff;font-weight:700;font-size:14px;cursor:'+(_sup.dead?'not-allowed':'pointer')+'">Send me a code</button>'
     : '<button data-testid="shop-support-send" onclick="supSubmit()" style="width:100%;border:0;border-radius:10px;'
-      + 'padding:12px;background:#c0392b;color:#fff;font-weight:700;font-size:14px;cursor:pointer">Send it</button>';
+      + 'padding:12px;background:var(--accent);color:#fff;font-weight:700;font-size:14px;cursor:pointer">Send it</button>';
 
   supHost().innerHTML='<div style="position:fixed;inset:0;background:rgba(15,22,32,.5);z-index:900;display:flex;'
     + 'align-items:center;justify-content:center;padding:12px" onclick="if(event.target===this)supClose()">'
@@ -831,7 +859,7 @@ function supSubmit(){
         + '<div style="font-size:13px;color:#6a707a;line-height:1.5">It is in their work queue. They can reply on '
         + esc(sent)+'.</div>'
         + '<button data-testid="shop-support-done" onclick="supClose()" style="margin-top:16px;width:100%;border:0;'
-        + 'border-radius:10px;padding:12px;background:#c0392b;color:#fff;font-weight:700;font-size:14px;cursor:pointer">Done</button>'
+        + 'border-radius:10px;padding:12px;background:var(--accent);color:#fff;font-weight:700;font-size:14px;cursor:pointer">Done</button>'
         + '</div></div>';
     })
     .catch(function(e){ if(!_sup)return; _sup.busy=false; _sup.err=e.message; supRender(); });
@@ -969,13 +997,13 @@ function _cartStepReview(){
   var row=function(k,v){ return '<div style="display:flex;gap:10px;padding:7px 0;border-top:1px dashed #e7e3d8;font-size:13px">'
     + '<span style="min-width:104px;color:#6a707a;font-size:11.5px">'+k+'</span><span style="flex:1">'+v+'</span></div>'; };
   var hd=function(t,step){ return '<div style="font-size:11px;font-weight:800;color:#6a707a;text-transform:uppercase;letter-spacing:.05em;display:flex;margin-top:10px">'+t
-    + '<span style="margin-inline-start:auto;color:#c0392b;cursor:pointer;text-transform:none;letter-spacing:0;font-size:11.5px" onclick="_CFLOW.go('+step+')">Change</span></div>'; };
+    + '<span style="margin-inline-start:auto;color:var(--accent);cursor:pointer;text-transform:none;letter-spacing:0;font-size:11.5px" onclick="_CFLOW.go('+step+')">Change</span></div>'; };
   return hd('Your basket · '+_ord.lines.length, 0)
     + _ord.lines.map(function(L,i){ return row(L.qty+' × '+esc(L.unit||''), '<span>'+esc(L.name)+'</span><b style="float:inline-end">'+_cartLineTotal(i)+'</b>'); }).join('')
     + (function(){ /* the same money the basket showed — offers, GST per rate, total incl. tax — never the listed price alone */
         try{ var byId={}; ((_SHOPDATA&&_SHOPDATA.items)||[]).forEach(function(p){ byId[String(p.item_id)]=p; });
           var lines=(_ord.lines||[]).map(function(L){ var it=byId[String(L.item_id)]||{ item_id:L.item_id, item_data:{ name:L.name } }; var l=_lineOf(it, Number(L.qty)||1); var _lp=Number(L.price)||0; l.unitPrice=(typeof CBPricing!=='undefined'&&(it.item_data||it).pricing_kind)?CBPricing.unitPrice(it.item_data||it, Number(L.qty)||1, _lp).amount:_lp; return l; });
-          return '<div style="margin-top:6px;padding:8px 10px;border:1px dashed #c0392b;border-radius:9px;font-size:13px">'+shopMoneyRowsHTML(shopBasketMath(lines), { totalTestid:'shop-review-total' })+'</div>';
+          return '<div style="margin-top:6px;padding:8px 10px;border:1px dashed var(--accent);border-radius:9px;font-size:13px">'+shopMoneyRowsHTML(shopBasketMath(lines), { totalTestid:'shop-review-total' })+'</div>';
         }catch(e){ return '<div style="display:flex;padding:9px 0;border-top:2px solid #e7e3d8;font-size:14px;font-weight:800"><span style="flex:1">Total</span><span data-testid="shop-review-total">'+_cartGrand()+'</span></div>'; } })()
     /* ⚠️ CJ-07 — the shop's catalogue is the authority and the server reprices every line. On a public page that
        must be SAID: a customer reading a total on their own screen cannot otherwise tell a request from a bill. */
@@ -1019,7 +1047,7 @@ function _cartPanelHtml(){
   /* ⚠️ --cbst-accent: the shared rail takes THIS shop's colour. A blue rail on a red shop is the same mistake as
      sharing a stylesheet instead of sharing the rules. */
   return '<div style="position:fixed;inset:0;background:rgba(15,22,32,.5);z-index:900;display:flex;align-items:center;justify-content:center;padding:12px" onclick="if(event.target===this)orderClose()">'
-    +'<div style="--cbst-accent:#c0392b;--cbst-soft:#fdf3f2;background:#fff;width:100%;max-width:460px;border-radius:16px;padding:18px 18px 20px;max-height:92vh;overflow:auto">'
+    +'<div style="--cbst-accent:var(--accent);--cbst-soft:var(--blue-tint-bg);background:#fff;width:100%;max-width:460px;border-radius:16px;padding:18px 18px 20px;max-height:92vh;overflow:auto">'
     +'<div style="display:flex;align-items:center;gap:8px"><b class="sg" style="font-size:16px;flex:1">🛒 '+esc(shop.display_name||'Your order')+'</b>'
     +'<button onclick="orderClose()" style="border:0;background:none;font-size:22px;cursor:pointer;color:#8a949c">×</button></div>'
     +'<div id="oc_rail"></div><div id="oc_body"></div>'

@@ -1127,7 +1127,7 @@
       + '<button onclick="CBCart.close(\'' + esc(ns) + '\')" style="border:0;background:none;font-size:var(--fs-5);color:#8a949c;cursor:pointer">×</button></div>'
       + '<div style="font-size:var(--fs-2);color:var(--grey-2);margin-bottom:10px">'
       + (opt(ns, 'from') ? 'from <b>' + esc(opt(ns, 'from')) + '</b> · ' : '')
-      + sel.length + ' line' + (sel.length === 1 ? '' : 's') + ' · ' + units(ns) + ' units</div>'
+      + sel.length + ' line' + (sel.length === 1 ? '' : 's') + ' · ' + units(ns) + (units(ns) === 1 ? ' unit' : ' units') + '</div>'
       + (sel.length
         ? sel.map(function (l) {
             var p = l.unit_price;
@@ -2296,9 +2296,22 @@
       } else msg = opts.emptyAll || opts.empty || 'Nothing to order here yet.';
       return '<div class="cbcat-empty">' + esc(msg) + '</div>';
     }
+    /* ⭐ SECTIONS (opt-in, 2026-10-09 — the online shop): `opts.sectionOf(row) → {id,label,order}` groups plain lines
+       under a heading each, in the order given. Skipped when the list has variant groups, because a group's
+       "add all" addresses its row by INDEX in cart.rows() and a reorder would aim it at the wrong row. */
+    var secOf = (typeof opts.sectionOf === 'function' && rows.every(function (r) { return r.type !== 'product'; })) ? opts.sectionOf : null;
+    if (secOf) {
+      var keyed = rows.map(function (r, n) { var s = secOf(r) || { id: '', label: '', order: 1e9 }; return { r: r, s: s, n: n }; });
+      keyed.sort(function (a, b) { return (a.s.order - b.s.order) || (a.n - b.n); });
+      rows = keyed.map(function (k) { return k.r; });
+      var secs = keyed.map(function (k) { return k.s; });
+    }
     var w = windowOf(cart, opts, rows.length);
     var out = '';
     for (var i = 0; i < w.shown; i++) {
+      if (secOf && secs[i].label && (i === 0 || secs[i - 1].id !== secs[i].id)) {
+        out += '<div class="cbcat-sec" data-testid="shop-cat-head" data-sec="' + esc(secs[i].id) + '">' + esc(secs[i].label) + '</div>';
+      }
       out += rows[i].type === 'product' ? groupHTML(cart, rows[i], i) : rowHTML(cart, rows[i], opts);
     }
     if (w.more) {
