@@ -184,8 +184,8 @@ async function route(S, r) {
   /* Dues · Month lock · Packs, looked at on a laptop and at 390 px (PR: ledger panels): at most three columns, nothing cut off, no sideways scroll */
   async function panelShots(p, tag, w) {
     await nav(p, 'dues'); await p.waitForSelector('[data-testid="dues-side-rcv"]'); await p.waitForTimeout(350);
-    const d = await p.evaluate(() => { const h = document.querySelector('#bkl_dues .lhead') || document.querySelector('#bkt_dues .lhead'); const cells = h ? Array.from(h.children).filter((c) => c.getBoundingClientRect().width > 0 && getComputedStyle(c).display !== 'none') : []; return { n: cells.length, found: !!h, sw: document.documentElement.scrollWidth, over: Array.from(document.querySelectorAll('#bk_body *')).filter((e) => e.getBoundingClientRect().right > window.innerWidth + 1).length }; });
-    console.log('  dues header found=' + d.found + ' cells=' + d.n);
+    const d = await p.evaluate(() => { const h = document.querySelector('#bkl_dues .lhead') || document.querySelector('#bkt_dues .lhead'); const cells = h ? Array.from(h.children).filter((c) => c.getBoundingClientRect().width > 0 && getComputedStyle(c).display !== 'none' && c.textContent.trim() !== '') : [];   /* M28: the buttons column (no heading) is not a data column */ return { n: cells.length, txt: cells.map((c) => c.className + ':' + JSON.stringify(c.textContent.trim())), found: !!h, sw: document.documentElement.scrollWidth, over: Array.from(document.querySelectorAll('#bk_body *')).filter((e) => e.getBoundingClientRect().right > window.innerWidth + 1).length }; });
+    console.log('  dues header found=' + d.found + ' cells=' + d.n + ' ' + JSON.stringify(d.txt));
     ok(d.n <= 3 && d.over === 0 && d.sw <= w, 'Dues ' + tag + ': ' + d.n + ' columns by default (at most 3), nothing past the right edge (' + d.over + '), no sideways scroll (' + d.sw + ')');
     await p.screenshot({ path: path.join(SHOTS, 'dues-' + tag + '.png') });
     await nav(p, 'lock'); await p.waitForSelector('[data-testid="lk-row-12"]'); await p.waitForTimeout(250);

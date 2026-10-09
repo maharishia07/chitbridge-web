@@ -187,6 +187,8 @@ h1{margin:0;font-family:var(--serif);font-size:30px;font-weight:700;letter-spaci
 @media (max-width:620px){.pe-card{padding:12px}#bk_body .pe-fix,#bk_body .pe-bar button,#bk_body .pe-card .supacts button,.pe-tab{min-height:44px}#bk_body .pe-card .supacts button{flex:1 1 100%}}
 
 /* toast (app/accounts-shell.js writes into #toast) */
+dialog.sheet{border:1px solid var(--line-3,#d8ccb0);border-radius:14px;padding:0;width:min(520px,94vw);max-height:92vh;background:var(--surface,#fffdf8);color:var(--ink,#241f14)}
+dialog.sheet::backdrop{background:var(--scrim,rgba(0,0,0,.4))}
 #toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:60;max-width:min(520px,92vw)}
 #toast .toast{background:var(--ink);color:var(--ground);padding:12px 16px;border-radius:10px;font-size:14px;box-shadow:var(--shadow-toast)}
 #toast .toast.err{background:var(--red-i)}
@@ -270,6 +272,7 @@ body.lg-on .cbl-slot .shop{display:none}
   </main>
 </div>
 <div id="toast"></div>
+<dialog class="sheet" id="acc_sheet" data-testid="acc-sheet"></dialog>   <!-- the Pay / Remind sheet (M28): the app's modal(html) signature, as crm.html -->
 
 <script>
 'use strict';
@@ -303,6 +306,7 @@ function go(hash){ location.href = '/app.html' + hash; }   /* api()'s 401 → th
 <script src="/app/chit-sheet.js"></script>   <!-- THE CHIT SHEET: the same popup the app opens (a bill number here opens it) -->
 <script src="/app/cap-folders.js"></script>
 <script src="/app/cap-books.js"></script>
+<script src="/app/rail-thread.js"></script>
 <script src="/engine/bank-recon.js"></script>   <!-- CBBankRecon: the bank statement is read, matched and reconciled HERE, on this device (DECISIONS: Bank reconciliation runs on the shop's device) -->
 <script src="/app/cap-entry.js"></script>   <!-- ＋ Entry on the Day book: four plain steps, the server's events and preview (docs/design/manual-entry) -->
 <script src="/app/cap-period.js"></script>   <!-- Month & year end: Closing stock · Assets & depreciation · Accruals & recurring · GST close & pay · Year close -->
@@ -410,6 +414,15 @@ function openChit(id){ window.open('/app.html#/app/chit/' + encodeURIComponent(i
 
 /* the page's own confirm — the same <dialog> the index tile uses (accounts-shell.js); cap-books.js asks through this name */
 const confirmAsk = CBConfirm;
+/* a sheet: the app's modal(html) / closeModal() signature on a native <dialog> (as crm.html), so cap-books.js's Pay and Remind open here unchanged */
+function modal(html){
+  const d = document.getElementById('acc_sheet');
+  d.innerHTML = '<button class="mx" style="position:absolute;right:6px;top:6px" onclick="closeModal()" aria-label="Close" title="Close">✕</button>' + html;
+  if (!d.open) { try { d.showModal(); } catch (_) { d.setAttribute('open', ''); } }
+}
+function closeModal(){ const d = document.getElementById('acc_sheet'); try { d.close(); } catch (_) { d.removeAttribute('open'); } d.innerHTML = ''; }
+document.getElementById('acc_sheet').addEventListener('cancel', (e) => { e.preventDefault(); closeModal(); });
+document.getElementById('acc_sheet').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeModal(); });
 
 /* ── which view, and its chrome ── */
 function chrome(view){

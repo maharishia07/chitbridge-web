@@ -9,6 +9,8 @@
  *      dead; Cancel records nothing (the stand-in counts the POSTs); "Pay as advance" is ONE POST that carries `acknowledge`.
  *  E2  oldest first: the four bills are pre-filled in due order, each amount = the preview's apply_minor; editing one amount changes the line under the table.
  *  E3  part + advance: ₹2,000 → two bills and part of the third, no band; ₹5,000 → "₹1,279.88 stays with … as an advance"; the outcome words are exact and name the bills.
+ *  E10 (M28) doors + Dues: Dues has To collect / To pay (total in words = the /dues balances), rows with age + due date + Receive/Pay (+ Remind on what is owed to you); the ledger's party view has Pay beside Statement;
+ *      Remind = ONE message on the oldest open bill's line through CBThread (prefilled, editable; no new chit, nothing posted); "Not paid yet — remind me" is the same Remind; the 5,000 test run from the ledger. png/Dues.png
  *  E10 the door: the CRM record's Pay button opens the ONE popup (pay_amt), the URL does not change; the popup has no "Later" (the ledger/Dues doors are M28).
  *  E11 owner 2026-10-08 — W1 fires ONLY with an allocation: nothing owed + bills meant → the band; "Keep it as an advance" (no allocation) → no band, Record works,
  *      and the POST says allocate:'none' with no allocations. The trigger lives in payIntent() (cap-books.js), the one place to change.
@@ -35,7 +37,7 @@ const MINUS = /(^|[\s(>])[-−]\s?(₹|\d)/;
 
 function standIn() {
   const fx = crmApi.resolve(JSON.parse(fs.readFileSync(FX, 'utf8')), Date.now());
-  return { fx, calls: [], list: JSON.parse(JSON.stringify(fx.list)), pay: payBooks() };
+  return { fx, calls: [], list: JSON.parse(JSON.stringify(fx.list)), pay: payBooks(), msgs: [], msgPosts: [] };
 }
 const DUES = [
   { party_id: 'c1', party_no: 'P-00001', name: 'Ravi Stores', side: 'customer', balance_minor: 300000, oldest_due: '2026-08-01', disputed_minor: 0, buckets: { not_due: 0, lt_6m: 300000 } },
@@ -95,7 +97,18 @@ async function route(S, r) {
     const line = { date: '2026-09-05', what: neg ? 'Purchase' : 'Sale', ref: null, party_id: x[1], source_chit_id: null, dr_minor: neg ? 0 : 300000, cr_minor: neg ? 150000 : 0, running_minor: neg ? -150000 : 300000, source: null };
     return J(r, 200, books.statement(x[1], { opening_minor: 0, closing_minor: line.running_minor, lines: [line] }));
   }
-  if (p === '/api/books/accounts') return J(r, 200, { accounts: [] });
+  if (p === '/api/books/accounts') return J(r, 200, { accounts: [['1300', 'Customers (Sundry Debtors)'], ['2100', 'Suppliers (Sundry Creditors)'], ['1400', 'Cash']].map((a) => books.accountRow({ account_id: 'acc-' + a[0], code: a[0], name: a[1], is_group: false })) });
+  if (p === '/api/books/trial-balance') return J(r, 200, books.trialBalance([{ code: '1300', name: 'Customers (Sundry Debtors)', dr_minor: 300000, cr_minor: 0 }, { code: '2100', name: 'Suppliers (Sundry Creditors)', dr_minor: 0, cr_minor: 250000 }], { total_dr_minor: 300000, total_cr_minor: 250000, balanced: false }));
+  if ((x = p.match(/^\/api\/books\/ledger\/(1300|2100)$/))) return J(r, 200, books.ledger(x[1], x[1] === '1300' ? 'Customers (Sundry Debtors)' : 'Suppliers (Sundry Creditors)', [], { closing_minor: x[1] === '1300' ? 300000 : -250000 }));
+  /* M28 · a bill chit and its thread (routes/chits.js :2539 GET /:id · :3821 / :3661 messages): a bill's line is 'ln-<chit>-1' */
+  if ((x = p.match(/^\/api\/chits\/([^/]+)$/)) && m === 'GET') return J(r, 200, { header: { chit_id: x[1] }, actions: { message_external: { ok: true }, message_internal: { ok: true } }, live_set: [{ line_id: 'ln-' + x[1] + '-1', live: { particulars: 'Goods' }, removed: false }] });
+  if ((x = p.match(/^\/api\/chits\/([^/]+)\/messages$/))) {
+    if (m === 'GET') return J(r, 200, { messages: S.msgs.filter((g) => g.chit_id === x[1]), count: S.msgs.filter((g) => g.chit_id === x[1]).length });
+    let b = {}; try { b = JSON.parse(q.postData() || '{}'); } catch (_) {}
+    S.msgPosts.push({ chit_id: x[1], body: b });
+    const row = { message_id: 'm' + S.msgPosts.length, chit_id: x[1], created_at: new Date().toISOString(), msg_type: b.msg_type || 'info', is_dispute: false, dispute_id: null, line_id: b.line_id || null, thread_type: b.thread_type, message_text: b.message_text, sender_entity_id: 'ent-M', sender_display_name: 'Mayur Bhavan', attachments: [] };
+    S.msgs.push(row); return J(r, 200, { message_id: row.message_id, thread_type: row.thread_type, message_text: row.message_text, sender_display_name: row.sender_display_name, created_at: row.created_at });
+  }
   if (p === '/api/books/todo') return J(r, 200, []);
   if (p === '/api/crm/parties' && m === 'GET') return J(r, 200, crmApi.list(S.list, { records: S.fx.records }));
   if ((x = p.match(/^\/api\/crm\/parties\/([^/]+)\/timeline$/))) return J(r, 200, crmApi.timeline(S.fx.timelines[decodeURIComponent(x[1])] || { entries: [] }, x[1], {}));
@@ -118,7 +131,7 @@ async function route(S, r) {
     await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
     await ctx.route('**/api/**', (r) => route(S, r));
     await ctx.addInitScript((s) => { try { if (!localStorage.getItem('cb_seeded')) { localStorage.setItem('cb_seeded', '1'); localStorage.setItem('cb_sess', JSON.stringify(s)); } } catch (_) {} }, OWNER);
-    const p = await ctx.newPage(); p.on('pageerror', (e) => threw.push(e.message));
+    const p = await ctx.newPage(); p.on('pageerror', (e) => { threw.push(e.message); console.log('  PAGEERR ' + e.message); });
     await p.goto(base + url); return { ctx, p };
   }
   const bodyText = (p) => p.evaluate(() => document.body.innerText);
@@ -287,6 +300,64 @@ async function route(S, r) {
     const po = S.pay.posts[0];
     ok(posts(S) === 1 && po.allocate === 'none' && !('allocations' in po) && !('acknowledge' in po), 'E11 the POST carries allocate:"none", no allocations, no acknowledge');
     ok(await text(p, 'pay_outcome') === 'Paid ₹5,000 cash to Agro Mills. ₹5,000 left with Agro Mills as an advance — they owe you this.', 'E11 outcome words (' + (await text(p, 'pay_outcome')) + ')');
+    await ctx.close();
+  }
+  /* ── E10 · M28 doors + Dues: the ledger's Pay beside Statement, Dues rows with To collect / To pay, Remind = a message on the oldest open bill ── */
+  {
+    const S = standIn(), { ctx, p } = await open('/accounts.html', S);
+    await p.waitForSelector('[data-testid="acc-nav-dues"]', { timeout: 15000 });
+    await p.click('[data-testid="acc-nav-dues"]');
+    await p.waitForSelector('[data-testid="dues-side-pay"]', { timeout: 15000 });
+    await p.waitForTimeout(400);
+    const hr = await text(p, 'dues-side-rcv'), hp = await text(p, 'dues-side-pay');
+    ok(/To collect/.test(hr) && /To pay/.test(hp) && !/They owe you|You owe\b/.test(hr + hp), 'E10 Dues has two headings: To collect and To pay (' + hr + ' | ' + hp + ')');
+    const sum = (side) => DUES.filter((d) => (side === 'rcv' ? d.balance_minor > 0 : d.balance_minor < 0)).reduce((t, d) => t + d.balance_minor, 0);
+    ok(/they owe you ₹3,000\.00/.test(hr) && /you owe ₹2,500\.00/.test(hp) && sum('rcv') === 300000 && sum('pay') === -250000, 'E10 each heading carries its total in words, equal to the /dues balances (' + hr + ' | ' + hp + ')');
+    ok(await p.locator('[data-testid="dues-pay-c1"]').innerText() === 'Receive' && await p.locator('[data-testid="dues-pay-s1"]').innerText() === 'Pay' && await p.locator('[data-testid="dues-remind-c1"]').count() === 1 && await p.locator('[data-testid="dues-remind-s1"]').count() === 0, 'E10 To collect rows say Receive and Remind; To pay rows say Pay and have no Remind');
+    ok((await text(p, 'dues-c1')).indexOf('< 6 months') >= 0 && /01 Aug 2026/.test(await text(p, 'dues-c1')), 'E10 a row shows its age bucket and its due date (' + (await text(p, 'dues-c1')) + ')');
+    const url0 = p.url();
+    await p.click('[data-testid="dues-pay-s1"]'); await p.waitForSelector('[data-testid="pay_amt"]', { timeout: 8000 });
+    ok(p.url() === url0 && /^Pay ·/.test(await text(p, 'pay_title')) && await p.locator('[data-testid="pay_remind"]').count() === 0, 'E10 a Dues row\'s Pay opens the same pay_amt popup without leaving the page (no "remind me" on what you owe)');
+    await closeIf(p); await p.waitForTimeout(200);
+    await p.screenshot({ path: path.join(PNG, 'Dues.png') });
+    S.calls.length = 0;
+    await p.click('[data-testid="dues-remind-c1"]'); await p.waitForSelector('[data-testid="msg-body"]', { timeout: 8000 });
+    const prefill = await p.inputValue('[data-testid="msg-body"]');
+    ok(/KT-0007/.test(prefill) && /1,120\.00/.test(prefill) && /KT-0007/.test(await text(p, 'remind_for')), 'E10 Remind opens a prefilled message about the oldest open bill (' + prefill.slice(0, 90) + ')');
+    await p.fill('[data-testid="msg-body"]', prefill + ' Thank you.');
+    await p.click('[data-testid="msg-send"]'); await p.waitForFunction(() => /notified|Note added|Sent/.test((document.querySelector('[data-testid="rt-out"]') || {}).textContent || ''), null, { timeout: 8000 });
+    const mp = S.msgPosts;
+    ok(mp.length === 1 && mp[0].chit_id === 'bill-a' && mp[0].body.line_id === 'ln-bill-a-1' && mp[0].body.thread_type === 'external' && /Thank you\.$/.test(mp[0].body.message_text), 'E10 ONE message lands on the oldest open bill\'s line, with the person\'s edit (' + JSON.stringify(mp.map((x) => [x.chit_id, x.body.line_id, x.body.thread_type])) + ')');
+    ok(!S.calls.some((c) => /^POST \/api\/chits(\/send)?$/.test(c)) && S.calls.filter((c) => /^POST /.test(c) && !/\/messages$/.test(c) && !/payments\/preview$/.test(c)).length === 0 && S.pay.posts.length === 0, 'E10 Remind makes no new chit and posts nothing to the books (' + S.calls.filter((c) => /^POST /.test(c)).join(', ') + ')');
+    await closeIf(p);
+    S.msgPosts.length = 0;
+    await p.click('[data-testid="dues-pay-c1"]'); await p.waitForSelector('[data-testid="pay_remind"]', { timeout: 8000 });
+    await p.click('[data-testid="pay_remind"]'); await p.waitForSelector('[data-testid="msg-body"]', { timeout: 8000 });
+    ok(await p.locator('[data-testid="pay_amt"]').count() === 0 && /KT-0007/.test(await p.inputValue('[data-testid="msg-body"]')) && S.pay.posts.length === 0 && S.msgPosts.length === 0, 'E10 "Not paid yet — remind me" closes the payment and opens the same Remind; nothing is posted or sent until the person sends');
+    await closeIf(p);
+    await ctx.close();
+  }
+  /* ── E10 · the LEDGER door and the ₹5,000 ledger test ── */
+  {
+    const S = standIn(), { ctx, p } = await open('/accounts.html', S);
+    await p.waitForSelector('[data-testid="acc-nav-ledgers"]', { timeout: 15000 });
+    await p.click('[data-testid="acc-nav-ledgers"]');
+    await p.waitForSelector('[data-testid="lg-acc-2100"]', { timeout: 15000 });
+    await p.click('[data-testid="lg-acc-2100"]'); await p.waitForSelector('[data-testid="lg-party-s1"]', { timeout: 8000 });
+    const leaves = await p.$$eval('[data-testid="lg-party-s1"], [data-testid="lg-party-s2"]', (e) => e.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
+    const tot = leaves.map((t) => Number((t.match(/₹\s?([\d,]+\.\d\d)/) || [0, '0'])[1].replace(/,/g, ''))).reduce((a, b) => a + b, 0);
+    ok(tot === 2500, 'E10 the ledger\'s supplier balances (' + leaves.join(' | ') + ') add to the To pay total, 2,500.00');
+    await p.click('[data-testid="lg-party-s1"]'); await p.waitForSelector('[data-testid="lg-statement"]', { timeout: 8000 });
+    ok(await p.locator('[data-testid="lg-pay"]').count() === 1 && (await text(p, 'lg-pay')) === 'Pay', 'E10 a party\'s ledger has Pay beside Statement');
+    const url0 = p.url();
+    await p.click('[data-testid="lg-pay"]'); await p.waitForSelector('[data-testid="pay_amt"]', { timeout: 8000 });
+    ok(p.url() === url0, 'E10 the ledger\'s Pay opens the popup without leaving the page');
+    await type(p, '5000');
+    const prev = S.pay.previews[S.pay.previews.length - 1];
+    ok(prev.party_id === 's1' && prev.direction === 'out' && prev.amount_minor === 500000, 'the ₹5,000 ledger test: the preview is for Agro Mills (s1), to pay, 5,000 (' + JSON.stringify(prev) + ')');
+    ok(/₹1,279\.88 stays with .* as an advance/.test(await text(p, 'pay_left')), 'the ₹5,000 ledger test: ₹1,279.88 stays as an advance (' + (await text(p, 'pay_left')) + ')');
+    await p.waitForSelector('[data-testid="pay_band"]:not([hidden])', { timeout: 8000 }); await p.click('[data-testid="pay_ack"]'); await p.waitForSelector('[data-testid="pay_outcome"]', { timeout: 8000 });
+    ok(S.pay.posts.length === 1 && S.pay.posts[0].party_id === 's1' && /^Paid ₹5,000 cash to Agro Mills\. /.test(await text(p, 'pay_outcome')), 'the ₹5,000 ledger test: ONE payment is recorded for s1 and the outcome names it (' + (await text(p, 'pay_outcome')) + ')');
     await ctx.close();
   }
   ok(threw.length === 0, 'no page error' + (threw.length ? ' · ' + threw[0] : ''));
