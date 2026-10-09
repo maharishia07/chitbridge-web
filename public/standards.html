@@ -106,6 +106,12 @@ dialog.sheet::backdrop{background:color-mix(in srgb,var(--ink) 40%,transparent)}
 
 #toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:60;background:var(--ink);color:var(--page);padding:10px 16px;border-radius:10px;font-size:calc(14px * var(--k,1))}
 #toast[hidden]{display:none}
+/* the glossary (M41 · T2): a dotted term opens its full name and meaning on a tap, a click or Enter — a phone has no hover */
+abbr.gl{text-decoration:underline dotted;text-underline-offset:2px;cursor:help;border-radius:3px}
+abbr.gl:focus-visible{outline:2px solid var(--blue,#3F66A6);outline-offset:1px}
+.glpop{position:fixed;z-index:70;max-width:min(320px,calc(100vw - 32px));background:var(--ink);color:var(--page);padding:9px 12px;border-radius:10px;font-size:calc(13px * var(--k,1));line-height:1.45;box-shadow:0 6px 18px color-mix(in srgb,var(--ink) 30%,transparent)}
+.glpop b{display:block;font-weight:700}
+.glpop[hidden]{display:none}
 
 /* ── phone: the matrix is the first page, the list the second (‹ back), like Ledgers ── */
 @container stdpage (max-width: 640px){
@@ -170,6 +176,9 @@ function checkedLabel(){ try{ return new Date(STD_CHECKED + 'T12:00:00Z').toLoca
 
 /* a row of the register, as the list holds it: the register's row itself (never a copy of its words) and its place */
 const ROWS = STANDARDS.map((r, i) => ({ ix: i, r: r }));
+/* ⭐ the 4th Kind, Compatibility (M41): ONE file, public/data/compat.json, shared with the Compatibility lab (N04); stdCompatRows maps it onto the register's shape */
+let COMPAT_ERR = '';
+function addCompat(json){ stdCompatRows(json).forEach((r) => ROWS.push({ ix: ROWS.length, r: r })); }
 const AREA = (r) => lab(STD_AREAS, r.a), KIND = (r) => lab(STD_KINDS, r.k), COUNTRY = (r) => r.c.map((c) => lab(STD_COUNTRIES, c)).join(' · '), STATUS = (r) => lab(STD_STATUS, r.s);
 const SORD = { live: 0, part: 1, plan: 2 };
 function countOf(rows){ var n = { live: 0, part: 0, plan: 0 }; rows.forEach((r) => { n[r.s]++; }); return n; }
@@ -192,9 +201,9 @@ const GROUP_ORDER = STD_AREAS.map((a) => a[0]).concat(STD_KINDS.map((k) => k[0])
 function cols(){
   return [
     { key: 'what', label: 'What it does for you', prio: 1, w: 250, sort: 'what', html: true, value: (x) => x.r.p,
-      cell: (x) => esc(x.r.p) + (x.r.m ? '<span class="miss"><b>Missing:</b> ' + esc(x.r.m) + '</span>' : x.r.limit ? '<span class="lim"><b>Limit:</b> ' + esc(x.r.limit) + '</span>' : '') },
+      cell: (x) => stdGloss(esc(x.r.p) + (x.r.m ? '<span class="miss"><b>Missing:</b> ' + esc(x.r.m) + '</span>' : x.r.limit ? '<span class="lim"><b>Limit:</b> ' + esc(x.r.limit) + '</span>' : ''), { focus: false }) },
     { key: 'std', label: 'Reference', prio: 2, w: 230, sort: 'std', html: true, value: (x) => x.r.n,
-      cell: (x) => '<span class="sn">' + esc(x.r.n) + '</span> <span class="kind k-' + esc(x.r.k) + '">' + esc(KIND(x.r)) + '</span>' },
+      cell: (x) => '<span class="sn">' + stdGloss(esc(x.r.n), { focus: false }) + '</span> <span class="kind k-' + esc(x.r.k) + '">' + esc(KIND(x.r)) + '</span>' },
     { key: 'where', label: 'Applies in', prio: 3, w: 120, sort: 'where', cell: (x) => COUNTRY(x.r) },
     { key: 'area', label: 'Area', prio: 4, w: 150, sort: 'area', cell: (x) => AREA(x.r) },
     { key: 'at', label: 'Where in the app', prio: 5, w: 220, cell: (x) => x.r.at || '—' },
@@ -220,12 +229,13 @@ function nextOf(x){
   if (shown.indexOf('std') < 0) h += '<dt>Reference</dt><dd>' + esc(r.n) + '</dd>';
   h += '<dt>Kind</dt><dd><span class="kind k-' + esc(r.k) + '">' + esc(KIND(r)) + '</span> ' + esc(lab(STD_KINDS, r.k, 2)) + '</dd>';
   if (r.ex && plain(r.ex) !== '—' && shown.indexOf('ex') < 0) h += '<dt>Clause or example</dt><dd><code>' + esc(plain(r.ex)) + '</code>' + (r.exWhy ? '<div class="exw">' + rich(r.exWhy) + '</div>' : '') + '</dd>';
-  if (r.note) h += '<dt>' + (r.s === 'live' ? 'Note' : 'What is missing, in full') + '</dt><dd>' + rich(r.note) + '</dd>';
+  if (r.note) h += '<dt>' + (r.k === 'compat' ? (r.s === 'live' ? 'Note' : 'Roadmap') : r.s === 'live' ? 'Note' : 'What is missing, in full') + '</dt><dd>' + rich(r.note) + '</dd>';
   if (r.eq) h += '<dt>Elsewhere</dt><dd>' + esc(r.eq) + '</dd>';
   if (shown.indexOf('at') < 0 && r.at) h += '<dt>In the app</dt><dd>' + esc(r.at) + '</dd>';
   if (r.why) h += '<dt>Why it matters</dt><dd>' + rich(r.why) + '</dd>';
-  h += '<dt>Source</dt><dd>' + (r.added ? '<span class="new">New</span> Adopted 2–3 Oct 2026; not yet in the register' : 'In the register') + '</dd></dl>';
-  return h;
+  if (r.k === 'compat') h += '<dt>Fit</dt><dd>' + esc(r.fit || '') + '</dd><dt>Proof</dt><dd data-testid="std-proof-' + x.ix + '">' + esc(r.proof || 'Not yet') + '</dd>';
+  h += '<dt>Source</dt><dd>' + (r.k === 'compat' ? 'The compatibility register (data/compat.json), shared with the Compatibility lab' : r.added ? '<span class="new">New</span> Adopted 2–3 Oct 2026; not yet in the register' : 'In the register') + '</dd></dl>';
+  return stdGloss(h);
 }
 /* the statement a buyer or a CA pastes into an e-mail: the standard, the clause, the status, and what is missing — in the register's words */
 function statementOf(r){
@@ -234,6 +244,7 @@ function statementOf(r){
   if (r.m) t.push('Missing: ' + r.m);
   if (r.note && r.s !== 'live') t.push('In full: ' + plain(r.note));
   if (r.eq) t.push('Elsewhere: ' + r.eq);
+  if (r.proof) t.push('Proof: ' + r.proof);
   t.push('Checked ' + checkedLabel() + ' (ChitBridge standards register)');
   return t.join('\n');
 }
@@ -298,7 +309,7 @@ function mxRows(){
 }
 function nowFilt(){ var s = LIST && LIST.state(); return (s && s.filt) || {}; }
 function paintMatrix(){
-  var f = nowFilt(), fk = DIM, rowsAll = STANDARDS;
+  var f = nowFilt(), fk = DIM, rowsAll = ROWS.map((x) => x.r);
   var other = Object.keys(f).filter((k) => f[k] && k !== 'status' && k !== fk).length || (LIST && LIST.state().q.trim());
   var h = '<div class="mx-tools"><span class="mx-lab" id="mxLab">Count by</span><span class="seg" role="group" aria-labelledby="mxLab">'
     + DIMS.map((d) => '<button type="button" data-dim="' + d[0] + '" data-testid="std-dim-' + d[0] + '" aria-pressed="' + (DIM === d[0]) + '">' + d[1] + '</button>').join('') + '</span></div>';
@@ -313,6 +324,7 @@ function paintMatrix(){
           : '<span role="cell" class="mx-c nil" aria-label="' + esc(r.label) + ', ' + t[1] + ': none">—</span>'; }).join('') + '</div>';
   });
   h += '</div>';
+  if (COMPAT_ERR) h += '<p class="mx-note" data-testid="std-compat-err">' + esc(COMPAT_ERR) + '</p>';
   if (other) h += '<p class="mx-note" data-testid="std-mx-note">The matrix counts the whole register; the list also has your search or other filters.</p>';
   h += '<div class="mx-more"><button type="button" class="tbtn" data-sheet="why" data-testid="std-open-why">Why follow standards ›</button><button type="button" class="tbtn" data-sheet="record" data-testid="std-open-record">One record, every standard ›</button></div>';
   $('mxBody').innerHTML = h;
@@ -355,7 +367,7 @@ function watch(){
 function openSheet(which){
   var d = $('sheet'), W = which === 'why';
   d.innerHTML = '<div class="sh-head"><h2>' + (W ? 'Why follow standards' : 'One record, every standard') + '</h2><button type="button" class="sh-x" data-act="sheetx" data-testid="std-sheet-x" aria-label="Close">✕</button></div>'
-    + '<div class="sh-body" data-testid="std-sheet-' + which + '">' + (W ? stdWhyHTML({ compact: false }) : stdRecordHTML({ compact: false })) + '</div>';
+    + '<div class="sh-body" data-testid="std-sheet-' + which + '">' + stdGloss(W ? stdWhyHTML({ compact: false }) : stdRecordHTML({ compact: false })) + '</div>';
   if (!d.open){ try{ d.showModal(); }catch(_){ d.setAttribute('open', ''); } }
   try{ history.replaceState(null, '', '?sheet=' + which); }catch(_){}
 }
@@ -376,15 +388,36 @@ document.addEventListener('click', (ev) => {
   else if (a === 'sheetx') closeSheet();
 });
 
-/* ═══ START ═══ */
-mountList();
-paintMatrix();
-watch();
-(function(){
+/* ═════ the glossary pop — one element, moved into an open sheet (a modal dialog's top layer would hide it otherwise) ═════ */
+function glHide(){ var p = $('glpop'); if (p) p.hidden = true; }
+function glShow(el){
+  var g = stdGlossary(el.getAttribute('data-gl')); if (!g) return;
+  var p = $('glpop'); if (!p){ p = document.createElement('div'); p.id = 'glpop'; p.className = 'glpop'; p.setAttribute('role', 'status'); p.setAttribute('data-testid', 'std-gloss-pop'); }
+  (el.closest('dialog') || document.body).appendChild(p);
+  p.innerHTML = '<b>' + esc(g[0]) + ' — ' + esc(g[1]) + '</b>' + esc(g[2] || ''); p.hidden = false;
+  var r = el.getBoundingClientRect(), w = Math.min(320, window.innerWidth - 32), left = Math.max(16, Math.min(r.left, window.innerWidth - 16 - w));
+  p.style.left = left + 'px'; p.style.top = (r.bottom + 6 + 80 > window.innerHeight ? Math.max(8, r.top - 6 - p.offsetHeight) : r.bottom + 6) + 'px';
+}
+/* capture. ⚠️ A ROW'S OWN LINE STAYS A ROW: a tap anywhere on a closed row opens it (on a phone most of a row is abbreviations, and a row that
+   would not open is a dead row) — there the term only shows its name on hover. Inside the opened row and the sheets, a tap explains the term. */
+function glLive(a){ return !!a && (!!a.closest('dl.sd') || !!a.closest('dialog') || !a.closest('[data-testid^="std-row-"]')); }
+document.addEventListener('click', (ev) => { var a = ev.target.closest && ev.target.closest('abbr.gl'); if (glLive(a)){ ev.stopPropagation(); ev.preventDefault(); glShow(a); return; } if (!(ev.target.closest && ev.target.closest('#glpop'))) glHide(); }, true);
+document.addEventListener('keydown', (ev) => { var a = ev.target.closest && ev.target.closest('abbr.gl'); if (glLive(a) && (ev.key === 'Enter' || ev.key === ' ')){ ev.preventDefault(); ev.stopPropagation(); glShow(a); } else if (ev.key === 'Escape') glHide(); }, true);
+window.addEventListener('scroll', glHide, true);
+
+/* ═══ START ═══ — the register is here already; Compatibility is read first so the list and the matrix hold it from the first paint */
+function start(){
+  mountList();
+  paintMatrix();
+  watch();
   var q = new URLSearchParams(location.search);
   if (q.get('sheet') === 'why' || q.get('sheet') === 'record') openSheet(q.get('sheet'));
   if (q.get('view') === 'list') $('app').setAttribute('data-view', 'list');
-})();
+}
+fetch('/data/compat.json', { cache: 'no-store' })
+  .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+  .then((j) => { addCompat(j); }, () => { COMPAT_ERR = 'Compatibility rows could not be read — the standards below are complete; reload to try again.'; })
+  .then(start);
 </script>
 </body>
 </html>

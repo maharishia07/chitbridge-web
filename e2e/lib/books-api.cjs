@@ -102,7 +102,7 @@ const payPreview = (bills, body, name, o) => {
   const prop = payProposal(bills, body.amount_minor), n = prop.proposal.filter((p) => p.apply_minor > 0).length, parts = [];
   if (n) parts.push(rs(prop.apply_minor) + ' settles ' + n + (n === 1 ? ' bill' : ' bills'));
   if (prop.on_account_minor > 0) parts.push(rs(prop.on_account_minor) + (body.direction === 'out' ? ' stays with ' + name + ' as an advance' : ' is kept as an advance from ' + name));
-  return { currency: 'INR', party: { party_id: body.party_id, name }, open_minor: prop.open_minor, proposal: prop.proposal, apply_minor: prop.apply_minor, on_account_minor: prop.on_account_minor,
+  return { currency: 'INR', party: { party_id: body.party_id, name, on_rail: !(o && o.on_rail === false) }, open_minor: prop.open_minor, proposal: prop.proposal, apply_minor: prop.apply_minor, on_account_minor: prop.on_account_minor,
     skipped: [], why: null, warnings: payWarnings(prop, body, name, o), words: parts.join(' · ') || 'Nothing to settle' };
 };
 /** the 409 a warning not named in acknowledge[] gets (nothing written) */
@@ -124,6 +124,37 @@ const payRecorded = (bills, body, name, o) => {
   const bal = o.balance_minor == null ? 0 : o.balance_minor;
   return { ok: true, payment: { payment_id: o.payment_id || 'pay1', status: cheque ? 'cheque_received' : 'recorded', duplicate: false },
     posted: posted({ entry_no: o.entry_no || 'PY/2026-27/000001' }), allocation: settled.length ? { settled: list, ok: true, items: settled.length * 2, allocated_minor: applied } : null,
-    outcome: { words, settled, applied_minor: applied, on_account_minor: on_account, balance_minor: bal, balance_words: bal ? (bal > 0 ? 'they owe you ' : 'you owe ') + rs(Math.abs(bal)) : 'settled' } };
+    outcome: { words, settled, applied_minor: applied, on_account_minor: on_account, balance_minor: bal, balance_words: bal ? (bal > 0 ? 'they owe you ' : 'you owe ') + rs(Math.abs(bal)) : 'settled' },
+    /* M30: the advice block rides on the record (payAdvice below); a harness without one sends null — the contract takes null as "not decided here" */
+    advice: o.advice === undefined ? null : o.advice };
 };
 Object.assign(module.exports, { rs, payProposal, payWarnings, payPreview, alreadyPaid, payRecorded });
+
+/* ── M30 · the payment advice OUT (chitbridge-api #60): the block on POST /payments (`advice`), GET /payments/:id/advice, PATCH /payments/:id ── */
+const NO_SAY = { off_rail: (n) => n + ' is not on ChitBridge — share the advice instead.', on_rail: (n) => n + ' is on ChitBridge — send the advice instead.', already_sent: () => 'An advice is already sent for this payment.' };
+const adviceNo = (why, name) => ({ ok: false, why, say: NO_SAY[why] ? NO_SAY[why](name) : why });
+/** may, as lib/books.js adviceMay answers for a recorded, posted payment: send on rail · share off rail · both refused once sent */
+const adviceMay = (name, o) => { const on = o.on_rail !== false, sent = /^(sent|delivered|disputed)$/.test(o.state || '');
+  return { send_advice: sent ? adviceNo('already_sent') : on ? { ok: true } : adviceNo('off_rail', name), share_advice: sent ? adviceNo('already_sent') : on ? adviceNo('on_rail', name) : { ok: true } }; };
+/**
+ * the advice block (routes/books.js adviceFor): body = the payment as POST /payments took it; o = { on_rail, state, chit_id, shared_at, entry_no, settled: outcome.settled, me }
+ * The words are the API's sentence shape ("<shop> paid you ₹2,000 cash on 5 Oct 2026 for bills KT-0007, KT-0008 (₹1,680) · ₹320 as an advance."); a harness that
+ * asserts on them passes its own.
+ */
+const payAdvice = (payment_id, body, name, o) => {
+  o = o || {}; const on = o.on_rail !== false, me = o.me || 'Mayur Bhavan', out = body.direction !== 'in', settled = o.settled || [], applied = settled.reduce((t, s) => t + s.amount_minor, 0);
+  const on_account = Math.max(0, body.amount_minor - applied), HOW = { cash: 'cash', upi: 'by UPI', bank: 'by bank', card: 'by card', cheque: 'by cheque' };
+  let words = o.words || (me + (out ? ' paid you ' : ' received ') + rs(body.amount_minor) + ' ' + (HOW[body.mode] || body.mode) + (out ? '' : ' from you') + ' on 5 Oct 2026'
+    + (settled.length ? ' for ' + (settled.length === 1 ? 'bill ' : 'bills ') + settled.map((s) => s.bill_no || s.against_ref).join(', ') + ' (' + rs(applied) + ')' : '')
+    + (on_account > 0 ? ' · ' + rs(on_account) + ' as an advance' : '') + '.');
+  const may = o.may || adviceMay(name, o), entry_no = o.entry_no || 'PY/2026-27/000001';
+  const chit = may.send_advice.ok ? { recipients: [{ entity_id: body.party_id, role: 'to' }], purpose: 'general', manual_subject: 'Payment advice ' + entry_no, client_ref: 'advice:pay:' + payment_id,
+    line_items: settled.map((s) => ({ particulars: 'Bill ' + (s.bill_no || s.against_ref), quantity: 1, unit: 'bill', price: s.amount_minor / 100, total: s.amount_minor / 100, currency: 'INR', ref_chit_id: s.against_ref, bill_no: s.bill_no || null, applied: s.amount_minor / 100, applied_minor: s.amount_minor })),
+    business_json: { kind: 'payment_advice', currency: 'INR', payment_advice: { action: out ? 'paid' : 'received', adviser_payment_id: payment_id, adviser_entry_no: entry_no, amount: body.amount_minor / 100, amount_minor: body.amount_minor, currency: 'INR',
+      mode: body.mode, reference: body.reference || null, paid_on: '2026-10-05', applied_minor: applied, on_account: on_account / 100, on_account_minor: on_account, collected_by: null, reverses_advice_chit_id: null, words } } } : null;
+  const share = may.share_advice.ok ? { text: words, wa: 'https://wa.me/?text=' + encodeURIComponent(words), mailto: 'mailto:?subject=' + encodeURIComponent('Payment advice ' + entry_no + ' — ' + me) + '&body=' + encodeURIComponent(words) } : null;
+  return { payment_id, party: { party_id: body.party_id, name, on_rail: on }, advice: { chit_id: o.chit_id || null, state: o.state || 'none', shared_at: o.shared_at || null }, may, words, body: chit, share };
+};
+/** PATCH /api/books/payments/:id → the row after the merge-patch */
+const payPatched = (payment_id, advice) => ({ ok: true, payment_id, advice: Object.assign({ chit_id: null, state: 'none', shared_at: null }, advice || {}) });
+Object.assign(module.exports, { adviceMay, payAdvice, payPatched });

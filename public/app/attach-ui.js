@@ -526,3 +526,54 @@ async function cbAttachOpen(id){
     toast((e && e.message) || 'Could not open that file');
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+ * R07 — CBAttach.mount(el, { chit_id, message_id?, line_index?, atts?, label?, note?, onDone(att) })
+ *
+ * The same picker, mountable in ANY page header or sheet (accounts · crm · till) without writing a handler. It adds NO rule:
+ * the 6 MB cap and the empty-file refusal stay in cbAttachAccept, the audience stays the server's (an attachment inherits its
+ * message's). It only draws the button (+ the files the host already holds, when `atts` is passed) and runs the press through
+ * CBAction (M64: busy · one press one write). A file is opened through cbAttachOpen (fetch + Bearer) — never an <a href>.
+ *
+ *   → { refresh(atts), destroy(), el }.   Emits `cb:rail` { module:'attach', chit_id, result } on el (bubbles) after a file lands.
+ * ═══════════════════════════════════════════════════════════════════════════════════════════════════════════ */
+var CBAttach = (function () {
+  function mount(el, o) {
+    if (typeof el === 'string') el = document.getElementById(el);
+    if (!el || !o || !o.chit_id) return null;
+    cbAttachCss();
+    var chit = cbAttachSafe(o.chit_id), atts = o.atts || null;
+    function paint() {
+      el.innerHTML = '<span data-testid="cb-attach-mount">'
+        + cbAttachButton({ chit_id: chit, message_id: o.message_id, line_index: o.line_index, label: o.label, note: o.note })
+        + '</span>' + (atts ? cbAttachList(atts, { compact: true }) : '');
+      var b = el.querySelector('[data-testid="cb-attach-btn"]');
+      if (!b) return;
+      b.removeAttribute('onclick');                  // the mount owns the press: one handler, through the action-state helper
+      b.addEventListener('click', press);
+    }
+    function ctx() {
+      var c = { chit_id: chit };
+      if (o.message_id != null && o.message_id !== '') c.message_id = cbAttachSafe(o.message_id);
+      if (o.line_index != null && o.line_index !== '') c.line_index = cbAttachSafe(o.line_index);
+      return c;
+    }
+    function done(att) {
+      if (!att) return;
+      try { el.dispatchEvent(new CustomEvent('cb:rail', { bubbles: true, detail: { module: 'attach', chit_id: chit, result: att } })); } catch (_) {}
+      if (typeof o.onDone === 'function') { try { o.onDone(att); } catch (_) {} }
+    }
+    function press(ev) {
+      var btn = ev.currentTarget;
+      if (typeof CBAction === 'undefined' || !CBAction || typeof CBAction.run !== 'function') return cbAttachPick(ctx()).then(done);
+      return CBAction.run(btn, function () { return cbAttachPick(ctx()); },
+        { key: 'att:' + chit + ':' + (o.message_id || '') + ':' + (o.line_index == null ? '' : o.line_index),
+          outcome: function (att) { done(att); } });     // cbAttachPick has already said the outcome (toast); cancel is silent
+    }
+    paint();
+    var api_ = { el: el, refresh: function (a) { atts = a || null; paint(); }, destroy: function () { el.innerHTML = ''; } };
+    return api_;
+  }
+  return { mount: mount };
+})();
+if (typeof window !== 'undefined') window.CBAttach = CBAttach;
