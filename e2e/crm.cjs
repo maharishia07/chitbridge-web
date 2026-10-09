@@ -58,6 +58,7 @@ async function route(S, r) {
   if (p === '/api/books/health') { if (!S.ledger) return J(r, 404, { error: 'Not found' }); return J(r, 200, books.health()); }
   if (p === '/api/books/enable' && m === 'POST') { S.ledger = true; return J(r, 200, { ok: true }); }
   if ((x = p.match(/^\/api\/books\/party\/([^/]+)\/statement$/))) return J(r, 200, books.statement(x[1]));
+  if (p === '/api/facts/rail/chits') return J(r, 200, S.railChits || { overdue_days: 7, truncated: false, items: [] });
   if (p.startsWith('/api/chits/')) return J(r, 200, { header: { chit_id: p.split('/').pop() }, detail: {} });
   if (p === '/api/entities/search') { const k = String(u.searchParams.get('q') || '').toLowerCase(); return J(r, 200, { results: fx.search[k] || [] }); }
   /* ── the CRM, answered as chitbridge-api answers it (e2e/lib/crm-api.cjs builds the shapes from the golden seed; the contract holds them) ── */
@@ -591,6 +592,50 @@ async function route(S, r) {
     await o3.p.waitForSelector('[data-testid="crm-rec-error"], [data-testid="crm-ident"]', { timeout: 8000 }); await o3.p.waitForTimeout(400);
     ok(await o3.p.locator('[data-testid="crm-rec-loading"]').count() === 0, 'a record the painter cannot read never leaves a spinner behind');
     await o3.ctx.close();
+  }
+
+  /* ── 11 · THE CHITS BEHIND THE HOME RAIL (H1 · H4 · H10) and the role links (H2 · H11) ───────────────────────────────── */
+  {
+    const it = (id, tab, stuck, why, extra) => Object.assign({ chit_id: id, direction: tab === 'in' ? 'received' : 'sent', tab: tab, stuck: stuck, status: 'pending', created_at: new Date(Date.now() - (stuck ? 12 : 1) * 864e5).toISOString(),
+      age_days: stuck ? 12 : 1, subject: 'Order ' + id, who: 'Chola Auto Care', value: 1250, currency: 'INR', why: why || null }, extra || {});
+    const railChits = { overdue_days: 7, truncated: false, items: [
+      it('s1', 'in', true, 'They sent it 12 days ago and you have not answered.'), it('s2', 'out', true, 'You sent it 12 days ago and they have not answered.'),
+      it('i1', 'in', false), it('o1', 'out', false)] };
+    const S = standIn({ railChits });
+    const { ctx, p } = await open(S, { hash: '#/chits?tab=stuck' });
+    await p.waitForSelector('[data-testid^="chits-row-"]', { timeout: 15000 }); await p.waitForTimeout(150);
+    const rows = await p.$$eval('[data-testid^="chits-row-"]', (r) => r.map((x) => x.getAttribute('data-testid')));
+    ok(rows.length === 2 && rows.every((x) => /chits-row-s[12]/.test(x)), 'chits · tab=stuck lists exactly the stuck chits (' + rows.join(' ') + ') - the number Home chips say');
+    const why = await p.$$eval('[data-testid="chits-why"]', (e) => e.map((x) => x.textContent));
+    ok(why.length === 2 && why.every((w) => /ago and (you|they) have not answered/.test(w)), 'chits · a stuck row says why, in plain words (' + why.join(' | ') + ')');
+    ok(/stuck/i.test(await text(p, '[data-testid="chits-note"]')) && /not a bill until/.test(await text(p, '[data-testid="chits-note"]')), 'chits · the page says why Dues, Waiting and Bills do not show a stuck chit (A4)');
+    ok((await text(p, '[data-testid="crm-nav-n-chits"]')).trim() === '2', 'chits · the nav carries the stuck count');
+    await p.click('[data-testid="chits-row-s1"]'); await p.waitForTimeout(400);
+    ok(S.calls.some((c) => c === 'GET /api/chits/s1'), 'chits · a row opens the chit sheet in place (it read /api/chits/s1)');
+    ok(/#.chits/.test(await p.evaluate(() => location.hash)), 'chits · ...and the person is still on the list');
+    await ctx.close();
+    const o2 = await open(standIn({ railChits }), { hash: '#/chits?tab=in' });
+    await o2.p.waitForSelector('[data-testid^="chits-row-"]', { timeout: 15000 }); await o2.p.waitForTimeout(150);
+    const inRows = await o2.p.$$eval('[data-testid^="chits-row-"]', (r) => r.map((x) => x.getAttribute('data-testid')));
+    ok(inRows.length === 2 && inRows.every((x) => /chits-row-(s1|i1)/.test(x)), 'chits · tab=in lists the chits that came in (' + inRows.join(' ') + ')');
+    await o2.ctx.close();
+    const o3 = await open(standIn({ railChits }), { hash: '#/chits' });
+    await o3.p.waitForSelector('[data-testid^="chits-row-"]', { timeout: 15000 }); await o3.p.waitForTimeout(150);
+    const all = await o3.p.$$eval('[data-testid^="chits-row-"]', (r) => r.map((x) => x.getAttribute('data-testid')));
+    ok(all.length === 4 && /s1|s2/.test(all[0]) && /s1|s2/.test(all[1]), 'chits · no tab: all four, the stuck ones first (' + all.join(' ') + ')');
+    await o3.ctx.close();
+    /* the role links */
+    const so = await open(standIn(), { hash: '#/parties?role=supplier' });
+    await homeReady(so.p);
+    const sup = await rowsOf(so.p);
+    const chipsOk = await so.p.$$eval('#crm_list [data-row]', (r) => r.every((x) => /Supplier/.test(x.textContent)));
+    ok(sup.length > 0 && chipsOk, 'parties · #/parties?role=supplier opens the list already filtered to suppliers (' + sup.length + ' rows, all Supplier)');
+    await so.ctx.close();
+    const full = await open(standIn(), { hash: '#/parties?role=customer' });
+    await homeReady(full.p);
+    const cu = await full.p.$$eval('#crm_list [data-row]', (r) => r.every((x) => /Customer/.test(x.textContent)));
+    ok(cu, 'parties · #/parties?role=customer shows only customers');
+    await full.ctx.close();
   }
 
   ok(...C.finish());

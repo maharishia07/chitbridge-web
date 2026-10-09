@@ -26,6 +26,7 @@ var CRM_EP = {
   crmFollowSet:  { m: 'PATCH',  p: '/api/crm/followups/:id',               ok: 'y' },   // { done:true } · { due_at } · { assignee_user_id }
   crmFollowDel:  { m: 'DELETE', p: '/api/crm/followups/:id',               ok: 'y' },
   crmWalkIn:     { m: 'POST',   p: '/api/crm/walk-ins/add',               ok: 'y' },   // { phone, name? } → 201 { party, points_claimed }: a phone that holds points becomes a local customer
+  railChits:     { m: 'GET',    p: '/api/facts/rail/chits',               ok: 'y' },   // the open chits behind Home's In · Out · Stuck (cap-crm-chits.js) - not a /api/crm route
   crmRemove:     { m: 'DELETE', p: '/api/crm/parties/:id',                 ok: 'y' },   // "Remove from my parties" - owner only, 409 HAS_DUES, hides the party and deletes nothing
 };
 
@@ -204,6 +205,7 @@ function crmRefresh() { var a = CRM.api; if (a && a.el && document.body.contains
 function crmNav(active) {
   var late = Number((CRM.alerts || {}).followups_overdue) || 0;   // the server's number — the same one the alert line shows
   var items = [['parties', 'Parties', 'M16 11a4 4 0 1 0-8 0 4 4 0 0 0 8 0zM4 21c0-4 3.6-6 8-6s8 2 8 6', CRM.loaded ? '<span class="n quiet" data-testid="crm-nav-n-parties">' + CRM.rows.length + '</span>' : ''],
+    ['chits', 'Chits', 'M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6', (typeof CHITS !== 'undefined' && CHITS.state === 'ready' && chitsStuckCount()) ? '<span class="n" data-testid="crm-nav-n-chits" title="' + esc(tx('Stuck chits')) + '">' + chitsStuckCount() + '</span>' : ''],
     ['followups', 'Follow-ups', 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M12 7v5l3 2', late ? '<span class="n" data-testid="crm-nav-n-followups" title="' + esc(crmPlural(late, 'late follow-up', 'late follow-ups')) + '">' + late + '</span>' : '']];
   document.getElementById('nav').innerHTML = items.map(function (x) {
     return '<a class="nav-btn' + (x[0] === active ? ' active' : '') + '" href="#/' + x[0] + '" data-testid="crm-nav-' + x[0] + '" aria-label="' + esc(tx(x[1])) + '"' + (x[0] === active ? ' aria-current="page"' : '') + '>'
@@ -230,6 +232,11 @@ function crmRoute() {
   if (seg[0] === 'party' && seg[1]) {
     CRM.route = { nav: 'parties', view: 'party', key: seg[1], sub: seg[2] || '', params: params };
     return crmRecordOpen(CRM.route);
+  }
+  if (seg[0] === 'chits') {
+    CRM.route = { nav: 'chits', view: 'chits', sub: '', params: params };
+    crmNav('chits'); chitsHome(params);
+    return;
   }
   if (seg[0] === 'followups') {
     CRM.route = { nav: 'followups', view: 'followups', sub: seg[1] || '', params: params };
@@ -301,7 +308,7 @@ function crmHome() {
     empty: { title: tx('No parties yet'), sub: tx('Customers appear when you bill them; suppliers when you add them. Use + Add party.') },
     search: function (p) { return [p.display_name, p.nickname, p.legal_name, p.party_no, p.user_id, p.phone, p.email, (p.tax_ids || []).map(function (t) { return t.value; }).join(' '), (p.groups || []).join(' ')].join(' '); },
     searchHint: tx('Name, User ID, phone or e-mail'),
-    filters: crmFilters(), sorts: crmPartySorts(),
+    filters: crmFilters(), sorts: crmPartySorts(), preset: (CRM.route && CRM.route.params && /^(customer|supplier|both)$/.test(CRM.route.params.role || '')) ? { filt: { role: CRM.route.params.role } } : null,
     group: { options: [['none', 'None'], ['rail', 'ChitBridge'], ['role', 'Role'], ['seg', 'Segment']], default: 'none', tid: 'crm-parties',
       by: function (p, mode) {
         if (mode === 'rail') { var k = p.kind === 'walk-in' ? 'walk' : p.on_chitbridge ? 'on' : 'local'; return [{ on: tx('On ChitBridge'), local: tx('Local'), walk: tx('Walk-in') }[k], k]; }

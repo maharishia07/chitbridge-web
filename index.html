@@ -44,6 +44,7 @@ body{margin:0;background:var(--page);color:var(--ink);font-family:var(--f-ui,'IB
 .railtop a{margin-left:auto;font-weight:600;color:var(--green-d);text-decoration:none}
 .track{display:flex;align-items:center;position:relative}
 .track::before{content:"";position:absolute;left:7%;right:7%;top:50%;height:2px;background:repeating-linear-gradient(90deg,var(--line) 0 7px,transparent 7px 13px)}
+.node,.pip{text-decoration:none;color:inherit}a.node:hover .n,a.pip:hover{text-decoration:underline}
 .node{position:relative;background:var(--card);padding:0 14px;text-align:center;flex:0 0 auto}
 .node .n{display:block;font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:21px;font-weight:700;line-height:1.1}
 .node .k{display:block;font-size:11.5px;color:var(--muted);margin-top:2px}
@@ -113,7 +114,7 @@ function mountShell(){
   var home = SHELL.slots.home;
   if (home) {
     home.innerHTML = '<div id="railbox"></div><div id="roadmap" data-testid="roadmap-host"></div>';
-    SHELL.ready.then(function(){ if (window.CBRoadmap) CBRoadmap.mount(document.getElementById('roadmap'), SHELL.manifest()); });
+    SHELL.ready.then(function(){ if (window.CBRoadmap) CBRoadmap.mount(document.getElementById('roadmap'), SHELL.manifest(), { quiet: !!SESS }); });   /* signed in: the page is the working app, the roadmap one quiet fold (H16) */
   }
   return SHELL;
 }
@@ -167,13 +168,16 @@ function railPaint(r){
   var sup = n1(r && r.suppliers), cus = n1(r && r.customers), fin = n1(r && r.in), fout = n1(r && r.out), stuck = n1(r && r.stuck);
   if (sup == null && cus == null) { host.innerHTML = ''; return; }
   var pips = [];
-  if (fin != null) pips.push('<span class="pip in" data-testid="rail-in">' + fin + ' in</span>');
-  if (fout != null) pips.push('<span class="pip out" data-testid="rail-out">' + fout + ' out</span>');
-  if (stuck) pips.push('<span class="pip stuck" data-testid="rail-stuck">' + stuck + ' stuck</span>');
+  /* every number is a door to what it counts: the chits (In · Out · Stuck) or the parties of that role, both in CB CRM */
+  var base = rail.route ? String(rail.route).split('#')[0] : '';
+  var door = function (cls, tid, tab, text) { return base ? '<a class="pip ' + cls + '" data-testid="' + tid + '" href="' + esc(base) + '#/chits?tab=' + tab + '">' + text + '</a>' : '<span class="pip ' + cls + '" data-testid="' + tid + '">' + text + '</span>'; };
+  if (fin != null) pips.push(door('in', 'rail-in', 'in', fin + ' in'));
+  if (fout != null) pips.push(door('out', 'rail-out', 'out', fout + ' out'));
+  if (stuck) pips.push(door('stuck', 'rail-stuck', 'stuck', stuck + ' stuck'));
+  var role = function (tid, n, role, word) { var inner = '<b class="n" data-testid="' + tid + '">' + (n == null ? '–' : n) + '</b><span class="k">' + word + '</span>'; return base ? '<a class="node" data-testid="' + tid + '-open" href="' + esc(base) + '#/parties?role=' + role + '">' + inner + '</a>' : '<span class="node">' + inner + '</span>'; };
   host.innerHTML = '<div class="rail" data-testid="rail"><div class="railtop"><h3>The rail</h3>'
     + (rail.route ? '<a href="' + esc(rail.route) + '" data-testid="rail-open">Open ›</a>' : '') + '</div>'
-    + '<div class="track"><span class="node"><b class="n" data-testid="rail-suppliers">' + (sup == null ? '–' : sup) + '</b><span class="k">Suppliers</span></span>'
-    + '<span class="node"><b class="n" data-testid="rail-customers">' + (cus == null ? '–' : cus) + '</b><span class="k">Customers</span></span>'
+    + '<div class="track">' + role('rail-suppliers', sup, 'supplier', 'Suppliers') + role('rail-customers', cus, 'customer', 'Customers')
     + '<span class="flow">' + pips.join('') + '</span></div></div>';
 }
 function railRead(){
