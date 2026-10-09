@@ -41,10 +41,22 @@ const srv = http.createServer((q, r) => {
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const n = (re) => S.calls.filter((c) => re.test(c)).length;
 
+/* ⚠️ THIS SPEC MUST EXIT. Its stand-in holds REAL open SSE responses (S.conns), and an open response keeps node alive after srv.close();
+   a spec that never exits holds the shared e2e lock. So: every stream is ended, every socket destroyed, the browser closed with a time
+   limit, and process.exit is called in finally — whatever happened above. A hard 4-minute watchdog exits if even that hangs. */
+let b = null;
+const watchdog = setTimeout(() => { console.error('rail-bell: watchdog — exiting after 4 min'); process.exit(3); }, 240000); watchdog.unref();
+async function teardown() {
+  S.conns.splice(0).forEach((c) => { try { c.end(); } catch (_) {} });
+  try { if (typeof srv.closeAllConnections === 'function') srv.closeAllConnections(); } catch (_) {}
+  try { srv.close(); } catch (_) {}
+  if (b) await Promise.race([b.close().catch(() => {}), new Promise((r) => setTimeout(r, 10000))]);
+}
+let code = 2;
 (async () => {
   await new Promise((r) => srv.listen(0, '127.0.0.1', r));
   const base = 'http://127.0.0.1:' + srv.address().port;
-  const b = await chromium.launch();
+  b = await chromium.launch();
   const errs = [];
   async function page(sess, url) {
     const ctx = await b.newContext({ viewport: { width: 1280, height: 800 } });
@@ -124,6 +136,7 @@ const n = (re) => S.calls.filter((c) => re.test(c)).length;
   ok(await o.locator('[data-testid="bell-btn"]').count() === 0 && S.tickets === tk2 && S.conns.length === cn, 'signed out: nothing drawn, nothing opened');
 
   ok(errs.length === 0, 'no page errors' + (errs.length ? ': ' + errs.slice(0, 3).join(' | ') : ''));
-  await b.close(); srv.close();
-  console.log('\n' + pass + ' passed, ' + fail + ' failed'); process.exit(fail ? 1 : 0);
-})().catch((e) => { console.error(e); process.exit(2); });
+  console.log('\n' + pass + ' passed, ' + fail + ' failed');
+  code = fail ? 1 : 0;
+})().catch((e) => { console.error(e); code = 2; })
+  .finally(async () => { await teardown(); process.exit(code); });
