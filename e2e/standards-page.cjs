@@ -76,6 +76,7 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
     await ctx.route('**/api/**', (r) => route(S, r));
     /* the app's own door is not loaded here: "Open in the app" is proved by WHERE it goes */
+    await ctx.route('**/till.html**', (r) => r.fulfill({ status: 200, contentType: 'text/html', body: '<title>till</title>the till' }));
     await ctx.route('**/app.html**', (r) => r.fulfill({ status: 200, contentType: 'text/html', body: '<title>app</title>the app' }));
     if (o.failCompat) await ctx.route('**/data/compat.json', (r) => r.fulfill({ status: 404, contentType: 'text/plain', body: 'no' }));
     if (o.session !== null) await ctx.addInitScript((s) => { try { if (!localStorage.getItem('cb_seeded')) { localStorage.setItem('cb_seeded', '1'); localStorage.setItem('cb_sess', JSON.stringify(s)); } } catch (_) {} }, o.session || OWNER);
@@ -142,7 +143,7 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     ok(!/accounting|books of account/i.test(src), 'the source carries neither forbidden string');
     ok(/<title>Standards<\/title>/.test(src), 'the page is named Standards');
     ok(/CBList\.mount\(/.test(src) && /src="\/app\/list-ctl\.js"/.test(src) && /src="\/app\/cap-standards\.js"/.test(src), 'the list is a CBList mount and the register is cap-standards.js');
-    ok(/stdWhyHTML\(/.test(src) && /stdRecordHTML\(/.test(src) && /stdGoto\(/.test(src), 'the sheets are the register\'s stdWhyHTML / stdRecordHTML and the app door is its stdGoto');
+    ok(/stdWhyHTML\(/.test(src) && /stdRecordHTML\(/.test(src) && /HOME\[/.test(src), 'the sheets are the register' + String.fromCharCode(39) + 's stdWhyHTML / stdRecordHTML and the door is the HOME map');
     ok(!/PROTOTYPE|kbar/i.test(src) && src.indexOf("CBKural.mount({ route: 'planning' })") > 0 && src.indexOf('cbkural') < 0, 'no purple prototype strip; the kural band is CBKural itself, mounted once (Round U: the one frame — it sits below the page, never in the head)');
     ok(!/\bSTANDARDS\s*=\s*\[|window\.STD_PAGE/.test(src), 'the page holds no copy of the register');
     ok(/fetch\('\/data\/compat\.json'/.test(src) && /stdCompatRows\(/.test(src) && !/"system"\s*:/.test(src), 'the Compatibility rows are read from data/compat.json through stdCompatRows — the page holds none');
@@ -158,8 +159,8 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     ok((await p.textContent('[data-testid="shop-name"]')).trim() === 'Mayur Bhavan', 'the signed-in shop is named in the title row');
     ok(await p.locator('#std_list.cbl').count() === 1 && await p.locator('#std_list .cbl-hdr').count() === 1, 'the list is a CBList mount (its header, its tools)');
     const heads = await p.$$eval('#std_list .cbl-hc', (h) => h.map((x) => x.innerText.replace(/[▲▼⇅]/g, '').trim()));
-    ok(heads.join('|') === 'WHAT IT DOES FOR YOU|REFERENCE|APPLIES IN|STATUS', 'three columns and the status: ' + heads.join(' · '));
-    ok(await p.locator('#std_list .cbl-rz').count() === 4, 'every column has a resize handle (the unit\'s)');
+    ok(heads.join('|') === 'WHAT IT DOES FOR YOU|REFERENCE|KIND|APPLIES IN|STATUS', 'four columns (Kind is one of them) and the status: ' + heads.join(' · '));
+    ok(await p.locator('#std_list .cbl-rz').count() === 5, 'every column has a resize handle (the unit\'s)');
     ok(shownAll().test(await count(p)), 'all ' + N + ' are listed (61 standards + ' + CROWS.length + ' compatibility rows): ' + (await count(p)));
     const mxAll = await p.$$eval('[data-testid^="std-cell-*-"]', (n) => n.map((x) => x.textContent.trim()));
     ok(mxAll.join(' ') === CA.live + ' ' + CA.part + ' ' + CA.plan, 'the matrix\'s All row is the counts of every row listed: ' + mxAll.join(' · '));
@@ -190,8 +191,17 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     const ch = await chips(p);
     ok(ch.length === 2 && ch.indexOf('Status: Partly') >= 0 && ch.indexOf('Area: Money & GST') >= 0, 'the unit\'s own chips carry the choice (' + ch.join(' · ') + ')');
     ok((await pressed(p)).join() === 'std-cell-money-part', 'exactly one cell is lit');
-    const missing = await p.$$eval('[data-testid^="std-row-"] .miss', (n) => n.length);
-    ok(missing === 3, 'each of the three rows says what is missing IN the row (' + missing + ')');
+    const missing = await p.$$eval('[data-testid^="std-row-"] [data-testid="std-status-more"]', (n) => n.map((x) => x.parentElement.textContent.replace(/\s+/g, ' ').trim()));
+    ok(missing.length === 3 && missing.every((t) => /^[^a-z]*Partly — ./.test(t)), 'each of the three rows says what is missing IN its Status cell, after the word: ' + missing[0]);
+    ok(await p.locator('[data-testid^="std-row-"] .miss').count() === 0, 'and no "Missing:" text sits in the title any more');
+    /* TIDY 1 · Kind is a column of its own: the same four words as the Kind filter, no tag inside the Reference text */
+    const kinds = await p.$$eval('[data-testid^="std-row-"] [data-testid="std-kind"]', (n) => n.map((x) => x.textContent.trim()));
+    ok(kinds.length === 3 && kinds.every((k) => ['Law', 'Standard', 'Practice', 'Compatibility'].indexOf(k) >= 0), 'the Kind column holds one of Law · Standard · Practice · Compatibility: ' + kinds.join(' · '));
+    ok(await p.locator('[data-testid^="std-row-"] .sn .kind').count() === 0, 'and the kind tag is gone from the Reference text');
+    /* TIDY 2 · ONE LINE per row on the laptop: every row is as tall as one line of text, and the table fills the width */
+    const geo = await p.evaluate(() => { const rs = Array.from(document.querySelectorAll('#std_list .cbl-row')); const hs = rs.map((r) => r.getBoundingClientRect().height); const row = rs[0].getBoundingClientRect(), box = document.querySelector('#std_list .cbl-list').getBoundingClientRect(); return { max: Math.max.apply(null, hs), n: rs.length, fill: row.width / box.width }; });
+    ok(geo.n > 0 && geo.max <= 44, 'one line per row at 1366: the tallest of ' + geo.n + ' rows is ' + Math.round(geo.max) + ' px (limit 44)');
+    ok(geo.fill >= 0.97, 'and the table fills the width of the list (' + Math.round(geo.fill * 100) + '%)');
     const hdrB2 = await p.evaluate(() => document.querySelector('#std_list .cbl-hdr').getBoundingClientRect().bottom);
     console.log('     head with a cell chosen: ' + Math.round(hdrB2 / ih * 100) + '% (two chips; the unit wraps them to a line of their own)');
     ok(hdrB2 / ih <= 0.25, 'the head with a cell chosen stays within 25% (' + Math.round(hdrB2 / ih * 100) + '%)');
@@ -222,17 +232,21 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     ok(shownAll().test(await count(p)), 'the All row clears everything');
 
     /* Count by Country and Kind */
-    await p.click('[data-testid="std-dim-country"]'); await p.waitForTimeout(150);
+    await p.click('[data-testid="cbl-group-standards"] [data-group="country"]'); await p.waitForTimeout(150);
     const crows = await p.$$eval('#mxBody .mx-rh', (n) => n.map((x) => x.textContent.trim()));
     ok(crows.join('|') === 'India|Global|All', 'Count by Country: India, Global, All');
     await p.click('[data-testid="std-cell-IN-part"]'); await p.waitForTimeout(250);
     const inPart = ALL.filter((r) => r.c.indexOf('IN') >= 0 && r.s === 'part').length;
     ok((await count(p)).indexOf(inPart + ' shown') === 0 && (await chips(p)).join('|').indexOf('Applies in: India') >= 0, 'India × Partly filters by Applies in: India → ' + (await count(p)) + ' (' + (await chips(p)).join(' · ') + ')');
     await p.screenshot({ path: path.join(SHOTS, 'standards-country.png') });
-    await p.click('[data-testid="std-dim-kind"]'); await p.waitForTimeout(250);
+    await p.click('[data-testid="cbl-group-standards"] [data-group="kind"]'); await p.waitForTimeout(250);
     const krows = await p.$$eval('#mxBody .mx-rh', (n) => n.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
     ok(krows.join('|') === 'Lawyou must|Standardagreed worldwide|Practicethe common way|Compatibilityworks with|All', 'Count by Kind: Law, Standard, Practice, Compatibility (with what each means), All');
-    ok(shownAll().test(await count(p)) && (await chips(p)).length === 0, 'switching what the rows count by clears the cell choice (a cell of one view means nothing in another)');
+    ok(shownAll().test(await count(p)) && (await chips(p)).length === 0, 'ONE choice: the Group by in the toolbar moved the left table (Counted by Kind); it cleared the cell choice (a cell of one view means nothing in another)');
+    ok(/Counted by Kind/.test(await p.textContent('[data-testid="std-mx-by"]')) && await p.locator('[data-dim]').count() === 0, 'there is no second Count by control — the table follows Group by');
+    await p.click('[data-testid="cbl-group-standards"] [data-group="none"]'); await p.waitForTimeout(250);
+    ok((await p.$$eval('#mxBody .mx-rh', (n) => n.map((x) => x.textContent.trim()))).join('|') === 'All', 'Group by None: the table is the All row only');
+    await p.click('[data-testid="cbl-group-standards"] [data-group="kind"]'); await p.waitForTimeout(250);
     await p.click('[data-testid="std-cell-law-live"]'); await p.waitForTimeout(250);
     ok((await count(p)).indexOf(REG.S.filter((r) => r.k === 'law' && r.s === 'live').length + ' shown') === 0, 'Law × In force filters by Kind → ' + (await count(p)));
     /* M41 · the 4th Kind: Compatibility × In force lists the compat.json rows that work, each with its proof when opened */
@@ -247,7 +261,7 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     await p.screenshot({ path: path.join(SHOTS, 'standards-compat.png') });
     await p.click('[data-testid="std-row-' + cIds[0] + '"]'); await p.waitForTimeout(150);
     await p.click('[data-testid="std-mx-row-*"]'); await p.waitForTimeout(150);
-    await p.click('[data-testid="std-dim-area"]'); await p.waitForTimeout(200);
+    await p.click('[data-testid="cbl-group-standards"] [data-group="area"]'); await p.waitForTimeout(200);
 
     /* ── 4 · search · no match · group · a row opens ── */
     await p.fill('[data-testid="listctl-search-standards"]', 'privacy'); await p.waitForTimeout(300);
@@ -279,8 +293,8 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     ok(/Covers/.test(dl) && /Kind\s*Law\s*you must/.test(dl) && /Source/.test(dl) && !/Missing:/.test(dl), 'the row opens to label : value — Covers · Kind · Source (what is missing is already in the row, not said twice)');
     ok(/New\s*Adopted 2–3 Oct 2026; not yet in the register/.test(dl), 'a 2–3 Oct 2026 addition says it is New and not yet in the register');
     ok(/Why it matters|Elsewhere|In the app/.test(dl), 'and the rest of what a buyer or CA checks (why it matters · in the app)');
-    ok(await p.locator('[data-testid="std-go"]').count() === 1 && await p.locator('[data-testid="std-copy"]').count() === 1, 'two buttons: Open in the app › and Copy for a buyer or CA');
-    ok(/Open in the app ›/.test(await p.textContent('[data-testid="std-go"]')) && /Copy for a buyer or CA/.test(await p.textContent('[data-testid="std-copy"]')), 'their words are the design\'s');
+    ok(await p.locator('[data-testid="std-go"]').count() === 0 && await p.locator('[data-testid="std-copy"]').count() === 1, 'a row whose only home is the workshop offers Copy only — no Open in the app ›');
+    ok(/Copy for a buyer or CA/.test(await p.textContent('[data-testid="std-copy"]')), 'its words are the design' + String.fromCharCode(39) + 's');
     /* M41 · T2: the opened row's terms explain themselves on a tap; on the closed row a tap still opens the row */
     const dab = p.locator('[data-testid="std-detail-' + gi + '"] abbr.gl').first();
     const dT = await dab.getAttribute('data-gl');
@@ -304,9 +318,14 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     ok(/What is missing, in full/.test(gdl) && /check-digit validation is not enforced/.test(gdl) && /In the register/.test(gdl) && !/New/.test(gdl), 'a Partly row from the register opens to "What is missing, in full" (the register\'s own note) and says it is In the register');
     await gsRow.click(); await p.waitForTimeout(150);
     await p.fill('[data-testid="listctl-search-standards"]', 'GSTR-1'); await p.waitForTimeout(300);
-    const goTo = REG.S[gi].go;
-    await Promise.all([p.waitForURL(/\/app\.html#\/app\//), p.click('[data-testid="std-go"]')]);
-    ok(p.url().indexOf('/app.html#/app/' + goTo) > 0 || p.url().indexOf('/app.html#/app/settings') > 0, 'Open in the app › goes to the app\'s own door (' + p.url().replace(base, '') + ')');
+    /* TIDY 6 · "Open in the app" is offered only where a CUSTOMER home exists (the till); never the workshop, app.html */
+    const till = REG.S.findIndex((r) => r.go === 'till');
+    await p.fill('[data-testid="listctl-search-standards"]', REG.S[till].n); await p.waitForTimeout(300);
+    await p.click('[data-testid="std-row-' + till + '"]'); await p.waitForTimeout(200);
+    await Promise.all([p.waitForURL(/till[.]html/), p.click('[data-testid="std-go"]')]);
+    ok(p.url().indexOf('/till.html') > 0 && p.url().indexOf('app.html') < 0, 'Open in the app › on a till row goes to the till, not the workshop (' + p.url().replace(base, '') + ')');
+    const srcP = fs.readFileSync(path.join(PUB, 'standards.html'), 'utf8');
+    ok(/var HOME = [{][^}]*[}]/.test(srcP) && !/HOME = [{][^}]*app[.]html/.test(srcP), 'the page HOME map names customer pages only');
     await ctx.close();
   }
   {
@@ -495,6 +514,38 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     }
     ok(total > 2000, 'a measurement of something: ' + total + ' text pairs measured across ' + Object.keys(table).length + ' views × ' + th.length + ' themes');
     ok(fails.length === 0, 'every visible text pair, in all 16 themes + Cream, on the laptop and the phone, on the matrix · a chosen cell with a row open · both sheets, clears WCAG AA (' + fails.length + ' failing)');
+  }
+
+  /* ── TIDY (2026-10-09) · tap-tips on every reference with a glossary entry · the left table's label whole · screenshots at 1366 and 390 ── */
+  {
+    const TS = path.join(SHOTS, 'standards-tidy'); fs.mkdirSync(TS, { recursive: true });
+    const { ctx, p } = await open(S);
+    await p.screenshot({ path: path.join(TS, 'standards-1366.png') });
+    /* tap-tips: the Reference cell carries an abbr.gl with the meaning as its title */
+    for (const [ref, want] of [['ISO 4217', /currency codes/], ['GS1', /barcodes/], ['BCP 47', /language tags/]]) {
+      const ix = REG.S.findIndex((r) => r.n === ref || r.n.indexOf(ref) === 0);
+      await p.fill('[data-testid="listctl-search-standards"]', REG.S[ix].n); await p.waitForTimeout(300);
+      const tips = await p.$$eval('[data-testid="std-row-' + ix + '"] .sn abbr.gl', (n) => n.map((x) => x.getAttribute('data-gl') + '=' + x.getAttribute('title')));
+      ok(tips.length > 0 && tips.some((t) => want.test(t)), ref + ' shows its tap-tip in the Reference cell: ' + tips.join(' | ').slice(0, 110));
+    }
+    await p.fill('[data-testid="listctl-search-standards"]', ''); await p.waitForTimeout(250);
+    /* the left table: no label cut, no two count heads touching */
+    const mx = await p.evaluate(() => { const cut = Array.from(document.querySelectorAll('#mxBody .mx-rh')).filter((e) => e.scrollWidth > e.clientWidth + 1).map((e) => e.textContent.trim()); const hs = Array.from(document.querySelectorAll('#mxBody .mx-ch')).map((e) => e.getBoundingClientRect()); let hit = 0; for (let k = 1; k < hs.length; k++) if (hs[k].left < hs[k - 1].right) hit++; const w = Array.from(document.querySelectorAll('#mxBody .mx-ch')).filter((e) => e.scrollWidth > e.clientWidth + 1).length; return { cut, hit, w }; });
+    ok(mx.cut.length === 0 && mx.hit === 0 && mx.w === 0, 'the left table: no row label cut, no count head touching its neighbour (' + JSON.stringify(mx) + ')');
+    await p.click('[data-testid="cbl-group-standards"] [data-group="kind"]'); await p.waitForTimeout(300);
+    const mk = await p.evaluate(() => Array.from(document.querySelectorAll('#mxBody .mx-rh')).filter((e) => e.scrollWidth > e.clientWidth + 1).map((e) => e.textContent.trim()));
+    ok(mk.length === 0, 'Counted by Kind: "Compatibility" is whole (' + JSON.stringify(mk) + ')');
+    await p.screenshot({ path: path.join(TS, 'standards-1366-kind.png') });
+    await ctx.close();
+  }
+  {
+    const { ctx, p } = await open(S, { viewport: { width: 390, height: 844 } });
+    await p.screenshot({ path: path.join(SHOTS, 'standards-tidy', 'standards-390-matrix.png') });
+    await p.evaluate(() => { document.getElementById('app').setAttribute('data-view', 'list'); }); await p.waitForTimeout(300);
+    const w = await width(p);
+    ok(w.sw === 390, 'phone, list page after the tidy: document.scrollWidth === 390 (' + w.sw + ')');
+    await p.screenshot({ path: path.join(SHOTS, 'standards-tidy', 'standards-390-list.png') });
+    await ctx.close();
   }
 
   const other = S.calls.filter((c) => c !== 'GET /api/entities/me' && c !== 'GET /api/notifications' && c !== 'GET /api/events/ticket' && c !== 'POST /api/events/ticket');   /* the header's bell (Round U: the one frame) reads the notifications; the register is still the file */

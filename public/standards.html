@@ -62,7 +62,22 @@ button,a,select,input{font:inherit;color:inherit} button{cursor:pointer} a{text-
   border:1px solid var(--line);border-radius:6px;padding:0 6px;margin-inline-start:2px;color:var(--muted);vertical-align:1px;white-space:normal}
 .kind.k-law{border-color:var(--ink);color:var(--ink)}
 .st{font-weight:600;white-space:nowrap}
-.st-live,.c-live,.c-live b{color:var(--green)} .st-part,.c-part,.c-part b{color:var(--amber-i)} .st-plan,.c-plan,.c-plan b{color:var(--muted)}
+.stm{color:var(--muted);font-weight:400;font-family:inherit}
+/* ONE LINE per row on a laptop: the columns share the width (weights, set by fit()), a long cell ends in … and the full words are the tooltip and the opened row */
+@container list (min-width:780px){   /* wide enough for five shared columns; narrower, the unit's own widths and its sideways scroll */
+  #std_list[data-fill] .cbl-grid{min-width:0!important}
+  #std_list[data-fill] .cbl-hdr,#std_list[data-fill] .cbl-row{grid-template-columns:var(--std-tpl)!important}
+}
+@container list (min-width:621px){
+  #std_list .cbl-row .cbl-cell{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #std_list .cbl-row .cbl-cell.amt{display:block;text-align:start!important;font-family:inherit!important;font-size:inherit!important;font-weight:400!important}
+  #std_list .cbl-row .kind{white-space:nowrap;overflow-wrap:normal}
+  #std_list .cbl-hc.r{justify-content:flex-start!important}
+  #std_list .cbl-row .kind{margin-inline-start:0}
+}
+.c-live,.c-live b{color:var(--green)} .c-part,.c-part b{color:var(--amber-i)} .c-plan,.c-plan b{color:var(--muted)}
+/* in a row the WORD is ink (AA on every theme and on the zebra stripe); the symbol carries the colour */
+.st{color:var(--ink)} .st-live>span{color:var(--green-d,var(--green))} .st-part>span{color:var(--amber-i)} .st-plan>span{color:var(--muted)}
 /* what a row opens to: a label · value sheet, never sideways */
 .sd{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:6px 16px;margin:2px 0 0;max-width:820px;font-size:calc(14px * var(--k,1))}
 .sd dt{color:var(--muted);font-size:calc(12px * var(--k,1));letter-spacing:.05em;text-transform:uppercase;font-weight:600;padding-top:2px}
@@ -72,7 +87,7 @@ button,a,select,input{font:inherit;color:inherit} button{cursor:pointer} a{text-
 .new{display:inline-block;font-weight:700;font-size:calc(11px * var(--k,1));letter-spacing:.05em;text-transform:uppercase;color:var(--blue-i);background:var(--blue-t);border:1px solid var(--blue-b);border-radius:6px;padding:0 6px;margin-inline-end:6px}
 
 /* ── the matrix pane ── */
-.mxp{width:min(340px,32%);flex:0 0 auto;display:flex;flex-direction:column;min-height:0;background:var(--page);border-inline-end:1px solid var(--line)}
+.mxp{width:min(360px,34%);flex:0 0 auto;display:flex;flex-direction:column;min-height:0;background:var(--page);border-inline-end:1px solid var(--line)}
 .mx-body{flex:1;min-height:0;overflow:auto;padding:12px 14px 20px 16px}
 .mx-tools{display:flex;align-items:center;gap:8px;margin:2px 0 10px;flex-wrap:wrap}
 .mx-lab{font-size:calc(12px * var(--k,1));font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
@@ -80,13 +95,13 @@ button,a,select,input{font:inherit;color:inherit} button{cursor:pointer} a{text-
 .seg button{border:0;background:none;padding:0 12px;font-size:calc(13.5px * var(--k,1));border-inline-start:1px solid var(--line-soft)}
 .seg button:first-child{border-inline-start:0}
 .seg button[aria-pressed="true"]{background:var(--ink);color:var(--page);font-weight:600}
-.mx{display:grid;grid-template-columns:minmax(0,1fr) repeat(3,minmax(64px,max-content));border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card)}
+.mx{display:grid;grid-template-columns:minmax(0,1fr) repeat(3,minmax(52px,max-content));border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card)}
 .mx-r{display:contents}
 .mx-r > *{border-bottom:1px solid var(--hair);min-height:44px}
 .mx-h > *{background:var(--panel);border-bottom:1.5px solid var(--line);min-height:38px}
-.mx-ch{border:0;font-weight:700;font-size:calc(11px * var(--k,1));letter-spacing:.04em;text-transform:uppercase;padding:5px 6px;white-space:nowrap;text-align:center;line-height:1.2;display:flex;flex-direction:column;align-items:center;gap:1px}
+.mx-ch{border:0;font-weight:700;font-size:calc(10.5px * var(--k,1));letter-spacing:.02em;min-width:0;text-transform:uppercase;padding:5px 4px;white-space:nowrap;text-align:center;line-height:1.2;display:flex;flex-direction:column;align-items:center;gap:1px}
 .mx-ch .sym{font-size:calc(14px * var(--k,1))}
-.mx-rh{border:0;background:none;text-align:start;padding:6px 10px;font-weight:600;display:flex;flex-direction:column;justify-content:center;line-height:1.25}
+.mx-rh{border:0;background:none;text-align:start;padding:6px 8px 6px 10px;min-width:0;overflow-wrap:normal;font-weight:600;display:flex;flex-direction:column;justify-content:center;line-height:1.25}
 .mx-sub{font-size:calc(12px * var(--k,1));color:var(--muted);font-weight:400}
 .mx-c{border:0;background:none;font-weight:600;font-size:calc(16px * var(--k,1));font-family:var(--f-num,'IBM Plex Mono',monospace);font-variant-numeric:tabular-nums;text-align:center;display:grid;place-items:center}
 .mx-c.nil{color:var(--muted);font-weight:400}
@@ -95,6 +110,7 @@ button,a,select,input{font:inherit;color:inherit} button{cursor:pointer} a{text-
 .mx-c[aria-pressed="true"],.mx-rh[aria-pressed="true"],.mx-ch[aria-pressed="true"]{background:var(--blue-t);box-shadow:inset 0 0 0 2px var(--blue)}
 .mx-all > *{border-bottom:0;border-top:1.5px solid var(--line);background:var(--panel)}
 .mx-all .mx-rh{font-weight:700}
+.mx-hint{font-size:calc(12px * var(--k,1));color:var(--muted)}
 .mx-note{font-size:calc(12.5px * var(--k,1));color:var(--muted);margin:8px 2px 0}
 .mx-more{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
 .tbtn{height:34px;display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);background:var(--card);border-radius:9px;padding:0 10px;font-size:calc(13.5px * var(--k,1));white-space:nowrap}
@@ -160,6 +176,8 @@ function tx(s){ return s; }
 /* the places stdGoto() sends a reader to: the app's screens (#/app/<nav> is the app's own deep link), Settings sections as Settings */
 function navTo(k){ location.href = '/app.html#/app/' + encodeURIComponent(k); }
 function setSetSec(){ navTo('settings'); }
+/* a row's "go" key → the customer-facing app that is its home. Every other key is a pane of the workshop (app.html) and gets no button. */
+var HOME = { till: '/till.html' };
 </script>
 <script src="/app/list-ctl.js"></script>   <!-- CBList: the list here is a mount on it -->
 <script src="/app/rail-bell.js"></script>   <!-- CBBell.mount: the bell, the same one every app header has -->
@@ -209,16 +227,20 @@ const GROUP_ORDER = STD_AREAS.map((a) => a[0]).concat(STD_KINDS.map((k) => k[0])
 function cols(){
   return [
     { key: 'what', label: 'What it does for you', prio: 1, w: 250, sort: 'what', html: true, value: (x) => x.r.p,
-      cell: (x) => stdGloss(esc(x.r.p) + (x.r.m ? '<span class="miss"><b>Missing:</b> ' + esc(x.r.m) + '</span>' : x.r.limit ? '<span class="lim"><b>Limit:</b> ' + esc(x.r.limit) + '</span>' : ''), { focus: false }) },
+      cell: (x) => '<span title="' + esc(x.r.p) + '">' + stdGloss(esc(x.r.p), { focus: false }) + '</span>' },
     { key: 'std', label: 'Reference', prio: 2, w: 230, sort: 'std', html: true, value: (x) => x.r.n,
-      cell: (x) => '<span class="sn">' + stdGloss(esc(x.r.n), { focus: false }) + '</span> <span class="kind k-' + esc(x.r.k) + '">' + esc(KIND(x.r)) + '</span>' },
+      cell: (x) => '<span class="sn" title="' + esc(x.r.n) + '">' + stdGloss(esc(x.r.n), { focus: false }) + '</span>' },
+    /* the KIND, a column of its own (M41-K): Law · Standard · Practice · Compatibility — the same word the Kind filter and the Group by use */
+    { key: 'kind', label: 'Kind', prio: 2, w: 120, sort: 'kind', html: true, value: (x) => x.r.k,
+      cell: (x) => '<span class="kind k-' + esc(x.r.k) + '" data-testid="std-kind">' + esc(KIND(x.r)) + '</span>' },
     { key: 'where', label: 'Applies in', prio: 3, w: 120, sort: 'where', cell: (x) => COUNTRY(x.r) },
     { key: 'area', label: 'Area', prio: 4, w: 150, sort: 'area', cell: (x) => AREA(x.r) },
     { key: 'at', label: 'Where in the app', prio: 5, w: 220, cell: (x) => x.r.at || '—' },
     { key: 'ex', label: 'Clause or example', prio: 6, w: 230, mono: true, cell: (x) => plain(x.r.ex) || '—' },
     /* the status: a symbol AND a word AND a colour, never colour alone; pinned at the end like an amount */
     { key: 'status', label: 'Status', pin: 'end', w: 120, sort: 'status', html: true, value: (x) => SORD[x.r.s],
-      cell: (x) => '<span class="st st-' + esc(x.r.s) + '"><span aria-hidden="true">' + esc(lab(STD_STATUS, x.r.s, 2)) + '</span> ' + esc(STATUS(x.r)) + '</span>' },
+      cell: (x) => { var more = x.r.m ? x.r.m : x.r.limit ? 'limit: ' + x.r.limit : '', t = STATUS(x.r) + (more ? ' — ' + more : '');
+        return '<span class="st st-' + esc(x.r.s) + '" title="' + esc(t) + '"><span aria-hidden="true">' + esc(lab(STD_STATUS, x.r.s, 2)) + '</span> ' + esc(STATUS(x.r)) + '</span>' + (more ? '<span class="stm" data-testid="std-status-more"> — ' + esc(more) + '</span>' : ''); } },
   ];
 }
 const byText = (f) => (a, b) => String(f(a)).localeCompare(String(f(b)), undefined, { numeric: true, sensitivity: 'base' });
@@ -226,6 +248,7 @@ const SORTS = [
   { key: 'status', label: 'Status', cmp: (a, b) => SORD[a.r.s] - SORD[b.r.s] || byText((x) => x.r.p)(a, b) },
   { key: 'what', label: 'What it does for you', cmp: byText((x) => x.r.p) },
   { key: 'std', label: 'Reference', cmp: byText((x) => x.r.n) },
+  { key: 'kind', label: 'Kind', cmp: byText((x) => KIND(x.r)) },
   { key: 'where', label: 'Applies in', cmp: byText((x) => COUNTRY(x.r)) },
   { key: 'area', label: 'Area', cmp: byText((x) => AREA(x.r)) },
 ];
@@ -282,7 +305,7 @@ function slot(el){
 
 /* the unit remembers a person's choices per list key through the host's `store` when one is given (list-ctl.js › loadChoices). This one keeps them in
    the browser as the unit would, and always hands back a column choice — the unit's state() reads it, and a first visit has none yet. */
-const DEFAULT_COLS = ['what', 'std', 'where'];
+const DEFAULT_COLS = ['what', 'std', 'kind', 'where'];
 const choices = {
   get: (k) => { var v = null; try{ v = JSON.parse(localStorage.getItem('cb.standards.list.' + k) || 'null'); }catch(_){} v = v && typeof v === 'object' ? v : {}; if (!Array.isArray(v.cols) || !v.cols.length) v.cols = DEFAULT_COLS.slice(); return v; },
   set: (k, v) => { try{ localStorage.setItem('cb.standards.list.' + k, JSON.stringify(v)); }catch(_){} },
@@ -300,7 +323,7 @@ function mountList(){
       fig: (rows) => { var n = countOf(rows.map((x) => x.r)); return rows.length + ' · ● ' + n.live + ' ◐ ' + n.part + ' ○ ' + n.plan; } },
     next: nextOf,
     actions: [
-      { id: 'go', label: 'Open in the app ›', tid: 'std-go', when: (x) => !!x.r.go, run: (x) => stdGoto(x.r.go) },
+      { id: 'go', label: 'Open in the app ›', tid: 'std-go', when: (x) => !!HOME[x.r.go], run: (x) => { location.href = HOME[x.r.go]; } },   /* only a CUSTOMER home — never app.html, the workshop */
       { id: 'copy', label: 'Copy for a buyer or CA', tid: 'std-copy', run: (x) => copyText(statementOf(x.r)) },
     ],
     empty: { title: 'No standards on the register', sub: 'The register could not be read.' },
@@ -310,19 +333,22 @@ function mountList(){
 /* ═════ THE MATRIX — the second pane ═════
    Rows by Area, Country or Kind; columns In force · Partly · Planned. A cell sets the LIST'S OWN filters (a row and a status), so the unit's chips
    and the lit cell are the same state shown twice, and the Filters popover can undo it. The matrix counts the whole register. */
-let DIM = (['area', 'country', 'kind'].indexOf(store('dim')) >= 0 && store('dim')) || 'area';
+/* ONE grouping choice: the left table counts by whatever the list's Group by says (Area · Country · Kind; None = the whole register only) */
 const DIMS = [['area', 'Area'], ['country', 'Country'], ['kind', 'Kind']];
+function curDim(){ var g = LIST && LIST.state().group; return DIMS.some((d) => d[0] === g) ? g : (g === 'none' ? 'none' : 'area'); }
+let DIM = 'area';
 function mxRows(){
+  if (DIM === 'none') return [];
   if (DIM === 'country') return STD_COUNTRIES.map((c) => ({ id: c[0], label: c[1], has: (r) => r.c.indexOf(c[0]) >= 0 }));
   if (DIM === 'kind') return STD_KINDS.map((k) => ({ id: k[0], label: k[1], sub: k[2], has: (r) => r.k === k[0] }));
   return STD_AREAS.map((a) => ({ id: a[0], label: a[1], has: (r) => r.a === a[0] }));
 }
 function nowFilt(){ var s = LIST && LIST.state(); return (s && s.filt) || {}; }
 function paintMatrix(){
+  DIM = curDim(); GLAST = DIM;
   var f = nowFilt(), fk = DIM, rowsAll = ROWS.map((x) => x.r);
   var other = Object.keys(f).filter((k) => f[k] && k !== 'status' && k !== fk).length || (LIST && LIST.state().q.trim());
-  var h = '<div class="mx-tools"><span class="mx-lab" id="mxLab">Count by</span><span class="seg" role="group" aria-labelledby="mxLab">'
-    + DIMS.map((d) => '<button type="button" data-dim="' + d[0] + '" data-testid="std-dim-' + d[0] + '" aria-pressed="' + (DIM === d[0]) + '">' + d[1] + '</button>').join('') + '</span></div>';
+  var h = '<div class="mx-tools"><span class="mx-lab" id="mxLab" data-testid="std-mx-by">' + (DIM === 'none' ? 'Counted: all together' : 'Counted by ' + esc(lab(DIMS, DIM))) + '</span><span class="mx-hint">follows Group by</span></div>';
   h += '<div class="mx" role="table" aria-label="Standards by ' + DIM + ' and status"><div class="mx-r mx-h" role="row"><span role="columnheader"></span>'
     + STD_STATUS.map((t) => { var on = f.status === t[0] && !f[fk];
       return '<button type="button" role="columnheader" class="mx-ch c-' + t[0] + '" data-mxs="' + t[0] + '" data-testid="std-mx-col-' + t[0] + '" aria-pressed="' + on + '" title="Show every ' + t[1].toLowerCase() + ' standard"><span class="sym" aria-hidden="true">' + t[2] + '</span>' + t[1] + '</button>'; }).join('') + '</div>';
@@ -340,7 +366,17 @@ function paintMatrix(){
   $('mxBody').innerHTML = h;
   LAST = JSON.stringify(f) + '|' + LIST.state().q;
 }
-let LAST = '';
+let LAST = '', GLAST = '';
+/* the list's columns share the width: weights per column, set on the host; a person who dragged a width keeps their own (no data-fill) */
+const WEIGHT = { what: 4, std: 2.4, kind: 1.6, where: 1.3, area: 1.3, at: 2, ex: 2.2, status: 3.2 };
+let FITKEY = '';
+function fit(){
+  var st = LIST && LIST.state(), host = $('std_list'); if (!st) return;
+  var keys = st.cols.concat(['status']), mine = Object.keys(st.widths || {}).length > 0, key = keys.join(',') + '|' + mine;
+  if (key === FITKEY) return; FITKEY = key;
+  if (mine){ host.removeAttribute('data-fill'); return; }
+  host.style.setProperty('--std-tpl', keys.map((k) => 'minmax(0,' + (WEIGHT[k] || 1.5) + 'fr)').join(' ')); host.setAttribute('data-fill', '1');
+}
 
 /* the unit has no setter, and its filters are its own: the matrix speaks to it the way its Filters popover does — one change event on a
    select that carries data-filt, which the unit's delegated listener handles (set the filter, repaint the tools and the rows). */
@@ -370,7 +406,9 @@ function mxPick(rowId, status){
 /* the matrix follows the list: a filter changed in the Filters popover moves the lit cell too */
 function watch(){
   var host = $('std_list');
-  new MutationObserver(() => { if (!LIST) return; var now = JSON.stringify(nowFilt()) + '|' + LIST.state().q; if (now !== LAST) paintMatrix(); }).observe(host, { childList: true, subtree: true, characterData: true });
+  new MutationObserver(() => { if (!LIST) return; fit();
+    if (curDim() !== GLAST){ GLAST = curDim(); setFilters({}); paintMatrix(); return; }   /* Group by changed: the table follows, with a clean slate as the old Count by had */
+    var now = JSON.stringify(nowFilt()) + '|' + LIST.state().q; if (now !== LAST) paintMatrix(); }).observe(host, { childList: true, subtree: true, characterData: true });
 }
 
 /* ═════ the two sheets — their content is the register's own renderers, called once ═════ */
@@ -389,8 +427,7 @@ $('sheet').addEventListener('cancel', (e) => { e.preventDefault(); closeSheet();
 $('sheet').addEventListener('click', (e) => { if (e.target === $('sheet')) closeSheet(); });
 
 document.addEventListener('click', (ev) => {
-  var t = ev.target.closest && ev.target.closest('[data-dim],[data-mxr],[data-mxs],[data-sheet],[data-act]'); if (!t) return;
-  if (t.hasAttribute('data-dim')){ DIM = t.getAttribute('data-dim'); store('dim', DIM); setFilters({}); paintMatrix(); return; }
+  var t = ev.target.closest && ev.target.closest('[data-mxr],[data-mxs],[data-sheet],[data-act]'); if (!t) return;
   if (t.hasAttribute('data-mxr') || t.hasAttribute('data-mxs')){ mxPick(t.getAttribute('data-mxr'), t.getAttribute('data-mxs')); return; }
   if (t.hasAttribute('data-sheet')){ openSheet(t.getAttribute('data-sheet')); return; }
   var a = t.getAttribute('data-act');
@@ -418,6 +455,7 @@ window.addEventListener('scroll', glHide, true);
 /* ═══ START ═══ — the register is here already; Compatibility is read first so the list and the matrix hold it from the first paint */
 function start(){
   mountList();
+  fit();
   paintMatrix();
   watch();
   var q = new URLSearchParams(location.search);

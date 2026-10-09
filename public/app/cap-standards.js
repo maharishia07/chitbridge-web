@@ -864,6 +864,24 @@ var STD_GLOSSARY = [
   ['WDV', 'Written-down value', 'Depreciation on what is left each year'],
   ['XML', 'Extensible Markup Language', 'A text data format with tags']
 ];
+/* REFERENCE-LEVEL entries (2026-10-09 tidy): a number after an abbreviation names ONE standard, so it gets its own tip, matched before the single words.
+   ⚠️ ONLY the expansion of the name is written here — no legal reading. ADDED WORDING, for Athi to confirm. */
+var STD_GLOSSARY_REF = [
+  ['ISO 4217', 'ISO 4217', 'The international standard list of currency codes'],
+  ['ISO 8601', 'ISO 8601', 'The international standard way to write dates and times'],
+  ['ISO 6523', 'ISO 6523', 'The international standard for identifying organisations'],
+  ['ISO 17442', 'ISO 17442', 'The international standard for the Legal Entity Identifier (LEI)'],
+  ['ISO 20022', 'ISO 20022', 'The international standard for financial messages'],
+  ['ISO/IEC 18004', 'ISO/IEC 18004', 'The international standard for QR codes'],
+  ['BCP 47', 'BCP 47', 'The internet standard for language tags, such as en-IN'],
+  ['RFC 4647', 'RFC 4647', 'The internet standard for matching language tags'],
+  ['RFC 5646', 'RFC 5646', 'The internet standard for naming languages (the text of BCP 47)'],
+  ['RFC 7386', 'RFC 7386', 'The internet standard for changing part of a JSON record (merge patch)'],
+  ['RFC 7519', 'RFC 7519', 'The internet standard for JSON Web Tokens (JWT)'],
+  ['RFC 7644', 'RFC 7644', 'The internet standard for SCIM, creating and removing staff accounts']
+];
+STD_GLOSSARY = STD_GLOSSARY.concat(STD_GLOSSARY_REF);
+var STD_REF_RE = new RegExp('(?<![A-Za-z0-9])(?:' + STD_GLOSSARY_REF.map(function(g){ return g[0]; }).join('|') + ')(?![A-Za-z0-9])', 'g');   /* the keys hold only letters, digits, a space and a slash — nothing to escape */
 var STD_NOT_ABBR = ['BEFORE', 'BETWEEN', 'CAN', 'IS', 'COMMAND', 'DELETES', 'FINER', 'FORCE', 'FORMAT', 'ISSUE', 'MANUAL', 'MEANS', 'MET', 'NOT', 'OTHER', 'PLAN',
   'RUNNER', 'SAME', 'SCHEMA', 'SCHEME', 'SUPERSEDED', 'THIS', 'WAS', 'ZONE', 'UBL-MAPPING-2026-09-05'];
 /* an abbreviation: two or more capitals or digits from a word start, joined by hyphens (GSTR-2B · ECMA-402 · WAI-ARIA); mixed case (JUnit, OAuth) is a name */
@@ -888,10 +906,13 @@ function stdGloss(html, o){
   return String(html == null ? '' : html).split(/(<[^>]+>)/).map(function(seg){
     if (seg.charAt(0) === '<'){ if (/^<(code|abbr)\b/i.test(seg)) inCode++; else if (/^<\/(code|abbr)>/i.test(seg)) inCode = Math.max(0, inCode - 1); return seg; }
     if (inCode) return seg;
-    return seg.replace(STD_ABBR_RE, function(m){
+    function one(m){
       var g = stdGlossary(m); if (!g) return m;
       var t = g[1] + (g[2] ? ' — ' + g[2] : '');
       return '<abbr class="gl"' + tab + ' data-gl="' + m + '" title="' + String(t).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;') + '">' + m + '</abbr>';
-    });
+    }
+    /* a numbered reference (ISO 4217) first, then the single words in what is left */
+    var parts = seg.split(STD_REF_RE), refs = seg.match(STD_REF_RE) || [];
+    return parts.map(function(p, i){ return p.replace(STD_ABBR_RE, one) + (i < refs.length ? one(refs[i]) : ''); }).join('');
   }).join('');
 }
