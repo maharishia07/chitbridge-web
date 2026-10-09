@@ -18,7 +18,8 @@
  *
  *   CBBell.mount(el, {
  *     onOpen?(chit_id),     // a row was pressed — the host opens the chit (default: openChitSheet, then openChit, when the page has one)
- *     base?, token?,        // override CFG.API_BASE / SESSION.token (a host that holds them elsewhere)
+ *     person?,              // the host's signed-in person; passed as null = signed out → nothing drawn, nothing read
+ *     apiBase?, token?,     // a page without core.js (the Home shell) hands these, as it does to CBAvatar; the call is then a plain bearer fetch
  *     context: { host }     // who mounted it
  *   }) -> { refresh(), destroy(), count(), el }      Emits `cb:rail` { module:'bell', result:{ count } } on el when the count changes.
  *
@@ -77,7 +78,28 @@ var cssDone = false;
 function addCss() { if (cssDone || !doc) return; cssDone = true; var s = doc.createElement('style'); s.setAttribute('data-cbbell', '1'); s.textContent = CSS; (doc.head || doc.documentElement).appendChild(s); }
 
 /** the token of a signed-in person of the shop, or null (signed out, or a customer login) */
+/**
+ * THE CALL. On a page with core.js (crm · accounts · the app) it is api() — the auth, the envelope, the 401 path, all of it. A page
+ * without core.js (the Home shell, index.html) hands the shell's apiBase + token, the way CBAvatar is given them, and the call is a
+ * plain fetch with the bearer that unwraps the same {ok,data,error} envelope.
+ */
+function call(o, name, opts) {
+  if (!o.apiBase && typeof api === 'function') return api(name, opts);
+  var e = BELL_EP[name], tok = whoToken(o), base = o.apiBase || o.base || (typeof CFG !== 'undefined' && CFG && CFG.API_BASE) || '';
+  return root.fetch(base + e.p, { method: e.m, cache: 'no-store', headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' },
+    body: opts && opts.body ? JSON.stringify(opts.body) : undefined }).then(function (r) {
+    return r.json().catch(function () { return {}; }).then(function (j) {
+      if (!r.ok || (j && j.ok === false)) { var er = new Error((j && (j.error && j.error.message || j.error)) || ('HTTP ' + r.status)); er.status = r.status; er.code = j && (j.code || (j.error && j.error.code)); throw er; }
+      return (j && 'ok' in j && 'data' in j) ? j.data : j;
+    });
+  });
+}
+/* every bell on the page; a bell whose element left the page (its header was redrawn) is closed, so a repaint never leaves a second stream open */
+var LIVE = [];
+function sweep() { LIVE.slice().forEach(function (b) { if (!b.el.isConnected) b.destroy(); }); }
+
 function whoToken(o) {
+  if (Object.prototype.hasOwnProperty.call(o, 'person') && !o.person) return null;   // the host says nobody is signed in (a token may still be saved)
   var tok = o.token || (typeof SESSION !== 'undefined' && SESSION && SESSION.token) || null;
   var role = (typeof SESSION !== 'undefined' && SESSION && SESSION.role) || '';
   return tok && role !== 'customer' ? tok : null;
@@ -88,9 +110,10 @@ function mount(el, o) {
   if (!el) return null;
   o = o || {};
   if (el.__cbbell) el.__cbbell.destroy();
+  sweep();
   addCss(); ensureEP();
   var m = { rows: [], count: 0, open: false, es: null, up: false, backoff: 5000, timer: null, dead: false, err: false, out: '', tone: '' };
-  el.setAttribute('data-testid', 'bell'); if (!/\bcbb\b/.test(el.className)) el.className = (el.className ? el.className + ' ' : '') + 'cbb';
+  if (!el.getAttribute('data-testid')) el.setAttribute('data-testid', 'bell');   /* a host's own slot keeps its name (the shell's is shell-bell) */ if (!/\bcbb\b/.test(el.className)) el.className = (el.className ? el.className + ' ' : '') + 'cbb';
 
   function paint() {
     if (m.dead) return;
@@ -122,17 +145,17 @@ function mount(el, o) {
   /** ONE read of the feed (never polled) */
   function read() {
     if (m.dead || !whoToken(o)) return Promise.resolve();
-    return api('notifications').then(function (r) {
+    return call(o, 'notifications').then(function (r) {
       if (m.dead) return; m.err = false; m.rows = (r && r.notifications) || []; setCount(r && r.count != null ? r.count : m.rows.length); paint();
     }).catch(function () { if (m.dead) return; m.err = true; paint(); });
   }
   /* the stream: ticket -> EventSource; an arrival re-reads once; a drop re-tickets with backoff (a reconnect, not a poll) */
   function connect() {
     if (m.dead || m.es || !root.EventSource || !whoToken(o)) return;
-    api('eventsTicket').then(function (t) {
+    call(o, 'eventsTicket').then(function (t) {
       if (m.dead || m.es) return;
       if (!t || !t.ticket) { retry(); return; }
-      var base = o.base || (typeof CFG !== 'undefined' && CFG && CFG.API_BASE) || '';
+      var base = o.apiBase || o.base || (typeof CFG !== 'undefined' && CFG && CFG.API_BASE) || '';
       var es = new root.EventSource(base + '/api/events/stream?t=' + encodeURIComponent(t.ticket));
       m.es = es;
       es.addEventListener('hello', function () { m.up = true; m.backoff = 5000; });
@@ -146,7 +169,7 @@ function mount(el, o) {
     m.open = !m.open; m.out = ''; m.tone = '';
     paint();
     /* OPENING IS SEEING: looking moves the watermark, so the dot clears without a "mark all read" button */
-    if (m.open) { api('notifSeen').then(function () { setCount(0); paint(); }).catch(function () {}); read(); }
+    if (m.open) { call(o, 'notifSeen').then(function () { setCount(0); paint(); }).catch(function () {}); read(); }
   }
   function onClick(ev) {
     ev.__cbbIn = true;    /* this press was ours: its target is repainted away, so the document handler cannot tell by contains() */
@@ -165,12 +188,13 @@ function mount(el, o) {
   }
   function clearAll(btn) {
     if (typeof CBAction === 'undefined' || !CBAction || typeof CBAction.run !== 'function') throw new Error('CBBell needs CBAction (app/accounts-shell.js) on the page — a clear is a write');
-    CBAction.run(btn, function () { return api('notifDismiss', { body: { all: true } }); },
+    CBAction.run(btn, function () { return call(o, 'notifDismiss', { body: { all: true } }); },
       { key: 'bell:clear', confirm: { title: T(W.ask), body: esc(T(W.askBody)), yes: T(W.clear) },
         outcome: function () { m.rows = []; m.out = T(W.cleared); m.tone = 'ok'; setCount(0); paint(); },
         onFail: function (w, e) { m.out = (e && e.code === 'NOTIF_DISMISS_NOT_MIGRATED') ? T(W.needs) : w; m.tone = 'error'; paint(); } });
   }
-  function onDoc(ev) { if (m.open && !ev.__cbbIn && !el.contains(ev.target)) { m.open = false; paint(); } }
+  /* a click in a dialog (the Clear all confirm) is not a click away: the panel stays to show what the clear did */
+  function onDoc(ev) { if (m.open && !ev.__cbbIn && !el.contains(ev.target) && !(ev.target.closest && ev.target.closest('dialog'))) { m.open = false; paint(); } }
   function onKey(ev) { if (m.open && ev.key === 'Escape') { m.open = false; paint(); } }
 
   el.addEventListener('click', onClick);
@@ -178,9 +202,9 @@ function mount(el, o) {
   var apiObj = {
     el: el, refresh: read, count: function () { return m.count; },
     destroy: function () { m.dead = true; clearTimeout(m.timer); if (m.es) { try { m.es.close(); } catch (_) {} } m.es = null;
-      el.removeEventListener('click', onClick); doc.removeEventListener('click', onDoc); doc.removeEventListener('keydown', onKey); el.innerHTML = ''; delete el.__cbbell; }
+      el.removeEventListener('click', onClick); doc.removeEventListener('click', onDoc); doc.removeEventListener('keydown', onKey); el.innerHTML = ''; delete el.__cbbell; var i = LIVE.indexOf(apiObj); if (i >= 0) LIVE.splice(i, 1); }
   };
-  el.__cbbell = apiObj;
+  el.__cbbell = apiObj; LIVE.push(apiObj);
   if (!whoToken(o)) { el.innerHTML = ''; return apiObj; }     // signed out / a customer: no bell, no stream
   paint(); read(); connect();
   return apiObj;

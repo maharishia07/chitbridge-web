@@ -407,7 +407,9 @@ function whoPaint(){
   WHO.innerHTML = `<span class="shop" data-testid="shop-name">${esc(nm)}</span>
     <span id="cb-bell-slot" data-testid="bell-slot"></span><a class="home" href="/" data-testid="acc-home" aria-label="Home">⌂ <span class="hw">Home</span></a><span id="cbav"></span>`;
   /* R06 — the bell (app/rail-bell.js): ONE host element, mounted once, moved into each repaint of the bar so the stream is not re-ticketed */
-  if (typeof CBBell !== 'undefined' && SESS) { if (!window.__cbBell) { window.__cbBell = document.createElement('span'); CBBell.mount(window.__cbBell, { context: { host: 'accounts' } }); } $('cb-bell-slot').appendChild(window.__cbBell); }
+  if (typeof CBBell !== 'undefined' && SESS) { if (!window.__cbBell) window.__cbBell = document.createElement('span'); $('cb-bell-slot').appendChild(window.__cbBell);
+    /* mounted once it is on the page and the session is set; a bell drawn before the session landed (no button) is mounted again */
+    if (!window.__cbBell.querySelector('[data-testid="bell-btn"]')) CBBell.mount(window.__cbBell, { context: { host: 'accounts' } }); }
   /* the avatar is CBAvatar: Profile opens the app's profile, Sign out is the app's (session and per-person nav memory go; the app's other tabs hear cb_sess go). No Settings here — that stays in the app. */
   CBAvatar.mount($('cbav'), { person: CBAvatar.personOf(SESS), items: ['profile', 'support', 'signout'], apiBase: CFG.API_BASE, token: SESS && SESS.token });
 }
