@@ -122,7 +122,7 @@ async function route(S, r) {
     await p.click('[data-testid="crm-tl-chit-ch-431"]'); await sheetUp(p);
     await p.waitForSelector('#chitsheet [data-testid="rt-no"], #chitsheet [data-testid="msg-body"]', { timeout: 8000 });
     ok(await p.locator('#chitsheet [data-testid="msg-body"]').count() === 0 && await p.locator('#chitsheet [data-testid="msg-send"]').count() === 0, 'A3 · a view-only login: no box, no Send');
-    ok(/view-only/.test(await text(p, '#chitsheet [data-testid="rt-no"]')), 'A3 · the engine\'s sentence is on screen: "' + (await text(p, '#chitsheet [data-testid="rt-no"]')) + '"');
+    ok(/View only/.test(await text(p, '#chitsheet [data-testid="rt-no"]')), 'A3 · the engine\'s sentence is on screen: "' + (await text(p, '#chitsheet [data-testid="rt-no"]')) + '"');
     ok(S.posts.length === 0, 'A3 · nothing was sent');
     await ctx.close();
   }
