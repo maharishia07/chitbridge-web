@@ -211,15 +211,24 @@ Object.keys(THEMES).forEach((key) => {
      into the card (list-ctl.js; the ledger tables use the same zebra). Text must clear the SAME bar on those two grounds as on the card: the ink, the four greys, and the colours the
      rows speak in (you'll get · you'll give · late · Dues). Measured on the colour the screen paints, not on the token's name. */
   {
-    const zebra = v('--zebra') || mix(v('--ink'), 0.04, card), hov = mix(v('--blue'), 0.08, card);
-    [['zebra row', zebra], ['hovered row', hov]].forEach(([nm, bg]) => {
+    const zebra = v('--zebra') || mix(v('--ink'), 0.09, card), hov = mix(v('--blue'), 0.08, card);
+    /* GROUP BAND (small-fixes, C12): --cl-gband = the blue mixed 13% into the page; the band's title and figures are the ink */
+    const gband = mix(v('--blue'), 0.13, v('--page') || v('--paper') || card);
+    /* VISIBLE STRIPE (Athi, 2026-10-09: "no difference, it has to be visible"): the stripe must differ from the plain card by a visible step, in light AND dark themes (contrast ratio of the two grounds >= 1.12), and the hover row / group band must differ from the stripe */
+    if (zebra) {
+      check(key, 'zebra stripe is visibly different from the plain row (step, min 1.12)', ratio(zebra, card), 1.12, 'zebra visibility');
+    }
+    /* ROW STRIPES (avatar menu: Off · Light · Strong): Light is the ink mixed 5% into the card (avatar.js :root[data-stripes=light]); it must still be a visible step and keep text AA */
+    const zebraLight = mix(v('--ink'), 0.05, card);
+    if (zebraLight) check(key, 'zebra stripe (Light) is visibly different from the plain row (step, min 1.05)', ratio(zebraLight, card), 1.05, 'zebra visibility');
+    [['zebra row', zebra], ['zebra row (Light)', zebraLight], ['hovered row', hov], ['group band', gband]].forEach(([nm, bg]) => {
       if (!bg) return;
       check(key, 'ink on ' + nm, ratio(v('--ink'), bg), TEXT);
-      GREYS.forEach((g) => check(key, g + ' on ' + nm, ratio(v(g), bg), TEXT));
+      if (nm !== 'group band') GREYS.forEach((g) => check(key, g + ' on ' + nm, ratio(v(g), bg), TEXT));
       /* the colours the CRM rows speak in, as crm.html resolves them in a chosen theme: you'll get = --green-d (the theme's --ok-2 mixed 20% toward its ink), you'll give · late = --red-text (the theme's --disp mixed 22% toward its ink) */
       const get = mix(v('--ok-2'), 0.8, v('--ink')), give = mix(v('--disp'), 0.78, v('--ink'));
-      if (get) check(key, 'you\'ll get (green-d) on ' + nm, ratio(get, bg), TEXT, 'Dues column');
-      if (give) check(key, 'you\'ll give · late (--disp) on ' + nm, ratio(give, bg), TEXT, 'Dues · Next follow-up');
+      if (get && nm !== 'group band') check(key, 'you\'ll get (green-d) on ' + nm, ratio(get, bg), TEXT, 'Dues column');
+      if (give && nm !== 'group band') check(key, 'you\'ll give · late (--disp) on ' + nm, ratio(give, bg), TEXT, 'Dues · Next follow-up');
     });
   }
 

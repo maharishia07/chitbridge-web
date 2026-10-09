@@ -234,7 +234,7 @@ body.lg-on .cbl-slot .shop{display:none}
   #bk_body table.bktab thead{display:none}
   #bk_body table.bktab tr{border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:8px 12px;margin-bottom:8px}
   #bk_body table.bktab td{border:0;padding:3px 0;display:flex;gap:10px;justify-content:space-between;text-align:right;overflow-wrap:anywhere}
-  #bk_body table.bktab tbody tr:nth-child(even){background:var(--zebra,color-mix(in srgb,var(--ink) 4%,var(--card)))}   /* a card per row on a phone: the stripe stays */
+  #bk_body table.bktab tbody tr:nth-child(even){background:var(--zebra,color-mix(in srgb,var(--ink) 9%,var(--card)))}   /* a card per row on a phone: the stripe stays */
   #bk_body table.bktab td[data-l]::before{content:attr(data-l);font-size:var(--fs-1);font-weight:700;text-transform:uppercase;color:var(--muted-2);text-align:left;flex-shrink:0}
   #bk_body table.bktab td:empty{display:none}
   #bk_body .bktab tr.bkentry td{border:0}
@@ -335,7 +335,9 @@ const NAV = [
   ['tb', 'Trial balance', 'M12 3v18M5 21h14M4 8h16M7 8l-3 7h6zM17 8l-3 7h6z'],
   ['pl', 'P&L', 'M4 20V4M4 20h16M8 15l4-4 3 3 5-6'],
   ['bs', 'Balance sheet', 'M3 10l9-6 9 6M5 10v8M10 10v8M14 10v8M19 10v8M3 20h18'],
-  ['dues', 'Dues', 'M7 3h10M7 21h10M8 3c0 5 8 6 8 9s-8 4-8 9M16 3c0 5-8 6-8 9'],
+  ['receivables', 'Receivables', 'M12 4v12M7 11l5 5 5-5M5 20h14'],
+  ['payables', 'Payables', 'M12 20V8M7 13l5-5 5 5M5 4h14'],
+  ['dues', 'Dues', 'M7 3h10M7 21h10M8 3c0 5 8 6 8 9s-8 4-8 9M16 3c0 5-8 6-8 9'],   /* kept as a door (To do opens it) - not in the menu: Receivables and Payables are its two sides */
   ['bills', 'Bills', 'M6 3h9l3 3v15H6zM9 9h6M9 13h6M9 17h4'],
   ['cheques', 'Cheques', 'M3 6h18v12H3zM7 14h5M15 10h2'],
   ['waiting', 'Waiting', 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18M12 7v5l3 2'],
@@ -351,7 +353,7 @@ const NAV = [
   ['accounts', 'Shop ledgers', 'M3 6h6l2 2h10v11H3z'],
 ];
 /* the kural of each view (docs/design/kural-kit/kurals.json routes): one per screen. The open LEDGER picks its own (cap-books.js bkKuralFor); the API does not send `ledger.kural` yet */
-const KURAL_OF = { todo: 'accounts', daybook: 'daybook', ledgers: 'accounts', tb: 'accounts', pl: 'reports', bs: 'reports', dues: 'sales', bills: 'accounts', cheques: 'daybook', waiting: 'suspense', bank: 'suspense',
+const KURAL_OF = { todo: 'accounts', daybook: 'daybook', ledgers: 'accounts', tb: 'accounts', pl: 'reports', bs: 'reports', dues: 'sales', bills: 'accounts', cheques: 'daybook', waiting: 'suspense', receivables: 'sales', payables: 'sales', bank: 'suspense',
   lock: 'month-lock', closingstock: 'period-close', assets: 'period-close', accruals: 'period-close', gstclose: 'gst', yearclose: 'period-close', packs: 'accounts', opening: 'accounts', accounts: 'accounts' };
 const TITLES = { ledgers: 'Ledgers', todo: 'To do' };   /* the Ledgers view keeps the designer's heading; the rest are named as the menu names them */
 
@@ -374,8 +376,9 @@ const isOwner = () => SESSION.role === 'entity';   /* the shop's own session is 
 /* the menu's groups (Athi, 2026-10-03; the page never names the trade, so the first group is Books): To do alone, then four folds; the open view's group is never folded. A folded group is remembered on this device. */
 const NAV_GROUPS = [
   ['', ['todo']],
-  ['Books', ['daybook', 'ledgers', 'tb', 'pl', 'bs']],
-  ['Every day', ['dues', 'bills', 'cheques', 'waiting', 'bank']],
+  ['Books', ['daybook', 'ledgers', 'tb', 'pl', 'bs', 'bank']],
+  /* Athi, 2026-10-03 (T20/T21): Outstandings > Receivables · Payables · Bills · Cheques. Waiting is not a menu item any more: a posting that failed is a To do item (its notice opens the same list). */
+  ['Outstandings', ['receivables', 'payables', 'bills', 'cheques']],
   ['Period end', ['lock', 'closingstock', 'assets', 'accruals', 'gstclose', 'yearclose']],
   ['Setup', ['packs', 'opening', 'accounts']],
 ];
@@ -457,7 +460,7 @@ BK.onTab = (t) => chrome(t);
 /* the Ledgers view: when a ledger is open the list's own title row IS the page header — it carries the shop · Home · avatar (BK.slotWho), and this page's header steps aside so the head stays within 20% */
 BK.slotWho = (el) => { el.appendChild(WHO); };
 BK.onLedger = (sel) => { document.body.classList.toggle('lg-sel', !!sel); if (!sel) whoHome(); };
-BK.views = { bills: (body) => accBills(body), todo: (body) => accTodo(body),
+BK.views = { bills: (body) => accBills(body), todo: (body) => accTodo(body), receivables: (b) => bkDues(b, 'rcv'), payables: (b) => bkDues(b, 'pay'),
   closingstock: (b) => peStockView(b), assets: (b) => peAssetsView(b), accruals: (b) => peAccrualsView(b), gstclose: (b) => peGstView(b), yearclose: (b) => peYearView(b),
   bank: (b) => bankView(b) };   /* the Ledgers view is cap-books.js's own: the folder tree + the Task table */
 function show(view){
@@ -528,7 +531,7 @@ async function accBills(body){
 /* ═══ TO DO — what the owner has to do next. GET /api/books/todo lists the checks (docs/design/cb-accounts-ia §1): a row is a symbol · a count · the server's sentence · ONE button.
    The page decides nothing: it draws what the API sends, and opens the page the row's action names. ═══ */
 /* the API's `action.screen` → the tab that opens it. A screen with no page yet is not in here: its button says it starts after an update. */
-const TODO_SCREEN = { waiting: 'waiting', ledgers: 'ledgers', periods: 'lock', daybook: 'daybook', dues: 'dues', cheques: 'cheques', bills: 'bills', packs: 'packs', opening: 'opening',
+const TODO_SCREEN = { waiting: 'waiting', ledgers: 'ledgers', periods: 'lock', daybook: 'daybook', dues: 'receivables', cheques: 'cheques', bills: 'bills', packs: 'packs', opening: 'opening',
   'closing-stock': 'closingstock', gst: 'gstclose', recurring: 'accruals', accruals: 'accruals', 'year-close': 'yearclose', assets: 'assets', bank: 'bank' };
 /* an item the server could not check (503 · not migrated yet) is not a task: it says so, and its button waits */
 const todoOff = (it) => it && (it.status === 503 || it.not_migrated === true || it.migrated === false || it.available === false);

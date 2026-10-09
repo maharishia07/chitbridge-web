@@ -153,7 +153,7 @@ async function run() {
       ok(hrefsOk, '1366 · every built card links to its utility page');
       ok((await offList(pg)).length === 0, '1366 · zero app.html hrefs outside the avatar (the allow-list: CBAvatar\'s own doors)');
       const chips = await pg.$$eval('.cbsh-sc', (cs) => cs.map((c) => ({ id: c.dataset.testid, st: c.dataset.state, link: c.tagName === 'A' || !!c.querySelector('a'), via: c.dataset.via === '1', href: c.getAttribute('href'), tag: (c.querySelector('.tag') || {}).textContent })));
-      ok(chips.length && chips.every((c) => (c.via ? /^\/[a-z-]+\.html$/.test(c.href || '') : !c.link) && (c.st === 'workshop' || c.st === 'coming') && c.tag), '1366 · every chip is dashed, names its state, and is not a link (bar a workshop item that names its closest built page: Catalogue to Product Lab)');
+      ok(chips.length && chips.every((c) => (c.via ? /^\/[a-z-]+\.html$/.test(c.href || '') : !c.link) && (c.st === 'workshop' || c.st === 'coming' || c.st === 'works') && c.tag), '1366 · every chip is dashed, names its state, and is not a link (bar a workshop item that names its closest built page: Catalogue to Product Lab)');
       const before = pg.url(), pages = ctx.pages().length;
       await pg.click('[data-testid="shell-chip-stock"]'); await pg.waitForTimeout(250);
       ok(pg.url() === before && ctx.pages().length === pages, '1366 · a workshop chip opens nothing');

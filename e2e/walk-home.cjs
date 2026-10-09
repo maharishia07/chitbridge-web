@@ -265,6 +265,12 @@ W.run('home', async (w) => {
     return { ok: !!phoneOk && !!lapOk, saw: 'phone: ' + JSON.stringify(ph) + ' | laptop: ' + JSON.stringify(lp) };
   });
   await page.setViewportSize({ width: 1280, height: 860 });
+  await w.step('H14-chip', 'Home -> the Connectors chip does not say WORKSHOP when Tally + Zoho work (manifest works = true)', async () => {
+    await goPage('/'); await page.waitForSelector('[data-testid="shell-chip-connectors"]', { timeout: 15000 });
+    const c = await page.locator('[data-testid="shell-chip-connectors"]').first().evaluate((e) => ({ st: e.getAttribute('data-state'), t: e.textContent.replace(/\s+/g, ' ').trim() }));
+    const others = await page.$$eval('[data-testid^="shell-chip-"][data-state="workshop"]', (e) => e.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
+    return { ok: c.st === 'works' && !/workshop/i.test(c.t) && /works today/i.test(c.t) && others.every((t) => !/Connectors/.test(t)), saw: '"' + c.t + '" (state ' + c.st + '); chips still marked workshop: ' + others.length };
+  });
 
   await w.step('M43', 'the stand-in answered every /api/books and /api/crm call as the API contract says', async () => { const [ok, saw] = C.finish(); return { ok, saw }; });
 

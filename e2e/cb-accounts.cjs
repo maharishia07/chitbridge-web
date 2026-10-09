@@ -31,13 +31,15 @@ const J = C.json;
 const TODAY = new Date().toISOString().slice(0, 10);
 const FYNOW = (() => { const d = new Date(), y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1; return y + '-' + String((y + 1) % 100).padStart(2, '0'); })();
 
-/* the designer's twelve views, Bills after Dues, plus Bank and the Month & year end pages — [tab id, label, a test id that only that screen paints] */
+/* the menu's views in the menu's order (A1), plus Bank and the Month & year end pages — [tab id, label, a test id that only that screen paints] */
 const VIEWS = [
   ['todo', 'To do', '[data-testid="todo-list"]'], ['daybook', 'Day book', '[data-testid^="db-entry-"]'], ['ledgers', 'Ledgers', '[data-testid="lt-band-people"]'],
   ['tb', 'Trial balance', '[data-testid="tb-balanced"]'], ['pl', 'P&L', '[data-testid="pl-profit"]'],
-  ['bs', 'Balance sheet', '[data-testid="bs-balanced"]'], ['dues', 'Dues', '[data-testid="dues-side-rcv"]'],
+  ['bs', 'Balance sheet', '[data-testid="bs-balanced"]'], ['bank', 'Bank', '[data-testid="bank-form"], [data-testid="bank-none"]'],
+  /* A1 (Athi, 2026-10-03 · T20/T21): Outstandings > Receivables · Payables · Bills · Cheques; Waiting is not a menu item (a failed posting is a To do item) */
+  ['receivables', 'Receivables', '[data-testid="dues-side-rcv"]'], ['payables', 'Payables', '[data-testid="dues-side-pay"]'],
   ['bills', 'Bills', '[data-testid="bills-list"]'], ['cheques', 'Cheques', '[data-testid="chq-chq9"]'],
-  ['waiting', 'Waiting', '[data-testid="wait-0"]'], ['bank', 'Bank', '[data-testid="bank-form"], [data-testid="bank-none"]'], ['lock', 'Month lock', '[data-testid="lk_fy"]'],
+  ['lock', 'Month lock', '[data-testid="lk_fy"]'],
   ['closingstock', 'Closing stock', '[data-testid="ps-form"]'], ['assets', 'Assets & depreciation', '[data-testid="assets-list"]'], ['accruals', 'Accruals & recurring', '[data-testid="recurring-list"]'],
   ['gstclose', 'GST close & pay', '[data-testid="pg-form"]'], ['yearclose', 'Year close', '[data-testid="py-res"]'],
   ['packs', 'Packs', '[data-testid="pk_fy"]'], ['opening', 'Opening balances', '[data-testid="op_csv"]'],
@@ -186,7 +188,7 @@ async function route(S, r) {
   const nav = (p, id) => p.click('[data-testid="acc-nav-' + id + '"]');
   /* Dues · Month lock · Packs, looked at on a laptop and at 390 px (PR: ledger panels): at most three columns, nothing cut off, no sideways scroll */
   async function panelShots(p, tag, w) {
-    await nav(p, 'dues'); await p.waitForSelector('[data-testid="dues-side-rcv"]'); await p.waitForTimeout(350);
+    await nav(p, 'receivables'); await p.waitForSelector('[data-testid="dues-side-rcv"]'); await p.waitForTimeout(350);
     const d = await p.evaluate(() => { const h = document.querySelector('#bkl_dues .lhead') || document.querySelector('#bkt_dues .lhead'); const cells = h ? Array.from(h.children).filter((c) => c.getBoundingClientRect().width > 0 && getComputedStyle(c).display !== 'none' && c.textContent.trim() !== '') : [];   /* M28: the buttons column (no heading) is not a data column */ return { n: cells.length, txt: cells.map((c) => c.className + ':' + JSON.stringify(c.textContent.trim())), found: !!h, sw: document.documentElement.scrollWidth, over: Array.from(document.querySelectorAll('#bk_body *')).filter((e) => e.getBoundingClientRect().right > window.innerWidth + 1).length }; });
     console.log('  dues header found=' + d.found + ' cells=' + d.n + ' ' + JSON.stringify(d.txt));
     ok(d.n <= 3 && d.over === 0 && d.sw <= w, 'Dues ' + tag + ': ' + d.n + ' columns by default (at most 3), nothing past the right edge (' + d.over + '), no sideways scroll (' + d.sw + ')');
@@ -221,12 +223,14 @@ async function route(S, r) {
     ok(/CB Accounts/.test(await p.textContent('.brand')), 'the brand says CB Accounts');
     ok(await p.locator('[data-testid="shop-name"]').textContent() === 'Mayur Bhavan', 'the pinned header names the shop');
     const labels = await p.$$eval('#nav .nav-btn', (b) => b.map((x) => x.getAttribute('aria-label')));
-    ok(JSON.stringify(labels) === JSON.stringify(VIEWS.map((v) => v[1])), 'the sidebar lists every view, Bills after Dues: ' + labels.join(' · '));
+    ok(JSON.stringify(labels) === JSON.stringify(VIEWS.map((v) => v[1])), 'the sidebar lists every view, in the menu\'s order: ' + labels.join(' · '));
     ok(await p.evaluate(() => document.querySelector('.top') && getComputedStyle(document.querySelector('.top')).position === 'sticky'), 'the header is pinned');
     /* the menu's groups (Athi, 2026-10-03): To do alone, then Books · Every day · Period end · Setup, each folds; the header's line is level with the brand's */
     const grps = await p.$$eval('#nav .nav-grp', (g) => g.map((x) => x.textContent.trim()));
-    ok(JSON.stringify(grps) === JSON.stringify(['Books', 'Every day', 'Period end', 'Setup']), 'the menu is grouped: ' + grps.join(' · '));
-    ok(await p.$$eval('#nav .nav-sec', (s) => s[1] && Array.from(s[1].querySelectorAll('.nav-btn')).map((b) => b.dataset.view).join(',')) === 'daybook,ledgers,tb,pl,bs', 'Books holds Day book → Balance sheet');
+    ok(JSON.stringify(grps) === JSON.stringify(['Books', 'Outstandings', 'Period end', 'Setup']), 'the menu is grouped: ' + grps.join(' · '));
+    ok(await p.$$eval('#nav .nav-sec', (s) => s[1] && Array.from(s[1].querySelectorAll('.nav-btn')).map((b) => b.dataset.view).join(',')) === 'daybook,ledgers,tb,pl,bs,bank', 'Books holds Day book → Balance sheet, Bank');
+    ok(await p.$$eval('#nav .nav-sec', (s) => s[2] && Array.from(s[2].querySelectorAll('.nav-btn')).map((b) => b.dataset.view).join(',')) === 'receivables,payables,bills,cheques', 'A1: Outstandings holds Receivables · Payables · Bills · Cheques');
+    ok(await p.locator('[data-testid="acc-nav-waiting"]').count() === 0 && await p.locator('[data-testid="acc-nav-dues"]').count() === 0, 'A1: Waiting and Dues are no longer menu items');
     await p.click('[data-testid="acc-grp-setup"]');
     ok(await p.locator('[data-testid="acc-nav-packs"]').isHidden() && await p.getAttribute('[data-testid="acc-grp-setup"]', 'aria-expanded') === 'false', 'a group folds');
     await p.click('[data-testid="acc-grp-setup"]');
@@ -254,6 +258,28 @@ async function route(S, r) {
       ok(!(await p.evaluate(() => document.documentElement.scrollWidth > innerWidth)), label + ': no horizontal scroll at 1360');
     }
     ok(S.calls.filter((c) => /booksAccounts|\/api\/books\/accounts/.test(c)).length >= 1, 'the Ledgers view read the accounts');
+
+    /* A1 — Receivables shows only the party-owes-you side, Payables only the you-owe side (the Dues list, one side each); the old #dues door still opens; the menu shot */
+    {
+      await nav(p, 'receivables'); await p.waitForSelector('[data-testid="dues-side-rcv"]'); await p.waitForTimeout(250);
+      ok(await p.locator('[data-testid="dues-side-pay"]').count() === 0 && await p.locator('[data-testid="dues-side-rcv"]').count() === 1, 'A1: Receivables lists only what customers owe you');
+      await nav(p, 'payables'); await p.waitForSelector('[data-testid="dues-side-pay"]'); await p.waitForTimeout(250);
+      ok(await p.locator('[data-testid="dues-side-rcv"]').count() === 0 && await p.locator('[data-testid="dues-side-pay"]').count() === 1, 'A1: Payables lists only what you owe');
+      ok(await p.evaluate(() => document.getElementById('title').textContent) === 'Payables', 'A1: the page title says Payables');
+      await p.screenshot({ path: path.join(SHOTS, 'small-fixes', 'accounts-menu-1366.png') }).catch(() => {});
+      /* ROW STRIPES (avatar menu) on the Day book: Off changes the stripe, and it is still off after a reload */
+      await nav(p, 'daybook'); await p.waitForSelector('[data-testid^="db-entry-"]'); await p.waitForTimeout(250);
+      const step = () => p.evaluate(() => { const c = document.querySelector('.cbl'); return c ? getComputedStyle(c).getPropertyValue('--cl-zebra').replace(/\s+/g, ' ').trim() : null; });
+      const sv = await step();
+      ok(!!sv && sv !== 'transparent' && /9%/.test(sv), 'zebra: the Day book stripe is Strong by default - the ink mixed 9% into the card (' + sv + ')');
+      await p.click('[data-testid="avatar"]'); await p.waitForSelector('[data-testid="stripes-off"]'); await p.click('[data-testid="stripes-off"]'); await p.waitForTimeout(150);
+      const so = await step();
+      ok(so === 'transparent', 'zebra: Off removes the Day book stripe (the one token is transparent)');
+      await p.reload(); await p.waitForSelector('[data-testid="acc-nav-daybook"]'); await p.waitForTimeout(500);
+      ok(await p.evaluate(() => document.documentElement.getAttribute('data-stripes')) === 'off', 'zebra: the choice survives a reload');
+      await p.click('[data-testid="avatar"]'); await p.waitForSelector('[data-testid="stripes-strong"]'); await p.click('[data-testid="stripes-strong"]'); await p.waitForTimeout(100);
+      await p.keyboard.press('Escape');
+    }
 
     /* ── 2 · LEDGERS — the two-pane page (docs/design/ledgers-page): the tree on the left, the chosen ledger's entries (a CBList) on the right ── */
     S.calls.length = 0;
@@ -650,6 +676,9 @@ async function route(S, r) {
     await p.waitForTimeout(400);
     const side = await p.evaluate(() => ({ w: document.getElementById('side').getBoundingClientRect().width, labels: Array.from(document.querySelectorAll('.side .label')).filter((l) => getComputedStyle(l).display !== 'none').length }));
     ok(side.w === 64 && side.labels === 0, 'at 390 px the sidebar is an icon rail (' + side.w + ' px wide, ' + side.labels + ' labels)');
+    /* A1 shot: the phone's menu opened - Outstandings with Receivables · Payables · Bills · Cheques */
+    await p.screenshot({ path: path.join(SHOTS, 'small-fixes', 'accounts-menu-390.png') }).catch(() => {});
+    ok(await p.locator('[data-testid="acc-nav-receivables"]').count() === 1 && await p.locator('[data-testid="acc-nav-waiting"]').count() === 0, 'A1 @390: the menu rail has Receivables and no Waiting');
     for (const [id, label] of VIEWS) {
       await nav(p, id);
       await p.waitForTimeout(350);

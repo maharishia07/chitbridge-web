@@ -73,7 +73,29 @@
 <script src="cb-offline.js"></script>
 <script>
 var API=(new URLSearchParams(location.search).get('api'))||(window.CBShell&&CBShell.apiBase&&CBShell.apiBase())||'https://chitbridge-api-production.up.railway.app';
-var TOK=null,_stage='email',FORMS=[],SEL=null,CTX='',MANUAL={},RESOLVED=null,ISSUED=null,_restored=false;
+var TOK=null,_stage='email',FORMS=[],SEL=null,CTX='',MANUAL={},RESOLVED=null,ISSUED=null,_restored=false,ORDERS=null;
+/* K3: nobody knows a chit id - the shop's own recent orders (the existing chits reads: orders that came in, orders that went out) are PICKED, not typed. */
+function orderLabel(c){
+  var sj=c.summary_json||{}, v=sj.total_value!=null?Number(sj.total_value):null, cur=sj.currency_code||'INR';
+  var who=c.sender_entity_display_name||((Array.isArray(c.all_recipients)&&c.all_recipients[1])?(c.all_recipients[1].display_name||c.all_recipients[1].name):'')||'';
+  var d=String(c.created_at||'').slice(0,10), sub=c.manual_subject||c.auto_subject||'Order';
+  var money=''; try{ money=v!=null?new Intl.NumberFormat(undefined,{style:'currency',currency:cur}).format(v):''; }catch(e){ money=v!=null?String(v):''; }
+  return [sub,who,money,d].filter(Boolean).join(' · ');
+}
+async function ordersLoad(){
+  if(ORDERS) return ORDERS;
+  var rs=await Promise.all(['inbox','sent'].map(function(k){ return api('GET','/api/chits/'+k+'?limit=20').then(function(r){ return (r.status===200&&r.j&&r.j.chits)||[]; }).catch(function(){ return []; }); }));
+  var seen={}; ORDERS=rs[0].concat(rs[1]).filter(function(c){ if(!c||!c.chit_id||seen[c.chit_id]||!/order/i.test(c.purpose||'')) return false; seen[c.chit_id]=1; return true; })
+    .sort(function(a,b){ return String(b.created_at||'').localeCompare(String(a.created_at||'')); }).slice(0,20);
+  return ORDERS;
+}
+function orderSelect(id,cur,none){
+  var list=ORDERS||[], has=!cur||list.some(function(c){ return c.chit_id===cur; });
+  return '<select id="'+id+'" data-testid="'+id+'"><option value="">'+esc(none)+'</option>'
+    +(has?'':'<option value="'+esc(cur)+'" selected>The order it was drawn from</option>')
+    +list.map(function(c){ return '<option value="'+esc(c.chit_id)+'"'+(c.chit_id===cur?' selected':'')+'>'+esc(orderLabel(c))+'</option>'; }).join('')+'</select>'
+    +(ORDERS&&!list.length?'<div class="note" style="margin-top:4px" data-testid="orders-none">No recent orders yet. The form is filled from your own data.</div>':'');
+}
 function paintPill(s){var p=el('netpill');if(!p)return;if(s.online){p.className='netpill';p.textContent=s.pending?('● Online · syncing '+s.pending):'● Online';}else{p.className='netpill off';p.textContent='⚠ Offline · '+(s.pending?s.pending+' pending':'work saved locally');}}
 function saveAF(){ if(window.CBOffline&&SEL) CBOffline.saveDraft('af.'+SEL,{ctx:CTX,manual:MANUAL}); }
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -87,14 +109,16 @@ function loginView(){ CBFrame.ended(); }
 async function boot(){
   var r=await api('GET','/api/forms'); if(r.status===401){TOK=null;return loginView('Session expired');}
   FORMS=(r.j&&r.j.forms)||[]; render();
+  ordersLoad().then(function(){ var c=el('ctx'); if(c){ CTX=(c.value||CTX||'').trim(); var h=c.parentNode; c.outerHTML=orderSelect('ctx',CTX,'No order — fill from my data'); c=el('ctx'); if(c) c.onchange=function(){ if(SEL) resolve(); }; } }).catch(function(){});
 }
 function render(){
   var picker='<div class="card noprint"><div class="note" style="margin-bottom:7px;font-weight:700">Pick a form</div>'
     +FORMS.map(function(f){return '<div class="formcard'+(SEL===f.key?' on':'')+'" onclick="pick(\''+f.key+'\')"><div class="t">'+esc(f.title)+'</div><div class="a">'+esc(f.authority||'')+' &middot; '+f.field_count+' fields</div></div>';}).join('')
-    +'<label>Draw from an order (optional chit ID)</label><input id="ctx" placeholder="paste an order/chit id to auto-fill buyer, invoice, value…" value="'+esc(CTX)+'">'
+    +'<label>Draw from one of your orders (optional)</label>'+orderSelect('ctx',CTX,'No order — fill from my data')+'<div class="note" style="margin-top:4px">Pick an order to fill the buyer, invoice and value from it.</div>'
     +'</div>';
   el('app').innerHTML=picker+'<div id="work"></div>';
   if(SEL) resolve();
+  var cx=el('ctx'); if(cx) cx.onchange=function(){ if(SEL) resolve(); };
 }
 function pick(k){ SEL=k; ISSUED=null; _restored=false;
   var d=(window.CBOffline&&CBOffline.loadDraft('af.'+k));
@@ -154,7 +178,7 @@ function drawDoc(inst){
     +'<button class="gh" onclick="window.print()">Print / Save PDF</button>'
     +'<button class="gh" onclick="pick(\''+SEL+'\')">New form</button></div><div id="signErr" class="err"></div>'
     +'<label style="margin-top:12px">Transfer on the rail — file onto a chit (per-copy)</label>'
-    +'<div class="row"><input id="attach_chit" style="flex:1;min-width:150px" value="'+esc(CTX)+'" placeholder="'+(CTX?'the order it was drawn from':'chit / order id')+'">'
+    +'<div class="row"><div style="flex:1;min-width:150px">'+orderSelect('attach_chit',CTX,'Pick the order to file it on')+'</div>'
     +'<button class="ok" onclick="attach(\''+inst.form_id+'\')">File on rail</button></div>'
     +'<div id="attachMsg" style="margin-top:6px"></div>'
     +'<div class="note" style="margin-top:4px">Files the frozen form as an attachment on that chit — every participant gets their own copy to view, verify at source, or dispute.</div></div>';
@@ -166,7 +190,7 @@ async function sign(id){
 }
 async function attach(id){
   var cid=((el('attach_chit')||{}).value||'').trim();
-  if(!cid){ el('attachMsg').innerHTML='<span class="err">Enter a chit / order id.</span>'; return; }
+  if(!cid){ el('attachMsg').innerHTML='<span class="err">Pick the order to file it on.</span>'; return; }
   el('attachMsg').innerHTML='<span class="note">Filing on the rail…</span>';
   var r=await api('POST','/api/forms/instances/'+id+'/attach',{chit_id:cid});
   if(r.status===200){ el('attachMsg').innerHTML='<span class="note" style="color:#2f7a45;font-weight:700">✓ Filed on the rail &mdash; attachment '+esc(String(r.j.attachment_id).slice(0,8))+'… delivered to '+(r.j.participants||1)+' participant copy(ies).</span>'; }

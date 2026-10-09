@@ -171,6 +171,18 @@ else say('  ✓ the unit stripes every other row from --cl-zebra (the theme\'s -
 const booksSrc = fs.readFileSync(path.join(ROOT, 'app/cap-books.js'), 'utf8');
 if (!/\.bktab tbody tr:nth-child\(even\)\{background:var\(--zebra,color-mix\(in srgb,var\(--ink\) \d+%,var\(--card\)\)\)\}/.test(booksSrc)) { fails++; say('  ✗ app/cap-books.js: the ledger / statement tables (.bktab) are no longer striped from the same token.'); }
 else say('  ✓ the ledger and statement tables (.bktab) carry the same stripe');
+/* 2c · THE STRIPE IS VISIBLE (Athi: "no difference, it has to be visible"): 9% ink (Strong, the default), not the 4% it was; the person's Row stripes choice (Off · Light · Strong) drives the same token */
+{
+  const pct = (unitSrc.match(/--cl-zebra:var\(--zebra,color-mix\(in srgb,var\(--cl-ink\) (\d+)%/) || [])[1];
+  if (!(Number(pct) >= 8 && Number(pct) <= 10)) { fails++; say('  ✗ the stripe is ' + pct + '% ink - it must be about 9% so it is visible at a glance.'); } else say('  ✓ the stripe is ' + pct + '% ink (visible)');
+  const avSrc = fs.readFileSync(path.join(ROOT, 'app/avatar.js'), 'utf8');
+  if (!(/data-stripes="off"\]\{--zebra:transparent\}/.test(avSrc) && /data-stripes="light"\]\{--zebra:color-mix/.test(avSrc) && /STRIPES = \[\['off'/.test(avSrc))) { fails++; say('  ✗ app/avatar.js no longer drives the one --zebra token from Row stripes: Off · Light · Strong.'); } else say('  ✓ the avatar menu\'s Row stripes (Off · Light · Strong) drives the one --zebra token');
+}
+/* 2d · A GROUP HEADING LOOKS LIKE A HEADING (C12): a full-width tinted band from a theme token, small upper-case title, rows indented, foldable */
+{
+  const band = /\.cbl \.cbl-group\{[^}]*background:var\(--cl-gband\)[^}]*text-transform:uppercase/.test(unitSrc) && /--cl-gband:color-mix\(in srgb,var\(--cl-blue\) \d+%,var\(--cl-page\)\)/.test(unitSrc) && /\.cbl-row\.ing>:first-child\{padding-inline-start:\d+px/.test(unitSrc) && /aria-expanded="' \+ !shut/.test(unitSrc);
+  if (!band) { fails++; say('  ✗ app/list-ctl.js: a group heading is no longer a tinted upper-case band with indented rows and a fold (aria-expanded).'); } else say('  ✓ a group heading is a tinted band (token, upper-case title), its rows are indented, and it folds');
+}
 {
   const rawStripe = scope().filter((f) => /\.html$|\.js$/.test(f) && !/list-ctl\.js$|cap-books\.js$/.test(f)).filter((f) => /(tr|\.cbl-row|\.cbl-lrec)[^{}]*:nth-(child|of-type)\((even|odd|2n)/.test(fs.readFileSync(path.join(ROOT, f), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/var _AI_MDCSS=.*$/m, '')));   /* the AI answer's own markdown stylesheet is rendered content, not a list */
   rawStripe.forEach((f) => { if (/accounts\.html$/.test(f)) return; fails++; say('  ✗ ' + f + ' paints a stripe of its own — the unit and cap-books.js own it (accounts.html only keeps it on the phone card, from the same token).'); });

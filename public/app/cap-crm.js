@@ -88,12 +88,13 @@ function crmRealEmail(v) {
 function crmRailChip(p) {
   if (p.kind === 'walk-in') return '<span class="tag walk" title="' + esc(tx('Phone only — points at the counter')) + '">' + crmIcon('walk') + esc(tx('Walk-in')) + '</span>';
   if (p.on_chitbridge) return '<span class="tag on" title="' + esc(tx('Bills and messages reach them in their app')) + '">' + crmIcon('link') + esc(tx('On ChitBridge')) + '</span>';
-  var w = p.why_not === 'inactive' ? tx('Account inactive') : p.why_not === 'other_population' ? tx('Test space') : p.why_not === 'shopper' ? tx('Shopper account') : tx('Local');
-  return '<span class="tag local" title="' + esc(tx('Not on ChitBridge — bills are yours only')) + '">' + crmIcon('house') + esc(w) + '</span>';
+  var shop = p.why_not === 'shopper' || (!!p.bridge_id && p.why_not !== 'inactive' && p.why_not !== 'other_population');
+  var w = p.why_not === 'inactive' ? tx('Account inactive') : p.why_not === 'other_population' ? tx('Test space') : shop ? tx('Shopper account') : tx('Local');
+  return '<span class="tag local" title="' + esc(shop ? tx('A shopper account on ChitBridge — they order from your shop. Bills are yours only') : tx('Not on ChitBridge — bills are yours only')) + '">' + crmIcon('house') + esc(w) + '</span>';
 }
 var CRM_ROLE = { customer: 'Customer', supplier: 'Supplier' };
 function crmRoleChips(p) { return (p.roles || []).map(function (r) { return '<span class="tag role">' + esc(tx(CRM_ROLE[r] || r)) + '</span>'; }).join(''); }
-var CRM_SEG = { new: 'New', regular: 'Regular', inactive: 'Inactive', high_value: 'High value' };
+var CRM_SEG = { new: 'New customer', regular: 'Regular', inactive: 'Inactive', high_value: 'High value' };
 function crmSegChip(p) { return p.segment ? '<span class="tag seg">' + esc(tx(CRM_SEG[p.segment] || p.segment)) + '</span>' : ''; }
 /** ⭐ A DUE IS SAID THE WAY A SHOPKEEPER SAYS IT: "₹12,450 you'll get" (green) / "₹4,816 you'll give" (red) — a symbol AND a word AND a colour, never the colour alone.
  *  The figure is the server's stored balance (+ they owe you), painted by bkMoney; the sign only picks the word. */
@@ -565,7 +566,7 @@ function crmAddOpen(q) {
   modal('<div class="mhd"><div class="t">' + esc(tx('Add party')) + '</div></div><div class="mbody" data-testid="crm-add-sheet">'
     + '<p class="hint" style="margin:0">' + esc(tx('One field — we look on ChitBridge and in your parties first.')) + '</p>'
     + '<label>' + esc(tx('Who?')) + '<input class="inp" id="crm_addq" data-testid="crm-addq" value="' + esc(ADD.q) + '" placeholder="' + esc(tx('Name, User ID, phone or e-mail')) + '" autocomplete="off"></label>'
-    + '<div class="supacts"><span class="hint">' + esc(tx('As')) + '</span><div class="seg2" role="group" aria-label="' + esc(tx('Role')) + '"><button type="button" data-crm="addrole" data-v="customer" aria-pressed="true" data-testid="crm-add-role-customer">' + esc(tx('Customer')) + '</button><button type="button" data-crm="addrole" data-v="supplier" aria-pressed="false" data-testid="crm-add-role-supplier">' + esc(tx('Supplier')) + '</button></div></div>'
+    + '<div class="supacts"><span class="hint">' + esc(tx('As')) + '</span><div class="seg2" role="group" aria-label="' + esc(tx('Role')) + '"><button type="button" data-crm="addrole" data-v="customer" aria-pressed="true" data-testid="crm-add-role-customer">' + esc(tx('Customer')) + '</button><button type="button" data-crm="addrole" data-v="supplier" aria-pressed="false" data-testid="crm-add-role-supplier">' + esc(tx('Supplier')) + '</button><button type="button" data-crm="addrole" data-v="both" aria-pressed="false" data-testid="crm-add-role-both">' + esc(tx('Both')) + '</button></div></div>'
     + '<div id="crm_addres" aria-live="polite" style="display:flex;flex-direction:column;gap:8px"></div></div>'
     + '<div class="mfoot"><button type="button" onclick="closeModal()">' + esc(tx('Cancel')) + '</button></div>');
   ADD.role = 'customer';
@@ -602,13 +603,13 @@ function crmAddResults() {
 }
 async function crmAddGo(kind, byHandle) {
   if (ADD.busy) return; ADD.busy = true;
-  var role = ADD.role, ep = role === 'supplier' ? 'supAdd' : 'custAdd', body;
-  if (kind === 'found') body = role === 'supplier' ? { supplier_bridge_id: byHandle.bridge_id } : { handle: byHandle.user_id };
-  else body = { name: ADD.q.trim().replace(/\s+/g, ' ') };
+  var role = ADD.role, both = role === 'both', first = both ? 'customer' : role, ep = first === 'supplier' ? 'supAdd' : 'custAdd', name = ADD.q.trim().replace(/\s+/g, ' ');
+  var bodyFor = function (rl) { return kind === 'found' ? (rl === 'supplier' ? { supplier_bridge_id: byHandle.bridge_id } : { handle: byHandle.user_id }) : { name: name }; };
   try {
-    var r = await api(ep, { body: body });
+    var r = await api(ep, { body: bodyFor(first) });
+    if (both) await api('supAdd', { body: bodyFor('supplier') });   /* "Both" = the two EXISTING adds; the second finds the same party and adds the other role */
     var made = r && (r.customer || r.supplier) || {}, id = made.customer_identity_id || made.supplier_entity_id;
-    closeModal(); toast(tx(role === 'supplier' ? 'Supplier added' : 'Customer added') + ': ' + (made.display_name || ADD.q));
+    closeModal(); toast(tx(both ? 'Customer and supplier added' : role === 'supplier' ? 'Supplier added' : 'Customer added') + ': ' + (made.display_name || ADD.q));
     await crmLoad(true);
     var p = id && CRM.byKey[id]; crmGo(p ? '#/party/' + encodeURIComponent(crmKey(p)) : '#/parties');
   } catch (e) { toast((e && e.message) || tx("Couldn't add that. Try again.")); }

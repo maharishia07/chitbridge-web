@@ -4,7 +4,7 @@
  *
  *  E9  Dr/Cr, never a minus (M25 · T59 · R30): every balance a shopkeeper reads on crm.html (the list chips, the record header, the ledger section) and on the
  *      Dues list of accounts.html is written in words ("you owe ₹X" / "they owe you ₹X" / "settled") or as Dr / Cr — and a "-" in front of a figure appears nowhere.
- *      Also: the Pay / Receive button takes the primary look from bkCss.
+ *      Also: the record's Pay / Receive button (C16: at the top, beside Call) takes the primary look.
  *  E1  double pay: ₹3,720.12 settles all four bills; opening Pay again and typing the same amount shows the BAND (nothing owed · PY/2026-27/000001) and Record is
  *      dead; Cancel records nothing (the stand-in counts the POSTs); "Pay as advance" is ONE POST that carries `acknowledge`.
  *  E2  oldest first: the four bills are pre-filled in due order, each amount = the preview's apply_minor; editing one amount changes the line under the table.
@@ -198,7 +198,7 @@ async function route(S, r) {
     ok(!MINUS.test(await bodyText(p)), 'E9 crm.html ledger section opened: still no minus');
     const stmt = await p.$$eval('[data-testid="stmt-opening"],[data-testid="stmt-closing"]', (e) => e.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
     ok(stmt.every((t) => / (Dr|Cr)$|^\D*0(\.0+)?$/.test(t)), 'E9 crm.html statement: opening and closing are Dr / Cr (' + stmt.join(' | ') + ')');
-    const btn = await p.evaluate(() => { const e = document.querySelector('[data-testid="party-pay"]'); return e ? getComputedStyle(e).backgroundColor : null; });
+    const btn = await p.evaluate(() => { const e = document.querySelector('[data-testid="crm-act-pay"]'); return e ? getComputedStyle(e).backgroundColor : null; });
     if (btn) ok(btn !== 'rgba(0, 0, 0, 0)' && btn !== 'rgb(255, 255, 255)', 'the Pay / Receive button takes the primary look from bkCss (' + btn + ')');
     fs.mkdirSync(PNG, { recursive: true });
     await p.screenshot({ path: path.join(PNG, 'CRMLedger.png') });
@@ -207,8 +207,8 @@ async function route(S, r) {
   /* ── E9 · the Dues list on accounts.html ───────────────────────────────────── */
   {
     const S = standIn(), { ctx, p } = await open('/accounts.html', S);
-    await p.waitForSelector('[data-testid="acc-nav-dues"]', { timeout: 15000 });
-    await p.click('[data-testid="acc-nav-dues"]');
+    await p.waitForSelector('[data-testid="acc-nav-receivables"]', { timeout: 15000 });
+    await p.evaluate(() => show('dues'));   /* the combined Dues list (both sides) is still a door - To do opens it; the menu has Receivables and Payables */
     await p.waitForSelector('[data-testid="dues-side-pay"]', { timeout: 15000 });
     await p.waitForTimeout(300);
     const text = await bodyText(p);
@@ -228,10 +228,10 @@ async function route(S, r) {
     await p.click('[data-testid="crm-row-P-0001"]');
     await p.waitForSelector('[data-testid="crm-rec-name"]', { timeout: 15000 });
     try { await p.click('[data-testid="crm-sec-ledger"]', { timeout: 3000 }); } catch (_) {}
-    await p.waitForSelector('[data-testid="party-pay"]', { timeout: 15000 });
+    await p.waitForSelector('[data-testid="crm-act-pay"]', { timeout: 15000 });
     return { ctx, p };
   }
-  const popup = async (p) => { await p.click('[data-testid="party-pay"]'); await p.waitForSelector('[data-testid="pay_amt"]', { timeout: 8000 }); };
+  const popup = async (p) => { await p.click('[data-testid="crm-act-pay"]'); await p.waitForSelector('[data-testid="pay_amt"]', { timeout: 8000 }); };
   const type = async (p, amt) => { await p.fill('[data-testid="pay_amt"]', amt); await p.waitForFunction(() => { const e = document.getElementById('pay_left'); return e && !/Type the amount/.test(e.textContent); }, null, { timeout: 8000 }); await p.waitForTimeout(150); };
   const closeIf = (p) => p.evaluate(() => { if (typeof closeModal === 'function') closeModal(); });
 
@@ -329,7 +329,7 @@ async function route(S, r) {
     await p.click('[data-testid="pay_done"]');
     await p.waitForTimeout(400);
     const ledBal = await text(p, 'party-balance');
-    ok(!/settled/.test(ledBal) && /advance|owe/i.test(ledBal + outBal) && await p.locator('[data-testid="party-pay"]').isVisible(), 'M30-1c the ledger behind the box repaints with the new balance and stays open (' + ledBal + ' · answer: ' + outBal + ')');
+    ok(!/settled/.test(ledBal) && /advance|owe/i.test(ledBal + outBal) && await p.locator('[data-testid="crm-act-pay"]').isVisible(), 'M30-1c the ledger behind the box repaints with the new balance and stays open (' + ledBal + ' · answer: ' + outBal + ')');
     await ctx.close();
   }
   /* ── E11 · owner 2026-10-08: W1 only when there is an allocation ── */
@@ -354,8 +354,8 @@ async function route(S, r) {
   /* ── E10 · M28 doors + Dues: the ledger's Pay beside Statement, Dues rows with To collect / To pay, Remind = a message on the oldest open bill ── */
   {
     const S = standIn(), { ctx, p } = await open('/accounts.html', S);
-    await p.waitForSelector('[data-testid="acc-nav-dues"]', { timeout: 15000 });
-    await p.click('[data-testid="acc-nav-dues"]');
+    await p.waitForSelector('[data-testid="acc-nav-receivables"]', { timeout: 15000 });
+    await p.evaluate(() => show('dues'));   /* the combined Dues list (both sides) is still a door - To do opens it; the menu has Receivables and Payables */
     await p.waitForSelector('[data-testid="dues-side-pay"]', { timeout: 15000 });
     await p.waitForTimeout(400);
     const hr = await text(p, 'dues-side-rcv'), hp = await text(p, 'dues-side-pay');
