@@ -41,31 +41,7 @@ const byRoute = (r) => KURALS.kurals.find((k) => k.route === r);
 
 const claims = (c) => { const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64').replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_'); return b64({ alg: 'none' }) + '.' + b64(Object.assign({ exp: Math.floor(Date.now() / 1000) + 3600 }, c)) + '.x'; };
 const OWNER = { token: claims({ identity_id: 'ent-M', identity_type: 'entity' }), role: 'entity', name: 'Mayur', entity: 'Mayur Bhavan' };
-
-/* the stand-in: a shop with the Ledger on, nothing waiting, a closed walk-in day (so no notice is on screen), three parties */
-const fx = JSON.parse(fs.readFileSync(FIX, 'utf8'));
-function standIn(over) {
-  return Object.assign({ noClose: false, calls: [] }, over || {});
-}
-async function route(S, r) {
-  const q = r.request(), u = new URL(q.url()), p = u.pathname, m = q.method();
-  S.calls.push(m + ' ' + p);
-  if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Mayur Bhavan', currency_code: 'INR' } });
-  if (p === '/api/books/health') return J(r, 200, books.health());
-  if (p === '/api/books/todo') return J(r, 200, []);
-  if (p === '/api/books/accounts') return J(r, 200, { accounts: [{ code: '1300', name: 'Customers (Sundry Debtors)', is_group: false }, { code: '1400', name: 'Cash', is_group: false }, { code: '4000', name: 'Sales', is_group: false }].map((a) => books.accountRow(Object.assign({ account_id: 'acc-' + a.code }, a))) });
-  if (p === '/api/books/trial-balance') return J(r, 200, books.trialBalance([]));
-  if (p === '/api/books/dues') return J(r, 200, books.dues([], { asOf: TODAY }));
-  if (p === '/api/books/cheques') return J(r, 200, { currency: 'INR', cheques: [] });
-  if (p === '/api/books/daybook') return J(r, 200, books.daybook((S.noClose ? [] : [{ entry_id: 'e1', entry_no: 'JV/1', posting_date: TODAY, event_type: 'walkin_day', narration: 'Walk-in sales',
-    source: { kind: 'day', counter: 'C1', count: 11, how: 'Cash', split: [{ how: 'Cash', amount_minor: 124000 }] }, lines: [{ code: '1400', name: 'Cash', dr_minor: 124000, cr_minor: 0 }, { code: '4000', name: 'Sales', dr_minor: 0, cr_minor: 124000 }] }]).map(books.entry)));
-  if (p === '/api/books/pl') return J(r, 200, books.pl([], []));
-  if (p === '/api/books/periods') return J(r, 200, books.periods([]));
-  if (p === '/api/crm/parties' && m === 'GET') return J(r, 200, crmApi.list(fx.list, { records: fx.records }));
-  if (p === '/api/crm/followups') return J(r, 200, crmApi.followups([]));
-  if (m === 'GET') return J(r, 200, {});
-  return J(r, 200, { ok: true });
-}
+const { standIn, route } = require('./lib/standin.cjs');
 
 (async () => {
   fs.mkdirSync(SHOTS, { recursive: true });

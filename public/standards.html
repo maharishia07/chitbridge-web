@@ -36,7 +36,13 @@ button,a,select,input{font:inherit;color:inherit} button{cursor:pointer} a{text-
 :focus-visible{outline:2px solid var(--blue);outline-offset:2px}
 
 /* the screen: the matrix pane beside the list — the frame Ledgers uses (a set on the left, the list on the right) */
-.app{height:100%;display:flex;flex-direction:column;container-type:inline-size;container-name:stdpage}
+.app{height:calc(100vh - var(--cbk-h,0px));display:flex;flex-direction:column;container-type:inline-size;container-name:stdpage}   /* the kural band (CBKural) is outside the head: it takes its height off the window, as on CRM and Accounts */
+/* the frame CRM and Accounts wear: the pane's head and the list's title row are ONE header line, 56 px */
+.brand{height:56px;flex:0 0 auto;padding:0 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line)}
+.logo{width:32px;height:32px;flex-shrink:0;border-radius:8px;background:var(--green);color:var(--card,#fff);display:flex;align-items:center;justify-content:center;font-size:16px}
+.brand-name{font-family:var(--f-display,'Bricolage Grotesque',sans-serif);font-size:19px;font-weight:700;white-space:nowrap}
+.main .cbl .cbl-title{min-height:56px;box-sizing:border-box}
+.who .bellslot{display:inline-flex}
 .body{flex:1;min-height:0;display:flex}
 .main{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column}
 .main #std_list{flex:1;min-height:0}
@@ -52,8 +58,8 @@ button,a,select,input{font:inherit;color:inherit} button{cursor:pointer} a{text-
 .miss{color:var(--amber-i)} .lim{color:var(--muted)}
 .miss b,.lim b{font-weight:600}
 .sn{font-family:var(--f-num,'IBM Plex Mono',monospace);font-size:calc(13px * var(--k,1));font-weight:500}
-.kind{display:inline-block;font-weight:600;font-size:calc(11px * var(--k,1));line-height:1.5;letter-spacing:.05em;text-transform:uppercase;
-  border:1px solid var(--line);border-radius:6px;padding:0 6px;margin-inline-start:2px;color:var(--muted);vertical-align:1px;white-space:nowrap}
+.kind{display:inline-block;max-width:100%;overflow-wrap:anywhere;font-weight:600;font-size:calc(11px * var(--k,1));line-height:1.5;letter-spacing:.05em;text-transform:uppercase;
+  border:1px solid var(--line);border-radius:6px;padding:0 6px;margin-inline-start:2px;color:var(--muted);vertical-align:1px;white-space:normal}
 .kind.k-law{border-color:var(--ink);color:var(--ink)}
 .st{font-weight:600;white-space:nowrap}
 .st-live,.c-live,.c-live b{color:var(--green)} .st-part,.c-part,.c-part b{color:var(--amber-i)} .st-plan,.c-plan,.c-plan b{color:var(--muted)}
@@ -74,11 +80,11 @@ button,a,select,input{font:inherit;color:inherit} button{cursor:pointer} a{text-
 .seg button{border:0;background:none;padding:0 12px;font-size:calc(13.5px * var(--k,1));border-inline-start:1px solid var(--line-soft)}
 .seg button:first-child{border-inline-start:0}
 .seg button[aria-pressed="true"]{background:var(--ink);color:var(--page);font-weight:600}
-.mx{display:grid;grid-template-columns:minmax(0,1fr) repeat(3,64px);border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card)}
+.mx{display:grid;grid-template-columns:minmax(0,1fr) repeat(3,minmax(64px,max-content));border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card)}
 .mx-r{display:contents}
 .mx-r > *{border-bottom:1px solid var(--hair);min-height:44px}
 .mx-h > *{background:var(--panel);border-bottom:1.5px solid var(--line);min-height:38px}
-.mx-ch{border:0;font-weight:700;font-size:calc(11px * var(--k,1));letter-spacing:.04em;text-transform:uppercase;padding:5px 2px;text-align:center;line-height:1.2;display:flex;flex-direction:column;align-items:center;gap:1px}
+.mx-ch{border:0;font-weight:700;font-size:calc(11px * var(--k,1));letter-spacing:.04em;text-transform:uppercase;padding:5px 6px;white-space:nowrap;text-align:center;line-height:1.2;display:flex;flex-direction:column;align-items:center;gap:1px}
 .mx-ch .sym{font-size:calc(14px * var(--k,1))}
 .mx-rh{border:0;background:none;text-align:start;padding:6px 10px;font-weight:600;display:flex;flex-direction:column;justify-content:center;line-height:1.25}
 .mx-sub{font-size:calc(12px * var(--k,1));color:var(--muted);font-weight:400}
@@ -137,7 +143,7 @@ abbr.gl:focus-visible{outline:2px solid var(--blue,#3F66A6);outline-offset:1px}
 <div class="app" id="app" data-view="matrix">
   <div class="body">
     <!-- the matrix pane: count by Area · Country · Kind × In force · Partly · Planned. A cell is the list's own filter. -->
-    <nav class="mxp" id="mxp" aria-label="Standards matrix"><div class="mx-body" id="mxBody" data-testid="std-matrix"></div></nav>
+    <nav class="mxp" id="mxp" aria-label="Standards matrix"><div class="brand"><div class="logo" aria-hidden="true">&#9776;</div><div class="brand-name">CB Standards</div></div><div class="mx-body" id="mxBody" data-testid="std-matrix"></div></nav>
     <main class="main" id="main"><div id="std_list" data-testid="std-list"></div></main>
   </div>
 </div>
@@ -156,6 +162,8 @@ function navTo(k){ location.href = '/app.html#/app/' + encodeURIComponent(k); }
 function setSetSec(){ navTo('settings'); }
 </script>
 <script src="/app/list-ctl.js"></script>   <!-- CBList: the list here is a mount on it -->
+<script src="/app/rail-bell.js"></script>   <!-- CBBell.mount: the bell, the same one every app header has -->
+<script src="/app/kural.js"></script>   <!-- CBKural: the kural band, ONE place below the page, the same on every page -->
 <script src="/app/cap-standards.js"></script>   <!-- the register, its vocabularies, the two sheets, stdGoto -->
 <script>
 'use strict';
@@ -266,7 +274,9 @@ function slot(el){
   var s = session(), name = s ? (s.entity || s.name || '') : '';
   el.innerHTML = '<span class="who"><button type="button" class="back" data-act="back" data-testid="std-back" aria-label="Back to the matrix">‹ Matrix</button>'
     + (name ? '<span class="shop" data-testid="shop-name">' + esc(name) + '</span>' : '')
+    + (s ? '<span id="cb-bell-slot" class="bellslot" data-testid="bell-slot"></span>' : '')
     + '<a class="home" href="/" data-testid="std-home" aria-label="Home">⌂<span class="hw">&nbsp;Home</span></a><span id="cb-avatar" data-cb-avatar data-testid="avatar-slot"></span></span>';
+  if (s && typeof CBBell !== 'undefined') { if (!window.__cbBell) window.__cbBell = document.createElement('span'); $('cb-bell-slot').appendChild(window.__cbBell); if (!window.__cbBell.querySelector('[data-testid="bell-btn"]')) CBBell.mount(window.__cbBell, { apiBase: apiBase(), token: s.token, person: CBAvatar && CBAvatar.personOf ? CBAvatar.personOf(s) : null }); }
   if (typeof CBAvatar !== 'undefined') CBAvatar.mount($('cb-avatar'), { person: s ? CBAvatar.personOf(s) : null, items: ['profile', 'support', 'signout'], apiBase: apiBase(), token: s && s.token });
 }
 
@@ -414,6 +424,7 @@ function start(){
   if (q.get('sheet') === 'why' || q.get('sheet') === 'record') openSheet(q.get('sheet'));
   if (q.get('view') === 'list') $('app').setAttribute('data-view', 'list');
 }
+if (window.CBKural) CBKural.mount({ route: 'planning' });
 fetch('/data/compat.json', { cache: 'no-store' })
   .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
   .then((j) => { addCompat(j); }, () => { COMPAT_ERR = 'Compatibility rows could not be read — the standards below are complete; reload to try again.'; })

@@ -60,6 +60,7 @@ svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke
 .side.collapsed{width:68px}
 .side.collapsed .label{display:none}
 .side.collapsed .nav-chev{transform:rotate(180deg)}
+.side.collapsed .nav-btn{position:relative}.side.collapsed .nav-btn .n{position:absolute;margin:0;transform:translate(12px,-12px);padding:0 5px}   /* the rail keeps the badge inside its 68 px */
 .brand{height:56px;padding:0 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line-side)}
 .logo{width:32px;height:32px;flex-shrink:0;border-radius:8px;background:var(--accent);color:var(--accent-ink);display:flex;align-items:center;justify-content:center}
 .brand-name{font-family:var(--serif);font-size:19px;font-weight:700;white-space:nowrap}
@@ -75,7 +76,7 @@ svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke
 
 /* main · a slim bar (shop · Home · the avatar's slot · the page's one action), then the screen */
 .main{flex-grow:1;min-width:0;height:100%;display:flex;flex-direction:column;overflow:hidden}
-.bar{flex-shrink:0;min-height:48px;background:color-mix(in srgb,var(--ground) 96%,transparent);border-bottom:1px solid var(--line);padding:6px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.bar{flex-shrink:0;min-height:56px;background:color-mix(in srgb,var(--ground) 96%,transparent);border-bottom:1px solid var(--line);padding:6px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .crumb{display:flex;align-items:center;gap:8px;min-width:0;font-size:13.5px;color:var(--muted)}
 .crumb a{color:var(--accent-text);text-decoration:none;font-weight:600}
 .crumb a:hover{text-decoration:underline}
@@ -88,11 +89,11 @@ svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke
    the unit's own title row (which keeps room for it) — everything above the rows stays three rows, ≤ 20% of the window. Other screens keep the bar. */
 @media (min-width:761px){
   .main{position:relative}
-  .main.overbar .bar{position:absolute;top:0;right:0;z-index:8;min-height:0;border:0;background:transparent;padding:5px 20px;flex-wrap:nowrap}
+  .main.overbar .bar{position:absolute;top:0;right:0;z-index:8;height:56px;min-height:0;border:0;background:transparent;padding:0 20px;flex-wrap:nowrap}
   .main.overbar .crumb{display:none}
   .main.overbar .home{height:32px}
   .main.overbar .act.sm{min-height:32px}
-  .main.overbar .screen .cbl-title{padding-right:440px}
+  .main.overbar .screen .cbl-title{padding-right:440px;min-height:56px;box-sizing:border-box}   /* the title row is the header line: 56 px, the same as the sidebar's brand */
 }
 .screen{flex:1;min-height:0;overflow-y:auto}
 .screen.flush{overflow:hidden;padding:0}
@@ -368,6 +369,10 @@ $('toggleNav').addEventListener('click', () => {
   $('toggleNav').setAttribute('aria-expanded', String(open));
   $('toggleNav').setAttribute('aria-label', open ? 'Collapse sidebar' : 'Expand sidebar');
 });
+/* ONE frame at every width (Round U): between 761 and 1100 px the sidebar is the icon rail, so the list's tool row has the room it needs and fits one line; the toggle still opens it */
+const railMq = window.matchMedia('(min-width:761px) and (max-width:1100px)');
+function railFit(){ const s = $('side'), t = $('toggleNav'); s.classList.toggle('collapsed', railMq.matches); const open = !s.classList.contains('collapsed'); t.setAttribute('aria-expanded', String(open)); t.setAttribute('aria-label', open ? 'Collapse sidebar' : 'Expand sidebar'); }
+if (railMq.addEventListener) railMq.addEventListener('change', railFit); railFit();
 function whoPaint(){
   const nm = SESS ? (SESS.entity || SESS.name || '') : '';
   const role = typeof crmRole === 'function' ? crmRole() : 'owner';

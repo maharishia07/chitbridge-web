@@ -307,7 +307,7 @@ function crmHome() {
     state: function () { return CRM.state; }, error: function () { return crmErrWords(CRM.err, 'your parties'); }, onRetry: function () { crmLoad(); },
     empty: { title: tx('No parties yet'), sub: tx('Customers appear when you bill them; suppliers when you add them. Use + Add party.') },
     search: function (p) { return [p.display_name, p.nickname, p.legal_name, p.party_no, p.user_id, p.phone, p.email, (p.tax_ids || []).map(function (t) { return t.value; }).join(' '), (p.groups || []).join(' ')].join(' '); },
-    searchHint: tx('Name, User ID, phone or e-mail'),
+    searchHint: tx('Name, ID, phone, e-mail'),
     filters: crmFilters(), sorts: crmPartySorts(), preset: (CRM.route && CRM.route.params && /^(customer|supplier|both)$/.test(CRM.route.params.role || '')) ? { filt: { role: CRM.route.params.role } } : null,
     group: { options: [['none', 'None'], ['rail', 'ChitBridge'], ['role', 'Role'], ['seg', 'Segment']], default: 'none', tid: 'crm-parties',
       by: function (p, mode) {
