@@ -247,6 +247,8 @@ dialog.sheet::backdrop{background:var(--scrim)}
 }
 @media (max-width:620px){
   .shop{display:none}
+  .home .hw{display:none}   /* the phone bar holds the page action, the bell, Home and the avatar on one line: Home is its symbol (as CB Accounts) */
+  .home{padding:0 11px}
   .rec h1{font-size:23px}
   .actbar.pin{position:fixed;left:64px;right:0;bottom:0;z-index:30;background:var(--surface);border-top:1px solid var(--line);padding:8px 12px;gap:6px;flex-wrap:nowrap}
   .actbar.pin .wide-only{display:none}
@@ -368,7 +370,7 @@ function whoPaint(){
   $('who').innerHTML = `<span class="shop" data-testid="shop-name">${esc(nm)}${role !== 'owner' ? ' · ' + esc(role === 'editor' ? 'co-assist' : 'viewer') : ''}</span>`
     + `<span id="crm-bar-act"></span>`
     + `<span id="cb-bell-slot" data-testid="bell-slot"></span>`
-    + `<a class="home" href="/" data-testid="crm-home">⌂ Home</a>`
+    + `<a class="home" href="/" data-testid="crm-home" aria-label="Home">⌂<span class="hw">&nbsp;Home</span></a>`
     + `<span id="cb-avatar" data-cb-avatar data-testid="avatar-slot"></span>`;
   /* R06 — the bell (app/rail-bell.js): ONE host element, mounted once, moved into each repaint of the bar so the stream is not re-ticketed */
   if (typeof CBBell !== 'undefined' && SESS) { if (!window.__cbBell) window.__cbBell = document.createElement('span'); $('cb-bell-slot').appendChild(window.__cbBell);

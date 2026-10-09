@@ -64,6 +64,7 @@ function line(n) {
 
 var CSS = '.cbb{position:relative;display:inline-block}'
   + '.cbb-btn{position:relative;border:1px solid var(--line,#DDD6C6);background:var(--card,#fff);color:var(--ink,#1D1B16);border-radius:9px;font:inherit;font-size:var(--fs-2,14px);min-width:36px;min-height:32px;padding:3px 9px;cursor:pointer}'
+  + '@media (max-width:620px){.cbb-btn{min-width:28px;padding:2px 4px}}'   /* a phone header holds the page action, the bell, Home and the avatar on one line */
   + '.cbb-dot{position:absolute;top:-6px;inset-inline-end:-6px;min-width:18px;height:18px;border-radius:9px;background:var(--disp,#8E3517);color:var(--on-accent,#fff);font-size:var(--fs-1,12px);font-weight:800;line-height:18px;text-align:center;padding:0 4px;box-sizing:border-box}'
   + '.cbb-panel{position:absolute;inset-inline-end:0;top:calc(100% + 6px);z-index:60;width:min(360px,92vw);max-height:70vh;overflow:auto;border:1px solid var(--line,#DDD6C6);border-radius:12px;background:var(--card,#fff);color:var(--ink,#1D1B16);box-shadow:0 8px 24px var(--shadow,rgba(0,0,0,.14));font-size:var(--fs-2,14px);text-align:start}'
   + '.cbb-hd{padding:10px 12px;font-weight:800;border-bottom:1px solid var(--line,#DDD6C6)}'
