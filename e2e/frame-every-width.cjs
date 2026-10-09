@@ -115,6 +115,17 @@ function measure() {
       if (m.tool && m.tool.hasGroup) ok(m.tool.lab, tag + ': the Group control carries its label');
       if (name === 'crm') ok(await p.evaluate(() => !!document.querySelector('.cbl-tools .cbl-gsel select') && !document.querySelector('.cbl-tools .cbl-seg[data-testid^="cbl-group"]')), tag + ': Group is ONE labelled dropdown, not a row of buttons');
       if (m.tool && w >= 957 && name === 'crm') ok(m.tool.rows === 1, tag + ': the tool row is one line (' + m.tool.rows + ' rows)');
+      if (name === 'standards') {   /* Standards tidy (2026-10-09): ONE LINE per row on the laptop, the count table whole, ONE grouping control, no workshop link */
+        const sg = await p.evaluate(() => {
+          const rows = Array.from(document.querySelectorAll('#std_list .cbl-row')), hs = rows.map((r) => r.getBoundingClientRect().height);
+          const cut = Array.from(document.querySelectorAll('#mxBody .mx-rh,#mxBody .mx-ch')).filter((e) => e.scrollWidth > e.clientWidth + 1).map((e) => e.textContent.trim());
+          return { rows: rows.length, tall: hs.length ? Math.max.apply(null, hs) : 0, cut, dim: document.querySelectorAll('[data-dim]').length, kind: !!document.querySelector('#std_list .cbl-hdr') ? Array.from(document.querySelectorAll('#std_list .cbl-hc')).some((h) => /^KIND/i.test(h.innerText.trim())) : null, app: Array.from(document.querySelectorAll('#std_list a[href],[data-testid="std-go"]')).filter((e) => /app[.]html/.test(e.getAttribute('href') || '')).length };
+        });
+        if (w >= 1366) { ok(sg.rows > 0 && sg.tall <= 44, tag + ': standards rows are one line (' + sg.rows + ' rows, tallest ' + Math.round(sg.tall) + ' px)'); ok(sg.kind === true, tag + ': standards has a Kind column'); }
+        ok(sg.dim === 0, tag + ': standards has no second Count by control — the table follows Group by');
+        ok(sg.app === 0, tag + ': standards links nothing into the workshop (app.html)');
+        if (w >= 1366 || w === 390) ok(sg.cut.length === 0, tag + ': the standards count table is whole — no label or head cut (' + JSON.stringify(sg.cut) + ')');
+      }
       if (m.tool && m.tool.searchW) ok(m.tool.searchW >= (m.tool.ph.length * 7.4) - 30, tag + ': the search box is wide enough for its hint "' + m.tool.ph + '" (' + m.tool.searchW + ' px)');
       ok(!m.onlineOverAvatar, tag + ': the Online pill does not sit on the avatar');
       if (m.sideH && m.mainH) ok(Math.abs(m.sideH - m.mainH) <= 2, tag + ': the sidebar header line and the main header line meet (' + m.sideH + ' / ' + m.mainH + ')');
