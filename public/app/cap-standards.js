@@ -499,7 +499,7 @@ var STANDARDS = [
 /* ⭐ THE VOCABULARIES the new fields draw from, and the date the register was last checked. A status word is said here once; the Settings
    card, the Legend and the page all say In force / Partly / Planned. Adding a country is one line in STD_COUNTRIES. */
 var STD_AREAS = [['sell','Selling'],['buy','Buying'],['money','Money & GST'],['books','Books'],['people','People & privacy'],['look','Look & access'],['build','How we build']];
-var STD_KINDS = [['law','Law','you must'],['std','Standard','agreed worldwide'],['prac','Practice','the common way']];
+var STD_KINDS = [['law','Law','you must'],['std','Standard','agreed worldwide'],['prac','Practice','the common way'],['compat','Compatibility','works with']];   /* compat: an outside system we work with — its rows are data/compat.json (stdCompatRows), never this list */
 var STD_COUNTRIES = [['IN','India'],['GLOBAL','Global']];
 var STD_STATUS = [['live','In force','●'],['part','Partly','◐'],['plan','Planned','○']];
 var STD_CHECKED = '2026-10-03';
@@ -551,7 +551,7 @@ var STD_WHY = {
  * one sets UI.setSec, the other navigates — so this resolves which kind the target is rather than making every
  * row know. A "used in Catalogue" that did not open the catalogue would be worse than no link at all.
  */
-var STD_SETTINGS_SECS = { locale:1, appearance:1, governance:1, standards:1 };
+var STD_SETTINGS_SECS = { locale:1, appearance:1, governance:1, standards:1, integrations:1 };
 function stdGoto(key){
   if (!key) return;
   if (STD_SETTINGS_SECS[key]) { setSetSec(key); return; }
@@ -606,7 +606,10 @@ function stdRecordHTML(opts){
        theme's muted ink (--grey), NOT with opacity: opacity cannot be measured against a ground, so a dimmed line could
        fall under AA in some theme and no check would see it (e2e/standards-page.cjs measures this one). */
     var dim = f.s === 'plan';
-    return '<div style="padding:5px 0;border-block-start:1px solid var(--line)">'
+    /* ⭐ T4 (M41): on the page each field is a block that opens to WHAT the standard is (the register's own line) and WHY it applies here */
+    var reg = compact ? null : stdRowFor(f.std);
+    return (compact ? '<div style="padding:5px 0;border-block-start:1px solid var(--line)">'
+        : '<details class="std-fold" data-testid="std-rec-field" style="padding:5px 0;border-block-start:1px solid var(--line)"><summary style="cursor:pointer">')
       + '<div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;font-family:' + "'Space Mono'" + ',ui-monospace,monospace;font-size:var(--fs-1)">'
       +   '<span style="color:var(--blue-2);min-width:96px">' + esc(f.k) + '</span>'
       +   '<span style="color:' + (dim ? 'var(--grey)' : 'var(--on-card)') + ';word-break:break-all;flex:1;min-width:0">' + esc(f.v) + '</span>'
@@ -617,8 +620,10 @@ function stdRecordHTML(opts){
          the smallest size the type scale admits, and it moves with the reader's text-size setting. */
       +   (f.std ? '<span style="font-size:var(--fs-1);font-weight:800;letter-spacing:.04em;text-transform:uppercase;background:' + b[0] + ';color:' + b[1] + ';border-radius:4px;padding:1px 6px">' + esc(f.std) + ' · ' + b[2] + '</span>' : '')
       + '</div>'
-      + (compact || !f.c ? '' : '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px;line-height:1.5">' + f.c + '</div>')
-      + '</div>';
+      + (compact ? '</div>' : '</summary>'
+        + (reg ? '<div style="font-size:var(--fs-1);color:var(--on-card);margin-top:3px;line-height:1.5"><b>' + esc(reg.n) + '</b> — ' + esc(reg.w) + '</div>' : '')
+        + (f.c ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px;line-height:1.5">' + f.c + '</div>' : '')
+        + '</details>');
   }).join('');
 
   return '<div style="border:1px solid var(--line);border-radius:9px;padding:10px 12px;margin-bottom:9px">'
@@ -629,8 +634,25 @@ function stdRecordHTML(opts){
     +   'shown rather than omitted, because a demonstration that quietly includes what we have not done is worse '
     +   'than the list it was meant to make concrete.'
     + '</div>'
+    + (compact ? '' : stdFoldBar())
     + rows
     + '</div>';
+}
+/** the register row a record field's standard names ("Incoterms · UN/LOCODE" → Incoterms; "HS (WCO)" → HS), or null */
+function stdRowFor(std){
+  var key = String(std || '').split(/ · | \(/)[0].trim();
+  if (!key || /^—/.test(key)) return null;
+  for (var i = 0; i < STANDARDS.length; i++) if (STANDARDS[i].n.indexOf(key) === 0) return STANDARDS[i];
+  for (var j = 0; j < STANDARDS.length; j++) if (STANDARDS[j].n.indexOf(key) >= 0) return STANDARDS[j];
+  return null;
+}
+/** Expand all · Collapse all for the folded blocks of the sheet it sits in (self-contained: works on any page that shows the sheet) */
+function stdFoldBar(){
+  var b = function(open, label, tid){
+    return '<button type="button" data-testid="' + tid + '" style="font:inherit;font-size:var(--fs-1);font-weight:700;border:1px solid var(--line);background:var(--card,transparent);color:var(--on-card);border-radius:8px;padding:5px 10px;cursor:pointer;min-height:32px"'
+      + ' onclick="var r=this.parentNode.parentNode;Array.prototype.forEach.call(r.querySelectorAll(&quot;details.std-fold&quot;),function(d){d.open=' + open + ';})">' + tx(label) + '</button>';
+  };
+  return '<div style="display:flex;gap:6px;margin:0 0 8px">' + b(true, 'Expand all', 'std-fold-all') + b(false, 'Collapse all', 'std-fold-none') + '</div>';
 }
 
 /**
@@ -654,14 +676,17 @@ function stdWhyHTML(opts){
   };
   var col = function(title, items, ink){
     return card(head(title, ink) + items.map(function(x){
-      return '<div style="padding:' + (compact ? '4px' : '6px') + ' 0;border-block-start:1px solid var(--line)">'
+      /* ⭐ T3 (M41): the bold line is the gist, the story folds under it — Expand all / Collapse all above */
+      if (!compact) return '<details class="std-fold" data-testid="std-why-fold" style="padding:6px 0;border-block-start:1px solid var(--line)"><summary style="cursor:pointer">'
+        + '<b style="font-size:var(--fs-2);color:var(--on-card)">' + x[0] + '</b></summary>'
+        + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px;line-height:1.55">' + x[1] + '</div></details>';
+      return '<div style="padding:4px 0;border-block-start:1px solid var(--line)">'
         + '<b style="font-size:var(--fs-2);color:var(--on-card)">' + x[0] + '</b>'
-        + (compact ? '' : '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px;line-height:1.55">' + x[1] + '</div>')
         + '</div>';
     }).join(''));
   };
 
-  return card('<div style="font-size:var(--fs-2);line-height:1.65;color:var(--on-card)">'
+  return (compact ? '' : stdFoldBar()) + card('<div style="font-size:var(--fs-2);line-height:1.65;color:var(--on-card)">'
       + '<b>A chit crosses a boundary.</b> It leaves one company and lands in another that shares no system with '
       + 'it. Every convention we invent is one the other side has to be taught; every standard we adopt arrives '
       + 'already legible.'
@@ -683,4 +708,190 @@ function stdCounts(){
   var n = { live:0, part:0, plan:0 };
   STANDARDS.forEach(function(x){ n[x.s]++; });
   return n;
+}
+
+/**
+ * ⭐ COMPATIBILITY — the 4th Kind (M41 · BACKLOG T49). Every outside system we work with is a row of the SAME register shape, so the page's
+ * list, matrix, filters and Copy treat it like any standard. The rows live in ONE file, public/data/compat.json, which the Compatibility lab
+ * (N04) reads too — never a second list here. This maps a compat.json row onto a register row; a row the file gets wrong is dropped, not guessed.
+ *   status works → In force · partly → Partly · planned → Planned.   proof live → "Tested live <date>" · stand-in → "Proven on a stand-in" · not-yet → "Not yet".
+ */
+var STD_COMPAT_STATUS = { works: 'live', partly: 'part', planned: 'plan' };
+var STD_COMPAT_PROOF = { live: 'Tested live', 'stand-in': 'Proven on a stand-in', 'not-yet': 'Not yet' };
+var STD_COMPAT_FIT = { 'one-to-one': 'One-to-one', alongside: 'Works alongside', gap: 'Gap' };
+function stdCompatRows(json){
+  var rows = (json && Array.isArray(json.rows)) ? json.rows : [];
+  var areas = STD_AREAS.map(function(a){ return a[0]; }), ctry = STD_COUNTRIES.map(function(c){ return c[0]; });
+  return rows.filter(function(x){
+    return x && x.system && x.service && x.p && STD_COMPAT_STATUS[x.status] && areas.indexOf(x.area) >= 0 && Array.isArray(x.c) && x.c.length && x.c.every(function(c){ return ctry.indexOf(c) >= 0; });
+  }).map(function(x){
+    var s = STD_COMPAT_STATUS[x.status];
+    var proof = (STD_COMPAT_PROOF[x.proof] || 'Not yet') + (x.proof_at ? ' ' + x.proof_at : '') + (x.proof_ref ? ' — ' + x.proof_ref : '');
+    return { a: x.area, k: 'compat', c: x.c.slice(), p: x.p, m: s === 'live' ? undefined : (x.m || x.roadmap || 'Not built yet'),
+      g: 'Compatibility', n: x.system + ' — ' + x.service, w: (STD_COMPAT_FIT[x.fit] || x.fit || '') + ' · ' + x.service,
+      ex: '—', s: s, note: x.roadmap || x.note || undefined, at: 'Settings › Integrations', go: 'integrations',
+      proof: proof, fit: STD_COMPAT_FIT[x.fit] || x.fit, compat: x.id };
+  });
+}
+
+/**
+ * ⭐ THE GLOSSARY (M41 · BACKLOG T2): every abbreviation the Standards page shows, with its full name and one line of meaning — one list,
+ * here, reused by every place that paints the register's words (stdGloss). e2e/standards-page.cjs scans every word the page can show and
+ * fails on an abbreviation with no entry. STD_NOT_ABBR = capitals that are emphasis or a document name, not an abbreviation.
+ *   [term, full name, what it means]
+ */
+var STD_GLOSSARY = [
+  ['AA', 'WCAG level AA', 'The middle level of the web accessibility rules — the one most laws ask for'],
+  ['AAL2', 'Authenticator Assurance Level 2', 'Sign-in with two factors, as NIST defines it'],
+  ['AE', 'United Arab Emirates (country code)', 'The ISO 3166 code for the UAE'],
+  ['AED', 'UAE dirham', 'The currency of the UAE (ISO 4217 code)'],
+  ['ANSI', 'American National Standards Institute', 'The body that publishes US national standards'],
+  ['API', 'Application programming interface', 'The door another program uses to talk to ours'],
+  ['APG', 'ARIA Authoring Practices Guide', 'How to build accessible controls, by the W3C'],
+  ['AS', 'Accounting Standard (India)', 'The ICAI rules for Indian businesses'],
+  ['BCP', 'Best Current Practice', 'An internet standard series; BCP 47 names languages'],
+  ['BIS', 'Bureau of Indian Standards', 'India\'s national standards body'],
+  ['CA', 'Chartered Accountant', 'A qualified accountant who audits and files for you'],
+  ['CB', 'ChitBridge', 'This platform'],
+  ['CGST', 'Central GST', 'The part of GST that goes to the central government'],
+  ['CI', 'Continuous integration', 'The server that runs every test on every change'],
+  ['CLDR', 'Common Locale Data Repository', 'The world\'s shared data for dates, numbers and names by country'],
+  ['CN', 'Credit note', 'A voucher that reduces what a buyer owes'],
+  ['CRM', 'Customer relationship management', 'Your list of parties and everything said with them'],
+  ['CSS', 'Cascading Style Sheets', 'The language that lays out a web page'],
+  ['CSV', 'Comma-separated values', 'A plain spreadsheet file any program can open'],
+  ['CV', 'Contra voucher', 'Money moved between your own cash and bank'],
+  ['DN', 'Debit note', 'A voucher that increases what a buyer owes'],
+  ['ECE', 'UN Economic Commission for Europe', 'Publishes trade codes, such as units (Rec 20)'],
+  ['ECMA-402', 'ECMAScript Internationalization API', 'How a browser formats dates, numbers and money by country'],
+  ['ERP', 'Enterprise resource planning', 'Large business software, such as SAP or NetSuite'],
+  ['EU', 'European Union', 'The 27-country union in Europe'],
+  ['FI', 'Financial information', 'Account data, in the Account Aggregator\'s schema'],
+  ['FIU', 'Financial Information User', 'A business allowed to receive your bank data with your consent'],
+  ['FOB', 'Free On Board', 'An Incoterm: the seller\'s duty ends once goods are on the ship'],
+  ['GDPR', 'General Data Protection Regulation', 'The EU\'s privacy law'],
+  ['GDSN', 'Global Data Synchronisation Network', 'GS1\'s network for sharing product data'],
+  ['GLEIF', 'Global Legal Entity Identifier Foundation', 'Keeps the world list of LEIs'],
+  ['GNU', 'GNU Project', 'Free software tools, such as gettext'],
+  ['GS1', 'GS1', 'The body behind barcodes and product numbers worldwide'],
+  ['GSP', 'GST Suvidha Provider', 'A licensed company that files GST for software'],
+  ['GST', 'Goods and Services Tax', 'India\'s tax on sales'],
+  ['GSTIN', 'GST Identification Number', 'Your 15-character GST registration number'],
+  ['GSTN', 'GST Network', 'The government\'s GST computer system'],
+  ['GSTR', 'GST Return', 'A GST filing'],
+  ['GSTR-1', 'GST Return 1', 'Your monthly list of sales'],
+  ['GSTR-2B', 'GST Return 2B', 'The input credit your suppliers have filed for you'],
+  ['GSTR-3B', 'GST Return 3B', 'Your monthly GST summary and payment'],
+  ['GTIN', 'Global Trade Item Number', 'The number under a barcode'],
+  ['HKQR', 'Hong Kong FPS QR', 'Hong Kong\'s payment QR code'],
+  ['HR', 'Human resources', 'Your staff records'],
+  ['HS', 'Harmonized System', 'The world\'s customs codes for goods'],
+  ['HSN', 'Harmonized System of Nomenclature', 'India\'s HS-based codes on a GST invoice'],
+  ['IAM', 'Identity and access management', 'Who can sign in, and what each person may do'],
+  ['IANA', 'Internet Assigned Numbers Authority', 'Keeps the world list of time zones'],
+  ['IAS', 'International Accounting Standard', 'The world\'s accounting rules (IFRS family)'],
+  ['ICC', 'International Chamber of Commerce', 'Publishes Incoterms and trade rules'],
+  ['ID', 'Identifier', 'A number or code that names one thing'],
+  ['IEC', 'International Electrotechnical Commission', 'Publishes standards with ISO'],
+  ['IEEE', 'Institute of Electrical and Electronics Engineers', 'Publishes engineering standards'],
+  ['II', 'Part II', 'The second part of a schedule'],
+  ['III', 'Schedule III', 'The layout of a company\'s balance sheet and P&L in India'],
+  ['IN', 'India (country code)', 'The ISO 3166 code for India'],
+  ['INCITS', 'InterNational Committee for Information Technology Standards', 'A US standards committee'],
+  ['INMAA', 'Chennai port (UN/LOCODE)', 'The world code for Chennai'],
+  ['INR', 'Indian rupee', 'The currency of India (ISO 4217 code)'],
+  ['INV-01', 'e-invoice schema INV-01', 'India\'s e-invoice format'],
+  ['IRN', 'Invoice Reference Number', 'The number the GST portal gives an e-invoice'],
+  ['IRP', 'Invoice Registration Portal', 'The GST portal that registers e-invoices'],
+  ['ISA', 'International Standard on Auditing', 'The world\'s audit rules'],
+  ['ISBP', 'International Standard Banking Practice', 'How banks check trade documents'],
+  ['ISO', 'International Organization for Standardization', 'Publishes most world standards'],
+  ['JSON', 'JavaScript Object Notation', 'A plain text data format'],
+  ['JV', 'Journal voucher', 'An entry that is not a sale, purchase, receipt or payment'],
+  ['JWT', 'JSON Web Token', 'A signed pass that proves who is signed in'],
+  ['KGM', 'Kilogram (UN/ECE unit code)', 'The world code for a kilogram'],
+  ['KGS', 'Kilograms (GST unit code)', 'The GST code for kilograms'],
+  ['LEI', 'Legal Entity Identifier', 'A world-wide number for a company'],
+  ['LOCODE', 'UN Location Code', 'The world code for a port or city'],
+  ['LTR', 'Left to right', 'Writing direction, as in English'],
+  ['MAA', 'Chennai (IATA code)', 'The airport code for Chennai'],
+  ['MDM', 'Master data management', 'Keeping one true copy of product and party data'],
+  ['MIT', 'MIT License', 'A free software licence'],
+  ['MJ', 'Manual journal', 'An entry typed by hand, so it is checked first'],
+  ['MPM', 'Merchant-presented mode', 'A QR the shop shows and the customer scans'],
+  ['NIST', 'US National Institute of Standards and Technology', 'Publishes security rules such as SP 800-63'],
+  ['NPCI', 'National Payments Corporation of India', 'Runs UPI'],
+  ['OIDC', 'OpenID Connect', 'The standard behind "Sign in with Google"'],
+  ['OS', 'Operating system', 'Windows, Android, iOS and so on'],
+  ['OTH', 'Others (GST unit code)', 'The GST unit for anything without its own code'],
+  ['PAY', 'Payment voucher', 'Money you paid out'],
+  ['PEPPOL', 'Pan-European Public Procurement Online', 'A network for sending e-invoices between businesses'],
+  ['PIM', 'Product information management', 'Keeping product details in one place'],
+  ['PIX', 'Pix', 'Brazil\'s instant payment system'],
+  ['POST', 'HTTP POST', 'A request that sends data to a server'],
+  ['PV', 'Purchase voucher', 'A bill from a supplier'],
+  ['PY', 'Payment voucher', 'Money you paid out'],
+  ['QR', 'Quick Response code', 'A square barcode a phone can scan'],
+  ['RBAC', 'Role-based access control', 'What you may do depends on your role'],
+  ['RBI', 'Reserve Bank of India', 'India\'s central bank'],
+  ['RFC', 'Request for Comments', 'An internet standard'],
+  ['RLS', 'Row-level security', 'The database shows each business only its own rows'],
+  ['RTL', 'Right to left', 'Writing direction, as in Arabic'],
+  ['RV', 'Receipt voucher', 'Money you received'],
+  ['SA', 'Standard on Auditing (India)', 'India\'s audit rules, based on ISA'],
+  ['SCIM', 'System for Cross-domain Identity Management', 'How an HR system creates and removes staff accounts'],
+  ['SGST', 'State GST', 'The part of GST that goes to the state'],
+  ['SKU', 'Stock-keeping unit', 'Your own code for one product'],
+  ['SP', 'Special Publication (NIST)', 'A NIST rule book'],
+  ['SV', 'Sales voucher', 'A sale'],
+  ['TCMS', 'Test case management system', 'Where test cases and results are kept'],
+  ['TLV', 'Tag-length-value', 'How fields are packed inside a payment QR'],
+  ['UAE', 'United Arab Emirates', 'A country in the Gulf'],
+  ['UBL', 'Universal Business Language', 'A world standard for invoices and orders in XML'],
+  ['UCP', 'Uniform Customs and Practice for Documentary Credits', 'The ICC rules for letters of credit'],
+  ['UEN', 'Unique Entity Number', 'Singapore\'s company number'],
+  ['UN', 'United Nations', 'Publishes world trade codes'],
+  ['UPI', 'Unified Payments Interface', 'India\'s instant phone payments'],
+  ['UQC', 'Unit Quantity Code', 'The GST code for a unit, such as KGS'],
+  ['URL', 'Web address', 'Where a page lives on the internet'],
+  ['US', 'United States', 'The country'],
+  ['UTF-16', 'UTF-16', 'A way of storing text as numbers'],
+  ['UTS', 'Unicode Technical Standard', 'UTS #35 is how locale data is written'],
+  ['VAT', 'Value-added tax', 'A sales tax, as in the UAE'],
+  ['WAI-ARIA', 'Web Accessibility Initiative — Accessible Rich Internet Applications', 'How a screen reader understands a control'],
+  ['WCAG', 'Web Content Accessibility Guidelines', 'The world rules for accessible web pages'],
+  ['WCO', 'World Customs Organization', 'Keeps the HS codes'],
+  ['WDV', 'Written-down value', 'Depreciation on what is left each year'],
+  ['XML', 'Extensible Markup Language', 'A text data format with tags']
+];
+var STD_NOT_ABBR = ['BEFORE', 'BETWEEN', 'CAN', 'IS', 'COMMAND', 'DELETES', 'FINER', 'FORCE', 'FORMAT', 'ISSUE', 'MANUAL', 'MEANS', 'MET', 'NOT', 'OTHER', 'PLAN',
+  'RUNNER', 'SAME', 'SCHEMA', 'SCHEME', 'SUPERSEDED', 'THIS', 'WAS', 'ZONE', 'UBL-MAPPING-2026-09-05'];
+/* an abbreviation: two or more capitals or digits from a word start, joined by hyphens (GSTR-2B · ECMA-402 · WAI-ARIA); mixed case (JUnit, OAuth) is a name */
+var STD_ABBR_RE = /\b[A-Z][A-Z0-9]+(?:-[A-Z0-9]+)*\b/g;
+var _stdGl = null;
+function stdGlossary(term){
+  if (!_stdGl){ _stdGl = {}; STD_GLOSSARY.forEach(function(g){ _stdGl[g[0]] = g; }); }
+  return _stdGl[term] || null;
+}
+/** every abbreviation in a text that is not an emphasis word (e2e/standards-page.cjs reads this) */
+function stdAbbrs(text){
+  var out = [];
+  String(text == null ? '' : text).replace(/<[^>]+>/g, ' ').replace(STD_ABBR_RE, function(m){ if (STD_NOT_ABBR.indexOf(m) < 0) out.push(m); return m; });
+  return out;
+}
+/**
+ * Wrap each known abbreviation in already-escaped HTML in <abbr class="gl" tabindex="0"> with its full name as the title. Text inside a tag,
+ * inside <code> and inside an existing <abbr> is left alone. The page shows the meaning on a tap or Enter (a phone has no hover).
+ */
+function stdGloss(html, o){
+  var inCode = 0, tab = !(o && o.focus === false) ? ' tabindex="0"' : '';   /* {focus:false}: a list cell — one tab stop per row, not per term */
+  return String(html == null ? '' : html).split(/(<[^>]+>)/).map(function(seg){
+    if (seg.charAt(0) === '<'){ if (/^<(code|abbr)\b/i.test(seg)) inCode++; else if (/^<\/(code|abbr)>/i.test(seg)) inCode = Math.max(0, inCode - 1); return seg; }
+    if (inCode) return seg;
+    return seg.replace(STD_ABBR_RE, function(m){
+      var g = stdGlossary(m); if (!g) return m;
+      var t = g[1] + (g[2] ? ' — ' + g[2] : '');
+      return '<abbr class="gl"' + tab + ' data-gl="' + m + '" title="' + String(t).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;') + '">' + m + '</abbr>';
+    });
+  }).join('');
 }
