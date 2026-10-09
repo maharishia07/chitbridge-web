@@ -45,7 +45,7 @@
   };
   /* CB Commerce: one box per pillar. The main row sits in the Selling section, the supporting row in the Running section; a manifest entry's `pillar` decides its box (none: its area's default) */
   var PILLARS = { selling: ['marketing', 'sales', 'finance', 'accounting'], running: ['operations', 'people', 'trade'] };
-  var PNAME = { marketing: 'Marketing', sales: 'Sales', finance: 'Finance', accounting: 'Accounting', operations: 'Operations', people: 'People', trade: 'Trade' };
+  var PNAME = { marketing: 'Marketing', sales: 'Sales', finance: 'Finance', accounting: 'Accounts', operations: 'Operations', people: 'People', trade: 'Trade' };
   var PDEFAULT = { selling: 'sales', running: 'accounting', labs: 'labs', setup: 'setup' };
   var AREAS = ['home', 'selling', 'running', 'labs', 'setup'];
   var ICON = { home: '⌂', selling: '▤', running: '₹', labs: '◈', setup: '⚙' };
