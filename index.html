@@ -9,6 +9,7 @@
      What this page owns is the HOME area: the alerts (one browser, one shop · the ledger's waiting posts · a counter paired to
      another shop) and "The rail" widget. Every figure is the server's, one budgeted read each (I19); a read that does not exist yet
      paints nothing — never a made-up number. e2e/index-page.cjs proves it at 1366 and 390.
+     The ROADMAP (public/app/roadmap.js) is drawn from the same manifest and reads no session: the page is also the front door before sign-in.
      The earlier design (docs/design/index-page/cb-index.md) is superseded by the shell (designs-inbox/cb-shell-2026-10-07). -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
 <style>
@@ -69,6 +70,7 @@ body{margin:0;background:var(--page);color:var(--ink);font-family:var(--f-ui,'IB
 <script src="/app/signin-ui.js"></script>   <!-- CBSignin.mount: THE ONE SIGN-IN WINDOW (M14) — the door above opens it here, in place -->
 <script src="/app/one-person.js"></script>  <!-- CBOnePerson: one browser, one shop -->
 <script src="/app/kural.js"></script>       <!-- CBKural: the kural band; the shell gives it its place -->
+<script src="/app/roadmap.js"></script>    <!-- CBRoadmap: the roadmap, the fit diagram and the rail table, drawn from the manifest, for a stranger too -->
 <script src="/app/sides.js"></script>      <!-- CBSides: the two reference panels; the shell mounts them -->
 <script src="/app/accounts-shell.js"></script>   <!-- CBAction + CBConfirm: the bell's Clear all is a write, asked first -->
 <script src="/app/rail-bell.js"></script>   <!-- CBBell (R06): the shell mounts it in its bell slot — the dot + the list, from the push stream -->
@@ -107,6 +109,12 @@ function mountShell(){
     signin: { surface: 'index', need: 'person', onIn: function(){ SESS = session(); MINE = SESS ? CBOnePerson.who(SESS) : null; open_(); } },
     avatar: { onSignIn: signinOpen }
   });
+  /* Home's slot: the rail widget (signed in) above the ROADMAP, which is for everyone, signed in or not, and reads no shop's figure */
+  var home = SHELL.slots.home;
+  if (home) {
+    home.innerHTML = '<div id="railbox"></div><div id="roadmap" data-testid="roadmap-host"></div>';
+    SHELL.ready.then(function(){ if (window.CBRoadmap) CBRoadmap.mount(document.getElementById('roadmap'), SHELL.manifest()); });
+  }
   return SHELL;
 }
 function signinOpen(){
@@ -154,7 +162,7 @@ function booksAlert(){
 
 /* ── THE RAIL: the Home widget. Its one read and its Open target come from the manifest's `rail` (null = not drawn). ── */
 function railPaint(r){
-  var host = SHELL && SHELL.slots.home; if (!host) return;
+  var host = document.getElementById('railbox'); if (!host) return;
   var m = SHELL.manifest(), rail = (m && m.rail) || {};
   var sup = n1(r && r.suppliers), cus = n1(r && r.customers), fin = n1(r && r.in), fout = n1(r && r.out), stuck = n1(r && r.stuck);
   if (sup == null && cus == null) { host.innerHTML = ''; return; }
