@@ -124,8 +124,8 @@ function bkCss() {
     '#bk_lt .lg-facts > span:not(:last-child)::after{content:"·";margin:0 7px;opacity:.7}',
     /* phone: the tree is page one, the ledger page two (list → detail → back); no squeezed side panel */
     '@container lt (max-width:620px){#bk_lt .lt-tree{width:100%;border-top:0}#bk_lt .lt-rz,#bk_lt [data-lt="fold"]{display:none}#bk_lt.has-sel .lt-tree{display:none}#bk_lt:not(.has-sel) .lt-pane{display:none}#bk_lt .tn{min-height:44px;padding-block:10px}#bk_lt .tn.band{min-height:40px}#bk_lt .lt-tools{padding:8px 16px}#bk_lt .cbl-nrow > span:not(:first-child){width:auto!important;min-width:76px;padding-inline-start:10px;white-space:nowrap}',
-    /* the ledger page's title row on a phone: ‹ title … home · avatar on line one; the period, the figures and the notice on line two (the slot dissolves so each of its buttons takes its own place) */
-    '#bk_lt .cbl-title .cbl-slot{display:contents!important}#bk_lt .cbl-title h1{flex:1 1 calc(100% - 150px);min-width:0;order:0}#bk_lt .cbl-title [data-lt="back"]{order:-1}#bk_lt .cbl-title .who{order:1}#bk_lt .cbl-title [data-lt="statement"],#bk_lt .cbl-title > .cbl-anchor,#bk_lt .cbl-title > .cbl-chip{order:2}}',
+    /* the ledger page's title row on a phone: ‹ title … bell · home · avatar on line one (R06: the bell takes ~36 px of it); the period, the figures and the notice on line two (the slot dissolves so each of its buttons takes its own place) */
+    '#bk_lt .cbl-title .cbl-slot{display:contents!important}#bk_lt .cbl-title h1{flex:1 1 calc(100% - 186px);min-width:0;order:0}#bk_lt .cbl-title .cbb-btn{min-width:0;height:34px;padding:0 6px;font-size:15px;line-height:1}#bk_lt .cbl-title [data-lt="back"]{order:-1}#bk_lt .cbl-title .who{order:1}#bk_lt .cbl-title [data-lt="statement"],#bk_lt .cbl-title > .cbl-anchor,#bk_lt .cbl-title > .cbl-chip{order:2}}',
     /* on a phone the tapped view covers the rail — the way back must be visible (cb-design: .dback is desktop-hidden) */
     '#bk_back{display:none}',
     '.appwrap.m .panel.showdetail #bk_back{display:block;padding:10px 13px 0}',
@@ -354,12 +354,43 @@ function bkReverseLine(l, partyId) {
   });
 }
 function bkStmtReverse(partyId, i) { var st = BK.stmt[partyId]; bkReverseLine(st && st.lines && st.lines[i], partyId); }
-/** the chips a line carries after M29: "reversed by MJ/… — reason" · the advice state (none → nothing) */
+/** the chips a line carries after M29: "reversed by MJ/… — reason" · the advice state (M30: CBAdvice's words — none → nothing) · the Advice button on a payment line */
 function bkLineChips(l, tid) {
   var out = '';
   if (l && l.reversed_by) out += ' <span class="cbl-chip" data-testid="' + esc(tid) + '-rev">' + esc(tx('reversed by') + ' ' + l.reversed_by + (l.reversed_why ? ' — ' + l.reversed_why : '')) + '</span>';
-  if (l && l.advice && l.advice.state && l.advice.state !== 'none') out += ' <span class="cbl-chip" data-testid="' + esc(tid) + '-adv">' + esc(tx('advice') + ' ' + tx(l.advice.state)) + '</span>';
+  if (l && l.advice && l.advice.state && l.advice.state !== 'none') out += ' <span class="cbl-chip" data-testid="' + esc(tid) + '-adv">' + esc(bkAdviceWords(l.advice)) + '</span>';
+  /* M30: every recorded payment line offers the advice (send on rail · share off rail); whether THIS login may is the server's answer, painted by the unit */
+  if (l && l.payment_id && !l.reversed_by && !l.reverses_entry_id && typeof CBAdvice !== 'undefined')
+    out += ' <button type="button" class="cbl-btn" data-testid="' + esc(tid) + '-advbtn" data-adv="' + esc(l.payment_id) + '" onclick="event.stopPropagation();bkAdviceToggle(this)">✉ ' + esc(tx('Advice')) + '</button>';
   return out;
+}
+/** the chip words for an advice state — the unit's own (one vocabulary on the row and under the outcome) */
+function bkAdviceWords(a) { return typeof CBAdvice !== 'undefined' ? CBAdvice.stateWords(a) : (a && a.state ? tx('advice') + ' ' + tx(a.state) : ''); }
+/**
+ * M30 · the Advice button on a statement row: mounts CBAdvice (app/rail-advice.js) right under the row's details, once; a second press folds it.
+ * The unit reads GET /payments/:id/advice itself and paints Send / Share with the server's may; its cb:rail / onDone flips THIS row's chip
+ * locally (every line object that is this payment, on the CRM table and the ledger list alike), never the screen.
+ */
+function bkAdviceToggle(btn) {
+  var pid = btn && btn.getAttribute('data-adv'); if (!pid) return;
+  var cell = btn.closest('td,div') || btn.parentNode, host = cell.querySelector('[data-adv-host="' + pid + '"]');
+  if (host) { host.remove(); return; }
+  host = document.createElement('div'); host.setAttribute('data-adv-host', pid); host.setAttribute('data-testid', 'adv-host'); host.style.marginTop = '6px';
+  btn.insertAdjacentElement('afterend', host);
+  var party = BK.lt && BK.lt.sel && BK.lt.sel.party ? bkPartyLabel(BK.lt.sel.party) : '';
+  CBAdvice.mount(host, { payment_id: pid, party: party || undefined, context: { host: typeof ACC !== 'undefined' ? 'accounts' : (typeof CRM !== 'undefined' ? 'crm' : 'app') },
+    onDone: function (res) { bkAdviceFlip(pid, res, cell); } });
+}
+/** the row after an advice went: the line objects remember the state, the chip beside the button repaints — no re-read */
+function bkAdviceFlip(pid, res, cell) {
+  var lines = [];
+  Object.keys(BK.stmt || {}).forEach(function (k) { ((BK.stmt[k] && BK.stmt[k].lines) || []).forEach(function (l) { if (l.payment_id === pid) lines.push(l); }); });
+  ((BK.lt && BK.lt.r && BK.lt.r.lines) || []).forEach(function (l) { if (l.payment_id === pid) lines.push(l); });
+  lines.forEach(function (l) { l.advice = Object.assign({}, l.advice || {}, res); });
+  var chip = cell && cell.querySelector('[data-testid$="-adv"]'), b = cell && cell.querySelector('[data-adv="' + pid + '"]');
+  var words = bkAdviceWords(res);
+  if (chip) chip.textContent = words;
+  else if (b && words) { chip = document.createElement('span'); chip.className = 'cbl-chip'; chip.setAttribute('data-testid', (b.getAttribute('data-testid') || '').replace(/-advbtn$/, '-adv')); chip.textContent = words; b.insertAdjacentElement('beforebegin', chip); b.insertAdjacentText('beforebegin', ' '); }
 }
 function statementHTML(r, partyId) {
   var c = r && r.currency, pid = partyId || (r && r.party_id) || '';
@@ -608,7 +639,11 @@ function payOutcomePaint(r) {
   if (bills.length) html += '<p data-testid="pay_settled" style="margin:0">' + esc(txf('Settled: {bills}', { bills: bills.join(', ') })) + '</p>';
   if (o.balance_minor != null) html += '<p data-testid="pay_balance" style="margin:0;color:var(--grey)">' + esc(txf('Balance: {bal}', { bal: bkOwes(o.balance_minor) })) + (r.posted && r.posted.entry_no ? ' · <span class="mono">' + esc(r.posted.entry_no) + '</span>' : '') + '</p>';
   if (cheque) html += '<div id="pay_chq_steps" data-testid="pay_chq_steps">' + bkChequeStepsHTML(BK.cheques[PAY.id]) + '</div><div id="chq_out" data-testid="chq_out" style="color:var(--warn-2);font-size:var(--fs-1)"></div>';
+  /* M30: the advice line — "Advice sent to Tally Test ✓" / "Ravi Stores is not on ChitBridge — share the advice" — the unit, from the block the record answered (no second read) */
+  if (r.advice) html += '<div id="pay_advice" data-testid="pay_advice"></div>';
   pb.innerHTML = html;
+  if (r.advice && typeof CBAdvice !== 'undefined') CBAdvice.mount(document.getElementById('pay_advice'), { payment_id: PAY.id, advice: r.advice, party: PAY.name, context: { host: typeof ACC !== 'undefined' ? 'accounts' : 'crm' },
+    onDone: function (res) { bkAdviceFlip(PAY.id, res, null); } });
   pf.innerHTML = '<button class="pri" data-testid="pay_done" onclick="closeModal()">' + tx('Done') + '</button>';
   booksAfterPay();   /* the statement, the dues chip and the record's header repaint now, behind the outcome */
 }

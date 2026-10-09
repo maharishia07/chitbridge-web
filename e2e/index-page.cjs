@@ -31,7 +31,10 @@ const T = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', 
 /* ⭐ THE READS THE PAGE MAY MAKE: each has a line in chitbridge-api/round-trips.budget.json (DB10, I19) — or is the shell's own N19 read.
    A new read here needs its budget line there first. */
 const BUDGETED = ['/api/entities/header', '/api/books/health',
-  '/api/entities/me'];   /* ⚠️ not this page's: CBAvatar hydrates its prefs from it on every page it mounts (public/app/avatar.js) — it has NO budget line yet (named in the N18 PR) */
+  '/api/entities/me',
+  /* R06: the bell in the shell's slot (CBBell) — the Activity badge (budgeted: GET /api/notifications) and the push ticket + stream, which
+     replace polling; ⚠️ POST /api/events/ticket and GET /api/events/stream have NO budget line yet (named in the R06 PR) */
+  '/api/notifications', '/api/events/ticket', '/api/events/stream'];   /* ⚠️ not this page's: CBAvatar hydrates its prefs from it on every page it mounts (public/app/avatar.js) — it has NO budget line yet (named in the N18 PR) */
 
 /* a planted manifest: facts URLs on two cards, the rail with its read and its door */
 const PLANTED = { version: 2,

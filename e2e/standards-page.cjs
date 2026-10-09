@@ -36,11 +36,17 @@ const J = (r, status, o) => r.fulfill({ status, contentType: 'application/json',
 function readRegister(file) {
   const ctx = { tx: (s) => s, esc: (s) => String(s) };
   vm.createContext(ctx);
-  vm.runInContext(fs.readFileSync(file, 'utf8') + ';this.R = { S: STANDARDS, A: STD_AREAS, K: STD_KINDS, C: STD_COUNTRIES, ST: STD_STATUS, CH: STD_CHECKED, WHY: STD_WHY, REC: STD_RECORD };', ctx);
+  vm.runInContext(fs.readFileSync(file, 'utf8') + ';this.R = { S: STANDARDS, A: STD_AREAS, K: STD_KINDS, C: STD_COUNTRIES, ST: STD_STATUS, CH: STD_CHECKED, WHY: STD_WHY, REC: STD_RECORD, compat: stdCompatRows, abbrs: stdAbbrs, gl: stdGlossary, GL: STD_GLOSSARY };', ctx);
   return ctx.R;
 }
 const REG = readRegister(path.join(PUB, 'app', 'cap-standards.js'));
 const COUNT = { live: 0, part: 0, plan: 0 }; REG.S.forEach((r) => { COUNT[r.s]++; });
+/* M41: the page lists the register AND the Compatibility rows of public/data/compat.json (the 4th Kind); ALL is what the list and the matrix hold */
+const COMPAT_JSON = JSON.parse(fs.readFileSync(path.join(PUB, 'data', 'compat.json'), 'utf8'));
+const CROWS = REG.compat(COMPAT_JSON);
+const ALL = REG.S.concat(CROWS), N = ALL.length;
+const CA = { live: 0, part: 0, plan: 0 }; ALL.forEach((r) => { CA[r.s]++; });
+const shownAll = () => new RegExp('^' + N + ' shown');
 const DESIGN = (() => { const g = { window: {} }; vm.createContext(g); vm.runInContext(fs.readFileSync(path.join(ROOT, 'docs', 'design', 'standards-page', 'data.js'), 'utf8'), g); return g.window.STD_PAGE; })();
 
 /* the stand-in: every /api call is recorded and answered with nothing — the page is expected to ask for none */
@@ -71,6 +77,7 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     await ctx.route('**/api/**', (r) => route(S, r));
     /* the app's own door is not loaded here: "Open in the app" is proved by WHERE it goes */
     await ctx.route('**/app.html**', (r) => r.fulfill({ status: 200, contentType: 'text/html', body: '<title>app</title>the app' }));
+    if (o.failCompat) await ctx.route('**/data/compat.json', (r) => r.fulfill({ status: 404, contentType: 'text/plain', body: 'no' }));
     if (o.session !== null) await ctx.addInitScript((s) => { try { if (!localStorage.getItem('cb_seeded')) { localStorage.setItem('cb_seeded', '1'); localStorage.setItem('cb_sess', JSON.stringify(s)); } } catch (_) {} }, o.session || OWNER);
     const p = await ctx.newPage();
     p.on('pageerror', (e) => threw.push(e.message));
@@ -90,7 +97,8 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
   /* ── 1 · the register ───────────────────────────────────────────────────────────────────────────────────── */
   {
     ok(REG.S.length === 61, 'the register holds 61 standards (44 + the 17 adopted 2–3 Oct 2026): ' + REG.S.length);
-    ok(COUNT.live === 33 && COUNT.part === 16 && COUNT.plan === 12, 'in force 33 · partly 16 · planned 12 (' + COUNT.live + ' · ' + COUNT.part + ' · ' + COUNT.plan + ')');
+    /* N11 (9c8cdc58, 2026-10-08): ISO 8601 moved Partly → In force with a stated limit, proven by chitbridge-api tests/iso8601.test.cjs */
+    ok(COUNT.live === 34 && COUNT.part === 15 && COUNT.plan === 12, 'in force 34 · partly 15 · planned 12 (' + COUNT.live + ' · ' + COUNT.part + ' · ' + COUNT.plan + ')');
     const fields = REG.S.filter((r) => !r.a || !r.k || !Array.isArray(r.c) || !r.c.length || !r.p);
     ok(fields.length === 0, 'every row has an area, a kind, an applies-in and the plain-words line' + (fields.length ? ' — missing on ' + fields.map((r) => r.n).join('; ') : ''));
     const areas = REG.A.map((a) => a[0]), kinds = REG.K.map((k) => k[0]), ctry = REG.C.map((c) => c[0]);
@@ -98,17 +106,33 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     const noMiss = REG.S.filter((r) => r.s !== 'live' && !(r.m && r.m.length > 3));
     ok(noMiss.length === 0, 'every Partly and Planned row says what is missing' + (noMiss.length ? ' — ' + noMiss.map((r) => r.n).join('; ') : ''));
     ok(REG.S.every((r) => r.s !== 'live' || !r.m), 'an In force row carries no "missing" line (a stated limit is `limit`, shown as Limit:)');
-    ok(REG.S.filter((r) => r.limit).map((r) => r.n).sort().join('|') === ['AS 2 / Ind AS 2', 'CGST Act s.9(3)/9(4) + notifications; s.49(4), Rule 86(2)', 'Schedule III, Companies Act (Division I)'].sort().join('|'), 'the three In force rows with a stated limit carry it: Schedule III, AS 2, reverse charge');
+    ok(REG.S.filter((r) => r.limit).map((r) => r.n).sort().join('|') === ['AS 2 / Ind AS 2', 'CGST Act s.9(3)/9(4) + notifications; s.49(4), Rule 86(2)', 'Schedule III, Companies Act (Division I)', 'ISO 8601'].sort().join('|'), 'the four In force rows with a stated limit carry it: Schedule III, AS 2, reverse charge, ISO 8601 (N11)');
     /* the words are the register's own: row by row against the designer's data (which was built from the register), every field both hold */
     const keys = ['g', 'n', 'w', 'ex', 'exWhy', 's', 'note', 'at', 'go', 'why', 'a', 'k', 'p', 'm', 'limit', 'eq'];
     const diff = [];
-    DESIGN.rows.forEach((d, i) => { const r = REG.S[i]; keys.forEach((k) => { if ((r && r[k] || undefined) !== (d[k] || undefined)) diff.push(i + ':' + k); }); if (!r || JSON.stringify(r.c) !== JSON.stringify(d.c)) diff.push(i + ':c'); });
+    const MOVED = { 'ISO 8601': 'N11' };   /* a row the register has moved on from the design's data, on purpose, with its reason */
+    DESIGN.rows.forEach((d, i) => { const r = REG.S[i]; if (r && MOVED[r.n]) return; keys.forEach((k) => { if ((r && r[k] || undefined) !== (d[k] || undefined)) diff.push(i + ':' + k); }); if (!r || JSON.stringify(r.c) !== JSON.stringify(d.c)) diff.push(i + ':c'); });
     ok(DESIGN.rows.length === REG.S.length && diff.length === 0, 'all 61 rows equal the designer\'s data, field for field' + (diff.length ? ' — ' + diff.slice(0, 6).join(' ') : ''));
     const added = REG.S.filter((r) => r.added);
     ok(added.length === 17 && added.filter((r) => r.s === 'live').length === 11 && added.filter((r) => r.s === 'part').length === 4 && added.filter((r) => r.s === 'plan').length === 2, 'the 17 additions carry their stated statuses: 11 in force, 4 partly, 2 planned');
     ok(REG.S.filter((r) => /WCAG/.test(r.n) && /1\.4\.3/.test(r.n)).length === 1 && /16 themes/.test(REG.S[11].note), 'no second WCAG contrast row: the existing one now says all 16 themes');
     ok(REG.CH === '2026-10-03', 'the register says when it was last checked (STD_CHECKED)');
     ok(new Set(REG.S.map((r) => r.n)).size === REG.S.length, 'no standard is listed twice');
+    /* M41 · Compatibility: ONE file, every row a valid register row, honest about proof */
+    const cj = COMPAT_JSON.rows || [];
+    ok(cj.length > 0 && CROWS.length === cj.length, 'every row of data/compat.json maps onto a register row (' + CROWS.length + '/' + cj.length + ')');
+    ok(new Set(cj.map((x) => x.id)).size === cj.length, 'no compatibility row is listed twice');
+    ok(cj.every((x) => ['one-to-one', 'alongside', 'gap'].indexOf(x.fit) >= 0 && ['works', 'partly', 'planned'].indexOf(x.status) >= 0 && ['live', 'stand-in', 'not-yet'].indexOf(x.proof) >= 0), 'every row has a fit, a status and a proof from the three words each');
+    ok(cj.filter((x) => x.status === 'works').every((x) => x.proof !== 'not-yet' && x.proof_ref && x.proof_ref.length > 8), 'no row says works without naming its proof (a test or a live run)');
+    ok(cj.filter((x) => x.proof === 'live').every((x) => /^\d{4}-\d{2}-\d{2}$/.test(x.proof_at || '')), 'every live proof carries its date');
+    ok(CROWS.every((r) => r.s === 'live' || (r.m && r.m.length > 3)), 'every compatibility row that is not working says what is missing');
+    ok(['NetSuite', 'Tally', 'Zoho Books'].every((n) => cj.some((x) => x.system.indexOf(n) >= 0)), 'NetSuite, Tally and Zoho Books are on it (decision M-D9: the first three)');
+    /* M41 · T2 the glossary: every abbreviation any row, sheet or record can show has an entry */
+    const txt = []; ALL.forEach((r) => ['p', 'm', 'n', 'w', 'limit', 'eq', 'note', 'why', 'exWhy', 'at', 'proof', 'fit'].forEach((k) => r[k] && txt.push(r[k])));
+    ['pleasure', 'pain'].forEach((k) => REG.WHY[k].forEach((x) => txt.push(x[0], x[1]))); REG.WHY.proof.forEach((x) => txt.push(x)); REG.REC.forEach((x) => txt.push(x.std, x.c));
+    const noGl = {}; txt.forEach((t) => REG.abbrs(t).forEach((a) => { if (!REG.gl(a)) noGl[a] = 1; }));
+    ok(Object.keys(noGl).length === 0, 'every abbreviation on the page has a glossary entry' + (Object.keys(noGl).length ? ' — none for: ' + Object.keys(noGl).join(' ') : ' (' + REG.GL.length + ' entries)'));
+    ok(REG.GL.every((g) => g[0] && g[1] && g[2]), 'every entry has its full name and one line of meaning');
   }
 
   /* ── the page's own source ── */
@@ -121,6 +145,7 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     ok(/stdWhyHTML\(/.test(src) && /stdRecordHTML\(/.test(src) && /stdGoto\(/.test(src), 'the sheets are the register\'s stdWhyHTML / stdRecordHTML and the app door is its stdGoto');
     ok(!/PROTOTYPE|kural|kbar/i.test(src), 'the purple prototype strip and the kural footer are not built');
     ok(!/\bSTANDARDS\s*=\s*\[|window\.STD_PAGE/.test(src), 'the page holds no copy of the register');
+    ok(/fetch\('\/data\/compat\.json'/.test(src) && /stdCompatRows\(/.test(src) && !/"system"\s*:/.test(src), 'the Compatibility rows are read from data/compat.json through stdCompatRows — the page holds none');
   }
 
   /* ── 2 · LAPTOP ──────────────────────────────────────────────────────────────────────────────────────────── */
@@ -135,15 +160,15 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     const heads = await p.$$eval('#std_list .cbl-hc', (h) => h.map((x) => x.innerText.replace(/[▲▼⇅]/g, '').trim()));
     ok(heads.join('|') === 'WHAT IT DOES FOR YOU|REFERENCE|APPLIES IN|STATUS', 'three columns and the status: ' + heads.join(' · '));
     ok(await p.locator('#std_list .cbl-rz').count() === 4, 'every column has a resize handle (the unit\'s)');
-    ok(/61 shown/.test(await count(p)), 'all 61 are listed: ' + (await count(p)));
+    ok(shownAll().test(await count(p)), 'all ' + N + ' are listed (61 standards + ' + CROWS.length + ' compatibility rows): ' + (await count(p)));
     const mxAll = await p.$$eval('[data-testid^="std-cell-*-"]', (n) => n.map((x) => x.textContent.trim()));
-    ok(mxAll.join(' ') === COUNT.live + ' ' + COUNT.part + ' ' + COUNT.plan, 'the matrix\'s All row is the register\'s own counts: ' + mxAll.join(' · '));
+    ok(mxAll.join(' ') === CA.live + ' ' + CA.part + ' ' + CA.plan, 'the matrix\'s All row is the counts of every row listed: ' + mxAll.join(' · '));
     const areaRows = await p.$$eval('#mxBody .mx-rh', (n) => n.map((x) => x.textContent.trim()));
     ok(areaRows.join('|') === 'Selling|Buying|Money & GST|Books|People & privacy|Look & access|How we build|All', 'Count by Area: seven areas and All');
     /* every matrix cell is the register's own count */
     let cellsOk = true;
     for (const a of REG.A) for (const st of ['live', 'part', 'plan']) {
-      const want = REG.S.filter((r) => r.a === a[0] && r.s === st).length;
+      const want = ALL.filter((r) => r.a === a[0] && r.s === st).length;
       const el = p.locator('[data-testid="std-cell-' + a[0] + '-' + st + '"]');
       const got = want ? (await el.count() ? (await el.textContent()).trim() : 'missing') : (await p.locator('#mxBody [aria-label="' + a[1] + ', ' + REG.ST.filter((x) => x[0] === st)[0][1] + ': none"]').count() ? '0' : 'missing');
       if (String(want) !== got) { cellsOk = false; console.log('     cell ' + a[0] + '/' + st + ' want ' + want + ' got ' + got); }
@@ -159,9 +184,9 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
 
     /* ── 3 · THE CELL IS THE LIST'S FILTER ── */
     await p.click('[data-testid="std-cell-money-part"]'); await p.waitForTimeout(250);
-    const want3 = REG.S.map((r, i) => [r, i]).filter(([r]) => r.a === 'money' && r.s === 'part').map(([, i]) => String(i)).sort();
+    const want3 = ALL.map((r, i) => [r, i]).filter(([r]) => r.a === 'money' && r.s === 'part').map(([, i]) => String(i)).sort();
     ok((await rowIds(p)).sort().join() === want3.join() && want3.length === 3, 'Money & GST × Partly: the list shows exactly those 3 (' + (await count(p)) + ')');
-    ok(/3 shown of 61/.test(await count(p)), 'and says "3 shown of 61"');
+    ok(new RegExp('3 shown of ' + N).test(await count(p)), 'and says "3 shown of ' + N + '"');
     const ch = await chips(p);
     ok(ch.length === 2 && ch.indexOf('Status: Partly') >= 0 && ch.indexOf('Area: Money & GST') >= 0, 'the unit\'s own chips carry the choice (' + ch.join(' · ') + ')');
     ok((await pressed(p)).join() === 'std-cell-money-part', 'exactly one cell is lit');
@@ -173,13 +198,13 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     await p.screenshot({ path: path.join(SHOTS, 'standards-cell.png') });
     /* the same cell again clears it */
     await p.click('[data-testid="std-cell-money-part"]'); await p.waitForTimeout(200);
-    ok(/61 shown/.test(await count(p)) && (await chips(p)).length === 0 && (await pressed(p)).join() === 'std-mx-row-*', 'choosing the lit cell again clears it (the All row is lit, no chips)');
+    ok(shownAll().test(await count(p)) && (await chips(p)).length === 0 && (await pressed(p)).join() === 'std-mx-row-*', 'choosing the lit cell again clears it (the All row is lit, no chips)');
     /* a row heading filters the row */
     await p.click('[data-testid="std-mx-row-books"]'); await p.waitForTimeout(200);
-    ok(REG.S.filter((r) => r.a === 'books').length + ' shown of 61' === (await count(p)).replace(/^(\d+) shown of 61$/, '$1 shown of 61') && (await chips(p)).join() === 'Area: Books', 'a row heading filters the row: Books → ' + (await count(p)));
+    ok(ALL.filter((r) => r.a === 'books').length + ' shown of ' + N === (await count(p)).trim() && (await chips(p)).join() === 'Area: Books', 'a row heading filters the row: Books → ' + (await count(p)));
     /* a column heading filters the status */
     await p.click('[data-testid="std-mx-col-plan"]'); await p.waitForTimeout(200);
-    ok((await count(p)).indexOf(COUNT.plan + ' shown of 61') === 0 && (await chips(p)).join() === 'Status: Planned' && (await pressed(p)).join() === 'std-mx-col-plan,std-cell-*-plan', 'a column heading filters the status: Planned → ' + (await count(p)) + ', one chip, that heading lit with the All × Planned cell (the same filter)');
+    ok((await count(p)).indexOf(CA.plan + ' shown of ' + N) === 0 && (await chips(p)).join() === 'Status: Planned' && (await pressed(p)).join() === 'std-mx-col-plan,std-cell-*-plan', 'a column heading filters the status: Planned → ' + (await count(p)) + ', one chip, that heading lit with the All × Planned cell (the same filter)');
     /* a "—" cell does nothing */
     const nilSel = '#mxBody .mx-c.nil';
     const before = await count(p), nilTag = await p.$eval(nilSel, (e) => e.tagName.toLowerCase());
@@ -187,47 +212,59 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     ok(nilTag === 'span' && before === await count(p), 'a cell with nothing in it ("—") is not a control and does nothing');
     /* clearing the chip clears the cell */
     await p.click('.cbl-fchip button'); await p.waitForTimeout(200);
-    ok(/61 shown/.test(await count(p)), 'removing the unit\'s chip returns all 61');
+    ok(shownAll().test(await count(p)), 'removing the unit\'s chip returns all ' + N);
     /* the unit's Filters popover and the matrix are one state */
     await p.click('[data-testid="cbl-filters-standards"]');
     await p.selectOption('[data-testid="cbl-filters-pop-standards"] select[data-filt="status"]', 'part'); await p.waitForTimeout(250);
     await p.keyboard.press('Escape');
     ok((await pressed(p)).join() === 'std-mx-col-part,std-cell-*-part', 'choosing Status: Partly in the Filters popover lights the matrix\'s Partly heading (one state, shown twice)');
     await p.click('[data-testid="std-mx-row-*"]'); await p.waitForTimeout(150);
-    ok(/61 shown/.test(await count(p)), 'the All row clears everything');
+    ok(shownAll().test(await count(p)), 'the All row clears everything');
 
     /* Count by Country and Kind */
     await p.click('[data-testid="std-dim-country"]'); await p.waitForTimeout(150);
     const crows = await p.$$eval('#mxBody .mx-rh', (n) => n.map((x) => x.textContent.trim()));
     ok(crows.join('|') === 'India|Global|All', 'Count by Country: India, Global, All');
     await p.click('[data-testid="std-cell-IN-part"]'); await p.waitForTimeout(250);
-    const inPart = REG.S.filter((r) => r.c.indexOf('IN') >= 0 && r.s === 'part').length;
+    const inPart = ALL.filter((r) => r.c.indexOf('IN') >= 0 && r.s === 'part').length;
     ok((await count(p)).indexOf(inPart + ' shown') === 0 && (await chips(p)).join('|').indexOf('Applies in: India') >= 0, 'India × Partly filters by Applies in: India → ' + (await count(p)) + ' (' + (await chips(p)).join(' · ') + ')');
     await p.screenshot({ path: path.join(SHOTS, 'standards-country.png') });
     await p.click('[data-testid="std-dim-kind"]'); await p.waitForTimeout(250);
     const krows = await p.$$eval('#mxBody .mx-rh', (n) => n.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
-    ok(krows.join('|') === 'Lawyou must|Standardagreed worldwide|Practicethe common way|All', 'Count by Kind: Law, Standard, Practice (with what each means), All');
-    ok(/61 shown/.test(await count(p)) && (await chips(p)).length === 0, 'switching what the rows count by clears the cell choice (a cell of one view means nothing in another)');
+    ok(krows.join('|') === 'Lawyou must|Standardagreed worldwide|Practicethe common way|Compatibilityworks with|All', 'Count by Kind: Law, Standard, Practice, Compatibility (with what each means), All');
+    ok(shownAll().test(await count(p)) && (await chips(p)).length === 0, 'switching what the rows count by clears the cell choice (a cell of one view means nothing in another)');
     await p.click('[data-testid="std-cell-law-live"]'); await p.waitForTimeout(250);
     ok((await count(p)).indexOf(REG.S.filter((r) => r.k === 'law' && r.s === 'live').length + ' shown') === 0, 'Law × In force filters by Kind → ' + (await count(p)));
+    /* M41 · the 4th Kind: Compatibility × In force lists the compat.json rows that work, each with its proof when opened */
+    await p.click('[data-testid="std-cell-compat-live"]'); await p.waitForTimeout(250);
+    const cl = CROWS.filter((r) => r.s === 'live').length;
+    ok(cl > 0 && (await count(p)).indexOf(cl + ' shown') === 0 && (await chips(p)).join('|').indexOf('Kind: Compatibility') >= 0, 'Compatibility × In force lists the ' + cl + ' working rows of data/compat.json → ' + (await count(p)));
+    const cIds = await rowIds(p);
+    ok(cIds.length === cl && cIds.every((i) => +i >= REG.S.length && ALL[+i].k === 'compat'), 'they are the compatibility rows, after the register\'s 61');
+    await p.click('[data-testid="std-row-' + cIds[0] + '"]'); await p.waitForTimeout(250);
+    const cdl = await p.textContent('[data-testid="std-detail-' + cIds[0] + '"]');
+    ok(/Proof/.test(cdl) && /Tested live|Proven on a stand-in/.test(cdl) && /Fit/.test(cdl) && /compatibility register \(data\/compat\.json\)/.test(cdl), 'an opened compatibility row says its fit, its proof and where it comes from: ' + cdl.replace(/\s+/g, ' ').slice(0, 160));
+    await p.screenshot({ path: path.join(SHOTS, 'standards-compat.png') });
+    await p.click('[data-testid="std-row-' + cIds[0] + '"]'); await p.waitForTimeout(150);
+    await p.click('[data-testid="std-mx-row-*"]'); await p.waitForTimeout(150);
     await p.click('[data-testid="std-dim-area"]'); await p.waitForTimeout(200);
 
     /* ── 4 · search · no match · group · a row opens ── */
     await p.fill('[data-testid="listctl-search-standards"]', 'privacy'); await p.waitForTimeout(300);
     const privIds = await rowIds(p);
-    ok(privIds.length > 0 && privIds.every((i) => JSON.stringify(REG.S[+i]).toLowerCase().indexOf('privacy') >= 0 || /privacy/i.test(REG.A.filter((a) => a[0] === REG.S[+i].a)[0][1])), 'search "privacy" lists only standards that say it (' + privIds.length + ')');
+    ok(privIds.length > 0 && privIds.every((i) => JSON.stringify(ALL[+i]).toLowerCase().indexOf('privacy') >= 0 || /privacy/i.test(REG.A.filter((a) => a[0] === ALL[+i].a)[0][1])), 'search "privacy" lists only standards that say it (' + privIds.length + ')');
     ok(await p.locator('[data-testid="std-mx-note"]').count() === 1, 'and the matrix says it still counts the whole register while a search is on');
     await p.screenshot({ path: path.join(SHOTS, 'standards-search.png') });
     await p.fill('[data-testid="listctl-search-standards"]', 'zzzz'); await p.waitForTimeout(300);
     ok(await p.locator('[data-testid="cbl-nomatch-standards"]').count() === 1 && /Nothing matches/.test(await p.textContent('[data-testid="cbl-nomatch-standards"]')), 'a search with no match says so and offers Clear');
     await p.click('[data-testid="cbl-nomatch-standards"] button'); await p.waitForTimeout(250);
-    ok(/61 shown/.test(await count(p)), 'Clear brings the 61 back');
+    ok(shownAll().test(await count(p)), 'Clear brings all ' + N + ' back');
     await p.click('[data-testid="cbl-group-standards"] [data-group="kind"]'); await p.waitForTimeout(200);
     await p.evaluate(() => { const l = document.querySelector('#std_list .cbl-list'); l.scrollTop = l.scrollHeight; }); await p.waitForTimeout(500);   /* the unit draws 50 rows at a time; the last group's head arrives with its rows */
     await p.evaluate(() => { const l = document.querySelector('#std_list .cbl-list'); l.scrollTop = l.scrollHeight; }); await p.waitForTimeout(300);
     const gk = await p.$$eval('#std_list .cbl-group', (n) => n.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
     console.log('     groups: ' + JSON.stringify(gk));
-    ok(gk.length === 3 && /Law/.test(gk[0]) && /Standard/.test(gk[1]) && /Practice/.test(gk[2]), 'Group by Kind: Law · Standard · Practice, in that order, each with its count: ' + gk[0]);
+    ok(gk.length === 4 && /Law/.test(gk[0]) && /Standard/.test(gk[1]) && /Practice/.test(gk[2]) && /Compatibility/.test(gk[3]), 'Group by Kind: Law · Standard · Practice · Compatibility, in that order, each with its count: ' + gk[0]);
     await p.click('[data-testid="cbl-group-standards"] [data-group="country"]'); await p.waitForTimeout(200);
     const gc = await p.$$eval('#std_list .cbl-group', (n) => n.map((x) => x.textContent.replace(/^[^A-Za-z]+/, '').replace(/\s+/g, ' ').trim().split(' ·')[0].replace(/\s*\d+$/, '').trim()));
     ok(gc.join('|') === 'India|India and global|Global', 'Group by Country: India · India and global · Global (' + gc.join(' | ') + ')');
@@ -244,6 +281,14 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     ok(/Why it matters|Elsewhere|In the app/.test(dl), 'and the rest of what a buyer or CA checks (why it matters · in the app)');
     ok(await p.locator('[data-testid="std-go"]').count() === 1 && await p.locator('[data-testid="std-copy"]').count() === 1, 'two buttons: Open in the app › and Copy for a buyer or CA');
     ok(/Open in the app ›/.test(await p.textContent('[data-testid="std-go"]')) && /Copy for a buyer or CA/.test(await p.textContent('[data-testid="std-copy"]')), 'their words are the design\'s');
+    /* M41 · T2: the opened row's terms explain themselves on a tap; on the closed row a tap still opens the row */
+    const dab = p.locator('[data-testid="std-detail-' + gi + '"] abbr.gl').first();
+    const dT = await dab.getAttribute('data-gl');
+    await dab.click(); await p.waitForTimeout(150);
+    ok(await p.locator('[data-testid="std-gloss-pop"]').isVisible() && (await p.textContent('[data-testid="std-gloss-pop"]')).indexOf(dT + ' — ' + REG.gl(dT)[1]) === 0 && await p.locator('[data-testid="std-detail-' + gi + '"]').count() === 1, 'tapping ' + dT + ' in the opened row shows "' + dT + ' — ' + REG.gl(dT)[1] + '" and the row stays open');
+    await p.keyboard.press('Escape'); await p.waitForTimeout(100);
+    ok(!(await p.locator('[data-testid="std-gloss-pop"]').isVisible()), 'Escape hides it');
+    ok(await p.locator('[data-testid="std-row-' + gi + '"] abbr.gl[title]').count() > 0 && await p.locator('[data-testid="std-row-' + gi + '"] abbr.gl[tabindex]').count() === 0, 'the row\'s own terms carry their full name as a title, without a tab stop each');
     await p.screenshot({ path: path.join(SHOTS, 'standards-row.png') });
     await p.click('[data-testid="std-copy"]'); await p.waitForTimeout(250);
     const clip = await p.evaluate(() => navigator.clipboard.readText());
@@ -282,6 +327,18 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     const why = await p.textContent('[data-testid="std-sheet-why"]');
     ok(/crosses a boundary/i.test(why) && /What it buys/i.test(why) && /What it costs/i.test(why) && /What it has actually caught here/i.test(why), 'Why follow standards: the structural claim · what it buys · what it costs · what it has actually caught');
     ok(/117 real failures/.test(why) && /broken promise/.test(why), 'with the evidence and the obligation it creates, in the register\'s own words');
+    /* M41 · T3: the gist leads (each bold line), the story is folded under it, Expand all / Collapse all */
+    const folds = await p.$$eval('[data-testid="std-why-fold"]', (n) => n.map((d) => ({ open: d.open, h: d.getBoundingClientRect().height })));
+    ok(folds.length === REG.WHY.pleasure.length + REG.WHY.pain.length && folds.every((x) => !x.open), 'Why follow: ' + folds.length + ' points, each its one bold line, the story folded');
+    await p.click('[data-testid="std-sheet-why"] [data-testid="std-fold-all"]'); await p.waitForTimeout(100);
+    ok(await p.$$eval('[data-testid="std-why-fold"]', (n) => n.every((d) => d.open)), 'Expand all opens every story');
+    await p.click('[data-testid="std-sheet-why"] [data-testid="std-fold-none"]'); await p.waitForTimeout(100);
+    ok(await p.$$eval('[data-testid="std-why-fold"]', (n) => n.every((d) => !d.open)), 'Collapse all folds them again');
+    /* M41 · T2 inside a sheet: a term explains itself over the sheet */
+    const ab = p.locator('[data-testid="std-sheet-why"] abbr.gl').first();
+    const abT = await ab.getAttribute('data-gl');
+    await p.click('[data-testid="std-sheet-why"] [data-testid="std-fold-all"]'); await ab.click(); await p.waitForTimeout(150);
+    ok(await p.locator('dialog[open] [data-testid="std-gloss-pop"]').isVisible() && (await p.textContent('[data-testid="std-gloss-pop"]')).indexOf(abT + ' — ' + REG.gl(abT)[1]) === 0, 'in a sheet, tapping ' + abT + ' shows its full name over the sheet');
     const sb = await p.evaluate(() => { const r = document.getElementById('sheet').getBoundingClientRect(); return { w: r.width, l: r.left, iw: window.innerWidth }; });
     ok(sb.w <= 560 && sb.l > 700, 'on a laptop it is a side sheet (' + Math.round(sb.w) + ' px wide, from ' + Math.round(sb.l) + ')');
     await p.screenshot({ path: path.join(SHOTS, 'standards-sheet-why.png') });
@@ -292,13 +349,23 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     ok(/One chit, every standard in it/i.test(rec) && rec.indexOf('0904.11') > 0 && rec.indexOf('08901234567894') > 0, 'One record, every standard: the pepper chit, a real HS code and a real GTIN');
     ok(/ISO 6523 · planned/i.test(rec) && /Greyed fields are not built yet/i.test(rec) && /never translated/i.test(rec), 'planned fields are labelled planned, "not built yet" is said, and the product name is marked never translated');
     const dim = await p.evaluate(() => {
-      const planned = Array.from(document.querySelectorAll('[data-testid="std-sheet-record"] div')).filter((d) => /ISO 6523 · planned/.test(d.textContent) && d.children.length >= 2 && d.style.borderBlockStart !== '').pop();
-      const live = Array.from(document.querySelectorAll('[data-testid="std-sheet-record"] div')).filter((d) => /ISO 4217 · in force/.test(d.textContent) && d.children.length >= 2 && d.style.borderBlockStart !== '').pop();
+      const planned = Array.from(document.querySelectorAll('[data-testid="std-rec-field"]')).filter((d) => /ISO 6523 · planned/.test(d.textContent)).pop();
+      const live = Array.from(document.querySelectorAll('[data-testid="std-rec-field"]')).filter((d) => /ISO 4217 · in force/.test(d.textContent)).pop();
       const op = (n) => { let a = 1; for (; n && n !== document.body; n = n.parentElement) a *= Number(getComputedStyle(n).opacity); return a; };
       const val = (d) => getComputedStyle(d.querySelector('span:nth-child(2)')).color;
       return { opP: op(planned), opL: op(live), cP: val(planned), cL: val(live) };
     });
     ok(dim.opP === 1 && dim.opL === 1 && dim.cP !== dim.cL, 'a planned field is dimmed by the theme\'s muted ink (' + dim.cP + ' vs ' + dim.cL + '), not by opacity (' + dim.opP + ')');
+    /* M41 · T4: each standard on the pepper chit is a block — closed, its name showing; open, what the standard is and why it applies */
+    const blocks = await p.$$eval('[data-testid="std-rec-field"]', (n) => n.map((d) => d.open));
+    ok(blocks.length === REG.REC.length && blocks.every((o) => !o), 'One record: ' + blocks.length + ' fields, each a closed block');
+    const iso = p.locator('[data-testid="std-rec-field"]', { hasText: 'ISO 6523 · planned' });
+    await iso.locator('summary').click(); await p.waitForTimeout(150);
+    ok(await iso.evaluate((d) => d.open) && /ISO 6523/.test(await iso.innerText()) && /Scheme first/.test(await iso.innerText()), 'tapping ISO 6523 opens what it is (the register\'s line) and why it applies here');
+    await p.click('[data-testid="std-sheet-record"] [data-testid="std-fold-all"]'); await p.waitForTimeout(100);
+    ok((await p.$$eval('[data-testid="std-rec-field"]', (n) => n.every((d) => d.open))), 'Expand all opens every block');
+    await p.click('[data-testid="std-sheet-record"] [data-testid="std-fold-none"]'); await p.waitForTimeout(100);
+    ok((await p.$$eval('[data-testid="std-rec-field"]', (n) => n.every((d) => !d.open))), 'Collapse all closes them');
     await p.screenshot({ path: path.join(SHOTS, 'standards-sheet-record.png') });
     await p.click('[data-testid="std-sheet-x"]'); await p.waitForTimeout(150);
     ok(await p.locator('dialog[open]').count() === 0, 'the ✕ closes it');
@@ -306,6 +373,10 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     const o2 = await open(S, { path: '/standards.html?sheet=why' });
     ok(await o2.p.locator('dialog[open] [data-testid="std-sheet-why"]').count() === 1, '/standards.html?sheet=why opens the first sheet (the door\'s Read me)');
     await o2.ctx.close();
+    /* M41: data/compat.json cannot be read → the register still lists in full, and the matrix SAYS the compatibility rows are missing */
+    const o3 = await open(S, { failCompat: true });
+    ok(new RegExp('^' + REG.S.length + ' shown').test(await count(o3.p)) && await o3.p.locator('[data-testid="std-compat-err"]').isVisible() && /could not be read/.test(await o3.p.textContent('[data-testid="std-compat-err"]')), 'compat.json unreadable: the 61 standards still list and the matrix says the compatibility rows could not be read');
+    await o3.ctx.close();
   }
 
   /* ── 6 · THE WAY IN from the index page (N18: Home is the shell; Standards is a Setup card of the manifest), and Settings ── */

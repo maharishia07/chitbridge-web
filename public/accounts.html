@@ -306,7 +306,10 @@ function go(hash){ location.href = '/app.html' + hash; }   /* api()'s 401 → th
 <script src="/app/chit-sheet.js"></script>   <!-- THE CHIT SHEET: the same popup the app opens (a bill number here opens it) -->
 <script src="/app/cap-folders.js"></script>
 <script src="/app/cap-books.js"></script>
+<script src="/app/rail-bell.js"></script>   <!-- CBBell.mount (R06): the dot + the list, from the push stream -->
+<script src="/app/attach-ui.js"></script>   <!-- CBAttach.mount (R07): the one picker, 6 MB cap and audience rule in this one file -->
 <script src="/app/rail-thread.js"></script>
+<script src="/app/rail-advice.js"></script>   <!-- CBAdvice.mount: the payment advice OUT (M30) — Send on rail / Share off rail, the server's may painted -->
 <script src="/engine/bank-recon.js"></script>   <!-- CBBankRecon: the bank statement is read, matched and reconciled HERE, on this device (DECISIONS: Bank reconciliation runs on the shop's device) -->
 <script src="/app/cap-entry.js"></script>   <!-- ＋ Entry on the Day book: four plain steps, the server's events and preview (docs/design/manual-entry) -->
 <script src="/app/cap-period.js"></script>   <!-- Month & year end: Closing stock · Assets & depreciation · Accruals & recurring · GST close & pay · Year close -->
@@ -404,7 +407,11 @@ $('toggleNav').addEventListener('click', () => {
 function whoPaint(){
   const nm = SESS ? (SESS.entity || SESS.name || '') : '';
   WHO.innerHTML = `<span class="shop" data-testid="shop-name">${esc(nm)}</span>
-    <a class="home" href="/" data-testid="acc-home" aria-label="Home">⌂ <span class="hw">Home</span></a><span id="cbav"></span>`;
+    <span id="cb-bell-slot" data-testid="bell-slot"></span><a class="home" href="/" data-testid="acc-home" aria-label="Home">⌂ <span class="hw">Home</span></a><span id="cbav"></span>`;
+  /* R06 — the bell (app/rail-bell.js): ONE host element, mounted once, moved into each repaint of the bar so the stream is not re-ticketed */
+  if (typeof CBBell !== 'undefined' && SESS) { if (!window.__cbBell) window.__cbBell = document.createElement('span'); $('cb-bell-slot').appendChild(window.__cbBell);
+    /* mounted once it is on the page and the session is set; a bell drawn before the session landed (no button) is mounted again */
+    if (!window.__cbBell.querySelector('[data-testid="bell-btn"]')) CBBell.mount(window.__cbBell, { context: { host: 'accounts' } }); }
   /* the avatar is CBAvatar: Profile opens the app's profile, Sign out is the app's (session and per-person nav memory go; the app's other tabs hear cb_sess go). No Settings here — that stays in the app. */
   CBAvatar.mount($('cbav'), { person: CBAvatar.personOf(SESS), items: ['profile', 'support', 'signout'], apiBase: CFG.API_BASE, token: SESS && SESS.token });
 }
@@ -511,7 +518,7 @@ async function accBills(body){
 /* ═══ TO DO — what the owner has to do next. GET /api/books/todo lists the checks (docs/design/cb-accounts-ia §1): a row is a symbol · a count · the server's sentence · ONE button.
    The page decides nothing: it draws what the API sends, and opens the page the row's action names. ═══ */
 /* the API's `action.screen` → the tab that opens it. A screen with no page yet is not in here: its button says it starts after an update. */
-const TODO_SCREEN = { waiting: 'waiting', periods: 'lock', daybook: 'daybook', dues: 'dues', cheques: 'cheques', bills: 'bills', packs: 'packs', opening: 'opening',
+const TODO_SCREEN = { waiting: 'waiting', ledgers: 'ledgers', periods: 'lock', daybook: 'daybook', dues: 'dues', cheques: 'cheques', bills: 'bills', packs: 'packs', opening: 'opening',
   'closing-stock': 'closingstock', gst: 'gstclose', recurring: 'accruals', accruals: 'accruals', 'year-close': 'yearclose', assets: 'assets', bank: 'bank' };
 /* an item the server could not check (503 · not migrated yet) is not a task: it says so, and its button waits */
 const todoOff = (it) => it && (it.status === 503 || it.not_migrated === true || it.migrated === false || it.available === false);
