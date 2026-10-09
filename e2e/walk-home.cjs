@@ -187,7 +187,7 @@ W.run('home', async (w) => {
   await w.step('UI9-crm', 'CRM -> slow connection: the whole frame is there first (menu, title, toolbar, header, skeleton rows, the kural\'s room); when the rows arrive nothing above them moves', async () => {
     const slow = async (r) => { await new Promise((x) => setTimeout(x, 1500)); r.fallback(); };
     await ctx.route('**/api/**', slow);
-    await page.goto(base + '/crm.html'); await page.waitForSelector('.cbl-skel', { timeout: 8000 }); await page.waitForTimeout(250);
+    await page.goto(base + '/crm.html'); await page.waitForTimeout(450);   /* a fixed beat, before the slow line answers anything: this IS the first paint */
     const box = () => page.evaluate(() => { const r = (s, n) => { const e = document.querySelectorAll(s)[n || 0]; if (!e) return null; const b = e.getBoundingClientRect(); return [Math.round(b.left), Math.round(b.top), Math.round(b.width), Math.round(b.height)]; };
       return { nav: document.querySelectorAll('#nav .nav-btn').length, n0: r('#nav .nav-btn', 0), title: r('.cbl-title'), tools: r('.cbl-tools'), hdr: r('.cbl-hdr'), skel: document.querySelectorAll('.cbl-skel').length, band: r('#cbkural,#cbkural-reserve'), rows: document.querySelectorAll('.cbl-row').length }; });
     const a = await box();

@@ -749,7 +749,7 @@ async function route(S, r) {
     const box = () => p.evaluate(() => { const r = (s, n) => { const e = document.querySelectorAll(s)[n || 0]; if (!e) return null; const b = e.getBoundingClientRect(); return [Math.round(b.left), Math.round(b.top), Math.round(b.width), Math.round(b.height)]; };
       return { navN: document.querySelectorAll('#nav .nav-btn').length, nav0: r('#nav .nav-btn', 0), nav2: r('#nav .nav-btn', 2), brand: r('#side .brand'), title: r('.cbl-title h1'), tools: r('.cbl-tools'), views: r('.cbl-views'), hdr: r('.cbl-hdr'), skel: document.querySelectorAll('.cbl-skel').length, rows: document.querySelectorAll('.cbl-row').length,
         band: r('#cbkural,#cbkural-reserve'), list: r('.cbl-list'), collapse: r('#toggleNav') }; });
-    await p.waitForSelector('.cbl-skel', { timeout: 6000 }); await p.waitForTimeout(250);
+    await p.waitForTimeout(450);   /* a fixed beat, BEFORE the slow line has answered anything: what is on screen now is the FIRST paint */
     const first = await box();
     ok(first.navN === 3 && first.rows === 0 && first.skel >= 5, 'FIRST PAINT, data still on its way: the three menu items, skeleton rows (' + first.skel + '), no data row yet');
     ok(!!first.title && !!first.tools && !!first.hdr && !!first.views, 'FIRST PAINT: the title "Parties", the views, the toolbar and the column header are all there');
