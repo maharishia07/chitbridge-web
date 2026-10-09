@@ -50,12 +50,12 @@ const T={'.html':'text/html','.js':'text/javascript','.css':'text/css','.json':'
 
  /* ⭐ and a press on the strip is acknowledged at the icon, whether or not the action opens anything */
  const ack = await p.evaluate(() => {
-   const btn = document.querySelector('[data-testid="till-side-refresh"]');
+   const btn = document.querySelector('[data-testid="till-side-bills"]');
    if (!btn) return 'no refresh icon';
    btn.click();
    return btn.classList.contains('hit') ? 'acknowledged' : 'SILENT';
  });
- console.log('press    · the refresh icon (opens no dialog) — ' + ack + (ack === 'acknowledged' ? '  OK' : '  ✗'));
+ console.log('press    · the Bills icon — ' + ack + (ack === 'acknowledged' ? '  OK' : '  ✗'));
 
  if(threw.length){console.log('THREW · '+threw.join(' | '));process.exitCode=1;}
  await b.close();srv.close();

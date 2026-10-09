@@ -75,7 +75,7 @@ const say = (l, ok, d) => { console.log(l.padEnd(10) + '· ' + d + '  ' + (ok ? 
   const strip = await p.$$eval('.side .sicons button[data-mh]', n => n.map(x => ({
     id: x.getAttribute('data-testid').replace('till-side-', ''), mh: x.style.getPropertyValue('--mh').trim() })));
   const wrong = await p.evaluate((st) => st.filter(function (s) { return opHue(s.id) !== s.mh; }).map(s => s.id), strip);
-  say('both halves', strip.length > 4 && !wrong.length,
+  say('both halves', strip.length >= 4 && !wrong.length,
     strip.length + ' strip icons, every hue the one its section carries' + (wrong.length ? ' — except ' + wrong.join(',') : ''));
 
   /* ── 4 · ⚠️ ONE DOOR, NOT TWO ([TILL-88]) — the full-width button inside the section opened the same

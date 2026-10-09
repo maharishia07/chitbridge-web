@@ -19,9 +19,9 @@ const T={'.html':'text/html','.js':'text/javascript','.css':'text/css','.json':'
  await p.evaluate(()=>{ window.S={shop:{name:'Mayur Bhavan',currency:'INR'},items:[],offers:[],at:new Date().toISOString()}; setMode('sell'); });
 
  /* ⭐ it is its own item on the strip */
- const onStrip=await p.evaluate(()=>!!document.querySelector('[data-testid="till-side-todo"]'));
- console.log('menu item · on the strip = '+onStrip+(onStrip?'  OK':'  ✗'));
- await p.click('[data-testid="till-side-todo"]');
+ const onStrip=await p.evaluate(()=>!document.querySelector('[data-testid="till-side-todo"]'));
+ console.log('menu item · off the rail (tidy: six icons), in the Menu = '+onStrip+(onStrip?'  OK':'  ✗'));
+ await p.evaluate(()=>{ openMenuAt('day'); }); await p.click('[data-testid="till-open-todo"]');
  await p.waitForSelector('#tododlg[open]',{timeout:5000});
  console.log('popup     · opened from the strip  OK');
 
