@@ -346,7 +346,8 @@ function enReverse(id, no, fromSheet, done) {
         delete EN.rev[id]; toast((r && r.words) || txf('Reversed — new entry {no}', { no: (r && (r.entry_no || r.no)) || '' }));
         if (fromSheet) enClose();
         if (typeof done === 'function') done(r, why);
-        if (typeof BK !== 'undefined' && BK.tab === 'daybook') bkTab('daybook', true);
+        /* M175: the Day book repaints its two rows from the answer; only when it cannot does it read the whole book again */
+        if (typeof BK !== 'undefined' && BK.tab === 'daybook' && !(typeof bkDvReversed === 'function' && bkDvReversed(id, r))) bkTab('daybook', true);
       } catch (e) { toast(bkWhy(e, tx('Could not reverse this entry'))); }
     });
   }, true);
