@@ -139,8 +139,9 @@ async function crmRecordOpen(route) {
   CRMR.menu = false;
   if (!CRM.loaded) { s.className = 'screen'; s.innerHTML = '<div class="content"><div class="loadwrap" role="status"><span class="spin"></span>' + esc(tx('Reading…')) + '</div></div>'; await crmLoad(true); if (tok !== CRMR.tok) return; }
   var p = CRM.byKey[route.key];
+  if (!p && typeof crmLeadsEnsure === 'function') { await crmLeadsEnsure(); if (tok !== CRMR.tok) return; p = CRM.byKey[route.key]; }   /* a lead opened from a link: the Leads read first */
   if (!p) return crmRecordFold(route, tok);
-  crmNav('parties');
+  crmNav(p.lead ? 'leads' : 'parties');
   CRMR.p = p; CRMR.rec = null;
   var back = '<a href="#/parties" data-testid="crm-back">‹ ' + esc(tx('Parties')) + '</a>' + (p.party_no ? ' <span class="sub">/</span> <span class="mono">' + esc(p.party_no) + '</span>' : '');
   crmBar(back, route.sub === 'timeline' ? '' : '');
@@ -194,7 +195,7 @@ function crmDueChip(p) {
 function crmHeaderHTML(p) {
   var legal = p.legal_name && p.legal_name !== p.display_name ? '<div class="legal" data-testid="crm-legal">' + esc(p.legal_name) + '</div>' : '';
   return '<div class="rhead"><h1 data-testid="crm-rec-name">' + esc(p.display_name) + '</h1>' + legal
-    + '<div class="rchips">' + crmRoleChips(p) + crmRailChip(p) + crmDueChip(p) + crmSegChip(p) + '</div></div>';
+    + '<div class="rchips">' + crmRoleChips(p) + crmRailChip(p) + crmDueChip(p) + crmSegChip(p) + crmStageChip(p.lead) + '</div></div>';
 }
 function crmIdentityHTML(p, rec) {
   if (p.kind === 'walk-in') return '<div class="idblk walk" data-testid="crm-ident"><div class="verdict off">' + crmIcon('walk') + '<span>' + esc(tx('Walk-in — known by phone at the counter. A party number comes when you add them.')) + '</span></div></div>';
@@ -266,7 +267,7 @@ function crmActionsHTML(p, rec) {
   }
   var wide = p.kind === 'walk-in' ? '' : '<button type="button" class="act quiet wide-only" data-crm="rfu" data-testid="crm-act-fu">' + icon('clock') + esc(tx('Follow-up')) + '</button><button type="button" class="act quiet wide-only" data-crm="redit" data-testid="crm-act-edit">' + icon('pencil') + esc(tx('Edit')) + '</button>';
   return '<div class="actbar pin" role="toolbar" aria-label="' + esc(tx('Actions')) + '" data-testid="crm-actions">' + primary + inline.join('') + '<button type="button" class="act quiet" data-crm="rlog" data-testid="crm-act-log">' + icon('note') + esc(tx('Log')) + '</button>' + wide
-    + '<span class="more"><button type="button" class="act quiet" data-crm="rmore" aria-haspopup="true" aria-expanded="' + CRMR.menu + '" data-testid="crm-act-more">' + icon('dots') + esc(tx('More')) + '</button>' + (CRMR.menu && more.length ? '<div class="menu" role="menu" data-testid="crm-more-menu">' + more.join('') + '</div>' : '') + '</span></div>';
+    + crmStageBtn(p) + '<span class="more"><button type="button" class="act quiet" data-crm="rmore" aria-haspopup="true" aria-expanded="' + CRMR.menu + '" data-testid="crm-act-more">' + icon('dots') + esc(tx('More')) + '</button>' + (CRMR.menu && more.length ? '<div class="menu" role="menu" data-testid="crm-more-menu">' + more.join('') + '</div>' : '') + '</span></div>';
 }
 /** C25: what is missing and where to set it - never a dead end */
 function crmTaxMissing(p, R, cu, su) {
@@ -339,7 +340,7 @@ function crmLedgerRepaint(pid) {
   var d = BK.dues && BK.dues[pid]; if (d && d.balance_minor != null) p.balance_minor = d.balance_minor;   /* the same row the Parties list reads */
   /* only the three places the balance shows - never the whole record: a repaint would fold the Ledger section the person is working in */
   var R = Object.assign({}, p, rec), has = CRM.ledger && p.balance_minor != null, rc = document.querySelector('[data-testid="crm-record"] .rchips');
-  if (rc) rc.innerHTML = crmRoleChips(R) + crmRailChip(R) + crmDueChip(Object.assign({}, R, { balance_minor: p.balance_minor, billFacts: crmBillFacts(rec.timeline_all || rec.timeline_head) })) + crmSegChip(R);
+  if (rc) rc.innerHTML = crmRoleChips(R) + crmRailChip(R) + crmDueChip(Object.assign({}, R, { balance_minor: p.balance_minor, billFacts: crmBillFacts(rec.timeline_all || rec.timeline_head) })) + crmSegChip(R) + crmStageChip(R.lead);
   var fact = document.querySelector('[data-testid="crm-sec-fact-ledger"]'); if (fact) fact.innerHTML = has ? crmDueCell(p) : '';
   var led = document.getElementById('crm_ledger');
   if (led) led.innerHTML = partyBooksHTML(rec.customer ? 'customer' : 'supplier', pid, crmLedgerRow(p, rec), true);
