@@ -293,8 +293,22 @@
   var _create = create;
   create = function (cfg) { ensureCSS(); return _create(cfg); };
 
+  /**
+   * ⭐ backdropTap(ev, backdrop) — a backdrop closes its panel ONLY for a tap that STARTED on the backdrop (M184).
+   * A repaint can replace the node under the finger between press and release, and the browser then reports the click on an
+   * ancestor — or the panel resizes and the next tap lands outside it. Neither is the reader asking to leave.
+   */
+  var _down = null;
+  if (typeof document !== 'undefined' && document.addEventListener) {
+    ['pointerdown', 'mousedown', 'touchstart'].forEach(function (t) {
+      document.addEventListener(t, function (e) { _down = e.target; }, true);
+    });
+  }
+  function backdropTap(ev, backdrop) { return !!ev && ev.target === backdrop && _down === backdrop; }
+  function _setDown(t) { _down = t; }
+
   root.CBSteps = {
-    create: create,
+    create: create, backdropTap: backdropTap, _setDown: _setDown,
     go: go, next: next, back: back, send: send, draft: draft,
     railHTML: railHTML, footHTML: footHTML, bodyHTML: bodyHTML,
     paint: paint, paintFoot: paintFoot, paintBody: paintBody

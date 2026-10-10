@@ -40,7 +40,7 @@ The guard reads the table below: **an icon in two rows, or a meaning with two ic
 | Names view | ≡ | till keys, bill | Names |
 | Park the bill | ⏸ | till bill foot | Park the bill |
 | Clear the bill | 🗑 | till bill, receive, despatch foot | Clear the bill |
-| Send to the kitchen (count) | 🍳 | till order bar | Kitchen |
+| Send to the kitchen (count) | the word "Kitchen" (🍳 renders as a purple circle that reads like 🔍 at this size) | till order bar | Kitchen |
 | Basket / online orders (count) | 🛒 | till bar + phone (online orders), shop dock (basket) | Online orders / Your basket |
 | Keyboard | ⌨ | till search | Show the on-screen keyboard |
 | Speak | 🎤 | till to-do, customer | Speak |

@@ -3596,7 +3596,7 @@ function renderRegister(){
     form = `<div ${who}>Entity <b>${esc(R.name)}</b> — verify to enter · <a onclick="regReset()">change</a></div>
        ${regVerticalChooser()}
        ${govPanel()}
-       <label class="fl">OTP sent to ${esc(R.email)}</label><input class="inp" id="r_otp" data-testid="reg-otp" placeholder="6-digit code">
+       <label class="fl">OTP sent to ${esc(R.email)}</label><input class="inp" id="r_otp" data-testid="reg-otp" placeholder="6-digit code" autocomplete="one-time-code" inputmode="numeric">
        ${R.err?`<div class="err">${R.err}</div>`:""}
        <button class="btn gold" id="r_go" data-testid="reg-submit" ${(R.busy||!R.agreed)?"disabled":""}>${R.busy?'<span class="spin"></span> Verifying…':"Verify &amp; enter <span class=arw>→</span>"}</button>`;
   }
@@ -3695,7 +3695,7 @@ function renderLogin(){
   let form="";
   if(L.cust){
     form = `<label class="fl">Shop link / User ID <span ${muted}>(Login.Bridge)</span></label><input class="inp" id="l_bridge" placeholder="your User ID or email" value="${esc(L.id||'')}">
-       <label class="fl">${tx('Your mobile OTP')}</label><input class="inp" id="l_cotp" placeholder="6-digit code">
+       <label class="fl">${tx('Your mobile OTP')}</label><input class="inp" id="l_cotp" placeholder="6-digit code" autocomplete="one-time-code" inputmode="numeric">
        <button class="btn" id="l_go">${L.busy?'<span class="spin"></span> …':"View my orders <span class=arw>→</span>"}</button>
        <div class="swap"><a onclick="setLoginCust(false)"><span class=arw>←</span> ${tx('Back to sign in')}</a></div>`;
   } else if(L.step==="id"){
@@ -3705,7 +3705,7 @@ function renderLogin(){
   } else if(L.step==="otp"){
     form = `<div ${who}>Signing in as <b>${esc(L.id)}</b> · ${L.kind} · <a onclick="loginReset()">change</a></div>
        ${L.note?`<div style="font-size:var(--fs-2);color:var(--warn-2);background:var(--warn-tint);border:1px solid #e0d3b0;border-radius:9px;padding:9px 11px;margin:6px 0 4px;line-height:1.5">${esc(L.note)}</div>`:''}
-       <label class="fl">${L.note?"Code from your network operator":(L.kind==="entity"?"OTP sent to your email":"OTP from your admin")}</label><input class="inp" id="l_otp" placeholder="6-digit code">
+       <label class="fl">${L.note?"Code from your network operator":(L.kind==="entity"?"OTP sent to your email":"OTP from your admin")}</label><input class="inp" id="l_otp" placeholder="6-digit code" autocomplete="one-time-code" inputmode="numeric">
        <button class="btn" id="l_go">${L.busy?'<span class="spin"></span> Verifying…':"Verify & enter <span class=arw>→</span>"}</button>`;
   } else if(L.step==="pin"){
     form = `<div ${who}>Signing in as <b>${esc(L.id)}</b> · co-assist · <a onclick="loginReset()">change</a></div>
