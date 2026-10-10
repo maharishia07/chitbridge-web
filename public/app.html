@@ -3709,11 +3709,11 @@ function renderLogin(){
        <button class="btn" id="l_go">${L.busy?'<span class="spin"></span> Verifying…':"Verify & enter <span class=arw>→</span>"}</button>`;
   } else if(L.step==="pin"){
     form = `<div ${who}>Signing in as <b>${esc(L.id)}</b> · co-assist · <a onclick="loginReset()">change</a></div>
-       <label class="fl">${tx('Your PIN')}</label><input class="inp" id="l_pin" placeholder="••••" type="password">
+       <label class="fl">${tx('Your PIN')}</label><input class="inp" id="l_pin" placeholder="••••" type="password" autocomplete="one-time-code">
        <button class="btn" id="l_go">${L.busy?'<span class="spin"></span> …':"Start shift <span class=arw>→</span>"}</button>`;
   } else if(L.step==="setpin"){
     form = `<div ${who}>First time — set a PIN for <b>${esc(L.id)}</b></div>
-       <label class="fl">${tx('Choose a PIN')}</label><input class="inp" id="l_setpin" placeholder="4–6 digits" type="password">
+       <label class="fl">${tx('Choose a PIN')}</label><input class="inp" id="l_setpin" placeholder="4–6 digits" type="password" autocomplete="new-password">
        <button class="btn" id="l_go">${L.busy?'<span class="spin"></span> …':"Set PIN & enter <span class=arw>→</span>"}</button>`;
   }
   document.getElementById("root").innerHTML = modeRibbon() + `

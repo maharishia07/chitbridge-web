@@ -1041,7 +1041,7 @@ function shopMode(v){ if(!_ord) return; _cartSet('mode',v); if(_CFLOW) _CFLOW.pa
 function _cartStepDelivery(){
   var fld='style="width:100%;padding:9px;border:1px solid #e7e3d8;border-radius:8px;margin:3px 0 11px;font-size:14px"';
   var m=_ord.mode;
-  var tab=function(v,label,ic){ var on=(m===v); return '<button type="button" data-ic="mode-'+v+'" aria-label="'+label+'" title="'+label+'" data-testid="shop-mode-'+v+'" aria-pressed="'+(on?'true':'false')+'" onclick="shopMode(&#39;'+v+'&#39;)" style="flex:1;border:1.5px solid var(--accent);border-radius:10px;padding:12px 8px;font:700 14px var(--font-ui);cursor:pointer;touch-action:manipulation;background:'+(on?'var(--accent)':'var(--card,#fff)')+';color:'+(on?'var(--card,#fff)':'var(--accent)')+'">'+'<span aria-hidden="true">'+ic+'</span></button>'; };
+  var tab=function(v,label,ic){ var on=(m===v); return '<button type="button" data-ic="mode-'+v+'" aria-label="'+label+'" title="'+label+'" data-testid="shop-mode-'+v+'" aria-pressed="'+(on?'true':'false')+'" onclick="shopMode(&#39;'+v+'&#39;)" style="flex:1;border:'+(on?'3px':'1.5px')+' solid var(--accent);border-radius:10px;padding:'+(on?'10.5px 6.5px':'12px 8px')+';font:700 14px var(--font-ui);cursor:pointer;touch-action:manipulation;background:'+(on?'var(--blue-tint-bg,#EAF0F8)':'var(--card,#fff)')+';color:var(--ink,#1D1B16)">'+'<span aria-hidden="true" style="font-size:24px;line-height:1;opacity:1;vertical-align:middle">'+ic+'</span> <span style="vertical-align:middle">'+label+(on?' ✓':'')+'</span></button>'; };
   var when=(m==='pickup')?'Pickup':'Delivery';
   return '<div style="display:flex;gap:9px;margin:6px 0 14px">'+tab('pickup','Pickup','🏪')+tab('delivery','Delivery','🛵')+'</div>'
     +(m==='delivery'
@@ -1278,6 +1278,8 @@ function _orderPost(body){
         +'<div style="margin-top:12px;font-size:12.5px;color:var(--ink-2,#3a4048);line-height:1.55"><b>What happens next</b><br>'+nextTxt+'</div>'
         +shopUpiBlock(res, isCart)
         +'<div style="display:flex;gap:8px;margin-top:16px">'+(_MYTOK?'<button type="button" data-testid="shop-my-orders" onclick="shopMyOrders()" style="flex:1;border:1px solid var(--accent,#3F66A6);border-radius:10px;padding:11px 14px;background:var(--card,#fff);color:var(--accent,#3F66A6);font-weight:700;cursor:pointer">My orders</button>':'')+_DONE_BTN+'</div>');
+      /* M178: the order is placed — the cart is spent (one more tap would order the same lines twice); the bar goes with it */
+      if(isCart&&_CART){ try{ _CART.clear(); shopPickPaint(); shopDockSync(); }catch(_e){} }
       if(window.CBOffline)CBOffline.clearDraft('shop.ord.'+BRIDGE); })
     .catch(function(e2){ _ord.busy=false; orderRender(null,(window.CBOffline&&!CBOffline.online())?'You are offline — reconnect to continue. Your details are saved.':(e2.message||'Network error')); });
 }
