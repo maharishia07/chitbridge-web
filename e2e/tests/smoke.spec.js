@@ -89,7 +89,7 @@ test.describe('Smoke · every menu item + icon renders', () => {
        ⚠️ AND NOW `icon-raid` IS GONE TOO — the report moved to Insight → Register on 2026-08-30, because the
        topbar is for state that changes while you work and a report is a place you go. Same step, new door: the
        point of walking it was never the icon, it was that the report opens and closes without leaving wreckage. */
-    await test.step('register report', async () => { await page.getByTestId('nav-raida').click(); await dismissModal(page); });
+    await test.step('register report', async () => { await page.evaluate(() => navTo('raida')); await dismissModal(page); });
     await test.step('notifications', async () => { await page.getByTestId('icon-notifications').click(); await dismissModal(page); });
     await test.step('legend', async () => { await page.getByTestId('icon-legend').click(); await dismissModal(page); });
   });

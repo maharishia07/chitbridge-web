@@ -243,7 +243,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
     const p = await ctx.newPage();
     p.on('pageerror', (e) => threw.push(e.message));
     await p.goto(base + '/app.html#/app');
-    await p.waitForSelector('[data-testid="nav-customers"]', { timeout: 20000 });
+    await p.waitForSelector('[data-testid="nav-task"]', { timeout: 20000 });
     return { ctx, p };
   }
   const noAccounting = async (p, where) => { const t = await p.evaluate(() => document.body.innerText); ok(!/accounting|books of account/i.test(t), where + ': the word "accounting" is nowhere on screen'); };
@@ -254,7 +254,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
     const { ctx, p } = await open(S);
     await p.waitForTimeout(1200);
     ok(await p.locator('[data-testid="nav-ledger"]').count() === 0, 'off: the Ledger door is not on the menu');
-    await p.click('[data-testid="nav-customers"]');
+    await p.evaluate(() => navTo('customers'));
     await p.waitForSelector('[data-testid="cust-row-c1"]', { timeout: 15000 });
     await p.waitForTimeout(600);
     ok(await p.locator('[data-testid^="party-books-"]').count() === 0 && await p.locator('[data-testid^="party-due-"]').count() === 0, 'off: no party block and no due chip on Customers');
@@ -269,8 +269,8 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
     await p.click('[data-testid="biz-ledger-on"]');
     await p.waitForSelector('[data-testid="confirm-ok"]', { timeout: 4000 }).catch(() => {});
     await p.click('[data-testid="confirm-ok"]', { timeout: 2000 }).catch(() => {});
-    await p.waitForSelector('[data-testid="nav-ledger"]', { timeout: 15000 }).catch(() => {});
-    ok(S.enables === 1 && await p.locator('[data-testid="nav-ledger"]').count() === 1, 'confirmed → POST /api/books/enable once; the Ledger door appears on the menu without a reload');
+    await p.waitForTimeout(800);
+    ok(S.enables === 1 && await p.locator('[data-testid="nav-ledger"]').count() === 0, 'confirmed → POST /api/books/enable once; the workshop menu carries no Ledger door (P0: CB Accounts has its own page)');
     await p.evaluate(() => navTo('settings')); await p.waitForSelector('[data-testid="set-sec-business"]', { timeout: 15000 }); await p.click('[data-testid="set-sec-business"]');
     await p.waitForFunction(() => /On/.test((document.querySelector('[data-testid="biz-ledger-state"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
     ok(/On/.test(await p.textContent('[data-testid="biz-ledger-state"]').catch(() => '')) && await p.locator('[data-testid="biz-ledger-off"]').count() === 1, 'the card now says On (per day) and offers Switch off');
@@ -290,12 +290,12 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
 
   const S = standIn();
   const { ctx, p } = await open(S);
-  await p.waitForSelector('[data-testid="nav-ledger"]', { timeout: 15000 });
-  ok(true, 'on: the Ledger door appears once /api/books/health answers');
+  await p.waitForSelector('[data-testid="nav-task"]', { timeout: 15000 });
+  ok(true, 'on: the menu loads once /api/books/health answers');
 
   let crmNo = '';
   /* 2 · customers: chip + party block + statement */
-  await p.click('[data-testid="nav-customers"]');
+  await p.evaluate(() => navTo('customers'));
   await p.waitForSelector('[data-testid="party-due-c1"]', { timeout: 15000 });
   const chip = await p.textContent('[data-testid="party-due-c1"]');
   ok(/P-00001/.test(await p.textContent('[data-testid="party-no-c1"]')) && /6,000/.test(chip), 'the Customers table: the Party no column (P-00001) and the Balance column (' + chip.trim() + ')');
@@ -369,7 +369,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   S.items.c1.push({ against_ref: 'b3', bill_no: 'INV-3', due_date: '2026-10-29', open_minor: 150000, date: '2026-09-29', chit: 'ch3' });
   await p.evaluate(() => { BK.stmt = {}; });
   await p.click('[data-testid="nav-suppliers"]'); await p.waitForTimeout(400);
-  await p.click('[data-testid="nav-customers"]');
+  await p.evaluate(() => navTo('customers'));
   await p.waitForSelector('[data-testid="party-books-c1"] [data-testid="stmt-closing"]', { timeout: 15000 });
   await p.waitForFunction(() => /7,500/.test((document.querySelector('[data-testid="stmt-closing"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
   const stmtTxt = await p.textContent('[data-testid="party-statement"]');
@@ -460,7 +460,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   await p.evaluate(() => { closeModal(); booksAfterPay(); });
 
   /* the rail's Ledger item is ONE link to its own page now (2026-10-01, CB Accounts); the in-app screen stays reachable by URL / navTo */
-  ok(await p.getAttribute('[data-testid="nav-ledger"]', 'href') === '/accounts.html' && /CB Accounts/.test(await p.textContent('[data-testid="nav-ledger"]')), 'the rail\'s Ledger item is the link "CB Accounts ↗" → /accounts.html (same tab)');
+  ok(await p.locator('[data-testid="nav-ledger"]').count() === 0, 'P0: the workshop menu has no Ledger door any more (CB Accounts is its own app); navTo("ledger") still redirects, checked below');
   /* 6 · the Ledger screen */
   await ledgerGo(p);
   await p.waitForSelector('[data-testid="acc-nav-daybook"]', { timeout: 15000 });
@@ -801,8 +801,8 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   await p.click('[data-testid="lk-lock-' + sep + '"]');
   await p.waitForFunction((n) => /Locked/.test(document.querySelector('[data-testid="lk-state-' + n + '"]').textContent), sep, { timeout: 8000 }).catch(() => {});
   ok(S.locked[+sep] === true && await p.locator('[data-testid="lk-unlock-' + sep + '"]').count() === 1 && await p.locator('[data-testid="lk-hard-' + sep + '"]').count() === 1, 'this month locked: its row now says Locked and offers Open again and Close for good');
-  await p.goto(base + '/app.html#/app'); await p.waitForSelector('[data-testid="nav-customers"]', { timeout: 20000 });   /* back from CB Accounts to the app */
-  await p.click('[data-testid="nav-customers"]');
+  await p.goto(base + '/app.html#/app'); await p.waitForSelector('[data-testid="nav-task"]', { timeout: 20000 });   /* back from CB Accounts to the app */
+  await p.evaluate(() => navTo('customers'));
   await p.waitForSelector('[data-testid="party-books-c1"] [data-testid="party-pay"]', { timeout: 15000 });
   await p.click('[data-testid="party-books-c1"] [data-testid="party-pay"]');
   await p.fill('[data-testid="pay_amt"]', '100'); await p.click('[data-testid="pay_record"]');
@@ -969,7 +969,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
     const S0 = standIn();
     S0.noToday = true; S0.waiting = []; S0.serverCheques = []; S0.items.c1 = [];
     const { ctx: c0, p: p0 } = await open(S0);
-    await p0.waitForSelector('[data-testid="nav-ledger"]', { timeout: 15000 });
+    await p0.waitForSelector('[data-testid="nav-task"]', { timeout: 15000 });
     await ledgerGo(p0);
     await p0.waitForSelector('[data-testid="db-entry-JV/2026-27/000001"]', { timeout: 15000 });
     await p0.waitForSelector('[data-testid="todo-none"]', { timeout: 8000 }).catch(() => {});

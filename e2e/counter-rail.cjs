@@ -17,7 +17,7 @@ const SESSION = process.env.CB_SESSION || path.join(__dirname, '.auth', 'user.js
   const threw = [];
   p.on('pageerror', (e) => threw.push(e.message));
   await p.goto('/app.html');
-  await p.getByTestId('nav-counter').waitFor({ state: 'visible', timeout: 45000 });
+  await p.getByTestId('nav-compose').waitFor({ state: 'visible', timeout: 45000 });
 
   const rail = await p.evaluate(() => {
     const btns = Array.from(document.querySelectorAll('.rail button[data-testid^="nav-"], nav button[data-testid^="nav-"], [data-testid^="nav-"]'))
@@ -29,7 +29,7 @@ const SESSION = process.env.CB_SESSION || path.join(__dirname, '.auth', 'user.js
   const compose = await p.getByTestId('nav-compose').isVisible();
   console.log((compose ? '  ok   ' : '  FAIL ') + 'Compose is still on the rail');
 
-  await p.getByTestId('nav-counter').click();
+  await p.evaluate(() => counterOpen());
   await p.getByTestId('counter-door').waitFor({ timeout: 15000 });
   const doors = await p.evaluate(() => ({
     here: (document.querySelector('[data-testid="counter-open-here"]') || {}).innerText,

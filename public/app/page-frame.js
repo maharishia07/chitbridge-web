@@ -25,7 +25,7 @@
       host: { app: o.app }, kural: false, homeHref: '/',
       person: sess && root.CBAvatar ? root.CBAvatar.personOf(sess) : null, token: sess && sess.token,
       /* the one sign-in window, in the shell's own slot; signed in -> this page reads again with the session it now holds */
-      signin: { surface: o.surface || o.app, need: 'person', registerHref: '/app.html#/register', onIn: function () { root.location.reload(); } },
+      signin: { surface: o.surface || o.app, need: 'person', registerHref: '/app.html#/welcome', onIn: function () { root.location.reload(); } },
       avatar: { onSignIn: function () { var s = host.querySelector('.cbsh-signin'); if (s && s.scrollIntoView) s.scrollIntoView({ block: 'center' }); } }
     });
     if (o.work && shell && shell.slots && shell.slots.work) shell.slots.work.appendChild(o.work);

@@ -19,7 +19,7 @@ test.use({ storageState: { cookies: [], origins: [] } });
 /* ⚠️ The Register is a LAZY capability (app/cap-register.js) opened as an overlay, not a nav screen — so the
    rail button opens a panel and leaves UI.nav where it was. Every wait below is on the panel, never on a URL. */
 async function openRegister(page) {
-  await page.getByTestId('nav-raida').click();
+  await page.evaluate(() => navTo('raida'));
   /* ⚠️ READY, not merely present. The loading state carries the same testid, so waiting for the panel alone
      returned while it was still a spinner — which is why the first record() ran against a half-built screen
      and failed intermittently on timing rather than on anything real. */

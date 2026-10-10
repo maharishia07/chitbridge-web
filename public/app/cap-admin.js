@@ -3624,7 +3624,7 @@ var SET_SECS = [
    * this?" — and splitting them across a menu and a settings page means someone who needs two of the three
    * finds one of them. Athi: *"we can see how to bring the look and feel as a separate unit."*
    */
-  { key:'appearance', name:'Appearance',   q:'Theme, text size and motion' },
+  { key:'appearance', name:'Appearance',   q:'Theme, text size and motion', moved:'the avatar menu' },
   /**
    * ⭐⭐ STANDARDS — what the PLATFORM follows, what YOU follow, and what your TRADE follows.
    *
@@ -3637,7 +3637,7 @@ var SET_SECS = [
    * those three into one tick is worse than no page, because someone will rely on it. Anything not in force
    * says what is missing, in its own row.
    */
-  { key:'standards',  name:'Standards',    q:'What you follow, and the register' }
+  { key:'standards',  name:'Standards',    q:'What you follow, and the register', moved:'standards.html' }
 ];
 function setSec(){ return UI.setSec || 'work'; }
 /* Same reason as profSetSec — the hook fires before #setbody exists, so drive the load explicitly. */
@@ -3659,7 +3659,8 @@ function settingsScreen(){
    *
    * They appear only while Governance is the open section, so the rail stays five rows when it is not.
    */
-  var rail = SET_SECS.map(function(s){
+  /* P0: a section marked `moved` has its customer home (frozen, not deleted; setSetSec('standards') still opens it) — no rail row. */
+  var rail = SET_SECS.filter(function(s){ return !s.moved; }).map(function(s){
     var row = '<div class="row misrow' + (setSec() === s.key ? ' sel' : '') + '" data-testid="set-sec-' + s.key + '" onclick="setSetSec(\'' + s.key + '\')">'
       + '<div class="main2"><div class="l1"><span class="code">' + esc(s.name) + '</span></div><div class="l2">' + esc(s.q) + '</div></div></div>';
     if (s.key === 'integrations' && setSec() === 'integrations'){

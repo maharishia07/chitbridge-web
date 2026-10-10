@@ -57,12 +57,12 @@ const SESSION = () => {
   try {
     /* ── 0 · the helper is there, on both pages' shared floor ── */
     await p.goto(web.url('/app.html#/app'));
-    await p.waitForSelector('[data-testid="nav-customers"]', { timeout: 20000 });
+    await p.waitForSelector('[data-testid="nav-task"]', { timeout: 20000 });
     ok(await p.evaluate(() => typeof CBAction === 'object' && typeof CBAction.run === 'function' && typeof CBAction.once === 'function' && bkOnce.toString().indexOf('CBAction.once') >= 0),
       'CBAction.run / CBAction.once exist, and bkOnce IS CBAction.once (one guard, not two)');
 
     /* ── A · Record a payment: a double press on Next records ONCE ── */
-    await p.click('[data-testid="nav-customers"]');
+    await p.evaluate(() => navTo('customers'));
     await p.waitForSelector('[data-testid="cust-row-c1"]', { timeout: 15000 });
     await p.click('[data-testid="cust-row-c1"]');
     await p.waitForSelector('[data-testid="party-books-c1"] [data-testid="party-pay"]', { timeout: 15000 });
