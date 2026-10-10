@@ -3483,10 +3483,22 @@ function regReset(){ REG={step:"form", name:"", email:"", busy:false, err:""}; r
 function govRows(){
   try { return (window.CBGov && CBGov.rows(govCtx())) || []; } catch (_) { return []; }
 }
+/* ⭐ THE TIME ZONE DECIDES THE COUNTRY when it names a served one (M196: en-US browser in Asia/Calcutta started an Indian shop in dollars);
+   the language tag only speaks when the zone is ambiguous. The engine's countryOf lets the tag win, so we hand it an env without
+   the tag when the zone is known — one table (CBGov.ZONES), no second one. [[feedback-country-first]] */
+function govRead(){
+  var e = CBGov.sense(), z = CBGov.regionFromZone(e.timeZone);
+  if (!(z && window.CBLocale && CBLocale.REGIONS && CBLocale.REGIONS[z])) return CBGov.read(e);
+  var c = CBGov.read({ language: '', languages: [], timeZone: e.timeZone, screenW: e.screenW, screenH: e.screenH, dpr: e.dpr,
+    coarsePointer: e.coarsePointer, uaMobile: e.uaMobile, platform: e.platform, touchPoints: e.touchPoints, online: e.online });
+  c.language = { value: String(e.language || '').split('-')[0], from: 'your browser' };   /* the zone sets the country, not the language */
+  c.languages = { value: (e.languages || []).slice(), from: 'your browser' };
+  return c;
+}
 var _govCtx = null;
 function govCtx(){
   /* ⚠️ READ ONCE. Re-deriving on every repaint would let the values move under the person while they read. */
-  try { if (!_govCtx && window.CBGov) _govCtx = CBGov.read(); } catch (_) { _govCtx = null; }
+  try { if (!_govCtx && window.CBGov) _govCtx = govRead(); } catch (_) { _govCtx = null; }
   return _govCtx;
 }
 function govPanel(){
@@ -3585,11 +3597,11 @@ function renderRegister(){
            acmetraders.clothing   a NETWORK node — . binds a store to its network
        Only the entity ever registers. Employees are created by the business, network stores are minted by their
        parent, and customers register at a storefront automatically. */
-    form = `${onbBanner()}<label class="fl">User ID <span ${muted}>(Register.UserID)</span></label><input class="inp" id="r_name" data-testid="reg-name" placeholder="acmetraders" autocapitalize="off" spellcheck="false" value="${esc(R.name)}">
+    form = `${onbBanner()}<label class="fl">User ID</label><input class="inp" id="r_name" data-testid="reg-name" placeholder="acmetraders" autocapitalize="off" spellcheck="false" value="${esc(R.name)}">
        <div style="font-size:var(--fs-1);color:var(--grey);margin:-2px 0 8px;line-height:1.5">${txf('8 characters or more · lowercase letters, numbers and dashes — nothing else.{br}No spaces, and no punctuation: {at} {dot} {tilde} each already mean something here — they make an employee, a network store, and a supplier you write down yourself — so they are kept for that.{br}{fixed} Your business name can be anything you like, spaces and all, and you set it after signing in.', {
         at: '<b>@</b>', dot: '<b>.</b>', tilde: '<b>~</b>', br: '<br>',
         fixed: '<b>' + tx('This cannot be changed later.') + '</b>' })}</div>
-       <label class="fl">Email <span ${muted}>(Register.Email)</span></label><input class="inp" id="r_email" data-testid="reg-email" placeholder="you@business.in" value="${esc(R.email)}">
+       <label class="fl">Email</label><input class="inp" id="r_email" data-testid="reg-email" placeholder="you@business.in" value="${esc(R.email)}">
        ${R.err?`<div class="err">${R.err}</div>`:""}
        <button class="btn gold" id="r_go" data-testid="reg-submit" ${R.busy?"disabled":""}>${R.busy?'<span class="spin"></span> Creating…':"Create entity <span class=arw>→</span>"}</button>`;
   } else {
@@ -3694,7 +3706,7 @@ function renderLogin(){
   const L=LOGIN; const muted='style="color:var(--grey);font-weight:400"'; const who='style="font-size:var(--fs-2);color:var(--grey);margin-bottom:8px"';
   let form="";
   if(L.cust){
-    form = `<label class="fl">Shop link / User ID <span ${muted}>(Login.Bridge)</span></label><input class="inp" id="l_bridge" placeholder="your User ID or email" value="${esc(L.id||'')}">
+    form = `<label class="fl">Shop link / User ID</label><input class="inp" id="l_bridge" placeholder="your User ID or email" value="${esc(L.id||'')}">
        <label class="fl">${tx('Your mobile OTP')}</label><input class="inp" id="l_cotp" placeholder="6-digit code" autocomplete="one-time-code" inputmode="numeric">
        <button class="btn" id="l_go">${L.busy?'<span class="spin"></span> …':"View my orders <span class=arw>→</span>"}</button>
        <div class="swap"><a onclick="setLoginCust(false)"><span class=arw>←</span> ${tx('Back to sign in')}</a></div>`;
