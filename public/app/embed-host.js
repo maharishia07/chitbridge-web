@@ -3,6 +3,7 @@
  * P1 (2026-10-10). Tasks & Orders will use the same helper for its own embeds; nothing here knows about employees.
  *
  *   var h = CBEmbed.open({ app: 'employees', view: 'add', title: 'Add a person',
+ *                          api: function () { return base }   // where the host's token is good (default: the host's CloudHost.api) — the embed reads THERE, not at its own default
  *                          onMessage: function (m) { ... }, onClose: function () { ... } });   h.close()
  *
  * The embed page is /<app>.html?embed=1&view=<view>. It tells its host with window.parent.postMessage({ cb: <app>, event, person? }, origin).
@@ -35,7 +36,7 @@
       if (e.source !== f.contentWindow || e.origin !== root.location.origin) return;
       var m = e.data; if (!m || m.cb !== o.app) return;
       if (m.event === 'close') return close();
-      if (m.event === 'need-session') { var t = o.session && o.session(); try { f.contentWindow.postMessage({ cb: 'host', event: 'session', token: t || null }, root.location.origin); } catch (_) {} return; }
+      if (m.event === 'need-session') { var t = o.session && o.session(); try { f.contentWindow.postMessage({ cb: 'host', event: 'session', token: t || null, api: (o.api ? o.api() : (root.CloudHost && root.CloudHost.api)) || null }, root.location.origin); } catch (_) {} return; }
       if (o.onMessage) o.onMessage(m);
     }
     root.addEventListener('message', heard);

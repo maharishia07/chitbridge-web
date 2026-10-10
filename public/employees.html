@@ -80,18 +80,18 @@ dialog.sheet .mx{position:absolute;right:8px;top:8px;border:0;background:transpa
   /* embed: no frame. A host page (the till, signed in under its own shop-scoped store) is asked for its person's token over postMessage -
      kept in memory only, never stored - so the form never acts as another shop's saved login. A host that says it has none: refused politely; one that
      does not answer: the browser's own saved session, as before. */
-  function start(token) {
+  function start(token, api) {
     if (!token) { host.innerHTML = '<div class="empty" data-testid="emp-signin"><div class="t">' + (embed ? 'Sign in first' : 'Sign in above') + '</div></div>'; return; }
-    CBEmployees.mount(host, { token: token, base: API, embed: embed, view: view, onEnded: function () { embed ? start(null) : CBFrame.ended(); } });
+    CBEmployees.mount(host, { token: token, base: api == null ? API : api, embed: embed, view: view, onEnded: function () { embed ? start(null) : CBFrame.ended(); } });
   }
   if (!embed) { start(CBFrame.mount({ app: 'employees', kural: 'employees', work: host }).token); return; }
   var own = (CBFrame.session() || {}).token;
   if (!window.parent || window.parent === window) { start(own); return; }
   var done = false;
-  function give(t) { if (done) return; done = true; window.removeEventListener('message', heard); start(t); }
+  function give(t, api) { if (done) return; done = true; window.removeEventListener('message', heard); start(t, api); }
   function heard(e) {
     var m = e.data;
-    if (e.source === window.parent && e.origin === location.origin && m && m.cb === 'host' && m.event === 'session') give(m.token || null);
+    if (e.source === window.parent && e.origin === location.origin && m && m.cb === 'host' && m.event === 'session') give(m.token || null, String(m.api || '').indexOf('http') === 0 ? m.api : null);
   }
   window.addEventListener('message', heard);
   window.parent.postMessage({ cb: 'employees', event: 'need-session' }, location.origin);
