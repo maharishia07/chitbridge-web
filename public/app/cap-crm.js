@@ -29,6 +29,8 @@ var CRM_EP = {
   railChits:     { m: 'GET',    p: '/api/facts/rail/chits',               ok: 'y' },   // the open chits behind Home's In · Out · Stuck (cap-crm-chits.js) - not a /api/crm route
   crmLeadAdd:    { m: 'POST',   p: '/api/crm/leads',                      ok: 'y' },   // { name, phone?, stage? } → 201 { party } · 503 LEADS_NOT_MIGRATED before b297 (L1)
   crmStage:      { m: 'POST',   p: '/api/crm/parties/:id/stage',          ok: 'y' },   // { stage } → { ok, lead } — "Move to…": a new memberships row, history kept (L1)
+  crmCalls:      { m: 'GET',    p: '/api/crm/calls',                      ok: 'y' },   // ?scope=mine|all → { calls, outcomes, may, late } — today's queue + the server's outcome buttons (L2)
+  crmOutcome:    { m: 'POST',   p: '/api/crm/parties/:id/outcome',        ok: 'y' },   // { outcome, after?|due_at? } → 201 { interaction, followup, stage, suggest } — one transaction (L2)
   crmRemove:     { m: 'DELETE', p: '/api/crm/parties/:id',                 ok: 'y' },   // "Remove from my parties" - owner only, 409 HAS_DUES, hides the party and deletes nothing
 };
 
@@ -256,6 +258,7 @@ function crmNav(active) {
   var items = [['parties', 'Parties', 'M16 11a4 4 0 1 0-8 0 4 4 0 0 0 8 0zM4 21c0-4 3.6-6 8-6s8 2 8 6', CRM.loaded ? '<span class="n quiet" data-testid="crm-nav-n-parties">' + CRM.rows.length + '</span>' : ''],
     ['chits', 'Chits', 'M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6', (typeof CHITS !== 'undefined' && CHITS.state === 'ready' && chitsStuckCount()) ? '<span class="n" data-testid="crm-nav-n-chits" title="' + esc(tx('Stuck chits')) + '">' + chitsStuckCount() + '</span>' : ''],
     ['leads', 'Leads', 'M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.4 6.6 19.5l1.2-6L3.3 9.3l6.1-.7z', ''],
+    ['calls', 'Calls', 'M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2', (typeof CALLS !== 'undefined' && CALLS.loaded && CALLS.rows.length) ? '<span class="n' + (CALLS.late ? '' : ' quiet') + '" data-testid="crm-nav-n-calls">' + CALLS.rows.length + '</span>' : ''],
     ['followups', 'Follow-ups', 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M12 7v5l3 2', late ? '<span class="n" data-testid="crm-nav-n-followups" title="' + esc(crmPlural(late, 'late follow-up', 'late follow-ups')) + '">' + late + '</span>' : '']];
   document.getElementById('nav').innerHTML = items.map(function (x) {
     return '<a class="nav-btn' + (x[0] === active ? ' active' : '') + '" href="#/' + x[0] + '" data-testid="crm-nav-' + x[0] + '" aria-label="' + esc(tx(x[1])) + '"' + (x[0] === active ? ' aria-current="page"' : '') + '>'
@@ -292,6 +295,11 @@ function crmRoute(frame) {
   if (seg[0] === 'leads') {
     CRM.route = { nav: 'leads', view: 'leads', sub: '', params: params };
     crmNav('leads'); crmLeads(frame);
+    return;
+  }
+  if (seg[0] === 'calls') {
+    CRM.route = { nav: 'calls', view: 'calls', sub: '', params: params };
+    crmNav('calls'); crmCalls(frame);
     return;
   }
   if (seg[0] === 'followups') {
@@ -677,5 +685,6 @@ document.addEventListener('click', function (ev) {
   if (a === 'fusave') return crmFuSave();
   if (a === 'minichit') { ev.stopPropagation(); if (typeof openChitSheet === 'function') openChitSheet(id); return; }
   if (typeof crmLeadClick === 'function' && crmLeadClick(a, t)) return;
+  if (typeof crmCallClick === 'function' && crmCallClick(a, t)) return;
   if (typeof crmRecordClick === 'function') return crmRecordClick(a, t, ev);
 });

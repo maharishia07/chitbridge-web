@@ -59,6 +59,12 @@ The guard reads the table below: **an icon in two rows, or a meaning with two ic
 | Reset code | 🔢 | Employees person sheet | Reset code |
 | Switch a person on or off | ⏻ | Employees person sheet | Switch on / Switch off |
 | Who stands in | 🤝 | Employees person sheet | Who stands in |
+| Call: no answer | 📵 | CRM Calls row (outcome buttons, icon + word) | No answer |
+| Call: call back | ↩ | CRM Calls row (outcome buttons, icon + word) | Call back |
+| Call: interested | 👍 | CRM Calls row (outcome buttons, icon + word) | Interested |
+| Call: demo booked | 📅 | CRM Calls row (outcome buttons, icon + word) | Demo booked |
+| Call: not now | ⏳ | CRM Calls row (outcome buttons, icon + word) | Not now |
+| Call: wrong number | 🚫 | CRM Calls row (outcome buttons, icon + word) | Wrong number |
 
 ## Conflicts found, and how the map resolves them
 
