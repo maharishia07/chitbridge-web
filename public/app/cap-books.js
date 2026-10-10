@@ -1523,6 +1523,8 @@ var BK_BUCKETS_PAY = [['not_due', 'Not due'], ['lt_1y', '< 1 year'], ['y1_2', '1
  * suppliers — each with the columns of its own side, and any bucket the server sends that has no column here lands in
  * "Other" rather than vanishing (a named list of columns must never be a silent filter).
  */
+/** a supplier the shop has paid ahead (Dr balance: paid with no bill) is an advance — they owe you; the balance sheet reclassifies it the same way (1700). It is never under To pay. */
+function bkDuesAdvance(p) { return bkDuesSide(p) === 'pay' && Number(p.balance_minor) > 0; }
 function bkDuesSide(p) {
   if (p.side === 'supplier') return 'pay';
   if (p.side === 'customer') return 'rcv';
@@ -1541,7 +1543,7 @@ function bkDuesCols(c) {
   var dash = '<span style="color:var(--grey)">—</span>', amt = function (p, v) { return esc(bkMoney(Math.abs(Number(v || 0)), c)); };   /* the group head says whose it is (You owe / They owe you) — an amount here is never signed */
   return [
     { key: 'party', label: tx('Party'), prio: 1, sort: 'party', w: 230, html: true, cell: function (p) { return esc(bkPartyLabel(p.party_id, p.name)); } },
-    { key: 'due', label: tx('Total due'), prio: 2, sort: 'due', num: true, w: 130, html: true, cell: function (p) { return '<b data-b="balance">' + amt(p, p.balance_minor) + '</b>'; } },
+    { key: 'due', label: tx('Total due'), prio: 2, sort: 'due', num: true, w: 130, html: true, cell: function (p) { return '<b data-b="balance">' + amt(p, p.balance_minor) + '</b>' + (bkDuesAdvance(p) ? ' <span data-b="advance" style="color:var(--grey)">· ' + esc(tx('advance paid — they owe you')) + '</span>' : ''); } },
     { key: 'oldest', label: tx('Oldest due'), prio: 3, sort: 'oldest', w: 220, html: true, cell: function (p) { var ag = bkDuesAge(p); return p.oldest_due ? '<span data-b="due">' + esc(bkDate(p.oldest_due)) + '</span>' + (ag ? ' <span data-b="age" style="color:var(--grey)">· ' + esc(tx(ag)) + '</span>' : '') : dash; } },
     { key: 'act', label: ' ', prio: 1, pin: 'end', w: 170, html: true, cell: function (p) { return bkDuesActs(p); } },
   ];
@@ -1622,13 +1624,15 @@ async function bkDues(body, onlySide) {   /* onlySide 'rcv' | 'pay' (CB Accounts
   try {
     var r = await api('booksDues', { query: { asOf: bkToday() } }); var c = r && r.currency; bkDuesStore(r);
     var open = ((r && r.parties) || []).filter(function (p) { return Number(p.balance_minor); });
+    /* the page's own side is the page, not a filter the person set: Receivables also holds the advances paid; Payables holds no one who owes you */
+    if (onlySide) open = open.filter(function (p) { return onlySide === 'rcv' ? (bkDuesSide(p) === 'rcv' || bkDuesAdvance(p)) : (bkDuesSide(p) === 'pay' && !bkDuesAdvance(p)); });
     var num = function (g) { return function (a, b) { return Number(g(a)) - Number(g(b)); }; };
     body.innerHTML = '<div id="bkl_dues" data-testid="dues-list"></div>';
     CBList.mount(document.getElementById('bkl_dues'), {
       key: 'dues', t: tx, rows: function () { return open; }, id: function (p) { return p.party_id; }, columns: bkDuesCols(c),
       rowTid: function (p) { return 'dues-' + p.party_id; },
       /* They owe you / You owe: one head each, the customers first */
-      group: { default: 'side', order: ['rcv', 'pay'], by: function (p) { var s = bkDuesSide(p); return [tx(s === 'rcv' ? 'To collect' : 'To pay'), s]; },
+      group: { default: 'side', order: ['rcv', 'adv', 'pay'], by: function (p) { if (bkDuesAdvance(p)) return [tx('Advance paid'), 'adv']; var s = bkDuesSide(p); return [tx(s === 'rcv' ? 'To collect' : 'To pay'), s]; },
         fig: function (rows) { return txf(rows.length === 1 ? '{n} party' : '{n} parties', { n: rows.length }) + ' · ' + bkOwes(rows.reduce(function (t, p) { return t + Number(p.balance_minor || 0); }, 0), c); }, headTid: function (k) { return 'dues-side-' + k; } },
       search: function (p) { return [p.party_no, p.name, bkPartyLabel(p.party_id, p.name), p.balance_minor ? (Math.abs(p.balance_minor) / Math.pow(10, bkDec(c))).toFixed(bkDec(c)) : ''].join(' '); },
       sorts: [
@@ -1637,10 +1641,9 @@ async function bkDues(body, onlySide) {   /* onlySide 'rcv' | 'pay' (CB Accounts
         { key: 'due', label: tx('Total due'), cmp: num(function (p) { return Math.abs(p.balance_minor || 0); }) },
         { key: 'oldest', label: tx('Oldest due'), cmp: function (a, b) { return String(a.oldest_due || '9999').localeCompare(String(b.oldest_due || '9999')); } },
       ],
-      preset: onlySide ? { filt: { side: onlySide } } : null,
-      filters: [{ key: 'side', label: tx('Side'), all: tx('Both sides'), options: [{ v: 'rcv', label: tx('To collect') }, { v: 'pay', label: tx('To pay') }], match: function (p, v) { return bkDuesSide(p) === v; } }],
+      filters: onlySide ? [] : [{ key: 'side', label: tx('Side'), all: tx('Both sides'), options: [{ v: 'rcv', label: tx('To collect') }, { v: 'pay', label: tx('To pay') }], match: function (p, v) { return v === 'pay' ? bkDuesSide(p) === 'pay' && !bkDuesAdvance(p) : bkDuesSide(p) === 'rcv' || bkDuesAdvance(p); } }],
       next: function (p) { return bkDuesNext(p, c); },
-      empty: { title: tx('Nothing is due') },
+      empty: { title: tx(onlySide === 'rcv' ? 'Nobody owes you money' : onlySide === 'pay' ? 'You owe nobody' : 'Nothing is due') },
     });
   } catch (e) { body.innerHTML = bkErr(e); }
 }
