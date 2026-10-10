@@ -22,6 +22,12 @@
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function $(id) { return root.document.getElementById(id); }
 
+  /* ⭐ the endpoint registry — the ONE declaration shape (accounts-shell.js) the round-trip scanner reads
+     (api tools/endpoint-usage.cjs): a call made any other way is invisible to the budget guard. */
+  var EP = {
+    nwValidate: { m: "POST", p: "/api/network-design/validate" }   // dry-run: what would break; posts nothing
+  };
+  function api(key, body) { var e = EP[key]; return call(e.m, e.p, body); }
   function call(method, path, body) {
     return root.fetch((N.o.base || '') + path, { method: method, cache: 'no-store',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + N.o.token }, body: body ? JSON.stringify(body) : undefined })
@@ -151,7 +157,7 @@
     t.innerHTML = kids(null, 0) || nodes.map(function (n) { return '<div class="nw-node"><b>' + esc(n.name || '—') + '</b></div>'; }).join('');
   }
   function check() {
-    root.CBAction.run($('nw_check'), function () { return call('POST', '/api/network-design/validate', {}); },
+    root.CBAction.run($('nw_check'), function () { return api('nwValidate', {}); },
       { key: 'nw-check', failed: T("Couldn't check the design"), out: 'nw_dout',
         outcome: function (v) {
           var out = $('nw_dout'); out.setAttribute('data-tone', v.ok ? 'ok' : 'error'); out.textContent = v.says || '';
