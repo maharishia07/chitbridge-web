@@ -47,6 +47,8 @@
   function ask(c, fn, btn, o) { return root.CBAction.run(btn, fn, Object.assign({ confirm: c }, o || {})); }
 
   /* ── words ── */
+  /** the short id people type: the stored grammar (asha01@mayur-restaurant.br) is added behind the scenes (2026-10-08) and never shown */
+  function shortId(u) { return String(u == null ? '' : u).replace(/@[^@]*$/, ''); }
   function sinceWord(iso) {
     if (!iso) return T('Not yet');
     var d = Date.parse(iso); if (!d) return T('Not yet');
@@ -93,7 +95,7 @@
     return [
       { key: 'name', label: T('Name'), prio: 1, w: 230, sort: 'name', html: true, value: function (p) { return p.name; },
         cell: function (p) { return '<b>' + esc(p.name) + '</b>' + (p.role ? ' <span class="sub">' + esc(p.role) + '</span>' : ''); } },
-      { key: 'user_id', label: T('User ID'), prio: 2, w: 230, mono: true, cell: function (p) { return p.user_id || '—'; } },
+      { key: 'user_id', label: T('User ID'), prio: 2, w: 230, mono: true, cell: function (p) { return shortId(p.user_id) || '—'; } },
       { key: 'access', label: T('Can do'), prio: 3, w: 170, sort: 'access', hfilter: 'access', cell: function (p) { return p.access.label; }, value: function (p) { return p.access.label; } },
       { key: 'state', label: T('On or off'), prio: 4, w: 120, sort: 'state', hfilter: 'state', html: true, cell: stateTag, value: function (p) { return STATE_WORD[p.state]; } },
       { key: 'last', label: T('Last at a counter'), prio: 5, w: 170, sort: 'last', cell: function (p) { return sinceWord(p.last_at); }, value: function (p) { return p.last_at || ''; } }
@@ -104,7 +106,7 @@
     root.CBList.reset && root.CBList.reset('employees');
     E.list = root.CBList.mount(host, {
       key: 'employees', t: T, rows: function () { return E.people; }, id: function (p) { return p.id; }, rowTid: function (p) { return 'emp-row-' + p.id; },
-      columns: cols(),
+      columns: cols(), defaultCols: ['name', 'user_id', 'access', 'state'],   /* On or off shows by default; Last at a counter is in the ⚙ chooser */
       filters: [
         { key: 'state', label: T('On or off'), all: T('All'), options: [{ v: 'on', label: T('On') }, { v: 'off', label: T('Off') }], match: function (p, v) { return v === 'off' ? p.state === 'off' : p.state !== 'off'; } },
         { key: 'access', label: T('Can do'), all: T('Anything'), options: E.choices.map(function (c) { return { v: c.label, label: c.label }; }), match: function (p, v) { return p.access.label === v; } }
@@ -141,7 +143,7 @@
     var m = p.may;
     var coverNote = p.cover ? '<span class="sub">' + esc(T('Stands in')) + ': ' + esc(p.cover.name) + '</span>' : '';
     sheet('<h2 data-testid="emp-name">' + esc(p.name) + '</h2>'
-      + '<div class="emp-sub"><span class="mono" data-testid="emp-userid">' + esc(p.user_id || '') + '</span> ' + stateTag(p) + '</div>'
+      + '<div class="emp-sub"><span class="mono" data-testid="emp-userid">' + esc(shortId(p.user_id)) + '</span> ' + stateTag(p) + '</div>'
       + '<div id="emp_out" class="emp-out" role="status" data-testid="emp-out"></div>'
       + '<div class="emp-acts">'
       + actRow('emp_access', '🔑', T('What they can do'), m.access, '<span class="sub">' + esc(p.access.label) + '</span>')
@@ -268,7 +270,7 @@
       var p = id ? byId(id) : null;
       sheet('<h2 data-testid="emp-added">' + esc(T('Added')) + '</h2>'
         + '<div class="emp-sub"><b>' + esc((p && p.name) || (r.actor && r.actor.display_name) || '') + '</b></div>'
-        + '<div class="mono" data-testid="emp-added-id">' + esc((p && p.user_id) || (r.actor && r.actor.login_format) || '') + '</div>'
+        + '<div class="mono" data-testid="emp-added-id">' + esc(shortId((p && p.user_id) || (r.actor && r.actor.login_format))) + '</div>'
         + '<div class="emp-out" data-testid="emp-added-code">' + esc(codeSentence(r)) + '</div>'
         + '<button type="button" class="act" id="emp_done" data-testid="emp-done">' + esc(T('Done')) + '</button>');
       $('emp_done').onclick = function () { var d = $('emp_sheet'); try { d.close(); } catch (_) {} d.innerHTML = ''; if (E.o.view === 'add') tell('close'); };
