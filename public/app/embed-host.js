@@ -7,7 +7,9 @@
  *
  * The embed page is /<app>.html?embed=1&view=<view>. It tells its host with window.parent.postMessage({ cb: <app>, event, person? }, origin).
  * Only a message from THIS iframe, from this page's own origin, with cb === app is heard; `event: 'close'` closes the dialog.
- * Same origin only: the sign-in is the browser's own saved session, so nothing is passed in the address.
+ * Same origin only. The sign-in is the browser's own saved session; a host that holds a session of its own (the till signs a PERSON in under a
+ * shop-scoped store, not cb_sess) passes  session: function () { return token }  and the embed — which asks with { cb, event: 'need-session' } —
+ * is answered over postMessage { cb: 'host', event: 'session', token } to THIS iframe only. The token is never put in the address or in storage.
  */
 (function (root) {
   'use strict';
@@ -33,6 +35,7 @@
       if (e.source !== f.contentWindow || e.origin !== root.location.origin) return;
       var m = e.data; if (!m || m.cb !== o.app) return;
       if (m.event === 'close') return close();
+      if (m.event === 'need-session') { var t = o.session && o.session(); try { f.contentWindow.postMessage({ cb: 'host', event: 'session', token: t || null }, root.location.origin); } catch (_) {} return; }
       if (o.onMessage) o.onMessage(m);
     }
     root.addEventListener('message', heard);
