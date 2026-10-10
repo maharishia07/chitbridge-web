@@ -686,12 +686,15 @@ function stdWhyHTML(opts){
     }).join(''));
   };
 
-  return (compact ? '' : stdFoldBar()) + card('<div style="font-size:var(--fs-2);line-height:1.65;color:var(--on-card)">'
-      + '<b>A chit crosses a boundary.</b> It leaves one company and lands in another that shares no system with '
+  return (compact ? '' : stdFoldBar()) + card('<div data-testid="std-why-short" style="font-size:var(--fs-2);line-height:1.65;color:var(--on-card)">'
+      + '<div><b>' + tx('Your chit reaches another shop.') + '</b></div>'
+      + '<div><b>' + tx('That shop can read it on day one.') + '</b></div>'
+      + '<div><b>' + tx('No one has to be taught our way.') + '</b></div>'
+      + '<details data-testid="std-why-more" style="margin-top:8px;color:var(--grey)"><summary style="cursor:pointer">' + tx('More') + '</summary>'
+      + '<div style="margin-top:6px"><b>A chit crosses a boundary.</b> It leaves one company and lands in another that shares no system with '
       + 'it. Every convention we invent is one the other side has to be taught; every standard we adopt arrives '
-      + 'already legible.'
-      + '<div style="margin-top:8px;color:var(--grey)">So this is not hygiene around the rail — it is what makes '
-      + 'a rail possible <b>without an integration project per counterparty</b>.</div></div>')
+      + 'already legible. So this is not hygiene around the rail — it is what makes '
+      + 'a rail possible <b>without an integration project per counterparty</b>.</div></details></div>')
     + col('What it buys', STD_WHY.pleasure, 'var(--ok-2)')
     + col('What it costs', STD_WHY.pain, 'var(--warn-2)')
     /* ⚠️ EVIDENCE FROM THIS CODEBASE, never assertions — each found BY adopting the standard, and none of them

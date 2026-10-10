@@ -65,7 +65,7 @@ function supPaint(){
   var counted = rows.filter(function(x){ return x.keep_stock; }).length;
   el.innerHTML = head
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:8px" data-testid="supply-count">'
-    + txf('{n} supplies · {c} counted', { n: rows.length, c: counted }) + '</div>'
+    + txn('{count} supply · {c} counted', '{count} supplies · {c} counted', rows.length, { c: counted }) + '</div>'
     + '<div class="itab" style="border:1px solid var(--line);border-radius:12px;overflow:hidden">'
     + rows.map(supRow).join('') + '</div>';
 }

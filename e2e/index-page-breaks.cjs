@@ -12,7 +12,7 @@ const BREAKS = [
   ['the 404 reaches the screen', IDX, `    if (w) alert_('ledger-waiting', 'warn', '🕗', w + ' waiting for the ledger', '', 'See them', '/accounts.html#waiting');\n  }).catch(function(){});`, `    if (w) alert_('ledger-waiting', 'warn', '🕗', w + ' waiting for the ledger', '', 'See them', '/accounts.html#waiting');\n  }).catch(function(e){ alert_('ledger-err', 'bad', '!', 'Error ' + e.status, '', 'Retry', '/'); });`],
   ['the page mounts the bar, not Home', IDX, `    host: null,`, `    host: { bar: true },`],
   ['the signed-out row grows a second door', IDX, `<button class="fix" data-testid="signed-out-go">Sign in</button>`, `<a class="fix" href="/app.html#/login" data-testid="signed-out-go">Sign in</a>`],
-  ['the word accounting reaches the page', IDX, `<h3>The rail</h3>`, `<h3>The rail (accounting)</h3>`],
+  ['the word accounting reaches the page', IDX, `<h3>Your suppliers and customers</h3>`, `<h3>Your suppliers and customers (accounting)</h3>`],
   ['the rail overflows a phone', IDX, `.rail{border:1px solid var(--line);border-radius:14px;background:var(--card);padding:14px 20px 16px;`, `.rail{min-width:600px;border:1px solid var(--line);border-radius:14px;background:var(--card);padding:14px 20px 16px;`],
 ];
 /* BREAK_ONLY=<text> runs just the breaks whose name contains it */

@@ -283,7 +283,7 @@ async function partyStatementLoad(partyId) {
  */
 /** a walk-in day's "N bills": opens the bills it covers, each one a link to its chit (the server names them in source.bills; without them it is only the count) */
 function bkDayBillsLink(s, tid) {
-  var word = esc(txf(s.count === 1 ? '{n} bill' : '{n} bills', { n: s.count }));
+  var word = esc(txn('{count} bill', '{count} bills', s.count));
   if (!s.bills || !s.bills.length) return word;
   var BKD = (BK.dayBills = BK.dayBills || {}); BKD[tid] = s.bills;
   return '<a href="#" data-testid="' + esc(tid) + '-bills" onclick="event.stopPropagation();bkDayBillsOpen(\'' + esc(tid) + '\');return false">' + word + '</a>';
@@ -293,7 +293,7 @@ function bkDayBillsOpen(tid) {
   /* M132b: the shared popover look (the cb-design tokens: card ground, line, radius, readable size) - the sheet host (accounts.html) carries no .mhd/.mbody/.mfoot of its own */
   var pad = 'padding:14px 18px;font-size:var(--fs-3,15px);color:var(--ink,#2a2418)';
   modal('<div style="min-width:min(300px,86vw);background:var(--card,#fffdf8);border-radius:12px">'
-    + '<div data-testid="daybills_title" style="' + pad + ';font-weight:700;border-bottom:1px solid var(--line,#e3dccb)">' + esc(txf(bills.length === 1 ? '{n} bill' : '{n} bills', { n: bills.length })) + '</div>'
+    + '<div data-testid="daybills_title" style="' + pad + ';font-weight:700;border-bottom:1px solid var(--line,#e3dccb)">' + esc(txn('{count} bill', '{count} bills', bills.length)) + '</div>'
     + '<div data-testid="daybills_list" style="' + pad + ';max-height:54vh;overflow-y:auto">'
     + bills.map(function (b, i) { return '<div style="padding:6px 0">' + bkBillPart({ ref: b.ref, chit_id: b.chit_id }, 'daybills-' + i) + '</div>'; }).join('') + '</div>'
     + '<div style="padding:12px 18px;border-top:1px solid var(--line,#e3dccb);display:flex;justify-content:flex-end"><button data-testid="daybills_close" onclick="closeModal()" style="min-height:44px;padding:8px 18px;border:1px solid var(--line,#e3dccb);border-radius:9px;background:var(--card,#fffdf8);color:var(--ink,#2a2418);font-size:var(--fs-3,15px);font-weight:600;cursor:pointer">' + esc(tx('Close')) + '</button></div></div>');
@@ -605,7 +605,7 @@ function payLeftPaint() {
   if (!(amt > 0)) { box.textContent = tx('Type the amount'); box.style.color = 'var(--grey)'; return; }
   if (payMode() === 'cheque') { box.textContent = tx('Counts against bills when the cheque clears'); box.style.color = 'var(--grey)'; return; }
   var a = payAllocs(), used = a.reduce(function (s, x) { return s + (x.amount_minor > 0 ? x.amount_minor : 0); }, 0), n = a.filter(function (x) { return x.amount_minor > 0; }).length, left = amt - used, parts = [];
-  if (n) parts.push(txf(n === 1 ? '{amt} settles 1 bill' : '{amt} settles {n} bills', { amt: bkMoney(used), n: n }));
+  if (n) parts.push(txn('{amt} settles {count} bill', '{amt} settles {count} bills', n, { amt: bkMoney(used) }));
   if (left > 0) parts.push(txf(PAY.kind === 'supplier' ? '{amt} stays with {name} as an advance' : '{amt} is kept as an advance from {name}', { amt: bkMoney(left), name: PAY.name }));
   if (left < 0) parts.push(txf('{amt} too much', { amt: bkMoney(Math.abs(left)) }));
   box.textContent = parts.length ? parts.join(' · ') : (pv && pv.words) || '';
@@ -862,7 +862,7 @@ function bkDvGroupSummary(entries, c) {
     if (bkDvKind(e) === 'Sales') (e.lines || []).forEach(function (l) { if (/^4/.test(String(l.code))) sales += Number(l.cr_minor || 0) - Number(l.dr_minor || 0); });
   });
   var tn = bkDaySales(entries, null).tenders;
-  var parts = [txf(entries.length === 1 ? '{n} entry' : '{n} entries', { n: entries.length }), tx('Dr') + ' ' + bkMoney(dr, c), tx('Cr') + ' ' + bkMoney(cr, c)];
+  var parts = [txn('{count} entry', '{count} entries', entries.length), tx('Dr') + ' ' + bkMoney(dr, c), tx('Cr') + ' ' + bkMoney(cr, c)];
   if (sales) parts.push(tx('Sales') + ' ' + bkMoney(sales, c));
   tn.forEach(function (x) { parts.push(tx(x.how) + ' ' + bkMoney(x.amount_minor, c)); });
   return parts.join(' · ');
@@ -947,7 +947,7 @@ function bkDbPeriodLabel(q, preset) {
 function bkDvHead() {
   var d = BK.dv, r = d.r, c = r && r.currency, q = d.range, n = d.todo, p = BK.dbp || bkDbPeriod('fy');
   var t = bkDaySales((r && r.entries) || [], q.to), chips = [], notices = [];
-  t.counters.forEach(function (x) { chips.push({ tid: 'strip-counter-' + x.counter, text: x.counter + ' ' + bkMoney(x.amount_minor, c) + ' · ' + txf(x.bills === 1 ? '{n} bill' : '{n} bills', { n: x.bills }) }); });
+  t.counters.forEach(function (x) { chips.push({ tid: 'strip-counter-' + x.counter, text: x.counter + ' ' + bkMoney(x.amount_minor, c) + ' · ' + txn('{count} bill', '{count} bills', x.bills) }); });
   t.tenders.forEach(function (x) { chips.push({ tid: 'strip-tender-' + x.how, text: tx(x.how) + ' ' + bkMoney(x.amount_minor, c) }); });
   /* ⚠️ walk-in cash/UPI/card reach the Day book only at day close — no walk-in day entry for this day means the strip is not the whole day yet, and says so (the counter holds the fix) */
   if (!t.day_closed) notices.push({ cls: 'warn', tid: 'strip-noclose', text: tx('Walk-ins not closed yet — close the day on the counter'), onOpen: function () { if (typeof navTo === 'function') navTo('counter'); } });
@@ -1262,7 +1262,7 @@ function bkEntryWord(e) {
 function bkLgDetails(l) {
   var s = l.source || {}, tid = 'stmt-src-' + l._ix, word = bkEntryWord(l), kw = BK_SRC_WORD[s.kind] ? tx(BK_SRC_WORD[s.kind]) : '';
   var said = !!kw && String(word).trim().toLowerCase() === kw.toLowerCase(), out = word;
-  if (s.kind === 'day') { if (s.count != null) out += ' · ' + esc(txf(s.count === 1 ? '{n} bill' : '{n} bills', { n: s.count })); }
+  if (s.kind === 'day') { if (s.count != null) out += ' · ' + esc(txn('{count} bill', '{count} bills', s.count)); }
   else if (s.ref || s.chit_id) out += (said ? ' ' : ' · ' + (kw ? esc(kw) + ' ' : '')) + bkBillPart(s, tid);
   return out + bkRecordedHTML(l, tid) + (l.ref && !s.ref ? ' <span class="mono">' + esc(l.ref) + '</span>' : '') + bkLineChips(l, 'stmt-' + l._ix);
 }
@@ -1673,7 +1673,7 @@ async function bkDues(body, onlySide) {   /* onlySide 'rcv' | 'pay' (CB Accounts
       rowTid: function (p) { return 'dues-' + p.party_id; },
       /* They owe you / You owe: one head each, the customers first */
       group: { default: 'side', order: ['rcv', 'adv', 'pay'], by: function (p) { if (bkDuesAdvance(p)) return [tx('Advance paid'), 'adv']; var s = bkDuesSide(p); return [tx(s === 'rcv' ? 'To collect' : 'To pay'), s]; },
-        fig: function (rows) { return txf(rows.length === 1 ? '{n} party' : '{n} parties', { n: rows.length }) + ' · ' + bkOwes(rows.reduce(function (t, p) { return t + Number(p.balance_minor || 0); }, 0), c); }, headTid: function (k) { return 'dues-side-' + k; } },
+        fig: function (rows) { return txn('{count} party', '{count} parties', rows.length) + ' · ' + bkOwes(rows.reduce(function (t, p) { return t + Number(p.balance_minor || 0); }, 0), c); }, headTid: function (k) { return 'dues-side-' + k; } },
       search: function (p) { return [p.party_no, p.name, bkPartyLabel(p.party_id, p.name), p.balance_minor ? (Math.abs(p.balance_minor) / Math.pow(10, bkDec(c))).toFixed(bkDec(c)) : ''].join(' '); },
       sorts: [
         { key: 'party', label: tx('Party no'), cmp: function (a, b) { return String(a.party_no || '').localeCompare(String(b.party_no || ''), undefined, { numeric: true }); } },
