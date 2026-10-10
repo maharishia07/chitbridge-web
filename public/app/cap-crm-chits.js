@@ -60,8 +60,8 @@ function chitsCols() {
 function chitsFilters() {
   /* CRM is about parties: the shop's own counter sales, expenses and credit notes are off by default (a stuck one is never hidden) */
   return [{ key: 'tab', label: tx('Show'), all: tx('Stuck, in and out'),
-    options: [{ v: 'stuck', label: tx('Stuck') }, { v: 'in', label: tx('In') }, { v: 'out', label: tx('Out') }],
-    match: function (c, v) { return v === 'stuck' ? !!c.stuck : c.tab === v; } },
+    options: [{ v: 'stuck', label: tx('Stuck') }, { v: 'in', label: tx('In') }, { v: 'out', label: tx('Out') }, { v: 'orders', label: tx('Orders') }],
+    match: function (c, v) { return v === 'stuck' ? !!c.stuck : v === 'orders' ? !!c.open_order : c.tab === v; } },   /* orders = the ones Home's Orders card counts (the server flags them: the till's own list) */
   { key: 'own', label: tx('Whose'), all: tx("Include your own shop's chits"),
     options: [{ v: 'party', label: tx('Only chits with another party') }],
     match: function (c) { return !c.own || !!c.stuck; } }];
@@ -80,7 +80,7 @@ function chitsHome(params, frame) {
   var s = document.getElementById('screen'); s.className = 'screen flush';
   s.innerHTML = '<div id="chits_list" data-testid="chits-list"></div>';
   if (CHITS.api && CHITS.api.destroy) { try { CHITS.api.destroy(); } catch (_) {} }
-  var tab = params && /^(stuck|in|out)$/.test(params.tab || '') ? params.tab : null;
+  var tab = params && /^(stuck|in|out|orders)$/.test(params.tab || '') ? params.tab : null;
   CHITS.api = CBList.mount(document.getElementById('chits_list'), {
     key: 'rail-chits', t: tx, rows: function () { return CHITS.items; }, id: function (c) { return c.chit_id; }, rowTid: function (c) { return 'chits-row-' + c.chit_id; },
     columns: chitsCols, defaultCols: ['chit', 'who', 'age', 'val'], cardMax: 3, fill: false,

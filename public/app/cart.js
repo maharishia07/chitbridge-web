@@ -953,8 +953,8 @@
      * own. The element must exist in the DOM even while this returns '' — it is the container that persists.
      */
     if (!on && opt(ns, 'barHideEmpty')) return '';
-    var sum = on ? (n + ' line' + (n === 1 ? '' : 's')
-                   + (T.amount ? ' · ' + fmt(ns, T.amount) + (T.partial ? '+' : '') : '')) : '';
+    /* M166: the bar reads '🛒 1 · ₹35' — the badge is the count, so the summary is the money (lines only while nothing is priced) */
+    var sum = on ? (T.amount ? '· ' + fmt(ns, T.amount) + (T.partial ? '+' : '') : n + ' line' + (n === 1 ? '' : 's')) : '';
     return '<div class="cbcart-bar' + (on ? ' on' : '') + '" data-testid="cart-' + esc(ns) + '"'
       + (on ? ' onclick="CBCart.open(\'' + esc(ns) + '\')" title="Open the cart to review and add these lines"'
             : ' title="' + esc(opt(ns, 'emptyHint', 'Press + on what you need')) + '"')

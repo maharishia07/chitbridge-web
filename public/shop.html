@@ -57,7 +57,6 @@
   .shopdock.on{ display:block; }
   .shopdock #p_offers{ max-height:30vh; overflow:auto; }
   .shopdock .cbcart-bar{ width:100%; justify-content:center; height:44px; }
-  body.hasdock #netpill{ bottom:78px !important; }
   .cbcat-was + .cbcat-offered::before{ content:'→ '; color:var(--grey,#8a949c); font-weight:400; }
   .cbcat-sec{ font:700 15px var(--font-ui); color:var(--ink); padding:12px 2px 6px; border-bottom:2px solid var(--accent); margin-top:4px; scroll-margin-top:64px; }
 .offbadge{display:inline-block;margin-inline-start:6px;padding:1px 7px;border-radius:999px;font-size:11px;font-weight:700;background:#fff5e0;border:1px solid #e8cf9a;color:#8a5a12;white-space:nowrap}
@@ -309,7 +308,8 @@ var _L={
   ta:{wall:'உங்கள் சுவரில் பாருங்கள்',order:'ஆர்டர் செய்யவும் →',combos:'வண்ண சேர்க்கைகள்',applied:'பூசும் முறை',por:'விலை கோரிக்கையின் பேரில்'},
   hi:{wall:'इसे अपनी दीवार पर देखें',order:'ऑर्डर करें →',combos:'रंग संयोजन',applied:'लगाने का तरीका',por:'कीमत अनुरोध पर'}
 };
-function paintPill(s){ var p=el('netpill'); if(!p){ p=document.createElement('div'); p.id='netpill'; p.style.cssText='position:fixed;bottom:10px;inset-inline-end:10px;z-index:998;font:700 11px/1 system-ui,-apple-system,sans-serif;border-radius:999px;padding:5px 11px;border:1px solid #e5e8ee;background:#fff;color:#2f7a45;box-shadow:0 1px 4px rgba(0,0,0,.08)'; (document.body||document.documentElement).appendChild(p); } if(!p)return; if(s.online){ p.style.background='#fff'; p.style.color='#2f7a45'; p.textContent=s.pending?('● Online · '+s.pending):'● Online'; } else { p.style.background='#fdf6e9'; p.style.color='#b4832a'; p.textContent='⚠ Offline · saved'; } }
+function paintPill(s){ var p=el('netpill'); if(!p){ p=document.createElement('div'); p.id='netpill'; p.style.cssText='position:fixed;top:10px;inset-inline-end:10px;z-index:998;font:700 11px/1 system-ui,-apple-system,sans-serif;border-radius:999px;padding:5px 11px;border:1px solid #e5e8ee;background:#fff;color:#2f7a45;box-shadow:0 1px 4px rgba(0,0,0,.08)'; (document.body||document.documentElement).appendChild(p); } if(!p)return; p.hidden=false; if(s.online && !s.pending){ p.hidden=true; }   /* M165: "● Online" is the normal state — said nowhere once loaded; only Offline / waiting-to-send shows, at the top, never over a price or the basket */
+  else if(s.online){ p.style.background='#fff'; p.style.color='#2f7a45'; p.textContent='● Online · '+s.pending; } else { p.style.background='#fdf6e9'; p.style.color='#b4832a'; p.textContent='⚠ Offline · saved'; } }
 if(window.CBOffline){ CBOffline.configure({apiBase:API, token:function(){return null;}, onChange:paintPill}); CBOffline.registerSW('/cb-sw.js'); }
 function tlang(){ var rc=regionCur(); return rc.language||'en'; }
 function t(k){ var l=tlang(); return (_L[l]&&_L[l][k])||_L.en[k]||k; }
