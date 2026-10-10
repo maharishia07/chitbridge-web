@@ -338,7 +338,7 @@ const NAV = [
   ['receivables', 'Receivables', 'M12 4v12M7 11l5 5 5-5M5 20h14'],
   ['payables', 'Payables', 'M12 20V8M7 13l5-5 5 5M5 4h14'],
   ['dues', 'Dues', 'M7 3h10M7 21h10M8 3c0 5 8 6 8 9s-8 4-8 9M16 3c0 5-8 6-8 9'],   /* kept as a door (To do opens it) - not in the menu: Receivables and Payables are its two sides */
-  ['bills', 'Bills', 'M6 3h9l3 3v15H6zM9 9h6M9 13h6M9 17h4'],
+  ['bills', 'Unpaid bills', 'M6 3h9l3 3v15H6zM9 9h6M9 13h6M9 17h4'],
   ['cheques', 'Cheques', 'M3 6h18v12H3zM7 14h5M15 10h2'],
   ['waiting', 'Waiting', 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18M12 7v5l3 2'],
   ['bank', 'Bank', 'M3 10l9-6 9 6M5 10v8M10 10v8M14 10v8M19 10v8M3 20h18M9 14h6'],
@@ -665,6 +665,9 @@ window.addEventListener('storage', (e) => {
 CBOnePerson.attach({ quiet: true, who: () => MINE, label: () => 'CB Accounts',
   onLeave: (by) => { location.replace('/?left=' + encodeURIComponent(by || '')); },
   onWipe: () => { location.replace('/?cleaned=1'); } });
+/* ⭐ THE # DECIDES THE PAGE (M138): Back, Forward and a typed or shared link land on the page the address says. chrome() writes the # with replaceState, which fires nothing, so a click never loops here. */
+function hashView(){ const v = (location.hash || '').replace(/^#\/?/, ''); return NAV.some((n) => n[0] === v) ? v : null; }
+window.addEventListener('hashchange', () => { const v = hashView(); if (v && ON && v !== BK.tab) show(v); });
 if (window.CBKural) CBKural.mount();
 start();
 </script>

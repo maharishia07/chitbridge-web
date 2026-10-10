@@ -86,7 +86,7 @@
    "currency": "INR",
    "oldest_due": "@-35d",
    "dues_overdue": true,
-   "next_followup_at": "@+6h",
+   "next_followup_at": "@+0h",
    "next_followup_late": false,
    "unread": 1,
    "merged_into": null,
@@ -125,7 +125,7 @@
    "currency": "INR",
    "oldest_due": "@-7d",
    "dues_overdue": false,
-   "next_followup_at": "@+4h",
+   "next_followup_at": "@+0h",
    "next_followup_late": false,
    "unread": 0,
    "merged_into": null,
@@ -464,7 +464,7 @@
     {
      "followup_id": "fu-02",
      "what": "Collect the August dues",
-     "due_at": "@+6h",
+     "due_at": "@+0h",
      "late": false,
      "assignee_name": "Athi"
     }
@@ -511,7 +511,7 @@
     {
      "followup_id": "fu-03",
      "what": "Call about the October pipe rate",
-     "due_at": "@+4h",
+     "due_at": "@+0h",
      "late": false,
      "assignee_name": "Divya"
     }
@@ -1977,7 +1977,7 @@
    "party_no": "P-0002",
    "party_name": "Chola Auto Care",
    "what": "Collect the August dues",
-   "due_at": "@+6h",
+   "due_at": "@+0h",
    "late": false,
    "bucket": "today",
    "assignee_user_id": "athi",
@@ -1992,7 +1992,7 @@
    "party_no": "P-0003",
    "party_name": "Ravi Traders",
    "what": "Call about the October pipe rate",
-   "due_at": "@+4h",
+   "due_at": "@+0h",
    "late": false,
    "bucket": "today",
    "assignee_user_id": "divya",

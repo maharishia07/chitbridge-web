@@ -75,6 +75,8 @@ body{margin:0;background:var(--page);color:var(--ink);font-family:var(--f-ui,'IB
 <script src="/app/sides.js"></script>      <!-- CBSides: the two reference panels; the shell mounts them -->
 <script src="/app/accounts-shell.js"></script>   <!-- CBAction + CBConfirm: the bell's Clear all is a write, asked first -->
 <script src="/app/rail-bell.js"></script>   <!-- CBBell (R06): the shell mounts it in its bell slot — the dot + the list, from the push stream -->
+<script src="/engine/money.js"></script>
+<script src="/app/locale.js"></script>   <!-- CBLocale: the shell words a fact line's money and time ("₹420", "09:33") — the server only sends the numbers -->
 <script src="/app/shell.js"></script>     <!-- CBShell: the frame — header · five areas · kural -->
 <script>
 'use strict';

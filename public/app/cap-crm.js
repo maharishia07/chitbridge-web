@@ -100,7 +100,7 @@ function crmSegChip(p) { return p.segment ? '<span class="tag seg">' + esc(tx(CR
  *  The figure is the server's stored balance (+ they owe you), painted by bkMoney; the sign only picks the word. */
 function crmDueCell(p) {
   if (!CRM.ledger || p.balance_minor == null) return '<span class="sub">—</span>';
-  var b = Number(p.balance_minor || 0), late = p.dues_overdue ? ' <span class="late red">· ' + esc(tx('late')) + '</span>' : '';
+  var b = Number(p.balance_minor || 0), late = p.dues_overdue ? ' <span class="late red" data-testid="party-due-late-' + esc(p.party_id) + '">· ' + esc(tx(p.oldest_due ? 'late since' : 'late')) + (p.oldest_due ? ' ' + esc(bkDate(p.oldest_due)) : '') + '</span>' : '';
   var tid = ' data-testid="party-due-' + esc(p.party_id) + '"', oldest = p.oldest_due ? ' · ' + tx('oldest due') + ' ' + bkDate(p.oldest_due) : '';
   if (!b) return '<span class="due settled"' + tid + '>' + esc(tx('Settled')) + '</span>';
   return b > 0
@@ -161,7 +161,7 @@ function crmPartyFrom(p) {
   if (q.txn_count === undefined) q.txn_count = c ? c.txn_count : 0;
   if (q.last_at === undefined) q.last_at = p.last_activity || null;
   if (q.why_not === undefined) q.why_not = p.may_trade && p.may_trade.ok === false ? (p.may_trade.why || 'local') : null;
-  if (q.dues_overdue === undefined) q.dues_overdue = false;           // the API sends no overdue flag; the page does not work lateness out
+  if (q.dues_overdue === undefined) q.dues_overdue = !!(d && d.overdue);   // the API's own flag (dues.overdue — one late rule, the shop's day); the page does not work lateness out
   if (q.unread === undefined) q.unread = 0;                           // nor an unread count on the list
   if (q.next_followup_at === undefined) { q.next_followup_at = null; q.next_followup_late = false; }   // filled from GET /followups (crmFuJoin)
   return q;
@@ -185,7 +185,7 @@ function crmFuFrom(f) {
 }
 /** the soonest open follow-up of each party, and the server's own late count, from GET /followups (the list row carries neither) */
 async function crmFuJoin(rows, r) {
-  if (r && r.alerts) return;                                          // the older shape sent them with the list
+  if (r && r.alerts && r.alerts.followups_overdue != null) return;    // the older shape sent them with the list (the API's list carries only the dues count: the follow-ups are read below)
   var f;
   try { f = await api('crmFollowups', { query: { scope: crmOwner() ? 'all' : 'mine', done: '0' } }); } catch (_) { return; }
   var list = ((f && f.followups) || []).map(crmFuFrom), by = {}, late = {};

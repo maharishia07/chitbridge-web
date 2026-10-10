@@ -12,8 +12,10 @@ async function shopCheckout(page, o) {
   /* the compact bar ("🛒 6 ✕") opens into the cart, where Checkout lives */
   if (!(await page.getByTestId('cart-checkout').isVisible().catch(() => false))) { await page.locator('[data-testid^="cart-cbcart"]').first().click(); }
   await page.getByTestId('cart-checkout').click({ timeout: 20000 });
-  /* the checkout is a four-step sheet — Items → Delivery → Review → Who you are; "Next" carries it to the contact step */
+  /* the checkout is a two-step sheet — Pickup or delivery → Who you are (the review is folded into the second); "Continue" carries it to the contact step */
   for (let i = 0; i < 5 && !(await page.getByTestId('shop-contact').isVisible().catch(() => false)); i++) {
+    const modeBtn = page.getByTestId('shop-mode-delivery');   /* the first step asks Pickup or Delivery; the address field only exists for Delivery */
+    if (await modeBtn.isVisible().catch(() => false) && !(await page.getByTestId('shop-area').isVisible().catch(() => false))) await modeBtn.click();
     if (await page.getByTestId('shop-area').isVisible().catch(() => false)) {
       await page.getByTestId('shop-area').fill(o.area || 'Perumbakkam, Chennai 600126');
       const d = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10);
