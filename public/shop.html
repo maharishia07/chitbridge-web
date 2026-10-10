@@ -551,7 +551,7 @@ function shopSectionOf(r){
    second tap lands on it and not on a product's "+". The page-wide backdrop also closes the panel on any tap outside; Esc closes it too. */
 function shopCatBtnHtml(){
   var t=_shopSecs(); if(!t.length) return '';
-  return '<button type="button" class="catbtn" id="cat_btn" data-testid="shop-cat-btn" aria-haspopup="true" aria-expanded="false" onclick="shopCatToggle()">Categories ▾</button>'
+  return '<button type="button" class="catbtn" id="cat_btn" data-testid="shop-cat-btn" aria-haspopup="true" aria-expanded="false" aria-label="Categories" title="Categories" data-ic="categories" onclick="shopCatToggle()"><span aria-hidden="true">🗂</span> <b class="icn">'+t.length+'</b> ▾</button>'
     +'<div class="catpanel" id="cat_panel" data-testid="shop-cat-bar" role="menu" hidden oncontextmenu="return false">'
     +t.map(function(c){ return '<button type="button" role="menuitem" class="catpick" data-testid="shop-cat-jump" data-sec="'+esc(c.id)+'" onclick="shopCatPick(this.dataset.sec)"><span>'+esc(c.label)+'</span><span class="meta">'+c.n+'</span></button>'; }).join('')+'</div>';
 }
@@ -559,7 +559,7 @@ var _catShield=false;
 function shopCatToggle(force){
   var pn=el('cat_panel'), b=el('cat_btn'); if(!pn||!b) return;
   var open=(typeof force==='boolean')?force:pn.hidden;
-  pn.hidden=!open; b.setAttribute('aria-expanded',open?'true':'false'); b.textContent=open?'Categories ▴':'Categories ▾';
+  pn.hidden=!open; b.setAttribute('aria-expanded',open?'true':'false'); b.lastChild.textContent=open?' ▴':' ▾';
   var bk=el('catback');
   if(open&&!bk){ bk=document.createElement('div'); bk.id='catback'; bk.onclick=function(){ shopCatToggle(false); }; document.body.appendChild(bk); }
   else if(!open&&bk&&!_catShield){ bk.parentNode.removeChild(bk); }
@@ -867,7 +867,7 @@ function supRender(){
     + '<div style="background:#fff;width:100%;max-width:430px;border-radius:16px;padding:18px;max-height:92vh;overflow:auto">'
     + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'
     + '<b class="sg" style="font-size:16px;flex:1">📣 Report a problem</b>'
-    + '<button onclick="supClose()" style="border:0;background:none;font-size:22px;cursor:pointer;color:#8a949c">×</button></div>'
+    + '<button onclick="supClose()" aria-label="Close" title="Close" style="border:0;background:none;font-size:22px;cursor:pointer;color:#8a949c">×</button></div>'
     + supNoteHtml()
     + (_sup.err&&!_sup.dead?'<div style="color:#b4453f;font-size:12.5px;margin-bottom:8px">'+esc(_sup.err)+'</div>':'')
     + (_sup.msg?'<div style="color:#2e7a45;font-size:12.5px;margin-bottom:8px">'+esc(_sup.msg)+'</div>':'')
@@ -1010,6 +1010,7 @@ function _cartStepsFor(){
   return CBSteps.create({
     /* ⭐ T2b (M67, M68): Pickup · Delivery first, then Who you are with the review folded in on top — no second "Items" screen repeating the basket */
     steps:[{k:'delivery',n:'Pickup or delivery'},{k:'who',n:'Who you are'}],
+    iconBack:true,   /* I1: Back is ← with its word as aria-label + title */
     quiet:true,   /* M70 — nothing says "needed" until the first press that finds it missing */
     railEl:'oc_rail', bodyEl:'oc_body', footEl:'oc_foot',
     render:function(k){ return k==='delivery'?_cartStepDelivery():_cartStepWho(); },
@@ -1040,9 +1041,9 @@ function shopMode(v){ if(!_ord) return; _cartSet('mode',v); if(_CFLOW) _CFLOW.pa
 function _cartStepDelivery(){
   var fld='style="width:100%;padding:9px;border:1px solid #e7e3d8;border-radius:8px;margin:3px 0 11px;font-size:14px"';
   var m=_ord.mode;
-  var tab=function(v,label){ var on=(m===v); return '<button type="button" data-testid="shop-mode-'+v+'" aria-pressed="'+(on?'true':'false')+'" onclick="shopMode(&#39;'+v+'&#39;)" style="flex:1;border:1.5px solid var(--accent);border-radius:10px;padding:12px 8px;font:700 14px var(--font-ui);cursor:pointer;touch-action:manipulation;background:'+(on?'var(--accent)':'var(--card,#fff)')+';color:'+(on?'var(--card,#fff)':'var(--accent)')+'">'+label+'</button>'; };
+  var tab=function(v,label,ic){ var on=(m===v); return '<button type="button" data-ic="mode-'+v+'" aria-label="'+label+'" title="'+label+'" data-testid="shop-mode-'+v+'" aria-pressed="'+(on?'true':'false')+'" onclick="shopMode(&#39;'+v+'&#39;)" style="flex:1;border:1.5px solid var(--accent);border-radius:10px;padding:12px 8px;font:700 14px var(--font-ui);cursor:pointer;touch-action:manipulation;background:'+(on?'var(--accent)':'var(--card,#fff)')+';color:'+(on?'var(--card,#fff)':'var(--accent)')+'">'+'<span aria-hidden="true">'+ic+'</span></button>'; };
   var when=(m==='pickup')?'Pickup':'Delivery';
-  return '<div style="display:flex;gap:9px;margin:6px 0 14px">'+tab('pickup','Pickup')+tab('delivery','Delivery')+'</div>'
+  return '<div style="display:flex;gap:9px;margin:6px 0 14px">'+tab('pickup','Pickup','🏪')+tab('delivery','Delivery','🛵')+'</div>'
     +(m==='delivery'
       ?'<label style="font-size:12px;color:var(--grey-3,#6a707a)">Delivery address</label>'
        +'<input id="o_loc" data-testid="shop-area" placeholder="'+esc(_addrExample())+'" value="'+esc(_ord.loc||'')+'" oninput="_cartSet(&#39;loc&#39;,this.value)" '+fld+'>'
