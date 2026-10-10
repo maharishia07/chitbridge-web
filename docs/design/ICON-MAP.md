@@ -19,7 +19,7 @@ The guard reads the table below: **an icon in two rows, or a meaning with two ic
 | Labs | 🧪 | till rail | Labs |
 | To do | ☑ | till menu | To do |
 | Customer screen | 📺 | till menu | Customer screen |
-| Read the shop again | ↻ | till menu | Read the shop again |
+| Read the shop again | ↻ | till menu, Start the day row | Read the shop again |
 | Repair this counter | ↺ | till menu | Repair this counter |
 | Line / capability | 📶 | till menu | Capability health |
 | Product Lab | 📋 | till menu | Product Lab |
@@ -27,6 +27,7 @@ The guard reads the table below: **an icon in two rows, or a meaning with two ic
 | Combo Lab | 🧩 | till menu | Combo Lab |
 | Take a break | ☕ | till menu | Take a break |
 | Lock the counter | 🔒 | till bar, phone menu chip | Lock |
+| Who is at the counter | 👤 | Start the day row, who pill | Pick who |
 | Close the counter | 🚪 | till menu | Close this counter |
 | Settings | ⚙ | till rail | Settings |
 | Install as an app | ⤓ | till rail | Install as an app |
