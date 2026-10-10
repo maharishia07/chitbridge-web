@@ -25278,6 +25278,8 @@ function usignMount(){
             io: { store: USIGN_STORE }, onIn: function(s, answer){ usignIn(s, answer); } };
   /* ⚠️ said in words, not as a failed fetch: offline with no counter PIN is the LINE, not the person (the window's own transport otherwise) */
   c.io.post = function(path, reqBody, token){
+    /* M202: this counter names its shop, so a bare short id (asha01) is asked as asha01@<shop> behind the scenes — the server never looks in another shop */
+    if (/\/api\/signin\/(ask|verify)$/.test(path) && S && S.shop && S.shop.handle && reqBody && !reqBody.shop) reqBody = Object.assign({}, reqBody, { shop: S.shop.handle });
     if (!lineUp()) return Promise.resolve({ status: 0, body: { code: 'OFFLINE',
       message: 'There is no counter PIN for ' + ((reqBody && reqBody.id) || 'you') + ' on this counter yet. The first sign-in here needs the internet.' } });
     return SIGN().transport(c)(path, reqBody, token);
