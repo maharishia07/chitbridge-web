@@ -66,6 +66,7 @@ dialog.sheet .mx{position:absolute;right:8px;top:8px;border:0;background:transpa
 <script src="/app/accounts-shell.js"></script>
 <script src="/app/rail-bell.js"></script>
 <script src="/app/shell.js"></script>
+<script src="/app/kural.js"></script>   <!-- CBKural: the one kural footer band; CBFrame hands it to the shell (never in an embed) -->
 <script src="/app/page-frame.js"></script>
 <script src="/app/list-ctl.js"></script>   <!-- CBList: the one list control -->
 <script src="/app/cap-employees.js"></script>
@@ -76,10 +77,25 @@ dialog.sheet .mx{position:absolute;right:8px;top:8px;border:0;background:transpa
   var API = q.get('api') || (window.CBShell && CBShell.apiBase && CBShell.apiBase()) || 'https://chitbridge-api-production.up.railway.app';
   var host = document.getElementById('emp');
   if (embed) document.body.classList.add('embed');
-  /* embed: no frame — the browser's own saved session is used, never asked for again */
-  var frame = embed ? { session: CBFrame.session(), token: (CBFrame.session() || {}).token } : CBFrame.mount({ app: 'employees', work: host });
-  if (!frame.token) { host.innerHTML = '<div class="empty" data-testid="emp-signin"><div class="t">' + (embed ? 'Sign in first' : 'Sign in above') + '</div></div>'; return; }
-  CBEmployees.mount(host, { token: frame.token, base: API, embed: embed, view: view, onEnded: function () { CBFrame.ended(); } });
+  /* embed: no frame. A host page (the till, signed in under its own shop-scoped store) is asked for its person's token over postMessage -
+     kept in memory only, never stored - so the form never acts as another shop's saved login. A host that says it has none: refused politely; one that
+     does not answer: the browser's own saved session, as before. */
+  function start(token) {
+    if (!token) { host.innerHTML = '<div class="empty" data-testid="emp-signin"><div class="t">' + (embed ? 'Sign in first' : 'Sign in above') + '</div></div>'; return; }
+    CBEmployees.mount(host, { token: token, base: API, embed: embed, view: view, onEnded: function () { embed ? start(null) : CBFrame.ended(); } });
+  }
+  if (!embed) { start(CBFrame.mount({ app: 'employees', kural: 'employees', work: host }).token); return; }
+  var own = (CBFrame.session() || {}).token;
+  if (!window.parent || window.parent === window) { start(own); return; }
+  var done = false;
+  function give(t) { if (done) return; done = true; window.removeEventListener('message', heard); start(t); }
+  function heard(e) {
+    var m = e.data;
+    if (e.source === window.parent && e.origin === location.origin && m && m.cb === 'host' && m.event === 'session') give(m.token || null);
+  }
+  window.addEventListener('message', heard);
+  window.parent.postMessage({ cb: 'employees', event: 'need-session' }, location.origin);
+  setTimeout(function () { give(own || null); }, 2500);   /* a host that does not answer: the browser's own saved session, as before */
 })();
 </script>
 </body>

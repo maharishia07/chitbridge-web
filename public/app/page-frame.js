@@ -7,6 +7,7 @@
  * by CBOnePerson.who) is simply used: the page reads FRAME.token and never asks for a code.
  *
  *   CBFrame.mount({ app: 'kyb', surface: 'kyb', work: <element the page draws in> }) → { token, session, shell }
+ *   kural: a route of app/kurals.json draws the foldable footer band (load /app/kural.js); left out, no band.
  *   Load first: /engine/screen.js · /app/avatar.js · /engine/signin.js · /app/signin-ui.js · /app/one-person.js · /app/accounts-shell.js · /app/rail-bell.js · /app/shell.js
  */
 (function (root) {
@@ -22,7 +23,7 @@
     var sess = session(), doc = root.document, host = doc.createElement('div');
     host.id = 'shell'; doc.body.insertBefore(host, doc.body.firstChild);
     var shell = root.CBShell.mount(host, {
-      host: { app: o.app }, kural: false, homeHref: '/',
+      host: { app: o.app }, kural: o.kural || false, homeHref: '/',
       person: sess && root.CBAvatar ? root.CBAvatar.personOf(sess) : null, token: sess && sess.token,
       /* the one sign-in window, in the shell's own slot; signed in -> this page reads again with the session it now holds */
       signin: { surface: o.surface || o.app, need: 'person', registerHref: '/app.html#/welcome', onIn: function () { root.location.reload(); } },

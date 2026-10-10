@@ -25826,13 +25826,14 @@ function openWho(){
 }
 /**
  * ⭐ P1 — ＋ Add a person: the Employees form (employees.html?embed=1&view=add) opens in a dialog on top of the counter. The counter holds no form of its own:
- * the page uses the owner's saved sign-in on this browser, tells us { cb:'employees', event:'added'|'changed' }, and the shop is read again so the new name is in the list.
+ * the page uses the person signed in on this counter (handed over by CBEmbed's session handshake), tells us { cb:'employees', event:'added'|'changed' }, and the shop is read again so the new name is in the list.
  */
 function whoAdd(){
   try { document.getElementById('whodlg').close(); } catch (_) {}
   if (!window.CBEmbed || !lineUp()) { say('Adding a person needs the internet. Try again when the line is back.'); return; }
   var heard = false;
   CBEmbed.open({ app: 'employees', view: 'add', title: 'Add a person',
+    session: function(){ return (typeof CloudHost !== 'undefined' && CloudHost && CloudHost.person && CloudHost.person.token) || null; },   /* the person signed in HERE (shop-scoped store) is the one the form acts as — handed over postMessage, never stored by the frame */
     onMessage: function(m){ if (m.event === 'added' || m.event === 'changed') heard = true; },
     onClose: function(){ if (heard) { Promise.resolve(refresh()).then(openWho, openWho); } else openWho(); } });
 }
