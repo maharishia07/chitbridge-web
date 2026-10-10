@@ -281,6 +281,19 @@ async function partyStatementLoad(partyId) {
  * the entry's word: "Bill C2/26-27/0002 · Counter C2 · Athi" — the number is a link that opens the chit; a walk-in day
  * reads "12 bills · Counter C2". A part the server did not know is left out, never guessed. No source → ''.
  */
+/** a walk-in day's "N bills": opens the bills it covers, each one a link to its chit (the server names them in source.bills; without them it is only the count) */
+function bkDayBillsLink(s, tid) {
+  var word = esc(txf(s.count === 1 ? '{n} bill' : '{n} bills', { n: s.count }));
+  if (!s.bills || !s.bills.length) return word;
+  var BKD = (BK.dayBills = BK.dayBills || {}); BKD[tid] = s.bills;
+  return '<a href="#" data-testid="' + esc(tid) + '-bills" onclick="event.stopPropagation();bkDayBillsOpen(\'' + esc(tid) + '\');return false">' + word + '</a>';
+}
+function bkDayBillsOpen(tid) {
+  var bills = (BK.dayBills || {})[tid] || [];
+  modal('<div class="mhd"><div class="t" data-testid="daybills_title">' + esc(txf(bills.length === 1 ? '{n} bill' : '{n} bills', { n: bills.length })) + '</div></div><div class="mbody" data-testid="daybills_list">'
+    + bills.map(function (b, i) { return '<div style="padding:3px 0">' + bkBillPart({ ref: b.ref, chit_id: b.chit_id }, 'daybills-' + i) + '</div>'; }).join('')
+    + '</div><div class="mfoot"><button onclick="closeModal()">' + esc(tx('Close')) + '</button></div>');
+}
 /** a long payment reference, readable: its first and last four (4421…9931) — the full one is on the chit */
 function bkShortRef(r) { var t = String(r == null ? '' : r).trim(); return t.length > 10 ? t.slice(0, 4) + '…' + t.slice(-4) : t; }
 var BK_SRC_WORD = { bill: 'Bill', purchase: 'Bill', receipt: 'Receipt', payment: 'Payment', credit_note: 'Credit note', expense: 'Expense', income: 'Income' };
@@ -311,7 +324,7 @@ function bkSourceParts(s, tid, cur, lead) {
   var out = [];
   /* ⭐ the kind word ONCE (2026-10-03: "Expense · Expense C2/…"): when the entry's own word already says it, only the number follows */
   var kw = BK_SRC_WORD[s.kind] ? tx(BK_SRC_WORD[s.kind]) : '', said = !!kw && String(lead || '').trim().toLowerCase() === kw.toLowerCase();
-  if (s.kind === 'day') { if (s.count != null) out.push(esc(txf(s.count === 1 ? '{n} bill' : '{n} bills', { n: s.count }))); }
+  if (s.kind === 'day') { if (s.count != null) out.push(bkDayBillsLink(s, tid)); }
   else if (s.ref || s.chit_id) out.push((kw && !said ? esc(kw) + ' ' : '') + bkBillPart(s, tid));
   var how = bkHowPart(s, tid, cur); if (how) out.push(how);
   if (s.counter) out.push(esc(counterWord(s.counter)));
