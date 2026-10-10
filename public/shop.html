@@ -742,7 +742,7 @@ function renderLoginGate(shop){
     +'<div class="card" style="max-width:420px;margin:26px auto"><div class="sg" style="font-weight:800;font-size:16px;margin-bottom:4px">Sign in to view this shop</div>'
     +'<div class="meta" style="margin-bottom:12px">This shop asks customers to sign in first. Enter your phone or email — we\'ll text/email a one-time code.</div>'
     +'<input id="lg_contact" placeholder="9876543210 or you@email.com" '+(otpStep?'disabled':'')+' value="'+esc(_lg.contact||'')+'" '+fld+'>'
-    +(otpStep?'<input id="lg_otp" inputmode="numeric" maxlength="6" placeholder="6-digit code" value="'+esc(_lg.otp||_lg.dev_otp||'')+'" '+fld+'>':'')
+    +(otpStep?'<input id="lg_otp" autocomplete="one-time-code" inputmode="numeric" maxlength="6" placeholder="6-digit code" value="'+esc(_lg.otp||_lg.dev_otp||'')+'" '+fld+'>':'')
     +(_lg.err?'<div style="color:#b4453f;font-size:12.5px;margin-bottom:8px">'+esc(_lg.err)+'</div>':'')
     +(_lg.msg?'<div style="color:#2e7a45;font-size:12.5px;margin-bottom:8px">'+esc(_lg.msg)+'</div>':'')
     +(_lg.busy?'<button disabled style="width:100%;border:0;border-radius:10px;padding:12px;background:#9db4d6;color:#fff;font-weight:700;font-size:14px">⏳ Processing…</button>'
@@ -851,7 +851,7 @@ function supRender(){
   } else {
     body='<div style="font-size:13px;color:#6a707a;margin-bottom:8px">We sent a 6-digit code to '
       + esc(_sup.contact)+'.</div>'
-      + '<input id="sup_otp" data-testid="shop-support-otp" inputmode="numeric" maxlength="6" '
+      + '<input id="sup_otp" data-testid="shop-support-otp" autocomplete="one-time-code" inputmode="numeric" maxlength="6" '
       + 'placeholder="6-digit code" value="'+esc(_sup.otp||'')+'" oninput="supSet(&#39;otp&#39;,this.value)" '+fld+'>'
       + (_sup.dev_otp?'<div style="font-size:11.5px;color:#6a707a;margin-top:6px">Code: <b>'+esc(_sup.dev_otp)+'</b></div>':'');
   }
@@ -1037,13 +1037,22 @@ function _cartStepsFor(){
     onSend:function(){ if(_ord&&_ord.step==='otp') orderConfirm(); else orderStart(); }
   });
 }
-function shopMode(v){ if(!_ord) return; _cartSet('mode',v); if(_CFLOW) _CFLOW.paintBody(); }
-function _cartStepDelivery(){
-  var fld='style="width:100%;padding:9px;border:1px solid #e7e3d8;border-radius:8px;margin:3px 0 11px;font-size:14px"';
+function shopMode(v){ if(!_ord) return; _cartSet('mode',v);
+  /* M184: repaint LOCALLY — only the two choice buttons and the fields under them; never the panel or the step body */
+  var t=el('o_tabs'), f=el('o_modefields');
+  if(t&&f){ t.innerHTML=_cartTabsHtml(); f.innerHTML=_cartModeFieldsHtml(); } else if(_CFLOW) _CFLOW.paintBody(); }
+function _cartTabsHtml(){
   var m=_ord.mode;
   var tab=function(v,label,ic){ var on=(m===v); return '<button type="button" data-ic="mode-'+v+'" aria-label="'+label+'" title="'+label+'" data-testid="shop-mode-'+v+'" aria-pressed="'+(on?'true':'false')+'" onclick="shopMode(&#39;'+v+'&#39;)" style="flex:1;border:'+(on?'3px':'1.5px')+' solid var(--accent);border-radius:10px;padding:'+(on?'10.5px 6.5px':'12px 8px')+';font:700 14px var(--font-ui);cursor:pointer;touch-action:manipulation;background:'+(on?'var(--blue-tint-bg,#EAF0F8)':'var(--card,#fff)')+';color:var(--ink,#1D1B16)">'+'<span aria-hidden="true" style="font-size:24px;line-height:1;opacity:1;vertical-align:middle">'+ic+'</span> <span style="vertical-align:middle">'+label+(on?' ✓':'')+'</span></button>'; };
-  var when=(m==='pickup')?'Pickup':'Delivery';
-  return '<div style="display:flex;gap:9px;margin:6px 0 14px">'+tab('pickup','Pickup','🏪')+tab('delivery','Delivery','🛵')+'</div>'
+  return tab('pickup','Pickup','🏪')+tab('delivery','Delivery','🛵');
+}
+function _cartStepDelivery(){
+  return '<div id="o_tabs" style="display:flex;gap:9px;margin:6px 0 14px">'+_cartTabsHtml()+'</div><div id="o_modefields">'+_cartModeFieldsHtml()+'</div>';
+}
+function _cartModeFieldsHtml(){
+  var fld='style="width:100%;padding:9px;border:1px solid #e7e3d8;border-radius:8px;margin:3px 0 11px;font-size:14px"';
+  var m=_ord.mode, when=(m==='pickup')?'Pickup':'Delivery';
+  return ''
     +(m==='delivery'
       ?'<label style="font-size:12px;color:var(--grey-3,#6a707a)">Delivery address</label>'
        +'<input id="o_loc" data-testid="shop-area" placeholder="'+esc(_addrExample())+'" value="'+esc(_ord.loc||'')+'" oninput="_cartSet(&#39;loc&#39;,this.value)" '+fld+'>'
@@ -1094,7 +1103,7 @@ function _cartStepWho(){
     +'<input id="o_name" data-testid="shop-name" placeholder="optional" value="'+esc(_ord.name||'')+'" oninput="_cartSet(&#39;name&#39;,this.value)" '+fld+'>'
     +'<label style="font-size:12px;color:#6a707a">Phone or email</label>'
     +'<input id="o_contact" data-testid="shop-contact" placeholder="9876543210 or you@email.com" '+(otpStep?'disabled':'')+' value="'+esc(_ord.contact||'')+'" oninput="_cartSet(&#39;contact&#39;,this.value)" '+fld+'>'
-    +(otpStep?('<label style="font-size:12px;color:#6a707a">6-digit code sent to you</label><input id="o_otp" data-testid="shop-otp" inputmode="numeric" maxlength="6" value="'+esc(_ord.otp||_ord.dev_otp||'')+'" oninput="_cartSet(&#39;otp&#39;,this.value)" '+fld+'>'):'')
+    +(otpStep?('<label style="font-size:12px;color:#6a707a">6-digit code sent to you</label><input id="o_otp" data-testid="shop-otp" inputmode="numeric" autocomplete="one-time-code" maxlength="6" value="'+esc(_ord.otp||_ord.dev_otp||'')+'" oninput="_cartSet(&#39;otp&#39;,this.value)" '+fld+'>'):'')
     /* No account, no password. The code IS the identity — the same rail the signed-in app uses, entered once. */
     +'<div class="meta">No account needed. The code confirms it is really you, and your order becomes a record you both hold.</div>'
     +(_ord._err?'<div style="color:#b4453f;font-size:12.5px;margin-top:8px">'+esc(_ord._err)+'</div>':'')
@@ -1118,7 +1127,7 @@ function _cartPanelHtml(){
   var shop=(_SHOPDATA&&_SHOPDATA.shop)||{};
   /* ⚠️ --cbst-accent: the shared rail takes THIS shop's colour. A blue rail on a red shop is the same mistake as
      sharing a stylesheet instead of sharing the rules. */
-  return '<div style="position:fixed;inset:0;background:rgba(15,22,32,.5);z-index:900;display:flex;align-items:center;justify-content:center;padding:12px" onclick="if(event.target===this)orderClose()">'
+  return '<div style="position:fixed;inset:0;background:rgba(15,22,32,.5);z-index:900;display:flex;align-items:center;justify-content:center;padding:12px" onclick="if(CBSteps.backdropTap(event,this))orderClose()">'
     +'<div style="--cbst-accent:var(--accent);--cbst-soft:var(--blue-tint-bg);background:#fff;width:100%;max-width:460px;border-radius:16px;padding:18px 18px 20px;max-height:92vh;overflow:auto">'
     +'<div style="display:flex;align-items:center;gap:8px"><b class="sg" style="font-size:16px;flex:1">🛒 '+esc(shop.display_name||'Your order')+'</b>'
     +'<button onclick="orderClose()" style="border:0;background:none;font-size:22px;cursor:pointer;color:#8a949c">×</button></div>'
@@ -1139,7 +1148,7 @@ function orderRender(msg, err){
   var minL=(e.rules&&Number(e.rules.min_order_litres))||0;   // STONE 2: the source's rule, cascaded
   var otpStep=(_ord.step==='otp');
   var fld='style="width:100%;padding:9px;border:1px solid #e7e3d8;border-radius:8px;margin:3px 0 11px;font-size:14px"';
-  var h='<div style="position:fixed;inset:0;background:rgba(15,22,32,.5);z-index:900;display:flex;align-items:center;justify-content:center;padding:12px" onclick="if(event.target===this)orderClose()">'
+  var h='<div style="position:fixed;inset:0;background:rgba(15,22,32,.5);z-index:900;display:flex;align-items:center;justify-content:center;padding:12px" onclick="if(CBSteps.backdropTap(event,this))orderClose()">'
     +'<div style="background:#fff;width:100%;max-width:440px;border-radius:16px;padding:18px 18px 22px;max-height:92vh;overflow:auto">'
     +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:2px"><b class="sg" style="font-size:17px;flex:1">'+esc(_isPayload()?_submitLabel():'Order')+' · '+esc(it.name)+'</b><button onclick="orderClose()" style="border:0;background:none;font-size:22px;cursor:pointer;color:#8a949c">×</button></div>'
     +(function(){ var p=itemPrice(it), bits=[]; if(it.texture_family)bits.push(esc(it.texture_family)); if(p&&_showsPrice())bits.push(cur+esc(String(p.v))+' / '+esc(p.u));
@@ -1162,7 +1171,7 @@ function orderRender(msg, err){
     +'<label style="font-size:12px;color:#6a707a">Your name</label><input id="o_name" data-testid="shop-name" placeholder="optional" value="'+esc(_ord.name||'')+'" '+fld+'>'
     +'<label style="font-size:12px;color:var(--grey-3,#6a707a)">Your area — pincode or city <span style="color:var(--grey,#9aa3a7)">· optional</span></label><input id="o_loc" data-testid="shop-area" placeholder="'+esc(_areaExample())+'" value="'+esc(_ord.loc||'')+'" '+fld+'>'
     +'<label style="font-size:12px;color:#6a707a">Phone or email</label><input id="o_contact" data-testid="shop-contact" placeholder="9876543210 or you@email.com" '+(otpStep?'disabled':'')+' value="'+esc(_ord.contact||'')+'" '+fld+'>'
-    +(otpStep?('<label style="font-size:12px;color:#6a707a">6-digit code sent to you</label><input id="o_otp" data-testid="shop-otp" inputmode="numeric" maxlength="6" value="'+esc(_ord.otp||_ord.dev_otp||'')+'" '+fld+'>'):'')
+    +(otpStep?('<label style="font-size:12px;color:#6a707a">6-digit code sent to you</label><input id="o_otp" data-testid="shop-otp" inputmode="numeric" autocomplete="one-time-code" maxlength="6" value="'+esc(_ord.otp||_ord.dev_otp||'')+'" '+fld+'>'):'')
     +(err?'<div style="color:#b4453f;font-size:12.5px;margin-bottom:8px">'+esc(err)+'</div>':'')
     +(msg?'<div style="color:#2e7a45;font-size:12.5px;margin-bottom:8px">'+esc(msg)+'</div>':'')
     +(_ord.busy?'<button disabled style="width:100%;border:0;border-radius:10px;padding:12px;background:#9db4d6;color:#fff;font-weight:700;font-size:14px">⏳ Processing…</button>'
@@ -1226,7 +1235,7 @@ function orderConfirm(){
   return _orderPost(body);
 }
 var _MYTOK=null;   /* the shopper's session from the order that was just placed — memory only, never stored */
-function shopSheet(inner){ return '<div style="position:fixed;inset:0;background:rgba(15,22,32,.5);z-index:900;display:flex;align-items:center;justify-content:center;padding:12px" onclick="if(event.target===this)orderClose()"><div style="background:var(--card,#fff);width:100%;max-width:400px;border-radius:16px;padding:22px;max-height:92vh;overflow:auto">'+inner+'</div></div>'; }
+function shopSheet(inner){ return '<div style="position:fixed;inset:0;background:rgba(15,22,32,.5);z-index:900;display:flex;align-items:center;justify-content:center;padding:12px" onclick="if(CBSteps.backdropTap(event,this))orderClose()"><div style="background:var(--card,#fff);width:100%;max-width:400px;border-radius:16px;padding:22px;max-height:92vh;overflow:auto">'+inner+'</div></div>'; }
 function shopStatusWord(s){ var k=String(s||'').toLowerCase().replace(/[_\s-]+/g,' ').trim();
   if(!k||/^(sent|new|open|pending|submitted|placed)$/.test(k)) return 'Waiting for the shop';
   if(/^(accepted|confirmed)$/.test(k)) return 'Accepted';

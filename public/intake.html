@@ -54,7 +54,7 @@ async function api(m,p,body){ var h={'Content-Type':'application/json'}; if(TOK)
 // ── login (email → OTP) ──
 function loginView(msg){
   el('app').innerHTML='<div class="card"><label>Business email</label><input id="lg_email" placeholder="you@company.com">'
-    +'<div id="otpwrap" style="display:none"><label>OTP <span class="note">(dev OTP = 123456)</span></label><input id="lg_otp" placeholder="6-digit code"></div>'
+    +'<div id="otpwrap" style="display:none"><label>OTP <span class="note">(dev OTP = 123456)</span></label><input id="lg_otp" autocomplete="one-time-code" placeholder="6-digit code"></div>'
     +'<div class="row" style="margin-top:10px"><button class="pri" id="lg_btn" onclick="doLogin()">Send code</button></div>'
     +(msg?'<div class="err">'+esc(msg)+'</div>':'')+'</div>';
 }
