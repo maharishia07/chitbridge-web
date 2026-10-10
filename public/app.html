@@ -4827,8 +4827,17 @@ function capScreen(name){
 }
 
 function hasCap(k){ return (SESSION.capabilities||[]).indexOf(k)>=0; }   // one capability check, used by all gates
-const _capPromise = {};
+const _capPromise = {}, _capWithPromise = {};
+/* a capability split by job loads its other halves first (P2: network = the design builder + its member half, cap-network-member.js) */
+const CAP_WITH = { network:['network-member'] };
 function ensureCap(name){
+  if(CAP_LOADED[name]) return Promise.resolve();
+  if(CAP_WITH[name]){
+    return _capWithPromise[name] || (_capWithPromise[name] = Promise.all(CAP_WITH[name].map(ensureCap)).then(function(){ return _capOne(name); }).catch(function(e){ delete _capWithPromise[name]; throw e; }));
+  }
+  return _capOne(name);
+}
+function _capOne(name){
   if(CAP_LOADED[name]) return Promise.resolve();
   if(_capPromise[name]) return _capPromise[name];
   return _capPromise[name] = new Promise(function(resolve, reject){

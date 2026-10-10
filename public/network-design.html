@@ -1,9 +1,11 @@
 <!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Network — design mock</title>
+<title>Network Lab</title>
 <!--
-  network-design.html — PAPER PROTOTYPE. Not wired, not deployed, not linked from the app.
+  network-design.html — NETWORK LAB (P2). On the Labs row of the index (manifest id network-lab). A lab SHOWS on sample data and never writes a real
+  network (the Tax Lab rule): the sketch below is checked by POST /api/network-design/validate with sample:true — the same plan() Build runs, no database
+  read, nothing saved, nothing made. The ordering mock under it is the original paper prototype of how a member sees the network (sample stores only).
 
   Athi, 2026-08-08: *"now do the same for network and storefront."*
 
@@ -27,6 +29,37 @@
   ── WHAT DOES NOT CHANGE ─────────────────────────────────────────────────────────────────────────────────────────
   Three steps, not four: on a store order the recipient IS the store. Same as Suppliers, for the same reason.
 -->
+<script>
+/* the Network Lab sketch — sample rows only; the server's validate answers, this page decides nothing about what would break */
+var LAB=[{name:'Clothing',owned:true,ref:''},{name:'Shoes',owned:true,ref:''}];
+function labEsc(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function labPaint(){
+  document.getElementById('labRows').innerHTML=LAB.map(function(n,i){
+    return '<div class="row"><input class="nm" value="'+labEsc(n.name)+'" placeholder="Name" oninput="LAB['+i+'].name=this.value" data-testid="lab-name-'+i+'">'
+      +(n.owned?'<span class="s" style="font-size:12px;color:var(--grey)">your store</span>':'<input value="'+labEsc(n.ref)+'" placeholder="their handle, e.g. ravi.timbers" oninput="LAB['+i+'].ref=this.value" data-testid="lab-ref-'+i+'">')
+      +'<button type="button" onclick="LAB.splice('+i+',1);labPaint()" aria-label="Remove">✕</button></div>';}).join('');
+}
+function labAdd(own){LAB.push({name:'',owned:own,ref:''});labPaint();}
+function labCheck(){
+  var out=document.getElementById('labOut'),btn=document.getElementById('labGo');
+  var q=new URLSearchParams(location.search),tok='';
+  try{var ss=JSON.parse(localStorage.getItem('cb_sess')||'null');tok=ss&&ss.token||'';}catch(_){}
+  if(!tok){out.innerHTML='<div class="says bad">Sign in to the app first — the check runs on the server. Nothing is made either way.</div>';return;}
+  var api=q.get('api')||'https://chitbridge-api-production.up.railway.app';
+  var nodes=[{key:'r',name:'Sample',root:true,owned:true,parent_key:null,holds:[]}].concat(LAB.map(function(n,i){
+    return {key:'n'+i,name:n.name,owned:n.owned,partner_ref:n.ref,parent_key:'r',holds:['catalogue']};}));
+  btn.disabled=true;out.innerHTML='<div class="s" style="color:var(--grey)">Checking…</div>';
+  fetch(api+'/api/network-design/validate',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+tok},body:JSON.stringify({sample:true,draft:{nodes:nodes}})})
+    .then(function(r){return r.json().then(function(j){if(!r.ok)throw new Error(j.message||'No answer');return j;});})
+    .then(function(v){
+      out.innerHTML='<div class="says '+(v.ok?'good':'bad')+'" data-testid="lab-says">'+labEsc(v.says)+'</div>'
+        +(v.breaks&&v.breaks.length?'<ul>'+v.breaks.map(function(b){return '<li><b>'+labEsc(b.name)+'</b> — '+labEsc(b.reason)+'</li>';}).join('')+'</ul>':'')
+        +(v.would&&v.would.create.length?'<div class="s" style="font-size:12.5px;color:var(--grey)">Would make: '+v.would.create.map(function(c){return labEsc(c.handle);}).join(', ')+'</div>':'');})
+    .catch(function(e){out.innerHTML='<div class="says bad">'+labEsc(e.message||'Could not check — try again.')+'</div>';})
+    .then(function(){btn.disabled=false;});
+}
+document.addEventListener("DOMContentLoaded",labPaint);
+</script>
 <script src="app/catalogue-lines.js"></script>
 <script src="app/locale.js"></script>   <!-- cart-ui reads CBLocale (money/symbol) — as shop.html and the app load it (2026-09-28) -->
 <script src="engine/money.js"></script>   <!-- ⭐ the one rounder, BEFORE cart.js — it has no copy of its own (2026-09-28) -->
@@ -95,8 +128,26 @@
   .ovc{background:#fff;width:100%;max-width:470px;border-radius:15px;padding:17px 18px 20px;max-height:88vh;overflow:auto}
   .kv{display:flex;gap:9px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:13px}
   .kv b{min-width:96px;color:var(--grey);font-size:11px;text-transform:uppercase;font-weight:700}
+  .lab{max-width:1040px;margin:20px auto 0;background:var(--card,#fff);border-radius:16px;padding:14px 18px;box-shadow:0 10px 40px var(--shadow-c,rgba(20,30,50,.13))}
+  .lab h1{font-size:17px;margin:0 0 2px}
+  .lab .row{display:flex;gap:8px;align-items:center;margin:6px 0}
+  .lab .row input,.lab .row select{padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13.5px}
+  .lab .row .nm{flex:1}
+  .lab button{border-radius:9px;padding:9px 14px;font-size:13.5px;font-weight:700;cursor:pointer;border:1px solid var(--line);background:var(--card,#fff)}
+  .lab button.pri{background:var(--blue);color:var(--on-accent,#fff);border-color:var(--blue)}
+  .lab .says{font-weight:700;margin:8px 0 2px}.lab .says.bad{color:var(--bad)}.lab .says.good{color:var(--good)}
+  .lab ul{margin:4px 0;padding-inline-start:20px}
 </style>
 
+<div class="lab" id="lab" data-testid="lab">
+  <h1>Network Lab</h1>
+  <div class="s" style="font-size:12.5px;color:var(--grey)">Sample data — nothing is saved or made. Sketch a network, then see what would break.</div>
+  <div id="labRows"></div>
+  <div class="row"><button type="button" onclick="labAdd(true)" data-testid="lab-add-own">＋ Store of yours</button>
+    <button type="button" onclick="labAdd(false)" data-testid="lab-add-partner">＋ Partner</button>
+    <button type="button" class="pri" id="labGo" onclick="labCheck()" data-testid="lab-check">See what it would create</button></div>
+  <div id="labOut" data-testid="lab-out"></div>
+</div>
 <div class="wrap">
   <div class="left">
     <div class="lh"><div class="t">🔗 Network</div>
