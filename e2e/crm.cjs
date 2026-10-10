@@ -222,7 +222,8 @@ async function route(S, r) {
     ok(sc.t0 === sc.t1 && sc.page === 0 && sc.scr === 0, 'only the rows scroll: the column header stays at ' + sc.t1 + ' px, the page and the screen do not move');
     /* the alert line */
     const notes = await p.$$eval('#crm_list [data-notice]', (n) => n.map((x) => x.innerText.trim()));
-    ok(notes.length === 1 && /2 follow-ups late · Open follow-ups/.test(notes[0]), 'the alert line: ' + notes.join(' | ') + ' — the late follow-ups (GET /followups counts them), each alert names its fix. The API sends no late-dues flag, so no dues alert.');
+    const duesLate = await p.$$eval('#crm_list [data-testid^="party-due-late-"]', (n) => n.length);
+    ok(notes.length === 2 && /2 follow-ups late · Open follow-ups/.test(notes[0]) && new RegExp(duesLate + ' part(y|ies) with late dues · See dues').test(notes[1]), 'the alert lines: ' + notes.join(' | ') + ' — the late follow-ups (GET /followups counts them) and the late dues (the API alerts.dues_overdue: the same parties the rows mark, ' + duesLate + '); each alert names its fix');
     ok(await p.locator('[data-testid="crm-nav-n-followups"]').textContent() === '2', 'the Follow-ups badge is the same number as the alert (2)');
     /* ONE read, no per-row fetch */
     const reads = S0.calls.filter((c) => /^GET \/api\/crm\/parties(\?|$)/.test(c)), perRow = S0.calls.filter((c) => /^GET \/api\/crm\/parties\/[^/?]+/.test(c));
