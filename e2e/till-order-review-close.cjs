@@ -58,7 +58,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(40) + '· ' + d 
   await p.click('[data-testid="till-order-go"]');
   await p.waitForTimeout(150);
   const bar = await p.evaluate(() => ({
-    kotText: (document.querySelector('[data-testid="till-kot"]') || {}).textContent || '',
+    kotText: ((document.querySelector('[data-testid="till-kot"]') || {}).getAttribute && document.querySelector('[data-testid="till-kot"]').getAttribute('aria-label')) || '',   // I1: the word is the aria-label now
     kotOn: kotOn(),
     bring: !!document.querySelector('[data-testid="till-order-bring"]'),
   }));

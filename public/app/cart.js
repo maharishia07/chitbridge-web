@@ -966,7 +966,7 @@
          lose; the money is the detail, and it is one tap away in the cart itself. */
       + (on ? '<span class="cbcart-sum">' + esc(sum) + '</span>' : '')
       + (on ? '<span class="cbcart-x" onclick="event.stopPropagation();CBCart.clear(\'' + esc(ns) + '\')"'
-            + ' title="Clear the cart">✕</span>' : '')
+            + ' title="Clear the cart" aria-label="Clear the cart">✕</span>' : '')
       + '</div>'
       + (on && T.partial ? '<div class="cbcart-partial">Some lines have no price — the total covers only the priced ones.</div>' : '');
   }
@@ -1133,7 +1133,7 @@
     var btn = 'flex:1;height:40px;border-radius:9px;font-size:var(--fs-3);font-weight:700;cursor:pointer;border:1.5px solid ' + a;
     return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">'
       + '<b style="font-size:var(--fs-4);flex:1">🛒 ' + esc(opt(ns, 'cartTitle', 'Your cart')) + '</b>'
-      + '<button onclick="CBCart.close(\'' + esc(ns) + '\')" style="border:0;background:none;font-size:var(--fs-5);color:#8a949c;cursor:pointer">×</button></div>'
+      + '<button onclick="CBCart.close(\'' + esc(ns) + '\')" aria-label="Close" title="Close" style="border:0;background:none;font-size:var(--fs-5);color:#8a949c;cursor:pointer">×</button></div>'
       + '<div style="font-size:var(--fs-2);color:var(--grey-2);margin-bottom:10px">'
       + (opt(ns, 'from') ? 'from <b>' + esc(opt(ns, 'from')) + '</b> · ' : '')
       + sel.length + ' line' + (sel.length === 1 ? '' : 's') + ' · ' + units(ns) + (units(ns) === 1 ? ' unit' : ' units') + '</div>'

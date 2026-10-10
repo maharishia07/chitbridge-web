@@ -175,7 +175,8 @@
     var s = F[ns]; if (!s) return '';
     var last = s.i === s.steps.length - 1, blocked = why(s, s.i);
     if (blocked && opt(s, 'quiet', false) && !s.tried) blocked = null;   // quiet until the first try — the guard still refuses on press
-    var backLbl = s.i ? '← Back' : opt(s, 'cancelLabel', '');
+    var iconBack = opt(s, 'iconBack', false);   // I1: opt-in — ← alone, the word rides on aria-label + title
+    var backLbl = s.i ? (iconBack ? '←' : '← Back') : opt(s, 'cancelLabel', '');
     var tidBack = opt(s, 'backTestid', 'step-back-' + ns);
     var tidDraft = opt(s, 'draftTestid', 'step-draft-' + ns);
     // The primary changes JOB on the last step, so it may change NAME too: "next" and "send" are different actions.
@@ -183,6 +184,7 @@
     var out = '<div class="cbst-foot" data-testid="stepfoot-' + esc(ns) + '">';
     if (backLbl) {
       out += '<button type="button" data-testid="' + esc(tidBack) + '"'
+        + (iconBack && s.i ? ' data-ic="back" aria-label="Back" title="Back"' : '')
         + ' onclick="CBSteps.back(\'' + esc(ns) + '\')">' + esc(backLbl) + '</button>';
     }
     if (opt(s, 'draftLabel')) {
