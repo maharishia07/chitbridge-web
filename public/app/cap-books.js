@@ -1656,10 +1656,10 @@ var BK_PERIOD_SYM = { open: '○', soft_locked: '🔒', hard_locked: '⛔' };
  * server makes a year's months the first time an entry lands in it). Month lock and Packs both read it; the year they show is one.
  */
 async function bkPeriodsLoad() {
-  var r = await api('booksPeriods'), rows = {}, yrs = {};
-  ((r && r.periods) || []).forEach(function (x) { var p = Number(x.period); if (p >= 1 && p <= 12) { rows[x.fiscal_year + '|' + p] = x.status; yrs[x.fiscal_year] = 1; } });
+  var r = await api('booksPeriods'), rows = {}, info = {}, yrs = {};
+  ((r && r.periods) || []).forEach(function (x) { var p = Number(x.period); if (p >= 1 && p <= 12) { rows[x.fiscal_year + '|' + p] = x.status; info[x.fiscal_year + '|' + p] = x; yrs[x.fiscal_year] = 1; } });
   yrs[bkFyNow()] = 1;
-  var L = BK.lk = BK.lk || {}; L.rows = rows; L.years = Object.keys(yrs).sort().reverse();
+  var L = BK.lk = BK.lk || {}; L.rows = rows; L.info = info; L.years = Object.keys(yrs).sort().reverse();
   if (!L.fy || !yrs[L.fy]) L.fy = bkFyNow();
   return L;
 }
@@ -1673,30 +1673,41 @@ async function bkLockView(body) {
   var own = bkIsOwner();
   body.innerHTML = '<div style="display:flex;flex-direction:column;gap:8px;max-width:420px">'
     + '<label>' + tx('Financial year') + bkFyPicker('lk_fy', 'lk_fy', 'width:100%') + '</label>'
-    + (own ? '<label>' + tx('Reason') + '<input class="inp" id="lk_why" data-testid="lk_why" placeholder="' + esc(tx('Needed to open a month again')) + '"></label>' : '')
     + '<div id="lk_rows" data-testid="lk_rows"></div>'
-    + (own ? '<div data-testid="lk_note" style="color:var(--grey);font-size:var(--fs-1)">' + tx('Close for good: the month never opens again. Corrections go into an open month as an adjusting entry.') + '</div>' : '')
+    + '<div id="lk_foot" data-testid="lk_note" style="color:var(--grey);font-size:var(--fs-1)"></div>'
     + '<div id="lk_out" data-testid="lk_out" style="font-size:var(--fs-1)"></div></div>';
   bkLockRowsPaint();
 }
-/** the twelve months, April to March: state as a word and a symbol, and the one or two actions that state allows (owner only) */
+/**
+ * the twelve months, April to March: state as a word and a symbol, its entries and sales, and the actions the SERVER says it may do (owner only).
+ * M157: ONE rule, read from GET /periods - Lock for a finished month, oldest first (else greyed with the server's sentence); the Reason box and the foot
+ * follow reopen.may, so the page never promises what the server will refuse.
+ */
 function bkLockRowsPaint() {
   var el = document.getElementById('lk_rows'), L = BK.lk, own = bkIsOwner(); if (!el) return;
+  var reopens = BK_MONTHS.some(function (m, i) { var q = (L.info || {})[L.fy + '|' + (i + 1)]; return q && q.reopen && q.reopen.may; });
+  var foot = document.getElementById('lk_foot'), whyBox = document.getElementById('lk_whybox');
+  if (own && reopens && !whyBox && foot) foot.insertAdjacentHTML('beforebegin', '<label id="lk_whybox">' + tx('Reason') + '<input class="inp" id="lk_why" data-testid="lk_why" placeholder="' + esc(tx('Needed to open a month again')) + '"></label>');
+  if (own && !reopens && whyBox) whyBox.remove();
+  if (foot) foot.textContent = !own ? '' : reopens ? tx('A locked month opens again with a reason. Close for good never opens.') : tx('Close for good: the month never opens again. Corrections go into an open month as an adjusting entry.');
   el.innerHTML = BK_MONTHS.map(function (m, i) {
-    var p = i + 1, st = L.rows[L.fy + '|' + p] || 'open', b = '';
-    if (own && st === 'open') b = '<button class="supact-pri" data-testid="lk-lock-' + p + '" onclick="bkLockDo(\'lock\',' + p + ')" title="' + esc(tx('Stops entries · reopens with a reason')) + '">🔒 ' + tx('Lock') + '</button>';
+    var p = i + 1, st = L.rows[L.fy + '|' + p] || 'open', b = '', x = (L.info || {})[L.fy + '|' + p] || null;
+    var may = !x || !x.lock || x.lock.may, why = x && x.lock && x.lock.why ? x.lock.why : '';
+    if (own && st === 'open') b = '<button class="supact-pri" data-testid="lk-lock-' + p + '"' + (may ? ' onclick="bkLockDo(\'lock\',' + p + ')" title="' + esc(tx('Stops entries · reopens with a reason')) + '"' : ' disabled title="' + esc(tx(why)) + '"') + '>🔒 ' + tx('Lock') + '</button>'
+      + (!may && why ? '<span data-testid="lk-why-' + p + '" style="color:var(--grey);font-size:var(--fs-1)">' + esc(tx(why)) + '</span>' : '');
     if (own && st === 'soft_locked') b = '<button data-testid="lk-unlock-' + p + '" onclick="bkLockDo(\'unlock\',' + p + ')">🔓 ' + tx('Open again') + '</button>'
       + '<button data-testid="lk-hard-' + p + '" onclick="bkLockDo(\'hard\',' + p + ')">⛔ ' + tx('Close for good') + '</button>';
     return '<div data-testid="lk-row-' + p + '" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:6px 0;border-bottom:1px solid var(--line)">'
       + '<b style="flex:1 1 52px">' + tx(m) + '</b>'
       + '<span data-testid="lk-state-' + p + '" data-state="' + esc(st) + '">' + (BK_PERIOD_SYM[st] || '') + ' ' + esc(tx(BK_PERIOD_WORD[st] || st)) + '</span>'
+      + (x && (x.entries || x.sales_minor) ? '<span data-testid="lk-figs-' + p + '" style="color:var(--grey);font-size:var(--fs-1)">' + txf('{n} entries', { n: x.entries }) + (x.sales_minor ? ' · ' + bkMoney(x.sales_minor) + ' ' + tx('sales') : '') + '</span>' : '')
       + (b ? '<span class="supacts" style="display:flex;gap:6px;flex-wrap:wrap;margin:0">' + b + '</span>' : '') + '</div>';
   }).join('');
 }
 async function bkLockDo(what, p) {
   var L = BK.lk, fy = L.fy, why = (document.getElementById('lk_why') || {}).value || '', out = document.getElementById('lk_out');
   var m = tx(BK_MONTHS[p - 1] || String(p));
-  if (what !== 'lock' && !why.trim()) { if (out) out.textContent = tx('Say why — the reason is kept'); var w = document.getElementById('lk_why'); if (w) w.focus(); return; }
+  if (what === 'unlock' && !why.trim()) { if (out) out.textContent = tx('Say why — the reason is kept'); var w = document.getElementById('lk_why'); if (w) w.focus(); return; }
   /* ⭐ M64: through CBAction — ONE write per month at a time (whichever of its buttons), Close for good asks first in the
      page's own dialog (Cancel sends nothing), and the outcome is said in lk_out beside the months */
   var btn = document.querySelector('[data-testid="lk-' + what + '-' + p + '"]');
@@ -1709,6 +1720,7 @@ async function bkLockDo(what, p) {
       var st = r && r.period && r.period.status;
       if (st) L.rows[fy + '|' + p] = st;   /* flip the ROW, never the whole list */
       if (L.fy === fy) bkLockRowsPaint();
+      bkPeriodsLoad().then(function () { if (BK.lk.fy === fy) bkLockRowsPaint(); }).catch(function () {});   /* M157: the server's may/why moves with the lock (the next month opens up, the reason box follows) */
       var o = document.getElementById('lk_out'); if (o) o.textContent = txf('{m} {fy} · {s}', { m: m, fy: fy, s: tx(BK_PERIOD_WORD[st] || 'Done') });
     },
   });
