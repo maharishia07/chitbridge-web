@@ -438,6 +438,15 @@
    * describe the order and stay on the money block. The answer is memoised per paint (touched() drops it).
    *   dealOf(ns, r, base) → { unit, off, label } | null
    */
+  /** the categories an item's engine line carries — `category_ids`, else `categories`, else the legacy single `category`, then their ancestors
+   *  when the host can walk the tree (the app: core.js; the storefront: its own payload's tree). The engine line used to read only the first two,
+   *  so an offer on a category never priced a row that carried the single-`category` shape (M101: "10% off Drinks" tagged, price unchanged). */
+  function lineCatgs(d) {
+    d = d || {};
+    var ids = Array.isArray(d.category_ids) ? d.category_ids : Array.isArray(d.categories) ? d.categories : (d.category ? [d.category] : []);
+    ids = ids.map(String).filter(Boolean);
+    return (typeof root.catgWithAncestors === 'function') ? root.catgWithAncestors(ids) : ids;
+  }
   /** dealCalc(d, item_id, base, q, offers, ctx) → { unit, off, label } | null — the engine's answer for ONE line; pure, no cart state.
    *  CBCart.dealFor(item_data, offers, { qty, price, currency, money }) exposes it: the seller's OWN catalogue list prints the same
    *  struck-list / offered pair as every cart row (Athi, 2026-09-06: "prominent in both catalogue and the cart"). */
@@ -446,7 +455,7 @@
     if (!isFinite(base) || base <= 0) return null;
     d = d || {}; q = Number(q) || 1;
     try {
-      var line = { key: String(item_id), item_id: item_id, sku: d.sku || d.code || null, categories: d.category_ids || d.categories || [],
+      var line = { key: String(item_id), item_id: item_id, sku: d.sku || d.code || null, categories: lineCatgs(d),
                    excluded: Array.isArray(d.offers_excluded) ? d.offers_excluded.map(String) : [], qty: q, unitPrice: base };
       var ev = root.CBOffers.evaluate({ lines: [line], offers: offers, ctx: ctx || { now: new Date(), currency: 'INR' } });
       var per = root.CBOffers.perLine(ev, [line]) || {}, p = per[String(item_id)];
@@ -532,7 +541,7 @@
     rowsOf(s.cat).forEach(function (r) {
       if (r.type !== 'line' || !s.sel[r.item_id]) return;
       var u = unitPrice(ns, r, { noDeal: true }), d = (r.item && (r.item.item_data || r.item)) || {};
-      out.push({ key: String(r.item_id), item_id: r.item_id, sku: d.sku || d.code || null, categories: d.category_ids || d.categories || [], excluded: Array.isArray(d.offers_excluded) ? d.offers_excluded : [],
+      out.push({ key: String(r.item_id), item_id: r.item_id, sku: d.sku || d.code || null, categories: lineCatgs(d), excluded: Array.isArray(d.offers_excluded) ? d.offers_excluded : [],
                  qty: Number(s.sel[r.item_id]) || 0, unitPrice: isFinite(u.amount) ? u.amount : 0, tax: (r.item && r.item.tax) || d.tax || null });
     });
     return out;
@@ -1455,7 +1464,7 @@
      nothing reads is a feature that exists on one screen only); it is warned, not refused, so a typo never blanks a screen. */
   var WRAP = ['listEl', 'barEl', 'popupEl', 'popupBodyEl', 'popupClass', 'cartTitle', 'checkoutLabel', 'emptyHint', 'noCatalogue', 'from',
     'accent', 'soft', 'symbol', 'currency', 'locale', 'groupDigits', 'hideAvail', 'staleDays', 'onCheckout', 'onChange', 'rowExtra', 'renderer',
-    'categories', 'barHideEmpty', 'summaryEl', 'summaryTestid', 'summary'];
+    'categories', 'barHideEmpty', 'summaryEl', 'summaryTestid', 'summary', 'sectionOf', 'pageSize', 'compact'];
 
   /**
    * ════════════════════════════════════════════════════════════════════════════════════════════════════════════
@@ -1772,7 +1781,7 @@
        at one width on two surfaces and diffs them. The frame around it (a dashed accent on the storefront) stays the surface's. */
     return '<div class="cbcart-money" data-testid="cbcart-money" style="font-family:var(--font-ui,Inter,system-ui,sans-serif);font-size:13px;line-height:1.35;color:var(--ink,#20303b);padding:8px 10px;border:1px solid var(--line,#e7e3d8);border-radius:9px;background:var(--card,#fff)">' + after + taxRows
 
-      + '<div style="display:flex;justify-content:space-between;border-top:2px solid #333;margin-top:6px;padding-top:6px;font-size:14px"><span>Total incl. tax</span><b data-testid="' + esc(opt.totalTestid || 'cart-total') + '">' + esc(ctx.money(m.grand)) + '</b></div>' + '</div>';
+      + '<div style="display:flex;justify-content:space-between;border-top:2px solid #333;margin-top:6px;padding-top:6px;font-size:14px"><span>' + (keys.length || !opt.plainUntaxed ? 'Total incl. tax' : 'Total') + '</span><b data-testid="' + esc(opt.totalTestid || 'cart-total') + '">' + esc(ctx.money(m.grand)) + '</b></div>' + '</div>';
   }
 
   root.CBCart = {
@@ -2055,6 +2064,8 @@
 
     var media = (function () {
       var m = mediaOf(r);
+      /* ⭐ COMPACT (the online shop, M64): no photograph → NO box at all. The row is name · price · control on one line and the grid has no thumb cell. */
+      if (opts && opts.compact && (!m || !m.src)) return '';
       if (!m) {
         /* No photograph — the derived letter tile, which is a real visual rather than a placeholder for one. */
         var t = tileFor(name);
@@ -2181,9 +2192,9 @@
        only a list needs: readonly (no stepper) · control(r) · lead(r) (the select tick) · head(r) (a status chip) · below(r) (category
        chips, 'more') · testid(r) · rowClass(r) · rowAttrs(r) (the click). Nothing else may build a row. */
     var H = opts || {};
-    var html = '<div class="cbcat-row cbgrid' + (q ? ' on' : '') + (r.variant ? ' cbcat-var' : '') + (H.rowClass ? ' ' + esc(H.rowClass(r) || '') : '') + '"'
+    var html = '<div class="cbcat-row cbgrid' + (q ? ' on' : '') + (r.variant ? ' cbcat-var' : '') + (H.compact ? ' cbcat-compact' + (media ? '' : ' cbcat-nophoto') : '') + (H.rowClass ? ' ' + esc(H.rowClass(r) || '') : '') + '"'
       + ' data-testid="' + esc(H.testid ? H.testid(r) : ('cbcat-row-' + id)) + '"' + (H.rowAttrs ? ' ' + H.rowAttrs(r) : '') + '>'
-      + (H.lead ? (H.lead(r) || '') : (media || '<span class="cbcat-thumb" aria-hidden="true"></span>'))   /* the grid needs every cell, image or not */
+      + (H.lead ? (H.lead(r) || '') : (media || (H.compact ? '' : '<span class="cbcat-thumb" aria-hidden="true"></span>')))   /* the grid needs every cell, image or not */
       + '<span class="cbcat-meat"><span class="cbcat-nm">' + esc(name) + '</span>' + (H.head ? (H.head(r) || '') : '')
       + '<span class="cbcat-sub">' + esc(d.unit || '')
       + (hint ? (d.unit ? ' · ' : '') + '<span class="cbcat-hint">' + esc(hint) + '</span>' : '') + '</span>'
@@ -2863,6 +2874,14 @@
       + '.cbcat-row.cbgrid>.cbcat-pr{grid-row:1;grid-column:3;min-width:0}.cbcat-row.cbgrid>.cbcat-tags{grid-row:2;grid-column:2/-1;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:flex-start;max-width:none}'
       + '.cbcat-row.cbgrid>.cbcat-ctl{grid-row:2;grid-column:3;min-width:0;align-self:center}.cbcat-row.cbgrid .cbcat-thumb{width:44px;height:44px}}',
       '@media(max-width:520px){.cbcat-row.cbgrid{grid-template-columns:44px minmax(0,1fr) auto}.cbcat-row.cbgrid>.cbcat-tags{grid-row:2;grid-column:2/-1;flex-direction:row;flex-wrap:wrap;justify-content:flex-start}.cbcat-row.cbgrid>.cbcat-ctl{grid-row:2;grid-column:3}.cbcat-thumb{width:44px;height:44px}}',
+      /* ⭐ COMPACT ROW (opts.compact — the online shop, M64): the control sits on the item's OWN line beside the price; the tags (offer, stock) take a line under the name only when there are any; a row with no photograph has no thumb cell */
+      '.cbcat-row.cbgrid.cbcat-compact{grid-template-columns:44px minmax(0,1fr) auto auto;align-items:center}',
+      '.cbcat-row.cbgrid.cbcat-compact>.cbcat-thumb{grid-row:1;grid-column:1}.cbcat-row.cbgrid.cbcat-compact>.cbcat-meat{grid-row:1;grid-column:2}',
+      '.cbcat-row.cbgrid.cbcat-compact>.cbcat-pr{grid-row:1;grid-column:3}.cbcat-row.cbgrid.cbcat-compact>.cbcat-ctl{grid-row:1;grid-column:4;min-width:0;align-self:center}',
+      '.cbcat-row.cbgrid.cbcat-compact>.cbcat-tags{grid-row:2;grid-column:2/-1}.cbcat-row.cbgrid.cbcat-compact>.cbcat-tags:empty{display:none}',
+      '.cbcat-row.cbgrid.cbcat-compact.cbcat-nophoto{grid-template-columns:minmax(0,1fr) auto auto}',
+      '.cbcat-row.cbgrid.cbcat-nophoto>.cbcat-meat{grid-column:1}.cbcat-row.cbgrid.cbcat-nophoto>.cbcat-pr{grid-column:2}.cbcat-row.cbgrid.cbcat-nophoto>.cbcat-ctl{grid-column:3}',
+      '.cbcat-row.cbgrid.cbcat-nophoto>.cbcat-tags{grid-column:1/-1}',
       '.cbcat-row{display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px dashed var(--line);',
       '}',   /* content-visibility:auto dropped 2026-09-06: an off-screen row read as HIDDEN (CAT-01 after the list joined this renderer); the list windows its rows anyway */
       '.cbcat-row.on{background:var(--soft,#eef4ff)}',

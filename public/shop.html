@@ -15,9 +15,9 @@
     --fs-1:11px; --fs-2:12.5px; --fs-3:14px; --fs-4:16px; --fs-5:20px; --cbpick-gap:8px; }
   *{ box-sizing:border-box; }
   body{ margin:0; font-family:var(--font-ui); color:var(--ink); background:var(--paper); }   /* the app's type token — one cart, one face */
-  .wrap{ max-width:860px; margin:0 auto; padding:20px 16px 60px; }
+  .wrap{ max-width:860px; margin:0 auto; padding:8px 14px 110px; }
   .sg{ font-family:'Space Grotesk',-apple-system,sans-serif; }
-  .hd{ display:flex; align-items:center; gap:12px; padding:14px 0 16px; border-bottom:1px solid var(--line); margin-bottom:18px; }
+  .hd{ display:flex; align-items:center; gap:10px; padding:4px 0 6px; margin-bottom:0; }
   .logo{ width:44px; height:44px; border-radius:12px; background:#eef3fb; display:flex; align-items:center; justify-content:center; font-size:22px; }
   .shopname{ font-weight:800; font-size:20px; }
   .badge{ font-size:11px; font-weight:700; border-radius:20px; padding:2px 9px; }
@@ -42,11 +42,24 @@
   .foot{ margin-top:26px; font-size:11px; color:var(--grey); text-align:center; line-height:1.6; }
   .msg{ padding:40px 16px; text-align:center; color:var(--grey); }
   .enq{ margin-top:12px; font-size:12px; color:var(--blue); }
-  /* categories: a bar of chips that WRAPS (as on the till) and a heading per section; the bar stays in reach while the list scrolls */
-  .catbar{ position:sticky; top:0; z-index:5; display:flex; flex-wrap:wrap; gap:6px; padding:8px 0; margin:0 0 6px; background:var(--paper); }
-  .catchip{ border:1px solid var(--line); background:#fff; color:var(--ink); border-radius:999px; padding:6px 13px; font:600 13px var(--font-ui); cursor:pointer; }
-  .catchip:hover,.catchip:focus-visible{ border-color:var(--accent); color:var(--accent); }
-  .cbcat-sec{ font:700 15px var(--font-ui); color:var(--ink); padding:16px 2px 6px; border-bottom:2px solid var(--accent); margin-top:6px; scroll-margin-top:110px; }
+  /* ⭐ THE FIRST SCREEN IS THE LIST (T2b, 2026-10-10; M62): one band = search + a "Categories ▾" button; the categories are an OVERLAY panel that takes no space of its own;
+     the basket is a bottom dock, so nothing above the list ever moves when the first dish is added (M72). */
+  .shopband{ position:sticky; top:0; z-index:20; display:flex; gap:8px; align-items:center; background:var(--paper); padding:6px 0 8px; }
+  .shopband input{ flex:1; min-width:0; padding:9px 10px; border:1px solid var(--line); border-radius:8px; font-size:14px; box-sizing:border-box; background:var(--card,#fff); }
+  .catbtn{ flex:none; border:1px solid var(--line); background:var(--card,#fff); color:var(--ink); border-radius:8px; padding:9px 11px; font:600 13px var(--font-ui); cursor:pointer; white-space:nowrap; touch-action:manipulation; }
+  .catbtn[aria-expanded="true"]{ border-color:var(--accent); color:var(--accent); }
+  .catpanel{ position:absolute; top:100%; inset-inline:0; max-height:62vh; overflow:auto; background:var(--card,#fff); border:1px solid var(--line); border-radius:12px; box-shadow:0 10px 28px rgba(15,22,32,.18); padding:4px; z-index:21; }
+  .catpanel[hidden]{ display:none; }
+  .catpick{ display:flex; justify-content:space-between; gap:10px; width:100%; border:0; background:none; padding:12px; font:600 14px var(--font-ui); color:var(--ink); text-align:start; border-radius:8px; cursor:pointer; touch-action:manipulation; -webkit-touch-callout:none; user-select:none; }
+  .catpick:hover,.catpick:focus-visible{ background:var(--blue-tint-bg); }
+  #catback{ position:fixed; inset:0; z-index:19; background:transparent; }
+  .shopdock{ display:none; position:fixed; left:0; right:0; bottom:0; z-index:30; background:var(--paper); border-top:1px solid var(--line); padding:8px 14px calc(8px + env(safe-area-inset-bottom)); box-shadow:0 -4px 14px rgba(15,22,32,.08); }
+  .shopdock.on{ display:block; }
+  .shopdock #p_offers{ max-height:30vh; overflow:auto; }
+  .shopdock .cbcart-bar{ width:100%; justify-content:center; height:44px; }
+  body.hasdock #netpill{ bottom:78px !important; }
+  .cbcat-was + .cbcat-offered::before{ content:'→ '; color:var(--grey,#8a949c); font-weight:400; }
+  .cbcat-sec{ font:700 15px var(--font-ui); color:var(--ink); padding:12px 2px 6px; border-bottom:2px solid var(--accent); margin-top:4px; scroll-margin-top:64px; }
 .offbadge{display:inline-block;margin-inline-start:6px;padding:1px 7px;border-radius:999px;font-size:11px;font-weight:700;background:#fff5e0;border:1px solid #e8cf9a;color:#8a5a12;white-space:nowrap}
 </style>
 </head>
@@ -339,6 +352,7 @@ function _catgUp(ids){
   var cats=(_SHOPDATA&&Array.isArray(_SHOPDATA.categories))?_SHOPDATA.categories:[];
   return (typeof cbCatgAncestors==='function') ? cbCatgAncestors(ids, cats) : (ids||[]).map(String);
 }
+window.catgWithAncestors=function(ids){ return _catgUp(ids); };   /* the shared cart asks for this by name — on the storefront the tree is the payload's own (M101) */
 function finishDeal(it, qty){
   var offers=_shopOffers(); if(!offers.length||typeof CBOffers==='undefined'||!CBOffers.evaluate||!CBOffers.perLine) return null;
   var p=itemPrice(it); if(!p||p.v==null||!_showsPrice()) return null;
@@ -457,11 +471,11 @@ function productListHtml(data, cur){
   /* ⚠️ ONE CART, HELD. render() runs again on a region change, so the handle is released first — a create()
      without a destroy() is the leak the namespaced API could not express. */
   if (_CART) _CART.destroy();
-  _CART = CBCart.create(data, { accent:'var(--accent)', soft:'var(--blue-tint-bg)', categories:(data&&data.categories)||[], pageSize:400, sectionOf:shopSectionOf, symbol:_shopSym(), currency:(data.shop&&data.shop.currency_code)||'INR', from:(data.shop&&data.shop.display_name)||'',
+  _CART = CBCart.create(data, { accent:'var(--accent)', soft:'var(--blue-tint-bg)', categories:(data&&data.categories)||[], pageSize:400, sectionOf:shopSectionOf, compact:true, symbol:_shopSym(), currency:(data.shop&&data.shop.currency_code)||'INR', from:(data.shop&&data.shop.display_name)||'',
     cartTitle:'Your basket', checkoutLabel:'Check out →', emptyHint:'Press + on what you want',
     noCatalogue:'This shop has nothing on display yet.',
     listEl:'p_list', barEl:'p_cart', onCheckout:function(){ shopCartOrder(); },
-    onChange:function(){ shopOffersSync(); },
+    onChange:function(){ shopDockSync(); shopOffersSync(); },
     /* ⭐ ONE CART, STEP 2 (Athi, 2026-09-05: "converge the storefront onto the same picker code"): the rows are drawn by
        app/catalogue-ui.js — the SAME renderer as Suppliers, Compose and Network — so the tax line and the offer badge are
        the same markup everywhere. This page keeps only what the row does not know: the stock stamp and the gallery. */
@@ -472,12 +486,12 @@ function productListHtml(data, cur){
   setTimeout(function(){ try{ var l=document.getElementById('p_list'); if(l&&typeof CBCatUI!=='undefined'&&CBCatUI.observe) CBCatUI.observe(l); }catch(e){} }, 0);
   setTimeout(shopOffersSync, 0);   /* after the list is in the DOM: the offered prices on the rows, the basket summary */   /* the offer promise under the line, then the gallery — same judgement as the app (CBOffers.forLine) */   /* pictures + video under the line — same gallery as the product page */
   if (!cbLineRows(data).length) return '';
-  return '<div class="sechd" style="color:var(--grey)">🗂️ Products</div>'
-    + '<input id="p_search" placeholder="Search products…" value="'+esc((_CART.state()||{}).q||'')+'"'
-    + ' oninput="shopPickSearch(this.value)" style="width:100%;padding:9px;border:1px solid #e7e3d8;border-radius:8px;margin:2px 0 8px;font-size:14px;box-sizing:border-box">'
-    + shopJumpHtml()
-    + '<div id="p_cart">' + shopCartBarHtml() + '</div><div id="p_offers"></div>'
-    + '<div id="p_list">' + shopPickListHtml(cur) + '</div>';
+  setTimeout(shopDockSync, 0);
+  return '<div class="shopband" id="shop_band" data-testid="shop-band">'
+    + '<input id="p_search" data-testid="shop-search" type="search" placeholder="Search products…" value="'+esc((_CART.state()||{}).q||'')+'" oninput="shopPickSearch(this.value)">'
+    + shopCatBtnHtml() + '</div>'
+    + '<div id="p_list">' + shopPickListHtml(cur) + '</div>'
+    + '<div class="shopdock" id="shop_dock" data-testid="shop-dock"><div id="p_offers"></div><div id="p_cart">' + shopCartBarHtml() + '</div></div>';
 }
 /* ⚠️ THE ROWS AND THE BAR MOVED to app/cart-ui.js — the same cart Suppliers, Network and compose use. This page
    keeps only its ACCENT, because it is a public page in the shop's colours; the rules are shared, the palette
@@ -498,26 +512,87 @@ function _shopSym(){ var c=(_SHOPDATA&&_SHOPDATA.shop&&_SHOPDATA.shop.currency_c
  * shared cart tallies them (CBCart.categories) and the shared list draws a heading per section (opts.sectionOf). Nothing here
  * invents a taxonomy: fewer than two categories in use → no headings, no bar, exactly as before.
  */
-function _shopCats(){ try{ var t=_CART?CBCart.categories(_CART.ns):[]; return t.length>=2?t:[]; }catch(e){ return []; } }
+/* A category on a product is an id the shop's own categories resolve to a NAME. A value that is not one of them is either a legacy name ("Tiffin", "other")
+   — shown as the name it is — or an id nobody can resolve (a deleted category; M99), which is NEVER shown: it goes under "Other". Sections are keyed by the
+   lower-cased NAME, so two categories (or an id and a legacy name) that read "Tiffin" are one chip and one heading (M63). */
+var _UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function _secLabel(raw){
+  var v=String(raw==null?'':raw).trim(); if(!v) return null;
+  var cats=(_SHOPDATA&&Array.isArray(_SHOPDATA.categories))?_SHOPDATA.categories:[];
+  for(var i=0;i<cats.length;i++){ if(String(cats[i].id)===v){ var n=String(cats[i].name||'').trim(); return n||null; } }
+  return _UUID.test(v)?null:v;
+}
+function _secKey(label){ var k=String(label).toLowerCase().replace(/\s+/g,' ').trim(); return (k==='others')?'other':k; }
+function _secOfData(d){
+  d=d||{}; var ids=Array.isArray(d.categories)?d.categories:Array.isArray(d.category_ids)?d.category_ids:(d.category?[d.category]:[]);
+  for(var i=0;i<ids.length;i++){ var l=_secLabel(ids[i]); if(l){ var k=_secKey(l); return k==='other'?{key:'other',label:'Other'}:{key:k,label:l}; } }
+  return {key:'other',label:'Other'};
+}
+var _SEC=null;
+/** the sections the shop shows — [{id,key,label,n}] name-sorted, "Other" last; fewer than two → none (no headings, no button), as before */
+function _shopSecs(){
+  if(_ONLY||!_SHOPDATA) return [];
+  if(_SEC&&_SEC.src===_SHOPDATA) return _SEC.list;
+  var by={}, order=[];
+  ((_SHOPDATA.items)||[]).forEach(function(p){ var s=_secOfData(p.item_data||p); if(!by[s.key]){ by[s.key]={key:s.key,label:s.label,n:0}; order.push(s.key); } by[s.key].n++; });
+  var list=order.map(function(k){ return by[k]; }).sort(function(a,b){ return ((a.key==='other')-(b.key==='other')) || a.label.localeCompare(b.label); });
+  list.forEach(function(c,i){ c.id='s'+i; });
+  if(list.length<2) list=[];
+  _SEC={src:_SHOPDATA,list:list}; return list;
+}
 function shopSectionOf(r){
-  var t=_shopCats(); if(!t.length) return null;
-  var d=(r&&r.item&&(r.item.item_data||r.item))||{}, ids=Array.isArray(d.categories)?d.categories:Array.isArray(d.category_ids)?d.category_ids:(d.category?[d.category]:[]);
-  ids=ids.map(String).filter(Boolean);
-  for(var i=0;i<t.length;i++){ if(ids.indexOf(String(t[i].id))>=0) return {id:String(t[i].id),label:t[i].name,order:i}; }
-  return {id:'__none',label:'More from the shop',order:1e6};
+  var t=_shopSecs(); if(!t.length) return null;
+  var k=_secOfData((r&&r.item&&(r.item.item_data||r.item))||{}).key;
+  for(var i=0;i<t.length;i++){ if(t[i].key===k) return {id:t[i].id,label:t[i].label,order:i}; }
+  return {id:t[t.length-1].id,label:t[t.length-1].label,order:t.length-1};
 }
-function shopJumpHtml(){
-  var t=_shopCats(); if(!t.length) return '';
-  return '<div class="catbar" data-testid="shop-cat-bar">'+t.map(function(c){ var id=c.none?'__none':String(c.id);
-    return '<button type="button" class="catchip" data-testid="shop-cat-jump" onclick="shopJump(this.dataset.sec)" data-sec="'+esc(id)+'">'+esc(c.none?'More':c.name)+'</button>'; }).join('')+'</div>';
+/* ⭐ CATEGORIES AS AN OVERLAY (M62). One button opens a panel OVER the list — it owns no height. A TAP on a name jumps to that heading and closes the panel;
+   nothing needs hover; a long press is just a slow tap (no context menu); a DOUBLE tap cannot reach the list: the backdrop stays 400 ms after a pick, so the
+   second tap lands on it and not on a product's "+". The page-wide backdrop also closes the panel on any tap outside; Esc closes it too. */
+function shopCatBtnHtml(){
+  var t=_shopSecs(); if(!t.length) return '';
+  return '<button type="button" class="catbtn" id="cat_btn" data-testid="shop-cat-btn" aria-haspopup="true" aria-expanded="false" onclick="shopCatToggle()">Categories ▾</button>'
+    +'<div class="catpanel" id="cat_panel" data-testid="shop-cat-bar" role="menu" hidden oncontextmenu="return false">'
+    +t.map(function(c){ return '<button type="button" role="menuitem" class="catpick" data-testid="shop-cat-jump" data-sec="'+esc(c.id)+'" onclick="shopCatPick(this.dataset.sec)"><span>'+esc(c.label)+'</span><span class="meta">'+c.n+'</span></button>'; }).join('')+'</div>';
 }
+var _catShield=false;
+function shopCatToggle(force){
+  var pn=el('cat_panel'), b=el('cat_btn'); if(!pn||!b) return;
+  var open=(typeof force==='boolean')?force:pn.hidden;
+  pn.hidden=!open; b.setAttribute('aria-expanded',open?'true':'false'); b.textContent=open?'Categories ▴':'Categories ▾';
+  var bk=el('catback');
+  if(open&&!bk){ bk=document.createElement('div'); bk.id='catback'; bk.onclick=function(){ shopCatToggle(false); }; document.body.appendChild(bk); }
+  else if(!open&&bk&&!_catShield){ bk.parentNode.removeChild(bk); }
+}
+function shopCatPick(id){
+  _catShield=true; shopCatToggle(false);
+  setTimeout(function(){ _catShield=false; var k=el('catback'); if(k&&k.parentNode) k.parentNode.removeChild(k); }, 400);
+  shopJump(id);
+}
+document.addEventListener('keydown',function(e){ if(e.key==='Escape') shopCatToggle(false); });
 function shopJump(id){ var h=document.querySelector('[data-testid="shop-cat-head"][data-sec="'+String(id).replace(/"/g,'')+'"]'); if(h) h.scrollIntoView({behavior:'smooth',block:'start'}); }
+/* the basket dock shows only while there is something in it; the list above it never moves (M72) */
+function shopDockSync(){ var d=el('shop_dock'); var n=_CART?_CART.selected().length:0; if(d) d.classList.toggle('on',n>0); document.body.classList.toggle('hasdock',n>0&&!!d); }
+/* the shop's own PIN and town, for the address example (M71) — read from the address the shop printed, never a built-in city */
+function _shopPlace(){
+  var a=String(((_SHOPDATA&&_SHOPDATA.shop&&_SHOPDATA.shop.address)||'')).trim(); if(!a) return { pin:'', town:'' };
+  var m=a.match(/\b\d{6}\b/), pin=m?m[0]:'';
+  var parts=a.split(',').map(function(x){ return x.replace(/\b\d{6}\b/,'').trim(); }).filter(Boolean);
+  return { pin:pin, town:parts.length?parts[parts.length-1]:'' };
+}
+function _addrExample(){ var pl=_shopPlace(); return (pl.town||pl.pin) ? 'e.g. 12, Main Road, '+[pl.town,pl.pin].filter(Boolean).join(' ') : 'house no., street, area, PIN'; }
+function _areaExample(){ var pl=_shopPlace(); return (pl.pin||pl.town) ? 'e.g. '+[pl.pin,pl.town].filter(Boolean).join(' or ') : 'pincode or city'; }
+function shopAboutHtml(s){
+  if(!s||(!s.address&&!s.gstn)) return '';
+  return '<details class="meta" data-testid="shop-about" style="text-align:center;margin-top:16px;line-height:1.7"><summary style="cursor:pointer;font-weight:700">About the shop</summary>'
+    +(s.address?'<div>📍 '+esc(s.address)+'</div>':'')+(s.gstn?'<div>GSTIN <span style="font-family:ui-monospace,Consolas,monospace">'+esc(s.gstn)+'</span></div>':'')+'</details>';
+}
 /* The one cart this page holds. Created in productListHtml, released before it is created again. */
 var _CART=null;
 /* ⚠️ THE FIRST PAINT MUST USE THE SAME RENDERER AS EVERY REPAINT (Athi, 2026-09-05: "when I refresh the offer details were
    there; when I tab to another tab and come back the details are gone") — this asked cart-ui for its plain rows and only
    the follow-up repaint drew the shared rows; any full re-render showed plain rows again. */
-function shopPickListHtml(){ if(!_CART) return ''; try{ if(typeof CBCatUI!=='undefined'&&CBCatUI.listHTML){ var o=Object.assign({}, (_CART.state()&&_CART.state().opts)||{}, { rowExtra:(_CART.state()&&_CART.state().opts&&_CART.state().opts.rowExtra)||undefined }); return CBCatUI.listHTML(_CART, o); } }catch(e){} return _CART.listHTML(); }
+function shopPickListHtml(){ if(!_CART) return ''; try{ if(typeof CBCatUI!=='undefined'&&CBCatUI.listHTML){ var o=Object.assign({}, (_CART.state()&&_CART.state().opts)||{}, { compact:true, rowExtra:(_CART.state()&&_CART.state().opts&&_CART.state().opts.rowExtra)||undefined }); return CBCatUI.listHTML(_CART, o); } }catch(e){} return _CART.listHTML(); }
 /**
  * ⭐ THE OFFER PRICE, ON THE ROW. Athi, 2026-09-04: "original price strike out, and offer price showed — something
  * clever, attractive". Every catalogue line is evaluated as a basket of one through CBOffers (the same engine the
@@ -564,8 +639,9 @@ function shopBasketMath(lines){
   var byId={}; ((_SHOPDATA&&_SHOPDATA.items)||[]).forEach(function(p){ byId[String(p.item_id)]=p; });
   return CBCart.money(lines, { offers:_shopOffers(), ctx:_shopCtx(), taxOf:function(id){ var p=byId[String(id)]; return (p&&p.tax)||null; } });
 }
-function shopMoneyRowsHTML(m, opt){ opt=opt||{}; return CBCart.moneyRowsHTML(m, { taxTestid:'shop-tax', totalTestid:opt.totalTestid||'shop-total' }); }
+function shopMoneyRowsHTML(m, opt){ opt=opt||{}; return CBCart.moneyRowsHTML(m, { plainUntaxed:true, taxTestid:'shop-tax', totalTestid:opt.totalTestid||'shop-total' }); }
 function shopBasketSummary(){
+  shopDockSync();
   var picked=_CART?_CART.selected():[]; var host=el('p_offers'); if(!host) return;
   if(!picked.length){ host.innerHTML=''; return; }
   var lines=picked.map(function(p){ var l=_lineOf(p, Number(p.qty)||1); var _lp=cbAmount(p.price); var _d=(p.item&&(p.item.item_data||p.item))||p.item_data||p; l.unitPrice=(typeof CBPricing!=='undefined'&&_d.pricing_kind)?CBPricing.unitPrice(_d, Number(p.qty)||1, _lp).amount:_lp; return l; });
@@ -635,14 +711,9 @@ function render(data){
      the name large, then the facts a customer looks for — where it is, its GSTIN, whether it is open — and nothing about the rail. */
   var initial=esc(String(s.display_name||'S').trim().charAt(0).toUpperCase());
   var logo=s.logo_url?'<img src="'+esc(s.logo_url)+'" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:12px">':'<span style="font-size:22px;font-weight:600;color:#fff">'+initial+'</span>';
-  var facts=[];
-  if(s.address) facts.push('📍 '+esc(s.address));
-  if(s.gstn) facts.push('GSTIN <span class="mono" style="font-family:ui-monospace,Consolas,monospace">'+esc(s.gstn)+'</span>');
-  var head='<div class="hd" style="align-items:center;gap:14px"><div class="logo" style="width:56px;height:56px;border-radius:12px;background:var(--accent,#3F66A6);display:grid;place-items:center;overflow:hidden">'+logo+'</div>'
-    +'<div style="flex:1;min-width:0"><div class="shopname sg" style="font-size:24px;line-height:1.15">'+esc(s.display_name||'Shop')+'</div>'
-    +(facts.length?'<div class="meta" style="margin-top:3px">'+facts.join(' · ')+'</div>':'')
-    +booksNote+'</div>'
-    +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">'+statusBadge+(s.is_verified?'<span class="badge b-ver">✓ Verified</span>':'')+'</div></div>';
+  var head='<div class="hd" data-testid="shop-head"><div class="logo" style="width:36px;height:36px;border-radius:10px;background:var(--accent,#3F66A6);display:grid;place-items:center;overflow:hidden;flex:none">'+logo+'</div>'
+    +'<div style="flex:1;min-width:0"><div class="shopname sg" style="font-size:19px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(s.display_name||'Shop')+'</div>'+booksNote+'</div>'
+    +'<div style="display:flex;align-items:center;gap:4px;flex:none">'+statusBadge+(s.is_verified?'<span class="badge b-ver">✓ Verified</span>':'')+'</div></div>';
   var finishes=(data.finishes||[]);
   var finHtml=''; _FIN=[];
   finishes.forEach(function(f){
@@ -661,6 +732,7 @@ function render(data){
     /* ⚠️ OUTSIDE the ternary. An empty shop still has customers, and the emptier it is the more likely the
        person reading this is the one with a problem. */
     + supLinkHtml()
+    + shopAboutHtml(s)
     + '<div class="foot">Powered by <b>Chit &amp; Bridge</b>. Prices are set by the shop; design &amp; colour, where shown, are referenced from the brand catalogue.</div>';
 }
 // ── Login-first gate (storefront_access==='login'): customer signs in (phone/email + OTP) before browsing. ──
@@ -904,13 +976,9 @@ function shopCartOrder(){
   // through, on a Review of items that are no longer in it.
   if(_CFLOW){ _CFLOW.destroy(); _CFLOW=null; }
   var _d=window.CBOffline&&CBOffline.loadDraft('shop.ord.'+BRIDGE);
-  if(_d&&_d.cart){ _ord.name=_d.name; _ord.loc=_d.loc; _ord.contact=_d.contact; }
+  if(_d&&_d.cart){ _ord.name=_d.name; _ord.loc=_d.loc; _ord.contact=_d.contact; _ord.mode=_d.mode; }
   orderRender();
 }
-/** Quantity per line, edited in the order panel — nobody orders exactly one of everything. */
-function shopCartQty(i, v){ if(!_ord||!_ord.lines||!_ord.lines[i])return; var n=parseFloat(v);
-  _ord.lines[i].qty = (isFinite(n)&&n>0)?n:1;
-  var t=el('cl_t_'+i); if(t) t.textContent=_cartLineTotal(i); var g=el('cl_g'); if(g) g.textContent=_cartGrand(); }
 function _cartLineTotal(i){ var L=_ord.lines[i]; var p=Number(L.price)||0; return p?('₹'+(p*L.qty)):'—'; }
 function _cartGrand(){ var s=0, any=false;
   (_ord.lines||[]).forEach(function(L){ var p=Number(L.price)||0; if(p){ any=true; s+=p*L.qty; } });
@@ -940,21 +1008,25 @@ function _cartGrand(){ var s=0, any=false;
 var _CFLOW = null;
 function _cartStepsFor(){
   return CBSteps.create({
-    steps:[{k:'items',n:'Items'},{k:'delivery',n:'Delivery'},{k:'review',n:'Review'},{k:'who',n:'Who you are'}],
+    /* ⭐ T2b (M67, M68): Pickup · Delivery first, then Who you are with the review folded in on top — no second "Items" screen repeating the basket */
+    steps:[{k:'delivery',n:'Pickup or delivery'},{k:'who',n:'Who you are'}],
+    quiet:true,   /* M70 — nothing says "needed" until the first press that finds it missing */
     railEl:'oc_rail', bodyEl:'oc_body', footEl:'oc_foot',
-    render:function(k){ return k==='items'?_cartStepItems():k==='delivery'?_cartStepDelivery():k==='review'?_cartStepReview():_cartStepWho(); },
+    render:function(k){ return k==='delivery'?_cartStepDelivery():_cartStepWho(); },
     guard:function(k){
-      if(k==='items' && !(_ord&&_ord.lines&&_ord.lines.length)) return 'Your basket is empty.';
-      /* The address is the one thing the shop cannot guess. Date and time are genuinely optional — asking for them
-         as required would be inventing a commitment neither side has made. */
-      if(k==='delivery' && !String((_ord&&_ord.loc)||'').trim()) return 'A delivery address is needed.';
+      if(!(_ord&&_ord.lines&&_ord.lines.length)) return 'Your basket is empty.';
+      /* The address is the one thing the shop cannot guess — and only a delivery needs it. Date and time are genuinely optional. */
+      if(k==='delivery'){
+        if(!_ord.mode) return 'Choose pickup or delivery.';
+        if(_ord.mode==='delivery' && !String(_ord.loc||'').trim()) return 'A delivery address is needed.';
+      }
       if(k==='who'){
         if(!String((_ord&&_ord.contact)||'').trim()) return 'A phone or email — so the shop can reach you.';
         if(_ord.step==='otp' && String(_ord.otp||'').trim().length!==6) return 'Enter the 6-digit code.';
       }
       return null;
     },
-    nextLabel:function(k){ return k==='review' ? 'Continue →' : null; },
+    nextLabel:function(k){ return 'Continue →'; },
     /* ⚠️ The last step's action CHANGES with the OTP stage — ask for the code, then place the order. Saying which
        of the two it is about to do is the entire job of a labelled button. */
     sendLabel:function(){ return (_ord&&_ord.step==='otp') ? 'Place order' : 'Send me a code'; },
@@ -964,41 +1036,39 @@ function _cartStepsFor(){
     onSend:function(){ if(_ord&&_ord.step==='otp') orderConfirm(); else orderStart(); }
   });
 }
-function _cartStepItems(){
-  return _ord.lines.map(function(L,i){
-      return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px dashed #e7e3d8;font-size:13px">'
-        + '<span style="flex:1"><b>'+esc(L.name)+'</b>'+(L.unit?' <span class="meta">'+esc(L.unit)+'</span>':'')+'</span>'
-        + '<input inputmode="decimal" value="'+esc(String(L.qty))+'" oninput="shopCartQty('+i+',this.value)" data-testid="shop-cart-qty-'+i+'"'
-        + ' style="width:58px;padding:5px 7px;border:1px solid #e7e3d8;border-radius:7px;font-size:13px;text-align:end">'
-        + '<span id="cl_t_'+i+'" style="min-width:64px;text-align:end;font-weight:700">'+_cartLineTotal(i)+'</span></div>'; }).join('')
-    +'<div style="display:flex;padding:9px 0 6px;font-size:13.5px"><span style="flex:1;font-weight:700">Total</span>'
-    +'<span id="cl_g" style="font-weight:800">'+_cartGrand()+'</span></div>'
-    +'<div class="meta">The shop confirms the price — nothing is charged now.</div>';
-}
+function shopMode(v){ if(!_ord) return; _cartSet('mode',v); if(_CFLOW) _CFLOW.paintBody(); }
 function _cartStepDelivery(){
   var fld='style="width:100%;padding:9px;border:1px solid #e7e3d8;border-radius:8px;margin:3px 0 11px;font-size:14px"';
-  return '<label style="font-size:12px;color:#6a707a">Delivery address</label>'
-    +'<input id="o_loc" data-testid="shop-area" placeholder="e.g. 16a, Bollenini Hill Side, 560001" value="'+esc(_ord.loc||'')+'" oninput="_cartSet(&#39;loc&#39;,this.value)" '+fld+'>'
-    /**
-     * WHEN, asked as two plain fields. Athi's 2018 panel had Delivery Date and Delivery Time above the address.
-     * ⚠️ Both are the CUSTOMER'S REQUEST, not a promise — the shop has said nothing yet, and a storefront that
-     * looks like it confirmed a slot it never saw is the kind of false certainty this codebase keeps refusing.
-     */
-    +'<div style="display:flex;gap:9px"><div style="flex:1"><label style="font-size:12px;color:#6a707a">Delivery date <span style="color:#9aa3a7">· optional</span></label>'
-    +'<input id="o_date" type="date" data-testid="shop-date" value="'+esc(_ord.date||'')+'" oninput="_cartSet(&#39;date&#39;,this.value)" '+fld+'></div>'
-    +'<div style="flex:1"><label style="font-size:12px;color:#6a707a">Time <span style="color:#9aa3a7">· optional</span></label>'
-    +'<input id="o_time" type="time" data-testid="shop-time" value="'+esc(_ord.time||'')+'" oninput="_cartSet(&#39;time&#39;,this.value)" '+fld+'></div></div>'
-    +'<div class="meta" style="margin:-6px 0 11px">A request, not a confirmed slot — the shop will come back to you.</div>'
-    +'<label style="font-size:12px;color:#6a707a">Remark <span style="color:#9aa3a7">· optional</span></label>'
-    +'<input id="o_remark" data-testid="shop-remark" placeholder="anything the shop should know" value="'+esc(_ord.remark||'')+'" oninput="_cartSet(&#39;remark&#39;,this.value)" '+fld+'>';
+  var m=_ord.mode;
+  var tab=function(v,label){ var on=(m===v); return '<button type="button" data-testid="shop-mode-'+v+'" aria-pressed="'+(on?'true':'false')+'" onclick="shopMode(&#39;'+v+'&#39;)" style="flex:1;border:1.5px solid var(--accent);border-radius:10px;padding:12px 8px;font:700 14px var(--font-ui);cursor:pointer;touch-action:manipulation;background:'+(on?'var(--accent)':'var(--card,#fff)')+';color:'+(on?'var(--card,#fff)':'var(--accent)')+'">'+label+'</button>'; };
+  var when=(m==='pickup')?'Pickup':'Delivery';
+  return '<div style="display:flex;gap:9px;margin:6px 0 14px">'+tab('pickup','Pickup')+tab('delivery','Delivery')+'</div>'
+    +(m==='delivery'
+      ?'<label style="font-size:12px;color:var(--grey-3,#6a707a)">Delivery address</label>'
+       +'<input id="o_loc" data-testid="shop-area" placeholder="'+esc(_addrExample())+'" value="'+esc(_ord.loc||'')+'" oninput="_cartSet(&#39;loc&#39;,this.value)" '+fld+'>'
+      :'')
+    +(m?(
+      /**
+       * WHEN, asked as two plain fields. Athi's 2018 panel had Delivery Date and Delivery Time above the address.
+       * ⚠️ Both are the CUSTOMER'S REQUEST, not a promise — the shop has said nothing yet, and a storefront that
+       * looks like it confirmed a slot it never saw is the kind of false certainty this codebase keeps refusing.
+       */
+      '<div style="display:flex;gap:9px"><div style="flex:1"><label style="font-size:12px;color:var(--grey-3,#6a707a)">'+when+' date <span style="color:var(--grey,#9aa3a7)">· optional</span></label>'
+      +'<input id="o_date" type="date" data-testid="shop-date" value="'+esc(_ord.date||'')+'" oninput="_cartSet(&#39;date&#39;,this.value)" '+fld+'></div>'
+      +'<div style="flex:1"><label style="font-size:12px;color:var(--grey-3,#6a707a)">Time <span style="color:var(--grey,#9aa3a7)">· optional</span></label>'
+      +'<input id="o_time" type="time" data-testid="shop-time" value="'+esc(_ord.time||'')+'" oninput="_cartSet(&#39;time&#39;,this.value)" '+fld+'></div></div>'
+      +'<div class="meta" style="margin:-6px 0 11px">A request, not a confirmed slot — the shop will come back to you.</div>'
+      +'<label style="font-size:12px;color:var(--grey-3,#6a707a)">Remark <span style="color:var(--grey,#9aa3a7)">· optional</span></label>'
+      +'<input id="o_remark" data-testid="shop-remark" placeholder="anything the shop should know" value="'+esc(_ord.remark||'')+'" oninput="_cartSet(&#39;remark&#39;,this.value)" '+fld+'>'
+    ):'<div class="meta">Choose one to go on.</div>');
 }
 function _cartStepReview(){
   var shopName=(_SHOPDATA&&_SHOPDATA.shop&&_SHOPDATA.shop.display_name)||'The shop';
   var row=function(k,v){ return '<div style="display:flex;gap:10px;padding:7px 0;border-top:1px dashed #e7e3d8;font-size:13px">'
     + '<span style="min-width:104px;color:#6a707a;font-size:11.5px">'+k+'</span><span style="flex:1">'+v+'</span></div>'; };
   var hd=function(t,step){ return '<div style="font-size:11px;font-weight:800;color:#6a707a;text-transform:uppercase;letter-spacing:.05em;display:flex;margin-top:10px">'+t
-    + '<span style="margin-inline-start:auto;color:var(--accent);cursor:pointer;text-transform:none;letter-spacing:0;font-size:11.5px" onclick="_CFLOW.go('+step+')">Change</span></div>'; };
-  return hd('Your basket · '+_ord.lines.length, 0)
+    + (step==null?'':'<span style="margin-inline-start:auto;color:var(--accent);cursor:pointer;text-transform:none;letter-spacing:0;font-size:11.5px" onclick="_CFLOW.go('+step+')">Change</span>') + '</div>'; };
+  return hd('Your basket · '+_ord.lines.length, null)
     + _ord.lines.map(function(L,i){ return row(L.qty+' × '+esc(L.unit||''), '<span>'+esc(L.name)+'</span><b style="float:inline-end">'+_cartLineTotal(i)+'</b>'); }).join('')
     + (function(){ /* the same money the basket showed — offers, GST per rate, total incl. tax — never the listed price alone */
         try{ var byId={}; ((_SHOPDATA&&_SHOPDATA.items)||[]).forEach(function(p){ byId[String(p.item_id)]=p; });
@@ -1009,15 +1079,16 @@ function _cartStepReview(){
        must be SAID: a customer reading a total on their own screen cannot otherwise tell a request from a bill. */
     + '<div style="background:#FBF6E9;border:1px solid #efe3c4;border-radius:10px;padding:9px 12px;font-size:12.5px;color:#6b5a36;margin:10px 0">'
     + 'This is a <b>request</b>, not a bill. '+esc(shopName)+' confirms the price and the date before anything is due. Nothing is charged here.</div>'
-    + hd('Delivery', 1)
-    + row('Address', _ord.loc?esc(_ord.loc):'<span style="color:#b4453f">required</span>')
+    + hd(_ord.mode==='pickup'?'Pickup':'Delivery', 0)
+    + (_ord.mode==='pickup'?'':row('Address', _ord.loc?esc(_ord.loc):'—'))
     + row('When', (_ord.date||_ord.time)?esc(((_ord.date||'')+' '+(_ord.time||'')).trim()):'as soon as possible')
     + row('Remark', _ord.remark?esc(_ord.remark):'—');
 }
 function _cartStepWho(){
   var fld='style="width:100%;padding:9px;border:1px solid #e7e3d8;border-radius:8px;margin:3px 0 11px;font-size:14px"';
   var otpStep=(_ord.step==='otp');
-  return '<div class="meta" style="margin-bottom:8px">Last step — so the shop can reach you about this order.</div>'
+  return _cartStepReview()
+    +'<div class="meta" style="margin:14px 0 8px">Last step — so the shop can reach you about this order.</div>'
     +'<label style="font-size:12px;color:#6a707a">Your name <span style="color:#9aa3a7">· optional</span></label>'
     +'<input id="o_name" data-testid="shop-name" placeholder="optional" value="'+esc(_ord.name||'')+'" oninput="_cartSet(&#39;name&#39;,this.value)" '+fld+'>'
     +'<label style="font-size:12px;color:#6a707a">Phone or email</label>'
@@ -1039,7 +1110,7 @@ function _cartSet(k, v){
   _ord[k]=v;
   if(_CFLOW) _CFLOW.paintFoot();          // the address / contact / code guards all live on the footer
   /* persist across a reload — NEVER the OTP */
-  if(window.CBOffline) CBOffline.saveDraft('shop.ord.'+BRIDGE,{cart:true,name:_ord.name,loc:_ord.loc,contact:_ord.contact});
+  if(window.CBOffline) CBOffline.saveDraft('shop.ord.'+BRIDGE,{cart:true,name:_ord.name,loc:_ord.loc,contact:_ord.contact,mode:_ord.mode});
 }
 function _cartPanelHtml(){
   if(!_CFLOW) _CFLOW=_cartStepsFor();
@@ -1088,7 +1159,7 @@ function orderRender(msg, err){
           +'<div style="font-size:11px;color:#6a707a;margin:-6px 0 11px">This is an <b>offer</b> — the shop accepts or counters. Nothing is charged.</div>'; })():'')
     ))
     +'<label style="font-size:12px;color:#6a707a">Your name</label><input id="o_name" data-testid="shop-name" placeholder="optional" value="'+esc(_ord.name||'')+'" '+fld+'>'
-    +'<label style="font-size:12px;color:#6a707a">Your area — pincode or city <span style="color:#9aa3a7">· optional</span></label><input id="o_loc" data-testid="shop-area" placeholder="e.g. 560001 or Bengaluru" value="'+esc(_ord.loc||'')+'" '+fld+'>'
+    +'<label style="font-size:12px;color:var(--grey-3,#6a707a)">Your area — pincode or city <span style="color:var(--grey,#9aa3a7)">· optional</span></label><input id="o_loc" data-testid="shop-area" placeholder="'+esc(_areaExample())+'" value="'+esc(_ord.loc||'')+'" '+fld+'>'
     +'<label style="font-size:12px;color:#6a707a">Phone or email</label><input id="o_contact" data-testid="shop-contact" placeholder="9876543210 or you@email.com" '+(otpStep?'disabled':'')+' value="'+esc(_ord.contact||'')+'" '+fld+'>'
     +(otpStep?('<label style="font-size:12px;color:#6a707a">6-digit code sent to you</label><input id="o_otp" data-testid="shop-otp" inputmode="numeric" maxlength="6" value="'+esc(_ord.otp||_ord.dev_otp||'')+'" '+fld+'>'):'')
     +(err?'<div style="color:#b4453f;font-size:12.5px;margin-bottom:8px">'+esc(err)+'</div>':'')
@@ -1106,7 +1177,7 @@ function _ocap(){ if(el('o_combo'))_ord.combo=el('o_combo').value; if(el('o_qty'
   // A cart is a purchase, never a declared-payload submission — the shop's default preset must not turn three
   // ticked products into an enquiry form with no fields on screen to fill.
   if(!_isCart() && _isPayload())_ord.payload=_readSchemaFields(_cur().schema); if(el('o_name'))_ord.name=(el('o_name').value||'').trim(); if(el('o_loc'))_ord.loc=(el('o_loc').value||'').trim(); if(el('o_contact'))_ord.contact=(el('o_contact').value||'').trim(); if(el('o_otp'))_ord.otp=el('o_otp').value;
-  if(window.CBOffline&&_ord)CBOffline.saveDraft('shop.ord.'+BRIDGE,{idx:_ord.idx,cart:!!_ord.cart,combo:_ord.combo,qty:_ord.qty,name:_ord.name,loc:_ord.loc,contact:_ord.contact}); }  /* persist across reload; NEVER the OTP */
+  if(window.CBOffline&&_ord)CBOffline.saveDraft('shop.ord.'+BRIDGE,{idx:_ord.idx,cart:!!_ord.cart,combo:_ord.combo,qty:_ord.qty,name:_ord.name,loc:_ord.loc,contact:_ord.contact,mode:_ord.mode}); }  /* persist across reload; NEVER the OTP */
 function orderStart(){
   if(_ord.busy)return; _ocap(); if(!_ord.contact){ orderRender(null,'Enter a phone or email.'); return; }
   _ord.busy=true; orderRender();
@@ -1120,7 +1191,7 @@ function orderConfirm(){
   // A cart is N product lines in ONE order. `kind:'product'` distinguishes them from a finish; the shape and the
   // endpoint are otherwise the same, so the shop reconciles one kind of order however it was placed.
   if(_isCart()){
-    return _orderPost({ identifier:_ord.contact, name:_ord.name, otp:otp, location:_ord.loc||'',
+    return _orderPost({ identifier:_ord.contact, name:_ord.name, otp:otp, location:(_ord.mode==='pickup')?'':(_ord.loc||''), fulfilment:(_ord.mode==='pickup')?'pickup':'delivery',
       // Asked-for, not agreed. The server stores them on the chit; the shop answers.
       requested_delivery:(_ord.date||_ord.time)?{ date:_ord.date||null, time:_ord.time||null }:null,
       remark:_ord.remark||null,
@@ -1153,6 +1224,30 @@ function orderConfirm(){
   var body={ identifier:_ord.contact, name:_ord.name, otp:otp, location:_ord.loc||'', line_items:[line] };
   return _orderPost(body);
 }
+var _MYTOK=null;   /* the shopper's session from the order that was just placed — memory only, never stored */
+function shopSheet(inner){ return '<div style="position:fixed;inset:0;background:rgba(15,22,32,.5);z-index:900;display:flex;align-items:center;justify-content:center;padding:12px" onclick="if(event.target===this)orderClose()"><div style="background:var(--card,#fff);width:100%;max-width:400px;border-radius:16px;padding:22px;max-height:92vh;overflow:auto">'+inner+'</div></div>'; }
+function shopStatusWord(s){ var k=String(s||'').toLowerCase().replace(/[_\s-]+/g,' ').trim();
+  if(!k||/^(sent|new|open|pending|submitted|placed)$/.test(k)) return 'Waiting for the shop';
+  if(/^(accepted|confirmed)$/.test(k)) return 'Accepted';
+  if(/^ready/.test(k)) return 'Ready';
+  if(/^(delivered|completed|fulfilled|closed|done)$/.test(k)) return 'Delivered';
+  return k.charAt(0).toUpperCase()+k.slice(1); }
+var _DONE_BTN='<button type="button" onclick="orderClose()" style="flex:1;border:0;border-radius:10px;padding:11px 18px;background:var(--accent,#3F66A6);color:var(--card,#fff);font-weight:700;cursor:pointer">Done</button>';
+/* "My orders" — the shopper's own orders and where each stands, read with the session the order just gave them (the route is /my-orders; no new route, no account to build) */
+function shopMyOrders(){
+  if(!_MYTOK) return;
+  var head='<div class="sg" style="font-weight:800;font-size:17px;margin-bottom:8px">My orders</div>';
+  ohost().innerHTML=shopSheet(head+'<div class="meta" data-testid="shop-orders">Loading…</div>');
+  fetch(API+'/api/catalogue/'+encodeURIComponent(BRIDGE)+'/my-orders',{headers:{Authorization:'Bearer '+_MYTOK}})
+    .then(function(r){return r.json().then(function(j){return{status:r.status,j:j};});})
+    .then(function(res){ var list=(res.status===200&&res.j&&Array.isArray(res.j.orders))?res.j.orders:null;
+      var body=!list?'<div style="color:var(--disp,#b4453f);font-size:13px">'+esc((res.j&&res.j.message)||'Could not load your orders.')+'</div>'
+        :!list.length?'<div class="meta">No orders yet.</div>'
+        :list.map(function(o){ var sm=o.summary_json||{}, tv=Number(sm.total_value)||0, dt=o.created_at?new Date(o.created_at).toLocaleDateString(undefined,{day:'numeric',month:'short'}):'';
+          return '<div data-testid="shop-order-row" style="padding:9px 0;border-top:1px dashed var(--line,#e7e3d8);font-size:13px"><div style="display:flex;gap:8px"><b style="flex:1">#CB-'+esc(String(o.chit_id||'').slice(0,8))+'</b>'+(tv?'<span>'+esc(cbFmt(tv))+'</span>':'')+'</div><div class="meta">'+esc(shopStatusWord(o.current_status))+(dt?' · '+esc(dt):'')+'</div></div>'; }).join('');
+      ohost().innerHTML=shopSheet(head+'<div data-testid="shop-orders">'+body+'</div><div style="display:flex;margin-top:14px">'+_DONE_BTN+'</div>'); })
+    .catch(function(e){ ohost().innerHTML=shopSheet(head+'<div style="color:var(--disp,#b4453f);font-size:13px">'+esc(e.message||'Network error')+'</div><div style="display:flex;margin-top:14px">'+_DONE_BTN+'</div>'); });
+}
 // One POST for every declaration — commerce order, offer, enquiry or filled form. They differ only in the line built
 // above; the rail, the OTP and the resulting chit are identical.
 function _orderPost(body){
@@ -1165,13 +1260,24 @@ function _orderPost(body){
     .then(function(r){return r.json().then(function(j){return{status:r.status,j:j};});})
     .then(function(res){ if(res.status!==200){ _ord.busy=false; orderRender(null,(res.j&&res.j.message)||'Could not submit.'); return; }
       var p=it?itemPrice(it):null, unit=(p&&p.u)||'';
-      var what=isCart?'Your order for ':(_isPayload()?(_OI.preset==='form'?'Your form for ':'Your enquiry about ')
-              :(_isNegotiable()?'Your offer for ':'Your order for '));
-      var subject=isCart?(n+' item'+(n===1?'':'s')):esc(it.name)+((_ord.combo&&!_isPayload())?(' · '+esc(_ord.combo)):'');
-      var qtyTxt=(!isCart&&!_isPayload()&&_ord.qty)?(' ('+esc(String(_ord.qty))+(unit?(' '+esc(unit)):'')+')'):'';
-      var title=isCart?'Order placed':(_isPayload()?'Submitted':(_isNegotiable()?'Offer sent':'Order placed'));
-      var tail=(!isCart&&_isNegotiable())?'The shop will accept or counter.':'They\'ll be in touch.';
-      ohost().innerHTML='<div style="position:fixed;inset:0;background:rgba(15,22,32,.5);z-index:900;display:flex;align-items:center;justify-content:center;padding:12px" onclick="orderClose()"><div style="background:#fff;max-width:400px;border-radius:16px;padding:26px;text-align:center"><div style="font-size:40px">✓</div><div class="sg" style="font-weight:800;font-size:18px;margin-top:8px">'+esc(title)+'</div><div style="font-size:13px;color:#3a4048;margin-top:8px;line-height:1.6">'+what+'<b>'+subject+'</b>'+qtyTxt+' reached the shop. '+tail+'</div>'+shopUpiBlock(res, isCart)+'<button onclick="orderClose()" style="margin-top:16px;border:0;border-radius:10px;padding:10px 20px;background:#3F66A6;color:#fff;font-weight:700;cursor:pointer">Done</button></div></div>'; if(window.CBOffline)CBOffline.clearDraft('shop.ord.'+BRIDGE); })
+      /* ⭐ M73 — what the shopper holds after Place order: the NUMBER, the TOTAL the server priced, what they ordered, where it stands, what happens next, and a way back to it */
+      var j=res.j||{}; if(j.token) _MYTOK=j.token;
+      var sm=j.summary||{}, tot=Number(sm.total_value||sm.indicative_total||0)||0, num='CB-'+String(j.chit_id||'').slice(0,8);
+      var offer=(!isCart&&_isNegotiable()), form=(!isCart&&_isPayload());
+      var title=isCart?'Order placed':(form?'Submitted':(offer?'Offer sent':'Order placed'));
+      var items=isCart?(_ord.lines||[]).map(function(L){ return esc(L.name)+' × '+esc(String(L.qty)); })
+                      :[esc(it.name)+((_ord.combo&&!form)?(' · '+esc(_ord.combo)):'')+((!form&&_ord.qty)?(' × '+esc(String(_ord.qty))+(unit?(' '+esc(unit)):'')):'')];
+      var how=isCart?((_ord.mode==='pickup')?'Pickup':('Delivery'+(_ord.loc?' to '+esc(_ord.loc):''))):'';
+      var nextTxt=offer?'The shop will accept or counter.':'The shop has it and will confirm the price and the time with you on '+esc(_ord.contact||'your phone or email')+'. Nothing is charged here.';
+      ohost().innerHTML=shopSheet('<div style="text-align:center"><div style="font-size:34px;line-height:1">✓</div><div class="sg" style="font-weight:800;font-size:18px;margin-top:6px">'+esc(title)+'</div>'
+        +(j.chit_id?'<div data-testid="shop-receipt-no" style="font-size:15px;font-weight:700;margin-top:4px">Order #'+esc(num)+'</div>':'')+'</div>'
+        +'<div data-testid="shop-receipt" style="margin-top:12px;font-size:13px;color:var(--ink-2,#3a4048);line-height:1.7">'+items.map(function(x){ return '<div>'+x+'</div>'; }).join('')+(how?'<div class="meta">'+how+'</div>':'')
+        +(tot?'<div style="display:flex;border-top:1px dashed var(--line,#e7e3d8);margin-top:6px;padding-top:6px"><span style="flex:1;font-weight:700">Total</span><b data-testid="shop-receipt-total">'+esc(cbFmt(tot))+'</b></div>':'')
+        +'<div style="margin-top:6px"><span style="display:inline-block;padding:2px 10px;border-radius:999px;background:var(--gold-soft,#FBF6E9);border:1px solid var(--gold-line,#efe3c4);color:var(--warn-2,#6b5a36);font-size:12px;font-weight:700" data-testid="shop-receipt-status">Waiting for the shop</span></div></div>'
+        +'<div style="margin-top:12px;font-size:12.5px;color:var(--ink-2,#3a4048);line-height:1.55"><b>What happens next</b><br>'+nextTxt+'</div>'
+        +shopUpiBlock(res, isCart)
+        +'<div style="display:flex;gap:8px;margin-top:16px">'+(_MYTOK?'<button type="button" data-testid="shop-my-orders" onclick="shopMyOrders()" style="flex:1;border:1px solid var(--accent,#3F66A6);border-radius:10px;padding:11px 14px;background:var(--card,#fff);color:var(--accent,#3F66A6);font-weight:700;cursor:pointer">My orders</button>':'')+_DONE_BTN+'</div>');
+      if(window.CBOffline)CBOffline.clearDraft('shop.ord.'+BRIDGE); })
     .catch(function(e2){ _ord.busy=false; orderRender(null,(window.CBOffline&&!CBOffline.online())?'You are offline — reconnect to continue. Your details are saved.':(e2.message||'Network error')); });
 }
 // ── VISUALIZE-APPLY ("scan your home") — CHEAP first slice: upload a room photo, tint it in each recommended
