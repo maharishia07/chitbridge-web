@@ -52,7 +52,7 @@ const PLANTED = { version: 2,
     { id: 'shop', name: 'Your shop', route: null, icon: '⌂', area: 'setup', state: 'workshop' }
   ] };
 const FACTS = {
-  '/api/facts/till': { lines: ['12 bills · ₹4,280 today', { text: '1 not sent up', tone: 'dn' }] },
+  '/api/facts/till': { lines: [{ text: '12 bills · {money}', money: { amount: 4280, currency: 'INR' } }, { text: '1 bill waiting to send', tone: 'dn', act: { label: 'Send now', href: '/till.html' } }] },
   '/api/facts/accounts': { lines: ['Ledger up to 7 Oct'] },
   '/api/facts/rail': { suppliers: 4, customers: 128, in: 3, out: 2, stuck: 1 }
 };
@@ -183,7 +183,7 @@ async function run() {
       const pg = await open(ctx);
       await pg.waitForSelector('[data-testid="rail"]', { timeout: 8000 }).catch(() => {});
       const f = (await pg.locator('[data-testid="shell-facts-till"]').innerText()).replace(/\s+/g, ' ');
-      ok(/12 bills · ₹4,280 today/.test(f) && /1 not sent up/.test(f), 'planted · the Till card\'s lines are the API\'s ("' + f + '")');
+      ok(/12 bills · ₹4,280/.test(f) && /1 bill waiting to send Send now ›/.test(f) && !/INR|{money}/.test(f), 'planted · the Till card\'s lines are the API\'s ("' + f + '")');
       ok(/Ledger up to 7 Oct/.test(await pg.locator('[data-testid="shell-facts-accounts"]').innerText()), 'planted · the CB Accounts card\'s line is the API\'s');
       ok((await pg.locator('[data-testid="shell-facts-crm"]').innerText()).trim() === '', 'planted · a card with facts null shows nothing');
       const rail = await pg.evaluate(() => { const t = (s) => (document.querySelector('[data-testid="' + s + '"]') || {}).textContent; return { s: t('rail-suppliers'), c: t('rail-customers'), i: t('rail-in'), o: t('rail-out'), k: t('rail-stuck'), open: (document.querySelector('[data-testid="rail-open"]') || {}).getAttribute && document.querySelector('[data-testid="rail-open"]').getAttribute('href') }; });

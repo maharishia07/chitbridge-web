@@ -571,9 +571,9 @@
     if (!m.rows.length) {
       var narrowed = (R.q && String(R.q).trim()) || activeFilters(I).length;
       if (m.all.length && narrowed && !remote(I)) {
-        box.innerHTML = '<div class="cbl-state" data-testid="cbl-nomatch-' + esc(I.key) + '"><div class="big">' + esc(T(I, 'Nothing matches.')) + '</div>' + esc(R.q ? '“' + R.q + '” ' : T(I, 'These filters') + ' ') + esc(T(I, 'matches nothing here.')) + '<br><button type="button" class="cbl-btn" data-cbl-clear>' + esc(T(I, 'Clear search and filters')) + '</button></div>';
+        box.innerHTML = '<div class="cbl-state" data-testid="cbl-nomatch-' + esc(I.key) + '"><div class="big">' + esc(T(I, 'Nothing matches.')) + '</div>' + esc(R.q ? '“' + R.q + '” ' + T(I, 'matches nothing here.') : T(I, 'These filters match nothing here.')) + '<br><button type="button" class="cbl-btn" data-cbl-clear>' + esc(T(I, 'Clear search and filters')) + '</button></div>';
       } else if (remote(I) && narrowed) {
-        box.innerHTML = '<div class="cbl-state" data-testid="cbl-nomatch-' + esc(I.key) + '"><div class="big">' + esc(T(I, 'Nothing matches.')) + '</div>' + esc(R.q ? '“' + R.q + '” ' : T(I, 'These filters') + ' ') + esc(T(I, 'matches nothing here.')) + '<br><button type="button" class="cbl-btn" data-cbl-clear>' + esc(T(I, 'Clear search and filters')) + '</button></div>' + footHTML(I);
+        box.innerHTML = '<div class="cbl-state" data-testid="cbl-nomatch-' + esc(I.key) + '"><div class="big">' + esc(T(I, 'Nothing matches.')) + '</div>' + esc(R.q ? '“' + R.q + '” ' + T(I, 'matches nothing here.') : T(I, 'These filters match nothing here.')) + '<br><button type="button" class="cbl-btn" data-cbl-clear>' + esc(T(I, 'Clear search and filters')) + '</button></div>' + footHTML(I);
       } else {
         var em = val(o.empty) || {};
         box.innerHTML = '<div class="cbl-state" data-testid="cbl-empty-' + esc(I.key) + '"><div class="big">' + esc(em.title || T(I, 'Nothing recorded yet.')) + '</div>' + esc(em.sub || '') + '</div>' + footHTML(I);

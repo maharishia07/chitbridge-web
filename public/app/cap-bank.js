@@ -32,6 +32,11 @@ function bkbBanks(accts) {
   return accts.filter((a) => bkbIsBank(a, g) && a.active !== false);
 }
 const bkbMinorText = (m) => bkMinorText(m);
+/** the payment mode of the ledger a statement belongs to (its own role: 1520 Card settlements is 'card'); null when the ledger has no mode, so nothing is posted to another account by guess */
+function bkbModeOf(accts, code) {
+  const a = (accts || []).filter((x) => String(x.code) === String(code))[0];
+  return a && /^(cash|bank|upi|card)$/.test(a.role || '') ? a.role : null;
+}
 
 /* ── the file: read and hashed on this device ── */
 async function bkbHash(text) {
@@ -44,6 +49,7 @@ async function bkbHash(text) {
 async function bankView(body) {
   let accts = [];
   try { const r = await api('booksAccounts'); accts = (r && r.accounts) || []; } catch (e) { body.innerHTML = '<div class="pe-bad">' + bkErr(e) + '</div>'; return; }
+  BKB.accts = accts;
   const banks = bkbBanks(accts);
   if (!banks.length) { body.innerHTML = '<div class="pe-note" data-testid="bank-none">' + bkbE(tx('There is no bank ledger yet. Add one under Shop ledgers.')) + '</div>'; return; }
   if (!banks.some((a) => a.code === BKB.acct)) BKB.acct = banks[0].code;
@@ -137,7 +143,7 @@ function bankList() {
     columns: [
       { key: 'status', label: tx('Status'), prio: 1, sort: 'status', w: 190, html: true, cell: (r) => '<span class="step ' + bkbStatus[r.status][0] + '" data-testid="bank-chip-' + bkbE(r.id) + '" data-status="' + r.status + '">' + bkbE(tx(bkbStatus[r.status][1])) + '</span>' },
       { key: 'line', label: tx('Line'), prio: 2, sort: 'line', w: 360, html: true, cell: (r) => '<div>' + bkbE(r.narration || '') + '</div><div style="color:var(--muted);font-size:var(--fs-1)">' + bkbE(bkDate(r.date)) + (r.ref ? ' · <span class="mono">' + bkbE(r.ref) + '</span>' : '') + '</div>' },
-      { key: 'amount', label: tx('Amount'), prio: 3, sort: 'amount', num: true, w: 170, html: true, cell: (r) => bkbE(bkMoney(r.amount_minor) + ' ' + tx(r.in ? 'Dr' : 'Cr')) },
+      { key: 'amount', label: tx('Amount'), prio: 3, sort: 'amount', num: true, w: 170, html: true, cell: (r) => bkbE(tx(r.in ? 'In' : 'Out') + ' ' + bkMoney(r.amount_minor)) },
       { key: 'entry', label: tx('In your books'), prio: 4, sort: 'entry', w: 180, html: true, cell: (r) => (r.books || []).length ? '<span class="mono">' + bkbE(r.books.map((b) => b.entry_no).join(', ')) + '</span>' : '—' },
     ],
     filters: [{ key: 'status', label: tx('Status'), all: tx('Every status'), options: Object.keys(bkbStatus).map((k) => ({ v: k, label: tx(bkbStatus[k][1]) })), match: (r, v) => r.status === v }],
@@ -170,9 +176,10 @@ function bankNext(r) {
 function bankAdd(r) {
   const s = r.stmt, ev = (r.sugg && r.sugg.event) || null, v = { date: s.date, amount: bkbMinorText(r.amount_minor), narration: (ev && ev.narration) || ('Bank statement ' + s.date + ': ' + String(s.narration || '').slice(0, 120)) };
   let kind = null;
-  if (ev && ev.type === 'expense') { kind = 'expense'; v.class = ev.class; v.paid_from = 'bank'; }
-  else if (ev && ev.type === 'other_income') { kind = 'other_income'; v.class = ev.class; v.into = 'bank'; }
-  else if (ev && ev.type === 'contra') { kind = 'contra'; v.from = ev.from; v.to = ev.to; }
+  const mode = bkbModeOf(BKB.accts, BKB.acct);   /* the statement's own ledger, never a fixed Bank */
+  if (ev && ev.type === 'expense' && mode) { kind = 'expense'; v.class = ev.class; v.paid_from = mode; }
+  else if (ev && ev.type === 'other_income' && mode) { kind = 'other_income'; v.class = ev.class; v.into = mode; }
+  else if (ev && ev.type === 'contra' && mode) { kind = 'contra'; v.from = ev.from === 'bank' ? mode : ev.from; v.to = ev.to === 'bank' ? mode : ev.to; }
   if (typeof enOpen !== 'function') return toast(tx('This starts after an update'));
   enOpen({ kind, v, ref: 'bank:' + BKB.file.hash + ':' + (s.row != null ? s.row : s.i + 1) });
 }

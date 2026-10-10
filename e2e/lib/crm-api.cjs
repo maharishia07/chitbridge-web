@@ -37,7 +37,7 @@ function party(p, rec) {
   o.terms = {};
   if (roles.customer) o.terms.customer = { credit_days: cu.credit_days == null ? null : cu.credit_days, credit_limit_minor: cu.credit_limit_minor == null ? null : cu.credit_limit_minor };
   if (roles.supplier) o.terms.supplier = { credit_days: su.credit_days == null ? null : su.credit_days, credit_limit_minor: su.credit_limit_minor == null ? null : su.credit_limit_minor };
-  o.dues = p.balance_minor == null ? null : { balance_minor: p.balance_minor, oldest_due: day(p.oldest_due), side: roles.customer && roles.supplier ? 'both' : (roles.customer ? 'customer' : 'supplier') };
+  o.dues = p.balance_minor == null ? null : { balance_minor: p.balance_minor, oldest_due: day(p.oldest_due), overdue: p.dues_overdue != null ? !!p.dues_overdue : (p.balance_minor !== 0 && !!p.oldest_due && day(p.oldest_due) < day(new Date().toISOString())), side: roles.customer && roles.supplier ? 'both' : (roles.customer ? 'customer' : 'supplier') };
   const theirs = r.gstn_profile || null, mine = gst ? gst.value : null;
   o.gstin = { value: mine || theirs, source: mine ? 'shop' : (theirs ? 'profile' : null), theirs, differs: !!(mine && theirs && mine !== theirs) };
   o.name = p.nickname || p.display_name;
@@ -64,7 +64,8 @@ function list(rows, opt) {
     if (a.roles.supplier && !a.terms.supplier) a.terms.supplier = { credit_days: null, credit_limit_minor: null };
     a.dues = a.dues ? Object.assign({}, a.dues, { side: a.roles.customer && a.roles.supplier ? 'both' : (a.roles.customer ? 'customer' : 'supplier') }) : null;
   });
-  return { parties: out, walk_ins: walk, count: out.length, truncated: false };
+  /* the API's own count of late dues: the parties it marked (lib/crm markLate) — the banner and the rows are one number */
+  return { parties: out, walk_ins: walk, count: out.length, truncated: false, alerts: { dues_overdue: out.filter((a) => a.dues && a.dues.overdue).length } };
 }
 
 /** a follow-up in the API's shape (lib/crm-followups.js shape): late / today / due_day by the shop's day */
@@ -72,7 +73,9 @@ function followupOne(f, now) {
   const t = now || Date.now(), d = day(f.due_at), today = day(new Date(t).toISOString());
   return { followup_id: f.followup_id, party_id: f.party_id, party_no: f.party_no || null, party_name: f.party_name || null, party_listed: f.party_removed ? false : true, what: f.what, due_at: f.due_at, due_day: d,
     assignee_user_id: f.assignee_user_id || null, assignee_name: f.assignee_name || null, source: f.source || 'manual', done_at: f.done_at || null, created_at: f.created_at || f.due_at,
-    late: !f.done_at && d < today, today: !f.done_at && d === today };
+    late: !f.done_at && d < today, today: !f.done_at && d === today,
+    /* the API's own bucket (lib/crm-followups bucketOf): late · today · the next six days · later — from the day, never the page's clock */
+    bucket: d < today ? 'late' : d === today ? 'today' : d <= day(new Date(Date.parse(today) + 6 * 86400e3).toISOString()) ? 'week' : 'later' };
 }
 function followups(fus, now) {
   const list2 = fus.map((f) => followupOne(f, now));
