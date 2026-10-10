@@ -50,6 +50,11 @@ The guard reads the table below: **an icon in two rows, or a meaning with two ic
 | Shop categories (count) | 🗂 | online shop list | Categories |
 | Pickup | 🏪 | online shop checkout | Pickup |
 | Delivery | 🛵 | online shop checkout | Delivery |
+| Add a person | ＋ | Employees list, till "Who is at the counter?" | Add a person |
+| What they can do | 🔑 | Employees person sheet | What they can do |
+| Reset code | 🔢 | Employees person sheet | Reset code |
+| Switch a person on or off | ⏻ | Employees person sheet | Switch on / Switch off |
+| Who stands in | 🤝 | Employees person sheet | Who stands in |
 
 ## Conflicts found, and how the map resolves them
 
