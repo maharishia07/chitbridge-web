@@ -66,17 +66,19 @@
 
   /* ── the read ── */
   function load() {
-    return call('GET', '/api/people').then(function (j) {
+    /* the Add form (embed view=add) needs only may/why + the picker: the server answers that without reading the list */
+    return call('GET', '/api/people' + (E.o.embed && E.o.view === 'add' ? '?for=add' : '')).then(function (j) {
       E.people = j.people || []; E.may = j.may || E.may; E.choices = j.access_choices || []; E.counts = j.counts || E.counts; E.loaded = true;
       return j;
     });
   }
   function reload() {
-    return load().then(function () { if (E.list) E.list.refresh(); paintBar(); }, function () { paintFail(); });
+    return load().then(function () { if (E.list) E.list.refresh(); paintBar(); }, function (e) { paintFail(e); });
   }
-  function paintFail() {
+  function paintFail(e) {
     if (!E.el) return;
-    E.el.innerHTML = '<div class="empty" data-testid="emp-fail"><div class="t">' + esc(T("Couldn't read your people")) + '</div>'
+    var refused = e && e.status === 403, adding = E.o.embed && E.o.view === 'add';
+    E.el.innerHTML = '<div class="empty" data-testid="emp-fail"><div class="t">' + esc(T(refused ? 'This sign-in cannot open this' : adding ? "Couldn't open the form" : "Couldn't read your people")) + '</div>'
       + '<button type="button" class="act" id="emp_retry" data-testid="emp-retry">' + esc(T('Try again')) + '</button></div>';
     $('emp_retry').onclick = function () { start(); };
   }
@@ -300,7 +302,7 @@
       d.addEventListener('cancel', function (e) { e.preventDefault(); closeSheet(); });
       d.addEventListener('click', function (e) { if (e.target === d) closeSheet(); });
       paintBar(); mountList($('emp_list'));
-    }, function () { paintFail(); });
+    }, function (e) { paintFail(e); });
   }
 
   function mount(el, o) { E.el = el; E.o = o || {}; start(); return { reload: reload }; }
