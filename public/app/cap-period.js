@@ -91,6 +91,8 @@ async function peStockView(body) {
     + '<div id="bkl_stock" data-testid="stock-list"></div>';
   await peStockList();
 }
+/* the counts the list shows - one array, so a count just saved is added here and painted at once (M173) */
+var PE_STOCK = { lines: [], api: null };
 async function peStockList() {
   const host = peEl('bkl_stock'); if (!host) return;
   let lines = [];
@@ -99,8 +101,9 @@ async function peStockList() {
     lines = ((r && r.lines) || []).filter((l) => /closing stock/i.test(String(l.what || ''))).map((l, i) => Object.assign({ i }, l)).reverse();
   } catch (e) { if (!(e && e.status === 404)) { host.innerHTML = '<div class="pe-bad">' + bkErr(e) + '</div>'; return; } }
   CBList.reset && CBList.reset('stock');
-  CBList.mount(host, {
-    key: 'stock', t: tx, rows: () => lines, id: (l) => String(l.ref) + '#' + l.i, rowTid: (l) => 'stock-' + l.i,
+  PE_STOCK.lines = lines; if (PE_STOCK.api) { try { PE_STOCK.api.destroy(); } catch (_) {} }
+  PE_STOCK.api = CBList.mount(host, {
+    key: 'stock', t: tx, rows: () => PE_STOCK.lines, id: (l) => String(l.ref) + '#' + l.i, rowTid: (l) => 'stock-' + l.i,
     columns: [
       { key: 'date', label: tx('Month end'), prio: 1, sort: 'date', w: 150, html: true, cell: (l) => peE(bkDate(l.date)) },
       { key: 'entry', label: tx('Entry'), prio: 3, sort: 'entry', w: 150, html: true, cell: (l) => '<span class="mono">' + peE(l.ref || '') + '</span>' },
@@ -112,6 +115,13 @@ async function peStockList() {
     empty: { title: tx('No counts yet') },
   });
 }
+/** M173: the count just saved goes into the list below at once, from the server's answer (only the difference posted: book_minor is what the ledger held) - no second read */
+function peStockAdd(body, v, r) {
+  const now = body.nrv_minor != null ? Math.min(v, body.nrv_minor) : v, book = Number(r && r.book_minor) || 0, diff = now - book;
+  const i = PE_STOCK.lines.reduce((m, l) => Math.max(m, l.i), -1) + 1;
+  PE_STOCK.lines = [{ i, date: body.date, ref: (r && r.entry_no) || '', what: 'Closing stock ' + body.date, dr_minor: diff > 0 ? diff : 0, cr_minor: diff < 0 ? -diff : 0, running_minor: now }].concat(PE_STOCK.lines);
+  if (PE_STOCK.api) PE_STOCK.api.refresh(); else peStockList();
+}
 async function peStockSave(btn) {
   const date = peVal('ps_date'), v = bkMoneyMinor(peVal('ps_val'));
   if (!date || isNaN(v)) return peBad('ps_out', tx('Enter the month end and the value of the stock on hand.'));
@@ -122,7 +132,7 @@ async function peStockSave(btn) {
       const r = await api('perStock', { body });
       PE.ref.stock = null;
       peOk('ps_out', r && r.entry_no ? peE(txf('Saved · {no}', { no: r.entry_no })) : peE(tx((r && r.why) || 'Saved')));
-      peStockList();
+      peStockAdd(body, v, r);
     } catch (e) { peBad('ps_out', e); }
   });
 }

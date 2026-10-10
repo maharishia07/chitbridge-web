@@ -290,9 +290,13 @@ function bkDayBillsLink(s, tid) {
 }
 function bkDayBillsOpen(tid) {
   var bills = (BK.dayBills || {})[tid] || [];
-  modal('<div class="mhd"><div class="t" data-testid="daybills_title">' + esc(txf(bills.length === 1 ? '{n} bill' : '{n} bills', { n: bills.length })) + '</div></div><div class="mbody" data-testid="daybills_list">'
-    + bills.map(function (b, i) { return '<div style="padding:3px 0">' + bkBillPart({ ref: b.ref, chit_id: b.chit_id }, 'daybills-' + i) + '</div>'; }).join('')
-    + '</div><div class="mfoot"><button onclick="closeModal()">' + esc(tx('Close')) + '</button></div>');
+  /* M132b: the shared popover look (the cb-design tokens: card ground, line, radius, readable size) - the sheet host (accounts.html) carries no .mhd/.mbody/.mfoot of its own */
+  var pad = 'padding:14px 18px;font-size:var(--fs-3,15px);color:var(--ink,#2a2418)';
+  modal('<div style="min-width:min(300px,86vw);background:var(--card,#fffdf8);border-radius:12px">'
+    + '<div data-testid="daybills_title" style="' + pad + ';font-weight:700;border-bottom:1px solid var(--line,#e3dccb)">' + esc(txf(bills.length === 1 ? '{n} bill' : '{n} bills', { n: bills.length })) + '</div>'
+    + '<div data-testid="daybills_list" style="' + pad + ';max-height:54vh;overflow-y:auto">'
+    + bills.map(function (b, i) { return '<div style="padding:6px 0">' + bkBillPart({ ref: b.ref, chit_id: b.chit_id }, 'daybills-' + i) + '</div>'; }).join('') + '</div>'
+    + '<div style="padding:12px 18px;border-top:1px solid var(--line,#e3dccb);display:flex;justify-content:flex-end"><button data-testid="daybills_close" onclick="closeModal()" style="min-height:44px;padding:8px 18px;border:1px solid var(--line,#e3dccb);border-radius:9px;background:var(--card,#fffdf8);color:var(--ink,#2a2418);font-size:var(--fs-3,15px);font-weight:600;cursor:pointer">' + esc(tx('Close')) + '</button></div></div>');
 }
 /** a long payment reference, readable: its first and last four (4421…9931) — the full one is on the chit */
 function bkShortRef(r) { var t = String(r == null ? '' : r).trim(); return t.length > 10 ? t.slice(0, 4) + '…' + t.slice(-4) : t; }
@@ -869,7 +873,7 @@ function bkDvCols(c) {
   var no = function (e) { return esc(e.entry_no); };
   return [
     { key: 'date', label: tx('Date'), prio: 1, sort: 'date', w: 96, html: true, cell: function (e) { return '<span class="bkdv-dt">' + esc(bkDvFmt(String(e.posting_date).slice(0, 10), { day: '2-digit', month: 'short' })) + '</span>'; } },
-    { key: 'no', label: tx('Entry'), prio: 6, sort: 'no', w: 150, html: true, cell: function (e) { return '<span class="mono">' + no(e) + '</span>'; } },
+    { key: 'no', label: tx('Entry'), prio: 6, sort: 'no', w: 150, html: true, cell: function (e) { return '<span class="mono">' + no(e) + '</span>' + bkDvRevChip(e); } },
     { key: 'kind', label: tx('Kind'), prio: 5, sort: 'kind', w: 100, html: true, cell: function (e) { return esc(tx(bkDvKind(e))); } },
     { key: 'party', label: tx('Party'), prio: 3, sort: 'party', w: 190, html: true, cell: function (e) { return esc(bkDvParty(e)) || dash; } },
     { key: 'bill', label: tx('Bill'), prio: 4, w: 230, html: true, tid: function (e) { return 'db-head-' + e.entry_no; }, cell: function (e) {
@@ -885,6 +889,29 @@ function bkDvCols(c) {
         return (cw + (cw && by ? ' · ' : '') + (by ? '<span style="color:var(--grey)">' + by + '</span>' : '')) || dash; } },
     { key: 'amount', label: tx('Amount'), prio: 2, pin: 'end', sort: 'amount', w: 130, html: true, cell: function (e) { return '<b data-testid="db-total-' + no(e) + '">' + esc(bkMoney(bkDvTotal(e), c)) + '</b>'; } },
   ];
+}
+/** M174: a reversed entry says "Reversed by <its reversal's number>" - a link to that row - and offers no Reverse button (the action's `when`); the reversal says what it undoes */
+function bkDvRevChip(e) {
+  if (e.reversed_by) return '<div style="font-size:var(--fs-1);color:var(--grey)" data-testid="db-rev-' + esc(e.entry_no) + '">' + esc(tx('Reversed by')) + ' <a href="#" class="mono" data-testid="db-rev-link-' + esc(e.entry_no) + '" onclick="event.stopPropagation();bkDvGoto(\'' + esc(e.reversed_by) + '\');return false">' + esc(e.reversed_by) + '</a></div>';
+  return '';
+}
+/** bring a row of the Day book into view (its reversal, from the chip) - or say it is outside these dates */
+function bkDvGoto(no) {
+  var n = document.querySelector('#bk_dvlist [data-no="' + String(no).replace(/"/g, '') + '"]');
+  if (!n) { toast(tx('Not in these dates')); return; }
+  n.scrollIntoView({ block: 'center' }); if (n.focus) n.focus();
+}
+/** M175: a reversal repaints the Day book from what the server answered - the original says who reversed it, the mirror row is added - no read of the whole book. true = handled */
+function bkDvReversed(id, r) {
+  var d = BK.dv; if (!d || !d.r || !d.api || BK.tab !== 'daybook') return false;
+  var ents = d.r.entries || [], o = null; ents.forEach(function (e) { if (e.entry_id === id) o = e; });
+  if (!o || !r || !r.entry_no) return false;
+  o.reversed_by = r.entry_no; o.reversed_by_id = r.entry_id || null;
+  var day = String(r.posting_date || '').slice(0, 10);
+  if (day && day >= d.range.from && day <= d.range.to) ents.push({ entry_id: r.entry_id, entry_no: r.entry_no, posting_date: day, doc_date: day, event_type: 'reversal', narration: 'Reversal',
+    source_chit_id: null, reverses_entry_id: id, reversed_by: null, reversed_by_id: null, source: null,
+    lines: (o.lines || []).map(function (l) { return Object.assign({}, l, { dr_minor: l.cr_minor, cr_minor: l.dr_minor }); }) });
+  d.r.count = ents.length; d.api.refresh(); return true;
 }
 /** its next level: the gist (the lines merged by ledger), then the Dr/Cr lines — each tax and sales line with its rate, as the line carries it */
 function bkDvGistHTML(e, c) { return bkDvGist(e).map(function (x) { return esc(x.name) + ' ' + esc(bkMoney(x.amt, c)); }).join(' · '); }
@@ -986,7 +1013,7 @@ async function bkDaybook(body) {
     var r = rr[0]; bkDuesStore(rr[1]);   /* the same read names each entry's party (bkPartyLabel) */
     BK.dv = { r: r, range: q, todo: bkTodoCounts(rr[1], rr[2], rr[3]) };
     body.innerHTML = '<div id="bk_dvlist" data-testid="db-list"></div>';
-    bkDvMount(document.getElementById('bk_dvlist'));
+    BK.dv.api = bkDvMount(document.getElementById('bk_dvlist'));
   } catch (e) { body.innerHTML = bkErr(e); }
 }
 
