@@ -82,9 +82,12 @@ const SIZES = [{ n: '1366', o: { viewport: { width: 1366, height: 768 } } },
       say('the rail Check opens the same Check section (not a second dialog)', c.open && c.on && !c.health, JSON.stringify(c));
       await shot('02-check');
       await p.evaluate(() => { closeMenu(); });
-      await p.click('[data-testid="till-side-labs"]', { timeout: 3000 }).catch(() => {}); await p.waitForTimeout(250);
+      /* T2i (M207): the rail's Labs slot is the Expense register; Labs stay in the Menu (Lab section) */
+      const rl = await p.evaluate(() => ({ labs: !!document.querySelector('[data-testid="till-side-labs"]'), exp: !!document.querySelector('[data-testid="till-side-expense"]') }));
+      say('the rail holds Expense, not Labs', rl.exp && !rl.labs, JSON.stringify(rl));
+      await p.evaluate(() => { openLabs(); }); await p.waitForTimeout(250);
       const l = await p.evaluate(() => ({ open: !document.getElementById('tillmenu').hidden, rows: ['productlab', 'offerlab', 'combolab'].filter((k) => document.querySelector('[data-testid="till-' + k + '"]')).length }));
-      say('the Labs icon opens the chooser: Product · Offer · Combo', l.open && l.rows === 3, JSON.stringify(l));
+      say('Labs still open from the Menu: Product · Offer · Combo', l.open && l.rows === 3, JSON.stringify(l));
       await shot('02-labs');
       await p.evaluate(() => { closeMenu(); });
     }
