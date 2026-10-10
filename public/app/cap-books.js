@@ -874,7 +874,7 @@ function bkDvCols(c) {
     { key: 'party', label: tx('Party'), prio: 3, sort: 'party', w: 190, html: true, cell: function (e) { return esc(bkDvParty(e)) || dash; } },
     { key: 'bill', label: tx('Bill'), prio: 4, w: 230, html: true, tid: function (e) { return 'db-head-' + e.entry_no; }, cell: function (e) {
         var s = e.source || {}, t = 'db-src-' + e.entry_no;
-        if (s.kind === 'day') return esc(tx('Walk-in day')) + (s.count != null ? ' · ' + esc(txf(s.count === 1 ? '{n} bill' : '{n} bills', { n: s.count })) : '');
+        if (s.kind === 'day') return esc(tx('Walk-in day')) + (s.count != null ? ' · ' + bkDayBillsLink(s, t) : '');   /* M132: the count opens the bills list, as the statement rows do */
         if (s.ref || s.chit_id) return bkBillPart(s, t) + bkRecordedHTML(e, t);
         return esc(s.kind === 'receipt' ? tx('Received') : (e.narration || e.what || e.event_type || '')) + bkRecordedHTML(e, t) || dash;
       } },
@@ -1567,11 +1567,11 @@ function bkDuesAge(p) {
   cols.forEach(function (k) { if (Number(b[k[0]])) w = k[1]; });
   return w;
 }
-/** the buttons on a Dues row: Receive (or Pay) opens the ONE unit; Remind (only on what is owed to you) messages the oldest open bill */
+/** the buttons on a Dues row: Receive (or Pay) opens the ONE unit — an ADVANCE row says what it does: "Get back" (paid ahead to a supplier) or "Adjust" (a customer's advance), never "Pay" (M167); Remind (only on what is owed to you) messages the oldest open bill */
 function bkDuesActs(p) {
   var kind = bkPartyKind(p.party_id), id = esc(p.party_id), rcv = kind === 'customer';
   return '<span style="display:inline-flex;gap:6px" onclick="event.stopPropagation()">'
-    + '<button type="button" class="cbl-tbtn" data-testid="dues-pay-' + id + '" onclick="event.stopPropagation();payOpen(\'' + kind + '\',\'' + id + '\')">' + esc(tx(rcv ? 'Receive' : 'Pay')) + '</button>'
+    + '<button type="button" class="cbl-tbtn" data-testid="dues-pay-' + id + '" onclick="event.stopPropagation();payOpen(\'' + kind + '\',\'' + id + '\')">' + esc(tx(bkDuesAdvance(p) ? 'Get back' : (rcv && Number(p.balance_minor) < 0 ? 'Adjust' : (rcv ? 'Receive' : 'Pay')))) + '</button>'
     + (rcv ? '<button type="button" class="cbl-tbtn" data-testid="dues-remind-' + id + '" onclick="event.stopPropagation();bkRemind(\'' + id + '\',this)">' + esc(tx('Remind')) + '</button>' : '') + '</span>';
 }
 /** 'customer' (you receive) or 'supplier' (you pay): the party's side from the one /dues read, else the control account that is open */
