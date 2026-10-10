@@ -80,7 +80,7 @@ async function run(o) {
       const u = new URL(r.request().url()), m = r.request().method(); seen.push(u.pathname);
       if (u.pathname === '/api/entities/header') return p.header ? J(r, 200, p.header) : J(r, 404, { error: 'not found' });
       if (u.pathname === '/api/entities/me' && m === 'GET') return J(r, 200, { entity: { display_name: 'Books Shop', ui_prefs: {} } });
-      if (u.pathname === '/api/facts/till') return J(r, 200, { lines: ['12 bills · ₹4,280 today', { text: '1 not sent up', tone: 'dn' }] });
+      if (u.pathname === '/api/facts/till') return J(r, 200, { lines: [{ text: '12 bills · {money}', money: { amount: 4280, currency: 'INR' } }, { text: '1 bill waiting to send', tone: 'dn', act: { label: 'Send now', href: '/till.html' } }] });
       if (u.pathname === '/api/facts/broken') return J(r, 500, { error: 'x' });
       return J(r, 200, { ok: true });
     });
@@ -166,7 +166,7 @@ async function run(o) {
       ok(await pg.locator('.cbsh-box').count() === 3 && await pg.locator('.cbsh-sc').count() === 2, 'planted · 3 cards, 2 chips');
       ok(await pg.getAttribute('[data-testid="shell-card-till"]', 'href') === '/till.html', 'planted · a built card links to its route');
       const f = (await pg.locator('[data-testid="shell-facts-till"]').innerText()).replace(/\s+/g, ' ');
-      ok(/12 bills · ₹4,280 today/.test(f) && /1 not sent up/.test(f), 'planted · the facts lines are the API\'s ("' + f + '")');
+      ok(/12 bills · ₹4,280/.test(f) && /1 bill waiting to send Send now ›/.test(f) && !/INR|{money}/.test(f), 'planted · the facts lines are the API\'s ("' + f + '")');
       ok((await pg.locator('[data-testid="shell-facts-storefront"]').innerText()).trim() === '—', 'planted · a failed facts read shows —, never a number');
       ok(await pg.getAttribute('[data-testid="shell-chip-catalogue"]', 'data-state') === 'workshop' && await pg.getAttribute('[data-testid="shell-chip-orders"]', 'data-state') === 'coming', 'planted · workshop and coming are dashed chips with their state');
       ok(await pg.locator('[data-testid="shell-chip-catalogue"] a, a[data-testid="shell-chip-catalogue"]').count() === 0, 'planted · a workshop chip is not a link');

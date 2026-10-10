@@ -41,7 +41,7 @@
     renew: 'Renew', again: 'Apply again', notAdded: 'not added', registered: 'registered', notRegistered: 'not registered',
     days: ' days', years: ' years', expired: function (d) { return 'expired ' + d + 'd ago'; }, lapsed: 'lapsed',
     notYet: 'Licences and trade checks are not available yet.', loading: '…', noApps: 'The list of apps could not be read.',
-    factsFailed: 'Could not read', switcher: 'Go to', close: 'Close'
+    factsFailed: 'Could not read', today: 'today', switcher: 'Go to', close: 'Close'
   };
   /* CB Commerce: one box per pillar. The main row sits in the Selling section, the supporting row in the Running section; a manifest entry's `pillar` decides its box (none: its area's default) */
   var PILLARS = { selling: ['marketing', 'sales', 'finance', 'accounting'], running: ['operations', 'people', 'trade'] };
@@ -156,6 +156,7 @@
     '.cbsh-box .facts{display:flex;flex-direction:column;gap:2px;margin-top:11px;padding-top:9px;border-top:1px solid var(--sh-hair)}',
     '.cbsh-box .facts:empty{display:none}',
     '.cbsh-box .f{font-size:12.5px;color:var(--sh-muted);font-family:var(--f-num,"IBM Plex Mono",monospace)}.cbsh-box .f.dn{color:var(--sh-amber-i)}',
+    '.cbsh-box .f .act{text-decoration:underline;cursor:pointer;font-weight:600}',
     '.cbsh-box .arw{position:absolute;top:14px;right:15px;color:var(--sh-ghost);font-size:16px}.cbsh-box:hover .arw{color:var(--sh-green)}',
     '.cbsh-sec.labs .cbsh-box,.cbsh-sec.setup .cbsh-box{padding:12px 14px;border-radius:11px}',
     '.cbsh-sec.labs .cbsh-box h4,.cbsh-sec.setup .cbsh-box h4{font-family:inherit;font-size:14px;font-weight:700;letter-spacing:0}',
@@ -393,7 +394,26 @@
       placeKural();
     }
 
-    /* each built entry's facts: GET its URL → { lines:[ 'text' | { text, tone:'dn' } ] }, at most two lines */
+    /* a fact line's words: the server names an amount or a moment ({money} {time} {date} {when}) and sends it as data (money:{amount,currency}, at: ISO);
+       the reader's locale words it — "₹420", "09:33", "today 09:40" — never "INR 420.00" or an ISO date */
+    function lineWords(t) {
+      var L = root.CBLocale, at = t.at, m = t.money, text = String(t.text == null ? '' : t.text);
+      var time = function () { try { return (L && L.time && L.time(at)) || ''; } catch (_) { return ''; } };
+      var date = function () { try { return (L && L.date && L.date(at)) || String(at || '').slice(0, 10); } catch (_) { return String(at || '').slice(0, 10); } };
+      var sameDay = function () { var d = new Date(at), n = new Date(); return !isNaN(d) && d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate(); };
+      return text.replace(/{(money|time|date|when)}/g, function (_, k) {
+        if (k === 'money') return m ? ((L && L.money && L.money(m.amount, m.currency)) || (m.currency + ' ' + m.amount)) : '';
+        if (k === 'time') return time();
+        if (k === 'date') return date();
+        return (sameDay() ? W.today : date()) + ' ' + time();
+      }).trim();
+    }
+    /* each built entry's facts: GET its URL → { lines:[ 'text' | { text, tone:'dn', money?, at?, act?:{ label, href } } ] }, at most two lines; act = the button that clears the line */
+    function lineHTML(l) {
+      var t = typeof l === 'string' ? { text: l } : (l || {});
+      var act = t.act && t.act.label && t.act.href ? ' <span class="act" role="link" tabindex="0" data-href="' + esc(t.act.href) + '" data-testid="shell-fact-act">' + esc(t.act.label) + ' ›</span>' : '';
+      return '<span class="f' + (t.tone === 'dn' ? ' dn' : '') + '">' + esc(lineWords(t)) + act + '</span>';
+    }
     function readFacts() {
       if (!person || !S.manifest) return;
       (S.manifest.entries || []).forEach(function (e) {
@@ -401,7 +421,7 @@
         var spot = $('[data-testid="shell-facts-' + e.id + '"]'); if (!spot) return;
         get(e.facts).then(function (r) {
           var lines = (r && r.lines) || [];
-          spot.innerHTML = lines.slice(0, 2).map(function (l) { var t = typeof l === 'string' ? { text: l } : (l || {}); return '<span class="f' + (t.tone === 'dn' ? ' dn' : '') + '">' + esc(t.text) + '</span>'; }).join('');
+          spot.innerHTML = lines.slice(0, 2).map(lineHTML).join('');
         }).catch(function () { spot.innerHTML = '<span class="f" title="' + esc(W.factsFailed) + '">—</span>'; });
       });
     }
@@ -467,6 +487,8 @@
 
     /* ── events ── */
     if (who) who.addEventListener('click', function () { setOpen(!S.open); });
+    /* a fact line's own button sits inside the card's link: it goes where it says, the card does not */
+    el.addEventListener('click', function (e) { var a = e.target.closest && e.target.closest('.cbsh-box .f .act'); if (!a) return; e.preventDefault(); e.stopPropagation(); root.location.href = a.getAttribute('data-href'); });
     var scrim = $('.cbsh-scrim'); if (scrim) scrim.addEventListener('click', function () { setOpen(false); });
     $('.cbsh-lic').addEventListener('click', function (e) { if (e.target.closest('.cbsh-chip')) setOpen(true); });
     var onKey = function (e) { if (e.key === 'Escape') { if (S.open) setOpen(false); swOpen(false); } };
