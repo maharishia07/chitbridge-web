@@ -15,7 +15,7 @@ const { mintEntity } = require('../fixtures');
 const open = async (page) => {
   await page.evaluate(() => window.navTo('settings'));
   await page.waitForTimeout(1200);
-  await page.getByTestId('set-sec-standards').click();
+  await page.evaluate(() => setSetSec('standards'));
   /**
    * ⚠️ WAIT FOR THE REGISTER, NOT FOR A CLOCK. STANDARDS lives in cap-standards.js — its own lazily-loaded
    * capability, shared with the Legend — so the section paints "Loading the register…" first and fills in when

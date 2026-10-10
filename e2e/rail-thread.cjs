@@ -120,7 +120,7 @@ async function route(S, r) {
     p.on('pageerror', (e) => errs.push(who.name + ': ' + String(e.message)));
     p.on('dialog', (d) => { errs.push('a browser dialog opened: ' + d.type()); d.dismiss().catch(() => {}); });
     await p.goto(web.url('/app.html#/app'));
-    await p.waitForSelector('[data-testid="nav-customers"]', { timeout: 20000 });
+    await p.waitForSelector('[data-testid="nav-task"]', { timeout: 20000 });
     await p.evaluate(() => openChit('lab-chit'));
     await p.waitForSelector('[data-testid="msg-tab"]', { timeout: 15000 });
     await p.waitForFunction(() => !(UI.detail && UI.detail._loading), null, { timeout: 15000 });

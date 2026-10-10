@@ -19,7 +19,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
   };
   try {
     await mintEntity(page);
-    await page.getByTestId('nav-raida').click();
+    await page.evaluate(() => navTo('raida'));
     await page.locator('[data-testid="register-panel"][data-ready="1"]').waitFor({ timeout: 30000 });
     await shot('0-empty');
 

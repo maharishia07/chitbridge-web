@@ -12,7 +12,7 @@ const { mintEntity } = require('../fixtures');
 const openAppearance = async (page) => {
   await page.evaluate(() => window.navTo('settings'));
   await page.waitForTimeout(1200);
-  await page.getByTestId('set-sec-appearance').click();
+  await page.evaluate(() => setSetSec('appearance'));
   await page.waitForTimeout(800);
 };
 

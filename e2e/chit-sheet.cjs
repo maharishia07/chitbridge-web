@@ -376,17 +376,17 @@ async function route(S, r) {
   {
     const S = standIn(); const { ctx, p } = await open(S);
     await p.goto(base + '/app.html#/app');
-    await p.waitForSelector('[data-testid="nav-bills"]', { timeout: 20000 });
-    ok(await p.getAttribute('[data-testid="nav-bills"]', 'href') === '/accounts.html#bills' && /Bills/.test(await p.textContent('[data-testid="nav-bills"]')), 'the app\'s menu has a Bills door → /accounts.html#bills (the way CB Accounts is linked)');
+    await p.waitForSelector('[data-testid="nav-task"]', { timeout: 20000 });
+    ok(await p.locator('[data-testid="nav-bills"]').count() === 0, 'P0: the app menu has no Bills door any more (CB Accounts › Bills is the home); the redirects below still hold');
     await p.goto(base + '/app.html#/app/ledger'); await p.waitForURL(/\/accounts\.html/, { timeout: 15000 }).catch(() => {});
     ok(/\/accounts\.html(#|$)/.test(p.url()), '#/app/ledger → /accounts.html (' + p.url().replace(base, '') + ')');
     await p.goto(base + '/app.html#/app/ledger/dues'); await p.waitForURL(/accounts\.html#dues/, { timeout: 15000 }).catch(() => {});
     ok(/\/accounts\.html#dues$/.test(p.url()), '#/app/ledger/dues → /accounts.html#dues, the same view (' + p.url().replace(base, '') + ')');
-    await p.goto(base + '/app.html#/app'); await p.waitForSelector('[data-testid="nav-bills"]', { timeout: 20000 });
+    await p.goto(base + '/app.html#/app'); await p.waitForSelector('[data-testid="nav-task"]', { timeout: 20000 });
     await p.evaluate(() => { localStorage.setItem(uk('cb_nav'), 'ledger'); });
     await p.reload(); await p.waitForURL(/\/accounts\.html/, { timeout: 15000 }).catch(() => {});
     ok(/\/accounts\.html/.test(p.url()), 'a remembered cb_nav of "ledger" → /accounts.html (' + p.url().replace(base, '') + ')');
-    await p.goto(base + '/app.html#/app'); await p.waitForSelector('[data-testid="nav-bills"]', { timeout: 20000 });
+    await p.goto(base + '/app.html#/app'); await p.waitForSelector('[data-testid="nav-task"]', { timeout: 20000 });
     ok(await p.evaluate(() => localStorage.getItem(uk('cb_nav'))) !== 'ledger', 'the remembered "ledger" was forgotten, so Back does not loop');
     await p.evaluate(() => navTo('ledger')); await p.waitForURL(/\/accounts\.html/, { timeout: 15000 }).catch(() => {});
     ok(/\/accounts\.html/.test(p.url()), 'navTo("ledger") → /accounts.html');
@@ -395,7 +395,7 @@ async function route(S, r) {
   /* ── 3f · THE TASK DETAIL READS THE FROZEN BILL, NEVER RECOMPUTES (Athi, 2026-10-02: "never ever recompute") ─────────────── */
   {
     const S = standIn(); const { ctx, p } = await open(S);
-    await p.goto(base + '/app.html#/app'); await p.waitForSelector('[data-testid="nav-bills"]', { timeout: 20000 });
+    await p.goto(base + '/app.html#/app'); await p.waitForSelector('[data-testid="nav-task"]', { timeout: 20000 });
     const tab = async (id, t) => { await p.evaluate(([i, tt]) => { UI.dtab = tt; return openChit(i); }, [id, t]); await p.waitForFunction(() => !(UI.detail && UI.detail._loading), null, { timeout: 15000 }); await p.waitForTimeout(300); };
     const txt = (sel) => p.locator(sel).first().textContent().then((t) => t.replace(/[₹,\s]/g, ''), () => null);
     /* the frozen invoice: the detail's total, GST rows and round-off equal CBTax.moneyOf(invoice) to the paisa */

@@ -55,7 +55,7 @@ const CHITS = Array.from({ length: 18 }, (_, i) => ({
     /* app.html: Task, then Customers */
     {
       const { ctx, p } = await open(vw, vh, '/app.html#/app');
-      await p.waitForSelector('[data-testid="nav-customers"]', { timeout: 20000 }).catch(() => {});
+      await p.waitForSelector('[data-testid="nav-task"]', { timeout: 20000 }).catch(() => {});
       await p.waitForSelector('#rows .cbl-row', { timeout: 15000 }).catch(() => {});
       const t = await mounted(p, '#rows');
       ok(!!t && t.rows > 0, dev + ' · Task: #rows is a CBList mount with ' + (t && t.rows) + ' rows');

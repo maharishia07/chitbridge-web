@@ -4626,7 +4626,10 @@ const MENUS = {
    * ⚠️ COMPOSE IS NOT GONE. It moved into Rail below, keeping its own testid and its own act: authoring a chit by hand is still how
    * anything that is not a sale gets onto the rail, and four screens still open it.
    */
-  entity:{ lead:["counter","🧾","Counter"], groups:[
+  /* ⭐ P0 (WORKSHOP-SIMPLIFY 2026-10-09): the MOVED items are off this menu — Counter → till.html, Messages → the bell, Bills and CB Accounts →
+     accounts.html, Customers → crm.html, Register → standards.html, Trade ready → know-your-business.html. FROZEN, not deleted: the screens, navTo
+     keys and menuBtn branches stay (tag frozen-workshop-menu-2026-10-10); only the doors are gone. */
+  entity:{ groups:[
     /* ⭐ "RAIL", NOT "MAILBOX" — Athi, 2026-08-15. His own positioning has been that CB is a governed RAIL and
        that mailbox is the older, smaller framing; the rail is what the product is pitched as. The heading over
        Task and Order is the first place a person reads either word, so it should be the right one. */
@@ -4646,7 +4649,7 @@ const MENUS = {
     /* ⚠️ MESSAGES MOVED OUT OF THE RAIL (Athi, 2026-08-18: *"messages can come under work in the panel rather
        than rail"*). The RAIL is the chit lifecycle — task, order, drafts, archive, trash: places a CHIT is. A
        message is not a place a chit sits, it is work someone has to do about one, which is what this group is. */
-    ["Work",    [["messages","💬","Messages"],["worklist","🧰","Everyone's work"],["intake","📨","Intake"],["bills","🧾","Bills"],["disputes","⚖️","Disputes"]]],
+    ["Work",    [["worklist","🧰","Everyone's work"],["intake","📨","Intake"],["disputes","⚖️","Disputes"]]],
     /* ⭐ CATEGORIES SITS NEXT TO CATALOGUE, not inside Definitions (Athi, 2026-08-16: *"bring the category as a
        panel next to catalogue"*). It is where you shape the shelf, so it belongs beside the shelf — Definitions
        still LISTS categories, but authoring now has one home and Definitions points at it. */
@@ -4677,11 +4680,11 @@ const MENUS = {
        which may not be essential — we have already the supplier menu"*). It is the Other tab inside Suppliers.
        The screen and its routes are unchanged; only the door moved, because a shop should not have to decide
        which of two menus a purchase belongs to before it can record one. */
-    ["Business",[["platform","🛰️","Platform"],["customers","🛍️","Customers"],["suppliers","🏭","Suppliers"],["ledger","📒","Ledger"],["match","⚖️","Match"],["network","🔗","Network"],["coassists","🧑‍🤝‍🧑","Co-assists"]]],
+    ["Business",[["platform","🛰️","Platform"],["suppliers","🏭","Suppliers"],["match","⚖️","Match"],["network","🔗","Network"],["coassists","🧑‍🤝‍🧑","Co-assists"]]],
     /* ⭐ REGISTER SITS UNDER INSIGHT — Athi, 2026-08-30: *"can we bring it under insight in the menu as a raida
        report so we can see all the open and closed stuff in a single place."* It was a topbar icon next to the
        key, which is where things that WATCH you live; a report is a place you GO. */
-    ["Insight", [["mis","📊","MIS"],["raida","📋","Register"],["traceability","🧭","Traceability"],["readiness","🛡️","Trade ready"]]],
+    ["Insight", [["mis","📊","MIS"],["traceability","🧭","Traceability"]]],
   ], tag:"Owner does structure."},
   /* ⭐ AN ACTOR GETS REPLIES TOO — Athi, 2026-08-15: *"can you show me message from … actor view?"* The screen
      existed and the actor rail had no door to it, so a co-assist could be asked a direct question by a customer

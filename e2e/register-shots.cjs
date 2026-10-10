@@ -34,7 +34,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
 
   try {
     await mintEntity(page);
-    await page.getByTestId('nav-raida').click();
+    await page.evaluate(() => navTo('raida'));
     await page.getByTestId('register-panel').waitFor({ state: 'visible', timeout: 20000 });
 
     /**
