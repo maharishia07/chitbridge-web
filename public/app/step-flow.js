@@ -116,7 +116,7 @@
      * constantly, and committing on every repaint would double lines as fast as the screen redraws.
      */
     if (s.i !== i) call(s, 'onLeave', keyAt(s, s.i));
-    s.i = i;
+    s.i = i; s.tried = false;
     var b = doc(opt(s, 'bodyEl'));
     if (b) b.scrollTop = 0;                 // a new step starts at its own top, never mid-scroll of the last one
     paint(ns);
@@ -125,9 +125,15 @@
     // mid-sentence is its own bug.
     focusFirst(ns);
   }
-  function next(ns) { var s = F[ns]; if (s && !why(s, s.i)) go(ns, s.i + 1); }
+  /**
+   * ⭐ `quiet` (opt-in, 2026-10-10 — the online shop, M70): a screen that asks a stranger for things must not say "needed" before they have
+   * typed or pressed anything. With `quiet: true` the button is live and the reason stays unsaid until the first press that finds the step
+   * unanswered; from then on it shows (and clears itself as the field is filled). Moving to another step starts quiet again.
+   */
+  function refuse(s, ns, w) { if (w && opt(s, 'quiet', false) && !s.tried) { s.tried = true; paintFoot(ns); } return !!w; }
+  function next(ns) { var s = F[ns]; if (s && !refuse(s, ns, why(s, s.i))) go(ns, s.i + 1); }
   function back(ns) { var s = F[ns]; if (s) { if (s.i > 0) go(ns, s.i - 1); else call(s, 'onCancel'); } }
-  function send(ns) { var s = F[ns]; if (s && !why(s, s.i)) call(s, 'onSend'); }
+  function send(ns) { var s = F[ns]; if (s && !refuse(s, ns, why(s, s.i))) call(s, 'onSend'); }
   function draft(ns) { var s = F[ns]; if (s) call(s, 'onDraft'); }
 
   /* ── the rail ────────────────────────────────────────────────────────────────────────────────────────────── */
@@ -168,6 +174,7 @@
   function footHTML(ns) {
     var s = F[ns]; if (!s) return '';
     var last = s.i === s.steps.length - 1, blocked = why(s, s.i);
+    if (blocked && opt(s, 'quiet', false) && !s.tried) blocked = null;   // quiet until the first try — the guard still refuses on press
     var backLbl = s.i ? '← Back' : opt(s, 'cancelLabel', '');
     var tidBack = opt(s, 'backTestid', 'step-back-' + ns);
     var tidDraft = opt(s, 'draftTestid', 'step-draft-' + ns);

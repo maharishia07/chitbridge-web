@@ -155,7 +155,7 @@ test.describe('render smoke — the page boots without throwing', () => {
   });
 
   /**
-   * ★★ THE CHECKOUT WIZARD, on the public page. Items → Delivery → Review → Who you are.
+   * ★★ THE CHECKOUT WIZARD, on the public page. Pickup or delivery → Who you are (T2b: the review is on the last step).
    *
    * The storefront checkout had no automated coverage at all — no spec drove shop-cart-submit, shop-area or
    * shop-contact. This is the page that went down twice in a week, so the redesign of its checkout does not ship
@@ -165,7 +165,7 @@ test.describe('render smoke — the page boots without throwing', () => {
    * send a real OTP to a real channel from a production shop. The wizard is what is under test — the OTP rail is
    * already covered by the order specs.
    */
-  test('★★ the storefront checkout walks Items → Delivery → Review → Who you are', async ({ page }) => {
+  test('★★ the storefront checkout walks Pickup or delivery → Who you are', async ({ page }) => {
     const errors = watch(page);
     await page.goto(`/shop.html?bridge=${BRIDGE}&api=${encodeURIComponent(API)}`, { waitUntil: 'networkidle' });
 
@@ -175,32 +175,34 @@ test.describe('render smoke — the page boots without throwing', () => {
     await page.locator('.cbcart-bar').first().click();
     await page.getByTestId('cart-checkout').click();
 
-    // ── ITEMS ────────────────────────────────────────────────────────────────────────────────────────────────
+    // ── PICKUP OR DELIVERY — first, and nothing says "needed" before a try (M67, M70).
     const rail = page.locator('[data-testid^="steps-"]');
     await expect(rail, 'the checkout did not open as a step flow').toBeVisible();
-    await expect(rail.locator('.cbst')).toHaveCount(4);
-    await expect(page.getByTestId('shop-cart-qty-0'), 'the basket lines are not on the Items step').toBeVisible();
+    await expect(rail.locator('.cbst')).toHaveCount(2);
+    await expect(page.getByTestId('shop-mode-pickup')).toBeVisible();
+    await expect(page.getByTestId('shop-mode-delivery')).toBeVisible();
+    await expect(page.locator('[data-testid^="step-why-"]'), 'it said "needed" before the shopper tried anything').toHaveCount(0);
     const next = page.locator('[data-testid^="step-next-"]');
     await next.click();
-
-    // ── DELIVERY. The address is the one thing the shop cannot guess; date and time are optional on purpose.
+    await expect(page.locator('[data-testid^="step-why-"]'), 'a press with nothing chosen must say what is missing').toContainText(/pickup or delivery/i);
+    await page.getByTestId('shop-mode-delivery').click();
     await expect(page.getByTestId('shop-area')).toBeVisible();
     await expect(next, 'Delivery let itself be left with no address').toBeDisabled();
-    await expect(page.locator('[data-testid^="step-why-"]')).toContainText('address');
     await page.getByTestId('shop-area').fill('16a Hill Side, 641001');
     await expect(next, 'an address did not unblock Delivery').toBeEnabled();
+    // Pickup asks for no address
+    await page.getByTestId('shop-mode-pickup').click();
+    await expect(page.getByTestId('shop-area')).toHaveCount(0);
+    await expect(next).toBeEnabled();
+    await page.getByTestId('shop-mode-delivery').click();
     await next.click();
 
-    // ── REVIEW. ⚠️ A public page must SAY that a total on the customer's own screen is not a bill.
-    await expect(page.getByTestId('shop-review-total'), 'the Review step did not render').toBeVisible();
+    // ── WHO YOU ARE, with the review folded in. ⚠️ A public page must SAY that a total on the customer's own screen is not a bill.
+    await expect(page.getByTestId('shop-review-total'), 'the review did not render on the last step').toBeVisible();
     await expect(page.locator('#ohost')).toContainText(/request/i);
-    await expect(page.locator('#ohost'), 'the address typed on Delivery did not reach Review').toContainText('16a Hill Side');
-    await page.locator('[data-testid^="step-next-"]').click();
-
-    // ── WHO YOU ARE — last, so nobody types a phone number before they know the price.
+    await expect(page.locator('#ohost'), 'the address typed on Delivery did not reach the review').toContainText('16a Hill Side');
     await expect(page.getByTestId('shop-contact')).toBeVisible();
     const submit = page.getByTestId('shop-cart-submit');
-    await expect(submit, 'identity is asked for before it is given').toBeDisabled();
     await page.getByTestId('shop-contact').fill('9876543210');
     await expect(submit).toBeEnabled();
     await expect(submit, 'the button must say which of its two jobs it is about to do').toContainText('Send me a code');
