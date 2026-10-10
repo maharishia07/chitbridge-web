@@ -143,6 +143,37 @@ function txf(english, vars){
   });
 }
 
+/**
+ * ⭐⭐ txn(one, other, n, vars) — a sentence whose wording depends on a COUNT.
+ *
+ * ⚠️ ENGLISH HAS TWO PLURAL FORMS AND THAT IS NOT UNIVERSAL. Arabic has SIX (zero, one, two, few, many,
+ * other), Russian has three, Tamil and Chinese have one. So "1 product / 2 products" is an English fact rather
+ * than a general one, and `n === 1 ? 'product' : 'products'` hard-codes English grammar into every screen that
+ * counts anything.
+ *
+ * `Intl.PluralRules` knows the real answer per language, and the catalogue keys off the CATEGORY it returns —
+ * which is why the stored key is `msgid\u0005category`, gettext's own plural convention. Until a translation
+ * exists this falls back to the two English forms, which is exactly today's behaviour and no worse.
+ *
+ * ⚠️ `{count}` IS SUPPLIED AUTOMATICALLY, and formatted through the localisation layer — because a count is a
+ * number, and a number is written differently in different places. Writing `n` into the string directly would
+ * give an Arabic reader Western digits inside an Arabic sentence.
+ */
+function txn(one, other, n, vars){
+  var count = Number(n) || 0;
+  var cat = 'other';
+  try { cat = new Intl.PluralRules(CBLocale.locale()).select(count); }
+  catch (_) { cat = count === 1 ? 'one' : 'other'; }
+  var m = CBSTR[cbLang()] || {};
+  /* the exact category, then the catch-all, then English — never a key on screen */
+  var s = m[one + '\u0005' + cat] || m[one + '\u0005other'] || (count === 1 ? one : other);
+  var all = { count: CBLocale.number(count) };
+  for (var k in (vars || {})) if (Object.prototype.hasOwnProperty.call(vars, k)) all[k] = vars[k];
+  return s.replace(/\{(\w+)\}/g, function(whole, key){
+    return Object.prototype.hasOwnProperty.call(all, key) ? bidiWrap(all[key]) : whole;
+  });
+}
+
 /* ── a failure's words, and the toast ── */
 
 function friendlyErr(e){ const m=(e&&e.message)||String(e||"");

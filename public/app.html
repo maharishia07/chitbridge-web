@@ -240,7 +240,7 @@
      * bottom will be visible, for example assistant icon is blocking the content below").
      *
      * ⚠️ THREE THINGS ARE PINNED OVER THE BOTTOM OF EVERY PANE: #assistfab (right, 16px up), .composepill
-     * (left, 16px up) and the #cbnet status pill. They float ABOVE the scroll area, so the last row of any list
+     * (left, 16px up) and the #cbnet status pill (sits ABOVE the Assistant, never over it). They float ABOVE the scroll area, so the last row of any list
      * sits underneath them and cannot be scrolled clear — there is nothing left to scroll. The content is not
      * merely hard to read, it is unreachable: a tap lands on the button on top of it.
      *
@@ -5543,36 +5543,7 @@ function t(key, english){
  */
 /* bidiWrap() and txf() live in app/accounts-shell.js */
 
-/**
- * ⭐⭐ txn(one, other, n, vars) — a sentence whose wording depends on a COUNT.
- *
- * ⚠️ ENGLISH HAS TWO PLURAL FORMS AND THAT IS NOT UNIVERSAL. Arabic has SIX (zero, one, two, few, many,
- * other), Russian has three, Tamil and Chinese have one. So "1 product / 2 products" is an English fact rather
- * than a general one, and `n === 1 ? 'product' : 'products'` hard-codes English grammar into every screen that
- * counts anything.
- *
- * `Intl.PluralRules` knows the real answer per language, and the catalogue keys off the CATEGORY it returns —
- * which is why the stored key is `msgid\u0005category`, gettext's own plural convention. Until a translation
- * exists this falls back to the two English forms, which is exactly today's behaviour and no worse.
- *
- * ⚠️ `{count}` IS SUPPLIED AUTOMATICALLY, and formatted through the localisation layer — because a count is a
- * number, and a number is written differently in different places. Writing `n` into the string directly would
- * give an Arabic reader Western digits inside an Arabic sentence.
- */
-function txn(one, other, n, vars){
-  var count = Number(n) || 0;
-  var cat = 'other';
-  try { cat = new Intl.PluralRules(CBLocale.locale()).select(count); }
-  catch (_) { cat = count === 1 ? 'one' : 'other'; }
-  var m = CBSTR[cbLang()] || {};
-  /* the exact category, then the catch-all, then English — never a key on screen */
-  var s = m[one + '\u0005' + cat] || m[one + '\u0005other'] || (count === 1 ? one : other);
-  var all = { count: CBLocale.number(count) };
-  for (var k in (vars || {})) if (Object.prototype.hasOwnProperty.call(vars, k)) all[k] = vars[k];
-  return s.replace(/\{(\w+)\}/g, function(whole, key){
-    return Object.prototype.hasOwnProperty.call(all, key) ? bidiWrap(all[key]) : whole;
-  });
-}
+/* txn() — a sentence whose wording depends on a COUNT — lives in app/accounts-shell.js, next to tx() and txf() (every CB page counts) */
 
 function menuBtn(x){
   /* ⚠️ THE LABEL GOES THROUGH t() HERE, at the ONE place every rail item is built — not at the fourteen places
@@ -18642,7 +18613,7 @@ route();
 </script>
 <script>
 (function(){ if(!window.CBOffline) return;
-  function cbPill(s){ var p=document.getElementById("cbnet"); if(!p){ p=document.createElement("div"); p.id="cbnet"; p.style.cssText="position:fixed;bottom:10px;inset-inline-end:10px;z-index:9998;font:700 11px/1 system-ui,-apple-system,sans-serif;border-radius:999px;padding:5px 11px;border:1px solid #e5e8ee;background:var(--card);color:var(--ok-2);box-shadow:0 1px 4px rgba(0,0,0,.08)"; (document.body||document.documentElement).appendChild(p); } if(!p) return;
+  function cbPill(s){ var p=document.getElementById("cbnet"); if(!p){ p=document.createElement("div"); p.id="cbnet"; p.style.cssText="position:fixed;bottom:calc(68px + var(--fab-lift,0px) + env(safe-area-inset-bottom,0px));inset-inline-end:calc(16px + env(safe-area-inset-right,0px));z-index:260;font:700 11px/1 system-ui,-apple-system,sans-serif;border-radius:999px;padding:5px 11px;border:1px solid #e5e8ee;background:var(--card);color:var(--ok-2);box-shadow:0 1px 4px rgba(0,0,0,.08)"; (document.body||document.documentElement).appendChild(p); } if(!p) return;
     if(s.online){ p.style.background="#fff"; p.style.color="var(--ok-2)"; p.textContent = s.pending ? ("\u25CF Online \u00B7 syncing "+s.pending) : "\u25CF Online"; }
     else { p.style.background="var(--warn-tint)"; p.style.color="var(--warn-2)"; p.textContent = "\u26A0 Offline" + (s.pending ? " \u00B7 "+s.pending+" pending" : ""); } }
   try{ CBOffline.configure({apiBase: CFG.API_BASE, token:function(){return SESSION && SESSION.token;}, onChange:cbPill}); /* not on the load right after a clean-up: the slate stays clean until the next visit */ if(!(typeof CLEAN_LOAD!=='undefined'&&CLEAN_LOAD)) CBOffline.registerSW("/cb-sw.js"); }catch(e){}

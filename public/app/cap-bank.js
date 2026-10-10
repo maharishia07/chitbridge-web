@@ -139,7 +139,7 @@ function bankList() {
   CBList.mount(host, {
     key: 'bank', t: tx, rows: () => BKB.rows, id: (r) => r.id, rowTid: (r) => 'bank-row-' + r.id,
     head: () => ({ chips: ['matched', 'suggested', 'bank-only', 'missing', 'check'].filter((s) => count(s)).map((s) => ({ tid: 'bank-count-' + s, text: tx(bkbStatus[s][1]) + ' ' + count(s) })),
-      notices: (count('suggested') + count('bank-only') + count('check')) ? [{ cls: 'warn', tid: 'bank-notice', text: txf('{n} lines are not in your books', { n: count('suggested') + count('bank-only') + count('check') }) }] : [] }),
+      notices: (count('suggested') + count('bank-only') + count('check')) ? [{ cls: 'warn', tid: 'bank-notice', text: txn('{count} line is not in your books', '{count} lines are not in your books', count('suggested') + count('bank-only') + count('check')) }] : [] }),
     columns: [
       { key: 'status', label: tx('Status'), prio: 1, sort: 'status', w: 190, html: true, cell: (r) => '<span class="step ' + bkbStatus[r.status][0] + '" data-testid="bank-chip-' + bkbE(r.id) + '" data-status="' + r.status + '">' + bkbE(tx(bkbStatus[r.status][1])) + '</span>' },
       { key: 'line', label: tx('Line'), prio: 2, sort: 'line', w: 360, html: true, cell: (r) => '<div>' + bkbE(r.narration || '') + '</div><div style="color:var(--muted);font-size:var(--fs-1)">' + bkbE(bkDate(r.date)) + (r.ref ? ' · <span class="mono">' + bkbE(r.ref) + '</span>' : '') + '</div>' },

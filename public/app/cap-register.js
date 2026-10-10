@@ -1145,7 +1145,7 @@ function rgImpact() {
     + (hops.length
         ? '<div style="overflow-x:auto" data-testid="walk-graph">' + rgGraph(hops) + '</div>'
           + '<div style="font-size:var(--fs-1);color:var(--grey);padding:6px 0">'
-          + (hops.length === 1 ? tx('1 hop') : txf('{n} hops', { n: hops.length }))
+          + txn('{count} hop', '{count} hops', hops.length)
             + ' · ' + txf('{d} deep', { d: (RG.walk && RG.walk.depth_reached) || 0 })
           + (RG.walk && RG.walk.truncated ? ' ' + tx('Stopped at the depth limit — there is more.') : '')
           + '</div>'

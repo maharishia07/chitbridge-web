@@ -9,7 +9,7 @@
  * The rail comparison is static copy (BACKLOG 2026-10-02 INDEX PAGE); each mark is ✓ · partly · planned, never more than is built. */
 (function (root) {
   'use strict';
-  var STATE = { built: { sym: '✓', word: 'built' }, coming: { sym: '◌', word: 'coming' }, workshop: { sym: '⚒', word: 'workshop' }, partly: { sym: '◐', word: 'part built' } };
+  var STATE = { built: { sym: '✓', word: 'built' }, coming: { sym: '◌', word: 'coming' }, workshop: { sym: '⚒', word: 'being built' }, partly: { sym: '◐', word: 'part built' } };
   var AREAS = [['selling', 'Selling'], ['running', 'Running'], ['labs', 'Labs'], ['setup', 'Setup']];
   /* the diagram: which manifest rows stand at which place around the rail (a place = one row, or all rows of an area) */
   var AROUND = [['till', 'Till'], ['accounts', 'CB Accounts'], ['crm', 'CB CRM'], ['trade', 'CB Trade'], ['connectors', 'Connectors'], ['@labs', 'Labs']];
@@ -91,10 +91,10 @@
     });
     /* the OTHER party: the picture is two businesses and one chit, not one business and its apps (the one-to-many idea) */
     var other = '<div class="rm-other" data-testid="rm-fit-other" style="grid-area:o"><b>The other business</b><small>Your supplier or your customer holds the same chit in their own books.</small><small>One chit, many businesses.</small></div>';
-    return '<div class="rm-fit" data-testid="rm-fit">' + nodes.join('') + '<div class="rm-hub" data-testid="rm-fit-rail"><b>The rail</b><small>the same chit, held by both sides</small></div>' + other + '</div>';
+    return '<div class="rm-fit" data-testid="rm-fit">' + nodes.join('') + '<div class="rm-hub" data-testid="rm-fit-rail"><b>ChitBridge</b><small>the same chit, held by both sides</small></div>' + other + '</div>';
   }
   function compare() {
-    var head = ['', 'The rail', 'Tally', 'Zoho', 'WhatsApp', 'Paper'];
+    var head = ['', 'ChitBridge', 'Tally', 'Zoho', 'WhatsApp', 'Paper'];
     return '<ul class="rm-attrs" data-testid="rm-attrs">' + ATTRS.map(function (a, i) {
       var m = a[1] == null ? '' : MARKS[COMPARE[a[1]][1]], mk = m ? '<span class="rm-chip rm-' + (COMPARE[a[1]][1] === 'yes' ? 'built' : 'partly') + '" data-testid="rm-attr-mark-' + i + '"><span aria-hidden="true">' + m[0] + '</span> ' + m[1] + '</span>' : '';
       return '<li data-testid="rm-attr-' + i + '"><span class="rm-n">' + esc(a[0]) + '</span>' + mk + '<span class="rm-f">' + esc(a[2]) + '</span></li>';
@@ -110,9 +110,9 @@
     if (!es.length) { el.innerHTML = ''; return; }
     var q = !!(opts && opts.quiet);
     el.innerHTML = (q ? '<div class="rm" data-testid="roadmap"><div class="rm-q" data-testid="rm-quiet"><details data-testid="rm-quiet-fold"><summary>Where we are going ›</summary><div class="rm-inner">' : '<div class="rm" data-testid="roadmap">')
-      + '<details data-testid="rm-going"><summary>Where we are going <small>' + count(es, 'built') + ' built · ' + count(es, 'coming') + ' coming · ' + count(es, 'workshop') + ' in the workshop</small></summary><div class="rm-body">' + groups(es) + '</div></details>'
+      + '<details data-testid="rm-going"><summary>Where we are going <small>' + count(es, 'built') + ' built · ' + count(es, 'coming') + ' coming · ' + count(es, 'workshop') + ' being built</small></summary><div class="rm-body">' + groups(es) + '</div></details>'
       + '<details data-testid="rm-fits"><summary>How it fits together</summary><div class="rm-body">' + fit(es) + '</div></details>'
-      + '<details data-testid="rm-rail"><summary>What the rail adds</summary><div class="rm-body">' + compare() + '</div></details>' + (q ? '</div></details></div></div>' : '</div>');
+      + '<details data-testid="rm-rail"><summary>What ChitBridge adds</summary><div class="rm-body">' + compare() + '</div></details>' + (q ? '</div></details></div></div>' : '</div>');
   }
   root.CBRoadmap = { mount: mount, stateOf: stateOf };
 })(typeof window !== 'undefined' ? window : this);

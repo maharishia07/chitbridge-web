@@ -177,7 +177,7 @@ function railPaint(r){
   if (fout != null) pips.push(door('out', 'rail-out', 'out', fout + ' out'));
   if (stuck) pips.push(door('stuck', 'rail-stuck', 'stuck', stuck + ' stuck'));
   var role = function (tid, n, role, word) { var inner = '<b class="n" data-testid="' + tid + '">' + (n == null ? '–' : n) + '</b><span class="k">' + word + '</span>'; return base ? '<a class="node" data-testid="' + tid + '-open" href="' + esc(base) + '#/parties?role=' + role + '">' + inner + '</a>' : '<span class="node">' + inner + '</span>'; };
-  host.innerHTML = '<div class="rail" data-testid="rail"><div class="railtop"><h3>The rail</h3>'
+  host.innerHTML = '<div class="rail" data-testid="rail"><div class="railtop"><h3>Your suppliers and customers</h3>'
     + (rail.route ? '<a href="' + esc(rail.route) + '" data-testid="rail-open">Open ›</a>' : '') + '</div>'
     + '<div class="track">' + role('rail-suppliers', sup, 'supplier', 'Suppliers') + role('rail-customers', cus, 'customer', 'Customers')
     + '<span class="flow">' + pips.join('') + '</span></div></div>';

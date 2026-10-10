@@ -1371,7 +1371,7 @@ function wlMatPickHTML(){
     + ' style="width:100%;padding:9px 12px;margin-bottom:9px;border:1px dashed var(--line);border-radius:9px;'
     + 'background:var(--card);color:var(--on-card);font-size:var(--fs-2);cursor:pointer;text-align:start">'
     + '🛒 ' + esc(tx('Take materials from the catalogue'))
-    + (n ? '<span style="color:var(--grey);font-size:var(--fs-1)"> · ' + esc(txf('{n} items', { n: n })) + '</span>' : '')
+    + (n ? '<span style="color:var(--grey);font-size:var(--fs-1)"> · ' + esc(txn('{count} item', '{count} items', n)) + '</span>' : '')
     + '</button>';
 }
 
