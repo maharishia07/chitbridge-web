@@ -27,6 +27,8 @@ var CRM_EP = {
   crmFollowDel:  { m: 'DELETE', p: '/api/crm/followups/:id',               ok: 'y' },
   crmWalkIn:     { m: 'POST',   p: '/api/crm/walk-ins/add',               ok: 'y' },   // { phone, name? } → 201 { party, points_claimed }: a phone that holds points becomes a local customer
   railChits:     { m: 'GET',    p: '/api/facts/rail/chits',               ok: 'y' },   // the open chits behind Home's In · Out · Stuck (cap-crm-chits.js) - not a /api/crm route
+  crmLeadAdd:    { m: 'POST',   p: '/api/crm/leads',                      ok: 'y' },   // { name, phone?, stage? } → 201 { party } · 503 LEADS_NOT_MIGRATED before b297 (L1)
+  crmStage:      { m: 'POST',   p: '/api/crm/parties/:id/stage',          ok: 'y' },   // { stage } → { ok, lead } — "Move to…": a new memberships row, history kept (L1)
   crmRemove:     { m: 'DELETE', p: '/api/crm/parties/:id',                 ok: 'y' },   // "Remove from my parties" - owner only, 409 HAS_DUES, hides the party and deletes nothing
 };
 
@@ -212,6 +214,7 @@ function crmNormalize(parties) {
 function crmIndex() {
   CRM.byKey = {};
   CRM.rows.forEach(function (p) { CRM.byKey[p.party_id] = p; if (p.party_no) CRM.byKey[p.party_no] = p; });
+  if (typeof crmLeadsIndex === 'function') crmLeadsIndex();   /* a lead opens on the same record (cap-crm-leads.js) */
   bkDuesStore({ currency: CRM.currency, parties: CRM.rows.filter(function (p) { return p.balance_minor != null; }).map(function (p) {
     return { party_id: p.party_id, party_no: p.party_no, name: p.display_name, balance_minor: p.balance_minor, oldest_due: p.oldest_due, side: p.roles.length > 1 ? 'both' : p.roles[0] }; }) });
   var mk = function (p, kind) { return { customer_identity_id: kind === 'customer' ? p.party_id : undefined, supplier_entity_id: kind === 'supplier' ? p.party_id : undefined, display_name: p.display_name, nickname: p.nickname, legal_name: p.legal_name,
@@ -252,6 +255,7 @@ function crmNav(active) {
   var late = Number((CRM.alerts || {}).followups_overdue) || 0;   // the server's number — the same one the alert line shows
   var items = [['parties', 'Parties', 'M16 11a4 4 0 1 0-8 0 4 4 0 0 0 8 0zM4 21c0-4 3.6-6 8-6s8 2 8 6', CRM.loaded ? '<span class="n quiet" data-testid="crm-nav-n-parties">' + CRM.rows.length + '</span>' : ''],
     ['chits', 'Chits', 'M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6', (typeof CHITS !== 'undefined' && CHITS.state === 'ready' && chitsStuckCount()) ? '<span class="n" data-testid="crm-nav-n-chits" title="' + esc(tx('Stuck chits')) + '">' + chitsStuckCount() + '</span>' : ''],
+    ['leads', 'Leads', 'M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.4 6.6 19.5l1.2-6L3.3 9.3l6.1-.7z', ''],
     ['followups', 'Follow-ups', 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M12 7v5l3 2', late ? '<span class="n" data-testid="crm-nav-n-followups" title="' + esc(crmPlural(late, 'late follow-up', 'late follow-ups')) + '">' + late + '</span>' : '']];
   document.getElementById('nav').innerHTML = items.map(function (x) {
     return '<a class="nav-btn' + (x[0] === active ? ' active' : '') + '" href="#/' + x[0] + '" data-testid="crm-nav-' + x[0] + '" aria-label="' + esc(tx(x[1])) + '"' + (x[0] === active ? ' aria-current="page"' : '') + '>'
@@ -283,6 +287,11 @@ function crmRoute(frame) {
   if (seg[0] === 'chits') {
     CRM.route = { nav: 'chits', view: 'chits', sub: '', params: params };
     crmNav('chits'); chitsHome(params, frame);
+    return;
+  }
+  if (seg[0] === 'leads') {
+    CRM.route = { nav: 'leads', view: 'leads', sub: '', params: params };
+    crmNav('leads'); crmLeads(frame);
     return;
   }
   if (seg[0] === 'followups') {
@@ -667,5 +676,6 @@ document.addEventListener('click', function (ev) {
   if (a === 'fupick') { FUADD.party = CRM.byKey[t.getAttribute('data-k')]; document.getElementById('crm_fu_pq').value = FUADD.party.display_name; document.getElementById('crm_fu_pres').innerHTML = ''; return; }
   if (a === 'fusave') return crmFuSave();
   if (a === 'minichit') { ev.stopPropagation(); if (typeof openChitSheet === 'function') openChitSheet(id); return; }
+  if (typeof crmLeadClick === 'function' && crmLeadClick(a, t)) return;
   if (typeof crmRecordClick === 'function') return crmRecordClick(a, t, ev);
 });

@@ -65,6 +65,30 @@ async function route(S, r) {
   if (p.startsWith('/api/chits/')) return J(r, 200, { header: { chit_id: p.split('/').pop() }, detail: {} });
   if (p === '/api/entities/search') { const k = String(u.searchParams.get('q') || '').toLowerCase(); return J(r, 200, { results: fx.search[k] || [] }); }
   /* ── the CRM, answered as chitbridge-api answers it (e2e/lib/crm-api.cjs builds the shapes from the golden seed; the contract holds them) ── */
+  /* L1 leads, answered as the API answers them (S.leads: the lead rows; S.leadsOff: b297 not run yet) */
+  if (p === '/api/crm/parties' && m === 'GET' && u.searchParams.get('view') === 'leads') {
+    const L = (S.leads || []).map((q2) => ({ party_id: q2.party_id, display_name: q2.display_name, user_id: '~mayur.cus-' + q2.party_id.slice(-4), bridge_id: null, email: null, phone: q2.phone || null, otp_contact: q2.phone || null, gstn: null, status: 'active',
+      city: null, kind: 'local', on_chitbridge: false, may_trade: { ok: false, why: 'local' }, roles: { customer: true, supplier: false }, party_no: q2.party_no || null, last_activity: null,
+      customer: { list_id: 'cl-' + q2.party_id, segment: 'new', segment_override: null, txn_count: 0, last_txn_at: null, groups: [], customer_type: 'entity', added_via: 'lead' },
+      lead: { stage: q2.stage || 'lead', since: '2026-10-09T09:00:00.000Z' }, legal_name: null, nickname: null, state_code: null, tax_ids: [], terms: { customer: { credit_days: null, credit_limit_minor: null } }, dues: null,
+      gstin: { value: null, source: null, theirs: null, differs: false }, name: q2.display_name }));
+    return J(r, 200, { parties: S.leadsOff ? [] : L, walk_ins: [], count: S.leadsOff ? 0 : L.length, truncated: false, alerts: { dues_overdue: 0 }, leads_migrated: !S.leadsOff });
+  }
+  if (p === '/api/crm/leads' && m === 'POST') {
+    if (S.leadsOff) return J(r, 503, { code: 'LEADS_NOT_MIGRATED', error: 'Lead stages arrive after the next update.', message: 'Lead stages arrive after the next update.' });
+    if (!String(body.name || '').trim()) return J(r, 400, { code: 'BAD_NAME', error: 'Give the lead a name.', message: 'Give the lead a name.' });
+    const id = '20000000-0000-4000-8000-' + String((S.leads || []).length + 1).padStart(12, '0');
+    S.leads = (S.leads || []).concat([{ party_id: id, display_name: body.name, phone: body.phone || null, stage: body.stage || 'lead', party_no: 'P-01' + String((S.leads || []).length + 1).padStart(2, '0') }]);
+    S.leadAdds = (S.leadAdds || []).concat([body]);
+    return J(r, 201, { party: { party_id: id, display_name: body.name, party_no: 'P-0100', kind: 'local', on_chitbridge: false, lead: { stage: body.stage || 'lead', since: '2026-10-10T09:00:00.000Z' } } });
+  }
+  if ((x = p.match(/^\/api\/crm\/parties\/([^/]+)\/stage$/)) && m === 'POST') {
+    if (S.leadsOff) return J(r, 503, { code: 'LEADS_NOT_MIGRATED', error: 'Lead stages arrive after the next update.', message: 'Lead stages arrive after the next update.' });
+    const row = (S.leads || []).find((q2) => q2.party_id === decodeURIComponent(x[1]));
+    if (!row) return J(r, 404, { code: 'NOT_FOUND', error: 'Not one of your leads.', message: 'Not one of your leads.' });
+    row.stage = body.stage; S.stageMoves = (S.stageMoves || []).concat([body]);
+    return J(r, 200, { ok: true, party_id: row.party_id, lead: { stage: body.stage, since: '2026-10-10T09:00:00.000Z' } });
+  }
   if (p === '/api/crm/parties' && m === 'GET') {
     if (S.listFails > 0) { S.listFails--; return J(r, 500, { error: 'boom' }); }
     return J(r, 200, crmApi.list(S.list, { careless: S.careless, records: fx.records }));
