@@ -37,7 +37,8 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(70) + '· ' + (d
     var bill = { kind: 'tax', no: 'C5/26-27/0001', at: Date.now(), total: 235, lines: [{ name: 'Poori', qty: 1, unit: 'plate', price: 50, net: 50, gst_rate: undefined }, { name: 'Masala Dosa', qty: 1, unit: 'plate', price: 185, net: 185, gst_rate: 5 }], payments: [], pos_state: '29' };
     return { warn: warn, slip: slipHTML(bill, {}) };
   });
-  say('the bill carries "Poori has no tax rate"', /Poori has no tax rate/.test(r1.warn) && /Set the rate in the catalogue/.test(r1.warn), '');
+  /* M40: one line, a count and Fix ›; the names and the sentence live behind Fix (billWarnFix) */
+  say('the bill carries ONE line "⚠ 1 item has no tax rate · Fix ›"', /⚠ 1 item has no tax rate/.test(r1.warn) && /till-warn-norate-fix[^>]*>Fix ›/.test(r1.warn) && !/catalogue/.test(r1.warn), r1.warn.replace(/<[^>]+>/g, ' ').trim());
   say('the slip is headed NOT A TAX INVOICE and names the line', /NOT A TAX INVOICE/.test(r1.slip) && /GST charged on: Poori/.test(r1.slip) && !/>TAX INVOICE</.test(r1.slip), '');
   say('place of supply prints with its state name', /29 Karnataka/.test(r1.slip), '');
 
@@ -49,17 +50,40 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(70) + '· ' + (d
     return { clash: clash, warn: billWarnHTML() };
   });
   say('Tamil Nadu address + 29 GSTIN is caught, in words with the fix', !!r2.clash && /Karnataka/.test(r2.clash.words) && /Tamil Nadu/.test(r2.clash.words) && /Correct the address or the GSTIN/.test(r2.clash.fix), r2.clash && r2.clash.words);
-  say('the cashier sees it on the bill before paying', /till-warn-state/.test(r2.warn), '');
-  const r2b = await p.evaluate(async () => {
-    var said = null; var realSay = window.say;
+  say('the cashier sees ONE line "⚠ GSTIN state ≠ address · Fix ›" before paying', /till-warn-state/.test(r2.warn) && /⚠ GSTIN state ≠ address/.test(r2.warn) && /till-warn-state-fix/.test(r2.warn) && !/Tamil Nadu/.test(r2.warn), r2.warn.replace(/<[^>]+>/g, ' ').trim());
+
+  console.log('\n── M41 · a details mismatch never costs a sale; the self-contradicting TAX INVOICE still never goes out');
+  /* the sale is driven through the real finish(); HOST.bill is the one stub (no disk, no network) and hands the body back as the bill */
+  const sell = (cart) => p.evaluate(async (cart) => {
+    var said = null, saved = null, realSay = window.say, realHost = HOST;
     window.say = function (m, t) { said = { m: m, t: t }; }; window.tillStopped = async function () { return false; };
-    CART = [{ item_id: 'x', name: 'Dosa', unit: 'plate', price: 100, qty: 1, gst_rate: 5 }];
+    window.autoPrint = function () {}; window.load = function () {}; window.loadQuick = function () {}; window.menuFresh = function () {};
+    HOST = Object.assign({}, realHost || {}, { bill: async function (body) { saved = Object.assign({ no: 'C5/26-27/0009', at: new Date().toISOString() }, body); return { ok: true, bill: saved }; } });
+    CART = cart;
     try { await finish(); } catch (e) { said = said || { m: 'threw ' + e.message }; }
-    window.say = realSay;
-    return { said: said, last: window.LAST };
+    window.say = realSay; HOST = realHost;
+    var sw = document.getElementById('slipwarn'), dlg = document.getElementById('slipdlg');
+    var out = { said: said, saved: saved ? { not_invoice: saved.not_invoice, kind: saved.kind, tax: saved.tax } : null,
+                slip: (document.getElementById('slipbox') || {}).innerHTML || '', note: sw && !sw.hidden ? sw.textContent : '' };
+    try { if (dlg && dlg.open) dlg.close(); } catch (e) {}
+    return out;
+  }, cart);
+  const r2b = await sell([{ item_id: 'x', name: 'Dosa', unit: 'plate', price: 100, qty: 1, gst_rate: 5 }]);
+  say('a TAXED bill with the clash is SAVED — no refusal dialog', !!r2b.saved && !(r2b.said && /cannot be a tax invoice/.test(r2b.said.m || r2b.said.t || '')), JSON.stringify(r2b.said || r2b.saved));
+  say('it is recorded as not a tax invoice (not_invoice: shop_details)', r2b.saved && r2b.saved.not_invoice === 'shop_details' && r2b.saved.tax > 0, JSON.stringify(r2b.saved));
+  say('the paper says BILL — NOT A TAX INVOICE, never TAX INVOICE', /BILL — NOT A TAX INVOICE/.test(r2b.slip) && !/>TAX INVOICE</.test(r2b.slip), '');
+  say('the dialog says it in ONE line with Fix ›, outside the printed slip', /Not a tax invoice — shop details disagree/.test(r2b.note) && /Fix ›/.test(r2b.note) && !/shop details disagree/.test(r2b.slip), r2b.note);
+  const r2c = await sell([{ item_id: 'y', name: 'Poori', unit: 'plate', price: 50, qty: 1, gst_rate: null }]);
+  say('a bill that charges NO tax saves as a plain bill and says nothing about the clash', !!r2c.saved && !r2c.saved.not_invoice && !r2c.note, JSON.stringify(r2c.saved) + ' ' + r2c.note);
+  const r2d = await p.evaluate(async () => {
+    var said = null, called = false, realSay = window.say, realHost = HOST, realCBTax = window.CBTax;
+    window.say = function (m) { said = m; }; HOST = Object.assign({}, realHost || {}, { bill: async function () { called = true; return { ok: true, bill: {} }; } });
+    window.CBTax = undefined; CART = [{ item_id: 'x', name: 'Dosa', unit: 'plate', price: 100, qty: 1, gst_rate: 5 }];
+    try { await finish(); } catch (e) { said = said || ('threw ' + e.message); }
+    window.CBTax = realCBTax; window.say = realSay; HOST = realHost;
+    return { said: said, called: called };
   });
-  say('finish() refuses to issue the tax invoice and says why', !!r2b.said && /disagree/.test(r2b.said.m || ''), r2b.said && String(r2b.said.m).slice(0, 80));
-  say('and no bill was made', !r2b.last, '');
+  say('no invoice engine is still no sale', /Prices cannot be worked out/.test(r2d.said || '') && !r2d.called, String(r2d.said).slice(0, 60));
 
   console.log('\n── BF3 / BF8 · modifiers and the order type are on the paper');
   const r3 = await p.evaluate(() => {
