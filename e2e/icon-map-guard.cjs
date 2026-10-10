@@ -25,7 +25,7 @@ const till = read('public/till.html');
 const seen = {};
 (till.match(/\{ id: '[\w-]+',\s+icon: '[^']+'/g) || []).forEach((m) => {
   const id = /id: '([\w-]+)'/.exec(m)[1], ic = /icon: '([^']+)'/.exec(m)[1].replace(/️/g, '');
-  const DOORS = { labs: 'pricing', pricing: 'labs', dayreport: 'today', today: 'dayreport', check: 'alerts', alerts: 'check' };   // a rail op and the Menu section it opens: one meaning
+  const DOORS = { labs: 'pricing', pricing: 'labs', dayreport: 'today', today: 'dayreport', check: 'alerts', alerts: 'check', expense: 'moremoney', moremoney: 'expense' };   // a rail op and the Menu section it opens: one meaning
   if (seen[ic] && DOORS[seen[ic]] !== id) bad('till op icon ' + ic + ' used by both ' + seen[ic] + ' and ' + id); else if (!seen[ic]) seen[ic] = id;
 });
 

@@ -16,7 +16,11 @@ The guard reads the table below: **an icon in two rows, or a meaning with two ic
 | Today's sales report | 📊 | till menu, Bills dialog | Day report |
 | Notifications / what needs you | 🔔 | till rail | Check |
 | Counter health | 🩺 | till menu, line grid | Counter health |
-| Labs | 🧪 | till rail | Labs |
+| Labs | 🧪 | till menu (Lab section) | Labs |
+| Expense register | 💰 | till rail, menu section | Expense |
+| Layout: Desktop | 💻 | till rail (layout switch) | Layout: Desktop |
+| Layout: Tablet | ▭ | till rail (layout switch) | Layout: Tablet |
+| Layout: Phone | 📱 | till rail (layout switch) | Layout: Phone |
 | To do | ☑ | till menu | To do |
 | Customer screen | 📺 | till menu | Customer screen |
 | Read the shop again | ↻ | till menu, Start the day row | Read the shop again |
