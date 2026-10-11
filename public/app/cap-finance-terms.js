@@ -106,6 +106,7 @@ async function ftLoad(quiet) {
   var list = api('crmParties').then(function (r) { return { r: r }; }, function (e) { return { e: e }; });
   var a = await terms, b = await list;
   if (g !== FT.gen) return;
+  if ((a.e && a.e.status === 404) || (b.e && b.e.status === 404 && !a.r)) { finOff(); return; }   /* the Ledger is off (M212) */
   if (a.r) { FT.t = a.r; FT.state = 'ready'; } else { FT.state = 'error'; }
   if (b.r) { FT.parties = ((b.r.parties) || []).filter(function (p) { return p.roles && p.roles.customer && p.kind !== 'walk-in'; }); FT.pstate = 'ready'; } else { FT.pstate = 'error'; }
   ftShopPaint(); if (FT.api) FT.api.refresh();

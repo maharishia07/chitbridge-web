@@ -1,0 +1,35 @@
+/* page-skeleton.css — THE STANDARD SMALL-APP PAGE: left sidebar (app name + icon · sections · Collapse) + a full-width main pane + a list that fills the window.
+   Drawn by CBFrame.mount({ skeleton }) (app/page-frame.js); the same shape CB Finance / CB CRM / CB Accounts wear. Every colour is a token with the Cream fallback. */
+html.cbsk,html.cbsk body{margin:0;height:100%}
+.cbsk .app{display:flex;height:calc(100vh - var(--cbk-h,0px));overflow:hidden;position:relative}
+.cbsk .side{width:232px;flex-shrink:0;height:100%;background:var(--side,#f4ecdc);border-right:1px solid var(--line-side,#e2d6bc);display:flex;flex-direction:column;transition:width .2s ease}
+.cbsk .side.collapsed{width:68px}
+.cbsk .side.collapsed .label{display:none}
+.cbsk .side.collapsed .nav-chev{transform:rotate(180deg)}
+.cbsk .brand{height:56px;padding:0 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line-side,#e2d6bc)}
+.cbsk .logo{width:32px;height:32px;flex-shrink:0;border-radius:8px;background:var(--accent,#1f5f5b);color:var(--accent-ink,#fbf6ec);display:flex;align-items:center;justify-content:center}
+.cbsk .brand-name{font-family:var(--serif,'Source Serif 4',Georgia,serif);font-size:19px;font-weight:700;white-space:nowrap}
+.cbsk .nav{flex-grow:1;overflow-y:auto;padding:10px 8px;display:flex;flex-direction:column;gap:2px}
+.cbsk .nav-btn{width:100%;height:44px;flex-shrink:0;display:flex;align-items:center;gap:12px;padding:0 12px;border:none;border-radius:8px;background:transparent;color:var(--ink-2,#3d3527);font-size:14px;font-weight:500;text-align:left;white-space:nowrap;text-decoration:none}
+.cbsk .nav-btn:hover{background:var(--hover-nav,#ece1c9)}
+.cbsk .nav-btn.active{background:color-mix(in srgb,var(--accent,#1f5f5b) 14%,var(--side,#f4ecdc));color:var(--accent-text,var(--accent,#1f5f5b));font-weight:700;box-shadow:inset 3px 0 0 var(--accent,#1f5f5b)}
+.cbsk .nav-chev{transition:transform .2s ease}
+.cbsk .side-foot{padding:8px;border-top:1px solid var(--line-side,#e2d6bc)}
+.cbsk .side-foot .nav-btn{font-size:13px;color:var(--muted-2,#5c5240)}
+.cbsk .side svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.cbsk .main{flex-grow:1;min-width:0;height:100%;display:flex;flex-direction:column;overflow:hidden}
+.cbsk .main > #shell{flex:0 0 auto}
+.cbsk .screen{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column}
+.cbsk .screen > #emp,.cbsk .screen > #nw{flex:1 1 auto;min-height:0;padding:16px 20px 20px;overflow:auto}
+.cbsk #emp .emp-list,.cbsk #nw .nw-list{min-height:0;flex:1}
+.cbsk #nw .nw-body{min-height:0;overflow:auto}
+@media (max-width:760px){
+  .cbsk .side{width:64px}
+  .cbsk .side .label,.cbsk #toggleNav{display:none}
+  .cbsk .brand{padding:0 15px}
+  .cbsk .screen > #emp,.cbsk .screen > #nw{padding-left:12px;padding-right:12px}
+}
+@media (prefers-reduced-motion:reduce){.cbsk *{transition:none !important}}
+/* the shell's header sits in the main pane, above the screen — not as the full-window overlay it is on a page without a skeleton */
+.cbsk #shell.cbsh.full{position:static;inset:auto;display:block;background:transparent;z-index:auto}
+.cbsk #shell .cbsh-work:empty{display:none}

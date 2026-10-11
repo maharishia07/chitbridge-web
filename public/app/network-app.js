@@ -57,10 +57,10 @@
   /* ── frame of the page: the tab strip and the one place a tab draws ── */
   function paint() {
     var tabs = [['mine', T('My network')], ['offers', T('Offers')], ['design', T('Design')]];
-    N.el.innerHTML = '<div class="nw-tabs" role="tablist" data-testid="nw-tabs">' + tabs.map(function (t) {
+    N.el.innerHTML = (N.o.sidebar ? '' : '<div class="nw-tabs" role="tablist" data-testid="nw-tabs">' + tabs.map(function (t) {
       var no = t[0] === 'design' && N.may.ok === false;
       return '<button type="button" role="tab" class="nw-tab' + (N.tab === t[0] ? ' on' : '') + (no ? ' no' : '') + '" data-tab="' + t[0] + '" data-testid="nw-tab-' + t[0] + '" aria-selected="' + (N.tab === t[0]) + '">' + esc(t[1]) + '</button>';
-    }).join('') + '</div><div class="nw-body" id="nw_body" data-testid="nw-body"></div><dialog class="sheet" id="nw_sheet" data-testid="nw-sheet"></dialog>';
+    }).join('') + '</div>') + '<div class="nw-body" id="nw_body" data-testid="nw-body"></div><dialog class="sheet" id="nw_sheet" data-testid="nw-sheet"></dialog>';
     Array.prototype.forEach.call(N.el.querySelectorAll('.nw-tab'), function (b) { b.onclick = function () { N.tab = b.getAttribute('data-tab'); paint(); }; });
     var d = $('nw_sheet');
     d.addEventListener('cancel', function (e) { e.preventDefault(); closeSheet(); });
@@ -176,6 +176,7 @@
     return load().then(paint, paintFail);
   }
   function reload() { return load().then(paint, paintFail); }
-  function mount(el, o) { N.el = el; N.o = o || {}; start(); return { reload: reload }; }
+  function go(tab) { if (N.tab !== tab) { N.tab = tab; if (N.el.querySelector('#nw_body')) paint(); } }   /* the page's sidebar picks the section; the in-page tab strip is for a page without one */
+  function mount(el, o) { N.el = el; N.o = o || {}; start(); return { reload: reload, go: go }; }
   root.CBNetworkApp = { mount: mount };
 })(typeof window !== 'undefined' ? window : globalThis);
