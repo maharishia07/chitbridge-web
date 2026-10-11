@@ -6176,6 +6176,17 @@ async function _chUnbind(id){
   catch(e){ toast((e&&e.message)||'Could not unbind that.', true); }
 }
 
+/* S2 — the owner's SHOWCASE chooser: the registered templates (app/showcase-templates.js), one tap to choose (saved as the policy flag
+   showcase_template via setPolFlag — one source), and the live preview is the shop's own page in a frame (shop.html ?showcase=). */
+function showcaseCard(){
+  if(typeof CBShowcase==='undefined') return '';
+  var cur=((_POL&&_POL.flags)||{}).showcase_template||CBShowcase.DEFAULT, id=(SESSION&&(SESSION.user_id||SESSION.bridge_id))||'';
+  var btn=Object.keys(CBShowcase.TEMPLATES).map(function(n){ var t=CBShowcase.TEMPLATES[n]; return '<button class="btn'+(n===cur?' primary':'')+'" data-testid="sc-pick" data-name="'+esc(n)+'" onclick="scPick(this.dataset.name)">'+esc(t.vertical+' · '+t.template)+'</button>'; }).join(' ');
+  return '<div style="'+_CARD+';margin-top:10px" id="scard"><div class="sec" style="margin:0 0 6px">'+tx('Your shop window')+'</div><div style="display:flex;gap:6px;flex-wrap:wrap">'+btn+'</div>'
+    +(id?'<iframe title="'+tx('Preview')+'" data-testid="sc-preview" src="/shop.html?s='+encodeURIComponent(id)+'&preview=1&showcase='+encodeURIComponent(cur)+'" style="width:100%;max-width:390px;height:560px;border:1px solid var(--line);border-radius:12px;margin-top:10px"></iframe>':'')+'</div>';
+}
+async function scPick(n){ await setPolFlag('showcase_template',n); paintShowcase(); }
+function paintShowcase(){ var h=document.getElementById('scard'); if(h) h.outerHTML=showcaseCard(); }
 function policyFlagsCard(){ loadPolicy(); return '<div style="'+_CARD+';margin-top:10px" id="polflags">'+policyFlagsInner()+'</div>'; }
 function policyFlagsInner(){
   var rows=POLICY_FLAGS.map(function(def){ return '<div style="display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)">'

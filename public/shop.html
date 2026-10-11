@@ -73,6 +73,7 @@
 <script src="engine/money.js"></script>   <!-- ⭐ the one rounder, BEFORE cart.js — it has no copy of its own (2026-09-28) -->
 <script src="app/cart.js"></script>
 <script src="app/step-flow.js"></script>
+<script src="app/showcase-templates.js"></script>   <!-- the shop's chosen showcase template (S2) -->
 <script>
 var API = (new URLSearchParams(location.search).get('api')) || 'https://chitbridge-api-production.up.railway.app';
 /**
@@ -696,6 +697,17 @@ function shopPickPaint(listOnly){
   if(!listOnly){ var c=el('p_cart'); if(c) c.innerHTML=shopCartBarHtml(); }
 }
 function shopPickSearch(q){ if(_CART) _CART.search(q); shopPickPaint(true); }
+/* S2 — the showcase's behaviour: share (device sheet, else copy) · search · category chips · Add → the item's own page */
+function scWire(c){
+  var root=document.querySelector('.sc'); if(!root) return;
+  root.addEventListener('click',function(e){
+    var t=e.target.closest('[data-sc],[data-sc-cat],[data-sc-add]'); if(!t) return;
+    if(t.dataset.scAdd){ location.href=location.pathname+'?s='+encodeURIComponent(BRIDGE)+'&item='+encodeURIComponent(t.dataset.scAdd); return; }
+    if(t.dataset.scCat!==undefined){ root.querySelectorAll('[data-item]').forEach(function(n){ n.hidden=!!t.dataset.scCat&&n.dataset.cat!==t.dataset.scCat; }); return; }
+    if(t.dataset.sc==='share'||t.dataset.sc==='copy'){ var u=c.shop.url||location.href; if(t.dataset.sc==='share'&&navigator.share){ navigator.share({title:c.shop.name,url:u}).catch(function(){}); } else if(navigator.clipboard){ navigator.clipboard.writeText(u).then(function(){ t.title='Link copied'; }); } }
+  });
+  var q=root.querySelector('[data-sc=search]'); if(q) q.addEventListener('input',function(){ var v=q.value.trim().toLowerCase(); root.querySelectorAll('[data-item]').forEach(function(n){ n.hidden=!!v&&n.textContent.toLowerCase().indexOf(v)<0&&(n.querySelector('img')?String(n.querySelector('img').alt).toLowerCase().indexOf(v)<0:true); }); });
+}
 function render(data){
   setTimeout(shopAskStock, 1500);   /* ask the store's connector for fresh stock once per open */
   if(_ONLY){ data = Object.assign({}, data, { finishes: [], items: (data.items||[]).filter(function(p){ return String(p.item_id||(p.item&&p.item.item_id)||'')===_ONLY; }) }); }
@@ -721,6 +733,16 @@ function render(data){
     var vizBadge=viz.enabled?'<div style="margin:0 0 9px;font-size:11.5px;color:#6a44a8;background:#F0EAF9;border:1px solid #e3d5f5;border-radius:8px;padding:6px 10px;display:inline-block">✨ '+esc(viz.label||'Scan your home')+' — see it on your wall <span style="color:#9aa3a7">· from '+esc(f.title||'the brand')+'</span></div>':'';
     finHtml += '<div class="sechd">🎨 '+esc(f.title||f.collection||'Designer finishes')+'</div>' + vizBadge + (f.items||[]).map(function(it){ var idx=_FIN.length; _FIN.push({source:f.source,it:it,rules:(f.experience&&f.experience.rules)||{}}); return finishCard(it,cur,idx,viz.enabled); }).join('');
   });
+  /* ⭐ S2 — THE SHOWCASE: when the shop chose a template (shop.showcase.template) or the owner previews one (?showcase=<name>), the
+     range is drawn by the registered template from the one data contract. An item's Add opens the item's own page (?item=), which
+     already carries the cart. Nothing chosen → the page below, unchanged. */
+  var _scName=(new URLSearchParams(location.search).get('showcase'))||((data.shop&&data.shop.showcase&&data.shop.showcase.template)||'');
+  if(!_ONLY && _scName && window.CBShowcase && CBShowcase.TEMPLATES[_scName]){
+    var _scc=CBShowcase.contractOf(data,{owner:_PREVIEW,url:location.href.split('#')[0].replace(/[?&]showcase=[^&]*/,'')});
+    el('app').innerHTML=CBShowcase.render(_scc,{template:_scName,money:(window.CBLocale&&CBLocale.money)?CBLocale.money:null})+supLinkHtml();
+    scWire(_scc);
+    return;
+  }
   var prods=(data.items||[]);
   var prodHtml = productListHtml(data, cur);
   var enq = '<div class="enq">Order with your phone or email — no account needed.</div>';
