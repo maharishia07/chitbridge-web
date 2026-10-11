@@ -31,12 +31,34 @@ async function finLoad(quiet) {
     FIN.state = 'ready'; FIN.err = null;
   } catch (e) {
     if (g !== FIN.gen) return;
+    if (e && e.status === 404) { finOff(); return; }   /* the Ledger is off for this shop (M212) */
     FIN.state = e && e.status === 403 ? 'denied' : 'error'; FIN.err = e;
     if (FIN.state === 'denied') { finDenied(); return; }
   }
   if (FIN.api) FIN.api.refresh();
 }
 function finRetry() { finLoad(); }
+
+/** M212 - the Ledger is off (books answer 404): one sentence and the owner's switch (CBLedger, the same words, confirm and call as CB Accounts and Settings);
+ *  anyone else sees it greyed with whom to ask - the server refuses a non-owner anyway. Both tabs (Collections, Terms) land here. */
+function finOff() {
+  var s = document.getElementById('screen'); if (!s) return;
+  var owner = typeof SESSION !== 'undefined' && SESSION && SESSION.role === 'entity';
+  s.className = 'screen';
+  s.innerHTML = '<div class="card" data-testid="fin-off"><h2>' + esc(tx('Your ledger is off')) + '</h2>'
+    + '<button type="button" class="act" id="fin_on" data-testid="fin-turn-on"' + (owner ? '' : ' disabled aria-disabled="true"') + '>' + esc(tx('Turn on')) + '</button>'
+    + (owner ? '' : '<p data-testid="fin-off-why">' + esc(tx('Ask the owner to switch it on')) + '</p>') + '</div>';
+  var b = document.getElementById('fin_on');
+  if (owner) b.onclick = function () {
+    CBLedger.run(true, {
+      ask: confirmAsk,
+      working: function () { b.disabled = true; b.textContent = tx('Working…'); },
+      call: function (on) { return CBLedger.call({ api: api }, on); },
+      done: function () { start(); },
+      failed: function (e) { b.disabled = false; b.textContent = tx('Turn on'); toast(tx('Could not switch it on.') + ' ' + (e && e.status === 403 ? tx('Only the owner may do this.') : tx('Try again.'))); }
+    });
+  };
+}
 
 /** the server said who may see it: the sentence, greyed, and no list — the server refuses anyway */
 function finDenied() {
