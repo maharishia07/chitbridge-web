@@ -44,6 +44,10 @@ for (const name of Object.keys(SC.TEMPLATES)) {
   ok(name + ': showcase-only item has no price', !/Gold border[\s\S]{0,200}₹800/.test(html) && html.indexOf('₹800') < 0);
   ok(name + ': a priced item paints through the money formatter', html.indexOf('₹1200') > 0);
   ok(name + ': item text is escaped', html.indexOf('<b>rose</b>') < 0 && html.indexOf('Rani <Cards>') < 0 && html.indexOf('Rani &lt;Cards&gt;') > 0);
+  ok(name + ': S3-4 share reads "⤴ Share", labelled, 44px', /data-sc="share"[^>]*>⤴ Share<\/button>/.test(html) && html.indexOf('aria-label="Share"') > 0 && /\.sc-ic\{min-width:44px;height:44px/.test(html));
+  ok(name + ': S3-3 header shows place, Call and WhatsApp; no hours chip when unset', /Chennai/.test(html) && />📞 Call</.test(html) && />💬 WhatsApp</.test(html) && !/class="sc-hrs"/.test(html));
+  ok(name + ': S3-1 a photo-less item gets a designed initial tile, never an empty box', !/<span class="sc-(ph|th)"><\/span>/.test(html) && (/sc-none" aria-hidden="true">P</.test(html) || name.indexOf('food') > 0 || name.indexOf('services') > 0));
+  ok(name + ': S3-2 names wrap to 2 lines, never nowrap-truncated', /line-clamp:2/.test(html) && !/\.sc-cap b\{[^}]*nowrap/.test(html));
   ok(name + ': no "Be found" card for a visitor', html.indexOf('data-sc="found"') < 0);
   ok(name + ': 390px — no fixed width over 390', !/(?:^|[^-a-z])width:\s*([4-9]\d\d|\d{4,})px/.test(html.replace(/max-width:\d+px/g, '')));
 }
