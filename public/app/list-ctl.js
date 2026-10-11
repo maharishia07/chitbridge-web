@@ -563,7 +563,9 @@
     var h = '';
     if (state === 'loading') { box.innerHTML = '<div class="cbl-grid" role="grid" aria-busy="true">' + (s.view === 'grid' ? hdr : '') + '</div>' + new Array(7).join('<div class="cbl-skel"></div>'); setHdrH(I, box); return; }
     if (state === 'error') {
-      var er = val(o.error) || {};
+      /* ⚠️ a caller may hand a plain SENTENCE (cap-finance did). A string has a native .sub() method (String.prototype.sub),
+         so er.sub printed "function sub() { [native code] }" on screen. A string is the title; only an object has parts. */
+      var er = val(o.error); er = (typeof er === 'string') ? { title: er } : (er || {});
       box.innerHTML = '<div class="cbl-state" role="alert" data-testid="cbl-error-' + esc(I.key) + '"><div class="big">' + esc(er.title || T(I, 'The list could not load.')) + '</div>' + esc(er.sub || T(I, 'Nothing was lost. Try again in a moment.')) + '<br><button type="button" class="cbl-btn" data-cbl-retry>' + esc(T(I, 'Try again')) + '</button></div>';
       return;
     }
@@ -575,7 +577,7 @@
       } else if (remote(I) && narrowed) {
         box.innerHTML = '<div class="cbl-state" data-testid="cbl-nomatch-' + esc(I.key) + '"><div class="big">' + esc(T(I, 'Nothing matches.')) + '</div>' + esc(R.q ? '“' + R.q + '” ' + T(I, 'matches nothing here.') : T(I, 'These filters match nothing here.')) + '<br><button type="button" class="cbl-btn" data-cbl-clear>' + esc(T(I, 'Clear search and filters')) + '</button></div>' + footHTML(I);
       } else {
-        var em = val(o.empty) || {};
+        var em = val(o.empty); em = (typeof em === 'string') ? { title: em } : (em || {});   /* same trap as er above */
         box.innerHTML = '<div class="cbl-state" data-testid="cbl-empty-' + esc(I.key) + '"><div class="big">' + esc(em.title || T(I, 'Nothing recorded yet.')) + '</div>' + esc(em.sub || '') + '</div>' + footHTML(I);
       }
       return;
