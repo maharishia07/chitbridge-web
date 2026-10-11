@@ -10,6 +10,7 @@
      Screens: app/network-app.js. Which actions are open is the server's answer (GET /api/network-offers → may_design); a refused one is greyed WITH its sentence.
      The Network Lab (network-design.html) sketches on sample data and posts nothing. The public shopfront that used to live here is network-shop.html
      (?bridge=… still lands there). -->
+<link rel="stylesheet" href="/app/page-skeleton.css">   <!-- the standard page skeleton (sidebar + main pane), drawn by CBFrame -->
 <style>
 :root{ --ink:#2a2418; --muted:#5c5240; --line:#e6dcc6; --line-3:#d8ccb0; --surface:#fffdf8; --ground:#fbf6ec; --hover:#f3ead7; --accent:#1f5f5b; --accent-ink:#fbf6ec;
   --green-t:#E8F4ED; --green-b:#A9D3BC; --green-d:#0D4A2B; --amber-t:#FDF3DC; --amber-b:#EFD39A; --amber-i:#7A5205; --red-i:#8E3517;
@@ -77,9 +78,14 @@ dialog.sheet .mx{position:absolute;right:8px;top:8px;border:0;background:transpa
   if (q.get('bridge')) { location.replace('/network-shop.html' + location.search); return; }
   var API = q.get('api') || (window.CBShell && CBShell.apiBase && CBShell.apiBase()) || 'https://chitbridge-api-production.up.railway.app';
   var host = document.getElementById('nw');
-  var frame = CBFrame.mount({ app: 'network', kural: 'network', work: host });
+  var app, frame = CBFrame.mount({ app: 'network', kural: 'network', work: host,
+    skeleton: { name: 'Network', icon: 'M12 5a2 2 0 1 0 0 .01M5 19a2 2 0 1 0 0 .01M19 19a2 2 0 1 0 0 .01M12 7v5M12 12l-6 5M12 12l6 5', active: 'mine',
+      sections: [{ k: 'mine', label: 'My network', icon: 'M12 5a2 2 0 1 0 0 .01M5 19a2 2 0 1 0 0 .01M19 19a2 2 0 1 0 0 .01M12 7v5M12 12l-6 5M12 12l6 5' },
+        { k: 'offers', label: 'Offers', icon: 'M20 12l-8 8-8-8V4h8zM8.5 8.5h.01' },
+        { k: 'design', label: 'Design', icon: 'M4 20l4-1 11-11-3-3L5 16zM14 7l3 3' }],
+      onSection: function (k) { if (app) app.go(k); } } });
   if (!frame.token) { host.innerHTML = '<div class="empty" data-testid="nw-signin"><div class="t">Sign in above</div></div>'; return; }
-  CBNetworkApp.mount(host, { token: frame.token, base: API, onEnded: function () { CBFrame.ended(); } });
+  app = CBNetworkApp.mount(host, { token: frame.token, base: API, sidebar: true, onEnded: function () { CBFrame.ended(); } });
 })();
 </script>
 </body>

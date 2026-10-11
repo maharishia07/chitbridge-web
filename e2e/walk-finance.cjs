@@ -40,6 +40,7 @@ W.run('finance', async (w) => {
     if (p === '/api/books/dues') {
       S.asked.push(u.search);
       if (S.mode === 'denied') return J(r, 403, { message: 'Only the owner may see collections.' });
+      if (S.mode === 'off') return J(r, 404, { message: 'Books is not switched on' });
       if (S.mode === 'broken') return J(r, 500, { message: 'database timeout at 10.0.0.5' });
       const asOf = new Date().toISOString().slice(0, 10), plain = books.dues(S.rows.map((x) => books.dueRow({ party_no: x.party_no, name: x.name, party_id: x.party_id, side: x.side, balance_minor: x.balance_minor, oldest_due: x.oldest_due, buckets: x.buckets })), { asOf });
       C.check('GET', p, 200, plain, 'walk-finance: ');   /* the contract holds the plain answer; the finance fields (credit limit, over_limit, interest, last remind) are served beside it */
@@ -112,6 +113,16 @@ W.run('finance', async (w) => {
     S.rows = ROWS.filter((x) => x.side === 'supplier'); await open('[data-testid="fin-list"]'); await page.waitForTimeout(600);
     const t = await body(), n = await rows(); S.rows = ROWS;
     return { ok: /Nobody owes you money/.test(t) && n === 0, saw: (/Nobody owes you money/.test(t) ? 'the empty sentence showed' : 'no empty sentence') + '; ' + n + ' rows' };
+  });
+  await w.step('F13', 'the ledger is off (M212) -> "Your ledger is off" and the owner switch (Turn on), on Collections AND on Terms; Turn on asks first and sends nothing until yes', async () => {
+    S.mode = 'off'; await open('[data-testid="fin-off"]');
+    const t1 = await txt('[data-testid="fin-off"]'), on1 = await page.locator('[data-testid="fin-turn-on"]').isEnabled().catch(() => false);
+    const w0 = S.writes.length;
+    await page.click('[data-testid="fin-turn-on"]'); await page.waitForTimeout(500);
+    const asked = /Switch the Ledger on/.test(await body()), sent = S.writes.length - w0;
+    await page.goto(base + '/finance.html#/terms'); await page.waitForSelector('[data-testid="fin-off"]', { timeout: 20000 }).catch(() => {}); await page.waitForTimeout(400);
+    const t2 = await txt('[data-testid="fin-off"]'); S.mode = 'ok';
+    return { ok: /Your ledger is off/.test(t1) && on1 && asked && sent === 0 && /Your ledger is off/.test(t2), saw: '"' + t1 + '"; enabled ' + on1 + '; asked first ' + asked + '; writes before yes ' + sent + '; Terms: "' + t2 + '"' };
   });
   await w.step('M43', 'the stand-in answered every /api/books call as the API contract says', async () => { const [ok, saw] = C.finish(); return { ok, saw }; });
   w.note('F12', 'Batch Remind (select parties -> Remind -> the queue sheet, one Remind after another) and a Remind that reaches the message composer', 'needs the chit + rail-thread stand-in (walk-rail-two-sided); not asserted here');
