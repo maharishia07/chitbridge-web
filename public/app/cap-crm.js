@@ -15,9 +15,9 @@
  */
 'use strict';
 
-/* ── the CRM API (chitbridge-api PR #15). The party routes it also calls (custAdd · supAdd · custGroup · supPatch · supDel · entitySearch) are CB_PARTY_EP in accounts-shell.js ── */
+/* ── the CRM API (chitbridge-api PR #15). The party routes it also calls (custAdd · supAdd · custGroup · supPatch · supDel · entitySearch
+   · crmParties · booksTerms — shared with CB Finance) are CB_PARTY_EP in accounts-shell.js ── */
 var CRM_EP = {
-  crmParties:    { m: 'GET',    p: '/api/crm/parties',                     ok: 'y' },   // { parties:[…], alerts:{…} } — one read, no per-row fetch
   crmParty:      { m: 'GET',    p: '/api/crm/parties/:id',                 ok: 'y' },   // the list row + contacts · prefs · followups · timeline_head …
   crmTimeline:   { m: 'GET',    p: '/api/crm/parties/:id/timeline',        ok: 'y' },   // ?kind=&q=&before= — server-paged, 50 a page
   crmLog:        { m: 'POST',   p: '/api/crm/parties/:id/interactions',    ok: 'y' },   // 503 "not migrated yet" before b276

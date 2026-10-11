@@ -38,6 +38,9 @@ var CB_PARTY_EP = {
   supDel:          {m:"DELETE",p:"/api/relationships/suppliers/:id", ok:"✓"},
   supPatch:        {m:"PATCH", p:"/api/relationships/suppliers/:id", ok:"y"},       // Stage B — owner-side fields (nickname/preferred/notes/category)
   entitySearch:    {m:"GET",  p:"/api/entities/search",                    ok:"✓"},   // ?q= live recipient lookup (name/bridge_id)
+  /* ⭐ read by BOTH CB CRM and CB Finance — one name, one place (the registry guard fails a second declaration) */
+  crmParties:      {m:"GET",  p:"/api/crm/parties",                        ok:"y"},   // { parties:[…], alerts:{…} } — one read, no per-row fetch; terms.customer per party
+  booksTerms:      {m:"GET",  p:"/api/books/terms",                        ok:"y"},   // ?party_id&side → { terms_migrated, may_set, why_not, default, party, events } — CB Finance sets, CRM reads
 };
 
 /* ── the chit sheet's three calls (chit-sheet.js reads one chit, moves its step, says what a bill's goods are for) —

@@ -187,6 +187,26 @@ function bkMoneyRead(idOrEl) {
 }
 function bkDate(d) { if (!d) return '—'; try { return CBLocale.date(d); } catch (_) { return String(d).slice(0, 10); } }
 function bkToday() { return new Date().toISOString().slice(0, 10); }
+/* ── CB Finance · Terms (F2): the words for a term and for a change to one — read by the Finance Terms tab AND the CRM record (one wording, two screens) ── */
+var BK_TERM_FIELD = { credit_days: 'Credit days', credit_limit_minor: 'Credit limit', interest: 'Interest', early: 'Early pay', allowed: 'Over limit allowed' };
+function bkTermVal(f, v, c) {
+  if (v == null || v === '') return tx('not set');
+  if (f === 'credit_limit_minor' || f === 'allowed') return bkMoney(Number(v), c);
+  if (f === 'interest' || f === 'early') {
+    try { var o = typeof v === 'string' ? JSON.parse(v) : v;
+      return f === 'interest' ? (o.on ? o.rate_pct + '%' : tx('off')) + (o.grace_days ? ' · ' + txf('{n} days grace', { n: o.grace_days }) : '')
+        : o.pct + '% ' + txf('within {n} days', { n: o.within_days }); } catch (_) { return String(v); }
+  }
+  return String(v);
+}
+/** the change events the server lists (newest first): date · what · from → to */
+function bkTermEvents(list, c, tid) {
+  if (!list || !list.length) return '<div class="hint" data-testid="' + tid + '-none">' + esc(tx('No changes yet')) + '</div>';
+  return list.map(function (x, i) {
+    var f = String(x.field || '').replace(/^(customer|supplier)./, '');
+    return '<div class="kv" data-testid="' + tid + '-' + i + '"><b style="flex:0 0 96px">' + esc(bkDate(x.at)) + '</b><span>' + esc(tx(BK_TERM_FIELD[f] || f)) + ': ' + esc(bkTermVal(f, x.old, c)) + ' → ' + esc(bkTermVal(f, x.new, c)) + '</span></div>';
+  }).join('');
+}
 /** ⭐ ONE door for a failure's words: the app's verdict table (friendlyErr, app.html) first, the screen's own fallback
  *  when the server said nothing — never a second table here, never a raw message pasted into a pane. */
 function bkWhy(e, fallback) {

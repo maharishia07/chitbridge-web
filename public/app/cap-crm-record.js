@@ -273,7 +273,7 @@ function crmActionsHTML(p, rec) {
 function crmTaxMissing(p, R, cu, su) {
   var gst = (R.tax_ids || []).filter(function (t) { return t.scheme === 'GSTIN'; })[0], miss = [], where = [];
   if (!gst) { miss.push(tx('no GSTIN')); where.push(tx('Add their GSTIN with Edit.')); }
-  if (!((cu && cu.credit_days != null) || (su && su.credit_days != null))) { miss.push(tx('no credit terms')); where.push(tx('Credit terms are set in CB Finance \u2014 coming.')); }
+  if (!((cu && cu.credit_days != null) || (su && su.credit_days != null))) { miss.push(tx('no credit terms')); where.push(tx('Set them in CB Finance, under Terms.')); }
   return miss.length ? '<div class="hint" data-testid="crm-tax-missing"><b>' + esc(miss.join(' \u00b7 ')) + '</b> \u2014 ' + esc(where.join(' ')) + '</div>' : '';
 }
 function crmSec(id, title, fact, body, open) {
@@ -305,7 +305,7 @@ function crmRecordPaint(p, rec) {
   var tax = crmKV('Tax IDs', (R.tax_ids || []).map(function (t) { return esc(t.scheme) + ' <span class="mono">' + esc(t.value) + '</span>'; }).join('<br>'))
     + crmKV('State', R.state_code ? esc(R.state_code) + (R.supply_type ? ' · ' + esc(tx(CRM_SUPPLY[R.supply_type] || R.supply_type)) : '') : '')
     + (cu ? crmKV('Credit you give', days(cu)) : '') + (su ? crmKV('Credit you get', days(su)) : '');
-  secs.push(crmSec('tax', 'Tax & terms', gst ? '<span class="mono">' + esc(gst.value) + '</span>' : '', tax + crmTaxMissing(p, R, cu, su), false));
+  secs.push(crmSec('tax', 'Tax & terms', gst ? '<span class="mono">' + esc(gst.value) + '</span>' : '', tax + crmTaxMissing(p, R, cu, su) + '<div id="crm_terms" data-testid="crm-terms"></div>', false));
   /* Customer · Supplier */
   var bf = R.billFacts || crmBillFacts([]);
   var ufact = bf.unbilled.n ? crmPlural(bf.unbilled.n, 'order not billed yet', 'orders not billed yet') + ' \u00b7 ' + bkMoney(bf.unbilled.minor, bf.unbilled.currency || CRM.currency) : '';
@@ -332,6 +332,26 @@ function crmRecordPaint(p, rec) {
     columns: crmTlCols, defaultCols: ['what', 'when', 'state', 'amount'], rowTid: function (e) { return 'crm-tl-' + e.id; }, onOpen: crmEntryOpen, next: crmEntryNext, empty: { title: tx('Nothing yet with this party.'), sub: tx('Use Log to record a call or note.') } }); }
   var led = document.getElementById('crm_ledger');
   if (led) led.innerHTML = partyBooksHTML(cu ? 'customer' : 'supplier', p.party_id, crmLedgerRow(p, rec), true);
+  if (CRM.ledger) crmTermsFill(p.party_id, cu ? 'customer' : 'supplier');
+}
+/** F2: the credit terms that apply to this party, READ-ONLY (CB Finance · Terms is the one place that sets them) + the changes made to them.
+ *  The server answers what applies (own, else the shop's) and who may change it; a login that may not sees the button greyed with the sentence. */
+async function crmTermsFill(pid, side) {
+  var el = document.getElementById('crm_terms'); if (!el) return;
+  var r; try { r = await api('booksTerms', { query: { party_id: pid, side: side } }); } catch (_) { return; }   /* ledger off / no read → the record says nothing more */
+  el = document.getElementById('crm_terms'); if (!el || !(CRM.route && CRM.route.view === 'party')) return;
+  var cur = (CRMR.p && CRMR.p.currency) || 'INR', eff = r.party && r.party.effective, from = function (x) { return x && x.from === 'shop' ? ' <span class="hint">' + esc(tx('Shop default')) + '</span>' : ''; };
+  var rows = '';
+  if (eff) {
+    rows = (eff.credit_days.value != null ? crmKV('Credit days', esc(String(eff.credit_days.value)) + from(eff.credit_days)) : '')
+      + (eff.credit_limit_minor.value != null ? crmKV('Credit limit', esc(bkMoney(eff.credit_limit_minor.value, cur)) + from(eff.credit_limit_minor)) : '')
+      + (eff.interest.value ? crmKV('Interest', esc(bkTermVal('interest', eff.interest.value, cur)) + from(eff.interest)) : '')
+      + (eff.early.value ? crmKV('Early pay', esc(bkTermVal('early', eff.early.value, cur)) + from(eff.early)) : '');
+  }
+  var can = r.may_set && r.terms_migrated, why = !r.terms_migrated ? tx('Terms arrive after the next update.') : (r.may_set ? '' : (r.why_not || ''));
+  el.innerHTML = rows + (why ? '<div class="hint" data-testid="crm-terms-why">' + esc(why) + '</div>' : '')
+    + (r.events && r.events.length ? '<div data-testid="crm-terms-events">' + bkTermEvents(r.events.slice(0, 5), cur, 'crm-terms-event') + '</div>' : '')
+    + '<a class="act sm' + (can ? '' : ' disabled') + '" data-testid="crm-terms-go" href="' + (can ? '/finance.html#/terms' : '#') + '"' + (can ? '' : ' aria-disabled="true" onclick="return false"') + '>' + esc(tx('Open Terms')) + '</a>';
 }
 /** M30-1c: after a payment, the open record's Ledger (header chip, Balance, statement) repaints from what the books now say - the Day book had the payment, this block did not */
 function crmLedgerRepaint(pid) {
