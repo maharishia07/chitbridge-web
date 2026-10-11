@@ -3484,22 +3484,10 @@ function regReset(){ REG={step:"form", name:"", email:"", busy:false, err:""}; r
 function govRows(){
   try { return (window.CBGov && CBGov.rows(govCtx())) || []; } catch (_) { return []; }
 }
-/* ⭐ THE TIME ZONE DECIDES THE COUNTRY when it names a served one (M196: en-US browser in Asia/Calcutta started an Indian shop in dollars);
-   the language tag only speaks when the zone is ambiguous. The engine's countryOf lets the tag win, so we hand it an env without
-   the tag when the zone is known — one table (CBGov.ZONES), no second one. [[feedback-country-first]] */
-function govRead(){
-  var e = CBGov.sense(), z = CBGov.regionFromZone(e.timeZone);
-  if (!(z && window.CBLocale && CBLocale.REGIONS && CBLocale.REGIONS[z])) return CBGov.read(e);
-  var c = CBGov.read({ language: '', languages: [], timeZone: e.timeZone, screenW: e.screenW, screenH: e.screenH, dpr: e.dpr,
-    coarsePointer: e.coarsePointer, uaMobile: e.uaMobile, platform: e.platform, touchPoints: e.touchPoints, online: e.online });
-  c.language = { value: String(e.language || '').split('-')[0], from: 'your browser' };   /* the zone sets the country, not the language */
-  c.languages = { value: (e.languages || []).slice(), from: 'your browser' };
-  return c;
-}
 var _govCtx = null;
 function govCtx(){
   /* ⚠️ READ ONCE. Re-deriving on every repaint would let the values move under the person while they read. */
-  try { if (!_govCtx && window.CBGov) _govCtx = govRead(); } catch (_) { _govCtx = null; }
+  try { if (!_govCtx && window.CBGov) _govCtx = CBGov.read(); } catch (_) { _govCtx = null; }
   return _govCtx;
 }
 function govPanel(){
