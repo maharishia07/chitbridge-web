@@ -35,7 +35,8 @@ W.run('finance', async (w) => {
   await ctx.route('**/api/**', async (r0) => {
     const r = C.wrap(r0);
     const q = r.request(), u = new URL(q.url()), p = u.pathname;
-    if (q.method() !== 'GET' && !/\/pay\/preview$|\/pay-preview$/.test(p)) S.writes.push(q.method() + ' ' + p);
+    /* not writes: the payment preview is a read asked with POST (the body is the question); /events/ticket only mints the shell's one-time bell-stream ticket */
+    if (q.method() !== 'GET' && !/\/pay(ments)?\/preview$|\/pay-preview$|^\/api\/events\/ticket$/.test(p)) S.writes.push(q.method() + ' ' + p);
     if (p === '/api/books/dues') {
       S.asked.push(u.search);
       if (S.mode === 'denied') return J(r, 403, { message: 'Only the owner may see collections.' });
@@ -105,7 +106,7 @@ W.run('finance', async (w) => {
   await w.step('F10', 'Collections (the read fails) -> a plain sentence to try again, never the raw server message', async () => {
     S.mode = 'broken'; await open('[data-testid="fin-list"]'); await page.waitForTimeout(600);
     const t = await body(); S.mode = 'ok';
-    return { ok: /Could not read who owes you/.test(t) && !/database timeout|10\.0\.0\.5/.test(t), saw: (/Could not read who owes you/.test(t) ? 'plain sentence' : 'NO plain sentence') + '; ' + (/database timeout|10\.0\.0\.5/.test(t) ? 'RAW MESSAGE SHOWING' : 'no raw message') };
+    return { ok: /Could not read who owes you/.test(t) && /Try again/.test(t) && !/database timeout|10\.0\.0\.5/.test(t), saw: (/Could not read who owes you/.test(t) ? 'plain sentence' : 'NO plain sentence') + '; ' + (/database timeout|10\.0\.0\.5/.test(t) ? 'RAW MESSAGE SHOWING' : 'no raw message') };
   });
   await w.step('F11', 'Collections (nobody owes us) -> "Nobody owes you money", not an empty grid', async () => {
     S.rows = ROWS.filter((x) => x.side === 'supplier'); await open('[data-testid="fin-list"]'); await page.waitForTimeout(600);
