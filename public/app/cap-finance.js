@@ -81,7 +81,7 @@ function finMount(frame) {
     key: 'fin-collect', t: tx, rows: function () { return FIN.rows; }, id: function (p) { return p.party_id; }, rowTid: function (p) { return 'fin-row-' + p.party_id; },
     columns: finCols(), defaultCols: ['party', 'due', 'age', 'limit', 'interest', 'last'], cardMax: 4, fill: false,
     head: function () { return { title: tx('Collections') }; },
-    state: function () { return FIN.state; }, error: function () { return tx('Could not read who owes you. Try again.'); }, onRetry: finRetry,
+    state: function () { return FIN.state; }, error: function () { return { title: tx('Could not read who owes you.'), sub: tx('Nothing was lost. Try again.') }; }, onRetry: finRetry,
     empty: { title: tx('Nobody owes you money') },
     group: { default: 'over', order: ['over', 'coll'], by: function (p) { return p.over_limit ? [tx('Over limit'), 'over'] : [tx('To collect'), 'coll']; },
       fig: function (rows) { return txn('{count} party', '{count} parties', rows.length) + ' · ' + bkOwes(rows.reduce(function (t, p) { return t + Number(p.balance_minor || 0); }, 0), FIN.cur); },
