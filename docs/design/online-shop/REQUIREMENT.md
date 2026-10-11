@@ -45,3 +45,11 @@ designs, "Ask about these" — no prices needed) · **Order** (restaurant, groce
 request** (bulk/hardware) · **Booking** (a date and a service). The designer shows the same bar/sheet wearing
 each face; the words and the finishing action change ("Send your enquiry" · "Place the order" · "Ask for a
 price" · "Ask for the date"), the machinery does not. Each face mints its chit kind and lands in Tasks & Orders.
+
+## Not one design — a template collection (Athi, same day, on seeing the mock)
+The mock is SEED #1, not the design. One data contract (catalogue + shop profile + exposure), many registered
+faces (kind.vertical.face@version): the shop CHOOSES its template and may mix sections. Round S2 builds the
+MECHANISM (template registry · the data contract a template receives · the chooser in the owner view · preview
+with the shop's own data) plus 3–4 seeds: gallery-first (designer/cards) · menu (food) · spec wall
+(paint/hardware) · booking (services). A template is sections, so mix-and-match is assembly, not forking.
+A couple of iterations are expected on this piece before it is called right.

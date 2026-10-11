@@ -14,9 +14,8 @@
 
 var FT = { gen: 0, state: 'loading', t: null, parties: [], pstate: 'loading', api: null, cur: 'INR' };
 var FT_EP = {
-  booksTerms:    { m: 'GET',  p: '/api/books/terms',  ok: 'y' },   // ?party_id&side → { terms_migrated, may_set, why_not, default, party, events }
+  /* booksTerms (the read) and crmParties live in accounts-shell.js CB_PARTY_EP — CRM reads them too; one name, one place */
   booksTermsSet: { m: 'POST', p: '/api/books/terms',  ok: '✓' },   // owner · { party_id?, side?, credit_days, credit_limit_minor, interest, early } — null clears
-  crmParties:    { m: 'GET',  p: '/api/crm/parties',  ok: 'y' },   // the CRM's own list read (its `terms.customer` is each party's own days and limit)
 };
 Object.assign(EP, FT_EP);
 var FT_NOT_YET = 'Terms arrive after the next update.';
