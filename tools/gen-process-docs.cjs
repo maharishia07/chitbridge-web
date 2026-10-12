@@ -136,9 +136,7 @@ let drift = 0;
 Object.keys(pages).forEach((name) => {
   const p = path.join(DIR, name);
   const want = pages[name];
-  const have = fs.existsSync(p) ? fs.readFileSync(p, 'utf8').replace(/
-/g, '
-') : null;   /* CRLF checkouts compare equal */
+  const have = fs.existsSync(p) ? fs.readFileSync(p, 'utf8').replace(/\r\n/g, '\n') : null;   /* a CRLF checkout compares equal */
   if (check) {
     if (have !== want) { drift++; console.error('  ✗ docs/process/' + name + (have == null ? ' is missing' : ' differs from flows.json')); }
   } else if (have !== want) {
