@@ -65,7 +65,8 @@ jobs:
             [ -d "$r/.git" ] && git -C "$r" config user.name "claude-round" && git -C "$r" config user.email "noreply@anthropic.com"
           done
           [ "${{ inputs.kind }}" = research ] && rm -rf ../chitbridge-api/.git || true
-      - uses: anthropics/claude-code-action@v1
+      - id: claude
+        uses: anthropics/claude-code-action@v1
         env:
           GH_TOKEN: ${{ inputs.kind == 'build' && secrets.ROUNDS_PAT || github.token }}
         with:
@@ -85,3 +86,13 @@ jobs:
 
             THE BRIEF:
             ${{ inputs.brief }}
+      # the round's transcript (the action hides it from the log): PM1's first try ended after 25 turns with nothing pushed and
+      # nothing to read — silence is the bug. Kept 7 days; tokens are masked by GitHub, the repo is public anyway.
+      - name: Keep the round's transcript
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: round-${{ inputs.name }}-transcript
+          path: ${{ steps.claude.outputs.execution_file }}
+          if-no-files-found: warn
+          retention-days: 7
