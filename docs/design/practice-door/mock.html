@@ -3,12 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Practice door — mock (CA1)</title>
-<!-- STATIC MOCK · round CA1 (2026-10-12). No network, no app code: the CB Accounts skeleton (sidebar + full-width main) with ONE
-     CBList-shaped list (three-row head: title · tools · column header; only the rows scroll; three columns shown, the rest in ⚙;
-     one card per row below 620 px by container query). Theme tokens only, every one with its Cream fallback, plus the dark
+<title>Practice door — mock (CA1b)</title>
+<!-- STATIC MOCK · round CA1, reworked CA1b (2026-10-13). No network, no app code: the CB Accounts skeleton (sidebar + full-width main)
+     with ONE CBList-shaped list (three-row head: title · tools · column header; only the rows scroll; three columns shown, the rest
+     in ⚙; one card per row below 620 px by container query). Theme tokens only, every one with its Cream fallback, plus the dark
      mapping docs/design/list-standard/index.html uses. Every figure is SAMPLE DATA shaped like the API (money in cents, Dr/Cr
      words, dates as dates); the page paints, it computes nothing. Open it in a browser at 1366 px and at 390 px.
+     CA1b (REQUIREMENT §0): the columns are OUR construct — Client · Sealed to (the hash-chained pack the client acknowledged) ·
+     Nightly says (the recompute's named findings, dated) — not Xero's insight columns; a question is a message on the chit (the
+     thread's turn says who owes a reply — no request object, no due date); the grant moves by the rail's verbs (accept · reject · end).
      What is built from this: public/practice.html (round CA3) — the list is a CBList mount, the avatar CBAvatar, the footer CBKural. -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
@@ -68,6 +71,9 @@ button{font:inherit;color:inherit;cursor:pointer} .num{font-family:var(--f-num,m
 .chip.warn::before,.chip.bad::before{content:"⚠"} button.chip.warn::after,button.chip.bad::after{content:"›";opacity:.7}
 .chip.quiet{color:var(--muted,#5E594D)}
 .chip.sel{outline:2px solid var(--blue,#2F74C9);outline-offset:1px}
+/* CBList folds the notices into ONE chip on a narrow container (list-ctl.js: "the head stays within its 30% of a phone") */
+.notes{display:contents} .fold{display:none}
+.pad.below{flex:0 1 auto;max-height:60%}
 .avatar{margin-left:auto;width:34px;height:34px;border-radius:50%;background:var(--green,#16693F);color:var(--card,#fff);display:grid;place-items:center;font-weight:700;font-size:13px}
 .tools{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;padding:6px 20px 8px}
 .search{flex:1 1 200px;display:flex;align-items:center;gap:6px;border:1px solid var(--line,#DDD6C6);background:var(--card,#fff);border-radius:9px;padding:0 10px;height:34px;color:var(--faint,#8A8374)}
@@ -90,9 +96,11 @@ button{font:inherit;color:inherit;cursor:pointer} .num{font-family:var(--f-num,m
 .pill.quiet{color:var(--muted,#5E594D);background:var(--panel,#F3EFE6)}
 .exp{width:30px;height:30px;border:1px solid var(--line,#DDD6C6);border-radius:8px;background:var(--card,#fff);display:grid;place-items:center;font-size:13px}
 .exp[aria-expanded="true"]{background:var(--blue-t,#E4EEFA);border-color:var(--blue-b,#B9D2EF);color:var(--blue-i,#174A87)}
-/* the next level: the client's own To-do rows + the CA's checks (REQUIREMENT §6), each with its button */
+/* the next level: "Audit me" in three groups — the seal chain · the nightly found · on the rail (REQUIREMENT §6), each line with its button */
 .next{display:none;background:var(--panel,#F3EFE6);border-bottom:1px solid var(--line,#DDD6C6);padding:8px 20px 12px 44px}
 .next.on{display:block}
+.grp{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted,#5E594D);padding:10px 0 2px}
+.grp:first-child{padding-top:2px}
 .line{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line-soft,#E6E0D2);font-size:14px}
 .line:last-child{border-bottom:0} .line i{font-style:normal;width:18px;text-align:center} .line .t{flex:1;min-width:0}
 .line .t b{font-family:var(--f-num,monospace);font-weight:600}
@@ -102,7 +110,7 @@ button{font:inherit;color:inherit;cursor:pointer} .num{font-family:var(--f-num,m
 .why{font-size:12.5px;color:var(--muted,#5E594D)}
 .allok{padding:14px 20px;color:var(--green-d,#0D4A2B);font-weight:600;background:var(--green-t,#E8F4ED);border-bottom:1px solid var(--green-b,#A9D3BC)}
 
-/* ── the client side (Setup › Your accountant) and a thread ── */
+/* ── the client side (Setup › Who may read your Ledger) and a thread ── */
 .pad{padding:20px;overflow-y:auto;display:flex;flex-direction:column;gap:16px}
 .card{border:1px solid var(--line,#DDD6C6);border-radius:14px;background:var(--card,#fff);padding:18px 20px;max-width:620px;display:flex;flex-direction:column;gap:10px}
 .card h2{margin:0;font:700 20px var(--f-display,sans-serif)} .card p{margin:0;color:var(--muted,#5E594D);font-size:14px}
@@ -123,10 +131,12 @@ button{font:inherit;color:inherit;cursor:pointer} .num{font-family:var(--f-num,m
 @media (max-width:760px){ .side{width:60px} .side .label,.side .n,.side-foot,.brand span{display:none} .nav button{justify-content:center;padding:0} }
 @container screen (max-width:620px){
   .cols{display:none}
-  .row{grid-template-columns:1fr 36px;grid-template-areas:"name exp" "books exp" "due exp";row-gap:4px}
-  .row .name{grid-area:name} .row .c2{grid-area:books} .row .c3{grid-area:due} .row .exp{grid-area:exp;align-self:start}
+  .row{grid-template-columns:1fr 36px;grid-template-areas:"name exp" "c2 exp" "c3 exp";row-gap:4px}
+  .row .name{grid-area:name} .row .c2{grid-area:c2} .row .c3{grid-area:c3} .row .exp{grid-area:exp;align-self:start}
   .chip.quiet{display:none} .title .chip{font-size:12.5px}
+  .fold{display:inline-flex} .notes{display:none} .notes.open{display:flex;flex:1 1 100%;flex-wrap:wrap;gap:6px}
   .next{padding-left:20px} .line{display:grid;grid-template-columns:18px 1fr;gap:4px 10px;align-items:start} .line .btn{grid-column:2;justify-self:start}
+  .line .btn + .btn{margin-top:-2px}
   .todo{flex-wrap:wrap} .todo .t{flex:1 1 100%} .todo .btn{margin-left:26px}
   .title{padding:10px 16px 6px} .tools,.rows .row,.next,.allok{padding-left:16px;padding-right:16px} .pad{padding:16px}
   .card .kv{grid-template-columns:1fr} .compose{flex-direction:column}
@@ -134,72 +144,82 @@ button{font:inherit;color:inherit;cursor:pointer} .num{font-family:var(--f-num,m
 </style>
 </head>
 <body>
-<div class="proto">PROTOTYPE ONLY — DO NOT BUILD · <b>sample data</b>, every figure illustrative · today = <b>12 Oct 2026</b> · FY 2026-27</div>
+<div class="proto">PROTOTYPE ONLY — DO NOT BUILD · <b>sample data</b>, every figure illustrative · today = <b>12 Oct 2026</b> · FY 2026-27 · nightly ran <b>02:10</b></div>
 <div class="app">
   <aside class="side">
     <div class="brand"><i>CB</i><span>Practice</span></div>
     <nav class="nav" aria-label="Practice">
-      <button class="on" data-v="clients"><span aria-hidden="true">▤</span><span class="label">Clients</span><span class="n">7</span></button>
-      <button data-v="queries"><span aria-hidden="true">?</span><span class="label">Queries</span><span class="n">3</span></button>
-      <button data-v="staff"><span aria-hidden="true">👤</span><span class="label">Staff</span></button>
+      <button class="on" data-v="clients"><span aria-hidden="true">▤</span><span class="label">Clients</span><span class="n">6</span></button>
+      <button data-v="replies"><span aria-hidden="true">↩</span><span class="label">Replies</span><span class="n">3</span></button>
+      <button data-v="people"><span aria-hidden="true">👤</span><span class="label">People</span></button>
+      <button data-v="practice"><span aria-hidden="true">⚙</span><span class="label">Practice</span></button>
       <button data-v="client"><span aria-hidden="true">↔</span><span class="label">What the client sees</span></button>
     </nav>
     <div class="side-foot">Harbourline Accounting Pty Ltd<br>ABN 51 824 753 556 · Tax agent 25 118 004</div>
   </aside>
 
   <main class="main">
-    <!-- ── S1 · Clients: the dashboard ── -->
+    <!-- ── S1 · Clients: the dashboard — Client · Sealed to · Nightly says ── -->
     <section class="view on" id="v-clients" aria-label="Clients">
       <div class="head">
         <div class="title">
           <h1>Clients</h1>
-          <span class="chip period">FY 2026-27 · Q1 BAS due 28 Oct</span>
+          <span class="chip period" title="statutory date from reg-au basPeriods; the agent lodgment-program date needs a calendar">Q1 BAS due 28 Oct</span>
+          <button class="chip bad fold" id="fold" aria-expanded="false">5 notices ▾</button>
+          <!-- only a failing thing earns a chip (SYSTEM §3 rule 1): "2 requests sent" and "1 Ledger off" are Filters ▾ states, not notices;
+               "not locked" is the Sealed to pill on the row (an unlocked month is an open month), not a chip of its own -->
+          <span class="notes" id="notes">
           <button class="chip bad" data-f="bas">2 BAS overdue</button>
-          <button class="chip bad" data-f="tb">1 TB off</button>
-          <button class="chip warn" data-f="bank">4 not reconciled</button>
-          <button class="chip warn" data-f="lock">5 not locked</button>
-          <button class="chip warn" data-f="q">3 queries overdue</button>
-          <span class="chip quiet">2 invited</span>
-          <span class="chip quiet">1 Ledger off</span>
+          <button class="chip bad" data-f="chain">1 chain broken</button>
+          <button class="chip bad" data-f="nightly">3 with findings</button>
+          <button class="chip warn" data-f="wait" title="the oldest thread the practice spoke last on is over 7 days old — a filter threshold, not a field">3 waiting 7+ days</button>
+          <button class="chip warn" data-f="rail">2 bills to accept</button>
+          </span>
           <span class="avatar" title="Priya Narayanan · Harbourline">PN</span>
         </div>
         <div class="tools">
           <label class="search"><span aria-hidden="true">⌕</span><input placeholder="Search clients" aria-label="Search clients"></label>
-          <button class="tbtn">Filters ▾</button>
+          <button class="tbtn" title="State: accepted · request sent · ended · Ledger off · Person · Due">Filters ▾</button>
           <button class="tbtn on" title="Grouped by trouble">Group: trouble</button>
           <button class="tbtn" aria-label="Expand all">⇣</button>
           <button class="tbtn" aria-label="Grid or lines">▤</button>
-          <button class="tbtn" aria-label="Columns" title="Columns: Bank · TB · Months · Packs · Queries · Access · Last entry · Staff">⚙ 3 of 11</button>
+          <button class="tbtn" aria-label="Columns" title="Columns: On the rail · Waiting on client · Bank · Months not locked · Manual entries · Access · Last entry · Person">⚙ 3 of 11</button>
           <button class="tbtn" aria-label="Download">⬇</button>
           <span class="count" id="count">12 clients</span>
         </div>
-        <div class="cols"><span>Client</span><span>Books</span><span>Next due</span><span></span></div>
+        <div class="cols"><span>Client</span><span>Sealed to</span><span>Nightly says</span><span></span></div>
       </div>
       <div class="rows" id="rows"></div>
     </section>
 
-    <!-- ── S3 · Queries across clients ── -->
-    <section class="view" id="v-queries" aria-label="Queries">
+    <!-- ── S3 · Replies across clients: the thread's turn says who owes a reply — no request object, no due date ── -->
+    <section class="view" id="v-replies" aria-label="Replies">
       <div class="head">
-        <div class="title"><h1>Queries</h1><span class="chip period">Open · 7</span><button class="chip warn">3 overdue</button><span class="avatar">PN</span></div>
-        <div class="tools"><label class="search"><span aria-hidden="true">⌕</span><input placeholder="Search queries" aria-label="Search queries"></label><button class="tbtn">Filters ▾</button><button class="tbtn" aria-label="Columns">⚙ 3 of 6</button><span class="count">7 open</span></div>
-        <div class="cols"><span>Client · about</span><span>Asked</span><span>Due</span><span></span></div>
+        <div class="title"><h1>Replies</h1><span class="chip period">7 threads</span><button class="chip warn">3 waiting over 7 days</button><span class="avatar">PN</span></div>
+        <div class="tools"><label class="search"><span aria-hidden="true">⌕</span><input placeholder="Search threads" aria-label="Search threads"></label><button class="tbtn">Filters ▾</button><button class="tbtn" aria-label="Columns">⚙ 3 of 6</button><span class="count">7 threads</span></div>
+        <div class="cols"><span>Client · about</span><span>Last word</span><span>Turn</span><span></span></div>
       </div>
       <div class="rows" id="qrows"></div>
-      <div class="pad" style="padding-top:0">
-        <div class="thread" aria-label="A query thread">
+      <div class="pad below" style="padding-top:0">
+        <div class="thread" aria-label="A thread on a chit, team only">
           <div class="aud">🔒 Team only — the other party never sees this · Marrickville Bakehouse · bill B/2026-27/0412 · Allied Flour Mills A$1,240.00</div>
-          <div class="msg me"><div class="by">You · Harbourline · 6 Oct · <span class="tag">query · due 13 Oct</span></div>Was the A$1,240.00 to Allied Flour on 29 Sep paid from the business account or the owner's card?</div>
-          <div class="msg"><div class="by">Dee Marrick · Marrickville Bakehouse · 8 Oct</div>Owner's card — I'll put it through as a reimbursement. Receipt attached.</div>
+          <div class="msg me"><div class="by">You · Harbourline · 6 Oct · <span class="tag">asked</span></div>Was the A$1,240.00 to Allied Flour on 29 Sep paid from the business account or the owner's card?</div>
+          <div class="msg"><div class="by">Dee Marrick · Marrickville Bakehouse · 8 Oct · <span class="tag">answered</span></div>Owner's card — I'll put it through as a reimbursement. Receipt attached.</div>
           <div class="compose"><input placeholder="Reply to the team" aria-label="Reply"><button class="btn">Send</button></div>
+        </div>
+        <div class="thread" aria-label="A thread on a chit, to the supplier">
+          <div class="aud">↔ To the other party — Allied Flour Mills sees this on their copy of the chit · asked from Marrickville Bakehouse's seat (editor)</div>
+          <div class="msg me"><div class="by">You · for Marrickville Bakehouse · 9 Oct · <span class="tag">asked</span></div>Line 2 says 20 bags of 25 kg; the delivery note says 18. Was the bill for 20?</div>
+          <div class="msg"><div class="by">Allied Flour Mills · 9 Oct · <span class="tag">answered</span></div>18 delivered, 2 short-shipped. Credit note C/0097 follows today.</div>
+          <div class="compose"><input placeholder="Reply to Allied Flour Mills" aria-label="Reply to supplier"><button class="btn">Send</button></div>
         </div>
       </div>
     </section>
 
-    <!-- ── S4 · Staff (employees.html as it is; the per-client column is a later phase) ── -->
-    <section class="view" id="v-staff" aria-label="Staff">
+    <!-- ── S4 · People (employees.html as it is; the per-client column is a later phase) ── -->
+    <section class="view" id="v-people" aria-label="People">
       <div class="head">
-        <div class="title"><h1>Staff</h1><span class="chip period">4 people</span><span class="avatar">PN</span></div>
+        <div class="title"><h1>People</h1><span class="chip period">4 people</span><span class="avatar">PN</span></div>
         <div class="tools"><label class="search"><span aria-hidden="true">⌕</span><input placeholder="Search people" aria-label="Search people"></label><button class="tbtn">＋ Add a person</button><span class="count">4</span></div>
         <div class="cols"><span>Person</span><span>Access</span><span>Clients</span><span></span></div>
       </div>
@@ -211,29 +231,46 @@ button{font:inherit;color:inherit;cursor:pointer} .num{font-family:var(--f-num,m
       </div>
     </section>
 
-    <!-- ── C1 / C2 · what the CLIENT sees inside its own CB Accounts (Setup › Your accountant; the To-do row) ── -->
-    <section class="view" id="v-client" aria-label="What the client sees">
-      <div class="strip"><span class="t">This is <b>Bondi Surf Supplies Pty Ltd</b>'s own CB Accounts · Setup › Your accountant</span><a href="#clients" data-v="clients">← Back to Clients</a></div>
+    <!-- ── S5 · Practice (the Settings section pattern) ── -->
+    <section class="view" id="v-practice" aria-label="Practice">
+      <div class="head"><div class="title"><h1>Practice</h1><span class="avatar">PN</span></div></div>
       <div class="pad">
-        <div class="todo"><span aria-hidden="true">⚠</span><span class="t"><b>Harbourline Accounting</b> asks to see your books. They would read everything and could ask you questions.</span><button class="btn">Accept</button><button class="btn ghost">Decline</button></div>
         <div class="card">
-          <h2>Your accountant</h2>
-          <p>Harbourline Accounting can read your books and ask you questions. They cannot post or change anything.</p>
+          <h2>Harbourline Accounting Pty Ltd</h2>
+          <dl class="kv">
+            <dt>ABN</dt><dd class="num">51 824 753 556</dd>
+            <dt>Tax agent</dt><dd class="num">25 118 004</dd>
+            <dt>Handle</dt><dd class="num">harbourline <span class="why">· what a client types to send you a request</span></dd>
+            <dt>Plan</dt><dd class="why">No practice plan yet — the price is a later decision</dd>
+          </dl>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── C1 / C2 · what the CLIENT sees inside its own CB Accounts (Setup › Who may read your Ledger; the To-do row) ── -->
+    <section class="view" id="v-client" aria-label="What the client sees">
+      <div class="strip"><span class="t">This is <b>Bondi Surf Supplies Pty Ltd</b>'s own CB Accounts · Setup › Who may read your Ledger</span><a href="#clients" data-v="clients">← Back to Clients</a></div>
+      <div class="pad">
+        <div class="todo"><span aria-hidden="true">⚠</span><span class="t"><b>Harbourline Accounting</b> asks to read your Ledger. They would read everything and could ask your team.</span><button class="btn">Accept</button><button class="btn ghost">Reject</button></div>
+        <div class="card">
+          <h2>Who may read your Ledger</h2>
+          <p>Harbourline Accounting reads your Ledger and can ask your team. They cannot post or change anything.</p>
           <dl class="kv">
             <dt>Practice</dt><dd>Harbourline Accounting Pty Ltd · ABN 51 824 753 556</dd>
             <dt>Since</dt><dd class="num">3 Oct 2026 · accepted by you</dd>
             <dt>Sees costs</dt><dd>Yes — margin and cost price</dd>
-            <dt>Opened your books</dt><dd>Priya Narayanan · 11 Oct 09:12 · laptop<br>Mei Lin · 8 Oct 16:40 · laptop<br>Priya Narayanan · 4 Oct 10:05 · phone</dd>
-            <dt>Asked you</dt><dd>2 questions · 1 waiting for your answer</dd>
+            <dt>Opened your Ledger</dt><dd>Priya Narayanan · 11 Oct 09:12 · laptop<br>Mei Lin · 8 Oct 16:40 · laptop<br>Priya Narayanan · 4 Oct 10:05 · phone</dd>
+            <dt>Asked your team</dt><dd>2 threads · 1 waiting on you</dd>
             <dt>Posted</dt><dd>Nothing — read only</dd>
+            <dt>Your packs</dt><dd>Jul · Aug acknowledged by you · Sep not built yet</dd>
           </dl>
-          <div class="acts"><button class="btn ghost">Change level</button><button class="btn ghost">Costs off</button><button class="btn red">Remove access</button></div>
-          <p class="why">Removing access stops them within a minute. Whatever they already posted stays in your books, with their name on it.</p>
+          <div class="acts"><button class="btn ghost">Change level</button><button class="btn ghost">Costs off</button><button class="btn red">End access</button></div>
+          <p class="why">Ending stops them within a minute. Whatever they already posted stays in your Ledger, with their name on it.</p>
         </div>
         <div class="card">
           <h2>Nobody yet</h2>
-          <p>Invite your accountant by their ChitBridge handle. You choose what they may do.</p>
-          <div class="compose" style="padding:0"><input placeholder="practice handle, e.g. harbourline" aria-label="Practice handle"><button class="btn">Invite</button></div>
+          <p>Ask your accountant to read your Ledger, by their ChitBridge handle. You choose what they may do, and you can end it any time.</p>
+          <div class="compose" style="padding:0"><input placeholder="practice handle, e.g. harbourline" aria-label="Practice handle"><button class="btn">Send request</button></div>
         </div>
       </div>
     </section>
@@ -241,101 +278,133 @@ button{font:inherit;color:inherit;cursor:pointer} .num{font-family:var(--f-num,m
 </div>
 
 <script>
-/* SAMPLE DATA, shaped like the API answer GET /api/practice/clients (REQUIREMENT §8): one row per ACTIVE grant, the figures are the
+/* SAMPLE DATA, shaped like the API answer GET /api/practice/clients (REQUIREMENT §8): one row per ACCEPTED grant, the figures are the
    client's own stored nightly summary (books_setting.last_check.summary) + its periods; the BAS due is reg-au basPeriods (statutory).
+   sealed = locked + pack built (sha256 chained to prev_sha256) + acknowledged by the client — the AND of three stored facts.
    Money in CENTS; sides as words; nothing is added up on this page. */
-var TODAY = '2026-10-12';
+var TODAY = '2026-10-12', CHECKED = '02:10 today';
 var CLIENTS = [
-  { name: 'Bondi Surf Supplies Pty Ltd', abn: '83 112 004 765', type: 'company', books: { state: 'todo', n: 3 }, due: { label: 'BAS Q1', date: '2026-10-28' },
-    bank: { to: '2026-09-30', unmatched: 2 }, tb: { ok: true }, months_unlocked: 1, packs: { last: '2026-08', ack: true }, queries: { open: 1, overdue: 0 }, access: { level: 'commenter', since: '2026-10-03' }, last_entry: '2026-10-11',
-    audit: [
-      { s: 'warn', t: 'September not locked', b: 'Ask to lock', why: 'months_not_locked · periodAdvice' },
-      { s: 'warn', t: '2 bank lines not in the books', b: 'Ask for statement', why: 'bank summary 30 Sep (device-posted counts)' },
-      { s: 'warn', t: '1 supplier bill to accept', b: 'Open', why: 'bills_to_accept' },
-      { s: 'ok', t: 'Balances recomputed from the lines agree · 12 Oct 02:10', why: 'nightly check' },
-      { s: 'ok', t: 'GST Q1 (read from posted ledgers): G1 A$184,320.00 · 1A A$16,756.36 · 1B A$9,102.40 · net A$7,653.96 payable · statutory due 28 Oct', b: 'Copy BAS figures', why: 'reg-au bas()' } ] },
-  { name: 'Marrickville Bakehouse', abn: '27 445 981 230', type: 'sole_trader', books: { state: 'todo', n: 5 }, due: { label: 'BAS Q4 FY26', date: '2026-07-28', overdue: true },
-    bank: { to: '2026-06-30', unmatched: 11 }, tb: { ok: false, diff: 4000, side: 'Dr' }, months_unlocked: 3, packs: { last: '2026-05', ack: false }, queries: { open: 2, overdue: 1 }, access: { level: 'editor', since: '2026-09-14' }, last_entry: '2026-10-09',
-    audit: [
-      { s: 'bad', t: 'BAS Q4 (Apr–Jun) not closed · statutory due 28 Jul · 76 days', b: 'Open GST close', why: 'gst_due · settledAsOf' },
-      { s: 'bad', t: 'Balances recomputed from the lines differ: 1500 Bank by A$40.00 Dr', b: 'Open ledger', why: 'last_check.problems[]' },
-      { s: 'warn', t: '11 bank lines not in the books · statement to 30 Jun', b: 'Ask for statement', why: 'bank summary' },
-      { s: 'warn', t: 'July, August, September not locked', b: 'Lock months', why: 'editor grant: setPeriod' },
-      { s: 'warn', t: 'Query overdue: owner card payment 29 Sep · due 13 Oct', b: 'Open', why: 'msg_type query' },
-      { s: 'warn', t: 'Pack for May not acknowledged · none since', b: 'Build pack', why: 'packs.acknowledged_at' } ] },
-  { name: 'Parramatta Tyre & Auto', abn: '61 009 334 118', type: 'company', books: { state: 'ok', n: 0 }, due: { label: 'BAS Q1', date: '2026-10-28' },
-    bank: { to: '2026-10-10', unmatched: 0 }, tb: { ok: true }, months_unlocked: 0, packs: { last: '2026-09', ack: true }, queries: { open: 0, overdue: 0 }, access: { level: 'editor', since: '2026-08-02' }, last_entry: '2026-10-12', audit: [] },
-  { name: 'Northern Rivers Organics', abn: '94 771 205 663', type: 'partnership', books: { state: 'todo', n: 2 }, due: { label: 'BAS Q4 FY26', date: '2026-07-28', overdue: true },
-    bank: null, tb: { ok: true }, months_unlocked: 2, packs: { last: '2026-06', ack: true }, queries: { open: 1, overdue: 1 }, access: { level: 'commenter', since: '2026-09-20' }, last_entry: '2026-09-28',
-    audit: [
-      { s: 'bad', t: 'BAS Q4 (Apr–Jun) not closed · statutory due 28 Jul · 76 days', b: 'Ask to close', why: 'gst_due' },
-      { s: 'warn', t: 'August, September not locked', b: 'Ask to lock', why: 'months_not_locked' },
-      { s: 'unknown', t: 'Bank: can’t tell — the client reconciles on their device and has not posted a summary', b: 'Ask for statement', why: 'bank summary null' } ] },
-  { name: 'Geelong Cabinetry Pty Ltd', abn: '35 602 118 907', type: 'company', books: { state: 'todo', n: 1 }, due: { label: 'Lock Sep', date: '2026-10-14' },
-    bank: { to: '2026-09-30', unmatched: 0 }, tb: { ok: true }, months_unlocked: 1, packs: { last: '2026-08', ack: true }, queries: { open: 0, overdue: 0 }, access: { level: 'viewer', since: '2026-10-01' }, last_entry: '2026-10-10',
-    audit: [ { s: 'warn', t: 'September not locked', b: 'Ask to lock', why: 'viewer grant: may only ask' }, { s: 'ok', t: '3 manual entries this quarter (MJ)', b: 'List them', why: 'books-manual series MJ · SA 240' } ] },
-  { name: 'Fremantle Fishing Co', abn: '48 233 907 541', type: 'company', books: { state: 'todo', n: 4 }, due: { label: 'BAS Q1', date: '2026-10-28' },
-    bank: { to: '2026-08-31', unmatched: 6 }, tb: { ok: true }, months_unlocked: 0, packs: { last: '2026-09', ack: true }, queries: { open: 1, overdue: 1 }, access: { level: 'editor', since: '2026-07-11' }, last_entry: '2026-10-11',
-    audit: [ { s: 'warn', t: '6 bank lines not in the books · statement to 31 Aug', b: 'Ask for statement', why: 'bank summary' }, { s: 'warn', t: '2 entries could not post: supplier not on the rail', b: 'Retry', why: 'health.waiting[]' }, { s: 'warn', t: 'Suspense A$312.50 Cr — must be nil at close', b: 'Open', why: 'LINES_AU.suspense' } ] },
-  { name: 'Hobart Hardware', abn: '72 318 556 092', type: 'sole_trader', books: { state: 'ok', n: 0 }, due: { label: 'BAS Q1', date: '2026-10-28' },
-    bank: { to: '2026-10-09', unmatched: 0 }, tb: { ok: true }, months_unlocked: 0, packs: { last: '2026-09', ack: true }, queries: { open: 0, overdue: 0 }, access: { level: 'commenter', since: '2026-06-30' }, last_entry: '2026-10-12', audit: [] },
-  { name: 'Darwin Dive Shop', abn: '19 884 310 227', type: 'company', books: { state: 'todo', n: 2 }, due: { label: 'BAS Q1', date: '2026-10-28' },
-    bank: { to: '2026-09-15', unmatched: 3 }, tb: { ok: true }, months_unlocked: 1, packs: { last: '2026-08', ack: false }, queries: { open: 1, overdue: 0 }, access: { level: 'editor', since: '2026-08-19' }, last_entry: '2026-10-08',
-    audit: [ { s: 'warn', t: '3 bank lines not in the books · statement to 15 Sep', b: 'Ask for statement', why: 'bank summary' }, { s: 'warn', t: 'Pack for August not acknowledged', b: 'Remind', why: 'packs' } ] },
-  { name: 'Byron Bay Yoga Studio', abn: '56 120 773 814', type: 'sole_trader', books: { state: 'ok', n: 0 }, due: { label: 'BAS Q1', date: '2026-10-28' },
-    bank: { to: '2026-10-11', unmatched: 0 }, tb: { ok: true }, months_unlocked: 0, packs: { last: '2026-09', ack: true }, queries: { open: 0, overdue: 0 }, access: { level: 'commenter', since: '2026-05-02' }, last_entry: '2026-10-11', audit: [] },
-  { name: 'Adelaide Hills Cellar Door', abn: '40 517 290 388', type: 'trust', books: { state: 'off', n: 0 }, due: null,
-    bank: null, tb: null, months_unlocked: 0, packs: null, queries: { open: 0, overdue: 0 }, access: { level: 'editor', since: '2026-10-05' }, last_entry: null,
-    audit: [ { s: 'unknown', t: 'The Ledger is off — nothing to check yet', b: 'Ask to switch on', why: 'books_setting.enabled = false' } ] },
-  { name: 'Cairns Reef Tours Pty Ltd', abn: '88 406 925 170', type: 'company', books: { state: 'invited' }, due: null, access: { level: 'commenter asked', since: '2026-10-09' }, audit: [] },
-  { name: 'Newcastle Signs', abn: '23 955 408 611', type: 'partnership', books: { state: 'invited' }, due: null, access: { level: 'editor asked', since: '2026-10-07' }, audit: [] }
+  { name: 'Bondi Surf Supplies Pty Ltd', level: 'commenter', since: '2026-10-03',
+    sealed: { to: '2026-08', open: 'Sep', state: 'open' }, quarter: { label: 'Q1', due: '2026-10-28', unsealed: 1 },
+    nightly: { findings: [] }, rail: { bills: 1, oldest: '2026-09-29' }, waiting: { n: 1, oldest: '2026-10-10' }, bank: { to: '2026-09-30', no_chit: 2 }, months_unlocked: 1,
+    audit: {
+      seal: [ { s: 'ok', t: 'Jul ✓ sealed · acknowledged by Kai Bondi 4 Aug · a3f9…' }, { s: 'ok', t: 'Aug ✓ sealed · acknowledged by Kai Bondi 3 Sep · 71c0…' }, { s: 'warn', t: 'Sep not locked · pack not built', b: 'Ask to lock', why: 'commenter grant: may only ask' } ],
+      found: [],
+      rail: [ { s: 'warn', t: '1 supplier bill waiting to accept · Allied Flour Mills A$1,240.00 · sent 29 Sep', b: 'Open the chit', why: 'bills_to_accept' }, { s: 'warn', t: 'Bank: statement to 30 Sep · 2 lines with no chit', b: 'Ask for the statement', why: 'device-posted counts' }, { s: 'warn', t: 'Waiting on client: 1 thread · since 10 Oct', b: 'Open Replies', why: 'the thread’s turn' } ],
+      gst: { s: 'ok', t: 'Q1 read from the posted ledgers: G1 A$184,320.00 · 1A A$16,756.36 · 1B A$9,102.40 · net A$7,653.96 payable · statutory due 28 Oct · rests on packs Jul a3f9… · Aug 71c0… · Sep (open)', b: 'Copy BAS figures', why: 'reg-au bas()' } } },
+  { name: 'Marrickville Bakehouse', level: 'editor', since: '2026-09-14',
+    sealed: { to: '2026-05', state: 'broken', at: 'Jun' }, quarter: { label: 'Q4 FY26', due: '2026-07-28', overdue: true, unsealed: 3 },
+    nightly: { findings: [ 'Monthly balance for 1500 Bank differs from its lines by A$40.00 Dr' ] }, rail: { bills: 1, oldest: '2026-09-02' }, waiting: { n: 2, oldest: '2026-10-02' }, bank: { to: '2026-06-30', no_chit: 11 }, months_unlocked: 3,
+    audit: {
+      seal: [ { s: 'bad', t: 'Q4 (Apr–Jun) BAS not closed · statutory due 28 Jul · 76 days', b: 'Open GST close', why: 'gst_due · settledAsOf' }, { s: 'bad', t: 'Chain broken at Jun — the stored pack does not match its manifest', b: 'Open', why: 'bookpack verify()' }, { s: 'warn', t: 'May pack not acknowledged', b: 'Ask to acknowledge', why: 'packs.acknowledged_at' }, { s: 'warn', t: 'Jul · Aug · Sep not locked', b: 'Lock months', why: 'editor grant: setPeriod' } ],
+      found: [ { s: 'bad', t: 'Monthly balance for 1500 Bank differs from its lines by A$40.00 Dr', b: 'Open ledger', why: 'last_check.problems[]' } ],
+      rail: [ { s: 'warn', t: '1 supplier bill waiting to accept · since 2 Sep', b: 'Open the chit', why: 'bills_to_accept' }, { s: 'warn', t: 'Bank: statement to 30 Jun · 11 lines with no chit', b: 'Ask for the statement', why: 'device-posted counts' }, { s: 'warn', t: 'Waiting on client: 2 threads · oldest 2 Oct (10 days)', b: 'Open Replies', why: 'the thread’s turn' } ] } },
+  { name: 'Parramatta Tyre & Auto', level: 'editor', since: '2026-08-02',
+    sealed: { to: '2026-09', state: 'sealed' }, quarter: { label: 'Q1', due: '2026-10-28', unsealed: 0 },
+    nightly: { findings: [] }, rail: { bills: 0 }, waiting: { n: 0 }, bank: { to: '2026-10-10', no_chit: 0 }, months_unlocked: 0, audit: null },
+  { name: 'Northern Rivers Organics', level: 'commenter', since: '2026-09-20',
+    sealed: { to: '2026-06', open: 'Jul', state: 'open' }, quarter: { label: 'Q4 FY26', due: '2026-07-28', overdue: true, unsealed: 0 },
+    nightly: { findings: [] }, rail: { bills: 0 }, waiting: { n: 1, oldest: '2026-09-22' }, bank: null, months_unlocked: 2,
+    audit: {
+      seal: [ { s: 'bad', t: 'Q4 (Apr–Jun) BAS not closed · statutory due 28 Jul · 76 days', b: 'Ask to close', why: 'gst_due' }, { s: 'warn', t: 'Aug · Sep not locked', b: 'Ask to lock', why: 'months_not_locked' } ],
+      found: [],
+      rail: [ { s: 'unknown', t: 'Bank: can’t tell — the client reconciles on their device and has not posted a summary', b: 'Ask for the statement', why: 'bank summary null' }, { s: 'warn', t: 'Waiting on client: 1 thread · since 22 Sep (20 days)', b: 'Open Replies', why: 'the thread’s turn' } ] } },
+  { name: 'Geelong Cabinetry Pty Ltd', level: 'viewer', since: '2026-10-01',
+    sealed: { to: '2026-08', open: 'Sep', state: 'open' }, quarter: { label: 'Q1', due: '2026-10-28', unsealed: 1 },
+    nightly: { findings: [ '3 manual entries this quarter (MJ)' ] }, rail: { bills: 0 }, waiting: { n: 0 }, bank: { to: '2026-09-30', no_chit: 0 }, months_unlocked: 1,
+    audit: {
+      seal: [ { s: 'warn', t: 'Sep not locked · pack not built', b: 'Lock months', why: 'viewer grant: greyed, with the sentence' } ],
+      found: [ { s: 'ok', t: '3 manual entries this quarter (MJ)', b: 'List them', why: 'books-manual series MJ · SA 240' } ],
+      rail: [] } },
+  { name: 'Fremantle Fishing Co', level: 'editor', since: '2026-07-11',
+    sealed: { to: '2026-09', state: 'built' }, quarter: { label: 'Q1', due: '2026-10-28', unsealed: 1 },
+    nightly: { findings: [ '2 entries could not post: supplier not on the rail', 'Suspense A$312.50 Cr — must be nil at close' ] }, rail: { bills: 0 }, waiting: { n: 1, oldest: '2026-09-30' }, bank: { to: '2026-08-31', no_chit: 6 }, months_unlocked: 0,
+    audit: {
+      seal: [ { s: 'warn', t: 'Sep pack built · not acknowledged', b: 'Ask to acknowledge', why: 'packs.acknowledged_at' } ],
+      found: [ { s: 'warn', t: '2 entries could not post: supplier not on the rail', b: 'Retry', why: 'health.waiting[]' }, { s: 'warn', t: 'Suspense A$312.50 Cr — must be nil at close', b: 'Open', why: 'LINES_AU.suspense' } ],
+      rail: [ { s: 'warn', t: 'Bank: statement to 31 Aug · 6 lines with no chit', b: 'Ask for the statement', why: 'device-posted counts' }, { s: 'warn', t: 'Waiting on client: 1 thread · since 30 Sep (12 days)', b: 'Open Replies', why: 'the thread’s turn' } ] } },
+  { name: 'Hobart Hardware', level: 'commenter', since: '2026-06-30',
+    sealed: { to: '2026-09', state: 'sealed' }, quarter: { label: 'Q1', due: '2026-10-28', unsealed: 0 },
+    nightly: { findings: [] }, rail: { bills: 0 }, waiting: { n: 0 }, bank: { to: '2026-10-09', no_chit: 0 }, months_unlocked: 0, audit: null },
+  { name: 'Darwin Dive Shop', level: 'editor', since: '2026-08-19',
+    sealed: { to: '2026-07', state: 'built', open: 'Sep' }, quarter: { label: 'Q1', due: '2026-10-28', unsealed: 2 },
+    nightly: { findings: [] }, rail: { bills: 0 }, waiting: { n: 1, oldest: '2026-10-11' }, bank: { to: '2026-09-15', no_chit: 3 }, months_unlocked: 1,
+    audit: {
+      seal: [ { s: 'warn', t: 'Aug pack built · not acknowledged', b: 'Ask to acknowledge', why: 'packs' }, { s: 'warn', t: 'Sep not locked', b: 'Lock months', why: 'editor grant' } ],
+      found: [],
+      rail: [ { s: 'warn', t: 'Bank: statement to 15 Sep · 3 lines with no chit', b: 'Ask for the statement', why: 'device-posted counts' } ] } },
+  { name: 'Byron Bay Yoga Studio', level: 'commenter', since: '2026-05-02',
+    sealed: { to: '2026-09', state: 'sealed' }, quarter: { label: 'Q1', due: '2026-10-28', unsealed: 0 },
+    nightly: { findings: [] }, rail: { bills: 0 }, waiting: { n: 0 }, bank: { to: '2026-10-11', no_chit: 0 }, months_unlocked: 0, audit: null },
+  { name: 'Adelaide Hills Cellar Door', level: 'editor', since: '2026-10-05',
+    sealed: { state: 'off' }, quarter: null, nightly: null, rail: { bills: 0 }, waiting: { n: 0 }, bank: null, months_unlocked: 0,
+    audit: { seal: [ { s: 'unknown', t: 'The Ledger is off — nothing to check yet', b: 'Ask to switch on', why: 'books_setting.enabled = false' } ], found: [], rail: [] } },
+  { name: 'Cairns Reef Tours Pty Ltd', level: 'commenter asked', since: '2026-10-09', sealed: { state: 'sent' }, quarter: null, nightly: null, audit: null },
+  { name: 'Newcastle Signs', level: 'editor asked', since: '2026-10-07', sealed: { state: 'sent' }, quarter: null, nightly: null, audit: null }
 ];
-var QUERIES = [
-  { c: 'Marrickville Bakehouse', about: 'Owner card payment 29 Sep', asked: '2026-10-06', due: '2026-10-13', late: false, answered: true },
-  { c: 'Northern Rivers Organics', about: 'Q4 BAS — farm diesel receipts', asked: '2026-09-22', due: '2026-10-01', late: true },
-  { c: 'Fremantle Fishing Co', about: 'A$8,400.00 cash sale 14 Aug — who to?', asked: '2026-09-30', due: '2026-10-07', late: true },
-  { c: 'Marrickville Bakehouse', about: 'Statement to 30 Sep, please', asked: '2026-10-02', due: '2026-10-09', late: true },
-  { c: 'Bondi Surf Supplies Pty Ltd', about: 'Wetsuit stock count 30 Sep', asked: '2026-10-10', due: '2026-10-17', late: false },
-  { c: 'Darwin Dive Shop', about: 'Compressor — asset or repair?', asked: '2026-10-11', due: '2026-10-18', late: false },
-  { c: 'Geelong Cabinetry Pty Ltd', about: 'Lock September?', asked: '2026-10-12', due: '2026-10-19', late: false }
+/* Replies: one row per thread, the LAST message decides the turn (REQUIREMENT §9) — no due date on anything */
+var THREADS = [
+  { c: 'Marrickville Bakehouse', about: 'Allied Flour Mills A$1,240.00 · owner card?', last: '2026-10-08', by: 'client' },
+  { c: 'Marrickville Bakehouse', about: 'Allied Flour Mills · 18 or 20 bags? (to the supplier)', last: '2026-10-09', by: 'supplier' },
+  { c: 'Northern Rivers Organics', about: 'Q4 BAS — farm diesel receipts', last: '2026-09-22', by: 'practice' },
+  { c: 'Fremantle Fishing Co', about: 'A$8,400.00 cash sale 14 Aug — who to?', last: '2026-09-30', by: 'practice' },
+  { c: 'Marrickville Bakehouse', about: 'Sep pack · statement to 30 Sep, please', last: '2026-10-02', by: 'practice' },
+  { c: 'Bondi Surf Supplies Pty Ltd', about: 'Sep pack · wetsuit stock count 30 Sep', last: '2026-10-10', by: 'practice' },
+  { c: 'Darwin Dive Shop', about: 'Compressor — asset or repair?', last: '2026-10-11', by: 'practice' }
 ];
 
-/* painting only: dates and money through Intl (en-AU, AUD) — the M36 money unit's job in the real page */
+/* painting only: dates through Intl (en-AU) — the M36 money unit's job in the real page */
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 function day(iso){ if(!iso) return ''; var d=new Date(iso+'T00:00:00Z'); return d.toLocaleDateString('en-AU',{day:'numeric',month:'short',timeZone:'UTC'}); }
+function mon(ym){ if(!ym) return ''; var d=new Date(ym+'-01T00:00:00Z'); return d.toLocaleDateString('en-AU',{month:'short',timeZone:'UTC'}); }
 function daysBetween(a,b){ return Math.round((new Date(b+'T00:00:00Z')-new Date(a+'T00:00:00Z'))/86400000); }
-function money(c){ return new Intl.NumberFormat('en-AU',{style:'currency',currency:'AUD'}).format(c/100); }
-function booksPill(c){
-  if (c.books.state==='invited') return '<span class="pill quiet">Invited · waiting</span>';
-  if (c.books.state==='off') return '<span class="pill quiet">Ledger off</span>';
-  if (c.books.state==='ok') return '<span class="pill ok">Up to date</span>';
-  return '<span class="pill warn"><span class="num">'+c.books.n+'</span> to do</span>';
+function sealedPill(c){
+  var s = c.sealed, q = c.quarter;
+  if (s.state==='sent') return '<span class="pill quiet">Request sent · '+day(c.since)+'</span>';
+  if (s.state==='off') return '<span class="pill quiet">Ledger off</span>';
+  if (s.state==='broken') return '<span class="pill bad">Chain broken at '+esc(s.at)+'</span>';
+  if (q && q.overdue) return '<span class="pill bad">'+esc(q.label)+' open · <span class="num">'+(-daysBetween(TODAY,q.due))+'</span> days late</span>';
+  var n = q ? daysBetween(TODAY, q.due) : 99;
+  if (q && q.unsealed>0 && n<=14) return '<span class="pill warn">'+esc(q.label)+' open · due '+day(q.due)+'</span>';
+  if (s.state==='sealed') return '<span class="pill ok">'+mon(s.to)+' ✓</span>';
+  if (s.state==='built') return '<span class="pill warn">'+mon(s.to)+' built · not acknowledged</span>';
+  return '<span class="pill warn">'+mon(s.to)+' ✓ · '+esc(s.open)+' open</span>';
 }
-function duePill(c){
-  if (!c.due) return '<span class="why">—</span>';
-  var n = daysBetween(TODAY, c.due.date);
-  if (c.due.overdue || n<0) return '<span class="pill bad">'+esc(c.due.label)+' · <span class="num">'+(-n)+'</span> days late</span>';
-  var cls = n<=7 ? 'warn' : 'quiet';
-  return '<span class="pill '+cls+'">'+esc(c.due.label)+' · <span class="num">'+day(c.due.date)+'</span></span>';
+function nightlyPill(c){
+  if (!c.nightly) return '<span class="why">—</span>';
+  var f = c.nightly.findings;
+  if (!f.length) return '<span class="pill ok">✓ clean</span> <span class="why num">'+CHECKED+'</span>';
+  return '<span class="pill bad"><span class="num">'+f.length+'</span> named</span> <span class="why">'+esc(f[0])+'</span>';
 }
-function worst(c){ if (c.books.state==='invited'||c.books.state==='off') return 'off'; if ((c.due&&c.due.overdue)||(c.tb&&c.tb.ok===false)) return 'bad'; if (c.audit.length) return 'warn'; return ''; }
+function worst(c){
+  if (c.sealed.state==='sent'||c.sealed.state==='off') return 'off';
+  if ((c.quarter&&c.quarter.overdue)||c.sealed.state==='broken'||(c.nightly&&c.nightly.findings.length)) return 'bad';
+  if (c.audit && (c.audit.seal.length||c.audit.found.length||c.audit.rail.length)) return 'warn'; return '';
+}
+function lineHTML(l, c){
+  var ico = l.s==='bad'?'<i style="color:var(--red,#C4562F)">●</i>':l.s==='warn'?'<i style="color:var(--amber,#E0A020)">●</i>':l.s==='unknown'?'<i style="color:var(--faint,#8A8374)">?</i>':'<i style="color:var(--green,#16693F)">✓</i>';
+  var viewer = c.level==='viewer' && /Lock|Open GST|Retry|Build/.test(l.b||'');
+  var h = '<div class="line">'+ico+'<span class="t">'+esc(l.t)+(l.why?' <span class="why">· '+esc(l.why)+'</span>':'')+'</span>';
+  if (l.b) h += viewer
+    ? '<button class="btn ghost" disabled title="Your access is view-only. You can read this chit but not change it.">'+esc(l.b)+'</button><button class="btn ghost">Ask the client</button>'
+    : '<button class="btn'+(l.s==='ok'?' ghost':'')+'">'+esc(l.b)+'</button>';
+  return h + '</div>';
+}
 function rowHTML(c,i){
-  var w = worst(c);
+  var w = worst(c), has = !!c.audit;
   var h = '<div class="row '+w+'" data-i="'+i+'">';
-  h += '<span class="name">'+esc(c.name)+'<span class="sub">ABN '+esc(c.abn)+' · '+esc(c.access.level)+'</span></span>';
-  h += '<span class="c2">'+booksPill(c)+'</span><span class="c3">'+duePill(c)+'</span>';
-  h += c.audit.length ? '<button class="exp" aria-expanded="false" aria-label="Open '+esc(c.name)+'">›</button>' : '<span></span>';
+  h += '<span class="name">'+esc(c.name)+'<span class="sub">'+esc(c.level)+' · since '+day(c.since)+(c.nightly?' · checked '+CHECKED:'')+'</span></span>';
+  h += '<span class="c2">'+sealedPill(c)+'</span><span class="c3">'+nightlyPill(c)+'</span>';
+  h += has ? '<button class="exp" aria-expanded="false" aria-label="Audit '+esc(c.name)+'">›</button>' : '<span></span>';
   h += '</div>';
-  if (c.audit.length){
+  if (has){
+    var a = c.audit;
     h += '<div class="next" id="next'+i+'">';
-    c.audit.forEach(function(l){
-      var ico = l.s==='bad'?'<i style="color:var(--red,#C4562F)">●</i>':l.s==='warn'?'<i style="color:var(--amber,#E0A020)">●</i>':l.s==='unknown'?'<i style="color:var(--faint,#8A8374)">?</i>':'<i style="color:var(--green,#16693F)">✓</i>';
-      var viewer = c.access.level==='viewer' && /Lock|Open GST|Retry|Build/.test(l.b||'');
-      h += '<div class="line">'+ico+'<span class="t">'+esc(l.t)+' <span class="why">· '+esc(l.why)+'</span></span>';
-      if (l.b) h += viewer ? '<button class="btn ghost" disabled title="Your access is view-only. You can read this chit but not change it.">'+esc(l.b)+'</button>' : '<button class="btn'+(l.s==='ok'?' ghost':'')+'">'+esc(l.b)+'</button>';
-      h += '</div>';
-    });
-    h += '<div class="line"><i>↗</i><span class="t">Open the books as Harbourline · '+esc(c.access.level)+'</span><button class="btn ghost">Open</button></div>';
+    if (a.seal.length){ h += '<div class="grp">The seal chain</div>'; a.seal.forEach(function(l){ h += lineHTML(l,c); }); }
+    if (a.found.length){ h += '<div class="grp">The nightly found</div>'; a.found.forEach(function(l){ h += lineHTML(l,c); }); }
+    if (a.rail.length){ h += '<div class="grp">On the rail</div>'; a.rail.forEach(function(l){ h += lineHTML(l,c); }); }
+    if (a.gst){ h += '<div class="grp">GST</div>'+lineHTML(a.gst,c); }
+    h += '<div class="line"><i>↗</i><span class="t">Open the Ledger as Harbourline · '+esc(c.level)+'</span><button class="btn ghost">Open</button></div>';
     h += '</div>';
   }
   return h;
@@ -350,10 +419,11 @@ rows.addEventListener('click', function(e){
 /* the first troubled row opens so the mock shows the next level without a click */
 var first = rows.querySelector('.row.bad .exp'); if (first) first.click();
 
-document.getElementById('qrows').innerHTML = QUERIES.map(function(q){
-  var late = q.late && !q.answered;
+document.getElementById('qrows').innerHTML = THREADS.map(function(q){
+  var waiting = q.by==='practice', age = daysBetween(q.last, TODAY), late = waiting && age>7;
+  var turn = waiting ? '<span class="pill '+(late?'warn':'quiet')+'">waiting on client · <span class="num">'+age+'</span> d</span>' : '<span class="pill ok">answered · '+(q.by==='supplier'?'supplier':'client')+'</span>';
   return '<div class="row'+(late?' warn':'')+'"><span class="name">'+esc(q.c)+'<span class="sub">'+esc(q.about)+'</span></span>'+
-    '<span class="c2 num">'+day(q.asked)+'</span><span class="c3">'+(q.answered?'<span class="pill ok">Answered</span>':late?'<span class="pill warn">Due '+day(q.due)+' · late</span>':'<span class="pill quiet">Due '+day(q.due)+'</span>')+'</span><span></span></div>';
+    '<span class="c2"><span class="num">'+day(q.last)+'</span> <span class="why">· '+(waiting?'you':q.by)+'</span></span><span class="c3">'+turn+'</span><span></span></div>';
 }).join('');
 
 /* the sidebar switches views; nothing is fetched */
@@ -362,12 +432,23 @@ function show(v){
   document.querySelectorAll('.nav button').forEach(function(b){ b.classList.toggle('on', b.dataset.v===v); });
 }
 document.querySelectorAll('[data-v]').forEach(function(b){ b.addEventListener('click', function(e){ e.preventDefault(); show(b.dataset.v); }); });
+/* on a phone the notices fold into one chip (CBList's narrow rule); a tap opens them */
+document.getElementById('fold').addEventListener('click', function(){
+  var open = document.getElementById('notes').classList.toggle('open'); this.setAttribute('aria-expanded', String(open));
+});
 /* a title chip is a filter: it keeps only the rows it counts (the real list does this through CBList filters) */
-document.querySelectorAll('.title button.chip').forEach(function(ch){
+document.querySelectorAll('#v-clients .title button.chip').forEach(function(ch){
   ch.addEventListener('click', function(){
     var f = ch.dataset.f, on = ch.classList.toggle('sel');
-    document.querySelectorAll('.title button.chip').forEach(function(o){ if(o!==ch) o.classList.remove('sel'); });
-    var keep = CLIENTS.map(function(c){ if(!on) return true; if (f==='bas') return c.due&&c.due.overdue; if (f==='tb') return c.tb&&c.tb.ok===false; if (f==='bank') return c.bank&&c.bank.unmatched>0; if (f==='lock') return c.months_unlocked>0; if (f==='q') return c.queries&&c.queries.overdue>0; return true; });
+    document.querySelectorAll('#v-clients .title button.chip').forEach(function(o){ if(o!==ch) o.classList.remove('sel'); });
+    var keep = CLIENTS.map(function(c){
+      if(!on) return true;
+      if (f==='bas') return c.quarter&&c.quarter.overdue;
+      if (f==='chain') return c.sealed.state==='broken';
+      if (f==='nightly') return c.nightly&&c.nightly.findings.length>0;
+      if (f==='wait') return c.waiting&&c.waiting.n>0&&daysBetween(c.waiting.oldest,TODAY)>7;
+      if (f==='rail') return c.rail&&c.rail.bills>0;
+      return true; });
     var n=0; rows.querySelectorAll('.row').forEach(function(r){ var k = keep[+r.dataset.i]; r.style.display = k?'':'none'; var nx=document.getElementById('next'+r.dataset.i); if(nx&&!k) nx.classList.remove('on'); if(k) n++; });
     document.getElementById('count').textContent = n + (n===1?' client':' clients');
   });

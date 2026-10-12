@@ -217,13 +217,14 @@ Only a failing thing earns a chip (SYSTEM §3 rule 1); all fine = one line "✓ 
 | **n nightly findings** | `last_check.problems.length > 0` | red | expand (§6) |
 | **n waiting on client over 7 days** | the oldest waiting thread's date (7 days is the chip's filter threshold, not a field on anything) | amber | *Open Replies* (S3) |
 | **n bills waiting on the rail** | `bills_to_accept.count > 0` older than 7 days | amber | *Ask client to accept* |
-| **n months not locked** | `months_not_locked.count > 0` for months ended ≥ 14 days ago | amber | *Ask client to lock* (or *Lock*, editor grant) |
 | **n waiting to post** | `health.waiting.length > 0` | amber | *Retry* (`POST /api/books/outbox/retry`, owner-only today → the grant's editor may call it, §11) |
 | **n requests sent** | grants in SENT | grey | *Send again* (a reminder notice through the same channels) |
 | **n Ledgers off** | `books_setting.enabled = false` | grey | *Ask client to switch the Ledger on* |
 
 Row colour = the worst chip that applies to it. A row with nothing applying is plain. Every row carries the nightly's time
-("checked 02:10 today") so a figure is never older than it says.
+("checked 02:10 today") so a figure is never older than it says. "Months not locked" is not a chip: an unlocked month is an open
+month, and the **Sealed to** pill on the row already says so (its expand line carries *Ask to lock* / *Lock*). The title row holds at
+most five notices so it stays one line at 1366 px (the head ≤ 20 % of the window); CBList folds them into one "n notices ▾" chip on a phone.
 
 ---
 
