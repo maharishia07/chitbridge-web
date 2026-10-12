@@ -20,6 +20,11 @@
 var SUP = { rows: null, busy: false, err: null };
 
 function suppliesScreen(){
+  /* ⚠️ WX-P2P-01 (2026-10-13, the real stack): a deep link to #/app/supplies stayed at "loading…" for ever. The capability's
+     first arrival re-renders the shell (bgRenderApp) AFTER supLoad's answer had already painted into the previous body — so the
+     fresh body held the placeholder and nothing repainted it, because SUP.rows was no longer null. The pattern suppliersScreen
+     uses: paint what is already known once this markup is in the page. */
+  if (SUP.rows !== null || SUP.err || SUP.notReady) setTimeout(supPaint, 0);
   return scr('🧴 ' + tx('Supplies'), 'sup_body', 'supplies');
 }
 
