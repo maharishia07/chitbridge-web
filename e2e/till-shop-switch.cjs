@@ -16,6 +16,7 @@
  */
 'use strict';
 const { chromium } = require('@playwright/test');
+const SI = require('./lib/signin.cjs');
 const http = require('http'), fs = require('fs'), path = require('path');
 const ROOT = path.join(__dirname, '..', 'public');
 const SHOTS = path.join(__dirname, '..', 'test-results', 'till-shop-switch');
@@ -53,7 +54,7 @@ const PEOPLE = {
     const b = raw ? JSON.parse(raw) : {};
     if ((u === '/api/entities/register' || u === '/api/signin/ask')) return j(200, { message: 'sent', dev_otp: '123456' });
     if ((u === '/api/entities/verify' || u === '/api/signin/verify')) {
-      const p = PEOPLE[b.user_id]; if (!p) return j(404, { message: 'not found' });
+      const p = PEOPLE[b.id || b.user_id]; if (!p) return j(404, { message: 'not found' });   /* CBSignin posts { id, otp } */
       const id = { identity_id: p.identity_id, bridge_id: 'CB-P', display_name: p.display_name, user_id: p.user_id,
                    identity_type: p.identity_type };
       if (p.entity_id) id.entity_id = p.entity_id;
@@ -101,20 +102,10 @@ const PEOPLE = {
     await p.waitForFunction((n) => S && S.shop && S.shop.name === n, shop, { timeout: 30000 });
   };
   /* the real dialog: user id → "Send me a code" → the test server's code is filled in → "Sign in" */
-  const signIn = async (who) => {
-    await p.evaluate(() => usignOpen());
-    await p.fill('[data-testid="till-usign-who"]', who);
-    await p.click('[data-testid="till-usign-ask"]');
-    await p.waitForSelector('[data-testid="till-usign-otp"]');
-    await p.click('[data-testid="till-usign-verify"]');
-  };
+  const signIn = (who) => SI.signIn(p, who);                    /* the one window (CBSignin, #68) — e2e/lib/signin.cjs */
 
   /* ⭐ v1.6.0: an online sign-in is followed by "Choose a counter PIN" — these checks are about shops, so: Not now */
-  const signedIn = async () => {
-    await p.waitForSelector('[data-testid="till-usign-in"], [data-testid="till-usign-pinlater"]', { timeout: 10000 });
-    if (await p.locator('[data-testid="till-usign-pinlater"]').count()) await p.click('[data-testid="till-usign-pinlater"]');
-    await p.waitForSelector('[data-testid="till-usign-in"]', { timeout: 10000 });
-  };
+  const signedIn = () => SI.signedIn(p);
 
   await p.goto('http://127.0.0.1:' + web.address().port + '/till.html');
   await ready('Shop X');
@@ -132,22 +123,14 @@ const PEOPLE = {
   await p.click('[data-testid="till-usign-out"]');
   await p.evaluate(() => usignClose());
 
-  console.log('\n── ⚠️⚠️ SHOP Y\'s OWNER signs in and says STAY — nobody is signed in, the counter stays X ' + '─'.repeat(0));
+  /* ⚠️ REMOVED (round W1): "Y's owner signs in and says STAY". Athi, 2026-10-09 — THE PERSON SIGNING IN WINS: the sheet
+     has one button ("Open my shop"; Esc is the same answer), it only SAYS what happens to the old shop. There is no Stay to press. */
+  console.log('\n── ⭐⭐⭐ SHOP Y\'s OWNER signs in — the counter SAYS what happens, and the whole counter becomes Y ' + '─'.repeat(0));
   await signIn('yowner');
   await p.waitForSelector('#askdlg[open]', { timeout: 10000 });
   const asked = await p.evaluate(() => document.getElementById('askbody').textContent + ' | ' + document.getElementById('askok').textContent);
-  say('the counter ASKS before anything changes', /different shop/i.test(asked) && /Switch/i.test(asked), '"' + asked.slice(0, 70) + '…"');
+  say('the counter SAYS before anything changes — a different shop, and the one button opens it', /different shop/i.test(asked) && /Open my shop/i.test(asked), '"' + asked.slice(0, 70) + '…"');
   await p.screenshot({ path: path.join(SHOTS, '1-asked.png') });
-  await p.click('#askno');
-  await p.waitForSelector('[data-testid="till-usign-why"]', { timeout: 10000 });
-  const x2 = await shelf();
-  say('⚠️ Y is NOT signed in on X\'s counter', x2.who === null, 'who=' + x2.who);
-  say('the counter is still X, session and shelf', x2.person === 'ent-x' && x2.shop === 'Shop X' && x2.items.indexOf('XMANGO') >= 0, x2.person + ' · ' + x2.shop);
-  await p.evaluate(() => usignClose());
-
-  console.log('\n── ⭐⭐⭐ SHOP Y\'s OWNER signs in and SWITCHES — the whole counter becomes Y ' + '─'.repeat(0));
-  await signIn('yowner');
-  await p.waitForSelector('#askdlg[open]', { timeout: 10000 });
   const nav = p.waitForEvent('load', { timeout: 30000 });
   await p.click('#askok');
   await nav;
@@ -165,13 +148,20 @@ const PEOPLE = {
   const stores = await p.evaluate(async () => (indexedDB.databases ? (await indexedDB.databases()).map((d) => d.name) : []));
   say('X\'s own store is KEPT, not wiped (its queue is money)', stores.filter((n) => /^cb-till-/.test(n)).length >= 2, JSON.stringify(stores));
 
-  console.log('\n── ⚠️ A SERVER THAT CANNOT SAY WHICH SHOP — the old behaviour, never a new refusal ' + '─'.repeat(0));
+  /* ⚠️ CHANGED (round W1): this asserted "the old behaviour, never a new refusal" — signed in as before, Y's session kept.
+     Athi, 2026-10-09 (shopMoveOf): unknown is NEVER 'same' — that default is how a person landed in the last shop. A sign-in
+     whose shop the server cannot say is spent on the one door, which refuses it IN WORDS; nobody is signed in and nothing
+     of Y's is touched. The property that stays: never a new LEAK. */
+  console.log('\n── ⚠️ A SERVER THAT CANNOT SAY WHICH SHOP — refused in words, and the counter is left exactly as it was ' + '─'.repeat(0));
   await p.click('[data-testid="till-usign-out"]').catch(() => {});
   await p.evaluate(() => { try { usignOut(); usignClose(); } catch (_) {} });
   await signIn('oldsrv');
-  await signedIn();
+  await p.waitForSelector('[data-testid="signin-why"]', { timeout: 15000 });
+  const oWhy = await p.locator('[data-testid="signin-why"]').textContent();
   const o = await shelf();
-  say('signed in as before, on the same counter (Y\'s session kept)', o.who === 'Old Server' && o.person === 'ent-y', 'who=' + o.who + ' person=' + o.person);
+  say('the sign-in is refused, and says why: the shop was not said', /which shop/i.test(oWhy), '"' + oWhy + '"');
+  say('nobody is signed in, and Y\'s session and shelf are untouched', o.who === null && o.person === 'ent-y' && o.shop === 'Shop Y', 'who=' + o.who + ' person=' + o.person);
+  await p.evaluate(() => usignClose());
 
   console.log('\nconsole/page errors:', errs.length ? errs.join(' | ') : 'none');
   say('no page errors', errs.length === 0, errs.length + ' error(s)');

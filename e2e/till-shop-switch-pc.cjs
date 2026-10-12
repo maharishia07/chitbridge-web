@@ -47,9 +47,10 @@ const PEOPLE = {
     const j = (c2, o) => { r.writeHead(c2, { 'content-type': 'application/json' }); r.end(JSON.stringify(o)); };
     const u = q.url.split('?')[0];
     const b = raw ? (() => { try { return JSON.parse(raw); } catch (_) { return {}; } })() : {};
-    if (u === '/api/entities/register') return j(200, { message: 'sent', dev_otp: '123456' });
-    if (u === '/api/entities/verify') {
-      const p = PEOPLE[b.user_id]; if (!p) return j(404, { message: 'not found' });
+    /* the kit passes the window's /api/signin/ask·verify through to the cloud (till.js) — the stand-in answers both names */
+    if (u === '/api/entities/register' || u === '/api/signin/ask') return j(200, { message: 'sent', dev_otp: '123456' });
+    if (u === '/api/entities/verify' || u === '/api/signin/verify') {
+      const p = PEOPLE[b.id || b.user_id];   /* CBSignin posts { id, otp } */ if (!p) return j(404, { message: 'not found' });
       return j(200, { token: 'TOKEN-' + p.user_id, identity: Object.assign({ bridge_id: 'CB-P' }, p) });
     }
     if (u === '/api/till/enrol') {
@@ -83,7 +84,8 @@ const PEOPLE = {
   /* ── a shop PC: a copy of the kit, an unpaired connector.json, and counter.cmd's restart loop ── */
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'cbswitchpc-'));
   const kit = path.join(home, 'kit'); fs.mkdirSync(kit);
-  ['till.js', 'till.html', 'core.js', 'printer.js', 'rollup.js', 'orders.js', 'orderhub.js', 'signin.js', 'money.js']
+  /* signin-ui.js: the kit's byte copy of the ONE sign-in window (#68) — till.js serves it at /app/signin-ui.js */
+  ['till.js', 'till.html', 'core.js', 'printer.js', 'rollup.js', 'orders.js', 'orderhub.js', 'signin.js', 'signin-ui.js', 'money.js']
     .forEach((n) => fs.copyFileSync(path.join(KIT, n), path.join(kit, n)));
   const cfgFile = path.join(home, 'connector.json');
   fs.writeFileSync(cfgFile, JSON.stringify({ api: API, till: { id: 'C1' }, printer: 'KeepMe' }, null, 2));
@@ -118,10 +120,13 @@ const PEOPLE = {
       await p.evaluate(() => usignOpen());
       if (await p.locator('[data-testid="till-usign-out"]').count()) await p.click('[data-testid="till-usign-out"]');
     }
-    await p.fill('[data-testid="till-usign-who"]', who);
-    await p.click('[data-testid="till-usign-ask"]');
-    await p.waitForSelector('[data-testid="till-usign-otp"]');
-    await p.click('[data-testid="till-usign-verify"]');
+    /* the one window (CBSignin, #68) through its own controls — the same steps e2e/lib/signin.cjs takes, after the door above */
+    await p.waitForSelector('[data-testid="signin-id"]', { timeout: 15000 });
+    await p.fill('[data-testid="signin-id"]', who);
+    await p.click('[data-testid="signin-go"]');
+    await p.waitForSelector('[data-testid="signin-code"]', { timeout: 15000 });
+    await p.fill('[data-testid="signin-code"]', '123456');
+    await p.click('[data-testid="signin-verify"]');
   };
   const reopened = async (shop) => {
     await p.waitForEvent('load', { timeout: 60000 });
@@ -145,11 +150,12 @@ const PEOPLE = {
   const r1 = reopened('Shop X');
   await signIn('xclerk', true);
   await r1;
-  /* ⭐ v1.6.0: the first sign-in here is the moment a counter PIN is offered — set one, on the shop PC's own page */
-  await p.waitForSelector('[data-testid="till-usign-pin1"]', { timeout: 20000 });
-  await p.fill('[data-testid="till-usign-pin1"]', '1357');
-  await p.fill('[data-testid="till-usign-pin2"]', '1357');
-  await p.click('[data-testid="till-usign-pinsave"]');
+  /* ⭐ v1.6.0: the first sign-in here is the moment a counter PIN is offered — set one, on the shop PC's own page
+     (the ONE window's own boxes, signin-pin1 · signin-pin2 · signin-pinsave, since #68) */
+  await p.waitForSelector('[data-testid="signin-pin1"]', { timeout: 20000 });
+  await p.fill('[data-testid="signin-pin1"]', '1357');
+  await p.fill('[data-testid="signin-pin2"]', '1357');
+  await p.click('[data-testid="signin-pinsave"]');
   await p.waitForSelector('[data-testid="till-usign-done"]', { timeout: 20000 });
   const book = await p.evaluate(() => pinBook());
   const pinx = book.xclerk || {};
@@ -190,7 +196,7 @@ const PEOPLE = {
   const r2 = reopened('Shop Y');
   await p.click('#askok');
   await r2;
-  if (await p.locator('[data-testid="till-usign-pinlater"]').count()) await p.click('[data-testid="till-usign-pinlater"]');
+  if (await p.locator('[data-testid="signin-later"]').count()) await p.click('[data-testid="signin-later"]');
   await p.evaluate(() => { try { usignClose(); } catch (_) {} });
   const s2 = await state(), g2 = await page();
   await p.screenshot({ path: path.join(SHOTS, '2-shop-y.png') });

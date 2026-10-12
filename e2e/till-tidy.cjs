@@ -54,8 +54,9 @@ const SIZES = [{ n: '1366', o: { viewport: { width: 1366, height: 768 } } },
     const wide = sz.n === '1366';
     if (wide) {
       const rail = await p.evaluate(() => [].map.call(document.querySelectorAll('#tillsideicons > button'), (b) => b.getAttribute('data-testid')));
-      say('the rail holds at most 7 icons (Menu + Bills · Check · Labs · Settings · Install)', rail.length <= 7, rail.length + ': ' + rail.join(' '));
-      say('no rail icon for the three Labs separately', !rail.some((t) => /productlab|offerlab|combolab/.test(t)) && rail.some((t) => /labs$/.test(t)), '');
+      say('the rail holds at most 7 icons (Menu + Bills · Check · Expense · Settings · Install)', rail.length <= 7, rail.length + ': ' + rail.join(' '));
+      /* T2i (M207, round W1): Labs left the rail for the Menu — so no Labs icon at all here, let alone three (asserted below too) */
+      say('no rail icon for the three Labs separately', !rail.some((t) => /productlab|offerlab|combolab/.test(t)), '');
       say('Capability health is not on the rail', !rail.some((t) => /-line$/.test(t)), '');
       const noTitle = await p.evaluate(() => [].filter.call(document.querySelectorAll('#tillsideicons > button'), (b) => !b.title).length);
       say('every rail icon says what it is (tooltip)', noTitle === 0, noTitle + ' without');

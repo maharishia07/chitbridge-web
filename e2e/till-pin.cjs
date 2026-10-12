@@ -39,7 +39,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(68) + '· ' + d 
     if ((u === '/api/entities/register' || u === '/api/signin/ask')) { calls.register++; return j(200, { message: 'sent', dev_otp: '123456' }); }
     if ((u === '/api/entities/verify' || u === '/api/signin/verify')) {
       calls.verify++;
-      if (b.user_id !== 'xclerk') return j(404, { message: 'not found' });
+      if ((b.id || b.user_id) !== 'xclerk') return j(404, { message: 'not found' });   /* CBSignin posts { id, otp } */
       return j(200, { token: 'TOKEN-x', identity: { identity_id: 'p-x', bridge_id: 'CB-P', display_name: 'X Clerk',
                       user_id: 'xclerk', identity_type: 'actor', entity_id: 'ent-x' } });
     }
@@ -83,7 +83,9 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(68) + '· ' + d 
 
   console.log('\n── ⭐ ONLINE: a real sign-in, then the counter PIN is offered and SET ' + '─'.repeat(0));
   await typeWho('xclerk');
-  await p.waitForSelector('[data-testid="signin-pin"]');
+  /* online, with no counter PIN here yet: the window asks for the CODE (typed — it never prefills the stand-in's dev_otp) */
+  await p.waitForSelector('[data-testid="signin-code"]');
+  await p.fill('[data-testid="signin-code"]', '123456');
   await p.click('[data-testid="signin-verify"]');
   await p.waitForSelector('[data-testid="signin-pin1"]', { timeout: 10000 });
   say('after a real sign-in, a counter PIN is offered', true, 'the "Choose a counter PIN" step is on screen');
@@ -167,7 +169,9 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(68) + '· ' + d 
   await ctx.setOffline(false);
   await p.waitForFunction(() => lineUp(), null, { timeout: 10000 });
   await typeWho('xclerk');
-  await p.waitForSelector('[data-testid="signin-pin"]');
+  /* a LOCKED counter PIN is not offered as the credential — the line is asked (a code), and the PIN step follows the real sign-in */
+  await p.waitForSelector('[data-testid="signin-code"]');
+  await p.fill('[data-testid="signin-code"]', '123456');
   await p.click('[data-testid="signin-verify"]');
   await p.waitForSelector('[data-testid="signin-pin1"]', { timeout: 10000 });
   say('a locked PIN is offered again after the online sign-in', true, 'the choose-a-PIN step is back');

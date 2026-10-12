@@ -7,6 +7,7 @@
  */
 'use strict';
 const { chromium } = require('@playwright/test');
+const SI = require('./lib/signin.cjs');
 const http = require('http'), fs = require('fs'), path = require('path');
 const ROOT = path.join(__dirname, '..', 'public');
 const T = { '.html':'text/html', '.js':'text/javascript', '.css':'text/css', '.json':'application/json',
@@ -55,13 +56,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(70) + '· ' + d 
   await p.evaluate(() => refresh().catch(function(){}));
   await p.waitForFunction(() => S && S.shop && S.shop.name === 'Shop X', null, { timeout: 30000 });
   /* a cashier on the counter, through the one sign-in — a counter with nobody on it refuses to bill */
-  await p.evaluate(() => usignOpen());
-  await p.fill('[data-testid="till-usign-who"]', 'xclerk');
-  await p.click('[data-testid="till-usign-ask"]');
-  await p.waitForSelector('[data-testid="till-usign-otp"]');
-  await p.click('[data-testid="till-usign-verify"]');
-  await p.waitForSelector('[data-testid="till-usign-in"], [data-testid="till-usign-pinlater"]', { timeout: 15000 });
-  if (await p.locator('[data-testid="till-usign-pinlater"]').count()) await p.click('[data-testid="till-usign-pinlater"]');
+  await SI.signIn(p, 'xclerk'); await SI.signedIn(p);          /* the one window (CBSignin, #68) — e2e/lib/signin.cjs */
   await p.evaluate(() => usignClose());
 
   console.log('\n── M11 · ⚠️ partial returns may never reverse more than was charged (the last return is the remainder) ' + '─'.repeat(0));

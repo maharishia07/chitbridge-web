@@ -10,6 +10,7 @@
  */
 'use strict';
 const { chromium } = require('@playwright/test');
+const SI = require('./lib/signin.cjs');
 const http = require('http'), fs = require('fs'), path = require('path');
 const ROOT = path.join(__dirname, '..', 'public');
 const T = { '.html':'text/html', '.js':'text/javascript', '.css':'text/css', '.json':'application/json',
@@ -59,13 +60,8 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(70) + '· ' + d 
   await p.waitForFunction(() => typeof refresh === 'function' && typeof ageOf === 'function', null, { timeout: 30000 });
   await p.evaluate(() => refresh().catch(function(){}));
   await p.waitForFunction(() => S && S.shop && S.shop.name === 'Shop X' && (S.items || []).length === 4, null, { timeout: 30000 });
-  await p.evaluate(() => usignOpen());
-  await p.fill('[data-testid="signin-id"]', 'xclerk');
-  await p.click('[data-testid="signin-go"]');
-  await p.waitForSelector('[data-testid="signin-code"]');
-  await p.click('[data-testid="signin-verify"]');
-  await p.waitForSelector('[data-testid="till-usign-in"], [data-testid="signin-later"]', { timeout: 15000 });
-  if (await p.locator('[data-testid="signin-later"]').count()) await p.click('[data-testid="signin-later"]');
+  /* the window does not prefill the stand-in's dev_otp — the code is typed, as a person would (e2e/lib/signin.cjs) */
+  await SI.signIn(p, 'xclerk'); await SI.signedIn(p);
   await p.evaluate(() => usignClose());
 
   console.log('\n── M12 · ⚠️⚠️ a combo naming an 18+/21+ part asks for the age check ' + '─'.repeat(0));

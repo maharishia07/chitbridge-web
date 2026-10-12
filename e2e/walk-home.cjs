@@ -240,7 +240,8 @@ W.run('home', async (w) => {
     await page.waitForSelector('[data-testid^="crm-row-"]', { timeout: 15000 }); await page.waitForTimeout(500);
     const z = await box(); await ctx.unroute('**/api/**', slow);
     const same = (p, q) => !!p && !!q && p.every((v, i) => Math.abs(v - q[i]) <= 1);
-    return { ok: a.nav === 3 && !!a.title && !!a.tools && !!a.hdr && a.skel >= 5 && a.rows === 0 && !!a.band && same(a.n0, z.n0) && same(a.title, z.title) && same(a.tools, z.tools) && same(a.hdr, z.hdr), saw: 'first paint: ' + a.nav + ' menu items, title, toolbar, header, ' + a.skel + ' skeleton rows, kural room ' + (a.band && a.band[3]) + ' px; toolbar ' + JSON.stringify(a.tools) + ' → ' + JSON.stringify(z.tools) };
+    /* the menu has grown (Leads, Calls): the first paint must hold ALL of it — the same count before and after the rows arrive */
+    return { ok: a.nav >= 3 && a.nav === z.nav && !!a.title && !!a.tools && !!a.hdr && a.skel >= 5 && a.rows === 0 && !!a.band && same(a.n0, z.n0) && same(a.title, z.title) && same(a.tools, z.tools) && same(a.hdr, z.hdr), saw: 'first paint: ' + a.nav + ' menu items, title, toolbar, header, ' + a.skel + ' skeleton rows, kural room ' + (a.band && a.band[3]) + ' px; toolbar ' + JSON.stringify(a.tools) + ' → ' + JSON.stringify(z.tools) };
   });
   await page.setViewportSize({ width: 1366, height: 800 });
   await w.step('UI9-home', 'Home -> the sidebar and header are in the first paint and do not move when the cards arrive', async () => {

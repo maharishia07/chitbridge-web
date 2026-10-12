@@ -55,10 +55,14 @@ const token = (p) => b64({ alg: 'HS256' }) + '.' + b64(p) + '.stub';
   say('it knows it is unfit', rd.ok === false, 'shopReady().ok is false on a blank counter');
   /* ⚠️ [TILL-193] the wording moved again, on purpose — a browser counter's "not signed in" no longer names
    * the mechanism ("key"), it says "due to maintenance" and points at the one fix (sign in again). See that
-   * commit's own comment on shopReady() for why. Assertion moved, not deleted. */
-  say('it names the first thing', /due to maintenance/i.test(rd.stops[0].why),
+   * commit's own comment on shopReady() for why. Assertion moved, not deleted.
+   * ⭐ M08 (round W1, 2026-10-12): moved once more — a browser with NOTHING on it is a fresh phone, not a fault.
+   * "Due to maintenance" is now the KEY holder's story (refreshFailed / keyWatch, till-plain-signin.cjs); a blank
+   * phone says "Nobody has signed in on this phone yet" and what that means: sign in, and it bills as you. */
+  say('it names the first thing', /nobody has signed in on this phone/i.test(rd.stops[0].why),
     '"' + rd.stops[0].why + '"');
-  say('what it MEANS', /nothing can be sold/i.test(rd.stops[0].means), 'and what that costs, in the shopkeeper’s terms');
+  say('what it MEANS', /sign in with your user id/i.test(rd.stops[0].means) && /bills as you/i.test(rd.stops[0].means),
+    'and what that costs, in the shopkeeper’s terms: "' + rd.stops[0].means + '"');
   /**
    * ⚠️⚠️ THE WORD MOVED, AND THE MOVE IS THE POINT ([TILL-187]). This asserted "Sign in" — and so did the
    * fix on a wrong-kind key, and so did the fix for nobody standing at the counter. Three identical
