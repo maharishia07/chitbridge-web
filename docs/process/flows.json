@@ -61,7 +61,14 @@
           "route": [{ "m": "POST", "p": "/api/books/events", "file": "api:routes/books.js" }, { "m": "GET", "p": "/api/books/daybook", "file": "api:routes/books.js" }],
           "chit": "bill → one entry (source_ref bill:<chit_id>)", "ledger": "sale_bill · Dr 1300 Customers (unpaid) / Dr 1400·1500·1510·1520 (paid) · Cr 4000 Sales · Cr 2200/2201/2202 Output CGST/SGST/IGST · 6900 Round off. walkin_day: the same per counter per day, no party",
           "test": ["api:tests/books-hooks.test.cjs", "api:tests/books-auto-post.test.cjs", "api:tests/books-post.test.cjs", "api:tests/books-day-bills.test.cjs", "engines:tests/posting.test.js", "engines:tests/golden-books.test.js"],
-          "status": "ok", "note": "" }
+          "status": "ok", "note": "" },
+        { "n": 8, "step": "repeat supply", "module": "Finance", "who": "the seller proposes it from a sent invoice; the customer accepts, counters or declines; each run mints a normal invoice",
+          "screen": [{ "file": "web:public/app/cap-repeat.js", "fn": "rpStart" }, { "file": "web:public/app/cap-repeat.js", "fn": "rpMount" }, { "file": "web:public/app/cap-repeat.js", "fn": "rpPanel" }, { "file": "web:public/app/chit-sheet.js", "fn": "actionsFor" }],
+          "engine": [{ "file": "api:lib/repeat-supply.js", "fn": "create" }, { "file": "api:lib/repeat-supply.js", "fn": "may" }, { "file": "api:lib/repeat-supply.js", "fn": "sweep" }, { "file": "api:lib/books-recurring.js", "fn": "nextAfter" }, { "file": "api:lib/autoraise.js", "fn": "sendAs" }],
+          "route": [{ "m": "GET", "p": "/api/repeat", "file": "api:routes/repeat-supply.js" }, { "m": "POST", "p": "/api/repeat", "file": "api:routes/repeat-supply.js" }, { "m": "POST", "p": "/api/repeat/:id/accept", "file": "api:routes/repeat-supply.js" }, { "m": "POST", "p": "/api/repeat/:id/counter", "file": "api:routes/repeat-supply.js" }, { "m": "POST", "p": "/api/repeat/:id/skip", "file": "api:routes/repeat-supply.js" }, { "m": "POST", "p": "/api/repeat/:id/run", "file": "api:routes/repeat-supply.js" }],
+          "chit": "subscription (the agreement, both parties hold it) → one invoice per run, client_ref rep:<agreement>:<date>", "ledger": "each run posts as any sent invoice (lib/books-hooks afterChit); the agreement itself posts nothing",
+          "test": ["api:tests/repeat-supply.test.cjs", "web:e2e/walk-repeat-supply.cjs"],
+          "status": "ok", "note": "RI1 (2026-10-12): better than a recurring invoice — the customer agrees first (accept · counter · decline), can skip a run with a reason, and pausing or ending is visible to both. Table repeat_supply (b300, DRAFT)." }
       ]
     },
     {

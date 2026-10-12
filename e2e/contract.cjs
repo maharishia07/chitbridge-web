@@ -24,7 +24,7 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail
 const raw = JSON.parse(fs.readFileSync(C.FILE, 'utf8'));
 const routes = Object.keys(raw.routes || {});
 ok(routes.length > 30, 'the contract lists ' + routes.length + ' routes');
-ok(routes.every((k) => /^(GET|POST|PATCH|PUT|DELETE) \/api\/(books|crm|work)\//.test(k) && raw.routes[k].status > 0 && 'example' in raw.routes[k]), 'every entry is "METHOD /api/(books|crm|work)/…" with a status and an example');
+ok(routes.every((k) => /^(GET|POST|PATCH|PUT|DELETE) \/api\/(books|crm|work|repeat)(\/|$| )/.test(k) && raw.routes[k].status > 0 && 'example' in raw.routes[k]), 'every entry is "METHOD /api/(books|crm|work|repeat)/…" with a status and an example');   /* repeat: RI1 (/api/repeat itself has no tail) */
 (raw._selftest || []).forEach((c, i) => {
   const p = C.problems(c.example, c.actual, c.optional || [], '', c.free || []);
   ok((p.length === 0) === c.conforms, 'selftest ' + (i + 1) + ': ' + c.name + (p.length ? ' [' + p[0] + ']' : ''));
@@ -62,9 +62,9 @@ if (crmApi) {
 
 /* ── 4 · no harness opts out ── */
 const files = fs.readdirSync(__dirname).filter((f) => /\.cjs$/.test(f) && f !== 'contract.cjs');
-const serves = files.filter((f) => { const s = fs.readFileSync(path.join(__dirname, f), 'utf8'); return /\.route\(/.test(s) && /['"`]\/api\/(books|crm)\//.test(s); });
+const serves = files.filter((f) => { const s = fs.readFileSync(path.join(__dirname, f), 'utf8'); return /\.route\(/.test(s) && /['"`]\/api\/(books|crm|repeat)(\/|['"`])/.test(s); });
 const unwrapped = serves.filter((f) => !/lib\/contract\.cjs/.test(fs.readFileSync(path.join(__dirname, f), 'utf8')));
-ok(unwrapped.length === 0, serves.length + ' harnesses answer /api/books or /api/crm calls; each holds its answers to the contract' + (unwrapped.length ? ' - NOT: ' + unwrapped.join(', ') : ''));
+ok(unwrapped.length === 0, serves.length + ' harnesses answer /api/books, /api/crm or /api/repeat calls; each holds its answers to the contract' + (unwrapped.length ? ' - NOT: ' + unwrapped.join(', ') : ''));
 
 /* ── 5 · every contract route is answered by some harness (the path appears in a harness that serves it) ── */
 const text = serves.map((f) => fs.readFileSync(path.join(__dirname, f), 'utf8')).join('\n') + '\n' + fs.readFileSync(path.join(__dirname, 'lib', 'crm-api.cjs'), 'utf8');

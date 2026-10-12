@@ -15,7 +15,7 @@ something needs them before any navigation happens.
 router renders a placeholder until `_capLoading` clears, which is the only reason the
 old duplicate `networkScreen()` in app.html was safe to delete.
 
-## Capabilities (39)
+## Capabilities (40)
 
 | file | loading · nav key | what it is |
 |---|---|---|
@@ -51,6 +51,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-period.js` | — | cap-period.js — MONTH & YEAR END on CB Accounts: Closing stock · Assets & depreciation · Accruals & recurring · GST close & pay · Year close |
 | `cap-readiness.js` | lazy · readiness | TRADE capability (lazy; ensureCap('readiness')). Two tabs: |
 | `cap-register.js` | lazy · on demand | THE REGISTER. Lazy (ensureCap('register')) |
+| `cap-repeat.js` | lazy · on demand | cap-repeat.js — REPEAT SUPPLY as an AGREEMENT both parties hold (round RI1, 2026-10-12): CB Finance › Repeat supply (the seller's list), |
 | `cap-service.js` | lazy · on demand | cap-service.js — a chit AS A SERVICE REQUEST. Lazy-loaded (ensureCap('service')) |
 | `cap-standards.js` | lazy · on demand |  |
 | `cap-supplies.js` | lazy · on demand | SUPPLIES: what the shop buys to USE, never to sell |
@@ -115,4 +116,4 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 
 ---
 
-*88 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*89 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*

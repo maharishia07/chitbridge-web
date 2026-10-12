@@ -20,6 +20,7 @@ function finOwes(p) { return Number(p.balance_minor) > 0; }
 
 async function finLoad(quiet) {
   if (finTab() === 'terms') return ftLoad(quiet);   /* the Terms tab (cap-finance-terms.js) */
+  if (finTab() === 'repeat') return rpLoad(quiet);  /* the Repeat supply tab (cap-repeat.js, RI1) */
   var g = ++FIN.gen;
   if (!quiet) { FIN.state = 'loading'; if (FIN.api) FIN.api.refresh(); }
   try {
@@ -95,6 +96,7 @@ function finCols() {
 function finMount(frame) {
   var s = document.getElementById('screen'); if (!s) return;
   if (finTab() === 'terms') return ftMount(frame);   /* the Terms tab (cap-finance-terms.js) */
+  if (finTab() === 'repeat') return rpMount(frame);  /* the Repeat supply tab (cap-repeat.js, RI1) */
   ftNav();
   s.className = 'screen flush';
   s.innerHTML = '<div id="fin_list" data-testid="fin-list" style="flex:1 1 auto;min-height:0"></div>';
