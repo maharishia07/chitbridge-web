@@ -52,9 +52,60 @@ async function useApiBase(page) {
   await page.addInitScript((b) => { try { localStorage.setItem('cb_api_base', b); } catch (e) {} }, base);
 }
 
+/**
+ * passCountryStep(page, country) — answer the COUNTRY SETUP step the way an owner does (CS1, 2026-10-12; round W2).
+ *
+ * ⭐⭐ A NEW SHOP LANDS ON #/country, NOT #/app. Since CS1 (web #137) verify goes to Country setup — country · money · financial
+ * year · tax registration, prefilled from the time zone, each with its source — and the app opens only after ONE Continue
+ * (one PUT /api/governance/country-setup). mintEntity waited for #/app, swallowed the miss, and the next nav click then waited
+ * 30 s for `nav-catalogue` (till-demo red on main). The same lesson as reg-name and reg-agree above: a step the product added
+ * reads as a slow screen. Answered HERE, once, so no spec and no harness answers it its own way.
+ *
+ * `country` — the ISO code to pick when the prefill is not it. The suite's shop is Indian (GST specs, ₹ prices, the India pack),
+ * while a GitHub runner sits in UTC with an en-US browser and is prefilled US — so mintEntity passes 'IN' by default. Falsy →
+ * accept the prefill, as a person who agrees with it does. Picked through the row's own Change → select, never by poking state.
+ *
+ * ⚠️ BEFORE b299 RUNS ON THE SERVER the PUT answers 503, the step says so and offers "Open the app" (cs-open) — pressed here, so
+ * the shop still opens. Any other refusal is thrown IN WORDS (the server's sentence), not left as a timeout three steps later.
+ * Returns true when the step was there and answered, false when it never showed (a returning owner boots straight to #/app).
+ */
+async function passCountryStep(page, country) {
+  const there = await page.getByTestId('cs-rows').waitFor({ state: 'visible', timeout: 15000 }).then(() => true).catch(() => false);
+  if (!there) return false;
+  if (country) {
+    const want = String(country).toUpperCase();
+    await page.getByTestId('cs-change-country').click();           // the row's one tap — opens the picker
+    const sel = page.getByTestId('cs-country');
+    await sel.waitFor({ state: 'visible', timeout: 5000 });
+    if ((await sel.inputValue()) !== want) {
+      if (!(await sel.locator('option[value="' + want + '"]').count())) {
+        throw new Error('passCountryStep: the country picker does not offer ' + want + ' — it offers: ' + (await sel.locator('option').allTextContents()).join(', '));
+      }
+      await sel.selectOption(want);                                  // fires change → the screen re-paints with that country's money
+      await page.waitForFunction((w) => { const s = document.querySelector('[data-testid="cs-country"]'); return !!s && s.value === w; }, want, { timeout: 5000 });
+    }
+  }
+  const saved = page.waitForResponse((r) => /\/api\/governance\/country-setup/.test(r.url()) && r.request().method() === 'PUT', { timeout: 30000 }).catch(() => null);
+  await page.getByTestId('cs-save').click();
+  const res = await saved;
+  if (!res) {
+    const err = await page.getByTestId('cs-err').textContent().catch(() => '');
+    throw new Error('passCountryStep: Continue sent no PUT /api/governance/country-setup' + (err ? ' — the step says: ' + err : ''));
+  }
+  if (res.status() === 503) {
+    await page.getByTestId('cs-open').click();                       // "Open the app" — the server is before b299; the shop opens unstamped
+  } else if (res.status() >= 400) {
+    const body = await res.text().catch(() => '');
+    throw new Error('passCountryStep: PUT /api/governance/country-setup refused ' + res.status() + ': ' + body.slice(0, 300));
+  }
+  await page.waitForURL(/#\/app/, { timeout: 15000 });
+  return true;
+}
+
 // Reusable: walk the onboarding→register→verify (mint) flow and land in the app. Returns { email, name }.
 // This is the shared "arrange" step other modules (chits, catalogue) build on — and the heart of the DoD.
-async function mintEntity(page, { role = 'business', email, name, fresh = false } = {}) {
+// `country` — the Country setup step's answer for a NEW shop (see passCountryStep); 'IN' is the shop every spec assumes.
+async function mintEntity(page, { role = 'business', email, name, fresh = false, country = 'IN' } = {}) {
   /**
    * ⭐ fresh:true — A CLEAN ENTITY, WHATEVER THE BATCH RESTORED. In the `authed` project every test boots into the ONE
    * shared session, so mintEntity's "already logged in → reuse" made a spec that builds a specific shelf collide with
@@ -121,7 +172,9 @@ async function mintEntity(page, { role = 'business', email, name, fresh = false 
     await otp.fill(DEV_OTP).catch(() => {});
     await page.getByTestId('reg-submit').click().catch(() => {});
   }
-  await page.waitForURL(/#\/app/, { timeout: 15000 }).catch(() => {});   // land in the app
+  /* ⭐ CS1: a NEW shop lands on #/country first — answer the step (passCountryStep), THEN we are in the app */
+  await page.waitForURL(/#\/(app|country)/, { timeout: 15000 }).catch(() => {});
+  if (/#\/country/.test(page.url())) await passCountryStep(page, country);
   return { email, name: handle, handle };
 }
 
@@ -478,7 +531,7 @@ async function shopAdd(page, name, times) {
 }
 module.exports = {
   shopAdd,
-  MEDIA_PNG, MEDIA_VIDEO, addMedia, addProduct, addCoassist, seedDemo, DEV_OTP, useApiBase, uniqueEmail, uniqueName, uniqueHandle, openAvatarItem, mintEntity, composeSelfChit, composeChit, composeStepNext, clickNav, stableClick, clickInModal, HAS_RCPT, HAS_TOTAL, mintInContext, addRecipientByName, settle, dismissModal, POOL, poolContext };
+  MEDIA_PNG, MEDIA_VIDEO, addMedia, addProduct, addCoassist, seedDemo, DEV_OTP, useApiBase, uniqueEmail, uniqueName, uniqueHandle, openAvatarItem, mintEntity, passCountryStep, composeSelfChit, composeChit, composeStepNext, clickNav, stableClick, clickInModal, HAS_RCPT, HAS_TOTAL, mintInContext, addRecipientByName, settle, dismissModal, POOL, poolContext };
 
 /**
  * openTab(page, key) — click a product-page tab and WAIT for its pane. The Edit view repaints twice (once at once, once
