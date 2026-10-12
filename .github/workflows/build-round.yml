@@ -1,0 +1,59 @@
+name: build-round
+# ⭐ A build/research ROUND runs HERE, on GitHub's machine, not on the dev PC (Athi 2026-10-12: "build / test in the cloud without
+# disturbing the local system … free resources"). Claude runs on the Max subscription (secret CLAUDE_CODE_OAUTH_TOKEN, made with
+# `claude setup-token`); the runner is free because this repo is public. Started by hand: Actions → build-round → Run workflow,
+# or `gh workflow run build-round.yml -f name=R1 -f brief="$(cat brief.md)"`. The round opens a PR; it never merges.
+# ⚠️ A PR pushed with GITHUB_TOKEN does not start other workflows — close + reopen it (or push to it) to run CI and the walks.
+on:
+  workflow_dispatch:
+    inputs:
+      name:
+        description: 'Round id (e.g. R1) — used in the branch name'
+        required: true
+      brief:
+        description: 'The brief, in full (the task text)'
+        required: true
+      model:
+        description: 'Model'
+        default: 'fable'
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  id-token: write
+jobs:
+  round:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # the api beside the web repo, as on the dev PC (read-only here: facts for the brief, never pushed from this job)
+      - uses: actions/checkout@v4
+        with:
+          repository: maharishia07/chitbridge-api
+          path: chitbridge-api
+      - name: Lay the api beside the web repo
+        run: ln -s "$GITHUB_WORKSPACE/chitbridge-api" "$GITHUB_WORKSPACE/../chitbridge-api" && rm -rf chitbridge-api/.git
+      - name: Git identity for the round
+        run: git config user.name "claude-round" && git config user.email "noreply@anthropic.com"
+      - uses: anthropics/claude-code-action@v1
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          claude_args: >-
+            --model ${{ inputs.model }} --max-turns 400
+            --allowedTools "Bash,Read,Edit,Write,Glob,Grep,WebSearch,WebFetch,TodoWrite"
+          prompt: |
+            You are a build agent running on a GitHub runner (Linux), in the chitbridge-web repo; the chitbridge-api repo is at
+            ../chitbridge-api (read-only — do not change or push it). Paths in the brief like C:/dev/... do not exist here: put any
+            file the brief asks for under docs/ in THIS repo instead (say where in the PR). Do not run Playwright or a browser.
+            Work on a new branch round/${{ inputs.name }}-${{ github.run_id }}, commit (messages end with
+            "Co-Authored-By: Claude <noreply@anthropic.com>"), push it, and open ONE pull request with `gh pr create` whose body is
+            your report. Never merge. Do not poll CI.
+
+            THE BRIEF:
+            ${{ inputs.brief }}
