@@ -63,12 +63,14 @@ const SHOP = { name: 'Anbu Vegetables', currency: 'INR', country: 'IN' };
     if (!('serviceWorker' in navigator)) return { ok: false, why: 'no serviceWorker in this browser' };
     const reg = await navigator.serviceWorker.ready;
     /* ⚠️ `ready` resolves on ACTIVE, but addAll may still be running — wait for the shelf to hold the page */
+    /* ⚠️ the shelf is named per release (till-sw.js SHELF: cb-till-v4 today) — read the name, never pin it (round W1) */
+    const shelf = async () => (await caches.keys()).filter((k) => /^cb-till-v/.test(k)).sort().pop() || 'cb-till-v?';
     for (let i = 0; i < 60; i++) {
-      const c = await caches.open('cb-till-v1');
+      const c = await caches.open(await shelf());
       if (await c.match('/till.html')) break;
       await new Promise((r) => setTimeout(r, 100));
     }
-    const c = await caches.open('cb-till-v1');
+    const c = await caches.open(await shelf());
     const keys = (await c.keys()).map((k) => new URL(k.url).pathname).sort();
     return { ok: !!reg.active, controller: !!navigator.serviceWorker.controller, cached: keys };
   });

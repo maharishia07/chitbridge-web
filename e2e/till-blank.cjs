@@ -83,7 +83,9 @@ const say = (l, ok, d) => { console.log(String(l).padEnd(26) + '· ' + d + '  ' 
   say('a way forward', connect > 0, 'the shelf offers a Connect button');
 
   console.log('\n── and the honest parts are still honest ' + '─'.repeat(27));
-  for (const [what, re] of [['not paired', /not paired yet/i], ['no key', /no key yet/i],
+  /* ⭐ M08 (round W1): the shop-name slot says "Not signed in yet" on a blank browser — a phone is a person on a device,
+     so the first thing it lacks is a sign-in, not a pairing. Same honesty, the current word. */
+  for (const [what, re] of [['not paired', /not signed in yet/i], ['no key', /no key yet/i],
                             ['no prices', /no prices yet/i], ['nobody signed in', /nobody signed in/i]]) {
     say(what, re.test(st.body), 'the header still says it');
   }

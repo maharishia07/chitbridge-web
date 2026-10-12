@@ -40,9 +40,9 @@ const PEOPLE = {
     const b = raw ? JSON.parse(raw) : {};
     if ((u === '/api/entities/register' || u === '/api/signin/ask')) return j(200, { message: 'sent', dev_otp: '123456' });
     if ((u === '/api/entities/verify' || u === '/api/signin/verify')) {
-      const p = PEOPLE[b.user_id]; if (!p) return j(404, { message: 'not found' });
-      return j(200, { token: 'TOKEN-' + b.user_id, identity: { identity_id: p.identity_id, bridge_id: 'CB-P', display_name: p.display_name,
-                      user_id: b.user_id, identity_type: 'actor', entity_id: 'ent-x' } });
+      const id = b.id || b.user_id, p = PEOPLE[id]; if (!p) return j(404, { message: 'not found' });   /* CBSignin posts { id, otp } */
+      return j(200, { token: 'TOKEN-' + id, identity: { identity_id: p.identity_id, bridge_id: 'CB-P', display_name: p.display_name,
+                      user_id: id, identity_type: 'actor', entity_id: 'ent-x' } });
     }
     if (u === '/api/till/snapshot') {
       /* M10: after its first sign-in a browser bills as the PERSON (Bearer + X-Device-Id) — its key is retired; the key still opens the shop before that */
@@ -73,7 +73,7 @@ const PEOPLE = {
   const ready = async () => {
     await p.waitForFunction(() => typeof lockNow === 'function' && S && S.shop && S.shop.name === 'Shop X', null, { timeout: 30000 });
   };
-  /* the one dialog: a user ID, then the code (online, prefilled) or the counter PIN */
+  /* the one dialog: a user ID, then the code (online — typed, the window never prefills the stand-in's dev_otp) or the counter PIN */
   const signIn = async (id, pinOrNull) => {
     if (!(await p.locator('#usigndlg[open]').count())) await p.evaluate(() => usignOpen());
     await p.waitForSelector('[data-testid="signin-id"], [data-testid="signin-pin"]');
@@ -85,7 +85,10 @@ const PEOPLE = {
       await p.click('[data-testid="signin-go"]');
     }
     if (pinOrNull) { await p.waitForSelector('[data-testid="signin-pin"]'); await p.fill('[data-testid="signin-pin"]', pinOrNull); }
-    else await p.waitForSelector('[data-testid="signin-pin"], [data-testid="signin-code"]');
+    else {
+      await p.waitForSelector('[data-testid="signin-pin"], [data-testid="signin-code"]');
+      if (await p.locator('[data-testid="signin-code"]').count()) await p.fill('[data-testid="signin-code"]', '123456');
+    }
     await p.click('[data-testid="signin-verify"]');
   };
 
@@ -155,6 +158,7 @@ const PEOPLE = {
   await p.keyboard.press('Escape');
   const s5 = await st();
   say('nobody got in, and Escape on the dialog leaves the cover up', s5.locked && s5.who === 'X Clerk', 'locked=' + s5.locked);
+  await p.evaluate(() => usignClose());   /* the window's own Close — a modal still open would sit over the cover's 🔓 */
 
   console.log('\n── ⭐ ANOTHER PERSON OF THIS SHOP UNLOCKS (online) — a shift change ' + '─'.repeat(0));
   await ctx.setOffline(false);
@@ -168,8 +172,9 @@ const PEOPLE = {
   say('W Clerk is on now — a new shift, not X\'s', s6.who === 'W Clerk' && s6.since !== s0.since, 'who=' + s6.who);
 
   console.log('\n── ⭐ SIGNING OUT LOCKS THE COUNTER — nobody on it means nobody bills on it ' + '─'.repeat(0));
-  await p.evaluate(() => { usignOpen(); });
-  await p.click('[data-testid="till-usign-out"]');
+  /* T2i: Sign out lives on the rail's ONE avatar (CBAvatar, items ['signout']) — the sign-in window reopened fresh holds no Sign out */
+  await p.click('[data-testid="till-avatar"]');
+  await p.click('[data-testid="nav-signout"]');
   const s7 = await st();
   say('after sign out the cover is up and nobody is on', s7.locked && s7.who === null, JSON.stringify({ locked: s7.locked, who: s7.who }));
   await p.evaluate(() => usignClose());

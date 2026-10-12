@@ -21,6 +21,7 @@
 'use strict';
 const { chromium } = require('@playwright/test');
 const http = require('http'), fs = require('fs'), path = require('path');
+const SI = require('./lib/signin.cjs');
 const ENG = path.join(__dirname, '..', 'public', 'engine');
 const SHOTS = path.join(__dirname, '..', 'test-results', 'till-two-sided');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -100,15 +101,9 @@ const one = (rs) => Array.isArray(rs) && rs.length === 1 && rs[0].self === true;
   const p = await ctx.newPage();
   p.on('pageerror', (e) => errs.push(String(e)));
 
+  /* the one sign-in window (CBSignin, #68) through its own controls — e2e/lib/signin.cjs */
   const signIn = async () => {
-    await p.evaluate(() => usignOpen());
-    await p.fill('[data-testid="till-usign-who"]', 'xclerk');
-    await p.click('[data-testid="till-usign-ask"]');
-    await p.waitForSelector('[data-testid="till-usign-otp"]');
-    if (!(await p.inputValue('[data-testid="till-usign-otp"]'))) await p.fill('[data-testid="till-usign-otp"]', '123456');
-    await p.click('[data-testid="till-usign-verify"]');
-    await p.waitForSelector('[data-testid="till-usign-in"], [data-testid="till-usign-pinlater"]', { timeout: 15000 });
-    if (await p.locator('[data-testid="till-usign-pinlater"]').count()) await p.click('[data-testid="till-usign-pinlater"]');
+    await SI.signIn(p, 'xclerk'); await SI.signedIn(p);
     await p.evaluate(() => usignClose());
   };
   /** one sale through the real controls → { no, slip } */

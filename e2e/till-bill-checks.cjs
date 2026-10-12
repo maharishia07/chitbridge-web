@@ -35,12 +35,15 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(70) + '· ' + (d
     CART = [{ name: 'Poori', gst_rate: null, qty: 1 }, { name: 'Masala Dosa', gst_rate: 5, qty: 1 }];
     var warn = billWarnHTML();
     var bill = { kind: 'tax', no: 'C5/26-27/0001', at: Date.now(), total: 235, lines: [{ name: 'Poori', qty: 1, unit: 'plate', price: 50, net: 50, gst_rate: undefined }, { name: 'Masala Dosa', qty: 1, unit: 'plate', price: 185, net: 185, gst_rate: 5 }], payments: [], pos_state: '29' };
-    return { warn: warn, slip: slipHTML(bill, {}) };
+    /* M66: the place of supply is printed only on a REAL tax invoice — the same bill with every line rated */
+    var rated = Object.assign({}, bill, { lines: bill.lines.map(function(l){ return Object.assign({}, l, { gst_rate: 5 }); }) });
+    return { warn: warn, slip: slipHTML(bill, {}), ratedSlip: slipHTML(rated, {}) };
   });
   /* M40: one line, a count and Fix ›; the names and the sentence live behind Fix (billWarnFix) */
   say('the bill carries ONE line "⚠ 1 item has no tax rate · Fix ›"', /⚠ 1 item has no tax rate/.test(r1.warn) && /till-warn-norate-fix[^>]*>Fix ›/.test(r1.warn) && !/catalogue/.test(r1.warn), r1.warn.replace(/<[^>]+>/g, ' ').trim());
   say('the slip is headed NOT A TAX INVOICE and names the line', /NOT A TAX INVOICE/.test(r1.slip) && /GST charged on: Poori/.test(r1.slip) && !/>TAX INVOICE</.test(r1.slip), '');
-  say('place of supply prints with its state name', /29 Karnataka/.test(r1.slip), '');
+  /* M66 (walk 2026-10-10): a slip that is NOT a tax invoice names no place of supply; a tax invoice names it with its state */
+  say('place of supply prints with its state name — on the tax invoice, not on the slip that is not one', /29 Karnataka/.test(r1.ratedSlip) && !/Place of supply/.test(r1.slip), '');
 
   console.log('\n── BF2 · the shop\'s data contradicts itself');
   const r2 = await p.evaluate(() => {
@@ -99,13 +102,16 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(70) + '· ' + (d
   say('a takeaway bill says Takeaway, with no table', /Takeaway/.test(r3.take) && !/Table/.test(r3.take), '');
 
   console.log('\n── BF4 · one counter name, from the prefix the bills are numbered under');
-  const r4 = await p.evaluate(() => {
+  const r4 = await p.evaluate(async () => {
     ls.set('cb_till_name', 'Counter 1'); STATE = { till: { id: 'C5', name: 'Counter 1' } };
     tillIdSet('C5');
     var bill = { kind: 'cash', no: 'C5/26-27/0003', at: Date.now(), total: 10, lines: [], payments: [] };
     var opt = document.querySelector('#set_dating option[value="fy"]');
     try { paintSetup(); } catch (e) {}
-    return { name: counterName(), slip: slipHTML(bill, {}), opt: opt && opt.textContent, note: (document.getElementById('seriesnote') || {}).textContent };
+    /* M54: on the web counter "Next bill" is the REAL next number, read from the store (nextNumber … peek) — it lands a tick later */
+    var sn = document.getElementById('seriesnote');
+    for (var i = 0; i < 40 && !(sn && /Next bill/.test(sn.textContent)); i++) await new Promise(function(r){ setTimeout(r, 50); });
+    return { name: counterName(), slip: slipHTML(bill, {}), opt: opt && opt.textContent, note: (sn || {}).textContent };
   });
   say('the name is "Counter 5" while the prefix is C5', r4.name === 'Counter 5', r4.name);
   say('the slip says Counter 5 beside a C5 number', /Counter 5/.test(r4.slip) && /C5\/26-27\/0003/.test(r4.slip), '');

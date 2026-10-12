@@ -20,31 +20,23 @@ const shard = Number(process.argv[2] || 1), of = Number(process.argv[3] || 1);
 if (!(shard >= 1 && shard <= of)) { console.error('usage: run-shard.cjs <shard> <of>'); process.exit(2); }
 /* ⭐ KNOWN RED (2026-10-12, first cloud run): each file here RUNS and is PRINTED, but does not fail the shard — with its reason.
  * SKIP = cannot run on a runner at all. A KNOWN file that passes says so: take it off the list. Fixing them = round W1
- * (C:/dev/toolset/briefs/W1-walks-green.md); TEST-LOG-2026-10-09.md rows W1-*. Never add a file here without a reason. */
+ * (C:/dev/toolset/briefs/W1-walks-green.md); TEST-LOG-2026-10-09.md rows W1-*. Never add a file here without a reason.
+ * ⭐ Round W1 (2026-10-12) took 18 files off: 13 stale harnesses re-pointed at the current controls (e2e/lib/signin.cjs drives the
+ * ONE sign-in window), 8 product fixes in till.html / signin-ui.js (see that PR). What is left is below, each with its row. */
 const SKIP = {
   'till-books-offline.cjs': 'reads ../../chitbridge-engines — that repo is private, the runner cannot check it out',
+  /* W1: a runner of runners — it spawns till-books-offline (SKIP above, so it can never go green here) and ~70 harnesses in one
+     240 s slot (it needs ~25 min). Every harness on its list already runs on its own in this shard, so running it again proves
+     nothing the shard does not. On a dev PC `node e2e/till-all.cjs` is still the one number. */
+  'till-all.cjs': 'runs till-books-offline (SKIP) and ~70 harnesses in one slot — each member runs on its own in this shard',
+  /* W1: it EDITS the chitbridge-api master till.html and re-vendors it over public/ (scripts/vendor-till.cjs) — on a runner the api
+     checkout is read-only and the vendor step has no engines repo to copy from, so the breaks never reach the page. It only read
+     "4/4 caught" in the first cloud run because till-two-sided itself was red. A dev PC with both repos runs it. */
+  'till-two-sided-breaks.cjs': 'edits the api master and re-vendors — read-only api checkout on a runner (dev PC only)',
 };
 const KNOWN = {
-  'walk-bill.cjs': 'BF1 open: no warning when an item has no tax rate (TEST-LOG BF1)',
-  'walk-home.cjs': 'UI9 open: CRM first paint still moves (TEST-LOG UI9)',
-  'till-two-sided.cjs': 'stale harness: waits for till-usign-who, gone since CBSignin (#68)',
-  'till-returns-faults.cjs': 'stale harness: till-usign-who, gone since #68',
-  'till-return-pc.cjs': 'stale harness: till-usign-who, gone since #68',
-  'till-shop-switch.cjs': 'stale harness: till-usign-who, gone since #68',
-  'till-shop-switch-pc.cjs': 'stale harness: till-usign-who, gone since #68',
-  'till-pin.cjs': 'sign-in PIN step never shows (signin-pin) — W1 decides: harness or product',
-  'till-lock.cjs': 'sign-in PIN step never shows (signin-pin1) — W1 decides',
-  'till-counter-faults.cjs': 'sign-in buttons never show (till-usign-in / signin-later) — W1 decides',
-  'till-reenrol.cjs': 'unclassified — W1 decides',
-  'till-keysize.cjs': 'phone 390px: the key-size preview disagrees with the real grid — W1 decides',
-  'till-netsim.cjs': '2G does not change the line panel — W1 decides',
-  'till-blank.cjs': 'header no longer says "not paired" — W1 decides',
-  'till-ready.cjs': '"Nobody has signed in" first-thing message missing — W1 decides',
-  'till-handoff.cjs': 'header names the counter, not the person — W1 decides',
-  'till-tidy.cjs': 'unclassified (1 check) — W1 decides',
-  'till-cold.cjs': 'unclassified (2 checks) — W1 decides',
-  'till-bill-checks.cjs': 'unclassified (2 checks) — W1 decides',
-  'till-all.cjs': 'runs the till harnesses above together — red while any of them is',
+  'walk-bill.cjs': 'BF1 open: the walk wants "Poori has no tax rate" on screen; M40 puts the names behind Fix › — Athi decides (TEST-LOG BF1)',
+  'walk-home.cjs': 'UI9 round: L-Home-390 the kural band overlaps its own lines; L-CRM-957/1366/1568 the header-filter rail overlaps the column heads (UI9-crm itself is green since W1)',
 };
 const mine = files.filter((_, i) => i % of === shard - 1);
 console.log('shard ' + shard + '/' + of + ' · ' + mine.length + ' of ' + files.length + ' files');

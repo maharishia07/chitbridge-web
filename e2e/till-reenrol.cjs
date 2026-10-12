@@ -46,9 +46,13 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(70) + '· ' + d 
   const routine = await p.evaluate(() => {
     ls.set('cb_till_key', 'old-refused-key'); CloudHost.key = 'old-refused-key';
     usignOpen();   /* no force — the routine 'signin' door's own call shape */
-    return { move: usignShopMove({ identity: {} }), keyAfter: CloudHost.key };
+    /* ⭐ 2026-10-09 (shopMoveOf): "NEVER 'same' by default" — 'same' needs the shop KNOWN on both sides: the key's shop
+       (S.entity_id, what the server said this key opens) and the person's own. An identity that names no shop is 'pair'. */
+    S = Object.assign({}, S || {}, { entity_id: 'ent-x' });
+    return { move: usignShopMove({ identity: { entity_id: 'ent-x' } }), unknown: usignShopMove({ identity: {} }), keyAfter: CloudHost.key };
   });
-  say('a routine sign-in on a paired counter is "same" — no enrol, no network', routine.move === 'same', 'move=' + routine.move);
+  say('a routine sign-in on a paired counter, by its own shop\'s person, is "same" — no enrol, no network', routine.move === 'same', 'move=' + routine.move);
+  say('…and one whose shop is not said is "pair" (unknown is never "same", 2026-10-09)', routine.unknown === 'pair', 'move=' + routine.unknown);
   say('the existing key is left exactly as it was', routine.keyAfter === 'old-refused-key', '"' + routine.keyAfter + '"');
 
   console.log('\n── ⭐⭐⭐ pairAgain() FORCES A REAL RE-ENROL — entered ONLY because the current key just failed ' + '─'.repeat(0));

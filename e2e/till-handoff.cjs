@@ -27,7 +27,10 @@ const J = (r, status, o) => r.fulfill({ status, contentType: 'application/json',
   ok(person && person.entity_id === 'ent-home', 'the counter holds a person session for the shop the owner signed in to on Home (' + (person && person.entity_id) + ')');
   ok(!(await ls('cb_till_key')), 'no key was made - a phone is a person on a device');
   ok(!seen.includes('/api/till/enrol'), 'nothing was spent on /api/till/enrol');
-  ok((await p.locator('#tillpill').innerText()).trim() === 'Mayur', 'the header names the person, not "Counter 1" (' + (await p.locator('#tillpill').innerText()).trim() + ')');
+  /* ⭐ M38 (walk 2026-10-10): one fact per pill — shop · counter · who. The PERSON is named on #whopill (paintWho);
+     #tillpill is the counter's own label. Same intent: the header names the person who signed in on Home. */
+  const whoPill = (await p.locator('#whopill').innerText()).trim();
+  ok(/Mayur/.test(whoPill) && !/nobody signed in/i.test(whoPill), 'the header names the person who signed in on Home (' + whoPill + ')');
   ok(errs.length === 0, 'no script errors' + (errs.length ? ' - ' + errs[0] : ''));
   /* once per sign-in: forget the person here (a sign-out) and reload - the same app session must not sign them straight back in */
   await p.evaluate(() => { localStorage.removeItem('cb_till_person'); });

@@ -13,6 +13,7 @@
  */
 'use strict';
 const { chromium } = require('@playwright/test');
+const SI = require('./lib/signin.cjs');
 const http = require('http'), fs = require('fs'), path = require('path'), os = require('os'), net = require('net');
 const { spawn } = require('child_process');
 const KIT = path.join(__dirname, '..', '..', 'chitbridge-api', 'tools', 'tally-connector');
@@ -34,8 +35,9 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(66) + '· ' + d 
     const j = (c2, o) => { r.writeHead(c2, { 'content-type': 'application/json' }); r.end(JSON.stringify(o)); };
     const u = q.url.split('?')[0];
     const b = raw ? (() => { try { return JSON.parse(raw); } catch (_) { return {}; } })() : {};
-    if (u === '/api/entities/register') return j(200, { message: 'sent', dev_otp: '123456' });
-    if (u === '/api/entities/verify') return j(200, { token: 'T', identity: { identity_id: 'p-x', user_id: 'xclerk', display_name: 'X Clerk', identity_type: 'actor', entity_id: 'ent-x' } });
+    /* the kit passes the window's /api/signin/ask·verify through to the cloud (till.js) — the stand-in answers both names */
+    if (u === '/api/entities/register' || u === '/api/signin/ask') return j(200, { message: 'sent', dev_otp: '123456' });
+    if (u === '/api/entities/verify' || u === '/api/signin/verify') return j(200, { token: 'T', identity: { identity_id: 'p-x', user_id: 'xclerk', display_name: 'X Clerk', identity_type: 'actor', entity_id: 'ent-x' } });
     if (u === '/api/till/snapshot') return j(200, { at: new Date().toISOString(), version: 'x-1', entity_id: 'ent-x',
       shop: { name: 'Shop X', bridge_id: 'CB-X' }, till: { suggested_id: 'C1', assigned_id: 'C1' },
       items: [{ id: 'xmango', name: 'XMANGO', price: 50, unit: 'nos', code: 'XMANGO' }] });
@@ -74,13 +76,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(66) + '· ' + d 
     say('the shop PC has returns and expenses now', await p.evaluate(() => typeof HOST.creditNote === 'function' && typeof HOST.expense === 'function' && retCanIssue() && expCanIssue()), 'creditNote + expense on AgentHost');
 
     /* somebody on the counter — through the one sign-in */
-    await p.evaluate(() => usignOpen());
-    await p.fill('[data-testid="till-usign-who"]', 'xclerk');
-    await p.click('[data-testid="till-usign-ask"]');
-    await p.waitForSelector('[data-testid="till-usign-otp"]');
-    await p.click('[data-testid="till-usign-verify"]');
-    await p.waitForSelector('[data-testid="till-usign-in"], [data-testid="till-usign-pinlater"]', { timeout: 15000 });
-    if (await p.locator('[data-testid="till-usign-pinlater"]').count()) await p.click('[data-testid="till-usign-pinlater"]');
+    await SI.signIn(p, 'xclerk'); await SI.signedIn(p);        /* the one window (CBSignin, #68) — e2e/lib/signin.cjs */
     await p.evaluate(() => usignClose());
 
     /* a sale, online */

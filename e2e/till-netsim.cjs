@@ -334,19 +334,26 @@ const say = (l, ok, d) => { console.log(String(l).padEnd(28) + '· ' + d + '  ' 
   /* ⚠️ MOVED ([TILL-153]): it is the same PANEL now, not a second list — which is the stronger property */
   say('and it is the same panel', !!inline && inline.tiles === 3, (inline || {}).tiles + ' tiles, as on the pill');
 
-  /* ⭐ IT FOLLOWS THE SWITCH — the consequence is on screen before the person looks away from the control */
+  /* ⭐ IT FOLLOWS THE SWITCH — the consequence is on screen before the person looks away from the control.
+     ⚠️ W1 (2026-10-12): the panel paints what the counter MEASURES (§4 "nothing in the grid is pretend"): with the line
+     set to Stop the face is "Keep selling" (the device says it has no line); at 2G a send that has not happened yet is
+     not a failure, so the face stays measured and the BANNER names the pretence ("Very slow · 2G"). The old check read
+     "Slow" off a 2G panel that had never sent anything — a number the counter does not have. */
+  say('changing the setting changes the panel', !!inline && /Keep selling/i.test(inline.text),
+      'Stop: the face says Keep selling — "' + ((inline || {}).text || '').slice(0, 60) + '"');
   const followed = await p2.evaluate(async () => {
     netSet('g2');
     await new Promise((r) => setTimeout(r, 200));
     const el = document.querySelector('[data-testid="till-net-inline"]');
-    const slow = el.innerText.replace(/\s+/g, ' ').trim();
+    const bar = (document.getElementById('netbar') || {}).innerText || '';
+    const slow = { shown: !el.hidden, text: el.innerText.replace(/\s+/g, ' ').trim(), bar: bar.replace(/\s+/g, ' ').trim() };
     netSet('full');
     await new Promise((r) => setTimeout(r, 200));
     return { slow, gone: el.hidden };
   });
+  say('…2G keeps the panel, and the banner names the pretence', followed.slow.shown && /Very slow/i.test(followed.slow.bar),
+      '2G: panel shown=' + followed.slow.shown + ' · banner "' + followed.slow.bar.slice(0, 50) + '"');
   /* ⭐ IT FOLLOWS THE SWITCH — back at full speed the same panel says all is well rather than emptying */
-  say('changing the setting changes the panel', /Slow|Keep selling/i.test(followed.slow),
-      '2G still shows the panel, in its own state');
   say('and full speed says so', followed.gone === false, 'the panel stays and reports a good line');
 
   if (SHOTS) {
