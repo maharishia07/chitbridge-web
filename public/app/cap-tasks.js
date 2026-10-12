@@ -14,8 +14,9 @@
  * shop's figure, never arithmetic here) · api()/EP (core.js: the endpoint registry the round-trip budget reads) · CBWorkflow (app/workflow.js,
  * adopted: tabs · stages words) · CBEmbed's handshake (embed-host.js) · the routes that already do the work, none new:
  *   PUT  /api/chits/:id/status        (CB_SHEET_EP.status)  — moveStatus, the ONE status writer; a step = CBWorkflow.STEP_TO[action]
- *   POST /api/chits/:id/assign-lines  (workAssignLines)     — who holds a LINE and its state open · done (lib/assign, b143 + b153)
- *   POST /api/chits/:id/deliver-lines (workDeliverLines)    — what has gone out on a line (lib/deliverline, b144)
+ *   POST /api/chits/:id/assign-lines  (CB_SHEET_EP.wlAssign)  — who holds a LINE and its state open · done (lib/assign, b143 + b153)
+ *   POST /api/chits/:id/deliver-lines (CB_SHEET_EP.wlDeliver) — what has gone out on a line (lib/deliverline, b144); ONE name per endpoint
+ *                                                               (e2e/ep-aliases.cjs): the worklist's rows, read here, never a third name
  *   PUT  /api/actors/assign/:id       (assign, as app.html) — who holds the whole task: push <person> · return
  *   GET  /api/work/list · /api/work/:id · GET /api/people  — the rows, the sheet, the people to pick from
  * Flow steps (docs/process/flows.json): O2C step 3 · order (tkList, tkOpen) · O2C step 4 · delivery (tkMove, tkAssignLine, tkDeliver).
@@ -31,12 +32,10 @@
  */
 (function (root) {
   'use strict';
-  /* the registry rows this screen adds (the scanner tools/endpoint-usage.cjs reads this shape); status · chit come from CB_SHEET_EP, messages · sendMsg from CB_THREAD_EP */
+  /* the registry rows this screen adds (the scanner tools/endpoint-usage.cjs reads this shape); status · chit · wlAssign · wlDeliver come from CB_SHEET_EP, messages · sendMsg from CB_THREAD_EP */
   var CB_WORK_EP = {
     workList:         { m: 'GET',  p: '/api/work/list',               ok: 'y' },   // ?view=&limit=
     workOne:          { m: 'GET',  p: '/api/work/:id',                ok: 'y' },
-    workAssignLines:  { m: 'POST', p: '/api/chits/:id/assign-lines',  ok: 'y' },   // { edits: [{ line_id, assignee_actor_id|null, assignee_name, assignee_type, state }] }
-    workDeliverLines: { m: 'POST', p: '/api/chits/:id/deliver-lines', ok: 'y' },   // { rows: [{ line_id, quantity, unit }] }
     assign:           { m: 'PUT',  p: '/api/actors/assign/:id',       ok: 'y' },   // { action: 'push', target_actor_id } · { action: 'return' }
     people:           { m: 'GET',  p: '/api/people',                  ok: 'y' },
   };
@@ -327,7 +326,7 @@
     var who = 'who' in x ? x.who : (a.assignee_actor_id || null), name = 'who' in x ? x.name : (a.assignee_name || null), state = x.state || st;
     var edit = { line_id: l.line_id, assignee_actor_id: who, assignee_name: name, assignee_type: who ? 'human' : null, state: state };
     var said = x.state ? T(x.state === 'done' ? 'Line done.' : 'Line reopened.') : (who ? T('Line given to') + ' ' + (name || '') + '.' : T('Line taken off.'));
-    return root.CBAction.run(btn, function () { return call('workAssignLines', { params: { id: c.chit_id }, body: { edits: [edit] } }); },
+    return root.CBAction.run(btn, function () { return call('wlAssign', { params: { id: c.chit_id }, body: { edits: [edit] } }); },
       { key: 'tk-line-' + l.line_id + '-' + (x.state || 'who'), failed: T("Couldn't save the line"), out: 'tk_out',
         outcome: function () { $('tk_out').textContent = said; changed(c.chit_id, x.state ? 'moved' : 'assigned', { line_id: l.line_id, state: state, assignee: who ? { id: who, name: name } : null }); } });
   }
@@ -345,7 +344,7 @@
   }
   /** what went out on a line: POST /chits/:id/deliver-lines (lib/deliverline — events, never a stored total) */
   function tkDeliver(c, l, qty, btn) {
-    return root.CBAction.run(btn, function () { return call('workDeliverLines', { params: { id: c.chit_id }, body: { rows: [{ line_id: l.line_id, quantity: qty, unit: l.unit || undefined }] } }); },
+    return root.CBAction.run(btn, function () { return call('wlDeliver', { params: { id: c.chit_id }, body: { rows: [{ line_id: l.line_id, quantity: qty, unit: l.unit || undefined }] } }); },
       { key: 'tk-deliver-' + l.line_id, failed: T("Couldn't record it"), out: 'tk_out',
         outcome: function () { $('tk_out').textContent = T('Recorded') + ' ' + qty + ' ' + (l.unit || '') + '.'; changed(c.chit_id, 'moved', { line_id: l.line_id, delivered: qty }); } });
   }

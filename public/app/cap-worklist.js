@@ -35,10 +35,9 @@ var WL = { data: null, busy: false, err: null, due: '', view: null,
 if (typeof EP !== 'undefined') {
   Object.assign(EP, {
     worklist: { m: 'GET', p: '/api/folders/worklist', ok: 'y' },
-    /* ⭐ Everything a person does to a line, recorded from the list they did it from. Declared HERE rather than
-       borrowed from cap-chit2, so opening a line never depends on another capability having been loaded first. */
-    wlDeliver: { m: 'POST', p: '/api/chits/:id/deliver-lines', ok: 'y' },
-    wlAssign:  { m: 'POST', p: '/api/chits/:id/assign-lines',  ok: 'y' },
+    /* ⭐ Everything a person does to a line (wlAssign · wlDeliver) is declared ONCE in CB_SHEET_EP (app/accounts-shell.js,
+       merged into EP by app.html before any capability loads) — never borrowed from cap-chit2, and since TO1c shared
+       with tasks.html's cap-tasks.js, so opening a line never depends on another capability having been loaded first. */
     wlChit:    { m: 'GET',  p: '/api/chits/:id',               ok: 'y' },
     wlActors:  { m: 'GET',  p: '/api/actors',                  ok: 'y' },
     /* b155 — the INTERNAL thread, narrowed to one line. Same store the message centre uses; never a second one. */
