@@ -49,11 +49,18 @@ function rpMoney(a) { var m = a && a.money; if (!m || m.total == null) return '�
 function rpDate(d) { return typeof bkDate === 'function' ? bkDate(d) : (d || '—'); }
 function rpSession() { return (typeof SESS !== 'undefined' && SESS) || (typeof SESSION !== 'undefined' && SESSION) || {}; }
 /** a verb button: enabled when the server says ok; otherwise greyed, its sentence on the control and said on a tap */
-function rpBtn(a, verb, tid, cls) {
+function rpBtn(a, verb, tid, cls, sayInline) {
   var v = (a.actions || {})[verb]; if (!v) return '';
   var ok = !!v.ok, say = v.say || '';
   return '<button type="button" class="' + (cls || 'act sm') + '" data-testid="' + rpE(tid) + '" data-verb="' + verb + '"' + (ok ? '' : ' disabled aria-disabled="true" title="' + rpE(say) + '" data-why="' + rpE(say) + '"')
-    + ' onclick="' + (ok ? 'CBRepeat.act(\'' + rpE(a.agreement_id) + '\',\'' + verb + '\',this)' : 'CBRepeat.why(this)') + '">' + rpE(rpT(RP_VERB[verb] || verb)) + '</button>';
+    + ' onclick="CBRepeat.act(\'' + rpE(a.agreement_id) + '\',\'' + verb + '\',this)">' + rpE(rpT(RP_VERB[verb] || verb)) + '</button>'
+    /* greyed WITH its sentence: a disabled button never answers a tap, so the sentence stands beside it */
+    + (!ok && sayInline ? '<div class="hint" data-testid="' + rpE(tid) + '-say">' + rpE(say) + '</div>' : '');
+}
+/** the greyed verbs' sentences, once each, with the verbs they refuse — under the panel's buttons */
+function rpSaysHTML(a, verbs) {
+  var by = {}; verbs.forEach(function (v) { var x = (a.actions || {})[v]; if (x && !x.ok && x.say) (by[x.say] = by[x.say] || []).push(rpT(RP_VERB[v] || v)); });
+  return Object.keys(by).map(function (say) { return '<div class="hint" data-testid="rp-says">' + rpE(by[say].join(' · ') + ': ' + say) + '</div>'; }).join('');
 }
 
 /* ── the Finance tab: the seller's agreements ─────────────────────────────────────────────────────────────── */
@@ -81,14 +88,14 @@ function rpHead() {
   var due = RP.rows.filter(function (a) { return a.due; }).length;
   h.innerHTML = '<div class="kv"><b data-testid="rp-due">' + rpE(due ? (typeof txn === 'function' ? txn('{count} run due', '{count} runs due', due) : due + ' due') : rpT('Nothing due today')) + '</b>'
     + '<span><button type="button" class="act sm" data-testid="rp-run-due"' + (due ? '' : ' disabled aria-disabled="true" title="' + rpE(rpT('Nothing is due.')) + '"') + ' onclick="rpSweep(this)">' + rpE(rpT('Run what is due')) + '</button>'
-    + ' <span id="rp_why" data-testid="rp-why" class="hint"></span></span></div>';
+    + ' <span id="rp_why" data-testid="rp-why" class="hint"' + (RP.said ? ' data-tone="' + rpE(RP.said.tone) + '"' : '') + '>' + rpE(RP.said ? RP.said.text : '') + '</span></span></div>';
 }
 function rpSweep(btn) {
   return CBAction.run(btn, function () { return api('repeatSweep', { body: {} }); },
     { key: 'rp-sweep', out: 'rp_why', failed: rpT('Could not run them'), outcome: function (r) {
       var n = (r && r.ran || []).length, p = (r && r.problems || []).length;
-      var el = document.getElementById('rp_why'); if (el) { el.textContent = (n ? (typeof txn === 'function' ? txn('{count} run made', '{count} runs made', n) : n + ' made') : rpT('Nothing to run')) + (p ? ' · ' + rpT('some could not: see the row') : ''); el.setAttribute('data-tone', p ? 'warn' : 'ok'); }
-      rpLoad(true);
+      RP.said = { text: (n ? (typeof txn === 'function' ? txn('{count} run made', '{count} runs made', n) : n + ' made') : rpT('Nothing to run')) + (p ? ' · ' + rpT('some could not: see the row') : ''), tone: p ? 'warn' : 'ok' };
+      rpHead(); rpLoad(true);
     } });
 }
 function rpCols() {
@@ -102,7 +109,7 @@ function rpCols() {
       return '<span class="tag ' + (RP_TONE[a.state] || '') + '" data-b="state">' + rpE(rpT(a.words || a.state)) + '</span>' + (a.state_note ? '<div class="hint" data-b="note">' + rpE(a.state_note) + '</div>' : ''); } },
     { key: 'act', label: ' ', prio: 1, pin: 'end', w: 170, html: true, cell: function (a) {
       var v = a.state === 'countered' ? 'agree' : a.state === 'paused' ? 'resume' : 'run';
-      return '<span style="display:inline-flex;gap:6px" onclick="event.stopPropagation()">' + rpBtn(a, v, 'rp-' + v + '-' + a.agreement_id, 'cbl-tbtn') + '</span>'; } },
+      return '<span style="display:inline-flex;gap:6px;flex-direction:column;align-items:flex-start" onclick="event.stopPropagation()">' + rpBtn(a, v, 'rp-' + v + '-' + a.agreement_id, 'cbl-tbtn', true) + '</span>'; } },
   ];
 }
 function rpMount(frame) {
@@ -227,7 +234,7 @@ function rpPanelPaint() {
     + '<div class="cs-row cs-mute"><span>' + rpE(rpT('Last run')) + '</span><span data-testid="rp-last">' + rpE(a.last_run_on ? rpDate(a.last_run_on) + ' · ' + a.runs_done : '—') + '</span></div>'
     + (a.state_note ? '<div class="cs-row cs-mute"><span>' + rpE(rpT('Note')) + '</span><span data-testid="rp-note">' + rpE(a.state_note) + '</span></div>' : '')
     + (c ? '<div class="cs-note" data-testid="rp-counter">' + rpE(rpT('Proposed change') + ': ' + rpCounterWords(c, p.lines)) + '</div>' : '')
-    + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 4px" data-testid="rp-verbs">' + verbs.map(function (v) { return rpBtn(a, v, 'rp-act-' + v); }).join('') + '</div>'
+    + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 4px" data-testid="rp-verbs">' + verbs.map(function (v) { return rpBtn(a, v, 'rp-act-' + v); }).join('') + '</div>' + rpSaysHTML(a, verbs)
     + '<div id="rp_form" data-testid="rp-form"></div><div class="cs-mute" id="rp_panel_why" data-testid="rp-panel-why"></div>';
 }
 function rpCounterWords(c, lines) {
@@ -235,8 +242,6 @@ function rpCounterWords(c, lines) {
   return [c.lines ? c.lines.map(function (x) { var l = byId[x.line_id]; return (l ? (l.particulars || l.name || x.line_id) : x.line_id) + ' × ' + x.quantity; }).join(', ') : null,
     c.every != null ? rpEvery(c) + ' ' + rpT('from') + ' ' + rpDate(c.start_on) : null, c.note || null].filter(Boolean).join(' · ');
 }
-/** a greyed verb, tapped: its sentence, said in the panel */
-function rpWhy(btn) { var el = document.getElementById('rp_panel_why') || document.getElementById('rp_why'); if (el) el.textContent = btn.getAttribute('data-why') || ''; }
 /** the Counter form: a quantity per line, how often, from when, a note */
 function rpCounterForm(p) {
   var a = p.a;
@@ -269,10 +274,11 @@ function rpRowAct(id, verb, btn) {
 }
 function rpEpOf(verb) { return 'repeat' + verb.charAt(0).toUpperCase() + verb.slice(1); }
 function rpSaid(verb, r) {
-  var el = document.getElementById('rp_panel_why') || document.getElementById('rp_why'); if (!el) return;
   var n = verb === 'run' ? ((r && r.ran) || []).length : 0;
-  el.textContent = verb === 'run' ? (n ? (typeof txn === 'function' ? txn('{count} run made', '{count} runs made', n) : n + ' made') : rpT('Nothing to run')) : rpT(RP_VERB[verb]) + ' ✓';
-  el.setAttribute('data-tone', 'ok');
+  var text = verb === 'run' ? (n ? (typeof txn === 'function' ? txn('{count} run made', '{count} runs made', n) : n + ' made') : rpT('Nothing to run')) : rpT(RP_VERB[verb]) + ' ✓';
+  var panel = document.getElementById('rp_panel_why');
+  if (panel) { panel.textContent = text; panel.setAttribute('data-tone', 'ok'); return; }
+  RP.said = { text: text, tone: 'ok' }; rpHead();   /* the head is repainted on every load: the outcome rides on RP.said */
 }
 function rpGo(verb, btn) {
   var p = RP.panel; if (!p) return;
@@ -301,4 +307,4 @@ function rpSendCounter(btn) {
     { key: 'rp-counter-' + p.id, out: 'rp_panel_why', busy: rpT('Sending…'), failed: rpT('Could not send the counter'), outcome: function (r) { if (r && r.agreement) p.a = r.agreement; rpPanelPaint(); rpSaid('counter', r); } });
 }
 
-var CBRepeat = { start: rpStart, read: rpRead, isAgreement: rpIsAgreement, panelHTML: rpPanelHTML, panel: rpPanel, act: rpAct, go: rpGo, why: rpWhy, sendCounter: rpSendCounter, mount: rpMount, load: rpLoad };
+var CBRepeat = { start: rpStart, read: rpRead, isAgreement: rpIsAgreement, panelHTML: rpPanelHTML, panel: rpPanel, act: rpAct, go: rpGo, sendCounter: rpSendCounter, mount: rpMount, load: rpLoad };

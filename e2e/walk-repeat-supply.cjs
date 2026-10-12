@@ -124,7 +124,7 @@ W.run('repeat-supply', async (w) => {
 
   const txt = (sel) => page.locator(sel).first().innerText().then((s) => s.replace(/\s+/g, ' ').trim()).catch(() => '');
   const body = () => page.evaluate(() => document.body.innerText.replace(/\s+/g, ' '));
-  const open = async (hash, until) => { await page.goto(base + '/finance.html' + (hash || '#/repeat')); await page.waitForSelector(until || '[data-testid^="rp-row-"]', { timeout: 20000 }).catch(() => {}); await page.waitForTimeout(400); };
+  const open = async (hash, until) => { await page.goto(base + '/finance.html?t=' + Date.now() + (hash || '#/repeat'));   /* a fresh load every time (a hash alone would not reload) */ await page.waitForSelector(until || '[data-testid^="rp-row-"]', { timeout: 20000 }).catch(() => {}); await page.waitForTimeout(400); };
   const sheet = async (chitId) => { await page.evaluate((id) => openChitSheet(id), chitId); await page.waitForSelector('[data-testid="rp-verbs"], [data-testid="cs-act-repeat"], [data-testid="rp-panel-err"]', { timeout: 15000 }).catch(() => {}); await page.waitForTimeout(300); };
   const writesTo = (tail) => S.writes.filter((x) => x.endsWith(tail)).length;
 
@@ -136,14 +136,14 @@ W.run('repeat-supply', async (w) => {
   });
   await w.step('R2', 'Repeat supply -> "1 run due" and Run what is due; opening the tab writes nothing', async () => {
     const h = await txt('[data-testid="rp-head"]'), en = await page.locator('[data-testid="rp-run-due"]').isEnabled().catch(() => false);
-    return { ok: /1 run due/.test(h) && en && S.writes.length === 0, saw: '"' + h + '"; enabled ' + en + '; writes ' + S.writes.length };
+    return { ok: /1 run due/i.test(h) && en && S.writes.length === 0, saw: '"' + h + '"; enabled ' + en + '; writes ' + S.writes.length };
   });
-  await w.step('R3', 'Row C (waiting for the customer) -> Run now is GREYED, and tapping it says the server\'s sentence', async () => {
+  await w.step('R3', 'Row C (waiting for the customer) -> Run now is GREYED, with the server\'s sentence beside it; a tap sends nothing', async () => {
     const dis = await page.locator('[data-testid="rp-run-C"]').isDisabled().catch(() => false);
     await page.locator('[data-testid="rp-run-C"]').click({ force: true }).catch(() => {});
     await page.waitForTimeout(200);
-    const why = await txt('[data-testid="rp-why"]');
-    return { ok: dis && /not at a step/.test(why) && writesTo('/C/run') === 0, saw: 'disabled ' + dis + '; said "' + why + '"; writes ' + writesTo('/C/run') };
+    const why = await txt('[data-testid="rp-run-C-say"]');
+    return { ok: dis && /not at a step/.test(why) && writesTo('/C/run') === 0, saw: 'disabled ' + dis + '; beside it "' + why + '"; writes ' + writesTo('/C/run') };
   });
   await w.step('R4', 'Row A (due) -> Run now, pressed twice -> ONE request, the outcome said ("1 run made"), the row moves to next week', async () => {
     const btn = page.locator('[data-testid="rp-run-A"]');
