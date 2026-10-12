@@ -311,7 +311,13 @@
       if (typeof quickDispute === 'function') quickDispute(id, { back: true });
       return;
     }
-    if (k === 'page') { close(); var pg = typeof openChitPage === 'function' ? openChitPage : openChit; if (typeof pg === 'function') pg(id); }
+    if (k === 'page') {
+      close();
+      var pg = typeof openChitPage === 'function' ? openChitPage : (typeof openChit === 'function' ? openChit : null);
+      /* ⚠️ WX-P2P-09 (2026-10-13, the real stack): on CB Accounts (accounts.html) neither opener exists, so "Open page" did nothing — a dead
+         button on every received bill. The app's own door for a bill opened from CB Accounts is #/app/chit/<id> (app.html route()). */
+      if (pg) pg(id); else root.location.href = '/app.html#/app/chit/' + encodeURIComponent(id);
+    }
   }
 
   root.CBSheet = { orderHTML: orderHTML, moneyFor: moneyFor, moneyBlockHTML: moneyBlockHTML, open: open, close: close, act: act, use: function (u) { return move('act', u); }, actionsFor: actionsFor, model: model, titleFor: titleFor, stepWord: function (m) { return T(STEP[m.status] || m.status); } };

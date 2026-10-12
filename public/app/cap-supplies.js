@@ -88,8 +88,11 @@ function supRow(s){
    * purchase recognisable at the counter of the hardware shop — "what did we pay last time" — and it is the whole
    * reason to keep this list rather than just an expense line.
    */
+  /* ⚠️ WX-P2P-05 (2026-10-13, the real stack): the row read "40 · Corner Stores" — a bare number. `money` is not a global in app.html (each
+     screen keeps its own local), so the fallback printed the raw figure. The app's one formatter (fmtMoney, M36) in the shop's currency. */
+  var fmt = function (n) { try { return fmtMoney(Number(n), typeof myCur === 'function' ? myCur() : 'INR'); } catch (_) { return typeof money === 'function' ? money(n) : String(n); } };
   var last = s.last_cost != null
-    ? (typeof money === 'function' ? money(s.last_cost) : s.last_cost) + (s.last_from ? ' · ' + esc(s.last_from) : '')
+    ? fmt(s.last_cost) + (s.last_from ? ' · ' + esc(s.last_from) : '')
     : '<span style="color:var(--grey)">' + tx('not bought yet') + '</span>';
   /* ⚠️ COUNTED vs EXPENSED said in words, because "keep_stock" is our word and a shopkeeper reads neither */
   var kept = s.keep_stock
