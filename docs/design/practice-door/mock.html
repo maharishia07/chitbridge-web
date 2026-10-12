@@ -36,16 +36,16 @@
   --shadow:0 10px 28px rgba(0,0,0,.5); --proto:#B9A3E6; --proto-t:#2A2238;
 }}
 *{box-sizing:border-box} html,body{margin:0;height:100%}
-body{background:var(--page,#FCFAF5);color:var(--ink,#1D1B16);font:15px/1.45 var(--f-ui,'IBM Plex Sans',system-ui,sans-serif)}
+body{display:flex;flex-direction:column;background:var(--page,#FCFAF5);color:var(--ink,#1D1B16);font:15px/1.45 var(--f-ui,'IBM Plex Sans',system-ui,sans-serif)}
 button{font:inherit;color:inherit;cursor:pointer} .num{font-family:var(--f-num,monospace);font-variant-numeric:tabular-nums}
 :focus-visible{outline:2px solid var(--blue,#2F74C9);outline-offset:2px}
 
 /* ── PROTOTYPE ONLY — DO NOT BUILD: the sample banner ── */
-.proto{display:flex;align-items:center;gap:10px;padding:6px 16px;background:var(--proto-t,#F1ECF8);color:var(--proto,#6B4FA0);font-size:13px;font-weight:600;border-bottom:1px solid var(--line,#DDD6C6)}
+.proto{flex-shrink:0;display:block;padding:6px 16px;background:var(--proto-t,#F1ECF8);color:var(--proto,#6B4FA0);font-size:13px;font-weight:600;border-bottom:1px solid var(--line,#DDD6C6)}
 .proto b{font-family:var(--f-num,monospace);font-weight:600}
 
 /* ── the shell: sidebar + full-width main (accounts.html) ── */
-.app{display:flex;height:calc(100vh - 34px);overflow:hidden}
+.app{flex:1;min-height:0;display:flex;overflow:hidden}
 .side{width:232px;flex-shrink:0;background:var(--panel,#F3EFE6);border-right:1px solid var(--line,#DDD6C6);display:flex;flex-direction:column}
 .brand{height:60px;display:flex;align-items:center;gap:10px;padding:0 14px;border-bottom:1px solid var(--line,#DDD6C6);font:800 19px var(--f-display,sans-serif)}
 .brand i{width:32px;height:32px;border-radius:8px;background:var(--green,#16693F);color:var(--card,#fff);display:grid;place-items:center;font:700 14px var(--f-num,monospace);font-style:normal}
@@ -67,6 +67,7 @@ button{font:inherit;color:inherit;cursor:pointer} .num{font-family:var(--f-num,m
 .chip.bad{background:var(--red-t,#FBEAE3);border-color:var(--red-b,#E7B9A8);color:var(--red-i,#8E3517);font-weight:600}
 .chip.warn::before,.chip.bad::before{content:"⚠"} button.chip.warn::after,button.chip.bad::after{content:"›";opacity:.7}
 .chip.quiet{color:var(--muted,#5E594D)}
+.chip.sel{outline:2px solid var(--blue,#2F74C9);outline-offset:1px}
 .avatar{margin-left:auto;width:34px;height:34px;border-radius:50%;background:var(--green,#16693F);color:var(--card,#fff);display:grid;place-items:center;font-weight:700;font-size:13px}
 .tools{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;padding:6px 20px 8px}
 .search{flex:1 1 200px;display:flex;align-items:center;gap:6px;border:1px solid var(--line,#DDD6C6);background:var(--card,#fff);border-radius:9px;padding:0 10px;height:34px;color:var(--faint,#8A8374)}
@@ -124,7 +125,9 @@ button{font:inherit;color:inherit;cursor:pointer} .num{font-family:var(--f-num,m
   .cols{display:none}
   .row{grid-template-columns:1fr 36px;grid-template-areas:"name exp" "books exp" "due exp";row-gap:4px}
   .row .name{grid-area:name} .row .c2{grid-area:books} .row .c3{grid-area:due} .row .exp{grid-area:exp;align-self:start}
-  .next{padding-left:20px} .line{flex-wrap:wrap} .line .btn{margin-left:28px}
+  .chip.quiet{display:none} .title .chip{font-size:12.5px}
+  .next{padding-left:20px} .line{display:grid;grid-template-columns:18px 1fr;gap:4px 10px;align-items:start} .line .btn{grid-column:2;justify-self:start}
+  .todo{flex-wrap:wrap} .todo .t{flex:1 1 100%} .todo .btn{margin-left:26px}
   .title{padding:10px 16px 6px} .tools,.rows .row,.next,.allok{padding-left:16px;padding-right:16px} .pad{padding:16px}
   .card .kv{grid-template-columns:1fr} .compose{flex-direction:column}
 }
