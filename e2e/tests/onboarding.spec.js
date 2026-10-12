@@ -3,7 +3,7 @@
 // DATA:   fresh email per run + DEV_OTP=123456
 // LOCATORS: onb-getstarted · onb-role-* · onb-bp-* · onb-continue · reg-name · reg-email · reg-submit · reg-vertical-* · reg-otp
 const { test, expect } = require('@playwright/test');
-const { uniqueEmail, uniqueName, DEV_OTP } = require('../fixtures');
+const { uniqueEmail, uniqueName, DEV_OTP, passCountryStep } = require('../fixtures');
 
 test.describe('Module · Onboarding / Mint', () => {
   test('[ONB-01] mint a business entity, screen by screen', async ({ page }) => {
@@ -35,6 +35,10 @@ test.describe('Module · Onboarding / Mint', () => {
       await page.locator('[data-testid^="reg-vertical-"]').first().click();
       await page.getByTestId('reg-otp').fill(DEV_OTP);
       await page.getByTestId('reg-submit').click();
+    });
+
+    await test.step('Country setup — the step after verify (CS1): confirm the prefill, Continue', async () => {
+      await passCountryStep(page, 'IN');                              // one PUT; the app opens
     });
 
     await test.step('Landed in the app (minted + signed in)', async () => {
