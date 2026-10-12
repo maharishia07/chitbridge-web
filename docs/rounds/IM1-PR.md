@@ -1,0 +1,9 @@
+# PR body — round IM1 (branch round/IM1-38318769309 → main). The runner's token cannot open a PR; the coordinator opens it with this body. Twin PRs: chitbridge-engines (tags v1.38.0 · v1.38.1) and chitbridge-api on the same branch name — landing order engines → api → web.
+
+IM1 · CB Accounts › Setup › **Move in** (`public/app/cap-move-in.js`, one entry for the five Xero / QuickBooks exports): File → Columns (the server's guess, confirmed per header) → Preview (will add · will merge · will skip, each row with the server's sentence) → Import (ONE write) → the outcome with the skipped rows downloadable. A refused import is greyed WITH the server's sentence (an unbalanced trial balance).
+Reuse, named: CBSteps (the rail, the guard-with-a-reason, the footer) · CBList (the preview and the skipped rows: search, action filter, cards at 390) · CBAction.run (M64) · bkDrCr / bkCur (M36; the row sentences are composed server-side) · the API contract (e2e/fixtures/web-api.contract.json, byte copy of the api's). New: the five mi* functions — nothing existing read a Xero / QBO file. Theme tokens only; 390 px proven.
+Walk: `e2e/walk-move-in.cjs` 7 of 7 (stand-in API held to the contract: 6 answers over 4 routes); `e2e/cb-accounts.cjs` gains the view (its menu count now reads VIEWS; the head-% and daybook-key reds there are pre-existing on main — verified against main's pages and test). Guards green: guard-static, token-guard, dup-functions, check-syntax, check-app-parses, ep-aliases, money-input, lazy, skeleton, markup, list-controls/behaviour, screen-reads, docs-guard (MODULES.md regenerated), contract.cjs, process-map.
+Flow: new `MVI` (Move in) steps 1–4 in docs/process/flows.json (+ MVI.md generated). The IM0 research file stays on its own branch (round/IM0-…), read from there.
+Landing order: engines → api → this (the stand-in matches the api's contract; the page needs the three doors live).
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
