@@ -30,6 +30,7 @@ if (typeof EP !== 'undefined') { Object.assign(EP, {
   perAccrueRev:  { m: 'POST',   p: '/api/books/accruals/:ref/reverse' },
   perGstClose:   { m: 'POST',   p: '/api/books/gst/close' },
   perGstPay:     { m: 'POST',   p: '/api/books/gst/pay' },
+  perReturn:     { m: 'GET',    p: '/api/books/returns' },      /* BAS1: the shop's OWN return (AU BAS · AE VAT201), read from the posted books */
   perYearStatus: { m: 'GET',    p: '/api/books/year/:fy/status' },
   perYearClose:  { m: 'POST',   p: '/api/books/year/:fy/close' },
 }); }
@@ -448,6 +449,11 @@ async function peAccrRev(a) {
    POST /gst/pay { fy, period, amounts, rcm, bank, challan_no } — a slip of the finger is caught by the server against what is owed. */
 async function peGstView(body) {
   if (!peOwner()) { body.innerHTML = peNoOwner('Only the owner closes and pays GST'); return; }
+  /* BAS1: the shop's OWN return first — an AU shop sees its BAS, an AE shop its VAT return (the pack's words). India (422 RETURN_FROM_RAIL), or a server
+     without the route yet, keeps the GST close & pay below as the whole page. */
+  let ret = null;
+  try { PE_RET.q = Object.assign({}, peRetRecall()); ret = await peReturnLoad(); } catch (e) { body.innerHTML = '<div class="pe-bad">' + bkErr(e) + '</div>'; return; }
+  if (ret) { peReturnWord(ret); body.innerHTML = '<div id="pr_host" data-testid="pr-host"></div>'; peReturnPaint(ret); return; }
   let L; try { L = await bkPeriodsLoad(); } catch (e) { body.innerHTML = '<div class="pe-bad">' + bkErr(e) + '</div>'; return; }
   const last = peMonthEnd(1), lastP = (Number(last.slice(5, 7)) + 8) % 12 + 1;    /* April = 1 … March = 12 */
   const lastFy = (() => { const y = Number(last.slice(5, 7)) >= 4 ? Number(last.slice(0, 4)) : Number(last.slice(0, 4)) - 1; return y + '-' + String((y + 1) % 100).padStart(2, '0'); })();
@@ -506,6 +512,109 @@ async function peGstPay(btn) {
     try { const r = await api('perGstPay', { body }) || {}; peOk('pgp_out', peE(txf('Paid · {no}', { no: r.entry_no || '' }))); }
     catch (e) { peBad('pgp_out', e); }
   });
+}
+
+/* ═══ 4a · THE SHOP'S OWN RETURN (BAS1, 2026-10-12) — BAS (AU) · VAT return (AE), prepared from the books, never lodged ═══════════════════════════════
+   GET /returns?period&frequency&simpler&stagger&emirate → { currency, pack, form, name, short, authority, portal, prepared, asked, periods: [{ period, label, start, end, due, ended }],
+     period, boxes: [{ code, label, amount_minor, tax_minor, roles, accounts: [{ code, name }], note }], payable_minor, refund_minor, net_minor, notes, cite, emirates?, staggers?, needs?, why? }
+   ⭐ THE PAGE COMPUTES NOTHING: every figure is the server's READ of the posted ledgers (engines gst-returns.returnFor → the pack's bas / vat201). The list IS CBList (rule 5);
+   a box row opens the Ledgers page on the ledgers it counts, for the period; "Copy figures" puts the boxes on the clipboard as one block for the ATO / FTA portal.
+   The FTA stagger and the Emirate are never guessed: until the owner picks the stagger the server says so (`needs`) and no box is drawn; the picks are remembered on this device. */
+var PE_RET = { r: null, q: {}, api: null, block: '' };
+const peRetKey = () => 'cb_ret_' + ((typeof SESSION !== 'undefined' && SESSION && (SESSION.entityId || SESSION.bridgeId)) || 'shop');
+function peRetRemember() { try { localStorage.setItem(peRetKey(), JSON.stringify({ stagger: PE_RET.q.stagger || null, emirate: PE_RET.q.emirate || null, frequency: PE_RET.q.frequency || null, simpler: PE_RET.q.simpler || null })); } catch (_) {} }
+function peRetRecall() { try { const v = JSON.parse(localStorage.getItem(peRetKey()) || 'null') || {}; Object.keys(v).forEach((k) => { if (v[k] == null) delete v[k]; }); return v; } catch (_) { return {}; } }
+const peRetDash = () => '<span style="color:var(--grey)">—</span>';
+/** the return for the current picks; null when this shop's return is not read from the ledgers (India: 422 RETURN_FROM_RAIL) or the server predates the route (404) */
+async function peReturnLoad() {
+  const q = {}; ['period', 'frequency', 'simpler', 'stagger', 'emirate'].forEach((k) => { if (PE_RET.q[k] != null && PE_RET.q[k] !== '') q[k] = String(PE_RET.q[k]); });
+  try { const r = await api('perReturn', { query: q }); return r && r.form ? r : null; }
+  catch (e) { if (e && (e.status === 404 || (e.status === 422 && e.data && e.data.code === 'RETURN_FROM_RAIL'))) return null; throw e; }
+}
+/** the menu and the title say what the pack calls it — BAS, VAT return — instead of "GST close & pay" */
+function peReturnWord(r) {
+  const word = r.short || r.form;
+  if (typeof NAV !== 'undefined' && Array.isArray(NAV)) { const n = NAV.find((x) => x[0] === 'gstclose'); if (n && n[1] !== word) { n[1] = word; if (typeof navPaint === 'function') navPaint('gstclose'); } }
+  const t = document.getElementById('title'); if (t && typeof BK !== 'undefined' && BK.tab === 'gstclose') t.textContent = word;
+}
+/** a pick changed (period · frequency · labels · stagger · Emirate): ask again, repaint; the server's refusal is one sentence in the slot */
+async function peReturnPick(k, v) {
+  PE_RET.q[k] = v; if (k !== 'period') { delete PE_RET.q.period; peRetRemember(); }
+  const host = peEl('pr_host'); if (!host) return;
+  try { const r = await peReturnLoad(); if (r) peReturnPaint(r); }
+  catch (e) { peBad('pr_out', e, tx('Could not be read')); }
+}
+function peReturnPaint(r) {
+  const host = peEl('pr_host'); if (!host) return;
+  PE_RET.r = r;
+  const c = r.currency, P = r.period, isAE = r.form === 'VAT201', asked = r.asked || {};
+  const periods = (r.periods || []).slice().reverse();          /* the latest first — the one to prepare now sits on top */
+  const stg = r.staggers || {};
+  const staggerOpts = [['', '—']].concat(Object.keys(stg).map((k) => [stg[k].monthly ? 'monthly' : k, stg[k].monthly ? tx('Monthly') : txf('Stagger {n} · tax year ends {m}', { n: k, m: stg[k].tax_year_end })]));
+  let h = '<div class="pe-card" data-testid="pr-card"><div class="pe-form">'
+    + (periods.length ? peField('pr_p', 'Period', peSel('pr_p', periods.map((p) => [p.period, p.label + ' · ' + tx('due') + ' ' + bkDate(p.due) + (p.ended ? '' : ' · ' + tx('not ended'))]), P ? P.period : '', ' onchange="peReturnPick(\'period\', this.value)"')) : '')
+    + (!isAE ? peField('pr_f', 'How often', peSel('pr_f', [['quarterly', 'Quarterly'], ['monthly', 'Monthly']], asked.frequency || 'quarterly', ' onchange="peReturnPick(\'frequency\', this.value)"')) : '')
+    + (!isAE ? peField('pr_s', 'Labels', peSel('pr_s', [['1', 'Simpler BAS'], ['0', 'Full BAS']], asked.simpler === false ? '0' : '1', ' onchange="peReturnPick(\'simpler\', this.value)"')) : '')
+    + (isAE ? peField('pr_st', 'Tax period', peSel('pr_st', staggerOpts, asked.stagger == null ? '' : String(asked.stagger), ' onchange="peReturnPick(\'stagger\', this.value)"')) : '')
+    + (isAE && !r.needs ? peField('pr_em', 'Emirate', peSel('pr_em', [['', '—']].concat((r.emirates || []).map((e) => [e, e])), asked.emirate || '', ' onchange="peReturnPick(\'emirate\', this.value)"')) : '')
+    + '</div>';
+  if (r.needs) { host.innerHTML = h + '<div class="pe-note" data-testid="pr-needs">' + peE(r.why || '') + '</div></div>'; return; }
+  h += '<div class="supacts">' + peBtn('pr-copy', 'Copy figures', 'peReturnCopy(this)') + '</div><div id="pr_out" class="pe-slot"></div>'
+    + '<div class="pe-total" data-testid="pr-total"><span>' + peE(r.net_minor < 0 ? tx('Refund due') : tx('To pay')) + '</span><span class="mono">' + peE(peMoney(Math.abs(r.net_minor || 0), c)) + '</span></div>'
+    + '<div class="pe-note" data-testid="pr-prepared">' + peE(r.prepared + ' — ' + txf('lodge it in the {who} portal ({portal})', { who: r.authority, portal: r.portal })) + '</div>'
+    + '</div><div id="pr_list" data-testid="pr-list"></div>';
+  if ((r.notes || []).length) h += '<div class="pe-card" data-testid="pr-basis"><div class="pe-sub">' + peE(tx('How it was read')) + '</div>' + r.notes.map((n, i) => '<div class="pe-note" data-testid="pr-note-' + i + '">' + peE(n) + '</div>').join('') + '</div>';
+  host.innerHTML = h;
+  peReturnList(r);
+}
+/** the boxes as the Task table (CBList): box · label · amount (· VAT) · the ledgers it counts, each a chip that opens it */
+function peReturnList(r) {
+  const host = peEl('pr_list'); if (!host) return;
+  const c = r.currency, two = (r.columns || []).indexOf('tax') >= 0 || r.form === 'VAT201';
+  CBList.reset && CBList.reset('return');
+  if (PE_RET.api) { try { PE_RET.api.destroy(); } catch (_) {} }
+  const rows = (r.boxes || []).map((b, i) => Object.assign({ i }, b));
+  const cols = [
+    { key: 'code', label: tx('Box'), prio: 1, w: 90, html: true, cell: (b) => '<b class="mono">' + peE(b.code) + '</b>' },
+    { key: 'label', label: tx('Label'), prio: 2, w: 320, html: true, cell: (b) => peE(b.label) + (b.note ? ' <span style="color:var(--grey)">' + peE(b.note) + '</span>' : '') },
+    { key: 'amount', label: tx('Amount'), prio: 1, num: true, w: 150, html: true, tid: (b) => 'pr-amt-' + b.code, cell: (b) => b.amount_minor == null ? peRetDash() : peE(peMoney(b.amount_minor, c)) },
+  ];
+  if (two) cols.push({ key: 'tax', label: tx('VAT'), prio: 1, num: true, w: 150, html: true, tid: (b) => 'pr-tax-' + b.code, cell: (b) => b.tax_minor == null ? peRetDash() : peE(peMoney(b.tax_minor, c)) });
+  cols.push({ key: 'opens', label: tx('Ledgers'), prio: 3, w: 280, html: true, cell: (b) => (b.accounts || []).map((a) => '<button type="button" class="optchip" data-testid="pr-open-' + peE(b.code) + '-' + peE(a.code) + '" onclick="peReturnOpen(\'' + peE(a.code) + '\')">' + peE(a.code + ' ' + a.name) + '</button>').join(' ') || peRetDash() });
+  PE_RET.api = CBList.mount(host, { key: 'return', t: tx, rows: () => rows, id: (b) => String(b.code), rowTid: (b) => 'pr-box-' + b.code, columns: cols,
+    onOpen: (b) => { const a = (b.accounts || [])[0]; if (a) peReturnOpen(a.code); } });
+}
+/** a figure opens what it counts: the Ledgers page on that ledger, the period chip set to the return's period (the same ledger read the box was summed from) */
+function peReturnOpen(code) {
+  const r = PE_RET.r, P = r && r.period; if (!P) return;
+  if (typeof BK !== 'undefined') {
+    BK.lgp = { preset: 'custom', from: P.start, to: P.end };
+    if (BK.lt) { BK.lt.sel = null; BK.lt.last = { code: String(code), party: null }; if (typeof bkLtPrefsSave === 'function') bkLtPrefsSave(); }
+    BK.lgAcc = String(code);
+  }
+  if (typeof show === 'function') show('ledgers');
+}
+/** the boxes as one block of text for the portal: code · label · amount (· VAT), plain digits — what a shopkeeper pastes box by box */
+function peReturnBlock(r) {
+  const c = r.currency, P = r.period || {}, lines = [(r.name || r.form) + ' · ' + (P.label || P.period || '') + (P.due ? ' · ' + tx('due') + ' ' + P.due : '')];
+  (r.boxes || []).forEach((b) => {
+    if (b.amount_minor == null && b.tax_minor == null) return;
+    lines.push([b.code, b.label, b.amount_minor == null ? '' : bkMinorText(b.amount_minor, c), b.tax_minor == null ? '' : bkMinorText(b.tax_minor, c)].join('\t').replace(/\t+$/, ''));
+  });
+  lines.push((r.net_minor < 0 ? tx('Refund due') : tx('To pay')) + '\t' + bkMinorText(Math.abs(r.net_minor || 0), c));
+  lines.push(r.prepared + ' · ChitBridge');
+  return lines.join('\n');
+}
+async function peReturnCopy(btn) {
+  const r = PE_RET.r; if (!r) return;
+  const text = PE_RET.block = peReturnBlock(r), n = (r.boxes || []).filter((b) => b.amount_minor != null || b.tax_minor != null).length;
+  let done = false;
+  try { if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(text); done = true; } } catch (_) {}
+  if (!done) {
+    try { const ta = document.createElement('textarea'); ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); done = !!(document.execCommand && document.execCommand('copy')); document.body.removeChild(ta); } catch (_) {}
+  }
+  if (done) peOk('pr_out', peE(txf('Copied {n} boxes · paste them into the {who} portal', { n: n, who: r.authority })));
+  else peBad('pr_out', tx('Could not copy — select the figures and copy by hand.'));
 }
 
 /* ═══ 5 · YEAR CLOSE ═══════════════════════════════════════════════════════════════════════════════════════════════════
