@@ -229,12 +229,12 @@
     {
       "id": "L2C", "name": "Lead to customer", "sap": "SD pre-sales (CRM)",
       "steps": [
-        { "n": 1, "step": "lead", "module": "CRM", "who": "the shop's staff",
-          "screen": [{ "file": "web:public/app/cap-crm-leads.js", "fn": "crmLeadAddOpen" }],
-          "engine": [{ "file": "api:lib/crm.js", "fn": "isLead" }, { "file": "api:lib/crm.js", "fn": "list" }, { "file": "api:lib/memberships.js", "fn": "add" }],
-          "route": [{ "m": "POST", "p": "/api/crm/leads", "file": "api:routes/crm.js" }, { "m": "GET", "p": "/api/crm/parties", "file": "api:routes/crm.js" }],
-          "chit": "none — a party row (added_via lead) with a lead_stage membership", "ledger": "none",
-          "test": ["api:tests/crm-leads.test.cjs", "api:tests/crm-read.test.cjs", "web:e2e/crm.cjs"],
+        { "n": 1, "step": "lead", "module": "CRM", "who": "the shop's staff (one by hand, or the call desk's first list from a CSV)",
+          "screen": [{ "file": "web:public/app/cap-crm-leads.js", "fn": "crmLeadAddOpen" }, { "file": "web:public/app/cap-crm-leads.js", "fn": "crmImportOpen" }],
+          "engine": [{ "file": "api:lib/crm.js", "fn": "isLead" }, { "file": "api:lib/crm.js", "fn": "list" }, { "file": "api:lib/memberships.js", "fn": "add" }, { "file": "api:lib/crm-leads.js", "fn": "importLeads" }, { "file": "api:lib/memberships.js", "fn": "addMany" }, { "file": "api:lib/local-identity.js", "fn": "mintMany" }],
+          "route": [{ "m": "POST", "p": "/api/crm/leads", "file": "api:routes/crm.js" }, { "m": "POST", "p": "/api/crm/leads/import", "file": "api:routes/crm.js" }, { "m": "GET", "p": "/api/crm/parties", "file": "api:routes/crm.js" }],
+          "chit": "none — a party row (added_via lead) with a lead_stage membership; the import makes the same rows as a set (≤500, phone-deduped, preview = the server's dry run)", "ledger": "none",
+          "test": ["api:tests/crm-leads.test.cjs", "api:tests/crm-leads-import.test.cjs", "api:tests/crm-read.test.cjs", "web:e2e/crm.cjs", "web:e2e/walk-crm-lead-import.cjs"],
           "status": "ok", "note": "" },
         { "n": 2, "step": "call", "module": "CRM", "who": "the shop's staff (the call desk)",
           "screen": [{ "file": "web:public/app/cap-crm-calls.js", "fn": "crmCallSend" }],
