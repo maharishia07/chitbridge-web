@@ -19,6 +19,13 @@ jobs:
         shard: [1, 2, 3, 4, 5, 6]
     steps:
       - uses: actions/checkout@v4
+      # many harnesses read the api's libraries as ../../chitbridge-api (the layout on the dev PC) — give the runner the same layout
+      - uses: actions/checkout@v4
+        with:
+          repository: maharishia07/chitbridge-api
+          path: chitbridge-api
+      - name: Lay the api beside the web repo, as on the dev PC
+        run: ln -s "$GITHUB_WORKSPACE/chitbridge-api" "$GITHUB_WORKSPACE/../chitbridge-api" && (cd chitbridge-api && npm ci --omit=dev --ignore-scripts)
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
