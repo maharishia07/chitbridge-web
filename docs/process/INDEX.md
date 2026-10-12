@@ -36,7 +36,7 @@ Athi, 2026-10-12: *"for each function we are building we need to have a SAP kind
 | Finance | `web:public/finance.html` | FI-AR (collections, terms) |
 | Accounts | `web:public/accounts.html` | FI-GL / FI-AP |
 | Till | `web:public/till.html` | SD (billing) · MM (goods movement) |
-| Tasks & Orders | `web:public/app.html` | SD (order) · MM (purchase order) |
+| Tasks & Orders | `web:public/tasks.html` | SD (order) · MM (purchase order) |
 | Operations | `web:public/app.html` | MM (supplies, stock, intake) |
 | Employees | `web:public/employees.html` | HCM |
 | Network | `web:public/network.html` | SD (storefront) · CTP |
