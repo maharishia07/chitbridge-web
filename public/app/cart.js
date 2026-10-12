@@ -1464,7 +1464,7 @@
      nothing reads is a feature that exists on one screen only); it is warned, not refused, so a typo never blanks a screen. */
   var WRAP = ['listEl', 'barEl', 'popupEl', 'popupBodyEl', 'popupClass', 'cartTitle', 'checkoutLabel', 'emptyHint', 'noCatalogue', 'from',
     'accent', 'soft', 'symbol', 'currency', 'locale', 'groupDigits', 'hideAvail', 'staleDays', 'onCheckout', 'onChange', 'rowExtra', 'renderer',
-    'categories', 'barHideEmpty', 'summaryEl', 'summaryTestid', 'summary', 'sectionOf', 'pageSize', 'compact'];
+    'categories', 'barHideEmpty', 'summaryEl', 'summaryTestid', 'summary', 'sectionOf', 'pageSize', 'compact', 'priceIncludesTax'];
 
   /**
    * ════════════════════════════════════════════════════════════════════════════════════════════════════════════
@@ -1693,9 +1693,23 @@
    *     it per item — the same resolver as the order and the invoice).
    *   moneyRowsHTML(m, { taxTestid, totalTestid }) → offers → After offers (or Goods) → GST per rate → Total incl. tax
    */
+  /**
+   * ⭐ WX-O2C (2026-10-13): THE TAX OF A LINE'S NET — added on top (the default), or SPLIT OUT of a tax-inclusive price by the engine's own
+   * split (engine/tax.js splitLineTax: the one the counter bill and the server's invoiceFor use — never a second formula here). Found on
+   * the real stack: a shop whose shelf prices include tax (the default) saw "GST ₹10.45 · Total incl. tax ₹219.45" for a ₹209 basket the
+   * server then priced at ₹209. A host that has not loaded the engine answers null for an inclusive price — the line joins the untaxed
+   * figure ("no tax slab resolves") rather than carrying a made-up split; the total stays the price, which is right either way.
+   */
+  function taxOfNet_(net, rate, incl) {
+    if (!incl) return roundMoney_(net * rate / 100);
+    var T = root.CBTax; if (!T || typeof T.splitLineTax !== 'function') return null;
+    var sp = T.splitLineTax({ net: net, rate: rate, priceIncludesTax: true });
+    return roundMoney_(Number(sp && sp.tax) || 0);
+  }
   function money(lines, o) {
     o = o || {}; var offers = o.offers || [], ctx = o.ctx || { now: new Date(), currency: 'INR', money: function (n) { return String(n); } };
     var taxOf = typeof o.taxOf === 'function' ? o.taxOf : function () { return null; };
+    var incl = !!(o.priceIncludesTax != null ? o.priceIncludesTax : ctx.priceIncludesTax);   /* WX-O2C: the shop's shelf prices include tax */
     var gross = lines.reduce(function (s, l) { return s + (Number(l.unitPrice) || 0) * (Number(l.qty) || 0); }, 0);
     var ev = (offers.length && root.CBOffers) ? root.CBOffers.evaluate({ lines: lines, offers: offers, ctx: ctx, money: ctx.money }) : { adjustments: [], notes: [], subtotal: gross, total: gross };
     var per = (offers.length && root.CBOffers && root.CBOffers.perLine) ? (root.CBOffers.perLine(ev, lines) || {}) : {};
@@ -1706,15 +1720,15 @@
       var off = ((per[String(i)] || per[l.key] || {}).off) || 0;
       /* the engine's own running net per line (percent on percent; basket offers allocated by running net) — the old list-value split stays only for an engine without it */
       var net = (ev.line_net && ev.line_net[String(l.key)] != null) ? Number(ev.line_net[String(l.key)]) : Math.max(0, g - off - (gross > 0 ? orderOff * g / gross : 0));
-      var t = taxOf(l.item_id, l);
-      if (t && t.rate != null) {
-        var rate = Number(t.rate) + (Number(t.cess) || 0), tax = roundMoney_(net * rate / 100);
+      var t = taxOf(l.item_id, l), tax = (t && t.rate != null) ? taxOfNet_(net, Number(t.rate) + (Number(t.cess) || 0), incl) : null;
+      if (tax != null) {
         var k = (t.name && !/^\d/.test(String(t.name)) ? String(t.name) : 'GST') + ' · ' + Number(t.rate) + '%' + (Number(t.cess) ? ' + ' + Number(t.cess) + '% cess' : '');
         byRate[k] = roundMoney_((byRate[k] || 0) + tax); taxTotal += tax;
       } else untaxed += net;
     });
     taxTotal = roundMoney_(taxTotal);
-    return { gross: gross, ev: ev, byRate: byRate, taxTotal: taxTotal, untaxed: roundMoney_(untaxed), grand: roundMoney_((ev.total != null ? ev.total : gross) + taxTotal), ctx: ctx, offers: offers };
+    /* an inclusive price already holds its tax: the grand total is the price, never price + tax again */
+    return { gross: gross, ev: ev, byRate: byRate, taxTotal: taxTotal, untaxed: roundMoney_(untaxed), grand: roundMoney_((ev.total != null ? ev.total : gross) + (incl ? 0 : taxTotal)), inclusive: incl, ctx: ctx, offers: offers };
   }
   /**
    * ⭐ THE MONEY BLOCK FROM RECORDED LINES — a chit's lines as they were written (price · quantity · discount · offer · gst_rate), the
@@ -1723,6 +1737,7 @@
    */
   function moneyFromLines(lines, ctx) {
     ctx = ctx || { now: new Date(), currency: 'INR', money: function (n) { return String(n); } };
+    var incl = !!ctx.priceIncludesTax;   /* WX-O2C: the lines were priced tax-inclusive (the chit's invoice says so) */
     var gross = 0, adjustments = [], byRate = {}, taxTotal = 0, untaxed = 0, after = 0, cartParts = {};   /* a cart-scope offer prorated over N lines is ONE row again here */
     (lines || []).forEach(function (l, i) {
       if (!l || l.removed || l.kind === 'payload') return;
@@ -1734,15 +1749,15 @@
       if (off > 0 && l.offer && Array.isArray(l.offer.parts) && l.offer.parts.length >= 1) l.offer.parts.forEach(function (pt) {   /* one part too: a lone basket-level part must fold to a basket row, not read as a line offer */ if (pt.scope === 'cart') { var ck = String(pt.offer_id || pt.label); if (!cartParts[ck]) { cartParts[ck] = { scope: 'cart', offer_id: pt.offer_id || null, label: pt.label || 'offer', amount: 0 }; adjustments.push(cartParts[ck]); } cartParts[ck].amount = roundMoney_(cartParts[ck].amount - (Number(pt.off) || 0)); } else adjustments.push({ scope: 'line', key: String(i), offer_id: pt.offer_id || null, label: pt.label || 'offer', amount: -(Number(pt.off) || 0) }); });
       else if (off > 0) adjustments.push({ scope: 'line', key: String(i), offer_id: (l.offer && l.offer.offer_id) || null, label: (l.offer && l.offer.label) || 'offer', amount: -off });
       var rate = (l.gst_rate != null) ? Number(l.gst_rate) : ((l.tax && l.tax.rate != null) ? Number(l.tax.rate) : null);
-      if (rate != null && isFinite(rate)) {
-        var cess = Number(l.cess_rate) || 0, tax = roundMoney_(net * (rate + cess) / 100);
+      var cess = Number(l.cess_rate) || 0, tax = (rate != null && isFinite(rate)) ? taxOfNet_(net, rate + cess, incl) : null;
+      if (tax != null) {
         var k = ((l.tax_name || (l.tax && l.tax.name)) && !/^\d/.test(String(l.tax_name || l.tax.name)) ? String(l.tax_name || l.tax.name) : 'GST') + ' · ' + rate + '%' + (cess ? ' + ' + cess + '% cess' : '');
         byRate[k] = roundMoney_((byRate[k] || 0) + tax); taxTotal += tax;
       } else untaxed += net;
     });
     taxTotal = roundMoney_(taxTotal);
     return { gross: gross, ev: { adjustments: adjustments, notes: [], subtotal: gross, total: roundMoney_(after) }, byRate: byRate, taxTotal: taxTotal,
-             untaxed: roundMoney_(untaxed), grand: roundMoney_(after + taxTotal), ctx: ctx };
+             untaxed: roundMoney_(untaxed), grand: roundMoney_(after + (incl ? 0 : taxTotal)), inclusive: incl, ctx: ctx };
   }
   /** a screen changed: a floating summary whose list is no longer on screen hides (the Suppliers card followed Athi to the Order page, 2026-09-06) */
   function floatsSync() {
@@ -1771,7 +1786,7 @@
     var rows = grouped.map(function (g) { return row('🏷️ ' + esc(g.label) + forYou(g) + (g.scope === 'line' && g.n > 1 ? ' <small style="opacity:.7">' + esc(g.n + ' items') + '</small>' : '') + (g.scope && g.scope !== 'line' ? ' <small style="opacity:.7">' + esc(g.scope) + '</small>' : ''), '<b style="color:var(--danger)">−' + esc(ctx.money(roundMoney_(g.amount))) + '</b>'); }).join('');
     var notes = (ev.notes || []).map(function (n) { return '<div style="opacity:.75">💡 ' + esc(n.why || n.text || n.label || '') + '</div>'; }).join('');
     var keys = Object.keys(m.byRate || {});
-    var taxRows = keys.map(function (k) { return '<div data-testid="' + esc(opt.taxTestid || 'cart-tax') + '" style="display:flex;justify-content:space-between;gap:8px;opacity:.85"><span>' + esc(k) + '</span><span>' + esc(ctx.money(m.byRate[k])) + '</span></div>'; }).join('')
+    var taxRows = keys.map(function (k) { return '<div data-testid="' + esc(opt.taxTestid || 'cart-tax') + '" style="display:flex;justify-content:space-between;gap:8px;opacity:.85"><span>' + esc(k) + (m.inclusive ? ' <small style="opacity:.7">included</small>' : '') + '</span><span>' + esc(ctx.money(m.byRate[k])) + '</span></div>'; }).join('')
       + (m.untaxed > 0 && keys.length ? '<div style="opacity:.6;font-size:12px">' + esc('no tax slab resolves for ' + ctx.money(m.untaxed) + ' of this basket') + '</div>' : '');
     var after = (rows || notes)
       ? rows + notes + '<div style="display:flex;justify-content:space-between;border-top:1px solid #eee;margin-top:6px;padding-top:6px"><span>After offers</span><b>' + esc(ctx.money(ev.total)) + '</b></div>'
@@ -1781,7 +1796,7 @@
        at one width on two surfaces and diffs them. The frame around it (a dashed accent on the storefront) stays the surface's. */
     return '<div class="cbcart-money" data-testid="cbcart-money" style="font-family:var(--font-ui,Inter,system-ui,sans-serif);font-size:13px;line-height:1.35;color:var(--ink,#20303b);padding:8px 10px;border:1px solid var(--line,#e7e3d8);border-radius:9px;background:var(--card,#fff)">' + after + taxRows
 
-      + '<div style="display:flex;justify-content:space-between;border-top:2px solid #333;margin-top:6px;padding-top:6px;font-size:14px"><span>' + (keys.length || !opt.plainUntaxed ? 'Total incl. tax' : 'Total') + '</span><b data-testid="' + esc(opt.totalTestid || 'cart-total') + '">' + esc(ctx.money(m.grand)) + '</b></div>' + '</div>';
+      + '<div style="display:flex;justify-content:space-between;border-top:2px solid #333;margin-top:6px;padding-top:6px;font-size:14px"><span>' + (keys.length && !m.inclusive ? 'Total incl. tax' : (!keys.length && !opt.plainUntaxed && !m.inclusive ? 'Total incl. tax' : 'Total')) + '</span><b data-testid="' + esc(opt.totalTestid || 'cart-total') + '">' + esc(ctx.money(m.grand)) + '</b></div>' + '</div>';
   }
 
   root.CBCart = {
@@ -2026,7 +2041,10 @@
       var t = o.tax;
       if (t && t.rate != null && isFinite(o.amount)) {
         var rate = Number(t.rate) + (Number(t.cess) || 0), incl = roundMoney_(o.amount * (1 + rate / 100));
-        taxChip = '<span class="cbcat-tax" data-testid="cbcat-tax-' + esc(o.id) + '" title="' + esc(t.name || 'GST') + '">+' + esc(String(Number(t.rate))) + '% GST' + (Number(t.cess) ? ' +' + esc(String(Number(t.cess))) + '% cess' : '') + ' · ' + esc(m(incl)) + ' incl.</span>';
+        /* WX-O2C: a tax-inclusive shelf (priceIncludesTax) names the slab inside the price — nothing is added */
+        taxChip = o.priceIncludesTax
+          ? '<span class="cbcat-tax" data-testid="cbcat-tax-' + esc(o.id) + '" title="' + esc(t.name || 'GST') + '">incl. ' + esc(String(Number(t.rate))) + '% GST' + (Number(t.cess) ? ' +' + esc(String(Number(t.cess))) + '% cess' : '') + '</span>'
+          : '<span class="cbcat-tax" data-testid="cbcat-tax-' + esc(o.id) + '" title="' + esc(t.name || 'GST') + '">+' + esc(String(Number(t.rate))) + '% GST' + (Number(t.cess) ? ' +' + esc(String(Number(t.cess))) + '% cess' : '') + ' · ' + esc(m(incl)) + ' incl.</span>';
         slab = '<span class="cbcat-slab" title="' + esc(t.name || 'GST') + '">' + esc('GST ' + String(Number(t.rate)) + '%') + (Number(t.cess) ? ' +' + esc(String(Number(t.cess))) + '%' : '') + '</span>';
       }
     } catch (e) { taxChip = ''; }
@@ -2110,7 +2128,7 @@
         + ' data-testid="cbcat-offer-' + esc(id) + '"'
         + ' onchange="CBCart.setOffer(\'' + esc(cart.ns) + '\',\'' + esc(id) + '\',this.value)">'
       : '';
-    var _pb = priceBits({ id: id, list: u.asking, amount: u.amount, deal: u.deal, tax: (r.item && r.item.tax) || (d && d.tax) || null, money: function (n) { return money(cart.ns, n); } });
+    var _pb = priceBits({ id: id, list: u.asking, amount: u.amount, deal: u.deal, tax: (r.item && r.item.tax) || (d && d.tax) || null, priceIncludesTax: !!((cart.state() || {}).opts || {}).priceIncludesTax, money: function (n) { return money(cart.ns, n); } });
     var price = u.offered
       /* an offered price on a row that is NOT a name-your-price model (a line-scope discount the storefront sets) shows the
          struck asking price AND the offered amount — without this the amount vanished behind the strike (2026-09-05) */

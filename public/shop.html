@@ -71,6 +71,7 @@
 <script src="app/catalogue-lines.js"></script>
 <script src="app/locale.js"></script>   <!-- cart-ui reads CBLocale (money/symbol) — the app loads it, the shop must too (found by the tour, 2026-09-05) -->
 <script src="engine/money.js"></script>   <!-- ⭐ the one rounder, BEFORE cart.js — it has no copy of its own (2026-09-28) -->
+<script src="engine/tax.js"></script>     <!-- ⭐ WX-O2C: the one tax split (splitLineTax) — a tax-inclusive shelf's GST comes OUT of the price in the cart, never on top -->
 <script src="app/cart.js"></script>
 <script src="app/step-flow.js"></script>
 <script src="app/showcase-templates.js"></script>   <!-- the shop's chosen showcase template (S2) -->
@@ -472,7 +473,7 @@ function productListHtml(data, cur){
   /* ⚠️ ONE CART, HELD. render() runs again on a region change, so the handle is released first — a create()
      without a destroy() is the leak the namespaced API could not express. */
   if (_CART) _CART.destroy();
-  _CART = CBCart.create(data, { accent:'var(--accent)', soft:'var(--blue-tint-bg)', categories:(data&&data.categories)||[], pageSize:400, sectionOf:shopSectionOf, compact:true, symbol:_shopSym(), currency:(data.shop&&data.shop.currency_code)||'INR', from:(data.shop&&data.shop.display_name)||'',
+  _CART = CBCart.create(data, { priceIncludesTax:!!(data.shop&&data.shop.price_includes_tax), accent:'var(--accent)', soft:'var(--blue-tint-bg)', categories:(data&&data.categories)||[], pageSize:400, sectionOf:shopSectionOf, compact:true, symbol:_shopSym(), currency:(data.shop&&data.shop.currency_code)||'INR', from:(data.shop&&data.shop.display_name)||'',
     cartTitle:'Your basket', checkoutLabel:'Check out →', emptyHint:'Press + on what you want',
     noCatalogue:'This shop has nothing on display yet.',
     listEl:'p_list', barEl:'p_cart', onCheckout:function(){ shopCartOrder(); },
@@ -603,7 +604,7 @@ function shopPickListHtml(){ if(!_CART) return ''; try{ if(typeof CBCatUI!=='und
  * that is the invoice.
  */
 function _shopOffers(){ return (_SHOPDATA && Array.isArray(_SHOPDATA.offers)) ? _SHOPDATA.offers : []; }
-function _shopCtx(){ return { now: new Date(), currency: (_SHOPDATA&&_SHOPDATA.shop&&_SHOPDATA.shop.currency_code)||'INR', money: function(n){ return (typeof CBLocale!=='undefined')?CBLocale.money(n, (_SHOPDATA&&_SHOPDATA.shop&&_SHOPDATA.shop.currency_code)||'INR'):String(n); } }; }
+function _shopCtx(){ return { now: new Date(), priceIncludesTax: !!(_SHOPDATA&&_SHOPDATA.shop&&_SHOPDATA.shop.price_includes_tax), currency: (_SHOPDATA&&_SHOPDATA.shop&&_SHOPDATA.shop.currency_code)||'INR', money: function(n){ return (typeof CBLocale!=='undefined')?CBLocale.money(n, (_SHOPDATA&&_SHOPDATA.shop&&_SHOPDATA.shop.currency_code)||'INR'):String(n); } }; }
 function _lineOf(p, qty){ var d=(p.item_data||p)||{}; return { key:String(p.item_id||''), item_id:p.item_id||null, sku:d.sku||d.code||null, excluded:Array.isArray(d.offers_excluded)?d.offers_excluded.map(String):[], categories:_catgUp((typeof catgIdsOf==='function')?catgIdsOf(d):((Array.isArray(d.categories)?d.categories:[]))), qty:qty||1, unitPrice:cbAmount(d.price) }; }
 /* ⚠️ RE-ENTRANCY. setOffer() repaints the cart, the repaint fires onChange, onChange called this again — an infinite
    recursion that crashed the page (stack overflow) whenever the shop was framed on a product page with an offer
