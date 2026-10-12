@@ -186,7 +186,14 @@ function bkMoneyRead(idOrEl) {
   return el ? bkMoneyMinor(el.value, el.getAttribute('data-cur')) : NaN;
 }
 function bkDate(d) { if (!d) return '—'; try { return CBLocale.date(d); } catch (_) { return String(d).slice(0, 10); } }
-function bkToday() { return new Date().toISOString().slice(0, 10); }
+/** today as a calendar day in the reader's zone (CBLocale.timezone — the business's zone when chosen, else the device's), never the UTC date.
+ *  ⚠️ WX-P2P-02 (2026-10-13): `toISOString().slice(0, 10)` is the UTC day — from 18:30 IST on it named YESTERDAY, so every dues read asked
+ *  "as of yesterday" and Payables said "You owe nobody" beside a supplier chip saying you owe lakhs. The server's own default is the shop's
+ *  day (books-hooks.dayOf); the reads that mean "now" send no asOf and let it decide. */
+function bkToday() {
+  try { return new Intl.DateTimeFormat('sv-SE', { timeZone: CBLocale.timezone(), year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()); }
+  catch (_) { return new Date().toISOString().slice(0, 10); }
+}
 /* ── CB Finance · Terms (F2): the words for a term and for a change to one — read by the Finance Terms tab AND the CRM record (one wording, two screens) ── */
 var BK_TERM_FIELD = { credit_days: 'Credit days', credit_limit_minor: 'Credit limit', interest: 'Interest', early: 'Early pay', allowed: 'Over limit allowed' };
 function bkTermVal(f, v, c) {
@@ -234,7 +241,7 @@ function bkPartyLabel(partyId, fallbackName) {
 async function booksDuesLoad(force) {
   if (!force && BK.dues && Date.now() - BK.duesAt < 30000) return BK.dues;
   try {
-    bkDuesStore(await api('booksDues', { query: { asOf: bkToday() } }));
+    bkDuesStore(await api('booksDues'));
   } catch (_) { BK.dues = BK.dues || {}; }
   try { if (typeof paintCustList === 'function' && document.getElementById('cu_rows')) paintCustList(); } catch (_) {}
   try { if (typeof paintSupList === 'function' && document.getElementById('sup_rows')) paintSupList(); } catch (_) {}
@@ -1029,7 +1036,7 @@ async function bkDaybook(body) {
   var q = bkRange('db');
   try {
     /* the strip and the to-do read routes that already exist — the day book's own, dues, cheques, health — together */
-    var rr = await Promise.all([api('booksDaybook', { query: q }), api('booksDues', { query: { asOf: bkToday() } }), bkChequesLoad(), bkHealthLoad()]);
+    var rr = await Promise.all([api('booksDaybook', { query: q }), api('booksDues'), bkChequesLoad(), bkHealthLoad()]);
     var r = rr[0]; bkDuesStore(rr[1]);   /* the same read names each entry's party (bkPartyLabel) */
     BK.dv = { r: r, range: q, todo: bkTodoCounts(rr[1], rr[2], rr[3]) };
     body.innerHTML = '<div id="bk_dvlist" data-testid="db-list"></div>';
@@ -1682,7 +1689,7 @@ function bkDuesNext(p, c) {
 }
 async function bkDues(body, onlySide) {   /* onlySide 'rcv' | 'pay' (CB Accounts: Receivables / Payables) opens the same list on that side */
   try {
-    var r = await api('booksDues', { query: { asOf: bkToday() } }); var c = r && r.currency; bkDuesStore(r);
+    var r = await api('booksDues'); var c = r && r.currency; bkDuesStore(r);
     var open = ((r && r.parties) || []).filter(function (p) { return Number(p.balance_minor); });
     /* the page's own side is the page, not a filter the person set: Receivables also holds the advances paid; Payables holds no one who owes you */
     if (onlySide) open = open.filter(function (p) { return onlySide === 'rcv' ? (bkDuesSide(p) === 'rcv' || bkDuesAdvance(p)) : (bkDuesSide(p) === 'pay' && !bkDuesAdvance(p)); });

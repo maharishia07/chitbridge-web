@@ -23,7 +23,7 @@ async function finLoad(quiet) {
   var g = ++FIN.gen;
   if (!quiet) { FIN.state = 'loading'; if (FIN.api) FIN.api.refresh(); }
   try {
-    var r = await api('booksDues', { query: { asOf: bkToday(), finance: '1' } });
+    var r = await api('booksDues', { query: { finance: '1' } });
     if (g !== FIN.gen) return;
     bkDuesStore(r);
     FIN.cur = (r && r.currency) || 'INR';
