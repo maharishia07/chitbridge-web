@@ -60,7 +60,8 @@ function miSel(id, k, opts, cur) {
   return '<select class="inp" id="' + id + '" data-testid="' + id + '" onchange="miSet(\'' + k + '\', this.value)">'
     + opts.map(function (o) { return '<option value="' + esc(o[0]) + '"' + (o[0] === cur ? ' selected' : '') + '>' + esc(tx(o[1])) + '</option>'; }).join('') + '</select>';
 }
-function miRow(label, html) { return '<div style="display:grid;grid-template-columns:minmax(90px,160px) 1fr;gap:8px;align-items:center;margin:6px 0"><span style="color:var(--grey);font-size:var(--fs-1)">' + esc(label) + '</span><span>' + html + '</span></div>'; }
+/* one labelled row; min-width:0 on the cell so a native file input or a long name never pushes the page sideways at 390 px */
+function miRow(label, html) { return '<div style="display:grid;grid-template-columns:minmax(80px,150px) minmax(0,1fr);gap:8px;align-items:center;margin:6px 0"><span style="color:var(--grey);font-size:var(--fs-1)">' + esc(label) + '</span><span style="min-width:0;overflow:hidden">' + html + '</span></div>'; }
 function miRender(k) {
   var f = MIV.f;
   if (MIV.out) return miDoneHTML();
@@ -71,7 +72,7 @@ function miRender(k) {
       + miRow(tx('Which export'), miSel('mi-kind', 'kind', MI_KINDS, f.kind))
       + (miNeedsSide(f.kind) ? miRow(tx('Which list'), miSel('mi-side', 'side', sides, f.side)) : '')
       + (miNeedsDate(f.kind) ? miRow(tx('As at'), '<input class="inp" type="date" id="mi-asat" data-testid="mi-asat" value="' + esc(f.as_at) + '" onchange="miSet(\'as_at\', this.value)" style="width:auto">') : '')
-      + miRow(tx('File'), '<input type="file" id="mi-file" data-testid="mi-file" accept=".csv,.xlsx,text/csv" onchange="miFile(this)">'
+      + miRow(tx('File'), '<input type="file" id="mi-file" data-testid="mi-file" accept=".csv,.xlsx,text/csv" onchange="miFile(this)" style="max-width:100%;min-width:0;font-size:var(--fs-1)">'
         + (f.name ? '<div data-testid="mi-file-name" style="font-size:var(--fs-1);margin-top:4px">' + esc(f.name) + '</div>' : ''))
       + '<div style="color:var(--grey);font-size:var(--fs-1);margin-top:8px">' + esc(tx('Order: chart, contacts, items, then balances.')) + '</div>'
       + (MIV.err ? '<div class="err" data-testid="mi-err" style="color:var(--warn-2);margin-top:8px">' + esc(MIV.err) + '</div>' : '')
@@ -83,14 +84,14 @@ function miRender(k) {
     var opts = [['', tx('not read')]].concat(fields.map(function (x) { return [x.key, x.label + (x.required ? ' *' : '')]; }));
     var rows = (p.guess || []).map(function (g) {
       var cur = MIV.dec[g.incoming] || '';
-      return '<tr data-testid="mi-col-' + esc(g.incoming) + '"><td style="padding:4px 8px 4px 0"><b>' + esc(g.incoming) + '</b></td>'
-        + '<td style="padding:4px 8px 4px 0"><select class="inp" data-testid="mi-pick-' + esc(g.incoming) + '" onchange="miPick(' + JSON.stringify(g.incoming).replace(/"/g, '&quot;') + ', this.value)">'
+      return '<tr data-testid="mi-col-' + esc(g.incoming) + '"><td style="padding:4px 8px 4px 0;word-break:break-word"><b>' + esc(g.incoming) + '</b></td>'
+        + '<td style="padding:4px 8px 4px 0"><select class="inp" style="width:100%;max-width:100%" data-testid="mi-pick-' + esc(g.incoming) + '" onchange="miPick(' + JSON.stringify(g.incoming).replace(/"/g, '&quot;') + ', this.value)">'
         + opts.map(function (o) { return '<option value="' + esc(o[0]) + '"' + (o[0] === cur ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('') + '</select></td>'
-        + '<td style="padding:4px 0;color:var(--grey);font-size:var(--fs-1)">' + esc(g.how === 'known' || g.how === 'exact' ? '' : (g.field ? tx('A guess — check it') + ' · ' : '') + (g.why || '')) + '</td></tr>';
+        + '<td style="padding:4px 0;color:var(--grey);font-size:var(--fs-1);word-break:break-word">' + esc(g.how === 'known' || g.how === 'exact' ? '' : (g.field ? tx('A guess — check it') + ' · ' : '') + (g.why || '')) + '</td></tr>';
     }).join('');
     return '<div data-testid="mi-columns-step">'
       + '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:6px" data-testid="mi-rows-total">' + esc(txf('{n} rows in {f}', { n: p.rows_total, f: MIV.f.name })) + '</div>'
-      + '<table style="border-collapse:collapse;width:100%;max-width:820px"><thead><tr style="text-align:left;color:var(--grey);font-size:var(--fs-1)"><th>' + esc(tx('In the file')) + '</th><th>' + esc(tx('Read as')) + '</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>'
+      + '<table style="border-collapse:collapse;width:100%;max-width:820px;table-layout:fixed"><thead><tr style="text-align:left;color:var(--grey);font-size:var(--fs-1)"><th>' + esc(tx('In the file')) + '</th><th>' + esc(tx('Read as')) + '</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>'
       + '</div>';
   }
   if (k === 'preview') {

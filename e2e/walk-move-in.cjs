@@ -70,14 +70,16 @@ function imported(b) {
   return { side: b.side || null, as_at: b.as_at || '2026-07-01', kind: b.kind, source: b.source, added: 6, merged: 8, skipped: 1, rows: [{ line: 16, what: 'Tracking Transfers', why: 'No home for Xero type "TRACKING" — add it under Shop ledgers and pick its group.' }],
     notes: ['Their account codes could not be kept yet (a database update, b300, is still to run) — a trial balance will match on names.'], source_code_written: false };
 }
+/* the three doors, as the page calls them (e2e/contract.cjs reads these literals to know this harness answers them) */
+const DOORS = { preflight: '/api/books/move-in/preflight', preview: '/api/books/move-in/preview', import: '/api/books/move-in/import', health: '/api/books/health', todo: '/api/books/todo' };
 async function stub(ctx, sent) {
   await ctx.route('**/api/**', (r) => (r.request().method() === 'GET' ? r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }) : r.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' })));
   await ctx.route('**/api/entities/me', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ entity: { display_name: 'Walk Shop', currency_code: 'AUD' } }) }));
-  await ctx.route('**/api/books/health', (r) => J(r, books.health({ currency: 'AUD' })));
-  await ctx.route('**/api/books/todo', (r) => J(r, []));
-  await ctx.route('**/api/books/move-in/preflight', (r) => { const b = JSON.parse(r.request().postData() || '{}'); sent.preflight.push(b); return J(r, preflight(b)); });
-  await ctx.route('**/api/books/move-in/preview', (r) => { const b = JSON.parse(r.request().postData() || '{}'); sent.preview.push(b); return J(r, preview(b)); });
-  await ctx.route('**/api/books/move-in/import', (r) => { const b = JSON.parse(r.request().postData() || '{}'); sent.import.push(b); return J(r, imported(b)); });
+  await ctx.route('**' + DOORS.health, (r) => J(r, books.health({ currency: 'AUD' })));
+  await ctx.route('**' + DOORS.todo, (r) => J(r, []));
+  await ctx.route('**' + DOORS.preflight, (r) => { const b = JSON.parse(r.request().postData() || '{}'); sent.preflight.push(b); return J(r, preflight(b)); });
+  await ctx.route('**' + DOORS.preview, (r) => { const b = JSON.parse(r.request().postData() || '{}'); sent.preview.push(b); return J(r, preview(b)); });
+  await ctx.route('**' + DOORS.import, (r) => { const b = JSON.parse(r.request().postData() || '{}'); sent.import.push(b); return J(r, imported(b)); });
 }
 const text = (page, sel) => page.evaluate((s) => { const el = document.querySelector(s); return el ? el.textContent.trim() : ''; }, sel);
 

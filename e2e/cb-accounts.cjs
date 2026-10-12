@@ -593,7 +593,7 @@ async function route(S, r) {
     await Promise.all([p.waitForSelector('[data-testid="acc-nav-daybook"]', { timeout: 10000 }), p.click('[data-testid="confirm-ok"]')]);
     await p.waitForSelector('[data-testid="acc-nav-daybook"]');
     ok(S.enables === 1, 'confirming sent POST /api/books/enable exactly once (' + S.enables + ')');
-    ok(await p.locator('#nav .nav-btn').count() === 20, 'the page fills: the full menu is there');
+    ok(await p.locator('#nav .nav-btn').count() === VIEWS.length, 'the page fills: the full menu is there (' + VIEWS.length + ' items)');
     await ctx.close();
   }
   {
@@ -824,7 +824,7 @@ async function route(S, r) {
   for (const [w, h] of [[1366, 768], [390, 844]]) {
     const { ctx, p } = await open(standIn(), { viewport: { width: w, height: h }, delay: 1200, path: '/accounts.html#daybook' });
     const box = () => p.evaluate(() => { const r = (s, n) => { const e = document.querySelectorAll(s)[n || 0]; if (!e) return null; const b = e.getBoundingClientRect(); return [Math.round(b.left), Math.round(b.top), Math.round(b.width), Math.round(b.height)]; };
-      return { navN: document.querySelectorAll('#nav .nav-btn').length, nav0: r('#nav .nav-btn', 0), navLast: r('#nav .nav-btn', 19), title: r('#title'), brand: r('#side .brand'), skel: document.querySelectorAll('.bk-skel i').length, band: r('#cbkural,#cbkural-reserve'), content: r('#content'), collapse: r('#toggleNav'), titleText: (document.getElementById('title') || {}).textContent }; });
+      return { navN: document.querySelectorAll('#nav .nav-btn').length, nav0: r('#nav .nav-btn', 0), navLast: r('#nav .nav-btn', document.querySelectorAll('#nav .nav-btn').length - 1), title: r('#title'), brand: r('#side .brand'), skel: document.querySelectorAll('.bk-skel i').length, band: r('#cbkural,#cbkural-reserve'), content: r('#content'), collapse: r('#toggleNav'), titleText: (document.getElementById('title') || {}).textContent }; });
     await p.waitForSelector('.bk-skel', { timeout: 6000 }); await p.waitForTimeout(250);
     const a = await box(), tag = 'accounts @' + w;
     ok(a.navN === VIEWS.length && a.titleText === 'Day book' && a.skel >= 5 && !!a.band && a.band[3] >= 40, tag + ' FIRST PAINT, data still on its way: all ' + a.navN + ' menu items, the title "' + a.titleText + '", skeleton rows (' + a.skel + '), the kural\'s room (' + (a.band && a.band[3]) + ' px)');
