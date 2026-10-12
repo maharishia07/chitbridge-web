@@ -86,13 +86,15 @@ jobs:
 
             THE BRIEF:
             ${{ inputs.brief }}
-      # the round's transcript (the action hides it from the log): PM1's first try ended after 25 turns with nothing pushed and
-      # nothing to read — silence is the bug. Kept 7 days; tokens are masked by GitHub, the repo is public anyway.
-      - name: Keep the round's transcript
+      # the round's REPORT and its failed tool calls, printed to the log (the action hides its output). NEVER upload the
+      # transcript: on 2026-10-12 the smoke round printed the git remote URL, which carries the push token in plain text, and
+      # artifacts are NOT masked (logs are) — the token sat in a public download for ~2 minutes and had to be rotated.
+      - name: The round's report
         if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: round-${{ inputs.name }}-transcript
-          path: ${{ steps.claude.outputs.execution_file }}
-          if-no-files-found: warn
-          retention-days: 7
+        env:
+          OUT: ${{ steps.claude.outputs.execution_file }}
+        run: |
+          [ -f "$OUT" ] || { echo "no transcript — the round did not start"; exit 0; }
+          jq -r '[.[] | select(.type=="result")] | last | "turns: \(.num_turns) · error: \(.is_error)\n\n\(.result)"' "$OUT"
+          echo; echo "── failed tool calls (first 160 chars each) ──"
+          jq -r '.[] | select(.type=="user") | .message.content[]? | select(.is_error==true) | (.content|tostring)[0:160]' "$OUT" | head -40
