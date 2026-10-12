@@ -14,7 +14,7 @@ Athi, 2026-10-12: *"for each function we are building we need to have a SAP kind
 | [INV](INV.md) | Inventory | MM-IM | receipt → stock → issue / sale → count → closing stock | 2 | 2 | 1 |
 | [H2P](H2P.md) | Hire to pay | HCM → FI | person → access → attendance → payroll → payment | 2 | 1 | 2 |
 | [L2C](L2C.md) | Lead to customer | SD pre-sales (CRM) | lead → call → demo → trial → customer | 3 | 2 | 0 |
-| [C2V](C2V.md) | Client to verified (the practice door) | no SAP module — the Xero HQ / QBOA / MYOB Practice pattern (docs/research/COMPARE-AU-BOOKS-2026-10.md §2); design in docs/design/practice-door/ | practice → invite → grant → dashboard → open client → query → revoke | 0 | 1 | 6 |
+| [C2V](C2V.md) | Client to verified (the practice door) | no SAP module — the incumbents (Xero HQ / QBOA / MYOB Practice, docs/research/COMPARE-AU-BOOKS-2026-10.md §2) are a baseline only; built on our construct (docs/design/practice-door/REQUIREMENT.md §0) | practice → request → grant → dashboard → open client → ask → end | 0 | 1 | 6 |
 
 ## Flows × modules — which module owns which step
 
@@ -26,7 +26,7 @@ Athi, 2026-10-12: *"for each function we are building we need to have a SAP kind
 | INV |  |  | 5 closing stock ⚠️ | 2 stock<br>3 issue / sale ⚠️ |  | 1 receipt<br>4 count (MISSING) |  |  |
 | H2P |  |  | 5 payment (MISSING) | 3 attendance ⚠️ |  |  | 1 person<br>2 access<br>4 payroll (MISSING) |  |
 | L2C | 1 lead<br>2 call<br>3 demo ⚠️<br>4 trial ⚠️<br>5 customer |  |  |  |  |  |  |  |
-| C2V |  |  | 1 practice (MISSING)<br>2 invite (MISSING)<br>3 grant (MISSING)<br>4 dashboard (MISSING)<br>5 open client (MISSING)<br>6 query ⚠️<br>7 revoke (MISSING) |  |  |  |  |  |
+| C2V |  |  | 1 practice (MISSING)<br>2 request (MISSING)<br>3 grant (MISSING)<br>4 dashboard (MISSING)<br>5 open client (MISSING)<br>6 ask ⚠️<br>7 end (MISSING) |  |  |  |  |  |
 
 ## The modules
 
@@ -48,11 +48,11 @@ Athi, 2026-10-12: *"for each function we are building we need to have a SAP kind
 - **H2P step 4 · payroll** — grep attendance|payroll|payslip|salary over api routes/, lib/ and migrations/ finds nothing outside the chart (engines src/reg-in.js). A salary can only be posted as a typed expense (class salary → 6020).
 - **H2P step 5 · payment** — Only POST /api/books/entries (a typed, owner-only journal) can record a salary paid. No employee party, no advice, no payslip.
 - **C2V step 1 · practice** — No entity kind 'practice': api lib/entitykind.js declares supplier · network · actor · shopper · internal · test only; POST /api/entities/register (routes/entities.js) mints a shop. The practice page (web:public/practice.html) does not exist; its module row joins modules[] when it does (round CA3).
-- **C2V step 2 · invite** — Nothing lets one entity ask another for access: a connection is a status with no scope (api db/schema.sql connections; migrations/net01_network.sql cb_edge) and the only trace is the empty-state words 'Invite an accountant' in api lib/sides.js. Planned: practice_grant row status=invited (migration FILE b299, round CA2).
-- **C2V step 3 · grant** — No cross-business permission model (web docs/DESIGN-NOTES-2026-10.md §1.2 item 2): one actor row = one shop (api migrations/b173_access_level.sql), whole_entity is entity-scoped by design. The three levels and their ladder EXIST (api lib/access.js levelOf, engines src/rail.js byLevel) and are reused unchanged; what is missing is the edge that carries one between two entities, and its event log (the access-events.js shape).
-- **C2V step 4 · dashboard** — No cross-client read: api lib/books-nightly.js check() stores books_setting.last_check per shop and lib/books-todo.js todo() lists one shop's to-do, but nothing lists them across the shops a practice holds (RLS is per entity; the one cross-shop read is ops.f_books_enabled, ids only). web public/app/cap-network.js is commerce-only, no finance figures. Planned: last_check.summary + ops.f_practice_clients + GET /api/practice/clients (CA2), practice.html S1 (CA3).
+- **C2V step 2 · request** — Nothing lets one entity ask another for access: a connection is a status with no scope (api db/schema.sql connections; migrations/net01_network.sql cb_edge) and the only trace is the empty-state words 'Invite an accountant' in api lib/sides.js. Planned: practice_grant row status=sent, no expiry (a To-do row until answered); migration FILE next free bNNN (b299 is taken), round CA2.
+- **C2V step 3 · grant** — No cross-business permission model (web docs/DESIGN-NOTES-2026-10.md §1.2 item 2): one actor row = one shop (api migrations/b173_access_level.sql), whole_entity is entity-scoped by design. The three levels and their ladder EXIST (api lib/access.js levelOf, engines src/rail.js byLevel) and the verbs are the rail's (engines src/rail.js ACTIONS accept · reject); what is missing is the edge that carries a level between two entities (states sent · accepted · rejected · ended) and its event log (the access-events.js shape).
+- **C2V step 4 · dashboard** — No cross-client read: api lib/books-nightly.js check() stores books_setting.last_check per shop (problems[], at); lib/books-pack.js build chains each pack (sha256, prev_sha256) and POST /api/books/packs/:id/ack stores acknowledged_at; lib/books-todo.js todo() lists one shop's to-do — but nothing lists them across the shops a practice holds (RLS is per entity; the one cross-shop read is ops.f_books_enabled, ids only) and no stored word says which month is sealed (locked + pack built + chain ok + acknowledged). web public/app/cap-network.js is commerce-only, no finance figures. Planned: last_check.summary + ops.f_practice_clients + GET /api/practice/clients (CA2), practice.html S1 (CA3).
 - **C2V step 5 · open client** — One token = one shop (api middleware/auth.js entityOf); a person session (lib/person-session.js) is minted for the person's own shop only. Nothing mints a client-scoped session from a grant, and nothing records an open of the books by name (access_events records access CHANGES only). Planned: POST /api/practice/clients/:id/open + practice_open rows (CA2).
-- **C2V step 7 · revoke** — Nothing to revoke yet (step 3). The mechanism it will use exists: a person session is as alive as its listing and a revoke is refused everywhere within 60 s (api lib/person-session.js CACHE_MS); the ledger is insert-only, so what the practice posted stays, stamped by the person (app.current_actor).
+- **C2V step 7 · end** — Nothing to end yet (step 3). The mechanism it will use exists: a person session is as alive as its listing and an end is refused everywhere within 60 s (api lib/person-session.js CACHE_MS); the ledger is insert-only, so what the practice posted stays, stamped by the person (app.current_actor).
 
 ## Built, with a gap named
 
@@ -63,7 +63,7 @@ Athi, 2026-10-12: *"for each function we are building we need to have a SAP kind
 - **H2P step 3 · attendance** — What exists is the counter sign-in, release and break state, and a work PATTERN (shift blueprints). Nothing records a day worked, hours or leave as an attendance register.
 - **L2C step 3 · demo** — The demo itself (held, who, what was shown) has no record beyond the follow-up row.
 - **L2C step 4 · trial** — 'trial' is one of the lead_stage groups; no outcome moves to it and nothing starts, times or ends a trial.
-- **C2V step 6 · query** — The ONE composer (CBThread) and the ladder (a commenter posts internally, a viewer reads and sees the sentence) exist and are reused as they are. Missing: msg_type 'query' as a known kind with a due date and an answered flag; and an anchor for a query on a ledger entry that is not a chit (REQUIREMENT §9: a per-client review chit, or entry_id as a subject — the owner decides before CA2).
+- **C2V step 6 · ask** — The ONE composer (CBThread), the ladder (a commenter posts internally, an editor externally, a viewer reads and sees the sentence) and msg_type 'query' (migrations/000_baseline_part2.sql CHECK) exist and are reused as they are. No due date and no answered flag: the thread's last message says whose turn it is (REQUIREMENT §9). Missing: the anchor for a MONTH's question (the month's pack as a message subject beside chit_id — owner Q1, decided before CA2) and the cross-client count threads_waiting_on_client in last_check.summary.
 
 ## How a new function joins the map
 
