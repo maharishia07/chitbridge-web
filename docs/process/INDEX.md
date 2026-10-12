@@ -14,6 +14,7 @@ Athi, 2026-10-12: *"for each function we are building we need to have a SAP kind
 | [INV](INV.md) | Inventory | MM-IM | receipt → stock → issue / sale → count → closing stock | 2 | 2 | 1 |
 | [H2P](H2P.md) | Hire to pay | HCM → FI | person → access → attendance → payroll → payment | 2 | 1 | 2 |
 | [L2C](L2C.md) | Lead to customer | SD pre-sales (CRM) | lead → call → demo → trial → customer | 3 | 2 | 0 |
+| [MVI](MVI.md) | Move in (from Xero / QuickBooks) | FI (conversion: opening balances, master data) | chart of accounts → contacts → items → opening balances | 4 | 0 | 0 |
 
 ## Flows × modules — which module owns which step
 
@@ -25,6 +26,7 @@ Athi, 2026-10-12: *"for each function we are building we need to have a SAP kind
 | INV |  |  | 5 closing stock ⚠️ | 2 stock<br>3 issue / sale ⚠️ |  | 1 receipt<br>4 count (MISSING) |  |  |
 | H2P |  |  | 5 payment (MISSING) | 3 attendance ⚠️ |  |  | 1 person<br>2 access<br>4 payroll (MISSING) |  |
 | L2C | 1 lead<br>2 call<br>3 demo ⚠️<br>4 trial ⚠️<br>5 customer |  |  |  |  |  |  |  |
+| MVI |  |  | 1 chart of accounts<br>2 contacts<br>3 items<br>4 opening balances |  |  |  |  |  |
 
 ## The modules
 

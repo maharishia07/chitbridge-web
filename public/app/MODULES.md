@@ -15,7 +15,7 @@ something needs them before any navigation happens.
 router renders a placeholder until `_capLoading` clears, which is the only reason the
 old duplicate `networkScreen()` in app.html was safe to delete.
 
-## Capabilities (39)
+## Capabilities (40)
 
 | file | loading · nav key | what it is |
 |---|---|---|
@@ -46,6 +46,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-legend.js` | lazy · on demand | the 🔑 LEGEND capability: a live map of "what we serve" |
 | `cap-match.js` | lazy · match | THE THREE-WAY MATCH (lazy; ensureCap('match')) |
 | `cap-messages.js` | lazy · messages | REPLIES: every external conversation that still wants you, across every chit. Lazy |
+| `cap-move-in.js` | — | cap-move-in.js — MOVE IN FROM XERO / QUICKBOOKS (IM1, 2026-10-12): CB Accounts › Setup › Move in. One entry for the five exports a practice |
 | `cap-network-member.js` | — |  |
 | `cap-network.js` | lazy · network | DESIGN-FIRST network builder. Lazy via ensureCap('network') |
 | `cap-period.js` | — | cap-period.js — MONTH & YEAR END on CB Accounts: Closing stock · Assets & depreciation · Accruals & recurring · GST close & pay · Year close |
@@ -115,4 +116,4 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 
 ---
 
-*88 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*89 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*

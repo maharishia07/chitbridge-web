@@ -2,268 +2,2079 @@
   "$comment": "PM1 · the SAP-style process maps of ChitBridge, read FROM THE CODE (2026-10-12). One row per step: who · screen · engine function · API route · chit kind · ledger entry · test · status. A file is `repo:path` (web = this repo · api = chitbridge-api · engines = chitbridge-engines). A step the code does not have is status MISSING with the evidence, never invented. e2e/process-map.cjs checks every file (and function name) still exists; tools/gen-process-docs.cjs writes the .md files from this one.",
   "generated": "2026-10-12",
   "round": "PM1",
-  "status_words": { "ok": "✅ built and tested", "warn": "⚠️ built, with a gap named in the note", "missing": "MISSING — nothing in the code does this step" },
+  "status_words": {
+    "ok": "✅ built and tested",
+    "warn": "⚠️ built, with a gap named in the note",
+    "missing": "MISSING — nothing in the code does this step"
+  },
   "modules": [
-    { "id": "CRM", "name": "CRM", "page": "web:public/crm.html", "sap": "SD (pre-sales)" },
-    { "id": "Finance", "name": "Finance", "page": "web:public/finance.html", "sap": "FI-AR (collections, terms)" },
-    { "id": "Accounts", "name": "Accounts", "page": "web:public/accounts.html", "sap": "FI-GL / FI-AP" },
-    { "id": "Till", "name": "Till", "page": "web:public/till.html", "sap": "SD (billing) · MM (goods movement)" },
-    { "id": "TasksOrders", "name": "Tasks & Orders", "page": "web:public/app.html", "sap": "SD (order) · MM (purchase order)" },
-    { "id": "Operations", "name": "Operations", "page": "web:public/app.html", "sap": "MM (supplies, stock, intake)" },
-    { "id": "Employees", "name": "Employees", "page": "web:public/employees.html", "sap": "HCM" },
-    { "id": "Network", "name": "Network", "page": "web:public/network.html", "sap": "SD (storefront) · CTP" }
+    {
+      "id": "CRM",
+      "name": "CRM",
+      "page": "web:public/crm.html",
+      "sap": "SD (pre-sales)"
+    },
+    {
+      "id": "Finance",
+      "name": "Finance",
+      "page": "web:public/finance.html",
+      "sap": "FI-AR (collections, terms)"
+    },
+    {
+      "id": "Accounts",
+      "name": "Accounts",
+      "page": "web:public/accounts.html",
+      "sap": "FI-GL / FI-AP"
+    },
+    {
+      "id": "Till",
+      "name": "Till",
+      "page": "web:public/till.html",
+      "sap": "SD (billing) · MM (goods movement)"
+    },
+    {
+      "id": "TasksOrders",
+      "name": "Tasks & Orders",
+      "page": "web:public/app.html",
+      "sap": "SD (order) · MM (purchase order)"
+    },
+    {
+      "id": "Operations",
+      "name": "Operations",
+      "page": "web:public/app.html",
+      "sap": "MM (supplies, stock, intake)"
+    },
+    {
+      "id": "Employees",
+      "name": "Employees",
+      "page": "web:public/employees.html",
+      "sap": "HCM"
+    },
+    {
+      "id": "Network",
+      "name": "Network",
+      "page": "web:public/network.html",
+      "sap": "SD (storefront) · CTP"
+    }
   ],
   "flows": [
     {
-      "id": "O2C", "name": "Order to cash", "sap": "SD → FI-AR",
+      "id": "O2C",
+      "name": "Order to cash",
+      "sap": "SD → FI-AR",
       "steps": [
-        { "n": 1, "step": "enquiry", "module": "Network", "who": "a buyer the catalogue was delivered to",
-          "screen": [{ "file": "web:public/app.html", "fn": "enquirySend" }],
+        {
+          "n": 1,
+          "step": "enquiry",
+          "module": "Network",
+          "who": "a buyer the catalogue was delivered to",
+          "screen": [
+            {
+              "file": "web:public/app.html",
+              "fn": "enquirySend"
+            }
+          ],
           "engine": [],
-          "route": [{ "m": "POST", "p": "/api/catalogue/enquiry/:item_id", "file": "api:routes/catalogue.js" }, { "m": "GET", "p": "/api/catalogue/enquiry/:item_id", "file": "api:routes/catalogue.js" }],
-          "chit": "none — a message thread on the item", "ledger": "none",
+          "route": [
+            {
+              "m": "POST",
+              "p": "/api/catalogue/enquiry/:item_id",
+              "file": "api:routes/catalogue.js"
+            },
+            {
+              "m": "GET",
+              "p": "/api/catalogue/enquiry/:item_id",
+              "file": "api:routes/catalogue.js"
+            }
+          ],
+          "chit": "none — a message thread on the item",
+          "ledger": "none",
           "test": [],
-          "status": "warn", "note": "No engine function and no test: the route writes the thread itself (RLS scopes the read)." },
-        { "n": 2, "step": "quote", "module": "TasksOrders", "who": "the seller",
-          "screen": [], "engine": [], "route": [], "chit": "none", "ledger": "none", "test": [],
-          "status": "missing", "note": "Nothing stores a priced offer to a named party before an order. Evidence: api lib/instruments.js names the stage ('Catalogue, quote & terms') and lib/beckn-map.js maps a Beckn quote, but no route, chit kind or screen raises one." },
-        { "n": 3, "step": "order", "module": "TasksOrders", "who": "the buyer (storefront, or the shop's own app)",
-          "screen": [{ "file": "web:public/shop.html", "fn": "orderStart" }, { "file": "web:public/shop.html", "fn": "_orderPost" }, { "file": "web:public/app.html", "fn": "sendChit" }],
-          "engine": [{ "file": "api:lib/mint.js", "fn": "order" }, { "file": "api:lib/workflow.js", "fn": "kindOf" }, { "file": "engines:src/workflow.js", "fn": "stageOf" }, { "file": "engines:src/orders.js", "fn": "kindOf" }],
-          "route": [{ "m": "POST", "p": "/api/catalogue/:bridge_id/order/confirm", "file": "api:routes/catalogue.js" }, { "m": "POST", "p": "/api/chits/send", "file": "api:routes/chits.js" }, { "m": "GET", "p": "/api/work/list", "file": "api:routes/work.js" }],
-          "chit": "order (workflow kind order_in on the seller's copy)", "ledger": "none — an order moves nothing (lib/stock-from-chit.js)",
-          "test": ["api:tests/orders.test.js", "api:tests/t2e-orders.test.cjs", "api:tests/work-rows.test.cjs", "engines:tests/workflow.test.js", "web:tests/t2e-cart.test.cjs"],
-          "status": "ok", "note": "" },
-        { "n": 4, "step": "delivery", "module": "TasksOrders", "who": "the seller's staff",
-          "screen": [{ "file": "web:public/app/cap-chit2.js", "fn": "" }, { "file": "web:public/app/cap-worklist.js", "fn": "wlAssignSave" }],
-          "engine": [{ "file": "api:lib/deliverline.js", "fn": "record" }, { "file": "api:lib/deliverline.js", "fn": "progress" }, { "file": "api:lib/stock-from-chit.js", "fn": "postFor" }, { "file": "api:lib/stock-store.js", "fn": "post" }],
-          "route": [{ "m": "POST", "p": "/api/chits/:chit_id/deliver-lines", "file": "api:routes/chits.js" }, { "m": "PUT", "p": "/api/chits/:chit_id/status", "file": "api:routes/chits.js" }],
-          "chit": "the order's lines marked delivered; status → completed", "ledger": "none — a stock movement OUT (perpetual, weighted average)",
-          "test": ["api:tests/line-complete.test.cjs", "api:tests/stock-cycle.test.js"],
-          "status": "ok", "note": "" },
-        { "n": 5, "step": "invoice", "module": "Till", "who": "the seller (the counter bill IS the invoice)",
-          "screen": [{ "file": "web:public/till.html", "fn": "fetchBy" }, { "file": "web:public/bill-print.html", "fn": "" }],
-          "engine": [{ "file": "api:lib/tax-lines.js", "fn": "invoiceFor" }, { "file": "api:lib/docnumber.js", "fn": "" }, { "file": "engines:src/einvoice.js", "fn": "irnPayload" }],
-          "route": [{ "m": "POST", "p": "/api/chits/send", "file": "api:routes/chits.js" }, { "m": "POST", "p": "/api/invoice/build", "file": "api:routes/invoice.js" }, { "m": "GET", "p": "/api/tax/invoice/:chit_id", "file": "api:routes/tax.js" }],
-          "chit": "bill (business_json.invoice frozen by invoiceFor)", "ledger": "none until posted (step 7)",
-          "test": ["api:tests/tax-lines.test.js", "api:tests/two-sided-bill.test.cjs", "api:tests/bill-checks.test.js", "engines:tests/einvoice.test.js", "web:e2e/walk-bill.cjs"],
-          "status": "ok", "note": "" },
-        { "n": 6, "step": "receipt", "module": "Finance", "who": "the owner or a person with the books (Receive)",
-          "screen": [{ "file": "web:public/app/cap-books.js", "fn": "payOpen" }, { "file": "web:public/app/cap-finance.js", "fn": "finMount" }, { "file": "web:public/app.html", "fn": "chitPaySubmit" }],
-          "engine": [{ "file": "api:lib/books.js", "fn": "recordPayment" }, { "file": "api:lib/receivables.js", "fn": "propose" }, { "file": "engines:src/receivables.js", "fn": "propose" }, { "file": "api:lib/books-hooks.js", "fn": "recordChitPayment" }],
-          "route": [{ "m": "POST", "p": "/api/books/payments/preview", "file": "api:routes/books.js" }, { "m": "POST", "p": "/api/books/payments", "file": "api:routes/books.js" }, { "m": "POST", "p": "/api/chits/:chit_id/payment", "file": "api:routes/chits.js" }],
-          "chit": "the payment is recorded on the bill", "ledger": "payment_received · Dr 1400 Cash / 1500 Bank / 1510 UPI / 1520 Card · Cr 1300 Customers (a cheque only when cleared)",
-          "test": ["api:tests/books-payments.test.cjs", "api:tests/books-collections.test.cjs", "engines:tests/receivables.test.js", "web:e2e/cb-accounts.cjs", "web:e2e/walk-finance.cjs"],
-          "status": "ok", "note": "" },
-        { "n": 7, "step": "posted", "module": "Accounts", "who": "the system (the hook after a chit; the nightly for walk-in days)",
-          "screen": [{ "file": "web:public/app/cap-books.js", "fn": "bkEntryHead" }],
-          "engine": [{ "file": "api:lib/books-hooks.js", "fn": "postChit" }, { "file": "api:lib/books-hooks.js", "fn": "classify" }, { "file": "api:lib/books.js", "fn": "postEntry" }, { "file": "engines:src/posting.js", "fn": "sale_bill" }, { "file": "engines:src/posting.js", "fn": "walkin_day" }],
-          "route": [{ "m": "POST", "p": "/api/books/events", "file": "api:routes/books.js" }, { "m": "GET", "p": "/api/books/daybook", "file": "api:routes/books.js" }],
-          "chit": "bill → one entry (source_ref bill:<chit_id>)", "ledger": "sale_bill · Dr 1300 Customers (unpaid) / Dr 1400·1500·1510·1520 (paid) · Cr 4000 Sales · Cr 2200/2201/2202 Output CGST/SGST/IGST · 6900 Round off. walkin_day: the same per counter per day, no party",
-          "test": ["api:tests/books-hooks.test.cjs", "api:tests/books-auto-post.test.cjs", "api:tests/books-post.test.cjs", "api:tests/books-day-bills.test.cjs", "engines:tests/posting.test.js", "engines:tests/golden-books.test.js"],
-          "status": "ok", "note": "" }
+          "status": "warn",
+          "note": "No engine function and no test: the route writes the thread itself (RLS scopes the read)."
+        },
+        {
+          "n": 2,
+          "step": "quote",
+          "module": "TasksOrders",
+          "who": "the seller",
+          "screen": [],
+          "engine": [],
+          "route": [],
+          "chit": "none",
+          "ledger": "none",
+          "test": [],
+          "status": "missing",
+          "note": "Nothing stores a priced offer to a named party before an order. Evidence: api lib/instruments.js names the stage ('Catalogue, quote & terms') and lib/beckn-map.js maps a Beckn quote, but no route, chit kind or screen raises one."
+        },
+        {
+          "n": 3,
+          "step": "order",
+          "module": "TasksOrders",
+          "who": "the buyer (storefront, or the shop's own app)",
+          "screen": [
+            {
+              "file": "web:public/shop.html",
+              "fn": "orderStart"
+            },
+            {
+              "file": "web:public/shop.html",
+              "fn": "_orderPost"
+            },
+            {
+              "file": "web:public/app.html",
+              "fn": "sendChit"
+            }
+          ],
+          "engine": [
+            {
+              "file": "api:lib/mint.js",
+              "fn": "order"
+            },
+            {
+              "file": "api:lib/workflow.js",
+              "fn": "kindOf"
+            },
+            {
+              "file": "engines:src/workflow.js",
+              "fn": "stageOf"
+            },
+            {
+              "file": "engines:src/orders.js",
+              "fn": "kindOf"
+            }
+          ],
+          "route": [
+            {
+              "m": "POST",
+              "p": "/api/catalogue/:bridge_id/order/confirm",
+              "file": "api:routes/catalogue.js"
+            },
+            {
+              "m": "POST",
+              "p": "/api/chits/send",
+              "file": "api:routes/chits.js"
+            },
+            {
+              "m": "GET",
+              "p": "/api/work/list",
+              "file": "api:routes/work.js"
+            }
+          ],
+          "chit": "order (workflow kind order_in on the seller's copy)",
+          "ledger": "none — an order moves nothing (lib/stock-from-chit.js)",
+          "test": [
+            "api:tests/orders.test.js",
+            "api:tests/t2e-orders.test.cjs",
+            "api:tests/work-rows.test.cjs",
+            "engines:tests/workflow.test.js",
+            "web:tests/t2e-cart.test.cjs"
+          ],
+          "status": "ok",
+          "note": ""
+        },
+        {
+          "n": 4,
+          "step": "delivery",
+          "module": "TasksOrders",
+          "who": "the seller's staff",
+          "screen": [
+            {
+              "file": "web:public/app/cap-chit2.js",
+              "fn": ""
+            },
+            {
+              "file": "web:public/app/cap-worklist.js",
+              "fn": "wlAssignSave"
+            }
+          ],
+          "engine": [
+            {
+              "file": "api:lib/deliverline.js",
+              "fn": "record"
+            },
+            {
+              "file": "api:lib/deliverline.js",
+              "fn": "progress"
+            },
+            {
+              "file": "api:lib/stock-from-chit.js",
+              "fn": "postFor"
+            },
+            {
+              "file": "api:lib/stock-store.js",
+              "fn": "post"
+            }
+          ],
+          "route": [
+            {
+              "m": "POST",
+              "p": "/api/chits/:chit_id/deliver-lines",
+              "file": "api:routes/chits.js"
+            },
+            {
+              "m": "PUT",
+              "p": "/api/chits/:chit_id/status",
+              "file": "api:routes/chits.js"
+            }
+          ],
+          "chit": "the order's lines marked delivered; status → completed",
+          "ledger": "none — a stock movement OUT (perpetual, weighted average)",
+          "test": [
+            "api:tests/line-complete.test.cjs",
+            "api:tests/stock-cycle.test.js"
+          ],
+          "status": "ok",
+          "note": ""
+        },
+        {
+          "n": 5,
+          "step": "invoice",
+          "module": "Till",
+          "who": "the seller (the counter bill IS the invoice)",
+          "screen": [
+            {
+              "file": "web:public/till.html",
+              "fn": "fetchBy"
+            },
+            {
+              "file": "web:public/bill-print.html",
+              "fn": ""
+            }
+          ],
+          "engine": [
+            {
+              "file": "api:lib/tax-lines.js",
+              "fn": "invoiceFor"
+            },
+            {
+              "file": "api:lib/docnumber.js",
+              "fn": ""
+            },
+            {
+              "file": "engines:src/einvoice.js",
+              "fn": "irnPayload"
+            }
+          ],
+          "route": [
+            {
+              "m": "POST",
+              "p": "/api/chits/send",
+              "file": "api:routes/chits.js"
+            },
+            {
+              "m": "POST",
+              "p": "/api/invoice/build",
+              "file": "api:routes/invoice.js"
+            },
+            {
+              "m": "GET",
+              "p": "/api/tax/invoice/:chit_id",
+              "file": "api:routes/tax.js"
+            }
+          ],
+          "chit": "bill (business_json.invoice frozen by invoiceFor)",
+          "ledger": "none until posted (step 7)",
+          "test": [
+            "api:tests/tax-lines.test.js",
+            "api:tests/two-sided-bill.test.cjs",
+            "api:tests/bill-checks.test.js",
+            "engines:tests/einvoice.test.js",
+            "web:e2e/walk-bill.cjs"
+          ],
+          "status": "ok",
+          "note": ""
+        },
+        {
+          "n": 6,
+          "step": "receipt",
+          "module": "Finance",
+          "who": "the owner or a person with the books (Receive)",
+          "screen": [
+            {
+              "file": "web:public/app/cap-books.js",
+              "fn": "payOpen"
+            },
+            {
+              "file": "web:public/app/cap-finance.js",
+              "fn": "finMount"
+            },
+            {
+              "file": "web:public/app.html",
+              "fn": "chitPaySubmit"
+            }
+          ],
+          "engine": [
+            {
+              "file": "api:lib/books.js",
+              "fn": "recordPayment"
+            },
+            {
+              "file": "api:lib/receivables.js",
+              "fn": "propose"
+            },
+            {
+              "file": "engines:src/receivables.js",
+              "fn": "propose"
+            },
+            {
+              "file": "api:lib/books-hooks.js",
+              "fn": "recordChitPayment"
+            }
+          ],
+          "route": [
+            {
+              "m": "POST",
+              "p": "/api/books/payments/preview",
+              "file": "api:routes/books.js"
+            },
+            {
+              "m": "POST",
+              "p": "/api/books/payments",
+              "file": "api:routes/books.js"
+            },
+            {
+              "m": "POST",
+              "p": "/api/chits/:chit_id/payment",
+              "file": "api:routes/chits.js"
+            }
+          ],
+          "chit": "the payment is recorded on the bill",
+          "ledger": "payment_received · Dr 1400 Cash / 1500 Bank / 1510 UPI / 1520 Card · Cr 1300 Customers (a cheque only when cleared)",
+          "test": [
+            "api:tests/books-payments.test.cjs",
+            "api:tests/books-collections.test.cjs",
+            "engines:tests/receivables.test.js",
+            "web:e2e/cb-accounts.cjs",
+            "web:e2e/walk-finance.cjs"
+          ],
+          "status": "ok",
+          "note": ""
+        },
+        {
+          "n": 7,
+          "step": "posted",
+          "module": "Accounts",
+          "who": "the system (the hook after a chit; the nightly for walk-in days)",
+          "screen": [
+            {
+              "file": "web:public/app/cap-books.js",
+              "fn": "bkEntryHead"
+            }
+          ],
+          "engine": [
+            {
+              "file": "api:lib/books-hooks.js",
+              "fn": "postChit"
+            },
+            {
+              "file": "api:lib/books-hooks.js",
+              "fn": "classify"
+            },
+            {
+              "file": "api:lib/books.js",
+              "fn": "postEntry"
+            },
+            {
+              "file": "engines:src/posting.js",
+              "fn": "sale_bill"
+            },
+            {
+              "file": "engines:src/posting.js",
+              "fn": "walkin_day"
+            }
+          ],
+          "route": [
+            {
+              "m": "POST",
+              "p": "/api/books/events",
+              "file": "api:routes/books.js"
+            },
+            {
+              "m": "GET",
+              "p": "/api/books/daybook",
+              "file": "api:routes/books.js"
+            }
+          ],
+          "chit": "bill → one entry (source_ref bill:<chit_id>)",
+          "ledger": "sale_bill · Dr 1300 Customers (unpaid) / Dr 1400·1500·1510·1520 (paid) · Cr 4000 Sales · Cr 2200/2201/2202 Output CGST/SGST/IGST · 6900 Round off. walkin_day: the same per counter per day, no party",
+          "test": [
+            "api:tests/books-hooks.test.cjs",
+            "api:tests/books-auto-post.test.cjs",
+            "api:tests/books-post.test.cjs",
+            "api:tests/books-day-bills.test.cjs",
+            "engines:tests/posting.test.js",
+            "engines:tests/golden-books.test.js"
+          ],
+          "status": "ok",
+          "note": ""
+        }
       ]
     },
     {
-      "id": "P2P", "name": "Procure to pay", "sap": "MM → FI-AP",
+      "id": "P2P",
+      "name": "Procure to pay",
+      "sap": "MM → FI-AP",
       "steps": [
-        { "n": 1, "step": "need", "module": "Operations", "who": "the shop's staff",
-          "screen": [{ "file": "web:public/app/cap-supplies.js", "fn": "supAdd" }, { "file": "web:public/app/cap-intake.js", "fn": "" }],
-          "engine": [{ "file": "api:lib/supply-store.js", "fn": "ensure" }, { "file": "api:lib/capture.js", "fn": "raisePayload" }],
-          "route": [{ "m": "POST", "p": "/api/supplies", "file": "api:routes/supplies.js" }, { "m": "POST", "p": "/api/capture/:id/raise", "file": "api:routes/capture.js" }],
-          "chit": "none yet — a supply row, or a captured message about to become a chit", "ledger": "none",
-          "test": ["api:tests/local-supplier.test.js"],
-          "status": "warn", "note": "No test exercises lib/supply-store.js or routes/supplies.js by name." },
-        { "n": 2, "step": "PO", "module": "TasksOrders", "who": "the shop (as buyer)",
-          "screen": [{ "file": "web:public/app.html", "fn": "sendChit" }],
-          "engine": [{ "file": "api:lib/mint.js", "fn": "order" }, { "file": "api:lib/workflow.js", "fn": "kindOf" }],
-          "route": [{ "m": "POST", "p": "/api/chits/send", "file": "api:routes/chits.js" }, { "m": "GET", "p": "/api/work/list", "file": "api:routes/work.js" }],
-          "chit": "order (workflow kind order_out on the buyer's copy)", "ledger": "none",
-          "test": ["api:tests/work-rows.test.cjs", "api:tests/t2e-orders.test.cjs", "engines:tests/workflow.test.js"],
-          "status": "ok", "note": "" },
-        { "n": 3, "step": "goods receipt", "module": "Operations", "who": "the shop's staff (goods-in, with what the goods are FOR)",
-          "screen": [{ "file": "web:public/app/cap-chit2.js", "fn": "" }, { "file": "web:public/till.html", "fn": "stockWrite" }],
-          "engine": [{ "file": "api:lib/deliverline.js", "fn": "record" }, { "file": "api:lib/bill-use.js", "fn": "set" }, { "file": "api:lib/stock-from-chit.js", "fn": "postFor" }, { "file": "api:lib/stock-store.js", "fn": "post" }],
-          "route": [{ "m": "POST", "p": "/api/chits/:chit_id/deliver-lines", "file": "api:routes/chits.js" }, { "m": "POST", "p": "/api/till/stock", "file": "api:routes/till.js" }],
-          "chit": "the supplier's bill or order, lines received", "ledger": "none — a stock movement IN at landed cost",
-          "test": ["api:tests/goods-in-accepts.test.cjs", "api:tests/bill-use.test.cjs", "api:tests/stock-cycle.test.js"],
-          "status": "ok", "note": "" },
-        { "n": 4, "step": "supplier bill", "module": "Accounts", "who": "the supplier (delivered over CTP or captured) or the shop (a supply bought)",
-          "screen": [{ "file": "web:public/app/cap-supplies.js", "fn": "supAdd" }, { "file": "web:public/app.html", "fn": "sendChit" }],
-          "engine": [{ "file": "api:lib/books-hooks.js", "fn": "classify" }, { "file": "api:lib/books-hooks.js", "fn": "useEvents" }, { "file": "api:lib/supply-store.js", "fn": "purchase" }, { "file": "engines:src/posting.js", "fn": "purchase_bill" }],
-          "route": [{ "m": "POST", "p": "/api/ctp/deliver", "file": "api:routes/ctp.js" }, { "m": "POST", "p": "/api/supplies/purchase", "file": "api:routes/supplies.js" }, { "m": "POST", "p": "/api/chits/:chit_id/books-request", "file": "api:routes/chits.js" }],
-          "chit": "bill (received copy, side buy)", "ledger": "purchase_bill · Dr 5000 Purchases (resale) / an asset 10xx / an expense 6xxx (by `use`) · Dr 2210/2211/2212 Input CGST/SGST/IGST · Cr 2100 Suppliers · reverse charge Cr 2204/2205/2206",
-          "test": ["api:tests/books-hooks.test.cjs", "api:tests/books-rcm.test.cjs", "api:tests/two-sided-books.test.cjs", "engines:tests/rcm.test.js"],
-          "status": "ok", "note": "" },
-        { "n": 5, "step": "payment", "module": "Accounts", "who": "the owner or a person with the books (Pay)",
-          "screen": [{ "file": "web:public/app/cap-books.js", "fn": "payOpen" }, { "file": "web:public/app/rail-advice.js", "fn": "" }],
-          "engine": [{ "file": "api:lib/books.js", "fn": "recordPayment" }, { "file": "engines:src/posting.js", "fn": "payment_made" }, { "file": "engines:src/ledger.js", "fn": "AGE_PAYABLE" }],
-          "route": [{ "m": "POST", "p": "/api/books/payments", "file": "api:routes/books.js" }, { "m": "GET", "p": "/api/books/payments/:id/advice", "file": "api:routes/books.js" }, { "m": "POST", "p": "/api/books/cheques/:id/status", "file": "api:routes/books.js" }],
-          "chit": "the payment advice goes to the supplier as a chit (rail-advice.js → /api/chits/send)", "ledger": "payment_made · Dr 2100 Suppliers · Cr 1400 Cash / 1500 Bank (a cheque only when cleared)",
-          "test": ["api:tests/books-payments.test.cjs", "web:tests/advice-retry.test.cjs"],
-          "status": "ok", "note": "" },
-        { "n": 6, "step": "posted", "module": "Accounts", "who": "the system (the hook after the bill is accepted)",
-          "screen": [{ "file": "web:public/app/cap-books.js", "fn": "bkLgEntry" }],
-          "engine": [{ "file": "api:lib/books-hooks.js", "fn": "postChit" }, { "file": "api:lib/books.js", "fn": "postEntry" }, { "file": "engines:src/posting.js", "fn": "purchase_bill" }],
-          "route": [{ "m": "GET", "p": "/api/books/daybook", "file": "api:routes/books.js" }, { "m": "GET", "p": "/api/books/ledger/:account", "file": "api:routes/books.js" }, { "m": "GET", "p": "/api/books/party/:id/statement", "file": "api:routes/books.js" }],
-          "chit": "bill → one entry (source_ref chit:<chit_id>); what cannot post waits in books_outbox", "ledger": "as step 4; the supplier's statement reads 2100 by party",
-          "test": ["api:tests/books-post.test.cjs", "api:tests/books-hooks.test.cjs", "engines:tests/golden-books.test.js"],
-          "status": "ok", "note": "" }
+        {
+          "n": 1,
+          "step": "need",
+          "module": "Operations",
+          "who": "the shop's staff",
+          "screen": [
+            {
+              "file": "web:public/app/cap-supplies.js",
+              "fn": "supAdd"
+            },
+            {
+              "file": "web:public/app/cap-intake.js",
+              "fn": ""
+            }
+          ],
+          "engine": [
+            {
+              "file": "api:lib/supply-store.js",
+              "fn": "ensure"
+            },
+            {
+              "file": "api:lib/capture.js",
+              "fn": "raisePayload"
+            }
+          ],
+          "route": [
+            {
+              "m": "POST",
+              "p": "/api/supplies",
+              "file": "api:routes/supplies.js"
+            },
+            {
+              "m": "POST",
+              "p": "/api/capture/:id/raise",
+              "file": "api:routes/capture.js"
+            }
+          ],
+          "chit": "none yet — a supply row, or a captured message about to become a chit",
+          "ledger": "none",
+          "test": [
+            "api:tests/local-supplier.test.js"
+          ],
+          "status": "warn",
+          "note": "No test exercises lib/supply-store.js or routes/supplies.js by name."
+        },
+        {
+          "n": 2,
+          "step": "PO",
+          "module": "TasksOrders",
+          "who": "the shop (as buyer)",
+          "screen": [
+            {
+              "file": "web:public/app.html",
+              "fn": "sendChit"
+            }
+          ],
+          "engine": [
+            {
+              "file": "api:lib/mint.js",
+              "fn": "order"
+            },
+            {
+              "file": "api:lib/workflow.js",
+              "fn": "kindOf"
+            }
+          ],
+          "route": [
+            {
+              "m": "POST",
+              "p": "/api/chits/send",
+              "file": "api:routes/chits.js"
+            },
+            {
+              "m": "GET",
+              "p": "/api/work/list",
+              "file": "api:routes/work.js"
+            }
+          ],
+          "chit": "order (workflow kind order_out on the buyer's copy)",
+          "ledger": "none",
+          "test": [
+            "api:tests/work-rows.test.cjs",
+            "api:tests/t2e-orders.test.cjs",
+            "engines:tests/workflow.test.js"
+          ],
+          "status": "ok",
+          "note": ""
+        },
+        {
+          "n": 3,
+          "step": "goods receipt",
+          "module": "Operations",
+          "who": "the shop's staff (goods-in, with what the goods are FOR)",
+          "screen": [
+            {
+              "file": "web:public/app/cap-chit2.js",
+              "fn": ""
+            },
+            {
+              "file": "web:public/till.html",
+              "fn": "stockWrite"
+            }
+          ],
+          "engine": [
+            {
+              "file": "api:lib/deliverline.js",
+              "fn": "record"
+            },
+            {
+              "file": "api:lib/bill-use.js",
+              "fn": "set"
+            },
+            {
+              "file": "api:lib/stock-from-chit.js",
+              "fn": "postFor"
+            },
+            {
+              "file": "api:lib/stock-store.js",
+              "fn": "post"
+            }
+          ],
+          "route": [
+            {
+              "m": "POST",
+              "p": "/api/chits/:chit_id/deliver-lines",
+              "file": "api:routes/chits.js"
+            },
+            {
+              "m": "POST",
+              "p": "/api/till/stock",
+              "file": "api:routes/till.js"
+            }
+          ],
+          "chit": "the supplier's bill or order, lines received",
+          "ledger": "none — a stock movement IN at landed cost",
+          "test": [
+            "api:tests/goods-in-accepts.test.cjs",
+            "api:tests/bill-use.test.cjs",
+            "api:tests/stock-cycle.test.js"
+          ],
+          "status": "ok",
+          "note": ""
+        },
+        {
+          "n": 4,
+          "step": "supplier bill",
+          "module": "Accounts",
+          "who": "the supplier (delivered over CTP or captured) or the shop (a supply bought)",
+          "screen": [
+            {
+              "file": "web:public/app/cap-supplies.js",
+              "fn": "supAdd"
+            },
+            {
+              "file": "web:public/app.html",
+              "fn": "sendChit"
+            }
+          ],
+          "engine": [
+            {
+              "file": "api:lib/books-hooks.js",
+              "fn": "classify"
+            },
+            {
+              "file": "api:lib/books-hooks.js",
+              "fn": "useEvents"
+            },
+            {
+              "file": "api:lib/supply-store.js",
+              "fn": "purchase"
+            },
+            {
+              "file": "engines:src/posting.js",
+              "fn": "purchase_bill"
+            }
+          ],
+          "route": [
+            {
+              "m": "POST",
+              "p": "/api/ctp/deliver",
+              "file": "api:routes/ctp.js"
+            },
+            {
+              "m": "POST",
+              "p": "/api/supplies/purchase",
+              "file": "api:routes/supplies.js"
+            },
+            {
+              "m": "POST",
+              "p": "/api/chits/:chit_id/books-request",
+              "file": "api:routes/chits.js"
+            }
+          ],
+          "chit": "bill (received copy, side buy)",
+          "ledger": "purchase_bill · Dr 5000 Purchases (resale) / an asset 10xx / an expense 6xxx (by `use`) · Dr 2210/2211/2212 Input CGST/SGST/IGST · Cr 2100 Suppliers · reverse charge Cr 2204/2205/2206",
+          "test": [
+            "api:tests/books-hooks.test.cjs",
+            "api:tests/books-rcm.test.cjs",
+            "api:tests/two-sided-books.test.cjs",
+            "engines:tests/rcm.test.js"
+          ],
+          "status": "ok",
+          "note": ""
+        },
+        {
+          "n": 5,
+          "step": "payment",
+          "module": "Accounts",
+          "who": "the owner or a person with the books (Pay)",
+          "screen": [
+            {
+              "file": "web:public/app/cap-books.js",
+              "fn": "payOpen"
+            },
+            {
+              "file": "web:public/app/rail-advice.js",
+              "fn": ""
+            }
+          ],
+          "engine": [
+            {
+              "file": "api:lib/books.js",
+              "fn": "recordPayment"
+            },
+            {
+              "file": "engines:src/posting.js",
+              "fn": "payment_made"
+            },
+            {
+              "file": "engines:src/ledger.js",
+              "fn": "AGE_PAYABLE"
+            }
+          ],
+          "route": [
+            {
+              "m": "POST",
+              "p": "/api/books/payments",
+              "file": "api:routes/books.js"
+            },
+            {
+              "m": "GET",
+              "p": "/api/books/payments/:id/advice",
+              "file": "api:routes/books.js"
+            },
+            {
+              "m": "POST",
+              "p": "/api/books/cheques/:id/status",
+              "file": "api:routes/books.js"
+            }
+          ],
+          "chit": "the payment advice goes to the supplier as a chit (rail-advice.js → /api/chits/send)",
+          "ledger": "payment_made · Dr 2100 Suppliers · Cr 1400 Cash / 1500 Bank (a cheque only when cleared)",
+          "test": [
+            "api:tests/books-payments.test.cjs",
+            "web:tests/advice-retry.test.cjs"
+          ],
+          "status": "ok",
+          "note": ""
+        },
+        {
+          "n": 6,
+          "step": "posted",
+          "module": "Accounts",
+          "who": "the system (the hook after the bill is accepted)",
+          "screen": [
+            {
+              "file": "web:public/app/cap-books.js",
+              "fn": "bkLgEntry"
+            }
+          ],
+          "engine": [
+            {
+              "file": "api:lib/books-hooks.js",
+              "fn": "postChit"
+            },
+            {
+              "file": "api:lib/books.js",
+              "fn": "postEntry"
+            },
+            {
+              "file": "engines:src/posting.js",
+              "fn": "purchase_bill"
+            }
+          ],
+          "route": [
+            {
+              "m": "GET",
+              "p": "/api/books/daybook",
+              "file": "api:routes/books.js"
+            },
+            {
+              "m": "GET",
+              "p": "/api/books/ledger/:account",
+              "file": "api:routes/books.js"
+            },
+            {
+              "m": "GET",
+              "p": "/api/books/party/:id/statement",
+              "file": "api:routes/books.js"
+            }
+          ],
+          "chit": "bill → one entry (source_ref chit:<chit_id>); what cannot post waits in books_outbox",
+          "ledger": "as step 4; the supplier's statement reads 2100 by party",
+          "test": [
+            "api:tests/books-post.test.cjs",
+            "api:tests/books-hooks.test.cjs",
+            "engines:tests/golden-books.test.js"
+          ],
+          "status": "ok",
+          "note": ""
+        }
       ]
     },
     {
-      "id": "R2R", "name": "Record to report", "sap": "FI-GL",
+      "id": "R2R",
+      "name": "Record to report",
+      "sap": "FI-GL",
       "steps": [
-        { "n": 1, "step": "entries", "module": "Accounts", "who": "the owner (a typed entry); the system (every hook)",
-          "screen": [{ "file": "web:public/app/cap-entry.js", "fn": "enDlg" }, { "file": "web:public/app/cap-bank.js", "fn": "" }],
-          "engine": [{ "file": "api:lib/books.js", "fn": "composeEntry" }, { "file": "api:lib/books.js", "fn": "postEntry" }, { "file": "api:lib/books-manual.js", "fn": "givenLines" }, { "file": "engines:src/posting.js", "fn": "manual" }, { "file": "engines:src/bank-recon.js", "fn": "match" }],
-          "route": [{ "m": "POST", "p": "/api/books/preview", "file": "api:routes/books.js" }, { "m": "POST", "p": "/api/books/events", "file": "api:routes/books.js" }, { "m": "POST", "p": "/api/books/entries", "file": "api:routes/books.js" }, { "m": "POST", "p": "/api/books/entries/:id/reverse", "file": "api:routes/books.js" }],
-          "chit": "none — a voucher (series by type: SV · PV · RV · PY · CV · CN · DN · JV; a typed one MJ)", "ledger": "the rule's lines; a manual entry must balance to the minor unit or is refused",
-          "test": ["api:tests/books-manual-events.test.cjs", "api:tests/books-writer.test.cjs", "api:tests/books-preview.test.cjs", "api:tests/books-voucher-series.test.cjs", "engines:tests/bank-recon.test.js", "web:e2e/bank-recon-page.cjs"],
-          "status": "ok", "note": "" },
-        { "n": 2, "step": "day close", "module": "Till", "who": "the counter (close); the system (the nightly folds the walk-in day)",
-          "screen": [{ "file": "web:public/till.html", "fn": "closeCounter" }],
-          "engine": [{ "file": "api:lib/books-nightly.js", "fn": "runAll" }, { "file": "api:lib/books-hooks.js", "fn": "postDay" }, { "file": "api:lib/till-summary.js", "fn": "summaryStatement" }, { "file": "engines:src/dayopen.js", "fn": "next" }, { "file": "engines:src/posting.js", "fn": "walkin_day" }],
-          "route": [{ "m": "POST", "p": "/api/till/close", "file": "api:routes/till.js" }, { "m": "GET", "p": "/api/till/summary", "file": "api:routes/till.js" }, { "m": "GET", "p": "/api/books/health", "file": "api:routes/books.js" }, { "m": "POST", "p": "/api/books/check", "file": "api:routes/books.js" }],
-          "chit": "none — the day's walk-in bills folded into one entry per counter per day", "ledger": "walkin_day · Dr 1400 Cash / 1500 Bank / 1510 UPI / 1520 Card · Cr 4000 Sales per rate · Cr 2200/2201/2202 Output tax",
-          "test": ["api:tests/books-day-bills.test.cjs", "api:tests/books-counter-snapshot.test.cjs", "api:tests/till-exits.test.js", "api:tests/stuck-close.test.cjs", "engines:tests/dayopen.test.js", "web:e2e/till-summary.cjs"],
-          "status": "ok", "note": "" },
-        { "n": 3, "step": "month lock", "module": "Accounts", "who": "the owner",
-          "screen": [{ "file": "web:public/app/cap-books.js", "fn": "bkLockDo" }],
-          "engine": [{ "file": "api:lib/books.js", "fn": "setPeriod" }, { "file": "api:lib/books.js", "fn": "periodAdvice" }, { "file": "engines:src/period.js", "fn": "periodState" }, { "file": "engines:src/period.js", "fn": "postingDate" }],
-          "route": [{ "m": "POST", "p": "/api/books/periods/:fy/:p/:act", "file": "api:routes/books.js" }, { "m": "GET", "p": "/api/books/periods", "file": "api:routes/books.js" }],
-          "chit": "none", "ledger": "none — a locked period refuses a dated entry (PERIOD_LOCKED)",
-          "test": ["api:tests/books-period.test.cjs", "engines:tests/period.test.js", "web:e2e/cb-accounts.cjs"],
-          "status": "ok", "note": "" },
-        { "n": 4, "step": "GST", "module": "Accounts", "who": "the owner",
-          "screen": [{ "file": "web:public/app/cap-period.js", "fn": "peGstClose" }, { "file": "web:public/app/cap-period.js", "fn": "peGstPay" }, { "file": "web:public/app/cap-admin.js", "fn": "" }],
-          "engine": [{ "file": "api:lib/books-period.js", "fn": "gstClose" }, { "file": "api:lib/books-period.js", "fn": "gstPay" }, { "file": "api:lib/tax-lines.js", "fn": "gstr1" }, { "file": "api:lib/tax-lines.js", "fn": "gstr3b" }, { "file": "engines:src/gst-returns.js", "fn": "gstr1" }, { "file": "engines:src/posting.js", "fn": "gstSetOff" }, { "file": "engines:src/posting.js", "fn": "tax_payment" }],
-          "route": [{ "m": "POST", "p": "/api/books/gst/close", "file": "api:routes/books.js" }, { "m": "POST", "p": "/api/books/gst/pay", "file": "api:routes/books.js" }, { "m": "GET", "p": "/api/tax/gstr", "file": "api:routes/tax.js" }],
-          "chit": "none", "ledger": "set-off: Dr 2200/2201/2202 Output · Cr 2210/2211/2212 Input, in the pack's order; payment (gst_payment): Dr 2200/2201/2202 per head · Cr 1500 Bank",
-          "test": ["api:tests/books-period.test.cjs", "api:tests/tax-lines.test.js", "engines:tests/gst-returns.test.js", "engines:tests/gst-2b.test.js"],
-          "status": "ok", "note": "" },
-        { "n": 5, "step": "year close", "module": "Accounts", "who": "the owner",
-          "screen": [{ "file": "web:public/app/cap-period.js", "fn": "peYearClose" }, { "file": "web:public/app/cap-period.js", "fn": "peYearStatus" }],
-          "engine": [{ "file": "api:lib/books.js", "fn": "closeYear" }, { "file": "api:lib/books.js", "fn": "yearState" }, { "file": "engines:src/period.js", "fn": "yearClose" }],
-          "route": [{ "m": "POST", "p": "/api/books/year/:fy/close", "file": "api:routes/books.js" }, { "m": "GET", "p": "/api/books/year/:fy/status", "file": "api:routes/books.js" }],
-          "chit": "none", "ledger": "every period locked; the year's profit carried to 3900 Profit and loss (retained); the opening rows of the next year (period 0)",
-          "test": ["api:tests/books-year.test.cjs", "engines:tests/year-journey.test.js"],
-          "status": "ok", "note": "" },
-        { "n": 6, "step": "statements", "module": "Accounts", "who": "the owner (reads); a CA (the handover pack)",
-          "screen": [{ "file": "web:public/app/cap-books.js", "fn": "partyBooksHTML" }],
-          "engine": [{ "file": "api:lib/books.js", "fn": "trialBalance" }, { "file": "api:lib/books.js", "fn": "profitAndLoss" }, { "file": "api:lib/books.js", "fn": "balanceSheet" }, { "file": "engines:src/ledger.js", "fn": "trialBalance" }, { "file": "engines:src/ledger.js", "fn": "balanceSheet" }, { "file": "engines:src/bookpack.js", "fn": "" }],
-          "route": [{ "m": "GET", "p": "/api/books/trial-balance", "file": "api:routes/books.js" }, { "m": "GET", "p": "/api/books/pl", "file": "api:routes/books.js" }, { "m": "GET", "p": "/api/books/bs", "file": "api:routes/books.js" }, { "m": "GET", "p": "/api/books/party/:id/statement", "file": "api:routes/books.js" }, { "m": "POST", "p": "/api/books/packs", "file": "api:routes/books.js" }],
-          "chit": "none", "ledger": "read only — Schedule III lines come from the pack beside each code",
-          "test": ["api:tests/books-routes.test.cjs", "api:tests/reporting.test.js", "engines:tests/ledger.test.js", "engines:tests/bookpack.test.js", "web:e2e/books-web.cjs"],
-          "status": "ok", "note": "" }
+        {
+          "n": 1,
+          "step": "entries",
+          "module": "Accounts",
+          "who": "the owner (a typed entry); the system (every hook)",
+          "screen": [
+            {
+              "file": "web:public/app/cap-entry.js",
+              "fn": "enDlg"
+            },
+            {
+              "file": "web:public/app/cap-bank.js",
+              "fn": ""
+            }
+          ],
+          "engine": [
+            {
+              "file": "api:lib/books.js",
+              "fn": "composeEntry"
+            },
+            {
+              "file": "api:lib/books.js",
+              "fn": "postEntry"
+            },
+            {
+              "file": "api:lib/books-manual.js",
+              "fn": "givenLines"
+            },
+            {
+              "file": "engines:src/posting.js",
+              "fn": "manual"
+            },
+            {
+              "file": "engines:src/bank-recon.js",
+              "fn": "match"
+            }
+          ],
+          "route": [
+            {
+              "m": "POST",
+              "p": "/api/books/preview",
+              "file": "api:routes/books.js"
+            },
+            {
+              "m": "POST",
+              "p": "/api/books/events",
+              "file": "api:routes/books.js"
+            },
+            {
+              "m": "POST",
+              "p": "/api/books/entries",
+              "file": "api:routes/books.js"
+            },
+            {
+              "m": "POST",
+              "p": "/api/books/entries/:id/reverse",
+              "file": "api:routes/books.js"
+            }
+          ],
+          "chit": "none — a voucher (series by type: SV · PV · RV · PY · CV · CN · DN · JV; a typed one MJ)",
+          "ledger": "the rule's lines; a manual entry must balance to the minor unit or is refused",
+          "test": [
+            "api:tests/books-manual-events.test.cjs",
+            "api:tests/books-writer.test.cjs",
+            "api:tests/books-preview.test.cjs",
+            "api:tests/books-voucher-series.test.cjs",
+            "engines:tests/bank-recon.test.js",
+            "web:e2e/bank-recon-page.cjs"
+          ],
+          "status": "ok",
+          "note": ""
+        },
+        {
+          "n": 2,
+          "step": "day close",
+          "module": "Till",
+          "who": "the counter (close); the system (the nightly folds the walk-in day)",
+          "screen": [
+            {
+              "file": "web:public/till.html",
+              "fn": "closeCounter"
+            }
+          ],
+          "engine": [
+            {
+              "file": "api:lib/books-nightly.js",
+              "fn": "runAll"
+            },
+            {
+              "file": "api:lib/books-hooks.js",
+              "fn": "postDay"
+            },
+            {
+              "file": "api:lib/till-summary.js",
+              "fn": "summaryStatement"
+            },
+            {
+              "file": "engines:src/dayopen.js",
+              "fn": "next"
+            },
+            {
+              "file": "engines:src/posting.js",
+              "fn": "walkin_day"
+            }
+          ],
+          "route": [
+            {
+              "m": "POST",
+              "p": "/api/till/close",
+              "file": "api:routes/till.js"
+            },
+            {
+              "m": "GET",
+              "p": "/api/till/summary",
+              "file": "api:routes/till.js"
+            },
+            {
+              "m": "GET",
+              "p": "/api/books/health",
+              "file": "api:routes/books.js"
+            },
+            {
+              "m": "POST",
+              "p": "/api/books/check",
+              "file": "api:routes/books.js"
+            }
+          ],
+          "chit": "none — the day's walk-in bills folded into one entry per counter per day",
+          "ledger": "walkin_day · Dr 1400 Cash / 1500 Bank / 1510 UPI / 1520 Card · Cr 4000 Sales per rate · Cr 2200/2201/2202 Output tax",
+          "test": [
+            "api:tests/books-day-bills.test.cjs",
+            "api:tests/books-counter-snapshot.test.cjs",
+            "api:tests/till-exits.test.js",
+            "api:tests/stuck-close.test.cjs",
+            "engines:tests/dayopen.test.js",
+            "web:e2e/till-summary.cjs"
+          ],
+          "status": "ok",
+          "note": ""
+        },
+        {
+          "n": 3,
+          "step": "month lock",
+          "module": "Accounts",
+          "who": "the owner",
+          "screen": [
+            {
+              "file": "web:public/app/cap-books.js",
+              "fn": "bkLockDo"
+            }
+          ],
+          "engine": [
+            {
+              "file": "api:lib/books.js",
+              "fn": "setPeriod"
+            },
+            {
+              "file": "api:lib/books.js",
+              "fn": "periodAdvice"
+            },
+            {
+              "file": "engines:src/period.js",
+              "fn": "periodState"
+            },
+            {
+              "file": "engines:src/period.js",
+              "fn": "postingDate"
+            }
+          ],
+          "route": [
+            {
+              "m": "POST",
+              "p": "/api/books/periods/:fy/:p/:act",
+              "file": "api:routes/books.js"
+            },
+            {
+              "m": "GET",
+              "p": "/api/books/periods",
+              "file": "api:routes/books.js"
+            }
+          ],
+          "chit": "none",
+          "ledger": "none — a locked period refuses a dated entry (PERIOD_LOCKED)",
+          "test": [
+            "api:tests/books-period.test.cjs",
+            "engines:tests/period.test.js",
+            "web:e2e/cb-accounts.cjs"
+          ],
+          "status": "ok",
+          "note": ""
+        },
+        {
+          "n": 4,
+          "step": "GST",
+          "module": "Accounts",
+          "who": "the owner",
+          "screen": [
+            {
+              "file": "web:public/app/cap-period.js",
+              "fn": "peGstClose"
+            },
+            {
+              "file": "web:public/app/cap-period.js",
+              "fn": "peGstPay"
+            },
+            {
+              "file": "web:public/app/cap-admin.js",
+              "fn": ""
+            }
+          ],
+          "engine": [
+            {
+              "file": "api:lib/books-period.js",
+              "fn": "gstClose"
+            },
+            {
+              "file": "api:lib/books-period.js",
+              "fn": "gstPay"
+            },
+            {
+              "file": "api:lib/tax-lines.js",
+              "fn": "gstr1"
+            },
+            {
+              "file": "api:lib/tax-lines.js",
+              "fn": "gstr3b"
+            },
+            {
+              "file": "engines:src/gst-returns.js",
+              "fn": "gstr1"
+            },
+            {
+              "file": "engines:src/posting.js",
+              "fn": "gstSetOff"
+            },
+            {
+              "file": "engines:src/posting.js",
+              "fn": "tax_payment"
+            }
+          ],
+          "route": [
+            {
+              "m": "POST",
+              "p": "/api/books/gst/close",
+              "file": "api:routes/books.js"
+            },
+            {
+              "m": "POST",
+              "p": "/api/books/gst/pay",
+              "file": "api:routes/books.js"
+            },
+            {
+              "m": "GET",
+              "p": "/api/tax/gstr",
+              "file": "api:routes/tax.js"
+            }
+          ],
+          "chit": "none",
+          "ledger": "set-off: Dr 2200/2201/2202 Output · Cr 2210/2211/2212 Input, in the pack's order; payment (gst_payment): Dr 2200/2201/2202 per head · Cr 1500 Bank",
+          "test": [
+            "api:tests/books-period.test.cjs",
+            "api:tests/tax-lines.test.js",
+            "engines:tests/gst-returns.test.js",
+            "engines:tests/gst-2b.test.js"
+          ],
+          "status": "ok",
+          "note": ""
+        },
+        {
+          "n": 5,
+          "step": "year close",
+          "module": "Accounts",
+          "who": "the owner",
+          "screen": [
+            {
+              "file": "web:public/app/cap-period.js",
+              "fn": "peYearClose"
+            },
+            {
+              "file": "web:public/app/cap-period.js",
+              "fn": "peYearStatus"
+            }
+          ],
+          "engine": [
+            {
+              "file": "api:lib/books.js",
+              "fn": "closeYear"
+            },
+            {
+              "file": "api:lib/books.js",
+              "fn": "yearState"
+            },
+            {
+              "file": "engines:src/period.js",
+              "fn": "yearClose"
+            }
+          ],
+          "route": [
+            {
+              "m": "POST",
+              "p": "/api/books/year/:fy/close",
+              "file": "api:routes/books.js"
+            },
+            {
+              "m": "GET",
+              "p": "/api/books/year/:fy/status",
+              "file": "api:routes/books.js"
+            }
+          ],
+          "chit": "none",
+          "ledger": "every period locked; the year's profit carried to 3900 Profit and loss (retained); the opening rows of the next year (period 0)",
+          "test": [
+            "api:tests/books-year.test.cjs",
+            "engines:tests/year-journey.test.js"
+          ],
+          "status": "ok",
+          "note": ""
+        },
+        {
+          "n": 6,
+          "step": "statements",
+          "module": "Accounts",
+          "who": "the owner (reads); a CA (the handover pack)",
+          "screen": [
+            {
+              "file": "web:public/app/cap-books.js",
+              "fn": "partyBooksHTML"
+            }
+          ],
+          "engine": [
+            {
+              "file": "api:lib/books.js",
+              "fn": "trialBalance"
+            },
+            {
+              "file": "api:lib/books.js",
+              "fn": "profitAndLoss"
+            },
+            {
+              "file": "api:lib/books.js",
+              "fn": "balanceSheet"
+            },
+            {
+              "file": "engines:src/ledger.js",
+              "fn": "trialBalance"
+            },
+            {
+              "file": "engines:src/ledger.js",
+              "fn": "balanceSheet"
+            },
+            {
+              "file": "engines:src/bookpack.js",
+              "fn": ""
+            }
+          ],
+          "route": [
+            {
+              "m": "GET",
+              "p": "/api/books/trial-balance",
+              "file": "api:routes/books.js"
+            },
+            {
+              "m": "GET",
+              "p": "/api/books/pl",
+              "file": "api:routes/books.js"
+            },
+            {
+              "m": "GET",
+              "p": "/api/books/bs",
+              "file": "api:routes/books.js"
+            },
+            {
+              "m": "GET",
+              "p": "/api/books/party/:id/statement",
+              "file": "api:routes/books.js"
+            },
+            {
+              "m": "POST",
+              "p": "/api/books/packs",
+              "file": "api:routes/books.js"
+            }
+          ],
+          "chit": "none",
+          "ledger": "read only — Schedule III lines come from the pack beside each code",
+          "test": [
+            "api:tests/books-routes.test.cjs",
+            "api:tests/reporting.test.js",
+            "engines:tests/ledger.test.js",
+            "engines:tests/bookpack.test.js",
+            "web:e2e/books-web.cjs"
+          ],
+          "status": "ok",
+          "note": ""
+        }
       ]
     },
     {
-      "id": "INV", "name": "Inventory", "sap": "MM-IM",
+      "id": "INV",
+      "name": "Inventory",
+      "sap": "MM-IM",
       "steps": [
-        { "n": 1, "step": "receipt", "module": "Operations", "who": "the shop's staff (goods-in); the counter (a stock line typed)",
-          "screen": [{ "file": "web:public/app/cap-chit2.js", "fn": "" }, { "file": "web:public/till.html", "fn": "stockWrite" }],
-          "engine": [{ "file": "api:lib/deliverline.js", "fn": "record" }, { "file": "api:lib/stock-from-chit.js", "fn": "postFor" }, { "file": "api:lib/stock-store.js", "fn": "post" }, { "file": "api:lib/inventory.js", "fn": "" }],
-          "route": [{ "m": "POST", "p": "/api/chits/:chit_id/deliver-lines", "file": "api:routes/chits.js" }, { "m": "POST", "p": "/api/till/stock", "file": "api:routes/till.js" }, { "m": "POST", "p": "/api/till/stock/bulk", "file": "api:routes/till.js" }],
-          "chit": "the received bill or order", "ledger": "none — IN at landed cost, weighted average (perpetual)",
-          "test": ["api:tests/stock-cycle.test.js", "api:tests/goods-in-accepts.test.cjs", "api:tests/item-cost.test.js"],
-          "status": "ok", "note": "" },
-        { "n": 2, "step": "stock", "module": "Till", "who": "the counter, the shop, a connected system",
-          "screen": [{ "file": "web:public/till.html", "fn": "stockWrite" }],
-          "engine": [{ "file": "api:lib/stock-store.js", "fn": "sheet" }, { "file": "api:lib/stock-store.js", "fn": "balanceOf" }, { "file": "api:lib/stock-store.js", "fn": "lotsOf" }, { "file": "engines:src/lots.js", "fn": "check" }],
-          "route": [{ "m": "GET", "p": "/api/till/stock", "file": "api:routes/till.js" }, { "m": "GET", "p": "/api/integrations/stock/:handle", "file": "api:routes/integrations.js" }],
-          "chit": "none", "ledger": "none — quantities only; the books value stock at step 5",
-          "test": ["api:tests/stock-cycle.test.js", "api:tests/lotfields.test.js", "api:tests/traceability-massbalance.test.js"],
-          "status": "ok", "note": "" },
-        { "n": 3, "step": "issue / sale", "module": "Till", "who": "the counter (a bill); staff (a supply used)",
-          "screen": [{ "file": "web:public/till.html", "fn": "fetchBy" }, { "file": "web:public/app/cap-supplies.js", "fn": "supAdd" }],
-          "engine": [{ "file": "api:lib/stock-from-chit.js", "fn": "postFor" }, { "file": "api:lib/stock-store.js", "fn": "issue" }, { "file": "api:lib/supply-store.js", "fn": "issue" }],
-          "route": [{ "m": "POST", "p": "/api/chits/send", "file": "api:routes/chits.js" }, { "m": "POST", "p": "/api/supplies/:id/issue", "file": "api:routes/supplies.js" }],
-          "chit": "bill (a till bill IS the handover); none for a supply", "ledger": "none at issue — the sale posts under O2C step 7; a supply issued posts nothing",
-          "test": ["api:tests/stock-cycle.test.js", "api:tests/till-shippable.test.cjs"],
-          "status": "warn", "note": "A supply issued leaves stock but no expense entry is raised; the cost reaches the books only through the supplier bill (P2P step 4, use)." },
-        { "n": 4, "step": "count", "module": "Operations", "who": "the shop's staff",
-          "screen": [], "engine": [], "route": [], "chit": "none", "ledger": "none", "test": [],
-          "status": "missing", "note": "No route or screen takes a physical count. Evidence: api routes/integrations.js says 'returns and stock counting are version 2'; lib/stock-store.js shrinkage() reports reason-coded losses but nothing writes a count; lib/books-period.js closingStock refuses 'automatic' because quantities on hand are not kept for it." },
-        { "n": 5, "step": "closing stock", "module": "Accounts", "who": "the owner (types the value)",
-          "screen": [{ "file": "web:public/app/cap-period.js", "fn": "peStockSave" }],
-          "engine": [{ "file": "api:lib/books-period.js", "fn": "closingStock" }, { "file": "engines:src/posting.js", "fn": "closing_stock" }],
-          "route": [{ "m": "POST", "p": "/api/books/closing-stock", "file": "api:routes/books.js" }],
-          "chit": "none", "ledger": "closing_stock · Dr 1200 Stock-in-hand · Cr 5050 Changes in inventories (or the reverse) — the difference from the books, lower of cost and NRV",
-          "test": ["api:tests/books-period.test.cjs", "engines:tests/golden-books.test.js"],
-          "status": "warn", "note": "Manual value only; the automatic mode is refused until a count (step 4) exists." }
+        {
+          "n": 1,
+          "step": "receipt",
+          "module": "Operations",
+          "who": "the shop's staff (goods-in); the counter (a stock line typed)",
+          "screen": [
+            {
+              "file": "web:public/app/cap-chit2.js",
+              "fn": ""
+            },
+            {
+              "file": "web:public/till.html",
+              "fn": "stockWrite"
+            }
+          ],
+          "engine": [
+            {
+              "file": "api:lib/deliverline.js",
+              "fn": "record"
+            },
+            {
+              "file": "api:lib/stock-from-chit.js",
+              "fn": "postFor"
+            },
+            {
+              "file": "api:lib/stock-store.js",
+              "fn": "post"
+            },
+            {
+              "file": "api:lib/inventory.js",
+              "fn": ""
+            }
+          ],
+          "route": [
+            {
+              "m": "POST",
+              "p": "/api/chits/:chit_id/deliver-lines",
+              "file": "api:routes/chits.js"
+            },
+            {
+              "m": "POST",
+              "p": "/api/till/stock",
+              "file": "api:routes/till.js"
+            },
+            {
+              "m": "POST",
+              "p": "/api/till/stock/bulk",
+              "file": "api:routes/till.js"
+            }
+          ],
+          "chit": "the received bill or order",
+          "ledger": "none — IN at landed cost, weighted average (perpetual)",
+          "test": [
+            "api:tests/stock-cycle.test.js",
+            "api:tests/goods-in-accepts.test.cjs",
+            "api:tests/item-cost.test.js"
+          ],
+          "status": "ok",
+          "note": ""
+        },
+        {
+          "n": 2,
+          "step": "stock",
+          "module": "Till",
+          "who": "the counter, the shop, a connected system",
+          "screen": [
+            {
+              "file": "web:public/till.html",
+              "fn": "stockWrite"
+            }
+          ],
+          "engine": [
+            {
+              "file": "api:lib/stock-store.js",
+              "fn": "sheet"
+            },
+            {
+              "file": "api:lib/stock-store.js",
+              "fn": "balanceOf"
+            },
+            {
+              "file": "api:lib/stock-store.js",
+              "fn": "lotsOf"
+            },
+            {
+              "file": "engines:src/lots.js",
+              "fn": "check"
+            }
+          ],
+          "route": [
+            {
+              "m": "GET",
+              "p": "/api/till/stock",
+              "file": "api:routes/till.js"
+            },
+            {
+              "m": "GET",
+              "p": "/api/integrations/stock/:handle",
+              "file": "api:routes/integrations.js"
+            }
+          ],
+          "chit": "none",
+          "ledger": "none — quantities only; the books value stock at step 5",
+          "test": [
+            "api:tests/stock-cycle.test.js",
+            "api:tests/lotfields.test.js",
+            "api:tests/traceability-massbalance.test.js"
+          ],
+          "status": "ok",
+          "note": ""
+        },
+        {
+          "n": 3,
+          "step": "issue / sale",
+          "module": "Till",
+          "who": "the counter (a bill); staff (a supply used)",
+          "screen": [
+            {
+              "file": "web:public/till.html",
+              "fn": "fetchBy"
+            },
+            {
+              "file": "web:public/app/cap-supplies.js",
+              "fn": "supAdd"
+            }
+          ],
+          "engine": [
+            {
+              "file": "api:lib/stock-from-chit.js",
+              "fn": "postFor"
+            },
+            {
+              "file": "api:lib/stock-store.js",
+              "fn": "issue"
+            },
+            {
+              "file": "api:lib/supply-store.js",
+              "fn": "issue"
+            }
+          ],
+          "route": [
+            {
+              "m": "POST",
+              "p": "/api/chits/send",
+              "file": "api:routes/chits.js"
+            },
+            {
+              "m": "POST",
+              "p": "/api/supplies/:id/issue",
+              "file": "api:routes/supplies.js"
+            }
+          ],
+          "chit": "bill (a till bill IS the handover); none for a supply",
+          "ledger": "none at issue — the sale posts under O2C step 7; a supply issued posts nothing",
+          "test": [
+            "api:tests/stock-cycle.test.js",
+            "api:tests/till-shippable.test.cjs"
+          ],
+          "status": "warn",
+          "note": "A supply issued leaves stock but no expense entry is raised; the cost reaches the books only through the supplier bill (P2P step 4, use)."
+        },
+        {
+          "n": 4,
+          "step": "count",
+          "module": "Operations",
+          "who": "the shop's staff",
+          "screen": [],
+          "engine": [],
+          "route": [],
+          "chit": "none",
+          "ledger": "none",
+          "test": [],
+          "status": "missing",
+          "note": "No route or screen takes a physical count. Evidence: api routes/integrations.js says 'returns and stock counting are version 2'; lib/stock-store.js shrinkage() reports reason-coded losses but nothing writes a count; lib/books-period.js closingStock refuses 'automatic' because quantities on hand are not kept for it."
+        },
+        {
+          "n": 5,
+          "step": "closing stock",
+          "module": "Accounts",
+          "who": "the owner (types the value)",
+          "screen": [
+            {
+              "file": "web:public/app/cap-period.js",
+              "fn": "peStockSave"
+            }
+          ],
+          "engine": [
+            {
+              "file": "api:lib/books-period.js",
+              "fn": "closingStock"
+            },
+            {
+              "file": "engines:src/posting.js",
+              "fn": "closing_stock"
+            }
+          ],
+          "route": [
+            {
+              "m": "POST",
+              "p": "/api/books/closing-stock",
+              "file": "api:routes/books.js"
+            }
+          ],
+          "chit": "none",
+          "ledger": "closing_stock · Dr 1200 Stock-in-hand · Cr 5050 Changes in inventories (or the reverse) — the difference from the books, lower of cost and NRV",
+          "test": [
+            "api:tests/books-period.test.cjs",
+            "engines:tests/golden-books.test.js"
+          ],
+          "status": "warn",
+          "note": "Manual value only; the automatic mode is refused until a count (step 4) exists."
+        }
       ]
     },
     {
-      "id": "H2P", "name": "Hire to pay", "sap": "HCM → FI",
+      "id": "H2P",
+      "name": "Hire to pay",
+      "sap": "HCM → FI",
       "steps": [
-        { "n": 1, "step": "person", "module": "Employees", "who": "the owner",
-          "screen": [{ "file": "web:public/app/cap-employees.js", "fn": "openAdd" }, { "file": "web:public/app/cap-workforce.js", "fn": "" }],
-          "engine": [{ "file": "api:lib/employee-code.js", "fn": "mint" }, { "file": "api:lib/mintuserid.js", "fn": "" }, { "file": "api:lib/people.js", "fn": "view" }],
-          "route": [{ "m": "POST", "p": "/api/actors", "file": "api:routes/actors.js" }, { "m": "POST", "p": "/api/actors/suggest-key", "file": "api:routes/actors.js" }, { "m": "GET", "p": "/api/people", "file": "api:routes/people.js" }],
-          "chit": "none", "ledger": "none",
-          "test": ["api:tests/people.test.cjs", "api:tests/employee-code.test.cjs", "api:tests/employee-first-signin.test.cjs", "api:tests/userid.test.cjs", "web:e2e/walk-employees.cjs", "web:e2e/employees-guard.cjs"],
-          "status": "ok", "note": "" },
-        { "n": 2, "step": "access", "module": "Employees", "who": "the owner (sets); the person (signs in)",
-          "screen": [{ "file": "web:public/app/cap-employees.js", "fn": "resetPin" }, { "file": "web:public/app/signin-ui.js", "fn": "" }],
-          "engine": [{ "file": "api:lib/access.js", "fn": "levelOf" }, { "file": "api:lib/people.js", "fn": "accessWords" }, { "file": "api:lib/signin.js", "fn": "" }, { "file": "api:lib/person-session.js", "fn": "" }, { "file": "engines:src/signin.js", "fn": "" }],
-          "route": [{ "m": "POST", "p": "/api/actors/set-pin", "file": "api:routes/actors.js" }, { "m": "PUT", "p": "/api/actors/:id/status", "file": "api:routes/actors.js" }, { "m": "POST", "p": "/api/actors/login", "file": "api:routes/actors.js" }, { "m": "POST", "p": "/api/signin/ask", "file": "api:routes/signin.js" }, { "m": "POST", "p": "/api/signin/verify", "file": "api:routes/signin.js" }],
-          "chit": "none", "ledger": "none",
-          "test": ["api:tests/iam-access.test.cjs", "api:tests/signin.test.js", "api:tests/person-session.test.cjs", "api:tests/access-events.test.cjs", "web:tests/signin-ui.test.cjs"],
-          "status": "ok", "note": "" },
-        { "n": 3, "step": "attendance", "module": "Till", "who": "the person (at a counter)",
-          "screen": [{ "file": "web:public/till.html", "fn": "closeCounter" }, { "file": "web:public/app/cap-employees.js", "fn": "openAdd" }],
-          "engine": [{ "file": "api:lib/dayopen.js", "fn": "" }, { "file": "api:lib/workpattern.js", "fn": "resolveWorkPattern" }, { "file": "api:lib/access-events.js", "fn": "record" }],
-          "route": [{ "m": "POST", "p": "/api/counters/:id/open", "file": "api:routes/counters.js" }, { "m": "POST", "p": "/api/counters/:id/release", "file": "api:routes/counters.js" }, { "m": "PUT", "p": "/api/actors/break", "file": "api:routes/actors.js" }, { "m": "GET", "p": "/api/actors/access-events", "file": "api:routes/actors.js" }],
-          "chit": "none", "ledger": "none",
-          "test": ["api:tests/counter-claim.test.js", "api:tests/counter-gates.test.cjs", "api:tests/access-events.test.cjs", "engines:tests/dayopen.test.js"],
-          "status": "warn", "note": "What exists is the counter sign-in, release and break state, and a work PATTERN (shift blueprints). Nothing records a day worked, hours or leave as an attendance register." },
-        { "n": 4, "step": "payroll", "module": "Employees", "who": "the owner",
-          "screen": [], "engine": [], "route": [], "chit": "none", "ledger": "the chart has 6020 Salaries · 5100 Wages · 2420 Salary and wages payable — no rule fills them", "test": [],
-          "status": "missing", "note": "grep attendance|payroll|payslip|salary over api routes/, lib/ and migrations/ finds nothing outside the chart (engines src/reg-in.js). A salary can only be posted as a typed expense (class salary → 6020)." },
-        { "n": 5, "step": "payment", "module": "Accounts", "who": "the owner",
-          "screen": [], "engine": [], "route": [], "chit": "none", "ledger": "none — posting payment_made needs a creditors party; an employee is not one", "test": [],
-          "status": "missing", "note": "Only POST /api/books/entries (a typed, owner-only journal) can record a salary paid. No employee party, no advice, no payslip." }
+        {
+          "n": 1,
+          "step": "person",
+          "module": "Employees",
+          "who": "the owner",
+          "screen": [
+            {
+              "file": "web:public/app/cap-employees.js",
+              "fn": "openAdd"
+            },
+            {
+              "file": "web:public/app/cap-workforce.js",
+              "fn": ""
+            }
+          ],
+          "engine": [
+            {
+              "file": "api:lib/employee-code.js",
+              "fn": "mint"
+            },
+            {
+              "file": "api:lib/mintuserid.js",
+              "fn": ""
+            },
+            {
+              "file": "api:lib/people.js",
+              "fn": "view"
+            }
+          ],
+          "route": [
+            {
+              "m": "POST",
+              "p": "/api/actors",
+              "file": "api:routes/actors.js"
+            },
+            {
+              "m": "POST",
+              "p": "/api/actors/suggest-key",
+              "file": "api:routes/actors.js"
+            },
+            {
+              "m": "GET",
+              "p": "/api/people",
+              "file": "api:routes/people.js"
+            }
+          ],
+          "chit": "none",
+          "ledger": "none",
+          "test": [
+            "api:tests/people.test.cjs",
+            "api:tests/employee-code.test.cjs",
+            "api:tests/employee-first-signin.test.cjs",
+            "api:tests/userid.test.cjs",
+            "web:e2e/walk-employees.cjs",
+            "web:e2e/employees-guard.cjs"
+          ],
+          "status": "ok",
+          "note": ""
+        },
+        {
+          "n": 2,
+          "step": "access",
+          "module": "Employees",
+          "who": "the owner (sets); the person (signs in)",
+          "screen": [
+            {
+              "file": "web:public/app/cap-employees.js",
+              "fn": "resetPin"
+            },
+            {
+              "file": "web:public/app/signin-ui.js",
+              "fn": ""
+            }
+          ],
+          "engine": [
+            {
+              "file": "api:lib/access.js",
+              "fn": "levelOf"
+            },
+            {
+              "file": "api:lib/people.js",
+              "fn": "accessWords"
+            },
+            {
+              "file": "api:lib/signin.js",
+              "fn": ""
+            },
+            {
+              "file": "api:lib/person-session.js",
+              "fn": ""
+            },
+            {
+              "file": "engines:src/signin.js",
+              "fn": ""
+            }
+          ],
+          "route": [
+            {
+              "m": "POST",
+              "p": "/api/actors/set-pin",
+              "file": "api:routes/actors.js"
+            },
+            {
+              "m": "PUT",
+              "p": "/api/actors/:id/status",
+              "file": "api:routes/actors.js"
+            },
+            {
+              "m": "POST",
+              "p": "/api/actors/login",
+              "file": "api:routes/actors.js"
+            },
+            {
+              "m": "POST",
+              "p": "/api/signin/ask",
+              "file": "api:routes/signin.js"
+            },
+            {
+              "m": "POST",
+              "p": "/api/signin/verify",
+              "file": "api:routes/signin.js"
+            }
+          ],
+          "chit": "none",
+          "ledger": "none",
+          "test": [
+            "api:tests/iam-access.test.cjs",
+            "api:tests/signin.test.js",
+            "api:tests/person-session.test.cjs",
+            "api:tests/access-events.test.cjs",
+            "web:tests/signin-ui.test.cjs"
+          ],
+          "status": "ok",
+          "note": ""
+        },
+        {
+          "n": 3,
+          "step": "attendance",
+          "module": "Till",
+          "who": "the person (at a counter)",
+          "screen": [
+            {
+              "file": "web:public/till.html",
+              "fn": "closeCounter"
+            },
+            {
+              "file": "web:public/app/cap-employees.js",
+              "fn": "openAdd"
+            }
+          ],
+          "engine": [
+            {
+              "file": "api:lib/dayopen.js",
+              "fn": ""
+            },
+            {
+              "file": "api:lib/workpattern.js",
+              "fn": "resolveWorkPattern"
+            },
+            {
+              "file": "api:lib/access-events.js",
+              "fn": "record"
+            }
+          ],
+          "route": [
+            {
+              "m": "POST",
+              "p": "/api/counters/:id/open",
+              "file": "api:routes/counters.js"
+            },
+            {
+              "m": "POST",
+              "p": "/api/counters/:id/release",
+              "file": "api:routes/counters.js"
+            },
+            {
+              "m": "PUT",
+              "p": "/api/actors/break",
+              "file": "api:routes/actors.js"
+            },
+            {
+              "m": "GET",
+              "p": "/api/actors/access-events",
+              "file": "api:routes/actors.js"
+            }
+          ],
+          "chit": "none",
+          "ledger": "none",
+          "test": [
+            "api:tests/counter-claim.test.js",
+            "api:tests/counter-gates.test.cjs",
+            "api:tests/access-events.test.cjs",
+            "engines:tests/dayopen.test.js"
+          ],
+          "status": "warn",
+          "note": "What exists is the counter sign-in, release and break state, and a work PATTERN (shift blueprints). Nothing records a day worked, hours or leave as an attendance register."
+        },
+        {
+          "n": 4,
+          "step": "payroll",
+          "module": "Employees",
+          "who": "the owner",
+          "screen": [],
+          "engine": [],
+          "route": [],
+          "chit": "none",
+          "ledger": "the chart has 6020 Salaries · 5100 Wages · 2420 Salary and wages payable — no rule fills them",
+          "test": [],
+          "status": "missing",
+          "note": "grep attendance|payroll|payslip|salary over api routes/, lib/ and migrations/ finds nothing outside the chart (engines src/reg-in.js). A salary can only be posted as a typed expense (class salary → 6020)."
+        },
+        {
+          "n": 5,
+          "step": "payment",
+          "module": "Accounts",
+          "who": "the owner",
+          "screen": [],
+          "engine": [],
+          "route": [],
+          "chit": "none",
+          "ledger": "none — posting payment_made needs a creditors party; an employee is not one",
+          "test": [],
+          "status": "missing",
+          "note": "Only POST /api/books/entries (a typed, owner-only journal) can record a salary paid. No employee party, no advice, no payslip."
+        }
       ]
     },
     {
-      "id": "L2C", "name": "Lead to customer", "sap": "SD pre-sales (CRM)",
+      "id": "L2C",
+      "name": "Lead to customer",
+      "sap": "SD pre-sales (CRM)",
       "steps": [
-        { "n": 1, "step": "lead", "module": "CRM", "who": "the shop's staff",
-          "screen": [{ "file": "web:public/app/cap-crm-leads.js", "fn": "crmLeadAddOpen" }],
-          "engine": [{ "file": "api:lib/crm.js", "fn": "isLead" }, { "file": "api:lib/crm.js", "fn": "list" }, { "file": "api:lib/memberships.js", "fn": "add" }],
-          "route": [{ "m": "POST", "p": "/api/crm/leads", "file": "api:routes/crm.js" }, { "m": "GET", "p": "/api/crm/parties", "file": "api:routes/crm.js" }],
-          "chit": "none — a party row (added_via lead) with a lead_stage membership", "ledger": "none",
-          "test": ["api:tests/crm-leads.test.cjs", "api:tests/crm-read.test.cjs", "web:e2e/crm.cjs"],
-          "status": "ok", "note": "" },
-        { "n": 2, "step": "call", "module": "CRM", "who": "the shop's staff (the call desk)",
-          "screen": [{ "file": "web:public/app/cap-crm-calls.js", "fn": "crmCallSend" }],
-          "engine": [{ "file": "api:lib/crm-calls.js", "fn": "queue" }, { "file": "api:lib/crm-calls.js", "fn": "outcome" }, { "file": "api:lib/crm-followups.js", "fn": "create" }],
-          "route": [{ "m": "GET", "p": "/api/crm/calls", "file": "api:routes/crm.js" }, { "m": "POST", "p": "/api/crm/parties/:id/outcome", "file": "api:routes/crm.js" }, { "m": "POST", "p": "/api/crm/followups", "file": "api:routes/crm.js" }],
-          "chit": "none — an interaction and the next follow-up", "ledger": "none",
-          "test": ["api:tests/crm-calls.test.cjs", "api:tests/crm-followups.test.cjs", "api:tests/crm-interactions.test.cjs"],
-          "status": "ok", "note": "" },
-        { "n": 3, "step": "demo", "module": "CRM", "who": "the shop's staff",
-          "screen": [{ "file": "web:public/app/cap-crm-calls.js", "fn": "crmCallSend" }, { "file": "web:public/app/cap-crm-leads.js", "fn": "crmStageGo" }],
-          "engine": [{ "file": "api:lib/crm-calls.js", "fn": "outcome" }, { "file": "api:lib/memberships.js", "fn": "add" }],
-          "route": [{ "m": "POST", "p": "/api/crm/parties/:id/outcome", "file": "api:routes/crm.js" }, { "m": "POST", "p": "/api/crm/parties/:id/stage", "file": "api:routes/crm.js" }],
-          "chit": "none — outcome demo_booked moves the stage to demo and books the follow-up 'Demo'", "ledger": "none",
-          "test": ["api:tests/crm-calls.test.cjs"],
-          "status": "warn", "note": "The demo itself (held, who, what was shown) has no record beyond the follow-up row." },
-        { "n": 4, "step": "trial", "module": "CRM", "who": "the shop's staff",
-          "screen": [{ "file": "web:public/app/cap-crm-leads.js", "fn": "crmStageGo" }],
-          "engine": [{ "file": "api:lib/memberships.js", "fn": "add" }],
-          "route": [{ "m": "POST", "p": "/api/crm/parties/:id/stage", "file": "api:routes/crm.js" }],
-          "chit": "none — a stage word only", "ledger": "none",
-          "test": ["api:tests/crm-leads.test.cjs"],
-          "status": "warn", "note": "'trial' is one of the lead_stage groups; no outcome moves to it and nothing starts, times or ends a trial." },
-        { "n": 5, "step": "customer", "module": "CRM", "who": "the party (by trading); the shop (adds a customer)",
-          "screen": [{ "file": "web:public/app/cap-crm-record.js", "fn": "" }, { "file": "web:public/app/accounts-shell.js", "fn": "" }],
-          "engine": [{ "file": "api:lib/crm.js", "fn": "isLead" }, { "file": "api:lib/crm.js", "fn": "one" }],
-          "route": [{ "m": "POST", "p": "/api/relationships/customers", "file": "api:routes/relationships.js" }, { "m": "GET", "p": "/api/crm/parties/:id", "file": "api:routes/crm.js" }, { "m": "POST", "p": "/api/chits/send", "file": "api:routes/chits.js" }],
-          "chit": "the first bill: txn_count > 0 ends the lead (isLead); a traded party refuses a stage move", "ledger": "none here — the bill posts under O2C step 7",
-          "test": ["api:tests/crm-maytrade.test.cjs", "api:tests/crm-remove-walkin.test.cjs", "api:tests/customer-by-name.test.cjs"],
-          "status": "ok", "note": "" }
+        {
+          "n": 1,
+          "step": "lead",
+          "module": "CRM",
+          "who": "the shop's staff",
+          "screen": [
+            {
+              "file": "web:public/app/cap-crm-leads.js",
+              "fn": "crmLeadAddOpen"
+            }
+          ],
+          "engine": [
+            {
+              "file": "api:lib/crm.js",
+              "fn": "isLead"
+            },
+            {
+              "file": "api:lib/crm.js",
+              "fn": "list"
+            },
+            {
+              "file": "api:lib/memberships.js",
+              "fn": "add"
+            }
+          ],
+          "route": [
+            {
+              "m": "POST",
+              "p": "/api/crm/leads",
+              "file": "api:routes/crm.js"
+            },
+            {
+              "m": "GET",
+              "p": "/api/crm/parties",
+              "file": "api:routes/crm.js"
+            }
+          ],
+          "chit": "none — a party row (added_via lead) with a lead_stage membership",
+          "ledger": "none",
+          "test": [
+            "api:tests/crm-leads.test.cjs",
+            "api:tests/crm-read.test.cjs",
+            "web:e2e/crm.cjs"
+          ],
+          "status": "ok",
+          "note": ""
+        },
+        {
+          "n": 2,
+          "step": "call",
+          "module": "CRM",
+          "who": "the shop's staff (the call desk)",
+          "screen": [
+            {
+              "file": "web:public/app/cap-crm-calls.js",
+              "fn": "crmCallSend"
+            }
+          ],
+          "engine": [
+            {
+              "file": "api:lib/crm-calls.js",
+              "fn": "queue"
+            },
+            {
+              "file": "api:lib/crm-calls.js",
+              "fn": "outcome"
+            },
+            {
+              "file": "api:lib/crm-followups.js",
+              "fn": "create"
+            }
+          ],
+          "route": [
+            {
+              "m": "GET",
+              "p": "/api/crm/calls",
+              "file": "api:routes/crm.js"
+            },
+            {
+              "m": "POST",
+              "p": "/api/crm/parties/:id/outcome",
+              "file": "api:routes/crm.js"
+            },
+            {
+              "m": "POST",
+              "p": "/api/crm/followups",
+              "file": "api:routes/crm.js"
+            }
+          ],
+          "chit": "none — an interaction and the next follow-up",
+          "ledger": "none",
+          "test": [
+            "api:tests/crm-calls.test.cjs",
+            "api:tests/crm-followups.test.cjs",
+            "api:tests/crm-interactions.test.cjs"
+          ],
+          "status": "ok",
+          "note": ""
+        },
+        {
+          "n": 3,
+          "step": "demo",
+          "module": "CRM",
+          "who": "the shop's staff",
+          "screen": [
+            {
+              "file": "web:public/app/cap-crm-calls.js",
+              "fn": "crmCallSend"
+            },
+            {
+              "file": "web:public/app/cap-crm-leads.js",
+              "fn": "crmStageGo"
+            }
+          ],
+          "engine": [
+            {
+              "file": "api:lib/crm-calls.js",
+              "fn": "outcome"
+            },
+            {
+              "file": "api:lib/memberships.js",
+              "fn": "add"
+            }
+          ],
+          "route": [
+            {
+              "m": "POST",
+              "p": "/api/crm/parties/:id/outcome",
+              "file": "api:routes/crm.js"
+            },
+            {
+              "m": "POST",
+              "p": "/api/crm/parties/:id/stage",
+              "file": "api:routes/crm.js"
+            }
+          ],
+          "chit": "none — outcome demo_booked moves the stage to demo and books the follow-up 'Demo'",
+          "ledger": "none",
+          "test": [
+            "api:tests/crm-calls.test.cjs"
+          ],
+          "status": "warn",
+          "note": "The demo itself (held, who, what was shown) has no record beyond the follow-up row."
+        },
+        {
+          "n": 4,
+          "step": "trial",
+          "module": "CRM",
+          "who": "the shop's staff",
+          "screen": [
+            {
+              "file": "web:public/app/cap-crm-leads.js",
+              "fn": "crmStageGo"
+            }
+          ],
+          "engine": [
+            {
+              "file": "api:lib/memberships.js",
+              "fn": "add"
+            }
+          ],
+          "route": [
+            {
+              "m": "POST",
+              "p": "/api/crm/parties/:id/stage",
+              "file": "api:routes/crm.js"
+            }
+          ],
+          "chit": "none — a stage word only",
+          "ledger": "none",
+          "test": [
+            "api:tests/crm-leads.test.cjs"
+          ],
+          "status": "warn",
+          "note": "'trial' is one of the lead_stage groups; no outcome moves to it and nothing starts, times or ends a trial."
+        },
+        {
+          "n": 5,
+          "step": "customer",
+          "module": "CRM",
+          "who": "the party (by trading); the shop (adds a customer)",
+          "screen": [
+            {
+              "file": "web:public/app/cap-crm-record.js",
+              "fn": ""
+            },
+            {
+              "file": "web:public/app/accounts-shell.js",
+              "fn": ""
+            }
+          ],
+          "engine": [
+            {
+              "file": "api:lib/crm.js",
+              "fn": "isLead"
+            },
+            {
+              "file": "api:lib/crm.js",
+              "fn": "one"
+            }
+          ],
+          "route": [
+            {
+              "m": "POST",
+              "p": "/api/relationships/customers",
+              "file": "api:routes/relationships.js"
+            },
+            {
+              "m": "GET",
+              "p": "/api/crm/parties/:id",
+              "file": "api:routes/crm.js"
+            },
+            {
+              "m": "POST",
+              "p": "/api/chits/send",
+              "file": "api:routes/chits.js"
+            }
+          ],
+          "chit": "the first bill: txn_count > 0 ends the lead (isLead); a traded party refuses a stage move",
+          "ledger": "none here — the bill posts under O2C step 7",
+          "test": [
+            "api:tests/crm-maytrade.test.cjs",
+            "api:tests/crm-remove-walkin.test.cjs",
+            "api:tests/customer-by-name.test.cjs"
+          ],
+          "status": "ok",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "id": "MVI",
+      "name": "Move in (from Xero / QuickBooks)",
+      "sap": "FI (conversion: opening balances, master data)",
+      "steps": [
+        {
+          "n": 1,
+          "step": "chart of accounts",
+          "module": "Accounts",
+          "who": "the owner, or the practice that keeps the books",
+          "screen": [
+            {
+              "file": "web:public/app/cap-move-in.js",
+              "fn": "miView"
+            },
+            {
+              "file": "web:public/app/cap-move-in.js",
+              "fn": "miRender"
+            }
+          ],
+          "engine": [
+            {
+              "file": "api:lib/move-in.js",
+              "fn": "guess"
+            },
+            {
+              "file": "api:lib/move-in.js",
+              "fn": "plan"
+            },
+            {
+              "file": "api:lib/move-in.js",
+              "fn": "apply"
+            },
+            {
+              "file": "api:lib/books.js",
+              "fn": "addAccount"
+            },
+            {
+              "file": "engines:src/reg-au.js",
+              "fn": "groupFor"
+            },
+            {
+              "file": "engines:src/reg-au.js",
+              "fn": "roleFor"
+            }
+          ],
+          "route": [
+            {
+              "m": "POST",
+              "p": "/api/books/move-in/preflight",
+              "file": "api:routes/books.js"
+            },
+            {
+              "m": "POST",
+              "p": "/api/books/move-in/preview",
+              "file": "api:routes/books.js"
+            },
+            {
+              "m": "POST",
+              "p": "/api/books/move-in/import",
+              "file": "api:routes/books.js"
+            },
+            {
+              "m": "POST",
+              "p": "/api/books/accounts",
+              "file": "api:routes/books.js"
+            }
+          ],
+          "chit": "none",
+          "ledger": "a ledger per account under its group (the system's code; theirs kept as source_code, b300); a control account merges onto the role ledger",
+          "test": [
+            "api:tests/move-in.test.cjs",
+            "engines:tests/reg-au.test.js",
+            "web:e2e/walk-move-in.cjs"
+          ],
+          "status": "ok",
+          "note": "The columns are the export's recall (IM0), guessed and confirmed, never assumed. source_code needs migration b300 (a file); before it the trial balance matches on names."
+        },
+        {
+          "n": 2,
+          "step": "contacts",
+          "module": "Accounts",
+          "who": "the owner, or the practice",
+          "screen": [
+            {
+              "file": "web:public/app/cap-move-in.js",
+              "fn": "miView"
+            }
+          ],
+          "engine": [
+            {
+              "file": "api:lib/move-in.js",
+              "fn": "plan"
+            },
+            {
+              "file": "api:lib/move-in.js",
+              "fn": "apply"
+            },
+            {
+              "file": "api:lib/local-identity.js",
+              "fn": "mint"
+            },
+            {
+              "file": "api:lib/party-fields.js",
+              "fn": "patch"
+            },
+            {
+              "file": "api:lib/party-fields.js",
+              "fn": "checkTaxId"
+            },
+            {
+              "file": "engines:src/reg-au.js",
+              "fn": "abnCheck"
+            }
+          ],
+          "route": [
+            {
+              "m": "POST",
+              "p": "/api/books/move-in/preflight",
+              "file": "api:routes/books.js"
+            },
+            {
+              "m": "POST",
+              "p": "/api/books/move-in/preview",
+              "file": "api:routes/books.js"
+            },
+            {
+              "m": "POST",
+              "p": "/api/books/move-in/import",
+              "file": "api:routes/books.js"
+            }
+          ],
+          "chit": "none",
+          "ledger": "none — a party on the customer / supplier list (party_no from the one series; ABN as a party_tax_id)",
+          "test": [
+            "api:tests/move-in.test.cjs",
+            "engines:tests/reg-au.test.js",
+            "web:e2e/walk-move-in.cjs"
+          ],
+          "status": "ok",
+          "note": "Dedupe: ABN, then phone (as L3's lead import), then name. A bad ABN is skipped with reg-au's sentence. Writes per party go through party-fields.patch (the one writer)."
+        },
+        {
+          "n": 3,
+          "step": "items",
+          "module": "Accounts",
+          "who": "the owner, or the practice",
+          "screen": [
+            {
+              "file": "web:public/app/cap-move-in.js",
+              "fn": "miView"
+            }
+          ],
+          "engine": [
+            {
+              "file": "api:lib/move-in.js",
+              "fn": "plan"
+            },
+            {
+              "file": "api:lib/catalogue-write.js",
+              "fn": "writeItems"
+            },
+            {
+              "file": "api:lib/item-cost.js",
+              "fn": "setCost"
+            },
+            {
+              "file": "engines:src/reg-au.js",
+              "fn": "supplyKindFor"
+            }
+          ],
+          "route": [
+            {
+              "m": "POST",
+              "p": "/api/books/move-in/preflight",
+              "file": "api:routes/books.js"
+            },
+            {
+              "m": "POST",
+              "p": "/api/books/move-in/preview",
+              "file": "api:routes/books.js"
+            },
+            {
+              "m": "POST",
+              "p": "/api/books/move-in/import",
+              "file": "api:routes/books.js"
+            }
+          ],
+          "chit": "none",
+          "ledger": "none — a product with price and gst_rate (their tax code → the pack's supply kind → the rate)",
+          "test": [
+            "api:tests/move-in.test.cjs",
+            "engines:tests/reg-au.test.js",
+            "web:e2e/walk-move-in.cjs"
+          ],
+          "status": "ok",
+          "note": "A code already in the catalogue is skipped (a move-in never overwrites prices). Stock on hand is not read in phase 1."
+        },
+        {
+          "n": 4,
+          "step": "opening balances",
+          "module": "Accounts",
+          "who": "the owner, or the practice",
+          "screen": [
+            {
+              "file": "web:public/app/cap-move-in.js",
+              "fn": "miImport"
+            },
+            {
+              "file": "web:public/app/cap-move-in.js",
+              "fn": "miDoneHTML"
+            }
+          ],
+          "engine": [
+            {
+              "file": "api:lib/move-in.js",
+              "fn": "plan"
+            },
+            {
+              "file": "api:lib/books.js",
+              "fn": "postOpening"
+            },
+            {
+              "file": "engines:src/posting.js",
+              "fn": "post"
+            }
+          ],
+          "route": [
+            {
+              "m": "POST",
+              "p": "/api/books/move-in/preflight",
+              "file": "api:routes/books.js"
+            },
+            {
+              "m": "POST",
+              "p": "/api/books/move-in/preview",
+              "file": "api:routes/books.js"
+            },
+            {
+              "m": "POST",
+              "p": "/api/books/move-in/import",
+              "file": "api:routes/books.js"
+            },
+            {
+              "m": "POST",
+              "p": "/api/books/opening",
+              "file": "api:routes/books.js"
+            }
+          ],
+          "chit": "none",
+          "ledger": "ONE opening entry (period 0) per file: the trial balance (the customers / suppliers control rows left out), then the open invoices and bills bill-wise on 1300 / 2100 with party, bill and due date; the difference on Suspense 2900",
+          "test": [
+            "api:tests/move-in.test.cjs",
+            "engines:tests/reg-au.test.js",
+            "web:e2e/walk-move-in.cjs"
+          ],
+          "status": "ok",
+          "note": "An unbalanced trial balance is refused with the sentence; nothing posts. The same file twice posts nothing (client_ref movein:<kind>:<as_at>)."
+        }
       ]
     }
   ]

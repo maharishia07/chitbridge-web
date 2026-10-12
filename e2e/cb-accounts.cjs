@@ -44,6 +44,7 @@ const VIEWS = [
   ['gstclose', 'GST close & pay', '[data-testid="pg-form"]'], ['yearclose', 'Year close', '[data-testid="py-res"]'],
   ['packs', 'Packs', '[data-testid="pk_fy"]'], ['opening', 'Opening balances', '[data-testid="op_csv"]'],
   ['accounts', 'Shop ledgers', '[data-testid="ac_name"]'],
+  ['movein', 'Move in', '[data-testid="mi-steps"]'],   /* IM1: move in from Xero / QuickBooks (e2e/walk-move-in.cjs walks it) */
 ];
 
 /* the control accounts' own statements: every line carries its party_id; the cashier (`by`) is the owner, never the party */
