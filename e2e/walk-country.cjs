@@ -2,13 +2,18 @@
 /**
  * e2e/walk-country.cjs - COUNTRY SETUP, WALKED (CS1, 2026-10-12): the step after registration, before the books open.
  * Black box: the real Register screen, the real Country setup screen, the real CB Accounts door; the API is a stand-in answering inside the
- * page (no account is created anywhere). Two browsers: an Indian one (Asia/Kolkata) and an Australian one (Australia/Sydney).
+ * page (no account is created anywhere). Three browsers: an Indian one (Asia/Kolkata), a Japanese one (Asia/Tokyo — no pack ships for Japan)
+ * and an Australian one (Australia/Sydney — AU1, engines v1.36.0: Australia HAS its pack, so it opens books with AUD and a July year).
  *   C1  register -> verify -> lands on Country setup, prefilled India - INR - April from the time zone, each with its source
  *   C2  Change -> the country picker opens; Done closes it
  *   C3  Continue -> ONE PUT with { country, currency, fy_start_month, tax, source } -> the app opens
- *   C4  an Australian browser -> the step says the sentence (no books for Australia yet - selling and the rail still work)
+ *   C4  a Japanese browser -> the step says the sentence (no books for Japan yet - selling and the rail still work)
  *   C5  CB Accounts for that shop -> the same sentence on the card, with the Country setup button, not the quiet "not switched on"
  *   C6  an Indian shop whose server says the setup is still to do -> CB Accounts says "Country setup first"
+ *   C7  an Australian browser -> the step prefills Australia - AUD - July from the AU pack, no sentence, and Continue PUTs AU / AUD / 7
+ *
+ * ⚠️ THE STAND-IN'S ORDER (CS1b, 2026-10-12): Playwright tries the LAST registered route first, so the catch-all for every /api path is registered
+ * FIRST and the specific answers after it — registered the other way round, the catch-all swallowed the country-setup PUT and C3 saw `{}`.
  *
  *   NODE_PATH=e2e/node_modules node e2e/walk-country.cjs         headless, fast
  *   node e2e/walk-country.cjs --show                              watch it
@@ -16,11 +21,12 @@
 'use strict';
 const W = require('./lib/walk.cjs');
 const J = (o) => ({ status: 200, contentType: 'application/json', body: JSON.stringify(o) });
-const AU_WHY = 'ChitBridge does not keep books for Australia yet — selling and the rail still work; books arrive when its pack ships.';
+const JP_WHY = 'ChitBridge does not keep books for Japan yet — selling and the rail still work; books arrive when its pack ships.';
 const profile = (over) => Object.assign({ migrated: true, done: false, required: true, country: { code: 'IN', name: 'India' }, currency: 'INR', fy_start_month: 4,
   tax: { registered: false, number: null, scheme: null }, source: {}, pack: { id: 'IN', version: '1.0.0', books: true, code: null, why: null } }, over || {});
 /** the stand-in API for a fresh registration: register -> OTP -> verify -> the step */
 async function stubRegistration(ctx, prof, sent) {
+  await ctx.route('**/api/**', (r) => r.fulfill(J({ ok: true })));   /* the catch-all FIRST — the last registered handler is tried first */
   await ctx.route('**/api/entities/register', (r) => r.fulfill(J({ email: 'shop@example.in' })));
   await ctx.route('**/api/entities/constitutions', (r) => r.fulfill(J({ constitutions: [{ key: 'base', label: 'Base', is_default: true }] })));
   await ctx.route('**/api/entities/verify', (r) => r.fulfill(J({ token: JSON.parse(W.session('Walk Owner', 'Walk Shop')).token, entity: { identity_id: 'ent-walk', bridge_id: 'CBWALK0001', display_name: 'Walk Shop', email: 'shop@example.in' }, identity: { identity_id: 'ent-walk', identity_type: 'entity', display_name: 'Walk Shop' } })));
@@ -28,7 +34,6 @@ async function stubRegistration(ctx, prof, sent) {
     if (r.request().method() === 'PUT') { sent.put = JSON.parse(r.request().postData() || '{}'); return r.fulfill(J(Object.assign({}, prof, { done: true, required: false }))); }
     return r.fulfill(J(prof));
   });
-  await ctx.route('**/api/**', (r) => r.fulfill(J({ ok: true })));
 }
 async function register(page, base) {
   await page.goto(base + '/app.html#/register');
@@ -71,26 +76,26 @@ W.run('country', async (w) => {
     return { ok, saw: 'sent ' + JSON.stringify({ country: p.country, currency: p.currency, fy: p.fy_start_month, tax: p.tax && p.tax.registered, src: p.source && p.source.country }) + ' · hash ' + (await page.evaluate(() => location.hash)) };
   });
 
-  /* ── an Australian browser: the step says it ── */
-  const au = await w.browser.newContext({ viewport: { width: 1280, height: 860 }, locale: 'en-AU', timezoneId: 'Australia/Sydney', serviceWorkers: 'block' });
-  const p2 = await au.newPage(); p2.on('pageerror', (e) => w.errs.push('au: ' + String(e && e.message || e)));
+  /* ── a Japanese browser: no pack ships for Japan, so the step says it (Australia had this role until AU1 shipped reg-au) ── */
+  const au = await w.browser.newContext({ viewport: { width: 1280, height: 860 }, locale: 'en', timezoneId: 'Asia/Tokyo', serviceWorkers: 'block' });
+  const p2 = await au.newPage(); p2.on('pageerror', (e) => w.errs.push('jp: ' + String(e && e.message || e)));
   const sent2 = {};
-  const auProfile = profile({ country: { code: 'AU', name: 'Australia' }, currency: 'AUD', fy_start_month: 7, pack: { id: null, version: null, books: false, code: 'NO_COUNTRY_PACK', why: AU_WHY } });
-  await stubRegistration(au, auProfile, sent2);
-  await w.step('C4', 'An Australian browser -> the step says: no books for Australia yet, selling and the rail still work', async () => {
+  const jpProfile = profile({ country: { code: 'JP', name: 'Japan' }, currency: 'JPY', fy_start_month: 4, pack: { id: null, version: null, books: false, code: 'NO_COUNTRY_PACK', why: JP_WHY } });
+  await stubRegistration(au, jpProfile, sent2);
+  await w.step('C4', 'A Japanese browser -> the step says: no books for Japan yet, selling and the rail still work', async () => {
     await register(p2, base);
     const why = await text(p2, '[data-testid="cs-nopack"]'), c = await text(p2, '[data-testid="cs-val-country"]');
     const stillContinues = !!(await p2.$('[data-testid="cs-save"]'));
-    return { ok: why === AU_WHY && /Australia/.test(c) && stillContinues, saw: c + ' · "' + why.slice(0, 60) + '…" · Continue ' + (stillContinues ? 'offered' : 'missing') };
+    return { ok: why === JP_WHY && /Japan/.test(c) && stillContinues, saw: c + ' · "' + why.slice(0, 60) + '…" · Continue ' + (stillContinues ? 'offered' : 'missing') };
   });
   await w.step('C5', 'CB Accounts for that shop -> the same sentence on the card, with the Country setup button (not "not switched on")', async () => {
     await p2.evaluate((s) => { localStorage.setItem('cb_sess', s); }, W.session('Walk Owner', 'Walk Shop'));
-    await au.route('**/api/books/health', (r) => r.fulfill({ status: 422, contentType: 'application/json', body: JSON.stringify({ code: 'NO_COUNTRY_PACK', error: AU_WHY, message: AU_WHY }) }));
+    await au.route('**/api/books/health', (r) => r.fulfill({ status: 422, contentType: 'application/json', body: JSON.stringify({ code: 'NO_COUNTRY_PACK', error: JP_WHY, message: JP_WHY }) }));
     await p2.goto(base + '/accounts.html');
     await p2.waitForSelector('[data-testid="acc-country"]', { timeout: 15000 });
     const h = await text(p2, '[data-testid="acc-country"]'), why = await text(p2, '[data-testid="acc-country-why"]');
     const btn = !!(await p2.$('[data-testid="acc-country-setup"]')), off = !!(await p2.$('[data-testid="acc-off"]'));
-    return { ok: why === AU_WHY && btn && !off, saw: h + ' · ' + why.slice(0, 50) + '… · button ' + (btn ? 'there' : 'missing') };
+    return { ok: why === JP_WHY && btn && !off, saw: h + ' · ' + why.slice(0, 50) + '… · button ' + (btn ? 'there' : 'missing') };
   });
   await w.step('C6', 'An Indian shop whose setup is still to do -> CB Accounts says "Country setup first"', async () => {
     await au.unroute('**/api/books/health');
@@ -101,4 +106,21 @@ W.run('country', async (w) => {
     return { ok: /Country setup first/.test(h) && !!(await p2.$('[data-testid="acc-country-setup"]')), saw: h };
   });
   await au.close();
+
+  /* ── an Australian browser (AU1): the pack is there — AUD and a July year from it, no sentence, and the PUT carries them ── */
+  const au2 = await w.browser.newContext({ viewport: { width: 1280, height: 860 }, locale: 'en-AU', timezoneId: 'Australia/Sydney', serviceWorkers: 'block' });
+  const p3 = await au2.newPage(); p3.on('pageerror', (e) => w.errs.push('au: ' + String(e && e.message || e)));
+  const sent3 = {};
+  await stubRegistration(au2, profile({ country: { code: 'AU', name: 'Australia' }, currency: 'AUD', fy_start_month: 7, pack: { id: 'AU', version: '1.0.0', books: true, code: null, why: null } }), sent3);
+  await w.step('C7', 'An Australian browser -> Australia - AUD - July from the AU pack, no sentence; Continue PUTs { AU, AUD, 7 } and the app opens', async () => {
+    await register(p3, base);
+    const c = await text(p3, '[data-testid="cs-val-country"]'), cur = await text(p3, '[data-testid="cs-val-currency"]'), fy = await text(p3, '[data-testid="cs-val-fy"]');
+    const noSentence = !(await p3.$('[data-testid="cs-nopack"]'));
+    await p3.click('[data-testid="cs-save"]');
+    await p3.waitForFunction(() => /#\/app/.test(location.hash), null, { timeout: 8000 });
+    const p = sent3.put || {};
+    const ok = /Australia/.test(c) && /AUD/.test(cur) && /July/.test(fy) && noSentence && p.country === 'AU' && p.currency === 'AUD' && p.fy_start_month === 7;
+    return { ok, saw: c + ' · ' + cur + ' · ' + fy + ' · sentence ' + (noSentence ? 'absent' : 'SHOWN') + ' · sent ' + JSON.stringify({ country: p.country, currency: p.currency, fy: p.fy_start_month }) };
+  });
+  await au2.close();
 });
