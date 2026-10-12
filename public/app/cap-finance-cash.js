@@ -5,6 +5,8 @@
  * a day counts: the dues and cheques behind it) · head.notices (the sentence on top, as the Ledger's To-do strip) · bkMoney / bkDrCr / bkDate / bkToday /
  * bkPartyLabel (cap-books.js — M25 Dr/Cr words, the M36 money unit) · finOff (the ledger-off card with the owner's switch) · finDenied (the owner-only sentence,
  * greyed) · the page's .tabs/.tab pills (the 7/30 toggle) and .card (the chart's frame) — finance.html's own styles, no new look.
+ * ⭐ THE DAY (F3b): "Today" is the row whose date is the server's asOf — the day the server counted from — not the browser's clock (bkToday is the fallback
+ * when the answer has no asOf). The walk injects one clock for the page and the stand-in, so the tab reads the same on any day and across midnight.
  * ⭐ ONE CALCULATION (rule 2): this file computes NO money. Opening, each day's in · out · running balance, the shortfall and every sentence are the
  * server's (GET /api/books/cashflow); the chart draws the server's balance_minor per day and the table shows the same figures. Nothing is added here.
  * ⭐ NEW PATHS (rule 4): FC (this tab's state) · FC_EP (the one new route) · fcChart (an inline SVG of the running balance — the owner-approved
@@ -86,7 +88,7 @@ function fcChart(r, width) {
 function fcCols() {
   var c = function () { return (FC.r && FC.r.currency) || 'INR'; }, dash = '<span style="color:var(--grey)">—</span>';
   return [
-    { key: 'date', label: tx('Day'), prio: 1, sort: 'date', w: 170, html: true, cell: function (d) { return '<span data-b="date">' + esc(bkDate(d.date)) + '</span>' + (d.date === bkToday() ? ' <span class="tag">' + esc(tx('Today')) + '</span>' : '') + (d.items.length ? '' : ' <span class="sub">' + esc(tx('quiet')) + '</span>'); } },
+    { key: 'date', label: tx('Day'), prio: 1, sort: 'date', w: 170, html: true, cell: function (d) { return '<span data-b="date">' + esc(bkDate(d.date)) + '</span>' + (d.date === ((FC.r && FC.r.asOf) || bkToday()) ? ' <span class="tag">' + esc(tx('Today')) + '</span>' : '') + (d.items.length ? '' : ' <span class="sub">' + esc(tx('quiet')) + '</span>'); } },
     { key: 'in', label: tx('Coming in'), prio: 3, num: true, w: 150, html: true, cell: function (d) { return Number(d.in_minor) ? '<span class="due get" data-b="in">' + esc(bkMoney(d.in_minor, c())) + '</span>' : dash; } },
     { key: 'out', label: tx('Going out'), prio: 4, num: true, w: 150, html: true, cell: function (d) { return Number(d.out_minor) ? '<span class="due give" data-b="out">' + esc(bkMoney(d.out_minor, c())) + '</span>' : dash; } },
     { key: 'bal', label: tx('Balance'), prio: 2, sort: 'bal', num: true, w: 190, html: true, cell: function (d) {

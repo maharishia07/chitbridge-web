@@ -17,9 +17,19 @@ const W = require('./lib/walk.cjs');
 const C = require('./lib/contract.cjs');
 const J = (r, status, body) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
 
-/* the days, as the SHOP's today (the browser runs in Asia/Kolkata; the page's bkToday() is the browser's day, so the fixture's day 0 is built the same way) */
+/**
+ * ⭐ ONE CLOCK (F3b, 2026-10-13): the walk ran red in the cloud at 23:37 UTC — the stand-in built its day 0 as the IST day (13 Oct) while the page's
+ * bkToday() was the UTC day (12 Oct), so no row carried the Today tag. Now there is ONE injected instant, NOW: the browser's clock is fixed to it
+ * (ctx.clock.setFixedTime) and the stand-in's days are that instant's calendar day in the SHOP's zone (Asia/Kolkata — the context's timezoneId in
+ * lib/walk.cjs). The walk reads the same on any runner day. Edge runs: WALK_NOW=2026-10-12T18:29:00Z (23:59 IST) · WALK_NOW=2026-10-12T18:31:00Z (00:01 IST).
+ */
+const ZONE = 'Asia/Kolkata';
+const NOW = new Date(process.env.WALK_NOW || '2026-10-12T16:00:00+05:30');
+if (isNaN(NOW)) { console.log('WALK_NOW is not a date: ' + process.env.WALK_NOW); process.exit(2); }
 const DAY_MS = 86400000;
-const dayN = (n) => { const d = new Date(Date.now() + 5.5 * 3600000 + n * DAY_MS); return d.toISOString().slice(0, 10); };
+const ymd = new Intl.DateTimeFormat('en-CA', { timeZone: ZONE, year: 'numeric', month: '2-digit', day: '2-digit' });
+/* day n of the window: NOW + n days, as the calendar day in the shop's zone (not UTC, not the runner's zone) */
+const dayN = (n) => ymd.format(new Date(NOW.getTime() + n * DAY_MS));
 const DMY = (s) => Number(s.slice(8, 10)) + ' ' + ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][Number(s.slice(5, 7)) - 1] + ' ' + s.slice(0, 4);
 const SRI = 'pa', MALA = 'pb';
 const item = (o) => Object.assign({ kind: 'due_in', ref: 'x', party_id: null, name: '', amount_minor: 0, date: dayN(0), due_date: dayN(0), promised: false, overdue: false, cheque_no: null }, o);
@@ -68,6 +78,9 @@ W.run('finance-cash', async (w) => {
     return J(r, 404, { error: 'not found' });
   });
   await ctx.addInitScript((s) => { try { localStorage.setItem('cb_api_base', location.origin); localStorage.setItem('cb_sess', s); } catch (_) {} }, W.session('Fixture Owner', 'Fixture Shop'));
+  /* the page's clock is the stand-in's clock: Date.now / new Date in the browser answer NOW (timers still run) */
+  await ctx.clock.setFixedTime(NOW);
+  console.log('clock: ' + NOW.toISOString() + ' = ' + dayN(0) + ' in ' + ZONE + (process.env.WALK_NOW ? ' (WALK_NOW)' : '') + ' · runner TZ ' + (process.env.TZ || 'system'));
 
   const txt = (sel) => page.locator(sel).first().innerText().then((s) => s.replace(/\s+/g, ' ').trim()).catch(() => '');
   const body = () => page.evaluate(() => document.body.innerText.replace(/\s+/g, ' '));
@@ -86,7 +99,10 @@ W.run('finance-cash', async (w) => {
   });
   await w.step('C3', 'Cash -> seven day rows; today is marked; the shortfall day says Short and its balance in Cr words (₹15,000 Cr); the opening is the server\'s ₹50,000', async () => {
     const n = await rows(), t0 = await txt('[data-testid="fc-row-' + dayN(0) + '"]'), t3 = await txt('[data-testid="fc-row-' + D3 + '"]'), op = await txt('[data-testid="fc-opening"]');
-    return { ok: n === 7 && /Today/.test(t0) && /Short/.test(t3) && /15,000(\.00)? Cr/.test(t3) && /50,000(\.00)? Dr/i.test(op), saw: n + ' rows; today "' + t0.slice(0, 60) + '"; day 3 "' + t3.slice(0, 90) + '"; opening "' + op + '"' };
+    /* the page's own day (bkToday, the shop's local day) must be the stand-in's day 0 — it was the UTC day before F3b, a day behind every IST morning */
+    const pageDay = await page.evaluate(() => (typeof bkToday === 'function' ? bkToday() : 'no bkToday')).catch(() => 'threw');
+    const today = await page.locator('[data-testid^="fc-row-"]:has-text("Today")').count();
+    return { ok: n === 7 && /Today/.test(t0) && today === 1 && pageDay === dayN(0) && /Short/.test(t3) && /15,000(\.00)? Cr/.test(t3) && /50,000(\.00)? Dr/i.test(op), saw: n + ' rows; page day ' + pageDay + ' (fixture ' + dayN(0) + '); ' + today + ' row marked Today "' + t0.slice(0, 60) + '"; day 3 "' + t3.slice(0, 90) + '"; opening "' + op + '"' };
   });
   await w.step('C4', 'Cash -> the bars: one per day, the shortfall day\'s is the red one, the lowest day is labelled (₹15,000 Cr)', async () => {
     const bars = await page.locator('[data-testid^="fc-bar-"]').count(), neg = await page.locator('[data-testid^="fc-bar-"][data-neg="true"]').count(), low = (await page.locator('[data-testid="fc-low-label"]').first().textContent().catch(() => '')) || '';
