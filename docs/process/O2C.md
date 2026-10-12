@@ -13,11 +13,12 @@ flowchart LR
   S5["5. invoice<br/><i>Till</i>"]
   S6["6. receipt<br/><i>Finance</i>"]
   S7["7. posted<br/><i>Accounts</i>"]
-  S1 --> S2 --> S3 --> S4 --> S5 --> S6 --> S7
+  S8["8. cash position<br/><i>Finance</i>"]
+  S1 --> S2 --> S3 --> S4 --> S5 --> S6 --> S7 --> S8
   classDef ok fill:#e8f5e9,stroke:#2e7d32,color:#1b1b1b
   classDef warn fill:#fff8e1,stroke:#f9a825,color:#1b1b1b
   classDef missing fill:#fafafa,stroke:#9e9e9e,stroke-dasharray:5 5,color:#616161
-  class S3,S4,S5,S6,S7 ok
+  class S3,S4,S5,S6,S7,S8 ok
   class S1 warn
   class S2 missing
 ```
@@ -31,6 +32,7 @@ flowchart LR
 | 5 | invoice | Till | the seller (the counter bill IS the invoice) | `web:public/till.html` `fetchBy()`<br>`web:public/bill-print.html` | `api:lib/tax-lines.js` `invoiceFor()`<br>`api:lib/docnumber.js`<br>`engines:src/einvoice.js` `irnPayload()` | `POST /api/chits/send` `api:routes/chits.js`<br>`POST /api/invoice/build` `api:routes/invoice.js`<br>`GET /api/tax/invoice/:chit_id` `api:routes/tax.js` | bill (business_json.invoice frozen by invoiceFor) | none until posted (step 7) | `api:tests/tax-lines.test.js`<br>`api:tests/two-sided-bill.test.cjs`<br>`api:tests/bill-checks.test.js`<br>`engines:tests/einvoice.test.js`<br>`web:e2e/walk-bill.cjs` | ✅ |
 | 6 | receipt | Finance | the owner or a person with the books (Receive) | `web:public/app/cap-books.js` `payOpen()`<br>`web:public/app/cap-finance.js` `finMount()`<br>`web:public/app.html` `chitPaySubmit()` | `api:lib/books.js` `recordPayment()`<br>`api:lib/receivables.js` `propose()`<br>`engines:src/receivables.js` `propose()`<br>`api:lib/books-hooks.js` `recordChitPayment()` | `POST /api/books/payments/preview` `api:routes/books.js`<br>`POST /api/books/payments` `api:routes/books.js`<br>`POST /api/chits/:chit_id/payment` `api:routes/chits.js` | the payment is recorded on the bill | payment_received · Dr 1400 Cash / 1500 Bank / 1510 UPI / 1520 Card · Cr 1300 Customers (a cheque only when cleared) | `api:tests/books-payments.test.cjs`<br>`api:tests/books-collections.test.cjs`<br>`engines:tests/receivables.test.js`<br>`web:e2e/cb-accounts.cjs`<br>`web:e2e/walk-finance.cjs` | ✅ |
 | 7 | posted | Accounts | the system (the hook after a chit; the nightly for walk-in days) | `web:public/app/cap-books.js` `bkEntryHead()` | `api:lib/books-hooks.js` `postChit()`<br>`api:lib/books-hooks.js` `classify()`<br>`api:lib/books.js` `postEntry()`<br>`engines:src/posting.js` `sale_bill()`<br>`engines:src/posting.js` `walkin_day()` | `POST /api/books/events` `api:routes/books.js`<br>`GET /api/books/daybook` `api:routes/books.js` | bill → one entry (source_ref bill:<chit_id>) | sale_bill · Dr 1300 Customers (unpaid) / Dr 1400·1500·1510·1520 (paid) · Cr 4000 Sales · Cr 2200/2201/2202 Output CGST/SGST/IGST · 6900 Round off. walkin_day: the same per counter per day, no party | `api:tests/books-hooks.test.cjs`<br>`api:tests/books-auto-post.test.cjs`<br>`api:tests/books-post.test.cjs`<br>`api:tests/books-day-bills.test.cjs`<br>`engines:tests/posting.test.js`<br>`engines:tests/golden-books.test.js` | ✅ |
+| 8 | cash position | Finance | the owner (reads; Finance suggests, nothing posts) | `web:public/app/cap-finance-cash.js` `fcMount()`<br>`web:public/app/cap-finance-cash.js` `fcChart()` | `api:lib/books-cashflow.js` `project()`<br>`api:lib/books-cashflow.js` `read()`<br>`api:lib/receivables.js` `outstanding()`<br>`engines:src/receivables.js` `propose()`<br>`engines:src/receivables.js` `pdcReminders()`<br>`engines:src/ledger.js` `balanceAsAt()` | `GET /api/books/cashflow` `api:routes/books.js`<br>`GET /api/books/cheques` `api:routes/books.js` | none — a read of the open bills, the promised dates (CRM follow-ups) and the cheques in hand behind each day | none — reads the cash / bank role ledgers as at today; the first day below zero is said in words | `api:tests/books-cashflow.test.cjs`<br>`web:e2e/walk-finance-cash.cjs`<br>`engines:tests/receivables.test.js` | ✅ |
 
 ## The backlog this map leaves
 

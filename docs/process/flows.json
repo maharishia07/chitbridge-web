@@ -61,6 +61,13 @@
           "route": [{ "m": "POST", "p": "/api/books/events", "file": "api:routes/books.js" }, { "m": "GET", "p": "/api/books/daybook", "file": "api:routes/books.js" }],
           "chit": "bill → one entry (source_ref bill:<chit_id>)", "ledger": "sale_bill · Dr 1300 Customers (unpaid) / Dr 1400·1500·1510·1520 (paid) · Cr 4000 Sales · Cr 2200/2201/2202 Output CGST/SGST/IGST · 6900 Round off. walkin_day: the same per counter per day, no party",
           "test": ["api:tests/books-hooks.test.cjs", "api:tests/books-auto-post.test.cjs", "api:tests/books-post.test.cjs", "api:tests/books-day-bills.test.cjs", "engines:tests/posting.test.js", "engines:tests/golden-books.test.js"],
+          "status": "ok", "note": "" },
+        { "n": 8, "step": "cash position", "module": "Finance", "who": "the owner (reads; Finance suggests, nothing posts)",
+          "screen": [{ "file": "web:public/app/cap-finance-cash.js", "fn": "fcMount" }, { "file": "web:public/app/cap-finance-cash.js", "fn": "fcChart" }],
+          "engine": [{ "file": "api:lib/books-cashflow.js", "fn": "project" }, { "file": "api:lib/books-cashflow.js", "fn": "read" }, { "file": "api:lib/receivables.js", "fn": "outstanding" }, { "file": "engines:src/receivables.js", "fn": "propose" }, { "file": "engines:src/receivables.js", "fn": "pdcReminders" }, { "file": "engines:src/ledger.js", "fn": "balanceAsAt" }],
+          "route": [{ "m": "GET", "p": "/api/books/cashflow", "file": "api:routes/books.js" }, { "m": "GET", "p": "/api/books/cheques", "file": "api:routes/books.js" }],
+          "chit": "none — a read of the open bills, the promised dates (CRM follow-ups) and the cheques in hand behind each day", "ledger": "none — reads the cash / bank role ledgers as at today; the first day below zero is said in words",
+          "test": ["api:tests/books-cashflow.test.cjs", "web:e2e/walk-finance-cash.cjs", "engines:tests/receivables.test.js"],
           "status": "ok", "note": "" }
       ]
     },
@@ -155,6 +162,13 @@
           "route": [{ "m": "GET", "p": "/api/books/trial-balance", "file": "api:routes/books.js" }, { "m": "GET", "p": "/api/books/pl", "file": "api:routes/books.js" }, { "m": "GET", "p": "/api/books/bs", "file": "api:routes/books.js" }, { "m": "GET", "p": "/api/books/party/:id/statement", "file": "api:routes/books.js" }, { "m": "POST", "p": "/api/books/packs", "file": "api:routes/books.js" }],
           "chit": "none", "ledger": "read only — Schedule III lines come from the pack beside each code",
           "test": ["api:tests/books-routes.test.cjs", "api:tests/reporting.test.js", "engines:tests/ledger.test.js", "engines:tests/bookpack.test.js", "web:e2e/books-web.cjs"],
+          "status": "ok", "note": "" },
+        { "n": 7, "step": "cash position", "module": "Finance", "who": "the owner (reads; Finance suggests, nothing posts)",
+          "screen": [{ "file": "web:public/app/cap-finance-cash.js", "fn": "fcMount" }],
+          "engine": [{ "file": "api:lib/books-cashflow.js", "fn": "project" }, { "file": "api:lib/books-period.js", "fn": "gstPayableAt" }, { "file": "api:lib/books-period.js", "fn": "gstBalances" }, { "file": "engines:src/posting.js", "fn": "gstSetOff" }, { "file": "engines:src/ledger.js", "fn": "balanceAsAt" }],
+          "route": [{ "m": "GET", "p": "/api/books/cashflow", "file": "api:routes/books.js" }],
+          "chit": "none", "ledger": "none — the GST owed is READ after the set-off (the same arithmetic the month close posts), due the 20th of the next month; cash · bank · UPI · card balances as at today",
+          "test": ["api:tests/books-cashflow.test.cjs", "api:tests/books-period.test.cjs", "web:e2e/walk-finance-cash.cjs"],
           "status": "ok", "note": "" }
       ]
     },
