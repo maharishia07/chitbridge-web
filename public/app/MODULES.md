@@ -15,7 +15,7 @@ something needs them before any navigation happens.
 router renders a placeholder until `_capLoading` clears, which is the only reason the
 old duplicate `networkScreen()` in app.html was safe to delete.
 
-## Capabilities (32)
+## Capabilities (39)
 
 | file | loading · nav key | what it is |
 |---|---|---|
@@ -28,18 +28,25 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-chit2.js` | lazy · on demand | DESIGN 2: the chit as LINE-LEVEL work (lazy; ensureCap('chit2')) |
 | `cap-cmdb.js` | lazy · on demand |  |
 | `cap-connector.js` | lazy · connectors | IoT / ERP connector MANAGEMENT (lazy; loaded via ensureCap('connector') on INVOCATION) |
+| `cap-country.js` | lazy · on demand | cap-country.js — COUNTRY SETUP (CS1, 2026-10-12): the step after registration, before the books open (lazy; ensureCap('country') → #/country) |
+| `cap-crm-calls.js` | — | cap-crm-calls.js — CB CRM L2: THE CALL DESK. The Calls tab (a CBList mount, the Follow-ups list's own look): today's queue, one-tap outcome buttons |
 | `cap-crm-chits.js` | — | cap-crm-chits.js — THE CHITS BEHIND THE HOME RAIL: In · Out · Stuck, stuck first (black-box H1 · H4 · H10) |
+| `cap-crm-leads.js` | — | cap-crm-leads.js — CB CRM L1: LEADS AS PARTIES. The Leads tab (a CBList mount, the Parties list's own look), Add lead, and the record's |
 | `cap-crm-record.js` | — | cap-crm-record.js — CB CRM: ONE party's record, its timeline, the Log sheet, the Next block, and the party edit |
 | `cap-crm.js` | — | cap-crm.js — CB CRM: the parties list (home), follow-ups, Add party, and the plumbing every CRM screen shares |
 | `cap-definitions.js` | lazy · definitions | DEFINITIONS · the shelf a catalogue takes things off. (lazy capability) |
 | `cap-dispute.js` | lazy · disputes | the DISPUTE capability (the USP), lazy-loaded via ensureCap('dispute') |
+| `cap-employees.js` | — |  |
 | `cap-entry.js` | — | cap-entry.js — ＋ ENTRY on the Day book: what happened → with whom / what → how much, when, on what paper → check and save |
+| `cap-finance-terms.js` | — | cap-finance-terms.js — CB Finance · Terms (round F2): the shop's DEFAULT credit terms and each party's OWN, set in ONE place |
+| `cap-finance.js` | — | cap-finance.js — CB Finance · Collections (round F1): who owes you, how old, the limit, the interest it has earned, Remind, Receive |
 | `cap-folders.js` | lazy · folders | FOLDERS capability (lazy; loaded via ensureCap('folders')) |
 | `cap-iddocs.js` | lazy · on demand |  |
 | `cap-intake.js` | lazy · intake | THE INTAKE INBOX. Lazy via ensureCap('intake') |
 | `cap-legend.js` | lazy · on demand | the 🔑 LEGEND capability: a live map of "what we serve" |
 | `cap-match.js` | lazy · match | THE THREE-WAY MATCH (lazy; ensureCap('match')) |
 | `cap-messages.js` | lazy · messages | REPLIES: every external conversation that still wants you, across every chit. Lazy |
+| `cap-network-member.js` | — |  |
 | `cap-network.js` | lazy · network | DESIGN-FIRST network builder. Lazy via ensureCap('network') |
 | `cap-period.js` | — | cap-period.js — MONTH & YEAR END on CB Accounts: Closing stock · Assets & depreciation · Accruals & recurring · GST close & pay · Year close |
 | `cap-readiness.js` | lazy · readiness | TRADE capability (lazy; ensureCap('readiness')). Two tabs: |
@@ -52,7 +59,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-workforce.js` | lazy · coassists | the CO-ASSIST (workforce) capability: FUNCTIONALITY only |
 | `cap-worklist.js` | lazy · on demand | MY WORK, across every chit. Lazy (ensureCap('worklist')) |
 
-## Shared (45)
+## Shared (49)
 
 | file | loading | what it is |
 |---|---|---|
@@ -67,12 +74,14 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `catalogue-starter-categories.js` | eager |  |
 | `chit-sheet.js` | eager |  |
 | `core.js` | eager | shared client module for the Task Panel (module 1 of the app split) |
-| `govcontext.js` | eager | ADOPTED from chitbridge-engines v1.4.0 · govcontext · sha256 b49816056f5284d60599004a4e65df388c61609bdc344a28baad169f58b86d87 — DO NOT EDIT HERE. Chan |
+| `embed-host.js` | — |  |
+| `govcontext.js` | eager | ADOPTED from chitbridge-engines v1.33.0 · govcontext · sha256 23f0158addb22ea27f7453b59d7982b3435840aae97612320095a4e443e72ad6 — DO NOT EDIT HERE. Cha |
 | `helpers.js` | eager | generic, dependency-free helpers (module 2 of the app split) |
 | `kural.js` | — |  |
 | `list-ctl.js` | eager |  |
 | `list-legacy.js` | eager |  |
 | `locale.js` | eager | ADOPTED from chitbridge-engines v1.4.0 · locale · sha256 0f8c7bd83ec0190beb18731192fdde3c0b20dc93d0477bb52197887716aa3668 — DO NOT EDIT HERE. Change i |
+| `network-app.js` | — |  |
 | `offers.js` | eager | ADOPTED from chitbridge-engines v1.3.0 · offers · sha256 b90632d3ffa35196adcee8722269468dc83255edd327e2ff28e3cb07f5d82dee — DO NOT EDIT HERE. Change i |
 | `one-person.js` | eager | one-person.js — ONE BROWSER, ONE SHOP AT A TIME |
 | `page-frame.js` | — |  |
@@ -87,6 +96,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `screens.js` | eager | GENERATED by screens.cjs — DO NOT EDIT. Run `node screens.cjs` and commit |
 | `search.js` | eager | ADOPTED from chitbridge-engines v1.4.0 · search · sha256 3e6b74d84e1fa082d5aa7d676f53421b263beafd8c455dfe9719f7d25cd841fa — DO NOT EDIT HERE. Change i |
 | `shell.js` | — |  |
+| `showcase-templates.js` | eager |  |
 | `sides.js` | — |  |
 | `signin-ui.js` | — | signin-ui.js — CBSignin.mount: THE ONE SIGN-IN WINDOW, for every app (M14, DECISIONS 2026-10-08) |
 | `step-flow.js` | eager |  |
@@ -101,7 +111,8 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `test-verdict.js` | — | what would make this red green. ONE judgement, two surfaces |
 | `units.js` | eager | vendored VERBATIM from chitbridge-api/lib/units.js (one unit · three names: ours · UN/ECE Rec 20 · GST UQC) |
 | `variant.js` | eager | ADOPTED from chitbridge-engines v1.4.0 · variant · sha256 2b82dcbaba8ad8590623ef72d41979894d4390468abf74d862f158d7d4e48946 — DO NOT EDIT HERE. Change |
+| `workflow.js` | — | ADOPTED from chitbridge-engines v1.33.0 · workflow · sha256 f8c7a43048bc1b8453a1c2ec43b6eed7f619feee4c67eaba046c6cea370f0a5b — DO NOT EDIT HERE. Chang |
 
 ---
 
-*77 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*88 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
