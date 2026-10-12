@@ -620,6 +620,17 @@ function failedCard(){
   card(`<h2>CB Accounts could not be read</h2><p>Check the connection, then try again.</p><button type="button" class="act" data-testid="acc-retry" id="retry">Try again</button>`, true);
   $('retry').onclick = () => start();
 }
+/* ⭐ CS1: the country decides whether books may open here — a country with no pack (or no country, or the setup still to do) is SAID in the
+   server's own sentence (engines regulation.status, 422 with a code), never the quiet 404 and never India's rules by default. The one button
+   that fixes it is the Country setup step; a co-assist is told whom to ask. Selling and the rail still work. */
+function countryCard(d){
+  ON = false; navPaint(''); $('nav').innerHTML = '';
+  const pending = d && d.code === 'COUNTRY_SETUP_PENDING';
+  card(`<h2 data-testid="acc-country">${pending ? 'Country setup first' : 'No books here yet'}</h2>
+    <p data-testid="acc-country-why">${esc((d && d.message) || '')}</p>`
+    + (isOwner() ? `<a class="act" data-testid="acc-country-setup" href="/app.html#/country">${pending ? 'Country setup' : 'See country setup'}</a>`
+                 : `<p data-testid="acc-ask-owner">Ask the owner</p>`));
+}
 
 /* ═══ START ═══════════════════════════════════════════════════════════════════════════════════════════════════ */
 async function start(){
@@ -645,6 +656,7 @@ async function start(){
     ON = !!(h && h.enabled !== false);
   }catch(e){
     if (e && e.status === 404) return offCard();
+    if (e && e.status === 422 && e.data && /^(NO_COUNTRY_PACK|NO_COUNTRY|COUNTRY_SETUP_PENDING)$/.test(String(e.data.code || ''))) return countryCard(e.data);
     return failedCard();
   }
   if (!ON) return offCard();

@@ -11,11 +11,11 @@ the outcome is said where the action happened.** The one helper is `CBAction` in
 
 | | count |
 |---|---|
-| writing controls found | **407** |
-| through `CBAction.run` (busy · confirm · outcome) | **5** |
-| through `CBAction.once` / `bkOnce` (busy only) | 17 |
-| not yet on the helper (**next**) | 385 |
-| irreversible (heuristic) | 33 |
+| writing controls found | **416** |
+| through `CBAction.run` (busy · confirm · outcome) | **46** |
+| through `CBAction.once` / `bkOnce` (busy only) | 14 |
+| not yet on the helper (**next**) | 356 |
+| irreversible (heuristic) | 34 |
 | irreversible with no confirm found on the path | 16 |
 
 How a control is found, and what this misses: a handler attribute (`onclick` · `onsubmit` · `onchange`), a `.onclick =`, an
@@ -36,51 +36,56 @@ write deeper than two calls, is not seen. "Irreversible" is read from the method
 
 | file:line | control | handler | writes | irreversible? | asks first? | helper |
 |---|---|---|---|---|---|---|
-| app.html:13397 | click `prod-mod-remove-${gi}` | `prodModRemoveGroup` | PATCH /api/products/:id | **yes** | **no** | no |
-| app.html:13404 | click `prod-mod-opt-remove-${gi}-${oi}` | `prodModRemoveOption` | PATCH /api/products/:id | **yes** | **no** | no |
-| app.html:13604 | click `prod-media-del-${esc(x.id)}` | `prodMediaRemove` | DELETE /api/products/:id/media/:mid | **yes** | **no** | no |
-| app.html:13800 | click `prod-xref-del-${xi}` | `prodXrefRemove` | PATCH /api/products/:id | **yes** | **no** | no |
-| app.html:14503 | click `prod-unschedule` | `prodUnschedule` | DELETE /api/products/:id/schedule/:sid | **yes** | **no** | no |
-| app.html:14811 | click `chit-unpay` | `chitUnpay` | DELETE /api/chits/:id/payment | **yes** | **no** | no |
-| app.html:15346 | click | `confirmDelete` | DELETE /api/chits/:id<br>POST /api/chits/:id/restore | **yes** | **no** | no |
-| app.html:16857 | click `chit-void` | `withdrawChit` | PUT /api/chits/:id/void | **yes** | **no** | no |
-| app/cap-admin.js:4560 | click | `intReject` | DELETE /api/keys/:jti | **yes** | **no** | no |
-| app/cap-admin.js:5360 | click `int-counter-close-` | `intCounterClose` | DELETE /api/keys/:jti | **yes** | **no** | no |
-| app/cap-admin.js:5370 | click `int-counter-close-dups` | `intCounterCloseDups` | DELETE /api/keys/:jti | **yes** | **no** | no |
-| app/cap-admin.js:5460 | click `int-key-revoke-` | `intKeyRevoke` | DELETE /api/keys/:jti | **yes** | **no** | no |
+| app.html:13387 | click `prod-mod-remove-${gi}` | `prodModRemoveGroup` | PATCH /api/products/:id | **yes** | **no** | no |
+| app.html:13394 | click `prod-mod-opt-remove-${gi}-${oi}` | `prodModRemoveOption` | PATCH /api/products/:id | **yes** | **no** | no |
+| app.html:13594 | click `prod-media-del-${esc(x.id)}` | `prodMediaRemove` | DELETE /api/products/:id/media/:mid | **yes** | **no** | no |
+| app.html:13790 | click `prod-xref-del-${xi}` | `prodXrefRemove` | PATCH /api/products/:id | **yes** | **no** | no |
+| app.html:14493 | click `prod-unschedule` | `prodUnschedule` | DELETE /api/products/:id/schedule/:sid | **yes** | **no** | no |
+| app.html:14801 | click `chit-unpay` | `chitUnpay` | DELETE /api/chits/:id/payment | **yes** | **no** | no |
+| app.html:15336 | click | `confirmDelete` | DELETE /api/chits/:id<br>POST /api/chits/:id/restore | **yes** | **no** | no |
+| app/cap-admin.js:4561 | click | `intReject` | DELETE /api/keys/:jti | **yes** | **no** | no |
+| app/cap-admin.js:5361 | click `int-counter-close-` | `intCounterClose` | DELETE /api/keys/:jti | **yes** | **no** | no |
+| app/cap-admin.js:5371 | click `int-counter-close-dups` | `intCounterCloseDups` | DELETE /api/keys/:jti | **yes** | **no** | no |
+| app/cap-admin.js:5461 | click `int-key-revoke-` | `intKeyRevoke` | DELETE /api/keys/:jti | **yes** | **no** | no |
+| app/cap-books.js:438 | click `stmt-reverse-` | `bkStmtReverse` | POST /api/books/entries/:id/reverse | **yes** | **no** | no |
 | app/cap-definitions.js:1412 | click `cbdef-takeover-go` | `cbDefTakeoverGo, cbDefEsc` | DELETE /api/definitions/:id | **yes** | **no** | no |
-| app/cap-period.js:349 | click via peBtn | `peRecSave` | POST /api/books/recurring<br>PATCH /api/books/recurring/:id<br>DELETE /api/books/recurring/:id | **yes** | **no** | once |
-| testing.html:1048 | change | `importResults` | PUT /api/actors/:id/status<br>POST /api/books/entries/:id/reverse<br>DELETE /api/connectors/:actorId<br>+1 more | **yes** | **no** | no |
-| till.html:22785 (vendored) | click `till-wipe` | `wipeDevice` | fetch POST | **yes** | **no** | no |
+| app/cap-period.js:359 | click via peBtn | `peRecSave` | POST /api/books/recurring<br>PATCH /api/books/recurring/:id<br>DELETE /api/books/recurring/:id | **yes** | **no** | once |
+| testing.html:1048 | change | `importResults` | PUT /api/actors/:id/status<br>POST /api/books/entries/:id/reverse<br>DELETE /api/connectors/:actorId<br>+2 more | **yes** | **no** | no |
+| till.html:23754 (vendored) | click `till-wipe` | `wipeDevice` | fetch POST | **yes** | **no** | no |
 
 ## By file
 
 | file | writing controls | on the helper |
 |---|---|---|
-| app.html | 109 | 0 |
-| app/cap-admin.js | 50 | 0 |
+| app.html | 109 | 15 |
+| app/cap-admin.js | 50 | 2 |
 | app/cap-adopt.js | 1 | 0 |
-| app/cap-books.js | 13 | 9 |
-| app/cap-categories.js | 6 | 0 |
-| app/cap-catsetup.js | 25 | 0 |
+| app/cap-books.js | 16 | 12 |
+| app/cap-categories.js | 6 | 2 |
+| app/cap-catsetup.js | 25 | 1 |
 | app/cap-chit2.js | 9 | 0 |
-| app/cap-connector.js | 5 | 0 |
+| app/cap-connector.js | 5 | 1 |
 | app/cap-definitions.js | 4 | 0 |
-| app/cap-dispute.js | 4 | 0 |
+| app/cap-dispute.js | 4 | 1 |
 | app/cap-entry.js | 7 | 1 |
+| app/cap-finance-terms.js | 2 | 2 |
+| app/cap-finance.js | 2 | 2 |
 | app/cap-folders.js | 11 | 0 |
 | app/cap-intake.js | 5 | 0 |
 | app/cap-match.js | 1 | 0 |
 | app/cap-messages.js | 2 | 0 |
-| app/cap-network.js | 7 | 0 |
+| app/cap-network-member.js | 2 | 0 |
+| app/cap-network.js | 5 | 4 |
 | app/cap-period.js | 12 | 12 |
 | app/cap-readiness.js | 9 | 0 |
 | app/cap-register.js | 4 | 0 |
 | app/cap-service.js | 7 | 0 |
 | app/cap-supplies.js | 3 | 0 |
 | app/cap-testing.js | 30 | 0 |
-| app/cap-workforce.js | 7 | 0 |
+| app/cap-workforce.js | 7 | 4 |
 | app/cap-worklist.js | 5 | 0 |
+| app/network-app.js | 1 | 1 |
+| network-design.html | 1 | 0 |
 | product-lab.html | 1 | 0 |
 | shop.html | 5 | 0 |
 | store.html | 1 | 0 |
@@ -91,184 +96,187 @@ write deeper than two calls, is not seen. "Irreversible" is read from the method
 
 | file:line | control | handler | writes | irreversible? | asks first? | helper |
 |---|---|---|---|---|---|---|
-| app.html:3005 | click `assist-helpdesk` | `askHelpDesk` | POST /api/chits/send | no | — | no |
-| app.html:3022 | click `assist-ask` | `assistAsk` | POST /api/assist | no | — | no |
-| app.html:3055 | click | `ccRun` | POST /api/assist/conform | no | — | no |
-| app.html:3120 | click | `cbAdopt` | POST /api/assist/catalogue-adopt | no | — | no |
-| app.html:3983 | click `gate-signout` | `logoutNow` | fetch PUT | no | — | no |
-| app.html:4037 | click | `setDuty` | PUT /api/actors/break | no | — | no |
-| app.html:4038 | click | `setDuty` | PUT /api/actors/break | no | — | no |
-| app.html:4054 | change | `setShop` | PATCH /api/entities/profile | no | yes | no |
-| app.html:5034 | click `icon-notifications` | `openNotifications` | POST /api/notifications/seen | no | — | no |
-| app.html:5043 | click `icon-logout` | `logout` | fetch PUT | no | yes | no |
-| app.html:5634 | click `nav-newfolder-${key}` | `newFolderIn` | POST /api/folders | no | — | no |
-| app.html:5783 | click `sb-record` | `selfBillSend` | POST /api/chits/send | no | — | no |
-| app.html:6393 | click `chit-ai-fill` | `ccAiFill` | fetch POST | no | — | no |
-| app.html:7096 | click | `mAskFree` | POST /api/assist | no | — | no |
-| app.html:7111 | click | `submitActor` | POST /api/actors | no | — | no |
-| app.html:7915 | click `sup-add` | `addSupplier` | POST /api/relationships/suppliers | no | yes | no |
-| app.html:8101 | click `sup-remove` | `delSupplier` | DELETE /api/relationships/suppliers/:id | **yes** | yes | no |
-| app.html:8362 | click `enq-send` | `enquirySend` | POST /api/catalogue/enquiry/:itemId | no | — | no |
-| app.html:9127 | click `plat-pop-add` | `platAddPopulation` | POST /api/entities/populations | no | — | no |
-| app.html:9171 | change `plat-desk` | `platSetDesk` | PUT /api/entities/populations/:code/desk | no | — | no |
-| app.html:9637 | click `cust-add` | `addCustomer` | POST /api/relationships/customers | no | — | no |
-| app.html:9681 | click | `toggleSupPref` | PATCH /api/relationships/suppliers/:id | no | — | no |
-| app.html:9760 | change `cust-group` | `custSetGroup` | PATCH /api/relationships/customers/:id | no | — | no |
-| app.html:9781 | change | `custToggleNamedGroup` | POST /api/relationships/customers/:id/groups | no | — | no |
-| app.html:9782 | click `cust-ngroup-add` | `custAddNamedGroup` | POST /api/relationships/customers/:id/groups | no | — | no |
-| app.html:9981 | onDraft | `supSendOrder` | POST /api/attachments<br>POST /api/capture/:id/convert<br>POST /api/chits/send<br>+1 more | no | — | no |
-| app.html:9982 | onSend | `supSendOrder` | POST /api/attachments<br>POST /api/capture/:id/convert<br>POST /api/chits/send<br>+1 more | no | — | no |
-| app.html:10127 | click `sup-kind-` | `setSupplierKind` | PATCH /api/relationships/suppliers/:id | no | — | no |
-| app.html:10135 | click | `toggleSupPref` | PATCH /api/relationships/suppliers/:id | no | — | no |
-| app.html:10137 | click `sup-save` | `saveSupplier` | PATCH /api/relationships/suppliers/:id | no | — | no |
-| app.html:10402 | click `sup-accept` | `ppAccept` | POST /api/governance/supplier-acceptance | no | — | no |
-| app.html:10623 | click | `supPick` | POST /api/relationships/suppliers | no | yes | no |
-| app.html:11027 | click | `prodOfferApply` | PUT /api/definitions/:id | no | — | no |
-| app.html:11029 | click | `prodOfferApply` | PUT /api/definitions/:id | no | — | no |
-| app.html:11177 | click `bulk-apply` | `prodCategoriseApply` | POST /api/products/bulk-update | no | — | no |
-| app.html:11213 | click `cat-avail-available` | `prodAvailApply` | POST /api/products/status/bulk | no | — | no |
-| app.html:11216 | click `cat-avail-unavailable` | `prodAvailApply` | POST /api/products/status/bulk | no | — | no |
-| app.html:12054 | click `cat-check-run` | `_cfRun` | POST /api/products/import/preflight | no | — | no |
-| app.html:12055 | click `cat-import-run` | `_cfImport` | POST /api/products/import | no | yes | no |
-| app.html:12100 | click `cat-variants-save` | `_vSave` | PUT /api/catalogue-face | no | — | no |
-| app.html:12150 | click `cat-starter-adopt` | `_cfAdoptSet` | POST /api/products/starter-columns | no | — | no |
-| app.html:12443 | click `cat-offer-exclude-` | `prodOfferExcludeToggle` | PATCH /api/products/:id | no | — | no |
-| app.html:12448 | click | `ctToggleOffer` | PUT /api/definitions/:id | no | — | no |
-| app.html:12691 | click | `ctNewCategory` | POST /api/definitions<br>PUT /api/definitions/:id | no | — | no |
-| app.html:12706 | click `cat-category-new` | `ctNewCategory` | POST /api/definitions<br>PUT /api/definitions/:id | no | — | no |
-| app.html:12974 | click | `prodSetStatus` | PUT /api/products/:id/status | no | — | no |
-| app.html:13052 | click | `saveAvail` | PUT /api/products/:id/availability | no | — | no |
-| app.html:13392 | change `prod-mod-name-${gi}` | `prodModSetGroup` | PATCH /api/products/:id | no | — | no |
-| app.html:13393 | change `prod-mod-required-${gi}` | `prodModSetGroup` | PATCH /api/products/:id | no | — | no |
-| app.html:13394 | change `prod-mod-max-${gi}` | `prodModSetGroup` | PATCH /api/products/:id | no | — | no |
-| app.html:13395 | click `prod-mod-up-${gi}` | `prodModMoveGroup` | PATCH /api/products/:id | no | — | no |
-| app.html:13396 | click `prod-mod-down-${gi}` | `prodModMoveGroup` | PATCH /api/products/:id | no | — | no |
-| app.html:13397 | click `prod-mod-remove-${gi}` | `prodModRemoveGroup` | PATCH /api/products/:id | **yes** | **no** | no |
-| app.html:13402 | change `prod-mod-opt-name-${gi}-${oi}` | `prodModSetOption` | PATCH /api/products/:id | no | — | no |
-| app.html:13403 | change `prod-mod-opt-price-${gi}-${oi}` | `prodModSetOption` | PATCH /api/products/:id | no | — | no |
-| app.html:13404 | click `prod-mod-opt-remove-${gi}-${oi}` | `prodModRemoveOption` | PATCH /api/products/:id | **yes** | **no** | no |
-| app.html:13405 | click `prod-mod-opt-add-${gi}` | `prodModAddOption` | PATCH /api/products/:id | no | — | no |
-| app.html:13459 | click `prod-mod-add` | `prodModAddGroup` | PATCH /api/products/:id | no | — | no |
-| app.html:13596 | change `cat-field-media` | `prodMediaUpload` | POST /api/products/:id/media | no | — | no |
-| app.html:13598 | click `cat-media-link-add` | `prodMediaLink` | POST /api/products/:id/media | no | — | no |
-| app.html:13604 | click `prod-media-del-${esc(x.id)}` | `prodMediaRemove` | DELETE /api/products/:id/media/:mid | **yes** | **no** | no |
-| app.html:13609 | change `cat-field-media` | `prodMediaUpload` | POST /api/products/:id/media | no | — | no |
-| app.html:13668 | change `prod-expose-tick-${k}` | `prodExposureSet` | PATCH /api/products/:id | no | — | no |
-| app.html:13672 | click `prod-expose-reset` | `prodExposureReset` | PATCH /api/products/:id | no | — | no |
-| app.html:13800 | click `prod-xref-del-${xi}` | `prodXrefRemove` | PATCH /api/products/:id | **yes** | **no** | no |
-| app.html:13808 | click `cat-xref-add` | `prodXrefAdd` | PATCH /api/products/:id | no | — | no |
-| app.html:13949 | click `prod-rows-save` | `prodRowsSave` | PATCH /api/entities/profile | no | — | no |
-| app.html:14130 | click `prod-pricing-fix-go` | `prodPricingAttach` | PATCH /api/products/:id | no | — | no |
-| app.html:14255 | click `prod-tax-fix-go` | `prodTaxAttach` | PATCH /api/products/:id | no | — | no |
-| app.html:14386 | click `cat-add` | `saveNewProduct` | POST /api/products | no | — | no |
-| app.html:14406 | click `cat-save` | `saveProduct` | PATCH /api/products/:id<br>POST /api/products/:id/schedule | no | — | no |
-| app.html:14413 | click `cat-delete` | `delProduct` | DELETE /api/products/:id | **yes** | yes | no |
-| app.html:14503 | click `prod-unschedule` | `prodUnschedule` | DELETE /api/products/:id/schedule/:sid | **yes** | **no** | no |
-| app.html:14679 | click | `bulkRestore` | POST /api/chits/:id/restore | no | — | no |
-| app.html:14680 | click | `bulkPurge` | DELETE /api/chits/:id/purge | **yes** | yes | no |
-| app.html:14684 | click | `bulkUnarchive` | POST /api/chits/:id/unarchive | no | — | no |
-| app.html:14738 | click `folder-rename` | `renameFolder` | PATCH /api/folders/:id | no | — | no |
-| app.html:14738 | click `folder-delete` | `deleteFolder` | DELETE /api/folders/:id | **yes** | yes | no |
-| app.html:14811 | click `chit-unpay` | `chitUnpay` | DELETE /api/chits/:id/payment | **yes** | **no** | no |
-| app.html:14820 | click `pay-ok` | `chitPaySubmit` | POST /api/chits/:id/payment | no | — | no |
-| app.html:15282 | click | `confirmStatus` | PUT /api/chits/:id/use<br>PUT /api/chits/:id/status | no | — | no |
-| app.html:15320 | click | `confirmStatus` | PUT /api/chits/:id/use<br>PUT /api/chits/:id/status | no | — | no |
-| app.html:15342 | click | `archiveSelected` | POST /api/chits/:id/archive | no | — | no |
-| app.html:15346 | click | `confirmDelete` | DELETE /api/chits/:id<br>POST /api/chits/:id/restore | **yes** | **no** | no |
-| app.html:15540 | click | `notifClearSelected` | POST /api/notifications/dismiss | no | — | no |
-| app.html:15543 | click `notif-clear-all` | `notifClearAll` | POST /api/notifications/dismiss | no | yes | no |
-| app.html:15994 | click | `toggleStar` | PUT /api/chits/:id/star | no | — | no |
-| app.html:16171 | click | `bulkRestore` | POST /api/chits/:id/restore | no | — | no |
-| app.html:16171 | click | `bulkPurge` | DELETE /api/chits/:id/purge | **yes** | yes | no |
-| app.html:16172 | click | `bulkUnarchive` | POST /api/chits/:id/unarchive | no | — | no |
-| app.html:16710 | click | `_aiOrderDoc` | fetch POST | no | — | no |
-| app.html:16731 | click | `_aiOrderDocAccept` | POST /api/attachments<br>POST /api/chits/send | no | — | no |
-| app.html:16843 | click | `restoreChit` | POST /api/chits/:id/restore | no | — | no |
-| app.html:16843 | click | `purgeChit` | DELETE /api/chits/:id/purge | **yes** | yes | no |
-| app.html:16843 | click | `unarchiveChit` | POST /api/chits/:id/unarchive | no | — | no |
-| app.html:16844 | click | `toggleCustPri` | PUT /api/chits/:id/priority-flag | no | — | no |
-| app.html:16844 | click | `askAiOrder` | fetch POST | no | — | no |
-| app.html:16853 | click `chit-unread` | `markUnread` | POST /api/chits/:id/unread | no | — | no |
-| app.html:16857 | click `chit-void` | `withdrawChit` | PUT /api/chits/:id/void | **yes** | **no** | no |
-| app.html:16861 | click | `askAiOrder` | fetch POST | no | — | no |
-| app.html:16903 | click | `doAnswerPublish` | POST /api/assist/publish<br>POST /api/chits/:id/messages | no | — | no |
-| app.html:17040 | click `counter-screen` | `screenGo` | POST /api/keys | no | — | no |
-| app.html:17041 | click `counter-pair` | `screenPair` | POST /api/till/pair | no | — | no |
-| app.html:17119 | click `books-send` | `booksSend` | POST /api/chits/:id/books-request | no | — | no |
-| app.html:17333 | click `cancel-agree` | `cancelAgree` | PUT /api/chits/:id/status | no | yes | no |
-| app.html:17461 | click | `confirmAssign` | PUT /api/actors/assign/:id<br>POST /api/chits/assign-bulk<br>PUT /api/actors/assign/:id | no | — | no |
-| app.html:17481 | click | `confirmAssign` | PUT /api/actors/assign/:id<br>POST /api/chits/assign-bulk<br>PUT /api/actors/assign/:id | no | — | no |
-| app.html:17498 | click | `confirmRepri` | PUT /api/chits/:id/priority | no | — | no |
-| app.html:18463 | click | `amendSave` | POST /api/chits/:id/amend | no | — | no |
+| app.html:3009 | click `assist-helpdesk` | `askHelpDesk` | POST /api/chits/send | no | yes | run |
+| app.html:3026 | click `assist-ask` | `assistAsk` | POST /api/assist | no | — | no |
+| app.html:3059 | click | `ccRun` | POST /api/assist/conform | no | yes | run |
+| app.html:3124 | click | `cbAdopt` | POST /api/assist/catalogue-adopt | no | yes | run |
+| app.html:3990 | click `gate-signout` | `logoutNow` | fetch PUT | no | — | no |
+| app.html:4044 | click | `setDuty` | PUT /api/actors/break | no | — | no |
+| app.html:4045 | click | `setDuty` | PUT /api/actors/break | no | — | no |
+| app.html:4061 | change | `setShop` | PATCH /api/entities/profile | no | yes | no |
+| app.html:5053 | click `icon-notifications` | `openNotifications` | POST /api/notifications/seen | no | — | no |
+| app.html:5062 | click `icon-logout` | `logout` | fetch PUT | no | yes | no |
+| app.html:5624 | click `nav-newfolder-${key}` | `newFolderIn` | POST /api/folders | no | — | no |
+| app.html:5773 | click `sb-record` | `selfBillSend` | POST /api/chits/send | no | — | no |
+| app.html:6383 | click `chit-ai-fill` | `ccAiFill` | fetch POST | no | — | no |
+| app.html:7086 | click | `mAskFree` | POST /api/assist | no | yes | run |
+| app.html:7101 | click | `submitActor` | POST /api/actors | no | — | no |
+| app.html:7905 | click `sup-add` | `addSupplier` | POST /api/relationships/suppliers | no | yes | run |
+| app.html:8091 | click `sup-remove` | `delSupplier` | DELETE /api/relationships/suppliers/:id | **yes** | yes | no |
+| app.html:8352 | click `enq-send` | `enquirySend` | POST /api/catalogue/enquiry/:itemId | no | — | no |
+| app.html:9117 | click `plat-pop-add` | `platAddPopulation` | POST /api/entities/populations | no | — | no |
+| app.html:9161 | change `plat-desk` | `platSetDesk` | PUT /api/entities/populations/:code/desk | no | — | no |
+| app.html:9627 | click `cust-add` | `addCustomer` | POST /api/relationships/customers | no | — | no |
+| app.html:9671 | click | `toggleSupPref` | PATCH /api/relationships/suppliers/:id | no | — | no |
+| app.html:9750 | change `cust-group` | `custSetGroup` | PATCH /api/relationships/customers/:id | no | — | no |
+| app.html:9771 | change | `custToggleNamedGroup` | POST /api/relationships/customers/:id/groups | no | — | no |
+| app.html:9772 | click `cust-ngroup-add` | `custAddNamedGroup` | POST /api/relationships/customers/:id/groups | no | — | no |
+| app.html:9971 | onDraft | `supSendOrder` | POST /api/attachments<br>POST /api/capture/:id/convert<br>POST /api/chits/send<br>+1 more | no | — | no |
+| app.html:9972 | onSend | `supSendOrder` | POST /api/attachments<br>POST /api/capture/:id/convert<br>POST /api/chits/send<br>+1 more | no | — | no |
+| app.html:10117 | click `sup-kind-` | `setSupplierKind` | PATCH /api/relationships/suppliers/:id | no | — | no |
+| app.html:10125 | click | `toggleSupPref` | PATCH /api/relationships/suppliers/:id | no | — | no |
+| app.html:10127 | click `sup-save` | `saveSupplier` | PATCH /api/relationships/suppliers/:id | no | — | no |
+| app.html:10392 | click `sup-accept` | `ppAccept` | POST /api/governance/supplier-acceptance | no | — | no |
+| app.html:10613 | click | `supPick` | POST /api/relationships/suppliers | no | yes | run |
+| app.html:11017 | click | `prodOfferApply` | PUT /api/definitions/:id | no | — | no |
+| app.html:11019 | click | `prodOfferApply` | PUT /api/definitions/:id | no | — | no |
+| app.html:11167 | click `bulk-apply` | `prodCategoriseApply` | POST /api/products/bulk-update | no | — | no |
+| app.html:11203 | click `cat-avail-available` | `prodAvailApply` | POST /api/products/status/bulk | no | — | no |
+| app.html:11206 | click `cat-avail-unavailable` | `prodAvailApply` | POST /api/products/status/bulk | no | — | no |
+| app.html:12044 | click `cat-check-run` | `_cfRun` | POST /api/products/import/preflight | no | yes | run |
+| app.html:12045 | click `cat-import-run` | `_cfImport` | POST /api/products/import | no | yes | no |
+| app.html:12090 | click `cat-variants-save` | `_vSave` | PUT /api/catalogue-face | no | yes | run |
+| app.html:12140 | click `cat-starter-adopt` | `_cfAdoptSet` | POST /api/products/starter-columns | no | yes | run |
+| app.html:12433 | click `cat-offer-exclude-` | `prodOfferExcludeToggle` | PATCH /api/products/:id | no | — | no |
+| app.html:12438 | click | `ctToggleOffer` | PUT /api/definitions/:id | no | — | no |
+| app.html:12681 | click | `ctNewCategory` | POST /api/definitions<br>PUT /api/definitions/:id | no | — | no |
+| app.html:12696 | click `cat-category-new` | `ctNewCategory` | POST /api/definitions<br>PUT /api/definitions/:id | no | — | no |
+| app.html:12964 | click | `prodSetStatus` | PUT /api/products/:id/status | no | — | no |
+| app.html:13042 | click | `saveAvail` | PUT /api/products/:id/availability | no | — | no |
+| app.html:13382 | change `prod-mod-name-${gi}` | `prodModSetGroup` | PATCH /api/products/:id | no | — | no |
+| app.html:13383 | change `prod-mod-required-${gi}` | `prodModSetGroup` | PATCH /api/products/:id | no | — | no |
+| app.html:13384 | change `prod-mod-max-${gi}` | `prodModSetGroup` | PATCH /api/products/:id | no | — | no |
+| app.html:13385 | click `prod-mod-up-${gi}` | `prodModMoveGroup` | PATCH /api/products/:id | no | — | no |
+| app.html:13386 | click `prod-mod-down-${gi}` | `prodModMoveGroup` | PATCH /api/products/:id | no | — | no |
+| app.html:13387 | click `prod-mod-remove-${gi}` | `prodModRemoveGroup` | PATCH /api/products/:id | **yes** | **no** | no |
+| app.html:13392 | change `prod-mod-opt-name-${gi}-${oi}` | `prodModSetOption` | PATCH /api/products/:id | no | — | no |
+| app.html:13393 | change `prod-mod-opt-price-${gi}-${oi}` | `prodModSetOption` | PATCH /api/products/:id | no | — | no |
+| app.html:13394 | click `prod-mod-opt-remove-${gi}-${oi}` | `prodModRemoveOption` | PATCH /api/products/:id | **yes** | **no** | no |
+| app.html:13395 | click `prod-mod-opt-add-${gi}` | `prodModAddOption` | PATCH /api/products/:id | no | — | no |
+| app.html:13449 | click `prod-mod-add` | `prodModAddGroup` | PATCH /api/products/:id | no | — | no |
+| app.html:13586 | change `cat-field-media` | `prodMediaUpload` | POST /api/products/:id/media | no | — | no |
+| app.html:13588 | click `cat-media-link-add` | `prodMediaLink` | POST /api/products/:id/media | no | — | no |
+| app.html:13594 | click `prod-media-del-${esc(x.id)}` | `prodMediaRemove` | DELETE /api/products/:id/media/:mid | **yes** | **no** | no |
+| app.html:13599 | change `cat-field-media` | `prodMediaUpload` | POST /api/products/:id/media | no | — | no |
+| app.html:13658 | change `prod-expose-tick-${k}` | `prodExposureSet` | PATCH /api/products/:id | no | — | no |
+| app.html:13662 | click `prod-expose-reset` | `prodExposureReset` | PATCH /api/products/:id | no | — | no |
+| app.html:13790 | click `prod-xref-del-${xi}` | `prodXrefRemove` | PATCH /api/products/:id | **yes** | **no** | no |
+| app.html:13798 | click `cat-xref-add` | `prodXrefAdd` | PATCH /api/products/:id | no | — | no |
+| app.html:13939 | click `prod-rows-save` | `prodRowsSave` | PATCH /api/entities/profile | no | — | no |
+| app.html:14120 | click `prod-pricing-fix-go` | `prodPricingAttach` | PATCH /api/products/:id | no | — | no |
+| app.html:14245 | click `prod-tax-fix-go` | `prodTaxAttach` | PATCH /api/products/:id | no | — | no |
+| app.html:14376 | click `cat-add` | `saveNewProduct` | POST /api/products | no | — | no |
+| app.html:14396 | click `cat-save` | `saveProduct` | PATCH /api/products/:id<br>POST /api/products/:id/schedule | no | — | no |
+| app.html:14403 | click `cat-delete` | `delProduct` | DELETE /api/products/:id | **yes** | yes | no |
+| app.html:14493 | click `prod-unschedule` | `prodUnschedule` | DELETE /api/products/:id/schedule/:sid | **yes** | **no** | no |
+| app.html:14669 | click | `bulkRestore` | POST /api/chits/:id/restore | no | — | no |
+| app.html:14670 | click | `bulkPurge` | DELETE /api/chits/:id/purge | **yes** | yes | no |
+| app.html:14674 | click | `bulkUnarchive` | POST /api/chits/:id/unarchive | no | — | no |
+| app.html:14728 | click `folder-rename` | `renameFolder` | PATCH /api/folders/:id | no | — | no |
+| app.html:14728 | click `folder-delete` | `deleteFolder` | DELETE /api/folders/:id | **yes** | yes | no |
+| app.html:14801 | click `chit-unpay` | `chitUnpay` | DELETE /api/chits/:id/payment | **yes** | **no** | no |
+| app.html:14810 | click `pay-ok` | `chitPaySubmit` | POST /api/chits/:id/payment | no | — | no |
+| app.html:15272 | click | `confirmStatus` | PUT /api/chits/:id/use<br>PUT /api/chits/:id/status | no | — | no |
+| app.html:15310 | click | `confirmStatus` | PUT /api/chits/:id/use<br>PUT /api/chits/:id/status | no | — | no |
+| app.html:15332 | click | `archiveSelected` | POST /api/chits/:id/archive | no | — | no |
+| app.html:15336 | click | `confirmDelete` | DELETE /api/chits/:id<br>POST /api/chits/:id/restore | **yes** | **no** | no |
+| app.html:15530 | click | `notifClearSelected` | POST /api/notifications/dismiss | no | — | no |
+| app.html:15533 | click `notif-clear-all` | `notifClearAll` | POST /api/notifications/dismiss | no | yes | no |
+| app.html:15984 | click | `toggleStar` | PUT /api/chits/:id/star | no | — | no |
+| app.html:16161 | click | `bulkRestore` | POST /api/chits/:id/restore | no | — | no |
+| app.html:16161 | click | `bulkPurge` | DELETE /api/chits/:id/purge | **yes** | yes | no |
+| app.html:16162 | click | `bulkUnarchive` | POST /api/chits/:id/unarchive | no | — | no |
+| app.html:16700 | click | `_aiOrderDoc` | fetch POST | no | yes | run |
+| app.html:16721 | click | `_aiOrderDocAccept` | POST /api/attachments<br>POST /api/chits/send | no | — | no |
+| app.html:16833 | click | `restoreChit` | POST /api/chits/:id/restore | no | — | no |
+| app.html:16833 | click | `purgeChit` | DELETE /api/chits/:id/purge | **yes** | yes | no |
+| app.html:16833 | click | `unarchiveChit` | POST /api/chits/:id/unarchive | no | — | no |
+| app.html:16834 | click | `toggleCustPri` | PUT /api/chits/:id/priority-flag | no | — | no |
+| app.html:16834 | click | `askAiOrder` | fetch POST | no | yes | run |
+| app.html:16843 | click `chit-unread` | `markUnread` | POST /api/chits/:id/unread | no | — | no |
+| app.html:16847 | click `chit-void` | `withdrawChit` | PUT /api/chits/:id/void | **yes** | yes | run |
+| app.html:16851 | click | `askAiOrder` | fetch POST | no | yes | run |
+| app.html:16893 | click | `doAnswerPublish` | POST /api/assist/publish<br>POST /api/chits/:id/messages | no | — | no |
+| app.html:17030 | click `counter-screen` | `screenGo` | POST /api/keys | no | — | no |
+| app.html:17031 | click `counter-pair` | `screenPair` | POST /api/till/pair | no | yes | run |
+| app.html:17109 | click `books-send` | `booksSend` | POST /api/chits/:id/books-request | no | — | no |
+| app.html:17323 | click `cancel-agree` | `cancelAgree` | PUT /api/chits/:id/status | no | yes | run |
+| app.html:17451 | click | `confirmAssign` | PUT /api/actors/assign/:id<br>POST /api/chits/assign-bulk<br>PUT /api/actors/assign/:id | no | — | no |
+| app.html:17471 | click | `confirmAssign` | PUT /api/actors/assign/:id<br>POST /api/chits/assign-bulk<br>PUT /api/actors/assign/:id | no | — | no |
+| app.html:17488 | click | `confirmRepri` | PUT /api/chits/:id/priority | no | — | no |
+| app.html:18453 | click | `amendSave` | POST /api/chits/:id/amend | no | — | no |
 | app/cap-admin.js:85 | change `pf-expose-` | `pfExposureSet` | PATCH /api/entities/me/exposure | no | — | no |
 | app/cap-admin.js:135 | click `vault-save` | `saveVaultUI` | PUT /api/governance/profile/vault | no | — | no |
-| app/cap-admin.js:317 | click | `aiRun` | fetch POST | no | — | no |
+| app/cap-admin.js:317 | click | `aiRun` | fetch POST | no | yes | run |
 | app/cap-admin.js:2877 | click | `saveProfile` | PATCH /api/entities/profile | no | — | no |
 | app/cap-admin.js:2975 | click `prof-guard-stay` | `profGuardDo` | PATCH /api/entities/profile<br>PUT /api/actors/settings | no | — | no |
 | app/cap-admin.js:2976 | click `prof-guard-discard` | `profGuardDo` | PATCH /api/entities/profile<br>PUT /api/actors/settings | no | — | no |
 | app/cap-admin.js:2977 | click `prof-guard-save` | `profGuardDo` | PATCH /api/entities/profile<br>PUT /api/actors/settings | no | — | no |
 | app/cap-admin.js:3070 | click | `saveActorPin` | PUT /api/actors/change-pin | no | — | no |
-| app/cap-admin.js:4071 | change | `localeSetCurrency` | PATCH /api/entities/profile | no | — | no |
-| app/cap-admin.js:4559 | click `int-approve-` | `intApprove` | POST /api/integrations/:id/approve | no | — | no |
-| app/cap-admin.js:4560 | click | `intReject` | DELETE /api/keys/:jti | **yes** | **no** | no |
-| app/cap-admin.js:4617 | change `int-use-` | `intUseToggle` | PATCH /api/entities/policy | no | — | no |
-| app/cap-admin.js:4709 | change `int-stream-` | `intStreamSet` | PUT /api/integrations/streams | no | — | no |
-| app/cap-admin.js:4811 | click `int-rec-unskip-` | `intRecSkip` | POST /api/integrations/books/skip | no | — | no |
-| app/cap-admin.js:4812 | click `int-rec-retry-` | `intRecRetry` | POST /api/chits/:id/books-request | no | — | no |
-| app/cap-admin.js:4813 | click `int-rec-skip-` | `intRecSkip` | POST /api/integrations/books/skip | no | — | no |
-| app/cap-admin.js:4902 | click `neto-policy-` | `netoPolicy` | PUT /api/network-offers/policy | no | — | no |
-| app/cap-admin.js:4917 | click `neto-release-` | `netoRelease` | POST /api/network-offers/:id/release | no | — | no |
-| app/cap-admin.js:4918 | click `neto-release-now-` | `netoRelease` | POST /api/network-offers/:id/release | no | — | no |
-| app/cap-admin.js:4921 | click `neto-withdraw-` | `netoWithdraw` | POST /api/network-offers/:id/withdraw | no | — | no |
-| app/cap-admin.js:4947 | click `neto-out-` | `netoChoice` | POST /api/network-offers/:id/choice | no | — | no |
-| app/cap-admin.js:4948 | click `neto-in-` | `netoChoice` | POST /api/network-offers/:id/choice | no | — | no |
-| app/cap-admin.js:5011 | click `netc-cancel` | `netcCancel` | POST /api/network-offers/catalogue/cancel | no | — | no |
-| app/cap-admin.js:5062 | click `netc-publish` | `netcPublish` | POST /api/network-offers/catalogue/publish | no | — | no |
-| app/cap-admin.js:5063 | click `netc-publish-now` | `netcPublish` | POST /api/network-offers/catalogue/publish | no | — | no |
-| app/cap-admin.js:5128 | click `netc-ok-` | `netcAnswer` | POST /api/network-offers/catalogue/price | no | — | no |
-| app/cap-admin.js:5133 | click `netc-ok-` | `netcAnswer` | POST /api/network-offers/catalogue/price | no | — | no |
-| app/cap-admin.js:5137 | click `netc-use-` | `netcAnswer` | POST /api/network-offers/catalogue/price | no | — | no |
-| app/cap-admin.js:5138 | click `netc-keep-` | `netcAnswer` | POST /api/network-offers/catalogue/price | no | — | no |
-| app/cap-admin.js:5200 | click `netm-invite` | `netmInvite` | POST /api/network/connections | no | — | no |
-| app/cap-admin.js:5215 | click `neto-ask-` | `netmAsk` | POST /api/network/connections | no | — | no |
-| app/cap-admin.js:5268 | click `ctr-release-` | `ctrRelease` | POST /api/counters/:id/release | no | — | no |
-| app/cap-admin.js:5271 | click `ctr-open-` | `ctrOpenHere` | POST /api/counters/:id/open | no | — | no |
-| app/cap-admin.js:5283 | click `ctr-add` | `ctrAdd` | POST /api/counters | no | — | no |
-| app/cap-admin.js:5360 | click `int-counter-close-` | `intCounterClose` | DELETE /api/keys/:jti | **yes** | **no** | no |
-| app/cap-admin.js:5370 | click `int-counter-close-dups` | `intCounterCloseDups` | DELETE /api/keys/:jti | **yes** | **no** | no |
-| app/cap-admin.js:5460 | click `int-key-revoke-` | `intKeyRevoke` | DELETE /api/keys/:jti | **yes** | **no** | no |
-| app/cap-admin.js:5474 | click `int-key-mint` | `intKeyMint` | POST /api/keys | no | — | no |
-| app/cap-admin.js:5535 | change | `bizSave` | PATCH /api/entities/profile | no | — | no |
-| app/cap-admin.js:5688 | change | `workRoutingSet` | PUT /api/entities/routing | no | — | no |
-| app/cap-admin.js:5819 | click | `saveSettings` | PUT /api/actors/settings | no | — | no |
-| app/cap-admin.js:5997 | change `pol-` | `setPolFlag` | PATCH /api/entities/policy | no | — | no |
-| app/cap-admin.js:6003 | change | `setPolFlag` | PATCH /api/entities/policy | no | — | no |
-| app/cap-admin.js:6007 | change | `setPolFlag` | PATCH /api/entities/policy | no | — | no |
-| app/cap-admin.js:6084 | click `ch-del` | `chUnbind` | DELETE /api/channels/:id | **yes** | yes | no |
-| app/cap-admin.js:6095 | change `ch-autoraise` | `chSetAutoRaise` | POST /api/channels/:id/auto-raise | no | yes | no |
-| app/cap-admin.js:6109 | click `ch-tpl-toggle` | `chSetTemplate` | POST /api/channels/:id/template | no | — | no |
-| app/cap-admin.js:6121 | click `ch-save` | `chBind` | POST /api/channels | no | — | no |
-| app/cap-admin.js:6219 | click | `saveAutoAssign` | PUT /api/actors/settings | no | — | no |
-| app/cap-admin.js:6238 | click `kb-publish` | `publishAnswer` | POST /api/assist/publish | no | — | no |
+| app/cap-admin.js:4072 | change | `localeSetCurrency` | PATCH /api/entities/profile | no | — | no |
+| app/cap-admin.js:4560 | click `int-approve-` | `intApprove` | POST /api/integrations/:id/approve | no | — | no |
+| app/cap-admin.js:4561 | click | `intReject` | DELETE /api/keys/:jti | **yes** | **no** | no |
+| app/cap-admin.js:4618 | change `int-use-` | `intUseToggle` | PATCH /api/entities/policy | no | — | no |
+| app/cap-admin.js:4710 | change `int-stream-` | `intStreamSet` | PUT /api/integrations/streams | no | — | no |
+| app/cap-admin.js:4812 | click `int-rec-unskip-` | `intRecSkip` | POST /api/integrations/books/skip | no | — | no |
+| app/cap-admin.js:4813 | click `int-rec-retry-` | `intRecRetry` | POST /api/chits/:id/books-request | no | — | no |
+| app/cap-admin.js:4814 | click `int-rec-skip-` | `intRecSkip` | POST /api/integrations/books/skip | no | — | no |
+| app/cap-admin.js:4903 | click `neto-policy-` | `netoPolicy` | PUT /api/network-offers/policy | no | — | no |
+| app/cap-admin.js:4918 | click `neto-release-` | `netoRelease` | POST /api/network-offers/:id/release | no | — | no |
+| app/cap-admin.js:4919 | click `neto-release-now-` | `netoRelease` | POST /api/network-offers/:id/release | no | — | no |
+| app/cap-admin.js:4922 | click `neto-withdraw-` | `netoWithdraw` | POST /api/network-offers/:id/withdraw | no | — | no |
+| app/cap-admin.js:4948 | click `neto-out-` | `netoChoice` | POST /api/network-offers/:id/choice | no | — | no |
+| app/cap-admin.js:4949 | click `neto-in-` | `netoChoice` | POST /api/network-offers/:id/choice | no | — | no |
+| app/cap-admin.js:5012 | click `netc-cancel` | `netcCancel` | POST /api/network-offers/catalogue/cancel | no | — | no |
+| app/cap-admin.js:5063 | click `netc-publish` | `netcPublish` | POST /api/network-offers/catalogue/publish | no | — | no |
+| app/cap-admin.js:5064 | click `netc-publish-now` | `netcPublish` | POST /api/network-offers/catalogue/publish | no | — | no |
+| app/cap-admin.js:5129 | click `netc-ok-` | `netcAnswer` | POST /api/network-offers/catalogue/price | no | — | no |
+| app/cap-admin.js:5134 | click `netc-ok-` | `netcAnswer` | POST /api/network-offers/catalogue/price | no | — | no |
+| app/cap-admin.js:5138 | click `netc-use-` | `netcAnswer` | POST /api/network-offers/catalogue/price | no | — | no |
+| app/cap-admin.js:5139 | click `netc-keep-` | `netcAnswer` | POST /api/network-offers/catalogue/price | no | — | no |
+| app/cap-admin.js:5201 | click `netm-invite` | `netmInvite` | POST /api/network/connections | no | — | no |
+| app/cap-admin.js:5216 | click `neto-ask-` | `netmAsk` | POST /api/network/connections | no | — | no |
+| app/cap-admin.js:5269 | click `ctr-release-` | `ctrRelease` | POST /api/counters/:id/release | no | — | no |
+| app/cap-admin.js:5272 | click `ctr-open-` | `ctrOpenHere` | POST /api/counters/:id/open | no | — | no |
+| app/cap-admin.js:5284 | click `ctr-add` | `ctrAdd` | POST /api/counters | no | — | no |
+| app/cap-admin.js:5361 | click `int-counter-close-` | `intCounterClose` | DELETE /api/keys/:jti | **yes** | **no** | no |
+| app/cap-admin.js:5371 | click `int-counter-close-dups` | `intCounterCloseDups` | DELETE /api/keys/:jti | **yes** | **no** | no |
+| app/cap-admin.js:5461 | click `int-key-revoke-` | `intKeyRevoke` | DELETE /api/keys/:jti | **yes** | **no** | no |
+| app/cap-admin.js:5475 | click `int-key-mint` | `intKeyMint` | POST /api/keys | no | yes | run |
+| app/cap-admin.js:5536 | change | `bizSave` | PATCH /api/entities/profile | no | — | no |
+| app/cap-admin.js:5696 | change | `workRoutingSet` | PUT /api/entities/routing | no | — | no |
+| app/cap-admin.js:5827 | click | `saveSettings` | PUT /api/actors/settings | no | — | no |
+| app/cap-admin.js:6005 | change `pol-` | `setPolFlag` | PATCH /api/entities/policy | no | — | no |
+| app/cap-admin.js:6011 | change | `setPolFlag` | PATCH /api/entities/policy | no | — | no |
+| app/cap-admin.js:6015 | change | `setPolFlag` | PATCH /api/entities/policy | no | — | no |
+| app/cap-admin.js:6092 | click `ch-del` | `chUnbind` | DELETE /api/channels/:id | **yes** | yes | no |
+| app/cap-admin.js:6103 | change `ch-autoraise` | `chSetAutoRaise` | POST /api/channels/:id/auto-raise | no | yes | no |
+| app/cap-admin.js:6117 | click `ch-tpl-toggle` | `chSetTemplate` | POST /api/channels/:id/template | no | — | no |
+| app/cap-admin.js:6129 | click `ch-save` | `chBind` | POST /api/channels | no | — | no |
+| app/cap-admin.js:6238 | click | `saveAutoAssign` | PUT /api/actors/settings | no | — | no |
+| app/cap-admin.js:6257 | click `kb-publish` | `publishAnswer` | POST /api/assist/publish | no | — | no |
 | app/cap-adopt.js:59 | click | `adoptAccept` | POST /api/adopt/:id | no | — | no |
-| app/cap-books.js:387 | click `pe_save` | `partyEditSave` | PATCH /api/relationships/customers/:id<br>PATCH /api/relationships/suppliers/:id | no | — | no |
-| app/cap-books.js:450 | click `pay_record` | `payRecord` | POST /api/books/payments | no | — | run |
-| app/cap-books.js:510 | click `pay_ack` | `payRecord` | POST /api/books/payments | no | — | run |
-| app/cap-books.js:859 | click | `enOpen` | POST /api/books/preview | no | — | no |
-| app/cap-books.js:1562 | click `lk-lock-` | `bkLockDo` | POST /api/books/periods/:fy/:p/lock<br>POST /api/books/periods/:fy/:p/unlock | no | yes | run |
-| app/cap-books.js:1563 | click `lk-unlock-` | `bkLockDo` | POST /api/books/periods/:fy/:p/lock<br>POST /api/books/periods/:fy/:p/unlock | no | yes | run |
-| app/cap-books.js:1564 | click `lk-hard-` | `bkLockDo` | POST /api/books/periods/:fy/:p/lock<br>POST /api/books/periods/:fy/:p/unlock | **yes** | yes | run |
-| app/cap-books.js:1616 | click `pack-ack-` | `bkPackAck` | POST /api/books/packs/:id/ack | no | yes | once |
-| app/cap-books.js:1635 | click `pk_build` | `bkPackBuild` | POST /api/books/packs | no | — | no |
-| app/cap-books.js:1701 | click `op_go` | `bkOpeningGo` | POST /api/books/opening | no | — | once |
-| app/cap-books.js:1759 | click `chq-` | `bkChequeStep` | POST /api/books/cheques/:id/status | no | yes | once |
-| app/cap-books.js:1896 | click `wait-retry` | `bkWaitingRetry` | POST /api/books/outbox/retry | no | — | once |
-| app/cap-books.js:1936 | click `ac_add` | `bkAccountAdd` | POST /api/books/accounts | no | — | no |
-| app/cap-categories.js:318 | click | `cbcatSeedPick` | PUT /api/chits/:id/use<br>PUT /api/chits/:id/status | no | — | no |
+| app/cap-books.js:438 | click `stmt-reverse-` | `bkStmtReverse` | POST /api/books/entries/:id/reverse | **yes** | **no** | no |
+| app/cap-books.js:482 | click `pe_save` | `partyEditSave` | PATCH /api/relationships/customers/:id<br>POST /api/network-design/validate<br>PATCH /api/relationships/suppliers/:id | no | — | run |
+| app/cap-books.js:545 | click `pay_record` | `payRecord` | POST /api/books/payments | no | — | run |
+| app/cap-books.js:546 | click `pay_remind` | `payRemind` | POST /api/books/payments/preview | no | — | run |
+| app/cap-books.js:608 | click `pay_ack` | `payRecord` | POST /api/books/payments | no | — | run |
+| app/cap-books.js:988 | click | `enOpen` | POST /api/books/preview | no | — | no |
+| app/cap-books.js:1622 | click `dues-remind-` | `bkRemind` | POST /api/books/payments/preview | no | — | run |
+| app/cap-books.js:1759 | click `lk-lock-` | `bkLockDo` | POST /api/books/periods/:fy/:p/lock<br>POST /api/books/periods/:fy/:p/unlock | no | yes | run |
+| app/cap-books.js:1761 | click `lk-unlock-` | `bkLockDo` | POST /api/books/periods/:fy/:p/lock<br>POST /api/books/periods/:fy/:p/unlock | no | yes | run |
+| app/cap-books.js:1762 | click `lk-hard-` | `bkLockDo` | POST /api/books/periods/:fy/:p/lock<br>POST /api/books/periods/:fy/:p/unlock | **yes** | yes | run |
+| app/cap-books.js:1816 | click `pack-ack-` | `bkPackAck` | POST /api/books/packs/:id/ack | no | yes | run |
+| app/cap-books.js:1835 | click `pk_build` | `bkPackBuild` | POST /api/books/packs | no | — | no |
+| app/cap-books.js:1901 | click `op_go` | `bkOpeningGo` | POST /api/books/opening | no | — | once |
+| app/cap-books.js:1959 | click `chq-` | `bkChequeStep` | POST /api/books/cheques/:id/status | no | yes | run |
+| app/cap-books.js:2096 | click `wait-retry` | `bkWaitingRetry` | POST /api/books/outbox/retry | no | — | once |
+| app/cap-books.js:2136 | click `ac_add` | `bkAccountAdd` | POST /api/books/accounts | no | — | no |
+| app/cap-categories.js:318 | click | `cbcatSeedPick` | PUT /api/chits/:id/use<br>PUT /api/chits/:id/status | no | yes | run |
 | app/cap-categories.js:428 | click `catg-seed-go` | `cbcatSeedGo` | POST /api/definitions<br>PUT /api/definitions/:id | no | — | no |
 | app/cap-categories.js:650 | click `catg-save` | `cbcatSave` | POST /api/definitions<br>PUT /api/definitions/:id | no | — | no |
 | app/cap-categories.js:717 | click `catg-relive` | `cbcatRelive` | PUT /api/definitions/:id | no | — | no |
-| app/cap-categories.js:719 | click `catg-retire` | `cbcatRetire` | DELETE /api/definitions/:id | **yes** | yes | no |
+| app/cap-categories.js:719 | click `catg-retire` | `cbcatRetire` | DELETE /api/definitions/:id | **yes** | yes | run |
 | app/cap-categories.js:819 | click `catg-offer-` | `cbcatOfferToggle` | PUT /api/definitions/:id | no | — | no |
 | app/cap-catsetup.js:128 | click `catset-` | `catsetDefStatus` | PUT /api/definitions/:id | no | — | no |
 | app/cap-catsetup.js:132 | click `catset-` | `catsetDefStatus` | PUT /api/definitions/:id | no | — | no |
@@ -283,7 +291,7 @@ write deeper than two calls, is not seen. "Irreversible" is read from the method
 | app/cap-catsetup.js:1042 | change | `catsetFieldPatch` | PATCH /api/schemas/fields/:key | no | — | no |
 | app/cap-catsetup.js:1048 | change | `catsetFieldPatch` | PATCH /api/schemas/fields/:key | no | — | no |
 | app/cap-catsetup.js:1051 | change | `catsetFieldPatch` | PATCH /api/schemas/fields/:key | no | — | no |
-| app/cap-catsetup.js:1062 | click | `catsetDrop` | DELETE /api/schemas/fields/:key | **yes** | yes | no |
+| app/cap-catsetup.js:1062 | click | `catsetDrop` | DELETE /api/schemas/fields/:key | **yes** | yes | run |
 | app/cap-catsetup.js:1068 | change | `catsetFieldPatch` | PATCH /api/schemas/fields/:key | no | — | no |
 | app/cap-catsetup.js:1071 | click | `catsetMove` | PATCH /api/schemas/fields/order | no | — | no |
 | app/cap-catsetup.js:1073 | click | `catsetMove` | PATCH /api/schemas/fields/order | no | — | no |
@@ -307,13 +315,13 @@ write deeper than two calls, is not seen. "Irreversible" is read from the method
 | app/cap-connector.js:115 | click | `acToggleDevice` | PATCH /api/connectors/:actorId/connections/:connId | no | — | no |
 | app/cap-connector.js:121 | click | `acErpTest` | POST /api/connectors/:actorId/erp-test | no | — | no |
 | app/cap-connector.js:160 | click | `acAddDevice` | POST /api/connectors/:actorId/connections | no | — | no |
-| app/cap-connector.js:256 | click | `acReissueSendCode` | POST /api/connectors/reissue-code | no | — | no |
+| app/cap-connector.js:256 | click | `acReissueSendCode` | POST /api/connectors/reissue-code | no | yes | run |
 | app/cap-connector.js:258 | click | `acReissueSubmit` | POST /api/connectors/:actorId/regenerate-key | no | — | no |
 | app/cap-definitions.js:1146 | click `cbdef-save` | `cbDefSave` | POST /api/definitions<br>PUT /api/definitions/:id | no | — | no |
 | app/cap-definitions.js:1412 | click `cbdef-takeover-go` | `cbDefTakeoverGo, cbDefEsc` | DELETE /api/definitions/:id | **yes** | **no** | no |
 | app/cap-definitions.js:1608 | click | `cbDefSetStatus, cbDefEsc` | PUT /api/definitions/:id | no | — | no |
 | app/cap-definitions.js:1610 | click | `cbDefRetire, cbDefEsc` | DELETE /api/definitions/:id | **yes** | yes | no |
-| app/cap-dispute.js:130 | click | `aiDisputeSummary` | fetch POST | no | — | no |
+| app/cap-dispute.js:130 | click | `aiDisputeSummary` | fetch POST | no | yes | run |
 | app/cap-dispute.js:169 | click | `aiResolutionSuggest` | fetch POST | no | — | no |
 | app/cap-dispute.js:297 | click `dispute-raise` | `confirmDispute` | POST /api/chits/:id/disputes | no | — | no |
 | app/cap-dispute.js:314 | click `dispute-resolve-submit` | `submitResolve` | PUT /api/chits/:id/disputes/:disputeId/resolve | no | — | no |
@@ -323,7 +331,11 @@ write deeper than two calls, is not seen. "Irreversible" is read from the method
 | app/cap-entry.js:188 | change | `enSet, enCheckDate` | POST /api/books/preview | no | — | no |
 | app/cap-entry.js:278 | click `en-fix-` | `enFixGo` | POST /api/books/preview | no | — | no |
 | app/cap-entry.js:281 | click `en-wfix-` | `enFixGo` | POST /api/books/preview | no | — | no |
-| app/cap-entry.js:324 | click `en-reverse-now` | `enReverse, enE` | POST /api/books/entries/:id/reverse | **yes** | yes | once |
+| app/cap-entry.js:324 | click `en-reverse-now` | `enReverse, enE` | POST /api/books/entries/:id/reverse | **yes** | yes | run |
+| app/cap-finance-terms.js:99 | click `ft-save` | `ftSaveShop` | POST /api/books/terms | no | — | run |
+| app/cap-finance-terms.js:136 | click `ftp-save` | `ftSaveParty` | POST /api/books/terms | no | — | run |
+| app/cap-finance.js:91 | click `fin-remind-` | `bkRemind` | POST /api/books/payments/preview | no | — | run |
+| app/cap-finance.js:137 | click `fin-queue-go-` | `finRemindOne` | POST /api/books/payments/preview | no | — | run |
 | app/cap-folders.js:85 | click | `newFolder` | POST /api/folders | no | — | no |
 | app/cap-folders.js:102 | click | `renameFolder` | PATCH /api/folders/:id | no | — | no |
 | app/cap-folders.js:103 | click | `deleteFolder` | DELETE /api/folders/:id | **yes** | yes | no |
@@ -343,25 +355,25 @@ write deeper than two calls, is not seen. "Irreversible" is read from the method
 | app/cap-match.js:181 | click `match-dispute-send` | `matchDisputeSend` | POST /api/chits/:chit_id/disputes | no | — | no |
 | app/cap-messages.js:167 | click | `msgOpen` | POST /api/folders/messages/:id/mark | no | — | no |
 | app/cap-messages.js:189 | click `msg-keep` | `msgKeep` | POST /api/folders/messages/:id/mark | no | — | no |
-| app/cap-network.js:763 | click | `netMint` | POST /api/network-design/build<br>PUT /api/network-design | no | — | no |
-| app/cap-network.js:817 | click | `netMintGo` | POST /api/network-design/build | no | — | no |
-| app/cap-network.js:1365 | onDraft | `netSendCart` | POST /api/attachments<br>POST /api/capture/:id/convert<br>POST /api/chits/send<br>+1 more | no | — | no |
-| app/cap-network.js:1366 | onSend | `netSendCart` | POST /api/attachments<br>POST /api/capture/:id/convert<br>POST /api/chits/send<br>+1 more | no | — | no |
-| app/cap-network.js:2624 | click | `netSetNetworkVisibility` | PATCH /api/entities/profile | no | — | no |
-| app/cap-network.js:2692 | click | `netSetNetworkName` | PATCH /api/entities/profile | no | — | no |
-| app/cap-network.js:2812 | click | `netReissueKey` | POST /api/network-design/reissue | no | — | no |
+| app/cap-network-member.js:393 | onDraft | `netSendCart` | POST /api/attachments<br>POST /api/capture/:id/convert<br>POST /api/chits/send<br>+1 more | no | — | no |
+| app/cap-network-member.js:394 | onSend | `netSendCart` | POST /api/attachments<br>POST /api/capture/:id/convert<br>POST /api/chits/send<br>+1 more | no | — | no |
+| app/cap-network.js:763 | click | `netMint` | POST /api/network-design/build<br>PUT /api/network-design | no | yes | run |
+| app/cap-network.js:817 | click | `netMintGo` | POST /api/network-design/build | no | yes | run |
+| app/cap-network.js:2001 | click | `netSetNetworkVisibility` | PATCH /api/entities/profile | no | — | no |
+| app/cap-network.js:2069 | click | `netSetNetworkName` | PATCH /api/entities/profile | no | yes | run |
+| app/cap-network.js:2189 | click | `netReissueKey` | POST /api/network-design/reissue | no | yes | run |
 | app/cap-period.js:89 | click via peBtn | `peStockSave` | POST /api/books/closing-stock | no | — | once |
-| app/cap-period.js:139 | click via peBtn | `peAssetForm, peDepForm` | POST /api/books/assets | no | — | once |
-| app/cap-period.js:178 | click via peBtn | `peAssetSave` | POST /api/books/assets | no | — | once |
-| app/cap-period.js:201 | click via peBtn | `peSellSave` | POST /api/books/assets/:id/dispose | no | — | once |
-| app/cap-period.js:222 | click `pdp-run` | `peDepRun` | POST /api/books/depreciation/run | no | — | once |
-| app/cap-period.js:285 | click via peBtn | `peRecForm` | POST /api/books/recurring | no | — | once |
-| app/cap-period.js:349 | click via peBtn | `peRecSave` | POST /api/books/recurring<br>PATCH /api/books/recurring/:id<br>DELETE /api/books/recurring/:id | **yes** | **no** | once |
-| app/cap-period.js:370 | click via peBtn | `peAccrForm` | POST /api/books/accruals | no | — | once |
-| app/cap-period.js:408 | click via peBtn | `peAccrSave` | POST /api/books/accruals<br>POST /api/books/accruals/:ref/reverse | no | — | once |
-| app/cap-period.js:448 | click via peBtn | `peGstClose` | POST /api/books/gst/close<br>POST /api/books/gst/pay | no | — | once |
-| app/cap-period.js:486 | click via peBtn | `peGstPay` | POST /api/books/gst/pay | no | — | once |
-| app/cap-period.js:539 | click `py-close` | `peYearClose` | POST /api/books/year/:fy/close | **yes** | yes | once |
+| app/cap-period.js:149 | click via peBtn | `peAssetForm, peDepForm` | POST /api/books/assets | no | — | once |
+| app/cap-period.js:188 | click via peBtn | `peAssetSave` | POST /api/books/assets | no | — | once |
+| app/cap-period.js:211 | click via peBtn | `peSellSave` | POST /api/books/assets/:id/dispose | no | — | once |
+| app/cap-period.js:232 | click `pdp-run` | `peDepRun` | POST /api/books/depreciation/run | no | — | once |
+| app/cap-period.js:295 | click via peBtn | `peRecForm` | POST /api/books/recurring | no | — | once |
+| app/cap-period.js:359 | click via peBtn | `peRecSave` | POST /api/books/recurring<br>PATCH /api/books/recurring/:id<br>DELETE /api/books/recurring/:id | **yes** | **no** | once |
+| app/cap-period.js:380 | click via peBtn | `peAccrForm` | POST /api/books/accruals | no | — | once |
+| app/cap-period.js:418 | click via peBtn | `peAccrSave` | POST /api/books/accruals<br>POST /api/books/accruals/:ref/reverse | no | — | once |
+| app/cap-period.js:458 | click via peBtn | `peGstClose` | POST /api/books/gst/close<br>POST /api/books/gst/pay | no | — | once |
+| app/cap-period.js:496 | click via peBtn | `peGstPay` | POST /api/books/gst/pay | no | — | once |
+| app/cap-period.js:549 | click `py-close` | `peYearClose` | POST /api/books/year/:fy/close | **yes** | yes | once |
 | app/cap-readiness.js:65 | click | `_aiAccept` | POST /api/attachments<br>POST /api/chits/send<br>POST /api/governance/compliance | no | — | no |
 | app/cap-readiness.js:199 | click | `aiSuggestPartner` | fetch POST | no | — | no |
 | app/cap-readiness.js:237 | click | `aiDraftReadiness` | POST /api/governance/ai-draft | no | — | no |
@@ -417,84 +429,86 @@ write deeper than two calls, is not seen. "Irreversible" is read from the method
 | app/cap-testing.js:8332 | click | `testAddSave` | POST /api/testing/cases/import | no | — | no |
 | app/cap-workforce.js:352 | click `coassist-wiz-next` | `awNext` | POST /api/actors<br>POST /api/connectors<br>fetch PUT | no | — | no |
 | app/cap-workforce.js:557 | click | `saveActor` | PUT /api/actors/:id/delegate<br>PATCH /api/actors/:id | no | — | no |
-| app/cap-workforce.js:609 | click | `acResetPin` | DELETE /api/actors/:id/pin | **yes** | yes | no |
+| app/cap-workforce.js:609 | click | `acResetPin` | DELETE /api/actors/:id/pin | **yes** | yes | run |
 | app/cap-workforce.js:610 | click | `acReinvite` | POST /api/actors/:id/otp | no | — | no |
-| app/cap-workforce.js:612 | click | `acStatus` | PUT /api/actors/:id/status | no | yes | no |
-| app/cap-workforce.js:614 | click | `acStatus` | PUT /api/actors/:id/status | no | yes | no |
-| app/cap-workforce.js:614 | click | `acStatus` | PUT /api/actors/:id/status | no | yes | no |
+| app/cap-workforce.js:612 | click | `acStatus` | PUT /api/actors/:id/status | no | yes | run |
+| app/cap-workforce.js:614 | click | `acStatus` | PUT /api/actors/:id/status | no | yes | run |
+| app/cap-workforce.js:614 | click | `acStatus` | PUT /api/actors/:id/status | no | yes | run |
 | app/cap-worklist.js:1027 | click `wl-raida-close-go` | `wlRaidaClose` | POST /api/chits/:id/raida/:rid/close | no | — | no |
 | app/cap-worklist.js:1176 | click via wlBtn | `wlActSave` | POST /api/chits/:id/deliver-lines | no | — | no |
 | app/cap-worklist.js:1213 | click via wlBtn | `wlActSave` | POST /api/chits/:id/deliver-lines | no | — | no |
 | app/cap-worklist.js:1279 | click via wlBtn | `wlLineSave` | POST /api/chits/:id/assign-lines | no | — | no |
 | app/cap-worklist.js:1283 | click `wl-mark-done` | `wlSetState` | POST /api/chits/:id/assign-lines | no | — | no |
+| app/network-app.js:145 | click | `check` | POST /api/network-design/validate | no | — | run |
+| network-design.html:148 | click `lab-check` | `labCheck` | fetch POST | no | — | no |
 | product-lab.html:384 | click `pl-adopt` | `adopt` | fetch POST | no | — | no |
-| shop.html:759 | click `shop-support-code` | `supSendCode` | fetch POST | no | — | no |
-| shop.html:762 | click `shop-support-send` | `supSubmit` | fetch POST | no | — | no |
-| shop.html:936 | onSend | `orderConfirm, orderStart` | fetch POST | no | — | no |
-| shop.html:1070 | click `shop-place-order` | `orderConfirm` | fetch POST | no | — | no |
-| shop.html:1071 | click `shop-send-code` | `orderStart` | fetch POST | no | — | no |
+| shop.html:881 | click `shop-support-code` | `supSendCode` | fetch POST | no | — | no |
+| shop.html:884 | click `shop-support-send` | `supSubmit` | fetch POST | no | — | no |
+| shop.html:1059 | onSend | `orderConfirm, orderStart` | fetch POST | no | — | no |
+| shop.html:1201 | click `shop-place-order` | `orderConfirm` | fetch POST | no | — | no |
+| shop.html:1202 | click `shop-send-code` | `orderStart` | fetch POST | no | — | no |
 | store.html:71 | click | `placeOrder` | fetch POST | no | — | no |
-| testing.html:1048 | change | `importResults` | PUT /api/actors/:id/status<br>POST /api/books/entries/:id/reverse<br>DELETE /api/connectors/:actorId<br>+1 more | **yes** | **no** | no |
-| till.html:2893 (vendored) | click | `listen` | fetch POST | no | — | no |
-| till.html:3060 (vendored) | change `till-set-qsrc` | `tillOptSet, quickMaintPaint` | fetch POST | no | — | no |
-| till.html:3068 (vendored) | click `till-quick-reset` | `quickReset, quickMaintPaint` | fetch POST | no | — | no |
-| till.html:3096 (vendored) | click `till-who` | `whoAct` | fetch POST | no | — | no |
-| till.html:3146 (vendored) | click `till-mic` | `listen` | fetch POST | no | — | no |
-| till.html:3195 (vendored) | click `till-mic-name` | `listen` | fetch POST | no | — | no |
-| till.html:3198 (vendored) | click `till-mic-phone` | `listen` | fetch POST | no | — | no |
-| till.html:3200 (vendored) | click `till-receive-pay` | `rcvPayOpen` | fetch POST | no | — | no |
-| till.html:3228 (vendored) | click `till-split` | `addPart` | fetch POST | no | — | no |
-| till.html:3256 (vendored) | change `rcv-incl` | `paintReceive` | fetch POST | no | — | no |
-| till.html:3378 (vendored) | click | `printSlip` | fetch POST | no | — | no |
-| till.html:3449 (vendored) | click | `shiftClose` | fetch POST | no | — | no |
-| till.html:3464 (vendored) | click `till-dayclose` | `dayClose` | fetch POST | no | — | no |
-| till.html:3525 (vendored) | change `till-set-kot` | `tillOptSet, paintOrderBar` | fetch POST | no | — | no |
-| till.html:3650 (vendored) | change | `voiceSpeakSet, paintSetup` | fetch POST | no | — | no |
-| till.html:3727 (vendored) | click `till-order-settle` | `orderReviewSettle` | fetch POST | no | — | no |
-| till.html:6492 (vendored) | click | `flashHide, act` | fetch POST | no | — | no |
-| till.html:6816 (vendored) | change `till-rp-mode` | `rcvPayPropose` | fetch POST | no | — | no |
-| till.html:9043 (vendored) | click `till-day-img` | `dayImgOpen` | fetch POST | no | — | no |
-| till.html:9084 (vendored) | click | `fromMenu, sureSheet` | fetch POST | no | — | no |
-| till.html:9524 (vendored) | click `till-dayreport-print` | `dayRepPrint` | fetch POST | no | — | no |
-| till.html:9525 (vendored) | click `till-dayreport-print-a4` | `dayRepPrint` | fetch POST | no | — | no |
-| till.html:9526 (vendored) | click `till-dayreport-print-land` | `dayRepPrint` | fetch POST | no | — | no |
-| till.html:9804 (vendored) | click | `fromMenu, sureSheet` | fetch POST | no | — | no |
-| till.html:10335 (vendored) | click | `tillShowSet, paintViewChips` | fetch POST | no | — | no |
-| till.html:12845 (vendored) | change | `quickGroupToggle, quickMaintPaint` | fetch POST | no | — | no |
-| till.html:12921 (vendored) | change `till-set-group` | `tillOptSet, quickMaintPaint` | fetch POST | no | — | no |
-| till.html:13266 (vendored) | click `till-quick-hide-` | `quickSoldOut` | fetch POST | no | — | no |
-| till.html:13300 (vendored) | click | `quickSoldOut` | fetch POST | no | — | no |
-| till.html:13598 (vendored) | click `till-connect` | `pairAgain` | fetch POST | no | — | no |
-| till.html:13617 (vendored) | click `till-start-shop` | `startOpen` | fetch POST | no | — | no |
-| till.html:14332 (vendored) | click `card-save` | `cardSave` | fetch POST | no | — | no |
-| till.html:14459 (vendored) | click `card-storefront` | `shopPrevOpen` | fetch POST | no | — | no |
-| till.html:14799 (vendored) | click `till-pick-price` | `pickedPrice` | fetch POST | no | — | no |
-| till.html:14800 (vendored) | click `till-pick-group` | `pickedGroup` | fetch POST | no | — | no |
-| till.html:17900 (vendored) | click `till-shop-edit` | `shopEditOpen` | fetch POST | no | — | no |
-| till.html:18054 (vendored) | change | `upRead` | fetch POST | no | — | no |
-| till.html:18356 (vendored) | click `till-signout-go` | `signoutDo` | fetch POST | no | — | no |
-| till.html:18382 (vendored) | click `till-signout-force` | `signoutDo` | fetch POST | no | — | no |
-| till.html:18408 (vendored) | click `till-signout-cloud` | `signoutCloudDo` | fetch POST | no | — | no |
-| till.html:19228 (vendored) | click `till-health-send` | `sendNow` | fetch POST | no | — | no |
-| till.html:19266 (vendored) | click | `healthClose, sureSheet` | fetch POST | no | — | no |
-| till.html:19341 (vendored) | click `till-workbook-get` | `workbookGet` | fetch POST | no | — | no |
-| till.html:19730 (vendored) | click `till-kot` | `sendKOT` | fetch POST | no | — | no |
-| till.html:19748 (vendored) | click `till-part-` | `dropPart` | fetch POST | no | — | no |
-| till.html:20140 (vendored) | click `till-order-go` | `orderGo` | fetch POST | no | — | no |
-| till.html:20156 (vendored) | click | `orderPick` | fetch POST | no | — | no |
-| till.html:20314 (vendored) | click | `pickPay` | fetch POST | no | — | no |
-| till.html:22304 (vendored) | click `till-stuck-release` | `releaseQueue` | fetch POST | no | — | no |
-| till.html:22306 (vendored) | click `till-stuck-copy` | `stuckCopy` | fetch POST | no | — | no |
-| till.html:22308 (vendored) | click `till-storage` | `openStorage` | fetch POST | no | — | no |
-| till.html:22309 (vendored) | click `till-check-sent` | `checkAbsorbedNow` | fetch POST | no | — | no |
-| till.html:22730 (vendored) | change | `retainSet, openStorage` | fetch POST | no | — | no |
-| till.html:22771 (vendored) | click `till-rescue` | `rescueOrphans` | fetch POST | no | — | no |
-| till.html:22785 (vendored) | click `till-wipe` | `wipeDevice` | fetch POST | **yes** | **no** | no |
-| till.html:23112 (vendored) | click `till-send-now` | `sendNow` | fetch POST | no | — | no |
-| till.html:23119 (vendored) | click `till-confirm-arrived` | `sendNow` | fetch POST | no | — | no |
-| till.html:24526 (vendored) | click `till-signin-takeover` | `usignBecome` | fetch POST | no | — | no |
-| till.html:24872 (vendored) | click `till-handover` | `handOver` | fetch POST | no | — | no |
-| till.html:25394 (vendored) | change | `settingsKeySave` | fetch POST | no | — | no |
-| till.html:25430 (vendored) | click `till-set-signin` | `pairAgain` | fetch POST | no | — | no |
-| till.html:25432 (vendored) | click `till-set-signout` | `setClose, signoutOpen` | fetch POST | no | — | no |
-| till.html:25535 (vendored) | click | `tillSeriesSet, paintSetup` | fetch POST | no | — | no |
+| testing.html:1048 | change | `importResults` | PUT /api/actors/:id/status<br>POST /api/books/entries/:id/reverse<br>DELETE /api/connectors/:actorId<br>+2 more | **yes** | **no** | no |
+| till.html:2996 (vendored) | click | `listen` | fetch POST | no | — | no |
+| till.html:3163 (vendored) | change `till-set-qsrc` | `tillOptSet, quickMaintPaint` | fetch POST | no | — | no |
+| till.html:3171 (vendored) | click `till-quick-reset` | `quickReset, quickMaintPaint` | fetch POST | no | — | no |
+| till.html:3199 (vendored) | click `till-modepill` | `modeMenuOpen` | fetch POST | no | — | no |
+| till.html:3202 (vendored) | click `till-who` | `whoAct` | fetch POST | no | — | no |
+| till.html:3205 (vendored) | click `till-online-orders` | `onlineOrdersOpen` | fetch POST | no | — | no |
+| till.html:3254 (vendored) | click `till-mic` | `listen` | fetch POST | no | — | no |
+| till.html:3305 (vendored) | click `till-mic-name` | `listen` | fetch POST | no | — | no |
+| till.html:3308 (vendored) | click `till-mic-phone` | `listen` | fetch POST | no | — | no |
+| till.html:3310 (vendored) | click `till-receive-pay` | `rcvPayOpen` | fetch POST | no | — | no |
+| till.html:3340 (vendored) | click `till-split` | `addPart` | fetch POST | no | — | no |
+| till.html:3350 (vendored) | click `till-park` | `parkBill` | fetch POST | no | — | no |
+| till.html:3367 (vendored) | change `rcv-incl` | `paintReceive` | fetch POST | no | — | no |
+| till.html:3491 (vendored) | click `till-day-close-do` | `dayCloseDo` | fetch POST | no | — | no |
+| till.html:3566 (vendored) | click | `shiftClose` | fetch POST | no | — | no |
+| till.html:3581 (vendored) | click `till-dayclose` | `dayClose` | fetch POST | no | — | no |
+| till.html:3642 (vendored) | change `till-set-kot` | `tillOptSet, paintOrderBar` | fetch POST | no | — | no |
+| till.html:3844 (vendored) | click `till-order-settle` | `orderReviewSettle` | fetch POST | no | — | no |
+| till.html:6706 (vendored) | click | `flashHide, act` | fetch POST | no | — | no |
+| till.html:7054 (vendored) | change `till-rp-mode` | `rcvPayPropose` | fetch POST | no | — | no |
+| till.html:9340 (vendored) | click `till-day-img` | `dayImgOpen` | fetch POST | no | — | no |
+| till.html:9385 (vendored) | click | `fromMenu, sureSheet` | fetch POST | no | — | no |
+| till.html:10110 (vendored) | click | `fromMenu, sureSheet` | fetch POST | no | — | no |
+| till.html:10727 (vendored) | click | `tillShowSet, paintViewChips` | fetch POST | no | — | no |
+| till.html:13369 (vendored) | change | `quickGroupToggle, quickMaintPaint` | fetch POST | no | — | no |
+| till.html:13445 (vendored) | change `till-set-group` | `tillOptSet, quickMaintPaint` | fetch POST | no | — | no |
+| till.html:13805 (vendored) | click `till-quick-hide-` | `quickSoldOut` | fetch POST | no | — | no |
+| till.html:13839 (vendored) | click | `quickSoldOut` | fetch POST | no | — | no |
+| till.html:14171 (vendored) | click `till-connect` | `pairAgain` | fetch POST | no | — | no |
+| till.html:14190 (vendored) | click `till-start-shop` | `startOpen` | fetch POST | no | — | no |
+| till.html:14905 (vendored) | click `card-save` | `cardSave` | fetch POST | no | — | no |
+| till.html:15032 (vendored) | click `card-storefront` | `shopPrevOpen` | fetch POST | no | — | no |
+| till.html:15374 (vendored) | click `till-pick-price` | `pickedPrice` | fetch POST | no | — | no |
+| till.html:15375 (vendored) | click `till-pick-group` | `pickedGroup` | fetch POST | no | — | no |
+| till.html:17103 (vendored) | click `till-parked-` | `unpark` | fetch POST | no | — | no |
+| till.html:18584 (vendored) | click `till-shop-edit` | `shopEditOpen` | fetch POST | no | — | no |
+| till.html:18738 (vendored) | change | `upRead` | fetch POST | no | — | no |
+| till.html:19040 (vendored) | click `till-signout-go` | `signoutDo` | fetch POST | no | — | no |
+| till.html:19066 (vendored) | click `till-signout-force` | `signoutDo` | fetch POST | no | — | no |
+| till.html:19092 (vendored) | click `till-signout-cloud` | `signoutCloudDo` | fetch POST | no | — | no |
+| till.html:19953 (vendored) | click `till-health-send` | `sendNow` | fetch POST | no | — | no |
+| till.html:19994 (vendored) | click | `healthClose, sureSheet` | fetch POST | no | — | no |
+| till.html:20069 (vendored) | click `till-workbook-get` | `workbookGet` | fetch POST | no | — | no |
+| till.html:20458 (vendored) | click `till-kot` | `sendKOT` | fetch POST | no | — | no |
+| till.html:20477 (vendored) | click `till-part-` | `dropPart` | fetch POST | no | — | no |
+| till.html:20869 (vendored) | click `till-order-go` | `orderGo` | fetch POST | no | — | no |
+| till.html:20885 (vendored) | click | `orderPick` | fetch POST | no | — | no |
+| till.html:21046 (vendored) | click | `pickPay` | fetch POST | no | — | no |
+| till.html:23273 (vendored) | click `till-stuck-release` | `releaseQueue` | fetch POST | no | — | no |
+| till.html:23275 (vendored) | click `till-stuck-copy` | `stuckCopy` | fetch POST | no | — | no |
+| till.html:23277 (vendored) | click `till-storage` | `openStorage` | fetch POST | no | — | no |
+| till.html:23278 (vendored) | click `till-check-sent` | `checkAbsorbedNow` | fetch POST | no | — | no |
+| till.html:23699 (vendored) | change | `retainSet, openStorage` | fetch POST | no | — | no |
+| till.html:23740 (vendored) | click `till-rescue` | `rescueOrphans` | fetch POST | no | — | no |
+| till.html:23754 (vendored) | click `till-wipe` | `wipeDevice` | fetch POST | **yes** | **no** | no |
+| till.html:24087 (vendored) | click `till-send-now` | `sendNow` | fetch POST | no | — | no |
+| till.html:24094 (vendored) | click `till-confirm-arrived` | `sendNow` | fetch POST | no | — | no |
+| till.html:25561 (vendored) | click `till-signin-takeover` | `usignBecome` | fetch POST | no | — | no |
+| till.html:25909 (vendored) | click `till-break` | `takeBreak` | fetch POST | no | — | no |
+| till.html:25910 (vendored) | click `till-handover` | `handOver` | fetch POST | no | — | no |
+| till.html:26445 (vendored) | change | `settingsKeySave` | fetch POST | no | — | no |
+| till.html:26481 (vendored) | click `till-set-signin` | `pairAgain` | fetch POST | no | — | no |
+| till.html:26483 (vendored) | click `till-set-signout` | `setClose, signoutOpen` | fetch POST | no | — | no |

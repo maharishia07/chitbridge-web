@@ -5596,6 +5596,13 @@ async function bizLedgerLoad(){
 }
 function bizLedgerHTML(r){
   if (r.migrated === false) return '<span data-testid="biz-ledger-state">' + esc(tx('Not ready on this server yet.')) + '</span>';
+  /* ⭐ CS1: the server says whether the books MAY open here (r.country, from engines regulation.status) — a country with no pack, no country, or
+     the setup still to do: the switch is not offered; its sentence is, with the one button that fixes it (Country setup) */
+  if (r.country && r.country.books === false && !r.enabled) {
+    return '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span data-testid="biz-ledger-state">○ ' + esc(tx('Off')) + '</span>'
+      + '<span data-testid="biz-ledger-country" style="color:var(--warn-2)">' + esc(r.country.why || '') + '</span>'
+      + '<a class="pri" data-testid="biz-ledger-country-setup" data-to="#/country" onclick="go(this.dataset.to)" style="cursor:pointer">' + esc(tx('Country setup')) + '</a></div>';
+  }
   if (r.enabled) {
     return '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span data-testid="biz-ledger-state" style="color:var(--ok)">● ' + esc(tx('On')) + '</span>'
       + '<span>' + esc(tx('Walk-in sales recorded per')) + ' <b>' + esc(tx(r.walkin_grain === 'bill' ? 'bill' : r.walkin_grain === 'shift' ? 'shift' : 'day')) + '</b></span>'
