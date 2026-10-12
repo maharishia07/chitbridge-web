@@ -1,0 +1,9 @@
+# W2b report — PR body (the runner token cannot open a PR: 403 createPullRequest; the coordinator opens it from this file, then drops the file as CS1b did)
+
+# W2b · main red since CS1: the shared fixture now answers the Country setup step (web only).
+- Fact: `#/country` is reached only from `doRegister` (a NEW shop); sign-in and a saved session boot to `#/app` — the step does not block an existing shop, so the PRODUCT is right and the FIXTURE was behind. Fixed once: `passCountryStep(page, country)` in e2e/fixtures.js, called by `mintEntity` (new option `country`, default 'IN' — a UTC runner prefills US). Picks via the row's own Change → select, presses Continue (ONE PUT), opens the app; a 503 before b299 presses "Open the app"; any other refusal is thrown in the server's words. Flow: Onboarding · Register → Country setup → the app (cap-country.js header).
+- Fixture users on the shard list: only till-demo (others are the manual Playwright suite + dev-PC probes, all through mintEntity → covered); onboarding.spec's inline front-door walk gets the step too.
+- Verified on this runner against production: till-demo PASS (14 s); a mint shows the step, PUT answered **503** (b299 not yet run on production — the owner's step), "Open the app" pressed, landed in `#/app`, server holds IN · INR · April. All 6 walk shards PASS (walk-home, walk-bill remain KNOWN). Offline checks green: check-syntax · check-app-parses · dup-functions · guard-static · token-guard · contract (locators.cjs: 16 misses, all pre-existing on main, none here).
+- For Athi: till-demo on the walks shard mints a throwaway entity on PRODUCTION every PR/push (till-all deliberately excluded it as shot-only). Left as is; say if it should be SKIPped in run-shard.cjs. No new dependency, no secret, no new key.
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
