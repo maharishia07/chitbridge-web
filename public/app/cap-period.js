@@ -74,7 +74,7 @@ const peMODES = [['cash', 'Cash'], ['bank', 'Bank'], ['upi', 'UPI'], ['card', 'C
 const peBtn = (tid, label, fn, cls) => '<button type="button" class="' + (cls || 'supact-pri') + '" data-testid="' + tid + '" onclick="' + fn + '">' + peE(tx(label)) + '</button>';
 /** a minor amount as the text of an amount field (the field is parsed back with bkToMinor — the same digits) */
 function peText(minor) { return bkMinorText(minor); }
-const peMoney = (minor) => bkMoney(minor);
+const peMoney = (minor, c) => bkMoney(minor, c);   /* c: the answer's currency (BAS1: an AU return is in AUD, an AE one in AED) — the India pages pass none, as before */
 const peHeads = ['cgst', 'sgst', 'igst', 'cess'];
 
 /* ═══ 1 · CLOSING STOCK ═════════════════════════════════════════════════════════════════════════════════════════════════
@@ -582,6 +582,7 @@ function peReturnList(r) {
   if (two) cols.push({ key: 'tax', label: tx('VAT'), prio: 1, num: true, w: 150, html: true, tid: (b) => 'pr-tax-' + b.code, cell: (b) => b.tax_minor == null ? peRetDash() : peE(peMoney(b.tax_minor, c)) });
   cols.push({ key: 'opens', label: tx('Ledgers'), prio: 3, w: 280, html: true, cell: (b) => (b.accounts || []).map((a) => '<button type="button" class="optchip" data-testid="pr-open-' + peE(b.code) + '-' + peE(a.code) + '" onclick="peReturnOpen(\'' + peE(a.code) + '\')">' + peE(a.code + ' ' + a.name) + '</button>').join(' ') || peRetDash() });
   PE_RET.api = CBList.mount(host, { key: 'return', t: tx, rows: () => rows, id: (b) => String(b.code), rowTid: (b) => 'pr-box-' + b.code, columns: cols,
+    defaultCols: cols.map((x) => x.key),                                  /* a return is read whole: every column shown (CBList's default keeps three); ⚙ still chooses */
     onOpen: (b) => { const a = (b.accounts || [])[0]; if (a) peReturnOpen(a.code); } });
 }
 /** a figure opens what it counts: the Ledgers page on that ledger, the period chip set to the return's period (the same ledger read the box was summed from) */
