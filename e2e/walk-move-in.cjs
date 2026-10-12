@@ -68,7 +68,7 @@ function preview(b) {
 }
 function imported(b) {
   return { side: b.side || null, as_at: b.as_at || '2026-07-01', kind: b.kind, source: b.source, added: 6, merged: 8, skipped: 1, rows: [{ line: 16, what: 'Tracking Transfers', why: 'No home for Xero type "TRACKING" — add it under Shop ledgers and pick its group.' }],
-    notes: ['Their account codes could not be kept yet (a database update, b300, is still to run) — a trial balance will match on names.'], source_code_written: false };
+    notes: ['Their account codes could not be kept yet (a database update, b302, is still to run) — a trial balance will match on names.'], source_code_written: false };
 }
 /* the three doors, as the page calls them (e2e/contract.cjs reads these literals to know this harness answers them) */
 const DOORS = { preflight: '/api/books/move-in/preflight', preview: '/api/books/move-in/preview', import: '/api/books/move-in/import', health: '/api/books/health', todo: '/api/books/todo' };
@@ -127,7 +127,7 @@ W.run('move-in', async (w) => {
     const n = [await text(page, '[data-testid="mi-done-add"]'), await text(page, '[data-testid="mi-done-merge"]'), await text(page, '[data-testid="mi-done-skip"]')];
     const note = await text(page, '[data-testid="mi-note"]'), dl = !!(await page.$('[data-testid="mi-download"]'));
     const b = sent.import[0] || {};
-    const ok = sent.import.length === 1 && b.confirm === true && b.kind === 'accounts' && n.join(',') === '6,8,1' && dl && /b300/.test(note);
+    const ok = sent.import.length === 1 && b.confirm === true && b.kind === 'accounts' && n.join(',') === '6,8,1' && dl && /b302/.test(note);
     return { ok, saw: n.join(' · ') + (dl ? ' · Download skipped rows' : ' · no download') + ' · ' + note.slice(0, 60) };
   });
   await w.step('M5', 'Another file: an UNBALANCED trial balance -> the preview says the sentence and Import is greyed WITH it', async () => {
