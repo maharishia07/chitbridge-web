@@ -60,6 +60,8 @@ jobs:
         run: node e2e/contract.cjs
       - name: No NEW raw colour in a page or app file (ratchet; e2e/token-guard.baseline.json)
         run: node e2e/token-guard.cjs
+      - name: The process map names files and functions that exist (PM1; docs/process/flows.json)
+        run: node e2e/process-map.cjs
 
 
   scan:
