@@ -62,9 +62,9 @@ if (crmApi) {
 
 /* ── 4 · no harness opts out ── */
 const files = fs.readdirSync(__dirname).filter((f) => /\.cjs$/.test(f) && f !== 'contract.cjs');
-const serves = files.filter((f) => { const s = fs.readFileSync(path.join(__dirname, f), 'utf8'); return /\.route\(/.test(s) && /['"`]\/api\/(books|crm)\//.test(s); });
+const serves = files.filter((f) => { const s = fs.readFileSync(path.join(__dirname, f), 'utf8'); return /\.route\(/.test(s) && /['"`]\/api\/(books|crm|work)\//.test(s); });
 const unwrapped = serves.filter((f) => !/lib\/contract\.cjs/.test(fs.readFileSync(path.join(__dirname, f), 'utf8')));
-ok(unwrapped.length === 0, serves.length + ' harnesses answer /api/books or /api/crm calls; each holds its answers to the contract' + (unwrapped.length ? ' - NOT: ' + unwrapped.join(', ') : ''));
+ok(unwrapped.length === 0, serves.length + ' harnesses answer /api/books, /api/crm or /api/work calls; each holds its answers to the contract' + (unwrapped.length ? ' - NOT: ' + unwrapped.join(', ') : ''));
 
 /* ── 5 · every contract route is answered by some harness (the path appears in a harness that serves it) ── */
 const text = serves.map((f) => fs.readFileSync(path.join(__dirname, f), 'utf8')).join('\n') + '\n' + fs.readFileSync(path.join(__dirname, 'lib', 'crm-api.cjs'), 'utf8');
@@ -73,8 +73,8 @@ const seen = (pattern) => {
   const tail = parts.slice(2).join('/');                               /* books/ledger/:account → "ledger" */
   return !tail || text.indexOf('/' + parts.slice(1).join('/')) >= 0 || text.indexOf(parts[parts.length - 1]) >= 0;
 };
-/* TO1/A1: the /api/work routes are the API's answers for the Tasks & Orders page; no stand-in serves them until that page lands (round W1), which adds its harness and lifts this exemption */
-const unserved = Array.from(new Set(routes.map((k) => k.replace(/ #.*$/, '')))).filter((k) => k.split(' ')[1].indexOf('/api/work/') !== 0).filter((k) => !seen(k.split(' ')[1]));
+/* TO1-UI: the /api/work routes are served by e2e/walk-tasks.cjs (the Tasks & Orders page's stand-in), so the W1 exemption is lifted */
+const unserved = Array.from(new Set(routes.map((k) => k.replace(/ #.*$/, '')))).filter((k) => !seen(k.split(' ')[1]));
 ok(unserved.length === 0, 'every route the contract lists is answered by at least one harness' + (unserved.length ? ' - NOT: ' + unserved.join(', ') : ''));
 
 console.log('\n  contract: ' + pass + ' passed, ' + fail + ' failed');
