@@ -23,6 +23,8 @@ const T={'.html':'text/html','.js':'text/javascript','.css':'text/css','.json':'
  /* stub only the two calls registration makes */
  await p.route('**/api/entities/register', r=>r.fulfill({status:200,contentType:'application/json',body:JSON.stringify({email:'shop@example.in'})}));
  await p.route('**/api/constitutions', r=>r.fulfill({status:200,contentType:'application/json',body:JSON.stringify({constitutions:[{key:'base',name:'Base',is_default:true}]})}));
+ /* CS1: after verify the app goes to Country setup, which reads the step's own answer (stubbed: an Indian shop, the step still to do) */
+ await p.route('**/api/governance/country-setup', r=>r.fulfill({status:200,contentType:'application/json',body:JSON.stringify({migrated:true,done:false,required:true,country:{code:'IN',name:'India'},currency:'INR',fy_start_month:4,tax:{registered:false,number:null,scheme:null},source:{},pack:{id:'IN',version:'1.0.0',books:true,code:null,why:null}})}));
  await p.route('**/api/entities/verify', async r=>{ sent=JSON.parse(r.request().postData()||'{}');
    r.fulfill({status:200,contentType:'application/json',body:JSON.stringify({token:'t.t.t',entity:{display_name:'Test Shop'}})}); });
 
@@ -46,7 +48,11 @@ const T={'.html':'text/html','.js':'text/javascript','.css':'text/css','.json':'
  const open=await p.evaluate(()=>document.getElementById('r_go').disabled);
  console.log('          · after agreeing, disabled = '+open+(open?'  ✗':'  OK'));
  await p.click('[data-testid="reg-submit"]');
- await p.waitForFunction(()=>location.hash.indexOf('app')>=0 || document.querySelector('[data-testid="reg-tocounter"]'),null,{timeout:8000});
+ await p.waitForFunction(()=>location.hash.indexOf('country')>=0 || location.hash.indexOf('app')>=0 || document.querySelector('[data-testid="reg-tocounter"]'),null,{timeout:8000});
+ /* ⭐ CS1: a NEW shop lands on Country setup, prefilled from the time zone with its source */
+ await p.waitForSelector('[data-testid="cs-rows"]',{timeout:8000});
+ const cs=await p.evaluate(()=>({country:document.querySelector('[data-testid="cs-val-country"]').textContent.trim(), src:document.querySelector('[data-testid="cs-src-country"]').textContent.trim()}));
+ console.log('country   · after verify: Country setup · '+cs.country+' · from '+cs.src+(/India/.test(cs.country)?'  OK':'  ✗'));
 
  const c=(sent&&sent.context)||{};
  console.log('sent      · country='+c.country+' currency='+c.currency_code+' tz='+c.timezone
