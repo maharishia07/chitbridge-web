@@ -71,7 +71,10 @@ ok(has('file:api:lib/money.js', 'file:engines:src/money.js', 'vendors') && has('
 ok(ids.has('pack:engines:src/reg-xx.js') && G.nodes.find((n) => n.id === 'pack:engines:src/reg-xx.js').code === 'XX', 'the regulation pack is a node');
 ok(has('fn:engines:src/money.js#round', 'test:engines:tests/money.test.js', 'tested-by'), 'engines round is tested-by the engines test');
 ok(G.meta.notes.some((n) => /decisions file/.test(n)), 'the build SAYS no decisions file exists (decided-by skipped)');
-ok(C.functions.length > 10 && C.calls.length > 3 && C.screenToRoute.some((x) => x[0] === 'screen:web:public/app.html#pay'), 'calls.json carries functions, calls and screen→route');
+/* screen→route comes through the api('key') registry join, so it needs endpoint-usage.cjs beside the checkout (as line 58) — in web CI
+   the api is absent and the join is checked by shape only (CI run 38321611157 failed here before this split) */
+ok(C.functions.length > 10 && C.calls.length > 3 && Array.isArray(C.screenToRoute), 'calls.json carries functions, calls and a screen→route list');
+if (haveEU) ok(C.screenToRoute.some((x) => x[0] === 'screen:web:public/app.html#pay'), '…and screen→route holds the pay screen (registry join)');
 
 /* ── 2 · impact ──────────────────────────────────────────────────────────────────────────────────────────────────── */
 const imp = run(['impact', 'payScreen', '--json', '--out', out1]);
