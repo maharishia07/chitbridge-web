@@ -96,5 +96,8 @@ jobs:
         run: |
           [ -f "$OUT" ] || { echo "no transcript — the round did not start"; exit 0; }
           jq -r '[.[] | select(.type=="result")] | last | "turns: \(.num_turns) · error: \(.is_error)\n\n\(.result)"' "$OUT"
+          # the plan's usage as this round saw it (Athi 13 Oct: at ~80% the coordinator switches to completion + maintenance rounds only)
+          echo; jq -r '[.[] | select(.type=="rate_limit_event") | .rate_limit_info] | last
+            | if . == null then "usage: not reported" else "usage: five_hour \((.unifiedWindows.five_hour.utilization // .utilization // 0) * 100 | floor)% · seven_day \((.unifiedWindows.seven_day.utilization // 0) * 100 | floor)% · status \(.status)" end' "$OUT" || echo "usage: not reported"
           echo; echo "── failed tool calls (first 160 chars each) ──"
           jq -r '.[] | select(.type=="user") | .message.content[]? | select(.is_error==true) | (.content|tostring)[0:160]' "$OUT" | head -40
