@@ -1709,7 +1709,7 @@
       var t = taxOf(l.item_id, l);
       if (t && t.rate != null) {
         var rate = Number(t.rate) + (Number(t.cess) || 0), tax = roundMoney_(net * rate / 100);
-        var k = (t.name && !/^\d/.test(String(t.name)) ? String(t.name) : 'GST') + ' · ' + Number(t.rate) + '%' + (Number(t.cess) ? ' + ' + Number(t.cess) + '% cess' : '');
+        var k = (t.name && !/^\d/.test(String(t.name)) ? String(t.name) : (t.scheme || 'GST')) + ' · ' + Number(t.rate) + '%' + (Number(t.cess) ? ' + ' + Number(t.cess) + '% cess' : '');   /* CX0: the slab's scheme word (pack.tax.scheme — VAT in the UAE) */
         byRate[k] = roundMoney_((byRate[k] || 0) + tax); taxTotal += tax;
       } else untaxed += net;
     });
@@ -1736,7 +1736,7 @@
       var rate = (l.gst_rate != null) ? Number(l.gst_rate) : ((l.tax && l.tax.rate != null) ? Number(l.tax.rate) : null);
       if (rate != null && isFinite(rate)) {
         var cess = Number(l.cess_rate) || 0, tax = roundMoney_(net * (rate + cess) / 100);
-        var k = ((l.tax_name || (l.tax && l.tax.name)) && !/^\d/.test(String(l.tax_name || l.tax.name)) ? String(l.tax_name || l.tax.name) : 'GST') + ' · ' + rate + '%' + (cess ? ' + ' + cess + '% cess' : '');
+        var k = ((l.tax_name || (l.tax && l.tax.name)) && !/^\d/.test(String(l.tax_name || l.tax.name)) ? String(l.tax_name || l.tax.name) : ((l.tax && l.tax.scheme) || 'GST')) + ' · ' + rate + '%' + (cess ? ' + ' + cess + '% cess' : '');   /* CX0: the slab's scheme word */
         byRate[k] = roundMoney_((byRate[k] || 0) + tax); taxTotal += tax;
       } else untaxed += net;
     });
@@ -2026,8 +2026,9 @@
       var t = o.tax;
       if (t && t.rate != null && isFinite(o.amount)) {
         var rate = Number(t.rate) + (Number(t.cess) || 0), incl = roundMoney_(o.amount * (1 + rate / 100));
-        taxChip = '<span class="cbcat-tax" data-testid="cbcat-tax-' + esc(o.id) + '" title="' + esc(t.name || 'GST') + '">+' + esc(String(Number(t.rate))) + '% GST' + (Number(t.cess) ? ' +' + esc(String(Number(t.cess))) + '% cess' : '') + ' · ' + esc(m(incl)) + ' incl.</span>';
-        slab = '<span class="cbcat-slab" title="' + esc(t.name || 'GST') + '">' + esc('GST ' + String(Number(t.rate)) + '%') + (Number(t.cess) ? ' +' + esc(String(Number(t.cess))) + '%' : '') + '</span>';
+        var sw = t.scheme || 'GST';   /* CX0: the slab's scheme word (pack.tax.scheme) — "+5% VAT" in the UAE, never GST by name */
+        taxChip = '<span class="cbcat-tax" data-testid="cbcat-tax-' + esc(o.id) + '" title="' + esc(t.name || sw) + '">+' + esc(String(Number(t.rate))) + '% ' + esc(sw) + (Number(t.cess) ? ' +' + esc(String(Number(t.cess))) + '% cess' : '') + ' · ' + esc(m(incl)) + ' incl.</span>';
+        slab = '<span class="cbcat-slab" title="' + esc(t.name || sw) + '">' + esc(sw + ' ' + String(Number(t.rate)) + '%') + (Number(t.cess) ? ' +' + esc(String(Number(t.cess))) + '%' : '') + '</span>';
       }
     } catch (e) { taxChip = ''; }
     return { price: price, taxChip: taxChip, slab: slab };

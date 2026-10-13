@@ -282,7 +282,7 @@
           "screen": [{ "file": "web:public/app/cap-crm-record.js", "fn": "" }, { "file": "web:public/app/accounts-shell.js", "fn": "" }],
           "engine": [{ "file": "api:lib/crm.js", "fn": "isLead" }, { "file": "api:lib/crm.js", "fn": "one" }],
           "route": [{ "m": "POST", "p": "/api/relationships/customers", "file": "api:routes/relationships.js" }, { "m": "GET", "p": "/api/crm/parties/:id", "file": "api:routes/crm.js" }, { "m": "POST", "p": "/api/chits/send", "file": "api:routes/chits.js" }],
-          "chit": "the first bill: txn_count > 0 ends the lead (isLead); a traded party refuses a stage move", "ledger": "none here — the bill posts under O2C step 7",
+          "chit": "the first bill: txn_count > 0 ends the lead (isLead); a traded party refuses a stage move — counted for a bill SENT to the party (the recipient auto-add) and for a counter bill that NAMES them in business_json.customer (lib/crm.traded, inside the bill's transaction — FX-L2C)", "ledger": "none here — the bill posts under O2C step 7",
           "test": ["api:tests/crm-maytrade.test.cjs", "api:tests/crm-remove-walkin.test.cjs", "api:tests/customer-by-name.test.cjs"],
           "status": "ok", "note": "" }
       ]
