@@ -22,7 +22,7 @@ const tag = new Date().toISOString().slice(11, 19).replace(/:/g, '');   /* re-ru
 const NAMES = { a: 'Lead Anbu ' + tag, b: 'Lead Bala ' + tag, c: 'Lead Chitra ' + tag, d: 'Lead Devi ' + tag };
 const PHONES = { a: '9' + String(Date.now()).slice(-9), b: '8' + String(Date.now()).slice(-9), c: '7' + String(Date.now()).slice(-9), d: '6' + String(Date.now()).slice(-9) };
 
-W.run('x-l2c', async (w) => {
+W.run(REAL ? 'x-l2c-real' : 'x-l2c', async (w) => {   /* two sets of shots: walk-x-l2c-real-NN.png (this stack) · walk-x-l2c-NN.png (the fixture) */
   const { page, ctx, base } = w;
   let api = null, token = null, SI = null, S = null;
   const txt = async (sel) => { try { return (await page.locator(sel).first().innerText()).replace(/\s+/g, ' ').trim(); } catch (_) { return ''; } };
@@ -262,7 +262,7 @@ W.run('x-l2c', async (w) => {
           if (await p2.locator(T('signin-code')).count()) await p2.fill(T('signin-code'), v.otp); else await p2.fill(T('signin-pin'), '2749');
           await p2.click(T('signin-verify'));
           const got = await p2.waitForSelector(T('shop-name') + ', ' + T('signin-pin1') + ', ' + T('signin-why'), { timeout: 20000 }).catch(() => null);
-          if (!got) { await p2.screenshot({ path: require('path').join(__dirname, 'shots', 'walk-x-l2c-viewer.png') }); return { ok: false, saw: 'the sign-in window after the code, as ' + v.login + ': "' + (await p2.locator(T('signin-window')).innerText().catch(() => '')).replace(/\s+/g, ' ').slice(0, 160) + '"' }; }
+          if (!got) { await p2.screenshot({ path: require('path').join(__dirname, 'shots', 'walk-x-l2c' + (REAL ? '-real' : '') + '-viewer.png') }); return { ok: false, saw: 'the sign-in window after the code, as ' + v.login + ': "' + (await p2.locator(T('signin-window')).innerText().catch(() => '')).replace(/\s+/g, ' ').slice(0, 160) + '"' }; }
           if (await p2.locator(T('signin-pin1')).count()) { await p2.fill(T('signin-pin1'), '2749'); await p2.fill(T('signin-pin2'), '2749'); await p2.click(T('signin-pinsave')); await p2.waitForSelector(T('shop-name'), { timeout: 20000 }); }
         } else {
           const S2 = SI.standIn({ l2c: SI.l2cState({ seed: true }) }); await ctx2.route('**/api/**', (r) => SI.route(S2, r));
@@ -283,11 +283,11 @@ W.run('x-l2c', async (w) => {
           await p2.fill(T('crm-lead-name'), 'Viewer Try ' + tag); await p2.click(T('crm-lead-save')); await p2.waitForTimeout(1500);
           tried = ' · a viewer pressing Save got: "' + ((await p2.locator(T('crm-lead-msg')).innerText().catch(() => '')) || (await p2.locator('#toast').innerText().catch(() => ''))).replace(/\s+/g, ' ').trim() + '"';
         }
-        await p2.screenshot({ path: require('path').join(__dirname, 'shots', 'walk-x-l2c-viewer.png') });
+        await p2.screenshot({ path: require('path').join(__dirname, 'shots', 'walk-x-l2c' + (REAL ? '-real' : '') + '-viewer.png') });
         const ok = /viewer/.test(who) && add === 0 && move === 0 && log === 0 && greyed === 6 && whys.every((x) => x === 'Your login can only view');
         return { ok, saw: '"' + who + '" · + Add lead: ' + add + ' · Move to…: ' + move + ' · Log: ' + log + ' · greyed outcomes: ' + greyed + ' · why: ' + (whys[0] || '(none)') + tried };
       } catch (e) {
-        await p2.screenshot({ path: require('path').join(__dirname, 'shots', 'walk-x-l2c-viewer.png') }).catch(() => {});
+        await p2.screenshot({ path: require('path').join(__dirname, 'shots', 'walk-x-l2c' + (REAL ? '-real' : '') + '-viewer.png') }).catch(() => {});
         return { ok: false, saw: 'it stopped (' + String(e && e.message || e).split('\n')[0].slice(0, 80) + ') · the page: "' + (await p2.evaluate(() => document.body.innerText.replace(/\s+/g, ' ')).catch(() => '')).slice(0, 160) + '"' };
       } finally { await ctx2.close(); }
     });
