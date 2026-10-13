@@ -291,7 +291,8 @@ function enPreviewHTML() {
   var c = pv.currency, v = pv.voucher || {};
   var grey = 'color:var(--grey);font-size:var(--fs-1);text-transform:uppercase';
   return '<div style="margin-bottom:8px"><span class="en-chip" data-testid="en-voucher">' + enE((v.series || 'MJ') + (v.kind ? ' · ' + tx(v.kind) : '')) + '</span> '
-    + (pv.balanced === true ? '<span class="en-ok" data-testid="en-balanced">✓ ' + enE(tx('Both sides match')) + '</span>' : '<b data-testid="en-unbalanced" style="color:var(--red-i,#8E3517)">' + enE(tx('The two sides do not match')) + '</b>') + '</div>'
+    /* WX-R2R: a refused entry with no lines has no two sides — the refusal (with its fix) is the one thing said; "do not match" sent the owner to the amounts when the DATE was the fix */
+    + (pv.balanced === true ? '<span class="en-ok" data-testid="en-balanced">✓ ' + enE(tx('Both sides match')) + '</span>' : (pv.refusals || []).length && !(pv.lines || []).length ? '' : '<b data-testid="en-unbalanced" style="color:var(--red-i,#8E3517)">' + enE(tx('The two sides do not match')) + '</b>') + '</div>'
     + enRefusalHTML(pv.refusals, 'refusals') + enWarnHTML(pv.warnings)
     + '<div style="' + grey + '">' + CBList.nextRow([enE(tx('Code')) + ' · ' + enE(tx('Ledger')), enE(tx('Debit')), enE(tx('Credit'))], [110, 110]) + '</div>'
     + (pv.lines || []).map(function (l) { return enLineHTML(l, c); }).join('')
