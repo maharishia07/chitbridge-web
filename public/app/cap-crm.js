@@ -338,7 +338,7 @@ function crmPartyCols() {
     { key: 'next', label: 'Next follow-up', prio: 4, w: 170, sort: 'next', html: true, cell: crmFuCell, value: function (p) { return p.next_followup_at || '9999'; } },
     { key: 'phone', label: 'Phone', prio: 7, w: 160, cell: function (p) { return p.phone || '—'; } },
     { key: 'email', label: 'E-mail', prio: 8, w: 220, cell: function (p) { return crmRealEmail(p.email) || '—'; } },
-    { key: 'gstin', label: 'GSTIN', prio: 9, w: 190, mono: true, cell: function (p) { var g = (p.tax_ids || []).filter(function (t) { return t.scheme === 'GSTIN'; })[0]; return g ? g.value : '—'; } },
+    { key: 'gstin', label: taxIdWord(), prio: 9, w: 190, mono: true, cell: function (p) { var g = (p.tax_ids || []).filter(function (t) { return t.scheme === taxIdWord(); })[0]; return g ? g.value : '—'; } },   /* CX0: the pack's tax-id word (GSTIN · ABN · TRN) */
     { key: 'seg', label: 'Segment · groups', prio: 10, w: 190, html: true, cell: function (p) { return (crmSegChip(p) + (p.groups || []).map(function (g) { return '<span class="tag">' + esc(g) + '</span>'; }).join(' ')) || '<span class="sub">—</span>'; }, value: function (p) { return [p.segment].concat(p.groups || []).join(' '); } },
     { key: 'terms', label: 'Credit terms', prio: 11, w: 170, html: true, cell: crmTermsCell, value: function (p) { var t = p.terms || {}, s = t.customer || t.supplier; return s && s.credit_days != null ? s.credit_days : ''; } },
     { key: 'city', label: 'City', prio: 12, w: 140, cell: function (p) { return p.city || '—'; } });

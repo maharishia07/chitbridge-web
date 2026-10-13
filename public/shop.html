@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Shop — Chit &amp; Bridge</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -75,7 +76,7 @@
 <script src="app/step-flow.js"></script>
 <script src="app/showcase-templates.js"></script>   <!-- the shop's chosen showcase template (S2) -->
 <script>
-var API = (new URLSearchParams(location.search).get('api')) || 'https://chitbridge-api-production.up.railway.app';
+var API = (new URLSearchParams(location.search).get('api')) || window.CB_API;
 /**
  * ⭐⭐ ?s= IS THE PUBLIC HANDLE (a User ID); ?bridge= IS THE OLD INTERNAL KEY, KEPT SO EXISTING LINKS STILL OPEN.
  *
@@ -321,7 +322,6 @@ function curOf(price){ return cbCurrency(price) || (_SHOPDATA && _SHOPDATA.shop 
 function symOf(code){ if(!code) return ''; if(_CUR[code]) return _CUR[code];
   try { var pt=new Intl.NumberFormat(undefined,{style:'currency',currency:code,currencyDisplay:'narrowSymbol'})
     .formatToParts(0).find(function(x){return x.type==='currency';}); return (pt&&pt.value)||code+' '; } catch(e){ return code+' '; } }
-function priceSym(price){ return symOf(curOf(price)); }
 function priceUnit(){ var rc=regionCur(); return rc.units||'litre'; }
 // The amount, unchanged. No rate, no rounding of someone else's money — what the seller typed is what shows.
 function priceVal(price){ return price; }
@@ -507,7 +507,7 @@ function productListHtml(data, cur){
  * Caught by e2e/tests/variants.spec.js against the deployed site — not by any unit test, not by node -c, and not
  * by the local run, which never reached this code because the API refuses a localhost origin. The seam again.
  */
-function _shopSym(){ var c=(_SHOPDATA&&_SHOPDATA.shop&&_SHOPDATA.shop.currency_code)||''; return (!c||c==='INR')?'₹':(c+' '); }
+function _shopSym(){ var c=(_SHOPDATA&&_SHOPDATA.shop&&_SHOPDATA.shop.currency_code)||''; return symOf(c); }   /* CX0: the shop's own symbol (symOf) — no code, no symbol */
 /**
  * ⭐ CATEGORIES ON THE SHOP (S7, 2026-10-09). The catalogue already sends its categories and each item's category ids; the
  * shared cart tallies them (CBCart.categories) and the shared list draws a heading per section (opts.sectionOf). Nothing here
@@ -677,7 +677,7 @@ function shopUpiBlock(res, isCart){
     +'<a data-testid="shop-upi-link" href="'+esc(link)+'" style="display:inline-block;margin-top:8px;border:1px solid #3F66A6;border-radius:9px;padding:8px 14px;color:#3F66A6;font-weight:700;text-decoration:none">Open my UPI app</a>'
     +'<div style="font-size:11px;color:#6a707a;margin-top:6px">'+esc('The shop confirms the payment on its side.')+'</div></div>';
 }
-function cbFmt(n){ try{ return (typeof CBLocale!=='undefined')?CBLocale.money(n,'INR'):('₹'+Number(n).toFixed(2)); }catch(e){ return '₹'+n; } }
+function cbFmt(n){ try{ return (typeof CBLocale!=='undefined')?CBLocale.money(n,curOf(null)||''):(_shopSym()+Number(n).toFixed(2)); }catch(e){ return _shopSym()+n; } }   /* CX0: the SHOP's currency, never INR by name */
 function shopCartBarHtml(){ if(!_CART) return ''; try{ if(typeof CBCatUI!=='undefined'&&CBCatUI.barHTML) return CBCatUI.barHTML(_CART); }catch(e){} return _CART.barHTML(); }   /* the same chip as the app; first paint = every repaint */   /* ⚠️ dropped by the stock patch for ~25 min on 2026-09-05 — every storefront said 'Could not reach the shop' */
 var _stockAsked=false;
 function shopAskStock(){
@@ -711,7 +711,7 @@ function scWire(c){
 function render(data){
   setTimeout(shopAskStock, 1500);   /* ask the store's connector for fresh stock once per open */
   if(_ONLY){ data = Object.assign({}, data, { finishes: [], items: (data.items||[]).filter(function(p){ return String(p.item_id||(p.item&&p.item.item_id)||'')===_ONLY; }) }); }
-  var s=data.shop||{}, cur=(s.currency_code==='INR'||!s.currency_code)?'₹':(s.currency_code+' ');
+  var s=data.shop||{}, cur=symOf(s.currency_code);
   if(s.order_input&&typeof s.order_input==='object') _OI=s.order_input;   // the declared contract, from the API
   _METHOD=_OI.preset||'cart';
   var statusBadge = s.business_status==='closed' ? '<span class="badge b-closed">Closed</span>' : (s.business_status==='away'?'<span class="badge b-away">Away</span>':'<span class="badge b-open">Open</span>');
@@ -1001,10 +1001,10 @@ function shopCartOrder(){
   if(_d&&_d.cart){ _ord.name=_d.name; _ord.loc=_d.loc; _ord.contact=_d.contact; _ord.mode=_d.mode; }
   orderRender();
 }
-function _cartLineTotal(i){ var L=_ord.lines[i]; var p=Number(L.price)||0; return p?('₹'+(p*L.qty)):'—'; }
+function _cartLineTotal(i){ var L=_ord.lines[i]; var p=Number(L.price)||0; return p?cbFmt(p*L.qty):'—'; }
 function _cartGrand(){ var s=0, any=false;
   (_ord.lines||[]).forEach(function(L){ var p=Number(L.price)||0; if(p){ any=true; s+=p*L.qty; } });
-  return any?('₹'+s):'—'; }
+  return any?cbFmt(s):'—'; }
 /**
  * ════════════════════════════════════════════════════════════════════════════════════════════════════════════════
  *  THE BASKET CHECKOUT, IN STEPS — Items → Delivery → Review → Who you are
@@ -1165,7 +1165,7 @@ function orderRender(msg, err){
     // The panel is only the HOST — the rail, the step body and the footer are painted by the flow that owns them.
     if(_CFLOW) _CFLOW.paint();
     return; }
-  var e=_FIN[_ord.idx], it=e.it, cur='₹';
+  var e=_FIN[_ord.idx], it=e.it, cur=_shopSym();
   var comboOpts=(it.combinations||[]).map(function(cm){ return '<option value="'+esc(cm.name)+'"'+(cm.name===_ord.combo?' selected':'')+'>'+esc(cm.name)+' ('+((cm.colours||[]).map(function(c){return esc(c.name);}).join(' + '))+')</option>'; }).join('');
   var minL=(e.rules&&Number(e.rules.min_order_litres))||0;   // STONE 2: the source's rule, cascaded
   var otpStep=(_ord.step==='otp');

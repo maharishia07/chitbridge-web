@@ -195,8 +195,8 @@ function mount(el, o) {
       else if (typeof root.openChitSheet === 'function') root.openChitSheet(id);
       else if (typeof root.openChit === 'function') root.openChit(id);
       /* O4: a page with no chit sheet (Home) sends the press to where the chit opens - never closes the list and does nothing.
-         TO1b (REQUIREMENT §6): a NEW ORDER opens in Tasks & Orders — the shop's task — not the CRM's list */
-      else if (r.getAttribute('data-order')) root.location.href = '/tasks.html?open=' + encodeURIComponent(id);
+         TO1b (REQUIREMENT §6): a NEW ORDER opens in Tasks & Orders — the shop's task — not the CRM's list; AX1: unless this edition leaves Tasks out (the CRM's chit, then) */
+      else if (r.getAttribute('data-order') && !(root.CBEdition && root.CBEdition.hidesHref('/tasks.html'))) root.location.href = '/tasks.html?open=' + encodeURIComponent(id);
       else root.location.href = '/crm.html#/chits?open=' + encodeURIComponent(id);
       return;
     }

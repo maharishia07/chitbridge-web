@@ -2,6 +2,7 @@
 <html lang="en" data-tokens="list">
 <head>
 <meta charset="utf-8">
+<script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CB CRM</title>
 <!-- ⭐ CB CRM — every party (customer and supplier) as one record, on its own page like CB Accounts (docs/design/crm/PLAN.md Q9).
@@ -324,11 +325,11 @@ dialog.sheet::backdrop{background:var(--scrim)}
 const CFG = { API_BASE: (function(){
   try{
     var forced = localStorage.getItem('cb_api_base');
-    if (forced) return forced === 'stage' ? 'https://chitbridge-api-production.up.railway.app' : forced;
+    if (forced) return forced === 'stage' ? window.CB_API : forced;
     var h = location.hostname;
     if (h === 'localhost' || h === '127.0.0.1') return 'http://localhost:3000';
   }catch(_){}
-  return 'https://chitbridge-api-production.up.railway.app';
+  return window.CB_API;
 })() };
 let SESSION = { token: null, role: null, name: null, entity: null, bridgeId: null };
 const EP = {};                       /* the Ledger's boot rows come from accounts-shell.js, the CRM's from cap-crm.js */
@@ -336,6 +337,7 @@ let UI = { vp: 'lap', lw: 340, custs: [], sups: [] };   /* custs/sups: the rows 
 function go(){ signedOut('Your session ended. Please sign in again.'); }   /* api()'s 401 → this page's own sign-in card (CBSignin), not the app's (R10) */
 </script>
 <script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies (engines screen) -->
+<script src="/app/edition.js"></script>   <!-- CBEdition (AX1): the showing this person chose — the switcher, the bell and the avatar's Edition choice follow it -->
 <script src="/app/avatar.js"></script>   <!-- CBAvatar: the one avatar (Profile · Support · Sign out) and the look it owns — nothing of it is drawn here -->
 <script src="/app/core.js"></script>
 <script src="/app/accounts-shell.js"></script>
@@ -468,7 +470,8 @@ async function start(){
   if (g !== CRM.gen || !MINE) return;
   if (t.others.length) return closeFirst(t);
   /* the Ledger's one read: on → the Dues column and the dues alert exist; off (404) → neither is drawn, no blank column */
-  try{ const h = await api('booksHealth'); CRM.ledger = !!(h && h.enabled !== false); }
+  try{ const h = await api('booksHealth'); CRM.ledger = !!(h && h.enabled !== false);
+    if (h && h.country && h.country.country && h.country.country.code) SESSION.country = h.country.country.code; }   /* CX0: the shop's country — the pack's tax-id word (taxIdWord) on the party list and record */
   catch(e){ CRM.ledger = false; }
   try { localStorage.setItem('cb_crm_ledger', CRM.ledger ? '1' : '0'); } catch (_) {}
   if (g !== CRM.gen) return;

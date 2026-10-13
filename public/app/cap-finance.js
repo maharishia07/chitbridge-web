@@ -21,13 +21,15 @@ function finOwes(p) { return Number(p.balance_minor) > 0; }
 async function finLoad(quiet) {
   if (finTab() === 'terms') return ftLoad(quiet);   /* the Terms tab (cap-finance-terms.js) */
   if (finTab() === 'cash') return fcLoad(quiet);    /* the Cash tab (cap-finance-cash.js, F3) */
+  if (finTab() === 'repeat') return rpLoad(quiet);  /* the Repeat supply tab (cap-repeat.js, RI1) */
   var g = ++FIN.gen;
   if (!quiet) { FIN.state = 'loading'; if (FIN.api) FIN.api.refresh(); }
   try {
     var r = await api('booksDues', { query: { asOf: bkToday(), finance: '1' } });
     if (g !== FIN.gen) return;
     bkDuesStore(r);
-    FIN.cur = (r && r.currency) || 'INR';
+    FIN.cur = (r && r.currency) || bkCur();
+    if (r && r.currency && typeof SESSION !== 'undefined' && SESSION) SESSION.currency = r.currency;   /* CX0: the ledger's currency reaches Receive / Pay (finance.html sets none) */
     FIN.rows = ((r && r.parties) || []).filter(function (p) { return bkDuesSide(p) === 'rcv' && finOwes(p); });
     FIN.state = 'ready'; FIN.err = null;
   } catch (e) {
@@ -97,6 +99,7 @@ function finMount(frame) {
   var s = document.getElementById('screen'); if (!s) return;
   if (finTab() === 'terms') return ftMount(frame);   /* the Terms tab (cap-finance-terms.js) */
   if (finTab() === 'cash') return fcMount(frame);    /* the Cash tab (cap-finance-cash.js, F3) */
+  if (finTab() === 'repeat') return rpMount(frame);  /* the Repeat supply tab (cap-repeat.js, RI1) */
   ftNav();
   s.className = 'screen flush';
   s.innerHTML = '<div id="fin_list" data-testid="fin-list" style="flex:1 1 auto;min-height:0"></div>';

@@ -1,5 +1,6 @@
 <!doctype html>
 <meta charset="utf-8">
+<script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Network Lab</title>
 <!--
@@ -45,7 +46,7 @@ function labCheck(){
   var q=new URLSearchParams(location.search),tok='';
   try{var ss=JSON.parse(localStorage.getItem('cb_sess')||'null');tok=ss&&ss.token||'';}catch(_){}
   if(!tok){out.innerHTML='<div class="says bad">Sign in to the app first — the check runs on the server. Nothing is made either way.</div>';return;}
-  var api=q.get('api')||'https://chitbridge-api-production.up.railway.app';
+  var api=q.get('api')||window.CB_API;
   var nodes=[{key:'r',name:'Sample',root:true,owned:true,parent_key:null,holds:[]}].concat(LAB.map(function(n,i){
     return {key:'n'+i,name:n.name,owned:n.owned,partner_ref:n.ref,parent_key:'r',holds:['catalogue']};}));
   btn.disabled=true;out.innerHTML='<div class="s" style="color:var(--grey)">Checking…</div>';

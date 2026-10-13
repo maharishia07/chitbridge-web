@@ -18,6 +18,8 @@
  *     homeHref  where the switcher's areas point (default '/'; an area is homeHref + '#' + area)
  *   shell.slots { bell, alerts, home, work } · shell.open() · .close() · .isOpen() · .go(area) · .area() · .header() · .manifest() · .ready (Promise)
  *
+ * EDITIONS (AX1): if the page loaded /app/edition.js, CBEdition decides which entries this showing draws — only those cards, their pillar boxes and
+ * their areas (an area with none is not in the menu), a header chip naming the view and one line on Home saying what it is for. Without it: every entry.
  * WHAT IT READS: the manifest, GET /api/entities/header (N19: { business, licences[], trade_ready }) and each built entry's `facts`
  * URL. Nothing else. A 404 or a failure is an EMPTY STATE that says so — never a made-up number.
  * WHAT IT NEVER DOES: load an application's script (only the units CBAvatar · CBKural · CBSignin · CBBell, each IF the page loaded
@@ -53,13 +55,14 @@
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function lsGet(k) { try { return root.localStorage.getItem(k); } catch (_) { return null; } }
 
-  /** the API base, decided the way the pages decide it (CFG.API_BASE) — here once, so a page that mounts the shell need not copy it */
+  /** the API base, decided the way the pages decide it (CFG.API_BASE) — here once, so a page that mounts the shell need not copy it.
+      HX1: the deploy's address is window.CB_API (/config.js, loaded first by every page) — never a host in code */
   function apiBase() {
     var f = lsGet('cb_api_base');
-    if (f) return f === 'stage' ? 'https://chitbridge-api-production.up.railway.app' : f;
+    if (f) return f === 'stage' ? (root.CB_API || '') : f;
     var h = root.location && root.location.hostname;
     if (h === 'localhost' || h === '127.0.0.1') return 'http://localhost:3000';
-    return 'https://chitbridge-api-production.up.railway.app';
+    return root.CB_API || '';
   }
   function session() { try { var s = JSON.parse(lsGet('cb_sess') || 'null'); return s && s.token ? s : null; } catch (_) { return null; } }
 
@@ -89,7 +92,7 @@
     '.cbsh-who .chev{color:var(--sh-muted);font-size:10px;transition:transform .14s}',
     '.cbsh-hdr.open .cbsh-who .chev{transform:rotate(180deg)}',
     '.cbsh-grow{flex:1}',
-    '.cbsh-lic:empty,.cbsh-bell:empty{display:none}',
+    '.cbsh-lic:empty,.cbsh-bell:empty,.cbsh-ed:empty{display:none}',
     '.cbsh-chip{display:inline-flex;align-items:center;gap:7px;height:28px;padding:0 11px;border-radius:8px;font-size:12.5px;font-weight:600;white-space:nowrap;border:1px solid}',
     '.cbsh-chip .d{font-family:var(--f-num,"IBM Plex Mono",monospace);font-weight:700}.cbsh-chip .sm{display:none}',
     '.cbsh-chip.due{background:var(--sh-blue-t);border-color:var(--sh-blue-b);color:var(--sh-blue-i)}',
@@ -136,7 +139,7 @@
     '.cbsh-nav{flex:0 0 var(--sh-navw);border-right:1px solid var(--sh-line);background:var(--sh-panel);display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 0}',
     '.cbsh-nv{width:46px;border:0;background:none;border-radius:10px;padding:7px 0 5px;display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--sh-muted)}',
     '.cbsh-nv .i{font-size:17px;line-height:1}.cbsh-nv .t{font-size:10px;font-weight:600;letter-spacing:.01em}',
-    '.cbsh-nv:hover{background:var(--sh-hover)}',
+    '.cbsh-nv:hover{background:var(--sh-hover)}.cbsh-nv[hidden]{display:none}',
     '.cbsh-nv[aria-current]{background:var(--sh-card);color:var(--sh-green-d);box-shadow:0 0 0 1px var(--sh-line)}.cbsh-nv[aria-current] .i{color:var(--sh-green)}',
     '.cbsh-main{flex:1 1 auto;min-width:0;overflow-y:auto;overflow-x:hidden;scroll-behavior:smooth;scrollbar-width:thin;scrollbar-color:var(--sh-line) transparent}',
     '.cbsh-inner{max-width:1240px;margin:0 auto;padding:16px 24px 28px}',
@@ -274,6 +277,7 @@
           (person ? '<button type="button" class="cbsh-who" data-testid="shell-shop" aria-expanded="false" aria-controls="' + sheetId + '"><b></b><span class="chev" aria-hidden="true">▼</span></button>' : '') +
           (mode === 'app' ? '<div class="cbsh-sw"><button type="button" class="cbsh-swb" data-testid="shell-switcher" aria-haspopup="true" aria-expanded="false"></button><div class="cbsh-swpop" data-testid="shell-switcher-menu" hidden></div></div>' : '') +
           '<span class="cbsh-grow"></span>' +
+          '<span class="cbsh-ed" data-testid="shell-edition"></span>' +
           '<span class="cbsh-lic" data-testid="shell-licence"></span>' +
           '<span class="cbsh-bell" data-testid="shell-bell" data-slot="bell"></span>' +
           '<span class="cbsh-av" data-testid="shell-avatar"></span>' +
@@ -307,6 +311,15 @@
       var lic = $('.cbsh-lic'), w = S.header ? worstOf(S.header.licences) : null;
       lic.innerHTML = w ? '<button type="button" class="cbsh-chip ' + w.band + '" data-testid="shell-licence-chip" data-band="' + w.band + '">' + (w.band === 'due' ? '●' : '⚠') +
         ' <span class="lbl">' + esc(w.label) + '</span> <span class="d">' + (w.days_left < 0 ? '<span class="lg">' + esc(W.expired(-w.days_left)) + '</span><span class="sm">' + esc(W.lapsed) + '</span>' : esc(daysWord(w))) + '</span></button>' : '';
+    }
+
+    /* ── the edition: a chip in the bar naming the view (absent on the full app) — the chip look the licence uses, never a new one ── */
+    function edition() { return root.CBEdition && S.manifest ? root.CBEdition.info(S.manifest) : null; }
+    function paintEdition() {
+      var ed = edition(), spot = $('.cbsh-ed');
+      spot.innerHTML = ed ? '<span class="cbsh-chip due" data-testid="shell-edition-chip" data-edition="' + esc(ed.key) + '">' + esc(ed.chip) + '</span>' : '';
+      var line = $('[data-testid="shell-edition-line"]');
+      if (line) { line.textContent = ed ? ed.line : ''; line.hidden = !(ed && ed.line); }
     }
 
     /* ── the sheet: the business · licences · trade ready — or the empty state that says they are not available yet ── */
@@ -346,7 +359,10 @@
     /* ── the five areas (Home) ── */
     function pillarOf(e) { return e.pillar || PDEFAULT[e.area] || e.area; }
     function sectionOf(e) { var p = pillarOf(e); return PILLARS.selling.indexOf(p) >= 0 ? 'selling' : PILLARS.running.indexOf(p) >= 0 ? 'running' : p; }
-    function entriesOf(area) { return ((S.manifest && S.manifest.entries) || []).filter(function (e) { return e && sectionOf(e) === area; }); }
+    function shown() { var m = root.CBEdition && S.manifest ? root.CBEdition.view(S.manifest) : S.manifest; return (m && m.entries) || []; }
+    function entriesOf(area) { return shown().filter(function (e) { return e && sectionOf(e) === area; }); }
+    /* the areas this showing has: Home always; another area only if the edition draws something in it (the full app: all five) */
+    function areasShown() { return !S.manifest || !edition() ? AREAS : AREAS.filter(function (a) { return a === 'home' || entriesOf(a).length; }); }
     /* a pillar box: its title, then the cards that have a page, then the dashed chips (coming · workshop) */
     function pillarBox(p, list) {
       var built = list.filter(function (e) { return e.state === 'built' && e.route; }), rest = list.filter(function (e) { return !(e.state === 'built' && e.route); });
@@ -375,12 +391,14 @@
       /* Home is drawn ONCE (the page may already have put its alerts and content in the slots); the four areas are redrawn from the manifest */
       if (!$('.cbsh-sec.home')) {
         box.innerHTML = '<section class="cbsh-sec home" data-area="home" data-testid="shell-area-home"><h2 class="cbsh-ph">' + esc(W.areas.home) + '</h2>' +
-          '<div class="cbsh-alerts" data-slot="alerts"></div><div class="cbsh-home" data-slot="home"></div><div class="cbsh-note" data-testid="shell-noapps" hidden>' + esc(W.noApps) + '</div>' +
+          '<div class="cbsh-note" data-testid="shell-edition-line" hidden></div><div class="cbsh-alerts" data-slot="alerts"></div><div class="cbsh-home" data-slot="home"></div><div class="cbsh-note" data-testid="shell-noapps" hidden>' + esc(W.noApps) + '</div>' +
           '</section><div class="cbsh-more"></div>';
         slots.alerts = $('[data-slot="alerts"]'); slots.home = $('[data-slot="home"]');
       }
       $('[data-testid="shell-noapps"]').hidden = !!S.manifest || S.loadingApps;
-      $('.cbsh-more').innerHTML = AREAS.slice(1).map(function (a) {
+      var has = areasShown();
+      [].forEach.call(el.querySelectorAll('.cbsh-nv'), function (b) { b.hidden = has.indexOf(b.getAttribute('data-go')) < 0; });
+      $('.cbsh-more').innerHTML = has.slice(1).map(function (a) {
           var list = entriesOf(a), built = list.filter(function (e) { return e.state === 'built' && e.route; }), rest = list.filter(function (e) { return !(e.state === 'built' && e.route); });
           var cap = '<div class="cbsh-cap"><b>' + esc(W.caption[a]) + '</b>' + (W.sub[a] ? '<span>' + esc(W.sub[a]) + '</span>' : '') + '<i></i></div>';
           if (PILLARS[a]) {
@@ -431,7 +449,7 @@
       [].forEach.call(el.querySelectorAll('.cbsh-nv'), function (b) { if (b.getAttribute('data-go') === id) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current'); });
     }
     function go(id) {
-      if (AREAS.indexOf(id) < 0) id = 'home';
+      if (areasShown().indexOf(id) < 0) id = 'home';
       if (mode !== 'home') { root.location.href = homeHref + (id === 'home' ? '' : '#' + id); return; }
       if (phone.matches) { main.setAttribute('data-tab', id); main.scrollTop = 0; mark(id); placeKural(); return; }
       var sec = $('.cbsh-sec.' + id);
@@ -447,8 +465,8 @@
       if (S.pin && bottom && S.pin !== 'home') return;
       S.pin = null;
       var y = main.scrollTop + 40, cur = 'home';
-      AREAS.forEach(function (id) { var s = $('.cbsh-sec.' + id); if (s && s.offsetTop <= y) cur = id; });
-      if (bottom) cur = 'setup';
+      areasShown().forEach(function (id) { var s = $('.cbsh-sec.' + id); if (s && s.offsetTop <= y) cur = id; });
+      if (bottom) cur = areasShown().slice(-1)[0];
       mark(cur);
     }
 
@@ -459,7 +477,7 @@
       var cur = (me && me.area) || o.area || 'home';
       b.innerHTML = '<span aria-hidden="true">' + esc((me && me.icon) || ICON[cur]) + '</span><span>' + esc((me && me.name) || W.areas[cur]) + '</span><span class="chev" aria-hidden="true">▼</span>';
       b.setAttribute('aria-label', W.switcher);
-      pop.innerHTML = AREAS.map(function (a) {
+      pop.innerHTML = areasShown().map(function (a) {
         return '<a href="' + esc(homeHref + (a === 'home' ? '' : '#' + a)) + '" data-testid="shell-switch-' + a + '"' + (a === cur ? ' aria-current="true"' : '') + '><span class="i" aria-hidden="true">' + ICON[a] + '</span>' + esc(W.areas[a]) + '</a>';
       }).join('');
     }
@@ -529,9 +547,9 @@
     var kuralP = (mode !== 'bar' && o.kural !== false && root.CBKural && root.CBKural.mount)
       ? root.CBKural.mount({ route: o.kural || 'planning', host: phone.matches && mode === 'home' ? $('.cbsh-pfoot') : $('.cbsh-foot') }).then(placeKural).catch(function () {}) : Promise.resolve();
 
-    var manP = loadManifest().then(function (m) { S.manifest = m && m.entries ? m : { entries: [] }; }, function () { S.manifest = null; })
+    var manP = loadManifest().then(function (m) { S.manifest = m && m.entries ? m : { entries: [] }; if (root.CBEdition) root.CBEdition.use(S.manifest); }, function () { S.manifest = null; })
       .then(function () { S.loadingApps = false; })
-      .then(function () { if (mode === 'home') { paintAreas(); if (first !== 'home') go(first); readFacts(); } if (mode === 'app') paintSwitcher(); });
+      .then(function () { paintEdition(); if (mode === 'home') { paintAreas(); if (first !== 'home') go(first); readFacts(); } if (mode === 'app') paintSwitcher(); });
 
     var hdrP = person ? get('/api/entities/header').then(function (h) { S.header = h || null; S.headerState = h ? 'ok' : 'none'; }, function () { S.header = null; S.headerState = 'none'; })
       .then(function () { paintBar(); paintSheet(); }) : Promise.resolve();
@@ -540,7 +558,8 @@
       el: el, slots: slots, mode: mode,
       open: function () { setOpen(true); }, close: function () { setOpen(false); }, isOpen: function () { return S.open; },
       go: go, area: function () { return S.area; }, header: function () { return S.header; }, headerState: function () { return S.headerState; },
-      manifest: function () { return S.manifest; },   /* N18: the Home page reads the manifest's top-level `rail` from the one copy the shell fetched — never a second fetch */
+      manifest: function () { return root.CBEdition && S.manifest ? root.CBEdition.view(S.manifest) : S.manifest; },   /* N18: the Home page reads the manifest's top-level `rail` from the one copy the shell fetched — never a second fetch; AX1: the edition's entries only */
+      edition: edition,
       sides: sidesApi,
       ready: Promise.all([manP, hdrP, kuralP, sidesApi ? sidesApi.ready : null]).then(function () { return api; })
     };

@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Chit &amp; Bridge — Intake inbox</title>
 <style>
@@ -42,7 +43,7 @@
 <div id="netpill" class="netpill"></div>
 <script src="cb-offline.js"></script>
 <script>
-var API = (new URLSearchParams(location.search).get('api')) || 'https://chitbridge-api-production.up.railway.app';
+var API = (new URLSearchParams(location.search).get('api')) || window.CB_API;
 var TOK = null, ME = null;
 function paintPill(s){ var p=el('netpill'); if(!p)return; if(s.online){ p.className='netpill'; p.textContent=s.pending?('● Online · syncing '+s.pending):'● Online'; } else { p.className='netpill off'; p.textContent='⚠ Offline · '+(s.pending?s.pending+' pending':'message saved locally'); } }
 function saveIntake(){ if(window.CBOffline) CBOffline.saveDraft('intake.sim',{ch:(el('s_ch')||{}).value,from:(el('s_from')||{}).value,text:(el('s_text')||{}).value}); }

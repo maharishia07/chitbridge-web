@@ -2,6 +2,7 @@
 <html lang="en" data-tokens="list">
 <head>
 <meta charset="utf-8">
+<script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Standards</title>
 <!-- ⭐ STANDARDS — the laws and standards we follow, and what is still missing (docs/design/standards-page is the design; docs/design/standards/REQUIREMENT.md the ask).
@@ -167,6 +168,7 @@ abbr.gl:focus-visible{outline:2px solid var(--blue,#3F66A6);outline-offset:1px}
 <div id="toast" role="status" hidden></div>
 
 <script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies (engines screen) -->
+<script src="/app/edition.js"></script>   <!-- CBEdition (AX1): an edition that leaves the till out draws no door to it -->
 <script src="/app/avatar.js"></script>   <!-- CBAvatar: the one avatar (Profile · Support · Sign out) and the look it owns — nothing of it is drawn here -->
 <script>
 'use strict';
@@ -189,9 +191,9 @@ function setSetSec(){}
 /* ═══ STANDARDS — the page: the matrix pane, the CBList mount, the two sheets. The register is cap-standards.js. ═══ */
 const $ = (id) => document.getElementById(id);
 function apiBase(){
-  try{ var f = localStorage.getItem('cb_api_base'); if (f) return f === 'stage' ? 'https://chitbridge-api-production.up.railway.app' : f;
+  try{ var f = localStorage.getItem('cb_api_base'); if (f) return f === 'stage' ? window.CB_API : f;
     var h = location.hostname; if (h === 'localhost' || h === '127.0.0.1') return 'http://localhost:3000'; }catch(_){}
-  return 'https://chitbridge-api-production.up.railway.app';
+  return window.CB_API;
 }
 function session(){ try{ return JSON.parse(localStorage.getItem('cb_sess') || 'null'); }catch(_){ return null; } }
 function store(k, v){ try{ if (v === undefined) return localStorage.getItem('cb.standards.' + k); localStorage.setItem('cb.standards.' + k, v); }catch(_){ return null; } }
@@ -358,7 +360,7 @@ function mountList(){
       fig: (rows) => { var n = countOf(rows.map((x) => x.r)); return rows.length + ' · ● ' + n.live + ' ◐ ' + n.part + ' ○ ' + n.plan; } },
     next: nextOf,
     actions: [
-      { id: 'go', label: 'Open in the app ›', tid: 'std-go', when: (x) => !!HOME[x.r.go], run: (x) => { location.href = HOME[x.r.go]; } },   /* only a CUSTOMER home — never app.html, the workshop */
+      { id: 'go', label: 'Open in the app ›', tid: 'std-go', when: (x) => !!HOME[x.r.go] && !(window.CBEdition && CBEdition.hidesHref(HOME[x.r.go])), run: (x) => { location.href = HOME[x.r.go]; } },   /* only a CUSTOMER home — never app.html, the workshop */
       { id: 'copy', label: 'Copy for a buyer or CA', tid: 'std-copy', run: (x) => copyText(statementOf(x.r)) },
     ],
     empty: { title: 'No standards on the register', sub: 'The register could not be read.' },

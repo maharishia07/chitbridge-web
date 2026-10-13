@@ -250,7 +250,6 @@ CBATT.stage = {};      /* bucket -> [{ key, file, line_index, name, size, mime }
 CBATT.stageSeq = 0;
 
 function cbAttachStaged(bucket){ return (CBATT.stage[bucket] || []).slice(); }
-function cbAttachClearStage(bucket){ delete CBATT.stage[bucket]; }
 function cbAttachUnstage(bucket, key){
   var list = CBATT.stage[bucket] || [];
   CBATT.stage[bucket] = list.filter(function (s) { return String(s.key) !== String(key); });
@@ -358,25 +357,6 @@ async function cbAttachFlush(bucket, chit_id, opts){
   return { uploaded: uploaded, failed: failed };
 }
 
-/** Chips for what is staged — the same shape cbAttachList renders, but for files that have no id yet. */
-function cbAttachStagedChips(bucket, opts){
-  opts = opts || {};
-  cbAttachCss();
-  var list = CBATT.stage[bucket] || [];
-  if (!list.length) return '';
-  return list.filter(function (s) {
-    return opts.line_index == null ? true : String(s.line_index) === String(opts.line_index);
-  }).map(function (s) {
-    return '<span class="cbatt-chip" data-testid="cbatt-staged">'
-      + cbAttachIcon(cbAttachType(s.mime, s.name)) + ' ' + cbAttachSafeText(s.name)
-      + ' <span style="color:var(--grey-2)">' + cbAttachSize(s.size) + '</span>'
-      /* ⚠️ "not sent yet" is said on the chip, not implied by its position. A staged file looks exactly like an
-         attached one otherwise, and the difference matters: one is evidence, the other is an intention. */
-      + ' <span style="font-size:var(--fs-1);color:var(--warn-2)">not sent yet</span>'
-      + ' <span onclick="cbAttachUnstage(\'' + cbAttachSafe(bucket) + '\',\'' + cbAttachSafe(s.key) + '\')"'
-      + ' style="cursor:pointer;color:var(--grey-4);font-weight:800" title="Remove">✕</span></span>';
-  }).join('');
-}
 /* ⚠️ NOT cbAttachSafe. That one strips to [A-Za-z0-9_.:-] and is for values going into an ATTRIBUTE or an inline
    handler; using it on a filename would silently mangle "வெங்காயம் bill.pdf" into something unrecognisable. Text
    in the document body needs escaping, not stripping — two different jobs, two different functions. */

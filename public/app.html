@@ -2,6 +2,7 @@
 <html lang="en" data-tokens="list">
 <head>
 <meta charset="UTF-8">
+<script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
 <!-- ⚠️ viewport-fit=cover is REQUIRED for env(safe-area-inset-*) to be anything but 0. Without it every
      safe-area rule in this file is inert, and the layout silently pretends the notch and the home
      indicator do not exist. Declaring it also means the page now extends UNDER them, so the topbar and
@@ -1720,7 +1721,7 @@ body.lab-only #cbtestpanel{
      dev / uat / live → the SAME real-API code path, pointed at three backends (differ only by base URL)
    MODE + API_BASE are DERIVED from STAGE, so the shared client (core.js) needs no change. */
 const STAGES = {
-  dev:      { label:"Dev",      mock:false, base:"https://chitbridge-api-production.up.railway.app",  note:"real API · dev database" },
+  dev:      { label:"Dev",      mock:false, base:window.CB_API,  note:"real API · dev database" },
   uat:      { label:"UAT",      mock:false, base:"",   /* TODO: UAT cloud API base */                 note:"real API · UAT cloud" },
   live:     { label:"Live",     mock:false, base:"",   /* TODO: production API base */                note:"production" },
 };
@@ -2868,30 +2869,6 @@ function stampDetailTitle(){
     try { stampTestChip(dt, info.code, info.label); } catch(_) {}
     try { if (typeof screenCasesFollow === 'function') screenCasesFollow(); } catch(_) {}
   }catch(e){}
-}
-
-function screenCodeHTML(){
-  var info = null;
-  try {
-    var fine = (typeof _fineScreen === 'function') ? _fineScreen() : null;
-    var U = (typeof UI !== 'undefined') ? UI : {};
-    var reg = (window.CBSCREENS && window.CBSCREENS.byNav) || {};
-    info = reg[fine] || reg[U.nav] || null;
-  } catch (_) { info = null; }
-  if (!info) return '';
-  /* ⚠️ the topbar is dark in every theme, so this is light ink on a translucent white, not the muted grey that
-     was invisible on navy in the ribbon it came from. ⭐ 2026-09-27: the ink is the topbar's own --chrome-on, not
-     #e8f1f6/#cfe0ea — a theme that re-colours the chrome now re-colours this with it (e2e/theme-literals) */
-  return '<span data-testid="screen-code-wrap" style="display:inline-flex;align-items:center;gap:6px;'
-    + 'margin-inline-start:12px;padding-inline-start:12px;border-inline-start:1px solid rgba(255,255,255,.22)">'
-    +   (info.icon ? '<span aria-hidden="true" style="font-size:var(--fs-3)">' + esc(info.icon) + '</span>' : '')
-    +   '<span data-testid="screen-code" title="' + tx('The code for this screen — quote it instead of describing where you are')
-    +     '" style="font-family:\'Space Mono\',ui-monospace,monospace;font-size:var(--fs-2);color:var(--chrome-on);'
-    +     'background:rgba(255,255,255,.14);border-radius:5px;padding:2px 7px;user-select:all;font-weight:600;'
-    +     'letter-spacing:.04em">' + esc(info.code) + '</span>'
-    +   '<span style="font-size:var(--fs-2);color:var(--chrome-on);opacity:.85;font-weight:600;white-space:nowrap">'
-    +     esc(info.label || '') + '</span>'
-    + '</span>';
 }
 
 function _fineScreen(){ try{ var U=(typeof UI!=="undefined")?UI:{};
@@ -5860,7 +5837,7 @@ function selfBillFoot(){
       + '<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">'
       + '<input class="inp" data-testid="sb-customer" value="' + esc((UI._sbCustomer && UI._sbCustomer.name) || '') + '" oninput="UI._sbCustomer=Object.assign({}, UI._sbCustomer||{}, {name:this.value})" placeholder="' + esc(tx('Customer name (optional)')) + '" style="flex:2 1 160px;margin:0">'
       + '<input class="inp" data-testid="sb-customer-contact" value="' + esc((UI._sbCustomer && UI._sbCustomer.contact) || '') + '" oninput="UI._sbCustomer=Object.assign({}, UI._sbCustomer||{}, {contact:this.value})" placeholder="' + esc(tx('phone or email')) + '" style="flex:1 1 130px;margin:0">'
-      + '<input class="inp" data-testid="sb-customer-gstin" value="' + esc((UI._sbCustomer && UI._sbCustomer.gstin) || '') + '" oninput="UI._sbCustomer=Object.assign({}, UI._sbCustomer||{}, {gstin:this.value.toUpperCase()})" placeholder="' + esc(tx('GSTIN, if a business')) + '" style="flex:1 1 150px;margin:0;font-family:ui-monospace,monospace">'
+      + '<input class="inp" data-testid="sb-customer-gstin" value="' + esc((UI._sbCustomer && UI._sbCustomer.gstin) || '') + '" oninput="UI._sbCustomer=Object.assign({}, UI._sbCustomer||{}, {gstin:this.value.toUpperCase()})" placeholder="' + esc(txf('{id}, if a business', { id: taxIdWord() })) + '" style="flex:1 1 150px;margin:0;font-family:ui-monospace,monospace">'
       + '</div>'
       /* ⭐ "on a picker" — closed, because a date that defaults to today and a note most sales do not need are
          exactly the things that should cost nothing when unused. */
@@ -9685,7 +9662,7 @@ function crmCols(kind){
     { key:'oldest', label:tx('Oldest due'), prio:5, sort:'oldest', w:130, html:true, cell:function(r){ var f=facts(r); return f.oldest?esc(bkDate(f.oldest)):dash; } });
   cols.push(
     { key:'credit', label:tx('Credit terms'), prio:6, w:170, html:true, cell:function(r){ return r.credit_days!=null ? esc(txf('{n} days',{n:r.credit_days}))+(r.credit_limit_minor!=null&&crmBooks()?' · '+esc(bkMoney(r.credit_limit_minor, BK.duesCur)):'') : dash; } },
-    { key:'gstin', label:tx('GSTIN'), prio:7, w:190, html:true, cell:function(r){ var g=crmGstin(r); return g?'<span class="mono">'+esc(g)+'</span>':dash; } });
+    { key:'gstin', label:taxIdWord(), prio:7, w:190, html:true, cell:function(r){ var g=crmGstin(r); return g?'<span class="mono">'+esc(g)+'</span>':dash; } });   /* CX0: the pack's tax-id word (GSTIN · ABN · TRN) */
   return cols;
 }
 /** a party's next level: what the row cannot hold — orders (a customer) or how you order (a supplier) — then its bills (one statement read, on the first open) */
@@ -13876,8 +13853,10 @@ function prodInvoiceModel(d, pos){
       }
     }catch(_){ off=0; }
     const orderOff=orderAdj.reduce(function(s,a){ return s+a.amount; }, 0);
-    const scheme=String(r.scheme||'GST').toUpperCase(), isGST=scheme==='GST';
     const myC=String((typeof SESSION!=='undefined'&&SESSION&&SESSION.country)||'').toUpperCase()||'XX', OTHERC=(myC==='ZZ'?'XX':'ZZ');
+    /* ⭐ CX0: the SPLIT is the pack's supply model (tax.supply 'state' = India's CGST/SGST · IGST; 'border' = one head), not the word "GST" — Australia's scheme is GST too */
+    const P0=(window.CBTaxPacks&&CBTaxPacks.packFor&&CBTaxPacks.packFor(myC))||null;
+    const scheme=String(r.scheme||(P0&&P0.scheme)||'GST').toUpperCase(), isGST=P0&&P0.supply?P0.supply==='state':scheme==='GST';
     const om=Object.assign({}, om0, { qty });
     /* a line-scope discount is per unit (× qty); an order-level one is a lump on this single-line sample — both come off before tax */
     const line={ name:pName(d), qty:om.qty, unit_price:price, discount:off+orderOff, rate:(r.rate==null?0:r.rate), cess_rate:r.cess||0, unit:pUnit(d), hsn:(r.hsn&&r.hsn[0])||d.hsn||'', tax_scheme:scheme };
@@ -13919,7 +13898,7 @@ function prodInvoiceTab(d){
     +   `<div style="text-align:end"><div style="font-size:15px;font-weight:800;letter-spacing:.04em">${esc(m.title.toUpperCase())}</div><div style="color:#666">No. <b>SAMPLE-0001</b> · ${esc(today)}</div><div style="color:#666">${esc(tx('Place of supply'))}: ${esc(pos==='other'?(m.isGST?tx('other state'):tx('abroad')):(m.isGST?tx('state ')+m.seller.state:tx('domestic')))}</div></div></div>`
     +   (m.seller.loading?`<div style="margin:8px 0;color:#666">${esc(tx('reading the supplier details…'))}</div>`:m.seller.unreadable?`<div data-testid="prod-invoice-unreadable" style="margin:8px 0;color:var(--warn-3)">${esc(tx('The supplier details could not be read — open Settings › Business identity.'))}</div>`:(m.seller.missing&&m.seller.missing.length?`<div data-testid="prod-invoice-missing" style="margin:8px 0;padding:6px 10px;background:#fff7e6;border:1px solid #f1d28a;border-radius:8px;color:#7a5a00">● ${esc(txf('Missing on the invoice: {m}', { m: m.seller.missing.join(', ') }))} — <a href="#" onclick="UI.profSec='vault'; navTo('profile'); return false;" style="color:#7a5a00;font-weight:700">${esc(tx('Settings › Documents › Business identity'))}</a> · ${esc(tx('also on Trade ready'))}</div>`:''))
     +   `<div style="margin:10px 0 8px;padding:8px 10px;background:#fafafa;border-radius:8px"><b>${tx('Bill to')}:</b> ${esc(tx('Your customer'))} <span style="color:#666">· ${esc(m.posWord)}</span>${m.their?' <span style="color:#666">· '+esc(tx('their item code'))+' <b>'+esc(m.their.id)+'</b></span>':''}</div>`
-    +   `<table class="cbcat-sheet" style="width:100%;margin:0"><thead><tr><th>#</th><th>${tx('Description')}</th><th>HSN</th><th>${tx('Qty')}</th><th>${tx('Rate')}</th><th>${tx('Discount')}</th><th>${tx('Taxable')}</th>${heads.map(h=>'<th>'+esc(h[0])+'</th>').join('')}${cess?'<th>'+esc(tx('Cess'))+'</th>':''}<th>${tx('Total')}</th></tr></thead>`
+    +   `<table class="cbcat-sheet" style="width:100%;margin:0"><thead><tr><th>#</th><th>${tx('Description')}</th><th>${(shopReg()&&shopReg().tax&&!shopReg().tax.hsn_digits)?tx('Code'):'HSN'}</th><th>${tx('Qty')}</th><th>${tx('Rate')}</th><th>${tx('Discount')}</th><th>${tx('Taxable')}</th>${heads.map(h=>'<th>'+esc(h[0])+'</th>').join('')}${cess?'<th>'+esc(tx('Cess'))+'</th>':''}<th>${tx('Total')}</th></tr></thead>`
     +   (m.om.negotiable?`<div data-testid="prod-invoice-negotiable" style="margin:0 0 8px;padding:6px 10px;background:#fff7e6;border:1px solid #f1d28a;border-radius:8px;color:#7a5a00">⚖️ ${esc(m.om.note)}</div>`:(m.om.note?`<div data-testid="prod-invoice-model" style="margin:0 0 8px;color:#666">${esc(m.om.note)}</div>`:''))
     +   `<tbody><tr data-testid="prod-invoice-line"><td>1</td><td><b>${esc(m.line.name)}</b>${m.their?'<div style="color:#666;font-size:11px">'+esc(tx('your code'))+' '+esc(m.their.id)+'</div>':''}${m.offLabel?'<div style="color:#c0392b;font-size:11px">🏷️ '+esc(m.offLabel)+'</div>':''}</td><td>${esc(m.line.hsn||'—')}</td><td data-testid="prod-invoice-qty">${esc(String(m.om.qty))} ${esc(m.line.unit||'')}</td><td>${M(m.line.unit_price)}${m.om.negotiable?' <small style="color:#7a5a00">'+esc(tx('indicative'))+'</small>':''}</td><td data-testid="prod-invoice-discount">${(m.off||m.orderOff)?'− '+M(m.off+m.orderOff):'—'}</td><td>${M(it.AssAmt)}</td>${heads.map(h=>'<td>'+M(h[1])+'</td>').join('')}${cess?'<td>'+M(cess)+'</td>':''}<td><b>${M(it.TotItemVal)}</b></td></tr></tbody></table>`
     +   `<div style="display:flex;justify-content:flex-end;margin-top:10px"><table style="min-width:300px;border-collapse:collapse">${rows.map((x,i)=>'<tr'+(i===rows.length-1?' style="font-weight:800;border-top:1px solid #ddd"':'')+'><td style="padding:3px 8px;color:#444">'+esc(x[0])+'</td><td style="padding:3px 8px;text-align:end" data-testid="'+(i===rows.length-1?'prod-invoice-total':'')+'">'+(x[1]<0?'− '+M(-x[1]):M(x[1]))+'</td></tr>').join('')}</table></div>`+noteRows
@@ -14294,8 +14273,10 @@ function prodTaxPreviewHTML(d,r){
   /* ⭐ THE SCHEME IS THE SLAB'S (b202). Under GST the two cells are same-state / other-state; under a VAT-type scheme
      (DE-VAT-19, FR-VAT-20 …) they are domestic / cross-border, because VAT turns on the border, not the state. Same
      engine, same line, one field different — that is the whole "other countries" story. */
-  const scheme=String(r.scheme||'GST').toUpperCase(), isGST=scheme==='GST';
   const myC=String((typeof SESSION!=='undefined'&&SESSION&&SESSION.country)||'').toUpperCase()||'XX', OTHERC=(myC==='ZZ'?'XX':'ZZ');
+  /* ⭐ CX0: the split is the pack's supply model ('state' | 'border'), not the word "GST" — see prodTaxPreview */
+  const P0=(window.CBTaxPacks&&CBTaxPacks.packFor&&CBTaxPacks.packFor(myC))||null;
+  const scheme=String(r.scheme||(P0&&P0.scheme)||'GST').toUpperCase(), isGST=P0&&P0.supply?P0.supply==='state':scheme==='GST';
   const line={ name:pName(d), qty:1, unit_price:price, discount:off, rate:(r.rate==null?0:r.rate),
                cess_rate:r.cess||0, unit:pUnit(d), hsn:(r.hsn&&r.hsn[0])||d.hsn||'', tax_scheme:scheme };
   const seller=isGST?{ State:S, RegType: prodRegType() }:{ Country:myC, RegType: prodRegType() };
@@ -14801,18 +14782,19 @@ function chitPaymentCell(c, cell, quoted){
   const h=(c&&c.header)||c||{}; if(h.sender_entity_id && typeof SESSION!=='undefined' && SESSION && SESSION.entity && h.sender_entity_id===SESSION.entity) return '';
   const bj=(c&&(c.business_json||(c.header&&c.header.business_json)))||{}; const pay=bj.payment||null;
   const val = pay ? `<span data-testid="chit-paid" style="color:var(--ok-2)">${esc(tx('Paid'))} · ${esc(String(pay.method||'').toUpperCase())}${pay.ref?' · '+esc(pay.ref):''}</span> <button type="button" data-testid="chit-unpay" onclick="chitUnpay('${c.id}')" title="${esc(tx('Clear this payment — a mistake undone; the log keeps both'))}" style="border:0;background:none;color:var(--grey);cursor:pointer;font-size:var(--fs-1)">✕</button>`
-    : `<span data-testid="chit-unpaid" style="color:var(--grey)">${esc(tx('Unpaid'))}</span> <button type="button" data-testid="chit-mark-paid" onclick="chitMarkPaid('${c.id}', ${Number(quoted)||0})" style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:8px;padding:3px 8px;font-size:var(--fs-1);cursor:pointer">${esc(tx('Mark paid'))}</button> <button type="button" data-testid="chit-show-qr" onclick="chitShowQr('${c.id}', ${Number(quoted)||0})" style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:8px;padding:3px 8px;font-size:var(--fs-1);cursor:pointer">${esc(tx('Show QR'))}</button>`;
+    : `<span data-testid="chit-unpaid" style="color:var(--grey)">${esc(tx('Unpaid'))}</span> <button type="button" data-testid="chit-mark-paid" onclick="chitMarkPaid('${c.id}', ${Number(quoted)||0})" style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:8px;padding:3px 8px;font-size:var(--fs-1);cursor:pointer">${esc(tx('Mark paid'))}</button> ${payHasUpi()?`<button type="button" data-testid="chit-show-qr" onclick="chitShowQr('${c.id}', ${Number(quoted)||0})" style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:8px;padding:3px 8px;font-size:var(--fs-1);cursor:pointer">${esc(tx('Show QR'))}</button>`:''}`;
   return cell(tx('Payment'), val);
 }
+/* CX0: payHasUpi · payModeOpts live in app/helpers.js (every page's) — UPI is offered only where the shop's pack carries it */
 function chitMarkPaid(id, amount){
   modal(`<div class="mhd"><div class="t">${esc(tx('Mark paid'))}</div><div class="s">${esc(tx('What you received, and the reference on it'))}</div></div><div class="mbody" style="display:grid;gap:8px">
-    <select class="inp" id="pay_method" data-testid="pay-method"><option value="upi">UPI</option><option value="cash">${esc(tx('Cash'))}</option><option value="card">${esc(tx('Card'))}</option><option value="bank">${esc(tx('Bank transfer'))}</option><option value="other">${esc(tx('Other'))}</option></select>
+    <select class="inp" id="pay_method" data-testid="pay-method">${payModeOpts()}<option value="cash">${esc(tx('Cash'))}</option><option value="card">${esc(tx('Card'))}</option><option value="bank">${esc(tx('Bank transfer'))}</option><option value="other">${esc(tx('Other'))}</option></select>
     <input class="inp" id="pay_ref" data-testid="pay-ref" placeholder="${esc(tx('UPI transaction id / reference'))}">
     <span class="cbdef-adorn" style="display:flex;align-items:center;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--on-card);overflow:hidden"><b style="padding:0 10px;color:var(--grey-2);font-size:var(--fs-2)">${esc((typeof CBLocale!=='undefined'&&CBLocale.symbol)?CBLocale.symbol((SESSION&&SESSION.currency)||'INR'):'₹')}</b><input class="inp" id="pay_amount" data-testid="pay-amount" type="number" step="0.01" value="${esc(String(amount||''))}" placeholder="${esc(tx('Amount'))}" style="border:0;margin:0;flex:1;min-width:0;background:transparent"></span></div>
     <div class="mfoot"><button onclick="closeModal()">${esc(tx('Cancel'))}</button><button class="pri" id="mok" data-testid="pay-ok" onclick="chitPaySubmit('${id}')">${esc(tx('Record'))}</button></div>`);
 }
 async function chitPaySubmit(id){
-  const method=(document.getElementById('pay_method')||{}).value||'upi', ref=(document.getElementById('pay_ref')||{}).value||'', amount=parseFloat((document.getElementById('pay_amount')||{}).value);
+  const method=(document.getElementById('pay_method')||{}).value||(payHasUpi()?'upi':'cash'), ref=(document.getElementById('pay_ref')||{}).value||'', amount=parseFloat((document.getElementById('pay_amount')||{}).value);
   try{ const r=await api('chitPay', { params:{ id }, body:{ method, ref: ref||undefined, amount: isFinite(amount)?amount:undefined } }); closeModal(); toast(tx('Payment recorded ✓')); const c=UI.rows&&UI.rows.find(x=>x.id===id); if(c){ c.business_json=Object.assign({}, c.business_json||{}, { payment:r.payment }); if(c.header) c.header.business_json=Object.assign({}, c.header.business_json||{}, { payment:r.payment }); } if(typeof openChit==='function') openChit(id, true); }
   catch(e){ toast((e&&e.message)||tx('Could not record'), true); }
 }
@@ -16457,15 +16439,6 @@ function supForYouHTML(x){
   var f=Array.isArray(x.for_you)?x.for_you:[]; if(!f.length) return '';
   return '<div class="l2" data-testid="sup-foryou-'+esc(x.supplier_list_id)+'" style="margin-top:3px"><span class="optchip" style="background:var(--ok-tint);color:var(--ok-2);border-color:var(--ok-2);font-weight:700">🏷️ '+tx('special for you')+'</span> '+f.map(function(o){ return '<b>'+esc(o.label||'offer')+'</b>'+(o.promise?' · '+esc(o.promise):''); }).join(' <span style="color:var(--grey)">·</span> ')+'</div>';
 }
-function supStandingHTML(cat){
-  if(!cat || !cat.shop) return '';
-  var groups=Array.isArray(cat.shop.viewer_groups)?cat.shop.viewer_groups:[]; var extra=(cat.offers||[]).filter(function(o){ return o && o.customer_group; });
-  if(!groups.length && !extra.length) return '';
-  var seg=groups.filter(function(g){ return !/^customer:/.test(String(g)); })[0]; var word={new:tx('new customer'),regular:tx('regular customer'),high_value:tx('high-value customer'),inactive:tx('customer')}[seg]||tx('customer');
-  var who=groups.length?('🤝 '+txf('You are their {word}',{word:word})):'';
-  var only=extra.length?('🏷️ '+tx('only for you')+': '+extra.map(function(o){ return esc(o.label||o.name||'offer'); }).join(', ')):'';
-  return '<div data-testid="sup-standing" style="font-size:var(--fs-1);color:var(--ok-2);font-weight:600;margin:4px 0 2px">'+[who,only].filter(Boolean).join(' · ')+'</div>';
-}
 function supFactsHTML(f, opts){
   if(!f || !(f.gstin || f.country)) return '';
   opts=opts||{};
@@ -17690,7 +17663,6 @@ function pickBox(o){
 }
 
 /* Stored as a comma-separated id list. Absent — not empty — means "everything": see pickSet above. */
-function dactPicked(){ return pickSet('cb_dact'); }
 function dactShows(id){ return pickShows('cb_dact', id); }
 function dactToggle(id){ pickToggle('cb_dact', DACT, id, dactPick); }
 function dactReset(){ pickReset('cb_dact', dactPick); }
@@ -17878,11 +17850,9 @@ var _attUrls={};
 async function attBlobUrl(id){ if(_attUrls[id])return _attUrls[id]; var res=await fetch(CFG.API_BASE+'/api/attachments/'+id,{headers:SESSION.token?{Authorization:'Bearer '+SESSION.token}:{}}); if(!res.ok)throw new Error('attachment '+res.status); var b=await res.blob(); var u=URL.createObjectURL(b); _attUrls[id]=u; return u; }
 async function attResolveSrc(a){ try{ a.src=await attBlobUrl(a.id); if(a.t==='text'&&a.text==null){ try{ a.text=await (await fetch(a.src)).text(); }catch(_){ a.text=''; } } paintLB(); }catch(e){ /* keep icon placeholder */ } }
 /* build the visible attachment groups for the current chit: line0, line1 … + chit */
-/* ⚠️ 'text' MUST BE HERE TOO. attType learned about text and this map did not, so a .txt fell through to 📎 —
-   the tile said "attachment" for the one file on the chit that is the customer's own words. */
-function attGlyph(t){ return ({image:'🖼️',video:'🎬',pdf:'📄',text:'📄',xlsx:'📊',csv:'📊',docx:'📝',doc:'📝',ppt:'📑',zip:'🗜️'})[t]||'📎'; }
-function fmtSize(b){ b=+b||0; if(b<1024)return b+' B'; if(b<1048576)return Math.round(b/1024)+' KB'; return (b/1048576).toFixed(1)+' MB'; }
-function attTile(a,group,i){ return `<div class="attTile" onclick="openLightbox('${group}',${i})" title="${esc(a.n)}"><div class="attTileIcon">${attGlyph(a.t)}</div><div class="attTileName">${esc(a.n)}</div><div class="attTileMeta">${esc((a.t||'file').toUpperCase())}${a.size?(' · '+fmtSize(a.size)):''}</div></div>`; }
+/* ⭐ attGlyph and fmtSize LIVED HERE, byte-for-byte copies of `cbAttachIcon` / `cbAttachSize` in app/attach-ui.js
+   (loaded above) — one mapping, every screen (CU1, 2026-10-13). Its map keeps 'text' → 📄: a .txt is the customer's own words. */
+function attTile(a,group,i){ return `<div class="attTile" onclick="openLightbox('${group}',${i})" title="${esc(a.n)}"><div class="attTileIcon">${cbAttachIcon(a.t)}</div><div class="attTileName">${esc(a.n)}</div><div class="attTileMeta">${esc((a.t||'file').toUpperCase())}${a.size?(' · '+cbAttachSize(a.size)):''}</div></div>`; }
 function attTileGrid(atts,group){ return `<div class="attGrid">${atts.map((a,i)=>attTile(a,group,i)).join('')}</div>`; }
 function buildAttGroups(c){
   const g={};

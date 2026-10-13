@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Test Report · Chit &amp; Bridge</title>
 <!--
@@ -1098,7 +1099,7 @@ recorded.">Try it</button>
 <main id="main"><div class="say">Reading the board…</div></main>
 
 <script>
-var API = (new URLSearchParams(location.search).get('api')) || 'https://chitbridge-api-production.up.railway.app';
+var API = (new URLSearchParams(location.search).get('api')) || window.CB_API;
 
 /**
  * ⚠️ THE SESSION COMES OFF DISK, exactly as the offer lab reads it. This page is a tool for somebody already
@@ -1652,7 +1653,6 @@ function chipTo(state){
 }
 
 function setState(v){ document.getElementById('f_state').value = v; paint(); }
-function setMod(k){ MODFILT = k; paint(); }
 
 /**
  * ⭐⭐ WHAT EACH LEVEL IS WORTH, in one sentence, on the badge itself.
@@ -3941,13 +3941,6 @@ async function paintSummary(){
   }
   h += '</table></div>';
   document.getElementById('main').innerHTML = h;
-}
-
-/** a row in the coverage table takes you to that area, on the Cases tab — the summary is for deciding, the cases are for doing */
-function jumpTo(mod){
-  MODFILT = mod;
-  document.getElementById('f_state').value = 'todo';
-  setView('cases');
 }
 
 /**

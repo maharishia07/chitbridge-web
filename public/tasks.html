@@ -2,6 +2,7 @@
 <html lang="en" data-tokens="list">
 <head>
 <meta charset="utf-8">
+<script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tasks &amp; Orders</title>
 <!-- ⭐ Tasks & Orders — a STANDALONE app (TO1-UI, owner decision 2026-10-10). The FRAME is CBFrame's (the shell header, Home, the avatar, the one sign-in
@@ -72,6 +73,7 @@ dialog.sheet .mx{position:absolute;right:8px;top:8px;border:0;background:transpa
 <div id="tk" data-testid="tk-screen"><div class="loadwrap"><span class="spin"></span> Loading</div></div>
 <div id="toast"></div>
 <script src="/engine/screen.js"></script>
+<script src="/app/edition.js"></script>   <!-- CBEdition (AX1): the showing this person chose — the switcher, the bell and the avatar's Edition choice follow it -->
 <script src="/app/avatar.js"></script>
 <script src="/engine/signin.js"></script>
 <script src="/app/signin-ui.js"></script>
@@ -79,7 +81,7 @@ dialog.sheet .mx{position:absolute;right:8px;top:8px;border:0;background:transpa
 <script>
 'use strict';
 /* ── the host globals core.js expects (as crm.html declares them): the API base, the session api() signs with, the endpoint registry, the 401 door ── */
-const CFG = { API_BASE: 'https://chitbridge-api-production.up.railway.app' };
+const CFG = { API_BASE: window.CB_API };
 let SESSION = { token: null, role: null, name: null, entity: null, bridgeId: null };
 const EP = {};
 function go(){ if (typeof CB_TASKS_ENDED === 'function') CB_TASKS_ENDED(); }

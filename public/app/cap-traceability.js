@@ -16,7 +16,8 @@ function _traceNum(v, d){ v = parseInt(v, 10); return (isFinite(v) && v >= 0) ? 
    priced in, and Indian grouping for every reader. A currency symbol is not decoration; printing ₹ on a
    dirham amount states something false about the money. Currency now comes from the value; format from the
    reader. ⚠️ The INR default preserves today's behaviour where a caller passes no currency. */
-function _traceRs(v, ccy){ return CBLocale.money(v || 0, ccy || 'INR'); }
+function _traceRs(v, ccy){ return CBLocale.money(v || 0, ccy || (typeof myCur === 'function' ? myCur() : 'INR')); }   /* CX0: the SHOP's currency when the caller passes none */
+function _traceSym(){ try { return typeof curSym === 'function' ? curSym() : '₹'; } catch (_) { return '₹'; } }
 function _traceShort(id){ id = String(id||''); return id.length > 8 ? '…' + id.slice(-6) : id; }
 
 function traceabilityScreen(){
@@ -38,11 +39,11 @@ function traceabilityScreen(){
       + '<button onclick="runTrace(\'backward\')" style="padding:9px 14px"><span class=arw>◂</span> ' + tx('To source') + '</button>'
     + '</div>'
     + '<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-top:10px;font-size:var(--fs-1);color:var(--grey)">'
-      + '<label>₹ / node&nbsp;<input value="' + cost + '" oninput="UI.traceCost=_traceNum(this.value,5000)" '
+      + '<label>' + _traceSym() + ' / node&nbsp;<input value="' + cost + '" oninput="UI.traceCost=_traceNum(this.value,5000)" '
         + 'style="width:80px;padding:4px 7px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)"></label>'
       + '<label>blanket-recall size&nbsp;<input value="' + blanket + '" oninput="UI.traceBlanket=_traceNum(this.value,200)" '
         + 'style="width:70px;padding:4px 7px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)"></label>'
-      + '<span>— the ₹ saved is targeted recall vs a blanket recall of your whole network.</span>'
+      + '<span>— the ' + _traceSym() + ' saved is targeted recall vs a blanket recall of your whole network.</span>'
     + '</div>'
     + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px;padding-top:11px;border-top:1px dashed var(--line)">'
       + '<span style="font-size:var(--fs-2);color:var(--grey)">or reconstruct from shared data (no links):</span>'
