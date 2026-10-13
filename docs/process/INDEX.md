@@ -9,7 +9,7 @@ Athi, 2026-10-12: *"for each function we are building we need to have a SAP kind
 | flow | what it is | SAP | steps | ✅ | ⚠️ | MISSING |
 |---|---|---|---|---|---|---|
 | [O2C](O2C.md) | Order to cash | SD → FI-AR | enquiry → quote → order → delivery → invoice → receipt → posted → cash position → repeat supply | 7 | 1 | 1 |
-| [P2P](P2P.md) | Procure to pay | MM → FI-AP | need → PO → goods receipt → supplier bill → payment → payables → posted | 6 | 1 | 0 |
+| [P2P](P2P.md) | Procure to pay | MM → FI-AP | need → PO → goods receipt → supplier bill → payment → posted → payables | 6 | 1 | 0 |
 | [R2R](R2R.md) | Record to report | FI-GL | country → entries → day close → month lock → GST → year close → statements → cash position → bank reconciliation | 9 | 0 | 0 |
 | [INV](INV.md) | Inventory | MM-IM | receipt → stock → issue / sale → count → closing stock | 2 | 2 | 1 |
 | [H2P](H2P.md) | Hire to pay | HCM → FI | person → access → attendance → payroll → payment | 2 | 1 | 2 |

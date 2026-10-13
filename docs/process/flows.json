@@ -116,20 +116,20 @@
           "chit": "the payment advice goes to the supplier as a chit (rail-advice.js → /api/chits/send)", "ledger": "payment_made · Dr 2100 Suppliers · Cr 1400 Cash / 1500 Bank (a cheque only when cleared)",
           "test": ["api:tests/books-payments.test.cjs", "web:tests/advice-retry.test.cjs"],
           "status": "ok", "note": "" },
-        { "n": 7, "step": "payables", "module": "Finance", "who": "the owner (reads; Pay and the discount are the owner's own presses — Finance suggests, nothing posts by itself)",
-          "screen": [{ "file": "web:public/app/cap-finance-pay.js", "fn": "fpMount" }, { "file": "web:public/app/cap-finance-pay.js", "fn": "fpPay" }, { "file": "web:public/app/cap-books.js", "fn": "payOpen" }, { "file": "web:public/app/cap-books.js", "fn": "payDiscRecord" }],
-          "engine": [{ "file": "api:lib/books-payables.js", "fn": "view" }, { "file": "api:lib/books-payables.js", "fn": "read" }, { "file": "api:lib/books-cashflow.js", "fn": "datedSide" }, { "file": "engines:src/receivables.js", "fn": "msmeFlags" }, { "file": "engines:src/receivables.js", "fn": "earlyDiscount" }, { "file": "api:lib/books.js", "fn": "postEntry" }],
-          "route": [{ "m": "GET", "p": "/api/books/dues", "file": "api:routes/books.js" }, { "m": "POST", "p": "/api/books/payments", "file": "api:routes/books.js" }, { "m": "POST", "p": "/api/books/entries", "file": "api:routes/books.js" }],
-          "chit": "the supplier's bill (side buy) → the payment, its advice chit (step 5)", "ledger": "none to read; the discount (owner-pressed) is a journal: Dr 2100 Suppliers (against the bill) · Cr 4230 Discount received. The GST credit note waits for the supplier's and the owner's confirm",
-          "test": ["api:tests/books-payables.test.cjs", "web:e2e/walk-finance-payables.cjs"],
-          "status": "ok", "note": "F4: supplier bill → payment — what we owe, aged 0–30/31–45/46–60/60+, MSME day 45 (India, Income-tax s.43B(h)), the supplier's early-pay offer. The total is F3's outgoing (one calculation)." },
         { "n": 6, "step": "posted", "module": "Accounts", "who": "the system (the hook after the bill is accepted)",
           "screen": [{ "file": "web:public/app/cap-books.js", "fn": "bkLgEntry" }],
           "engine": [{ "file": "api:lib/books-hooks.js", "fn": "postChit" }, { "file": "api:lib/books.js", "fn": "postEntry" }, { "file": "engines:src/posting.js", "fn": "purchase_bill" }],
           "route": [{ "m": "GET", "p": "/api/books/daybook", "file": "api:routes/books.js" }, { "m": "GET", "p": "/api/books/ledger/:account", "file": "api:routes/books.js" }, { "m": "GET", "p": "/api/books/party/:id/statement", "file": "api:routes/books.js" }],
           "chit": "bill → one entry (source_ref chit:<chit_id>); what cannot post waits in books_outbox", "ledger": "as step 4; the supplier's statement reads 2100 by party",
           "test": ["api:tests/books-post.test.cjs", "api:tests/books-hooks.test.cjs", "engines:tests/golden-books.test.js"],
-          "status": "ok", "note": "" }
+          "status": "ok", "note": "" },
+        { "n": 7, "step": "payables", "module": "Finance", "who": "the owner (reads; Pay and the discount are the owner's own presses — Finance suggests, nothing posts by itself)",
+          "screen": [{ "file": "web:public/app/cap-finance-pay.js", "fn": "fpMount" }, { "file": "web:public/app/cap-finance-pay.js", "fn": "fpPay" }, { "file": "web:public/app/cap-books.js", "fn": "payOpen" }, { "file": "web:public/app/cap-books.js", "fn": "payDiscRecord" }],
+          "engine": [{ "file": "api:lib/books-payables.js", "fn": "view" }, { "file": "api:lib/books-payables.js", "fn": "read" }, { "file": "api:lib/books-cashflow.js", "fn": "datedSide" }, { "file": "engines:src/receivables.js", "fn": "msmeFlags" }, { "file": "engines:src/receivables.js", "fn": "earlyDiscount" }, { "file": "api:lib/books.js", "fn": "postEntry" }],
+          "route": [{ "m": "GET", "p": "/api/books/dues", "file": "api:routes/books.js" }, { "m": "POST", "p": "/api/books/payments", "file": "api:routes/books.js" }, { "m": "POST", "p": "/api/books/entries", "file": "api:routes/books.js" }],
+          "chit": "the supplier's bill (side buy) → the payment, its advice chit (step 5)", "ledger": "none to read; the discount (owner-pressed) is a journal: Dr 2100 Suppliers (against the bill) · Cr 4230 Discount received. The GST credit note waits for the supplier's and the owner's confirm",
+          "test": ["api:tests/books-payables.test.cjs", "web:e2e/walk-finance-payables.cjs"],
+          "status": "ok", "note": "F4: supplier bill → payment — what we owe, aged 0–30/31–45/46–60/60+, MSME day 45 (India, Income-tax s.43B(h)), the supplier's early-pay offer. The total is F3's outgoing (one calculation)." }
       ]
     },
     {
