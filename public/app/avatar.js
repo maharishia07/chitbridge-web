@@ -304,9 +304,11 @@
     if (has_('profile')) up.push(o.onProfile
       ? '<button type="button" data-testid="nav-profile" data-av="profile">Profile</button>'
       : '<a data-testid="nav-profile" data-av="profile" href="' + esc(o.profileHref || PROFILE_HREF) + '">Profile<span aria-hidden="true">↗</span></a>');
-    if (showSettings) up.push(o.onSettings
+    /* IX0: Settings is drawn only where the page says where it goes (onSettings — the workshop's own — or settingsHref, a settings page when
+       one exists). No default door into app.html: a utility page never sends a customer into the workshop (H34). */
+    if (showSettings && (o.onSettings || o.settingsHref)) up.push(o.onSettings
       ? '<button type="button" data-testid="nav-settings" data-av="settings">Settings</button>'
-      : '<a data-testid="nav-settings" data-av="settings" href="' + esc(o.settingsHref || '/app.html#/app/settings') + '">Settings<span aria-hidden="true">↗</span></a>');
+      : '<a data-testid="nav-settings" data-av="settings" href="' + esc(o.settingsHref) + '">Settings<span aria-hidden="true">↗</span></a>');
     if (has_('support')) down.push(o.onSupport
       ? '<button type="button" data-testid="av-support" data-av="support">Support</button>'
       : '<a data-testid="av-support" data-av="support" href="' + esc(o.supportHref || SUPPORT_HREF) + '">Support<span aria-hidden="true">↗</span></a>');
