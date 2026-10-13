@@ -205,6 +205,10 @@
           if (!j) return;
           var d = (j && j.data) || j, e = (d && d.entity) || d || {};
           hydrate(e.ui_prefs);
+          /* FX-UX1 (F6): the same row carries the person's locale choice and the shop's country — handed to the locale engine the way app.html's boot
+             does (app.html CBLocale.hydrate), so number · date · grouping follow the shop's country (REGIONS[country] = the pack's locale) on every
+             page, not en-IN by default. One read for both; a page with pull:false hydrates itself. */
+          try { if (root.CBLocale && root.CBLocale.hydrate) root.CBLocale.hydrate(e.locale_prefs || {}, { country: e.country || null }); } catch (_) {}
         }).catch(function () {});
     } catch (_) {}
   }
