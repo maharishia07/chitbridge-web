@@ -47,16 +47,6 @@ function disputeResolveBtns(parties, chitId, disputeId, show, btnCls){
  * filter / send-decorator / row-cell); a future cap could register the same way.
  * ═══════════════════════════════════════════════════════════════════════════════════════════ */
 
-/* msgBubble → the header badge for a dispute message: ⚑ Dispute [raised] (red) / [resolved] (green).
- * '' for a non-dispute message, so Core falls back to its normal external/internal + type badges. */
-function disputeBadge(m){
-  if(!m||!m.isDispute) return '';
-  // dispKind is set at map time from the (now-stripped) body prefix: only the raise/resolution carry a badge;
-  // an ordinary reply gets a truthy-but-empty span so msgBubble shows no int/ext fallback — just sender + message.
-  if(m.dispKind==='resolved') return '<span class="mbadge disp ok">' + tx('⚑ Dispute [resolved]') + '</span>';
-  if(m.dispKind==='raised') return '<span class="mbadge disp">' + tx('⚑ Dispute [raised]') + '</span>';
-  return '<span></span>';
-}
 /* mapApiMsg → split the trailing "— actor@entity" provenance a dispute message carries into a byline.
  * Returns {by, body}; on a plain message (or no marker) by=null and body is unchanged. */
 function disputeByline(body){

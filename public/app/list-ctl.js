@@ -468,7 +468,7 @@
     h += '<span class="cbl-anchor"><button type="button" class="cbl-tbtn cbl-ico" data-cbl-pop="cols" id="cbl-cols-' + k + '" data-testid="cols-btn-' + k + '" title="' + esc(T(I, 'Choose columns')) + '" aria-label="' + esc(T(I, 'Choose columns')) + '" aria-haspopup="dialog" aria-expanded="' + (I.pop === 'cols') + '">⚙</button>' + (I.pop === 'cols' ? colsPop(I) : '') + '</span>';
     if (o.csv !== false && tl.csv !== false) h += '<button type="button" class="cbl-tbtn cbl-ico" data-cbl-csv data-testid="' + esc(tids.csv || 'cbl-csv-' + k) + '" title="' + esc(T(I, 'Download CSV')) + '" aria-label="' + esc(T(I, 'Download CSV')) + '">⬇</button>';
     if (o.bulk && o.bulk.length) h += '<button type="button" class="cbl-tbtn' + (R.selMode ? ' on' : '') + '" data-cbl-selmode data-testid="cbl-select-' + k + '" aria-pressed="' + !!R.selMode + '">☑ ' + esc(T(I, 'Select')) + '</button>';
-    h += '<span class="cbl-count" id="cbl-count-' + k + '" data-testid="' + esc(tids.count || (I.key + '-count')) + '" aria-live="polite">' + esc(countText(I, m)) + '</span>';
+    if (tl.count !== false) h += '<span class="cbl-count" id="cbl-count-' + k + '" data-testid="' + esc(tids.count || (I.key + '-count')) + '" aria-live="polite">' + esc(countText(I, m)) + '</span>';   /* tools.count:false — a host that already says the count (one count on a screen) */
     if (o.bulk && o.bulk.length && R.selMode) {
       var n = selectedRows(I).length;
       h += '<span class="cbl-acts" style="margin:0" data-testid="cbl-bulk-' + k + '"><button type="button" class="cbl-btn" data-cbl-selall>' + esc(T(I, 'Select all shown')) + '</button>' + o.bulk.map(function (b) { return '<button type="button" class="cbl-btn" data-bulk="' + esc(b.id) + '"' + (n ? '' : ' disabled') + '>' + esc(T(I, b.label)) + ' (' + n + ')</button>'; }).join('') + '</span>';
@@ -602,7 +602,7 @@
     }
     var end;
     if (!remote(I) && drawn < total) end = '<div class="cbl-end" data-cbl-sentinel data-testid="cbl-more-' + esc(I.key) + '"><button type="button" data-cbl-more>' + esc(T(I, '↓ Show {n} more', { n: Math.min(50, total - drawn) })) + '</button> <span>' + drawn + ' ' + esc(T(I, 'of')) + ' ' + total + '</span></div>';
-    else end = remote(I) ? '' : '<div class="cbl-end" data-testid="cbl-end-' + esc(I.key) + '">' + total + ' · ' + esc(T(I, 'end of list')) + '</div>';
+    else end = remote(I) ? '' : '<div class="cbl-end" data-testid="cbl-end-' + esc(I.key) + '">' + esc(T(I, 'end of list')) + '</div>';   /* the count is said once, in the tools — not again here (ai-eye E-3/E-13) */
     box.innerHTML = '<div class="cbl-grid' + (s.view === 'lines' ? ' cbl-lines' : '') + '" role="grid" aria-rowcount="' + total + '">' + (s.view === 'grid' ? hdr : '') + body + '</div>' + end + footHTML(I);
     setHdrH(I, box);
     box.scrollTop = keepTop;
@@ -685,11 +685,16 @@
     }
     var acts = (o.actions || []).filter(function (a) { return !a.when || safe(function () { return a.when(row); }, true); });
     return '<div class="cbl-next" role="row" data-next="' + esc(id) + '"><div role="cell">' + inner + '</div>'
-      + (acts.length ? '<div class="cbl-acts">' + acts.map(function (a) {
-        var why = a.why ? safe(function () { return a.why(row); }, '') : '';   /* the page asks the server's answer for this login; a sentence = refused, shown greyed with it */
-        var btn = '<button type="button" class="cbl-btn" data-act="' + esc(a.id) + '" data-actrow="' + esc(id) + '"' + (a.tid ? ' data-testid="' + esc(a.tid) + '"' : '') + (why ? ' disabled aria-disabled="true" title="' + esc(why) + '"' : '') + '>' + (a.icon ? esc(a.icon) + ' ' : '') + esc(T(I, a.label)) + '</button>';
-        return why ? '<span class="cbl-act">' + btn + '<span class="cbl-why"' + (a.tid ? ' data-testid="' + esc(a.tid) + '-why"' : '') + '>' + esc(why) + '</span></span>' : btn;
-      }).join('') + '</div>' : '') + '</div>';
+      + (acts.length ? '<div class="cbl-acts">' + (function () {
+        var whys = acts.map(function (a) { return a.why ? safe(function () { return a.why(row); }, '') : ''; });   /* the page asks the server's answer for this login; a sentence = refused, shown greyed with it */
+        /* every action refused for the same reason (a view-only login): the sentence ONCE after the row's buttons, not six times (ai-eye E-1) */
+        var one = acts.length > 1 && whys[0] && whys.every(function (w) { return w === whys[0]; }) ? whys[0] : '';
+        return acts.map(function (a, i) {
+          var why = whys[i];
+          var btn = '<button type="button" class="cbl-btn" data-act="' + esc(a.id) + '" data-actrow="' + esc(id) + '"' + (a.tid ? ' data-testid="' + esc(a.tid) + '"' : '') + (why ? ' disabled aria-disabled="true" title="' + esc(why) + '"' : '') + '>' + (a.icon ? esc(a.icon) + ' ' : '') + esc(T(I, a.label)) + '</button>';
+          return why && !one ? '<span class="cbl-act">' + btn + '<span class="cbl-why"' + (a.tid ? ' data-testid="' + esc(a.tid) + '-why"' : '') + '>' + esc(why) + '</span></span>' : btn;
+        }).join('') + (one ? '<span class="cbl-why" data-testid="cbl-why-' + esc(id) + '">' + esc(one) + '</span>' : '');
+      })() + '</div>' : '') + '</div>';
   }
   function resolveNext(I) {
     var p = I.pending; if (!p) return; I.pending = null;
@@ -711,7 +716,6 @@
   }
 
   /* ═════ actions ═════ */
-  function persistRepaint(I, whole) { saveChoices(I); if (whole) paintAll(I); else paintList(I); }
   function resetLimit(I) { I.limit = 50; }
   function query(I, why, sort, now) {
     if (!remote(I)) return false;
