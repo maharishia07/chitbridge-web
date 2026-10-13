@@ -87,7 +87,7 @@ function finCols() {
     { key: 'act', label: ' ', prio: 1, pin: 'end', w: 170, html: true, cell: function (p) {
       var id = esc(p.party_id);
       return '<span style="display:inline-flex;gap:6px" onclick="event.stopPropagation()">'
-        + '<button type="button" class="cbl-tbtn" data-testid="fin-receive-' + id + '" onclick="event.stopPropagation();payOpen(\'customer\',\'' + id + '\')">' + esc(tx('Receive')) + '</button>'
+        + '<button type="button" class="cbl-tbtn" data-testid="fin-receive-' + id + '" onclick="event.stopPropagation();payOpen(\'customer\',\'' + id + '\',' + esc(JSON.stringify(String(p.name || ''))) + ')">' + esc(tx('Receive')) + '</button>'
         + '<button type="button" class="cbl-tbtn" data-testid="fin-remind-' + id + '" onclick="event.stopPropagation();bkRemind(\'' + id + '\',this)">' + esc(tx('Remind')) + '</button></span>'; } },
   ];
 }

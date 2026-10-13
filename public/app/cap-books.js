@@ -529,9 +529,10 @@ async function partyEditSave(kind, partyId) {
    duplicate band. There is no "Later": "Keep it as an advance" is a switch that says what it does. The words of every warning and of
    the outcome come from the server; this unit paints them. */
 var PAY = null;
-function payOpen(kind, partyId) {
+function payOpen(kind, partyId, name) {
   var r = partyRowOf(kind, partyId) || {};
-  PAY = { kind: kind, partyId: partyId, name: r.nickname || r.display_name || '', ref: bkRef(), seq: 0, ack: [], advice: false, preview: null };   /* one ref per opened form */
+  /* WX-O2C (2026-10-13): Receivables does not load the party lists (UI.custs) — the title read "Receive · " with no name; the Dues row hands its own name */
+  PAY = { kind: kind, partyId: partyId, name: r.nickname || r.display_name || name || '', ref: bkRef(), seq: 0, ack: [], advice: false, preview: null };   /* one ref per opened form */
   modal('<div class="mhd"><div class="t" id="pay_title" data-testid="pay_title">' + esc(kind === 'supplier' ? tx('Pay') : tx('Receive')) + ' · ' + esc(PAY.name) + '</div></div><div class="mbody" id="pay_body" style="display:flex;flex-direction:column;gap:8px">'
     + '<label>' + tx('Amount') + '' + bkMoneyInput({ id: 'pay_amt', on: 'payPreviewSoon()' }) + '</label>'
     + '<label>' + tx('How') + '<select class="inp" id="pay_mode" data-testid="pay_mode" onchange="payModePaint()"><option value="cash">' + tx('Cash') + '</option><option value="upi">UPI</option><option value="bank">' + tx('Bank') + '</option><option value="card">' + tx('Card') + '</option><option value="cheque">' + tx('Cheque') + '</option></select></label>'
@@ -1618,7 +1619,7 @@ function bkDuesAge(p) {
 function bkDuesActs(p) {
   var kind = bkPartyKind(p.party_id), id = esc(p.party_id), rcv = kind === 'customer';
   return '<span style="display:inline-flex;gap:6px" onclick="event.stopPropagation()">'
-    + '<button type="button" class="cbl-tbtn" data-testid="dues-pay-' + id + '" onclick="event.stopPropagation();payOpen(\'' + kind + '\',\'' + id + '\')">' + esc(tx(bkDuesAdvance(p) ? 'Get back' : (rcv && Number(p.balance_minor) < 0 ? 'Adjust' : (rcv ? 'Receive' : 'Pay')))) + '</button>'
+    + '<button type="button" class="cbl-tbtn" data-testid="dues-pay-' + id + '" onclick="event.stopPropagation();payOpen(\'' + kind + '\',\'' + id + '\',' + esc(JSON.stringify(String(p.name || ''))) + ')">' + esc(tx(bkDuesAdvance(p) ? 'Get back' : (rcv && Number(p.balance_minor) < 0 ? 'Adjust' : (rcv ? 'Receive' : 'Pay')))) + '</button>'
     + (rcv ? '<button type="button" class="cbl-tbtn" data-testid="dues-remind-' + id + '" onclick="event.stopPropagation();bkRemind(\'' + id + '\',this)">' + esc(tx('Remind')) + '</button>' : '') + '</span>';
 }
 /** 'customer' (you receive) or 'supplier' (you pay): the party's side from the one /dues read, else the control account that is open */

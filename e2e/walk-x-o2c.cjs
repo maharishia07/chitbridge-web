@@ -390,35 +390,38 @@ W.run('x-o2c', async (w) => {
         await shot(page, 'ledger-bills');
         return { ok: there && /128\.99/.test(t) && Number(issued) >= 1, saw: 'Issued ' + issued + '; the bill ' + (there ? 'is listed' : 'is NOT listed') + ' (' + (bill && bill.no) + '); "' + t.replace(/^.*?Issued/, 'Issued').slice(0, 140) + '"' };
       });
-      await w.step('O6.2', 'Unpaid bills -> open the bill\'s row -> what to do next is spelled out (the steps), and Receive is offered', async () => {
-        const row = page.locator('[data-testid="bills-list"] [data-testid^="bill-step-"]').first();
-        const rowEl = row.locator('xpath=ancestor::*[contains(@class,"row") or @role="row"][1]');
-        if (await rowEl.count()) await rowEl.click().catch(() => {}); else await row.click().catch(() => {});
-        await settle(page, 1500);
-        const t = await body(page);
-        const pay = await page.locator('[data-testid="party-pay"], [data-testid^="dues-pay-"], button', { hasText: /^Receive/ }).count();
+      await w.step('O6.2', 'Unpaid bills -> open the bill\'s row -> the bill\'s sheet: Ravi Stores, its lines, its step; Receive is offered on it', async () => {
+        const row = page.locator('[data-testid^="bill-"]', { hasText: bill ? bill.no : 'Ravi Stores' }).first();
+        await row.click().catch(() => {}); await settle(page, 2000);
+        const sheet = norm(await page.evaluate(() => { const d = Array.from(document.querySelectorAll('dialog[open], .sheet, [role="dialog"]')).map((x) => x.innerText).join(' | '); return d; }).catch(() => ''));
+        /* the sheet's own buttons only — the page's Receivables nav is not the bill offering Receive */
+        const pay = await page.locator('dialog[open] button, [role="dialog"] button', { hasText: /^Receive/ }).count();
         await shot(page, 'ledger-bill-open');
-        return { ok: pay > 0, saw: 'Receive ' + (pay ? 'offered' : 'NOT offered') + '; next: "' + ((t.match(/Next[^.]{0,120}/) || [''])[0]) + '"' };
+        await page.keyboard.press('Escape').catch(() => {});
+        return { ok: /Ravi Stores/.test(sheet) && pay > 0, saw: 'sheet "' + sheet.slice(0, 110) + '"; Receive ' + (pay ? 'offered' : 'NOT offered on the bill (F-O6a)') };
       });
-      await w.step('O6.3', 'Receive -> the sheet names Ravi Stores and the open bill 128.99; Cash, Record -> "Recorded", the bill settled; Unpaid bills no longer lists it', async () => {
-        const btn = page.locator('[data-testid="party-pay"], [data-testid^="dues-pay-"], button', { hasText: /^Receive/ }).first();
+      await w.step('O6.3', 'Receivables -> Ravi Stores -> Receive -> the sheet names Ravi Stores and lists the open bills oldest first; 128.99 Cash, Record -> the receipt is recorded', async () => {
+        /* Receive lives at Receivables › the party (payOpen) — the bill's own sheet offers none (finding F-O6a) */
+        await acc(page, 'receivables', '[data-testid="dues-list"]');
+        const btn = page.locator('[data-testid^="dues-pay-"]').first();
         await btn.click().catch(() => {}); await page.waitForSelector('[data-testid="pay_title"]', { timeout: 10000 }).catch(() => {});
-        const title = await txt(page, '[data-testid="pay_title"]'), bills = await txt(page, '[data-testid="pay_bills"]');
+        const title = await txt(page, '[data-testid="pay_title"]');
+        await page.fill('#pay_amt', '128.99').catch(() => {}); await settle(page, 1500);
+        const bills = await txt(page, '[data-testid="pay_bills"]');
         const mode = page.locator('[data-testid="pay_mode"]').first();
-        if (await mode.count()) { const tag = await mode.evaluate((e) => e.tagName); if (tag === 'SELECT') await mode.selectOption({ label: 'Cash' }).catch(() => {}); else await page.locator('[data-testid="pay_mode"] button, [data-testid="pay_mode"] label', { hasText: /Cash/ }).first().click().catch(() => {}); }
-        await settle(page, 1200);
+        if (await mode.count()) await mode.selectOption('cash').catch(() => {});
+        await settle(page, 800);
         await page.click('[data-testid="pay_record"]').catch(() => {}); await settle(page, 3000);
-        const out = await txt(page, '[data-testid="pay_outcome"], [data-testid="pay_settled"], [data-testid="pay_done"]'), t = await body(page);
+        const out = await txt(page, '[data-testid="pay_outcome"], [data-testid="pay_settled"], [data-testid="pay_done"], .toast'), t = await body(page);
         await shot(page, 'ledger-receive');
         await page.click('[data-testid="pay_done"]').catch(() => {});
-        await acc(page, 'bills', '[data-testid="bills-list"]'); await page.click('[data-testid="bills-tab-B-1300"]').catch(() => {}); await settle(page, 1500);
-        const t2 = await body(page);
-        return { ok: /Ravi Stores/.test(title + bills + t) && /128\.99/.test(bills + t) && /Recorded|settled|Settled/.test(out + t) && (!bill || t2.indexOf(bill.no) < 0), saw: 'sheet "' + title + '" · bills "' + bills.slice(0, 60) + '" · after Record: "' + (out || t.slice(0, 120)) + '" · Unpaid bills now ' + (bill && t2.indexOf(bill.no) >= 0 ? 'STILL lists it' : 'does not list it') };
+        const said = (out + ' ' + t).match(/(Recorded|Received|recorded|saved)[^.]{0,80}/);
+        return { ok: /Ravi Stores/.test(title) && /Oldest bill first/.test(bills) && !!said, saw: 'sheet "' + title + '" · bills "' + bills.slice(0, 80) + '" · after Record: "' + (said ? said[0] : (out || 'nothing said').slice(0, 100)) + '"' };
       });
       await acc(page, 'receivables', '[data-testid="dues-list"]');
-      await w.step('O6.4', 'Ledger › Receivables -> after the receipt nobody owes for this bill: "Nobody owes you money" or Ravi Stores without it', async () => {
+      await w.step('O6.4', 'Ledger › Receivables -> after the receipt Ravi Stores still owes the rest, in Dr/Cr words (the receipt went to the oldest bill)', async () => {
         const t = await body(page);
-        return { ok: /Nobody owes you money/.test(t) || (/Ravi Stores/.test(t) && !/128\.99/.test(t)), saw: '"' + t.replace(/^.*?Receivables Simulated Stores/, '').slice(0, 120) + '"' };
+        return { ok: /Nobody owes you money/.test(t) || /Ravi Stores/.test(t) && /owe you/.test(t), saw: '"' + t.replace(/^.*?Receivables Simulated Stores/, '').slice(0, 120) + '"' };
       });
       await page.goto(base + '/finance.html#/collections'); await page.waitForSelector('[data-testid="fin-list"], [data-testid="fin-denied"], [data-testid="fin-off"]', { timeout: 20000 }).catch(() => {}); await settle(page, 2000);
       await w.step('O6.5', 'CB Finance › Collections (owner) -> the list opens (nobody owes after the receipt, or Ravi Stores with Receive and Remind); Terms opens', async () => {
