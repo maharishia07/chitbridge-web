@@ -22,3 +22,14 @@ None simpler than one attribute + one selector. Skipping `[data-testid="ribbon-a
 
 ## (e) Changes to the brief
 1. The attribute is `data-dev-only` (not `data-dev`, taken in signin-lab.html). 2. The Assistant button is NOT excluded: it is a product string and counts; named in the report as the LOC7 item.
+
+## Report (the PR body — the runner token cannot edit PR #163; paste it there)
+
+Cloud rounds LOC0 + LOC0b. Verdict: BUILD WITH CHANGES (critiques: docs/critique/LOC0.md, docs/critique/LOC0b.md).
+- `docs/design/standards/LOCALE-STANDARD.md` (standards row 62) + `LOCALE-PLAN.md`; pseudo locale `qps` is a strings pack (`app/strings-qps.js`), plurals via the existing txn(); no dependency.
+- `e2e/walk-locale.cjs` + `e2e/locale-baseline.json`: ten screens at 1366/390; fails if untranslated or clipped counts rise and names the new strings. Server sentences queued as LOC2 (api).
+- LOC0b: main merged; the Build-preview ribbon (API URL with a random port) carries `data-dev-only` and the walk skips `[data-dev-only]` — by attribute, not text; the walk holds the pack until the page's first /api call so the Assistant button (mounted at boot, never repainted) counts the same every run — a real LOC7 (Home) item, not translated here.
+- Baseline re-taken on the runner (untranslated 1366·390, clipped 0 everywhere): Home 278·197 · Till 61·21 · Accounts 30·4 · Employees 24·16 · Network 13·4 · Finance 12·0 (Cash tab) · CRM 10·1 · Shop 8·8 · Country setup 7·7 (ribbon out, Assistant in) · Tasks 7·1. Walk run 3× after --write: 22/22 each, stable.
+- Checks: guard-static · token-guard · dup-functions · contract · check-syntax · check-app-parses exit 0. Web only, no api/engines/migration.
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
