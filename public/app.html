@@ -16417,11 +16417,13 @@ function paintDetail(){const dp=document.getElementById("detailpane");if(dp){dp.
  * on every paint; a mount keeps the typed text across a repaint. The app hands the unit only what it knows and the unit does
  * not: the chit's `actions`, the party's name, the message kinds, the co-assist's signature, the dispute byline reader.
  */
+/* the OTHER party: on a copy I received that is the sender; on one I sent, the receivers (c.party) — the thread and the detail head
+   (WX-P2P-17: the supplier's head read "Order — Kumar Trade Co · Kumar Trade Co", its own name) */
+function chitOtherParty(c){ return (c&&c.sender&&!chitIsSelf(null,c.sender))?c.sender:((c&&c.party)||''); }
 function rtMountAll(scope){
   if(typeof CBThread==='undefined') return;
   const c=UI.detail||{}; const isCust=SESSION.role==="customer";
-  /* the OTHER party: on a copy I received that is the sender; on one I sent, the receivers (c.party) */
-  const other=(c.sender&&!chitIsSelf(null,c.sender))?c.sender:(c.party||'');
+  const other=chitOtherParty(c);
   CBThread.mountAll(scope, {
     actions:c.actions||null, party:other, me:SESSION.entity||SESSION.name||'', kinds:isCust?["info","query"]:surfacedTypes(),
     channel:isCust?'external':'both', thread_type:isCust?'external':'internal',
@@ -16884,7 +16886,7 @@ function detailInner(){
    */
   const dtabs=(inputHTML?[["input","Input"]]:[]).concat(
     [["content","Content"],["status","Status"],["summary","Summary"],["messages","💬 Messages"+(msgCount(c)?" ("+msgCount(c)+")":"")]]);
-  return `<div class="dh"><button class="dback" onclick="backToList()">‹ Back to list</button><button class="dmsg" data-testid="msg-tab" onclick="setDtab('messages')" title="Messages" aria-label="Messages">💬${msgCount(c)?' '+msgCount(c):''}</button><div class="dt">${esc(c.code)} · ${esc(c.party)}</div><div class="ds">${esc(c.area)} · ${esc(c.kind)} · ${inr(c.amt)} · ${c.state.toUpperCase()}</div>
+  return `<div class="dh"><button class="dback" onclick="backToList()">‹ Back to list</button><button class="dmsg" data-testid="msg-tab" onclick="setDtab('messages')" title="Messages" aria-label="Messages">💬${msgCount(c)?' '+msgCount(c):''}</button><div class="dt">${esc(c.code)} · ${esc(chitOtherParty(c)||'—')}</div><div class="ds">${esc(c.area)} · ${esc(c.kind)} · ${inr(c.amt)} · ${c.state.toUpperCase()}</div>
      <div class="parties">${askedByLine(c.via) ? `<span class="ptag">${askedByLine(c.via)}</span>` : `<span class="ptag">from <b>${esc(c.sender||SESSION.entity||"You")}</b></span>`}<span class="ptag">${c.kind==='counter'?('to <b>'+esc(SESSION.entity||'You')+'</b>'):esc(c.rsummary||('to '+(c.party||'—')))}</span>${c.kind==='counter'?`<span class="ptag">for <b>${esc(c.cust)}</b></span>`:''}</div><div class="dchips">${dchipShows('ext')?`<span class="prichip-btn pri-${c.priExt||'normal'}" style="cursor:default" title="External priority — set by the drafter at compose, locked once sent">↔ ext: ${PRI[c.priExt||'normal'].label}</span>`:''}${(SESSION.role!=="customer"&&dchipShows('int'))?`<button class="prichip-btn pri-${c.pri||'normal'}" onclick="repriority('${c.id}')" title="Internal priority — your own queue; tap to change">⚙ int: ${PRI[c.pri||'normal'].label} ▾</button>`:''}${(c.custPri&&dchipShows('custpri'))?'<span class="custflag-tag">' + tx('⚑ Customer priority') + '</span>':''}${dchipShows('assignee')?`<span class="prichip-btn" style="cursor:default;margin-inline-start:auto;background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)" title="Currently assigned to">👤 ${c.assignee?esc(c.assignee):'Unassigned'}</span>`:''}${dchipMore()}</div></div>
    ${(window.CBPage&&!c._loading)?CBPage.noteHTML(c.business_json):''}${chitSpendStrip(c)}${(typeof disputeBanner==='function')?disputeBanner(c):''}${cancelBanner(c)}<div class="dtabs">${dtabs.map(([k,l])=>`<button class="${UI.dtab===k?'on':''}" data-testid="dtab-${k}" onclick="setDtab('${k}')">${l}</button>`).join("")}</div>
    <div class="db">${body}</div><div class="actbar">${(typeof SESSION!=='undefined'&&(SESSION.name==='GOV-01-Help'||SESSION.isHelpdesk)&&c.kind==='inquiry')?'<button class="pri" onclick="answerPublish(\''+c.id+'\')">🧠 Answer &amp; publish</button>':''}${actbar}</div>`;

@@ -241,7 +241,7 @@ const walk = async (w) => {
       const t2 = await text(p), name = await shot(p, 'd10-supplier-task');
       const i = t2.indexOf('DTL');
       const selfHead = /Order — Kumar Trade Co · Kumar Trade Co/.test(t2);
-      return { ok: listed && /Order — Kumar Trade Co/.test(t2) && t2.slice(i).indexOf(buyer.me.display_name) >= 0 && /Coconut hair oil|Chocolate bar/.test(t2), saw: name + ' · before the search: "' + paged + '" ' + (listed ? '(the order is listed)' : '[the order is NOT listed until searched — WX-P2P-03]') + ' · ' + t2.slice(i, i + 200) + (selfHead ? ' [the head names the reader\'s own shop as the party — WX-P2P-17]' : '') };
+      return { ok: listed && !selfHead && new RegExp('Order — Kumar Trade Co · ' + buyer.me.display_name).test(t2) && t2.slice(i).indexOf(buyer.me.display_name) >= 0 && /Coconut hair oil|Chocolate bar/.test(t2), saw: name + ' · before the search: "' + paged + '" ' + (listed ? '(the order is listed)' : '[the order is NOT listed until searched — WX-P2P-03]') + ' · ' + t2.slice(i, i + 200) + (selfHead ? ' [the head names the reader\'s own shop as the party — WX-P2P-17]' : '') };
     });
     await w.step('D11', 'The SUPPLIER -> Status ▾ -> Act -> Set status -> the order reads ACT; the BUYER\'s Order list shows the same ACT', async () => {
       const p = supUI.page;
