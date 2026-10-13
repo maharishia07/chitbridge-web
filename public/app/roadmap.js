@@ -30,6 +30,9 @@
     ['You send what you choose; nothing is kept for others', null, 'We pass on only what you send, and hold no copy for anyone else.']
   ];
 
+  /* the words go through the catalogue (tx · txf, accounts-shell.js — English is the key); a page without it shows the English */
+  function T(s) { return typeof root.tx === 'function' ? root.tx(s) : s; }
+  function TF(s, v) { return typeof root.txf === 'function' ? root.txf(s, v) : s.replace(/\{(\w+)\}/g, function (w, k) { return k in v ? v[k] : w; }); }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function eff(e) { return e.works && e.state === 'workshop' ? 'built' : e.state; }
   function chip(st) { var s = STATE[st] || STATE.coming; return '<span class="rm-chip rm-' + esc(st) + '" data-state="' + esc(st) + '"><span aria-hidden="true">' + s.sym + '</span> ' + s.word + '</span>'; }
@@ -75,8 +78,8 @@
       if (!rows.length) return '';
       return '<h4 data-testid="rm-area-' + a[0] + '">' + a[1] + '</h4><ul>' + rows.map(function (e) {
         var meta = [e.phase].concat(e.rows || []).filter(Boolean).join(' · ');
-        return '<li data-testid="rm-item-' + esc(e.id) + '" data-state="' + esc(eff(e)) + '"' + (meta ? ' data-plan="' + esc(meta) + '" title="' + esc('Plan: ' + meta) + '"' : '') + '>' + chip(eff(e)) + '<span class="rm-n">' + esc(e.name) + '</span>'
-          + (e.fits ? '<span class="rm-f">' + esc(e.fits) + '</span>' : '') + '</li>';
+        return '<li data-testid="rm-item-' + esc(e.id) + '" data-state="' + esc(eff(e)) + '"' + (meta ? ' data-plan="' + esc(meta) + '" title="' + esc('Plan: ' + meta) + '"' : '') + '>' + chip(eff(e)) + '<span class="rm-n">' + esc(T(e.name)) + '</span>'
+          + (e.fits ? '<span class="rm-f">' + esc(T(e.fits)) + '</span>' : '') + '</li>';
       }).join('') + '</ul>';
     }).join('');
   }
@@ -110,7 +113,7 @@
     if (!es.length) { el.innerHTML = ''; return; }
     var q = !!(opts && opts.quiet);
     el.innerHTML = (q ? '<div class="rm" data-testid="roadmap"><div class="rm-q" data-testid="rm-quiet"><details data-testid="rm-quiet-fold"><summary>Where we are going ›</summary><div class="rm-inner">' : '<div class="rm" data-testid="roadmap">')
-      + '<details data-testid="rm-going"><summary>Where we are going <small>' + count(es, 'built') + ' built · ' + count(es, 'coming') + ' coming · ' + count(es, 'workshop') + ' being built</small></summary><div class="rm-body">' + groups(es) + '</div></details>'
+      + '<details data-testid="rm-going"><summary>Where we are going <small>' + esc(TF('{built} built · {coming} coming · {workshop} being built', { built: count(es, 'built'), coming: count(es, 'coming'), workshop: count(es, 'workshop') })) + '</small></summary><div class="rm-body">' + groups(es) + '</div></details>'
       + '<details data-testid="rm-fits"><summary>How it fits together</summary><div class="rm-body">' + fit(es) + '</div></details>'
       + '<details data-testid="rm-rail"><summary>What ChitBridge adds</summary><div class="rm-body">' + compare() + '</div></details>' + (q ? '</div></details></div></div>' : '</div>');
   }

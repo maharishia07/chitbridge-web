@@ -281,8 +281,8 @@ async function run() {
       ok(attrs.filter((a) => a.m).every((a) => { const row = tbl[[0, 1, 3][attrs.filter((x) => x.m).indexOf(a)]]; return row && row.m.replace(/\s+/g, ' ') === a.m.replace(/\s+/g, ' '); }), 'roadmap · H18 · a headline carries the SAME mark as its row in the table');
       const groupsOk = await pg.$$eval('[data-testid^="rm-area-"]', (hs) => hs.map((h) => h.dataset.testid.slice(8)));
       ok(['selling', 'running', 'labs', 'setup'].every((a) => groupsOk.includes(a)), 'roadmap · grouped by area (' + groupsOk.join(', ') + ')');
-      const sum = await pg.locator('[data-testid="rm-going"] summary').innerText();
-      ok(sum.includes(man.entries.filter((e) => eff(e) === 'built').length + ' built') && sum.includes(man.entries.filter((e) => eff(e) === 'coming').length + ' coming') && sum.includes(man.entries.filter((e) => eff(e) === 'workshop').length + ' in the workshop'), 'roadmap · the counts are the manifest\'s (' + sum.replace(/\s+/g, ' ') + ')');
+      const sum = (await pg.locator('[data-testid="rm-going"] summary').innerText()).replace(/[\u2068\u2069]/g, '');   /* txf isolates each number (bidiWrap) */
+      ok(sum.includes(man.entries.filter((e) => eff(e) === 'built').length + ' built') && sum.includes(man.entries.filter((e) => eff(e) === 'coming').length + ' coming') && sum.includes(man.entries.filter((e) => eff(e) === 'workshop').length + ' being built'), 'roadmap · the counts are the manifest\'s (' + sum.replace(/\s+/g, ' ') + ')');
       let routesOk = true;
       for (const e of BUILT) { const r = await ctx.request.get(base + e.route); if (r.status() !== 200) { routesOk = false; console.log('      ' + e.route + ' → ' + r.status()); } }
       ok(routesOk, 'roadmap · every built item\'s route returns 200');

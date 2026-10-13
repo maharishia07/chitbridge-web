@@ -52,6 +52,8 @@
   var AREAS = ['home', 'selling', 'running', 'labs', 'setup'];
   var ICON = { home: '⌂', selling: '▤', running: '₹', labs: '◈', setup: '⚙' };
 
+  /* a manifest entry's name and line go through the catalogue (tx, accounts-shell.js — English is the key); a page without it shows the English */
+  function T(s) { return typeof root.tx === 'function' ? root.tx(s) : s; }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function lsGet(k) { try { return root.localStorage.getItem(k); } catch (_) { return null; } }
 
@@ -376,15 +378,15 @@
     }
     function card(e) {
       return '<a class="cbsh-box" href="' + esc(routeOf(e)) + '" data-testid="shell-card-' + esc(e.id) + '" data-id="' + esc(e.id) + '">' +
-        '<span class="arw" aria-hidden="true">›</span><span class="g" aria-hidden="true">' + esc(e.icon) + '</span><h4>' + esc(e.name) + '</h4>' +
-        (e.what ? '<p class="what">' + esc(e.what) + '</p>' : '') + '<span class="facts" data-testid="shell-facts-' + esc(e.id) + '"></span></a>';
+        '<span class="arw" aria-hidden="true">›</span><span class="g" aria-hidden="true">' + esc(e.icon) + '</span><h4>' + esc(T(e.name)) + '</h4>' +
+        (e.what ? '<p class="what">' + esc(T(e.what)) + '</p>' : '') + '<span class="facts" data-testid="shell-facts-' + esc(e.id) + '"></span></a>';
     }
     function chip(e) {
       /* H14/P2-5: a workshop row whose function WORKS today (manifest `works`, the roadmap's rule) says so - never the word workshop */
       var st = e.state === 'workshop' ? (e.works ? 'works' : 'workshop') : 'coming';
       /* H36: a workshop item with no page of its own may name the closest built page (`via`): the chip becomes a link there, still marked workshop */
-      if (e.via) return '<a class="cbsh-sc" href="' + esc(e.via) + '" data-testid="shell-chip-' + esc(e.id) + '" data-state="' + st + '" data-via="1"' + (e.via_note ? ' title="' + esc(e.via_note) + '"' : '') + '><span class="g" aria-hidden="true">' + esc(e.icon) + '</span><b>' + esc(e.name) + '</b><span class="tag">' + esc(W.tag[st]) + '</span></a>';
-      return '<span class="cbsh-sc" data-testid="shell-chip-' + esc(e.id) + '" data-state="' + st + '"><span class="g" aria-hidden="true">' + esc(e.icon) + '</span><b>' + esc(e.name) + '</b><span class="tag">' + esc(W.tag[st]) + '</span></span>';
+      if (e.via) return '<a class="cbsh-sc" href="' + esc(e.via) + '" data-testid="shell-chip-' + esc(e.id) + '" data-state="' + st + '" data-via="1"' + (e.via_note ? ' title="' + esc(e.via_note) + '"' : '') + '><span class="g" aria-hidden="true">' + esc(e.icon) + '</span><b>' + esc(T(e.name)) + '</b><span class="tag">' + esc(W.tag[st]) + '</span></a>';
+      return '<span class="cbsh-sc" data-testid="shell-chip-' + esc(e.id) + '" data-state="' + st + '"><span class="g" aria-hidden="true">' + esc(e.icon) + '</span><b>' + esc(T(e.name)) + '</b><span class="tag">' + esc(W.tag[st]) + '</span></span>';
     }
     function paintAreas() {
       var box = $('.cbsh-areas'); if (!box) return;
