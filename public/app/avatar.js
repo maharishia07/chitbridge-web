@@ -32,8 +32,8 @@
  *
  * ⭐ BOLD: regular text goes to 600 and what was already bold stays the strongest (like the phones' "Bold text"). Italic: no.
  *
- * ⚠️ THE SERVER KEEPS theme · fs · motion ONLY (routes/entities.js › ui.keys). Reading font and bold are on THIS machine until
- *    that list gains them — sending them now would be dropped silently, which is how a setting looks saved and is not.
+ * ⭐ THE SERVER KEEPS ALL SIX (routes/entities.js › ui.keys): theme · fs · motion · stripes · font · weight. Reading font and bold
+ *    were on this machine only until CU3 widened that list — a setting that looks saved and is not was the defect.
  */
 (function (root) {
   'use strict';
@@ -160,7 +160,7 @@
   var HOST = {};                                            /* what the mounted page told us (apiBase · token · sync) */
   function push() {
     if (HOST.sync === false) return;
-    var body = { theme: pref('theme'), fs: pref('fs'), motion: pref('motion'), stripes: pref('stripes') };
+    var body = { theme: pref('theme'), fs: pref('fs'), motion: pref('motion'), stripes: pref('stripes'), font: pref('font'), weight: pref('weight') };
     /* the app's (and CB Accounts') own door: CBPrefs debounces, queues offline and stays silent before the migration */
     try { if (typeof CBPrefs !== 'undefined' && typeof SESSION !== 'undefined' && SESSION && SESSION.token) { CBPrefs.push('ui', body); return; } } catch (_) {}
     var base = apiBaseOf(HOST), tok = tokenOf(HOST);
@@ -176,13 +176,15 @@
   /** The server wins — that is the feature — EXCEPT when it has nothing (an empty object means "never chosen"). */
   function hydrate(prefs) {
     if (!prefs || typeof prefs !== 'object') return false;
-    if (!prefs.theme && !prefs.fs && !prefs.motion && !prefs.stripes) return false;
+    if (!prefs.theme && !prefs.fs && !prefs.motion && !prefs.stripes && !prefs.font && !prefs.weight) return false;
     var changed = false;
     try {
       if (prefs.theme && (prefs.theme === 'device' || (has(THEMES, prefs.theme) && THEMES[prefs.theme])) && prefs.theme !== pref('theme')) { lsSet(KEY.theme, prefs.theme); changed = true; }
       if (prefs.fs && TEXT_SIZES.some(function (x) { return x[0] === prefs.fs; }) && prefs.fs !== pref('fs')) { lsSet(KEY.fs, prefs.fs); changed = true; }
       if (prefs.motion && ['auto', 'reduce', 'full'].indexOf(prefs.motion) >= 0 && prefs.motion !== pref('motion')) { lsSet(KEY.motion, prefs.motion); changed = true; }
       if (prefs.stripes && STRIPES.some(function (x) { return x[0] === prefs.stripes; }) && prefs.stripes !== pref('stripes')) { lsSet(KEY.stripes, prefs.stripes); changed = true; }
+      if (prefs.font && FONTS.some(function (x) { return x[0] === prefs.font; }) && prefs.font !== pref('font')) { lsSet(KEY.font, prefs.font); changed = true; }
+      if (prefs.weight && (prefs.weight === 'normal' || prefs.weight === 'bold') && prefs.weight !== pref('weight')) { lsSet(KEY.weight, prefs.weight); changed = true; }
       if (changed) { apply(); repaint(); }
     } catch (_) {}
     return changed;
@@ -211,7 +213,7 @@
     if (kind === 'stripes' && !STRIPES.some(function (x) { return x[0] === value; })) return;
     lsSet(KEY[kind], value);
     apply();
-    if (kind === 'theme' || kind === 'fs' || kind === 'motion' || kind === 'stripes') push();
+    push();                                                 /* every kind reaches the server since CU3 (font · weight were device-only) */
     repaint();
   }
 

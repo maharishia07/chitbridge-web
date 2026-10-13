@@ -4173,7 +4173,7 @@ function _localeSettingsBody(){
     ['ja-JP', 'Japan — 123,456,789.50']
   ];
 
-  var cur = (function(){ try { return localStorage.getItem('cb_locale') || ''; } catch(_) { return ''; } })();
+  var cur = CBLocale.getExt('locale');   /* CU3: the layer's own read, not a second one of its storage */
   var sel = function(id, list, val, fn){
     return '<select class="inp" data-testid="' + id + '" onchange="' + fn + '(this.value)">'
       /* ⚠️ ESCAPE THE VALUE TOO, not only the label. `o[0]` lands inside `value="…"` — an unescaped quote
@@ -4206,7 +4206,7 @@ function _localeSettingsBody(){
 
   /* ⚠️ The zone list comes from the ENGINE (Intl.supportedValuesOf), not a table we would have to edit twice a
      year. Where the engine will not supply one, a short list beats an empty select. */
-  var tzCur = (function(){ try { return localStorage.getItem('cb_tz') || ''; } catch(_) { return ''; } })();
+  var tzCur = CBLocale.getExt('tz');     /* the override only ('' = the device's zone) — CBLocale.timezone() would fill the default */
   var tzAll = CBLocale.zones();
   /* ⚠️ esc() — the zone comes from localStorage (and, via b165, from a row another device wrote), so it is not
      ours to trust. Every OTHER render of it on this screen was escaped; this one label was not, which is exactly
