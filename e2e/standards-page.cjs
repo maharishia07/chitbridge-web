@@ -286,9 +286,23 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     ok(gk.length === 4 && /Law/.test(gk[0]) && /Standard/.test(gk[1]) && /Practice/.test(gk[2]) && /Compatibility/.test(gk[3]), 'Group by Kind: Law · Standard · Practice · Compatibility, in that order, each with its count: ' + gk[0]);
     await p.click('[data-testid="cbl-group-standards"] [data-group="country"]'); await p.waitForTimeout(200);
     const gc = await p.$$eval('#std_list .cbl-group', (n) => n.map((x) => x.textContent.replace(/^[^A-Za-z]+/, '').replace(/\s+/g, ' ').trim().split(' ·')[0].replace(/\s*\d+$/, '').trim()));
-    ok(gc.join('|') === 'India|India and global|Global|India · Australia · UAE', 'Group by Country: India · India and global · Global · India · Australia · UAE (the Country Standard row, CPS1) (' + gc.join(' | ') + ')');
+    ok(gc.join('|') === 'India|India and global|Global|India, Australia, UAE', 'Group by Country: India · India and global · Global · "India, Australia, UAE" (the Country Standard row, CPS1) (' + gc.join(' | ') + ')');
     await p.click('[data-testid="cbl-group-standards"] [data-group="area"]'); await p.waitForTimeout(200);
 
+    /* CPS1: the Country Standard row opens to the GENERATED matrix — the engines' counts, painted, not computed here */
+    {
+      const ci = REG.S.findIndex((r) => r.matrix === 'country');
+      const CMXJ = JSON.parse(fs.readFileSync(path.join(PUB, 'data', 'country-matrix.json'), 'utf8'));
+      await p.fill('[data-testid="listctl-search-standards"]', 'Country Standard'); await p.waitForTimeout(300);
+      await p.click('[data-testid="std-row-' + ci + '"]'); await p.waitForTimeout(300);
+      const cm = p.locator('[data-testid="std-country-matrix"]');
+      ok(await cm.locator('.mx[role="table"]').count() === 1 && await cm.locator('[data-testid="std-country-matrix-err"]').count() === 0, 'the opened Country Standard row paints the matrix with the pane\'s own grid');
+      const miss = {}; for (const id of ['IN', 'AU', 'AE']) miss[id] = (await p.textContent('[data-testid="std-cmx-' + id + '-missing"]')).trim();
+      ok(['IN', 'AU', 'AE'].every((id) => miss[id] === String(CMXJ.counts[id].missing)), 'its ❌ counts are the engines\' own: IN ' + miss.IN + ' · AU ' + miss.AU + ' · AE ' + miss.AE);
+      ok(await cm.locator('.mx-r').count() > 100 && /Generated from the packs chitbridge-engines v/.test(await p.textContent('[data-testid="std-detail-' + ci + '"]')), 'every member is a row, and the Source line names the engines version the matrix came from');
+      await p.screenshot({ path: path.join(SHOTS, 'standards-country-matrix.png') });
+      await p.click('[data-testid="std-row-' + ci + '"]'); await p.waitForTimeout(150);
+    }
     /* a row opens: the GSTR row (Partly, Money & GST) */
     const gi = idx('GSTR-1 / GSTR-3B (GSTN schema)');
     await p.fill('[data-testid="listctl-search-standards"]', 'GSTR-1'); await p.waitForTimeout(300);

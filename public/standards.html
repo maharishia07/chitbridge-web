@@ -223,14 +223,14 @@ function groupBy(x, mode){
   if (mode === 'country'){ var l = countryGroup(r.c); return [l, l]; }
   return null;
 }
-/* the Country group's words: India · India and global · Global as before; a row that applies in several countries names them (CPS1: India · Australia · UAE) */
+/* the Country group's words: India · India and global · Global as before; a row that applies in several countries names them (CPS1: India, Australia, UAE) */
 function countryGroup(c){
   if (c.length === 1 && c[0] === 'IN') return 'India';
   if (c.length === 1 && c[0] === 'GLOBAL') return 'Global';
   if (c.indexOf('GLOBAL') >= 0) return 'India and global';
-  return c.map((x) => lab(STD_COUNTRIES, x)).join(' · ');
+  return c.map((x) => lab(STD_COUNTRIES, x)).join(', ');   /* commas: the group head's own " · " separates the label from its count */
 }
-const GROUP_ORDER = STD_AREAS.map((a) => a[0]).concat(STD_KINDS.map((k) => k[0]), ['India', 'India and global', 'Global', STD_COUNTRIES.filter((c) => c[0] !== 'GLOBAL').map((c) => c[1]).join(' · ')]);
+const GROUP_ORDER = STD_AREAS.map((a) => a[0]).concat(STD_KINDS.map((k) => k[0]), ['India', 'India and global', 'Global', STD_COUNTRIES.filter((c) => c[0] !== 'GLOBAL').map((c) => c[1]).join(', ')]);
 function cols(){
   return [
     { key: 'what', label: 'What it does for you', prio: 1, w: 250, sort: 'what', html: true, value: (x) => x.r.p,
