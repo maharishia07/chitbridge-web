@@ -14,10 +14,10 @@
   --green-t:#E8F4ED; --green-b:#A9D3BC; --green-d:#0D4A2B; --amber-t:#FDF3DC; --amber-b:#EFD39A; --amber-i:#7A5205; --red-i:#8E3517;
   --mono:'IBM Plex Mono',ui-monospace,monospace; --sans:'IBM Plex Sans',system-ui,sans-serif; --serif:'Source Serif 4',Georgia,serif; }
 *{box-sizing:border-box}
-body{margin:0;background:var(--ground,#fbf6ec);color:var(--ink,#2a2418);font-family:var(--sans);font-size:15px;line-height:1.45}
+body{margin:0;background:var(--paper,var(--ground,#fbf6ec));color:var(--ink,#2a2418);font-family:var(--sans);font-size:15px;line-height:1.45}
 button{font-family:inherit;cursor:pointer}
 .mono{font-family:var(--mono)}
-.sub{color:var(--muted,#5c5240);font-size:13px}
+.sub{color:var(--grey,var(--muted,#5c5240));font-size:13px}
 #emp{display:flex;flex-direction:column;gap:12px;padding:16px 20px 40px;min-height:60vh}
 body.embed #emp{padding:14px 16px}
 .emp-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
@@ -25,7 +25,7 @@ body.embed #emp{padding:14px 16px}
 .emp-count b{font-size:22px}
 .emp-list{flex:1;min-height:420px;display:flex;flex-direction:column}
 .emp-act{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:4px 0}
-.emp-act .why{font-size:13px;color:var(--muted,#5c5240)}
+.emp-act .why{font-size:13px;color:var(--grey,var(--muted,#5c5240))}
 .emp-act.no .act{opacity:.55;cursor:not-allowed}
 .act{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:40px;padding:0 16px;border:1px solid var(--accent,#1f5f5b);border-radius:9px;background:var(--accent,#1f5f5b);color:var(--accent-ink,#fbf6ec);font-size:14px;font-weight:600}
 .act.quiet{background:transparent;border-color:var(--line-3,#d8ccb0);color:var(--ink,#2a2418)}
