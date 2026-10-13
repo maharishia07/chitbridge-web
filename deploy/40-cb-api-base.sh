@@ -7,5 +7,5 @@ RAILWAY='https://chitbridge-api-production.up.railway.app'
 case "$CB_API_BASE" in http://*|https://*) ;; *) echo "cb-api-base: CB_API_BASE must start with http:// or https://" >&2; exit 1 ;; esac
 BASE=$(printf '%s' "$CB_API_BASE" | sed 's#/*$##; s#[&|\\]#\\&#g')
 n=0
-for f in $(grep -rl --include='*.html' --include='*.js' "$RAILWAY" /usr/share/nginx/html); do sed -i "s|$RAILWAY|$BASE|g" "$f"; n=$((n+1)); done
+for f in $(find /usr/share/nginx/html -type f \( -name '*.html' -o -name '*.js' \) -exec grep -l "$RAILWAY" {} +); do sed -i "s|$RAILWAY|$BASE|g" "$f"; n=$((n+1)); done
 echo "cb-api-base: $n file(s) now call $CB_API_BASE"

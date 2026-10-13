@@ -6,5 +6,9 @@ COPY deploy/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --chmod=755 deploy/40-cb-api-base.sh /docker-entrypoint.d/40-cb-api-base.sh
 COPY --chown=101:101 public/ /usr/share/nginx/html/
 COPY --chown=101:101 index.html /usr/share/nginx/html/index.html
+# the site folder itself belongs to nginx too, so the start script can rewrite a page in place (sed -i makes its temp file here)
+USER root
+RUN chown 101:101 /usr/share/nginx/html
+USER 101
 EXPOSE 8080
 HEALTHCHECK --interval=15s --timeout=3s --retries=3 CMD wget -qO- http://127.0.0.1:8080/healthz >/dev/null || exit 1
