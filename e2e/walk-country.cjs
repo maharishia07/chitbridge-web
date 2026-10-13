@@ -11,6 +11,13 @@
  *   C5  CB Accounts for that shop -> the same sentence on the card, with the Country setup button, not the quiet "not switched on"
  *   C6  an Indian shop whose server says the setup is still to do -> CB Accounts says "Country setup first"
  *   C7  an Australian browser -> the step prefills Australia - AUD - July from the AU pack, no sentence, and Continue PUTs AU / AUD / 7
+ *       CS2: Australia has several zones, so the step ASKS, the browser's (Australia/Sydney) preselected, and the PUT carries it
+ *   C8  CS2: the picker offers EXACTLY the server's registered packs (IN - AU - AE), whatever the browser's locale (CL1's finding)
+ *   C9  CS2: an Indian shop NOT yet constituted corrects the country to Australia -> AUD, July and the zone ask are painted from the pack
+ *       (the Indian browser's zone is not one of Australia's, so the picker is open with nothing preselected); pick Perth -> ONE PUT
+ *       { AU, AUD, 7, timezone: Australia/Perth } -> the server's `rederived` -> the app opens
+ *   C10 CS2: a CONSTITUTED shop (it has products) -> Country and Money are greyed with the reason, no Change; the rule says "never change"
+ *   C11 CS2: ... and a PUT the server refuses (409 COUNTRY_CHANGE_IS_NEW_ENTITY) -> its sentence is painted in the form, the step stays
  *
  * ⚠️ THE STAND-IN'S ORDER (CS1b, 2026-10-12): Playwright tries the LAST registered route first, so the catch-all for every /api path is registered
  * FIRST and the specific answers after it — registered the other way round, the catch-all swallowed the country-setup PUT and C3 saw `{}`.
@@ -22,8 +29,17 @@
 const W = require('./lib/walk.cjs');
 const J = (o) => ({ status: 200, contentType: 'application/json', body: JSON.stringify(o) });
 const JP_WHY = 'ChitBridge does not keep books for Japan yet — selling and the rail still work; books arrive when its pack ships.';
+/* CS2: the server's `countries[]` = exactly the registered packs (regulation.list()), with what each derives — the picker reads THIS, never the browser's locale */
+const AU_ZONES = ['Australia/Sydney', 'Australia/Melbourne', 'Australia/Brisbane', 'Australia/Perth', 'Australia/Adelaide', 'Australia/Darwin', 'Australia/Hobart'];
+const COUNTRIES = [
+  { code: 'IN', name: 'India', currency: 'INR', fy_start_month: 4, zones: ['Asia/Kolkata'], locale: 'en-IN', books: true },
+  { code: 'AU', name: 'Australia', currency: 'AUD', fy_start_month: 7, zones: AU_ZONES, locale: 'en-AU', books: true },
+  { code: 'AE', name: 'United Arab Emirates', currency: 'AED', fy_start_month: 1, zones: ['Asia/Dubai'], locale: 'ar-AE', books: true },
+];
 const profile = (over) => Object.assign({ migrated: true, done: false, required: true, country: { code: 'IN', name: 'India' }, currency: 'INR', fy_start_month: 4,
-  tax: { registered: false, number: null, scheme: null }, source: {}, pack: { id: 'IN', version: '1.0.0', books: true, code: null, why: null } }, over || {});
+  tax: { registered: false, number: null, scheme: null }, timezone: 'Asia/Kolkata', zones: ['Asia/Kolkata'], constituted: false, constituted_by: { products: false, chits: false, entries: false },
+  countries: COUNTRIES, source: {}, pack: { id: 'IN', version: '1.0.0', books: true, code: null, why: null } }, over || {});
+const FIXED_WHY = 'This shop is set up for India and INR and already has products — country and money never change. Register a new business for Australia.';
 /** the stand-in API for a fresh registration: register -> OTP -> verify -> the step */
 async function stubRegistration(ctx, prof, sent) {
   await ctx.route('**/api/**', (r) => r.fulfill(J({ ok: true })));   /* the catch-all FIRST — the last registered handler is tried first */
@@ -31,7 +47,17 @@ async function stubRegistration(ctx, prof, sent) {
   await ctx.route('**/api/entities/constitutions', (r) => r.fulfill(J({ constitutions: [{ key: 'base', label: 'Base', is_default: true }] })));
   await ctx.route('**/api/entities/verify', (r) => r.fulfill(J({ token: JSON.parse(W.session('Walk Owner', 'Walk Shop')).token, entity: { identity_id: 'ent-walk', bridge_id: 'CBWALK0001', display_name: 'Walk Shop', email: 'shop@example.in' }, identity: { identity_id: 'ent-walk', identity_type: 'entity', display_name: 'Walk Shop' } })));
   await ctx.route('**/api/governance/country-setup', (r) => {
-    if (r.request().method() === 'PUT') { sent.put = JSON.parse(r.request().postData() || '{}'); return r.fulfill(J(Object.assign({}, prof, { done: true, required: false }))); }
+    if (r.request().method() === 'PUT') {
+      sent.put = JSON.parse(r.request().postData() || '{}');
+      /* CS2: a constituted shop refuses a change with the server's sentence; a correction before it answers `rederived` */
+      if (prof.constituted && (sent.put.country !== prof.country.code || sent.put.currency !== prof.currency))
+        return r.fulfill({ status: 409, contentType: 'application/json', body: JSON.stringify({ code: 'COUNTRY_CHANGE_IS_NEW_ENTITY', error: FIXED_WHY, message: FIXED_WHY }) });
+      const changed = sent.put.country !== prof.country.code;
+      const row = COUNTRIES.find((c) => c.code === sent.put.country) || {};
+      return r.fulfill(J(Object.assign({}, prof, { done: true, required: false, country: { code: sent.put.country, name: row.name || sent.put.country }, currency: sent.put.currency,
+        fy_start_month: sent.put.fy_start_month, timezone: sent.put.timezone || prof.timezone },
+        changed ? { rederived: { from: prof.country.code, to: sent.put.country, chart: 0, by: 'ent-walk', at: new Date().toISOString() } } : {})));
+    }
     return r.fulfill(J(prof));
   });
 }
@@ -80,7 +106,7 @@ W.run('country', async (w) => {
   const au = await w.browser.newContext({ viewport: { width: 1280, height: 860 }, locale: 'en', timezoneId: 'Asia/Tokyo', serviceWorkers: 'block' });
   const p2 = await au.newPage(); p2.on('pageerror', (e) => w.errs.push('jp: ' + String(e && e.message || e)));
   const sent2 = {};
-  const jpProfile = profile({ country: { code: 'JP', name: 'Japan' }, currency: 'JPY', fy_start_month: 4, pack: { id: null, version: null, books: false, code: 'NO_COUNTRY_PACK', why: JP_WHY } });
+  const jpProfile = profile({ country: { code: 'JP', name: 'Japan' }, currency: 'JPY', fy_start_month: 4, timezone: 'Asia/Tokyo', zones: [], pack: { id: null, version: null, books: false, code: 'NO_COUNTRY_PACK', why: JP_WHY } });
   await stubRegistration(au, jpProfile, sent2);
   await w.step('C4', 'A Japanese browser -> the step says: no books for Japan yet, selling and the rail still work', async () => {
     await register(p2, base);
@@ -111,16 +137,82 @@ W.run('country', async (w) => {
   const au2 = await w.browser.newContext({ viewport: { width: 1280, height: 860 }, locale: 'en-AU', timezoneId: 'Australia/Sydney', serviceWorkers: 'block' });
   const p3 = await au2.newPage(); p3.on('pageerror', (e) => w.errs.push('au: ' + String(e && e.message || e)));
   const sent3 = {};
-  await stubRegistration(au2, profile({ country: { code: 'AU', name: 'Australia' }, currency: 'AUD', fy_start_month: 7, pack: { id: 'AU', version: '1.0.0', books: true, code: null, why: null } }), sent3);
-  await w.step('C7', 'An Australian browser -> Australia - AUD - July from the AU pack, no sentence; Continue PUTs { AU, AUD, 7 } and the app opens', async () => {
+  await stubRegistration(au2, profile({ country: { code: 'AU', name: 'Australia' }, currency: 'AUD', fy_start_month: 7, timezone: 'Australia/Sydney', zones: AU_ZONES, pack: { id: 'AU', version: '1.0.0', books: true, code: null, why: null } }), sent3);
+  await w.step('C7', 'An Australian browser -> Australia - AUD - July from the AU pack, no sentence; the zone is ASKED with Australia/Sydney preselected; Continue PUTs { AU, AUD, 7, Australia/Sydney }', async () => {
     await register(p3, base);
     const c = await text(p3, '[data-testid="cs-val-country"]'), cur = await text(p3, '[data-testid="cs-val-currency"]'), fy = await text(p3, '[data-testid="cs-val-fy"]');
     const noSentence = !(await p3.$('[data-testid="cs-nopack"]'));
+    /* CS2: several zones -> the row has Change; open it and the picker holds the browser's zone */
+    const tz = await text(p3, '[data-testid="cs-val-timezone"]'), tzSrc = await text(p3, '[data-testid="cs-src-timezone"]');
+    const askable = !!(await p3.$('[data-testid="cs-change-timezone"]'));
+    await p3.click('[data-testid="cs-change-timezone"]');
+    const picked = await p3.$eval('[data-testid="cs-timezone"]', (el) => el.value);
+    const nOpts = await p3.$$eval('[data-testid="cs-timezone"] option', (os) => os.length);
     await p3.click('[data-testid="cs-save"]');
     await p3.waitForFunction(() => /#\/app/.test(location.hash), null, { timeout: 8000 });
     const p = sent3.put || {};
-    const ok = /Australia/.test(c) && /AUD/.test(cur) && /July/.test(fy) && noSentence && p.country === 'AU' && p.currency === 'AUD' && p.fy_start_month === 7;
-    return { ok, saw: c + ' · ' + cur + ' · ' + fy + ' · sentence ' + (noSentence ? 'absent' : 'SHOWN') + ' · sent ' + JSON.stringify({ country: p.country, currency: p.currency, fy: p.fy_start_month }) };
+    const ok = /Australia/.test(c) && /AUD/.test(cur) && /July/.test(fy) && noSentence && askable && /Sydney/.test(tz) && picked === 'Australia/Sydney' && nOpts === AU_ZONES.length
+      && p.country === 'AU' && p.currency === 'AUD' && p.fy_start_month === 7 && p.timezone === 'Australia/Sydney';
+    return { ok, saw: c + ' · ' + cur + ' · ' + fy + ' · zone ' + tz + ' (' + tzSrc + ', ' + nOpts + ' offered) · sentence ' + (noSentence ? 'absent' : 'SHOWN') + ' · sent ' + JSON.stringify({ country: p.country, currency: p.currency, fy: p.fy_start_month, tz: p.timezone }) };
   });
   await au2.close();
+
+  /* ── CS2: an Indian browser, a shop not yet constituted — the picker is the server's list; a correction to Australia re-derives ── */
+  const in2 = await w.browser.newContext({ viewport: { width: 1280, height: 860 }, locale: 'en-IN', timezoneId: 'Asia/Kolkata', serviceWorkers: 'block' });
+  const p4 = await in2.newPage(); p4.on('pageerror', (e) => w.errs.push('in2: ' + String(e && e.message || e)));
+  const sent4 = {};
+  await stubRegistration(in2, profile(), sent4);
+  await w.step('C8', 'The country picker offers EXACTLY the registered packs (India - Australia - UAE), whatever the browser\'s locale', async () => {
+    await register(p4, base);
+    await p4.click('[data-testid="cs-change-country"]');
+    const codes = await p4.$$eval('[data-testid="cs-country"] option', (os) => os.map((o) => o.value));
+    const want = COUNTRIES.map((c) => c.code);
+    const ok = codes.length === want.length && want.every((c) => codes.includes(c));
+    return { ok, saw: 'offered ' + codes.join(', ') + ' · served ' + want.join(', ') };
+  });
+  await w.step('C9', 'Not yet constituted: correct India -> Australia -> AUD, July and the zone ask painted from the pack (nothing preselected: this browser sits in Asia/Kolkata); pick Perth -> ONE PUT { AU, AUD, 7, Australia/Perth } -> rederived -> the app opens', async () => {
+    await p4.selectOption('[data-testid="cs-country"]', 'AU');
+    await p4.waitForSelector('[data-testid="cs-timezone"]', { timeout: 5000 });
+    const cur = await text(p4, '[data-testid="cs-val-currency"]'), fy = await text(p4, '[data-testid="cs-val-fy"]'), tz = await text(p4, '[data-testid="cs-val-timezone"]');
+    const curSrc = await text(p4, '[data-testid="cs-src-currency"]'), fySrc = await text(p4, '[data-testid="cs-src-fy"]');
+    const preselected = await p4.$eval('[data-testid="cs-timezone"]', (el) => el.value);
+    const rule = await text(p4, '[data-testid="cs-rule"]');
+    await p4.selectOption('[data-testid="cs-timezone"]', 'Australia/Perth');
+    const tz2 = await text(p4, '[data-testid="cs-val-timezone"]');
+    await p4.click('[data-testid="cs-save"]');
+    await p4.waitForFunction(() => /#\/app/.test(location.hash), null, { timeout: 8000 });
+    const p = sent4.put || {};
+    const ok = /AUD/.test(cur) && /July/.test(fy) && /not picked/.test(tz) && preselected === '' && /Australia pack/.test(curSrc) && /Australia pack/.test(fySrc) && /Perth/.test(tz2)
+      && /can still be corrected/.test(rule) && p.country === 'AU' && p.currency === 'AUD' && p.fy_start_month === 7 && p.timezone === 'Australia/Perth';
+    return { ok, saw: cur + ' (' + curSrc + ') · ' + fy + ' (' + fySrc + ') · zone first "' + tz + '" then ' + tz2 + ' · sent ' + JSON.stringify({ country: p.country, currency: p.currency, fy: p.fy_start_month, tz: p.timezone }) };
+  });
+  await in2.close();
+
+  /* ── CS2: a CONSTITUTED shop (it has products): Country and Money are fixed on the step, and the server refuses a change in its words ── */
+  const in3 = await w.browser.newContext({ viewport: { width: 1280, height: 860 }, locale: 'en-IN', timezoneId: 'Asia/Kolkata', serviceWorkers: 'block' });
+  const p5 = await in3.newPage(); p5.on('pageerror', (e) => w.errs.push('in3: ' + String(e && e.message || e)));
+  const sent5 = {};
+  const fixedProfile = profile({ done: true, required: false, constituted: true, constituted_by: { products: true, chits: false, entries: false } });
+  await stubRegistration(in3, fixedProfile, sent5);
+  await w.step('C10', 'A constituted shop (it has products) -> Country and Money greyed with the reason, no Change; Year and tax still open; the rule says never', async () => {
+    await p5.evaluate((s) => { localStorage.setItem('cb_sess', s); }, W.session('Walk Owner', 'Walk Shop'));
+    await p5.goto(base + '/app.html#/country');
+    await p5.waitForSelector('[data-testid="cs-rows"]', { timeout: 15000 });
+    await p5.waitForSelector('[data-testid="cs-row-country"][data-locked="1"]', { timeout: 8000 });
+    const noCountryChange = !(await p5.$('[data-testid="cs-change-country"]')), noMoneyChange = !(await p5.$('[data-testid="cs-change-currency"]'));
+    const fyChange = !!(await p5.$('[data-testid="cs-change-fy"]')), taxChange = !!(await p5.$('[data-testid="cs-change-tax"]'));
+    const why = await text(p5, '[data-testid="cs-src-country"]'), rule = await text(p5, '[data-testid="cs-rule"]');
+    const ok = noCountryChange && noMoneyChange && fyChange && taxChange && /fixed/.test(why) && /products/.test(why) && /never change/.test(rule);
+    return { ok, saw: 'country "' + why + '" · Change on country ' + (noCountryChange ? 'absent' : 'SHOWN') + ', money ' + (noMoneyChange ? 'absent' : 'SHOWN') + ', year ' + (fyChange ? 'there' : 'missing') + ' · rule "' + rule.slice(0, 50) + '…"' };
+  });
+  await w.step('C11', '... and a PUT the server refuses (409 COUNTRY_CHANGE_IS_NEW_ENTITY) -> its sentence painted in the form, the step stays', async () => {
+    /* the screen never offers the change; the server is the one that decides — so push the refused body the way an old tab would */
+    await p5.evaluate(() => { CSU.edit.country = 'AU'; CSU.edit.currency = 'AUD'; });
+    await p5.click('[data-testid="cs-save"]');
+    await p5.waitForSelector('[data-testid="cs-err"]', { timeout: 8000 });
+    const err = await text(p5, '[data-testid="cs-err"]'), hash = await p5.evaluate(() => location.hash);
+    const ok = err === FIXED_WHY && /#\/country/.test(hash) && sent5.put && sent5.put.country === 'AU';
+    return { ok, saw: '"' + err.slice(0, 70) + '…" · hash ' + hash };
+  });
+  await in3.close();
 });
