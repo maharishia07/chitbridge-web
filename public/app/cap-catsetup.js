@@ -771,7 +771,10 @@ function catsetBody(k){
        carries (tax as RESOLVED, from where; offers; HSN; categories) comes first, each row opening the product; the
        slabs carry their counts; the two explanations fold away. */
     return catsetCard('What your products carry', catsetTaxRegisterHTML(),
-      '<button class="composebtn pri" data-testid="catset-tax-new" onclick="catsetDefNew(\'tax\')">+ New slab</button>')
+      /* ⭐ CL1 (2026-10-12): the Country lab beside the slabs — what a change of country does to the tax, the year, the chart and the
+         return, every row read from the regulation packs; the same Labs rule as Offer / Combo / Conversion (one tab per lab). */
+      '<a class="composebtn" data-testid="catset-country-lab" href="country-lab.html" target="cb_country_lab" rel="noopener" title="What changes when the shop\'s country changes — every row read from the regulation packs, the cart billed under both" style="text-decoration:none;margin-right:6px">🌍 ' + tx('Country lab') + '</a>'
+      + '<button class="composebtn pri" data-testid="catset-tax-new" onclick="catsetDefNew(\'tax\')">+ New slab</button>')
     + catsetCard('Your slabs', catsetTaxCountsHTML() + catsetDefListHTML('tax', 'tax slab'), '')
     + catsetCard('Falls back to', catsetTaxHTML(), '')
     + '<details class="catset-fold"><summary style="cursor:pointer;font-weight:700;padding:8px 0">' + tx('How slabs work') + '</summary>'
