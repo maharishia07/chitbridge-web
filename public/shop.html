@@ -679,7 +679,9 @@ function shopUpiBlock(res, isCart){
     +'<a data-testid="shop-upi-link" href="'+esc(link)+'" style="display:inline-block;margin-top:8px;border:1px solid #3F66A6;border-radius:9px;padding:8px 14px;color:#3F66A6;font-weight:700;text-decoration:none">Open my UPI app</a>'
     +'<div style="font-size:11px;color:#6a707a;margin-top:6px">'+esc('The shop confirms the payment on its side.')+'</div></div>';
 }
-function cbFmt(n){ try{ return (typeof CBLocale!=='undefined')?CBLocale.money(n,'INR'):('₹'+Number(n).toFixed(2)); }catch(e){ return '₹'+n; } }
+/* WX-O2C (2026-10-13): the SHOP's currency (catalogue shop.currency_code), not a fixed INR — an AU shop's basket printed ₹ */
+function _shopCur(){ return (_SHOPDATA&&_SHOPDATA.shop&&_SHOPDATA.shop.currency_code)||'INR'; }
+function cbFmt(n){ try{ return (typeof CBLocale!=='undefined')?CBLocale.money(n,_shopCur()):(Number(n).toFixed(2)); }catch(e){ return String(n); } }
 function shopCartBarHtml(){ if(!_CART) return ''; try{ if(typeof CBCatUI!=='undefined'&&CBCatUI.barHTML) return CBCatUI.barHTML(_CART); }catch(e){} return _CART.barHTML(); }   /* the same chip as the app; first paint = every repaint */   /* ⚠️ dropped by the stock patch for ~25 min on 2026-09-05 — every storefront said 'Could not reach the shop' */
 var _stockAsked=false;
 function shopAskStock(){
@@ -1003,10 +1005,10 @@ function shopCartOrder(){
   if(_d&&_d.cart){ _ord.name=_d.name; _ord.loc=_d.loc; _ord.contact=_d.contact; _ord.mode=_d.mode; }
   orderRender();
 }
-function _cartLineTotal(i){ var L=_ord.lines[i]; var p=Number(L.price)||0; return p?('₹'+(p*L.qty)):'—'; }
+function _cartLineTotal(i){ var L=_ord.lines[i]; var p=Number(L.price)||0; return p?cbFmt(p*L.qty):'—'; }
 function _cartGrand(){ var s=0, any=false;
   (_ord.lines||[]).forEach(function(L){ var p=Number(L.price)||0; if(p){ any=true; s+=p*L.qty; } });
-  return any?('₹'+s):'—'; }
+  return any?cbFmt(s):'—'; }
 /**
  * ════════════════════════════════════════════════════════════════════════════════════════════════════════════════
  *  THE BASKET CHECKOUT, IN STEPS — Items → Delivery → Review → Who you are

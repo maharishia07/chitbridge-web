@@ -97,6 +97,10 @@ ok(listPos > 0 && offPos > listPos, 'the totals box is BELOW the list in the pag
 ok(/Order #/.test(script) && /shop-receipt-total/.test(script) && /What happens next/.test(script) && /Waiting for the shop/.test(script), 'the receipt: order number, total, what happens next, status');
 ok(/\/my-orders/.test(script) && /shop-my-orders/.test(script), 'a "My orders" button reads the existing /my-orders route');
 ok(run(`shopStatusWord('sent')`) === 'Waiting for the shop' && run(`shopStatusWord('accepted')`) === 'Accepted' && run(`shopStatusWord('completed')`) === 'Delivered' && run(`shopStatusWord('ready')`) === 'Ready', 'status words');
+/* WX-O2C: money on the storefront is in the SHOP's currency (an AU shop printed ₹) */
+run(`var CBLocale={ money:function(n,c){ return c+' '+Number(n).toFixed(2); } }; _SHOPDATA={ shop:{ currency_code:'AUD' } }; _ord={ lines:[{ price:5, qty:2 }] };`);
+ok(run(`cbFmt(12.5)`) === 'AUD 12.50' && run(`_cartLineTotal(0)`) === 'AUD 10.00' && run(`_cartGrand()`) === 'AUD 10.00', 'the shop\'s currency on the basket review (cbFmt · line · total), not a fixed ₹');
+run(`_SHOPDATA=null; _ord=null; delete CBLocale;`);
 /* WX-O2C: the buyer's copy is minted 'delivered' (the rail: it reached the shop) — a just-placed order must not read "Delivered" */
 ok(run(`shopStatusWord('delivered')`) === 'Waiting for the shop' && run(`shopStatusWord('read')`) === 'Waiting for the shop' && run(`shopStatusWord('pending')`) === 'Waiting for the shop', 'the rail\'s delivered / read / pending = still waiting for the shop (CBWorkflow.stageOf)');
 

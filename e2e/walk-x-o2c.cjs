@@ -499,7 +499,7 @@ W.run('x-o2c', async (w) => {
 
   /* ════ S8 · REVERSE — the bill opened by its door, returned at the counter; the books and the trail show both ═════════════════════════════════ */
   if (want('S8')) {
-    if (!REAL) w.note('O8.0', 'Void the bill', 'needs the real stack (--real)');
+    if (!REAL) w.note('O8.0', 'Reverse the bill (a return at the counter)', 'needs the real stack (--real)');
     else {
       await lastBill();
       if (bill && !bill.chit_id) bill.chit_id = await R.billByNo(bill.no).catch(() => null);
