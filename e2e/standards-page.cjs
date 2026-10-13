@@ -3,7 +3,7 @@
  * Nothing here reaches localhost:3000, port 7351 or the live site: every /api/** call is fulfilled by ctx.route before it can leave the browser (and the
  * page is made to refuse any other host). The Standards page itself reads NO API (the register is cap-standards.js), so the stand-in's job is to PROVE that.
  *
- *  1  the register (cap-standards.js): 61 rows, 33 in force · 16 partly · 12 planned; every row has area · kind · applies-in · plain words; every Partly and Planned
+ *  1  the register (cap-standards.js): 62 rows, 35 in force · 15 partly · 12 planned (CPS1 added the Country Standard row, whose opened row paints data/country-matrix.json); every row has area · kind · applies-in · plain words; every Partly and Planned
  *     row says what is missing; the first 44 rows' words are the register's own, unchanged; the 17 additions carry their stated statuses; no second WCAG row
  *  2  laptop 1366×768: title · "checked 3 Oct 2026" · the matrix beside the list; the matrix's All row IS the register's counts; the list is a CBList mount
  *     (three columns, a resize handle on each, only the rows scroll) with the head at most 20% of the window; no sideways scroll
@@ -97,9 +97,9 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
 
   /* ── 1 · the register ───────────────────────────────────────────────────────────────────────────────────── */
   {
-    ok(REG.S.length === 61, 'the register holds 61 standards (44 + the 17 adopted 2–3 Oct 2026): ' + REG.S.length);
-    /* N11 (9c8cdc58, 2026-10-08): ISO 8601 moved Partly → In force with a stated limit, proven by chitbridge-api tests/iso8601.test.cjs */
-    ok(COUNT.live === 34 && COUNT.part === 15 && COUNT.plan === 12, 'in force 34 · partly 15 · planned 12 (' + COUNT.live + ' · ' + COUNT.part + ' · ' + COUNT.plan + ')');
+    ok(REG.S.length === 62, 'the register holds 62 standards (44 + the 17 adopted 2–3 Oct 2026 + the Country Standard, CPS1 13 Oct 2026): ' + REG.S.length);
+    /* N11 (9c8cdc58, 2026-10-08): ISO 8601 moved Partly → In force with a stated limit, proven by chitbridge-api tests/iso8601.test.cjs; CPS1: the Country Standard, In force with a limit */
+    ok(COUNT.live === 35 && COUNT.part === 15 && COUNT.plan === 12, 'in force 35 · partly 15 · planned 12 (' + COUNT.live + ' · ' + COUNT.part + ' · ' + COUNT.plan + ')');
     const fields = REG.S.filter((r) => !r.a || !r.k || !Array.isArray(r.c) || !r.c.length || !r.p);
     ok(fields.length === 0, 'every row has an area, a kind, an applies-in and the plain-words line' + (fields.length ? ' — missing on ' + fields.map((r) => r.n).join('; ') : ''));
     const areas = REG.A.map((a) => a[0]), kinds = REG.K.map((k) => k[0]), ctry = REG.C.map((c) => c[0]);
@@ -107,15 +107,20 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     const noMiss = REG.S.filter((r) => r.s !== 'live' && !(r.m && r.m.length > 3));
     ok(noMiss.length === 0, 'every Partly and Planned row says what is missing' + (noMiss.length ? ' — ' + noMiss.map((r) => r.n).join('; ') : ''));
     ok(REG.S.every((r) => r.s !== 'live' || !r.m), 'an In force row carries no "missing" line (a stated limit is `limit`, shown as Limit:)');
-    ok(REG.S.filter((r) => r.limit).map((r) => r.n).sort().join('|') === ['AS 2 / Ind AS 2', 'CGST Act s.9(3)/9(4) + notifications; s.49(4), Rule 86(2)', 'Schedule III, Companies Act (Division I)', 'ISO 8601'].sort().join('|'), 'the four In force rows with a stated limit carry it: Schedule III, AS 2, reverse charge, ISO 8601 (N11)');
+    ok(REG.S.filter((r) => r.limit).map((r) => r.n).sort().join('|') === ['AS 2 / Ind AS 2', 'CGST Act s.9(3)/9(4) + notifications; s.49(4), Rule 86(2)', 'Schedule III, Companies Act (Division I)', 'ISO 8601', 'Country Standard (chitbridge-engines docs/COUNTRY-STANDARD.md)'].sort().join('|'), 'the five In force rows with a stated limit carry it: Schedule III, AS 2, reverse charge, ISO 8601 (N11), the Country Standard (CPS1)');
     /* the words are the register's own: row by row against the designer's data (which was built from the register), every field both hold */
     const keys = ['g', 'n', 'w', 'ex', 'exWhy', 's', 'note', 'at', 'go', 'why', 'a', 'k', 'p', 'm', 'limit', 'eq'];
     const diff = [];
     const MOVED = { 'ISO 8601': 'N11' };   /* a row the register has moved on from the design's data, on purpose, with its reason */
     DESIGN.rows.forEach((d, i) => { const r = REG.S[i]; if (r && MOVED[r.n]) return; keys.forEach((k) => { if ((r && r[k] || undefined) !== (d[k] || undefined)) diff.push(i + ':' + k); }); if (!r || JSON.stringify(r.c) !== JSON.stringify(d.c)) diff.push(i + ':c'); });
-    ok(DESIGN.rows.length === REG.S.length && diff.length === 0, 'all 61 rows equal the designer\'s data, field for field' + (diff.length ? ' — ' + diff.slice(0, 6).join(' ') : ''));
+    /* the designer's data is the register AS OF 3 Oct 2026 (61 rows); rows adopted later (CPS1: the Country Standard) follow it, and are not in it */
+    ok(DESIGN.rows.length === 61 && REG.S.length >= DESIGN.rows.length && diff.length === 0, 'the designer\'s 61 rows equal the register\'s first 61, field for field' + (diff.length ? ' — ' + diff.slice(0, 6).join(' ') : ''));
     const added = REG.S.filter((r) => r.added);
-    ok(added.length === 17 && added.filter((r) => r.s === 'live').length === 11 && added.filter((r) => r.s === 'part').length === 4 && added.filter((r) => r.s === 'plan').length === 2, 'the 17 additions carry their stated statuses: 11 in force, 4 partly, 2 planned');
+    ok(added.length === 18 && added.filter((r) => r.s === 'live').length === 12 && added.filter((r) => r.s === 'part').length === 4 && added.filter((r) => r.s === 'plan').length === 2, 'the 18 additions carry their stated statuses: 12 in force, 4 partly, 2 planned');
+    const cm = REG.S.filter((r) => r.matrix === 'country');
+    ok(cm.length === 1 && cm[0].c.join() === 'IN,AU,AE' && cm[0].s === 'live' && cm[0].limit, 'ONE Country Standard row (CPS1): applies in IN · AU · AE, In force with a stated limit, its opened row paints the matrix');
+    const CMXJ = JSON.parse(fs.readFileSync(path.join(PUB, 'data', 'country-matrix.json'), 'utf8'));
+    ok(Array.isArray(CMXJ.rows) && CMXJ.rows.length > 80 && CMXJ.packs.map((x) => x.id).join() === 'IN,AU,AE' && CMXJ.packs.every((x) => CMXJ.missing[x.id] && CMXJ.counts[x.id]), 'data/country-matrix.json is the engines\' generated matrix: ' + CMXJ.rows.length + ' members × IN · AU · AE, with counts and the ❌ list per pack (engines v' + CMXJ.engines + ')');
     ok(REG.S.filter((r) => /WCAG/.test(r.n) && /1\.4\.3/.test(r.n)).length === 1 && /16 themes/.test(REG.S[11].note), 'no second WCAG contrast row: the existing one now says all 16 themes');
     ok(REG.CH === '2026-10-03', 'the register says when it was last checked (STD_CHECKED)');
     ok(new Set(REG.S.map((r) => r.n)).size === REG.S.length, 'no standard is listed twice');
@@ -234,7 +239,7 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     /* Count by Country and Kind */
     await p.click('[data-testid="cbl-group-standards"] [data-group="country"]'); await p.waitForTimeout(150);
     const crows = await p.$$eval('#mxBody .mx-rh', (n) => n.map((x) => x.textContent.trim()));
-    ok(crows.join('|') === 'India|Global|All', 'Count by Country: India, Global, All');
+    ok(crows.join('|') === 'India|Australia|UAE|Global|All', 'Count by Country: India, Australia, UAE (CPS1: the registered packs), Global, All');
     await p.click('[data-testid="std-cell-IN-part"]'); await p.waitForTimeout(250);
     const inPart = ALL.filter((r) => r.c.indexOf('IN') >= 0 && r.s === 'part').length;
     ok((await count(p)).indexOf(inPart + ' shown') === 0 && (await chips(p)).join('|').indexOf('Applies in: India') >= 0, 'India × Partly filters by Applies in: India → ' + (await count(p)) + ' (' + (await chips(p)).join(' · ') + ')');
@@ -281,7 +286,7 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     ok(gk.length === 4 && /Law/.test(gk[0]) && /Standard/.test(gk[1]) && /Practice/.test(gk[2]) && /Compatibility/.test(gk[3]), 'Group by Kind: Law · Standard · Practice · Compatibility, in that order, each with its count: ' + gk[0]);
     await p.click('[data-testid="cbl-group-standards"] [data-group="country"]'); await p.waitForTimeout(200);
     const gc = await p.$$eval('#std_list .cbl-group', (n) => n.map((x) => x.textContent.replace(/^[^A-Za-z]+/, '').replace(/\s+/g, ' ').trim().split(' ·')[0].replace(/\s*\d+$/, '').trim()));
-    ok(gc.join('|') === 'India|India and global|Global', 'Group by Country: India · India and global · Global (' + gc.join(' | ') + ')');
+    ok(gc.join('|') === 'India|India and global|Global|India · Australia · UAE', 'Group by Country: India · India and global · Global · India · Australia · UAE (the Country Standard row, CPS1) (' + gc.join(' | ') + ')');
     await p.click('[data-testid="cbl-group-standards"] [data-group="area"]'); await p.waitForTimeout(200);
 
     /* a row opens: the GSTR row (Partly, Money & GST) */
