@@ -205,7 +205,10 @@ W.run(REAL ? 'x-l2c-real' : 'x-l2c', async (w) => {   /* two sets of shots: walk
     });
     await w.step('L16', 'The server refuses a stage move for a party that traded (IS_CUSTOMER) — and the Leads list no longer lists them', async () => {
       let st = null, code = '';
-      if (REAL) { const r = await api.j('/api/crm/parties?view=leads', { token }); const row = (r.b.parties || []).find((x) => x.display_name === NAMES.a); const id = row ? row.party_id : aKey; const s = await api.j('/api/crm/parties/' + id + '/stage', { method: 'POST', token, body: { stage: 'lead' } }); st = s.status; code = s.b.code || ''; }
+      if (REAL) {   /* the billed lead is no longer in the Leads view (a customer now, FX-L2C): its id comes from its own record (by party no) */
+        const one = await api.j('/api/crm/parties/' + encodeURIComponent(aKey), { token }); const id = ((one.b && one.b.party) || one.b || {}).party_id || aKey;
+        const s = await api.j('/api/crm/parties/' + id + '/stage', { method: 'POST', token, body: { stage: 'lead' } }); st = s.status; code = s.b.code || '';
+      }
       else { const s = SI.l2cStage(S.l2c, NAMES.a, 'lead'); st = s.status; code = s.code; }
       await go('#/leads', T('crm-leads')); await settle(800);
       const listed = await leadRow(NAMES.a).count();
@@ -291,7 +294,7 @@ W.run(REAL ? 'x-l2c-real' : 'x-l2c', async (w) => {   /* two sets of shots: walk
         if (add && !addOff) {   /* the page offered the write: press it — the SERVER's refusal must come back as a sentence on the sheet */
           await p2.evaluate(() => { location.hash = '#/leads'; }); await p2.waitForSelector(T('crm-lead-add'), { timeout: 15000 }); await p2.click(T('crm-lead-add')); await p2.waitForSelector(T('crm-lead-sheet'));
           await p2.fill(T('crm-lead-name'), 'Viewer Try ' + tag); await p2.click(T('crm-lead-save')); await p2.waitForTimeout(1500);
-          tried = ' · a viewer pressing Save got: "' + ((await p2.locator(T('crm-lead-msg')).innerText().catch(() => '')) || (await p2.locator('#toast').innerText().catch(() => ''))).replace(/\s+/g, ' ').trim() + '"';
+          tried += ' · a viewer pressing Save got: "' + ((await p2.locator(T('crm-lead-msg')).innerText().catch(() => '')) || (await p2.locator('#toast').innerText().catch(() => ''))).replace(/\s+/g, ' ').trim() + '"';
         }
         await p2.screenshot({ path: require('path').join(__dirname, 'shots', 'walk-x-l2c' + (REAL ? '-real' : '') + '-viewer.png') });
         const S = 'Your login can only view';
