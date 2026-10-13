@@ -18,9 +18,6 @@ const DOOR = /app\.html|(?<!\.html)#\/app\b|(?<!\.html)#\/welcome\b|(?<!\.html)#
 const ALLOW = [
   { file: 'index.html',                 re: /registerHref: '\/app\.html#\/welcome'/,          round: 'SET3', app: 'settings',  what: 'register a new shop (the sign-in window\'s Continue to register)' },
   { file: 'public/app/page-frame.js',   re: /registerHref: '\/app\.html#\/welcome'/,          round: 'SET3', app: 'settings',  what: 'the same register door on the CBFrame pages (Tasks · Employees · Network · KYB · Documents)' },
-  { file: 'public/accounts.html',       re: /openChitPage.*\/app\.html#\/app\/chit\//,        round: 'CRM2', app: 'crm',       what: 'the chit sheet\'s Open page (the full M53 detail page)' },
-  { file: 'public/crm.html',            re: /openChitPage.*\/app\.html#\/app\/chit\//,        round: 'CRM2', app: 'crm',       what: 'the chit sheet\'s Open page' },
-  { file: 'public/finance.html',        re: /openChitPage.*\/app\.html#\/app\/chit\//,        round: 'CRM2', app: 'crm',       what: 'the chit sheet\'s Open page' },
   { file: 'public/app/network-app.js',  re: /nw-builder.*\/app\.html#\/network|\/app\.html#\/network.*nw-builder/, round: 'NET2', app: 'network', what: 'Open the builder (make the network the design checked)' },
   { file: 'public/till.html',           re: /'https:\/\/chitbridge-web\.vercel\.app\/app\.html' : \(location\.origin \+ '\/app\.html'\)/, round: 'SET2', app: 'settings', what: 'cbHome()\'s own literal' },
   { file: 'public/till.html',           re: /window\.open\(cbHome\(\) \+ '#\/app', '_blank', 'noopener'\)/, round: 'SET2', app: 'settings', what: 'whoseShopFix: pair this PC to the right counter (Counters & keys)' },

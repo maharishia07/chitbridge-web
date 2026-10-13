@@ -28,7 +28,7 @@
   --green:#16693F; --green-d:#0D4A2B; --green-t:#E8F4ED; --green-b:#A9D3BC;
   --amber:#E0A020; --amber-t:#FDF3DC; --amber-b:#EFD39A; --amber-i:#7A5205;
   --red:#C4562F; --red-t:#FBEAE3; --red-b:#E7B9A8; --red-i:#8E3517;
-  --blue:#2F74C9; --blue-t:#E4EEFA; --blue-b:#B9D2EF; --blue-i:#174A87;
+  --blue:#2468BD; --blue-t:#E4EEFA; --blue-b:#B9D2EF; --blue-i:#174A87;   /* #2F74C9 read 4.37:1 under cream text and as text on cream (the thread's External · Send); 5.1:1 now (CRM2 walk) */
   /* the names app/cap-books.js paints its tables, chips and buttons with, mapped onto this page's palette */
   --fs-1:12px; --fs-2:13.5px; --fs-3:15px; --grey:#6f6450;   /* = the --muted below; --muted reads it, so a chosen theme's --grey reaches both */
   --page:#FCFAF5; --card:#fffdf8; --panel:#F3EFE6;   /* SYSTEM's neutrals, literal so e2e/a11y-contrast.cjs <page> can measure them */
@@ -434,7 +434,7 @@ function whoPaint(){
 }
 /* the SMALL APP a screen key hands over to (CB_HOMES, accounts-shell.js) — never the workshop (IX0); no home yet → said, not a dead door */
 function navTo(k){ var h = CB_HOMES[k]; if (h) location.href = h; else toast(tx('Not built outside the workshop yet.')); }
-function openChitPage(id){ window.open('/app.html#/app/chit/' + encodeURIComponent(id), '_blank', 'noopener'); }   /* KEPT door: the sheet's "Open page" (its home is the M53 detail page) */
+function openChitPage(id){ window.open(chitPageHref(id), '_blank', 'noopener'); }   /* the sheet's "Open page": the chit page in CB CRM (CRM2), this page keeps its place */
 function openChit(id){ openChitSheet(id); }   /* every other chit link opens the sheet here: Messages and files are on it (R10) */
 
 /* the page's own confirm — the same <dialog> the index tile uses (accounts-shell.js); cap-books.js asks through this name */

@@ -16,11 +16,11 @@
  *   CBPage.load()          reads /app/pages.json once (a cached promise). Until it arrives — or if it cannot be read — only
  *                          the base page is known, so anything else still opens on the base page with the note.
  *
- * A classic script with no imports: app.html loads it eagerly; e2e/detail-page.cjs drives it in the real page.
+ * A classic script with no imports: app.html and crm.html (the chit page, CRM2) load it eagerly; e2e/detail-page.cjs drives it in the real page.
  */
 (function (root) {
   'use strict';
-  var BUILTIN = { base: 'chit.base.detail@1.0', pages: [{ name: 'chit.base.detail', version: '1.0', script: 'app.html' }] };
+  var BUILTIN = { base: 'chit.base.detail@1.0', pages: [{ name: 'chit.base.detail', version: '1.0', script: 'crm.html' }] };   /* mirrors pages.json's base row: the chit page in CB CRM (CRM2) */
   var REG = null, LOADING = null;
 
   function reg() { return REG || BUILTIN; }
@@ -40,7 +40,7 @@
 
   function resolve(page) {
     var asked = (page && typeof page === 'object') ? page.page : page;
-    var base = reg().base, b = row(base) || { script: 'app.html' };
+    var base = reg().base, b = row(base) || { script: 'crm.html' };
     if (asked === undefined || asked === null || asked === '') return { page: base, script: b.script, installed: true, fallback: false, asked: null, note: null };
     asked = String(asked);
     var hit = row(asked);
