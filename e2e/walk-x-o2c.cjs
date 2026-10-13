@@ -9,7 +9,7 @@
  * state with a view-only login. It asserts on what the SCREEN shows (the visible text + a screenshot per step), never only the DOM or the API.
  *
  *   --real     the REAL stack: ../chitbridge-api spawned against the loader's Postgres (docs/SIM-LOAD.md: `node tools/sim-load.cjs --schema
- *              --country IN --shop simstores`, then `--country AU --shop austores --seed 11`). Nothing is stubbed; what the screens show is
+ *              --country IN --shop simstores --start 2023-04-01` — the years end before today; then `--country AU --shop austores --seed 11`, refused until an AU pack is adopted). Nothing is stubbed; what the screens show is
  *              what the routes answered. Needs e2e/lib/real-stack.cjs's CB_REAL_DB (default postgres://postgres:pw@127.0.0.1:5432/cb_sim).
  *   (no flag)  fixture mode — the storefront and the seller's screens on the stand-in API (the cloud walks): the paths that need a database
  *              are NOTEd, never silently passed.
@@ -324,7 +324,7 @@ W.run('x-o2c', async (w) => {
         await settle(page, 1500);
         const slip = await txt(page, '#slipdlg'), last = await txt(page, '[data-testid="till-lastbill"]');
         const no = (slip.match(/No ([A-Z0-9]+\/\d\d-\d\d\/\d{4})/) || [])[1] || (last.match(/([A-Z0-9]+\/\d\d-\d\d\/\d{4})/) || [])[1] || '';
-        bill = { no, total: '128.99' };
+        bill = { no, total: '128.99', chit_id: no ? await R.billByNo(no).catch(() => null) : null };
         await shot(page, 'till-slip');
         await page.evaluate(() => { document.querySelectorAll('dialog[open]').forEach((d) => { try { d.close(); } catch (_) {} }); });
         return { ok: /TAX INVOICE/.test(slip) && !!no && /Ravi Stores/.test(slip) && /ON CREDIT/.test(slip) && /128\.99/.test(slip) && /GST SUMMARY/.test(slip), saw: 'bill ' + (no || 'NO NUMBER') + '; slip: ' + (/TAX INVOICE/.test(slip) ? 'tax invoice' : 'NOT a tax invoice') + ', ' + (/128\.99/.test(slip) ? '₹128.99' : 'total MISSING') + ', ' + (/ON CREDIT/.test(slip) ? 'on credit' : 'credit NOT shown') + '; printed: ' + (await page.evaluate(() => window.__printed || 0)) };
@@ -371,13 +371,15 @@ W.run('x-o2c', async (w) => {
     }
   }
 
+  /** a section run without S5: the walk's last credit bill to Ravi Stores (a walk counter's number starts with D — the loader's is C1) */
+  const lastBill = async () => { if (bill) return; const no = await R.lastWalkBill().catch(() => null); if (no) bill = { no: no.no, chit_id: no.chit_id, total: no.total }; };
   /* ════ S6 · RECEIPT — Ledger › Unpaid bills › Receive · Receivables · CB Finance › Collections ═════════════════════ */
   const esc = (s) => String(s || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const acc = async (pg, view, until) => { await pg.goto(base + '/accounts.html#' + view); await pg.waitForSelector(until || '[data-testid="bk-body"]', { timeout: 20000 }).catch(() => {}); await settle(pg, 2500); };
   if (want('S6')) {
     if (!REAL) w.note('O6.0', 'Receive against the bill', 'needs the real stack (--real); the fixture Finance screen is walked by e2e/walk-finance.cjs');
     else {
-      if (!bill) { const b = await R.j(api + '/api/till/bills?days=1&limit=50', { token: owner.token }); const mine = ((b.b && b.b.bills) || []).find((x) => /ON CREDIT|credit/i.test(x.kind || '') && x.customer === 'Ravi Stores' && /^D/.test(x.no)); if (mine) bill = { no: mine.no, chit_id: mine.chit_id, total: String(mine.total) }; }
+      await lastBill();
       await acc(page, 'bills', '[data-testid="bills-list"]');
       await w.step('O6.1', 'Ledger › Unpaid bills (1366) -> "Issued" counts the credit bill; the row: its number, Ravi Stores, 128.99, a step word', async () => {
         await page.click('[data-testid="bills-tab-B-1300"]').catch(() => {}); await settle(page, 1500);
@@ -444,6 +446,7 @@ W.run('x-o2c', async (w) => {
   if (want('S7')) {
     if (!REAL) w.note('O7.0', 'The books after the bill', 'needs the real stack (--real); the fixture Ledger is walked by e2e/cb-accounts.cjs');
     else {
+      await lastBill();
       await acc(page, 'daybook', '[data-testid="db-list"]');
       await w.step('O7.1', 'Ledger › Day book (1366) -> the range ends on the SHOP\'s day; the bill\'s Sale entry (SV/…) with its number as the source, and the Payment received entry', async () => {
         const t = await body(page);
@@ -489,25 +492,29 @@ W.run('x-o2c', async (w) => {
     }
   }
 
-  /* ════ S8 · REVERSE — void the bill from the app; the books and the trail show both ═════════════════════════════════ */
+  /* ════ S8 · REVERSE — the bill opened by its door, returned at the counter; the books and the trail show both ═════════════════════════════════ */
   if (want('S8')) {
     if (!REAL) w.note('O8.0', 'Void the bill', 'needs the real stack (--real)');
     else {
-      if (bill && !bill.chit_id) { const b = await R.j(api + '/api/till/bills?days=1&limit=50', { token: owner.token }); const mine = ((b.b && b.b.bills) || []).find((x) => x.no === bill.no); if (mine) bill.chit_id = mine.chit_id; }
-      await page.goto(base + '/app.html#/app/chit/' + (bill && bill.chit_id || '')); await settle(page, 3000);
-      await w.step('O8.1', 'App -> the bill chit opens from its number (the Ledger\'s door): the bill\'s number, Ravi Stores, 128.99; Void is offered', async () => {
+      await lastBill();
+      if (bill && !bill.chit_id) bill.chit_id = await R.billByNo(bill.no).catch(() => null);
+      await page.goto(base + '/app.html#/app/chit/' + (bill && bill.chit_id || '')); await page.reload(); await settle(page, 3500);
+      await w.step('O8.1', 'App -> the bill chit opens from its number (the Ledger\'s door): the bill\'s number, Ravi Stores, 128.99; its status word is the bill\'s own', async () => {
         const t = await body(page), v = await has(page, '[data-testid="chit-void"]');
-        return { ok: !!bill && t.indexOf(bill.no) >= 0 && /Ravi Stores/.test(t) && v, saw: (bill && t.indexOf(bill.no) >= 0 ? 'the bill is open' : 'the bill is NOT open') + '; Void ' + (v ? 'offered' : 'NOT offered') + '; "' + t.replace(/^.*?Chit & Bridge/, '').slice(0, 120) + '"' };
+        /* ⊘ Withdraw is an Order-folder action (DACT 'void'); the door opens under Task — finding F-O8a. A counter bill is reversed by a RETURN at the counter (O8.2). */
+        return { ok: !!bill && t.indexOf(bill.no) >= 0 && /Ravi Stores/.test(t) && /128\.99/.test(t), saw: (bill && t.indexOf(bill.no) >= 0 ? 'the bill is open' : 'the bill is NOT open') + '; ⊘ Withdraw ' + (v ? 'offered' : 'not offered under Task (F-O8a)') };
       });
-      await w.step('O8.2', 'App -> Void -> asks first; yes -> the status word says Void / Cancelled; the Status tab lists the trail (made · voided)', async () => {
-        await page.click('[data-testid="chit-void"]').catch(() => {}); await settle(page, 800);
-        const ask = await body(page);
-        await page.locator('.mfoot button, dialog[open] button, button', { hasText: /^(Void|Yes|Confirm|Withdraw|OK)/ }).first().click().catch(() => {}); await settle(page, 3000);
-        const t = await body(page);
-        await page.locator('button, .tab', { hasText: /^Status$/ }).first().click().catch(() => {}); await settle(page, 1200);
-        const st = await body(page);
-        await shot(page, 'bill-void');
-        return { ok: /void|cancel|withdraw/i.test(t) && /void|cancel|withdraw/i.test(st), saw: 'asked: "' + (ask.match(/[^.]*(void|withdraw)[^.]*\./i) || [''])[0].slice(0, 100) + '"; after: ' + ((t.match(/\b(Voided|Void|Cancelled|Withdrawn)\b/i) || ['no void word'])[0]) };
+      await w.step('O8.2', 'Counter -> Bills -> return on the bill -> "Take a return" lists its lines; all, Give it back -> the counter says the return (a credit note) and the bill reads returned', async () => {
+        await tillOpen(page);
+        await page.evaluate((no) => retOpen(no), bill && bill.no).catch(() => {}); await page.waitForSelector('#retdlg[open]', { timeout: 15000 }).catch(() => {});
+        const sheet = await txt(page, '#retdlg');
+        await page.evaluate(() => { try { retAll(); } catch (_) {} }); await settle(page, 400);
+        await page.click('[data-testid="till-return-go"]').catch(() => {}); await settle(page, 4000);
+        const t = await body(page), dlg = await page.evaluate(() => Array.from(document.querySelectorAll('dialog[open]')).map((d) => d.innerText.replace(/\s+/g, ' ')).join(' | '));
+        await shot(page, 'till-return');
+        const said = (dlg + ' ' + t).match(/(credit note|return|returned|CN\/)[^|.]{0,80}/i);
+        await page.evaluate(() => { document.querySelectorAll('dialog[open]').forEach((d) => { try { d.close(); } catch (_) {} }); });
+        return { ok: /Sugar 1 kg/.test(sheet) && /Toor dal/.test(sheet) && !!said, saw: 'sheet ' + (/Sugar 1 kg/.test(sheet) ? 'lists the lines' : 'EMPTY ("' + sheet.slice(0, 80) + '")') + '; after: "' + (said ? said[0] : 'nothing about the return') + '"' };
       });
       await acc(page, 'daybook', '[data-testid="db-list"]');
       await w.step('O8.3', 'Ledger › Day book -> the sale entry now says "Reversed by …" and the reversal entry is there; both stay on the record', async () => {

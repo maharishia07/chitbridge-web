@@ -112,4 +112,27 @@ async function shopperOrder(api, bridgeId, o) {
   return c.b;
 }
 
-module.exports = { up, j, signIn, signInActor, viewer, shopperOrder, sessionOf, OTP, OTP_CUSTOMER, DB, API_DIR };
+/**
+ * billByNo(no) → chit_id | null — the walk's own bill found by its number, read straight from the LOCAL database (the api's pg).
+ * ⚠️ Why not a route: the loader's three years run 2026-04 → 2029-03, so every newest-first read (till/bills, the Task list) is topped by
+ * future-dated bills and a bill made today is never on the first page (finding F-LOAD in docs/testing/WX-O2C-2026-10-13.md).
+ */
+async function billByNo(no) {
+  if (!localOnly(DB)) throw new Error('real-stack: billByNo reads a localhost database only');
+  const { Client } = require(path.join(API_DIR, 'node_modules', 'pg'));
+  const c = new Client({ connectionString: DB }); await c.connect();
+  try { const r = await c.query("SELECT chit_id FROM chit_header WHERE business_json->>'bill_no' = $1 ORDER BY created_at DESC LIMIT 1", [no]); return r.rows[0] ? String(r.rows[0].chit_id) : null; }
+  finally { await c.end(); }
+}
+/** lastWalkBill() → { no, chit_id, total } — the newest credit bill to Ravi Stores from a WALK's counter (D…; the loader's is C1), same reason as billByNo */
+async function lastWalkBill() {
+  if (!localOnly(DB)) throw new Error('real-stack: lastWalkBill reads a localhost database only');
+  const { Client } = require(path.join(API_DIR, 'node_modules', 'pg'));
+  const c = new Client({ connectionString: DB }); await c.connect();
+  try {
+    const r = await c.query("SELECT chit_id, business_json->>'bill_no' AS no, summary_json->>'total_value' AS total FROM chit_header WHERE business_json->>'bill_no' LIKE 'D%' AND business_json::text ILIKE '%credit%' AND business_json::text LIKE '%Ravi Stores%' ORDER BY created_at DESC LIMIT 1");
+    return r.rows[0] ? { no: r.rows[0].no, chit_id: String(r.rows[0].chit_id), total: String(r.rows[0].total) } : null;
+  } finally { await c.end(); }
+}
+
+module.exports = { up, j, billByNo, lastWalkBill, signIn, signInActor, viewer, shopperOrder, sessionOf, OTP, OTP_CUSTOMER, DB, API_DIR };
