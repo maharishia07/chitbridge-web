@@ -56,6 +56,8 @@ W.run('x-o2c', async (w) => {
     try { viewer = await R.viewer(api, owner.token, OWNER); } catch (e) { console.log('   (viewer: ' + e.message.slice(0, 160) + ')'); }
     /* the walk's own page talks to THIS api (the apps read cb_api_base / cb_till_api) */
     await ctx.addInitScript((a) => { try { localStorage.setItem('cb_api_base', a); localStorage.setItem('cb_till_api', a); } catch (_) {} }, api);
+    /* a run without S3 (whose O3.10 signs in on the real screen) starts signed in as the owner */
+    if (ONLY && !ONLY.includes('S3')) await ctx.addInitScript((s) => { try { if (!localStorage.getItem('cb_sess')) localStorage.setItem('cb_sess', s); } catch (_) {} }, owner.session);
   }
   /** a page in a fresh context at a width, holding a session (the cb_sess the apps store) and pointed at the api */
   const newPage = async (vp, sess) => {
@@ -214,7 +216,6 @@ W.run('x-o2c', async (w) => {
         const o = await R.shopperOrder(api, OWNER, { contact: SHOPPER.contact, name: SHOPPER.name, location: SHOPPER.location, lines: [{ item_id: pick('Ponni raw rice 1 kg').item_id, name: 'Ponni raw rice 1 kg', quantity: 2 }, { item_id: pick('Toor dal 500 g').item_id, name: 'Toor dal 500 g', quantity: 1 }] });
         order = { no: 'CB-' + String(o.chit_id).slice(0, 8), chit_id: o.chit_id };
         await page.setViewportSize(LAPTOP);
-        await ctx.addInitScript((s) => { try { if (!localStorage.getItem('cb_sess')) localStorage.setItem('cb_sess', s); } catch (_) {} }, owner.session);   /* signed in as S3's O3.10 leaves it */
         await page.goto(base + '/app.html#/app/chit/' + o.chit_id); await page.reload(); await settle(page, 3500);   /* a hash change alone does not boot the door */
       }
       const moveStatus = async (word) => {
@@ -307,7 +308,8 @@ W.run('x-o2c', async (w) => {
         await page.evaluate(() => onlineOrdersOpen()); await settle(page, 800);
         const d = await txt(page, '#onlinedlg'), rows = await page.locator('[data-testid^="till-online-row-"]').count();
         await page.evaluate(() => { try { document.getElementById('onlinedlg').close(); } catch (_) {} });
-        return { ok: rows >= 1 && new RegExp(SHOPPER.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).test(d), saw: rows + ' online order(s): "' + d.slice(0, 140) + '"' };
+        /* a run without S3 placed no order of its own: any open online order proves the pill reads them */
+        return { ok: rows >= 1 && (!order || new RegExp(SHOPPER.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).test(d)), saw: rows + ' online order(s): "' + d.slice(0, 140) + '"' };
       });
       await w.step('O5.3', 'Counter -> type Sugar 1 kg, Toor dal 500 g, customer "Ravi Stores" -> the bill has 2 lines, total 129.00 (prices include tax), and "On credit" appears because the shop knows the customer', async () => {
         await tillType(page, 'Sugar 1 kg'); await tillType(page, 'Toor dal 500 g');
@@ -341,7 +343,8 @@ W.run('x-o2c', async (w) => {
       await w.step('O5.6', 'Counter (390) -> no sideways scroll; search, the shelf and the pay row fit; add Sugar -> the total shows', async () => {
         const sw = await scrollW(ph);
         await tillType(ph, 'Sugar 1 kg');
-        const total = await txt(ph, '[data-testid="till-total"]'), pay = await ph.locator('[data-testid="till-pay-cash"]').isVisible().catch(() => false);
+        /* on a phone the pay row is one step on: "Pay ₹44.00 ›" (till-paygo) at the foot, Cash behind it */
+        const total = await txt(ph, '[data-testid="till-total"]'), pay = await ph.locator('[data-testid="till-paygo"]').isVisible().catch(() => false);
         await shot(ph, 'till-phone');
         return { ok: sw === 390 && /44/.test(total) && pay, saw: 'scrollWidth ' + sw + '; total "' + total + '"; Cash ' + (pay ? 'visible' : 'NOT visible') };
       });
