@@ -19,7 +19,7 @@
  *                                                               (e2e/ep-aliases.cjs): the worklist's rows, read here, never a third name
  *   PUT  /api/actors/assign/:id       (assign, as app.html) — who holds the whole task: push <person> · return
  *   GET  /api/work/list · /api/work/:id · GET /api/people  — the rows, the sheet, the people to pick from
- *   GET  /api/facts/rail/chits        (railChits, as cap-crm.js) — stuck + why: the SERVER's overdue test, the same rows and clock as Home's rail chips
+ *   GET  /api/facts/rail/chits        (CB_SHEET_EP.railChits, the CRM's name) — stuck + why: the SERVER's overdue test, the same rows and clock as Home's rail chips
  * Flow steps (docs/process/flows.json): O2C step 3 · order (tkList, tkOpen) · O2C step 4 · delivery (tkMove, tkAssignLine, tkDeliver) ·
  *   O2C step 5 · invoice (tkBill: hands the order to the till's ONE bill path, orderToBill — never a second bill here).
  *
@@ -38,13 +38,13 @@
  */
 (function (root) {
   'use strict';
-  /* the registry rows this screen adds (the scanner tools/endpoint-usage.cjs reads this shape); status · chit · wlAssign · wlDeliver come from CB_SHEET_EP, messages · sendMsg from CB_THREAD_EP */
+  /* the registry rows this screen adds (the scanner tools/endpoint-usage.cjs reads this shape); status · chit · wlAssign · wlDeliver · railChits come from CB_SHEET_EP, messages · sendMsg from CB_THREAD_EP */
   var CB_WORK_EP = {
     workList:         { m: 'GET',  p: '/api/work/list',               ok: 'y' },   // ?view=&limit=
     workOne:          { m: 'GET',  p: '/api/work/:id',                ok: 'y' },
     assign:           { m: 'PUT',  p: '/api/actors/assign/:id',       ok: 'y' },   // { action: 'push', target_actor_id } · { action: 'return' }
     people:           { m: 'GET',  p: '/api/people',                  ok: 'y' },
-    railChits:        { m: 'GET',  p: '/api/facts/rail/chits',        ok: 'y' },   // the SAME name cap-crm.js gives it: stuck + why, the server's overdue test (TO1b)
+    /* railChits (GET /api/facts/rail/chits: stuck + why, the server's overdue test) comes from CB_SHEET_EP — one name, registered once (TO1b) */
   };
   root.CB_WORK_EP = CB_WORK_EP;
 
@@ -138,8 +138,8 @@
   function markStuck() {
     if (K.view !== 'orders_in' && K.view !== 'orders_out') return Promise.resolve();
     return call('railChits').then(function (j) {
-      var by = {};
-      ((j && j.items) || []).forEach(function (x) { if (x && x.stuck) by[x.chit_id] = x.why || T('Waiting too long'); });
+      var by = {}, items = Array.isArray(j) ? j : ((j && j.items) || []);   /* core.js unwrap() collapses the reply to its array, as cap-crm-chits reads it */
+      items.forEach(function (x) { if (x && x.stuck) by[x.chit_id] = x.why || T('Waiting too long'); });
       K.rows.forEach(function (r) { r.stuck = !!by[r.chit_id]; r.stuck_why = by[r.chit_id] || null; });
     }, function () {});
   }

@@ -272,13 +272,14 @@ W.run('tasks', async (w) => {
     await fr.selectOption('[data-testid="tk-view"]', 'orders_in'); await fr.waitForTimeout(700);
     const fresh = await fr.locator('[data-testid="tk-new"]').count();
     await fr.click('[data-testid="tk-row-c4"]'); await fr.waitForSelector('[data-testid="tk-steps"]', { timeout: 6000 }); await fr.waitForTimeout(300);
-    const before = S.calls.length;
+    const writes = () => S.calls.filter((c) => /\/status|assign-lines|deliver-lines|actors\/assign/.test(c)).length;
+    const before = writes();
     const billDis = await fr.$eval('#tk_do_bill', (b) => b.disabled).catch(() => null);
     await fr.click('#tk_do_bill'); await fr.waitForTimeout(400);
     const bills = await page.evaluate(() => window.__bills.slice());
     await page.evaluate(() => { const f = document.getElementById('__tkframe'); if (f) f.remove(); });
-    return { ok: fresh === 0 && billDis === false && bills.join() === 'c4:Priya' && S.calls.length === before,
-      saw: 'new button in frame: ' + fresh + ' · Bill it ' + (billDis ? 'greyed' : 'open') + ' · host heard bill: ' + (bills.join(' ') || 'nothing') + ' · writes after: ' + (S.calls.length - before) };
+    return { ok: fresh === 0 && billDis === false && bills.join() === 'c4:Priya' && writes() === before,
+      saw: 'new button in frame: ' + fresh + ' · Bill it ' + (billDis ? 'greyed' : 'open') + ' · host heard bill: ' + (bills.join(' ') || 'nothing') + ' · writes after: ' + (writes() - before) };
   });
   await w.step('T15', 'A phone (390 px) -> the page fits the width (no sideways scroll) and the rows are there; the bell\'s door (openChit) opens THAT order here, the sheet with its address, still 390 wide', async () => {
     await page.setViewportSize({ width: 390, height: 844 }); await openPage(); await page.waitForTimeout(500);
