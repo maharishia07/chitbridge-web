@@ -168,7 +168,7 @@ W.run('compare', async (w) => {
     const has = (re) => rows.some((r) => re.test(r));
     await page.click('[data-testid="cmp-part-pl"]'); await page.waitForTimeout(300);
     const pl = await page.$$eval('[data-testid="cmp-rows"] .cbl-row,[data-testid="cmp-rows"] .cbl-lrec', (es) => es.map((e) => e.innerText.replace(/\s+/g, ' ')));
-    return { ok: has(/^Sales.*Same ✓/) && has(/Bank Fees.*Not mapped.*No ledger here matches "Bank Fees"/) && has(/GST paid.*Only ours/) && pl.some((r) => /Net profit/.test(r)),
+    return { ok: has(/^▸?Sales .*Same ✓/) && has(/Bank Fees.*Not mapped.*No ledger here matches "Bank Fees"/) && has(/GST paid.*Only ours/) && pl.some((r) => /Net profit/.test(r)),
       saw: rows.length + ' TB lines · ' + rows.filter((r) => /Bank Fees|GST paid|^Sales/.test(r)).map((r) => r.slice(0, 70)).join(' | ') + ' · P&L ' + pl.length + ' lines' };
   });
 
@@ -184,7 +184,7 @@ W.run('compare', async (w) => {
         const low = rec.filter((r) => !r.grad && r.ratio < r.need && r.inMain !== false).map((r) => r.text + ' ' + (Math.round(r.ratio * 100) / 100));
         const g = await page.evaluate(() => {
           const root = document.querySelector('[data-testid="cmp"]'), bar = document.getElementById('cmp_bar');
-          const clipped = [...root.querySelectorAll('button,.optchip,.step,[data-testid="cmp-sub"],[data-testid="cmp-effort"],[data-testid^="cmp-n-"]')].filter((e) => e.offsetParent && e.scrollWidth > e.clientWidth + 1).map((e) => e.textContent.trim().slice(0, 30));
+          const clipped = [...root.querySelectorAll('button,.optchip,.step,[data-status],[data-testid="cmp-sub"],[data-testid="cmp-effort"],[data-testid^="cmp-n-"]')].filter((e) => e.offsetParent && (e.scrollWidth > e.clientWidth + 1 || e.scrollHeight > e.clientHeight + 1)).map((e) => e.textContent.trim().slice(0, 30));
           const br = bar.getBoundingClientRect();
           const floats = [...document.querySelectorAll('body *')].filter((e) => { const cs = getComputedStyle(e); if (cs.position !== 'fixed' || cs.display === 'none' || cs.visibility === 'hidden') return false; const r = e.getBoundingClientRect(); return r.width && r.height && r.left < br.right && br.left < r.right && r.top < br.bottom && br.top < r.bottom && !e.contains(bar) && !bar.contains(e); }).map((e) => e.className || e.tagName);
           const main = document.getElementById('content') || document.body;

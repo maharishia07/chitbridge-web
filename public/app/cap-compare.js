@@ -25,7 +25,7 @@ if (typeof EP !== 'undefined') { Object.assign(EP, {
 }); }
 
 var CMP = { list: null, id: null, r: null, part: null, err: '', ld: null, st: null, gen: 0 };
-var CMP_STATUS = { different: ['Different', 'amber'], gap: ['Not mapped', 'amber'], only_ours: ['Only ours', 'blue'], equal: ['Same ✓', 'green'] };
+var CMP_STATUS = { different: ['Different', 'amber'], gap: ['Not mapped', 'amber'], only_ours: ['Only ours', 'blue'], equal: ['Same ✓', ''] };   /* a line that is fine is structural grey (design rule: everything fine collapses); amber asks to be checked */
 var CMP_ORDER = ['tb', 'pl', 'bs', 'ret'];
 
 /* ── the view (BK.views.compare) ── */
@@ -106,10 +106,11 @@ function cmpPaintList() {
       { key: 'name', label: tx('Line'), prio: 1, sort: 'name', w: 190, cell: function (r) { return (r.name || r.their_name || '') + (r.their_name && r.their_name !== r.name ? ' (' + tx('theirs') + ': ' + r.their_name + ')' : ''); } },
       { key: 'theirs', label: tx('Theirs'), prio: 3, num: true, w: 120, cell: function (r) { return cmpFig(r.theirs_minor, k); } },
       { key: 'ours', label: tx('Ours'), prio: 3, num: true, w: 120, cell: function (r) { return cmpFig(r.ours_minor, k); } },
-      { key: 'diff', label: tx('Difference'), prio: 2, num: true, w: 120, cell: function (r) { return r.status === 'equal' ? '' : k === 'tb' ? cmpFig(r.diff_minor, k) : cmpDiff(r.diff_minor); } },
-      { key: 'status', label: tx('Status'), prio: 2, w: 110, html: true, hfilter: 'status', cell: function (r) { var s = CMP_STATUS[r.status] || [r.status, '']; return '<span class="step ' + s[1] + '" data-status="' + esc(r.status) + '">' + esc(tx(s[0])) + '</span>'; } },
+      { key: 'diff', label: tx('Difference'), prio: 2, num: true, w: 120, cell: function (r) { return r.status === 'equal' ? '' : k === 'tb' && !r.total ? cmpFig(r.diff_minor, k) : cmpDiff(r.diff_minor); } },
+      { key: 'status', label: tx('Status'), prio: 2, w: 130, html: true, hfilter: 'status', cell: function (r) { var s = CMP_STATUS[r.status] || [r.status, '']; return '<span class="step ' + s[1] + '" data-status="' + esc(r.status) + '" style="white-space:nowrap">' + esc(tx(s[0])) + '</span>'; } },
       { key: 'why', label: tx('Why'), prio: 2, w: 320, cell: function (r) { return r.why || ''; } },
     ],
+    defaultCols: ['name', 'theirs', 'ours', 'diff', 'status', 'why'],
     filters: [{ key: 'status', label: tx('Status'), all: tx('Every line'), options: opts, match: function (r, v) { return r.status === v; } }],
     sorts: [{ key: 'first', label: tx('Differences first'), cmp: function () { return 0; } }, { key: 'name', label: tx('Line'), cmp: function (a, b) { return String(a.name).localeCompare(String(b.name)); } }],
     search: function (r) { return [r.name, r.their_name, r.their_code, r.why].join(' '); },
@@ -220,7 +221,8 @@ function cmpLoadSet(k, v, quiet) {
   if (k === 'add') L.add = false; else L[k] = String(v == null ? '' : v);
   if (k === 'part' || k === 'source' || k === 'header_row') { L.pre = null; L.dec = {}; }
   L.err = '';
-  if (quiet) { if (CMP.st) CMP.st.paintFoot(); } else cmpLoadRefresh();
+  /* a typed field (name · dates · headings row) changes no part of the form: only the footer's guard is painted, so a change fired on blur never repaints under the cursor */
+  if (quiet || k === 'label' || k === 'from' || k === 'to' || k === 'header_row') { if (CMP.st) CMP.st.paintFoot(); } else cmpLoadRefresh();
 }
 function cmpLoadPick(h, v) { CMP.ld.dec[h] = v || ''; if (CMP.st) CMP.st.paintFoot(); }
 /* the one reader of the file: text for .csv / .xml, base64 for .xlsx — nothing leaves the browser until the Columns step asks the server */
