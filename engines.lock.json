@@ -2,9 +2,9 @@
   "$comment": "The engines this platform ADOPTS from chitbridge-engines — ONE PIN PER ENGINE, so a rollout moves one engine at a time. Change a pin, then run: node ../chitbridge-engines/tools/adopt.cjs . — never edit an adopted file.",
   "pins": {
     "money": "1.0.0",
-    "tax-packs": "1.20.0",
+    "tax-packs": "1.37.0",
     "tax-slab": "1.2.0",
-    "tax": "1.20.0",
+    "tax": "1.37.0",
     "pricing": "1.3.0",
     "offers": "1.3.0",
     "variant": "1.4.0",
@@ -31,7 +31,11 @@
     "convert": "1.5.0",
     "bank-recon": "1.18.0",
     "rail": "1.29.0",
-    "workflow": "1.33.0"
+    "workflow": "1.33.0",
+    "reg-in": "1.37.0",
+    "reg-au": "1.37.0",
+    "reg-ae": "1.37.0",
+    "regulation": "1.37.0"
   },
   "adopt": {
     "money": [
@@ -130,11 +134,19 @@
   },
   "bundles": {
     "public/engine/tax.js": [
+      "reg-in",
+      "reg-au",
+      "reg-ae",
+      "regulation",
       "tax-packs",
       "tax-slab",
       "tax"
     ],
     "public/app/tax.js": [
+      "reg-in",
+      "reg-au",
+      "reg-ae",
+      "regulation",
       "tax-packs",
       "tax"
     ]
@@ -169,7 +181,11 @@
     "bank-recon": "fdbf6190577fa7b8473ac4e07f4da01762808191229f379a3861ab35cca281d3",
     "rail": "62146650c1ae4e0aa47c16625026f2d29039c4d05261c191f899bd0213f1b698",
     "workflow": "f8c7a43048bc1b8453a1c2ec43b6eed7f619feee4c67eaba046c6cea370f0a5b",
-    "tax-packs": "3ef519adebb1da0de7b6ced61f0d728c8075bb9b0251a20099ae31d826cb272e",
-    "tax": "38523910daabd85398684729e4faa397c711e983368149b48b4a5d2bd63f3f36"
+    "reg-in": "3d1e905873f75d7133d4a53e706035b2fcbeb4a2231358b3f12b7e3a53cf5875",
+    "reg-au": "878c0052b81d1e8d4515c3bdd5da07b6caa2b2ed824340afd1cc5fd485fbc47f",
+    "reg-ae": "069efc3fe694db163649de693d6fc7ee8f49dfdb2ecdf00f37d2967d9a3ecf03",
+    "regulation": "38e3e8ff5a17dc3d1fa1f1212b5b4200aefbdc27f32bb8f379687bdba57c5870",
+    "tax-packs": "e3885990e20a64aada0f545316e520176ff3601d9d5a6c6b2d73ce56b00c6248",
+    "tax": "0b888049577bbcccf623e8c26e00f121c9e6443790c4be831ddfebaac5667988"
   }
 }

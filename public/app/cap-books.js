@@ -186,7 +186,9 @@ function bkMoneyRead(idOrEl) {
   return el ? bkMoneyMinor(el.value, el.getAttribute('data-cur')) : NaN;
 }
 function bkDate(d) { if (!d) return '—'; try { return CBLocale.date(d); } catch (_) { return String(d).slice(0, 10); } }
-function bkToday() { return new Date().toISOString().slice(0, 10); }
+/** the SHOP's day — the browser's local calendar day (F3b, 2026-10-13: toISOString() is the UTC day, which for an Indian shop between midnight and
+ *  05:30 is YESTERDAY — the entry date, the dues as-of and the Cash tab's Today tag were all a day behind every early morning). Same day as crmLocalISO / peYmd. */
+function bkToday() { var d = new Date(), p = function (n) { return (n < 10 ? '0' : '') + n; }; return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); }
 /* ── CB Finance · Terms (F2): the words for a term and for a change to one — read by the Finance Terms tab AND the CRM record (one wording, two screens) ── */
 var BK_TERM_FIELD = { credit_days: 'Credit days', credit_limit_minor: 'Credit limit', interest: 'Interest', early: 'Early pay', allowed: 'Over limit allowed' };
 function bkTermVal(f, v, c) {
