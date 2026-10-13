@@ -13,6 +13,8 @@
  *   · the frame is the auth card (.auth .card .top .body) every sign-in screen uses — no new style
  * ── WHAT IS NEW, AND WHY ───────────────────────────────────────────────────────────────────────────────────────────────────────────
  *   renderCountrySetup() — nothing existing painted a country step (the gov panel is read-only and lives inside Register).
+ *   csuReadyHTML() (CL3) — "Where ChitBridge is for <country>" for the CHOSEN country, so a new shop sees what works for it. The rows are
+ *     CBCountryReady's (app/country-ready.js — the same unit the Country lab paints), drawn in this step's own gov-panel rows; nothing typed.
  * Flow step: Onboarding · Register → Country setup → the app. (docs/process/flows.json is PM1's, not merged yet.)
  */
 'use strict';
@@ -82,6 +84,30 @@ function csuSet(k, v) {
   CSU.err = '';
   renderCountrySetup();
 }
+/* CL3 · the readiness reader, loaded once on first paint (a small shared unit, not a cap); its data is read once per page */
+var CSU_READY = { data: null, state: '' };
+function csuReadyLoad() {
+  if (CSU_READY.state) return;
+  CSU_READY.state = 'loading';
+  var go2 = function () { CBCountryReady.load().then(function (d) { CSU_READY.data = d; CSU_READY.state = 'ok'; }, function () { CSU_READY.state = 'err'; }).then(function () { if (/^#\/country/.test(location.hash)) renderCountrySetup(); }); };
+  if (window.CBCountryReady) return go2();
+  var sc = document.createElement('script'); sc.src = '/app/country-ready.js?v=' + (typeof CB_BUILD !== 'undefined' ? CB_BUILD : ''); sc.onload = go2;
+  sc.onerror = function () { CSU_READY.state = 'err'; renderCountrySetup(); }; document.head.appendChild(sc);
+}
+/** "Where ChitBridge is for <country>": one row per product area — symbol · area · one line — in the gov panel's rows */
+function csuReadyHTML(cc) {
+  csuReadyLoad();
+  if (!cc || CSU_READY.state === 'loading' || !CSU_READY.state) return '';
+  if (CSU_READY.state === 'err') return '<div class="hint" data-testid="cs-ready-err">' + esc(tx('Could not read where ChitBridge is for each country.')) + '</div>';
+  var v = CBCountryReady.view(CSU_READY.data, cc, csuCountryName(cc));
+  return '<div class="govbox" data-testid="cs-ready">'
+    + '<div style="font-weight:700" data-testid="cs-ready-title">' + esc(v.title) + '</div>'
+    + (v.known ? '<div class="hint" data-testid="cs-ready-pack">' + esc(v.pack) + '</div>' : '<div class="hint" data-testid="cs-ready-none">' + esc(v.none) + '</div>')
+    + v.rows.map(function (r) {
+      return '<div class="govrow" data-testid="cs-ready-row" data-state="' + esc(r.state) + '"><span class="gw"><span aria-hidden="true">' + esc(r.sym) + '</span> ' + esc(r.area) + '</span><span class="gv" style="font-weight:600">' + esc(r.line) + '</span></div>';
+    }).join('')
+    + '</div>';
+}
 function csuOpen(k) { CSU.open[k] = !CSU.open[k]; renderCountrySetup(); }
 /** one row: what · value · where it came from · Change (the registration's gov panel, with the one tap it lacked) */
 function csuRow(key, what, valueHtml, from, editHtml) {
@@ -125,6 +151,7 @@ function renderCountrySetup() {
       + '<div style="color:var(--grey);font-size:var(--fs-2);margin-bottom:6px">' + esc(tx('We filled these in. Change any, then continue.')) + '</div>'
       + '<div class="govbox" data-testid="cs-rows">' + rows + '</div>'
       + (noPack ? '<div class="hint" data-testid="cs-nopack" style="color:var(--warn-2)">' + esc(p.pack.why) + '</div>' : '')
+      + csuReadyHTML(e.country)
       + (CSU.readErr ? '<div class="hint" data-testid="cs-readerr">' + esc(tx('Could not read what registration stored — these are from this device.')) + '</div>' : '')
       + (CSU.err ? '<div class="err" data-testid="cs-err">' + esc(CSU.err) + '</div>' : '')
       + (CSU.later
