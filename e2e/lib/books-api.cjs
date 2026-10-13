@@ -11,7 +11,8 @@ const ENGINES = { posting: 'injected', packs: 'injected', receivables: 'injected
 /** GET /api/books/health */
 /* only the API's keys: a harness's own bookkeeping on the row (stuck, last_posted_day …) stays in the harness, it is not part of the answer */
 const only = (defaults, o) => { const out = Object.assign({}, defaults); Object.keys(o || {}).forEach((k) => { if (k in defaults) out[k] = o[k]; }); return out; };
-const health = (o) => only({ enabled: true, currency: 'INR', walkin_grain: 'day', last_check: null, engines: ENGINES, waiting: [] }, o);
+/* year (WX-R2R): the shop's financial year as the server defaults its reads — an India shop's April year unless the harness says otherwise */
+const health = (o) => only({ enabled: true, currency: 'INR', walkin_grain: 'day', last_check: null, engines: ENGINES, year: { fiscal_year: '2026-27', from: '2026-04-01', start_month: 4 }, waiting: [] }, o);
 /** GET /api/books/party/:id/statement */
 /* M29: every line also names its entry (entry_id · entry_no · event_type), its reversal (reverses_entry_id · reversed_by · reversed_why) and, on a payment line, payment_id · unapplied_minor · advice — null = not a payment / not reversed */
 const statement = (partyId, o) => { const s = Object.assign({ currency: 'INR', party_id: partyId, from: '2026-04-01', to: '2026-10-03', code: '1300', opening_minor: 0, closing_minor: 0, lines: [] }, o || {}); s.lines = s.lines.map((l) => Object.assign({ ref: null, source_chit_id: null, entry_id: null, entry_no: null, event_type: null, reverses_entry_id: null, reversed_by: null, reversed_why: null, payment_id: null, unapplied_minor: null, advice: null }, l, { source: l.source ? Object.assign({ chit_id: null, ref: null, kind: 'bill', counter: null, by: null, count: null, how: null, how_ref: null, split: null, doc_at: null, recorded_at: '2026-10-03T05:00:00.000Z' }, l.source) : null })); return s; };
