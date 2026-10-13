@@ -508,6 +508,16 @@ var STANDARDS = [
     why:'A country rule that lands in core code is copied into every country, and each copy drifts. Writing down what is country-specific, and checking every pack against it, is how a new country stays one file.',
     matrix:'country',
     added:'2026-10-13' },
+  /* LOC0 (2026-10-13): the locale standard and its guard — docs/design/standards/LOCALE-STANDARD.md */
+  { a:'look', k:'prac', c:['GLOBAL'],
+    p:"Every word on the screen can change language — and a test says which cannot yet",
+    m:"Screens convert by the plan (till and bill first); server sentences carry no key yet",
+    g:'Localisation', n:'Pseudo-localisation (Microsoft qps-ploc · Unicode)', w:'The locale standard (docs/design/standards/LOCALE-STANDARD.md) and its guard',
+    ex:"[!! Ŝàļéš !!]", exWhy:"What a label becomes in the pseudo-locale: accented, 40 % longer, bracketed. On one screen it shows which words did NOT go through the catalogue, and which boxes clip when German or Tamil arrives.",
+    s:'part',
+    note:'e2e/walk-locale.cjs opens every customer screen in qps at 1366 and 390 and holds a per-screen count of untranslated and clipped text (e2e/locale-baseline.json); the build fails when a count rises. The standard fixes the rules: whole sentences with placeholders and Intl plural rules, never concatenation; icons universal, only directional ones mirrored; the fallback chain to English, never blank; server sentences keyed; names, amounts and user data never translated.',
+    at:'docs/design/standards/LOCALE-STANDARD.md · e2e/walk-locale.cjs', go:'locale', why:'A translator can only translate what reaches the catalogue; a pseudo-locale shows the rest before a customer in Dubai or Coimbatore does.',
+    added:'2026-10-13' },
 ];
 
 /* ⭐ THE VOCABULARIES the new fields draw from, and the date the register was last checked. A status word is said here once; the Settings
@@ -829,6 +839,7 @@ var STD_GLOSSARY = [
   ['KGM', 'Kilogram (UN/ECE unit code)', 'The world code for a kilogram'],
   ['KGS', 'Kilograms (GST unit code)', 'The GST code for kilograms'],
   ['LEI', 'Legal Entity Identifier', 'A world-wide number for a company'],
+  ['LOCALE-STANDARD', 'The locale standard', 'docs/design/standards/LOCALE-STANDARD.md — the rules every screen follows for words, figures and direction; its guard is e2e/walk-locale.cjs'],
   ['LOCODE', 'UN Location Code', 'The world code for a port or city'],
   ['LTR', 'Left to right', 'Writing direction, as in English'],
   ['MAA', 'Chennai (IATA code)', 'The airport code for Chennai'],
