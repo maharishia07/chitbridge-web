@@ -385,6 +385,9 @@ async function loadTaxLedger(){
     const el = rail.querySelector('[data-testid="mis-band-tax"] .misval'); if (el) el.innerHTML = hv.v + '<small>' + esc(hv.s) + '</small>'; }
 }
 function misTax(){
+  /* ⭐ CX0: this band is India's GST (CGST · SGST · IGST, GSTR-1 / 3B from the rail). Another country's shop is told where its own return is. */
+  if (typeof SESSION !== 'undefined' && SESSION && SESSION.country && String(SESSION.country).toUpperCase() !== 'IN')
+    return _misHead('Tax', tx('This band reads India\'s GST. Your return is prepared in Accounts.'));
   const L = UI._taxLedger;
   if (L === undefined || L === null) { loadTaxLedger(); return _misHead('Tax', tx('What this month owes, from the chits on the rail.')) + '<div class="misnote">' + tx('reading…') + '</div>'; }
   if (L.error) return _misHead('Tax', '') + '<div class="miswarn">' + esc(L.error) + '</div>';

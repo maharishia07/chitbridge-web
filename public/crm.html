@@ -468,7 +468,8 @@ async function start(){
   if (g !== CRM.gen || !MINE) return;
   if (t.others.length) return closeFirst(t);
   /* the Ledger's one read: on → the Dues column and the dues alert exist; off (404) → neither is drawn, no blank column */
-  try{ const h = await api('booksHealth'); CRM.ledger = !!(h && h.enabled !== false); }
+  try{ const h = await api('booksHealth'); CRM.ledger = !!(h && h.enabled !== false);
+    if (h && h.country && h.country.country && h.country.country.code) SESSION.country = h.country.country.code; }   /* CX0: the shop's country — the pack's tax-id word (taxIdWord) on the party list and record */
   catch(e){ CRM.ledger = false; }
   try { localStorage.setItem('cb_crm_ledger', CRM.ledger ? '1' : '0'); } catch (_) {}
   if (g !== CRM.gen) return;
