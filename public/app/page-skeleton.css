@@ -23,6 +23,8 @@ html.cbsk,html.cbsk body{margin:0;height:100%}
 .cbsk .screen > #emp,.cbsk .screen > #nw,.cbsk .screen > #tk{flex:1 1 auto;min-height:0;padding:16px 20px 20px;overflow:auto}
 .cbsk #emp .emp-list,.cbsk #nw .nw-list,.cbsk #tk .tk-list{min-height:0;flex:1}
 .cbsk #nw .nw-body{min-height:0;overflow:auto}
+/* the Country lab (CL3): its own two panes carry their padding; the work area scrolls as one, under the shell header */
+.cbsk .screen > #cl{flex:1 1 auto;min-height:0;overflow:auto}
 @media (max-width:760px){
   .cbsk .side{width:64px}
   .cbsk .side .label,.cbsk #toggleNav{display:none}

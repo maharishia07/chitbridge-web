@@ -17,6 +17,13 @@
   SAME rows collapse under "N rows are the same"; the cart stacks as cards when its pane is narrow (a container query, never a
   scroll bar inside the panel); the page's private colour names are re-pointed at the theme's tokens under [data-themed].
 
+  CL3 (owner, 13 Oct: "if login not required, still avatar, and font, and other things should be intact"): the page WEARS THE STANDARD SHELL —
+  CBFrame.mount (app/page-frame.js) draws the CBShell header (avatar · Sign in when signed out · text size · theme), the standard skeleton
+  (sidebar + main pane, app/page-skeleton.css) and the kural foot, exactly as Tasks / Employees / Network; signin:false keeps it public (no
+  sign-in window over the lab). Its own header and the Inter font are gone. Beside the TO side, "Where ChitBridge is for <country>" — READ
+  from public/data/country-ready.json (scripts/country-ready.cjs: the engines' COUNTRY-MATRIX × COUNTRY-COVERAGE §1) by CBCountryReady,
+  the same unit the Country setup step paints. The flow (FROM/TO, the rows, the cart, bill-this-cart) is unchanged.
+
   ⭐ IT IS THE REAL THING, NOT A MOCK. Every row on the right is READ from the regulation packs the books run on — reg-in,
   reg-au, reg-ae and the registry (engine/tax.js, the adopted bundle: packs + regulation + tax-packs + tax-slab + tax, one release,
   the same file the till bills with). Nothing in this page is a hand-written table of what a country does: a pack that carries no
@@ -31,7 +38,7 @@
   is exactly the silent switch the decision forbids.
 -->
 <style>
-  :root{ --font-ui:Inter,system-ui,sans-serif; --ink:#20303b; --grey-2:#545A61; --line:#e7e3d8; --line-2:#efece4; --paper:#faf8f3; --card:#fff;
+  :root{ --font-ui:var(--f-ui,'IBM Plex Sans',system-ui,sans-serif); --ink:#20303b; --grey-2:#545A61; --line:#e7e3d8; --line-2:#efece4; --paper:#faf8f3; --card:#fff;
     --blue:#3F66A6; --blue-tint-bg:#E9F0FA; --accent:#3F66A6; --on-accent:#fff; --ok-2:#2c7a43; --ok-tint:#e6f4ea; --ok-line:#bfe0c9; --warn-2:#8a5a1e; --warn-tint:#fbf3e3;
     --bad:#b4453f; --bad-tint:#fbeceb; --bad-line:#eccbc9; --gold-soft:#f7f2e3; --gold-line:#e6d9a8; --neutral-tint:#EEF1F5;
     --fs-1:11px; --fs-2:12.5px; --fs-3:14px; --fs-4:16px; --fs-5:22px; }
@@ -43,9 +50,10 @@
     --bad-line:var(--disp-2,#eccbc9); --accent:var(--blue,#3F66A6); }
   *{ box-sizing:border-box; }
   body{ margin:0; font-family:var(--font-ui,system-ui); color:var(--ink,#20303b); background:var(--paper,#faf8f3); font-size:var(--fs-3,14px); font-variant-numeric:tabular-nums; }
-  header{ display:flex; align-items:center; gap:14px; padding:10px 18px; border-bottom:1px solid var(--line,#e7e3d8); background:var(--card,#fff); flex-wrap:wrap; }
-  header h1{ font-size:var(--fs-4,16px); margin:0; letter-spacing:.01em; } header .sub{ color:var(--grey-2,#545A61); font-size:var(--fs-2,12.5px); }
-  .lab{ display:grid; grid-template-columns:minmax(300px,380px) 1fr; min-height:calc(100vh - 52px); }
+  /* the lab's own title row, inside the standard main pane (the shell's header above it carries Home, the avatar and the text size) */
+  .labbar{ display:flex; align-items:center; gap:14px; padding:10px 18px; border-bottom:1px solid var(--line,#e7e3d8); background:var(--card,#fff); flex-wrap:wrap; }
+  .labbar h1{ font-size:var(--fs-4,16px); margin:0; letter-spacing:.01em; } .labbar .sub{ color:var(--grey-2,#545A61); font-size:var(--fs-2,12.5px); }
+  .lab{ display:grid; grid-template-columns:minmax(300px,380px) 1fr; }
   .pane{ padding:12px 16px; overflow:auto; min-width:0; }
   .pane.left{ border-right:1px solid var(--line,#e7e3d8); background:var(--card,#fff); }
   /* ⚠️ THE RIGHT GUTTER (CL2 #6): a round control floating at the window's right edge covered the "what it means" column on the owner's screen.
@@ -122,6 +130,8 @@
   .kv:last-child{ border-bottom:0; }
   .idck{ display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-top:4px; }
   .idck input{ width:150px; }
+  /* "Where ChitBridge is for <country>" (CL3): the lab's own .card and .kv rows — the symbol and the area on the left, the one line on the right */
+  #ready .kv > span:first-child{ white-space:nowrap; font-weight:600; } #ready .kv > span:last-child{ text-align:right; color:var(--grey-2,#545A61); }
   @media (max-width: 880px){ .lab{ grid-template-columns:1fr; } .pane.left{ border-right:0; border-bottom:1px solid var(--line,#e7e3d8); } .pane.right{ --fab-gutter:0px; } }
   @media (max-width: 640px){
     .two{ grid-template-columns:1fr; }
@@ -135,15 +145,18 @@
     table.cmp tr.different td.v.to{ box-shadow:none; border-left:3px solid var(--blue,#3F66A6); }
   }
 </style>
+<link rel="stylesheet" href="/app/page-skeleton.css">   <!-- the standard page skeleton (sidebar + main pane), drawn by CBFrame (CL3) -->
 <script src="/engine/screen.js"></script>
 <script src="/app/avatar.js"></script>   <!-- CBAvatar: the one avatar (Profile · Support · Sign out) and the look it owns — the same on every page -->
 </head>
 <body>
 
+<!-- CL3: the work area CBFrame puts in the standard main pane (the shell header and the sidebar are drawn around it) -->
+<div id="cl" data-testid="cl-work">
 <!-- ⚠️ THE ENGINES' ABSENCE IS ANNOUNCED (the Conversion lab's rule): a missing engine is a fact, and a fact belongs on the screen. -->
 <div id="nofuel" class="bar" hidden data-testid="cl-nofuel"></div>
 
-<header>
+<div class="labbar">
   <div><h1>Country lab</h1><div class="sub" data-testid="cl-sub">What registering in another country would look like, read from the packs.</div></div>
   <div style="margin-left:auto;display:flex;gap:8px;align-items:center;font-size:var(--fs-2,12.5px);flex-wrap:wrap">
     <span id="src" class="chip" data-testid="cl-packs">packs: …</span>
@@ -151,10 +164,8 @@
     <a class="btn" href="offer-lab-next.html" target="cb_offer_lab" style="text-decoration:none">offer lab</a>
     <a class="btn" href="combo-lab.html" target="cb_combo_lab" style="text-decoration:none">combo lab</a>
     <a class="btn" href="conversion-lab.html" target="cb_conversion_lab" style="text-decoration:none">conversion lab</a>
-    <!-- ⚠️ Home, never the backend app (owner, 13 Oct: everything from index) — the same door the Combo and Offer labs use -->
-    <a class="btn" href="/" data-testid="cl-home" title="The index — the whole shop on one page" style="text-decoration:none">⌂ Home</a><span id="cbav"></span><script>if(window.CBAvatar)CBAvatar.mount(document.getElementById('cbav'),{person:CBAvatar.sessionPerson(),items:['profile','support','signout']});</script>
   </div>
-</header>
+</div>
 
 <div class="lab">
   <section class="pane left" data-testid="cl-inputs">
@@ -167,6 +178,9 @@
     </div>
     <div class="card" id="status-from" data-testid="cl-status-from" style="margin-top:6px"></div>
     <div class="card" id="status-to" data-testid="cl-status-to" style="margin-top:6px"></div>
+    <!-- ⭐ CL3: WHERE CHITBRIDGE IS for the country being registered in — beside the TO side, read from the docs (CBCountryReady), never typed -->
+    <div class="sec" id="ready-sec" data-testid="cl-ready-title">Where ChitBridge is</div>
+    <div class="card" id="ready" data-testid="cl-ready"></div>
     <details class="why hint" style="margin-top:6px"><summary>why these countries</summary><div>The registered packs first (the registry's own list), then the other countries the Country setup step offers — pack-less, in the server's own sentence.</div></details>
 
     <div class="sec">The cart <button class="btn" style="margin-left:auto" data-testid="cl-add-line" onclick="addLine()">+ a line</button></div>
@@ -208,6 +222,7 @@
     <div class="two bill" id="bill"></div>
   </section>
 </div>
+</div>
 
 <!-- ⚠️ ORDER IS LOAD-BEARING: engine/tax.js is the adopted BUNDLE reg-in + reg-au + reg-ae + regulation + tax-packs + tax-slab + tax, in that
      order; tax-packs reads the registry at load and refuses to load without it. money first, as on the till. -->
@@ -216,6 +231,12 @@
 <script src="/engine/locale.js"></script>
 <script src="/engine/profilemap.js"></script>
 <script src="/engine/jurisdiction.js"></script>
+<!-- CL3 · THE STANDARD SHELL (page-frame.js's load order): the one-person check, the shell, the kural, the frame; then the readiness reader -->
+<script src="/app/one-person.js"></script>
+<script src="/app/shell.js"></script>
+<script src="/app/kural.js"></script>
+<script src="/app/page-frame.js"></script>
+<script src="/app/country-ready.js"></script>
 <script>
 'use strict';
 
@@ -601,7 +622,33 @@ function repaint() {
   paintRows();
   paintBill();
   paintExisting();
+  paintReady();
 }
+/* CL3 · "Where ChitBridge is for <TO country>": the rows CBCountryReady gives, painted in this page's .kv look. Nothing is added up here. */
+var READY = null;
+function paintReady() {
+  var el = document.getElementById('ready'), sec = document.getElementById('ready-sec'), cc = LAB.to, name = countryName(cc);
+  if (!READY) {
+    el.innerHTML = '<span class="hint">…</span>';
+    READY = window.CBCountryReady ? CBCountryReady.load().catch(function () { return null; }) : Promise.resolve(null);
+  }
+  READY.then(function (data) {
+    if (LAB.to !== cc) return;
+    var v = data ? CBCountryReady.view(data, cc, name) : null;
+    sec.textContent = v ? v.title : 'Where ChitBridge is';
+    if (!v) { el.innerHTML = '<span class="hint" data-testid="cl-ready-none">Could not read where ChitBridge is for each country.</span>'; return; }
+    if (!v.known) { el.innerHTML = '<span class="hint" data-testid="cl-ready-none">' + esc(v.none) + '</span>'; return; }
+    el.innerHTML = '<div class="hint" data-testid="cl-ready-pack" style="margin-bottom:4px">' + esc(v.pack) + '</div>'
+      + v.rows.map(function (r) {
+        return '<div class="kv" data-testid="cl-ready-row" data-state="' + esc(r.state) + '"><span><span aria-hidden="true">' + esc(r.sym) + '</span> ' + esc(r.area) + '</span><span>' + esc(r.line) + '</span></div>';
+      }).join('');
+  });
+}
+/* CL3 · the standard frame around the lab: header + avatar (Sign in when signed out) + skeleton + kural. Public: no sign-in window. */
+var FRAME = window.CBFrame ? CBFrame.mount({ app: 'country-lab', area: 'labs', signin: false, kural: 'planning', work: document.getElementById('cl'),
+  skeleton: { name: 'Country lab', icon: 'M12 3a9 9 0 1 0 0 18a9 9 0 0 0 0-18zM3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18', active: 'compare',
+    sections: [{ k: 'compare', label: 'Side by side', icon: 'M4 5h7v14H4zM13 5h7v14h-7z' }, { k: 'ready', label: 'Where we are', icon: 'M5 12l4 4 10-10' }],
+    onSection: function (k) { var t = document.getElementById(k === 'ready' ? 'ready-sec' : 'cl'); if (t && t.scrollIntoView) t.scrollIntoView({ block: 'start' }); } } }) : null;
 repaint();
 </script>
 </body>

@@ -1,0 +1,347 @@
+{
+ "source": "scripts/country-ready.cjs — public/data/country-matrix.json (engines 1.43.0) × docs/design/standards/COUNTRY-COVERAGE.md §1; never edit by hand",
+ "engines": "1.43.0",
+ "coverage": {
+  "sha": "30039e978bb8dd48"
+ },
+ "countries": {
+  "IN": {
+   "pack": {
+    "name": "India · GST",
+    "version": "1.0.0",
+    "verified": true,
+    "ok": 74,
+    "of": 94
+   },
+   "areas": [
+    {
+     "area": "Registration",
+     "state": "ok",
+     "line": "",
+     "works": 2,
+     "of": 2
+    },
+    {
+     "area": "Country setup",
+     "state": "ok",
+     "line": "",
+     "works": 5,
+     "of": 5
+    },
+    {
+     "area": "Till",
+     "state": "ok",
+     "line": "",
+     "works": 12,
+     "of": 12
+    },
+    {
+     "area": "Print / share",
+     "state": "partial",
+     "line": "a standalone printer test with India sample data — not a product screen",
+     "works": 3,
+     "of": 4
+    },
+    {
+     "area": "Shop / online showcase + cart",
+     "state": "ok",
+     "line": "",
+     "works": 6,
+     "of": 6
+    },
+    {
+     "area": "Catalogue",
+     "state": "ok",
+     "line": "",
+     "works": 6,
+     "of": 6
+    },
+    {
+     "area": "CB Accounts",
+     "state": "ok",
+     "line": "",
+     "works": 11,
+     "of": 11
+    },
+    {
+     "area": "CB Finance",
+     "state": "partial",
+     "line": "\"Interest due\"",
+     "works": 6,
+     "of": 7
+    },
+    {
+     "area": "CRM",
+     "state": "partial",
+     "line": "a party's tax id checked with the pack",
+     "works": 4,
+     "of": 5
+    },
+    {
+     "area": "Tasks & Orders",
+     "state": "ok",
+     "line": "",
+     "works": 1,
+     "of": 1
+    },
+    {
+     "area": "Connector",
+     "state": "ok",
+     "line": "",
+     "works": 1,
+     "of": 1
+    },
+    {
+     "area": "Employees",
+     "state": "partial",
+     "line": "payroll out of scope, SAID per country",
+     "works": 0,
+     "of": 1
+    },
+    {
+     "area": "Network / rail",
+     "state": "partial",
+     "line": "chit currency vs the seller's",
+     "works": 2,
+     "of": 3
+    },
+    {
+     "area": "Locale",
+     "state": "ok",
+     "line": "",
+     "works": 6,
+     "of": 6
+    }
+   ],
+   "out": [
+    {
+     "member": "payroll",
+     "area": "Payroll"
+    }
+   ]
+  },
+  "AU": {
+   "pack": {
+    "name": "Australia · GST",
+    "version": "1.0.0",
+    "verified": false,
+    "ok": 80,
+    "of": 93
+   },
+   "areas": [
+    {
+     "area": "Registration",
+     "state": "missing",
+     "line": "written at register",
+     "works": 0,
+     "of": 2
+    },
+    {
+     "area": "Country setup",
+     "state": "partial",
+     "line": "currencies offered",
+     "works": 3,
+     "of": 5
+    },
+    {
+     "area": "Till",
+     "state": "partial",
+     "line": "tax-invoice rules",
+     "works": 8,
+     "of": 12
+    },
+    {
+     "area": "Print / share",
+     "state": "partial",
+     "line": "bill step labels",
+     "works": 2,
+     "of": 3
+    },
+    {
+     "area": "Shop / online showcase + cart",
+     "state": "partial",
+     "line": "the page knows its country",
+     "works": 3,
+     "of": 6
+    },
+    {
+     "area": "Catalogue",
+     "state": "partial",
+     "line": "ready-made slabs published per country",
+     "works": 4,
+     "of": 6
+    },
+    {
+     "area": "CB Accounts",
+     "state": "partial",
+     "line": "chart of accounts",
+     "works": 5,
+     "of": 11
+    },
+    {
+     "area": "CB Finance",
+     "state": "partial",
+     "line": "dues ageing buckets",
+     "works": 4,
+     "of": 7
+    },
+    {
+     "area": "CRM",
+     "state": "partial",
+     "line": "a party's tax id checked with the pack",
+     "works": 2,
+     "of": 5
+    },
+    {
+     "area": "Tasks & Orders",
+     "state": "ok",
+     "line": "",
+     "works": 1,
+     "of": 1
+    },
+    {
+     "area": "Connector",
+     "state": "missing",
+     "line": "offered as if it works",
+     "works": 0,
+     "of": 1
+    },
+    {
+     "area": "Employees",
+     "state": "partial",
+     "line": "payroll out of scope, SAID per country",
+     "works": 0,
+     "of": 1
+    },
+    {
+     "area": "Network / rail",
+     "state": "partial",
+     "line": "chit currency vs the seller's",
+     "works": 2,
+     "of": 4
+    },
+    {
+     "area": "Locale",
+     "state": "partial",
+     "line": "region row",
+     "works": 1,
+     "of": 6
+    }
+   ],
+   "out": [
+    {
+     "member": "payroll",
+     "area": "Payroll"
+    }
+   ]
+  },
+  "AE": {
+   "pack": {
+    "name": "United Arab Emirates · VAT",
+    "version": "1.0.0",
+    "verified": false,
+    "ok": 82,
+    "of": 97
+   },
+   "areas": [
+    {
+     "area": "Registration",
+     "state": "partial",
+     "line": "written at register",
+     "works": 1,
+     "of": 2
+    },
+    {
+     "area": "Country setup",
+     "state": "ok",
+     "line": "",
+     "works": 4,
+     "of": 4
+    },
+    {
+     "area": "Till",
+     "state": "partial",
+     "line": "tax-invoice rules",
+     "works": 9,
+     "of": 12
+    },
+    {
+     "area": "Print / share",
+     "state": "partial",
+     "line": "bill step labels",
+     "works": 1,
+     "of": 2
+    },
+    {
+     "area": "Shop / online showcase + cart",
+     "state": "partial",
+     "line": "the page knows its country",
+     "works": 4,
+     "of": 6
+    },
+    {
+     "area": "Catalogue",
+     "state": "partial",
+     "line": "ready-made slabs published per country",
+     "works": 2,
+     "of": 6
+    },
+    {
+     "area": "CB Accounts",
+     "state": "partial",
+     "line": "chart of accounts",
+     "works": 6,
+     "of": 12
+    },
+    {
+     "area": "CB Finance",
+     "state": "partial",
+     "line": "dues ageing buckets",
+     "works": 4,
+     "of": 7
+    },
+    {
+     "area": "CRM",
+     "state": "partial",
+     "line": "a party's tax id checked with the pack",
+     "works": 2,
+     "of": 5
+    },
+    {
+     "area": "Connector",
+     "state": "missing",
+     "line": "",
+     "works": 0,
+     "of": 1
+    },
+    {
+     "area": "Employees",
+     "state": "partial",
+     "line": "payroll out of scope, SAID per country",
+     "works": 0,
+     "of": 1
+    },
+    {
+     "area": "Network / rail",
+     "state": "partial",
+     "line": "IN seller → AE buyer",
+     "works": 2,
+     "of": 5
+    },
+    {
+     "area": "Locale",
+     "state": "partial",
+     "line": "Kural band · till voice",
+     "works": 4,
+     "of": 5
+    }
+   ],
+   "out": [
+    {
+     "member": "payroll",
+     "area": "Payroll"
+    }
+   ]
+  }
+ }
+}
