@@ -11,7 +11,8 @@ const root = path.join(__dirname, '..'), pub = path.join(root, 'public');
 const read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
 let fail = 0; const bad = (m) => { fail++; console.log('FAIL ' + m); }; const ok = (m) => console.log('  ok  ' + m);
 
-const DOOR = /app\.html|#\/app\b|#\/welcome\b|#\/country\b/;
+/* a bare hash is the workshop's router; the same hash after a small app's page (settings.html#/country, SET1) is that page's own */
+const DOOR = /app\.html|(?<!\.html)#\/app\b|(?<!\.html)#\/welcome\b|(?<!\.html)#\/country\b/;
 
 /* ── THE GAPS: a door that still opens the workshop, its small-app home, and the round that moves the screen (docs/design/INDEX-NOT-APP.md) ── */
 const ALLOW = [
@@ -20,12 +21,10 @@ const ALLOW = [
   { file: 'public/accounts.html',       re: /openChitPage.*\/app\.html#\/app\/chit\//,        round: 'CRM2', app: 'crm',       what: 'the chit sheet\'s Open page (the full M53 detail page)' },
   { file: 'public/crm.html',            re: /openChitPage.*\/app\.html#\/app\/chit\//,        round: 'CRM2', app: 'crm',       what: 'the chit sheet\'s Open page' },
   { file: 'public/finance.html',        re: /openChitPage.*\/app\.html#\/app\/chit\//,        round: 'CRM2', app: 'crm',       what: 'the chit sheet\'s Open page' },
-  { file: 'public/accounts.html',       re: /acc-country-setup.*\/app\.html#\/country/,       round: 'SET1', app: 'settings',  what: 'Country setup before the books can open' },
   { file: 'public/app/network-app.js',  re: /nw-builder.*\/app\.html#\/network|\/app\.html#\/network.*nw-builder/, round: 'NET2', app: 'network', what: 'Open the builder (make the network the design checked)' },
   { file: 'public/till.html',           re: /'https:\/\/chitbridge-web\.vercel\.app\/app\.html' : \(location\.origin \+ '\/app\.html'\)/, round: 'SET2', app: 'settings', what: 'cbHome()\'s own literal' },
-  { file: 'public/till.html',           re: /window\.open\(cbHome\(\) \+ '#\/app', '_blank', 'noopener'\)/, round: 'SET2', app: 'settings', what: 'whoseShopFix: pair this PC to the right counter (Counters & keys) · openGst: set up GST (Your shop)' },
-  { file: 'public/till.html',           re: /var url = cbHome\(\) \+ '#\/app';/,              round: 'SET1', app: 'settings',  what: 'openGst: the shop\'s GST details' },
-  { file: 'public/till.html',           re: /cbHome\(\) \+ \(st \? '#\/app\/profile' : '#\/app\/catalogue'\)/, round: 'SET1', app: 'settings · catalogue', what: 'billWarnFix: the shop\'s state/GSTIN (settings) · an item\'s tax rate (catalogue, CAT1)' },
+  { file: 'public/till.html',           re: /window\.open\(cbHome\(\) \+ '#\/app', '_blank', 'noopener'\)/, round: 'SET2', app: 'settings', what: 'whoseShopFix: pair this PC to the right counter (Counters & keys)' },
+  { file: 'public/till.html',           re: /cbHome\(\) \+ '#\/app\/catalogue'/,               round: 'CAT1', app: 'catalogue', what: 'billWarnFix: an item\'s tax rate (the state half opens CB Settings › Your shop since SET1)' },
 ];
 
 /* ── the pages a customer reaches from Home: index.html + every manifest route / via + the pages those link to ── */

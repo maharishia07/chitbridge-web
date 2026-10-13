@@ -628,7 +628,7 @@ function countryCard(d){
   const pending = d && d.code === 'COUNTRY_SETUP_PENDING';
   card(`<h2 data-testid="acc-country">${pending ? 'Country setup first' : 'No books here yet'}</h2>
     <p data-testid="acc-country-why">${esc((d && d.message) || '')}</p>`
-    + (isOwner() ? `<a class="act" data-testid="acc-country-setup" href="/app.html#/country">${pending ? 'Country setup' : 'See country setup'}</a>`
+    + (isOwner() ? `<a class="act" data-testid="acc-country-setup" href="/settings.html#/country">${pending ? 'Country setup' : 'See country setup'}</a>`
                  : `<p data-testid="acc-ask-owner">Ask the owner</p>`));
 }
 

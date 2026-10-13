@@ -1,4 +1,6 @@
-/* till-open-gst.cjs — THE SHOP CARD'S "Add"/"Register" BUTTONS OPEN THE WEB APP, NEVER THE API HOST
+/* till-open-gst.cjs — THE SHOP CARD'S "Add"/"Register" BUTTONS OPEN CB SETTINGS › YOUR SHOP ON THE WEB, NEVER THE API HOST AND NEVER THE WORKSHOP
+ *
+ * SET1 (2026-10-13): the door is /settings.html#/shop — the small app that edits the GSTIN (docs/design/INDEX-NOT-APP.md); app.html is the workshop.
  *
  * Two real, live bugs on the same one-line URL, both from Athi actually clicking the button:
  *   [TILL-163] "add button opens in another window but erroring" — an invented hash, '#profile/tax', that
@@ -47,17 +49,17 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
     return { opened: opened };
   });
   say('the API host never appears in the opened URL', r1.opened.indexOf('railway') < 0, r1.opened);
-  say('it opens a real hash on app.html, not an invented one', /\/app\.html#\/app$/.test(r1.opened), r1.opened);
-  say('and the host is the web app\'s own — cbHome(), not a second, bespoke lookup', r1.opened.indexOf('/app.html#/app') === r1.opened.length - '/app.html#/app'.length, r1.opened);
+  say('it opens CB Settings › Your shop (settings.html#/shop), never the workshop', /\/settings\.html#\/shop$/.test(r1.opened) && r1.opened.indexOf('app.html') < 0, r1.opened);
+  say('and the host is the web app\'s own — cbRoot(), not a second, bespoke lookup', r1.opened.indexOf('/settings.html#/shop') === r1.opened.length - '/settings.html#/shop'.length, r1.opened);
 
   console.log('\n── ⚠️ the hash it deep-links to is a real one, not invented ([TILL-163]\'s own mistake) ' + '─'.repeat(0));
   const errsBeforeAppLoad = errs.length;
-  await p.goto('http://127.0.0.1:' + srv.address().port + '/app.html#/app');
+  await p.goto('http://127.0.0.1:' + srv.address().port + '/settings.html#/shop');
   await p.waitForTimeout(500);
-  say('app.html loads at #/app with no thrown error', errs.length === errsBeforeAppLoad, errs.slice(errsBeforeAppLoad).join(' | ') || 'none');
+  say('settings.html loads at #/shop with no thrown error', errs.length === errsBeforeAppLoad, errs.slice(errsBeforeAppLoad).join(' | ') || 'none');
 
   say('no console/page errors across either page', errs.length === 0, errs.join(' | ') || 'none');
-  console.log(bad ? '\n' + bad + ' FAILED' : '\nopenGst() opens the shop\'s own web app, on its own host, at a route that is really there');
+  console.log(bad ? '\n' + bad + ' FAILED' : '\nopenGst() opens CB Settings › Your shop, on the web\'s own host, at a route that is really there');
   await b.close(); srv.close();
   process.exit(bad ? 1 : 0);
 })();
