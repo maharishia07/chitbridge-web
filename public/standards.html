@@ -220,10 +220,14 @@ function groupBy(x, mode){
   var r = x.r;
   if (mode === 'area') return [lab(STD_AREAS, r.a), r.a];
   if (mode === 'kind') return [lab(STD_KINDS, r.k), r.k];
-  if (mode === 'country'){ var l = r.c.indexOf('IN') >= 0 && r.c.length === 1 ? 'India' : r.c.length > 1 ? 'India and global' : 'Global'; return [l, l]; }
+  if (mode === 'country'){ var l = countryGroup(r.c); return [l, l]; }
   return null;
 }
-const GROUP_ORDER = STD_AREAS.map((a) => a[0]).concat(STD_KINDS.map((k) => k[0]), ['India', 'India and global', 'Global']);
+/* a row's countries in words, from STD_COUNTRIES (a new country needs nothing here): 'India' · 'India and global' · 'India, Australia and UAE' */
+function countryGroup(c){ var n = c.map((x) => lab(STD_COUNTRIES, x)); return n.length === 1 ? n[0] : n.slice(0, -1).join(', ') + ' and ' + n[n.length - 1].replace(/^Global$/, 'global'); }
+/* one country alone first, in STD_COUNTRIES order; then every mix a row has, in register order; Global alone last */
+const GROUP_ORDER = STD_AREAS.map((a) => a[0]).concat(STD_KINDS.map((k) => k[0]), STD_COUNTRIES.filter((c) => c[0] !== 'GLOBAL').map((c) => c[1]),
+  STANDARDS.filter((r) => r.c.length > 1).map((r) => countryGroup(r.c)).filter((l, i, a) => a.indexOf(l) === i), ['Global']);
 function cols(){
   return [
     { key: 'what', label: 'What it does for you', prio: 1, w: 250, sort: 'what', html: true, value: (x) => x.r.p,
