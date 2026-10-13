@@ -6,7 +6,7 @@ Source: `docs/research/COMPLIANCE-OBLIGATIONS-2026-10.md`. Rounds add their own 
 ## CO3 · record-keeping (2026-10-13)
 | ☐ | Act | Why (law) | Evidence to keep |
 |---|---|---|---|
-| ☐ | Run `chitbridge-api/migrations/b303_records_floor.sql` (Supabase SQL editor, as postgres); paste P1–P4 output here | Companies Act s.128(5) · CGST s.36 · r.3(1) audit trail | P1 = 0 · P2 '9 years' · P3 5 rows `O` · P4 0 rows |
+| ☐ | Run `chitbridge-api/migrations/b305_records_floor.sql` (Supabase SQL editor, as postgres); paste P1–P4 output here | Companies Act s.128(5) · CGST s.36 · r.3(1) audit trail | P1 = 0 · P2 '9 years' · P3 5 rows `O` · P4 0 rows |
 | ☐ | Confirm in the Supabase dashboard: plan, **daily backup on**, backup region = ap-south-1, PITR on/off, backup retention days | Companies (Accounts) Rules r.3(5): daily backup on servers in India | Screenshot of Database › Backups, dated |
 | ☐ | Do one restore drill (restore a backup to a scratch project; count `journal_entry` rows against live) and log the date | r.3(5) / ISO 27001 A.8.13 | Drill date · rows matched |
 | ☐ | Record the Railway (api) region and its log retention | r.3(5)–(6) facts; CERT-In 180-day logs (CO2) | Railway settings screenshot |

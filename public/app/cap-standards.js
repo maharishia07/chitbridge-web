@@ -498,7 +498,7 @@ var STANDARDS = [
      Appended AFTER the 61 rows the design snapshot holds (e2e/standards-page.cjs compares those field for field; it names these four as CO3). */
   { a:'books', k:'law', c:['IN'],
     p:"Every bill and entry kept at least nine years, whatever a setting says",
-    m:"Older copies lengthen when the owner runs b303",
+    m:"Older copies lengthen when the owner runs b305",
     g:"Books", n:"Companies Act 2013 s.128(5) · CGST Act s.36, Rules 56–57", w:"Keep the books 8 years; GST records 72 months",
     ex:"A copy made today is kept until 2035",
     s:"part",
