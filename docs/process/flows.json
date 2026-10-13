@@ -284,7 +284,14 @@
           "route": [{ "m": "POST", "p": "/api/relationships/customers", "file": "api:routes/relationships.js" }, { "m": "GET", "p": "/api/crm/parties/:id", "file": "api:routes/crm.js" }, { "m": "POST", "p": "/api/chits/send", "file": "api:routes/chits.js" }],
           "chit": "the first bill: txn_count > 0 ends the lead (isLead); a traded party refuses a stage move — counted for a bill SENT to the party (the recipient auto-add) and for a counter bill that NAMES them in business_json.customer (lib/crm.traded, inside the bill's transaction — FX-L2C)", "ledger": "none here — the bill posts under O2C step 7",
           "test": ["api:tests/crm-maytrade.test.cjs", "api:tests/crm-remove-walkin.test.cjs", "api:tests/customer-by-name.test.cjs"],
-          "status": "ok", "note": "" }
+          "status": "ok", "note": "" },
+        { "n": 6, "step": "consent & privacy requests", "module": "CRM", "who": "the shop's staff note consent; the owner answers a request",
+          "screen": [],
+          "engine": [{ "file": "api:lib/privacy.js", "fn": "mayMessage" }, { "file": "api:lib/privacy.js", "fn": "notePref" }, { "file": "api:lib/privacy.js", "fn": "logRequest" }, { "file": "api:lib/privacy.js", "fn": "answerRequest" }, { "file": "api:lib/privacy.js", "fn": "facts" }],
+          "route": [{ "m": "GET", "p": "/api/crm/parties/:id/contact-prefs", "file": "api:routes/crm.js" }, { "m": "POST", "p": "/api/crm/parties/:id/contact-prefs", "file": "api:routes/crm.js" }, { "m": "GET", "p": "/api/crm/privacy-requests", "file": "api:routes/crm.js" }, { "m": "POST", "p": "/api/crm/privacy-requests", "file": "api:routes/crm.js" }, { "m": "POST", "p": "/api/crm/privacy-requests/:id/answer", "file": "api:routes/crm.js" }, { "m": "GET", "p": "/api/privacy/facts", "file": "api:routes/privacy.js" }],
+          "chit": "none", "ledger": "none",
+          "test": ["api:tests/privacy.test.cjs"],
+          "status": "warn", "note": "CO1: built and tested in the api; no screen yet, and migrations b306 / b307 are drafts the owner runs (docs/compliance/OWNER-ACTIONS.md)." }
       ]
     },
     {
