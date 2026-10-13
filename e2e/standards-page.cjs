@@ -3,8 +3,8 @@
  * Nothing here reaches localhost:3000, port 7351 or the live site: every /api/** call is fulfilled by ctx.route before it can leave the browser (and the
  * page is made to refuse any other host). The Standards page itself reads NO API (the register is cap-standards.js), so the stand-in's job is to PROVE that.
  *
- *  1  the register (cap-standards.js): 74 rows — the designer's 61, then CPS1's Country Standard, LOC0's pseudo-localisation, CO3's 4 record-keeping rows and
- *     CO1's 7 privacy rows, in that order — 35 in force · 26 partly · 13 planned; every row has area · kind · applies-in · plain words; every Partly and Planned
+ *  1  the register (cap-standards.js): 81 rows — the designer's 61, then CPS1's Country Standard, LOC0's pseudo-localisation, CO3's 4 record-keeping rows,
+ *     CO1's 7 privacy rows and CO2's 7 security rows, in that order — 35 in force · 32 partly · 14 planned; every row has area · kind · applies-in · plain words; every Partly and Planned
  *     row says what is missing; the first 44 rows' words are the register's own, unchanged; the 17 additions carry their stated statuses; no second WCAG row
  *  2  laptop 1366×768: title · "checked 13 Oct 2026" · the matrix beside the list; the matrix's All row IS the register's counts; the list is a CBList mount
  *     (three columns, a resize handle on each, only the rows scroll) with the head at most 20% of the window; no sideways scroll
@@ -41,6 +41,11 @@ function readRegister(file) {
   return ctx.R;
 }
 const REG = readRegister(path.join(PUB, 'app', 'cap-standards.js'));
+/* the register's rows, in order (INT4, 13 Oct 2026): the designer's 61, then each round's additions where it appended them — named here once, so a
+   count below says which round moved it. CO is the compliance rounds' rows (CO3 · CO1 · CO2), proved by their own rule (section 1, last block). */
+const AT = { CPS1: [61, 62], LOC0: [62, 63], CO3: [63, 67], CO1: [67, 74], CO2: [74, 81] };
+const ROWS = (k) => REG.S.slice(AT[k][0], AT[k][1]);
+const CO = REG.S.slice(AT.CO3[0]);
 const COUNT = { live: 0, part: 0, plan: 0 }; REG.S.forEach((r) => { COUNT[r.s]++; });
 /* M41: the page lists the register AND the Compatibility rows of public/data/compat.json (the 4th Kind); ALL is what the list and the matrix hold */
 const COMPAT_JSON = JSON.parse(fs.readFileSync(path.join(PUB, 'data', 'compat.json'), 'utf8'));
@@ -101,12 +106,11 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     /* CO3 (2026-10-13): four record-keeping rows (IN · AU · AE), after CPS1's and LOC0's, named here — every one Partly */
     const CO3 = ['Companies Act 2013 s.128(5) · CGST Act s.36, Rules 56–57', 'Companies (Accounts) Rules r.3(5)–(6)',
       'TAA 1953 Sch 1 s.382-5 · Corporations Act 2001 s.286', 'Tax Procedures Decree-Law 28/2022 · Corporate Tax Decree-Law 47/2022 Art. 56'];
-    /* CO1 (2026-10-13): seven privacy rows after CO3's */
-    const CO1 = REG.S.slice(67, 74);
-    ok(REG.S.length === 74 && REG.S.slice(63, 67).map((r) => r.n).join('|') === CO3.join('|') && REG.S.slice(63, 67).every((r) => r.s === 'part' && r.added === '2026-10-13'),
-      'the register holds 74 standards (44 + the 17 adopted 2–3 Oct 2026 + the Country Standard, CPS1 + pseudo-localisation, LOC0 + the 4 CO3 record-keeping rows, each Partly + the 7 CO1 privacy rows): ' + REG.S.length);
+    const CO1 = ROWS('CO1'), CO2 = ROWS('CO2');
+    ok(REG.S.length === 81 && ROWS('CO3').map((r) => r.n).join('|') === CO3.join('|') && ROWS('CO3').every((r) => r.s === 'part' && r.added === '2026-10-13'),
+      'the register holds 81 standards (44 + the 17 adopted 2–3 Oct 2026 + the Country Standard, CPS1 + pseudo-localisation, LOC0 + CO3\'s 4 record-keeping rows, each Partly + CO1\'s 7 privacy rows + CO2\'s 7 security rows): ' + REG.S.length);
     /* N11 (9c8cdc58, 2026-10-08): ISO 8601 moved Partly → In force with a stated limit, proven by chitbridge-api tests/iso8601.test.cjs; CPS1: the Country Standard, In force with a limit; LOC0: pseudo-localisation, Partly */
-    ok(COUNT.live === 35 && COUNT.part === 26 && COUNT.plan === 13, 'in force 35 · partly 26 (16 + CO3\'s 4 + CO1\'s 6) · planned 13 (12 + CO1\'s 1) (' + COUNT.live + ' · ' + COUNT.part + ' · ' + COUNT.plan + ')');
+    ok(COUNT.live === 35 && COUNT.part === 32 && COUNT.plan === 14, 'in force 35 · partly 32 (16 + CO3\'s 4 + CO1\'s 6 + CO2\'s 6) · planned 14 (12 + CO1\'s 1 + CO2\'s 1) (' + COUNT.live + ' · ' + COUNT.part + ' · ' + COUNT.plan + ')');
     const fields = REG.S.filter((r) => !r.a || !r.k || !Array.isArray(r.c) || !r.c.length || !r.p);
     ok(fields.length === 0, 'every row has an area, a kind, an applies-in and the plain-words line' + (fields.length ? ' — missing on ' + fields.map((r) => r.n).join('; ') : ''));
     const areas = REG.A.map((a) => a[0]), kinds = REG.K.map((k) => k[0]), ctry = REG.C.map((c) => c[0]);
@@ -122,7 +126,7 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     DESIGN.rows.forEach((d, i) => { const r = REG.S[i]; if (r && MOVED[r.n]) return; keys.forEach((k) => { if ((r && r[k] || undefined) !== (d[k] || undefined)) diff.push(i + ':' + k); }); if (!r || JSON.stringify(r.c) !== JSON.stringify(d.c)) diff.push(i + ':c'); });
     /* the designer's data is the register AS OF 3 Oct 2026 (61 rows); rows adopted later (CPS1: the Country Standard · LOC0: pseudo-localisation) follow it, and are not in it */
     ok(DESIGN.rows.length === 61 && REG.S.length >= DESIGN.rows.length && diff.length === 0, 'the designer\'s 61 rows equal the register\'s first 61, field for field' + (diff.length ? ' — ' + diff.slice(0, 6).join(' ') : ''));
-    const added = REG.S.slice(0, 63).filter((r) => r.added);
+    const added = REG.S.slice(0, AT.CO3[0]).filter((r) => r.added);
     ok(added.length === 19 && added.filter((r) => r.s === 'live').length === 12 && added.filter((r) => r.s === 'part').length === 5 && added.filter((r) => r.s === 'plan').length === 2, 'the 19 additions carry their stated statuses: 12 in force, 5 partly (LOC0\'s pseudo-localisation is Partly), 2 planned');
     const cm = REG.S.filter((r) => r.matrix === 'country');
     ok(cm.length === 1 && cm[0].c.join() === 'IN,AU,AE' && cm[0].s === 'live' && cm[0].limit, 'ONE Country Standard row (CPS1): applies in IN · AU · AE, In force with a stated limit, its opened row paints the matrix');
@@ -148,6 +152,11 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     const noGl = {}; txt.forEach((t) => REG.abbrs(t).forEach((a) => { if (!REG.gl(a)) noGl[a] = 1; }));
     ok(Object.keys(noGl).length === 0, 'every abbreviation on the page has a glossary entry' + (Object.keys(noGl).length ? ' — none for: ' + Object.keys(noGl).join(' ') : ' (' + REG.GL.length + ' entries)'));
     ok(REG.GL.every((g) => g[0] && g[1] && g[2]), 'every entry has its full name and one line of meaning');
+    /* CO2 · the compliance additions: each a law or a standard, with what is in force and not (note), where the proof is (at), and — unless In force — what is missing */
+    ok(CO2.length === 7 && CO2.every((r) => (r.k === 'law' || r.k === 'std') && r.note && r.note.length > 80 && r.at && r.why && r.added === '2026-10-13'), 'CO2\'s 7 security rows each say what is in force, what is not, and where the proof is');
+    ok(CO.length === 18 && CO.every((r) => (r.k === 'law' || r.k === 'std') && r.s !== 'live' && r.at && r.why && (r.s === 'plan' || (r.note && r.note.length > 80))), 'the ' + CO.length + ' compliance rows (CO3 · CO1 · CO2) are laws or standards, none In force, each with where the proof is and why — and, unless Planned, what is in force and what is not');
+    ok(['IN', 'AU', 'AE'].every((c) => CO.some((r) => r.c.indexOf(c) >= 0 && r.k === 'law')), 'India, Australia and the UAE each have a law row from the compliance rounds');
+    ok(CO2.filter((r) => r.k === 'law').every((r) => /\b(Act|Decree-Law|Directions|Rules)\b/.test(r.n)), 'every CO2 law row names its legal reference in its title');
   }
 
   /* ── the page's own source ── */
@@ -449,7 +458,7 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     vm.runInContext(fs.readFileSync(path.join(PUB, 'app', 'cap-standards.js'), 'utf8'), g);
     const html = vm.runInContext(fnSrc + ';standardsSettingsHTML()', g);
     ok(/data-testid="std-yours"/.test(html) && /Region/.test(html) && /Reading order/.test(html), 'Settings › Standards keeps What you follow — the live reading of the person\'s own settings');
-    ok(/href="\/standards\.html"/.test(html) && new RegExp(COUNT.live + ' in force').test(html) && new RegExp(COUNT.part + ' partly').test(html), 'and the door to the page, with the register\'s own counts');
+    ok(/href="\/standards\.html"/.test(html) && new RegExp(REG.S.filter((r) => r.s === 'live').length + ' in force').test(html) && new RegExp(REG.S.filter((r) => r.s === 'part').length + ' partly').test(html), 'and the door to the page, with the register\'s own counts (all rows, the compliance additions too)');
     ok(!/Incoterms|BCP 47|GS1|What we follow<|Your trade|Why bother/.test(html), 'and lists no standard (the register is read on the page)');
   }
 
