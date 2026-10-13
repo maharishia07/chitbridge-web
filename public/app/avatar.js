@@ -160,7 +160,7 @@
     try { var s = JSON.parse(root.localStorage.getItem('cb_sess') || 'null'); return (s && s.token) || ''; } catch (_) { return ''; }
   }
   var HOST = {};                                            /* what the mounted page told us (apiBase · token · sync) */
-  function push() {
+  function push(now) {
     if (HOST.sync === false) return;
     var body = { theme: pref('theme'), fs: pref('fs'), motion: pref('motion'), stripes: pref('stripes'), edition: pref('edition') };   /* the server REPLACES the set: every synced key rides every push */
     /* the app's (and CB Accounts') own door: CBPrefs debounces, queues offline and stays silent before the migration */
@@ -168,12 +168,14 @@
     var base = apiBaseOf(HOST), tok = tokenOf(HOST);
     if (!base || !tok || !root.fetch) return;
     if (pushTimer) { try { root.clearTimeout(pushTimer); } catch (_) {} }
-    pushTimer = root.setTimeout(function () {
+    var send = function (keep) {
       try {
-        root.fetch(base + '/api/entities/me/prefs/ui', { method: 'PATCH', cache: 'no-store',
+        return root.fetch(base + '/api/entities/me/prefs/ui', { method: 'PATCH', cache: 'no-store', keepalive: !!keep,
           headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify(body) }).catch(function () {});
-      } catch (_) {}
-    }, 400);
+      } catch (_) { return null; }
+    };
+    if (now) return send(true);   /* the page redraws at once (an edition): sent now, and kept alive across the reload */
+    pushTimer = root.setTimeout(function () { send(false); }, 400);
   }
   /** The server wins — that is the feature — EXCEPT when it has nothing (an empty object means "never chosen"). */
   function hydrate(prefs) {
@@ -216,8 +218,8 @@
     if (kind === 'edition' && !EDITION.test(String(value))) return;
     lsSet(KEY[kind], value);
     apply();
-    if (kind === 'theme' || kind === 'fs' || kind === 'motion' || kind === 'stripes' || kind === 'edition') push();
-    if (kind === 'edition') { if (root.CBEdition) root.CBEdition.clearTab(); return editionReload(true); }   /* the person's own choice outranks a showing link */
+    if (kind === 'edition') { push(true); if (root.CBEdition) root.CBEdition.clearTab(); return editionReload(true); }   /* the person's own choice outranks a showing link */
+    if (kind === 'theme' || kind === 'fs' || kind === 'motion' || kind === 'stripes') push();   /* the person's own choice outranks a showing link */
     repaint();
   }
   /** an edition decides what a page DRAWS, so a new one is a fresh draw — without the ?edition= that would win over the choice just made */
@@ -277,7 +279,7 @@
        <html data-tokens="list">, and a chosen theme re-points those names at the theme's own tokens. The fallbacks ARE the page's original
        values, and Cream (no overrides, so no data-themed) is left alone, so a page that never chooses a theme is byte-for-byte what it was. */
     ':root[data-tokens="list"][data-themed]{--page:var(--paper,#FCFAF5);--panel:var(--gold-soft,#F3EFE6);--line-soft:var(--line,#E6E0D2);--hair:var(--gold-soft,#F0ECE2);' +
-    '--muted:var(--grey,#5E594D);--faint:var(--grey-3,#8A8374);--ghost:var(--grey-4,#A8A295);--green:var(--ok,#16693F);--green-t:var(--ok-tint,#E8F4ED);--green-b:var(--ok-3,#A9D3BC);' +
+    '--muted:var(--grey,#5E594D);--faint:var(--grey-3,#8A8374);--ghost:var(--grey-4,#A8A295);--green:var(--ok,#16693F);--green-d:var(--ok-2,#0D4A2B);--green-t:var(--ok-tint,#E8F4ED);--green-b:var(--ok-3,#A9D3BC);' +
     '--red:var(--disp,#C4562F);--red-t:var(--danger-tint,#FBEAE3);--red-b:var(--disp-2,#E7B9A8);--red-i:var(--disp-2,#8E3517);--amber-t:var(--warn-tint,#FDF3DC);--amber-i:var(--warn-2,#7A5205);' +
     '--blue-t:var(--blue-tint-bg,var(--blue-tint,#E4EEFA));--blue-b:var(--blue-tint-line,#B9D2EF);--blue-i:var(--blue-d,#174A87)}' +
     /* the two preferences every page honours, written once here so no page re-declares them */
