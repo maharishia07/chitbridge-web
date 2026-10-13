@@ -35,7 +35,7 @@
       var line = a.state === 'ok' ? t('Works')
         : a.state === 'missing' ? (a.line ? tf('Not yet: {what}', { what: a.line }) : t('Not yet'))
         : (a.line ? tf('{works} of {of} work · next: {what}', { works: a.works, of: a.of, what: a.line }) : tf('{works} of {of} work', { works: a.works, of: a.of }));
-      return { state: a.state, sym: SYM[a.state] || '', area: a.area, line: line };
+      return { state: a.state, sym: SYM[a.state] || '', area: t(a.area), line: line };   /* the area's name is a catalogue word too (INT5b: walk-locale country-lab) */
     }).concat((c.out || []).map(function (o) {
       return { state: 'out', sym: SYM.out, area: t(o.area), line: tf('Not offered in {country}', { country: name }) };
     }));
