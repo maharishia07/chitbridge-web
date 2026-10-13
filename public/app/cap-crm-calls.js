@@ -18,6 +18,7 @@ function crmCallWords(e) {
   var code = e && e.data && e.data.code;
   if (code === 'LEADS_NOT_MIGRATED') return tx(CRM_LEADS_WAIT);
   if (code === 'CRM_NOT_MIGRATED') return tx('Calls and follow-ups start after an update. Nothing is lost.');
+  if (e && e.status === 403) return tx(CALL_VIEW_ONLY);   /* the server's level gate — the same sentence the greyed button carries (WX-L2C) */
   if (code === 'NEED_DAY') return tx('Pick a day.');
   if (code === 'BAD_DUE' || code === 'BAD_AFTER') return tx('Pick a day from today.');
   if (code === 'NOT_FOUND') return tx('Not your party.');
@@ -40,7 +41,9 @@ async function crmCallsLoad(quiet) {
   }
   crmNav(CRM.route && CRM.route.nav); crmCallsRefresh();
 }
-function crmCallsRefresh() { var a = CALLS.api; if (a && a.el && document.body.contains(a.el)) a.refresh(); }
+/* the outcome buttons are the SERVER's table, read with the queue: the list is mounted before the read answers, so every refresh hands it the
+   current table (WX-L2C, real stack 2026-10-13: the first open of Calls had no caret and no outcome — the mount's actions were the empty list) */
+function crmCallsRefresh() { var a = CALLS.api; if (a && a.el && document.body.contains(a.el)) a.refresh({ actions: crmCallActions() }); }
 
 /* ═══ THE ROW ════════════════════════════════════════════════════════════════════════════════════════════════════ */
 function crmCallPhone(c) {
