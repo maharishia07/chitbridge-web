@@ -26,7 +26,7 @@ var CRM_EP = {
   crmFollowSet:  { m: 'PATCH',  p: '/api/crm/followups/:id',               ok: 'y' },   // { done:true } · { due_at } · { assignee_user_id }
   crmFollowDel:  { m: 'DELETE', p: '/api/crm/followups/:id',               ok: 'y' },
   crmWalkIn:     { m: 'POST',   p: '/api/crm/walk-ins/add',               ok: 'y' },   // { phone, name? } → 201 { party, points_claimed }: a phone that holds points becomes a local customer
-  railChits:     { m: 'GET',    p: '/api/facts/rail/chits',               ok: 'y' },   // the open chits behind Home's In · Out · Stuck (cap-crm-chits.js) - not a /api/crm route
+  /* railChits (GET /api/facts/rail/chits, cap-crm-chits.js) lives in CB_SHEET_EP (accounts-shell.js) since TO1b: one name, registered once, for CRM and Tasks & Orders */
   crmLeadAdd:    { m: 'POST',   p: '/api/crm/leads',                      ok: 'y' },   // { name, phone?, stage? } → 201 { party } · 503 LEADS_NOT_MIGRATED before b297 (L1)
   crmStage:      { m: 'POST',   p: '/api/crm/parties/:id/stage',          ok: 'y' },   // { stage } → { ok, lead } — "Move to…": a new memberships row, history kept (L1)
   crmLeadImport: { m: 'POST',   p: '/api/crm/leads/import',               ok: 'y' },   // { rows[≤500], dry? } → 200 the plan (dry) · 201 { added, merged, skipped[], rows[] } · 400 TOO_MANY · 503 before b297 (L3)
