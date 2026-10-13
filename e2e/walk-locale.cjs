@@ -28,6 +28,7 @@
 const fs = require('fs'), path = require('path');
 const W = require('./lib/walk.cjs');
 const books = require('./lib/books-api.cjs'), crmApi = require('./lib/crm-api.cjs');
+const C = require('./lib/contract.cjs');   /* M43: every /api/books, /api/crm and /api/work answer this stand-in serves is held to the API contract */
 
 const WRITE = process.argv.includes('--write');
 const BASE_FILE = path.join(__dirname, 'locale-baseline.json');
@@ -60,8 +61,8 @@ const fin = (o) => Object.assign({ credit_limit_minor: null, over_limit: false, 
 const DUES = [
   fin({ party_id: 'pa', party_no: 'P-00001', name: 'Sri Hardware', side: 'customer', balance_minor: 12000000, oldest_due: '2026-06-01', credit_limit_minor: 10000000, over_limit: true, interest_minor: 150000, buckets: { lt_6m: 12000000 } }),
   fin({ party_id: 'pb', party_no: 'P-00002', name: 'Lakshmi Stores', side: 'customer', balance_minor: 4500000, oldest_due: '2026-08-15', credit_limit_minor: 10000000, interest_minor: 20000, last_remind: '2026-09-20', buckets: { lt_6m: 4500000 } }),
-  fin({ party_id: 'pc', party_no: 'P-00003', name: 'Kumar Traders', side: 'customer', balance_minor: 800000, buckets: { not_due: 800000 } }),
-  fin({ party_id: 'ps', party_no: 'P-00004', name: 'Bharat Steel', side: 'supplier', balance_minor: -300000, buckets: { lt_1y: 300000 } }),
+  fin({ party_id: 'pc', party_no: 'P-00003', name: 'Kumar Traders', side: 'customer', balance_minor: 800000, oldest_due: '2026-10-30', buckets: { not_due: 800000 } }),
+  fin({ party_id: 'ps', party_no: 'P-00004', name: 'Bharat Steel', side: 'supplier', balance_minor: -300000, oldest_due: '2026-07-10', buckets: { lt_1y: 300000 } }),
 ];
 const line = (id, what, qty, unit, price, delivered, who) => ({ line_id: id, particulars: what, qty, unit, price_minor: price, delivered, removed: false,
   assignment: who ? { assignee_actor_id: who.id, assignee_name: who.name, assignee_type: 'human', history: [] } : null, settings: { due: null, task: null, note: null, state: 'open' } });
@@ -74,7 +75,10 @@ const WORK = [
   row('t1', { kind: 'task', side: null, subject: 'Clean the cold room', party: 'Fixture Shop', assignee: { id: 'p2', name: 'Ravi Nair' }, age_days: 1 }),
 ];
 const OK = { ok: true };
-const workOut = (r) => Object.assign({}, r, { stage: r.status === 'accepted' ? 'accepted' : 'new', state_word: r.status === 'accepted' ? 'Accepted' : 'New', open_lines: r.lines.filter((l) => l.qty - l.delivered > 0).length, tab: r.kind === 'order_in' ? 'orders_in' : r.kind === 'order_out' ? 'orders_out' : 'tasks',
+/* a list row, in the shape the API's contract holds (walk-tasks.cjs rowOut): counts of lines, never the lines themselves */
+const workOut = (r) => ({ chit_id: r.chit_id, kind: r.kind, tab: r.kind === 'order_in' ? 'orders_in' : r.kind === 'order_out' ? 'orders_out' : 'tasks', stage: r.status === 'accepted' ? 'accepted' : 'new', word: r.status === 'accepted' ? 'Accepted' : 'New',
+  status: r.status, side: r.side, subject: r.subject, ref: r.ref, party: r.party, party_id: r.party_id, channel: r.channel, fulfilment: r.fulfilment, address: r.address, requested_for: r.requested_for, remark: r.remark, total_minor: r.total_minor, currency: r.currency,
+  lines_n: r.lines.length, lines_open_n: r.lines.filter((l) => l.qty - l.delivered > 0).length, billed: r.billed, despatched: r.despatched, assignee: r.assignee, lines_assigned_n: r.lines.filter((l) => l.assignment).length || null, created_at: r.created_at, age_days: r.age_days,
   actions: { accept: r.status === 'accepted' ? { ok: false, why: 'already_done', say: 'This chit is already at that step.' } : OK, reject: OK, complete: OK, cancel: OK, reopen: OK, assign_task: OK, assign_line: OK, deliver_line: OK, amend: OK } });
 const CHOICES = [
   { key: 'counter', label: 'Counter only', why: 'Bills and sells. Cannot see costs.', level: 'editor', whole_entity: false, can_see_costs: false },
@@ -96,11 +100,11 @@ function answer(p, u, m) {
   if (p === '/api/entities/header') return { business: { display_name: 'Fixture Shop', bridge_id: 'CBWALK0001' }, licences: [], trade_ready: true };
   if (p === '/api/facts/rail') return { suppliers: 1, customers: 3, in: 24, out: 2, stuck: 3 };
   if (p === '/api/facts/rail/chits') return { overdue_days: 7, truncated: false, items: [] };
-  if (p === '/api/books/health') return books.health({ waiting: [{ id: 1, chit_id: 'ch7', ref: 'bill:ch7', reason: 'September is locked.', tries: 3, since: '2026-09-28T10:00:00Z' }] });
-  if (p === '/api/books/todo') return [{ kind: 'months_not_locked', count: 2, words: '2 months are over but still open: August 2026, September 2026.', action: { label: 'Lock the months', screen: 'periods', call: 'POST /api/books/periods/:fy/:period/lock' } }];
+  if (p === '/api/books/health') return books.health({ waiting: [books.waitingRow({ id: 1, chit_id: 'ch7', ref: 'bill:ch7', reason: 'September is locked.', tries: 3, since: '2026-09-28T10:00:00Z' })] });
+  if (p === '/api/books/todo') return [books.todoRow({ kind: 'months_not_locked', count: 2, words: '2 months are over but still open: August 2026, September 2026.', action: { label: 'Lock the months', screen: 'periods', call: 'POST /api/books/periods/:fy/:period/lock' } })];
   if (p === '/api/books/dues') return books.dues(DUES.map((x) => books.dueRow({ party_no: x.party_no, name: x.name, party_id: x.party_id, side: x.side, balance_minor: x.balance_minor, oldest_due: x.oldest_due, buckets: x.buckets })), { asOf: TODAY });
   if (p === '/api/books/periods') return books.periods([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => books.periodRow('2026-27', n, n === 5 ? 'soft_locked' : 'open')));
-  if (p === '/api/books/accounts') return { accounts: [{ account_id: 'acc-1400', code: '1400', name: 'Cash', kind: 'asset', balance_minor: 1240000 }, { account_id: 'acc-4000', code: '4000', name: 'Sales', kind: 'income', balance_minor: -1590000 }] };
+  if (p === '/api/books/accounts') return { accounts: [books.accountRow({ account_id: 'acc-1400', code: '1400', name: 'Cash', tally_group: 'Cash-in-Hand', nature: 'asset' }), books.accountRow({ account_id: 'acc-4000', code: '4000', name: 'Sales', tally_group: 'Sales Accounts', nature: 'income' })] };
   if (p === '/api/books/packs') return { packs: [] };
   if (p === '/api/folders') return { folders: [] };
   if (p === '/api/crm/parties') return crmApi.list(FX.list, { records: FX.records });
@@ -143,7 +147,7 @@ function measureInPage(dataList) {
   const FORMATTED = /\b\d{1,2} [A-Z][a-z]{2}( \d{4})?\b|\b\d{1,2}:\d{2}( ?[ap]m)?\b|[A-Z]{3} ?\d/g;
   const IDENT = /\b[A-Z][A-Z0-9]*(?:[\/\-_.:][A-Z0-9]+)+\b|\b[A-Z]{2,}\d+\b|\b\d{2,}…\d+\b|^[A-Z]{3}$|^[A-Z]$/g;   /* SO-1 · C1/26-27/0041 · 91…21 · a bare ISO code · an avatar initial */
   /** the text with the author's words, identifiers and formatted figures taken out — what is left is the product's own copy */
-  const chrome = (t) => { let s = t; DATA.forEach((d) => { if (s.indexOf(d) >= 0) s = s.split(d).join(' '); }); return s.replace(FORMATTED, ' ').replace(IDENT, ' '); };
+  const chrome = (t) => { let s = t.replace(/https?:\/\/\S+/g, ' '); DATA.forEach((d) => { if (s.indexOf(d) >= 0) s = s.split(d).join(' '); }); return s.replace(FORMATTED, ' ').replace(IDENT, ' '); };
   const scrolls = (el) => { for (let e = el; e && e !== document.body; e = e.parentElement) { const o = getComputedStyle(e).overflowX; if (o === 'auto' || o === 'scroll') return true; } return false; };
   const untranslated = [], clipped = [], seenEl = new Set();
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
@@ -194,7 +198,7 @@ W.run('locale', async (w) => {
         const q = r.request(), u = new URL(q.url());
         const body = answer(u.pathname, u, q.method());
         await new Promise((x) => setTimeout(x, DELAY));
-        return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
+        return C.json(r, 200, body);
       });
       /* the reader's choice, as the product stores it: the UI language is qps; the figures stay en-IN (language and format are two choices) */
       await ctx.addInitScript((s) => { try { localStorage.setItem('cb_api_base', location.origin); localStorage.setItem('cb_sess', s); localStorage.setItem('cb_lang', 'qps'); localStorage.setItem('cb_langs', 'qps'); localStorage.setItem('cb_locale', 'en-IN'); localStorage.setItem('cb_region', 'IN'); } catch (_) {} }, W.session('Fixture Owner', 'Fixture Shop'));
@@ -209,11 +213,12 @@ W.run('locale', async (w) => {
         /* the pack arrives on the switch, asynchronously; wait for it where the page loads the locale layer at all */
         await page.waitForFunction(() => typeof window.CBSTR === 'undefined' || !window.CBLocale || window.CBSTR.qps, null, { timeout: 5000 }).catch(() => {});
         await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {});
-        await page.waitForTimeout(700);
+        /* measure a screen that has stopped changing: the same text twice, 600 ms apart (a late pack, a late list, a toast fading) */
+        for (let i = 0, last = ''; i < 8; i++) { await page.waitForTimeout(600); const now = await page.evaluate(() => document.body.innerText.length + ':' + document.querySelectorAll('*').length).catch(() => ''); if (now === last) break; last = now; }
         const m = await page.evaluate(measureInPage, [...DATA]);
         try { await page.screenshot({ path: path.join(__dirname, 'shots', 'walk-locale-' + S.id + '-' + key + '.png') }); } catch (_) {}
         const uniq = [...new Set(m.untranslated)].sort();
-        const res = { untranslated: m.untranslated.length, clipped: m.clipped.length, pack: m.pack, locale: m.locale, sample: uniq.slice(0, 12), clippedSample: m.clipped.slice(0, 8) };
+        const res = { untranslated: m.untranslated.length, clipped: m.clipped.length, pack: m.pack, locale: m.locale, strings: uniq, clippedSample: m.clipped.slice(0, 8) };
         (measured[S.id] = measured[S.id] || {})[key] = res;
         if (errs.length) errsBy[S.id + '@' + key] = errs;
         const b = baseline[S.id] && baseline[S.id][key];
@@ -222,16 +227,31 @@ W.run('locale', async (w) => {
         const facts = 'untranslated ' + res.untranslated + (b ? ' (baseline ' + b.untranslated + ')' : '') + ' · clipped ' + res.clipped + (b ? ' (baseline ' + b.clipped + ')' : '') + ' · pack ' + (m.pack ? 'landed' : m.locale ? 'NOT loaded' : 'no locale layer on this page');
         if (WRITE) return { ok: true, saw: facts + ' · written' };
         if (!b) return { ok: false, saw: facts + ' · NO BASELINE — run with --write' };
-        if (up.length) return { ok: false, saw: facts + ' · WENT UP: ' + up.join(', ') + ' — new words must go through tx()' };
+        if (up.length) { const fresh = uniq.filter((x) => (b.strings || []).indexOf(x) < 0); return { ok: false, saw: facts + ' · WENT UP: ' + up.join(', ') + ' — new words must go through tx()' + (fresh.length ? ' · new: ' + fresh.slice(0, 6).map((x) => JSON.stringify(x.slice(0, 50))).join(', ') : '') + (res.clipped > b.clipped ? ' · clipped: ' + res.clippedSample.join(', ') : '') }; }
         return { ok: true, saw: facts + (down.length ? ' · fell (' + down.join(', ') + ') — run --write to lower the bar' : '') };
       });
       await ctx.close();
     }
   }
 
+  /* the pack itself, reached the way a screen reaches it — the standard's example, exactly */
+  await w.step('L-pack', 'tx("Sales") in qps -> "[!! Ŝàļéš !!]" (accented, longer, bracketed; a placeholder and a tag survive)', async () => {
+    const ctx = await browser.newContext({ viewport: { width: 1366, height: 800 } });
+    await ctx.route('**/api/**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
+    await ctx.addInitScript(() => { try { localStorage.setItem('cb_lang', 'qps'); } catch (_) {} });
+    const page = await ctx.newPage();
+    await page.goto(w.base + '/accounts.html', { waitUntil: 'load' });
+    await page.waitForFunction(() => window.CBSTR && window.CBSTR.qps, null, { timeout: 5000 }).catch(() => {});
+    const got = await page.evaluate(() => [tx('Sales'), txf('Remove {name} from the list?', { name: 'Alpha' }), tx('A <b>shared</b> record'), txn('{count} product', '{count} products', 3), tx('Open', 'status')]);
+    await ctx.close();
+    const ok = got[0] === '[!! Ŝàļéš !!]' && /\[!+ .*\{name\}|Alpha/.test(got[1]) && got[1].indexOf('Alpha') > 0 && /<b>/.test(got[2]) && /3/.test(got[3]) && /^\[!+ /.test(got[4]);
+    return { ok, saw: got.join('  ·  ') };
+  });
+  await w.step('M43', 'the stand-in answered every /api/books, /api/crm and /api/work call as the API contract says', async () => { const [ok, saw] = C.finish(); return { ok, saw }; });
+
   if (WRITE) {
-    const out = { _what: 'walk-locale.cjs baseline — per screen × width: untranslated = rendered English text nodes not pseudo-localised; clipped = text boxes that clip at +40 %. A ratchet: the walk fails when a number rises. Rewrite ONLY with --write after a conversion round.', _written: new Date().toISOString().slice(0, 10) };
-    Object.keys(measured).forEach((id) => { out[id] = {}; Object.keys(measured[id]).forEach((k) => { const r = measured[id][k]; out[id][k] = { untranslated: r.untranslated, clipped: r.clipped, pack: r.pack, sample: r.sample, clipped_sample: r.clippedSample }; }); });
+    const out = { _what: 'walk-locale.cjs baseline — per screen × width: untranslated = rendered English text nodes not pseudo-localised (strings = the distinct ones, so a rise names the new words); clipped = text boxes that clip at +40 %. A ratchet: the walk fails when a number rises. Rewrite ONLY with --write after a conversion round.', _written: new Date().toISOString().slice(0, 10) };
+    Object.keys(measured).forEach((id) => { out[id] = {}; Object.keys(measured[id]).forEach((k) => { const r = measured[id][k]; out[id][k] = { untranslated: r.untranslated, clipped: r.clipped, pack: r.pack, clipped_sample: r.clippedSample, strings: r.strings }; }); });
     fs.writeFileSync(BASE_FILE, JSON.stringify(out, null, 1) + '\n');
     console.log('\nbaseline written: e2e/locale-baseline.json');
   }

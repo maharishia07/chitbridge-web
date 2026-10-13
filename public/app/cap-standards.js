@@ -825,6 +825,7 @@ var STD_GLOSSARY = [
   ['KGM', 'Kilogram (UN/ECE unit code)', 'The world code for a kilogram'],
   ['KGS', 'Kilograms (GST unit code)', 'The GST code for kilograms'],
   ['LEI', 'Legal Entity Identifier', 'A world-wide number for a company'],
+  ['LOCALE-STANDARD', 'The locale standard', 'docs/design/standards/LOCALE-STANDARD.md — the rules every screen follows for words, figures and direction; its guard is e2e/walk-locale.cjs'],
   ['LOCODE', 'UN Location Code', 'The world code for a port or city'],
   ['LTR', 'Left to right', 'Writing direction, as in English'],
   ['MAA', 'Chennai (IATA code)', 'The airport code for Chennai'],

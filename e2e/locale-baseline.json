@@ -1,12 +1,13 @@
 {
- "_what": "walk-locale.cjs baseline — per screen × width: untranslated = rendered English text nodes not pseudo-localised; clipped = text boxes that clip at +40 %. A ratchet: the walk fails when a number rises. Rewrite ONLY with --write after a conversion round.",
+ "_what": "walk-locale.cjs baseline — per screen × width: untranslated = rendered English text nodes not pseudo-localised (strings = the distinct ones, so a rise names the new words); clipped = text boxes that clip at +40 %. A ratchet: the walk fails when a number rises. Rewrite ONLY with --write after a conversion round.",
  "_written": "2026-10-13",
  "home": {
   "390": {
    "untranslated": 197,
    "clipped": 0,
    "pack": true,
-   "sample": [
+   "clipped_sample": [],
+   "strings": [
     "1 waiting for the ledger",
     "17 built · 10 coming · 7 being built",
     "2 out",
@@ -18,15 +19,122 @@
     "A one-sided fallback for parties not on it",
     "Books and tax for your shop",
     "Both sides hold the same bill",
-    "CB Accounts"
-   ],
-   "clipped_sample": []
+    "CB Accounts",
+    "CB CRM",
+    "CB Employees",
+    "CB Finance",
+    "CB Marketing",
+    "CB Operations",
+    "CB People",
+    "CB Tasks & Orders",
+    "CB Trade",
+    "Catalogue",
+    "Checks a business before the first chit.",
+    "Chits both parties hold",
+    "Co-assist",
+    "Combo Lab",
+    "Compatibility",
+    "Connectors",
+    "Counters & keys",
+    "Counts follow the chits that move goods.",
+    "Customers",
+    "Delivery",
+    "Delivery steps are lines on the same chit.",
+    "Disputes",
+    "Documents",
+    "Fills each party record from the chits you share.",
+    "Finance: payment advice and reminders over the same chits.",
+    "Forms for an authority, filled from the chit.",
+    "Governance",
+    "Helps fill and check a chit; you confirm.",
+    "Home",
+    "How it fits together",
+    "How the rail sits beside the books you already keep.",
+    "If the other business is not on ChitBridge, you still keep your own side.",
+    "Know your business",
+    "Labs",
+    "Leans on us ←",
+    "Marketing: the shop, offers and reach, one place.",
+    "Network",
+    "Network Lab",
+    "Offer Lab",
+    "One chit, many businesses.",
+    "One frozen invoice both books post",
+    "Open ›",
+    "Operations: counters, buying, stock and delivery as lines on the chit.",
+    "Orders",
+    "Orders from the web land on the rail like any other chit.",
+    "Orders in and out arrive as rail chits.",
+    "Orders in and out, tasks, each line's state and holder — the workflow engine's verdicts, painted.",
+    "Paper",
+    "Partly = some of it works today. Planned = not built. Use the rail beside your books, not instead of them.",
+    "People and access, inside the same sign-in.",
+    "People: roles and access inside the same sign-in.",
+    "Plan & usage",
+    "Posts the one frozen invoice both sides hold.",
+    "Product Lab",
+    "Rail Lab",
+    "Rules are written (Constitution v2); the page to set who approves is coming.",
+    "Running",
+    "See them",
+    "Selling",
+    "Send a sample chit and watch both sides.",
+    "Setup",
+    "Standards",
+    "Stock",
+    "Suppliers",
+    "Takes the money; every bill goes onto the rail as a chit.",
+    "Tally",
+    "Tally and Zoho both ways; set up in the workshop for now.",
+    "Tax Lab",
+    "The invoice is fixed when it is sent. Both sides read the same one; posting it into the other side's books is only partly built.",
+    "The map of who you trade with on the rail.",
+    "The one list of what you sell; chits and offers read it.",
+    "The other business",
+    "The rules the rail follows, each with an example.",
+    "Till",
+    "Trade across borders",
+    "Trade across borders: partner checks and forms, over the same chits.",
+    "Try a bundle price on a sample bill.",
+    "Try a network on paper before anything is made.",
+    "Try a tax slab on a sample bill.",
+    "Try an item list before it reaches the catalogue.",
+    "Try an offer on a sample bill.",
+    "We pass on only what you send, and hold no copy for anyone else.",
+    "What ChitBridge adds",
+    "What your plan includes.",
+    "WhatsApp",
+    "Where we are going",
+    "Where we are going ›",
+    "Which counters may sell for your shop.",
+    "Works when the other side is not on it",
+    "You and the business you trade with each keep a copy of the same chit.",
+    "You send what you choose; nothing is kept for others",
+    "Your online shop",
+    "Your shop",
+    "Your shop details, used on every chit.",
+    "Your supplier or your customer holds the same chit in their own books.",
+    "Your suppliers and customers",
+    "Your suppliers, as the rail lists them.",
+    "Zoho",
+    "being built",
+    "built",
+    "coming",
+    "no",
+    "part built",
+    "partly",
+    "planned",
+    "the same chit, held by both sides",
+    "yes",
+    "→ We lean on"
+   ]
   },
   "1366": {
    "untranslated": 278,
    "clipped": 0,
    "pack": true,
-   "sample": [
+   "clipped_sample": [],
+   "strings": [
     "1 new order",
     "1 waiting for the ledger",
     "17 built · 10 coming · 7 being built",
@@ -38,9 +146,147 @@
     "A dispute is a thread on the chit both sides see.",
     "A one-sided fallback for parties not on it",
     "Accounts",
-    "Books and tax for your shop"
-   ],
-   "clipped_sample": []
+    "Books and tax for your shop",
+    "Both sides hold the same bill",
+    "CB Accounts",
+    "CB CRM",
+    "CB Commerce",
+    "CB Employees",
+    "CB Finance",
+    "CB Marketing",
+    "CB Operations",
+    "CB People",
+    "CB Tasks & Orders",
+    "CB Trade",
+    "Catalogue",
+    "Check a business before you trade.",
+    "Checks a business before the first chit.",
+    "Chits both parties hold",
+    "Co-assist",
+    "Combo Lab",
+    "Compatibility",
+    "Connectors",
+    "Cost, price, and what each one leaves you.",
+    "Counters & keys",
+    "Counts follow the chits that move goods.",
+    "Customers",
+    "Delivery",
+    "Delivery steps are lines on the same chit.",
+    "Discounts, and whether they clear your margin.",
+    "Disputes",
+    "Documents",
+    "Every order and task, and who has each line.",
+    "Fills each party record from the chits you share.",
+    "Finance",
+    "Finance: payment advice and reminders over the same chits.",
+    "Forms for an authority, filled from the chit.",
+    "Forms for an authority.",
+    "Governance",
+    "Helps fill and check a chit; you confirm.",
+    "Home",
+    "How it fits together",
+    "How the rail sits beside the books you already keep.",
+    "If the other business is not on ChitBridge, you still keep your own side.",
+    "Know your business",
+    "Labs",
+    "Leans on us ←",
+    "Marketing",
+    "Marketing: the shop, offers and reach, one place.",
+    "Network",
+    "Network Lab",
+    "Offer Lab",
+    "One chit, many businesses.",
+    "One frozen invoice both books post",
+    "Open ›",
+    "Operations",
+    "Operations: counters, buying, stock and delivery as lines on the chit.",
+    "Orders",
+    "Orders from the web land on the rail like any other chit.",
+    "Orders in and out arrive as rail chits.",
+    "Orders in and out, tasks, each line's state and holder — the workflow engine's verdicts, painted.",
+    "Orders waiting on you.",
+    "Paper",
+    "Partly = some of it works today. Planned = not built. Use the rail beside your books, not instead of them.",
+    "People",
+    "People and access, inside the same sign-in.",
+    "People: roles and access inside the same sign-in.",
+    "Plan & usage",
+    "Posts the one frozen invoice both sides hold.",
+    "Product Lab",
+    "Rail Lab",
+    "Rules are written (Constitution v2); the page to set who approves is coming.",
+    "Running",
+    "Running it",
+    "Sales",
+    "See them",
+    "Selling",
+    "Send a sample chit and watch both sides.",
+    "Set once, rarely touched.",
+    "Setup",
+    "Sketch a network and see what would break.",
+    "Standards",
+    "Stock",
+    "Suppliers",
+    "Take money at the counter.",
+    "Takes the money; every bill goes onto the rail as a chit.",
+    "Tally",
+    "Tally and Zoho both ways; set up in the workshop for now.",
+    "Tax Lab",
+    "The invoice is fixed when it is sent. Both sides read the same one; posting it into the other side's books is only partly built.",
+    "The map of who you trade with on the rail.",
+    "The one list of what you sell; chits and offers read it.",
+    "The other business",
+    "The rules the rail follows, each with an example.",
+    "Till",
+    "Trade",
+    "Trade across borders",
+    "Trade across borders: partner checks and forms, over the same chits.",
+    "Try a bundle price on a sample bill.",
+    "Try a network on paper before anything is made.",
+    "Try a tax slab on a sample bill.",
+    "Try an item list before it reaches the catalogue.",
+    "Try an offer on a sample bill.",
+    "Two at one price.",
+    "We pass on only what you send, and hold no copy for anyone else.",
+    "What ChitBridge adds",
+    "What a chit must contain.",
+    "What it all stands on",
+    "What the shop made, and what it owes.",
+    "What your plan includes.",
+    "WhatsApp",
+    "Where we are going",
+    "Where we are going ›",
+    "Which counters may sell for your shop.",
+    "Who buys, and how often.",
+    "Who is in your network, and what it offers you.",
+    "Who owes you, who you owe, and when.",
+    "Work the number out first. Nothing changes until you say so.",
+    "Works when the other side is not on it",
+    "You and the business you trade with each keep a copy of the same chit.",
+    "You send what you choose; nothing is kept for others",
+    "Your online shop",
+    "Your people, and what each can do.",
+    "Your shop",
+    "Your shop details, used on every chit.",
+    "Your shop on the web.",
+    "Your supplier or your customer holds the same chit in their own books.",
+    "Your suppliers and customers",
+    "Your suppliers, as the rail lists them.",
+    "Zoho",
+    "being built",
+    "built",
+    "coming",
+    "later",
+    "no",
+    "part built",
+    "partly",
+    "planned",
+    "the same chit, held by both sides",
+    "works today",
+    "workshop",
+    "yes",
+    "→ We lean on"
+   ]
   }
  },
  "till": {
@@ -48,7 +294,8 @@
    "untranslated": 21,
    "clipped": 0,
    "pack": false,
-   "sample": [
+   "clipped_sample": [],
+   "strings": [
     "A bill was left open",
     "Bill",
     "Categories ▾",
@@ -60,29 +307,86 @@
     "Not now",
     "Nothing has been sold and no number has been taken.",
     "Nothing matches.",
-    "Nothing to sell yet ·"
-   ],
-   "clipped_sample": []
+    "Nothing to sell yet ·",
+    "Pay ›",
+    "Save PIN",
+    "Signing in opens your own shop.",
+    "Start fresh",
+    "Start your shop",
+    "This shop",
+    "Type it again",
+    "You had a bill open with 3 items · ₹63.00, left at 5:52 am.",
+    "Your new PIN"
+   ]
   },
   "1366": {
    "untranslated": 61,
    "clipped": 0,
    "pack": false,
-   "sample": [
+   "clipped_sample": [],
+   "strings": [
     "+ part",
     "A bill was left open",
     "Card",
     "Cash",
     "Close",
     "Continue that bill",
-    "Counter DOMK",
+    "Counter DH5Y",
     "Counter PIN",
     "Ctrl ↑↓",
     "Enter",
     "Esc",
-    "Everything"
-   ],
-   "clipped_sample": []
+    "Everything",
+    "F10",
+    "F2",
+    "F4",
+    "F6",
+    "F7",
+    "F8",
+    "F9",
+    "Four digits, to sign in here without the internet.",
+    "Line good · 0.3 s",
+    "No GSTIN on this shop, so no GST is charged or shown (Settings → Profile).",
+    "Not now",
+    "Nothing has been sold and no number has been taken.",
+    "Nothing matches.",
+    "Nothing on this bill yet.",
+    "Nothing to sell yet ·",
+    "Off the shelf",
+    "On offer",
+    "Photos",
+    "Read the shop.",
+    "Save & print",
+    "Save PIN",
+    "Signing in opens your own shop.",
+    "Start fresh",
+    "Start your shop",
+    "TOTAL",
+    "This shop",
+    "Type it again",
+    "You had a bill open with 3 items · ₹63.00, left at 5:52 am.",
+    "Your new PIN",
+    "add",
+    "bills",
+    "change the line in action",
+    "choose",
+    "clear",
+    "day close",
+    "double-click",
+    "no prices yet",
+    "or",
+    "park",
+    "quantity",
+    "re-read the shop",
+    "save & print",
+    "search",
+    "today 0 · ₹0.00",
+    "who",
+    "· F9",
+    "↓↑ PgUp/PgDn",
+    "↕ Order them",
+    "≡ By category"
+   ]
   }
  },
  "shop": {
@@ -90,7 +394,8 @@
    "untranslated": 8,
    "clipped": 0,
    "pack": false,
-   "sample": [
+   "clipped_sample": [],
+   "strings": [
     ". Prices are set by the shop; design & colour, where shown, are referenced from the brand catalogue.",
     "About the shop",
     "GSTIN",
@@ -99,14 +404,14 @@
     "Powered by",
     "Report a problem to Mayur Bhavan",
     "Something wrong with an order?"
-   ],
-   "clipped_sample": []
+   ]
   },
   "1366": {
    "untranslated": 8,
    "clipped": 0,
    "pack": false,
-   "sample": [
+   "clipped_sample": [],
+   "strings": [
     ". Prices are set by the shop; design & colour, where shown, are referenced from the brand catalogue.",
     "About the shop",
     "GSTIN",
@@ -115,8 +420,7 @@
     "Powered by",
     "Report a problem to Mayur Bhavan",
     "Something wrong with an order?"
-   ],
-   "clipped_sample": []
+   ]
   }
  },
  "accounts": {
@@ -124,19 +428,20 @@
    "untranslated": 4,
    "clipped": 0,
    "pack": true,
-   "sample": [
+   "clipped_sample": [],
+   "strings": [
     "2 months are over but still open: August 2026, September 2026.",
     "Home",
     "Lock the months",
     "To do"
-   ],
-   "clipped_sample": []
+   ]
   },
   "1366": {
    "untranslated": 30,
    "clipped": 0,
    "pack": true,
-   "sample": [
+   "clipped_sample": [],
+   "strings": [
     "2 months are over but still open: August 2026, September 2026.",
     "Accruals & recurring",
     "Assets & depreciation",
@@ -148,9 +453,25 @@
     "Closing stock",
     "Collapse",
     "Day book",
-    "GST close & pay"
-   ],
-   "clipped_sample": []
+    "GST close & pay",
+    "Home",
+    "Ledgers",
+    "Lock the months",
+    "Month lock",
+    "Opening balances",
+    "Outstandings",
+    "P&L",
+    "Packs",
+    "Payables",
+    "Period end",
+    "Receivables",
+    "Setup",
+    "Shop ledgers",
+    "To do",
+    "Trial balance",
+    "Unpaid bills",
+    "Year close"
+   ]
   }
  },
  "finance": {
@@ -158,14 +479,15 @@
    "untranslated": 0,
    "clipped": 0,
    "pack": true,
-   "sample": [],
-   "clipped_sample": []
+   "clipped_sample": [],
+   "strings": []
   },
   "1366": {
    "untranslated": 11,
    "clipped": 0,
    "pack": true,
-   "sample": [
+   "clipped_sample": [],
+   "strings": [
     "Age",
     "CB Finance",
     "Collapse",
@@ -177,8 +499,7 @@
     "Party",
     "Terms",
     "To collect"
-   ],
-   "clipped_sample": []
+   ]
   }
  },
  "crm": {
@@ -186,16 +507,17 @@
    "untranslated": 1,
    "clipped": 0,
    "pack": true,
-   "sample": [
+   "clipped_sample": [],
+   "strings": [
     "Walk-in 91…21"
-   ],
-   "clipped_sample": []
+   ]
   },
   "1366": {
    "untranslated": 10,
    "clipped": 0,
    "pack": true,
-   "sample": [
+   "clipped_sample": [],
+   "strings": [
     "CB CRM",
     "Collapse",
     "Dues",
@@ -206,8 +528,7 @@
     "Party",
     "Role",
     "Walk-in 91…21"
-   ],
-   "clipped_sample": []
+   ]
   }
  },
  "tasks": {
@@ -215,16 +536,17 @@
    "untranslated": 1,
    "clipped": 0,
    "pack": true,
-   "sample": [
+   "clipped_sample": [],
+   "strings": [
     "CB Tasks & Orders"
-   ],
-   "clipped_sample": []
+   ]
   },
   "1366": {
    "untranslated": 7,
    "clipped": 0,
    "pack": true,
-   "sample": [
+   "clipped_sample": [],
+   "strings": [
     "CB Tasks & Orders",
     "Collapse",
     "Done",
@@ -232,8 +554,7 @@
     "Orders out",
     "Tasks",
     "Tasks & Orders"
-   ],
-   "clipped_sample": []
+   ]
   }
  },
  "employees": {
@@ -241,7 +562,8 @@
    "untranslated": 16,
    "clipped": 0,
    "pack": false,
-   "sample": [
+   "clipped_sample": [],
+   "strings": [
     "3 shown",
     "3 · end of list",
     "Add a person",
@@ -253,15 +575,16 @@
     "Manager",
     "Off",
     "On",
-    "off"
-   ],
-   "clipped_sample": []
+    "off",
+    "on ·"
+   ]
   },
   "1366": {
    "untranslated": 24,
    "clipped": 0,
    "pack": false,
-   "sample": [
+   "clipped_sample": [],
+   "strings": [
     "3 shown",
     "3 · end of list",
     "Add a person",
@@ -273,9 +596,17 @@
     "Employees",
     "Filters ▾",
     "Helper",
-    "Know which person can do which task, and by what means, then trust them with it."
-   ],
-   "clipped_sample": []
+    "Know which person can do which task, and by what means, then trust them with it.",
+    "Manager",
+    "Name",
+    "Off",
+    "On",
+    "On or off",
+    "People",
+    "User ID",
+    "off",
+    "on ·"
+   ]
   }
  },
  "network": {
@@ -283,19 +614,20 @@
    "untranslated": 4,
    "clipped": 0,
    "pack": false,
-   "sample": [
+   "clipped_sample": [],
+   "strings": [
     "1 shown",
     "1 · end of list",
     "Filters ▾",
     "Network"
-   ],
-   "clipped_sample": []
+   ]
   },
   "1366": {
    "untranslated": 13,
    "clipped": 0,
    "pack": false,
-   "sample": [
+   "clipped_sample": [],
+   "strings": [
     "1 shown",
     "1 · end of list",
     "City",
@@ -308,8 +640,7 @@
     "Network",
     "Offers",
     "Store"
-   ],
-   "clipped_sample": []
+   ]
   }
  },
  "country-lab": {
@@ -317,37 +648,37 @@
    "untranslated": 12,
    "clipped": 0,
    "pack": true,
-   "sample": [
+   "clipped_sample": [],
+   "strings": [
     "April",
     "Dev",
     "India",
     "Live",
     "country",
-    "hitting http://127.0.0.1:43147 · override",
+    "hitting http://127.0.0.1:41153 · override",
     "off",
     "time zone",
     "● Online",
     "🧪 Log"
-   ],
-   "clipped_sample": []
+   ]
   },
   "1366": {
    "untranslated": 12,
    "clipped": 0,
    "pack": true,
-   "sample": [
+   "clipped_sample": [],
+   "strings": [
     "April",
     "Dev",
     "India",
     "Live",
     "country",
-    "hitting http://127.0.0.1:43147 · override",
+    "hitting http://127.0.0.1:41153 · override",
     "off",
     "time zone",
     "● Online",
     "🧪 Log"
-   ],
-   "clipped_sample": []
+   ]
   }
  }
 }
