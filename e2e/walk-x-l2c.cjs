@@ -205,8 +205,8 @@ W.run(REAL ? 'x-l2c-real' : 'x-l2c', async (w) => {   /* two sets of shots: walk
     });
     await w.step('L16', 'The server refuses a stage move for a party that traded (IS_CUSTOMER) — and the Leads list no longer lists them', async () => {
       let st = null, code = '';
-      if (REAL) {   /* the billed lead is no longer in the Leads view (a customer now, FX-L2C): its id comes from its own record (by party no) */
-        const one = await api.j('/api/crm/parties/' + encodeURIComponent(aKey), { token }); const id = ((one.b && one.b.party) || one.b || {}).party_id || aKey;
+      if (REAL) {   /* the billed lead is no longer in the Leads view (a customer now, FX-L2C): the Parties list names them now */
+        const r = await api.j('/api/crm/parties', { token }); const row = (r.b.parties || []).find((x) => x.display_name === NAMES.a); const id = row ? row.party_id : aKey;
         const s = await api.j('/api/crm/parties/' + id + '/stage', { method: 'POST', token, body: { stage: 'lead' } }); st = s.status; code = s.b.code || '';
       }
       else { const s = SI.l2cStage(S.l2c, NAMES.a, 'lead'); st = s.status; code = s.code; }
@@ -254,6 +254,8 @@ W.run(REAL ? 'x-l2c-real' : 'x-l2c', async (w) => {   /* two sets of shots: walk
 
     /* ── the refused state: a view-only login ───────────────────────────────────────────────────────────────────── */
     await w.step('L20', 'A view-only login: + Add lead · Move to… · Log · every call outcome SHOWN and greyed with "Your login can only view" — and the server refuses the write', async () => {
+      /* the viewer needs a row in today's call queue to look at: one untouched lead, added by the shop (the fixture seeds its own) */
+      if (REAL) await api.j('/api/crm/leads', { method: 'POST', token, body: { name: 'Lead Esai ' + tag, phone: '5' + String(Date.now()).slice(-9) } });
       const ctx2 = await w.browser.newContext({ viewport: LAP, locale: 'en-IN', timezoneId: 'Asia/Kolkata', serviceWorkers: 'block' });
       await ctx2.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
       const p2 = await ctx2.newPage(); p2.on('pageerror', (e) => w.errs.push(String(e && e.message || e)));
