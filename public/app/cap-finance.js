@@ -25,13 +25,14 @@ async function finLoad(quiet) {
   var g = ++FIN.gen;
   if (!quiet) { FIN.state = 'loading'; if (FIN.api) FIN.api.refresh(); }
   try {
-    var r = await api('booksDues', { query: { asOf: bkToday(), finance: '1' } });
+    var r = await api('booksDues', { query: { finance: '1' } });
     if (g !== FIN.gen) return;
     bkDuesStore(r);
     FIN.cur = (r && r.currency) || bkCur();
     if (r && r.currency && typeof SESSION !== 'undefined' && SESSION) SESSION.currency = r.currency;   /* CX0: the ledger's currency reaches Receive / Pay (finance.html sets none) */
     FIN.rows = ((r && r.parties) || []).filter(function (p) { return bkDuesSide(p) === 'rcv' && finOwes(p); });
     FIN.state = 'ready'; FIN.err = null;
+    ftNav();   /* the tabs' words again, now the language pack has had the boot to land */
   } catch (e) {
     if (g !== FIN.gen) return;
     if (e && e.status === 404) { finOff(); return; }   /* the Ledger is off for this shop (M212) */

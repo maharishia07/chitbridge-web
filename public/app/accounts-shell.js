@@ -28,8 +28,12 @@ var CB_HOMES = {
   task: '/tasks.html', order: '/tasks.html',           /* CB Tasks & Orders */
   customers: '/crm.html#/parties?role=customer', suppliers: '/crm.html#/parties?role=supplier',
   ledger: '/accounts.html', network: '/network.html', coassists: '/employees.html',
-  profile: '/know-your-business.html'                  /* the avatar's own choice for Profile (avatar.js, H34) */
+  profile: '/know-your-business.html',                 /* the avatar's own choice for Profile (avatar.js, H34) */
+  shop: '/settings.html#/shop', country: '/settings.html#/country', settings: '/settings.html',  /* CB Settings (SET1): Your shop · Country setup */
+  chit: '/crm.html#/chit/'                             /* + the chit id: the chit PAGE in CB CRM (CRM2) — chitPageHref(id) below */
 };
+/* the sheet's "Open page" (chit-sheet.js `page` → openChitPage on each ledger page): the chit page in CB CRM, never the workshop */
+function chitPageHref(id){ return CB_HOMES.chit + encodeURIComponent(id); }
 
 /* ── the Ledger's boot endpoints ── */
 var CB_BOOKS_EP = {
@@ -53,6 +57,17 @@ var CB_PARTY_EP = {
   /* ⭐ read by BOTH CB CRM and CB Finance — one name, one place (the registry guard fails a second declaration) */
   crmParties:      {m:"GET",  p:"/api/crm/parties",                        ok:"y"},   // { parties:[…], alerts:{…} } — one read, no per-row fetch; terms.customer per party
   booksTerms:      {m:"GET",  p:"/api/books/terms",                        ok:"y"},   // ?party_id&side → { terms_migrated, may_set, why_not, default, party, events } — CB Finance sets, CRM reads
+};
+
+/* ── the shop's OWN particulars — what the workshop's Profile · Country setup AND CB Settings (settings.html, SET1 2026-10-13) read and write.
+   MOVED from app.html's EP (one name per endpoint, e2e/ep-aliases.cjs): the profile (PATCH /entities/profile), the vault (GET /governance/profile),
+   Country setup (CS1) ── */
+var CB_SHOP_EP = {
+  me:               {m:"GET",   p:"/api/entities/me",                    ok:"✓"},
+  saveProfile:      {m:"PATCH", p:"/api/entities/profile",               ok:"✓"},   // {gstn,address,business_status}
+  profileGet:       {m:"GET",   p:"/api/governance/profile",             ok:"y"},
+  countrySetup:     {m:"GET",   p:"/api/governance/country-setup",       ok:"y"},   // CS1: the step after registration — country · money · year · tax, each with its source; pack { books, why }
+  countrySetupSave: {m:"PUT",   p:"/api/governance/country-setup",       ok:"y"},   // CS1 (owner): set once; 503 before b299; 409 a different country (a new entity)
 };
 
 /* ── the chit sheet's three calls (chit-sheet.js reads one chit, moves its step, says what a bill's goods are for) —

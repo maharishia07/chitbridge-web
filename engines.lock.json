@@ -9,8 +9,8 @@
     "offers": "1.3.0",
     "variant": "1.4.0",
     "search": "1.4.0",
-    "govcontext": "1.33.0",
-    "locale": "1.4.0",
+    "govcontext": "1.42.0",
+    "locale": "1.42.0",
     "units": "1.5.0",
     "qty": "1.5.0",
     "verdict": "1.5.0",
@@ -32,10 +32,10 @@
     "bank-recon": "1.18.0",
     "rail": "1.29.0",
     "workflow": "1.33.0",
-    "reg-in": "1.37.0",
-    "reg-au": "1.37.0",
-    "reg-ae": "1.37.0",
-    "regulation": "1.37.0"
+    "reg-in": "1.42.0",
+    "reg-au": "1.42.0",
+    "reg-ae": "1.42.0",
+    "regulation": "1.42.0"
   },
   "adopt": {
     "money": [
@@ -158,8 +158,8 @@
     "offers": "b90632d3ffa35196adcee8722269468dc83255edd327e2ff28e3cb07f5d82dee",
     "variant": "2b82dcbaba8ad8590623ef72d41979894d4390468abf74d862f158d7d4e48946",
     "search": "3e6b74d84e1fa082d5aa7d676f53421b263beafd8c455dfe9719f7d25cd841fa",
-    "govcontext": "23f0158addb22ea27f7453b59d7982b3435840aae97612320095a4e443e72ad6",
-    "locale": "0f8c7bd83ec0190beb18731192fdde3c0b20dc93d0477bb52197887716aa3668",
+    "govcontext": "d6eaa7aab22daeb73b006f25996a23d74ca571bb1260d61dfd56669f21e59a82",
+    "locale": "cf7b24baeeb7b19538f75d2b286b11c5f46d51c3fc865ffe11a6d26d5aefa427",
     "units": "93626bcaf343cde1a56ca3fa554b8ed0a0e6cdf40e5ab6368fe3b332572b8219",
     "qty": "48f6fb0cc0338202b1b938193cff6e0e9b1ef1edc10cd36a27104e967d1b9fbe",
     "verdict": "fd056da9669edcf81ce3fc94b9505982628e56ec471b69005b6330fc27452f10",
@@ -181,10 +181,10 @@
     "bank-recon": "fdbf6190577fa7b8473ac4e07f4da01762808191229f379a3861ab35cca281d3",
     "rail": "62146650c1ae4e0aa47c16625026f2d29039c4d05261c191f899bd0213f1b698",
     "workflow": "f8c7a43048bc1b8453a1c2ec43b6eed7f619feee4c67eaba046c6cea370f0a5b",
-    "reg-in": "3d1e905873f75d7133d4a53e706035b2fcbeb4a2231358b3f12b7e3a53cf5875",
-    "reg-au": "878c0052b81d1e8d4515c3bdd5da07b6caa2b2ed824340afd1cc5fd485fbc47f",
-    "reg-ae": "069efc3fe694db163649de693d6fc7ee8f49dfdb2ecdf00f37d2967d9a3ecf03",
-    "regulation": "38e3e8ff5a17dc3d1fa1f1212b5b4200aefbdc27f32bb8f379687bdba57c5870",
+    "reg-in": "f1e9c6d4698c26a00020085feaa22147984f70a2c5dd8780ed41f3766df0fa44",
+    "reg-au": "555303db4e674321aabb751f12bf250a389b7db0b6d0cf43efb399e05bcc17f7",
+    "reg-ae": "38503de3ef40298b101c31774eb82f3001fe2772ecb6e1d1b2e0d704a61da7bc",
+    "regulation": "63e83c5315afbf1c2c0d2df6c770cb25b6db66a3451bb720f489217c82f92238",
     "tax-packs": "e3885990e20a64aada0f545316e520176ff3601d9d5a6c6b2d73ce56b00c6248",
     "tax": "47bf282446266f3444e6e2d3e1f29e9c9c6ee78fbd2af1afc5cb5202b5cdf2f6"
   }

@@ -25,7 +25,7 @@
   --green:#16693F; --green-d:#0D4A2B; --green-t:#E8F4ED; --green-b:#A9D3BC;
   --amber:#E0A020; --amber-t:#FDF3DC; --amber-b:#EFD39A; --amber-i:#7A5205;
   --red:#C4562F; --red-t:#FBEAE3; --red-b:#E7B9A8; --red-i:#8E3517;
-  --blue:#2F74C9; --blue-t:#E4EEFA; --blue-b:#B9D2EF; --blue-i:#174A87;
+  --blue:#2468BD; --blue-t:#E4EEFA; --blue-b:#B9D2EF; --blue-i:#174A87;   /* #2F74C9 read 4.37:1 under cream text and as text on cream (the thread's External · Send); 5.1:1 now (CRM2 walk) */
   /* the names cap-books.js (the dues chip, the statement) and CBList paint with, mapped onto this palette */
   --fs-1:12px; --fs-2:13.5px; --fs-3:15px; --grey:#6f6450;   /* = the old --muted; --muted reads it, so a chosen theme's --grey reaches both */
   --page:#FCFAF5; --card:#fffdf8; --panel:#F3EFE6;
@@ -291,6 +291,7 @@ dialog.sheet::backdrop{background:var(--scrim)}
 }
 @media (min-width:621px){ .narrow-only{display:none !important} }
 @media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
+@media print{.side,.bar,#toast{display:none !important}.main{margin:0}.content{padding:0}}   /* the chit page prints as the document (its Print action), not the frame */
 </style>
 </head>
 <body>
@@ -347,7 +348,8 @@ function go(){ signedOut('Your session ended. Please sign in again.'); }   /* ap
 <script src="/app/helpers.js"></script>
 <script src="/app/list-ctl.js"></script>   <!-- CBList: every list here is a mount on it -->
 <script src="/app/tax.js"></script>
-<script src="/app/chit-sheet.js"></script>   <!-- THE CHIT SHEET: a bill, a chit, a message in the timeline opens it in place -->
+<script src="/app/chit-sheet.js"></script>   <!-- THE CHIT SHEET: a bill, a chit, a message in the timeline opens it in place; full-page at #/chit/<id> (CBSheet.mount, CRM2) -->
+<script src="/app/page.js"></script>   <!-- CBPage: the "made with X@v — page not installed" note on the chit page (N03) -->
 <script src="/app/cap-folders.js"></script>
 <script src="/app/cap-books.js"></script>   <!-- partyDueChipHTML · partyEditOpen · statementHTML — the party pieces the record reuses -->
 <script src="/app/rail-bell.js"></script>   <!-- CBBell.mount (R06): the dot + the list, from the push stream -->
@@ -381,7 +383,7 @@ function session(){
 
 /* the SMALL APP a screen key hands over to (CB_HOMES, accounts-shell.js) — never the workshop (IX0) */
 function navTo(k){ var h = CB_HOMES[k]; if (h) location.href = h; else toast(tx('Not built outside the workshop yet.')); }
-function openChitPage(id){ window.open('/app.html#/app/chit/' + encodeURIComponent(id), '_blank', 'noopener'); }   /* KEPT door: the sheet's "Open page" (its home is the M53 detail page) */
+function openChitPage(id){ location.hash = chitPageHref(id).replace(/^.*#/, '#'); }   /* the sheet's "Open page": the chit page HERE (#/chit/<id>, CRM2) — same tab, Back returns */
 function openChit(id){ openChitSheet(id); }   /* every other chit link opens the sheet here: Messages and files are on it (R10) */
 const confirmAsk = CBConfirm;   /* the page's own confirm, as CB Accounts uses it */
 

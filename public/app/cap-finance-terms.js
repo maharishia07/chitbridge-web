@@ -26,6 +26,8 @@ function ftNav() {
   [['collect', 'fin-nav-collections'], ['cash', 'fin-nav-cash'], ['terms', 'fin-nav-terms'], ['repeat', 'fin-nav-repeat']].forEach(function (x) {
     var a = document.querySelector('[data-testid="' + x[1] + '"]'); if (!a) return;
     a.classList.toggle('active', x[0] === t); if (x[0] === t) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+    /* the tab's word through the catalogue (INT4: the walk-locale ratchet counts a hard-wired label); the page's English is kept as the key */
+    var l = a.querySelector('.label'); if (l && typeof tx === 'function') { l.dataset.en = l.dataset.en || l.textContent; l.textContent = tx(l.dataset.en); a.setAttribute('aria-label', l.textContent); }
   });
 }
 window.addEventListener('hashchange', function () { if (!document.getElementById('screen') || typeof finMount !== 'function') return; ftNav(); finMount(false); });

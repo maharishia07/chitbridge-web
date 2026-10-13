@@ -20,6 +20,11 @@
 var SUP = { rows: null, busy: false, err: null };
 
 function suppliesScreen(){
+  /* ⚠️ WX-P2P-01 (2026-10-13, the real stack): a deep link to #/app/supplies stayed at "loading…" for ever. The capability's
+     first arrival re-renders the shell (bgRenderApp) AFTER supLoad's answer had already painted into the previous body — so the
+     fresh body held the placeholder and nothing repainted it, because SUP.rows was no longer null. The pattern suppliersScreen
+     uses: paint what is already known once this markup is in the page. */
+  if (SUP.rows !== null || SUP.err || SUP.notReady) setTimeout(supPaint, 0);
   return scr('🧴 ' + tx('Supplies'), 'sup_body', 'supplies');
 }
 
@@ -83,8 +88,11 @@ function supRow(s){
    * purchase recognisable at the counter of the hardware shop — "what did we pay last time" — and it is the whole
    * reason to keep this list rather than just an expense line.
    */
+  /* ⚠️ WX-P2P-05 (2026-10-13, the real stack): the row read "40 · Corner Stores" — a bare number. `money` is not a global in app.html (each
+     screen keeps its own local), so the fallback printed the raw figure. The app's one formatter (fmtMoney, M36) in the shop's currency. */
+  var fmt = function (n) { try { return fmtMoney(Number(n), typeof myCur === 'function' ? myCur() : 'INR'); } catch (_) { return typeof money === 'function' ? money(n) : String(n); } };
   var last = s.last_cost != null
-    ? (typeof money === 'function' ? money(s.last_cost) : s.last_cost) + (s.last_from ? ' · ' + esc(s.last_from) : '')
+    ? fmt(s.last_cost) + (s.last_from ? ' · ' + esc(s.last_from) : '')
     : '<span style="color:var(--grey)">' + tx('not bought yet') + '</span>';
   /* ⚠️ COUNTED vs EXPENSED said in words, because "keep_stock" is our word and a shopkeeper reads neither */
   var kept = s.keep_stock

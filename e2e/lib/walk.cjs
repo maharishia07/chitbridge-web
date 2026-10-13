@@ -59,7 +59,7 @@ async function start(name, opts) {
   opts = opts || {};
   const { chromium } = require('@playwright/test');
   fs.mkdirSync(SHOTS, { recursive: true });
-  /* opts.base (HX0): walk a site that is already running — the compose stack's web container — instead of serving this checkout */
+  /* opts.base (HX0): walk a site that is already running — the compose stack's web container — instead of serving this checkout; WX: e2e/lib/stack-local.cjs's site, its api on 3000 */
   const { srv, base } = opts.base ? { srv: null, base: String(opts.base).replace(/\/+$/, '') } : await serve();
   const browser = await chromium.launch(SHOW ? { headless: false, slowMo: 450, args: ['--window-size=1360,900', '--window-position=40,20'] } : {});
   const ctx = await browser.newContext({ viewport: opts.viewport || { width: 1280, height: 860 }, locale: 'en-IN', timezoneId: 'Asia/Kolkata', serviceWorkers: 'block' });

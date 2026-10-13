@@ -299,6 +299,11 @@ function crmRoute(frame) {
     CRM.route = { nav: 'parties', view: 'party', key: seg[1], sub: seg[2] || '', params: params };
     return crmRecordOpen(CRM.route);
   }
+  if (seg[0] === 'chit' && seg[1]) {   /* CRM2: the chit page — the sheet's painters full-page (cap-crm-chits.js chitPage) */
+    CRM.route = { nav: 'chits', view: 'chit', key: seg[1], sub: '', params: params };
+    crmNav('chits'); chitPage(seg[1], frame);
+    return;
+  }
   if (seg[0] === 'chits') {
     CRM.route = { nav: 'chits', view: 'chits', sub: '', params: params };
     crmNav('chits'); chitsHome(params, frame);

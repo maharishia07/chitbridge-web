@@ -80,7 +80,7 @@ function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function
 function fill(s, v) { return String(s).replace(/\{(\w+)\}/g, function (_, k) { return v[k] == null ? '' : v[k]; }); }
 function when(ts) {
   if (!ts) return '';
-  try { var L = root.CBLocale; if (L) { var d = L.date(ts, { day: '2-digit', month: 'short' }) || '', t = L.time(ts) || ''; return (d + ' ' + t).trim(); } } catch (_) {}
+  try { if (root.CBLocale) return root.CBLocale.datetime(ts); } catch (_) {}   /* CU4: the one date-time stamp */
   return String(ts).replace('T', ' ').slice(0, 16);
 }
 /** the sentence for an engine refusal word — the engine's own (CBRail.WHY) when the page loads /engine/rail.js, else the server's words */

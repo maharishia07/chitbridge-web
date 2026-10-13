@@ -15,7 +15,7 @@ something needs them before any navigation happens.
 router renders a placeholder until `_capLoading` clears, which is the only reason the
 old duplicate `networkScreen()` in app.html was safe to delete.
 
-## Capabilities (43)
+## Capabilities (44)
 
 | file | loading · nav key | what it is |
 |---|---|---|
@@ -55,6 +55,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-register.js` | lazy · on demand | THE REGISTER. Lazy (ensureCap('register')) |
 | `cap-repeat.js` | lazy · on demand | cap-repeat.js — REPEAT SUPPLY as an AGREEMENT both parties hold (round RI1, 2026-10-12): CB Finance › Repeat supply (the seller's list), |
 | `cap-service.js` | lazy · on demand | cap-service.js — a chit AS A SERVICE REQUEST. Lazy-loaded (ensureCap('service')) |
+| `cap-shop.js` | — | YOUR SHOP: the shop's own particulars, ONE implementation painted in two places (SET1, 2026-10-13) |
 | `cap-standards.js` | lazy · on demand |  |
 | `cap-supplies.js` | lazy · on demand | SUPPLIES: what the shop buys to USE, never to sell |
 | `cap-tasks.js` | — |  |
@@ -63,7 +64,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-workforce.js` | lazy · coassists | the CO-ASSIST (workforce) capability: FUNCTIONALITY only |
 | `cap-worklist.js` | lazy · on demand | MY WORK, across every chit. Lazy (ensureCap('worklist')) |
 
-## Shared (50)
+## Shared (51)
 
 | file | loading | what it is |
 |---|---|---|
@@ -80,12 +81,12 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `core.js` | eager | shared client module for the Task Panel (module 1 of the app split) |
 | `edition.js` | — |  |
 | `embed-host.js` | — |  |
-| `govcontext.js` | eager | ADOPTED from chitbridge-engines v1.33.0 · govcontext · sha256 23f0158addb22ea27f7453b59d7982b3435840aae97612320095a4e443e72ad6 — DO NOT EDIT HERE. Cha |
+| `govcontext.js` | eager | ADOPTED from chitbridge-engines v1.42.0 · govcontext · sha256 d6eaa7aab22daeb73b006f25996a23d74ca571bb1260d61dfd56669f21e59a82 — DO NOT EDIT HERE. Cha |
 | `helpers.js` | eager | generic, dependency-free helpers (module 2 of the app split) |
 | `kural.js` | — |  |
 | `list-ctl.js` | eager |  |
 | `list-legacy.js` | eager |  |
-| `locale.js` | eager | ADOPTED from chitbridge-engines v1.4.0 · locale · sha256 0f8c7bd83ec0190beb18731192fdde3c0b20dc93d0477bb52197887716aa3668 — DO NOT EDIT HERE. Change i |
+| `locale.js` | eager | ADOPTED from chitbridge-engines v1.42.0 · locale · sha256 cf7b24baeeb7b19538f75d2b286b11c5f46d51c3fc865ffe11a6d26d5aefa427 — DO NOT EDIT HERE. Change |
 | `network-app.js` | — |  |
 | `offers.js` | eager | ADOPTED from chitbridge-engines v1.3.0 · offers · sha256 b90632d3ffa35196adcee8722269468dc83255edd327e2ff28e3cb07f5d82dee — DO NOT EDIT HERE. Change i |
 | `one-person.js` | eager | one-person.js — ONE BROWSER, ONE SHOP AT A TIME |
@@ -108,10 +109,11 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `strings-ar.js` | — |  |
 | `strings-fr.js` | — |  |
 | `strings-hi.js` | — |  |
+| `strings-qps.js` | — |  |
 | `strings-ta.js` | — |  |
 | `table-resize.js` | — | drag a column edge; the width is yours and it is remembered |
 | `tax-slab.js` | eager | ADOPTED from chitbridge-engines v1.2.0 · tax-slab · sha256 439500a95910ff8bd55d4a1c422e2c4e810f509c7a6af2f1cd4e34aa239bc98d — DO NOT EDIT HERE. Change |
-| `tax.js` | eager | ADOPTED BUNDLE from chitbridge-engines · reg-in v1.37.0 + reg-au v1.37.0 + reg-ae v1.37.0 + regulation v1.37.0 + tax-packs v1.37.0 + tax v1.43.0 — DO |
+| `tax.js` | eager | ADOPTED BUNDLE from chitbridge-engines · reg-in v1.42.0 + reg-au v1.42.0 + reg-ae v1.42.0 + regulation v1.42.0 + tax-packs v1.37.0 + tax v1.43.0 — DO |
 | `test-menu-tree.js` | — | the product as a menu. ONE shape, two surfaces |
 | `test-verdict.js` | — | what would make this red green. ONE judgement, two surfaces |
 | `units.js` | eager | vendored VERBATIM from chitbridge-api/lib/units.js (one unit · three names: ours · UN/ECE Rec 20 · GST UQC) |
@@ -120,4 +122,4 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 
 ---
 
-*93 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*95 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
