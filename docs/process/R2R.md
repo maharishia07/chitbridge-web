@@ -14,11 +14,12 @@ flowchart LR
   S6["6. year close<br/><i>Accounts</i>"]
   S7["7. statements<br/><i>Accounts</i>"]
   S8["8. cash position<br/><i>Finance</i>"]
-  S1 --> S2 --> S3 --> S4 --> S5 --> S6 --> S7 --> S8
+  S9["9. bank reconciliation<br/><i>Accounts</i>"]
+  S1 --> S2 --> S3 --> S4 --> S5 --> S6 --> S7 --> S8 --> S9
   classDef ok fill:#e8f5e9,stroke:#2e7d32,color:#1b1b1b
   classDef warn fill:#fff8e1,stroke:#f9a825,color:#1b1b1b
   classDef missing fill:#fafafa,stroke:#9e9e9e,stroke-dasharray:5 5,color:#616161
-  class S1,S2,S3,S4,S5,S6,S7,S8 ok
+  class S1,S2,S3,S4,S5,S6,S7,S8,S9 ok
 ```
 
 | # | step | module | who | screen (file · function) | engine function | API route | chit kind | ledger entry | test | status |
@@ -31,6 +32,7 @@ flowchart LR
 | 6 | year close | Accounts | the owner | `web:public/app/cap-period.js` `peYearClose()`<br>`web:public/app/cap-period.js` `peYearStatus()` | `api:lib/books.js` `closeYear()`<br>`api:lib/books.js` `yearState()`<br>`engines:src/period.js` `yearClose()` | `POST /api/books/year/:fy/close` `api:routes/books.js`<br>`GET /api/books/year/:fy/status` `api:routes/books.js` | none | every period locked; the year's profit carried to 3900 Profit and loss (retained); the opening rows of the next year (period 0) | `api:tests/books-year.test.cjs`<br>`engines:tests/year-journey.test.js` | ✅ |
 | 7 | statements | Accounts | the owner (reads); a CA (the handover pack) | `web:public/app/cap-books.js` `partyBooksHTML()` | `api:lib/books.js` `trialBalance()`<br>`api:lib/books.js` `profitAndLoss()`<br>`api:lib/books.js` `balanceSheet()`<br>`engines:src/ledger.js` `trialBalance()`<br>`engines:src/ledger.js` `balanceSheet()`<br>`engines:src/bookpack.js` | `GET /api/books/trial-balance` `api:routes/books.js`<br>`GET /api/books/pl` `api:routes/books.js`<br>`GET /api/books/bs` `api:routes/books.js`<br>`GET /api/books/party/:id/statement` `api:routes/books.js`<br>`POST /api/books/packs` `api:routes/books.js` | none | read only — Schedule III lines come from the pack beside each code | `api:tests/books-routes.test.cjs`<br>`api:tests/reporting.test.js`<br>`engines:tests/ledger.test.js`<br>`engines:tests/bookpack.test.js`<br>`web:e2e/books-web.cjs` | ✅ |
 | 8 | cash position | Finance | the owner (reads; Finance suggests, nothing posts) | `web:public/app/cap-finance-cash.js` `fcMount()` | `api:lib/books-cashflow.js` `project()`<br>`api:lib/books-period.js` `gstPayableAt()`<br>`api:lib/books-period.js` `gstBalances()`<br>`engines:src/posting.js` `gstSetOff()`<br>`engines:src/ledger.js` `balanceAsAt()` | `GET /api/books/cashflow` `api:routes/books.js` | none | none — the GST owed is READ after the set-off (the same arithmetic the month close posts), due the 20th of the next month; cash · bank · UPI · card balances as at today | `api:tests/books-cashflow.test.cjs`<br>`api:tests/books-period.test.cjs`<br>`web:e2e/walk-finance-cash.cjs` | ✅ |
+| 9 | bank reconciliation | Accounts | the owner (accepts · records · asks); a view-only login reads (Ask / Record greyed with the server's sentence) | `web:public/app/cap-bank.js` `bankExplain()`<br>`web:public/app/cap-bank.js` `bankAccept()`<br>`web:public/app/cap-bank.js` `bankRecord()`<br>`web:public/app/cap-bank.js` `bankAsk()`<br>`web:public/app/cap-bank.js` `bankTodoItem()`<br>`web:public/app/cap-books.js` `payPrefill()` | `engines:src/bank-recon.js` `explain()`<br>`engines:src/bank-recon.js` `railPayments()`<br>`engines:src/bank-recon.js` `ask()`<br>`engines:src/bank-recon.js` `learn()`<br>`engines:src/bank-recon.js` `step()`<br>`api:lib/books-store.js` `bankRailChits()` | `GET /api/books/bank/rail` `api:routes/books.js`<br>`POST /api/chits/send` `api:routes/chits.js`<br>`POST /api/books/payments` `api:routes/books.js` | the other party's payment advice (M30) explains a line; an unexplained one is ASKED with a message chit (business_json.kind bank_query — date · amount · ref only); their advice answers it | none here — a line told by a chit but not in the books is recorded through the ONE writer (POST /payments, the pay sheet prefilled with their amount, ref and bills); the statement never leaves the device | `engines:tests/bank-recon-rail.test.js`<br>`api:tests/books-bank-rail.test.cjs`<br>`web:e2e/walk-bank-rec.cjs`<br>`web:e2e/bank-recon-page.cjs` | ✅ — BR1 (2026-10-13): three-way — statement line ↔ payment chit ↔ ledger entry. Accept marks, notes and learned rules stay on the device (no server store yet). |
 
 ## The backlog this map leaves
 
