@@ -344,9 +344,9 @@ W.run('x-o2c', async (w) => {
         const sw = await scrollW(ph);
         await tillType(ph, 'Sugar 1 kg');
         /* on a phone the pay row is one step on: "Pay ₹44.00 ›" (till-paygo) at the foot, Cash behind it */
-        const total = await txt(ph, '[data-testid="till-total"]'), pay = await ph.locator('[data-testid="till-paygo"]').isVisible().catch(() => false);
+        const total = await txt(ph, '[data-testid="till-total"]'), pay = await ph.locator('[data-testid="till-paygo"], button', { hasText: /^Pay ₹/ }).first().isVisible().catch(() => false);
         await shot(ph, 'till-phone');
-        return { ok: sw === 390 && /44/.test(total) && pay, saw: 'scrollWidth ' + sw + '; total "' + total + '"; Cash ' + (pay ? 'visible' : 'NOT visible') };
+        return { ok: sw === 390 && /44/.test(total) && pay, saw: 'scrollWidth ' + sw + '; total "' + total + '"; Pay › ' + (pay ? 'at the foot' : 'NOT visible') };
       });
       await ph.context().close();
       /* bill-print.html — the standalone slip (the printer test): no server; the paper widths */
@@ -463,7 +463,8 @@ W.run('x-o2c', async (w) => {
         const ent = page.locator('[data-testid^="db-entry-SV/"]', { hasText: bill ? bill.no : 'Sale' }).first();
         const et = norm(await ent.innerText().catch(() => ''));
         await shot(page, 'daybook-entry');
-        return { ok: /Ravi Stores/.test(et) && /128\.99/.test(et) && /Sales/.test(et) && /CGST/.test(et) && /3\.07/.test(et), saw: '"' + et.slice(0, 220) + '"' };
+        /* the entry's line strip says the GST as one figure (6.14 = CGST 3.07 + SGST 3.07); the heads show when a line opens */
+        return { ok: /Ravi Stores/.test(et) && /128\.99/.test(et) && /Sales/.test(et) && (/CGST/.test(et) && /3\.07/.test(et) || /GST ₹6\.14/.test(et)), saw: '"' + et.slice(0, 220) + '"' };
       });
       await acc(page, 'tb', '[data-testid="tb-balanced"], [data-testid="tb-dr"]');
       await w.step('O7.3', 'Ledger › Trial balance -> balanced (Dr = Cr), Customers · Cash · Sales · Output GST rows, figures in the shop\'s money', async () => {
@@ -502,7 +503,8 @@ W.run('x-o2c', async (w) => {
       await w.step('O8.1', 'App -> the bill chit opens from its number (the Ledger\'s door): the bill\'s number, Ravi Stores, 128.99; its status word is the bill\'s own', async () => {
         const t = await body(page), v = await has(page, '[data-testid="chit-void"]');
         /* ⊘ Withdraw is an Order-folder action (DACT 'void'); the door opens under Task — finding F-O8a. A counter bill is reversed by a RETURN at the counter (O8.2). */
-        return { ok: !!bill && t.indexOf(bill.no) >= 0 && /Ravi Stores/.test(t) && /128\.99/.test(t), saw: (bill && t.indexOf(bill.no) >= 0 ? 'the bill is open' : 'the bill is NOT open') + '; ⊘ Withdraw ' + (v ? 'offered' : 'not offered under Task (F-O8a)') };
+        const amt = (t.match(/₹\s?[\d,]+\.\d\d/g) || []).slice(0, 4).join(' ');
+        return { ok: !!bill && t.indexOf(bill.no) >= 0 && /Ravi Stores/.test(t) && /128\.99/.test(t), saw: (bill && t.indexOf(bill.no) >= 0 ? 'the bill is open' : 'the bill is NOT open') + '; amounts on screen: ' + (amt || 'none') + '; ⊘ Withdraw ' + (v ? 'offered' : 'not offered under Task (F-O8a)') };
       });
       await w.step('O8.2', 'Counter -> Bills -> return on the bill -> "Take a return" lists its lines; all, Give it back -> the counter says the return (a credit note) and the bill reads returned', async () => {
         await tillOpen(page);
