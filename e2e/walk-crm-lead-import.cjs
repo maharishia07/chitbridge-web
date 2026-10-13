@@ -165,11 +165,15 @@ W.run('crm-lead-import', async (w) => {
     S.leadsOff = false;
     return { ok: off && title === WAIT, saw: 'disabled=' + off + ' · title "' + title + '"' };
   });
-  await w.step('I10', 'a view-only login -> no Import button at all', async () => {
+  /* the show-action rule (FX-L2C, 13 Oct): a view-only login SEES Import and Add, greyed WITH the reason — never hidden */
+  await w.step('I10', 'a view-only login -> Import and Add are shown greyed, each with the reason', async () => {
     await page.evaluate((s) => { localStorage.setItem('cb_sess', s); }, VIEWER); await open();
     const b = await page.$(T('crm-lead-import')), add = await page.$(T('crm-lead-add'));
+    const st = async (el) => (el ? { off: await el.isDisabled(), why: (await el.getAttribute('title')) || (await el.innerText()) } : null);
+    const bi = await st(b), ba = await st(add);
     await page.evaluate((s) => { localStorage.setItem('cb_sess', s); }, W.session('Walk Owner', 'Fixture Shop'));
-    return { ok: !b && !add, saw: 'import=' + !!b + ' add=' + !!add };
+    const ok = !!bi && !!ba && bi.off && ba.off && !!bi.why && !!ba.why;
+    return { ok, saw: 'import=' + JSON.stringify(bi) + ' add=' + JSON.stringify(ba) };
   });
   await w.step('I11', '390 px -> the sheet and its Check list fit the phone (no sideways scroll)', async () => {
     await page.setViewportSize({ width: 390, height: 800 }); await open();
