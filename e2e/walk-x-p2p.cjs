@@ -291,7 +291,7 @@ const walk = async (w) => {
       for (let i = 0; i < S.bill.lines.length; i++) { const row = await txt(page, T('cs-line-' + i)), want = money(S.bill.lines[i].quantity * S.bill.lines[i].price), got = (row.match(/₹\s?[\d,]+\.\d\d\s*$/) || [''])[0].replace(/[₹\s]/g, ''); if (got && got !== want) offs.push(row.slice(0, 40) + ' → ' + got + ' not ' + want); }
       return { ok: t.indexOf(S.bill.no) >= 0 && /Kumar Trade Co/.test(t) && /To accept/.test(t) && t.indexOf(money(S.bill.total)) >= 0 && acts.length === 4, saw: 'actions ' + acts.join('·') + '; ' + t.slice(0, 220) + (offs.length ? ' [line total ≠ qty × price: ' + offs.join('; ') + ' — WX-P2P-16, engines]' : '') };
     });
-    await w.step('D14', 'The sheet -> Open page -> the app opens the bill in a new tab -> ⧉ Lines -> THEM · Delivered & paid: "0 of n"; Delivered on the first line -> "n of n" (step 3 · goods receipt)', async () => {
+    await w.step('D14', 'The sheet -> Open page -> the app opens the bill in a new tab -> ⧉ Lines -> THEM · Delivered & paid: "0 of n"; Delivered on the first line, its box untouched (it shows the pending n) -> "n of n" (step 3 · goods receipt)', async () => {
       const popup = page.context().waitForEvent('page', { timeout: 15000 }).catch(() => null);
       await page.click(T('cs-act-page'));
       const p2 = (await popup) || page;
@@ -301,8 +301,7 @@ const walk = async (w) => {
       const before = await txt(p2, T('c2-del-count'));
       const q = S.bill.lines[0].quantity;
       const first = p2.locator(T('c2-delivered')).first();
-      const lineId = await first.evaluate((b) => (b.getAttribute('onclick') || '').split("'")[1]).catch(() => '');
-      if (lineId) await p2.fill('#c2dq_' + lineId, String(q)).catch(() => {});
+      /* WX-P2P-19: nothing typed — the box shows the pending quantity, and Delivered records what it shows */
       await first.click().catch(() => {}); await p2.waitForTimeout(2000);
       const after = await txt(p2, T('c2-del-count')), t = await text(p2), name = await shot(p2, 'd14-goods-in-lines');
       if (p2 !== page) await p2.close().catch(() => {});

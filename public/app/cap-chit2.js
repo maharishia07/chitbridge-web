@@ -605,7 +605,9 @@ function c2ApplyProgress(r){
 
 async function c2Deliver(line_id, unit, back){
   var el = document.getElementById('c2dq_' + line_id);
-  var q = Number(el ? el.value.trim() : '');
+  /* WX-P2P-19: the empty box SHOWS the pending quantity (its placeholder) — Delivered records what it shows, never "How many?" over a 2 */
+  var typed = el ? el.value.trim() : '';
+  var q = Number(typed || (!back && el && /^\d+(\.\d+)?$/.test(el.placeholder) ? el.placeholder : ''));
   if (!Number.isFinite(q) || q === 0) return toast('How many? (a number, and not zero)');
   var ref = (document.getElementById('c2dr_' + line_id) || {}).value || null;
   try {
