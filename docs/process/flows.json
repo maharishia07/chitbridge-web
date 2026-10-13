@@ -68,7 +68,14 @@
           "route": [{ "m": "GET", "p": "/api/books/cashflow", "file": "api:routes/books.js" }, { "m": "GET", "p": "/api/books/cheques", "file": "api:routes/books.js" }],
           "chit": "none — a read of the open bills, the promised dates (CRM follow-ups) and the cheques in hand behind each day", "ledger": "none — reads the cash / bank role ledgers as at today; the first day below zero is said in words",
           "test": ["api:tests/books-cashflow.test.cjs", "web:e2e/walk-finance-cash.cjs", "engines:tests/receivables.test.js"],
-          "status": "ok", "note": "" }
+          "status": "ok", "note": "" },
+        { "n": 9, "step": "repeat supply", "module": "Finance", "who": "the seller proposes it from a sent invoice; the customer accepts, counters or declines; each run mints a normal invoice",
+          "screen": [{ "file": "web:public/app/cap-repeat.js", "fn": "rpStart" }, { "file": "web:public/app/cap-repeat.js", "fn": "rpMount" }, { "file": "web:public/app/cap-repeat.js", "fn": "rpPanel" }, { "file": "web:public/app/chit-sheet.js", "fn": "actionsFor" }],
+          "engine": [{ "file": "api:lib/repeat-supply.js", "fn": "create" }, { "file": "api:lib/repeat-supply.js", "fn": "may" }, { "file": "api:lib/repeat-supply.js", "fn": "sweep" }, { "file": "api:lib/books-recurring.js", "fn": "nextAfter" }, { "file": "api:lib/autoraise.js", "fn": "sendAs" }],
+          "route": [{ "m": "GET", "p": "/api/repeat", "file": "api:routes/repeat-supply.js" }, { "m": "POST", "p": "/api/repeat", "file": "api:routes/repeat-supply.js" }, { "m": "POST", "p": "/api/repeat/:id/accept", "file": "api:routes/repeat-supply.js" }, { "m": "POST", "p": "/api/repeat/:id/counter", "file": "api:routes/repeat-supply.js" }, { "m": "POST", "p": "/api/repeat/:id/skip", "file": "api:routes/repeat-supply.js" }, { "m": "POST", "p": "/api/repeat/:id/run", "file": "api:routes/repeat-supply.js" }],
+          "chit": "subscription (the agreement, both parties hold it) → one invoice per run, client_ref rep:<agreement>:<date>", "ledger": "each run posts as any sent invoice (lib/books-hooks afterChit); the agreement itself posts nothing",
+          "test": ["api:tests/repeat-supply.test.cjs", "web:e2e/walk-repeat-supply.cjs"],
+          "status": "ok", "note": "RI1 (2026-10-12): better than a recurring invoice — the customer agrees first (accept · counter · decline), can skip a run with a reason, and pausing or ending is visible to both. Table repeat_supply (b303, DRAFT — renumbered in INT2; IM1 holds b302)." }
       ]
     },
     {
@@ -315,6 +322,39 @@
         { "n": 7, "step": "end", "module": "Accounts", "who": "the client owner (any time) or the practice (ends the engagement; from sent = withdraws)",
           "screen": [], "engine": [], "route": [], "chit": "none", "ledger": "none", "test": [],
           "status": "missing", "note": "Nothing to end yet (step 3). The mechanism it will use exists: a person session is as alive as its listing and an end is refused everywhere within 60 s (api lib/person-session.js CACHE_MS); the ledger is insert-only, so what the practice posted stays, stamped by the person (app.current_actor)." }
+      ]
+    },
+    {
+      "id": "MVI", "name": "Move in (from Xero / QuickBooks)", "sap": "FI (conversion: opening balances, master data)",
+      "steps": [
+        { "n": 1, "step": "chart of accounts", "module": "Accounts", "who": "the owner, or the practice that keeps the books",
+          "screen": [{ "file": "web:public/app/cap-move-in.js", "fn": "miView" }, { "file": "web:public/app/cap-move-in.js", "fn": "miRender" }],
+          "engine": [{ "file": "api:lib/move-in.js", "fn": "guess" }, { "file": "api:lib/move-in.js", "fn": "plan" }, { "file": "api:lib/move-in.js", "fn": "apply" }, { "file": "api:lib/books.js", "fn": "addAccount" }, { "file": "engines:src/reg-au.js", "fn": "groupFor" }, { "file": "engines:src/reg-au.js", "fn": "roleFor" }],
+          "route": [{ "m": "POST", "p": "/api/books/move-in/preflight", "file": "api:routes/books.js" }, { "m": "POST", "p": "/api/books/move-in/preview", "file": "api:routes/books.js" }, { "m": "POST", "p": "/api/books/move-in/import", "file": "api:routes/books.js" }, { "m": "POST", "p": "/api/books/accounts", "file": "api:routes/books.js" }],
+          "chit": "none", "ledger": "a ledger per account under its group (the system's code; theirs kept as source_code, b302); a control account merges onto the role ledger",
+          "test": ["api:tests/move-in.test.cjs", "engines:tests/reg-au.test.js", "web:e2e/walk-move-in.cjs"],
+          "status": "ok", "note": "The columns are the export's recall (IM0), guessed and confirmed, never assumed. source_code needs migration b302 (a file); before it the trial balance matches on names." },
+        { "n": 2, "step": "contacts", "module": "Accounts", "who": "the owner, or the practice",
+          "screen": [{ "file": "web:public/app/cap-move-in.js", "fn": "miView" }],
+          "engine": [{ "file": "api:lib/move-in.js", "fn": "plan" }, { "file": "api:lib/move-in.js", "fn": "apply" }, { "file": "api:lib/local-identity.js", "fn": "mint" }, { "file": "api:lib/party-fields.js", "fn": "patch" }, { "file": "api:lib/party-fields.js", "fn": "checkTaxId" }, { "file": "engines:src/reg-au.js", "fn": "abnCheck" }],
+          "route": [{ "m": "POST", "p": "/api/books/move-in/preflight", "file": "api:routes/books.js" }, { "m": "POST", "p": "/api/books/move-in/preview", "file": "api:routes/books.js" }, { "m": "POST", "p": "/api/books/move-in/import", "file": "api:routes/books.js" }],
+          "chit": "none", "ledger": "none — a party on the customer / supplier list (party_no from the one series; ABN as a party_tax_id)",
+          "test": ["api:tests/move-in.test.cjs", "engines:tests/reg-au.test.js", "web:e2e/walk-move-in.cjs"],
+          "status": "ok", "note": "Dedupe: ABN, then phone (as L3's lead import), then name. A bad ABN is skipped with reg-au's sentence. Writes per party go through party-fields.patch (the one writer)." },
+        { "n": 3, "step": "items", "module": "Accounts", "who": "the owner, or the practice",
+          "screen": [{ "file": "web:public/app/cap-move-in.js", "fn": "miView" }],
+          "engine": [{ "file": "api:lib/move-in.js", "fn": "plan" }, { "file": "api:lib/catalogue-write.js", "fn": "writeItems" }, { "file": "api:lib/item-cost.js", "fn": "setCost" }, { "file": "engines:src/reg-au.js", "fn": "supplyKindFor" }],
+          "route": [{ "m": "POST", "p": "/api/books/move-in/preflight", "file": "api:routes/books.js" }, { "m": "POST", "p": "/api/books/move-in/preview", "file": "api:routes/books.js" }, { "m": "POST", "p": "/api/books/move-in/import", "file": "api:routes/books.js" }],
+          "chit": "none", "ledger": "none — a product with price and gst_rate (their tax code → the pack's supply kind → the rate)",
+          "test": ["api:tests/move-in.test.cjs", "engines:tests/reg-au.test.js", "web:e2e/walk-move-in.cjs"],
+          "status": "ok", "note": "A code already in the catalogue is skipped (a move-in never overwrites prices). Stock on hand is not read in phase 1." },
+        { "n": 4, "step": "opening balances", "module": "Accounts", "who": "the owner, or the practice",
+          "screen": [{ "file": "web:public/app/cap-move-in.js", "fn": "miImport" }, { "file": "web:public/app/cap-move-in.js", "fn": "miDoneHTML" }],
+          "engine": [{ "file": "api:lib/move-in.js", "fn": "plan" }, { "file": "api:lib/books.js", "fn": "postOpening" }, { "file": "engines:src/posting.js", "fn": "post" }],
+          "route": [{ "m": "POST", "p": "/api/books/move-in/preflight", "file": "api:routes/books.js" }, { "m": "POST", "p": "/api/books/move-in/preview", "file": "api:routes/books.js" }, { "m": "POST", "p": "/api/books/move-in/import", "file": "api:routes/books.js" }, { "m": "POST", "p": "/api/books/opening", "file": "api:routes/books.js" }],
+          "chit": "none", "ledger": "ONE opening entry (period 0) per file: the trial balance (the customers / suppliers control rows left out), then the open invoices and bills bill-wise on 1300 / 2100 with party, bill and due date; the difference on Suspense 2900",
+          "test": ["api:tests/move-in.test.cjs", "engines:tests/reg-au.test.js", "web:e2e/walk-move-in.cjs"],
+          "status": "ok", "note": "An unbalanced trial balance is refused with the sentence; nothing posts. The same file twice posts nothing (client_ref movein:<kind>:<as_at>)." }
       ]
     }
   ]

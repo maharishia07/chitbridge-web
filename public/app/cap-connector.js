@@ -276,7 +276,7 @@ async function acReissueSubmit(){ var g=UI.acReissue||{}, id=g.id, mode=g.mode;
     if(mode==='package'){
       var r=await api('connectorConns',{params:{actorId:id}});
       var devs=(Array.isArray(r)?r:((r&&r.connections)||[]))   /* ⚠️ collapsed to the array — see acLoadDevices */.filter(function(c){return c.enabled!==false;}).map(function(c){ var cf=c.conn_config||{}; return {bridge_id:c.bridge_id, ref:c.ref, folder:cf.folder||null, classes:cf.classes||null}; });
-      _download('chitbridge-install.sh', _buildInstaller({ endpoint:'https://chitbridge-api-production.up.railway.app', key:key, heartbeat_sec:60, spool_dir:'/opt/chitbridge/spool', devices:devs }));
+      _download('chitbridge-install.sh', _buildInstaller({ endpoint:CFG.API_BASE /* HX1: the api this app talks to */, key:key, heartbeat_sec:60, spool_dir:'/opt/chitbridge/spool', devices:devs }));
       UI.acFreshKey=null; if(typeof paintAcDetail==='function')paintAcDetail();   // key is INSIDE the installer — never shown raw
       if(typeof toast==='function')toast('Key reissued — installer downloaded (key is inside it). Reflash the Pi: sudo bash chitbridge-install.sh');
     } else {

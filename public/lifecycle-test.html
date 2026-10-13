@@ -1,5 +1,5 @@
 <!doctype html>
-<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html><head><meta charset="utf-8"><script src="/config.js"></script><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>IoT Lifecycle — live verification</title>
 <style>
   :root{--line:#e6e8eb;--grey:#8a9199;--blue:#2c5aa0;--ink:#1a1f24;--bg:#f4f6f8;--pass:#1f7a3d;--fail:#c0453b;--run:#c9962a}
@@ -36,7 +36,7 @@
   <div class="sub">Runs the full connector<span class=arw>→</span>device<span class=arw>→</span>exception<span class=arw>→</span>folder lifecycle against the live API and asserts the desired result at each step, including the RLS isolation proof. Nothing is mocked.</div>
 
   <div class="cfg">
-    <div class="f1"><label>API base</label><input id="api" value="https://chitbridge-api-production.up.railway.app"></div>
+    <div class="f1"><label>API base</label><input id="api" value=""><script>document.getElementById('api').value = window.CB_API || '';</script></div>
     <div class="f2"><label>Entity (dev login)</label><input id="entity" value="Alpha Timbers"></div>
     <div class="f2"><label>Counterparty (CC) — 2nd entity</label><input id="beta" value="Beta Traders"></div>
     <button class="run" id="runbtn" onclick="runAll()">▶ Run lifecycle</button>

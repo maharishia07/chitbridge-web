@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Catalogue</title>
 <style>
@@ -46,7 +47,7 @@
 <script>
 (function(){
   var Q = new URLSearchParams(location.search);
-  var API = Q.get('api') || 'https://chitbridge-api-production.up.railway.app';
+  var API = Q.get('api') || window.CB_API;
   var BRIDGE = (Q.get('bridge') || Q.get('b') || '').trim();
   var BRAND = Q.get('brand') !== 'off';           // brand shown unless brand=off (whitelabel)
   if (Q.get('theme') === 'light' || Q.get('theme') === 'dark') document.documentElement.setAttribute('data-theme', Q.get('theme'));

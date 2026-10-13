@@ -2,6 +2,7 @@
 <html lang="en" data-tokens="list">
 <head>
 <meta charset="utf-8">
+<script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Network</title>
 <!-- ⭐ Network — a store inside someone's network, as a small app (P2): the networks it is in and who its parent is, the stores it can see, the offers its brands
@@ -77,7 +78,7 @@ dialog.sheet .mx{position:absolute;right:8px;top:8px;border:0;background:transpa
   var q = new URLSearchParams(location.search);
   /* the old public link (network.html?bridge=…) keeps working: the shopfront moved to network-shop.html */
   if (q.get('bridge')) { location.replace('/network-shop.html' + location.search); return; }
-  var API = q.get('api') || (window.CBShell && CBShell.apiBase && CBShell.apiBase()) || 'https://chitbridge-api-production.up.railway.app';
+  var API = q.get('api') || (window.CBShell && CBShell.apiBase && CBShell.apiBase()) || window.CB_API;
   var host = document.getElementById('nw');
   var app, frame = CBFrame.mount({ app: 'network', kural: 'network', work: host,
     skeleton: { name: 'Network', icon: 'M12 5a2 2 0 1 0 0 .01M5 19a2 2 0 1 0 0 .01M19 19a2 2 0 1 0 0 .01M12 7v5M12 12l-6 5M12 12l6 5', active: 'mine',
