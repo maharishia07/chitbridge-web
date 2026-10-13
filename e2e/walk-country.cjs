@@ -20,7 +20,7 @@
  *   C11 CS2: ... and a PUT the server refuses (409 COUNTRY_CHANGE_IS_NEW_ENTITY) -> its sentence is painted in the form, the step stays
  *   ── CL3: "Where ChitBridge is for <country>" on the step (the same CBCountryReady rows the Country lab paints, in the step's own gov-panel rows) ──
  *   C12  the step shows "Where ChitBridge is for India": the pack line, one row per product area (✅ ⚠️ ❌), Payroll "—" — the file's rows
- *   C13  Change the country -> the UAE (an Indian browser's picker has no Australia yet — the block's own "currencies offered" row): the block follows the CHOSEN country; Japan (no pack): it says so, never a made-up row
+ *   C13  Change the country -> the UAE: the block follows the CHOSEN country; Japan (no pack — the picker no longer offers it, CS2 C8): the block says so, never a made-up row
  *   C14 rule 13 on the step, Cream and Dark at 1366 and 390: AA on every text, nothing clipped, no sideways scroll, nothing floating over the
  *       block, the copy within budget. (The step is signed in by nature — it follows registration; signed out it is the sign-in screen.)
  *
@@ -239,13 +239,15 @@ W.run('country', async (w) => {
       && r.rows.every((x) => /^(✅|⚠️|❌|—) /.test(x.text)) && !!pay && pay.state === 'out' && /Not offered in India/.test(pay.text);
     return { ok, saw: '"' + r.title + '" · "' + r.pack + '" · ' + r.rows.length + '/' + want + ' rows · = file ' + same + ' · "' + (pay ? pay.text : 'no payroll row') + '"' };
   });
-  await w.step('C13', 'Change the country -> the UAE: the block follows the chosen country; Japan (no pack): it says so, never a made-up row', async () => {
+  await w.step('C13', 'Change the country -> the UAE: the block follows the chosen country; Japan (no pack, not offered by the picker): it says so, never a made-up row', async () => {
     const tap = () => page.$eval('[data-testid="cs-change-country"]', (a) => a.click());   /* the workshop's fixed dev ribbon sits over the link once scrolled: a person's tap, not a pointer at a covered spot */
     await tap();
     await page.selectOption('[data-testid="cs-country"]', 'AE'); await page.waitForTimeout(150);
     const a = await ready();
-    await page.selectOption('[data-testid="cs-country"]', 'JP'); await page.waitForTimeout(150);
-    const b = await ready();
+    /* INT5b: since CS2 the picker offers ONLY the registered packs (C8), so Japan cannot be picked — the block is asked for it directly, as a
+       pack-less country would draw it */
+    const b = await page.evaluate(() => { const d = document.createElement('div'); d.innerHTML = csuReadyHTML('JP'); const q = (t) => (d.querySelector('[data-testid="' + t + '"]') || {}).textContent || '';
+      return { title: q('cs-ready-title'), none: q('cs-ready-none'), rows: [...d.querySelectorAll('[data-testid="cs-ready-row"]')] }; });
     await page.selectOption('[data-testid="cs-country"]', 'IN'); await page.waitForTimeout(150);
     await tap();
     const ok = /United Arab Emirates/.test(a.title) && /VAT · \d+ of \d+ rules ready · not yet checked/.test(a.pack) && a.rows.length > 10 && /Japan/.test(b.title) && b.rows.length === 0 && /No pack for Japan yet/.test(b.none);
