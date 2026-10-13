@@ -19,7 +19,8 @@
  * ⚠️ STAND-IN, NOT A SERVER: the site is served from this checkout (e2e/lib/walk.cjs), the API answered inside the page with the
  * shapes the other walks use (walk-home · walk-finance · walk-tasks · walk-employees · cb-accounts · the CRM golden parties).
  * Answers are delayed 300 ms so the pack — fetched on the language switch, asynchronously, as every pack is — lands before the
- * screens paint their lists, as it does on a real connection.
+ * screens paint their lists, as it does on a real connection; and the pack is held until the page's boot script is over (its first
+ * /api call), so what boot paints before any pack can arrive (the Assistant button) counts the same way every run.
  *
  *   NODE_PATH=e2e/node_modules node e2e/walk-locale.cjs            ratchet against the baseline (CI, run-shard.cjs)
  *   NODE_PATH=e2e/node_modules node e2e/walk-locale.cjs --write    re-measure and rewrite e2e/locale-baseline.json
@@ -34,6 +35,7 @@ const C = require('./lib/contract.cjs');   /* M43: every /api/books, /api/crm an
 const WRITE = process.argv.includes('--write');
 const BASE_FILE = path.join(__dirname, 'locale-baseline.json');
 const DELAY = 300;
+const PACK_CAP = 2500;   /* the pack is held until the page's first /api call (see the route below), at most this long */
 const WIDTHS = [{ w: 1366, h: 800 }, { w: 390, h: 844, phone: true }];
 const SHOP = 'CBXK3RPTTR';
 
@@ -196,7 +198,15 @@ W.run('locale', async (w) => {
       const key = String(V.w);
       const ctx = await browser.newContext(Object.assign({ viewport: { width: V.w, height: V.h }, locale: 'en-IN', timezoneId: 'Asia/Kolkata', serviceWorkers: 'block' }, V.phone ? { isMobile: true, hasTouch: true } : {}));
       await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
+      /* ⭐ THE PACK LANDS AFTER BOOT, AS ON A REAL CONNECTION (LOC0b). Served from this checkout the pack script could land before
+         app.html's boot script had finished — a race the runner lost one run in three: "💬 Assistant" is mounted by route() and never
+         repainted, so it counted or not by luck. The pack is held until the page's FIRST /api call (boot is over by then — JS is
+         single-threaded, so an async script runs only after the script that asked), then released at once; the API's answers take
+         DELAY ms more, so the pack still lands before any list paints. A page that never calls the API gets it after PACK_CAP ms. */
+      let release; const booted = new Promise((x) => { release = x; }); setTimeout(release, PACK_CAP);
+      await ctx.route(/\/app\/strings-[a-z]+\.js(\?|$)/, async (r) => { await booted; return r.continue(); });
       await ctx.route('**/api/**', async (r) => {
+        release();
         const q = r.request(), u = new URL(q.url());
         const body = answer(u.pathname, u, q.method());
         await new Promise((x) => setTimeout(x, DELAY));

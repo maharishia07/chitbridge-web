@@ -315,7 +315,7 @@
     "Start your shop",
     "This shop",
     "Type it again",
-    "You had a bill open with 3 items · ₹63.00, left at 6:08 am.",
+    "You had a bill open with 3 items · ₹63.00, left at 6:11 am.",
     "Your new PIN"
    ]
   },
@@ -331,7 +331,7 @@
     "Cash",
     "Close",
     "Continue that bill",
-    "Counter DKK8",
+    "Counter D0JV",
     "Counter PIN",
     "Ctrl ↑↓",
     "Enter",
@@ -364,7 +364,7 @@
     "TOTAL",
     "This shop",
     "Type it again",
-    "You had a bill open with 3 items · ₹63.00, left at 6:08 am.",
+    "You had a bill open with 3 items · ₹63.00, left at 6:11 am.",
     "Your new PIN",
     "add",
     "bills",
@@ -646,7 +646,7 @@
  },
  "country-lab": {
   "390": {
-   "untranslated": 6,
+   "untranslated": 7,
    "clipped": 0,
    "pack": true,
    "clipped_sample": [],
@@ -655,11 +655,12 @@
     "India",
     "country",
     "time zone",
-    "● Online"
+    "● Online",
+    "💬 Assistant"
    ]
   },
   "1366": {
-   "untranslated": 6,
+   "untranslated": 7,
    "clipped": 0,
    "pack": true,
    "clipped_sample": [],
@@ -668,7 +669,8 @@
     "India",
     "country",
     "time zone",
-    "● Online"
+    "● Online",
+    "💬 Assistant"
    ]
   }
  }
