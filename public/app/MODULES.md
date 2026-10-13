@@ -15,7 +15,7 @@ something needs them before any navigation happens.
 router renders a placeholder until `_capLoading` clears, which is the only reason the
 old duplicate `networkScreen()` in app.html was safe to delete.
 
-## Capabilities (40)
+## Capabilities (41)
 
 | file | loading · nav key | what it is |
 |---|---|---|
@@ -31,13 +31,14 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-country.js` | lazy · on demand | cap-country.js — COUNTRY SETUP (CS1, 2026-10-12): the step after registration, before the books open (lazy; ensureCap('country') → #/country) |
 | `cap-crm-calls.js` | — | cap-crm-calls.js — CB CRM L2: THE CALL DESK. The Calls tab (a CBList mount, the Follow-ups list's own look): today's queue, one-tap outcome buttons |
 | `cap-crm-chits.js` | — | cap-crm-chits.js — THE CHITS BEHIND THE HOME RAIL: In · Out · Stuck, stuck first (black-box H1 · H4 · H10) |
-| `cap-crm-leads.js` | — | cap-crm-leads.js — CB CRM L1: LEADS AS PARTIES. The Leads tab (a CBList mount, the Parties list's own look), Add lead, and the record's |
+| `cap-crm-leads.js` | — | cap-crm-leads.js — CB CRM L1: LEADS AS PARTIES (+ L3: Import from a CSV, at the foot of this file). The Leads tab (a CBList mount, the Parties list's |
 | `cap-crm-record.js` | — | cap-crm-record.js — CB CRM: ONE party's record, its timeline, the Log sheet, the Next block, and the party edit |
 | `cap-crm.js` | — | cap-crm.js — CB CRM: the parties list (home), follow-ups, Add party, and the plumbing every CRM screen shares |
 | `cap-definitions.js` | lazy · definitions | DEFINITIONS · the shelf a catalogue takes things off. (lazy capability) |
 | `cap-dispute.js` | lazy · disputes | the DISPUTE capability (the USP), lazy-loaded via ensureCap('dispute') |
 | `cap-employees.js` | — |  |
 | `cap-entry.js` | — | cap-entry.js — ＋ ENTRY on the Day book: what happened → with whom / what → how much, when, on what paper → check and save |
+| `cap-finance-cash.js` | — | cap-finance-cash.js — CB Finance · Cash (round F3): today's cash and bank, then day by day what comes in and goes out for 7 or 30 days, and the FIRST |
 | `cap-finance-terms.js` | — | cap-finance-terms.js — CB Finance · Terms (round F2): the shop's DEFAULT credit terms and each party's OWN, set in ONE place |
 | `cap-finance.js` | — | cap-finance.js — CB Finance · Collections (round F1): who owes you, how old, the limit, the interest it has earned, Remind, Receive |
 | `cap-folders.js` | lazy · folders | FOLDERS capability (lazy; loaded via ensureCap('folders')) |
@@ -107,7 +108,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `strings-ta.js` | — |  |
 | `table-resize.js` | — | drag a column edge; the width is yours and it is remembered |
 | `tax-slab.js` | eager | ADOPTED from chitbridge-engines v1.2.0 · tax-slab · sha256 439500a95910ff8bd55d4a1c422e2c4e810f509c7a6af2f1cd4e34aa239bc98d — DO NOT EDIT HERE. Change |
-| `tax.js` | eager | ADOPTED BUNDLE from chitbridge-engines · tax-packs v1.20.0 + tax v1.20.0 — DO NOT EDIT HERE. Each part below is a release, unchanged |
+| `tax.js` | eager | ADOPTED BUNDLE from chitbridge-engines · reg-in v1.37.0 + reg-au v1.37.0 + reg-ae v1.37.0 + regulation v1.37.0 + tax-packs v1.37.0 + tax v1.37.0 — DO |
 | `test-menu-tree.js` | — | the product as a menu. ONE shape, two surfaces |
 | `test-verdict.js` | — | what would make this red green. ONE judgement, two surfaces |
 | `units.js` | eager | vendored VERBATIM from chitbridge-api/lib/units.js (one unit · three names: ours · UN/ECE Rec 20 · GST UQC) |
@@ -116,4 +117,4 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 
 ---
 
-*89 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*90 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
