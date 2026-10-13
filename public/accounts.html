@@ -554,7 +554,9 @@ async function accTodo(body){
   try{
     const r = await api('booksTodo');
     if (g !== ACC.gen) return;
-    const list = Array.isArray(r) ? r : ((r && (r.items || r.todo)) || []);
+    const list = (Array.isArray(r) ? r : ((r && (r.items || r.todo)) || [])).slice();
+    /* BR1: the bank lines that need a person — counted on THIS device (the statement never reaches the server), drawn by the same row */
+    const bank = typeof bankTodoItem === 'function' ? bankTodoItem() : null; if (bank && !list.some((x) => x.kind === 'bank')) list.push(bank);
     ACC.todo = list;
     body.innerHTML = list.length
       ? '<div class="todo" data-testid="todo-list">' + list.map(todoRow).join('') + '</div>'
