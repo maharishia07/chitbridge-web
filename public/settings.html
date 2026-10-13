@@ -15,10 +15,13 @@
 <link rel="stylesheet" href="/app/gov-panel.css">       <!-- Country setup's rows (what · value · where it came from) — the same file app.html links -->
 <style>
 /* the workshop's token NAMES with the Cream values (the avatar's themes re-point these names; a page that never chooses a theme is Cream) */
-:root{ --paper:#fbf6ec; --card:#fffdf8; --ink:#2a2418; --on-bg:#2a2418; --on-card:#2a2418; --grey:#5c5240; --line:#e6dcc6; --blue:#1f5f5b; --on-accent:#fbf6ec;
+:root{ --paper:#fbf6ec; --card:#fffdf8; --ink:#2a2418; --on-bg:var(--ink); --on-card:var(--ink); --grey:#5c5240; --line:#e6dcc6; --blue:#1f5f5b; --on-accent:#fbf6ec;
   --disp:#8e3517; --danger-tint:#fbeae3; --warn-2:#7a5205; --warn-3:#7a5205; --warn-tint:#fdf3dc; --gold-soft:#f3ead7; --gold-line:#e6dcc6; --ok-2:#0d4a2b; --ok-tint:#e8f4ed;
   --chrome:#1f5f5b; --chrome-on:#fbf6ec; --gold:#7a5205; --fs-1:12px; --fs-2:13.5px; --fs-3:15px;
   --mono:'IBM Plex Mono',ui-monospace,monospace; --sans:'IBM Plex Sans',system-ui,sans-serif; --serif:'Source Serif 4',Georgia,serif; }
+/* a chosen theme (CBAvatar stamps data-themed) re-points the skeleton's names and the button ink at the theme's own — as finance.html / crm.html do; Cream is untouched */
+:root[data-themed]{--side:var(--card);--line-side:var(--line);--ink-2:var(--ink);--muted-2:var(--grey);--hover-nav:color-mix(in srgb,var(--ink) 8%,var(--card));
+  --accent:var(--blue-2,var(--blue));--accent-text:var(--blue-d,var(--blue));--accent-ink:var(--card);--on-accent:var(--card)}
 *{box-sizing:border-box}
 body{margin:0;background:var(--paper,#fbf6ec);color:var(--ink,#2a2418);font-family:var(--sans);font-size:15px;line-height:1.45}
 button{font-family:inherit;cursor:pointer}

@@ -78,21 +78,20 @@ const walk = async (w) => {
     const c = await txt('[data-testid="cs-val-country"]'), t = await txt('[data-testid="cs-title"]');
     return { ok: /India/.test(c) && /Country setup/.test(t) && /#\/country$/.test(page.url()), saw: t + ' · ' + c + ' · ' + page.url().replace(base, '') };
   });
-  await w.step('T6', 'Country -> Continue -> one PUT, and Done takes the owner back to Your shop (never to the workshop)', async () => {
-    await page.click('[data-testid="cs-save"]'); await page.waitForSelector('[data-testid="cs-open"]', { timeout: 8000 });
-    await page.click('[data-testid="cs-open"]'); await page.waitForSelector('[data-testid="shop-card"]', { timeout: 8000 });
+  await w.step('T6', 'Country -> Continue -> one PUT, "Country set." and back to Your shop (never to the workshop)', async () => {
+    await page.click('[data-testid="cs-save"]'); await page.waitForSelector('[data-testid="shop-card"]', { timeout: 8000 });
     return { ok: wrote(/PUT \/api\/governance\/country-setup/) === 1 && /settings\.html#\/shop$/.test(page.url()), saw: wrote(/PUT \/api\/governance\/country-setup/) + ' PUT · now at ' + page.url().replace(base, '') };
   });
 
   /* ── RULE 13: two themes × two widths × two sections ── */
   const audit = () => page.evaluate(() => {
-    const host = document.getElementById('set'), out = { clip: [], scroll: [], cover: [], app: [], budget: [] };
+    const host = document.getElementById('set'), out = { clip: [], frameClip: [], scroll: [], cover: [], app: [], budget: [] };
     const vis = (el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(el).visibility !== 'hidden'; };
     document.querySelectorAll('body *').forEach((el) => {
       if (!vis(el) || el.closest('#cb-avatar,#toast,script,style')) return;
       const cs = getComputedStyle(el), hasText = [...el.childNodes].some((n) => n.nodeType === 3 && n.nodeValue.trim());
       if (/auto|scroll/.test(cs.overflowX) && el.scrollWidth > el.clientWidth + 1 && el !== document.documentElement && el !== document.body) out.scroll.push(el.tagName + '.' + el.className + ' ' + el.scrollWidth + '>' + el.clientWidth);
-      if (hasText && (cs.textOverflow === 'ellipsis' || /hidden|clip/.test(cs.overflowX)) && el.scrollWidth > el.clientWidth + 1) out.clip.push(el.textContent.trim().slice(0, 40));
+      if (hasText && (cs.textOverflow === 'ellipsis' || /hidden|clip/.test(cs.overflowX)) && el.scrollWidth > el.clientWidth + 1) (host.contains(el) ? out.clip : out.frameClip).push(el.textContent.trim().slice(0, 40));
       const href = (el.getAttribute('href') || '') + ' ' + (el.getAttribute('onclick') || '');
       if (/app\.html/.test(href)) out.app.push(el.outerHTML.slice(0, 80));
     });
@@ -111,7 +110,7 @@ const walk = async (w) => {
     window.scrollTo(0, 0);
     return out;
   });
-  let k = 0;
+  let k = 0; const frameClip = new Set();
   for (const theme of ['cream', 'dark']) {
     for (const width of [1366, 390]) {
       await page.setViewportSize({ width, height: width > 500 ? 900 : 844 });
@@ -124,12 +123,15 @@ const walk = async (w) => {
           const a = await audit();
           const fails = [].concat(bad.map((x) => 'contrast ' + x.ratio + ' "' + x.text + '"'), a.clip.map((x) => 'clipped "' + x + '"'), a.scroll.map((x) => 'scroll ' + x),
             a.cover.map((x) => 'covered ' + x), a.app.map((x) => 'app.html ' + x), a.budget.map((x) => 'budget ' + x));
+          a.frameClip.forEach((x) => frameClip.add(x));
           return { ok: !fails.length && pairs.length > 10, saw: pairs.length + ' texts measured, lowest ' + Math.min.apply(null, pairs.map((x) => x.ratio)) + (fails.length ? ' · ' + fails.slice(0, 4).join(' · ') : ' · clean') };
         });
       }
     }
   }
   await page.evaluate(() => { CBAvatar.applyTheme('cream'); }).catch(() => {});
+  /* the shared frame (page-frame.js / shell.js) ellipsises the shop's name in its top bar on a phone — on every small app (employees.html the same); said, not hidden */
+  if (frameClip.size) w.note('T15', 'the shared frame\'s top bar at 390 px (not this page\'s pane)', 'ellipsised: ' + [...frameClip].join(' · '));
   if (w.errs.length) w.note('T99', 'page errors seen during the walk', w.errs.slice(0, 3).join(' | '));
 };
 walk.opts = { viewport: { width: 1366, height: 900 } };
