@@ -316,10 +316,16 @@ const walk = async (w) => {
       const clipped = [...el.querySelectorAll('span, div')].filter((x) => x.scrollWidth > x.clientWidth + 1 && getComputedStyle(x).overflow !== 'visible').length
         + [...el.querySelectorAll('.kv > span')].filter((x) => x.getBoundingClientRect().right > box.right + 1).length;
       return { sw: document.documentElement.scrollWidth, iw: window.innerWidth, inner: cl.scrollWidth > cl.clientWidth + 1 || el.scrollWidth > el.clientWidth + 1, floating, clipped,
-        toApp: document.querySelectorAll('a[href*="app.html"]').length, maxWords: Math.max(...[...el.querySelectorAll('.kv, .hint')].map((x) => x.textContent.trim().split(/\s+/).length)) };
+        toApp: document.querySelectorAll('a[href*="app.html"]').length, kural: (function () {
+          /* the kural band's ground is a gradient (the measure leaves it out), so its words are read against the band's own base colour here */
+          const k = document.querySelector('[data-testid="kural-footer"]'); if (!k || k.hidden) return null;
+          const rgb = (c) => (c.match(/[\d.]+/g) || []).slice(0, 3).map(Number), lum = (c) => { const v = rgb(c).map((x) => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); }); return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
+          const a = lum(getComputedStyle(k).color), b = lum(getComputedStyle(k).backgroundColor), kb = k.getBoundingClientRect();
+          return { ratio: Math.round(((Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05)) * 100) / 100, atFoot: kb.top >= document.querySelector('.app').getBoundingClientRect().bottom - 1 };
+        })(), maxWords: Math.max(...[...el.querySelectorAll('.kv, .hint')].map((x) => x.textContent.trim().split(/\s+/).length)) };
     });
-    const ok = c.bad.length === 0 && r.sw <= r.iw && !r.inner && r.floating.length === 0 && r.clipped === 0 && r.toApp === 0 && r.maxWords <= 20;
-    return { ok, saw: c.n + ' texts, ' + c.bad.length + ' below AA' + (c.bad.length ? ' (' + c.bad.slice(0, 3).map((x) => '"' + x.text + '" ' + x.ratio + '/' + x.need).join(', ') + ')' : '') + ' · scroll ' + r.sw + '/' + r.iw + ' · inner scroll ' + r.inner + ' · floating over the block ' + r.floating.length + (r.floating.length ? ' (' + r.floating[0] + ')' : '') + ' · clipped ' + r.clipped + ' · app.html ' + r.toApp + ' · longest line ' + r.maxWords + ' words' };
+    const ok = c.bad.length === 0 && r.sw <= r.iw && !r.inner && r.floating.length === 0 && r.clipped === 0 && r.toApp === 0 && r.maxWords <= 20 && (!r.kural || (r.kural.ratio >= 4.5 && r.kural.atFoot));
+    return { ok, saw: c.n + ' texts, ' + c.bad.length + ' below AA' + (c.bad.length ? ' (' + c.bad.slice(0, 3).map((x) => '"' + x.text + '" ' + x.ratio + '/' + x.need).join(', ') + ')' : '') + ' · scroll ' + r.sw + '/' + r.iw + ' · inner scroll ' + r.inner + ' · floating over the block ' + r.floating.length + (r.floating.length ? ' (' + r.floating[0] + ')' : '') + ' · clipped ' + r.clipped + ' · app.html ' + r.toApp + ' · longest line ' + r.maxWords + ' words · kural ' + (r.kural ? r.kural.ratio + ':1, at the foot ' + r.kural.atFoot : 'hidden') };
   };
   const looks = [['cream', 1366, 900], ['dark', 1366, 900], ['cream', 390, 844], ['dark', 390, 844]];
   for (const [th, wd, ht] of looks) {

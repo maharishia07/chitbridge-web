@@ -229,7 +229,9 @@
     '.cbav-btn[aria-expanded="true"]{outline:2px solid var(--av-blue);outline-offset:1px}' +
     /* ⚠️ `.cbav .cbav-signin`, not `.cbav-signin` (CL2, 2026-10-13): `.cbav a{color:inherit}` above is MORE specific than a lone class, so the door's
        white label lost to the page's ink — #20303b on the green, 2.02:1, on every lab page a signed-out owner opened (measured by e2e/walk-country-lab.cjs C1) */
-    '.cbav .cbav-signin{display:inline-flex;align-items:center;height:34px;padding:0 15px;border-radius:9px;background:var(--green,#16693F);color:#fff;font-size:calc(13.5px * var(--k,1));font-weight:700;text-decoration:none}' +
+    /* CL3: a list-token page under Dark re-points --green at the theme's --ok (#2E9E5E) — white on it is 3.4:1. The door's ground is the green
+       taken 28% toward black, so the white label is AA in every theme (Cream 9:1, Dark 5.8:1) and Cream's door is still green. */
+    '.cbav .cbav-signin{display:inline-flex;align-items:center;height:34px;padding:0 15px;border-radius:9px;background:color-mix(in srgb,var(--green,#16693F) 72%,var(--av-shade,#000));color:#fff;font-size:calc(13.5px * var(--k,1));font-weight:700;text-decoration:none}' +
     'button.cbav-signin{border:0;cursor:pointer;font-family:inherit}' +
     '.cbav-pop{position:absolute;inset-inline-end:0;top:calc(100% + 6px);z-index:1000;width:min(344px,calc(100vw - 32px));max-height:calc(100vh - 64px);overflow-y:auto;overscroll-behavior:contain;' +
     'padding:12px 14px;background:var(--av-card);color:var(--av-ink);border:1px solid var(--av-line);border-radius:12px;box-shadow:var(--av-shadow);font-size:calc(14px * var(--k,1));line-height:1.35}' +
