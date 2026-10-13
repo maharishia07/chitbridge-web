@@ -143,11 +143,12 @@ async function peStockSave(btn) {
 
 /* ═══ 2 · ASSETS & DEPRECIATION ═════════════════════════════════════════════════════════════════════════════════════════
    GET /assets → the register; POST /assets (by hand); POST /assets/:id/dispose; POST /depreciation/run { fy } → one entry, and the basis it used.
-   The classes are the India pack's (the server refuses another and names them). */
+   The classes are the pack's — the same six keys in IN · AU · AE (the server refuses another and names them). */
 const PE_CLASSES = [['buildings', 'Buildings'], ['plant', 'Plant & machinery'], ['furniture', 'Furniture'], ['vehicles', 'Vehicles'], ['office', 'Office equipment'], ['computers', 'Computers']];
 const PE_CLASS_WORD = PE_CLASSES.reduce((m, c) => { m[c[0]] = c[1]; return m; }, {});
-const PE_BASIS = { it_act_wdv: 'Income-tax WDV', schedule_ii: 'Schedule II' };
-const PE_ENTITY = { proprietor: 'proprietor', partnership: 'partnership', llp: 'LLP', huf: 'HUF', trust: 'trust', company: 'company' };
+/* CX2 (A5): the basis CODE is the pack's (depreciation.entityBases); its short word is here until a pack carries a label (engines request queued) */
+const PE_BASIS = { it_act_wdv: 'Income-tax WDV', schedule_ii: 'Schedule II', div40: 'Division 40', ias16: 'IAS 16' };
+const PE_ENTITY = { proprietor: 'proprietor', partnership: 'partnership', llp: 'LLP', huf: 'HUF', trust: 'trust', company: 'company', sole_trader: 'sole trader', sole_establishment: 'sole establishment' };
 async function peAssetsView(body) {
   if (!peOwner()) { body.innerHTML = peNoOwner('Only the owner sees the asset register'); return; }
   body.innerHTML = '<div class="supacts pe-bar">' + peBtn('pa-add-open', '＋ Add an asset', 'peAssetForm()') + peBtn('pa-dep-open', 'Run depreciation', 'peDepForm()', '') + '</div>'

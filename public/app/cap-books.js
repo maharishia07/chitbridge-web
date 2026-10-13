@@ -1016,7 +1016,7 @@ function bkDvHead() {
   if (n.waiting) notices.push({ cls: 'warn', tid: 'todo-waiting', text: n.waiting + ' ' + tx('waiting to be recorded'), onOpen: function () { bkTab('waiting'); } });
   if (!n.accept && !n.overdue && !n.cheques && !n.waiting) chips.push({ tid: 'todo-none', text: tx('Nothing waiting on you') });
   return { period: { label: bkDbPeriodLabel(q, p.preset), value: p.preset, custom: { from: q.from, to: q.to },
-      presets: [['today', tx('Today')], ['month', tx('This month')], ['fy', bkFyWord()], ['custom', tx('Custom')]],
+      presets: [['today', tx('Today')], ['month', tx('This month')], ['fy', bkFyWord('This FY')], ['custom', tx('Custom')]],
       onPick: function (v, range) { if (v === 'custom' && !range) return; BK.dbp = bkDbPeriod(v, range); bkTab('daybook', true); } },
     chips: chips, notices: notices,
     /* ＋ Entry (cap-entry.js, loaded by CB Accounts): the one door to a manual entry, in the slot CBList gives the head — the page that loads cap-entry offers it, nobody else */
@@ -1349,7 +1349,7 @@ function bkLgPeriodHead() {
   var pane = document.getElementById('lt_pane'), word = { today: 'Today', month: 'This month', fy: 'This FY' }[p.preset];
   /* the chip says the preset's name ("This FY") where the pane is too narrow for the dates — they are the chip's popover and the figures' own period */
   return { label: word && pane && pane.clientWidth < 1100 ? tx(word) : bkDbPeriodLabel(q, p.preset), value: p.preset, custom: { from: q.from, to: q.to },
-    presets: [['today', tx('Today')], ['month', tx('This month')], ['fy', bkFyWord()], ['custom', tx('Custom')]],
+    presets: [['today', tx('Today')], ['month', tx('This month')], ['fy', bkFyWord('This FY')], ['custom', tx('Custom')]],
     onPick: function (v, range) { if (v === 'custom' && !range) return; BK.lgp = bkDbPeriod(v, range); BK.lt.r = null; BK.lt.noParty = false; if (BK.lt.api) BK.lt.api.refresh(); bkLtLoad(); } };
 }
 /**
@@ -1757,17 +1757,17 @@ async function bkDues(body, onlySide) {   /* onlySide 'rcv' | 'pay' (CB Accounts
   } catch (e) { body.innerHTML = bkErr(e); }
 }
 /**
- * ⭐ THE SHOP'S YEAR IS THE SERVER'S (WX-R2R, 2026-10-13): GET /books/health answers year { fiscal_year, from, start_month } — the pack on the
- * Country setup's year start, the same default the TB / P&L / BS reads take. BK.year holds it (accounts.html boot · bkHealthLoad). Before this
- * every screen here assumed April: an AU shop (a July year) had its P&L refused for spanning two years and its months named Apr–Mar.
- * April is only the answer of a server that does not say (an older api).
+ * ⭐ THE SHOP'S YEAR IS THE SERVER'S — ONE PLACE (WX-R2R + CX2, 2026-10-13; one painter since INT5b): GET /books/health answers
+ * year { fiscal_year, from, start_month } — the pack on the Country setup's year start, the same default the TB / P&L / BS reads take. BK.year
+ * holds it (accounts.html boot · bkHealthLoad). Its first month, else the pack's (shopReg — CX2), else April (an older api, a page without
+ * helpers.js); the name is the pack's (split '2026-27' · single '2026'). Period 1 is that first month — what the server numbers.
  */
-function bkYearStart() { var m = Number(BK.year && BK.year.start_month); return m >= 1 && m <= 12 ? m : 4; }
-function bkFyNow() {
-  if (BK.year && BK.year.fiscal_year) return String(BK.year.fiscal_year);
-  var d = new Date(); var y = d.getMonth() + 1 >= 4 ? d.getFullYear() : d.getFullYear() - 1; return y + '-' + String((y + 1) % 100).padStart(2, '0');
-}
-function bkFyFrom() { return (BK.year && BK.year.from) || (bkFyNow().slice(0, 4) + '-04-01'); }
+function bkFyPack() { return typeof shopReg === 'function' ? shopReg() : null; }
+function bkYearStart() { var r = bkFyPack(), m = Number(BK.year && BK.year.start_month) || (r && r.fiscalYear && r.fiscalYear.startMonth) || 4; return m >= 1 && m <= 12 ? m : 4; }
+function bkFyStartYear(d) { return d.getMonth() + 1 >= bkYearStart() ? d.getFullYear() : d.getFullYear() - 1; }
+function bkFyName(y) { var r = bkFyPack(), single = r && r.fiscalYear && r.fiscalYear.label ? r.fiscalYear.label === 'single' : bkYearStart() === 1; return single ? String(y) : y + '-' + String((y + 1) % 100).padStart(2, '0'); }
+function bkFyNow() { return (BK.year && BK.year.fiscal_year) ? String(BK.year.fiscal_year) : bkFyName(bkFyStartYear(new Date())); }
+function bkFyFrom() { return (BK.year && BK.year.from) || (bkFyStartYear(new Date()) + '-' + String(bkYearStart()).padStart(2, '0') + '-01'); }
 var BK_MON12 = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 /** the twelve month names of the shop's year, period 1 first (April for India, July for Australia, January for a calendar year) */
 function bkMonths() { var s = bkYearStart() - 1; return BK_MON12.map(function (_, i) { return BK_MON12[(s + i) % 12]; }); }
@@ -1778,10 +1778,10 @@ function bkPeriodOfDay(day, L) {
   var hit = Object.keys((L && L.info) || {}).filter(function (k) { var x = L.info[k]; return x.start_date && x.end_date && String(x.start_date).slice(0, 10) <= day && day <= String(x.end_date).slice(0, 10) && Number(x.period) >= 1; })[0];
   if (hit) return { fy: hit.split('|')[0], p: Number(hit.split('|')[1]) };
   var st = bkYearStart(), m = Number(day.slice(5, 7)), y = m >= st ? Number(day.slice(0, 4)) : Number(day.slice(0, 4)) - 1;
-  return { fy: st === 1 ? String(y) : y + '-' + String((y + 1) % 100).padStart(2, '0'), p: (m - st + 12) % 12 + 1 };
+  return { fy: bkFyName(y), p: (m - st + 12) % 12 + 1 };
 }
-/** "This FY (Jul–Jun)" — the preset's name, in the shop's months */
-function bkFyWord() { var m = bkMonths(); return tx('This FY') + ' (' + tx(m[0]) + '–' + tx(m[11]) + ')'; }
+/** "This FY (Jul–Jun)" / "Whole year (Jul–Jun)" — the word with the shop's own months, ONE catalogue sentence (CX2) */
+function bkFyWord(w) { var m = bkMonths(); return txf((w || 'This FY') + ' ({a}–{b})', { a: tx(m[0]), b: tx(m[11]) }); }
 /** the period's status is a server enum — it becomes a word here, never shown raw */
 var BK_PERIOD_WORD = { open: 'Open', soft_locked: 'Locked', hard_locked: 'Closed for good' };
 function bkIsOwner() { return typeof SESSION !== 'undefined' && !!SESSION && SESSION.role === 'entity'; }   /* the server enforces it; this only decides who is offered the buttons */
@@ -1903,7 +1903,7 @@ function bkPackCtlPaint() {
   var el = document.getElementById('pk_ctl'), L = BK.lk; if (!el) return;
   var locked = bkMonths().map(function (m, i) { return [i + 1, m, L.rows[L.fy + '|' + (i + 1)]]; }).filter(function (x) { return x[2] === 'soft_locked' || x[2] === 'hard_locked'; });
   el.innerHTML = '<div class="supacts" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px">' + bkFyPicker('pk_fy', 'pk_fy')
-    + '<select class="inp" id="pk_p" data-testid="pk_p" onchange="bkPackPick()" style="flex:1 1 110px;min-width:0"' + '><option value="">' + esc(tx('Month')) + '</option><option value="year">' + esc(tx('Whole year') + ' (' + tx(bkMonths()[0]) + '–' + tx(bkMonths()[11]) + ')') + '</option>'
+    + '<select class="inp" id="pk_p" data-testid="pk_p" onchange="bkPackPick()" style="flex:1 1 110px;min-width:0"' + '><option value="">' + esc(tx('Month')) + '</option><option value="year">' + esc(bkFyWord('Whole year')) + '</option>'
     + locked.map(function (x) { return '<option value="' + x[0] + '">' + esc(tx(x[1])) + '</option>'; }).join('') + '</select>'
     + '<button class="supact-pri" data-testid="pk_build" id="pk_build" onclick="bkPackBuild()" disabled>' + tx('Make a pack') + '</button></div>'
     + (locked.length ? '' : '<div class="supacts" style="margin-bottom:9px"><button data-testid="pk_lockfirst" onclick="bkTab(\'lock\')">🔒 ' + tx('Lock a month first') + '</button></div>');
@@ -1948,8 +1948,10 @@ async function bkPackGet(id) {
       var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = (m && m[1]) || ('ledger-pack-' + id + '.zip'); a.setAttribute('data-testid', 'pack-download-link'); document.body.appendChild(a); a.click();
       setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
       BK.packGot = BK.packGot || {}; BK.packGot[id] = true;   /* this session holds the file — "We have it" is now a plain yes */
-      var files = (r && r.manifest && r.manifest.files) || [];
-      if (out) out.innerHTML = '<div data-testid="pack-manifest"><b>' + esc(tx('Manifest')) + '</b> · ' + files.length + ' ' + tx('files') + '<br>' + files.map(function (f) { return '<span class="mono">' + esc(f.name) + ' · ' + esc(String(f.sha256 || '').slice(0, 12)) + '</span>'; }).join('<br>') + '</div>';
+      var files = (r && r.manifest && r.manifest.files) || [], tally = r && r.manifest && r.manifest.tally;
+      if (out) out.innerHTML = '<div data-testid="pack-manifest"><b>' + esc(tx('Manifest')) + '</b> · ' + files.length + ' ' + tx('files') + '<br>' + files.map(function (f) { return '<span class="mono">' + esc(f.name) + ' · ' + esc(String(f.sha256 || '').slice(0, 12)) + '</span>'; }).join('<br>')
+        /* CX2 (A9): why the Tally file is absent or unchecked — the server's own sentence (not_for_country outside India · unverified), never a silent gap */
+        + (tally && tally.why ? '<div data-testid="pack-tally-why" style="color:var(--grey);margin-top:4px">' + esc(tx('Tally')) + ' · ' + esc(tx(tally.why)) + '</div>' : '') + '</div>';
     } catch (e) { if (out) out.textContent = bkWhy(e, tx('Could not download it')); }
   });
 }
