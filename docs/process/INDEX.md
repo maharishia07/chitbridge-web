@@ -8,25 +8,27 @@ Athi, 2026-10-12: *"for each function we are building we need to have a SAP kind
 
 | flow | what it is | SAP | steps | ✅ | ⚠️ | MISSING |
 |---|---|---|---|---|---|---|
-| [O2C](O2C.md) | Order to cash | SD → FI-AR | enquiry → quote → order → delivery → invoice → receipt → posted → cash position | 6 | 1 | 1 |
+| [O2C](O2C.md) | Order to cash | SD → FI-AR | enquiry → quote → order → delivery → invoice → receipt → posted → cash position → repeat supply | 7 | 1 | 1 |
 | [P2P](P2P.md) | Procure to pay | MM → FI-AP | need → PO → goods receipt → supplier bill → payment → posted | 5 | 1 | 0 |
 | [R2R](R2R.md) | Record to report | FI-GL | country → entries → day close → month lock → GST → year close → statements → cash position | 8 | 0 | 0 |
 | [INV](INV.md) | Inventory | MM-IM | receipt → stock → issue / sale → count → closing stock | 2 | 2 | 1 |
 | [H2P](H2P.md) | Hire to pay | HCM → FI | person → access → attendance → payroll → payment | 2 | 1 | 2 |
 | [L2C](L2C.md) | Lead to customer | SD pre-sales (CRM) | lead → call → demo → trial → customer | 3 | 2 | 0 |
 | [C2V](C2V.md) | Client to verified (the practice door) | no SAP module — the incumbents (Xero HQ / QBOA / MYOB Practice, docs/research/COMPARE-AU-BOOKS-2026-10.md §2) are a baseline only; built on our construct (docs/design/practice-door/REQUIREMENT.md §0) | practice → request → grant → dashboard → open client → ask → end | 0 | 1 | 6 |
+| [MVI](MVI.md) | Move in (from Xero / QuickBooks) | FI (conversion: opening balances, master data) | chart of accounts → contacts → items → opening balances | 4 | 0 | 0 |
 
 ## Flows × modules — which module owns which step
 
 | flow | CRM | Finance | Accounts | Till | Tasks & Orders | Operations | Employees | Network |
 |---|---|---|---|---|---|---|---|---|
-| O2C |  | 6 receipt<br>8 cash position | 7 posted | 5 invoice | 2 quote (MISSING)<br>3 order<br>4 delivery |  |  | 1 enquiry ⚠️ |
+| O2C |  | 6 receipt<br>8 cash position<br>9 repeat supply | 7 posted | 5 invoice | 2 quote (MISSING)<br>3 order<br>4 delivery |  |  | 1 enquiry ⚠️ |
 | P2P |  |  | 4 supplier bill<br>5 payment<br>6 posted |  | 2 PO | 1 need ⚠️<br>3 goods receipt |  |  |
 | R2R |  | 8 cash position | 1 country<br>2 entries<br>4 month lock<br>5 GST<br>6 year close<br>7 statements | 3 day close |  |  |  |  |
 | INV |  |  | 5 closing stock ⚠️ | 2 stock<br>3 issue / sale ⚠️ |  | 1 receipt<br>4 count (MISSING) |  |  |
 | H2P |  |  | 5 payment (MISSING) | 3 attendance ⚠️ |  |  | 1 person<br>2 access<br>4 payroll (MISSING) |  |
 | L2C | 1 lead<br>2 call<br>3 demo ⚠️<br>4 trial ⚠️<br>5 customer |  |  |  |  |  |  |  |
 | C2V |  |  | 1 practice (MISSING)<br>2 request (MISSING)<br>3 grant (MISSING)<br>4 dashboard (MISSING)<br>5 open client (MISSING)<br>6 ask ⚠️<br>7 end (MISSING) |  |  |  |  |  |
+| MVI |  |  | 1 chart of accounts<br>2 contacts<br>3 items<br>4 opening balances |  |  |  |  |  |
 
 ## The modules
 

@@ -320,6 +320,8 @@ function go(){ signedOut('Your session ended. Please sign in again.'); }   /* ap
 <script src="/app/cap-entry.js"></script>   <!-- ＋ Entry on the Day book: four plain steps, the server's events and preview (docs/design/manual-entry) -->
 <script src="/app/cap-period.js"></script>   <!-- Month & year end: Closing stock · Assets & depreciation · Accruals & recurring · GST close & pay · Year close -->
 <script src="/app/cap-bank.js"></script>   <!-- Bank: the statement file is parsed in the browser and NEVER uploaded -->
+<script src="/app/step-flow.js"></script>   <!-- CBSteps: the one step flow (rail · guard with a reason · footer) the Move in screen composes on -->
+<script src="/app/cap-move-in.js"></script>   <!-- Move in from Xero / QuickBooks (IM1): CBSteps file → columns → preview → import; CBList rows; CBAction for the one write -->
 <script src="/app/one-person.js"></script>
 <script src="/engine/signin.js"></script>   <!-- CBSignin: the sign-in RULES (engines signin) -->
 <script src="/app/signin-ui.js"></script>   <!-- CBSignin.mount: THE ONE SIGN-IN WINDOW (M14) — the signed-out card mounts it -->
@@ -352,10 +354,11 @@ const NAV = [
   ['packs', 'Packs', 'M3 7l9-4 9 4v10l-9 4-9-4zM3 7l9 4 9-4M12 11v10'],
   ['opening', 'Opening balances', 'M12 3v12M7 10l5 5 5-5M4 21h16'],
   ['accounts', 'Shop ledgers', 'M3 6h6l2 2h10v11H3z'],
+  ['movein', 'Move in', 'M4 12h12M12 8l4 4-4 4M20 4v16'],   /* IM1: move in from Xero / QuickBooks — the five exports, each file → columns → preview → import */
 ];
 /* the kural of each view (docs/design/kural-kit/kurals.json routes): one per screen. The open LEDGER picks its own (cap-books.js bkKuralFor); the API does not send `ledger.kural` yet */
 const KURAL_OF = { todo: 'accounts', daybook: 'daybook', ledgers: 'accounts', tb: 'accounts', pl: 'reports', bs: 'reports', dues: 'sales', bills: 'accounts', cheques: 'daybook', waiting: 'suspense', receivables: 'sales', payables: 'sales', bank: 'suspense',
-  lock: 'month-lock', closingstock: 'period-close', assets: 'period-close', accruals: 'period-close', gstclose: 'gst', yearclose: 'period-close', packs: 'accounts', opening: 'accounts', accounts: 'accounts' };
+  lock: 'month-lock', closingstock: 'period-close', assets: 'period-close', accruals: 'period-close', gstclose: 'gst', yearclose: 'period-close', packs: 'accounts', opening: 'accounts', accounts: 'accounts', movein: 'accounts' };
 const TITLES = { ledgers: 'Ledgers', todo: 'To do' };   /* the Ledgers view keeps the designer's heading; the rest are named as the menu names them */
 
 /* the Ledgers' grouping (bands → groups → ledgers, decided by CODE) lives in app/cap-books.js — one copy, drawn as the folder tree */
@@ -381,7 +384,7 @@ const NAV_GROUPS = [
   /* Athi, 2026-10-03 (T20/T21): Outstandings > Receivables · Payables · Bills · Cheques. Waiting is not a menu item any more: a posting that failed is a To do item (its notice opens the same list). */
   ['Outstandings', ['receivables', 'payables', 'bills', 'cheques']],
   ['Period end', ['lock', 'closingstock', 'assets', 'accruals', 'gstclose', 'yearclose']],
-  ['Setup', ['packs', 'opening', 'accounts']],
+  ['Setup', ['packs', 'opening', 'accounts', 'movein']],
 ];
 const navFolded = () => { try { return JSON.parse(localStorage.getItem('cb_acc_navfold') || '{}') || {}; } catch (_) { return {}; } };
 function navPaint(active){
@@ -463,7 +466,7 @@ BK.slotWho = (el) => { el.appendChild(WHO); };
 BK.onLedger = (sel) => { document.body.classList.toggle('lg-sel', !!sel); if (!sel) whoHome(); };
 BK.views = { bills: (body) => accBills(body), todo: (body) => accTodo(body), receivables: (b) => bkDues(b, 'rcv'), payables: (b) => bkDues(b, 'pay'),
   closingstock: (b) => peStockView(b), assets: (b) => peAssetsView(b), accruals: (b) => peAccrualsView(b), gstclose: (b) => peGstView(b), yearclose: (b) => peYearView(b),
-  bank: (b) => bankView(b) };   /* the Ledgers view is cap-books.js's own: the folder tree + the Task table */
+  bank: (b) => bankView(b), movein: (b) => miView(b) };   /* the Ledgers view is cap-books.js's own: the folder tree + the Task table */
 function show(view){
   if (!ON) { chrome(NAV.some((n) => n[0] === view) ? view : 'todo'); return; }   /* the frame is up before the Ledger has answered: a tap on the menu is remembered (the hash) and opened when it does */
   whoHome();
