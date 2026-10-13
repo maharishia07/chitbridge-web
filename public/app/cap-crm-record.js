@@ -20,6 +20,7 @@ var CRM_KIND = {
   chit: ['chit', '', 'Chit'], message: ['msg', 'blue', 'Message'], message_internal: ['msg', '', 'Internal message'], bill: ['bill', '', 'Bill'], payment: ['pay', 'green', 'Payment'],
   dispute: ['flag', 'red', 'Dispute'], call: ['phone', '', 'Call'], visit: ['pin', '', 'Visit'], whatsapp: ['wa', 'green', 'WhatsApp'], note: ['note', '', 'Note'],
   mail: ['mail', '', 'Mail'], followup: ['clock', 'amber', 'Follow-up'], change: ['pencil', '', 'Change'], link: ['link', 'green', 'Linked'],
+  stage: ['pencil', '', 'Stage'],   /* a lead's move (memberships, read by the timeline — FX-L2C F7) */
 };
 var CRM_TABS = [['all', 'All'], ['messages', 'Messages'], ['bills', 'Bills'], ['notes', 'Notes & calls'], ['mail', 'Mail'], ['followups', 'Follow-ups']];
 var CRM_SUPPLY = { intra: 'Same state — CGST and SGST', inter: 'Another state — IGST' };
@@ -66,7 +67,7 @@ function crmRecordFrom(rec, p) {
 /** the timeline as the API sends it ({ entries: [{ kind, at, … }] }, kinds chit · message · dispute · ledger · interaction · followup · followup_done · change) → the page's entry grammar */
 function crmEntryFrom(e, i) {
   if (e && e.line != null && e.id != null) return e;   // already the page's grammar (the design stand-in's) — accepted as is
-  var at = e.at || '', k = e.kind, key = e.interaction_id || e.followup_id || e.dispute_id || e.chit_id || e.ref || e.field || '';
+  var at = e.at || '', k = e.kind, key = e.interaction_id || e.followup_id || e.dispute_id || e.membership_id || e.chit_id || e.ref || e.field || '';
   /* a stable id (it is the row's test id and its key): the API's own id for the thing, plus the time where the same id can appear twice (a message, a ledger item, a change) */
   var o = { at: at, kind: k, line: '', by: '', id: k + '-' + key + (/^(message|ledger|change|followup_done)$/.test(k) ? '-' + Date.parse(at) : '') };
   if (e.chit_id) o.chit_id = e.chit_id;
@@ -91,6 +92,8 @@ function crmEntryFrom(e, i) {
   else if (k === 'followup') o.line = e.what || '';
   else if (k === 'followup_done') { o.kind = 'followup'; o.line = tx('Done') + ' · ' + (e.what || ''); }
   else if (k === 'change') { o.line = word(e.field) + (e.old != null || e.new != null ? ': ' + (e.old == null ? '—' : e.old) + ' → ' + (e.new == null ? '—' : e.new) : ''); o.by = e.by || ''; }
+  /* a stage move: who · when · from → to (the server's memberships row; the words are the Leads module's CRM_STAGE) */
+  else if (k === 'stage') { var SW = typeof CRM_STAGE === 'object' ? CRM_STAGE : {}, to = tx(SW[e.stage] || e.stage || ''); o.line = e.from ? txf('Moved to {to} · from {from}', { to: to, from: tx(SW[e.from] || e.from) }) : txf('Added as {to}', { to: to }); o.by = crmIsRawId(e.by) ? '' : (e.by || ''); }
   else o.line = e.line || e.title || '';
   return o;
 }
@@ -109,7 +112,7 @@ function crmEntryWhat(e) {
   return '<div class="entry' + (e.theirs ? ' theirs' : '') + '" data-testid="crm-entry-' + esc(e.id) + '" data-kind="' + esc(e.kind) + '"><span class="mk ' + esc(tone) + '" title="' + esc(tx(k[2])) + '">' + crmIcon(k[0]) + '<span class="sr-only">' + esc(tx(k[2])) + '</span></span>'
     + '<span class="tx"><span' + (unread ? ' class="unread-line"' : '') + '>' + (unread ? '<span class="udot" title="' + esc(tx('Unread')) + '"></span> ' : '') + esc(crmEntryLine(e)) + '</span>' + (e.kind === 'message_internal' ? '<span class="tagi">' + esc(tx('internal')) + '</span>' : '')
     + (e.thread && e.thread.count > 1 ? ' <span class="sub">+' + (e.thread.count - 1) + ' ' + esc(tx('more')) + '</span>' : '')
-    + '<span class="by">' + (e.theirs ? '<span style="color:var(--blue-i)">↙</span> ' : '') + esc(e.by || '') + (e.direction ? ' · ' + esc(tx(e.direction === 'in' ? 'in' : 'out')) : '') + '</span></span></div>';
+    + '<span class="by">' + (e.theirs ? '<span style="color:var(--blue-i)">↙</span> ' : '') + esc(e.by || '') + (e.direction ? (e.by ? ' · ' : '') + esc(tx(e.direction === 'in' ? 'incoming' : 'outgoing')) : '') + '</span></span></div>';   /* never a lone "· out" (ai-eye E-16/E-20) */
 }
 function crmEntryState(e) {
   var h = '';
@@ -154,7 +157,9 @@ async function crmRecordOpen(route) {
     /* a walk-in is a phone that holds points, not a party: the API has no record of it (its party_id is null) - the row is all there is */
     var got = p.kind === 'walk-in' ? [{}, null] : await Promise.all([api('crmParty', { params: { id: p.party_id } }), api('crmTimeline', { params: { id: p.party_id }, query: { limit: 100 } }).catch(function () { return null; })]);
     rec = got[0]; head = got[1];
-    if (tok !== CRMR.tok) return;
+    /* the person may have LEFT this record while the read was out (WX-L2C: a stage move re-reads the record; Leads opened meanwhile, and the
+       record painted over the Leads list under the Leads bar): a read that lands on another screen paints nothing */
+    if (tok !== CRMR.tok || CRM.route !== route) return;
     rec = crmRecordFrom(rec, p);
     CRMR.added = rec.customer && rec.customer.added_via || '';
     /* the latest five are shown; the same read (up to 100) is what "bills" and "orders not billed yet" are counted from - no new route */
@@ -164,7 +169,7 @@ async function crmRecordOpen(route) {
     crmRecordPaint(p, CRMR.rec);
   } catch (e) {
     /* ANY failure — the read or the paint — ends the spinner: a plain line and Try again, never "Reading…" for good */
-    if (tok !== CRMR.tok) return;
+    if (tok !== CRMR.tok || CRM.route !== route) return;
     var w = s.querySelector('.loadwrap'), html = '<div class="empty" data-testid="crm-rec-error"><div class="t">' + esc(tx("Couldn't open this party.")) + '</div><button type="button" class="act ghost" data-crm="recretry" data-testid="crm-rec-retry">' + esc(tx('Try again')) + '</button></div>';
     if (w) w.outerHTML = html; else { var rr = s.querySelector('.rec'); if (rr) rr.insertAdjacentHTML('beforeend', html); else s.innerHTML = '<div class="content">' + html + '</div>'; }
     return;
@@ -195,13 +200,13 @@ function crmDueChip(p) {
 function crmHeaderHTML(p) {
   var legal = p.legal_name && p.legal_name !== p.display_name ? '<div class="legal" data-testid="crm-legal">' + esc(p.legal_name) + '</div>' : '';
   return '<div class="rhead"><h1 data-testid="crm-rec-name">' + esc(p.display_name) + '</h1>' + legal
-    + '<div class="rchips">' + crmRoleChips(p) + crmRailChip(p) + crmDueChip(p) + crmSegChip(p) + crmStageChip(p.lead) + '</div></div>';
+    + '<div class="rchips">' + crmRoleChips(p) + crmRailChip(p) + (crmIsLead(p) && !Number(p.balance_minor || 0) ? '' : crmDueChip(p)) + crmSegChip(p) + crmStageChip(p.lead) + '</div></div>';   /* a lead with nothing due is not "Settled": nothing was ever due (WX-L2C) */
 }
 function crmIdentityHTML(p, rec) {
   if (p.kind === 'walk-in') return '<div class="idblk walk" data-testid="crm-ident"><div class="verdict off">' + crmIcon('walk') + '<span>' + esc(tx('Walk-in — known by phone at the counter. A party number comes when you add them.')) + '</span></div></div>';
   var on = !!p.on_chitbridge, minted = p.kind === 'local' || !p.bridge_id;
   var cell = function (k, v, none, tid) { return '<div class="c"><div class="k">' + esc(tx(k)) + '</div><div class="v' + (v ? '' : ' none') + '" data-testid="' + tid + '">' + (v ? esc(v) : esc(tx(none))) + '</div></div>'; };
-  var shopper = p.why_not === 'shopper' || (!on && !!p.bridge_id && p.why_not !== 'inactive' && p.why_not !== 'other_population');
+  var shopper = p.why_not === 'shopper' || (!on && !minted && !!p.bridge_id && p.why_not !== 'inactive' && p.why_not !== 'other_population');   /* a minted party (kind 'local') is never a shopper account, bridge_id or not (WX-L2C) */
   var why = p.why_not === 'inactive' ? 'Account inactive — bills are yours only.' : p.why_not === 'other_population' ? 'Test space — bills are yours only.' : shopper ? 'A shopper account on ChitBridge — they order from your shop. Bills are yours only.' : 'Not on ChitBridge — bills are yours only.';
   return '<div class="idblk' + (on ? '' : ' local') + '" data-testid="crm-ident">' + '<div class="cells">'
     + cell('Party no', p.party_no, '—', 'crm-id-no') + (!minted && p.user_id ? cell('User ID', p.user_id, '—', 'crm-id-user') : '') + (!minted && p.bridge_id ? cell('ChitBridge ID', p.bridge_id, '—', 'crm-id-bridge') : '') + '</div>'
@@ -239,8 +244,25 @@ function crmMailBlock(p, rec) {
   if (!(c.emails || []).length) return tx('No e-mail yet');
   return '';
 }
+/**
+ * a viewer's bar (FX-L2C): every action the record offers is SHOWN, greyed, with the server's ONE sentence — the rule "show the action, the
+ * server decides" (the Calls list greys its outcomes the same way). A phone call is not a write, so Call stays live when there is a number.
+ */
+function crmViewerActionsHTML(p, rec) {
+  var c = rec.contacts || {}, phone = (c.phones || [])[0], why = tx('Your login can only view'), b = [];
+  var off = function (k, tid, label, cls) { return '<button type="button" class="act ghost' + (cls ? ' ' + cls : '') + '" disabled aria-disabled="true" title="' + esc(why) + '" data-testid="' + tid + '">' + (k ? crmIcon(k) : '') + esc(tx(label)) + '</button>'; };
+  if (phone) b.push('<a class="act" href="tel:' + esc(String(phone).replace(/\s+/g, '')) + '" data-crm="call" data-testid="crm-act-call">' + crmIcon('phone') + esc(tx('Call')) + '</a>');
+  if (p.kind === 'walk-in') b.push(off('plus', 'crm-act-walkin', 'Add to my parties'));
+  else {
+    if (p.on_chitbridge) b.push(off('msg', 'crm-act-message', 'Message'));
+    var b0 = Number(p.balance_minor || 0); b.push(off('pay', 'crm-act-pay', b0 > 0 ? 'Receive' : b0 < 0 ? 'Pay' : 'Pay / Receive'));
+    b.push(off('note', 'crm-act-log', 'Log'), off('clock', 'crm-act-fu', 'Follow-up', 'wide-only'), off('pencil', 'crm-act-edit', 'Edit', 'wide-only'));
+    if (crmIsLead(p)) b.push(off('', 'crm-act-stage', 'Move to…'));
+  }
+  return '<div class="actbar pin" role="toolbar" aria-label="' + esc(tx('Actions')) + '" data-testid="crm-actions" data-level="viewer">' + b.join('') + '<span class="why" data-testid="crm-actions-why">' + esc(why) + '</span></div>';
+}
 function crmActionsHTML(p, rec) {
-  if (!crmEdit()) return '';
+  if (!crmEdit()) return crmViewerActionsHTML(p, rec);
   var c = rec.contacts || {}, phone = (c.phones || [])[0], mail = (c.emails || []).filter(function (m) { return !(rec.mail_bounced && rec.mail_bounced.to === m); })[0] || (c.emails || [])[0], mb = crmMailBlock(p, rec), primary, inline = [];
   var key = esc(crmKey(p)), icon = function (k) { return crmIcon(k); };
   var mailBtn = '<a class="act ghost wide-only" href="mailto:' + esc(mail || '') + '" data-crm="mail" data-testid="crm-act-mail">' + icon('mail') + esc(tx('Mail')) + '</a>';
@@ -254,7 +276,7 @@ function crmActionsHTML(p, rec) {
   if (p.kind !== 'walk-in') {
     var wpay = crmWhyNot(p, 'pay'), b0 = Number(p.balance_minor || 0), plab = b0 > 0 ? 'Receive' : b0 < 0 ? 'Pay' : 'Pay / Receive';
     inline.push('<button type="button" class="act' + (wpay ? ' ghost' : '') + '" data-crm="rpay" data-testid="crm-act-pay"' + (wpay ? ' disabled title="' + esc(wpay) + '"' : '') + '>' + icon('pay') + esc(tx(plab)) + (wpay ? '<span class="why wide-only" style="font-weight:400;font-size:12px"> \u00b7 ' + esc(wpay) + '</span>' : '') + '</button>');
-    if (!p.on_chitbridge) inline.push('<button type="button" class="act ghost wide-only" disabled data-testid="crm-act-message-off" title="' + esc(crmWhyNot(p, 'message')) + '">' + icon('msg') + esc(tx('Message')) + '</button>');
+    if (!p.on_chitbridge) inline.push('<button type="button" class="act ghost wide-only" disabled data-testid="crm-act-message-off" title="' + esc(crmWhyNot(p, 'message')) + '">' + icon('msg') + esc(tx('Message')) + '<span class="why wide-only" style="font-weight:400;font-size:12px"> · ' + esc(crmWhyNot(p, 'message')) + '</span></button>');   /* the refused action carries its sentence on screen, as Pay / Receive does — not only in a tooltip (WX-L2C) */
   }
   var more = [];
   if (p.kind !== 'walk-in') more.push('<button type="button" class="narrow-only" data-crm="rfu" data-testid="crm-more-fu">' + icon('clock') + esc(tx('Follow-up')) + '</button>', '<button type="button" class="narrow-only" data-crm="redit" data-testid="crm-more-edit">' + icon('pencil') + esc(tx('Edit')) + '</button>');
@@ -328,7 +350,7 @@ function crmRecordPaint(p, rec) {
   /* the mounts */
   crmEditPrep(p, rec);
   var head = document.getElementById('crm_tlhead');
-  if (head) { if (CRMR.headApi) { try { CRMR.headApi.destroy(); } catch (_) {} } CRMR.headApi = CBList.mount(head, { key: 'crm-tl-head', t: tx, fill: false, view: 'grid', tools: { search: false, csv: false }, rows: function () { return rec.timeline_head || []; }, id: function (e) { return e.id; },
+  if (head) { if (CRMR.headApi) { try { CRMR.headApi.destroy(); } catch (_) {} } CRMR.headApi = CBList.mount(head, { key: 'crm-tl-head', t: tx, fill: false, view: 'grid', tools: { search: false, csv: false, count: false }, rows: function () { return rec.timeline_head || []; }, id: function (e) { return e.id; },   /* the section head already says "N entries" — one count (ai-eye E-18) */
     columns: crmTlCols, defaultCols: ['what', 'when', 'state', 'amount'], rowTid: function (e) { return 'crm-tl-' + e.id; }, onOpen: crmEntryOpen, next: crmEntryNext, empty: { title: tx('Nothing yet with this party.'), sub: tx('Use Log to record a call or note.') } }); }
   var led = document.getElementById('crm_ledger');
   if (led) led.innerHTML = partyBooksHTML(cu ? 'customer' : 'supplier', p.party_id, crmLedgerRow(p, rec), true);
@@ -360,7 +382,7 @@ function crmLedgerRepaint(pid) {
   var d = BK.dues && BK.dues[pid]; if (d && d.balance_minor != null) p.balance_minor = d.balance_minor;   /* the same row the Parties list reads */
   /* only the three places the balance shows - never the whole record: a repaint would fold the Ledger section the person is working in */
   var R = Object.assign({}, p, rec), has = CRM.ledger && p.balance_minor != null, rc = document.querySelector('[data-testid="crm-record"] .rchips');
-  if (rc) rc.innerHTML = crmRoleChips(R) + crmRailChip(R) + crmDueChip(Object.assign({}, R, { balance_minor: p.balance_minor, billFacts: crmBillFacts(rec.timeline_all || rec.timeline_head) })) + crmSegChip(R) + crmStageChip(R.lead);
+  if (rc) rc.innerHTML = crmRoleChips(R) + crmRailChip(R) + (crmIsLead(R) && !Number(p.balance_minor || 0) ? '' : crmDueChip(Object.assign({}, R, { balance_minor: p.balance_minor, billFacts: crmBillFacts(rec.timeline_all || rec.timeline_head) }))) + crmSegChip(R) + crmStageChip(R.lead);
   var fact = document.querySelector('[data-testid="crm-sec-fact-ledger"]'); if (fact) fact.innerHTML = has ? crmDueCell(p) : '';
   var led = document.getElementById('crm_ledger');
   if (led) led.innerHTML = partyBooksHTML(rec.customer ? 'customer' : 'supplier', pid, crmLedgerRow(p, rec), true);
@@ -426,7 +448,7 @@ function crmTlFilters(T) {
 function crmTimelineView(p, tok) {
   var s = document.getElementById('screen'), f = (CRM.route.params || {}).f;
   var T = CRMR.tl = { p: p, kind: 'all', q: '', entries: [], next: null, counts: {}, state: 'loading', gen: 0, err: null, busy: false };
-  crmBar('<a href="#/party/' + esc(crmKey(p)) + '" data-testid="crm-back">‹ ' + esc(p.display_name) + '</a>', crmEdit() ? '<button type="button" class="act sm" data-crm="rlog" data-testid="crm-act-log">+ ' + esc(tx('Log a call or note')) + '</button>' : '', true);
+  crmBar('<a href="#/party/' + esc(crmKey(p)) + '" data-testid="crm-back">‹ ' + esc(p.display_name) + '</a>', crmEdit() ? '<button type="button" class="act sm" data-crm="rlog" data-testid="crm-act-log">+ ' + esc(tx('Log a call or note')) + '</button>' : crmViewOnlyBtn('crm-act-log', '+ ' + tx('Log a call or note'), tx('Your login can only view')), true);
   s.className = 'screen flush';
   s.innerHTML = '<div id="crm_tl" data-testid="crm-timeline"></div>';
   if (CRMR.tlApi) { try { CRMR.tlApi.destroy(); } catch (_) {} }
