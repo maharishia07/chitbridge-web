@@ -111,9 +111,22 @@ function supplierBillBody(sup, buyer, lines, no, at) {
     line_items: lines }, total };
 }
 
+/** the two loaded shops as the flow needs them (idempotent; the api's own doors): the supplier shop is named Kumar Trade Co, its catalogue is public,
+ *  the buyer lists it as a resale supplier and it lists the buyer as a customer. tools/sim-load.cjs names every shop "Simulated Stores" and keeps
+ *  its catalogue private — so a fresh load needs exactly these four PATCH/POSTs, and nothing else (docs/testing/WX-P2P-2026-10-13.md). */
+async function ensureSupplier(buyerId, supId) {
+  let sup = await party(supId);
+  if (sup.me.display_name !== 'Kumar Trade Co') await http('/api/entities/profile', 'PATCH', { display_name: 'Kumar Trade Co' }, sup.token);
+  if (sup.me.catalogue_visibility !== 'public') await http('/api/entities/profile', 'PATCH', { catalogue_visibility: 'public' }, sup.token);
+  await sup.post('/api/relationships/customers', { handle: buyerId });
+  const buyer = await party(buyerId);
+  await buyer.post('/api/relationships/suppliers', { supplier_bridge_id: supId, supply_kind: 'resale' });
+  return party(supId);
+}
+
 const walk = async (w) => {
   const { browser, page } = w;
-  const loaded = await party(BUYER), sup = await party(SUPPLIER);
+  const sup = await ensureSupplier(BUYER, SUPPLIER), loaded = await party(BUYER);
   const dep = ONLY === 'W' ? null : await ensureBuyer(DEPTH_BUYER);
   /* the supplier knows the fresh buyer as a customer too (its own door) — a bill to a customer on the rail is two-sided */
   if (dep) await sup.post('/api/relationships/customers', { handle: DEPTH_BUYER });
@@ -220,14 +233,15 @@ const walk = async (w) => {
     await w.step('D10', 'The SUPPLIER (Kumar Trade Co) -> Task: "Open 0/1 · Nothing in Open" on a paged list (WX-P2P-03); the search finds the order -> opening it shows the buyer and the two lines', async () => {
       const p = supUI.page;
       await open(p, '/app.html#/app/task', T('task-count')); await p.waitForTimeout(1500);
-      const t0 = await text(p), paged = t0.slice(t0.indexOf('Open'), t0.indexOf('Open') + 30);
+      const t0 = await text(p), paged = t0.slice(t0.indexOf('Unassigned'), t0.indexOf('Unassigned') + 60), listed = /Order — Kumar Trade Co/.test(t0);
       await p.fill('#listsrch', 'Order — Kumar'); await p.waitForFunction(() => /Order — Kumar Trade Co/.test(document.body.innerText) && !/Nothing in Open/.test(document.body.innerText), null, { timeout: 10000 }).catch(() => {});
       await p.waitForTimeout(600);
       const row = p.locator('text=Order — Kumar Trade Co').first();
       if (await row.count()) { await row.click(); await p.waitForTimeout(1500); }
       const t2 = await text(p), name = await shot(p, 'd10-supplier-task');
       const i = t2.indexOf('DTL');
-      return { ok: /Order — Kumar Trade Co/.test(t2) && t2.slice(i).indexOf(buyer.me.display_name) >= 0 && /Coconut hair oil|Chocolate bar/.test(t2), saw: name + ' · before the search: "' + paged + '" · ' + t2.slice(i, i + 200) };
+      const selfHead = /Order — Kumar Trade Co · Kumar Trade Co/.test(t2);
+      return { ok: listed && /Order — Kumar Trade Co/.test(t2) && t2.slice(i).indexOf(buyer.me.display_name) >= 0 && /Coconut hair oil|Chocolate bar/.test(t2), saw: name + ' · before the search: "' + paged + '" ' + (listed ? '(the order is listed)' : '[the order is NOT listed until searched — WX-P2P-03]') + ' · ' + t2.slice(i, i + 200) + (selfHead ? ' [the head names the reader\'s own shop as the party — WX-P2P-17]' : '') };
     });
     await w.step('D11', 'The SUPPLIER -> Status ▾ -> Act -> Set status -> the order reads ACT; the BUYER\'s Order list shows the same ACT', async () => {
       const p = supUI.page;
@@ -272,7 +286,10 @@ const walk = async (w) => {
       await openBillSheet();
       const t = await txt(page, '#chitsheet'), acts = [];
       for (const k of ['accept', 'dispute', 'goodsin', 'page']) if (await page.locator(T('cs-act-' + k)).count()) acts.push(k);
-      return { ok: t.indexOf(S.bill.no) >= 0 && /Kumar Trade Co/.test(t) && /To accept/.test(t) && t.indexOf(money(S.bill.total)) >= 0 && acts.length === 4, saw: 'actions ' + acts.join('·') + '; ' + t.slice(0, 220) };
+      /* a line's Total is the figure the buyer agreed to — quantity × the tax-inclusive price; a paisa off is the parts' rounding re-added (WX-P2P-16) */
+      const offs = [];
+      for (let i = 0; i < S.bill.lines.length; i++) { const row = await txt(page, T('cs-line-' + i)), want = money(S.bill.lines[i].quantity * S.bill.lines[i].price), got = (row.match(/₹\s?[\d,]+\.\d\d\s*$/) || [''])[0].replace(/[₹\s]/g, ''); if (got && got !== want) offs.push(row.slice(0, 40) + ' → ' + got + ' not ' + want); }
+      return { ok: t.indexOf(S.bill.no) >= 0 && /Kumar Trade Co/.test(t) && /To accept/.test(t) && t.indexOf(money(S.bill.total)) >= 0 && acts.length === 4, saw: 'actions ' + acts.join('·') + '; ' + t.slice(0, 220) + (offs.length ? ' [line total ≠ qty × price: ' + offs.join('; ') + ' — WX-P2P-16, engines]' : '') };
     });
     await w.step('D14', 'The sheet -> Open page -> the app opens the bill in a new tab -> ⧉ Lines -> THEM · Delivered & paid: "0 of n"; Delivered on the first line -> "n of n" (step 3 · goods receipt)', async () => {
       const popup = page.context().waitForEvent('page', { timeout: 15000 }).catch(() => null);
@@ -386,7 +403,7 @@ const walk = async (w) => {
       await open(page, '/accounts.html#pl', T('pl-profit')); const t2 = await text(page);
       await open(page, '/accounts.html#gstclose', T('pg-close')); const t3 = await text(page);
       const bal = await txt(page, T('tb-balanced'));
-      return { ok: /2100 Suppliers/.test(t1) && /1500 Bank/.test(t1) && /5000 · Purchases/.test(t2) && /Close the month/.test(t3), saw: 'TB: ' + t1.slice(t1.indexOf('2100'), t1.indexOf('2100') + 50) + ' · ' + t1.slice(t1.indexOf('Total'), t1.indexOf('Total') + 40) + '; P&L: ' + t2.slice(t2.indexOf('5000'), t2.indexOf('5000') + 40) + '; GST: ' + t3.slice(t3.indexOf('Financial year'), t3.indexOf('Financial year') + 60) };
+      return { ok: /1500 Bank/.test(t1) && /2210 Input CGST/.test(t1) && /✓ balances/.test(bal) && /5000 · Purchases/.test(t2) && /Close the month/.test(t3), saw: 'TB: ' + t1.slice(t1.indexOf('1500'), t1.indexOf('1500') + 40) + ' · ' + (/2100/.test(t1) ? 'Suppliers listed' : 'Suppliers nets to nothing after the payment (no row, rightly)') + ' · ' + bal + ' · ' + t1.slice(t1.indexOf('Total'), t1.indexOf('Total') + 40) + '; P&L: ' + t2.slice(t2.indexOf('5000'), t2.indexOf('5000') + 40) + '; GST: ' + t3.slice(t3.indexOf('Financial year'), t3.indexOf('Financial year') + 60) };
     });
 
     /* ── reverse: the trail shows both ── */
@@ -431,7 +448,8 @@ const walk = async (w) => {
         await open(p, '/accounts.html#gstclose', T('pg-close') + ', ' + T('acc-card')); await p.waitForTimeout(800);
         await p.click(T('pg-close')).catch(() => {}); await p.waitForTimeout(2500);
         const t2 = await text(p), name = await shot(p, 'd23-viewer');
-        return { ok: /Payables|CB Accounts/.test(t0) && /Only the owner|may not|not allowed|owner/i.test(t2 + ' ' + paySaw), saw: name + ' · opened: ' + t0.slice(0, 60) + '; pay: "' + paySaw.slice(0, 100) + '"; gst: ' + t2.slice(t2.indexOf('Close the month'), t2.indexOf('Close the month') + 160) };
+        const payRefused = /view-only/i.test(paySaw) && !/Paid ₹/.test(paySaw);
+        return { ok: /Payables|CB Accounts/.test(t0) && payRefused && /Only the owner may do this/.test(t2), saw: name + ' · opened: ' + t0.slice(0, 60) + '; pay: "' + paySaw.slice(0, 120) + '"' + (payRefused ? '' : ' [a VIEW-ONLY login RECORDED a payment — WX-P2P-15]') + '; gst: ' + (t2.match(/Only the owner may do this\.?/) || ['no refusal sentence'])[0] };
       });
       await vUI.ctx.close();
     } else w.note('D24', 'view-only co-assist', 'no viewer login (' + VIEWER + ') on this stack — see the findings file for how to make one');
