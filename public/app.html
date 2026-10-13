@@ -3351,7 +3351,10 @@ function route(){
   /* ⭐ A BILL OPENED FROM CB ACCOUNTS (#/app/chit/<id>): the app arrives on Task and opens that chit with its own openChit — nothing else
      is decided here. "For now": the chit sheet may replace the way a bill opens. */
   var _bill = /^#\/app\/chit\/([A-Za-z0-9_-]+)$/.exec(h);
-  if(_bill && SESSION.token){ UI.nav="task"; UI.folder="task"; renderApp(); try{ openChit(decodeURIComponent(_bill[1])); }catch(_){} return; }
+  /* ⚠️ WX-P2P-09 (2026-10-13, the real stack): a bill is NOT in the Task list (bills are not tasks), so the list's load used to drop the chit this
+     door had just opened — a fresh shop saw "Your bogie is empty" in the tab CB Accounts' "Open page" opened. UI._byId pins it: loadList keeps a
+     chit opened by its id whether or not the page lists it; picking another chit un-pins. */
+  if(_bill && SESSION.token){ UI.nav="task"; UI.folder="task"; UI._byId=decodeURIComponent(_bill[1]); renderApp(); try{ openChit(UI._byId); }catch(_){} return; }
   /* …or remembered: cb_nav@<id> held 'ledger' from before the door closed (boot puts it in UI.nav) */
   if(SESSION.token && UI.nav==="ledger" && /^#\/app$|^#\/?$/.test(h)) return ledgerDoorClosed();
   if(h.startsWith("#/welcome")) return renderWelcome();
@@ -14755,7 +14758,10 @@ function hasRollup(){ return !!(UI.rollup && UI.rollup.length); }
 // tab label: loaded / true-total (nn/mmmm) — true total from the rollup, loaded from the current page
 /* `9/9 · 5/5 · 2/2` — the two numbers are loaded and total, so once a list is fully loaded EVERY tab reads X/X
    and the slash carries nothing. Show the pair only while they actually differ, i.e. while more is still coming. */
-function stCount(s){ const loaded=countStates()[s]; const t=hasRollup()?rollupBuckets()[s].c:loaded; return loaded===t? (''+t) : (loaded+'/'+t); }
+function stCount(s){ const loaded=countStates()[s]; const t=hasRollup()?rollupBuckets()[s].c:loaded;
+  /* WX-P2P-03: the other tabs' rows are not read until pressed — their count is the rollup's whole figure, never "0/2" */
+  if(s!==UI.state && !UI.selectMode && !UI.search) return ''+t;
+  return loaded===t? (''+t) : (loaded+'/'+t); }
 /* cap → app/helpers.js */
 function setSub(s){UI.sub=s;UI.sel=null;UI.detail=null;renderApp();}
 /**
@@ -14801,9 +14807,9 @@ async function chitShowQr(id, amount){
   modal(`<div class="mhd"><div class="t">${esc(tx('Pay by UPI'))}</div><div class="s">${esc(upi)}${amount?' · '+esc(inr(amount)):''} · CB-${esc(String(id).slice(0,8))}</div></div><div class="mbody" style="text-align:center">${img||esc(tx('QR library not loaded'))}<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">${esc(tx('Any UPI app scans this. Then Mark paid with the transaction id.'))}</div></div><div class="mfoot"><button onclick="closeModal()">${esc(tx('Close'))}</button></div>`);
 }
 function toggleListHelp(){ UI.listHelp=!UI.listHelp; paintMain(); }
-function setState(s){UI.state=s; UI.sel=null; UI.detail=null; renderApp(); const first=UI.rows.find(c=>c.state===s); if(first)openChit(first.id,true);}
+function setState(s){UI.state=s; UI.sel=null; UI.detail=null; renderApp(); loadList();}   /* WX-P2P-03: the tab is a server term — its rows are read, not picked from another tab's page */
 function toggleAgg(s){UI.aggStates.has(s)?(UI.aggStates.size>1&&UI.aggStates.delete(s)):UI.aggStates.add(s);paintMain();}
-function toggleSelect(){UI.selectMode=!UI.selectMode;if(!UI.selectMode)UI.selected.clear();paintMain();}
+function toggleSelect(){UI.selectMode=!UI.selectMode;if(!UI.selectMode)UI.selected.clear();paintMain();if(UI.folder==="task")loadList(true);}   /* WX-P2P-03: select mode spans the states — re-read without the tab's term (silently) */
 function actionTargets(){ if(UI.selectMode && UI.selected.size) return [...UI.selected]; if(UI.sel) return [UI.sel]; return []; }
 function needTarget(){ const t=actionTargets(); if(!t.length) toast("Open a chit — or tick some in Select — first."); return t; }
 let MODALS={};
@@ -15780,6 +15786,11 @@ function advPanel(){ const a=UI.adv||{};
     <div class="advfoot"><button class="composebtn" onclick="clearAdv()">${tx('Clear')}</button><button class="composebtn pri" onclick="applyAdv()">${tx('Apply')}</button></div>
   </div>`; }
 function fetchPage(page){ const limit=UI.pageLimit||50; if(["drafts","trash","archive"].indexOf(UI.folder)>=0){ return api("folder",{query:Object.assign({view:UI.folder,page,limit,q:UI.search||undefined,sort:UI.sort||undefined,dir:UI.dir||undefined}, advParams())}); } if(UI.folder==="order"||SESSION.role==="customer"){ return SESSION.role==="customer" ? api("custOrders",{params:{bridgeId:SESSION.bridgeId},query:{page,limit,q:UI.search||undefined,sort:UI.sort||undefined,dir:UI.dir||undefined}}) : api("sent",{query:Object.assign({page,limit,q:UI.search||undefined,sort:UI.sort||undefined,dir:UI.dir||undefined}, advParams())}); } const q={page,limit}; if(UI.search)q.q=UI.search; if(UI.sort){q.sort=UI.sort;q.dir=UI.dir;} Object.assign(q, advParams());
+  /* ⚠️ WX-P2P-03 (2026-10-13, the real stack): the state tab (Open · Act · Close) filtered CLIENT-SIDE inside the page of 50 the server had sent
+     latest-first — a shop with 369 chits read "Open 0/2 · Nothing in Open" while two orders waited below the fold of a page it never asked for.
+     The tab is one more term in the same query (the inbox route's own fstatus buckets); the search, an advanced filter and select mode show
+     every state, so they send none. The rows are still filtered in place for the fixture walks and the counts stay the rollup's. */
+  if(!q.fstatus && !UI.search && !UI.selectMode && /^(open|act|close)$/.test(String(UI.state||''))) q.fstatus=UI.state;
   /**
    * ⚠️ "ALL TASK" IS THE UNASSIGNED POOL, NOT EVERYTHING. Athi, 2026-08-13:
    *   *"after assignment, that task should not be appearing in all task. All task is nothing but all unassigned
@@ -15875,12 +15886,14 @@ async function loadList(silent){
        * ⚠️ A stale skeleton is the worst shape a failure can take: it looks like work in progress, so nobody
        * reports it for the first minute and everybody blames the network after that.
        */
+      /* WX-P2P-09: a chit opened by its id (#/app/chit/<id> — a bill from CB Accounts) stays open whether or not this page lists it */
+      const pinned = !!(UI._byId && UI.sel===UI._byId);
       if(UI.rows.length){
         const here = UI.sel && UI.rows.some(c=>c.id===UI.sel);
         const want = here ? UI.sel : ((UI.rows.find(c=>c.state===UI.state)||UI.rows[0]||{}).id || null);
-        if(want && (!UI.detail || UI.detail.id!==want)) openChit(want,true);
+        if(!pinned && want && (!UI.detail || UI.detail.id!==want)) openChit(want,true);
       }
-      else if(!UI.rows.length){ UI.sel=null; UI.detail=null; const dp=document.getElementById("detailpane"); if(dp){ dp.className="detail"; dp.innerHTML=renderDetail(); } }   // empty → placeholder, not a stuck skeleton
+      else if(!UI.rows.length && !pinned){ UI.sel=null; UI.detail=null; const dp=document.getElementById("detailpane"); if(dp){ dp.className="detail"; dp.innerHTML=renderDetail(); } }   // empty → placeholder, not a stuck skeleton
     }
     paintRowsOnly();
     // full-set per-state rollup (true counts + sums) — independent enrichment; repaint counts when it lands.
@@ -16257,6 +16270,7 @@ function frozenMoneyHTML(c,wrapTid,totalTid,bare){
   return wrapTid?`<div data-testid="${wrapTid}" style="margin:8px 12px 10px">${html}</div>`:html;
 }
 async function openChit(id, silent){
+  if(UI._byId && id!==UI._byId) UI._byId=null;   /* WX-P2P-09: picking another chit un-pins the one opened by id */
   UI.sel=id;
   /**
    * ⚠️⚠️ LEAVE THE OTHER CHIT'S READING BEHIND. `UI.chit2` is what makes `renderDetail()` return design 2, and
@@ -16374,11 +16388,13 @@ function paintDetail(){const dp=document.getElementById("detailpane");if(dp){dp.
  * on every paint; a mount keeps the typed text across a repaint. The app hands the unit only what it knows and the unit does
  * not: the chit's `actions`, the party's name, the message kinds, the co-assist's signature, the dispute byline reader.
  */
+/* the OTHER party: on a copy I received that is the sender; on one I sent, the receivers (c.party) — the thread and the detail head
+   (WX-P2P-17: the supplier's head read "Order — Kumar Trade Co · Kumar Trade Co", its own name) */
+function chitOtherParty(c){ return (c&&c.sender&&!chitIsSelf(null,c.sender))?c.sender:((c&&c.party)||''); }
 function rtMountAll(scope){
   if(typeof CBThread==='undefined') return;
   const c=UI.detail||{}; const isCust=SESSION.role==="customer";
-  /* the OTHER party: on a copy I received that is the sender; on one I sent, the receivers (c.party) */
-  const other=(c.sender&&!chitIsSelf(null,c.sender))?c.sender:(c.party||'');
+  const other=chitOtherParty(c);
   CBThread.mountAll(scope, {
     actions:c.actions||null, party:other, me:SESSION.entity||SESSION.name||'', kinds:isCust?["info","query"]:surfacedTypes(),
     channel:isCust?'external':'both', thread_type:isCust?'external':'internal',
@@ -16832,7 +16848,7 @@ function detailInner(){
    */
   const dtabs=(inputHTML?[["input","Input"]]:[]).concat(
     [["content","Content"],["status","Status"],["summary","Summary"],["messages","💬 Messages"+(msgCount(c)?" ("+msgCount(c)+")":"")]]);
-  return `<div class="dh"><button class="dback" onclick="backToList()">‹ Back to list</button><button class="dmsg" data-testid="msg-tab" onclick="setDtab('messages')" title="Messages" aria-label="Messages">💬${msgCount(c)?' '+msgCount(c):''}</button><div class="dt">${esc(c.code)} · ${esc(c.party)}</div><div class="ds">${esc(c.area)} · ${esc(c.kind)} · ${inr(c.amt)} · ${c.state.toUpperCase()}</div>
+  return `<div class="dh"><button class="dback" onclick="backToList()">‹ Back to list</button><button class="dmsg" data-testid="msg-tab" onclick="setDtab('messages')" title="Messages" aria-label="Messages">💬${msgCount(c)?' '+msgCount(c):''}</button><div class="dt">${esc(c.code)} · ${esc(chitOtherParty(c)||'—')}</div><div class="ds">${esc(c.area)} · ${esc(c.kind)} · ${inr(c.amt)} · ${c.state.toUpperCase()}</div>
      <div class="parties">${askedByLine(c.via) ? `<span class="ptag">${askedByLine(c.via)}</span>` : `<span class="ptag">from <b>${esc(c.sender||SESSION.entity||"You")}</b></span>`}<span class="ptag">${c.kind==='counter'?('to <b>'+esc(SESSION.entity||'You')+'</b>'):esc(c.rsummary||('to '+(c.party||'—')))}</span>${c.kind==='counter'?`<span class="ptag">for <b>${esc(c.cust)}</b></span>`:''}</div><div class="dchips">${dchipShows('ext')?`<span class="prichip-btn pri-${c.priExt||'normal'}" style="cursor:default" title="External priority — set by the drafter at compose, locked once sent">↔ ext: ${PRI[c.priExt||'normal'].label}</span>`:''}${(SESSION.role!=="customer"&&dchipShows('int'))?`<button class="prichip-btn pri-${c.pri||'normal'}" onclick="repriority('${c.id}')" title="Internal priority — your own queue; tap to change">⚙ int: ${PRI[c.pri||'normal'].label} ▾</button>`:''}${(c.custPri&&dchipShows('custpri'))?'<span class="custflag-tag">' + tx('⚑ Customer priority') + '</span>':''}${dchipShows('assignee')?`<span class="prichip-btn" style="cursor:default;margin-inline-start:auto;background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)" title="Currently assigned to">👤 ${c.assignee?esc(c.assignee):'Unassigned'}</span>`:''}${dchipMore()}</div></div>
    ${(window.CBPage&&!c._loading)?CBPage.noteHTML(c.business_json):''}${chitSpendStrip(c)}${(typeof disputeBanner==='function')?disputeBanner(c):''}${cancelBanner(c)}<div class="dtabs">${dtabs.map(([k,l])=>`<button class="${UI.dtab===k?'on':''}" data-testid="dtab-${k}" onclick="setDtab('${k}')">${l}</button>`).join("")}</div>
    <div class="db">${body}</div><div class="actbar">${(typeof SESSION!=='undefined'&&(SESSION.name==='GOV-01-Help'||SESSION.isHelpdesk)&&c.kind==='inquiry')?'<button class="pri" onclick="answerPublish(\''+c.id+'\')">🧠 Answer &amp; publish</button>':''}${actbar}</div>`;

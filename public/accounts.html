@@ -194,6 +194,18 @@ h1{margin:0;font-family:var(--serif);font-size:30px;font-weight:700;letter-spaci
 /* toast (app/accounts-shell.js writes into #toast) */
 dialog.sheet{border:1px solid var(--line-3,#d8ccb0);border-radius:14px;padding:0;width:min(520px,94vw);max-height:92vh;background:var(--surface,#fffdf8);color:var(--ink,#241f14)}
 dialog.sheet::backdrop{background:var(--scrim,rgba(0,0,0,.4))}
+/* ⚠️ WX-P2P-14 (2026-10-13, the real stack): the sheet's body had no height here, so Pay for a supplier with 370 open bills grew the dialog to
+   12,000 px — Record sat off screen at 390 (and at 1366). The sheet grammar finance.html / crm.html already carry: the head and the foot stay,
+   only the body scrolls (SYSTEM rule 8 — only rows scroll). Same rules, same names; one of the three copies should become the shared file. */
+dialog.sheet .mhd{padding:16px 20px 4px;display:flex;align-items:center;gap:10px}
+dialog.sheet .mhd .t{font-family:var(--serif);font-size:20px;font-weight:700;flex:1;padding-inline-end:36px}
+dialog.sheet .mx{border:0;background:none;font-size:18px;min-width:40px;min-height:40px;border-radius:8px;color:var(--muted)}
+dialog.sheet .mbody{padding:8px 20px 12px;display:flex;flex-direction:column;gap:10px;overflow:auto;max-height:62vh}
+dialog.sheet .mbody label{display:flex;flex-direction:column;gap:4px;font-size:13.5px;font-weight:600}
+dialog.sheet .mfoot{padding:10px 20px 16px;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;border-top:1px solid var(--line-2,#e6dcc4)}
+dialog.sheet .mfoot button{min-height:40px;padding:0 16px;border:1px solid var(--line-3);border-radius:9px;background:transparent;color:var(--ink);font-weight:600}
+dialog.sheet .mfoot button.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+dialog.sheet .mfoot button[disabled]{opacity:.6}
 #toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:60;max-width:min(520px,92vw)}
 #toast .toast{background:var(--ink);color:var(--ground);padding:12px 16px;border-radius:10px;font-size:14px;box-shadow:var(--shadow-toast)}
 #toast .toast.err{background:var(--red-i)}
