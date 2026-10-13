@@ -42,10 +42,11 @@ var CRM = { gen: 0, loadGen: 0, rows: [], byKey: {}, alerts: {}, currency: 'INR'
 function crmOwner() { return SESSION.role === 'entity'; }
 /** the co-assist's hat rides in their signed token (lib/access.js); the session record does not keep it, so it is read from the token's own payload */
 function crmHat() {
-  if (SESSION.hat) return String(SESSION.hat);
+  /* the b173 ladder word (access_level: viewer · commenter · editor) is what the server enforces — read FIRST; the old hat only when no level rides (FX-L2C) */
   if (SESSION.access_level || SESSION.level) return String(SESSION.access_level || SESSION.level);
-  /* the level may ride as `hat` (pre-b173), `actor_hat`, or the b173 ladder word `access_level` / `level` (viewer · commenter · editor) — any of them is read (WX-L2C) */
-  try { var b = String(SESSION.token || '').split('.')[1].replace(/-/g, '+').replace(/_/g, '/'); var c = JSON.parse(atob(b)); return String(c.hat || c.actor_hat || c.access_level || c.level || ''); } catch (_) { return ''; }
+  if (SESSION.hat) return String(SESSION.hat);
+  /* the level rides in the signed token's own payload (lib/identity-auth issueToken: access_level; pre-b173 tokens: hat / actor_hat) */
+  try { var b = String(SESSION.token || '').split('.')[1].replace(/-/g, '+').replace(/_/g, '/'); var c = JSON.parse(atob(b)); return String(c.access_level || c.level || c.hat || c.actor_hat || ''); } catch (_) { return ''; }
 }
 function crmRole() {
   if (crmOwner()) return 'owner';
@@ -279,7 +280,9 @@ function crmBar(crumb, action, overlay) {
   document.getElementById('crumb').innerHTML = crumb || '';
   var a = document.getElementById('crm-bar-act'); if (a) a.innerHTML = action || '';
 }
-function crmAddBtn() { return crmEdit() ? '<button type="button" class="act sm" data-testid="crm-add" data-crm="add">+ ' + esc(tx('Add party')) + '</button>' : ''; }
+/** the page action a login may not take is SHOWN, greyed, with the server's sentence — never hidden (rule: show the action, the server decides; FX-L2C) */
+function crmViewOnlyBtn(tid, label, why) { return '<button type="button" class="act sm ghost" disabled aria-disabled="true" title="' + esc(why) + '" data-testid="' + tid + '">' + esc(label) + '</button><span class="why" data-testid="' + tid + '-why">' + esc(why) + '</span>'; }
+function crmAddBtn() { return crmEdit() ? '<button type="button" class="act sm" data-testid="crm-add" data-crm="add">+ ' + esc(tx('Add party')) + '</button>' : crmViewOnlyBtn('crm-add', '+ ' + tx('Add party'), tx('Your login can only view')); }
 function crmAddFuBtn() { return crmEdit() ? '<button type="button" class="act sm" data-testid="crm-fu-add" data-crm="fuadd">+ ' + esc(tx('Add follow-up')) + '</button>' : ''; }
 function crmGo(hash, replace) { if (replace) { try { history.replaceState(null, '', hash); } catch (_) {} crmRoute(); } else location.hash = hash; }
 
@@ -426,7 +429,7 @@ function crmMiniAsync(p) {
 function crmWhyNot(p, act) {
   var viewer = !crmEdit(), walk = p.kind === 'walk-in', b = Number(p.balance_minor || 0);
   if (act === 'call') return p.phone ? '' : tx('No phone number yet');
-  if (act === 'message') return viewer ? tx('Your login can only view') : (walk ? tx('Add them to your parties first') : (crmConnected(p) ? '' : tx('Not on ChitBridge — messages reach them only there')));
+  if (act === 'message') return viewer ? tx('Your login can only view') : (walk ? tx('Add them to your parties first') : (crmConnected(p) ? '' : tx('Not on ChitBridge')));   /* one short reason beside a greyed button (ai-eye E-14) */
   if (act === 'pay') return viewer ? tx('Your login can only view') : (walk ? tx('Add them to your parties first') : (!CRM.ledger ? tx('Switch on the Ledger first') : (!b ? tx('Nothing is due') : '')));
   if (act === 'followup') return viewer ? tx('Your login can only view') : (walk ? tx('Add them to your parties first') : '');
   return '';

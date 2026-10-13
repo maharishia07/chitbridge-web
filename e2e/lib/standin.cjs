@@ -54,9 +54,12 @@ function leadRow(L, l) {
 const findLead = (L, id) => L.leads.find((l) => l.party_id === id || l.party_no === id);
 const isLead = (l) => l.txn === 0;
 function fuRows(L) { return L.fu.map((f) => { const l = findLead(L, f.party_id); return Object.assign({ party_no: l && l.party_no, party_name: l && l.name }, f); }); }
-/** the timeline the record reads: calls and notes (interaction), follow-ups made and done — never a stage move (the api sends none; the walk reports it) */
+/** the timeline the record reads: calls and notes (interaction), follow-ups made and done, and every stage move as the api sends it since FX-L2C
+ *  (kind stage { stage, from, by } — memberships read newest-first, from = the older row) */
 function tlEntries(L, id) {
   const out = [];
+  const st = L.stages.filter((s) => s.party_id === id).sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
+  st.forEach((s, i) => out.push({ kind: 'stage', at: s.at, membership_id: 'ms-' + id.slice(-4) + '-' + i, stage: s.stage, from: st[i + 1] ? st[i + 1].stage : null, by: null }));
   L.ix.filter((x) => x.party_id === id).forEach((x) => out.push({ kind: 'interaction', at: x.at, interaction_id: x.interaction_id, interaction_kind: x.kind, direction: x.direction, body: x.body }));
   L.fu.filter((f) => f.party_id === id).forEach((f) => { out.push({ kind: 'followup', at: f.created_at, followup_id: f.followup_id, what: f.what, due_at: f.due_at }); if (f.done_at) out.push({ kind: 'followup_done', at: f.done_at, followup_id: f.followup_id, what: f.what }); });
   return out.sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));

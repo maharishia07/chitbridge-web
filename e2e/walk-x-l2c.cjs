@@ -250,7 +250,7 @@ W.run(REAL ? 'x-l2c-real' : 'x-l2c', async (w) => {   /* two sets of shots: walk
     await page.setViewportSize(LAP);
 
     /* ── the refused state: a view-only login ───────────────────────────────────────────────────────────────────── */
-    await w.step('L20', 'A view-only login: no + Add lead · no Move to… · every call outcome greyed with "Your login can only view"', async () => {
+    await w.step('L20', 'A view-only login: + Add lead · Move to… · Log · every call outcome SHOWN and greyed with "Your login can only view" — and the server refuses the write', async () => {
       const ctx2 = await w.browser.newContext({ viewport: LAP, locale: 'en-IN', timezoneId: 'Asia/Kolkata', serviceWorkers: 'block' });
       await ctx2.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
       const p2 = await ctx2.newPage(); p2.on('pageerror', (e) => w.errs.push(String(e && e.message || e)));
@@ -271,21 +271,32 @@ W.run(REAL ? 'x-l2c-real' : 'x-l2c', async (w) => {   /* two sets of shots: walk
         }
         await p2.waitForSelector(T('crm-leads'), { timeout: 20000 }); await p2.waitForTimeout(900);
         const who = (await p2.locator(T('shop-name')).innerText()).replace(/\s+/g, ' '), add = await p2.locator(T('crm-lead-add')).count();
-        const row = p2.locator('[data-row][data-testid^="crm-lead-"]').first(); let move = -1, log = -1;
-        /* a viewer's record draws no toolbar at all (crmActionsHTML returns '' for a viewer — crm.cjs §7): wait for the record, not for actions */
-        if (await row.count()) { await row.click(); await p2.waitForSelector(T('crm-record'), { timeout: 15000 }); await p2.waitForSelector(T('crm-rec-loading'), { state: 'detached', timeout: 15000 }).catch(() => {}); await p2.waitForTimeout(400); move = await p2.locator(T('crm-act-stage')).count(); log = await p2.locator(T('crm-act-log')).count(); }
+        const addOff = add ? await p2.locator(T('crm-lead-add')).isDisabled() : false, addWhy = (await p2.locator(T('crm-lead-add-why')).innerText().catch(() => '')).trim();
+        const row = p2.locator('[data-row][data-testid^="crm-lead-"]').first(); let move = -1, log = -1, moveOff = false, logOff = false, barWhy = '';
+        /* a viewer's record draws its bar with every write greyed and the server's ONE sentence (FX-L2C: show the action, the server decides) */
+        if (await row.count()) {
+          await row.click(); await p2.waitForSelector(T('crm-record'), { timeout: 15000 }); await p2.waitForSelector(T('crm-rec-loading'), { state: 'detached', timeout: 15000 }).catch(() => {}); await p2.waitForTimeout(400);
+          move = await p2.locator(T('crm-act-stage')).count(); moveOff = move ? await p2.locator(T('crm-act-stage')).isDisabled() : false;
+          log = await p2.locator(T('crm-act-log')).count(); logOff = log ? await p2.locator(T('crm-act-log')).isDisabled() : false;
+          barWhy = (await p2.locator(T('crm-actions-why')).innerText().catch(() => '')).trim();
+        }
         await p2.evaluate(() => { location.hash = '#/calls'; }); await p2.waitForSelector(T('crm-calls'), { timeout: 15000 }); await p2.waitForTimeout(900);
         const crow = p2.locator('[data-row][data-testid^="crm-call-row-"]').first(); let whys = [], greyed = 0;
         if (await crow.count()) { await crow.locator('[data-caret]').first().click().catch(() => {}); await p2.waitForTimeout(300); whys = await p2.$$eval('.cbl-next .cbl-why', (s) => s.map((x) => x.textContent.trim())); greyed = await p2.locator('.cbl-next .cbl-btn[disabled]').count(); }
-        let tried = '';
-        if (add) {   /* the page offered the write: press it — the SERVER's refusal must come back as a sentence on the sheet */
+        let tried = '', server = null;
+        if (REAL) {   /* the server, asked directly with the viewer's own token: the row the POST /actors made refuses the write (no PATCH behind it) */
+          const vt = await p2.evaluate(() => { try { return JSON.parse(localStorage.getItem('cb_sess') || '{}').token || null; } catch (_) { return null; } });
+          const s = await api.j('/api/crm/leads', { method: 'POST', token: vt, body: { name: 'Viewer Try ' + tag } }); server = s.status; tried += ' · POST /api/crm/leads as the viewer → HTTP ' + s.status + ' ' + (s.b.access_level || s.b.code || '');
+        }
+        if (add && !addOff) {   /* the page offered the write: press it — the SERVER's refusal must come back as a sentence on the sheet */
           await p2.evaluate(() => { location.hash = '#/leads'; }); await p2.waitForSelector(T('crm-lead-add'), { timeout: 15000 }); await p2.click(T('crm-lead-add')); await p2.waitForSelector(T('crm-lead-sheet'));
           await p2.fill(T('crm-lead-name'), 'Viewer Try ' + tag); await p2.click(T('crm-lead-save')); await p2.waitForTimeout(1500);
           tried = ' · a viewer pressing Save got: "' + ((await p2.locator(T('crm-lead-msg')).innerText().catch(() => '')) || (await p2.locator('#toast').innerText().catch(() => ''))).replace(/\s+/g, ' ').trim() + '"';
         }
         await p2.screenshot({ path: require('path').join(__dirname, 'shots', 'walk-x-l2c' + (REAL ? '-real' : '') + '-viewer.png') });
-        const ok = /viewer/.test(who) && add === 0 && move === 0 && log === 0 && greyed === 6 && whys.every((x) => x === 'Your login can only view');
-        return { ok, saw: '"' + who + '" · + Add lead: ' + add + ' · Move to…: ' + move + ' · Log: ' + log + ' · greyed outcomes: ' + greyed + ' · why: ' + (whys[0] || '(none)') + tried };
+        const S = 'Your login can only view';
+        const ok = /view-only/.test(who) && add === 1 && addOff && addWhy === S && move === 1 && moveOff && log === 1 && logOff && barWhy === S && greyed === 6 && whys.length === 1 && whys[0] === S && (!REAL || server === 403);
+        return { ok, saw: '"' + who + '" · + Add lead: ' + (add ? (addOff ? 'greyed "' + addWhy + '"' : 'LIVE') : 'missing') + ' · Move to…: ' + (move ? (moveOff ? 'greyed' : 'LIVE') : 'missing') + ' · Log: ' + (log ? (logOff ? 'greyed' : 'LIVE') : 'missing') + ' · bar: "' + barWhy + '" · greyed outcomes: ' + greyed + ' · the sentence ' + whys.length + '× "' + (whys[0] || '') + '"' + tried };
       } catch (e) {
         await p2.screenshot({ path: require('path').join(__dirname, 'shots', 'walk-x-l2c' + (REAL ? '-real' : '') + '-viewer.png') }).catch(() => {});
         return { ok: false, saw: 'it stopped (' + String(e && e.message || e).split('\n')[0].slice(0, 80) + ') · the page: "' + (await p2.evaluate(() => document.body.innerText.replace(/\s+/g, ' ')).catch(() => '')).slice(0, 160) + '"' };

@@ -63,7 +63,7 @@ function crmLeadCols() {
     { key: 'last', label: 'Last activity', prio: 5, w: 190, html: true, cell: crmLastCell, value: function (p) { return p.last_at || ''; } }];
 }
 function crmLeadAddBtn() {
-  if (!crmEdit()) return '';
+  if (!crmEdit()) return crmViewOnlyBtn('crm-lead-add', '+ ' + tx('Add lead'), tx('Your login can only view'));   /* shown, greyed, with the server's sentence (FX-L2C) */
   var off = LEADS.loaded && !LEADS.ready;
   return '<button type="button" class="act sm' + (off ? ' ghost' : '') + '" data-testid="crm-lead-add" data-crm="leadadd"' + (off ? ' disabled title="' + esc(tx(CRM_LEADS_WAIT)) + '"' : '') + '>+ ' + esc(tx('Add lead')) + '</button>';
 }
