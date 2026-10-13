@@ -42,14 +42,14 @@ Legend: ✅ works from the pack · ⚠️ partial (named) · ❌ wrong or India'
 | Till · tax-id label on paper and panel | ✅ | ✅ CX0 ABN | ✅ CX0 TRN | till.html `taxIdLabel()` |
 | Till · the shop form accepts the country's tax id | ✅ | ✅ CX0 `abn.check` (was refused: "not the shape of a GSTIN") | ✅ CX0 `trn.check` | till.html `shopCheck`; api `routes/till.js:2026` |
 | Till · place of supply · state clash | ✅ | ✅ CX0 (no state off an ABN) | ✅ CX0 (a PO Box no longer reads as a state) | till.html `shopStateClash`, `billMoney`; api `routes/till.js state_code` CX0 |
-| Till · tax-invoice rules (full vs simplified, buyer's identity) | ✅ Rule 46 | ❌ `pack.taxInvoice(total_minor)` never read (A$1,000 / buyer ABN) | ❌ same (AED 10,000 / buyer TRN) | till.html `slipHeadHTML` titles typed; no caller of `taxInvoice` in till, tax-lines, tax-copy, invoice |
+| Till · tax-invoice rules (full vs simplified, buyer's identity) | ✅ Rule 46 (reg-in has no `taxInvoice` — unchanged) | ✅ CX1 from A$1,000 the bill names its buyer or ABN, else it saves as NOT a tax invoice and says why; the buyer's ABN prints | ⚠️ CX1 full vs simplified decided by `taxInvoice`, the buyer's TRN prints; a FULL invoice also wants the buyer's ADDRESS, which the counter's snapshot does not carry (CX4 · R2) | till.html `invoiceRule · buyerWarnWords · slipBuyerHTML`; the buyer's id rides `business_json.customer.gstin` (the existing slot) |
 | Till · rounding | ✅ | ⚠️ no 5c cash rounding member (`cashRounding` ❌ in every pack) | ✅ | `engine/tax.js:2843` reads `invoice_round_to` |
 | Till · payment ways · UPI | ✅ | ✅ CX0 (`packHasUpi`; server `jurisdiction.js:134`) | ✅ CX0 | till.html `paintPays`, `paySummaryWays`; ⚠️ no AU/AE QR scheme (`PAY_SCHEMES`) — Cash and Card only, honest |
 | Till · bill-number year | ✅ `docnumber RULES.IN` | ⚠️ falls to `'*'` (calendar year, no July reset) | ⚠️ `'*'` (January — right by accident) | `engine/docnumber.js` RULES; till.html `fyOf` (April) is the no-engine fallback |
-| Till · money, counts, voice | ✅ | ⚠️ counts `toLocaleString('en-IN')`; no en-AU voice | ⚠️ same; ta/hi offered, no ar | till.html `:6774, 14204, 18194` (counts); `:3756` voice list |
-| Till · currency default (api) | ✅ | ✅ CX0 (the pack's money) | ✅ CX0 | api `routes/till.js` snapshot `currency`; ❌ still `routes/invoice.js:33,44`, `lib/tax-lines.js:151`, `lib/tax-copy.js:77` |
+| Till · money, counts, voice | ✅ | ✅ CX1 counts 1,234,567 (`shopCount` → `CBLocale.moneyTag`); voice en-AU | ✅ CX1 counts; voice ar · en · hi · ur · ml (`CBLocale.REGIONS.AE`), English first | till.html `shopCount · voiceLangs · tillLang` |
+| Till · currency default (api) | ✅ | ✅ CX0 (the pack's money) · ✅ CX1 invoice preview / frozen invoice | ✅ CX0 · ✅ CX1 | api `routes/till.js` snapshot `currency`; CX1 `lib/tax-lines.currencyOf` (`regulation.lookup`) in `routes/invoice.js`, `invoiceFor`; `lib/tax-copy.js` no `'IN'` |
 | **Print / share** · slip money · share text | ✅ | ✅ `CBLocale.money(n, cur)` | ✅ | till.html `money()`, `shareText` |
-| Print / share · bill step labels (api) | ✅ | ❌ `toLocaleString('en-IN')`, `₹` | ❌ "AED 1,00,000" | api `lib/bill-privacy.js:61-63` |
+| Print / share · bill step labels (api) | ✅ | ✅ CX1 "AUD 100,000" | ✅ CX1 "AED 1,234.56" | api `lib/bill-privacy.js money` (lakh grouping for INR only) |
 | Print / share · UPI QR on a chit / the shop page | ✅ | ✅ CX0 (chit: `payHasUpi`) · ❌ shop page shows a UPI block whenever `upi_id` is set, `cu=INR` typed | same | web `app.html chitPaymentCell`; `shop.html:665-669` |
 | Print / share · bill-print.html | ⚠️ a standalone printer test with India sample data (GSTIN, CGST/SGST, HSN) — not a product screen | — | — | web `bill-print.html:143-190` |
 | **Shop / online showcase + cart** · price currency | ✅ | ✅ CX0 (`symOf`, `CBLocale.money`) | ✅ CX0 | `shop.html:510, 680`, `store.html:62`, `embed.html:53/83` |
@@ -105,7 +105,7 @@ Legend: ✅ works from the pack · ⚠️ partial (named) · ❌ wrong or India'
 | Locale · licence / compliance rules | ✅ | ❌ `RULES[c] \|\| RULES.IN` — told it lacks Indian licences | ❌ | api `lib/licence-rules.js:36`, `lib/entity-header.js:50` |
 | Locale · exporter lanes (readiness) | ✅ | ⚠️ `origin \|\| 'IN'` | ⚠️ | api `lib/readiness.js:151, 163`; web `app/cap-readiness.js:31…330` |
 
-**❌ count (cells, after CX0's fixes): IN 2 · AU 24 · AE 22.** (IN's two: a party's tax id is never checked; a chit's currency is never compared with the seller's.)
+**❌ count (cells, after CX0's fixes): IN 2 · AU 24 · AE 22; after CX1: IN 2 · AU 22 · AE 20.** (IN's two: a party's tax id is never checked; a chit's currency is never compared with the seller's.)
 
 ## 2. The bug rows — file:line · class · the fix (pack member · gate · locale helper)
 
@@ -113,12 +113,12 @@ Round = the fix round in §3. Size ≤20 = fixable without an engines change in 
 
 | # | area | file:line | class | what fails for AU / AE | fix | round | ≤20 |
 |---|---|---|---|---|---|---|---|
-| T1 | till | till.html `slipHeadHTML` ('TAX INVOICE' typed; no caller of `taxInvoice`) | A | AU: A$1,000+ needs the buyer's identity/ABN; AE: full vs simplified never decided | `shopPack().taxInvoice(total_minor, { buyer_registered })` → title + required fields; the till needs a place for a buyer's ABN/TRN (beside `cust.gstin`) | 1 | no |
-| T2 | till | till.html `:6774, 14204, 18194` | C | counts read "1,00,000" | `CBLocale.number(n)` | 1 | yes |
+| T1 ✅ CX1 | till | till.html `slipHeadHTML` ('TAX INVOICE' typed; no caller of `taxInvoice`) | A | AU: A$1,000+ needs the buyer's identity/ABN; AE: full vs simplified never decided | `shopPack().taxInvoice(total_minor, { buyer_registered })` → title + required fields; the till needs a place for a buyer's ABN/TRN (beside `cust.gstin`) | 1 | no | (AE buyer address left: CX4)
+| T2 ✅ CX1 | till | till.html `:6774, 14204, 18194` | C | counts read "1,00,000" | `CBLocale.number(n)` | 1 | yes |
 | T3 | till | till.html `:5849 fyOf`, `engine/docnumber.js` RULES (IN, `*`) | C | AU bill numbers: calendar year, no July reset | RULES read `pack.fiscalYear.startMonth / label` (engines) | 1 | engines |
-| T4 | till | till.html `:3756, 17172…26473` voice list | C | AE offered ta/hi, no ar; AU no en-AU | the list from `REGIONS[country].langs` + format tag | 1 | yes |
-| T5 | till/api | api `routes/invoice.js:33, 44`, `lib/tax-lines.js:151`, `lib/tax-copy.js:77` | C | a preview / frozen invoice with no currency is INR; `Country \|\| 'IN'` | `regional.currencyFor(entity)` / the seller pack's `currency`; drop `'IN'` | 1 | yes |
-| T6 | print | api `lib/bill-privacy.js:61-63` | C | "AUD 1,00,000", ₹ | `lib/locale.browser` money with the currency's tag | 1 | yes |
+| T4 ✅ CX1 | till | till.html `:3756, 17172…26473` voice list | C | AE offered ta/hi, no ar; AU no en-AU | the list from `REGIONS[country].langs` + format tag | 1 | yes |
+| T5 ✅ CX1 | till/api | api `routes/invoice.js:33, 44`, `lib/tax-lines.js:151`, `lib/tax-copy.js:77` | C | a preview / frozen invoice with no currency is INR; `Country \|\| 'IN'` | `regional.currencyFor(entity)` / the seller pack's `currency`; drop `'IN'` | 1 | yes |
+| T6 ✅ CX1 | print | api `lib/bill-privacy.js:61-63` | C | "AUD 1,00,000", ₹ | `lib/locale.browser` money with the currency's tag | 1 | yes |
 | T7 | till | `engine/jurisdiction.js PAY_SCHEMES` (no AU/AE) | A | Cash + Card only (honest) | a pack member for a QR scheme when one exists (PayID has none); AU 5c `cashRounding` | 1 | engines |
 | S1 | shop | api `lib/catalogue-view.js:533-535` | C | the shop page cannot read a pack | add `country` to the `shop` block (FIELDS entry: source `identities.country`, read by shop.html) | 4 | yes |
 | S2 | shop | `shop.html:589, 665, 669` | A/C | "GSTIN" typed; UPI block for any shop with `upi_id`, `cu=INR` | gate on `pack.chart.paymentModes.upi`; label from the pack (needs S1) | 4 | yes |
