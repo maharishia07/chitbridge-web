@@ -9,7 +9,7 @@
  *
  *   node e2e/run-shard.cjs <shard> <of>      e.g. 1 6  → files 1, 7, 13 … of the sorted list
  *   node e2e/run-shard.cjs --list            print the whole list (what CI shares out)
- * One line per file (PASS/FAIL + seconds); a FAIL prints that file's last lines; exit 1 if any failed.
+ * One line per file (PASS/FAIL + seconds); a FAIL prints that file's FAIL lines, then its last lines; exit 1 if any failed.
  */
 'use strict';
 const fs = require('fs'), path = require('path'), { spawnSync } = require('child_process');
@@ -38,6 +38,16 @@ const KNOWN = {
   'walk-bill.cjs': 'BF1 open: the walk wants "Poori has no tax rate" on screen; M40 puts the names behind Fix › — Athi decides (TEST-LOG BF1)',
   'walk-home.cjs': 'UI9 round: L-Home-390 the kural band overlaps its own lines; L-CRM-957/1366/1568 the header-filter rail overlaps the column heads (UI9-crm itself is green since W1)',
 };
+/**
+ * what a red file prints (F3b, 2026-10-13: shard 6 showed only the last 12 lines of walk-finance-cash — all PASS — and the one FAIL, C3, was above the
+ * cut): first every line that says FAIL / ✗ / FAILED (up to 15, in order), then the last 12 lines, so the failing check is always in the CI log.
+ */
+function failLines(out) {
+  const lines = out.trim().split('\n'), tail = lines.slice(-12);
+  const red = lines.filter((l) => /\bFAIL(ED)?\b|✗/.test(l)).slice(0, 15);
+  const pad = (ls) => ls.map((l) => '       ' + l).join('\n');
+  return (red.length ? '       -- failing lines (' + red.length + ') --\n' + pad(red) + '\n       -- last lines --\n' : '') + pad(tail);
+}
 const mine = files.filter((_, i) => i % of === shard - 1);
 console.log('shard ' + shard + '/' + of + ' · ' + mine.length + ' of ' + files.length + ' files');
 let failed = 0, known = 0;
@@ -57,7 +67,7 @@ for (const f of mine) {
   }
   if (!ok) failed++;
   console.log((ok ? '  PASS ' : '  FAIL ') + f.padEnd(34) + s + (r.error ? '  (' + r.error.code + ')' : ''));
-  if (!ok) console.log(((r.stdout || '') + (r.stderr || '')).trim().split('\n').slice(-12).map((l) => '       ' + l).join('\n'));
+  if (!ok) console.log(failLines((r.stdout || '') + (r.stderr || '')));
 }
 console.log((failed ? failed + ' failed' : 'all passed') + (known ? ' · ' + known + ' known red (listed above, round W1)' : ''));
 process.exit(failed ? 1 : 0);

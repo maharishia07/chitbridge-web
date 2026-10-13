@@ -120,6 +120,10 @@ function collect() {
       const nested = line.match(/(?:^|[^.\w$])(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/);
       if (nested) declared.add(nested[1]);
       for (const re of ASSIGN) { const a = re.exec(line); if (a) declared.add(a[1]); }
+      /* every name bound in a var/let/const LIST counts, not only the first: `var c = kit.c, codeBook = kit.codeBook` (the vendored
+         tax bundle, 13 Oct) declares codeBook — the old pattern saw only `c` and called codeBook() undeclared */
+      const vl = line.replace(/\r$/, '').match(/\b(?:var|let|const)\s+(.*)$/);
+      if (vl) { const re = /(?:^|,)\s*([A-Za-z_$][\w$]*)\s*=(?!=)/g; let m; while ((m = re.exec(vl[1]))) declared.add(m[1]); }
 
       const t = line.match(/typeof\s+([A-Za-z_$][\w$]*)/g) || [];
       t.forEach((x) => optional.add(x.replace(/typeof\s+/, '')));

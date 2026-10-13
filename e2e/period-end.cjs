@@ -117,6 +117,8 @@ const GST_CLOSED = { fy: FYNOW, period: 6, date: '2026-09-30', utilised: [{ from
       if (ym) { S.yearHas = true; return J(r, 200, { ok: true, fiscal_year: ym[1], next: '2026-27', locked: 13, opening: { rows: 40, retained_minor: 0, profit_minor: 0, balanced: true } }); }
       if (p === '/api/books/daybook') return J(r, 200, books.daybook([]));
       if (p === '/api/books/dues') return J(r, 200, books.dues([]));
+      /* BAS1: an Indian shop's return is the GSTR, read from the rail — the GST screen asks once and paints the close & pay form on this answer */
+      if (p === '/api/books/returns') return J(r, 422, { code: 'RETURN_FROM_RAIL', error: 'India\'s GSTR-1 and GSTR-3B are read from the frozen invoices on the rail (GET /api/tax/gstr), not from the ledgers.', message: 'India\'s GSTR-1 and GSTR-3B are read from the frozen invoices on the rail (GET /api/tax/gstr), not from the ledgers.' });
       if (p.startsWith('/api/books')) return J(r, 200, {});
       return J(r, 200, {});
     });
