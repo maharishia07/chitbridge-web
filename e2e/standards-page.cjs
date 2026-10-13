@@ -3,9 +3,10 @@
  * Nothing here reaches localhost:3000, port 7351 or the live site: every /api/** call is fulfilled by ctx.route before it can leave the browser (and the
  * page is made to refuse any other host). The Standards page itself reads NO API (the register is cap-standards.js), so the stand-in's job is to PROVE that.
  *
- *  1  the register (cap-standards.js): 62 rows, 35 in force · 15 partly · 12 planned (CPS1 added the Country Standard row, whose opened row paints data/country-matrix.json); every row has area · kind · applies-in · plain words; every Partly and Planned
+ *  1  the register (cap-standards.js): 74 rows — the designer's 61, then CPS1's Country Standard, LOC0's pseudo-localisation, CO3's 4 record-keeping rows and
+ *     CO1's 7 privacy rows, in that order — 35 in force · 26 partly · 13 planned; every row has area · kind · applies-in · plain words; every Partly and Planned
  *     row says what is missing; the first 44 rows' words are the register's own, unchanged; the 17 additions carry their stated statuses; no second WCAG row
- *  2  laptop 1366×768: title · "checked 3 Oct 2026" · the matrix beside the list; the matrix's All row IS the register's counts; the list is a CBList mount
+ *  2  laptop 1366×768: title · "checked 13 Oct 2026" · the matrix beside the list; the matrix's All row IS the register's counts; the list is a CBList mount
  *     (three columns, a resize handle on each, only the rows scroll) with the head at most 20% of the window; no sideways scroll
  *  3  THE CELL IS THE LIST'S FILTER: Money & GST × Partly → 3 rows, two of the unit's own chips, one lit cell; a row heading filters the row, a column heading the
  *     status; a "—" cell does nothing; clearing a chip clears the cell; changing the unit's Filters popover moves the lit cell; Count by Country and Kind
@@ -100,10 +101,12 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     /* CO3 (2026-10-13): four record-keeping rows (IN · AU · AE), after CPS1's and LOC0's, named here — every one Partly */
     const CO3 = ['Companies Act 2013 s.128(5) · CGST Act s.36, Rules 56–57', 'Companies (Accounts) Rules r.3(5)–(6)',
       'TAA 1953 Sch 1 s.382-5 · Corporations Act 2001 s.286', 'Tax Procedures Decree-Law 28/2022 · Corporate Tax Decree-Law 47/2022 Art. 56'];
-    ok(REG.S.length === 63 + CO3.length && REG.S.slice(63, 67).map((r) => r.n).join('|') === CO3.join('|') && REG.S.slice(63, 67).every((r) => r.s === 'part' && r.added === '2026-10-13'),
-      'the register holds 67 standards (44 + the 17 adopted 2–3 Oct 2026 + the Country Standard, CPS1 + pseudo-localisation, LOC0 + the 4 CO3 record-keeping rows, each Partly): ' + REG.S.length);
+    /* CO1 (2026-10-13): seven privacy rows after CO3's */
+    const CO1 = REG.S.slice(67, 74);
+    ok(REG.S.length === 74 && REG.S.slice(63, 67).map((r) => r.n).join('|') === CO3.join('|') && REG.S.slice(63, 67).every((r) => r.s === 'part' && r.added === '2026-10-13'),
+      'the register holds 74 standards (44 + the 17 adopted 2–3 Oct 2026 + the Country Standard, CPS1 + pseudo-localisation, LOC0 + the 4 CO3 record-keeping rows, each Partly + the 7 CO1 privacy rows): ' + REG.S.length);
     /* N11 (9c8cdc58, 2026-10-08): ISO 8601 moved Partly → In force with a stated limit, proven by chitbridge-api tests/iso8601.test.cjs; CPS1: the Country Standard, In force with a limit; LOC0: pseudo-localisation, Partly */
-    ok(COUNT.live === 35 && COUNT.part === 16 + CO3.length && COUNT.plan === 12, 'in force 35 · partly 20 (16 + CO3\'s 4) · planned 12 (' + COUNT.live + ' · ' + COUNT.part + ' · ' + COUNT.plan + ')');
+    ok(COUNT.live === 35 && COUNT.part === 26 && COUNT.plan === 13, 'in force 35 · partly 26 (16 + CO3\'s 4 + CO1\'s 6) · planned 13 (12 + CO1\'s 1) (' + COUNT.live + ' · ' + COUNT.part + ' · ' + COUNT.plan + ')');
     const fields = REG.S.filter((r) => !r.a || !r.k || !Array.isArray(r.c) || !r.c.length || !r.p);
     ok(fields.length === 0, 'every row has an area, a kind, an applies-in and the plain-words line' + (fields.length ? ' — missing on ' + fields.map((r) => r.n).join('; ') : ''));
     const areas = REG.A.map((a) => a[0]), kinds = REG.K.map((k) => k[0]), ctry = REG.C.map((c) => c[0]);
@@ -115,18 +118,20 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     /* the words are the register's own: row by row against the designer's data (which was built from the register), every field both hold */
     const keys = ['g', 'n', 'w', 'ex', 'exWhy', 's', 'note', 'at', 'go', 'why', 'a', 'k', 'p', 'm', 'limit', 'eq'];
     const diff = [];
-    const MOVED = { 'ISO 8601': 'N11' };   /* a row the register has moved on from the design's data, on purpose, with its reason */
+    const MOVED = { 'ISO 8601': 'N11', 'Digital Personal Data Protection Act 2023': 'CO1' };   /* a row the register has moved on from the design's data, on purpose, with its reason */
     DESIGN.rows.forEach((d, i) => { const r = REG.S[i]; if (r && MOVED[r.n]) return; keys.forEach((k) => { if ((r && r[k] || undefined) !== (d[k] || undefined)) diff.push(i + ':' + k); }); if (!r || JSON.stringify(r.c) !== JSON.stringify(d.c)) diff.push(i + ':c'); });
     /* the designer's data is the register AS OF 3 Oct 2026 (61 rows); rows adopted later (CPS1: the Country Standard · LOC0: pseudo-localisation) follow it, and are not in it */
     ok(DESIGN.rows.length === 61 && REG.S.length >= DESIGN.rows.length && diff.length === 0, 'the designer\'s 61 rows equal the register\'s first 61, field for field' + (diff.length ? ' — ' + diff.slice(0, 6).join(' ') : ''));
-    const added = REG.S.filter((r) => r.added && CO3.indexOf(r.n) < 0);
+    const added = REG.S.slice(0, 63).filter((r) => r.added);
     ok(added.length === 19 && added.filter((r) => r.s === 'live').length === 12 && added.filter((r) => r.s === 'part').length === 5 && added.filter((r) => r.s === 'plan').length === 2, 'the 19 additions carry their stated statuses: 12 in force, 5 partly (LOC0\'s pseudo-localisation is Partly), 2 planned');
     const cm = REG.S.filter((r) => r.matrix === 'country');
     ok(cm.length === 1 && cm[0].c.join() === 'IN,AU,AE' && cm[0].s === 'live' && cm[0].limit, 'ONE Country Standard row (CPS1): applies in IN · AU · AE, In force with a stated limit, its opened row paints the matrix');
     const CMXJ = JSON.parse(fs.readFileSync(path.join(PUB, 'data', 'country-matrix.json'), 'utf8'));
     ok(Array.isArray(CMXJ.rows) && CMXJ.rows.length > 80 && CMXJ.packs.map((x) => x.id).join() === 'IN,AU,AE' && CMXJ.packs.every((x) => CMXJ.missing[x.id] && CMXJ.counts[x.id]), 'data/country-matrix.json is the engines\' generated matrix: ' + CMXJ.rows.length + ' members × IN · AU · AE, with counts and the ❌ list per pack (engines v' + CMXJ.engines + ')');
+    ok(CO1.length === 7 && CO1.every((r) => r.a === 'people' && r.k === 'law' && r.s !== 'live' && r.added === '2026-10-13') && ['IN', 'AU', 'AE'].every((c) => CO1.some((r) => r.c.indexOf(c) >= 0)), 'CO1: 7 privacy rows for India, Australia and the UAE — none claims In force (the owner acts and the ◐ citations come first)');
     ok(REG.S.filter((r) => /WCAG/.test(r.n) && /1\.4\.3/.test(r.n)).length === 1 && /16 themes/.test(REG.S[11].note), 'no second WCAG contrast row: the existing one now says all 16 themes');
-    ok(REG.CH === '2026-10-03', 'the register says when it was last checked (STD_CHECKED)');
+    ok(REG.CH === '2026-10-13', 'the register says when it was last checked (STD_CHECKED)');
+    ok(CO1.length === 7 && CO1.every((r) => r.a === 'people' && r.k === 'law' && r.s !== 'live') && ['IN', 'AU', 'AE'].every((c) => CO1.some((r) => r.c.indexOf(c) >= 0)), 'CO1: 7 privacy rows for India, Australia and the UAE — none claims In force (the owner acts and the ◐ citations come first)');
     ok(new Set(REG.S.map((r) => r.n)).size === REG.S.length, 'no standard is listed twice');
     /* M41 · Compatibility: ONE file, every row a valid register row, honest about proof */
     const cj = COMPAT_JSON.rows || [];
@@ -163,14 +168,14 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
   {
     const { ctx, p } = await open(S);
     ok(/^Standards$/.test((await p.textContent('.cbl-title h1')).trim()), 'the title row says Standards');
-    ok(/checked 3 Oct 2026/.test(await p.textContent('[data-testid="std-checked"]')), 'and "checked 3 Oct 2026" — once; the counts are in the matrix, not repeated up here');
+    ok(/checked 13 Oct 2026/.test(await p.textContent('[data-testid="std-checked"]')), 'and "checked 13 Oct 2026" — once; the counts are in the matrix, not repeated up here');
     ok(await p.locator('.cbl-title').innerText().then((t) => !/\b33\b/.test(t)), 'the title row does not repeat the totals the matrix\'s All row says');
     ok((await p.textContent('[data-testid="shop-name"]')).trim() === 'Mayur Bhavan', 'the signed-in shop is named in the title row');
     ok(await p.locator('#std_list.cbl').count() === 1 && await p.locator('#std_list .cbl-hdr').count() === 1, 'the list is a CBList mount (its header, its tools)');
     const heads = await p.$$eval('#std_list .cbl-hc', (h) => h.map((x) => x.innerText.replace(/[▲▼⇅]/g, '').trim()));
     ok(heads.join('|') === 'WHAT IT DOES FOR YOU|REFERENCE|KIND|APPLIES IN|STATUS', 'four columns (Kind is one of them) and the status: ' + heads.join(' · '));
     ok(await p.locator('#std_list .cbl-rz').count() === 5, 'every column has a resize handle (the unit\'s)');
-    ok(shownAll().test(await count(p)), 'all ' + N + ' are listed (61 standards + ' + CROWS.length + ' compatibility rows): ' + (await count(p)));
+    ok(shownAll().test(await count(p)), 'all ' + N + ' are listed (' + REG.S.length + ' standards + ' + CROWS.length + ' compatibility rows): ' + (await count(p)));
     const mxAll = await p.$$eval('[data-testid^="std-cell-*-"]', (n) => n.map((x) => x.textContent.trim()));
     ok(mxAll.join(' ') === CA.live + ' ' + CA.part + ' ' + CA.plan, 'the matrix\'s All row is the counts of every row listed: ' + mxAll.join(' · '));
     const areaRows = await p.$$eval('#mxBody .mx-rh', (n) => n.map((x) => x.textContent.trim()));
@@ -263,7 +268,7 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     const cl = CROWS.filter((r) => r.s === 'live').length;
     ok(cl > 0 && (await count(p)).indexOf(cl + ' shown') === 0 && (await chips(p)).join('|').indexOf('Kind: Compatibility') >= 0, 'Compatibility × In force lists the ' + cl + ' working rows of data/compat.json → ' + (await count(p)));
     const cIds = await rowIds(p);
-    ok(cIds.length === cl && cIds.every((i) => +i >= REG.S.length && ALL[+i].k === 'compat'), 'they are the compatibility rows, after the register\'s 61');
+    ok(cIds.length === cl && cIds.every((i) => +i >= REG.S.length && ALL[+i].k === 'compat'), 'they are the compatibility rows, after the register\'s ' + REG.S.length);
     await p.click('[data-testid="std-row-' + cIds[0] + '"]'); await p.waitForTimeout(250);
     const cdl = await p.textContent('[data-testid="std-detail-' + cIds[0] + '"]');
     ok(/Proof/.test(cdl) && /Tested live|Proven on a stand-in/.test(cdl) && /Fit/.test(cdl) && /compatibility register \(data\/compat\.json\)/.test(cdl), 'an opened compatibility row says its fit, its proof and where it comes from: ' + cdl.replace(/\s+/g, ' ').slice(0, 160));
@@ -290,7 +295,7 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     ok(gk.length === 4 && /Law/.test(gk[0]) && /Standard/.test(gk[1]) && /Practice/.test(gk[2]) && /Compatibility/.test(gk[3]), 'Group by Kind: Law · Standard · Practice · Compatibility, in that order, each with its count: ' + gk[0]);
     await p.click('[data-testid="cbl-group-standards"] [data-group="country"]'); await p.waitForTimeout(200);
     const gc = await p.$$eval('#std_list .cbl-group', (n) => n.map((x) => x.textContent.replace(/^[^A-Za-z]+/, '').replace(/\s+/g, ' ').trim().split(' ·')[0].replace(/\s*\d+$/, '').trim()));
-    ok(gc.join('|') === 'India|India and global|Global|India, Australia, UAE', 'Group by Country: India · India and global · Global · "India, Australia, UAE" (the Country Standard row, CPS1) (' + gc.join(' | ') + ')');
+    ok(gc.join('|') === 'India|Australia|UAE|India and global|Global|India, Australia, UAE', 'Group by Country: one country alone (India · Australia · UAE), India and global, Global, then the rows that apply in all three (' + gc.join(' | ') + ')');
     await p.click('[data-testid="cbl-group-standards"] [data-group="area"]'); await p.waitForTimeout(200);
 
     /* CPS1: the Country Standard row opens to the GENERATED matrix — the engines' counts, painted, not computed here */
@@ -329,7 +334,7 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     await p.screenshot({ path: path.join(SHOTS, 'standards-row.png') });
     await p.click('[data-testid="std-copy"]'); await p.waitForTimeout(250);
     const clip = await p.evaluate(() => navigator.clipboard.readText());
-    ok(/GSTR-1 \/ GSTR-3B/.test(clip) && /Status: Partly/.test(clip) && /Missing: /.test(clip) && /Kind: Law/.test(clip) && /Checked 3 Oct 2026/.test(clip), 'Copy puts the standard, kind, status, what is missing and the date on the clipboard');
+    ok(/GSTR-1 \/ GSTR-3B/.test(clip) && /Status: Partly/.test(clip) && /Missing: /.test(clip) && /Kind: Law/.test(clip) && /Checked 13 Oct 2026/.test(clip), 'Copy puts the standard, kind, status, what is missing and the date on the clipboard');
     ok(!/<[a-z]/i.test(clip) && clip.indexOf('⭐') < 0, 'and it is plain text — no markup, no code-comment markers');
     ok(/Copied/.test(await p.textContent('#toast')), 'and says Copied');
     /* a row with a long note says what is missing IN FULL when opened */

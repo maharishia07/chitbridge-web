@@ -11,12 +11,13 @@ flowchart LR
   S3["3. demo<br/><i>CRM</i><br/>⚠"]
   S4["4. trial<br/><i>CRM</i><br/>⚠"]
   S5["5. customer<br/><i>CRM</i>"]
-  S1 --> S2 --> S3 --> S4 --> S5
+  S6["6. consent & privacy requests<br/><i>CRM</i><br/>⚠"]
+  S1 --> S2 --> S3 --> S4 --> S5 --> S6
   classDef ok fill:#e8f5e9,stroke:#2e7d32,color:#1b1b1b
   classDef warn fill:#fff8e1,stroke:#f9a825,color:#1b1b1b
   classDef missing fill:#fafafa,stroke:#9e9e9e,stroke-dasharray:5 5,color:#616161
   class S1,S2,S5 ok
-  class S3,S4 warn
+  class S3,S4,S6 warn
 ```
 
 | # | step | module | who | screen (file · function) | engine function | API route | chit kind | ledger entry | test | status |
@@ -26,8 +27,10 @@ flowchart LR
 | 3 | demo | CRM | the shop's staff | `web:public/app/cap-crm-calls.js` `crmCallSend()`<br>`web:public/app/cap-crm-leads.js` `crmStageGo()` | `api:lib/crm-calls.js` `outcome()`<br>`api:lib/memberships.js` `add()` | `POST /api/crm/parties/:id/outcome` `api:routes/crm.js`<br>`POST /api/crm/parties/:id/stage` `api:routes/crm.js` | none — outcome demo_booked moves the stage to demo and books the follow-up 'Demo' | none | `api:tests/crm-calls.test.cjs` | ⚠️ — The demo itself (held, who, what was shown) has no record beyond the follow-up row. |
 | 4 | trial | CRM | the shop's staff | `web:public/app/cap-crm-leads.js` `crmStageGo()` | `api:lib/memberships.js` `add()` | `POST /api/crm/parties/:id/stage` `api:routes/crm.js` | none — a stage word only | none | `api:tests/crm-leads.test.cjs` | ⚠️ — 'trial' is one of the lead_stage groups; no outcome moves to it and nothing starts, times or ends a trial. |
 | 5 | customer | CRM | the party (by trading); the shop (adds a customer) | `web:public/app/cap-crm-record.js`<br>`web:public/app/accounts-shell.js` | `api:lib/crm.js` `isLead()`<br>`api:lib/crm.js` `one()` | `POST /api/relationships/customers` `api:routes/relationships.js`<br>`GET /api/crm/parties/:id` `api:routes/crm.js`<br>`POST /api/chits/send` `api:routes/chits.js` | the first bill: txn_count > 0 ends the lead (isLead); a traded party refuses a stage move — counted for a bill SENT to the party (the recipient auto-add) and for a counter bill that NAMES them in business_json.customer (lib/crm.traded, inside the bill's transaction — FX-L2C) | none here — the bill posts under O2C step 7 | `api:tests/crm-maytrade.test.cjs`<br>`api:tests/crm-remove-walkin.test.cjs`<br>`api:tests/customer-by-name.test.cjs` | ✅ |
+| 6 | consent & privacy requests | CRM | the shop's staff note consent; the owner answers a request | — | `api:lib/privacy.js` `mayMessage()`<br>`api:lib/privacy.js` `notePref()`<br>`api:lib/privacy.js` `logRequest()`<br>`api:lib/privacy.js` `answerRequest()`<br>`api:lib/privacy.js` `facts()` | `GET /api/crm/parties/:id/contact-prefs` `api:routes/crm.js`<br>`POST /api/crm/parties/:id/contact-prefs` `api:routes/crm.js`<br>`GET /api/crm/privacy-requests` `api:routes/crm.js`<br>`POST /api/crm/privacy-requests` `api:routes/crm.js`<br>`POST /api/crm/privacy-requests/:id/answer` `api:routes/crm.js`<br>`GET /api/privacy/facts` `api:routes/privacy.js` | none | none | `api:tests/privacy.test.cjs` | ⚠️ — CO1: built and tested in the api; no screen yet, and migrations b306 / b307 are drafts the owner runs (docs/compliance/OWNER-ACTIONS.md). |
 
 ## The backlog this map leaves
 
 - **step 3 · demo** — ⚠️ — The demo itself (held, who, what was shown) has no record beyond the follow-up row.
 - **step 4 · trial** — ⚠️ — 'trial' is one of the lead_stage groups; no outcome moves to it and nothing starts, times or ends a trial.
+- **step 6 · consent & privacy requests** — ⚠️ — CO1: built and tested in the api; no screen yet, and migrations b306 / b307 are drafts the owner runs (docs/compliance/OWNER-ACTIONS.md).
