@@ -230,15 +230,17 @@ async function run(site, o) {
       S.ui = {}; S.patches = [];
       const ctx = await profile(1366, 800), idx = PAGES[2], p = await open(ctx, idx);
       await openMenu(p, idx); await p.click('[data-testid="theme-slate"]'); await p.click('[data-testid="fs-xl"]'); await p.click('[data-testid="motion-switch"]');
+      await p.click('[data-testid="font-serif"]'); await p.click('[data-testid="weight-bold"]');
       await p.waitForTimeout(900);
       const last = S.patches[S.patches.length - 1] || {};
       ok(last.theme === 'slate' && last.fs === 'xl' && last.motion === 'reduce', 'sync · a choice is PATCHed to /api/entities/me/prefs/ui as theme · fs · motion (' + JSON.stringify(last) + ')');
-      ok(!('font' in last) && !('weight' in last), 'sync · font and bold stay on this machine (the server keeps theme · fs · motion only — sent they would be dropped silently)');
+      ok(last.font === 'serif' && last.weight === 'bold', 'sync · CU3: reading font and bold reach the server too (were device-only)');
       await ctx.close();
-      S.ui = { theme: 'azure', fs: 'l', motion: 'reduce' };
+      S.ui = { theme: 'azure', fs: 'l', motion: 'reduce', font: 'wide', weight: 'bold' };
       const fresh = await profile(1366, 800), q = await open(fresh, idx);
       await q.waitForFunction(() => document.documentElement.getAttribute('data-theme') === 'azure', null, { timeout: 5000 }).catch(() => {});
       ok((await html(q, 'data-theme')) === 'azure' && (await q.evaluate(() => localStorage.getItem('cb_fs'))) === 'l' && (await html(q, 'data-motion')) === 'reduce', 'sync · a fresh device is dressed from the server (azure · large · less motion)');
+      ok((await q.evaluate(() => localStorage.getItem('cb_font'))) === 'wide' && (await html(q, 'data-weight')) === 'bold', 'sync · CU3: …and in the reading font and bold the person chose elsewhere');
       await fresh.close(); S.ui = {};
       /* offline is silent */
       const off = await profile(1366, 800), po = await open(off, idx);
