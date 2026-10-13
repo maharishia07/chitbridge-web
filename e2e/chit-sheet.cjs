@@ -319,7 +319,7 @@ async function route(S, r) {
     await p.evaluate(() => bkTab('waiting')); await p.waitForSelector('[data-testid="wait-0"]', { timeout: 8000 });
     await p.waitForFunction(() => /Agro Mills/.test((document.querySelector('[data-testid="wait-0"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
     const heads = await p.$$eval('#bk_body .lhead .lhcell', (els) => els.map((x) => x.textContent.replace(/[⇅▲▼]/g, '').trim()));
-    ok(JSON.stringify(heads) === JSON.stringify(['Supplier', 'Amount', 'Step']), 'Waiting is the Task table, its top three columns by priority: ' + heads.join(' · '));
+    ok(JSON.stringify(heads) === JSON.stringify(['Party', 'Amount', 'Step']), 'Waiting is the Task table, its top three columns by priority: ' + heads.join(' · '));
     /* the rest are one tick away in the columns chooser (bill no, date) */
     await p.click('[data-testid="cols-btn-waiting"]'); await p.click('[data-testid="cols-waiting-no"]'); await p.click('[data-testid="cols-waiting-date"]'); await p.click('[data-testid="cols-btn-waiting"]');
     const row0 = (await p.textContent('[data-testid="wait-0"]')).replace(/\s+/g, ' ');

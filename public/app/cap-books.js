@@ -2086,13 +2086,16 @@ async function bkChequesView(body) {
 function bkWaitId(w) { return String(w.chit_id || w.id || w.ref || ''); }
 function bkWaitFailed(w) { return !/^Waiting for you to confirm/.test(String(w.reason || w.why || '')); }
 function bkWaitModel(w) { var r = w && w.chit_id && BK.wchit && BK.wchit[w.chit_id]; try { return r && window.CBSheet ? CBSheet.model(r) : null; } catch (_) { return null; } }
+/** a walk-in DAY waiting (job 'day': no bill of its own) — its counter and day, read from the server's own source ref "walkin:<counter>:<day>" (WX-R2R:
+    those rows said "— · —", so the owner could not tell which day of which counter was stuck) */
+function bkWaitDay(w) { var m = w && w.job === 'day' ? /^walkin:([^:]+):(\d{4}-\d{2}-\d{2})$/.exec(String(w.ref || '')) : null; return m ? { counter: (w.source && w.source.counter) || m[1], day: m[2] } : null; }
 function bkWaitCols() {
   var dash = '<span style="color:var(--grey)">—</span>';
   return [
-    { key: 'who', label: tx('Supplier'), prio: 1, sort: 'who', w: 240, html: true, cell: function (w) { var m = bkWaitModel(w); return m && m.who ? esc(m.who) : dash; } },
+    { key: 'who', label: tx('Party'), prio: 1, sort: 'who', w: 240, html: true, cell: function (w) { var m = bkWaitModel(w), d = bkWaitDay(w); return m && m.who ? esc(m.who) : d ? esc(tx('Walk-in day') + ' · ' + tx('Counter') + ' ' + d.counter) : dash; } },
     { key: 'no', label: tx('Bill no'), prio: 4, sort: 'no', w: 170, html: true, cell: function (w) { var m = bkWaitModel(w); return m && m.no ? '<span class="mono">' + esc(m.no) + '</span>' : dash; } },
     { key: 'amount', label: tx('Amount'), prio: 2, sort: 'amount', num: true, w: 140, html: true, cell: function (w) { var m = bkWaitModel(w), t = m && m.money && m.money.total; return t != null ? esc(bkMajor(t, m.cur)) : dash; } },
-    { key: 'date', label: tx('Date'), prio: 5, sort: 'date', w: 120, html: true, cell: function (w) { var m = bkWaitModel(w); return esc(bkDate((m && m.at) || w.since)); } },
+    { key: 'date', label: tx('Date'), prio: 5, sort: 'date', w: 120, html: true, cell: function (w) { var m = bkWaitModel(w), d = bkWaitDay(w); return esc(bkDate((m && m.at) || (d && d.day) || w.since)); } },
     { key: 'step', label: tx('Step'), prio: 3, sort: 'step', w: 300, html: true, cell: function (w) {
         var i = (BK.waiting || []).indexOf(w), m = bkWaitModel(w);
         /* a posting that failed says why, in the server's words; a bill waiting on a person says which step it is at */
@@ -2101,7 +2104,7 @@ function bkWaitCols() {
       } },
   ];
 }
-function bkWaitDate(w) { var m = bkWaitModel(w); return String((m && m.at) || w.since || ''); }
+function bkWaitDate(w) { var m = bkWaitModel(w), d = bkWaitDay(w); return String((m && m.at) || (d && d.day) || w.since || ''); }
 function bkWaitNext(w) {
   var m = bkWaitModel(w), tid = 'wait-lines-' + (BK.waiting || []).indexOf(w);
   if (!m) return '<div data-testid="' + tid + '" style="color:var(--grey);font-size:var(--fs-1)">' + esc(tx(w.chit_id ? 'Reading the bill…' : 'No bill attached')) + '</div>';
@@ -2144,7 +2147,7 @@ async function bkWaitingView(body) {
       search: function (w) { var m = bkWaitModel(w); return [m && m.who, m && m.no, m && m.money && m.money.total, w.reason, w.why].join(' '); },
       sorts: [
         { key: 'date', label: tx('Oldest first'), cmp: function (a, b) { return bkWaitDate(a) < bkWaitDate(b) ? -1 : bkWaitDate(a) > bkWaitDate(b) ? 1 : 0; } },
-        { key: 'who', label: tx('Supplier'), cmp: function (a, b) { return String((bkWaitModel(a) || {}).who || '').localeCompare(String((bkWaitModel(b) || {}).who || '')); } },
+        { key: 'who', label: tx('Party'), cmp: function (a, b) { return String((bkWaitModel(a) || {}).who || '').localeCompare(String((bkWaitModel(b) || {}).who || '')); } },
         { key: 'no', label: tx('Bill no'), cmp: function (a, b) { return String((bkWaitModel(a) || {}).no || '').localeCompare(String((bkWaitModel(b) || {}).no || ''), undefined, { numeric: true }); } },
         { key: 'amount', label: tx('Amount'), cmp: function (a, b) { var g = function (w) { var m = bkWaitModel(w); return Number(m && m.money && m.money.total) || 0; }; return g(a) - g(b); } },
         { key: 'step', label: tx('Step'), cmp: function (a, b) { return Number(bkWaitFailed(b)) - Number(bkWaitFailed(a)); } },

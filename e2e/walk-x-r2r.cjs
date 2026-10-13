@@ -200,11 +200,13 @@ W.run('x-r2r', async (w) => {
       const m = /Total\s+([^\s]+[\d,.]+)\s+([^\s]+[\d,.]+)/.exec(t);
       return { ok: !!m && money(m[1]) === money(m[2]) && money(m[1]) > 0, saw: m ? 'Dr ' + m[1] + ' · Cr ' + m[2] : t.slice(-120) };
     });
-    await w.step('D6b', 'a Trial balance line opens the ledger it counts (Cash) — its closing is the TB figure', async () => {
-      await open(page, base, 'tb'); const want = (await page.locator('tr').filter({ hasText: /\bCash\b/ }).first().innerText().catch(() => '')).split('\t').pop().trim();
+    await w.step('D6b', 'a Trial balance line opens the ledger it counts (Cash) — and the ledger\'s closing is the TB\'s figure', async () => {
+      await open(page, base, 'tb');
+      const want = (await page.locator('tr', { has: page.locator(T('tb-open-1400')) }).first().locator('td.num').first().innerText().catch(() => '')).trim();
       await page.click(T('tb-open-1400')); await page.waitForTimeout(REAL ? 3500 : 1200);
       const h = await page.evaluate(() => location.hash), t = await content(page);
-      return { ok: h === '#ledgers' && /Cash/.test(t) && !/Find a ledger or party\s*$/.test(t), saw: 'hash ' + h + ' · TB says ' + want + ' · ' + t.replace(/\n/g, ' | ').slice(0, 140) };
+      const closing = (/Closing\s+([^\s·]*[\d,.]+)/.exec(await page.evaluate(() => document.body.innerText)) || [, ''])[1];
+      return { ok: h === '#ledgers' && !!want && money(closing) === money(want), saw: 'TB Cash ' + want + ' · the Cash ledger says Closing ' + (closing || '(none)') };
     });
     await w.step('D6c', 'Balance sheet: the two Totals agree on screen', async () => {
       await open(page, base, 'bs'); const t = await content(page);
@@ -225,7 +227,7 @@ W.run('x-r2r', async (w) => {
       await page.waitForTimeout(800);
       if (await page.locator(T('en-f-paid_from')).count()) await page.selectOption(T('en-f-paid_from'), { index: 1 }).catch(() => {});
       await page.fill(T('en-f-amount'), '123');
-      await page.fill(T('en-f-date'), SHOP === 'AU' ? '2027-09-15' : '2027-06-15').catch(() => {});   /* a month the loader closed for good */
+      await page.fill(T('en-f-date'), SHOP === 'AU' ? '2026-08-15' : '2026-06-15').catch(() => {});   /* a month the loader closed for good */
       await page.click(T('en-next')).catch(() => {}); await page.waitForTimeout(2500);
       const t = await page.evaluate(() => (document.getElementById('entrysheet') || {}).innerText || '');
       await page.screenshot({ path: path.join(SHOTS, 'wx-r2r-' + SHOP.toLowerCase() + '-entry-closed.png') });
