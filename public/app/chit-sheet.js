@@ -37,7 +37,7 @@
   }
   function when(ts) {
     if (!ts) return '';
-    try { var d = (CBLocale.date(ts, { day: '2-digit', month: 'short' }) || ''), t = (CBLocale.time(ts) || ''); return (d + ' ' + t).trim(); } catch (_) { return String(ts).slice(0, 16); }
+    try { return CBLocale.datetime(ts); } catch (_) { return String(ts).slice(0, 16); }   /* CU4: the one date-time stamp */
   }
   function isSelf(en, name) {
     try { return typeof chitIsSelf === 'function' && chitIsSelf(en, name); } catch (_) { return false; }

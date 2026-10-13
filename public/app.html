@@ -1622,7 +1622,7 @@ body.lab-only #cbtestpanel{
 <script src="/engine/screen.js"></script>   <!-- APP_THEMES: the 16 themes, ONE list for every page (engines screen v1.15.0) -->
 <script src="/app/avatar.js"></script>   <!-- CBAvatar: the avatar, its menu, and the look it owns (theme · font · text size · bold · motion) — one file, every page -->
 <script src="/app/accounts-shell.js"></script>   <!-- tx · txf · friendlyErr · toast · the Ledger's boot endpoints and switch — shared with accounts.html (2026-10-01) -->
-<!-- module 2: generic dependency-free helpers (esc/opt/scrErr/cap/inr_/fmtAt/fmtMoney/deepClone/jwtPayload) -->
+<!-- module 2: generic dependency-free helpers (esc/opt/scrErr/cap/fmtAt/fmtMoney/deepClone/jwtPayload) -->
 <!-- ⚠️ BEFORE helpers.js, which formats through it. The localisation layer owns every decision that changes
      across a border: language, direction, numerals, numbers, money, dates, times and SORT ORDER. -->
 <!-- ⭐ MONEY — an amount is never a bare number. The ONE reader (lib/money.js, vendored). Loaded BEFORE
@@ -12726,7 +12726,8 @@ function prodEffectiveField(){
     + `<input class="inp" id="ct_effective" data-testid="cat-field-effective" type="datetime-local" style="width:100%">`
     + `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">${tx('A future moment parks only what you changed; the product stays as it is until then.')}</div>`;
 }
-function fmtDateTime(x){ try{ return (typeof CBLocale!=='undefined'&&typeof CBLocale.dateTime==='function')?CBLocale.dateTime(x):new Date(x).toLocaleString(); }catch(_){ return String(x); } }
+/* CU4: it asked for a capital-T dateTime on CBLocale (no such function), so every caller printed the OS locale. The one formatter, with the year it always showed */
+function fmtDateTime(x){ try{ return CBLocale.datetime(x,{ day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }); }catch(_){ return String(x); } }
 function prodEffectiveAt(){ const v=val('ct_effective'); if(!v) return null; const t=new Date(v); return (t.getTime()>Date.now()+30000)?t.toISOString():null; }
 function prodDiff(cur, next){ const out={}; Object.keys(next||{}).forEach(k=>{ if(JSON.stringify((cur||{})[k])!==JSON.stringify(next[k])) out[k]=next[k]; }); return out; }
 
@@ -13149,7 +13150,7 @@ function prodOutcomeHTML(k, d){
         const word={ available:tx('Available'), unavailable:tx('Not available for now'), retired:tx('Retired'), redundant:tx('Redundant') }[st]||st;
         const hist=UI._prodHist&&UI._prodHist[UI.prodSel||'']; const since=(Array.isArray(hist)&&hist.length)?hist[hist.length-1].valid_from:null;
         return (st==='available'?'':'<span style="color:var(--warn-3)">● </span>')+`<b>${esc(word)}</b>`
-          + (since?' '+grey('· '+esc(tx('since')+' '+fmtDateTime(since).split(' ')[0])):'')
+          + (since?' '+grey('· '+esc(tx('since')+' '+CBLocale.date(since))):'')
           + (sch.length?' '+grey('· ')+`<span style="color:var(--blue)">📅 ${esc(txf('{n} change(s) parked', { n:String(sch.length) }))}</span>`:'')
           + (d.redundant_by?' '+grey('· '+esc(tx('replaced by')+' '+String(d.redundant_by))):'');
       }
@@ -13879,7 +13880,7 @@ function prodInvoiceTab(d){
     : [[txf('{s} {r}%',{ s:m.scheme, r:String(it.GstRt||0) }), (it.IgstAmt||it.CgstAmt||0)]];
   const cess = Number(it.CesAmt||0);
   const sw=(k,label)=>`<button class="composebtn${pos===k?' on':''}" data-testid="prod-invoice-pos-${k}" onclick="prodInvoicePos('${k}')" style="${pos===k?'font-weight:700;border-color:var(--blue)':''}">${esc(label)}</button>`;
-  const today=fmtDateTime(new Date().toISOString()).split(' ')[0];
+  const today=CBLocale.date(new Date());
   const gross=Number(m.line.unit_price||0)*Number(m.om.qty||1);
   const rows=[[tx('Gross'), gross]].concat(m.off?[[txf('Line offer{l}', { l: m.offLabel?' · '+m.offLabel:'' }), -m.off]]:[]).concat((m.orderAdj||[]).map(a=>[txf('Order-level · {l}', { l:a.label })+(a.why?' — '+a.why:''), -a.amount])).concat([[tx('Taxable value'), it.AssAmt]]).concat(heads).concat(cess?[[txf('Cess {r}%',{r:String(m.line.cess_rate||0)}), cess]]:[]).concat([[tx('Invoice total'), it.TotItemVal]]);
   const noteRows=(m.notes||[]).map(n=>`<div data-testid="prod-invoice-note" style="margin-top:6px;color:#7a5a00;background:#fff7e6;border:1px solid #f1d28a;border-radius:8px;padding:6px 10px">💡 <b>${esc(n.label)}</b> — ${esc(n.why)}</div>`).join('');
@@ -15631,7 +15632,7 @@ function mapApiChit(c){
     cancelConf:c.cancel_confirmed_at||null, cancelConfBy:c.cancel_confirmed_by||null,
     proof:'ok', pri:c.priority_flag||'normal', priExt:(c.summary_json&&c.summary_json.priority_external)||'normal', custPri:!!c.customer_priority, star:!!c.star_flag, unread:(c.read_at!==undefined ? !c.read_at : false), nitems:(c.summary_json&&c.summary_json.line_item_count)||0, items:[], atts:[], msgs:[] };
 }
-/* fmtAt + inr_ → app/helpers.js */
+/* fmtAt → app/helpers.js; inr_ retired by CU4 (it printed ₹ for every shop — use inr) */
 /**
  * ⚠️ THE QUALIFIERS ARE PART OF THE LINE, so they render with it. "Briyani × 4" and "Briyani × 4 — extra leg
  * piece, extra spicy, schezwan" are different orders; showing only the first means the kitchen cooks the wrong
@@ -15648,7 +15649,7 @@ function mapApiChit(c){
 function fmtLine(e){
   var li=(e&&(e.live||e.original))||e||{};
   var qty=(li.quantity||0)+(li.unit?(' '+li.unit):'')+(li.unit_size?(' ('+li.unit_size+')'):'');
-  var money=' × '+inr_(li.price)+' = '+inr_(li.total||(li.quantity*li.price));
+  var money=' × '+inr(li.price)+' = '+inr(li.total||(li.quantity*li.price));
   var name=(li.particulars||'Item')
     + (li.comment?('  ·  '+li.comment):'')
     + (li.asked_unit?('  (asked in '+li.asked_unit+')'):'');
@@ -17071,7 +17072,7 @@ function booksBlockHTML(c){
   var bj=(c.business_json||(c.header&&c.header.business_json)||(c.raw&&c.raw.business_json))||{}; var B=bj.books||{}; var st=String(c._status||(c.header&&c.header.current_status)||c.state||'');
   var purpose=String(c.kind||c.purpose||(c.header&&c.header.purpose)||''); if(!/^(order|offer)$/.test(purpose) && !Object.keys(B).length) return '';
   var at=String(((typeof SESSION!=='undefined'&&SESSION.policy_flags)||{}).books_at||'accepted');
-  var whenTx=function(iso){ try{ return (typeof fmtDateTime==='function')?fmtDateTime(iso):new Date(iso).toLocaleString(); }catch(_){ return String(iso||''); } };
+  var whenTx=fmtDateTime;
   var word={order:tx('Sales voucher'),receipt:tx('Receipt voucher'),purchase:tx('Purchase voucher')};
   var rows=Object.keys(B).map(function(k){ var r=B[k]||{}; var sys=esc(r.system||'books'); var w=word[k]||k;
     if(r.outcome==='ok') return '<div class="ir" data-testid="books-'+k+'"><span class="nm" style="color:var(--ok-2);font-weight:700">✓ '+txf('Written to {sys}',{sys:sys})+'</span><span class="qt">'+w+(r.ref?' '+esc(r.ref):'')+' · '+esc(whenTx(r.at))+(r.why?' · '+esc(r.why):'')+'</span></div>';

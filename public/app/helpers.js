@@ -26,7 +26,6 @@ function scrErr(e, subject, retry){
 }
 
 function cap(s){ return s[0].toUpperCase()+s.slice(1); }
-function inr_(v){ return fmtMoney(v, typeof myCur === 'function' ? myCur() : undefined); }   /* R1: one money formatter — alias to fmtMoney (currency-aware); CX0: the SHOP's currency, never INR by name */
 /* ⭐ CX0 (2026-10-13): THE SHOP'S PACK, ON EVERY PAGE — the registered pack of SESSION.country (CBRegulation, bundled in app/tax.js). One reader; a screen
    that needs the pack's word asks here, never a second `if (country === 'IN')`. null = no registry on the page or no country known (then India's words, as before). */
 function shopReg(){ try { var c = (typeof SESSION !== 'undefined' && SESSION && SESSION.country) || ''; return (window.CBRegulation && c && CBRegulation.packFor(String(c).toUpperCase())) || null; } catch (_) { return null; } }
