@@ -62,6 +62,8 @@ jobs:
         run: node e2e/token-guard.cjs
       - name: The process map names files and functions that exist (PM1; docs/process/flows.json)
         run: node e2e/process-map.cjs
+      - name: Docs beside the code have not drifted (MODULES.md; regenerate with node tools/gen-modules-doc.cjs)
+        run: node e2e/docs-guard.cjs
 
 
   scan:
