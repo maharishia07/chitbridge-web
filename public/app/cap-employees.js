@@ -68,7 +68,7 @@
   function load() {
     /* the Add form (embed view=add) needs only may/why + the picker: the server answers that without reading the list */
     return call('GET', '/api/people' + (E.o.embed && E.o.view === 'add' ? '?for=add' : '')).then(function (j) {
-      E.people = j.people || []; E.may = j.may || E.may; E.choices = j.access_choices || []; E.counts = j.counts || E.counts; E.loaded = true;
+      E.people = j.people || []; E.may = j.may || E.may; E.choices = j.access_choices || []; E.counts = j.counts || E.counts; E.payroll = j.payroll || null; E.loaded = true;
       return j;
     });
   }
@@ -125,7 +125,9 @@
     var b = $('emp_bar'); if (!b) return;
     var add = E.may.add || { ok: false };
     b.innerHTML = '<span class="emp-count" data-testid="emp-count"><b>' + (E.counts.on || 0) + '</b> ' + esc(T('on')) + (E.counts.off ? ' · <b>' + E.counts.off + '</b> ' + esc(T('off')) : '') + '</span>'
-      + '<span class="emp-add">' + actRow('emp_add', '＋', T('Add a person'), add) + '</span>';
+      + '<span class="emp-add">' + actRow('emp_add', '＋', T('Add a person'), add) + '</span>'
+      /* CX6 (E1): payroll is SAID, not silent — the server's one line, shown while the shop's country pack lists payroll as out of scope */
+      + (E.payroll && E.payroll.said ? '<div class="sub" data-testid="emp-payroll" style="flex-basis:100%">' + esc(E.payroll.said) + '</div>' : '');
     var btn = $('emp_add'); if (btn && add.ok !== false) btn.onclick = function () { openAdd(); };
   }
 

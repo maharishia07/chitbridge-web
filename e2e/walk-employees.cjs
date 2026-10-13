@@ -13,6 +13,7 @@
  */
 'use strict';
 const W = require('./lib/walk.cjs');
+const { measure } = require('./lib/theme-measure.cjs');
 const J = (r, status, body) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
 
 W.run('employees', async (w) => {
@@ -43,7 +44,8 @@ W.run('employees', async (w) => {
     if (p === '/api/facts/rail') return J(r, 200, { suppliers: 0, customers: 0, in: 0, out: 0, stuck: 0 });
     if (p === '/api/people' && m === 'GET') {
       if (S.listDenied) return J(r, 403, { message: 'This sign-in cannot open this.' });
-      return J(r, 200, { people: S.people, may: { add: S.addRefused ? { ok: false, why: 'Only the owner can add people.' } : { ok: true } }, access_choices: CHOICES, counts: counts() });
+      return J(r, 200, { people: S.people, may: { add: S.addRefused ? { ok: false, why: 'Only the owner can add people.' } : { ok: true } }, access_choices: CHOICES, counts: counts(),
+        payroll: { here: false, said: 'Pay and payroll filings are not done in ChitBridge yet. Keep paying your people the way you do now.' } });   /* CX6 (E1): api lib/people.js payrollWord — the same line for IN, AU, AE (gated on the pack; tests/people.test.cjs) */
     }
     if (p === '/api/actors/suggest-key' && m === 'POST') {
       const k = String(body && body.display_name || '').toLowerCase().replace(/[^a-z]/g, '').slice(0, 6) + '04';
@@ -164,6 +166,23 @@ W.run('employees', async (w) => {
     await page.click('[data-testid="emp-retry"]'); await page.waitForSelector('[data-testid="emp-bar"]', { timeout: 8000 }).catch(() => {}); await page.waitForTimeout(300);
     const back = await rows();
     return { ok: /This sign-in cannot open this/.test(t) && /Try again/.test(t) && back >= 3, saw: '"' + t.slice(0, 80) + '"; after Try again: ' + back + ' rows' };
+  });
+  await w.step('E17', 'CX6 · Employees -> payroll is SAID (one line), readable (AA) and unclipped in light and dark at 1366 and 390 px, no sideways scroll', async () => {
+    const seen = [];
+    for (const [wd, ht] of [[1366, 800], [390, 844]]) {
+      await page.setViewportSize({ width: wd, height: ht }); await open();
+      for (const th of ['cream', 'dark']) {
+        await page.evaluate((k) => { if (window.CBAvatar) CBAvatar.applyTheme(k); }, th); await page.waitForTimeout(80);
+        const line = await txt('[data-testid="emp-payroll"]');
+        const box = await page.$eval('[data-testid="emp-payroll"]', (e) => ({ clip: e.scrollWidth > e.clientWidth + 1, right: e.getBoundingClientRect().right })).catch(() => null);
+        const hscroll = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
+        const all = (await page.evaluate(measure)).filter((x) => x.ratio < x.need); if (process.env.CX6_DEBUG) console.log(th, wd, JSON.stringify(all.slice(0, 8)));
+        const bad = all.filter((x) => /payroll|Pay and/.test(x.html + x.text));
+        seen.push({ wd, th, ok: /not done in ChitBridge/.test(line) && box && !box.clip && box.right <= wd + 1 && !hscroll && !bad.length, why: (box ? '' : 'no line ') + (hscroll ? 'h-scroll ' : '') + (bad.length ? 'contrast ' + bad[0].ratio : '') });
+      }
+    }
+    await page.setViewportSize({ width: 1366, height: 800 }); await page.evaluate(() => { if (window.CBAvatar) CBAvatar.applyTheme('cream'); });
+    return { ok: seen.every((x) => x.ok), saw: seen.map((x) => x.wd + '/' + x.th + ':' + (x.ok ? 'ok' : 'FAIL ' + x.why)).join(' · ') };
   });
   w.note('E16', 'Embedded form (?embed=1&view=add) and "who is on duty" (?view=onduty), opened from the till', 'they wait for a host page\'s session over postMessage - walked in the till pack (walk-bill), not here');
 });
