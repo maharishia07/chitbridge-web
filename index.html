@@ -133,7 +133,7 @@ async function read(path){
   var g = GEN, never = function(){ return new Promise(function(){}); };
   var r = await fetch(CBShell.apiBase() + path, { cache:'no-store', headers:{ Authorization:'Bearer ' + SESS.token } });
   if (g !== GEN) return never();
-  if (!r.ok) { var e = new Error(String(r.status)); e.status = r.status; throw e; }
+  if (!r.ok) { var e = new Error(String(r.status)); e.status = r.status; try { e.data = await r.json(); } catch (_) {} throw e; }   /* the refusal's body (code · message) rides the error, as CB Accounts' api() does */
   var j = await r.json();
   if (g !== GEN) return never();
   return (j && typeof j === 'object' && 'ok' in j && ('data' in j || 'error' in j)) ? (j.ok ? j.data : null) : j;
@@ -158,14 +158,20 @@ function alertsPaint(){
     .map(function(a){ return a.html; }).join('');
 }
 
-/* the ledger's posts waiting for the owner — GET /api/books/health (budget line: I19); a 404 means the ledger is off, nothing wrong */
+/* the ledger's posts waiting for the owner — GET /api/books/health (budget line: I19); a 404 means the ledger is off, nothing wrong.
+   FX-UX1 (F1): a country setup still to do (422 COUNTRY_SETUP_PENDING · NO_COUNTRY) blocks CB Accounts and Finance — one row, in the server's
+   own sentence, with the button that fixes it (the door CB Accounts' card uses). Read on every Home paint, so it is gone once the setup is done. */
 function booksAlert(){
   var g = GEN;
   return read('/api/books/health').then(function(r){
     if (g !== GEN) return;
     var w = ((r && r.waiting) || []).length;
     if (w) alert_('ledger-waiting', 'warn', '🕗', w + ' waiting for the ledger', '', 'See them', '/accounts.html#waiting');
-  }).catch(function(){});
+  }).catch(function(e){
+    if (g !== GEN || !e || e.status !== 422 || !e.data) return;
+    if (/^(COUNTRY_SETUP_PENDING|NO_COUNTRY)$/.test(String(e.data.code || '')) && (e.data.message || e.data.error))
+      alert_('country-pending', 'warn', '!', e.data.message || e.data.error, '', 'Finish your country setup', '/settings.html#/country');
+  });
 }
 
 /* ── THE RAIL: the Home widget. Its one read and its Open target come from the manifest's `rail` (null = not drawn). ── */
