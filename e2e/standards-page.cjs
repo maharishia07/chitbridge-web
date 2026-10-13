@@ -97,9 +97,13 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
 
   /* ── 1 · the register ───────────────────────────────────────────────────────────────────────────────────── */
   {
-    ok(REG.S.length === 63, 'the register holds 63 standards (44 + the 17 adopted 2–3 Oct 2026 + the Country Standard, CPS1 + pseudo-localisation, LOC0, 13 Oct 2026): ' + REG.S.length);
+    /* CO3 (2026-10-13): four record-keeping rows (IN · AU · AE), after CPS1's and LOC0's, named here — every one Partly */
+    const CO3 = ['Companies Act 2013 s.128(5) · CGST Act s.36, Rules 56–57', 'Companies (Accounts) Rules r.3(5)–(6)',
+      'TAA 1953 Sch 1 s.382-5 · Corporations Act 2001 s.286', 'Tax Procedures Decree-Law 28/2022 · Corporate Tax Decree-Law 47/2022 Art. 56'];
+    ok(REG.S.length === 63 + CO3.length && REG.S.slice(63, 67).map((r) => r.n).join('|') === CO3.join('|') && REG.S.slice(63, 67).every((r) => r.s === 'part' && r.added === '2026-10-13'),
+      'the register holds 67 standards (44 + the 17 adopted 2–3 Oct 2026 + the Country Standard, CPS1 + pseudo-localisation, LOC0 + the 4 CO3 record-keeping rows, each Partly): ' + REG.S.length);
     /* N11 (9c8cdc58, 2026-10-08): ISO 8601 moved Partly → In force with a stated limit, proven by chitbridge-api tests/iso8601.test.cjs; CPS1: the Country Standard, In force with a limit; LOC0: pseudo-localisation, Partly */
-    ok(COUNT.live === 35 && COUNT.part === 16 && COUNT.plan === 12, 'in force 35 · partly 16 · planned 12 (' + COUNT.live + ' · ' + COUNT.part + ' · ' + COUNT.plan + ')');
+    ok(COUNT.live === 35 && COUNT.part === 16 + CO3.length && COUNT.plan === 12, 'in force 35 · partly 20 (16 + CO3\'s 4) · planned 12 (' + COUNT.live + ' · ' + COUNT.part + ' · ' + COUNT.plan + ')');
     const fields = REG.S.filter((r) => !r.a || !r.k || !Array.isArray(r.c) || !r.c.length || !r.p);
     ok(fields.length === 0, 'every row has an area, a kind, an applies-in and the plain-words line' + (fields.length ? ' — missing on ' + fields.map((r) => r.n).join('; ') : ''));
     const areas = REG.A.map((a) => a[0]), kinds = REG.K.map((k) => k[0]), ctry = REG.C.map((c) => c[0]);
@@ -115,7 +119,7 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     DESIGN.rows.forEach((d, i) => { const r = REG.S[i]; if (r && MOVED[r.n]) return; keys.forEach((k) => { if ((r && r[k] || undefined) !== (d[k] || undefined)) diff.push(i + ':' + k); }); if (!r || JSON.stringify(r.c) !== JSON.stringify(d.c)) diff.push(i + ':c'); });
     /* the designer's data is the register AS OF 3 Oct 2026 (61 rows); rows adopted later (CPS1: the Country Standard · LOC0: pseudo-localisation) follow it, and are not in it */
     ok(DESIGN.rows.length === 61 && REG.S.length >= DESIGN.rows.length && diff.length === 0, 'the designer\'s 61 rows equal the register\'s first 61, field for field' + (diff.length ? ' — ' + diff.slice(0, 6).join(' ') : ''));
-    const added = REG.S.filter((r) => r.added);
+    const added = REG.S.filter((r) => r.added && CO3.indexOf(r.n) < 0);
     ok(added.length === 19 && added.filter((r) => r.s === 'live').length === 12 && added.filter((r) => r.s === 'part').length === 5 && added.filter((r) => r.s === 'plan').length === 2, 'the 19 additions carry their stated statuses: 12 in force, 5 partly (LOC0\'s pseudo-localisation is Partly), 2 planned');
     const cm = REG.S.filter((r) => r.matrix === 'country');
     ok(cm.length === 1 && cm[0].c.join() === 'IN,AU,AE' && cm[0].s === 'live' && cm[0].limit, 'ONE Country Standard row (CPS1): applies in IN · AU · AE, In force with a stated limit, its opened row paints the matrix');
