@@ -236,7 +236,7 @@ function bkPartyLabel(partyId, fallbackName) {
 async function booksDuesLoad(force) {
   if (!force && BK.dues && Date.now() - BK.duesAt < 30000) return BK.dues;
   try {
-    bkDuesStore(await api('booksDues', { query: { asOf: bkToday() } }));
+    bkDuesStore(await api('booksDues'));   /* WX-P2P-02: no asOf — the server's today is the shop's day */
   } catch (_) { BK.dues = BK.dues || {}; }
   try { if (typeof paintCustList === 'function' && document.getElementById('cu_rows')) paintCustList(); } catch (_) {}
   try { if (typeof paintSupList === 'function' && document.getElementById('sup_rows')) paintSupList(); } catch (_) {}
@@ -533,7 +533,10 @@ async function partyEditSave(kind, partyId) {
 var PAY = null;
 function payOpen(kind, partyId) {
   var r = partyRowOf(kind, partyId) || {};
-  PAY = { kind: kind, partyId: partyId, name: r.nickname || r.display_name || '', ref: bkRef(), seq: 0, ack: [], advice: false, preview: null };   /* one ref per opened form */
+  /* ⚠️ WX-P2P-10 (2026-10-13, the real stack): on CB Accounts (no supplier / customer list loaded) the sheet opened as "Pay ·" — no name until the
+     preview answered. The Payables row that opened it already holds the name (BK.dues, the one dues read); the preview's party.name still wins later. */
+  var d = (BK.dues && BK.dues[partyId]) || {};
+  PAY = { kind: kind, partyId: partyId, name: r.nickname || r.display_name || d.name || '', ref: bkRef(), seq: 0, ack: [], advice: false, preview: null };   /* one ref per opened form */
   modal('<div class="mhd"><div class="t" id="pay_title" data-testid="pay_title">' + esc(kind === 'supplier' ? tx('Pay') : tx('Receive')) + ' · ' + esc(PAY.name) + '</div></div><div class="mbody" id="pay_body" style="display:flex;flex-direction:column;gap:8px">'
     + '<label>' + tx('Amount') + '' + bkMoneyInput({ id: 'pay_amt', on: 'payPreviewSoon()' }) + '</label>'
     + '<label>' + tx('How') + '<select class="inp" id="pay_mode" data-testid="pay_mode" onchange="payModePaint()"><option value="cash">' + tx('Cash') + '</option><option value="upi">UPI</option><option value="bank">' + tx('Bank') + '</option><option value="card">' + tx('Card') + '</option><option value="cheque">' + tx('Cheque') + '</option></select></label>'
@@ -605,9 +608,13 @@ function payPaint() {
   var ws = payOpenWarnings();
   if (band) {
     band.hidden = !ws.length;
-    band.innerHTML = !ws.length ? '' : '<div data-testid="pay_band_words">' + ws.map(function (w) { return esc(w.words); }).join(' ') + (ws.some(function (w) { return w.code === 'nothing_owed' || w.code === 'excess'; })
+    /* ⚠️ WX-P2P-11 (2026-10-13, the real stack): the band's yes said "Pay as advance" for EVERY warning — a second genuine payment to the same
+       supplier today ("the last bill was settled by PY/… today", the duplicate rule) offered only an advance, though pressing it applies the bills
+       on screen exactly as Record would. The words follow the warning: an advance only when nothing is owed / too much is paid. */
+    var asAdvance = ws.some(function (w) { return w.code === 'nothing_owed' || w.code === 'excess'; });
+    band.innerHTML = !ws.length ? '' : '<div data-testid="pay_band_words">' + ws.map(function (w) { return esc(w.words); }).join(' ') + (asAdvance
         ? ' ' + esc(txf(PAY.kind === 'supplier' ? 'Pay {amt} again as an advance?' : 'Receive {amt} again as an advance?', { amt: bkMoney(PAY.amount) })) : '')
-      + '</div><div style="display:flex;gap:8px;margin-top:6px"><button class="pri" data-testid="pay_ack" onclick="payRecord(true)">' + esc(PAY.kind === 'supplier' ? tx('Pay as advance') : tx('Receive as advance')) + '</button>'
+      + '</div><div style="display:flex;gap:8px;margin-top:6px"><button class="pri" data-testid="pay_ack" onclick="payRecord(true)">' + esc(asAdvance ? (PAY.kind === 'supplier' ? tx('Pay as advance') : tx('Receive as advance')) : (PAY.kind === 'supplier' ? tx('Pay anyway') : tx('Receive anyway'))) + '</button>'
       + '<button data-testid="pay_band_cancel" onclick="closeModal()">' + tx('Cancel') + '</button></div>';
   }
   /* nothing records until a button IN the band is pressed */
@@ -1031,7 +1038,7 @@ async function bkDaybook(body) {
   var q = bkRange('db');
   try {
     /* the strip and the to-do read routes that already exist — the day book's own, dues, cheques, health — together */
-    var rr = await Promise.all([api('booksDaybook', { query: q }), api('booksDues', { query: { asOf: bkToday() } }), bkChequesLoad(), bkHealthLoad()]);
+    var rr = await Promise.all([api('booksDaybook', { query: q }), api('booksDues'), bkChequesLoad(), bkHealthLoad()]);
     var r = rr[0]; bkDuesStore(rr[1]);   /* the same read names each entry's party (bkPartyLabel) */
     BK.dv = { r: r, range: q, todo: bkTodoCounts(rr[1], rr[2], rr[3]) };
     body.innerHTML = '<div id="bk_dvlist" data-testid="db-list"></div>';
@@ -1684,7 +1691,7 @@ function bkDuesNext(p, c) {
 }
 async function bkDues(body, onlySide) {   /* onlySide 'rcv' | 'pay' (CB Accounts: Receivables / Payables) opens the same list on that side */
   try {
-    var r = await api('booksDues', { query: { asOf: bkToday() } }); var c = r && r.currency; bkDuesStore(r);
+    var r = await api('booksDues'); var c = r && r.currency; bkDuesStore(r);
     var open = ((r && r.parties) || []).filter(function (p) { return Number(p.balance_minor); });
     /* the page's own side is the page, not a filter the person set: Receivables also holds the advances paid; Payables holds no one who owes you */
     if (onlySide) open = open.filter(function (p) { return onlySide === 'rcv' ? (bkDuesSide(p) === 'rcv' || bkDuesAdvance(p)) : (bkDuesSide(p) === 'pay' && !bkDuesAdvance(p)); });
