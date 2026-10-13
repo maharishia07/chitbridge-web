@@ -7,7 +7,7 @@ Other compliance rounds (CO1 privacy, CO3 records) add their own sections below.
 ## CO2 · security controls (2026-10-13)
 | ✔ | Action | Why (rule) | Proof to keep |
 |---|---|---|---|
-| ☐ | **Run `chitbridge-api/migrations/b303_state_log_append_only.sql`** (Supabase SQL editor, as postgres), steps 1–3 | Chit history append-only (ISO 27001 A.8.15; Companies Act r.3(1) spirit) | Step 3 output: `update_grant_must_be_0 = 0`, `delete_guard_must_be_1 = 1` |
+| ☐ | **Run `chitbridge-api/migrations/b315_state_log_append_only.sql`** (Supabase SQL editor, as postgres), steps 1–3 | Chit history append-only (ISO 27001 A.8.15; Companies Act r.3(1) spirit) | Step 3 output: `update_grant_must_be_0 = 0`, `delete_guard_must_be_1 = 1` |
 | ☐ | **Set `CB_ALERT_WEBHOOK`** on Railway (an on-call channel's incoming webhook), then raise one test critical | Wakes a person inside the CERT-In 6 h clock | Screenshot of the alert arriving |
 | ☐ | **Register a CERT-In point of contact** (name, designation, phone, e-mail) | CERT-In Directions 2022, dir.(iii) ◐ | CERT-In acknowledgement |
 | ☐ | **Logs kept 180 days (≥ 1 year advised) in India** — ship Railway logs to a sink in an Indian region, or move the API's region | CERT-In dir.(iv) 180 days in India ◐; DPDP Rules r.6(1)(e) 1 year (May 2027) ◐. Today the API runs in **Singapore** (`public/app.html`, API_BASE note) | Sink config + a sample line ≥ 180 days old |

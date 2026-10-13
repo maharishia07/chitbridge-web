@@ -498,7 +498,7 @@ var STANDARDS = [
   /**
    * ⭐ ROUND CO2 (2026-10-13) — security controls + evidence, from docs/research/COMPLIANCE-OBLIGATIONS-2026-10.md (K5 · K6 · K10) for
    * India, Australia and the UAE. Each row says what is IN FORCE in the product, what is not, and where a reviewer sees the proof
-   * (docs/compliance/ · chitbridge-api tests/co2-controls.test.cjs · b303 · vercel.json). An organisational act (registering a
+   * (docs/compliance/ · chitbridge-api tests/co2-controls.test.cjs · b315 · vercel.json). An organisational act (registering a
    * contact, a lawyer's wording) is never claimed here — it is a line in docs/compliance/OWNER-ACTIONS.md. Kept AFTER the 61 rows the
    * design data holds, so e2e/standards-page.cjs compares those 61 unchanged and counts these by their `added` date.
    */
@@ -540,11 +540,11 @@ var STANDARDS = [
     added:'2026-10-13' },
   { a:'build', k:'std', c:['GLOBAL'],
     p:"A chit’s history can be added to, never rewritten",
-    m:"Database guard written; in force once b303 runs",
+    m:"Database guard written; in force once b315 runs",
     g:'Security', n:'ISO/IEC 27001:2022 A.8.15 (Logging)', w:'Logs protected from change and deletion',
     s:'part',
-    note:"Already insert-only for the app: the sign-in log (b282), the access-grant log (b172) and the books’ journal (b273). b303 adds the chit history (state_log): the app may no longer change a line, and may delete only a draft’s own lines — the draft-purge rule, now held by the database. Proof: chitbridge-api tests/co2-controls.test.cjs, and b303’s last query (update grant 0, delete guard 1).",
-    at:'chitbridge-api b303 · tests/co2-controls', go:'',
+    note:"Already insert-only for the app: the sign-in log (b282), the access-grant log (b172) and the books’ journal (b273). b315 adds the chit history (state_log): the app may no longer change a line, and may delete only a draft’s own lines — the draft-purge rule, now held by the database. Proof: chitbridge-api tests/co2-controls.test.cjs, and b315’s last query (update grant 0, delete guard 1).",
+    at:'chitbridge-api b315 · tests/co2-controls', go:'',
     why:"A history a program can rewrite proves nothing; one the database refuses to rewrite proves itself.",
     added:'2026-10-13' },
   { a:'build', k:'std', c:['GLOBAL'],
