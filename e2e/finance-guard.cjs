@@ -1,4 +1,4 @@
-/* Finance guard (F1): static — no browser. CB Finance · Collections agrees with itself and with the pieces it reuses:
+/* Finance guard (F1 · F2 · F3): static — no browser. CB Finance · Collections agrees with itself and with the pieces it reuses:
    · finance.html wears the ONE frame (CBAvatar · the header with Home · the kural band · the one sign-in) and loads what cap-finance.js reaches for;
    · the Home door points at /finance.html (state built);
    · the only call is the existing booksDues row, asked with finance=1; Receive is payOpen (the one payment path), Remind is bkRemind (M28);
@@ -47,6 +47,25 @@ if (!/Terms arrive after the next update\./.test(ftc) || !/may_set/.test(ftc) ||
 if (/coming/.test(crmRec.replace(/\/\*[\s\S]*?\*\//g, '')) && /CB Finance[^'"]*coming/.test(crmRec)) bad('the CRM record still says CB Finance is coming'); else ok('CRM record: the "coming" text is gone');
 if (!/booksTerms/.test(crmRec) || !/booksTerms/.test(crmJs) || !/crm-terms/.test(crmRec)) bad('the CRM record must read booksTerms (read-only) and show the changes'); else ok('CRM record reads terms, read-only');
 if (/booksTermsSet/.test(crmRec)) bad('the CRM record must not SET terms — Finance is the one place'); else ok('CRM record never sets terms');
+
+/* ── F3 · Cash (cap-finance-cash.js): static, no browser — the tab paints the server's cash position and computes nothing ── */
+const fc = read('public/app/cap-finance-cash.js');
+const fcc = fc.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '').replace(/\s\/\/ .*$/gm, '');
+if (page.indexOf('/app/cap-finance-cash.js') < 0 || page.indexOf('data-testid="fin-nav-cash"') < 0 || page.indexOf('href="#/cash"') < 0) bad('finance.html must load cap-finance-cash.js and carry the Cash nav'); else ok('Cash tab: script + nav');
+const fcCalls = [...fcc.matchAll(/\bapi\('(\w+)'/g)].map((m) => m[1]).filter((v, i, a) => a.indexOf(v) === i).join();
+if (fcCalls !== 'booksCashflow') bad('the Cash tab calls booksCashflow and nothing else, found ' + JSON.stringify(fcCalls)); else ok('Cash calls: booksCashflow only');
+if (!/query:\s*\{\s*days:/.test(fcc)) bad('the 7/30 toggle must re-ask the server (query days), never slice the answer');
+/* no arithmetic on the server's figures: the bars are drawn FROM balance_minor (a scale is geometry, not money); in · out · balance · shortfall are painted as given */
+if (/_minor\s*[*\/+\-]\s*[\w(]/.test(fcc.replace(/Number\(d\.balance_minor \|\| 0\)/g, '')) || /\*\s*100\b/.test(fcc)) bad('cap-finance-cash.js must not compute with *_minor'); else ok('Cash: no money computed here');
+if (/e(rr)?\.message|error\.message/.test(fcc) || /\bconfirm\(|\balert\(/.test(fcc)) bad('Cash: no raw server message, no browser dialog'); else ok('Cash: no raw message / dialog');
+if (/#[0-9a-fA-F]{3,6}\b/.test(fcc.replace(/var\(--[\w-]+,\s*#[0-9a-fA-F]{3,8}\)/g, ''))) bad('Cash: a raw colour outside a var() fallback'); else ok('Cash: theme tokens only (var(--token,#fallback))');
+if (!/finOff\(\)/.test(fcc) || !/finDenied\(FC_OWNER_ONLY\)/.test(fcc) || !/Only the owner may see the cash position\./.test(fcc) || !/status === 403/.test(fcc) || !/status === 404/.test(fcc)) bad('Cash: the ledger-off card and the owner-only sentence must be the shared ones'); else ok('Cash: ledger off → finOff · owner only → the sentence, greyed');
+if (!/CBList\.mount\(/.test(fcc) || !/CBList\.nextRow\(/.test(fcc) || !/notices/.test(fcc)) bad('Cash: the days are the one list (CBList), a day opens with nextRow, the sentence rides as a head notice'); else ok('Cash: CBList table · nextRow · head notice');
+if (!/bkDrCr\(/.test(fcc) || !/bkMoney\(/.test(fcc)) bad('Cash: balances in Dr/Cr words (bkDrCr), amounts through bkMoney (M25/M36)'); else ok('Cash: M25 Dr/Cr words · M36 money unit');
+if (!/role="img"/.test(fcc) || !/aria-label=/.test(fcc)) bad('Cash: the chart needs role=img and an aria-label (the table carries the numbers)'); else ok('Cash: chart is labelled; numbers are also the table');
+if (!/booksCashflow/.test(read('e2e/fixtures/web-api.contract.json')) && !/\/api\/books\/cashflow/.test(read('e2e/fixtures/web-api.contract.json'))) bad('the contract copy must list GET /api/books/cashflow'); else ok('contract copy lists /api/books/cashflow');
+const flows = read('docs/process/flows.json');
+if (!/"cash position"/.test(flows) || !/cap-finance-cash\.js/.test(flows)) bad('flows.json must carry the cash position step (PM1)'); else ok('flows.json: cash position step');
 
 console.log(fail ? fail + ' FAILED' : 'finance-guard: all ok');
 process.exit(fail ? 1 : 0);

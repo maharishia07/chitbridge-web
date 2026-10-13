@@ -19,25 +19,32 @@
  *                                                               (e2e/ep-aliases.cjs): the worklist's rows, read here, never a third name
  *   PUT  /api/actors/assign/:id       (assign, as app.html) — who holds the whole task: push <person> · return
  *   GET  /api/work/list · /api/work/:id · GET /api/people  — the rows, the sheet, the people to pick from
- * Flow steps (docs/process/flows.json): O2C step 3 · order (tkList, tkOpen) · O2C step 4 · delivery (tkMove, tkAssignLine, tkDeliver).
+ *   GET  /api/facts/rail/chits        (CB_SHEET_EP.railChits, the CRM's name) — stuck + why: the SERVER's overdue test, the same rows and clock as Home's rail chips
+ * Flow steps (docs/process/flows.json): O2C step 3 · order (tkList, tkOpen) · O2C step 4 · delivery (tkMove, tkAssignLine, tkDeliver) ·
+ *   O2C step 5 · invoice (tkBill: hands the order to the till's ONE bill path, orderToBill — never a second bill here).
  *
  * NEW PATHS (rule 4): CBTasks (this screen: nothing drew the work rows, the lines' state + assignee and the server's verdicts together) ·
- *   ageWord (age_days → "Today" / "3 d": cap-crm-chits.js chitsAge reads the same field but lives inside the CRM's screen file and its globals).
+ *   ageWord (age_days → "Today" / "3 d": cap-crm-chits.js chitsAge reads the same field but lives inside the CRM's screen file and its globals) ·
+ *   markStuck (TO1b: the rail's stuck + why joined onto the work rows — cap-crm-chits reads the same route for its own rows, inside the CRM's screen).
+ *
+ * TO1b (the designer brief, docs/design/tasks-orders/REQUIREMENT.md): a row says 🌐 Online · Delivery / Pick up · customer · ₹ · asked-for · address ·
+ * remark · age; Stuck / Billed / Sent out are marks beside the stage word; Accept → Bill it → Delivered / Handed over; ＋ New is app.html's Compose.
  *
  * EMBED (?embed=1[&view=orders_in|orders_out|tasks|done]): the same screen with no frame, for a host page to open in a dialog (embed-host.js).
  * The page tells its host what happened — docs/design/tasks-orders/EMBED.md:
- *   window.parent.postMessage({ cb: 'tasks', event: 'open' | 'moved' | 'assigned' | 'close', chit_id, ... }, location.origin)
+ *   window.parent.postMessage({ cb: 'tasks', event: 'open' | 'moved' | 'assigned' | 'bill' | 'close', chit_id, ... }, location.origin)
  *
  *   CBTasks.mount(el, { token, base, embed, view, onEnded }) → { reload, show(view) }
  */
 (function (root) {
   'use strict';
-  /* the registry rows this screen adds (the scanner tools/endpoint-usage.cjs reads this shape); status · chit · wlAssign · wlDeliver come from CB_SHEET_EP, messages · sendMsg from CB_THREAD_EP */
+  /* the registry rows this screen adds (the scanner tools/endpoint-usage.cjs reads this shape); status · chit · wlAssign · wlDeliver · railChits come from CB_SHEET_EP, messages · sendMsg from CB_THREAD_EP */
   var CB_WORK_EP = {
     workList:         { m: 'GET',  p: '/api/work/list',               ok: 'y' },   // ?view=&limit=
     workOne:          { m: 'GET',  p: '/api/work/:id',                ok: 'y' },
     assign:           { m: 'PUT',  p: '/api/actors/assign/:id',       ok: 'y' },   // { action: 'push', target_actor_id } · { action: 'return' }
     people:           { m: 'GET',  p: '/api/people',                  ok: 'y' },
+    /* railChits (GET /api/facts/rail/chits: stuck + why, the server's overdue test) comes from CB_SHEET_EP — one name, registered once (TO1b) */
   };
   root.CB_WORK_EP = CB_WORK_EP;
 
@@ -66,17 +73,43 @@
 
   /* ── words ── */
   var KIND_WORD = { order_in: 'Order in', order_out: 'Order out', task: 'Task' };
-  var STEP_LABEL = { accept: { order: 'Accept', task: 'Start' }, reject: { order: 'Reject', task: 'Reject' }, complete: { order: 'Complete', task: 'Done' }, cancel: { order: 'Cancel', task: 'Cancel' }, reopen: { order: 'Reopen', task: 'Reopen' } };
-  var STEP_SAID = { accept: 'Accepted.', reject: 'Rejected.', complete: 'Completed.', cancel: 'Cancelled.', reopen: 'Reopened.' };
+  /* the brief's words (REQUIREMENT §4): an order in is Delivered / Handed over, never "Complete"; an order out is Received; a task is Done */
+  var STEP_LABEL = { accept: { order: 'Accept', task: 'Start' }, reject: { order: 'Reject', task: 'Reject' }, complete: { order: 'Delivered', task: 'Done' }, cancel: { order: 'Cancel', task: 'Cancel' }, reopen: { order: 'Reopen', task: 'Reopen' } };
+  var STEP_SAID = { accept: 'Accepted.', reject: 'Rejected.', complete: 'Done.', cancel: 'Cancelled.', reopen: 'Reopened.' };
   var STEPS = ['accept', 'reject', 'complete', 'cancel', 'reopen'];
-  function stepLabel(a, r) { return T(STEP_LABEL[a][r.kind === 'task' ? 'task' : 'order']); }
+  function stepLabel(a, r) {
+    if (a === 'complete' && r.kind === 'order_in') return T(r.fulfilment === 'pickup' ? 'Handed over' : 'Delivered');
+    if (a === 'complete' && r.kind === 'order_out') return T('Received');
+    return T(STEP_LABEL[a][r.kind === 'task' ? 'task' : 'order']);
+  }
+  function stepSaid(a, r) { return a === 'complete' && r.kind !== 'task' ? stepLabel(a, r) + '.' : T(STEP_SAID[a]); }
   function ageWord(d) { d = Math.floor(Number(d) || 0); return d <= 0 ? T('Today') : d + ' ' + T('d'); }
+  /* the symbols the bell already uses for an order (rail-bell.js O3): 🌐 Online · Delivery / Pick up — a symbol beats a sentence (SYSTEM §1) */
+  var CHANNEL_WORD = { online: '🌐 Online', rail: '⇄ Rail', counter: '▤ Counter' };
+  var FULFIL_WORD = { delivery: 'Delivery', pickup: 'Pick up' };
+  function channelWord(r) { return r.channel ? T(CHANNEL_WORD[r.channel] || r.channel) : ''; }
+  function fulfilWord(r) { return r.fulfilment ? T(FULFIL_WORD[r.fulfilment] || r.fulfilment) : ''; }
+  function howWord(r) { return [channelWord(r), fulfilWord(r)].filter(Boolean).join(' · '); }
+  /** the asked-for time, in the shop's own date words (CBLocale.date; the raw ISO day when the locale unit is not on the page) */
+  function forWord(r) {
+    if (!r.requested_for) return '';
+    try { return (root.CBLocale && root.CBLocale.date(r.requested_for, { day: 'numeric', month: 'short' })) || String(r.requested_for).slice(0, 10); } catch (_) { return String(r.requested_for).slice(0, 10); }
+  }
+  /** the marks the server keeps beside the stage word: billed (the counter bill exists) · sent out (despatched) · stuck (the rail's overdue test, with its why) */
+  function marksHTML(r) {
+    var m = [];
+    if (r.stuck) m.push('<span class="tag red" data-testid="tk-stuck-' + esc(r.chit_id) + '" title="' + esc(r.stuck_why || '') + '">' + esc(T('Stuck')) + '</span>');
+    if (r.billed) m.push('<span class="tag" data-testid="tk-billed-' + esc(r.chit_id) + '">' + esc(T('Billed')) + '</span>');
+    if (r.despatched && r.stage !== 'delivered' && r.stage !== 'closed') m.push('<span class="tag">' + esc(T('Sent out')) + '</span>');
+    return m.join(' ');
+  }
   function money(minor, cur) {
     if (minor == null) return '';
     try { return root.bkMoney(minor, cur || 'INR'); } catch (_) { return String(minor); }
   }
   function toneOf(r) { return r.stage === 'new' ? 'amber' : r.stage === 'closed' ? '' : 'green'; }
   function wordTag(r) { return '<span class="tag ' + toneOf(r) + '" data-testid="tk-word-' + esc(r.chit_id) + '">' + esc(T(r.word || '')) + '</span>'; }
+  function wordCell(r) { var m = marksHTML(r); return wordTag(r) + (m ? ' ' + m : ''); }
   function whoWord(r) {
     if (r.lines_assigned_n) return r.lines_assigned_n + ' ' + T(r.lines_assigned_n === 1 ? 'line held' : 'lines held');
     return r.assignee && r.assignee.name ? r.assignee.name : T('No one');
@@ -94,8 +127,21 @@
     return call('workList', { query: { view: K.view, limit: LIMIT } }).then(function (j) {
       j = j || {};
       K.rows = Array.isArray(j.rows) ? j.rows : []; K.counts = j.counts || null; K.total = j.total == null ? K.rows.length : j.total; K.truncated = !!j.truncated;
-      return j;
+      return markStuck().then(function () { return j; });
     });
+  }
+  /**
+   * stuck = the SERVER's overdue test (GET /api/facts/rail/chits: lib/home-facts railChits, the same rows and clock as Home's rail chips) with its
+   * `why` in a shopkeeper's words — this page compares no dates (SYSTEM §3 rule 12). Orders only (a task is the shop's own note, never stuck);
+   * a truncated shop or a failed read marks nothing, never a wrong row.
+   */
+  function markStuck() {
+    if (K.view !== 'orders_in' && K.view !== 'orders_out') return Promise.resolve();
+    return call('railChits').then(function (j) {
+      var by = {}, items = Array.isArray(j) ? j : ((j && j.items) || []);   /* core.js unwrap() collapses the reply to its array, as cap-crm-chits reads it */
+      items.forEach(function (x) { if (x && x.stuck) by[x.chit_id] = x.why || T('Waiting too long'); });
+      K.rows.forEach(function (r) { r.stuck = !!by[r.chit_id]; r.stuck_why = by[r.chit_id] || null; });
+    }, function () {});
   }
   function reload() { return load().then(function () { paintBar(); mountList($('tk_list')); }, function (e) { paintFail(e); }); }
   function paintFail(e) {
@@ -118,17 +164,22 @@
   function tkList() { return K.rows; }
   function cols() {
     return [
+      /* the row the brief asks for (§4): 🌐 Online · Delivery / Pick up · customer · ₹ total · asked-for time · address · remark · age · items */
       { key: 'what', label: T('What'), prio: 1, w: 260, sort: 'what', html: true, value: function (r) { return r.subject || ''; },
-        cell: function (r) { return '<b>' + esc(r.subject || T('Untitled')) + '</b>' + (r.party ? ' <span class="sub">' + esc(r.party) + '</span>' : ''); } },
-      { key: 'word', label: T('Where it is'), prio: 2, w: 140, sort: 'word', hfilter: 'state', html: true, cell: wordTag, value: function (r) { return r.word || ''; } },
-      { key: 'who', label: T('Who has it'), prio: 3, w: 150, sort: 'who', hfilter: 'assignee', cell: whoWord, value: whoWord },
-      { key: 'amount', label: T('Amount'), prio: 4, w: 130, num: true, sort: 'amount', cell: function (r) { return money(r.total_minor, r.currency); }, value: function (r) { return Number(r.total_minor) || 0; } },
-      { key: 'age', label: T('Age'), prio: 5, w: 90, sort: 'age', cell: function (r) { return ageWord(r.age_days); }, value: function (r) { return Number(r.age_days) || 0; } },
-      { key: 'lines', label: T('Lines'), prio: 6, w: 130, cell: linesWord },
-      { key: 'kind', label: T('Kind'), prio: 7, w: 110, hfilter: 'kind', cell: function (r) { return T(KIND_WORD[r.kind] || r.kind); } },
-      { key: 'channel', label: T('From'), prio: 8, w: 110, cell: function (r) { return r.channel ? T(r.channel) : ''; } }
+        cell: function (r) { var how = howWord(r); return '<b>' + esc(r.subject || T('Untitled')) + '</b>' + (r.party ? ' <span class="sub">' + esc(r.party) + '</span>' : '') + (how ? ' <span class="sub" data-testid="tk-how-' + esc(r.chit_id) + '">' + esc(how) + '</span>' : ''); } },
+      { key: 'word', label: T('Where it is'), prio: 2, w: 150, sort: 'word', hfilter: 'state', html: true, cell: wordCell, value: function (r) { return r.word || ''; } },
+      { key: 'amount', label: T('Amount'), prio: 3, w: 130, num: true, sort: 'amount', cell: function (r) { return money(r.total_minor, r.currency); }, value: function (r) { return Number(r.total_minor) || 0; } },
+      { key: 'who', label: T('Who has it'), prio: 4, w: 150, sort: 'who', hfilter: 'assignee', cell: whoWord, value: whoWord },
+      { key: 'for', label: T('Asked for'), prio: 5, w: 110, sort: 'for', cell: forWord, value: function (r) { return r.requested_for || ''; } },
+      { key: 'age', label: T('Age'), prio: 6, w: 90, sort: 'age', cell: function (r) { return ageWord(r.age_days); }, value: function (r) { return Number(r.age_days) || 0; } },
+      { key: 'lines', label: T('Items'), prio: 7, w: 130, cell: linesWord },
+      { key: 'address', label: T('Address'), prio: 8, w: 200, cell: function (r) { return r.address || ''; } },
+      { key: 'remark', label: T('Remark'), prio: 9, w: 200, cell: function (r) { return r.remark || ''; } },
+      { key: 'kind', label: T('Kind'), prio: 10, w: 110, hfilter: 'kind', cell: function (r) { return T(KIND_WORD[r.kind] || r.kind); } }
     ];
   }
+  /** the three columns a folder shows first (SYSTEM §3 rule 7; the rest sit under ⚙): an order's money before its holder; a task's holder before money */
+  function defaultCols() { return K.view === 'tasks' ? ['what', 'word', 'who'] : ['what', 'word', 'amount']; }
   function mountList(host) {
     if (!host) return;
     if (K.list) { try { K.list.destroy(); } catch (_) {} }
@@ -137,17 +188,20 @@
     var stages = (WF() ? WF().STAGES : ['new', 'accepted', 'delivered', 'closed']).filter(function (s) { return K.rows.some(function (r) { return r.stage === s; }); });
     var stageLabel = { new: 'New', accepted: 'Accepted', delivered: 'Delivered', closed: 'Closed' };
     var kinds = Object.keys(KIND_WORD).filter(function (k) { return K.rows.some(function (r) { return r.kind === k; }); });
+    var stateOpts = stages.map(function (s) { return { v: s, label: T(stageLabel[s] || s) }; });
+    if (K.rows.some(function (r) { return r.stuck; })) stateOpts.push({ v: 'stuck', label: T('Stuck') });
     K.list = root.CBList.mount(host, {
       key: 'tasks-' + K.view, t: T, rows: tkList, id: function (r) { return r.chit_id; }, rowTid: function (r) { return 'tk-row-' + r.chit_id; },
-      columns: cols(), defaultCols: ['what', 'word', 'who'],
+      columns: cols(), defaultCols: defaultCols(),
       filters: [
         { key: 'kind', label: T('Kind'), all: T('Any kind'), options: kinds.map(function (k) { return { v: k, label: T(KIND_WORD[k]) }; }), match: function (r, v) { return r.kind === v; } },
-        { key: 'state', label: T('Where it is'), all: T('Anywhere'), options: stages.map(function (s) { return { v: s, label: T(stageLabel[s] || s) }; }), match: function (r, v) { return r.stage === v; } },
+        { key: 'state', label: T('Where it is'), all: T('Anywhere'), options: stateOpts, match: function (r, v) { return v === 'stuck' ? !!r.stuck : r.stage === v; } },
         { key: 'assignee', label: T('Who has it'), all: T('Anyone'), options: [{ v: 'none', label: T('No one') }].concat(names.map(function (n) { return { v: n, label: n }; })),
           match: function (r, v) { return v === 'none' ? !(r.assignee && r.assignee.name) && !r.lines_assigned_n : !!(r.assignee && r.assignee.name === v); } }
       ],
-      search: function (r) { return [r.subject, r.party, r.ref, r.word, r.assignee && r.assignee.name, r.remark].join(' '); },
+      search: function (r) { return [r.subject, r.party, r.ref, r.word, r.assignee && r.assignee.name, r.remark, r.address, howWord(r)].join(' '); },
       sorts: [{ key: 'age', label: T('Newest first'), cmp: function (a, b) { return (Number(a.age_days) || 0) - (Number(b.age_days) || 0); } },
+              { key: 'for', label: T('Asked for'), cmp: function (a, b) { return String(a.requested_for || '9').localeCompare(String(b.requested_for || '9')); } },
               { key: 'amount', label: T('Amount'), cmp: function (a, b) { return (Number(b.total_minor) || 0) - (Number(a.total_minor) || 0); } },
               { key: 'what', label: T('Name'), cmp: function (a, b) { return String(a.subject || '').localeCompare(String(b.subject || '')); } }],
       onOpen: function (r) { tkOpen(r.chit_id); },
@@ -170,7 +224,9 @@
         return '<option value="' + v + '"' + (v === K.view ? ' selected' : '') + '>' + esc(viewLabel(v) + c) + '</option>';
       }).join('') + '</select>';
     }
-    b.innerHTML = '<span class="tk-count" data-testid="tk-count">' + count + '</span>' + pick;
+    /* ＋ New (the brief's sixth tab): start a chit or an order to a supplier — the ONE composer, app.html's Compose, through its #/app/compose door; not in a frame (the counter stays where it is) */
+    var fresh = K.o.embed ? '' : '<a class="act quiet" id="tk_new" data-testid="tk-new" href="/app.html#/app/compose">' + esc(T('＋ New')) + '</a>';
+    b.innerHTML = '<span class="tk-count" data-testid="tk-count">' + count + '</span>' + pick + fresh;
     var sel = $('tk_view'); if (sel) sel.onchange = function () { show(sel.value); };
     if (typeof K.o.onCounts === 'function') { try { K.o.onCounts(K.counts); } catch (_) {} }
   }
@@ -204,9 +260,31 @@
     if (c.party) bits.push(esc(c.party));
     if (c.total_minor != null) bits.push('<span class="mono">' + esc(money(c.total_minor, c.currency)) + '</span>');
     bits.push(esc(ageWord(c.age_days)));
-    if (c.channel) bits.push(esc(T(c.channel)) + (c.fulfilment ? ' · ' + esc(T(c.fulfilment)) : ''));
-    if (c.requested_for) bits.push(esc(T('for')) + ' ' + esc(c.requested_for));
+    var how = howWord(c); if (how) bits.push(esc(how));
+    if (c.requested_for) bits.push(esc(T('for')) + ' ' + esc(forWord(c)));
     return bits.join(' · ');
+  }
+  /** under the header: the delivery address, the remark, and — when the rail says it is stuck — why (the button that clears it is the next step below) */
+  function headMore(c) {
+    var h = '';
+    if (c.address) h += '<div class="sub" data-testid="tk-address">📍 ' + esc(c.address) + '</div>';
+    if (c.remark) h += '<div class="sub" data-testid="tk-remark">' + esc(c.remark) + '</div>';
+    if (c.stuck) h += '<div class="tk-stuck" data-testid="tk-stuck-why"><span class="tag red">' + esc(T('Stuck')) + '</span> ' + esc(c.stuck_why || '') + '</div>';
+    return h;
+  }
+  /**
+   * Bill it (O2C step 5 · invoice): an order in becomes the counter bill on the TILL — invoice number and tax frozen by the till's one bill path
+   * (orderToBill), never a second bill path here. In a frame on the till: the host hears { event: 'bill', chit_id } and bills it. Standalone: the
+   * till opens, where its 🛒 pill holds the same order (one queue, two places). Greyed with its sentence once the server says it is billed.
+   */
+  function billRow(c) {
+    if (c.kind !== 'order_in') return '';
+    var may = c.billed ? { ok: false, say: T('Already billed') } : c.stage === 'closed' ? { ok: false, say: T('This order is closed') } : { ok: true };
+    return actRow('tk_do_bill', T('Bill it'), may, K.o.embed ? '' : '<span class="why">' + esc(T('on the till')) + '</span>', may.ok ? '' : 'quiet');
+  }
+  function tkBill(c) {
+    if (K.o.embed) { tell('bill', { chit_id: c.chit_id, kind: c.kind, stage: c.stage, word: c.word, party: c.party || null }); return; }
+    root.location.href = '/till.html';
   }
   function lineHTML(l, c) {
     var a = l.assignment || {}, st = (l.settings && l.settings.state) || 'open', done = st === 'done';
@@ -228,18 +306,22 @@
   function paintSheet(c) {
     var acts = c.actions || {};
     var keep = $('tk_out') ? $('tk_out').textContent : '';
-    var steps = STEPS.map(function (a) { return actRow('tk_do_' + a, stepLabel(a, c), acts[a], '', a === 'accept' || a === 'complete' ? '' : 'quiet'); }).join('');
+    var r0 = byId(c.chit_id); if (r0) { c.stuck = !!r0.stuck; c.stuck_why = r0.stuck_why || null; }   /* the rail's stuck mark rides the list row; the sheet paints it */
+    var steps = STEPS.map(function (a) { return actRow('tk_do_' + a, stepLabel(a, c), acts[a], '', a === 'accept' || a === 'complete' ? '' : 'quiet'); });
+    steps.splice(1, 0, billRow(c));   /* Accept → Bill it → Delivered, the brief's order */
+    steps = steps.join('');
     /* the whole task's holder (the list column prefers the lines' summary, b143's rule; the sheet shows both: the task's, then the lines held) */
     var who = ((c.assignee && c.assignee.name) || T('No one')) + (c.lines_assigned_n ? ' · ' + c.lines_assigned_n + ' ' + T(c.lines_assigned_n === 1 ? 'line held' : 'lines held') : '');
     sheet('<h2 data-testid="tk-subject">' + esc(c.subject || T('Order')) + '</h2>'
-      + '<div class="tk-sub">' + wordTag(c) + ' <span class="sub" data-testid="tk-head">' + headLine(c) + '</span></div>'
-      + (c.remark ? '<div class="sub" data-testid="tk-remark">' + esc(c.remark) + '</div>' : '')
+      + '<div class="tk-sub">' + wordCell(c) + ' <span class="sub" data-testid="tk-head">' + headLine(c) + '</span></div>'
+      + headMore(c)
       + '<div id="tk_out" class="tk-out" role="status" data-testid="tk-out">' + esc(keep) + '</div>'
       + '<div class="tk-block"><div class="tk-h">' + esc(T('Next step')) + '</div><div class="tk-steps" data-testid="tk-steps">' + steps + '</div><div id="tk_more"></div></div>'
       + '<div class="tk-block"><div class="tk-h">' + esc(T('Who has it')) + '</div>' + actRow('tk_assign', T('Assign'), acts.assign_task, '<span class="sub" data-testid="tk-who">' + esc(who) + '</span>') + '<div id="tk_amore"></div></div>'
       + '<div class="tk-block"><div class="tk-h">' + esc(T('Lines')) + '</div><div class="tk-lines" data-testid="tk-lines">' + ((c.lines || []).length ? c.lines.map(function (l) { return lineHTML(l, c); }).join('') : '<div class="sub">' + esc(T('No lines on this one')) + '</div>') + '</div></div>'
       + '<div class="tk-block"><div class="tk-h">' + esc(T('Messages')) + '</div><div id="tk_thread" data-testid="tk-thread"></div></div>');
     STEPS.forEach(function (a) { var b = $('tk_do_' + a); if (b && acts[a] && acts[a].ok !== false) b.onclick = function () { tkMove(c, a, b); }; });
+    var bill = $('tk_do_bill'); if (bill && !bill.disabled) bill.onclick = function () { tkBill(c); };
     if (acts.assign_task && acts.assign_task.ok !== false) $('tk_assign').onclick = function () { assignPanel(c, null); };
     (c.lines || []).forEach(function (l) {
       var k = l.line_id, la = $('tk_la_' + k), ld = $('tk_ld_' + k), lv = $('tk_lv_' + k);
@@ -273,7 +355,7 @@
     var needs = (c.actions && c.actions[action] && c.actions[action].needs) || [];
     var run = function (note) { return call('status', { params: { id: c.chit_id }, body: Object.assign({ status: to }, note ? { note: note } : {}) }); };
     var opts = { key: 'tk-' + action + '-' + c.chit_id, failed: T("That step didn't go through"), out: 'tk_out',
-      outcome: function () { $('tk_out').textContent = T(STEP_SAID[action]); changed(c.chit_id, 'moved', { action: action }); } };
+      outcome: function () { $('tk_out').textContent = stepSaid(action, c); changed(c.chit_id, 'moved', { action: action }); } };
     if (needs.indexOf('reason') >= 0) {
       $('tk_more').innerHTML = '<div class="tk-panel"><label class="sub" for="tk_reason">' + esc(T(action === 'reject' ? 'Why is it refused?' : 'Lines are still open — why close it?')) + '</label>'
         + '<input class="inp" id="tk_reason" data-testid="tk-reason" maxlength="500" autocomplete="off">'

@@ -35,6 +35,7 @@ Every message is `window.parent.postMessage({ cb: 'tasks', event, ...fields }, l
 | `open` | a row's sheet was opened (and read fresh) | `chit_id` · `kind` (`order_in` · `order_out` · `task`) · `stage` · `word` |
 | `moved` | a status step went through (accept · reject · complete · cancel · reopen), OR a line's state changed (done · reopened), OR a delivery was recorded on a line | `chit_id` · `kind` · `stage` · `word` · `status` (the rail status) · `action?` (the step) · `line_id?` · `state?` (`open` · `done`) · `delivered?` (the quantity recorded) |
 | `assigned` | the whole task, or one line, changed hands | `chit_id` · `kind` · `stage` · `word` · `status` · `line_id` (`null` for the whole task) · `assignee` (`{ id, name }` or `null` = taken off) |
+| `bill` | **Bill it** was pressed on an order in (TO1b, REQUIREMENT §4: Accept → Bill it → Delivered) — the frame bills nothing; the host that holds the bill path (the till: `orderToBill`) closes the frame and puts the order on its bill | `chit_id` · `kind` · `stage` · `word` · `party` |
 | `close` | the person closed the frame (the ✕ of the dialog is the host's; this is sent by the screen when it ends itself) | — |
 
 `stage` · `word` · `status` are the SERVER's answer after the write (GET /api/work/:id read again) — the host paints them, it never
@@ -44,7 +45,8 @@ derives them. A host that keeps its own list of open orders (the till's 🛒 pil
 
 - the till (`chitbridge-api tools/tally-connector/till.html`, vendored to `public/till.html`): the **Online orders** dialog carries
   **All orders & tasks**, which opens this frame on `orders_in` with the counter's signed-in person; on `moved` / `assigned` the till
-  re-reads its open orders when the dialog closes (`tasksOpen()`).
+  re-reads its open orders when the dialog closes (`tasksOpen()`); on `bill` it closes the frame and puts that order on the bill through
+  its ONE path (`orderToBill` — the shopper's prices, Delivery / Pickup as ordered, normal series and tax; `tasksBill()`).
 
 ## What the frame does not do
 

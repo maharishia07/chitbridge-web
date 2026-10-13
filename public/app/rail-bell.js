@@ -66,7 +66,7 @@ function line(n) {
   /* O3: a NEW incoming order is not a "delivered" - it says what it is, who sent it and what it is worth */
   if (n.purpose === 'order' && n.action === 'delivered' && n.direction === 'received') {
     var amt = money(n.total_value, n.currency_code), how = [n.order_channel === 'online' ? '🌐 ' + T('Online') : '', n.order_fulfilment === 'delivery' ? T('Delivery') : ''].filter(Boolean).join(' · ');
-    return { i: '🛍️', mine: !!(n.assigned_to_me || n.dispute_for_me), chit: n.chit_id || null, who: n.action_by_display_name || '', say: T('sent a new order'), subj: '',
+    return { i: '🛍️', mine: !!(n.assigned_to_me || n.dispute_for_me), chit: n.chit_id || null, order: true, who: n.action_by_display_name || '', say: T('sent a new order'), subj: '',
       d: [amt, how].filter(Boolean).join(' · '), s: s, id: n.log_id || null };
   }
   return { i: k ? k[0] : '•', mine: !!(n.assigned_to_me || n.dispute_for_me), chit: n.chit_id || null, who: n.action_by_display_name || '',
@@ -136,7 +136,7 @@ function mount(el, o) {
     if (m.open) {
       var items = m.rows.map(line), mine = items.filter(function (x) { return x.mine; }), rest = items.filter(function (x) { return !x.mine; });
       var row = function (x) {
-        return '<button type="button" class="cbb-row" data-testid="bell-row"' + (x.chit ? ' data-chit="' + esc(x.chit) + '"' : ' disabled') + '><span aria-hidden="true">' + x.i + '</span><span style="min-width:0">'
+        return '<button type="button" class="cbb-row" data-testid="bell-row"' + (x.chit ? ' data-chit="' + esc(x.chit) + '"' : ' disabled') + (x.order ? ' data-order="1"' : '') + '><span aria-hidden="true">' + x.i + '</span><span style="min-width:0">'
           + '<div class="cbb-t">' + (x.who ? '<b>' + esc(x.who) + '</b> ' : '') + esc(x.say) + ' <b>' + esc(x.subj) + '</b></div>'
           + (x.d ? '<div class="cbb-d">' + esc(x.d) + '</div>' : '') + '<div class="cbb-s">' + esc(x.s) + '</div></span></button>';
       };
@@ -194,7 +194,9 @@ function mount(el, o) {
       if (typeof o.onOpen === 'function') o.onOpen(id);
       else if (typeof root.openChitSheet === 'function') root.openChitSheet(id);
       else if (typeof root.openChit === 'function') root.openChit(id);
-      /* O4: a page with no chit sheet (Home) sends the press to where the chit opens - never closes the list and does nothing */
+      /* O4: a page with no chit sheet (Home) sends the press to where the chit opens - never closes the list and does nothing.
+         TO1b (REQUIREMENT §6): a NEW ORDER opens in Tasks & Orders — the shop's task — not the CRM's list */
+      else if (r.getAttribute('data-order')) root.location.href = '/tasks.html?open=' + encodeURIComponent(id);
       else root.location.href = '/crm.html#/chits?open=' + encodeURIComponent(id);
       return;
     }
