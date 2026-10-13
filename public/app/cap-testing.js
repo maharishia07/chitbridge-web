@@ -753,8 +753,6 @@ function testAreaCols() {
 function testSetAreaCols(tpl) {
   try { tpl ? localStorage.setItem('cb.labcols', tpl) : localStorage.removeItem('cb.labcols'); } catch (_) {}
 }
-/** ⭐ every column back to the width this panel shipped with */
-function testResetCols() { testSetAreaCols(''); testPaint(); }
 
 /**
  * Drag one boundary. `i` is the track to the LEFT of the grip.
@@ -1625,13 +1623,6 @@ var TUI = {
       + 'background:var(--panel,#faf8f3);border:1px solid var(--grey-4,#646A72)',
 };
 
-/** ⭐ hover in ONE place so the chip rows cannot drift apart — the panel has no stylesheet and is not
-    getting one. ⚠️ Never on a selected chip: it would wipe the --ink fill. And hover fires on neither touch
-    nor keyboard, so the RESTING state must already say "button"; this is the bonus, never the signal. */
-function testHov(on, off) {
-  return ' onmouseenter="this.style.background=' + String.fromCharCode(39) + on + String.fromCharCode(39) + '"'
-       + ' onmouseleave="this.style.background=' + String.fromCharCode(39) + off + String.fromCharCode(39) + '"';
-}
 var TEST_CHIP = 'font:inherit;font-size:var(--fs-1);padding:2px 9px;border:0;border-radius:11px;'
   + 'cursor:pointer;margin-inline-end:4px;';
 var TEST_CHIP_ON = 'background:var(--ink,#0F2E3D);color:var(--card,#fff)';
@@ -1677,10 +1668,6 @@ async function testReqSet(id, state) {
     if (typeof toast === 'function') toast('Marked ' + state);
     testNewsRefresh('requirement');
   } catch (e) { if (typeof toast === 'function') toast((e && e.message) || 'Could not set that.'); }
-}
-async function testReqPri(id, priority) {
-  try { await api('testReqSet', { params: { id: id }, body: { state: null, priority: priority } }); testReqLoad(); }
-  catch (e) { if (typeof toast === 'function') toast((e && e.message) || 'Could not set that.'); }
 }
 
 /**
@@ -2766,10 +2753,6 @@ function testTechPick(k) {
     if (f && f.vals && f.vals.length > 1) CBTEST.tech.seenVals = f.vals.slice(0, 6);
     else CBTEST.tech.seenVals = null;
   } catch (_) { CBTEST.tech.seenVals = null; }
-  if (CBTEST.popupFor) screenCasesPaint(); else testPaint();
-}
-function testTechFold() {
-  CBTEST.techOpen = !CBTEST.techOpen;
   if (CBTEST.popupFor) screenCasesPaint(); else testPaint();
 }
 /**
@@ -6858,12 +6841,6 @@ async function testHandClose(key, open) {
      */
     return testNewsRefresh('case');
   }).catch(function (e) { if (typeof toast === 'function') toast((e && e.message) || 'Could not change it.'); });
-}
-
-function testHandCases() {
-  return (CBTEST.cases || [])
-    .filter(function (c) { return /-H\d+$/.test(String(c.case_key || '')); })
-    .sort(function (a, b) { return String(b.case_key) < String(a.case_key) ? -1 : 1; });
 }
 
 /**

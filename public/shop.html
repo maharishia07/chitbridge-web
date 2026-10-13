@@ -321,7 +321,6 @@ function curOf(price){ return cbCurrency(price) || (_SHOPDATA && _SHOPDATA.shop 
 function symOf(code){ if(!code) return ''; if(_CUR[code]) return _CUR[code];
   try { var pt=new Intl.NumberFormat(undefined,{style:'currency',currency:code,currencyDisplay:'narrowSymbol'})
     .formatToParts(0).find(function(x){return x.type==='currency';}); return (pt&&pt.value)||code+' '; } catch(e){ return code+' '; } }
-function priceSym(price){ return symOf(curOf(price)); }
 function priceUnit(){ var rc=regionCur(); return rc.units||'litre'; }
 // The amount, unchanged. No rate, no rounding of someone else's money — what the seller typed is what shows.
 function priceVal(price){ return price; }

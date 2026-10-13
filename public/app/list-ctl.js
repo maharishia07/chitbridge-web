@@ -716,7 +716,6 @@
   }
 
   /* ═════ actions ═════ */
-  function persistRepaint(I, whole) { saveChoices(I); if (whole) paintAll(I); else paintList(I); }
   function resetLimit(I) { I.limit = 50; }
   function query(I, why, sort, now) {
     if (!remote(I)) return false;
