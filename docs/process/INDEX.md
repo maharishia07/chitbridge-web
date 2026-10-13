@@ -8,7 +8,7 @@ Athi, 2026-10-12: *"for each function we are building we need to have a SAP kind
 
 | flow | what it is | SAP | steps | ✅ | ⚠️ | MISSING |
 |---|---|---|---|---|---|---|
-| [O2C](O2C.md) | Order to cash | SD → FI-AR | enquiry → quote → order → delivery → invoice → receipt → posted → cash position | 6 | 1 | 1 |
+| [O2C](O2C.md) | Order to cash | SD → FI-AR | enquiry → quote → order → delivery → invoice → receipt → posted → cash position → repeat supply | 7 | 1 | 1 |
 | [P2P](P2P.md) | Procure to pay | MM → FI-AP | need → PO → goods receipt → supplier bill → payment → posted | 5 | 1 | 0 |
 | [R2R](R2R.md) | Record to report | FI-GL | country → entries → day close → month lock → GST → year close → statements → cash position | 8 | 0 | 0 |
 | [INV](INV.md) | Inventory | MM-IM | receipt → stock → issue / sale → count → closing stock | 2 | 2 | 1 |
@@ -21,7 +21,7 @@ Athi, 2026-10-12: *"for each function we are building we need to have a SAP kind
 
 | flow | CRM | Finance | Accounts | Till | Tasks & Orders | Operations | Employees | Network |
 |---|---|---|---|---|---|---|---|---|
-| O2C |  | 6 receipt<br>8 cash position | 7 posted | 5 invoice | 2 quote (MISSING)<br>3 order<br>4 delivery |  |  | 1 enquiry ⚠️ |
+| O2C |  | 6 receipt<br>8 cash position<br>9 repeat supply | 7 posted | 5 invoice | 2 quote (MISSING)<br>3 order<br>4 delivery |  |  | 1 enquiry ⚠️ |
 | P2P |  |  | 4 supplier bill<br>5 payment<br>6 posted |  | 2 PO | 1 need ⚠️<br>3 goods receipt |  |  |
 | R2R |  | 8 cash position | 1 country<br>2 entries<br>4 month lock<br>5 GST<br>6 year close<br>7 statements | 3 day close |  |  |  |  |
 | INV |  |  | 5 closing stock ⚠️ | 2 stock<br>3 issue / sale ⚠️ |  | 1 receipt<br>4 count (MISSING) |  |  |

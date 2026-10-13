@@ -55,7 +55,9 @@
     var log = (r && r.state_log) || [];
     var counterBill = !!(bj.till && iSent && !others.length);   /* rung up at a counter and sent to nobody else */
     var billRx = purpose === 'invoice' && !iSent;
+    var agreement = !!(bj.repeat && bj.repeat.agreement_id);   /* RI1: a repeat-supply agreement (purpose subscription) — its verbs are its own panel's */
     return {
+      agreement: agreement,
       id: h.chit_id || (r && r.id) || null, status: billRx ? billStepStatus(log) : String(h.current_status || h.status || 'pending'), purpose: purpose, cur: cur,
       iSent: iSent, counterBill: counterBill, billRx: billRx, hasOther: (!iSent) || others.length > 0, hasLines: live.length > 0,
       isTask: !counterBill && !billRx,
@@ -109,6 +111,9 @@
   function actionsFor(m) {
     var s = m.status, open = /^(pending|delivered|read)$/.test(s), live = /^(accepted|in_progress|partial)$/.test(s), dead = /^(cancelled|rejected)$/.test(s);
     var a = [];
+    /* RI1: a repeat-supply AGREEMENT — Accept · Counter · Decline · Skip (the customer) and Run · Pause · End (the seller) are the panel's,
+       answered by the server per verb (may/why); the rail's step buttons would move the copy behind the agreement's back */
+    if (m.agreement) { if (!dead && m.hasOther) a.push('dispute'); a.push('page'); return a; }
     if (m.counterBill) { a.push('print'); if (!dead) a.push('return'); }
     else if (m.billRx) {
       if (open) { a.push('accept'); a.push('dispute'); a.push('goodsin'); }
@@ -118,13 +123,21 @@
       if (!dead && m.hasOther) a.push('dispute');
       if (live) a.push('done');
     }
+    /* RI1: a bill I sent to a ChitBridge customer can become a repeat-supply agreement (cap-repeat.js rpStart) */
+    if (m.purpose === 'invoice' && m.iSent && m.hasOther && !dead && m.hasLines) a.push('repeat');
     a.push('page');
     return a;
   }
   var ACT = {
     accept: ['✓', 'Accept'], dispute: ['⚑', 'Dispute'], goodsin: ['📥', 'Goods in'], done: ['✔', 'Done'],
-    print: ['🖨', 'Print'], 'return': ['↩', 'Return'], page: ['↗', 'Open page']
+    print: ['🖨', 'Print'], 'return': ['↩', 'Return'], repeat: ['🔁', 'Repeat this…'], page: ['↗', 'Open page']
   };
+  /** RI1: the repeat-supply capability, by NAME on the global (lazy on app.html: ensureCap('repeat'); loaded with the page on finance.html) */
+  function repeatCap() {
+    if (root.CBRepeat) return Promise.resolve(root.CBRepeat);
+    if (typeof root.ensureCap === 'function') return root.ensureCap('repeat').then(function () { return root.CBRepeat || null; }).catch(function () { return null; });
+    return Promise.resolve(null);
+  }
 
   /* ── the paint ───────────────────────────────────────────────────────────────────────────────────── */
   /* a line's own frozen total; an unbilled ORDER line that carries only price and quantity is shown as placed (price x quantity, rounded to the paisa) */
@@ -223,10 +236,12 @@
       '<div class="cs-head" data-testid="cs-head">' + head + '</div>'
       + '<div class="cs-who"><span data-testid="cs-who">' + E(m.who) + '</span> <span class="cs-step" data-testid="cs-step">' + E(T(STEP[m.status] || m.status)) + '</span></div>'
       + orderHTML(m) + linesHTML(m) + (m.purpose === 'order' && !(m.money && m.money.by_rate) ? '' : gstHTML(m)) + totalHTML(m) + tenderHTML(m)
+      + (m.agreement ? (root.CBRepeat ? root.CBRepeat.panelHTML() : '<div class="cs-sec">' + E(T('Repeat supply')) + '</div><div class="cs-mute" data-testid="rp-panel">' + E(T('Reading…')) + '</div>') : '')
       + (CS.note ? '<div class="cs-note" data-testid="cs-note">' + E(CS.note) + '</div>' : '')
       + (CS.useAsk ? '<div class="cs-use" data-testid="cs-use">' + billUseChoiceHTML([m], 'CBSheet.use')
         + '<button type="button" class="optchip" data-testid="cs-use-auto" onclick="CBSheet.use(\'\')">' + E(T('Let my catalogue decide')) + '</button></div>' : '');
     railMount(d, m);
+    if (m.agreement) repeatCap().then(function (rp) { if (rp && CS.view === m) { if (!document.getElementById('rp_panel')) paint(); else rp.panel(m); } });
     d.querySelector('.cs-acts').innerHTML = actionsFor(m).map(function (k) {
       return '<button type="button" class="cs-act" data-testid="cs-act-' + k + '" onclick="CBSheet.act(\'' + k + '\')"' + (CS.busy ? ' disabled' : '') + ' title="' + E(T(ACT[k][1])) + '"><span class="ic" aria-hidden="true">' + ACT[k][0] + '</span><span>' + E(T(ACT[k][1])) + '</span></button>';
     }).join('');
@@ -311,6 +326,7 @@
       if (typeof quickDispute === 'function') quickDispute(id, { back: true });
       return;
     }
+    if (k === 'repeat') { repeatCap().then(function (rp) { if (rp) rp.start(id, m); else { CS.note = T('Repeat supply is not available on this page.'); paint(); } }); return; }
     if (k === 'page') { close(); var pg = typeof openChitPage === 'function' ? openChitPage : openChit; if (typeof pg === 'function') pg(id); }
   }
 
