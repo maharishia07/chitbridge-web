@@ -283,7 +283,7 @@ function crmBar(crumb, action, overlay) {
 /** the page action a login may not take is SHOWN, greyed, with the server's sentence — never hidden (rule: show the action, the server decides; FX-L2C) */
 function crmViewOnlyBtn(tid, label, why) { return '<button type="button" class="act sm ghost" disabled aria-disabled="true" title="' + esc(why) + '" data-testid="' + tid + '">' + esc(label) + '</button><span class="why" data-testid="' + tid + '-why">' + esc(why) + '</span>'; }
 function crmAddBtn() { return crmEdit() ? '<button type="button" class="act sm" data-testid="crm-add" data-crm="add">+ ' + esc(tx('Add party')) + '</button>' : crmViewOnlyBtn('crm-add', '+ ' + tx('Add party'), tx('Your login can only view')); }
-function crmAddFuBtn() { return crmEdit() ? '<button type="button" class="act sm" data-testid="crm-fu-add" data-crm="fuadd">+ ' + esc(tx('Add follow-up')) + '</button>' : ''; }
+function crmAddFuBtn() { return crmEdit() ? '<button type="button" class="act sm" data-testid="crm-fu-add" data-crm="fuadd">+ ' + esc(tx('Add follow-up')) + '</button>' : crmViewOnlyBtn('crm-fu-add', '+ ' + tx('Add follow-up'), tx('Your login can only view')); }   /* never hidden — greyed with the reason */
 function crmGo(hash, replace) { if (replace) { try { history.replaceState(null, '', hash); } catch (_) {} crmRoute(); } else location.hash = hash; }
 
 function crmRoute(frame) {

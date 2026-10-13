@@ -221,7 +221,7 @@ function crmImportCounts(p) {
 }
 
 function crmLeadImportBtn() {
-  if (!crmEdit()) return '';
+  if (!crmEdit()) return crmViewOnlyBtn('crm-lead-import', tx('Import'), tx('Your login can only view'));   /* shown, greyed, with the server's sentence — never hidden (the show-action rule, FX-L2C) */
   var off = LEADS.loaded && !LEADS.ready;
   return '<button type="button" class="act sm' + (off ? ' ghost' : '') + '" data-testid="crm-lead-import" data-crm="leadimport"' + (off ? ' disabled title="' + esc(tx(CRM_LEADS_WAIT)) + '"' : '') + '>' + esc(tx('Import')) + '</button>';
 }
