@@ -17568,7 +17568,9 @@ function modeRibbon(){
     const usable = s.mock || !!s.base;
     return `<button class="${CFG.STAGE===k?'on':''}"${usable?'':' disabled title="API base not set"'} onclick="setStage('${k}')">${s.label}</button>`;
   }).join("");
-  return `<div class="moderibbon">
+  /* data-dev-only: this strip is build chrome (API URL with its port, stage switches), never the product's copy —
+     e2e/walk-locale.cjs skips [data-dev-only] so a random port cannot change the locale baseline (round LOC0b) */
+  return `<div class="moderibbon" data-dev-only="build-preview">
     <b>${tx('Build preview')}</b><span class="pill">${st.label}</span>
     <span style="font-size:var(--fs-1)" data-testid="ribbon-api">${st.mock?st.note:(eff?"hitting "+eff+(overridden?" · override":""):"(API base not set!)")}</span>
     ${apiSwitchBtn()}

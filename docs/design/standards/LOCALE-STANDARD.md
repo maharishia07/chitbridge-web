@@ -48,6 +48,8 @@ ARE translated), amounts and their currency (the currency's own convention — `
 numbers and identifiers (`.mono`, `<code>`, `translate="no"`), the author's own words in a chit (a shared record reads the same to both
 parties — `CBLocale.match` chooses between AUTHORED versions and never translates), a quotation in its own language (the kural band: the
 Tamil verse carries `lang="ta"`, its English meaning `lang="en"`). An element that declares its own `lang` is content, not chrome.
+Build chrome a customer never sees (app.html's Build-preview ribbon: the API URL and the stage switches) carries `data-dev-only` and is
+neither translated nor counted by the walk — mark such a strip by the attribute, never exclude it by its words.
 Formats (dates, numbers, grouping) follow the FORMAT locale, which is a separate choice from the language (an Indian trader reads English
 with lakh grouping) — a date in `qps` still reads `01 Jun 2026` because the format locale is `en-IN`.
 

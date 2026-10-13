@@ -12,7 +12,8 @@
  * must use the catalogue); when a number falls, it says so — run `--write` to lower the bar. docs/design/standards/LOCALE-STANDARD.md.
  *
  * ⚠️ WHAT IS NOT COUNTED, by the standard: user data (the fixture's shop, party, product and person names — listed below as
- * DATA, never translated), identifiers (.mono · code · kbd · [translate=no]), digits and glyphs, text in another script.
+ * DATA, never translated), identifiers (.mono · code · kbd · [translate=no]), digits and glyphs, text in another script, and build
+ * chrome marked [data-dev-only] (the Build-preview ribbon: its API URL carries this run's random port — a tester on the product never sees it).
  * Server sentences (may/why) ARE counted: the standard wants them keyed, so today they are honestly untranslated.
  *
  * ⚠️ STAND-IN, NOT A SERVER: the site is served from this checkout (e2e/lib/walk.cjs), the API answered inside the page with the
@@ -141,7 +142,8 @@ const SCREENS = [
 /** in the page: every rendered text node that is still plain English, and every text box that no longer fits */
 function measureInPage(dataList) {
   const DATA = dataList.slice().sort((a, b) => b.length - a.length);               /* longest first, so "Ravi Stores" goes before "Ravi" */
-  const SKIP = 'script,style,noscript,template,code,kbd,pre,.mono,[translate="no"],#__walkbanner';
+  /* [data-dev-only]: build chrome (app.html's Build-preview ribbon — the API URL carries this run's RANDOM port) — never product copy, never counted (LOC0b) */
+  const SKIP = 'script,style,noscript,template,code,kbd,pre,.mono,[translate="no"],[data-dev-only],#__walkbanner';
   const docLang = (document.documentElement.getAttribute('lang') || '').toLowerCase();
   /* what the locale LAYER wrote: a date, a time, a money figure — localised by construction, in the FORMAT locale, not the language */
   const FORMATTED = /\b\d{1,2} [A-Z][a-z]{2}( \d{4})?\b|\b\d{1,2}:\d{2}( ?[ap]m)?\b|[A-Z]{3} ?\d/g;
