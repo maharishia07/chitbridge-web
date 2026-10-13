@@ -54,6 +54,13 @@ function label(mask, item, value) {
   p.on('pageerror', (e) => { console.log('    PAGE ERROR: ' + e.message); bad++; });
   await p.goto(base + '/till.html');
   await p.waitForFunction(() => typeof window.setMode === 'function', null, { timeout: 30000 });
+  /* ⚠️ THE PAGE'S OWN BOOT IS STILL RUNNING when setMode() first exists: load() awaits pickHost() and HOST.state() and then
+     re-paints, re-reads WHO and (online) refresh()es — any of which lands in the middle of the seeding below and replaces
+     S / WHO or overwrites #lastnote (the one-in-N failure, TEST-LOG W2-1). Wait for it to FINISH — HOST chosen and the
+     counter pill painted (the last thing load() does) — then seed. A condition, never a fixed sleep. */
+  await p.waitForFunction(() => typeof HOST !== 'undefined' && HOST && document.getElementById('tillpill').textContent !== 'till',
+    null, { timeout: 30000 });
+  await p.waitForLoadState('networkidle');
 
   /* a produce counter: tomatoes sold by the kilo, with the scale's own item code on them */
   await p.evaluate(() => {
@@ -81,7 +88,6 @@ function label(mask, item, value) {
     tillOptSet({ weigh: { on: false } });
     document.getElementById('q').value = code;
     searchTyped();
-    await new Promise((r) => setTimeout(r, 400));
     return { cart: CART.length, still: document.getElementById('q').value.length > 0 };
   }, label('21IIIIIWWWWWC', 42, 750));
   say('⚠️⚠️ a scale label is just an unknown barcode', off.cart === 0, 'nothing was added or claimed');
@@ -93,7 +99,6 @@ function label(mask, item, value) {
     CART.length = 0;
     document.getElementById('q').value = code;
     searchTyped();
-    await new Promise((r) => setTimeout(r, 400));
     const l = CART[0] || {};
     return { n: CART.length, name: l.name, qty: l.qty, unit: l.unit, box: document.getElementById('q').value };
   }, label('21IIIIIWWWWWC', 42, 750));
@@ -110,7 +115,6 @@ function label(mask, item, value) {
     CART.length = 0;
     document.getElementById('q').value = bad2;
     searchTyped();
-    await new Promise((r) => setTimeout(r, 400));
     /* ⚠️ toastLine() writes #lastnote — the first draft looked for a .toast that does not exist, so every
        message check would have passed as "nothing said" whatever the counter actually said. */
     return { cart: CART.length, said: (document.getElementById('lastnote') || {}).textContent || '' };
@@ -124,7 +128,6 @@ function label(mask, item, value) {
     CART.length = 0;
     document.getElementById('q').value = code;
     searchTyped();
-    await new Promise((r) => setTimeout(r, 400));
     return { cart: CART.length, said: (document.getElementById('lastnote') || {}).textContent || '' };
   }, label('21IIIIIWWWWWC', 99, 500));
   say('⚠️⚠️ nothing is sold', unknown.cart === 0, 'the cart is untouched');
@@ -137,7 +140,6 @@ function label(mask, item, value) {
     CART.length = 0;
     document.getElementById('q').value = '8901234567894';
     searchTyped();
-    await new Promise((r) => setTimeout(r, 400));
     return { n: CART.length, name: (CART[0] || {}).name, qty: (CART[0] || {}).qty };
   });
   say('an ordinary product is unaffected', soap.n === 1 && soap.name === 'Soap', soap.name + ' × ' + soap.qty);
@@ -149,7 +151,6 @@ function label(mask, item, value) {
     CART.length = 0;
     document.getElementById('q').value = code;
     searchTyped();
-    await new Promise((r) => setTimeout(r, 400));
     price();
     const l = CART[0] || {};
     return { n: CART.length, name: l.name, qty: l.qty, price: l.price, net: l.net };
@@ -171,9 +172,9 @@ function label(mask, item, value) {
   /* ⚠️ setTab() is gone (design-handoff/04-settings, Phase 2.5) — Settings is one scrolling list now, so
      #set_weigh and its neighbours are already in the document with no tab to switch to first. */
   await p.evaluate(() => { document.getElementById('setdlg').showModal(); paintSetup(); });
-  await p.waitForTimeout(300);
+  await p.waitForSelector('#set_weigh', { state: 'visible' });
   await p.selectOption('#set_weigh', 'weight_13');
-  await p.waitForTimeout(250);
+  await p.waitForFunction(() => /reads as item/.test((document.getElementById('set_weighex') || {}).innerText || ''));
   const shown = await p.evaluate(() => ({
     ex: (document.getElementById('set_weighex') || {}).innerText || '',
     maskRow: (document.getElementById('row_weighmask') || {}).hidden,
@@ -182,14 +183,13 @@ function label(mask, item, value) {
   say('and the pattern box stays out of the way', shown.maskRow === true, 'hidden until "Something else"');
 
   await p.selectOption('#set_weigh', 'custom');
-  await p.waitForTimeout(200);
+  await p.waitForFunction(() => document.getElementById('row_weighmask').hidden === false);
   say('until a shop says its scale is different',
       await p.evaluate(() => document.getElementById('row_weighmask').hidden === false), 'the box appears');
   /** ⚠️ and a pattern that cannot work is refused where it is typed, not at a till three weeks later */
   const refused = await p.evaluate(async () => {
     document.getElementById('set_weighmask').value = 'IIIIIWWWWWC';
     document.getElementById('set_weighmask').dispatchEvent(new Event('change'));
-    await new Promise((r) => setTimeout(r, 400));
     return (document.getElementById('lastnote') || {}).textContent || '';
   });
   say('⚠️ a pattern with no prefix is refused there and then',
