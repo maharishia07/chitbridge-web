@@ -2,6 +2,7 @@
 <html lang="en" data-tokens="list">
 <head>
 <meta charset="UTF-8">
+<script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
 <!-- ⚠️ viewport-fit=cover is REQUIRED for env(safe-area-inset-*) to be anything but 0. Without it every
      safe-area rule in this file is inert, and the layout silently pretends the notch and the home
      indicator do not exist. Declaring it also means the page now extends UNDER them, so the topbar and
@@ -1720,7 +1721,7 @@ body.lab-only #cbtestpanel{
      dev / uat / live → the SAME real-API code path, pointed at three backends (differ only by base URL)
    MODE + API_BASE are DERIVED from STAGE, so the shared client (core.js) needs no change. */
 const STAGES = {
-  dev:      { label:"Dev",      mock:false, base:"https://chitbridge-api-production.up.railway.app",  note:"real API · dev database" },
+  dev:      { label:"Dev",      mock:false, base:window.CB_API,  note:"real API · dev database" },
   uat:      { label:"UAT",      mock:false, base:"",   /* TODO: UAT cloud API base */                 note:"real API · UAT cloud" },
   live:     { label:"Live",     mock:false, base:"",   /* TODO: production API base */                note:"production" },
 };

@@ -2,6 +2,7 @@
 <html lang="en" data-tokens="list">
 <head>
 <meta charset="utf-8">
+<script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Offer Lab</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
@@ -1008,7 +1009,7 @@ var FRESH={ biz:'hotel', step:0, goal:'percent', scope:'cat',
 
 var S, CATS, P, SAVED=[], SEQ=0;
 /* ⭐ the same override the current offer-lab.html supports (?api=) — one lab, testable against any deploy */
-var API=(new URLSearchParams(location.search).get('api'))||'https://chitbridge-api-production.up.railway.app';
+var API=(new URLSearchParams(location.search).get('api'))||window.CB_API;
 
 /* ── plumbing ──────────────────────────────────────────────────────────── */
 /**

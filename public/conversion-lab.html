@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Conversion lab · Chit &amp; Bridge</title>
 <!--
@@ -178,7 +179,7 @@
 <script src="app/locale.js"></script>
 <script>
 'use strict';
-var API = (new URLSearchParams(location.search).get('api')) || 'https://chitbridge-api-production.up.railway.app';
+var API = (new URLSearchParams(location.search).get('api')) || window.CB_API;
 
 /* ── the engines, or an honest refusal to draw ─────────────────────────────────────────────────────────────── */
 (function () {

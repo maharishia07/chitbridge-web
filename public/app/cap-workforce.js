@@ -284,7 +284,7 @@ async function awFinish(){
       try{
         if(typeof ensureCap==='function') await ensureCap('connector');
         if(typeof _buildInstaller==='function')
-          UI.awInstaller=_buildInstaller({ endpoint:'https://chitbridge-api-production.up.railway.app', key:pk, heartbeat_sec:60, spool_dir:'/opt/chitbridge/spool', devices:[] });
+          UI.awInstaller=_buildInstaller({ endpoint:CFG.API_BASE /* HX1: the api this app talks to */, key:pk, heartbeat_sec:60, spool_dir:'/opt/chitbridge/spool', devices:[] });
       }catch(_){}
       UI.awResult='<div style="text-align:center"><div style="font-size:var(--fs-7);margin:8px 0 6px">🛰️</div><div style="font-weight:700;font-size:var(--fs-4)">' + tx('Gateway created') + '</div>'
         +(UI.awInstaller

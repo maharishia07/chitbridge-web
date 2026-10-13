@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Shop — Chit &amp; Bridge</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -75,7 +76,7 @@
 <script src="app/step-flow.js"></script>
 <script src="app/showcase-templates.js"></script>   <!-- the shop's chosen showcase template (S2) -->
 <script>
-var API = (new URLSearchParams(location.search).get('api')) || 'https://chitbridge-api-production.up.railway.app';
+var API = (new URLSearchParams(location.search).get('api')) || window.CB_API;
 /**
  * ⭐⭐ ?s= IS THE PUBLIC HANDLE (a User ID); ?bridge= IS THE OLD INTERNAL KEY, KEPT SO EXISTING LINKS STILL OPEN.
  *

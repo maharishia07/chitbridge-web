@@ -53,13 +53,14 @@
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function lsGet(k) { try { return root.localStorage.getItem(k); } catch (_) { return null; } }
 
-  /** the API base, decided the way the pages decide it (CFG.API_BASE) — here once, so a page that mounts the shell need not copy it */
+  /** the API base, decided the way the pages decide it (CFG.API_BASE) — here once, so a page that mounts the shell need not copy it.
+      HX1: the deploy's address is window.CB_API (/config.js, loaded first by every page) — never a host in code */
   function apiBase() {
     var f = lsGet('cb_api_base');
-    if (f) return f === 'stage' ? 'https://chitbridge-api-production.up.railway.app' : f;
+    if (f) return f === 'stage' ? (root.CB_API || '') : f;
     var h = root.location && root.location.hostname;
     if (h === 'localhost' || h === '127.0.0.1') return 'http://localhost:3000';
-    return 'https://chitbridge-api-production.up.railway.app';
+    return root.CB_API || '';
   }
   function session() { try { var s = JSON.parse(lsGet('cb_sess') || 'null'); return s && s.token ? s : null; } catch (_) { return null; } }
 

@@ -2,6 +2,7 @@
 <html lang="en" data-tokens="list">
 <head>
 <meta charset="utf-8">
+<script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Product Lab</title>
 <!--
@@ -104,7 +105,7 @@ tr.has .whose{color:var(--ok)}
 <div class="foot" id="foot"></div>
 
 <script>
-var API = (new URLSearchParams(location.search).get('api')) || 'https://chitbridge-api-production.up.railway.app';
+var API = (new URLSearchParams(location.search).get('api')) || window.CB_API;
 var STEP = 1, DATA = null, LIST = null, LANGS = [], OWN = '', OFFUNITS = {}, BUSY = false;
 /* ⭐ PICKED holds the DECISION, not just the tick: {key: {name, unit, price}} — so a price typed in step 2
    survives going back to step 1 and returning, which is what makes it a flow rather than two forms. */

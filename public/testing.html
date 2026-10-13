@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Test Report · Chit &amp; Bridge</title>
 <!--
@@ -1098,7 +1099,7 @@ recorded.">Try it</button>
 <main id="main"><div class="say">Reading the board…</div></main>
 
 <script>
-var API = (new URLSearchParams(location.search).get('api')) || 'https://chitbridge-api-production.up.railway.app';
+var API = (new URLSearchParams(location.search).get('api')) || window.CB_API;
 
 /**
  * ⚠️ THE SESSION COMES OFF DISK, exactly as the offer lab reads it. This page is a tool for somebody already

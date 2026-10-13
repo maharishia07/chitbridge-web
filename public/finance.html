@@ -2,6 +2,7 @@
 <html lang="en" data-tokens="list">
 <head>
 <meta charset="utf-8">
+<script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CB Finance</title>
 <!-- ⭐ CB Finance — what the shop is owed, on its own page like CB Accounts and CB CRM (C:/dev/CB-FINANCE-PLAN.md round F1). The FRAME is theirs (sidebar · header ·
@@ -316,11 +317,11 @@ dialog.sheet::backdrop{background:var(--scrim)}
 const CFG = { API_BASE: (function(){
   try{
     var forced = localStorage.getItem('cb_api_base');
-    if (forced) return forced === 'stage' ? 'https://chitbridge-api-production.up.railway.app' : forced;
+    if (forced) return forced === 'stage' ? window.CB_API : forced;
     var h = location.hostname;
     if (h === 'localhost' || h === '127.0.0.1') return 'http://localhost:3000';
   }catch(_){}
-  return 'https://chitbridge-api-production.up.railway.app';
+  return window.CB_API;
 })() };
 let SESSION = { token: null, role: null, name: null, entity: null, bridgeId: null };
 const EP = {};

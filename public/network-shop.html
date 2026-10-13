@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Network shop — Chit &amp; Bridge</title>
 <style>
@@ -52,7 +53,7 @@
  * Each department keeps its OWN currency — they are shown side by side, never summed. Different currencies is a
  * fact to display, not a total to compute.
  */
-var API = (new URLSearchParams(location.search).get('api')) || 'https://chitbridge-api-production.up.railway.app';
+var API = (new URLSearchParams(location.search).get('api')) || window.CB_API;
 var NET = (new URLSearchParams(location.search).get('bridge') || '').trim();
 var DATA = null, Q = '', DEPT = null;
 

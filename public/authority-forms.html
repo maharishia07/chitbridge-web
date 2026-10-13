@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Chit &amp; Bridge — Authority forms</title>
 <style>
@@ -72,7 +73,7 @@
 <script src="/app/page-frame.js"></script>   <!-- CBFrame: the shell header + the one sign-in window (H23/H24) -->
 <script src="cb-offline.js"></script>
 <script>
-var API=(new URLSearchParams(location.search).get('api'))||(window.CBShell&&CBShell.apiBase&&CBShell.apiBase())||'https://chitbridge-api-production.up.railway.app';
+var API=(new URLSearchParams(location.search).get('api'))||(window.CBShell&&CBShell.apiBase&&CBShell.apiBase())||window.CB_API;
 var TOK=null,_stage='email',FORMS=[],SEL=null,CTX='',MANUAL={},RESOLVED=null,ISSUED=null,_restored=false,ORDERS=null;
 /* K3: nobody knows a chit id - the shop's own recent orders (the existing chits reads: orders that came in, orders that went out) are PICKED, not typed. */
 function orderLabel(c){
