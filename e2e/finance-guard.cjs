@@ -67,5 +67,22 @@ if (!/booksCashflow/.test(read('e2e/fixtures/web-api.contract.json')) && !/\/api
 const flows = read('docs/process/flows.json');
 if (!/"cash position"/.test(flows) || !/cap-finance-cash\.js/.test(flows)) bad('flows.json must carry the cash position step (PM1)'); else ok('flows.json: cash position step');
 
+/* ── F4 · Payables (cap-finance-pay.js + payOpen's offer): static, no browser — the tab paints the server's payables and computes nothing ── */
+const fp = read('public/app/cap-finance-pay.js'), books = read('public/app/cap-books.js');
+const fpc = fp.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '').replace(/\s\/\/ .*$/gm, '');
+if (page.indexOf('/app/cap-finance-pay.js') < 0 || page.indexOf('data-testid="fin-nav-payables"') < 0 || page.indexOf('href="#/payables"') < 0) bad('finance.html must load cap-finance-pay.js and carry the Payables nav'); else ok('Payables tab: script + nav');
+const fpCalls = [...fpc.matchAll(/\bapi\('(\w+)'/g)].map((m) => m[1]).filter((v, i, a) => a.indexOf(v) === i).join();
+if (fpCalls !== 'booksDues' || !/side:\s*'supplier',\s*finance:\s*'1'/.test(fpc)) bad('Payables reads the SAME dues route (booksDues, side=supplier&finance=1) and nothing else, found ' + JSON.stringify(fpCalls)); else ok('Payables calls: booksDues (side=supplier, finance=1) only — no second dues route');
+if (!/payOpen\('supplier', pid, \{ offer:/.test(fpc) || /booksPayRecord|booksPayPreview/.test(fpc)) bad('Pay must be payOpen (the one payment path) with the server\'s offer — no second pay form'); else ok('Pay = payOpen with the offer');
+/* no arithmetic on the server's figures; the one sum is the group head's fig, as Collections' */
+if (/_minor\s*[*\/\-]|[*\/]\s*\w+\.\w*_minor|\*\s*100\b/.test(fpc.replace(/t \+ Number\(p\.payable\.total_minor \|\| 0\)/, ''))) bad('cap-finance-pay.js must not compute money'); else ok('Payables: no money computed here');
+if (/e(rr)?\.message|error\.message/.test(fpc) || /\bconfirm\(|\balert\(/.test(fpc)) bad('Payables: no raw server message, no browser dialog'); else ok('Payables: no raw message / dialog');
+if (/#[0-9a-fA-F]{3,6}\b/.test(fpc.replace(/var\(--[\w-]+,\s*#[0-9a-fA-F]{3,8}\)/g, ''))) bad('Payables: a raw colour outside a var() fallback'); else ok('Payables: theme tokens only');
+if (!/finOff\(\)/.test(fpc) || !/finDenied\(FP_OWNER_ONLY/.test(fpc) || !/Only the owner may see what you owe\./.test(fpc)) bad('Payables: the ledger-off card and the owner-only sentence must be the shared ones'); else ok('Payables: ledger off → finOff · owner only → the sentence, greyed');
+if (!/CBList\.mount\(/.test(fpc) || !/CBList\.nextRow\(/.test(fpc) || !/order: \['overdue', 'msme', 'week', 'later'\]/.test(fpc)) bad('Payables: one list (CBList) grouped Overdue · MSME at risk · Due this week · Later, a row opens with nextRow'); else ok('Payables: CBList grouped by the server\'s group · nextRow');
+if (!/function payOpen\(kind, partyId, opt\)/.test(books) || !/api\('booksEntryPost', \{ body: Object\.assign\(\{ date: bkToday\(\) \}, f\.record\.body\) \}\)/.test(books) || !/CBAction\.run\(btn, function \(\) \{ return api\('booksEntryPost'/.test(books)) bad('payOpen takes the offer additively; the discount sends the server\'s ready body through CBAction (M64)'); else ok('payOpen: offer widened · Record discount = the server\'s body via CBAction');
+if (!/data-testid="pay_gst_note" disabled aria-disabled="true"/.test(books) || !/pay_gst_why/.test(books)) bad('the GST credit note is a greyed button WITH the server\'s sentence — never automatic'); else ok('GST credit note: greyed with its sentence');
+if (!/"supplier bill → payment"|"payables"/.test(flows) || !/cap-finance-pay\.js/.test(flows)) bad('flows.json must carry the P2P payables step (PM1)'); else ok('flows.json: P2P payables step');
+
 console.log(fail ? fail + ' FAILED' : 'finance-guard: all ok');
 process.exit(fail ? 1 : 0);

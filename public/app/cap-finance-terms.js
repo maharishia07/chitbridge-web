@@ -20,10 +20,10 @@ var FT_EP = {
 Object.assign(EP, FT_EP);
 var FT_NOT_YET = 'Terms arrive after the next update.';
 
-function finTab() { return /^#\/terms/.test(location.hash) ? 'terms' : /^#\/cash/.test(location.hash) ? 'cash' : 'collect'; }   /* cash: F3 (cap-finance-cash.js) */
+function finTab() { return /^#\/terms/.test(location.hash) ? 'terms' : /^#\/cash/.test(location.hash) ? 'cash' : /^#\/payables/.test(location.hash) ? 'pay' : 'collect'; }   /* cash: F3 (cap-finance-cash.js) · pay: F4 (cap-finance-pay.js) */
 function ftNav() {
   var t = finTab();
-  [['collect', 'fin-nav-collections'], ['cash', 'fin-nav-cash'], ['terms', 'fin-nav-terms']].forEach(function (x) {
+  [['collect', 'fin-nav-collections'], ['pay', 'fin-nav-payables'], ['cash', 'fin-nav-cash'], ['terms', 'fin-nav-terms']].forEach(function (x) {
     var a = document.querySelector('[data-testid="' + x[1] + '"]'); if (!a) return;
     a.classList.toggle('active', x[0] === t); if (x[0] === t) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
   });

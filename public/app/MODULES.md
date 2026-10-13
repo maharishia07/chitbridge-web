@@ -15,7 +15,7 @@ something needs them before any navigation happens.
 router renders a placeholder until `_capLoading` clears, which is the only reason the
 old duplicate `networkScreen()` in app.html was safe to delete.
 
-## Capabilities (41)
+## Capabilities (42)
 
 | file | loading · nav key | what it is |
 |---|---|---|
@@ -39,6 +39,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-employees.js` | — |  |
 | `cap-entry.js` | — | cap-entry.js — ＋ ENTRY on the Day book: what happened → with whom / what → how much, when, on what paper → check and save |
 | `cap-finance-cash.js` | — | cap-finance-cash.js — CB Finance · Cash (round F3): today's cash and bank, then day by day what comes in and goes out for 7 or 30 days, and the FIRST |
+| `cap-finance-pay.js` | — | cap-finance-pay.js — CB Finance · Payables (round F4): what WE owe each supplier, aged, MSME day 45 and its risk (India), the supplier's early-pay off |
 | `cap-finance-terms.js` | — | cap-finance-terms.js — CB Finance · Terms (round F2): the shop's DEFAULT credit terms and each party's OWN, set in ONE place |
 | `cap-finance.js` | — | cap-finance.js — CB Finance · Collections (round F1): who owes you, how old, the limit, the interest it has earned, Remind, Receive |
 | `cap-folders.js` | lazy · folders | FOLDERS capability (lazy; loaded via ensureCap('folders')) |
@@ -117,4 +118,4 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 
 ---
 
-*90 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*91 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*

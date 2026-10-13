@@ -33,6 +33,7 @@ if (typeof EP !== 'undefined') { Object.assign(EP, {
   booksChequeStep: { m: 'POST', p: '/api/books/cheques/:id/status' },
   booksRetry:      { m: 'POST', p: '/api/books/outbox/retry' },
   booksTodo:       { m: 'GET',  p: '/api/books/todo' },              /* what the owner has to do next — the API lists the checks; the To-do page only draws them */
+  booksEntryPost:  { m: 'POST', p: '/api/books/entries' },           /* F4: the owner's journal — Pay's early-pay discount sends the server's ready body (against_ref settles the bill) */
 }); }
 
 /**
@@ -534,11 +535,19 @@ async function partyEditSave(kind, partyId) {
    duplicate band. There is no "Later": "Keep it as an advance" is a switch that says what it does. The words of every warning and of
    the outcome come from the server; this unit paints them. */
 var PAY = null;
-function payOpen(kind, partyId) {
-  var r = partyRowOf(kind, partyId) || {};
-  PAY = { kind: kind, partyId: partyId, name: r.nickname || r.display_name || '', ref: bkRef(), seq: 0, ack: [], advice: false, preview: null };   /* one ref per opened form */
+/**
+ * opt (F4, additive — every other door calls payOpen(kind, partyId) as before): { offer, after }
+ *   offer: the server's early-pay offer for one bill (GET /dues?side=supplier&finance=1 → payable.early: { words, pay_minor, record, gst_note, valid }) —
+ *          its sentence sits under Amount, the amount starts at the server's pay_minor, and after Record the discount is offered as the owner's journal
+ *          (record.body, sent as given) beside a GST credit note button the server greys with its sentence. Nothing here works out a discount.
+ *   after: called when this form wrote something (a payment, a discount) — CB Finance re-reads its list.
+ */
+function payOpen(kind, partyId, opt) {
+  var r = partyRowOf(kind, partyId) || {}, o = opt || {}, offer = o.offer && o.offer.valid ? o.offer : null;
+  PAY = { kind: kind, partyId: partyId, name: r.nickname || r.display_name || '', ref: bkRef(), seq: 0, ack: [], advice: false, preview: null, offer: offer, after: o.after || null };   /* one ref per opened form */
   modal('<div class="mhd"><div class="t" id="pay_title" data-testid="pay_title">' + esc(kind === 'supplier' ? tx('Pay') : tx('Receive')) + ' · ' + esc(PAY.name) + '</div></div><div class="mbody" id="pay_body" style="display:flex;flex-direction:column;gap:8px">'
-    + '<label>' + tx('Amount') + '' + bkMoneyInput({ id: 'pay_amt', on: 'payPreviewSoon()' }) + '</label>'
+    + '<label>' + tx('Amount') + '' + bkMoneyInput({ id: 'pay_amt', on: 'payPreviewSoon()', minor: offer ? offer.pay_minor : null }) + '</label>'
+    + (offer ? '<div data-testid="pay_offer" style="font-size:var(--fs-1);color:var(--grey)">' + esc(offer.words) + '</div>' : '')
     + '<label>' + tx('How') + '<select class="inp" id="pay_mode" data-testid="pay_mode" onchange="payModePaint()"><option value="cash">' + tx('Cash') + '</option>' + payModeOpts() + '<option value="bank">' + tx('Bank') + '</option><option value="card">' + tx('Card') + '</option><option value="cheque">' + tx('Cheque') + '</option></select></label>'
     + '<label>' + tx('Reference') + '<input class="inp" id="pay_ref" data-testid="pay_ref" style="width:100%"></label>'
     + '<div id="pay_chq" hidden style="gap:6px"><input class="inp" id="pay_chqno" data-testid="pay_chqno" placeholder="' + esc(tx('Cheque no')) + '"><input class="inp" id="pay_bank" placeholder="' + esc(tx('Bank')) + '"><input class="inp" id="pay_chqdate" type="date"></div>'
@@ -550,6 +559,24 @@ function payOpen(kind, partyId) {
     + '</div><div class="mfoot" id="pay_foot"><button onclick="closeModal()">' + tx('Cancel') + '</button><button class="pri" data-testid="pay_record" onclick="payRecord()">' + tx('Record') + '</button>'
     + (kind === 'supplier' ? '' : '<button data-testid="pay_remind" onclick="payRemind()">' + tx('Not paid yet — remind me') + '</button>') + '</div>');
   payPaint();
+  if (offer) payPreviewSoon(0);   /* the amount came filled in: read its bills now */
+}
+/** F4: the early-pay step under the Pay outcome — the owner's journal (the server's ready body, one client_ref) and the GST credit note the server greys */
+function payDiscHTML(f) {
+  var rec = f.record || { ok: false }, gst = f.gst_note || { ok: false };
+  return '<div data-testid="pay_disc" style="display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line,#e6dcc6);padding-top:8px">'
+    + '<span data-testid="pay_disc_words">' + esc(f.words) + '</span>'
+    + '<span style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="pri" data-testid="pay_disc_record" onclick="payDiscRecord(this)"' + (rec.ok ? '' : ' disabled aria-disabled="true"') + '>' + esc(tx('Record discount')) + '</button>'
+    + '<button type="button" data-testid="pay_gst_note" disabled aria-disabled="true">' + esc(tx('GST credit note')) + '</button></span>'
+    + (rec.ok ? '' : '<span class="hint" data-testid="pay_disc_why_not">' + esc(rec.say || '') + '</span>')
+    + '<span class="hint" data-testid="pay_gst_why">' + esc(gst.say || '') + '</span>'
+    + '<span id="pay_disc_out" data-testid="pay_disc_out" class="hint"></span></div>';
+}
+function payDiscRecord(btn) {
+  var f = PAY && PAY.offer; if (!f || !f.record || !f.record.ok) return;
+  return CBAction.run(btn, function () { return api('booksEntryPost', { body: Object.assign({ date: bkToday() }, f.record.body) }); },
+    { key: 'pay-disc:' + f.record.body.client_ref, out: 'pay_disc_out', failed: tx('Could not record the discount'), done: tx('Discount recorded'),
+      outcome: function () { if (PAY && PAY.after) PAY.after(); } });
 }
 /** "Not paid yet — remind me" (SPEC-payments D3): nothing posts; it is the Remind of the Dues row — a message on the oldest open bill */
 function payRemind() { if (!PAY) return; var id = PAY.partyId; closeModal(); return bkRemind(id, null); }
@@ -688,8 +715,10 @@ function payOutcomePaint(r) {
   pb.innerHTML = html;
   if (r.advice && typeof CBAdvice !== 'undefined') CBAdvice.mount(document.getElementById('pay_advice'), { payment_id: PAY.id, advice: r.advice, party: PAY.name, context: { host: typeof ACC !== 'undefined' ? 'accounts' : 'crm' },
     onDone: function (res) { bkAdviceFlip(PAY.id, res, null); } });
+  if (PAY.offer) pb.insertAdjacentHTML('beforeend', payDiscHTML(PAY.offer));   /* F4: the discount is the owner's next step, never automatic */
   pf.innerHTML = '<button class="pri" data-testid="pay_done" onclick="closeModal()">' + tx('Done') + '</button>';
-  booksAfterPay(r);   /* the statement, the dues chip and the record's header repaint now, behind the outcome */
+  booksAfterPay(r);
+  if (PAY.after) PAY.after();   /* the statement, the dues chip and the record's header repaint now, behind the outcome */
 }
 function booksAfterPay(r) {
   var pid = PAY && PAY.partyId;
