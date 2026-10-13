@@ -209,7 +209,7 @@ function renderCountrySetup() {
       + csuRow('fy', tx('Year starts'), esc(CSU_MONTHS[(e.fy || 1) - 1] || ''), s.fy_start_month,
         csuSel('cs-fy', 'fy', CSU_MONTHS.map(function (m, i) { return { v: i + 1, t: m }; }), e.fy))
       + ((zones.length || e.timezone)
-        ? csuRow('timezone', tx('Time zone'), esc((e.timezone || tx('not picked yet')).replace(/_/g, ' ')), s.timezone,
+        ? csuRow('timezone', tx('Time zone'), e.timezone ? '<span translate="no">' + esc(e.timezone.replace(/_/g, ' ')) + '</span>' : esc(tx('not picked yet')), s.timezone,   /* the IANA id is an identifier, never translated (LOCALE-STANDARD) */
             csuSel('cs-timezone', 'timezone', zoneOpts, e.timezone), !zoneAsk)
         : '')
       + csuRow('tax', csuScheme(e.country),

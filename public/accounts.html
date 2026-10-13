@@ -404,14 +404,14 @@ function navPaint(active){
   const byId = Object.fromEntries(NAV.map((n) => [n[0], n])), fold = navFolded();
   $('nav').innerHTML = NAV_GROUPS.map(([g, ids]) => {
     const shut = !!(g && fold[g] && ids.indexOf(active) < 0);
-    const head = g ? `<button type="button" class="nav-grp" data-grp="${esc(g)}" data-testid="acc-grp-${esc(g.toLowerCase().replace(/ /g, '-'))}" aria-expanded="${!shut}"><span class="label">${esc(g)}</span><svg class="nav-gchev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>` : '';
+    const head = g ? `<button type="button" class="nav-grp" data-grp="${esc(g)}" data-testid="acc-grp-${esc(g.toLowerCase().replace(/ /g, '-'))}" aria-expanded="${!shut}"><span class="label">${esc(tx(g))}</span><svg class="nav-gchev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>` : '';
     return '<div class="nav-sec' + (shut ? ' shut' : '') + '">' + head + navItems(ids.map((id) => byId[id]).filter(Boolean), active) + '</div>';
   }).join('');
 }
 function navItems(items, active){
   return items.map(([id, label, d]) =>
-    `<button type="button" class="nav-btn${id === active ? ' active' : ''}" data-testid="acc-nav-${id}" data-view="${id}" aria-label="${esc(label)}"${id === active ? ' aria-current="page"' : ''}>
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"/></svg><span class="label">${esc(label)}</span>${id === 'waiting' && (BK.waiting || []).length ? `<span class="n" data-testid="acc-waiting-n">${(BK.waiting || []).length}</span>` : ''}</button>`).join('');
+    `<button type="button" class="nav-btn${id === active ? ' active' : ''}" data-testid="acc-nav-${id}" data-view="${id}" aria-label="${esc(tx(label))}"${id === active ? ' aria-current="page"' : ''}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"/></svg><span class="label">${esc(tx(label))}</span>${id === 'waiting' && (BK.waiting || []).length ? `<span class="n" data-testid="acc-waiting-n">${(BK.waiting || []).length}</span>` : ''}</button>`).join('');
 }
 $('nav').addEventListener('click', (e) => {
   const g = e.target.closest('.nav-grp');

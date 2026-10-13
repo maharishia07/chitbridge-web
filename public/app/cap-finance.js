@@ -32,6 +32,7 @@ async function finLoad(quiet) {
     if (r && r.currency && typeof SESSION !== 'undefined' && SESSION) SESSION.currency = r.currency;   /* CX0: the ledger's currency reaches Receive / Pay (finance.html sets none) */
     FIN.rows = ((r && r.parties) || []).filter(function (p) { return bkDuesSide(p) === 'rcv' && finOwes(p); });
     FIN.state = 'ready'; FIN.err = null;
+    ftNav();   /* the tabs' words again, now the language pack has had the boot to land */
   } catch (e) {
     if (g !== FIN.gen) return;
     if (e && e.status === 404) { finOff(); return; }   /* the Ledger is off for this shop (M212) */
