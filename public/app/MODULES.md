@@ -66,7 +66,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-workforce.js` | lazy · coassists | the CO-ASSIST (workforce) capability: FUNCTIONALITY only |
 | `cap-worklist.js` | lazy · on demand | MY WORK, across every chit. Lazy (ensureCap('worklist')) |
 
-## Shared (51)
+## Shared (52)
 
 | file | loading | what it is |
 |---|---|---|
@@ -81,6 +81,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `catalogue-starter-categories.js` | eager |  |
 | `chit-sheet.js` | eager |  |
 | `core.js` | eager | shared client module for the Task Panel (module 1 of the app split) |
+| `country-ready.js` | — |  |
 | `edition.js` | — |  |
 | `embed-host.js` | — |  |
 | `govcontext.js` | eager | ADOPTED from chitbridge-engines v1.42.0 · govcontext · sha256 d6eaa7aab22daeb73b006f25996a23d74ca571bb1260d61dfd56669f21e59a82 — DO NOT EDIT HERE. Cha |
@@ -124,4 +125,4 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 
 ---
 
-*97 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*98 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*

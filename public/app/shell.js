@@ -487,6 +487,8 @@
 
     /* ── the kural: the footer band on a laptop; once, at the foot of Home, on a phone ── */
     function placeKural() {
+      /* CL3: kural:false = the PAGE owns the band (CBFrame's skeleton pages put it at the body's foot) — a resize must never pull it up into the header */
+      if (o.kural === false) return;
       var K = root.CBKural, k = K && K.el && K.el(); if (!k) return;
       var spot = phone.matches && mode === 'home' ? $('.cbsh-pfoot') : $('.cbsh-foot');   /* always the footer: above the tab bar on a phone, under the page elsewhere */
       if (spot && k.parentNode !== spot) { spot.appendChild(k); if (K.refresh) K.refresh(); }

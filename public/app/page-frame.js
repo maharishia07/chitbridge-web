@@ -10,6 +10,7 @@
  *   skeleton: { name, icon, sections, active, onSection } draws the standard sidebar + main pane around the page (link /app/page-skeleton.css).
  *   kural: a route of app/kurals.json draws the foldable footer band (load /app/kural.js); left out, no band.
  *   Load first: /engine/screen.js · (/app/edition.js: the person's edition, AX1) · /app/avatar.js · /engine/signin.js · /app/signin-ui.js · /app/one-person.js · /app/accounts-shell.js · /app/rail-bell.js · /app/shell.js
+ *   signin: false — a public page (works signed out): no sign-in window in the page, the avatar's "Sign in" goes to Home's. area: the switcher's area.
  */
 (function (root) {
   'use strict';
@@ -47,12 +48,15 @@
     o = o || {};
     var sess = session(), doc = root.document, sk = o.skeleton ? skeleton(doc, o.skeleton) : null, host;
     if (sk) host = sk.host; else { host = doc.createElement('div'); host.id = 'shell'; doc.body.insertBefore(host, doc.body.firstChild); }
+    /* CL3: signin:false = a PUBLIC page (the Country lab) — it works signed out, so no sign-in window sits over it; the avatar's door is
+       "Sign in", a link to Home's one sign-in window. area names the switcher's area when the page has no manifest entry (labs). */
+    var open = o.signin !== false;
     var shell = root.CBShell.mount(host, {
-      host: { app: o.app }, kural: sk ? false : (o.kural || false), homeHref: '/',
+      host: { app: o.app }, kural: sk ? false : (o.kural || false), homeHref: '/', area: o.area,
       person: sess && root.CBAvatar ? root.CBAvatar.personOf(sess) : null, token: sess && sess.token,
       /* the one sign-in window, in the shell's own slot; signed in -> this page reads again with the session it now holds */
-      signin: { surface: o.surface || o.app, need: 'person', registerHref: '/app.html#/welcome', onIn: function () { root.location.reload(); } },
-      avatar: { onSignIn: function () { var s = host.querySelector('.cbsh-signin'); if (s && s.scrollIntoView) s.scrollIntoView({ block: 'center' }); } }
+      signin: open ? { surface: o.surface || o.app, need: 'person', registerHref: '/app.html#/welcome', onIn: function () { root.location.reload(); } } : undefined,
+      avatar: open ? { onSignIn: function () { var s = host.querySelector('.cbsh-signin'); if (s && s.scrollIntoView) s.scrollIntoView({ block: 'center' }); } } : { signInHref: '/' }
     });
     if (sk && o.kural && root.CBKural) { root.CBKural.mount(); root.CBKural.set(o.kural); }   /* the one kural band at the FOOT, outside the head - as CB Finance / CRM / Accounts */
     if (o.work && sk) sk.screen.appendChild(o.work);
