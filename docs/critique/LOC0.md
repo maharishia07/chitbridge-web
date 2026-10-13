@@ -26,3 +26,16 @@ A pack, not an engine edit (above). The walk reuses `e2e/lib/walk.cjs` (serve ·
 
 ## (e) Changes to the brief
 1. `qps` as `app/strings-qps.js` (pack), not inside CBLocale. 2. Plural = existing `txn()`; no ICU library. 3. api untouched; server sentences specified + queued. 4. Register row in cap-standards.js + the 61→62 assertion.
+
+## Report (the PR body — the runner token could not open the PR; paste this at https://github.com/maharishia07/chitbridge-web/pull/new/round/LOC0-38324851671)
+
+**VERDICT: BUILD WITH CHANGES** — `qps` is a PACK (`public/app/strings-qps.js`, loaded by the existing `CBLocale.pack()`), not an edit to `locale.js` (an adopted engines asset); plurals = the existing `txn()` (Intl.PluralRules), no ICU library; api untouched — server-sentence keys are specified (standard § 7) and queued (LOCALE-PLAN round LOC2). Critique: `docs/critique/LOC0.md`.
+
+- **Standard** `docs/design/standards/LOCALE-STANDARD.md` (catalogue · whole sentences + placeholders + plural categories · context notes · pseudo-locale · icons universal, only directional ones mirror (listed) · fallback chain counted never blank · server sentences `why_key`+`why_params` beside `why` · what is never translated). Registered: `cap-standards.js` row 62 (Localisation · Partly) + designer data + glossary; `standards-page.cjs` 147/147.
+- **Guard** `e2e/walk-locale.cjs` (reuses `lib/walk.cjs`, the other walks' stand-in shapes, `lib/contract.cjs` M43): 10 screens × 1366/390 in `qps`, counts untranslated text nodes + clipped boxes, FAILS when either rises; `e2e/locale-baseline.json` holds the counts and the distinct strings so a rise names the new words. Run on this runner 3×: 22/22, stable. Shots `e2e/shots/walk-locale-*.png`.
+- **Baseline (untranslated 1366 · 390; clipped 0 on every screen):** home 278·197 · till 61·21 (no catalogue at all — vendored, api master) · shop 8·8 (own `_L`) · accounts 30·4 · finance 11·0 · crm 10·1 · tasks 7·1 · employees 24·16 and network 13·4 (neither loads `locale.js`, so no pack can reach them) · country setup 12·12. Extractor: LABEL 114 · PROSE 163 · INTERPOLATED 12 · FRAGMENT 837.
+- **Plan** `docs/design/standards/LOCALE-PLAN.md`: LOC1 till + bill (api master) → LOC2 server sentences → LOC3 accounts+finance → LOC4 crm+tasks → LOC5 employees+network → LOC6 country+shop → LOC7 Home. Nothing converted here.
+- New paths, each justified: `strings-qps.js` (no pack can be generated statically — a Proxy answers every key so tomorrow's label is covered the day it uses `tx()`); `walk-locale.cjs` (no walk measured language); `locale-baseline.json` (the ratchet's one slot). Flow step: cross-flow tooling (PM1: no flow row). No dependency, no secret, no migration, no engines change. Better than Microsoft's qps-ploc because the bar is a per-screen ratchet the build enforces, not a tester's eye.
+- Checks: guard-static · token-guard · dup-functions · contract · check-syntax · check-app-parses · pack-parity · lazy-screen · screen-reads · process-map all exit 0. Single PR, web only.
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
