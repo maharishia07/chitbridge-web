@@ -41,6 +41,10 @@ var CBIdDocs = (function () {
     AADHAAR:  { label: 'Aadhaar',         eg: '12 digits',        self: false }
   };
   var ORDER = ['PHONE', 'EMAIL', 'PAN', 'VOTER_ID', 'DL', 'AADHAAR'];
+  /* CX4 (R3): the documents the SERVER lists for the shop's country (GET's `catalogue`, from identities.country) — an Australian or
+     UAE shop is never offered PAN or Aadhaar. null until a GET answered: the full list, as before. */
+  var LIST = null;
+  function order() { return LIST ? ORDER.filter(function (sc) { return LIST.indexOf(sc) >= 0; }) : ORDER; }
 
   var STATUS = {
     verified:   ['✓', 'var(--ok-3)',   'Verified'],
@@ -110,8 +114,8 @@ var CBIdDocs = (function () {
 
     var rows;
     if (self) {
-      var addable  = ORDER.filter(function (sc) { return HINT[sc].self; });
-      var readonly = ORDER.filter(function (sc) { return !HINT[sc].self; });
+      var addable  = order().filter(function (sc) { return HINT[sc].self; });
+      var readonly = order().filter(function (sc) { return !HINT[sc].self; });
       /* ⭐ VIEW FIRST, THEN UPDATE. Athi, 2026-08-20: *"view section, next update section."* The record is
          what you came to read; the fields are what you may do about it. Putting the inputs first makes a page
          that is mostly a statement look like a form. */
@@ -126,7 +130,7 @@ var CBIdDocs = (function () {
            +   'Confirmed by a code sent to them.'
            + '</div>';
     } else {
-      rows = ORDER.map(function (sc) { return row(sc, true); }).join('');
+      rows = order().map(function (sc) { return row(sc, true); }).join('');
     }
 
     /* ⚠️⚠️ THE AADHAAR SENTENCE IS NOT REASSURANCE, IT IS THE DESIGN. The Aadhaar Act restricts a private body
@@ -135,7 +139,9 @@ var CBIdDocs = (function () {
     var aadhaarNote = '<div class="misnote" style="margin-top:8px;line-height:1.5">'
       + 'Aadhaar: only the last four digits are kept. The number itself is never stored.</div>';
 
-    var consent = self ? '' :
+    var hasAadhaar = order().indexOf('AADHAAR') >= 0;
+    if (!hasAadhaar) aadhaarNote = '';
+    var consent = (self || !hasAadhaar) ? '' :
       '<label class="fl" style="display:flex;align-items:center;gap:7px;cursor:pointer;margin-top:8px">'
       + '<input type="checkbox" id="idoc_consent" style="width:auto;margin:0">'
       + '<span style="font-weight:400">They have agreed to this being recorded '
@@ -166,7 +172,9 @@ var CBIdDocs = (function () {
       var r = await fetch(CFG.API_BASE + '/api/identity/documents' + q,
         { headers: { Authorization: 'Bearer ' + SESSION.token } });
       if (!r.ok) return [];          // 503 before the migration — an empty record, not an error screen
-      return (await r.json()).documents || [];
+      var j = await r.json();
+      if (Array.isArray(j.catalogue)) LIST = j.catalogue.map(function (c) { return c.scheme; });
+      return j.documents || [];
     } catch (_) { return []; }
   }
 
