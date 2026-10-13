@@ -38,6 +38,9 @@ body.embed #tk{padding:14px 16px;min-height:100vh}
 .tag{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:999px;border:1px solid var(--line-3,#d8ccb0);background:var(--surface,#fffdf8);font-size:12px;font-weight:600;white-space:nowrap}
 .tag.green{background:var(--green-t,#E8F4ED);border-color:var(--green-b,#A9D3BC);color:var(--green-d,#0D4A2B)}
 .tag.amber{background:var(--amber-t,#FDF3DC);border-color:var(--amber-b,#EFD39A);color:var(--amber-i,#7A5205)}
+.tag.red{background:var(--red-t,#FBEAE3);border-color:var(--red-b,#E7B9A8);color:var(--red-i,#8E3517)}   /* red only when work is at risk: a stuck order */
+.tk-stuck{margin:6px 0;color:var(--red-i,#8E3517);font-size:13px}
+a.act{text-decoration:none}
 .empty{padding:40px 20px;text-align:center;border:1px dashed var(--line-3,#d8ccb0);border-radius:14px;color:var(--muted,#5c5240);display:flex;flex-direction:column;align-items:center;gap:12px}
 .empty .t{font-family:var(--serif);font-size:19px;color:var(--ink,#2a2418);font-weight:700}
 .loadwrap{display:flex;align-items:center;gap:10px;color:var(--muted,#5c5240);padding:18px 0}
@@ -108,6 +111,8 @@ function go(){ if (typeof CB_TASKS_ENDED === 'function') CB_TASKS_ENDED(); }
     orders_in: 'M12 3v12M6 9l6 6 6-6M4 21h16', orders_out: 'M12 21V9M6 15l6-6 6 6M4 3h16', done: 'M20 6L9 17l-5-5' };
   /** a 401 from the API: the session is no longer good (core.js api() calls go() → this) */
   window.CB_TASKS_ENDED = function () { if (embed) start(null); else CBFrame.ended(); };
+  /** the bell's row opens THAT order HERE (REQUIREMENT §6; rail-bell.js presses openChit when the page has one) — the same sheet, over whichever folder is open */
+  window.openChit = function (id) { if (app && id) app.open(String(id)); };
   function start(token, api) {
     if (!token) { host.innerHTML = '<div class="empty" data-testid="tk-signin"><div class="t">' + (embed ? 'Sign in first' : 'Sign in above') + '</div></div>'; return; }
     SESSION.token = token;

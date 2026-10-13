@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Country lab · Chit &amp; Bridge</title>
+<!--
+  THE COUNTRY LAB (CL1, 2026-10-12) — what changes when a shop's country changes, SHOWN FROM THE PACKS.
+
+  Owner decision (2026-10-13): during registration, until the entity's constitution (country · currency · FY · tax registration)
+  is FIXED by its first posting / close, the country may change freely and everything hanging on it is re-derived from the new
+  pack; after that a country change stays a NEW ENTITY. This page shows the impact. It is a workshop page, like the Offer,
+  Combo and Conversion labs — reachable from the Catalogue setup's Labs links, never a customer screen.
+
+  ⭐ IT IS THE REAL THING, NOT A MOCK. Every row on the right is READ from the regulation packs the books run on — reg-in,
+  reg-au, reg-ae and the registry (engine/tax.js, the adopted bundle: packs + regulation + tax-packs + tax-slab + tax, one release,
+  the same file the till bills with). Nothing in this page is a hand-written table of what a country does: a pack that carries no
+  member for a row SAYS SO on that row (the India pack names no `returns` — its GSTR-3B is the gst-returns engine's — and that
+  absence is painted, never filled in). The cart is billed by CBTax.determine, the same function the counter and the server call,
+  and the figures are read with CBTax.moneyOf — this page adds nothing up.
+
+  ⚠️ A COUNTRY WITH NO PACK IS SAID, NEVER SILENTLY INDIA. The picker lists exactly the registered packs (CBRegulation.list) and,
+  marked as pack-less, the other countries the Country setup step offers (CBLocale.REGIONS — the served list that step reads).
+  A pack-less side paints CBRegulation.status()'s one sentence — the same words the server's books gate and the setup step say —
+  and its cart is NOT billed: tax.determine would read it under the default pack (the fallback kept for READING old chits), which
+  is exactly the silent switch the decision forbids.
+-->
+<style>
+  :root{ --font-ui:Inter,system-ui,sans-serif; --ink:#20303b; --grey-2:#545A61; --line:#e7e3d8; --line-2:#efece4; --paper:#faf8f3; --card:#fff;
+    --blue:#3F66A6; --blue-tint-bg:#E9F0FA; --accent:#3F66A6; --on-accent:#fff; --ok-2:#2c7a43; --ok-tint:#e6f4ea; --ok-line:#bfe0c9; --warn-2:#8a5a1e; --warn-tint:#fbf3e3;
+    --bad:#b4453f; --bad-tint:#fbeceb; --bad-line:#eccbc9; --gold-soft:#f7f2e3; --gold-line:#e6d9a8; --neutral-tint:#EEF1F5; --diff-tint:#fff4d6;
+    --fs-1:11px; --fs-2:12.5px; --fs-3:14px; --fs-4:16px; --fs-5:22px; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; font-family:var(--font-ui,system-ui); color:var(--ink,#20303b); background:var(--paper,#faf8f3); font-size:var(--fs-3,14px); font-variant-numeric:tabular-nums; }
+  header{ display:flex; align-items:center; gap:14px; padding:10px 18px; border-bottom:1px solid var(--line,#e7e3d8); background:var(--card,#fff); flex-wrap:wrap; }
+  header h1{ font-size:var(--fs-4,16px); margin:0; letter-spacing:.01em; } header .sub{ color:var(--grey-2,#545A61); font-size:var(--fs-2,12.5px); }
+  .lab{ display:grid; grid-template-columns:minmax(300px,380px) 1fr; min-height:calc(100vh - 52px); }
+  .pane{ padding:12px 16px; overflow:auto; min-width:0; }
+  .pane.left{ border-right:1px solid var(--line,#e7e3d8); background:var(--card,#fff); }
+  .sec{ font-weight:800; font-size:var(--fs-1,11px); letter-spacing:.08em; text-transform:uppercase; color:var(--grey-2,#545A61); margin:14px 0 6px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .sec:first-child{ margin-top:0; }
+  .line{ display:flex; flex-wrap:wrap; gap:6px 12px; align-items:center; font-size:var(--fs-2,12.5px); padding:6px 8px; border:1px solid var(--line,#e7e3d8); border-radius:8px; background:var(--paper,#faf8f3); }
+  .line label{ display:inline-flex; align-items:center; gap:5px; white-space:nowrap; }
+  input[type=number], input[type=text], select{ font:inherit; font-size:var(--fs-2,12.5px); padding:3px 5px; border:1px solid var(--line,#e7e3d8); border-radius:5px; background:var(--card,#fff); color:var(--ink,#20303b); height:26px; max-width:100%; }
+  input[type=number]{ text-align:right; }
+  input[type=radio]{ width:15px; height:15px; margin:0; accent-color:var(--blue,#3F66A6); }
+  table.grid{ width:100%; border-collapse:separate; border-spacing:0; font-size:var(--fs-2,12.5px); background:var(--card,#fff); border:1px solid var(--line,#e7e3d8); border-radius:8px; overflow:hidden; }
+  table.grid th{ background:var(--neutral-tint,#EEF1F5); color:var(--grey-2,#545A61); font-size:var(--fs-1,11px); text-transform:uppercase; letter-spacing:.06em; font-weight:700; text-align:left; padding:5px 7px; border-bottom:1px solid var(--line,#e7e3d8); white-space:nowrap; }
+  table.grid td{ padding:4px 6px; border-bottom:1px solid var(--line-2,#efece4); vertical-align:top; }
+  table.grid tr:last-child td{ border-bottom:0; }
+  table.grid td.r, table.grid th.r{ text-align:right; white-space:nowrap; }
+  table.grid input[type=text]{ width:100%; min-width:64px; } table.grid input[type=number]{ width:64px; }
+  .btn{ font:inherit; font-size:var(--fs-2,12.5px); padding:4px 10px; border:1px solid var(--line,#e7e3d8); border-radius:7px; background:var(--card,#fff); color:var(--ink,#20303b); cursor:pointer; white-space:nowrap; }
+  .btn.x{ padding:2px 7px; color:var(--grey-2,#545A61); }
+  .btn:focus-visible, input:focus-visible, select:focus-visible{ outline:2px solid var(--blue,#3F66A6); outline-offset:1px; }
+  .chip{ display:inline-block; border:1px solid var(--line,#e7e3d8); border-radius:999px; padding:1px 8px; font-size:var(--fs-1,11px); background:var(--neutral-tint,#EEF1F5); white-space:nowrap; }
+  .chip.ok{ background:var(--ok-tint,#e6f4ea); border-color:var(--ok-line,#bfe0c9); color:var(--ok-2,#2c7a43); }
+  .chip.warn{ background:var(--warn-tint,#fbf3e3); border-color:var(--gold-line,#e6d9a8); color:var(--warn-2,#8a5a1e); }
+  .chip.bad{ background:var(--bad-tint,#fbeceb); border-color:var(--bad-line,#eccbc9); color:var(--bad,#b4453f); }
+  .hint{ color:var(--grey-2,#545A61); font-size:var(--fs-1,11px); line-height:1.45; }
+  .card{ background:var(--card,#fff); border:1px solid var(--line,#e7e3d8); border-radius:8px; padding:8px 10px; font-size:var(--fs-2,12.5px); }
+  .card.nopack{ border-color:var(--gold-line,#e6d9a8); background:var(--warn-tint,#fbf3e3); color:var(--warn-2,#8a5a1e); }
+  .card.blocked{ border-color:var(--bad-line,#eccbc9); background:var(--bad-tint,#fbeceb); }
+  .card.blocked b{ color:var(--bad,#b4453f); }
+  .bar{ background:var(--bad-tint,#fbeceb); border-bottom:1px solid var(--bad-line,#eccbc9); color:var(--bad,#b4453f); padding:8px 18px; font-size:var(--fs-2,12.5px); }
+  .scroll{ overflow-x:auto; }
+  /* the comparison: one row per fact, the two packs side by side, the verdict and what it means */
+  table.cmp{ width:100%; border-collapse:separate; border-spacing:0; font-size:var(--fs-2,12.5px); background:var(--card,#fff); border:1px solid var(--line,#e7e3d8); border-radius:8px; overflow:hidden; table-layout:fixed; }
+  table.cmp th{ background:var(--neutral-tint,#EEF1F5); color:var(--grey-2,#545A61); font-size:var(--fs-1,11px); text-transform:uppercase; letter-spacing:.06em; font-weight:700; text-align:left; padding:5px 7px; border-bottom:1px solid var(--line,#e7e3d8); }
+  table.cmp td{ padding:6px 7px; border-bottom:1px solid var(--line-2,#efece4); vertical-align:top; overflow-wrap:anywhere; }
+  table.cmp tr:last-child td{ border-bottom:0; }
+  table.cmp td.k{ font-weight:700; width:14%; }
+  table.cmp td.v{ width:31%; } table.cmp td.verdict{ width:10%; } table.cmp td.means{ width:14%; color:var(--grey-2,#545A61); }
+  table.cmp tr.different td.v.to{ background:var(--diff-tint,#fff4d6); }
+  table.cmp ul{ margin:2px 0 0 14px; padding:0; } table.cmp li{ margin:0 0 2px; }
+  table.cmp details{ margin-top:3px; } table.cmp summary{ cursor:pointer; color:var(--blue,#3F66A6); font-weight:600; }
+  .two{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .bill .big{ font-size:var(--fs-5,22px); font-weight:800; letter-spacing:-.01em; }
+  .bill .diff{ background:var(--diff-tint,#fff4d6); border-radius:4px; padding:0 3px; }
+  .bill ul{ margin:4px 0 0 14px; padding:0; } .bill li{ margin:0 0 3px; }
+  .kv{ display:flex; justify-content:space-between; gap:8px; padding:2px 0; border-bottom:1px solid var(--line-2,#efece4); }
+  .kv:last-child{ border-bottom:0; }
+  .idck{ display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-top:4px; }
+  .idck input{ width:150px; }
+  @media (max-width: 880px){ .lab{ grid-template-columns:1fr; } .pane.left{ border-right:0; border-bottom:1px solid var(--line,#e7e3d8); } }
+  @media (max-width: 640px){
+    .two{ grid-template-columns:1fr; }
+    table.cmp, table.cmp tbody, table.cmp tr, table.cmp td{ display:block; width:auto; }
+    table.cmp thead{ display:none; }
+    table.cmp td{ border-bottom:0; padding:3px 8px; }
+    table.cmp tr{ border-bottom:1px solid var(--line,#e7e3d8); padding:4px 0; }
+    table.cmp td.k, table.cmp td.v, table.cmp td.verdict, table.cmp td.means{ width:auto; }
+    table.cmp td.v::before{ content:attr(data-side) ' · '; font-weight:700; color:var(--grey-2,#545A61); }
+    table.grid input[type=text]{ min-width:54px; } table.grid input[type=number]{ width:50px; }
+  }
+</style>
+<script src="/engine/screen.js"></script>
+<script src="/app/avatar.js"></script>   <!-- CBAvatar: the one avatar (Profile · Support · Sign out) and the look it owns — the same on every page -->
+</head>
+<body>
+
+<!-- ⚠️ THE ENGINES' ABSENCE IS ANNOUNCED (the Conversion lab's rule): a missing engine is a fact, and a fact belongs on the screen. -->
+<div id="nofuel" class="bar" hidden data-testid="cl-nofuel"></div>
+
+<header>
+  <div><h1>Country lab</h1><div class="sub">What changes when a shop's country changes — every row read from the regulation packs, the cart billed by the tax engine under both.</div></div>
+  <div style="margin-left:auto;display:flex;gap:8px;align-items:center;font-size:var(--fs-2,12.5px);flex-wrap:wrap">
+    <span id="src" class="chip" data-testid="cl-packs">packs: …</span>
+    <!-- ⚠️ target names, not '_blank' — the labs' rule: one tab per Lab, reused whichever page asked for it -->
+    <a class="btn" href="offer-lab-next.html" target="cb_offer_lab" style="text-decoration:none">offer lab</a>
+    <a class="btn" href="combo-lab.html" target="cb_combo_lab" style="text-decoration:none">combo lab</a>
+    <a class="btn" href="conversion-lab.html" target="cb_conversion_lab" style="text-decoration:none">conversion lab</a>
+    <a class="btn" href="app.html" style="text-decoration:none">← app</a><span id="cbav"></span><script>if(window.CBAvatar)CBAvatar.mount(document.getElementById('cbav'),{person:CBAvatar.sessionPerson(),items:['profile','support','signout']});</script>
+  </div>
+</header>
+
+<div class="lab">
+  <section class="pane left" data-testid="cl-inputs">
+
+    <div class="sec">From → to</div>
+    <div class="line">
+      <label>from <select id="from" data-testid="cl-from" onchange="setSide('from', this.value)"></select></label>
+      <label>to <select id="to" data-testid="cl-to" onchange="setSide('to', this.value)"></select></label>
+      <button class="btn" data-testid="cl-swap" onclick="swapSides()" title="swap from and to">⇄</button>
+    </div>
+    <div class="card" id="status-from" data-testid="cl-status-from" style="margin-top:6px"></div>
+    <div class="card" id="status-to" data-testid="cl-status-to" style="margin-top:6px"></div>
+    <div class="hint" style="margin-top:6px">The list is exactly the registered packs (the registry's own list), then the other countries the Country setup step offers — each of those is pack-less, and says so in the server's own sentence.</div>
+
+    <div class="sec">The cart <button class="btn" style="margin-left:auto" data-testid="cl-add-line" onclick="addLine()">+ a line</button></div>
+    <div class="scroll"><table class="grid" data-testid="cl-cart">
+      <thead><tr><th>Item</th><th class="r">Qty</th><th class="r">Price</th><th class="r" title="the slab rate a product cites — read only by a pack that names no supply kinds (India: per HSN)">Rate %</th><th>Supply kind</th><th></th></tr></thead>
+      <tbody id="cart-body"></tbody>
+    </table></div>
+    <div class="line" style="margin-top:6px">
+      <label>the buyer is
+        <select id="buyer" data-testid="cl-buyer" onchange="LAB.buyer=this.value; paintBill()">
+          <option value="same">in the shop's state and country</option>
+          <option value="other_state">in another state (a pack that splits by state)</option>
+          <option value="abroad">in another country</option>
+        </select></label>
+      <label><input type="checkbox" id="incl" onchange="LAB.incl=this.checked; paintBill()"> prices include tax</label>
+    </div>
+    <div class="hint" style="margin-top:6px">The same figures are read in each pack's currency — ₹300 on one side is A$300 on the other. Converting money is the Conversion lab's job, with a rate and its source; this page shows what the TAX does to one cart. A supply kind is the pack's own word (taxable · GST-free · input-taxed; standard · zero-rated · exempt); a kind the other pack does not know is said by the engine on that side, never guessed. The rate column is read only by a pack that names no kinds (India: the product's slab).</div>
+
+    <div class="sec">For an existing shop</div>
+    <div class="line">
+      <label><input type="radio" name="fixed" value="no" checked data-testid="cl-fixed-no" onchange="LAB.fixed=false; paintExisting()"> the constitution is not fixed yet (no posting, no close)</label>
+      <label><input type="radio" name="fixed" value="yes" data-testid="cl-fixed-yes" onchange="LAB.fixed=true; paintExisting()"> fixed — the books have posted or closed</label>
+    </div>
+    <div id="existing" style="margin-top:6px"></div>
+  </section>
+
+  <section class="pane" data-testid="cl-outcome">
+    <div class="sec">What changes — read from the packs</div>
+    <table class="cmp" data-testid="cl-rows">
+      <thead><tr><th>Row</th><th id="th-from">From</th><th id="th-to">To</th><th>Verdict</th><th>What it means for the shop</th></tr></thead>
+      <tbody id="rows-body"></tbody>
+    </table>
+    <div class="hint" style="margin-top:6px">A row that says "the pack carries no …" is the pack's own silence, painted: this page fills nothing in. Verified: a pack says whether an accountant of that country has read it.</div>
+
+    <div class="sec">Bill this cart in both</div>
+    <div class="two bill" id="bill"></div>
+  </section>
+</div>
+
+<!-- ⚠️ ORDER IS LOAD-BEARING: engine/tax.js is the adopted BUNDLE reg-in + reg-au + reg-ae + regulation + tax-packs + tax-slab + tax, in that
+     order; tax-packs reads the registry at load and refuses to load without it. money first, as on the till. -->
+<script src="/engine/money.js"></script>
+<script src="/engine/tax.js"></script>
+<script src="/engine/locale.js"></script>
+<script src="/engine/profilemap.js"></script>
+<script src="/engine/jurisdiction.js"></script>
+<script>
+'use strict';
+
+/* ── the engines, or an honest refusal to draw ─────────────────────────────────────────────────────────────── */
+var FUEL = (function () {
+  var missing = [];
+  if (!window.CBMoney) missing.push('engine/money.js');
+  if (!window.CBRegulation || !window.CBTax || !window.CBTaxPacks) missing.push('engine/tax.js (the bundle: packs + regulation + tax)');
+  if (!window.CBLocale) missing.push('engine/locale.js');
+  if (!window.CBProfileMap) missing.push('engine/profilemap.js');
+  if (!window.CBJurisdiction) missing.push('engine/jurisdiction.js');
+  if (!missing.length) return true;
+  var bar = document.getElementById('nofuel');
+  bar.hidden = false;
+  bar.textContent = 'This page cannot show anything: ' + missing.join(', ') + ' did not load. Every row here is read from an engine, so there is nothing to draw.';
+  return false;
+})();
+
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+/** ⚠️ never a bare toFixed with a guessed symbol — locale.js already knows how each currency is written */
+function fmt(n, c) { try { return CBLocale.money(n, c); } catch (_) { return c + ' ' + Number(n).toFixed(2); } }
+/** minor units → the pack's major unit, through money.decimals (Intl's table, never ours) */
+function fromMinor(m, c) { var d = CBMoney.decimals(c); return fmt(Number(m) / Math.pow(10, d), c); }
+function monthName(m) { try { return new Intl.DateTimeFormat('en', { month: 'long' }).format(new Date(Date.UTC(2026, Number(m) - 1, 1))); } catch (_) { return String(m); } }
+/** the country's name as the Country setup step reads it: the served list, else the browser's region names, else the code */
+function countryName(code) {
+  try { var R = CBLocale.REGIONS; if (R && R[code] && R[code].name) return R[code].name; } catch (_) {}
+  try { var n = new Intl.DisplayNames(['en'], { type: 'region' }).of(code); if (n && n !== code && !/unknown/i.test(n)) return n; } catch (_) {}
+  return code;
+}
+
+/* ── the countries offered: exactly the registered packs, then the setup step's served list, pack-less ──────── */
+function countries() {
+  var out = [], seen = {};
+  var add = function (c) { c = String(c || '').toUpperCase(); if (c && /^[A-Z]{2}$/.test(c) && !seen[c]) { seen[c] = 1; out.push(c); } };
+  if (FUEL) CBRegulation.list().forEach(function (p) { add(p.id); });
+  try { Object.keys((window.CBLocale && CBLocale.REGIONS) || {}).forEach(add); } catch (_) {}
+  return out;
+}
+function statusOf(code) { return CBRegulation.status(code, { name: countryName(code) }); }
+function packOf(code) { var st = statusOf(code); return st.pack ? CBRegulation.packFor(st.pack) : null; }
+
+/* ── the state ─────────────────────────────────────────────────────────────────────────────────────────────── */
+var LAB = {
+  from: 'IN', to: 'AU',
+  lines: [
+    { name: 'Rice 5 kg', qty: 2, price: 300, rate: 5, kind: 'gst_free' },
+    { name: 'Cooking oil 1 L', qty: 1, price: 180, rate: 5, kind: 'taxable' },
+    { name: 'Mobile charger', qty: 1, price: 499, rate: 18, kind: 'taxable' },
+  ],
+  buyer: 'same', incl: false, fixed: false,
+};
+
+function setSide(which, v) { LAB[which] = v; repaint(); }
+function swapSides() { var f = LAB.from; LAB.from = LAB.to; LAB.to = f; repaint(); }
+function addLine() { LAB.lines.push({ name: '', qty: 1, price: 0, rate: 0, kind: '' }); repaint(); }
+function delLine(i) { LAB.lines.splice(i, 1); repaint(); }
+/** a keystroke repaints the ANSWER, never the form (the Conversion lab's lesson: a rebuilt input loses its caret) */
+function setVal(i, field, v, num) { LAB.lines[i][field] = num ? Number(v) : v; paintBill(); paintExisting(); }
+
+/* ── what each pack SAYS, as plain data per row (the comparison is of these; the html is painted from them) ──── */
+/** the tax-id rule of a pack: Australia's ABN and the UAE's TRN are the pack's own members; India's GSTIN check is the profile-map engine's */
+function taxIdOf(p) {
+  if (!p) return null;
+  if (p.abn && p.abn.check) return { name: 'ABN', rule: '11 digits with a checksum (modulus 89)', cite: p.abn.cite, check: function (v) { var r = p.abn.check(v); return { ok: r.ok, why: r.why, shown: r.formatted }; } };
+  if (p.trn && p.trn.check) return { name: 'TRN', rule: p.trn.digits + ' digits; the first ' + p.trn.tin_digits + ' are the TIN; ' + (p.trn.check_digit == null ? 'no check digit is published, so this is a format check only' : 'with a check digit'), cite: p.trn.cite, check: function (v) { var r = p.trn.check(v); return { ok: r.ok, why: r.why, shown: r.trn }; } };
+  if (p.id === 'IN') {
+    var f = (CBProfileMap.FIELDS || []).filter(function (x) { return x.key === 'gstin'; })[0];
+    return { name: 'GSTIN', rule: '15 characters: ' + (f ? f.why : 'state, PAN, entity code, check digit'), cite: 'profile-map engine (gstinChecksum)',
+      check: function (v) { var r = CBProfileMap.gstinChecksum(v); return { ok: r.ok, why: r.ok ? null : (r.reason === 'format' ? 'Not a GSTIN shape (15 characters, e.g. 33AAAAA0000A1Z5).' : 'The check digit does not match — look at the last character.'), shown: String(v || '').trim().toUpperCase() }; } };
+  }
+  return { name: 'tax number', rule: 'the pack names no tax-id rule', cite: null, check: null };
+}
+/** the registration threshold: the pack's own, else the jurisdiction engine's (which says whether anybody verified it) */
+function thresholdOf(p) {
+  var t = p && p.tax && p.tax.registration;
+  if (t) {
+    var out = [];
+    if (t.turnover_minor != null) out.push('register from ' + fromMinor(t.turnover_minor, p.currency) + ' GST turnover');
+    if (t.nonprofit_minor != null) out.push(fromMinor(t.nonprofit_minor, p.currency) + ' for a non-profit');
+    if (t.mandatory_minor != null) out.push('mandatory from ' + fromMinor(t.mandatory_minor, p.currency));
+    if (t.voluntary_minor != null) out.push('voluntary from ' + fromMinor(t.voluntary_minor, p.currency));
+    return { words: out.join(' · '), cite: t.cite || null, verified: true };
+  }
+  var j = CBJurisdiction.registrationRule(p ? p.id : '');
+  if (j && j.bands && j.bands.length) return { words: j.bands.map(function (b) { return b.what + ' ' + b.words; }).join(' · ') + (j.caveat ? ' (' + j.caveat + ')' : ''), cite: j.name + ' · ' + j.as_of, verified: !!j.verified };
+  return { words: 'the pack names no registration threshold', cite: null, verified: false };
+}
+/** the cart's total in minor units under a pack, for the tax-invoice rule that depends on the amount */
+function cartTotalMinor(p) {
+  var b = billUnder(p); if (!b) return 0;
+  return Math.round(b.money.total * Math.pow(10, CBMoney.decimals(p.currency)));
+}
+function factsOf(p) {
+  if (!p) return null;
+  var t = p.tax || {};
+  var kinds = t.supplyKinds ? Object.keys(t.supplyKinds).map(function (k) { var x = t.supplyKinds[k]; return { id: x.id || k, name: x.name, rate: x.rate, credit: x.credit, at: x.bas || x.box || null, why: x.why }; }) : [];
+  var tid = taxIdOf(p);
+  var inv = t.taxInvoice || null, must = null, invKind = null;
+  if (typeof p.taxInvoice === 'function') {
+    var total = cartTotalMinor(p);
+    var r = p.taxInvoice(total, { buyer_registered: false });
+    must = r.must || []; invKind = { required: r.required, kind: r.kind || null, within_days: r.within_days, issue: r.issue || null, buyer: r.buyer_identity || r.buyer_trn || false };
+  }
+  var ein = t.einvoice && t.einvoice.aato_thresholds ? t.einvoice.aato_thresholds[t.einvoice.aato_thresholds.length - 1] : null;
+  var ret = p.returns ? { id: p.returns.id, frequencies: p.returns.frequencies || [], labels: p.returns.labels || {} } : null;
+  var ledgers = {}; (p.ledgers || []).forEach(function (l) { if (l && l.role) ledgers[l.role] = { code: l.code, name: l.name }; });
+  var pres = p.presentation || {};
+  var th = thresholdOf(p);
+  return {
+    id: p.id, name: p.name, version: p.version, verified: !!p.verified,
+    currency: { code: p.currency, decimals: CBMoney.decimals(p.currency), round: t.invoice_round_to || null, lineRound: t.line_tax_rounding || null },
+    fy: { startMonth: p.fiscalYear.startMonth, label: p.fiscalYear.label },
+    scheme: { scheme: t.scheme, supply: t.supply, rates: t.rates ? t.rates.slice() : [], standard: t.standard_rate != null ? t.standard_rate : null, heads: (p.taxHeads || []).slice() },
+    kinds: kinds,
+    invoice: { thresholds: inv, must: must, kind: invKind, language: p.language || null, einvoice: ein },
+    taxid: { name: tid.name, rule: tid.rule, cite: tid.cite },
+    returns: ret,
+    ledgers: ledgers,
+    words: { basis: p.basis || null, lines: Object.keys(p.sch3 || {}).length, labels: pres.labels || {}, netting: (pres.taxNetting || []).map(function (n) { return n.creditName + ' / ' + n.payableName; }) },
+    setup: { country: countryName(p.id), currency: p.currency, fy: p.fiscalYear.startMonth, taxid: tid.name, threshold: th.words, thresholdCite: th.cite, thresholdVerified: th.verified },
+  };
+}
+function same(a, b) { return JSON.stringify(a) === JSON.stringify(b); }
+
+/* ── the rows, painted from the facts ──────────────────────────────────────────────────────────────────────── */
+function list(items) { return items.length ? '<ul>' + items.map(function (s) { return '<li>' + s + '</li>'; }).join('') + '</ul>' : ''; }
+function fold(summary, inner) { return '<details><summary>' + esc(summary) + '</summary>' + inner + '</details>'; }
+function cellHTML(key, f) {
+  if (!f) return '<span class="chip warn">no pack</span>';
+  var c;
+  switch (key) {
+    case 'currency': c = f.currency;
+      return '<b>' + esc(c.code) + '</b> · ' + c.decimals + ' decimal' + (c.decimals === 1 ? '' : 's') + (c.round ? ' · the bill total rounds to ' + esc(c.round) : ' · the pack names no invoice rounding') + (c.lineRound ? ' · each line\'s tax ' + esc(c.lineRound.replace(/_/g, ' ')) : '');
+    case 'fy':
+      return '<b>' + esc(monthName(f.fy.startMonth)) + '</b> start · ' + (f.fy.label === 'split' ? 'written across two years (2026-27)' : 'written as one year (2026)');
+    case 'scheme': c = f.scheme;
+      return '<b>' + esc(c.scheme) + '</b> · ' + (c.supply === 'state' ? 'split by state: same state → two heads, another state → one' : 'decided at the border: one head at home, nothing charged across it')
+        + '<br>rates on the menu: ' + esc(c.rates.join(' · ')) + '%' + (c.standard != null ? ' · standard ' + esc(c.standard) + '%' : '') + '<br>heads: ' + esc(c.heads.join(' · '));
+    case 'kinds':
+      if (!f.kinds.length) return 'the pack names <b>no supply kinds</b> — each line carries its own slab rate (per HSN), and the registration type decides what may be charged';
+      return list(f.kinds.map(function (k) { return '<b>' + esc(k.name) + '</b> ' + esc(k.rate) + '% · credit ' + (k.credit ? 'kept' : 'not claimable') + (k.at ? ' · reported at ' + esc(k.at) : '') + '<br><span class="hint">' + esc(k.why) + '</span>'; }));
+    case 'invoice': c = f.invoice;
+      var parts = [];
+      if (c.thresholds) {
+        if (c.thresholds.from_minor != null) parts.push('a tax invoice from ' + fromMinor(c.thresholds.from_minor, f.currency.code) + ' (incl. tax)');
+        if (c.thresholds.buyer_identity_from_minor != null) parts.push('the buyer\'s identity or ' + esc(f.taxid.name) + ' from ' + fromMinor(c.thresholds.buyer_identity_from_minor, f.currency.code));
+        if (c.thresholds.simplified_upto_minor != null) parts.push('a simplified invoice up to ' + fromMinor(c.thresholds.simplified_upto_minor, f.currency.code) + ' (a non-registrant: always)');
+        if (c.thresholds.within_days != null) parts.push('issued within ' + esc(c.thresholds.within_days) + ' days');
+      }
+      if (c.kind) parts.push('this cart: ' + (c.kind.required ? ('a <b>' + esc(c.kind.kind || 'tax') + '</b> invoice' + (c.kind.issue ? ', ' + esc(c.kind.issue) : '')) : 'no tax invoice is required'));
+      if (c.einvoice) parts.push('e-invoice (IRN) above ' + fromMinor(c.einvoice.above_minor, f.currency.code) + ' turnover from ' + esc(c.einvoice.from));
+      if (!parts.length) parts.push('the pack names no tax-invoice thresholds');
+      var lang = c.language ? ('language: ' + (c.language.english_accepted ? 'English accepted' : 'as the pack says') + (c.language.records_on_request ? '; ' + esc(String(c.language.records_on_request).toUpperCase()) + ' on request, at the ' + esc(c.language.translation_cost) + '\'s cost' : '')) : 'language: the pack states no language rule';
+      return list(parts) + '<div>' + lang + '</div>' + (c.must && c.must.length ? fold('the ' + c.must.length + ' things it must carry', list(c.must.map(esc))) : (c.must ? '' : '<div class="hint">the pack lists no invoice fields</div>'));
+    case 'taxid':
+      return '<b>' + esc(f.taxid.name) + '</b> · ' + esc(f.taxid.rule) + (f.taxid.cite ? '<div class="hint">' + esc(f.taxid.cite) + '</div>' : '');
+    case 'returns': c = f.returns;
+      if (!c) return 'the pack carries <b>no returns member</b>' + (f.id === 'IN' ? ' — its GSTR-3B is the gst-returns engine\'s, which this page does not load' : '');
+      var boxes = Object.keys(c.labels).map(function (k) { return '<b>' + esc(k) + '</b> ' + esc(c.labels[k]); });
+      return '<b>' + esc(c.id) + '</b> · ' + esc(c.frequencies.join(' or ')) + fold(boxes.length + ' boxes', list(boxes));
+    case 'words': c = f.words;
+      var w = Object.keys(c.labels).map(function (k) { return '<span class="hint">' + esc(k) + '</span> ' + esc(c.labels[k]); });
+      return (c.basis ? esc(c.basis) + ' · ' : '') + c.lines + ' statement lines' + (c.netting.length ? '<div>tax on the balance sheet: ' + esc(c.netting.join('; ')) + '</div>' : '') + fold(w.length + ' words the statements use', list(w));
+    case 'setup': c = f.setup;
+      return list(['country: <b>' + esc(c.country) + '</b>', 'money: <b>' + esc(c.currency) + '</b>', 'financial year starts: <b>' + esc(monthName(c.fy)) + '</b>',
+        'registered for tax? — the number is a <b>' + esc(c.taxid) + '</b>; ' + esc(c.threshold) + (c.thresholdVerified ? '' : ' <span class="chip warn">unverified</span>') + (c.thresholdCite ? '<div class="hint">' + esc(c.thresholdCite) + '</div>' : '')]);
+  }
+  return '';
+}
+function ledgerDiff(a, b) {
+  var added = [], removed = [], renamed = [];
+  if (!a || !b) return null;
+  Object.keys(b.ledgers).forEach(function (r) { if (!a.ledgers[r]) added.push(r); else if (a.ledgers[r].name !== b.ledgers[r].name || a.ledgers[r].code !== b.ledgers[r].code) renamed.push(r); });
+  Object.keys(a.ledgers).forEach(function (r) { if (!b.ledgers[r]) removed.push(r); });
+  return { added: added, removed: removed, renamed: renamed };
+}
+function ledgerCell(f, other, side) {
+  if (!f) return '<span class="chip warn">no pack</span>';
+  var n = Object.keys(f.ledgers).length, d = (other && f) ? ledgerDiff(side === 'from' ? f : other, side === 'from' ? other : f) : null;
+  var out = '<b>' + n + ' ledgers</b>';
+  if (!d) return out + ' · nothing to compare against';
+  if (side === 'to') {
+    out += ' · ' + d.added.length + ' added · ' + d.removed.length + ' removed · ' + d.renamed.length + ' renamed';
+    if (d.added.length) out += fold('added (' + d.added.length + ')', list(d.added.map(function (r) { return esc(f.ledgers[r].code + ' ' + f.ledgers[r].name) + ' <span class="hint">' + esc(r) + '</span>'; })));
+    if (d.renamed.length) out += fold('renamed (' + d.renamed.length + ')', list(d.renamed.map(function (r) { return esc(other.ledgers[r].code + ' ' + other.ledgers[r].name) + ' → ' + esc(f.ledgers[r].code + ' ' + f.ledgers[r].name); })));
+  } else if (d.removed.length) out += fold('not in the other pack (' + d.removed.length + ')', list(d.removed.map(function (r) { return esc(f.ledgers[r].code + ' ' + f.ledgers[r].name) + ' <span class="hint">' + esc(r) + '</span>'; })));
+  return out;
+}
+/* one line per row on what it means for the shop — short, what happens · what to do */
+function meaning(key, a, b, isSame) {
+  var to = b || a;
+  switch (key) {
+    case 'currency': return isSame ? 'Prices, bills and the books stay in ' + to.currency.code + '.' : 'Every price is re-read in ' + to.currency.code + '; the books keep ' + to.currency.decimals + ' decimals and the bill rounds as the pack says.';
+    case 'fy': return isSame ? 'The year, its month locks and the close keep their dates.' : 'The year starts in ' + monthName(to.fy.startMonth) + '; month locks and the year close move with it.';
+    case 'scheme': return isSame ? 'The bill\'s tax heads are the same.' : 'The bill\'s tax heads change: ' + (a ? a.scheme.heads.join('+') : '—') + ' → ' + to.scheme.heads.join('+') + '. Every product\'s rate is re-read from the new menu.';
+    case 'kinds': return to.kinds.length ? 'Each line must say what kind of supply it is; the kind sets the rate and whether credit is kept.' : 'No kinds to name: the product\'s slab decides.';
+    case 'invoice': return 'What a bill must carry to count as a tax invoice, and from what amount.';
+    case 'taxid': return 'The number the setup step asks for, and the check it runs while you type (try it below).';
+    case 'returns': return to.returns ? 'The shop files ' + to.returns.id + ' from its posted ledgers.' : 'The pack names no return; nothing is filed from it.';
+    case 'ledgers': return isSame ? 'The chart stays.' : 'The chart is re-derived from the pack: new ledgers appear, some go, some are renamed. Nothing posted moves.';
+    case 'words': return isSame ? 'The statements read the same.' : 'The statements use this pack\'s words and lines.';
+    case 'setup': return 'The step asks these four; each answer starts from the pack and may be corrected.';
+  }
+  return '';
+}
+var ROWS = [
+  ['currency', 'Currency'], ['fy', 'Financial year'], ['scheme', 'Tax scheme'], ['kinds', 'Supply kinds'], ['invoice', 'Tax invoice'],
+  ['taxid', 'Tax id'], ['returns', 'The return'], ['ledgers', 'Chart of accounts'], ['words', 'Statement words'], ['setup', 'Country setup asks'],
+];
+function verdictOf(key, a, b) {
+  if (!a || !b) return { same: false, chip: '<span class="chip warn">no pack</span>', word: 'no pack' };
+  var s = key === 'ledgers' ? same(a.ledgers, b.ledgers) : same(a[key], b[key]);
+  return { same: s, chip: s ? '<span class="chip ok">SAME</span>' : '<span class="chip bad">DIFFERENT</span>', word: s ? 'SAME' : 'DIFFERENT' };
+}
+function paintRows() {
+  var a = FACTS.from, b = FACTS.to, body = document.getElementById('rows-body');
+  document.getElementById('th-from').textContent = 'From · ' + countryName(LAB.from);
+  document.getElementById('th-to').textContent = 'To · ' + countryName(LAB.to);
+  body.innerHTML = ROWS.map(function (r) {
+    var key = r[0], v = verdictOf(key, a, b);
+    var left = key === 'ledgers' ? ledgerCell(a, b, 'from') : cellHTML(key, a);
+    var right = key === 'ledgers' ? ledgerCell(b, a, 'to') : cellHTML(key, b);
+    if (key === 'taxid') { left += idCheckHTML('from'); right += idCheckHTML('to'); }
+    return '<tr data-row="' + key + '" data-testid="cl-row-' + key + '" class="' + (v.same ? 'same' : 'different') + '">'
+      + '<td class="k">' + esc(r[1]) + '</td>'
+      + '<td class="v from" data-side="' + esc(countryName(LAB.from)) + '">' + left + '</td>'
+      + '<td class="v to" data-side="' + esc(countryName(LAB.to)) + '">' + right + '</td>'
+      + '<td class="verdict" data-testid="cl-verdict-' + key + '">' + v.chip + '</td>'
+      + '<td class="means">' + esc((a && b) ? meaning(key, a, b, v.same) : (b ? meaning(key, null, b, false) : 'No pack on this side: the books never open on a guess.')) + '</td></tr>';
+  }).join('');
+}
+/* the live tax-id check: typed on the row, answered by the pack's own checker */
+var IDS = { from: '', to: '' };
+function idCheckHTML(side) {
+  var p = PACKS[side], t = taxIdOf(p);
+  if (!t || !t.check) return '';
+  return '<div class="idck"><input type="text" placeholder="type a ' + esc(t.name) + '" value="' + esc(IDS[side]) + '" data-testid="cl-id-' + side + '" oninput="idCheck(\'' + side + '\', this.value)"><span id="idres-' + side + '" data-testid="cl-idres-' + side + '">' + idResult(side, IDS[side]) + '</span></div>';
+}
+function idResult(side, v) {
+  var t = taxIdOf(PACKS[side]);
+  if (!t || !t.check || !String(v || '').trim()) return '<span class="hint">checked as you type</span>';
+  var r = t.check(v);
+  return r.ok ? '<span class="chip ok">valid ' + esc(t.name) + (r.shown ? ' · ' + esc(r.shown) : '') + '</span>' : '<span class="chip bad">' + esc(r.why || 'not valid') + '</span>';
+}
+function idCheck(side, v) { IDS[side] = v; document.getElementById('idres-' + side).innerHTML = idResult(side, v); }
+
+/* ── the cart, billed by the tax engine under each pack ─────────────────────────────────────────────────────── */
+function kindOptions(cur) {
+  var out = ['<option value=""' + (cur ? '' : ' selected') + '>— none (the line\'s rate)</option>'];
+  ['from', 'to'].forEach(function (side) {
+    var p = PACKS[side], k = p && p.tax && p.tax.supplyKinds;
+    if (!k) return;
+    out.push('<optgroup label="' + esc(p.id + ' · ' + p.tax.scheme) + '">' + Object.keys(k).map(function (id) { return '<option value="' + esc(id) + '"' + (cur === id ? ' selected' : '') + '>' + esc(k[id].name) + ' ' + esc(k[id].rate) + '%</option>'; }).join('') + '</optgroup>');
+  });
+  return out.join('');
+}
+function paintCart() {
+  document.getElementById('cart-body').innerHTML = LAB.lines.map(function (l, i) {
+    return '<tr><td><input type="text" value="' + esc(l.name) + '" oninput="setVal(' + i + ',\'name\',this.value)"></td>'
+      + '<td class="r"><input type="number" min="0" step="1" value="' + esc(l.qty) + '" oninput="setVal(' + i + ',\'qty\',this.value,true)"></td>'
+      + '<td class="r"><input type="number" min="0" step="0.01" value="' + esc(l.price) + '" oninput="setVal(' + i + ',\'price\',this.value,true)"></td>'
+      + '<td class="r"><input type="number" min="0" step="0.01" value="' + esc(l.rate) + '" style="width:56px" oninput="setVal(' + i + ',\'rate\',this.value,true)"></td>'
+      + '<td><select data-testid="cl-kind-' + i + '" onchange="setVal(' + i + ',\'kind\',this.value)">' + kindOptions(l.kind) + '</select></td>'
+      + '<td><button class="btn x" onclick="delLine(' + i + ')" title="remove">×</button></td></tr>';
+  }).join('');
+}
+/**
+ * ⭐ ONE CALCULATION. The engine is handed the cart as the counter would hand it: the seller in the pack's country (with a state when
+ * the pack splits by state — Tamil Nadu, 33), the buyer where the picker says, each line's kind, and the slab rate only where no kind is
+ * named. A pack with supply kinds takes the kind's rate (the engine's rule); a pack without them reads the line's rate.
+ */
+function billUnder(p) {
+  if (!p) return null;
+  var split = p.tax && p.tax.supply === 'state';
+  var seller = { Country: p.id, LglNm: 'The shop' }, buyer = { Country: LAB.buyer === 'abroad' ? 'XX' : p.id };
+  if (split) { seller.State = '33'; buyer.Pos = LAB.buyer === 'other_state' ? '29' : '33'; }
+  var lines = LAB.lines.map(function (l, i) {
+    var line = { id: i, name: l.name, qty: l.qty, unit_price: l.price };
+    if (l.kind) line.supply_kind = l.kind;
+    if (!(p.tax && p.tax.supplyKinds) || !l.kind) line.rate = l.rate;
+    return line;
+  });
+  try {
+    var inv = CBTax.determine({ seller: seller, buyer: buyer, lines: lines, priceIncludesTax: LAB.incl });
+    return { inv: inv, money: CBTax.moneyOf(inv, p.currency) };
+  } catch (e) { return { refused: String(e && e.message || e) }; }
+}
+function billHTML(side, b, other) {
+  var p = PACKS[side], st = STATUS[side];
+  if (!p) return '<div class="card nopack" data-testid="cl-bill-' + side + '"><b>' + esc(countryName(LAB[side])) + '</b> — not billed. ' + esc(st.why) + '<div class="hint" style="margin-top:4px">The engine would read this cart under the default pack; that silent switch is the one thing this lab never shows as an answer.</div></div>';
+  if (b.refused) return '<div class="card nopack" data-testid="cl-bill-' + side + '"><b>' + esc(p.name) + '</b> — the engine refused: ' + esc(b.refused) + '</div>';
+  var m = b.money, o = other && other.money, cb = b.inv._cb || {};
+  var d = function (k, v) { return (o && JSON.stringify(o[k]) !== JSON.stringify(v)) ? ' class="diff"' : ''; };
+  var heads = (m.heads || []).map(function (h) { return '<span' + ((o && !(o.heads || []).some(function (x) { return x.name === h.name && x.rate === h.rate && x.amount === h.amount; })) ? ' class="diff"' : '') + '>' + esc(h.name) + ' ' + esc(h.rate) + '% on ' + fmt(h.base, p.currency) + ' = <b>' + fmt(h.amount, p.currency) + '</b></span>'; });
+  var lines = (b.inv.ItemList || []).map(function (it, i) {
+    var k = (cb.kinds || []).filter(function (x) { return x.line === i; })[0];
+    return esc(it.PrdDesc || ('line ' + (i + 1))) + ' · ' + esc(it.GstRt) + '% on ' + fmt(it.AssAmt, p.currency) + ' → tax ' + fmt((it.CgstAmt || 0) + (it.SgstAmt || 0) + (it.IgstAmt || 0) + (it.TaxAmt || 0), p.currency) + (k ? ' <span class="chip">' + esc(k.kind) + (k.bas ? ' · ' + esc(k.bas) : '') + (k.box ? ' · Box ' + esc(k.box) : '') + '</span>' : '');
+  });
+  var notes = (cb.notes || []).map(esc);
+  return '<div class="card" data-testid="cl-bill-' + side + '">'
+    + '<div><b>' + esc(p.name) + '</b> <span class="chip">' + esc(cb.scheme) + ' · ' + esc(cb.supply) + '</span> ' + (p.verified ? '<span class="chip ok">verified</span>' : '<span class="chip warn">not yet verified by an accountant</span>') + '</div>'
+    + '<div class="big"' + d('total', m.total) + ' data-testid="cl-total-' + side + '">' + fmt(m.total, p.currency) + '</div>'
+    + '<div class="kv"><span>goods</span><span>' + fmt(m.net, p.currency) + '</span></div>'
+    + '<div class="kv"><span>tax</span><span' + d('tax', m.tax) + ' data-testid="cl-tax-' + side + '">' + fmt(m.tax, p.currency) + '</span></div>'
+    + (m.round_off ? '<div class="kv"><span>round off</span><span>' + fmt(m.round_off, p.currency) + '</span></div>' : '')
+    + '<div class="sec" style="margin:8px 0 2px">Tax lines</div>' + (heads.length ? '<ul data-testid="cl-heads-' + side + '">' + heads.map(function (h) { return '<li>' + h + '</li>'; }).join('') + '</ul>' : '<span class="hint">no tax head carries an amount</span>')
+    + '<div class="sec" style="margin:8px 0 2px">Per line</div><ul>' + lines.map(function (l) { return '<li>' + l + '</li>'; }).join('') + '</ul>'
+    + '<div class="sec" style="margin:8px 0 2px">The invoice notes</div>' + (notes.length ? '<ul data-testid="cl-notes-' + side + '">' + notes.map(function (n) { return '<li>' + n + '</li>'; }).join('') + '</ul>' : '<span class="hint" data-testid="cl-notes-' + side + '">the engine added no note</span>')
+    + '</div>';
+}
+var BILLS = { from: null, to: null };
+function paintBill() {
+  BILLS.from = billUnder(PACKS.from); BILLS.to = billUnder(PACKS.to);
+  document.getElementById('bill').innerHTML = billHTML('from', BILLS.from, BILLS.to) + billHTML('to', BILLS.to, BILLS.from);
+}
+
+/* ── for an existing shop: the rule in plain words, the list read off the rows that differ ──────────────────── */
+function paintExisting() {
+  var el = document.getElementById('existing'), a = FACTS.from, b = FACTS.to;
+  var fromName = countryName(LAB.from), toName = countryName(LAB.to);
+  if (!LAB.fixed) {
+    var changed = ROWS.filter(function (r) { return !verdictOf(r[0], a, b).same; }).map(function (r) { return r[1]; });
+    var inner = !b ? '<b>' + esc(toName) + '</b> has no pack, so nothing can be re-derived: ' + esc(STATUS.to.why)
+      : (changed.length ? 'Until the first posting or close, the country may still change. Moving this shop from <b>' + esc(fromName) + '</b> to <b>' + esc(toName) + '</b> would re-derive, from the ' + esc(toName) + ' pack:' + list(changed.map(esc)) + '<span class="hint">Everything else stays; nothing is posted yet, so nothing has to move.</span>'
+        : 'The two packs agree on every row — a change of country would re-derive nothing.');
+    el.innerHTML = '<div class="card" data-testid="cl-rederive">' + inner + '</div>';
+    return;
+  }
+  el.innerHTML = '<div class="card blocked" data-testid="cl-blocked"><b>Blocked.</b> This shop is set up for ' + esc(fromName) + '. A shop in another country is a new registration.'
+    + '<div style="margin-top:4px">The books have posted under the ' + esc(fromName) + ' pack: its ledgers, its year and its tax heads hold entries. A switch would leave those entries under rules they were not written to, so the server refuses it — never a silent switch.</div>'
+    + '<div style="margin-top:4px"><b>What to do:</b> register the ' + esc(toName) + ' shop as a new entity; it gets the ' + esc(toName) + ' pack from its first day. This entity keeps its books as they are.</div></div>';
+}
+
+/* ── the pickers and the repaint ───────────────────────────────────────────────────────────────────────────── */
+var PACKS = { from: null, to: null }, FACTS = { from: null, to: null }, STATUS = { from: null, to: null };
+function optionsHTML(cur) {
+  return countries().map(function (c) {
+    var st = statusOf(c);
+    return '<option value="' + esc(c) + '"' + (c === cur ? ' selected' : '') + '>' + esc(st.name || countryName(c)) + (st.pack ? ' · ' + esc(st.pack) + ' pack ' + esc(st.version) : ' — no pack') + '</option>';
+  }).join('');
+}
+function statusHTML(side) {
+  var st = STATUS[side], p = PACKS[side];
+  if (!p) return '<span class="chip warn">no pack</span> <b>' + esc(st.name) + '</b> — ' + esc(st.why);
+  return '<span class="chip ok">' + esc(p.id) + ' pack ' + esc(p.version) + '</span> <b>' + esc(p.name) + '</b> · ' + (p.verified ? 'verified' : 'not yet verified by an accountant of that country') + ' · ' + esc(p.currency) + ' · year from ' + esc(monthName(p.fiscalYear.startMonth));
+}
+function repaint() {
+  if (!FUEL) return;
+  ['from', 'to'].forEach(function (side) { STATUS[side] = statusOf(LAB[side]); PACKS[side] = packOf(LAB[side]); });
+  /* the facts read the billed cart (the tax-invoice rule depends on the total), so the bill comes first */
+  FACTS.from = factsOf(PACKS.from); FACTS.to = factsOf(PACKS.to);
+  document.getElementById('from').innerHTML = optionsHTML(LAB.from);
+  document.getElementById('to').innerHTML = optionsHTML(LAB.to);
+  document.getElementById('status-from').innerHTML = statusHTML('from');
+  document.getElementById('status-to').innerHTML = statusHTML('to');
+  document.getElementById('src').textContent = 'packs: ' + CBRegulation.list().map(function (p) { return p.id + ' ' + p.version; }).join(' · ');
+  paintCart();
+  paintRows();
+  paintBill();
+  paintExisting();
+}
+repaint();
+</script>
+</body>
+</html>
