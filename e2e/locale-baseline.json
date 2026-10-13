@@ -315,7 +315,7 @@
     "Start your shop",
     "This shop",
     "Type it again",
-    "You had a bill open with 3 items · ₹63.00, left at 5:52 am.",
+    "You had a bill open with 3 items · ₹63.00, left at 6:08 am.",
     "Your new PIN"
    ]
   },
@@ -331,7 +331,7 @@
     "Cash",
     "Close",
     "Continue that bill",
-    "Counter DH5Y",
+    "Counter DKK8",
     "Counter PIN",
     "Ctrl ↑↓",
     "Enter",
@@ -364,7 +364,7 @@
     "TOTAL",
     "This shop",
     "Type it again",
-    "You had a bill open with 3 items · ₹63.00, left at 5:52 am.",
+    "You had a bill open with 3 items · ₹63.00, left at 6:08 am.",
     "Your new PIN",
     "add",
     "bills",
@@ -483,13 +483,14 @@
    "strings": []
   },
   "1366": {
-   "untranslated": 11,
+   "untranslated": 12,
    "clipped": 0,
    "pack": true,
    "clipped_sample": [],
    "strings": [
     "Age",
     "CB Finance",
+    "Cash",
     "Collapse",
     "Collections",
     "Home",
@@ -645,39 +646,29 @@
  },
  "country-lab": {
   "390": {
-   "untranslated": 12,
+   "untranslated": 6,
    "clipped": 0,
    "pack": true,
    "clipped_sample": [],
    "strings": [
     "April",
-    "Dev",
     "India",
-    "Live",
     "country",
-    "hitting http://127.0.0.1:41153 · override",
-    "off",
     "time zone",
-    "● Online",
-    "🧪 Log"
+    "● Online"
    ]
   },
   "1366": {
-   "untranslated": 12,
+   "untranslated": 6,
    "clipped": 0,
    "pack": true,
    "clipped_sample": [],
    "strings": [
     "April",
-    "Dev",
     "India",
-    "Live",
     "country",
-    "hitting http://127.0.0.1:41153 · override",
-    "off",
     "time zone",
-    "● Online",
-    "🧪 Log"
+    "● Online"
    ]
   }
  }
