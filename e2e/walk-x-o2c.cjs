@@ -66,6 +66,24 @@ W.run('x-o2c', async (w) => {
     p.on('pageerror', (e) => w.errs.push(String(e && e.message || e)));
     return p;
   };
+  /** the cart's own popup holds Check out — the dock's chip (.cbcart-bar) opens it first, as a shopper does */
+  const checkout = async (p) => { if (!(await p.locator('[data-testid="cart-checkout"]').isVisible().catch(() => false))) { await p.locator('[data-testid="shop-dock"] .cbcart-bar').first().click(); await settle(p, 400); } await p.click('[data-testid="cart-checkout"]'); };
+  /** the basket checkout in its steps (shop.html _cartStepsFor): Pickup or delivery → Continue → Who you are → "Send me a code" → the code → "Place order" */
+  const sheetTo = async (p, who) => {
+    await p.click('[data-testid="shop-mode-delivery"]'); await settle(p, 200);
+    if (who.location) await p.fill('[data-testid="shop-area"]', who.location);
+    await p.locator('[data-testid^="step-next-"]').first().click(); await settle(p, 400);
+  };
+  const sheetSend = async (p, who) => {
+    if (who.name && await has(p, '[data-testid="shop-name"]')) await p.fill('[data-testid="shop-name"]', who.name);
+    await p.fill('[data-testid="shop-contact"]', who.contact);
+    await p.click('[data-testid="shop-cart-submit"]'); await p.waitForSelector('[data-testid="shop-otp"]', { timeout: 15000 });
+    const sent = await body(p);
+    const code = await p.locator('[data-testid="shop-otp"]').inputValue().catch(() => ''); if (!code) await p.fill('[data-testid="shop-otp"]', R.OTP_CUSTOMER);
+    await p.locator('[data-testid="shop-otp"]').dispatchEvent('input').catch(() => {}); await settle(p, 200);
+    await p.click('[data-testid="shop-cart-submit"]'); await p.waitForSelector('[data-testid="shop-receipt-no"]', { timeout: 20000 }).catch(() => {});
+    return sent;
+  };
   const shopUrl = (extra) => base + '/shop.html?s=' + OWNER + (api ? '&api=' + encodeURIComponent(api) : '') + (extra || '');
 
   /* ════ S3 · ORDER — the buyer on the storefront, the seller in Task ══════════════════════════════════════════════ */
@@ -100,26 +118,25 @@ W.run('x-o2c', async (w) => {
         const dock = await txt(page, '[data-testid="shop-dock"]'), on = await page.locator('[data-testid="shop-dock"].on').count();
         return { ok: on === 1 && /209/.test(dock), saw: 'dock ' + (on ? 'shown' : 'HIDDEN') + ': "' + dock.slice(0, 120) + '"' };
       });
-      await w.step('O3.5', 'Storefront -> the cart bar -> the order sheet: the lines, Delivery/Pickup, name, address, phone; "Send code" without a phone says so', async () => {
-        await page.click('[data-testid="cart-checkout"]'); await settle(page, 600);
-        const sheet = await body(page);
-        const hasFields = await has(page, '[data-testid="shop-contact"]') && await has(page, '[data-testid="shop-send-code"]');
-        if (hasFields) { await page.click('[data-testid="shop-send-code"]'); await settle(page, 400); }
+      await w.step('O3.5', 'Storefront -> the cart bar -> Check out -> Pickup or delivery (Continue refused with its sentence until one is chosen) -> Delivery + address -> Who you are: name, phone, "Send me a code"; sending without a phone says so', async () => {
+        await checkout(page); await settle(page, 600);
+        const s1 = await body(page);
+        await page.locator('[data-testid^="step-next-"]').first().click().catch(() => {}); await settle(page, 300);
+        const refused = /Choose pickup or delivery/.test(await body(page));
+        await sheetTo(page, SHOPPER);
+        const hasFields = await has(page, '[data-testid="shop-contact"]') && await has(page, '[data-testid="shop-cart-submit"]');
+        if (hasFields) { await page.click('[data-testid="shop-cart-submit"]'); await settle(page, 400); }
         const err = await body(page);
-        return { ok: hasFields && /Ponni raw rice/.test(sheet) && /Enter a phone or email/.test(err), saw: (hasFields ? 'the sheet with contact + Send code' : 'NO ORDER SHEET') + '; empty phone -> ' + (/Enter a phone or email/.test(err) ? '"Enter a phone or email."' : 'no sentence') };
+        await shot(page, 'storefront-sheet');
+        const said = /phone or email/i.test(err);
+        return { ok: /Pickup or delivery/.test(s1) && refused && hasFields && said, saw: 'step 1 ' + (/Pickup or delivery/.test(s1) ? 'shown' : 'MISSING') + '; Continue with no choice ' + (refused ? 'says "Choose pickup or delivery."' : 'SAID NOTHING') + '; ' + (hasFields ? 'Who you are: contact + Send me a code' : 'NO WHO-YOU-ARE STEP') + '; empty phone -> ' + (said ? 'a sentence' : 'no sentence') };
       });
-      await w.step('O3.6', 'Storefront -> name, address, phone -> Send code -> "Code sent" and the code box; the code -> Place order -> "Order placed", the order number, the total 209, "Waiting for the shop"', async () => {
-        const fill = async (sel, v) => { if (await has(page, sel)) await page.fill(sel, v); };
-        await fill('#o_name', SHOPPER.name); await fill('#o_loc', SHOPPER.location); await fill('[data-testid="shop-contact"]', SHOPPER.contact);
-        await page.click('[data-testid="shop-send-code"]'); await page.waitForSelector('[data-testid="shop-otp"]', { timeout: 15000 });
-        const sent = await body(page);
-        const code = await page.locator('[data-testid="shop-otp"]').inputValue().catch(() => '');
-        if (!code) await page.fill('[data-testid="shop-otp"]', R.OTP_CUSTOMER);
-        await page.click('[data-testid="shop-place-order"]'); await page.waitForSelector('[data-testid="shop-receipt-no"]', { timeout: 20000 }).catch(() => {});
+      await w.step('O3.6', 'Storefront -> name, phone -> Send me a code -> "Code sent" and the code box; the code -> Place order -> "Order placed", the order number, the total 209, "Waiting for the shop"', async () => {
+        const sent = await sheetSend(page, SHOPPER);
         const rec = await body(page), no = await txt(page, '[data-testid="shop-receipt-no"]'), tot = await txt(page, '[data-testid="shop-receipt-total"]'), st = await txt(page, '[data-testid="shop-receipt-status"]');
         order = { no: no.replace(/^Order #/, ''), total: tot };
         const wl = await R.j(api + '/api/work/list?view=orders_in&limit=5', { token: owner.token }); const mine = ((wl.b && wl.b.rows) || []).find((x) => x.party === SHOPPER.name); if (mine) order.chit_id = mine.chit_id;
-        return { ok: /Code sent/.test(sent) && /Order placed/.test(rec) && /CB-/.test(no) && /209/.test(tot) && /Waiting for the shop/.test(st), saw: (/Code sent/.test(sent) ? 'code sent; ' : 'NO "code sent"; ') + no + ' · total ' + tot + ' · ' + st };
+        return { ok: /code sent/i.test(sent) && /Order placed/.test(rec) && /CB-/.test(no) && /209/.test(tot) && /Waiting for the shop/.test(st), saw: (/code sent/i.test(sent) ? 'code sent; ' : 'NO "code sent"; ') + (no || 'NO ORDER NUMBER') + ' · total ' + tot + ' · ' + st + (no ? '' : ' · screen: "' + rec.slice(-200) + '"') };
       });
       await w.step('O3.7', 'Storefront -> My orders -> the order just placed, "Waiting for the shop", its total', async () => {
         await page.click('[data-testid="shop-my-orders"]'); await page.waitForSelector('[data-testid="shop-order-row"]', { timeout: 10000 }).catch(() => {});
@@ -143,10 +160,10 @@ W.run('x-o2c', async (w) => {
         return { ok: sw === 390 && !!dock && !moved, saw: 'scrollWidth ' + sw + '; dock ' + (dock ? 'at y=' + Math.round(dock.y) + ' (viewport 844)' : 'MISSING') + '; first row ' + (moved ? 'MOVED by ' + (y1 - y0) + 'px' : 'stayed') };
       });
       await w.step('O3.9', 'Storefront (390) -> the order sheet fits the phone: the fields, Send code, no sideways scroll', async () => {
-        await ph.click('[data-testid="cart-checkout"]'); await settle(ph, 600);
-        const sw = await scrollW(ph), ok = await has(ph, '[data-testid="shop-send-code"]');
+        await checkout(ph); await settle(ph, 600); await sheetTo(ph, SHOPPER);
+        const sw = await scrollW(ph), ok = await has(ph, '[data-testid="shop-cart-submit"]') && await has(ph, '[data-testid="shop-contact"]');
         await shot(ph, 'storefront-phone-sheet');
-        return { ok: sw === 390 && ok, saw: 'scrollWidth ' + sw + '; Send code ' + (ok ? 'shown' : 'MISSING') };
+        return { ok: sw === 390 && ok, saw: 'scrollWidth ' + sw + '; Who you are + Send me a code ' + (ok ? 'shown' : 'MISSING') };
       });
       await ph.context().close();
 
@@ -243,10 +260,8 @@ W.run('x-o2c', async (w) => {
         await ph.goto(shopUrl()); await ph.waitForSelector('[data-testid="shop-search"]', { timeout: 20000 }).catch(() => {});
         /* the shopper's own view needs their session: the order sheet mints it on Place order — so the shopper asks the code again and reads My orders through the sheet */
         await ph.locator('.cbcat-row', { hasText: 'Sugar 1 kg' }).first().locator('[data-testid="cart-add"]', { hasText: '+' }).last().click(); await settle(ph, 300);
-        await ph.click('[data-testid="cart-checkout"]'); await settle(ph, 500);
-        await ph.fill('[data-testid="shop-contact"]', SHOPPER.contact); await ph.click('[data-testid="shop-send-code"]'); await ph.waitForSelector('[data-testid="shop-otp"]', { timeout: 15000 });
-        const code = await ph.locator('[data-testid="shop-otp"]').inputValue().catch(() => ''); if (!code) await ph.fill('[data-testid="shop-otp"]', R.OTP_CUSTOMER);
-        await ph.click('[data-testid="shop-place-order"]'); await ph.waitForSelector('[data-testid="shop-my-orders"]', { timeout: 20000 }).catch(() => {});
+        await checkout(ph); await settle(ph, 500);
+        await sheetTo(ph, SHOPPER); await sheetSend(ph, SHOPPER);
         await ph.click('[data-testid="shop-my-orders"]').catch(() => {}); await ph.waitForSelector('[data-testid="shop-order-row"]', { timeout: 10000 }).catch(() => {});
         const t = await txt(ph, '[data-testid="shop-orders"]');
         await shot(ph, 'storefront-my-orders');

@@ -23,6 +23,7 @@ const ctx = { console, setTimeout: () => 0, location: { search: '' }, localStora
   fetch: () => new Promise(() => {}), Intl, document: { getElementById: () => stub(), createElement: stub, addEventListener() {}, body: stub(), head: stub(), querySelector: () => null } };
 ctx.window = ctx;
 vm.createContext(ctx);
+vm.runInContext(read('app/workflow.js'), ctx);   /* the page loads it before its own script (CBWorkflow.stageOf → the status words) */
 vm.runInContext(script, ctx);
 const run = (src) => vm.runInContext(src, ctx);
 
@@ -95,7 +96,9 @@ const listPos = script.indexOf("+ '<div id=\"p_list\">'"), offPos = script.index
 ok(listPos > 0 && offPos > listPos, 'the totals box is BELOW the list in the page, so nothing above the list can move');
 ok(/Order #/.test(script) && /shop-receipt-total/.test(script) && /What happens next/.test(script) && /Waiting for the shop/.test(script), 'the receipt: order number, total, what happens next, status');
 ok(/\/my-orders/.test(script) && /shop-my-orders/.test(script), 'a "My orders" button reads the existing /my-orders route');
-ok(run(`shopStatusWord('sent')`) === 'Waiting for the shop' && run(`shopStatusWord('accepted')`) === 'Accepted' && run(`shopStatusWord('delivered')`) === 'Delivered' && run(`shopStatusWord('ready')`) === 'Ready', 'status words');
+ok(run(`shopStatusWord('sent')`) === 'Waiting for the shop' && run(`shopStatusWord('accepted')`) === 'Accepted' && run(`shopStatusWord('completed')`) === 'Delivered' && run(`shopStatusWord('ready')`) === 'Ready', 'status words');
+/* WX-O2C: the buyer's copy is minted 'delivered' (the rail: it reached the shop) — a just-placed order must not read "Delivered" */
+ok(run(`shopStatusWord('delivered')`) === 'Waiting for the shop' && run(`shopStatusWord('read')`) === 'Waiting for the shop' && run(`shopStatusWord('pending')`) === 'Waiting for the shop', 'the rail\'s delivered / read / pending = still waiting for the shop (CBWorkflow.stageOf)');
 
 console.log('\n— the shared cart (M64, M69, M101)');
 const cc = { console, setTimeout: () => 0, clearTimeout() {}, Intl, Date, Math, JSON };
