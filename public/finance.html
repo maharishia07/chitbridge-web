@@ -328,6 +328,7 @@ let UI = { vp: 'lap', lw: 340, custs: [], sups: [] };   /* the rows cap-books.js
 function go(){ signedOut('Your session ended. Please sign in again.'); }
 </script>
 <script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies (engines screen) -->
+<script src="/app/edition.js"></script>   <!-- CBEdition (AX1): the showing this person chose — the switcher, the bell and the avatar's Edition choice follow it -->
 <script src="/app/avatar.js"></script>   <!-- CBAvatar: the one avatar (Profile · Support · Sign out) — nothing of it is drawn here -->
 <script src="/app/core.js"></script>
 <script src="/app/accounts-shell.js"></script>
@@ -363,7 +364,8 @@ function session(){
     return (window.CBOnePerson && CBOnePerson.who(s)) ? s : null;
   }catch(_){ return null; }
 }
-function navTo(k){ location.href = '/app.html#/app/' + encodeURIComponent(k); }
+/* the SMALL APP a screen key hands over to (CB_HOMES, accounts-shell.js) — never the workshop (IX0) */
+function navTo(k){ var h = CB_HOMES[k]; if (h) location.href = h; else toast(tx('Not built outside the workshop yet.')); }
 function openChitPage(id){ window.open('/app.html#/app/chit/' + encodeURIComponent(id), '_blank', 'noopener'); }
 function openChit(id){ openChitSheet(id); }
 const confirmAsk = CBConfirm;

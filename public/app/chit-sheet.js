@@ -158,6 +158,16 @@
         : '<div class="cs-mute" data-testid="cs-gst-none">' + E(T('Rate-wise GST is not recorded on this bill')) + '</div>');
     }
     var inter = (mo.supply || m.bj.supply) === 'inter';
+    /* ⭐ CX0: a ONE-HEAD scheme (supply 'domestic' — the border decided: GST in Australia, VAT in the UAE) has one tax column named by its head
+       (by_rate[rate].gst · .vat — the pack's taxHeads), never a CGST/SGST grid of 0.00 with the tax nowhere. Same shape as the counter's slip. */
+    if ((mo.supply || m.bj.supply) === 'domestic') {
+      var head = Object.keys(by[rates[0]] || {}).filter(function (k) { return ['taxable', 'base', 'rate', 'tax', 'cess', 'cgst', 'sgst', 'igst'].indexOf(k) < 0; })[0];
+      var hw = head ? head.toUpperCase() : T('Tax');
+      var rows1 = rates.map(function (rt) { var v = by[rt] || {}, b = v.taxable != null ? v.taxable : v.base, tv = head && v[head] != null ? v[head] : v.tax;
+        return '<tr data-testid="cs-gst-' + E(rt) + '"><td>' + E(rt) + '%</td><td class="n">' + E(money(b, m.cur)) + '</td><td class="n">' + E(money(tv, m.cur)) + '</td></tr>'; }).join('');
+      var foot1 = mo.taxable != null ? '<tr class="tot"><td></td><td class="n">' + E(money(mo.taxable, m.cur)) + '</td><td class="n">' + E(money(mo.tax, m.cur)) + '</td></tr>' : '';
+      return '<div class="cs-sec">' + E(hw + ' ' + T('summary')) + '</div><table class="cs-lines" data-testid="cs-gst"><thead><tr><th>' + E(T('Rate')) + '</th><th class="n">' + E(T('Taxable')) + '</th><th class="n">' + E(hw) + '</th></tr></thead><tbody>' + rows1 + foot1 + '</tbody></table>';
+    }
     var rows = rates.map(function (rt) {
       var v = by[rt] || {}, b = v.taxable != null ? v.taxable : v.base;
       return '<tr data-testid="cs-gst-' + E(rt) + '"><td>' + E(rt) + '%</td><td class="n">' + E(money(b, m.cur)) + '</td><td class="n">' + E(money(inter ? v.igst : v.cgst, m.cur)) + '</td><td class="n">' + (inter ? '' : E(money(v.sgst, m.cur))) + '</td></tr>';
