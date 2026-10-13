@@ -263,7 +263,7 @@
        <html data-tokens="list">, and a chosen theme re-points those names at the theme's own tokens. The fallbacks ARE the page's original
        values, and Cream (no overrides, so no data-themed) is left alone, so a page that never chooses a theme is byte-for-byte what it was. */
     ':root[data-tokens="list"][data-themed]{--page:var(--paper,#FCFAF5);--panel:var(--gold-soft,#F3EFE6);--line-soft:var(--line,#E6E0D2);--hair:var(--gold-soft,#F0ECE2);' +
-    '--muted:var(--grey,#5E594D);--faint:var(--grey-3,#8A8374);--ghost:var(--grey-4,#A8A295);--green:var(--ok,#16693F);--green-t:var(--ok-tint,#E8F4ED);--green-b:var(--ok-3,#A9D3BC);' +
+    '--muted:var(--grey,#5E594D);--faint:var(--grey-3,#8A8374);--ghost:var(--grey-4,#A8A295);--green:var(--ok,#16693F);--green-t:var(--ok-tint,#E8F4ED);--green-b:var(--ok-3,#A9D3BC);--green-d:var(--ok-2,#0D4A2B);' +
     '--red:var(--disp,#C4562F);--red-t:var(--danger-tint,#FBEAE3);--red-b:var(--disp-2,#E7B9A8);--red-i:var(--disp-2,#8E3517);--amber-t:var(--warn-tint,#FDF3DC);--amber-i:var(--warn-2,#7A5205);' +
     '--blue-t:var(--blue-tint-bg,var(--blue-tint,#E4EEFA));--blue-b:var(--blue-tint-line,#B9D2EF);--blue-i:var(--blue-d,#174A87)}' +
     /* the two preferences every page honours, written once here so no page re-declares them */

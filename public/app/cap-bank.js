@@ -119,7 +119,7 @@ async function bankLedger() {
 }
 /** BR1: what the other parties already told us for the statement's dates — their advices and my questions. A failure is said, never a blank: the lines still match the books */
 async function bankRail() {
-  try { const r = await api('booksBankRail', { query: { from: BKB.from, to: BKB.to } }); return Object.assign({ chits: [], parties: [], may: {} }, r || {}); }
+  try { const r = (await api('booksBankRail', { query: { from: BKB.from, to: BKB.to } })) || {}; return { chits: r.rail_chits || [], parties: r.parties || [], may: r.may || {}, me: r.me || null, currency: r.currency || null }; }
   catch (e) { return { chits: [], parties: [], may: {}, failed: true }; }
 }
 async function bankRun() {
