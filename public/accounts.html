@@ -537,6 +537,9 @@ async function accBills(body){
     CBList.reset('bills');   /* the Received and the Issued tab are two lists: a search or an open row does not carry across */
     CBList.mount($('bkl_bills'), {
       key: 'bills', t: tx, rows: () => list, id: (c) => c.chit_id, columns: accBillCols(), rowTid: (c) => 'bill-' + c.chit_id,
+      /* WX-O2C (2026-10-13): all five by default — the top-3-by-prio default hid the Bill no and the Date at 1366 beside empty space,
+         and the number is what a shopkeeper reads a bill by. Narrower containers still drop to cards (CBList). */
+      defaultCols: ['who', 'no', 'amount', 'date', 'step'],
       /* a bill's row opens its sheet; its caret opens who took it and when */
       onOpen: (c) => openChitSheet(c.chit_id),
       search: (c) => [c.counterparty_name, c.bill_no, c.manual_subject, c.auto_subject, (c.bill || {}).label, c.value].join(' '),

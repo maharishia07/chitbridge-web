@@ -62,7 +62,9 @@ if (crmApi) {
 
 /* ── 4 · no harness opts out ── */
 const files = fs.readdirSync(__dirname).filter((f) => /\.cjs$/.test(f) && f !== 'contract.cjs');
-const serves = files.filter((f) => { const s = fs.readFileSync(path.join(__dirname, f), 'utf8'); return /\.route\(/.test(s) && /['"`]\/api\/(books|crm|work|repeat)(\/|['"`])/.test(s); });
+/* INT5b: a harness SERVES when one of its .route( patterns is an /api path — a real-stack walk (walk-x-o2c --real) only CALLS the api and
+   routes nothing but fonts (whose host, googleapis, once matched a bare "api") */
+const serves = files.filter((f) => { const s = fs.readFileSync(path.join(__dirname, f), 'utf8'); return /\.route\([^,\n]*\/api\b/.test(s) && /['"`]\/api\/(books|crm|work|repeat)(\/|['"`])/.test(s); });
 const unwrapped = serves.filter((f) => !/lib\/contract\.cjs/.test(fs.readFileSync(path.join(__dirname, f), 'utf8')));
 ok(unwrapped.length === 0, serves.length + ' harnesses answer /api/books, /api/crm, /api/work or /api/repeat calls; each holds its answers to the contract' + (unwrapped.length ? ' - NOT: ' + unwrapped.join(', ') : ''));
 
