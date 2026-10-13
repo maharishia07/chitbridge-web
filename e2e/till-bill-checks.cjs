@@ -168,6 +168,33 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(70) + '· ' + (d
   });
   say('a single dish with Mild · Medium · Hot says nothing about a combo', !/in the combo/.test(r7.text) && /Mild/.test(r7.text), r7.text.slice(0, 80));
 
+  console.log('\n── BUY1 · a walk-in at the counter is taxed INSIDE the shop\'s country (border packs: AU, AE)');
+  /* billMoney() hands the engine a buyer; the real CBTax.determine is wrapped to CAPTURE that buyer and answer as before. The web's
+     engine is still tax v1.20.0 (India, no AU / AE pack), so the border pack's own answer — supply 'domestic' — is SIMULATED on the
+     real result for the UAE shop, to prove the note path; the India shop runs the real engine untouched. */
+  const r8 = await p.evaluate(() => {
+    var realDet = CBTax.determine, seen = [], simulateBorder = false;
+    CBTax.determine = function(inp){ seen.push(JSON.parse(JSON.stringify(inp.buyer))); var r = realDet(inp);
+      if (simulateBorder && r && r._cb) r._cb.supply = 'domestic'; return r; };
+    try {
+      S = { shop: { name: 'Souq', gstin: '100000000000003', state_code: '', reg_type: 'regular', country: 'ae' }, customers: [], slabs: [], items: [] };
+      CART = [{ name: 'Dates', gst_rate: 5, qty: 1, price: 100 }];
+      simulateBorder = true; var ae = billMoney(); simulateBorder = false;
+      S.shop = { name: 'Mayur Bhavan', gstin: '29ABCPE1234F1Z7', state_code: '29', reg_type: 'regular', country: 'IN' };
+      CART = [{ name: 'Dosa', gst_rate: 5, qty: 1, price: 100 }];
+      var inn = billMoney();
+      S.shop = { name: 'No country yet', gstin: '29ABCPE1234F1Z7', state_code: '29', reg_type: 'regular' };
+      var none = billMoney();
+      return { ae: { buyer: seen[0], supply: ae.supply, notes: (ae.invoice && ae.invoice._cb && ae.invoice._cb.notes) || [] },
+               inn: { buyer: seen[1], supply: inn.supply, cgst: inn.byRate['5'] && inn.byRate['5'].cgst, sgst: inn.byRate['5'] && inn.byRate['5'].sgst, notes: (inn.invoice && inn.invoice._cb && inn.invoice._cb.notes) || [] },
+               none: { buyer: seen[2], supply: none.supply, notes: (none.invoice && none.invoice._cb && none.invoice._cb.notes) || [] } };
+    } finally { CBTax.determine = realDet; }
+  });
+  say('a UAE shop\'s walk-in reaches the engine with Country AE — the shop\'s own, upper-cased', r8.ae.buyer.Country === 'AE' && r8.ae.buyer.RegType === 'unregistered', JSON.stringify(r8.ae.buyer));
+  say('…and when the border decides (domestic), the invoice notes "Walk-in: taxed as a sale inside AE."', r8.ae.supply === 'domestic' && r8.ae.notes.indexOf('Walk-in: taxed as a sale inside AE.') >= 0, JSON.stringify(r8.ae.notes));
+  say('an Indian shop\'s walk-in: Country IN, place of supply 29 (the counter), CGST + SGST — and NO walk-in note (the state rule, not a guess)', r8.inn.buyer.Country === 'IN' && r8.inn.buyer.Pos === '29' && r8.inn.supply === 'intra' && r8.inn.cgst > 0 && r8.inn.cgst === r8.inn.sgst && !r8.inn.notes.some(function(n){ return /^Walk-in/.test(n); }), JSON.stringify(r8.inn));
+  say('a shop with no country on record hands the engine none — nothing is invented', r8.none.buyer.Country === '' && !r8.none.notes.some(function(n){ return /^Walk-in/.test(n); }), JSON.stringify(r8.none.buyer));
+
   say('no page errors', errs.length === 0, errs.join(' | ') || 'none');
   console.log(bad ? '\n' + bad + ' FAILED' : '\nthe bill\'s data checks hold in the real page');
   await b.close(); srv.close();

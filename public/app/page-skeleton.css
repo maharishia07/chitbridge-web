@@ -20,14 +20,14 @@ html.cbsk,html.cbsk body{margin:0;height:100%}
 .cbsk .main{flex-grow:1;min-width:0;height:100%;display:flex;flex-direction:column;overflow:hidden}
 .cbsk .main > #shell{flex:0 0 auto}
 .cbsk .screen{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column}
-.cbsk .screen > #emp,.cbsk .screen > #nw{flex:1 1 auto;min-height:0;padding:16px 20px 20px;overflow:auto}
-.cbsk #emp .emp-list,.cbsk #nw .nw-list{min-height:0;flex:1}
+.cbsk .screen > #emp,.cbsk .screen > #nw,.cbsk .screen > #tk{flex:1 1 auto;min-height:0;padding:16px 20px 20px;overflow:auto}
+.cbsk #emp .emp-list,.cbsk #nw .nw-list,.cbsk #tk .tk-list{min-height:0;flex:1}
 .cbsk #nw .nw-body{min-height:0;overflow:auto}
 @media (max-width:760px){
   .cbsk .side{width:64px}
   .cbsk .side .label,.cbsk #toggleNav{display:none}
   .cbsk .brand{padding:0 15px}
-  .cbsk .screen > #emp,.cbsk .screen > #nw{padding-left:12px;padding-right:12px}
+  .cbsk .screen > #emp,.cbsk .screen > #nw,.cbsk .screen > #tk{padding-left:12px;padding-right:12px}
 }
 @media (prefers-reduced-motion:reduce){.cbsk *{transition:none !important}}
 /* the shell's header sits in the main pane, above the screen — not as the full-window overlay it is on a page without a skeleton */

@@ -49,6 +49,14 @@ var CB_SHEET_EP = {
   chit:            {m:"GET",  p:"/api/chits/:id",                ok:"✓"},
   status:          {m:"PUT",  p:"/api/chits/:id/status",         ok:"✓"},
   billUse:         {m:"PUT",  p:"/api/chits/:id/use",            ok:"✓"},  // a bill I received: resale · use · asset (lib/bill-use), until accepted
+  /* ⭐ ONE ENDPOINT, ONE NAME (e2e/ep-aliases.cjs): a LINE's holder · state and what went out on it. MOVED here from
+     cap-worklist.js (TO1c) so the Task list (app.html → cap-worklist.js) and Tasks & Orders (tasks.html → cap-tasks.js)
+     register each route ONCE, under the name the worklist already had; neither page needs the other's capability loaded. */
+  wlAssign:        {m:"POST", p:"/api/chits/:id/assign-lines",   ok:"y"},  // { edits: [{ line_id, assignee_actor_id|null, assignee_name, assignee_type, state }] } (lib/assign)
+  wlDeliver:       {m:"POST", p:"/api/chits/:id/deliver-lines",  ok:"y"},  // { rows: [{ line_id, quantity, unit }] } (lib/deliverline — events, never a stored total)
+  /* the open chits behind Home's In · Out · Stuck, with the rail's why — MOVED here from cap-crm.js (TO1b) so CRM (cap-crm-chits.js) and
+     Tasks & Orders (cap-tasks.js: the Stuck mark on an order) register it ONCE; not a /api/crm route */
+  railChits:       {m:"GET",  p:"/api/facts/rail/chits",          ok:"y"},
 };
 
 /* ── the chit-sheet helpers both pages share (MOVED from app.html, not copied) ── */

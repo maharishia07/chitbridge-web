@@ -1,4 +1,4 @@
-/* cap-crm-leads.js — CB CRM L1: LEADS AS PARTIES. The Leads tab (a CBList mount, the Parties list's own look), Add lead, and the record's
+/* cap-crm-leads.js — CB CRM L1: LEADS AS PARTIES (+ L3: Import from a CSV, at the foot of this file). The Leads tab (a CBList mount, the Parties list's own look), Add lead, and the record's
  * stage chip + "Move to…". A lead IS a party (the API's added_via 'lead'); its stage is the server's (memberships, b297) — this page only labels it.
  * ⚠️ BEFORE the API's b297 runs the writes answer 503 LEADS_NOT_MIGRATED: the page says "Lead stages arrive after the next update." — never silence,
  *   never the server's message. Every write goes through CBAction (M64). Needs cap-crm.js (CRM · crmLoad · crmNormalize · crmFuJoin · cells).
@@ -43,7 +43,9 @@ async function crmLeadsLoad(quiet) {
     if (LEADS.loaded) LEADS.state = 'ready'; else { LEADS.state = 'error'; LEADS.err = e; }
   }
   crmNav(CRM.route && CRM.route.nav); crmLeadsRefresh();
+  if (CRM.route && CRM.route.view === 'leads') crmLeadsBar();   /* Add lead · Import grey WITH the sentence once the read says b297 has not run */
 }
+function crmLeadsBar() { crmBar('<strong>' + esc(tx('CB CRM')) + '</strong>', crmLeadAddBtn() + crmLeadImportBtn(), true); }
 function crmLeadsRefresh() { var a = LEADS.api; if (a && a.el && document.body.contains(a.el)) a.refresh(); }
 /** a lead opens on the same record as any party: its key must resolve (crmIndex calls this after every Parties read too) */
 function crmLeadsIndex() { LEADS.rows.forEach(function (p) { CRM.byKey[p.party_id] = p; if (p.party_no) CRM.byKey[p.party_no] = p; }); }
@@ -65,7 +67,7 @@ function crmLeadAddBtn() {
   return '<button type="button" class="act sm' + (off ? ' ghost' : '') + '" data-testid="crm-lead-add" data-crm="leadadd"' + (off ? ' disabled title="' + esc(tx(CRM_LEADS_WAIT)) + '"' : '') + '>+ ' + esc(tx('Add lead')) + '</button>';
 }
 function crmLeads(frame) {
-  crmBar('<strong>' + esc(tx('CB CRM')) + '</strong>', crmLeadAddBtn(), true);
+  crmLeadsBar();
   var s = document.getElementById('screen'); s.className = 'screen flush';
   s.innerHTML = '<div id="crm_leads" data-testid="crm-leads"></div>';
   if (LEADS.api && LEADS.api.destroy) { try { LEADS.api.destroy(); } catch (_) {} }
@@ -139,7 +141,189 @@ function crmStageGo(stage, btn) {
 function crmLeadClick(a, t) {
   if (a === 'leadadd') { crmLeadAddOpen(); return true; }
   if (a === 'leadsave') { crmLeadSave(t); return true; }
+  if (a === 'leadimport') { crmImportOpen(); return true; }
   if (a === 'rstage') { crmStageOpen(CRMR.p, CRMR.rec); return true; }
   if (a === 'stagego') { crmStageGo(t.getAttribute('data-v'), t); return true; }
   return false;
+}
+
+/* ═══ IMPORT (L3) — the call desk's first list, from a CSV: File → Columns → Check → Import; the outcome shown where it happened ═══════════
+ * ⭐ REUSE: the steps are CBSteps (step-flow.js); the preview and the skipped list are CBList mounts (its own ⬇ Download CSV IS "the skipped rows
+ *   as CSV"); the write goes through CBAction (M64). ⭐ ONE CALCULATION: the SERVER plans (POST /api/crm/leads/import { dry: true }) and the Check
+ *   step PAINTS that plan — this page normalises no phone and dedupes nothing; the only arithmetic here is reading a CSV into cells.
+ * ⭐ NEW PATHS (rule 4): crmCsvRows — the api's lib/csv.js is server-side and the bank engine's splitter is private to its vendored copy;
+ *   LIMP_GUESS — the catalogue preflight's synonyms name catalogue fields; these name a lead's seven, and the person confirms every guess on Columns.
+ * ⚠️ Before the api's b297 runs the Import button is greyed with CRM_LEADS_WAIT (like Add lead); the server still refuses (503 → the same sentence). */
+var LIMP = { name: '', rows: [], head: [], map: {}, plan: null, planErr: null, flow: null, prev: null, gen: 0 };
+var LIMP_FIELDS = [['name', 'Name'], ['phone', 'Phone'], ['email', 'Email'], ['business', 'Business'], ['city', 'City'], ['source', 'Source'], ['note', 'Note']];
+var LIMP_GUESS = {
+  name: ['name', 'lead', 'contact', 'person', 'customer', 'full name', 'contact name', 'lead name', 'customer name'],
+  phone: ['phone', 'mobile', 'cell', 'whatsapp', 'tel', 'telephone', 'number', 'phone number', 'mobile number', 'contact number'],
+  email: ['email', 'e mail', 'mail', 'email id', 'email address'],
+  business: ['business', 'company', 'shop', 'firm', 'organisation', 'organization', 'org', 'store', 'business name', 'company name'],
+  city: ['city', 'town', 'place', 'location', 'area'],
+  source: ['source', 'from', 'campaign', 'channel', 'origin', 'lead source'],
+  note: ['note', 'notes', 'remark', 'remarks', 'comment', 'comments'] };
+var LIMP_WILL = { add: 'Will add', merge: 'Will merge', skip: 'Will skip' };
+var LIMP_CAP = 'Import up to 500 leads at a time. Split the file.';
+
+/** a CSV's cells (RFC 4180: quotes, doubled quotes, commas and newlines inside quotes, CRLF, a BOM) → rows of strings; blank lines dropped */
+function crmCsvRows(text) {
+  var rows = [], row = [], cell = '', q = false, s = String(text || '').replace(/^﻿/, '');
+  var end = function () { row.push(cell); if (row.some(function (x) { return String(x).trim(); })) rows.push(row); row = []; cell = ''; };
+  for (var i = 0; i < s.length; i++) {
+    var c = s.charAt(i);
+    if (q) { if (c === '"') { if (s.charAt(i + 1) === '"') { cell += '"'; i++; } else q = false; } else cell += c; continue; }
+    if (c === '"') { q = true; continue; }
+    if (c === ',') { row.push(cell); cell = ''; continue; }
+    if (c === '\r') continue;
+    if (c === '\n') { end(); continue; }
+    cell += c;
+  }
+  end();
+  return rows;
+}
+/** the header each field is most likely under — a guess the person confirms on Columns */
+function crmImportGuess(head) {
+  var map = {}, used = {}, norm = function (h) { return String(h || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); };
+  LIMP_FIELDS.forEach(function (f) {
+    var k = f[0], words = LIMP_GUESS[k];
+    for (var i = 0; i < head.length && map[k] == null; i++) {
+      if (used[i]) continue;
+      var h = norm(head[i]);
+      if (words.indexOf(h) >= 0 || words.some(function (w) { return w.length > 3 && h.indexOf(w) >= 0; })) { map[k] = i; used[i] = true; }
+    }
+  });
+  return map;
+}
+/** the rows as the api takes them: only the mapped columns, trimmed, empty cells left out */
+function crmImportBody() {
+  var m = LIMP.map;
+  return LIMP.rows.map(function (r) {
+    var o = {};
+    LIMP_FIELDS.forEach(function (f) { var i = m[f[0]]; if (i != null && r[i] != null && String(r[i]).trim()) o[f[0]] = String(r[i]).trim(); });
+    return o;
+  });
+}
+/** what an import failure says, in the shop's words (the server's message is never shown) */
+function crmImportWords(e) {
+  var code = e && e.data && e.data.code;
+  if (e && e.status === 503) return tx(CRM_LEADS_WAIT);
+  if (code === 'TOO_MANY') return tx(LIMP_CAP);
+  if (code === 'NO_ROWS') return tx('Nothing to import.');
+  if (code === 'VIEW_ONLY' || (e && e.status === 403)) return tx('Your login can only view.');
+  if (e && e.status === 409) return tx('Could not add them. Try once more.');
+  return tx("Couldn't import. Try again.");
+}
+function crmImportCounts(p) {
+  return crmPlural(p.added, 'lead to add', 'leads to add') + ' · ' + p.merged + ' ' + tx('to merge') + ' · ' + p.skipped.length + ' ' + tx('to skip');
+}
+
+function crmLeadImportBtn() {
+  if (!crmEdit()) return '';
+  var off = LEADS.loaded && !LEADS.ready;
+  return '<button type="button" class="act sm' + (off ? ' ghost' : '') + '" data-testid="crm-lead-import" data-crm="leadimport"' + (off ? ' disabled title="' + esc(tx(CRM_LEADS_WAIT)) + '"' : '') + '>' + esc(tx('Import')) + '</button>';
+}
+function crmImportOpen() {
+  if (LEADS.loaded && !LEADS.ready) { toast(tx(CRM_LEADS_WAIT)); return; }
+  LIMP = { name: '', rows: [], head: [], map: {}, plan: null, planErr: null, flow: null, prev: null, gen: 0 };
+  modal('<div class="mhd"><div class="t">' + esc(tx('Import leads')) + '</div><div class="sub" id="crm_imp_sub"></div></div>'
+    + '<div class="mbody" data-testid="crm-import-sheet"><div id="crm_imp_rail"></div><div id="crm_imp_body"></div></div>'
+    + '<div class="mfoot" id="crm_imp_foot"></div>');
+  LIMP.flow = CBSteps.create({
+    steps: [{ k: 'file', n: tx('File'), t: tx('A .csv with a header row') }, { k: 'map', n: tx('Columns'), t: tx('Which column is which') }, { k: 'check', n: tx('Check'), t: tx('What will happen') }],
+    railEl: 'crm_imp_rail', bodyEl: 'crm_imp_body', footEl: 'crm_imp_foot', subEl: 'crm_imp_sub',
+    render: crmImportStep, guard: crmImportGuard,
+    nextLabel: function (k) { return k === 'map' ? tx('Check →') : null; }, sendLabel: function () { return tx('Import'); },
+    cancelLabel: tx('Cancel'), onCancel: closeModal, onSend: crmImportSend, onStep: function (k) { if (k === 'check') crmImportPlan(); },
+    nextTestid: 'crm-import-next', sendTestid: 'crm-import-go', backTestid: 'crm-import-back'
+  });
+  LIMP.flow.paint();
+}
+function crmImportStep(k) {
+  if (k === 'file') {
+    var n = LIMP.rows.length;
+    return '<label>' + esc(tx('CSV file')) + '<input class="inp" type="file" accept=".csv,text/csv" data-testid="crm-import-file" onchange="crmImportPick(this)"></label>'
+      + '<div class="hint" role="status" data-testid="crm-import-filemsg">' + (LIMP.name ? esc(LIMP.name) + ' · ' + esc(crmPlural(n, 'row', 'rows')) + (n > 500 ? ' · ' + esc(tx(LIMP_CAP)) : '') : esc(tx('Name and phone columns, one lead per row.'))) + '</div>';
+  }
+  if (k === 'map') {
+    return LIMP_FIELDS.map(function (f) {
+      var key = f[0], cur = LIMP.map[key];
+      return '<label>' + esc(tx(f[1])) + (key === 'name' ? ' *' : '') + '<select class="inp" data-testid="crm-import-map-' + key + '" onchange="crmImportMap(\'' + key + '\', this.value)"><option value="">' + esc(tx('Not in the file')) + '</option>'
+        + LIMP.head.map(function (h, i) { return '<option value="' + i + '"' + (cur === i ? ' selected' : '') + '>' + esc(h || (tx('Column') + ' ' + (i + 1))) + '</option>'; }).join('') + '</select></label>';
+    }).join('');
+  }
+  if (k === 'check') return '<div id="crm_imp_prev" data-testid="crm-import-preview"></div>';
+  return '';
+}
+/** why a step cannot be left — a sentence, or null (the server's refusal rides here too, so Import is greyed WITH its reason) */
+function crmImportGuard(k) {
+  if (k === 'file') { if (!LIMP.rows.length) return tx('Pick a CSV file first.'); if (LIMP.rows.length > 500) return tx(LIMP_CAP); return null; }
+  if (k === 'map') return LIMP.map.name == null ? tx('Say which column holds the name.') : null;
+  if (k === 'check') { if (LIMP.planErr) return LIMP.planErr; if (!LIMP.plan) return tx('Checking…'); return (LIMP.plan.added + LIMP.plan.merged) ? null : tx('Every row would be skipped.'); }
+  return null;
+}
+async function crmImportPick(inp) {
+  var f = inp.files && inp.files[0]; if (!f) return;
+  var text;
+  try { text = await f.text(); } catch (_) { LIMP.rows = []; LIMP.name = ''; var m = document.querySelector('[data-testid="crm-import-filemsg"]'); if (m) m.textContent = tx('That file could not be read.'); return; }
+  var all = crmCsvRows(text);
+  LIMP.name = f.name; LIMP.head = all.length ? all[0].map(function (h) { return String(h || '').trim(); }) : []; LIMP.rows = all.slice(1);
+  LIMP.map = crmImportGuess(LIMP.head); LIMP.plan = null; LIMP.planErr = null;
+  if (LIMP.flow) { LIMP.flow.paintBody(); LIMP.flow.paintFoot(); }
+}
+function crmImportMap(k, v) { if (v === '') delete LIMP.map[k]; else LIMP.map[k] = Number(v); LIMP.plan = null; LIMP.planErr = null; if (LIMP.flow) LIMP.flow.paintFoot(); }
+/** the Check step: the server's plan (a dry run), painted — never a second answer */
+async function crmImportPlan() {
+  var g = ++LIMP.gen, el = document.getElementById('crm_imp_prev'); if (!el) return;
+  LIMP.plan = null; LIMP.planErr = null; LIMP.flow.paintFoot();
+  el.innerHTML = '<div class="loadwrap" role="status"><span class="spin"></span>' + esc(tx('Checking…')) + '</div>';
+  try { var r = await api('crmLeadImport', { body: { rows: crmImportBody(), dry: true } }); if (g !== LIMP.gen) return; LIMP.plan = r; }
+  catch (e) { if (g !== LIMP.gen) return; LIMP.planErr = crmImportWords(e); el.innerHTML = '<div class="hint" role="alert" data-testid="crm-import-planerr">' + esc(LIMP.planErr) + '</div>'; LIMP.flow.paintFoot(); return; }
+  crmImportList(el, 'crm-import-preview', LIMP.plan.rows || [], true);
+  LIMP.flow.paintFoot();
+}
+/** the preview (will add · will merge · will skip + why) and the skipped list after the import: ONE list unit, CBList — its ⬇ is the CSV download */
+function crmImportList(el, key, rows, preview) {
+  if (LIMP.prev && LIMP.prev.destroy) { try { LIMP.prev.destroy(); } catch (_) {} }
+  /* in the sheet the list is a narrow card: the name, the verdict and its reason stay; the row number and the phone are named in the chooser */
+  var cols = [
+    { key: 'name', label: 'Name', prio: 1, w: 180, cell: function (r) { return r.name || '—'; }, value: function (r) { return r.name || ''; } }];
+  if (preview) cols.push({ key: 'will', label: 'Will', prio: 1, w: 110, html: true, hfilter: 'will', cell: function (r) { return '<span class="tag' + (r.outcome === 'add' ? ' on' : r.outcome === 'merge' ? ' local' : '') + '" data-will="' + esc(r.outcome) + '">' + esc(tx(LIMP_WILL[r.outcome] || r.outcome)) + '</span>'; }, value: function (r) { return r.outcome; } });
+  cols.push({ key: 'why', label: 'Why', prio: 1, w: 200, cell: function (r) { return r.why || ''; } });
+  cols.push({ key: 'row', label: 'Row', prio: 3, w: 64, sort: 'row', cell: function (r) { return String(r.row); }, value: function (r) { return r.row; } });
+  cols.push({ key: 'phone', label: 'Phone', prio: 4, w: 140, cell: function (r) { return r.phone || '—'; } });
+  var p = LIMP.plan, tid = preview ? 'crm-imp-prev-' : 'crm-imp-skip-';
+  LIMP.prev = CBList.mount(el, {
+    key: key, t: tx, rows: function () { return rows; }, id: function (r) { return r.row; }, rowTid: function (r) { return tid + r.row; },
+    columns: function () { return cols; }, defaultCols: cols.map(function (c) { return c.key; }), cardMax: preview ? 4 : 3, fill: false,
+    /* the counts are a plain chip (a notice is amber — advisory — and these are facts); the step's own line already says "What will happen" */
+    head: function () { return { title: preview ? '' : tx('Skipped rows'), chips: preview && p ? [{ text: crmImportCounts(p), tid: 'crm-import-counts' }] : [] }; },
+    state: function () { return 'ready'; },
+    empty: { title: preview ? tx('Nothing to check') : tx('Nothing skipped'), sub: '' },
+    search: function (r) { return [r.name, r.phone, r.why].join(' '); }, searchHint: tx('Name or phone'),
+    filters: preview ? [{ key: 'will', label: tx('Will'), all: tx('All rows'), options: ['add', 'merge', 'skip'].map(function (k) { return { v: k, label: tx(LIMP_WILL[k]) }; }), match: function (r, v) { return r.outcome === v; } }] : [],
+    sorts: [{ key: 'row', label: tx('Row'), cmp: function (a, b) { return a.row - b.row; } }]
+  });
+}
+function crmImportSend() {
+  var btn = document.querySelector('[data-testid="crm-import-go"]');
+  return CBAction.run(btn, async function () { return api('crmLeadImport', { body: { rows: crmImportBody() } }); }, {
+    key: 'lead-import', busy: tx('Importing…'),
+    onFail: function (words, e) { LIMP.planErr = crmImportWords(e); if (LIMP.flow) LIMP.flow.paintFoot(); },
+    outcome: async function (r) { crmImportDone(r || { added: 0, merged: 0, skipped: [] }); await crmLeadsLoad(true); }
+  });
+}
+/** the outcome, where the action happened: the three numbers large, the skipped rows as a list (downloadable), Done */
+function crmImportDone(r) {
+  var sub = document.getElementById('crm_imp_sub'); if (sub) sub.textContent = tx('Imported');
+  var rail = document.getElementById('crm_imp_rail'); if (rail) rail.innerHTML = '';
+  var body = document.getElementById('crm_imp_body'); if (!body) return;
+  var skipped = r.skipped || [];
+  var big = function (n, w, tid) { return '<div data-testid="' + tid + '"><strong style="font-size:var(--fs-4,24px)">' + Number(n) + '</strong> <span class="sub">' + esc(w) + '</span></div>'; };
+  body.innerHTML = '<div data-testid="crm-import-outcome" style="display:flex;gap:22px;flex-wrap:wrap;padding:6px 0">' + big(r.added, tx('added'), 'crm-import-added') + big(r.merged, tx('merged'), 'crm-import-merged') + big(skipped.length, tx('skipped'), 'crm-import-skipped') + '</div>'
+    + '<div id="crm_imp_skipped"></div>';
+  if (skipped.length) crmImportList(document.getElementById('crm_imp_skipped'), 'crm-import-skipped', skipped, false);
+  var foot = document.getElementById('crm_imp_foot'); if (foot) foot.innerHTML = '<button type="button" class="pri" data-testid="crm-import-done" onclick="closeModal()">' + esc(tx('Done')) + '</button>';
+  toast(crmPlural(Number(r.added) + Number(r.merged), 'lead imported', 'leads imported'));
 }

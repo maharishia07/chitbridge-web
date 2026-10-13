@@ -632,6 +632,57 @@
         "footer"
       ],
       "translit": {}
+    },
+    {
+      "no": 120,
+      "route": "network",
+      "group": "modules",
+      "page": {
+        "en": "Network",
+        "ta": "வலையமைப்பு"
+      },
+      "verse": [
+        "வாணிகம் செய்வார்க்கு வாணிகம் பேணிப்",
+        "பிறவும் தமபோல் செயின்"
+      ],
+      "meaning": {
+        "en": "Good business guards the interests of others as carefully as its own.",
+        "ta": null
+      },
+      "why": {
+        "en": "Fair dealing with every party",
+        "ta": "அனைவரிடமும் நேர்மையான வணிகம்"
+      },
+      "placements": [
+        "strip"
+      ],
+      "translit": {}
+    },
+    {
+      "no": 672,
+      "route": "tasks",
+      "group": "modules",
+      "page": {
+        "en": "Tasks & Orders",
+        "ta": "பணிகளும் ஆணைகளும்"
+      },
+      "verse": [
+        "தூங்குக தூங்கிச் செயற்பால தூங்கற்க",
+        "துஞ்சாது செய்யும் வினை"
+      ],
+      "meaning": {
+        "en": "Delay what may wait; never delay the work that must not wait.",
+        "ta": null
+      },
+      "why": {
+        "en": "Each order and task in its turn",
+        "ta": "ஒவ்வொரு பணியும் அதன் முறையில்"
+      },
+      "placements": [
+        "strip",
+        "empty"
+      ],
+      "translit": {}
     }
   ],
   "excluded": [
