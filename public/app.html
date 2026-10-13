@@ -13943,8 +13943,9 @@ function prodRowsPick(){
 async function prodRowsSave(){
   const ticks=Array.prototype.slice.call(document.querySelectorAll('[data-testid="prod-rows-grid"] input[data-row]'));
   const rows=ticks.filter(i=>i.checked||i.disabled).map(i=>i.getAttribute('data-row'));
+  /* a merge-patch of its own key only (CU2): re-sending the whole /me snapshot reverted a theme changed since page load */
   const me=UI._me||{}; const ui=Object.assign({}, me.ui_prefs||{}, { product_rows: rows });
-  try{ await api('saveProfile', { body:{ ui_prefs: ui } }); UI._me=Object.assign({}, me, { ui_prefs: ui }); closeModal(); toast(tx('Saved ✓')); paintProdDetail(); }
+  try{ await api('saveProfile', { body:{ ui_prefs: { product_rows: rows } } }); UI._me=Object.assign({}, me, { ui_prefs: ui }); closeModal(); toast(tx('Saved ✓')); paintProdDetail(); }
   catch(e){ toast((e&&e.message)||tx('Could not save'), true); }
 }
 /**
