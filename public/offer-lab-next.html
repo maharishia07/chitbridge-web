@@ -1941,7 +1941,7 @@ function renderS0(){
            '<div class="sub">Cost is yours alone. No customer or link ever sees it.</div></div>'+
          (S.biz==='mine' && savedLive() && COST_ACCESS.is_owner
            ? '<div class="fld"><span class="lbl">Who else sees cost</span><div class="seg">'+
-             '<button onclick="window.open(\'app.html\',\'cb_app\')">Open co-assists</button></div>'+
+             '<button onclick="window.open(\'/employees.html\',\'cb_employees\')">Open CB Employees</button></div>'+   /* IX0: "Sees costs" is granted on the person's row in CB Employees (cap-employees.js can_see_costs), never in the workshop */
              '<div class="sub">Yours alone by default.</div></div>'
            : '')+
        '</div>'+

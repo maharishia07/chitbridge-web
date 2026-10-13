@@ -19,6 +19,18 @@
  */
 'use strict';
 
+/* ── IX0 (2026-10-13): THE SMALL APP THAT IS HOME FOR A WORKSHOP SCREEN KEY. A utility page never sends a customer into app.html
+   (H34, "Utility apps, not app.html"); `navTo(key)` on CB Accounts · CB CRM · CB Finance resolves through this ONE map, the way
+   standards.html's own `HOME` does. A key with no small-app home yet opens nothing and says so — never a door into the workshop.
+   The gaps and the round that builds each: docs/design/INDEX-NOT-APP.md (e2e/index-not-app.cjs keeps the list shrinking). ── */
+var CB_HOMES = {
+  counter: '/till.html',                               /* the counter IS the till (the Day book's "close the day on the counter") */
+  task: '/tasks.html', order: '/tasks.html',           /* CB Tasks & Orders */
+  customers: '/crm.html#/parties?role=customer', suppliers: '/crm.html#/parties?role=supplier',
+  ledger: '/accounts.html', network: '/network.html', coassists: '/employees.html',
+  profile: '/know-your-business.html'                  /* the avatar's own choice for Profile (avatar.js, H34) */
+};
+
 /* ── the Ledger's boot endpoints ── */
 var CB_BOOKS_EP = {
   booksHealth:     {m:"GET",  p:"/api/books/health",                      ok:"y"},   // 404 = the Ledger is off for this shop → the door stays hidden

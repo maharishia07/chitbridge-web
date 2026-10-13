@@ -52,13 +52,14 @@
 <div class="cartbar" id="cartbar"></div>
 <div class="toast" id="toast"></div>
 
+<script src="/engine/locale.js"></script>
 <script>
   var API = 'https://chitbridge-api-production.up.railway.app';
   var NET = new URLSearchParams(location.search).get('net') || '';
-  var STATE = { all: [], categories: [], q: '', cat: '', cart: {} };
+  var STATE = { all: [], categories: [], q: '', cat: '', cart: {}, cur: '' };
 
   function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]; }); }
-  function rs(v){ if (v == null) return ''; try { return '₹' + Number(v).toLocaleString('en-IN'); } catch(e){ return '₹' + v; } }
+  function rs(v){ if (v == null) return ''; try { return CBLocale.money(Number(v), STATE.cur || ''); } catch(e){ return (STATE.cur ? STATE.cur + ' ' : '') + v; } }   /* CX0: the store's currency through the locale engine, never ₹ en-IN by name */
   function toast(m){ var t = document.getElementById('toast'); t.textContent = m; t.className = 'toast show'; setTimeout(function(){ t.className = 'toast'; }, 1800); }
 
   function addToCart(pid){ STATE.cart[pid] = (STATE.cart[pid] || 0) + 1; renderCart(); var p = STATE.all.find(function(x){ return x.product_id === pid; }); toast((p ? p.name : 'Item') + ' added'); }
@@ -116,7 +117,7 @@
     fetch(API + '/api/catalogue/network-store/' + encodeURIComponent(NET), { cache: 'no-store' })
       .then(function(r){ return r.json(); })
       .then(function(j){
-        STATE.all = j.products || []; STATE.categories = j.categories || [];
+        STATE.all = j.products || []; STATE.categories = j.categories || []; STATE.cur = j.currency_code || (j.shop && j.shop.currency_code) || (j.network && j.network.currency_code) || '';
         renderCats(); renderBody();
         document.getElementById('foot').innerHTML = 'One storefront across every line of business. You see products — never the network\'s internal departments, locations, or supply. Powered by Chit &amp; Bridge.';
       })

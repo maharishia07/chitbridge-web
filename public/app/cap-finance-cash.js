@@ -86,7 +86,7 @@ function fcChart(r, width) {
 
 /* ── the table: the days — every figure is the server's ── */
 function fcCols() {
-  var c = function () { return (FC.r && FC.r.currency) || 'INR'; }, dash = '<span style="color:var(--grey)">—</span>';
+  var c = function () { return bkCur(FC.r && FC.r.currency); }, dash = '<span style="color:var(--grey)">—</span>';
   return [
     { key: 'date', label: tx('Day'), prio: 1, sort: 'date', w: 170, html: true, cell: function (d) { return '<span data-b="date">' + esc(bkDate(d.date)) + '</span>' + (d.date === ((FC.r && FC.r.asOf) || bkToday()) ? ' <span class="tag">' + esc(tx('Today')) + '</span>' : '') + (d.items.length ? '' : ' <span class="sub">' + esc(tx('quiet')) + '</span>'); } },
     { key: 'in', label: tx('Coming in'), prio: 3, num: true, w: 150, html: true, cell: function (d) { return Number(d.in_minor) ? '<span class="due get" data-b="in">' + esc(bkMoney(d.in_minor, c())) + '</span>' : dash; } },
@@ -99,7 +99,7 @@ function fcCols() {
 }
 /** what a day counts: the dues and cheques behind it, as the server listed them (the Task table's next level, CBList.nextRow) */
 function fcNext(d) {
-  var c = (FC.r && FC.r.currency) || 'INR';
+  var c = bkCur(FC.r && FC.r.currency);
   var rows = (d.items || []).map(function (it) {
     var who = it.party_id ? bkPartyLabel(it.party_id, it.name) : esc(it.name || '');
     var what = tx(FC_KIND[it.kind] || it.kind) + (it.cheque_no ? ' ' + it.cheque_no : '') + (it.promised ? ' · ' + tx('promised') : it.overdue ? ' · ' + tx('overdue') : it.due_date && it.due_date !== d.date ? ' · ' + tx('due') + ' ' + bkDate(it.due_date) : '');

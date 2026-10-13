@@ -42,6 +42,7 @@
 </head>
 <body>
 <div class="wrap"><div id="app"><div class="empty">Loading catalogue…</div></div></div>
+<script src="/engine/locale.js"></script>
 <script>
 (function(){
   var Q = new URLSearchParams(location.search);
@@ -49,10 +50,9 @@
   var BRIDGE = (Q.get('bridge') || Q.get('b') || '').trim();
   var BRAND = Q.get('brand') !== 'off';           // brand shown unless brand=off (whitelabel)
   if (Q.get('theme') === 'light' || Q.get('theme') === 'dark') document.documentElement.setAttribute('data-theme', Q.get('theme'));
-  var CURSYM = { INR:'₹', USD:'$', EUR:'€', GBP:'£', AED:'AED ', SGD:'S$', JPY:'¥' };
-  var CUR = 'INR';
+  var CUR = '';   /* CX0: the shop's currency_code, read from the catalogue; the locale engine draws the symbol */
   function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-  function price(v){ if (v==null || v==='') return ''; var s=CURSYM[CUR]||(CUR+' '); return s + String(v); }
+  function price(v){ if (v==null || v==='') return ''; try { return CBLocale.money(Number(v), CUR || ''); } catch (e) { return (CUR ? CUR + ' ' : '') + String(v); } }
   function el(id){ return document.getElementById(id); }
   // the media URL a catalogue item carries (ready for real photos/videos when the media layer lands)
   function mediaUrl(x){ return (x && (x.image || x.img || x.photo || x.thumbnail || (Array.isArray(x.media) && x.media[0] && (x.media[0].url || x.media[0])))) || ''; }
@@ -80,7 +80,7 @@
   }
   function render(data){
     var shop = data.shop || {};
-    CUR = shop.currency_code || 'INR';
+    CUR = shop.currency_code || '';
     var head = '';
     if (BRAND) {
       head = '<div class="brand"><div class="logo">🎨</div><div style="flex:1;min-width:0"><div class="bname">'+esc(shop.display_name||'Catalogue')+'</div>'

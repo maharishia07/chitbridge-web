@@ -12,7 +12,7 @@
  */
 'use strict';
 
-var FT = { gen: 0, state: 'loading', t: null, parties: [], pstate: 'loading', api: null, cur: 'INR' };
+var FT = { gen: 0, state: 'loading', t: null, parties: [], pstate: 'loading', api: null, cur: null };   /* CX0: the shop's currency is the ledger's (bkCur → SESSION.currency, set by the dues answer), never typed */
 var FT_EP = {
   /* booksTerms (the read) and crmParties live in accounts-shell.js CB_PARTY_EP — CRM reads them too; one name, one place */
   booksTermsSet: { m: 'POST', p: '/api/books/terms',  ok: '✓' },   // owner · { party_id?, side?, credit_days, credit_limit_minor, interest, early } — null clears
@@ -41,7 +41,7 @@ function ftForm(p, own, dflt, off) {
   own = own || {}; dflt = dflt || {};
   var i = own.interest || {}, e = own.early || {}, di = dflt.interest || {}, de = dflt.early || {};
   return ftField(p + '_days', tx('Credit days'), ftInput(p + '_days', own.credit_days, dflt.credit_days, off))
-    + ftField(p + '_limit', tx('Credit limit'), bkMoneyInput({ id: p + '_limit', minor: own.credit_limit_minor, cur: FT.cur, ph: dflt.credit_limit_minor != null ? bkMoney(dflt.credit_limit_minor, FT.cur) : tx('No limit'), extra: off ? 'disabled' : '' }))
+    + ftField(p + '_limit', tx('Credit limit'), bkMoneyInput({ id: p + '_limit', minor: own.credit_limit_minor, cur: bkCur(FT.cur), ph: dflt.credit_limit_minor != null ? bkMoney(dflt.credit_limit_minor, bkCur(FT.cur)) : tx('No limit'), extra: off ? 'disabled' : '' }))
     + ftField(p + '_ion', tx('Interest on overdue'), '<input type="checkbox" id="' + p + '_ion" data-testid="' + p + '_ion"' + (i.on ? ' checked' : '') + (off ? ' disabled' : '') + '> <span class="hint">' + esc(tx('Shown, never charged')) + '</span>')
     + ftField(p + '_rate', tx('Rate % a year'), ftInput(p + '_rate', i.rate_pct, di.rate_pct, off))
     + ftField(p + '_grace', tx('Grace days'), ftInput(p + '_grace', i.grace_days, di.grace_days, off))
@@ -85,7 +85,7 @@ function ftCols() {
   return [
     { key: 'party', label: tx('Party'), prio: 1, sort: 'name', w: 240, html: true, cell: function (p) { return esc(bkPartyLabel(p.party_id, p.name)); } },
     { key: 'days', label: tx('Credit days'), prio: 2, w: 150, html: true, cell: function (p) { var d = mine(p).credit_days; return d == null ? dash + ' <span class="hint">' + esc(tx('Shop default')) + '</span>' : '<span data-b="days">' + esc(String(d)) + '</span>'; } },
-    { key: 'limit', label: tx('Credit limit'), prio: 3, w: 170, num: true, html: true, cell: function (p) { var l = mine(p).credit_limit_minor; return l == null ? dash : '<span data-b="limit">' + esc(bkMoney(Number(l), FT.cur)) + '</span>'; } },
+    { key: 'limit', label: tx('Credit limit'), prio: 3, w: 170, num: true, html: true, cell: function (p) { var l = mine(p).credit_limit_minor; return l == null ? dash : '<span data-b="limit">' + esc(bkMoney(Number(l), bkCur(FT.cur))) + '</span>'; } },
   ];
 }
 function ftShopPaint() {
@@ -97,7 +97,7 @@ function ftShopPaint() {
     + (why ? '<div class="hint" data-testid="ft-why" style="opacity:.85">' + esc(tx(why)) + '</div>' : '')
     + ftForm('fts', t.default, null, off)
     + '<div style="display:flex;gap:10px;align-items:center"><button type="button" class="act" data-testid="ft-save"' + (off ? ' disabled' : '') + ' onclick="ftSaveShop(this)">' + esc(tx('Save')) + '</button><span id="ft_why" data-testid="ft-out" class="hint"></span></div>'
-    + '<h3 style="margin:14px 0 4px;font-size:14px">' + esc(tx('Changes')) + '</h3>' + bkTermEvents(t.events, FT.cur, 'ft-event');
+    + '<h3 style="margin:14px 0 4px;font-size:14px">' + esc(tx('Changes')) + '</h3>' + bkTermEvents(t.events, bkCur(FT.cur), 'ft-event');
 }
 async function ftLoad(quiet) {
   var g = ++FT.gen;
@@ -130,7 +130,7 @@ async function ftOpen(pid) {
   var own = r.party ? r.party.own : {}, d = r.default || {};
   body.innerHTML = (why ? '<div class="hint" data-testid="ft-sheet-why">' + esc(tx(why)) + '</div>' : '')
     + '<p class="hint">' + esc(tx('Empty means the shop default.')) + '</p>' + ftForm('ftp', own, d, off)
-    + '<h3 style="margin:12px 0 4px;font-size:14px">' + esc(tx('Changes')) + '</h3>' + bkTermEvents(r.events, FT.cur, 'ft-event');
+    + '<h3 style="margin:12px 0 4px;font-size:14px">' + esc(tx('Changes')) + '</h3>' + bkTermEvents(r.events, bkCur(FT.cur), 'ft-event');
   var foot = document.querySelector('#fin_sheet .mfoot'); if (foot) foot.remove();
   body.insertAdjacentHTML('afterend', '<div class="mfoot"><span id="ftp_why" data-testid="ftp-out" class="hint"></span><button type="button" onclick="closeModal()">' + esc(tx('Close')) + '</button>'
     + '<button type="button" class="act" data-testid="ftp-save"' + (off ? ' disabled' : '') + ' onclick="ftSaveParty(\'' + esc(pid) + '\',this)">' + esc(tx('Save')) + '</button></div>');
