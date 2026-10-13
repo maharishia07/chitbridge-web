@@ -1881,9 +1881,6 @@ function tierFault(){ var t=tiers(), bad=[];
   return bad; }
 function counts(){ return (S.freeCounts||[1,2,3]).map(num); }
 function setCount(i,v){ S.freeCounts[i]=Math.max(1,num(v)); S.applied=true; render(); }
-function addCount(){ if(S.freeCounts.length>=3) return;
-  S.freeCounts.push(num(S.freeCounts[S.freeCounts.length-1])+1); S.applied=true; render(); }
-function delCount(i){ if(S.freeCounts.length<=1) return; S.freeCounts.splice(i,1); S.applied=true; render(); }
 function setBill(i,v){ S.bills[i]=Math.max(1,num(v)); S.applied=true; render(); }
 
 /* three representative items in the shelf: cheapest, middle, dearest */

@@ -1652,7 +1652,6 @@ function chipTo(state){
 }
 
 function setState(v){ document.getElementById('f_state').value = v; paint(); }
-function setMod(k){ MODFILT = k; paint(); }
 
 /**
  * ⭐⭐ WHAT EACH LEVEL IS WORTH, in one sentence, on the badge itself.
@@ -3941,13 +3940,6 @@ async function paintSummary(){
   }
   h += '</table></div>';
   document.getElementById('main').innerHTML = h;
-}
-
-/** a row in the coverage table takes you to that area, on the Cases tab — the summary is for deciding, the cases are for doing */
-function jumpTo(mod){
-  MODFILT = mod;
-  document.getElementById('f_state').value = 'todo';
-  setView('cases');
 }
 
 /**
