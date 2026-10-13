@@ -10,7 +10,7 @@
  *   CBAvatar.mount(el, { person, items, onSignOut, … })   draw the button and its menu into `el`
  *   CBAvatar.apply()                                       put the saved look on <html> (runs at load, BEFORE first paint)
  *   CBAvatar.hydrate(prefs)                                the server's per-person appearance (true if something changed)
- *   CBAvatar.set(kind, value)                              kind: theme · font · fs · weight · motion — saves, applies, syncs
+ *   CBAvatar.set(kind, value)                              kind: theme · font · fs · weight · motion · stripes · edition — saves, applies, syncs
  *   CBAvatar.get() · .themeKey() · .close() · .signOut() · .THEMES · .FONTS · .TEXT_SIZES · .FS_BASE
  *
  * ⭐ ONE FILE, ONE GLOBAL, NO IMPORTS, NO BUILD STEP, NO NETWORK NEEDED — so the counter can load it as it loads /engine/screen.js.
@@ -32,7 +32,7 @@
  *
  * ⭐ BOLD: regular text goes to 600 and what was already bold stays the strongest (like the phones' "Bold text"). Italic: no.
  *
- * ⚠️ THE SERVER KEEPS theme · fs · motion ONLY (routes/entities.js › ui.keys). Reading font and bold are on THIS machine until
+ * ⚠️ THE SERVER KEEPS theme · fs · motion · stripes · edition ONLY (routes/entities.js › ui.keys; edition from AX1). Reading font and bold are on THIS machine until
  *    that list gains them — sending them now would be dropped silently, which is how a setting looks saved and is not.
  */
 (function (root) {
@@ -59,8 +59,10 @@
     ['mono',    'Monospace', "'Space Mono',ui-monospace,monospace", 'every character the same width']
   ];
   var MONO = FONTS[4][2];
-  var KEY = { theme: 'cb_theme', font: 'cb_font', fs: 'cb_fs', weight: 'cb_weight', motion: 'cb_motion', stripes: 'cb_stripes' };
-  var DEFAULTS = { theme: 'device', font: 'default', fs: 'm', weight: 'normal', motion: 'auto', stripes: 'strong' };
+  /* edition (AX1): which showing of Home this person sees (public/app/edition.js reads it; the list is the manifest's `editions`) — kept and synced like text size */
+  var KEY = { theme: 'cb_theme', font: 'cb_font', fs: 'cb_fs', weight: 'cb_weight', motion: 'cb_motion', stripes: 'cb_stripes', edition: 'cb_edition' };
+  var DEFAULTS = { theme: 'device', font: 'default', fs: 'm', weight: 'normal', motion: 'auto', stripes: 'strong', edition: 'full' };
+  var EDITION = /^[a-z][a-z0-9-]{0,23}$/;
   var STRIPES = [['off', 'Off'], ['light', 'Light'], ['strong', 'Strong']];   /* row stripes (Excel's banded rows): Strong is the default and the list unit's own 9%; Light 5%; Off none */
 
   function lsGet(k, d) { try { return root.localStorage.getItem(k) || d; } catch (_) { return d; } }
@@ -68,7 +70,7 @@
 
   /* ── what is saved ── */
   function pref(kind) { return lsGet(KEY[kind], DEFAULTS[kind]); }
-  function get() { return { theme: pref('theme'), font: pref('font'), fs: pref('fs'), weight: pref('weight'), motion: pref('motion'), stripes: pref('stripes') }; }
+  function get() { return { theme: pref('theme'), font: pref('font'), fs: pref('fs'), weight: pref('weight'), motion: pref('motion'), stripes: pref('stripes'), edition: pref('edition') }; }
 
   /** The theme that is actually on the page. `device` (or nothing saved) asks the operating system ONCE, at load, and is not live. */
   function themeKey() {
@@ -160,7 +162,7 @@
   var HOST = {};                                            /* what the mounted page told us (apiBase · token · sync) */
   function push() {
     if (HOST.sync === false) return;
-    var body = { theme: pref('theme'), fs: pref('fs'), motion: pref('motion'), stripes: pref('stripes') };
+    var body = { theme: pref('theme'), fs: pref('fs'), motion: pref('motion'), stripes: pref('stripes'), edition: pref('edition') };   /* the server REPLACES the set: every synced key rides every push */
     /* the app's (and CB Accounts') own door: CBPrefs debounces, queues offline and stays silent before the migration */
     try { if (typeof CBPrefs !== 'undefined' && typeof SESSION !== 'undefined' && SESSION && SESSION.token) { CBPrefs.push('ui', body); return; } } catch (_) {}
     var base = apiBaseOf(HOST), tok = tokenOf(HOST);
@@ -176,14 +178,16 @@
   /** The server wins — that is the feature — EXCEPT when it has nothing (an empty object means "never chosen"). */
   function hydrate(prefs) {
     if (!prefs || typeof prefs !== 'object') return false;
-    if (!prefs.theme && !prefs.fs && !prefs.motion && !prefs.stripes) return false;
-    var changed = false;
+    if (!prefs.theme && !prefs.fs && !prefs.motion && !prefs.stripes && !prefs.edition) return false;
+    var changed = false, edNow = pref('edition');
     try {
       if (prefs.theme && (prefs.theme === 'device' || (has(THEMES, prefs.theme) && THEMES[prefs.theme])) && prefs.theme !== pref('theme')) { lsSet(KEY.theme, prefs.theme); changed = true; }
       if (prefs.fs && TEXT_SIZES.some(function (x) { return x[0] === prefs.fs; }) && prefs.fs !== pref('fs')) { lsSet(KEY.fs, prefs.fs); changed = true; }
       if (prefs.motion && ['auto', 'reduce', 'full'].indexOf(prefs.motion) >= 0 && prefs.motion !== pref('motion')) { lsSet(KEY.motion, prefs.motion); changed = true; }
       if (prefs.stripes && STRIPES.some(function (x) { return x[0] === prefs.stripes; }) && prefs.stripes !== pref('stripes')) { lsSet(KEY.stripes, prefs.stripes); changed = true; }
+      if (prefs.edition && EDITION.test(prefs.edition) && prefs.edition !== edNow) { lsSet(KEY.edition, prefs.edition); changed = true; }
       if (changed) { apply(); repaint(); }
+      if (pref('edition') !== edNow) editionReload();   /* this person's saved showing differs from what this machine drew: draw it again */
     } catch (_) {}
     return changed;
   }
@@ -209,10 +213,20 @@
     if (kind === 'weight' && value !== 'normal' && value !== 'bold') return;
     if (kind === 'motion' && ['auto', 'reduce', 'full'].indexOf(value) < 0) return;
     if (kind === 'stripes' && !STRIPES.some(function (x) { return x[0] === value; })) return;
+    if (kind === 'edition' && !EDITION.test(String(value))) return;
     lsSet(KEY[kind], value);
     apply();
-    if (kind === 'theme' || kind === 'fs' || kind === 'motion' || kind === 'stripes') push();
+    if (kind === 'theme' || kind === 'fs' || kind === 'motion' || kind === 'stripes' || kind === 'edition') push();
+    if (kind === 'edition') { if (root.CBEdition) root.CBEdition.clearTab(); return editionReload(true); }   /* the person's own choice outranks a showing link */
     repaint();
+  }
+  /** an edition decides what a page DRAWS, so a new one is a fresh draw — without the ?edition= that would win over the choice just made */
+  function editionReload(force) {
+    try {
+      if (!force && root.sessionStorage.getItem('cb_edition_tab')) return;   /* a showing link holds this tab: nothing to redraw */
+      var u = new URL(root.location.href); u.searchParams.delete('edition');
+      if (u.href === root.location.href) root.location.reload(); else root.location.replace(u.href);
+    } catch (_) {}
   }
 
   /* ── the menu ── */
@@ -323,6 +337,7 @@
       '<div class="cbav-who"><span class="l">' + esc(letter(P)) + '</span><div><b>' + esc(P.name || P.entity || '') + '</b><span>' + esc(P.role || '') + '</span></div></div>' +
       (up.length ? '<div class="cbav-items">' + up.join('') + '</div>' : '') +
       '<div class="cbav-cols"><div class="cbav-c"><h4>Appearance</h4><div class="cbav-sw" role="group" aria-label="Theme">' + swatches() + '</div>' +
+      editionsHtml() +
       '<h4>Row stripes</h4><div class="cbav-stripes" role="group" aria-label="Row stripes" data-testid="stripes-group">' + STRIPES.map(function (x) {
         return '<button type="button" data-testid="stripes-' + x[0] + '" data-av-stripes="' + x[0] + '" aria-pressed="' + (pref('stripes') === x[0]) + '">' + x[1] + '</button>';
       }).join('') + '</div></div>' +
@@ -338,6 +353,15 @@
       }).join('') + '</div>' + langs + '</div></div>' +
       (down.length ? '<div class="cbav-items last">' + down.join('') + '</div>' : '') +
       '</div>';
+  }
+  /* AX1: the showings this app has (the manifest's `editions`, through CBEdition) — the Row stripes look, never a new one; absent with one edition or no CBEdition */
+  function editionsHtml() {
+    var E = root.CBEdition, l = E && E.list ? E.list() : [];
+    if (l.length < 2) return '';
+    var now = E.key();
+    return '<h4>Edition</h4><div class="cbav-stripes" role="group" aria-label="Edition" data-testid="edition-group">' + l.map(function (x) {
+      return '<button type="button" data-testid="edition-' + esc(x.key) + '" data-av-edition="' + esc(x.key) + '" aria-pressed="' + (now === x.key) + '">' + esc(x.name) + '</button>';
+    }).join('') + '</div>';
   }
   function letter(P) { return String(P.name || P.entity || '?').trim().slice(0, 1).toUpperCase() || '?'; }
 
@@ -392,6 +416,7 @@
       if ((b = t.closest('[data-av-fs]'))) return set('fs', b.getAttribute('data-av-fs'));
       if ((b = t.closest('[data-av-weight]'))) return set('weight', b.getAttribute('data-av-weight'));
       if ((b = t.closest('[data-av-stripes]'))) return set('stripes', b.getAttribute('data-av-stripes'));
+      if ((b = t.closest('[data-av-edition]'))) return set('edition', b.getAttribute('data-av-edition'));
       if ((b = t.closest('[data-av-font]'))) return set('font', b.getAttribute('data-av-font'));
       if ((b = t.closest('[data-av-motion]'))) return set('motion', pref('motion') === 'reduce' ? 'auto' : 'reduce');
       if ((b = t.closest('[data-av-lang]'))) { var c = b.getAttribute('data-av-lang'); if (o.languages && o.languages.onPick) o.languages.onPick(c); return; }
@@ -433,6 +458,7 @@
     M = { el: el, o: o };
     apply();                                                 /* the base may only now be readable (the page's stylesheet is parsed) */
     wire(); paint();
+    if (root.CBEdition && root.CBEdition.load) root.CBEdition.load().then(function () { if (openNow) paint(); });   /* the Edition choice needs the manifest's list */
     if (first && o.person && o.sync !== false && o.pull !== false) pull(o);
     return { update: function (p) { M.o.person = p; paint(); }, close: close, el: el };
   }
