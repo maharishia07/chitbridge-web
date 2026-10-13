@@ -39,6 +39,11 @@ const FIRST = SHOP === 'AU' ? 'Jul' : 'Apr', LAST = SHOP === 'AU' ? 'Jun' : 'Mar
 const SYM = SHOP === 'AU' ? 'A$' : '₹';
 const API_DIR = process.env.CB_API_DIR || path.join(__dirname, '..', '..', 'chitbridge-api');
 const SIM_DB = process.env.SIM_DB || 'postgres://postgres:pw@127.0.0.1:5432/cb_sim';
+/* --at YYYY-MM-DD: the SERVER's "today" — the api's shop clock (lib/shop-clock.set, allowed only with SHOP_CLOCK_ALLOW=1 on this local stack).
+   The loaded shop runs 2026 → 2029 and closes every month it holds; its open year starts after its last day, so a typed entry that SAVES needs
+   the server's today inside that year (--at 2029-04-10 for IN, 2029-07-10 for AU). The browser keeps its own clock (a moved browser clock reads
+   the real sign-in token as expired), so --at walks ONLY the entry's depth (D1a–D1c); the width and the other steps run without it. */
+const AT = argOf('at', '');
 const SHOTS = path.join(__dirname, 'shots');
 const T = (s) => '[data-testid="' + s + '"]';
 const VIEWS = ['todo', 'daybook', 'ledgers', 'tb', 'pl', 'bs', 'bank', 'receivables', 'payables', 'bills', 'cheques', 'waiting', 'lock', 'closingstock', 'assets', 'accruals', 'gstclose', 'yearclose', 'packs', 'opening', 'accounts'];
@@ -51,9 +56,10 @@ const money = (t) => Number(String(t).replace(/[^0-9.\-]/g, ''));
 /* ── the real api, spawned on the loaded database (killed in the finally) ── */
 async function realApi(webBase) {
   const port = await freePort();
-  const api = cp.spawn(process.execPath, ['server.js'], { cwd: API_DIR, stdio: ['ignore', 'pipe', 'pipe'], env: Object.assign({}, process.env, {
+  const args = AT ? ['-e', "require('./lib/shop-clock').set(process.argv[1] + 'T04:30:00Z'); require('./server.js');", AT] : ['server.js'];
+  const api = cp.spawn(process.execPath, args, { cwd: API_DIR, stdio: ['ignore', 'pipe', 'pipe'], env: Object.assign({}, process.env, {
     DATABASE_URL: SIM_DB, PORT: String(port), HOST: '127.0.0.1', NODE_ENV: 'development', DEV_OTP: '123456', ALLOWED_ORIGINS: webBase, RLS_GUARD: 'off',
-    JWT_SECRET: 'walk-x-r2r-local-only-' + 'x'.repeat(24), RATE_LIMIT_MAX: '1000000', BOOKS_NIGHTLY: '0', CRM_SWEEP: '0', LOG_LEVEL: 'warn' }) });
+    JWT_SECRET: 'walk-x-r2r-local-only-' + 'x'.repeat(24), SHOP_CLOCK_ALLOW: AT ? '1' : '', RATE_LIMIT_MAX: '1000000', BOOKS_NIGHTLY: '0', CRM_SWEEP: '0', LOG_LEVEL: 'warn' }) });
   let log = ''; api.stdout.on('data', (d) => { log += d; }); api.stderr.on('data', (d) => { log += d; });
   for (let i = 0; i < 80 && !/running on port/.test(log); i++) await new Promise((r) => setTimeout(r, 250));
   if (!/running on port/.test(log)) { api.kill(); throw new Error('the api did not start: ' + log.slice(-400)); }
@@ -130,6 +136,7 @@ W.run('x-r2r', async (w) => {
       return { ok: /To do/.test(h1) && !ERRWORDS.test(t), saw: h1 + ' · ' + t.replace(/\n/g, ' | ').slice(0, 120) };
     });
 
+    if (!AT) {
     /* ── WIDTH: every view, both widths ── */
     const seen = {};
     for (const [wd, ht] of (REAL ? WIDTHS : [[1366, 768], [390, 844]])) {
@@ -209,18 +216,23 @@ W.run('x-r2r', async (w) => {
       const n = (t.match(/Walk-in day/g) || []).length;
       return { ok: n > 0, saw: n + ' walk-in day rows on the first page' + (SHOP === 'AU' ? ' (AU: the engine does not fold the GST head — see E1)' : '') };
     });
-    await w.step('D1a', 'step 1 an entry: ＋ Entry → Pay expense → Rent, cash, today (a CLOSED month) → the server refuses in words, with its fix', async () => {
+    }
+    if (!AT) w.note('D1b', 'the entry that saves and its reversal', 'the server\'s today is in a closed month — run again with --at <a day in the open year> for D1a–D1c');
+    {
+    await w.step('D1a', 'step 1 an entry: ＋ Entry → Pay expense → Rent, cash, dated in a CLOSED month → the server refuses in words, with its fix (and nothing else)', async () => {
       await open(page, base, 'daybook'); await page.click(T('db-add')); await page.waitForSelector(T('en-event-expense'), { timeout: 15000 });
       await page.click(T('en-event-expense')); await page.selectOption(T('en-f-class'), 'rent'); await page.click(T('en-next'));
       await page.waitForTimeout(800);
       if (await page.locator(T('en-f-paid_from')).count()) await page.selectOption(T('en-f-paid_from'), { index: 1 }).catch(() => {});
       await page.fill(T('en-f-amount'), '123');
+      await page.fill(T('en-f-date'), SHOP === 'AU' ? '2027-09-15' : '2027-06-15').catch(() => {});   /* a month the loader closed for good */
       await page.click(T('en-next')).catch(() => {}); await page.waitForTimeout(2500);
       const t = await page.evaluate(() => (document.getElementById('entrysheet') || {}).innerText || '');
       await page.screenshot({ path: path.join(SHOTS, 'wx-r2r-' + SHOP.toLowerCase() + '-entry-closed.png') });
-      return { ok: /closed|locked/i.test(t) && /(open|month|lock|date)/i.test(t), saw: t.replace(/\n/g, ' | ').slice(0, 220) };
+      return { ok: /closed|locked/i.test(t) && /(open|month|lock|date)/i.test(t) && !/do not match/.test(t), saw: t.replace(/\n/g, ' | ').slice(0, 220) };
     });
     let entryNo = '';
+    if (AT) {
     await w.step('D1b', '…dated in the open year it balances and saves; the Day book shows it', async () => {
       const r = await page.evaluate(() => fetch(localStorage.getItem('cb_api_base') + '/api/books/periods', { headers: { Authorization: 'Bearer ' + JSON.parse(localStorage.getItem('cb_sess')).token } }).then((x) => x.json()));
       const open1 = (r.periods || []).filter((x) => x.status === 'open' && x.period >= 1).sort((a, b) => String(a.start_date).localeCompare(String(b.start_date)))[0];
@@ -238,19 +250,21 @@ W.run('x-r2r', async (w) => {
       await page.screenshot({ path: path.join(SHOTS, 'wx-r2r-' + SHOP.toLowerCase() + '-entry-saved.png') });
       return { ok: !!entryNo, saw: day + ' · ' + t.replace(/\n/g, ' | ').slice(0, 160) };
     });
-    await w.step('D1c', '…Reverse adds the mirror; the row says "Reversed by" — the trail shows both', async () => {
+    await w.step('D1c', '…Reverse this entry (with a reason) adds the mirror; the Day book row says "Reversed by" — the trail shows both', async () => {
       if (!entryNo) return { ok: false, saw: 'no entry to reverse' };
-      if (await page.locator(T('en-done')).count()) await page.click(T('en-done')).catch(() => {});
-      if (await page.locator(T('en-close')).count()) await page.click(T('en-close')).catch(() => {});
-      await page.evaluate((no) => { try { bkDvGoto(no); } catch (_) {} }, entryNo); await page.waitForTimeout(2500);
-      const row = page.locator('[data-testid="db-reverse"]').first();
-      if (!(await row.count())) return { ok: false, saw: 'no Reverse on ' + entryNo };
-      await row.click(); await page.waitForTimeout(800);
-      if (await page.locator(T('en-reason')).count()) await page.fill(T('en-reason'), 'walk: typed by mistake');
-      await page.click(T('en-reverse-now')).catch(() => {}); await page.waitForTimeout(2500);
-      const t = await page.evaluate(() => (document.getElementById('entrysheet') || {}).innerText || document.body.innerText);
-      return { ok: /revers/i.test(t), saw: t.replace(/\n/g, ' | ').slice(0, 180) };
+      await page.click(T('en-reverse-now')); await page.waitForSelector(T('en-reason'), { timeout: 10000 });
+      await page.fill(T('en-reason'), 'walk: typed by mistake'); await page.click(T('confirm-ok'));
+      await page.waitForTimeout(3000);
+      const said = await page.evaluate(() => (document.body.innerText.match(/Reversed[^\n]*/) || [''])[0]);
+      /* the Day book on the open year's days (its own Custom period — what a person picks in the chip) */
+      await page.evaluate((to) => { BK.dbp = bkDbPeriod('custom', { from: to.slice(0, 8) + '01', to: to }); }, AT); await open(page, base, 'todo'); await open(page, base, 'daybook');
+      const t = await content(page);
+      await page.screenshot({ path: path.join(SHOTS, 'wx-r2r-' + SHOP.toLowerCase() + '-entry-reversed.png') });
+      return { ok: /Reversed/.test(said) && t.indexOf(entryNo) >= 0 && /Reversed by/.test(t), saw: said.slice(0, 90) + ' · day book: ' + (t.match(/Reversed by[^|\n]*/) || ['no "Reversed by"'])[0] };
     });
+    }
+    }
+    if (!AT) {
     await w.step('D3', 'step 3 Month lock: the open year\'s first month — Lock is greyed WITH the server\'s sentence when it may not', async () => {
       if (await page.locator('#entrysheet[open]').count()) await page.keyboard.press('Escape');
       await open(page, base, 'lock'); const yrs = await page.$$eval(T('lk_fy') + ' option', (a) => a.map((x) => x.value));
@@ -274,6 +288,7 @@ W.run('x-r2r', async (w) => {
       await open(page, base, 'waiting'); const t = await content(page);
       return { ok: /Nothing is waiting/.test(t), saw: t.replace(/\n/g, ' | ').slice(0, 160) };
     });
+    }
     w.note('V1', 'a view-only login (co-assist) sees each refusal', 'the loader mints no co-assist and the api\'s invite needs a second signed-in person — not walked; see the findings file');
   } finally { if (api) api.stop(); }
 });
