@@ -103,12 +103,12 @@ function cmpPaintList() {
   CBList.mount(el, {
     key: 'compare-' + k, t: tx, rows: function () { return rows; }, id: function (r) { return r.key; }, rowTid: function (r) { return 'cmp-row-' + r.key.replace(/[^a-z0-9]+/gi, '-'); },
     columns: [
-      { key: 'name', label: tx('Line'), prio: 1, sort: 'name', w: 240, cell: function (r) { return (r.name || r.their_name || '') + (r.their_name && r.their_name !== r.name ? ' (' + tx('theirs') + ': ' + r.their_name + ')' : ''); } },
-      { key: 'theirs', label: tx('Theirs'), prio: 3, num: true, w: 130, cell: function (r) { return cmpFig(r.theirs_minor, k); } },
-      { key: 'ours', label: tx('Ours'), prio: 3, num: true, w: 130, cell: function (r) { return cmpFig(r.ours_minor, k); } },
-      { key: 'diff', label: tx('Difference'), prio: 2, num: true, w: 120, cell: function (r) { return r.status === 'equal' ? '' : cmpDiff(r.diff_minor); } },
-      { key: 'status', label: tx('Status'), prio: 2, w: 120, html: true, hfilter: 'status', cell: function (r) { var s = CMP_STATUS[r.status] || [r.status, '']; return '<span class="step ' + s[1] + '" data-status="' + esc(r.status) + '">' + esc(tx(s[0])) + '</span>'; } },
-      { key: 'why', label: tx('Why'), prio: 4, w: 420, cell: function (r) { return r.why || ''; } },
+      { key: 'name', label: tx('Line'), prio: 1, sort: 'name', w: 190, cell: function (r) { return (r.name || r.their_name || '') + (r.their_name && r.their_name !== r.name ? ' (' + tx('theirs') + ': ' + r.their_name + ')' : ''); } },
+      { key: 'theirs', label: tx('Theirs'), prio: 3, num: true, w: 120, cell: function (r) { return cmpFig(r.theirs_minor, k); } },
+      { key: 'ours', label: tx('Ours'), prio: 3, num: true, w: 120, cell: function (r) { return cmpFig(r.ours_minor, k); } },
+      { key: 'diff', label: tx('Difference'), prio: 2, num: true, w: 120, cell: function (r) { return r.status === 'equal' ? '' : k === 'tb' ? cmpFig(r.diff_minor, k) : cmpDiff(r.diff_minor); } },
+      { key: 'status', label: tx('Status'), prio: 2, w: 110, html: true, hfilter: 'status', cell: function (r) { var s = CMP_STATUS[r.status] || [r.status, '']; return '<span class="step ' + s[1] + '" data-status="' + esc(r.status) + '">' + esc(tx(s[0])) + '</span>'; } },
+      { key: 'why', label: tx('Why'), prio: 2, w: 320, cell: function (r) { return r.why || ''; } },
     ],
     filters: [{ key: 'status', label: tx('Status'), all: tx('Every line'), options: opts, match: function (r, v) { return r.status === v; } }],
     sorts: [{ key: 'first', label: tx('Differences first'), cmp: function () { return 0; } }, { key: 'name', label: tx('Line'), cmp: function (a, b) { return String(a.name).localeCompare(String(b.name)); } }],
@@ -129,7 +129,7 @@ function cmpNext(r) {
   var more = r.entries_n > list.length ? '<div style="color:var(--grey);font-size:var(--fs-1)">' + esc(txf('{n} more in the ledger', { n: r.entries_n - list.length })) + '</div>' : '';
   var open = r.open ? '<button type="button" data-testid="cmp-open-' + esc(r.open.code) + '" onclick="cmpOpenLedger(\'' + esc(r.open.code) + '\',\'' + esc(r.open.from) + '\',\'' + esc(r.open.to) + '\')">' + esc(tx('Open the ledger')) + '</button>' : '';
   if (!rows && !open) return '<div style="color:var(--grey);font-size:var(--fs-1)">' + esc(r.status === 'gap' ? tx('No ledger of ours to open yet.') : tx('No entries of ours in this period.')) + '</div>';
-  return '<div data-testid="cmp-next">' + rows + more + (open ? '<div style="margin-top:6px">' + open + '</div>' : '') + '</div>';
+  return '<div data-testid="cmp-entries">' + rows + more + (open ? '<div style="margin-top:6px">' + open + '</div>' : '') + '</div>';
 }
 function cmpOpenLedger(code, from, to) {
   BK.lgp = bkDbPeriod('custom', { from: from, to: to });
