@@ -29,3 +29,15 @@ greys Country and Money with the reason and paints the server's 409 sentence. No
 | public/app/cap-admin.js:4166 | the number-system picker's example row for 'en-IN' | a label in a picker that offers every system; not a default |
 | public/app.html:+91 (1) · storefront-design.html:+91 (1) | a phone placeholder | the party-fields phone rule is the server's; the placeholder should read the pack's dial code — its own row |
 | 'GSTIN' as a word in app.html (15) · cap-admin.js (11) · cap-crm*.js (8) · screens.js (4) · cap-standards.js (3) | the India tax-number label in copy | the label belongs to the scheme (party-fields SCHEMES); a label-by-scheme pass is one round, not a string replace |
+
+## PR body (the token could not open the PR; open it from the compare link with this body)
+
+**VERDICT: BUILD WITH CHANGES** (api docs/critique/CS2.md; web share + the rows left in docs/critique/CS2.md). Lands LAST (engines v1.42.0 → api → web); works before the api lands (CBLocale.REGIONS fallback).
+- Country setup step (public/app/cap-country.js — the registration's gov rows, no new style): the picker = the server's `countries[]` (exactly the packs, whatever the browser's locale); choosing a country paints ITS pack's currency · year · zones; a multi-zone pack ASKS the zone (device's preselected, else open with nothing picked); PUT carries `timezone`; a constituted shop greys Country and Money with the reason and paints the server's 409 sentence; `rederived` is said in the toast.
+- engines v1.42.0 adopted (locale · govcontext · reg-in/au/ae · regulation; engines.lock.json via the adopt tool); till.html re-vendored (counts through CBLocale).
+- Walk e2e/walk-country.cjs C7–C11: AU asks the zone · the picker is the packs · a correction before constitution re-derives and PUTs the zone · constituted → greyed · 409 painted. 11/11.
+- Hard-coded India spots LEFT: the rows in docs/critique/CS2.md (till voice-language default, bill-print sample, store.html rs(), design labs, 'GSTIN' labels — label-by-scheme is its own round).
+- Checks: check-syntax · check-app-parses · guard-static · token-guard · dup-functions · contract · a11y-contrast — all green. Flow step: Accounts · step "country" (flows.json note updated).
+- Better than Zoho Books because the step shows WHY a field is fixed (products / chits / entries) on the row itself, instead of a disabled setting with no sentence.
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
