@@ -29,6 +29,7 @@ var CRM_EP = {
   railChits:     { m: 'GET',    p: '/api/facts/rail/chits',               ok: 'y' },   // the open chits behind Home's In · Out · Stuck (cap-crm-chits.js) - not a /api/crm route
   crmLeadAdd:    { m: 'POST',   p: '/api/crm/leads',                      ok: 'y' },   // { name, phone?, stage? } → 201 { party } · 503 LEADS_NOT_MIGRATED before b297 (L1)
   crmStage:      { m: 'POST',   p: '/api/crm/parties/:id/stage',          ok: 'y' },   // { stage } → { ok, lead } — "Move to…": a new memberships row, history kept (L1)
+  crmLeadImport: { m: 'POST',   p: '/api/crm/leads/import',               ok: 'y' },   // { rows[≤500], dry? } → 200 the plan (dry) · 201 { added, merged, skipped[], rows[] } · 400 TOO_MANY · 503 before b297 (L3)
   crmCalls:      { m: 'GET',    p: '/api/crm/calls',                      ok: 'y' },   // ?scope=mine|all → { calls, outcomes, may, late } — today's queue + the server's outcome buttons (L2)
   crmOutcome:    { m: 'POST',   p: '/api/crm/parties/:id/outcome',        ok: 'y' },   // { outcome, after?|due_at? } → 201 { interaction, followup, stage, suggest } — one transaction (L2)
   crmRemove:     { m: 'DELETE', p: '/api/crm/parties/:id',                 ok: 'y' },   // "Remove from my parties" - owner only, 409 HAS_DUES, hides the party and deletes nothing

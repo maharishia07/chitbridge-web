@@ -1,0 +1,186 @@
+#!/usr/bin/env node
+/**
+ * e2e/walk-returns.cjs - THE SHOP'S OWN RETURN, WALKED (BAS1, 2026-10-12): Accounts › GST for an Australian shop (BAS) and a UAE shop (VAT return).
+ * Black box: the real accounts.html, the real cap-period.js / cap-books.js; the API is a stand-in answering inside the page in the shapes chitbridge-api
+ * routes/books.js GET /returns sends (checked against e2e/fixtures/web-api.contract.json on the way out). Nothing leaves the machine.
+ *   R0  an Indian shop (422 RETURN_FROM_RAIL) -> the GST close & pay form, as before
+ *   R1  an Australian shop -> the menu and the title say BAS; the quarter that ended is chosen; G1 · 1A · 1B · 9 as rows, the server's figures; To pay; Prepared, not lodged — ATO
+ *   R2  Full BAS -> ONE GET with simpler=0 -> G2 G3 G10 G11 join the rows
+ *   R3  Copy figures -> the clipboard holds the boxes as one block (code · label · amount), plain digits for the portal
+ *   R4  a box's ledger chip -> the Ledgers page opens on 2200 GST collected for the quarter (the ledger read carries from=2026-07-01&to=2026-09-30)
+ *   R5  a UAE shop -> VAT return; no stagger yet: the server's sentence, no box; pick stagger 1 -> ONE GET with stagger=1 -> Boxes 1–15, Box 14, To pay, FTA / EmaraTax
+ *   R6  390 px (AU) -> the return paints and nothing scrolls sideways
+ *   R7  every answer the stand-in served matches the API contract
+ *
+ *   NODE_PATH=e2e/node_modules node e2e/walk-returns.cjs         headless, fast
+ *   node e2e/walk-returns.cjs --show                              watch it
+ */
+'use strict';
+const W = require('./lib/walk.cjs');
+const C = require('./lib/contract.cjs');
+const books = require('./lib/books-api.cjs');
+const J = C.json;
+const SESS = (name) => JSON.parse(W.session(name, name));
+
+/* ── the stand-in's answers, in the server's shape (lib/books-period.taxReturn) ── */
+const AU_PERIODS = [
+  ['2025-Q1', '2025-26 Q1 (Jul–Sep 2025)', '2025-07-01', '2025-09-30', '2025-10-28'], ['2025-Q2', '2025-26 Q2 (Oct–Dec 2025)', '2025-10-01', '2025-12-31', '2026-02-28'],
+  ['2026-Q3', '2025-26 Q3 (Jan–Mar 2026)', '2026-01-01', '2026-03-31', '2026-04-28'], ['2026-Q4', '2025-26 Q4 (Apr–Jun 2026)', '2026-04-01', '2026-06-30', '2026-07-28'],
+  ['2026-Q1', '2026-27 Q1 (Jul–Sep 2026)', '2026-07-01', '2026-09-30', '2026-10-28'], ['2026-Q2', '2026-27 Q2 (Oct–Dec 2026)', '2026-10-01', '2026-12-31', '2027-02-28'],
+  ['2027-Q3', '2026-27 Q3 (Jan–Mar 2027)', '2027-01-01', '2027-03-31', '2027-04-28'], ['2027-Q4', '2026-27 Q4 (Apr–Jun 2027)', '2027-04-01', '2027-06-30', '2027-07-28'],
+].map(([period, label, start, end, due]) => ({ period, label, frequency: 'quarterly', start, end, due, ended: end <= '2026-10-12' }));
+const box = (code, label, amount, tax, roles, accounts, note) => ({ code: String(code), label, amount_minor: amount, tax_minor: tax, roles, accounts, note: note || null });
+const A = { sales: { code: '4000', name: 'Sales' }, ret: { code: '4090', name: 'Sales returns and allowances' }, exp: { code: '4010', name: 'Export sales' }, free: { code: '4020', name: 'GST-free sales' },
+  gstc: { code: '2200', name: 'GST collected' }, gstp: { code: '2210', name: 'GST paid' }, pur: { code: '5000', name: 'Purchases' }, rent: { code: '6010', name: 'Rent' }, pc: { code: '1060', name: 'Computers' } };
+function bas(simpler, period) {
+  const P = AU_PERIODS.find((p) => p.period === period) || AU_PERIODS[4];
+  const boxes = [box('G1', 'Total sales', 1345000, null, ['sales', 'sales_export', 'sales_gst_free', 'sales_input_taxed', 'sales_returns', 'gst_collected'], [A.sales, A.exp, A.free, A.ret, A.gstc])];
+  if (!simpler) boxes.push(box('G2', 'Export sales', 100000, null, ['sales_export'], [A.exp]), box('G3', 'Other GST-free sales', 200000, null, ['sales_gst_free'], [A.free]),
+    box('G10', 'Capital purchases', 300000, null, ['ppe_computers'], [A.pc], 'GST-exclusive (the ledgers hold all GST paid in one account)'),
+    box('G11', 'Non-capital purchases', 500000, null, ['purchases', 'purchase_returns', 'rent'], [A.pur, A.rent], 'GST-exclusive (the ledgers hold all GST paid in one account)'));
+  boxes.push(box('1A', 'GST on sales', 95000, null, ['gst_collected'], [A.gstc]), box('1B', 'GST on purchases', 80000, null, ['gst_paid'], [A.gstp]), box('9', 'Your payment or refund amount', 15000, null, ['gst_collected', 'gst_paid'], [A.gstc, A.gstp]));
+  return { currency: 'AUD', pack: 'AU', form: 'BAS', name: 'Business activity statement', short: 'BAS', authority: 'ATO', portal: 'ATO Online services for business', prepared: 'Prepared, not lodged',
+    asked: { frequency: 'quarterly', simpler: !!simpler }, periods: AU_PERIODS, period: P, boxes, payable_minor: 15000, refund_minor: 0, net_minor: 15000,
+    notes: [simpler ? 'Simpler BAS: G1, 1A and 1B only (GST turnover under A$10 million)' : 'GST-exclusive (the ledgers hold all GST paid in one account)'], cite: 'ato.gov.au › GST labels on your BAS; Simpler BAS (turnover under A$10 million)' };
+}
+const AE_PERIODS = [['2025-02/2025-04', 'Feb–Apr 2025', '2025-02-01', '2025-04-30', '2025-05-28'], ['2025-05/2025-07', 'May–Jul 2025', '2025-05-01', '2025-07-31', '2025-08-28'], ['2025-08/2025-10', 'Aug–Oct 2025', '2025-08-01', '2025-10-31', '2025-11-28'],
+  ['2025-11/2026-01', 'Nov–Jan 2025/2026', '2025-11-01', '2026-01-31', '2026-02-28'], ['2026-02/2026-04', 'Feb–Apr 2026', '2026-02-01', '2026-04-30', '2026-05-28'], ['2026-05/2026-07', 'May–Jul 2026', '2026-05-01', '2026-07-31', '2026-08-28'],
+  ['2026-08/2026-10', 'Aug–Oct 2026', '2026-08-01', '2026-10-31', '2026-11-28'], ['2026-11/2027-01', 'Nov–Jan 2026/2027', '2026-11-01', '2027-01-31', '2027-02-28']]
+  .map(([period, label, start, end, due]) => ({ period, label, stagger: 1, frequency: 'quarterly', start, end, due, due_rule: 'the 28th day after the end of the Tax Period (ER Art. 64(1))', ended: end <= '2026-10-12' }));
+const STAGGERS = { 1: { first_month: 2, tax_year_end: 'January' }, 2: { first_month: 3, tax_year_end: 'February' }, 3: { first_month: 4, tax_year_end: 'March' }, 4: { first_month: 1, tax_year_end: 'December', monthly: true } };
+const EMIRATES = ['Abu Dhabi', 'Dubai', 'Sharjah', 'Ajman', 'Umm Al Quwain', 'Ras Al Khaimah', 'Fujairah'];
+const V = { sales: { code: '4000', name: 'Sales' }, ret: { code: '4090', name: 'Sales returns and allowances' }, out: { code: '2200', name: 'Output VAT' }, inp: { code: '2210', name: 'Input VAT' }, rcm: { code: '2220', name: 'VAT due under reverse charge' },
+  pur: { code: '5000', name: 'Purchases' }, rcmp: { code: '5020', name: 'Purchases under reverse charge' }, zero: { code: '4010', name: 'Zero-rated sales' }, exp: { code: '4015', name: 'Export sales' }, exm: { code: '4020', name: 'Exempt sales' } };
+const VAT_BASE = { currency: 'AED', pack: 'AE', form: 'VAT201', name: 'VAT return (Form VAT201)', short: 'VAT return', authority: 'FTA', portal: 'EmaraTax', prepared: 'Prepared, not lodged', emirates: EMIRATES, staggers: STAGGERS };
+const vatNeeds = () => Object.assign({}, VAT_BASE, { asked: { stagger: null }, needs: 'stagger', why: 'The FTA assigns the Tax Period (ER Art. 62): say which stagger — 1 (Feb–Apr …), 2 (Mar–May …), 3 (Apr–Jun …) or 4 (monthly) — as on the registration; it is never guessed.',
+  periods: [], period: null, boxes: [], payable_minor: 0, refund_minor: 0, net_minor: 0, notes: [], cite: null });
+function vat201(emirate, period) {
+  const P = AE_PERIODS.find((p) => p.period === period) || AE_PERIODS[4], fta = 'not read from the ledgers';
+  const boxes = [box(1, 'Standard rated supplies', 9500000, 475000, ['sales', 'sales_returns', 'output_vat'], [V.sales, V.ret, V.out], emirate ? 'Emirate: ' + emirate : null),
+    box(2, 'Tax Refunds provided to Tourists under the Tax Refunds for Tourists Scheme', null, null, [], [], 'pre-populated by the FTA from the Tax Refunds for Tourists Scheme; ' + fta),
+    box(3, 'Supplies subject to the reverse charge provisions', 800000, 40000, ['purchases_reverse_charge', 'rcm_vat'], [V.rcmp, V.rcm]), box(4, 'Zero-rated supplies', 3000000, 0, ['sales_zero_rated', 'sales_export'], [V.zero, V.exp]),
+    box(5, 'Exempt supplies', 3000000, 0, ['sales_exempt'], [V.exm]), box(6, 'Goods imported into the UAE', null, null, [], [], 'auto-populated by the FTA from customs declarations linked to the TRN; ' + fta),
+    box(7, 'Adjustments to goods imported into the UAE', null, null, [], [], 'a manual correction of Box 6; ' + fta), box(8, 'Totals', 16300000, 515000, ['sales', 'sales_returns', 'purchases_reverse_charge', 'sales_zero_rated', 'sales_export', 'sales_exempt', 'output_vat', 'rcm_vat'], [V.sales, V.ret, V.rcmp, V.zero, V.exp, V.exm, V.out, V.rcm]),
+    box(9, 'Standard rated expenses', 4800000, 280000, ['purchases', 'purchase_returns', 'input_vat'], [V.pur, V.inp]), box(10, 'Supplies subject to the reverse charge provisions', 0, 0, [], []), box(11, 'Totals', 4800000, 280000, ['purchases', 'purchase_returns', 'input_vat'], [V.pur, V.inp]),
+    box(12, 'Total value of due tax for the period', null, 515000, ['output_vat', 'rcm_vat'], [V.out, V.rcm]), box(13, 'Total value of recoverable tax for the period', null, 280000, ['input_vat'], [V.inp]),
+    box(14, 'Payable tax for the period', null, 235000, ['output_vat', 'rcm_vat', 'input_vat'], [V.out, V.rcm, V.inp]), box(15, 'Do you wish to request a refund for the above amount of excess recoverable tax', null, null, [], [], 'the shop\'s choice: a refund by Form VAT311, or carried forward; ' + fta)];
+  return Object.assign({}, VAT_BASE, { asked: { stagger: 1, emirate: emirate || null }, periods: AE_PERIODS, period: P, boxes, payable_minor: 235000, refund_minor: 0, net_minor: 235000,
+    notes: ['the whole of Box 1 is reported under ' + (emirate || 'the Emirate of the fixed establishment (none was handed in)') + ' — the ledgers carry no Emirate (ER Art. 72(2))', 'VAT-exclusive, and including zero-rated and exempt purchases (the ledgers hold them under the same accounts); the VAT column is what was posted to Input VAT'],
+    cite: 'RET (FTA VAT Returns guide, Aug 2021) §3.2 and Boxes 1–15; RET-UM (EmaraTax VAT201 user manual, Oct 2022); ER Art. 64(5), Art. 72' });
+}
+const IN_422 = { code: 'RETURN_FROM_RAIL', error: 'India\'s GSTR-1 and GSTR-3B are read from the frozen invoices on the rail (GET /api/tax/gstr), not from the ledgers.', message: 'India\'s GSTR-1 and GSTR-3B are read from the frozen invoices on the rail (GET /api/tax/gstr), not from the ledgers.' };
+const acct = (code, name, nature, role, parent) => ({ account_id: '00000000-0000-4000-8000-0000000' + code + '0', code, name, is_group: false, tally_group: '', nature, role, parent_code: parent, active: true });
+const CHART = { accounts: [acct('1400', 'Cash on hand', 'asset', 'cash', 'G1400'), acct('2200', 'GST collected', 'liability', 'gst_collected', 'G2200'), acct('2210', 'GST paid', 'liability', 'gst_paid', 'G2200'), acct('4000', 'Sales', 'income', 'sales', 'G4000')] };
+
+/** the stand-in for one shop: `kind` is 'IN' | 'AU' | 'AE'; every /api/books answer is checked against the contract (C.json) */
+async function stub(ctx, kind, S) {
+  await ctx.route('**/api/**', (r) => {
+    const u = new URL(r.request().url()), p = u.pathname, m = r.request().method(); S.calls.push(m + ' ' + p + u.search);
+    if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: S.name, currency_code: kind === 'AU' ? 'AUD' : kind === 'AE' ? 'AED' : 'INR' } });
+    if (p === '/api/books/health') return J(r, 200, books.health({ currency: kind === 'AU' ? 'AUD' : kind === 'AE' ? 'AED' : 'INR' }));
+    if (p === '/api/books/todo') return J(r, 200, []);
+    if (p === '/api/books/periods') return J(r, 200, books.periods([Object.assign(books.periodRow('2026-27', 1, 'open'), { entries: 0, sales_minor: 0, lock: { may: true, why: null }, reopen: { may: false, why: null } })]));   /* the row as the API sends it today (books-api.periodRow predates entries · sales_minor · lock · reopen) */
+    if (p === '/api/books/accounts') return J(r, 200, CHART);
+    if (p === '/api/books/dues') return J(r, 200, books.dues([]));
+    if (/^\/api\/books\/ledger\//.test(p)) return J(r, 200, books.ledger('2200', 'GST collected', [{ date: '2026-07-01', what: 'Walk-in day', ref: 'SV/2026-27/000001', dr_minor: 0, cr_minor: 1000 }], { currency: 'AUD', from: u.searchParams.get('from') || '2026-07-01', to: u.searchParams.get('to') || '2026-09-30', closing_minor: 1000 }));
+    if (p === '/api/books/returns') {
+      if (kind === 'IN') return J(r, 422, IN_422);
+      if (kind === 'AU') return J(r, 200, bas(u.searchParams.get('simpler') !== '0', u.searchParams.get('period')));
+      return J(r, 200, u.searchParams.get('stagger') ? vat201(u.searchParams.get('emirate'), u.searchParams.get('period')) : vatNeeds());
+    }
+    return J(r, 404, { error: 'not found' });
+  });
+}
+async function open(w, kind, name, tz, vp) {
+  const ctx = await w.browser.newContext({ viewport: vp || { width: 1280, height: 860 }, locale: 'en', timezoneId: tz, serviceWorkers: 'block' });
+  await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
+  try { await ctx.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: w.base }); } catch (_) {}
+  const S = { calls: [], name };
+  await stub(ctx, kind, S);
+  await ctx.addInitScript((s) => { try { localStorage.setItem('cb_sess', JSON.stringify(s)); } catch (_) {} }, SESS(name));
+  const page = await ctx.newPage();
+  const errs = []; page.on('pageerror', (e) => errs.push(String(e && e.message || e)));
+  await page.goto(w.base + '/accounts.html#gstclose');
+  return { ctx, page, S, errs };
+}
+const text = (page, sel) => page.evaluate((s) => { const el = document.querySelector(s); return el ? el.textContent.trim() : ''; }, sel);
+const count = (page, sel) => page.locator(sel).count();
+const navWord = (page) => page.evaluate(() => { const b = document.querySelector('[data-testid="acc-nav-gstclose"] .label'); return b ? b.textContent.trim() : ''; });
+
+W.run('returns', async (w) => {
+  /* R0 · India: the GST close & pay, as before */
+  const IN = await open(w, 'IN', 'Mayur Bhavan', 'Asia/Kolkata');
+  await w.step('R0', 'An Indian shop -> Accounts > GST close & pay: the close form, as before (its GSTR comes from the rail)', async () => {
+    await IN.page.waitForSelector('[data-testid="pg-form"]', { timeout: 15000 });
+    const asked = IN.S.calls.filter((c) => /GET \/api\/books\/returns/.test(c)).length, word = await navWord(IN.page);
+    return { ok: asked === 1 && word === 'GST close & pay' && (await count(IN.page, '[data-testid="pr-card"]')) === 0 && IN.errs.length === 0, saw: 'asked once, got 422 -> the close form; menu says "' + word + '"' + (IN.errs.length ? ' · page error ' + IN.errs[0] : '') };
+  });
+  await IN.ctx.close();
+
+  /* R1–R4 · Australia */
+  const AU = await open(w, 'AU', 'Bondi Grocer', 'Australia/Sydney');
+  await w.step('R1', 'An Australian shop -> the menu and the title say BAS; the quarter that ended is chosen; G1 1A 1B 9 as rows; To pay; Prepared, not lodged — ATO', async () => {
+    await AU.page.waitForSelector('[data-testid="pr-box-1A"]', { timeout: 15000 });
+    const word = await navWord(AU.page), title = await text(AU.page, '#title'), period = await AU.page.inputValue('#pr_p');
+    const rows = await AU.page.$$eval('[data-testid^="pr-box-"]', (x) => x.map((e) => e.getAttribute('data-testid').slice(7)));
+    const a1 = await text(AU.page, '[data-testid="pr-amt-1A"]'), tot = await text(AU.page, '[data-testid="pr-total"]'), prep = await text(AU.page, '[data-testid="pr-prepared"]');
+    const ok = word === 'BAS' && title === 'BAS' && period === '2026-Q1' && rows.join() === 'G1,1A,1B,9' && /950\.00/.test(a1) && /To pay/.test(tot) && /150\.00/.test(tot) && /Prepared, not lodged/.test(prep) && /ATO/.test(prep) && AU.errs.length === 0;
+    return { ok, saw: 'menu "' + word + '" · title "' + title + '" · period ' + period + ' · rows ' + rows.join(' ') + ' · 1A ' + a1 + ' · ' + tot + ' · ' + prep + (AU.errs.length ? ' · page error ' + AU.errs[0] : '') };
+  });
+  await w.step('R2', 'Full BAS -> ONE GET with simpler=0 -> G2 G3 G10 G11 join the rows (G11 5,000.00, its basis beside it)', async () => {
+    const before = AU.S.calls.length;
+    await AU.page.selectOption('#pr_s', '0');
+    await AU.page.waitForSelector('[data-testid="pr-box-G11"]', { timeout: 8000 });
+    const gets = AU.S.calls.slice(before).filter((c) => /GET \/api\/books\/returns/.test(c));
+    const rows = await AU.page.$$eval('[data-testid^="pr-box-"]', (x) => x.map((e) => e.getAttribute('data-testid').slice(7)));
+    const g11 = await text(AU.page, '[data-testid="pr-amt-G11"]'), lbl = await text(AU.page, '[data-testid="pr-box-G11"]');
+    return { ok: gets.length === 1 && /simpler=0/.test(gets[0]) && rows.join() === 'G1,G2,G3,G10,G11,1A,1B,9' && /5,000\.00/.test(g11) && /GST-exclusive/.test(lbl), saw: gets.join(' ') + ' · rows ' + rows.join(' ') + ' · G11 ' + g11 };
+  });
+  await w.step('R3', 'Copy figures -> the clipboard holds the boxes as one block (code · label · amount, plain digits) for the portal', async () => {
+    await AU.page.click('[data-testid="pr-copy"]');
+    await AU.page.waitForSelector('#pr_out [data-testid="pe-ok"]', { timeout: 8000 });
+    let clip = ''; try { clip = await AU.page.evaluate(() => navigator.clipboard.readText()); } catch (_) {}
+    if (!clip) clip = await AU.page.evaluate(() => (window.PE_RET && PE_RET.block) || '');
+    const lines = clip.split('\n');
+    const ok = /^Business activity statement · 2026-27 Q1/.test(lines[0]) && lines.indexOf('1A\tGST on sales\t950.00') >= 0 && lines.indexOf('G11\tNon-capital purchases\t5000.00') >= 0 && /^To pay\t150\.00$/.test(lines[lines.length - 2]) && /Prepared, not lodged/.test(lines[lines.length - 1]);
+    return { ok, saw: (await text(AU.page, '#pr_out')) + ' · ' + lines.length + ' lines: ' + lines[0] + ' | ' + lines[5] };
+  });
+  await w.step('R4', 'A box\'s ledger chip (1A -> 2200 GST collected) -> the Ledgers page opens on that ledger, for the quarter', async () => {
+    await AU.page.click('[data-testid="pr-open-1A-2200"]');
+    await AU.page.waitForFunction(() => /#ledgers/.test(location.hash), null, { timeout: 8000 });
+    await AU.page.waitForFunction(() => (document.querySelector('#lg_out') || {}).textContent && /GST collected/.test(document.querySelector('#lt_pane').textContent), null, { timeout: 10000 }).catch(() => {});
+    const led = AU.S.calls.filter((c) => /GET \/api\/books\/ledger\/2200/.test(c));
+    const pane = await text(AU.page, '#lt_pane');
+    const ok = led.length >= 1 && /from=2026-07-01/.test(led[led.length - 1]) && /to=2026-09-30/.test(led[led.length - 1]) && /GST collected/.test(pane) && AU.errs.length === 0;
+    return { ok, saw: 'hash ' + (await AU.page.evaluate(() => location.hash)) + ' · ' + (led[led.length - 1] || 'no ledger read') + ' · pane says ' + (/GST collected/.test(pane) ? 'GST collected' : pane.slice(0, 60)) + (AU.errs.length ? ' · page error ' + AU.errs[0] : '') };
+  });
+  await AU.ctx.close();
+
+  /* R5 · the UAE */
+  const AE = await open(w, 'AE', 'Deira Stores', 'Asia/Dubai');
+  await w.step('R5', 'A UAE shop -> VAT return; no stagger yet: the server\'s sentence and no box; stagger 1 -> ONE GET with stagger=1 -> Boxes 1–15, Box 14 2,350.00, To pay, FTA / EmaraTax', async () => {
+    await AE.page.waitForSelector('[data-testid="pr-needs"]', { timeout: 15000 });
+    const word = await navWord(AE.page), needs = await text(AE.page, '[data-testid="pr-needs"]'), none = (await count(AE.page, '[data-testid^="pr-box-"]')) === 0;
+    const before = AE.S.calls.length;
+    await AE.page.selectOption('#pr_st', '1');
+    await AE.page.waitForSelector('[data-testid="pr-box-14"]', { timeout: 8000 });
+    const gets = AE.S.calls.slice(before).filter((c) => /GET \/api\/books\/returns/.test(c));
+    const rows = await AE.page.$$eval('[data-testid^="pr-box-"]', (x) => x.length), b14 = await text(AE.page, '[data-testid="pr-tax-14"]'), b1 = await text(AE.page, '[data-testid="pr-amt-1"]');
+    const tot = await text(AE.page, '[data-testid="pr-total"]'), prep = await text(AE.page, '[data-testid="pr-prepared"]'), period = await AE.page.inputValue('#pr_p');
+    const ok = word === 'VAT return' && /FTA assigns the Tax Period/.test(needs) && none && gets.length === 1 && /stagger=1/.test(gets[0]) && rows === 15 && /2,350\.00/.test(b14) && /95,000\.00/.test(b1) && /To pay/.test(tot) && /FTA/.test(prep) && /EmaraTax/.test(prep) && period === '2026-02/2026-04' && AE.errs.length === 0;
+    return { ok, saw: 'menu "' + word + '" · first: ' + needs.slice(0, 40) + '… · then ' + gets.join(' ') + ' · ' + rows + ' boxes · Box 1 ' + b1 + ' · Box 14 ' + b14 + ' · ' + tot + ' · ' + period + (AE.errs.length ? ' · page error ' + AE.errs[0] : '') };
+  });
+  await AE.ctx.close();
+
+  /* R6 · a phone */
+  const P = await open(w, 'AU', 'Bondi Grocer', 'Australia/Sydney', { width: 390, height: 844 });
+  await w.step('R6', '390 px: the BAS paints and nothing scrolls sideways', async () => {
+    await P.page.waitForSelector('[data-testid="pr-box-1A"]', { timeout: 15000 });
+    await P.page.waitForTimeout(300);
+    const m = await P.page.evaluate(() => ({ d: document.documentElement.scrollWidth, main: document.querySelector('.main') ? document.querySelector('.main').scrollWidth <= document.querySelector('.main').clientWidth : true }));
+    return { ok: m.d <= 390 && m.main && P.errs.length === 0, saw: 'document ' + m.d + ' px wide · main fits: ' + m.main };
+  });
+  await P.ctx.close();
+
+  await w.step('R7', 'Every answer the stand-in served for a contract route has the API\'s keys, nesting and types', async () => { const [ok, msg] = C.finish(); return { ok, saw: msg }; });
+});
