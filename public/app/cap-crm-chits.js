@@ -2,7 +2,8 @@
  * Home's "24 in · 0 out · 21 stuck" must open the chits it counts. This is the smallest honest list of them: ONE read,
  * GET /api/facts/rail/chits — the SAME rows and the SAME overdue test the Home figures are counted from (lib/home-facts railScope),
  * so the stuck rows here number the stuck chip on Home. Only chits THIS shop holds a copy of are in it; a chit between two other
- * businesses cannot appear. It draws with CBList (the CRM's own list unit) and a row opens the chit sheet in place (openChitSheet).
+ * businesses cannot appear. It draws with CBList (the CRM's own list unit) and a row opens the chit sheet in place (openChitSheet);
+ * the sheet's "Open page" lands on the chit PAGE below (#/chit/<id>) — the same painters, full-page (CRM2).
  * Nothing is computed here: the reason a chit is stuck is the server's sentence. A stuck row names its fix by opening the sheet,
  * whose action row offers only what this chit allows (accept · answer · close · cancel).
  * Route: CB CRM  #/chits?tab=stuck|in|out. Needs from cap-crm.js: CRM · crmNav · crmBar · crmGo · esc · tx · api · crmErrWords. */
@@ -97,4 +98,15 @@ function chitsHome(params, frame) {
   chitsLoad();
   /* O4: the Home bell sends a pressed row here (crm.html#/chits?open=<chit>) - the order opens to act on, over the list */
   if (params && /^[0-9a-f-]{36}$/i.test(params.open || '') && typeof openChitSheet === 'function') openChitSheet(params.open);
+}
+
+/* ═══ THE CHIT PAGE (CRM2, 2026-10-13) — crm.html#/chit/<id>: where the sheet's "Open page" lands, never the workshop (docs/design/INDEX-NOT-APP.md).
+   It is the chit sheet's own painters mounted full-page (CBSheet.mount, app/chit-sheet.js): header · lines · GST · total · tender · messages and
+   files · history — no second painter, no money worked out here. The crumb leads back to Chits. O2C step 5 · invoice. */
+function chitPage(id, frame) {
+  crmBar('<a href="#/chits" data-testid="chit-page-back">' + esc(tx('Chits')) + '</a> › <strong>' + esc(tx('Chit')) + '</strong>', '', false);
+  var s = document.getElementById('screen'); s.className = 'screen';
+  s.innerHTML = '<div class="content"><div id="chit_page"></div></div>';
+  if (frame || !window.CBSheet) return;
+  CBSheet.mount(document.getElementById('chit_page'), id);
 }

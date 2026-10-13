@@ -17,9 +17,6 @@ const DOOR = /app\.html|#\/app\b|#\/welcome\b|#\/country\b/;
 const ALLOW = [
   { file: 'index.html',                 re: /registerHref: '\/app\.html#\/welcome'/,          round: 'SET3', app: 'settings',  what: 'register a new shop (the sign-in window\'s Continue to register)' },
   { file: 'public/app/page-frame.js',   re: /registerHref: '\/app\.html#\/welcome'/,          round: 'SET3', app: 'settings',  what: 'the same register door on the CBFrame pages (Tasks · Employees · Network · KYB · Documents)' },
-  { file: 'public/accounts.html',       re: /openChitPage.*\/app\.html#\/app\/chit\//,        round: 'CRM2', app: 'crm',       what: 'the chit sheet\'s Open page (the full M53 detail page)' },
-  { file: 'public/crm.html',            re: /openChitPage.*\/app\.html#\/app\/chit\//,        round: 'CRM2', app: 'crm',       what: 'the chit sheet\'s Open page' },
-  { file: 'public/finance.html',        re: /openChitPage.*\/app\.html#\/app\/chit\//,        round: 'CRM2', app: 'crm',       what: 'the chit sheet\'s Open page' },
   { file: 'public/accounts.html',       re: /acc-country-setup.*\/app\.html#\/country/,       round: 'SET1', app: 'settings',  what: 'Country setup before the books can open' },
   { file: 'public/app/network-app.js',  re: /nw-builder.*\/app\.html#\/network|\/app\.html#\/network.*nw-builder/, round: 'NET2', app: 'network', what: 'Open the builder (make the network the design checked)' },
   { file: 'public/till.html',           re: /'https:\/\/chitbridge-web\.vercel\.app\/app\.html' : \(location\.origin \+ '\/app\.html'\)/, round: 'SET2', app: 'settings', what: 'cbHome()\'s own literal' },

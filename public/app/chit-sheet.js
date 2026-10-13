@@ -18,11 +18,16 @@
  * "Open page" is the only way out: it goes where the link went before (openChit).
  *
  * Phone first. The sheet scrolls; the page behind does not move, so closing returns to the same place.
+ *
+ * ── TWO HOSTS, ONE PAINTER (CRM2, 2026-10-13) ── the same sections also paint FULL-PAGE: CBSheet.mount(el, id) draws them into a
+ * page's own element (CB CRM › Chits › crm.html#/chit/<id> — where "Open page" lands, never the workshop). The page form is the popup
+ * plus what a popup leaves out: the chit's history (state_log, read as held) and the page note (CBPage, app/page.js); it drops the
+ * "Open page" icon (you are on it). M53 (docs/design/chit-detail) asks for exactly this: one module, opened as a popup or a full page.
  */
 (function (root) {
   'use strict';
 
-  var CS = { id: null, chit: null, view: null, busy: false };
+  var CS = { id: null, chit: null, view: null, busy: false, mode: 'dialog', el: null, page: null };
 
   function E(v) { return typeof esc === 'function' ? esc(v) : String(v == null ? '' : v).replace(/[<>"&]/g, function (c) { return { '<': '&lt;', '>': '&gt;', '"': '&quot;', '&': '&amp;' }[c]; }); }
   function T(s) { return typeof tx === 'function' ? tx(s) : s; }
@@ -213,8 +218,23 @@
     body.appendChild(CS.rail.el);
   }
 
+  /* the page form only: the chit's history as the state_log holds it — when · what · who. Read, never worked out; the step words are the sheet's own. */
+  var LOGWORD = { created: 'Created', delivered: 'Delivered', message_sent: 'Message sent', amended: 'Amended', bill_step: 'Step', assigned: 'Assigned', dispute_opened: 'Disputed', dispute_resolved: 'Dispute closed' };
+  function historyHTML() {
+    var log = (CS.chit && CS.chit.state_log) || [];
+    if (!log.length) return '';
+    return '<div class="cs-sec">' + E(T('History')) + '</div>' + log.map(function (e, i) {
+      var a = String(e.action || ''), w = LOGWORD[a] || (a.indexOf('status_') === 0 ? (STEP[a.slice(7)] || a.slice(7)) : (e.new_status ? (STEP[e.new_status] || e.new_status) : (a || 'Event')));
+      return '<div class="cs-row cs-hist" data-testid="cs-hist-' + i + '"><span>' + E(when(e.created_at || e.at)) + ' · ' + E(T(w)) + '</span><b>' + E(e.action_by_display_name || e.by_name || '') + '</b></div>';
+    }).join('');
+  }
+  function pageNoteHTML() {
+    try { return (CS.mode === 'page' && root.CBPage && CS.chit) ? root.CBPage.noteHTML((CS.chit.header || {}).business_json) : ''; } catch (_) { return ''; }
+  }
+  function host() { return CS.el && document.body.contains(CS.el) ? CS.el : null; }
+
   function paint() {
-    var d = document.getElementById('chitsheet'); if (!d) return;
+    var d = host(); if (!d) return;
     var m = CS.view, ttl = d.querySelector('[data-testid="cs-title"]');
     if (ttl) ttl.textContent = T(m ? titleFor(m) : 'Bill');
     if (!m) { d.querySelector('.cs-body').innerHTML = CS.err ? '<div class="cs-mute" data-testid="cs-err">' + E(CS.err) + '</div>' : '<div class="cs-mute">' + E(T('Reading…')) + '</div>'; d.querySelector('.cs-acts').innerHTML = ''; return; }
@@ -222,47 +242,69 @@
     d.querySelector('.cs-body').innerHTML =
       '<div class="cs-head" data-testid="cs-head">' + head + '</div>'
       + '<div class="cs-who"><span data-testid="cs-who">' + E(m.who) + '</span> <span class="cs-step" data-testid="cs-step">' + E(T(STEP[m.status] || m.status)) + '</span></div>'
+      + pageNoteHTML()
       + orderHTML(m) + linesHTML(m) + (m.purpose === 'order' && !(m.money && m.money.by_rate) ? '' : gstHTML(m)) + totalHTML(m) + tenderHTML(m)
       + (CS.note ? '<div class="cs-note" data-testid="cs-note">' + E(CS.note) + '</div>' : '')
       + (CS.useAsk ? '<div class="cs-use" data-testid="cs-use">' + billUseChoiceHTML([m], 'CBSheet.use')
-        + '<button type="button" class="optchip" data-testid="cs-use-auto" onclick="CBSheet.use(\'\')">' + E(T('Let my catalogue decide')) + '</button></div>' : '');
+        + '<button type="button" class="optchip" data-testid="cs-use-auto" onclick="CBSheet.use(\'\')">' + E(T('Let my catalogue decide')) + '</button></div>' : '')
+      + (CS.mode === 'page' ? historyHTML() : '');
     railMount(d, m);
-    d.querySelector('.cs-acts').innerHTML = actionsFor(m).map(function (k) {
+    /* the page form has no "Open page": the person is on it */
+    d.querySelector('.cs-acts').innerHTML = actionsFor(m).filter(function (k) { return !(CS.mode === 'page' && k === 'page'); }).map(function (k) {
       return '<button type="button" class="cs-act" data-testid="cs-act-' + k + '" onclick="CBSheet.act(\'' + k + '\')"' + (CS.busy ? ' disabled' : '') + ' title="' + E(T(ACT[k][1])) + '"><span class="ic" aria-hidden="true">' + ACT[k][0] + '</span><span>' + E(T(ACT[k][1])) + '</span></button>';
     }).join('');
   }
 
   var CSS = '#chitsheet{border:0;padding:0;margin:auto;width:min(560px,100vw);max-width:100vw;max-height:92dvh;border-radius:14px;background:var(--card,#fff);color:var(--ink,#0F2E3D);box-shadow:var(--shadow,0 12px 34px rgba(15,46,61,.2));overflow:hidden}'
     + '#chitsheet[open]{display:flex;flex-direction:column}#chitsheet::backdrop{background:rgba(15,46,61,.45)}'
-    + '#chitsheet .cs-top{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--line,#E7E2D8);font-size:var(--fs-3,14px);font-weight:700}'
-    + '#chitsheet .cs-top button{cursor:pointer;min-width:44px;min-height:44px;border:0;background:none;font-size:var(--fs-4,16px);color:inherit}'
-    + '#chitsheet .cs-body{padding:12px 14px;overflow:auto;flex:1;min-height:0;overscroll-behavior:contain;font-size:var(--fs-2,12.5px)}'
-    + '#chitsheet .cs-head{font-size:var(--fs-2,12.5px);color:var(--grey,#494F56)}#chitsheet .cs-who{margin:4px 0 10px;font-size:var(--fs-3,14px);font-weight:700}'
-    + '#chitsheet .cs-step{margin-inline-start:6px;border:1px solid var(--line,#E7E2D8);border-radius:99px;padding:1px 8px;font-size:var(--fs-1,11px);font-weight:600;color:var(--prog,#7d6126)}'
-    + '#chitsheet .cs-lines{width:100%;border-collapse:collapse;margin:4px 0 8px}#chitsheet .cs-lines th{font-size:var(--fs-1,11px);color:var(--grey,#494F56);text-align:start;font-weight:600}'
-    + '#chitsheet .cs-lines td,#chitsheet .cs-lines th{padding:4px 3px;border-bottom:1px solid var(--line,#E7E2D8);vertical-align:top}#chitsheet .n,#chitsheet th.n{text-align:end;white-space:nowrap}#chitsheet .tot td{font-weight:700}'
-    + '#chitsheet .cs-off{font-size:var(--fs-1,11px);color:var(--ok,#27794c)}#chitsheet .cs-sec{margin:12px 0 4px;font-size:var(--fs-1,11px);font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--grey,#494F56)}'
-    + '#chitsheet .cs-row{display:flex;justify-content:space-between;gap:10px;padding:3px 0}#chitsheet .cs-total{font-size:var(--fs-4,16px);border-top:2px solid var(--ink,#0F2E3D);margin-top:8px;padding-top:6px}'
-    + '#chitsheet .cs-order{margin:0 0 10px;padding:8px 10px;border:1px solid var(--gold-line,#E8D9BC);background:var(--gold-soft,#F7F1E4);border-radius:8px}#chitsheet .cs-online{font-weight:700;margin-bottom:4px}#chitsheet .cs-mute{color:var(--grey,#494F56);font-size:var(--fs-1,11px);margin:6px 0}#chitsheet .cs-note{margin-top:10px;padding:8px 10px;border:1px solid var(--gold-line,#E8D9BC);background:var(--gold-soft,#F7F1E4);border-radius:8px}'
-    + '#chitsheet .cs-use .optchip{cursor:pointer;min-height:44px;padding:0 12px;margin:2px 2px 2px 0}'
-    + '#chitsheet .cs-acts{display:flex;gap:4px;flex-wrap:wrap;justify-content:space-around;padding:8px 8px calc(8px + env(safe-area-inset-bottom));border-top:1px solid var(--line,#E7E2D8);background:var(--paper,#FAF8F4)}'
-    + '#chitsheet .cs-act{cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:68px;min-height:52px;padding:4px 6px;border:0;border-radius:8px;background:none;color:inherit;font-size:var(--fs-1,11px)}'
-    + '#chitsheet .cs-act .ic{font-size:20px;line-height:1}#chitsheet .cs-act:disabled{opacity:.5;cursor:default}#chitsheet .cs-act:hover{background:var(--gold-soft,#F7F1E4)}'
-    + '@media print{body>*:not(#chitsheet){display:none!important}#chitsheet{position:static;max-height:none;box-shadow:none}#chitsheet .cs-acts,#chitsheet .cs-top button{display:none}}';
+    + '.cs .cs-top{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--line,#E7E2D8);font-size:var(--fs-3,14px);font-weight:700}'
+    + '.cs .cs-top button{cursor:pointer;min-width:44px;min-height:44px;border:0;background:none;font-size:var(--fs-4,16px);color:inherit}'
+    + '.cs .cs-body{padding:12px 14px;overflow:auto;flex:1;min-height:0;overscroll-behavior:contain;font-size:var(--fs-2,12.5px)}'
+    + '.cs .cs-head{font-size:var(--fs-2,12.5px);color:var(--grey,#494F56)}.cs .cs-who{margin:4px 0 10px;font-size:var(--fs-3,14px);font-weight:700}'
+    + '.cs .cs-step{margin-inline-start:6px;border:1px solid var(--line,#E7E2D8);border-radius:99px;padding:1px 8px;font-size:var(--fs-1,11px);font-weight:600;color:var(--prog,#7d6126)}'
+    + '.cs .cs-lines{width:100%;border-collapse:collapse;margin:4px 0 8px}.cs .cs-lines th{font-size:var(--fs-1,11px);color:var(--grey,#494F56);text-align:start;font-weight:600}'
+    + '.cs .cs-lines td,.cs .cs-lines th{padding:4px 3px;border-bottom:1px solid var(--line,#E7E2D8);vertical-align:top}.cs .n,.cs th.n{text-align:end;white-space:nowrap}.cs .tot td{font-weight:700}'
+    + '.cs .cs-off{font-size:var(--fs-1,11px);color:var(--ok,#27794c)}.cs .cs-sec{margin:12px 0 4px;font-size:var(--fs-1,11px);font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--grey,#494F56)}'
+    + '.cs .cs-row{display:flex;justify-content:space-between;gap:10px;padding:3px 0}.cs .cs-total{font-size:var(--fs-4,16px);border-top:2px solid var(--ink,#0F2E3D);margin-top:8px;padding-top:6px}'
+    + '.cs .cs-order{margin:0 0 10px;padding:8px 10px;border:1px solid var(--gold-line,#E8D9BC);background:var(--gold-soft,#F7F1E4);border-radius:8px}.cs .cs-online{font-weight:700;margin-bottom:4px}.cs .cs-mute{color:var(--grey,#494F56);font-size:var(--fs-1,11px);margin:6px 0}.cs .cs-note{margin-top:10px;padding:8px 10px;border:1px solid var(--gold-line,#E8D9BC);background:var(--gold-soft,#F7F1E4);border-radius:8px}'
+    + '.cs .cs-use .optchip{cursor:pointer;min-height:44px;padding:0 12px;margin:2px 2px 2px 0}'
+    + '.cs .cs-acts{display:flex;gap:4px;flex-wrap:wrap;justify-content:space-around;padding:8px 8px calc(8px + env(safe-area-inset-bottom));border-top:1px solid var(--line,#E7E2D8);background:var(--paper,#FAF8F4)}'
+    + '.cs .cs-act{cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:68px;min-height:52px;padding:4px 6px;border:0;border-radius:8px;background:none;color:inherit;font-size:var(--fs-1,11px)}'
+    + '.cs .cs-act .ic{font-size:20px;line-height:1}.cs .cs-act:disabled{opacity:.5;cursor:default}.cs .cs-act:hover{background:var(--gold-soft,#F7F1E4)}'
+    /* print: while the POPUP is open the rest of the page hides; the page form prints as its page, the action row hidden either way */
+    + '@media print{body.cs-open>*:not(#chitsheet){display:none!important}#chitsheet{position:static;max-height:none;box-shadow:none}.cs .cs-acts,.cs .cs-top button{display:none}}'
+    /* the page form (CBSheet.mount): the same sections full-width in a page's own element; the title row and the action row are the popup's, without a close button */
+    + '.cs-page{display:flex;flex-direction:column;border:1px solid var(--line,#E7E2D8);border-radius:14px;background:var(--card,var(--surface,#fff));color:var(--ink,#0F2E3D);max-width:100%;overflow:hidden}'
+    + '.cs-page .cs-body{overflow:visible}.cs-page .cs-lines{table-layout:fixed}.cs-page .cs-lines td{overflow-wrap:anywhere}.cs-page .cs-hist span{color:var(--grey,#494F56)}.cs-page .cs-hist b{text-align:end;overflow-wrap:anywhere}';
 
+  function ensureCSS() { if (document.getElementById('cs-css')) return; var st = document.createElement('style'); st.id = 'cs-css'; st.textContent = CSS; document.head.appendChild(st); }
   function ensureDlg() {
     var d = document.getElementById('chitsheet'); if (d) return d;
-    var st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
-    d = document.createElement('dialog'); d.id = 'chitsheet'; d.setAttribute('aria-label', T('Bill'));
+    ensureCSS();
+    d = document.createElement('dialog'); d.id = 'chitsheet'; d.className = 'cs'; d.setAttribute('aria-label', T('Bill'));
     d.innerHTML = '<div class="cs-top"><span data-testid="cs-title">' + E(T('Bill')) + '</span><button type="button" data-testid="cs-close" aria-label="' + E(T('Close')) + '" onclick="CBSheet.close()">✕</button></div><div class="cs-body"></div><div class="cs-acts" data-testid="cs-acts"></div>';
     /* R10-4: a close event is queued; if a new chit was opened meanwhile the sheet is open again and that late event must not wipe it (the read would be dropped and the sheet stay on Reading) */
-    d.addEventListener('close', function () { if (d.open) return; lock(false); CS.id = null; });
+    d.addEventListener('close', function () { if (d.open) return; lock(false); if (CS.mode === 'dialog') CS.id = null; });
     d.addEventListener('click', function (e) { if (e.target === d) CBSheet.close(); });
     document.body.appendChild(d);
     return d;
   }
   /* the page behind does not scroll while the sheet is open — and it is not touched, so closing returns to the same place */
-  function lock(on) { try { document.documentElement.style.overflow = on ? 'hidden' : ''; } catch (_) {} }
+  function lock(on) { try { document.documentElement.style.overflow = on ? 'hidden' : ''; document.body.classList.toggle('cs-open', !!on); } catch (_) {} }
+  function reset(id) { CS.id = id; CS.rail = null; CS.chit = null; CS.view = null; CS.err = null; CS.note = null; CS.useAsk = false; CS.busy = false; }
+  function readSaid(e) { return (typeof MSG !== 'undefined' && MSG.fail) ? MSG.fail('read this chit', e) : T('Could not read this chit'); }
+
+  /* ── THE PAGE FORM: the same sections, full-width, in a page's own element (CB CRM › crm.html#/chit/<id>) ─────────────────── */
+  async function mount(el, id) {
+    if (!el || !id) return;
+    ensureCSS();
+    el.classList.add('cs', 'cs-page'); el.setAttribute('data-testid', 'cs-page');
+    el.innerHTML = '<div class="cs-top"><span data-testid="cs-title">' + E(T('Bill')) + '</span></div><div class="cs-body"></div><div class="cs-acts" data-testid="cs-acts"></div>';
+    CS.mode = 'page'; CS.el = el; CS.page = { el: el, id: id }; reset(id);
+    paint();
+    try { await read(id); }
+    catch (e) { if (CS.id !== id || CS.el !== el) return; CS.err = readSaid(e); paint(); }
+  }
 
   async function read(id) {
     var r = await api('chit', { params: { id: id } });
@@ -271,13 +313,18 @@
   }
   async function open(id) {
     if (!id) return;
-    var d = ensureDlg(); CS.id = id; CS.rail = null; CS.chit = null; CS.view = null; CS.err = null; CS.note = null; CS.useAsk = false; CS.busy = false;
+    var d = ensureDlg(); CS.mode = 'dialog'; CS.el = d; reset(id);
     paint(); lock(true);
     if (!d.open) { if (d.showModal) d.showModal(); else d.setAttribute('open', ''); }
     try { await read(id); }
-    catch (e) { if (CS.id !== id) return; CS.err = (typeof MSG !== 'undefined' && MSG.fail) ? MSG.fail('read this chit', e) : T('Could not read this chit'); paint(); }
+    catch (e) { if (CS.id !== id) return; CS.err = readSaid(e); paint(); }
   }
-  function close() { var d = document.getElementById('chitsheet'); if (d && d.open) d.close(); lock(false); CS.id = null; }
+  /* closing the popup hands the painter back to a page form still on screen (it re-reads: the popup may have moved the chit) */
+  function close() {
+    var d = document.getElementById('chitsheet'); if (d && d.open) d.close(); lock(false); CS.id = null;
+    var pg = CS.page; CS.page = null;
+    if (pg && document.body.contains(pg.el)) mount(pg.el, pg.id);
+  }
 
   /* the same move the full page makes: `status` through statusWordFor — then the sheet re-reads and repaints */
   async function move(to, use) {
@@ -314,6 +361,6 @@
     if (k === 'page') { close(); var pg = typeof openChitPage === 'function' ? openChitPage : openChit; if (typeof pg === 'function') pg(id); }
   }
 
-  root.CBSheet = { orderHTML: orderHTML, moneyFor: moneyFor, moneyBlockHTML: moneyBlockHTML, open: open, close: close, act: act, use: function (u) { return move('act', u); }, actionsFor: actionsFor, model: model, titleFor: titleFor, stepWord: function (m) { return T(STEP[m.status] || m.status); } };
+  root.CBSheet = { orderHTML: orderHTML, moneyFor: moneyFor, moneyBlockHTML: moneyBlockHTML, open: open, close: close, mount: mount, act: act, use: function (u) { return move('act', u); }, actionsFor: actionsFor, model: model, titleFor: titleFor, stepWord: function (m) { return T(STEP[m.status] || m.status); } };
   root.openChitSheet = open;
 })(typeof window !== 'undefined' ? window : globalThis);

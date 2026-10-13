@@ -28,8 +28,11 @@ var CB_HOMES = {
   task: '/tasks.html', order: '/tasks.html',           /* CB Tasks & Orders */
   customers: '/crm.html#/parties?role=customer', suppliers: '/crm.html#/parties?role=supplier',
   ledger: '/accounts.html', network: '/network.html', coassists: '/employees.html',
-  profile: '/know-your-business.html'                  /* the avatar's own choice for Profile (avatar.js, H34) */
+  profile: '/know-your-business.html',                 /* the avatar's own choice for Profile (avatar.js, H34) */
+  chit: '/crm.html#/chit/'                             /* + the chit id: the chit PAGE in CB CRM (CRM2) — chitPageHref(id) below */
 };
+/* the sheet's "Open page" (chit-sheet.js `page` → openChitPage on each ledger page): the chit page in CB CRM, never the workshop */
+function chitPageHref(id){ return CB_HOMES.chit + encodeURIComponent(id); }
 
 /* ── the Ledger's boot endpoints ── */
 var CB_BOOKS_EP = {

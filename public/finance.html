@@ -365,7 +365,7 @@ function session(){
 }
 /* the SMALL APP a screen key hands over to (CB_HOMES, accounts-shell.js) — never the workshop (IX0) */
 function navTo(k){ var h = CB_HOMES[k]; if (h) location.href = h; else toast(tx('Not built outside the workshop yet.')); }
-function openChitPage(id){ window.open('/app.html#/app/chit/' + encodeURIComponent(id), '_blank', 'noopener'); }
+function openChitPage(id){ window.open(chitPageHref(id), '_blank', 'noopener'); }   /* the sheet's "Open page": the chit page in CB CRM (CRM2), this page keeps its place */
 function openChit(id){ openChitSheet(id); }
 const confirmAsk = CBConfirm;
 

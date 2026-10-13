@@ -42,7 +42,7 @@
           "test": ["api:tests/line-complete.test.cjs", "api:tests/stock-cycle.test.js", "web:e2e/walk-tasks.cjs"],
           "status": "ok", "note": "" },
         { "n": 5, "step": "invoice", "module": "Till", "who": "the seller (the counter bill IS the invoice)",
-          "screen": [{ "file": "web:public/till.html", "fn": "fetchBy" }, { "file": "web:public/bill-print.html", "fn": "" }],
+          "screen": [{ "file": "web:public/till.html", "fn": "fetchBy" }, { "file": "web:public/bill-print.html", "fn": "" }, { "file": "web:public/app/chit-sheet.js", "fn": "mount" }, { "file": "web:public/app/cap-crm-chits.js", "fn": "chitPage" }],
           "engine": [{ "file": "api:lib/tax-lines.js", "fn": "invoiceFor" }, { "file": "api:lib/tax-lines.js", "fn": "walkIn" }, { "file": "api:lib/docnumber.js", "fn": "" }, { "file": "engines:src/einvoice.js", "fn": "irnPayload" }],
           "route": [{ "m": "POST", "p": "/api/chits/send", "file": "api:routes/chits.js" }, { "m": "POST", "p": "/api/invoice/build", "file": "api:routes/invoice.js" }, { "m": "GET", "p": "/api/tax/invoice/:chit_id", "file": "api:routes/tax.js" }],
           "chit": "bill (business_json.invoice frozen by invoiceFor)", "ledger": "none until posted (step 7)",
