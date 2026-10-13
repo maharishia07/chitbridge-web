@@ -63,7 +63,7 @@ const toHex = (rgb) => { const m = String(rgb).match(/\d+/g); return m ? '#' + m
         clipped: span ? span.scrollWidth > span.clientWidth + 1 : false,
         appLink: warn ? !!warn.querySelector('a[href*="app.html"]') : false,
         hscroll: document.documentElement.scrollWidth > window.innerWidth + 1,
-        count: shopCount(100000),
+        count: fmtCount(100000),
         payClipped: (() => { const pb = document.querySelector('[data-testid="till-step-pay"]'); return !!(pb && vis(pb) && pb.scrollWidth > pb.clientWidth + 1); })(),
         rowScheme: ((document.querySelector('.cart .row') || {}).innerText || '').replace(/\s+/g, ' '),
       };
