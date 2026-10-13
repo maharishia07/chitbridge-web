@@ -174,11 +174,12 @@ abbr.gl:focus-visible{outline:2px solid var(--blue,#3F66A6);outline-offset:1px}
 /* the two helpers cap-standards.js paints with (it calls esc() and tx() from whatever page loads it); this page is English, so tx() is the identity */
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 function tx(s){ return s; }
-/* the places stdGoto() sends a reader to: the app's screens (#/app/<nav> is the app's own deep link), Settings sections as Settings */
-function navTo(k){ location.href = '/app.html#/app/' + encodeURIComponent(k); }
-function setSetSec(){ navTo('settings'); }
-/* a row's "go" key → the customer-facing app that is its home. Every other key is a pane of the workshop (app.html) and gets no button. */
-var HOME = { till: '/till.html' };
+/* a row's "go" key → the customer-facing app that is its home. Every other key is a pane of the workshop (app.html) and gets no button
+   (IX0: catalogue · locale · appearance · integrations · readiness · returns wait for their small app — docs/design/INDEX-NOT-APP.md). */
+var HOME = { till: '/till.html', coassists: '/employees.html', task: '/tasks.html', network: '/network.html', identity: '/know-your-business.html' };
+/* the places stdGoto() (cap-standards.js) sends a reader to: a customer home from the map above, never the workshop; a Settings section has no customer page yet */
+function navTo(k){ if (HOME[k]) location.href = HOME[k]; }
+function setSetSec(){}
 </script>
 <script src="/app/list-ctl.js"></script>   <!-- CBList: the list here is a mount on it -->
 <script src="/app/rail-bell.js"></script>   <!-- CBBell.mount: the bell, the same one every app header has -->
@@ -221,10 +222,17 @@ function groupBy(x, mode){
   var r = x.r;
   if (mode === 'area') return [lab(STD_AREAS, r.a), r.a];
   if (mode === 'kind') return [lab(STD_KINDS, r.k), r.k];
-  if (mode === 'country'){ var l = r.c.indexOf('IN') >= 0 && r.c.length === 1 ? 'India' : r.c.length > 1 ? 'India and global' : 'Global'; return [l, l]; }
+  if (mode === 'country'){ var l = countryGroup(r.c); return [l, l]; }
   return null;
 }
-const GROUP_ORDER = STD_AREAS.map((a) => a[0]).concat(STD_KINDS.map((k) => k[0]), ['India', 'India and global', 'Global']);
+/* the Country group's words: India · India and global · Global as before; a row that applies in several countries names them (CPS1: India, Australia, UAE) */
+function countryGroup(c){
+  if (c.length === 1 && c[0] === 'IN') return 'India';
+  if (c.length === 1 && c[0] === 'GLOBAL') return 'Global';
+  if (c.indexOf('GLOBAL') >= 0) return 'India and global';
+  return c.map((x) => lab(STD_COUNTRIES, x)).join(', ');   /* commas: the group head's own " · " separates the label from its count */
+}
+const GROUP_ORDER = STD_AREAS.map((a) => a[0]).concat(STD_KINDS.map((k) => k[0]), ['India', 'India and global', 'Global', STD_COUNTRIES.filter((c) => c[0] !== 'GLOBAL').map((c) => c[1]).join(', ')]);
 function cols(){
   return [
     { key: 'what', label: 'What it does for you', prio: 1, w: 250, sort: 'what', html: true, value: (x) => x.r.p,
@@ -266,8 +274,35 @@ function nextOf(x){
   if (shown.indexOf('at') < 0 && r.at) h += '<dt>In the app</dt><dd>' + esc(r.at) + '</dd>';
   if (r.why) h += '<dt>Why it matters</dt><dd>' + rich(r.why) + '</dd>';
   if (r.k === 'compat') h += '<dt>Fit</dt><dd>' + esc(r.fit || '') + '</dd><dt>Proof</dt><dd data-testid="std-proof-' + x.ix + '">' + esc(r.proof || 'Not yet') + '</dd>';
-  h += '<dt>Source</dt><dd>' + (r.k === 'compat' ? 'The compatibility register (data/compat.json), shared with the Compatibility lab' : r.added ? '<span class="new">New</span> Adopted 2–3 Oct 2026; not yet in the register' : 'In the register') + '</dd></dl>';
+  /* CPS1: the Country Standard's row opens to the GENERATED matrix — every member × every registered pack, read from the engines' file, never typed here */
+  if (r.matrix === 'country') h += '<dt>Matrix</dt><dd data-testid="std-country-matrix">' + countryMatrixHTML() + '</dd>';
+  h += '<dt>Source</dt><dd>' + (r.k === 'compat' ? 'The compatibility register (data/compat.json), shared with the Compatibility lab'
+    : r.matrix === 'country' ? (CMX ? 'Generated from the packs chitbridge-engines v' + esc(CMX.engines) + ' registers (data/country-matrix.json, a copy of its docs/COUNTRY-MATRIX.json)' : 'chitbridge-engines docs/COUNTRY-STANDARD.md and docs/COUNTRY-MATRIX.md')
+    : r.added === '2026-10-03' ? '<span class="new">New</span> Adopted 2–3 Oct 2026; not yet in the register' : r.added ? '<span class="new">New</span> Adopted ' + esc(r.added) : 'In the register') + '</dd></dl>';
   return stdGloss(h);
+}
+/* ⭐ the country matrix (CPS1): the engines' generated table, painted with the matrix pane's own grid (.mx) — columns are the registered packs, rows the standard's
+   members by section; a cell is the engines' symbol, its sentence in the title. Nothing is computed here; a file that could not be read says so. */
+let CMX = null, CMX_ERR = '';
+const CMX_SYM = { ok: '✅', partial: '⚠️', missing: '❌', out: '—' };
+function countryMatrixHTML(){
+  if (!CMX) return '<span class="miss" data-testid="std-country-matrix-err">' + esc(CMX_ERR || 'The country matrix could not be read (data/country-matrix.json). The standard itself is chitbridge-engines docs/COUNTRY-STANDARD.md.') + '</span>';
+  var ids = CMX.packs.map((p) => p.id), tpl = 'grid-template-columns:minmax(0,1fr) repeat(' + ids.length + ',minmax(52px,max-content))';
+  var h = '<div class="mx" role="table" aria-label="Country matrix" style="' + tpl + '"><div class="mx-r mx-h" role="row"><span role="columnheader" class="mx-ch">member</span>'
+    + CMX.packs.map((p) => '<span role="columnheader" class="mx-ch" title="' + esc(p.name + ' · pack ' + p.version + (p.verified ? ' · read by a local accountant' : ' · not yet read by a local accountant')) + '">' + esc(p.id) + '</span>').join('') + '</div>';
+  /* the counts first: what each pack has, partly has, lacks, leaves out */
+  [['ok', 'present'], ['partial', 'partly'], ['missing', 'missing'], ['out', 'out of scope']].forEach((s) => {
+    h += '<div class="mx-r" role="row"><span role="rowheader" class="mx-rh">' + CMX_SYM[s[0]] + ' ' + s[1] + '</span>' + ids.map((id) => '<span role="cell" class="mx-c' + (CMX.counts[id][s[0]] ? '' : ' nil') + '" data-testid="std-cmx-' + esc(id) + '-' + s[0] + '">' + (CMX.counts[id][s[0]] || '—') + '</span>').join('') + '</div>';
+  });
+  var sec = '';
+  CMX.rows.forEach((r) => {
+    if (r.section !== sec){ sec = r.section; h += '<div class="mx-r mx-all" role="row"><span role="rowheader" class="mx-rh">' + esc(sec) + '</span>' + ids.map(() => '<span role="cell" class="mx-c nil"></span>').join('') + '</div>'; }
+    h += '<div class="mx-r" role="row"><span role="rowheader" class="mx-rh"><code>' + esc(r.member) + '</code><span class="mx-sub">' + esc(r.level) + ' · ' + esc(r.home) + '</span></span>'
+      + ids.map((id) => { var c = r.cells[id]; return '<span role="cell" class="mx-c' + (c.state === 'missing' || c.state === 'out' ? ' nil' : '') + '" title="' + esc(c.note || (c.state === 'missing' ? 'missing' : 'present')) + '" aria-label="' + esc(id + ' ' + r.member + ': ' + c.state + (c.note ? ' — ' + c.note : '')) + '">' + CMX_SYM[c.state] + '</span>'; }).join('') + '</div>';
+  });
+  h += '</div>';
+  h += '<p class="mx-note">❌ per pack: ' + ids.map((id) => esc(id) + ' — ' + (CMX.missing[id].length ? CMX.missing[id].map((m) => '<code>' + esc(m) + '</code>').join(' · ') : 'none')).join('<br>') + '</p>';
+  return h;
 }
 /* the statement a buyer or a CA pastes into an e-mail: the standard, the clause, the status, and what is missing — in the register's words */
 function statementOf(r){
@@ -462,12 +497,19 @@ function start(){
   var q = new URLSearchParams(location.search);
   if (q.get('sheet') === 'why' || q.get('sheet') === 'record') openSheet(q.get('sheet'));
   if (q.get('view') === 'list') $('app').setAttribute('data-view', 'list');
+  /* CPS1: ?std=country (from Country setup) — the list, searched down to the Country Standard's row through the unit's own search box */
+  if (q.get('std') === 'country'){ var cq = $('std_list').querySelector('[data-cbl-q]'); if (cq){ cq.value = 'Country Standard'; cq.dispatchEvent(new Event('input', { bubbles: true })); } $('app').setAttribute('data-view', 'list'); }
 }
 if (window.CBKural) CBKural.mount({ route: 'planning' });
-fetch('/data/compat.json', { cache: 'no-store' })
-  .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-  .then((j) => { addCompat(j); }, () => { COMPAT_ERR = 'Compatibility rows could not be read — the standards below are complete; reload to try again.'; })
-  .then(start);
+/* two files are read before the first paint: the Compatibility rows (M41) and the country matrix (CPS1) — each failure is said in its place, never silent */
+Promise.all([
+  fetch('/data/compat.json', { cache: 'no-store' })
+    .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then((j) => { addCompat(j); }, () => { COMPAT_ERR = 'Compatibility rows could not be read — the standards below are complete; reload to try again.'; }),
+  fetch('/data/country-matrix.json', { cache: 'no-store' })
+    .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then((j) => { if (j && Array.isArray(j.rows) && Array.isArray(j.packs) && j.counts && j.missing) CMX = j; else throw new Error('not a matrix'); }, (e) => { CMX_ERR = 'The country matrix could not be read (data/country-matrix.json' + (e && e.message ? ': ' + e.message : '') + ') — reload to try again. The standard itself is chitbridge-engines docs/COUNTRY-STANDARD.md.'; }),
+]).then(start);
 </script>
 </body>
 </html>

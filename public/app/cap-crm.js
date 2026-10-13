@@ -42,8 +42,11 @@ var CRM = { gen: 0, loadGen: 0, rows: [], byKey: {}, alerts: {}, currency: 'INR'
 function crmOwner() { return SESSION.role === 'entity'; }
 /** the co-assist's hat rides in their signed token (lib/access.js); the session record does not keep it, so it is read from the token's own payload */
 function crmHat() {
+  /* the b173 ladder word (access_level: viewer · commenter · editor) is what the server enforces — read FIRST; the old hat only when no level rides (FX-L2C) */
+  if (SESSION.access_level || SESSION.level) return String(SESSION.access_level || SESSION.level);
   if (SESSION.hat) return String(SESSION.hat);
-  try { var b = String(SESSION.token || '').split('.')[1].replace(/-/g, '+').replace(/_/g, '/'); var c = JSON.parse(atob(b)); return String(c.hat || c.actor_hat || ''); } catch (_) { return ''; }
+  /* the level rides in the signed token's own payload (lib/identity-auth issueToken: access_level; pre-b173 tokens: hat / actor_hat) */
+  try { var b = String(SESSION.token || '').split('.')[1].replace(/-/g, '+').replace(/_/g, '/'); var c = JSON.parse(atob(b)); return String(c.access_level || c.level || c.hat || c.actor_hat || ''); } catch (_) { return ''; }
 }
 function crmRole() {
   if (crmOwner()) return 'owner';
@@ -63,7 +66,9 @@ function crmDayWord(iso) {
 function crmWhen(iso) {
   if (!iso) return '—';
   var w = crmDayWord(iso), d = new Date(iso), n = Math.round((crmDay0(d) - crmDay0(new Date())) / 86400000);
-  return (n >= -1 && n <= 1) ? w + ' ' + bkTime(iso) : w;
+  /* a follow-up made from a DAY (the call desk's "Tomorrow", a date pick) lands at the shop's midnight: the day is the word, "12:00 am" is noise (WX-L2C) */
+  var midnight = d.getHours() === 0 && d.getMinutes() === 0;
+  return (n >= -1 && n <= 1 && !midnight) ? w + ' ' + bkTime(iso) : w;
 }
 function crmLocalISO(d) { var p = function (n) { return String(n).padStart(2, '0'); }; return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); }
 function crmPlural(n, one, many) { return n + ' ' + (n === 1 ? tx(one) : tx(many)); }
@@ -93,14 +98,18 @@ function crmRealEmail(v) {
 function crmRailChip(p) {
   if (p.kind === 'walk-in') return '<span class="tag walk" title="' + esc(tx('Phone only — points at the counter')) + '">' + crmIcon('walk') + esc(tx('Walk-in')) + '</span>';
   if (p.on_chitbridge) return '<span class="tag on" title="' + esc(tx('Bills and messages reach them in their app')) + '">' + crmIcon('link') + esc(tx('On ChitBridge')) + '</span>';
-  var shop = p.why_not === 'shopper' || (!!p.bridge_id && p.why_not !== 'inactive' && p.why_not !== 'other_population');
+  /* WX-L2C (2026-10-13, real stack): a MINTED party (the server's kind 'local' — every lead, every party added by name) carries a bridge_id too;
+     it is Local, never a shopper account. The server's kind decides first; the bridge_id heuristic only for a party the server did not call local. */
+  var shop = p.why_not === 'shopper' || (p.kind !== 'local' && !!p.bridge_id && p.why_not !== 'inactive' && p.why_not !== 'other_population');
   var w = p.why_not === 'inactive' ? tx('Account inactive') : p.why_not === 'other_population' ? tx('Test space') : shop ? tx('Shopper account') : tx('Local');
   return '<span class="tag local" title="' + esc(shop ? tx('A shopper account on ChitBridge — they order from your shop. Bills are yours only') : tx('Not on ChitBridge — bills are yours only')) + '">' + crmIcon('house') + esc(w) + '</span>';
 }
 var CRM_ROLE = { customer: 'Customer', supplier: 'Supplier' };
-function crmRoleChips(p) { return (p.roles || []).map(function (r) { return '<span class="tag role">' + esc(tx(CRM_ROLE[r] || r)) + '</span>'; }).join(''); }
+/** a LIVE lead (the server's lead.stage, not yet 'customer'): the stage chip is its one word — "Customer" / "New customer" / "Settled" beside it would say three things at once (WX-L2C) */
+function crmIsLead(p) { return !!(p && p.lead && p.lead.stage && p.lead.stage !== 'customer'); }
+function crmRoleChips(p) { return (p.roles || []).filter(function (r) { return !(r === 'customer' && crmIsLead(p)); }).map(function (r) { return '<span class="tag role">' + esc(tx(CRM_ROLE[r] || r)) + '</span>'; }).join(''); }
 var CRM_SEG = { new: 'New customer', regular: 'Regular', inactive: 'Inactive', high_value: 'High value' };
-function crmSegChip(p) { return p.segment ? '<span class="tag seg">' + esc(tx(CRM_SEG[p.segment] || p.segment)) + '</span>' : ''; }
+function crmSegChip(p) { return p.segment && !crmIsLead(p) ? '<span class="tag seg">' + esc(tx(CRM_SEG[p.segment] || p.segment)) + '</span>' : ''; }
 /** ⭐ A DUE IS SAID THE WAY A SHOPKEEPER SAYS IT: "₹12,450 you'll get" (green) / "₹4,816 you'll give" (red) — a symbol AND a word AND a colour, never the colour alone.
  *  The figure is the server's stored balance (+ they owe you), painted by bkMoney; the sign only picks the word. */
 function crmDueCell(p) {
@@ -271,8 +280,10 @@ function crmBar(crumb, action, overlay) {
   document.getElementById('crumb').innerHTML = crumb || '';
   var a = document.getElementById('crm-bar-act'); if (a) a.innerHTML = action || '';
 }
-function crmAddBtn() { return crmEdit() ? '<button type="button" class="act sm" data-testid="crm-add" data-crm="add">+ ' + esc(tx('Add party')) + '</button>' : ''; }
-function crmAddFuBtn() { return crmEdit() ? '<button type="button" class="act sm" data-testid="crm-fu-add" data-crm="fuadd">+ ' + esc(tx('Add follow-up')) + '</button>' : ''; }
+/** the page action a login may not take is SHOWN, greyed, with the server's sentence — never hidden (rule: show the action, the server decides; FX-L2C) */
+function crmViewOnlyBtn(tid, label, why) { return '<button type="button" class="act sm ghost" disabled aria-disabled="true" title="' + esc(why) + '" data-testid="' + tid + '">' + esc(label) + '</button><span class="why" data-testid="' + tid + '-why">' + esc(why) + '</span>'; }
+function crmAddBtn() { return crmEdit() ? '<button type="button" class="act sm" data-testid="crm-add" data-crm="add">+ ' + esc(tx('Add party')) + '</button>' : crmViewOnlyBtn('crm-add', '+ ' + tx('Add party'), tx('Your login can only view')); }
+function crmAddFuBtn() { return crmEdit() ? '<button type="button" class="act sm" data-testid="crm-fu-add" data-crm="fuadd">+ ' + esc(tx('Add follow-up')) + '</button>' : crmViewOnlyBtn('crm-fu-add', '+ ' + tx('Add follow-up'), tx('Your login can only view')); }   /* never hidden — greyed with the reason */
 function crmGo(hash, replace) { if (replace) { try { history.replaceState(null, '', hash); } catch (_) {} crmRoute(); } else location.hash = hash; }
 
 function crmRoute(frame) {
@@ -327,7 +338,7 @@ function crmPartyCols() {
     { key: 'next', label: 'Next follow-up', prio: 4, w: 170, sort: 'next', html: true, cell: crmFuCell, value: function (p) { return p.next_followup_at || '9999'; } },
     { key: 'phone', label: 'Phone', prio: 7, w: 160, cell: function (p) { return p.phone || '—'; } },
     { key: 'email', label: 'E-mail', prio: 8, w: 220, cell: function (p) { return crmRealEmail(p.email) || '—'; } },
-    { key: 'gstin', label: 'GSTIN', prio: 9, w: 190, mono: true, cell: function (p) { var g = (p.tax_ids || []).filter(function (t) { return t.scheme === 'GSTIN'; })[0]; return g ? g.value : '—'; } },
+    { key: 'gstin', label: taxIdWord(), prio: 9, w: 190, mono: true, cell: function (p) { var g = (p.tax_ids || []).filter(function (t) { return t.scheme === taxIdWord(); })[0]; return g ? g.value : '—'; } },   /* CX0: the pack's tax-id word (GSTIN · ABN · TRN) */
     { key: 'seg', label: 'Segment · groups', prio: 10, w: 190, html: true, cell: function (p) { return (crmSegChip(p) + (p.groups || []).map(function (g) { return '<span class="tag">' + esc(g) + '</span>'; }).join(' ')) || '<span class="sub">—</span>'; }, value: function (p) { return [p.segment].concat(p.groups || []).join(' '); } },
     { key: 'terms', label: 'Credit terms', prio: 11, w: 170, html: true, cell: crmTermsCell, value: function (p) { var t = p.terms || {}, s = t.customer || t.supplier; return s && s.credit_days != null ? s.credit_days : ''; } },
     { key: 'city', label: 'City', prio: 12, w: 140, cell: function (p) { return p.city || '—'; } });
@@ -418,7 +429,7 @@ function crmMiniAsync(p) {
 function crmWhyNot(p, act) {
   var viewer = !crmEdit(), walk = p.kind === 'walk-in', b = Number(p.balance_minor || 0);
   if (act === 'call') return p.phone ? '' : tx('No phone number yet');
-  if (act === 'message') return viewer ? tx('Your login can only view') : (walk ? tx('Add them to your parties first') : (crmConnected(p) ? '' : tx('Not on ChitBridge — messages reach them only there')));
+  if (act === 'message') return viewer ? tx('Your login can only view') : (walk ? tx('Add them to your parties first') : (crmConnected(p) ? '' : tx('Not on ChitBridge')));   /* one short reason beside a greyed button (ai-eye E-14) */
   if (act === 'pay') return viewer ? tx('Your login can only view') : (walk ? tx('Add them to your parties first') : (!CRM.ledger ? tx('Switch on the Ledger first') : (!b ? tx('Nothing is due') : '')));
   if (act === 'followup') return viewer ? tx('Your login can only view') : (walk ? tx('Add them to your parties first') : '');
   return '';

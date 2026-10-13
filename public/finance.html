@@ -364,7 +364,8 @@ function session(){
     return (window.CBOnePerson && CBOnePerson.who(s)) ? s : null;
   }catch(_){ return null; }
 }
-function navTo(k){ location.href = '/app.html#/app/' + encodeURIComponent(k); }
+/* the SMALL APP a screen key hands over to (CB_HOMES, accounts-shell.js) — never the workshop (IX0) */
+function navTo(k){ var h = CB_HOMES[k]; if (h) location.href = h; else toast(tx('Not built outside the workshop yet.')); }
 function openChitPage(id){ window.open('/app.html#/app/chit/' + encodeURIComponent(id), '_blank', 'noopener'); }
 function openChit(id){ openChitSheet(id); }
 const confirmAsk = CBConfirm;

@@ -428,8 +428,8 @@ function whoPaint(){
   /* the avatar is CBAvatar: Profile opens the app's profile, Sign out is the app's (session and per-person nav memory go; the app's other tabs hear cb_sess go). No Settings here — that stays in the app. */
   CBAvatar.mount($('cbav'), { person: CBAvatar.personOf(SESS), items: ['profile', 'support', 'signout'], apiBase: CFG.API_BASE, token: SESS && SESS.token });
 }
-/* the pages of the app this page hands over to (the Day book's to-do cards, a bill) */
-function navTo(k){ location.href = '/app.html#/app/' + encodeURIComponent(k); }
+/* the SMALL APP a screen key hands over to (CB_HOMES, accounts-shell.js) — never the workshop (IX0); no home yet → said, not a dead door */
+function navTo(k){ var h = CB_HOMES[k]; if (h) location.href = h; else toast(tx('Not built outside the workshop yet.')); }
 function openChitPage(id){ window.open('/app.html#/app/chit/' + encodeURIComponent(id), '_blank', 'noopener'); }   /* KEPT door: the sheet's "Open page" (its home is the M53 detail page) */
 function openChit(id){ openChitSheet(id); }   /* every other chit link opens the sheet here: Messages and files are on it (R10) */
 
@@ -655,6 +655,8 @@ async function start(){
     const h = await api('booksHealth');                 /* 404 = the Ledger is off for this shop */
     BK.waiting = (h && h.waiting) || [];
     ON = !!(h && h.enabled !== false);
+    if (h && h.currency) SESSION.currency = h.currency;   /* CX0: the ledger's currency (AUD · AED · INR) — Receive / Pay send it; 'INR' typed here refused an AU shop (routes/books.js:520) */
+    if (h && h.country && h.country.country && h.country.country.code) SESSION.country = h.country.country.code;   /* CX0: the shop's country (CS1 status) — the pack's words on this page (shopReg) */
   }catch(e){
     if (e && e.status === 404) return offCard();
     if (e && e.status === 422 && e.data && /^(NO_COUNTRY_PACK|NO_COUNTRY|COUNTRY_SETUP_PENDING)$/.test(String(e.data.code || ''))) return countryCard(e.data);
