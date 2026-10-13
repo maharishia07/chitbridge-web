@@ -114,15 +114,3 @@ function tblResizable(root) {
     });
   });
 }
-
-/** ⭐ every column of every table, back to the browser's own sizing */
-function tblResetWidths() {
-  try { localStorage.removeItem(TBL_STORE); } catch (_) {}
-  document.querySelectorAll('th[data-rs]').forEach(function (th) { th.style.width = ''; });
-}
-
-/** has the reader adjusted anything? — so a Reset control can say whether it has work to do */
-function tblHasWidths() {
-  var all = tblWidths();
-  return Object.keys(all).some(function (k) { return Object.keys(all[k] || {}).length; });
-}

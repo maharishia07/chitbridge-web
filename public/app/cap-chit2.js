@@ -406,16 +406,6 @@ function c2AmendLine(i, wantPick){
 }
 function c2AmendPick(i){ c2AmendLine(i, true); }
 
-/** The ⚠️ badge, only where the reader actually refused to choose. Same data Design 1 reads. */
-function c2PickBadge(l, i){
-  var n = ((l && (l.ambiguous || l.variant_candidates)) || []).length;
-  if (!n) return '';
-  return '<span onclick="event.stopPropagation();c2AmendPick(' + i + ')"'
-    + ' title="More than one match — pick which"'
-    + ' style="cursor:pointer;font-size:var(--fs-1);font-weight:800;color:var(--warn-2);background:var(--warn-tint);border:1px solid #e6d9a8;'
-    + 'border-radius:5px;padding:2px 7px;white-space:nowrap">' + tx('⚠️ pick item') + '</span>';
-}
-
 /* ── price from catalogue — PREVIEW, then apply ─────────────────────────────────────────────────────────────────
    Athi, 2026-08-13: *"either wholistically or for an individual item the price should be pulled in"* and
    *"always bring the entire content as an overlay box and perform the activity"*.
