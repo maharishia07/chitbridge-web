@@ -511,22 +511,30 @@ W.run('x-o2c', async (w) => {
       });
       await w.step('O8.2', 'Counter -> Bills -> return on the bill -> "Take a return" lists its lines; all, Give it back -> the counter says the return (a credit note) and the bill reads returned', async () => {
         await tillOpen(page);
+        /* the return is taken from Bills (F8), which reads the counter's bills first */
+        await page.click('[data-testid="till-side-bills"]').catch(() => {}); await settle(page, 2500);
         await page.evaluate((no) => retOpen(no), bill && bill.no).catch(() => {}); await page.waitForSelector('#retdlg[open]', { timeout: 15000 }).catch(() => {});
         const sheet = await txt(page, '#retdlg');
         await page.evaluate(() => { try { retAll(); } catch (_) {} }); await settle(page, 400);
-        await page.click('[data-testid="till-return-go"]').catch(() => {}); await settle(page, 4000);
+        const against = norm(await page.locator('#retdlg').innerText().catch(() => '')).match(/Against [^·]+·[^·]+·[^·]+·\s*paid by \w+( \w+)?/);
+        await page.click('[data-testid="till-return-go"]').catch(() => {}); await settle(page, 800);
+        const ask = norm(await page.evaluate(() => Array.from(document.querySelectorAll('dialog[open]')).map((d) => d.innerText).join(' | ')));
+        const asked = (ask.match(/Give back [^?]+\?/) || [''])[0];
+        await page.locator('dialog[open] button', { hasText: /^Yes, give it back/ }).first().click().catch(() => {}); await settle(page, 4000);
         const t = await body(page), dlg = await page.evaluate(() => Array.from(document.querySelectorAll('dialog[open]')).map((d) => d.innerText.replace(/\s+/g, ' ')).join(' | '));
         await shot(page, 'till-return');
         const said = (dlg + ' ' + t).match(/(credit note|return|returned|CN\/)[^|.]{0,80}/i);
         await page.evaluate(() => { document.querySelectorAll('dialog[open]').forEach((d) => { try { d.close(); } catch (_) {} }); });
-        return { ok: /Sugar 1 kg/.test(sheet) && /Toor dal/.test(sheet) && !!said, saw: 'sheet ' + (/Sugar 1 kg/.test(sheet) ? 'lists the lines' : 'EMPTY ("' + sheet.slice(0, 80) + '")') + '; after: "' + (said ? said[0] : 'nothing about the return') + '"' };
+        /* a return of an ON-CREDIT bill must not give cash back, and gives back what was billed (128.99) — findings F-O8b / F-O8c */
+        const credit = !/paid by Cash/.test(against ? against[0] : '') && !/in Cash/.test(asked) && /128\.99/.test(asked);
+        return { ok: /Sugar 1 kg/.test(sheet) && /Toor dal/.test(sheet) && !!said && credit, saw: 'sheet ' + (/Sugar 1 kg/.test(sheet) ? 'lists the lines' : 'EMPTY ("' + sheet.slice(0, 80) + '")') + '; "' + (against ? against[0] : '') + '"; asked "' + asked + '"; after: "' + (said ? said[0] : 'nothing about the return') + '"' };
       });
       await acc(page, 'daybook', '[data-testid="db-list"]');
       await w.step('O8.3', 'Ledger › Day book -> the sale entry now says "Reversed by …" and the reversal entry is there; both stay on the record', async () => {
         const t = await body(page);
-        const rev = await page.locator('[data-testid^="db-rev-"]').count();
+        const rev = await page.locator('[data-testid^="db-rev-"]').count() + await page.locator('[data-testid^="db-head-"]', { hasText: /Return|Credit note|Sales return/i }).count();
         await shot(page, 'daybook-reversed');
-        return { ok: /Reversed by|Reversal/.test(t) && rev > 0, saw: rev + ' reversal mark(s); "' + ((t.match(/Reversed by[^·]{0,60}/) || t.match(/Reversal[^·]{0,60}/) || ['no reversal on screen'])[0]) + '"' };
+        return { ok: /Reversed by|Reversal|Sales return|Credit note/i.test(t) && rev > 0, saw: rev + ' reversal mark(s); "' + ((t.match(/Reversed by[^·]{0,60}/) || t.match(/(Reversal|Sales return|Credit note)[^·]{0,60}/i) || ['no reversal on screen'])[0]) + '"' };
       });
     }
   }
