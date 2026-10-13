@@ -15,7 +15,7 @@ something needs them before any navigation happens.
 router renders a placeholder until `_capLoading` clears, which is the only reason the
 old duplicate `networkScreen()` in app.html was safe to delete.
 
-## Capabilities (39)
+## Capabilities (40)
 
 | file | loading · nav key | what it is |
 |---|---|---|
@@ -54,6 +54,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-service.js` | lazy · on demand | cap-service.js — a chit AS A SERVICE REQUEST. Lazy-loaded (ensureCap('service')) |
 | `cap-standards.js` | lazy · on demand |  |
 | `cap-supplies.js` | lazy · on demand | SUPPLIES: what the shop buys to USE, never to sell |
+| `cap-tasks.js` | — |  |
 | `cap-testing.js` | lazy · on demand |  |
 | `cap-traceability.js` | lazy · traceability | TRACEABILITY capability (lazy via ensureCap('traceability')) |
 | `cap-workforce.js` | lazy · coassists | the CO-ASSIST (workforce) capability: FUNCTIONALITY only |
@@ -115,4 +116,4 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 
 ---
 
-*88 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*89 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
