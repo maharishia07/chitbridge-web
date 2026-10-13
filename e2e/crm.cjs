@@ -16,7 +16,7 @@
  *     history · the kind filter and search ask the SERVER · a local party's empty kinds are not offered
  *  5  FOLLOW-UPS: Late · Today · This week · Later · Done · assignee left → Unassigned + Assign · party removed → greyed + Delete · scope defaults
  *  6  ADD PARTY (one field, three result kinds) · LOG sheet · Add follow-up · EDIT sheet with a list of tax ids · the 409 words
- *  7  ROLES: a co-assist sees no Import / Export / Merge · a viewer sees no action at all
+ *  7  ROLES: a co-assist sees no Import / Export / Merge · a viewer sees every action greyed with the server's sentence (FX-L2C)
  *  8  STATES: migration not run (409) · calls and follow-ups before b276 (503) · the list fails → Try again · Ledger off → no Dues column
  *  9  PHONE: 390 px — document.scrollWidth === 390 on every screen
  *  10 THE LISTS ROUND (Athi 2026-10-09): ONE LINE per party in columns (Role with its heading filter · On ChitBridge · Dues "you'll get/give" · Last activity · Next follow-up red when late) ·
@@ -579,9 +579,9 @@ async function route(S, r) {
   {
     const S = standIn({ me: 'Divya' }), { ctx, p } = await open(S, { session: VIEWER });
     await homeReady(p);
-    ok(await p.locator('[data-testid="crm-add"]').count() === 0, 'a viewer: no Add party');
+    ok(await p.locator('[data-testid="crm-add"]').count() === 1 && await p.locator('[data-testid="crm-add"]').isDisabled() && /only view/.test(await text(p, '[data-testid="crm-add-why"]')), 'a viewer: Add party shown, greyed, with the sentence (FX-L2C)');
     await p.click('[data-testid="crm-row-P-0003"]'); await recReady(p);
-    ok(await p.locator('[data-testid="crm-actions"]').count() === 0 && await p.locator('[data-testid="crm-next"] button').count() === 0 && await p.locator('[data-testid="crm-next-done-fu-03"]').count() === 0, 'a viewer: every action is hidden (not disabled)');
+    ok(await p.locator('[data-testid="crm-actions"]').count() === 1 && await p.locator('[data-testid="crm-actions"] button:not([disabled])').count() === 0 && /only view/.test(await text(p, '[data-testid="crm-actions-why"]')) && await p.locator('[data-testid="crm-next"] button').count() === 0 && await p.locator('[data-testid="crm-next-done-fu-03"]').count() === 0, 'a viewer: every action shown, greyed, with the server\'s one sentence (FX-L2C)');
     ok(await p.locator('[data-testid="crm-next"]').count() === 1, 'a viewer still SEES what is due (Next stays)');
     await p.evaluate(() => { location.hash = '#/followups'; }); await p.waitForSelector('[data-testid^="crm-fu-fu-"]', { timeout: 10000 });
     ok(await p.locator('[data-testid^="crm-fu-done-"]').count() === 0 && await p.locator('[data-testid="crm-fu-add"]').count() === 0, 'a viewer: no Done, no Add follow-up');

@@ -137,7 +137,7 @@ svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke
 .tag svg{width:12px;height:12px}
 .tag.role{background:var(--sub);color:var(--ink)}
 .tag.on{background:var(--green-t);border-color:var(--green-b);color:var(--green-d)}
-.tag.local{border-style:dashed}
+.tag.local{border-color:var(--line-2)}
 .tag.walk{border-style:dotted}
 .tag.seg{background:var(--blue-t);border-color:var(--blue-b);color:var(--blue-i)}
 .tag.amber{background:var(--amber-t);border-color:var(--amber-b);color:var(--amber-i)}
@@ -157,6 +157,7 @@ svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke
 .pcell .l1{display:inline-flex;align-items:baseline;gap:8px;max-width:100%}
 .pcell .nm{overflow:hidden;text-overflow:ellipsis}
 .due{white-space:nowrap;font-weight:700;font-variant-numeric:tabular-nums}
+.cbl-grid .due .late{display:block;font-size:12px;white-space:normal}   /* a list cell: the figure and its word on one line, the late line under them — never into the next column (ai-eye E-10/E-11) */
 .due .w{font-weight:600;font-size:var(--fs-1)}
 .rchips .due{display:inline-flex;align-items:center;gap:4px;min-height:22px;padding:0 8px;border-radius:999px;border:1px solid var(--line-3);background:var(--surface);font-size:12px;font-weight:600}
 .rchips .due.get{border-color:var(--green-b)}.rchips .due.give{border-color:var(--red-b)}
@@ -187,7 +188,7 @@ svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke
 .rhead{display:flex;flex-direction:column;gap:6px}
 .rchips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .idblk{border:1px solid var(--line);border-radius:12px;background:var(--surface);overflow:hidden}
-.idblk.local,.idblk.walk{border-style:dashed}
+.idblk.local,.idblk.walk{border-color:var(--line-2)}
 .idblk .cells{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
 .idblk .c{padding:9px 13px;border-right:1px solid var(--line-2);min-width:0}
 .idblk .c:last-child{border-right:0}
@@ -206,6 +207,7 @@ svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke
 .nx .btns{display:flex;gap:6px;flex-wrap:wrap}
 .nx .ic{display:inline-flex}
 .actbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.actbar>.why{font-size:12px;color:var(--muted);flex-basis:100%}   /* a viewer's bar: every action greyed, the server's ONE sentence once */
 .actbar .more{position:relative}
 .menu{position:absolute;top:calc(100% + 4px);right:0;z-index:20;min-width:220px;background:var(--surface);border:1px solid var(--line-3);border-radius:12px;box-shadow:var(--shadow-menu);padding:4px;display:flex;flex-direction:column}
 .menu button{display:flex;align-items:center;gap:8px;min-height:40px;padding:0 12px;border:0;background:none;border-radius:8px;text-align:left;font-size:14px;color:var(--ink)}
@@ -279,10 +281,11 @@ dialog.sheet::backdrop{background:var(--scrim)}
   .home .hw{display:none}   /* the phone bar holds the page action, the bell, Home and the avatar on one line: Home is its symbol (as CB Accounts) */
   .home{padding:0 11px}
   .rec h1{font-size:23px}
-  .actbar.pin{position:fixed;left:64px;right:0;bottom:0;z-index:30;background:var(--surface);border-top:1px solid var(--line);padding:8px 12px;gap:6px;flex-wrap:nowrap}
+  .actbar.pin{position:fixed;left:64px;right:0;bottom:0;z-index:30;background:var(--surface);border-top:1px solid var(--line);padding:8px 12px;gap:6px;flex-wrap:wrap}   /* two per row when four do not fit — nothing cut off (ai-eye E-19) */
   .actbar.pin .wide-only{display:none}
-  .actbar.pin .act{flex:1;justify-content:center;padding:0 8px}
-  .actbar.pin .more{flex:1}
+  .actbar.pin .act{flex:1 1 calc(50% - 3px);min-width:0;justify-content:center;padding:0 8px}
+  .actbar.pin .more{flex:1 1 calc(50% - 3px)}
+  .actbar.pin>.why{text-align:center}
   .actbar.pin .more>.act{width:100%}
 }
 @media (min-width:621px){ .narrow-only{display:none !important} }
@@ -333,6 +336,7 @@ let UI = { vp: 'lap', lw: 340, custs: [], sups: [] };   /* custs/sups: the rows 
 function go(){ signedOut('Your session ended. Please sign in again.'); }   /* api()'s 401 → this page's own sign-in card (CBSignin), not the app's (R10) */
 </script>
 <script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies (engines screen) -->
+<script src="/app/edition.js"></script>   <!-- CBEdition (AX1): the showing this person chose — the switcher, the bell and the avatar's Edition choice follow it -->
 <script src="/app/avatar.js"></script>   <!-- CBAvatar: the one avatar (Profile · Support · Sign out) and the look it owns — nothing of it is drawn here -->
 <script src="/app/core.js"></script>
 <script src="/app/accounts-shell.js"></script>
@@ -374,8 +378,8 @@ function session(){
   }catch(_){ return null; }
 }
 
-/* the pages of the app this page hands over to */
-function navTo(k){ location.href = '/app.html#/app/' + encodeURIComponent(k); }
+/* the SMALL APP a screen key hands over to (CB_HOMES, accounts-shell.js) — never the workshop (IX0) */
+function navTo(k){ var h = CB_HOMES[k]; if (h) location.href = h; else toast(tx('Not built outside the workshop yet.')); }
 function openChitPage(id){ window.open('/app.html#/app/chit/' + encodeURIComponent(id), '_blank', 'noopener'); }   /* KEPT door: the sheet's "Open page" (its home is the M53 detail page) */
 function openChit(id){ openChitSheet(id); }   /* every other chit link opens the sheet here: Messages and files are on it (R10) */
 const confirmAsk = CBConfirm;   /* the page's own confirm, as CB Accounts uses it */
@@ -407,7 +411,8 @@ if (railMq.addEventListener) railMq.addEventListener('change', railFit); railFit
 function whoPaint(){
   const nm = SESS ? (SESS.entity || SESS.name || '') : '';
   const role = typeof crmRole === 'function' ? crmRole() : 'owner';
-  $('who').innerHTML = `<span class="shop" data-testid="shop-name">${esc(nm)}${role !== 'owner' ? ' · ' + esc(role === 'editor' ? 'co-assist' : 'viewer') : ''}</span>`
+  /* a login's LEVEL in the server's own words (lib/access: editor · view-only) — never the internal word "co-assist" on screen (ai-eye E-8) */
+  $('who').innerHTML = `<span class="shop" data-testid="shop-name" data-level="${esc(role)}">${esc(nm)}${role !== 'owner' ? ' · ' + esc(role === 'editor' ? 'editor' : 'view-only') : ''}</span>`
     + `<span id="crm-bar-act"></span>`
     + `<span id="cb-bell-slot" data-testid="bell-slot"></span>`
     + `<a class="home" href="/" data-testid="crm-home" aria-label="Home">⌂<span class="hw">&nbsp;Home</span></a>`
@@ -423,7 +428,9 @@ function signedOut(why){
   SESS = null; MINE = null; CRM.gen++;
   $('who').innerHTML = ''; $('nav').innerHTML = ''; $('crumb').innerHTML = '';
   /* ⭐ M14: the one sign-in window, here in the card — mobile number or e-mail, the first-time PIN step; signed in → start() */
-  crmCard(`<h2>${esc(why || 'You are signed out')}</h2><div id="signin-host" data-testid="signin-host"></div>`);
+  /* the card's own heading only when there is a reason to give (a session that ended, another tab): the window has its title, and "You are signed out"
+     stayed over the PIN step of a first sign-in (WX-L2C, 2026-10-13) */
+  crmCard(`${why ? '<h2>' + esc(why) + '</h2>' : ''}<div id="signin-host" data-testid="signin-host"></div>`);
   CBSignin.mount($('signin-host'), { apiBase: CFG.API_BASE, surface: 'crm', need: 'person', onIn: function(){ start(); } });
 }
 function closeFirst(r){
@@ -462,7 +469,8 @@ async function start(){
   if (g !== CRM.gen || !MINE) return;
   if (t.others.length) return closeFirst(t);
   /* the Ledger's one read: on → the Dues column and the dues alert exist; off (404) → neither is drawn, no blank column */
-  try{ const h = await api('booksHealth'); CRM.ledger = !!(h && h.enabled !== false); }
+  try{ const h = await api('booksHealth'); CRM.ledger = !!(h && h.enabled !== false);
+    if (h && h.country && h.country.country && h.country.country.code) SESSION.country = h.country.country.code; }   /* CX0: the shop's country — the pack's tax-id word (taxIdWord) on the party list and record */
   catch(e){ CRM.ledger = false; }
   try { localStorage.setItem('cb_crm_ledger', CRM.ledger ? '1' : '0'); } catch (_) {}
   if (g !== CRM.gen) return;

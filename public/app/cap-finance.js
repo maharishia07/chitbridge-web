@@ -27,7 +27,8 @@ async function finLoad(quiet) {
     var r = await api('booksDues', { query: { asOf: bkToday(), finance: '1' } });
     if (g !== FIN.gen) return;
     bkDuesStore(r);
-    FIN.cur = (r && r.currency) || 'INR';
+    FIN.cur = (r && r.currency) || bkCur();
+    if (r && r.currency && typeof SESSION !== 'undefined' && SESSION) SESSION.currency = r.currency;   /* CX0: the ledger's currency reaches Receive / Pay (finance.html sets none) */
     FIN.rows = ((r && r.parties) || []).filter(function (p) { return bkDuesSide(p) === 'rcv' && finOwes(p); });
     FIN.state = 'ready'; FIN.err = null;
   } catch (e) {
