@@ -88,7 +88,7 @@ async function open(page, url, until, ms) { await page.goto('about:blank').catch
 async function shot(page, name) { try { await page.screenshot({ path: path.join(SHOTS, 'wxp2p-' + name + '.png') }); } catch (_) {} return 'wxp2p-' + name + '.png'; }
 async function ctxFor(browser, p, vp) {
   const ctx = await browser.newContext({ viewport: vp || { width: 1366, height: 768 }, locale: 'en-IN', timezoneId: 'Asia/Kolkata', serviceWorkers: 'block' });
-  /* no ctx.route here: this walk answers nothing itself — every /api call reaches the real api (e2e/contract.cjs reads `.route(` as a stand-in) */
+  /* no request interception here: this walk answers nothing itself — every /api call reaches the real api (a stand-in would owe the contract guard its answers) */
   await ctx.addInitScript((s) => { try { localStorage.setItem('cb_sess', s); window.print = function () {}; } catch (_) {} }, JSON.stringify(p.sess));
   const page = await ctx.newPage(); page.on('dialog', (d) => d.accept().catch(() => {}));
   return { ctx, page };
