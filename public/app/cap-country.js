@@ -63,6 +63,10 @@ function csuPrefill() {
     if (!src.fy_start_month && e.fy) src.fy_start_month = p.done ? tx('what you set') : (p.pack && p.pack.id ? txf('the {c} pack', { c: csuCountryName(p.pack.id) }) : tx('the usual year'));
     if (!src.tax) src.tax = e.registered ? tx('your registration') : tx('not set yet');
   }
+  /* CX0: before the step is DONE, the server's country is the database's default (identities.country 'IN', b299 §⚠️), not the owner's fact —
+     the clock's served country (M196) wins over it, and the currency follows the clock too, never the default's INR */
+  if (p && !p.done && g && g.country && g.country.value && g.country.value !== e.country && csuPack(g.country.value)) {
+    e.country = g.country.value; src.country = g.country.from; e.currency = ''; e.fy = 0; }
   if (!e.country && g && g.country && g.country.value) { e.country = g.country.value; src.country = g.country.from; }
   if (!e.currency && g && g.currency && g.currency.value) { e.currency = g.currency.value; src.currency = g.currency.from; }
   if (!e.fy) { var pk = csuPack(e.country); e.fy = (pk && pk.fiscalYear && pk.fiscalYear.startMonth) || (e.country === 'IN' ? 4 : 1);
