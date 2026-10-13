@@ -102,9 +102,9 @@ function csuReadyHTML(cc) {
   var v = CBCountryReady.view(CSU_READY.data, cc, csuCountryName(cc));
   return '<div class="govbox" data-testid="cs-ready">'
     + '<div style="font-weight:700" data-testid="cs-ready-title">' + esc(v.title) + '</div>'
-    + (v.known ? '<div class="hint" data-testid="cs-ready-pack">' + esc(v.pack) + '</div>' : '<div class="hint" data-testid="cs-ready-none">' + esc(v.none) + '</div>')
+    + '<div style="color:var(--grey);font-size:var(--fs-1)" data-testid="' + (v.known ? 'cs-ready-pack' : 'cs-ready-none') + '">' + esc(v.known ? v.pack : v.none) + '</div>'
     + v.rows.map(function (r) {
-      return '<div class="govrow" data-testid="cs-ready-row" data-state="' + esc(r.state) + '"><span class="gw"><span aria-hidden="true">' + esc(r.sym) + '</span> ' + esc(r.area) + '</span><span class="gv" style="font-weight:600">' + esc(r.line) + '</span></div>';
+      return '<div class="govrow" data-testid="cs-ready-row" data-state="' + esc(r.state) + '"><span class="gw"><span aria-hidden="true">' + esc(r.sym) + '</span> ' + esc(r.area) + '</span><span class="gv" style="font-weight:600;font-size:var(--fs-2)">' + esc(r.line) + '</span></div>';
     }).join('')
     + '</div>';
 }
@@ -151,16 +151,18 @@ function renderCountrySetup() {
       + '<div style="color:var(--grey);font-size:var(--fs-2);margin-bottom:6px">' + esc(tx('We filled these in. Change any, then continue.')) + '</div>'
       + '<div class="govbox" data-testid="cs-rows">' + rows + '</div>'
       + (noPack ? '<div class="hint" data-testid="cs-nopack" style="color:var(--warn-2)">' + esc(p.pack.why) + '</div>' : '')
-      + csuReadyHTML(e.country)
       + (CSU.readErr ? '<div class="hint" data-testid="cs-readerr">' + esc(tx('Could not read what registration stored — these are from this device.')) + '</div>' : '')
       + (CSU.err ? '<div class="err" data-testid="cs-err">' + esc(CSU.err) + '</div>' : '')
       + (CSU.later
           ? '<button class="btn" id="cs-open" data-testid="cs-open" onclick="go(\'#/app\')">' + esc(tx('Open the app')) + ' <span class=arw>→</span></button>'
           : '<button class="btn" id="cs-save" data-testid="cs-save">' + esc(tx('Continue')) + ' <span class=arw>→</span></button>')
       + '<div class="hint">' + esc(tx('Set once. A shop in another country is a new registration.')) + '</div>'
+      /* CL3: under Continue, so the step's one action stays beside its four rows; the card scrolls to its top (.auth align-items:safe center)
+         and ends --scroll-tail above the fold (app.html's own rule), so its last row scrolls clear of the pinned Assistant button */
+      + csuReadyHTML(e.country)
       + '</div>';
   }
-  document.getElementById('root').innerHTML = modeRibbon() + '<div class="auth"><div class="card">'
+  document.getElementById('root').innerHTML = modeRibbon() + '<div class="auth"><div class="card" style="margin-bottom:var(--scroll-tail,120px)">'
     + '<div class="top">' + logo() + '<h1 data-testid="cs-title">' + esc(tx('Country setup')) + '</h1></div>' + body + '</div></div>';
   var b = document.getElementById('cs-save'); if (b) b.onclick = csuSave;
 }

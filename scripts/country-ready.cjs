@@ -61,7 +61,7 @@ function rollUp(area, cc) {
   const state = n('ok') === on.length ? 'ok' : n('missing') === on.length ? 'missing' : 'partial';
   const why = on.find((r) => r.s === 'missing') || on.find((r) => r.s === 'partial');
   /* a row with no sub-label (the area's own row, e.g. Connector) speaks through its cell: "❌ offered as if it works (…)" → "offered as if it works" */
-  const words = why ? (why.label || plain(String(area.rows.find((r) => r.label === why.label).cells[cc]).replace(/^(✅|⚠️|⚠|❌|—)/, ''))) : '';
+  const words = why ? (why.label || plain(String(area.rows.find((r) => r.label === why.label).cells[cc]).replace(/^(✅|⚠️|⚠|❌|—)/, '').split(/ — |;/)[0])) : '';
   return { area: area.area, state, line: state === 'ok' ? '' : words, works: n('ok'), of: on.length };
 }
 function build(mdText) {
