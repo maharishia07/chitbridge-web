@@ -40,7 +40,9 @@ async function crmCallsLoad(quiet) {
   }
   crmNav(CRM.route && CRM.route.nav); crmCallsRefresh();
 }
-function crmCallsRefresh() { var a = CALLS.api; if (a && a.el && document.body.contains(a.el)) a.refresh(); }
+/* the outcome buttons are the SERVER's table, read with the queue: the list is mounted before the read answers, so every refresh hands it the
+   current table (WX-L2C, real stack 2026-10-13: the first open of Calls had no caret and no outcome — the mount's actions were the empty list) */
+function crmCallsRefresh() { var a = CALLS.api; if (a && a.el && document.body.contains(a.el)) a.refresh({ actions: crmCallActions() }); }
 
 /* ═══ THE ROW ════════════════════════════════════════════════════════════════════════════════════════════════════ */
 function crmCallPhone(c) {
