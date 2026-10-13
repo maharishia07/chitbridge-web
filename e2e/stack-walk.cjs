@@ -8,6 +8,8 @@
  *
  *   STACK_WEB=http://localhost:8080 STACK_API=http://localhost:3000 STACK_MAIL=http://127.0.0.1:8025 STACK_SHOP=simstores \
  *     NODE_PATH=e2e/node_modules node e2e/stack-walk.cjs
+ * HX2: a cloud spin (chitbridge-api deploy/<platform>/test.sh) runs the same walk against its platform; its sink is public, so it
+ * answers only to STACK_MAIL_TOKEN (sent as `authorization: Bearer …`; unset = the open compose sink).
  * One line per path; shots e2e/shots/walk-stack-NN.png. Exit 0 = every path passed.
  */
 'use strict';
@@ -16,6 +18,7 @@ const W = require('./lib/walk.cjs');
 const WEB = process.env.STACK_WEB || 'http://localhost:8080';
 const API = (process.env.STACK_API || 'http://localhost:3000').replace(/\/+$/, '');
 const MAIL = (process.env.STACK_MAIL || 'http://127.0.0.1:8025').replace(/\/+$/, '');
+const MAIL_AUTH = process.env.STACK_MAIL_TOKEN ? { authorization: 'Bearer ' + process.env.STACK_MAIL_TOKEN } : {};
 const SHOP = process.env.STACK_SHOP || 'simstores';
 const T = (s) => '[data-testid="' + s + '"]';
 
@@ -39,7 +42,7 @@ const body = async (w) => {
     if (!await page.locator(T('signin-code')).count()) return { ok: false, saw: 'no code box: ' + await page.locator(T('signin-why')).textContent() };
     let mail = null;
     for (let i = 0; i < 20 && !mail; i++) {
-      const r = await fetch(MAIL + '/last?to=' + encodeURIComponent(SHOP + '@test.example'));
+      const r = await fetch(MAIL + '/last?to=' + encodeURIComponent(SHOP + '@test.example'), { headers: MAIL_AUTH });
       if (r.ok) mail = await r.json(); else await page.waitForTimeout(250);
     }
     if (!mail || !mail.code) return { ok: false, saw: 'no mail reached the sink in ' + (Date.now() - asked) + ' ms' };
