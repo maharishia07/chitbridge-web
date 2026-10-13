@@ -120,8 +120,10 @@ function csuPrefill() {
     e.country = (p.country && p.country.code) || ''; e.currency = p.currency || ''; e.fy = p.fy_start_month || 0;
     e.registered = !!(p.tax && p.tax.registered); e.number = (p.tax && p.tax.number) || ''; e.scheme = (p.tax && p.tax.scheme) || 'regular';
     src = Object.assign({}, p.source || {});
-    if (!src.country && e.country) src.country = p.done ? tx('what you set') : (g && g.country && g.country.value === e.country && g.country.from) || tx('your registration');
-    if (!src.currency && e.currency) src.currency = p.done ? tx('what you set') : (g && g.currency && g.currency.value === e.currency && g.currency.from) || tx('your registration');
+    /* FX-AU1: registration now stores the guess WITH its source (the server's words, entity_governance.setup_source). A value with no source
+       before the step is done is the database default ('IN'), never the owner's answer — so it is "not confirmed yet", never "your registration" */
+    if (!src.country && e.country) src.country = p.done ? tx('what you set') : (g && g.country && g.country.value === e.country && g.country.from) || tx('not confirmed yet');
+    if (!src.currency && e.currency) src.currency = p.done ? tx('what you set') : (g && g.currency && g.currency.value === e.currency && g.currency.from) || tx('not confirmed yet');
     if (!src.fy_start_month && e.fy) src.fy_start_month = p.done ? tx('what you set') : (p.pack && p.pack.id ? txf('the {c} pack', { c: csuCountryName(p.pack.id) }) : tx('the usual year'));
     if (!src.tax) src.tax = e.registered ? tx('your registration') : tx('not set yet');
   }

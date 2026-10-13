@@ -3621,7 +3621,10 @@ async function doRegister(){
   try{
     if(R.step==="form"){
       /* user_id is the permanent one; display_name simply STARTS as it and is free to change in IAM after. */
-      const r=await api("register",{body:{user_id:R.name, display_name:R.name, email:R.email}});
+      /* ⭐ FX-AU1: the guess the governance panel SHOWED travels with the registration — the server names it in the write that creates the
+         shop (routes/entities.registerNew), so the column default never decides a Sydney shop is Indian. Verify still sends it (COALESCE). */
+      const r=await api("register",{body:{user_id:R.name, display_name:R.name, email:R.email,
+        context:(window.CBGov?CBGov.payload(govCtx()):undefined)}});
       R.email=(r&&r.email)||R.email; R.busy=false; R.step="otp";
       try{ const c=await api("constitutions"); REG.verticals=(c&&c.constitutions)||[]; const dv=(REG.verticals.find(function(x){return x.is_default;})||REG.verticals[0]); REG.constitution=dv?dv.key:null; }catch(_){ REG.verticals=[]; }
       return renderRegister();
