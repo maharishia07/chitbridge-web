@@ -411,7 +411,8 @@ W.run('x-o2c', async (w) => {
         const mode = page.locator('[data-testid="pay_mode"]').first();
         if (await mode.count()) await mode.selectOption('cash').catch(() => {});
         await settle(page, 800);
-        await page.click('[data-testid="pay_record"]').catch(() => {}); await settle(page, 3000);
+        await page.click('[data-testid="pay_record"]').catch(() => {});
+        await page.waitForFunction(() => /Received ₹|Recorded/.test(document.body.innerText), null, { timeout: 8000 }).catch(() => {});
         const out = await txt(page, '[data-testid="pay_outcome"], [data-testid="pay_settled"], [data-testid="pay_done"], .toast'), t = await body(page);
         await shot(page, 'ledger-receive');
         await page.click('[data-testid="pay_done"]').catch(() => {});
