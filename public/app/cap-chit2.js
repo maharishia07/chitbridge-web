@@ -163,7 +163,7 @@ function c2Paint(){
 /* ── helpers ───────────────────────────────────────────────────────────────────────────────────────────────── */
 var c2n = function(v){ return (v === null || v === undefined || v === '') ? null : Number(v); };
 var c2q = function(l){ return [l.quantity, l.unit].filter(function(x){ return x !== null && x !== undefined && x !== ''; }).join(' '); };
-function c2Money(v){ return (v === null || v === undefined) ? '—' : (typeof inr_ === 'function' ? inr_(v) : ('₹' + v)); }
+function c2Money(v){ return (v === null || v === undefined) ? '—' : inr(v); }   /* CU4: the shop's currency (inr), not always ₹ (inr_) */
 function c2Head(t, s){ return '<div style="padding:11px 16px;border-bottom:1px solid var(--line)"><div style="font-weight:600;font-size:var(--fs-3)">' + t + '</div>' + (s ? '<div style="color:var(--grey);font-size:var(--fs-2);margin-top:2px">' + s + '</div>' : '') + '</div>'; }
 function c2Grp(d, s){ return '<div style="padding:13px 16px 5px;display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:var(--fs-1);letter-spacing:.09em;text-transform:uppercase;color:var(--grey);font-weight:600">' + d + '</span><span style="font-size:var(--fs-2);color:var(--grey)">' + (s || '') + '</span></div>'; }
 

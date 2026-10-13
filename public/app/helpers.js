@@ -26,7 +26,6 @@ function scrErr(e, subject, retry){
 }
 
 function cap(s){ return s[0].toUpperCase()+s.slice(1); }
-function inr_(v){ return fmtMoney(v,'INR'); }   /* R1: one money formatter — alias to fmtMoney (currency-aware) */
 
 /**
  * ⭐⭐ ONE GROUP SUM — TOTALLED PER CURRENCY, NEVER ACROSS. Athi, 2026-08-21: *"we have a couple of places

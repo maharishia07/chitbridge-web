@@ -4587,7 +4587,7 @@ async function intDownloadKit(id, adapter){
 /** the OTHER system's health as of this connector's last run — "live" says the connector checked in, never that Tally answered. */
 function intSourceHTML(r){
   var sc = r.source; if (!sc || sc.ok === null || sc.ok === undefined) return '';
-  var when = ''; try { when = sc.at ? ((typeof fmtDateTime === 'function') ? fmtDateTime(sc.at) : new Date(sc.at).toLocaleString()) : ''; } catch (_) {}
+  var when = sc.at ? fmtDateTime(sc.at) : '';
   var sys = r.adapter || tx('the other system');
   if (sc.ok) return '<div style="width:100%;font-size:var(--fs-1);color:var(--ok-2)" data-testid="int-source-' + esc(r.id) + '">✓ ' + esc(txf('{sys} answered', { sys: sys })) + (when ? ' · ' + esc(when) : '') + '</div>';
   return '<div style="width:100%;font-size:var(--fs-1);color:var(--warn-3)" data-testid="int-source-' + esc(r.id) + '">⚠ ' + esc(txf('{sys} did not answer', { sys: sys })) + (when ? ' · ' + esc(when) : '') + (sc.why ? ' · ' + esc(sc.why) : '') + ' — ' + tx('the connector keeps trying and starts by itself when it comes back') + '</div>';
@@ -4794,7 +4794,7 @@ function intReconcileHTML(){
   var open = rows.filter(function(r){ return r.state === 'overdue' || r.state === 'refused' || r.state === 'due' || r.state === 'before_connector' || r.state === 'set_aside'; });
   var word = { overdue: tx('overdue'), refused: tx('refused'), due: tx('on the way'), before_connector: tx('older'), set_aside: tx('set aside') };
   var colour = { overdue: 'var(--warn-3)', refused: 'var(--warn-3)', due: 'var(--grey)', before_connector: 'var(--grey)', set_aside: 'var(--grey)' };
-  var when = function(iso){ try { return (typeof fmtDateTime === 'function') ? fmtDateTime(iso) : new Date(iso).toLocaleString(); } catch (_) { return String(iso || ''); } };
+  var when = fmtDateTime;
   var list = open.length ? open.slice(0, 40).map(function(r){
     var short = String(r.chit_id).slice(0, 8), p = recPlain(r), raw = lsGet('cb_rec_raw_' + short, '0') === '1';
     return '<div data-testid="int-rec-row-' + esc(short) + '" style="display:flex;gap:10px;align-items:baseline;padding:8px 0;border-top:1px solid var(--line);font-size:var(--fs-2)">'
