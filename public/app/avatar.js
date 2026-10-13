@@ -32,8 +32,8 @@
  *
  * ⭐ BOLD: regular text goes to 600 and what was already bold stays the strongest (like the phones' "Bold text"). Italic: no.
  *
- * ⚠️ THE SERVER KEEPS theme · fs · motion · stripes · edition ONLY (routes/entities.js › ui.keys; edition from AX1). Reading font and bold are on THIS machine until
- *    that list gains them — sending them now would be dropped silently, which is how a setting looks saved and is not.
+ * ⭐ THE SERVER KEEPS ALL SEVEN (routes/entities.js › ui.keys): theme · fs · motion · stripes · edition (AX1) · font · weight. Reading font
+ *    and bold were on this machine only until CU3 widened that list — a setting that looks saved and is not was the defect.
  */
 (function (root) {
   'use strict';
@@ -162,7 +162,7 @@
   var HOST = {};                                            /* what the mounted page told us (apiBase · token · sync) */
   function push(now) {
     if (HOST.sync === false) return;
-    var body = { theme: pref('theme'), fs: pref('fs'), motion: pref('motion'), stripes: pref('stripes'), edition: pref('edition') };   /* the server REPLACES the set: every synced key rides every push */
+    var body = { theme: pref('theme'), fs: pref('fs'), motion: pref('motion'), stripes: pref('stripes'), edition: pref('edition'), font: pref('font'), weight: pref('weight') };   /* every synced key rides every push */
     /* the app's (and CB Accounts') own door: CBPrefs debounces, queues offline and stays silent before the migration */
     try { if (typeof CBPrefs !== 'undefined' && typeof SESSION !== 'undefined' && SESSION && SESSION.token) { CBPrefs.push('ui', body); return; } } catch (_) {}
     var base = apiBaseOf(HOST), tok = tokenOf(HOST);
@@ -180,7 +180,7 @@
   /** The server wins — that is the feature — EXCEPT when it has nothing (an empty object means "never chosen"). */
   function hydrate(prefs) {
     if (!prefs || typeof prefs !== 'object') return false;
-    if (!prefs.theme && !prefs.fs && !prefs.motion && !prefs.stripes && !prefs.edition) return false;
+    if (!prefs.theme && !prefs.fs && !prefs.motion && !prefs.stripes && !prefs.edition && !prefs.font && !prefs.weight) return false;
     var changed = false, edNow = pref('edition');
     try {
       if (prefs.theme && (prefs.theme === 'device' || (has(THEMES, prefs.theme) && THEMES[prefs.theme])) && prefs.theme !== pref('theme')) { lsSet(KEY.theme, prefs.theme); changed = true; }
@@ -188,6 +188,8 @@
       if (prefs.motion && ['auto', 'reduce', 'full'].indexOf(prefs.motion) >= 0 && prefs.motion !== pref('motion')) { lsSet(KEY.motion, prefs.motion); changed = true; }
       if (prefs.stripes && STRIPES.some(function (x) { return x[0] === prefs.stripes; }) && prefs.stripes !== pref('stripes')) { lsSet(KEY.stripes, prefs.stripes); changed = true; }
       if (prefs.edition && EDITION.test(prefs.edition) && prefs.edition !== edNow) { lsSet(KEY.edition, prefs.edition); changed = true; }
+      if (prefs.font && FONTS.some(function (x) { return x[0] === prefs.font; }) && prefs.font !== pref('font')) { lsSet(KEY.font, prefs.font); changed = true; }
+      if (prefs.weight && (prefs.weight === 'normal' || prefs.weight === 'bold') && prefs.weight !== pref('weight')) { lsSet(KEY.weight, prefs.weight); changed = true; }
       if (changed) { apply(); repaint(); }
       if (pref('edition') !== edNow) editionReload();   /* this person's saved showing differs from what this machine drew: draw it again */
     } catch (_) {}
@@ -219,7 +221,7 @@
     lsSet(KEY[kind], value);
     apply();
     if (kind === 'edition') { push(true); if (root.CBEdition) root.CBEdition.clearTab(); return editionReload(true); }   /* the person's own choice outranks a showing link */
-    if (kind === 'theme' || kind === 'fs' || kind === 'motion' || kind === 'stripes') push();   /* the person's own choice outranks a showing link */
+    push();                                                 /* every kind reaches the server since CU3 (font · weight were device-only) */
     repaint();
   }
   /** an edition decides what a page DRAWS, so a new one is a fresh draw — without the ?edition= that would win over the choice just made */
@@ -245,7 +247,9 @@
     '.cbav-btn[aria-expanded="true"]{outline:2px solid var(--av-blue);outline-offset:1px}' +
     /* ⚠️ `.cbav .cbav-signin`, not `.cbav-signin` (CL2, 2026-10-13): `.cbav a{color:inherit}` above is MORE specific than a lone class, so the door's
        white label lost to the page's ink — #20303b on the green, 2.02:1, on every lab page a signed-out owner opened (measured by e2e/walk-country-lab.cjs C1) */
-    '.cbav .cbav-signin{display:inline-flex;align-items:center;height:34px;padding:0 15px;border-radius:9px;background:var(--green,#16693F);color:#fff;font-size:calc(13.5px * var(--k,1));font-weight:700;text-decoration:none}' +
+    /* CL3: a list-token page under Dark re-points --green at the theme's --ok (#2E9E5E) — white on it is 3.4:1. The door's ground is the green
+       taken 28% toward black, so the white label is AA in every theme (Cream 9:1, Dark 5.8:1) and Cream's door is still green. */
+    '.cbav .cbav-signin{display:inline-flex;align-items:center;height:34px;padding:0 15px;border-radius:9px;background:color-mix(in srgb,var(--green,#16693F) 72%,var(--av-shade,#000));color:#fff;font-size:calc(13.5px * var(--k,1));font-weight:700;text-decoration:none}' +
     'button.cbav-signin{border:0;cursor:pointer;font-family:inherit}' +
     '.cbav-pop{position:absolute;inset-inline-end:0;top:calc(100% + 6px);z-index:1000;width:min(344px,calc(100vw - 32px));max-height:calc(100vh - 64px);overflow-y:auto;overscroll-behavior:contain;' +
     'padding:12px 14px;background:var(--av-card);color:var(--av-ink);border:1px solid var(--av-line);border-radius:12px;box-shadow:var(--av-shadow);font-size:calc(14px * var(--k,1));line-height:1.35}' +

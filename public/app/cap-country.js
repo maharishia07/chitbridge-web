@@ -23,6 +23,8 @@
  *   · `constituted` (the shop already holds a product or a transaction): Country and Money are greyed — no Change, the reason on the row —
  *     and the server refuses a change with its sentence (409 COUNTRY_CHANGE_IS_NEW_ENTITY), painted here. Before it, a correction is free and
  *     the save's `rederived` says what was set again.
+ *   csuReadyHTML() (CL3) — "Where ChitBridge is for <country>" for the CHOSEN country, so a new shop sees what works for it. The rows are
+ *     CBCountryReady's (app/country-ready.js — the same unit the Country lab paints), drawn in this step's own gov-panel rows; nothing typed.
  */
 'use strict';
 var CSU = { p: null, loading: false, readErr: false, edit: null, src: {}, open: {}, err: '', later: false, host: null, onDone: null };
@@ -168,6 +170,30 @@ function csuSet(k, v) {
   CSU.err = '';
   renderCountrySetup();
 }
+/* CL3 · the readiness reader, loaded once on first paint (a small shared unit, not a cap); its data is read once per page */
+var CSU_READY = { data: null, state: '' };
+function csuReadyLoad() {
+  if (CSU_READY.state) return;
+  CSU_READY.state = 'loading';
+  var go2 = function () { CBCountryReady.load().then(function (d) { CSU_READY.data = d; CSU_READY.state = 'ok'; }, function () { CSU_READY.state = 'err'; }).then(function () { if (/^#\/country/.test(location.hash)) renderCountrySetup(); }); };
+  if (window.CBCountryReady) return go2();
+  var sc = document.createElement('script'); sc.src = '/app/country-ready.js?v=' + (typeof CB_BUILD !== 'undefined' ? CB_BUILD : ''); sc.onload = go2;
+  sc.onerror = function () { CSU_READY.state = 'err'; renderCountrySetup(); }; document.head.appendChild(sc);
+}
+/** "Where ChitBridge is for <country>": one row per product area — symbol · area · one line — in the gov panel's rows */
+function csuReadyHTML(cc) {
+  csuReadyLoad();
+  if (!cc || CSU_READY.state === 'loading' || !CSU_READY.state) return '';
+  if (CSU_READY.state === 'err') return '<div class="hint" data-testid="cs-ready-err">' + esc(tx('Could not read where ChitBridge is for each country.')) + '</div>';
+  var v = CBCountryReady.view(CSU_READY.data, cc, csuCountryName(cc));
+  return '<div class="govbox" data-testid="cs-ready">'
+    + '<div style="font-weight:700" data-testid="cs-ready-title">' + esc(v.title) + '</div>'
+    + '<div style="color:var(--grey);font-size:var(--fs-1)" data-testid="' + (v.known ? 'cs-ready-pack' : 'cs-ready-none') + '">' + esc(v.known ? v.pack : v.none) + '</div>'
+    + v.rows.map(function (r) {
+      return '<div class="govrow" data-testid="cs-ready-row" data-state="' + esc(r.state) + '"><span class="gw"><span aria-hidden="true">' + esc(r.sym) + '</span> ' + esc(r.area) + '</span><span class="gv" style="font-weight:600;font-size:var(--fs-2)">' + esc(r.line) + '</span></div>';
+    }).join('')
+    + '</div>';
+}
 function csuOpen(k) { CSU.open[k] = !CSU.open[k]; renderCountrySetup(); }
 /**
  * one row: what · value · where it came from · Change (the registration's gov panel, with the one tap it lacked).
@@ -233,10 +259,13 @@ function renderCountrySetup() {
           : tx('Country and money can still be corrected now. Once the shop has a product or a transaction they are fixed for good.')) + '</div>'
       /* CPS1: the Country Standard — what a country pack carries and what each pack still lacks (standards.html opens on that row's search) */
       + '<div class="hint"><a href="/standards.html?std=country" data-testid="cs-standard" style="font-weight:600;color:var(--blue);cursor:pointer">' + esc(tx('What a country pack must carry — the Country Standard')) + ' ›</a></div>'
+      /* CL3: under Continue, so the step's one action stays beside its rows; the card scrolls to its top (.auth align-items:safe center)
+         and ends --scroll-tail above the fold (app.html's own rule), so its last row scrolls clear of the pinned Assistant button */
+      + csuReadyHTML(e.country)
       + '</div>';
   }
   if (CSU.host) CSU.host.innerHTML = '<div class="cs"><h2 class="shop-h" data-testid="cs-title">' + esc(tx('Country setup')) + '</h2>' + body + '</div>';
-  else document.getElementById('root').innerHTML = modeRibbon() + '<div class="auth"><div class="card">'
+  else document.getElementById('root').innerHTML = modeRibbon() + '<div class="auth"><div class="card" style="margin-bottom:var(--scroll-tail,120px)">'
     + '<div class="top">' + logo() + '<h1 data-testid="cs-title">' + esc(tx('Country setup')) + '</h1></div>' + body + '</div></div>';
   var b = document.getElementById('cs-save'); if (b) b.onclick = csuSave;
 }

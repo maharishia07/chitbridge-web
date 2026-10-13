@@ -15,7 +15,7 @@ let n = 0; const ok = (c, m) => { assert(c, m); n++; console.log('  ok  ' + m); 
 /* ── M141: Add missing posts against the ledger the statement belongs to ── */
 const bank = src('cap-bank.js'), opened = [];
 const cx = vm.createContext({ BKB: { acct: '1520', file: { hash: 'h' }, accts: [{ code: '1500', role: 'bank' }, { code: '1520', role: 'card' }, { code: '1530', role: null }] },
-  bkbMinorText: (m) => String(m / 100), toast() {}, tx: (x) => x, enOpen: (p) => opened.push(p) });
+  bkbMinorText: (m) => String(m / 100), toast() {}, tx: (x) => x, enOpen: (p) => opened.push(p), bkbEventWord: () => '' });   /* INT5b: BR1's bankAdd names the event it will learn (bkbEventWord) */
 vm.runInContext(fn(bank, 'bkbModeOf') + fn(bank, 'bankAdd'), cx);
 const charge = { amount_minor: 590, stmt: { date: '2026-10-10', narration: 'CHARGES', row: 3 }, sugg: { event: { type: 'expense', class: 'bank_charges', narration: 'Bank charges' } } };
 cx.bankAdd(charge);

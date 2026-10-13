@@ -23,6 +23,8 @@ html.cbsk,html.cbsk body{margin:0;height:100%}
 .cbsk .screen > #emp,.cbsk .screen > #nw,.cbsk .screen > #tk{flex:1 1 auto;min-height:0;padding:16px 20px 20px;overflow:auto}
 .cbsk #emp .emp-list,.cbsk #nw .nw-list,.cbsk #tk .tk-list{min-height:0;flex:1}
 .cbsk #nw .nw-body{min-height:0;overflow:auto}
+/* the Country lab (CL3): its own two panes carry their padding; the work area scrolls as one, under the shell header */
+.cbsk .screen > #cl{flex:1 1 auto;min-height:0;overflow:auto}
 @media (max-width:760px){
   .cbsk .side{width:64px}
   .cbsk .side .label,.cbsk #toggleNav{display:none}
@@ -33,3 +35,10 @@ html.cbsk,html.cbsk body{margin:0;height:100%}
 /* the shell's header sits in the main pane, above the screen — not as the full-window overlay it is on a page without a skeleton */
 .cbsk #shell.cbsh.full{position:static;inset:auto;display:block;background:transparent;z-index:auto}
 .cbsk #shell .cbsh-work:empty{display:none}
+/* CL3: in app mode the work area holds two slots; when neither has anything (signed in, or a public page) it is no blank band under the header */
+.cbsk #shell .cbsh-work:not(:has(.cbsh-signin:not(:empty))):not(:has(.cbsh-slotwork:not(:empty))){display:none}
+/* CL3 · UNDER A CHOSEN THEME the sidebar's own names are re-pointed at the theme's tokens (the avatar's data-tokens="list" pattern), scoped to the
+   sidebar so a page's own --accent buttons are untouched. Before this the sidebar kept Cream's ground under Dark's light ink (1.03:1, the owner's
+   "settings sidebar" finding). Cream (no data-themed) is byte-for-byte what it was. */
+html.cbsk[data-themed] .side{--side:var(--card,#f4ecdc);--line-side:var(--line,#e2d6bc);--hover-nav:var(--hover,#ece1c9);--muted-2:var(--grey-2,#5c5240);--accent:var(--blue,#1f5f5b);color:var(--ink,#2a2418)}
+html.cbsk[data-themed] .side .nav-btn{color:var(--ink-2,var(--ink,#3d3527))}

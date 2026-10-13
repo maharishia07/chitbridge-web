@@ -24,6 +24,9 @@ const code = (s) => '`' + s + '`';
 const fileRef = (f) => f.fn ? code(f.file) + ' ' + code(f.fn + '()') : code(f.file);
 const routeRef = (r) => code(r.m + ' ' + r.p) + ' ' + code(r.file);
 const joinOr = (list, fn) => (list && list.length ? list.map(fn).join('<br>') : '—');
+/* a flow's page name: Windows cannot check out a file called CON · PRN · AUX · NUL · COM1–9 · LPT1–9 (any case, any extension),
+   so such an id gets `<id>-flow.md` (FIX-INT5a: docs/process/PRN.md broke the owner's checkout). e2e/guard-static.cjs §18 holds every tracked path to it. */
+const pageOf = (id) => (/^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(id) ? id + '-flow' : id) + '.md';
 const moduleOf = (id) => (MAP.modules.find((m) => m.id === id) || { name: id }).name;
 
 /* ── one flow page ─────────────────────────────────────────────────────────────────────────────────────────────── */
@@ -91,7 +94,7 @@ function indexPage() {
   L.push('|---|---|---|---|---|---|---|');
   MAP.flows.forEach((f) => {
     const c = (st) => f.steps.filter((s) => s.status === st).length;
-    L.push('| [' + f.id + '](' + f.id + '.md) | ' + f.name + ' | ' + f.sap + ' | ' + f.steps.map((s) => s.step).join(' → ') + ' | ' + c('ok') + ' | ' + c('warn') + ' | ' + c('missing') + ' |');
+    L.push('| [' + f.id + '](' + pageOf(f.id) + ') | ' + f.name + ' | ' + f.sap + ' | ' + f.steps.map((s) => s.step).join(' → ') + ' | ' + c('ok') + ' | ' + c('warn') + ' | ' + c('missing') + ' |');
   });
   L.push('');
   L.push('## Flows × modules — which module owns which step');
@@ -128,7 +131,7 @@ function indexPage() {
 
 /* ── write or check ────────────────────────────────────────────────────────────────────────────────────────────── */
 const pages = {};
-MAP.flows.forEach((f) => { pages[f.id + '.md'] = flowPage(f); });
+MAP.flows.forEach((f) => { pages[pageOf(f.id)] = flowPage(f); });
 pages['INDEX.md'] = indexPage();
 
 const check = process.argv.includes('--check');

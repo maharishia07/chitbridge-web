@@ -273,6 +273,12 @@ var CBPrefs = (function(){
   var timers = {};
   return {
     push: function(kind, obj){
+      /* ⚠️ CU3: the server merges (RFC 7386, CU2) — a key not sent is KEPT. CBLocale.push sends prefs(), which leaves out
+         cleared keys, so "use my device's zone" / "regional default" never reached the server. snapshot() is the same
+         keys with every clear as '' (= remove). Until the locale engine sends snapshot() itself, this door does. */
+      if (kind === 'locale' && typeof window !== 'undefined' && window.CBLocale && typeof window.CBLocale.snapshot === 'function') {
+        try { obj = window.CBLocale.snapshot(); } catch(_){}
+      }
       if (timers[kind]) { try { clearTimeout(timers[kind]); } catch(_){} }
       timers[kind] = setTimeout(function(){
         try {
@@ -293,7 +299,7 @@ const OUTBOX_KEYS = new Set([
      name — e2e/ep-aliases.cjs); had the survivor not been added here, that write would have quietly stopped
      being queued when the counter is offline, with nothing anywhere to say so. */
   'saveProfile','shopStatus','saveSettings','vaultSave','profilePut',
-  'savePrefs',      // b165 — idempotent whole-object overwrite of one's own preferences; the caller ignores the body
+  'savePrefs',      // b165 — an idempotent merge-patch (CU2) of one's own preferences; the caller ignores the body
   'connRespond','netApprove','netDecline','netSuspend','netResume','netDisconnect',
   'supDel','supPatch','prodDel','prodEdit','folderRename','folderDelete','folderMove',
   'connectorDelete','connectorConnToggle',

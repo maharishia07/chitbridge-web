@@ -15,6 +15,7 @@ if (typeof EP !== 'undefined') { Object.assign(EP, {
   booksAccountAdd: { m: 'POST', p: '/api/books/accounts' },
   booksDaybook:    { m: 'GET',  p: '/api/books/daybook' },
   booksLedger:     { m: 'GET',  p: '/api/books/ledger/:account' },
+  booksBankRail:   { m: 'GET',  p: '/api/books/bank/rail' },         /* BR1: what the other parties already TOLD us (their payment advices) + the bank questions asked — the statement itself never goes */
   booksTB:         { m: 'GET',  p: '/api/books/trial-balance' },
   booksPL:         { m: 'GET',  p: '/api/books/pl' },
   booksBS:         { m: 'GET',  p: '/api/books/bs' },
@@ -33,6 +34,7 @@ if (typeof EP !== 'undefined') { Object.assign(EP, {
   booksChequeStep: { m: 'POST', p: '/api/books/cheques/:id/status' },
   booksRetry:      { m: 'POST', p: '/api/books/outbox/retry' },
   booksTodo:       { m: 'GET',  p: '/api/books/todo' },              /* what the owner has to do next — the API lists the checks; the To-do page only draws them */
+  booksEntryPost:  { m: 'POST', p: '/api/books/entries' },           /* F4: the owner's journal — Pay's early-pay discount sends the server's ready body (against_ref settles the bill) */
 }); }
 
 /**
@@ -137,7 +139,7 @@ function bkCss() {
 bkCss();
 
 /* ── money and dates: through the engines, never by hand ── */
-function bkCur(c) { return c || (typeof SESSION !== 'undefined' && SESSION.currency) || ((typeof shopReg === 'function' && shopReg()) || {}).currency || 'INR'; }   /* CX0: the ledger's, else the PACK's money; INR only when no country is known */
+function bkCur(c) { return c || (typeof SESSION !== 'undefined' && SESSION.currency) || (typeof BK !== 'undefined' && BK.cur) || ((typeof shopReg === 'function' && shopReg()) || {}).currency || 'INR'; }   /* the ledger's own money (BK.cur, GET /health — WX-R2R), else the PACK's (CX0); INR only when no country is known */
 function bkDec(c) { try { return CBMoney.decimals(bkCur(c)); } catch (_) { return 2; } }
 function bkMoney(minor, c) {
   var n = Number(minor || 0) / Math.pow(10, bkDec(c));
@@ -534,14 +536,27 @@ async function partyEditSave(kind, partyId) {
    duplicate band. There is no "Later": "Keep it as an advance" is a switch that says what it does. The words of every warning and of
    the outcome come from the server; this unit paints them. */
 var PAY = null;
-function payOpen(kind, partyId) {
+/**
+ * The third argument (every other door calls payOpen(kind, partyId) as before) is ONE of:
+ *   a name (string) — the Dues / CB Finance row's own name, for pages that load no party lists (WX-O2C);
+ *   pre — BR1's payment advice the Bank page read: { amount_minor, mode, reference, name, bills } (payPrefill);
+ *   opt (F4) — { offer, after }: offer = the server's early-pay offer for one bill (GET /dues?side=supplier&finance=1 → payable.early: { words,
+ *          pay_minor, record, gst_note, valid }) — its sentence sits under Amount, the amount starts at the server's pay_minor, and after Record the
+ *          discount is offered as the owner's journal (record.body, sent as given) beside a GST credit note button the server greys with its sentence.
+ *          Nothing here works out a discount. after = called when this form wrote something (a payment, a discount) — CB Finance re-reads its list.
+ */
+function payOpen(kind, partyId, pre) {
   var r = partyRowOf(kind, partyId) || {};
-  /* ⚠️ WX-P2P-10 (2026-10-13, the real stack): on CB Accounts (no supplier / customer list loaded) the sheet opened as "Pay ·" — no name until the
-     preview answered. The Payables row that opened it already holds the name (BK.dues, the one dues read); the preview's party.name still wins later. */
-  var d = (BK.dues && BK.dues[partyId]) || {};
-  PAY = { kind: kind, partyId: partyId, name: r.nickname || r.display_name || d.name || '', ref: bkRef(), seq: 0, ack: [], advice: false, preview: null };   /* one ref per opened form */
+  /* ⚠️ WX-P2P-10 + WX-O2C (2026-10-13, the real stack): on CB Accounts / Receivables / CB Finance (no supplier / customer list loaded) the sheet
+     opened as "Pay ·" / "Receive · " — no name until the preview answered. The row that opened it holds the name: BK.dues (the one dues read), or
+     the name the Dues / Finance row hands (a string). A prefill object (bank rec) still carries its own name; the preview's party.name wins later. */
+  var d = (BK.dues && BK.dues[partyId]) || {}, nm = typeof pre === 'string' ? pre : '';
+  var o = pre && typeof pre === 'object' && ('offer' in pre || 'after' in pre) ? pre : {}, offer = o.offer && o.offer.valid ? o.offer : null;
+  if (typeof pre === 'string' || o === pre) pre = null;
+  PAY = { kind: kind, partyId: partyId, name: r.nickname || r.display_name || d.name || nm || '', ref: bkRef(), seq: 0, ack: [], advice: false, preview: null, offer: offer, after: o.after || null };   /* one ref per opened form */
   modal('<div class="mhd"><div class="t" id="pay_title" data-testid="pay_title">' + esc(kind === 'supplier' ? tx('Pay') : tx('Receive')) + ' · ' + esc(PAY.name) + '</div></div><div class="mbody" id="pay_body" style="display:flex;flex-direction:column;gap:8px">'
-    + '<label>' + tx('Amount') + '' + bkMoneyInput({ id: 'pay_amt', on: 'payPreviewSoon()' }) + '</label>'
+    + '<label>' + tx('Amount') + '' + bkMoneyInput({ id: 'pay_amt', on: 'payPreviewSoon()', minor: offer ? offer.pay_minor : null }) + '</label>'
+    + (offer ? '<div data-testid="pay_offer" style="font-size:var(--fs-1);color:var(--grey)">' + esc(offer.words) + '</div>' : '')
     + '<label>' + tx('How') + '<select class="inp" id="pay_mode" data-testid="pay_mode" onchange="payModePaint()"><option value="cash">' + tx('Cash') + '</option>' + payModeOpts() + '<option value="bank">' + tx('Bank') + '</option><option value="card">' + tx('Card') + '</option><option value="cheque">' + tx('Cheque') + '</option></select></label>'
     + '<label>' + tx('Reference') + '<input class="inp" id="pay_ref" data-testid="pay_ref" style="width:100%"></label>'
     + '<div id="pay_chq" hidden style="gap:6px"><input class="inp" id="pay_chqno" data-testid="pay_chqno" placeholder="' + esc(tx('Cheque no')) + '"><input class="inp" id="pay_bank" placeholder="' + esc(tx('Bank')) + '"><input class="inp" id="pay_chqdate" type="date"></div>'
@@ -553,6 +568,51 @@ function payOpen(kind, partyId) {
     + '</div><div class="mfoot" id="pay_foot"><button onclick="closeModal()">' + tx('Cancel') + '</button><button class="pri" data-testid="pay_record" onclick="payRecord()">' + tx('Record') + '</button>'
     + (kind === 'supplier' ? '' : '<button data-testid="pay_remind" onclick="payRemind()">' + tx('Not paid yet — remind me') + '</button>') + '</div>');
   payPaint();
+  if (pre) payPrefill(pre);
+  else if (offer) payPreviewSoon(0);   /* F4: the amount came filled in: read its bills now */
+}
+/**
+ * BR1 · a payment the OTHER PARTY already told us about (their payment advice chit, read by the Bank page): the amount, How (the statement's
+ * own ledger), their reference and the bills the chit settles are placed — the person still presses Record, and the ONE books writer
+ * (POST /payments) decides. pre = { amount_minor, mode, reference, name, bills: [{ ref_chit_id, applied_minor }] }
+ */
+function payPrefill(pre) {
+  PAY.pre = pre;
+  if (!PAY.name && pre.name) { PAY.name = pre.name; var t = document.getElementById('pay_title'); if (t) t.textContent = (PAY.kind === 'supplier' ? tx('Pay') : tx('Receive')) + ' · ' + PAY.name; }
+  var a = document.getElementById('pay_amt'); if (a && pre.amount_minor > 0) a.value = bkMinorText(pre.amount_minor);
+  var m = document.getElementById('pay_mode'); if (m && pre.mode) { m.value = pre.mode; payModePaint(); }
+  var f = document.getElementById('pay_ref'); if (f && pre.reference) f.value = pre.reference;
+  payPreviewSoon(0);
+}
+/** the bills the advice names take the amounts it names; the others 0 — only when the advice's bills are among the open ones (else the server's proposal stands) */
+function payPreBills(r) {
+  var bills = (PAY.pre && PAY.pre.bills) || [], rows = (r && r.proposal) || [];
+  if (!bills.length || !rows.some(function (it) { return bills.some(function (b) { return b.ref_chit_id === it.against_ref; }); })) return;
+  rows.forEach(function (it) {
+    var b = bills.filter(function (x) { return x.ref_chit_id === it.against_ref; })[0];
+    it.apply_minor = b ? Math.min(b.applied_minor != null ? b.applied_minor : it.open_minor, it.open_minor) : 0;
+  });
+}
+/** F4: the early-pay step under the Pay outcome — the owner's journal (the server's ready body, one client_ref) and the GST credit note the server greys */
+function payDiscHTML(f) {
+  var rec = f.record || { ok: false }, gst = f.gst_note || { ok: false };
+  return '<div data-testid="pay_disc" style="display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line,#e6dcc6);padding-top:8px">'
+    + '<span data-testid="pay_disc_words">' + esc(f.words) + '</span>'
+    + '<span style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="pri" data-testid="pay_disc_record" onclick="payDiscRecord(this)"' + (rec.ok ? '' : ' disabled aria-disabled="true"') + '>' + esc(tx('Record discount')) + '</button>'
+    + '<button type="button" data-testid="pay_gst_note" disabled aria-disabled="true">' + esc(tx('GST credit note')) + '</button></span>'
+    + (rec.ok ? '' : '<span class="hint" data-testid="pay_disc_why_not">' + esc(rec.say || '') + '</span>')
+    + '<span class="hint" data-testid="pay_gst_why">' + esc(gst.say || '') + '</span>'
+    + '<span id="pay_disc_out" data-testid="pay_disc_out" class="hint"></span></div>';
+}
+function payDiscRecord(btn) {
+  var f = PAY && PAY.offer; if (!f || !f.record || !f.record.ok) return;
+  return CBAction.run(btn, function () { return api('booksEntryPost', { body: Object.assign({ date: bkToday() }, f.record.body) }); },
+    { key: 'pay-disc:' + f.record.body.client_ref, out: 'pay_disc_out', failed: tx('Could not record the discount'),
+      /* the outcome where it happened: the button becomes the fact (a second press would only replay the same client_ref) */
+      outcome: function (r) {
+        var t = document.createElement('span'); t.className = 'tag green'; t.setAttribute('data-testid', 'pay_disc_done');
+        t.textContent = '✓ ' + tx('Discount recorded') + (r && r.entry_no ? ' · ' + r.entry_no : ''); btn.replaceWith(t);
+        if (PAY && PAY.after) PAY.after(); } });
 }
 /** "Not paid yet — remind me" (SPEC-payments D3): nothing posts; it is the Remind of the Dues row — a message on the oldest open bill */
 function payRemind() { if (!PAY) return; var id = PAY.partyId; closeModal(); return bkRemind(id, null); }
@@ -588,7 +648,7 @@ async function payPreview() {
   try {
     var q = payIntent(false), r = await api('booksPayPreview', { body: { party_id: PAY.partyId, direction: payDirection(), amount_minor: amt, currency: bkCur(), allocate: q.allocate } });
     if (PAY === p && n === PAY.seq) {
-      PAY.preview = r; PAY.ack = []; PAY.amount = amt;
+      PAY.preview = r; PAY.ack = []; PAY.amount = amt; payPreBills(r);
       /* a door that does not hold the party's list (the CRM record) learns the name from the server's own answer */
       if (!PAY.name && r.party && r.party.name) { PAY.name = r.party.name; var ti = document.getElementById('pay_title'); if (ti) ti.textContent = (PAY.kind === 'supplier' ? tx('Pay') : tx('Receive')) + ' · ' + PAY.name; } var w = document.getElementById('pay_why'); if (w) w.textContent = ''; payPaint(); }
   } catch (e) {
@@ -605,7 +665,7 @@ function payPaint() {
     + '<table class="bktab" style="width:100%;font-size:var(--fs-1)"><thead><tr><th>' + tx('Bill') + '</th><th>' + tx('Due') + '</th><th class="num">' + tx('Open') + '</th><th class="num">' + tx('Apply') + '</th></tr></thead><tbody>'
     + rows.map(function (it, i) {
         return '<tr data-testid="alloc-row-' + i + '"><td class="mono">' + esc(it.bill_no || it.against_ref) + (it.disputed ? ' <span class="optchip" style="color:var(--warn-2)">' + tx('In dispute') + '</span>' : '') + '</td><td>' + esc(bkDate(it.due_date)) + '</td><td class="num">' + esc(bkMoney(it.open_minor)) + '</td>'
-          + '<td class="num">' + bkMoneyInput({ id: 'alloc_' + i, tid: 'alloc-' + i, minor: it.apply_minor || null, ph: '', w: '150px', on: 'payLeftPaint()', extra: it.disputed ? 'disabled title="' + esc(tx('In dispute · settle it first')) + '"' : '' }) + '</td></tr>';
+          + '<td class="num">' + bkMoneyInput({ id: 'alloc_' + i, tid: 'alloc-' + i, minor: it.apply_minor || null, ph: '', w: 'min(150px,30vw)', on: 'payLeftPaint()', extra: it.disputed ? 'disabled title="' + esc(tx('In dispute · settle it first')) + '"' : '' }) + '</td></tr>';
       }).join('') + '</tbody></table>';
   payLeftPaint();
   var ws = payOpenWarnings();
@@ -695,8 +755,10 @@ function payOutcomePaint(r) {
   pb.innerHTML = html;
   if (r.advice && typeof CBAdvice !== 'undefined') CBAdvice.mount(document.getElementById('pay_advice'), { payment_id: PAY.id, advice: r.advice, party: PAY.name, context: { host: typeof ACC !== 'undefined' ? 'accounts' : 'crm' },
     onDone: function (res) { bkAdviceFlip(PAY.id, res, null); } });
+  if (PAY.offer) pb.insertAdjacentHTML('beforeend', payDiscHTML(PAY.offer));   /* F4: the discount is the owner's next step, never automatic */
   pf.innerHTML = '<button class="pri" data-testid="pay_done" onclick="closeModal()">' + tx('Done') + '</button>';
-  booksAfterPay(r);   /* the statement, the dues chip and the record's header repaint now, behind the outcome */
+  booksAfterPay(r);
+  if (PAY.after) PAY.after();   /* the statement, the dues chip and the record's header repaint now, behind the outcome */
 }
 function booksAfterPay(r) {
   var pid = PAY && PAY.partyId;
@@ -743,8 +805,7 @@ function bkRange(id) {
   if (id === 'db' && BK.dbp) return { from: BK.dbp.from, to: BK.dbp.to };
   if (id === 'lg' && BK.lgp) return { from: BK.lgp.from, to: BK.lgp.to };   /* the Ledgers' period chip (bkLgHead) */   /* the Day book's period chip (bkDbPeriod) */
   var from = (document.getElementById(id + '_from') || {}).value, to = (document.getElementById(id + '_to') || {}).value;
-  var d = new Date(); var fyStart = (d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1) + '-04-01';
-  return { from: from || fyStart, to: to || bkToday() };
+  return { from: from || bkFyFrom(), to: to || bkToday() };
 }
 function bkRangeHTML(id, again) {
   var r = bkRange(id);
@@ -965,7 +1026,7 @@ function bkDvNext(e, c, lines, noParty, mine) {
 }
 /** the Day book's period: Today · This month · This FY · Custom — applies on pick (no Show button); bkRange('db') reads it */
 function bkDbPeriod(preset, custom) {
-  var today = bkToday(), d = new Date(), fy = (d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1) + '-04-01';
+  var today = bkToday(), fy = bkFyFrom();
   if (preset === 'today') return { preset: 'today', from: today, to: today };
   if (preset === 'month') return { preset: 'month', from: today.slice(0, 7) + '-01', to: today };
   if (preset === 'custom' && custom && custom.from && custom.to) return { preset: 'custom', from: custom.from, to: custom.to };
@@ -991,7 +1052,7 @@ function bkDvHead() {
   if (n.waiting) notices.push({ cls: 'warn', tid: 'todo-waiting', text: n.waiting + ' ' + tx('waiting to be recorded'), onOpen: function () { bkTab('waiting'); } });
   if (!n.accept && !n.overdue && !n.cheques && !n.waiting) chips.push({ tid: 'todo-none', text: tx('Nothing waiting on you') });
   return { period: { label: bkDbPeriodLabel(q, p.preset), value: p.preset, custom: { from: q.from, to: q.to },
-      presets: [['today', tx('Today')], ['month', tx('This month')], ['fy', tx('This FY (Apr–Mar)')], ['custom', tx('Custom')]],
+      presets: [['today', tx('Today')], ['month', tx('This month')], ['fy', bkFyWord('This FY')], ['custom', tx('Custom')]],
       onPick: function (v, range) { if (v === 'custom' && !range) return; BK.dbp = bkDbPeriod(v, range); bkTab('daybook', true); } },
     chips: chips, notices: notices,
     /* ＋ Entry (cap-entry.js, loaded by CB Accounts): the one door to a manual entry, in the slot CBList gives the head — the page that loads cap-entry offers it, nobody else */
@@ -1324,7 +1385,7 @@ function bkLgPeriodHead() {
   var pane = document.getElementById('lt_pane'), word = { today: 'Today', month: 'This month', fy: 'This FY' }[p.preset];
   /* the chip says the preset's name ("This FY") where the pane is too narrow for the dates — they are the chip's popover and the figures' own period */
   return { label: word && pane && pane.clientWidth < 1100 ? tx(word) : bkDbPeriodLabel(q, p.preset), value: p.preset, custom: { from: q.from, to: q.to },
-    presets: [['today', tx('Today')], ['month', tx('This month')], ['fy', tx('This FY (Apr–Mar)')], ['custom', tx('Custom')]],
+    presets: [['today', tx('Today')], ['month', tx('This month')], ['fy', bkFyWord('This FY')], ['custom', tx('Custom')]],
     onPick: function (v, range) { if (v === 'custom' && !range) return; BK.lgp = bkDbPeriod(v, range); BK.lt.r = null; BK.lt.noParty = false; if (BK.lt.api) BK.lt.api.refresh(); bkLtLoad(); } };
 }
 /**
@@ -1545,8 +1606,8 @@ async function bkLedgers(body) {
     var root = document.getElementById('bk_lt');
     bkLtBind(root); bkLtTreePaint();
     if (typeof ResizeObserver !== 'undefined') { var last = bkLtNarrow(); try { new ResizeObserver(function () { var n = bkLtNarrow(); if (n !== last) { last = n; bkLtTreePaint(); if (BK.lt.api) BK.lt.api.refresh(); } }).observe(root); } catch (_) {} }
-    var s0 = BK.lt.sel; BK.lt.sel = null;
-    if (s0 && !bkLtNarrow()) bkLtOpen(s0.party ? { code: s0.code, party: s0.party } : { code: s0.code }); else if (!s0) bkLtRestore();
+    var s0 = BK.lt.sel, go = !!BK.lt.go; BK.lt.sel = null; BK.lt.go = false;
+    if (s0 && (go || !bkLtNarrow())) bkLtOpen(s0.party ? { code: s0.code, party: s0.party } : { code: s0.code }); else if (!s0) bkLtRestore();
     if (typeof CBKural !== 'undefined' && !BK.lt.sel) CBKural.set('accounts');
   } catch (e) { body.innerHTML = bkErr(e); }
 }
@@ -1554,7 +1615,7 @@ async function bkTB(body) {
   var asOf = (document.getElementById('tb_asof') || {}).value || bkToday();
   try {
     var r = await api('booksTB', { query: { asOf: asOf } }); var c = r && r.currency;
-    var rows = ((r && r.rows) || []).map(function (x) { return '<tr><td class="mono">' + esc(x.code) + '</td><td>' + esc(x.name) + '</td><td class="num">' + (x.dr_minor ? esc(bkMoney(x.dr_minor, c)) : '') + '</td><td class="num">' + (x.cr_minor ? esc(bkMoney(x.cr_minor, c)) : '') + '</td></tr>'; }).join('');
+    var rows = ((r && r.rows) || []).map(function (x) { return '<tr><td class="mono">' + esc(x.code) + '</td><td>' + bkLedgerLink(x.code, x.name, 'tb') + '</td><td class="num">' + (x.dr_minor ? esc(bkMoney(x.dr_minor, c)) : '') + '</td><td class="num">' + (x.cr_minor ? esc(bkMoney(x.cr_minor, c)) : '') + '</td></tr>'; }).join('');
     var ok = Number(r.total_dr_minor) === Number(r.total_cr_minor);
     body.innerHTML = '<div class="supacts" style="display:flex;gap:6px;align-items:center;margin-bottom:9px"><input type="date" class="inp" id="tb_asof" value="' + asOf + '"><button onclick="bkTab(\'tb\')">' + tx('Show') + '</button>'
       + '<span class="optchip" data-testid="tb-balanced" style="margin-inline-start:auto;' + (ok ? 'color:var(--ok-2);border-color:var(--ok-2)' : 'color:var(--warn-2);border-color:var(--warn-2)') + '">' + (ok ? tx('✓ balances') : tx('⚠ does not balance')) + '</span></div>'
@@ -1562,9 +1623,21 @@ async function bkTB(body) {
           '<tr><td></td><td><b>' + tx('Total') + '</b></td><td class="num" data-testid="tb-dr"><b>' + esc(bkMoney(r.total_dr_minor, c)) + '</b></td><td class="num" data-testid="tb-cr"><b>' + esc(bkMoney(r.total_cr_minor, c)) + '</b></td></tr>');
   } catch (e) { body.innerHTML = bkErr(e); }
 }
+/**
+ * ⭐ EVERY NUMBER OPENS WHAT IT COUNTS (WX-R2R, 2026-10-13): a Trial balance / P&L / Balance sheet line opens ITS ledger — the Ledgers view's own
+ * door (BK.lt.sel → bkLedgers → bkLtOpen), never a second ledger screen. The link is the Day book's (an <a> that runs the door). `go` opens it even
+ * on a phone, where the Ledgers view otherwise starts on its list.
+ */
+function bkOpenLedger(code) {
+  BK.lt.sel = { code: String(code) }; BK.lt.go = true; BK.lgAcc = String(code);
+  if (typeof hashView === 'function') location.hash = 'ledgers'; else bkTab('ledgers');   /* CB Accounts moves by its menu's hash (show) — the menu and the header follow */
+}
+function bkLedgerLink(code, name, tid) {
+  return '<a href="#" data-testid="' + esc(tid) + '-open-' + esc(code) + '" onclick="bkOpenLedger(\'' + esc(code) + '\');return false" title="' + esc(tx('Open this ledger')) + '">' + esc(name) + '</a>';
+}
 function bkSideHTML(title, rows, c, total) {
   return '<div class="sec">' + title + '</div>' + bkTable([{ t: tx('Ledger') }, { t: tx('Amount'), num: 1 }],
-    (rows || []).map(function (x) { return '<tr><td>' + esc(x.code ? x.code + ' · ' : '') + esc(x.name) + '</td><td class="num">' + esc(bkMoney(x.amount_minor, c)) + '</td></tr>'; }).join(''),
+    (rows || []).map(function (x) { return '<tr><td>' + (x.code ? esc(x.code + ' · ') + bkLedgerLink(x.code, x.name, 'st') : esc(x.name)) + '</td><td class="num">' + esc(bkMoney(x.amount_minor, c)) + '</td></tr>'; }).join(''),
     total != null ? '<tr><td><b>' + tx('Total') + '</b></td><td class="num"><b>' + esc(bkMoney(total, c)) + '</b></td></tr>' : '');
 }
 async function bkPL(body) {
@@ -1630,7 +1703,7 @@ function bkDuesAge(p) {
 function bkDuesActs(p) {
   var kind = bkPartyKind(p.party_id), id = esc(p.party_id), rcv = kind === 'customer';
   return '<span style="display:inline-flex;gap:6px" onclick="event.stopPropagation()">'
-    + '<button type="button" class="cbl-tbtn" data-testid="dues-pay-' + id + '" onclick="event.stopPropagation();payOpen(\'' + kind + '\',\'' + id + '\')">' + esc(tx(bkDuesAdvance(p) ? 'Get back' : (rcv && Number(p.balance_minor) < 0 ? 'Adjust' : (rcv ? 'Receive' : 'Pay')))) + '</button>'
+    + '<button type="button" class="cbl-tbtn" data-testid="dues-pay-' + id + '" onclick="event.stopPropagation();payOpen(\'' + kind + '\',\'' + id + '\',' + esc(JSON.stringify(String(p.name || ''))) + ')">' + esc(tx(bkDuesAdvance(p) ? 'Get back' : (rcv && Number(p.balance_minor) < 0 ? 'Adjust' : (rcv ? 'Receive' : 'Pay')))) + '</button>'
     + (rcv ? '<button type="button" class="cbl-tbtn" data-testid="dues-remind-' + id + '" onclick="event.stopPropagation();bkRemind(\'' + id + '\',this)">' + esc(tx('Remind')) + '</button>' : '') + '</span>';
 }
 /** 'customer' (you receive) or 'supplier' (you pay): the party's side from the one /dues read, else the control account that is open */
@@ -1719,8 +1792,32 @@ async function bkDues(body, onlySide) {   /* onlySide 'rcv' | 'pay' (CB Accounts
     });
   } catch (e) { body.innerHTML = bkErr(e); }
 }
-function bkFyNow() { var d = new Date(); var y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1; return y + '-' + String((y + 1) % 100).padStart(2, '0'); }
-var BK_MONTHS = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'];
+/**
+ * ⭐ THE SHOP'S YEAR IS THE SERVER'S — ONE PLACE (WX-R2R + CX2, 2026-10-13; one painter since INT5b): GET /books/health answers
+ * year { fiscal_year, from, start_month } — the pack on the Country setup's year start, the same default the TB / P&L / BS reads take. BK.year
+ * holds it (accounts.html boot · bkHealthLoad). Its first month, else the pack's (shopReg — CX2), else April (an older api, a page without
+ * helpers.js); the name is the pack's (split '2026-27' · single '2026'). Period 1 is that first month — what the server numbers.
+ */
+function bkFyPack() { return typeof shopReg === 'function' ? shopReg() : null; }
+function bkYearStart() { var r = bkFyPack(), m = Number(BK.year && BK.year.start_month) || (r && r.fiscalYear && r.fiscalYear.startMonth) || 4; return m >= 1 && m <= 12 ? m : 4; }
+function bkFyStartYear(d) { return d.getMonth() + 1 >= bkYearStart() ? d.getFullYear() : d.getFullYear() - 1; }
+function bkFyName(y) { var r = bkFyPack(), single = r && r.fiscalYear && r.fiscalYear.label ? r.fiscalYear.label === 'single' : bkYearStart() === 1; return single ? String(y) : y + '-' + String((y + 1) % 100).padStart(2, '0'); }
+function bkFyNow() { return (BK.year && BK.year.fiscal_year) ? String(BK.year.fiscal_year) : bkFyName(bkFyStartYear(new Date())); }
+function bkFyFrom() { return (BK.year && BK.year.from) || (bkFyStartYear(new Date()) + '-' + String(bkYearStart()).padStart(2, '0') + '-01'); }
+var BK_MON12 = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+/** the twelve month names of the shop's year, period 1 first (April for India, July for Australia, January for a calendar year) */
+function bkMonths() { var s = bkYearStart() - 1; return BK_MON12.map(function (_, i) { return BK_MON12[(s + i) % 12]; }); }
+/** the year before `fy` in the server's own labels ("2026-27" → "2025-26"; a calendar year "2026" → "2025") */
+function bkFyPrev(fy) { var y = Number(String(fy).slice(0, 4)) - 1; return String(fy).length === 4 ? String(y) : y + '-' + String((y + 1) % 100).padStart(2, '0'); }
+/** the year and month a day falls in — the server's own row first (GET /periods start_date…end_date), the shop's year start when the month has no row yet */
+function bkPeriodOfDay(day, L) {
+  var hit = Object.keys((L && L.info) || {}).filter(function (k) { var x = L.info[k]; return x.start_date && x.end_date && String(x.start_date).slice(0, 10) <= day && day <= String(x.end_date).slice(0, 10) && Number(x.period) >= 1; })[0];
+  if (hit) return { fy: hit.split('|')[0], p: Number(hit.split('|')[1]) };
+  var st = bkYearStart(), m = Number(day.slice(5, 7)), y = m >= st ? Number(day.slice(0, 4)) : Number(day.slice(0, 4)) - 1;
+  return { fy: bkFyName(y), p: (m - st + 12) % 12 + 1 };
+}
+/** "This FY (Jul–Jun)" / "Whole year (Jul–Jun)" — the word with the shop's own months, ONE catalogue sentence (CX2) */
+function bkFyWord(w) { var m = bkMonths(); return txf((w || 'This FY') + ' ({a}–{b})', { a: tx(m[0]), b: tx(m[11]) }); }
 /** the period's status is a server enum — it becomes a word here, never shown raw */
 var BK_PERIOD_WORD = { open: 'Open', soft_locked: 'Locked', hard_locked: 'Closed for good' };
 function bkIsOwner() { return typeof SESSION !== 'undefined' && !!SESSION && SESSION.role === 'entity'; }   /* the server enforces it; this only decides who is offered the buttons */
@@ -1760,12 +1857,12 @@ async function bkLockView(body) {
  */
 function bkLockRowsPaint() {
   var el = document.getElementById('lk_rows'), L = BK.lk, own = bkIsOwner(); if (!el) return;
-  var reopens = BK_MONTHS.some(function (m, i) { var q = (L.info || {})[L.fy + '|' + (i + 1)]; return q && q.reopen && q.reopen.may; });
+  var reopens = bkMonths().some(function (m, i) { var q = (L.info || {})[L.fy + '|' + (i + 1)]; return q && q.reopen && q.reopen.may; });
   var foot = document.getElementById('lk_foot'), whyBox = document.getElementById('lk_whybox');
   if (own && reopens && !whyBox && foot) foot.insertAdjacentHTML('beforebegin', '<label id="lk_whybox">' + tx('Reason') + '<input class="inp" id="lk_why" data-testid="lk_why" placeholder="' + esc(tx('Needed to open a month again')) + '"></label>');
   if (own && !reopens && whyBox) whyBox.remove();
   if (foot) foot.textContent = !own ? '' : reopens ? tx('A locked month opens again with a reason. Close for good never opens.') : tx('Close for good: the month never opens again. Corrections go into an open month as an adjusting entry.');
-  el.innerHTML = BK_MONTHS.map(function (m, i) {
+  el.innerHTML = bkMonths().map(function (m, i) {
     var p = i + 1, st = L.rows[L.fy + '|' + p] || 'open', b = '', x = (L.info || {})[L.fy + '|' + p] || null;
     var may = !x || !x.lock || x.lock.may, why = x && x.lock && x.lock.why ? x.lock.why : '';
     if (own && st === 'open') b = '<button class="supact-pri" data-testid="lk-lock-' + p + '"' + (may ? ' onclick="bkLockDo(\'lock\',' + p + ')" title="' + esc(tx('Stops entries · reopens with a reason')) + '"' : ' disabled title="' + esc(tx(why)) + '"') + '>🔒 ' + tx('Lock') + '</button>'
@@ -1781,7 +1878,7 @@ function bkLockRowsPaint() {
 }
 async function bkLockDo(what, p) {
   var L = BK.lk, fy = L.fy, why = (document.getElementById('lk_why') || {}).value || '', out = document.getElementById('lk_out');
-  var m = tx(BK_MONTHS[p - 1] || String(p));
+  var m = tx(bkMonths()[p - 1] || String(p));
   if (what === 'unlock' && !why.trim()) { if (out) out.textContent = tx('Say why — the reason is kept'); var w = document.getElementById('lk_why'); if (w) w.focus(); return; }
   /* ⭐ M64: through CBAction — ONE write per month at a time (whichever of its buttons), Close for good asks first in the
      page's own dialog (Cancel sends nothing), and the outcome is said in lk_out beside the months */
@@ -1840,9 +1937,9 @@ async function bkPacks(body) {
 /** the pack controls: the year, then a month that IS locked (a pack is made from a locked month). No locked month → the sentence is the button to Month lock */
 function bkPackCtlPaint() {
   var el = document.getElementById('pk_ctl'), L = BK.lk; if (!el) return;
-  var locked = BK_MONTHS.map(function (m, i) { return [i + 1, m, L.rows[L.fy + '|' + (i + 1)]]; }).filter(function (x) { return x[2] === 'soft_locked' || x[2] === 'hard_locked'; });
+  var locked = bkMonths().map(function (m, i) { return [i + 1, m, L.rows[L.fy + '|' + (i + 1)]]; }).filter(function (x) { return x[2] === 'soft_locked' || x[2] === 'hard_locked'; });
   el.innerHTML = '<div class="supacts" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px">' + bkFyPicker('pk_fy', 'pk_fy')
-    + '<select class="inp" id="pk_p" data-testid="pk_p" onchange="bkPackPick()" style="flex:1 1 110px;min-width:0"' + '><option value="">' + esc(tx('Month')) + '</option><option value="year">' + esc(tx('Whole year (Apr–Mar)')) + '</option>'
+    + '<select class="inp" id="pk_p" data-testid="pk_p" onchange="bkPackPick()" style="flex:1 1 110px;min-width:0"' + '><option value="">' + esc(tx('Month')) + '</option><option value="year">' + esc(bkFyWord('Whole year')) + '</option>'
     + locked.map(function (x) { return '<option value="' + x[0] + '">' + esc(tx(x[1])) + '</option>'; }).join('') + '</select>'
     + '<button class="supact-pri" data-testid="pk_build" id="pk_build" onclick="bkPackBuild()" disabled>' + tx('Make a pack') + '</button></div>'
     + (locked.length ? '' : '<div class="supacts" style="margin-bottom:9px"><button data-testid="pk_lockfirst" onclick="bkTab(\'lock\')">🔒 ' + tx('Lock a month first') + '</button></div>');
@@ -1887,8 +1984,10 @@ async function bkPackGet(id) {
       var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = (m && m[1]) || ('ledger-pack-' + id + '.zip'); a.setAttribute('data-testid', 'pack-download-link'); document.body.appendChild(a); a.click();
       setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
       BK.packGot = BK.packGot || {}; BK.packGot[id] = true;   /* this session holds the file — "We have it" is now a plain yes */
-      var files = (r && r.manifest && r.manifest.files) || [];
-      if (out) out.innerHTML = '<div data-testid="pack-manifest"><b>' + esc(tx('Manifest')) + '</b> · ' + files.length + ' ' + tx('files') + '<br>' + files.map(function (f) { return '<span class="mono">' + esc(f.name) + ' · ' + esc(String(f.sha256 || '').slice(0, 12)) + '</span>'; }).join('<br>') + '</div>';
+      var files = (r && r.manifest && r.manifest.files) || [], tally = r && r.manifest && r.manifest.tally;
+      if (out) out.innerHTML = '<div data-testid="pack-manifest"><b>' + esc(tx('Manifest')) + '</b> · ' + files.length + ' ' + tx('files') + '<br>' + files.map(function (f) { return '<span class="mono">' + esc(f.name) + ' · ' + esc(String(f.sha256 || '').slice(0, 12)) + '</span>'; }).join('<br>')
+        /* CX2 (A9): why the Tally file is absent or unchecked — the server's own sentence (not_for_country outside India · unverified), never a silent gap */
+        + (tally && tally.why ? '<div data-testid="pack-tally-why" style="color:var(--grey);margin-top:4px">' + esc(tx('Tally')) + ' · ' + esc(tx(tally.why)) + '</div>' : '') + '</div>';
     } catch (e) { if (out) out.textContent = bkWhy(e, tx('Could not download it')); }
   });
 }
@@ -2000,6 +2099,8 @@ function bkChequeRepaint(id) {
 async function bkHealthLoad() {
   var r = await api('booksHealth');
   BK.waiting = (r && r.waiting) || [];
+  if (r && r.year) BK.year = r.year;   /* the shop's year (bkFyNow) */
+  if (r && r.currency) BK.cur = r.currency;
   bkWaitingCount();
   return r;
 }
@@ -2059,13 +2160,16 @@ async function bkChequesView(body) {
 function bkWaitId(w) { return String(w.chit_id || w.id || w.ref || ''); }
 function bkWaitFailed(w) { return !/^Waiting for you to confirm/.test(String(w.reason || w.why || '')); }
 function bkWaitModel(w) { var r = w && w.chit_id && BK.wchit && BK.wchit[w.chit_id]; try { return r && window.CBSheet ? CBSheet.model(r) : null; } catch (_) { return null; } }
+/** a walk-in DAY waiting (job 'day': no bill of its own) — its counter and day, read from the server's own source ref "walkin:<counter>:<day>" (WX-R2R:
+    those rows said "— · —", so the owner could not tell which day of which counter was stuck) */
+function bkWaitDay(w) { var m = w && w.job === 'day' ? /^walkin:([^:]+):(\d{4}-\d{2}-\d{2})$/.exec(String(w.ref || '')) : null; return m ? { counter: (w.source && w.source.counter) || m[1], day: m[2] } : null; }
 function bkWaitCols() {
   var dash = '<span style="color:var(--grey)">—</span>';
   return [
-    { key: 'who', label: tx('Supplier'), prio: 1, sort: 'who', w: 240, html: true, cell: function (w) { var m = bkWaitModel(w); return m && m.who ? esc(m.who) : dash; } },
+    { key: 'who', label: tx('Party'), prio: 1, sort: 'who', w: 240, html: true, cell: function (w) { var m = bkWaitModel(w), d = bkWaitDay(w); return m && m.who ? esc(m.who) : d ? esc(tx('Walk-in day') + ' · ' + tx('Counter') + ' ' + d.counter) : dash; } },
     { key: 'no', label: tx('Bill no'), prio: 4, sort: 'no', w: 170, html: true, cell: function (w) { var m = bkWaitModel(w); return m && m.no ? '<span class="mono">' + esc(m.no) + '</span>' : dash; } },
     { key: 'amount', label: tx('Amount'), prio: 2, sort: 'amount', num: true, w: 140, html: true, cell: function (w) { var m = bkWaitModel(w), t = m && m.money && m.money.total; return t != null ? esc(bkMajor(t, m.cur)) : dash; } },
-    { key: 'date', label: tx('Date'), prio: 5, sort: 'date', w: 120, html: true, cell: function (w) { var m = bkWaitModel(w); return esc(bkDate((m && m.at) || w.since)); } },
+    { key: 'date', label: tx('Date'), prio: 5, sort: 'date', w: 120, html: true, cell: function (w) { var m = bkWaitModel(w), d = bkWaitDay(w); return esc(bkDate((m && m.at) || (d && d.day) || w.since)); } },
     { key: 'step', label: tx('Step'), prio: 3, sort: 'step', w: 300, html: true, cell: function (w) {
         var i = (BK.waiting || []).indexOf(w), m = bkWaitModel(w);
         /* a posting that failed says why, in the server's words; a bill waiting on a person says which step it is at */
@@ -2074,7 +2178,7 @@ function bkWaitCols() {
       } },
   ];
 }
-function bkWaitDate(w) { var m = bkWaitModel(w); return String((m && m.at) || w.since || ''); }
+function bkWaitDate(w) { var m = bkWaitModel(w), d = bkWaitDay(w); return String((m && m.at) || (d && d.day) || w.since || ''); }
 function bkWaitNext(w) {
   var m = bkWaitModel(w), tid = 'wait-lines-' + (BK.waiting || []).indexOf(w);
   if (!m) return '<div data-testid="' + tid + '" style="color:var(--grey);font-size:var(--fs-1)">' + esc(tx(w.chit_id ? 'Reading the bill…' : 'No bill attached')) + '</div>';
@@ -2117,7 +2221,7 @@ async function bkWaitingView(body) {
       search: function (w) { var m = bkWaitModel(w); return [m && m.who, m && m.no, m && m.money && m.money.total, w.reason, w.why].join(' '); },
       sorts: [
         { key: 'date', label: tx('Oldest first'), cmp: function (a, b) { return bkWaitDate(a) < bkWaitDate(b) ? -1 : bkWaitDate(a) > bkWaitDate(b) ? 1 : 0; } },
-        { key: 'who', label: tx('Supplier'), cmp: function (a, b) { return String((bkWaitModel(a) || {}).who || '').localeCompare(String((bkWaitModel(b) || {}).who || '')); } },
+        { key: 'who', label: tx('Party'), cmp: function (a, b) { return String((bkWaitModel(a) || {}).who || '').localeCompare(String((bkWaitModel(b) || {}).who || '')); } },
         { key: 'no', label: tx('Bill no'), cmp: function (a, b) { return String((bkWaitModel(a) || {}).no || '').localeCompare(String((bkWaitModel(b) || {}).no || ''), undefined, { numeric: true }); } },
         { key: 'amount', label: tx('Amount'), cmp: function (a, b) { var g = function (w) { var m = bkWaitModel(w); return Number(m && m.money && m.money.total) || 0; }; return g(a) - g(b); } },
         { key: 'step', label: tx('Step'), cmp: function (a, b) { return Number(bkWaitFailed(b)) - Number(bkWaitFailed(a)); } },

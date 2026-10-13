@@ -122,19 +122,26 @@
           "route": [{ "m": "GET", "p": "/api/books/daybook", "file": "api:routes/books.js" }, { "m": "GET", "p": "/api/books/ledger/:account", "file": "api:routes/books.js" }, { "m": "GET", "p": "/api/books/party/:id/statement", "file": "api:routes/books.js" }],
           "chit": "bill → one entry (source_ref chit:<chit_id>); what cannot post waits in books_outbox", "ledger": "as step 4; the supplier's statement reads 2100 by party",
           "test": ["api:tests/books-post.test.cjs", "api:tests/books-hooks.test.cjs", "engines:tests/golden-books.test.js"],
-          "status": "ok", "note": "" }
+          "status": "ok", "note": "" },
+        { "n": 7, "step": "payables", "module": "Finance", "who": "the owner (reads; Pay and the discount are the owner's own presses — Finance suggests, nothing posts by itself)",
+          "screen": [{ "file": "web:public/app/cap-finance-pay.js", "fn": "fpMount" }, { "file": "web:public/app/cap-finance-pay.js", "fn": "fpPay" }, { "file": "web:public/app/cap-books.js", "fn": "payOpen" }, { "file": "web:public/app/cap-books.js", "fn": "payDiscRecord" }],
+          "engine": [{ "file": "api:lib/books-payables.js", "fn": "view" }, { "file": "api:lib/books-payables.js", "fn": "read" }, { "file": "api:lib/books-cashflow.js", "fn": "datedSide" }, { "file": "engines:src/receivables.js", "fn": "msmeFlags" }, { "file": "engines:src/receivables.js", "fn": "earlyDiscount" }, { "file": "api:lib/books.js", "fn": "postEntry" }],
+          "route": [{ "m": "GET", "p": "/api/books/dues", "file": "api:routes/books.js" }, { "m": "POST", "p": "/api/books/payments", "file": "api:routes/books.js" }, { "m": "POST", "p": "/api/books/entries", "file": "api:routes/books.js" }],
+          "chit": "the supplier's bill (side buy) → the payment, its advice chit (step 5)", "ledger": "none to read; the discount (owner-pressed) is a journal: Dr 2100 Suppliers (against the bill) · Cr 4230 Discount received. The GST credit note waits for the supplier's and the owner's confirm",
+          "test": ["api:tests/books-payables.test.cjs", "web:e2e/walk-finance-payables.cjs"],
+          "status": "ok", "note": "F4: supplier bill → payment — what we owe, aged 0–30/31–45/46–60/60+, MSME day 45 (India, Income-tax s.43B(h)), the supplier's early-pay offer. The total is F3's outgoing (one calculation)." }
       ]
     },
     {
       "id": "R2R", "name": "Record to report", "sap": "FI-GL",
       "steps": [
         { "n": 1, "step": "country", "module": "Accounts", "who": "the owner, after registration and before the books open",
-          "screen": [{ "file": "web:public/app/cap-country.js", "fn": "renderCountrySetup" }, { "file": "web:public/settings.html", "fn": "paint" }, { "file": "web:public/app/cap-country.js", "fn": "mount" }, { "file": "web:public/app/cap-shop.js", "fn": "mount" }, { "file": "web:public/country-lab.html", "fn": "paintRows" }],
+          "screen": [{ "file": "web:public/app/cap-country.js", "fn": "renderCountrySetup" }, { "file": "web:public/settings.html", "fn": "paint" }, { "file": "web:public/app/cap-country.js", "fn": "mount" }, { "file": "web:public/app/cap-shop.js", "fn": "mount" }, { "file": "web:public/country-lab.html", "fn": "paintRows" }, { "file": "web:public/app/cap-country.js", "fn": "csuReadyHTML" }, { "file": "web:public/country-lab.html", "fn": "paintReady" }, { "file": "web:public/app/country-ready.js", "fn": "view" }],
           "engine": [{ "file": "api:lib/country-setup.js", "fn": "gate" }, { "file": "engines:src/regulation.js", "fn": "status" }, { "file": "engines:src/tax.js", "fn": "determine" }],
           "route": [{ "m": "GET", "p": "/api/governance/country-setup", "file": "api:routes/governance.js" }, { "m": "PUT", "p": "/api/governance/country-setup", "file": "api:routes/governance.js" }],
           "chit": "none", "ledger": "none — the pack the chart, the year and the tax heads are read from",
           "test": ["web:e2e/walk-country.cjs", "web:e2e/walk-settings.cjs", "web:e2e/walk-country-lab.cjs", "api:tests/country-setup.test.cjs"],
-          "status": "ok", "note": "SET1: the same step and the shop's own particulars (GSTIN · address · state · PIN — what the invoice party reads) are CB Settings (settings.html), never the workshop. CS1: the constitution (country · currency · FY · tax registration) is set once; a country with no pack is said in the server's sentence. CL1 · CL2: the Country lab shows what REGISTERING in another country would look like, read from the packs — a shop never changes country once it has a product or a transaction (DECISIONS 13 Oct). CS2 (2026-10-13): the country may be CORRECTED until the shop holds a product or a transaction (api country-setup.isConstituted) — currency · FY · scheme · time zone · chart re-derived from the new pack in one transaction; after that Country and Money are greyed with the reason and the server refuses (409). The picker = the server's countries[] (the registered packs); a multi-zone pack asks the zone, the device's preselected." },
+          "status": "ok", "note": "SET1: the same step and the shop's own particulars (GSTIN · address · state · PIN — what the invoice party reads) are CB Settings (settings.html), never the workshop. CS1: the constitution (country · currency · FY · tax registration) is set once; a country with no pack is said in the server's sentence. CL1 · CL2: the Country lab shows what REGISTERING in another country would look like, read from the packs — a shop never changes country once it has a product or a transaction (DECISIONS 13 Oct). CS2 (2026-10-13): the country may be CORRECTED until the shop holds a product or a transaction (api country-setup.isConstituted) — currency · FY · scheme · time zone · chart re-derived from the new pack in one transaction; after that Country and Money are greyed with the reason and the server refuses (409). The picker = the server's countries[] (the registered packs); a multi-zone pack asks the zone, the device's preselected. CL3: both screens show \"Where ChitBridge is for <country>\" — per product area ✅ · ⚠️ · ❌ · —, read from public/data/country-ready.json (scripts/country-ready.cjs: the engines' COUNTRY-MATRIX × COUNTRY-COVERAGE §1)." },
         { "n": 2, "step": "entries", "module": "Accounts", "who": "the owner (a typed entry); the system (every hook)",
           "screen": [{ "file": "web:public/app/cap-entry.js", "fn": "enDlg" }, { "file": "web:public/app/cap-bank.js", "fn": "" }],
           "engine": [{ "file": "api:lib/books.js", "fn": "composeEntry" }, { "file": "api:lib/books.js", "fn": "postEntry" }, { "file": "api:lib/books-manual.js", "fn": "givenLines" }, { "file": "engines:src/posting.js", "fn": "manual" }, { "file": "engines:src/bank-recon.js", "fn": "match" }],
@@ -183,7 +190,14 @@
           "route": [{ "m": "GET", "p": "/api/books/cashflow", "file": "api:routes/books.js" }],
           "chit": "none", "ledger": "none — the GST owed is READ after the set-off (the same arithmetic the month close posts), due the 20th of the next month; cash · bank · UPI · card balances as at today",
           "test": ["api:tests/books-cashflow.test.cjs", "api:tests/books-period.test.cjs", "web:e2e/walk-finance-cash.cjs"],
-          "status": "ok", "note": "" }
+          "status": "ok", "note": "" },
+        { "n": 9, "step": "bank reconciliation", "module": "Accounts", "who": "the owner (accepts · records · asks); a view-only login reads (Ask / Record greyed with the server's sentence)",
+          "screen": [{ "file": "web:public/app/cap-bank.js", "fn": "bankExplain" }, { "file": "web:public/app/cap-bank.js", "fn": "bankAccept" }, { "file": "web:public/app/cap-bank.js", "fn": "bankRecord" }, { "file": "web:public/app/cap-bank.js", "fn": "bankAsk" }, { "file": "web:public/app/cap-bank.js", "fn": "bankTodoItem" }, { "file": "web:public/app/cap-books.js", "fn": "payPrefill" }],
+          "engine": [{ "file": "engines:src/bank-recon.js", "fn": "explain" }, { "file": "engines:src/bank-recon.js", "fn": "railPayments" }, { "file": "engines:src/bank-recon.js", "fn": "ask" }, { "file": "engines:src/bank-recon.js", "fn": "learn" }, { "file": "engines:src/bank-recon.js", "fn": "step" }, { "file": "api:lib/books-store.js", "fn": "bankRailChits" }],
+          "route": [{ "m": "GET", "p": "/api/books/bank/rail", "file": "api:routes/books.js" }, { "m": "POST", "p": "/api/chits/send", "file": "api:routes/chits.js" }, { "m": "POST", "p": "/api/books/payments", "file": "api:routes/books.js" }],
+          "chit": "the other party's payment advice (M30) explains a line; an unexplained one is ASKED with a message chit (business_json.kind bank_query — date · amount · ref only); their advice answers it", "ledger": "none here — a line told by a chit but not in the books is recorded through the ONE writer (POST /payments, the pay sheet prefilled with their amount, ref and bills); the statement never leaves the device",
+          "test": ["engines:tests/bank-recon-rail.test.js", "api:tests/books-bank-rail.test.cjs", "web:e2e/walk-bank-rec.cjs", "web:e2e/bank-recon-page.cjs"],
+          "status": "ok", "note": "BR1 (2026-10-13): three-way — statement line ↔ payment chit ↔ ledger entry. Accept marks, notes and learned rules stay on the device (no server store yet)." }
       ]
     },
     {
@@ -362,6 +376,32 @@
           "chit": "none", "ledger": "ONE opening entry (period 0) per file: the trial balance (the customers / suppliers control rows left out), then the open invoices and bills bill-wise on 1300 / 2100 with party, bill and due date; the difference on Suspense 2900",
           "test": ["api:tests/move-in.test.cjs", "engines:tests/reg-au.test.js", "web:e2e/walk-move-in.cjs"],
           "status": "ok", "note": "An unbalanced trial balance is refused with the sentence; nothing posts. The same file twice posts nothing (client_ref movein:<kind>:<as_at>)." }
+      ]
+    },
+    {
+      "id": "PRN", "name": "Parallel run (their Tally / Xero period beside ours)", "sap": "FI (audit: parallel run, reconciliation of statements)",
+      "steps": [
+        { "n": 1, "step": "load their period", "module": "Accounts", "who": "the owner, or the shop's auditor (whole entity, may see money)",
+          "screen": [{ "file": "web:public/app/cap-compare.js", "fn": "cmpLoadOpen" }, { "file": "web:public/app/cap-compare.js", "fn": "cmpKeep" }],
+          "engine": [{ "file": "api:lib/parallel-run.js", "fn": "preflight" }, { "file": "api:lib/parallel-run.js", "fn": "read" }, { "file": "api:lib/move-in.js", "fn": "guess" }, { "file": "api:lib/books-store.js", "fn": "insertComparePart" }],
+          "route": [{ "m": "POST", "p": "/api/books/compare/preflight", "file": "api:routes/books.js" }, { "m": "POST", "p": "/api/books/compare/snapshots", "file": "api:routes/books.js" }],
+          "chit": "none", "ledger": "none (a snapshot is never posted)",
+          "test": ["api:tests/parallel-run.test.cjs", "web:e2e/walk-compare.cjs"],
+          "status": "ok", "note": "Insert-only: a part a snapshot already has is refused (409). Before b309 runs, Load is greyed with the sentence." },
+        { "n": 2, "step": "compare, differences first", "module": "Accounts", "who": "the owner, or the shop's auditor",
+          "screen": [{ "file": "web:public/app/cap-compare.js", "fn": "cmpView" }, { "file": "web:public/app/cap-compare.js", "fn": "cmpPaintList" }, { "file": "web:public/app/cap-compare.js", "fn": "cmpNext" }],
+          "engine": [{ "file": "api:lib/parallel-run.js", "fn": "compare" }, { "file": "api:lib/books.js", "fn": "trialBalance" }, { "file": "api:lib/books.js", "fn": "profitAndLoss" }, { "file": "api:lib/books.js", "fn": "balanceSheet" }, { "file": "api:lib/books-period.js", "fn": "taxReturn" }, { "file": "api:lib/tax-lines.js", "fn": "gstr3b" }],
+          "route": [{ "m": "GET", "p": "/api/books/compare", "file": "api:routes/books.js" }, { "m": "GET", "p": "/api/books/compare/:id", "file": "api:routes/books.js" }],
+          "chit": "read (the chit behind an entry opens)", "ledger": "read",
+          "test": ["api:tests/parallel-run.test.cjs", "web:e2e/walk-compare.cjs"],
+          "status": "ok", "note": "Why is said where we can tell: a rounding rule, a bill on the rail they keyed later, an entry only one side has, a mapping gap. Tally XML shapes are recall, proven on fixtures." },
+        { "n": 3, "step": "the auditor's file", "module": "Accounts", "who": "the owner, or the shop's auditor",
+          "screen": [{ "file": "web:public/app/cap-compare.js", "fn": "cmpCsv" }],
+          "engine": [{ "file": "api:lib/parallel-run.js", "fn": "csv" }],
+          "route": [{ "m": "GET", "p": "/api/books/compare/:id/csv", "file": "api:routes/books.js" }],
+          "chit": "none", "ledger": "read",
+          "test": ["api:tests/parallel-run.test.cjs"],
+          "status": "warn", "note": "CSV from the server; the PDF is the browser's print of the page (no PDF library added)." }
       ]
     }
   ]

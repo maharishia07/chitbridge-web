@@ -135,6 +135,13 @@ function settle(m, result, words, tone) {
   emit(m.el, m.o.payment_id, result);
   if (typeof m.o.onDone === 'function') { try { m.o.onDone(result, m.o); } catch (_) {} }
 }
+/** the ONE send of a rail body this page did not compose (the server's advice; the bank-recon engine's question, BR1) — POST /api/chits/send,
+    the server's sendChit mints it. → the chit id, or null. The chit sheet's own sends stay in app.html sendChit. */
+async function sendBody(body) {
+  ensureEP();
+  var sent = await api('createChit', { body: body });
+  return (sent && (sent.chit_id || (sent.chit && sent.chit.chit_id))) || null;
+}
 /** Send: the chit (the server's ready body) then the merge-patch — one press, one outcome; a failed send keeps the button as "Send again" */
 function sendPress(m, btn) {
   needAction(); ensureEP();
@@ -145,8 +152,7 @@ function sendPress(m, btn) {
     /* M30-2: once the chit is SENT, a failed RECORD is retried with the SAME chit - never a second advice to the party */
     var chit_id = m.sentChit;
     if (!chit_id) {
-      var sent = await api('createChit', { body: a.body });
-      chit_id = sent && (sent.chit_id || (sent.chit && sent.chit.chit_id));
+      chit_id = await sendBody(a.body);
       if (!chit_id) throw new Error('no chit id');
       m.sentChit = chit_id;
     }
@@ -204,6 +210,6 @@ function mount(el, o) {
   return api_;
 }
 
-var CBAdvice = { mount: mount, stateWords: stateWords, STATE_WORDS: STATE_WORDS, EP: CB_ADVICE_EP, WORDS: W };
+var CBAdvice = { mount: mount, sendBody: sendBody, stateWords: stateWords, STATE_WORDS: STATE_WORDS, EP: CB_ADVICE_EP, WORDS: W };
 root.CBAdvice = CBAdvice;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

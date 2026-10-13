@@ -26,7 +26,7 @@
   .sechd{ font-size:11px; font-weight:800; color:#6a44a8; text-transform:uppercase; letter-spacing:.5px; margin:22px 0 10px; }
   .card{ border:1px solid var(--line); border-radius:14px; padding:15px 16px; margin-bottom:12px; background:#fff; }
   .fname{ font-weight:800; font-size:17px; }
-  .meta{ font-size:12px; color:var(--grey); }
+  .meta{ font-size:12px; color:var(--grey-3); }   /* CX4 walk: --grey read 2.9:1 on the paper — --grey-3 is AA */
   .story{ font-size:13px; color:#3a4048; line-height:1.6; margin:6px 0 9px; }
   .chip{ display:inline-block; font-size:11px; border-radius:8px; padding:2px 9px; margin:0 5px 5px 0; }
   .c-tex{ background:#F0EAF9; color:#6a44a8; } .c-reg{ background:#eef3fb; color:#345488; } .c-eff{ background:#f3f0e8; color:#7a5e22; }
@@ -40,7 +40,7 @@
   .pmedia{ padding:4px 0 10px; }
   .pbadges{ padding:2px 0 4px; }
   .prow{ display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px dashed var(--line); }
-  .foot{ margin-top:26px; font-size:11px; color:var(--grey); text-align:center; line-height:1.6; }
+  .foot{ margin-top:26px; font-size:11px; color:var(--grey-3); text-align:center; line-height:1.6; }
   .msg{ padding:40px 16px; text-align:center; color:var(--grey); }
   .enq{ margin-top:12px; font-size:12px; color:var(--blue); }
   /* ⭐ THE FIRST SCREEN IS THE LIST (T2b, 2026-10-10; M62): one band = search + a "Categories ▾" button; the categories are an OVERLAY panel that takes no space of its own;
@@ -72,8 +72,10 @@
 <script src="app/catalogue-lines.js"></script>
 <script src="app/locale.js"></script>   <!-- cart-ui reads CBLocale (money/symbol) — the app loads it, the shop must too (found by the tour, 2026-09-05) -->
 <script src="engine/money.js"></script>   <!-- ⭐ the one rounder, BEFORE cart.js — it has no copy of its own (2026-09-28) -->
+<script src="engine/tax.js"></script>     <!-- ⭐ WX-O2C: the one tax split (splitLineTax) — a tax-inclusive shelf's GST comes OUT of the price in the cart, never on top -->
 <script src="app/cart.js"></script>
 <script src="app/step-flow.js"></script>
+<script src="app/workflow.js"></script>   <!-- WX-O2C: the order's stage for "My orders" (CBWorkflow.stageOf) — the one answer the seller's Task list uses -->
 <script src="app/showcase-templates.js"></script>   <!-- the shop's chosen showcase template (S2) -->
 <script>
 var API = (new URLSearchParams(location.search).get('api')) || window.CB_API;
@@ -472,7 +474,7 @@ function productListHtml(data, cur){
   /* ⚠️ ONE CART, HELD. render() runs again on a region change, so the handle is released first — a create()
      without a destroy() is the leak the namespaced API could not express. */
   if (_CART) _CART.destroy();
-  _CART = CBCart.create(data, { accent:'var(--accent)', soft:'var(--blue-tint-bg)', categories:(data&&data.categories)||[], pageSize:400, sectionOf:shopSectionOf, compact:true, symbol:_shopSym(), currency:(data.shop&&data.shop.currency_code)||'INR', from:(data.shop&&data.shop.display_name)||'',
+  _CART = CBCart.create(data, { priceIncludesTax:!!(data.shop&&data.shop.price_includes_tax), accent:'var(--accent)', soft:'var(--blue-tint-bg)', categories:(data&&data.categories)||[], pageSize:400, sectionOf:shopSectionOf, compact:true, symbol:_shopSym(), currency:(data.shop&&data.shop.currency_code)||'INR', from:(data.shop&&data.shop.display_name)||'',
     cartTitle:'Your basket', checkoutLabel:'Check out →', emptyHint:'Press + on what you want',
     noCatalogue:'This shop has nothing on display yet.',
     listEl:'p_list', barEl:'p_cart', onCheckout:function(){ shopCartOrder(); },
@@ -586,7 +588,7 @@ function _areaExample(){ var pl=_shopPlace(); return (pl.pin||pl.town) ? 'e.g. '
 function shopAboutHtml(s){
   if(!s||(!s.address&&!s.gstn)) return '';
   return '<details class="meta" data-testid="shop-about" style="text-align:center;margin-top:16px;line-height:1.7"><summary style="cursor:pointer;font-weight:700">About the shop</summary>'
-    +(s.address?'<div>📍 '+esc(s.address)+'</div>':'')+(s.gstn?'<div>GSTIN <span style="font-family:ui-monospace,Consolas,monospace">'+esc(s.gstn)+'</span></div>':'')+'</details>';
+    +(s.address?'<div>📍 '+esc(s.address)+'</div>':'')+(s.gstn?'<div>'+esc(s.tax_id_word||'GSTIN')+' <span style="font-family:ui-monospace,Consolas,monospace">'+esc(s.gstn)+'</span></div>':'')+'</details>';
 }
 /* The one cart this page holds. Created in productListHtml, released before it is created again. */
 var _CART=null;
@@ -603,7 +605,7 @@ function shopPickListHtml(){ if(!_CART) return ''; try{ if(typeof CBCatUI!=='und
  * that is the invoice.
  */
 function _shopOffers(){ return (_SHOPDATA && Array.isArray(_SHOPDATA.offers)) ? _SHOPDATA.offers : []; }
-function _shopCtx(){ return { now: new Date(), currency: (_SHOPDATA&&_SHOPDATA.shop&&_SHOPDATA.shop.currency_code)||'INR', money: function(n){ return (typeof CBLocale!=='undefined')?CBLocale.money(n, (_SHOPDATA&&_SHOPDATA.shop&&_SHOPDATA.shop.currency_code)||'INR'):String(n); } }; }
+function _shopCtx(){ return { now: new Date(), priceIncludesTax: !!(_SHOPDATA&&_SHOPDATA.shop&&_SHOPDATA.shop.price_includes_tax), currency: (_SHOPDATA&&_SHOPDATA.shop&&_SHOPDATA.shop.currency_code)||'INR', money: function(n){ return (typeof CBLocale!=='undefined')?CBLocale.money(n, (_SHOPDATA&&_SHOPDATA.shop&&_SHOPDATA.shop.currency_code)||'INR'):String(n); } }; }
 function _lineOf(p, qty){ var d=(p.item_data||p)||{}; return { key:String(p.item_id||''), item_id:p.item_id||null, sku:d.sku||d.code||null, excluded:Array.isArray(d.offers_excluded)?d.offers_excluded.map(String):[], categories:_catgUp((typeof catgIdsOf==='function')?catgIdsOf(d):((Array.isArray(d.categories)?d.categories:[]))), qty:qty||1, unitPrice:cbAmount(d.price) }; }
 /* ⚠️ RE-ENTRANCY. setOffer() repaints the cart, the repaint fires onChange, onChange called this again — an infinite
    recursion that crashed the page (stack overflow) whenever the shop was framed on a product page with an offer
@@ -1259,10 +1261,13 @@ function orderConfirm(){
 var _MYTOK=null;   /* the shopper's session from the order that was just placed — memory only, never stored */
 function shopSheet(inner){ return '<div style="position:fixed;inset:0;background:rgba(15,22,32,.5);z-index:900;display:flex;align-items:center;justify-content:center;padding:12px" onclick="if(CBSteps.backdropTap(event,this))orderClose()"><div style="background:var(--card,#fff);width:100%;max-width:400px;border-radius:16px;padding:22px;max-height:92vh;overflow:auto">'+inner+'</div></div>'; }
 function shopStatusWord(s){ var k=String(s||'').toLowerCase().replace(/[_\s-]+/g,' ').trim();
-  if(!k||/^(sent|new|open|pending|submitted|placed)$/.test(k)) return 'Waiting for the shop';
+  /* ⚠️ WX-O2C (2026-10-13): the buyer's copy is minted 'delivered' — the RAIL's word for "the chit reached the shop", not goods handed
+     over. The stage is the engine's (CBWorkflow.stageOf: pending · delivered · read = new), so a just-placed order waits for the shop. */
+  var st=(typeof CBWorkflow!=='undefined'&&CBWorkflow.stageOf)?CBWorkflow.stageOf({ status:k.replace(/ /g,'_') }):null;
+  if(!k||st==='new'||/^(sent|new|open|submitted|placed)$/.test(k)) return 'Waiting for the shop';
   if(/^(accepted|confirmed)$/.test(k)) return 'Accepted';
   if(/^ready/.test(k)) return 'Ready';
-  if(/^(delivered|completed|fulfilled|closed|done)$/.test(k)) return 'Delivered';
+  if(/^(completed|fulfilled|closed|done)$/.test(k)) return 'Delivered';
   return k.charAt(0).toUpperCase()+k.slice(1); }
 var _DONE_BTN='<button type="button" onclick="orderClose()" style="flex:1;border:0;border-radius:10px;padding:11px 18px;background:var(--accent,#3F66A6);color:var(--card,#fff);font-weight:700;cursor:pointer">Done</button>';
 /* "My orders" — the shopper's own orders and where each stands, read with the session the order just gave them (the route is /my-orders; no new route, no account to build) */
@@ -1276,7 +1281,7 @@ function shopMyOrders(){
       var body=!list?'<div style="color:var(--disp,#b4453f);font-size:13px">'+esc((res.j&&res.j.message)||'Could not load your orders.')+'</div>'
         :!list.length?'<div class="meta">No orders yet.</div>'
         :list.map(function(o){ var sm=o.summary_json||{}, tv=Number(sm.total_value)||0, dt=o.created_at?new Date(o.created_at).toLocaleDateString(undefined,{day:'numeric',month:'short'}):'';
-          return '<div data-testid="shop-order-row" style="padding:9px 0;border-top:1px dashed var(--line,#e7e3d8);font-size:13px"><div style="display:flex;gap:8px"><b style="flex:1">#CB-'+esc(String(o.chit_id||'').slice(0,8))+'</b>'+(tv?'<span>'+esc(cbFmt(tv))+'</span>':'')+'</div><div class="meta">'+esc(shopStatusWord(o.current_status))+(dt?' · '+esc(dt):'')+'</div></div>'; }).join('');
+          return '<div data-testid="shop-order-row" style="padding:9px 0;border-top:1px dashed var(--line,#e7e3d8);font-size:13px"><div style="display:flex;gap:8px"><b style="flex:1">#CB-'+esc(String(o.chit_id||'').slice(0,8))+'</b>'+(tv?'<span>'+esc(cbFmt(tv))+'</span>':'')+'</div><div class="meta">'+esc(shopStatusWord(o.shop_status||o.current_status))+(dt?' · '+esc(dt):'')+'</div></div>'; }).join('');
       ohost().innerHTML=shopSheet(head+'<div data-testid="shop-orders">'+body+'</div><div style="display:flex;margin-top:14px">'+_DONE_BTN+'</div>'); })
     .catch(function(e){ ohost().innerHTML=shopSheet(head+'<div style="color:var(--disp,#b4453f);font-size:13px">'+esc(e.message||'Network error')+'</div><div style="display:flex;margin-top:14px">'+_DONE_BTN+'</div>'); });
 }

@@ -3947,7 +3947,7 @@ function _localeSettingsBody(){
     ['ja-JP', 'Japan — 123,456,789.50']
   ];
 
-  var cur = (function(){ try { return localStorage.getItem('cb_locale') || ''; } catch(_) { return ''; } })();
+  var cur = CBLocale.getExt('locale');   /* CU3: the layer's own read, not a second one of its storage */
   var sel = function(id, list, val, fn){
     return '<select class="inp" data-testid="' + id + '" onchange="' + fn + '(this.value)">'
       /* ⚠️ ESCAPE THE VALUE TOO, not only the label. `o[0]` lands inside `value="…"` — an unescaped quote
@@ -3980,7 +3980,7 @@ function _localeSettingsBody(){
 
   /* ⚠️ The zone list comes from the ENGINE (Intl.supportedValuesOf), not a table we would have to edit twice a
      year. Where the engine will not supply one, a short list beats an empty select. */
-  var tzCur = (function(){ try { return localStorage.getItem('cb_tz') || ''; } catch(_) { return ''; } })();
+  var tzCur = CBLocale.getExt('tz');     /* the override only ('' = the device's zone) — CBLocale.timezone() would fill the default */
   var tzAll = CBLocale.zones();
   /* ⚠️ esc() — the zone comes from localStorage (and, via b165, from a row another device wrote), so it is not
      ours to trust. Every OTHER render of it on this screen was escaped; this one label was not, which is exactly
@@ -4384,7 +4384,9 @@ function intConnectorsHTML(){
   var rest = use.length ? cat.filter(function(c){ return use.indexOf(c.id) < 0; }) : [];
   var cards = cat.length ? chosen.map(function(c){
     /* ⭐ through the session, not a bare link: the API mints a connector key INTO the zip's connector.json (Athi, 2026-09-06: "download option should autofill everything") */
-    var adapters = (c.adapters || []).map(function(a){ return '<button class="composebtn" data-testid="int-download-' + esc(c.id) + '-' + esc(a) + '" onclick="intDownloadKit(\'' + esc(c.id) + '\',\'' + esc(a) + '\')">⬇ ' + esc(tx('Download')) + ' · ' + esc(a) + '</button>'; }).join(' ');
+    /* CX6 (K1): the SERVER says whether this connector works for the shop's country (may/why from the pack) — a refused one stays shown, greyed WITH its sentence */
+    var may = c.may || { ok: true }, no = may.ok === false;
+    var adapters = (c.adapters || []).map(function(a){ return '<button class="composebtn" data-testid="int-download-' + esc(c.id) + '-' + esc(a) + '"' + (no ? ' disabled aria-disabled="true" title="' + esc(may.why || '') + '" style="opacity:.55;cursor:not-allowed"' : ' onclick="intDownloadKit(\'' + esc(c.id) + '\',\'' + esc(a) + '\')"') + '>⬇ ' + esc(tx('Download')) + ' · ' + esc(a) + '</button>'; }).join(' ');
     var open = intOpen() === c.id;
     var more = '<span data-testid="int-card-' + esc(c.id) + '-toggle" onclick="intToggleCard(\'' + esc(c.id) + '\')" style="cursor:pointer;color:var(--blue);font-size:var(--fs-1);user-select:none">' + (open ? '▾ ' + tx('less') : '▸ ' + txf('what to do for {name}', { name: c.name })) + '</span>';
     var steps = open ? intCardDetailHTML(c) : '';
@@ -4392,6 +4394,7 @@ function intConnectorsHTML(){
     var tick = '<label style="display:inline-flex;gap:5px;align-items:center;font-size:var(--fs-1);color:var(--grey);cursor:pointer"><input type="checkbox" data-testid="int-use-' + esc(c.id) + '"' + (use.indexOf(c.id) >= 0 ? ' checked' : '') + ' onchange="intUseToggle(\'' + esc(c.id) + '\', this.checked)">' + esc(tx('we use this')) + '</label>';
     return '<div data-testid="int-connector-' + esc(c.id) + '" style="border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:8px"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b style="flex:1">' + esc(c.name) + '</b>' + tick + ' ' + doc + ' ' + adapters + '</div>'
       + '<div style="font-size:var(--fs-2);margin-top:6px">' + esc(c.does) + '</div>'
+      + (no ? '<div data-testid="int-why-' + esc(c.id) + '" style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">' + esc(may.why || '') + '</div>' : '')
       + '<div style="margin-top:6px">' + more + '</div>'
       + (open ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">' + esc(tx('Runs on')) + ': ' + esc(c.runs_on) + ' · ' + esc(c.status) + '</div>' : '')
       + steps + '</div>';

@@ -26,5 +26,15 @@ try {
   console.error('    weeks, saying "in progress". Regenerate: node tools/gen-modules-doc.cjs');
 }
 
+/* ── CL3: "Where ChitBridge is for <country>" is generated from the engines' matrix × COUNTRY-COVERAGE §1 — never typed, never stale ── */
+try {
+  const out = execSync('node ' + JSON.stringify(path.join(__dirname, '..', 'scripts', 'country-ready.cjs')) + ' --check', { stdio: 'pipe' }).toString().trim();
+  console.log('  \u2713 public/data/country-ready.json — ' + out.replace(/^country-ready: /, ''));
+} catch (e) {
+  fail++;
+  console.error('  \u2717 public/data/country-ready.json has drifted: ' + String((e.stdout || '') + (e.stderr || '')).trim());
+  console.error('    Re-vendor the matrix (engines: node tools/country-matrix.cjs --web <web>), then: node scripts/country-ready.cjs');
+}
+
 console.log('\n  \u2550\u2550 ' + (fail ? 'DOCUMENT DRIFT' : 'the load-bearing documents match the code') + ' \u2550\u2550\n');
 process.exit(fail ? 1 : 0);
