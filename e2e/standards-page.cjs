@@ -97,7 +97,7 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
 
   /* ── 1 · the register ───────────────────────────────────────────────────────────────────────────────────── */
   {
-    ok(REG.S.length === 61, 'the register holds 61 standards (44 + the 17 adopted 2–3 Oct 2026): ' + REG.S.length);
+    ok(REG.S.length === 62, 'the register holds 62 standards (44 + the 17 adopted 2–3 Oct 2026 + pseudo-localisation, LOC0 13 Oct): ' + REG.S.length);
     /* N11 (9c8cdc58, 2026-10-08): ISO 8601 moved Partly → In force with a stated limit, proven by chitbridge-api tests/iso8601.test.cjs */
     ok(COUNT.live === 34 && COUNT.part === 15 && COUNT.plan === 12, 'in force 34 · partly 15 · planned 12 (' + COUNT.live + ' · ' + COUNT.part + ' · ' + COUNT.plan + ')');
     const fields = REG.S.filter((r) => !r.a || !r.k || !Array.isArray(r.c) || !r.c.length || !r.p);
@@ -113,9 +113,9 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     const diff = [];
     const MOVED = { 'ISO 8601': 'N11' };   /* a row the register has moved on from the design's data, on purpose, with its reason */
     DESIGN.rows.forEach((d, i) => { const r = REG.S[i]; if (r && MOVED[r.n]) return; keys.forEach((k) => { if ((r && r[k] || undefined) !== (d[k] || undefined)) diff.push(i + ':' + k); }); if (!r || JSON.stringify(r.c) !== JSON.stringify(d.c)) diff.push(i + ':c'); });
-    ok(DESIGN.rows.length === REG.S.length && diff.length === 0, 'all 61 rows equal the designer\'s data, field for field' + (diff.length ? ' — ' + diff.slice(0, 6).join(' ') : ''));
+    ok(DESIGN.rows.length === REG.S.length && diff.length === 0, 'all 62 rows equal the designer\'s data, field for field' + (diff.length ? ' — ' + diff.slice(0, 6).join(' ') : ''));
     const added = REG.S.filter((r) => r.added);
-    ok(added.length === 17 && added.filter((r) => r.s === 'live').length === 11 && added.filter((r) => r.s === 'part').length === 4 && added.filter((r) => r.s === 'plan').length === 2, 'the 17 additions carry their stated statuses: 11 in force, 4 partly, 2 planned');
+    ok(added.length === 18 && added.filter((r) => r.s === 'live').length === 11 && added.filter((r) => r.s === 'part').length === 5 && added.filter((r) => r.s === 'plan').length === 2, 'the 18 additions carry their stated statuses: 11 in force, 5 partly (the LOC0 pseudo-localisation row is Partly), 2 planned');
     ok(REG.S.filter((r) => /WCAG/.test(r.n) && /1\.4\.3/.test(r.n)).length === 1 && /16 themes/.test(REG.S[11].note), 'no second WCAG contrast row: the existing one now says all 16 themes');
     ok(REG.CH === '2026-10-03', 'the register says when it was last checked (STD_CHECKED)');
     ok(new Set(REG.S.map((r) => r.n)).size === REG.S.length, 'no standard is listed twice');

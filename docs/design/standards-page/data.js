@@ -1291,6 +1291,27 @@ window.STD_PAGE = {
 "src": "added 2026-10-03",
 "g": "Money & GST",
 "id": "s61"
+},
+{
+"n": "Pseudo-localisation (Microsoft qps-ploc · Unicode)",
+"w": "The locale standard (docs/design/standards/LOCALE-STANDARD.md) and its guard",
+"ex": "[!! Ŝàļéš !!]",
+"exWhy": "What a label becomes in the pseudo-locale: accented, 40 % longer, bracketed. On one screen it shows which words did NOT go through the catalogue, and which boxes clip when German or Tamil arrives.",
+"s": "part",
+"a": "look",
+"k": "prac",
+"c": [
+"GLOBAL"
+],
+"p": "Every word on the screen can change language — and a test says which cannot yet",
+"m": "Screens convert by the plan (till and bill first); server sentences carry no key yet",
+"at": "docs/design/standards/LOCALE-STANDARD.md · e2e/walk-locale.cjs",
+"go": "locale",
+"why": "A translator can only translate what reaches the catalogue; a pseudo-locale shows the rest before a customer in Dubai or Coimbatore does.",
+"note": "e2e/walk-locale.cjs opens every customer screen in qps at 1366 and 390 and holds a per-screen count of untranslated and clipped text (e2e/locale-baseline.json); the build fails when a count rises. The standard fixes the rules: whole sentences with placeholders and Intl plural rules, never concatenation; icons universal, only directional ones mirrored; the fallback chain to English, never blank; server sentences keyed; names, amounts and user data never translated.",
+"src": "added 2026-10-13",
+"g": "Localisation",
+"id": "s62"
 }
 ],
 "why": {
