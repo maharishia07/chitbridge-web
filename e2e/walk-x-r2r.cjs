@@ -193,12 +193,11 @@ W.run('x-r2r', async (w) => {
       const m = /Total\s+([^\s]+[\d,.]+)\s+([^\s]+[\d,.]+)/.exec(t);
       return { ok: !!m && money(m[1]) === money(m[2]) && money(m[1]) > 0, saw: m ? 'Dr ' + m[1] + ' · Cr ' + m[2] : t.slice(-120) };
     });
-    await w.step('D6b', 'a Trial balance amount opens the ledger it counts (Cash)', async () => {
-      await open(page, base, 'tb');
-      const row = page.locator('tr,div[role=row],.cbl-row').filter({ hasText: /\bCash\b/ }).first();
-      await row.click({ timeout: 5000 }).catch(() => {});
-      await page.waitForTimeout(1500); const t = await content(page), h = await page.evaluate(() => location.hash);
-      return { ok: /Cash/.test(t) && (h !== '#tb' || /opening|running|balance/i.test(t)), saw: 'hash ' + h + ' · ' + t.replace(/\n/g, ' | ').slice(0, 120) };
+    await w.step('D6b', 'a Trial balance line opens the ledger it counts (Cash) — its closing is the TB figure', async () => {
+      await open(page, base, 'tb'); const want = (await page.locator('tr').filter({ hasText: /\bCash\b/ }).first().innerText().catch(() => '')).split('\t').pop().trim();
+      await page.click(T('tb-open-1400')); await page.waitForTimeout(REAL ? 3500 : 1200);
+      const h = await page.evaluate(() => location.hash), t = await content(page);
+      return { ok: h === '#ledgers' && /Cash/.test(t) && !/Find a ledger or party\s*$/.test(t), saw: 'hash ' + h + ' · TB says ' + want + ' · ' + t.replace(/\n/g, ' | ').slice(0, 140) };
     });
     await w.step('D6c', 'Balance sheet: the two Totals agree on screen', async () => {
       await open(page, base, 'bs'); const t = await content(page);

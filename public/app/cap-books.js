@@ -1534,8 +1534,8 @@ async function bkLedgers(body) {
     var root = document.getElementById('bk_lt');
     bkLtBind(root); bkLtTreePaint();
     if (typeof ResizeObserver !== 'undefined') { var last = bkLtNarrow(); try { new ResizeObserver(function () { var n = bkLtNarrow(); if (n !== last) { last = n; bkLtTreePaint(); if (BK.lt.api) BK.lt.api.refresh(); } }).observe(root); } catch (_) {} }
-    var s0 = BK.lt.sel; BK.lt.sel = null;
-    if (s0 && !bkLtNarrow()) bkLtOpen(s0.party ? { code: s0.code, party: s0.party } : { code: s0.code }); else if (!s0) bkLtRestore();
+    var s0 = BK.lt.sel, go = !!BK.lt.go; BK.lt.sel = null; BK.lt.go = false;
+    if (s0 && (go || !bkLtNarrow())) bkLtOpen(s0.party ? { code: s0.code, party: s0.party } : { code: s0.code }); else if (!s0) bkLtRestore();
     if (typeof CBKural !== 'undefined' && !BK.lt.sel) CBKural.set('accounts');
   } catch (e) { body.innerHTML = bkErr(e); }
 }
@@ -1543,7 +1543,7 @@ async function bkTB(body) {
   var asOf = (document.getElementById('tb_asof') || {}).value || bkToday();
   try {
     var r = await api('booksTB', { query: { asOf: asOf } }); var c = r && r.currency;
-    var rows = ((r && r.rows) || []).map(function (x) { return '<tr><td class="mono">' + esc(x.code) + '</td><td>' + esc(x.name) + '</td><td class="num">' + (x.dr_minor ? esc(bkMoney(x.dr_minor, c)) : '') + '</td><td class="num">' + (x.cr_minor ? esc(bkMoney(x.cr_minor, c)) : '') + '</td></tr>'; }).join('');
+    var rows = ((r && r.rows) || []).map(function (x) { return '<tr><td class="mono">' + esc(x.code) + '</td><td>' + bkLedgerLink(x.code, x.name, 'tb') + '</td><td class="num">' + (x.dr_minor ? esc(bkMoney(x.dr_minor, c)) : '') + '</td><td class="num">' + (x.cr_minor ? esc(bkMoney(x.cr_minor, c)) : '') + '</td></tr>'; }).join('');
     var ok = Number(r.total_dr_minor) === Number(r.total_cr_minor);
     body.innerHTML = '<div class="supacts" style="display:flex;gap:6px;align-items:center;margin-bottom:9px"><input type="date" class="inp" id="tb_asof" value="' + asOf + '"><button onclick="bkTab(\'tb\')">' + tx('Show') + '</button>'
       + '<span class="optchip" data-testid="tb-balanced" style="margin-inline-start:auto;' + (ok ? 'color:var(--ok-2);border-color:var(--ok-2)' : 'color:var(--warn-2);border-color:var(--warn-2)') + '">' + (ok ? tx('✓ balances') : tx('⚠ does not balance')) + '</span></div>'
@@ -1551,9 +1551,21 @@ async function bkTB(body) {
           '<tr><td></td><td><b>' + tx('Total') + '</b></td><td class="num" data-testid="tb-dr"><b>' + esc(bkMoney(r.total_dr_minor, c)) + '</b></td><td class="num" data-testid="tb-cr"><b>' + esc(bkMoney(r.total_cr_minor, c)) + '</b></td></tr>');
   } catch (e) { body.innerHTML = bkErr(e); }
 }
+/**
+ * ⭐ EVERY NUMBER OPENS WHAT IT COUNTS (WX-R2R, 2026-10-13): a Trial balance / P&L / Balance sheet line opens ITS ledger — the Ledgers view's own
+ * door (BK.lt.sel → bkLedgers → bkLtOpen), never a second ledger screen. The link is the Day book's (an <a> that runs the door). `go` opens it even
+ * on a phone, where the Ledgers view otherwise starts on its list.
+ */
+function bkOpenLedger(code) {
+  BK.lt.sel = { code: String(code) }; BK.lt.go = true; BK.lgAcc = String(code);
+  if (typeof hashView === 'function') location.hash = 'ledgers'; else bkTab('ledgers');   /* CB Accounts moves by its menu's hash (show) — the menu and the header follow */
+}
+function bkLedgerLink(code, name, tid) {
+  return '<a href="#" data-testid="' + esc(tid) + '-open-' + esc(code) + '" onclick="bkOpenLedger(\'' + esc(code) + '\');return false" title="' + esc(tx('Open this ledger')) + '">' + esc(name) + '</a>';
+}
 function bkSideHTML(title, rows, c, total) {
   return '<div class="sec">' + title + '</div>' + bkTable([{ t: tx('Ledger') }, { t: tx('Amount'), num: 1 }],
-    (rows || []).map(function (x) { return '<tr><td>' + esc(x.code ? x.code + ' · ' : '') + esc(x.name) + '</td><td class="num">' + esc(bkMoney(x.amount_minor, c)) + '</td></tr>'; }).join(''),
+    (rows || []).map(function (x) { return '<tr><td>' + (x.code ? esc(x.code + ' · ') + bkLedgerLink(x.code, x.name, 'st') : esc(x.name)) + '</td><td class="num">' + esc(bkMoney(x.amount_minor, c)) + '</td></tr>'; }).join(''),
     total != null ? '<tr><td><b>' + tx('Total') + '</b></td><td class="num"><b>' + esc(bkMoney(total, c)) + '</b></td></tr>' : '');
 }
 async function bkPL(body) {
