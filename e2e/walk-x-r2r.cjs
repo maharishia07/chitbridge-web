@@ -23,7 +23,7 @@
  *            local database only.
  *   (none)   FIXTURE: the cloud walks. The site from this checkout, the API a stand-in inside the page (e2e/lib/books-api.cjs shapes, held to the
  *            contract by e2e/lib/contract.cjs) — an AU shop on a July year: the screens must paint the server's year, never an April of their own.
- * Shots: e2e/shots/walk-x-r2r-NN.png (one per path) + e2e/shots/wx-r2r-<shop>-<width>-<view>.png (every view). Findings: docs/testing/WX-R2R-2026-10-13.md.
+ * Shots: e2e/shots/walk-x-r2r-NN.png (one per path) + e2e/shots/wx-r2r-<shop>-<width>-<view>.png (every view; fixture-<shop> in fixture mode). Findings: docs/testing/WX-R2R-2026-10-13.md.
  */
 'use strict';
 const path = require('path'), fs = require('fs'), cp = require('child_process'), net = require('net');
@@ -37,6 +37,7 @@ const SHOP = String(argOf('shop', REAL ? 'IN' : 'AU')).toUpperCase();
 const LOGIN = SHOP === 'AU' ? 'austores' : 'simstores';
 const FIRST = SHOP === 'AU' ? 'Jul' : 'Apr', LAST = SHOP === 'AU' ? 'Jun' : 'Mar';
 const SYM = SHOP === 'AU' ? 'A$' : '₹';
+const TAG = (REAL ? '' : 'fixture-') + SHOP.toLowerCase();   /* the shots' name: a fixture run never overwrites the real stack's */
 const API_DIR = process.env.CB_API_DIR || path.join(__dirname, '..', '..', 'chitbridge-api');
 const SIM_DB = process.env.SIM_DB || 'postgres://postgres:pw@127.0.0.1:5432/cb_sim';
 /* --at YYYY-MM-DD: the SERVER's "today" — the api's shop clock (lib/shop-clock.set, allowed only with SHOP_CLOCK_ALLOW=1 on this local stack).
@@ -146,7 +147,7 @@ W.run('x-r2r', async (w) => {
           await open(page, base, v);
           const t = await content(page), side = await sideways(page);
           seen[wd + v] = t;
-          await page.screenshot({ path: path.join(SHOTS, 'wx-r2r-' + SHOP.toLowerCase() + '-' + wd + '-' + v + '.png') });
+          await page.screenshot({ path: path.join(SHOTS, 'wx-r2r-' + TAG + '-' + wd + '-' + v + '.png') });
           const bad = ERRWORDS.exec(t);
           return { ok: !side && !bad && t.length > 10 && w.errs.length === 0, saw: (side ? 'SIDEWAYS SCROLL · ' : '') + (bad ? 'says "' + bad[0] + '" · ' : '') + (w.errs.length ? 'page error: ' + w.errs[0] + ' · ' : '') + t.replace(/\n/g, ' | ').slice(0, 140) };
         });
@@ -167,7 +168,7 @@ W.run('x-r2r', async (w) => {
       await open(page, base, 'lock');
       const m1 = (await page.locator(T('lk-row-1') + ' b').first().innerText().catch(() => '')).trim(), m12 = (await page.locator(T('lk-row-12') + ' b').first().innerText().catch(() => '')).trim();
       const figs = await page.$$eval('[data-testid^="lk-figs-"]', (a) => a.map((x) => x.innerText).join(' '));
-      const symOk = !figs || (figs.indexOf(SYM) >= 0 && (SYM === '₹' || figs.indexOf('₹') < 0));
+      const symOk = (figs.match(/A\$|₹|\$/g) || []).every((x) => x === SYM);   /* every money figure the months show is in the shop's money (a month with no sales shows none) */
       return { ok: m1 === FIRST && m12 === LAST && symOk, saw: m1 + ' … ' + m12 + ' · ' + (figs.slice(0, 60) || 'no figures') };
     });
     await w.step('Y4', 'Packs offers "Whole year (' + FIRST + '–' + LAST + ')"', async () => {
@@ -230,7 +231,7 @@ W.run('x-r2r', async (w) => {
       await page.fill(T('en-f-date'), SHOP === 'AU' ? '2026-08-15' : '2026-06-15').catch(() => {});   /* a month the loader closed for good */
       await page.click(T('en-next')).catch(() => {}); await page.waitForTimeout(2500);
       const t = await page.evaluate(() => (document.getElementById('entrysheet') || {}).innerText || '');
-      await page.screenshot({ path: path.join(SHOTS, 'wx-r2r-' + SHOP.toLowerCase() + '-entry-closed.png') });
+      await page.screenshot({ path: path.join(SHOTS, 'wx-r2r-' + TAG + '-entry-closed.png') });
       return { ok: /closed|locked/i.test(t) && /(open|month|lock|date)/i.test(t) && !/do not match/.test(t), saw: t.replace(/\n/g, ' | ').slice(0, 220) };
     });
     let entryNo = '';
@@ -249,7 +250,7 @@ W.run('x-r2r', async (w) => {
       await page.click(T('en-save')); await page.waitForSelector(T('en-saved') + ',' + T('en-err'), { timeout: 15000 });
       const t = await page.evaluate(() => (document.getElementById('entrysheet') || {}).innerText || '');
       entryNo = (t.match(/[A-Z]{2}\/\d{4}-\d{2}\/\d+/) || [''])[0];
-      await page.screenshot({ path: path.join(SHOTS, 'wx-r2r-' + SHOP.toLowerCase() + '-entry-saved.png') });
+      await page.screenshot({ path: path.join(SHOTS, 'wx-r2r-' + TAG + '-entry-saved.png') });
       return { ok: !!entryNo, saw: day + ' · ' + t.replace(/\n/g, ' | ').slice(0, 160) };
     });
     await w.step('D1c', '…Reverse this entry (with a reason) adds the mirror; the Day book row says "Reversed by" — the trail shows both', async () => {
@@ -261,7 +262,7 @@ W.run('x-r2r', async (w) => {
       /* the Day book on the open year's days (its own Custom period — what a person picks in the chip) */
       await page.evaluate((to) => { BK.dbp = bkDbPeriod('custom', { from: to.slice(0, 8) + '01', to: to }); }, AT); await open(page, base, 'todo'); await open(page, base, 'daybook');
       const t = await content(page);
-      await page.screenshot({ path: path.join(SHOTS, 'wx-r2r-' + SHOP.toLowerCase() + '-entry-reversed.png') });
+      await page.screenshot({ path: path.join(SHOTS, 'wx-r2r-' + TAG + '-entry-reversed.png') });
       return { ok: /Reversed/.test(said) && t.indexOf(entryNo) >= 0 && /Reversed by/.test(t), saw: said.slice(0, 90) + ' · day book: ' + (t.match(/Reversed by[^|\n]*/) || ['no "Reversed by"'])[0] };
     });
     }
