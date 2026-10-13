@@ -690,5 +690,35 @@ console.log('\n16 · specs must not read window.X for a script-scoped global');
   else pass('no spec reads or writes a let/const global off window (' + SCOPED.length + ' script-scoped names checked)');
 }
 
+// ── 17 · no platform host in the site (HX1) ────────────────────────────────────────────────────────────────────────────
+/* The api's address lives in ONE file, public/config.js (window.CB_API), written per deploy from CB_API_BASE; a page that names
+   *.railway.app or *.vercel.app itself is a site that cannot move (api docs/HOSTING-COUPLING.md). ALLOWED names the only exceptions and
+   why; the master of till.html is the api's tools/tally-connector/till.html, held by the api's tests/hosting-neutral.test.cjs too. */
+console.log('\n17 · no platform host in the site');
+{
+  const ROOT = path.join(__dirname, '..');
+  const ALLOWED = {
+    'public/config.js': 1,      // THE one place: the production api, as Vercel serves this file (rewritten per deploy elsewhere)
+    'public/till.html': 1,      // cbHome's fallback for a shop PC whose till.js predates HX1 (no /config.js there yet) — vendored, named debt
+  };
+  const HOST = /[a-z0-9-]+\.(?:up\.)?railway\.app|[a-z0-9-]+\.vercel\.app/gi;
+  const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => e.isDirectory() ? walk(path.join(d, e.name))
+    : (/\.(html|js|cjs|mjs|json|css|sh|conf)$/.test(e.name) ? [path.join(d, e.name)] : []));
+  const files = walk(WEB).concat(['index.html', 'vercel.json', 'Dockerfile', 'deploy/nginx.conf', 'deploy/40-cb-api-base.sh'].map((f) => path.join(ROOT, f)).filter((f) => fs.existsSync(f)));
+  const bad = [];
+  files.forEach((f) => {
+    const rel = path.relative(ROOT, f).split(path.sep).join('/');
+    const n = (fs.readFileSync(f, 'utf8').match(HOST) || []).length;
+    if (n > (ALLOWED[rel] || 0)) bad.push(rel + ' ×' + n + (ALLOWED[rel] ? ' (allowed ' + ALLOWED[rel] + ')' : ''));
+  });
+  if (bad.length) fail(bad.length + ' file(s) name a platform host — read window.CB_API (public/config.js) instead: ' + bad.slice(0, 8).join('; '));
+  else pass(files.length + ' site files name no *.railway.app / *.vercel.app host outside public/config.js');
+  const pagesNeed = walk(WEB).filter((f) => /\.html$/.test(f) && /window\.CB_API\b|CBShell\.apiBase|app\/shell\.js/.test(fs.readFileSync(f, 'utf8')))
+    .concat([path.join(ROOT, 'index.html')])
+    .filter((f) => !/<script src="\/config\.js"><\/script>/.test(fs.readFileSync(f, 'utf8')));
+  if (pagesNeed.length) fail('page(s) read the api base but do not load /config.js first: ' + pagesNeed.map((f) => path.relative(ROOT, f)).join(', '));
+  else pass('every page that reads the api base loads /config.js');
+}
+
 console.log('\n== GUARD ==  ' + hard + ' failure(s) · ' + soft + ' warning(s)');
 process.exit(hard ? 1 : 0);

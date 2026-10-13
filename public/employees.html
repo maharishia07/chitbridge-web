@@ -2,6 +2,7 @@
 <html lang="en" data-tokens="list">
 <head>
 <meta charset="utf-8">
+<script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Employees</title>
 <!-- ⭐ Employees — the shop's people as a small app (P1). The FRAME is CBFrame's (the shell header, Home, the avatar, the one sign-in window — page-frame.js);
@@ -76,7 +77,7 @@ dialog.sheet .mx{position:absolute;right:8px;top:8px;border:0;background:transpa
 'use strict';
 (function () {
   var q = new URLSearchParams(location.search), embed = q.get('embed') === '1', view = q.get('view') || '';
-  var API = q.get('api') || (window.CBShell && CBShell.apiBase && CBShell.apiBase()) || 'https://chitbridge-api-production.up.railway.app';
+  var API = q.get('api') || (window.CBShell && CBShell.apiBase && CBShell.apiBase()) || window.CB_API;
   var host = document.getElementById('emp');
   if (embed) document.body.classList.add('embed');
   /* embed: no frame. A host page (the till, signed in under its own shop-scoped store) is asked for its person's token over postMessage -
