@@ -38,7 +38,10 @@ W.run('tasks', async (w) => {
       row('c1', { subject: 'Order SO-1', ref: 'SO-1', party: 'Meena', party_id: 'cust-1', channel: 'online', fulfilment: 'pickup', requested_for: '2026-10-13', remark: 'Ring first', total_minor: 120050,
         lines: [line('l1', 'Tomato', 5, 'kg', 10000, 0, null), line('l2', 'Onion', 3, 'kg', 23350, 1, { id: 'p1', name: 'Asha Kumar' })] }),
       row('c2', { subject: 'Order SO-2', ref: 'SO-2', party: 'Kumar Stores', party_id: 'cust-2', status: 'accepted', total_minor: 48000, assignee: { id: 'p1', name: 'Asha Kumar' }, age_days: 3,
-        lines: [line('l3', 'Rice 25 kg bag', 2, 'bag', 24000, 0, null)] }),
+        channel: 'online', fulfilment: 'delivery', address: '12 Mint Street, Chennai', billed: true, lines: [line('l3', 'Rice 25 kg bag', 2, 'bag', 24000, 0, null)] }),
+      /* TO1b: an accepted delivery order, not billed yet - the one the frame's Bill it hands to the till */
+      row('c4', { subject: 'Order SO-4', ref: 'SO-4', party: 'Priya', party_id: 'cust-4', status: 'accepted', channel: 'online', fulfilment: 'delivery', address: '7 Beach Road, Chennai', requested_for: '2026-10-14', total_minor: 25000,
+        lines: [line('l5', 'Milk', 5, 'l', 5000, 0, null)] }),
       row('c3', { kind: 'order_out', side: 'buy', subject: 'Purchase to Fresh Farms', party: 'Fresh Farms', party_id: 'sup-1', status: 'accepted', total_minor: 900000, age_days: 1,
         lines: [line('l4', 'Potato', 100, 'kg', 9000, 40, null)] }),
       row('t1', { kind: 'task', side: null, subject: 'Clean the cold room', party: 'Fixture Shop', assignee: { id: 'p2', name: 'Ravi Nair' }, age_days: 1 }),
@@ -84,7 +87,16 @@ W.run('tasks', async (w) => {
     if (m !== 'GET') S.calls.push(m + ' ' + p + (body ? ' ' + JSON.stringify(body) : ''));
     if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Fixture Shop', currency_code: 'INR' } });
     if (p === '/api/entities/header') return J(r, 200, { business: { display_name: 'Fixture Shop', bridge_id: 'CBWALK0001' }, licences: [], trade_ready: true });
-    if (p === '/api/facts/rail') return J(r, 200, { suppliers: 1, customers: 3, in: 2, out: 1, stuck: 0 });
+    if (p === '/api/facts/rail') return J(r, 200, { suppliers: 1, customers: 3, in: 2, out: 1, stuck: 1 });
+    /* TO1b: the SERVER's stuck test (lib/home-facts railChits: open, from someone else, age >= overdue_days) with its why - the screen compares no dates */
+    if (p === '/api/facts/rail/chits') {
+      const items = S.rows.filter((x) => x.kind !== 'task' && !CLOSED.includes(x.status)).map((x) => {
+        const stuck = x.age_days >= 2;
+        return { chit_id: x.chit_id, direction: x.kind === 'order_in' ? 'received' : 'sent', tab: x.kind === 'order_in' ? 'in' : 'out', stuck, status: x.status, created_at: x.created_at, age_days: x.age_days,
+          subject: x.subject, who: x.party, value: x.total_minor / 100, currency: 'INR', self: false, own: false, why: stuck ? x.party + ' has waited ' + x.age_days + ' days - nobody answered.' : null };
+      });
+      return J(r, 200, { overdue_days: 2, truncated: false, items });
+    }
     if (p === '/api/work/facts') { const c = counts(); return J(r, 200, { truncated: false, counts: c, lines: [{ text: '1 new order', value: 1, tone: 'dn' }], figures: { orders_new: 1, tasks_mine: 0, orders_in: c.orders_in, orders_out: c.orders_out, tasks: c.tasks, done: c.done } }); }
     if (p === '/api/work/list' && m === 'GET') {
       if (S.listDenied) return J(r, 403, { error: 'Forbidden', message: 'Sign in as staff to see Tasks and Orders.' });
@@ -125,11 +137,14 @@ W.run('tasks', async (w) => {
 
   await openPage();
 
-  await w.step('T1', 'Tasks & Orders -> the standard page: four folders in the sidebar, Orders in first, one row per open order, the count says 2 rows', async () => {
+  await w.step('T1', 'Tasks & Orders -> the standard page: four folders in the sidebar, Orders in first, one row per open order, the count says 3 rows; a row says 🌐 Online · Pick up and the amount; the 3-day-old order wears Stuck (the rail\'s test) and Billed; ＋ New goes to the one composer', async () => {
     const nav = await page.$$eval('[data-testid^="skel-nav-"]', (bs) => bs.map((b) => b.getAttribute('data-sec')));
     const n = await rows(), cnt = await txt('[data-testid="tk-count"]'), list = await txt('[data-testid="tk-list"]');
-    return { ok: nav.join() === 'orders_in,orders_out,tasks,done' && n === 2 && /2\s*rows/.test(cnt) && /Meena/.test(list) && /New/.test(list) && /Accepted/.test(list) && !w.errs.length,
-      saw: 'folders ' + nav.join(' · ') + '; ' + n + ' rows; "' + cnt + '"' + (w.errs.length ? '; PAGE ERRORS: ' + w.errs.join(' | ') : '') };
+    const how = await txt('[data-testid="tk-how-c1"]'), stuck = await page.locator('[data-testid="tk-stuck-c2"]').count(), billed = await page.locator('[data-testid="tk-billed-c2"]').count(), stuck4 = await page.locator('[data-testid="tk-stuck-c4"]').count();
+    const fresh = await page.getAttribute('[data-testid="tk-new"]', 'href').catch(() => null);
+    return { ok: nav.join() === 'orders_in,orders_out,tasks,done' && n === 3 && /3\s*rows/.test(cnt) && /Meena/.test(list) && /New/.test(list) && /Accepted/.test(list) && /1,200\.50|1200\.50/.test(list)
+        && how === '🌐 Online · Pick up' && stuck === 1 && billed === 1 && stuck4 === 0 && fresh === '/app.html#/app/compose' && !w.errs.length,
+      saw: 'folders ' + nav.join(' · ') + '; ' + n + ' rows; "' + cnt + '" · SO-1 "' + how + '" · SO-2 stuck ' + stuck + ' billed ' + billed + ' · SO-4 stuck ' + stuck4 + ' · new -> ' + fresh + (w.errs.length ? '; PAGE ERRORS: ' + w.errs.join(' | ') : '') };
   });
   await w.step('T2', 'Sidebar -> Tasks -> the one task, who has it (Ravi), the word Started is not there yet (New)', async () => {
     await page.click('[data-testid="skel-nav-tasks"]'); await page.waitForTimeout(600);
@@ -145,14 +160,22 @@ W.run('tasks', async (w) => {
     await page.fill('[data-testid="listctl-search-tasks-orders_in"]', ''); await page.waitForTimeout(300);
     return { ok: /Rejected/.test(done) && n === 1 && /SO-1/.test(t), saw: 'Done: ' + done.slice(0, 50) + ' | search: ' + n + ' row(s) ' + t.slice(0, 60) };
   });
-  await w.step('T4', 'Click SO-1 -> the sheet: the word New, Meena and the amount, Accept and Reject open, Reopen greyed WITH the server\'s sentence, two lines with their state and holder, the thread', async () => {
+  await w.step('T4a', 'Click SO-2 (3 days old, billed) -> the sheet says Stuck WITH the rail\'s why, the delivery address, Bill it greyed "Already billed", the last step reads Delivered', async () => {
+    await openRow('c2');
+    const why = await txt('[data-testid="tk-stuck-why"]'), addr = await txt('[data-testid="tk-address"]'), bill = await greyed('tk_do_bill'), bwhy = await txt('[data-testid="tk_do_bill-why"]'), done = await txt('#tk_do_complete');
+    await closeSheet();
+    return { ok: /Stuck/.test(why) && /waited 3 days/.test(why) && /Mint Street/.test(addr) && bill === true && /Already billed/.test(bwhy) && done === 'Delivered',
+      saw: '"' + why.slice(0, 60) + '" · ' + addr + ' · Bill it ' + (bill ? 'greyed: "' + bwhy + '"' : 'OPEN') + ' · last step "' + done + '"' };
+  });
+  await w.step('T4', 'Click SO-1 -> the sheet: the word New, Meena and the amount, Pick up, Accept and Reject open, Bill it open (on the till), Handed over for a pick-up, Reopen greyed WITH the server\'s sentence, two lines with their state and holder, the thread', async () => {
     await openRow('c1');
     const subj = await txt('[data-testid="tk-subject"]'), head = await txt('[data-testid="tk-head"]');
-    const dis = { accept: await greyed('tk_do_accept'), reject: await greyed('tk_do_reject'), reopen: await greyed('tk_do_reopen') };
-    const why = await txt('[data-testid="tk_do_reopen-why"]');
+    const dis = { accept: await greyed('tk_do_accept'), reject: await greyed('tk_do_reject'), reopen: await greyed('tk_do_reopen'), bill: await greyed('tk_do_bill') };
+    const why = await txt('[data-testid="tk_do_reopen-why"]'), done = await txt('#tk_do_complete'), steps = await txt('[data-testid="tk-steps"]');
     const l1 = await txt('[data-testid="tk-line-state-l1"]'), l2who = await txt('[data-testid="tk-line-who-l2"]'), thread = await page.locator('[data-testid="tk-thread"] textarea, [data-testid="tk-thread"] [data-rt-act="text"]').count();
-    return { ok: /SO-1/.test(subj) && /Meena/.test(head) && /1,200\.50|1200\.50/.test(head) && dis.accept === false && dis.reject === false && dis.reopen === true && /cannot move/.test(why) && /Open/.test(l1) && /Asha/.test(l2who) && thread >= 1,
-      saw: subj + ' · ' + head.slice(0, 60) + ' | accept ' + (dis.accept ? 'greyed' : 'open') + ', reopen ' + (dis.reopen ? 'greyed: "' + why.slice(0, 40) + '"' : 'OPEN') + ' | line 1 ' + l1 + ', line 2 held by ' + l2who + ' | composer ' + thread };
+    return { ok: /SO-1/.test(subj) && /Meena/.test(head) && /1,200\.50|1200\.50/.test(head) && /Pick up/.test(head) && dis.accept === false && dis.reject === false && dis.bill === false && /on the till/.test(steps) && done === 'Handed over'
+        && dis.reopen === true && /cannot move/.test(why) && /Open/.test(l1) && /Asha/.test(l2who) && thread >= 1,
+      saw: subj + ' · ' + head.slice(0, 70) + ' | accept ' + (dis.accept ? 'greyed' : 'open') + ', bill ' + (dis.bill ? 'greyed' : 'open') + ', last step "' + done + '", reopen ' + (dis.reopen ? 'greyed: "' + why.slice(0, 40) + '"' : 'OPEN') + ' | line 1 ' + l1 + ', line 2 held by ' + l2who + ' | composer ' + thread };
   });
   await w.step('T5', 'SO-1 -> Accept -> ONE PUT /status { accepted } (the one status writer), the sheet says Accepted. and wears Accepted', async () => {
     await page.click('#tk_do_accept'); await page.waitForTimeout(800);
@@ -193,7 +216,7 @@ W.run('tasks', async (w) => {
     const out = await txt('[data-testid="tk-out"]'), tag = await txt('#tk_sheet [data-testid="tk-word-c1"]');
     await closeSheet();
     const n = await rows();
-    return { ok: /reason first/.test(askedOut) && before === 0 && wrote(/PUT \/api\/chits\/c1\/status \{"status":"rejected","note":"Out of stock"\}/) === 1 && /Rejected\./.test(out) && /Rejected/.test(tag) && n === 1,
+    return { ok: /reason first/.test(askedOut) && before === 0 && wrote(/PUT \/api\/chits\/c1\/status \{"status":"rejected","note":"Out of stock"\}/) === 1 && /Rejected\./.test(out) && /Rejected/.test(tag) && n === 2,
       saw: 'empty: "' + askedOut + '" (' + before + ' sent) · then "' + out + '" tag ' + tag + ' · rows left ' + n };
   });
   await w.step('T11', 'SO-2 (accepted) -> Accept is greyed "already at that step"; Cancel asks first; Cancel in the dialog sends nothing', async () => {
@@ -226,8 +249,8 @@ W.run('tasks', async (w) => {
   await w.step('T14', 'As a frame (?embed=1&view=tasks) inside a host page: no sidebar, a folder chooser, the host hears open then moved when Start is pressed', async () => {
     const sess = JSON.parse(W.session('Fixture Owner', 'Fixture Shop'));
     await page.evaluate((token) => {
-      window.__heard = [];
-      window.addEventListener('message', (e) => { const m = e.data || {}; if (m.cb !== 'tasks') return; window.__heard.push(m.event); if (m.event === 'need-session') e.source.postMessage({ cb: 'host', event: 'session', token, api: location.origin }, location.origin); });
+      window.__heard = []; window.__bills = [];
+      window.addEventListener('message', (e) => { const m = e.data || {}; if (m.cb !== 'tasks') return; window.__heard.push(m.event); if (m.event === 'bill') window.__bills.push(m.chit_id + ':' + m.party); if (m.event === 'need-session') e.source.postMessage({ cb: 'host', event: 'session', token, api: location.origin }, location.origin); });
       const f = document.createElement('iframe'); f.id = '__tkframe'; f.src = '/tasks.html?embed=1&view=tasks'; f.style.cssText = 'position:fixed;left:0;top:0;width:560px;height:640px;z-index:99;background:#fff'; document.body.appendChild(f);
     }, sess.token);
     await page.waitForTimeout(1500);
@@ -239,15 +262,32 @@ W.run('tasks', async (w) => {
     const startLabel = await txt('#tk_do_accept', fr);
     await fr.click('#tk_do_accept'); await fr.waitForTimeout(900);
     const heard = await page.evaluate(() => window.__heard.slice());
-    await page.evaluate(() => { const f = document.getElementById('__tkframe'); if (f) f.remove(); });
     return { ok: side === 0 && pick === 1 && n === 1 && startLabel === 'Start' && heard.includes('need-session') && heard.includes('open') && heard.includes('moved') && wrote(/t1\/status \{"status":"accepted"\}/) === 1,
       saw: 'sidebar ' + side + ' · chooser ' + pick + ' · ' + n + ' task · button "' + startLabel + '" · host heard: ' + heard.join(' > ') };
   });
-  await w.step('T15', 'A phone (390 px) -> the page fits the width (no sideways scroll) and the rows are there', async () => {
+  await w.step('T14b', 'In the frame -> folder Orders in -> SO-4 (accepted, not billed) -> no ＋ New in a frame; Bill it -> the HOST hears bill with the order (the till bills it through its one path); the frame wrote nothing', async () => {
+    const fr = page.frames().find((f) => /embed=1/.test(f.url()));
+    if (!fr) return { ok: false, saw: 'the frame is gone' };
+    await fr.click('#tk_x').catch(() => {}); await fr.waitForTimeout(200);
+    await fr.selectOption('[data-testid="tk-view"]', 'orders_in'); await fr.waitForTimeout(700);
+    const fresh = await fr.locator('[data-testid="tk-new"]').count();
+    await fr.click('[data-testid="tk-row-c4"]'); await fr.waitForSelector('[data-testid="tk-steps"]', { timeout: 6000 }); await fr.waitForTimeout(300);
+    const before = S.calls.length;
+    const billDis = await fr.$eval('#tk_do_bill', (b) => b.disabled).catch(() => null);
+    await fr.click('#tk_do_bill'); await fr.waitForTimeout(400);
+    const bills = await page.evaluate(() => window.__bills.slice());
+    await page.evaluate(() => { const f = document.getElementById('__tkframe'); if (f) f.remove(); });
+    return { ok: fresh === 0 && billDis === false && bills.join() === 'c4:Priya' && S.calls.length === before,
+      saw: 'new button in frame: ' + fresh + ' · Bill it ' + (billDis ? 'greyed' : 'open') + ' · host heard bill: ' + (bills.join(' ') || 'nothing') + ' · writes after: ' + (S.calls.length - before) };
+  });
+  await w.step('T15', 'A phone (390 px) -> the page fits the width (no sideways scroll) and the rows are there; the bell\'s door (openChit) opens THAT order here, the sheet with its address, still 390 wide', async () => {
     await page.setViewportSize({ width: 390, height: 844 }); await openPage(); await page.waitForTimeout(500);
     const sw = await page.evaluate(() => document.documentElement.scrollWidth), n = await rows();
+    await page.evaluate(() => window.openChit('c4')); await page.waitForSelector('[data-testid="tk-steps"]', { timeout: 6000 }); await page.waitForTimeout(300);
+    const subj = await txt('[data-testid="tk-subject"]'), addr = await txt('[data-testid="tk-address"]'), sw2 = await page.evaluate(() => document.documentElement.scrollWidth);
+    await closeSheet();
     await page.setViewportSize({ width: 1280, height: 860 });
-    return { ok: sw === 390 && n >= 1, saw: 'scrollWidth ' + sw + ' · ' + n + ' rows' };
+    return { ok: sw === 390 && n >= 1 && /SO-4/.test(subj) && /Beach Road/.test(addr) && sw2 === 390, saw: 'scrollWidth ' + sw + ' · ' + n + ' rows · openChit -> ' + subj + ' · ' + addr + ' · sheet open scrollWidth ' + sw2 };
   });
   await w.step('T16', 'Every /api/work answer the stand-in served matches the API contract (keys, nesting, types), and the page threw no error', async () => {
     const [ok, msg] = C.finish();
