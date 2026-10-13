@@ -15,7 +15,7 @@
  *   C8  rule 13, Cream and Dark at 1366 and 390: AA contrast of every text, no sideways scroll, nothing clipped, nothing floating over the bar, no app.html link, copy in budget
  *   C9  every compare answer had the API's keys, nesting and types (the contract)
  *
- *   NODE_PATH=$PWD/e2e/node_modules node e2e/walk-compare.cjs        (needs ../chitbridge-api with its node_modules, and ../chitbridge-engines)
+ *   NODE_PATH=$PWD/e2e/node_modules node e2e/walk-compare.cjs        (needs ../chitbridge-api with its node_modules; ../chitbridge-engines if beside, else the api's adopted lib/ copies)
  */
 'use strict';
 const path = require('path');
@@ -36,6 +36,9 @@ const WHO = { identity_id: IN_SHOP, identity_type: 'entity', display_name: 'Mayu
 async function realBooks() {
   const H = require(path.join(API, 'tests', 'support', 'books-harness.cjs'));
   const auth = Object.assign((req, res, next) => { req.identity = Object.assign({}, WHO); next(); }, { entityOf: (req) => req.identity.identity_id, requireScope: () => (req, res, next) => next() });
+  /* the engines: the sibling working copy on the dev PC, else the api's ADOPTED copies (lib/ledger.js · accounts-packs.js · … — the released,
+     pinned engines production runs). The walks CI checks out only the api — engines is private — so without this the walk stopped in 1 s (FIX-INT5a). */
+  if (!process.env.BOOKS_ENGINES_SRC && !H.enginesSrc().dir) process.env.BOOKS_ENGINES_SRC = path.join(API, 'lib');
   const X = H.load({ auth });
   if (!X.src.dir) throw new Error('the books engines are not beside this checkout: ' + X.src.why);
   const express = require(path.join(API, 'node_modules', 'express'));
@@ -48,7 +51,12 @@ async function realBooks() {
   await X.store.saveSetting(X.db, IN_SHOP, { enabled: false }); await call('POST', '/enable', {});
   X.T.parties.push({ owner: IN_SHOP, party_id: CUST, party_no: 'P-00001', name: 'Ravi Stores', customer: true }, { owner: IN_SHOP, party_id: SUPP, party_no: 'P-00002', name: 'Kumar Traders', supplier: true });
   X.T.chits.push({ chit_id: 'c0000000-0000-4000-8000-00000000000a', entity_id: IN_SHOP, business_json: { printed_as: 'B-1' } }, { chit_id: 'c0000000-0000-4000-8000-00000000000b', entity_id: IN_SHOP, business_json: { printed_as: 'B-2' } });
-  const post = async (e, ev) => { const r = await X.B.postEntry(X.db, e, ev); if (!r.ok) throw new Error(JSON.stringify(r)); };
+  const ADOPTED = X.src.dir === path.join(API, 'lib');
+  const post = async (e, ev) => {
+    let r; try { r = await X.B.postEntry(X.db, e, ev); } catch (err) { r = { ok: false, why: err.message }; }
+    if (!r.ok) throw new Error(JSON.stringify(r) + (ADOPTED ? ' — on the api\'s ADOPTED engines (engines.lock.json posting ' + JSON.parse(fs.readFileSync(path.join(API, 'engines.lock.json'), 'utf8')).pins.posting
+      + '): a shop outside India needs the pack-driven tax heads (engines b2, after v1.20.0) — the api must adopt the current release of posting · ledger · bookpack · period · receivables (tools/adopt.cjs)' : ''));
+  };
   await post(IN_SHOP, { type: 'sale_bill', date: '2026-09-05', currency: 'INR', party: CUST, source_chit_id: 'c0000000-0000-4000-8000-00000000000a', source_ref: 'chit:a', by_rate: [{ rate: 18, taxable: 1000, cgst: 90, sgst: 90, igst: 0 }], paid: {}, round_off: 0 });
   await post(IN_SHOP, { type: 'sale_bill', date: '2026-09-28', currency: 'INR', party: CUST, source_chit_id: 'c0000000-0000-4000-8000-00000000000b', source_ref: 'chit:b', by_rate: [{ rate: 18, taxable: 500, cgst: 45, sgst: 45, igst: 0 }], paid: {}, round_off: 0 });
   await post(IN_SHOP, { type: 'purchase_bill', date: '2026-09-06', currency: 'INR', party: SUPP, source_ref: 'pur:K7', by_rate: [{ rate: 18, taxable: 500, cgst: 45, sgst: 45, igst: 0 }], paid: {}, round_off: 0 });
