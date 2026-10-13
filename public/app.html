@@ -3383,7 +3383,8 @@ function route(){
   /* ⭐ A BILL OPENED FROM CB ACCOUNTS (#/app/chit/<id>): the app arrives on Task and opens that chit with its own openChit — nothing else
      is decided here. "For now": the chit sheet may replace the way a bill opens. */
   var _bill = /^#\/app\/chit\/([A-Za-z0-9_-]+)$/.exec(h);
-  if(_bill && SESSION.token){ UI.nav="task"; UI.folder="task"; renderApp(); try{ openChit(decodeURIComponent(_bill[1])); }catch(_){} return; }
+  /* ⚠️ WX-O2C (2026-10-13): PINNED — a bill older than the list's first page is not in UI.rows, and the list's load replaced it with row 1. */
+  if(_bill && SESSION.token){ UI.nav="task"; UI.folder="task"; UI.pin=decodeURIComponent(_bill[1]); renderApp(); try{ openChit(UI.pin); }catch(_){} return; }
   /* …or remembered: cb_nav@<id> held 'ledger' from before the door closed (boot puts it in UI.nav) */
   if(SESSION.token && UI.nav==="ledger" && /^#\/app$|^#\/?$/.test(h)) return ledgerDoorClosed();
   if(h.startsWith("#/welcome")) return renderWelcome();
@@ -15903,7 +15904,8 @@ async function loadList(silent){
        * reports it for the first minute and everybody blames the network after that.
        */
       if(UI.rows.length){
-        const here = UI.sel && UI.rows.some(c=>c.id===UI.sel);
+        /* …or the chit a door opened by id (UI.pin, #/app/chit/<id>) — it stays open even when it is not on the first page */
+        const here = UI.sel && (UI.rows.some(c=>c.id===UI.sel) || UI.sel===UI.pin);
         const want = here ? UI.sel : ((UI.rows.find(c=>c.state===UI.state)||UI.rows[0]||{}).id || null);
         if(want && (!UI.detail || UI.detail.id!==want)) openChit(want,true);
       }

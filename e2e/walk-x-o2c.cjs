@@ -213,7 +213,9 @@ W.run('x-o2c', async (w) => {
         const pick = (n) => items.find((x) => ((x.item_data || x).name || '') === n) || items[0];
         const o = await R.shopperOrder(api, OWNER, { contact: SHOPPER.contact, name: SHOPPER.name, location: SHOPPER.location, lines: [{ item_id: pick('Ponni raw rice 1 kg').item_id, name: 'Ponni raw rice 1 kg', quantity: 2 }, { item_id: pick('Toor dal 500 g').item_id, name: 'Toor dal 500 g', quantity: 1 }] });
         order = { no: 'CB-' + String(o.chit_id).slice(0, 8), chit_id: o.chit_id };
-        await page.setViewportSize(LAPTOP); await page.goto(base + '/app.html#/app/chit/' + o.chit_id); await settle(page, 2500);
+        await page.setViewportSize(LAPTOP); await page.goto(base + '/app.html');
+        await page.evaluate((s) => { try { localStorage.setItem('cb_sess', s); } catch (_) {} }, owner.session);   /* signed in as S3's O3.10 leaves it */
+        await page.goto(base + '/app.html#/app/chit/' + o.chit_id); await settle(page, 2500);
       }
       const moveStatus = async (word) => {
         await page.click('[data-testid="chit-status-btn"]'); await settle(page, 600);
