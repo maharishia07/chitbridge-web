@@ -137,7 +137,7 @@ function bkCss() {
 bkCss();
 
 /* ── money and dates: through the engines, never by hand ── */
-function bkCur(c) { return c || (typeof SESSION !== 'undefined' && SESSION.currency) || 'INR'; }
+function bkCur(c) { return c || (typeof SESSION !== 'undefined' && SESSION.currency) || (typeof BK !== 'undefined' && BK.cur) || 'INR'; }   /* BK.cur: the ledger's own money (GET /health) — CB Accounts' session names none, and an AU shop's months said ₹ */
 function bkDec(c) { try { return CBMoney.decimals(bkCur(c)); } catch (_) { return 2; } }
 function bkMoney(minor, c) {
   var n = Number(minor || 0) / Math.pow(10, bkDec(c));
@@ -733,8 +733,7 @@ function bkRange(id) {
   if (id === 'db' && BK.dbp) return { from: BK.dbp.from, to: BK.dbp.to };
   if (id === 'lg' && BK.lgp) return { from: BK.lgp.from, to: BK.lgp.to };   /* the Ledgers' period chip (bkLgHead) */   /* the Day book's period chip (bkDbPeriod) */
   var from = (document.getElementById(id + '_from') || {}).value, to = (document.getElementById(id + '_to') || {}).value;
-  var d = new Date(); var fyStart = (d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1) + '-04-01';
-  return { from: from || fyStart, to: to || bkToday() };
+  return { from: from || bkFyFrom(), to: to || bkToday() };
 }
 function bkRangeHTML(id, again) {
   var r = bkRange(id);
@@ -955,7 +954,7 @@ function bkDvNext(e, c, lines, noParty, mine) {
 }
 /** the Day book's period: Today · This month · This FY · Custom — applies on pick (no Show button); bkRange('db') reads it */
 function bkDbPeriod(preset, custom) {
-  var today = bkToday(), d = new Date(), fy = (d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1) + '-04-01';
+  var today = bkToday(), fy = bkFyFrom();
   if (preset === 'today') return { preset: 'today', from: today, to: today };
   if (preset === 'month') return { preset: 'month', from: today.slice(0, 7) + '-01', to: today };
   if (preset === 'custom' && custom && custom.from && custom.to) return { preset: 'custom', from: custom.from, to: custom.to };
@@ -981,7 +980,7 @@ function bkDvHead() {
   if (n.waiting) notices.push({ cls: 'warn', tid: 'todo-waiting', text: n.waiting + ' ' + tx('waiting to be recorded'), onOpen: function () { bkTab('waiting'); } });
   if (!n.accept && !n.overdue && !n.cheques && !n.waiting) chips.push({ tid: 'todo-none', text: tx('Nothing waiting on you') });
   return { period: { label: bkDbPeriodLabel(q, p.preset), value: p.preset, custom: { from: q.from, to: q.to },
-      presets: [['today', tx('Today')], ['month', tx('This month')], ['fy', tx('This FY (Apr–Mar)')], ['custom', tx('Custom')]],
+      presets: [['today', tx('Today')], ['month', tx('This month')], ['fy', bkFyWord()], ['custom', tx('Custom')]],
       onPick: function (v, range) { if (v === 'custom' && !range) return; BK.dbp = bkDbPeriod(v, range); bkTab('daybook', true); } },
     chips: chips, notices: notices,
     /* ＋ Entry (cap-entry.js, loaded by CB Accounts): the one door to a manual entry, in the slot CBList gives the head — the page that loads cap-entry offers it, nobody else */
@@ -1314,7 +1313,7 @@ function bkLgPeriodHead() {
   var pane = document.getElementById('lt_pane'), word = { today: 'Today', month: 'This month', fy: 'This FY' }[p.preset];
   /* the chip says the preset's name ("This FY") where the pane is too narrow for the dates — they are the chip's popover and the figures' own period */
   return { label: word && pane && pane.clientWidth < 1100 ? tx(word) : bkDbPeriodLabel(q, p.preset), value: p.preset, custom: { from: q.from, to: q.to },
-    presets: [['today', tx('Today')], ['month', tx('This month')], ['fy', tx('This FY (Apr–Mar)')], ['custom', tx('Custom')]],
+    presets: [['today', tx('Today')], ['month', tx('This month')], ['fy', bkFyWord()], ['custom', tx('Custom')]],
     onPick: function (v, range) { if (v === 'custom' && !range) return; BK.lgp = bkDbPeriod(v, range); BK.lt.r = null; BK.lt.noParty = false; if (BK.lt.api) BK.lt.api.refresh(); bkLtLoad(); } };
 }
 /**
@@ -1709,8 +1708,32 @@ async function bkDues(body, onlySide) {   /* onlySide 'rcv' | 'pay' (CB Accounts
     });
   } catch (e) { body.innerHTML = bkErr(e); }
 }
-function bkFyNow() { var d = new Date(); var y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1; return y + '-' + String((y + 1) % 100).padStart(2, '0'); }
-var BK_MONTHS = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'];
+/**
+ * ⭐ THE SHOP'S YEAR IS THE SERVER'S (WX-R2R, 2026-10-13): GET /books/health answers year { fiscal_year, from, start_month } — the pack on the
+ * Country setup's year start, the same default the TB / P&L / BS reads take. BK.year holds it (accounts.html boot · bkHealthLoad). Before this
+ * every screen here assumed April: an AU shop (a July year) had its P&L refused for spanning two years and its months named Apr–Mar.
+ * April is only the answer of a server that does not say (an older api).
+ */
+function bkYearStart() { var m = Number(BK.year && BK.year.start_month); return m >= 1 && m <= 12 ? m : 4; }
+function bkFyNow() {
+  if (BK.year && BK.year.fiscal_year) return String(BK.year.fiscal_year);
+  var d = new Date(); var y = d.getMonth() + 1 >= 4 ? d.getFullYear() : d.getFullYear() - 1; return y + '-' + String((y + 1) % 100).padStart(2, '0');
+}
+function bkFyFrom() { return (BK.year && BK.year.from) || (bkFyNow().slice(0, 4) + '-04-01'); }
+var BK_MON12 = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+/** the twelve month names of the shop's year, period 1 first (April for India, July for Australia, January for a calendar year) */
+function bkMonths() { var s = bkYearStart() - 1; return BK_MON12.map(function (_, i) { return BK_MON12[(s + i) % 12]; }); }
+/** the year before `fy` in the server's own labels ("2026-27" → "2025-26"; a calendar year "2026" → "2025") */
+function bkFyPrev(fy) { var y = Number(String(fy).slice(0, 4)) - 1; return String(fy).length === 4 ? String(y) : y + '-' + String((y + 1) % 100).padStart(2, '0'); }
+/** the year and month a day falls in — the server's own row first (GET /periods start_date…end_date), the shop's year start when the month has no row yet */
+function bkPeriodOfDay(day, L) {
+  var hit = Object.keys((L && L.info) || {}).filter(function (k) { var x = L.info[k]; return x.start_date && x.end_date && String(x.start_date).slice(0, 10) <= day && day <= String(x.end_date).slice(0, 10) && Number(x.period) >= 1; })[0];
+  if (hit) return { fy: hit.split('|')[0], p: Number(hit.split('|')[1]) };
+  var st = bkYearStart(), m = Number(day.slice(5, 7)), y = m >= st ? Number(day.slice(0, 4)) : Number(day.slice(0, 4)) - 1;
+  return { fy: st === 1 ? String(y) : y + '-' + String((y + 1) % 100).padStart(2, '0'), p: (m - st + 12) % 12 + 1 };
+}
+/** "This FY (Jul–Jun)" — the preset's name, in the shop's months */
+function bkFyWord() { var m = bkMonths(); return tx('This FY') + ' (' + tx(m[0]) + '–' + tx(m[11]) + ')'; }
 /** the period's status is a server enum — it becomes a word here, never shown raw */
 var BK_PERIOD_WORD = { open: 'Open', soft_locked: 'Locked', hard_locked: 'Closed for good' };
 function bkIsOwner() { return typeof SESSION !== 'undefined' && !!SESSION && SESSION.role === 'entity'; }   /* the server enforces it; this only decides who is offered the buttons */
@@ -1750,12 +1773,12 @@ async function bkLockView(body) {
  */
 function bkLockRowsPaint() {
   var el = document.getElementById('lk_rows'), L = BK.lk, own = bkIsOwner(); if (!el) return;
-  var reopens = BK_MONTHS.some(function (m, i) { var q = (L.info || {})[L.fy + '|' + (i + 1)]; return q && q.reopen && q.reopen.may; });
+  var reopens = bkMonths().some(function (m, i) { var q = (L.info || {})[L.fy + '|' + (i + 1)]; return q && q.reopen && q.reopen.may; });
   var foot = document.getElementById('lk_foot'), whyBox = document.getElementById('lk_whybox');
   if (own && reopens && !whyBox && foot) foot.insertAdjacentHTML('beforebegin', '<label id="lk_whybox">' + tx('Reason') + '<input class="inp" id="lk_why" data-testid="lk_why" placeholder="' + esc(tx('Needed to open a month again')) + '"></label>');
   if (own && !reopens && whyBox) whyBox.remove();
   if (foot) foot.textContent = !own ? '' : reopens ? tx('A locked month opens again with a reason. Close for good never opens.') : tx('Close for good: the month never opens again. Corrections go into an open month as an adjusting entry.');
-  el.innerHTML = BK_MONTHS.map(function (m, i) {
+  el.innerHTML = bkMonths().map(function (m, i) {
     var p = i + 1, st = L.rows[L.fy + '|' + p] || 'open', b = '', x = (L.info || {})[L.fy + '|' + p] || null;
     var may = !x || !x.lock || x.lock.may, why = x && x.lock && x.lock.why ? x.lock.why : '';
     if (own && st === 'open') b = '<button class="supact-pri" data-testid="lk-lock-' + p + '"' + (may ? ' onclick="bkLockDo(\'lock\',' + p + ')" title="' + esc(tx('Stops entries · reopens with a reason')) + '"' : ' disabled title="' + esc(tx(why)) + '"') + '>🔒 ' + tx('Lock') + '</button>'
@@ -1771,7 +1794,7 @@ function bkLockRowsPaint() {
 }
 async function bkLockDo(what, p) {
   var L = BK.lk, fy = L.fy, why = (document.getElementById('lk_why') || {}).value || '', out = document.getElementById('lk_out');
-  var m = tx(BK_MONTHS[p - 1] || String(p));
+  var m = tx(bkMonths()[p - 1] || String(p));
   if (what === 'unlock' && !why.trim()) { if (out) out.textContent = tx('Say why — the reason is kept'); var w = document.getElementById('lk_why'); if (w) w.focus(); return; }
   /* ⭐ M64: through CBAction — ONE write per month at a time (whichever of its buttons), Close for good asks first in the
      page's own dialog (Cancel sends nothing), and the outcome is said in lk_out beside the months */
@@ -1830,9 +1853,9 @@ async function bkPacks(body) {
 /** the pack controls: the year, then a month that IS locked (a pack is made from a locked month). No locked month → the sentence is the button to Month lock */
 function bkPackCtlPaint() {
   var el = document.getElementById('pk_ctl'), L = BK.lk; if (!el) return;
-  var locked = BK_MONTHS.map(function (m, i) { return [i + 1, m, L.rows[L.fy + '|' + (i + 1)]]; }).filter(function (x) { return x[2] === 'soft_locked' || x[2] === 'hard_locked'; });
+  var locked = bkMonths().map(function (m, i) { return [i + 1, m, L.rows[L.fy + '|' + (i + 1)]]; }).filter(function (x) { return x[2] === 'soft_locked' || x[2] === 'hard_locked'; });
   el.innerHTML = '<div class="supacts" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px">' + bkFyPicker('pk_fy', 'pk_fy')
-    + '<select class="inp" id="pk_p" data-testid="pk_p" onchange="bkPackPick()" style="flex:1 1 110px;min-width:0"' + '><option value="">' + esc(tx('Month')) + '</option><option value="year">' + esc(tx('Whole year (Apr–Mar)')) + '</option>'
+    + '<select class="inp" id="pk_p" data-testid="pk_p" onchange="bkPackPick()" style="flex:1 1 110px;min-width:0"' + '><option value="">' + esc(tx('Month')) + '</option><option value="year">' + esc(tx('Whole year') + ' (' + tx(bkMonths()[0]) + '–' + tx(bkMonths()[11]) + ')') + '</option>'
     + locked.map(function (x) { return '<option value="' + x[0] + '">' + esc(tx(x[1])) + '</option>'; }).join('') + '</select>'
     + '<button class="supact-pri" data-testid="pk_build" id="pk_build" onclick="bkPackBuild()" disabled>' + tx('Make a pack') + '</button></div>'
     + (locked.length ? '' : '<div class="supacts" style="margin-bottom:9px"><button data-testid="pk_lockfirst" onclick="bkTab(\'lock\')">🔒 ' + tx('Lock a month first') + '</button></div>');
@@ -1990,6 +2013,8 @@ function bkChequeRepaint(id) {
 async function bkHealthLoad() {
   var r = await api('booksHealth');
   BK.waiting = (r && r.waiting) || [];
+  if (r && r.year) BK.year = r.year;   /* the shop's year (bkFyNow) */
+  if (r && r.currency) BK.cur = r.currency;
   bkWaitingCount();
   return r;
 }

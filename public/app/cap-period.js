@@ -44,6 +44,9 @@ const peRef = (k) => PE.ref[k] || (PE.ref[k] = bkRef());
 const peYmd = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 /** the last day of the month `back` months ago (1 = last month) — a date for a field's default, not money */
 function peMonthEnd(back) { const n = new Date(); return peYmd(new Date(n.getFullYear(), n.getMonth() - back + 1, 0)); }
+/** ⭐ WX-R2R: the year a close or a depreciation run is for — last year when the books hold it, else the books' FIRST year (the server's
+   GET /periods years). Never a year before the books began: the Year close used to open on it and paint twelve "not locked" crosses. */
+function peLastYear(years) { const prev = bkFyPrev(bkFyNow()); return years.indexOf(prev) >= 0 ? prev : (years.slice().sort()[0] || prev); }
 function peDaysAgo(n) { const d = new Date(); d.setDate(d.getDate() - n); return peYmd(d); }
 function peList(r, k) { return Array.isArray(r) ? r : ((r && r[k]) || []); }
 
@@ -226,8 +229,7 @@ async function peSellSave(btn, id) {
 }
 async function peDepForm() {
   let L; try { L = await bkPeriodsLoad(); } catch (e) { return peBad('pa_out', e); }
-  const prev = (() => { const y = Number(bkFyNow().slice(0, 4)) - 1; return y + '-' + String((y + 1) % 100).padStart(2, '0'); })();
-  const years = L.years.slice(); if (years.indexOf(prev) < 0) years.push(prev); years.sort().reverse();
+  const years = L.years.slice(), prev = peLastYear(years);
   peEl('pa_form').innerHTML = '<div class="pe-card" data-testid="pdp-form"><div class="pe-form">'
     + peField('pdp_fy', 'Financial year', peSel('pdp_fy', years.map((y) => [y, y]), prev, ' onchange="peDepLabel()"'))
     + '</div><div class="supacts"><button type="button" class="supact-pri" id="pdp_run" data-testid="pdp-run" onclick="peDepRun(this)"></button>'
@@ -455,12 +457,12 @@ async function peGstView(body) {
   try { PE_RET.q = Object.assign({}, peRetRecall()); ret = await peReturnLoad(); } catch (e) { body.innerHTML = '<div class="pe-bad">' + bkErr(e) + '</div>'; return; }
   if (ret) { peReturnWord(ret); body.innerHTML = '<div id="pr_host" data-testid="pr-host"></div>'; peReturnPaint(ret); return; }
   let L; try { L = await bkPeriodsLoad(); } catch (e) { body.innerHTML = '<div class="pe-bad">' + bkErr(e) + '</div>'; return; }
-  const last = peMonthEnd(1), lastP = (Number(last.slice(5, 7)) + 8) % 12 + 1;    /* April = 1 … March = 12 */
-  const lastFy = (() => { const y = Number(last.slice(5, 7)) >= 4 ? Number(last.slice(0, 4)) : Number(last.slice(0, 4)) - 1; return y + '-' + String((y + 1) % 100).padStart(2, '0'); })();
+  /* last month, in the shop's year (WX-R2R: the server's period row, else its year start — never an April of this file's own) */
+  const last = peMonthEnd(1), lp = bkPeriodOfDay(last, L), lastP = lp.p, lastFy = lp.fy;
   const years = L.years.slice(); if (years.indexOf(lastFy) < 0) years.push(lastFy); years.sort().reverse();
   body.innerHTML = '<div class="pe-card" data-testid="pg-form"><div class="pe-form">'
     + peField('pg_fy', 'Financial year', peSel('pg_fy', years.map((y) => [y, y]), lastFy))
-    + peField('pg_p', 'Month', peSel('pg_p', BK_MONTHS.map((m, i) => [String(i + 1), m]), String(lastP)))
+    + peField('pg_p', 'Month', peSel('pg_p', bkMonths().map((m, i) => [String(i + 1), m]), String(lastP)))
     + '</div><div class="supacts">' + peBtn('pg-close', 'Close the month', 'peGstClose(this)') + '</div><div id="pg_out" class="pe-slot"></div></div><div id="pg_res"></div>';
 }
 function peGstSetOff(r) {
@@ -623,8 +625,7 @@ async function peReturnCopy(btn) {
    POST /year/:fy/close → { ok, next, locked, opening } · refused (422) with the refusals in plain words */
 async function peYearView(body) {
   let L; try { L = await bkPeriodsLoad(); } catch (e) { body.innerHTML = '<div class="pe-bad">' + bkErr(e) + '</div>'; return; }
-  const prev = (() => { const y = Number(bkFyNow().slice(0, 4)) - 1; return y + '-' + String((y + 1) % 100).padStart(2, '0'); })();
-  const years = L.years.slice(); if (years.indexOf(prev) < 0) years.push(prev); years.sort().reverse();
+  const years = L.years.slice(), prev = peLastYear(years);
   body.innerHTML = '<div class="pe-card"><div class="pe-form">' + peField('py_fy', 'Financial year', peSel('py_fy', years.map((y) => [y, y]), prev, ' onchange="peYearStatus()"')) + '</div></div><div id="py_res" data-testid="py-res"></div>';
   peYearStatus();
 }

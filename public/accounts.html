@@ -653,6 +653,8 @@ async function start(){
   try{
     const h = await api('booksHealth');                 /* 404 = the Ledger is off for this shop */
     BK.waiting = (h && h.waiting) || [];
+    if (h && h.year) BK.year = h.year;                  /* the shop's year — cap-books bkFyNow / bkMonths paint it, never an April of their own */
+    if (h && h.currency) BK.cur = h.currency;           /* the ledger's money — bkCur's answer when a figure names none */
     ON = !!(h && h.enabled !== false);
   }catch(e){
     if (e && e.status === 404) return offCard();
