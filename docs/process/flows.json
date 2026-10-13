@@ -183,7 +183,14 @@
           "route": [{ "m": "GET", "p": "/api/books/cashflow", "file": "api:routes/books.js" }],
           "chit": "none", "ledger": "none — the GST owed is READ after the set-off (the same arithmetic the month close posts), due the 20th of the next month; cash · bank · UPI · card balances as at today",
           "test": ["api:tests/books-cashflow.test.cjs", "api:tests/books-period.test.cjs", "web:e2e/walk-finance-cash.cjs"],
-          "status": "ok", "note": "" }
+          "status": "ok", "note": "" },
+        { "n": 9, "step": "bank reconciliation", "module": "Accounts", "who": "the owner (accepts · records · asks); a view-only login reads (Ask / Record greyed with the server's sentence)",
+          "screen": [{ "file": "web:public/app/cap-bank.js", "fn": "bankExplain" }, { "file": "web:public/app/cap-bank.js", "fn": "bankAccept" }, { "file": "web:public/app/cap-bank.js", "fn": "bankRecord" }, { "file": "web:public/app/cap-bank.js", "fn": "bankAsk" }, { "file": "web:public/app/cap-bank.js", "fn": "bankTodoItem" }, { "file": "web:public/app/cap-books.js", "fn": "payPrefill" }],
+          "engine": [{ "file": "engines:src/bank-recon.js", "fn": "explain" }, { "file": "engines:src/bank-recon.js", "fn": "railPayments" }, { "file": "engines:src/bank-recon.js", "fn": "ask" }, { "file": "engines:src/bank-recon.js", "fn": "learn" }, { "file": "engines:src/bank-recon.js", "fn": "step" }, { "file": "api:lib/books-store.js", "fn": "bankRailChits" }],
+          "route": [{ "m": "GET", "p": "/api/books/bank/rail", "file": "api:routes/books.js" }, { "m": "POST", "p": "/api/chits/send", "file": "api:routes/chits.js" }, { "m": "POST", "p": "/api/books/payments", "file": "api:routes/books.js" }],
+          "chit": "the other party's payment advice (M30) explains a line; an unexplained one is ASKED with a message chit (business_json.kind bank_query — date · amount · ref only); their advice answers it", "ledger": "none here — a line told by a chit but not in the books is recorded through the ONE writer (POST /payments, the pay sheet prefilled with their amount, ref and bills); the statement never leaves the device",
+          "test": ["engines:tests/bank-recon-rail.test.js", "api:tests/books-bank-rail.test.cjs", "web:e2e/walk-bank-rec.cjs", "web:e2e/bank-recon-page.cjs"],
+          "status": "ok", "note": "BR1 (2026-10-13): three-way — statement line ↔ payment chit ↔ ledger entry. Accept marks, notes and learned rules stay on the device (no server store yet)." }
       ]
     },
     {

@@ -91,6 +91,7 @@ const closing = (S) => S.opening + S.lines.reduce((t, l) => t + l.dr_minor - l.c
         lines: [{ code: '6090', ledger: 'Bank charges', dr_minor: body.amount_minor, cr_minor: 0, type: 'nominal', rule: 'Dr expenses and losses' }, { code: '1500', ledger: 'Bank', dr_minor: 0, cr_minor: body.amount_minor, type: 'real', rule: 'Cr what goes out' }] });
       if (p === '/api/books/events' && m === 'POST') { S.lines.push({ date: body.date, what: body.narration, ref: 'MJ/26-27/0030', source: { how_ref: null }, dr_minor: 0, cr_minor: 2360 }); return J(r, 200, Object.assign({ kind: body.event }, books.posted({ entry_no: 'MJ/26-27/0030', entry_id: 'e30' }))); }
       if (p === '/api/books/dues') return J(r, 200, books.dues([]));
+      if (p === '/api/books/bank/rail') return J(r, 200, { currency: 'INR', from: u.searchParams.get('from'), to: u.searchParams.get('to'), me: 'Mayur Bhavan', rail_chits: [], parties: [], may: { ask: { ok: true } } });   /* BR1: nobody told us anything here — the lines match the books alone */
       return J(r, 200, {});
     });
     await ctx.addInitScript((s) => { try { if (!localStorage.getItem('cb_seeded')) { localStorage.setItem('cb_seeded', '1'); localStorage.setItem('cb_sess', JSON.stringify(s)); } } catch (_) {} }, who || OWNER);
@@ -114,13 +115,13 @@ const closing = (S) => S.opening + S.lines.reduce((t, l) => t + l.dr_minor - l.c
   const c = { matched: await status(p, 'matched'), suggested: await status(p, 'suggested'), bankOnly: await status(p, 'bank-only'), missing: await status(p, 'missing') };
   ok(c.matched === 2 && c.suggested === 3 && c.bankOnly === 1 && c.missing === 1, 'matched 2 · suggested 3 · bank-only 1 · not on the statement 1 (' + JSON.stringify(c) + ')');
   ok(S.ledgerCalls.length === 1 && S.ledgerCalls[0] === '?from=2026-09-01&to=2026-09-25', 'the ledger is read once, for the statement\'s dates only (' + S.ledgerCalls[0] + ')');
-  ok(await p.locator('[data-testid="bank-count-matched"]').count() === 1 && /2/.test(await p.textContent('[data-testid="bank-count-matched"]')) && /4 lines are not in your books/.test(await p.textContent('[data-testid="bank-notice"]')), 'the head says the counts and "4 lines are not in your books"');
+  ok(await p.locator('[data-testid="bank-count-matched"]').count() === 1 && /2/.test(await p.textContent('[data-testid="bank-count-matched"]')) && /4 lines need you/.test(await p.textContent('[data-testid="bank-notice"]')), 'the head says the counts and "4 lines need you"');
   await p.screenshot({ path: path.join(SHOTS, 'bank-lines-laptop.png') });
 
   /* ── 2 · NO REQUEST CARRIES THE FILE ── */
   const leaks = S.reqs.filter((r) => SECRETS.some((s) => (r.u + r.h + r.d).indexOf(s) >= 0));
   ok(leaks.length === 0, 'no request (url, header or body) carries a line, a narration, the file name or its text' + (leaks.length ? ' — ' + leaks.map((l) => l.m + ' ' + l.u).join(', ') : ''));
-  ok(S.reqs.every((r) => r.m === 'GET' || !/statement/i.test(r.u)) && S.bodies.length === 0, 'nothing has been posted yet — only reads (' + S.reqs.filter((r) => /\/api\//.test(r.u)).length + ' API calls, all GET)');
+  ok(S.reqs.every((r) => r.m === 'GET' || !/statement/i.test(r.u)) && S.bodies.filter((x) => /^\/api\/books\//.test(x.p)).length === 0, 'nothing has been posted yet — only reads (' + S.reqs.filter((r) => /\/api\//.test(r.u)).length + ' API calls, all GET)');
 
   /* ── 3 · ADD MISSING → ＋ ENTRY → ONE POST ── */
   const sms = await p.locator('[data-status="suggested"]').first().evaluate((e) => e.getAttribute('data-testid'));

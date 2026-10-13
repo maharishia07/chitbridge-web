@@ -15,6 +15,7 @@ if (typeof EP !== 'undefined') { Object.assign(EP, {
   booksAccountAdd: { m: 'POST', p: '/api/books/accounts' },
   booksDaybook:    { m: 'GET',  p: '/api/books/daybook' },
   booksLedger:     { m: 'GET',  p: '/api/books/ledger/:account' },
+  booksBankRail:   { m: 'GET',  p: '/api/books/bank/rail' },         /* BR1: what the other parties already TOLD us (their payment advices) + the bank questions asked — the statement itself never goes */
   booksTB:         { m: 'GET',  p: '/api/books/trial-balance' },
   booksPL:         { m: 'GET',  p: '/api/books/pl' },
   booksBS:         { m: 'GET',  p: '/api/books/bs' },
@@ -534,7 +535,7 @@ async function partyEditSave(kind, partyId) {
    duplicate band. There is no "Later": "Keep it as an advance" is a switch that says what it does. The words of every warning and of
    the outcome come from the server; this unit paints them. */
 var PAY = null;
-function payOpen(kind, partyId) {
+function payOpen(kind, partyId, pre) {
   var r = partyRowOf(kind, partyId) || {};
   /* ⚠️ WX-P2P-10 (2026-10-13, the real stack): on CB Accounts (no supplier / customer list loaded) the sheet opened as "Pay ·" — no name until the
      preview answered. The Payables row that opened it already holds the name (BK.dues, the one dues read); the preview's party.name still wins later. */
@@ -553,6 +554,29 @@ function payOpen(kind, partyId) {
     + '</div><div class="mfoot" id="pay_foot"><button onclick="closeModal()">' + tx('Cancel') + '</button><button class="pri" data-testid="pay_record" onclick="payRecord()">' + tx('Record') + '</button>'
     + (kind === 'supplier' ? '' : '<button data-testid="pay_remind" onclick="payRemind()">' + tx('Not paid yet — remind me') + '</button>') + '</div>');
   payPaint();
+  if (pre) payPrefill(pre);
+}
+/**
+ * BR1 · a payment the OTHER PARTY already told us about (their payment advice chit, read by the Bank page): the amount, How (the statement's
+ * own ledger), their reference and the bills the chit settles are placed — the person still presses Record, and the ONE books writer
+ * (POST /payments) decides. pre = { amount_minor, mode, reference, name, bills: [{ ref_chit_id, applied_minor }] }
+ */
+function payPrefill(pre) {
+  PAY.pre = pre;
+  if (!PAY.name && pre.name) { PAY.name = pre.name; var t = document.getElementById('pay_title'); if (t) t.textContent = (PAY.kind === 'supplier' ? tx('Pay') : tx('Receive')) + ' · ' + PAY.name; }
+  var a = document.getElementById('pay_amt'); if (a && pre.amount_minor > 0) a.value = bkMinorText(pre.amount_minor);
+  var m = document.getElementById('pay_mode'); if (m && pre.mode) { m.value = pre.mode; payModePaint(); }
+  var f = document.getElementById('pay_ref'); if (f && pre.reference) f.value = pre.reference;
+  payPreviewSoon(0);
+}
+/** the bills the advice names take the amounts it names; the others 0 — only when the advice's bills are among the open ones (else the server's proposal stands) */
+function payPreBills(r) {
+  var bills = (PAY.pre && PAY.pre.bills) || [], rows = (r && r.proposal) || [];
+  if (!bills.length || !rows.some(function (it) { return bills.some(function (b) { return b.ref_chit_id === it.against_ref; }); })) return;
+  rows.forEach(function (it) {
+    var b = bills.filter(function (x) { return x.ref_chit_id === it.against_ref; })[0];
+    it.apply_minor = b ? Math.min(b.applied_minor != null ? b.applied_minor : it.open_minor, it.open_minor) : 0;
+  });
 }
 /** "Not paid yet — remind me" (SPEC-payments D3): nothing posts; it is the Remind of the Dues row — a message on the oldest open bill */
 function payRemind() { if (!PAY) return; var id = PAY.partyId; closeModal(); return bkRemind(id, null); }
@@ -588,7 +612,7 @@ async function payPreview() {
   try {
     var q = payIntent(false), r = await api('booksPayPreview', { body: { party_id: PAY.partyId, direction: payDirection(), amount_minor: amt, currency: bkCur(), allocate: q.allocate } });
     if (PAY === p && n === PAY.seq) {
-      PAY.preview = r; PAY.ack = []; PAY.amount = amt;
+      PAY.preview = r; PAY.ack = []; PAY.amount = amt; payPreBills(r);
       /* a door that does not hold the party's list (the CRM record) learns the name from the server's own answer */
       if (!PAY.name && r.party && r.party.name) { PAY.name = r.party.name; var ti = document.getElementById('pay_title'); if (ti) ti.textContent = (PAY.kind === 'supplier' ? tx('Pay') : tx('Receive')) + ' · ' + PAY.name; } var w = document.getElementById('pay_why'); if (w) w.textContent = ''; payPaint(); }
   } catch (e) {
