@@ -140,11 +140,12 @@ async function peStockSave(btn) {
 
 /* ═══ 2 · ASSETS & DEPRECIATION ═════════════════════════════════════════════════════════════════════════════════════════
    GET /assets → the register; POST /assets (by hand); POST /assets/:id/dispose; POST /depreciation/run { fy } → one entry, and the basis it used.
-   The classes are the India pack's (the server refuses another and names them). */
+   The classes are the pack's — the same six keys in IN · AU · AE (the server refuses another and names them). */
 const PE_CLASSES = [['buildings', 'Buildings'], ['plant', 'Plant & machinery'], ['furniture', 'Furniture'], ['vehicles', 'Vehicles'], ['office', 'Office equipment'], ['computers', 'Computers']];
 const PE_CLASS_WORD = PE_CLASSES.reduce((m, c) => { m[c[0]] = c[1]; return m; }, {});
-const PE_BASIS = { it_act_wdv: 'Income-tax WDV', schedule_ii: 'Schedule II' };
-const PE_ENTITY = { proprietor: 'proprietor', partnership: 'partnership', llp: 'LLP', huf: 'HUF', trust: 'trust', company: 'company' };
+/* CX2 (A5): the basis CODE is the pack's (depreciation.entityBases); its short word is here until a pack carries a label (engines request queued) */
+const PE_BASIS = { it_act_wdv: 'Income-tax WDV', schedule_ii: 'Schedule II', div40: 'Division 40', ias16: 'IAS 16' };
+const PE_ENTITY = { proprietor: 'proprietor', partnership: 'partnership', llp: 'LLP', huf: 'HUF', trust: 'trust', company: 'company', sole_trader: 'sole trader', sole_establishment: 'sole establishment' };
 async function peAssetsView(body) {
   if (!peOwner()) { body.innerHTML = peNoOwner('Only the owner sees the asset register'); return; }
   body.innerHTML = '<div class="supacts pe-bar">' + peBtn('pa-add-open', '＋ Add an asset', 'peAssetForm()') + peBtn('pa-dep-open', 'Run depreciation', 'peDepForm()', '') + '</div>'
@@ -226,7 +227,7 @@ async function peSellSave(btn, id) {
 }
 async function peDepForm() {
   let L; try { L = await bkPeriodsLoad(); } catch (e) { return peBad('pa_out', e); }
-  const prev = (() => { const y = Number(bkFyNow().slice(0, 4)) - 1; return y + '-' + String((y + 1) % 100).padStart(2, '0'); })();
+  const prev = bkFyName(Number(bkFyNow().slice(0, 4)) - 1);
   const years = L.years.slice(); if (years.indexOf(prev) < 0) years.push(prev); years.sort().reverse();
   peEl('pa_form').innerHTML = '<div class="pe-card" data-testid="pdp-form"><div class="pe-form">'
     + peField('pdp_fy', 'Financial year', peSel('pdp_fy', years.map((y) => [y, y]), prev, ' onchange="peDepLabel()"'))
@@ -455,12 +456,12 @@ async function peGstView(body) {
   try { PE_RET.q = Object.assign({}, peRetRecall()); ret = await peReturnLoad(); } catch (e) { body.innerHTML = '<div class="pe-bad">' + bkErr(e) + '</div>'; return; }
   if (ret) { peReturnWord(ret); body.innerHTML = '<div id="pr_host" data-testid="pr-host"></div>'; peReturnPaint(ret); return; }
   let L; try { L = await bkPeriodsLoad(); } catch (e) { body.innerHTML = '<div class="pe-bad">' + bkErr(e) + '</div>'; return; }
-  const last = peMonthEnd(1), lastP = (Number(last.slice(5, 7)) + 8) % 12 + 1;    /* April = 1 … March = 12 */
-  const lastFy = (() => { const y = Number(last.slice(5, 7)) >= 4 ? Number(last.slice(0, 4)) : Number(last.slice(0, 4)) - 1; return y + '-' + String((y + 1) % 100).padStart(2, '0'); })();
+  const last = peMonthEnd(1), lastP = (Number(last.slice(5, 7)) - bkFy0() + 12) % 12 + 1;    /* the year's first month = 1 (CX2: the shop's year, not April) */
+  const lastFy = bkFyName(bkFyStartYear(new Date(Number(last.slice(0, 4)), Number(last.slice(5, 7)) - 1, 1)));
   const years = L.years.slice(); if (years.indexOf(lastFy) < 0) years.push(lastFy); years.sort().reverse();
   body.innerHTML = '<div class="pe-card" data-testid="pg-form"><div class="pe-form">'
     + peField('pg_fy', 'Financial year', peSel('pg_fy', years.map((y) => [y, y]), lastFy))
-    + peField('pg_p', 'Month', peSel('pg_p', BK_MONTHS.map((m, i) => [String(i + 1), m]), String(lastP)))
+    + peField('pg_p', 'Month', peSel('pg_p', bkMonths().map((m, i) => [String(i + 1), m]), String(lastP)))
     + '</div><div class="supacts">' + peBtn('pg-close', 'Close the month', 'peGstClose(this)') + '</div><div id="pg_out" class="pe-slot"></div></div><div id="pg_res"></div>';
 }
 function peGstSetOff(r) {
@@ -623,7 +624,7 @@ async function peReturnCopy(btn) {
    POST /year/:fy/close → { ok, next, locked, opening } · refused (422) with the refusals in plain words */
 async function peYearView(body) {
   let L; try { L = await bkPeriodsLoad(); } catch (e) { body.innerHTML = '<div class="pe-bad">' + bkErr(e) + '</div>'; return; }
-  const prev = (() => { const y = Number(bkFyNow().slice(0, 4)) - 1; return y + '-' + String((y + 1) % 100).padStart(2, '0'); })();
+  const prev = bkFyName(Number(bkFyNow().slice(0, 4)) - 1);
   const years = L.years.slice(); if (years.indexOf(prev) < 0) years.push(prev); years.sort().reverse();
   body.innerHTML = '<div class="pe-card"><div class="pe-form">' + peField('py_fy', 'Financial year', peSel('py_fy', years.map((y) => [y, y]), prev, ' onchange="peYearStatus()"')) + '</div></div><div id="py_res" data-testid="py-res"></div>';
   peYearStatus();

@@ -66,17 +66,17 @@ Legend: ✅ works from the pack · ⚠️ partial (named) · ❌ wrong or India'
 | Catalogue · units · CSV import tax column | ✅ | ✅ "tax rate" maps | ⚠️ no "vat" header alias | api `lib/csv-preflight.js:59-60` |
 | Catalogue · an entity slab with no scheme | ✅ | ✅ | ❌ stamped "GST" (`homeScheme_` = the default country's) | api `lib/tax-slab.js:56, 102` (engines) |
 | **CB Accounts** · the books open in the shop's country · money · year | ✅ | ✅ CX0 (AU · AUD · July) | ✅ CX0 (AE · AED · January) | api `lib/books.js enable`; `routes/books.js:115` |
-| Accounts · chart of accounts | ✅ | ❌ India's chart (`fallback: true`) | ❌ | api `lib/accounts-packs.js:227-240` — §0 |
-| Accounts · statement words (Sch III / AASB 101 / IAS 1) | ✅ `pack.sch3` | ❌ Schedule III lines (fallback pack) | ❌ | api `lib/ledger.js:214-219` reads the pack correctly — the pack is India's |
-| Accounts · the return (GSTR from the rail · BAS · VAT201) | ✅ | ❌ `/returns` reads `B.packOf(s)` (accounts-packs) which has no `.returns` → RETURN_FROM_RAIL; the web then paints India's GST close | ❌ | api `lib/books-period.js:497-498`, `routes/books.js:1013`; web `app/cap-period.js:456-463` |
+| Accounts · chart of accounts | ✅ | ✅ CS2 (accounts-packs v1.42 facade) + **CX2** the books core (posting · ledger · bookpack · period) at v1.42 — reads the pack | ✅ CS2 + **CX2** | api `engines.lock.json`; `tests/books-country.test.cjs` |
+| Accounts · statement words (Sch III / AASB 101 / IAS 1) | ✅ `pack.sch3` | ✅ **CX2** AASB 101 lines (the pack's `sch3` · `presentation`, ledger v1.42) | ✅ **CX2** IAS 1 | api `lib/ledger.js` v1.42 |
+| Accounts · the return (GSTR from the rail · BAS · VAT201) | ✅ | ✅ CS2/BAS1 — `packOf('AU').returns.id === 'BAS'`; the web paints the return first | ✅ VAT201 | api `lib/books-period.js:497-498`, `routes/books.js:1013`; web `app/cap-period.js:456-463` |
 | Accounts · GST set-off (s.49) · challan | ✅ | ✅ CX0 refused in words (`NOT_FOR_COUNTRY`) | ✅ CX0 | api `lib/books-period.js indiaOnly` |
-| Accounts · financial year on screen (months, "This FY (Apr–Mar)") | ✅ | ❌ April months | ❌ | web `app/cap-books.js:958, 984, 1317, 1712-1713`; `app/cap-period.js:458-459` |
-| Accounts · depreciation note · basis words | ✅ | ❌ "Income-tax Act written-down value" | ❌ | api `lib/books-period.js:186`; web `app/cap-period.js:146` |
+| Accounts · financial year on screen (months, "This FY (Apr–Mar)") | ✅ | ✅ **CX2** July months, "This FY (Jul–Jun)" (`/health fy_start_month` → `bkFy0 · bkMonths · bkFyName`) | ✅ **CX2** January, year "2026"; the api accepts AE's calendar-year label | web `app/cap-books.js:958, 984, 1317, 1712-1713`; `app/cap-period.js:458-459` |
+| Accounts · depreciation note · basis words | ✅ | ✅ **CX2** default = the pack's one-owner entity (sole trader), Division 40 named | ✅ **CX2** sole establishment, IAS 16 — ⚠️ the words are api/web copy until a pack carries `depreciation.bases[code].label` (engines request) | api `lib/books-period.js:186`; web `app/cap-period.js:146` |
 | Accounts · Receive / Pay currency · UPI mode | ✅ | ✅ CX0 (ledger's currency; UPI only with the pack) | ✅ CX0 | web `accounts.html:657-658`, `app/cap-books.js payOpen` |
-| Accounts · bank statement import presets | ✅ five banks | ⚠️ `pack.bank` exists (`$` prefixes) but nothing reads it; proposals `currency: 'INR'` | ⚠️ | web `engine/bank-recon.js:65-67, 110, 495` (engines) |
-| Accounts · Tally export · GSTR-1 in the pack | ✅ | ✅ CX0 gated (`not_for_country` + sentence) | ✅ | api `lib/books-pack.js:75-79, 101`; ⚠️ the web never shows `tally.why` |
+| Accounts · bank statement import presets | ✅ five banks | ⚠️ `pack.bank` exists (`$` prefixes) but nothing reads it; proposals `currency: 'INR'` — **left to BR1** (bank-recon v1.44 in flight; the web is at v1.18) | ⚠️ | web `engine/bank-recon.js:65-67, 110, 495` (engines) |
+| Accounts · Tally export · GSTR-1 in the pack | ✅ | ✅ CX0 gated (`not_for_country` + sentence; api CX0 PR still open) · **CX2** the web paints `tally.why` under the manifest | ✅ | api `lib/books-pack.js:75-79, 101`; web `bkPackGet` |
 | Accounts · Insights "Tax" band | ✅ | ✅ CX0 (told where its return is) | ✅ | web `app/cap-admin.js:388-390` |
-| Accounts · `functional_currency \|\| 'INR'` · "a rupee" · zone | ✅ | ⚠️ ~15 fallbacks; "differ by more than a rupee"; AU zone → Asia/Kolkata | ⚠️ | api `routes/books.js:97`, `lib/books-period.js:102…497`, `lib/books-hooks.js:197, 205, 398, 429` |
+| Accounts · `functional_currency \|\| 'INR'` · "a rupee" · zone | ✅ | ✅ **CX2** `B.curOf(s)` (the pack's money) ×17; "more than 1 AUD"; AU with no saved zone → `pack.timeZones[0]` (Sydney) | ✅ **CX2** | ⚠️ left: `books.js` payment/party `\|\| 'INR'` (×8, fed by the setting's currency) · `books-pack.js:54` `\|\| 'IN'` | api `routes/books.js:97`, `lib/books-period.js:102…497`, `lib/books-hooks.js:197, 205, 398, 429` |
 | **CB Finance** · dues ageing buckets | ✅ Sch III | ❌ India's buckets; `presentation.ageing` (AGE_AU) unread | ❌ | api `lib/ledger.js:453-463`, `lib/books-engines.js:160-165`; web `app/cap-books.js:1579-1594` |
 | Finance · MSME (interest words, 45 days, Udyam) | ✅ engine only | ✅ hidden — `pack.checks.msme` is reg-in's alone; no screen paints it | ✅ | api `lib/receivables.js:359-361`; `lib/reg-in.js:614` |
 | Finance · "Interest due" | ⚠️ a fixed 1.5 %/month guide | ❌ the same guide for every country, no law or term behind it | ❌ | api `lib/books-engines.js:173, 178` |
@@ -128,15 +128,15 @@ Round = the fix round in §3. Size ≤20 = fixable without an engines change in 
 | C2 | catalogue | `app.html:12749, 13007, 13648, 13928` | C | "Code / HSN", the HSN switch, "GST Rule 46" note | gate on `pack.tax.hsn_digits` (IN own) | 4 | yes |
 | C3 | catalogue | api `lib/tax-slab.js:56, 102`, `app/tax-slab.js:330` | A | an unnamed AE slab stamped "GST"; India's rate list | `schemeFor(country)` / `ratesFor(country)` in tax-slab (engines) | 4 | engines |
 | C4 | catalogue | api `lib/csv-preflight.js:60` | A | "VAT %" header does not map | add `vat · vat % · vat rate` aliases | 4 | yes |
-| A1 | accounts | api `lib/accounts-packs.js:227-240`, `posting.js:493, 599, 644`, `ledger.js`, `bookpack.js` (v1.20) | A | India's chart, lines, set-off, depreciation for AU/AE | **adopt the books engines ≥ v1.41** (accounts-packs reads the registry); then `enable`, `packOf`, `taxReturn` read `regulation.packFor` | 2 | engines adopt |
-| A2 | accounts | api `lib/books-period.js:497-498` | A | BAS / VAT201 unreachable (RETURN_FROM_RAIL) | `pack.returns` from the regulation pack (after A1) | 2 | yes |
-| A3 | accounts | api `lib/books-store.js:34`, `routes/books.js:97`, `books-period.js` ×15, `books-manual.js:220`, `books-cashflow.js:170` | C | `\|\| 4`, `\|\| 'INR'`, `\|\| 'IN'` | one `curOf(s)` / `fyOf(s)` that refuses when empty | 2 | yes |
-| A4 | accounts | web `app/cap-books.js:958, 984, 1317, 1712-1713`, `app/cap-period.js:458-459` | A | April months and "Apr–Mar" for July / January years | `fy_start_month` on `/status` → `BK_MONTHS` from it | 2 | yes |
-| A5 | accounts | api `lib/books-period.js:186`; web `app/cap-period.js:146` | A | Income-tax WDV named | `pack.depreciation.entityBases` + `pack.messages` | 2 | yes |
-| A6 | accounts | api `lib/books-hooks.js:197, 210`, `routes/chits.js:1754`, `lib/crm.js:83`, `lib/crm-followups.js:38`, `lib/books-pack.js:54` | C | AU day cut at IST midnight when `identities.timezone` is empty | `pack.timeZones` (engines); until then refuse / ask for the zone — never Kolkata | 2 | yes |
-| A7 | accounts | api `lib/books-hooks.js:398, 429` | A | "differ by more than a rupee" | the currency's word / `pack.messages` | 2 | yes |
-| A8 | accounts | web `engine/bank-recon.js:65-67, 110, 495` | A | India presets; `₹\|rs\|inr`; proposals in INR | read `pack.bank`; pass the currency in (engines) | 2 | engines |
-| A9 | accounts | web (no reader of `tally.why`); api `lib/books-pack.js:123` (8-year retention) | A | the greyed Tally line never shows its sentence; AU/AE keep 8 years | paint `tally.why`; `pack.retentionYears` | 2 | yes |
+| A1 ✅ CX2 | accounts | api `lib/accounts-packs.js:227-240`, `posting.js:493, 599, 644`, `ledger.js`, `bookpack.js` (v1.20) | A | India's chart, lines, set-off, depreciation for AU/AE | **adopt the books engines ≥ v1.41** (accounts-packs reads the registry); then `enable`, `packOf`, `taxReturn` read `regulation.packFor` | 2 | engines adopt |
+| A2 ✅ CS2 | accounts | api `lib/books-period.js:497-498` | A | BAS / VAT201 unreachable (RETURN_FROM_RAIL) | `pack.returns` from the regulation pack (after A1) | 2 | yes |
+| A3 ✅ CX2 (⚠️ books.js ×8) | accounts | api `lib/books-store.js:34`, `routes/books.js:97`, `books-period.js` ×15, `books-manual.js:220`, `books-cashflow.js:170` | C | `\|\| 4`, `\|\| 'INR'`, `\|\| 'IN'` | one `curOf(s)` / `fyOf(s)` that refuses when empty | 2 | yes |
+| A4 ✅ CX2 | accounts | web `app/cap-books.js:958, 984, 1317, 1712-1713`, `app/cap-period.js:458-459` | A | April months and "Apr–Mar" for July / January years | `fy_start_month` on `/status` → `BK_MONTHS` from it | 2 | yes |
+| A5 ✅ CX2 | accounts | api `lib/books-period.js:186`; web `app/cap-period.js:146` | A | Income-tax WDV named | `pack.depreciation.entityBases` + `pack.messages` | 2 | yes |
+| A6 ✅ CX2 (books; crm · chits left to CX4) | accounts | api `lib/books-hooks.js:197, 210`, `routes/chits.js:1754`, `lib/crm.js:83`, `lib/crm-followups.js:38`, `lib/books-pack.js:54` | C | AU day cut at IST midnight when `identities.timezone` is empty | `pack.timeZones` (engines); until then refuse / ask for the zone — never Kolkata | 2 | yes |
+| A7 ✅ CX2 | accounts | api `lib/books-hooks.js:398, 429` | A | "differ by more than a rupee" | the currency's word / `pack.messages` | 2 | yes |
+| A8 ⏳ BR1 | accounts | web `engine/bank-recon.js:65-67, 110, 495` | A | India presets; `₹\|rs\|inr`; proposals in INR | read `pack.bank`; pass the currency in (engines) | 2 | engines |
+| A9 ✅ CX2 why · retention kept | accounts | web (no reader of `tally.why`); api `lib/books-pack.js:123` (8-year retention) | A | the greyed Tally line never shows its sentence; AU/AE keep 8 years | paint `tally.why`; `pack.retentionYears` | 2 | yes |
 | F1 | finance | api `lib/ledger.js:453-463`, `lib/books-engines.js:160-165`; web `app/cap-books.js:1579-1594` | A | India's ageing buckets | `pack.presentation.ageing` → `dues(items, asOf, side, pack)` + `bucket_keys` to the screen | 3 | yes |
 | F2 | finance | api `lib/books-cashflow.js:31-32, 183`, `lib/books-period.js:270`; web `app/cap-finance-cash.js:24, 116` | A | "GST by the 20th" for BAS / VAT shops | no tax line unless `pack.returns.periods()` gives a due date; the word from `pack.tax.scheme` | 3 | yes (gate) |
 | F3 | finance | api `lib/books-engines.js:173` | C | 1.5 %/month "interest due" with nothing behind it | the party's resolved terms (`interest.on / rate_pct`, `routes/books.js:151`); nothing when off | 3 | no |
@@ -183,6 +183,14 @@ database default before the step is done; `app/cart.js · cap-definitions.js`: t
 summary; `app/cap-crm*.js · app.html`: the tax-id word; `app/cap-admin.js`: the Insights tax band gated; `app/cap-finance*.js · cap-traceability.js`: the ledger's
 currency; `shop.html · store.html · embed.html`: money through the locale engine. New functions are listed in the PRs with the one-line reason each.
 
+### CX2 (2026-10-13) — Accounts, what closed and what is left (api critique `docs/critique/CX2.md`)
+api: `engines.lock.json` posting · ledger · bookpack · period → v1.42.0 (a pin move, no engines release) · `books.curOf(s)` (the setting's money, else the pack's) ·
+`books-hooks.zoneOf` reads `pack.timeZones` · the one-unit tolerance in the bill's money · `books-period` year label by the pack (AE '2026') and the pack's own one-owner
+entity + basis in the depreciation note · `/health` carries `country` (the gate's CS1 status, so CX0's `SESSION.country` line finally fires) and `fy_start_month`.
+web: `cap-books.js bkFy0 · bkFyStartYear · bkFyName · bkFyFrom · bkMonths · bkFyWord` (one home for the shop's year; `BK_MONTHS` removed) · `cap-period.js` basis and entity words ·
+the Tally sentence under a pack's manifest. Retention NOT shortened to AU/AE's 5 y (the product floor outlives it — deleting earlier is Athi's call, not a fix).
+Left: A8 (bank-recon, round BR1) · the basis label as a pack member (engines) · `books.js` payment/party `|| 'INR'` ×8 · A6's CRM and chits readers (CX4).
+
 ## 5. The simulator — three shops, one per pack (api `docs/SIM-LOAD.md` "The three shops the WX walks load")
 
 `node tools/sim-load.cjs --db … --shop simstores --country IN · simsydney --country AU · simdubai --country AE`. The loader READS currency · year · heads ·
@@ -193,7 +201,7 @@ in the loader's own words.
 
 ## 6. Engines requests queued (this round does not own engines)
 
-accounts-packs ≥ v1.41 adopt (A1) · `docnumber` RULES from `fiscalYear` (T3) · `cashRounding` AU (T7) · `tax.determine` `export` for a state-split seller
+✅ ~~accounts-packs ≥ v1.41 adopt (A1)~~ (CS2 + CX2) · `depreciation.bases[code].label` (A5, CX2) · `docnumber` RULES from `fiscalYear` (T3) · `cashRounding` AU (T7) · `tax.determine` `export` for a state-split seller
 and a foreign buyer (N1) · `tax-slab.schemeFor / ratesFor(country)` (C3) · `formats.address · postalCode · phone` on every pack (R2) · `pack.locale` AU and
 `pack.timeZones` (L1, L2) · `bank-recon` reads `pack.bank` and takes a currency (A8) · `taxId { label, check }` on reg-in so `taxIdLabel` stops saying India's
 word by default · a return calendar (`returns.periods` due dates) read by the cash-flow line (F2).

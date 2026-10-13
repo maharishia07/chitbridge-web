@@ -656,6 +656,7 @@ async function start(){
     ON = !!(h && h.enabled !== false);
     if (h && h.currency) SESSION.currency = h.currency;   /* CX0: the ledger's currency (AUD · AED · INR) — Receive / Pay send it; 'INR' typed here refused an AU shop (routes/books.js:520) */
     if (h && h.country && h.country.country && h.country.country.code) SESSION.country = h.country.country.code;   /* CX0: the shop's country (CS1 status) — the pack's words on this page (shopReg) */
+    if (h && h.fy_start_month) BK.fy0 = Number(h.fy_start_month);   /* CX2: the ledger's year start (AU July · AE January) — bkMonths · bkFyNow read it */
   }catch(e){
     if (e && e.status === 404) return offCard();
     if (e && e.status === 422 && e.data && /^(NO_COUNTRY_PACK|NO_COUNTRY|COUNTRY_SETUP_PENDING)$/.test(String(e.data.code || ''))) return countryCard(e.data);
