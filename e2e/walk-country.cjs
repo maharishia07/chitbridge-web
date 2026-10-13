@@ -21,6 +21,8 @@
  *   ── CL3: "Where ChitBridge is for <country>" on the step (the same CBCountryReady rows the Country lab paints, in the step's own gov-panel rows) ──
  *   C12  the step shows "Where ChitBridge is for India": the pack line, one row per product area (✅ ⚠️ ❌), Payroll "—" — the file's rows
  *   C13  Change the country -> the UAE: the block follows the CHOSEN country; Japan (no pack — the picker no longer offers it, CS2 C8): the block says so, never a made-up row
+ *   C15 FX-AU1: a Sydney browser's register call CARRIES the guess; Settings > Country then says Australia "your time zone" (the server's source)
+ *   C16 FX-AU1: a country that is only the column default (no source, not done) is "not confirmed yet", never "your registration"
  *   C14 rule 13 on the step, Cream and Dark at 1366 and 390: AA on every text, nothing clipped, no sideways scroll, nothing floating over the
  *       block, the copy within budget. (The step is signed in by nature — it follows registration; signed out it is the sign-in screen.)
  *
@@ -49,7 +51,7 @@ const FIXED_WHY = 'This shop is set up for India and INR and already has product
 /** the stand-in API for a fresh registration: register -> OTP -> verify -> the step */
 async function stubRegistration(ctx, prof, sent) {
   await ctx.route('**/api/**', (r) => r.fulfill(J({ ok: true })));   /* the catch-all FIRST — the last registered handler is tried first */
-  await ctx.route('**/api/entities/register', (r) => r.fulfill(J({ email: 'shop@example.in' })));
+  await ctx.route('**/api/entities/register', (r) => { sent.register = JSON.parse(r.request().postData() || '{}'); return r.fulfill(J({ email: 'shop@example.in' })); });
   await ctx.route('**/api/entities/constitutions', (r) => r.fulfill(J({ constitutions: [{ key: 'base', label: 'Base', is_default: true }] })));
   await ctx.route('**/api/entities/verify', (r) => r.fulfill(J({ token: JSON.parse(W.session('Walk Owner', 'Walk Shop')).token, entity: { identity_id: 'ent-walk', bridge_id: 'CBWALK0001', display_name: 'Walk Shop', email: 'shop@example.in' }, identity: { identity_id: 'ent-walk', identity_type: 'entity', display_name: 'Walk Shop' } })));
   await ctx.route('**/api/governance/country-setup', (r) => {
@@ -162,6 +164,39 @@ W.run('country', async (w) => {
     return { ok, saw: c + ' · ' + cur + ' · ' + fy + ' · zone ' + tz + ' (' + tzSrc + ', ' + nOpts + ' offered) · sentence ' + (noSentence ? 'absent' : 'SHOWN') + ' · sent ' + JSON.stringify({ country: p.country, currency: p.currency, fy: p.fy_start_month, tz: p.timezone }) };
   });
   await au2.close();
+
+  /* ── FX-AU1 (F7): the Sydney guess the panel showed is SENT with the registration (the server stores it in the write that creates the shop);
+        the owner leaves before Continue, opens Settings › Country: it says Australia, "your time zone" — the SERVER's source, not a default ── */
+  const au3 = await w.browser.newContext({ viewport: { width: 1280, height: 860 }, locale: 'en-AU', timezoneId: 'Australia/Sydney', serviceWorkers: 'block' });
+  const pAu3 = await au3.newPage(); pAu3.on('pageerror', (e) => w.errs.push('au3: ' + String(e && e.message || e)));
+  const sentAu3 = {};
+  const AU_PROF = profile({ country: { code: 'AU', name: 'Australia' }, currency: 'AUD', fy_start_month: 7, timezone: 'Australia/Sydney', zones: AU_ZONES,
+    source: { country: 'your time zone', currency: 'the usual currency in Australia', timezone: 'your device clock' }, pack: { id: 'AU', version: '1.0.0', books: true, code: null, why: null } });
+  await stubRegistration(au3, AU_PROF, sentAu3);
+  await w.step('C15', 'FX-AU1: a Sydney browser registers -> the register call CARRIES the guess (AU - AUD - Australia/Sydney); leave; Settings > Country says Australia "your time zone"', async () => {
+    await register(pAu3, base);
+    const g = (sentAu3.register && sentAu3.register.context) || {};
+    await pAu3.goto(base + '/settings.html#/country');
+    await pAu3.waitForSelector('[data-testid="cs-rows"]', { timeout: 10000 });
+    const c = await text(pAu3, '[data-testid="cs-val-country"]'), src = await text(pAu3, '[data-testid="cs-src-country"]');
+    const ok = g.country === 'AU' && g.currency_code === 'AUD' && g.timezone === 'Australia/Sydney' && /Australia/.test(c) && /your time zone/.test(src) && !/registration/.test(src);
+    return { ok, saw: 'register sent ' + JSON.stringify({ country: g.country, currency: g.currency_code, tz: g.timezone }) + ' · settings: ' + c + ' from ' + src };
+  });
+  await au3.close();
+
+  /* ── FX-AU1: a shop whose country is only the column default (no source stored, step not done) is never labelled "your registration" ── */
+  const au4 = await w.browser.newContext({ viewport: { width: 1280, height: 860 }, locale: 'en-AU', timezoneId: 'Australia/Sydney', serviceWorkers: 'block' });
+  const pAu4 = await au4.newPage(); pAu4.on('pageerror', (e) => w.errs.push('au4: ' + String(e && e.message || e)));
+  await stubRegistration(au4, profile(), {});
+  await w.step('C16', 'FX-AU1: Settings > Country for a shop holding only the default India (no source, not done) -> "not confirmed yet", never "your registration"', async () => {
+    await register(pAu4, base);
+    await pAu4.goto(base + '/settings.html#/country');
+    await pAu4.waitForSelector('[data-testid="cs-rows"]', { timeout: 10000 });
+    const c = await text(pAu4, '[data-testid="cs-val-country"]'), src = await text(pAu4, '[data-testid="cs-src-country"]'), csrc = await text(pAu4, '[data-testid="cs-src-currency"]');
+    const ok = !/your registration/.test(src + ' ' + csrc) && src.length > 0;
+    return { ok, saw: c + ' from ' + src + ' · money from ' + csrc };
+  });
+  await au4.close();
 
   /* ── CS2: an Indian browser, a shop not yet constituted — the picker is the server's list; a correction to Australia re-derives ── */
   const in2 = await w.browser.newContext({ viewport: { width: 1280, height: 860 }, locale: 'en-IN', timezoneId: 'Asia/Kolkata', serviceWorkers: 'block' });
