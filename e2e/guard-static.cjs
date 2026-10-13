@@ -700,6 +700,7 @@ console.log('\n17 · no platform host in the site');
   const ALLOWED = {
     'public/config.js': 1,      // THE one place: the production api, as Vercel serves this file (rewritten per deploy elsewhere)
     'public/till.html': 1,      // cbHome's fallback for a shop PC whose till.js predates HX1 (no /config.js there yet) — vendored, named debt
+    'vercel.json': 1,           // CO2's CSP (report-only) connect-src: the Vercel deploy's own header names the api it talks to — per-deploy config, like config.js (INT4)
   };
   const HOST = /[a-z0-9-]+\.(?:up\.)?railway\.app|[a-z0-9-]+\.vercel\.app/gi;
   const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => e.isDirectory() ? walk(path.join(d, e.name))

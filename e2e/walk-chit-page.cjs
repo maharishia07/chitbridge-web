@@ -15,7 +15,8 @@ const fs = require('fs'), path = require('path'), vm = require('vm');
 const W = require('./lib/walk.cjs');
 const { measure } = require('./lib/theme-measure.cjs');
 const ROOT = path.join(__dirname, '..', 'public');
-const J = (r, status, body) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+const C = require('./lib/contract.cjs');   /* M43: every /api/books · /api/crm answer this stand-in serves is held to the API contract (INT4) */
+const J = (r, status, body) => C.json(r, status, body);
 const SHOP = 'Fixture Shop', TODAY = new Date().toISOString().slice(0, 10);
 
 /* the frozen invoice the counter determined - the one money engine, run once here, so the page's figures have a reference to the paisa */
@@ -166,6 +167,7 @@ const walk = async (w) => {
     const shell = /chit: '\/crm\.html#\/chit\/'/.test(rd('app/accounts-shell.js'));
     return { ok: pages.every((x) => /true$/.test(x)) && baseRow.script === 'crm.html' && shell, saw: pages.join(' ') + ' · base script ' + baseRow.script + ' · CB_HOMES.chit ' + shell };
   });
+  await w.step('M43', 'the stand-in answered every /api/books and /api/crm call as the API contract says', async () => { const [ok, saw] = C.finish(); return { ok, saw }; });
 };
 walk.opts = { viewport: { width: 1366, height: 900 } };
 W.run('chit-page', walk);

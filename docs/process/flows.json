@@ -129,7 +129,7 @@
       "id": "R2R", "name": "Record to report", "sap": "FI-GL",
       "steps": [
         { "n": 1, "step": "country", "module": "Accounts", "who": "the owner, after registration and before the books open",
-          "screen": [{ "file": "web:public/app/cap-country.js", "fn": "renderCountrySetup" }, { "file": "web:public/settings.html", "fn": "CBCountry.mount" }, { "file": "web:public/app/cap-shop.js", "fn": "CBShop.mount" }, { "file": "web:public/country-lab.html", "fn": "paintRows" }],
+          "screen": [{ "file": "web:public/app/cap-country.js", "fn": "renderCountrySetup" }, { "file": "web:public/settings.html", "fn": "paint" }, { "file": "web:public/app/cap-country.js", "fn": "mount" }, { "file": "web:public/app/cap-shop.js", "fn": "mount" }, { "file": "web:public/country-lab.html", "fn": "paintRows" }],
           "engine": [{ "file": "api:lib/country-setup.js", "fn": "gate" }, { "file": "engines:src/regulation.js", "fn": "status" }, { "file": "engines:src/tax.js", "fn": "determine" }],
           "route": [{ "m": "GET", "p": "/api/governance/country-setup", "file": "api:routes/governance.js" }, { "m": "PUT", "p": "/api/governance/country-setup", "file": "api:routes/governance.js" }],
           "chit": "none", "ledger": "none — the pack the chart, the year and the tax heads are read from",
@@ -343,7 +343,7 @@
           "status": "ok", "note": "The columns are the export's recall (IM0), guessed and confirmed, never assumed. source_code needs migration b302 (a file); before it the trial balance matches on names." },
         { "n": 2, "step": "contacts", "module": "Accounts", "who": "the owner, or the practice",
           "screen": [{ "file": "web:public/app/cap-move-in.js", "fn": "miView" }],
-          "engine": [{ "file": "api:lib/move-in.js", "fn": "plan" }, { "file": "api:lib/move-in.js", "fn": "apply" }, { "file": "api:lib/local-identity.js", "fn": "mint" }, { "file": "api:lib/party-fields.js", "fn": "patch" }, { "file": "api:lib/party-fields.js", "fn": "checkTaxId" }, { "file": "engines:src/reg-au.js", "fn": "abnCheck" }],
+          "engine": [{ "file": "api:lib/move-in.js", "fn": "plan" }, { "file": "api:lib/move-in.js", "fn": "apply" }, { "file": "api:lib/local-identity.js", "fn": "mint" }, { "file": "api:lib/party-fields.js", "fn": "patch" }, { "file": "api:lib/party-fields.js", "fn": "cleanTaxIds" }, { "file": "engines:src/reg-au.js", "fn": "abnCheck" }],
           "route": [{ "m": "POST", "p": "/api/books/move-in/preflight", "file": "api:routes/books.js" }, { "m": "POST", "p": "/api/books/move-in/preview", "file": "api:routes/books.js" }, { "m": "POST", "p": "/api/books/move-in/import", "file": "api:routes/books.js" }],
           "chit": "none", "ledger": "none — a party on the customer / supplier list (party_no from the one series; ABN as a party_tax_id)",
           "test": ["api:tests/move-in.test.cjs", "engines:tests/reg-au.test.js", "web:e2e/walk-move-in.cjs"],
