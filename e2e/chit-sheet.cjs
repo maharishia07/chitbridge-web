@@ -17,6 +17,7 @@
  *     state_log bill_step row (the shared status never moves), so the sheet, the to-do and Waiting stop saying "To accept"
  * 11  the popup names the counter as the Day book does (Counter C2); CB Accounts' Bills rows open the sheet and name who accepted
  * 12  #/app/ledger, a remembered cb_nav of 'ledger' and navTo('ledger') land on /accounts.html at the same view; the app's menu has a Bills door
+ * ⚠️ "Open page" (test 3) pins TODAY's door: the chit page in CB CRM (crm.html#/chit/<id>, round CRM2) — it moves with the round that moves the page.
  *  Env CHS_ROOT = a COPY of public/ (used by chit-sheet-breaks.cjs); screenshots to e2e/shots/chit-sheet-*.png
  */
 'use strict';
@@ -262,10 +263,10 @@ async function route(S, r) {
     await p.click('[data-testid="cs-act-goodsin"]'); await p.click('[data-testid="bill-use-resale"]');
     await p.waitForFunction(() => /Accepted/.test((document.querySelector('[data-testid="cs-step"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
     ok(S.useCalls.length === 1 && S.useCalls[0].body.use === 'resale' && S.statusCalls.length === 1 && S.statusCalls[0].body.status === 'accepted', 'Goods in → what it is for (PUT /use) then accepted');
-    /* Open page: the one way out — it goes where the link went before */
-    await p.evaluate(() => { window.__opened = null; const o = window.openChit; window.openChit = function (id) { window.__opened = id; }; });
+    /* Open page: the one way out — the chit PAGE in CB CRM (crm.html#/chit/<id>, CRM2), in a new tab so the Day book keeps its place; never the workshop */
+    await p.evaluate(() => { window.__opened = null; window.open = function (url) { window.__opened = url; return null; }; });
     await p.click('[data-testid="cs-act-page"]');
-    ok(!(await sheetOpen(p)) && await p.evaluate(() => window.__opened) === 'sb1', 'Open page closes the sheet and opens the existing page (openChit) — the only navigation');
+    ok(!(await sheetOpen(p)) && await p.evaluate(() => window.__opened) === '/crm.html#/chit/sb1', 'Open page closes the sheet and opens the chit page in CB CRM (/crm.html#/chit/sb1) — the only navigation');
     await ctx.close();
   }
   /* ── 3 · a task, from the Waiting list ──────────────────────────────────────────────────────────── */
