@@ -11,7 +11,9 @@ const ENGINES = { posting: 'injected', packs: 'injected', receivables: 'injected
 /** GET /api/books/health */
 /* only the API's keys: a harness's own bookkeeping on the row (stuck, last_posted_day …) stays in the harness, it is not part of the answer */
 const only = (defaults, o) => { const out = Object.assign({}, defaults); Object.keys(o || {}).forEach((k) => { if (k in defaults) out[k] = o[k]; }); return out; };
-const health = (o) => only({ enabled: true, currency: 'INR', walkin_grain: 'day', last_check: null, engines: ENGINES, waiting: [] }, o);
+/* CX2: `fy_start_month` (the ledger's year start) and `country` (the CS1 status the books gate read) — an Indian shop unless the harness says otherwise */
+const csStatus = (code, name) => ({ books: true, code: null, why: null, required: false, country: { code: code, name: name }, pack: code, version: '1.0.0' });
+const health = (o) => only({ enabled: true, currency: 'INR', fy_start_month: 4, country: csStatus('IN', 'India'), walkin_grain: 'day', last_check: null, engines: ENGINES, waiting: [] }, o);
 /** GET /api/books/party/:id/statement */
 /* M29: every line also names its entry (entry_id · entry_no · event_type), its reversal (reverses_entry_id · reversed_by · reversed_why) and, on a payment line, payment_id · unapplied_minor · advice — null = not a payment / not reversed */
 const statement = (partyId, o) => { const s = Object.assign({ currency: 'INR', party_id: partyId, from: '2026-04-01', to: '2026-10-03', code: '1300', opening_minor: 0, closing_minor: 0, lines: [] }, o || {}); s.lines = s.lines.map((l) => Object.assign({ ref: null, source_chit_id: null, entry_id: null, entry_no: null, event_type: null, reverses_entry_id: null, reversed_by: null, reversed_why: null, payment_id: null, unapplied_minor: null, advice: null }, l, { source: l.source ? Object.assign({ chit_id: null, ref: null, kind: 'bill', counter: null, by: null, count: null, how: null, how_ref: null, split: null, doc_at: null, recorded_at: '2026-10-03T05:00:00.000Z' }, l.source) : null })); return s; };
@@ -23,7 +25,7 @@ const dues = (parties, o) => Object.assign({ currency: 'INR', asOf: '2026-10-03'
 const periodRow = (fy, period, status) => ({ entity_id: 'ent-M', status: status || 'open', fiscal_year: fy, period, start_date: '2026-04-01', end_date: '2026-04-30' });
 /** GET /api/books/periods */
 const periods = (rows) => ({ periods: rows || [] });
-module.exports = { ENGINES, health, statement, dues, dueRow, periods, periodRow };
+module.exports = { ENGINES, health, csStatus, statement, dues, dueRow, periods, periodRow };
 
 /* ── the period-end answers ── */
 const DAY = new Date().toISOString().slice(0, 10);

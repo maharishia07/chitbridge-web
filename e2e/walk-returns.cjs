@@ -11,6 +11,7 @@
  *   R5  a UAE shop -> VAT return; no stagger yet: the server's sentence, no box; pick stagger 1 -> ONE GET with stagger=1 -> Boxes 1–15, Box 14, To pay, FTA / EmaraTax
  *   R6  390 px (AU) -> the return paints and nothing scrolls sideways
  *   R7  every answer the stand-in served matches the API contract
+ *   R8  (CX2) Month lock in the shop's own year: IN Apr–Mar · AU Jul–Jun · AE Jan–Dec ('2026'), at 1366/390 in light and dark — AA, no clip, no sideways scroll, no app.html
  *
  *   NODE_PATH=e2e/node_modules node e2e/walk-returns.cjs         headless, fast
  *   node e2e/walk-returns.cjs --show                              watch it
@@ -77,7 +78,8 @@ async function stub(ctx, kind, S) {
   await ctx.route('**/api/**', (r) => {
     const u = new URL(r.request().url()), p = u.pathname, m = r.request().method(); S.calls.push(m + ' ' + p + u.search);
     if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: S.name, currency_code: kind === 'AU' ? 'AUD' : kind === 'AE' ? 'AED' : 'INR' } });
-    if (p === '/api/books/health') return J(r, 200, books.health({ currency: kind === 'AU' ? 'AUD' : kind === 'AE' ? 'AED' : 'INR' }));
+    if (p === '/api/books/health') return J(r, 200, books.health({ currency: kind === 'AU' ? 'AUD' : kind === 'AE' ? 'AED' : 'INR', fy_start_month: kind === 'AU' ? 7 : kind === 'AE' ? 1 : 4,
+      country: books.csStatus(kind, kind === 'AU' ? 'Australia' : kind === 'AE' ? 'United Arab Emirates' : 'India') }));   /* CX2: the ledger's year start + the CS1 status, as routes/books.js /health sends them */
     if (p === '/api/books/todo') return J(r, 200, []);
     if (p === '/api/books/periods') return J(r, 200, books.periods([Object.assign(books.periodRow('2026-27', 1, 'open'), { entries: 0, sales_minor: 0, lock: { may: true, why: null }, reopen: { may: false, why: null } })]));   /* the row as the API sends it today (books-api.periodRow predates entries · sales_minor · lock · reopen) */
     if (p === '/api/books/accounts') return J(r, 200, CHART);
@@ -91,8 +93,9 @@ async function stub(ctx, kind, S) {
     return J(r, 404, { error: 'not found' });
   });
 }
-async function open(w, kind, name, tz, vp) {
+async function open(w, kind, name, tz, vp, hash, theme) {
   const ctx = await w.browser.newContext({ viewport: vp || { width: 1280, height: 860 }, locale: 'en', timezoneId: tz, serviceWorkers: 'block' });
+  if (theme) await ctx.addInitScript((t) => { try { localStorage.setItem('cb_theme', t); } catch (_) {} }, theme);
   await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
   try { await ctx.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: w.base }); } catch (_) {}
   const S = { calls: [], name };
@@ -100,7 +103,7 @@ async function open(w, kind, name, tz, vp) {
   await ctx.addInitScript((s) => { try { localStorage.setItem('cb_sess', JSON.stringify(s)); } catch (_) {} }, SESS(name));
   const page = await ctx.newPage();
   const errs = []; page.on('pageerror', (e) => errs.push(String(e && e.message || e)));
-  await page.goto(w.base + '/accounts.html#gstclose');
+  await page.goto(w.base + '/accounts.html#' + (hash || 'gstclose'));
   return { ctx, page, S, errs };
 }
 const text = (page, sel) => page.evaluate((s) => { const el = document.querySelector(s); return el ? el.textContent.trim() : ''; }, sel);
@@ -181,6 +184,39 @@ W.run('returns', async (w) => {
     return { ok: m.d <= 390 && m.main && P.errs.length === 0, saw: 'document ' + m.d + ' px wide · main fits: ' + m.main };
   });
   await P.ctx.close();
+
+  /* R8 · CX2: the shop's own YEAR on Month lock — IN April, AU July, AE January (and AE's year is '2026'), at 1366 and 390, light and dark (rule 13) */
+  const { ratio } = require('./lib/contrast.cjs');
+  const YEAR = { IN: ['Mayur Bhavan', 'Asia/Kolkata', 'Apr', 'Mar', '2026-27'], AU: ['Bondi Grocer', 'Australia/Sydney', 'Jul', 'Jun', '2026-27'], AE: ['Deira Stores', 'Asia/Dubai', 'Jan', 'Dec', '2026'] };
+  for (const kind of ['IN', 'AU', 'AE']) {
+    const [name, tz, first, last, fy] = YEAR[kind];
+    await w.step('R8-' + kind, kind + ' shop -> Month lock lists ' + first + ' … ' + last + ', the year reads ' + fy + '; at 1366 / 390 in light and dark: AA contrast, nothing clipped or scrolling sideways, no link to app.html', async () => {
+      const seen = [];
+      let ok = true;
+      for (const vp of [{ width: 1366, height: 860 }, { width: 390, height: 844 }]) for (const theme of ['cream', 'dark']) {
+        const X = await open(w, kind, name, tz, vp, 'lock', theme);
+        await X.page.waitForSelector('[data-testid="lk-row-12"]', { timeout: 15000 });
+        await X.page.waitForTimeout(200);
+        const m = await X.page.evaluate(() => {
+          const rgb = (c) => { const v = (String(c).match(/[\d.]+/g) || []).map(Number); return v.length >= 3 ? { hex: '#' + v.slice(0, 3).map((n) => Math.round(n).toString(16).padStart(2, '0')).join(''), a: v.length > 3 ? v[3] : 1 } : null; };
+          const bgOf = (el) => { for (let e = el; e; e = e.parentElement) { const b = rgb(getComputedStyle(e).backgroundColor); if (b && b.a > 0.5) return b.hex; } return '#ffffff'; };
+          const els = Array.from(document.querySelectorAll('[data-testid^="lk-row-"] b, [data-testid^="lk-state-"], [data-testid="lk_fy"]'));
+          const pairs = els.map((e) => ({ t: e.textContent.trim().slice(0, 20), fg: rgb(getComputedStyle(e).color).hex, bg: bgOf(e) }));
+          const clipped = els.filter((e) => e.scrollWidth > e.clientWidth + 1 && getComputedStyle(e).overflow !== 'visible').map((e) => e.textContent.trim().slice(0, 20));
+          const rows = Array.from(document.querySelectorAll('[data-testid^="lk-row-"] b')).map((b) => b.textContent.trim());
+          const main = document.querySelector('.main');
+          return { rows, fy: (document.querySelector('[data-testid="lk_fy"]') || {}).value, pairs, clipped, doc: document.documentElement.scrollWidth, iw: innerWidth,
+            mainFits: main ? main.scrollWidth <= main.clientWidth + 1 : true, appLinks: document.querySelectorAll('a[href*="app.html"]').length, theme: document.documentElement.getAttribute('data-theme') };
+        });
+        const worst = m.pairs.map((x) => ({ t: x.t, r: ratio(x.fg, x.bg) })).sort((a, b) => a.r - b.r)[0] || { r: 99 };
+        const good = m.rows[0] === first && m.rows[11] === last && m.rows.length === 12 && m.fy === fy && worst.r >= 4.5 && !m.clipped.length && m.doc <= m.iw && m.mainFits && m.appLinks === 0 && X.errs.length === 0;
+        ok = ok && good;
+        seen.push(vp.width + ' ' + theme + ': ' + m.rows[0] + '…' + m.rows[11] + ' · ' + m.fy + ' · AA ' + worst.r.toFixed(2) + (good ? '' : ' ✗ (' + JSON.stringify({ clipped: m.clipped, doc: m.doc, main: m.mainFits, app: m.appLinks, worst: worst.t, err: X.errs[0] }) + ')'));
+        await X.ctx.close();
+      }
+      return { ok, saw: seen.join(' | ') };
+    });
+  }
 
   await w.step('R7', 'Every answer the stand-in served for a contract route has the API\'s keys, nesting and types', async () => { const [ok, msg] = C.finish(); return { ok, saw: msg }; });
 });
