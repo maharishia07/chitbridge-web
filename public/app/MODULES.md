@@ -15,7 +15,7 @@ something needs them before any navigation happens.
 router renders a placeholder until `_capLoading` clears, which is the only reason the
 old duplicate `networkScreen()` in app.html was safe to delete.
 
-## Capabilities (44)
+## Capabilities (45)
 
 | file | loading · nav key | what it is |
 |---|---|---|
@@ -27,6 +27,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-catsetup.js` | lazy · catsetup |  |
 | `cap-chit2.js` | lazy · on demand | DESIGN 2: the chit as LINE-LEVEL work (lazy; ensureCap('chit2')) |
 | `cap-cmdb.js` | lazy · on demand |  |
+| `cap-compare.js` | — | cap-compare.js — PARALLEL RUN (PR1, 2026-10-13): CB Accounts › Books › Parallel run. An auditor keeps the shop's books in Tally (IN) or Xero / QuickBo |
 | `cap-connector.js` | lazy · connectors | IoT / ERP connector MANAGEMENT (lazy; loaded via ensureCap('connector') on INVOCATION) |
 | `cap-country.js` | lazy · on demand | cap-country.js — COUNTRY SETUP (CS1, 2026-10-12): the step after registration, before the books open (lazy; ensureCap('country') → #/country) |
 | `cap-crm-calls.js` | — | cap-crm-calls.js — CB CRM L2: THE CALL DESK. The Calls tab (a CBList mount, the Follow-ups list's own look): today's queue, one-tap outcome buttons |
@@ -122,4 +123,4 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 
 ---
 
-*95 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*96 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
