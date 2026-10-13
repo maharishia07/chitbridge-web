@@ -22,6 +22,7 @@ async function finLoad(quiet) {
   if (finTab() === 'terms') return ftLoad(quiet);   /* the Terms tab (cap-finance-terms.js) */
   if (finTab() === 'cash') return fcLoad(quiet);    /* the Cash tab (cap-finance-cash.js, F3) */
   if (finTab() === 'repeat') return rpLoad(quiet);  /* the Repeat supply tab (cap-repeat.js, RI1) */
+  if (finTab() === 'pay') return fpLoad(quiet);     /* the Payables tab (cap-finance-pay.js, F4) */
   var g = ++FIN.gen;
   if (!quiet) { FIN.state = 'loading'; if (FIN.api) FIN.api.refresh(); }
   try {
@@ -64,11 +65,11 @@ function finOff() {
   };
 }
 
-/** the server said who may see it: the sentence, greyed, and no list — the server refuses anyway. `why`: another tab's sentence (Cash, F3); Collections' by default */
-function finDenied(why) {
+/** the server said who may see it: the sentence, greyed, and no list — the server refuses anyway. `why`: another tab's sentence (Cash, F3); Collections' by default. `title`: that tab's name (Payables, F4) */
+function finDenied(why, title) {
   var s = document.getElementById('screen'); if (!s) return;
   s.className = 'screen';
-  s.innerHTML = '<div class="card" data-testid="fin-denied" style="opacity:.75"><h2>' + esc(tx(why ? 'Cash position' : 'Collections')) + '</h2><p data-testid="fin-denied-why">' + esc(tx(why || FIN_OWNER_ONLY)) + '</p></div>';
+  s.innerHTML = '<div class="card" data-testid="fin-denied" style="opacity:.75"><h2>' + esc(tx(title || (why ? 'Cash position' : 'Collections'))) + '</h2><p data-testid="fin-denied-why">' + esc(tx(why || FIN_OWNER_ONLY)) + '</p></div>';
 }
 
 /* ── the columns: every figure is the server's ── */
@@ -101,6 +102,7 @@ function finMount(frame) {
   if (finTab() === 'terms') return ftMount(frame);   /* the Terms tab (cap-finance-terms.js) */
   if (finTab() === 'cash') return fcMount(frame);    /* the Cash tab (cap-finance-cash.js, F3) */
   if (finTab() === 'repeat') return rpMount(frame);  /* the Repeat supply tab (cap-repeat.js, RI1) */
+  if (finTab() === 'pay') return fpMount(frame);     /* the Payables tab (cap-finance-pay.js, F4) */
   ftNav();
   s.className = 'screen flush';
   s.innerHTML = '<div id="fin_list" data-testid="fin-list" style="flex:1 1 auto;min-height:0"></div>';
