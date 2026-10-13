@@ -97,9 +97,13 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
 
   /* ── 1 · the register ───────────────────────────────────────────────────────────────────────────────────── */
   {
-    ok(REG.S.length === 61, 'the register holds 61 standards (44 + the 17 adopted 2–3 Oct 2026): ' + REG.S.length);
+    /* CO3 (2026-10-13): four record-keeping rows (IN · AU · AE), appended after the design's 61 and named here — every one Partly */
+    const CO3 = ['Companies Act 2013 s.128(5) · CGST Act s.36, Rules 56–57', 'Companies (Accounts) Rules r.3(5)–(6)',
+      'TAA 1953 Sch 1 s.382-5 · Corporations Act 2001 s.286', 'Tax Procedures Decree-Law 28/2022 · Corporate Tax Decree-Law 47/2022 Art. 56'];
+    ok(REG.S.length === 61 + CO3.length && REG.S.slice(61).map((r) => r.n).join('|') === CO3.join('|') && REG.S.slice(61).every((r) => r.s === 'part' && r.added === '2026-10-13'),
+      'the register holds 61 standards (44 + the 17 adopted 2–3 Oct 2026) + the 4 CO3 record-keeping rows, after them, each Partly: ' + REG.S.length);
     /* N11 (9c8cdc58, 2026-10-08): ISO 8601 moved Partly → In force with a stated limit, proven by chitbridge-api tests/iso8601.test.cjs */
-    ok(COUNT.live === 34 && COUNT.part === 15 && COUNT.plan === 12, 'in force 34 · partly 15 · planned 12 (' + COUNT.live + ' · ' + COUNT.part + ' · ' + COUNT.plan + ')');
+    ok(COUNT.live === 34 && COUNT.part === 15 + CO3.length && COUNT.plan === 12, 'in force 34 · partly 19 (15 + CO3\'s 4) · planned 12 (' + COUNT.live + ' · ' + COUNT.part + ' · ' + COUNT.plan + ')');
     const fields = REG.S.filter((r) => !r.a || !r.k || !Array.isArray(r.c) || !r.c.length || !r.p);
     ok(fields.length === 0, 'every row has an area, a kind, an applies-in and the plain-words line' + (fields.length ? ' — missing on ' + fields.map((r) => r.n).join('; ') : ''));
     const areas = REG.A.map((a) => a[0]), kinds = REG.K.map((k) => k[0]), ctry = REG.C.map((c) => c[0]);
@@ -113,8 +117,8 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     const diff = [];
     const MOVED = { 'ISO 8601': 'N11' };   /* a row the register has moved on from the design's data, on purpose, with its reason */
     DESIGN.rows.forEach((d, i) => { const r = REG.S[i]; if (r && MOVED[r.n]) return; keys.forEach((k) => { if ((r && r[k] || undefined) !== (d[k] || undefined)) diff.push(i + ':' + k); }); if (!r || JSON.stringify(r.c) !== JSON.stringify(d.c)) diff.push(i + ':c'); });
-    ok(DESIGN.rows.length === REG.S.length && diff.length === 0, 'all 61 rows equal the designer\'s data, field for field' + (diff.length ? ' — ' + diff.slice(0, 6).join(' ') : ''));
-    const added = REG.S.filter((r) => r.added);
+    ok(DESIGN.rows.length === REG.S.length - CO3.length && diff.length === 0, 'all 61 rows equal the designer\'s data, field for field' + (diff.length ? ' — ' + diff.slice(0, 6).join(' ') : ''));
+    const added = REG.S.filter((r) => r.added && CO3.indexOf(r.n) < 0);
     ok(added.length === 17 && added.filter((r) => r.s === 'live').length === 11 && added.filter((r) => r.s === 'part').length === 4 && added.filter((r) => r.s === 'plan').length === 2, 'the 17 additions carry their stated statuses: 11 in force, 4 partly, 2 planned');
     ok(REG.S.filter((r) => /WCAG/.test(r.n) && /1\.4\.3/.test(r.n)).length === 1 && /16 themes/.test(REG.S[11].note), 'no second WCAG contrast row: the existing one now says all 16 themes');
     ok(REG.CH === '2026-10-03', 'the register says when it was last checked (STD_CHECKED)');
@@ -234,7 +238,7 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     /* Count by Country and Kind */
     await p.click('[data-testid="cbl-group-standards"] [data-group="country"]'); await p.waitForTimeout(150);
     const crows = await p.$$eval('#mxBody .mx-rh', (n) => n.map((x) => x.textContent.trim()));
-    ok(crows.join('|') === 'India|Global|All', 'Count by Country: India, Global, All');
+    ok(crows.join('|') === 'India|Australia|United Arab Emirates|Global|All', 'Count by Country: India, Australia, United Arab Emirates (CO3), Global, All — ' + crows.join('|'));
     await p.click('[data-testid="std-cell-IN-part"]'); await p.waitForTimeout(250);
     const inPart = ALL.filter((r) => r.c.indexOf('IN') >= 0 && r.s === 'part').length;
     ok((await count(p)).indexOf(inPart + ' shown') === 0 && (await chips(p)).join('|').indexOf('Applies in: India') >= 0, 'India × Partly filters by Applies in: India → ' + (await count(p)) + ' (' + (await chips(p)).join(' · ') + ')');
