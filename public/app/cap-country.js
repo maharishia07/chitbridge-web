@@ -89,7 +89,7 @@ function csuZoneFor(country, held) {
   var zones = csuZones(country), dev = csuDeviceZone();
   if (zones.length === 1) return { value: zones[0], from: txf('the {c} pack', { c: csuCountryName(country) }), ask: false };
   if (zones.length > 1) {
-    if (held && zones.indexOf(held) >= 0) return { value: held, from: tx('what you set'), ask: true };
+    if (held && zones.indexOf(held) >= 0) return { value: held, from: held === dev ? tx('your device clock') : tx('what you set'), ask: true };
     if (dev && zones.indexOf(dev) >= 0) return { value: dev, from: tx('your device clock'), ask: true };
     return { value: '', from: txf('{c} has several — pick one', { c: csuCountryName(country) }), ask: true };
   }

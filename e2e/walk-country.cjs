@@ -195,8 +195,11 @@ W.run('country', async (w) => {
   const fixedProfile = profile({ done: true, required: false, constituted: true, constituted_by: { products: true, chits: false, entries: false } });
   await stubRegistration(in3, fixedProfile, sent5);
   await w.step('C10', 'A constituted shop (it has products) -> Country and Money greyed with the reason, no Change; Year and tax still open; the rule says never', async () => {
+    await p5.goto(base + '/app.html#/login');   /* a page of the origin first: localStorage is unreadable on about:blank */
+    await p5.waitForSelector('#root', { timeout: 15000 });
     await p5.evaluate((s) => { localStorage.setItem('cb_sess', s); }, W.session('Walk Owner', 'Walk Shop'));
     await p5.goto(base + '/app.html#/country');
+    await p5.reload();
     await p5.waitForSelector('[data-testid="cs-rows"]', { timeout: 15000 });
     await p5.waitForSelector('[data-testid="cs-row-country"][data-locked="1"]', { timeout: 8000 });
     const noCountryChange = !(await p5.$('[data-testid="cs-change-country"]')), noMoneyChange = !(await p5.$('[data-testid="cs-change-currency"]'));
