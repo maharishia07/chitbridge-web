@@ -1,26 +1,49 @@
 #!/usr/bin/env node
 /**
- * e2e/walk-country-lab.cjs - THE COUNTRY LAB, WALKED (CL1, 2026-10-12): what changes when a shop's country changes, shown from the packs.
+ * e2e/walk-country-lab.cjs - THE COUNTRY LAB, WALKED (CL1, 2026-10-12 · CL2, 2026-10-13): what registering in another country would look like, shown from the packs.
  * Black box: the real page, the real adopted engines (engine/tax.js carries reg-in · reg-au · reg-ae · regulation · tax-packs · tax-slab · tax,
- * one release), no API at all - the lab reads nothing from a server. Three journeys, at 1366 px and then at 390 px:
+ * one release), no API at all - the lab reads nothing from a server. The journeys at 1366 px, then the owner's eight CL2 findings, then 390 px;
+ * each step shoots the screen (e2e/shots/walk-country-lab-NN.png) - Cream and Dark at both widths are among them (C1 · L8 · C9).
  *   L1  the pickers list exactly the registered packs (IN · AU · AE, the registry's own list) and the setup step's other countries as pack-less
  *   L2  IN -> AU: every row is read from the packs and marked - currency INR -> AUD, April -> July, state-split GST -> one-head GST, BAS with its boxes
  *   L3  IN -> AU: the ABN check box answers from the pack (a wrong digit is said); the GSTIN box from the profile-map engine
  *   L4  IN -> AU: the cart is billed by the tax engine under both - CGST+SGST on one side, one GST head on the other, the GST-free line said in the notes
  *   L5  AU -> AE: GST -> VAT, BAS -> VAT201 with its boxes, TRN 15 digits with no check digit (said); a kind the UAE pack does not know is said by the engine
  *   L6  IN -> JP (pack-less): the TO side paints the server's sentence; the cart is NOT billed under Japan; every row says "no pack"
- *   L7  for an existing shop: before the constitution is fixed, the rows that differ are the list; after, the blocked sentence names a new entity
- *   L8  at 390 px: no sideways scroll, the rows still read one under the other, the bills stack
+ *   L7  this shop: with no product or transaction the rows that differ are the list; with one, the country is final and a new entity is named
+ *   C1  (#1) Cream and Dark: every visible text is AA on the ground it is painted on (e2e/lib/theme-measure.cjs, the crm-themes eyes); the TO cell is
+ *       marked by a rule, never a tinted column - its ground is the FROM cell's ground; the bill's differing figures are underlined, not tinted
+ *   C2  (#2) no sentence says a shop changes country: the title, the subtitle, the "This shop" choice and the final-sentence all speak of REGISTERING
+ *   C3  (#3) the way out is Home (/), never app.html
+ *   C4  (#4) the cart never cuts: beside the outcome it stacks as cards, every item name and supply kind is shown whole, no scroll bar inside the panel
+ *   C5  (#5) one plain line per cell (<= 20 words visible), the legal detail and its citation behind a closed "why" fold (DL Art. 45 is in the fold only)
+ *   C6  (#6) a reserved right gutter: the table ends before the window's edge; nothing fixed overlaps the "what it means" column
+ *   C7  (#7) India's supply kinds say "India: each item's own GST rate decides."
+ *   C8  (#8) AU -> AU: ten rows are the same, collapsed under "10 rows are the same"; show opens them; IN -> AU has no fold row
+ *   L8  at 390 px (Cream): no sideways scroll, the rows read one under the other, the bills stack, the cart lines are cards with nothing cut
+ *   C9  at 390 px (Dark): AA everywhere, no sideways scroll, the TO cell still carries its rule
  *
  *   NODE_PATH=e2e/node_modules node e2e/walk-country-lab.cjs         headless, fast
  *   node e2e/walk-country-lab.cjs --show                              watch it
  */
 'use strict';
 const W = require('./lib/walk.cjs');
+const { measure } = require('./lib/theme-measure.cjs');   /* the contrast measurement, run INSIDE the page - one copy, shared with crm-themes.cjs */
 const JP_WHY = 'ChitBridge does not keep books for Japan yet — selling and the rail still work; books arrive when its pack ships.';
 const text = (page, sel) => page.evaluate((s) => { const el = document.querySelector(s); return el ? el.textContent.replace(/\s+/g, ' ').trim() : ''; }, sel);
-const verdicts = (page) => page.evaluate(() => { const o = {}; document.querySelectorAll('#rows-body tr').forEach((t) => { o[t.dataset.row] = t.querySelector('.verdict').textContent.trim(); }); return o; });
+const verdicts = (page) => page.evaluate(() => { const o = {}; document.querySelectorAll('#rows-body tr[data-row]').forEach((t) => { o[t.dataset.row] = t.querySelector('.verdict').textContent.trim(); }); return o; });
 const pick = async (page, side, code) => { await page.selectOption('[data-testid="cl-' + side + '"]', code); await page.waitForTimeout(150); };
+const theme = async (page, key) => { await page.evaluate((k) => { CBAvatar.applyTheme(k); }, key); await page.waitForTimeout(120); };
+/** every visible text on the page against the ground it is painted on; the failing pairs (a gradient ground is not measurable and is left out) */
+const contrast = async (page) => { const pairs = await page.evaluate(measure); return { n: pairs.length, bad: pairs.filter((x) => !x.grad && x.ratio < x.need) }; };
+/** the words a cell SHOWS: its text with every closed fold's body taken out (the "why" summary stays - it is visible) */
+const visibleWords = `(el) => { const c = el.cloneNode(true); c.querySelectorAll('details:not([open])').forEach((d) => { [...d.children].forEach((ch) => { if (ch.tagName !== 'SUMMARY') ch.remove(); }); });
+  return c.textContent.replace(/\\s+/g, ' ').trim().split(' ').filter(Boolean).length; }`;
+/** does the text in an input or select fit its box? measured with the control's own font (a cut name is the owner's "Cooking c") */
+const fits = `(el) => { const cs = getComputedStyle(el); const cv = document.createElement('canvas').getContext('2d'); cv.font = cs.font;
+  const t = el.tagName === 'SELECT' ? (el.options[el.selectedIndex] ? el.options[el.selectedIndex].text : '') : el.value;
+  const w = cv.measureText(t).width, room = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - (el.tagName === 'SELECT' ? 20 : 0);
+  return { t, w: Math.round(w), room: Math.round(room), ok: w <= room + 0.5 }; }`;
 
 const walk = async (w) => {
   const { page, base } = w;
@@ -44,8 +67,8 @@ const walk = async (w) => {
     const cur = await text(page, '[data-testid="cl-row-currency"]'), fy = await text(page, '[data-testid="cl-row-fy"]'), sch = await text(page, '[data-testid="cl-row-scheme"]');
     const ret = await text(page, '[data-testid="cl-row-returns"]'), led = await text(page, '[data-testid="cl-row-ledgers"]');
     const ok = Object.keys(v).length === 10 && Object.values(v).every((x) => x === 'DIFFERENT')
-      && /INR/.test(cur) && /AUD/.test(cur) && /April/.test(fy) && /July/.test(fy) && /split by state/.test(sch) && /border/.test(sch) && /heads: gst/.test(sch)
-      && /no returns member/.test(ret) && /BAS/.test(ret) && /8 boxes/.test(ret) && /added/.test(led) && /renamed/.test(led);
+      && /INR/.test(cur) && /AUD/.test(cur) && /April/.test(fy) && /July/.test(fy) && /split by state/.test(sch) && /border/.test(sch) && /heads gst/.test(sch)
+      && /none in the pack/.test(ret) && /no returns member/.test(ret) && /BAS/.test(ret) && /8 boxes/.test(ret) && /added/.test(led) && /renamed/.test(led);
     return { ok, saw: Object.keys(v).length + ' rows · ' + Object.values(v).filter((x) => x === 'DIFFERENT').length + ' different · ' + ret.slice(0, 70) };
   });
 
@@ -68,7 +91,7 @@ const walk = async (w) => {
       sameAsEngine: (function () { const b = BILLS.to.money; return document.querySelector('[data-testid="cl-total-to"]').textContent === CBLocale.money(b.total, 'AUD'); })(),
     }));
     const ok = /CGST/.test(r.fromHeads) && /SGST/.test(r.fromHeads) && /GST 10%/.test(r.toHeads) && !/CGST/.test(r.toHeads) && /GST-free/.test(r.toNotes) && r.diffs > 0 && r.sameAsEngine && /₹/.test(r.fromTotal) && /A\$/.test(r.toTotal);
-    return { ok, saw: r.fromTotal + ' vs ' + r.toTotal + ' · ' + r.diffs + ' cells highlighted · ' + r.toNotes.slice(0, 40) + '…' };
+    return { ok, saw: r.fromTotal + ' vs ' + r.toTotal + ' · ' + r.diffs + ' figures marked · ' + r.toNotes.slice(0, 40) + '…' };
   });
 
   await w.step('L5', 'AU -> AE: GST -> VAT, BAS -> VAT201 with its boxes, TRN 15 digits with no check digit; a kind the UAE pack does not know is said', async () => {
@@ -94,27 +117,143 @@ const walk = async (w) => {
     return { ok, saw: st.slice(0, 80) + '… · IN billed ' + billedFrom + ' · JP billed ' + billedTo };
   });
 
-  await w.step('L7', 'For an existing shop: before the constitution is fixed the differing rows are the list; after, the blocked sentence names a new entity', async () => {
+  await w.step('L7', 'This shop: with no product or transaction the differing rows are the list; with one, the country is final and a new entity is named', async () => {
     await pick(page, 'to', 'AU');
     const before = await text(page, '[data-testid="cl-rederive"]');
     await page.click('[data-testid="cl-fixed-yes"]'); await page.waitForTimeout(100);
     const after = await text(page, '[data-testid="cl-blocked"]');
     await page.click('[data-testid="cl-fixed-no"]'); await page.waitForTimeout(100);
-    const ok = /re-derive/.test(before) && /Currency/.test(before) && /Financial year/.test(before) && /Chart of accounts/.test(before)
-      && /Blocked/.test(after) && /set up for India/.test(after) && /new registration/.test(after) && /new entity/.test(after) && /never a silent switch/.test(after);
+    const ok = /re-derive/.test(before) && /Currency/.test(before) && /Financial year/.test(before) && /Chart of accounts/.test(before) && /corrected/.test(before)
+      && /Final/.test(after) && /registered in India/.test(after) && /never changes/.test(after) && /new entity/.test(after) && /never a silent switch/.test(after);
     return { ok, saw: before.slice(0, 70) + '… | ' + after.slice(0, 90) + '…' };
   });
 
-  await w.step('L8', 'At 390 px: no sideways scroll, the rows read one under the other, the bills stack', async () => {
-    await page.setViewportSize({ width: 390, height: 844 }); await page.waitForTimeout(300);
-    const r = await page.evaluate(() => {
-      const rows = [...document.querySelectorAll('#rows-body tr')], a = document.querySelector('[data-testid="cl-bill-from"]').getBoundingClientRect(), b = document.querySelector('[data-testid="cl-bill-to"]').getBoundingClientRect();
-      const stacked = rows.every((t) => { const f = t.querySelector('td.v.from').getBoundingClientRect(), g = t.querySelector('td.v.to').getBoundingClientRect(); return g.top >= f.bottom - 1; });
-      return { sw: document.documentElement.scrollWidth, iw: window.innerWidth, stacked, billsStack: b.top >= a.bottom - 1, rows: rows.length, firstRow: rows[0].innerText.replace(/\s+/g, ' ').slice(0, 60) };
-    });
-    const ok = r.sw <= r.iw && r.stacked && r.billsStack && r.rows === 10;
-    return { ok, saw: 'scroll ' + r.sw + ' / ' + r.iw + ' · rows stacked ' + r.stacked + ' · bills stacked ' + r.billsStack + ' · "' + r.firstRow + '"' };
+  /* ── CL2: the owner's eight findings, IN -> AU at 1366 px ─────────────────────────────────────────────────────────────────────────── */
+  await w.step('C1', '(#1) Cream and Dark: every text AA on its ground; the TO cell is marked by a rule, never a tinted column; differing figures underlined', async () => {
+    const out = [];
+    let ok = true;
+    for (const k of ['cream', 'dark']) {
+      await theme(page, k);
+      const c = await contrast(page);
+      const m = await page.evaluate(() => {
+        const tr = document.querySelector('#rows-body tr.different'), f = tr.querySelector('td.v.from'), t = tr.querySelector('td.v.to');
+        const cf = getComputedStyle(f), ct = getComputedStyle(t);
+        const underlined = [...document.querySelectorAll('#bill .diff')].every((d) => getComputedStyle(d).boxShadow !== 'none' && getComputedStyle(d).backgroundColor === 'rgba(0, 0, 0, 0)');
+        return { sameGround: cf.backgroundColor === ct.backgroundColor, rule: /inset/.test(ct.boxShadow) && !/rgba\(0, 0, 0, 0\)/.test(ct.boxShadow), underlined, diffs: document.querySelectorAll('#bill .diff').length, themed: document.documentElement.getAttribute('data-theme') };
+      });
+      const good = c.bad.length === 0 && m.sameGround && m.rule && m.underlined && m.diffs > 0 && m.themed === k;
+      ok = ok && good;
+      out.push(k + ': ' + c.n + ' texts, ' + c.bad.length + ' below AA' + (c.bad.length ? ' (' + c.bad.slice(0, 3).map((x) => '"' + x.text + '" ' + x.ratio + '/' + x.need).join(', ') + ')' : '') + ' · TO ground = FROM ground ' + m.sameGround + ' · rule ' + m.rule + ' · ' + m.diffs + ' figures underlined ' + m.underlined);
+    }
+    return { ok, saw: out.join(' | ') };   /* the step ends in Dark: this shot is Dark at 1366 */
   });
+
+  await w.step('C2', '(#2) No sentence says a shop changes country: title, subtitle, the "This shop" choice and its final sentence speak of registering', async () => {
+    await theme(page, 'cream');
+    const r = await page.evaluate(() => {
+      /* every word on the page, folds included, scripts and styles out (a comment in the script is not a sentence the owner reads) */
+      const c = document.body.cloneNode(true); c.querySelectorAll('script,style').forEach((n) => n.remove());
+      const all = c.textContent.replace(/\s+/g, ' ');
+      const forbidden = /what changes when|country changes|changes country|moving this shop|change of country|country change|country may (still )?change|a switch would/i;
+      const hit = all.match(forbidden);
+      return { hit: hit ? hit[0] : null, title: document.querySelector('h1').textContent.trim(), sub: document.querySelector('[data-testid="cl-sub"]').textContent.trim(),
+        th: document.getElementById('th-to').textContent, radios: [...document.querySelectorAll('input[name=fixed]')].map((i) => i.parentElement.textContent.trim()), heads: [...document.querySelectorAll('.pane.left .sec')].map((s) => s.textContent.trim()) };
+    });
+    const words = (s) => s.split(/\s+/).filter(Boolean).length;
+    const ok = !r.hit && words(r.title) <= 5 && /registering in another country/i.test(r.sub) && words(r.sub) <= 12 && /Registering/.test(r.th)
+      && /no product or transaction yet/.test(r.radios[0]) && /has a product or a transaction/.test(r.radios[1]) && r.heads.some((h) => /registering in/i.test(h)) && !r.heads.some((h) => /existing shop/i.test(h));
+    return { ok, saw: (r.hit ? 'still says "' + r.hit + '" · ' : '') + '"' + r.sub + '" · ' + r.th + ' · ' + r.radios.join(' / ') };
+  });
+
+  await w.step('C3', '(#3) The way out is Home (/), never app.html', async () => {
+    const r = await page.evaluate(() => ({ home: (function () { const a = document.querySelector('[data-testid="cl-home"]'); return a ? { path: new URL(a.href).pathname, text: a.textContent.trim() } : null; })(), toApp: document.querySelectorAll('a[href$="app.html"]').length }));
+    const ok = !!r.home && r.home.path === '/' && /Home/.test(r.home.text) && r.toApp === 0;
+    return { ok, saw: (r.home ? r.home.text + ' → ' + r.home.path : 'no home link') + ' · links to app.html: ' + r.toApp };
+  });
+
+  await w.step('C4', '(#4) The cart never cuts: beside the outcome it stacks as cards, every name and supply kind shown whole, no scroll bar inside the panel', async () => {
+    const r = await page.evaluate((fitsSrc) => {
+      const fits = eval(fitsSrc);
+      const cart = document.querySelector('.cart'), rows = [...document.querySelectorAll('#cart-body tr')];
+      const controls = [...cart.querySelectorAll('input[type=text],select')].map(fits);
+      return { stacked: rows.every((t) => getComputedStyle(t).display === 'grid'), paneW: Math.round(cart.getBoundingClientRect().width), noScroll: cart.scrollWidth <= cart.clientWidth && document.querySelector('.pane.left').scrollWidth <= document.querySelector('.pane.left').clientWidth,
+        inside: [...cart.querySelectorAll('input,select,button')].every((el) => el.getBoundingClientRect().right <= cart.getBoundingClientRect().right + 1), controls };
+    }, fits);
+    const cut = r.controls.filter((c) => !c.ok);
+    const ok = r.stacked && r.noScroll && r.inside && cut.length === 0 && r.controls.some((c) => /Cooking oil 1 L/.test(c.t)) && r.controls.some((c) => /GST-free/.test(c.t));
+    return { ok, saw: 'pane ' + r.paneW + 'px · cards ' + r.stacked + ' · no inner scroll ' + r.noScroll + ' · ' + r.controls.length + ' controls, ' + cut.length + ' cut' + (cut.length ? ' ("' + cut[0].t + '" ' + cut[0].w + ' > ' + cut[0].room + ')' : '') };
+  });
+
+  await w.step('C5', '(#5) One plain line per cell (<= 20 words shown); the legal detail and its citation behind a closed "why" fold', async () => {
+    await pick(page, 'from', 'AU'); await pick(page, 'to', 'AE');
+    const r = await page.evaluate((vwSrc) => {
+      const vw = eval(vwSrc);
+      const cells = [...document.querySelectorAll('#rows-body tr[data-row] td.v, #rows-body tr[data-row] td.means')].map((td) => ({ row: td.parentElement.dataset.row, words: vw(td), folds: td.querySelectorAll('details.why').length, open: td.querySelectorAll('details[open]').length }));
+      const hints = [...document.querySelectorAll('.pane.left .hint, .pane.right > .hint')].filter((h) => !h.closest('details') && getComputedStyle(h).display !== 'none').map((h) => ({ words: vw(h), t: h.textContent.trim().slice(0, 30) }));
+      const kinds = document.querySelector('[data-testid="cl-row-kinds"] td.v.to');
+      return { cells, hints, citeInText: /DL Art\. 45/.test(kinds.textContent), citeShown: /DL Art\. 45/.test((function () { const c = kinds.cloneNode(true); c.querySelectorAll('details').forEach((d) => d.remove()); return c.textContent; })()), folds: document.querySelectorAll('#rows-body details.why').length };
+    }, visibleWords);
+    const over = r.cells.filter((c) => c.words > 20), overHints = r.hints.filter((h) => h.words > 20);
+    const ok = over.length === 0 && overHints.length === 0 && r.citeInText && !r.citeShown && r.folds >= 10 && r.cells.every((c) => c.open === 0);
+    await pick(page, 'from', 'IN'); await pick(page, 'to', 'AU');
+    return { ok, saw: r.cells.length + ' cells, longest ' + Math.max(...r.cells.map((c) => c.words)) + ' words' + (over.length ? ' (over: ' + over.map((c) => c.row + ' ' + c.words).join(', ') + ')' : '') + ' · ' + r.folds + ' why-folds, all closed · DL Art. 45 in the fold only ' + (r.citeInText && !r.citeShown) + ' · hints ≤ 20 words ' + (overHints.length === 0) };
+  });
+
+  await w.step('C6', '(#6) A reserved right gutter: the table ends before the window\'s edge and nothing fixed overlaps the "what it means" column', async () => {
+    const r = await page.evaluate(() => {
+      const pane = document.querySelector('.pane.right'), cmp = document.querySelector('table.cmp').getBoundingClientRect();
+      const means = [...document.querySelectorAll('#rows-body td.means')].map((td) => td.getBoundingClientRect());
+      const hits = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+      const overlaps = [...document.querySelectorAll('body *')].filter((el) => { const cs = getComputedStyle(el); if (cs.position !== 'fixed' && cs.position !== 'sticky') return false; const rc = el.getBoundingClientRect(); return rc.width > 0 && means.some((m) => hits(rc, m)); }).map((el) => el.tagName + '.' + el.className);
+      const av = document.querySelector('[data-testid="cbavatar"]'); const avHit = av ? means.some((m) => hits(av.getBoundingClientRect(), m)) : false;
+      return { gutter: parseFloat(getComputedStyle(pane).paddingInlineEnd), gap: Math.round(window.innerWidth - cmp.right), overlaps, avHit };
+    });
+    const ok = r.gutter >= 56 && r.gap >= 56 && r.overlaps.length === 0 && !r.avHit;
+    return { ok, saw: 'pane ends ' + r.gutter + 'px before the edge · table to edge ' + r.gap + 'px · fixed elements over the column: ' + r.overlaps.length + ' · avatar over it: ' + r.avHit };
+  });
+
+  await w.step('C7', '(#7) India\'s supply kinds say "India: each item\'s own GST rate decides."', async () => {
+    const t = await text(page, '[data-testid="cl-row-kinds"] td.v.from');
+    const ok = t === 'India: each item\'s own GST rate decides.' || t === 'India: each item’s own GST rate decides.';
+    return { ok, saw: '"' + t + '"' };
+  });
+
+  await w.step('C8', '(#8) AU -> AU: ten rows the same, collapsed under "10 rows are the same"; show opens them; IN -> AU has no fold row', async () => {
+    await pick(page, 'from', 'AU'); await pick(page, 'to', 'AU');
+    const vis = () => page.evaluate(() => ({ same: document.querySelectorAll('#rows-body tr.same').length, shown: [...document.querySelectorAll('#rows-body tr[data-row]')].filter((t) => getComputedStyle(t).display !== 'none').length, fold: (document.querySelector('[data-testid="cl-samefold"]') || { textContent: '' }).textContent.replace(/\s+/g, ' ').trim() }));
+    const a = await vis();
+    await page.click('[data-testid="cl-samefold-btn"]'); await page.waitForTimeout(100);
+    const b = await vis();
+    await page.click('[data-testid="cl-samefold-btn"]'); await page.waitForTimeout(100);
+    const c = await vis();
+    await pick(page, 'from', 'IN'); await pick(page, 'to', 'AU');
+    const d = await vis();
+    const ok = a.same === 10 && a.shown === 0 && /^10 rows are the same · show/.test(a.fold) && b.shown === 10 && /hide/.test(b.fold) && c.shown === 0 && d.same === 0 && d.fold === '' && d.shown === 10;
+    return { ok, saw: 'AU→AU: ' + a.same + ' same, ' + a.shown + ' shown, "' + a.fold.slice(0, 40) + '" → show: ' + b.shown + ' → hide: ' + c.shown + ' · IN→AU: fold row ' + (d.fold ? 'present' : 'absent') };
+  });
+
+  /* ── 390 px: Cream, then Dark ─────────────────────────────────────────────────────────────────────────────────────────────────────── */
+  await w.step('L8', 'At 390 px (Cream): no sideways scroll, the rows read one under the other, the bills stack, the cart lines are cards with nothing cut', async () => {
+    await page.setViewportSize({ width: 390, height: 844 }); await page.waitForTimeout(300);
+    const r = await page.evaluate((fitsSrc) => {
+      const fits = eval(fitsSrc);
+      const rows = [...document.querySelectorAll('#rows-body tr[data-row]')].filter((t) => getComputedStyle(t).display !== 'none'), a = document.querySelector('[data-testid="cl-bill-from"]').getBoundingClientRect(), b = document.querySelector('[data-testid="cl-bill-to"]').getBoundingClientRect();
+      const stacked = rows.every((t) => { const f = t.querySelector('td.v.from').getBoundingClientRect(), g = t.querySelector('td.v.to').getBoundingClientRect(); return g.top >= f.bottom - 1; });
+      const cart = document.querySelector('.cart'), cut = [...cart.querySelectorAll('input[type=text],select')].map(fits).filter((x) => !x.ok);
+      return { sw: document.documentElement.scrollWidth, iw: window.innerWidth, stacked, billsStack: b.top >= a.bottom - 1, rows: rows.length, cards: [...document.querySelectorAll('#cart-body tr')].every((t) => getComputedStyle(t).display === 'grid'), cut: cut.length, innerScroll: cart.scrollWidth > cart.clientWidth, firstRow: rows[0].innerText.replace(/\s+/g, ' ').slice(0, 60) };
+    }, fits);
+    const ok = r.sw <= r.iw && r.stacked && r.billsStack && r.rows === 10 && r.cards && r.cut === 0 && !r.innerScroll;
+    return { ok, saw: 'scroll ' + r.sw + ' / ' + r.iw + ' · rows stacked ' + r.stacked + ' · bills stacked ' + r.billsStack + ' · cart cards ' + r.cards + ', ' + r.cut + ' cut · "' + r.firstRow + '"' };
+  });
+
+  await w.step('C9', 'At 390 px (Dark): AA everywhere, no sideways scroll, the TO cell still carries its rule', async () => {
+    await theme(page, 'dark');
+    const c = await contrast(page);
+    const r = await page.evaluate(() => { const t = document.querySelector('#rows-body tr.different td.v.to'), cs = getComputedStyle(t); return { sw: document.documentElement.scrollWidth, iw: window.innerWidth, rule: parseFloat(cs.borderLeftWidth) >= 3 && cs.borderLeftColor !== 'rgba(0, 0, 0, 0)', ground: cs.backgroundColor === getComputedStyle(document.querySelector('#rows-body tr.different td.v.from')).backgroundColor }; });
+    const ok = c.bad.length === 0 && r.sw <= r.iw && r.rule && r.ground;
+    return { ok, saw: c.n + ' texts, ' + c.bad.length + ' below AA' + (c.bad.length ? ' (' + c.bad.slice(0, 3).map((x) => '"' + x.text + '" ' + x.ratio + '/' + x.need).join(', ') + ')' : '') + ' · scroll ' + r.sw + ' / ' + r.iw + ' · rule ' + r.rule };
+  });
+  await theme(page, 'cream');
   await page.setViewportSize({ width: 1366, height: 900 });
 };
 walk.opts = { viewport: { width: 1366, height: 900 } };
