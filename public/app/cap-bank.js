@@ -250,7 +250,7 @@ function bankNoteSave(id) {
   if (!bkbStep({ act: 'note', key: r.key, text: t })) return;
   closeModal(); bankPaint(); toast(tx('Note kept.'));
 }
-/** ✉ Ask: the engine composes the question (date · amount · reference only); the chit goes through POST /api/chits/send; their advice answers it */
+/** ✉ Ask: the engine composes the question (date · amount · reference only); CBAdvice.sendBody sends it (POST /api/chits/send); their advice answers it */
 function bankAsk(r) {
   const parties = (BKB.rail && BKB.rail.parties) || [], pre = (r.sugg && r.sugg.event && r.sugg.event.party) || '';
   BKB.asking = r.id;
@@ -270,11 +270,8 @@ function bankAskWords() { const a = bankAskBody(), el = bkbEl('bk_askwords'); if
 function bankAskSend(btn) {
   const a = bankAskBody(), r = BKB.rows.filter((x) => x.id === BKB.asking)[0];
   if (!a.ok) return peBad('bk_askout', tx('Choose who to ask.'));
-  if (!EP.createChit) EP.createChit = { m: 'POST', p: '/api/chits/send', ok: '✓' };
-  return CBAction.run(btn, async () => {
-    const sent = await api('createChit', { body: a.body });
-    return (sent && (sent.chit_id || (sent.chit && sent.chit.chit_id))) || null;
-  }, { key: 'bankask:' + a.key, busy: tx('Sending…'), failed: tx('Not sent. Try again.'),
+  /* the rail's one send of a composed body (rail-advice.js CBAdvice.sendBody) — never a second mint */
+  return CBAction.run(btn, () => CBAdvice.sendBody(a.body), { key: 'bankask:' + a.key, busy: tx('Sending…'), failed: tx('Not sent. Try again.'),
     outcome: (chit_id) => {
       const p = ((BKB.rail && BKB.rail.parties) || []).filter((x) => x.party_id === peVal('bk_askto'))[0] || {};
       BKB.rail.chits = (BKB.rail.chits || []).concat([{ chit_id: chit_id || ('local:' + a.key), direction: 'sent', party: { id: p.party_id, name: p.name }, created_at: new Date().toISOString(), business_json: a.body.business_json, line_items: [] }]);
