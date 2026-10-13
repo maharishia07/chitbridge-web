@@ -54,24 +54,28 @@ function fpCols() {
     { key: 'due', label: tx('To pay'), prio: 2, sort: 'due', num: true, w: 140, html: true, cell: function (p) { return '<b data-b="topay">' + esc(bkMoney(Number(p.payable.total_minor), c())) + '</b>'; } },
     { key: 'payby', label: tx('Pay by'), prio: 3, sort: 'risk', w: 150, html: true, cell: function (p) {
       var x = p.payable;
-      return x.pay_by ? '<span data-b="payby">' + esc(bkDate(x.pay_by)) + '</span>' + (x.msme_risk ? ' <span class="tag red" data-b="risk">⚠ ' + esc(tx('Day 45')) + '</span>' : '') : dash; } },
+      return x.pay_by ? '<span data-b="payby">' + esc(bkDate(x.pay_by)) + '</span>' + (x.msme_risk ? ' <span class="tag amber" data-b="risk">⚠ ' + esc(tx('Day 45')) + '</span>' : '') : dash; } },
     { key: 'offer', label: tx('Early pay'), prio: 4, w: 230, html: true, cell: function (p) { var f = p.payable.early; return f ? '<span data-b="offer">' + esc(f.words) + '</span>' : dash; } },
     bucket('0_30', '0–30 days', 5), bucket('31_45', '31–45 days', 6), bucket('46_60', '46–60 days', 7), bucket('60_plus', 'Over 60 days', 8),
     { key: 'act', label: ' ', prio: 1, pin: 'end', w: 100, html: true, cell: function (p) {
       return '<button type="button" class="cbl-tbtn" data-testid="fp-pay-' + esc(p.party_id) + '" onclick="event.stopPropagation();fpPay(\'' + esc(p.party_id) + '\')">' + esc(tx('Pay')) + '</button>'; } },
   ];
 }
-/** what a supplier row opens to: its bills, as the server listed them — the MSME sentence and the offer under the bill they belong to */
+/** what a supplier row opens to: its ages (the server's buckets), then its bills as the server listed them — the MSME sentence and the offer under the bill they belong to */
 function fpNext(p) {
-  var c = FP.cur, bills = (p.payable && p.payable.bills) || [];
+  var c = FP.cur, bills = (p.payable && p.payable.bills) || [], b0 = (p.payable && p.payable.buckets) || {};
+  var ages = FP_BUCKETS.filter(function (k) { return Number(b0[k[0]]) > 0; }).map(function (k) { return CBList.nextRow(['<span data-b="age-' + k[0] + '">' + esc(tx(k[1])) + '</span>', esc(bkMoney(Number(b0[k[0]]), c))]); }).join('');
+  /* the bill's line is a nextRow (its date | amount — short, so a phone card stays inside the screen); its age, due day and sentences sit UNDER it on their own
+     lines — a nextRow cell is one line, and a sentence must wrap, never clip */
+  var line = function (tid, t, red) { return '<div data-b="' + tid + '" style="font-size:var(--fs-1);padding:0 0 2px;color:' + (red ? 'var(--ink,#2a2418)' : 'var(--grey)') + '">' + esc(t) + '</div>'; };
   var rows = bills.map(function (b) {
     var lab = (FP_BUCKETS.filter(function (k) { return k[0] === b.bucket; })[0] || [0, ''])[1];
-    var head = '<span data-b="bill">' + esc(bkDate(b.date)) + '</span> <span class="sub">' + esc(tx(lab)) + ' · ' + esc(tx(b.overdue ? 'overdue since' : 'due')) + ' ' + esc(bkDate(b.due_date)) + '</span>'
-      + (b.msme_words ? '<div data-b="msme" style="font-size:var(--fs-1);color:' + (b.msme_risk ? 'var(--red-text,#8E3517)' : 'var(--grey)') + '">' + esc(b.msme_words) + '</div>' : '')
-      + (b.early ? '<div data-b="early" style="font-size:var(--fs-1);color:var(--grey)">' + esc(b.early.words) + '</div>' : '');
-    return CBList.nextRow([head, '<span class="due give">' + esc(bkMoney(b.open_minor, c)) + '</span>'], [140]);
+    return CBList.nextRow(['<span data-b="bill">' + esc(bkDate(b.date)) + '</span>', '<span class="due give">' + esc(bkMoney(b.open_minor, c)) + '</span>'])
+      + line('due', tx(lab) + ' · ' + (b.overdue ? tx('overdue since') : tx('due')) + ' ' + bkDate(b.due_date))
+      + (b.msme_words ? line('msme', b.msme_words, b.msme_risk) : '') + (b.early ? line('early', b.early.words) : '');
   }).join('');
-  return '<div data-testid="fp-next-' + esc(p.party_id) + '">' + (rows || '<div style="color:var(--grey);font-size:var(--fs-1)">' + esc(tx('Nothing to pay')) + '</div>') + '</div>';
+  var sec = function (t) { return '<div style="color:var(--grey);font-size:var(--fs-1);padding:4px 0 2px">' + esc(tx(t)) + '</div>'; };
+  return '<div data-testid="fp-next-' + esc(p.party_id) + '">' + (ages ? sec('Age') + '<div data-testid="fp-ages-' + esc(p.party_id) + '">' + ages + '</div>' + sec('Bills') : '') + (rows || '<div style="color:var(--grey);font-size:var(--fs-1)">' + esc(tx('Nothing to pay')) + '</div>') + '</div>';
 }
 function fpHead() {
   var chips = [];
@@ -86,7 +90,7 @@ function fpMount(frame) {
   var num = function (g) { return function (a, b) { return Number(g(a) || 0) - Number(g(b) || 0); }; };
   FP.api = CBList.mount(document.getElementById('fp_list'), {
     key: 'fin-pay', t: tx, rows: function () { return FP.rows; }, id: function (p) { return p.party_id; }, rowTid: function (p) { return 'fp-row-' + p.party_id; },
-    columns: fpCols(), defaultCols: ['party', 'due', 'payby', 'offer', 'b0_30', 'b31_45', 'b46_60', 'b60_plus'], cardMax: 4, fill: false,
+    columns: fpCols(), defaultCols: ['party', 'due', 'payby', 'offer'], cardMax: 4, fill: false,   /* the four age columns are in the ⚙ chooser; a row opens to its ages and bills */
     head: fpHead,
     state: function () { return FP.state; }, error: function () { return { title: tx('Could not read what you owe.'), sub: tx('Nothing was lost. Try again.') }; }, onRetry: fpRetry,
     empty: { title: tx('You owe no supplier') },

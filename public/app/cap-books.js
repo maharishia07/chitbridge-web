@@ -575,8 +575,12 @@ function payDiscHTML(f) {
 function payDiscRecord(btn) {
   var f = PAY && PAY.offer; if (!f || !f.record || !f.record.ok) return;
   return CBAction.run(btn, function () { return api('booksEntryPost', { body: Object.assign({ date: bkToday() }, f.record.body) }); },
-    { key: 'pay-disc:' + f.record.body.client_ref, out: 'pay_disc_out', failed: tx('Could not record the discount'), done: tx('Discount recorded'),
-      outcome: function () { if (PAY && PAY.after) PAY.after(); } });
+    { key: 'pay-disc:' + f.record.body.client_ref, out: 'pay_disc_out', failed: tx('Could not record the discount'),
+      /* the outcome where it happened: the button becomes the fact (a second press would only replay the same client_ref) */
+      outcome: function (r) {
+        var t = document.createElement('span'); t.className = 'tag green'; t.setAttribute('data-testid', 'pay_disc_done');
+        t.textContent = '✓ ' + tx('Discount recorded') + (r && r.entry_no ? ' · ' + r.entry_no : ''); btn.replaceWith(t);
+        if (PAY && PAY.after) PAY.after(); } });
 }
 /** "Not paid yet — remind me" (SPEC-payments D3): nothing posts; it is the Remind of the Dues row — a message on the oldest open bill */
 function payRemind() { if (!PAY) return; var id = PAY.partyId; closeModal(); return bkRemind(id, null); }
@@ -629,7 +633,7 @@ function payPaint() {
     + '<table class="bktab" style="width:100%;font-size:var(--fs-1)"><thead><tr><th>' + tx('Bill') + '</th><th>' + tx('Due') + '</th><th class="num">' + tx('Open') + '</th><th class="num">' + tx('Apply') + '</th></tr></thead><tbody>'
     + rows.map(function (it, i) {
         return '<tr data-testid="alloc-row-' + i + '"><td class="mono">' + esc(it.bill_no || it.against_ref) + (it.disputed ? ' <span class="optchip" style="color:var(--warn-2)">' + tx('In dispute') + '</span>' : '') + '</td><td>' + esc(bkDate(it.due_date)) + '</td><td class="num">' + esc(bkMoney(it.open_minor)) + '</td>'
-          + '<td class="num">' + bkMoneyInput({ id: 'alloc_' + i, tid: 'alloc-' + i, minor: it.apply_minor || null, ph: '', w: '150px', on: 'payLeftPaint()', extra: it.disputed ? 'disabled title="' + esc(tx('In dispute · settle it first')) + '"' : '' }) + '</td></tr>';
+          + '<td class="num">' + bkMoneyInput({ id: 'alloc_' + i, tid: 'alloc-' + i, minor: it.apply_minor || null, ph: '', w: 'min(150px,30vw)', on: 'payLeftPaint()', extra: it.disputed ? 'disabled title="' + esc(tx('In dispute · settle it first')) + '"' : '' }) + '</td></tr>';
       }).join('') + '</tbody></table>';
   payLeftPaint();
   var ws = payOpenWarnings();
