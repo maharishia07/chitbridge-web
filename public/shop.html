@@ -1281,7 +1281,7 @@ function shopMyOrders(){
       var body=!list?'<div style="color:var(--disp,#b4453f);font-size:13px">'+esc((res.j&&res.j.message)||'Could not load your orders.')+'</div>'
         :!list.length?'<div class="meta">No orders yet.</div>'
         :list.map(function(o){ var sm=o.summary_json||{}, tv=Number(sm.total_value)||0, dt=o.created_at?new Date(o.created_at).toLocaleDateString(undefined,{day:'numeric',month:'short'}):'';
-          return '<div data-testid="shop-order-row" style="padding:9px 0;border-top:1px dashed var(--line,#e7e3d8);font-size:13px"><div style="display:flex;gap:8px"><b style="flex:1">#CB-'+esc(String(o.chit_id||'').slice(0,8))+'</b>'+(tv?'<span>'+esc(cbFmt(tv))+'</span>':'')+'</div><div class="meta">'+esc(shopStatusWord(o.current_status))+(dt?' · '+esc(dt):'')+'</div></div>'; }).join('');
+          return '<div data-testid="shop-order-row" style="padding:9px 0;border-top:1px dashed var(--line,#e7e3d8);font-size:13px"><div style="display:flex;gap:8px"><b style="flex:1">#CB-'+esc(String(o.chit_id||'').slice(0,8))+'</b>'+(tv?'<span>'+esc(cbFmt(tv))+'</span>':'')+'</div><div class="meta">'+esc(shopStatusWord(o.shop_status||o.current_status))+(dt?' · '+esc(dt):'')+'</div></div>'; }).join('');
       ohost().innerHTML=shopSheet(head+'<div data-testid="shop-orders">'+body+'</div><div style="display:flex;margin-top:14px">'+_DONE_BTN+'</div>'); })
     .catch(function(e){ ohost().innerHTML=shopSheet(head+'<div style="color:var(--disp,#b4453f);font-size:13px">'+esc(e.message||'Network error')+'</div><div style="display:flex;margin-top:14px">'+_DONE_BTN+'</div>'); });
 }
