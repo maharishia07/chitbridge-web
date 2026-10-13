@@ -13,32 +13,57 @@
  *   · the frame is the auth card (.auth .card .top .body) every sign-in screen uses — no new style
  * ── WHAT IS NEW, AND WHY ───────────────────────────────────────────────────────────────────────────────────────────────────────────
  *   renderCountrySetup() — nothing existing painted a country step (the gov panel is read-only and lives inside Register).
- * Flow step: Onboarding · Register → Country setup → the app. (docs/process/flows.json is PM1's, not merged yet.)
+ * Flow step: Onboarding · Register → Country setup → the app (docs/process/flows.json: Accounts · step "country").
+ *
+ * ── CS2 (2026-10-13) — THE CONSTITUTION, THE ZONE, THE COUNTRIES OFFERED ───────────────────────────────────────────────────────
+ *   · the picker offers EXACTLY the server's `countries[]` (= the registered packs, CS1's rule) whatever the browser's locale; CBLocale.REGIONS
+ *     is only the offline fallback. Choosing a country paints what ITS pack derives (currency · year · zones) from that same list — the server
+ *     re-derives on save (country-setup.derive); this file computes nothing.
+ *   · the time zone: a one-zone pack sets it (no Change); a multi-zone pack ASKS, the browser's zone preselected when it is one of the pack's.
+ *   · `constituted` (the shop already holds a product or a transaction): Country and Money are greyed — no Change, the reason on the row —
+ *     and the server refuses a change with its sentence (409 COUNTRY_CHANGE_IS_NEW_ENTITY), painted here. Before it, a correction is free and
+ *     the save's `rederived` says what was set again.
  */
 'use strict';
 var CSU = { p: null, loading: false, readErr: false, edit: null, src: {}, open: {}, err: '', later: false };
 var CSU_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-/** the country's name a person reads — the locale engine's served list, else the browser's own region names, else the code (never a guess) */
+/** CS2: the server's pack row for a country ({ code, name, currency, fy_start_month, zones, locale }) — null when the server sent no list or has no pack for it */
+function csuPackOf(code) {
+  code = String(code || '').toUpperCase();
+  var list = CSU.p && Array.isArray(CSU.p.countries) ? CSU.p.countries : [];
+  for (var i = 0; i < list.length; i++) if (list[i] && String(list[i].code).toUpperCase() === code) return list[i];
+  return null;
+}
+/** the country's name a person reads — the server's pack list, the locale engine's served list, else the browser's own region names, else the code (never a guess) */
 function csuCountryName(code) {
   if (!code) return '';
+  var pk = csuPackOf(code); if (pk && pk.name) return pk.name;
   try { var R = window.CBLocale && CBLocale.REGIONS; if (R && R[code] && R[code].name) return R[code].name; } catch (_) {}
   try { var n = new Intl.DisplayNames([navigator.language || 'en'], { type: 'region' }).of(code); if (n && n !== code && !/unknown/i.test(n)) return n; } catch (_) {}
   return code;
 }
-/** the countries the picker offers: the served list, plus the one the browser sits in and the one the server holds */
+/**
+ * the countries the picker offers — CS2: EXACTLY the server's registered packs, plus the one the shop holds now (a pack-less country stays
+ * visible as what it is). Without the server's list (offline, an older api): the locale engine's list, the browser's and the server's.
+ */
 function csuCountries() {
   var out = [], seen = {};
   var add = function (c) { c = String(c || '').toUpperCase(); if (c && /^[A-Z]{2}$/.test(c) && !seen[c]) { seen[c] = 1; out.push(c); } };
-  try { Object.keys((window.CBLocale && CBLocale.REGIONS) || {}).forEach(add); } catch (_) {}
-  try { var g = govCtx(); if (g && g.country) { add(g.country.value); add(g.country.unserved); } } catch (_) {}
+  var served = CSU.p && Array.isArray(CSU.p.countries) && CSU.p.countries.length ? CSU.p.countries : null;
+  if (served) served.forEach(function (c) { add(c && c.code); });
+  else {
+    try { Object.keys((window.CBLocale && CBLocale.REGIONS) || {}).forEach(add); } catch (_) {}
+    try { var g = govCtx(); if (g && g.country) { add(g.country.value); add(g.country.unserved); } } catch (_) {}
+  }
   if (CSU.p && CSU.p.country) add(CSU.p.country.code);
   if (CSU.edit) add(CSU.edit.country);
   return out;
 }
-/** the money a country usually keeps its prices in (the locale engine's list), plus whatever is set now */
+/** the money a country keeps its prices in — the pack's first (the server's list), the locale engine's, plus whatever is set now */
 function csuCurrencies(country) {
   var out = [], seen = {};
   var add = function (c) { c = String(c || '').toUpperCase(); if (c && /^[A-Z]{3}$/.test(c) && !seen[c]) { seen[c] = 1; out.push(c); } };
+  var pk = csuPackOf(country); if (pk) add(pk.currency);
   try { var R = window.CBLocale && CBLocale.REGIONS; if (R && R[country]) (R[country].cur || []).forEach(add); } catch (_) {}
   if (CSU.edit) add(CSU.edit.currency);
   if (CSU.p) add(CSU.p.currency);
@@ -50,10 +75,43 @@ function csuPack(code) { try { return (window.CBRegulation && code && CBRegulati
 function csuScheme(code) { var p = csuPack(code); return (p && p.tax && p.tax.scheme) || tx('Tax'); }
 /** the tax-id the pack names (abn · trn · gstin), for the placeholder; India's GSTIN example until reg-in carries one */
 function csuTaxIdHint(code) { var p = csuPack(code); if (code === 'IN') return '33AAAAA0000A1Z5'; if (p && p.abn) return 'ABN · 11 digits'; if (p && p.trn) return 'TRN · 15 digits'; return tx('Registration number'); }
+/** CS2: the IANA zones a country's pack names — the server's list for the chosen country; for the shop's own country also the profile's `zones` */
+function csuZones(country) {
+  var pk = csuPackOf(country);
+  if (pk && Array.isArray(pk.zones) && pk.zones.length) return pk.zones.slice();
+  if (CSU.p && CSU.p.country && CSU.p.country.code === country && Array.isArray(CSU.p.zones)) return CSU.p.zones.slice();
+  return [];
+}
+/** the zone this device sits in (M196's reading of the clock) — preselected when it is one of the pack's */
+function csuDeviceZone() {
+  try { var g = govCtx(); if (g && g.timezone && g.timezone.value) return g.timezone.value; } catch (_) {}
+  try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (_) { return ''; }
+}
+/**
+ * CS2: the zone for a country, the way the server will set it (country-setup.derive): ONE zone → that one, from the pack; SEVERAL → the one
+ * already held when it is one of them, else the device's when it is one of them, else nothing (the step asks); NONE named → what is held.
+ */
+function csuZoneFor(country, held) {
+  var zones = csuZones(country), dev = csuDeviceZone();
+  if (zones.length === 1) return { value: zones[0], from: txf('the {c} pack', { c: csuCountryName(country) }), ask: false };
+  if (zones.length > 1) {
+    if (held && zones.indexOf(held) >= 0) return { value: held, from: held === dev ? tx('your device clock') : tx('what you set'), ask: true };
+    if (dev && zones.indexOf(dev) >= 0) return { value: dev, from: tx('your device clock'), ask: true };
+    return { value: '', from: txf('{c} has several — pick one', { c: csuCountryName(country) }), ask: true };
+  }
+  return { value: held || '', from: held ? tx('your registration') : '', ask: false };
+}
+/** CS2: the words for what fixed the country — the server's `constituted_by`, in shopkeeper words */
+function csuFixedBy() {
+  var by = (CSU.p && CSU.p.constituted_by) || {}, w = [];
+  if (by.products) w.push(tx('products')); if (by.chits) w.push(tx('chits')); if (by.entries) w.push(tx('books entries'));
+  return w.join(', ') || tx('transactions');
+}
+function csuConstituted() { return !!(CSU.p && CSU.p.constituted); }
 /** the prefill: the server's answer first (it knows what registration stored), else what the browser worked out (M196) — each with its source */
 function csuPrefill() {
   var p = CSU.p, g = null; try { g = govCtx(); } catch (_) {}
-  var e = { country: '', currency: '', fy: 0, registered: false, number: '', scheme: 'regular' }, src = {};
+  var e = { country: '', currency: '', fy: 0, registered: false, number: '', scheme: 'regular', timezone: '' }, src = {};
   if (p) {
     e.country = (p.country && p.country.code) || ''; e.currency = p.currency || ''; e.fy = p.fy_start_month || 0;
     e.registered = !!(p.tax && p.tax.registered); e.number = (p.tax && p.tax.number) || ''; e.scheme = (p.tax && p.tax.scheme) || 'regular';
@@ -69,9 +127,15 @@ function csuPrefill() {
     e.country = g.country.value; src.country = g.country.from; e.currency = ''; e.fy = 0; }
   if (!e.country && g && g.country && g.country.value) { e.country = g.country.value; src.country = g.country.from; }
   if (!e.currency && g && g.currency && g.currency.value) { e.currency = g.currency.value; src.currency = g.currency.from; }
-  if (!e.fy) { var pk = csuPack(e.country); e.fy = (pk && pk.fiscalYear && pk.fiscalYear.startMonth) || (e.country === 'IN' ? 4 : 1);
-    src.fy_start_month = pk ? txf('the {c} pack', { c: csuCountryName(e.country) }) : tx('the usual year'); }   /* CX0: the PACK's year (AU July · AE January), never India-or-January */
+  var pk = csuPackOf(e.country), rp = csuPack(e.country);
+  /* the year: the server's pack row (CS2), else the regulation pack's (CX0: AU July · AE January), never India-or-January by guess */
+  if (!e.fy) { e.fy = (pk && pk.fy_start_month) || (rp && rp.fiscalYear && rp.fiscalYear.startMonth) || (e.country === 'IN' ? 4 : 1);
+    src.fy_start_month = (pk || rp || e.country === 'IN') ? txf('the {c} pack', { c: csuCountryName(e.country) }) : tx('the usual year'); }
   if (!src.tax) src.tax = tx('not set yet');
+  /* CS2: the zone — the pack's one, or the held / device one when the pack names several (the step asks), or what registration wrote */
+  var z = csuZoneFor(e.country, (p && p.timezone) || csuDeviceZone());
+  e.timezone = z.value; src.timezone = src.timezone || z.from;
+  if (z.ask && !z.value) CSU.open.timezone = true;   /* nothing to preselect: the picker is open from the start */
   CSU.edit = e; CSU.src = src;
 }
 function csuRead() {
@@ -82,25 +146,37 @@ function csuRead() {
 }
 function csuSet(k, v) {
   if (!CSU.edit) return;
-  var map = { country: 'country', currency: 'currency', fy: 'fy_start_month', registered: 'tax', number: 'tax', scheme: 'tax' };
-  if (k === 'country') { var c = String(v || '').toUpperCase(); CSU.edit.country = c; var curs = csuCurrencies(c); if (curs.length && curs.indexOf(CSU.edit.currency) < 0) { CSU.edit.currency = curs[0]; CSU.src.currency = txf('the usual currency in {c}', { c: csuCountryName(c) }); } if (c !== 'IN' && CSU.edit.scheme === 'composition') CSU.edit.scheme = 'regular'; }
+  var map = { country: 'country', currency: 'currency', fy: 'fy_start_month', registered: 'tax', number: 'tax', scheme: 'tax', timezone: 'timezone' };
+  if (k === 'country') {
+    var c = String(v || '').toUpperCase(); CSU.edit.country = c;
+    /* CS2: the whole shop follows the country — what its pack derives is painted now, the way the server sets it on save (derive) */
+    var pk = csuPackOf(c), packName = txf('the {c} pack', { c: csuCountryName(c) });
+    var curs = csuCurrencies(c); if (curs.length && curs.indexOf(CSU.edit.currency) < 0 || (pk && pk.currency && pk.currency !== CSU.edit.currency)) { CSU.edit.currency = pk && pk.currency ? pk.currency : curs[0]; CSU.src.currency = pk ? packName : txf('the usual currency in {c}', { c: csuCountryName(c) }); }
+    if (pk && pk.fy_start_month) { CSU.edit.fy = pk.fy_start_month; CSU.src.fy_start_month = packName; }
+    if (c !== 'IN' && CSU.edit.scheme === 'composition') CSU.edit.scheme = 'regular';
+    var z = csuZoneFor(c, CSU.edit.timezone); CSU.edit.timezone = z.value; CSU.src.timezone = z.from; CSU.open.timezone = z.ask && !z.value;
+  }
   else if (k === 'currency') CSU.edit.currency = String(v || '').toUpperCase().slice(0, 3);
   else if (k === 'fy') CSU.edit.fy = Number(v) || 0;
   else if (k === 'registered') CSU.edit.registered = (v === true || v === 'yes');
   else if (k === 'number') CSU.edit.number = String(v || '');
   else if (k === 'scheme') CSU.edit.scheme = String(v || 'regular');
-  CSU.src[map[k]] = tx('typed');
+  else if (k === 'timezone') CSU.edit.timezone = String(v || '');
+  if (k !== 'country') CSU.src[map[k]] = tx('typed'); else CSU.src.country = tx('typed');
   CSU.err = '';
   renderCountrySetup();
 }
 function csuOpen(k) { CSU.open[k] = !CSU.open[k]; renderCountrySetup(); }
-/** one row: what · value · where it came from · Change (the registration's gov panel, with the one tap it lacked) */
-function csuRow(key, what, valueHtml, from, editHtml) {
-  return '<div class="govrow" data-testid="cs-row-' + key + '">'
+/**
+ * one row: what · value · where it came from · Change (the registration's gov panel, with the one tap it lacked).
+ * CS2: `locked` — no Change at all (the value is fixed, or the pack sets it); the reason is the row's source line.
+ */
+function csuRow(key, what, valueHtml, from, editHtml, locked) {
+  return '<div class="govrow" data-testid="cs-row-' + key + '"' + (locked ? ' data-locked="1"' : '') + '>'
     + '<span class="gw">' + esc(what) + '</span>'
-    + '<span class="gv" data-testid="cs-val-' + key + '">' + valueHtml + ' <a data-testid="cs-change-' + key + '" onclick="csuOpen(\'' + key + '\')" style="font-weight:600;color:var(--blue);cursor:pointer;margin-inline-start:6px">' + esc(CSU.open[key] ? tx('Done') : tx('Change')) + '</a></span>'
+    + '<span class="gv" data-testid="cs-val-' + key + '">' + valueHtml + (locked ? '' : ' <a data-testid="cs-change-' + key + '" onclick="csuOpen(\'' + key + '\')" style="font-weight:600;color:var(--blue);cursor:pointer;margin-inline-start:6px">' + esc(CSU.open[key] ? tx('Done') : tx('Change')) + '</a>') + '</span>'
     + '<span class="gf" data-testid="cs-src-' + key + '">' + esc(from || '') + '</span>'
-    + (CSU.open[key] ? '<span style="grid-column:1 / -1;padding-top:4px">' + editHtml + '</span>' : '')
+    + (CSU.open[key] && !locked ? '<span style="grid-column:1 / -1;padding-top:4px">' + editHtml + '</span>' : '')
     + '</div>';
 }
 function csuSel(id, k, opts, cur) {
@@ -119,12 +195,21 @@ function renderCountrySetup() {
   } else {
     var countryOpts = csuCountries().map(function (c) { return { v: c, t: csuCountryName(c) + ' · ' + c }; });
     var curOpts = csuCurrencies(e.country).map(function (c) { return { v: c, t: c }; });
-    var rows = csuRow('country', tx('Country'), esc(csuCountryName(e.country) || tx('not known')), s.country,
-        csuSel('cs-country', 'country', countryOpts, e.country))
-      + csuRow('currency', tx('Money'), esc(e.currency || tx('not known')), s.currency,
-        curOpts.length ? csuSel('cs-currency', 'currency', curOpts, e.currency) : '<input class="inp" id="cs-currency" data-testid="cs-currency" maxlength="3" placeholder="' + esc((csuPack(e.country) || {}).currency || '') + '" value="' + esc(e.currency) + '" onchange="csuSet(\'currency\', this.value)">')
+    /* CS2: once the shop holds a product or a transaction, Country and Money are fixed — greyed, with the reason, never a Change */
+    var fixed = csuConstituted();
+    var fixedWhy = fixed ? txf('fixed — the shop already has {w}', { w: csuFixedBy() }) : null;
+    var zones = csuZones(e.country), zoneAsk = zones.length > 1;
+    var zoneOpts = (e.timezone && zones.indexOf(e.timezone) >= 0 ? [] : [{ v: '', t: tx('Pick the time zone') }]).concat(zones.map(function (z) { return { v: z, t: z.replace(/_/g, ' ') }; }));
+    var rows = csuRow('country', tx('Country'), esc(csuCountryName(e.country) || tx('not known')), fixedWhy || s.country,
+        csuSel('cs-country', 'country', countryOpts, e.country), fixed)
+      + csuRow('currency', tx('Money'), esc(e.currency || tx('not known')), fixedWhy || s.currency,
+        curOpts.length ? csuSel('cs-currency', 'currency', curOpts, e.currency) : '<input class="inp" id="cs-currency" data-testid="cs-currency" maxlength="3" placeholder="' + esc((csuPackOf(e.country) || csuPack(e.country) || {}).currency || '') + '" value="' + esc(e.currency) + '" onchange="csuSet(\'currency\', this.value)">', fixed)
       + csuRow('fy', tx('Year starts'), esc(CSU_MONTHS[(e.fy || 1) - 1] || ''), s.fy_start_month,
         csuSel('cs-fy', 'fy', CSU_MONTHS.map(function (m, i) { return { v: i + 1, t: m }; }), e.fy))
+      + ((zones.length || e.timezone)
+        ? csuRow('timezone', tx('Time zone'), esc((e.timezone || tx('not picked yet')).replace(/_/g, ' ')), s.timezone,
+            csuSel('cs-timezone', 'timezone', zoneOpts, e.timezone), !zoneAsk)
+        : '')
       + csuRow('tax', csuScheme(e.country),
         esc(e.registered ? ((e.country === 'IN' ? (e.scheme === 'composition' ? tx('Composition') : tx('Regular')) + ' · ' : tx('Registered') + ' · ') + (e.number || '')) : tx('Not registered')), s.tax,
         '<div style="display:grid;gap:6px">'
@@ -141,7 +226,9 @@ function renderCountrySetup() {
       + (CSU.later
           ? '<button class="btn" id="cs-open" data-testid="cs-open" onclick="go(\'#/app\')">' + esc(tx('Open the app')) + ' <span class=arw>→</span></button>'
           : '<button class="btn" id="cs-save" data-testid="cs-save">' + esc(tx('Continue')) + ' <span class=arw>→</span></button>')
-      + '<div class="hint">' + esc(tx('Set once. A shop in another country is a new registration.')) + '</div>'
+      + '<div class="hint" data-testid="cs-rule">' + esc(fixed
+          ? tx('Country and money never change once a shop has products or transactions. Register a new business for another country.')
+          : tx('Country and money can still be corrected now. Once the shop has a product or a transaction they are fixed for good.')) + '</div>'
       /* CPS1: the Country Standard — what a country pack carries and what each pack still lacks (standards.html opens on that row's search) */
       + '<div class="hint"><a href="/standards.html?std=country" data-testid="cs-standard" style="font-weight:600;color:var(--blue);cursor:pointer">' + esc(tx('What a country pack must carry — the Country Standard')) + ' ›</a></div>'
       + '</div>';
@@ -154,10 +241,16 @@ function renderCountrySetup() {
 function csuSave() {
   var btn = document.getElementById('cs-save'), e = CSU.edit; if (!e) return;
   CSU.err = '';
-  var body = { country: e.country, currency: e.currency, fy_start_month: e.fy, tax: { registered: !!e.registered, number: e.registered ? e.number : null, scheme: e.registered ? e.scheme : null }, source: CSU.src };
+  var body = { country: e.country, currency: e.currency, fy_start_month: e.fy, tax: { registered: !!e.registered, number: e.registered ? e.number : null, scheme: e.registered ? e.scheme : null },
+               timezone: e.timezone || null, source: CSU.src };   /* CS2: the zone picked of the pack's several (a one-zone pack: the server sets it anyway) */
   CBAction.run(btn, function () { return api('countrySetupSave', { body: body }); }, {
     key: 'cs-save', busy: tx('Saving…'),
-    outcome: function (p) { CSU.p = p || CSU.p; try { if (p && p.pack) SESSION.booksOn = false; } catch (_) {} toast(tx('Country set.')); go('#/app'); },
+    outcome: function (p) {
+      CSU.p = p || CSU.p; try { if (p && p.pack) SESSION.booksOn = false; } catch (_) {}
+      /* CS2: a correction before the shop was constituted — the server says what it set again from the new pack */
+      toast(p && p.rederived ? txf('Country corrected to {c} — money, year, tax, time zone and chart set again from its pack.', { c: csuCountryName(p.rederived.to) }) : tx('Country set.'));
+      go('#/app');
+    },
     onFail: function (words, err) {
       var st = err && err.status;
       /* before the database update that holds this step: say so, and let the shop in — selling and the rail work meanwhile */
