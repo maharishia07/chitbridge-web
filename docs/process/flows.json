@@ -356,6 +356,32 @@
           "test": ["api:tests/move-in.test.cjs", "engines:tests/reg-au.test.js", "web:e2e/walk-move-in.cjs"],
           "status": "ok", "note": "An unbalanced trial balance is refused with the sentence; nothing posts. The same file twice posts nothing (client_ref movein:<kind>:<as_at>)." }
       ]
+    },
+    {
+      "id": "PRN", "name": "Parallel run (their Tally / Xero period beside ours)", "sap": "FI (audit: parallel run, reconciliation of statements)",
+      "steps": [
+        { "n": 1, "step": "load their period", "module": "Accounts", "who": "the owner, or the shop's auditor (whole entity, may see money)",
+          "screen": [{ "file": "web:public/app/cap-compare.js", "fn": "cmpLoadOpen" }, { "file": "web:public/app/cap-compare.js", "fn": "cmpKeep" }],
+          "engine": [{ "file": "api:lib/parallel-run.js", "fn": "preflight" }, { "file": "api:lib/parallel-run.js", "fn": "read" }, { "file": "api:lib/move-in.js", "fn": "guess" }, { "file": "api:lib/books-store.js", "fn": "insertComparePart" }],
+          "route": [{ "m": "POST", "p": "/api/books/compare/preflight", "file": "api:routes/books.js" }, { "m": "POST", "p": "/api/books/compare/snapshots", "file": "api:routes/books.js" }],
+          "chit": "none", "ledger": "none (a snapshot is never posted)",
+          "test": ["api:tests/parallel-run.test.cjs", "web:e2e/walk-compare.cjs"],
+          "status": "ok", "note": "Insert-only: a part a snapshot already has is refused (409). Before b309 runs, Load is greyed with the sentence." },
+        { "n": 2, "step": "compare, differences first", "module": "Accounts", "who": "the owner, or the shop's auditor",
+          "screen": [{ "file": "web:public/app/cap-compare.js", "fn": "cmpView" }, { "file": "web:public/app/cap-compare.js", "fn": "cmpPaintList" }, { "file": "web:public/app/cap-compare.js", "fn": "cmpNext" }],
+          "engine": [{ "file": "api:lib/parallel-run.js", "fn": "compare" }, { "file": "api:lib/books.js", "fn": "trialBalance" }, { "file": "api:lib/books.js", "fn": "profitAndLoss" }, { "file": "api:lib/books.js", "fn": "balanceSheet" }, { "file": "api:lib/books-period.js", "fn": "taxReturn" }, { "file": "api:lib/tax-lines.js", "fn": "gstr3b" }],
+          "route": [{ "m": "GET", "p": "/api/books/compare", "file": "api:routes/books.js" }, { "m": "GET", "p": "/api/books/compare/:id", "file": "api:routes/books.js" }],
+          "chit": "read (the chit behind an entry opens)", "ledger": "read",
+          "test": ["api:tests/parallel-run.test.cjs", "web:e2e/walk-compare.cjs"],
+          "status": "ok", "note": "Why is said where we can tell: a rounding rule, a bill on the rail they keyed later, an entry only one side has, a mapping gap. Tally XML shapes are recall, proven on fixtures." },
+        { "n": 3, "step": "the auditor's file", "module": "Accounts", "who": "the owner, or the shop's auditor",
+          "screen": [{ "file": "web:public/app/cap-compare.js", "fn": "cmpCsv" }],
+          "engine": [{ "file": "api:lib/parallel-run.js", "fn": "csv" }],
+          "route": [{ "m": "GET", "p": "/api/books/compare/:id/csv", "file": "api:routes/books.js" }],
+          "chit": "none", "ledger": "read",
+          "test": ["api:tests/parallel-run.test.cjs"],
+          "status": "warn", "note": "CSV from the server; the PDF is the browser's print of the page (no PDF library added)." }
+      ]
     }
   ]
 }
