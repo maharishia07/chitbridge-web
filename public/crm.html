@@ -377,8 +377,8 @@ function session(){
   }catch(_){ return null; }
 }
 
-/* the pages of the app this page hands over to */
-function navTo(k){ location.href = '/app.html#/app/' + encodeURIComponent(k); }
+/* the SMALL APP a screen key hands over to (CB_HOMES, accounts-shell.js) — never the workshop (IX0) */
+function navTo(k){ var h = CB_HOMES[k]; if (h) location.href = h; else toast(tx('Not built outside the workshop yet.')); }
 function openChitPage(id){ window.open('/app.html#/app/chit/' + encodeURIComponent(id), '_blank', 'noopener'); }   /* KEPT door: the sheet's "Open page" (its home is the M53 detail page) */
 function openChit(id){ openChitSheet(id); }   /* every other chit link opens the sheet here: Messages and files are on it (R10) */
 const confirmAsk = CBConfirm;   /* the page's own confirm, as CB Accounts uses it */

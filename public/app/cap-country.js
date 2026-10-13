@@ -131,6 +131,8 @@ function renderCountrySetup() {
           ? '<button class="btn" id="cs-open" data-testid="cs-open" onclick="go(\'#/app\')">' + esc(tx('Open the app')) + ' <span class=arw>→</span></button>'
           : '<button class="btn" id="cs-save" data-testid="cs-save">' + esc(tx('Continue')) + ' <span class=arw>→</span></button>')
       + '<div class="hint">' + esc(tx('Set once. A shop in another country is a new registration.')) + '</div>'
+      /* CPS1: the Country Standard — what a country pack carries and what each pack still lacks (standards.html opens on that row's search) */
+      + '<div class="hint"><a href="/standards.html?std=country" data-testid="cs-standard" style="font-weight:600;color:var(--blue);cursor:pointer">' + esc(tx('What a country pack must carry — the Country Standard')) + ' ›</a></div>'
       + '</div>';
   }
   document.getElementById('root').innerHTML = modeRibbon() + '<div class="auth"><div class="card">'
