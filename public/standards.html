@@ -220,10 +220,11 @@ function groupBy(x, mode){
   var r = x.r;
   if (mode === 'area') return [lab(STD_AREAS, r.a), r.a];
   if (mode === 'kind') return [lab(STD_KINDS, r.k), r.k];
-  if (mode === 'country'){ var l = r.c.indexOf('IN') >= 0 && r.c.length === 1 ? 'India' : r.c.length > 1 ? 'India and global' : 'Global'; return [l, l]; }
+  /* CO2 (2026-10-13): a single country is its own group (Australia, UAE beside India); a country with GLOBAL is "<country> and global" */
+  if (mode === 'country'){ var own = r.c.filter((c) => c !== 'GLOBAL'), l = !own.length ? 'Global' : own.map((c) => lab(STD_COUNTRIES, c)).join(' · ') + (own.length < r.c.length ? ' and global' : ''); return [l, l]; }
   return null;
 }
-const GROUP_ORDER = STD_AREAS.map((a) => a[0]).concat(STD_KINDS.map((k) => k[0]), ['India', 'India and global', 'Global']);
+const GROUP_ORDER = STD_AREAS.map((a) => a[0]).concat(STD_KINDS.map((k) => k[0]), STD_COUNTRIES.filter((c) => c[0] !== 'GLOBAL').map((c) => c[1]), ['India and global', 'Global']);
 function cols(){
   return [
     { key: 'what', label: 'What it does for you', prio: 1, w: 250, sort: 'what', html: true, value: (x) => x.r.p,
