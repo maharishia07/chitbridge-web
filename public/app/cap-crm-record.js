@@ -228,7 +228,7 @@ function crmNextHTML(p, rec) {
     items.push('<div class="nx" data-testid="crm-next-dues"><span class="ic">' + crmIcon('pay') + '</span><span class="tx"><b>' + esc(tx(owes ? 'Late dues' : 'You are late paying')) + '</b> · ' + esc(tx('oldest since')) + ' ' + esc(bkDate(p.oldest_due)) + '</span><span class="btns">'
       + (owes ? btn('rremind', 'Remind', false, '', 'crm-next-remind') + btn('rpay', 'Receive payment', true, '', 'crm-next-pay') : btn('rpay', 'Pay', true, '', 'crm-next-pay')) + '</span></div>');
   }
-  var mine = (p.tax_ids || []).filter(function (t) { return t.scheme === 'GSTIN'; })[0];
+  var mine = (p.tax_ids || []).filter(function (t) { return t.scheme === taxIdWord(); })[0];   /* CX0: the pack's tax-id (GSTIN · ABN · TRN) */
   if (rec.gstn_profile && mine && rec.gstn_profile !== mine.value && CRMR.keep[p.party_id + rec.gstn_profile] !== 1)
     items.push('<div class="nx" data-testid="crm-next-gstin"><span class="ic">' + crmIcon('warn') + '</span><span class="tx"><b>' + esc(tx('GSTIN differs from their profile')) + '</b><span class="s mono">' + esc(tx('Yours')) + ' ' + esc(mine.value) + ' · ' + esc(tx('theirs')) + ' ' + esc(rec.gstn_profile) + '</span></span><span class="btns">'
       + btn('rgtheirs', 'Use theirs', true, '', 'crm-gstin-theirs') + btn('rgmine', 'Keep mine', false, '', 'crm-gstin-mine') + '</span></div>');
@@ -293,8 +293,8 @@ function crmActionsHTML(p, rec) {
 }
 /** C25: what is missing and where to set it - never a dead end */
 function crmTaxMissing(p, R, cu, su) {
-  var gst = (R.tax_ids || []).filter(function (t) { return t.scheme === 'GSTIN'; })[0], miss = [], where = [];
-  if (!gst) { miss.push(tx('no GSTIN')); where.push(tx('Add their GSTIN with Edit.')); }
+  var gst = (R.tax_ids || []).filter(function (t) { return t.scheme === taxIdWord(); })[0], miss = [], where = [];   /* CX0: the pack's tax-id word */
+  if (!gst) { miss.push(txf('no {id}', { id: taxIdWord() })); where.push(txf('Add their {id} with Edit.', { id: taxIdWord() })); }
   if (!((cu && cu.credit_days != null) || (su && su.credit_days != null))) { miss.push(tx('no credit terms')); where.push(tx('Set them in CB Finance, under Terms.')); }
   return miss.length ? '<div class="hint" data-testid="crm-tax-missing"><b>' + esc(miss.join(' \u00b7 ')) + '</b> \u2014 ' + esc(where.join(' ')) + '</div>' : '';
 }
@@ -323,7 +323,7 @@ function crmRecordPaint(p, rec) {
   /* Tax & terms */
   var cu = rec.customer, su = rec.supplier, lim = function (x) { return x && x.credit_limit_minor != null ? ' · ' + esc(tx('limit')) + ' ' + esc(bkMoney(x.credit_limit_minor, p.currency)) : ''; };
   var days = function (x) { return x && x.credit_days != null ? esc(txf('{n} days', { n: x.credit_days })) + lim(x) : ''; };
-  var gst = (R.tax_ids || []).filter(function (t) { return t.scheme === 'GSTIN'; })[0];
+  var gst = (R.tax_ids || []).filter(function (t) { return t.scheme === taxIdWord(); })[0];   /* CX0: the pack's tax-id word */
   var tax = crmKV('Tax IDs', (R.tax_ids || []).map(function (t) { return esc(t.scheme) + ' <span class="mono">' + esc(t.value) + '</span>'; }).join('<br>'))
     + crmKV('State', R.state_code ? esc(R.state_code) + (R.supply_type ? ' · ' + esc(tx(CRM_SUPPLY[R.supply_type] || R.supply_type)) : '') : '')
     + (cu ? crmKV('Credit you give', days(cu)) : '') + (su ? crmKV('Credit you get', days(su)) : '');

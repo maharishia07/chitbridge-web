@@ -248,14 +248,18 @@ function cbDefRegistries(){
    * product attracts this rate" — that one is per-HSN and the merchant's to make. Same rule tax.js states at
    * length: we carry the determination, never the rate table.
    */
+  /* CX0: the rate menu and the scheme's word are the shop's PACK's (pack.tax.rates · pack.tax.scheme — GST 10 % in Australia, VAT 5 % in the UAE);
+     India's GST_SLAB_RATES only under India's pack or none known */
+  var tp = (typeof shopReg === 'function' && shopReg()) || null, tsch = (tp && tp.tax && tp.tax.scheme) || 'GST';
+  var trates = (tp && tp.tax && tp.tax.rates) || ((typeof CBTaxSlab !== 'undefined' && CBTaxSlab.GST_SLAB_RATES) || null);
   out.push({
-    key: 'tax', icon: '🧾', title: 'GST slab rates',
+    key: 'tax', icon: '🧾', title: tsch + ' slab rates',
     blurb: 'The rates the scheme itself defines. Name one as a slab, then a product cites it. Cess rides on top '
          + 'of the slab and is declared per slab, because it varies by product within one rate.',
-    source: 'app/tax-slab.js · GST_SLAB_RATES',
-    rows: (typeof CBTaxSlab !== 'undefined' && CBTaxSlab.GST_SLAB_RATES)
-      ? CBTaxSlab.GST_SLAB_RATES.map(function (r) {
-          return { code: String(r) + '%', label: 'GST ' + r + '%', note: cbDefSlabNote(r) }; })
+    source: tp ? 'engines reg-' + String(tp.id || '').toLowerCase() + ' · tax.rates' : 'app/tax-slab.js · GST_SLAB_RATES',
+    rows: trates
+      ? trates.map(function (r) {
+          return { code: String(r) + '%', label: tsch + ' ' + r + '%', note: tsch === 'GST' && tp && tp.id === 'IN' ? cbDefSlabNote(r) : '' }; })
       : null
   });
 

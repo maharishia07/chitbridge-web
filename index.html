@@ -77,6 +77,7 @@ body{margin:0;background:var(--page);color:var(--ink);font-family:var(--f-ui,'IB
 <script src="/app/rail-bell.js"></script>   <!-- CBBell (R06): the shell mounts it in its bell slot — the dot + the list, from the push stream -->
 <script src="/engine/money.js"></script>
 <script src="/app/locale.js"></script>   <!-- CBLocale: the shell words a fact line's money and time ("₹420", "09:33") — the server only sends the numbers -->
+<script src="/app/edition.js"></script>   <!-- CBEdition (AX1): which entries this showing draws (?edition=auditor · the avatar's Edition choice); it hides, never grants -->
 <script src="/app/shell.js"></script>     <!-- CBShell: the frame — header · five areas · kural -->
 <script>
 'use strict';
@@ -116,6 +117,7 @@ function mountShell(){
   var home = SHELL.slots.home;
   if (home) {
     home.innerHTML = '<div id="railbox"></div><div id="roadmap" data-testid="roadmap-host"></div>';
+    SHELL.ready.then(function(){ if (ALERTS.length) alertsPaint(); });   /* the edition is known once the manifest is in (rows written straight into the slot — close-first, signed-out — are left alone) */
     SHELL.ready.then(function(){ if (window.CBRoadmap) CBRoadmap.mount(document.getElementById('roadmap'), SHELL.manifest(), { quiet: !!SESS }); });   /* signed in: the page is the working app, the roadmap one quiet fold (H16) */
   }
   return SHELL;
@@ -142,14 +144,16 @@ function n1(v){ var n = Number(v); return isFinite(n) ? n : null; }
 var ALERTS = [];
 function alert_(key, lvl, ic, t, s, fixText, fixHref, fixBlank){
   ALERTS = ALERTS.filter(function(a){ return a.key !== key; });
-  ALERTS.push({ key: key, lvl: lvl, html: '<div class="al ' + lvl + '" data-testid="' + esc(key) + '"><span class="ic">' + ic + '</span><span><b>' + esc(t) + '</b>' + (s ? ' &nbsp;' + esc(s) : '') + '</span>'
+  ALERTS.push({ key: key, lvl: lvl, href: fixHref, html: '<div class="al ' + lvl + '" data-testid="' + esc(key) + '"><span class="ic">' + ic + '</span><span><b>' + esc(t) + '</b>' + (s ? ' &nbsp;' + esc(s) : '') + '</span>'
     + '<a class="fix" href="' + esc(fixHref) + '"' + (fixBlank ? ' target="_blank" rel="noopener"' : '') + '>' + esc(fixText) + '</a></div>' });
   alertsPaint();
 }
 function alertDrop(key){ ALERTS = ALERTS.filter(function(a){ return a.key !== key; }); alertsPaint(); }
 function alertsPaint(){
   var host = SHELL && SHELL.slots.alerts; if (!host) return;
-  host.innerHTML = ALERTS.filter(function(a){ return a.lvl === 'bad'; }).concat(ALERTS.filter(function(a){ return a.lvl !== 'bad'; }))
+  /* AX1: a row whose one button opens an app this edition leaves out is not this showing's business (no dead door) */
+  var on = ALERTS.filter(function(a){ return !(window.CBEdition && CBEdition.hidesHref(a.href)); });
+  host.innerHTML = on.filter(function(a){ return a.lvl === 'bad'; }).concat(on.filter(function(a){ return a.lvl !== 'bad'; }))
     .map(function(a){ return a.html; }).join('');
 }
 

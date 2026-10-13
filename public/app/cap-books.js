@@ -137,7 +137,7 @@ function bkCss() {
 bkCss();
 
 /* ── money and dates: through the engines, never by hand ── */
-function bkCur(c) { return c || (typeof SESSION !== 'undefined' && SESSION.currency) || 'INR'; }
+function bkCur(c) { return c || (typeof SESSION !== 'undefined' && SESSION.currency) || ((typeof shopReg === 'function' && shopReg()) || {}).currency || 'INR'; }   /* CX0: the ledger's, else the PACK's money; INR only when no country is known */
 function bkDec(c) { try { return CBMoney.decimals(bkCur(c)); } catch (_) { return 2; } }
 function bkMoney(minor, c) {
   var n = Number(minor || 0) / Math.pow(10, bkDec(c));
@@ -449,7 +449,10 @@ function statementHTML(r, partyId) {
 
 /* ── the party's own fields, edited where the party is shown ── */
 /* the schemes the server accepts (lib/party-fields.js): a party can carry several tax ids, so the sheet edits a LIST of them */
-var TAX_SCHEMES = ['GSTIN', 'PAN', 'TAN', 'TRN', 'VAT', 'TIN', 'CIN', 'UDYAM'];
+var TAX_SCHEMES = ['GSTIN', 'PAN', 'TAN', 'TRN', 'ABN', 'VAT', 'TIN', 'CIN', 'UDYAM'];
+/** CX0: the schemes offered are the shop's PACK's — an Australian shop's parties carry an ABN, a UAE shop's a TRN (reg-au `abn` · reg-ae `trn`); India's own (GSTIN · PAN · TAN · UDYAM · CIN) only under India's pack or none known */
+function bkTaxSchemes(t) { var p = (typeof shopReg === 'function' && shopReg()) || null, list = p && p.abn ? ['ABN', 'TIN', 'VAT'] : p && p.trn ? ['TRN', 'TIN', 'VAT'] : TAX_SCHEMES;
+  return t && t.scheme && list.indexOf(t.scheme) < 0 ? [t.scheme].concat(list) : list; }
 function partyRowOf(kind, partyId) {
   if (kind === 'supplier') return (UI.sups || []).find(function (s) { return s.supplier_entity_id === partyId; });
   return (UI.custs || []).find(function (c) { return c.customer_identity_id === partyId; });
@@ -457,7 +460,7 @@ function partyRowOf(kind, partyId) {
 /** one tax-id row of the edit sheet; the first keeps the ids the Ledger's own tests read (pe_scheme / pe_taxid) */
 function partyTaxRowHTML(kind, partyId, t, i) {
   var sid = i === 0 ? 'pe_scheme' : 'pe_scheme' + i, vid = i === 0 ? 'pe_taxid' : 'pe_taxid' + i;
-  return '<div class="supacts pe_taxrow" style="display:flex;gap:6px"><select class="inp" id="' + sid + '" data-testid="' + sid + '" style="width:auto" aria-label="' + esc(tx('Scheme')) + '">' + TAX_SCHEMES.map(function (s) { return '<option' + (t.scheme === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>'
+  return '<div class="supacts pe_taxrow" style="display:flex;gap:6px"><select class="inp" id="' + sid + '" data-testid="' + sid + '" style="width:auto" aria-label="' + esc(tx('Scheme')) + '">' + bkTaxSchemes(t).map(function (s) { return '<option' + (t.scheme === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>'
     + '<input class="inp" id="' + vid + '" data-testid="' + vid + '" value="' + esc(t.value == null ? '' : t.value) + '" aria-label="' + esc(tx('Tax id')) + '" style="width:100%" oninput="partyDupCheck(\'' + kind + '\',\'' + esc(partyId) + '\')"></div>';
 }
 function partyTaxAdd(kind, partyId) {
@@ -480,7 +483,7 @@ function partyEditOpen(kind, partyId) {
     + '<div id="pe_dup" data-testid="pe_dup" style="font-size:var(--fs-1);color:var(--warn-2)"></div>'
     + '<div style="display:flex;gap:8px"><label style="flex:1">' + tx('Credit days') + inp('pe_days', r.credit_days, '30', 'inputmode="numeric"') + '</label>'
     + '<label style="flex:1">' + tx('Credit limit') + bkMoneyInput({ id: 'pe_limit', minor: r.credit_limit_minor != null ? r.credit_limit_minor : null, ph: '' }) + '</label></div>'
-    + '<label>' + tx('State code') + inp('pe_state', r.state_code, '33') + '</label>'
+    + (typeof packSplitsByState !== 'function' || packSplitsByState() ? '<label>' + tx('State code') + inp('pe_state', r.state_code, '33') + '</label>' : '')   /* CX0: a state only where the tax turns on it (India) */
     + '</div><div class="mfoot"><button onclick="closeModal()">' + tx('Cancel') + '</button><button class="pri" data-testid="pe_save" onclick="partyEditSave(\'' + kind + '\',\'' + esc(partyId) + '\')">' + tx('Save') + '</button></div>');
   partyDupCheck(kind, partyId);
 }
@@ -536,7 +539,7 @@ function payOpen(kind, partyId) {
   PAY = { kind: kind, partyId: partyId, name: r.nickname || r.display_name || '', ref: bkRef(), seq: 0, ack: [], advice: false, preview: null };   /* one ref per opened form */
   modal('<div class="mhd"><div class="t" id="pay_title" data-testid="pay_title">' + esc(kind === 'supplier' ? tx('Pay') : tx('Receive')) + ' · ' + esc(PAY.name) + '</div></div><div class="mbody" id="pay_body" style="display:flex;flex-direction:column;gap:8px">'
     + '<label>' + tx('Amount') + '' + bkMoneyInput({ id: 'pay_amt', on: 'payPreviewSoon()' }) + '</label>'
-    + '<label>' + tx('How') + '<select class="inp" id="pay_mode" data-testid="pay_mode" onchange="payModePaint()"><option value="cash">' + tx('Cash') + '</option><option value="upi">UPI</option><option value="bank">' + tx('Bank') + '</option><option value="card">' + tx('Card') + '</option><option value="cheque">' + tx('Cheque') + '</option></select></label>'
+    + '<label>' + tx('How') + '<select class="inp" id="pay_mode" data-testid="pay_mode" onchange="payModePaint()"><option value="cash">' + tx('Cash') + '</option>' + payModeOpts() + '<option value="bank">' + tx('Bank') + '</option><option value="card">' + tx('Card') + '</option><option value="cheque">' + tx('Cheque') + '</option></select></label>'
     + '<label>' + tx('Reference') + '<input class="inp" id="pay_ref" data-testid="pay_ref" style="width:100%"></label>'
     + '<div id="pay_chq" hidden style="gap:6px"><input class="inp" id="pay_chqno" data-testid="pay_chqno" placeholder="' + esc(tx('Cheque no')) + '"><input class="inp" id="pay_bank" placeholder="' + esc(tx('Bank')) + '"><input class="inp" id="pay_chqdate" type="date"></div>'
     + '<div style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="pay_adv" data-testid="pay_adv" onchange="payAdvToggle()"><label for="pay_adv" style="display:inline;margin:0">' + tx('Keep as advance') + '</label></div>'
