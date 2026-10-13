@@ -5,7 +5,7 @@
  *
  *  1  the register (cap-standards.js): 68 rows (61 designed + 7 CO1 privacy rows), 33 in force · 16 partly · 12 planned; every row has area · kind · applies-in · plain words; every Partly and Planned
  *     row says what is missing; the first 44 rows' words are the register's own, unchanged; the 17 additions carry their stated statuses; no second WCAG row
- *  2  laptop 1366×768: title · "checked 3 Oct 2026" · the matrix beside the list; the matrix's All row IS the register's counts; the list is a CBList mount
+ *  2  laptop 1366×768: title · "checked 13 Oct 2026" · the matrix beside the list; the matrix's All row IS the register's counts; the list is a CBList mount
  *     (three columns, a resize handle on each, only the rows scroll) with the head at most 20% of the window; no sideways scroll
  *  3  THE CELL IS THE LIST'S FILTER: Money & GST × Partly → 3 rows, two of the unit's own chips, one lit cell; a row heading filters the row, a column heading the
  *     status; a "—" cell does nothing; clearing a chip clears the cell; changing the unit's Filters popover moves the lit cell; Count by Country and Kind
@@ -156,7 +156,7 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
   {
     const { ctx, p } = await open(S);
     ok(/^Standards$/.test((await p.textContent('.cbl-title h1')).trim()), 'the title row says Standards');
-    ok(/checked 3 Oct 2026/.test(await p.textContent('[data-testid="std-checked"]')), 'and "checked 3 Oct 2026" — once; the counts are in the matrix, not repeated up here');
+    ok(/checked 13 Oct 2026/.test(await p.textContent('[data-testid="std-checked"]')), 'and "checked 13 Oct 2026" — once; the counts are in the matrix, not repeated up here');
     ok(await p.locator('.cbl-title').innerText().then((t) => !/\b33\b/.test(t)), 'the title row does not repeat the totals the matrix\'s All row says');
     ok((await p.textContent('[data-testid="shop-name"]')).trim() === 'Mayur Bhavan', 'the signed-in shop is named in the title row');
     ok(await p.locator('#std_list.cbl').count() === 1 && await p.locator('#std_list .cbl-hdr').count() === 1, 'the list is a CBList mount (its header, its tools)');
@@ -308,7 +308,7 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     await p.screenshot({ path: path.join(SHOTS, 'standards-row.png') });
     await p.click('[data-testid="std-copy"]'); await p.waitForTimeout(250);
     const clip = await p.evaluate(() => navigator.clipboard.readText());
-    ok(/GSTR-1 \/ GSTR-3B/.test(clip) && /Status: Partly/.test(clip) && /Missing: /.test(clip) && /Kind: Law/.test(clip) && /Checked 3 Oct 2026/.test(clip), 'Copy puts the standard, kind, status, what is missing and the date on the clipboard');
+    ok(/GSTR-1 \/ GSTR-3B/.test(clip) && /Status: Partly/.test(clip) && /Missing: /.test(clip) && /Kind: Law/.test(clip) && /Checked 13 Oct 2026/.test(clip), 'Copy puts the standard, kind, status, what is missing and the date on the clipboard');
     ok(!/<[a-z]/i.test(clip) && clip.indexOf('⭐') < 0, 'and it is plain text — no markup, no code-comment markers');
     ok(/Copied/.test(await p.textContent('#toast')), 'and says Copied');
     /* a row with a long note says what is missing IN FULL when opened */
