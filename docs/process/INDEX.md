@@ -16,7 +16,7 @@ Athi, 2026-10-12: *"for each function we are building we need to have a SAP kind
 | [L2C](L2C.md) | Lead to customer | SD pre-sales (CRM) | lead → call → demo → trial → customer → consent & privacy requests | 3 | 3 | 0 |
 | [C2V](C2V.md) | Client to verified (the practice door) | no SAP module — the incumbents (Xero HQ / QBOA / MYOB Practice, docs/research/COMPARE-AU-BOOKS-2026-10.md §2) are a baseline only; built on our construct (docs/design/practice-door/REQUIREMENT.md §0) | practice → request → grant → dashboard → open client → ask → end | 0 | 1 | 6 |
 | [MVI](MVI.md) | Move in (from Xero / QuickBooks) | FI (conversion: opening balances, master data) | chart of accounts → contacts → items → opening balances | 4 | 0 | 0 |
-| [PRN](PRN.md) | Parallel run (their Tally / Xero period beside ours) | FI (audit: parallel run, reconciliation of statements) | load their period → compare, differences first → the auditor's file | 2 | 1 | 0 |
+| [PRN](PRN-flow.md) | Parallel run (their Tally / Xero period beside ours) | FI (audit: parallel run, reconciliation of statements) | load their period → compare, differences first → the auditor's file | 2 | 1 | 0 |
 
 ## Flows × modules — which module owns which step
 

@@ -721,5 +721,28 @@ console.log('\n17 · no platform host in the site');
   else pass('every page that reads the api base loads /config.js');
 }
 
+/* 18 · FIX-INT5a (13 Oct): docs/process/PRN.md was tracked — PRN is a Windows device name, and `git checkout` failed on the owner's PC.
+   Windows reserves CON · PRN · AUX · NUL · COM1–9 · LPT1–9 as a file's name before ANY extension, in any case. Every tracked path is held
+   to it; the api and engines beside this checkout are read too and reported (`node e2e/guard-static.cjs` there is not theirs to fail). */
+console.log('\n18 · no tracked path a Windows checkout cannot write');
+{
+  const { execFileSync } = require('child_process');
+  const ROOT = path.join(__dirname, '..');
+  const RESERVED = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i;
+  const hits = (dir) => execFileSync('git', ['-C', dir, 'ls-files', '-z'], { encoding: 'utf8', maxBuffer: 64 << 20 }).split('\0').filter(Boolean)
+    .filter((p) => p.split('/').some((seg) => RESERVED.test(seg.split('.')[0])));
+  const own = hits(ROOT);
+  if (own.length) fail(own.length + ' tracked path(s) Windows cannot check out (a reserved device name): ' + own.slice(0, 8).join(', '));
+  else pass('no tracked path is named CON · PRN · AUX · NUL · COM1–9 · LPT1–9');
+  ['chitbridge-api', 'chitbridge-engines'].forEach((r) => {
+    const d = path.join(ROOT, '..', r);
+    if (!fs.existsSync(path.join(d, '.git'))) return;
+    let h = [];
+    try { h = hits(d); } catch (_) { return; }
+    if (h.length) warn(r + ' (beside) tracks ' + h.length + ' path(s) Windows cannot check out: ' + h.slice(0, 8).join(', '));
+    else pass(r + ' (beside): no reserved device name');
+  });
+}
+
 console.log('\n== GUARD ==  ' + hard + ' failure(s) · ' + soft + ' warning(s)');
 process.exit(hard ? 1 : 0);
