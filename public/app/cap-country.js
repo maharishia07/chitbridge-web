@@ -44,6 +44,12 @@ function csuCurrencies(country) {
   if (CSU.p) add(CSU.p.currency);
   return out;
 }
+/** the registered pack of a country (CBRegulation, app/tax.js) — its scheme word, currency and year start; null when the page has no registry */
+function csuPack(code) { try { return (window.CBRegulation && code && CBRegulation.packFor(String(code).toUpperCase())) || null; } catch (_) { return null; } }
+/** the scheme's own word for the tax row: GST · GST · VAT (pack.tax.scheme); 'Tax' when no pack says */
+function csuScheme(code) { var p = csuPack(code); return (p && p.tax && p.tax.scheme) || tx('Tax'); }
+/** the tax-id the pack names (abn · trn · gstin), for the placeholder; India's GSTIN example until reg-in carries one */
+function csuTaxIdHint(code) { var p = csuPack(code); if (code === 'IN') return '33AAAAA0000A1Z5'; if (p && p.abn) return 'ABN · 11 digits'; if (p && p.trn) return 'TRN · 15 digits'; return tx('Registration number'); }
 /** the prefill: the server's answer first (it knows what registration stored), else what the browser worked out (M196) — each with its source */
 function csuPrefill() {
   var p = CSU.p, g = null; try { g = govCtx(); } catch (_) {}
@@ -59,7 +65,8 @@ function csuPrefill() {
   }
   if (!e.country && g && g.country && g.country.value) { e.country = g.country.value; src.country = g.country.from; }
   if (!e.currency && g && g.currency && g.currency.value) { e.currency = g.currency.value; src.currency = g.currency.from; }
-  if (!e.fy) { e.fy = e.country === 'IN' ? 4 : 1; src.fy_start_month = e.country === 'IN' ? tx('the India pack') : tx('the usual year'); }
+  if (!e.fy) { var pk = csuPack(e.country); e.fy = (pk && pk.fiscalYear && pk.fiscalYear.startMonth) || (e.country === 'IN' ? 4 : 1);
+    src.fy_start_month = pk ? txf('the {c} pack', { c: csuCountryName(e.country) }) : tx('the usual year'); }   /* CX0: the PACK's year (AU July · AE January), never India-or-January */
   if (!src.tax) src.tax = tx('not set yet');
   CSU.edit = e; CSU.src = src;
 }
@@ -111,14 +118,14 @@ function renderCountrySetup() {
     var rows = csuRow('country', tx('Country'), esc(csuCountryName(e.country) || tx('not known')), s.country,
         csuSel('cs-country', 'country', countryOpts, e.country))
       + csuRow('currency', tx('Money'), esc(e.currency || tx('not known')), s.currency,
-        curOpts.length ? csuSel('cs-currency', 'currency', curOpts, e.currency) : '<input class="inp" id="cs-currency" data-testid="cs-currency" maxlength="3" placeholder="INR" value="' + esc(e.currency) + '" onchange="csuSet(\'currency\', this.value)">')
+        curOpts.length ? csuSel('cs-currency', 'currency', curOpts, e.currency) : '<input class="inp" id="cs-currency" data-testid="cs-currency" maxlength="3" placeholder="' + esc((csuPack(e.country) || {}).currency || '') + '" value="' + esc(e.currency) + '" onchange="csuSet(\'currency\', this.value)">')
       + csuRow('fy', tx('Year starts'), esc(CSU_MONTHS[(e.fy || 1) - 1] || ''), s.fy_start_month,
         csuSel('cs-fy', 'fy', CSU_MONTHS.map(function (m, i) { return { v: i + 1, t: m }; }), e.fy))
-      + csuRow('tax', e.country === 'IN' ? tx('GST') : tx('Tax'),
+      + csuRow('tax', csuScheme(e.country),
         esc(e.registered ? ((e.country === 'IN' ? (e.scheme === 'composition' ? tx('Composition') : tx('Regular')) + ' · ' : tx('Registered') + ' · ') + (e.number || '')) : tx('Not registered')), s.tax,
         '<div style="display:grid;gap:6px">'
-        + csuSel('cs-tax-reg', 'registered', [{ v: 'no', t: tx('Not registered') }, { v: 'yes', t: e.country === 'IN' ? tx('Registered for GST') : tx('Registered for tax') }], e.registered ? 'yes' : 'no')
-        + (e.registered ? '<input class="inp" id="cs-tax-number" data-testid="cs-tax-number" placeholder="' + esc(e.country === 'IN' ? '33AAAAA0000A1Z5' : tx('Registration number')) + '" value="' + esc(e.number) + '" onchange="csuSet(\'number\', this.value)">' : '')
+        + csuSel('cs-tax-reg', 'registered', [{ v: 'no', t: tx('Not registered') }, { v: 'yes', t: txf('Registered for {s}', { s: csuScheme(e.country) }) }], e.registered ? 'yes' : 'no')
+        + (e.registered ? '<input class="inp" id="cs-tax-number" data-testid="cs-tax-number" placeholder="' + esc(csuTaxIdHint(e.country)) + '" value="' + esc(e.number) + '" onchange="csuSet(\'number\', this.value)">' : '')
         + (e.registered && e.country === 'IN' ? csuSel('cs-tax-scheme', 'scheme', [{ v: 'regular', t: tx('Regular') }, { v: 'composition', t: tx('Composition') }], e.scheme) : '')
         + '</div>');
     body = '<div class="body">'
