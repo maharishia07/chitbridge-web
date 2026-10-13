@@ -1,0 +1,32 @@
+name: batch-merge
+# ⭐ The BATCH MERGE runs in the cloud (Athi 13 Oct: merge in batches; nothing may depend on the owner's PC — its background jobs are killed when
+# memory runs low). 12:00 and 20:00 IST, or by hand. Lands every open PR labelled `ready-to-land` (not `hold`) in engines → api → web order —
+# scripts/batch-merge.sh has the rules (re-tested on the current main, merge only fully green, delete the branch). Uses ROUNDS_PAT (contents +
+# pull requests + workflows on the three repos). The report is kept as an artifact (no secrets in it — titles and results only).
+on:
+  schedule:
+    - cron: '30 6 * * *'     # 12:00 IST
+    - cron: '30 14 * * *'    # 20:00 IST
+  workflow_dispatch:
+concurrency:
+  group: batch-merge
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  batch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - name: Land the ready PRs
+        env:
+          GH_TOKEN: ${{ secrets.ROUNDS_PAT }}
+        run: sh scripts/batch-merge.sh
+      - name: Keep the batch report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: batch-report-${{ github.run_id }}
+          path: batch-report.md
+          retention-days: 30

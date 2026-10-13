@@ -173,11 +173,12 @@ abbr.gl:focus-visible{outline:2px solid var(--blue,#3F66A6);outline-offset:1px}
 /* the two helpers cap-standards.js paints with (it calls esc() and tx() from whatever page loads it); this page is English, so tx() is the identity */
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 function tx(s){ return s; }
-/* the places stdGoto() sends a reader to: the app's screens (#/app/<nav> is the app's own deep link), Settings sections as Settings */
-function navTo(k){ location.href = '/app.html#/app/' + encodeURIComponent(k); }
-function setSetSec(){ navTo('settings'); }
-/* a row's "go" key → the customer-facing app that is its home. Every other key is a pane of the workshop (app.html) and gets no button. */
-var HOME = { till: '/till.html' };
+/* a row's "go" key → the customer-facing app that is its home. Every other key is a pane of the workshop (app.html) and gets no button
+   (IX0: catalogue · locale · appearance · integrations · readiness · returns wait for their small app — docs/design/INDEX-NOT-APP.md). */
+var HOME = { till: '/till.html', coassists: '/employees.html', task: '/tasks.html', network: '/network.html', identity: '/know-your-business.html' };
+/* the places stdGoto() (cap-standards.js) sends a reader to: a customer home from the map above, never the workshop; a Settings section has no customer page yet */
+function navTo(k){ if (HOME[k]) location.href = HOME[k]; }
+function setSetSec(){}
 </script>
 <script src="/app/list-ctl.js"></script>   <!-- CBList: the list here is a mount on it -->
 <script src="/app/rail-bell.js"></script>   <!-- CBBell.mount: the bell, the same one every app header has -->
