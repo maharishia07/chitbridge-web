@@ -167,6 +167,7 @@ abbr.gl:focus-visible{outline:2px solid var(--blue,#3F66A6);outline-offset:1px}
 <div id="toast" role="status" hidden></div>
 
 <script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies (engines screen) -->
+<script src="/app/edition.js"></script>   <!-- CBEdition (AX1): an edition that leaves the till out draws no door to it -->
 <script src="/app/avatar.js"></script>   <!-- CBAvatar: the one avatar (Profile · Support · Sign out) and the look it owns — nothing of it is drawn here -->
 <script>
 'use strict';
@@ -358,7 +359,7 @@ function mountList(){
       fig: (rows) => { var n = countOf(rows.map((x) => x.r)); return rows.length + ' · ● ' + n.live + ' ◐ ' + n.part + ' ○ ' + n.plan; } },
     next: nextOf,
     actions: [
-      { id: 'go', label: 'Open in the app ›', tid: 'std-go', when: (x) => !!HOME[x.r.go], run: (x) => { location.href = HOME[x.r.go]; } },   /* only a CUSTOMER home — never app.html, the workshop */
+      { id: 'go', label: 'Open in the app ›', tid: 'std-go', when: (x) => !!HOME[x.r.go] && !(window.CBEdition && CBEdition.hidesHref(HOME[x.r.go])), run: (x) => { location.href = HOME[x.r.go]; } },   /* only a CUSTOMER home — never app.html, the workshop */
       { id: 'copy', label: 'Copy for a buyer or CA', tid: 'std-copy', run: (x) => copyText(statementOf(x.r)) },
     ],
     empty: { title: 'No standards on the register', sub: 'The register could not be read.' },

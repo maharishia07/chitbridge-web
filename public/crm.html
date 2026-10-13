@@ -336,6 +336,7 @@ let UI = { vp: 'lap', lw: 340, custs: [], sups: [] };   /* custs/sups: the rows 
 function go(){ signedOut('Your session ended. Please sign in again.'); }   /* api()'s 401 → this page's own sign-in card (CBSignin), not the app's (R10) */
 </script>
 <script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies (engines screen) -->
+<script src="/app/edition.js"></script>   <!-- CBEdition (AX1): the showing this person chose — the switcher, the bell and the avatar's Edition choice follow it -->
 <script src="/app/avatar.js"></script>   <!-- CBAvatar: the one avatar (Profile · Support · Sign out) and the look it owns — nothing of it is drawn here -->
 <script src="/app/core.js"></script>
 <script src="/app/accounts-shell.js"></script>
