@@ -63,7 +63,7 @@ else if (cmd === 'stop') {
   const env = Object.assign({}, process.env, {
     DATABASE_URL: DB, NODE_ENV: 'development', JWT_SECRET: process.env.JWT_SECRET && process.env.JWT_SECRET.length >= 32 ? process.env.JWT_SECRET : 'stack-local-only-secret-' + 'x'.repeat(24),
     DEV_OTP: process.env.DEV_OTP || '123456', SHOP_CLOCK_ALLOW: '1', HOST: '127.0.0.1', RLS_GUARD: process.env.RLS_GUARD || 'off', LOG_LEVEL: process.env.LOG_LEVEL || 'warn',
-    RATE_LIMIT_MAX: '10000000', PORT: String(APIP),
+    RATE_LIMIT_MAX: '10000000', AUTH_RATE_LIMIT_MAX: '10000000', PORT: String(APIP),   /* one caller, many walks: the 15-minute windows would refuse the fifth run */
     ALLOWED_ORIGINS: 'http://localhost:' + WEBP + ',http://127.0.0.1:' + WEBP + ',http://localhost:' + APIP,
   });
   const out = fs.openSync(path.join(STATE, 'api.log'), 'a');

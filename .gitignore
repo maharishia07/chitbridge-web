@@ -13,3 +13,5 @@ test-results/
 # demo run outputs (regenerated on every run)
 e2e/demo-*.png
 e2e/demo-prestige-summary.json
+
+e2e/.stack/

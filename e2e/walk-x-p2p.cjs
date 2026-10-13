@@ -30,7 +30,7 @@ const BUYER = process.env.WX_BUYER || 'simstores', SUPPLIER = process.env.WX_SUP
 /* ⚠️ the DEPTH half buys as a FRESH shop (registered through the api's own doors below): the loader hard-locks every month it wrote — the
    present one included — so a bill accepted today on the loaded shop posts silently into the next open year (WX-P2P-08). The WIDTH half
    walks the loaded shop, three years deep. */
-const DEPTH_BUYER = process.env.WX_DEPTH_BUYER || 'wxbuyer', VIEWER = process.env.WX_VIEWER || ('vani@' + DEPTH_BUYER);
+const DEPTH_BUYER = process.env.WX_DEPTH_BUYER || 'walkbuyer', VIEWER = process.env.WX_VIEWER || ('vani@' + DEPTH_BUYER);
 const OTP = process.env.DEV_OTP || '123456';
 const SHOTS = path.join(__dirname, 'shots');
 const RUN = String(Date.now()).slice(-4);   /* a suffix so a re-run on the same stack adds a new supply, not a second 'Packing tape' */
@@ -83,11 +83,12 @@ const norm = (s) => String(s || '').replace(/\s+/g, ' ').trim();
 const text = (page) => page.evaluate(() => document.body.innerText.replace(/\s+/g, ' ')).catch(() => '');
 const txt = async (page, sel) => norm(await page.locator(sel).first().innerText().catch(() => ''));
 const widths = (page) => page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);
-async function open(page, url, until, ms) { await page.goto(WEB + url, { waitUntil: 'load' }); if (until) await page.waitForSelector(until, { timeout: ms || 20000 }).catch(() => {}); await page.waitForTimeout(700); }
+/* every screen starts fresh: a hash-only change on the same page would keep a sheet or a modal of the last step on screen (CB Accounts is one page) */
+async function open(page, url, until, ms) { await page.goto('about:blank').catch(() => {}); await page.goto(WEB + url, { waitUntil: 'load' }); if (until) await page.waitForSelector(until, { timeout: ms || 9000 }).catch(() => {}); await page.waitForTimeout(700); }
 async function shot(page, name) { try { await page.screenshot({ path: path.join(SHOTS, 'wxp2p-' + name + '.png') }); } catch (_) {} return 'wxp2p-' + name + '.png'; }
 async function ctxFor(browser, p, vp) {
   const ctx = await browser.newContext({ viewport: vp || { width: 1366, height: 768 }, locale: 'en-IN', timezoneId: 'Asia/Kolkata', serviceWorkers: 'block' });
-  await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
+  /* no ctx.route here: this walk answers nothing itself — every /api call reaches the real api (e2e/contract.cjs reads `.route(` as a stand-in) */
   await ctx.addInitScript((s) => { try { localStorage.setItem('cb_sess', s); window.print = function () {}; } catch (_) {} }, JSON.stringify(p.sess));
   const page = await ctx.newPage(); page.on('dialog', (d) => d.accept().catch(() => {}));
   return { ctx, page };
@@ -96,8 +97,9 @@ async function ctxFor(browser, p, vp) {
  *  ONE calculation (lib/tax-lines.invoiceFor) exactly as tools/sim-load.cjs sends it; nothing here computes a rupee */
 function supplierBillBody(sup, buyer, lines, no, at) {
   const TL = require(path.join(__dirname, '..', '..', 'chitbridge-api', 'lib', 'tax-lines'));
-  const seller = { entity_id: sup.me.identity_id, name: sup.me.display_name, gstin: sup.me.gstn || null, state_code: '33', country: 'IN' };
-  const buyerP = { entity_id: buyer.me.identity_id, name: buyer.me.display_name, gstin: buyer.me.gstn || null, state_code: '33', country: 'IN' };
+  /* the parties in the invoice's own shape (TL.partyOf — GSTIN, state, registration), exactly as the loader builds its seller */
+  const seller = TL.partyOf({ gstn: sup.me.gstn || null, display_name: sup.me.display_name, country: sup.me.country || 'IN', policy_flags: sup.me.policy_flags }, { entity_id: sup.me.identity_id });
+  const buyerP = TL.partyOf({ gstn: buyer.me.gstn || null, display_name: buyer.me.display_name, country: buyer.me.country || 'IN', policy_flags: buyer.me.policy_flags }, { entity_id: buyer.me.identity_id });
   const inv = TL.invoiceFor({ lines, seller, buyer: buyerP, currency: 'INR', at, priceIncludesTax: true }).invoice;
   const total = Number(inv.ValDtls && inv.ValDtls.TotInvVal) || 0;
   return { body: {
@@ -135,8 +137,8 @@ const walk = async (w) => {
         await p.fill(T('signin-id'), buyer.id); await p.click(T('signin-go'));
         await p.waitForSelector(T('signin-code'), { timeout: 15000 }).catch(() => {});
         await p.fill(T('signin-code'), OTP); await p.click(T('signin-verify'));
-        await p.waitForSelector(T('todo-list') + ', ' + T('todo-none') + ', ' + T('signin-later'), { timeout: 20000 }).catch(() => {});
-        if (await p.locator(T('signin-later')).count()) { await p.click(T('signin-later')); await p.waitForSelector(T('todo-list') + ', ' + T('todo-none'), { timeout: 20000 }).catch(() => {}); }
+        await p.waitForSelector(T('todo-list') + ', ' + T('todo-none') + ', ' + T('signin-later'), { timeout: 10000 }).catch(() => {});
+        if (await p.locator(T('signin-later')).count()) { await p.click(T('signin-later')); await p.waitForSelector(T('todo-list') + ', ' + T('todo-none'), { timeout: 10000 }).catch(() => {}); }
         after = await text(p);
       }
       await shot(p, 'd01-front-door'); await fresh.close();
@@ -219,7 +221,7 @@ const walk = async (w) => {
       const p = supUI.page;
       await open(p, '/app.html#/app/task', T('task-count')); await p.waitForTimeout(1500);
       const t0 = await text(p), paged = t0.slice(t0.indexOf('Open'), t0.indexOf('Open') + 30);
-      await p.fill('#listsrch', 'Order — Kumar'); await p.waitForFunction(() => /Order — Kumar Trade Co/.test(document.body.innerText) && !/Nothing in Open/.test(document.body.innerText), null, { timeout: 20000 }).catch(() => {});
+      await p.fill('#listsrch', 'Order — Kumar'); await p.waitForFunction(() => /Order — Kumar Trade Co/.test(document.body.innerText) && !/Nothing in Open/.test(document.body.innerText), null, { timeout: 10000 }).catch(() => {});
       await p.waitForTimeout(600);
       const row = p.locator('text=Order — Kumar Trade Co').first();
       if (await row.count()) { await row.click(); await p.waitForTimeout(1500); }
@@ -251,7 +253,7 @@ const walk = async (w) => {
       const r = await sup.post('/api/chits/send', made.body);
       S.bill = { no, total: made.total, chit_id: r.b && r.b.chit_id, lines };
       await open(page, '/accounts.html#bills', T('bills-list'));
-      await page.waitForFunction((no) => document.body.innerText.indexOf(no) >= 0, no, { timeout: 20000 }).catch(() => {});
+      await page.waitForFunction((no) => document.body.innerText.indexOf(no) >= 0, no, { timeout: 10000 }).catch(() => {});
       const t = await text(page), row = S.bill.chit_id ? await txt(page, T('bill-' + S.bill.chit_id)) : '', step = S.bill.chit_id ? await txt(page, T('bill-step-' + S.bill.chit_id)) : '', tabs = t.slice(t.indexOf('Received'), t.indexOf('Received') + 24);
       await open(page, '/app.html#/app/task', T('task-count')); await page.waitForTimeout(1200);
       const tt = await text(page), openTab = tt.slice(tt.indexOf('Open'), tt.indexOf('Open') + 14);
@@ -261,7 +263,7 @@ const walk = async (w) => {
     /* ── step 3 · goods receipt: the bill's sheet → Open page → ⧉ Lines → Delivered ── */
     const openBillSheet = async () => {
       await open(page, '/accounts.html#bills', T('bills-list'));
-      await page.waitForFunction((no) => document.body.innerText.indexOf(no) >= 0, S.bill.no, { timeout: 20000 }).catch(() => {});
+      await page.waitForFunction((no) => document.body.innerText.indexOf(no) >= 0, S.bill.no, { timeout: 10000 }).catch(() => {});
       const row = S.bill.chit_id ? page.locator(T('bill-' + S.bill.chit_id)) : page.locator('[data-testid^="bill-"]:not([data-testid^="bills"])', { hasText: 'Kumar Trade Co' }).first();
       await row.first().click({ timeout: 10000 });
       await page.waitForSelector(T('cs-head'), { timeout: 15000 }).catch(() => {}); await page.waitForTimeout(800);
@@ -272,17 +274,22 @@ const walk = async (w) => {
       for (const k of ['accept', 'dispute', 'goodsin', 'page']) if (await page.locator(T('cs-act-' + k)).count()) acts.push(k);
       return { ok: t.indexOf(S.bill.no) >= 0 && /Kumar Trade Co/.test(t) && /To accept/.test(t) && t.indexOf(money(S.bill.total)) >= 0 && acts.length === 4, saw: 'actions ' + acts.join('·') + '; ' + t.slice(0, 220) };
     });
-    await w.step('D14', 'The sheet -> Open page -> the app opens the bill -> ⧉ Lines -> THEM · Delivered & paid: "0 of n"; Delivered on the first line -> "n of n" (step 3 · goods receipt)', async () => {
-      await page.click(T('cs-act-page')); await page.waitForSelector(T('open-design2'), { timeout: 20000 }).catch(() => {}); await page.waitForTimeout(800);
-      await page.click(T('open-design2')).catch(() => {}); await page.waitForSelector(T('c2-delivered'), { timeout: 15000 }).catch(() => {});
-      const before = await txt(page, T('c2-del-count'));
+    await w.step('D14', 'The sheet -> Open page -> the app opens the bill in a new tab -> ⧉ Lines -> THEM · Delivered & paid: "0 of n"; Delivered on the first line -> "n of n" (step 3 · goods receipt)', async () => {
+      const popup = page.context().waitForEvent('page', { timeout: 15000 }).catch(() => null);
+      await page.click(T('cs-act-page'));
+      const p2 = (await popup) || page;
+      await p2.waitForLoadState('load').catch(() => {}); await p2.waitForSelector(T('open-design2'), { timeout: 25000 }).catch(() => {}); await p2.waitForTimeout(800);
+      await p2.click(T('open-design2')).catch(() => {}); await p2.waitForSelector(T('c2-tab-del'), { timeout: 15000 }).catch(() => {});
+      await p2.click(T('c2-tab-del')).catch(() => {}); await p2.waitForSelector(T('c2-delivered'), { timeout: 10000 }).catch(() => {});
+      const before = await txt(p2, T('c2-del-count'));
       const q = S.bill.lines[0].quantity;
-      const first = page.locator(T('c2-delivered')).first();
+      const first = p2.locator(T('c2-delivered')).first();
       const lineId = await first.evaluate((b) => (b.getAttribute('onclick') || '').split("'")[1]).catch(() => '');
-      if (lineId) await page.fill('#c2dq_' + lineId, String(q)).catch(() => {});
-      await first.click().catch(() => {}); await page.waitForTimeout(2000);
-      const after = await txt(page, T('c2-del-count')), t = await text(page);
-      return { ok: /0 of/.test(before) && new RegExp(q + ' of ' + q).test(after), saw: 'before "' + before + '" → after "' + after + '"' + (/Recorded/.test(t) ? ' · toast Recorded' : '') };
+      if (lineId) await p2.fill('#c2dq_' + lineId, String(q)).catch(() => {});
+      await first.click().catch(() => {}); await p2.waitForTimeout(2000);
+      const after = await txt(p2, T('c2-del-count')), t = await text(p2), name = await shot(p2, 'd14-goods-in-lines');
+      if (p2 !== page) await p2.close().catch(() => {});
+      return { ok: /0 of/.test(before) && new RegExp(q + ' of ' + q).test(after), saw: name + ' · ' + (p2 === page ? 'no new tab opened; ' : 'new tab; ') + 'before "' + before + '" → after "' + after + '"' + (/Recorded/.test(t) ? ' · toast Recorded' : '') };
     });
     await w.step('D15', 'The sheet -> Goods in -> "What is it for?" -> To sell -> the bill reads "Accepted" (step 4 · supplier bill accepted; the hook posts it)', async () => {
       await openBillSheet();
@@ -297,7 +304,7 @@ const walk = async (w) => {
     /* ── step 6 · posted: CB Accounts ── */
     await w.step('D16', 'CB Accounts › Unpaid bills › Received (step 6) -> the bill from Kumar Trade Co with its amount and the server\'s step word', async () => {
       await open(page, '/accounts.html#bills', T('bills-list'));
-      await page.waitForFunction((no) => document.body.innerText.indexOf(no) >= 0, S.bill.no, { timeout: 20000 }).catch(() => {});
+      await page.waitForFunction((no) => document.body.innerText.indexOf(no) >= 0, S.bill.no, { timeout: 10000 }).catch(() => {});
       const t = await text(page), row = S.bill.chit_id ? await txt(page, T('bill-' + S.bill.chit_id)) : '', step = S.bill.chit_id ? await txt(page, T('bill-step-' + S.bill.chit_id)) : '';
       return { ok: /Kumar Trade Co/.test(row) && row.indexOf(money(S.bill.total)) >= 0 && /Accepted|accepted/.test(step), saw: t.slice(t.indexOf('Received'), t.indexOf('Received') + 30) + ' … row "' + row.slice(0, 100) + '"; step "' + step + '"' };
     });
@@ -308,16 +315,19 @@ const walk = async (w) => {
       await open(page, '/accounts.html#daybook', T('db-list'));
       await page.fill(T('listctl-search-daybook'), 'Kumar Trade Co').catch(() => {}); await page.waitForTimeout(900);
       const td = await text(page);
-      const pv = td.slice(td.indexOf('PV/'), td.indexOf('PV/') + 220);
-      return { ok: /Kumar Trade Co/.test(prow) && prow.indexOf(money(S.bill.total)) >= 0 && /Pay/.test(prow) && /Kumar Trade Co/.test(pv) && /Purchases/.test(pv) && /GST/.test(pv), saw: 'payables row "' + prow.slice(0, 110) + '"; day book: ' + (pv || td.slice(td.indexOf('shown'), td.indexOf('shown') + 120)) };
+      const k = td.indexOf(S.bill.no), pv = k >= 0 ? td.slice(td.lastIndexOf('PV/', k), k + 200) : '';
+      S.owed = (prow.match(/₹\s?[\d,]+\.\d\d/) || [''])[0];
+      return { ok: /Kumar Trade Co/.test(prow) && !!S.owed && /Pay/.test(prow) && /Kumar Trade Co/.test(pv) && /Purchases/.test(pv) && /GST/.test(pv), saw: 'payables row "' + prow.slice(0, 110) + '"; day book: ' + (pv || td.slice(td.indexOf('shown'), td.indexOf('shown') + 120)) };
     });
-    await w.step('D18', 'CB Accounts › Ledgers › Suppliers › Kumar Trade Co -> the party\'s ledger: the bill as a Cr line, closing "you owe" the amount', async () => {
+    await w.step('D18', 'CB Accounts › Ledgers › Suppliers › Kumar Trade Co -> the party\'s ledger: Opening · Closing … Cr in the head, the bill as "Purchase · Bill KT/…" with its amount Cr', async () => {
       await open(page, '/accounts.html#ledgers', T('lt-tree'));
-      await page.click(T('lg-acc-2100')).catch(() => {}); await page.waitForTimeout(1200);
-      const party = page.locator('#lt_tree .tn, #lt_tree [data-tn]', { hasText: 'Kumar Trade Co' }).first();
-      if (await party.count()) { await party.click(); await page.waitForTimeout(1500); }
-      const t = await text(page), i = t.indexOf('Purchase', t.indexOf('Kumar Trade Co'));
-      return { ok: /Kumar Trade Co/.test(t) && i >= 0 && t.indexOf(money(S.bill.total)) >= 0 && /you owe/.test(t), saw: t.slice(Math.max(0, i - 120), i + 160) };
+      await page.click('[data-tn="L:2100"]').catch(() => {}); await page.waitForTimeout(1200);   /* Suppliers: opens the control ledger and unfolds its parties */
+      let party = page.locator('[data-tn="P:' + sup.me.identity_id + '"]').first();
+      if (!(await party.count())) { await page.fill(T('lt-find'), 'Kumar Trade').catch(() => {}); await page.waitForTimeout(900); party = page.locator('[data-tn="P:' + sup.me.identity_id + '"]').first(); }
+      const found = await party.count();
+      if (found) { await party.click(); await page.waitForTimeout(1500); }
+      const t = await text(page), i = t.indexOf(S.bill.no), head = t.slice(t.indexOf('Kumar Trade Co Opening'), t.indexOf('Kumar Trade Co Opening') + 60);
+      return { ok: found > 0 && /Closing ₹[\d,.]+ Cr/.test(head) && i >= 0 && /Purchase · Bill/.test(t.slice(i - 20, i)) && t.indexOf(money(S.bill.total)) >= 0, saw: (found ? '' : 'no tree node for the party; ') + head + ' … ' + t.slice(Math.max(0, i - 24), i + 60) };
     });
 
     /* ── step 5 · payment: Payables › Pay ── */
@@ -331,29 +341,43 @@ const walk = async (w) => {
       await page.fill(T('pay_amt'), String(S.bill.total.toFixed(2))); await page.fill(T('pay_ref'), 'NEFT 4421'); await page.selectOption(T('pay_mode'), 'bank');
       await page.waitForSelector('[data-testid^="alloc-row-"]', { timeout: 10000 }).catch(() => {});
       const bills = await txt(page, T('pay_bills')), left = await txt(page, T('pay_left'));
-      await page.click(T('pay_record')); await page.waitForSelector(T('pay_outcome'), { timeout: 15000 }).catch(() => {});
+      /* a band ("the last bill was settled today" — the duplicate rule) holds Record until its own button is pressed: that press is the acknowledgement */
+      const band = await page.locator(T('pay_band')).isVisible().catch(() => false), bandWords = band ? await txt(page, T('pay_band_words')) : '', ackLabel = band ? await txt(page, T('pay_ack')) : '';
+      if (band) await page.click(T('pay_ack')); else await page.click(T('pay_record'));
+      await page.waitForSelector(T('pay_outcome'), { timeout: 15000 }).catch(() => {});
       const out = await txt(page, '#pay_body'), adv = await page.locator(T('pay_advice')).count();
-      S.paid = /Recorded/.test(out);
-      return { ok: /Pay · Kumar Trade Co/.test(title) && bills.indexOf(S.bill.no) >= 0 && /settles 1 bill/.test(left) && /Recorded/.test(out) && out.indexOf(S.bill.no) >= 0 && /settled/.test(out) && adv === 1, saw: '"' + title + '"; bills: ' + bills.slice(0, 90) + '; line: ' + left + '; outcome: ' + out.slice(0, 200) };
+      S.paid = /Paid|Recorded/.test(out); S.settledNo = (out.match(/Settled: ([^ ]+)/) || [])[1] || ''; S.settledOther = !!(S.settledNo && S.settledNo !== S.bill.no);
+      return { ok: /Pay · Kumar Trade Co/.test(title) && bills.indexOf(S.bill.no) >= 0 && /settles 1 bill/.test(left) && /Paid|Recorded/.test(out) && /Settled/.test(out) && adv === 1, saw: '"' + title + '"; bills: ' + bills.slice(0, 90) + '; line: ' + left + (band ? '; band "' + bandWords.slice(0, 80) + '" → pressed "' + ackLabel + '"' + (/advance/i.test(ackLabel) ? ' [the band\'s only yes is "as advance" though the bills are applied — WX-P2P-11]' : '') : '') + '; outcome: ' + out.slice(0, 200) };
     });
     await w.step('D20', 'The outcome -> Send advice -> "Advice sent to Kumar Trade Co ✓"; the SUPPLIER\'s Task shows the advice chit', async () => {
+      const before = await txt(page, T('pay_advice'));
       const send = page.locator(T('pay_advice')).locator('button', { hasText: /Send advice/ }).first();
       const may = await send.count() ? await send.isEnabled() : false;
-      if (may) await send.click();
-      await page.waitForFunction(() => /Advice sent to/.test(document.body.innerText), null, { timeout: 15000 }).catch(() => {});
+      if (may && !/advice sent/.test(before)) await send.click();
+      await page.waitForFunction(() => /Advice sent to|advice sent/.test(document.body.innerText), null, { timeout: 15000 }).catch(() => {});
       const out = await txt(page, T('pay_advice'));
       await page.click(T('pay_done')).catch(() => {});
       await open(supUI.page, '/app.html#/app/task', T('task-count'));
-      await supUI.page.waitForFunction(() => /advice|Advice/.test(document.body.innerText), null, { timeout: 20000 }).catch(() => {});
-      const ts = await text(supUI.page), name = await shot(supUI.page, 'd19-supplier-advice');
-      return { ok: may && /Advice sent to Kumar Trade Co/.test(out) && /advice/i.test(ts), saw: (may ? 'Send advice enabled' : 'Send advice NOT enabled') + '; "' + out.slice(0, 80) + '"; supplier: ' + name + ' ' + ts.slice(ts.search(/advice/i) - 60, ts.search(/advice/i) + 80) };
+      await supUI.page.fill('#listsrch', 'advice').catch(() => {});
+      await supUI.page.waitForFunction(() => /advice/i.test(document.body.innerText) && !/Nothing in Open/.test(document.body.innerText), null, { timeout: 10000 }).catch(() => {});
+      await supUI.page.waitForTimeout(600);
+      const ts = await text(supUI.page), name = await shot(supUI.page, 'd19-supplier-advice'), k = ts.search(/advice/i);
+      return { ok: /advice sent|Advice sent to Kumar Trade Co/.test(out) && /advice/i.test(ts.slice(ts.indexOf('shown'))), saw: 'outcome: "' + out.slice(0, 90) + '"' + (/advice sent · delivered/.test(before) ? ' [sent by the record itself, before any press]' : '') + '; supplier: ' + name + ' ' + ts.slice(Math.max(0, k - 60), k + 90) };
     });
-    await w.step('D21', 'After the payment: Payables no longer lists Kumar Trade Co; Unpaid bills › Received no longer lists the bill', async () => {
+    await w.step('D21', 'After the payment: Payables shows Kumar Trade Co owed less by the bill (or gone); Unpaid bills › Received no longer lists the bill', async () => {
       await open(page, '/accounts.html#payables', T('dues-list')); await page.waitForTimeout(1500);
       const tp = await text(page);
       await open(page, '/accounts.html#bills', T('bills-list')); await page.waitForTimeout(1500);
       const tb = await text(page);
-      return { ok: !/Kumar Trade Co/.test(tp) && tb.indexOf(S.bill.no) < 0, saw: 'payables: ' + (/Kumar Trade Co/.test(tp) ? 'STILL listed' : 'gone') + '; bills: ' + (tb.indexOf(S.bill.no) >= 0 ? 'STILL open' : 'gone') };
+      await page.waitForSelector(T('dues-' + sup.me.identity_id), { timeout: 8000 }).catch(() => {});
+      if (!(await page.locator(T('dues-' + sup.me.identity_id)).count())) { await open(page, '/accounts.html#payables', T('dues-list')); await page.waitForSelector(T('dues-' + sup.me.identity_id), { timeout: 8000 }).catch(() => {}); }
+      const prow = await txt(page, T('dues-' + sup.me.identity_id)).catch(() => ''), now = (prow.match(/₹\s?[\d,]+\.\d\d/) || [''])[0];
+      const minor = (x) => Math.round(Number(String(x).replace(/[^\d.]/g, '')) * 100);
+      const settled = !prow || (S.owed && minor(S.owed) - minor(now) === Math.round(S.bill.total * 100));
+      /* oldest first: on a re-run the payment settles the OLDEST open bill, which may be an earlier run's — then this one stays open, rightly */
+      const mine = !S.settledOther, stillOpen = S.bill.chit_id ? await page.locator(T('bill-' + S.bill.chit_id)).count() : 0;
+      const settledShown = S.settledNo ? await page.locator('[data-testid^="bill-"]', { hasText: S.settledNo }).count() : 0;
+      return { ok: settled && (mine ? stillOpen === 0 : true), saw: 'payables: ' + (prow ? 'owed ' + S.owed + ' → ' + now : 'the party is gone') + '; bills: ' + (mine ? (stillOpen ? 'this bill is STILL open' : 'this bill is gone') : 'the payment settled the older ' + S.settledNo + ' (oldest first); this bill stays open') + (S.settledNo && !mine ? '; the settled bill ' + (settledShown ? 'is STILL listed under Unpaid bills [WX-P2P-12]' : 'is gone') : '') };
     });
 
     /* ── reports ── */
@@ -369,17 +393,23 @@ const walk = async (w) => {
     await w.step('D23', 'Day book -> the payment entry (PY) -> Reverse with a reason -> the entry carries "reversed" and the reversal is a row of its own; Payables lists Kumar Trade Co again', async () => {
       await open(page, '/accounts.html#daybook', T('db-list'));
       await page.fill(T('listctl-search-daybook'), 'Kumar Trade Co').catch(() => {}); await page.waitForTimeout(900);
-      const head = page.locator('[data-testid^="db-head-PY"]').first();
+      const head = page.locator('[data-testid^="db-head-PY"]').last();
       const no = await head.count() ? await head.evaluate((e) => e.getAttribute('data-testid').replace('db-head-', '')) : '';
       if (no) { await head.click(); await page.waitForTimeout(900); }
-      const rev = page.locator('button', { hasText: /^Reverse$/ }).first();
+      const rev = page.locator(T('db-reverse')).first();
       const had = await rev.count();
-      if (had) { await rev.click(); await page.waitForTimeout(600); const why = page.locator('textarea, input[data-testid*="reason"], #rev_why, input[placeholder*="why" i], input[placeholder*="reason" i]').first(); if (await why.count()) await why.fill('Paid twice by mistake'); const go = page.locator('.mfoot button.pri, button[data-testid="rev-go"], button', { hasText: /^Reverse$|Reverse it/ }).last(); await go.click().catch(() => {}); await page.waitForTimeout(2500); }
+      if (had) {
+        await rev.click(); await page.waitForSelector(T('en-reason'), { timeout: 8000 }).catch(() => {});
+        await page.fill(T('en-reason'), 'Paid twice by mistake').catch(() => {});
+        const go = page.locator('[data-testid="confirm-ok"], [data-testid="ask-ok"], dialog button, .mfoot button.pri, button.pri', { hasText: /^Reverse$/ }).last();
+        await go.click().catch(() => {}); await page.waitForTimeout(2500);
+      }
       await page.fill(T('listctl-search-daybook'), '').catch(() => {}); await page.fill(T('listctl-search-daybook'), no.slice(-6)).catch(() => {}); await page.waitForTimeout(900);
       const t = await text(page);
       await open(page, '/accounts.html#payables', T('dues-list')); await page.waitForTimeout(1500);
       const tp = await text(page);
-      return { ok: !!no && had === 1 && /reversed/i.test(t) && /Kumar Trade Co/.test(tp), saw: 'entry ' + (no || 'NOT FOUND') + '; Reverse button: ' + had + '; trail: ' + t.slice(t.indexOf(no), t.indexOf(no) + 160) + '; payables: ' + (/Kumar Trade Co/.test(tp) ? 'listed again' : 'not listed') };
+      const i = t.indexOf('Reversed by'), j = t.indexOf('Reverses') >= 0 ? t.indexOf('Reverses') : t.indexOf('reversal');
+      return { ok: !!no && had === 1 && /Reversed by/.test(t) && /Kumar Trade Co/.test(tp), saw: 'entry ' + (no || 'NOT FOUND') + '; Reverse button: ' + had + '; trail: ' + (i >= 0 ? t.slice(Math.max(0, i - 60), i + 60) : t.slice(t.indexOf(no), t.indexOf(no) + 160)) + (j >= 0 ? ' … ' + t.slice(Math.max(0, j - 40), j + 60) : '') + '; payables: ' + (/Kumar Trade Co/.test(tp) ? 'listed again' : 'not listed') };
     });
 
     /* ── the refused states, with a view-only login ── */
@@ -451,9 +481,12 @@ const walk = async (w) => {
       if (!(await row.count())) return { ok: false, saw: 'no Pay button on Payables at 390' };
       await row.click({ force: true }); await p.waitForSelector(T('pay_title'), { timeout: 10000 });
       await p.fill(T('pay_amt'), '100.00'); await p.waitForSelector('[data-testid^="alloc-row-"]', { timeout: 10000 }).catch(() => {});
-      const [sw] = await widths(p), rec = await p.locator(T('pay_record')).isVisible(), t = await txt(p, '#pay_body'), name = await shot(p, 'w-pay-390');
+      const [sw] = await widths(p), t = await txt(p, '#pay_body'), name = await shot(p, 'w-pay-390');
+      /* on screen means INSIDE the 390 × 844 window: the first Apply box wholly within the width, Record within the height (SYSTEM rule 8: no sideways scroll, a table is cards below 620) */
+      const box = await p.locator(T('alloc-0')).first().boundingBox().catch(() => null), rb = await p.locator(T('pay_record')).boundingBox().catch(() => null);
+      const applyIn = !!(box && box.x >= 0 && box.x + box.width <= 390), recIn = !!(rb && rb.y >= 0 && rb.y + rb.height <= 844);
       await p.click(T('pay_done')).catch(() => {}); await p.evaluate(() => { try { closeModal(); } catch (_) {} });
-      return { ok: sw === 390 && rec && /Oldest bill first/.test(t), saw: 'scrollWidth ' + sw + '; Record visible ' + rec + '; ' + t.slice(0, 120) + ' · ' + name };
+      return { ok: sw === 390 && applyIn && recIn && /Oldest bill first/.test(t), saw: 'scrollWidth ' + sw + '; Apply box ' + (box ? 'x ' + Math.round(box.x) + '–' + Math.round(box.x + box.width) : 'none') + (applyIn ? '' : ' CLIPPED') + '; Record ' + (rb ? 'y ' + Math.round(rb.y) : 'none') + (recIn ? '' : ' OFF SCREEN') + ' [WX-P2P-14]' + ' · ' + name };
     });
     await w.step('W17', 'Supplies at 390: Add a supply sheet fits (scrollWidth 390), its three fields and two buttons on screen', async () => {
       const p = phone.page;

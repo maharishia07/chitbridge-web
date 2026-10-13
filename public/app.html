@@ -3383,7 +3383,10 @@ function route(){
   /* ⭐ A BILL OPENED FROM CB ACCOUNTS (#/app/chit/<id>): the app arrives on Task and opens that chit with its own openChit — nothing else
      is decided here. "For now": the chit sheet may replace the way a bill opens. */
   var _bill = /^#\/app\/chit\/([A-Za-z0-9_-]+)$/.exec(h);
-  if(_bill && SESSION.token){ UI.nav="task"; UI.folder="task"; renderApp(); try{ openChit(decodeURIComponent(_bill[1])); }catch(_){} return; }
+  /* ⚠️ WX-P2P-09 (2026-10-13, the real stack): a bill is NOT in the Task list (bills are not tasks), so the list's load used to drop the chit this
+     door had just opened — a fresh shop saw "Your bogie is empty" in the tab CB Accounts' "Open page" opened. UI._byId pins it: loadList keeps a
+     chit opened by its id whether or not the page lists it; picking another chit un-pins. */
+  if(_bill && SESSION.token){ UI.nav="task"; UI.folder="task"; UI._byId=decodeURIComponent(_bill[1]); renderApp(); try{ openChit(UI._byId); }catch(_){} return; }
   /* …or remembered: cb_nav@<id> held 'ledger' from before the door closed (boot puts it in UI.nav) */
   if(SESSION.token && UI.nav==="ledger" && /^#\/app$|^#\/?$/.test(h)) return ledgerDoorClosed();
   if(h.startsWith("#/welcome")) return renderWelcome();
@@ -15902,12 +15905,14 @@ async function loadList(silent){
        * ⚠️ A stale skeleton is the worst shape a failure can take: it looks like work in progress, so nobody
        * reports it for the first minute and everybody blames the network after that.
        */
+      /* WX-P2P-09: a chit opened by its id (#/app/chit/<id> — a bill from CB Accounts) stays open whether or not this page lists it */
+      const pinned = !!(UI._byId && UI.sel===UI._byId);
       if(UI.rows.length){
         const here = UI.sel && UI.rows.some(c=>c.id===UI.sel);
         const want = here ? UI.sel : ((UI.rows.find(c=>c.state===UI.state)||UI.rows[0]||{}).id || null);
-        if(want && (!UI.detail || UI.detail.id!==want)) openChit(want,true);
+        if(!pinned && want && (!UI.detail || UI.detail.id!==want)) openChit(want,true);
       }
-      else if(!UI.rows.length){ UI.sel=null; UI.detail=null; const dp=document.getElementById("detailpane"); if(dp){ dp.className="detail"; dp.innerHTML=renderDetail(); } }   // empty → placeholder, not a stuck skeleton
+      else if(!UI.rows.length && !pinned){ UI.sel=null; UI.detail=null; const dp=document.getElementById("detailpane"); if(dp){ dp.className="detail"; dp.innerHTML=renderDetail(); } }   // empty → placeholder, not a stuck skeleton
     }
     paintRowsOnly();
     // full-set per-state rollup (true counts + sums) — independent enrichment; repaint counts when it lands.
@@ -16284,6 +16289,7 @@ function frozenMoneyHTML(c,wrapTid,totalTid,bare){
   return wrapTid?`<div data-testid="${wrapTid}" style="margin:8px 12px 10px">${html}</div>`:html;
 }
 async function openChit(id, silent){
+  if(UI._byId && id!==UI._byId) UI._byId=null;   /* WX-P2P-09: picking another chit un-pins the one opened by id */
   UI.sel=id;
   /**
    * ⚠️⚠️ LEAVE THE OTHER CHIT'S READING BEHIND. `UI.chit2` is what makes `renderDetail()` return design 2, and
