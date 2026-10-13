@@ -1,11 +1,11 @@
-/* ADOPTED from chitbridge-engines v1.44.0 · bank-recon · sha256 664e569e25e954552c9ebea4bfb7204672965e96247e037a90d7e2ba591df833 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* ADOPTED from chitbridge-engines v1.44.1 · bank-recon · sha256 14ed769fee7666cff1b50a4e4687ff66f53109ec7e3036d932e8d1b33f8f60ef — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
 /* chitbridge-engines · bank-recon. Edited ONLY in chitbridge-engines/src/bank-recon.js; every platform adopts a released version of it. */
 (function (root) {
 'use strict';
 // @stage tested
 // @stage-note A bank statement (CSV / JSON) read, matched to the Ledger's bank lines AND to the payment chits on the rail (BR1), the missing entries SUGGESTED, the BRS. Pure — no I/O, no clock.
 /**
- * bank-recon.js — BANK RECONCILIATION: READ THE STATEMENT, MATCH IT, SUGGEST WHAT THE BOOKS MISS, STATE THE DIFFERENCE. v1.18.0; the rail leg v1.44.0.
+ * bank-recon.js — BANK RECONCILIATION: READ THE STATEMENT, MATCH IT, SUGGEST WHAT THE BOOKS MISS, STATE THE DIFFERENCE. v1.18.0; the rail leg v1.44.0 (v1.44.1: a learned rule's words in any order).
  *
  * Athi, 2026-10-03: *"can u build bank stt reconciliation by reading the csv / json file and add any transaction which is missing?"*
  * Standing rules carried here: (1) PROPOSE, NEVER AUTO-APPLY — suggest() hands back an event a person confirms (an owner-made entry,
@@ -735,7 +735,8 @@ function learnedFor_(line, rules, out) {
   var low = String(line.narration || '').toLowerCase(), up = String(line.narration || '').toUpperCase(), best = null;
   rules.forEach(function (r) {
     if (!r || !r.has || (r.side && r.side !== SIDE_(out))) return;
-    var hit = r.has.indexOf('@') >= 0 ? low.indexOf(r.has) >= 0 : hasWord_(up, [r.has]) !== null;
+    /* every word of the rule, each a whole word, in any order: "KUMAR SONS" (the bank's "AND" left out when it was learned) finds "KUMAR AND SONS" */
+    var hit = r.has.indexOf('@') >= 0 ? low.indexOf(r.has) >= 0 : String(r.has).split(/\s+/).every(function (w) { return hasWord_(up, [w]) !== null; });
     if (!hit) return;
     if (!best || r.has.length > best.has.length || (r.has.length === best.has.length && String((r.source || {}).at || '') > String((best.source || {}).at || ''))) best = r;
   });
