@@ -35,3 +35,8 @@ html.cbsk,html.cbsk body{margin:0;height:100%}
 /* the shell's header sits in the main pane, above the screen — not as the full-window overlay it is on a page without a skeleton */
 .cbsk #shell.cbsh.full{position:static;inset:auto;display:block;background:transparent;z-index:auto}
 .cbsk #shell .cbsh-work:empty{display:none}
+/* CL3 · UNDER A CHOSEN THEME the sidebar's own names are re-pointed at the theme's tokens (the avatar's data-tokens="list" pattern), scoped to the
+   sidebar so a page's own --accent buttons are untouched. Before this the sidebar kept Cream's ground under Dark's light ink (1.03:1, the owner's
+   "settings sidebar" finding). Cream (no data-themed) is byte-for-byte what it was. */
+html.cbsk[data-themed] .side{--side:var(--card,#f4ecdc);--line-side:var(--line,#e2d6bc);--hover-nav:var(--hover,#ece1c9);--muted-2:var(--grey-2,#5c5240);--accent:var(--blue,#1f5f5b);color:var(--ink,#2a2418)}
+html.cbsk[data-themed] .side .nav-btn{color:var(--ink-2,var(--ink,#3d3527))}

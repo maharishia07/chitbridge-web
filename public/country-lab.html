@@ -39,7 +39,7 @@
 -->
 <style>
   :root{ --font-ui:var(--f-ui,'IBM Plex Sans',system-ui,sans-serif); --ink:#20303b; --grey-2:#545A61; --line:#e7e3d8; --line-2:#efece4; --paper:#faf8f3; --card:#fff;
-    --blue:#3F66A6; --blue-tint-bg:#E9F0FA; --accent:#3F66A6; --on-accent:#fff; --ok-2:#2c7a43; --ok-tint:#e6f4ea; --ok-line:#bfe0c9; --warn-2:#8a5a1e; --warn-tint:#fbf3e3;
+    --blue:#3F66A6; --blue-tint-bg:#E9F0FA; --on-accent:#fff; --ok-2:#2c7a43; --ok-tint:#e6f4ea; --ok-line:#bfe0c9; --warn-2:#8a5a1e; --warn-tint:#fbf3e3;
     --bad:#b4453f; --bad-tint:#fbeceb; --bad-line:#eccbc9; --gold-soft:#f7f2e3; --gold-line:#e6d9a8; --neutral-tint:#EEF1F5;
     --fs-1:11px; --fs-2:12.5px; --fs-3:14px; --fs-4:16px; --fs-5:22px; }
   /* ⭐ THEME TOKENS ONLY (CL2). The avatar writes the app's tokens on <html> (--paper · --card · --ink · --blue · --ok-tint …) and this page's
@@ -47,7 +47,7 @@
      at the theme's token of the same job — the avatar's own pattern for data-tokens="list" — with the page's original value as the fallback,
      so Cream (no overrides, no data-themed) is byte-for-byte what it was. A light pink card under Dark's light ink was the owner's finding. */
   :root[data-themed]{ --line-2:var(--line,#efece4); --ok-line:var(--ok-3,#bfe0c9); --bad:var(--disp,#b4453f); --bad-tint:var(--danger-tint,#fbeceb);
-    --bad-line:var(--disp-2,#eccbc9); --accent:var(--blue,#3F66A6); }
+    --bad-line:var(--disp-2,#eccbc9); }
   *{ box-sizing:border-box; }
   body{ margin:0; font-family:var(--font-ui,system-ui); color:var(--ink,#20303b); background:var(--paper,#faf8f3); font-size:var(--fs-3,14px); font-variant-numeric:tabular-nums; }
   /* the lab's own title row, inside the standard main pane (the shell's header above it carries Home, the avatar and the text size) */
@@ -131,7 +131,8 @@
   .idck{ display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-top:4px; }
   .idck input{ width:150px; }
   /* "Where ChitBridge is for <country>" (CL3): the lab's own .card and .kv rows — the symbol and the area on the left, the one line on the right */
-  #ready .kv > span:first-child{ white-space:nowrap; font-weight:600; } #ready .kv > span:last-child{ text-align:right; color:var(--grey-2,#545A61); }
+  #ready .kv{ flex-wrap:wrap; } #ready .kv > span:first-child{ font-weight:600; min-width:0; }
+  #ready .kv > span:last-child{ margin-inline-start:auto; text-align:right; color:var(--grey-2,#545A61); min-width:0; }   /* a long area and its line wrap, never run out of the card (390 px) */
   @media (max-width: 880px){ .lab{ grid-template-columns:1fr; } .pane.left{ border-right:0; border-bottom:1px solid var(--line,#e7e3d8); } .pane.right{ --fab-gutter:0px; } }
   @media (max-width: 640px){
     .two{ grid-template-columns:1fr; }

@@ -22,6 +22,15 @@
  *   C8  (#8) AU -> AU: ten rows are the same, collapsed under "10 rows are the same"; show opens them; IN -> AU has no fold row
  *   L8  at 390 px (Cream): no sideways scroll, the rows read one under the other, the bills stack, the cart lines are cards with nothing cut
  *   C9  at 390 px (Dark): AA everywhere, no sideways scroll, the TO cell still carries its rule
+ *   ── CL3 (owner, 13 Oct: "where we are with it" · "if login not required, still avatar, and font, and other things should be intact") ──
+ *   R1  signed out, the STANDARD SHELL: the CBShell header, the avatar's "Sign in" (to Home, no sign-in window over the lab), the skeleton
+ *       (sidebar + main), the kural foot, the shell's font on the lab, and the text size reaching the lab's own words
+ *   R2  IN -> AU: "Where ChitBridge is for Australia" beside the TO side — the pack line, one row per product area (✅ ⚠️ ❌), Payroll "—",
+ *       each row one short line, read from /data/country-ready.json (never typed: the rows equal the file's)
+ *   R3  -> UAE: the block follows the TO side; -> Japan (pack-less): it says there is no pack, not a made-up row
+ *   R4  rule 13, SIGNED OUT, Cream and Dark at 1366 and 390: AA on every text, nothing clipped, no inner sideways scroll, nothing floating over
+ *       the block, no link to app.html, the copy within its budget
+ *   R5  the same, SIGNED IN (the avatar's initial, never "Sign in"); the readiness block and the flow are the same for both
  *
  *   NODE_PATH=e2e/node_modules node e2e/walk-country-lab.cjs         headless, fast
  *   node e2e/walk-country-lab.cjs --show                              watch it
@@ -165,8 +174,8 @@ const walk = async (w) => {
     return { ok, saw: (r.hit ? 'still says "' + r.hit + '" · ' : '') + '"' + r.sub + '" · ' + r.th + ' · ' + r.radios.join(' / ') };
   });
 
-  await w.step('C3', '(#3) The way out is Home (/), never app.html', async () => {
-    const r = await page.evaluate(() => ({ home: (function () { const a = document.querySelector('[data-testid="cl-home"]'); return a ? { path: new URL(a.href).pathname, text: a.textContent.trim() } : null; })(), toApp: document.querySelectorAll('a[href$="app.html"]').length }));
+  await w.step('C3', '(#3) The way out is Home (/), never app.html — the standard shell\'s switcher (CL3: the lab\'s own header is gone)', async () => {
+    const r = await page.evaluate(() => ({ home: (function () { const a = document.querySelector('[data-testid="shell-switch-home"]'); return a ? { path: new URL(a.href).pathname, text: a.textContent.trim() } : null; })(), toApp: document.querySelectorAll('a[href*="app.html"]').length }));
     const ok = !!r.home && r.home.path === '/' && /Home/.test(r.home.text) && r.toApp === 0;
     return { ok, saw: (r.home ? r.home.text + ' → ' + r.home.path : 'no home link') + ' · links to app.html: ' + r.toApp };
   });
@@ -255,6 +264,88 @@ const walk = async (w) => {
   });
   await theme(page, 'cream');
   await page.setViewportSize({ width: 1366, height: 900 });
+
+  /* ── CL3 · the standard shell and "Where ChitBridge is for <country>" ─────────────────────────────────────────────────────────── */
+  await w.step('R1', 'Signed out: the standard shell — header, avatar "Sign in" (to Home, no window over the lab), skeleton, kural, the shell\'s font, text size', async () => {
+    const r = await page.evaluate(() => {
+      const fam = (el) => getComputedStyle(el).fontFamily.split(',')[0].replace(/["']/g, '').trim();
+      const door = document.querySelector('[data-testid="shell-avatar"] [data-testid="signin-door"]');
+      const sec = document.querySelector('.pane.left .sec'), before = parseFloat(getComputedStyle(sec).fontSize);
+      CBAvatar.set('fs', 'xl'); const after = parseFloat(getComputedStyle(sec).fontSize); CBAvatar.set('fs', 'm');
+      return { shell: !!document.querySelector('[data-testid="cbshell"][data-mode="app"]'), side: !!document.querySelector('[data-testid="skel-side"]'), main: !!document.querySelector('[data-testid="skel-main"] [data-testid="cl-work"]'),
+        door: door ? { t: door.textContent.trim(), href: door.getAttribute('href') } : null, window: (document.querySelector('[data-testid="shell-signin"]') || { innerHTML: '' }).innerHTML.trim().length,
+        kural: !!document.querySelector('[data-testid="kural-footer"]'), labFont: fam(document.querySelector('.labbar h1')), shellFont: fam(document.querySelector('[data-testid="cbshell"]')),
+        ownHeader: !!document.querySelector('#cl header, body > header'), before, after };
+    });
+    const ok = r.shell && r.side && r.main && r.door && r.door.t === 'Sign in' && r.door.href === '/' && r.window === 0 && r.kural && r.labFont === r.shellFont && !r.ownHeader && r.after > r.before * 1.2;
+    return { ok, saw: 'shell ' + r.shell + ' · sidebar ' + r.side + ' · lab in main ' + r.main + ' · avatar "' + (r.door && r.door.t) + '" → ' + (r.door && r.door.href) + ' · sign-in window ' + (r.window ? 'drawn' : 'none') + ' · kural ' + r.kural + ' · font ' + r.labFont + ' = ' + r.shellFont + ' · text size ' + r.before + ' → ' + r.after + 'px' };
+  });
+
+  const ready = () => page.evaluate(() => ({ title: (document.querySelector('[data-testid="cl-ready-title"]') || {}).textContent || '', pack: (document.querySelector('[data-testid="cl-ready-pack"]') || {}).textContent || '',
+    none: (document.querySelector('[data-testid="cl-ready-none"]') || {}).textContent || '',
+    rows: [...document.querySelectorAll('[data-testid="cl-ready-row"]')].map((r) => ({ state: r.dataset.state, text: r.textContent.replace(/\s+/g, ' ').trim() })) }));
+  await w.step('R2', 'IN -> AU: "Where ChitBridge is for Australia" — the pack line, a row per product area (✅ ⚠️ ❌), Payroll "—", read from the file', async () => {
+    await pick(page, 'from', 'IN'); await pick(page, 'to', 'AU'); await page.waitForTimeout(200);
+    const r = await ready();
+    const file = await page.evaluate(() => fetch('/data/country-ready.json').then((x) => x.json()));
+    const au = file.countries.AU, want = au.areas.length + au.out.length;
+    const syms = r.rows.every((x) => /^(✅|⚠️|❌|—) /.test(x.text)), words = Math.max(...r.rows.map((x) => x.text.split(' ').length));
+    const same = r.rows.slice(0, au.areas.length).every((x, i) => x.state === au.areas[i].state && x.text.indexOf(au.areas[i].area) >= 0);
+    const pay = r.rows.find((x) => /Payroll/.test(x.text));
+    const ok = /Where ChitBridge is for Australia/.test(r.title) && /Australia · GST · \d+ of \d+ rules ready · not yet checked by a local accountant/.test(r.pack) && r.rows.length === want && syms && same && words <= 20
+      && !!pay && pay.state === 'out' && /Not offered in Australia/.test(pay.text) && r.rows.some((x) => x.state === 'partial') && r.rows.some((x) => x.state === 'ok');
+    return { ok, saw: '"' + r.title + '" · "' + r.pack + '" · ' + r.rows.length + '/' + want + ' rows · symbols ' + syms + ' · = file ' + same + ' · longest ' + words + ' words · "' + (pay ? pay.text : 'no payroll row') + '" · e.g. "' + (r.rows[2] || {}).text + '"' };
+  });
+  await w.step('R3', '-> UAE: the block follows the TO side; -> Japan (pack-less): it says there is no pack, never a made-up row', async () => {
+    await pick(page, 'to', 'AE'); await page.waitForTimeout(150);
+    const a = await ready();
+    await pick(page, 'to', 'JP'); await page.waitForTimeout(150);
+    const b = await ready();
+    await pick(page, 'to', 'AU'); await page.waitForTimeout(150);
+    const ok = /United Arab Emirates/.test(a.title) && /VAT/.test(a.pack) && a.rows.length > 10 && /Japan/.test(b.title) && b.rows.length === 0 && /No pack for Japan yet/.test(b.none);
+    return { ok, saw: '"' + a.title + '" ' + a.rows.length + ' rows · "' + b.title + '" — "' + b.none + '"' };
+  });
+
+  /** rule 13 on this page as it stands: AA everywhere, nothing clipped, no inner sideways scroll, nothing floating over the block, no app.html, the budget */
+  const rule13 = async () => {
+    const c = await contrast(page);
+    const r = await page.evaluate(() => {
+      const el = document.getElementById('ready'), box = el.getBoundingClientRect(), cl = document.getElementById('cl');
+      const hits = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+      const floating = [...document.querySelectorAll('body *')].filter((x) => { const cs = getComputedStyle(x); if (cs.position !== 'fixed' && cs.position !== 'sticky') return false; if (x.contains(el)) return false; const rc = x.getBoundingClientRect(); return rc.width > 0 && rc.height > 0 && hits(rc, box); }).map((x) => x.tagName + '.' + x.className);
+      const clipped = [...el.querySelectorAll('span, div')].filter((x) => x.scrollWidth > x.clientWidth + 1 && getComputedStyle(x).overflow !== 'visible').length
+        + [...el.querySelectorAll('.kv > span')].filter((x) => x.getBoundingClientRect().right > box.right + 1).length;
+      return { sw: document.documentElement.scrollWidth, iw: window.innerWidth, inner: cl.scrollWidth > cl.clientWidth + 1 || el.scrollWidth > el.clientWidth + 1, floating, clipped,
+        toApp: document.querySelectorAll('a[href*="app.html"]').length, maxWords: Math.max(...[...el.querySelectorAll('.kv, .hint')].map((x) => x.textContent.trim().split(/\s+/).length)) };
+    });
+    const ok = c.bad.length === 0 && r.sw <= r.iw && !r.inner && r.floating.length === 0 && r.clipped === 0 && r.toApp === 0 && r.maxWords <= 20;
+    return { ok, saw: c.n + ' texts, ' + c.bad.length + ' below AA' + (c.bad.length ? ' (' + c.bad.slice(0, 3).map((x) => '"' + x.text + '" ' + x.ratio + '/' + x.need).join(', ') + ')' : '') + ' · scroll ' + r.sw + '/' + r.iw + ' · inner scroll ' + r.inner + ' · floating over the block ' + r.floating.length + (r.floating.length ? ' (' + r.floating[0] + ')' : '') + ' · clipped ' + r.clipped + ' · app.html ' + r.toApp + ' · longest line ' + r.maxWords + ' words' };
+  };
+  const looks = [['cream', 1366, 900], ['dark', 1366, 900], ['cream', 390, 844], ['dark', 390, 844]];
+  for (const [th, wd, ht] of looks) {
+    await w.step('R4', 'Rule 13, signed out, ' + th + ' at ' + wd + ' px: AA · nothing clipped · no inner scroll · nothing over the block · no app.html · the budget (≤ 20 words a line)', async () => {
+      await page.setViewportSize({ width: wd, height: ht }); await theme(page, th); await page.waitForTimeout(200);
+      await page.evaluate(() => document.getElementById('ready-sec').scrollIntoView({ block: 'start' }));
+      return rule13();
+    });
+  }
+  await theme(page, 'cream'); await page.setViewportSize({ width: 1366, height: 900 });
+
+  /* signed in: the same page with a session in this browser — the avatar's initial, the same block, the same flow */
+  await page.evaluate((s) => { localStorage.setItem('cb_sess', s); }, W.session('Walk Owner', 'Walk Shop'));
+  await page.reload(); await page.waitForSelector('[data-testid="cl-rows"] tr[data-row]', { timeout: 15000 });
+  await pick(page, 'from', 'IN'); await pick(page, 'to', 'AU'); await page.waitForTimeout(200);
+  for (const [th, wd, ht] of looks) {
+    await w.step('R5', 'Rule 13, SIGNED IN, ' + th + ' at ' + wd + ' px: the avatar\'s initial (not Sign in), the same block, AA · nothing clipped · nothing over it', async () => {
+      await page.setViewportSize({ width: wd, height: ht }); await theme(page, th); await page.waitForTimeout(200);
+      await page.evaluate(() => document.getElementById('ready-sec').scrollIntoView({ block: 'start' }));
+      const who = await page.evaluate(() => ({ door: !!document.querySelector('[data-testid="shell-avatar"] [data-testid="signin-door"]'), rows: document.querySelectorAll('[data-testid="cl-ready-row"]').length, title: document.getElementById('ready-sec').textContent }));
+      const r = await rule13();
+      return { ok: r.ok && !who.door && who.rows > 10 && /Australia/.test(who.title), saw: 'avatar ' + (who.door ? '"Sign in"' : 'signed in') + ' · ' + who.rows + ' rows · ' + r.saw };
+    });
+  }
+  await theme(page, 'cream'); await page.setViewportSize({ width: 1366, height: 900 });
+  await page.evaluate(() => localStorage.removeItem('cb_sess'));
 };
 walk.opts = { viewport: { width: 1366, height: 900 } };
 W.run('country-lab', walk);

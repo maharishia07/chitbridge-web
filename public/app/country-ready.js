@@ -41,8 +41,8 @@
     }));
     return {
       known: true, title: tf('Where ChitBridge is for {country}', { country: name }), rows: rows,
-      pack: tf(p.verified ? '{pack} rules {version} · {ok} of {of} ready · read by a local accountant'
-        : '{pack} rules {version} · {ok} of {of} ready · not yet read by a local accountant', { pack: p.name, version: p.version, ok: p.ok, of: p.of })
+      pack: tf(p.verified ? '{pack} · {ok} of {of} rules ready · checked by a local accountant'
+        : '{pack} · {ok} of {of} rules ready · not yet checked by a local accountant', { pack: p.name, ok: p.ok, of: p.of }), version: p.version
     };
   }
   root.CBCountryReady = { load: load, view: view, SYM: SYM };
