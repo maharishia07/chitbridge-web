@@ -35,6 +35,8 @@ function taxIdWord(){ var p = shopReg(); return p && p.abn ? 'ABN' : p && p.trn 
 function packSplitsByState(){ var p = shopReg(); return !p || !p.tax || !p.tax.supply || p.tax.supply === 'state'; }
 /** UPI is India's payment mode (reg-in chart.paymentModes.upi) — offered only where the shop's pack carries it; true when no pack is known */
 function payHasUpi(){ var p = shopReg(); return !p || !!(p.chart && p.chart.paymentModes && p.chart.paymentModes.upi); }
+/** does the shop's pack carry India's HSN rule (reg-in tax.hsn_digits)? CX4: the "HSN" words, the exposure switch and the Rule 46 note follow it; true when no pack is known */
+function packHasHsn(){ var p = shopReg(); return !p || !p.tax || !!p.tax.hsn_digits; }
 function payModeOpts(){ return payHasUpi() ? '<option value="upi">UPI</option>' : ''; }
 
 /**
