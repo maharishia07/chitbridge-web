@@ -25,7 +25,9 @@
  *     the save's `rederived` says what was set again.
  */
 'use strict';
-var CSU = { p: null, loading: false, readErr: false, edit: null, src: {}, open: {}, err: '', later: false };
+var CSU = { p: null, loading: false, readErr: false, edit: null, src: {}, open: {}, err: '', later: false, host: null, onDone: null };
+/* host · onDone (SET1, 2026-10-13): a small app (settings.html, CB Settings › Country) mounts the SAME rows in its own pane — CBCountry.mount(host, onDone).
+   With no host the step paints app.html's auth card at #root, as CS1 built it. One renderer, two frames; never a second copy of the rows. */
 var CSU_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 /** CS2: the server's pack row for a country ({ code, name, currency, fy_start_month, zones, locale }) — null when the server sent no list or has no pack for it */
 function csuPackOf(code) {
@@ -184,7 +186,7 @@ function csuSel(id, k, opts, cur) {
     + opts.map(function (o) { return '<option value="' + esc(o.v) + '"' + (String(o.v) === String(cur) ? ' selected' : '') + '>' + esc(o.t) + '</option>'; }).join('') + '</select>';
 }
 function renderCountrySetup() {
-  if (!SESSION.token) return go('#/login');
+  if (!SESSION.token && !CSU.host) return go('#/login');   /* a host page holds its own sign-in window (CBFrame) */
   if (!CSU.p && !CSU.loading && !CSU.readErr) { csuRead(); }
   if (!CSU.edit) csuPrefill();
   var e = CSU.edit, p = CSU.p, s = CSU.src;
@@ -224,7 +226,7 @@ function renderCountrySetup() {
       + (CSU.readErr ? '<div class="hint" data-testid="cs-readerr">' + esc(tx('Could not read what registration stored — these are from this device.')) + '</div>' : '')
       + (CSU.err ? '<div class="err" data-testid="cs-err">' + esc(CSU.err) + '</div>' : '')
       + (CSU.later
-          ? '<button class="btn" id="cs-open" data-testid="cs-open" onclick="go(\'#/app\')">' + esc(tx('Open the app')) + ' <span class=arw>→</span></button>'
+          ? '<button class="btn" id="cs-open" data-testid="cs-open" onclick="csuDone()">' + esc(tx(CSU.host ? 'Done' : 'Open the app')) + ' <span class=arw>→</span></button>'
           : '<button class="btn" id="cs-save" data-testid="cs-save">' + esc(tx('Continue')) + ' <span class=arw>→</span></button>')
       + '<div class="hint" data-testid="cs-rule">' + esc(fixed
           ? tx('Country and money never change once a shop has products or transactions. Register a new business for another country.')
@@ -233,7 +235,8 @@ function renderCountrySetup() {
       + '<div class="hint"><a href="/standards.html?std=country" data-testid="cs-standard" style="font-weight:600;color:var(--blue);cursor:pointer">' + esc(tx('What a country pack must carry — the Country Standard')) + ' ›</a></div>'
       + '</div>';
   }
-  document.getElementById('root').innerHTML = modeRibbon() + '<div class="auth"><div class="card">'
+  if (CSU.host) CSU.host.innerHTML = '<div class="cs"><h2 class="shop-h" data-testid="cs-title">' + esc(tx('Country setup')) + '</h2>' + body + '</div>';
+  else document.getElementById('root').innerHTML = modeRibbon() + '<div class="auth"><div class="card">'
     + '<div class="top">' + logo() + '<h1 data-testid="cs-title">' + esc(tx('Country setup')) + '</h1></div>' + body + '</div></div>';
   var b = document.getElementById('cs-save'); if (b) b.onclick = csuSave;
 }
@@ -249,7 +252,7 @@ function csuSave() {
       CSU.p = p || CSU.p; try { if (p && p.pack) SESSION.booksOn = false; } catch (_) {}
       /* CS2: a correction before the shop was constituted — the server says what it set again from the new pack */
       toast(p && p.rederived ? txf('Country corrected to {c} — money, year, tax, time zone and chart set again from its pack.', { c: csuCountryName(p.rederived.to) }) : tx('Country set.'));
-      go('#/app');
+      csuDone();
     },
     onFail: function (words, err) {
       var st = err && err.status;
@@ -260,3 +263,7 @@ function csuSave() {
     },
   });
 }
+/** where the step goes when it is done: the HOST says (app.html's route sets the workshop's own; settings.html its Your shop) — this file names no door */
+function csuDone(){ if (CSU.onDone) CSU.onDone(); }
+/** CB Settings › Country (settings.html): the same rows, painted in the page's pane. Re-mounting re-reads nothing the server already answered. */
+var CBCountry = { mount: function (host, onDone) { CSU.host = host; CSU.onDone = onDone || null; renderCountrySetup(); } };

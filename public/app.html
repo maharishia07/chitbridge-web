@@ -11,6 +11,7 @@
 <title>Chit &amp; Bridge — app (build)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="/app/gov-panel.css">   <!-- the registration's gov panel rows (.govbox .govrow) — shared with settings.html; loaded BEFORE the inline style so app.html's own later .govrow rule still wins -->
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
   /**
@@ -344,14 +345,7 @@
   .welwrap{max-width:860px;margin:0 auto;padding:6px 18px 70px}
   .weltop{display:flex;align-items:center;justify-content:space-between;padding:10px 0 6px}
   /* ⭐ WHAT WE WORKED OUT, at registration — quiet, because the shop is only checking it ([REG-2]) */
-  .govbox{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:10px 0 8px;background:var(--card)}
-  .govhd{font-size:var(--fs-1);color:var(--grey);margin-bottom:8px}
-  .govrow{display:grid;grid-template-columns:96px minmax(0,1fr);gap:2px 10px;padding:5px 0;border-top:1px solid var(--line)}
-  .govrow:first-of-type{border-top:0}
-  .govrow .gw{color:var(--grey);font-size:var(--fs-1)}
-  .govrow .gv{font-weight:700;overflow-wrap:anywhere}
-  .govrow .gf{grid-column:2;color:var(--grey);font-size:var(--fs-1)}
-  .govrow.unknown .gv{color:var(--warn-2);font-weight:600}   /* the amber TEXT token (2026-09-28): it used an amber token that was never defined, so its fallback literal rendered in every theme */
+  /* .govbox · .govrow · .gw .gv .gf · .govhd — MOVED to /app/gov-panel.css (SET1): Country setup paints the same rows on settings.html */
   .govagree{display:flex;align-items:flex-start;gap:9px;margin:4px 0 10px;cursor:pointer;line-height:1.45}
   .govagree input{margin-top:3px;width:18px;height:18px;flex:none}
   .welsignin{font-size:var(--fs-2);color:var(--blue);border:1px solid var(--line);border-radius:9px;padding:7px 13px;background:var(--card);cursor:pointer}
@@ -1797,8 +1791,6 @@ const EP = {
   ownerLogin:      {m:"POST", p:"/api/entities/register",        ok:"✓"},  // same route — returning owner requests OTP (pass mode:'login')
   ownerVerify:     {m:"POST", p:"/api/entities/verify",          ok:"✓"},  // verify OTP → token
   constitutions:   {m:"GET",  p:"/api/entities/constitutions",   ok:"y"},  // public: the verticals to choose at sign-up
-  countrySetup:    {m:"GET",  p:"/api/governance/country-setup",  ok:"y"},  // CS1: the step after registration — country · money · year · tax, each with its source; pack { books, why }
-  countrySetupSave:{m:"PUT",  p:"/api/governance/country-setup",  ok:"y"},  // CS1 (owner): set once; 503 before b299; 409 a different country (a new entity)
   actorLogin:      {m:"POST", p:"/api/actors/login",             ok:"✓"},  // actor PIN
   actorCheck:      {m:"GET",  p:"/api/actors/check-login",      ok:"✓"},  // ?username= -> {valid,has_pin}
   setPin:          {m:"POST", p:"/api/actors/set-pin",          ok:"✓"},  // first-time actor sets PIN
@@ -1878,7 +1870,6 @@ const EP = {
   purgeChit:       {m:"DELETE", p:"/api/chits/:id/purge",        ok:"✓"},  // permanent hard-delete of a DRAFT only
   pulse:           {m:"GET",   p:"/api/chits/pulse",             ok:"y"},   // has anything changed? one cheap watermark
   eventsTicket:    {m:"POST",  p:"/api/events/ticket",           ok:"y"},   // the mailbox bell: a one-time ticket for the push stream
-  profileGet:      {m:"GET",   p:"/api/governance/profile",       ok:"y"},
   profilePut:      {m:"PUT",   p:"/api/governance/profile",       ok:"y"},   // the trade profile itself — markets, SECTORS, adopted certs
   /* ⭐ SUPPLIES — what a shop buys to USE. Deliberately four calls and no more: this is the most ERP-shaped
      and least differentiating part of the platform, and depth here competes with Tally on its own ground. */
@@ -1925,11 +1916,9 @@ const EP = {
   disputeQueue:    {m:"GET",  p:"/api/chits/disputes/queue",     ok:"✓"},  // all open disputes
   disputes:        {m:"GET",  p:"/api/chits/:id/disputes",       ok:"✓"},  // disputes + roster for one chit
   resolveDispute:  {m:"PUT",  p:"/api/chits/:id/disputes/:disputeId/resolve", ok:"✓"},  // {resolution_note}
-  me:              {m:"GET",   p:"/api/entities/me",             ok:"✓"},
   /* The billing ledger for the CALLER's own entity — there is no entity parameter, so it cannot be asked about
      anyone else. Read on demand when the Usage section is opened, never as part of painting a profile. */
   entityUsage:     {m:"GET",   p:"/api/entities/usage",          ok:"✓"},
-  saveProfile:     {m:"PATCH", p:"/api/entities/profile",        ok:"✓"},  // {gstn,address,business_status}
   savePrefs:       {m:"PATCH", p:"/api/entities/me/prefs/:kind", ok:"✓"},  // b165/b166 · ONE endpoint for both preference sets; params:{kind:"locale"|"ui"}
   getSettings:     {m:"GET",   p:"/api/actors/settings",         ok:"✓"},
   saveSettings:    {m:"PUT",   p:"/api/actors/settings",         ok:"✓"},
@@ -2052,7 +2041,7 @@ const EP = {
   netResume:      {m:"POST", p:"/api/network/connections/:id/resume",     ok:"✓"},
   netDisconnect:  {m:"POST", p:"/api/network/connections/:id/disconnect", ok:"✓"},
 };
-Object.assign(EP, CB_BOOKS_EP, CB_SHEET_EP, CB_PARTY_EP, CB_THREAD_EP);   /* the Ledger's boot endpoints and the party add/edit/remove/search routes — declared once, in app/accounts-shell.js, shared with accounts.html and crm.html */
+Object.assign(EP, CB_BOOKS_EP, CB_SHEET_EP, CB_PARTY_EP, CB_THREAD_EP, CB_SHOP_EP);   /* CB_SHOP_EP (SET1): the shop's own profile · vault · country setup — shared with settings.html */   /* the Ledger's boot endpoints and the party add/edit/remove/search routes — declared once, in app/accounts-shell.js, shared with accounts.html and crm.html */
 
 /* deepClone → app/helpers.js */
 /* STORE starts EMPTY. It once had a demo dataset beside it and the rule was that a demo constant must never be
@@ -3367,7 +3356,7 @@ function route(){
   if(SESSION.token && UI.nav==="ledger" && /^#\/app$|^#\/?$/.test(h)) return ledgerDoorClosed();
   if(h.startsWith("#/welcome")) return renderWelcome();
   /* ⭐ CS1: the step after registration — country · money · financial year · tax registration — before the books open (app/cap-country.js, lazy) */
-  if(h.startsWith("#/country")) return ensureCap('country').then(function(){ renderCountrySetup(); }).catch(function(){ renderApp(); });
+  if(h.startsWith("#/country")) return ensureCap('country').then(function(){ CSU.host = null; CSU.onDone = function(){ go('#/app'); }; renderCountrySetup(); }).catch(function(){ renderApp(); });
   if(h.startsWith("#/legend")){ renderWelcome(); return openLegend(); }
   if(h.startsWith("#/register")) return renderRegister();
   if(h.startsWith("#/login")) return renderLogin();
@@ -4802,7 +4791,7 @@ function capScreen(name){
 function hasCap(k){ return (SESSION.capabilities||[]).indexOf(k)>=0; }   // one capability check, used by all gates
 const _capPromise = {}, _capWithPromise = {};
 /* a capability split by job loads its other halves first (P2: network = the design builder + its member half, cap-network-member.js) */
-const CAP_WITH = { network:['network-member'] };
+const CAP_WITH = { network:['network-member'], admin:['shop'] };   /* admin: the Profile's Business section and the vault live in cap-shop.js (SET1: CB Settings paints them too) */
 function ensureCap(name){
   if(CAP_LOADED[name]) return Promise.resolve();
   if(CAP_WITH[name]){
