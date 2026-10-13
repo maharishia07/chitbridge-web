@@ -24,3 +24,8 @@ Left as is (gaps, allow-listed in the web guard with their round): `whoseShopFix
 Checks: tests/till-vendor.test.js (69 checks) and scripts/guards.cjs (5007 checks · 167 files) exit 0. No route, no migration, no budget line, no engines change, no new dependency.
 Twin: this lands FIRST; chitbridge-web round/IX0-38326681653 carries the vendored copy (scripts/vendor-till.cjs) and the rest of the round.
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+## Browser walks run on the runner (after the push)
+- `e2e/standards-page.cjs`: 147 passed, 0 failed (the widened `HOME` map, the Open › button on a till row, Copy-only rows).
+- `e2e/one-avatar.cjs`: all Settings assertions pass (owner's menu on app.html · none on a utility page · never for a co-assist); the walk then fails at "size · index: the page text grows" — the SAME failure on an export of main, not from this round.
+- `e2e/index-page.cjs`: 109 passed, 7 failed on this branch AND on main (identical rows: the static check still allows `#/register` where index.html has `#/welcome`; budget lines; roadmap counts) — pre-existing, index.html and the manifest are untouched here.
