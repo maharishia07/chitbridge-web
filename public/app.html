@@ -14788,7 +14788,10 @@ function hasRollup(){ return !!(UI.rollup && UI.rollup.length); }
 // tab label: loaded / true-total (nn/mmmm) — true total from the rollup, loaded from the current page
 /* `9/9 · 5/5 · 2/2` — the two numbers are loaded and total, so once a list is fully loaded EVERY tab reads X/X
    and the slash carries nothing. Show the pair only while they actually differ, i.e. while more is still coming. */
-function stCount(s){ const loaded=countStates()[s]; const t=hasRollup()?rollupBuckets()[s].c:loaded; return loaded===t? (''+t) : (loaded+'/'+t); }
+function stCount(s){ const loaded=countStates()[s]; const t=hasRollup()?rollupBuckets()[s].c:loaded;
+  /* WX-P2P-03: the other tabs' rows are not read until pressed — their count is the rollup's whole figure, never "0/2" */
+  if(s!==UI.state && !UI.selectMode && !UI.search) return ''+t;
+  return loaded===t? (''+t) : (loaded+'/'+t); }
 /* cap → app/helpers.js */
 function setSub(s){UI.sub=s;UI.sel=null;UI.detail=null;renderApp();}
 /**
@@ -14833,9 +14836,9 @@ async function chitShowQr(id, amount){
   modal(`<div class="mhd"><div class="t">${esc(tx('Pay by UPI'))}</div><div class="s">${esc(upi)}${amount?' · '+esc(inr(amount)):''} · CB-${esc(String(id).slice(0,8))}</div></div><div class="mbody" style="text-align:center">${img||esc(tx('QR library not loaded'))}<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">${esc(tx('Any UPI app scans this. Then Mark paid with the transaction id.'))}</div></div><div class="mfoot"><button onclick="closeModal()">${esc(tx('Close'))}</button></div>`);
 }
 function toggleListHelp(){ UI.listHelp=!UI.listHelp; paintMain(); }
-function setState(s){UI.state=s; UI.sel=null; UI.detail=null; renderApp(); const first=UI.rows.find(c=>c.state===s); if(first)openChit(first.id,true);}
+function setState(s){UI.state=s; UI.sel=null; UI.detail=null; renderApp(); loadList();}   /* WX-P2P-03: the tab is a server term — its rows are read, not picked from another tab's page */
 function toggleAgg(s){UI.aggStates.has(s)?(UI.aggStates.size>1&&UI.aggStates.delete(s)):UI.aggStates.add(s);paintMain();}
-function toggleSelect(){UI.selectMode=!UI.selectMode;if(!UI.selectMode)UI.selected.clear();paintMain();}
+function toggleSelect(){UI.selectMode=!UI.selectMode;if(!UI.selectMode)UI.selected.clear();paintMain();if(UI.folder==="task")loadList(true);}   /* WX-P2P-03: select mode spans the states — re-read without the tab's term (silently) */
 function actionTargets(){ if(UI.selectMode && UI.selected.size) return [...UI.selected]; if(UI.sel) return [UI.sel]; return []; }
 function needTarget(){ const t=actionTargets(); if(!t.length) toast("Open a chit — or tick some in Select — first."); return t; }
 let MODALS={};
@@ -15812,6 +15815,11 @@ function advPanel(){ const a=UI.adv||{};
     <div class="advfoot"><button class="composebtn" onclick="clearAdv()">${tx('Clear')}</button><button class="composebtn pri" onclick="applyAdv()">${tx('Apply')}</button></div>
   </div>`; }
 function fetchPage(page){ const limit=UI.pageLimit||50; if(["drafts","trash","archive"].indexOf(UI.folder)>=0){ return api("folder",{query:Object.assign({view:UI.folder,page,limit,q:UI.search||undefined,sort:UI.sort||undefined,dir:UI.dir||undefined}, advParams())}); } if(UI.folder==="order"||SESSION.role==="customer"){ return SESSION.role==="customer" ? api("custOrders",{params:{bridgeId:SESSION.bridgeId},query:{page,limit,q:UI.search||undefined,sort:UI.sort||undefined,dir:UI.dir||undefined}}) : api("sent",{query:Object.assign({page,limit,q:UI.search||undefined,sort:UI.sort||undefined,dir:UI.dir||undefined}, advParams())}); } const q={page,limit}; if(UI.search)q.q=UI.search; if(UI.sort){q.sort=UI.sort;q.dir=UI.dir;} Object.assign(q, advParams());
+  /* ⚠️ WX-P2P-03 (2026-10-13, the real stack): the state tab (Open · Act · Close) filtered CLIENT-SIDE inside the page of 50 the server had sent
+     latest-first — a shop with 369 chits read "Open 0/2 · Nothing in Open" while two orders waited below the fold of a page it never asked for.
+     The tab is one more term in the same query (the inbox route's own fstatus buckets); the search, an advanced filter and select mode show
+     every state, so they send none. The rows are still filtered in place for the fixture walks and the counts stay the rollup's. */
+  if(!q.fstatus && !UI.search && !UI.selectMode && /^(open|act|close)$/.test(String(UI.state||''))) q.fstatus=UI.state;
   /**
    * ⚠️ "ALL TASK" IS THE UNASSIGNED POOL, NOT EVERYTHING. Athi, 2026-08-13:
    *   *"after assignment, that task should not be appearing in all task. All task is nothing but all unassigned

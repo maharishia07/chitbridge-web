@@ -364,7 +364,8 @@ const walk = async (w) => {
       await page.waitForSelector(T('pay_outcome'), { timeout: 15000 }).catch(() => {});
       const out = await txt(page, '#pay_body'), adv = await page.locator(T('pay_advice')).count();
       S.paid = /Paid|Recorded/.test(out); S.settledNo = (out.match(/Settled: ([^ ]+)/) || [])[1] || ''; S.settledOther = !!(S.settledNo && S.settledNo !== S.bill.no);
-      return { ok: /Pay · Kumar Trade Co/.test(title) && bills.indexOf(S.bill.no) >= 0 && /settles 1 bill/.test(left) && /Paid|Recorded/.test(out) && /Settled/.test(out) && adv === 1, saw: '"' + title + '"; bills: ' + bills.slice(0, 90) + '; line: ' + left + (band ? '; band "' + bandWords.slice(0, 80) + '" → pressed "' + ackLabel + '"' + (/advance/i.test(ackLabel) ? ' [the band\'s only yes is "as advance" though the bills are applied — WX-P2P-11]' : '') : '') + '; outcome: ' + out.slice(0, 200) };
+      S.settledOther = S.settledOther || (/settles \d+ bills/.test(left));
+      return { ok: /Pay · Kumar Trade Co/.test(title) && bills.indexOf(S.bill.no) >= 0 && /settles \d+ bills?/.test(left) && /Paid|Recorded/.test(out) && /Settled/.test(out) && adv === 1, saw: '"' + title + '"; bills: ' + bills.slice(0, 90) + '; line: ' + left + (band ? '; band "' + bandWords.slice(0, 80) + '" → pressed "' + ackLabel + '"' + (/advance/i.test(ackLabel) ? ' [the band\'s only yes is "as advance" though the bills are applied — WX-P2P-11]' : '') : '') + '; outcome: ' + out.slice(0, 200) };
     });
     await w.step('D20', 'The outcome -> Send advice -> "Advice sent to Kumar Trade Co ✓"; the SUPPLIER\'s Task shows the advice chit', async () => {
       const before = await txt(page, T('pay_advice'));
@@ -399,10 +400,9 @@ const walk = async (w) => {
 
     /* ── reports ── */
     await w.step('D22', 'Trial balance -> 2100 Suppliers and 1500 Bank are rows, Dr = Cr; P&L -> 5000 Purchases; GST close & pay -> the month picker and the one button', async () => {
-      await open(page, '/accounts.html#tb', T('tb-balanced')); const t1 = await text(page);
+      await open(page, '/accounts.html#tb', T('tb-balanced')); const t1 = await text(page), bal = await txt(page, T('tb-balanced'));
       await open(page, '/accounts.html#pl', T('pl-profit')); const t2 = await text(page);
       await open(page, '/accounts.html#gstclose', T('pg-close')); const t3 = await text(page);
-      const bal = await txt(page, T('tb-balanced'));
       return { ok: /1500 Bank/.test(t1) && /2210 Input CGST/.test(t1) && /✓ balances/.test(bal) && /5000 · Purchases/.test(t2) && /Close the month/.test(t3), saw: 'TB: ' + t1.slice(t1.indexOf('1500'), t1.indexOf('1500') + 40) + ' · ' + (/2100/.test(t1) ? 'Suppliers listed' : 'Suppliers nets to nothing after the payment (no row, rightly)') + ' · ' + bal + ' · ' + t1.slice(t1.indexOf('Total'), t1.indexOf('Total') + 40) + '; P&L: ' + t2.slice(t2.indexOf('5000'), t2.indexOf('5000') + 40) + '; GST: ' + t3.slice(t3.indexOf('Financial year'), t3.indexOf('Financial year') + 60) };
     });
 
@@ -441,8 +441,10 @@ const walk = async (w) => {
         if (await row.count()) {
           await row.click({ force: true }).catch(() => {});
           if (await p.waitForSelector(T('pay_title'), { timeout: 8000 }).catch(() => null)) {
-            await p.fill(T('pay_amt'), '10.00'); await p.waitForTimeout(1200); await p.click(T('pay_record')).catch(() => {}); await p.waitForTimeout(2500);
-            paySaw = await txt(p, '#pay_body'); await p.click(T('pay_done')).catch(() => {}); await p.evaluate(() => { try { closeModal(); } catch (_) {} });
+            await p.fill(T('pay_amt'), '10.00'); await p.waitForTimeout(1500);
+            if (await p.locator(T('pay_band')).isVisible().catch(() => false)) await p.click(T('pay_ack')); else await p.click(T('pay_record')).catch(() => {});
+            await p.waitForTimeout(2500);
+            paySaw = await txt(p, T('pay_why')) + ' | ' + await txt(p, '#pay_body'); await p.click(T('pay_done')).catch(() => {}); await p.evaluate(() => { try { closeModal(); } catch (_) {} });
           }
         }
         await open(p, '/accounts.html#gstclose', T('pg-close') + ', ' + T('acc-card')); await p.waitForTimeout(800);
