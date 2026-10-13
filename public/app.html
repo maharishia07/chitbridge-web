@@ -16323,7 +16323,9 @@ async function openChit(id, silent){
         const dispP=(rowBase && (rowBase.dispute || rowBase.dispResolved>0)) ? api("disputes",{params:{id}}).catch(()=>null) : null;
         const r=await chitP;
         if(r && r.header){ const h=r.header, det=r.detail||{};
-          const base=rowBase||mapApiChit({chit_id:h.chit_id,summary_json:h.summary_json,all_recipients:h.all_recipients,sender_entity_display_name:h.sender_entity_display_name,purpose:h.purpose,manual_subject:h.manual_subject,auto_subject:h.auto_subject,current_status:'delivered',open_dispute_count:0});
+          const base=rowBase||mapApiChit({chit_id:h.chit_id,summary_json:h.summary_json,all_recipients:h.all_recipients,sender_entity_display_name:h.sender_entity_display_name,purpose:h.purpose,manual_subject:h.manual_subject,auto_subject:h.auto_subject,current_status:(((r.participants||[]).find(x=>x&&x.entity_id===h.entity_id)||{}).current_status)||'delivered',open_dispute_count:0});
+          /* ⚠️ WX-O2C (2026-10-13): MY copy's status (participants[] row of my entity — the header is my copy) — a chit opened by its door, not on the
+             list's page, was painted with a fixed 'delivered' and read OPEN after it was accepted or completed. */
           /* b138 — `live_set` is one entry per ORIGINAL line carrying what it is NOW plus everything it has been:
              {live, original, history[], removed, reason_code}. Removed lines are PRESENT with live:null — they
              must stay on screen as evidence while counting nowhere.

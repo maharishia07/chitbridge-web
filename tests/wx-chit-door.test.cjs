@@ -14,4 +14,11 @@ const rows = [{ id: 'day-summary' }, { id: 'bill-new' }];
 ok(here({ sel: 'bill-old', pin: 'bill-old', rows }), 'a pinned bill NOT on the first page stays open');
 ok(!here({ sel: 'other-folder', pin: 'bill-old', rows }), 'a selection from another folder (not pinned, not listed) is still replaced');
 ok(here({ sel: 'bill-new', rows }), 'a listed selection stays');
+
+/* …and the door-opened chit wears MY copy's status (participants[] row of the header's entity), not a fixed 'delivered' (it read OPEN after Close) */
+const base = /current_status:(\(\(\(r\.participants\|\|\[\]\)\.find\(x=>x&&x\.entity_id===h\.entity_id\)\|\|\{\}\)\.current_status\)\|\|'delivered'),open_dispute_count:0\}\);/.exec(html);
+ok(base, 'openChit builds an unlisted chit from my participant row');
+const mine = (r, h) => Function('r', 'h', 'return ' + base[1])(r, h);
+ok(mine({ participants: [{ entity_id: 'buyer', current_status: 'delivered' }, { entity_id: 'shop', current_status: 'completed' }] }, { entity_id: 'shop' }) === 'completed', 'the shop sees its own completed, not the buyer\'s delivered');
+ok(mine({}, { entity_id: 'shop' }) === 'delivered', 'an api without participants keeps the old default');
 console.log(n + ' checks passed');

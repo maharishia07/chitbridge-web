@@ -213,26 +213,33 @@ W.run('x-o2c', async (w) => {
         const pick = (n) => items.find((x) => ((x.item_data || x).name || '') === n) || items[0];
         const o = await R.shopperOrder(api, OWNER, { contact: SHOPPER.contact, name: SHOPPER.name, location: SHOPPER.location, lines: [{ item_id: pick('Ponni raw rice 1 kg').item_id, name: 'Ponni raw rice 1 kg', quantity: 2 }, { item_id: pick('Toor dal 500 g').item_id, name: 'Toor dal 500 g', quantity: 1 }] });
         order = { no: 'CB-' + String(o.chit_id).slice(0, 8), chit_id: o.chit_id };
-        await page.setViewportSize(LAPTOP); await page.goto(base + '/app.html');
-        await page.evaluate((s) => { try { localStorage.setItem('cb_sess', s); } catch (_) {} }, owner.session);   /* signed in as S3's O3.10 leaves it */
-        await page.goto(base + '/app.html#/app/chit/' + o.chit_id); await settle(page, 2500);
+        await page.setViewportSize(LAPTOP);
+        await ctx.addInitScript((s) => { try { if (!localStorage.getItem('cb_sess')) localStorage.setItem('cb_sess', s); } catch (_) {} }, owner.session);   /* signed in as S3's O3.10 leaves it */
+        await page.goto(base + '/app.html#/app/chit/' + o.chit_id); await page.reload(); await settle(page, 3500);   /* a hash change alone does not boot the door */
       }
       const moveStatus = async (word) => {
-        await page.click('[data-testid="chit-status-btn"]'); await settle(page, 600);
+        await page.locator('[data-testid="chit-status-btn"]:visible').first().click({ timeout: 10000 }); await settle(page, 600);
         const opts = norm(await page.locator('.optrow').allInnerTexts().then((a) => a.join(' | ')).catch(() => ''));
-        const o = page.locator('.optrow', { hasText: new RegExp('^' + word) }).first();
+        /* the sheet speaks folder words (Open · Act · Close) where the list speaks the engine's (New · Accepted · Closed) — finding F-O4a */
+        const o = page.locator('.optrow', { hasText: new RegExp('^(' + word + ')') }).first();
         if (!(await o.count())) { await page.locator('.mfoot button', { hasText: /Cancel/ }).first().click().catch(() => {}); return { opts, moved: false }; }
         await o.click(); await settle(page, 400);
         const note = page.locator('.mbody textarea, .mbody input[type="text"]').first();
         if (await note.count()) await note.fill('Walk: ' + word).catch(() => {});
-        await page.locator('.mfoot button', { hasText: /Move|Save|OK|Apply|Done|Yes|Confirm/ }).first().click().catch(() => {});
-        await settle(page, 2000);
-        return { opts, moved: true };
+        await page.locator('.mfoot button', { hasText: /Set status|Move|Save|OK|Apply|Done|Yes|Confirm/ }).first().click().catch(() => {});
+        await settle(page, 900);
+        const said = ((await body(page)).match(/→ [A-Z_]+ ✓/) || [''])[0];   /* the toast: "<code> → ACT ✓" */
+        await settle(page, 1100);
+        /* the list moves its cursor on (the email-style next row) — the order is opened again by its door, as the Ledger does */
+        await page.goto(base + '/app.html#/app/chit/' + (order.chit_id || '')).catch(() => {}); await page.reload().catch(() => {}); await settle(page, 3500);
+        return { opts, moved: true, said };
       };
+      if (process.env.CB_WALK_DEBUG) { await shot(page, 'debug-o4'); console.log('DEBUG', (await body(page)).slice(0, 600), await page.evaluate(() => [location.href, typeof UI !== 'undefined' && UI.sel])); }
       await w.step('O4.1', 'Order -> Status ▾ -> the sheet lists the moves; Accept -> the status word is Accepted on the screen', async () => {
-        const r = await moveStatus('Accept');
+        const r = await moveStatus('Accept|Act');
         const t = await body(page);
-        return { ok: r.moved && /Accepted/.test(t), saw: 'moves offered: ' + r.opts.slice(0, 120) + '; after: ' + (/Accepted/.test(t) ? 'Accepted' : 'NOT Accepted') };
+        const word = (t.match(/· (OPEN|ACT|CLOSE|ACCEPTED|NEW)\b/) || [, '(no status word)'])[1];
+        return { ok: r.moved && /ACT/.test(r.said) && /ACT|ACCEPTED/.test(word), saw: 'moves offered: ' + r.opts.slice(0, 120) + '; toast "' + r.said + '"; reopened, the header says ' + word };
       });
       await w.step('O4.2', 'Order -> ⧉ Lines -> Delivered & paid -> the two lines with 0 of 2 / 0 of 1; deliver 2 rice -> the line shows 2 delivered, "1 of 2 complete"', async () => {
         await page.click('[data-testid="open-design2"]'); await settle(page, 2500);
@@ -252,10 +259,11 @@ W.run('x-o2c', async (w) => {
         if (lineId) { await page.fill('#c2dq_' + lineId, '1').catch(() => {}); await dal.locator('[data-testid="c2-delivered"]').click().catch(() => {}); await settle(page, 2500); }
         const t1 = await body(page);
         await page.locator('[data-testid="c2-side-them"], [data-testid^="c2-side-"]').first().click().catch(() => {});
-        await page.goto(base + '/app.html#/app/chit/' + (order.chit_id || '')).catch(() => {}); await settle(page, 2500);
-        const r = await moveStatus('Complete');
+        await page.goto(base + '/app.html#/app/chit/' + (order.chit_id || '')).catch(() => {}); await page.reload().catch(() => {}); await settle(page, 3500);
+        const r = await moveStatus('Complete|Close');
         const t = await body(page);
-        return { ok: /2 of 2 complete/.test(t1) && r.moved && /Completed/.test(t), saw: ((t1.match(/\d of \d complete/) || ['no "n of n complete"'])[0]) + '; moves: ' + r.opts.slice(0, 100) + '; after: ' + (/Completed/.test(t) ? 'Completed' : 'NOT Completed') };
+        const word = (t.match(/· (OPEN|ACT|CLOSE|CLOSED|COMPLETED)\b/) || [, '(no status word)'])[1];
+        return { ok: /2 of 2 complete/.test(t1) && r.moved && /CLOSE|COMPLETED/.test(word), saw: ((t1.match(/\d of \d complete/) || ['no "n of n complete"'])[0]) + '; moves: ' + r.opts.slice(0, 100) + '; after: the header says ' + word };
       });
       await w.step('O4.4', 'Storefront -> My orders (the buyer) -> the order now says Delivered', async () => {
         const ph = await newPage(LAPTOP, '');
@@ -536,7 +544,7 @@ W.run('x-o2c', async (w) => {
       await w.step('O9.3', 'App as View Only -> the order opens to read; Status ▾ is greyed or the move is refused in a sentence', async () => {
         const btn = v.locator('[data-testid="chit-status-btn"]').first();
         let said = '';
-        if (await btn.count()) { const dis = await btn.isDisabled().catch(() => false); if (dis) said = 'greyed'; else { await btn.click().catch(() => {}); await settle(v, 600); const o = v.locator('.optrow', { hasText: /^Act/ }).first(); if (await o.count()) { await o.click(); await v.locator('.mfoot button', { hasText: /Move|Save|OK|Apply|Done|Yes|Confirm/ }).first().click().catch(() => {}); await settle(v, 2000); } said = await v.evaluate(() => { const t = Array.from(document.querySelectorAll('.toast, [role="status"], #toast')).map((e) => e.innerText).join(' '); return t; }).catch(() => ''); } }
+        if (await btn.count()) { const dis = await btn.isDisabled().catch(() => false); if (dis) said = 'greyed'; else { await btn.click().catch(() => {}); await settle(v, 600); const o = v.locator('.optrow', { hasText: /^Act/ }).first(); if (await o.count()) { await o.click(); await v.locator('.mfoot button', { hasText: /Set status|Move|Save|OK|Apply|Done|Yes|Confirm/ }).first().click().catch(() => {}); await settle(v, 2000); } said = await v.evaluate(() => { const t = Array.from(document.querySelectorAll('.toast, [role="status"], #toast')).map((e) => e.innerText).join(' '); return t; }).catch(() => ''); } }
         const t = await body(v);
         await shot(v, 'viewer-app');
         return { ok: !(/403|Forbidden/.test(t)) && (!(await btn.count()) || /greyed|only|may not|cannot|viewer|read/i.test(said || t)), saw: 'Status ▾ ' + (await btn.count() ? 'offered → "' + (said || '').slice(0, 100) + '"' : 'not offered') };
