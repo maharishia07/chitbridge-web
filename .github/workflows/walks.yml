@@ -20,9 +20,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       # many harnesses read the api's libraries as ../../chitbridge-api (the layout on the dev PC) — give the runner the same layout
+      # ⭐ TWIN BRANCHES (13 Oct): a branch that also exists in chitbridge-api is walked against THAT api branch (its contract, its till
+      # master), not api main — twin PRs check each other instead of deadlocking. Else: main.
+      - name: Twin api branch?
+        id: twin
+        env:
+          B: ${{ github.head_ref || github.ref_name }}
+        run: |
+          if [ -n "$B" ] && git ls-remote --exit-code --heads https://github.com/maharishia07/chitbridge-api "$B" >/dev/null 2>&1; then
+            echo "ref=$B" >> "$GITHUB_OUTPUT"; echo "twin: walking against chitbridge-api branch $B"
+          else echo "ref=main" >> "$GITHUB_OUTPUT"; echo "no twin: chitbridge-api main"; fi
       - uses: actions/checkout@v4
         with:
           repository: maharishia07/chitbridge-api
+          ref: ${{ steps.twin.outputs.ref }}
           path: chitbridge-api
       - name: Lay the api beside the web repo, as on the dev PC
         run: ln -s "$GITHUB_WORKSPACE/chitbridge-api" "$GITHUB_WORKSPACE/../chitbridge-api" && (cd chitbridge-api && npm ci --omit=dev --ignore-scripts)

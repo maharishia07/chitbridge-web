@@ -3372,6 +3372,8 @@ function route(){
   if(SESSION.token && _lg) return ledgerDoorClosed(_lg[1]);
   /* ⭐ SUPPORT, from another page's avatar (CB Accounts, the index page, a Lab): the app opens on its Support popup */
   if(SESSION.token && h==="#/app/support"){ renderApp(); try{ supportOpen(); }catch(_){} return; }
+  /* ⭐ TO1b: ＋ New from Tasks & Orders (tasks.html) — the app opens on its ONE composer, as the support door above opens its popup */
+  if(SESSION.token && h==="#/app/compose"){ UI.nav="task"; UI.folder="task"; renderApp(); try{ compose(); }catch(_){} return; }
   var _deep = /^#\/app\/([a-z][a-z0-9-]*)$/.exec(h);
   if(_deep && SESSION.token){
     UI.nav=_deep[1];

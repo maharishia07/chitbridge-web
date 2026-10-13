@@ -13,3 +13,6 @@ test-results/
 # demo run outputs (regenerated on every run)
 e2e/demo-*.png
 e2e/demo-prestige-summary.json
+
+# the knowledge graph (KG1) — rebuilt from the three repos by `node tools/graph/graph.cjs build`, never committed
+tools/graph/out/
