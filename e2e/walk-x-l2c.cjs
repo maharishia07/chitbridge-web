@@ -14,6 +14,7 @@
  */
 'use strict';
 const W = require('./lib/walk.cjs');
+const C = require('./lib/contract.cjs');   /* M43: every /api/crm answer the fixture stand-in serves is held to the API contract (e2e/lib/standin.cjs → C.json) */
 const REAL = process.argv.includes('--real');
 const T = (s) => '[data-testid="' + s + '"]';
 const LAP = { width: 1366, height: 768 }, PHONE = { width: 390, height: 844 };
@@ -271,13 +272,20 @@ W.run('x-l2c', async (w) => {
         await p2.waitForSelector(T('crm-leads'), { timeout: 20000 }); await p2.waitForTimeout(900);
         const who = (await p2.locator(T('shop-name')).innerText()).replace(/\s+/g, ' '), add = await p2.locator(T('crm-lead-add')).count();
         const row = p2.locator('[data-row][data-testid^="crm-lead-"]').first(); let move = -1, log = -1;
-        if (await row.count()) { await row.click(); await p2.waitForSelector(T('crm-actions'), { timeout: 15000 }); await p2.waitForTimeout(400); move = await p2.locator(T('crm-act-stage')).count(); log = await p2.locator(T('crm-act-log')).count(); }
+        /* a viewer's record draws no toolbar at all (crmActionsHTML returns '' for a viewer — crm.cjs §7): wait for the record, not for actions */
+        if (await row.count()) { await row.click(); await p2.waitForSelector(T('crm-record'), { timeout: 15000 }); await p2.waitForSelector(T('crm-rec-loading'), { state: 'detached', timeout: 15000 }).catch(() => {}); await p2.waitForTimeout(400); move = await p2.locator(T('crm-act-stage')).count(); log = await p2.locator(T('crm-act-log')).count(); }
         await p2.evaluate(() => { location.hash = '#/calls'; }); await p2.waitForSelector(T('crm-calls'), { timeout: 15000 }); await p2.waitForTimeout(900);
         const crow = p2.locator('[data-row][data-testid^="crm-call-row-"]').first(); let whys = [], greyed = 0;
         if (await crow.count()) { await crow.locator('[data-caret]').first().click().catch(() => {}); await p2.waitForTimeout(300); whys = await p2.$$eval('.cbl-next .cbl-why', (s) => s.map((x) => x.textContent.trim())); greyed = await p2.locator('.cbl-next .cbl-btn[disabled]').count(); }
+        let tried = '';
+        if (add) {   /* the page offered the write: press it — the SERVER's refusal must come back as a sentence on the sheet */
+          await p2.evaluate(() => { location.hash = '#/leads'; }); await p2.waitForSelector(T('crm-lead-add'), { timeout: 15000 }); await p2.click(T('crm-lead-add')); await p2.waitForSelector(T('crm-lead-sheet'));
+          await p2.fill(T('crm-lead-name'), 'Viewer Try ' + tag); await p2.click(T('crm-lead-save')); await p2.waitForTimeout(1500);
+          tried = ' · a viewer pressing Save got: "' + ((await p2.locator(T('crm-lead-msg')).innerText().catch(() => '')) || (await p2.locator('#toast').innerText().catch(() => ''))).replace(/\s+/g, ' ').trim() + '"';
+        }
         await p2.screenshot({ path: require('path').join(__dirname, 'shots', 'walk-x-l2c-viewer.png') });
         const ok = /viewer/.test(who) && add === 0 && move === 0 && log === 0 && greyed === 6 && whys.every((x) => x === 'Your login can only view');
-        return { ok, saw: '"' + who + '" · + Add lead: ' + add + ' · Move to…: ' + move + ' · Log: ' + log + ' · greyed outcomes: ' + greyed + ' · why: ' + (whys[0] || '(none)') };
+        return { ok, saw: '"' + who + '" · + Add lead: ' + add + ' · Move to…: ' + move + ' · Log: ' + log + ' · greyed outcomes: ' + greyed + ' · why: ' + (whys[0] || '(none)') + tried };
       } catch (e) {
         await p2.screenshot({ path: require('path').join(__dirname, 'shots', 'walk-x-l2c-viewer.png') }).catch(() => {});
         return { ok: false, saw: 'it stopped (' + String(e && e.message || e).split('\n')[0].slice(0, 80) + ') · the page: "' + (await p2.evaluate(() => document.body.innerText.replace(/\s+/g, ' ')).catch(() => '')).slice(0, 160) + '"' };
@@ -291,6 +299,7 @@ W.run('x-l2c', async (w) => {
       const shop = await txt(T('shop-name')), self = names.filter((n) => n.indexOf(shop.split(' ·')[0]) === 0).length, lead = names.filter((n) => n.indexOf(NAMES.a) >= 0).length;
       return { ok: self === 0 && lead === 1, saw: names.length + ' rows · rows named after the shop itself: ' + self + ' · the billed lead listed: ' + lead };
     });
+    if (!REAL) await w.step('M43', 'the stand-in answered every /api/crm call as the API contract says', async () => { const [ok, saw] = C.finish(); return { ok, saw }; });
   } finally {
     if (api) await api.stop();
   }

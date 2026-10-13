@@ -42,7 +42,9 @@ function crmOwner() { return SESSION.role === 'entity'; }
 /** the co-assist's hat rides in their signed token (lib/access.js); the session record does not keep it, so it is read from the token's own payload */
 function crmHat() {
   if (SESSION.hat) return String(SESSION.hat);
-  try { var b = String(SESSION.token || '').split('.')[1].replace(/-/g, '+').replace(/_/g, '/'); var c = JSON.parse(atob(b)); return String(c.hat || c.actor_hat || ''); } catch (_) { return ''; }
+  if (SESSION.access_level || SESSION.level) return String(SESSION.access_level || SESSION.level);
+  /* the level may ride as `hat` (pre-b173), `actor_hat`, or the b173 ladder word `access_level` / `level` (viewer · commenter · editor) — any of them is read (WX-L2C) */
+  try { var b = String(SESSION.token || '').split('.')[1].replace(/-/g, '+').replace(/_/g, '/'); var c = JSON.parse(atob(b)); return String(c.hat || c.actor_hat || c.access_level || c.level || ''); } catch (_) { return ''; }
 }
 function crmRole() {
   if (crmOwner()) return 'owner';

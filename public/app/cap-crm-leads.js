@@ -19,6 +19,7 @@ function crmStageChip(lead) {
 function crmLeadWords(e) {
   var code = e && e.data && e.data.code;
   if (e && e.status === 503) return tx(CRM_LEADS_WAIT);
+  if (e && e.status === 403) return tx('Your login can only view');   /* the server's level gate (lib/access) — the sentence, never "Try again" (WX-L2C) */
   if (code === 'EXISTS') return tx('That name is already on your list.');
   if (code === 'BAD_PHONE') return tx('That phone number does not look right.');
   if (code === 'BAD_NAME') return tx('Give the lead a name.');

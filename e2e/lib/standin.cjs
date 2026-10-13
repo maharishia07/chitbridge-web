@@ -61,8 +61,13 @@ function tlEntries(L, id) {
   L.fu.filter((f) => f.party_id === id).forEach((f) => { out.push({ kind: 'followup', at: f.created_at, followup_id: f.followup_id, what: f.what, due_at: f.due_at }); if (f.done_at) out.push({ kind: 'followup_done', at: f.done_at, followup_id: f.followup_id, what: f.what }); });
   return out.sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
 }
-function addFu(L, party_id, what, day, source) { const f = { followup_id: 'fu-' + (++L.seq), party_id, what, due_at: dayAt(day), assignee_user_id: null, source: source || 'manual', done_at: null, created_at: new Date().toISOString() }; L.fu.push(f); return f; }
-function addIx(L, party_id, kind, direction, body) { const x = { interaction_id: 'ix-' + (++L.seq), party_id, kind, direction, body, at: new Date().toISOString(), by_user_id: 'u1' }; L.ix.push(x); return x; }
+function addFu(L, party_id, what, day, source) { const f = { followup_id: 'fu-' + (++L.seq), party_id, what, due_at: dayAt(day), due_day: day, assignee_user_id: null, source: source || 'manual', done_at: null, created_at: new Date().toISOString() }; L.fu.push(f); return f; }
+/** the api's follow-up shape with the SHOP's day (crm-api.followupOne reads the UTC date off due_at; the shop's midnight is the evening before in UTC) */
+function fuShape(f) {
+  const t = today(), d = f.due_day || localDay(new Date(f.due_at)), week = addDays(t, 6);
+  return Object.assign(crmApi.followupOne(f), { due_day: d, late: !f.done_at && d < t, today: !f.done_at && d === t, bucket: d < t ? 'late' : d === t ? 'today' : d <= week ? 'week' : 'later' });
+}
+function addIx(L, party_id, kind, direction, body) { const x = Object.assign(crmApi.interaction({ kind, direction, body }).interaction, { interaction_id: 'ix-' + (++L.seq), party_id }); L.ix.push(x); return x; }   /* the api's interaction shape (crm-api.cjs), this party's id */
 function setStage(L, l, stage) { l.stage = stage; l.since = new Date().toISOString(); L.stages.push({ party_id: l.party_id, stage, at: l.since }); return { stage, since: l.since }; }
 
 /** the walk's "counter bills the lead": txn_count 1 — the server's rule (isLead: txn_count 0) ends the lead */
@@ -100,7 +105,7 @@ function l2cRoute(L, r, q, u, p, m, body) {
   }
   if (p === '/api/crm/calls' && m === 'GET') {
     const t = today(), calls = [];
-    L.fu.filter((f) => !f.done_at && f.due_at.slice(0, 10) <= new Date().toISOString().slice(0, 10) && localDay(new Date(f.due_at)) <= t).forEach((f) => { const l = findLead(L, f.party_id); if (!l) return; const d = localDay(new Date(f.due_at)); const last = L.ix.filter((x) => x.party_id === l.party_id && x.kind === 'call').slice(-1)[0];
+    L.fu.filter((f) => !f.done_at && (f.due_day || localDay(new Date(f.due_at))) <= t).forEach((f) => { const l = findLead(L, f.party_id); if (!l) return; const d = f.due_day || localDay(new Date(f.due_at)); const last = L.ix.filter((x) => x.party_id === l.party_id && x.kind === 'call').slice(-1)[0];
       calls.push({ party_id: l.party_id, party_name: l.name, phone: l.phone, stage: isLead(l) ? l.stage : 'lead', followup_id: f.followup_id, what: f.what, due_day: d, assignee_user_id: null, new: false, last_outcome: last ? last.body : null, last_at: last ? last.at : null, late: d < t, today: d === t }); });
     L.leads.filter((l) => isLead(l) && !L.ix.some((x) => x.party_id === l.party_id) && !L.fu.some((f) => f.party_id === l.party_id && !f.done_at)).forEach((l) => calls.push({ party_id: l.party_id, party_name: l.name, phone: l.phone, stage: l.stage, followup_id: null, what: null, due_day: null, assignee_user_id: null, new: true, last_outcome: null, last_at: null, late: false, today: false }));
     return J(r, 200, { calls, count: calls.length, late: calls.filter((c) => c.late).length, today: calls.filter((c) => c.today).length,
@@ -119,8 +124,8 @@ function l2cRoute(L, r, q, u, p, m, body) {
       } else day = addDays(t, o.days);
     }
     L.fu.filter((f) => f.party_id === l.party_id && !f.done_at).forEach((f) => { f.done_at = new Date().toISOString(); });
-    const interaction = addIx(L, l.party_id, 'call', 'out', o.label);
-    const followup = day ? crmApi.followupOne(addFu(L, l.party_id, o.then, day, 'interaction')) : null;
+    const interaction = Object.assign({ owner: 'ent-walk' }, addIx(L, l.party_id, 'call', 'out', o.label));   /* the outcome's 201 names the owner, as the api's does */
+    const followup = day ? fuShape(addFu(L, l.party_id, o.then, day, 'interaction')) : null;
     const stage = o.stage && isLead(l) ? setStage(L, l, o.stage) : null;
     return J(r, 201, { interaction, followup, stage, suggest: null });
   }
@@ -145,27 +150,28 @@ function l2cRoute(L, r, q, u, p, m, body) {
     const l = findLead(L, decodeURIComponent(x[1])); if (!l) return null;
     const row = leadRow(L, l), stage = row.lead.stage;
     row.lead = Object.assign({}, row.lead, { moves: STAGES.filter((g) => g !== stage), may: L.migrated ? { ok: true } : { ok: false, why: NOT_READY } });
-    return J(r, 200, Object.assign(row, { merged_from: null, relationship: null, points: null, migrated: true, followups: fuRows(L).filter((f) => f.party_id === l.party_id && !f.done_at).map((f) => crmApi.followupOne(f)) }));
+    return J(r, 200, Object.assign(row, { merged_from: null, relationship: null, points: null, migrated: true, followups: fuRows(L).filter((f) => f.party_id === l.party_id && !f.done_at).map(fuShape) }));
   }
   if (p === '/api/crm/followups' && m === 'GET') {
     const done = u.searchParams.get('done') === '1';
-    return J(r, 200, crmApi.followups(fuRows(L).filter((f) => !!f.done_at === done)));
+    const list2 = fuRows(L).filter((f) => !!f.done_at === done).map(fuShape);
+    return J(r, 200, { followups: list2, late: list2.filter((x) => x.late).length, today: list2.filter((x) => x.today).length });
   }
   if (p === '/api/crm/followups' && m === 'POST') {
     const b = body || {}, l = findLead(L, b.party_id); if (!l) return J(r, 404, errBody('Not your party.', 'NOT_FOUND'));
-    return J(r, 201, { followup: crmApi.followupOne(addFu(L, l.party_id, b.what, String(b.due_at).slice(0, 10), b.source)) });
+    return J(r, 201, { followup: fuShape(addFu(L, l.party_id, b.what, String(b.due_at).slice(0, 10), b.source)) });
   }
   if ((x = p.match(/^\/api\/crm\/followups\/([^/]+)$/)) && (m === 'PATCH' || m === 'DELETE')) {
     const f = L.fu.find((y) => y.followup_id === decodeURIComponent(x[1])); if (!f) return J(r, 404, errBody('Not your follow-up.', 'NOT_FOUND'));
     if (m === 'DELETE') { L.fu = L.fu.filter((y) => y !== f); return J(r, 200, { ok: true }); }
     const b = body || {}; if (b.done === true) f.done_at = new Date().toISOString(); if (b.due_at) f.due_at = b.due_at; if (b.assignee_user_id !== undefined) f.assignee_user_id = b.assignee_user_id;
-    return J(r, 200, { followup: crmApi.followupOne(Object.assign({}, fuRows(L).find((y) => y.followup_id === f.followup_id))) });
+    return J(r, 200, { followup: fuShape(Object.assign({}, fuRows(L).find((y) => y.followup_id === f.followup_id))) });
   }
   return null;
 }
 
 async function route(S, r) {
-  const q = r.request(), u = new URL(q.url()), p = u.pathname, m = q.method();
+  const q = r.request(), u = new URL(q.url()), p = u.pathname, m = q.method(); let x;
   S.calls.push(m + ' ' + p);
   if (S.l2c) { let body = null; try { body = q.postDataJSON(); } catch (_) {} const done = l2cRoute(S.l2c, r, q, u, p, m, body); if (done) return done; }
   if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Mayur Bhavan', currency_code: 'INR' } });
@@ -179,6 +185,8 @@ async function route(S, r) {
     source: { kind: 'day', counter: 'C1', count: 11, how: 'Cash', split: [{ how: 'Cash', amount_minor: 124000 }] }, lines: [{ code: '1400', name: 'Cash', dr_minor: 124000, cr_minor: 0 }, { code: '4000', name: 'Sales', dr_minor: 0, cr_minor: 124000 }] }]).map(books.entry)));
   if (p === '/api/books/pl') return J(r, 200, books.pl([], []));
   if (p === '/api/books/periods') return J(r, 200, books.periods([]));
+  if ((x = p.match(/^\/api\/books\/party\/([^/]+)\/statement$/))) return J(r, 200, books.statement(decodeURIComponent(x[1])));   /* the record's Ledger section (as crm.cjs answers it) */
+  if (p === '/api/books/terms') return J(r, 200, { terms_migrated: true, may_set: true, why_not: null, default: {}, party: null, events: [] });   /* the record's credit-terms read (CB_PARTY_EP booksTerms), as the contract shapes it */
   if (p === '/api/crm/parties' && m === 'GET') return J(r, 200, crmApi.list(fx.list, { records: fx.records }));
   if (p === '/api/crm/followups') return J(r, 200, crmApi.followups([]));
   if (m === 'GET') return J(r, 200, {});

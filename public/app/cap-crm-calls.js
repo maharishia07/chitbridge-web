@@ -18,6 +18,7 @@ function crmCallWords(e) {
   var code = e && e.data && e.data.code;
   if (code === 'LEADS_NOT_MIGRATED') return tx(CRM_LEADS_WAIT);
   if (code === 'CRM_NOT_MIGRATED') return tx('Calls and follow-ups start after an update. Nothing is lost.');
+  if (e && e.status === 403) return tx(CALL_VIEW_ONLY);   /* the server's level gate — the same sentence the greyed button carries (WX-L2C) */
   if (code === 'NEED_DAY') return tx('Pick a day.');
   if (code === 'BAD_DUE' || code === 'BAD_AFTER') return tx('Pick a day from today.');
   if (code === 'NOT_FOUND') return tx('Not your party.');

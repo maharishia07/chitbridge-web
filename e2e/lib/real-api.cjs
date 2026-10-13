@@ -71,7 +71,11 @@ async function start(opts) {
     const r = await j('/api/actors', { method: 'POST', token, body: { display_name: 'Vel Viewer', actor_key: key, hat: 'view_only', access_level: 'viewer' } });
     const login = (r.b && (r.b.login_format || (r.b.actor && r.b.actor.login_format))) || (key + '@' + SHOP);
     if (r.status >= 300 && r.status !== 409) throw new Error('real-api: add viewer → HTTP ' + r.status + ' ' + JSON.stringify(r.b).slice(0, 300));
-    return { login, otp: (r.b && (r.b.dev_otp || r.b.otp)) || OTP, created: r.status < 300 };
+    /* WX-L2C (2026-10-13): POST /actors stored hat view_only but access_level 'editor' (the level the server enforces) — the PATCH door sets the level
+       by name, so the server-side refusal is real for the walk; what the token then tells the page is the walk's own finding */
+    const id = r.b && r.b.actor && r.b.actor.identity_id; let level = null;
+    if (id) { const pz = await j('/api/actors/' + id, { method: 'PATCH', token, body: { access_level: 'viewer' } }); level = pz.status < 300 ? 'viewer' : 'HTTP ' + pz.status; }
+    return { login, otp: (r.b && (r.b.dev_otp || r.b.otp)) || OTP, created: r.status < 300, level };
   }
   /**
    * a counter bill naming the party (the loader's own shape, tools/sim-load.cjs step 5: recipients self · business_json.customer · the
