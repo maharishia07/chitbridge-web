@@ -522,6 +522,11 @@ function build() {
       idOf.APP001 = 'screen:web:public/app.html';
       for (const o of SL.opens) if (idOf[o.from] && idOf[o.to] && nodes.has(idOf[o.from])) edge(idOf[o.from], idOf[o.to], 'opens', 'loads ' + o.page);
       meta.counts.screenOpens = SL.opens.length;
+      /* a web test names a declared screen by its CODE (e2e/walk-screen-id.cjs asserts each one) */
+      for (const f of files) {
+        if (f.kind !== 'test' || f.repo !== 'web') continue;
+        for (const st of f.scan.strings) { const m = /^[A-Z]{3}\d{3}$/.exec(st.text); if (m && idOf[st.text] && nodes.has(idOf[st.text])) edge(idOf[st.text], f.id, 'tested-by', 'code'); }
+      }
     } catch (e) { meta.notes.push('public/app/screen-id.js could not be read (SCREEN-ID rows and opens edges left out): ' + e.message); }
   }
 
