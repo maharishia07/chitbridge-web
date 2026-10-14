@@ -130,7 +130,7 @@
 
   /* a tap copies the code; the chip says so for a moment. A browser that refuses the clipboard: the code stays on screen to read. */
   function copied(b, ok) {
-    var n = b.querySelector('.cbsid-n'); if (!n) return;
+    var n = b.querySelector('.cbsid-c'); if (!n) return;   /* said on the CODE: it is the part every width shows (a phone and a list's title row hide the name) */
     var was = n.textContent; n.textContent = T(ok ? 'Copied' : 'Not copied'); b.setAttribute('data-copied', ok ? '1' : '0');
     setTimeout(function () { n.textContent = was; b.removeAttribute('data-copied'); }, 1400);
   }
