@@ -41,7 +41,7 @@ const walk = async (w) => {
     const R = require('./lib/real-stack.cjs');
     S.stack = await R.up({ webBase: base }); api = S.stack.api;
     const who = await R.signIn(api, process.env.WX_SHOP || 'simstores@test.example');
-    await ctx.addInitScript((s) => { try { localStorage.setItem('cb_sess', s); } catch (_) {} }, JSON.stringify(who.session));
+    await ctx.addInitScript((s) => { try { localStorage.setItem('cb_sess', s); } catch (_) {} }, who.session);
   } else {
     await ctx.route('**/api/**', async (r) => {
       const q = r.request(), u = new URL(q.url()), p = u.pathname, m = q.method();
