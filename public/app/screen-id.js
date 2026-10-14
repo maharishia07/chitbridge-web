@@ -44,7 +44,11 @@
       { app: 'tasks', name: 'CB Tasks & Orders', page: '/tasks.html', rows: [
         ['TSK001', 'orders_in', 'Orders in'], ['TSK002', 'orders_out', 'Orders out'], ['TSK003', 'tasks', 'Tasks'], ['TSK004', 'done', 'Done']] },
       { app: 'settings', name: 'Settings', page: '/settings.html', hash: true, rows: [
-        ['SET001', 'shop', 'Your shop'], ['SET002', 'country', 'Country'], ['SET003', 'new', 'New shop', 'the sign-in window › New shop? Register']] },
+        ['SET001', 'shop', 'Your shop'], ['SET002', 'country', 'Country'], ['SET003', 'new', 'New shop', 'the sign-in window › New shop? Register'],
+        /* T3-SETTINGS (INT6c): the four CB Settings sections */
+        ['SET004', 'counters', 'Counters & keys'], ['SET005', 'connectors', 'Connectors'], ['SET006', 'policy', 'Policy'], ['SET007', 'plan', 'Plan & usage']] },
+      /* T3-OPS (INT6c): CB Operations — Stock + Suppliers */
+      { app: 'operations', name: 'CB Operations', page: '/operations.html', hash: true, rows: [['OPS001', 'stock', 'Stock'], ['OPS002', 'suppliers', 'Suppliers']] },
       { app: 'employees', name: 'CB Employees', page: '/employees.html', rows: [['EMP001', 'people', 'People']] },
       { app: 'network', name: 'Network', page: '/network.html', rows: [['NET001', 'mine', 'My network'], ['NET002', 'offers', 'Offers'], ['NET003', 'design', 'Design']] },
       { app: 'country-lab', name: 'Country lab', page: '/country-lab.html', rows: [['CLB001', 'compare', 'Side by side'], ['CLB002', 'ready', 'Where we are']] },

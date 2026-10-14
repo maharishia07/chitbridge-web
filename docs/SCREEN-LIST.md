@@ -53,6 +53,12 @@ Register: `public/app/screen-id.js` (declared rows, merged into `CBSCREENS`) + `
 | SET001 | Your shop | Settings | /settings.html | /settings.html#/shop · Settings › Your shop |
 | SET002 | Country | Settings | /settings.html | /settings.html#/country · Settings › Country |
 | SET003 | New shop | Settings | /settings.html | the sign-in window › New shop? Register |
+| SET004 | Counters & keys | Settings | /settings.html | /settings.html#/counters · Settings › Counters & keys |
+| SET005 | Connectors | Settings | /settings.html | /settings.html#/connectors · Settings › Connectors |
+| SET006 | Policy | Settings | /settings.html | /settings.html#/policy · Settings › Policy |
+| SET007 | Plan & usage | Settings | /settings.html | /settings.html#/plan · Settings › Plan & usage |
+| OPS001 | Stock | CB Operations | /operations.html | /operations.html#/stock · CB Operations › Stock |
+| OPS002 | Suppliers | CB Operations | /operations.html | /operations.html#/suppliers · CB Operations › Suppliers |
 | EMP001 | People | CB Employees | /employees.html | /employees.html · CB Employees › People |
 | NET001 | My network | Network | /network.html | /network.html · Network › My network |
 | NET002 | Offers | Network | /network.html | /network.html · Network › Offers |
@@ -66,9 +72,9 @@ Register: `public/app/screen-id.js` (declared rows, merged into `CBSCREENS`) + `
 
 | Code | Screen | Painted by | How to reach it | Opened from |
 |---|---|---|---|---|
-| TSK005 | Task details | app/chit-sheet.js | a task, order or invoice row › its sheet | CB Accounts (/accounts.html) · CB Finance (/finance.html) · CB CRM (/crm.html) · the workshop (/app.html) |
-| BIL001 | Bill | app/chit-sheet.js | a counter bill row › its sheet | CB Accounts (/accounts.html) · CB Finance (/finance.html) · CB CRM (/crm.html) · the workshop (/app.html) |
-| BIL002 | Supplier bill | app/chit-sheet.js | a bill received › its sheet | CB Accounts (/accounts.html) · CB Finance (/finance.html) · CB CRM (/crm.html) · the workshop (/app.html) |
+| TSK005 | Task details | app/chit-sheet.js | a task, order or invoice row › its sheet | CB Accounts (/accounts.html) · CB Finance (/finance.html) · CB CRM (/crm.html) · CB Tasks & Orders (/tasks.html) · the workshop (/app.html) |
+| BIL001 | Bill | app/chit-sheet.js | a counter bill row › its sheet | CB Accounts (/accounts.html) · CB Finance (/finance.html) · CB CRM (/crm.html) · CB Tasks & Orders (/tasks.html) · the workshop (/app.html) |
+| BIL002 | Supplier bill | app/chit-sheet.js | a bill received › its sheet | CB Accounts (/accounts.html) · CB Finance (/finance.html) · CB CRM (/crm.html) · CB Tasks & Orders (/tasks.html) · the workshop (/app.html) |
 
 ## The workshop (app.html) — 932 rows in public/app/screens.js, listed in C:/dev/SCREENS.md
 
