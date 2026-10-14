@@ -18,6 +18,7 @@ Athi, 2026-10-12: *"for each function we are building we need to have a SAP kind
 | [MVI](MVI.md) | Move in (from Xero / QuickBooks) | FI (conversion: opening balances, master data) | chart of accounts → contacts → items → opening balances | 4 | 0 | 0 |
 | [PRN](PRN-flow.md) | Parallel run (their Tally / Xero period beside ours) | FI (audit: parallel run, reconciliation of statements) | load their period → compare, differences first → the auditor's file | 2 | 1 | 0 |
 | [FX](FX.md) | Foreign currency (a bill in another currency, its settlement, the period-end revaluation) | FI (foreign currency valuation · realised / unrealised exchange differences) | the day's rate → a foreign bill posts at its day's rate; its payment settles with the exchange gain or loss → revalue at the month end, reversed next month | 3 | 0 | 0 |
+| [NET](NET.md) | Join a network (a store and a brand: ask, invite, approve, pause, leave) | SD (partner determination) · no SAP equivalent for the two-sided consent | membership | 0 | 1 | 0 |
 
 ## Flows × modules — which module owns which step
 
@@ -33,6 +34,7 @@ Athi, 2026-10-12: *"for each function we are building we need to have a SAP kind
 | MVI |  |  | 1 chart of accounts<br>2 contacts<br>3 items<br>4 opening balances |  |  |  |  |  |
 | PRN |  |  | 1 load their period<br>2 compare, differences first<br>3 the auditor's file ⚠️ |  |  |  |  |  |
 | FX |  |  | 1 the day's rate<br>2 a foreign bill posts at its day's rate; its payment settles with the exchange gain or loss<br>3 revalue at the month end, reversed next month |  |  |  |  |  |
+| NET |  |  |  |  |  |  |  | 1 membership ⚠️ |
 
 ## The modules
 
@@ -72,6 +74,7 @@ Athi, 2026-10-12: *"for each function we are building we need to have a SAP kind
 - **L2C step 6 · consent & privacy requests** — CO1: built and tested in the api; no screen yet, and migrations b306 / b307 are drafts the owner runs (docs/compliance/OWNER-ACTIONS.md).
 - **C2V step 6 · ask** — The ONE composer (CBThread), the ladder (a commenter posts internally, an editor externally, a viewer reads and sees the sentence) and msg_type 'query' (migrations/000_baseline_part2.sql CHECK) exist and are reused as they are. No due date and no answered flag: the thread's last message says whose turn it is (REQUIREMENT §9). Missing: the anchor for a MONTH's question (the month's pack as a message subject beside chit_id — owner Q1, decided before CA2) and the cross-client count threads_waiting_on_client in last_check.summary.
 - **PRN step 3 · the auditor's file** — CSV from the server; the PDF is the browser's print of the page (no PDF library added).
+- **NET step 1 · membership** — NET-SRV1 (2026-10-14): the server answers every row's may/why from the one rule table (mayAct) and names the brand's and its root's bridge id; a store sees the brand it asked without selling for it yet. The screen that shows the actions waits for its design — network-app.js paints the standing word only.
 
 ## How a new function joins the map
 
