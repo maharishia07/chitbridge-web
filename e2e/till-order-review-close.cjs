@@ -48,7 +48,8 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(40) + '· ' + d 
     WHO = { id: 'w1', name: 'Bala', kind: 'coassist', since: new Date().toISOString() };
     window.S = { shop: { name: 'Mayur Bhavan', currency: 'INR' }, at: new Date().toISOString(),
                  items: [{ item_id: 'i1', name: 'Masala Dosa', price: 70, unit: 'plate' },
-                         { item_id: 'i2', name: 'Filter Coffee', price: 25, unit: 'cup' }] };
+                         { item_id: 'i2', name: 'Filter Coffee', price: 25, unit: 'cup' }],
+                 suppliers: [] };   /* a CURRENT snapshot carries suppliers (FX-F10W SNAP_NEEDS) — without it the counter re-reads the shop mid-walk */
     setMode('sell');
     purposeSet('order');
   }, base);
