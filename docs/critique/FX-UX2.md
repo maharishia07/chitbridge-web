@@ -12,16 +12,12 @@
 - One form: the form MOVES to `app/cap-registration.js`, host-aware the way cap-country.js is (`CBCountry.mount(host, onDone)`, SET1) — app.html lazy-loads it (ensureCap) and settings.html mounts it. No second form, one `reg-agree`, one register/verify call pair.
 - One settings app (SET1/SET3): the register door is `settings.html#/new`, not a new page. Signed-out is fine: the section is public; the sign-in window stays in the head.
 - Settings custodian: the pending mark is ONE new device key `cb_prefs_pending` (layer: the person, U; not governed; device-only by nature — it records what has not reached the server). FIELDS entry in api docs/FIELDS.md beside ui_prefs.
-
 ## (c) Simpler way
 - F9 needs no server change: one loop over KEY in hydrate (all seven kinds, one rule), a pending mark written by set() and cleared by the push that the server answers `ok:true`. CBPrefs.push (core.js) widened with an optional done callback so the app's door reports the same.
-
 ## (d) Risks
 - Wiping a choice: a device choice made before this ships with no pending mark and not on the server (e.g. set while signed out) is reset once on the next signed-in load — that is F9's own case, accepted. A choice made from now on is marked until a push lands; hydrate re-pushes marked kinds.
 - Showing link: editionReload already skips a tab held by `cb_edition_tab` (`avatar.js:234`); CBEdition.key reads the tab first, so the tab keeps its rule.
 - app.html is shared with other rounds; the move is mechanical (functions lifted verbatim, host-aware wrapper). No api route, no contract change, no migration (b379-b381 unused), engines untouched.
 
 ## (e) VERDICT: BUILD WITH CHANGES
-1. The register app is CB Settings' section `settings.html#/new` (SET3), not register.html; the form moves to `app/cap-registration.js`.
-2. index already passes registerHref — re-pointed with page-frame's; both ALLOW rows struck from index-not-app.cjs and INDEX-NOT-APP.md.
-3. F9's guard is a pending-push mark (`cb_prefs_pending`), cleared only by a server `ok:true`.
+1. The register app is CB Settings' section `settings.html#/new` (SET3), not register.html; the form moves to `app/cap-registration.js`. 2. index's registerHref re-pointed with page-frame's; both ALLOW rows struck. 3. F9's guard: `cb_prefs_pending`, cleared only by a server `ok:true`.
