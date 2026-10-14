@@ -9,6 +9,7 @@
  *
  *   node e2e/run-shard.cjs <shard> <of>      e.g. 1 6  → files 1, 7, 13 … of the sorted list
  *   node e2e/run-shard.cjs --list            print the whole list (what CI shares out)
+ *   node e2e/run-shard.cjs --repeat <n>      run each file on the REPEAT list n times in a row (the walks.yml "steady" job)
  * One line per file (PASS/FAIL + seconds); a FAIL prints that file's FAIL lines, then its last lines; exit 1 if any failed.
  */
 'use strict';
@@ -16,7 +17,16 @@ const fs = require('fs'), path = require('path'), { spawnSync } = require('child
 const E2E = __dirname;
 const files = fs.readdirSync(E2E).filter((f) => /^(walk|till)-[a-z0-9-]+\.cjs$/.test(f)).sort();
 if (process.argv[2] === '--list') { console.log(files.join('\n')); process.exit(0); }
-const shard = Number(process.argv[2] || 1), of = Number(process.argv[3] || 1);
+/**
+ * ⭐ REPEAT (K2b, 2026-10-14): a file that once flaked runs this many times INSIDE its shard, every run must pass — and
+ * `--repeat <n>` runs the same list n times in its own job, so "fixed" is shown, never a re-run habit. Each entry: times · why.
+ */
+const REPEAT = {
+  'till-scale.cjs': [3, 'K2b: seeded before the boot load() ended and read CART before the async add landed (TEST-LOG W2-1, web #160)'],
+};
+const REP_N = process.argv[2] === '--repeat' ? Number(process.argv[3]) : 0;
+if (process.argv[2] === '--repeat' && !(REP_N >= 1)) { console.error('usage: run-shard.cjs --repeat <n>'); process.exit(2); }
+const shard = REP_N ? 1 : Number(process.argv[2] || 1), of = REP_N ? 1 : Number(process.argv[3] || 1);
 if (!(shard >= 1 && shard <= of)) { console.error('usage: run-shard.cjs <shard> <of>'); process.exit(2); }
 /* ⭐ KNOWN RED (2026-10-12, first cloud run): each file here RUNS and is PRINTED, but does not fail the shard — with its reason.
  * SKIP = cannot run on a runner at all. A KNOWN file that passes says so: take it off the list. Fixing them = round W1
@@ -48,11 +58,15 @@ function failLines(out) {
   const pad = (ls) => ls.map((l) => '       ' + l).join('\n');
   return (red.length ? '       -- failing lines (' + red.length + ') --\n' + pad(red) + '\n       -- last lines --\n' : '') + pad(tail);
 }
-const mine = files.filter((_, i) => i % of === shard - 1);
-console.log('shard ' + shard + '/' + of + ' · ' + mine.length + ' of ' + files.length + ' files');
+const mine = REP_N ? Object.keys(REPEAT).filter((f) => files.includes(f)) : files.filter((_, i) => i % of === shard - 1);
+console.log(REP_N ? ('repeat ×' + REP_N + ' · ' + mine.join(' · '))
+  : ('shard ' + shard + '/' + of + ' · ' + mine.length + ' of ' + files.length + ' files'));
 let failed = 0, known = 0;
-for (const f of mine) {
+const runs = [];
+for (const f of mine) for (let k = 1, n = REP_N || (REPEAT[f] ? REPEAT[f][0] : 1); k <= n; k++) runs.push([f, k, n]);
+for (const [f, k, n] of runs) {
   if (SKIP[f]) { console.log('  SKIP ' + f.padEnd(34) + '   ' + SKIP[f]); continue; }
+  if (k === 1 && n > 1) console.log('  ×' + n + '  ' + f + '   ' + (REPEAT[f] ? REPEAT[f][1] : 'repeat'));
   const t0 = Date.now();
   const r = spawnSync(process.execPath, [path.join(E2E, f)], {
     encoding: 'utf8', timeout: 240000,
@@ -66,7 +80,8 @@ for (const f of mine) {
     continue;
   }
   if (!ok) failed++;
-  console.log((ok ? '  PASS ' : '  FAIL ') + f.padEnd(34) + s + (r.error ? '  (' + r.error.code + ')' : ''));
+  const name = n > 1 ? f + ' ' + k + '/' + n : f;
+  console.log((ok ? '  PASS ' : '  FAIL ') + name.padEnd(34) + s + (r.error ? '  (' + r.error.code + ')' : ''));
   if (!ok) console.log(failLines((r.stdout || '') + (r.stderr || '')));
 }
 console.log((failed ? failed + ' failed' : 'all passed') + (known ? ' · ' + known + ' known red (listed above, round W1)' : ''));
