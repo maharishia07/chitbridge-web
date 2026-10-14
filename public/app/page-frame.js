@@ -55,7 +55,7 @@
       host: { app: o.app }, kural: sk ? false : (o.kural || false), homeHref: '/', area: o.area,
       person: sess && root.CBAvatar ? root.CBAvatar.personOf(sess) : null, token: sess && sess.token,
       /* the one sign-in window, in the shell's own slot; signed in -> this page reads again with the session it now holds */
-      signin: open ? { surface: o.surface || o.app, need: 'person', registerHref: '/settings.html#/new', onIn: function () { root.location.reload(); } } : undefined,
+      signin: open ? { surface: o.surface || o.app, need: 'person', registerHref: '/settings.html#/new', onIn: function () { root.location.reload(); } } : false,   /* false: no window at all, even where signin-ui.js is loaded */
       avatar: open ? { onSignIn: function () { var s = host.querySelector('.cbsh-signin'); if (s && s.scrollIntoView) s.scrollIntoView({ block: 'center' }); } } : { signInHref: '/' }
     });
     if (sk && o.kural && root.CBKural) { root.CBKural.mount(); root.CBKural.set(o.kural); }   /* the one kural band at the FOOT, outside the head - as CB Finance / CRM / Accounts */
