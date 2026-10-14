@@ -109,7 +109,7 @@ var STANDARDS = [
     p:"Extra-strong contrast for readers with low vision",
     m:"Not tested; our check stops at 4.5:1",
     g:'Accessibility', n:'WCAG 2.2 — 1.4.6', w:'Enhanced text contrast, 7:1 (level AAA)',
-    ex:"#494F56 on #FFFFFF = 8.11:1", exWhy:"This pair would pass 7:1, but no test measures every theme against it — so we do not claim it.",
+    ex:"7:1 or more (AA asks 4.5:1)", exWhy:"The 1.4.3 example above would pass 7:1, but no test measures every theme against it — so we do not claim it.",
     s:'plan',
     note:"The theme-contrast test measures the AA level (4.5:1). Some themes may already reach 7:1; none is checked. Missing: the same measurement at 7:1, and a theme that promises it.",
     at:'Appearance · themes', go:'appearance', why:'A claim the test does not measure is a guess; this row stays Planned until the test says otherwise.',
