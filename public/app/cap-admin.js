@@ -30,8 +30,8 @@ if (typeof EP !== 'undefined') { Object.assign(EP, {
   /* ⭐ THE SERVER'S MEASUREMENT (backlog 29). MIS was the THIRD implementation of open/overdue/ageing/unread;
      lib/measure.js already served the folder pane and the counterparty scorecard. This makes it three consumers
      of one definition rather than two definitions. ⚠️ Above all it brings OVERDUE, which MIS simply did not have
-     — the screen titled "What is stuck?" did not know what late meant. */
-  misMetrics: {m:'GET', p:'/api/folders/mis', ok:'y'},
+     — the screen titled "What is stuck?" did not know what late meant.
+     misMetrics → CB_MIS_EP (app/accounts-shell.js, T3-P4-ACCOUNT): CB Finance › Reports reads the same name; app.html merges it. */
 }); }
 // ── TRADE DOCUMENTS VAULT — MOVED to app/cap-shop.js (SET1, 2026-10-13): CB Settings › Your shop paints the same rows. Loaded first by CAP_WITH.admin. ──
 /**
@@ -544,7 +544,7 @@ async function _loadMIS(){
     /* ⚠️ The window is computed BEFORE the fetch because the server has to measure the same one — see `since`
        below. A period selector on screen beside a figure measured over all time is worse than no selector. */
     const _days = misPeriod() === 'all' ? null : parseInt(misPeriod(), 10);
-    const _since = _days ? new Date(Date.now() - _days * 864e5).toISOString() : undefined;
+    const _since = misWindow(misPeriod());   /* ONE window rule (app/cap-mis.js, T3-P4-ACCOUNT): the same `since` CB Finance › Reports sends */
     const [inb, snt, dq, ac, sp, msgRaw, srv] = await Promise.all([
       api('inbox'), api('sent').catch(function(){ return []; }),
       api('disputeQueue').catch(function(){ return {}; }),

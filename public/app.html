@@ -2036,7 +2036,7 @@ const EP = {
   netResume:      {m:"POST", p:"/api/network/connections/:id/resume",     ok:"✓"},
   netDisconnect:  {m:"POST", p:"/api/network/connections/:id/disconnect", ok:"✓"},
 };
-Object.assign(EP, CB_BOOKS_EP, CB_SHEET_EP, CB_PARTY_EP, CB_THREAD_EP, CB_SHOP_EP, CB_SETTINGS_EP);   /* CB_SETTINGS_EP (T3-SETTINGS): counters · keys · connectors · policy · plan & usage — shared with settings.html */   /* CB_SHOP_EP (SET1): the shop's own profile · vault · country setup — shared with settings.html */   /* the Ledger's boot endpoints and the party add/edit/remove/search routes — declared once, in app/accounts-shell.js, shared with accounts.html and crm.html */
+Object.assign(EP, CB_BOOKS_EP, CB_SHEET_EP, CB_PARTY_EP, CB_THREAD_EP, CB_SHOP_EP, CB_SETTINGS_EP, CB_MIS_EP);   /* CB_MIS_EP (T3-P4-ACCOUNT): the rail measured — shared with finance.html */   /* CB_SETTINGS_EP (T3-SETTINGS): counters · keys · connectors · policy · plan & usage — shared with settings.html */   /* CB_SHOP_EP (SET1): the shop's own profile · vault · country setup — shared with settings.html */   /* the Ledger's boot endpoints and the party add/edit/remove/search routes — declared once, in app/accounts-shell.js, shared with accounts.html and crm.html */
 
 /* deepClone → app/helpers.js */
 /* STORE starts EMPTY. It once had a demo dataset beside it and the rule was that a demo constant must never be
@@ -4658,7 +4658,7 @@ function capScreen(name){
 function hasCap(k){ return (SESSION.capabilities||[]).indexOf(k)>=0; }   // one capability check, used by all gates
 const _capPromise = {}, _capWithPromise = {};
 /* a capability split by job loads its other halves first (P2: network = the design builder + its member half, cap-network-member.js) */
-const CAP_WITH = { network:['network-member'], admin:['shop', 'settings'] };   /* admin: the Profile's Business section and the vault live in cap-shop.js (SET1); POLICY_FLAGS and the counters/keys/kit helpers in cap-settings.js (T3-SETTINGS) — CB Settings paints both */
+const CAP_WITH = { network:['network-member'], admin:['shop', 'settings', 'mis'] };   /* mis: misWindow (the one period → since rule) lives in cap-mis.js (T3-P4-ACCOUNT) */   /* admin: the Profile's Business section and the vault live in cap-shop.js (SET1); POLICY_FLAGS and the counters/keys/kit helpers in cap-settings.js (T3-SETTINGS) — CB Settings paints both */
 function ensureCap(name){
   if(CAP_LOADED[name]) return Promise.resolve();
   if(CAP_WITH[name]){

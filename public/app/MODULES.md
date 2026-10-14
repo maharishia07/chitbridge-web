@@ -15,7 +15,7 @@ something needs them before any navigation happens.
 router renders a placeholder until `_capLoading` clears, which is the only reason the
 old duplicate `networkScreen()` in app.html was safe to delete.
 
-## Capabilities (47)
+## Capabilities (49)
 
 | file | loading · nav key | what it is |
 |---|---|---|
@@ -50,6 +50,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-legend.js` | lazy · on demand | the 🔑 LEGEND capability: a live map of "what we serve" |
 | `cap-match.js` | lazy · match | THE THREE-WAY MATCH (lazy; ensureCap('match')) |
 | `cap-messages.js` | lazy · messages | REPLIES: every external conversation that still wants you, across every chit. Lazy |
+| `cap-mis.js` | — | CB FINANCE › REPORTS: the rail measured, by the server, as one list (T3-P4-ACCOUNT, 2026-10-14) |
 | `cap-move-in.js` | — | cap-move-in.js — MOVE IN FROM XERO / QUICKBOOKS (IM1, 2026-10-12): CB Accounts › Setup › Move in. One entry for the five exports a practice |
 | `cap-network-member.js` | — |  |
 | `cap-network.js` | lazy · network | DESIGN-FIRST network builder. Lazy via ensureCap('network') |
@@ -58,8 +59,8 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-register.js` | lazy · on demand | THE REGISTER. Lazy (ensureCap('register')) |
 | `cap-repeat.js` | lazy · on demand | cap-repeat.js — REPEAT SUPPLY as an AGREEMENT both parties hold (round RI1, 2026-10-12): CB Finance › Repeat supply (the seller's list), |
 | `cap-service.js` | lazy · on demand | cap-service.js — a chit AS A SERVICE REQUEST. Lazy-loaded (ensureCap('service')) |
+| `cap-settings.js` | — | CB SETTINGS › Counters & keys · Connectors · Policy · Plan & usage (T3-SETTINGS, 2026-10-14; SET2 of INDEX-NOT-APP.md) |
 | `cap-shop.js` | — | YOUR SHOP: the shop's own particulars, ONE implementation painted in two places (SET1, 2026-10-13) |
-| `cap-settings.js` | — | CB SETTINGS › Counters & keys · Connectors · Policy · Plan & usage: CBList over the workshop's routes; POLICY_FLAGS and the counters/keys/kit helpers MOVED from cap-admin.js (T3-SETTINGS, 2026-10-14) |
 | `cap-standards.js` | lazy · on demand |  |
 | `cap-supplies.js` | lazy · on demand | SUPPLIES: what the shop buys to USE, never to sell |
 | `cap-tasks.js` | — |  |
@@ -129,4 +130,4 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 
 ---
 
-*101 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*103 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*

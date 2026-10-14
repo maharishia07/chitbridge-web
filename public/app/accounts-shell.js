@@ -97,6 +97,16 @@ var CB_SETTINGS_EP = {
      anyone else. Read on demand when the Usage section is opened, never as part of painting a profile. */
   entityUsage:    {m:'GET',    p:'/api/entities/usage',           ok:'✓'},
   entitlements:   {m:'GET',    p:'/api/entities/entitlements',    ok:'y'},   // the plan and every quota as a STATE (unlimited · unset · capped) — reporting only (enforced:false)
+  /* T3-P4-ACCOUNT: where this person is signed in (M05 sessions, routes/signin.js) — CB Settings › Account › Sessions; the first web reader of these routes */
+  sessionsList:   {m:'GET',    p:'/api/signin/sessions',          ok:'y'},   // { sessions:[{ jti, device_id, surface, iat, exp, current, device:{ label, kind, seen } }], legacy, may:{ devices } }
+  devicesList:    {m:'GET',    p:'/api/signin/devices',           ok:'y'},   // owner only (lib/owner.gate): every device of the shop with its live count
+  sessionRevoke:  {m:'POST',   p:'/api/signin/sessions/revoke',   ok:'✓'},   // { jti } my own (the owner: anyone's) · { device_id } the owner removes a device
+};
+
+/* ── the rail measured (T3-P4-ACCOUNT): ONE name for GET /api/folders/mis — CB Finance › Reports (app/cap-mis.js) and the workshop's MIS
+   (cap-admin.js) read the server's measurement through it; MOVED here from cap-admin.js's own EP rows (ep-aliases: one endpoint, one name) ── */
+var CB_MIS_EP = {
+  misMetrics:     {m:'GET',    p:'/api/folders/mis',              ok:'y'},   // { overdue_days, since, truncated, all, received, sent } — lib/measure, the rail's overdue rule
 };
 
 /* ── the chit sheet's three calls (chit-sheet.js reads one chit, moves its step, says what a bill's goods are for) —

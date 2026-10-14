@@ -10,7 +10,7 @@ Athi, 2026-10-12: *"for each function we are building we need to have a SAP kind
 |---|---|---|---|---|---|---|
 | [O2C](O2C.md) | Order to cash | SD → FI-AR | enquiry → quote → order → delivery → invoice → receipt → posted → cash position → repeat supply | 7 | 1 | 1 |
 | [P2P](P2P.md) | Procure to pay | MM → FI-AP | need → PO → goods receipt → supplier bill → payment → posted → payables | 6 | 1 | 0 |
-| [R2R](R2R.md) | Record to report | FI-GL | country → entries → day close → month lock → GST → year close → statements → cash position → bank reconciliation | 9 | 0 | 0 |
+| [R2R](R2R.md) | Record to report | FI-GL | country → entries → day close → month lock → GST → year close → statements → cash position → bank reconciliation → reports: the rail measured once on the server (chits · open · stuck · unread · closed · in dispute · ages) by window; every number opens the list that holds it | 10 | 0 | 0 |
 | [INV](INV.md) | Inventory | MM-IM | receipt → stock → issue / sale → count → closing stock | 2 | 2 | 1 |
 | [H2P](H2P.md) | Hire to pay | HCM → FI | person → access → attendance → payroll → payment | 2 | 1 | 2 |
 | [L2C](L2C.md) | Lead to customer | SD pre-sales (CRM) | lead → call → demo → trial → customer → consent & privacy requests | 3 | 3 | 0 |
@@ -18,7 +18,7 @@ Athi, 2026-10-12: *"for each function we are building we need to have a SAP kind
 | [MVI](MVI.md) | Move in (from Xero / QuickBooks) | FI (conversion: opening balances, master data) | chart of accounts → contacts → items → opening balances | 4 | 0 | 0 |
 | [PRN](PRN-flow.md) | Parallel run (their Tally / Xero period beside ours) | FI (audit: parallel run, reconciliation of statements) | load their period → compare, differences first → the auditor's file | 2 | 1 | 0 |
 | [FX](FX.md) | Foreign currency (a bill in another currency, its settlement, the period-end revaluation) | FI (foreign currency valuation · realised / unrealised exchange differences) | the day's rate → a foreign bill posts at its day's rate; its payment settles with the exchange gain or loss → revalue at the month end, reversed next month | 3 | 0 | 0 |
-| [SET](SET.md) | Shop setup (counters · connectors · rules · plan) | BC (customising · authorisations · licence) | counters and keys: add, open on this PC, release; make and revoke a key → connectors: download the kit, say which ones you use, approve the PC → rules: set a policy flag, who may change each said by the server → plan and usage: the plan, each quota as a state, what was billed | 3 | 1 | 0 |
+| [SET](SET.md) | Shop setup (counters · connectors · rules · plan · account) | BC (customising · authorisations · licence) | counters and keys: add, open on this PC, release; make and revoke a key → connectors: download the kit, say which ones you use, approve the PC → rules: set a policy flag, who may change each said by the server → plan and usage: the plan, each quota as a state, what was billed → account: where you are signed in (sign one out), every device (the owner removes one), keys (a door to the one list), the vault | 4 | 1 | 0 |
 
 ## Flows × modules — which module owns which step
 
@@ -26,7 +26,7 @@ Athi, 2026-10-12: *"for each function we are building we need to have a SAP kind
 |---|---|---|---|---|---|---|---|---|---|
 | O2C |  | 6 receipt<br>8 cash position<br>9 repeat supply | 7 posted | 5 invoice | 2 quote (MISSING)<br>3 order<br>4 delivery |  |  | 1 enquiry ⚠️ |  |
 | P2P |  | 7 payables | 4 supplier bill<br>5 payment<br>6 posted |  | 2 PO | 1 need ⚠️<br>3 goods receipt |  |  |  |
-| R2R |  | 8 cash position | 1 country<br>2 entries<br>4 month lock<br>5 GST<br>6 year close<br>7 statements<br>9 bank reconciliation | 3 day close |  |  |  |  |  |
+| R2R |  | 8 cash position<br>10 reports: the rail measured once on the server (chits · open · stuck · unread · closed · in dispute · ages) by window; every number opens the list that holds it | 1 country<br>2 entries<br>4 month lock<br>5 GST<br>6 year close<br>7 statements<br>9 bank reconciliation | 3 day close |  |  |  |  |  |
 | INV |  |  | 5 closing stock ⚠️ | 2 stock<br>3 issue / sale ⚠️ |  | 1 receipt<br>4 count (MISSING) |  |  |  |
 | H2P |  |  | 5 payment (MISSING) | 3 attendance ⚠️ |  |  | 1 person<br>2 access<br>4 payroll (MISSING) |  |  |
 | L2C | 1 lead<br>2 call<br>3 demo ⚠️<br>4 trial ⚠️<br>5 customer<br>6 consent & privacy requests ⚠️ |  |  |  |  |  |  |  |  |
@@ -34,7 +34,7 @@ Athi, 2026-10-12: *"for each function we are building we need to have a SAP kind
 | MVI |  |  | 1 chart of accounts<br>2 contacts<br>3 items<br>4 opening balances |  |  |  |  |  |  |
 | PRN |  |  | 1 load their period<br>2 compare, differences first<br>3 the auditor's file ⚠️ |  |  |  |  |  |  |
 | FX |  |  | 1 the day's rate<br>2 a foreign bill posts at its day's rate; its payment settles with the exchange gain or loss<br>3 revalue at the month end, reversed next month |  |  |  |  |  |  |
-| SET |  |  |  |  |  |  |  |  | 1 counters and keys: add, open on this PC, release; make and revoke a key<br>2 connectors: download the kit, say which ones you use, approve the PC<br>3 rules: set a policy flag, who may change each said by the server<br>4 plan and usage: the plan, each quota as a state, what was billed ⚠️ |
+| SET |  |  |  |  |  |  |  |  | 1 counters and keys: add, open on this PC, release; make and revoke a key<br>2 connectors: download the kit, say which ones you use, approve the PC<br>3 rules: set a policy flag, who may change each said by the server<br>4 plan and usage: the plan, each quota as a state, what was billed ⚠️<br>5 account: where you are signed in (sign one out), every device (the owner removes one), keys (a door to the one list), the vault |
 
 ## The modules
 
