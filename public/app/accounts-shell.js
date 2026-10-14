@@ -50,6 +50,7 @@ var CB_BOOKS_EP = {
 var CB_PARTY_EP = {
   custGroup:       {m:"PATCH",p:"/api/relationships/customers/:id",       ok:"✓"},
   custAdd:         {m:"POST", p:"/api/relationships/customers",           ok:"✓"},   // { handle } on ChitBridge · { name, phone } a local party
+  supList:         {m:"GET",  p:"/api/relationships/suppliers", ok:"✓"},            // MOVED from app.html's EP (T3-OPS): the workshop and CB Operations › Suppliers
   supAdd:          {m:"POST", p:"/api/relationships/suppliers", ok:"✓"},            // { supplier_bridge_id } · { name }
   supDel:          {m:"DELETE",p:"/api/relationships/suppliers/:id", ok:"✓"},
   supPatch:        {m:"PATCH", p:"/api/relationships/suppliers/:id", ok:"y"},       // Stage B — owner-side fields (nickname/preferred/notes/category)

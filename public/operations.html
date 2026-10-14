@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en" data-tokens="list">
+<head>
+<meta charset="utf-8">
+<script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CB Operations</title>
+<!-- ⭐ CB Operations — Stock and Suppliers as a small app (T3-OPS, 2026-10-14; Home's "CB Operations", "Stock" and "Suppliers" open here).
+     The FRAME is CBFrame's standard skeleton (sidebar + full-width main, page-frame.js + page-skeleton.css), as settings.html wears it; the
+     LISTS are CBList (list-ctl.js); the SCREENS are modules, never drawn here:
+       Stock     → app/cap-stock.js     (on hand per item, batches and expiry, fewest first — the ONE stock reader, GET /api/till/stock?lots=1)
+       Suppliers → app/cap-suppliers.js (the supplier list, readiness, add / link / remove — supName · supKindOf · supReachOf LIFTED from app.html)
+     Every write goes through CBAction (M64); what may be done is the server's answer (a refusal paints its sentence). This page is the gate and the frame.
+     ⚠️ Not here yet (OPS-S2): the certificate check a supplier must pass — the workshop keeps it this round. -->
+<link rel="stylesheet" href="/app/page-skeleton.css">   <!-- the standard page skeleton (sidebar + main pane), drawn by CBFrame -->
+<style>
+/* the workshop's token NAMES with the Cream values (the avatar's themes re-point these names; a page that never chooses a theme is Cream) — settings.html's set */
+:root{ --paper:#fbf6ec; --card:#fffdf8; --ink:#2a2418; --on-bg:var(--ink); --on-card:var(--ink); --grey:#5c5240; --line:#e6dcc6; --blue:#1f5f5b; --on-accent:#fbf6ec;
+  --disp:#8e3517; --danger-tint:#fbeae3; --warn-2:#7a5205; --ok-2:#0d4a2b; --ok-tint:#e8f4ed;
+  --mono:'IBM Plex Mono',ui-monospace,monospace; --sans:'IBM Plex Sans',system-ui,sans-serif; --serif:'Source Serif 4',Georgia,serif; }
+:root[data-themed]{--side:var(--card);--line-side:var(--line);--ink-2:var(--ink);--muted-2:var(--grey);--hover-nav:color-mix(in srgb,var(--ink) 8%,var(--card));
+  --accent:var(--blue-2,var(--blue));--accent-text:var(--blue-d,var(--blue));--accent-ink:var(--card);--on-accent:var(--card)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper,#fbf6ec);color:var(--ink,#2a2418);font-family:var(--sans);font-size:15px;line-height:1.45}
+button{font-family:inherit;cursor:pointer}
+.cbsk .screen > #ops{flex:1 1 auto;min-height:0;padding:12px 20px 0;display:flex;flex-direction:column;gap:8px;overflow:hidden}
+#ops .ops-list{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+.ops-bar{display:flex;gap:8px;flex-wrap:wrap}
+.ops-bar .inp{flex:1 1 220px;min-width:0}
+.inp{border:1px solid var(--line,#e6dcc6);border-radius:9px;padding:10px 12px;font:inherit;font-size:14px;background:var(--card,#fffdf8);color:var(--on-card,#2a2418);margin:0}
+.act{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:40px;padding:0 16px;border:1px solid var(--accent,#1f5f5b);border-radius:9px;background:var(--accent,#1f5f5b);color:var(--on-accent,#fbf6ec);font-size:14px;font-weight:600}
+.act.ghost{background:var(--card,#fffdf8);color:var(--accent-text,var(--accent,#1f5f5b))}
+.act[disabled]{cursor:not-allowed}
+[data-action-state="busy"]{opacity:.7}
+.err{font-size:13.5px;color:var(--disp,#8e3517)}
+.err:empty{display:none}
+.err:not(:empty){background:var(--danger-tint,#fbeae3);border:1px solid var(--line,#e6dcc6);border-radius:9px;padding:8px 11px}
+.ops-chip{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:999px;border:1px solid var(--line,#e6dcc6);font-size:12px;font-weight:600;white-space:nowrap}
+.ops-chip.ok{background:var(--ok-tint,#e8f4ed);color:var(--ok-2,#0d4a2b)}
+.ops-chip.dim{background:var(--card,#fffdf8);color:var(--grey,#5c5240)}
+.ops-chip.bad{background:var(--danger-tint,#fbeae3);color:var(--disp,#8e3517)}
+.ops-next{display:flex;flex-direction:column;gap:4px;font-size:13.5px;color:var(--on-card,#2a2418)}
+.ops-lot{display:flex;flex-wrap:wrap;gap:4px 14px}
+.empty{padding:40px 20px;text-align:center;border:1px dashed var(--line,#e6dcc6);border-radius:14px;color:var(--grey,#5c5240);display:flex;flex-direction:column;align-items:center;gap:12px}
+.empty .t{font-family:var(--serif);font-size:19px;color:var(--ink,#2a2418);font-weight:700}
+.loadwrap{display:flex;align-items:center;gap:10px;color:var(--grey,#5c5240);padding:18px 0}
+.spin{display:inline-block;width:15px;height:15px;border:2px solid var(--line,#e6dcc6);border-top-color:var(--accent,#1f5f5b);border-radius:50%;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:60;max-width:min(520px,92vw)}
+#toast .toast{background:var(--ink,#2a2418);color:var(--paper,#fbf6ec);padding:12px 16px;border-radius:10px;font-size:14px}
+#netpill{position:fixed;right:12px;bottom:12px;font-size:12px;color:var(--grey,#5c5240)}
+@media (max-width:760px){ .cbsk .screen > #ops{padding:10px 10px 0} }
+</style>
+</head>
+<body>
+<div id="ops" data-testid="ops-screen"><div class="loadwrap"><span class="spin"></span> Loading</div></div>
+<div id="toast"></div>
+<script>
+'use strict';
+/* ── the host globals the workshop's own files expect (as settings.html / tasks.html declare them) ── */
+const CFG = { API_BASE: window.CB_API };
+let SESSION = { token: null, role: null, name: null, entity: null, bridgeId: null };
+const EP = {};
+function go(){ if (window.CBFrame) CBFrame.ended(); }   /* api()'s 401 → drop the session, the one sign-in window shows (page-frame.js) */
+</script>
+<script src="/engine/screen.js"></script>
+<script src="/app/edition.js"></script>
+<script src="/app/avatar.js"></script>
+<script src="/app/core.js"></script>            <!-- api() · the network pill — the workshop's own transport -->
+<script src="/app/accounts-shell.js"></script>  <!-- tx · txf · txn · toast · CBAction · CBConfirm · CB_PARTY_EP (supList · supAdd · supDel) -->
+<script src="/app/locale.js"></script>
+<script src="/app/helpers.js"></script>         <!-- esc -->
+<script src="/engine/signin.js"></script>
+<script src="/app/signin-ui.js"></script>
+<script src="/app/one-person.js"></script>
+<script src="/app/rail-bell.js"></script>
+<script src="/app/shell.js"></script>
+<script src="/app/kural.js"></script>
+<script src="/app/page-frame.js"></script>
+<script src="/app/list-ctl.js"></script>        <!-- CBList: both lists -->
+<script src="/app/cap-suppliers.js"></script>   <!-- Suppliers (CBSuppliers.mount) + the list rules the workshop shares -->
+<script src="/app/cap-stock.js"></script>       <!-- Stock (CBStock.mount) + CB_OPS_EP -->
+<script>
+'use strict';
+(function () {
+  Object.assign(EP, CB_PARTY_EP, CB_OPS_EP);
+  if (window.CBShell && CBShell.apiBase) CFG.API_BASE = CBShell.apiBase() || CFG.API_BASE;
+  var SECTIONS = [
+    { k: 'stock',     label: 'Stock',     icon: 'M3 7l9-4 9 4-9 4-9-4M3 7v10l9 4 9-4V7M12 11v10' },
+    { k: 'suppliers', label: 'Suppliers', icon: 'M3 21V9l6 4V9l6 4V5h6v16H3M7 17h2M12 17h2M17 17h2' },
+  ];
+  var host = document.getElementById('ops'), frame = null;
+  function secOf(){ var h = (location.hash || '').replace(/^#\/?/, '').split(/[?&]/)[0]; return SECTIONS.some(function (s) { return s.k === h; }) ? h : 'stock'; }
+  function paint(k){
+    if (frame && frame.skeleton) frame.skeleton.setActive(k);
+    if (location.hash !== '#/' + k) {
+      try { history.replaceState(null, '', '#/' + k); } catch (e) { if (typeof cblog === 'function') cblog('warn', 'operations: the address did not update — ' + e.message); }
+    }
+    host.innerHTML = '';
+    if (k === 'suppliers') CBSuppliers.mount(host); else CBStock.mount(host);
+  }
+  frame = CBFrame.mount({ app: 'operations', kural: 'operations', work: host,
+    skeleton: { name: 'CB Operations', icon: 'M12 15a3 3 0 1 0 0-6a3 3 0 0 0 0 6M4 12h2M18 12h2M12 4v2M12 18v2M6.3 6.3l1.4 1.4M16.3 16.3l1.4 1.4M6.3 17.7l1.4-1.4M16.3 7.7l1.4-1.4',
+      sections: SECTIONS, active: secOf(), onSection: paint } });
+  var sess = frame.session;
+  if (!sess || !sess.token) { host.innerHTML = '<div class="empty" data-testid="ops-signin"><div class="t">Sign in above</div></div>'; return; }
+  var me = CBOnePerson.who(sess);
+  SESSION = { token: sess.token, role: sess.role, name: sess.name, entity: sess.entity, bridgeId: sess.bridgeId, entityId: me && me.ent, actorId: sess.role === 'actor' ? (me && me.uid) : null };
+  window.addEventListener('hashchange', function () { paint(secOf()); });
+  paint(secOf());
+})();
+</script>
+</body>
+</html>

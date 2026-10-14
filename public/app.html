@@ -1640,6 +1640,7 @@ body.lab-only #cbtestpanel{
      already holds. e2e/list-controls.cjs checks the rule; this is what makes obeying it cheap on the ninth
      screen as well as the first. NOT lazy-loaded: the screens that need it are the ordinary ones. -->
 <script src="/app/list-ctl.js"></script>
+<script src="/app/cap-suppliers.js"></script>   <!-- supName · supKindOf · supReachOf: the supplier list's rules, shared with CB Operations (T3-OPS) -->
 <script src="/app/list-legacy.js"></script>
 <!-- module 3: the canonical catalogue model (shape · migration · four-leg chain · compute-job derivation). Shared by cap-network.js and headless consumers. -->
 <script src="/app/catalogue-model.js"></script>
@@ -1926,7 +1927,7 @@ const EP = {
   connPending:     {m:"GET",   p:"/api/connections/pending",     ok:"✓"},
   connRequest:     {m:"POST",  p:"/api/connections/request",     ok:"✓"},  // {to_entity_id}
   connRespond:     {m:"PUT",   p:"/api/connections/:id/respond", ok:"✓"},  // {action:accept|reject}
-  supList:         {m:"GET",   p:"/api/relationships/suppliers", ok:"✓"},
+  /* supList → CB_PARTY_EP (app/accounts-shell.js, T3-OPS): CB Operations › Suppliers reads the same list */
   supCatalogue:    {m:"GET",   p:"/api/relationships/suppliers/:sid/catalogue", ok:"✓"},
   /* ⚠️ ok:"y" — NEW, and the client falls back to the per-supplier fan-out when it 404s. Web and API deploy
      separately, so "the endpoint is not there yet" is a normal state, not an error. */
@@ -7766,7 +7767,7 @@ function suppliersScreen(){
   setTimeout(paintSupList, 0);   /* the rows are a CBList mount: painted once the panel is in the page */
   return `<div class="panel ${showDetail?'showdetail':''}" id="panel" style="--lw:${UI.lw}px;--lh:${UI.lh}px">${list}${divider}${detail}</div>`;
 }
-function supName(x){ return (x&&(x.nickname||x.display_name))||'—'; }
+/* supName · supKindOf · supReachOf → app/cap-suppliers.js (T3-OPS: lifted, CB Operations reads the same rules) */
 /**
  * ⭐⭐ TWO TABS, ONE LIST (Athi, 2026-09-10): *"we have already the supplier menu — add the business here and,
  * while adding or maybe later through edit, set a flag: is he the supplier for my sales or is he the facilitator?
@@ -7784,7 +7785,6 @@ function supName(x){ return (x&&(x.nickname||x.display_name))||'—'; }
  * list that already exists.
  */
 function supKind(){ return UI.supKind==='own_use'?'own_use':'resale'; }
-function supKindOf(x){ return (x&&x.supply_kind==='own_use')?'own_use':'resale'; }
 function supKindCount(k){ return (UI.sups||[]).filter(function(x){ return supKindOf(x)===k; }).length; }
 function supKindTabsHTML(){
   const b=function(k,icon,label,tid){
@@ -7847,11 +7847,8 @@ function supListOpts(){
       /* ⭐ "can I actually order from them?" is the question this answers, and it is three different states —
          a catalogue to call, on the rail with nothing on it, and not on ChitBridge at all. */
       { key:'reach', label: tx('How you order'), all: tx('However you order'),
-        options:[{v:'cat',label:tx('📕 Has a catalogue')},{v:'nocat',label:tx('On ChitBridge, no catalogue')},
-                 {v:'off',label:tx('🧾 Not on ChitBridge')}],
-        match: function(x,v){ return v==='off' ? x.on_rail===false
-          : v==='cat' ? (x.on_rail!==false && !!x.has_catalogue)
-          : (x.on_rail!==false && !x.has_catalogue); } },
+        options: supReachOptions(),
+        match: function(x,v){ return supReachOf(x)===v; } },
     ].concat(cats.length ? [{ key:'category', label: tx('Category'), all: tx('Every category'),
         options: cats.map(function(c){ return {v:c,label:c}; }),
         match: function(x,v){ return x.category===v; } }] : []),
