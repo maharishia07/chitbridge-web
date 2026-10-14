@@ -18,21 +18,23 @@ Athi, 2026-10-12: *"for each function we are building we need to have a SAP kind
 | [MVI](MVI.md) | Move in (from Xero / QuickBooks) | FI (conversion: opening balances, master data) | chart of accounts → contacts → items → opening balances | 4 | 0 | 0 |
 | [PRN](PRN-flow.md) | Parallel run (their Tally / Xero period beside ours) | FI (audit: parallel run, reconciliation of statements) | load their period → compare, differences first → the auditor's file | 2 | 1 | 0 |
 | [FX](FX.md) | Foreign currency (a bill in another currency, its settlement, the period-end revaluation) | FI (foreign currency valuation · realised / unrealised exchange differences) | the day's rate → a foreign bill posts at its day's rate; its payment settles with the exchange gain or loss → revalue at the month end, reversed next month | 3 | 0 | 0 |
+| [TRD](TRD.md) | Trade (a lane from the shop's own country, its papers by deal, the deals abroad) | SD-FT (foreign trade: export documents, country of origin) — the incumbents are a baseline; built on the rail (a paper is a per-copy attachment on the chit) | the lanes from the shop's own country, the sector asked when unstated → the deals abroad on the Task / Order list → the papers of a deal: the day's rate and the pack's tax word on the commercial invoice, the issued papers by deal | 3 | 0 | 0 |
 
 ## Flows × modules — which module owns which step
 
-| flow | CRM | Finance | Accounts | Till | Tasks & Orders | Operations | Employees | Network |
-|---|---|---|---|---|---|---|---|---|
-| O2C |  | 6 receipt<br>8 cash position<br>9 repeat supply | 7 posted | 5 invoice | 2 quote (MISSING)<br>3 order<br>4 delivery |  |  | 1 enquiry ⚠️ |
-| P2P |  | 7 payables | 4 supplier bill<br>5 payment<br>6 posted |  | 2 PO | 1 need ⚠️<br>3 goods receipt |  |  |
-| R2R |  | 8 cash position | 1 country<br>2 entries<br>4 month lock<br>5 GST<br>6 year close<br>7 statements<br>9 bank reconciliation | 3 day close |  |  |  |  |
-| INV |  |  | 5 closing stock ⚠️ | 2 stock<br>3 issue / sale ⚠️ |  | 1 receipt<br>4 count (MISSING) |  |  |
-| H2P |  |  | 5 payment (MISSING) | 3 attendance ⚠️ |  |  | 1 person<br>2 access<br>4 payroll (MISSING) |  |
-| L2C | 1 lead<br>2 call<br>3 demo ⚠️<br>4 trial ⚠️<br>5 customer<br>6 consent & privacy requests ⚠️ |  |  |  |  |  |  |  |
-| C2V |  |  | 1 practice (MISSING)<br>2 request (MISSING)<br>3 grant (MISSING)<br>4 dashboard (MISSING)<br>5 open client (MISSING)<br>6 ask ⚠️<br>7 end (MISSING) |  |  |  |  |  |
-| MVI |  |  | 1 chart of accounts<br>2 contacts<br>3 items<br>4 opening balances |  |  |  |  |  |
-| PRN |  |  | 1 load their period<br>2 compare, differences first<br>3 the auditor's file ⚠️ |  |  |  |  |  |
-| FX |  |  | 1 the day's rate<br>2 a foreign bill posts at its day's rate; its payment settles with the exchange gain or loss<br>3 revalue at the month end, reversed next month |  |  |  |  |  |
+| flow | CRM | Finance | Accounts | Till | Tasks & Orders | Operations | Employees | Network | Documents |
+|---|---|---|---|---|---|---|---|---|---|
+| O2C |  | 6 receipt<br>8 cash position<br>9 repeat supply | 7 posted | 5 invoice | 2 quote (MISSING)<br>3 order<br>4 delivery |  |  | 1 enquiry ⚠️ |  |
+| P2P |  | 7 payables | 4 supplier bill<br>5 payment<br>6 posted |  | 2 PO | 1 need ⚠️<br>3 goods receipt |  |  |  |
+| R2R |  | 8 cash position | 1 country<br>2 entries<br>4 month lock<br>5 GST<br>6 year close<br>7 statements<br>9 bank reconciliation | 3 day close |  |  |  |  |  |
+| INV |  |  | 5 closing stock ⚠️ | 2 stock<br>3 issue / sale ⚠️ |  | 1 receipt<br>4 count (MISSING) |  |  |  |
+| H2P |  |  | 5 payment (MISSING) | 3 attendance ⚠️ |  |  | 1 person<br>2 access<br>4 payroll (MISSING) |  |  |
+| L2C | 1 lead<br>2 call<br>3 demo ⚠️<br>4 trial ⚠️<br>5 customer<br>6 consent & privacy requests ⚠️ |  |  |  |  |  |  |  |  |
+| C2V |  |  | 1 practice (MISSING)<br>2 request (MISSING)<br>3 grant (MISSING)<br>4 dashboard (MISSING)<br>5 open client (MISSING)<br>6 ask ⚠️<br>7 end (MISSING) |  |  |  |  |  |  |
+| MVI |  |  | 1 chart of accounts<br>2 contacts<br>3 items<br>4 opening balances |  |  |  |  |  |  |
+| PRN |  |  | 1 load their period<br>2 compare, differences first<br>3 the auditor's file ⚠️ |  |  |  |  |  |  |
+| FX |  |  | 1 the day's rate<br>2 a foreign bill posts at its day's rate; its payment settles with the exchange gain or loss<br>3 revalue at the month end, reversed next month |  |  |  |  |  |  |
+| TRD |  |  |  |  |  | 1 the lanes from the shop's own country, the sector asked when unstated<br>2 the deals abroad on the Task / Order list |  |  | 3 the papers of a deal: the day's rate and the pack's tax word on the commercial invoice, the issued papers by deal |
 
 ## The modules
 
@@ -46,6 +48,7 @@ Athi, 2026-10-12: *"for each function we are building we need to have a SAP kind
 | Operations | `web:public/app.html` | MM (supplies, stock, intake) |
 | Employees | `web:public/employees.html` | HCM |
 | Network | `web:public/network.html` | SD (storefront) · CTP |
+| Documents | `web:public/authority-forms.html` | SD-FT (export documents: certificate of origin, commercial invoice) |
 
 ## The backlog — every step the code does not have
 
