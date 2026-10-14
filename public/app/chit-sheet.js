@@ -58,18 +58,22 @@
     var cur = sum.currency_code || h.currency || 'INR';
     var bill = bj.bill_no || bj.printed_as || null;
     var log = (r && r.state_log) || [];
-    var counterBill = !!(bj.till && iSent && !others.length);   /* rung up at a counter and sent to nobody else */
-    var billRx = purpose === 'invoice' && !iSent;
+    /* ⭐ F10: MY counter receipt that carries their bill no. AND total IS their bill — the server's own test (folder-inventory `their_bill`,
+       tax-copy.capturedBill), read here as a classification, never a sum. It is a bill I received, accepted like one; its step is my own copy's. */
+    var tb = bj.their_bill, captured = purpose === 'receipt' && !!(tb && typeof tb === 'object' && String(tb.no == null ? '' : tb.no).trim() !== '' && tb.total != null && String(tb.total) !== '');
+    var counterBill = !captured && !!(bj.till && iSent && !others.length);   /* rung up at a counter and sent to nobody else */
+    var billRx = (purpose === 'invoice' && !iSent) || captured;
     var agreement = !!(bj.repeat && bj.repeat.agreement_id);   /* RI1: a repeat-supply agreement (purpose subscription) — its verbs are its own panel's */
     return {
       agreement: agreement,
-      id: h.chit_id || (r && r.id) || null, status: billRx ? billStepStatus(log) : String(h.current_status || h.status || 'pending'), purpose: purpose, cur: cur,
-      iSent: iSent, counterBill: counterBill, billRx: billRx, hasOther: (!iSent) || others.length > 0, hasLines: live.length > 0,
+      id: h.chit_id || (r && r.id) || null, status: billRx && !captured ? billStepStatus(log) : String(h.current_status || h.status || 'pending'), purpose: purpose, cur: cur,
+      iSent: iSent, counterBill: counterBill, billRx: billRx, captured: captured, hasOther: (!iSent) || others.length > 0, hasLines: live.length > 0,
       isTask: !counterBill && !billRx,
-      no: bill || h.manual_subject || h.auto_subject || '', at: bj.billed_at || h.created_at,
+      no: captured ? String(tb.no).trim() : (bill || h.manual_subject || h.auto_subject || ''), at: bj.billed_at || h.created_at,
       counter: counterOfBill(bill, bj.till), by: bj.till && bj.till.by && bj.till.by.name || '',
-      who: counterBill ? ((bj.customer && bj.customer.name) || T('Walk-in')) : (billRx ? ((sum.bill_received && sum.bill_received.from) || senderName) : (others.map(function (x) { return x.display_name; }).join(', ') || senderName)),
-      lines: live, bj: bj, money: moneyFor(bj, money_, cur, sum), rec: rec, order: orderDetails(sum, purpose)
+      who: counterBill ? ((bj.customer && bj.customer.name) || T('Walk-in')) : captured ? ((bj.party && bj.party.name) || T('Not named')) : (billRx ? ((sum.bill_received && sum.bill_received.from) || senderName) : (others.map(function (x) { return x.display_name; }).join(', ') || senderName)),
+      /* a captured bill not yet frozen: the money it carries is THEIR total as the door typed it (read; the server taxes the lines when it posts) */
+      lines: live, bj: bj, money: captured && !bj.invoice ? { total: Number(tb.total) } : moneyFor(bj, money_, cur, sum), rec: rec, order: orderDetails(sum, purpose)
     };
   }
   /* ⭐ WHAT THE CHIT IS FROZEN WITH, in one shape (summary_json.money's names + by_rate · heads · lines): the invoice the
@@ -120,6 +124,8 @@
        answered by the server per verb (may/why); the rail's step buttons would move the copy behind the agreement's back */
     if (m.agreement) { if (!dead && m.hasOther) a.push('dispute'); a.push('page'); return a; }
     if (m.counterBill) { a.push('print'); if (!dead) a.push('return'); }
+    /* F10: my receipt of their bill — Accept (the goods were counted at my door: no Goods in; nobody else holds it: no Dispute) */
+    else if (m.captured) { if (open) a.push('accept'); }
     else if (m.billRx) {
       if (open) { a.push('accept'); a.push('dispute'); a.push('goodsin'); }
       else if (!dead) a.push('dispute');
@@ -133,7 +139,23 @@
     a.push('page');
     return a;
   }
+  /**
+   * ⭐ F10: WHAT THE SERVER SAID ABOUT THIS BILL — its row on the Books Waiting list (GET /books/health waiting[]; the reason is the server's
+   * sentence, painted, never re-derived). A gap between their total and the lines, or a supplier the books do not know: Accept stays SHOWN
+   * and greyed WITH that sentence; "Who is …" also gets the add-party door. Off the Books page there is no list in hand — Accept is offered,
+   * and the server still never posts what it refused (it waits again, with the same words).
+   */
+  function serverSaid(m) {
+    if (!m || !m.captured) return null;
+    var list = (typeof BK !== 'undefined' && BK && BK.waiting) || [];
+    var w = list.filter(function (x) { return x && x.chit_id === m.id; })[0], why = w ? String(w.reason || w.why || '') : '';
+    if (!why || /^Waiting for you to confirm/.test(why)) return null;
+    var who = /^Who is (.+)\? Add them as a supplier/.exec(why);
+    return { why: why, name: who ? who[1] : null };
+  }
+  function actsOf(m) { var a = actionsFor(m), said = serverSaid(m); if (said && said.name) a.splice(Math.max(0, a.length - 1), 0, 'supplier'); return a; }
   var ACT = {
+    supplier: ['＋', 'Add supplier'],
     accept: ['✓', 'Accept'], dispute: ['⚑', 'Dispute'], goodsin: ['📥', 'Goods in'], done: ['✔', 'Done'],
     print: ['🖨', 'Print'], 'return': ['↩', 'Return'], repeat: ['🔁', 'Repeat this…'], page: ['↗', 'Open page']
   };
@@ -268,6 +290,7 @@
       + pageNoteHTML()
       + orderHTML(m) + linesHTML(m) + (m.purpose === 'order' && !(m.money && m.money.by_rate) ? '' : gstHTML(m)) + totalHTML(m) + tenderHTML(m)
       + (m.agreement ? (root.CBRepeat ? root.CBRepeat.panelHTML() : '<div class="cs-sec">' + E(T('Repeat supply')) + '</div><div class="cs-mute" data-testid="rp-panel">' + E(T('Reading…')) + '</div>') : '')
+      + (serverSaid(m) ? '<div class="cs-note" data-testid="cs-why">' + E(serverSaid(m).why) + '</div>' : '')
       + (CS.note ? '<div class="cs-note" data-testid="cs-note">' + E(CS.note) + '</div>' : '')
       + (CS.useAsk ? '<div class="cs-use" data-testid="cs-use">' + billUseChoiceHTML([m], 'CBSheet.use')
         + '<button type="button" class="optchip" data-testid="cs-use-auto" onclick="CBSheet.use(\'\')">' + E(T('Let my catalogue decide')) + '</button></div>' : '')
@@ -275,8 +298,10 @@
     railMount(d, m);
     if (m.agreement) repeatCap().then(function (rp) { if (rp && CS.view === m) { if (!document.getElementById('rp_panel')) paint(); else rp.panel(m); } });
     /* the page form has no "Open page": the person is on it */
-    d.querySelector('.cs-acts').innerHTML = actionsFor(m).filter(function (k) { return !(CS.mode === 'page' && k === 'page'); }).map(function (k) {
-      return '<button type="button" class="cs-act" data-testid="cs-act-' + k + '" onclick="CBSheet.act(\'' + k + '\')"' + (CS.busy ? ' disabled' : '') + ' title="' + E(T(ACT[k][1])) + '"><span class="ic" aria-hidden="true">' + ACT[k][0] + '</span><span>' + E(T(ACT[k][1])) + '</span></button>';
+    var said = serverSaid(m);
+    d.querySelector('.cs-acts').innerHTML = actsOf(m).filter(function (k) { return !(CS.mode === 'page' && k === 'page'); }).map(function (k) {
+      var refused = k === 'accept' && !!said;   /* the server's refusal: shown, greyed, with its sentence */
+      return '<button type="button" class="cs-act" data-testid="cs-act-' + k + '" onclick="CBSheet.act(\'' + k + '\')"' + (CS.busy || refused ? ' disabled' : '') + ' title="' + E(refused ? said.why : T(ACT[k][1])) + '"><span class="ic" aria-hidden="true">' + ACT[k][0] + '</span><span>' + E(T(ACT[k][1])) + '</span></button>';
     }).join('');
   }
 
@@ -370,9 +395,13 @@
 
   function act(k) {
     var m = CS.view, id = CS.id; if (!m) return;
-    if (actionsFor(m).indexOf(k) < 0) return;   /* a stale tap on an action this step no longer allows */
+    if (actsOf(m).indexOf(k) < 0) return;   /* a stale tap on an action this step no longer allows */
+    if (k === 'accept' && serverSaid(m)) return;   /* greyed: the server refused it, and said why */
+    if (k === 'supplier') { var nm = serverSaid(m).name; if (typeof root.bkAddSupplier !== 'function') { CS.note = T('Add them on the Suppliers page.'); return paint(); }
+      CS.busy = true; paint();
+      return root.bkAddSupplier(nm).then(function (said) { CS.busy = false; CS.note = said || null; return read(id); }).catch(function () { CS.busy = false; paint(); }); }
     /* a bill received asks what the goods are for BEFORE the acceptance it decides (the same choice Goods in shows) — a task just moves */
-    if (k === 'accept') { if (m.billRx) { CS.useAsk = true; CS.note = null; return paint(); } return move('act'); }
+    if (k === 'accept') { if (m.billRx && !m.captured) { CS.useAsk = true; CS.note = null; return paint(); } return move('act'); }
     if (k === 'done') return move('close');
     if (k === 'goodsin') { CS.useAsk = true; CS.note = null; return paint(); }
     if (k === 'print') { try { window.print(); } catch (_) {} return; }

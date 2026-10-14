@@ -18,3 +18,6 @@ e2e/.stack/
 
 # the knowledge graph (KG1) — rebuilt from the three repos by `node tools/graph/graph.cjs build`, never committed
 tools/graph/out/
+
+# test run output (screenshots) — never committed
+e2e/out/
