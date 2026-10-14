@@ -66,8 +66,9 @@ const walk = async (w) => {
   const txt = (sel) => page.locator(sel).first().innerText().then((s) => s.replace(/\s+/g, ' ').trim()).catch(() => '');
   const wrote = (re) => S.calls.filter((c) => re.test(c));
   const ready = (k) => T('cbl-error-ops-' + k) + ',' + T('cbl-empty-ops-' + k) + ',[data-testid^="ops-' + (k === 'stock' ? 'stock' : 'sup') + '-row-"]';
-  const stock = async () => { await page.goto(base + '/operations.html#/stock'); await page.waitForSelector(ready('stock'), { timeout: 20000 }); await page.waitForTimeout(300); };
-  const sups = async () => { await page.goto(base + '/operations.html#/suppliers'); await page.waitForSelector(ready('suppliers'), { timeout: 20000 }); await page.waitForTimeout(300); };
+  let nav = 0;   /* a goto to the same URL + hash only moves the hash: a fresh query makes it a fresh load */
+  const stock = async () => { await page.goto(base + '/operations.html?n=' + (++nav) + '#/stock'); await page.waitForSelector(ready('stock'), { timeout: 20000 }); await page.waitForTimeout(300); };
+  const sups = async () => { await page.goto(base + '/operations.html?n=' + (++nav) + '#/suppliers'); await page.waitForSelector(ready('suppliers'), { timeout: 20000 }); await page.waitForTimeout(300); };
 
   try {
     if (REAL) {
