@@ -66,8 +66,10 @@ button[disabled]{opacity:.55;cursor:not-allowed}
 .govrow{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid var(--line,#e6dcc6);font-size:var(--fs-2)}
 .misplanrow{margin:10px 0}.misplanhead{display:flex;justify-content:space-between;gap:10px;font-size:var(--fs-2)}.misplanv{font-weight:700}
 .misplanbar{height:8px;border-radius:4px;background:var(--line,#e6dcc6);overflow:hidden}.misplanbar i{display:block;height:100%}
-#set table{max-width:100%}
-#set select.inp{width:auto;max-width:100%}
+/* a table (who owns what · the store map) takes the pane's width and wraps — never a sideways scroll at 390 px; a select is as wide as its cell or row, not as its longest option */
+#set table{width:100%;max-width:100%;table-layout:fixed;border-collapse:collapse}
+#set td,#set th{overflow-wrap:anywhere}
+#set select{max-width:100%;min-width:0}
 #toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:60;max-width:min(520px,92vw)}
 #toast .toast{background:var(--ink,#2a2418);color:var(--paper,#fbf6ec);padding:12px 16px;border-radius:10px;font-size:14px}
 /* the network pill core.js paints while a read is in flight (one for every page) */

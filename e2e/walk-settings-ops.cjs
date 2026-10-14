@@ -36,9 +36,11 @@ const walk = async (w) => {
     runs_on: 'a shop PC', does: 'Carries products and stock up, orders down as vouchers.', status: 'proven', steps: ['Download, unzip, double-click start.cmd.'], needs: [], watch_out: [], docs: '/api/integrations/docs/' + id,
     may: S.country !== 'IN' && id !== 'csv' ? { ok: false, why: 'The ' + id + ' connector is built on India\'s GST books, so it is not offered for a ' + NAMES[S.country] + ' shop. Use the File connector (CSV) or the Counter.' } : { ok: true, why: null } })) });
   const RUN = () => ({ connectors: [{ id: 'tally@OFFICE-PC', actor_id: 'a1', name: 'Tally on OFFICE-PC', adapter: 'tally', host: 'OFFICE-PC', version: '1.4', key_jti: 'k9', last_seen: ago(60000), health: 'live',
-    source: { ok: true, at: ago(60000) }, counters: { products_ok: 12, orders_ok: 3 }, note: '', kit: true, enrol: { approved: true, host: 'OFFICE-PC', company: 'Fixture Shop' } }] });
+    source: { ok: true, at: ago(60000) }, counters: { products_ok: 12, orders_ok: 3 }, note: '', kit: true, enrol: { approved: true, host: 'OFFICE-PC', company: 'Fixture Shop' } },
+    /* a second connector: with one, the streams card SAYS it carries everything (no hand-over to offer); with two, the owner's select appears */
+    { id: 'csv@BACK-PC', actor_id: 'a2', name: 'Files on BACK-PC', adapter: 'csv', host: 'BACK-PC', version: '1.4', key_jti: 'k8', last_seen: ago(3 * 86400000), health: 'offline', source: null, counters: { products_ok: 0, orders_ok: 0 }, note: '', kit: true, enrol: null }] });
   const STREAMS = () => ({ streams: [{ id: 'products', label: 'Products', dir: 'in', what: 'the item list this account sells from' }, { id: 'order', label: 'Sales voucher', dir: 'out', what: 'an order you received becomes a sales invoice' }],
-    owner: { products: 'tally@OFFICE-PC' }, connectors: [{ id: 'tally@OFFICE-PC', name: 'Tally on OFFICE-PC', adapter: 'tally' }] });
+    owner: { products: 'tally@OFFICE-PC' }, connectors: [{ id: 'tally@OFFICE-PC', name: 'Tally on OFFICE-PC', adapter: 'tally' }, { id: 'csv@BACK-PC', name: 'Files on BACK-PC', adapter: 'csv' }] });
   const FLAGS = { trade_side: 'sell', gst_registration: 'regular', books_at: 'accepted', books_overdue_hours: 12, tol_weight_bp: 50, tol_count_units: 0, tol_rate_bp: 0, trade_cover: 'off', self_copy_pref: 'received', detail_design: 'chit', chit_expiry_days: 0, retention_days: 0, dispute_scope: 'per-party', quick_key_reset_at: 'business_day', connectors_in_use: ['tally'], _migrated: true };
   const MAY = () => { const m = {}; Object.keys(FLAGS).forEach((k) => { m[k] = { ok: true, code: null, why: null }; });
     m.dispute_scope = { ok: false, code: 'PLATFORM_BOUND', why: 'Set by the platform for every shop.' };
@@ -87,7 +89,9 @@ const walk = async (w) => {
 
   const txt = (sel) => page.locator(sel).first().innerText().then((s) => s.replace(/\s+/g, ' ').trim()).catch(() => '');
   const wrote = (re) => S.calls.filter((c) => re.test(c));
-  const open = async (sec, sel) => { await page.goto(base + '/settings.html?sec=' + sec + '#/' + sec); await page.waitForSelector(sel, { timeout: 20000 }); await page.waitForTimeout(400); };
+  /* a FRESH load each time (a same-URL goto keeps the page and its reads — walk-settings.cjs T6A found the same): the query changes, the hash names the section */
+  let nav = 0;
+  const open = async (sec, sel) => { await page.goto(base + '/settings.html?n=' + (++nav) + '#/' + sec); await page.waitForSelector(sel, { timeout: 20000 }); await page.waitForTimeout(400); };
   const counters = () => open('counters', REAL ? '[data-testid="ctr-screen"]' : '[data-testid="ctr-C1"]');
   const connectors = () => open('connectors', REAL ? '[data-testid="int-screen"]' : '[data-testid="int-connector-tally"]');
   const policy = () => open('policy', '[data-testid="pol-trade_side"], [data-testid="pol-why-trade_side"]');
@@ -163,8 +167,9 @@ const walk = async (w) => {
   await w.step('P1', 'CB Settings › Policy & Localisation: the rules, each with its class; the platform\'s one locked WITH the server\'s sentence; Localisation under it', async () => {
     const rows = await page.$$eval('[data-testid^="pol-"]', (els) => els.filter((e) => /^(select|input)$/i.test(e.tagName)).length);
     const why = await txt('[data-testid="pol-why-dispute_scope"]'), loc = await txt('[data-testid="loc-title"]'), sub = await txt('[data-testid="pol-sub"]');
-    if (REAL) return { ok: rows > 5 && /Localisation/.test(loc), saw: rows + ' controls · "' + why + '"' };
-    return { ok: rows >= 12 && why === 'Set by the platform for every shop.' && /Localisation/.test(loc) && /server says/.test(sub) && /#\/policy$/.test(page.url()), saw: rows + ' controls · dispute_scope "' + why + '" · ' + loc };
+    /* the heading is upper-cased by CSS (.sec) and innerText reads the rendering: case-insensitive */
+    if (REAL) return { ok: rows > 5 && /Localisation/i.test(loc), saw: rows + ' controls · "' + why + '"' };
+    return { ok: rows >= 12 && why === 'Set by the platform for every shop.' && /Localisation/i.test(loc) && /server says/.test(sub) && /#\/policy$/.test(page.url()), saw: rows + ' controls · dispute_scope "' + why + '" · ' + loc };
   });
   if (!REAL) {
     await w.step('P2', 'Change "This entity" to receive -> one PATCH /entities/policy { trade_side: receive }, the card repainted from the server\'s answer', async () => {
@@ -196,7 +201,7 @@ const walk = async (w) => {
   }
 
   /* ── RULE 13: two themes × two widths × four sections ── */
-  const frameClip = await R13.sweep(w, page, measure, { host: 'set', sections: { counters, connectors, policy, plan }, from: 1, prefix: 'R' });
+  const frameClip = await R13.sweep(w, page, measure, { host: 'set', sections: { counters, connectors, policy, plan }, from: 1, prefix: 'R', min: 8 });   /* min 8: Plan & usage is two short cards */
   if (frameClip.size) w.note('R99', 'the shared frame\'s top bar at 390 px (not this page\'s pane)', 'ellipsised: ' + [...frameClip].join(' · '));
   if (w.errs.length) w.note('X99', 'page errors seen during the walk', w.errs.slice(0, 3).join(' | '));
   if (S.stack) await S.stack.stop();

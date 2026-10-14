@@ -51,7 +51,7 @@ function fails(pairs, a) {
 
 /**
  * the sweep: two themes × two widths × every section — one walk step each ("T7 · shop · dark · 390 px -> …").
- * opts: { host: the pane's id, sections: { key: async () => open it }, from: the first step number, prefix: 'T', frameClip: Set (the frame's own ellipses, reported once) }
+ * opts: { host: the pane's id, sections: { key: async () => open it }, from: the first step number, prefix: 'T', min: texts a section must have (10), frameClip: Set (the frame's own ellipses, reported once) }
  */
 async function sweep(w, page, measure, opts) {
   let k = opts.from || 1; const frameClip = opts.frameClip || new Set(); const prefix = opts.prefix || 'T';
@@ -65,7 +65,7 @@ async function sweep(w, page, measure, opts) {
           await page.evaluate((t) => { CBAvatar.applyTheme(t); }, theme); await page.waitForTimeout(150);
           const pairs = await page.evaluate(measure), a = await audit(page, opts.host), f = fails(pairs, a);
           a.frameClip.forEach((x) => frameClip.add(x));
-          return { ok: !f.length && pairs.length > 10, saw: pairs.length + ' texts measured, lowest ' + Math.min.apply(null, pairs.map((x) => x.ratio)) + (f.length ? ' · ' + f.slice(0, 4).join(' · ') : ' · clean') };
+          return { ok: !f.length && pairs.length >= (opts.min || 10), saw: pairs.length + ' texts measured, lowest ' + Math.min.apply(null, pairs.map((x) => x.ratio)) + (f.length ? ' · ' + f.slice(0, 4).join(' · ') : ' · clean') };
         });
       }
     }

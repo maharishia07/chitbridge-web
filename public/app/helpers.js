@@ -180,3 +180,5 @@ function pendingNote(why){
     + 'padding:8px 11px;font-size:var(--fs-1);color:var(--warn-3)">⏳ <b>' + tx('Pending') + '</b>'
     + (why ? ' — ' + esc(why) : '') + '</div>';
 }
+/** may this session edit the shop's own particulars — the owner's session, not a co-assist's (SESSION.actorId). Was cap-admin.js's; cap-locale.js asks it too. */
+function profCanEdit(){ return !(typeof SESSION !== 'undefined' && SESSION && SESSION.actorId); }

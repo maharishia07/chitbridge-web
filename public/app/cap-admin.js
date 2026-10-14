@@ -2624,7 +2624,7 @@ var PROF_FIELDS = {
  * this screen today (loadProfile routes them to loadActorProfile), but a button that would silently misfile
  * data must not exist on the strength of a route that might change.
  */
-function profCanEdit(){ return !(typeof SESSION !== 'undefined' && SESSION && SESSION.actorId); }
+/* profCanEdit → app/helpers.js (T3-SETTINGS: cap-locale.js's currency picker asks it too) */
 
 function profSaveBtn(sec){
   if (!profCanEdit()) return '';

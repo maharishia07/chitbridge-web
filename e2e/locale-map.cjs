@@ -60,7 +60,7 @@ Object.assign(sb, {
   textSize: () => 'm', motionPref: () => 'auto', apGet: (k, d) => (k in store ? store[k] : d),
   STANDARDS: [], GOV: [],
   /* T3-SETTINGS: helpers.js's pack words (cap-shop.js reads them at paint) — the sandbox never loaded helpers.js */
-  taxIdWord: () => 'GSTIN', packWord: (k) => k, lsGet: (k, d) => d, lsSet(){}, specNote: () => '', pendingNote: () => '',
+  taxIdWord: () => 'GSTIN', packWord: (k) => k, lsGet: (k, d) => d, lsSet(){}, specNote: () => '', pendingNote: () => '', profCanEdit: () => true,
 });
 /* T3-SETTINGS: the Localisation screen MOVED to app/cap-locale.js (CB Settings paints it too); app.html loads cap-shop · cap-policy · cap-locale before cap-admin (CAP_WITH.admin), so does this sandbox */
 for (const f of ['cap-shop.js', 'cap-policy.js', 'cap-locale.js', 'cap-admin.js']) vm.runInContext(fs.readFileSync(path.join(W, 'app', f), 'utf8'), ctx, { filename: f });
