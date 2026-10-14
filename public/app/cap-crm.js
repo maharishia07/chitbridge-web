@@ -31,7 +31,13 @@ var CRM_EP = {
   crmStage:      { m: 'POST',   p: '/api/crm/parties/:id/stage',          ok: 'y' },   // { stage } → { ok, lead } — "Move to…": a new memberships row, history kept (L1)
   crmLeadImport: { m: 'POST',   p: '/api/crm/leads/import',               ok: 'y' },   // { rows[≤500], dry? } → 200 the plan (dry) · 201 { added, merged, skipped[], rows[] } · 400 TOO_MANY · 503 before b297 (L3)
   crmCalls:      { m: 'GET',    p: '/api/crm/calls',                      ok: 'y' },   // ?scope=mine|all → { calls, outcomes, may, late } — today's queue + the server's outcome buttons (L2)
-  crmOutcome:    { m: 'POST',   p: '/api/crm/parties/:id/outcome',        ok: 'y' },   // { outcome, after?|due_at? } → 201 { interaction, followup, stage, suggest } — one transaction (L2)
+  crmOutcome:    { m: 'POST',   p: '/api/crm/parties/:id/outcome',        ok: 'y' },
+  /* T3-P3-CONSENT: consent (b306) and the privacy-request register (b307) — cap-crm-privacy.js; 503 PRIVACY_NOT_MIGRATED before the migrations */
+  crmPrefs:      { m: 'GET',    p: '/api/crm/parties/:id/contact-prefs',   ok: 'y' },   // { history[], may[channel][purpose] { may, code, why }, law }
+  crmPrefSet:    { m: 'POST',   p: '/api/crm/parties/:id/contact-prefs',   ok: 'y' },   // { channel, purpose, allowed } → 201 { pref } (append-only; a withdrawal is a new row)
+  crmPrivReqs:   { m: 'GET',    p: '/api/crm/privacy-requests',            ok: 'y' },   // ?open=1&page=&limit= → { requests, total, page, limit, open, late, may_answer, why }
+  crmPrivReqAdd: { m: 'POST',   p: '/api/crm/privacy-requests',            ok: 'y' },   // { who, kind, received_at?, party_id?, country? } → 201 { request } — due_at is the law's
+  crmPrivReqAnswer: { m: 'POST', p: '/api/crm/privacy-requests/:id/answer', ok: 'y' },  // owner only: { outcome, answer } → { request } — answered once   // { outcome, after?|due_at? } → 201 { interaction, followup, stage, suggest } — one transaction (L2)
   crmRemove:     { m: 'DELETE', p: '/api/crm/parties/:id',                 ok: 'y' },   // "Remove from my parties" - owner only, 409 HAS_DUES, hides the party and deletes nothing
 };
 
@@ -269,7 +275,8 @@ function crmNav(active) {
     ['chits', 'Chits', 'M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6', (typeof CHITS !== 'undefined' && CHITS.state === 'ready' && chitsStuckCount()) ? '<span class="n" data-testid="crm-nav-n-chits" title="' + esc(tx('Stuck chits')) + '">' + chitsStuckCount() + '</span>' : ''],
     ['leads', 'Leads', 'M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.4 6.6 19.5l1.2-6L3.3 9.3l6.1-.7z', ''],
     ['calls', 'Calls', 'M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2', (typeof CALLS !== 'undefined' && CALLS.loaded && CALLS.rows.length) ? '<span class="n' + (CALLS.late ? '' : ' quiet') + '" data-testid="crm-nav-n-calls">' + CALLS.rows.length + '</span>' : ''],
-    ['followups', 'Follow-ups', 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M12 7v5l3 2', late ? '<span class="n" data-testid="crm-nav-n-followups" title="' + esc(crmPlural(late, 'late follow-up', 'late follow-ups')) + '">' + late + '</span>' : '']];
+    ['followups', 'Follow-ups', 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M12 7v5l3 2', late ? '<span class="n" data-testid="crm-nav-n-followups" title="' + esc(crmPlural(late, 'late follow-up', 'late follow-ups')) + '">' + late + '</span>' : ''],
+    ['privacy', 'Privacy', 'M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6zM9 12l2 2 4-4', (typeof PRV !== 'undefined' && PRV.state === 'ready' && PRV.late) ? '<span class="n" data-testid="crm-nav-n-privacy" title="' + esc(tx('Late privacy requests')) + '">' + PRV.late + '</span>' : '']];
   document.getElementById('nav').innerHTML = items.map(function (x) {
     return '<a class="nav-btn' + (x[0] === active ? ' active' : '') + '" href="#/' + x[0] + '" data-testid="crm-nav-' + x[0] + '" aria-label="' + esc(tx(x[1])) + '"' + (x[0] === active ? ' aria-current="page"' : '') + '>'
       + '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + x[2] + '"/></svg><span class="label">' + esc(tx(x[1])) + '</span>' + x[3] + '</a>';
@@ -317,6 +324,11 @@ function crmRoute(frame) {
   if (seg[0] === 'calls') {
     CRM.route = { nav: 'calls', view: 'calls', sub: '', params: params };
     crmNav('calls'); crmCalls(frame);
+    return;
+  }
+  if (seg[0] === 'privacy') {   /* T3-P3-CONSENT: the privacy-request register (cap-crm-privacy.js) */
+    CRM.route = { nav: 'privacy', view: 'privacy', sub: '', params: params };
+    crmNav('privacy'); crmPrivacy(frame, params);
     return;
   }
   if (seg[0] === 'followups') {
