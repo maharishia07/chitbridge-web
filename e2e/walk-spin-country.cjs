@@ -90,7 +90,7 @@ const walk = async (w) => {
     }
     await ctx.addInitScript((a) => { try { localStorage.removeItem('cb_sess'); if (a) localStorage.setItem('cb_api_base', a); } catch (_) {} }, stack ? stack.api : w.base);
     const page = await ctx.newPage();
-    const handle = ('spin' + (typeof k === 'string' ? k : 'x') + br + Date.now().toString(36)).toLowerCase().replace(/[^a-z0-9]/g, '');
+    const handle = ('sp' + (typeof k === 'string' ? k : 'x') + br.slice(0, 3) + Date.now().toString(36)).toLowerCase().replace(/[^a-z0-9]/g, '');
     const email = handle + '@test.example';
     await page.goto(w.base + '/settings.html#/new');
     await page.waitForSelector('[data-testid="reg-name"]', { timeout: 20000 });
