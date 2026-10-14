@@ -83,7 +83,7 @@
       "steps": [
         { "n": 1, "step": "need", "module": "Operations", "who": "the shop's staff",
           "screen": [{ "file": "web:public/app/cap-supplies.js", "fn": "supAdd" }, { "file": "web:public/app/cap-intake.js", "fn": "" }],
-          "engine": [{ "file": "api:lib/supply-store.js", "fn": "ensure" }, { "file": "api:lib/capture.js", "fn": "raisePayload" }],
+          "engine": [{ "file": "api:lib/supply-store.js", "fn": "ensure" }, { "file": "api:lib/capture.js", "fn": "raisePayload" }, { "file": "api:lib/line-guard.js", "fn": "checkLine" }],
           "route": [{ "m": "POST", "p": "/api/supplies", "file": "api:routes/supplies.js" }, { "m": "POST", "p": "/api/capture/:id/raise", "file": "api:routes/capture.js" }],
           "chit": "none yet — a supply row, or a captured message about to become a chit", "ledger": "none",
           "test": ["api:tests/local-supplier.test.js"],
