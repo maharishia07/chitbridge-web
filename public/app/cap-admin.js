@@ -245,14 +245,11 @@ function misTax(){
     + '<div class="sec">' + tx('The chits behind it') + ' · ' + L.count + '</div>'
     + (rows || '<div class="misnote">' + tx('No chit in this month.') + '</div>');
 }
-/* The offline-tool JSON, opened in a new tab (the browser saves it) — the same read the band shows, as a file. */
+/* The offline-tool JSON, saved as a file — the same read the band shows. T3-P1-MONEY: the download is helpers.js gstrDownload, the ONE copy CB Finance › Returns uses too. */
 function misTaxExport(form){
   const base = (typeof apiBase === 'function') ? apiBase() : '';
   const url = base + '/api/tax/gstr?month=' + encodeURIComponent(misTaxMonth()) + '&form=' + form;
-  api('taxGstr', { query: { month: misTaxMonth(), form: form } }).then(function(j){
-    const blob = new Blob([JSON.stringify(j, null, 2)], { type: 'application/json' });
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = form + '-' + misTaxMonth() + '.json'; document.body.appendChild(a); a.click(); a.remove();
-  }).catch(function(e){ toast((e && e.message) || 'Could not build the export.', true); });
+  gstrDownload(misTaxMonth(), form).catch(function(){ toast(tx('Could not build the file. Try again.'), true); });   /* the server's sentence never reaches the band (design rule 1) */
   return url;
 }
 /**
