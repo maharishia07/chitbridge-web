@@ -11,6 +11,9 @@
  *   4. a MISSING step names NO file (a file on a MISSING step is a contradiction) and carries its evidence in `note`
  *   5. docs/process/*.md are what tools/gen-process-docs.cjs writes from the JSON (--check)
  *   6. the guard bites: an invented file is caught
+ *   7. a row says what the code DOES (T1-INV, 2026-10-14): a route or function whose meaning is pinned in MEANINGS may not sit on a
+ *      step that claims the opposite — POST /api/till/stock is an availability switch, not a goods receipt; a supply purchase
+ *      posts nothing, so it may not sit on a step whose ledger posts
  *
  * Run: node e2e/process-map.cjs
  */
@@ -83,6 +86,23 @@ function checkRoute(where, r) {
   if (src.indexOf("'" + tail + "'") < 0 && src.indexOf('"' + tail + '"') < 0) fail(where + ': ' + r.m + ' ' + r.p + ' — no literal \'' + tail + '\' in ' + r.file + ' (route moved?)');
 }
 
+/* ── 7: meanings pinned to the code (T1-INV) — each was once mapped wrong. `not(step)` true = the row contradicts the code ── */
+const isReceipt = (s) => /receipt/i.test(String(s.step || ''));
+const posts = (s) => !/^\s*none\b/i.test(String(s.ledger || ''));
+const MEANINGS = [
+  { route: 'POST /api/till/stock', says: 'an availability switch (item status available/unavailable), not a goods receipt', not: isReceipt },
+  { route: 'POST /api/till/stock/bulk', says: 'an availability switch for many products, not a goods receipt', not: isReceipt },
+  { route: 'POST /api/supplies/purchase', says: 'a record of a supply bought, which posts NOTHING to the books', not: posts },
+  { engine: 'api:lib/supply-store.js#purchase', says: 'a record of a supply bought, which posts NOTHING to the books', not: posts },
+];
+function checkMeaning(where, s) {
+  const routes = (s.route || []).map((r) => r.m + ' ' + r.p), engines = (s.engine || []).map((e) => e.file + '#' + e.fn);
+  MEANINGS.forEach((m) => {
+    const on = m.route ? routes.indexOf(m.route) >= 0 : engines.indexOf(m.engine) >= 0;
+    if (on && m.not(s)) fail(where + ': ' + (m.route || m.engine) + ' is ' + m.says + ' — it does not belong on this step');
+  });
+}
+
 /* ── 1–4: the rows ─────────────────────────────────────────────────────────────────────────────────────────────── */
 console.log('');
 const seen = new Set();
@@ -100,6 +120,7 @@ const seen = new Set();
       return;
     }
     if (s.status === 'warn' && !String(s.note || '').trim()) fail(where + ': a ⚠️ step must say what the gap is in note');
+    checkMeaning(where, s);
     (s.screen || []).forEach((f) => checkFile(where + ' screen', f.file, f.fn));
     (s.engine || []).forEach((f) => checkFile(where + ' engine', f.file, f.fn));
     (s.route || []).forEach((r) => checkRoute(where + ' route', r));
@@ -126,8 +147,15 @@ const fnBefore = bad;
 checkFile('bite', 'web:public/app/cap-books.js', 'bkInventedFunctionNobodyWrote');
 if (bad === fnBefore) { console.log('  ✗ the guard did not catch an invented function'); process.exit(1); }
 bad = fnBefore;
+const mBefore = bad;
+checkMeaning('bite', { step: 'goods receipt', ledger: 'none', route: [{ m: 'POST', p: '/api/till/stock' }] });
+if (bad === mBefore) { console.log('  ✗ the guard did not catch the availability switch mapped as a goods receipt'); process.exit(1); }
+bad = mBefore;
+checkMeaning('bite', { step: 'supplier bill', ledger: 'purchase_bill · Dr 5000', engine: [{ file: 'api:lib/supply-store.js', fn: 'purchase' }] });
+if (bad === mBefore) { console.log('  ✗ the guard did not catch a supply purchase mapped as posting'); process.exit(1); }
+bad = mBefore;
 quiet = false;
-console.log('  ✓ the guard bites: an invented file and an invented function are named');
+console.log('  ✓ the guard bites: an invented file and an invented function are named; a wrong meaning (T1-INV) is named');
 
 const rows = MAP.flows.reduce((n, f) => n + f.steps.length, 0);
 console.log('  ' + rows + ' steps · ' + checked + ' files/routes checked' + (shapeOnly ? ' · ' + shapeOnly + ' api/engines refs by shape only (sibling repo not beside this one)' : ''));

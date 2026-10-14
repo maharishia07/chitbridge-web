@@ -10,6 +10,9 @@
  *   · the chit that goes to the server carries party.party_id, their_bill, and each line's gst_rate (the books tax their bill from it)
  *   · a receipt WITHOUT their bill says nothing about the books
  *
+ *   · FX-F10W2: their total is compared with goods + tax by the ONE rule (CBTheirBill — the books' Waiting row asks the same file); the
+ *     slip says the screen's sentence; inclusive rates; Receive at 390 px (light + dark) does not scroll sideways
+ *
  * Run: NODE_PATH=$PWD/e2e/node_modules node e2e/till-receive-bill.cjs
  */
 'use strict';
@@ -136,6 +139,54 @@ const SG = '33333333-3333-4333-8333-333333333333';
   say('two of the same name is nobody; a row with no id, a part of a name, or nothing typed is nobody', nm.two === null && nm.noId === null && nm.part === null && nm.empty === null, JSON.stringify(nm));
   say('the Receive door asks it (rcvSupplierKnown)', nm.rcv === 'a', String(nm.rcv));
   say('the customer box asks it too (custKnown: two Kumars is nobody; the phone still wins first)', nm.custTwo === null && nm.custNick === 'k3' && nm.custPhone === 'k1', JSON.stringify(nm));
+
+  console.log('\n── FX-F10W2 · ONE comparison: their total against goods + tax (CBTheirBill — the books ask the same file) ───────────');
+  const sg = await p.evaluate(async () => {
+    const out = {};
+    rcvClear(); RCV.vendor = 'Sri Ganesh Provisions'; document.getElementById('rcv_vendor').value = RCV.vendor; rcvVendorPick();
+    rcvAdd({ item_id: 'i3', name: 'Toor dal', unit: 'kg', price: 105 }, 4); RCV.lines[0].gst_rate = 5; RCV.lines[0].rate = 105;
+    RCV.bill_no = 'SG-201'; document.getElementById('rcv_billno').value = 'SG-201';
+    const read = () => { const el = document.querySelector('[data-testid="rcv-check"]'); return el ? { code: el.getAttribute('data-code'), text: el.textContent } : null; };
+    const rule = (t) => CBTheirBill.check({ total: t, taxable: 420, tax: 21, currency: 'INR', no: 'SG-201', say: money });
+    RCV.bill_total = 420; paintReceive(); out.at420 = read(); out.rule420 = rule(420);
+    RCV.bill_total = 441; paintReceive(); out.at441 = read(); out.rule441 = rule(441);
+    RCV.bill_total = 442; paintReceive(); out.at442 = read();
+    out.loaded = !!window.CBTheirBill && MISSING.indexOf('their-bill') < 0;
+    RCV.bill_total = 441; paintReceive();
+    await rcvConfirm();
+    const sl = document.querySelector('#slipbox [data-testid="rcv-slip-check"]');
+    out.slip = sl ? { code: sl.getAttribute('data-code'), text: sl.textContent } : null;
+    try { document.getElementById('slipdlg').close(); } catch (_) {}
+    rcvClear(); RCV.tax_inclusive = true; rcvAdd({ item_id: 'i3', name: 'Toor dal', unit: 'kg', price: 110.25 }, 4); RCV.lines[0].gst_rate = 5; RCV.lines[0].rate = 110.25;
+    RCV.bill_total = 441; paintReceive(); out.incl = read(); out.inclTax = rcvTax();
+    RCV.tax_inclusive = false; rcvClear();
+    return out;
+  });
+  say('the page loads /app/their-bill.js (CBTheirBill) — not reported missing', sg.loaded, String(sg.loaded));
+  say('SG-201 · ₹420 typed (the goods BEFORE tax) → "apart", never "agrees"', sg.at420 && sg.at420.code === 'apart' && /₹\s?21(\.00)? apart/.test(sg.at420.text), JSON.stringify(sg.at420));
+  say('…its words are the rule\'s own, word for word (the books\' Waiting row starts with the same sentence)', sg.at420 && sg.at420.text === sg.rule420.sentence, sg.rule420.sentence);
+  say('SG-201 · ₹441 (goods ₹420 + tax ₹21) → agrees', sg.at441 && sg.at441.code === 'agrees' && sg.at441.text === sg.rule441.sentence, JSON.stringify(sg.at441));
+  say('…₹442 is within one rupee → their round-off (the books post it so)', sg.at442 && sg.at442.code === 'round_off', JSON.stringify(sg.at442));
+  say('the slip says the same sentence as the screen (₹441 agrees)', sg.slip && sg.slip.code === 'agrees' && sg.slip.text === sg.rule441.sentence, JSON.stringify(sg.slip));
+  say('inclusive rates (₹110.25 × 4 with 5% inside) → taxable ₹420 + tax ₹21 = their ₹441 agrees', sg.incl && sg.incl.code === 'agrees' && sg.inclTax.taxable === 420 && sg.inclTax.tax === 21, JSON.stringify([sg.incl, sg.inclTax.taxable, sg.inclTax.tax]));
+
+  console.log('\n── FX-F10W2 · Receive at 390 px: no sideways scroll, "Confirm receipt" on screen (light and dark) ───────────');
+  for (const theme of ['light', 'dark']) {
+    const n = await (await b.newContext({ viewport: { width: 390, height: 844 }, colorScheme: theme })).newPage();
+    await n.goto(base + '/till.html');
+    await n.waitForFunction(() => typeof window.rcvConfirm === 'function', null, { timeout: 30000 });
+    const m = await n.evaluate(() => {
+      CloudHost.key = 'demo-key'; HOST = CloudHost; HOST.drain = function () {}; ls.set(tillGivenKey(), 'C1');
+      WHO = { id: 'w1', name: 'Bala', kind: 'coassist' };
+      window.S = { shop: { name: 'Mayur Stores', currency: 'INR', state_code: '33', gstin: '33AAAAA0000A1Z5', reg_type: 'regular', pay: [{ id: 'cash', label: 'Cash' }] }, at: new Date().toISOString(), items: [], offers: [], customers: [], suppliers: [] };
+      setMode('receive'); rcvAdd({ item_id: 'i1', name: 'Toor dal premium 25kg', unit: 'bag', price: 105 }, 4); RCV.lines[0].gst_rate = 5; RCV.lines[0].rate = 105; RCV.bill_total = 420; paintReceive();
+      const pane = document.getElementById('pane_receive'), r = document.getElementById('rcv_save').getBoundingClientRect();
+      return { page: document.documentElement.scrollWidth, pane: pane.scrollWidth - pane.clientWidth, btn: [Math.round(r.left), Math.round(r.right)], vw: innerWidth };
+    });
+    say('390 px ' + theme + ': the page and the Receive pane do not scroll sideways', m.page <= m.vw && m.pane <= 0, JSON.stringify(m));
+    say('390 px ' + theme + ': "Confirm receipt" is wholly on screen', m.btn[0] >= 0 && m.btn[1] <= m.vw, JSON.stringify(m.btn));
+    await n.context().close();
+  }
 
   say('no page errors', errs.length === 0, errs.slice(0, 2).join(' | ') || 'none');
   await b.close(); srv.close();
