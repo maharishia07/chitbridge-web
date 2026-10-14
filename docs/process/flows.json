@@ -403,6 +403,32 @@
           "test": ["api:tests/parallel-run.test.cjs"],
           "status": "warn", "note": "CSV from the server; the PDF is the browser's print of the page (no PDF library added)." }
       ]
+    },
+    {
+      "id": "FX", "name": "Foreign currency (a bill in another currency, its settlement, the period-end revaluation)", "sap": "FI (foreign currency valuation · realised / unrealised exchange differences)",
+      "steps": [
+        { "n": 1, "step": "the day's rate", "module": "Accounts", "who": "the owner (anyone who reads the books sees the rates)",
+          "screen": [{ "file": "web:public/app/cap-fx.js", "fn": "fxView" }, { "file": "web:public/app/cap-fx.js", "fn": "fxAddSave" }, { "file": "web:public/app/cap-fx.js", "fn": "fxImport" }],
+          "engine": [{ "file": "api:lib/fx-rates.js", "fn": "add" }, { "file": "api:lib/fx-rates.js", "fn": "importCsv" }, { "file": "api:lib/books-store.js", "fn": "insertFxRates" }],
+          "route": [{ "m": "GET", "p": "/api/books/fx-rates", "file": "api:routes/books.js" }, { "m": "POST", "p": "/api/books/fx-rates", "file": "api:routes/books.js" }, { "m": "POST", "p": "/api/books/fx-rates/import", "file": "api:routes/books.js" }],
+          "chit": "none", "ledger": "none (a rate is evidence, insert-only)",
+          "test": ["api:tests/fx-rates.test.cjs", "web:e2e/walk-fx.cjs"],
+          "status": "ok", "note": "Never fetched, never assumed. Before b391 runs, Add rate is greyed with the sentence." },
+        { "n": 2, "step": "a foreign bill posts at its day's rate; its payment settles with the exchange gain or loss", "module": "Accounts", "who": "the hooks (a chit) · the owner (a payment)",
+          "screen": [{ "file": "web:public/app/cap-books.js", "fn": "bkDuesForeign" }],
+          "engine": [{ "file": "api:lib/fx-rates.js", "fn": "forEvent" }, { "file": "api:lib/books.js", "fn": "composeEntry" }, { "file": "engines:src/posting.js", "fn": "fx_settlement" }],
+          "route": [{ "m": "GET", "p": "/api/books/dues", "file": "api:routes/books.js" }],
+          "chit": "read (the bill or invoice chit, in its own currency)", "ledger": "the bill at its day's rate; the payment Dr money at its rate · Cr the party at what the books carry · the difference on 4260 Exchange gain or loss",
+          "test": ["engines:tests/fx.test.js", "api:tests/fx-rates.test.cjs"],
+          "status": "ok", "note": "No rate for the day → waits on Waiting, named: No USD rate for 14 Oct — add it in Accounts › Rates." },
+        { "n": 3, "step": "revalue at the month end, reversed next month", "module": "Accounts", "who": "the owner, from Month lock",
+          "screen": [{ "file": "web:public/app/cap-fx.js", "fn": "fxLockLine" }, { "file": "web:public/app/cap-fx.js", "fn": "fxRevalue" }],
+          "engine": [{ "file": "api:lib/fx-rates.js", "fn": "revaluation" }, { "file": "api:lib/fx-rates.js", "fn": "revalue" }, { "file": "engines:src/posting.js", "fn": "fxRevaluation" }],
+          "route": [{ "m": "GET", "p": "/api/books/fx-revalue", "file": "api:routes/books.js" }, { "m": "POST", "p": "/api/books/fx-revalue", "file": "api:routes/books.js" }],
+          "chit": "none", "ledger": "two entries in one transaction: the unrealised difference on 4260 at the month end, its reversal on the next month's first day",
+          "test": ["engines:tests/fx.test.js", "api:tests/fx-rates.test.cjs"],
+          "status": "ok", "note": "Debtors and creditors only; a currency with no closing rate is named and nothing is revalued." }
+      ]
     }
   ]
 }
