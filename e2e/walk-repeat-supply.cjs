@@ -125,7 +125,7 @@ W.run('repeat-supply', async (w) => {
 
   const txt = (sel) => page.locator(sel).first().innerText().then((s) => s.replace(/\s+/g, ' ').trim()).catch(() => '');
   const body = () => page.evaluate(() => document.body.innerText.replace(/\s+/g, ' '));
-  const open = async (hash, until) => { await page.goto(base + '/finance.html?t=' + Date.now() + (hash || '#/repeat'));   /* a fresh load every time (a hash alone would not reload) */ await page.waitForSelector(until || '[data-testid^="rp-row-"]', { timeout: 20000 }).catch(() => {}); await page.waitForTimeout(400); };
+  const open = async (hash, until) => { await page.goto(base + '/finance.html?t=' + Date.now() + (hash || '#/repeat'));   /* clock-ok: cache-bust — a fresh load every time (a hash alone would not reload) */ await page.waitForSelector(until || '[data-testid^="rp-row-"]', { timeout: 20000 }).catch(() => {}); await page.waitForTimeout(400); };
   const sheet = async (chitId) => { await page.evaluate((id) => openChitSheet(id), chitId); await page.waitForSelector('[data-testid="rp-verbs"], [data-testid="cs-act-repeat"], [data-testid="rp-panel-err"]', { timeout: 15000 }).catch(() => {}); await page.waitForTimeout(300); };
   const writesTo = (tail) => S.writes.filter((x) => x.endsWith(tail)).length;
 
