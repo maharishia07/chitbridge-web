@@ -439,87 +439,56 @@
  },
  "employees": {
   "390": {
-   "untranslated": 16,
+   "untranslated": 7,
    "clipped": 0,
-   "pack": false,
+   "pack": true,
    "clipped_sample": [],
    "strings": [
-    "3 shown",
-    "Add a person",
     "CB Employees",
     "Cashier",
     "Counter only",
-    "Filters ▾",
     "Helper",
-    "Manager",
-    "Off",
-    "On",
-    "end of list",
-    "off",
-    "on ·"
+    "Manager"
    ]
   },
   "1366": {
-   "untranslated": 24,
+   "untranslated": 10,
    "clipped": 0,
-   "pack": false,
+   "pack": true,
    "clipped_sample": [],
    "strings": [
-    "3 shown",
-    "Add a person",
     "CB Employees",
-    "Can do",
     "Cashier",
     "Collapse",
     "Counter only",
     "Employees",
-    "Filters ▾",
     "Helper",
-    "Know which person can do which task, and by what means, then trust them with it.",
     "Manager",
-    "Name",
-    "Off",
-    "On",
-    "On or off",
-    "People",
-    "User ID",
-    "end of list",
-    "off",
-    "on ·"
+    "People"
    ]
   }
  },
  "network": {
   "390": {
-   "untranslated": 4,
+   "untranslated": 1,
    "clipped": 0,
-   "pack": false,
+   "pack": true,
    "clipped_sample": [],
    "strings": [
-    "1 shown",
-    "Filters ▾",
-    "Network",
-    "end of list"
+    "Network"
    ]
   },
   "1366": {
-   "untranslated": 13,
+   "untranslated": 6,
    "clipped": 0,
-   "pack": false,
+   "pack": true,
    "clipped_sample": [],
    "strings": [
-    "1 shown",
-    "City",
     "Collapse",
     "Design",
-    "Distance",
-    "Filters ▾",
-    "Good business guards the interests of others as carefully as its own.",
     "My network",
     "Network",
-    "Offers",
-    "Store",
-    "end of list"
+    "Offers"
    ]
   }
  },

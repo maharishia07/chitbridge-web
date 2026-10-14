@@ -323,6 +323,7 @@ function go(){ signedOut('Your session ended. Please sign in again.'); }   /* ap
 <script src="/app/list-ctl.js"></script>   <!-- CBList: the list control — every list here is mounted on it (a page declares columns, grouping, filters; the unit draws) -->
 <script src="/app/list-legacy.js"></script>   <!-- the Ledgers TREE's search box (listCtl*) — not a column list; goes when the tree has its own search -->
 <script src="/engine/tax.js"></script>        <!-- CBTax.moneyOf — what the chit sheet reads a frozen invoice with -->
+<script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the header, and every sheet's own (SCREEN-ID) -->
 <script src="/app/chit-sheet.js"></script>   <!-- THE CHIT SHEET: the same popup the app opens (a bill number here opens it) -->
 <script src="/app/cap-folders.js"></script>
 <script src="/app/cap-books.js"></script>
@@ -448,6 +449,7 @@ function whoPaint(){
     if (!window.__cbBell.querySelector('[data-testid="bell-btn"]')) CBBell.mount(window.__cbBell, { context: { host: 'accounts' } }); }
   /* the avatar is CBAvatar: Profile opens the app's profile, Sign out is the app's (session and per-person nav memory go; the app's other tabs hear cb_sess go). No Settings here — that stays in the app. */
   CBAvatar.mount($('cbav'), { person: CBAvatar.personOf(SESS), items: ['profile', 'support', 'signout'], apiBase: CFG.API_BASE, token: SESS && SESS.token });
+  if (window.CBScreenId) { if (!CBScreenId.current()) CBScreenId.here('accounts'); WHO.insertBefore(CBScreenId.chip(), WHO.firstChild); }   /* SCREEN-ID: this screen's name · code, one element moved into each repaint (the bell's pattern) */
 }
 /* the SMALL APP a screen key hands over to (CB_HOMES, accounts-shell.js) — never the workshop (IX0); no home yet → said, not a dead door */
 function navTo(k){ var h = CB_HOMES[k]; if (h) location.href = h; else toast(tx('Not built outside the workshop yet.')); }
@@ -469,6 +471,7 @@ document.getElementById('acc_sheet').addEventListener('click', (e) => { if (e.ta
 /* ── which view, and its chrome ── */
 function chrome(view){
   const nav = NAV.find((n) => n[0] === view) || NAV[0];
+  if (window.CBScreenId) CBScreenId.here('accounts', nav[0]);   /* SCREEN-ID: the view on show is the screen the chip names */
   navPaint(nav[0]);
   document.body.classList.toggle('lg-on', nav[0] === 'ledgers');
   if (nav[0] !== 'ledgers') { document.body.classList.remove('lg-sel'); whoHome(); }

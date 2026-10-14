@@ -17,6 +17,7 @@
  * Nodes  step · screen · function · route · table · test · pack · file
  * Edges  implements (step → code) · calls (fn/screen/route → fn; fn → route via http) · reads / writes (code → table)
  *        tested-by (code → test) · requires (file → file) · vendors (adopted copy → engines source) · uses (file → pack)
+ *        opens (screen → screen: a sheet raised from a page — SCREEN-ID, read from tools/screen-list.cjs)
  *
  *   node tools/graph/graph.cjs build                      → tools/graph/out/calls.json + graph.json (gitignored)
  *   node tools/graph/graph.cjs impact <file|function>     flow steps, screens, routes and TESTS touched by a change there
@@ -504,6 +505,29 @@ function build() {
       if (!set.size && folderNavs.has(nav) && navCalls.get('task')) { set = navCalls.get('task'); for (const t of set) edge(id, t, 'calls', 'dispatch:folder'); continue; }
       for (const t of set) edge(id, t, 'calls', 'dispatch');
     }
+  }
+
+  /* ── 9b · the small apps' screens and the sheets (SCREEN-ID): the declared rows of the one register, and screen → opens → screen ──── */
+  if (exists(path.join(W, 'public', 'app', 'screen-id.js'))) {
+    try {
+      const SL = require('../screen-list.cjs').load(W);
+      const idOf = {};
+      for (const r of SL.rows) {
+        const file = r.kind === 'sheet' ? 'public/' + r.file : (r.page === '/' ? 'index.html' : 'public' + r.page);
+        const id = 'screen:web:' + file + (r.key ? '#' + r.key : '');
+        idOf[r.code] = id;
+        node(id, { kind: 'screen', screen: r.kind, repo: 'web', file, code: r.code, label: r.screen, path: r.path });
+        if (r.key && nodes.has('screen:web:' + file)) edge('screen:web:' + file, id, 'calls', 'section');
+      }
+      idOf.APP001 = 'screen:web:public/app.html';
+      for (const o of SL.opens) if (idOf[o.from] && idOf[o.to] && nodes.has(idOf[o.from])) edge(idOf[o.from], idOf[o.to], 'opens', 'loads ' + o.page);
+      meta.counts.screenOpens = SL.opens.length;
+      /* a web test names a declared screen by its CODE (e2e/walk-screen-id.cjs asserts each one) */
+      for (const f of files) {
+        if (f.kind !== 'test' || f.repo !== 'web') continue;
+        for (const st of f.scan.strings) { const m = /^[A-Z]{3}\d{3}$/.exec(st.text); if (m && idOf[st.text] && nodes.has(idOf[st.text])) edge(idOf[st.text], f.id, 'tested-by', 'code'); }
+      }
+    } catch (e) { meta.notes.push('public/app/screen-id.js could not be read (SCREEN-ID rows and opens edges left out): ' + e.message); }
   }
 
   /* ── 10 · flow steps (PM1) ──────────────────────────────────────────────────────────────────────────────────── */
