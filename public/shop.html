@@ -762,15 +762,18 @@ function render(data){
 // ── Login-first gate (storefront_access==='login'): customer signs in (phone/email + OTP) before browsing. ──
 function renderLoginGate(shop){
   var otpStep=(_lg.step==='otp'), fld='style="width:100%;padding:9px;border:1px solid #e7e3d8;border-radius:8px;margin-bottom:10px;font-size:14px"';
+  /* SH-MY1: the same gate signs a RETURNING shopper in for My orders (_lg.after='orders') — one sign-in, two doors */
+  var forOrders=(_lg.after==='orders');
   el('app').innerHTML='<div class="hd"><div class="logo">🎨</div><div style="flex:1"><div class="shopname sg">'+esc(shop.display_name||'Shop')+'</div><div class="meta">'+esc(shop.user_id||shop.bridge_id||'')+'</div></div></div>'
-    +'<div class="card" style="max-width:420px;margin:26px auto"><div class="sg" style="font-weight:800;font-size:16px;margin-bottom:4px">Sign in to view this shop</div>'
-    +'<div class="meta" style="margin-bottom:12px">This shop asks customers to sign in first. Enter your phone or email — we\'ll text/email a one-time code.</div>'
+    +'<div class="card" style="max-width:420px;margin:26px auto"><div class="sg" style="font-weight:800;font-size:16px;margin-bottom:4px">'+(forOrders?'Sign in to see your orders':'Sign in to view this shop')+'</div>'
+    +'<div class="meta" style="margin-bottom:12px">'+(forOrders?'Use the phone or email you ordered with. We\'ll send a code.':'This shop asks customers to sign in first. Enter your phone or email — we\'ll text/email a one-time code.')+'</div>'
     +'<input id="lg_contact" placeholder="9876543210 or you@email.com" '+(otpStep?'disabled':'')+' value="'+esc(_lg.contact||'')+'" '+fld+'>'
     +(otpStep?'<input id="lg_otp" autocomplete="one-time-code" inputmode="numeric" maxlength="64" placeholder="6-digit code" value="'+esc(_lg.otp||_lg.dev_otp||'')+'" '+fld+'>':'')
     +(_lg.err?'<div style="color:#b4453f;font-size:12.5px;margin-bottom:8px">'+esc(_lg.err)+'</div>':'')
     +(_lg.msg?'<div style="color:#2e7a45;font-size:12.5px;margin-bottom:8px">'+esc(_lg.msg)+'</div>':'')
     +(_lg.busy?'<button disabled style="width:100%;border:0;border-radius:10px;padding:12px;background:#9db4d6;color:#fff;font-weight:700;font-size:14px">⏳ Processing…</button>'
-      :'<button onclick="'+(otpStep?'sfLoginVerify':'sfLoginStart')+'()" style="width:100%;border:0;border-radius:10px;padding:12px;background:#3F66A6;color:#fff;font-weight:700;font-size:14px;cursor:pointer">'+(otpStep?'View shop':'Send code')+'</button>')
+      :'<button onclick="'+(otpStep?'sfLoginVerify':'sfLoginStart')+'()" style="width:100%;border:0;border-radius:10px;padding:12px;background:#3F66A6;color:#fff;font-weight:700;font-size:14px;cursor:pointer">'+(otpStep?(forOrders?'See my orders':'View shop'):'Send code')+'</button>')
+    +(forOrders?'<div style="text-align:center;margin-top:10px"><a href="#" data-testid="shop-login-back" onclick="_lg={};render(_SHOPDATA);return false" style="color:var(--accent,#3F66A6);font-size:12.5px">Back to the shop</a></div>':'')
     +'</div>';
 }
 function sfLoginStart(){
@@ -786,7 +789,11 @@ function sfLoginVerify(){
   _lg.busy=true; _lg.err=null; renderLoginGate(_SHOPDATA.shop);
   fetch(API+'/api/catalogue/'+encodeURIComponent(BRIDGE)+'/login/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({identifier:_lg.contact,otp:_lg.otp})})
     .then(function(r){return r.json().then(function(j){return{status:r.status,j:j};});})
-    .then(function(res){ if(res.status!==200){ _lg.busy=false; _lg.err=(res.j&&res.j.message)||'Verification failed.'; renderLoginGate(_SHOPDATA.shop); return; } render(_SHOPDATA); })
+    .then(function(res){ if(res.status!==200){ _lg.busy=false; _lg.err=(res.j&&res.j.message)||'Verification failed.'; renderLoginGate(_SHOPDATA.shop); return; }
+      /* ⭐ SH-MY1 (T1-ORD): the token is KEPT in the one session keeper (_MYTOK) — it was thrown away here, so a shopper who signed in
+         could not open My orders. Memory only, as the order's own token is; no second store. */
+      var j=res.j||{}; if(j.token) _MYTOK=j.token;
+      var after=_lg.after; _lg={}; render(_SHOPDATA); if(after==='orders') shopMyOrders(); })
     .catch(function(e){ _lg.busy=false; _lg.err=e.message; renderLoginGate(_SHOPDATA.shop); });
 }
 /**
@@ -811,7 +818,9 @@ function supLinkHtml(){
   return '<div style="text-align:center;margin:10px 0 2px;font-size:12.5px;color:#6a707a">'
     + 'Something wrong with an order? '
     + '<a href="#" data-testid="shop-support" onclick="supOpen();return false" '
-    + 'style="color:var(--accent);font-weight:600">Report a problem to '+esc(s.display_name||'the shop')+'</a></div>';
+    + 'style="color:var(--accent);font-weight:600">Report a problem to '+esc(s.display_name||'the shop')+'</a>'
+    /* SH-MY1: a returning shopper's door to their orders — signed in already (_MYTOK) it opens them, else the sign-in gate asks first */
+    + ' · <a href="#" data-testid="shop-my-orders-link" onclick="shopMyOrdersOpen();return false" style="color:var(--accent);font-weight:600">My orders</a></div>';
 }
 
 function supHost(){ var h=el('suphost'); if(!h){ h=document.createElement('div'); h.id='suphost'; document.body.appendChild(h); } return h; }
@@ -1271,19 +1280,39 @@ function shopStatusWord(s){ var k=String(s||'').toLowerCase().replace(/[_\s-]+/g
   return k.charAt(0).toUpperCase()+k.slice(1); }
 var _DONE_BTN='<button type="button" onclick="orderClose()" style="flex:1;border:0;border-radius:10px;padding:11px 18px;background:var(--accent,#3F66A6);color:var(--card,#fff);font-weight:700;cursor:pointer">Done</button>';
 /* "My orders" — the shopper's own orders and where each stands, read with the session the order just gave them (the route is /my-orders; no new route, no account to build) */
-function shopMyOrders(){
+/* SH-MY1: the door from the page — a returning shopper signs in through the same gate (/order/start + /login/verify), then the list opens */
+function shopMyOrdersOpen(){ if(_MYTOK){ shopMyOrders(); return; } _lg={after:'orders'}; renderLoginGate(_SHOPDATA.shop); }
+/* ⭐ SH-MY1 · THE PAGER CONTRACT (DISCIPLINES §2): the server answers total · page · limit (it caps limit); page 1 first, "Show more" for the
+   next, a count, and an end marker — never one giant dump. _MYO holds what is shown; More appends without losing the place. */
+var _MYO=null;
+function shopMyOrders(more){
   if(!_MYTOK) return;
   var head='<div class="sg" style="font-weight:800;font-size:17px;margin-bottom:8px">My orders</div>';
-  ohost().innerHTML=shopSheet(head+'<div class="meta" data-testid="shop-orders">Loading…</div>');
-  fetch(API+'/api/catalogue/'+encodeURIComponent(BRIDGE)+'/my-orders',{headers:{Authorization:'Bearer '+_MYTOK}})
+  if(!more){ _MYO={rows:[],total:0,page:0,busy:false,err:null}; ohost().innerHTML=shopSheet(head+'<div class="meta" data-testid="shop-orders">Loading…</div>'); }
+  if(_MYO.busy) return; _MYO.busy=true; if(more) shopMyOrdersPaint(head);
+  fetch(API+'/api/catalogue/'+encodeURIComponent(BRIDGE)+'/my-orders?page='+(_MYO.page+1)+'&limit=20',{headers:{Authorization:'Bearer '+_MYTOK}})
     .then(function(r){return r.json().then(function(j){return{status:r.status,j:j};});})
-    .then(function(res){ var list=(res.status===200&&res.j&&Array.isArray(res.j.orders))?res.j.orders:null;
-      var body=!list?'<div style="color:var(--disp,#b4453f);font-size:13px">'+esc((res.j&&res.j.message)||'Could not load your orders.')+'</div>'
-        :!list.length?'<div class="meta">No orders yet.</div>'
-        :list.map(function(o){ var sm=o.summary_json||{}, tv=Number(sm.total_value)||0, dt=o.created_at?new Date(o.created_at).toLocaleDateString(undefined,{day:'numeric',month:'short'}):'';
-          return '<div data-testid="shop-order-row" style="padding:9px 0;border-top:1px dashed var(--line,#e7e3d8);font-size:13px"><div style="display:flex;gap:8px"><b style="flex:1">#CB-'+esc(String(o.chit_id||'').slice(0,8))+'</b>'+(tv?'<span>'+esc(cbFmt(tv))+'</span>':'')+'</div><div class="meta">'+esc(shopStatusWord(o.shop_status||o.current_status))+(dt?' · '+esc(dt):'')+'</div></div>'; }).join('');
-      ohost().innerHTML=shopSheet(head+'<div data-testid="shop-orders">'+body+'</div><div style="display:flex;margin-top:14px">'+_DONE_BTN+'</div>'); })
-    .catch(function(e){ ohost().innerHTML=shopSheet(head+'<div style="color:var(--disp,#b4453f);font-size:13px">'+esc(e.message||'Network error')+'</div><div style="display:flex;margin-top:14px">'+_DONE_BTN+'</div>'); });
+    .then(function(res){ _MYO.busy=false; var list=(res.status===200&&res.j&&Array.isArray(res.j.orders))?res.j.orders:null;
+      if(!list){ _MYO.err=(res.j&&res.j.message)||'Could not load your orders.'; }
+      else { _MYO.err=null; _MYO.rows=_MYO.rows.concat(list); _MYO.page=Number(res.j.page)||(_MYO.page+1);
+        /* an older api sends no total: what came is all there is */
+        _MYO.total=(res.j.total!=null)?Number(res.j.total)||0:_MYO.rows.length; }
+      shopMyOrdersPaint(head); })
+    .catch(function(e){ _MYO.busy=false; _MYO.err=e.message||'Network error'; shopMyOrdersPaint(head); });
+}
+function shopMyOrdersPaint(head){
+  var o=_MYO, list=o.rows, left=o.total-list.length;
+  var body=(o.err&&!list.length)?'<div style="color:var(--disp,#b4453f);font-size:13px">'+esc(o.err)+'</div>'
+    :!list.length?'<div class="meta">No orders yet.</div>'
+    :'<div class="meta" data-testid="shop-orders-count">'+esc(list.length+' of '+o.total)+'</div>'
+      +list.map(function(o){ var sm=o.summary_json||{}, tv=Number(sm.total_value)||0, dt=o.created_at?new Date(o.created_at).toLocaleDateString(undefined,{day:'numeric',month:'short'}):'';
+        return '<div data-testid="shop-order-row" style="padding:9px 0;border-top:1px dashed var(--line,#e7e3d8);font-size:13px"><div style="display:flex;gap:8px"><b style="flex:1">#CB-'+esc(String(o.chit_id||'').slice(0,8))+'</b>'+(tv?'<span>'+esc(cbFmt(tv))+'</span>':'')+'</div><div class="meta">'+esc(shopStatusWord(o.shop_status||o.current_status))+(dt?' · '+esc(dt):'')+'</div></div>'; }).join('')
+      +(o.err?'<div style="color:var(--disp,#b4453f);font-size:13px">'+esc(o.err)+'</div>':'')
+      +(left>0?'<button type="button" data-testid="shop-orders-more" '+(o.busy?'disabled ':'')+'onclick="shopMyOrders(true)" style="width:100%;margin-top:8px;border:1px solid var(--accent,#3F66A6);border-radius:10px;padding:9px;background:var(--card,#fff);color:var(--accent,#3F66A6);font-weight:700;cursor:pointer">'+(o.busy?'Loading…':esc('Show more ('+left+')'))+'</button>'
+        :'<div class="meta" data-testid="shop-orders-end" style="text-align:center;margin-top:8px">That\'s all your orders.</div>');
+  var keep=document.querySelector('[data-testid="shop-orders"]'), top=keep&&keep.parentNode?keep.parentNode.scrollTop:0;
+  ohost().innerHTML=shopSheet(head+'<div data-testid="shop-orders">'+body+'</div><div style="display:flex;margin-top:14px">'+_DONE_BTN+'</div>');
+  var now=document.querySelector('[data-testid="shop-orders"]'); if(now&&now.parentNode) now.parentNode.scrollTop=top;   /* Show more keeps the place */
 }
 // One POST for every declaration — commerce order, offer, enquiry or filled form. They differ only in the line built
 // above; the rail, the OTP and the resulting chit are identical.

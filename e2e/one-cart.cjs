@@ -63,7 +63,7 @@ const OUTLETS = {
                          ["Catalogue list (the seller's own products, read-only rows)", '[CAT-01] · e2e/shot-rows.cjs'],
                          ['Design 1 chit › Content + Summary (read-only: the chit IS the cart; Summary = its money block + delivery, cover by flag)', '[PAR-03] the order page and its Summary equal the cart'],],
   'offer-lab-next.html': [['Offer lab (the engine as a page: the same rows, badges and money block)', '[LAB-01] the offer lab: switch, see, compare, advise']],
-  'app/cap-network.js': [['Network › a store catalogue',      'network-cascade']],
+  'app/cap-network-member.js': [['Network › a store catalogue (the member half of Network, split from cap-network.js)', 'network-cascade']],
   'app/pick.js':        [['CBPick overlay (worklist: take materials)', 'order-steps › the picker over any screen']],
   'app/cap-chit2.js':   [["The chit's Order tab (read-only: the chit IS the cart)", '[PAR-03] the order page equals the cart']],
 };
