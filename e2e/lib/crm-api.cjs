@@ -65,7 +65,31 @@ function list(rows, opt) {
     a.dues = a.dues ? Object.assign({}, a.dues, { side: a.roles.customer && a.roles.supplier ? 'both' : (a.roles.customer ? 'customer' : 'supplier') }) : null;
   });
   /* the API's own count of late dues: the parties it marked (lib/crm markLate) — the banner and the rows are one number */
-  return { parties: out, walk_ins: walk, count: out.length, truncated: false, alerts: { dues_overdue: out.filter((a) => a.dues && a.dues.overdue).length } };
+  /* MKT-SRV1 G4: total · page · limit on top (lib/page-limit.cut) — the whole list by default (limit = the API's 5,000 cap); o.page / o.limit cut a page, total and alerts stay the whole list */
+  const limit = Math.min(5000, Math.max(1, parseInt(o.limit, 10) || 5000)), page = Math.max(1, parseInt(o.page, 10) || 1);
+  return { parties: out.slice((page - 1) * limit, page * limit), walk_ins: walk, count: out.length, total: out.length, page, limit, truncated: false, alerts: { dues_overdue: out.filter((a) => a.dues && a.dues.overdue).length } };
+}
+
+/** MKT-SRV1 G0/G5: the consent answer as lib/privacy.mayMap sends it — may[channel][purpose] = { may, code, why }; no rows = offers refused (NO_CONSENT), service allowed (LEGITIMATE_USE) */
+const CHANNELS = ['phone', 'sms', 'whatsapp', 'email', 'chitbridge'];
+function mayMap(rows) {
+  const may = {};
+  CHANNELS.forEach((c) => {
+    const m = (rows || []).filter((r) => r.channel === c && r.purpose === 'marketing')[0], s = (rows || []).filter((r) => r.channel === c && r.purpose === 'service')[0];
+    may[c] = {
+      marketing: !m ? { may: false, code: 'NO_CONSENT', why: 'No consent for offers on ' + c + '. Ask them first.' }
+        : !m.allowed ? (m.withdrawn_at ? { may: false, code: 'CONSENT_WITHDRAWN', why: 'They withdrew consent for offers on ' + c + '.' } : { may: false, code: 'CONSENT_REFUSED', why: 'They said no to offers on ' + c + '.' })
+        : { may: true, code: 'CONSENT_GIVEN', why: 'They agreed to offers on ' + c + '.' },
+      service: s && !s.allowed ? { may: false, code: 'OPTED_OUT', why: 'They asked not to be messaged on ' + c + '.' } : { may: true, code: 'LEGITIMATE_USE', why: 'Messages about their own orders are allowed.' },
+    };
+  });
+  return may;
+}
+/** GET contact-prefs' answer, which the record carries as `prefs` (G5): the consent rows newest first + the may map */
+function prefs(rows) {
+  const history = (rows || []).map((r, i) => ({ pref_id: r.pref_id || 'pref-' + (i + 1), channel: r.channel, purpose: r.purpose, allowed: !!r.allowed, basis: r.basis || (r.purpose === 'marketing' ? 'consent' : 'legitimate_use'),
+    notice_version: r.notice_version || null, noted_at: r.noted_at || null, noted_by: r.noted_by || null, withdrawn_at: r.withdrawn_at || null }));
+  return { history, may: mayMap(history) };
 }
 
 /** a follow-up in the API's shape (lib/crm-followups.js shape): late / today / due_day by the shop's day */
@@ -95,6 +119,9 @@ function record(rows, id, rec, fus, now) {
     points: pts ? { programme: pts.programme || 'Rewards', points: pts.balance != null ? pts.balance : pts.points, worth: 0 } : null,
     migrated: true,
     followups: (fus || []).filter((f) => f.party_id === id && !f.done_at).map((f) => followupOne(f, now)),
+    /* MKT-SRV1 G5: the record carries prefs { history, may } — exactly GET contact-prefs' answer — and prefs_migrated (false before b306, prefs then null) */
+    prefs: r.prefs_migrated === false ? null : prefs(r.prefs || row.prefs || []),
+    prefs_migrated: r.prefs_migrated !== false,
   });
 }
 
@@ -124,4 +151,4 @@ function timeline(tl, id, q) {
 function interaction(b, now) {
   return { interaction: { interaction_id: 'ix-new', party_id: 'pid', kind: b.kind, direction: b.kind === 'note' ? null : b.direction, body: b.body, at: new Date(now || Date.now()).toISOString(), by_user_id: 'u1', created_at: new Date(now || Date.now()).toISOString() } };
 }
-module.exports = { resolve, party, list, record, followupOne, followups, entry, timeline, interaction, rolesOf };
+module.exports = { resolve, party, list, record, followupOne, followups, entry, timeline, interaction, rolesOf, mayMap, prefs };
