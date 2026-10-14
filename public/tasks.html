@@ -164,8 +164,20 @@ function go(){ if (typeof CB_TASKS_ENDED === 'function') CB_TASKS_ENDED(); }
     frame = CBFrame.mount({ app: 'tasks', kural: 'tasks', work: document.getElementById('tkw'),
       skeleton: { name: 'Tasks & Orders', icon: ICON.tasks, active: first,
         sections: [].concat(tabs.map(function (t) { return { k: t.id, label: t.label, icon: ICON[t.id] || ICON.tasks }; }),
-          EXTRA.map(function (x) { return { k: x.k, label: x.label, icon: ICON[x.k] }; })),
+          EXTRA.map(function (x) { return { k: x.k, label: tx(x.label), icon: ICON[x.k] }; })),   /* through the catalogue (walk-locale) */
         onSection: function (k) { pane(k); } } });
+    /* a language pack loads after the frame is drawn and calls renderApp() when it lands (strings-*.js): the sidebar's words are said again
+       through the catalogue then — the folders, Disputes · CB Assist, the name and Collapse (walk-locale counted them as plain English) */
+    var WORDS = {}; tabs.forEach(function (t) { WORDS[t.id] = t.label; }); EXTRA.forEach(function (x) { WORDS[x.k] = x.label; });
+    window.renderApp = function () {
+      var side = document.getElementById('side'); if (!side) return;
+      Array.prototype.forEach.call(side.querySelectorAll('.nav-btn[data-sec]'), function (b) {
+        var en = WORDS[b.getAttribute('data-sec')], l = b.querySelector('.label'); if (!en || !l) return;
+        l.textContent = tx(en); b.setAttribute('aria-label', tx(en));
+      });
+      var bn = side.querySelector('.brand-name'); if (bn) bn.textContent = tx('Tasks & Orders');
+      var tg = document.getElementById('toggleNav'), tl = tg && tg.querySelector('.label'); if (tl) tl.textContent = tx('Collapse');
+    };
     if (frame.session) SESSION = Object.assign({}, SESSION, frame.session);
     if (!frame.token) { start(null); return; }
     SESSION.token = frame.token;

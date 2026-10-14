@@ -422,18 +422,12 @@
    ]
   },
   "1366": {
-   "untranslated": 7,
+   "untranslated": 1,
    "clipped": 0,
    "pack": true,
    "clipped_sample": [],
    "strings": [
-    "CB Tasks & Orders",
-    "Collapse",
-    "Done",
-    "Orders in",
-    "Orders out",
-    "Tasks",
-    "Tasks & Orders"
+    "CB Tasks & Orders"
    ]
   }
  },
