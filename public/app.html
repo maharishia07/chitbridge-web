@@ -1633,6 +1633,7 @@ body.lab-only #cbtestpanel{
 <!-- ⭐ what we can work out about a shop without asking it — AFTER locale, whose REGIONS it reads -->
 <script src="/app/govcontext.js"></script>
 <script src="/app/helpers.js"></script>
+<script src="/app/cap-suppliers.js"></script>   <!-- supName · supKindOf · isUserId (MOVED, T3-OPS) — CB Operations › Suppliers reads the same; CBSuppliers is not mounted here -->
 <script src="/app/register-form.js"></script>   <!-- the register form (#/register) — shared with CB Settings › New shop; govCtx with it (cap-country reads it) -->
 <script src="/app/one-person.js"></script>   <!-- ONE BROWSER, ONE SHOP: the check route()'s gate asks (2026-10-01) -->
 <script src="/app/page.js"></script>   <!-- CBPage: which detail page opens a chit — business_json.page, the registry app/pages.json, base + a note when not installed (N03) -->
@@ -1926,7 +1927,6 @@ const EP = {
   connPending:     {m:"GET",   p:"/api/connections/pending",     ok:"✓"},
   connRequest:     {m:"POST",  p:"/api/connections/request",     ok:"✓"},  // {to_entity_id}
   connRespond:     {m:"PUT",   p:"/api/connections/:id/respond", ok:"✓"},  // {action:accept|reject}
-  supList:         {m:"GET",   p:"/api/relationships/suppliers", ok:"✓"},
   supCatalogue:    {m:"GET",   p:"/api/relationships/suppliers/:sid/catalogue", ok:"✓"},
   /* ⚠️ ok:"y" — NEW, and the client falls back to the per-supplier fan-out when it 404s. Web and API deploy
      separately, so "the endpoint is not there yet" is a normal state, not an error. */
@@ -7766,7 +7766,7 @@ function suppliersScreen(){
   setTimeout(paintSupList, 0);   /* the rows are a CBList mount: painted once the panel is in the page */
   return `<div class="panel ${showDetail?'showdetail':''}" id="panel" style="--lw:${UI.lw}px;--lh:${UI.lh}px">${list}${divider}${detail}</div>`;
 }
-function supName(x){ return (x&&(x.nickname||x.display_name))||'—'; }
+/* supName · supKindOf → app/cap-suppliers.js (T3-OPS: CB Operations › Suppliers paints the same list) */
 /**
  * ⭐⭐ TWO TABS, ONE LIST (Athi, 2026-09-10): *"we have already the supplier menu — add the business here and,
  * while adding or maybe later through edit, set a flag: is he the supplier for my sales or is he the facilitator?
@@ -7784,7 +7784,6 @@ function supName(x){ return (x&&(x.nickname||x.display_name))||'—'; }
  * list that already exists.
  */
 function supKind(){ return UI.supKind==='own_use'?'own_use':'resale'; }
-function supKindOf(x){ return (x&&x.supply_kind==='own_use')?'own_use':'resale'; }
 function supKindCount(k){ return (UI.sups||[]).filter(function(x){ return supKindOf(x)===k; }).length; }
 function supKindTabsHTML(){
   const b=function(k,icon,label,tid){
@@ -17363,7 +17362,7 @@ function val(id){const el=document.getElementById(id);return el?el.value.trim():
  * where it does not (a one-word name of 8+ letters), addSupplier now falls through to the local offer on a 404
  * rather than dead-ending. Neither test has to be perfect because the failure is caught downstream.
  */
-function isUserId(v){ v=(v||"").trim(); return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) || (v.length>=8 && !/\s/.test(v)); }
+/* isUserId → app/cap-suppliers.js (T3-OPS) */
 function logoMark(s){return `<svg width="${s}" height="${s}" viewBox="0 0 32 32"><circle cx="16" cy="16" r="12.5" fill="none" stroke="var(--gold)" stroke-width="1.6"/><path d="M7 19 Q16 9 25 19" fill="none" stroke="var(--gold)" stroke-width="2.4" stroke-linecap="round"/><circle cx="7" cy="19" r="1.6" fill="var(--gold)"/><circle cx="25" cy="19" r="1.6" fill="var(--gold)"/></svg>`;}
 function logo(){return `<div class="brand">${logoMark(26)} Chit &amp; Bridge</div>`;}
 function setStage(k){ const s=STAGES[k]; if(!s) return; if(!s.mock && !s.base){ toast(s.label+" — API base not set yet (config)."); return; } CFG.STAGE=k; if(s.mock) STORE=deepClone(DEMO); route(); }
