@@ -1946,11 +1946,9 @@ const EP = {
    * wrong; the server filters correctly when asked directly. Watching the request settled it in one call, where
    * two rounds of reasoning had not.
    */
-  defList:         {m:"GET",   p:"/api/definitions",             ok:"y"},   // ?all=1 via defListAll
   defListLive:     {m:"GET",   p:"/api/definitions?kind=offer&status=live", ok:"y"},   // the offers a cart applies
   defListAll:      {m:"GET",   p:"/api/definitions?all=1",       ok:"y"},   // the shelf, incl. retired
   defGet:          {m:"GET",   p:"/api/definitions/:id",         ok:"y"},   // + full version history
-  defAdd:          {m:"POST",  p:"/api/definitions",             ok:"y"},
   /* ⭐ THE TEST BOARD (b219). Cases are `definition`s of kind 'testcase', so nothing here is a new kind of
      record — only the RESULT ledger is new, because results accumulate and a definition does not. */
   testCasesAll:    {m:"GET",  p:"/api/testing/cases?all=1",       ok:"y"},   // including the closed
@@ -1989,10 +1987,7 @@ const EP = {
   testIncList:     {m:"GET",   p:"/api/testing/incidents",        ok:"y"},   // ?state=open — raised or being looked at
   testIncSet:      {m:"PATCH", p:"/api/testing/incidents/:id",    ok:"y"},   // ⚠ append-only, and resolving must cite a commit
   testGherkinIn:   {m:"POST",  p:"/api/testing/cases/gherkin",   ok:"y"},   // .feature text in: clause + cases together
-  defSave:         {m:"PUT",   p:"/api/definitions/:id",         ok:"y"},   // rules change => NEW VERSION
-  defRetire:       {m:"DELETE",p:"/api/definitions/:id",         ok:"y"},   // retires, never deletes
   defFreeze:       {m:"POST",  p:"/api/definitions/freeze",      ok:"y"},   // the copy AND the pointer
-  prodList:        {m:"GET",   p:"/api/products",                ok:"✓"},
   tillPair:        {m:"POST",  p:"/api/till/pair",               ok:"✓"},   // a six-character code a TV can be told over the phone
   /* TAX — read before MIS is ever opened (a chit view, a spec): the core table, not cap-admin's lazy one. routes/tax.js, reads only. */
   taxLedger:       {m:"GET",   p:"/api/tax/ledger",              ok:"✓"},
@@ -2006,11 +2001,9 @@ const EP = {
   /* MEDIA — pictures and videos on the private object store; the API streams the public read */
   prodMediaAdd:    {m:"POST",  p:"/api/products/:id/media",         ok:"✓"},
   prodMediaDel:    {m:"DELETE",p:"/api/products/:id/media/:mid",    ok:"✓"},
-  prodAdd:         {m:"POST",  p:"/api/products",                ok:"✓"},  // {item_data:{name,price}}
   /* ⭐ MANY IN ONE. The wizard posted one request per item, sequentially — 40 items was ~20s. */
   prodAddMany:     {m:"POST",  p:"/api/products/bulk",           ok:"y"},  // {items:[item_data,…]} — one transaction
   prodDel:         {m:"DELETE",p:"/api/products/:id",            ok:"✓"},
-  prodEdit:        {m:"PATCH", p:"/api/products/:id",            ok:"✓"},  // {item_data} — full edit (already live)
   exposureDefaults:{m:"PATCH", p:"/api/entities/me/exposure",     ok:"✓"},  // the business's default "Shown to customers" switches
   /* ⚠️ NOT prodEdit. A status change MERGES onto the row (jsonb ||), so it cannot lose a price or a synonym
      list — which is exactly what a PATCH of the whole item_data would risk. Set a flag; never amend the row. */
@@ -2021,8 +2014,6 @@ const EP = {
   /* ⭐ Many edits, one transaction. prodCategoriseApply looped one PATCH per product — this is that fix. */
   prodBulkUpdate:  {m:"POST",  p:"/api/products/bulk-update", ok:"y"},  // {items:[{id,item_data}]}
   prodTemplate:    {m:"GET",   p:"/api/products/template",       ok:"✓"},  // the blank sheet in THIS catalogue's format
-  prodPreflight:   {m:"POST",  p:"/api/products/import/preflight",ok:"✓"}, // read a file before it becomes data — WRITES NOTHING
-  prodImport:      {m:"POST",  p:"/api/products/import",         ok:"✓"},  // the commit half — a decision per column, confirm:true required
   prodStarters:    {m:"GET",   p:"/api/products/starter-columns",ok:"✓"},  // the standard column set for a trade
   prodStarterAdopt:{m:"POST",  p:"/api/products/starter-columns",ok:"✓"},  // adopt one — ADDITIVE, never retypes an existing column
   // --- NET tree (NET-01 Spine) · live /api/network · cb_entity/cb_edge. NOTE: cb_* id-space — resolve self via netLookup(bridge_id); Dev needs backfill ---
@@ -2040,7 +2031,7 @@ const EP = {
   netResume:      {m:"POST", p:"/api/network/connections/:id/resume",     ok:"✓"},
   netDisconnect:  {m:"POST", p:"/api/network/connections/:id/disconnect", ok:"✓"},
 };
-Object.assign(EP, CB_BOOKS_EP, CB_SHEET_EP, CB_PARTY_EP, CB_THREAD_EP, CB_SHOP_EP);   /* CB_SHOP_EP (SET1): the shop's own profile · vault · country setup — shared with settings.html */   /* the Ledger's boot endpoints and the party add/edit/remove/search routes — declared once, in app/accounts-shell.js, shared with accounts.html and crm.html */
+Object.assign(EP, CB_BOOKS_EP, CB_SHEET_EP, CB_PARTY_EP, CB_THREAD_EP, CB_SHOP_EP, CB_CAT_EP);   /* CB_CAT_EP (T3-CATALOGUE): the product list · edit · import and the category shelf — shared with catalogue.html */   /* CB_SHOP_EP (SET1): the shop's own profile · vault · country setup — shared with settings.html */   /* the Ledger's boot endpoints and the party add/edit/remove/search routes — declared once, in app/accounts-shell.js, shared with accounts.html and crm.html */
 
 /* deepClone → app/helpers.js */
 /* STORE starts EMPTY. It once had a demo dataset beside it and the rule was that a demo constant must never be
@@ -12014,26 +12005,13 @@ async function _cfRun(btn){
     var r = res.report;
     UI._cf = { csv: text, accepted: res.accepted||[], optional: res.optional||[], report: r };
 
-    // How each verdict reads, and what it DEFAULTS the decision to. A blocked column has no choice at all — the
-    // control is removed rather than merely pre-set, because a disabled dropdown still looks like a decision
-    // someone could change.
-    var HOW = {
-      exact:         ['✓','var(--ok-2)','matches your catalogue'],
-      synonym:       ['✓','var(--ok-2)','recognised under another name'],
-      contains:      ['?','var(--warn-2)','probably this — confirm'],
-      fuzzy:         ['?','var(--warn-2)','guessed — confirm this'],
-      ambiguous:     ['?','var(--warn-2)','could be more than one thing'],
-      'not-accepted':['—','var(--grey-2)','your catalogue does not use this'],
-      unmatched:     ['—','var(--grey-2)','not recognised'],
-      conflict:      ['!','var(--warn-2)','another column matched this better'],
-      blocked:       ['⨯','var(--disp)','a file may not set this'],
-      empty:         ['—','var(--grey-2)','this column has no heading']
-    };
+    // How each verdict reads, and what it DEFAULTS the decision to: ONE table, app/catalogue-lines.js cbImportVerdict (CB Catalogue's Import reads it too).
+    var TONE = { ok: 'var(--ok-2)', warn: 'var(--warn-2)', grey: 'var(--grey-2)', bad: 'var(--disp)' };
     var accepted = res.accepted || [];
     var rowsHtml = (r.mapping||[]).map(function(m, i){
-      var h = HOW[m.how] || ['?','var(--grey-2)',m.how];
+      var v = cbImportVerdict(m), h = [v.mark, TONE[v.tone], v.why];
       var control;
-      if(m.how === 'blocked' || m.how === 'empty'){
+      if(v.fixed){
         control = '<span style="font-size:var(--fs-1);color:'+h[1]+'">not importable</span>';
       } else {
         var opts = ['<option value="ignore">' + tx('Leave it out') + '</option>'];
@@ -12600,7 +12578,7 @@ function prodEffectiveField(){
 /* CU4: it asked for a capital-T dateTime on CBLocale (no such function), so every caller printed the OS locale. The one formatter, with the year it always showed */
 function fmtDateTime(x){ try{ return CBLocale.datetime(x,{ day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }); }catch(_){ return String(x); } }
 function prodEffectiveAt(){ const v=val('ct_effective'); if(!v) return null; const t=new Date(v); return (t.getTime()>Date.now()+30000)?t.toISOString():null; }
-function prodDiff(cur, next){ const out={}; Object.keys(next||{}).forEach(k=>{ if(JSON.stringify((cur||{})[k])!==JSON.stringify(next[k])) out[k]=next[k]; }); return out; }
+function prodDiff(cur, next){ return cbItemDiff(cur, next); }   /* ONE diff: app/catalogue-lines.js cbItemDiff (CB Catalogue's Save reads it too) */
 
 /* ═══ EVERY FIELD THIS ITEM CARRIES ════════════════════════════════════════════════════════════════════════════
  * Athi, 2026-08-13: *"the other information like synonym etc are not visible… clicking one item possibly bring

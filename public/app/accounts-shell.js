@@ -59,6 +59,22 @@ var CB_PARTY_EP = {
   booksTerms:      {m:"GET",  p:"/api/books/terms",                        ok:"y"},   // ?party_id&side → { terms_migrated, may_set, why_not, default, party, events } — CB Finance sets, CRM reads
 };
 
+/* ── THE CATALOGUE — what the workshop's Catalogue · Categories AND CB Catalogue (catalogue.html, T3-CATALOGUE 14 Oct) read and write.
+   MOVED from app.html's EP (one name per endpoint, e2e/ep-aliases.cjs). Every product write is PATCH /products/:id (merge:true = RFC 7386) or the import;
+   who may write what is the server's (OFFR-04: a co-assist without "Sees costs" may change availability only). ── */
+var CB_CAT_EP = {
+  defList:         {m:"GET",   p:"/api/definitions",             ok:"y"},   // ?all=1 via defListAll
+  defAdd:          {m:"POST",  p:"/api/definitions",             ok:"y"},
+  defSave:         {m:"PUT",   p:"/api/definitions/:id",         ok:"y"},   // rules change => NEW VERSION
+  defRetire:       {m:"DELETE",p:"/api/definitions/:id",         ok:"y"},   // retires, never deletes
+  prodList:        {m:"GET",   p:"/api/products",                ok:"✓"},
+  prodAdd:         {m:"POST",  p:"/api/products",                ok:"✓"},  // {item_data:{name,price}}
+  prodEdit:        {m:"PATCH", p:"/api/products/:id",            ok:"✓"},  // {item_data} — full edit (already live)
+  prodPreflight:   {m:"POST",  p:"/api/products/import/preflight",ok:"✓"}, // read a file before it becomes data — WRITES NOTHING
+  prodImport:      {m:"POST",  p:"/api/products/import",         ok:"✓"},  // the commit half — a decision per column, confirm:true required
+  canSeeCosts:     {m:"GET",   p:"/api/entities/me/can-see-costs", ok:"✓"},  // [OFFR-04] { can_see_costs, is_owner } — the caller's own; the codes CB Catalogue greys from
+};
+
 /* ── the shop's OWN particulars — what the workshop's Profile · Country setup AND CB Settings (settings.html, SET1 2026-10-13) read and write.
    MOVED from app.html's EP (one name per endpoint, e2e/ep-aliases.cjs): the profile (PATCH /entities/profile), the vault (GET /governance/profile),
    Country setup (CS1) ── */

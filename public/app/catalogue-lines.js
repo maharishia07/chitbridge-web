@@ -160,5 +160,45 @@ function cbCatgAncestors(ids, cats, parentOf, idOf) {
   return out;
 }
 root.cbCatgAncestors = cbCatgAncestors;
-  if (typeof module !== 'undefined' && module.exports) module.exports = { cbLineRows: cbLineRows, cbCatgAncestors: cbCatgAncestors };
+
+/**
+ * ⭐ THE PREFLIGHT'S VERDICT, IN WORDS (T3-CATALOGUE, 14 Oct) — LIFTED from app.html `_cfRun` so the workshop's "Check a file" and
+ * CB Catalogue's Import (app/cap-catalogue.js) read ONE table. POST /api/products/import/preflight answers each incoming column with
+ * `how`; this says what that means and which decision the row starts on. The server re-runs the preflight on import and trusts none of it.
+ *   cbImportVerdict({ how, canonical }) → { mark, tone: ok|warn|grey|bad (each page maps it to its own token), why, fixed, start }
+ *   fixed: a blocked or blank-headed column has NO choice (the control is removed, not merely preset).
+ *   start: 'map:<field>' when the catalogue claimed it, else 'create' — only offer to CREATE where nothing claimed it.
+ */
+var CB_IMPORT_HOW = {
+  exact:          ['✓', 'ok',   'matches your catalogue'],
+  synonym:        ['✓', 'ok',   'recognised under another name'],
+  contains:       ['?', 'warn', 'probably this — confirm'],
+  fuzzy:          ['?', 'warn', 'guessed — confirm this'],
+  ambiguous:      ['?', 'warn', 'could be more than one thing'],
+  'not-accepted': ['—', 'grey', 'your catalogue does not use this'],
+  unmatched:      ['—', 'grey', 'not recognised'],
+  conflict:       ['!', 'warn', 'another column matched this better'],
+  blocked:        ['⨯', 'bad',  'a file may not set this'],
+  empty:          ['—', 'grey', 'this column has no heading']
+};
+function cbImportVerdict(m) {
+  m = m || {};
+  var h = CB_IMPORT_HOW[m.how] || ['?', 'grey', String(m.how || '')];
+  return { mark: h[0], tone: h[1], why: h[2], fixed: m.how === 'blocked' || m.how === 'empty', start: m.canonical ? 'map:' + m.canonical : 'create' };
+}
+root.cbImportVerdict = cbImportVerdict;
+
+/**
+ * ⭐ AN ITEM'S CHANGE AS A PATCH (T3-CATALOGUE) — LIFTED from app.html `prodDiff` (the scheduled change) so CB Catalogue's Save reads the same one.
+ *   cbItemDiff(cur, next)          → the keys whose value changed (a schedule parks only these)
+ *   cbItemDiff(cur, next, true)    → and every key `next` dropped as null — an RFC 7386 merge patch (PATCH /products/:id { merge:true }: null removes it)
+ */
+function cbItemDiff(cur, next, removals) {
+  var out = {}, c = cur || {}, n = next || {};
+  Object.keys(n).forEach(function (k) { if (JSON.stringify(c[k]) !== JSON.stringify(n[k])) out[k] = n[k]; });
+  if (removals) Object.keys(c).forEach(function (k) { if (!(k in n) && c[k] != null) out[k] = null; });
+  return out;
+}
+root.cbItemDiff = cbItemDiff;
+  if (typeof module !== 'undefined' && module.exports) module.exports = { cbLineRows: cbLineRows, cbCatgAncestors: cbCatgAncestors, cbImportVerdict: cbImportVerdict, cbItemDiff: cbItemDiff };
 })(typeof window !== 'undefined' ? window : globalThis);

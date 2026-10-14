@@ -32,6 +32,7 @@
  *
  * SERVER-PAGED LISTS (Platform): pass `remote:{ total, onQuery(q), foot() }`. The unit then neither filters nor sorts: it draws
  * the page it was given in its own look, asks the page's pager for the next one through `onQuery`, and paints `foot()` below.
+ * `remote.filters: true` — the server filters too (Catalogue: ?status=): Filters ▾ shows, and a choice reaches onQuery as `filt`.
  */
 (function (root) {
   'use strict';
@@ -332,6 +333,8 @@
   function leadOn(I) { return !!(I.o.lead && safe(function () { return I.o.lead.on(); }, false)) || (I.o.bulk && I.o.bulk.length && I.r.selMode); }
   function template(I, cols) { return (leadOn(I) ? '34px ' : '') + cols.map(function (c) { return widthOf(I, c) + 'px'; }).join(' '); }
   function remote(I) { return !!I.o.remote; }
+  /* a server-paged list whose server ALSO filters (remote.filters:true, T3-CATALOGUE): Filters ▾ and the heading filters show, and a choice goes to onQuery as `filt` */
+  function remoteFilt(I) { return remote(I) && !!I.o.remote.filters; }
 
   function sortOf(I, cols) {
     var st = I.s.sort, sorts = I.o.sorts || [], e = null, dir = 1, cmp = null;
@@ -456,7 +459,7 @@
     if (!box) { box = root.document.createElement('div'); box.className = 'cbl-tools'; box.setAttribute('data-cbl-part', 'tools'); box.setAttribute('role', 'toolbar'); box.setAttribute('aria-label', T(I, 'View')); var l = $(I, ':scope > .cbl-list'); I.el.insertBefore(box, l); }
     var o = I.o, R = I.r, s = I.s, m = matched(I), fn = activeFilters(I).length, k = esc(I.key), sorts = sortChoices(I);
     var tids = o.tids || {}, tl = o.tools || {}, h = tl.search === false ? '' : '<div class="cbl-search"><span aria-hidden="true">🔍</span><input type="search" data-cbl-q id="cbl-q-' + k + '" data-testid="listctl-search-' + k + '" placeholder="' + esc(o.searchHint || T(I, 'Search')) + '" value="' + esc(R.q) + '" aria-label="' + esc(T(I, 'Search')) + '"></div>';
-    if (!remote(I) && ((o.filters && o.filters.length) || sorts.length > 1)) {
+    if ((!remote(I) || remoteFilt(I)) && ((o.filters && o.filters.length) || sorts.length > 1)) {
       h += '<span class="cbl-anchor"><button type="button" class="cbl-tbtn' + (fn ? ' on' : '') + '" data-cbl-pop="filt" id="cbl-filt-' + k + '" data-testid="cbl-filters-' + k + '" aria-haspopup="dialog" aria-expanded="' + (I.pop === 'filt') + '">' + esc(T(I, 'Filters')) + ' ▾' + (fn ? ' <span class="badge">' + fn + '</span>' : '') + '</button>' + (I.pop === 'filt' ? filtPop(I, sorts) : '') + '</span>';
     }
     var g = o.group, gm = groupMode(I);
@@ -626,7 +629,7 @@
       var id = sortId(c), sorted = !!(st && id && st.key === id), r = !!(c.num || c.pin === 'end'), label = esc(c.label || c.key);
       return '<div class="cbl-hc lhcell' + (r ? ' r' : '') + (id ? ' sortable' : '') + '" role="columnheader" aria-sort="' + (sorted ? (st.dir === -1 ? 'descending' : 'ascending') : 'none') + '">'
         + (id ? '<button type="button" class="sort"' + (plainHead ? ' disabled tabindex="-1"' : ' data-sort="' + esc(id) + '"') + '>' + label + ' <span class="arrow">' + (sorted ? (st.dir === -1 ? '▼' : '▲') : '⇅') + '</span></button>' : label)   /* the loading header keeps the SAME boxes (its buttons are just inert), so it does not change height when the rows arrive */
-        + (c.hfilter && !remote(I) ? '<button type="button" class="cbl-hf' + (I.r.filt[c.hfilter] ? ' on' : '') + '"' + (plainHead ? ' disabled tabindex="-1"' : ' data-hf="' + esc(c.hfilter) + '"') + ' data-testid="cbl-hf-' + esc(c.hfilter) + '" aria-haspopup="menu" aria-expanded="' + (I.pop === 'hf:' + c.hfilter) + '" aria-label="' + esc(T(I, 'Filter {x}', { x: c.label || c.key })) + '" title="' + esc(T(I, 'Filter {x}', { x: c.label || c.key })) + '">' + (I.r.filt[c.hfilter] ? '●' : '▾') + '</button>' : '')
+        + (c.hfilter && (!remote(I) || remoteFilt(I)) ? '<button type="button" class="cbl-hf' + (I.r.filt[c.hfilter] ? ' on' : '') + '"' + (plainHead ? ' disabled tabindex="-1"' : ' data-hf="' + esc(c.hfilter) + '"') + ' data-testid="cbl-hf-' + esc(c.hfilter) + '" aria-haspopup="menu" aria-expanded="' + (I.pop === 'hf:' + c.hfilter) + '" aria-label="' + esc(T(I, 'Filter {x}', { x: c.label || c.key })) + '" title="' + esc(T(I, 'Filter {x}', { x: c.label || c.key })) + '">' + (I.r.filt[c.hfilter] ? '●' : '▾') + '</button>' : '')
         + (plainHead ? '' : '<button type="button" class="cbl-rz colrz" data-rz="' + esc(c.key) + '" aria-label="' + esc(T(I, 'Resize {x} column (arrow keys)', { x: c.label || c.key })) + '" title="' + esc(T(I, 'Drag to resize · double-click resets')) + '"></button>') + '</div>';
     }).join('') + '</div>';
   }

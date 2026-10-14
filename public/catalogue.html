@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en" data-tokens="list">
+<head>
+<meta charset="utf-8">
+<script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
+<script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CB Catalogue</title>
+<!-- ⭐ CB Catalogue — what the shop sells, as a small app (T3-CATALOGUE, 2026-10-14; docs/design/INDEX-NOT-APP.md §3 row 3). The FRAME is CBFrame's standard
+     skeleton (sidebar + full-width main, page-frame.js + page-skeleton.css); the SCREEN is app/cap-catalogue.js: Items (CBList, server-paged) · Categories ·
+     Import (CBSteps over the server's preflight). Every write goes through CBAction (M64) to a route the workshop already uses; who may change what is the
+     server's answer (a co-assist without "Sees costs": availability only). Linked from Home (app/manifest.json), never from app.html. The workshop's own
+     catalogue (variants · modifiers · barcode · media · storefront · schedule) stays reachable from Settings › Workshop. -->
+<link rel="stylesheet" href="/app/page-skeleton.css">   <!-- the standard page skeleton (sidebar + main pane), drawn by CBFrame -->
+<style>
+/* the workshop's token NAMES with the Cream values (the avatar's themes re-point these names; a page that never chooses a theme is Cream) — as settings.html */
+:root{ --paper:#fbf6ec; --card:#fffdf8; --ink:#2a2418; --on-bg:var(--ink); --on-card:var(--ink); --grey:#5c5240; --line:#e6dcc6; --blue:#1f5f5b; --on-accent:#fbf6ec;
+  --disp:#8e3517; --danger-tint:#fbeae3; --warn-2:#7a5205; --warn-3:#7a5205; --warn-tint:#fdf3dc; --gold-soft:#f3ead7; --ok-2:#0d4a2b; --ok-tint:#e8f4ed;
+  --green-b:#A9D3BC; --amber-b:#EFD39A; --fs-1:12px; --fs-2:13.5px; --fs-3:15px;
+  --mono:'IBM Plex Mono',ui-monospace,monospace; --sans:'IBM Plex Sans',system-ui,sans-serif; --serif:'Source Serif 4',Georgia,serif; }
+:root[data-themed]{--side:var(--card);--line-side:var(--line);--ink-2:var(--ink);--muted-2:var(--grey);--hover-nav:color-mix(in srgb,var(--ink) 8%,var(--card));
+  --accent:var(--blue-2,var(--blue));--accent-text:var(--blue-d,var(--blue));--accent-ink:var(--card);--on-accent:var(--card)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper,#fbf6ec);color:var(--ink,#2a2418);font-family:var(--sans);font-size:15px;line-height:1.45}
+button{font-family:inherit;cursor:pointer}
+.mono{font-family:var(--mono)}
+.sub{color:var(--grey,#5c5240);font-size:13px}
+.lbl{font-size:13px;font-weight:600;margin-top:4px}
+#cat{display:flex;flex-direction:column;gap:12px;padding:16px 20px 40px;min-height:60vh;min-width:0}
+.cat-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.cat-count{font-size:15px}
+.cat-count b{font-size:22px}
+.cat-list{flex:1;min-height:420px;display:flex;flex-direction:column;min-width:0}
+.cat-list [data-cat-more]{margin:10px 0}
+.act{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:40px;padding:0 16px;border:1px solid var(--blue,#1f5f5b);border-radius:9px;background:var(--blue,#1f5f5b);color:var(--on-accent,#fbf6ec);font-size:14px;font-weight:600}
+.act.quiet{background:transparent;border-color:var(--line,#e6dcc6);color:var(--ink,#2a2418)}
+.act[disabled]{cursor:not-allowed}
+.act[data-action-state="busy"]{opacity:.7}
+.inp{width:100%;border:1px solid var(--line,#e6dcc6);border-radius:9px;padding:10px 12px;font:inherit;font-size:14px;background:var(--paper,#fbf6ec);color:var(--on-bg,#2a2418);margin:0}
+.inp[disabled]{opacity:.6;cursor:not-allowed}
+.tag{display:inline-flex;align-items:center;gap:4px;min-height:22px;padding:0 8px;border-radius:999px;border:1px solid var(--line,#e6dcc6);background:var(--card,#fffdf8);color:var(--ink,#2a2418);font-size:12px;font-weight:600}
+.tag.green{background:var(--ok-tint,#e8f4ed);border-color:var(--green-b,#A9D3BC);color:var(--ok-2,#0d4a2b)}
+.tag.amber{background:var(--warn-tint,#fdf3dc);border-color:var(--amber-b,#EFD39A);color:var(--warn-3,#7a5205)}
+.why{font-size:13px;color:var(--grey,#5c5240)}
+.cat-act.no{display:flex;flex-direction:column;gap:2px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{min-height:34px;padding:0 12px;border-radius:999px;border:1px solid var(--line,#e6dcc6);background:var(--card,#fffdf8);color:var(--ink,#2a2418);font-size:13px}
+.chip.on{background:var(--blue,#1f5f5b);border-color:var(--blue,#1f5f5b);color:var(--on-accent,#fbf6ec);font-weight:600}
+.chip[disabled]{opacity:.6;cursor:not-allowed}
+.empty{padding:40px 20px;text-align:center;border:1px dashed var(--line,#e6dcc6);border-radius:14px;color:var(--grey,#5c5240);display:flex;flex-direction:column;align-items:center;gap:12px}
+.empty .t{font-family:var(--serif);font-size:19px;color:var(--ink,#2a2418);font-weight:700}
+.loadwrap{display:flex;align-items:center;gap:10px;color:var(--grey,#5c5240);padding:18px 0}
+.spin{display:inline-block;width:15px;height:15px;border:2px solid var(--line,#e6dcc6);border-top-color:var(--blue,#1f5f5b);border-radius:50%;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+dialog.sheet{border:1px solid var(--line,#e6dcc6);border-radius:14px;padding:20px;width:min(520px,96vw);max-height:92vh;overflow:auto;background:var(--card,#fffdf8);color:var(--ink,#2a2418);position:relative}
+dialog.sheet::backdrop{background:var(--scrim,rgba(42,36,24,.4))}
+dialog.sheet h2{margin:0 0 4px;font-family:var(--serif);font-size:21px;padding-inline-end:32px;overflow-wrap:anywhere}
+dialog.sheet .mx{position:absolute;right:8px;top:8px;border:0;background:transparent;font-size:18px;color:inherit;min-width:40px;min-height:40px}
+.cat-out{min-height:20px;margin:6px 0;font-weight:600;color:var(--ok-2,#0d4a2b)}
+.cat-out[data-tone="error"]{color:var(--disp,#8e3517)}
+.cat-form{display:flex;flex-direction:column;gap:6px}
+.cat-form label{font-size:13px;font-weight:600;margin-top:4px}
+.cat-form .act{margin-top:10px}
+.cat-two{display:flex;gap:10px;flex-wrap:wrap}
+.cat-two>div{flex:1 1 140px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.cat-imp{display:flex;flex-direction:column;gap:8px;max-width:760px;width:100%}
+.cat-imp .sub{margin:0}
+.cat-imp .cbst{color:var(--grey,#5c5240)}
+.cat-imp .cbst.now{color:var(--on-accent,#fbf6ec)}
+.cat-imp .cbst-foot button:not(.pri){color:var(--ink,#2a2418)}
+.cat-imp .cbst-foot button.pri{color:var(--on-accent,#fbf6ec)}
+.cat-imp .cbst-why{color:var(--warn-3,#7a5205)}
+.cat-imp-sum{font-size:14px}
+.cat-cols{display:flex;flex-direction:column;gap:10px;margin:8px 0}
+.cat-col{display:flex;flex-direction:column;gap:4px;padding:10px;border:1px solid var(--line,#e6dcc6);border-radius:9px;background:var(--card,#fffdf8);min-width:0}
+.cat-col-h{overflow-wrap:anywhere}
+.mark{display:inline-block;min-width:16px;font-weight:700}
+.mark.ok{color:var(--ok-2,#0d4a2b)} .mark.warn{color:var(--warn-3,#7a5205)} .mark.grey{color:var(--grey,#5c5240)} .mark.bad{color:var(--disp,#8e3517)}
+.bad{color:var(--disp,#8e3517)}
+.cat-issues{font-size:13px;line-height:1.6;padding-inline-start:18px;margin:4px 0}
+.cat-done{padding:12px;border-radius:9px;background:var(--ok-tint,#e8f4ed);color:var(--ok-2,#0d4a2b)}
+.err{font-size:var(--fs-2);color:var(--disp,#8e3517)}
+.err:not(:empty){background:var(--danger-tint,#fbeae3);border:1px solid var(--line,#e6dcc6);border-radius:9px;padding:9px 11px}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:60;max-width:min(520px,92vw)}
+#toast .toast{background:var(--ink,#2a2418);color:var(--paper,#fbf6ec);padding:12px 16px;border-radius:10px;font-size:14px}
+#netpill{position:fixed;right:12px;bottom:12px;font-size:12px;color:var(--grey,#5c5240)}
+</style>
+</head>
+<body>
+<div id="cat" data-testid="cat-screen"><div class="loadwrap"><span class="spin"></span> Loading</div></div>
+<div id="toast"></div>
+<script>
+'use strict';
+/* ── the host globals the workshop's own files expect (app.html declares these with let/const; so does this page — as settings.html does) ── */
+const CFG = { API_BASE: window.CB_API };   /* HX1: the deploy's api address from /config.js; asked again below once the shell is loaded */
+let SESSION = { token: null, role: null, name: null, entity: null, bridgeId: null };
+const EP = {};                       /* CB_CAT_EP from accounts-shell.js: the catalogue's endpoints, one name each */
+function go(){ if (window.CBFrame) CBFrame.ended(); }   /* api()'s 401 → drop the session, the one sign-in window shows (page-frame.js) */
+</script>
+<script src="/engine/screen.js"></script>
+<script src="/app/edition.js"></script>         <!-- CBEdition (AX1): the showing this person chose -->
+<script src="/app/avatar.js"></script>
+<script src="/app/core.js"></script>            <!-- api() · the network pill · a product's categories (catgIdsOf · catgSetOn · cbCatgLive · cbCatgCreate) -->
+<script src="/app/accounts-shell.js"></script>  <!-- tx · toast · CBAction · CBConfirm · CB_CAT_EP -->
+<script>Object.assign(EP, CB_CAT_EP);</script>
+<script src="/engine/money.js"></script>        <!-- CBMoney: one reading of a stored price -->
+<script src="/app/locale.js"></script>          <!-- CBLocale: the page's language and the currency's own figures (fmtMoney) -->
+<script src="/engine/signin.js"></script>
+<script src="/app/signin-ui.js"></script>
+<script src="/app/one-person.js"></script>
+<script src="/app/rail-bell.js"></script>
+<script src="/app/shell.js"></script>
+<script src="/app/page-frame.js"></script>
+<script src="/app/list-ctl.js"></script>        <!-- CBList: the one list control -->
+<script src="/app/step-flow.js"></script>       <!-- CBSteps: the import's File → Check -->
+<script src="/app/catalogue-lines.js"></script> <!-- cbImportVerdict · cbItemDiff — the workshop reads the same -->
+<script src="/app/cap-catalogue.js"></script>
+<script>
+'use strict';
+(function () {
+  if (window.CBShell && CBShell.apiBase) CFG.API_BASE = CBShell.apiBase() || CFG.API_BASE;
+  var SECTIONS = [
+    { k: 'items',      label: 'Items',      icon: 'M4 6h16M4 12h16M4 18h10' },
+    { k: 'categories', label: 'Categories', icon: 'M3 7l9-4 9 4-9 4-9-4M3 12l9 4 9-4M3 17l9 4 9-4' },
+    { k: 'import',     label: 'Import',     icon: 'M12 3v12M7 10l5 5 5-5M4 21h16' },
+  ];
+  var host = document.getElementById('cat'), frame = null, app = null;
+  function secOf(){ var h = (location.hash || '').replace(/^#\/?/, '').split(/[?&]/)[0]; return SECTIONS.some(function (s) { return s.k === h; }) ? h : 'items'; }
+  function paint(k){
+    if (frame && frame.skeleton) frame.skeleton.setActive(k);
+    if (location.hash !== '#/' + k) history.replaceState(null, '', '#/' + k);
+    if (app) app.show(k);
+  }
+  frame = CBFrame.mount({ app: 'catalogue', work: host,
+    skeleton: { name: 'Catalogue', icon: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z', sections: SECTIONS, active: secOf(), onSection: paint } });
+  var sess = frame.session;
+  if (!sess || !sess.token) { host.innerHTML = '<div class="empty" data-testid="cat-signin"><div class="t">Sign in above</div></div>'; return; }
+  var me = CBOnePerson.who(sess);
+  SESSION = { token: sess.token, role: sess.role, name: sess.name, entity: sess.entity, bridgeId: sess.bridgeId, entityId: me && me.ent, actorId: sess.role === 'actor' ? (me && me.uid) : null };
+  app = CBCatalogueApp.mount(host, { section: secOf() });
+  window.addEventListener('hashchange', function () { paint(secOf()); });
+})();
+</script>
+</body>
+</html>

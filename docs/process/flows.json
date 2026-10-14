@@ -11,7 +11,8 @@
     { "id": "TasksOrders", "name": "Tasks & Orders", "page": "web:public/tasks.html", "sap": "SD (order) · MM (purchase order)" },
     { "id": "Operations", "name": "Operations", "page": "web:public/app.html", "sap": "MM (supplies, stock, intake)" },
     { "id": "Employees", "name": "Employees", "page": "web:public/employees.html", "sap": "HCM" },
-    { "id": "Network", "name": "Network", "page": "web:public/network.html", "sap": "SD (storefront) · CTP" }
+    { "id": "Network", "name": "Network", "page": "web:public/network.html", "sap": "SD (storefront) · CTP" },
+    { "id": "Catalogue", "name": "Catalogue", "page": "web:public/catalogue.html", "sap": "MM (material master) · SD (pricing)" }
   ],
   "flows": [
     {
@@ -428,6 +429,32 @@
           "chit": "none", "ledger": "two entries in one transaction: the unrealised difference on 4260 at the month end, its reversal on the next month's first day",
           "test": ["engines:tests/fx.test.js", "api:tests/fx-rates.test.cjs"],
           "status": "ok", "note": "Debtors and creditors only; a currency with no closing rate is named and nothing is revalued." }
+      ]
+    },
+    {
+      "id": "CAT", "name": "Catalogue (what the shop sells)", "sap": "MM (material master) · SD (condition records)",
+      "steps": [
+        { "n": 1, "step": "item list · edit", "module": "Catalogue", "who": "the owner, or a co-assist (availability only without \"Sees costs\")",
+          "screen": [{ "file": "web:public/app/cap-catalogue.js", "fn": "readItems" }, { "file": "web:public/app/cap-catalogue.js", "fn": "openItem" }, { "file": "web:public/app/cap-catalogue.js", "fn": "save" }],
+          "engine": [{ "file": "api:lib/money.js", "fn": "stampItem" }, { "file": "api:lib/cost.js", "fn": "canRead" }],
+          "route": [{ "m": "GET", "p": "/api/products", "file": "api:routes/products.js" }, { "m": "PATCH", "p": "/api/products/:id", "file": "api:routes/products.js" }, { "m": "POST", "p": "/api/products", "file": "api:routes/products.js" }, { "m": "GET", "p": "/api/entities/me/can-see-costs", "file": "api:routes/entities.js" }],
+          "chit": "none — the catalogue is master data; a chit freezes the line it cites", "ledger": "none",
+          "test": ["api:tests/offr04-cost-gate.test.cjs", "api:tests/cost-never-to-employees.test.cjs", "web:e2e/walk-catalogue.cjs"],
+          "status": "ok", "note": "PATCH merge:true is an RFC 7386 patch (null removes a key). The server strips cost for a cost-blind caller and refuses that caller anything but status (OFFR-04). Sort is the server's one order, newest first." },
+        { "n": 2, "step": "categories", "module": "Catalogue", "who": "the owner",
+          "screen": [{ "file": "web:public/app/cap-catalogue.js", "fn": "showCats" }, { "file": "web:public/app/cap-catalogue.js", "fn": "saveCat" }, { "file": "web:public/app/cap-catalogue.js", "fn": "lifeCat" }, { "file": "web:public/app/core.js", "fn": "cbCatgCreate" }],
+          "engine": [],
+          "route": [{ "m": "GET", "p": "/api/definitions", "file": "api:routes/definitions.js" }, { "m": "POST", "p": "/api/definitions", "file": "api:routes/definitions.js" }, { "m": "PUT", "p": "/api/definitions/:id", "file": "api:routes/definitions.js" }, { "m": "DELETE", "p": "/api/definitions/:id", "file": "api:routes/definitions.js" }],
+          "chit": "none", "ledger": "none",
+          "test": ["web:e2e/walk-catalogue.cjs"],
+          "status": "warn", "note": "No engine function: a category is a definition row of kind category, retired never deleted. PUT replaces rules whole, so a rename re-sends them." },
+        { "n": 3, "step": "import", "module": "Catalogue", "who": "the owner",
+          "screen": [{ "file": "web:public/app/cap-catalogue.js", "fn": "impPick" }, { "file": "web:public/app/cap-catalogue.js", "fn": "impSend" }, { "file": "web:public/app/catalogue-lines.js", "fn": "cbImportVerdict" }],
+          "engine": [{ "file": "api:lib/csv-preflight.js", "fn": "preflight" }, { "file": "api:lib/csv-preflight.js", "fn": "applyDecisions" }],
+          "route": [{ "m": "POST", "p": "/api/products/import/preflight", "file": "api:routes/products.js" }, { "m": "POST", "p": "/api/products/import", "file": "api:routes/products.js" }],
+          "chit": "none", "ledger": "none",
+          "test": ["api:tests/csv-preflight.test.js", "web:e2e/walk-catalogue.cjs"],
+          "status": "ok", "note": "The preflight writes nothing; the import re-runs it on the server, refuses while a row has an error, and never deletes." }
       ]
     }
   ]
