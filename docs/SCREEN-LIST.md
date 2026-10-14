@@ -60,6 +60,9 @@ Register: `public/app/screen-id.js` (declared rows, merged into `CBSCREENS`) + `
 | OPS001 | Stock | CB Operations | /operations.html | /operations.html#/stock · CB Operations › Stock |
 | OPS002 | Suppliers | CB Operations | /operations.html | /operations.html#/suppliers · CB Operations › Suppliers |
 | EMP001 | People | CB Employees | /employees.html | /employees.html · CB Employees › People |
+| CTG001 | Items | Catalogue | /catalogue.html | /catalogue.html#/items · Catalogue › Items |
+| CTG002 | Categories | Catalogue | /catalogue.html | /catalogue.html#/categories · Catalogue › Categories |
+| CTG003 | Import | Catalogue | /catalogue.html | /catalogue.html#/import · Catalogue › Import |
 | NET001 | My network | Network | /network.html | /network.html · Network › My network |
 | NET002 | Offers | Network | /network.html | /network.html · Network › Offers |
 | NET003 | Design | Network | /network.html | /network.html · Network › Design |

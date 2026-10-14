@@ -464,8 +464,9 @@
     var o = I.o, R = I.r, s = I.s, m = matched(I), fn = activeFilters(I).length, k = esc(I.key), sorts = sortChoices(I);
     var tids = o.tids || {}, tl = o.tools || {}, h = tl.search === false ? '' : '<div class="cbl-search"><span aria-hidden="true">🔍</span><input type="search" data-cbl-q id="cbl-q-' + k + '" data-testid="listctl-search-' + k + '" placeholder="' + esc(o.searchHint || T(I, 'Search')) + '" value="' + esc(R.q) + '" aria-label="' + esc(T(I, 'Search')) + '"></div>';
     /* T3-DISPUTES-ASSIST: a server-paged list that ALSO filters on the server says so (remote.filters: true) — the same Filters control, and every choice
-       goes to its onQuery (q.filt · q.sort) instead of narrowing the page in hand; a remote list without it keeps the control off, as before */
-    if ((!remote(I) || o.remote.filters === true) && ((o.filters && o.filters.length) || sorts.length > 1)) {
+       goes to its onQuery (q.filt · q.sort) instead of narrowing the page in hand. T3-CATALOGUE (widened, additively): a server-paged list that DECLARES
+       filters gets the Filters ▾ too (a change goes to its pager, the unit still filters nothing itself); sorts alone show it only when the unit sorts (not remote) or the list opted in */
+    if ((o.filters && o.filters.length) || ((!remote(I) || o.remote.filters === true) && sorts.length > 1)) {
       h += '<span class="cbl-anchor"><button type="button" class="cbl-tbtn' + (fn ? ' on' : '') + '" data-cbl-pop="filt" id="cbl-filt-' + k + '" data-testid="cbl-filters-' + k + '" aria-haspopup="dialog" aria-expanded="' + (I.pop === 'filt') + '">' + esc(T(I, 'Filters')) + ' ▾' + (fn ? ' <span class="badge">' + fn + '</span>' : '') + '</button>' + (I.pop === 'filt' ? filtPop(I, sorts) : '') + '</span>';
     }
     var g = o.group, gm = groupMode(I);
