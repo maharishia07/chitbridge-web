@@ -59,6 +59,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-repeat.js` | lazy · on demand | cap-repeat.js — REPEAT SUPPLY as an AGREEMENT both parties hold (round RI1, 2026-10-12): CB Finance › Repeat supply (the seller's list), |
 | `cap-service.js` | lazy · on demand | cap-service.js — a chit AS A SERVICE REQUEST. Lazy-loaded (ensureCap('service')) |
 | `cap-shop.js` | — | YOUR SHOP: the shop's own particulars, ONE implementation painted in two places (SET1, 2026-10-13) |
+| `cap-settings.js` | — | CB SETTINGS › Counters & keys · Connectors · Policy · Plan & usage: CBList over the workshop's routes; POLICY_FLAGS and the counters/keys/kit helpers MOVED from cap-admin.js (T3-SETTINGS, 2026-10-14) |
 | `cap-standards.js` | lazy · on demand |  |
 | `cap-supplies.js` | lazy · on demand | SUPPLIES: what the shop buys to USE, never to sell |
 | `cap-tasks.js` | — |  |

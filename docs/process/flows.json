@@ -11,7 +11,8 @@
     { "id": "TasksOrders", "name": "Tasks & Orders", "page": "web:public/tasks.html", "sap": "SD (order) · MM (purchase order)" },
     { "id": "Operations", "name": "Operations", "page": "web:public/app.html", "sap": "MM (supplies, stock, intake)" },
     { "id": "Employees", "name": "Employees", "page": "web:public/employees.html", "sap": "HCM" },
-    { "id": "Network", "name": "Network", "page": "web:public/network.html", "sap": "SD (storefront) · CTP" }
+    { "id": "Network", "name": "Network", "page": "web:public/network.html", "sap": "SD (storefront) · CTP" },
+    { "id": "Settings", "name": "Settings", "page": "web:public/settings.html", "sap": "BC (customising · authorisations)" }
   ],
   "flows": [
     {
@@ -428,6 +429,39 @@
           "chit": "none", "ledger": "two entries in one transaction: the unrealised difference on 4260 at the month end, its reversal on the next month's first day",
           "test": ["engines:tests/fx.test.js", "api:tests/fx-rates.test.cjs"],
           "status": "ok", "note": "Debtors and creditors only; a currency with no closing rate is named and nothing is revalued." }
+      ]
+    },
+    {
+      "id": "SET", "name": "Shop setup (counters · connectors · rules · plan)", "sap": "BC (customising · authorisations · licence)",
+      "steps": [
+        { "n": 1, "step": "counters and keys: add, open on this PC, release; make and revoke a key", "module": "Settings", "who": "the owner (every counters write: lib/owner.gate) · any signed-in person reads",
+          "screen": [{ "file": "web:public/app/cap-settings.js", "fn": "counters" }, { "file": "web:public/app/cap-settings.js", "fn": "ctrOpenTill" }],
+          "engine": [{ "file": "api:lib/owner.js", "fn": "gate" }, { "file": "api:routes/keys.js", "fn": "mint" }],
+          "route": [{ "m": "GET", "p": "/api/counters", "file": "api:routes/counters.js" }, { "m": "POST", "p": "/:id/open", "file": "api:routes/counters.js" }, { "m": "POST", "p": "/:id/release", "file": "api:routes/counters.js" }],
+          "chit": "none", "ledger": "none",
+          "test": ["api:tests/settings-owner-gate.test.cjs", "web:e2e/walk-settings-ops.cjs"],
+          "status": "ok", "note": "A co-assist sees every action greyed with the server's sentence (may.manage, code OWNER_ONLY)." },
+        { "n": 2, "step": "connectors: download the kit, say which ones you use, approve the PC", "module": "Settings", "who": "the owner",
+          "screen": [{ "file": "web:public/app/cap-settings.js", "fn": "connectors" }, { "file": "web:public/app/cap-settings.js", "fn": "kitDownload" }],
+          "engine": [{ "file": "api:routes/keys.js", "fn": "mint" }],
+          "route": [{ "m": "GET", "p": "/catalogue", "file": "api:routes/integrations.js" }, { "m": "GET", "p": "/status", "file": "api:routes/integrations.js" }, { "m": "POST", "p": "/:actor_id/approve", "file": "api:routes/integrations.js" }],
+          "chit": "none", "ledger": "none",
+          "test": ["web:e2e/walk-settings-ops.cjs"],
+          "status": "ok", "note": "A connector the shop's country pack does not offer stays listed, its Download greyed with the pack's sentence (CX6)." },
+        { "n": 3, "step": "rules: set a policy flag, who may change each said by the server", "module": "Settings", "who": "the owner · a co-assist where the server allows",
+          "screen": [{ "file": "web:public/app/cap-settings.js", "fn": "policy" }, { "file": "web:public/app/cap-settings.js", "fn": "polStored" }],
+          "engine": [{ "file": "api:lib/policy.js", "fn": "set" }, { "file": "api:lib/owner.js", "fn": "may" }],
+          "route": [{ "m": "GET", "p": "/policy", "file": "api:routes/entities.js" }, { "m": "PATCH", "p": "/policy", "file": "api:routes/entities.js" }],
+          "chit": "none", "ledger": "none",
+          "test": ["api:tests/settings-owner-gate.test.cjs", "web:e2e/walk-settings-ops.cjs"],
+          "status": "ok", "note": "The labels are POLICY_FLAGS (one list, cap-settings.js); lib/policy FLAGS is the whitelist and the may/why." },
+        { "n": 4, "step": "plan and usage: the plan, each quota as a state, what was billed", "module": "Settings", "who": "the owner",
+          "screen": [{ "file": "web:public/app/cap-settings.js", "fn": "plan" }],
+          "engine": [{ "file": "api:lib/plans.js", "fn": "quotaOf" }],
+          "route": [{ "m": "GET", "p": "/entitlements", "file": "api:routes/entities.js" }, { "m": "GET", "p": "/usage", "file": "api:routes/entities.js" }],
+          "chit": "none", "ledger": "none",
+          "test": ["web:e2e/walk-settings-ops.cjs"],
+          "status": "warn", "note": "Reporting only: no route gates on plan (enforced:false) and every sellable tier's quotas are not decided — shown as 'Not decided yet', never as unlimited." }
       ]
     }
   ]
