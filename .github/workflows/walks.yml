@@ -35,6 +35,15 @@ jobs:
           repository: maharishia07/chitbridge-api
           ref: ${{ steps.twin.outputs.ref }}
           path: chitbridge-api
+          fetch-depth: 0
+      # 14 Oct: a twin cut BEFORE another api change landed on main walked against a stale api (GOV-SPIN's spin-country failed on
+      # #218/#219 while main passed). Walk the twin AS IT WILL LAND: api main merged in (local only, never pushed). A conflict = say so.
+      - name: Twin merged with api main (as it will land)
+        if: steps.twin.outputs.ref != 'main'
+        working-directory: chitbridge-api
+        run: |
+          git config user.name walks && git config user.email noreply@anthropic.com
+          git merge --no-edit origin/main || { echo "::warning::twin api branch conflicts with api main — walking the twin as is"; git merge --abort; }
       - name: Lay the api beside the web repo, as on the dev PC
         run: ln -s "$GITHUB_WORKSPACE/chitbridge-api" "$GITHUB_WORKSPACE/../chitbridge-api" && (cd chitbridge-api && npm ci --omit=dev --ignore-scripts)
       - uses: actions/setup-node@v4
