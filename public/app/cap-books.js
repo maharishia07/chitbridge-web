@@ -1491,11 +1491,11 @@ function bkLgMount(el) {
       by: function (l, mode) { if (mode === 'none') return null; var g = bkDvGroupOf(l.date, mode); return [g.label, g.key]; } },
     csv: function (rows) { bkLgDownload(rows); },
     /* its journal is read once, on the first open, and the row shows it when it arrives */
-    next: function (l) { return bkLgJournal().then(function () { return bkLgNext(l, cur()); }); },
+    next: function (l) { return bkLgJournal(l).then(function () { return bkLgNext(l, cur()); }); },
     /* Reverse this entry (insert-only: cap-entry.js asks first). The line names its entry only through the journal, so the journal is read first and a line that cannot be reversed (already reversed, or itself a reversal) says so. */
     /* M29: a line that names its entry (a party statement) reverses FROM THE ROW — no Day book read, and the row repaints itself (bkReverseLine); an account ledger's line still goes through its journal */
     actions: typeof enReverse === 'function' ? [{ id: 'reverse', icon: '↩', label: 'Reverse this entry', tid: 'lg-reverse', when: function (l) { return l.entry_id ? bkCanReverse(l) : !!(l.entry_no || l.ref || l.source_chit_id || (l.source && l.source.chit_id)); },
-      run: function (l) { if (l.entry_id) return bkReverseLine(l, BK.lt.sel && BK.lt.sel.party); bkLgJournal().then(function () { var e = bkLgEntry(l); if (!e || !e.entry_id || e.reversed_by || e.reverses_entry_id || e.event_type === 'reversal') { if (typeof toast === 'function') toast(tx('This entry cannot be reversed here.')); return; } enReverse(e.entry_id, e.entry_no); }); } }] : undefined,
+      run: function (l) { if (l.entry_id) return bkReverseLine(l, BK.lt.sel && BK.lt.sel.party); bkLgJournal(l).then(function () { var e = bkLgEntry(l); if (!e || !e.entry_id || e.reversed_by || e.reverses_entry_id || e.event_type === 'reversal') { if (typeof toast === 'function') toast(tx('This entry cannot be reversed here.')); return; } enReverse(e.entry_id, e.entry_no); }); } }] : undefined,
     tids: { expand: 'lg-expand-all', collapse: 'lg-collapse-all', csv: 'lg-csv', count: 'lg-count' },
     empty: { title: tx('No entries in these dates') },
   });
@@ -1505,10 +1505,25 @@ function bkLgEntry(l) {
   var es = (BK.lt.day && BK.lt.day.entries) || [], d = String(l.date || '').slice(0, 10);
   return es.filter(function (e) { return (l.entry_no && e.entry_no === l.entry_no) || (l.entry_id && e.entry_id === l.entry_id) || (!l.entry_no && !l.entry_id && (l.source_chit_id || (l.source && l.source.chit_id)) && (e.source_chit_id || (e.source && e.source.chit_id)) === (l.source_chit_id || (l.source && l.source.chit_id)) && String(e.posting_date).slice(0, 10) === d); })[0];
 }
-function bkLgJournal() {
+/**
+ * PERF1: the opened line's OWN entry, read by its id (GET /daybook?entries=<entry_id>, that day) and kept for the next open — it read the whole
+ * range's Day book for one line (the cash ledger's year: 24,163 entries, 18 MB at 100k lines). A line with no entry_id (an older api) reads
+ * the range as before. A read that fails is said by the row ("not on this page"), and logged.
+ */
+function bkLgJournal(l) {
+  var id = l && l.entry_id, day = String((l && l.date) || '').slice(0, 10), me = BK.lt.r;
+  var have = function () { return ((BK.lt.day && BK.lt.day.entries) || []).some(function (e) { return e.entry_id === id; }); };
+  if (id && day) {
+    if (have()) return Promise.resolve();
+    return api('booksDaybook', { query: { from: day, to: day, entries: id } }).then(function (d) {
+      if (BK.lt.r !== me) return;
+      BK.lt.day = BK.lt.day || { entries: [] };
+      (d.entries || []).forEach(function (e) { if (!BK.lt.day.entries.some(function (x) { return x.entry_id === e.entry_id; })) BK.lt.day.entries.push(e); });
+    }, function (e) { console.error('Books: a ledger line\'s journal could not be read —', id, (e && e.message) || e); });   /* the row then says "not on this page" (bkLgNext) */
+  }
   if (BK.lt.day) return Promise.resolve();
   if (BK.lt.dayP) return BK.lt.dayP;
-  var ls = (BK.lt.r && BK.lt.r.lines) || [], ds = ls.map(function (l) { return String(l.date || '').slice(0, 10); }).filter(Boolean).sort(), me = BK.lt.r;
+  var ls = (BK.lt.r && BK.lt.r.lines) || [], ds = ls.map(function (x) { return String(x.date || '').slice(0, 10); }).filter(Boolean).sort();
   return (BK.lt.dayP = api('booksDaybook', { query: { from: ds[0] || bkRange('lg').from, to: ds[ds.length - 1] || bkToday() } }).then(function (d) { return d; }, function () { return { entries: [], failed: true }; })
     .then(function (d) { if (BK.lt.r === me) BK.lt.day = d; BK.lt.dayP = null; }));
 }

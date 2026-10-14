@@ -15655,7 +15655,11 @@ function advPanel(){ const a=UI.adv||{};
     ${(typeof dispSearchRow==='function')?dispSearchRow(a):''}
     <div class="advfoot"><button class="composebtn" onclick="clearAdv()">${tx('Clear')}</button><button class="composebtn pri" onclick="applyAdv()">${tx('Apply')}</button></div>
   </div>`; }
-function fetchPage(page){ const limit=UI.pageLimit||50; if(["drafts","trash","archive"].indexOf(UI.folder)>=0){ return api("folder",{query:Object.assign({view:UI.folder,page,limit,q:UI.search||undefined,sort:UI.sort||undefined,dir:UI.dir||undefined}, advParams())}); } if(UI.folder==="order"||SESSION.role==="customer"){ return SESSION.role==="customer" ? api("custOrders",{params:{bridgeId:SESSION.bridgeId},query:{page,limit,q:UI.search||undefined,sort:UI.sort||undefined,dir:UI.dir||undefined}}) : api("sent",{query:Object.assign({page,limit,q:UI.search||undefined,sort:UI.sort||undefined,dir:UI.dir||undefined}, advParams())}); } const q={page,limit}; if(UI.search)q.q=UI.search; if(UI.sort){q.sort=UI.sort;q.dir=UI.dir;} Object.assign(q, advParams());
+/* PERF1: the Task / Order list in its default order (newest first) asks for the page AFTER the last one it holds (`next`, keyset) — never OFFSET past
+   the rows already read; the count comes on page 1 only and the pager keeps it (pgNext). Any other sort keeps page numbers. */
+function pgAfter(page){ if(page===1) UI._pgNext=null; }
+function pgKeep(r){ UI._pgNext=(r&&r.next)||null; return r; }
+function fetchPage(page){ const limit=UI.pageLimit||50; pgAfter(page); const after=(page>1&&(!UI.sort||UI.sort==='date')&&UI.dir!=='asc'&&UI._pgNext)?UI._pgNext:undefined; if(["drafts","trash","archive"].indexOf(UI.folder)>=0){ return api("folder",{query:Object.assign({view:UI.folder,page,limit,q:UI.search||undefined,sort:UI.sort||undefined,dir:UI.dir||undefined}, advParams())}); } if(UI.folder==="order"||SESSION.role==="customer"){ return SESSION.role==="customer" ? api("custOrders",{params:{bridgeId:SESSION.bridgeId},query:{page,limit,q:UI.search||undefined,sort:UI.sort||undefined,dir:UI.dir||undefined}}) : api("sent",{query:Object.assign({page,limit,after,q:UI.search||undefined,sort:UI.sort||undefined,dir:UI.dir||undefined}, advParams())}).then(pgKeep); } const q={page,limit}; if(UI.search)q.q=UI.search; if(UI.sort){q.sort=UI.sort;q.dir=UI.dir;} Object.assign(q, advParams());
   /* ⚠️ WX-P2P-03 (2026-10-13, the real stack): the state tab (Open · Act · Close) filtered CLIENT-SIDE inside the page of 50 the server had sent
      latest-first — a shop with 369 chits read "Open 0/2 · Nothing in Open" while two orders waited below the fold of a page it never asked for.
      The tab is one more term in the same query (the inbox route's own fstatus buckets); the search, an advanced filter and select mode show
@@ -15670,7 +15674,8 @@ function fetchPage(page){ const limit=UI.pageLimit||50; if(["drafts","trash","ar
    * and two co-assists could pick up the same job. A pool that still shows what has been taken is not a pool.
    */
   var _dispF=!!(UI.adv&&UI.adv.dispute); if(!_dispF){ if(SESSION.role==="actor"){ if(UI.sub==="my")q.assigned_to="me"; else q.assignment="unassigned"; } else { q.assignment=taskScope(); } }   // entity: unassigned pool (default) / assigned
-  return api("inbox",{query:q}); }
+  if(after) q.after=after;
+  return api("inbox",{query:q}).then(pgKeep); }
 function onRowsScroll(){ if(UI.loading)return; pgScroll("list"); }
 function paintRowsKeepScroll(){ taskPaint(); document.querySelectorAll(".statetabs .n").forEach((el,i)=>{ el.textContent=stCount(["open","act","close"][i]); }); pgPaintTotal(); }
 async function loadList(silent){
