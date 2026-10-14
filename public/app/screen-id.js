@@ -6,7 +6,7 @@
  *
  * ── ONE REGISTER ── the workshop's screens are `public/app/screens.js` (CBSCREENS, generated from C:/dev/SCREENS.json by screens.cjs).
  * The small apps and the sheets were never in it. Their rows are DECLARED here (as screens.cjs declares the `_fineScreen` sub-views) and
- * MERGED into the same window.CBSCREENS — rows · byApp · bySheet — so the browser holds ONE register. screens.cjs should read DECLARED
+ * MERGED into window.CBSCREENS (rows · byApp · bySheet) wherever a page loaded it, so the browser holds ONE register; screens.cjs should read DECLARED
  * below as an input; until it does, e2e/screen-id-guard.cjs keeps the two apart (no shared code, no shared prefix).
  * Codes are AAA### like every other (screens-register.cjs): assigned once, never reused. A new section or sheet kind = a new row here.
  *
@@ -17,7 +17,7 @@
  *   CBScreenId.here(app, key)   the screen now on show (key: a section; absent → read from location.hash, else the app's first screen)
  *   CBScreenId.chip()           THE page chip — one element, moved into each repaint of a header (the bell's pattern)
  *   CBScreenId.sheetHTML(kind)  the chip for a sheet's title row (kind: task · bill · supplierbill)
- *   CBScreenId.row(app, key) · .sheet(kind) · .current() · .DECLARED
+ *   CBScreenId.row(app, key) · .sheet(kind) · .current() · .DECLARED · .rows · .byApp · .bySheet
  * Read by: app/shell.js (the CBShell bar) · app/page-frame.js (the skeleton's section) · app/chit-sheet.js (the sheet) ·
  * accounts.html · finance.html · crm.html (their own headers) · tools/screen-list.cjs (docs/SCREEN-LIST.md) · tools/graph (KG1 `opens`).
  */
@@ -75,14 +75,12 @@
       reach: s[4] + ' › its sheet', nav: null, since: DECLARED.since, declared: true };
     ROWS.push(row); BYCODE[row.code] = row; BYSHEET[s[1]] = row.code;
   });
-  var REG = root.CBSCREENS || (root.CBSCREENS = { rows: [] });
-  if (!REG.byApp) {
-    REG.rows = (REG.rows || []).concat(ROWS);
-    REG.byApp = BYAPP; REG.bySheet = BYSHEET;
-  }
+  /* the workshop's register (screens.js) is its own file's global: where a page loaded it, these rows join it; this file never creates it */
+  var WS = root.CBSCREENS;
+  if (WS && !WS.byApp) { WS.rows = (WS.rows || []).concat(ROWS); WS.byApp = BYAPP; WS.bySheet = BYSHEET; }
 
   function T(s) { return typeof root.tx === 'function' ? root.tx(s) : s; }
-  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  /* escaping: the ONE esc (app/helpers.js, loaded first by every page) */
   function hashKey() { try { return (root.location.hash || '').replace(/^#\/?/, '').split(/[/?&]/)[0]; } catch (_) { return ''; } }
   function row(app, key) {
     var m = BYAPP[app]; if (!m) return null;
@@ -104,13 +102,13 @@
   }
   function inner(r) {
     if (!r) return '';
-    return '<span class="cbsid-n">' + esc(T(r.screen)) + '</span><span class="cbsid-d" aria-hidden="true">·</span><code class="cbsid-c" translate="no">' + esc(r.code) + '</code>';
+    return '<span class="cbsid-n">' + root.esc(T(r.screen)) + '</span><span class="cbsid-d" aria-hidden="true">·</span><code class="cbsid-c" translate="no">' + root.esc(r.code) + '</code>';
   }
   function label(r) { return T(r.screen) + ' · ' + r.code + ' — ' + T('Tap to copy the screen code'); }
   function sheetHTML(kind) {
     var r = sheet(kind); if (!r) return '';
     ensureCss();
-    return '<button type="button" class="cbsid" data-cbsid="' + esc(r.code) + '" data-testid="screen-id-sheet" aria-label="' + esc(label(r)) + '" title="' + esc(label(r)) + '">' + inner(r) + '</button>';
+    return '<button type="button" class="cbsid" data-cbsid="' + root.esc(r.code) + '" data-testid="screen-id-sheet" aria-label="' + root.esc(label(r)) + '" title="' + root.esc(label(r)) + '">' + inner(r) + '</button>';
   }
 
   var S = { app: null, key: null, el: null };
@@ -153,5 +151,6 @@
     root.addEventListener('hashchange', function () { if (S.app && BYAPP[S.app] && BYAPP[S.app][hashKey()]) { S.key = hashKey(); paint(); } });
   }
 
-  root.CBScreenId = { here: here, chip: chip, sheetHTML: sheetHTML, row: row, sheet: sheet, current: current, DECLARED: DECLARED };
+  root.CBScreenId = { here: here, chip: chip, sheetHTML: sheetHTML, row: row, sheet: sheet, current: current, DECLARED: DECLARED,
+    rows: ROWS, byApp: BYAPP, bySheet: BYSHEET };
 })(typeof window !== 'undefined' ? window : globalThis);
