@@ -21,7 +21,6 @@
   var STATE_WORD = { on: 'On', away: 'Away', off: 'Off' };
 
   function T(s) { return typeof root.tx === 'function' ? root.tx(s) : s; }
-  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function $(id) { return root.document.getElementById(id); }
 
   /** the one call: a server refusal keeps its own words and its status, so CBAction.words can say it */

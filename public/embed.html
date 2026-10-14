@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
+<script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Catalogue</title>
 <style>
@@ -52,7 +53,6 @@
   var BRAND = Q.get('brand') !== 'off';           // brand shown unless brand=off (whitelabel)
   if (Q.get('theme') === 'light' || Q.get('theme') === 'dark') document.documentElement.setAttribute('data-theme', Q.get('theme'));
   var CUR = '';   /* CX0: the shop's currency_code, read from the catalogue; the locale engine draws the symbol */
-  function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   function price(v){ if (v==null || v==='') return ''; try { return CBLocale.money(Number(v), CUR || ''); } catch (e) { return (CUR ? CUR + ' ' : '') + String(v); } }
   function el(id){ return document.getElementById(id); }
   // the media URL a catalogue item carries (ready for real photos/videos when the media layer lands)

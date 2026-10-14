@@ -33,6 +33,8 @@ function page(o) {
   g.fetch = (url, init) => { g.sent.push({ url, body: JSON.parse(init.body) }); const a = o.answer || { ok: true }; return Promise.resolve({ ok: true, json: () => Promise.resolve(a) }); };
   Object.entries(o.ls || {}).forEach(([k, v]) => g.localStorage.setItem(k, v));
   Object.entries(o.ss || {}).forEach(([k, v]) => g.sessionStorage.setItem(k, v));
+  /* T2-WEBPRIMS: every page loads app/helpers.js (the one esc) before avatar.js — its free `esc` resolves to that global */
+  if (typeof globalThis.esc !== 'function') require('vm').runInThisContext(require('fs').readFileSync(path.join(path.dirname(FILE), 'helpers.js'), 'utf8'));
   const fn = new Function('window', 'localStorage', 'document', require('fs').readFileSync(FILE, 'utf8'));
   fn.call(g, g, g.localStorage, g.document);
   g.A = g.CBAvatar;

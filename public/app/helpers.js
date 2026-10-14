@@ -6,7 +6,9 @@
 
 function deepClone(x){ return JSON.parse(JSON.stringify(x)); }
 
-function esc(v){ return String(v==null?'':v).replace(/[<>"&]/g,c=>({'<':'&lt;','>':'&gt;','"':'&quot;','&':'&amp;'}[c])); }
+/* ⭐ T2-WEBPRIMS: THE ONE esc — every page loads this file first and calls it; 43 private copies were deleted, and they disagreed on "'"
+   (30 escaped it, this home did not). Text and attribute safe either quote: & < > " '. e2e/prim-homes.cjs fails a second definition. */
+function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function opt(arr,sel){ return arr.map(o=>`<option ${o===sel?'selected':''}>${o}</option>`).join(""); }
 /**
  * ⚠️ ONE SHAPE FOR "IT DID NOT LOAD", because there were four. Measured across the app: "Couldn't load",
@@ -144,6 +146,21 @@ function loader(label){ return '<div style="padding:40px 16px;text-align:center;
  * The currency decides the SYMBOL. The reader decides the FORMAT. They are independent.
  */
 /* ONE money formatter, and it now asks the localisation layer. See the note above CCY_LOCALE's removal. */
-function fmtMoney(amount,code){ return CBLocale.money(amount, code); }
+/* T2-WEBPRIMS (widened, additive): `empty` — what a MISSING amount reads as ('' · '—'); left out, a missing amount formats as zero, as before.
+   A page without the locale engine (a lab, a kit page) still gets the currency's own format from Intl — never a hard-coded ₹. */
+function fmtMoney(amount,code,empty){
+  if (empty !== undefined && (amount == null || amount === '' || (typeof amount !== 'object' && !isFinite(Number(amount))))) return empty;
+  if (typeof CBLocale !== 'undefined' && CBLocale.money) return CBLocale.money(amount, code);
+  var n = Number(amount) || 0;
+  try { return new Intl.NumberFormat(undefined, { style: 'currency', currency: code || 'INR' }).format(n); }
+  catch (e) { return (code ? code + ' ' : '') + n.toFixed(2); }   /* a code Intl does not know: the code and the figure, never a guessed symbol */
+}
+/* ⭐ T2-WEBPRIMS: THE TWELVE MONTH WORDS in the reader's language (CBLocale's own date words) — 'short' Jan… · 'long' January…. Three files typed
+   their own English Jan…Dec; a list built here follows the reader. Index 0 = January; a fiscal year rotates it at the caller. */
+function monthNames(form){
+  var out = [];
+  for (var i = 0; i < 12; i++) out.push(CBLocale.date(Date.UTC(2000, i, 15, 12), { month: form === 'long' ? 'long' : 'short', timeZone: 'UTC' }));
+  return out;
+}
 
 function jwtPayload(t){ try{ const p=String(t||"").split('.')[1]; if(!p) return null; return JSON.parse(atob(p.replace(/-/g,'+').replace(/_/g,'/'))); }catch(_){ return null; } }

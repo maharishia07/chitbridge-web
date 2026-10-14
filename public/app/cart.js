@@ -360,11 +360,6 @@
     return null;
   }
 
-  function esc(s) {
-    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-    });
-  }
   function rowsOf(cat) {
     return (typeof root.cbLineRows === 'function')
       ? root.cbLineRows(cat)
@@ -1026,11 +1021,12 @@
    *     never said    avl —              (never "avl 0")
    *     no date       avl 14 · dt ?      (the missing date is shown as missing, not quietly dropped)
    */
-  var MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  /* T2-WEBPRIMS: day and month in the reader's words (CBLocale.date) — no typed Jan…Dec; a host without the locale engine shows the ISO day */
   function shortDate(s) {
     var d = new Date(s);
     if (isNaN(d)) return String(s);
-    return ('0' + d.getDate()).slice(-2) + ' ' + MON[d.getMonth()];
+    if (root.CBLocale && root.CBLocale.date) return root.CBLocale.date(d, { day: '2-digit', month: 'short' });
+    return d.toISOString().slice(0, 10);
   }
   function availHTML(ns, r) {
     if (opt(ns, 'hideAvail', true)) return '';
@@ -1897,11 +1893,6 @@
      That bug cost hours on 2026-08-15 (`MSG` in cap-messages) and it is invisible to `node --check`. */
   var CBCAT = { io: null, moreIo: null, seq: 0, win: {} };
 
-  function esc(s) {
-    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-    });
-  }
   function dataOf(r) { return (r && r.item && (r.item.item_data || r.item)) || {}; }
   /**
    * ⚠️ MONEY IS FORMATTED BY CBCart.fmt, NOT HERE. This file had its own `money()` for about an hour and that was
@@ -1914,7 +1905,7 @@
     if (n == null || !isFinite(n)) return '';
     /* ⚠️ ONE FORMAT EVERYWHERE. Beside the app, its own formatter (locale · currency · sign · two decimals) rules — the
        sheet read "₹610" and "₹-61" above "549.00 ₹" (Athi, 2026-09-05). The storefront keeps CBCart.fmt. */
-    if (typeof root.fmtMoney === 'function') { try { return root.fmtMoney(n, (typeof root.myCur === 'function') ? root.myCur() : 'INR'); } catch (_) {} }
+    if (typeof root.fmtMoney === 'function' && typeof root.myCur === 'function') { try { return root.fmtMoney(n, root.myCur()); } catch (e) { if (typeof console !== 'undefined') console.warn('cart: the app formatter failed — the price shows in the cart\'s own format', e); } }   /* T2-WEBPRIMS: every page loads fmtMoney now — myCur says "beside the app" */
     return (root.CBCart && root.CBCart.fmt) ? root.CBCart.fmt(ns, n) : String(n);
   }
 

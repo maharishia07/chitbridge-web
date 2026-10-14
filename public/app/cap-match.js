@@ -88,7 +88,6 @@ function matchScreen() {
 function matchCard(o) {
   var w = MATCH_WORDS[o.verdict] || MATCH_WORDS.open;
   var open = MATCH.open === o.chit_id;
-  var money = function (n) { return (n == null) ? '—' : inr(n); };
   return '<div style="border:1px solid var(--line);border-radius:12px;margin-bottom:10px;overflow:hidden" data-testid="match-order">'
     + '<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer" onclick="MATCH.open=' + (open ? 'null' : "'" + esc(o.chit_id) + "'") + ';renderApp()">'
       + '<span style="font-weight:800;flex:1">' + esc(o.party || tx('a supplier')) + '<div class="u" style="font-weight:400;color:var(--grey);font-size:var(--fs-1)">'
@@ -117,9 +116,9 @@ function matchDetail(o, money) {
   var gap = o.money_gap;
   return '<div style="border-top:1px solid var(--line);padding:12px 14px">'
     + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px">'
-      + matchFig(tx('Ordered'), money(o.ordered_total), tx('what you asked for'))
-      + matchFig(tx('Received'), money(o.received_total), tx('what your own door counted'))
-      + matchFig(tx('Invoiced'), money(o.invoiced_total), o.invoiced_from ? esc(o.invoiced_from) : tx('no bill of theirs yet'))
+      + matchFig(tx('Ordered'), fmtMoney(o.ordered_total, myCur(), '—'), tx('what you asked for'))
+      + matchFig(tx('Received'), fmtMoney(o.received_total, myCur(), '—'), tx('what your own door counted'))
+      + matchFig(tx('Invoiced'), fmtMoney(o.invoiced_total, myCur(), '—'), o.invoiced_from ? esc(o.invoiced_from) : tx('no bill of theirs yet'))
     + '</div>'
     + (gap != null && gap !== 0
       ? '<div style="background:var(--warn-tint,rgba(200,120,0,.12));border-radius:8px;padding:9px 11px;margin-bottom:12px;color:var(--warn);font-weight:700" data-testid="match-gap">'

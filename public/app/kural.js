@@ -34,7 +34,6 @@
   var DATA = null, LOADING = null, ROUTE = '', LEAD = 'ta', LANG = 'en', HOST = null, EL = null, TIMER = null, SECOND = false, PAUSED = false, OBS = null, BLOCKED = false;
   var SRC = '/app/kurals.json';
 
-  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function lsGet(k) { try { return root.localStorage.getItem(k); } catch (_) { return null; } }
   function lsSet(k, v) { try { root.localStorage.setItem(k, v); } catch (_) {} }
   function today() { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }

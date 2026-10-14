@@ -40,8 +40,9 @@ for (const fn of NEEDED) {
  * outages on exactly that kind of second copy.
  */
 const helpers = fs.readFileSync(path.join(root, 'public', 'app', 'helpers.js'), 'utf8');
-for (const fn of ['fmtMoney']) {
-  const m = new RegExp('^function ' + fn + '\\b.*$', 'm').exec(helpers);
+/* T2-WEBPRIMS: esc is lifted too (it was a stub copy in ctx below), and fmtMoney spans lines now — a one-line body or up to its closing brace */
+for (const fn of ['fmtMoney', 'esc']) {
+  const m = new RegExp('^function ' + fn + '\\b(?:.*\\}\\s*$|[\\s\\S]*?\\n\\})', 'm').exec(helpers);
   if (!m) { console.log('SETUP FAIL — could not lift ' + fn + '() out of app/helpers.js'); process.exit(1); }
   src = m[0] + '\n' + src;
 }
@@ -57,7 +58,6 @@ const ctx = {
   // myCur() reads SESSION.currency; the fixtures are priced in INR, so say so explicitly rather than lean on a
   // default that could change underneath the assertions.
   SESSION: { currency: 'INR' },
-  esc: (v) => String(v == null ? '' : v).replace(/[<>"&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '"': '&quot;', '&': '&amp;' }[c])),
   /**
    * ⚠️⚠️ ALL TEN FAILURES IN THIS FILE WERE ONE MISSING SANDBOX, NOT TEN DEFECTS. The localisation layer gave
    * every renderer three new globals — `tx`, `txf`, `CBLocale` — and a lifted-source harness sees only what it

@@ -28,6 +28,7 @@
   Mobile-first: one column, wide tap targets, the cart bar sticky. This is the screen most likely to be used on a
   phone, so it is the one designed for a phone.
 -->
+<script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <script src="app/catalogue-lines.js"></script>
 <script src="app/locale.js"></script>   <!-- cart-ui reads CBLocale (money/symbol) — as shop.html and the app load it (2026-09-28) -->
 <script src="engine/money.js"></script>   <!-- ⭐ the one rounder, BEFORE cart.js — it has no copy of its own (2026-09-28) -->
@@ -114,9 +115,6 @@ var S={step:0,addr:'',date:'',time:'',remark:'',name:'',contact:'',otp:'',sent:f
 /* ⭐ FOUR steps — and "Who you are" is LAST on purpose. Nobody types a phone number before they know the price. */
 var STEPS=[{n:'Items'},{n:'Delivery'},{n:'Review'},{n:'Who you are'}];
 
-function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){
-  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
-function money(n){ return '₹'+Number(n).toLocaleString('en-IN'); }
 
 function armCart(){
   CBCart.init('shop', CAT, {
@@ -170,8 +168,8 @@ function stepReview(){
   return '<div class="rev"><div class="h">Your basket · '+sel.length+'<span class="e" onclick="go(0)">Change</span></div>'
     + sel.map(function(l){
         return '<div class="r"><span class="k">'+l.qty+' × '+esc(l.unit)+'</span><span style="flex:1">'+esc(l.name)+'</span>'
-          + '<b>'+(l.line_total==null?'—':money(l.line_total))+'</b></div>'; }).join('')
-    + '<div class="tot"><span style="flex:1">Total</span><span>'+(T.amount?money(T.amount)+(T.partial?'+':''):'—')+'</span></div></div>'
+          + '<b>'+(l.line_total==null?'—':CBCart.fmt('shop', l.line_total))+'</b></div>'; }).join('')
+    + '<div class="tot"><span style="flex:1">Total</span><span>'+(T.amount?CBCart.fmt('shop', T.amount)+(T.partial?'+':''):'—')+'</span></div></div>'
     /* ⚠️ CJ-07 — the shop's catalogue is the authority and the server reprices every line. On a public page that
        must be SAID: a customer reading a total on their own screen cannot otherwise tell a request from a bill. */
     + '<div class="note">This is a <b>request</b>, not a bill. '+esc(SHOP.name)+' confirms the price and the date before anything is due. Nothing is charged here.</div>'
@@ -196,7 +194,7 @@ function stepDone(){
   return '<div class="empty" style="padding:40px 12px"><div style="font-size:42px">✓</div>'
     + '<div style="font-weight:800;font-size:18px;margin-top:8px;color:var(--ink)">Order placed</div>'
     + '<div style="margin-top:8px;line-height:1.6">Your request for <b>'+n+' item'+(n===1?'':'s')+'</b>'
-    + (T.amount?' ('+money(T.amount)+')':'')+' reached '+esc(SHOP.name)+'.<br>They will confirm the price and the date.</div></div>';
+    + (T.amount?' ('+CBCart.fmt('shop', T.amount)+')':'')+' reached '+esc(SHOP.name)+'.<br>They will confirm the price and the date.</div></div>';
 }
 function ovHTML(){
   return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><b style="font-size:17px;flex:1">'+esc(SHOP.name)+'</b>'

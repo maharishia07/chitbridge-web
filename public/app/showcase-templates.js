@@ -19,7 +19,6 @@
  */
 (function (root) {
   'use strict';
-  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
 
   /* the words a cart face wears (design §4); the machinery is the one cart engine */
   var FACE = {
@@ -133,6 +132,6 @@
     return '<style>' + CSS + '</style><div class="sc" data-template="' + esc(name) + '" data-face="' + esc(t.face) + '">' + body + '</div>';
   }
 
-  var api = { esc: esc, FACE: FACE, SECTIONS: Object.keys(SECTIONS), TEMPLATES: TEMPLATES, DEFAULT: DEFAULT, contractOf: contractOf, assemble: assemble, pick: pick, render: render };
+  var api = { FACE: FACE, SECTIONS: Object.keys(SECTIONS), TEMPLATES: TEMPLATES, DEFAULT: DEFAULT, contractOf: contractOf, assemble: assemble, pick: pick, render: render };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.CBShowcase = api;
 })(typeof self !== 'undefined' ? self : this);

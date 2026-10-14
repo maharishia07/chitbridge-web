@@ -9866,7 +9866,6 @@ function supStepReview(x){
    * that formats money its own way will one day print a different number from the cart beside it, and the Network
    * review had already copied this screen's `String()` verbatim. A helper in this file would have been the third.
    */
-  var money=function(n){ return c ? c.money(n) : (n==null||!isFinite(n)?'—':String(n)); };
   var row=function(k,v){ return '<div style="display:flex;gap:10px;padding:8px 12px;border-top:1px solid var(--line);font-size:var(--fs-2)">'
     + '<span style="min-width:96px;color:var(--grey);font-size:var(--fs-1)">'+k+'</span><span style="flex:1">'+v+'</span></div>'; };
   var card=function(h,inner,edit){ return '<div style="border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:8px">'
@@ -9878,7 +9877,7 @@ function supStepReview(x){
     + card('Items · '+sel.length, sel.map(function(l){
         return row(l.qty+' × '+esc(l.unit), '<span style="flex:1">'+esc(l.name)+'</span>'
           + (l.offered?'<span style="color:var(--grey);font-size:var(--fs-1)"> · your offer</span>':'')
-          + '<b style="float:inline-end">'+esc(money(l.line_total))+'</b>'); }).join('')
+          + '<b style="float:inline-end">'+esc((c ? c.money(l.line_total) : fmtMoney(l.line_total, myCur(), '—')))+'</b>'); }).join('')
         /* ONE LINE, ONE SOURCE: the cart prints its own money block (rows or bare total) — see CBCart.reviewHTML */
         + (c ? c.reviewHTML({ totalTestid:'sup-total', taxTestid:'sup-tax' }) : ''), 0)
     + card('Details', row('Subject', esc(o.subject)||'<span style="color:var(--disp)">required</span>')
@@ -12389,16 +12388,15 @@ function prodOfferCartHTML(d, offers, qty, totalTestid, opts){   /* opts.custome
   /* ⚠️ cbOfferLine, the SAME builder the cart and the send use. The send path carried a different line shape for
      months and every targeted offer silently evaluated against an anonymous row. */
   const lines = [cbOfferLine(0, Object.assign({}, d, { item_id: pid }), qty)];
-  const money = function(n){ return fmtMoney(n, myCur ? myCur() : 'INR'); };
   let ev;
-  try { ev = CBOffers.evaluate({ lines: lines, offers: offers, money: money, customer_groups: (opts && Array.isArray(opts.customer_groups)) ? opts.customer_groups : [] }); }
+  try { ev = CBOffers.evaluate({ lines: lines, offers: offers, money: inr, customer_groups: (opts && Array.isArray(opts.customer_groups)) ? opts.customer_groups : [] }); }
   catch(e){ return ''; }   /* the offers are a view of the product; a failing engine must not take the tab down */
   const per = (CBOffers.perLine(ev, lines) || {})['0'] || { off: 0 };
   const gross = CBMoney.round(qty * ((cbAmount(d.price) || 0)));
   return '<div class="prodprev-c">'
     + '<div class="prodprev-l"><span class="n">' + esc(d.name || tx('This product')) + '</span>'
-    + '<span class="q">' + qty + ' × ' + esc(money((cbAmount(d.price) || 0))) + '</span>'
-    + '<span class="p">' + esc(money(gross)) + (per.off ? ' → <b>' + esc(money(CBMoney.round(gross - per.off))) + '</b>' : '') + '</span></div>'
+    + '<span class="q">' + qty + ' × ' + esc(inr((cbAmount(d.price) || 0))) + '</span>'
+    + '<span class="p">' + esc(inr(gross)) + (per.off ? ' → <b>' + esc(inr(CBMoney.round(gross - per.off))) + '</b>' : '') + '</span></div>'
     /**
      * ⭐ THE FREEBIE LINES THE CART WOULD ADD, shown as what they are: a CONSEQUENCE, not something chosen.
      * ⚠️ The engine never adds them itself (see offers.js) — claims() is what a cart acts on, and showing them
@@ -12406,7 +12404,7 @@ function prodOfferCartHTML(d, offers, qty, totalTestid, opts){   /* opts.custome
      */
     + CBOffers.claims(ev).map(function(c){
         return '<div class="prodprev-l free"><span class="n">+ ' + esc(c.name || tx('free item')) + '</span>'
-          + '<span class="q">' + (c.qty || 1) + ' × ' + esc(money(0)) + '</span>'
+          + '<span class="q">' + (c.qty || 1) + ' × ' + esc(inr(0)) + '</span>'
           + '<span class="p">' + tx('free') + '</span></div>'; }).join('')
     + CBCatUI.offersHTML('prodprev', lines, offers, null,
         { ev: ev, skipped: true, subtotal: true, testid: 'prod-offer-break-' + qty,
@@ -12439,9 +12437,8 @@ function prodOfferTaxFooterHTML(d, qty, off){
   const one = (disc) => CBTax.determine({ seller: { State: S, RegType: prodRegType() }, buyer: { Pos: S },
     lines: [{ name: pName(d), qty: qty, unit_price: price, discount: disc, rate: r.rate, cess_rate: r.cess || 0 }] }).ItemList[0];
   const it = one(off);
-  const money = function(n){ return fmtMoney(n, myCur ? myCur() : 'INR'); };
   /* rows for the SAME money table as the offers above (catalogue-ui offersHTML, opt.tailRows): GST grey between the two totals; After tax the only heavy row */
-  const row = (l, v, cls, tid, attrs) => `<tr class="cbm-row ${cls || ''}"${tid ? ' data-testid="' + tid + '"' : ''}${attrs || ''}><td class="cbm-l">${l}</td><td class="cbm-a"><bdi>${esc(money(v))}</bdi></td></tr>`;
+  const row = (l, v, cls, tid, attrs) => `<tr class="cbm-row ${cls || ''}"${tid ? ' data-testid="' + tid + '"' : ''}${attrs || ''}><td class="cbm-l">${l}</td><td class="cbm-a"><bdi>${esc(inr(v))}</bdi></td></tr>`;
   return row(txf('{name} · {rate}%', { name: esc(r.name || 'GST'), rate: String(r.rate) }), CBMoney.round(it.TotItemVal - it.AssAmt), 'cbm-tax')
     + row(tx('After tax'), it.TotItemVal, 'cbm-grand', 'prod-offer-preview-tax-' + qty, ` data-before="${esc(it.AssAmt)}" data-after="${esc(it.TotItemVal)}"`)
     + prodSavingsRowHTML(off, one(0).TotItemVal, it.TotItemVal, qty * price, row);
@@ -12456,13 +12453,12 @@ function prodSavingsRowHTML(off, totalAtList, totalNet, gross, row){
   if (!(off > 0)) return '';
   const allIn = CBMoney.round(totalAtList - totalNet);
   const pct = gross > 0 ? Math.round(off / gross * 1000) / 10 : 0;
-  const money = function(n){ return fmtMoney(n, myCur ? myCur() : 'INR'); };
   /* inside the sheet (row given): one row — You save (pct) · before tax X · all-in Y */
-  if (typeof row === 'function') return `<tr class="cbm-row cbm-save" data-testid="prod-savings" data-before="${esc(off)}" data-allin="${esc(allIn)}"><td class="cbm-l">${tx('You save')} <span style="font-weight:400">(${esc(String(pct))}%)</span><span class="cbm-sub">${esc(tx('off the price'))} ${esc(money(off))} · ${esc(tx('all-in with the tax on it'))} ${esc(money(allIn))}</span></td><td class="cbm-a"><bdi>${esc(money(allIn))}</bdi></td></tr>`;
-  if (false) return `<tr data-testid="prod-savings" data-before="${esc(off)}" data-allin="${esc(allIn)}" style="color:var(--ok-2);font-weight:700"><td style="padding:4px 8px;border-top:1px solid var(--line)">${tx('You save')} <span style="font-weight:400">(${esc(String(pct))}%)</span></td><td style="padding:4px 8px;border-top:1px solid var(--line);font-weight:400;color:var(--grey)"><bdi>${esc(money(off))}</bdi> ${tx('before tax')}</td><td style="padding:4px 8px;border-top:1px solid var(--line);text-align:end;white-space:nowrap"><bdi>${esc(money(allIn))}</bdi> <span style="font-weight:400;color:var(--grey)">${tx('all-in')}</span></td></tr>`;
+  if (typeof row === 'function') return `<tr class="cbm-row cbm-save" data-testid="prod-savings" data-before="${esc(off)}" data-allin="${esc(allIn)}"><td class="cbm-l">${tx('You save')} <span style="font-weight:400">(${esc(String(pct))}%)</span><span class="cbm-sub">${esc(tx('off the price'))} ${esc(inr(off))} · ${esc(tx('all-in with the tax on it'))} ${esc(inr(allIn))}</span></td><td class="cbm-a"><bdi>${esc(inr(allIn))}</bdi></td></tr>`;
+  if (false) return `<tr data-testid="prod-savings" data-before="${esc(off)}" data-allin="${esc(allIn)}" style="color:var(--ok-2);font-weight:700"><td style="padding:4px 8px;border-top:1px solid var(--line)">${tx('You save')} <span style="font-weight:400">(${esc(String(pct))}%)</span></td><td style="padding:4px 8px;border-top:1px solid var(--line);font-weight:400;color:var(--grey)"><bdi>${esc(inr(off))}</bdi> ${tx('before tax')}</td><td style="padding:4px 8px;border-top:1px solid var(--line);text-align:end;white-space:nowrap"><bdi>${esc(inr(allIn))}</bdi> <span style="font-weight:400;color:var(--grey)">${tx('all-in')}</span></td></tr>`;
   return `<div data-testid="prod-savings" data-before="${esc(off)}" data-allin="${esc(allIn)}" style="display:flex;justify-content:space-between;gap:8px;color:var(--ok-2);font-weight:700;margin-top:4px">`
     + `<span>${tx('You save')} <span style="font-weight:400">(${esc(String(pct))}%)</span></span>`
-    + `<span><bdi>${esc(money(off))}</bdi> <span style="font-weight:400;color:var(--grey)">${tx('before tax')}</span> · <bdi>${esc(money(allIn))}</bdi> <span style="font-weight:400;color:var(--grey)">${tx('all-in')}</span></span></div>`;
+    + `<span><bdi>${esc(inr(off))}</bdi> <span style="font-weight:400;color:var(--grey)">${tx('before tax')}</span> · <bdi>${esc(inr(allIn))}</bdi> <span style="font-weight:400;color:var(--grey)">${tx('all-in')}</span></span></div>`;
 }
 
 /**
@@ -13956,7 +13952,6 @@ function prodPricingHTML(d){
   let row=Object.assign({}, d);
   const sel=document.getElementById('ct_pricing_def');
   if(editing&&sel){ const chosen=defs.find(x=>String(x.definition_id||x.id)===String(sel.value))||null; CBPricing.setOn(row, chosen); }
-  const money=n=>fmtMoney(n, (typeof myCur==='function')?myCur():'INR');
   const list=cbAmount(pPrice(d));
   const qty=(UI._invQty&&UI._invQty>0)?UI._invQty:1;
   const u=CBPricing.unitPrice(row, qty, list);
@@ -13972,10 +13967,10 @@ function prodPricingHTML(d){
   const bands=CBPricing.bands(row, list);
   const table=bands.length
     ? `<table class="cb-money" data-testid="prod-pricing-table" style="margin-top:6px"><colgroup><col><col style="width:11ch"></colgroup><tbody>`
-      + bands.map(b=>`<tr class="cbm-row${u.tier&&u.tier.qty===b.from?' cbm-tot':''}"><td class="cbm-l">${esc(b.to==null?txf('{n} and above',{n:String(b.from)}):(b.from===b.to?String(b.from):b.from+'–'+b.to))} ${grey(esc(pUnit(d)))}</td><td class="cbm-a"><bdi>${esc(money(b.price))}</bdi></td></tr>`).join('')
+      + bands.map(b=>`<tr class="cbm-row${u.tier&&u.tier.qty===b.from?' cbm-tot':''}"><td class="cbm-l">${esc(b.to==null?txf('{n} and above',{n:String(b.from)}):(b.from===b.to?String(b.from):b.from+'–'+b.to))} ${grey(esc(pUnit(d)))}</td><td class="cbm-a"><bdi>${esc(inr(b.price))}</bdi></td></tr>`).join('')
       + `</tbody></table>` : '';
   const at=row.pricing_kind
-    ? `<div data-testid="prod-pricing-at" data-qty="${esc(String(qty))}" data-unit="${esc(String(u.amount))}" style="margin-top:6px">${txf('At {n} {u}: {p} each', { n:String(qty), u:esc(pUnit(d)), p:'<b>'+esc(money(u.amount))+'</b>' })} ${grey(esc(u.why))}${u.violation?`<div style="color:var(--warn-3)">⚠️ ${esc(u.violation)}</div>`:''}</div>`
+    ? `<div data-testid="prod-pricing-at" data-qty="${esc(String(qty))}" data-unit="${esc(String(u.amount))}" style="margin-top:6px">${txf('At {n} {u}: {p} each', { n:String(qty), u:esc(pUnit(d)), p:'<b>'+esc(inr(u.amount))+'</b>' })} ${grey(esc(u.why))}${u.violation?`<div style="color:var(--warn-3)">⚠️ ${esc(u.violation)}</div>`:''}</div>`
     : '';
   return `<div style="padding-bottom:4px">${pick}</div>${table}${at}`;
 }
@@ -14177,7 +14172,6 @@ function prodTaxPreviewHTML(d,r){
      FIRST, one row each with their amount; then the taxable value; then every head with its rate — CGST · SGST for the
      same state, IGST for another — then CESS as its own row (from the slab; "none on this slab" when zero); then After
      tax and You save. Two amount columns, one per case; the INV-01 field name rides beside each row for the buyer's system. */
-  const money=(v)=>`<bdi>${esc(inr(v))}</bdi>`;
   const th=(t,it,tid)=>`<th data-testid="${tid}" data-rate="${esc(it.GstRt)}" data-ass="${esc(it.AssAmt)}" data-cgst="${esc(it.CgstAmt)}" data-sgst="${esc(it.SgstAmt)}" data-igst="${esc(it.IgstAmt)}" data-cess="${esc(it.CesAmt)}" data-total="${esc(it.TotItemVal)}" style="text-align:end;padding:4px 8px;font-weight:700;white-space:nowrap">${esc(t)}</th>`;
   const td=(h,extra)=>`<td style="padding:4px 8px;border-top:1px solid var(--line);vertical-align:top;${extra||''}">${h}</td>`;
   const amt=(h,bold)=>td(h,'text-align:end;white-space:nowrap;font-variant-numeric:tabular-nums;'+(bold?'font-weight:700':''));
@@ -14188,15 +14182,15 @@ function prodTaxPreviewHTML(d,r){
     ? offRows.map(o=>row(esc(o.label), esc(o.why)+(o.scope?' · '+esc(tx(o.scope)):''), o.amount!=null?'−'+esc(inr(o.amount)):esc(tx('in the cart')), o.amount!=null?'−'+esc(inr(o.amount)):esc(tx('in the cart')))).join('')
     : row(tx('Offers'), tx('no offer applies to this product — tax is on the listed price'), '—', '—');
   const gstRows = isGST
-    ? row(txf('CGST {r}%', { r: String(intra.GstRt/2) })+' '+code('CgstAmt'), tx('same state: half the rate'), money(intra.CgstAmt), '—')
-      + row(txf('SGST {r}%', { r: String(intra.GstRt/2) })+' '+code('SgstAmt'), tx('same state: the other half'), money(intra.SgstAmt), '—')
-      + row(txf('IGST {r}%', { r: String(inter.GstRt) })+' '+code('IgstAmt'), tx('other state: the whole rate'), '—', money(inter.IgstAmt))
-    : row(esc(scheme)+' '+esc(String(intra.GstRt))+'%', tx('charged at home; not charged across the border'), money(intra.TaxAmt), money(inter.TaxAmt));
+    ? row(txf('CGST {r}%', { r: String(intra.GstRt/2) })+' '+code('CgstAmt'), tx('same state: half the rate'), '<bdi>'+esc(inr(intra.CgstAmt))+'</bdi>', '—')
+      + row(txf('SGST {r}%', { r: String(intra.GstRt/2) })+' '+code('SgstAmt'), tx('same state: the other half'), '<bdi>'+esc(inr(intra.SgstAmt))+'</bdi>', '—')
+      + row(txf('IGST {r}%', { r: String(inter.GstRt) })+' '+code('IgstAmt'), tx('other state: the whole rate'), '—', '<bdi>'+esc(inr(inter.IgstAmt))+'</bdi>')
+    : row(esc(scheme)+' '+esc(String(intra.GstRt))+'%', tx('charged at home; not charged across the border'), '<bdi>'+esc(inr(intra.TaxAmt))+'</bdi>', '<bdi>'+esc(inr(inter.TaxAmt))+'</bdi>');
   const cessRow = cessRate>0
-    ? row(txf('Cess {r}%', { r: String(cessRate) })+' '+code('CesAmt'), tx('on the taxable value, on top of the slab'), money(intra.CesAmt), money(inter.CesAmt), false, 'prod-tax-cess')
+    ? row(txf('Cess {r}%', { r: String(cessRate) })+' '+code('CesAmt'), tx('on the taxable value, on top of the slab'), '<bdi>'+esc(inr(intra.CesAmt))+'</bdi>', '<bdi>'+esc(inr(inter.CesAmt))+'</bdi>', false, 'prod-tax-cess')
     : row(tx('Cess'), tx('none on this slab'), '—', '—', false, 'prod-tax-cess');
   const saveRow = off>0 ? (()=>{ const atList=one0(HOME).TotItemVal; const allIn=CBMoney.round(atList-intra.TotItemVal); const pct=price>0?Math.round(off/price*1000)/10:0;
-      return `<tr data-testid="prod-savings" data-before="${esc(off)}" data-allin="${esc(allIn)}" style="color:var(--ok-2);font-weight:700">${td(tx('You save')+' <span style="font-weight:400">('+esc(String(pct))+'%)</span>')}${td(money(off)+' '+tx('before tax'),'color:var(--grey);font-weight:400')}${amt(money(allIn)+' <span style="font-weight:400;color:var(--grey)">'+tx('all-in')+'</span>',true)}${amt(money(allIn)+' <span style="font-weight:400;color:var(--grey)">'+tx('all-in')+'</span>',true)}</tr>`; })() : '';
+      return `<tr data-testid="prod-savings" data-before="${esc(off)}" data-allin="${esc(allIn)}" style="color:var(--ok-2);font-weight:700">${td(tx('You save')+' <span style="font-weight:400">('+esc(String(pct))+'%)</span>')}${td('<bdi>'+esc(inr(off))+'</bdi>'+' '+tx('before tax'),'color:var(--grey);font-weight:400')}${amt('<bdi>'+esc(inr(allIn))+'</bdi>'+' <span style="font-weight:400;color:var(--grey)">'+tx('all-in')+'</span>',true)}${amt('<bdi>'+esc(inr(allIn))+'</bdi>'+' <span style="font-weight:400;color:var(--grey)">'+tx('all-in')+'</span>',true)}</tr>`; })() : '';
   return `<div data-testid="prod-tax-preview">`
     + `<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:6px">`
     + txf('One unit at {price} — {rate}% ({name})', { price: inr(price), rate: String(r.rate), name: esc(r.name||tx('unnamed slab')) })
@@ -14207,12 +14201,12 @@ function prodTaxPreviewHTML(d,r){
     + `<th style="text-align:start;padding:4px 8px;color:var(--grey);font-weight:600">${tx('Step')}</th><th style="text-align:start;padding:4px 8px;color:var(--grey);font-weight:600">${tx('Detail')}</th>`
     + th(isGST?tx('Same state'):tx('Domestic'), intra, 'prod-tax-preview-intra') + th(isGST?tx('Other state'):tx('Cross-border'), inter, 'prod-tax-preview-inter')
     + `</tr></thead><tbody>`
-    + row(tx('Listed price'), '1 × '+esc(inr(price)), money(price), money(price))
+    + row(tx('Listed price'), '1 × '+esc(inr(price)), '<bdi>'+esc(inr(price))+'</bdi>', '<bdi>'+esc(inr(price))+'</bdi>')
     + offerRowsHTML
-    + row(tx('Taxable value')+' '+code('AssAmt'), off>0?tx('the listed price after every offer'):tx('the listed price'), money(intra.AssAmt), money(inter.AssAmt), true)
+    + row(tx('Taxable value')+' '+code('AssAmt'), off>0?tx('the listed price after every offer'):tx('the listed price'), '<bdi>'+esc(inr(intra.AssAmt))+'</bdi>', '<bdi>'+esc(inr(inter.AssAmt))+'</bdi>', true)
     + gstRows
     + cessRow
-    + row(tx('After tax')+' '+code('TotItemVal'), tx('what the buyer pays'), money(intra.TotItemVal), money(inter.TotItemVal), true)
+    + row(tx('After tax')+' '+code('TotItemVal'), tx('what the buyer pays'), '<bdi>'+esc(inr(intra.TotItemVal))+'</bdi>', '<bdi>'+esc(inr(inter.TotItemVal))+'</bdi>', true)
     + saveRow
     + `</tbody></table></div>`
     + (!isGST
@@ -18347,9 +18341,8 @@ function amendPaint(){
   const cands0=(cat&&cat.candidates)||[];
   const showCands = cands0.length && !AMD.picked;
   const items0=(cat&&cat.items)||[];
-  const money = (n)=> (n===''||n==null||isNaN(Number(n))) ? '' : String(Number(n));
   const total = (Number(l.quantity)>0 && Number(l.price)>0)
-    ? '<span style="color:var(--grey)"> = </span><b>'+esc(money(CBMoney.round(Number(l.quantity)*Number(l.price))))+'</b>' : '';
+    ? '<span style="color:var(--grey)"> = </span><b>'+esc(inr(CBMoney.round(Number(l.quantity)*Number(l.price))))+'</b>' : '';
 
   modal(`${wrote}
     ${showCands ? `<div style="margin-bottom:14px">${amdShortlistHTML(cands0, cat, items0.length)}</div>` : ''}
@@ -18367,7 +18360,7 @@ function amendPaint(){
       <span onclick="amdView('unit')" style="cursor:pointer;font-size:var(--fs-3);font-weight:700;min-width:52px;text-align:center;border-bottom:2px dotted var(--line)">${esc(l.unit||'unit')}</span>
       <button class="btn" onclick="amdStep(1)" style="width:46px;height:46px;font-size:24px;border-radius:23px;flex:none">+</button>
       <span style="color:var(--grey);font-size:var(--fs-3)">×</span>
-      <input inputmode="decimal" data-testid="amd-price" value="${esc(money(l.price))}" oninput="amdSetPrice(this.value)" placeholder="price"
+      <input inputmode="decimal" data-testid="amd-price" value="${esc((l.price===''||l.price==null||isNaN(Number(l.price)) ? '' : String(Number(l.price))))}" oninput="amdSetPrice(this.value)" placeholder="price"
              style="width:84px;text-align:center;font-size:var(--fs-4);font-weight:700;padding:8px;border:1px solid var(--line);border-radius:9px">
     </div>
     <div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:12px">quantity · unit · price${total}</div>

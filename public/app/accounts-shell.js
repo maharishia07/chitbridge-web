@@ -249,11 +249,10 @@ function toastLevel(m){ const s=String(m);
  * The server refuses anyone but the owner; the pages only offer the button to the owner.
  */
 var CBLedger = (function () {
-  var e = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
   function words(on) {
     return {
       title: on ? tx('Switch the Ledger on?') : tx('Switch the Ledger off?'),
-      body: e(on ? tx('From today every bill, payment and expense is recorded. Nothing before today is.')
+      body: esc(on ? tx('From today every bill, payment and expense is recorded. Nothing before today is.')
                  : tx('Nothing is deleted. Recording stops until it is switched on again.')),
       ok: on ? tx('Switch on') : tx('Switch off'),
     };
@@ -387,16 +386,15 @@ var CBAction = (function () {
  * Cancel, Escape and a click on the backdrop all dismiss, and all call onCancel.
  */
 function CBConfirm(title, bodyHtml, okLabel, onOk, danger, onCancel) {
-  var e = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
   var old = document.getElementById('cb_confirm'); if (old) old.remove();
   var d = document.createElement('dialog'); d.id = 'cb_confirm'; d.setAttribute('data-testid', 'confirm');
   d.style.cssText = 'border:1px solid var(--line,#DDD6C6);border-radius:14px;padding:0;max-width:min(420px,92vw);width:100%;background:var(--card,#fff);color:var(--ink,#1D1B16);font:15px/1.45 "IBM Plex Sans",system-ui,sans-serif';
   d.innerHTML = '<form method="dialog" style="margin:0;padding:20px 20px 16px;display:flex;flex-direction:column;gap:12px">'
-    + '<div style="font-weight:700;font-size:18px">' + e(title) + '</div>'
+    + '<div style="font-weight:700;font-size:18px">' + esc(title) + '</div>'
     + '<div style="color:var(--muted,#5E594D)">' + bodyHtml + '</div>'
     + '<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">'
-    + '<button type="button" data-testid="confirm-cancel" style="min-height:44px;padding:0 16px;border:1px solid var(--line,#DDD6C6);border-radius:9px;background:transparent;color:inherit;font:inherit;font-weight:600;cursor:pointer">' + e(tx('Cancel')) + '</button>'
-    + '<button type="button" data-testid="confirm-ok" style="min-height:44px;padding:0 18px;border:1px solid ' + (danger ? 'var(--red-i,#8E3517)' : 'var(--green,#16693F)') + ';border-radius:9px;background:' + (danger ? 'var(--red-i,#8E3517)' : 'var(--green,#16693F)') + ';color:#fff;font:inherit;font-weight:700;cursor:pointer">' + e(okLabel || tx('Confirm')) + '</button>'
+    + '<button type="button" data-testid="confirm-cancel" style="min-height:44px;padding:0 16px;border:1px solid var(--line,#DDD6C6);border-radius:9px;background:transparent;color:inherit;font:inherit;font-weight:600;cursor:pointer">' + esc(tx('Cancel')) + '</button>'
+    + '<button type="button" data-testid="confirm-ok" style="min-height:44px;padding:0 18px;border:1px solid ' + (danger ? 'var(--red-i,#8E3517)' : 'var(--green,#16693F)') + ';border-radius:9px;background:' + (danger ? 'var(--red-i,#8E3517)' : 'var(--green,#16693F)') + ';color:#fff;font:inherit;font-weight:700;cursor:pointer">' + esc(okLabel || tx('Confirm')) + '</button>'
     + '</div></form>';
   document.body.appendChild(d);
   var done = false;

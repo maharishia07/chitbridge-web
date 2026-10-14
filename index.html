@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
+<script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>ChitBridge</title>
 <!-- ⭐ THE INDEX PAGE IS THE SHELL'S HOME (plan row N18, 2026-10-08; FIT §D Q1 · Q3 · Q5 · Q10). CBShell (public/app/shell.js) draws
@@ -85,7 +86,6 @@ body{margin:0;background:var(--page);color:var(--ink);font-family:var(--f-ui,'IB
 /* The page paints; it computes nothing a counter or another page also computes (SYSTEM rule 12). A failed read
    leaves its row out — never an error string (rule 4). */
 
-function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 
 /* the app's session, read the way the apps restore it — an expired token counts as signed out. WHO it is (the
    shop's id from the signed token) is CBOnePerson's one answer, the same one the apps' gate compares. */

@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
+<script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Network shop — Chit &amp; Bridge</title>
 <style>
@@ -57,10 +58,6 @@ var API = (new URLSearchParams(location.search).get('api')) || window.CB_API;
 var NET = (new URLSearchParams(location.search).get('bridge') || '').trim();
 var DATA = null, Q = '', DEPT = null;
 
-function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){
-  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
-var SYM = { INR:'₹', USD:'$', AED:'AED ', EUR:'€', GBP:'£' };
-function money(amt, ccy){ if(amt==null||amt==='') return '—'; return (SYM[ccy]||((ccy||'')+' '))+amt; }
 
 function render(){
   var app = document.getElementById('app');
@@ -93,7 +90,7 @@ function render(){
                 return '<div class="prow"><div class="pname"><b>'+esc(it.name)+'</b>'
                   + (it.variant?'<span class="pvar">'+esc(it.variant)+'</span>':'')
                   + (it.unit?' <span class="meta">'+esc(it.unit)+'</span>':'')+'</div>'
-                  + '<div class="price">'+esc(money(it.price, it.currency))+'</div></div>';
+                  + '<div class="price">'+esc(fmtMoney(it.price, it.currency, '—'))+'</div></div>';
               }).join('');
         }).join('')
       + '</div>';

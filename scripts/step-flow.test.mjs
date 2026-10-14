@@ -7,6 +7,9 @@
  * These are the STEP rules only. The cart's rules live in cart-ui.test.mjs and are not restated here — the whole
  * point of two helpers is that neither has to know the other's business.
  */
+/* T2-WEBPRIMS: the page loads app/helpers.js first (its one esc) — so does this harness */
+const { runInThisContext } = await import('node:vm'); const { readFileSync } = await import('node:fs');
+runInThisContext(readFileSync(new URL('../public/app/helpers.js', import.meta.url), 'utf8'));
 await import('../public/app/step-flow.js');
 const K = globalThis.CBSteps;
 

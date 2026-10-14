@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
+<script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Combo Lab</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
@@ -844,7 +845,6 @@ function M0(n){ if(n==null||isNaN(n)) return '—';
   return (neg?'−₹':'₹')+Math.round(n).toLocaleString('en-IN'); }
 function PC(n){ if(n==null||!isFinite(n)) return '—';
   return (Math.round(n*10)/10)+'%'; }
-function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
 
 function marginPct(price,cost){return price>0?Math.round(((price-cost)/price)*100):0;}
 function roundDown(v,cap){

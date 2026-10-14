@@ -28,8 +28,6 @@
   'use strict';
 
   var CS = { id: null, chit: null, view: null, busy: false, mode: 'dialog', el: null, page: null, answered: {} };   /* answered: chit id → the step a status move made here was answered with (FX-F10W) */
-
-  function E(v) { return typeof esc === 'function' ? esc(v) : String(v == null ? '' : v).replace(/[<>"&]/g, function (c) { return { '<': '&lt;', '>': '&gt;', '"': '&quot;', '&': '&amp;' }[c]; }); }
   function T(s) { return typeof tx === 'function' ? tx(s) : s; }
   /**
    * ⭐ STD1 · THE STEPS, ONCE — the rail's statuses grouped the way this sheet asks (the engine's own grouping is workflow.js OPEN_NEW /
@@ -38,10 +36,6 @@
   var STEPS = { open: ['pending', 'delivered', 'read'], live: ['accepted', 'in_progress', 'partial'], dead: ['cancelled', 'rejected'] };
   function stepIn(s, k) { return STEPS[k].indexOf(String(s || '')) >= 0; }
   function tf(s, v) { if (typeof txf === 'function') return txf(s, v); return String(s).replace(/\{(\w+)\}/g, function (_, k) { return v && v[k] != null ? v[k] : ''; }); }
-  function money(n, cur) {
-    if (n == null || n === '' || isNaN(Number(n))) return '—';
-    try { return fmtMoney(Number(n), cur || 'INR'); } catch (_) { return String(n); }
-  }
   function when(ts) {
     if (!ts) return '';
     try { return CBLocale.datetime(ts); } catch (_) { return String(ts).slice(0, 16); }   /* CU4: the one date-time stamp */
@@ -119,8 +113,8 @@
     if (o.address) rows.push([o.fulfilment === 'pickup' ? 'Pick up' : 'Deliver to', o.address, 'cs-order-address']);
     if (o.when) rows.push(['Asked for', o.when, 'cs-order-when']);
     if (o.remark) rows.push(['Remark', o.remark, 'cs-order-remark']);
-    return '<div class="cs-order" data-testid="cs-order">' + (o.online ? '<div class="cs-online" data-testid="cs-order-online">🌐 ' + E(T('Online order')) + (o.fulfilment === 'delivery' ? ' · ' + E(T('Delivery')) : '') + '</div>' : '')
-      + rows.map(function (r) { return '<div class="cs-row"><span>' + E(T(r[0])) + '</span><b data-testid="' + r[2] + '">' + E(r[1]) + '</b></div>'; }).join('') + '</div>';
+    return '<div class="cs-order" data-testid="cs-order">' + (o.online ? '<div class="cs-online" data-testid="cs-order-online">🌐 ' + esc(T('Online order')) + (o.fulfilment === 'delivery' ? ' · ' + esc(T('Delivery')) : '') + '</div>' : '')
+      + rows.map(function (r) { return '<div class="cs-row"><span>' + esc(T(r[0])) + '</span><b data-testid="' + r[2] + '">' + esc(r[1]) + '</b></div>'; }).join('') + '</div>';
   }
   /* ⭐ A BILL I RECEIVED has its own step per shop: since the API's "bills-private" it is a `bill_step` row in the chit's
      state_log (code B-2100, step 'accepted', mine:true) — NOT the shared status, which is the seller's. The latest of mine wins. */
@@ -208,17 +202,17 @@
     return t;
   }
   function linesHTML(m) {
-    if (!m.lines.length) return '<div class="cs-mute">' + E(T('No lines on this chit')) + '</div>';
+    if (!m.lines.length) return '<div class="cs-mute">' + esc(T('No lines on this chit')) + '</div>';
     var ml = (m.money && m.money.lines) || [];
-    return '<table class="cs-lines"><thead><tr><th>' + E(T('Item')) + '</th><th class="n">' + E(T('Qty')) + '</th><th class="n">' + E(T('Price')) + '</th><th class="n">' + E(T('Total')) + '</th></tr></thead><tbody>'
+    return '<table class="cs-lines"><thead><tr><th>' + esc(T('Item')) + '</th><th class="n">' + esc(T('Qty')) + '</th><th class="n">' + esc(T('Price')) + '</th><th class="n">' + esc(T('Total')) + '</th></tr></thead><tbody>'
       + m.lines.map(function (l, i) {
         var f = ml[i], offs = (l.offers && l.offers.length) ? l.offers : (l.offer ? [{ label: l.offer.label, off: l.offer.off }] : []);
         /* a frozen invoice line says what it took off; one offer on the line wears that figure, several keep their own recorded amounts */
         if (f && offs.length === 1) offs = f.discount > 0 ? [{ label: offs[0].label, off: f.discount }] : [];
-        return '<tr data-testid="cs-line-' + i + '"><td>' + E(l.particulars || l.name || '') + offs.map(function (o) {
-          return '<div class="cs-off" data-testid="cs-offer-' + i + '">' + E(o.label || T('Offer')) + ' −' + E(money(o.off, m.cur)) + '</div>'; }).join('') + '</td>'
-          + '<td class="n">' + E(l.quantity != null ? l.quantity : (l.qty != null ? l.qty : '')) + (l.unit && l.unit !== 'piece' ? ' ' + E(l.unit) : '') + '</td>'
-          + '<td class="n">' + E(money(l.price, m.cur)) + '</td><td class="n">' + E(money(f ? f.total : lineTotal(l, m), m.cur)) + '</td></tr>';
+        return '<tr data-testid="cs-line-' + i + '"><td>' + esc(l.particulars || l.name || '') + offs.map(function (o) {
+          return '<div class="cs-off" data-testid="cs-offer-' + i + '">' + esc(o.label || T('Offer')) + ' −' + esc(fmtMoney(o.off, m.cur, '—')) + '</div>'; }).join('') + '</td>'
+          + '<td class="n">' + esc(l.quantity != null ? l.quantity : (l.qty != null ? l.qty : '')) + (l.unit && l.unit !== 'piece' ? ' ' + esc(l.unit) : '') + '</td>'
+          + '<td class="n">' + esc(fmtMoney(l.price, m.cur, '—')) + '</td><td class="n">' + esc(fmtMoney(f ? f.total : lineTotal(l, m), m.cur, '—')) + '</td></tr>';
       }).join('') + '</tbody></table>';
   }
   /* the GST summary as the counter prints it (till.html taxSummaryHTML is the reference shape): the frozen by_rate, as it is held.
@@ -227,9 +221,9 @@
     var mo = m.money || {}, by = mo.by_rate || null;
     var rates = by ? Object.keys(by).sort(function (a, b) { return Number(a) - Number(b); }) : [];
     if (!rates.length) {
-      return '<div class="cs-sec">' + E(T('GST')) + '</div>' + (mo.tax != null
-        ? '<div class="cs-row"><span>' + E(T('GST total')) + '</span><b data-testid="cs-gst-total">' + E(money(mo.tax, m.cur)) + '</b></div>'
-        : '<div class="cs-mute" data-testid="cs-gst-none">' + E(T('Rate-wise GST is not recorded on this bill')) + '</div>');
+      return '<div class="cs-sec">' + esc(T('GST')) + '</div>' + (mo.tax != null
+        ? '<div class="cs-row"><span>' + esc(T('GST total')) + '</span><b data-testid="cs-gst-total">' + esc(fmtMoney(mo.tax, m.cur, '—')) + '</b></div>'
+        : '<div class="cs-mute" data-testid="cs-gst-none">' + esc(T('Rate-wise GST is not recorded on this bill')) + '</div>');
     }
     var inter = (mo.supply || m.bj.supply) === 'inter';
     /* ⭐ CX0: a ONE-HEAD scheme (supply 'domestic' — the border decided: GST in Australia, VAT in the UAE) has one tax column named by its head
@@ -238,22 +232,22 @@
       var head = Object.keys(by[rates[0]] || {}).filter(function (k) { return ['taxable', 'base', 'rate', 'tax', 'cess', 'cgst', 'sgst', 'igst'].indexOf(k) < 0; })[0];
       var hw = head ? head.toUpperCase() : T('Tax');
       var rows1 = rates.map(function (rt) { var v = by[rt] || {}, b = v.taxable != null ? v.taxable : v.base, tv = head && v[head] != null ? v[head] : v.tax;
-        return '<tr data-testid="cs-gst-' + E(rt) + '"><td>' + E(rt) + '%</td><td class="n">' + E(money(b, m.cur)) + '</td><td class="n">' + E(money(tv, m.cur)) + '</td></tr>'; }).join('');
-      var foot1 = mo.taxable != null ? '<tr class="tot"><td></td><td class="n">' + E(money(mo.taxable, m.cur)) + '</td><td class="n">' + E(money(mo.tax, m.cur)) + '</td></tr>' : '';
-      return '<div class="cs-sec">' + E(hw + ' ' + T('summary')) + '</div><table class="cs-lines" data-testid="cs-gst"><thead><tr><th>' + E(T('Rate')) + '</th><th class="n">' + E(T('Taxable')) + '</th><th class="n">' + E(hw) + '</th></tr></thead><tbody>' + rows1 + foot1 + '</tbody></table>';
+        return '<tr data-testid="cs-gst-' + esc(rt) + '"><td>' + esc(rt) + '%</td><td class="n">' + esc(fmtMoney(b, m.cur, '—')) + '</td><td class="n">' + esc(fmtMoney(tv, m.cur, '—')) + '</td></tr>'; }).join('');
+      var foot1 = mo.taxable != null ? '<tr class="tot"><td></td><td class="n">' + esc(fmtMoney(mo.taxable, m.cur, '—')) + '</td><td class="n">' + esc(fmtMoney(mo.tax, m.cur, '—')) + '</td></tr>' : '';
+      return '<div class="cs-sec">' + esc(hw + ' ' + T('summary')) + '</div><table class="cs-lines" data-testid="cs-gst"><thead><tr><th>' + esc(T('Rate')) + '</th><th class="n">' + esc(T('Taxable')) + '</th><th class="n">' + esc(hw) + '</th></tr></thead><tbody>' + rows1 + foot1 + '</tbody></table>';
     }
     var rows = rates.map(function (rt) {
       var v = by[rt] || {}, b = v.taxable != null ? v.taxable : v.base;
-      return '<tr data-testid="cs-gst-' + E(rt) + '"><td>' + E(rt) + '%</td><td class="n">' + E(money(b, m.cur)) + '</td><td class="n">' + E(money(inter ? v.igst : v.cgst, m.cur)) + '</td><td class="n">' + (inter ? '' : E(money(v.sgst, m.cur))) + '</td></tr>';
+      return '<tr data-testid="cs-gst-' + esc(rt) + '"><td>' + esc(rt) + '%</td><td class="n">' + esc(fmtMoney(b, m.cur, '—')) + '</td><td class="n">' + esc(fmtMoney(inter ? v.igst : v.cgst, m.cur, '—')) + '</td><td class="n">' + (inter ? '' : esc(fmtMoney(v.sgst, m.cur, '—'))) + '</td></tr>';
     }).join('');
     var foot = mo.taxable != null
-      ? '<tr class="tot"><td></td><td class="n">' + E(money(mo.taxable, m.cur)) + '</td><td class="n">' + E(money(inter ? mo.igst : mo.cgst, m.cur)) + '</td><td class="n">' + (inter ? '' : E(money(mo.sgst, m.cur))) + '</td></tr>' : '';
-    return '<div class="cs-sec">' + E(T(inter ? 'IGST summary' : 'GST summary')) + '</div><table class="cs-lines" data-testid="cs-gst"><thead><tr><th>' + E(T('Rate')) + '</th><th class="n">' + E(T('Taxable')) + '</th><th class="n">' + E(T(inter ? 'IGST' : 'CGST')) + '</th><th class="n">' + (inter ? '' : E(T('SGST'))) + '</th></tr></thead><tbody>' + rows + foot + '</tbody></table>';
+      ? '<tr class="tot"><td></td><td class="n">' + esc(fmtMoney(mo.taxable, m.cur, '—')) + '</td><td class="n">' + esc(fmtMoney(inter ? mo.igst : mo.cgst, m.cur, '—')) + '</td><td class="n">' + (inter ? '' : esc(fmtMoney(mo.sgst, m.cur, '—'))) + '</td></tr>' : '';
+    return '<div class="cs-sec">' + esc(T(inter ? 'IGST summary' : 'GST summary')) + '</div><table class="cs-lines" data-testid="cs-gst"><thead><tr><th>' + esc(T('Rate')) + '</th><th class="n">' + esc(T('Taxable')) + '</th><th class="n">' + esc(T(inter ? 'IGST' : 'CGST')) + '</th><th class="n">' + (inter ? '' : esc(T('SGST'))) + '</th></tr></thead><tbody>' + rows + foot + '</tbody></table>';
   }
   function totalHTML(m, tid) {
     var mo = m.money || {}, t = mo.total;
-    return (mo.round_off ? '<div class="cs-row cs-mute" data-testid="cs-roundoff"><span>' + E(T('Round off')) + '</span><span>' + E(money(mo.round_off, m.cur)) + '</span></div>' : '')
-      + '<div class="cs-row cs-total"><span>' + E(T('Total')) + '</span><b data-testid="' + E(tid || 'cs-total') + '">' + E(t == null ? T('not recorded') : money(t, m.cur)) + '</b></div>';
+    return (mo.round_off ? '<div class="cs-row cs-mute" data-testid="cs-roundoff"><span>' + esc(T('Round off')) + '</span><span>' + esc(fmtMoney(mo.round_off, m.cur, '—')) + '</span></div>' : '')
+      + '<div class="cs-row cs-total"><span>' + esc(T('Total')) + '</span><b data-testid="' + esc(tid || 'cs-total') + '">' + esc(t == null ? T('not recorded') : fmtMoney(t, m.cur, '—')) + '</b></div>';
   }
   /* the frozen money as the sheet prints it, for any other screen that shows an issued chit (the Task detail): GST rate-wise, round-off, total.
      m = { money: moneyFor(...), cur, bj } — the same painters the popup uses, never a second one. */
@@ -263,10 +257,10 @@
     var p = m.bj.payment; if (!p) return '';
     var parts = (p.parts && p.parts.length) ? p.parts : (p.mode ? [{ how: p.mode, amount: p.paid }] : []);
     if (!parts.length) return '';
-    return '<div class="cs-sec">' + E(T('Paid by')) + '</div>' + parts.map(function (x, i) {
+    return '<div class="cs-sec">' + esc(T('Paid by')) + '</div>' + parts.map(function (x, i) {
       var k = String(x.how || '').toLowerCase();
-      return '<div class="cs-row" data-testid="cs-tender-' + i + '"><span>' + E(T(HOW[k] || x.how || '')) + '</span><b>' + E(money(x.amount, m.cur)) + '</b></div>';
-    }).join('') + (p.change > 0 ? '<div class="cs-row cs-mute" data-testid="cs-change"><span>' + E(T('Change')) + '</span><span>' + E(money(p.change, m.cur)) + '</span></div>' : '');
+      return '<div class="cs-row" data-testid="cs-tender-' + i + '"><span>' + esc(T(HOW[k] || x.how || '')) + '</span><b>' + esc(fmtMoney(x.amount, m.cur, '—')) + '</b></div>';
+    }).join('') + (p.change > 0 ? '<div class="cs-row cs-mute" data-testid="cs-change"><span>' + esc(T('Change')) + '</span><span>' + esc(fmtMoney(p.change, m.cur, '—')) + '</span></div>' : '');
   }
   var STEP = { pending: 'To accept', delivered: 'To accept', read: 'To accept', accepted: 'Accepted', in_progress: 'In hand', partial: 'Part done', completed: 'Done', cancelled: 'Cancelled', rejected: 'Rejected' };
   /* the sheet's title is the document: a counter bill is "Bill", a bill received "Supplier bill", the rest the purpose word — never "Chit" */
@@ -286,7 +280,7 @@
     if (!body || !id || (typeof CBThread === 'undefined' && typeof CBAttach === 'undefined')) return;
     if (!CS.rail || CS.rail.id !== id) {
       var el = document.createElement('div'); el.setAttribute('data-testid', 'cs-rail');
-      el.innerHTML = '<div class="cs-sec">' + E(T('Messages and files')) + '</div><div data-testid="cs-rail-attach"></div><div data-testid="cs-rail-thread"></div>';
+      el.innerHTML = '<div class="cs-sec">' + esc(T('Messages and files')) + '</div><div data-testid="cs-rail-attach"></div><div data-testid="cs-rail-thread"></div>';
       CS.rail = { id: id, el: el };
       var ch = CS.chit || {}, who = (typeof SESS !== 'undefined' && SESS) || (typeof SESSION !== 'undefined' && SESSION) || {};
       if (typeof CBAttach !== 'undefined') CBAttach.mount(el.querySelector('[data-testid="cs-rail-attach"]'), { chit_id: id, label: T('Attach a file') });
@@ -302,9 +296,9 @@
   function historyHTML() {
     var log = (CS.chit && CS.chit.state_log) || [];
     if (!log.length) return '';
-    return '<div class="cs-sec">' + E(T('History')) + '</div>' + log.map(function (e, i) {
+    return '<div class="cs-sec">' + esc(T('History')) + '</div>' + log.map(function (e, i) {
       var a = String(e.action || ''), w = LOGWORD[a] || (a.indexOf('status_') === 0 ? (STEP[a.slice(7)] || a.slice(7)) : (e.new_status ? (STEP[e.new_status] || e.new_status) : (a || 'Event')));
-      return '<div class="cs-row cs-hist" data-testid="cs-hist-' + i + '"><span>' + E(when(e.created_at || e.at)) + ' · ' + E(T(w)) + '</span><b>' + E(e.action_by_display_name || e.by_name || '') + '</b></div>';
+      return '<div class="cs-row cs-hist" data-testid="cs-hist-' + i + '"><span>' + esc(when(e.created_at || e.at)) + ' · ' + esc(T(w)) + '</span><b>' + esc(e.action_by_display_name || e.by_name || '') + '</b></div>';
     }).join('');
   }
   function pageNoteHTML() {
@@ -316,24 +310,24 @@
     var d = host(); if (!d) return;
     var m = CS.view, ttl = d.querySelector('[data-testid="cs-title"]');
     if (ttl) ttl.textContent = T(m ? titleFor(m) : 'Bill');
-    if (!m) { d.querySelector('.cs-body').innerHTML = CS.err ? '<div class="cs-mute" data-testid="cs-err">' + E(CS.err) + '</div>' : '<div class="cs-mute">' + E(T('Reading…')) + '</div>'; d.querySelector('.cs-acts').innerHTML = ''; return; }
-    var head = [T(kindWord(m)), m.no, when(m.at), counterWord(m.counter), m.by].filter(Boolean).map(function (x, i) { return i === 1 ? '<b class="mono" data-testid="cs-no">' + E(x) + '</b>' : E(x); }).join(' · ');
+    if (!m) { d.querySelector('.cs-body').innerHTML = CS.err ? '<div class="cs-mute" data-testid="cs-err">' + esc(CS.err) + '</div>' : '<div class="cs-mute">' + esc(T('Reading…')) + '</div>'; d.querySelector('.cs-acts').innerHTML = ''; return; }
+    var head = [T(kindWord(m)), m.no, when(m.at), counterWord(m.counter), m.by].filter(Boolean).map(function (x, i) { return i === 1 ? '<b class="mono" data-testid="cs-no">' + esc(x) + '</b>' : esc(x); }).join(' · ');
     d.querySelector('.cs-body').innerHTML =
       '<div class="cs-head" data-testid="cs-head">' + head + '</div>'
-      + '<div class="cs-who"><span data-testid="cs-who">' + E(m.who) + '</span> <span class="cs-step" data-testid="cs-step">' + E(T(STEP[m.status] || m.status)) + '</span></div>'
+      + '<div class="cs-who"><span data-testid="cs-who">' + esc(m.who) + '</span> <span class="cs-step" data-testid="cs-step">' + esc(T(STEP[m.status] || m.status)) + '</span></div>'
       + pageNoteHTML()
       + orderHTML(m) + linesHTML(m) + (m.purpose === 'order' && !m.counterBill && !(m.money && m.money.by_rate) ? '' : gstHTML(m)) + totalHTML(m) + tenderHTML(m)
-      + (m.agreement ? (root.CBRepeat ? root.CBRepeat.panelHTML() : '<div class="cs-sec">' + E(T('Repeat supply')) + '</div><div class="cs-mute" data-testid="rp-panel">' + E(T('Reading…')) + '</div>') : '')
-      + (serverSaid(m) ? '<div class="cs-note" data-testid="cs-why">' + E(serverSaid(m).why) + '</div>' : '')
+      + (m.agreement ? (root.CBRepeat ? root.CBRepeat.panelHTML() : '<div class="cs-sec">' + esc(T('Repeat supply')) + '</div><div class="cs-mute" data-testid="rp-panel">' + esc(T('Reading…')) + '</div>') : '')
+      + (serverSaid(m) ? '<div class="cs-note" data-testid="cs-why">' + esc(serverSaid(m).why) + '</div>' : '')
       + (serverSaid(m) && serverSaid(m).cands.length ? '<div class="cs-use" data-testid="cs-pick">' + serverSaid(m).cands.map(function (c, j) {
           return '<button type="button" class="optchip" data-testid="cs-link-' + j + '" onclick="CBSheet.link(' + j + ')"' + (CS.busy ? ' disabled' : '') + '>'
-            + E(isThis(c)) + '</button>'; }).join('') + '</div>' : '')
-      + (CS.rejectAsk ? '<div class="cs-use" data-testid="cs-reject"><label class="cs-sec" for="cs_reason">' + E(T('Why is it refused?')) + '</label>'
-        + '<input class="inp" id="cs_reason" data-testid="cs-reason" maxlength="500" autocomplete="off" value="' + E(CS.reason || '') + '" oninput="CBSheet.reason(this.value)">'
-        + '<button type="button" class="optchip" data-testid="cs-reject-go" onclick="CBSheet.reject()"' + (CS.busy ? ' disabled' : '') + '>' + E(T('Reject — it goes on the bill')) + '</button></div>' : '')
-      + (CS.note ? '<div class="cs-note" data-testid="cs-note">' + E(CS.note) + '</div>' : '')
+            + esc(isThis(c)) + '</button>'; }).join('') + '</div>' : '')
+      + (CS.rejectAsk ? '<div class="cs-use" data-testid="cs-reject"><label class="cs-sec" for="cs_reason">' + esc(T('Why is it refused?')) + '</label>'
+        + '<input class="inp" id="cs_reason" data-testid="cs-reason" maxlength="500" autocomplete="off" value="' + esc(CS.reason || '') + '" oninput="CBSheet.reason(this.value)">'
+        + '<button type="button" class="optchip" data-testid="cs-reject-go" onclick="CBSheet.reject()"' + (CS.busy ? ' disabled' : '') + '>' + esc(T('Reject — it goes on the bill')) + '</button></div>' : '')
+      + (CS.note ? '<div class="cs-note" data-testid="cs-note">' + esc(CS.note) + '</div>' : '')
       + (CS.useAsk ? '<div class="cs-use" data-testid="cs-use">' + billUseChoiceHTML([m], 'CBSheet.use')
-        + '<button type="button" class="optchip" data-testid="cs-use-auto" onclick="CBSheet.use(\'\')">' + E(T('Let my catalogue decide')) + '</button></div>' : '')
+        + '<button type="button" class="optchip" data-testid="cs-use-auto" onclick="CBSheet.use(\'\')">' + esc(T('Let my catalogue decide')) + '</button></div>' : '')
       + (CS.mode === 'page' ? historyHTML() : '');
     railMount(d, m);
     if (m.agreement) repeatCap().then(function (rp) { if (rp && CS.view === m) { if (!document.getElementById('rp_panel')) paint(); else rp.panel(m); } });
@@ -341,7 +335,7 @@
     var no = refusedAccept(m), noR = refusedReject(m);
     d.querySelector('.cs-acts').innerHTML = actsOf(m).filter(function (k) { return !(CS.mode === 'page' && k === 'page'); }).map(function (k) {
       var why = k === 'accept' ? no : k === 'reject' ? noR : null, refused = !!why;   /* the server's refusal (actions.accept / .reject): shown, greyed, with its sentence */
-      return '<button type="button" class="cs-act" data-testid="cs-act-' + k + '" onclick="CBSheet.act(\'' + k + '\')"' + (CS.busy || refused ? ' disabled' : '') + ' title="' + E(refused ? why : T(ACT[k][1])) + '"><span class="ic" aria-hidden="true">' + ACT[k][0] + '</span><span>' + E(T(ACT[k][1])) + '</span></button>';
+      return '<button type="button" class="cs-act" data-testid="cs-act-' + k + '" onclick="CBSheet.act(\'' + k + '\')"' + (CS.busy || refused ? ' disabled' : '') + ' title="' + esc(refused ? why : T(ACT[k][1])) + '"><span class="ic" aria-hidden="true">' + ACT[k][0] + '</span><span>' + esc(T(ACT[k][1])) + '</span></button>';
     }).join('');
   }
 
@@ -373,7 +367,7 @@
     var d = document.getElementById('chitsheet'); if (d) return d;
     ensureCSS();
     d = document.createElement('dialog'); d.id = 'chitsheet'; d.className = 'cs'; d.setAttribute('aria-label', T('Bill'));
-    d.innerHTML = '<div class="cs-top"><span data-testid="cs-title">' + E(T('Bill')) + '</span><button type="button" data-testid="cs-close" aria-label="' + E(T('Close')) + '" onclick="CBSheet.close()">✕</button></div><div class="cs-body"></div><div class="cs-acts" data-testid="cs-acts"></div>';
+    d.innerHTML = '<div class="cs-top"><span data-testid="cs-title">' + esc(T('Bill')) + '</span><button type="button" data-testid="cs-close" aria-label="' + esc(T('Close')) + '" onclick="CBSheet.close()">✕</button></div><div class="cs-body"></div><div class="cs-acts" data-testid="cs-acts"></div>';
     /* R10-4: a close event is queued; if a new chit was opened meanwhile the sheet is open again and that late event must not wipe it (the read would be dropped and the sheet stay on Reading) */
     d.addEventListener('close', function () { if (d.open) return; lock(false); if (CS.mode === 'dialog') CS.id = null; });
     d.addEventListener('click', function (e) { if (e.target === d) CBSheet.close(); });
@@ -390,7 +384,7 @@
     if (!el || !id) return;
     ensureCSS();
     el.classList.add('cs', 'cs-page'); el.setAttribute('data-testid', 'cs-page');
-    el.innerHTML = '<div class="cs-top"><span data-testid="cs-title">' + E(T('Bill')) + '</span></div><div class="cs-body"></div><div class="cs-acts" data-testid="cs-acts"></div>';
+    el.innerHTML = '<div class="cs-top"><span data-testid="cs-title">' + esc(T('Bill')) + '</span></div><div class="cs-body"></div><div class="cs-acts" data-testid="cs-acts"></div>';
     CS.mode = 'page'; CS.el = el; CS.page = { el: el, id: id }; reset(id);
     paint();
     try { await read(id); }

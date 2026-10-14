@@ -29,7 +29,6 @@
     close: 'Close', fail: 'Could not read', failM: 'not yet', nobody: 'Nobody yet', who: 'See who', hide: 'Hide', review: 'Review', finish: 'Finish', cur: 'Current'
   };
 
-  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 
   var CSS = [
     '.cbsd{--sd-blue:var(--blue,#2F74C9);--sd-blue-b:var(--sh-blue-b,var(--blue-b,#B9D2EF));--sd-blue-i:var(--sh-blue-i,var(--blue-i,#174A87));',

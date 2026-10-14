@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
+<script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Chit &amp; Bridge — Intake inbox</title>
 <style>
@@ -48,7 +49,6 @@ var TOK = null, ME = null;
 function paintPill(s){ var p=el('netpill'); if(!p)return; if(s.online){ p.className='netpill'; p.textContent=s.pending?('● Online · syncing '+s.pending):'● Online'; } else { p.className='netpill off'; p.textContent='⚠ Offline · '+(s.pending?s.pending+' pending':'message saved locally'); } }
 function saveIntake(){ if(window.CBOffline) CBOffline.saveDraft('intake.sim',{ch:(el('s_ch')||{}).value,from:(el('s_from')||{}).value,text:(el('s_text')||{}).value}); }
 function restoreIntake(){ var d=window.CBOffline&&CBOffline.loadDraft('intake.sim'); if(!d)return; if(el('s_ch')&&d.ch)el('s_ch').value=d.ch; if(el('s_from'))el('s_from').value=d.from||''; if(el('s_text'))el('s_text').value=d.text||''; if((d.text||'').trim()&&el('s_err'))el('s_err').innerHTML='<span class="ok">↩ restored your unsaved message</span>'; }
-function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function el(id){ return document.getElementById(id); }
 async function api(m,p,body){ var h={'Content-Type':'application/json'}; if(TOK)h.Authorization='Bearer '+TOK; var r=await fetch(API+p,{method:m,headers:h,body:body?JSON.stringify(body):undefined}); var j=null; try{j=await r.json();}catch(e){} return {status:r.status,j:j}; }
 

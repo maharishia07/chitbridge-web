@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
+<script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Product Lab</title>
 <!--
@@ -122,8 +123,6 @@ var STEP = 1, DATA = null, LIST = null, LANGS = [], OWN = '', OFFUNITS = {}, BUS
 var PICKED = {}, SHELF = 'unavailable';
 var SEP = String.fromCharCode(1);
 
-function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
-  return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]; }); }
 function token(){ try { return (JSON.parse(localStorage.getItem('cb_sess') || 'null') || {}).token || null; } catch (_) { return null; } }
 function say(t, bad){ var el = document.getElementById('say');
   el.innerHTML = t ? '<div class="say ' + (bad ? 'bad' : 'ok') + '">' + esc(t) + '</div>' : ''; }
@@ -135,11 +134,6 @@ function keyOf(r){ return r.name + SEP + r.unit; }
  * inherited is the NAME, the unit, the shelf and the local words, the same tomato in Chennai and in New
  * Jersey. The figure is an indicative starting number, stamped with the entity's currency when written.
  */
-function money(n, cur){
-  if (n == null) return '—';
-  try { return new Intl.NumberFormat(undefined, { style: 'currency', currency: cur || 'INR' }).format(n); }
-  catch (_) { return (cur || '') + ' ' + Number(n).toFixed(2); }
-}
 
 async function load(keepStep){
   if (!token()) {
@@ -325,7 +319,7 @@ function paintRows(){
       + '<td>' + esc(r.name) + (got ? ' <span class="note">· you sell this</span>' : '') + '</td>'
       + '<td class="loc">' + esc(localOf(r)) + '</td>'
       + '<td>' + esc(r.unit) + '</td>'
-      + '<td class="num">' + money(pr.n, DATA.currency)
+      + '<td class="num">' + fmtMoney(pr.n, DATA.currency || 'INR', '—')
         + '<div class="whose">' + (pr.whose === 'yours' ? 'yours' : 'suggested') + '</div></td>'
       + '<td class="loc">' + esc(r.category || '') + '</td></tr>');
   });

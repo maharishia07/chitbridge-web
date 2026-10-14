@@ -50,6 +50,7 @@ body{background:var(--page);color:var(--ink);font:calc(15px * var(--k,1))/1.45 v
 </div>
 <div id="app"></div>
 <div class="toast" id="toast" hidden></div>
+<script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies (engines screen) -->
 <script src="/app/avatar.js"></script>   <!-- CBAvatar: the one avatar, mounted in the list's title row through head.slot -->
 <script src="/app/list-ctl.js"></script>
@@ -62,9 +63,8 @@ var r = rnd(42);
 var PARTIES = ['P-00002 · Tally Test Shop', 'P-00007 · Kumar Spares', 'P-00011 · Ravi Stores', 'P-00014 · Meena Traders', '—'];
 var KINDS = [['Sales', 'sale'], ['Purchase', 'purchase'], ['Expense', 'expense'], ['Receipts', 'receipt'], ['Payment', 'payment']];
 var TENDERS = ['Cash', 'UPI', 'Card', 'On credit'], PEOPLE = ['Athi', 'Priya', 'Tally Test'];
-function rs(paise) { var neg = paise < 0; paise = Math.abs(paise); return (neg ? '−' : '') + '₹' + (paise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function rs(paise) { var neg = paise < 0; paise = Math.abs(paise); return (neg ? '−' : '') + '₹' + (paise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }   /* the unit's lab runs with CBLocale and fmtMoney TRAPPED (e2e/list-unit.cjs) — its sample figures cannot borrow the formatter */
 function dfmt(d, o) { return d.toLocaleDateString('en-IN', o || { day: '2-digit', month: 'short' }); }
-function h(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
 var ENTRIES = [];
 (function () {
   var d = new Date(2026, 6, 1), n = 1;
@@ -112,7 +112,7 @@ function daybook() {
       { key: 'entry', label: 'Entry', prio: 3, w: 190, sort: true, mono: true, cell: function (e) { return e.entry; } },
       { key: 'party', label: 'Party', prio: 2, w: 240, sort: true, cell: function (e) { return e.party; } },
       { key: 'kind', label: 'Kind', prio: 5, w: 110, sort: true, cell: function (e) { return e.kind; } },
-      { key: 'bill', label: 'Bill', prio: 4, w: 210, html: true, cell: function (e) { return e.bill ? '<span class="cbl-link">' + h(e.bill) + '</span> <span class="cbl-dim">' + h(e.time) + '</span>' : '<span class="cbl-dim">—</span>'; } },
+      { key: 'bill', label: 'Bill', prio: 4, w: 210, html: true, cell: function (e) { return e.bill ? '<span class="cbl-link">' + esc(e.bill) + '</span> <span class="cbl-dim">' + esc(e.time) + '</span>' : '<span class="cbl-dim">—</span>'; } },
       { key: 'tender', label: 'Tender', prio: 6, w: 110, cell: function (e) { return e.tender; } },
       { key: 'counter', label: 'Counter', prio: 7, w: 110, cell: function (e) { return e.counter; } },
       { key: 'person', label: 'Rung by', prio: 8, w: 110, cell: function (e) { return e.person; } },
@@ -133,8 +133,8 @@ function daybook() {
     searchHint: 'Search party, bill, amount',
     gist: function (e) { return e.gist; },
     next: function (e) {
-      return '<div class="gist">' + h(e.gist) + '</div><div style="display:grid;grid-template-columns:minmax(0,1fr) 120px 120px;gap:0 12px;max-width:720px;font-size:13.5px"><div class="cbl-dim">Code · Ledger</div><div class="cbl-dim" style="text-align:end">Debit</div><div class="cbl-dim" style="text-align:end">Credit</div>'
-        + e.lines.map(function (l) { return '<div><b>' + h(l[0]) + '</b> ' + h(l[1]) + '</div><div style="text-align:end">' + (l[2] ? rs(l[2]) : '') + '</div><div style="text-align:end">' + (l[3] ? rs(l[3]) : '') + '</div>'; }).join('') + '</div>';
+      return '<div class="gist">' + esc(e.gist) + '</div><div style="display:grid;grid-template-columns:minmax(0,1fr) 120px 120px;gap:0 12px;max-width:720px;font-size:13.5px"><div class="cbl-dim">Code · Ledger</div><div class="cbl-dim" style="text-align:end">Debit</div><div class="cbl-dim" style="text-align:end">Credit</div>'
+        + e.lines.map(function (l) { return '<div><b>' + esc(l[0]) + '</b> ' + esc(l[1]) + '</div><div style="text-align:end">' + (l[2] ? rs(l[2]) : '') + '</div><div style="text-align:end">' + (l[3] ? rs(l[3]) : '') + '</div>'; }).join('') + '</div>';
     },
     actions: [{ id: 'open', label: 'Open bill', run: function (e) { toast('Opens ' + e.entry + ' in the one detail page'); } },
               { id: 'reverse', label: 'Reverse this entry', run: function (e) { toast('In the product: reverses ' + e.entry); } }],
@@ -194,7 +194,7 @@ function mountCurrent() {
   measure();
 }
 function paintProto() {
-  document.getElementById('pList').innerHTML = Object.keys(LISTS).map(function (k) { return '<button data-plist="' + k + '" aria-pressed="' + (current === k) + '">' + h(LISTS[k][0]) + '</button>'; }).join('');
+  document.getElementById('pList').innerHTML = Object.keys(LISTS).map(function (k) { return '<button data-plist="' + k + '" aria-pressed="' + (current === k) + '">' + esc(LISTS[k][0]) + '</button>'; }).join('');
   document.getElementById('pState').innerHTML = [['normal', 'Rows'], ['loading', 'Loading'], ['empty', 'Empty'], ['error', 'Could not load']].map(function (x) { return '<button data-pstate="' + x[0] + '" aria-pressed="' + (pstate === x[0]) + '">' + x[1] + '</button>'; }).join('');
   var dark = document.documentElement.getAttribute('data-theme') === 'dark';
   document.getElementById('pTheme').innerHTML = '<button data-theme="light" aria-pressed="' + !dark + '">Light</button><button data-theme="dark" aria-pressed="' + dark + '">Dark</button>';

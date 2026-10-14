@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address (CL3 loads app/shell.js) -->
+<script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Country lab · Chit &amp; Bridge</title>
 <!--
@@ -257,7 +258,6 @@ var FUEL = (function () {
   return false;
 })();
 
-function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 /** ⚠️ never a bare toFixed with a guessed symbol — locale.js already knows how each currency is written */
 function fmt(n, c) { try { return CBLocale.money(n, c); } catch (_) { return c + ' ' + Number(n).toFixed(2); } }
 /** minor units → the pack's major unit, through money.decimals (Intl's table, never ours) */

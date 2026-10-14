@@ -29,6 +29,7 @@
   ⚠️ A WARNING IS NOT HIDDEN BEHIND THE CHIP. Outstanding clearances show ON it; the overlay is for detail, never
   for the fact that there is something to know.
 -->
+<script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <script src="app/catalogue-lines.js"></script>
 <script src="app/locale.js"></script>   <!-- cart-ui reads CBLocale (money/symbol) — as shop.html and the app load it (2026-09-28) -->
 <script src="engine/money.js"></script>   <!-- ⭐ the one rounder, BEFORE cart.js — it has no copy of its own (2026-09-28) -->
@@ -149,9 +150,6 @@ var S={sup:null,q:'',step:0,by:'',addr:'',note:''};
 /* ⭐ Three steps. No "To" — on a supplier order the recipient was never a question. */
 var STEPS=[{n:'Items'},{n:'Details'},{n:'Review'}];
 
-function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){
-  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
-function money(n){ return '₹'+Number(n).toLocaleString('en-IN'); }
 
 /* ── the ONE place this screen configures the shared cart ── */
 function armCart(){
@@ -222,12 +220,12 @@ function stepReview(){
     + sel.map(function(l){
         return '<div class="r"><span class="k">'+l.qty+' × '+esc(l.unit)+'</span>'
           + '<span style="flex:1">'+esc(l.name)
-          + (l.offered?'<span style="color:#6a707a;font-size:11.5px"> · your offer '+money(l.unit_price)
-              +' <span style="text-decoration:line-through;opacity:.6">'+money(l.asking_price)+'</span></span>':'')
+          + (l.offered?'<span style="color:#6a707a;font-size:11.5px"> · your offer '+CBCart.fmt('sup', l.unit_price)
+              +' <span style="text-decoration:line-through;opacity:.6">'+CBCart.fmt('sup', l.asking_price)+'</span></span>':'')
           + '</span>'
-          + '<b>'+(l.line_total==null?'—':money(l.line_total))+'</b></div>'; }).join('')
+          + '<b>'+(l.line_total==null?'—':CBCart.fmt('sup', l.line_total))+'</b></div>'; }).join('')
     + '<div class="tot"><span style="flex:1">'+(T.offered?'Total at your offer':'Total')+'</span>'
-    + '<span>'+(T.amount?money(T.amount)+(T.partial?'+':''):'—')+'</span></div></div>'
+    + '<span>'+(T.amount?CBCart.fmt('sup', T.amount)+(T.partial?'+':''):'—')+'</span></div></div>'
     + (T.offered?'<div class="note">This contains an OFFER — your price, not theirs. They accept or counter; nothing is agreed yet.</div>':'')
     + '<div class="rev"><div class="h">Details<span class="e" onclick="go(1)">Change</span></div>'
     + '<div class="r"><span class="k">Needed by</span><span>'+(S.by?esc(S.by):'—')+'</span></div>'

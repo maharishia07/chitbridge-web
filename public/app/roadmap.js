@@ -33,7 +33,6 @@
   /* the words go through the catalogue (tx · txf, accounts-shell.js — English is the key); a page without it shows the English */
   function T(s) { return typeof root.tx === 'function' ? root.tx(s) : s; }
   function TF(s, v) { return typeof root.txf === 'function' ? root.txf(s, v) : s.replace(/\{(\w+)\}/g, function (w, k) { return k in v ? v[k] : w; }); }
-  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function eff(e) { return e.works && e.state === 'workshop' ? 'built' : e.state; }
   function chip(st) { var s = STATE[st] || STATE.coming; return '<span class="rm-chip rm-' + esc(st) + '" data-state="' + esc(st) + '"><span aria-hidden="true">' + s.sym + '</span> ' + s.word + '</span>'; }
   function count(es, st) { return es.filter(function (e) { return eff(e) === st; }).length; }

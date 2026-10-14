@@ -48,11 +48,6 @@ function cmdbDrawnBy(code) {
   catch (_) { return null; }
 }
 
-function cmdbEsc(x) {
-  return String(x == null ? '' : x).replace(/[&<>"']/g, function (c) {
-    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-  });
-}
 
 /**
  * ⚠⚠ SCREENS AND POPUPS ARE BOTH IN THE REGISTER AND MUST NOT SHARE A LIST. 84 dialogs dropped into a list of
@@ -172,7 +167,7 @@ function cmdbKindsHTML() {
     return '<button onclick="cmdbFilter(\'kind\',\'' + k[0] + '\')" style="' + base
       + (on ? 'background:var(--grey-2,#545A61);color:#fff;border-color:var(--grey-2,#545A61)'
             : 'background:var(--card,#fff);color:var(--grey-2,#545A61)') + '">'
-      + cmdbEsc(k[1]) + ' <b>' + k[2] + '</b></button>';
+      + esc(k[1]) + ' <b>' + k[2] + '</b></button>';
   }).join('');
 }
 
@@ -223,8 +218,8 @@ function cmdbPanelHTML() {
   h += A.map(function (r) {
     return '<tr style="border-top:1px solid var(--line,#e7e3d8)">'
       + '<td style="padding:4px 6px 4px 0;white-space:nowrap"><code style="font-family:\'Space Mono\','
-      +   'ui-monospace,monospace;user-select:all">' + cmdbEsc(r.code) + '</code></td>'
-      + '<td style="padding:4px 6px">' + cmdbEsc(r.screen) + '</td></tr>';
+      +   'ui-monospace,monospace;user-select:all">' + esc(r.code) + '</code></td>'
+      + '<td style="padding:4px 6px">' + esc(r.screen) + '</td></tr>';
   }).join('');
   return h + '</table>';
 }
@@ -253,11 +248,11 @@ function cmdbGoneHTML() {
   h += A.map(function (r) {
     return '<tr style="border-top:1px solid var(--line,#e7e3d8)">'
       + '<td style="padding:4px 6px 4px 0;white-space:nowrap"><code style="font-family:\'Space Mono\','
-      +   'ui-monospace,monospace;user-select:all;color:var(--note)">' + cmdbEsc(r.code) + '</code></td>'
-      + '<td style="padding:4px 6px">' + cmdbEsc(r.path)
-      +   (r.why ? '<div style="font-size:var(--fs-1);color:var(--grey-2,#545A61)">' + cmdbEsc(r.why)
+      +   'ui-monospace,monospace;user-select:all;color:var(--note)">' + esc(r.code) + '</code></td>'
+      + '<td style="padding:4px 6px">' + esc(r.path)
+      +   (r.why ? '<div style="font-size:var(--fs-1);color:var(--grey-2,#545A61)">' + esc(r.why)
             + '</div>' : '') + '</td>'
-      + '<td style="padding:4px 6px;white-space:nowrap;color:var(--note)">' + cmdbEsc(r.until || '') + '</td></tr>';
+      + '<td style="padding:4px 6px;white-space:nowrap;color:var(--note)">' + esc(r.until || '') + '</td></tr>';
   }).join('');
   return h + '</table>';
 }
@@ -283,9 +278,9 @@ function cmdbControlHTML(q2) {
     var bits = String(x.screen).split('•');
     h += '<tr style="border-top:1px solid var(--line,#efece4)">'
       + '<td style="padding:4px 6px 4px 0"><code style="font-family:\'Space Mono\',ui-monospace,monospace;'
-      +   'user-select:all;color:var(--ink)">' + cmdbEsc(x.code) + '</code></td>'
-      + '<td style="padding:4px 6px">' + cmdbEsc((bits[1] || '').trim()) + '</td>'
-      + '<td style="padding:4px 0 4px 6px;' + q2 + '">' + cmdbEsc((bits[0] || '').trim()) + '</td>'
+      +   'user-select:all;color:var(--ink)">' + esc(x.code) + '</code></td>'
+      + '<td style="padding:4px 6px">' + esc((bits[1] || '').trim()) + '</td>'
+      + '<td style="padding:4px 0 4px 6px;' + q2 + '">' + esc((bits[0] || '').trim()) + '</td>'
       + '</tr>';
   });
   return h + '</table>';
@@ -313,10 +308,10 @@ function cmdbPopupHTML(q2) {
     var meta = byFn[x.screen] || {};
     h += '<tr style="border-top:1px solid var(--line,#efece4)">'
       + '<td style="padding:4px 6px 4px 0"><code style="font-family:\'Space Mono\',ui-monospace,monospace;'
-      +   'user-select:all;color:var(--ink)">' + cmdbEsc(x.code) + '</code>'
+      +   'user-select:all;color:var(--ink)">' + esc(x.code) + '</code>'
       +   (meta.ambiguous ? '<span title="opens more than one dialog" style="' + q2 + '"> ·</span>' : '') + '</td>'
-      + '<td style="padding:4px 6px">' + cmdbEsc(x.screen) + '()</td>'
-      + '<td style="padding:4px 0 4px 6px;' + q2 + '">' + cmdbEsc(meta.file || '') + '</td>'
+      + '<td style="padding:4px 6px">' + esc(x.screen) + '()</td>'
+      + '<td style="padding:4px 0 4px 6px;' + q2 + '">' + esc(meta.file || '') + '</td>'
       + '</tr>';
   });
   return h + '</table>';
@@ -348,11 +343,11 @@ function cmdbSoftwareHTML(q2) {
   A.forEach(function (x) {
     h += '<tr style="border-top:1px solid var(--line,#efece4)">'
       + '<td style="padding:4px 6px 4px 0"><code style="font-family:\'Space Mono\',ui-monospace,monospace;'
-      +   'user-select:all;color:var(--ink)">' + cmdbEsc(x.code) + '</code></td>'
-      + '<td style="padding:4px 6px">' + cmdbEsc(x.name)
-      +   '<div style="' + q2 + '">' + cmdbEsc(x.group) + '</div></td>'
+      +   'user-select:all;color:var(--ink)">' + esc(x.code) + '</code></td>'
+      + '<td style="padding:4px 6px">' + esc(x.name)
+      +   '<div style="' + q2 + '">' + esc(x.group) + '</div></td>'
       + '<td style="padding:4px 6px' + (x.stage ? '' : ';' + q2) + '">'
-      +   cmdbEsc(x.stage || 'not stated') + '</td>'
+      +   esc(x.stage || 'not stated') + '</td>'
       /* ⭐ THE LINK: which screens this file draws — the join that did not exist before today */
       + '<td style="padding:4px 0 4px 6px;' + q2 + '">'
       +   (x.draws && x.draws.length ? x.draws.map(cmdbEsc).join(' ') : '') + '</td>'
@@ -394,11 +389,11 @@ function cmdbPaint() {
     +     '<option value="">Every menu \u00b7 ' + all.length + '</option>'
     +     groups.map(function (g) {
             var n = all.filter(function (r) { return r.group === g; }).length;
-            return '<option value="' + cmdbEsc(g) + '"' + (CBCMDB.group === g ? ' selected' : '') + '>'
-              + cmdbEsc(g) + ' \u00b7 ' + n + '</option>';
+            return '<option value="' + esc(g) + '"' + (CBCMDB.group === g ? ' selected' : '') + '>'
+              + esc(g) + ' \u00b7 ' + n + '</option>';
           }).join('')
     +   '</select>' : '')
-    +   '<input value="' + cmdbEsc(CBCMDB.q) + '" oninput="cmdbFilter(\'q\',this.value)" placeholder="code or name"'
+    +   '<input value="' + esc(CBCMDB.q) + '" oninput="cmdbFilter(\'q\',this.value)" placeholder="code or name"'
     +     ' style="flex:1 1 140px;font-size:var(--fs-2);padding:3px 6px;border:1px solid var(--line,#e7e3d8);'
     +     'border-radius:7px;background:var(--card,#fff);color:var(--ink)">'
     + '</div>';
@@ -436,15 +431,15 @@ function cmdbPaint() {
   rows.forEach(function (r) {
     h += '<tr style="border-top:1px solid var(--line,#efece4)">'
       + '<td style="padding:4px 6px 4px 0"><code style="font-family:\'Space Mono\',ui-monospace,monospace;'
-      +   'user-select:all;color:var(--ink)">' + cmdbEsc(r.code) + '</code></td>'
-      + '<td style="padding:4px 6px;' + q2 + '">' + cmdbEsc(r.group) + '</td>'
-      + '<td style="padding:4px 6px">' + cmdbEsc(r.screen) + '</td>'
+      +   'user-select:all;color:var(--ink)">' + esc(r.code) + '</code></td>'
+      + '<td style="padding:4px 6px;' + q2 + '">' + esc(r.group) + '</td>'
+      + '<td style="padding:4px 6px">' + esc(r.screen) + '</td>'
       + '<td style="padding:4px 6px;text-align:end;font-variant-numeric:tabular-nums;'
       +   (r.cases <= 1 ? q2 : '') + '">' + r.cases + '</td>'
       /* ⭐⭐ THE MIDDLE LINK OF THE CHAIN: spec → case → SCREEN → SOFTWARE → result. It existed nowhere until
          today; the sweep computed it to emit controls once per screen and then threw it away. */
       + '<td style="padding:4px 0 4px 6px;' + q2 + '">'
-      +   cmdbEsc(String(cmdbDrawnBy(r.code) || '').replace('chitbridge-web/public/app/', '')) + '</td>'
+      +   esc(String(cmdbDrawnBy(r.code) || '').replace('chitbridge-web/public/app/', '')) + '</td>'
       + '</tr>';
   });
   h += '</table>';

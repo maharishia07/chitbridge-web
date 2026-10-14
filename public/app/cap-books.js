@@ -1846,9 +1846,8 @@ function bkFyStartYear(d) { return d.getMonth() + 1 >= bkYearStart() ? d.getFull
 function bkFyName(y) { var r = bkFyPack(), single = r && r.fiscalYear && r.fiscalYear.label ? r.fiscalYear.label === 'single' : bkYearStart() === 1; return single ? String(y) : y + '-' + String((y + 1) % 100).padStart(2, '0'); }
 function bkFyNow() { return (BK.year && BK.year.fiscal_year) ? String(BK.year.fiscal_year) : bkFyName(bkFyStartYear(new Date())); }
 function bkFyFrom() { return (BK.year && BK.year.from) || (bkFyStartYear(new Date()) + '-' + String(bkYearStart()).padStart(2, '0') + '-01'); }
-var BK_MON12 = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 /** the twelve month names of the shop's year, period 1 first (April for India, July for Australia, January for a calendar year) */
-function bkMonths() { var s = bkYearStart() - 1; return BK_MON12.map(function (_, i) { return BK_MON12[(s + i) % 12]; }); }
+function bkMonths() { var s = bkYearStart() - 1, m = monthNames('short'); return m.map(function (_, i) { return m[(s + i) % 12]; }); }   /* T2-WEBPRIMS: the words are CBLocale's (helpers.js monthNames) */
 /** the year before `fy` in the server's own labels ("2026-27" → "2025-26"; a calendar year "2026" → "2025") */
 function bkFyPrev(fy) { var y = Number(String(fy).slice(0, 4)) - 1; return String(fy).length === 4 ? String(y) : y + '-' + String((y + 1) % 100).padStart(2, '0'); }
 /** the year and month a day falls in — the server's own row first (GET /periods start_date…end_date), the shop's year start when the month has no row yet */
