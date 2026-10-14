@@ -8,11 +8,17 @@
 // result set, so it lands in neither the changes nor the removals and the till's merge keeps it for ever. This spec cannot issue a
 // raw SQL delete, so it reproduces the STATE that a delete leaves behind (a copy holding a row the shop does not have) and proves
 // the counter notices and heals it. That is the mechanism, tested where it actually lives.
+//
+// ⚠️ CTR-VERIFY (T3-FIXES, 2026-10-14) — THE COUNTER'S OWN CHECK IS RETIRED HERE, HONESTLY. verifyCounter() (the "prove it
+// against ChitBridge" report: right shop, full count, 8 sampled rows) was deleted from the counter on 25 Sep (api be02d62b):
+// no click reached it, and Athi chose delete over reviving it. The steps that called it could not pass and are removed —
+// not skipped, not faked. What stays is what still runs: GET /api/till/verify (the counter's keyWatch asks it every ten
+// minutes), the shelf count line, and a refresh healing a ghost row — each asserted on the counter's own state.
 const { test, expect } = require('@playwright/test');
 const { mintEntity, clickNav } = require('../fixtures');
 const API = process.env.CB_API_BASE || 'https://chitbridge-api-production.up.railway.app';
 
-test('[TILL-05] the counter checks itself against the shop, and heals a copy that holds too much', async ({ page, context }) => {
+test('[TILL-05] the shop answers /verify, and a refresh heals a counter copy that holds too much', async ({ page, context }) => {
   test.setTimeout(300000);
   await mintEntity(page, { fresh: true, name: 'Verify ' + Date.now().toString().slice(-6) });
 
@@ -58,12 +64,8 @@ test('[TILL-05] the counter checks itself against the shop, and heals a copy tha
 
     /* the count line Athi asked for — it must say the true total, not the number of rows drawn */
     await expect(till.locator('[data-testid="till-shelf-count"]')).toContainText('4 products on this counter');
-
-    const report = await till.evaluate(async () => { await verifyCounter();
-      return document.getElementById('slipbox').textContent; });
-    expect(report, 'the check did not pass on a counter that is correct').toContain('agrees with ChitBridge');
-    expect(report).toContain('Everything is here');
-    expect(report).toContain('What is here is right');
+    /* CTR-VERIFY: the counter's copy holds what the shop's /verify counted — read off the copy, not a retired report */
+    expect(await till.evaluate(() => (S.items || []).length), 'the copy does not hold the whole shop').toBe(4);
   });
 
   await test.step('⚠️⚠️ a copy holding a row the shop does not have — what a DELETE leaves behind', async () => {
@@ -77,20 +79,11 @@ test('[TILL-05] the counter checks itself against the shop, and heals a copy tha
     });
     expect(await till.evaluate(() => (S.items || []).length), 'the ghost is in the copy').toBe(5);
 
-    /* the check must SAY so, in words, before anything is repaired */
-    const bad = await till.evaluate(async () => { await verifyCounter();
-      return document.getElementById('slipbox').textContent; });
-    expect(bad, 'the check passed a counter holding stock the shop does not have').toContain('does NOT agree');
-
     /* and a refresh must heal it: the merge will not add up, so the whole shop comes down again */
     await till.evaluate(() => refresh());
     await till.waitForFunction(() => (S.items || []).length === 4, null, { timeout: 60000 });
     const names = await till.evaluate(() => (S.items || []).map((i) => i.name));
     expect(names, 'the ghost survived a refresh — the delta merge is not self-healing').not.toContain('Ghost stock 1 kg');
-
-    const good = await till.evaluate(async () => { await verifyCounter();
-      return document.getElementById('slipbox').textContent; });
-    expect(good, 'it did not recover').toContain('agrees with ChitBridge');
   });
 
   expect(threw, 'the counter threw').toEqual([]);
@@ -138,9 +131,6 @@ test('[TILL-06] the counter stamps every row with its shop, and refuses to merge
     /* ⚠️ the WHOLE entity id, not a prefix — it never crosses the wire, so there is nothing to save by shortening the one
        value the audit is about, and a prefix can collide */
     expect(kinds[0], 'the stamp is not this shop').toBe(shopA);
-
-    const report = await till.evaluate(async () => { await verifyCounter(); return document.getElementById('slipbox').textContent; });
-    expect(report, 'the check does not report the count Athi asked for').toContain('Every row is from one shop');
   });
 
   await test.step('⚠️⚠️ ANOTHER SHOP CATALOGUE IS REFUSED — through the real refresh, not a simulation', async () => {
