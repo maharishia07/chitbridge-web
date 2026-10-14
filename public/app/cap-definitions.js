@@ -202,7 +202,7 @@ function cbDefRegistries(){
   out.push({
     key: 'offer', icon: '🏷️', title: 'Offer kinds',
     blurb: 'The shapes an offer can take. A definition picks a kind and sets its rules.',
-    source: 'app/offers.js · KINDS',
+    source: 'engine/offers.js · KINDS',
     rows: (typeof CBOffers !== 'undefined' && CBOffers.KINDS)
       ? Object.keys(CBOffers.KINDS).map(function (k) {
           return { code: k, label: cbDefOfferLabel(k),
@@ -240,7 +240,7 @@ function cbDefRegistries(){
   });
 
   /**
-   * ⭐ THE GST SLAB RATES — read from the SAME module that resolves them (app/tax-slab.js, the generated mirror of
+   * ⭐ THE GST SLAB RATES — read from the SAME module that resolves them (engine/tax.js's tax-slab part, the adopted mirror of
    * the API's lib/tax-slab.js). A second list here would be a second statement of what the scheme allows, and the
    * second one always goes stale.
    *
@@ -256,7 +256,7 @@ function cbDefRegistries(){
     key: 'tax', icon: '🧾', title: tsch + ' slab rates',
     blurb: 'The rates the scheme itself defines. Name one as a slab, then a product cites it. Cess rides on top '
          + 'of the slab and is declared per slab, because it varies by product within one rate.',
-    source: tp ? 'engines reg-' + String(tp.id || '').toLowerCase() + ' · tax.rates' : 'app/tax-slab.js · GST_SLAB_RATES',
+    source: tp ? 'engines reg-' + String(tp.id || '').toLowerCase() + ' · tax.rates' : 'engine/tax.js · GST_SLAB_RATES',
     rows: trates
       ? trates.map(function (r) {
           return { code: String(r) + '%', label: tsch + ' ' + r + '%', note: tsch === 'GST' && tp && tp.id === 'IN' ? cbDefSlabNote(r) : '' }; })

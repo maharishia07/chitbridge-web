@@ -82,7 +82,7 @@ ctx.localStorage = { getItem: () => null, setItem() {}, removeItem() {} };
    without money gets "CBMoney is not defined" on the first price and fails 40 cases for one missing script. */
 try { new vm.Script(fs.readFileSync(path.join(root, 'public/engine/money.js'), 'utf8')).runInNewContext(ctx); }
 catch (e) { console.log('SETUP FAIL — money.js did not evaluate: ' + e.message); process.exit(1); }
-try { new vm.Script(fs.readFileSync(path.join(root, 'public/app/locale.js'), 'utf8')).runInNewContext(ctx); }
+try { new vm.Script(fs.readFileSync(path.join(root, 'public/engine/locale.js'), 'utf8')).runInNewContext(ctx); }
 catch (e) { console.log('SETUP FAIL — locale.js did not evaluate: ' + e.message); process.exit(1); }
 
 try { new vm.Script(src).runInNewContext(ctx); }

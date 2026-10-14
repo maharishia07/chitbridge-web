@@ -76,8 +76,8 @@ function go(){ if (window.CBFrame) CBFrame.ended(); }   /* api()'s 401 → drop 
 <script src="/app/core.js"></script>          <!-- api() · the network pill · the outbox — the workshop's own transport -->
 <script src="/app/accounts-shell.js"></script>  <!-- tx · toast · CBAction · CB_HOMES · CB_SHOP_EP -->
 <script>Object.assign(EP, CB_SHOP_EP);</script>
-<script src="/app/locale.js"></script>          <!-- CBLocale: the page's language, direction and formats -->
-<script src="/app/govcontext.js"></script>      <!-- CBGov: what the browser tells about a new shop (the register form's gov panel; Country setup's prefill) — AFTER locale -->
+<script src="/engine/locale.js"></script>          <!-- CBLocale: the page's language, direction and formats -->
+<script src="/engine/govcontext.js"></script>      <!-- CBGov: what the browser tells about a new shop (the register form's gov panel; Country setup's prefill) — AFTER locale -->
 <script src="/app/helpers.js"></script>         <!-- esc -->
 <script src="/engine/tax.js"></script>             <!-- CBRegulation: the shop's pack → its words (helpers.js packWord: ABN · Postcode · TRN · Emirate) and Country setup's csuPack (FX-QA1) -->
 <script src="/engine/signin.js"></script>

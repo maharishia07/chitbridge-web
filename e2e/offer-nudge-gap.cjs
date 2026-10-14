@@ -16,7 +16,7 @@
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const PUB = path.join(__dirname, '..', 'public');
 const sb = { console, Date }; sb.window = sb; sb.self = sb; sb.globalThis = sb; vm.createContext(sb);
-for (const f of ['engine/money.js', 'app/offers.js']) vm.runInContext(fs.readFileSync(path.join(PUB, f), 'utf8'), sb);
+for (const f of ['engine/money.js', 'engine/offers.js']) vm.runInContext(fs.readFileSync(path.join(PUB, f), 'utf8'), sb);
 const O = sb.CBOffers;
 let bad = 0;
 const say = (l, ok, d) => { console.log('  ' + (ok ? 'OK ' : '✗  ') + l + (d ? '  · ' + d : '')); if (!ok) bad++; };

@@ -67,11 +67,11 @@
 <body>
 <div class="wrap" id="app"><div class="msg">Loading shop…</div></div>
 <script src="cb-offline.js"></script>
-<script src="app/offers.js"></script>
-<script src="app/pricing.js"></script>
+<script src="engine/offers.js"></script>
+<script src="engine/pricing.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script src="app/catalogue-lines.js"></script>
-<script src="app/locale.js"></script>   <!-- cart-ui reads CBLocale (money/symbol) — the app loads it, the shop must too (found by the tour, 2026-09-05) -->
+<script src="engine/locale.js"></script>   <!-- cart-ui reads CBLocale (money/symbol) — the app loads it, the shop must too (found by the tour, 2026-09-05) -->
 <script src="engine/money.js"></script>   <!-- ⭐ the one rounder, BEFORE cart.js — it has no copy of its own (2026-09-28) -->
 <script src="engine/tax.js"></script>     <!-- ⭐ WX-O2C: the one tax split (splitLineTax) — a tax-inclusive shelf's GST comes OUT of the price in the cart, never on top -->
 <script src="app/cart.js"></script>

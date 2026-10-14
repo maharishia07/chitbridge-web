@@ -1628,10 +1628,10 @@ body.lab-only #cbtestpanel{
 <!-- ⭐ MONEY — an amount is never a bare number. The ONE reader (lib/money.js, vendored). Loaded BEFORE
      everything that reads a price, because cbAmount() and the cart both forward to it. -->
 <script src="/engine/money.js"></script>
-<script src="/app/locale.js"></script>
+<script src="/engine/locale.js"></script>
 <script src="/app/showcase-templates.js"></script>   <!-- CBShowcase: the template names the Settings › Policy chooser lists (S2) -->
 <!-- ⭐ what we can work out about a shop without asking it — AFTER locale, whose REGIONS it reads -->
-<script src="/app/govcontext.js"></script>
+<script src="/engine/govcontext.js"></script>
 <script src="/app/helpers.js"></script>
 <script src="/app/register-form.js"></script>   <!-- the register form (#/register) — shared with CB Settings › New shop; govCtx with it (cap-country reads it) -->
 <script src="/app/one-person.js"></script>   <!-- ONE BROWSER, ONE SHOP: the check route()'s gate asks (2026-10-01) -->
@@ -1661,7 +1661,7 @@ body.lab-only #cbtestpanel{
 <!-- ⭐ CBVariant — ONE PRODUCT, MANY COMBINATIONS ([TILL-33]/[TILL-76]). The SAME file the counter loads
      (/engine/variant.js) — one module owns what a modifier IS, read (the till's chooser) and written (the
      product page's Modifiers tab), so the two can never disagree about the shape. Pure, no DOM, no fetch. -->
-<script src="/app/variant.js"></script>
+<script src="/engine/variant.js"></script>
 <!-- The redesigned catalogue ROW. A renderer only — it owns no quantity rule; every mutation routes through
      CBCart. Loaded AFTER cart-ui.js because it reads CBCart.fmt. -->
 <!-- ⭐ CBPick — open the catalogue OVER any screen and get the selection back. The four screens that
@@ -1670,11 +1670,11 @@ body.lab-only #cbtestpanel{
 <script src="/app/pick.js"></script>
 <!-- Offers as a subject of their own — a PURE engine, not wired to a screen yet. Loaded so Definitions can
      read its registry of kinds; see SPEC-offers-tax.md. -->
-<script src="/app/offers.js"></script>
+<script src="/engine/offers.js"></script>
 <!-- ⭐ ONE SEARCH FOR THE COUNTER AND THE CATALOGUE (2026-09-08). The master of the engine the till loads as /engine/search.js:
      what "ac co" means is defined once, so the two screens cannot answer a shopkeeper's own words differently. -->
-<script src="/app/search.js"></script>
-<script src="/app/pricing.js"></script>
+<script src="/engine/search.js"></script>
+<script src="/engine/pricing.js"></script>
 <!-- ⭐ REWARDS. The SAME file the counter loads (/engine/rewards.js, generated from the API's lib/rewards.js) — one
      URL, not a third copy, so what a point is worth cannot differ between the shop and the till. Definitions reads
      its registry of earning kinds; nothing else in the app calls it yet. -->
@@ -1690,9 +1690,8 @@ body.lab-only #cbtestpanel{
      so it can be verified then and there."* Showing the invoice split on the product needs the REAL
      determination; a lookalike would agree on every example anyone tries and diverge on the one that matters.
      Eager, not lazy: the product's Pricing & tax pane lives in app.html itself. -->
-<script src="/engine/tax.js"></script>
+<script src="/engine/tax.js"></script>   <!-- the adopted BUNDLE: reg-* packs + regulation + tax-packs + tax-slab (CBTaxSlab) + tax (CBTax), one file (T2-ENGONCE) -->
 <script src="/app/chit-sheet.js"></script>   <!-- THE CHIT SHEET: a chit as a popup, with the actions its step allows -->
-<script src="/app/tax-slab.js"></script>
 <script src="/app/barcode.js"></script>  <!-- Code 128 of the SKU for the product page (Barcode tab); pure, no network -->
 <!-- ATTACH + VIEW, shared. Loaded here so `cbAttachType` is the SINGLE type→icon mapping for every screen; the
      copy that used to live in this file is gone. See BACKLOG-attach-ui-sweep.md for what is deliberately NOT
@@ -10655,7 +10654,7 @@ function prodVisible(ctx){
     }));
     return prodSorted(list);                       /* the answer is on its way; the shelf stands until it lands */
   }
-  /* ⭐ THE COUNTER'S SEARCH, THE SAME FILE (app/search.js): "ac co" reaches Aachi Coriander here too, and a code with a hyphen in it
+  /* ⭐ THE COUNTER'S SEARCH, THE SAME FILE (engine/search.js): "ac co" reaches Aachi Coriander here too, and a code with a hyphen in it
      finds its product. No limit — this list renders its rows lazily and the count under the box must be the true one. */
   if(typeof CBSearch!=='undefined') return prodSorted(CBSearch.search(list, q, { text:prodSearchText, stamp:prodTextStamp(), name:(p)=>pName(pData(p)), barcode:'', limit:Infinity }));
   const lq=q.toLowerCase();

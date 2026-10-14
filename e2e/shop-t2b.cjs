@@ -107,7 +107,7 @@ ok(run(`shopStatusWord('delivered')`) === 'Waiting for the shop' && run(`shopSta
 console.log('\n— the shared cart (M64, M69, M101)');
 const cc = { console, setTimeout: () => 0, clearTimeout() {}, Intl, Date, Math, JSON };
 cc.window = cc; cc.globalThis = cc; vm.createContext(cc);
-for (const f of ['engine/money.js', 'app/offers.js', 'app/cart.js']) { try { vm.runInContext(read(f), cc, { filename: f }); } catch (e) { ok(false, 'could not load ' + f + ': ' + e.message); } }
+for (const f of ['engine/money.js', 'engine/offers.js', 'app/cart.js']) { try { vm.runInContext(read(f), cc, { filename: f }); } catch (e) { ok(false, 'could not load ' + f + ': ' + e.message); } }
 const CB = cc.CBCart || vm.runInContext('typeof CBCart!=="undefined"?CBCart:null', cc);
 if (!CB) ok(false, 'CBCart did not load');
 else {

@@ -2,7 +2,7 @@
  *
  * Athi, 2026-10-03 (DECISIONS "Country packs: the three switch decisions"): a shop with NO country is REFUSED, no silent India fallback;
  * a country with no pack is SAID; a country change is a NEW entity. Registration already reads the country from the time zone (M196,
- * app/govcontext.js) and shows it with its source; this screen is where the OWNER confirms it — country · money · financial year · tax
+ * engine/govcontext.js) and shows it with its source; this screen is where the OWNER confirms it — country · money · financial year · tax
  * registration — one row each, prefilled, each with where the answer came from, and one tap to change any of them.
  *
  * ── WHAT IS REUSED (CLAUDE.md rule 1) ────────────────────────────────────────────────────────────────────────────────────────────
