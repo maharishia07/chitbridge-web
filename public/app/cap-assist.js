@@ -45,11 +45,11 @@ function publishAnswer(btn){
 var CBAssist = (function () {
   var K = { el: null, o: {}, may: null, state: 'loading', err: null, list: null, said: '' };   /* said: the last outcome, kept over the form's repaint */
   function T(s) { return typeof tx === 'function' ? tx(s) : s; }
-  /** the server's answer for Publish / Edit — a sentence when refused, '' when allowed (still reading: refused until it answers) */
-  function refused() { var m = K.may && K.may.publish; return !m ? T('Checking whether you can publish…') : m.ok === false ? (m.say || T('Only a help desk publishes answers.')) : ''; }
-  function ctxWord(e) { return Array.isArray(e.context) && e.context.length ? e.context.join(', ') : '*'; }
-  function formHTML() {
-    var no = refused(), dis = no ? ' disabled aria-disabled="true"' : '';
+  /** the server's answer for Publish / Edit — a sentence when kbRefused, '' when allowed (still reading: kbRefused until it answers) */
+  function kbRefused() { var m = K.may && K.may.publish; return !m ? T('Checking whether you can publish…') : m.ok === false ? (m.say || T('Only a help desk publishes answers.')) : ''; }
+  function kbCtxWord(e) { return Array.isArray(e.context) && e.context.length ? e.context.join(', ') : '*'; }
+  function kbFormHTML() {
+    var no = kbRefused(), dis = no ? ' disabled aria-disabled="true"' : '';
     return '<div class="kb-form" data-testid="kb-form"><div class="tk-h" id="kb_formhd">' + esc(T('Publish an answer')) + '</div>'
       + '<label class="sub" for="kb_q">' + esc(T('Question')) + '</label><input class="inp" id="kb_q" data-testid="kb-question" placeholder="' + esc(T('e.g. How do I export to Excel?')) + '"' + dis + '>'
       + '<label class="sub" for="kb_a">' + esc(T('Answer')) + '</label><textarea class="inp" id="kb_a" data-testid="kb-answer" rows="3" placeholder="' + esc(T('The answer the assistant gives')) + '"' + dis + '></textarea>'
@@ -59,16 +59,16 @@ var CBAssist = (function () {
       + (no ? '<span class="why" data-testid="kb-publish-why">' + esc(no) + '</span>' : '') + '</div>'
       + '<div class="tk-out" id="kb_err" role="status" data-testid="kb-out" data-tone="ok">' + esc(K.said) + '</div></div>';
   }
-  function paintForm() {
+  function kbPaintForm() {
     var f = K.el && K.el.querySelector('#kb_formbox'); if (!f) return;
-    f.innerHTML = formHTML();
+    f.innerHTML = kbFormHTML();
     var pb = document.getElementById('kb_pub'), nb = document.getElementById('kb_new');
     if (pb && !pb.disabled) pb.onclick = function () { publishAnswer(pb); };
     if (nb && !nb.disabled) nb.onclick = kbNew;
-    if (!refused() && window.CBOffline && CBOffline.autodraft) CBOffline.autodraft(f, 'kb.form');   /* draft the question / answer being written */
+    if (!kbRefused() && window.CBOffline && CBOffline.autodraft) CBOffline.autodraft(f, 'kb.form');   /* draft the question / answer being written */
   }
-  function errWords() { return K.err && K.err.status === 403 ? T('This sign-in cannot read the answers.') : T("Couldn't read the answers. Check the connection and try again."); }
-  function paintList() {
+  function kbErrWords() { return K.err && K.err.status === 403 ? T('This sign-in cannot read the answers.') : T("Couldn't read the answers. Check the connection and try again."); }
+  function kbPaintList() {
     if (K.list) { K.list.refresh(); return; }
     var host = K.el && K.el.querySelector('#kb_list'); if (!host) return;
     K.list = CBList.mount(host, {
@@ -76,34 +76,34 @@ var CBAssist = (function () {
       columns: [
         { key: 'q', label: T('Question'), prio: 1, w: 260, value: function (e) { return e.q || ''; }, cell: function (e) { return e.q || ''; } },
         { key: 'a', label: T('Answer'), prio: 2, w: 360, value: function (e) { return e.a || ''; }, cell: function (e) { return e.a || ''; } },
-        { key: 'ctx', label: T('Where it shows'), prio: 3, w: 160, hfilter: 'ctx', value: ctxWord, cell: ctxWord }
+        { key: 'ctx', label: T('Where it shows'), prio: 3, w: 160, hfilter: 'ctx', value: kbCtxWord, cell: kbCtxWord }
       ],
       defaultCols: ['q', 'a'], cardMax: 2, fill: K.o.fill !== false,
-      state: function () { return K.state; }, error: errWords, onRetry: function () { load(); },
+      state: function () { return K.state; }, error: kbErrWords, onRetry: function () { kbLoad(); },
       empty: { title: T('No answers yet'), sub: T('A help desk publishes them here; the assistant says them at once.') },
-      search: function (e) { return [e.q, e.a, ctxWord(e)].join(' '); }, searchHint: T('Question or answer'),
+      search: function (e) { return [e.q, e.a, kbCtxWord(e)].join(' '); }, searchHint: T('Question or answer'),
       filters: [{ key: 'ctx', label: T('Where it shows'), all: T('Every screen'), options: [{ v: 'all', label: T('Everywhere (*)') }, { v: 'some', label: T('Named screens') }],
         match: function (e, v) { var all = !Array.isArray(e.context) || !e.context.length || e.context.indexOf('*') >= 0; return v === 'all' ? all : !all; } }],
       sorts: [{ key: 'q', label: T('By question'), cmp: function (a, b) { return String(a.q || '').localeCompare(String(b.q || '')); } }],
       next: function (e) { return '<div class="sub"><b>' + esc(e.q || '') + '</b><div>' + esc(e.a || '') + '</div></div>'; },
-      actions: [{ id: 'edit', label: T('Edit'), icon: '✎', tid: 'kb-edit', why: refused, run: function (e) { if (!refused()) kbEdit(e.id); } }]
+      actions: [{ id: 'edit', label: T('Edit'), icon: '✎', tid: 'kb-edit', why: kbRefused, run: function (e) { if (!kbRefused()) kbEdit(e.id); } }]
     });
   }
-  function load() {
+  function kbLoad() {
     K.state = 'loading'; K.err = null; if (K.list) K.list.refresh();
     var who = api('assistWhoami').then(function (r) { K.may = (r && r.may) || { publish: { ok: !!(r && r.is_helpdesk) } }; },
       function (e) { if (typeof cblog === 'function') cblog('warn', 'assist: whoami could not be read — ' + ((e && e.message) || e)); K.may = { publish: { ok: false, say: T("Couldn't check whether you can publish. Try again.") } }; });
     var qs = api('assistQuestions').then(function (r) { _kbItems = Array.isArray(r) ? r : ((r && r.items) || []); K.state = 'ready'; },
       function (e) { if (typeof cblog === 'function') cblog('error', 'assist: the answers could not be read — ' + ((e && e.message) || e)); K.state = 'error'; K.err = e; });
-    return Promise.all([who, qs]).then(function () { paintForm(); paintList(); });
+    return Promise.all([who, qs]).then(function () { kbPaintForm(); kbPaintList(); });
   }
-  function mount(el, o) {
+  function kbMount(el, o) {
     K.el = el; K.o = o || {}; K.list = null; K.may = null; K.said = ''; _kbEditId = '';
     el.innerHTML = '<div class="kb-top sub" data-testid="kb-how">' + esc(T('Questions reach a help desk as chits in its Tasks. The answers published here are what the assistant says.')) + '</div>'
       + '<div id="kb_formbox"></div><div class="tk-list" id="kb_list" data-testid="kb-list"></div>';
-    paintForm(); paintList(); load();
-    return { reload: load };
+    kbPaintForm(); kbPaintList(); kbLoad();
+    return { reload: kbLoad };
   }
-  return { mount: mount, said: function (w) { K.said = String(w || ''); var x = document.getElementById('kb_err'); if (x) x.textContent = K.said; },
-    reload: function () { if (K.el && document.body.contains(K.el)) return load(); } };
+  return { mount: kbMount, said: function (w) { K.said = String(w || ''); var x = document.getElementById('kb_err'); if (x) x.textContent = K.said; },
+    reload: function () { if (K.el && document.body.contains(K.el)) return kbLoad(); } };
 })();

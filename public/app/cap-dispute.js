@@ -363,63 +363,63 @@ var CBDisputes = (function(){
   var LIMIT = 100;
   var KIND = { quality: 'Quality', quantity: 'Quantity', delivery: 'Delivery', payment: 'Payment', docs: 'Docs', other: 'Other' };
   function T(s){ return typeof tx === 'function' ? tx(s) : s; }
-  function kindWord(d){ return T(KIND[d.category] || cap(String(d.category || 'other'))); }
-  function sideWord(d){ return T(d.side === 'mine' ? 'Raised by you' : 'Against you'); }
-  function withWord(d){ var p = disputeParties(d).map(function(x){ return x.display_name || T('party'); });
+  function dpKindWord(d){ return T(KIND[d.category] || cap(String(d.category || 'other'))); }
+  function dpSideWord(d){ return T(d.side === 'mine' ? 'Raised by you' : 'Against you'); }
+  function dpWithWord(d){ var p = disputeParties(d).map(function(x){ return x.display_name || T('party'); });
     return d.side === 'mine' ? (p.join(', ') || T('Everyone on the chit')) : (d.raised_by_display_name || T('The other side')); }
-  function onWord(d){ if (!d.created_at) return ''; try { return (window.CBLocale && CBLocale.date(d.created_at, { day: 'numeric', month: 'short' })) || String(d.created_at).slice(0, 10); } catch (e) { return String(d.created_at).slice(0, 10); } }
-  function statusTag(d){ var open = d.status === 'open'; return '<span class="tag ' + (open ? 'amber' : 'green') + '" data-testid="dp-status-' + esc(d.dispute_id) + '">' + esc(T(open ? 'Open' : 'Resolved')) + '</span>'; }
-  function mayResolve(d){ var m = d.may && d.may.resolve; return m && m.ok === false ? (m.say || T('You cannot resolve this one')) : ''; }
-  function cols(){
+  function dpOnWord(d){ if (!d.created_at) return ''; try { return (window.CBLocale && CBLocale.date(d.created_at, { day: 'numeric', month: 'short' })) || String(d.created_at).slice(0, 10); } catch (e) { return String(d.created_at).slice(0, 10); } }
+  function dpStatusTag(d){ var open = d.status === 'open'; return '<span class="tag ' + (open ? 'amber' : 'green') + '" data-testid="dp-status-' + esc(d.dispute_id) + '">' + esc(T(open ? 'Open' : 'Resolved')) + '</span>'; }
+  function dpMayResolve(d){ var m = d.may && d.may.resolve; return m && m.ok === false ? (m.say || T('You cannot resolve this one')) : ''; }
+  function dpCols(){
     return [
       { key: 'what', label: T('Chit'), prio: 1, w: 240, html: true, sort: 'what', value: function(d){ return d.auto_subject || d.purpose || ''; },
         cell: function(d){ return '<b>' + esc(d.auto_subject || d.purpose || T('Chit')) + '</b>'; } },
       { key: 'reason', label: T('Reason'), prio: 2, w: 260, value: function(d){ return d.reason || ''; }, cell: function(d){ return d.reason || ''; } },
-      { key: 'status', label: T('Where it is'), prio: 3, w: 120, html: true, hfilter: 'status', value: function(d){ return d.status; }, cell: statusTag },
-      { key: 'kind', label: T('Kind'), prio: 4, w: 110, hfilter: 'kind', value: kindWord, cell: kindWord },
-      { key: 'with', label: T('With'), prio: 5, w: 180, value: withWord, cell: withWord },
-      { key: 'side', label: T('Side'), prio: 6, w: 130, hfilter: 'side', value: sideWord, cell: sideWord },
-      { key: 'on', label: T('Raised on'), prio: 7, w: 110, value: function(d){ return d.created_at || ''; }, cell: onWord },
+      { key: 'status', label: T('Where it is'), prio: 3, w: 120, html: true, hfilter: 'status', value: function(d){ return d.status; }, cell: dpStatusTag },
+      { key: 'kind', label: T('Kind'), prio: 4, w: 110, hfilter: 'kind', value: dpKindWord, cell: dpKindWord },
+      { key: 'with', label: T('With'), prio: 5, w: 180, value: dpWithWord, cell: dpWithWord },
+      { key: 'side', label: T('Side'), prio: 6, w: 130, hfilter: 'side', value: dpSideWord, cell: dpSideWord },
+      { key: 'on', label: T('Raised on'), prio: 7, w: 110, value: function(d){ return d.created_at || ''; }, cell: dpOnWord },
       { key: 'note', label: T('How it ended'), prio: 8, w: 220, value: function(d){ return d.resolution_note || ''; }, cell: function(d){ return d.resolution_note || ''; } }
     ];
   }
   /** a row's next level: the reason in full, who is in it, and — for the raiser — Resolve per party (BR-D3) */
-  function mini(d){
+  function dpMini(d){
     var parties = disputeParties(d), open = d.status === 'open';
-    var per = open && !mayResolve(d) && parties.filter(function(p){ return p.dispute_status !== 'resolved'; }).length > 1 ? disputeResolveBtns(parties, d.chit_id, d.dispute_id, true, 'cbl-btn') : '';
-    return '<div class="sub" data-testid="dp-mini-' + esc(d.dispute_id) + '"><b>' + esc(kindWord(d)) + '</b> — ' + esc(d.reason || '')
+    var per = open && !dpMayResolve(d) && parties.filter(function(p){ return p.dispute_status !== 'resolved'; }).length > 1 ? disputeResolveBtns(parties, d.chit_id, d.dispute_id, true, 'cbl-btn') : '';
+    return '<div class="sub" data-testid="dp-dpMini-' + esc(d.dispute_id) + '"><b>' + esc(dpKindWord(d)) + '</b> — ' + esc(d.reason || '')
       + (parties.length ? '<div>' + esc(T('Parties')) + ': ' + disputeChips(parties, 'tag') + '</div>' : '')
       + (d.resolution_note ? '<div>✓ ' + esc(d.resolution_note) + '</div>' : '') + '</div>'
       + (per ? '<div class="cbl-acts" data-testid="dp-per-party">' + per + '</div>' : '');
   }
-  function load(){
+  function dpLoad(){
     D.state = 'loading'; if (D.list) D.list.refresh();
     return api('disputeQueue', { query: { status: 'all', limit: LIMIT } }).then(function(j){
       j = j || {};
       D.rows = Array.isArray(j.rows) ? j.rows : (j.disputes || []); D.total = j.total == null ? D.rows.length : Number(j.total) || 0;
-      D.state = 'ready'; D.err = null; paint();
+      D.state = 'ready'; D.err = null; dpPaint();
     }, function(e){
       if (typeof cblog === 'function') cblog('error', 'disputes: the list could not be read — ' + ((e && e.message) || e));
       if (e && e.status === 401 && typeof D.o.onEnded === 'function') return D.o.onEnded();
-      D.state = 'error'; D.err = e; paint();
+      D.state = 'error'; D.err = e; dpPaint();
     });
   }
-  function errWords(){ var e = D.err; return e && e.status === 403 ? T('This sign-in cannot open disputes.') : T("Couldn't read your disputes. Check the connection and try again."); }
-  function countHTML(){
+  function dpErrWords(){ var e = D.err; return e && e.status === 403 ? T('This sign-in cannot open disputes.') : T("Couldn't read your disputes. Check the connection and try again."); }
+  function dpCountHTML(){
     var n = D.total, shown = D.rows.length;
     return '<span class="tk-count" data-testid="dp-count"><b>' + n + '</b> ' + esc(T(n === 1 ? 'dispute' : 'disputes')) + (shown < n ? ' · ' + esc(T('first')) + ' ' + shown + ' ' + esc(T('shown')) : '') + '</span>';
   }
-  function paint(){
+  function dpPaint(){
     if (!D.el) return;
-    var bar = D.el.querySelector('#dp_bar'); if (bar) bar.innerHTML = D.state === 'ready' ? countHTML() : '';
+    var bar = D.el.querySelector('#dp_bar'); if (bar) bar.innerHTML = D.state === 'ready' ? dpCountHTML() : '';
     if (D.list) { D.list.refresh(); return; }
     var kinds = Object.keys(KIND);
     D.list = CBList.mount(D.el.querySelector('#dp_list'), {
       key: 'disputes', t: T, rows: function(){ return D.rows; }, id: function(d){ return d.dispute_id; }, rowTid: function(d){ return 'dp-row-' + d.dispute_id; },
-      columns: cols(), defaultCols: ['what', 'reason', 'status'], cardMax: 3,
-      state: function(){ return D.state; }, error: errWords, onRetry: function(){ load(); },
+      columns: dpCols(), defaultCols: ['what', 'reason', 'status'], cardMax: 3,
+      state: function(){ return D.state; }, error: dpErrWords, onRetry: function(){ dpLoad(); },
       empty: { title: T('No disputes'), sub: T('When you or the other side raises one on a chit, it shows here.') },
-      search: function(d){ return [d.auto_subject, d.purpose, d.reason, d.category, d.raised_by_display_name, withWord(d), d.resolution_note].join(' '); },
+      search: function(d){ return [d.auto_subject, d.purpose, d.reason, d.category, d.raised_by_display_name, dpWithWord(d), d.resolution_note].join(' '); },
       searchHint: T('Chit, reason or business'),
       filters: [
         { key: 'status', label: T('Where it is'), all: T('Open and resolved'), options: [{ v: 'open', label: T('Open') }, { v: 'resolved', label: T('Resolved') }],
@@ -435,19 +435,19 @@ var CBDisputes = (function(){
         { key: 'kind', label: T('By kind'), cmp: function(a, b){ return String(a.category || '').localeCompare(String(b.category || '')); } }
       ],
       onOpen: function(d){ if (typeof openChitSheet === 'function') openChitSheet(d.chit_id); },
-      next: mini,
+      next: dpMini,
       actions: [
         { id: 'open', label: T('Open chit'), icon: '↗', tid: 'dp-open', run: function(d){ if (typeof openChitSheet === 'function') openChitSheet(d.chit_id); } },
-        { id: 'resolve', label: T('Resolve'), icon: '✓', tid: 'dp-resolve', why: mayResolve, run: function(d){ if (!mayResolve(d)) resolveDispute(d.chit_id, d.dispute_id); } }
+        { id: 'resolve', label: T('Resolve'), icon: '✓', tid: 'dp-resolve', why: dpMayResolve, run: function(d){ if (!dpMayResolve(d)) resolveDispute(d.chit_id, d.dispute_id); } }
       ]
     });
   }
-  function mount(el, o){
+  function dpMount(el, o){
     D.el = el; D.o = o || {}; D.list = null; D.rows = []; D.total = 0;
     el.innerHTML = '<div class="tk-top" id="dp_bar" data-testid="dp-bar"></div><div class="tk-list" id="dp_list" data-testid="dp-list"></div>';
-    paint(); load();
-    return { reload: load };
+    dpPaint(); dpLoad();
+    return { reload: dpLoad };
   }
-  function changed(){ if (D.el && document.body.contains(D.el)) load(); }
-  return { mount: mount, changed: changed };
+  function dpChanged(){ if (D.el && document.body.contains(D.el)) dpLoad(); }
+  return { mount: dpMount, changed: dpChanged };
 })();

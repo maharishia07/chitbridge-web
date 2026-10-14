@@ -198,8 +198,16 @@ function val(id){ const el = document.getElementById(id); return el ? el.value.t
     frame = CBFrame.mount({ app: 'tasks', kural: 'tasks', work: document.getElementById('tk_work'),
       skeleton: { name: 'Tasks & Orders', icon: ICON.tasks, active: pane || (CBTasks.VIEWS.indexOf(view) >= 0 ? view : 'orders_in'),
         sections: [].concat(tabs.map(function (t) { return { k: t.id, label: t.label, icon: ICON[t.id] || ICON.tasks }; }),
-          [{ k: 'disputes', label: 'Disputes', icon: ICON.disputes }, { k: 'assist', label: 'CB Assist', icon: ICON.assist }]),
+          [{ k: 'disputes', label: tx('Disputes'), icon: ICON.disputes }, { k: 'assist', label: tx('CB Assist'), icon: ICON.assist }]),
         onSection: showPane } });
+    /* a language pack lands after the frame is drawn and calls renderApp() (locale.js pack): the sidebar's words are said again through tx() */
+    var LABEL = { disputes: 'Disputes', assist: 'CB Assist' }; tabs.forEach(function (t) { LABEL[t.id] = t.label; });
+    window.renderApp = function () {
+      Array.prototype.forEach.call(document.querySelectorAll('.nav-btn[data-sec]'), function (b) {
+        var w = LABEL[b.getAttribute('data-sec')], l = b.querySelector('.label'); if (!w || !l) return;
+        l.textContent = tx(w); b.setAttribute('aria-label', tx(w));
+      });
+    };
     if (frame.session) SESSION = Object.assign({}, SESSION, frame.session);
     start(frame.token); return;
   }
