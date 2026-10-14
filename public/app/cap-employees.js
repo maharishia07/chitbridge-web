@@ -151,6 +151,7 @@
       + '<div id="emp_out" class="emp-out" role="status" data-testid="emp-out"></div>'
       + '<div class="emp-acts">'
       + actRow('emp_access', '🔑', T('What they can do'), m.access, '<span class="sub">' + esc(p.access.label) + '</span>')
+      + actRow('emp_email', '✉️', T('E-mail'), m.email || m.access, '<span class="sub" data-testid="emp-email-now">' + esc(p.email || (p.has_email ? T('On file') : T('None yet'))) + '</span>')
       + actRow('emp_pin', '🔢', T('Reset code'), m.reset_pin)
       + actRow('emp_switch', '⏻', m.switch.to === 'on' ? T('Switch on') : T('Switch off'), m.switch,
           p.jobs && m.switch.to === 'off' ? '<span class="sub">' + esc(p.jobs + ' ' + T('open jobs go to the pool')) + '</span>' : '')
@@ -158,6 +159,7 @@
       + '</div><div id="emp_more"></div>');
     var q = function (k) { return $(k); };
     if (m.access.ok !== false) q('emp_access').onclick = function () { accessPanel(p); };
+    if ((m.email || m.access).ok !== false) q('emp_email').onclick = function () { emailPanel(p); };
     if (m.reset_pin.ok !== false) q('emp_pin').onclick = function () { resetPin(p, q('emp_pin')); };
     if (m.switch.ok !== false) q('emp_switch').onclick = function () { switchIt(p, q('emp_switch')); };
     if (m.cover.ok !== false) q('emp_cover').onclick = function () { coverPanel(p); };
@@ -174,7 +176,6 @@
 
   function codeSentence(r) {
     if (r && r.otp) return T('Their first code is') + ' ' + r.otp + ' — ' + T('good for 24 hours.');
-    if (r && r.sent_to) return T('A new code went to') + ' ' + r.sent_to + '.';
     return (r && r.delivery_note) || T('A new code is ready.');
   }
 
@@ -209,6 +210,18 @@
       root.CBAction.run($('emp_access_go'), function () {
         return call('PATCH', '/api/actors/' + encodeURIComponent(p.id), { access_level: c.level, hat: HAT_OF[c.level] || 'act', whole_entity: c.whole_entity, can_see_costs: c.can_see_costs });
       }, { key: 'emp-access-' + p.id, failed: T("Couldn't save"), out: 'emp_out', outcome: function () { $('emp_out').textContent = T('Saved.'); changed(p.id); } });
+    };
+  }
+
+  /* SEC2 · PEOPLE-EMAIL: where the first code and every reset go. The server stores it (PATCH /api/actors/:id { email }); empty clears it. */
+  function emailPanel(p) {
+    $('emp_more').innerHTML = '<div class="emp-panel"><label class="sub" for="emp_email_in">' + esc(T('Their e-mail. Codes are sent here, never shown.')) + '</label>'
+      + '<input class="inp" id="emp_email_in" data-testid="emp-email-in" type="email" autocomplete="off" value="' + esc(p.email || '') + '">'
+      + '<button type="button" class="act" id="emp_email_go" data-testid="emp-email-go">' + esc(T('Save')) + '</button></div>';
+    $('emp_email_go').onclick = function () {
+      var v = $('emp_email_in').value.trim();
+      root.CBAction.run($('emp_email_go'), function () { return call('PATCH', '/api/actors/' + encodeURIComponent(p.id), { email: v }); },
+        { key: 'emp-email-' + p.id, failed: T("Couldn't save"), out: 'emp_out', outcome: function () { $('emp_out').textContent = T('Saved.'); changed(p.id); } });
     };
   }
 

@@ -98,23 +98,25 @@ var h = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, fun
 var $ = function (id) { return document.getElementById(id); };
 var toastT; function toast(t) { var e = $('toast'); e.textContent = t; e.hidden = false; clearTimeout(toastT); toastT = setTimeout(function () { e.hidden = true; }, 2400); }
 
+/* SEC2: the practice code is made here, per page load — never the server's fixed test codes, which no page prints */
+var PRACTICE = String(100000 + Math.floor(Math.random() * 900000));
 /* ═════ THE PLANTED PEOPLE — practice identities whose FIELDS drive the real rules (nothing below is a real account) ═════ */
 var SHOP = { id: 'ent-mayur', name: 'Mayur Bhavan', bridge: 'CB-MAYUR', userid: 'mayuri123' };
 var PEOPLE = {
   owner:      { label: 'Owner', name: 'Mayur Bhavan', id: 'mayuri123', kind: 'entity', mobile: '9876543210', email: 'athi@mayur.test', userid: 'mayuri123',
-                code: '123456', access_level: 'editor', can_see_costs: true, hat: 'own' },
+                code: PRACTICE, access_level: 'editor', can_see_costs: true, hat: 'own' },
   employee:   { label: 'Employee (.br)', name: 'Bala', id: 'bala@mayuri123.br', kind: 'actor', mobile: '9000000001', email: 'bala@mail.test', userid: 'bala@mayuri123.br',
-                code: '123456', pin: '4826', access_level: 'editor', can_see_costs: false, hat: 'act' },
+                code: PRACTICE, pin: '4826', access_level: 'editor', can_see_costs: false, hat: 'act' },
   customer:   { label: 'Customer (.cr)', name: 'Kavi', id: 'kavi=mail.test@mayuri123.cr', kind: 'customer', mobile: '9111111111', email: 'kavi@mail.test', userid: null,
-                code: '123123' },
+                code: PRACTICE },
   brand:      { label: 'Network store', name: 'Athi · Chennai', id: 'athi.chennai', kind: 'entity', mobile: null, email: null, userid: 'athi.chennai',
-                code: '123456', operator: true, access_level: 'editor', can_see_costs: true, hat: 'own' },
+                code: PRACTICE, operator: true, access_level: 'editor', can_see_costs: true, hat: 'own' },
   auditor:    { label: 'Auditor', name: 'Meera', id: 'meera@mayuri123.br', kind: 'actor', mobile: '9222222222', email: 'meera@audit.test', userid: 'meera@mayuri123.br',
-                code: '123456', pin: '1357', access_level: 'commenter', can_see_costs: true, hat: 'audit' },
+                code: PRACTICE, pin: '1357', access_level: 'commenter', can_see_costs: true, hat: 'audit' },
   accountant: { label: 'Accountant', name: 'Suresh', id: 'suresh@mayuri123.br', kind: 'actor', mobile: '9333333333', email: 'suresh@ca.test', userid: 'suresh@mayuri123.br',
-                code: '123456', pin: '2468', access_level: 'viewer', can_see_costs: true, hat: 'mis' },
+                code: PRACTICE, pin: '2468', access_level: 'viewer', can_see_costs: true, hat: 'mis' },
   shared:     { label: 'Shared contact', name: 'Athi', id: 'athi@alpha-timers.br', kind: 'actor', mobile: '9876543210', email: 'athi@mayur.test', userid: 'athi@alpha-timers.br',
-                code: '123456', pin: '2580', access_level: 'editor', can_see_costs: false, hat: 'act', shop: { id: 'ent-alpha', name: 'Alpha Timers', bridge: 'CB-ALPHA' } },
+                code: PRACTICE, pin: '2580', access_level: 'editor', can_see_costs: false, hat: 'act', shop: { id: 'ent-alpha', name: 'Alpha Timers', bridge: 'CB-ALPHA' } },
 };
 /* roles that exist only as an idea — shown greyed, never as if they work (Athi: "planned role — not built") */
 var PLANNED_ROLES = [
@@ -136,7 +138,7 @@ function reset() {
   if (sel.stage === 'first') { if (p.kind === 'actor') p.pin = null; }
   if (p.kind === 'actor' && sel.stage !== 'first' && !p.pin) p.pin = '4826';
   p.locked = sel.stage === 'locked'; p.removed = sel.stage === 'removed';
-  LIVE.alphaOwner = { name: 'Alpha Timers', id: 'alpha-timers', kind: 'entity', code: '123456' };
+  LIVE.alphaOwner = { name: 'Alpha Timers', id: 'alpha-timers', kind: 'entity', code: PRACTICE };
 }
 var b64 = function (o) { return btoa(unescape(encodeURIComponent(JSON.stringify(o)))).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_'); };
 function tokenOf(p, device) {

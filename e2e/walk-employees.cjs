@@ -26,7 +26,7 @@ W.run('employees', async (w) => {
     { key: 'books', label: 'Books and costs', why: 'Sees the whole shop and what it costs.', level: 'commenter', whole_entity: true, can_see_costs: true },
   ];
   const S = { calls: [], addRefused: false, listDenied: false, nextId: 4, people: [] };
-  const may = (o) => Object.assign({ access: { ok: true }, reset_pin: { ok: true }, switch: { ok: true, to: 'off' }, cover: { ok: true } }, o || {});
+  const may = (o) => Object.assign({ access: { ok: true }, email: { ok: true }, reset_pin: { ok: true }, switch: { ok: true, to: 'off' }, cover: { ok: true } }, o || {});
   S.people = [
     { id: 'p1', name: 'Asha Kumar', user_id: 'asha01@walk-shop.br', role: 'Cashier', phone: '9840000001', state: 'on', jobs: 0, last_at: new Date().toISOString(), access: CHOICES[0], may: may(), cover: null, cover_options: [{ id: 'p2', name: 'Ravi Nair' }] },
     { id: 'p2', name: 'Ravi Nair', user_id: 'ravi02@walk-shop.br', role: 'Manager', phone: '9840000002', state: 'on', jobs: 2, last_at: null, access: CHOICES[1],
@@ -55,15 +55,17 @@ W.run('employees', async (w) => {
       const id = 'p' + (S.nextId++), key = body.actor_key;
       const c = CHOICES.find((x) => x.level === body.access_level && !!x.whole_entity === !!body.whole_entity) || CHOICES[0];
       S.people.push({ id, name: body.display_name, user_id: key + '@walk-shop.br', role: body.actor_role || '', phone: body.phone || '', state: 'on', jobs: 0, last_at: null, access: c, may: may(), cover: null, cover_options: [] });
-      return J(r, 200, { actor: { identity_id: id, display_name: body.display_name, login_format: key + '@walk-shop.br' }, otp: '482913' });
+      /* SEC2: the server never answers the code — it says where it went (lib/employee-code.deliver delivery_note) */
+      return J(r, 200, { actor: { identity_id: id, display_name: body.display_name, login_format: key + '@walk-shop.br' }, delivery: 'sent', sent_to: 'k***@walk.test', delivery_note: 'The code went to k***@walk.test.' });
     }
     let mm = /^\/api\/actors\/([^/]+)\/pin$/.exec(p);
-    if (mm && m === 'DELETE') return J(r, 200, { otp: '735190' });
+    if (mm && m === 'DELETE') return J(r, 200, { delivery: 'sent', sent_to: 'a***@walk.test', delivery_note: 'The code went to a***@walk.test.' });
     mm = /^\/api\/actors\/([^/]+)\/status$/.exec(p);
-    if (mm && m === 'PUT') { const x = find(mm[1]); x.state = body.action === 'deactivate' ? 'off' : 'on'; x.may.switch = { ok: true, to: x.state === 'off' ? 'on' : 'off' }; return J(r, 200, body.action === 'reactivate' ? { otp: '246810' } : { ok: true }); }
+    if (mm && m === 'PUT') { const x = find(mm[1]); x.state = body.action === 'deactivate' ? 'off' : 'on'; x.may.switch = { ok: true, to: x.state === 'off' ? 'on' : 'off' }; return J(r, 200, body.action === 'reactivate' ? { delivery: 'sent', sent_to: 'm***@walk.test', delivery_note: 'The code went to m***@walk.test.' } : { ok: true }); }
     mm = /^\/api\/actors\/([^/]+)\/delegate$/.exec(p);
     if (mm && m === 'PUT') { const x = find(mm[1]); x.cover = body.delegate_actor_id ? { id: body.delegate_actor_id, name: (find(body.delegate_actor_id) || {}).name } : null; return J(r, 200, { ok: true }); }
     mm = /^\/api\/actors\/([^/]+)$/.exec(p);
+    if (mm && m === 'PATCH' && body && 'email' in body) { const x = find(mm[1]); x.email = body.email || null; x.has_email = !!body.email; return J(r, 200, { ok: true }); }
     if (mm && m === 'PATCH') { const x = find(mm[1]); x.access = CHOICES.find((c) => c.level === body.access_level && !!c.whole_entity === !!body.whole_entity && !!c.can_see_costs === !!body.can_see_costs) || x.access; return J(r, 200, { ok: true }); }
     return J(r, 404, { error: 'not found' });
   });
@@ -100,10 +102,10 @@ W.run('employees', async (w) => {
     await page.click('[data-testid="confirm-cancel"]'); await page.waitForTimeout(400);
     return { ok: /Reset code\?/.test(asked) && wrote(/\/pin$/) === 0, saw: 'asked "' + asked.slice(0, 60) + '"; reset calls after Cancel: ' + wrote(/\/pin$/) };
   });
-  await w.step('E5', 'Asha -> Reset code -> Reset -> the sheet says her new first code, in words', async () => {
+  await w.step('E5', 'Asha -> Reset code -> Reset -> the sheet says where her new code went, in words (never the code)', async () => {
     await page.click('#emp_pin'); await confirmYes();
     const out = await txt('[data-testid="emp-out"]');
-    return { ok: /735190/.test(out) && wrote(/DELETE \/api\/actors\/p1\/pin/) === 1, saw: '"' + out + '" - one reset call' };
+    return { ok: /went to a\*\*\*@walk\.test/.test(out) && !/\b\d{6}\b/.test(out) && wrote(/DELETE \/api\/actors\/p1\/pin/) === 1, saw: '"' + out + '" - one reset call' };
   });
   await w.step('E6', 'Asha -> What they can do -> Manager -> Save -> "Saved." and her line now says Manager', async () => {
     await page.click('#emp_access'); await page.click('[data-testid="emp-level-manager"]'); await page.click('[data-testid="emp-access-go"]'); await page.waitForTimeout(600);
@@ -122,11 +124,11 @@ W.run('employees', async (w) => {
     return { ok: /can no longer sign in/.test(asked) && /Off/.test(tag) && /1\s*on/.test(cnt) && /2\s*off/.test(cnt), saw: 'asked "' + asked.slice(0, 70) + '"; tag ' + tag + '; "' + cnt + '"' };
   });
   await closeSheet();
-  await w.step('E9', 'Meena (off) -> Switch on -> no question asked (it is reversible) -> she is On with a first code', async () => {
+  await w.step('E9', 'Meena (off) -> Switch on -> no question asked (it is reversible) -> she is On and told where her code went', async () => {
     await page.click('[data-testid="emp-row-p3"]'); await page.waitForSelector('#emp_switch', { timeout: 6000 });
     await page.click('#emp_switch'); await page.waitForTimeout(700);
     const asked = await page.locator('[data-testid="confirm-ok"]').count(), out = await txt('[data-testid="emp-out"]'), tag = await txt('[data-testid="emp-state-p3"]');
-    return { ok: asked === 0 && /246810/.test(out) && /On/.test(tag), saw: (asked ? 'it asked first; ' : 'no question; ') + '"' + out + '"; tag ' + tag };
+    return { ok: asked === 0 && /went to m\*\*\*@/.test(out) && /On/.test(tag), saw: (asked ? 'it asked first; ' : 'no question; ') + '"' + out + '"; tag ' + tag };
   });
   await closeSheet();
   await w.step('E10', 'Ravi (a manager) -> Reset code is greyed WITH its sentence, and pressing it sends nothing', async () => {
@@ -147,12 +149,19 @@ W.run('employees', async (w) => {
     const out = await txt('[data-testid="emp-out"]');
     return { ok: /4 to 12 letters or numbers/.test(out) && wrote(/POST \/api\/actors \{/) === 0, saw: '"' + out + '"; add calls: ' + wrote(/POST \/api\/actors \{/) };
   });
-  await w.step('E13', 'Add a person -> a good sign-in name -> Add -> "Added" with the sign-in name and a first code, and the list has 4 people', async () => {
+  await w.step('E13', 'Add a person -> a good sign-in name -> Add -> "Added" with the sign-in name and where the first code went, and the list has 4 people', async () => {
     await page.fill('[data-testid="emp-add-key"]', 'kavya04'); await page.click('[data-testid="emp-add-go"]'); await page.waitForSelector('[data-testid="emp-added"]', { timeout: 6000 });
     const id = await txt('[data-testid="emp-added-id"]'), code = await txt('[data-testid="emp-added-code"]');
     await page.click('[data-testid="emp-done"]'); await page.waitForTimeout(400);
     const n = await rows();
-    return { ok: id === 'kavya04' && /482913/.test(code) && n === 4 && wrote(/POST \/api\/actors \{/) === 1, saw: 'sign-in "' + id + '"; "' + code + '"; ' + n + ' rows; one add call' };
+    return { ok: id === 'kavya04' && /went to k\*\*\*@/.test(code) && n === 4 && wrote(/POST \/api\/actors \{/) === 1, saw: 'sign-in "' + id + '"; "' + code + '"; ' + n + ' rows; one add call' };
+  });
+  await w.step('E18', 'SEC2 · Asha -> E-mail -> type her address -> Save -> "Saved." and the sheet shows it (codes go there, never on screen)', async () => {
+    await page.click('[data-testid="emp-row-p1"]'); await page.waitForSelector('#emp_email', { timeout: 6000 });
+    await page.click('#emp_email'); await page.fill('[data-testid="emp-email-in"]', 'asha@walk.test'); await page.click('[data-testid="emp-email-go"]'); await page.waitForTimeout(600);
+    const out = await txt('[data-testid="emp-out"]'), now = await txt('[data-testid="emp-email-now"]');
+    await closeSheet();
+    return { ok: /Saved/.test(out) && /asha@walk\.test/.test(now) && wrote(/PATCH \/api\/actors\/p1 \{"email":"asha@walk\.test"\}/) === 1, saw: '"' + out + '"; e-mail now "' + now + '"; ' + wrote(/PATCH \/api\/actors\/p1 \{"email"/) + ' e-mail call(s)' };
   });
   await w.step('E14', 'Employees (this login may not add) -> "Add a person" is shown greyed with the server\'s sentence', async () => {
     S.addRefused = true; await open();
