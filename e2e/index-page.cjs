@@ -26,6 +26,7 @@ const PUB = path.join(ROOT, 'public');
 const SHOTS = path.join(__dirname, 'shots');
 const C = require('./lib/contract.cjs'), books = require('./lib/books-api.cjs');
 const J = C.json;
+const crmApi = require('./lib/crm-api.cjs');   /* RAIL-LAB-SRV1: the rail card (GET /api/facts/rail) from its one builder */
 const T = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.webmanifest': 'application/manifest+json' };
 
 /* ⭐ THE READS THE PAGE MAY MAKE: each has a line in chitbridge-api/round-trips.budget.json (DB10, I19) — or is the shell's own N19 read.
@@ -54,7 +55,7 @@ const PLANTED = { version: 2,
 const FACTS = {
   '/api/facts/till': { lines: [{ text: '12 bills · {money}', money: { amount: 4280, currency: 'INR' } }, { text: '1 bill waiting to send', tone: 'dn', act: { label: 'Send now', href: '/till.html' } }] },
   '/api/facts/accounts': { lines: ['Ledger up to 7 Oct'] },
-  '/api/facts/rail': { suppliers: 4, customers: 128, in: 3, out: 2, stuck: 1 }
+  '/api/facts/rail': crmApi.railFacts({ suppliers: 4, customers: 128, in: 3, out: 2, stuck: 1 })
 };
 
 async function run() {

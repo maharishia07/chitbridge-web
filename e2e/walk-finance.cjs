@@ -17,6 +17,7 @@ const W = require('./lib/walk.cjs');
 const books = require('./lib/books-api.cjs');
 const C = require('./lib/contract.cjs');   /* M43: every /api/books answer this stand-in serves is held to the API contract */
 const J = (r, status, body) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+const crmApi = require('./lib/crm-api.cjs');   /* RAIL-LAB-SRV1: the rail card (GET /api/facts/rail) from its one builder */
 
 W.run('finance', async (w) => {
   const { page, ctx, base } = w;
@@ -50,7 +51,7 @@ W.run('finance', async (w) => {
     }
     if (/\/pay(\/|-)preview$/.test(p)) return J(r, 200, { proposal: [], warnings: [] });   /* no open bill: Remind has nothing to remind about */
     if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Fixture Shop', currency_code: 'INR' } });
-    if (p === '/api/facts/rail') return J(r, 200, { suppliers: 1, customers: 3, in: 0, out: 0, stuck: 0 });
+    if (p === '/api/facts/rail') return J(r, 200, crmApi.railFacts({ suppliers: 1, customers: 3, in: 0, out: 0, stuck: 0 }));
     return J(r, 404, { error: 'not found' });
   });
   await ctx.addInitScript((s) => { try { localStorage.setItem('cb_api_base', location.origin); localStorage.setItem('cb_sess', s); } catch (_) {} }, W.session('Fixture Owner', 'Fixture Shop'));

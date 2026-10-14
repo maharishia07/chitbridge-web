@@ -101,7 +101,7 @@ const TODAY = new Date().toISOString().slice(0, 10);
 function answer(p, u, m) {
   if (p === '/api/entities/me') return ME;
   if (p === '/api/entities/header') return { business: { display_name: 'Fixture Shop', bridge_id: 'CBWALK0001' }, licences: [], trade_ready: true };
-  if (p === '/api/facts/rail') return { suppliers: 1, customers: 3, in: 24, out: 2, stuck: 3 };
+  if (p === '/api/facts/rail') return crmApi.railFacts({ suppliers: 1, customers: 3, in: 24, out: 2, stuck: 3 });
   if (p === '/api/facts/rail/chits') return { overdue_days: 7, truncated: false, items: [] };
   if (p === '/api/books/health') return books.health({ waiting: [books.waitingRow({ id: 1, chit_id: 'ch7', ref: 'bill:ch7', reason: 'September is locked.', tries: 3, since: '2026-09-28T10:00:00Z' })] });
   if (p === '/api/books/todo') return [books.todoRow({ kind: 'months_not_locked', count: 2, words: '2 months are over but still open: August 2026, September 2026.', action: { label: 'Lock the months', screen: 'periods', call: 'POST /api/books/periods/:fy/:period/lock' } })];

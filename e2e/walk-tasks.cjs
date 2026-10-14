@@ -18,6 +18,7 @@
 const W = require('./lib/walk.cjs');
 const C = require('./lib/contract.cjs');   /* M43: every /api/work answer this stand-in serves is held to the API contract */
 const J = (r, status, body) => C.json(r, status, body);
+const crmApi = require('./lib/crm-api.cjs');   /* RAIL-LAB-SRV1: the rail card (GET /api/facts/rail) from its one builder */
 
 W.run('tasks', async (w) => {
   const { page, ctx, base } = w;
@@ -87,7 +88,7 @@ W.run('tasks', async (w) => {
     if (m !== 'GET') S.calls.push(m + ' ' + p + (body ? ' ' + JSON.stringify(body) : ''));
     if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Fixture Shop', currency_code: 'INR' } });
     if (p === '/api/entities/header') return J(r, 200, { business: { display_name: 'Fixture Shop', bridge_id: 'CBWALK0001' }, licences: [], trade_ready: true });
-    if (p === '/api/facts/rail') return J(r, 200, { suppliers: 1, customers: 3, in: 2, out: 1, stuck: 1 });
+    if (p === '/api/facts/rail') return J(r, 200, crmApi.railFacts({ suppliers: 1, customers: 3, in: 2, out: 1, stuck: 1 }));
     /* TO1b: the SERVER's stuck test (lib/home-facts railChits: open, from someone else, age >= overdue_days) with its why - the screen compares no dates */
     if (p === '/api/facts/rail/chits') {
       const items = S.rows.filter((x) => x.kind !== 'task' && !CLOSED.includes(x.status)).map((x) => {

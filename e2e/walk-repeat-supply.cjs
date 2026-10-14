@@ -18,6 +18,7 @@ const path = require('path');
 const W = require('./lib/walk.cjs');
 const C = require('./lib/contract.cjs');   /* M43: every /api/repeat answer this stand-in serves is held to the API contract */
 const J = (r, status, body) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+const crmApi = require('./lib/crm-api.cjs');   /* RAIL-LAB-SRV1: the rail card (GET /api/facts/rail) from its one builder */
 const clone = (x) => JSON.parse(JSON.stringify(x));
 const FX = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'web-api.contract.json'), 'utf8')).routes;
 const SHOP = '11111111-1111-4111-8111-111111111111', CUST = '22222222-2222-4222-8222-222222222222';
@@ -116,7 +117,7 @@ W.run('repeat-supply', async (w) => {
       return J(r0, 404, { error: 'Not found' });
     }
     if (p === '/api/entities/me') return J(r0, 200, { entity: { display_name: S.me === 'customer' ? 'Ravi Stores' : 'Fixture Shop', currency_code: 'INR' } });
-    if (p === '/api/facts/rail') return J(r0, 200, { suppliers: 1, customers: 3, in: 0, out: 0, stuck: 0 });
+    if (p === '/api/facts/rail') return J(r0, 200, crmApi.railFacts({ suppliers: 1, customers: 3, in: 0, out: 0, stuck: 0 }));
     return J(r0, 404, { error: 'not found' });
   });
   const asSeller = async () => { S.me = 'seller'; await ctx.addInitScript((s) => { try { localStorage.setItem('cb_api_base', location.origin); localStorage.setItem('cb_sess', s); } catch (_) {} }, W.session('Fixture Owner', 'Fixture Shop')); };

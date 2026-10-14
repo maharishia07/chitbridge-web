@@ -124,4 +124,18 @@ function timeline(tl, id, q) {
 function interaction(b, now) {
   return { interaction: { interaction_id: 'ix-new', party_id: 'pid', kind: b.kind, direction: b.kind === 'note' ? null : b.direction, body: b.body, at: new Date(now || Date.now()).toISOString(), by_user_id: 'u1', created_at: new Date(now || Date.now()).toISOString() } };
 }
-module.exports = { resolve, party, list, record, followupOne, followups, entry, timeline, interaction, rolesOf };
+/**
+ * GET /api/facts/rail → the Home rail card, as lib/home-facts.rail sends it (RAIL-LAB-SRV1, 2026-10-14): the CRM's party counts, the open
+ * in / out / stuck, and `may_sample` — the SERVER's may/why for the Rail Lab: a live shop `{ ok: false, why: 'live_shop', say }`, a lab (test)
+ * shop `{ ok: true }`. ONE builder: it was hand-drawn in twelve harnesses, and none of them could ever carry a key the api added.
+ *   railFacts({ suppliers?, customers?, in?, out?, stuck?, lab?: true, truncated?: true })   truncated: in/out/stuck omitted, as the api omits them
+ */
+const RAIL_SAY = 'This is a live shop, so a lab chit cannot be sent from it. Try it in a test shop.';
+function railFacts(o) {
+  const x = o || {};
+  const out = { suppliers: x.suppliers == null ? 0 : x.suppliers, customers: x.customers == null ? 0 : x.customers,
+    may_sample: x.lab ? { ok: true } : { ok: false, why: 'live_shop', say: RAIL_SAY } };
+  if (!x.truncated) { out.in = x.in == null ? 0 : x.in; out.out = x.out == null ? 0 : x.out; out.stuck = x.stuck == null ? 0 : x.stuck; }
+  return out;
+}
+module.exports = { resolve, party, list, record, followupOne, followups, entry, timeline, interaction, rolesOf, railFacts };
