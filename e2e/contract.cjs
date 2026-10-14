@@ -24,7 +24,7 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail
 const raw = JSON.parse(fs.readFileSync(C.FILE, 'utf8'));
 const routes = Object.keys(raw.routes || {});
 ok(routes.length > 30, 'the contract lists ' + routes.length + ' routes');
-ok(routes.every((k) => /^(GET|POST|PATCH|PUT|DELETE) \/api\/(books|crm|work|repeat)(\/|$| )/.test(k) && raw.routes[k].status > 0 && 'example' in raw.routes[k]), 'every entry is "METHOD /api/(books|crm|work|repeat)/…" with a status and an example');   /* repeat: RI1 (/api/repeat itself has no tail) */
+ok(routes.every((k) => /^(GET|POST|PATCH|PUT|DELETE) \/api\/(books|crm|work|repeat|tax|facts\/tax-lab)(\/|$| )/.test(k) && raw.routes[k].status > 0 && 'example' in raw.routes[k]), 'every entry is "METHOD /api/(books|crm|work|repeat|tax|facts/tax-lab)/…" with a status and an example');   /* repeat: RI1 (/api/repeat itself has no tail) · tax + facts/tax-lab: the Tax Lab reads (TAX-SRV1) */
 (raw._selftest || []).forEach((c, i) => {
   const p = C.problems(c.example, c.actual, c.optional || [], '', c.free || []);
   ok((p.length === 0) === c.conforms, 'selftest ' + (i + 1) + ': ' + c.name + (p.length ? ' [' + p[0] + ']' : ''));
@@ -64,7 +64,7 @@ if (crmApi) {
 const files = fs.readdirSync(__dirname).filter((f) => /\.cjs$/.test(f) && f !== 'contract.cjs');
 /* INT5b: a harness SERVES when one of its .route( patterns is an /api path — a real-stack walk (walk-x-o2c --real) only CALLS the api and
    routes nothing but fonts (whose host, googleapis, once matched a bare "api") */
-const serves = files.filter((f) => { const s = fs.readFileSync(path.join(__dirname, f), 'utf8'); return /\.route\([^,\n]*\/api\b/.test(s) && /['"`]\/api\/(books|crm|work|repeat)(\/|['"`])/.test(s); });
+const serves = files.filter((f) => { const s = fs.readFileSync(path.join(__dirname, f), 'utf8'); return /\.route\([^,\n]*\/api\b/.test(s) && /['"`]\/api\/(books|crm|work|repeat|tax|facts\/tax-lab)(\/|['"`])/.test(s); });
 const unwrapped = serves.filter((f) => !/lib\/contract\.cjs/.test(fs.readFileSync(path.join(__dirname, f), 'utf8')));
 ok(unwrapped.length === 0, serves.length + ' harnesses answer /api/books, /api/crm, /api/work or /api/repeat calls; each holds its answers to the contract' + (unwrapped.length ? ' - NOT: ' + unwrapped.join(', ') : ''));
 
