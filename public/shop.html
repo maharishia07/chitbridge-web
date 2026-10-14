@@ -764,7 +764,7 @@ function renderLoginGate(shop){
   var otpStep=(_lg.step==='otp'), fld='style="width:100%;padding:9px;border:1px solid #e7e3d8;border-radius:8px;margin-bottom:10px;font-size:14px"';
   el('app').innerHTML='<div class="hd"><div class="logo">🎨</div><div style="flex:1"><div class="shopname sg">'+esc(shop.display_name||'Shop')+'</div><div class="meta">'+esc(shop.user_id||shop.bridge_id||'')+'</div></div></div>'
     +'<div class="card" style="max-width:420px;margin:26px auto"><div class="sg" style="font-weight:800;font-size:16px;margin-bottom:4px">Sign in to view this shop</div>'
-    +'<div class="meta" style="margin-bottom:12px">This shop asks customers to sign in first. Enter your phone or email — we\'ll text/email a one-time code.</div>'
+    +'<div class="meta" data-testid="shop-sign-in-first" style="margin-bottom:12px">This shop asks customers to sign in first. Enter your phone or email — we\'ll text/email a one-time code.</div>'
     +'<input id="lg_contact" placeholder="9876543210 or you@email.com" '+(otpStep?'disabled':'')+' value="'+esc(_lg.contact||'')+'" '+fld+'>'
     +(otpStep?'<input id="lg_otp" autocomplete="one-time-code" inputmode="numeric" maxlength="64" placeholder="6-digit code" value="'+esc(_lg.otp||'')+'" '+fld+'>':'')
     +(_lg.err?'<div style="color:#b4453f;font-size:12.5px;margin-bottom:8px">'+esc(_lg.err)+'</div>':'')
@@ -786,7 +786,8 @@ function sfLoginVerify(){
   _lg.busy=true; _lg.err=null; renderLoginGate(_SHOPDATA.shop);
   fetch(API+'/api/catalogue/'+encodeURIComponent(BRIDGE)+'/login/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({identifier:_lg.contact,otp:_lg.otp})})
     .then(function(r){return r.json().then(function(j){return{status:r.status,j:j};});})
-    .then(function(res){ if(res.status!==200){ _lg.busy=false; _lg.err=(res.j&&res.j.message)||'Verification failed.'; renderLoginGate(_SHOPDATA.shop); return; } render(_SHOPDATA); })
+    /* SEC4: signed in → read the shop again with the customer's token; the server sends the catalogue it withheld from a stranger */
+    .then(function(res){ if(res.status!==200){ _lg.busy=false; _lg.err=(res.j&&res.j.message)||'Verification failed.'; renderLoginGate(_SHOPDATA.shop); return; } _MYTOK=(res.j&&res.j.token)||null; _lg={}; shopLoad(); })
     .catch(function(e){ _lg.busy=false; _lg.err=e.message; renderLoginGate(_SHOPDATA.shop); });
 }
 /**
@@ -1346,17 +1347,28 @@ function vizToOrder(){ var idx=_VIZ.idx, comboName=_VIZ.combo&&_VIZ.combo.name; 
 (function(){
   if(!BRIDGE){ el('app').innerHTML='<div class="msg">No shop specified.</div>'; return; }
   // load the region layers first (for the spin-the-globe switcher), then the shop
-  fetch(API+'/api/assist/regions').then(function(r){return r.json();}).then(function(j){ _REGIONS=(j&&j.regions)||[]; if(_REGIONS.length && !_REGIONS.find(function(x){return x.region_code===_REGION;})) _REGION=_REGIONS[0].region_code; }).catch(function(){}).then(function(){
-    fetch(API+'/api/catalogue/'+encodeURIComponent(BRIDGE)+(_PREVIEW?'?preview=1':''), _PREVIEW && _ownerToken() ? { headers: { Authorization: 'Bearer ' + _ownerToken() } } : undefined).then(function(r){ return r.json().then(function(j){ return {status:r.status, j:j}; }); })
-      .then(function(res){ if(res.status!==200){
-        /* ⚠️ the door stays open: the catalogue may be private or gone, but the shop is still there and a
-           buyer with a problem about last week's order has nowhere else to go. supLinkHtml() has no name to
-           show yet; /support/preview supplies it the moment the panel opens. */
-        el('app').innerHTML='<div class="msg">'+esc((res.j&&res.j.message)||'Shop not found or has no public catalogue.')+'</div>'
-          + (BRIDGE ? supLinkHtml() : ''); return; } _SHOPDATA=res.j; if(res.j.shop&&res.j.shop.storefront_access==='login'){ renderLoginGate(res.j.shop); } else { render(res.j); } })
-      .catch(function(e){ el('app').innerHTML='<div class="msg">Could not reach the shop. '+esc(e.message||'')+'</div>'; });
-  });
+  fetch(API+'/api/assist/regions').then(function(r){return r.json();}).then(function(j){ _REGIONS=(j&&j.regions)||[]; if(_REGIONS.length && !_REGIONS.find(function(x){return x.region_code===_REGION;})) _REGION=_REGIONS[0].region_code; }).catch(function(){}).then(shopLoad);
 })();
+/**
+ * ⭐ SEC4 · THE SHOP READ, ONE FUNCTION — on open, and again once the customer has signed in. A sign-in-first shop now answers a
+ * stranger with its card and the code `sign_in.code === 'sign_in_first'` (the server cuts the catalogue; this page used to hide one it
+ * had been handed in full). After the code is verified the read goes again WITH the customer's token (_MYTOK, memory only) and the
+ * server sends the catalogue. The storefront_access test stays only for an api that predates the cut (no code, no token yet).
+ */
+function shopLoad(){
+  var tok = _PREVIEW && _ownerToken() ? _ownerToken() : _MYTOK;
+  return fetch(API+'/api/catalogue/'+encodeURIComponent(BRIDGE)+(_PREVIEW?'?preview=1':''), tok ? { headers: { Authorization: 'Bearer ' + tok } } : undefined).then(function(r){ return r.json().then(function(j){ return {status:r.status, j:j}; }); })
+    .then(function(res){ if(res.status!==200){
+      /* ⚠️ the door stays open: the catalogue may be private or gone, but the shop is still there and a
+         buyer with a problem about last week's order has nowhere else to go. supLinkHtml() has no name to
+         show yet; /support/preview supplies it the moment the panel opens. */
+      el('app').innerHTML='<div class="msg">'+esc((res.j&&res.j.message)||'Shop not found or has no public catalogue.')+'</div>'
+        + (BRIDGE ? supLinkHtml() : ''); return; }
+      _SHOPDATA=res.j;
+      var gated = (res.j.sign_in && res.j.sign_in.code === 'sign_in_first') || (!_MYTOK && res.j.shop && res.j.shop.storefront_access === 'login');
+      if (gated) renderLoginGate(res.j.shop || {}); else { _lg = {}; render(res.j); } })
+    .catch(function(e){ el('app').innerHTML='<div class="msg">Could not reach the shop. '+esc(e.message||'')+'</div>'; });
+}
 </script>
 </body>
 </html>
