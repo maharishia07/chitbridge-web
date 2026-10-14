@@ -10,7 +10,7 @@ Terminal. The real theme control is the avatar.
 | `index.html` | The index page with the Standards door (`?jump=9`), and the Standards page: title row, then the matrix pane beside the list. |
 | `styles.css` | The standard's CSS **unchanged** (top), then this page's additions (marked `STANDARDS PAGE — NEW`), then the proposed kural footer, the same as Ledgers. Tokens only. |
 | `app.js` | `STANDARDS_LIST()` = the CBList declaration · the CBList shell and CBAvatar from the standard · the matrix · the two sheets · the door. |
-| `data.js` | The register in the shape this design proposes. Built from `cap-standards.js` (their words unchanged) plus five new fields per row, and the 17 recent additions. |
+| `data.js` | DERIVED (STDREG1, 14 Oct 2026): builds `STD_PAGE` from the register itself (`public/app/cap-standards.js`, loaded by `index.html`); it holds no rows. The fields this design proposed are register fields now. |
 | `shots/` | 60 screenshots: 10 states × laptop 1366×768 / phone 390×844 × Cream, Dark, Terminal. |
 
 ## The baseline, and what we add

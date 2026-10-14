@@ -70,7 +70,7 @@ var VAULT_SUGGEST = {
 /** a section's suggestions in the shop's own words (FX-QA1): the identity's region and postal code from the pack (packWord, helpers.js) — the TAG stays,
     so a form's pre-fill finds `state` / `pincode` whatever the row is called (an AU shop's "Postcode", a UAE shop's "Emirate") */
 function vaultSuggest(type){
-  var words = { state: packWord('region'), pincode: packWord('postcode') };
+  var words = { state: packWord('region', shopCc()), pincode: packWord('postcode', shopCc()) };
   return (VAULT_SUGGEST[type] || []).map(function(x){ return words[x[1]] ? [words[x[1]], x[1]] : x; });
 }
 /* Hints only where the format cannot be guessed, keyed by TAG rather than position — a row keeps its hint
@@ -93,7 +93,7 @@ function vaultCardHTML(vault, encrypted){
   var secs=(UI._vault&&UI._vault.sections)||[];
   var shown=secs.map(function(s,i){ return [s,i]; }).filter(function(p){ return !only||p[0].type===only; });
   var body=shown.length ? shown.map(function(p){ return vaultSectionHTML(p[0],p[1]); }).join('')
-    : '<div style="color:var(--grey);font-size:var(--fs-2);padding:9px 0" data-testid="vault-empty">' + (only ? esc(txf('Nothing here yet. Add it, then fill in the legal name, address, city, {region} and {postcode}.', { region: tx(packWord('region')).toLowerCase(), postcode: tx(packWord('postcode')) })) : 'Nothing here yet. Add a section below and name the details you actually have — anything we don’t recognise is still saved.') + '</div>';
+    : '<div style="color:var(--grey);font-size:var(--fs-2);padding:9px 0" data-testid="vault-empty">' + (only ? esc(txf('Nothing here yet. Add it, then fill in the legal name, address, city, {region} and {postcode}.', { region: tx(packWord('region', shopCc())).toLowerCase(), postcode: tx(packWord('postcode', shopCc())) })) : 'Nothing here yet. Add a section below and name the details you actually have — anything we don’t recognise is still saved.') + '</div>';
   var addOpts=Object.keys(VAULT_SECTION_TYPES).filter(function(t){ return !only||t===only; }).map(function(t){ return '<option value="'+t+'">'+esc(VAULT_SECTION_TYPES[t])+'</option>'; }).join('');
   if (only) return '<div style="'+_CARD+';margin-top:10px" data-testid="vault-only-'+esc(only)+'"><div class="sec" style="margin:0">'+esc(VAULT_SECTION_TYPES[only]||only)+'</div>'
     +encBanner+body
@@ -227,13 +227,9 @@ async function saveVaultUI(){
  * provide suggestion based on country."* The full (scheme, value) pair needs a column and a country
  * catalogue; until then the label says what it is and where the name comes from, so the field stops
  * asserting that every business on earth is Indian. */
-function shopLicLabel(){
-  try {
-    if (shopReg()) return taxIdWord();   /* FX-QA1: the shop's pack names it (helpers.js packWord); the region table below only for a country with no pack */
-    var r = CBLocale.region && CBLocale.region();
-    return ({ IN:'GSTIN', AE:'TRN', SA:'VAT number', GB:'VAT / company number', DE:'USt-IdNr.', FR:'SIRET', SG:'UEN', US:'EIN' })[r] || 'Licence number';
-  } catch (_) { return 'Licence number'; }
-}
+function shopLicLabel(){ return taxIdWord(shopCc()); }   /* STD2: the pack's word (helpers.js, the one reader); no pack → "Tax number" — the CBLocale region table is gone */
+/** the shop's country as THIS card knows it (CB Settings › Your shop reads /me), else the page's — never written to the global SESSION.country (STD2) */
+function shopCc(){ return (typeof CBShop !== 'undefined' && CBShop.country && CBShop.country()) || ''; }
 /** the three inputs (ids pf_gstn · pf_addr · pf_sup — saveProfile and SHOP_FIELDS read them by id) */
 function shopFieldsHTML(e, licLabel){
   return '<label class="fl">' + esc(licLabel)
@@ -291,7 +287,7 @@ function vaultEnd(){ return (typeof _capEnd === 'function') ? _capEnd() : ''; }
 
 /* ── CB SETTINGS › YOUR SHOP — the page's host mounts the two cards here ───────────────────────────────────────────────────────── */
 var CBShop = (function () {
-  var H = { host: null, me: null, loading: false };
+  var H = { host: null, me: null, loading: false, cc: '' };
   function esc0(v){ return esc(v); }
   function card(title, body, tid){
     return '<section class="shop-card" data-testid="' + tid + '" style="' + _CARD + '"><h2 class="shop-h">' + esc0(title) + '</h2>' + body + '</section>';
@@ -308,9 +304,9 @@ var CBShop = (function () {
     var h = H.host; if (!h) return;
     UI._vaultOnly = 'identity';
     h.innerHTML = card(tx('Your shop'), shopCardHTML(H.me), 'shop-card')
-      + '<p class="sub" data-testid="shop-why">' + esc0(packSplitsByState()
-        ? txf('These go on every bill. A tax invoice names one state: the {id}, the address and the {postcode} must agree.', { id: taxIdWord(), postcode: tx(packWord('postcode')) })
-        : txf('These go on every bill: the {id} and the address.', { id: taxIdWord() })) + '</p>'
+      + '<p class="sub" data-testid="shop-why">' + esc0(packSplitsByState(H.cc)
+        ? txf('These go on every bill. A tax invoice names one state: the {id}, the address and the {postcode} must agree.', { id: taxIdWord(H.cc), postcode: tx(packWord('postcode', H.cc)) })
+        : txf('These go on every bill: the {id} and the address.', { id: taxIdWord(H.cc) })) + '</p>'
       + '<div id="vaulthost" data-testid="shop-identity"></div>';
     var b = document.getElementById('shop-save'); if (b) b.onclick = function () { shopSave(b); };
     loadVault();
@@ -320,10 +316,10 @@ var CBShop = (function () {
     api('me').then(function (r) { H.me = (r && (r.entity || r)) || {}; }, function (e) { H.me = {}; if (e && e.status === 401 && typeof CBFrame !== 'undefined') CBFrame.ended(); })
       .then(function () { H.loading = false; shopCountry(H.me); paint(); });
   }
-  /** the shop's country from /me → SESSION.country, so shopReg() names its pack's words on this page (CX0; settings has no books health to read it from) */
-  function shopCountry(me){ var c = me && (me.country || me.country_code); if (c && typeof SESSION !== 'undefined' && SESSION) SESSION.country = String(c).toUpperCase(); }
+  /** the shop's country from /me, kept on THIS card (STD2: never written to the global SESSION.country) — the words above pass it to helpers.js shopReg(cc) */
+  function shopCountry(me){ var c = me && (me.country || me.country_code); H.cc = c ? String(c).toUpperCase() : ''; }
   function mount(host, o){ H.host = host; H.me = (o && o.me) || null; if (H.me) { shopCountry(H.me); paint(); } else read(); }
-  return { mount: mount, refresh: read, paint: paint };
+  return { mount: mount, refresh: read, paint: paint, country: function () { return H.cc; } };
 })();
 /** Your shop › Save: one press, one PATCH, the outcome said where it happened (M64); the server's refusal in its own words */
 function shopSave(btn){

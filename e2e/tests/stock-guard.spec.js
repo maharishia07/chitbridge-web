@@ -2,6 +2,7 @@
 // a shortfall never refuses — it rides the line as `stock` and the seller's chit shows "short by N". Without a stamp
 // nothing changes. Athi, 2026-09-05: "stock with stamp first".
 const { test, expect } = require('@playwright/test');
+require('../fixtures').needCode(test);   // SEC1: no sign-in code for this target (E2E_TESTER_CODE) → the file SKIPS with a CI warning
 const { mintEntity, addProduct, clickNav, settle } = require('../fixtures');
 const API = process.env.CB_API_BASE || 'https://chitbridge-api-production.up.railway.app';
 
@@ -18,7 +19,7 @@ test('[STK-02] a fresh zero refuses the order line; a shortfall rides the line t
   const order = async (quantity) => {
     const ident = 'stk' + Date.now().toString().slice(-7) + '@example.com';
     const st = await (await request.post(API + '/api/catalogue/' + encodeURIComponent(handle) + '/order/start', { data: { identifier: ident, name: 'Stock Buyer' } })).json();
-    const cf = await request.post(API + '/api/catalogue/' + encodeURIComponent(handle) + '/order/confirm', { data: { identifier: ident, name: 'Stock Buyer', otp: st.dev_otp || '123123', location: 'Chennai', line_items: [{ kind: 'product', item_id: item.item_id, quantity }] } });
+    const cf = await request.post(API + '/api/catalogue/' + encodeURIComponent(handle) + '/order/confirm', { data: { identifier: ident, name: 'Stock Buyer', otp: st.dev_otp || require('../fixtures').signinCode('customer'), location: 'Chennai', line_items: [{ kind: 'product', item_id: item.item_id, quantity }] } });
     return { status: cf.status(), j: await cf.json() };
   };
 

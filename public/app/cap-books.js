@@ -452,8 +452,9 @@ function statementHTML(r, partyId) {
 /* ── the party's own fields, edited where the party is shown ── */
 /* the schemes the server accepts (lib/party-fields.js): a party can carry several tax ids, so the sheet edits a LIST of them */
 var TAX_SCHEMES = ['GSTIN', 'PAN', 'TAN', 'TRN', 'ABN', 'VAT', 'TIN', 'CIN', 'UDYAM'];
-/** CX0: the schemes offered are the shop's PACK's — an Australian shop's parties carry an ABN, a UAE shop's a TRN (reg-au `abn` · reg-ae `trn`); India's own (GSTIN · PAN · TAN · UDYAM · CIN) only under India's pack or none known */
-function bkTaxSchemes(t) { var p = (typeof shopReg === 'function' && shopReg()) || null, list = p && p.abn ? ['ABN', 'TIN', 'VAT'] : p && p.trn ? ['TRN', 'TIN', 'VAT'] : TAX_SCHEMES;
+/** CX0: the schemes offered are the shop's PACK's — an Australian shop's parties carry an ABN, a UAE shop's a TRN; India's own (GSTIN · PAN · TAN · UDYAM · CIN)
+    under India's pack or none known. STD2: the pack's word is helpers.js taxIdWord (the one reader), not a second `p.abn ?` here */
+function bkTaxSchemes(t) { var p = (typeof shopReg === 'function' && shopReg()) || null, w = p ? taxIdWord() : '', list = w && TAX_SCHEMES.indexOf(w) >= 0 && w !== TAX_SCHEMES[0] ? [w, 'TIN', 'VAT'] : TAX_SCHEMES;
   return t && t.scheme && list.indexOf(t.scheme) < 0 ? [t.scheme].concat(list) : list; }
 function partyRowOf(kind, partyId) {
   if (kind === 'supplier') return (UI.sups || []).find(function (s) { return s.supplier_entity_id === partyId; });

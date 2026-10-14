@@ -588,7 +588,7 @@ function _areaExample(){ var pl=_shopPlace(); return (pl.pin||pl.town) ? 'e.g. '
 function shopAboutHtml(s){
   if(!s||(!s.address&&!s.gstn)) return '';
   return '<details class="meta" data-testid="shop-about" style="text-align:center;margin-top:16px;line-height:1.7"><summary style="cursor:pointer;font-weight:700">About the shop</summary>'
-    +(s.address?'<div>📍 '+esc(s.address)+'</div>':'')+(s.gstn?'<div>'+esc(s.tax_id_word||'GSTIN')+' <span style="font-family:ui-monospace,Consolas,monospace">'+esc(s.gstn)+'</span></div>':'')+'</details>';
+    +(s.address?'<div>📍 '+esc(s.address)+'</div>':'')+(s.gstn?'<div>'+esc(s.tax_id_word||'Tax number')+' <span style="font-family:ui-monospace,Consolas,monospace">'+esc(s.gstn)+'</span></div>':'')+'</details>';
 }
 /* The one cart this page holds. Created in productListHtml, released before it is created again. */
 var _CART=null;
@@ -766,7 +766,7 @@ function renderLoginGate(shop){
     +'<div class="card" style="max-width:420px;margin:26px auto"><div class="sg" style="font-weight:800;font-size:16px;margin-bottom:4px">Sign in to view this shop</div>'
     +'<div class="meta" style="margin-bottom:12px">This shop asks customers to sign in first. Enter your phone or email — we\'ll text/email a one-time code.</div>'
     +'<input id="lg_contact" placeholder="9876543210 or you@email.com" '+(otpStep?'disabled':'')+' value="'+esc(_lg.contact||'')+'" '+fld+'>'
-    +(otpStep?'<input id="lg_otp" autocomplete="one-time-code" inputmode="numeric" maxlength="6" placeholder="6-digit code" value="'+esc(_lg.otp||_lg.dev_otp||'')+'" '+fld+'>':'')
+    +(otpStep?'<input id="lg_otp" autocomplete="one-time-code" inputmode="numeric" maxlength="64" placeholder="6-digit code" value="'+esc(_lg.otp||_lg.dev_otp||'')+'" '+fld+'>':'')
     +(_lg.err?'<div style="color:#b4453f;font-size:12.5px;margin-bottom:8px">'+esc(_lg.err)+'</div>':'')
     +(_lg.msg?'<div style="color:#2e7a45;font-size:12.5px;margin-bottom:8px">'+esc(_lg.msg)+'</div>':'')
     +(_lg.busy?'<button disabled style="width:100%;border:0;border-radius:10px;padding:12px;background:#9db4d6;color:#fff;font-weight:700;font-size:14px">⏳ Processing…</button>'
@@ -782,7 +782,7 @@ function sfLoginStart(){
     .catch(function(e){ _lg.busy=false; _lg.err=e.message; renderLoginGate(_SHOPDATA.shop); });
 }
 function sfLoginVerify(){
-  if(_lg.busy)return; _lg.otp=(el('lg_otp').value||'').trim(); if(_lg.otp.length!==6){ _lg.err='Enter the 6-digit code.'; renderLoginGate(_SHOPDATA.shop); return; }
+  if(_lg.busy)return; _lg.otp=(el('lg_otp').value||'').trim(); if(_lg.otp.length<6){ _lg.err='Enter the 6-digit code.'; renderLoginGate(_SHOPDATA.shop); return; }
   _lg.busy=true; _lg.err=null; renderLoginGate(_SHOPDATA.shop);
   fetch(API+'/api/catalogue/'+encodeURIComponent(BRIDGE)+'/login/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({identifier:_lg.contact,otp:_lg.otp})})
     .then(function(r){return r.json().then(function(j){return{status:r.status,j:j};});})
@@ -875,7 +875,7 @@ function supRender(){
   } else {
     body='<div style="font-size:13px;color:#6a707a;margin-bottom:8px">We sent a 6-digit code to '
       + esc(_sup.contact)+'.</div>'
-      + '<input id="sup_otp" data-testid="shop-support-otp" autocomplete="one-time-code" inputmode="numeric" maxlength="6" '
+      + '<input id="sup_otp" data-testid="shop-support-otp" autocomplete="one-time-code" inputmode="numeric" maxlength="64" '
       + 'placeholder="6-digit code" value="'+esc(_sup.otp||'')+'" oninput="supSet(&#39;otp&#39;,this.value)" '+fld+'>'
       + (_sup.dev_otp?'<div style="font-size:11.5px;color:#6a707a;margin-top:6px">Code: <b>'+esc(_sup.dev_otp)+'</b></div>':'');
   }
@@ -931,7 +931,7 @@ function supSendCode(){
 
 function supSubmit(){
   if(!_sup||_sup.busy) return;
-  if((_sup.otp||'').trim().length!==6){ _sup.err='Enter the 6-digit code.'; supRender(); return; }
+  if((_sup.otp||'').trim().length<6){ _sup.err='Enter the 6-digit code.'; supRender(); return; }
   _sup.busy=true; _sup.err=null; supRender();
   fetch(API+'/api/catalogue/'+encodeURIComponent(BRIDGE)+'/support',
         {method:'POST',headers:{'Content-Type':'application/json'},
@@ -1047,7 +1047,7 @@ function _cartStepsFor(){
       }
       if(k==='who'){
         if(!String((_ord&&_ord.contact)||'').trim()) return 'A phone or email — so the shop can reach you.';
-        if(_ord.step==='otp' && String(_ord.otp||'').trim().length!==6) return 'Enter the 6-digit code.';
+        if(_ord.step==='otp' && String(_ord.otp||'').trim().length<6) return 'Enter the 6-digit code.';
       }
       return null;
     },
@@ -1127,7 +1127,7 @@ function _cartStepWho(){
     +'<input id="o_name" data-testid="shop-name" placeholder="optional" value="'+esc(_ord.name||'')+'" oninput="_cartSet(&#39;name&#39;,this.value)" '+fld+'>'
     +'<label style="font-size:12px;color:#6a707a">Phone or email</label>'
     +'<input id="o_contact" data-testid="shop-contact" placeholder="9876543210 or you@email.com" '+(otpStep?'disabled':'')+' value="'+esc(_ord.contact||'')+'" oninput="_cartSet(&#39;contact&#39;,this.value)" '+fld+'>'
-    +(otpStep?('<label style="font-size:12px;color:#6a707a">6-digit code sent to you</label><input id="o_otp" data-testid="shop-otp" inputmode="numeric" autocomplete="one-time-code" maxlength="6" value="'+esc(_ord.otp||_ord.dev_otp||'')+'" oninput="_cartSet(&#39;otp&#39;,this.value)" '+fld+'>'):'')
+    +(otpStep?('<label style="font-size:12px;color:#6a707a">6-digit code sent to you</label><input id="o_otp" data-testid="shop-otp" inputmode="numeric" autocomplete="one-time-code" maxlength="64" value="'+esc(_ord.otp||_ord.dev_otp||'')+'" oninput="_cartSet(&#39;otp&#39;,this.value)" '+fld+'>'):'')
     /* No account, no password. The code IS the identity — the same rail the signed-in app uses, entered once. */
     +'<div class="meta">No account needed. The code confirms it is really you, and your order becomes a record you both hold.</div>'
     +(_ord._err?'<div style="color:#b4453f;font-size:12.5px;margin-top:8px">'+esc(_ord._err)+'</div>':'')
@@ -1195,7 +1195,7 @@ function orderRender(msg, err){
     +'<label style="font-size:12px;color:#6a707a">Your name</label><input id="o_name" data-testid="shop-name" placeholder="optional" value="'+esc(_ord.name||'')+'" '+fld+'>'
     +'<label style="font-size:12px;color:var(--grey-3,#6a707a)">Your area — pincode or city <span style="color:var(--grey,#9aa3a7)">· optional</span></label><input id="o_loc" data-testid="shop-area" placeholder="'+esc(_areaExample())+'" value="'+esc(_ord.loc||'')+'" '+fld+'>'
     +'<label style="font-size:12px;color:#6a707a">Phone or email</label><input id="o_contact" data-testid="shop-contact" placeholder="9876543210 or you@email.com" '+(otpStep?'disabled':'')+' value="'+esc(_ord.contact||'')+'" '+fld+'>'
-    +(otpStep?('<label style="font-size:12px;color:#6a707a">6-digit code sent to you</label><input id="o_otp" data-testid="shop-otp" inputmode="numeric" autocomplete="one-time-code" maxlength="6" value="'+esc(_ord.otp||_ord.dev_otp||'')+'" '+fld+'>'):'')
+    +(otpStep?('<label style="font-size:12px;color:#6a707a">6-digit code sent to you</label><input id="o_otp" data-testid="shop-otp" inputmode="numeric" autocomplete="one-time-code" maxlength="64" value="'+esc(_ord.otp||_ord.dev_otp||'')+'" '+fld+'>'):'')
     +(err?'<div style="color:#b4453f;font-size:12.5px;margin-bottom:8px">'+esc(err)+'</div>':'')
     +(msg?'<div style="color:#2e7a45;font-size:12.5px;margin-bottom:8px">'+esc(msg)+'</div>':'')
     +(_ord.busy?'<button disabled style="width:100%;border:0;border-radius:10px;padding:12px;background:#9db4d6;color:#fff;font-weight:700;font-size:14px">⏳ Processing…</button>'
@@ -1221,7 +1221,7 @@ function orderStart(){
     .catch(function(e){ _ord.busy=false; orderRender(null,(window.CBOffline&&!CBOffline.online())?'You are offline — reconnect to continue. Your details are saved.':(e.message||'Network error')); });
 }
 function orderConfirm(){
-  if(_ord.busy)return; _ocap(); var otp=(_ord.otp||'').trim(); if(otp.length!==6){ orderRender(null,'Enter the 6-digit code.'); return; }
+  if(_ord.busy)return; _ocap(); var otp=(_ord.otp||'').trim(); if(otp.length<6){   /* SEC1: <6, not !==6 — a tester code is 8+ */ orderRender(null,'Enter the 6-digit code.'); return; }
   // A cart is N product lines in ONE order. `kind:'product'` distinguishes them from a finish; the shape and the
   // endpoint are otherwise the same, so the shop reconciles one kind of order however it was placed.
   if(_isCart()){

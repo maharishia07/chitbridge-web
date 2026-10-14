@@ -3,6 +3,7 @@
 // and Show QR; Mark paid THROUGH THE CONTROL records the payment on the seller's copy and the cell reads Paid · UPI · ref.
 // Athi, 2026-09-05: "or QR code and get the payment loop done" → level 1 autonomously.
 const { test, expect } = require('@playwright/test');
+require('../fixtures').needCode(test);   // SEC1: no sign-in code for this target (E2E_TESTER_CODE) → the file SKIPS with a CI warning
 const { mintEntity, addProduct, clickNav, settle, shopAdd } = require('../fixtures');
 const API = process.env.CB_API_BASE || 'https://chitbridge-api-production.up.railway.app';
 
@@ -34,7 +35,7 @@ test('[PAY-01] a UPI QR on the order; the seller marks the chit paid through the
       await shop.getByTestId('shop-contact').fill('pay' + Date.now().toString().slice(-6) + '@example.com');
       const started = shop.waitForResponse((r) => /\/order\/start$/.test(r.url()) && r.request().method() === 'POST', { timeout: 30000 });
       await shop.locator('[data-testid="shop-cart-submit"], [data-testid="shop-send-code"]').first().click(); const sj = await (await started).json().catch(() => ({}));
-      const otpBox = shop.locator('[data-testid="shop-otp"], #o_otp, input[inputmode="numeric"]').first(); await otpBox.waitFor({ timeout: 20000 }); await otpBox.fill(sj.dev_otp || '123123');
+      const otpBox = shop.locator('[data-testid="shop-otp"], #o_otp, input[inputmode="numeric"]').first(); await otpBox.waitFor({ timeout: 20000 }); await otpBox.fill(sj.dev_otp || require('../fixtures').signinCode('customer'));
       const confirmed = shop.waitForResponse((r) => /\/order\/confirm$/.test(r.url()) && r.request().method() === 'POST', { timeout: 45000 });
       await shop.locator('[data-testid="shop-cart-submit"], [data-testid="shop-place-order"]').first().click({ timeout: 20000 });
       const cj = await (await confirmed).json().catch(() => ({})); chitId = cj.chit_id; expect(chitId).toBeTruthy();

@@ -16,9 +16,9 @@ let bad = 0, n = 0;
 const say = (l, ok, d) => { n++; console.log(String(l).padEnd(34) + '· ' + d + '  ' + (ok ? 'OK' : (bad++, '✗ FAILED'))); };
 
 const SHOPS = [
-  { country: 'IN', currency: 'INR', gstin: '33AABCK1234F1Z6', state_code: '33', price: 900, rate: 18 },
-  { country: 'AU', currency: 'AUD', gstin: '51824753556', price: 600, rate: 10 },
-  { country: 'AE', currency: 'AED', gstin: '100123456700003', price: 6000, rate: 5 },
+  { country: 'IN', currency: 'INR', gstin: '33AABCK1234F1Z6', state_code: '33', price: 900, rate: 18, tax_id_word: 'GSTIN' },
+  { country: 'AU', currency: 'AUD', gstin: '51824753556', price: 600, rate: 10, tax_id_word: 'ABN' },
+  { country: 'AE', currency: 'AED', gstin: '100123456700003', price: 6000, rate: 5, tax_id_word: 'TRN' },
 ];
 const VIEWS = [{ w: 1366, h: 900 }, { w: 390, h: 844 }];
 const THEMES = ['light', 'dark'];
@@ -44,7 +44,7 @@ const toHex = (rgb) => { const m = String(rgb).match(/\d+/g); return m ? '#' + m
     await p.waitForFunction(() => typeof window.screenSet === 'function', null, { timeout: 30000 });
     const r = await p.evaluate(({ sh, theme }) => {
       ls.set('cb_till_theme', theme); applyLook();
-      window.S = { shop: { name: 'A shop', currency: sh.currency, country: sh.country, gstin: sh.gstin, state_code: sh.state_code || null, reg_type: 'regular' },
+      window.S = { shop: { name: 'A shop', currency: sh.currency, country: sh.country, gstin: sh.gstin, state_code: sh.state_code || null, reg_type: 'regular', tax_id_word: sh.tax_id_word /* STD2: the server sends the word (profile.taxIdWordOf) */ },
         items: [{ item_id: 'a', name: 'Espresso machine', code: 'A1', category: 'Kit', unit: 'pc', price: sh.price, tax_slab: 'std' }],
         offers: [], slabs: [{ id: 'std', name: 'Standard', rate: sh.rate }], at: new Date().toISOString(), policy: { price_includes_tax: 'yes' } };
       setMode('sell'); paintChips();

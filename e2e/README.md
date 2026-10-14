@@ -4,6 +4,10 @@ Every walk is `NODE_PATH=$PWD/e2e/node_modules node e2e/<walk>.cjs [--real] [--s
 `cd e2e && npm ci && npx playwright install --with-deps chromium`). `--real` runs the local api (`e2e/lib/real-stack.cjs`:
 `../chitbridge-api/server.js` on `CB_REAL_DB`, DEV_OTP `123456`); default is a stand-in answering inside the page.
 
+**Signing in against a DEPLOYED api (SEC1, 2026-10-14):** the fixed codes work on a local stack only. Specs and scripts that sign in
+to a deployed api type env `E2E_TESTER_CODE` (the api's `TESTER_CODE`; in CI the GitHub secret of that name) through
+`e2e/lib/signin-code.cjs` — unset, they SKIP with a `::warning` naming the secret. Never write the code into a file.
+
 ## Testing another country from one PC (GOV-SPIN, 2026-10-14)
 
 A country reaches registration from TWO sides; a walk can set both.

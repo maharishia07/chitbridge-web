@@ -19,7 +19,8 @@ const { test, expect } = require('@playwright/test');
 const { mintEntity } = require('../fixtures');
 
 const API = process.env.CB_API || 'https://chitbridge-api-production.up.railway.app';
-const OTP = process.env.DEV_OTP || '123456';
+const OTP = require('../fixtures').signinCode();   // SEC1: the tester code (E2E_TESTER_CODE) on a deployed api, the local code on a local one
+require('../fixtures').needCode(test);   // no code → the file SKIPS with a CI warning naming the secret
 // The same published shop variants.spec.js uses — a supplier that really has a catalogue to order from.
 const SHOP = { email: 'beta@test-cb.com', name: 'Beta Fresh' };
 /** ⚠️ BETA FRESH IS A SHARED SHOP AND OTHER SPECS TIDY UP AFTER THEMSELVES (variants.spec.js retires the lines it imported), so
