@@ -29,8 +29,8 @@ const LIST = process.argv.includes('--list');
 
 /* ⭐ THE RATCHET — measured 2026-10-14. Before this round (main): NAMES 17 · COPIES 3,528; after: 11 · 201. Lower a number when it goes down; never raise one. */
 const NAMES_MAX = { 'offer-lab-next.html': 0, 'signin-lab.html': 0, 'combo-lab.html': 0, 'lab/combo-mode.js': 0,
-  'conversion-lab.html': 3, 'country-lab.html': 2, 'product-lab.html': 6 };   /* a lab not listed: 0 */
-const COPIES_MAX = 201;
+  'conversion-lab.html': 2, 'country-lab.html': 0, 'product-lab.html': 3 };   /* lowered at INT6b (WEBPRIMS took the private esc/money copies) */   /* a lab not listed: 0 */
+const COPIES_MAX = 184;   /* INT6b: 201 → 184 once a load-only <script src> line stopped counting as a copy */
 
 const read = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
 const DECL = /^(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/;
@@ -75,7 +75,10 @@ say(true, 'names across the labs: ' + namesTotal);
 
 console.log('\n── 2 · COPIES: lines one lab file carries that another lab file also carries ──');
 const L = {}, sets = {};
-for (const f of labFilesForCopies) { L[f] = read(f).split('\n').map((s) => s.trim()).filter((s) => s.length >= 12); sets[f] = new Set(L[f]); }
+/* INT6b: a line that only LOADS a shared file (`<script src="/app/helpers.js"></script>  <!-- … -->`) is the reuse this check asks for, not a
+   copy — T2-WEBPRIMS put the one helpers.js load into every lab and the count rose 201 → 206 with no logic copied */
+const LOAD_ONLY = /^<script\s+src="[^"]+"\s*><\/script>\s*(<!--.*-->)?$/;
+for (const f of labFilesForCopies) { L[f] = read(f).split('\n').map((s) => s.trim()).filter((s) => s.length >= 12 && !LOAD_ONLY.test(s)); sets[f] = new Set(L[f]); }
 let copies = 0; const per = {};
 for (const f of labFilesForCopies) { per[f] = L[f].filter((l) => labFilesForCopies.some((g) => g !== f && sets[g].has(l))).length; copies += per[f]; }
 if (LIST) Object.keys(per).forEach((f) => console.log('        ' + f + ': ' + per[f]));
