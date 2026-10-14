@@ -201,10 +201,11 @@ var CBSettings = (function () {
     return '<span class="sx-act"><button type="button" class="act' + (cls ? ' ' + cls : '') + '" id="' + id + '" data-testid="' + id.replace(/_/g, '-') + '"' + (why ? ' disabled aria-disabled="true" title="' + esc(why) + '"' : '') + '>' + esc(label) + '</button>'
       + (why ? '<span class="sx-why" data-testid="' + id.replace(/_/g, '-') + '-why">' + esc(why) + '</span>' : '') + '</span>';
   }
-  /** one read per list: loading under the kept header, the answer, or could-not-read with Try again */
+  /** one read per list: loading under the kept header, the answer, or could-not-read with Try again. `name` is the EP name, or a function that makes the
+   *  call itself (so a route read nowhere else keeps a literal api('…') the api's endpoint-usage scanner counts — T3-P4-ACCOUNT) */
   function load(key, name, opts, paint) {
     H.data[key] = { state: 'loading', rows: [] }; paint();
-    return api(name, opts || {}).then(function (r) { H.data[key] = { state: 'ok', r: r || {} }; paint(); return r; },
+    return (typeof name === 'function' ? name() : api(name, opts || {})).then(function (r) { H.data[key] = { state: 'ok', r: r || {} }; paint(); return r; },
       function (e) { if (typeof cblog === 'function') cblog('error', 'settings ' + key + ': ' + ((e && e.message) || e)); H.data[key] = { state: 'error', err: e }; paint(); });
   }
   function listState(key) { var d = H.data[key] || {}; return d.state === 'loading' ? 'loading' : d.state === 'error' ? 'error' : null; }
@@ -567,7 +568,7 @@ var CBSettings = (function () {
       $('sx_ses_bar').innerHTML = bar('<span class="sx-count" data-testid="sx-ses-count"><b>' + rows.length + '</b> ' + esc(T(rows.length === 1 ? 'sign-in' : 'sign-ins'))
         + (d.r && d.r.legacy ? ' · <span class="tag amber" data-testid="sx-ses-legacy">' + esc(T('This sign-in is older than the list — sign in again to see it here.')) + '</span>' : '') + '</span>');
     }
-    function readSes() { return load('ses', 'sessionsList', null, function () { paintSesBar(); if (sl) sl.refresh(); paintDevBar(); if (dl) dl.refresh(); }); }
+    function readSes() { return load('ses', function () { return api('sessionsList'); }, null, function () { paintSesBar(); if (sl) sl.refresh(); paintDevBar(); if (dl) dl.refresh(); }); }
     sl = list($('sx_ses_list'), {
       key: 'set-sessions', rows: sesRows, id: function (s) { return s.jti; }, rowTid: function (s) { return 'sx-ses-' + s.jti; },
       state: function () { return listState('ses'); }, error: function () { return listErr('ses'); }, onRetry: function () { readSes(); },
@@ -607,7 +608,7 @@ var CBSettings = (function () {
     function readDev() {
       var m = devMay();
       if (m && m.ok === false) { H.data.dev = { state: 'error', err: { status: 403, message: m.why } }; paintDevBar(); if (dl) dl.refresh(); return Promise.resolve(); }
-      return load('dev', 'devicesList', null, function () { paintDevBar(); if (dl) dl.refresh(); });
+      return load('dev', function () { return api('devicesList'); }, null, function () { paintDevBar(); if (dl) dl.refresh(); });
     }
     function devState(d) { return d.revoked_at ? T('Removed') : Number(d.sessions) > 0 ? T('Signed in') : T('Nobody signed in'); }
     dl = list($('sx_dev_list'), {
