@@ -112,6 +112,7 @@ function regCountryChoice(){
   if (inst && br && br !== inst) h += '<div data-testid="reg-gov-browser">' + esc(txf('Your browser says {c}', { c: regCountryName(br) })) + '</div>';
   if (list.length > 1) {
     h += '<label style="display:block;margin-top:4px">' + esc(tx('Another country')) + ' <select class="inp" data-testid="reg-country" style="width:auto;max-width:100%;display:inline-block;padding:4px 8px" onchange="REG.country=this.value;REG.agreed=false;renderRegister()">'
+      + (REG.country ? '' : '<option value="" selected>' + esc(tx('Pick one')) + '</option>')
       + list.map(function (c) { return '<option value="' + esc(c.code) + '"' + (c.code === REG.country ? ' selected' : '') + '>' + esc(c.name || c.code) + '</option>'; }).join('')
       + '</select></label>';
   } else if (inst && br && br !== inst) {
