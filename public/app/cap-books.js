@@ -1688,10 +1688,16 @@ function bkDuesCols(c) {
   var dash = '<span style="color:var(--grey)">—</span>', amt = function (p, v) { return esc(bkMoney(Math.abs(Number(v || 0)), c)); };   /* the group head says whose it is (You owe / They owe you) — an amount here is never signed */
   return [
     { key: 'party', label: tx('Party'), prio: 1, sort: 'party', w: 230, html: true, cell: function (p) { return esc(bkPartyLabel(p.party_id, p.name)); } },
-    { key: 'due', label: tx('Total due'), prio: 2, sort: 'due', num: true, w: 130, html: true, cell: function (p) { return '<b data-b="balance">' + amt(p, p.balance_minor) + '</b>' + (bkDuesAdvance(p) ? ' <span data-b="advance" style="color:var(--grey)">· ' + esc(tx('advance paid — they owe you')) + '</span>' : ''); } },
+    { key: 'due', label: tx('Total due'), prio: 2, sort: 'due', num: true, w: 130, html: true, cell: function (p) { return '<b data-b="balance">' + amt(p, p.balance_minor) + '</b>' + bkDuesForeign(p) + (bkDuesAdvance(p) ? ' <span data-b="advance" style="color:var(--grey)">· ' + esc(tx('advance paid — they owe you')) + '</span>' : ''); } },
     { key: 'oldest', label: tx('Oldest due'), prio: 3, sort: 'oldest', w: 220, html: true, cell: function (p) { var ag = bkDuesAge(p); return p.oldest_due ? '<span data-b="due">' + esc(bkDate(p.oldest_due)) + '</span>' + (ag ? ' <span data-b="age" style="color:var(--grey)">· ' + esc(tx(ag)) + '</span>' : '') : dash; } },
     { key: 'act', label: ' ', prio: 1, pin: 'end', w: 170, html: true, cell: function (p) { return bkDuesActs(p); } },
   ];
+}
+/** FX1: a party's foreign balance beside the books' figure — "USD 1,000 · ₹83,250" (the server's `foreign[]`, after b392; nothing for a party with none) */
+function bkDuesForeign(p) {
+  return (p.foreign || []).filter(function (f) { return Number(f.balance_minor); }).map(function (f) {
+    return ' <span data-b="foreign" data-testid="dues-fx-' + esc(p.party_id) + '-' + esc(f.currency) + '" style="color:var(--grey)">· ' + esc(bkMoney(Math.abs(Number(f.balance_minor)), f.currency)) + '</span>';
+  }).join('');
 }
 /** the oldest age bucket the party has money in — the server's own buckets (Schedule III), in the words of BK_BUCKETS */
 function bkDuesAge(p) {
@@ -1846,6 +1852,7 @@ async function bkLockView(body) {
   body.innerHTML = '<div style="display:flex;flex-direction:column;gap:8px;max-width:420px">'
     + '<label>' + tx('Financial year') + bkFyPicker('lk_fy', 'lk_fy', 'width:100%') + '</label>'
     + '<div id="lk_rows" data-testid="lk_rows"></div>'
+    + '<div id="lk_fx"></div>'   /* FX1 (cap-fx.js): the foreign balances of the month to lock next — revalue, then lock */
     + '<div id="lk_foot" data-testid="lk_note" style="color:var(--grey);font-size:var(--fs-1)"></div>'
     + '<div id="lk_out" data-testid="lk_out" style="font-size:var(--fs-1)"></div></div>';
   bkLockRowsPaint();
@@ -1857,6 +1864,7 @@ async function bkLockView(body) {
  */
 function bkLockRowsPaint() {
   var el = document.getElementById('lk_rows'), L = BK.lk, own = bkIsOwner(); if (!el) return;
+  if (typeof fxLockLine === 'function') fxLockLine();
   var reopens = bkMonths().some(function (m, i) { var q = (L.info || {})[L.fy + '|' + (i + 1)]; return q && q.reopen && q.reopen.may; });
   var foot = document.getElementById('lk_foot'), whyBox = document.getElementById('lk_whybox');
   if (own && reopens && !whyBox && foot) foot.insertAdjacentHTML('beforebegin', '<label id="lk_whybox">' + tx('Reason') + '<input class="inp" id="lk_why" data-testid="lk_why" placeholder="' + esc(tx('Needed to open a month again')) + '"></label>');
