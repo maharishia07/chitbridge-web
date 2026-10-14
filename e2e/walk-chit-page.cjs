@@ -21,7 +21,7 @@ const SHOP = 'Fixture Shop', TODAY = new Date().toISOString().slice(0, 10);
 
 /* the frozen invoice the counter determined - the one money engine, run once here, so the page's figures have a reference to the paisa */
 const eng = {}; eng.window = eng; eng.self = eng; vm.createContext(eng);
-for (const f of ['engine/money.js', 'app/tax.js']) vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), eng);
+for (const f of ['engine/money.js', 'engine/tax.js']) vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), eng);
 const LINES = [{ name: 'Rice 5kg', unit: 'piece', qty: 2, unit_price: 97.16, discount: 10, gst_rate: 12 }, { name: 'Soap', unit: 'piece', qty: 3, unit_price: 98.7, discount: 0, gst_rate: 18 },
   { name: 'Oil 1L', unit: 'piece', qty: 1, unit_price: 89.48, discount: 5.25, gst_rate: 12 }, { name: 'Tea', unit: 'piece', qty: 2, unit_price: 54.8, discount: 0, gst_rate: 18 }];
 const INV = eng.CBTax.determine({ seller: { Gstin: '33AAAAA0000A1Z5', State: '33', LglNm: SHOP }, buyer: { LglNm: 'Walk-in', State: '', Pos: '33' }, lines: LINES, priceIncludesTax: true });

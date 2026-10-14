@@ -31,7 +31,7 @@ const BREAKS = [
   ['the redirect drops the view', APP, `var v=view||((typeof BK!=="undefined"&&BK&&BK.tab)||"");`, `var v="";`],
   ['no Bills door in the app menu', APP, `["intake","📨","Intake"],["bills","🧾","Bills"],`, `["intake","📨","Intake"],`],
   ['CB Accounts does not load the sheet', ACCOUNTS, `<script src="/app/chit-sheet.js"></script>`, ``],
-  ['CB Accounts does not load tax.js', ACCOUNTS, `<script src="/app/tax.js"></script>`, ``],
+  ['CB Accounts does not load tax.js', ACCOUNTS, `<script src="/engine/tax.js"></script>`, ``],
   ['a Bills row opens a new tab, not the sheet', ACCOUNTS, `if (bill) openChitSheet(bill.dataset.id);`, `if (bill) openChit(bill.dataset.id);`],
   ['Bills shows the handle, not the name', ACCOUNTS, `\${by ? ' · ' + esc(by) : ''}`, `\${b.by ? ' · ' + esc(b.by) : ''}`],
   ['GST rate rows dropped', SHEET, `+ linesHTML(m) + gstHTML(m) + totalHTML(m)`, `+ linesHTML(m) + totalHTML(m)`],

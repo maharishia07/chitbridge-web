@@ -75,7 +75,7 @@ function csuCurrencies(country) {
   if (CSU.p) add(CSU.p.currency);
   return out;
 }
-/** the registered pack of a country (CBRegulation, app/tax.js) — its scheme word, currency and year start; null when the page has no registry */
+/** the registered pack of a country (CBRegulation, engine/tax.js) — its scheme word, currency and year start; null when the page has no registry */
 function csuPack(code) { try { return (window.CBRegulation && code && CBRegulation.packFor(String(code).toUpperCase())) || null; } catch (_) { return null; } }
 /** the scheme's own word for the tax row: GST · GST · VAT (pack.tax.scheme); 'Tax' when no pack says */
 function csuScheme(code) { var p = csuPack(code); return (p && p.tax && p.tax.scheme) || tx('Tax'); }
