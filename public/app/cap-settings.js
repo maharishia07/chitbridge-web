@@ -130,10 +130,11 @@ var CBSettings = (function () {
     return '<span class="sx-act"><button type="button" class="act' + (cls ? ' ' + cls : '') + '" id="' + id + '" data-testid="' + id.replace(/_/g, '-') + '"' + (why ? ' disabled aria-disabled="true" title="' + esc(why) + '"' : '') + '>' + esc(label) + '</button>'
       + (why ? '<span class="sx-why" data-testid="' + id.replace(/_/g, '-') + '-why">' + esc(why) + '</span>' : '') + '</span>';
   }
-  /** one read per list: loading under the kept header, the answer, or could-not-read with Try again */
+  /** one read per list: loading under the kept header, the answer, or could-not-read with Try again. `name` is the EP name, or a function that makes the
+   *  call itself (so a route read nowhere else keeps a literal api('…') the api's endpoint-usage scanner counts — T3-P4-ACCOUNT) */
   function load(key, name, opts, paint) {
     H.data[key] = { state: 'loading', rows: [] }; paint();
-    return api(name, opts || {}).then(function (r) { H.data[key] = { state: 'ok', r: r || {} }; paint(); return r; },
+    return (typeof name === 'function' ? name() : api(name, opts || {})).then(function (r) { H.data[key] = { state: 'ok', r: r || {} }; paint(); return r; },
       function (e) { if (typeof cblog === 'function') cblog('error', 'settings ' + key + ': ' + ((e && e.message) || e)); H.data[key] = { state: 'error', err: e }; paint(); });
   }
   function listState(key) { var d = H.data[key] || {}; return d.state === 'loading' ? 'loading' : d.state === 'error' ? 'error' : null; }
@@ -472,7 +473,120 @@ var CBSettings = (function () {
     paintHead(); paintUse(); readEnt(); readUse();
   }
 
-  var PAINT = { counters: counters, connectors: connectors, policy: policy, plan: plan };
+  /* ═════ ACCOUNT (T3-P4-ACCOUNT) — Sessions (GET /signin/sessions · the owner's devices) · API keys (a door to the one list) · Vault (cap-shop.js's card, every section) ═════ */
+  var SURFACE_WORDS = { till: 'Counter', index: 'Home', app: 'Workshop', web: 'Web', settings: 'CB Settings', finance: 'CB Finance', accounts: 'CB Accounts', crm: 'CB CRM', tasks: 'CB Tasks & Orders', shop: 'Online shop', kyb: 'Know your business', employees: 'CB Employees', network: 'Network' };
+  var CURRENT_WHY = 'This is the device you are on. Use Sign out in the menu.';
+  function account() {
+    frame(['<h1 class="sx-h" data-testid="sx-title">' + esc(T('Account')) + '</h1>',
+      '<p class="sub">' + esc(T('Where you are signed in. Sign one out if a device is lost or shared.')) + '</p>',
+      '<div id="sx_ses_bar"></div>', lineOut('sx_ses_out'), '<div class="sx-list" id="sx_ses_list" data-testid="sx-ses-list"></div>',
+      '<h2 class="sx-h2">' + esc(T('Every device of the shop')) + '</h2>', '<div id="sx_dev_bar"></div>', lineOut('sx_dev_out'), '<div class="sx-list" id="sx_dev_list" data-testid="sx-dev-list"></div>',
+      '<h2 class="sx-h2">' + esc(T('Keys for other systems')) + '</h2>', '<div id="sx_keys_card" data-testid="sx-keys-card"></div>',
+      '<h2 class="sx-h2">' + esc(T('Vault')) + '</h2>',
+      '<p class="sub">' + esc(T('Identity, signatory, bank and licences — kept once, they fill every form for an authority')) + ' · <a class="sx-link" href="/authority-forms.html" data-testid="sx-vault-forms">' + esc(T('Forms for an authority')) + ' ›</a></p>',
+      '<div id="vaulthost" data-testid="sx-vault"></div>']);
+    var sl = null, dl = null;
+    var sesRows = function () { var d = H.data.ses; return (d && d.r && d.r.sessions) || []; };
+    var devMay = function () { var d = H.data.ses; return (d && d.r && d.r.may && d.r.may.devices) || null; };
+    var devRows = function () { var d = H.data.dev; return (d && d.r && d.r.devices) || []; };
+    function surface(s) { return T(SURFACE_WORDS[s] || s || 'Web'); }
+    function deviceOf(s) { var d = s.device || {}; return d.label || (d.kind === 'till' ? T('Counter phone or PC') : T('A browser')); }
+    function sinceOf(s) { return s.iat ? when(new Date(Number(s.iat) * 1000).toISOString()) : ''; }
+    function untilOf(s) { return s.exp ? day(new Date(Number(s.exp) * 1000).toISOString()) : ''; }
+    function paintSesBar() {
+      var d = H.data.ses || {}, rows = sesRows();
+      $('sx_ses_bar').innerHTML = bar('<span class="sx-count" data-testid="sx-ses-count"><b>' + rows.length + '</b> ' + esc(T(rows.length === 1 ? 'sign-in' : 'sign-ins'))
+        + (d.r && d.r.legacy ? ' · <span class="tag amber" data-testid="sx-ses-legacy">' + esc(T('This sign-in is older than the list — sign in again to see it here.')) + '</span>' : '') + '</span>');
+    }
+    function readSes() { return load('ses', function () { return api('sessionsList'); }, null, function () { paintSesBar(); if (sl) sl.refresh(); paintDevBar(); if (dl) dl.refresh(); }); }
+    sl = list($('sx_ses_list'), {
+      key: 'set-sessions', rows: sesRows, id: function (s) { return s.jti; }, rowTid: function (s) { return 'sx-ses-' + s.jti; },
+      state: function () { return listState('ses'); }, error: function () { return listErr('ses'); }, onRetry: function () { readSes(); },
+      empty: { title: T('No listed sign-in'), sub: T('Sign in again and this device is listed here.') },
+      columns: [
+        { key: 'device', label: T('Device'), prio: 1, w: 220, html: true, value: deviceOf,
+          cell: function (s) { return '<b>' + esc(deviceOf(s)) + '</b>' + (s.current ? ' <span class="tag green" data-testid="sx-ses-current-' + esc(s.jti) + '">' + esc(T('This one')) + '</span>' : ''); } },
+        { key: 'where', label: T('Where'), prio: 2, w: 150, cell: function (s) { return surface(s.surface); } },
+        { key: 'since', label: T('Signed in'), prio: 3, w: 170, sort: 'since', cell: sinceOf, value: function (s) { return Number(s.iat) || 0; } },
+        { key: 'until', label: T('Ends'), prio: 4, w: 130, cell: untilOf },
+      ],
+      sorts: [{ key: 'since', label: T('Signed in'), cmp: function (a, b) { return (Number(b.iat) || 0) - (Number(a.iat) || 0); } }],
+      search: function (s) { return [deviceOf(s), surface(s.surface), s.device_id].join(' '); },
+      filters: [{ key: 'kind', label: T('Kind'), all: T('All'), options: [{ v: 'till', label: T('Counter') }, { v: 'web', label: T('Browser') }],
+        match: function (s, v) { var k = (s.device && s.device.kind) || 'web'; return v === 'till' ? k === 'till' : k !== 'till'; } }],
+      next: function (s) {
+        var d = s.device || {};
+        return '<div class="sx-next" data-testid="sx-ses-next-' + esc(s.jti) + '"><div class="mono sub">' + esc(s.device_id || '') + '</div>'
+          + (d.seen ? '<div class="sub">' + esc(T('Last seen') + ' ' + _keyAgo(d.seen)) + '</div>' : '')
+          + (s.current ? '<div class="sub">' + esc(T(CURRENT_WHY)) + '</div>' : '') + '</div>';
+      },
+      actions: [{ id: 'signout', label: T('Sign out this device'), tid: 'sx-ses-signout', why: function (s) { return s.current ? T(CURRENT_WHY) : ''; },
+        run: function (s) {
+          CBAction.run(btnOf('signout', s.jti), function () { return api('sessionRevoke', { body: { jti: s.jti } }); },
+            { key: 'sx-ses-signout-' + s.jti, confirm: { title: T('Sign out') + ' ' + deviceOf(s) + '?', body: esc(T('That device is signed out now. Nothing on it is lost.')), yes: T('Sign out'), danger: true },
+              failed: T('Could not sign it out'), out: 'sx_ses_out', outcome: function () { $('sx_ses_out').textContent = T('Signed out.'); readSes(); } });
+        } }],
+    });
+
+    /* every device of the shop — the owner's list (GET /signin/devices); anyone else sees it greyed with the server's sentence (may.devices), never hidden */
+    function paintDevBar() {
+      var m = devMay(), rows = devRows(), live = rows.filter(function (d) { return !d.revoked_at && Number(d.sessions) > 0; }).length;
+      $('sx_dev_bar').innerHTML = bar('<span class="sx-count" data-testid="sx-dev-count">' + (m && m.ok === false
+        ? '<span class="sx-why" data-testid="sx-dev-why">' + esc(m.why || T('Not allowed for this sign-in.')) + '</span>'
+        : '<b>' + rows.length + '</b> ' + esc(T(rows.length === 1 ? 'device' : 'devices')) + ' · <b>' + live + '</b> ' + esc(T('signed in now'))) + '</span>');
+    }
+    function readDev() {
+      var m = devMay();
+      if (m && m.ok === false) { H.data.dev = { state: 'error', err: { status: 403, message: m.why } }; paintDevBar(); if (dl) dl.refresh(); return Promise.resolve(); }
+      return load('dev', function () { return api('devicesList'); }, null, function () { paintDevBar(); if (dl) dl.refresh(); });
+    }
+    function devState(d) { return d.revoked_at ? T('Removed') : Number(d.sessions) > 0 ? T('Signed in') : T('Nobody signed in'); }
+    dl = list($('sx_dev_list'), {
+      key: 'set-devices', rows: devRows, id: function (d) { return d.device_id; }, rowTid: function (d) { return 'sx-dev-' + d.device_id; },
+      state: function () { return listState('dev'); }, error: function () { return listErr('dev'); }, onRetry: function () { readDev(); },
+      empty: { title: T('No device listed yet'), sub: T('A device is listed the first time someone signs in on it.') },
+      columns: [
+        { key: 'id', label: T('Device'), prio: 1, w: 220, html: true, value: function (d) { return d.label || d.device_id; }, cell: function (d) { return '<b>' + esc(d.label || (d.kind === 'till' ? T('Counter phone or PC') : T('A browser'))) + '</b> <span class="mono sub">' + esc(String(d.device_id || '').slice(0, 12)) + '</span>'; } },
+        { key: 'state', label: T('Now'), prio: 2, w: 170, html: true, value: devState,
+          cell: function (d) { var on = !d.revoked_at && Number(d.sessions) > 0; return '<span class="tag' + (d.revoked_at ? '' : on ? ' green' : ' amber') + '" data-testid="sx-dev-state-' + esc(d.device_id) + '">' + esc(devState(d)) + (on ? ' · ' + d.sessions : '') + '</span>'; } },
+        { key: 'seen', label: T('Last seen'), prio: 3, w: 150, sort: 'seen', cell: function (d) { return d.seen ? _keyAgo(d.seen) : T('Never'); }, value: function (d) { return d.seen ? new Date(d.seen).getTime() : 0; } },
+        { key: 'first', label: T('First seen'), prio: 4, w: 150, cell: function (d) { return day(d.first_seen); } },
+      ],
+      sorts: [{ key: 'seen', label: T('Last seen'), cmp: function (a, b) { return (b.seen ? new Date(b.seen).getTime() : 0) - (a.seen ? new Date(a.seen).getTime() : 0); } }],
+      search: function (d) { return [d.label, d.device_id, d.kind, d.till_prefix].join(' '); },
+      filters: [{ key: 'st', label: T('State'), all: T('All'), options: [{ v: 'on', label: T('Signed in') }, { v: 'off', label: T('Nobody signed in') }, { v: 'gone', label: T('Removed') }],
+        match: function (d, v) { return v === 'gone' ? !!d.revoked_at : v === 'on' ? !d.revoked_at && Number(d.sessions) > 0 : !d.revoked_at && !(Number(d.sessions) > 0); } }],
+      next: function (d) {
+        return '<div class="sx-next" data-testid="sx-dev-next-' + esc(d.device_id) + '"><div class="mono sub">' + esc(d.device_id || '') + '</div>'
+          + (d.till_prefix ? '<div class="sub">' + esc(T('Bills as') + ' ' + d.till_prefix) + '</div>' : '')
+          + (d.revoked_at ? '<div class="sub">' + esc(T('Removed') + ' ' + when(d.revoked_at)) + '</div>' : '<div class="sub">' + esc(T('Removing a device signs out everyone on it; it may not sign in again.')) + '</div>') + '</div>';
+      },
+      actions: [{ id: 'remove', label: T('Remove this device'), tid: 'sx-dev-remove', when: function (d) { return !d.revoked_at; }, why: function () { return grey(devMay()); },
+        run: function (d) {
+          CBAction.run(btnOf('remove', d.device_id), function () { return api('sessionRevoke', { body: { device_id: d.device_id } }); },
+            { key: 'sx-dev-remove-' + d.device_id, confirm: { title: T('Remove this device?'), body: esc(T('Everyone on it is signed out now, and it cannot sign in again. Bills it has not sent stay on it.')), yes: T('Remove'), danger: true },
+              failed: T('Could not remove it'), out: 'sx_dev_out', outcome: function () { $('sx_dev_out').textContent = T('Device removed.'); readDev(); readSes(); } });
+        } }],
+    });
+    paintSesBar(); paintDevBar(); readSes().then(readDev);
+
+    /* keys for other systems: the ONE list lives under Counters & keys (T3-SETTINGS) — here the count from the same read, and the door; never a second list or minting */
+    function paintKeys() {
+      var d = H.data.keys || {}, keys = (d.r && d.r.keys) || [], latest = keys.slice().sort(function (a, b) { return _keySeenAt(b) - _keySeenAt(a); })[0];
+      $('sx_keys_card').innerHTML = '<div class="sx-card">' + (d.state === 'loading' ? '<div class="loadwrap"><span class="spin"></span> ' + esc(T('Reading your keys…')) + '</div>'
+        : d.state === 'error' ? '<div class="err" data-testid="sx-keys-err">' + esc(listErr('keys').title) + '</div>'
+        : '<div class="sx-big" data-testid="sx-keys-count">' + keys.length + ' ' + esc(T(keys.length === 1 ? 'key' : 'keys')) + '</div>'
+          + '<p class="sub" data-testid="sx-keys-last">' + esc(latest && latest.seen && latest.seen.at ? T('Last heard') + ': ' + (latest.name || 'key') + ' · ' + _keyAgo(latest.seen.at) : keys.length ? T('None has reached ChitBridge yet.') : T('A key lets another system or a counter PC sign in as your shop.')) + '</p>')
+        + '<a class="sx-link" href="/settings.html#/counters" data-testid="sx-keys-door">' + esc(T('Make, see or revoke a key')) + ' ›</a></div>';
+    }
+    load('keys', 'keysList', null, paintKeys);
+
+    /* the vault: the workshop's own card (cap-shop.js), every section type here — Your shop shows the identity rows only */
+    UI._vaultOnly = '';
+    loadVault();
+  }
+
+  var PAINT = { counters: counters, connectors: connectors, policy: policy, plan: plan, account: account };
   function mount(host, sec) {
     H.lists.forEach(function (l) { try { l.destroy(); } catch (e) { if (typeof cblog === 'function') cblog('error', 'settings list teardown: ' + ((e && e.message) || e)); } });
     H.lists = []; H.data = {}; H.host = host; H.sec = sec;

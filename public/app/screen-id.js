@@ -37,7 +37,7 @@
         ['BKS019', 'gstclose', 'GST close & pay'], ['BKS020', 'yearclose', 'Year close'], ['BKS021', 'packs', 'Packs'], ['BKS022', 'opening', 'Opening balances'],
         ['BKS023', 'accounts', 'Shop ledgers'], ['BKS024', 'movein', 'Move in'], ['BKS025', 'rates', 'Rates']] },
       { app: 'finance', name: 'CB Finance', page: '/finance.html', hash: true, rows: [
-        ['FIN001', 'collections', 'Collections'], ['FIN002', 'payables', 'Payables'], ['FIN003', 'cash', 'Cash'], ['FIN004', 'terms', 'Terms'], ['FIN005', 'repeat', 'Repeat supply'], ['FIN006', 'cheques', 'Cheques'], ['FIN007', 'returns', 'Returns']] },   /* FIN006–007: T3-P1-MONEY */
+        ['FIN001', 'collections', 'Collections'], ['FIN002', 'payables', 'Payables'], ['FIN003', 'cash', 'Cash'], ['FIN004', 'terms', 'Terms'], ['FIN005', 'repeat', 'Repeat supply'], ['FIN006', 'cheques', 'Cheques'], ['FIN007', 'returns', 'Returns'], ['FIN008', 'reports', 'Reports']] },   /* FIN006–007: T3-P1-MONEY · FIN008: T3-P4-ACCOUNT */
       { app: 'crm', name: 'CB CRM', page: '/crm.html', hash: true, rows: [
         ['CRM001', 'parties', 'Parties'], ['CRM002', 'chits', 'Chits'], ['CRM003', 'followups', 'Follow-ups'], ['CRM004', 'leads', 'Leads', 'Parties › Leads'],
         ['CRM005', 'calls', 'Calls', 'Parties › Calls'], ['CRM006', 'party', 'Party', 'Parties › a party'], ['CRM007', 'chit', 'Chit page', 'a sheet › Open page'],
@@ -47,7 +47,7 @@
       { app: 'settings', name: 'Settings', page: '/settings.html', hash: true, rows: [
         ['SET001', 'shop', 'Your shop'], ['SET002', 'country', 'Country'], ['SET003', 'new', 'New shop', 'the sign-in window › New shop? Register'],
         /* T3-SETTINGS (INT6c): the four CB Settings sections */
-        ['SET004', 'counters', 'Counters & keys'], ['SET005', 'connectors', 'Connectors'], ['SET006', 'policy', 'Policy'], ['SET007', 'plan', 'Plan & usage']] },
+        ['SET004', 'counters', 'Counters & keys'], ['SET005', 'connectors', 'Connectors'], ['SET006', 'policy', 'Policy'], ['SET007', 'plan', 'Plan & usage'], ['SET008', 'account', 'Account']] },   /* SET008: T3-P4-ACCOUNT */
       /* T3-OPS (INT6c): CB Operations — Stock + Suppliers */
       { app: 'operations', name: 'CB Operations', page: '/operations.html', hash: true, rows: [['OPS001', 'stock', 'Stock'], ['OPS002', 'suppliers', 'Suppliers']] },
       { app: 'employees', name: 'CB Employees', page: '/employees.html', rows: [['EMP001', 'people', 'People']] },

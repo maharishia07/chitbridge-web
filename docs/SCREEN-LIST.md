@@ -41,6 +41,7 @@ Register: `public/app/screen-id.js` (declared rows, merged into `CBSCREENS`) + `
 | FIN005 | Repeat supply | CB Finance | /finance.html | /finance.html#/repeat · CB Finance › Repeat supply |
 | FIN006 | Cheques | CB Finance | /finance.html | /finance.html#/cheques · CB Finance › Cheques |
 | FIN007 | Returns | CB Finance | /finance.html | /finance.html#/returns · CB Finance › Returns |
+| FIN008 | Reports | CB Finance | /finance.html | /finance.html#/reports · CB Finance › Reports |
 | CRM001 | Parties | CB CRM | /crm.html | /crm.html#/parties · CB CRM › Parties |
 | CRM002 | Chits | CB CRM | /crm.html | /crm.html#/chits · CB CRM › Chits |
 | CRM003 | Follow-ups | CB CRM | /crm.html | /crm.html#/followups · CB CRM › Follow-ups |
@@ -62,6 +63,7 @@ Register: `public/app/screen-id.js` (declared rows, merged into `CBSCREENS`) + `
 | SET005 | Connectors | Settings | /settings.html | /settings.html#/connectors · Settings › Connectors |
 | SET006 | Policy | Settings | /settings.html | /settings.html#/policy · Settings › Policy |
 | SET007 | Plan & usage | Settings | /settings.html | /settings.html#/plan · Settings › Plan & usage |
+| SET008 | Account | Settings | /settings.html | /settings.html#/account · Settings › Account |
 | OPS001 | Stock | CB Operations | /operations.html | /operations.html#/stock · CB Operations › Stock |
 | OPS002 | Suppliers | CB Operations | /operations.html | /operations.html#/suppliers · CB Operations › Suppliers |
 | EMP001 | People | CB Employees | /employees.html | /employees.html · CB Employees › People |

@@ -20,10 +20,10 @@ var FT_EP = {
 Object.assign(EP, FT_EP);
 var FT_NOT_YET = 'Terms arrive after the next update.';
 
-function finTab() { return /^#\/terms/.test(location.hash) ? 'terms' : /^#\/cash/.test(location.hash) ? 'cash' : /^#\/payables/.test(location.hash) ? 'pay' : /^#\/repeat/.test(location.hash) ? 'repeat' : /^#\/cheques/.test(location.hash) ? 'cheques' : /^#\/returns/.test(location.hash) ? 'returns' : 'collect'; }   /* cash: F3 (cap-finance-cash.js) · pay: F4 (cap-finance-pay.js) · repeat: RI1 (cap-repeat.js) · cheques · returns: T3-P1-MONEY (cap-finance-cheques.js · cap-finance-returns.js) */
+function finTab() { return /^#\/terms/.test(location.hash) ? 'terms' : /^#\/cash/.test(location.hash) ? 'cash' : /^#\/payables/.test(location.hash) ? 'pay' : /^#\/repeat/.test(location.hash) ? 'repeat' : /^#\/cheques/.test(location.hash) ? 'cheques' : /^#\/returns/.test(location.hash) ? 'returns' : /^#\/reports/.test(location.hash) ? 'reports' : 'collect'; }   /* cash: F3 (cap-finance-cash.js) · pay: F4 (cap-finance-pay.js) · repeat: RI1 (cap-repeat.js) · cheques · returns: T3-P1-MONEY (cap-finance-cheques.js · cap-finance-returns.js) */
 function ftNav() {
   var t = finTab();
-  [['collect', 'fin-nav-collections'], ['pay', 'fin-nav-payables'], ['cheques', 'fin-nav-cheques'], ['cash', 'fin-nav-cash'], ['terms', 'fin-nav-terms'], ['repeat', 'fin-nav-repeat'], ['returns', 'fin-nav-returns']].forEach(function (x) {
+  [['collect', 'fin-nav-collections'], ['pay', 'fin-nav-payables'], ['cheques', 'fin-nav-cheques'], ['cash', 'fin-nav-cash'], ['terms', 'fin-nav-terms'], ['repeat', 'fin-nav-repeat'], ['returns', 'fin-nav-returns'], ['reports', 'fin-nav-reports']].forEach(function (x) {
     var a = document.querySelector('[data-testid="' + x[1] + '"]'); if (!a) return;
     a.classList.toggle('active', x[0] === t); if (x[0] === t) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
     /* the tab's word through the catalogue (INT4: the walk-locale ratchet counts a hard-wired label); the page's English is kept as the key */

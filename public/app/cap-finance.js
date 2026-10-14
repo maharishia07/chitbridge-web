@@ -25,6 +25,7 @@ async function finLoad(quiet) {
   if (finTab() === 'pay') return fpLoad(quiet);     /* the Payables tab (cap-finance-pay.js, F4) */
   if (finTab() === 'cheques') return fqLoad(quiet); /* the Cheques tab (cap-finance-cheques.js, T3-P1-MONEY) */
   if (finTab() === 'returns') return frLoad(quiet); /* the Returns tab (cap-finance-returns.js, T3-P1-MONEY) */
+  if (finTab() === 'reports') return fmLoad(quiet); /* the Reports tab (cap-mis.js, T3-P4-ACCOUNT) */
   var g = ++FIN.gen;
   if (!quiet) { FIN.state = 'loading'; if (FIN.api) FIN.api.refresh(); }
   try {
@@ -116,6 +117,7 @@ function finMount(frame) {
   if (finTab() === 'pay') return fpMount(frame);     /* the Payables tab (cap-finance-pay.js, F4) */
   if (finTab() === 'cheques') return fqMount(frame); /* the Cheques tab (cap-finance-cheques.js, T3-P1-MONEY) */
   if (finTab() === 'returns') return frMount(frame); /* the Returns tab (cap-finance-returns.js, T3-P1-MONEY) */
+  if (finTab() === 'reports') return fmMount(frame); /* the Reports tab (cap-mis.js, T3-P4-ACCOUNT) */
   ftNav();
   s.className = 'screen flush';
   s.innerHTML = '<div id="fin_list" data-testid="fin-list" style="flex:1 1 auto;min-height:0"></div>';
