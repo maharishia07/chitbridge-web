@@ -39,6 +39,8 @@ function chitPageHref(id){ return CB_HOMES.chit + encodeURIComponent(id); }
 /* ── the Ledger's boot endpoints ── */
 var CB_BOOKS_EP = {
   booksHealth:     {m:"GET",  p:"/api/books/health",                      ok:"y"},   // 404 = the Ledger is off for this shop → the door stays hidden
+  /* ⭐ T3-P1-MONEY: read by BOTH the workshop's Tax band (cap-admin.js misTaxExport) and CB Finance › Returns (cap-finance-returns.js) — one name, one place */
+  taxGstr:         {m:"GET",  p:"/api/tax/gstr",                          ok:"✓"},   // ?month=YYYY-MM&form=gstr1|gstr3b → the offline-tool JSON (tax-lines gstr1 · gstr3b), downloaded by helpers.js gstrDownload
   booksStatus:     {m:"GET",  p:"/api/books/status",                      ok:"y"},   // owner: { migrated, enabled, walkin_grain } — answers while off
   booksEnable:     {m:"POST", p:"/api/books/enable",                      ok:"y"},   // owner: the switch (Settings › Your business › Ledger)
   booksSetting:    {m:"POST", p:"/api/books/setting",                     ok:"y"},   // owner: { enabled:false } switches it off; nothing deleted
@@ -59,6 +61,8 @@ var CB_PARTY_EP = {
   /* ⭐ read by BOTH CB CRM and CB Finance — one name, one place (the registry guard fails a second declaration) */
   crmParties:      {m:"GET",  p:"/api/crm/parties",                        ok:"y"},   // { parties:[…], alerts:{…} } — one read, no per-row fetch; terms.customer per party
   booksTerms:      {m:"GET",  p:"/api/books/terms",                        ok:"y"},   // ?party_id&side → { terms_migrated, may_set, why_not, default, party, events } — CB Finance sets, CRM reads
+  /* ⭐ T3-P1-MONEY: written by BOTH CB CRM (the follow-up sheet) and CB Finance › Cheques (Remind me = a follow-up due on the cheque's date) — one name, one place */
+  crmFollowAdd:    {m:"POST", p:"/api/crm/followups",                      ok:"y"},   // { party_id, what, due_at, source: manual|dues|interaction, assignee_user_id? } → 201 { followup }
 };
 
 /* ── the shop's OWN particulars — what the workshop's Profile · Country setup AND CB Settings (settings.html, SET1 2026-10-13) read and write.

@@ -1980,7 +1980,7 @@ const EP = {
   /* TAX — read before MIS is ever opened (a chit view, a spec): the core table, not cap-admin's lazy one. routes/tax.js, reads only. */
   taxLedger:       {m:"GET",   p:"/api/tax/ledger",              ok:"✓"},
   taxInvoice:      {m:"GET",   p:"/api/tax/invoice/:id",         ok:"✓"},
-  taxGstr:         {m:"GET",   p:"/api/tax/gstr",                ok:"✓"},
+  /* taxGstr → CB_BOOKS_EP (app/accounts-shell.js, T3-P1-MONEY): CB Finance › Returns downloads the same files */
   /* PUBLISH ON A DATE — a parked change with an effective time (lib/schedule.js; dark until b203 runs) */
   prodSchedule:    {m:"POST",  p:"/api/products/:id/schedule",   ok:"✓"},
   prodScheduled:   {m:"GET",   p:"/api/products/:id/schedule",   ok:"✓"},

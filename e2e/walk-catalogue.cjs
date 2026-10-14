@@ -18,7 +18,8 @@
 const W = require('./lib/walk.cjs');
 const { rule13 } = require('./lib/rule13.cjs');
 const REAL = process.argv.includes('--real');
-const J = (r, status, body) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+const C = require('./lib/contract.cjs');   /* M43: every answer for a route in the API contract is held to it (the facts family: /api/facts/product-lab) */
+const J = C.json;
 
 /* ── the fixture shop: 130 items (so the server pages), 3 categories, one declared column ── */
 const CATS = [

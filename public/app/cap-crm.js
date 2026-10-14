@@ -22,7 +22,7 @@ var CRM_EP = {
   crmTimeline:   { m: 'GET',    p: '/api/crm/parties/:id/timeline',        ok: 'y' },   // ?kind=&q=&before= — server-paged, 50 a page
   crmLog:        { m: 'POST',   p: '/api/crm/parties/:id/interactions',    ok: 'y' },   // 503 "not migrated yet" before b276
   crmFollowups:  { m: 'GET',    p: '/api/crm/followups',                   ok: 'y' },   // ?scope=mine|all&done=0|1
-  crmFollowAdd:  { m: 'POST',   p: '/api/crm/followups',                   ok: 'y' },
+  /* crmFollowAdd → CB_PARTY_EP (app/accounts-shell.js, T3-P1-MONEY): CB Finance › Cheques files a follow-up through the same row */
   crmFollowSet:  { m: 'PATCH',  p: '/api/crm/followups/:id',               ok: 'y' },   // { done:true } · { due_at } · { assignee_user_id }
   crmFollowDel:  { m: 'DELETE', p: '/api/crm/followups/:id',               ok: 'y' },
   crmWalkIn:     { m: 'POST',   p: '/api/crm/walk-ins/add',               ok: 'y' },   // { phone, name? } → 201 { party, points_claimed }: a phone that holds points becomes a local customer
