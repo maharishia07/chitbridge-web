@@ -306,13 +306,13 @@
           "chit": "the first bill: txn_count > 0 ends the lead (isLead); a traded party refuses a stage move — counted for a bill SENT to the party (the recipient auto-add) and for a counter bill that NAMES them in business_json.customer (lib/crm.traded, inside the bill's transaction — FX-L2C)", "ledger": "none here — the bill posts under O2C step 7",
           "test": ["api:tests/crm-maytrade.test.cjs", "api:tests/crm-remove-walkin.test.cjs", "api:tests/customer-by-name.test.cjs"],
           "status": "ok", "note": "" },
-        { "n": 6, "step": "consent & privacy requests", "module": "CRM", "who": "the shop's staff note consent; the owner answers a request",
-          "screen": [],
-          "engine": [{ "file": "api:lib/privacy.js", "fn": "mayMessage" }, { "file": "api:lib/privacy.js", "fn": "notePref" }, { "file": "api:lib/privacy.js", "fn": "logRequest" }, { "file": "api:lib/privacy.js", "fn": "answerRequest" }, { "file": "api:lib/privacy.js", "fn": "facts" }],
-          "route": [{ "m": "GET", "p": "/api/crm/parties/:id/contact-prefs", "file": "api:routes/crm.js" }, { "m": "POST", "p": "/api/crm/parties/:id/contact-prefs", "file": "api:routes/crm.js" }, { "m": "GET", "p": "/api/crm/privacy-requests", "file": "api:routes/crm.js" }, { "m": "POST", "p": "/api/crm/privacy-requests", "file": "api:routes/crm.js" }, { "m": "POST", "p": "/api/crm/privacy-requests/:id/answer", "file": "api:routes/crm.js" }, { "m": "GET", "p": "/api/privacy/facts", "file": "api:routes/privacy.js" }],
+        { "n": 6, "step": "consent & privacy requests", "module": "CRM", "who": "the shop's staff note consent (the record's Consent block); the shopper says yes/no and asks for a copy or erasure on the storefront; the owner answers a request",
+          "screen": [{ "file": "web:public/app/cap-crm-privacy.js", "fn": "crmConsentHTML" }, { "file": "web:public/app/cap-crm-privacy.js", "fn": "crmPrivacy" }, { "file": "web:public/app/shop-privacy.js", "fn": "" }],
+          "engine": [{ "file": "api:lib/privacy.js", "fn": "mayMessage" }, { "file": "api:lib/privacy.js", "fn": "gate" }, { "file": "api:lib/privacy.js", "fn": "notePref" }, { "file": "api:lib/privacy.js", "fn": "logRequest" }, { "file": "api:lib/privacy.js", "fn": "answerRequest" }, { "file": "api:lib/privacy.js", "fn": "lawOf" }, { "file": "api:lib/privacy.js", "fn": "shopper" }, { "file": "api:lib/privacy.js", "fn": "facts" }],
+          "route": [{ "m": "GET", "p": "/api/crm/parties/:id/contact-prefs", "file": "api:routes/crm.js" }, { "m": "POST", "p": "/api/crm/parties/:id/contact-prefs", "file": "api:routes/crm.js" }, { "m": "GET", "p": "/api/crm/privacy-requests", "file": "api:routes/crm.js" }, { "m": "POST", "p": "/api/crm/privacy-requests", "file": "api:routes/crm.js" }, { "m": "POST", "p": "/api/crm/privacy-requests/:id/answer", "file": "api:routes/crm.js" }, { "m": "GET", "p": "/api/privacy/facts", "file": "api:routes/privacy.js" }, { "m": "GET", "p": "/api/privacy/me", "file": "api:routes/privacy.js" }, { "m": "POST", "p": "/api/privacy/me/consent", "file": "api:routes/privacy.js" }, { "m": "POST", "p": "/api/privacy/me/requests", "file": "api:routes/privacy.js" }],
           "chit": "none", "ledger": "none",
-          "test": ["api:tests/privacy.test.cjs"],
-          "status": "warn", "note": "CO1: built and tested in the api; no screen yet, and migrations b306 / b307 are drafts the owner runs (docs/compliance/OWNER-ACTIONS.md)." }
+          "test": ["api:tests/privacy.test.cjs", "api:tests/consent-senders.test.cjs", "web:e2e/walk-consent.cjs"],
+          "status": "warn", "note": "T3-P3-CONSENT (14 Oct): screens built — CRM record › Consent, #/privacy register, the storefront's Privacy sheet; every provider send asks lib/privacy.gate (consent-senders guard). Still warn: migrations b306 / b307 are drafts the owner runs (docs/compliance/OWNER-ACTIONS.md)." }
       ]
     },
     {
