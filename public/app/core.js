@@ -124,7 +124,7 @@ function unwrap(j, _key){
    * `groups` join it for a different reason — they ARE read, but only because supCatalogueFull() bypasses this
    * function entirely to keep them. Carrying them here is what would let that bypass be retired.
    */
-  var SIBS = ["total","page","limit","truncated","count","offset","status_counts","open","counts",
+  var SIBS = ["total","page","limit","next","truncated","count","offset","status_counts","open","counts",   /* next: PERF1 — a keyset list's cursor (chits inbox/sent, books pages) */
               "category_counts","uncategorised","actor_health","actor_last_seen",
               "migrated","supplier","groups","project"];
   for(const mk of SIBS) if(mk in j){ try{ Object.defineProperty(a, mk, {value:j[mk], enumerable:false, configurable:true, writable:true}); }catch(_){ a[mk]=j[mk]; } }
