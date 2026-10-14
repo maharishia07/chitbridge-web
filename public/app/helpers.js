@@ -26,7 +26,7 @@ function scrErr(e, subject, retry){
 }
 
 function cap(s){ return s[0].toUpperCase()+s.slice(1); }
-/* ⭐ CX0 (2026-10-13): THE SHOP'S PACK, ON EVERY PAGE — the registered pack of the shop's country (CBRegulation, bundled in app/tax.js). One reader; a screen
+/* ⭐ CX0 (2026-10-13): THE SHOP'S PACK, ON EVERY PAGE — the registered pack of the shop's country (CBRegulation, bundled in engine/tax.js). One reader; a screen
    that needs the pack's word asks here, never a second `if (country === 'IN')`. `cc` (STD2): a screen that holds the shop's country itself passes it
    (CB Settings › Your shop, from /me) instead of writing the global SESSION.country. null = no registry on the page or no country known. */
 function shopReg(cc){ try { var c = cc || (typeof SESSION !== 'undefined' && SESSION && SESSION.country) || ''; return (window.CBRegulation && c && CBRegulation.packFor(String(c).toUpperCase())) || null; } catch (_) { return null; } }

@@ -1,6 +1,6 @@
 {
- "source": "scripts/country-ready.cjs — public/data/country-matrix.json (engines 1.44.1) × docs/design/standards/COUNTRY-COVERAGE.md §1; never edit by hand",
- "engines": "1.44.1",
+ "source": "scripts/country-ready.cjs — public/data/country-matrix.json (engines 1.45.0) × docs/design/standards/COUNTRY-COVERAGE.md §1; never edit by hand",
+ "engines": "1.45.0",
  "coverage": {
   "sha": "3285629301a7daa6"
  },
@@ -10,8 +10,8 @@
     "name": "India · GST",
     "version": "1.0.0",
     "verified": true,
-    "ok": 74,
-    "of": 94
+    "ok": 75,
+    "of": 95
    },
    "areas": [
     {
@@ -125,8 +125,8 @@
     "name": "Australia · GST",
     "version": "1.0.0",
     "verified": false,
-    "ok": 80,
-    "of": 93
+    "ok": 81,
+    "of": 94
    },
    "areas": [
     {
@@ -240,8 +240,8 @@
     "name": "United Arab Emirates · VAT",
     "version": "1.0.0",
     "verified": false,
-    "ok": 82,
-    "of": 97
+    "ok": 83,
+    "of": 98
    },
    "areas": [
     {
