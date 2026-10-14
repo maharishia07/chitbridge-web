@@ -75,7 +75,9 @@ async function run(site, o) {
   const route = (r) => {
     const u = new URL(r.request().url()), p = u.pathname, m = r.request().method();
     if (p === '/api/entities/me' && m === 'GET') return J(r, 200, { entity: { display_name: 'Books Shop', currency_code: 'INR', ui_prefs: S.ui } });
-    if (p === '/api/entities/me/prefs/ui' && m === 'PATCH') { try { S.patches.push(JSON.parse(r.request().postData() || '{}')); } catch (_) {} return J(r, 200, { ok: true }); }
+    /* the server MERGES what it is sent (RFC 7386, api routes/entities.js savePrefSet; '' / null = removed) and /me reads it back — since FX-UX2 (F9)
+       the server's ui_prefs is the truth, so a stand-in that answered ok:true and forgot the choice would reset the device on the next page */
+    if (p === '/api/entities/me/prefs/ui' && m === 'PATCH') { try { const bd = JSON.parse(r.request().postData() || '{}'); S.patches.push(bd); Object.keys(bd).forEach((k) => { if (bd[k] == null || bd[k] === '') delete S.ui[k]; else S.ui[k] = bd[k]; }); } catch (_) {} return J(r, 200, { ok: true }); }
     return booksRoute(S, r);
   };
   const SESSION_INIT = (role) => {
