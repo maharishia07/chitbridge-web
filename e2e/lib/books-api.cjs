@@ -61,7 +61,9 @@ Object.assign(module.exports, { entry, lockAnswer, source, posted, ledger, asset
 
 /* ── the reads of the books ── */
 /** one post waiting for the owner (lib/books-hooks waitingRow) */
-const waitingRow = (o) => only({ id: 1, chit_id: null, ref: null, reason: 'Waiting', tries: 0, since: '2026-10-03T05:00:00.000Z', job: 'chit', source: { chit_id: null, ref: null, kind: 'chit', counter: null, by: null } }, o);
+/* FX-F10W: `todo` is the server's reading of the row's sentence (books-hooks todoOf) — the stand-in reads it the same way unless the harness says; `candidates` [] unless given */
+const todoOf = (why) => (/^Waiting for you to confirm/.test(String(why || '')) ? 'accept' : /^Who is .+\? Add them as a supplier/.test(String(why || '')) ? 'add_supplier' : 'record');
+const waitingRow = (o) => only({ id: 1, chit_id: null, ref: null, reason: 'Waiting', tries: 0, since: '2026-10-03T05:00:00.000Z', job: 'chit', todo: todoOf(o && o.reason), candidates: [], source: { chit_id: null, ref: null, kind: 'chit', counter: null, by: null } }, o);
 /** GET /api/books/trial-balance */
 const trialBalance = (rows, o) => { const r = (rows || []).map((x) => Object.assign({ group: 'group' }, x)); const dr = r.reduce((t, x) => t + (x.dr_minor || 0), 0), cr = r.reduce((t, x) => t + (x.cr_minor || 0), 0);
   return Object.assign({ currency: 'INR', asOf: DAY, rows: r, total_dr_minor: dr, total_cr_minor: cr, balanced: dr === cr }, o || {}); };

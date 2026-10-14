@@ -27,10 +27,11 @@
 (function (root) {
   'use strict';
 
-  var CS = { id: null, chit: null, view: null, busy: false, mode: 'dialog', el: null, page: null };
+  var CS = { id: null, chit: null, view: null, busy: false, mode: 'dialog', el: null, page: null, answered: {} };   /* answered: chit id → the step a status move made here was answered with (FX-F10W) */
 
   function E(v) { return typeof esc === 'function' ? esc(v) : String(v == null ? '' : v).replace(/[<>"&]/g, function (c) { return { '<': '&lt;', '>': '&gt;', '"': '&quot;', '&': '&amp;' }[c]; }); }
   function T(s) { return typeof tx === 'function' ? tx(s) : s; }
+  function tf(s, v) { if (typeof txf === 'function') return txf(s, v); return String(s).replace(/\{(\w+)\}/g, function (_, k) { return v && v[k] != null ? v[k] : ''; }); }
   function money(n, cur) {
     if (n == null || n === '' || isNaN(Number(n))) return '—';
     try { return fmtMoney(Number(n), cur || 'INR'); } catch (_) { return String(n); }
@@ -66,7 +67,9 @@
     var agreement = !!(bj.repeat && bj.repeat.agreement_id);   /* RI1: a repeat-supply agreement (purpose subscription) — its verbs are its own panel's */
     return {
       agreement: agreement,
-      id: h.chit_id || (r && r.id) || null, status: billRx && !captured ? billStepStatus(log) : String(h.current_status || h.status || 'pending'), purpose: purpose, cur: cur,
+      /* FX-F10W: a captured receipt IS a bill (folder-inventory bill_received), so its step is MY bill_step too (routes/chits.js writes it there);
+         the header's status is the sent copy's and never moves — read alone, Accept stayed "To accept" after the server said accepted */
+      id: h.chit_id || (r && r.id) || null, status: billRx ? billStepStatus(log, captured ? String(h.current_status || h.status || 'pending') : null) : String(h.current_status || h.status || 'pending'), purpose: purpose, cur: cur,
       iSent: iSent, counterBill: counterBill, billRx: billRx, captured: captured, hasOther: (!iSent) || others.length > 0, hasLines: live.length > 0,
       isTask: !counterBill && !billRx,
       no: captured ? String(tb.no).trim() : (bill || h.manual_subject || h.auto_subject || ''), at: bj.billed_at || h.created_at,
@@ -104,8 +107,9 @@
   }
   /* ⭐ A BILL I RECEIVED has its own step per shop: since the API's "bills-private" it is a `bill_step` row in the chit's
      state_log (code B-2100, step 'accepted', mine:true) — NOT the shared status, which is the seller's. The latest of mine wins. */
-  function billStepStatus(log) {
+  function billStepStatus(log, none) {
     var mine = (log || []).filter(function (x) { return x && x.action === 'bill_step' && x.mine && (!x.code || x.code === 'B-2100'); });
+    if (!mine.length && none) return none;   /* no step of mine yet: the caller's own reading (a captured receipt's status) */
     var step = mine.length ? mine[mine.length - 1].step : '';
     return step === 'accepted' ? 'accepted' : step === 'closed' ? 'completed' : 'pending';
   }
@@ -151,7 +155,8 @@
     var w = list.filter(function (x) { return x && x.chit_id === m.id; })[0], why = w ? String(w.reason || w.why || '') : '';
     if (!why || /^Waiting for you to confirm/.test(why)) return null;
     var who = /^Who is (.+)\? Add them as a supplier/.exec(why);
-    return { why: why, name: who ? who[1] : null };
+    /* FX-F10W: the shop's near matches (the server's candidates) — asked before a second party is added */
+    return { why: why, name: who ? who[1] : null, cands: who && Array.isArray(w.candidates) ? w.candidates.slice(0, 3) : [] };
   }
   function actsOf(m) { var a = actionsFor(m), said = serverSaid(m); if (said && said.name) a.splice(Math.max(0, a.length - 1), 0, 'supplier'); return a; }
   var ACT = {
@@ -291,6 +296,9 @@
       + orderHTML(m) + linesHTML(m) + (m.purpose === 'order' && !(m.money && m.money.by_rate) ? '' : gstHTML(m)) + totalHTML(m) + tenderHTML(m)
       + (m.agreement ? (root.CBRepeat ? root.CBRepeat.panelHTML() : '<div class="cs-sec">' + E(T('Repeat supply')) + '</div><div class="cs-mute" data-testid="rp-panel">' + E(T('Reading…')) + '</div>') : '')
       + (serverSaid(m) ? '<div class="cs-note" data-testid="cs-why">' + E(serverSaid(m).why) + '</div>' : '')
+      + (serverSaid(m) && serverSaid(m).cands.length ? '<div class="cs-use" data-testid="cs-pick">' + serverSaid(m).cands.map(function (c, j) {
+          return '<button type="button" class="optchip" data-testid="cs-link-' + j + '" onclick="CBSheet.link(' + j + ')"' + (CS.busy ? ' disabled' : '') + '>'
+            + E(c.party_no ? tf('Is this {name} ({no})?', { name: c.name, no: c.party_no }) : tf('Is this {name}?', { name: c.name })) + '</button>'; }).join('') + '</div>' : '')
       + (CS.note ? '<div class="cs-note" data-testid="cs-note">' + E(CS.note) + '</div>' : '')
       + (CS.useAsk ? '<div class="cs-use" data-testid="cs-use">' + billUseChoiceHTML([m], 'CBSheet.use')
         + '<button type="button" class="optchip" data-testid="cs-use-auto" onclick="CBSheet.use(\'\')">' + E(T('Let my catalogue decide')) + '</button></div>' : '')
@@ -359,7 +367,10 @@
   async function read(id) {
     var r = await api('chit', { params: { id: id } });
     if (CS.id !== id) return;
-    CS.chit = r; CS.view = model(r); CS.err = null; paint();
+    CS.chit = r; CS.view = model(r); CS.err = null;
+    /* the server's own answer to a move made here wins over a read that still shows the step it left (move) */
+    var a = CS.answered[id]; if (a && /^(pending|delivered|read)$/.test(CS.view.status) && !/^(pending|delivered|read)$/.test(a)) CS.view.status = a;
+    paint();
   }
   async function open(id) {
     if (!id) return;
@@ -385,10 +396,15 @@
       var word = typeof statusWordFor === 'function' ? statusWordFor(to, { billRx: m.billRx }) : ({ open: 'pending', act: m.billRx ? 'accepted' : 'in_progress', close: 'completed' })[to];
       var sr = await api('status', { params: { id: id }, body: { status: word } });
       if (sr && sr.warning && typeof toast === 'function') toast(sr.warning);
+      /* ⭐ FX-F10W: THE ANSWER IS THE STEP — "pending → accepted" (new_status), or "Already accepted" (a noop's status). The sheet paints it
+         now and keeps it over a read that has not caught up, so a second tap is never offered for what the server already did. */
+      var now = sr && (sr.new_status || (sr.noop && sr.status)) || null;
+      if (now) CS.answered[id] = String(now);
       try { var i = (UI.rows || []).findIndex(function (x) { return x.id === id; }); if (i >= 0) UI.rows[i].state = to; } catch (_) {}
       await read(id);
-      /* the Day book's to-do and Waiting count are the server's: read them again, and repaint the tab that is showing them */
-      try { if (typeof bkHealthLoad === 'function') bkHealthLoad().then(function () { if (typeof BK !== 'undefined' && BK.tab && typeof bkTab === 'function') bkTab(BK.tab, true); }).catch(function () {}); } catch (_) {}
+      /* the Waiting row leaves at once (bkWaitGone — the row flipped, no reload); the Day book's to-do is the server's: read again behind it */
+      try { if (now && /^(accepted|in_progress|completed)$/.test(now) && typeof root.bkWaitGone === 'function') root.bkWaitGone(id); } catch (_) {}
+      try { if (typeof bkHealthLoad === 'function') bkHealthLoad().then(function () { if (typeof BK !== 'undefined' && BK.tab && BK.tab !== 'waiting' && typeof bkTab === 'function') bkTab(BK.tab, true); }).catch(function () {}); } catch (_) {}
     } catch (e) { CS.note = (typeof MSG !== 'undefined' && MSG.fail) ? MSG.fail('change status', e) : T('Could not change it'); }
     CS.busy = false; paint();
   }
@@ -416,6 +432,14 @@
     if (k === 'page') { close(); var pg = typeof openChitPage === 'function' ? openChitPage : openChit; if (typeof pg === 'function') pg(id); }
   }
 
-  root.CBSheet = { orderHTML: orderHTML, moneyFor: moneyFor, moneyBlockHTML: moneyBlockHTML, open: open, close: close, mount: mount, act: act, use: function (u) { return move('act', u); }, actionsFor: actionsFor, model: model, titleFor: titleFor, stepWord: function (m) { return T(STEP[m.status] || m.status); } };
+  /* FX-F10W: "Is this Sri Ganesh Provisions (P-00001)?" — the same link the Waiting row makes (cap-books bkLinkSupplier), then the sheet reads again */
+  function link(j) {
+    var m = CS.view, id = CS.id, said = serverSaid(m), c = said && said.cands[j]; if (!c || CS.busy) return;
+    if (typeof root.bkLinkSupplier !== 'function') { CS.note = T('Add them on the Suppliers page.'); return paint(); }
+    CS.busy = true; paint();
+    return root.bkLinkSupplier(id, c).then(function (err) { CS.busy = false; CS.note = err || null; return read(id); }).catch(function () { CS.busy = false; paint(); });
+  }
+
+  root.CBSheet = { link: link, orderHTML: orderHTML, moneyFor: moneyFor, moneyBlockHTML: moneyBlockHTML, open: open, close: close, mount: mount, act: act, use: function (u) { return move('act', u); }, actionsFor: actionsFor, model: model, titleFor: titleFor, stepWord: function (m) { return T(STEP[m.status] || m.status); } };
   root.openChitSheet = open;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -165,8 +165,15 @@ function booksAlert(){
   var g = GEN;
   return read('/api/books/health').then(function(r){
     if (g !== GEN) return;
-    var w = ((r && r.waiting) || []).length;
-    if (w) alert_('ledger-waiting', 'warn', '🕗', w + ' waiting for the ledger', '', 'See them', '/accounts.html#waiting');
+    /* FX-F10W: the same counts as Books' To do — each waiting row's `todo` (the server's one reading, books-hooks todoOf), each kind with its
+       own words and door, never "2 waiting for the ledger". An older server sends no `todo`: its rows are said as one line, as before. */
+    var rows = (r && r.waiting) || [], n = { accept: 0, add_supplier: 0, record: 0 };
+    rows.forEach(function(w){ n[w && n.hasOwnProperty(w.todo) ? w.todo : 'record']++; });
+    var pl = function(k, one, many){ return n[k] + ' ' + (n[k] === 1 ? one : many); };
+    ['ledger-accept', 'ledger-supplier', 'ledger-waiting'].forEach(alertDrop);
+    if (n.accept) alert_('ledger-accept', 'warn', '🕗', pl('accept', 'supplier bill to accept', 'supplier bills to accept'), '', 'Open the bills', '/accounts.html#waiting');
+    if (n.add_supplier) alert_('ledger-supplier', 'warn', '＋', pl('add_supplier', 'supplier to add', 'suppliers to add'), '', 'Add them', '/accounts.html#waiting');
+    if (n.record) alert_('ledger-waiting', 'warn', '🕗', n.record + ' waiting to be recorded', '', 'See them', '/accounts.html#waiting');
   }).catch(function(e){
     if (g !== GEN || !e || e.status !== 422 || !e.data) return;
     if (/^(COUNTRY_SETUP_PENDING|NO_COUNTRY)$/.test(String(e.data.code || '')) && (e.data.message || e.data.error))
