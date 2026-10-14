@@ -513,7 +513,7 @@ async function submitResolve(chitId, disputeId, partyId){
   function room(d) {
     var box = $('dp_room_' + d.dispute_id); if (!box || !root.CBThread) return;
     SH.threads[d.dispute_id] = root.CBThread.mount(box, { chit_id: SH.id, dispute_id: d.dispute_id, channel: 'external', readOnly: d.status !== 'open', party: withWord(d),
-      context: { host: 'tasks-dispute' }, decorate: typeof disputeByline === 'function' ? function (x) { return disputeByline(x.message_text || x.body || ''); } : undefined });
+      context: { host: 'tasks-dispute' }, decorate: typeof disputeByline === 'function' ? disputeByline : undefined });   /* CBThread hands decorate the message TEXT */
   }
   function raiseAsk() { SH.raising = true; sheetPaint(); var r = $('dp_reason'); if (r) { r.focus(); if (r.scrollIntoView) r.scrollIntoView({ block: 'center' }); } }
   function changed() { return sheetRead().then(function () { if (DP.el && root.document.body.contains(DP.el)) return listLoad(); }); }
