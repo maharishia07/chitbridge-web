@@ -164,3 +164,21 @@ function monthNames(form){
 }
 
 function jwtPayload(t){ try{ const p=String(t||"").split('.')[1]; if(!p) return null; return JSON.parse(atob(p.replace(/-/g,'+').replace(/_/g,'/'))); }catch(_){ return null; } }
+
+/* ── lifted from app.html (T3-SETTINGS, 2026-10-14): the settings modules (cap-counters · cap-connectors · cap-policy · cap-locale) call these on CB Settings too — one copy ── */
+function lsGet(k,def){try{const v=localStorage.getItem(k);return v==null?def:v;}catch(e){return def;}}
+function lsSet(k,v){try{localStorage.setItem(k,v);}catch(e){}}
+function fmtDateTime(x){ try{ return CBLocale.datetime(x,{ day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }); }catch(_){ return String(x); } }
+function specNote(key, html){
+  if (typeof CBSPEC !== 'undefined') CBSPEC[key] = html;          /* the workshop's spec register */
+  if (typeof specOn !== 'function' || !specOn()) return '';         /* spec mode is the workshop's; a page without it paints no note */
+  return '<div class="specnote" data-spec="' + esc(key) + '">'
+    + '<span class="speck">' + esc(key) + '</span>' + html + '</div>';
+}
+function pendingNote(why){
+  return '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;'
+    + 'padding:8px 11px;font-size:var(--fs-1);color:var(--warn-3)">⏳ <b>' + tx('Pending') + '</b>'
+    + (why ? ' — ' + esc(why) : '') + '</div>';
+}
+/** may this session edit the shop's own particulars — the owner's session, not a co-assist's (SESSION.actorId). Was cap-admin.js's; cap-locale.js asks it too. */
+function profCanEdit(){ return !(typeof SESSION !== 'undefined' && SESSION && SESSION.actorId); }

@@ -16,6 +16,7 @@
 'use strict';
 const W = require('./lib/walk.cjs');
 const { measure } = require('./lib/theme-measure.cjs');
+const R13 = require('./lib/rule13.cjs');
 const J = (r, status, body) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
 
 const walk = async (w) => {
@@ -97,53 +98,8 @@ const walk = async (w) => {
     return { ok, saw: 'AU "' + au.lic.split(' ')[0] + '" · "' + au.why.trim() + '" · ' + au.sug.split(',').slice(4, 6) + ' | AE "' + ae.lic.split(' ')[0] + '" · ' + ae.sug.split(',').slice(4, 6) + ' | IN "' + ind.lic.split(' ')[0] + '" · "' + ind.why.trim() + '"' };
   });
 
-  /* ── RULE 13: two themes × two widths × two sections ── */
-  const audit = () => page.evaluate(() => {
-    const host = document.getElementById('set'), out = { clip: [], frameClip: [], scroll: [], cover: [], app: [], budget: [] };
-    const vis = (el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(el).visibility !== 'hidden'; };
-    document.querySelectorAll('body *').forEach((el) => {
-      if (!vis(el) || el.closest('#cb-avatar,#toast,script,style')) return;
-      const cs = getComputedStyle(el), hasText = [...el.childNodes].some((n) => n.nodeType === 3 && n.nodeValue.trim());
-      if (/auto|scroll/.test(cs.overflowX) && el.scrollWidth > el.clientWidth + 1 && el !== document.documentElement && el !== document.body) out.scroll.push(el.tagName + '.' + el.className + ' ' + el.scrollWidth + '>' + el.clientWidth);
-      if (hasText && (cs.textOverflow === 'ellipsis' || /hidden|clip/.test(cs.overflowX)) && el.scrollWidth > el.clientWidth + 1) (host.contains(el) ? out.clip : out.frameClip).push(el.textContent.trim().slice(0, 40));
-      const href = (el.getAttribute('href') || '') + ' ' + (el.getAttribute('onclick') || '');
-      if (/app\.html/.test(href)) out.app.push(el.outerHTML.slice(0, 80));
-    });
-    if (document.documentElement.scrollWidth > window.innerWidth + 1) out.scroll.push('page ' + document.documentElement.scrollWidth + '>' + window.innerWidth);
-    /* a fixed/sticky control over content: the centre of every control in the pane must hit the control itself */
-    host.querySelectorAll('button,input,select,textarea,a').forEach((c) => {
-      if (!vis(c)) return; c.scrollIntoView({ block: 'center' }); const r = c.getBoundingClientRect();
-      const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-      if (hit && hit !== c && !c.contains(hit) && !hit.contains(c) && !hit.closest('#toast')) out.cover.push((c.dataset.testid || c.id || c.tagName) + ' under ' + (hit.id || hit.className || hit.tagName));
-    });
-    host.querySelectorAll('p,.hint,.sub,.err').forEach((n) => {
-      const t = n.textContent.replace(/\s+/g, ' ').trim(); if (!t) return;
-      const sentences = t.split(/[.!?](\s|$)/).filter((s) => s && s.trim()).length;
-      if (t.length > 140 || sentences > 2) out.budget.push(t.length + ' chars / ' + sentences + ' sentences: "' + t.slice(0, 50) + '…"');
-    });
-    window.scrollTo(0, 0);
-    return out;
-  });
-  let k = 0; const frameClip = new Set();
-  for (const theme of ['cream', 'dark']) {
-    for (const width of [1366, 390]) {
-      await page.setViewportSize({ width, height: width > 500 ? 900 : 844 });
-      for (const sec of ['shop', 'country']) {
-        k++;
-        await w.step('T' + (6 + k), sec + ' · ' + theme + ' · ' + width + ' px -> AA contrast, no clipping, no inner sideways scroll, nothing floating over a control, no app.html link, copy in budget', async () => {
-          if (sec === 'shop') await shop(); else await country();
-          await page.evaluate((t) => { CBAvatar.applyTheme(t); }, theme); await page.waitForTimeout(150);
-          const pairs = await page.evaluate(measure), bad = pairs.filter((x) => !x.grad && x.ratio < x.need);
-          const a = await audit();
-          const fails = [].concat(bad.map((x) => 'contrast ' + x.ratio + ' "' + x.text + '"'), a.clip.map((x) => 'clipped "' + x + '"'), a.scroll.map((x) => 'scroll ' + x),
-            a.cover.map((x) => 'covered ' + x), a.app.map((x) => 'app.html ' + x), a.budget.map((x) => 'budget ' + x));
-          a.frameClip.forEach((x) => frameClip.add(x));
-          return { ok: !fails.length && pairs.length > 10, saw: pairs.length + ' texts measured, lowest ' + Math.min.apply(null, pairs.map((x) => x.ratio)) + (fails.length ? ' · ' + fails.slice(0, 4).join(' · ') : ' · clean') };
-        });
-      }
-    }
-  }
-  await page.evaluate(() => { CBAvatar.applyTheme('cream'); }).catch(() => {});
+  /* ── RULE 13: two themes × two widths × two sections — e2e/lib/rule13.cjs, the ONE audit (lifted on 2026-10-14 when walk-settings-ops.cjs became its second caller) ── */
+  const frameClip = await R13.sweep(w, page, measure, { host: 'set', sections: { shop: shop, country: country }, from: 7 });
   /* the shared frame (page-frame.js / shell.js) ellipsises the shop's name in its top bar on a phone — on every small app (employees.html the same); said, not hidden */
   if (frameClip.size) w.note('T15', 'the shared frame\'s top bar at 390 px (not this page\'s pane)', 'ellipsised: ' + [...frameClip].join(' · '));
   if (w.errs.length) w.note('T99', 'page errors seen during the walk', w.errs.slice(0, 3).join(' | '));

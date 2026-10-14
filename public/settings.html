@@ -11,7 +11,12 @@
        Your shop  → app/cap-shop.js   (the Profile's Business section + the vault's business-identity rows: the tax id · address · region · postal code, in the pack's words)
        Country    → app/cap-country.js (CS1's Country setup, mounted in this pane: CBCountry.mount)
      Every write goes through CBAction (M64); who may write is the server's answer (403 → its sentence, painted). This page is the gate and the frame.
-     Later rounds add Counters & keys + Connectors (SET2) and the register flow (SET3) as sections here — ONE settings app, never one page per screen. -->
+     T3-SETTINGS (2026-10-14) — four more sections, each the workshop's own screen MOVED into a module and mounted here (never a second copy):
+       Counters & keys        → app/cap-counters.js   (CBCounters.mount: the register · the pairings · the keys; Add/Open greyed WITH the server's OWNER_ONLY sentence)
+       Connectors             → app/cap-connectors.js (CBConnectors.mount: what you can attach (the server's may/why per country) · who checked in · who owns what)
+       Policy & Localisation  → app/cap-policy.js + app/cap-locale.js (CBPolicy.mount: the business rules, each with the server's who-may-change; CBLocaleSettings.mount under it)
+       Plan & usage           → app/cap-plan.js      (CBPlan.mount: the plan the server records, its declared limits, chits today, the billed ledger)
+     ONE settings app, never one page per screen; the workshop (app.html) keeps painting the same modules through CAP_WITH.admin. -->
 <link rel="stylesheet" href="/app/page-skeleton.css">   <!-- the standard page skeleton (sidebar + main pane), drawn by CBFrame -->
 <link rel="stylesheet" href="/app/gov-panel.css">       <!-- Country setup's rows (what · value · where it came from) — the same file app.html links -->
 <style>
@@ -51,6 +56,20 @@ button{font-family:inherit;cursor:pointer}
 .loadwrap{display:flex;align-items:center;gap:10px;color:var(--grey,#5c5240);padding:18px 0}
 .spin{display:inline-block;width:15px;height:15px;border:2px solid var(--line,#e6dcc6);border-top-color:var(--blue,#1f5f5b);border-radius:50%;animation:sp .7s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
+/* T3-SETTINGS: the workshop's button classes the moved modules use (pri · warn · btn2), its tags and notes, and the plan meter — the skeleton's tokens, never a colour */
+button.pri,button.warn,button.btn2{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:40px;padding:0 14px;border-radius:9px;font:inherit;font-size:14px;font-weight:600;border:1px solid var(--line,#e6dcc6);background:var(--card,#fffdf8);color:var(--ink,#2a2418)}
+button.pri{background:var(--blue,#1f5f5b);border-color:var(--blue,#1f5f5b);color:var(--on-accent,#fbf6ec)}
+button.warn{color:var(--disp,#8e3517);border-color:var(--disp,#8e3517)}
+button[disabled]{opacity:.55;cursor:not-allowed}
+.govtag{display:inline-block;font-size:var(--fs-1);line-height:1.35;border-radius:6px;padding:2px 8px}
+.misnote{font-size:var(--fs-2);color:var(--grey,#5c5240);line-height:1.55}
+.govrow{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid var(--line,#e6dcc6);font-size:var(--fs-2)}
+.misplanrow{margin:10px 0}.misplanhead{display:flex;justify-content:space-between;gap:10px;font-size:var(--fs-2)}.misplanv{font-weight:700}
+.misplanbar{height:8px;border-radius:4px;background:var(--line,#e6dcc6);overflow:hidden}.misplanbar i{display:block;height:100%}
+/* a table (who owns what · the store map) takes the pane's width and wraps — never a sideways scroll at 390 px; a select is as wide as its cell or row, not as its longest option */
+#set table{width:100%;max-width:100%;table-layout:fixed;border-collapse:collapse}
+#set td,#set th{overflow-wrap:anywhere}
+#set select{max-width:100%;min-width:0}
 #toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:60;max-width:min(520px,92vw)}
 #toast .toast{background:var(--ink,#2a2418);color:var(--paper,#fbf6ec);padding:12px 16px;border-radius:10px;font-size:14px}
 /* the network pill core.js paints while a read is in flight (one for every page) */
@@ -91,12 +110,22 @@ function go(){ if (window.CBFrame) CBFrame.ended(); }   /* api()'s 401 → drop 
 <script src="/app/cap-shop.js"></script>        <!-- Your shop: the Profile's Business section + the vault's identity rows (MOVED from cap-admin.js) -->
 <script src="/app/cap-country.js"></script>     <!-- Country setup (CS1), mounted here with CBCountry.mount -->
 <script src="/app/register-form.js"></script>   <!-- New shop (SET3 · FX-UX2): the register form app.html #/register paints, mounted here with CBRegistration.mount -->
+<script src="/app/cap-counters.js"></script>    <!-- Counters & keys (T3-SETTINGS): the register · the pairings · the keys (MOVED from cap-admin.js), CBCounters.mount -->
+<script src="/app/cap-connectors.js"></script>  <!-- Connectors (T3-SETTINGS): the catalogue with the server's may/why · running · who owns what, CBConnectors.mount -->
+<script src="/app/cap-policy.js"></script>      <!-- Policy (T3-SETTINGS): the business rules with the server's who-may-change, CBPolicy.mount -->
+<script src="/app/cap-locale.js"></script>      <!-- Localisation (T3-SETTINGS): language · formats · calendar · time zone · currency, CBLocaleSettings.mount -->
+<script src="/app/cap-plan.js"></script>        <!-- Plan & usage (T3-SETTINGS): the server's plan and limits, the billed ledger, CBPlan.mount -->
 <script>
 'use strict';
 (function () {
   var SECTIONS = [
     { k: 'shop',    label: 'Your shop', icon: 'M3 10l9-6 9 6M5 10v10h14V10M9 20v-6h6v6' },
     { k: 'country', label: 'Country',   icon: 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18' },
+    /* T3-SETTINGS: the four doors Home names — each the workshop's own module, mounted here */
+    { k: 'counters',   label: 'Counters & keys',       icon: 'M3 7h18v10H3zM7 11h2M11 11h2M15 11h2M7 14h10' },
+    { k: 'connectors', label: 'Connectors',            icon: 'M4 12h6M14 12h6M10 8v8M14 8v8M4 12a2 2 0 1 0-4 0M24 12a2 2 0 1 0-4 0' },
+    { k: 'policy',     label: 'Policy & Localisation', icon: 'M5 3v18M5 3h11l-2 4 2 4H5' },
+    { k: 'plan',       label: 'Plan & usage',          icon: 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18M12 7v5l3 3' },
   ];
   /* ⭐ New shop (SET3 · FX-UX2): the sign-in window's "New shop? Register" opens HERE — a customer never enters the workshop (INDEX-NOT-APP.md).
      A public section: no sign-in window over it (signin:false; the avatar's Sign in goes to Home's), the only section in the sidebar, and
@@ -121,6 +150,11 @@ function go(){ if (window.CBFrame) CBFrame.ended(); }   /* api()'s 401 → drop 
     host.innerHTML = '';
     if (k === 'new') CBRegistration.mount(host, registered);
     else if (k === 'country') CBCountry.mount(host, function () { location.hash = '#/shop'; });
+    /* T3-SETTINGS: each module paints into its own element under the host; a read that lands after the section changed paints nothing (the element is gone) */
+    else if (k === 'counters') CBCounters.mount(host);
+    else if (k === 'connectors') CBConnectors.mount(host);
+    else if (k === 'policy') { CBPolicy.mount(host); CBLocaleSettings.mount(host); }
+    else if (k === 'plan') CBPlan.mount(host);
     else CBShop.mount(host);
   }
   frame = CBFrame.mount({ app: 'settings', kural: 'settings', work: host, signin: isNew ? false : undefined,

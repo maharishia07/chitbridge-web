@@ -59,8 +59,11 @@ Object.assign(sb, {
   TEXT_SIZES: [['s','Small',0.92],['m','Medium',1],['l','Large',1.15],['xl','Extra large',1.32]],
   textSize: () => 'm', motionPref: () => 'auto', apGet: (k, d) => (k in store ? store[k] : d),
   STANDARDS: [], GOV: [],
+  /* T3-SETTINGS: helpers.js's pack words (cap-shop.js reads them at paint) — the sandbox never loaded helpers.js */
+  taxIdWord: () => 'GSTIN', packWord: (k) => k, lsGet: (k, d) => d, lsSet(){}, specNote: () => '', pendingNote: () => '', profCanEdit: () => true,
 });
-vm.runInContext(fs.readFileSync(path.join(W, 'app', 'cap-admin.js'), 'utf8'), ctx, { filename: 'cap-admin.js' });
+/* T3-SETTINGS: the Localisation screen MOVED to app/cap-locale.js (CB Settings paints it too); app.html loads cap-shop · cap-policy · cap-locale before cap-admin (CAP_WITH.admin), so does this sandbox */
+for (const f of ['cap-shop.js', 'cap-policy.js', 'cap-locale.js', 'cap-admin.js']) vm.runInContext(fs.readFileSync(path.join(W, 'app', f), 'utf8'), ctx, { filename: f });
 
 const ENTITY = {
   identity_id: 'e', bridge_id: 'B', display_name: 'mystorex', user_id: 'mystorex',
@@ -168,7 +171,7 @@ const CONTROLS = [
    ⚠️ THE PATTERN CARRIES NO BACKSLASHES ON PURPOSE. [(] rather than an escaped paren, a space class rather
    than the whitespace escape: six separate times this session a generated edit has eaten one backslash out of
    a regex, and a regex that silently matches nothing is a guard that silently passes. Nothing here to eat. */
-const admin = fs.readFileSync(path.join(W, 'app', 'cap-admin.js'), 'utf8');
+const admin = fs.readFileSync(path.join(W, 'app', 'cap-locale.js'), 'utf8');   /* T3-SETTINGS: the setters are declared in cap-locale.js */
 const found = [...new Set([...admin.matchAll(/function (locale[A-Z][A-Za-z]*)[ ]*[(]/g)].map((m) => m[1]))]
   /* ⚠️ THE RENDERER AND THE TWO COMMIT ACTIONS ARE NOT SETTINGS. Save and Discard do not change a value;
      they decide the fate of values already staged, so demanding that each 'moves a profile row' would be
