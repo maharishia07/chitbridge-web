@@ -76,7 +76,7 @@ function go(){ if (window.CBFrame) CBFrame.ended(); }   /* api()'s 401 → drop 
 <script src="/app/core.js"></script>          <!-- api() · the network pill · the outbox — the workshop's own transport -->
 <script src="/app/accounts-shell.js"></script>  <!-- tx · toast · CBAction · CB_HOMES · CB_SHOP_EP -->
 <script>Object.assign(EP, CB_SHOP_EP);</script>
-<script src="/app/locale.js"></script>          <!-- CBLocale.region → the licence number's name (GSTIN · TRN · VAT …) -->
+<script src="/app/locale.js"></script>          <!-- CBLocale: the page's language, direction and formats -->
 <script src="/app/govcontext.js"></script>      <!-- CBGov: what the browser tells about a new shop (the register form's gov panel; Country setup's prefill) — AFTER locale -->
 <script src="/app/helpers.js"></script>         <!-- esc -->
 <script src="/app/tax.js"></script>             <!-- CBRegulation: the shop's pack → its words (helpers.js packWord: ABN · Postcode · TRN · Emirate) and Country setup's csuPack (FX-QA1) -->
@@ -110,9 +110,8 @@ function go(){ if (window.CBFrame) CBFrame.ended(); }   /* api()'s 401 → drop 
   function secOf(){ var h = (location.hash || '').replace(/^#\/?/, '').split(/[?&]/)[0]; return SECTIONS.some(function (s) { return s.k === h; }) ? h : 'shop'; }
   /** the verify answer → the apps' session (cb_sess, CBSignin.sessionOf — the one reading), claimed for this browser (CBOnePerson) → Home */
   function registered(r){
-    var s = CBSignin.sessionOf(r), sess = { token: s.token, role: s.role, name: s.name, entity: s.entity, bridgeId: s.bridgeId };
-    try { localStorage.setItem('cb_sess', JSON.stringify(sess)); } catch (_) {}
-    try { CBOnePerson.claim(CBOnePerson.who(sess)); } catch (_) {}
+    /* STD2: kept by the sign-in window's own writer (CBSignin.keep — cb_sess with `duty`, then CBOnePerson.claim), never a second copy here */
+    CBSignin.keep({}, CBSignin.sessionOf(r));
     location.href = '/';
   }
   function paint(k){

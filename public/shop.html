@@ -588,7 +588,7 @@ function _areaExample(){ var pl=_shopPlace(); return (pl.pin||pl.town) ? 'e.g. '
 function shopAboutHtml(s){
   if(!s||(!s.address&&!s.gstn)) return '';
   return '<details class="meta" data-testid="shop-about" style="text-align:center;margin-top:16px;line-height:1.7"><summary style="cursor:pointer;font-weight:700">About the shop</summary>'
-    +(s.address?'<div>📍 '+esc(s.address)+'</div>':'')+(s.gstn?'<div>'+esc(s.tax_id_word||'GSTIN')+' <span style="font-family:ui-monospace,Consolas,monospace">'+esc(s.gstn)+'</span></div>':'')+'</details>';
+    +(s.address?'<div>📍 '+esc(s.address)+'</div>':'')+(s.gstn?'<div>'+esc(s.tax_id_word||'Tax number')+' <span style="font-family:ui-monospace,Consolas,monospace">'+esc(s.gstn)+'</span></div>':'')+'</details>';
 }
 /* The one cart this page holds. Created in productListHtml, released before it is created again. */
 var _CART=null;
