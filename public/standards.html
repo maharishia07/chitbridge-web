@@ -8,7 +8,7 @@
 <!-- ⭐ STANDARDS — the laws and standards we follow, and what is still missing (docs/design/standards-page is the design; docs/design/standards/REQUIREMENT.md the ask).
      It replaces Settings › Standards as the place to READ the register; Settings keeps what is about your own settings.
      REUSE (CLAUDE.md rule 1, named in the PR): the list is a CBList mount (app/list-ctl.js) with its filters · groups · sorts · ⚙ columns ·
-     opened row · row actions; the data is the register in app/cap-standards.js (STANDARDS · STD_AREAS/KINDS/COUNTRIES/STATUS · STD_CHECKED);
+     opened row · row actions; the data is the register in app/cap-standards.js (STANDARDS · STD_AREAS/PRODUCT_AREAS/KINDS/COUNTRIES/STATUS · STD_CHECKED);
      the two sheets are its stdWhyHTML() and stdRecordHTML(); "Open in the app" is its stdGoto(); the avatar is CBAvatar (app/avatar.js).
      NEW here and nowhere else: the matrix pane (counts by Area · Country · Kind × In force · Partly · Planned), whose every cell IS the list's
      own filter — it sets the unit's Status and Area / Kind / Applies in filters and keeps no filter of its own (one value, one control).
@@ -208,7 +208,7 @@ const ROWS = STANDARDS.map((r, i) => ({ ix: i, r: r }));
 /* ⭐ the 4th Kind, Compatibility (M41): ONE file, public/data/compat.json, shared with the Compatibility lab (N04); stdCompatRows maps it onto the register's shape */
 let COMPAT_ERR = '';
 function addCompat(json){ stdCompatRows(json).forEach((r) => ROWS.push({ ix: ROWS.length, r: r })); }
-const AREA = (r) => lab(STD_AREAS, r.a), KIND = (r) => lab(STD_KINDS, r.k), COUNTRY = (r) => r.c.map((c) => lab(STD_COUNTRIES, c)).join(' · '), STATUS = (r) => lab(STD_STATUS, r.s);
+const AREA = (r) => lab(STD_AREAS, r.a), PAREA = (r) => lab(STD_PRODUCT_AREAS, r.pa), KIND = (r) => lab(STD_KINDS, r.k), COUNTRY = (r) => r.c.map((c) => lab(STD_COUNTRIES, c)).join(' · '), STATUS = (r) => lab(STD_STATUS, r.s);
 const SORD = { live: 0, part: 1, plan: 2 };
 function countOf(rows){ var n = { live: 0, part: 0, plan: 0 }; rows.forEach((r) => { n[r.s]++; }); return n; }
 
@@ -216,6 +216,8 @@ function countOf(rows){ var n = { live: 0, part: 0, plan: 0 }; rows.forEach((r) 
 const FILTERS = [
   { key: 'status', label: 'Status', all: 'Any', options: STD_STATUS.map((s) => ({ v: s[0], label: s[1] })), match: (x, v) => x.r.s === v },
   { key: 'area', label: 'Area', all: 'Any', options: STD_AREAS.map((a) => ({ v: a[0], label: a[1] })), match: (x, v) => x.r.a === v },
+  /* STDREG1: the PRODUCT area (`pa`, STD_PRODUCT_AREAS) — the part of the product a row lives in, beside the business Area */
+  { key: 'parea', label: 'Product area', all: 'Any', options: STD_PRODUCT_AREAS.map((a) => ({ v: a[0], label: a[1] })), match: (x, v) => x.r.pa === v },
   { key: 'kind', label: 'Kind', all: 'Any', options: STD_KINDS.map((k) => ({ v: k[0], label: k[1] })), match: (x, v) => x.r.k === v },
   { key: 'country', label: 'Applies in', all: 'Any', options: STD_COUNTRIES.map((c) => ({ v: c[0], label: c[1] })), match: (x, v) => x.r.c.indexOf(v) >= 0 },
 ];
@@ -223,6 +225,7 @@ function groupBy(x, mode){
   var r = x.r;
   if (mode === 'area') return [lab(STD_AREAS, r.a), r.a];
   if (mode === 'kind') return [lab(STD_KINDS, r.k), r.k];
+  if (mode === 'parea') return [PAREA(r), r.pa];
   if (mode === 'country'){ var l = countryGroup(r.c); return [l, l]; }
   return null;
 }
@@ -234,8 +237,8 @@ function countryGroup(c){
   if (own.length < c.length) return own.map((x) => lab(STD_COUNTRIES, x)).join(', ') + ' and global';
   return c.map((x) => lab(STD_COUNTRIES, x)).join(', ');   /* commas: the group head's own " · " separates the label from its count */
 }
-const GROUP_ORDER = STD_AREAS.map((a) => a[0]).concat(STD_KINDS.map((k) => k[0]), STD_COUNTRIES.filter((c) => c[0] !== 'GLOBAL').map((c) => c[1]),
-  ['India and global', 'Global', STD_COUNTRIES.filter((c) => c[0] !== 'GLOBAL').map((c) => c[1]).join(', ')]);
+const GROUP_ORDER = STD_AREAS.map((a) => a[0]).concat(STD_PRODUCT_AREAS.map((a) => a[0]), STD_KINDS.map((k) => k[0]), STD_COUNTRIES.filter((c) => c[0] !== 'GLOBAL').map((c) => c[1]),
+  STD_COUNTRIES.filter((c) => c[0] !== 'GLOBAL').map((c) => c[1] + ' and global'), ['Global', STD_COUNTRIES.filter((c) => c[0] !== 'GLOBAL').map((c) => c[1]).join(', ')]);   /* STDREG1: any "<country> and global" (Xero: Australia and global) */
 function cols(){
   return [
     { key: 'what', label: 'What it does for you', prio: 1, w: 250, sort: 'what', html: true, value: (x) => x.r.p,
@@ -247,6 +250,7 @@ function cols(){
       cell: (x) => '<span class="kind k-' + esc(x.r.k) + '" data-testid="std-kind">' + esc(KIND(x.r)) + '</span>' },
     { key: 'where', label: 'Applies in', prio: 3, w: 120, sort: 'where', cell: (x) => COUNTRY(x.r) },
     { key: 'area', label: 'Area', prio: 4, w: 150, sort: 'area', cell: (x) => AREA(x.r) },
+    { key: 'parea', label: 'Product area', prio: 4, w: 160, sort: 'parea', cell: (x) => PAREA(x.r) },
     { key: 'at', label: 'Where in the app', prio: 5, w: 220, cell: (x) => x.r.at || '—' },
     { key: 'ex', label: 'Clause or example', prio: 6, w: 230, mono: true, cell: (x) => plain(x.r.ex) || '—' },
     /* the status: a symbol AND a word AND a colour, never colour alone; pinned at the end like an amount */
@@ -263,6 +267,7 @@ const SORTS = [
   { key: 'kind', label: 'Kind', cmp: byText((x) => KIND(x.r)) },
   { key: 'where', label: 'Applies in', cmp: byText((x) => COUNTRY(x.r)) },
   { key: 'area', label: 'Area', cmp: byText((x) => AREA(x.r)) },
+  { key: 'parea', label: 'Product area', cmp: byText((x) => PAREA(x.r)) },
 ];
 
 /* what a row opens to: everything a buyer or CA checks, nothing the row already shows */
@@ -355,10 +360,10 @@ function mountList(){
     key: 'standards', rows: ROWS, id: (x) => 's' + x.ix, rowTid: (x) => 'std-row-' + x.ix, fill: false,
     columns: cols, defaultCols: DEFAULT_COLS, cardMax: 3, store: choices,
     head: () => ({ title: 'Standards', chips: [{ text: 'checked ' + checkedLabel(), tid: 'std-checked' }], slot: slot }),
-    search: (x) => { var r = x.r; return [r.p, r.n, r.w, r.m, r.limit, r.note, r.at, plain(r.ex), r.eq, AREA(r), KIND(r), COUNTRY(r), STATUS(r), r.g].join(' '); },
+    search: (x) => { var r = x.r; return [r.p, r.n, r.w, r.m, r.limit, r.note, r.at, plain(r.ex), r.eq, AREA(r), PAREA(r), KIND(r), COUNTRY(r), STATUS(r), r.g].join(' '); },
     searchHint: 'Search standards',
     filters: FILTERS, sorts: SORTS,
-    group: { options: [['area', 'Area'], ['country', 'Country'], ['kind', 'Kind'], ['none', 'None']], default: 'area', tid: 'std', by: groupBy, order: GROUP_ORDER,
+    group: { options: [['area', 'Area'], ['parea', 'Product area'], ['country', 'Country'], ['kind', 'Kind'], ['none', 'None']], default: 'area', tid: 'std', by: groupBy, order: GROUP_ORDER,
       fig: (rows) => { var n = countOf(rows.map((x) => x.r)); return rows.length + ' · ● ' + n.live + ' ◐ ' + n.part + ' ○ ' + n.plan; } },
     next: nextOf,
     actions: [
@@ -370,16 +375,18 @@ function mountList(){
 }
 
 /* ═════ THE MATRIX — the second pane ═════
-   Rows by Area, Country or Kind; columns In force · Partly · Planned. A cell sets the LIST'S OWN filters (a row and a status), so the unit's chips
+   Rows by Area, Product area, Country or Kind; columns In force · Partly · Planned. A cell sets the LIST'S OWN filters (a row and a status), so the unit's chips
    and the lit cell are the same state shown twice, and the Filters popover can undo it. The matrix counts the whole register. */
-/* ONE grouping choice: the left table counts by whatever the list's Group by says (Area · Country · Kind; None = the whole register only) */
-const DIMS = [['area', 'Area'], ['country', 'Country'], ['kind', 'Kind']];
+/* ONE grouping choice: the left table counts by whatever the list's Group by says (Area · Product area · Country · Kind; None = the whole register only) */
+const DIMS = [['area', 'Area'], ['parea', 'Product area'], ['country', 'Country'], ['kind', 'Kind']];
 function curDim(){ var g = LIST && LIST.state().group; return DIMS.some((d) => d[0] === g) ? g : (g === 'none' ? 'none' : 'area'); }
 let DIM = 'area';
 function mxRows(){
   if (DIM === 'none') return [];
   if (DIM === 'country') return STD_COUNTRIES.map((c) => ({ id: c[0], label: c[1], has: (r) => r.c.indexOf(c[0]) >= 0 }));
   if (DIM === 'kind') return STD_KINDS.map((k) => ({ id: k[0], label: k[1], sub: k[2], has: (r) => r.k === k[0] }));
+  /* STDREG1: the product areas that hold at least one row (twenty would mostly be "—") */
+  if (DIM === 'parea') return STD_PRODUCT_AREAS.filter((a) => ROWS.some((x) => x.r.pa === a[0])).map((a) => ({ id: a[0], label: a[1], has: (r) => r.pa === a[0] }));
   return STD_AREAS.map((a) => ({ id: a[0], label: a[1], has: (r) => r.a === a[0] }));
 }
 function nowFilt(){ var s = LIST && LIST.state(); return (s && s.filt) || {}; }
@@ -407,7 +414,7 @@ function paintMatrix(){
 }
 let LAST = '', GLAST = '';
 /* the list's columns share the width: weights per column, set on the host; a person who dragged a width keeps their own (no data-fill) */
-const WEIGHT = { what: 4, std: 2.4, kind: 1.6, where: 1.3, area: 1.3, at: 2, ex: 2.2, status: 3.2 };
+const WEIGHT = { what: 4, std: 2.4, kind: 1.6, where: 1.3, area: 1.3, parea: 1.4, at: 2, ex: 2.2, status: 3.2 };
 let FITKEY = '';
 function fit(){
   var st = LIST && LIST.state(), host = $('std_list'); if (!st) return;
