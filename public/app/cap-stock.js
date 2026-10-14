@@ -43,7 +43,9 @@ var CBStock = (function () {
     S.state = 'loading'; S.notReady = false; if (S.list) S.list.refresh();
     try {
       var r = await api('stockShelf', { query: { lots: 1 } });
-      S.rows = (r && r.shelf) || []; S.below = (r && r.below_zero) || 0; S.at = r && r.at; S.state = 'ready'; S.err = null;
+      /* a server from before T3-OPS ignores ?lots and answers without `shelf`: that is "not switched on yet", never an empty shelf */
+      if (!r || !Array.isArray(r.shelf)) { S.rows = []; S.state = 'error'; S.notReady = true; if (typeof cblog === 'function') cblog('warn', 'operations: the stock read has no shelf list (an older server)'); if (S.list) S.list.refresh(); return; }
+      S.rows = r.shelf; S.below = r.below_zero || 0; S.at = r.at; S.state = 'ready'; S.err = null;
     } catch (e) {
       S.err = e; S.state = 'error';
       S.notReady = !!(e && e.data && e.data.code === 'STOCK_NOT_READY');   /* the server's code, never its sentence */
