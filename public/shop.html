@@ -679,7 +679,7 @@ function shopUpiBlock(res, isCart){
     +'<a data-testid="shop-upi-link" href="'+esc(link)+'" style="display:inline-block;margin-top:8px;border:1px solid #3F66A6;border-radius:9px;padding:8px 14px;color:#3F66A6;font-weight:700;text-decoration:none">Open my UPI app</a>'
     +'<div style="font-size:11px;color:#6a707a;margin-top:6px">'+esc('The shop confirms the payment on its side.')+'</div></div>';
 }
-function cbFmt(n){ var c=curOf(null); try{ return (typeof CBLocale!=='undefined')?(c?CBLocale.money(n,c):CBLocale.amount(n)):(_shopSym()+Number(n).toFixed(2)); }catch(e){ return _shopSym()+n; } }   /* CX0: the SHOP's currency, never INR by name; none stated → the bare amount (CART-REG1) */
+function cbFmt(n){ var c=curOf(null); try{ return (typeof CBLocale!=='undefined')?(c?CBLocale.money(n,c):CBLocale.number(n,{minimumFractionDigits:2,maximumFractionDigits:2})):(_shopSym()+Number(n).toFixed(2)); }catch(e){ return _shopSym()+n; } }   /* CX0: the SHOP's currency, never INR by name; none stated → the bare amount (CART-REG1) */
 function shopCartBarHtml(){ if(!_CART) return ''; try{ if(typeof CBCatUI!=='undefined'&&CBCatUI.barHTML) return CBCatUI.barHTML(_CART); }catch(e){} return _CART.barHTML(); }   /* the same chip as the app; first paint = every repaint */   /* ⚠️ dropped by the stock patch for ~25 min on 2026-09-05 — every storefront said 'Could not reach the shop' */
 var _stockAsked=false;
 function shopAskStock(){

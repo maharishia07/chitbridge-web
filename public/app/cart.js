@@ -926,8 +926,9 @@
   }
   function fmt(ns, n) {
     var cur = currencyOf(ns);
-    /* no money stated: the amount alone (CBLocale.amount) — no symbol stands in for a currency nobody named */
-    if (!cur) return (typeof CBLocale !== 'undefined' && CBLocale && CBLocale.amount) ? CBLocale.amount(n) : Number(n || 0).toFixed(2);
+    /* no money stated: the amount alone (CBLocale.number, two decimals — INT6a: the engine's own reader, no hand edit to the adopted copy)
+       — no symbol stands in for a currency nobody named */
+    if (!cur) return (typeof CBLocale !== 'undefined' && CBLocale && CBLocale.number) ? CBLocale.number(n, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : Number(n || 0).toFixed(2);
     if (typeof CBLocale !== 'undefined' && CBLocale && typeof CBLocale.money === 'function') {
       try { return CBLocale.money(Number(n || 0), cur); } catch (_) {}
     }

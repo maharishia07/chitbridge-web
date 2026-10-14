@@ -791,18 +791,6 @@
     },
 
     /**
-     * ⭐ CART-REG1 (T1-ORD, 2026-10-14) — AN AMOUNT WITH NO CURRENCY, for a shop that never stated its money. money() answers 'INR' for an
-     * absent code; that is a national default speaking for a shop nobody asked. This prints the figure alone — two decimals, the reader's
-     * grouping, no symbol — and the screen says the server's one sentence (shop.money_why, NO_MONEY) beside it. Read by app/cart.js fmt and
-     * shop.html cbFmt (the two places a shop's own money is printed).
-     */
-    amount: function (amount) {
-      var raw = (typeof CBMoney !== 'undefined' && CBMoney.amountOfLoose) ? CBMoney.amountOfLoose(amount) : Number(amount);
-      var n = isFinite(raw) ? raw : 0;
-      return L.ltr(n.toLocaleString(L.tag(), { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-    },
-
-    /**
      * ⭐⭐ WHICH CONVENTION WRITES THIS CURRENCY — one small, checkable table rather than a guess per call.
      *
      * ⚠ IT CARRIES WHAT HAS BEEN VERIFIED AND WHAT HAS NOT, the same discipline lib/docnumber.js uses for
