@@ -335,6 +335,8 @@ function crmRecordPaint(p, rec) {
     crmKV('Bills', esc(String(bf.bills))) + crmKV('Last bill', bf.lastBill ? esc(bkDate(bf.lastBill)) : '') + crmKV('Not billed yet', ufact ? esc(ufact) : '') + crmKV('Customer since', cu.since ? esc(bkDate(cu.since)) : '') + crmKV('Added from', cu.added_via ? esc(tx(CRM_ADDED[cu.added_via] || cu.added_via)) : '')
     + crmKV('Segment', cu.segment && cu.segment !== 'new' ? esc(tx(CRM_SEG[cu.segment] || cu.segment)) + (cu.segment_override ? ' · ' + esc(tx('set by you')) : '') : '') + crmKV('Groups', (cu.groups || []).map(function (g) { return '<span class="tag">' + esc(g) + '</span>'; }).join(' '))
     + crmKV('Points', rec.points ? esc(String(rec.points.balance)) + (rec.points.programme ? ' · ' + esc(rec.points.programme) : '') : ''), one));
+  /* T3-P2-CRM: Rewards — the engine's pane (app/cap-rewards.js, ONE copy with the workshop): the fact is the record's own points figure; the pane reads when the fold opens */
+  if (cu && p.kind !== 'walk-in') secs.push(crmSec('rewards', 'Rewards', rec.points ? esc(String(rec.points.points != null ? rec.points.points : rec.points.balance)) + ' ' + esc(tx('points')) + (rec.points.programme ? ' · ' + esc(rec.points.programme) : '') : '', '<div id="crm_rw" data-testid="crm-rewards"></div>', false));
   if (su) secs.push(crmSec('supplier', 'Supplier', su.category ? esc(su.category) : '',
     crmKV('Category', esc(su.category || '')) + crmKV('Preferred', su.preferred ? esc(tx('Yes')) : '') + crmKV('Supplies', esc(tx(su.supply_kind === 'resale' ? 'For resale' : su.supply_kind === 'own_use' ? 'For the shop' : su.supply_kind || '')))
     + crmKV('Catalogue', su.catalogue ? esc(tx('On ChitBridge')) : '') + (su.notes ? '<div class="kv" data-testid="crm-notes"><b>' + esc(tx('Notes')) + '</b><span>📌 ' + esc(su.notes) + '</span></div>' : ''), one));
@@ -354,6 +356,8 @@ function crmRecordPaint(p, rec) {
     columns: crmTlCols, defaultCols: ['what', 'when', 'state', 'amount'], rowTid: function (e) { return 'crm-tl-' + e.id; }, onOpen: crmEntryOpen, next: crmEntryNext, empty: { title: tx('Nothing yet with this party.'), sub: tx('Use Log to record a call or note.') } }); }
   var led = document.getElementById('crm_ledger');
   if (led) led.innerHTML = partyBooksHTML(cu ? 'customer' : 'supplier', p.party_id, crmLedgerRow(p, rec), true);
+  var rwSec = document.querySelector('[data-testid="crm-sec-rewards"]');
+  if (rwSec && typeof CBRewards !== 'undefined') { var rwOnce = function () { if (rwSec.open && !rwSec.getAttribute('data-read')) { rwSec.setAttribute('data-read', '1'); CBRewards.load('crm_rw', { id: p.party_id, api: api, t: tx, money: function (n) { try { return CBLocale.money(n, p.currency || CRM.currency); } catch (_) { return String(n); } }   /* the same formatter the workshop's pane uses */ }); } }; rwSec.addEventListener('toggle', rwOnce); rwOnce(); }
   if (CRM.ledger) crmTermsFill(p.party_id, cu ? 'customer' : 'supplier');
 }
 /** F2: the credit terms that apply to this party, READ-ONLY (CB Finance · Terms is the one place that sets them) + the changes made to them.

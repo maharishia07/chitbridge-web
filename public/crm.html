@@ -264,6 +264,15 @@ dialog.sheet::backdrop{background:var(--scrim)}
 .banner{display:flex;gap:10px;align-items:center;flex-wrap:wrap;border:1px solid var(--amber-b);background:var(--amber-t);color:var(--amber-i);border-radius:10px;padding:9px 12px;font-size:13.5px}
 .banner.bad{border-color:var(--red-b);background:var(--red-t);color:var(--red-i)}
 .hint{font-size:13px;color:var(--muted)}
+/* T3-P2-CRM: the group sheet's member list (only it scrolls), the rewards history, the showcase picks — tokens only */
+.grp-list{max-height:38vh;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:4px}
+.grp-row{display:flex;align-items:center;gap:10px;min-height:40px;padding:0 10px;border-radius:8px;cursor:pointer;font-weight:500}
+.grp-row:hover{background:var(--hover)}
+.grp-row .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.grp-row input{margin:0;width:18px;height:18px}
+.rw-hist{padding:8px 0 0;font-size:13px}.rw-e{display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px dashed var(--line-2)}.rw-e:last-child{border-bottom:0}
+.sc-picks{display:flex;gap:6px;flex-wrap:wrap}
+.screen.flush > #crm_groups{flex:1 1 auto;min-height:0;height:auto}
 
 @media (max-width:760px){
   .side{width:64px}
@@ -342,7 +351,7 @@ function go(){ signedOut('Your session ended. Please sign in again.'); }   /* ap
 <script src="/app/avatar.js"></script>   <!-- CBAvatar: the one avatar (Profile · Support · Sign out) and the look it owns — nothing of it is drawn here -->
 <script src="/app/core.js"></script>
 <script src="/app/accounts-shell.js"></script>
-<script>Object.assign(EP, CB_BOOKS_EP, CB_SHEET_EP, CB_PARTY_EP);</script>
+<script>Object.assign(EP, CB_BOOKS_EP, CB_SHEET_EP, CB_PARTY_EP, CB_POLICY_EP);</script>   <!-- CB_POLICY_EP (T3-P2-CRM): the Shop window reads and writes the policy flag showcase_template -->
 <script src="/engine/money.js"></script>
 <script src="/app/locale.js"></script>
 <script src="/app/helpers.js"></script>
@@ -365,6 +374,10 @@ function go(){ signedOut('Your session ended. Please sign in again.'); }   /* ap
 <script src="/app/step-flow.js"></script>   <!-- CBSteps: THE step flow — the Import leads sheet walks File → Columns → Check on it (L3) -->
 <script src="/app/cap-crm-leads.js"></script>   <!-- L1: the Leads tab, Add lead, the record's stage chip + Move to… · L3: Import from a CSV -->
 <script src="/app/cap-crm-chits.js"></script>   <!-- the chits behind Home's rail: In · Out · Stuck -->
+<script src="/app/cap-rewards.js"></script>   <!-- CBRewards (T3-P2-CRM): the points pane the record paints — ONE copy with the workshop's Customers pane -->
+<script src="/app/showcase-templates.js"></script>   <!-- CBShowcase: the registered shop-window templates (S2) -->
+<script src="/app/cap-showcase.js"></script>   <!-- CBShowcasePick (T3-P2-CRM): the chooser + the live preview of the shop's own page — ONE copy with the workshop's Settings › Policy -->
+<script src="/app/cap-crm-groups.js"></script>   <!-- T3-P2-CRM: Groups & segments (#/groups) and the Shop window (#/showcase) -->
 <script src="/app/kural.js"></script>   <!-- CBKural: the kural footer — one band at the foot, outside the head; never in a message -->
 <script>
 'use strict';

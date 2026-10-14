@@ -97,7 +97,7 @@ W.run('home', async (w) => {
   const PIL = ['marketing', 'sales', 'finance', 'accounting', 'operations', 'people', 'trade'];
   await w.step('P1', 'Manifest -> every entry has a pillar, and the pillars are the nine known words', async () => {
     const known = PIL.concat(['labs', 'setup']), bad = man.entries.filter((e) => known.indexOf(e.pillar) < 0).map((e) => e.id);
-    const need = ['marketing', 'finance', 'operations', 'people', 'trade'].filter((id) => { const e = man.entries.find((x) => x.id === id); return !e || e.state === 'built' && !e.route || !e.what && id !== 'trade'; });
+    const need = ['marketing', 'finance', 'operations', 'people', 'trade'].filter((id) => { const e = man.entries.find((x) => x.id === id); return !e || e.state === 'built' && !e.route || !e.what && id !== 'trade'; });   /* marketing: built since T3-P2-CRM (route + facts) */
     return { ok: !bad.length && !need.length, saw: bad.length ? 'no/odd pillar: ' + bad.join() : need.length ? 'missing box: ' + need.join() : man.entries.length + ' entries, all placed; the coming boxes exist' };
   });
   const reqs = []; const onReq = (rq) => { const u = new URL(rq.url()); if (u.pathname.indexOf('/api/') === 0) reqs.push(u.pathname); };
@@ -108,7 +108,7 @@ W.run('home', async (w) => {
     const r = await page.evaluate(() => {
       const ps = [...document.querySelectorAll('.cbsh-pil')].map((p) => p.dataset.pillar);
       const ids = [...document.querySelectorAll('[data-testid^="shell-card-"],[data-testid^="shell-chip-"]')].map((e) => e.dataset.id || e.getAttribute('data-testid').replace(/^shell-(card|chip)-/, ''));
-      const comingFacts = ['marketing', 'finance', 'operations', 'people', 'trade'].map((id) => { const c = document.querySelector('[data-testid="shell-chip-' + id + '"]'); return c ? c.innerText.replace(/\s+/g, ' ').trim() : 'MISSING ' + id; });
+      const comingFacts = ['operations', 'people', 'trade'].map((id) => { const c = document.querySelector('[data-testid="shell-chip-' + id + '"]'); return c ? c.innerText.replace(/\s+/g, ' ').trim() : 'MISSING ' + id; });   /* marketing (T3-P2-CRM) and finance are cards now */
       const cap = (document.querySelector('.cbsh-sec.selling .cbsh-cap b') || {}).textContent;
       const rows = ['selling', 'running'].map((a) => [...document.querySelectorAll('.cbsh-sec.' + a + ' .cbsh-pil')].map((p) => Math.round(p.getBoundingClientRect().top)).filter((v, i, x) => x.indexOf(v) === i).length);
       return { ps, dup: ids.filter((v, i) => ids.indexOf(v) !== i), comingFacts, cap, rows };
@@ -121,7 +121,7 @@ W.run('home', async (w) => {
     const own = new Set(man.entries.filter((e) => e.state === 'built' && e.facts).map((e) => e.facts));
     const known = new Set(['/api/facts/rail', '/api/books/health', '/api/entities/me', '/api/entities/header', '/api/crm/parties', '/api/crm/followups', '/api/entities/sides']);
     const strange = [...new Set(reqs)].filter((p) => !own.has(p) && !known.has(p) && !/^\/api\/(notifications|events|sides|me|session|counters|catalogue|offers|network|messages|reference)/.test(p));
-    return { ok: !strange.length && !reqs.some((p) => /finance|marketing|people|operations/.test(p)), saw: reqs.length + ' calls (' + [...new Set(reqs)].join(', ') + ')' + (strange.length ? ' - NEW: ' + strange.join() : '') };
+    return { ok: !strange.length && !reqs.some((p) => /finance|people|operations/.test(p)), saw: reqs.length + ' calls (' + [...new Set(reqs)].join(', ') + ')' + (strange.length ? ' - NEW: ' + strange.join() : '') };
   });
   const PS = path.join(__dirname, 'shots', 'pillars'); fs.mkdirSync(PS, { recursive: true });
   await w.step('P4', 'Home at 1366 and 390 -> the boxes fit the width (no sideways scroll), shots saved', async () => {

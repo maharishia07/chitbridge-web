@@ -54,11 +54,17 @@ var CB_PARTY_EP = {
   supDel:          {m:"DELETE",p:"/api/relationships/suppliers/:id", ok:"✓"},
   supPatch:        {m:"PATCH", p:"/api/relationships/suppliers/:id", ok:"y"},       // Stage B — owner-side fields (nickname/preferred/notes/category)
   entitySearch:    {m:"GET",  p:"/api/entities/search",                    ok:"✓"},   // ?q= live recipient lookup (name/bridge_id)
+  custRewards:     {m:"GET",  p:"/api/relationships/customers/:id/rewards", ok:"✓"},   // what this customer holds in points, and what it means — the ONE rewards pane (app/cap-rewards.js), read by the workshop's Customers pane and CB CRM's record (T3-P2-CRM; moved from app.html)
   /* ⭐ read by BOTH CB CRM and CB Finance — one name, one place (the registry guard fails a second declaration) */
   crmParties:      {m:"GET",  p:"/api/crm/parties",                        ok:"y"},   // { parties:[…], alerts:{…} } — one read, no per-row fetch; terms.customer per party
   booksTerms:      {m:"GET",  p:"/api/books/terms",                        ok:"y"},   // ?party_id&side → { terms_migrated, may_set, why_not, default, party, events } — CB Finance sets, CRM reads
 };
 
+/* ── the shop's policy flags (b130) — the workshop's Settings › Policy AND CB CRM's Shop window (showcase_template, T3-P2-CRM) read and write them; MOVED from app.html's EP ── */
+var CB_POLICY_EP = {
+  policyGet:       {m:"GET",  p:"/api/entities/policy",          ok:"✓"},  // b130 — per-entity flags, on the ENTITY
+  policySet:       {m:"PATCH",p:"/api/entities/policy",          ok:"✓"},
+};
 /* ── the shop's OWN particulars — what the workshop's Profile · Country setup AND CB Settings (settings.html, SET1 2026-10-13) read and write.
    MOVED from app.html's EP (one name per endpoint, e2e/ep-aliases.cjs): the profile (PATCH /entities/profile), the vault (GET /governance/profile),
    Country setup (CS1) ── */

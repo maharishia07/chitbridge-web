@@ -15,7 +15,7 @@ something needs them before any navigation happens.
 router renders a placeholder until `_capLoading` clears, which is the only reason the
 old duplicate `networkScreen()` in app.html was safe to delete.
 
-## Capabilities (47)
+## Capabilities (50)
 
 | file | loading · nav key | what it is |
 |---|---|---|
@@ -32,6 +32,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-country.js` | lazy · on demand | cap-country.js — COUNTRY SETUP (CS1, 2026-10-12): the step after registration, before the books open (lazy; ensureCap('country') → #/country) |
 | `cap-crm-calls.js` | — | cap-crm-calls.js — CB CRM L2: THE CALL DESK. The Calls tab (a CBList mount, the Follow-ups list's own look): today's queue, one-tap outcome buttons |
 | `cap-crm-chits.js` | — | cap-crm-chits.js — THE CHITS BEHIND THE HOME RAIL: In · Out · Stuck, stuck first (black-box H1 · H4 · H10) |
+| `cap-crm-groups.js` | — | cap-crm-groups.js — CB CRM: GROUPS & SEGMENTS and the SHOP WINDOW (T3-P2-CRM, 2026-10-14; docs/design/crm/REQUIREMENT-segments.md) |
 | `cap-crm-leads.js` | — | cap-crm-leads.js — CB CRM L1: LEADS AS PARTIES (+ L3: Import from a CSV, at the foot of this file). The Leads tab (a CBList mount, the Parties list's |
 | `cap-crm-record.js` | — | cap-crm-record.js — CB CRM: ONE party's record, its timeline, the Log sheet, the Next block, and the party edit |
 | `cap-crm.js` | — | cap-crm.js — CB CRM: the parties list (home), follow-ups, Add party, and the plumbing every CRM screen shares |
@@ -57,8 +58,10 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-readiness.js` | lazy · readiness | TRADE capability (lazy; ensureCap('readiness')). Two tabs: |
 | `cap-register.js` | lazy · on demand | THE REGISTER. Lazy (ensureCap('register')) |
 | `cap-repeat.js` | lazy · on demand | cap-repeat.js — REPEAT SUPPLY as an AGREEMENT both parties hold (round RI1, 2026-10-12): CB Finance › Repeat supply (the seller's list), |
+| `cap-rewards.js` | eager | cap-rewards.js — THE REWARDS PANE, ONE COPY (T3-P2-CRM, 2026-10-14): what a customer holds in points, what it is worth, how it was earned, |
 | `cap-service.js` | lazy · on demand | cap-service.js — a chit AS A SERVICE REQUEST. Lazy-loaded (ensureCap('service')) |
 | `cap-shop.js` | — | YOUR SHOP: the shop's own particulars, ONE implementation painted in two places (SET1, 2026-10-13) |
+| `cap-showcase.js` | eager | cap-showcase.js — THE SHOP WINDOW CHOOSER, ONE COPY (T3-P2-CRM, 2026-10-14): the registered showcase templates (app/showcase-templates.js, |
 | `cap-standards.js` | lazy · on demand |  |
 | `cap-supplies.js` | lazy · on demand | SUPPLIES: what the shop buys to USE, never to sell |
 | `cap-tasks.js` | — |  |
@@ -127,4 +130,4 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 
 ---
 
-*100 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*103 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
