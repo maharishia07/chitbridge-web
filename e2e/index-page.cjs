@@ -11,7 +11,7 @@
  *   3  1366 · every read the page makes is a budgeted one (the API's round-trips.budget.json has a line for it); a facts URL that is null
  *      paints nothing; nothing wrong → the alerts slot draws nothing; N19 404 → the sheet's empty state (kept)
  *   4  1366 · PLANTED manifest (facts URLs + the rail) and a planted API: each card's lines are the API's; the rail's digits are the API's;
- *      "2 waiting for the ledger" carries its fix; a counter paired to another shop earns an amber row with its fix
+ *      "1 supplier bill to accept" · "1 supplier to add" · "2 waiting to be recorded" each carry their fix (FX-F10W: Books' To do counts); a counter paired to another shop earns an amber row with its fix
  *   5  word budget per VISIBLE area (Q10): Home ≤ 120 (with the rail and the alerts up), every other area ≤ 100 — at 1366 and at 390
  *   6  390: scrollWidth === 390; bottom tabs, one area at a time; the kural at the foot of Home
  *   7  signed out: not one /api call leaves the page; the cards are still drawn, no facts; the avatar is the one Sign in door;
@@ -112,7 +112,7 @@ async function run() {
       if (u.pathname === '/api/entities/header') return J(r, 404, { error: 'not found' });            /* N19 built, not live: the empty state stays */
       if (u.pathname === '/api/books/health') {
         if (p.booksOff) return J(r, 404, { error: 'Not found' });
-        return J(r, 200, books.health({ waiting: (p.waiting || []).map((w) => books.waitingRow(w)) }));
+        return J(r, 200, books.health(Object.assign({ waiting: (p.waiting || []).map((w) => books.waitingRow(w)) }, p.health || {})));
       }
       if (FACTS[u.pathname]) return J(r, 200, FACTS[u.pathname]);
       return J(r, 404, { error: 'not found' });
@@ -179,7 +179,8 @@ async function run() {
 
     /* ── 4 · 1366, a planted manifest and a planted API: facts, the rail, the alerts ── */
     {
-      const { ctx } = await profile(1366, 800, { manifest: PLANTED, waiting: [{ id: 1, reason: 'Paid by Points — there is no ledger for Points yet.' }, { id: 2, reason: 'September is locked.' }], pair: { ent: 'ent-C', name: 'Mayuri123' } });
+      const { ctx } = await profile(1366, 800, { manifest: PLANTED, waiting: [{ id: 1, reason: 'Paid by Points — there is no ledger for Points yet.' }, { id: 2, reason: 'September is locked.' },
+        { id: 3, todo: 'accept', reason: 'Waiting for you to confirm the goods were received (bill SG-103 from Sri Ganesh Provisions)' }, { id: 4, todo: 'add_supplier', name: 'Sri Ganesh', reason: 'Who is Sri Ganesh? Add them as a supplier — then bill SG-102 waits for you to accept it.' }], pair: { ent: 'ent-C', name: 'Mayuri123' } });
       const pg = await open(ctx);
       await pg.waitForSelector('[data-testid="rail"]', { timeout: 8000 }).catch(() => {});
       const f = (await pg.locator('[data-testid="shell-facts-till"]').innerText()).replace(/\s+/g, ' ');
@@ -191,11 +192,27 @@ async function run() {
       ok(rail.open === '/network.html', 'planted · the rail\'s Open goes where the manifest says');
       const rows = await pg.$$eval('[data-slot="alerts"] .al', (els) => els.map((e) => ({ id: e.dataset.testid, lvl: e.className.replace('al ', ''), text: e.textContent.replace(/\s+/g, ' ').trim(), fix: (e.querySelector('.fix') || {}).getAttribute && e.querySelector('.fix').getAttribute('href') })));
       const led = rows.find((r) => r.id === 'ledger-waiting'), pr = rows.find((r) => r.id === 'till-paired');
-      ok(led && /2 waiting for the ledger/.test(led.text) && led.fix === '/accounts.html#waiting', 'planted · "2 waiting for the ledger" — the alert\'s number is the API\'s, its fix opens CB Accounts (' + (led && led.text) + ')');
+      ok(led && /2 waiting to be recorded/.test(led.text) && led.fix === '/accounts.html#waiting', 'planted · "2 waiting to be recorded" — the alert\'s number is the API\'s, its fix opens CB Accounts (' + (led && led.text) + ')');
+      /* FX-F10W: the same counts as Books' To do — each waiting row's `todo`, each kind its own words and door (never "4 waiting for the ledger") */
+      const acc = rows.find((r) => r.id === 'ledger-accept'), sup = rows.find((r) => r.id === 'ledger-supplier');
+      ok(acc && /\b1 supplier bill to accept/.test(acc.text) && acc.fix === '/accounts.html#waiting', 'planted · "1 supplier bill to accept" with its door (' + (acc && acc.text) + ')');
+      ok(sup && /\b1 supplier to add/.test(sup.text) && sup.fix === '/accounts.html#waiting', 'planted · "1 supplier to add" with its door (' + (sup && sup.text) + ')');
+      ok(!rows.some((r) => /waiting for the ledger/.test(r.text)), 'planted · no row says "waiting for the ledger"');
       ok(pr && pr.lvl === 'warn' && /Counter 1 · paired to Mayuri123, not this shop/.test(pr.text) && pr.fix === '/till.html', 'planted · a counter paired to another shop earns an amber row with its fix (' + (pr && pr.text) + ')');
       ok(rows.every((r) => r.fix), 'planted · every alert carries the button that fixes it');
       for (const a of Object.keys(BUDGET)) { const n = await areaWords(pg, a); ok(n >= 0 && n <= BUDGET[a], 'planted 1366 · words in ' + a + ': ' + n + ' ≤ ' + BUDGET[a]); }
       await pg.screenshot({ path: path.join(SHOTS, 'index-alerts.png') });
+      await ctx.close();
+    }
+    /* ── 4b · STD1: Home says the server's ONE count (/health todo — GROUP BY over every waiting row), never the 50-row page's length ── */
+    {
+      const page = Array.from({ length: 50 }, (_, i) => ({ id: i + 1, todo: 'accept', reason: 'Waiting for you to confirm the goods (bill B' + i + ')' }));
+      const { ctx } = await profile(1366, 800, { manifest: PLANTED, waiting: page, health: { total: 211, todo: { accept: 120, add_supplier: 90, record: 1 } } });
+      const pg = await open(ctx);
+      await pg.waitForSelector('[data-testid="ledger-accept"]', { timeout: 8000 }).catch(() => {});
+      const t = (id) => pg.evaluate((x) => ((document.querySelector('[data-testid="' + x + '"]') || {}).textContent || '').replace(/\s+/g, ' '), id);
+      ok(/\b120 supplier bills to accept/.test(await t('ledger-accept')) && /\b90 suppliers to add/.test(await t('ledger-supplier')) && /\b1 waiting to be recorded/.test(await t('ledger-waiting')),
+        'STD1 · > 50 rows: Home says the server\'s count (120 · 90 · 1), not the page of 50 (' + (await t('ledger-accept')) + ')');
       await ctx.close();
     }
 

@@ -14,7 +14,13 @@ const only = (defaults, o) => { const out = Object.assign({}, defaults); Object.
 /* year (WX-R2R) + country (CX2) — ONE /health shape (INT5b): the shop's financial year as the server defaults its reads, and the CS1 status the
    books gate read — an Indian shop on an April year unless the harness says otherwise */
 const csStatus = (code, name) => ({ books: true, code: null, why: null, required: false, country: { code: code, name: name }, pack: code, version: '1.0.0' });
-const health = (o) => only({ enabled: true, currency: 'INR', country: csStatus('IN', 'India'), walkin_grain: 'day', last_check: null, engines: ENGINES, year: { fiscal_year: '2026-27', from: '2026-04-01', start_month: 4 }, waiting: [] }, o);
+/* STD1: the waiting list is a page (limit 50) with its total, and `todo` is the server's ONE count (GROUP BY over every open row) — the stand-in
+   counts its rows' own `todo` unless the harness gives the counts (a shop with more rows than the page says so) */
+const healthCounts = (rows) => rows.reduce((a, w) => { const k = w && ['accept', 'add_supplier', 'record'].indexOf(w.todo) >= 0 ? w.todo : 'record'; a.todo[k]++; a.total++; return a; },
+  { total: 0, page: 1, limit: 50, todo: { accept: 0, add_supplier: 0, record: 0 } });
+const health = (o) => { const h = only({ enabled: true, currency: 'INR', country: csStatus('IN', 'India'), walkin_grain: 'day', last_check: null, engines: ENGINES, year: { fiscal_year: '2026-27', from: '2026-04-01', start_month: 4 }, waiting: [],
+  total: 0, page: 1, limit: 50, todo: { accept: 0, add_supplier: 0, record: 0 } }, o); const c = healthCounts(h.waiting || []);
+  if (!(o && 'total' in o)) h.total = c.total; if (!(o && 'todo' in o)) h.todo = c.todo; return h; };
 /** GET /api/books/party/:id/statement */
 /* M29: every line also names its entry (entry_id · entry_no · event_type), its reversal (reverses_entry_id · reversed_by · reversed_why) and, on a payment line, payment_id · unapplied_minor · advice — null = not a payment / not reversed */
 const statement = (partyId, o) => { const s = Object.assign({ currency: 'INR', party_id: partyId, from: '2026-04-01', to: '2026-10-03', code: '1300', opening_minor: 0, closing_minor: 0, lines: [] }, o || {}); s.lines = s.lines.map((l) => Object.assign({ ref: null, source_chit_id: null, entry_id: null, entry_no: null, event_type: null, reverses_entry_id: null, reversed_by: null, reversed_why: null, payment_id: null, unapplied_minor: null, advice: null }, l, { source: l.source ? Object.assign({ chit_id: null, ref: null, kind: 'bill', counter: null, by: null, count: null, how: null, how_ref: null, split: null, doc_at: null, recorded_at: '2026-10-03T05:00:00.000Z' }, l.source) : null })); return s; };
@@ -54,14 +60,15 @@ const refusal = (msg, code) => Object.assign({ error: msg, message: msg }, code 
 /** GET /api/books/daybook */
 const daybook = (entries, o) => Object.assign({ currency: 'INR', from: DAY, to: DAY, entries: entries || [], count: (entries || []).length }, o || {});
 /** a day book entry with every key the API sends (a missing doc_date is the posting date, no reversal, a line with no party / counter / rate says so) */
-const entry = (e) => Object.assign({ doc_date: e.posting_date, reverses_entry_id: null }, e, { source: source(e.source), lines: (e.lines || []).map((l) => Object.assign({ party_id: null, party_name: null, counter: null, rate: null }, l)) });
+const entry = (e) => Object.assign({ doc_date: e.posting_date, reverses_entry_id: null, reversed_by: null, reversed_by_id: null }, e, { source: source(e.source), lines: (e.lines || []).map((l) => Object.assign({ party_id: null, party_name: null, counter: null, rate: null }, l)) });
 /** the period answer of POST /periods/:fy/:p/lock|unlock */
 const lockAnswer = (fy, period, status) => ({ ok: true, period: { fiscal_year: fy, period, status } });
 Object.assign(module.exports, { entry, lockAnswer, source, posted, ledger, assetRow, recRow, todoRow, eventsAnswer, refusal, daybook });
 
 /* ── the reads of the books ── */
 /** one post waiting for the owner (lib/books-hooks waitingRow) */
-const waitingRow = (o) => only({ id: 1, chit_id: null, ref: null, reason: 'Waiting', tries: 0, since: '2026-10-03T05:00:00.000Z', job: 'chit', source: { chit_id: null, ref: null, kind: 'chit', counter: null, by: null } }, o);
+/* STD1: `todo` (accept · add_supplier · record) and `name` are the row's DATA (the books parked them) — the harness says them; never read from `reason` */
+const waitingRow = (o) => only({ id: 1, chit_id: null, ref: null, reason: 'Waiting', tries: 0, since: '2026-10-03T05:00:00.000Z', job: 'chit', todo: 'record', name: null, candidates: [], source: { chit_id: null, ref: null, kind: 'chit', counter: null, by: null } }, o);
 /** GET /api/books/trial-balance */
 const trialBalance = (rows, o) => { const r = (rows || []).map((x) => Object.assign({ group: 'group' }, x)); const dr = r.reduce((t, x) => t + (x.dr_minor || 0), 0), cr = r.reduce((t, x) => t + (x.cr_minor || 0), 0);
   return Object.assign({ currency: 'INR', asOf: DAY, rows: r, total_dr_minor: dr, total_cr_minor: cr, balanced: dr === cr }, o || {}); };

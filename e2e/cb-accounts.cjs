@@ -118,7 +118,7 @@ async function route(S, r) {
   if (p.startsWith('/api/books')) {
     if (p === '/api/books/enable' && m === 'POST') { S.enables++; S.enabled = true; return J(r, 200, books.enable()); }
     if (!S.enabled) return J(r, 404, { error: 'Not found' });
-    if (p === '/api/books/health') { if (S.healthStatus) return J(r, S.healthStatus, { error: 'down' }); return J(r, 200, books.health({ waiting: S.waiting.map((w) => books.waitingRow({ id: w.id, chit_id: w.chit_id, ref: w.ref, reason: w.why, tries: w.tries, since: w.since })) })); }
+    if (p === '/api/books/health') { if (S.healthStatus) return J(r, S.healthStatus, { error: 'down' }); return J(r, 200, books.health({ waiting: S.waiting.map((w) => books.waitingRow({ id: w.id, chit_id: w.chit_id, ref: w.ref, reason: w.why, tries: w.tries, since: w.since, todo: w.todo || 'record', name: w.name || null })) })); }
     if (p === '/api/books/accounts' && m === 'GET') return J(r, 200, { accounts: S.accounts.map((a) => books.accountRow(Object.assign({ account_id: 'acc-' + a.code }, a))) });
     if (p === '/api/books/trial-balance') { S.last = u.searchParams.get('asOf'); return J(r, 200, books.trialBalance(S.tb, { total_dr_minor: 1940000, total_cr_minor: 1840000, balanced: false })); }
     if ((x = p.match(/^\/api\/books\/party\/([^/]+)\/statement$/))) { const pl = PARTY_LINES[x[1]] || []; return J(r, 200, books.statement(x[1], { opening_minor: 0, closing_minor: pl.length ? pl[pl.length - 1].running_minor : 0, lines: pl.map((l) => ({ date: l.date, what: l.what, ref: l.ref, source_chit_id: l.source_chit_id, source: l.source, dr_minor: l.dr_minor, cr_minor: l.cr_minor, running_minor: l.running_minor })) })); }
