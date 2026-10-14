@@ -50,7 +50,7 @@ var CBSuppliers = (function () {
     S.state = 'loading'; if (S.list) S.list.refresh();
     try {
       var r = await api('supList');
-      S.rows = (r && r.suppliers) || []; S.state = 'ready'; S.err = null;
+      S.rows = Array.isArray(r) ? r : ((r && r.suppliers) || []);   /* api()'s unwrap hands a `suppliers` answer back as the bare array (core.js) — as the workshop reads it */ S.state = 'ready'; S.err = null;
     } catch (e) {
       S.err = e; S.state = 'error';
       if (typeof cblog === 'function') cblog('error', 'operations: the supplier list did not load — ' + ((e && e.message) || e));
@@ -65,6 +65,9 @@ var CBSuppliers = (function () {
     var body = how === 'link' ? { supplier_bridge_id: v } : { name: v };
     CBAction.run(btn, function () { return api('supAdd', { body: body }); }, {
       key: 'ops-sup-' + how, out: out,
+      /* a refused link is the server's 404 WITH its sentence ("No business with that User ID…") — by the status and the body's own message,
+         never by matching words; CBAction's general words keep a bare 404 (a route that is not there) as "did not go through" */
+      onFail: function (w, e) { out.textContent = (e && e.status === 404 && e.data && e.data.message) ? e.data.message : w; },
       outcome: function () { inp.value = ''; toast(how === 'link' ? tx('Supplier linked') : tx('Supplier added')); load(); },
     });
   }

@@ -2,7 +2,7 @@
  *
  * ⚠️ NEW, AND WHY (CLAUDE.md rule 4): the workshop has no stock-on-hand screen to move (grep `till/stock|onHand|stock_balance` in app.html and
  * app/*.js: none — the critique, docs/critique/T3-OPS.md). The reader is the server's: chitbridge-api lib/stock-store.onHand (T1-INV), served by
- * GET /api/till/stock?lots=1 (widened in T3-OPS) → items[{ item_id, name, unit, qty, below_zero, lots[{ lot, expires_at, qty }] }] · below_zero.
+ * GET /api/till/stock?lots=1 (widened in T3-OPS) → shelf[{ item_id, name, unit, qty, below_zero, lots[{ lot, expires_at, qty }] }] · below_zero.
  * ⭐ THIS FILE COMPUTES NOTHING (rule 2): the quantities, the batch split, "below zero" and the order (fewest on hand first, below zero on top)
  * are the server's. No reorder level is kept anywhere, so "low" is the server's own fact — below zero — and never a threshold made up here.
  * ⚠️ NO VALUE, NO COST on this list: what the shelf is worth is the books' answer (closing stock), and cost is gated on the server.
@@ -14,7 +14,7 @@
 
 /* ── the one read this screen makes (registered once; operations.html assigns it into EP) ── */
 var CB_OPS_EP = {
-  stockShelf: { m: 'GET', p: '/api/till/stock', ok: 'y' },   // ?lots=1 → { balances, items[], below_zero, at } · 503 STOCK_NOT_READY before b214
+  stockShelf: { m: 'GET', p: '/api/till/stock', ok: 'y' },   // ?lots=1 → { balances, shelf[], below_zero, at } (`shelf`, not `items`: api()'s unwrap would collapse an `items` answer and drop below_zero) · 503 STOCK_NOT_READY before b214
 };
 
 var CBStock = (function () {
@@ -43,7 +43,7 @@ var CBStock = (function () {
     S.state = 'loading'; S.notReady = false; if (S.list) S.list.refresh();
     try {
       var r = await api('stockShelf', { query: { lots: 1 } });
-      S.rows = (r && r.items) || []; S.below = (r && r.below_zero) || 0; S.at = r && r.at; S.state = 'ready'; S.err = null;
+      S.rows = (r && r.shelf) || []; S.below = (r && r.below_zero) || 0; S.at = r && r.at; S.state = 'ready'; S.err = null;
     } catch (e) {
       S.err = e; S.state = 'error';
       S.notReady = !!(e && e.data && e.data.code === 'STOCK_NOT_READY');   /* the server's code, never its sentence */
