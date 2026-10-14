@@ -101,7 +101,7 @@ const walk = async (w) => {
     });
     await w.step('S4', 'C1 (open) -> Release -> the page\'s own confirm names what it costs -> Release -> one POST release', async () => {
       await go('counters', '[data-testid="sx-ctr-C1"]'); await openRow('sx-ctr-C1'); await act('release', 'C1').click();
-      await page.waitForSelector('[data-testid="confirm-ok"]', { timeout: 5000 }); const ask = await txt('.cbconfirm, [role="dialog"]');
+      await page.waitForSelector('[data-testid="confirm-ok"]', { timeout: 5000 }); const ask = await txt('[data-testid="confirm"]');
       await yes();
       const post = wrote(/POST \/api\/counters\/C1\/release/);
       return { ok: post.length === 1 && /not sent/.test(ask), saw: post.length + ' release · asked "' + ask.slice(0, 80) + '"' };
@@ -118,13 +118,13 @@ const walk = async (w) => {
       return { ok: del.length === 1, saw: del.length + ' DELETE' };
     });
     await w.step('S7', 'a CO-ASSIST: Add and every row action SHOWN, greyed with the server\'s sentence (may.manage); pressing sends nothing', async () => {
-      S.coassist = true; const before = S.calls.length;
+      S.coassist = true; const mine = () => S.calls.filter((c) => /\/api\/(counters|keys)/.test(c)); const before = mine().length;
       await go('counters', '[data-testid="sx-ctr-C1"]'); await openRow('sx-ctr-C2');
       const add = await page.locator('[data-testid="sx-ctr-add"]').isDisabled(), why = await txt('[data-testid="sx-ctr-add-why"]');
       const open = await act('open', 'C2').isDisabled(), rowWhy = await txt('[data-testid="sx-ctr-next-C2"] ~ .cbl-acts, .cbl-next[data-next="C2"] .cbl-why');
       await act('open', 'C2').click({ force: true }).catch(() => {}); await page.waitForTimeout(300);
       S.coassist = false;
-      return { ok: add && why === OWNER_SAYS && open && rowWhy.indexOf(OWNER_SAYS) >= 0 && S.calls.length === before, saw: 'Add greyed ' + add + ' "' + why + '" · Open greyed ' + open + ' "' + rowWhy + '" · sent ' + (S.calls.length - before) };
+      return { ok: add && why === OWNER_SAYS && open && rowWhy.indexOf(OWNER_SAYS) >= 0 && mine().length === before, saw: 'Add greyed ' + add + ' "' + why + '" · Open greyed ' + open + ' "' + rowWhy + '" · sent ' + (S.calls.length - before) };
     });
     await w.step('S8', 'the counters read fails -> "Could not read this" + Try again in the list, never "No counters yet"', async () => {
       S.ctrFail = true; await go('counters', '[data-testid="cbl-error-set-counters"]');

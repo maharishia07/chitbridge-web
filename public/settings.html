@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-tokens="list">
 <head>
 <meta charset="utf-8">
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
@@ -55,13 +55,15 @@ button{font-family:inherit;cursor:pointer}
 @keyframes sp{to{transform:rotate(360deg)}}
 /* T3-SETTINGS — the four list sections (app/cap-settings.js): CBList draws every list; these are the bars above them and the row's next level */
 #set.wide{max-width:1000px}
+#set.wide > *{flex-shrink:0}   /* #set is a fixed-height scroller: a list keeps its own height (its rows scroll inside it), never squeezed under the next bar */
 .sx-h{margin:0;font-family:var(--serif);font-size:21px;font-weight:700;color:var(--ink,#2a2418)}
 .sx-h2{margin:18px 0 0;font-family:var(--serif);font-size:18px;font-weight:700;color:var(--ink,#2a2418)}
 .sx-bar{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .sx-count{font-size:15px;padding-bottom:9px}
 .sx-count b{font-size:20px}
-.sx-add{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap;flex:1 1 320px;justify-content:flex-end}
-.sx-add .inp{width:auto;flex:1 1 180px;min-width:0}
+.sx-add{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap;flex:1 1 320px;justify-content:flex-end;min-width:0;max-width:100%}
+.sx-add .inp{width:auto;flex:1 1 180px;min-width:0;max-width:100%}
+.sx-add select.inp{flex:1 1 100%;width:100%}
 .sx-lbl{display:block;font-size:var(--fs-2);font-weight:600;color:var(--ink,#2a2418);flex-basis:100%}
 .sx-act{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap}
 .sx-why{font-size:13px;color:var(--grey,#5c5240)}
