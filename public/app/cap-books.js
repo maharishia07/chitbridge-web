@@ -2173,10 +2173,35 @@ function bkWaitCols() {
     { key: 'step', label: tx('Step'), prio: 3, sort: 'step', w: 300, html: true, cell: function (w) {
         var i = (BK.waiting || []).indexOf(w), m = bkWaitModel(w);
         /* a posting that failed says why, in the server's words; a bill waiting on a person says which step it is at */
+        /* F10/F11: a bill naming a supplier the books do not know carries the fix — the existing add-party door (supAdd), then a retry */
+        var who = bkWaitWho(w);
+        if (who) return '<span data-testid="wait-why-' + i + '" style="color:var(--warn-2)">' + esc(w.reason || w.why) + '</span> <button type="button" class="supact-pri" data-testid="wait-addsup-' + i + '" onclick="event.stopPropagation(); bkWaitAddSupplier(' + i + ', this)">' + esc(tx('Add supplier')) + '</button>';
         if (bkWaitFailed(w)) return '<span data-testid="wait-why-' + i + '" style="color:var(--warn-2)">' + esc(w.reason || w.why || tx('No reason given')) + '</span>';
         return m ? esc(CBSheet.stepWord(m)) : dash;
       } },
   ];
+}
+/** F11: the name in the server's "Who is <name>? Add them as a supplier …" (books-hooks receiptBill) — read from its sentence, as bkWaitFailed reads "Waiting for you to confirm" */
+function bkWaitWho(w) { var m = /^Who is (.+)\? Add them as a supplier/.exec(String((w && (w.reason || w.why)) || '')); return m ? m[1] : null; }
+/**
+ * F11: add <name> as a supplier through the EXISTING door (POST /relationships/suppliers { name } — a local party, as the Suppliers screen adds
+ * one), then ask the books to try again: the bill now names a supplier the books know and waits for acceptance. → the sentence to show, or null.
+ * "Already on your list" is not a failure here — the retry is what was wanted.
+ */
+async function bkAddSupplier(name) {
+  try { await api('supAdd', { body: { name: name, supply_kind: 'resale' } }); }
+  catch (e) { if (!(e && (e.status === 409 || /already/i.test(String(e.message || ''))))) return bkWhy(e, tx('Could not add the supplier')); }
+  try { await api('booksRetry', { body: {} }); } catch (e) { return bkWhy(e, tx('Added — try again from Waiting')); }
+  try { await bkHealthLoad(); } catch (_) {}
+  return null;
+}
+async function bkWaitAddSupplier(i, btn) {
+  var w = (BK.waiting || [])[i], name = bkWaitWho(w); if (!name) return;
+  await bkOnce('addsup-' + i, btn, async function () {
+    var said = await bkAddSupplier(name);
+    var body = document.getElementById('bk_body'); if (body && BK.tab === 'waiting') await bkWaitingView(body);
+    var out = document.getElementById('wait_out'); if (out) out.textContent = said || txf('{name} added as a supplier', { name: name });
+  });
 }
 function bkWaitDate(w) { var m = bkWaitModel(w), d = bkWaitDay(w); return String((m && m.at) || (d && d.day) || w.since || ''); }
 function bkWaitNext(w) {
