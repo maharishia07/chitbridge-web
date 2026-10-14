@@ -109,7 +109,8 @@ const walk = async (w) => {
   if (REAL) {
     /* the real stack: chitbridge-api as a child on the loader's Postgres; the walk signs in through the one sign-in window (e2e/lib/real-api.cjs) */
     api = await require('./lib/real-api.cjs').start({ origin: base });
-    await ctx.addInitScript((b) => { try { localStorage.setItem('cb_api_base', b); } catch (_) {} }, api.base);
+    const token = await api.owner();   /* the shop's own token through the ONE sign-in door; kept the way the sign-in window keeps it */
+    await ctx.addInitScript((o) => { try { localStorage.setItem('cb_api_base', o.b); localStorage.setItem('cb_sess', JSON.stringify({ token: o.t, role: 'entity', name: 'Owner', entity: o.shop, bridgeId: o.shop })); } catch (_) {} }, { b: api.base, t: token, shop: api.shop });
   } else {
     await ctx.route('**/api/**', route);
     /* the preview frame is the shop's OWN page: here a stub that echoes its address, so the walk asserts the src and loads no catalogue */
@@ -121,12 +122,10 @@ const walk = async (w) => {
   const txt = (sel) => page.locator(sel).first().innerText().then((s) => s.replace(/\s+/g, ' ').trim()).catch(() => '');
   const has = (sel) => page.locator(sel).first().count().then((n) => n > 0);
   const posts = (re) => S.bodies.filter((b) => re.test(b.m + ' ' + b.p));
-  const groups = async () => { await page.goto(base + '/crm.html#/groups'); await page.waitForSelector('[data-testid="crm-grp-count-regular"]', { timeout: 20000 }); await page.waitForTimeout(300); };
-  const openRow = async (tid) => { const row = page.locator('[data-testid="' + tid + '"]').first(); await row.locator('[data-cbl-next],button[aria-label*="Open"],.cbl-exp,.cbl-next').first().click({ timeout: 5000 }).catch(async () => { await row.click(); }); await page.waitForTimeout(250); };
-  if (REAL) {
-    await page.goto(base + '/crm.html#/groups'); await page.waitForTimeout(800);
-    await api.signIn(page, { surface: 'crm' }).catch(() => {});
-  }
+  /* a hash-only goto is no navigation in Playwright: reload so the page reads again */
+  const groups = async () => { await page.goto(base + '/crm.html#/groups'); await page.reload(); await page.waitForSelector('[data-testid="crm-grp-count-regular"]', { timeout: 20000 }); await page.waitForTimeout(300); };
+  /* a CBList row opens its ▸ level on a click of the row itself (list-ctl.js: role=row, aria-expanded) */
+  const openRow = async (tid) => { const row = page.locator('[data-testid="' + tid + '"]').first(); if ((await row.getAttribute('aria-expanded')) !== 'true') await row.click(); await page.waitForTimeout(300); };
 
   /* ── 1 · GROUPS & SEGMENTS ── */
   await groups();
@@ -140,13 +139,13 @@ const walk = async (w) => {
   });
   await w.step('G2', 'Groups -> ▸ Workshops: the mini-card names its member (a link to the record), says who may be sent offers, and the offers only for them', async () => {
     await openRow('crm-grp-group_Workshops');
-    const mini = await txt('[data-testid="crm-grp-mini-group_Workshops"]'), link = await has('[data-testid="crm-grp-member-pid-0002"]'), may = await txt('[data-testid="crm-grp-may-group_Workshops"]');
+    const mini = await txt('[data-testid="crm-grp-mini-group_Workshops"]'), link = await has('[data-testid="crm-grp-member-P-0002"]'), may = await txt('[data-testid="crm-grp-may-group_Workshops"]');
     return { ok: link && /Chola Auto Care/.test(mini) && /1 may be sent offers/.test(may) && /Offers only for them\s*1/.test(mini), saw: mini.slice(0, 160) };
   });
   await w.step('G3', 'Groups -> + New group "VIP" -> tick two customers -> Save: ONE POST { name, add[2] }, the toast says the members, the row appears with the server\'s count', async () => {
     await page.click('[data-testid="crm-grp-new"]'); await page.waitForSelector('[data-testid="crm-grp-sheet"]', { timeout: 5000 });
     await page.fill('#crm_grp_name', 'VIP');
-    await page.click('[data-testid="crm-grp-cand-pid-0002"] input'); await page.click('[data-testid="crm-grp-cand-pid-0006"] input');
+    await page.click('[data-testid="crm-grp-cand-P-0002"] input'); await page.click('[data-testid="crm-grp-cand-P-0006"] input');
     const n = await txt('[data-testid="crm-grp-n"]');
     await page.click('[data-testid="crm-grp-save"]'); await page.waitForSelector('[data-testid="crm-grp-count-group_VIP"]', { timeout: 10000 }); await page.waitForTimeout(300);
     const b = posts(/POST \/api\/crm\/groups$/), body = b.length ? b[b.length - 1].body : {}, count = await txt('[data-testid="crm-grp-count-group_VIP"]'), toast = await txt('#toast');
@@ -161,14 +160,14 @@ const walk = async (w) => {
     const who = await txt('[data-testid="crm-send-who"]'), dry = posts(/\/send$/).filter((b) => b.body && b.body.dry).length, goLabel = await txt('[data-testid="crm-send-go"]');
     await page.click('[data-testid="crm-send-go"]'); await page.waitForSelector('[data-testid="crm-send-done"]', { timeout: 8000 });
     const done = await txt('[data-testid="crm-send-done"]'), lines = await txt('[data-testid="crm-send-lines"]'), real = posts(/\/send$/).filter((b) => b.body && !b.body.dry);
-    const ok = goBefore && dry === 1 && /1 may be sent offers/.test(who) && /1 not — 1 no consent yet/.test(who) && /Big Buyer/.test(who) && goLabel === 'Send to 1' && real.length === 1 && real[0].body.text === 'Diwali offer: 10% off this week' && /0 sent · 1 refused/.test(done) && /WHATSAPP_TOKEN/.test(lines);
+    const ok = goBefore && dry === 1 && /1 may be sent offers/.test(who) && /1 not — 1 no consent yet/.test(who) && /Big Buyer/.test(who) && goLabel === 'Send to 1' && real.length === 1 && real[0].body.text === 'Diwali offer: 10% off this week' && /0 sent · 1 not sent · 1 not asked — no consent/.test(done) && /WHATSAPP_TOKEN/.test(lines);
     return { ok, saw: 'check: "' + who.slice(0, 90) + '" · button "' + goLabel + '" · outcome "' + done + '" · ' + lines.slice(0, 80) };
   });
   await w.step('G5', 'VIP -> Delete group: asks first, then ONE DELETE; the row is gone and the Parties list no longer carries the name', async () => {
     await page.keyboard.press('Escape'); await page.waitForTimeout(200);
     await page.locator('[data-testid="crm-grp-delete"]').first().click(); await page.waitForSelector('[data-testid="confirm"]', { timeout: 5000 });
     const ask = await txt('[data-testid="confirm"]');
-    await page.locator('[data-testid="confirm"] button').filter({ hasText: /^Delete/ }).first().click(); await page.waitForTimeout(800);
+    await page.click('[data-testid="confirm-ok"]'); await page.waitForTimeout(800);
     const gone = !(await has('[data-testid="crm-grp-count-group_VIP"]')), dels = S.calls.filter((c) => /DELETE \/api\/crm\/groups\/VIP/.test(c)).length;
     return { ok: /Delete group VIP\?/.test(ask) && /name goes/.test(ask) && gone && dels === 1, saw: '"' + ask.slice(0, 80) + '" · DELETE ×' + dels + ' · row gone ' + gone };
   });
@@ -192,11 +191,11 @@ const walk = async (w) => {
   await w.step('G9', 'A view-only login -> Groups: + New group, Send and Delete are SHOWN, greyed, each with the server\'s sentence; never hidden', async () => {
     S.level = 'viewer'; await ctx.addInitScript((s) => { try { localStorage.setItem('cb_sess', s); } catch (_) {} }, VIEWER); await page.evaluate((s) => localStorage.setItem('cb_sess', s), VIEWER);
     await groups();
-    const newBtn = page.locator('[data-testid="crm-grp-new"]'), newOff = await newBtn.isDisabled(), newWhy = await txt('[data-testid="crm-grp-new-why"]');
+    const newBtn = page.locator('[data-testid="crm-grp-new"]'), nNew = await newBtn.count(), newOff = await newBtn.first().isDisabled(), newWhy = await txt('[data-testid="crm-grp-new-why"]');
     await openRow('crm-grp-group_Workshops');
     const sendOff = await page.locator('[data-testid="crm-grp-send"]').first().isDisabled(), delOff = await page.locator('[data-testid="crm-grp-delete"]').first().isDisabled();
     const sendWhy = await page.locator('[data-testid="crm-grp-send"]').first().getAttribute('title'), delWhy = await page.locator('[data-testid="crm-grp-delete"]').first().getAttribute('title');
-    return { ok: newOff && /only view/.test(newWhy) && sendOff && /only view/.test(sendWhy || '') && delOff && /Only the owner deletes/.test(delWhy || ''), saw: 'New group: "' + newWhy + '" · Send: "' + sendWhy + '" · Delete: "' + delWhy + '"' };
+    return { ok: nNew === 1 && newOff && /only view/.test(newWhy) && sendOff && /only view/.test(sendWhy || '') && delOff && /Only the owner deletes/.test(delWhy || ''), saw: 'New group ×' + nNew + ': "' + newWhy + '" · Send: "' + sendWhy + '" · Delete: "' + delWhy + '"' };
   });
   S.level = 'owner'; await ctx.addInitScript((s) => { try { localStorage.setItem('cb_sess', s); } catch (_) {} }, W.session('Fixture Owner', 'Fixture Shop')); await page.evaluate((s) => localStorage.setItem('cb_sess', s), W.session('Fixture Owner', 'Fixture Shop'));
 
@@ -217,7 +216,7 @@ const walk = async (w) => {
   });
 
   /* ── 3 · THE SHOP WINDOW ── */
-  const showcase = async () => { await page.goto(base + '/crm.html#/showcase'); await page.waitForSelector('[data-testid="sc-picks"]', { timeout: 20000 }); await page.waitForTimeout(300); };
+  const showcase = async () => { await page.goto(base + '/crm.html#/showcase'); await page.reload(); await page.waitForSelector('[data-testid="sc-picks"]', { timeout: 20000 }); await page.waitForTimeout(300); };
   await showcase();
   await w.step('S1', 'CB CRM -> Shop window: the templates as buttons, the current one lit; the preview is the shop\'s OWN page with ?showcase=<current>; pick another -> ONE PATCH, the lit one and the preview follow', async () => {
     const cur = await page.locator('[data-testid="sc-picks"]').getAttribute('data-current'), src0 = await page.locator('[data-testid="sc-preview"]').getAttribute('src');
@@ -228,13 +227,13 @@ const walk = async (w) => {
     return { ok, saw: 'current ' + cur + ' · src ' + (src0 || '').replace(base, '') + ' -> ' + (src1 || '').replace(base, '') + ' · PATCH ×' + b.length + ' · "' + toast + '"' };
   });
   await w.step('S2', 'Share with a party who has NOT agreed (Big Buyer): the verdict says Not now, Share on WhatsApp is greyed WITH the server\'s sentence', async () => {
-    await page.fill('#crm_sc_q', 'Big'); await page.waitForSelector('[data-testid="crm-sc-pick-pid-0006"]', { timeout: 5000 }); await page.click('[data-testid="crm-sc-pick-pid-0006"]');
+    await page.fill('#crm_sc_q', 'Big'); await page.waitForSelector('[data-testid="crm-sc-pick-P-0006"]', { timeout: 5000 }); await page.click('[data-testid="crm-sc-pick-P-0006"]');
     await page.waitForSelector('[data-testid="crm-sc-verdict"]', { timeout: 8000 });
     const code = await page.locator('[data-testid="crm-sc-verdict"]').getAttribute('data-code'), chip = await txt('[data-testid="crm-sc-may"]'), off = await page.locator('[data-testid="crm-sc-share"]').isDisabled(), why = await txt('[data-testid="crm-sc-share-why"]');
     return { ok: code === 'NO_CONSENT' && /Not now/.test(chip) && off && /No consent for offers on whatsapp/.test(why), saw: code + ' · "' + chip + '" · greyed ' + off + ' · "' + why + '"' };
   });
   await w.step('S3', 'Share with a party who agreed (Chola): Share is lit -> the out message is LOGGED through the gated route (channel whatsapp · purpose marketing) and WhatsApp opens with the link', async () => {
-    await page.fill('#crm_sc_q', 'Chola'); await page.waitForSelector('[data-testid="crm-sc-pick-pid-0002"]', { timeout: 5000 }); await page.click('[data-testid="crm-sc-pick-pid-0002"]');
+    await page.fill('#crm_sc_q', 'Chola'); await page.waitForSelector('[data-testid="crm-sc-pick-P-0002"]', { timeout: 5000 }); await page.click('[data-testid="crm-sc-pick-P-0002"]');
     await page.waitForSelector('[data-testid="crm-sc-verdict"][data-code="CONSENT"]', { timeout: 8000 });
     const chip = await txt('[data-testid="crm-sc-may"]'), lit = !(await page.locator('[data-testid="crm-sc-share"]').isDisabled());
     await page.click('[data-testid="crm-sc-share"]'); await page.waitForTimeout(700);

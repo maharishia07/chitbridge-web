@@ -242,7 +242,9 @@ function crmSendGo(btn) {
     onFail: function (words, e) { out.innerHTML = '<div class="banner bad" data-testid="crm-send-fail">' + esc(crmSendWords(e)) + '</div>'; },
     outcome: function (r) {
       SEND.done = r;
-      var line = [txf('{n} sent', { n: r.sent_n || 0 }), r.refused_n ? txf('{n} refused', { n: r.refused_n }) : '', r.failed_n ? txf('{n} failed', { n: r.failed_n }) : ''].filter(Boolean).join(' · ');
+      /* three facts, never one number: sent · not sent (the sender refused or failed — its reason is on each line) · not asked (no consent — the server's codes) */
+      var notSent = (r.sent || []).filter(function (x) { return x.status !== 'sent'; }).length, notAsked = (r.refused_by || []).reduce(function (a, x) { return a + (Number(x.n) || 0); }, 0);
+      var line = [txf('{n} sent', { n: r.sent_n || 0 }), notSent ? txf('{n} not sent', { n: notSent }) : '', notAsked ? txf('{n} not asked — no consent', { n: notAsked }) : ''].filter(Boolean).join(' · ');
       out.innerHTML = '<div class="result" data-testid="crm-send-done"><span><span class="k">' + esc(tx('Outcome')) + '</span><b>' + esc(line) + '</b></span></div>'
         + ((r.sent || []).length ? '<div class="sub" data-testid="crm-send-lines">' + r.sent.slice(0, 8).map(function (x) { return esc(x.name || x.party_id) + ' — ' + esc(tx(x.status)) + (x.reason ? ': ' + esc(x.reason) : ''); }).join('<br>') + (r.sent.length > 8 ? '<br>…' : '') + '</div>' : '');
       var go = document.querySelector('[data-testid="crm-send-go"]'); if (go) { go.disabled = true; go.title = tx('Sent'); }
