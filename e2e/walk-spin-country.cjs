@@ -39,13 +39,17 @@ const BROWSER = {
   Berlin:  { timezoneId: 'Europe/Berlin',    locale: 'de-DE', country: null },   /* a zone and a tag naming no served country — the "asks" case */
 };
 const name = (c) => CS.nameOf(c);
-/** what the server answers GET /entities/constitutions with, for a stand-in installation (country-setup.atSignup's shape) */
-const spinAnswer = (inst, allowed) => ({
-  constitutions: [{ key: 'base', label: 'Base', is_default: true, capabilities: [] }],
-  installation: { key: inst.key, country: inst.country, name: inst.country ? name(inst.country) : null, timezone: inst.timezone },
-  allowed_countries: allowed || null,
-  countries: CS.countries().filter((c) => !allowed || allowed.indexOf(c.code) >= 0),
-});
+/** what the server answers GET /entities/constitutions?tz= with, for a stand-in installation (country-setup.atSignup's shape; STD2: each country row
+    carries the server's `offer` — country-setup.offered, the SAME function the route calls — so the stand-in never computes a second answer) */
+const spinAnswer = (inst, allowed, tz) => {
+  const at = { installation: { country: inst.country }, timezone: inst.timezone, countries: CS.countries().filter((c) => !allowed || allowed.indexOf(c.code) >= 0) };
+  return {
+    constitutions: [{ key: 'base', label: 'Base', is_default: true, capabilities: [] }],
+    installation: { key: inst.key, country: inst.country, name: inst.country ? name(inst.country) : null, timezone: inst.timezone },
+    allowed_countries: allowed || null,
+    countries: CS.offered(at, tz),
+  };
+};
 
 async function readStored(email) {
   const { Pool } = require(path.join(API_DIR, 'node_modules', 'pg'));
@@ -79,7 +83,7 @@ const walk = async (w) => {
         const q = r.request(), p = new URL(q.url()).pathname;
         if (q.method() === 'POST') calls.push(p + ' ' + (q.postData() || ''));
         if (p === '/api/entities/register') return J(r, 200, { email: JSON.parse(q.postData() || '{}').email });
-        if (p === '/api/entities/constitutions') return J(r, 200, spinAnswer(INST[k] || k, allowed));
+        if (p === '/api/entities/constitutions') return J(r, 200, spinAnswer(INST[k] || k, allowed, new URL(q.url()).searchParams.get('tz')));
         if (p === '/api/entities/verify') {
           const token = b64({ alg: 'none' }) + '.' + b64({ identity_id: 'ent-new', identity_type: 'entity', display_name: 'spin', exp: Math.floor(Date.now() / 1000) + 3600 }) + '.x';
           return J(r, 200, { token, entity: { identity_id: 'ent-new', identity_type: 'entity', display_name: 'spin', bridge_id: 'CBNEW0001' } });
@@ -170,9 +174,13 @@ const walk = async (w) => {
 
   /* rule 13 on the richest panel: the Emirati spin from a Kolkata browser (the browser line · "Another country" · Arabic in its own script) */
   const o = await openAt('ae', 'Kolkata');
-  await w.step('A1', 'the Emirati panel names Arabic in its own script, isolated right-to-left (bdi dir=rtl) so the row never flips', async () => {
-    const bdi = await o.page.locator('[data-testid="reg-gov-language"] bdi[dir="rtl"]').count(), lang = await txt(o.page, '[data-testid="reg-gov-language"]');
+  await w.step('A1', 'the Emirati panel names Arabic in its own script, isolated (bdi lang=ar dir=auto — the browser\'s bidi runs it right-to-left) so the row never flips', async () => {
+    const bdi = await o.page.locator('[data-testid="reg-gov-language"] bdi[lang="ar"][dir="auto"]').count(), lang = await txt(o.page, '[data-testid="reg-gov-language"]');
     return { ok: bdi === 1 && /Arabic/.test(lang) && /العربية/.test(lang), saw: '"' + lang + '" · rtl-isolated ' + bdi };
+  });
+  await w.step('Z1', 'the Time zone row paints the SERVER\'s offer (countries[].offer, STD2): an Emirati spin offers Asia/Dubai from the pack, never the Kolkata device', async () => {
+    const row = await txt(o.page, '[data-testid="reg-gov-timezone"]');
+    return { ok: /Asia\/Dubai/.test(row) && /pack/.test(row) && !/Kolkata/.test(row), saw: '"' + row + '"' };
   });
   await rule13(w, 'R13', 'the Emirati spin\'s code step (a Kolkata browser)', 'set', o.page);
   await o.page.screenshot({ path: path.join(OUT, 'walk-spin-country-R13.png'), fullPage: true });
