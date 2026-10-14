@@ -68,6 +68,10 @@ var CB_SHOP_EP = {
   profileGet:       {m:"GET",   p:"/api/governance/profile",             ok:"y"},
   countrySetup:     {m:"GET",   p:"/api/governance/country-setup",       ok:"y"},   // CS1: the step after registration — country · money · year · tax, each with its source; pack { books, why }
   countrySetupSave: {m:"PUT",   p:"/api/governance/country-setup",       ok:"y"},   // CS1 (owner): set once; 503 before b299; 409 a different country (a new entity)
+  /* a new shop is the shop's first setup (FX-UX2): the register form (app/register-form.js) on app.html #/register and CB Settings › New shop — MOVED from app.html's EP */
+  register:         {m:"POST",  p:"/api/entities/register",              ok:"✓"},   // OTP request (register doubles as owner login)
+  ownerVerify:      {m:"POST",  p:"/api/entities/verify",                ok:"✓"},   // verify OTP → token
+  constitutions:    {m:"GET",   p:"/api/entities/constitutions",         ok:"y"},   // public: the verticals to choose at sign-up
 };
 
 /* ── the chit sheet's three calls (chit-sheet.js reads one chit, moves its step, says what a bill's goods are for) —

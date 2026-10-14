@@ -14,7 +14,7 @@ Where a door is: `file:line` at the time of the audit. "What the person wanted" 
 
 | Entry on Home / in a small app | What the person wanted | Target before IX0 | Small app it belongs to | Move |
 |---|---|---|---|---|
-| Home · sign-in window · *Continue to register* (`index.html:112`; the same on Tasks · Employees · Network · KYB · Documents via `page-frame.js:54`) | start a new shop | `app.html#/welcome` | **settings** (the shop's own setup; a new shop is its first) | **build · SET3 (M)** |
+| Home · sign-in window · *Continue to register* (`index.html:112`; the same on Tasks · Employees · Network · KYB · Documents via `page-frame.js:54`) | start a new shop | ~~`app.html#/welcome`~~ → `settings.html#/new` | **settings** (the shop's own setup; a new shop is its first) | **done · FX-UX2** (the form moved to `app/register-form.js`; app.html #/register paints the same) |
 | Home · avatar menu · *Settings* (`avatar.js:309`, a default href) | the shop's settings | `app.html#/app/settings` — dormant: only app.html asks for the item and it passes its own handler | settings | **fixed now**: no default door; Settings is drawn only with a page's own `onSettings` / `settingsHref` |
 | CB Accounts · Day book · *"close the day on the counter"* (`cap-books.js:975` → `navTo('counter')`) | close the day | `app.html#/app/counter` | **till** (the counter IS `/till.html`) | **repointed now** — `CB_HOMES` (accounts-shell.js) |
 | CB Accounts · CRM · Finance · `navTo(key)` for any other key | — (no other live caller) | `app.html#/app/<key>` | the map `CB_HOMES`: task/order → tasks · customers/suppliers → crm · ledger → accounts · network · coassists → employees · profile → kyb | **repointed now**; a key with no home says "Not built outside the workshop yet." — never a door |
@@ -36,7 +36,7 @@ no app.html href: `grep app.html routes lib` is comments only), shop.html, tasks
 
 | Area | Small app | Exists? | Screens that move there (REUSE, never rewrite) |
 |---|---|---|---|
-| **settings** | `settings.html` — CB Settings | **yes (SET1)** — Your shop (`cap-shop.js`: the Business section + the vault's identity rows) · Country (`cap-country.js`) | still to move: the workshop's Settings sections (`setSetSec`: identity · locale · appearance · governance · policy · channels · integrations), Country setup (`cap-country.js`), Counters & keys (`counterGo`, Counters card), Connectors (`cap-connector.js`), the register/welcome flow (`#/welcome`) |
+| **settings** | `settings.html` — CB Settings | **yes (SET1)** — Your shop (`cap-shop.js`: the Business section + the vault's identity rows) · Country (`cap-country.js`) · New shop (`register-form.js`, FX-UX2) | still to move: the workshop's Settings sections (`setSetSec`: identity · locale · appearance · governance · policy · channels · integrations), Country setup (`cap-country.js`), Counters & keys (`counterGo`, Counters card), Connectors (`cap-connector.js`) |
 | **catalogue** | `catalogue.html` — Catalogue | **no** (chip `via` Product Lab) | the product list + detail (app.html `catalogue` nav: `prodPickAll`, the tabs product · pricing · variants · modifiers · barcode · media · storefront), Categories (`cap-categories.js`), Catalogue setup (`cap-catsetup.js`), `catalogue-model.js` · `catalogue-lines.js` · `price-resolve.js` |
 | **crm** | `crm.html` | yes | **done · CRM2 (2026-10-13)**: the chit page `#/chit/<id>` is the chit sheet mounted full-page (`CBSheet.mount`, one painter, the frozen figures read once) + history + the CBPage note; `paintDetail` stays the workshop's pane until M53 is designed (it recomputes money — docs/critique/CRM2.md) |
 | **network** | `network.html` | yes | the builder (`cap-network.js`) |
@@ -56,7 +56,7 @@ A round STRIKES its rows from the ALLOW list in `e2e/index-not-app.cjs` and from
 | 3 | **CAT1** · `catalogue.html` born: the list (CBList) + the product detail tabs + Categories | L | manifest `catalogue` → built, route `/catalogue.html` (drop `via`); standards `HOME.catalogue` | till `billWarnFix` (rate) · standards 8 rows |
 | 4 | **SET2** · Counters & keys + Connectors in `settings.html` | M | `counterGo` + Counters card; `cap-connector.js`; manifest `counters` · `connectors` → built | till `whoseShopFix` · the last till `#/app` caller → `cbHome()` retired, `cbRoot()` stays |
 | 5 | **NET2** · the builder inside `network.html` | M | `cap-network.js` in the work pane, behind the design's Check | `nw-builder` |
-| 6 | **SET3** · register a new shop from the sign-in window (`settings.html#/new` or the window's own step) | M | the `#/welcome` flow as CBSteps; `registerHref` in `index.html` and `page-frame.js` → the new page; M37's P0 allow-list closes | the two `registerHref` |
+| 6 | **SET3** (register door done FX-UX2; the welcome intro as CBSteps still open) · register a new shop from the sign-in window (`settings.html#/new` or the window's own step) | M | the `#/welcome` flow as CBSteps; `registerHref` in `index.html` and `page-frame.js` → the new page; M37's P0 allow-list closes | the two `registerHref` |
 | 7 | **TRD1** · Trade readiness in Know your business | M | `cap-readiness.js`; standards `HOME.readiness` | none today (button-less rows) |
 
 When the table in §1 has no **build** row left, `e2e/index-not-app.cjs`'s ALLOW list is empty, and the guard becomes the plain rule: no customer page names app.html.

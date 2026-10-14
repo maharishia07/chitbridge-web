@@ -77,6 +77,7 @@ function go(){ if (window.CBFrame) CBFrame.ended(); }   /* api()'s 401 → drop 
 <script src="/app/accounts-shell.js"></script>  <!-- tx · toast · CBAction · CB_HOMES · CB_SHOP_EP -->
 <script>Object.assign(EP, CB_SHOP_EP);</script>
 <script src="/app/locale.js"></script>          <!-- CBLocale.region → the licence number's name (GSTIN · TRN · VAT …) -->
+<script src="/app/govcontext.js"></script>      <!-- CBGov: what the browser tells about a new shop (the register form's gov panel; Country setup's prefill) — AFTER locale -->
 <script src="/app/helpers.js"></script>         <!-- esc -->
 <script src="/engine/signin.js"></script>
 <script src="/app/signin-ui.js"></script>
@@ -87,6 +88,7 @@ function go(){ if (window.CBFrame) CBFrame.ended(); }   /* api()'s 401 → drop 
 <script src="/app/page-frame.js"></script>
 <script src="/app/cap-shop.js"></script>        <!-- Your shop: the Profile's Business section + the vault's identity rows (MOVED from cap-admin.js) -->
 <script src="/app/cap-country.js"></script>     <!-- Country setup (CS1), mounted here with CBCountry.mount -->
+<script src="/app/register-form.js"></script>   <!-- New shop (SET3 · FX-UX2): the register form app.html #/register paints, mounted here with CBRegistration.mount -->
 <script>
 'use strict';
 (function () {
@@ -94,18 +96,33 @@ function go(){ if (window.CBFrame) CBFrame.ended(); }   /* api()'s 401 → drop 
     { k: 'shop',    label: 'Your shop', icon: 'M3 10l9-6 9 6M5 10v10h14V10M9 20v-6h6v6' },
     { k: 'country', label: 'Country',   icon: 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18' },
   ];
+  /* ⭐ New shop (SET3 · FX-UX2): the sign-in window's "New shop? Register" opens HERE — a customer never enters the workshop (INDEX-NOT-APP.md).
+     A public section: no sign-in window over it (signin:false; the avatar's Sign in goes to Home's), the only section in the sidebar, and
+     the SAME form app.html #/register paints (app/register-form.js). Verified → the session is kept as the sign-in window keeps it → Home. */
+  var NEW = { k: 'new', label: 'New shop', icon: 'M12 5v14M5 12h14' };
+  var isNew = /^#\/?new\b/.test(location.hash || '');
+  if (isNew) SECTIONS = [NEW];
   var host = document.getElementById('set'), frame = null;
   function secOf(){ var h = (location.hash || '').replace(/^#\/?/, '').split(/[?&]/)[0]; return SECTIONS.some(function (s) { return s.k === h; }) ? h : 'shop'; }
+  /** the verify answer → the apps' session (cb_sess, CBSignin.sessionOf — the one reading), claimed for this browser (CBOnePerson) → Home */
+  function registered(r){
+    var s = CBSignin.sessionOf(r), sess = { token: s.token, role: s.role, name: s.name, entity: s.entity, bridgeId: s.bridgeId };
+    try { localStorage.setItem('cb_sess', JSON.stringify(sess)); } catch (_) {}
+    try { CBOnePerson.claim(CBOnePerson.who(sess)); } catch (_) {}
+    location.href = '/';
+  }
   function paint(k){
     if (frame && frame.skeleton) frame.skeleton.setActive(k);
     if (location.hash !== '#/' + k) { try { history.replaceState(null, '', '#/' + k); } catch (_) {} }
     host.innerHTML = '';
-    if (k === 'country') CBCountry.mount(host, function () { location.hash = '#/shop'; });
+    if (k === 'new') CBRegistration.mount(host, registered);
+    else if (k === 'country') CBCountry.mount(host, function () { location.hash = '#/shop'; });
     else CBShop.mount(host);
   }
-  frame = CBFrame.mount({ app: 'settings', kural: 'settings', work: host,
+  frame = CBFrame.mount({ app: 'settings', kural: 'settings', work: host, signin: isNew ? false : undefined,
     skeleton: { name: 'CB Settings', icon: 'M12 15a3 3 0 1 0 0-6a3 3 0 0 0 0 6M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3a1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5a1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8a1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1a1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5a1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1',
       sections: SECTIONS, active: secOf(), onSection: paint } });
+  if (isNew) return paint('new');
   var sess = frame.session;
   if (!sess || !sess.token) { host.innerHTML = '<div class="empty" data-testid="set-signin"><div class="t">Sign in above</div></div>'; return; }
   var me = CBOnePerson.who(sess);
