@@ -41,31 +41,22 @@
     "money": [
       "public/engine/money.js"
     ],
-    "tax-slab": [
-      "public/app/tax-slab.js"
-    ],
     "pricing": [
-      "public/app/pricing.js",
       "public/engine/pricing.js"
     ],
     "offers": [
-      "public/app/offers.js",
       "public/engine/offers.js"
     ],
     "variant": [
-      "public/app/variant.js",
       "public/engine/variant.js"
     ],
     "search": [
-      "public/app/search.js",
       "public/engine/search.js"
     ],
     "govcontext": [
-      "public/app/govcontext.js",
       "public/engine/govcontext.js"
     ],
     "locale": [
-      "public/app/locale.js",
       "public/engine/locale.js"
     ],
     "units": [
@@ -140,14 +131,6 @@
       "regulation",
       "tax-packs",
       "tax-slab",
-      "tax"
-    ],
-    "public/app/tax.js": [
-      "reg-in",
-      "reg-au",
-      "reg-ae",
-      "regulation",
-      "tax-packs",
       "tax"
     ]
   },

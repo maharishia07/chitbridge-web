@@ -46,7 +46,7 @@ const sb = {
 };
 sb.window = sb; sb.globalThis = sb;
 const ctx = vm.createContext(sb);
-vm.runInContext(fs.readFileSync(path.join(W, 'app', 'locale.js'), 'utf8'), ctx, { filename: 'locale.js' });
+vm.runInContext(fs.readFileSync(path.join(W, 'engine', 'locale.js'), 'utf8'), ctx, { filename: 'locale.js' });
 Object.assign(sb, {
   esc: (x) => String(x == null ? '' : x), tx: (x) => x,
   txf: (t, v) => String(t).replace(/\{(\w+)\}/g, (m, k) => v[k]),

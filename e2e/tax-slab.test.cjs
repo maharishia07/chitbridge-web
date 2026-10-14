@@ -6,7 +6,7 @@
  * attach screen: *"it has to showcase the outcome … so it can be verified then and there."*
  *
  * ── ⚠️⚠️ WHAT THIS FILE IS ACTUALLY GUARDING ───────────────────────────────────────────────────────────────────
- * `public/app/tax.js` and `public/app/tax-slab.js` are GENERATED mirrors of `chitbridge-api/lib/*` — the product
+ * `public/engine/tax.js` (tax-slab + tax, one bundle) is the ADOPTED mirror of `chitbridge-api/lib/*` — the product
  * page shows the invoice split, and it must be the split the ORDER will produce, not a lookalike. The failure
  * this exists to catch is the quiet one: the API's engine changes, nobody re-runs the generator, and the pane
  * keeps showing last month's arithmetic while looking perfectly healthy.
@@ -40,8 +40,8 @@ const skipIf = (cond, why) => { if (cond) { const e = new Error(why); e.__skip =
 /* ⭐ 2026-09-28: the files are ADOPTED chitbridge-engines releases, which hand a page window.CBTax — and in a browser
    `window` IS the global. Node has no window, so say what a browser would. (money-language.test.js does the same.) */
 globalThis.window = globalThis.window || globalThis;
-require('../public/app/tax.js');
-require('../public/app/tax-slab.js');
+/* T2-ENGONCE: ONE file now — engine/tax.js is the adopted bundle, tax-slab (CBTaxSlab) inside it ahead of tax (CBTax) */
+require('../public/engine/tax.js');
 const T = globalThis.CBTax;
 const S = globalThis.CBTaxSlab;
 
@@ -141,8 +141,8 @@ t('the generated mirror matches chitbridge-api/lib, byte for byte', () => {
      the api's copy and this one must be byte-identical, header and all. (mirror-pure-libs.cjs is retired.) */
   for (const f of ['tax.js', 'tax-slab.js']) {
     const src = lf(fs.readFileSync(path.join(apiLib, f), 'utf8'));
-    const mirror = lf(fs.readFileSync(path.join(__dirname, '..', 'public', 'app', f), 'utf8'));
-    /* app/tax.js is a BUNDLE since v1.2.0 (tax-packs + tax) — the api's copy must appear in it whole, header and all */
+    const mirror = lf(fs.readFileSync(path.join(__dirname, '..', 'public', 'engine', 'tax.js'), 'utf8'));
+    /* engine/tax.js is a BUNDLE since v1.2.0 (tax-packs + tax) — the api's copy must appear in it whole, header and all */
     assert.ok(/^\/\* ADOPTED (BUNDLE )?from chitbridge-engines/.test(mirror), f + ' is not an adopted file — run: node ../chitbridge-engines/tools/adopt.cjs .');
     assert.ok(mirror.includes(src), f + ' does not carry the release chitbridge-api adopts — the two repos pin different versions');
   }

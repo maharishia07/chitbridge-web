@@ -94,7 +94,7 @@ test('[TILL-26] network offers: released, taken or declined, and on the counter 
     expect(kettle, 'the network product is not on the counter').toBeTruthy();
     /* priced by the SAME engine the counter uses */
     const priced = await store.page.evaluate(async ({ kettle, offers }) => {
-      if (!window.CBOffers) { await new Promise((ok) => { const s = document.createElement('script'); s.src = '/app/offers.js'; s.onload = ok; document.head.appendChild(s); }); }
+      if (!window.CBOffers) { await new Promise((ok) => { const s = document.createElement('script'); s.src = '/engine/offers.js'; s.onload = ok; document.head.appendChild(s); }); }
       /* the engine's own documented input: { key, item_id, sku, category, qty, unitPrice } → { subtotal, total, … } */
       const ev = CBOffers.evaluate({ lines: [{ key: 'k1', item_id: kettle.item_id, sku: kettle.code, category: kettle.category,
         qty: 1, unitPrice: kettle.price }], offers, ctx: { currency: 'INR', now: new Date().toISOString() } });

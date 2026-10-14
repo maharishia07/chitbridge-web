@@ -6,7 +6,7 @@
  * truth … keep it as a practice". The storefront had its own basket math for two days and drifted (no GST on the Suppliers
  * screen, a badge no screen could show). This guard fails the moment a second implementation appears:
  *   – only app/cart.js (the CART capability) may build the "Total incl. tax" row or a per-rate tax table (`byRate`);
- *   – only app/cart.js and app/offers.js may call CBOffers.evaluate for a BASKET (the product page's single-line preview
+ *   – only app/cart.js and engine/offers.js may call CBOffers.evaluate for a BASKET (the product page's single-line preview
  *     and the offer form's test panel are allowed: they preview one product, they never total a basket).
  */
 const fs = require('fs'); const path = require('path');
@@ -14,7 +14,7 @@ const PUB = process.env.ONE_CART_ROOT || path.join(__dirname, '..', 'public');  
 const files = ['app.html', 'shop.html'].concat(fs.readdirSync(path.join(PUB, 'app')).filter((f) => f.endsWith('.js')).map((f) => 'app/' + f));
 const OWNER = 'app/cart.js';
 /* the renderer pair (cart-ui + catalogue-ui) and the engine itself may evaluate; anyone else only for ONE line ("lines:[line]") */
-const ALLOW_EVALUATE = new Set([OWNER, 'app/offers.js',
+const ALLOW_EVALUATE = new Set([OWNER, 'engine/offers.js',
   'app.html'              /* the product page previews ONE product (prodOfferCartHTML, the bulk preview) — and the Compose cart, see DEBT below */,
   'app/cap-definitions.js' /* the offer form's preview and Test panel: one product */]);
 /* KNOWN DEBT, printed every run until it is gone: the Compose cart (CC.offers) still totals its own offers — step 3 of the convergence */

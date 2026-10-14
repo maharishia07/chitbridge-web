@@ -54,8 +54,8 @@ function scan(label, files) {
      * column zero inside `(function (root) { … })(globalThis)`, so `resolve`, `slabOf` and `r2` appeared to be
      * declared twice and to be fighting. They are in three separate scopes and cannot see each other.
      *
-     * ⭐ WHAT THEY REALLY CONTEST IS THE GLOBAL THEY PUBLISH, and that is checked and is fine: app/tax.js sets
-     * `CBTax`, app/tax-slab.js sets `CBTaxSlab`, and app/tax-engine.js — which app.html does not load at all —
+     * ⭐ WHAT THEY REALLY CONTEST IS THE GLOBAL THEY PUBLISH, and that is checked and is fine: engine/tax.js sets
+     * `CBTax`, engine/tax.js's tax-slab part sets `CBTaxSlab`, and app/tax-engine.js — which app.html does not load at all —
      * sets the combined `CBTax` for the till and for `require()`. The app calls `CBTaxSlab.resolve` and
      * `CBTax.determine`, which is exactly what those two files provide.
      */

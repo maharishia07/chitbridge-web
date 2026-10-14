@@ -89,7 +89,7 @@ function go(){ if (typeof CB_TASKS_ENDED === 'function') CB_TASKS_ENDED(); }
 <script src="/app/core.js"></script>   <!-- api() + the registry: every read and write of this page goes through it (the round-trip budget reads the registry) -->
 <script src="/app/accounts-shell.js"></script>   <!-- CBAction (M64) · tx · toast · CBConfirm · CB_SHEET_EP (status: the ONE status writer's route) -->
 <script src="/engine/money.js"></script>
-<script src="/app/locale.js"></script>
+<script src="/engine/locale.js"></script>
 <script src="/app/helpers.js"></script>
 <script src="/app/cap-books.js"></script>   <!-- bkMoney (M36): minor units → the shop's figure; nothing here does money arithmetic -->
 <script src="/engine/rail.js"></script>   <!-- CBRail: the status machine the workflow engine wraps -->

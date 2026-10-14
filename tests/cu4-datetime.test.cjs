@@ -11,7 +11,7 @@ const store = {};
 globalThis.window = globalThis;
 globalThis.localStorage = { getItem: (k) => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); }, removeItem: (k) => { delete store[k]; } };
 globalThis.document = { createElement: () => ({ setAttribute() {}, appendChild() {} }), head: { appendChild() {} }, documentElement: { appendChild() {} }, addEventListener() {} };
-eval(P('app/locale.js'));
+eval(P('engine/locale.js'));
 eval(P('app/rail-advice.js'));
 const app = P('app.html');
 const src = app.match(/^function fmtDateTime\(x\)\{.*\}$/m);

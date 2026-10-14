@@ -2,7 +2,7 @@
  *
  * Athi, 2026-10-03 (DECISIONS "Country packs: the three switch decisions"): a shop with NO country is REFUSED, no silent India fallback;
  * a country with no pack is SAID; a country change is a NEW entity. Registration already reads the country from the time zone (M196,
- * app/govcontext.js) and shows it with its source; this screen is where the OWNER confirms it — country · money · financial year · tax
+ * engine/govcontext.js) and shows it with its source; this screen is where the OWNER confirms it — country · money · financial year · tax
  * registration — one row each, prefilled, each with where the answer came from, and one tap to change any of them.
  *
  * ── WHAT IS REUSED (CLAUDE.md rule 1) ────────────────────────────────────────────────────────────────────────────────────────────
@@ -75,7 +75,7 @@ function csuCurrencies(country) {
   if (CSU.p) add(CSU.p.currency);
   return out;
 }
-/** the registered pack of a country (CBRegulation, app/tax.js) — its scheme word, currency and year start; null when the page has no registry */
+/** the registered pack of a country (CBRegulation, engine/tax.js) — its scheme word, currency and year start; null when the page has no registry */
 function csuPack(code) { try { return (window.CBRegulation && code && CBRegulation.packFor(String(code).toUpperCase())) || null; } catch (_) { return null; } }
 /** the scheme's own word for the tax row: GST · GST · VAT (pack.tax.scheme); 'Tax' when no pack says */
 function csuScheme(code) { var p = csuPack(code); return (p && p.tax && p.tax.scheme) || tx('Tax'); }

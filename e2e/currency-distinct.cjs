@@ -32,7 +32,7 @@ const sb = {
 };
 sb.window = sb; sb.globalThis = sb;
 const ctx = vm.createContext(sb);
-vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'locale.js'), 'utf8'), ctx, { filename: 'locale.js' });
+vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'engine', 'locale.js'), 'utf8'), ctx, { filename: 'locale.js' });
 const C = ctx.CBLocale;
 
 /**

@@ -94,7 +94,7 @@ for (const f of FILES) {
 /** ── 3 · CAN ANYTHING DRAW ARABIC? ── */
 const app = fs.readFileSync(path.join(ROOT, 'app.html'), 'utf8');
 /* the RTL face is injected by locale.js only when an RTL language is chosen, so BOTH files count as "loaded" */
-const locale = fs.readFileSync(path.join(ROOT, 'app', 'locale.js'), 'utf8');
+const locale = fs.readFileSync(path.join(ROOT, 'engine', 'locale.js'), 'utf8');
 const fontLink = (app.match(/fonts\.googleapis\.com\/css2\?[^"']+/) || [''])[0];
 const rtlFont = (locale.match(/fonts\.googleapis\.com\/css2\?[^"']+/) || [''])[0];
 const ARABIC_FACES = /Noto\+Sans\+Arabic|IBM\+Plex\+Sans\+Arabic|Cairo|Tajawal|Almarai|Amiri|Rubik/;

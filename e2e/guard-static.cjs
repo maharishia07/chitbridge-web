@@ -744,5 +744,44 @@ console.log('\n18 · no tracked path a Windows checkout cannot write');
   });
 }
 
+/* 19 · T2-ENGONCE (14 Oct): eight engines were adopted TWICE — public/app/X.js AND public/engine/X.js (6,191 duplicated lines, MAINT-1 D3).
+   public/engine/ is the one home of an adopted engine; every page loads that copy. An engine stamped ADOPTED in two web files (a bundle
+   counts each part it carries), a lock entry with two paths, or a page that loads /app/<adopted engine>.js fails. Ratchet: zero. */
+console.log('\n19 · each adopted engine has ONE home in web (public/engine)');
+{
+  const ROOT = path.join(__dirname, '..');
+  const STAMP = /^\/\* ADOPTED from chitbridge-engines v\d+\.\d+\.\d+ · ([a-z0-9-]+) · sha256 /gm;
+  const where = {};
+  const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).forEach((e) => {
+    const f = path.join(dir, e.name);
+    if (e.isDirectory()) { if (e.name !== 'node_modules') walk(f); return; }
+    if (!/\.(js|cjs|mjs)$/.test(e.name)) return;
+    for (const m of fs.readFileSync(f, 'utf8').matchAll(STAMP)) (where[m[1]] = where[m[1]] || new Set()).add(path.relative(ROOT, f).replace(/\\/g, '/'));
+  });
+  walk(WEB);
+  const twice = Object.keys(where).filter((n) => where[n].size > 1);
+  if (twice.length) fail(twice.length + ' engine(s) adopted in more than one web file: ' + twice.map((n) => n + ' (' + [...where[n]].join(' + ') + ')').join(' · '));
+  else pass(Object.keys(where).length + ' adopted engines, each in exactly one web file');
+  const outside = Object.keys(where).filter((n) => [...where[n]].some((f) => !/^public\/(engine|app)\//.test(f)));
+  if (outside.length) fail('adopted engine(s) outside public/engine or public/app: ' + outside.join(', '));
+  const lock = JSON.parse(fs.readFileSync(path.join(ROOT, 'engines.lock.json'), 'utf8'));
+  const paths = {};
+  Object.entries(lock.adopt || {}).forEach(([n, ps]) => ps.forEach((p) => (paths[n] = paths[n] || []).push(p)));
+  Object.entries(lock.bundles || {}).forEach(([p, ns]) => ns.forEach((n) => (paths[n] = paths[n] || []).push(p)));
+  const lockTwice = Object.keys(paths).filter((n) => paths[n].length > 1);
+  if (lockTwice.length) fail('engines.lock.json gives ' + lockTwice.length + ' engine(s) more than one path: ' + lockTwice.map((n) => n + ' → ' + paths[n].join(' + ')).join(' · '));
+  else pass('engines.lock.json lists one path per engine (' + Object.keys(paths).length + ')');
+  /* a load of /app/<engine>.js whose app/ copy is gone (the deleted second copies) — app/units.js is NOT an adopted engine (a hand-vendored
+     CBUnits, custodian finding T2-ENGONCE), so it is judged by whether the file exists, not by its name */
+  const gone = Object.keys(where).filter((n) => !fs.existsSync(path.join(WEB, 'app', n + '.js')));
+  const LOADS = new RegExp('src=["\']\\.?\\/?app\\/(' + gone.join('|') + ')\\.js["\']', 'g');
+  const loads = [];
+  [ROOT, WEB].forEach((d) => fs.readdirSync(d).filter((f) => f.endsWith('.html')).forEach((f) => {
+    for (const m of fs.readFileSync(path.join(d, f), 'utf8').matchAll(LOADS)) loads.push(path.relative(ROOT, path.join(d, f)) + ' → app/' + m[1] + '.js');
+  }));
+  if (loads.length) fail(loads.length + ' page load(s) of an engine that lives in public/engine, not app/: ' + loads.slice(0, 8).join(', '));
+  else pass('no page loads an adopted engine from app/');
+}
+
 console.log('\n== GUARD ==  ' + hard + ' failure(s) · ' + soft + ' warning(s)');
 process.exit(hard ? 1 : 0);

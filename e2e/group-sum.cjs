@@ -37,7 +37,7 @@ const sandbox = {
 };
 sandbox.window = sandbox; sandbox.globalThis = sandbox;
 const ctx = vm.createContext(sandbox);
-vm.runInContext(fs.readFileSync(path.join(W, 'app', 'locale.js'), 'utf8'), ctx, { filename: 'locale.js' });
+vm.runInContext(fs.readFileSync(path.join(W, 'engine', 'locale.js'), 'utf8'), ctx, { filename: 'locale.js' });
 vm.runInContext(fs.readFileSync(path.join(W, 'app', 'helpers.js'), 'utf8'), ctx, { filename: 'helpers.js' });
 
 let pass = 0, fail = 0;

@@ -22,7 +22,7 @@ function page(country, currency) {
   const ctx = { console, SESSION: { token: 't', country, currency }, CFG: { API_BASE: '' }, document: { getElementById: () => null } };
   ctx.window = ctx; ctx.self = ctx; ctx.globalThis = ctx;
   vm.createContext(ctx);
-  for (const f of ['app/tax.js', 'app/locale.js', 'app/helpers.js', 'app/cap-iddocs.js']) vm.runInContext(fs.readFileSync(path.join(PUB, f), 'utf8'), ctx, { filename: f });
+  for (const f of ['engine/tax.js', 'engine/locale.js', 'app/helpers.js', 'app/cap-iddocs.js']) vm.runInContext(fs.readFileSync(path.join(PUB, f), 'utf8'), ctx, { filename: f });
   /* myCur as app.html defines it (the one line, read from the page so this proves the shipped text) */
   const line = fs.readFileSync(path.join(PUB, 'app.html'), 'utf8').split('\n').find((l) => l.startsWith('function myCur(){'));
   vm.runInContext(line, ctx);

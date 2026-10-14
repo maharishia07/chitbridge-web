@@ -105,7 +105,7 @@ for (const f of files) {
    *
    * The rule above says only column zero enters the one global namespace these classic scripts share. That is
    * true of the hand-written files — and false of every generated mirror, because the vendor pastes the master
-   * at column zero INSIDE `(function (root) { … })(globalThis)`. So app/tax.js, app/tax-slab.js and
+   * at column zero INSIDE `(function (root) { … })(globalThis)`. So engine/tax.js and
    * app/tax-engine.js all appeared to declare `resolve`, `r2`, `slabOf` globally, and the guard reported
    * thirteen collisions between three files that cannot collide with anything. It had been saying so for days.
    *

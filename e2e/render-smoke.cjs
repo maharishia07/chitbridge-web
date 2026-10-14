@@ -93,7 +93,7 @@ try {
  * until the line runs, so every screen that nothing calls is a screen where this is waiting.
  */
 try {
-  vm.runInContext(fs.readFileSync(path.join(ROOT, 'app', 'locale.js'), 'utf8'), ctx, { filename: 'locale.js' });
+  vm.runInContext(fs.readFileSync(path.join(ROOT, 'engine', 'locale.js'), 'utf8'), ctx, { filename: 'locale.js' });
   vm.runInContext(fs.readFileSync(path.join(ROOT, 'app', 'catalogue-lines.js'), 'utf8'), ctx, { filename: 'catalogue-lines.js' });
   vm.runInContext(fs.readFileSync(path.join(ROOT, 'app', 'cart.js'), 'utf8'), ctx, { filename: 'cart.js' });
 } catch (e) {
