@@ -137,12 +137,12 @@ W.run('tasks', async (w) => {
 
   await openPage();
 
-  await w.step('T1', 'Tasks & Orders -> the standard page: four folders in the sidebar, Orders in first, one row per open order, the count says 3 rows; a row says 🌐 Online · Pick up and the amount; the 3-day-old order wears Stuck (the rail\'s test) and Billed; ＋ New goes to the one composer', async () => {
+  await w.step('T1', 'Tasks & Orders -> the standard page: four folders in the sidebar (then Disputes · CB Assist, T3), Orders in first, one row per open order, the count says 3 rows; a row says 🌐 Online · Pick up and the amount; the 3-day-old order wears Stuck (the rail\'s test) and Billed; ＋ New goes to the one composer', async () => {
     const nav = await page.$$eval('[data-testid^="skel-nav-"]', (bs) => bs.map((b) => b.getAttribute('data-sec')));
     const n = await rows(), cnt = await txt('[data-testid="tk-count"]'), list = await txt('[data-testid="tk-list"]');
     const how = await txt('[data-testid="tk-how-c1"]'), stuck = await page.locator('[data-testid="tk-stuck-c2"]').count(), billed = await page.locator('[data-testid="tk-billed-c2"]').count(), stuck4 = await page.locator('[data-testid="tk-stuck-c4"]').count();
     const fresh = await page.getAttribute('[data-testid="tk-new"]', 'href').catch(() => null);
-    return { ok: nav.join() === 'orders_in,orders_out,tasks,done' && n === 3 && /3\s*rows/.test(cnt) && /Meena/.test(list) && /New/.test(list) && /Accepted/.test(list) && /1,200\.50|1200\.50/.test(list)
+    return { ok: nav.join() === 'orders_in,orders_out,tasks,done,disputes,assist' && n === 3 && /3\s*rows/.test(cnt) && /Meena/.test(list) && /New/.test(list) && /Accepted/.test(list) && /1,200\.50|1200\.50/.test(list)
         && how === '🌐 Online · Pick up' && stuck === 1 && billed === 1 && stuck4 === 0 && fresh === '/app.html#/app/compose' && !w.errs.length,
       saw: 'folders ' + nav.join(' · ') + '; ' + n + ' rows; "' + cnt + '" · SO-1 "' + how + '" · SO-2 stuck ' + stuck + ' billed ' + billed + ' · SO-4 stuck ' + stuck4 + ' · new -> ' + fresh + (w.errs.length ? '; PAGE ERRORS: ' + w.errs.join(' | ') : '') };
   });
