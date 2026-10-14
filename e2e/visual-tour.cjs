@@ -182,6 +182,8 @@ async function main() {
   const viewport = { width: WIDTH, height: WIDTH > 500 ? 900 : 844 };
   const w = await W.start('tour-' + RUN, { base: BASE, viewport });
   const states = [];
+  /* what was seen is kept even when the run is cut short (a time limit's SIGTERM, a crash): the report lists it, never loses it */
+  saveRun = (why) => { const f = path.join(OUT, 'run-' + RUN + '.json'); fs.writeFileSync(f, JSON.stringify({ run: RUN, part: PART, theme: THEME, width: WIDTH, base: BASE, at: new Date().toISOString(), refused: w.refused, stopped: why || null, states }, null, 1)); return f; };
   const runIdx = { a: 1, b: 5 }[PART] + (THEME === 'dark' ? 1 : 0) + (WIDTH < 500 ? 2 : 0);
   let counter = 0;
   const nn = () => String(runIdx) + String(SHARD) + String(++counter).padStart(4, '0');
@@ -456,8 +458,7 @@ async function main() {
       if (OPS > 0) await randomOps(page.url().replace(BASE, ''), file, s.label || s.hash);
     }
   }
-  const out = path.join(OUT, 'run-' + RUN + '.json');
-  fs.writeFileSync(out, JSON.stringify({ run: RUN, part: PART, theme: THEME, width: WIDTH, base: BASE, at: new Date().toISOString(), refused: w.refused, states }, null, 1));
+  const out = saveRun();
   console.log('\nVISUAL TOUR ' + RUN + ': ' + states.length + ' states → ' + path.relative(ROOT, out) + (w.refused.length ? ' · ⚠️ ' + w.refused.length + ' request(s) to PRODUCTION refused' : ''));
   await w.close();
   process.exit(w.refused.length ? 1 : 0);
@@ -523,6 +524,7 @@ function report() {
   md.push('# TOUR-FINDINGS — the visual tour (round VTOUR, ' + new Date().toISOString().slice(0, 10) + ')', '');
   md.push('Harness: `e2e/visual-tour.cjs` on the LOCAL stack (`e2e/lib/stack-local.cjs` + api `tools/sim-load.cjs` shop `simstores` + `scripts/seed-local.cjs`). Runs: ' + runs.map((r) => '`' + r.run + '`').join(' · ') + '.');
   md.push('States: ' + screens.length + ' screen states · ' + clicks.length + ' boxes (' + clicks.filter((c) => c.result !== 'skipped').length + ' clicked) · ' + ops.length + ' random operations. Findings: **' + counts.broken + ' broken · ' + counts.inconsistent + ' inconsistent · ' + counts.cosmetic + ' cosmetic** (grouped; n = states it was seen in). Screenshots: the `visual-tour` artifact (`e2e/out/tour/`), never committed.', '');
+  runs.filter((r) => r.stopped || (r.refused && r.refused.length)).forEach((r) => md.push('⚠️ run `' + r.run + '`' + (r.stopped ? ' was cut short (' + r.stopped + ') — its states up to then are kept' : '') + (r.refused && r.refused.length ? ' · ' + r.refused.length + ' request(s) to the PRODUCTION host refused' : '') + '.', ''));
   md.push('**Screen codes:** ' + unnumbered.size + ' toured page(s) carry no code in the register (public/app/screens.js numbers app.html, the Counter and the Storefront only): ' + Array.from(unnumbered).sort().join(', ') + '. → the SCREEN-ID round.', '');
   for (const rank of ['broken', 'inconsistent', 'cosmetic']) {
     const rows = list.filter((f) => f.rank === rank); md.push('## ' + rank[0].toUpperCase() + rank.slice(1) + ' (' + rows.length + ')', '');
@@ -548,4 +550,6 @@ function report() {
   console.log('tour.json · TOUR-FINDINGS.md: ' + states.length + ' states · ' + counts.broken + ' broken · ' + counts.inconsistent + ' inconsistent · ' + counts.cosmetic + ' cosmetic' + (has('docs') ? ' (copied to docs/testing/)' : ''));
 }
 
-main().catch((e) => { console.log('visual tour stopped: ' + (e && e.stack || e)); process.exit(1); });
+let saveRun = null;
+process.on('SIGTERM', () => { console.log('visual tour: SIGTERM — saving what was seen'); try { if (saveRun) saveRun('SIGTERM'); } catch (e) { console.log('could not save: ' + e.message); } process.exit(1); });
+main().catch((e) => { console.log('visual tour stopped: ' + (e && e.stack || e)); try { if (saveRun) saveRun('stopped: ' + String(e && e.message || e).split('\n')[0]); } catch (e2) { console.log('could not save: ' + e2.message); } process.exit(1); });
