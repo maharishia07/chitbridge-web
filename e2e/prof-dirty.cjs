@@ -32,6 +32,8 @@ const sandbox = {
 };
 sandbox.window = sandbox; sandbox.globalThis = sandbox;
 const ctx = vm.createContext(sandbox);
+/* CAP_WITH.admin (app.html): helpers.js (taxIdWord · packWord), cap-shop.js (SET1) and cap-settings.js (T3-SETTINGS) load before cap-admin.js */
+for (const f of ['helpers.js', 'cap-shop.js', 'cap-settings.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'app', f), 'utf8'), ctx, { filename: f });
 vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'cap-admin.js'), 'utf8'), ctx,
                 { filename: 'cap-admin.js' });
 

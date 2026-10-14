@@ -338,7 +338,8 @@ var CBSettings = (function () {
       '<p class="sub">' + esc(T('A small program beside Tally, Zoho or a folder of files. Download, unzip, start — your key is inside.')) + '</p>',
       lineOut('sx_con_out'), '<div class="sx-list" id="sx_con_list" data-testid="sx-con-list"></div>',
       '<h2 class="sx-h2">' + esc(T('Running on your PCs')) + '</h2>', lineOut('sx_run_out'), '<div class="sx-list" id="sx_run_list" data-testid="sx-run-list"></div>']);
-    var pol = null, inUse = function () { var v = (pol && pol.connectors_in_use) || []; return Array.isArray(v) ? v.filter(function (x) { return x !== 'none'; }) : []; };
+    var pol = null;
+    function inUse() { var v = (pol && pol.connectors_in_use) || []; return Array.isArray(v) ? v.filter(function (x) { return x !== 'none'; }) : []; }
     var catRows = function () { var d = H.data.cat; return (d && d.r && d.r.connectors) || []; };
     var cl = null, rl = null;
     function readCat() {
