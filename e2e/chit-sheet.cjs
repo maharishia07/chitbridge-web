@@ -637,9 +637,6 @@ async function route(S, r) {
     await ctx.close();
   }
 
-  ok(...C.finish());
-  ok(threw.length === 0, 'no page errors' + (threw.length ? ': ' + threw[0] : ''));
-  await b.close(); srv.close();
   /* ── 13 · RCM-POST: a bill under reverse charge SAYS who pays the tax, from the frozen invoice's own code (moneyOf(inv).rcm) ── */
   {
     const S = standIn(); const { ctx, p } = await open(S);
@@ -658,6 +655,9 @@ async function route(S, r) {
     await ctx.close();
   }
 
+  ok(...C.finish());
+  ok(threw.length === 0, 'no page errors' + (threw.length ? ': ' + threw[0] : ''));
+  await b.close(); srv.close();
   console.log('\n  ' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });
