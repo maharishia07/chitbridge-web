@@ -7,13 +7,14 @@
 //   · the order routes to SILENT per-store fragments the customer can't see, while the OPERATOR can walk the
 //     order forward to the fragments (convergence on the common ORDER_ID)
 const { test, expect, request } = require('@playwright/test');
+require('../fixtures').needCode(test);   // SEC1: no sign-in code for this target (E2E_TESTER_CODE) → the file SKIPS with a CI warning
 const API = process.env.CB_API_BASE || 'https://chitbridge-api-production.up.railway.app';
 const H = (t) => ({ Authorization: 'Bearer ' + t });
 
 async function mint(api, name){
   const email = `store-${name.replace(/\W+/g, '')}-${Date.now()}-${Math.floor(Math.random() * 1e5)}@node.cb`;
   await api.post(`${API}/api/entities/register`, { data: { display_name: name, email, user_id: 'e' + Date.now() + Math.floor(Math.random()*1e6) } });
-  const v = await (await api.post(`${API}/api/entities/verify`, { data: { email, otp: '123456' } })).json();
+  const v = await (await api.post(`${API}/api/entities/verify`, { data: { email, otp: require('../fixtures').signinCode() } })).json();
   return { id: v.entity.identity_id, token: v.token, name };
 }
 

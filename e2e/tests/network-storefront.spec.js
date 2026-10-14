@@ -4,6 +4,7 @@
 // network offer; the storefront showed the same product at full price, and its checkout had no way to apply one. One key
 // per adopted line (lib/network-offers.lineKey) now ties the row's promise to the order's arithmetic.
 const { test, expect } = require('@playwright/test');
+require('../fixtures').needCode(test);   // SEC1: no sign-in code for this target (E2E_TESTER_CODE) → the file SKIPS with a CI warning
 const { mintEntity, mintInContext, approveJoins, clickNav, settle } = require('../fixtures');
 const API = process.env.CB_API_BASE || 'https://chitbridge-api-production.up.railway.app';
 
@@ -82,7 +83,7 @@ test('[NET-SF-01] a released network offer is on the member storefront and on it
     const ident = 'nsf' + Date.now().toString().slice(-7) + '@example.com';
     const st = await (await request.post(API + '/api/catalogue/' + encodeURIComponent(handle) + '/order/start', { data: { identifier: ident, name: 'Net Buyer' } })).json();
     const cf = await request.post(API + '/api/catalogue/' + encodeURIComponent(handle) + '/order/confirm', { data: { identifier: ident, name: 'Net Buyer',
-      otp: st.dev_otp || '123123', location: 'Chennai', line_items: [{ kind: 'finish', source: sourceKey, finish: name, quantity }] } });
+      otp: st.dev_otp || require('../fixtures').signinCode('customer'), location: 'Chennai', line_items: [{ kind: 'finish', source: sourceKey, finish: name, quantity }] } });
     return { status: cf.status(), j: await cf.json() };
   };
 

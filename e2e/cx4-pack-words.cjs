@@ -5,6 +5,11 @@
  *   P2  myCur's fallback — the pack's money (AUD · AED) when the session has none, INR for India
  *   P3  cap-iddocs draws only what the server lists (GET's catalogue): an AU shop's employee record has no PAN / Aadhaar, no Aadhaar note or consent;
  *       before any GET answered the full list is drawn, as before
+ *   P4  STD2 · helpers.packWord / taxIdWord — IN GSTIN·PIN·State · AU ABN·Postcode·State · AE TRN·P.O. Box·Emirate · NO pack → Tax number·Postcode·Region
+ *       (never India's); a screen holding the country passes it (cc) instead of writing SESSION.country
+ *   P5  STD2 guard · no file under public/ outside app/helpers.js holds a tax-ID word table or a `pack.abn ? 'ABN'` reading (the till reads the server's)
+ *   P6  STD2 · register-form reuses csuCountryName · CSU_MONTHS and paints the server's offer; settings keeps the session via CBSignin.keepSession (never over the engine's keep); cap-shop
+ *       never writes SESSION.country
  *   node e2e/cx4-pack-words.cjs
  */
 'use strict';
@@ -42,6 +47,29 @@ function page(country, currency) {
   await IN.CBIdDocs.load();
   const inOwner = IN.CBIdDocs.html([], 'owner', { noButton: true });
   ok('P3 an Indian shop: PAN · Aadhaar · the Aadhaar note and consent, as before', /PAN/.test(inOwner) && /never stored/.test(inOwner) && /idoc_consent/.test(inOwner));
+
+  /* P4 — the pack's words, and neutral words with no pack (STD2) */
+  const words = (c) => ['taxId', 'postcode', 'region'].map((k) => c.packWord(k)).join('·');
+  ok('P4 packWord: IN GSTIN·PIN·State · AU ABN·Postcode·State · AE TRN·P.O. Box·Emirate', words(IN) === 'GSTIN·PIN·State' && words(AU) === 'ABN·Postcode·State' && words(AE) === 'TRN·P.O. Box·Emirate', [words(IN), words(AU), words(AE)].join(' | '));
+  ok('P4 no pack → neutral words, never India\'s: Tax number·Postcode·Region (and for a country with no pack, US)', words(NONE) === 'Tax number·Postcode·Region' && words(page('US')) === 'Tax number·Postcode·Region', words(NONE));
+  ok('P4 a screen passes the country it holds: taxIdWord(\'AU\') on a page whose session names none → ABN; packSplitsByState(\'AU\') false', NONE.taxIdWord('AU') === 'ABN' && NONE.packSplitsByState('AU') === false && NONE.taxIdWord() === 'Tax number');
+
+  /* P5 — the guard: one tax-ID word table on the web (helpers.js PACK_WORDS) */
+  const blank = (t) => t.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:\\])\/\/[^\n]*/g, '$1').replace(/<!--[\s\S]*?-->/g, ' ');
+  const TABLE = [/\.(abn|trn)\s*\?\s*\[?\s*['"](an? )?(ABN|TRN|GSTIN)['"]/, /\b(IN|AU|AE)\s*:\s*['"](GSTIN|ABN|TRN)['"]/];
+  const all = []; (function walk(d) { for (const f of fs.readdirSync(d, { withFileTypes: true })) { const q = path.join(d, f.name);
+    if (f.isDirectory()) { if (!/^(engine|vendor|node_modules)$/.test(f.name)) walk(q); } else if (/\.(js|html)$/.test(f.name)) all.push(q); } })(PUB);
+  const tables = all.filter((f) => path.relative(PUB, f).replace(/\\/g, '/') !== 'app/helpers.js' && !/^app\/(tax|locale|regulation)[^/]*\.js$/.test(path.relative(PUB, f).replace(/\\/g, '/')))
+    .filter((f) => TABLE.some((re) => re.test(blank(fs.readFileSync(f, 'utf8'))))).map((f) => path.relative(PUB, f));
+  ok('P5 no tax-ID word table outside app/helpers.js (cap-shop\'s CBLocale table, cap-books\' and the till\'s copies gone)', tables.length === 0, tables.join(' · '));
+
+  /* P6 — the register panel paints, the session is kept by its one writer */
+  const src = (f) => blank(fs.readFileSync(path.join(PUB, f), 'utf8'));
+  const rf = src('app/register-form.js');
+  ok('P6 register-form: no regZoneFor / regSourceOf / own months / RTL list / .in address / dev copy; reads csuCountryName · CSU_MONTHS · countries[].offer',
+    !/regZoneFor|regSourceOf|'January','February'|\(ar\|ur\|fa\|he\)|@business\.in|check endpoint/.test(rf) && /csuCountryName\(/.test(rf) && /CSU_MONTHS\[/.test(rf) && /pk\.offer/.test(rf) && /query:\{tz:tz\}/.test(rf));
+  ok('P6 settings.html registered() keeps the session through CBSignin.keepSession (with duty); signin-ui exports it WITHOUT replacing the engine\'s keep (the counter\'s)', /CBSignin\.keepSession\(\{\}, CBSignin\.sessionOf\(r\)\)/.test(src('settings.html')) && !/setItem\('cb_sess'/.test(src('settings.html')) && /E\.keepSession = keep;/.test(src('app/signin-ui.js')) && !/E\.keep = /.test(src('app/signin-ui.js')));
+  ok('P6 cap-shop never writes the global SESSION.country', !/SESSION\.country\s*=/.test(src('app/cap-shop.js')));
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);

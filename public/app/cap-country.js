@@ -39,9 +39,11 @@ function csuPackOf(code) {
   return null;
 }
 /** the country's name a person reads — the server's pack list, the locale engine's served list, else the browser's own region names, else the code (never a guess) */
-function csuCountryName(code) {
+function csuCountryName(code, list) {
   if (!code) return '';
-  var pk = csuPackOf(code); if (pk && pk.name) return pk.name;
+  /* STD2 (additive): `list` = another holder of the server's pack rows (the register panel's REG.spin.countries) — the one name reader, never a copy */
+  var pk = null; if (Array.isArray(list)) { for (var i = 0; i < list.length; i++) if (list[i] && String(list[i].code).toUpperCase() === String(code).toUpperCase()) pk = list[i]; } else pk = csuPackOf(code);
+  if (pk && pk.name) return pk.name;
   try { var R = window.CBLocale && CBLocale.REGIONS; if (R && R[code] && R[code].name) return R[code].name; } catch (_) {}
   try { var n = new Intl.DisplayNames([navigator.language || 'en'], { type: 'region' }).of(code); if (n && n !== code && !/unknown/i.test(n)) return n; } catch (_) {}
   return code;

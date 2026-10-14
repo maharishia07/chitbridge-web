@@ -6,7 +6,7 @@
  *   CBRegistration.mount(host, onDone)   paint the form into host; onDone(verifyAnswer, userId) when the code is verified
  *   host null                             app.html's auth card at #root (app.html: CBRegistration.mount(null, regIn) — regIn keeps its old next step)
  * Host globals it reads (both pages have them): api · EP (register · ownerVerify · constitutions from CB_SHOP_EP) · tx · txf · esc · val ·
- * window.CBGov (app/govcontext.js). app.html's card only: onbBanner · modeRibbon · logo · STAGES · CFG.STAGE · go.
+ * window.CBGov (app/govcontext.js) · csuCountryName · CSU_MONTHS (app/cap-country.js — settings.html carries it; app.html loads it on demand, ensureCap). app.html's card only: onbBanner · modeRibbon · logo · STAGES · CFG.STAGE · go.
  * Flow step: R2R step 1 · country — registration is its door (docs/process/flows.json).
  */
 'use strict';
@@ -47,15 +47,10 @@ function regPackOf(code){
 }
 function regInstCountry(){ return (REG.spin && REG.spin.installation && REG.spin.installation.country) || ''; }
 function regBrowserCountry(){ var g = govCtx(); return (g && g.country && g.country.value) || ''; }
-function regCountryName(code){
-  if (!code) return '';
-  var pk = regPackOf(code); if (pk && pk.name) return pk.name;
-  try { var R = window.CBLocale && CBLocale.REGIONS; if (R && R[code] && R[code].name) return R[code].name; } catch (_) {}
-  try { var n = new Intl.DisplayNames(['en'], { type: 'region' }).of(code); if (n && n !== code) return n; } catch (_) {}
-  return code;
-}
-/** where the country on the panel came from — the same three codes the server records (it re-decides them from the facts) */
-function regSourceOf(code){ return code && code === regInstCountry() ? 'installation' : code && code === regBrowserCountry() ? 'browser' : 'chosen'; }
+/** STD2: the country's name is Country setup's one reader (cap-country.js csuCountryName), asked of the server's rows this form holds */
+function regCountryName(code){ return typeof csuCountryName === 'function' ? csuCountryName(code, (REG.spin && REG.spin.countries) || []) : (code || ''); }
+/** STD2: what the SERVER will store and record for a country if it is accepted (GET /entities/constitutions?tz= → countries[].offer) — painted, never computed here */
+function regOfferOf(code){ var pk = regPackOf(code); return (pk && pk.offer) || null; }
 /** the first country offered: the installation's, else the browser's when the server may serve it, else none (the panel says so) */
 function regFirstCountry(){
   var inst = regInstCountry(), br = regBrowserCountry();
@@ -63,12 +58,13 @@ function regFirstCountry(){
   if (br && (!REG.spin || !REG.spin.countries || regPackOf(br))) return br;
   return '';
 }
-/** a language's English name, and for a right-to-left one its own name too, isolated so it never flips the row ([[project-arabic-rtl]]) */
+/** a language's English name, and its own name beside it — isolated in <bdi lang dir=auto> so the browser's bidi gives a right-to-left script its
+    direction and the row never flips ([[project-arabic-rtl]]). STD2: no hand-kept RTL list here (CBLocale.dir answers only for the page's own language) */
 function regLangHTML(code){
   var en = code, own = '';
   try { en = new Intl.DisplayNames(['en'], { type: 'language' }).of(code) || code; } catch (_) {}
-  if (/^(ar|ur|fa|he)$/.test(code)) { try { own = new Intl.DisplayNames([code], { type: 'language' }).of(code) || ''; } catch (_) {} }
-  return esc(en) + (own && own !== en ? ' <bdi dir="rtl" lang="' + esc(code) + '">' + esc(own) + '</bdi>' : '');
+  try { own = new Intl.DisplayNames([code], { type: 'language' }).of(code) || ''; } catch (_) {}
+  return esc(en) + (own && own.toLowerCase() !== en.toLowerCase() ? ' <bdi dir="auto" lang="' + esc(code) + '">' + esc(own) + '</bdi>' : '');
 }
 /** how numbers and dates print in the pack's format — the browser's own Intl, one fixed sample */
 function regFormatSample(locale){
@@ -77,14 +73,6 @@ function regFormatSample(locale){
     return '<bdi dir="auto">' + esc(n) + '</bdi> · <bdi dir="auto">' + esc(d) + '</bdi>';
   } catch (_) { return esc(locale); }
 }
-/** the zone the server will store (country-setup.offerOf): the device's when it is the pack's, else its one zone, else the installation's */
-function regZoneFor(pk){
-  var dev = (govCtx() && govCtx().timezone && govCtx().timezone.value) || '', z = (pk && pk.zones) || [], inst = REG.spin && REG.spin.installation && REG.spin.installation.timezone;
-  if (dev && z.indexOf(dev) >= 0) return { value: dev, from: tx('your device clock') };
-  if (z.length === 1) return { value: z[0], from: txf('the {c} pack', { c: pk.name }) };
-  if (inst && z.indexOf(inst) >= 0) return { value: inst, from: tx('this ChitBridge') };
-  return { value: '', from: tx('you pick it after signing in') };
-}
 /** the rows when the server sent its countries: the country (with its source), then what that country's pack applies */
 function regSpinRows(){
   var c = REG.country, inst = regInstCountry(), pk = regPackOf(c), name = regCountryName(c), out = [];
@@ -92,11 +80,10 @@ function regSpinRows(){
     : c === regBrowserCountry() ? ((g && g.country && g.country.from) || tx('your browser')) : tx('you chose it');
   out.push({ key: 'country', what: tx('Country'), value: esc(name), from: from, known: !!c });
   if (pk) {
-    var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
     var tax = [pk.tax && pk.tax.scheme, pk.tax && pk.tax.id].filter(Boolean).join(' · ');
-    var zone = regZoneFor(pk);
+    var off = pk.offer || {}, zone = { value: off.timezone || '', from: off.from || tx('you pick it after signing in') };   /* the server's offer (STD2) */
     out.push({ key: 'currency', what: tx('Money'), value: esc(pk.currency || ''), from: txf('the usual currency in {c}', { c: name }), known: !!pk.currency });
-    out.push({ key: 'year', what: tx('Year starts'), value: esc(pk.fy_start_month ? tx(months[pk.fy_start_month - 1]) : ''), from: txf('the {c} pack', { c: name }), known: !!pk.fy_start_month });
+    out.push({ key: 'year', what: tx('Year starts'), value: esc(pk.fy_start_month ? tx((typeof CSU_MONTHS !== 'undefined' && CSU_MONTHS[pk.fy_start_month - 1]) || String(pk.fy_start_month)) : ''), from: txf('the {c} pack', { c: name }), known: !!pk.fy_start_month });
     out.push({ key: 'tax', what: tx('Tax'), value: esc(tax), from: (pk.tax && pk.tax.return) ? txf('returns: {r}', { r: pk.tax.return }) : txf('the {c} pack', { c: name }), known: !!tax });
     out.push({ key: 'format', what: tx('Format'), value: pk.locale ? regFormatSample(pk.locale) : '', from: txf('how {c} writes numbers and dates', { c: name }), known: !!pk.locale });
     out.push({ key: 'language', what: tx('Language'), value: (pk.languages || []).slice(0, 2).map(regLangHTML).join(' · '), from: txf('the {c} pack', { c: name }), known: !!(pk.languages && pk.languages.length) });
@@ -147,7 +134,8 @@ function regPayload(){
   var p = CBGov.payload(govCtx());
   if (REG.spin && REG.country) {
     var pk = regPackOf(REG.country);
-    p.country = REG.country; p.country_source = regSourceOf(REG.country);
+    /* the source the SERVER said it will record (countries[].offer.source); an older api sent none → 'chosen' (verify re-decides it from the facts) */
+    p.country = REG.country; p.country_source = (regOfferOf(REG.country) || {}).source || 'chosen';
     if (pk && pk.currency) p.currency_code = pk.currency;
   }
   return p;
@@ -171,7 +159,7 @@ function renderRegister(){
        <div style="font-size:var(--fs-1);color:var(--grey);margin:-2px 0 8px;line-height:1.5">${txf('8 characters or more · lowercase letters, numbers and dashes — nothing else.{br}No spaces, and no punctuation: {at} {dot} {tilde} each already mean something here — they make an employee, a network store, and a supplier you write down yourself — so they are kept for that.{br}{fixed} Your business name can be anything you like, spaces and all, and you set it after signing in.', {
         at: '<b>@</b>', dot: '<b>.</b>', tilde: '<b>~</b>', br: '<br>',
         fixed: '<b>' + tx('This cannot be changed later.') + '</b>' })}</div>
-       <label class="fl">Email</label><input class="inp" id="r_email" data-testid="reg-email" placeholder="you@business.in" value="${esc(R.email)}">
+       <label class="fl">Email</label><input class="inp" id="r_email" data-testid="reg-email" placeholder="you@yourshop.example" value="${esc(R.email)}">
        ${R.err?`<div class="err">${R.err}</div>`:""}
        <button class="btn gold" id="r_go" data-testid="reg-submit" ${R.busy?"disabled":""}>${R.busy?'<span class="spin"></span> Creating…':"Create entity <span class=arw>→</span>"}</button>`;
   } else {
@@ -231,7 +219,11 @@ async function doRegister(){
       const r=await api("register",{body:{user_id:R.name, display_name:R.name, email:R.email,
         context:(window.CBGov?CBGov.payload(govCtx()):undefined)}});
       R.email=(r&&r.email)||R.email; R.busy=false; R.step="otp";
-      try{ const c=await api("constitutions"); REG.verticals=(c&&c.constitutions)||[]; const dv=(REG.verticals.find(function(x){return x.is_default;})||REG.verticals[0]); REG.constitution=dv?dv.key:null;
+      try{ /* STD2: the device's zone rides along, so each country row carries the zone the server WILL store (countries[].offer) */
+        const tz=(govCtx()&&govCtx().timezone&&govCtx().timezone.value)||'';
+        const c=await api("constitutions", tz?{query:{tz:tz}}:undefined);
+        /* the country names and months are Country setup's (cap-country.js) — fetched on demand where the page does not carry it (app.html) */
+        if(typeof csuCountryName!=='function'&&typeof ensureCap==='function') await ensureCap('country').catch(function(e){ cblog('warn','register: Country setup unloaded — the panel shows country codes, not names: '+(e&&e.message)); }); REG.verticals=(c&&c.constitutions)||[]; const dv=(REG.verticals.find(function(x){return x.is_default;})||REG.verticals[0]); REG.constitution=dv?dv.key:null;
         /* GOV-SPIN: the installation's country and the packs a registrant may choose — the panel's first country is the installation's */
         REG.spin=(c&&Array.isArray(c.countries))?{installation:c.installation||null, allowed:c.allowed_countries||null, countries:c.countries}:null; REG.country=regFirstCountry(); }catch(_){ REG.verticals=[]; REG.spin=null; }
       return renderRegister();
@@ -246,7 +238,7 @@ async function doRegister(){
     R.busy=false;
     /* the host's next step: app.html's regIn (the session · a paired counter · #/country) or CB Settings' (keep the session, open Home) */
     if(REG_AT.onDone) return REG_AT.onDone(r, R.name);
-  }catch(e){ R.busy=false; R.err="Could not register: "+e.message+" (check endpoint / stage)"; renderRegister(); }
+  }catch(e){ R.busy=false; R.err="Could not register: "+e.message; renderRegister(); }
 }
 /* The vertical/blueprint chooser at sign-up — showcases the available constitutions (verticals) so the registrant
    picks one; their entity is minted onto it (verify → entity_governance). "None fits" → tailor / contact the team. */

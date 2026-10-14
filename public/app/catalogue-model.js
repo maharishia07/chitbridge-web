@@ -509,38 +509,43 @@
   }
 
   // ============================================================================
-  // ADOPTED INDUSTRY STANDARDS  (named here so the whole thing is universal, not
-  // bespoke — this list is what the in-app "Built on open standards" panel reads.)
-  // We arrange these existing pieces our own way; the CB-unique layer (four-leg
-  // provenance + chit/seal + per-copy + governance) rides ON TOP of them.
+  // ADOPTED INDUSTRY STANDARDS — NAMED BY ID, READ FROM THE REGISTER (STDREG1, 2026-10-14).
+  // This used to be a 19-row list of its own (name · body · role · status), and it drifted: it called UN/ECE Rec 20
+  // "roadmap" while the register said In force. ONE list now: every standard's words and status live in
+  // app/cap-standards.js (STANDARDS, by `id`); this keeps only WHERE in this model each one is implemented.
+  // e2e/standards-one-list.cjs fails if an id here is not on the register, or if a second standards list appears.
   // ============================================================================
-  var STANDARDS = [
-    { id: 'json-schema-2020-12', name: 'JSON Schema (draft 2020-12)', body: 'json-schema.org', role: 'Catalogue & item shape — LLMs emit it natively, so it doubles as the real-time build format.', status: 'in code', where: 'toJSONSchema()', spec: 'https://json-schema.org/draft/2020-12' },
-    { id: 'rfc7386', name: 'JSON Merge Patch — IETF RFC 7386', body: 'IETF', role: 'Smooth partial modification: any source emits a patch, the record accumulates it (never a full rewrite).', status: 'in code', where: 'mergePatch()', spec: 'https://www.rfc-editor.org/rfc/rfc7386' },
-    { id: 'mdm-golden-record', name: 'MDM golden record + survivorship', body: 'Master Data Management', role: 'One living item filled by many sources; per-field source-of-truth decides which source wins.', status: 'in code', where: 'upsertItem() · _lineage', spec: 'https://en.wikipedia.org/wiki/Master_data_management' },
-    { id: 'gs1-gtin', name: 'GS1 GTIN / SKU', body: 'GS1', role: 'Used as the stable upsert key so re-importing a source updates, never duplicates. (SKU/GTIN taken as-is — no check-digit validation yet.)', status: 'in code', where: 'itemKey() · upsertItem()', spec: 'https://www.gs1.org/standards/id-keys/gtin' },
-    { id: 'pim', name: 'PIM data model (attributes · families · completeness)', body: 'PIM discipline', role: 'Naming/shape alignment only — our fields/sections/facets mirror the standard PIM vocabulary so an export stays compatible. No PIM engine or vendor code is embedded.', status: 'vocabulary', where: 'fields · sections · facets', spec: 'https://en.wikipedia.org/wiki/Product_information_management' },
-    { id: 'gs1-gpc', name: 'GS1 GPC classification', body: 'GS1', role: 'Product classification, held BY REFERENCE (link out, never mirror).', status: 'by reference', where: 'standards[]', spec: 'https://www.gs1.org/standards/gpc' },
-    { id: 'schema-org-product', name: 'Schema.org / Product', body: 'schema.org', role: 'Web-standard product vocabulary for interop, held by reference.', status: 'by reference', where: 'standards[]', spec: 'https://schema.org/Product' },
-    // Moved from "by reference" to IN CODE: the item lifecycle flag is schema.org's enumeration, not four words we
-    // made up. CB is deliberately finer in one place — schema.org's single Discontinued conflates "stopped selling"
-    // with "use that one instead", and only the second carries a successor worth acting on. Both export as
-    // Discontinued, so we are finer than the standard without ever emitting a value it does not define.
-    { id: 'schema-org-availability', name: 'Schema.org / ItemAvailability', body: 'schema.org', role: 'Item lifecycle flag (available · not available · redundant · retired) carries its InStock/OutOfStock/Discontinued equivalent, so a feed or storefront never learns our vocabulary.', status: 'in code', where: 'itemstatus.SCHEMA_ORG · item_data.status_schema_org', spec: 'https://schema.org/ItemAvailability' },
-    // ── named in the one-pass audit of 2026-08-13 (schema.org + Medusa, field by field — see FIELD_STANDARDS) ──
-    { id: 'schema-org-offer', name: 'Schema.org / Offer', body: 'schema.org', role: 'Price, currency, availability, eligible quantity and price VALIDITY belong to the offer, not the product — the same good sells at different prices to different buyers. Our per-copy model already agrees; the field placement does not yet.', status: 'vocabulary', where: 'price · currency · min_qty · status', spec: 'https://schema.org/Offer' },
-    { id: 'wco-hs', name: 'WCO Harmonized System (HS/HSN)', body: 'World Customs Organization', role: 'Customs classification — what a good IS, for duty. schema.org has no equivalent at all; Medusa carries hs_code as first-class. It is the field that makes this a trade catalogue rather than a shop one.', status: 'by reference', where: 'hsn · hs_code · starter-fields', spec: 'https://www.wcoomd.org/en/topics/nomenclature/instrument-and-tools/hs-nomenclature-2022-edition.aspx' },
-    { id: 'unece-rec20', name: 'UN/CEFACT Recommendation 20 — units of measure', body: 'UNECE', role: 'The code list for units in international trade (KGM · LTR · TNE · MTQ · PCE). Neither schema.org nor Medusa models a unit of sale properly, which for a bulk-commodity rail is a real gap in both — and the reason we keep our own unit + conversions.', status: 'roadmap', where: 'unit · conversions (our own names today)', spec: 'https://unece.org/trade/uncefact/cl-recommendations' },
-    { id: 'iso3166', name: 'ISO 3166-1 alpha-2', body: 'ISO', role: 'Country of origin — drives duty and preference, and feeds the trade-lane layer.', status: 'by reference', where: 'origin_country', spec: 'https://www.iso.org/iso-3166-country-codes.html' },
-    { id: 'iso4217', name: 'ISO 4217 currency codes', body: 'ISO', role: 'Currency of a price, stamped from the ENTITY and never from the request.', status: 'in code', where: 'money.stampItem() · regional.currencyFor()', spec: 'https://www.iso.org/iso-4217-currency-codes.html' },
-    { id: 'medusa-model', name: 'Medusa product model', body: 'Medusa (MIT)', role: 'Read field-by-field to name ours well: Product/ProductVariant confirmed hs_code, origin_country, sku, barcode, material, weight. NOT adopted: variant-as-its-own-record (a trader writes a flat price list), ProductStatus (a publication workflow, not orderability), is_giftcard/discountable (B2C checkout concerns). No Medusa code is embedded.', status: 'vocabulary', where: 'FIELD_STANDARDS', spec: 'https://docs.medusajs.com/resources/references/product/models/Product' },
-    // ── the INSTANCE, as distinct from the product class (added 2026-08-13, batch/expiry pass) ─────────────────
-    { id: 'gs1-ai', name: 'GS1 Application Identifiers — (10) batch · (17) expiry · (21) serial', body: 'GS1', role: '⭐ A GTIN identifies a product CLASS; a batch or serial identifies an INSTANCE of it. "Two or three of the same SKU" is therefore one product with three lots, not three products — and the lot travels on the MOVEMENT (the chit line), never on the catalogue item. Stored ISO, mapped to GS1 YYMMDD at the barcode boundary.', status: 'in code', where: 'gs1.AI · gs1.lotOf() · gs1.lotKey() · line.lot', spec: 'https://www.gs1.org/standards/barcodes/application-identifiers' },
-    { id: 'gs1-epcis', name: 'GS1 EPCIS 2.0 + Core Business Vocabulary', body: 'GS1', role: 'The cross-company standard for what HAPPENED to a lot — what · when · where · why, with ObjectEvent and TransformationEvent (the only event that breaks a lot chain and creates new output lots from inputs). This is the vocabulary our traceability walk and mass-balance already implement under our own names; adopting the naming is what makes the graph exportable to anyone else.', status: 'roadmap', where: 'trace walk · by-batch · mass-balance', spec: 'https://www.gs1.org/standards/epcis' },
-    { id: 'odoo-tracking', name: 'Lot/serial tracking (Odoo model)', body: 'Odoo (LGPL)', role: 'A lot is NOT a separate product — it is a record linked to one product, and the product merely declares whether it is tracked (none · lot · serial). Copied exactly, because the alternative (a catalogue row per lot) turns the catalogue into a lot ledger. Removal strategy FEFO — first-EXPIRY-first-out — is the one perishables need; FIFO ships the wrong box when a later delivery carries an older date. No Odoo code embedded.', status: 'vocabulary', where: 'starter-fields pharma `tracking` · gs1.expiryState()', spec: 'https://www.odoo.com/documentation/17.0/applications/inventory_and_mrp/inventory/product_management/product_tracking/lots.html' },
-    { id: 'rfc6902', name: 'JSON Patch — IETF RFC 6902', body: 'IETF', role: 'Ordered, audited edit operations — for when a change history must be replayable.', status: 'roadmap', where: '—', spec: 'https://www.rfc-editor.org/rfc/rfc6902' },
-    { id: 'gs1-gdsn', name: 'GS1 GDSN', body: 'GS1', role: 'Cross-company continuous catalogue sync (supplier → distributor).', status: 'roadmap', where: '—', spec: 'https://www.gs1.org/services/gdsn' },
+  var STANDARD_REFS = [
+    { id: 'json-schema-2020-12', where: 'toJSONSchema()' },
+    { id: 'rfc7386', where: 'mergePatch()' },
+    { id: 'mdm-golden-record', where: 'upsertItem() · _lineage' },
+    { id: 'gs1-gtin', where: 'itemKey() · upsertItem()' },
+    { id: 'pim', where: 'fields · sections · facets' },
+    { id: 'gs1-gpc', where: 'standards[]' },
+    { id: 'schema-org-product', where: 'standards[]' },
+    { id: 'schema-org-availability', where: 'itemstatus.SCHEMA_ORG · item_data.status_schema_org' },
+    { id: 'schema-org-offer', where: 'price · currency · min_qty · status' },
+    { id: 'wco-hs', where: 'hsn · hs_code · starter-fields' },
+    { id: 'unece-rec20', where: 'unit · conversions (our own names today)' },
+    { id: 'iso3166', where: 'origin_country' },
+    { id: 'iso4217', where: 'money.stampItem() · regional.currencyFor()' },
+    { id: 'medusa-model', where: 'FIELD_STANDARDS' },
+    { id: 'gs1-ai', where: 'gs1.AI · gs1.lotOf() · gs1.lotKey() · line.lot' },
+    { id: 'gs1-epcis', where: 'trace walk · by-batch · mass-balance' },
+    { id: 'odoo-tracking', where: 'starter-fields pharma `tracking` · gs1.expiryState()' },
+    { id: 'rfc6902', where: '—' },
+    { id: 'gs1-gdsn', where: '—' }
   ];
+  /** standards(register?) → [{ id, where, n, w, s, m, limit }] — the register's own row for each id (the global STANDARDS once
+      cap-standards.js has loaded, or the array passed in); an id the register lacks comes back { id, where, missing: true }, never guessed. */
+  function standards(register) {
+    var reg = register || (typeof STANDARDS !== 'undefined' ? STANDARDS : null) || [];
+    return STANDARD_REFS.map(function (ref) {
+      var r = null;
+      for (var k = 0; k < reg.length; k++) if (reg[k] && reg[k].id === ref.id) { r = reg[k]; break; }
+      return r ? { id: ref.id, where: ref.where, n: r.n, w: r.w, s: r.s, m: r.m, limit: r.limit } : { id: ref.id, where: ref.where, missing: true };
+    });
+  }
 
   /* ============================================================================================================
    * FIELD-LEVEL STANDARD MAP — our key → what the rest of the world calls it.
@@ -548,7 +553,7 @@
    * Athi, 2026-08-13: *"adopt all the standards in one pass so we can reference quickly … check medusa and org
    * standards."*
    *
-   * The STANDARDS list above names the standards we build ON. This names them FIELD BY FIELD, because that is the
+   * The STANDARD_REFS above name the standards we build ON (their words: the register, app/cap-standards.js). This names them FIELD BY FIELD, because that is the
    * question anyone actually has: "we call it `hsn` — what does an integrator call it?" Without this the alignment
    * is a claim in a comment; with it, it is a lookup.
    *
@@ -712,7 +717,7 @@
     ensure: ensure, toBase: toBase, resolvePrice: resolvePrice, routeChain: routeChain,
     deriveComputeJob: deriveComputeJob, canonicalInputs: canonicalInputs, validate: validate,
     toJSONSchema: toJSONSchema,
-    STANDARDS: STANDARDS, mergePatch: mergePatch, itemKey: itemKey, upsertItem: upsertItem, SOURCE_PRIORITY: SOURCE_PRIORITY,
+    STANDARD_REFS: STANDARD_REFS, standards: standards, mergePatch: mergePatch, itemKey: itemKey, upsertItem: upsertItem, SOURCE_PRIORITY: SOURCE_PRIORITY,
     FIELD_STANDARDS: FIELD_STANDARDS, FIELD_GAPS: FIELD_GAPS, FIELD_CONFLICTS: FIELD_CONFLICTS, stdFor: stdFor,
   };
 });

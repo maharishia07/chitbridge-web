@@ -1,6 +1,20 @@
 // fixtures.js — Shared helpers for the e2e specs. Kept tiny so each MODULE spec stays self-describing.
 const { expect } = require('@playwright/test');   // composeChit asserts the wizard actually advanced
-const DEV_OTP = process.env.CB_DEV_OTP || '123456';   // relies on DEV_OTP set on the API during dev (Athi's standing choice)
+/**
+ * ⭐ SEC1 (Athi, 2026-10-14: "do not keep the code in the logic, i can share the password to the testers") — THE SIGN-IN CODE the suite
+ * types. Against a DEPLOYED api it is the testers' code, env E2E_TESTER_CODE (a GitHub secret Athi sets) — never a fallback: unset →
+ * null, and needCode() / mintEntity SKIP with a CI warning naming the secret (a skip, never a silent pass). Against a LOCAL api
+ * (CB_API_BASE / CB_API on localhost, or the web served from localhost with no api named) it is the local stack's fixed code — the api
+ * accepts those on a local stack only (chitbridge-api lib/dev-otp.js). `kind` 'customer' = the storefront's own local code.
+ */
+const { signinCode, warnNoCode, NO_CODE } = require('./lib/signin-code.cjs');   // the one rule — shared with the standalone scripts
+/** needCode(test) — at the top of a spec that signs in through the api: skips the whole file, loudly, when there is no code to type */
+function needCode(test) {
+  if (signinCode()) return;
+  warnNoCode();
+  test.skip(true, NO_CODE);
+}
+const DEV_OTP = signinCode();   // the name the specs already import — now the code for THIS target (null → needCode skips)
 
 // a fresh identity per run so specs never collide on an existing entity/email.
 function uniqueEmail(prefix) {
@@ -141,6 +155,10 @@ async function mintEntity(page, { role = 'business', email, name, fresh = false,
   const loggedIn = fresh ? false : await page.getByTestId('nav-compose')
     .waitFor({ state: 'visible', timeout: 4000 }).then(() => true).catch(() => false);
   if (loggedIn) return { existing: true, email: null, name: null };
+  /* SEC1: a new shop needs a code to type — none for this target → skip LOUDLY here, before anything is registered */
+  /* inside a Playwright test → test.skip; in a STANDALONE harness (till-demo.cjs…) test.skip throws, so exit 78 = SKIP
+     (run-shard prints it as SKIP — never PASS, never FAIL) */
+  if (!DEV_OTP) { warnNoCode(); try { require('@playwright/test').test.skip(true, NO_CODE); } catch (_) { console.log('SKIP · ' + NO_CODE); process.exit(78); } }
   // LOGGED OUT: /app.html now defaults to the Sign-in screen → reach onboarding via "New here? Create an entity"
   // (the welcome screen at #/welcome still carries onb-getstarted). Fall back to the hash route if the link moved.
   if (!(await page.getByTestId('onb-getstarted').isVisible().catch(() => false))) {
@@ -531,7 +549,7 @@ async function shopAdd(page, name, times) {
 }
 module.exports = {
   shopAdd,
-  MEDIA_PNG, MEDIA_VIDEO, addMedia, addProduct, addCoassist, seedDemo, DEV_OTP, useApiBase, uniqueEmail, uniqueName, uniqueHandle, openAvatarItem, mintEntity, passCountryStep, composeSelfChit, composeChit, composeStepNext, clickNav, stableClick, clickInModal, HAS_RCPT, HAS_TOTAL, mintInContext, addRecipientByName, settle, dismissModal, POOL, poolContext };
+  MEDIA_PNG, MEDIA_VIDEO, addMedia, addProduct, addCoassist, seedDemo, DEV_OTP, signinCode, needCode, useApiBase, uniqueEmail, uniqueName, uniqueHandle, openAvatarItem, mintEntity, passCountryStep, composeSelfChit, composeChit, composeStepNext, clickNav, stableClick, clickInModal, HAS_RCPT, HAS_TOTAL, mintInContext, addRecipientByName, settle, dismissModal, POOL, poolContext };
 
 /**
  * openTab(page, key) — click a product-page tab and WAIT for its pane. The Edit view repaints twice (once at once, once

@@ -12,7 +12,8 @@
 const { test, expect } = require('@playwright/test');
 const API = process.env.CB_API_BASE || 'https://chitbridge-api-production.up.railway.app';
 const APP = process.env.CB_APP_BASE || 'https://chitbridge-web.vercel.app';
-const OTP = process.env.CB_DEV_OTP || '123456';
+const OTP = require('../fixtures').signinCode();   // SEC1: the tester code (E2E_TESTER_CODE) on a deployed api, the local code on a local one
+require('../fixtures').needCode(test);   // no code → the file SKIPS with a CI warning naming the secret
 const WHO = 'tallytest';
 
 const ms = async (fn) => { const t = Date.now(); const r = await fn(); return { ms: Date.now() - t, r: r }; };
