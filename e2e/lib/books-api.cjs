@@ -89,7 +89,9 @@ const bs = (assets, liabilities, equity, o) => { const a = (assets || []).map((x
 const enable = (o) => Object.assign({ ok: true, accounts_added: 80, fiscal_year: '2026-27', parties_numbered: null }, o || {});
 /** one account of GET /api/books/accounts */
 const accountRow = (o) => Object.assign({ account_id: 'acc', code: '1000', name: 'Account', is_group: false, tally_group: 'Group', nature: 'asset', role: null, parent_code: null, active: true }, o || {});
-Object.assign(module.exports, { waitingRow, trialBalance, pl, bs, enable, accountRow });
+/* GET /api/books/cheques (T3-P1-MONEY shape): the cheques in hand, the post-dated reminders and the owner's switch — the contract's keys, asOf = the one injected today */
+const cheques = (o) => Object.assign({ currency: 'INR', asOf: DAY, cheques: [], pdc_reminders: [], remind: { on: true, lead_days: 7, from: null, may_set: true, why_not: null } }, o || {});
+Object.assign(module.exports, { waitingRow, trialBalance, pl, bs, enable, accountRow, cheques });
 
 /* ── payments (M26, chitbridge-api #57): the preview, the one-call record, the 409 ── */
 const rs = (minor) => { const v = minor / 100; return '₹' + v.toLocaleString('en-IN', { minimumFractionDigits: Number.isInteger(v) ? 0 : 2, maximumFractionDigits: 2 }); };

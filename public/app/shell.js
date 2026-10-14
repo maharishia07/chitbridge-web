@@ -388,8 +388,8 @@
       /* H14/P2-5: a workshop row whose function WORKS today (manifest `works`, the roadmap's rule) says so - never the word workshop */
       var st = e.state === 'workshop' ? (e.works ? 'works' : 'workshop') : 'coming';
       /* H36: a workshop item with no page of its own may name the closest built page (`via`): the chip becomes a link there, still marked workshop */
-      if (e.via) return '<a class="cbsh-sc" href="' + esc(e.via) + '" data-testid="shell-chip-' + esc(e.id) + '" data-state="' + st + '" data-via="1"' + (e.via_note ? ' title="' + esc(e.via_note) + '"' : '') + '><span class="g" aria-hidden="true">' + esc(e.icon) + '</span><b>' + esc(T(e.name)) + '</b><span class="tag">' + esc(W.tag[st]) + '</span></a>';
-      return '<span class="cbsh-sc" data-testid="shell-chip-' + esc(e.id) + '" data-state="' + st + '"><span class="g" aria-hidden="true">' + esc(e.icon) + '</span><b>' + esc(T(e.name)) + '</b><span class="tag">' + esc(W.tag[st]) + '</span></span>';
+      if (e.via) return '<a class="cbsh-sc" href="' + esc(e.via) + '" data-testid="shell-chip-' + esc(e.id) + '" data-state="' + st + '" data-via="1"' + (e.via_note ? ' title="' + esc(e.via_note) + '"' : '') + '><span class="g" aria-hidden="true">' + esc(e.icon) + '</span><b>' + esc(T(e.name)) + '</b><span class="tag">' + esc(T(W.tag[st])) + '</span></a>';
+      return '<span class="cbsh-sc" data-testid="shell-chip-' + esc(e.id) + '" data-state="' + st + '"><span class="g" aria-hidden="true">' + esc(e.icon) + '</span><b>' + esc(T(e.name)) + '</b><span class="tag">' + esc(T(W.tag[st])) + '</span></span>';
     }
     function paintAreas() {
       var box = $('.cbsh-areas'); if (!box) return;

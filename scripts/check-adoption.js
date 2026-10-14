@@ -27,9 +27,12 @@ const html = fs.readFileSync(process.env.CB_APP_HTML || path.join(root, 'public'
 const NEEDED = ['myCur', 'cbAmount', 'cbCurrency', 'cbHasPrice',
   '_refPrice', '_refPriceHTML', '_refChips', '_refFacts', '_refPhoto', 'refFinishRow', 'refFinishDetail', '_swatch', '_combo'];
 let src = 'var _REF_SKIP=' + (/var _REF_SKIP=(\{[^}]*\});/.exec(html) || [])[1] + ';\n';
+/* T3-CATALOGUE moved the catalogue primitives (cbAmount · cbHasPrice · cbCurrency …) out of app.html into app/cap-catalogue.js — ONE copy; lift from wherever the one copy lives */
+const catalogue = fs.readFileSync(path.join(root, 'public', 'app', 'cap-catalogue.js'), 'utf8');
 for (const fn of NEEDED) {
-  const m = new RegExp('^function ' + fn + '\\b[\\s\\S]*?(?=^function |^var |^\\/\\/)', 'm').exec(html);
-  if (!m) { console.log('SETUP FAIL — could not lift ' + fn + '() out of app.html'); process.exit(1); }
+  const re = new RegExp('^function ' + fn + '\\b[\\s\\S]*?(?=^function |^var |^\\/\\/|^\\/\\*)', 'm');
+  const m = re.exec(html) || re.exec(catalogue);
+  if (!m) { console.log('SETUP FAIL — could not lift ' + fn + '() out of app.html or app/cap-catalogue.js'); process.exit(1); }
   src += m[0] + '\n';
 }
 /**

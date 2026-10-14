@@ -131,7 +131,7 @@ async function route(S, r) {
   let body = {}; try { body = JSON.parse(q.postData() || '{}'); } catch (_) {}
   if (p === '/api/books/status') return J(r, 200, { migrated: true, enabled: true, walkin_grain: 'day' });
   if (p === '/api/books/health') return J(r, 200, books.health({ last_check: { ok: true }, waiting: S.waiting.map((w) => books.waitingRow(w)) }));
-  if (p === '/api/books/cheques') return J(r, 200, { currency: 'INR', cheques: [], pdc_reminders: [] });
+  if (p === '/api/books/cheques') return J(r, 200, books.cheques());   /* the one cheques builder (e2e/lib/books-api.cjs) — asOf + remind as the master says since T3-P1 */
   if (p === '/api/books/dues') return J(r, 200, books.dues([], { asOf: TODAY }));
   if (p === '/api/books/daybook') return J(r, 200, books.daybook(S.entries.map(books.entry)));
   if (p === '/api/books/outbox/retry' && m === 'POST') { S.retries = (S.retries || 0) + 1; if (S.onRetry) S.onRetry(); return J(r, 200, { tried: 1, posted: 0, still: 1 }); }
