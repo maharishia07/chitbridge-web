@@ -184,14 +184,18 @@ function booksAlert(){
 function railPaint(r){
   var host = document.getElementById('railbox'); if (!host) return;
   var m = SHELL.manifest(), rail = (m && m.rail) || {};
-  var sup = n1(r && r.suppliers), cus = n1(r && r.customers), fin = n1(r && r.in), fout = n1(r && r.out), stuck = n1(r && r.stuck);
+  var sup = n1(r && r.suppliers), cus = n1(r && r.customers), fin = n1(r && r.in), fout = n1(r && r.out), ftask = n1(r && r.tasks), stuck = n1(r && r.stuck);
   if (sup == null && cus == null) { host.innerHTML = ''; return; }
   var pips = [];
   /* every number is a door to what it counts: the chits (In · Out · Stuck) or the parties of that role, both in CB CRM */
   var base = rail.route ? String(rail.route).split('#')[0] : '';
   var door = function (cls, tid, tab, text) { return base ? '<a class="pip ' + cls + '" data-testid="' + tid + '" href="' + esc(base) + '#/chits?tab=' + tab + '">' + text + '</a>' : '<span class="pip ' + cls + '" data-testid="' + tid + '">' + text + '</span>'; };
-  if (fin != null) pips.push(door('in', 'rail-in', 'in', fin + ' in'));
-  if (fout != null) pips.push(door('out', 'rail-out', 'out', fout + ' out'));
+  /* TOUR-FIX1: in / out / to do are Tasks & Orders' own folder counts (the server's one reader) — so each opens THAT folder, where the same number is the list */
+  var tasksE = ((m && m.entries) || []).filter(function (e) { return e.id === 'tasks' && e.route; })[0];
+  var folder = function (cls, tid, view, text) { return tasksE ? '<a class="pip ' + cls + '" data-testid="' + tid + '" href="' + esc(String(tasksE.route).split(/[?#]/)[0]) + '?view=' + view + '">' + text + '</a>' : '<span class="pip ' + cls + '" data-testid="' + tid + '">' + text + '</span>'; };
+  if (fin != null) pips.push(folder('in', 'rail-in', 'orders_in', fin + ' in'));
+  if (fout != null) pips.push(folder('out', 'rail-out', 'orders_out', fout + ' out'));
+  if (ftask) pips.push(folder('in', 'rail-tasks', 'tasks', ftask + ' to do'));
   if (stuck) pips.push(door('stuck', 'rail-stuck', 'stuck', stuck + ' stuck'));
   var role = function (tid, n, role, word) { var inner = '<b class="n" data-testid="' + tid + '">' + (n == null ? '–' : n) + '</b><span class="k">' + word + '</span>'; return base ? '<a class="node" data-testid="' + tid + '-open" href="' + esc(base) + '#/parties?role=' + role + '">' + inner + '</a>' : '<span class="node">' + inner + '</span>'; };
   host.innerHTML = '<div class="rail" data-testid="rail"><div class="railtop"><h3>Your suppliers and customers</h3>'

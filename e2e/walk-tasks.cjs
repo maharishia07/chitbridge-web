@@ -109,6 +109,8 @@ W.run('tasks', async (w) => {
     if (p === '/api/people' && m === 'GET') return J(r, 200, { people: PEOPLE, may: { add: { ok: true } }, access_choices: [], counts: { on: 2, off: 1 } });
     mm = /^\/api\/chits\/([^/]+)\/status$/.exec(p);
     if (mm && m === 'PUT') { const x = find(mm[1]); if (!x) return J(r, 404, { error: 'Not found' }); if (S.level === 'viewer') return J(r, 403, { error: 'Forbidden', message: SAY.read_only, why: 'read_only' }); x.status = body.status; x.note = body.note || ''; return J(r, 200, { chit_id: x.chit_id, status: x.status, message: 'Status updated' }); }
+    /* TOUR-FIX1: ＋ New task — the chit send to the shop itself (POST /api/chits/send); the stand-in files it as an open task */
+    if (p === '/api/chits/send' && m === 'POST') { const id = 'n' + (S.rows.length + 1); S.rows.push(row(id, { kind: 'task', side: null, subject: body.manual_subject || body.subject, party: 'Fixture Shop' })); return J(r, 200, { chit_id: id, message: 'sent' }); }
     mm = /^\/api\/chits\/([^/]+)\/assign-lines$/.exec(p);
     if (mm && m === 'POST') {
       const out = (body.edits || []).map((e, i) => { const l = findLine(e.line_id); if (l) { l.assignment = { assignee_actor_id: e.assignee_actor_id, assignee_name: e.assignee_name || null, assignee_type: e.assignee_actor_id ? 'human' : null, history: [] }; l.settings.state = e.state || 'open'; } return { line_id: e.line_id, seq: i + 2, state: e.state || 'open' }; });
@@ -137,13 +139,13 @@ W.run('tasks', async (w) => {
 
   await openPage();
 
-  await w.step('T1', 'Tasks & Orders -> the standard page: four folders in the sidebar, Orders in first, one row per open order, the count says 3 rows; a row says 🌐 Online · Pick up and the amount; the 3-day-old order wears Stuck (the rail\'s test) and Billed; ＋ New goes to the one composer', async () => {
+  await w.step('T1', 'Tasks & Orders -> the standard page: four folders in the sidebar, Orders in first, one row per open order, the count says 3 rows; a row says 🌐 Online · Pick up and the amount; the 3-day-old order wears Stuck (the rail\'s test) and Billed; ＋ New is this page\'s own button (never the workshop)', async () => {
     const nav = await page.$$eval('[data-testid^="skel-nav-"]', (bs) => bs.map((b) => b.getAttribute('data-sec')));
     const n = await rows(), cnt = await txt('[data-testid="tk-count"]'), list = await txt('[data-testid="tk-list"]');
     const how = await txt('[data-testid="tk-how-c1"]'), stuck = await page.locator('[data-testid="tk-stuck-c2"]').count(), billed = await page.locator('[data-testid="tk-billed-c2"]').count(), stuck4 = await page.locator('[data-testid="tk-stuck-c4"]').count();
-    const fresh = await page.getAttribute('[data-testid="tk-new"]', 'href').catch(() => null);
+    const fresh = await page.$eval('[data-testid="tk-new"]', (b) => b.tagName + (b.getAttribute('href') ? ' href ' + b.getAttribute('href') : '')).catch(() => null);
     return { ok: nav.join() === 'orders_in,orders_out,tasks,done' && n === 3 && /3\s*rows/.test(cnt) && /Meena/.test(list) && /New/.test(list) && /Accepted/.test(list) && /1,200\.50|1200\.50/.test(list)
-        && how === '🌐 Online · Pick up' && stuck === 1 && billed === 1 && stuck4 === 0 && fresh === '/app.html#/app/compose' && !w.errs.length,
+        && how === '🌐 Online · Pick up' && stuck === 1 && billed === 1 && stuck4 === 0 && fresh === 'BUTTON' && !w.errs.length,
       saw: 'folders ' + nav.join(' · ') + '; ' + n + ' rows; "' + cnt + '" · SO-1 "' + how + '" · SO-2 stuck ' + stuck + ' billed ' + billed + ' · SO-4 stuck ' + stuck4 + ' · new -> ' + fresh + (w.errs.length ? '; PAGE ERRORS: ' + w.errs.join(' | ') : '') };
   });
   await w.step('T2', 'Sidebar -> Tasks -> the one task, who has it (Ravi), the word Started is not there yet (New)', async () => {
@@ -238,6 +240,19 @@ W.run('tasks', async (w) => {
     await closeSheet();
     const writes = S.calls.filter((c) => /\/status|assign-lines|deliver-lines|actors\/assign/.test(c));
     return { ok: dis.length === 9 && dis.every((d) => /:greyed/.test(d)) && /view-only/.test(why) && /view-only/.test(lwhy) && writes.length === 0, saw: dis.join(' ') + ' · "' + why.slice(0, 40) + '" · writes: ' + (writes.join(' | ') || 'none') + (S.calls.length !== writes.length ? ' · other calls: ' + S.calls.filter((c) => writes.indexOf(c) < 0).join(' | ') : '') };
+  });
+  await w.step('T12b', 'TOUR-FIX1 · ＋ New -> the sheet asks "What needs doing?"; Add task with nothing typed says so and sends nothing; typed -> one POST /api/chits/send to the shop itself, the sheet closes, Tasks opens with the new task in it', async () => {
+    await openPage(); S.calls = [];
+    await page.click('[data-testid="tk-new"]'); await page.waitForSelector('[data-testid="tk-new-what"]', { timeout: 5000 });
+    const ask = await txt('[data-testid="tk-sheet"]');
+    await page.click('[data-testid="tk-new-go"]'); await page.waitForTimeout(200);
+    const empty = await txt('[data-testid="tk-out"]'), sent0 = wrote(/chits\/send/);
+    await page.fill('[data-testid="tk-new-what"]', 'Count the rice bags'); await page.click('[data-testid="tk-new-go"]');
+    await page.waitForFunction(() => !document.querySelector('[data-testid="tk-new-what"]'), null, { timeout: 6000 }).catch(() => {}); await page.waitForTimeout(600);
+    const list = await txt('[data-testid="tk-list"]'), active = await page.$eval('[data-testid="skel-nav-tasks"]', (b) => b.classList.contains('active')).catch(() => false);
+    S.rows = S.rows.filter((x) => !/^n\d+$/.test(x.chit_id));   /* the steps after this one count the seeded rows */
+    return { ok: /What needs doing\?/.test(ask) && /Type what needs doing/.test(empty) && sent0 === 0 && wrote(/chits\/send/) === 1 && /Count the rice bags/.test(list) && active,
+      saw: 'asked "' + ask.slice(0, 40) + '"; empty -> "' + empty + '" (' + sent0 + ' sent); then ' + wrote(/chits\/send/) + ' send; Tasks active ' + active + ': ' + list.slice(0, 80) };
   });
   await w.step('T13', 'The server refuses the list -> a plain sentence and Try again, never a raw error; Try again reads it', async () => {
     S.listDenied = true; await openPage();

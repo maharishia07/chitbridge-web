@@ -46,6 +46,7 @@ const PLANTED = { version: 2,
     { id: 'orders', name: 'Orders', route: null, icon: '↓', area: 'selling', state: 'coming' },
     { id: 'accounts', name: 'CB Accounts', route: '/accounts.html', icon: '₹', area: 'running', state: 'built', what: 'What the shop made, and what it owes.', facts: '/api/facts/accounts' },
     { id: 'crm', name: 'CB CRM', route: '/crm.html', icon: '◍', area: 'running', state: 'built', what: 'Who buys, and how often.', facts: null },
+    { id: 'tasks', name: 'CB Tasks & Orders', route: '/tasks.html', icon: '☑', area: 'selling', state: 'built', what: 'Every order and task.', facts: null },
     { id: 'product-lab', name: 'Product Lab', route: '/product-lab.html', icon: '◈', area: 'labs', state: 'built', what: 'Cost, price, and what each one leaves you.', facts: null },
     { id: 'tax-lab', name: 'Tax Lab', route: null, icon: '§', area: 'labs', state: 'coming' },
     { id: 'standards', name: 'Standards', route: '/standards.html', icon: '≡', area: 'setup', state: 'built', what: 'What a chit must contain.', facts: null },
@@ -54,7 +55,7 @@ const PLANTED = { version: 2,
 const FACTS = {
   '/api/facts/till': { lines: [{ text: '12 bills · {money}', money: { amount: 4280, currency: 'INR' } }, { text: '1 bill waiting to send', tone: 'dn', act: { label: 'Send now', href: '/till.html' } }] },
   '/api/facts/accounts': { lines: ['Ledger up to 7 Oct'] },
-  '/api/facts/rail': { suppliers: 4, customers: 128, in: 3, out: 2, stuck: 1 }
+  '/api/facts/rail': { suppliers: 4, customers: 128, in: 3, out: 2, tasks: 4, stuck: 1 }
 };
 
 async function run() {
@@ -346,8 +347,9 @@ async function run() {
       await pg.click('[data-testid="rm-quiet-fold"] > summary');
       ok(await vis(pg, '[data-testid="rm-going"] summary'), 'roadmap · H16 · the quiet fold opens to the same roadmap');
       /* H1/H10/H11 — every rail number is a door to what it counts */
-      const hrefs = await pg.evaluate(() => { const h = (s) => ((document.querySelector('[data-testid="' + s + '"]') || {}).getAttribute || function () { return null; }).call(document.querySelector('[data-testid="' + s + '"]'), 'href'); return { i: h('rail-in'), o: h('rail-out'), k: h('rail-stuck'), s: h('rail-suppliers-open'), c: h('rail-customers-open') }; });
-      ok(hrefs.i === '/network.html#/chits?tab=in' && hrefs.o === '/network.html#/chits?tab=out' && hrefs.k === '/network.html#/chits?tab=stuck', 'rail · H10 · 3 in / 2 out / 1 stuck open that tab of the chits view (' + JSON.stringify(hrefs) + ')');
+      const hrefs = await pg.evaluate(() => { const h = (s) => ((document.querySelector('[data-testid="' + s + '"]') || {}).getAttribute || function () { return null; }).call(document.querySelector('[data-testid="' + s + '"]'), 'href'); return { i: h('rail-in'), o: h('rail-out'), t: h('rail-tasks'), k: h('rail-stuck'), s: h('rail-suppliers-open'), c: h('rail-customers-open') }; });
+      /* TOUR-FIX1: in / out / to do are Tasks & Orders' own folder counts — each opens THAT folder (where the same number is the list); stuck stays the chits view */
+      ok(hrefs.i === '/tasks.html?view=orders_in' && hrefs.o === '/tasks.html?view=orders_out' && hrefs.t === '/tasks.html?view=tasks' && hrefs.k === '/network.html#/chits?tab=stuck', 'rail · H10 · TOUR-FIX1 · 3 in / 2 out / 4 to do open that Tasks folder, 1 stuck the chits view (' + JSON.stringify(hrefs) + ')');
       ok(hrefs.s === '/network.html#/parties?role=supplier' && hrefs.c === '/network.html#/parties?role=customer', 'rail · H11 · Suppliers / Customers open the parties list filtered to that role');
       await ctx.close();
     }

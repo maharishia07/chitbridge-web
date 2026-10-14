@@ -460,7 +460,8 @@ async function peGstView(body) {
   /* last month, in the shop's year (WX-R2R: the server's period row, else its year start — never an April of this file's own) */
   const last = peMonthEnd(1), lp = bkPeriodOfDay(last, L), lastP = lp.p, lastFy = lp.fy;
   const years = L.years.slice(); if (years.indexOf(lastFy) < 0) years.push(lastFy); years.sort().reverse();
-  body.innerHTML = '<div class="pe-card" data-testid="pg-form"><div class="pe-form">'
+  body.innerHTML = (PE_RET.why ? '<div class="pe-note" data-testid="pg-rail-why">' + esc(tx(PE_RET.why)) + '</div>' : '')
+    + '<div class="pe-card" data-testid="pg-form"><div class="pe-form">'
     + peField('pg_fy', 'Financial year', peSel('pg_fy', years.map((y) => [y, y]), lastFy))
     + peField('pg_p', 'Month', peSel('pg_p', bkMonths().map((m, i) => [String(i + 1), m]), String(lastP)))
     + '</div><div class="supacts">' + peBtn('pg-close', 'Close the month', 'peGstClose(this)') + '</div><div id="pg_out" class="pe-slot"></div></div><div id="pg_res"></div>';
@@ -522,7 +523,7 @@ async function peGstPay(btn) {
    ⭐ THE PAGE COMPUTES NOTHING: every figure is the server's READ of the posted ledgers (engines gst-returns.returnFor → the pack's bas / vat201). The list IS CBList (rule 5);
    a box row opens the Ledgers page on the ledgers it counts, for the period; "Copy figures" puts the boxes on the clipboard as one block for the ATO / FTA portal.
    The FTA stagger and the Emirate are never guessed: until the owner picks the stagger the server says so (`needs`) and no box is drawn; the picks are remembered on this device. */
-var PE_RET = { r: null, q: {}, api: null, block: '' };
+var PE_RET = { r: null, q: {}, api: null, block: '', why: '' };
 const peRetKey = () => 'cb_ret_' + ((typeof SESSION !== 'undefined' && SESSION && (SESSION.entityId || SESSION.bridgeId)) || 'shop');
 function peRetRemember() { try { localStorage.setItem(peRetKey(), JSON.stringify({ stagger: PE_RET.q.stagger || null, emirate: PE_RET.q.emirate || null, frequency: PE_RET.q.frequency || null, simpler: PE_RET.q.simpler || null })); } catch (_) {} }
 function peRetRecall() { try { const v = JSON.parse(localStorage.getItem(peRetKey()) || 'null') || {}; Object.keys(v).forEach((k) => { if (v[k] == null) delete v[k]; }); return v; } catch (_) { return {}; } }
@@ -530,7 +531,10 @@ const peRetDash = () => '<span style="color:var(--grey)">—</span>';
 /** the return for the current picks; null when this shop's return is not read from the ledgers (India: 422 RETURN_FROM_RAIL) or the server predates the route (404) */
 async function peReturnLoad() {
   const q = {}; ['period', 'frequency', 'simpler', 'stagger', 'emirate'].forEach((k) => { if (PE_RET.q[k] != null && PE_RET.q[k] !== '') q[k] = String(PE_RET.q[k]); });
-  try { const r = await api('perReturn', { query: q }); return r && r.form ? r : null; }
+  /* TOUR-FIX1: the server ANSWERS a shop whose return is not read from the ledgers — 200 { form: null, code: RETURN_FROM_RAIL, why } — and the
+     page says `why` above its GST close (the 422 is still read for a server from before) */
+  PE_RET.why = '';
+  try { const r = await api('perReturn', { query: q }); if (r && r.form) return r; PE_RET.why = (r && r.code === 'RETURN_FROM_RAIL' && r.why) || ''; return null; }
   catch (e) { if (e && (e.status === 404 || (e.status === 422 && e.data && e.data.code === 'RETURN_FROM_RAIL'))) return null; throw e; }
 }
 /** the menu and the title say what the pack calls it — BAS, VAT return — instead of "GST close & pay" */
