@@ -92,7 +92,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `list-legacy.js` | eager |  |
 | `locale.js` | eager | ADOPTED from chitbridge-engines v1.42.0 · locale · sha256 cf7b24baeeb7b19538f75d2b286b11c5f46d51c3fc865ffe11a6d26d5aefa427 — DO NOT EDIT HERE. Change |
 | `network-app.js` | — |  |
-| `offers.js` | eager | ADOPTED from chitbridge-engines v1.3.0 · offers · sha256 b90632d3ffa35196adcee8722269468dc83255edd327e2ff28e3cb07f5d82dee — DO NOT EDIT HERE. Change i |
+| `offers.js` | eager | ADOPTED from chitbridge-engines v1.46.0 · offers · sha256 045a872f45a8cc01442a676a2c331686ffcef491ae7021708846840a2030a4c1 — DO NOT EDIT HERE. Change |
 | `one-person.js` | eager | one-person.js — ONE BROWSER, ONE SHOP AT A TIME |
 | `page-frame.js` | — |  |
 | `page.js` | eager | CBPage: WHICH DETAIL PAGE OPENS A CHIT (N03, 2026-10-07 · decisions M-D6 / M-D7) |
