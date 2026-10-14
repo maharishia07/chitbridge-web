@@ -4323,7 +4323,7 @@ function themePaletteHTML(){
     + "</div>"
     + needs.map(a11yRow).join("")
     + "<div style=\"font-size:var(--fs-1);color:var(--grey);line-height:1.5;margin-top:4px\">"
-    +   "Standard: <b>WCAG 2.2</b> (contrast 1.4.3 / 1.4.6 / 1.4.11) · colour-blind palette: <b>Okabe–Ito</b>."
+    +   "Standard: <b>WCAG 2.2</b> (contrast 1.4.3 / 1.4.11) · colour-blind palette: <b>Okabe–Ito</b>."
     + "</div>";
 }
 
@@ -6338,6 +6338,12 @@ async function ccAiFill(){
     ccRenderItems();
     if(typeof toast==='function')toast(txn('AI filled {count} line item — review, edit, then send ✓',
           'AI filled {count} line items — review, edit, then send ✓', rows.length));
+    /* T1-AI: the server checks each quantity against the words (lib/line-guard.js) — branch on its code, show which rows. */
+    var qc=j&&j.data&&j.data.quantity_check;
+    if(qc&&qc.code==='QTY_NEEDS_CHECK'&&err){
+      var names=rows.filter(function(li){ return li&&li.needs_human; }).map(function(li){ return String(li.particulars||'item'); }).slice(0,4).join(', ');
+      err.textContent=txn('{count} row needs your check','{count} rows need your check',qc.needs_human)+' ('+names+'): the words say another quantity or "don\'t want". Fix before sending.';
+    }
   }catch(e){ if(err)err.textContent=(e&&e.message)||'AI fill failed'; }
   finally{ var b2=document.getElementById('cc_aibtn'); if(b2){ b2.disabled=false; b2.textContent='✨ Fill'; } }
 }

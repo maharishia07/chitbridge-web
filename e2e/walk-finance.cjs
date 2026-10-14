@@ -23,11 +23,12 @@ W.run('finance', async (w) => {
 
   /* the day as the server states it: Sri Hardware is over its limit and owes 1,20,000; Lakshmi Stores is overdue with interest; Kumar Traders is within terms.
      A supplier and a settled customer are in the same answer - Collections must leave them out. */
-  const fin = (o) => Object.assign({ credit_limit_minor: null, over_limit: false, interest_minor: 0, last_remind: null }, o);
+  /* FIN-R1: limit and interest come from the customer's Terms — credit_limit_from (party · shop · null) and interest_state (on · off · not_set) are the server's codes */
+  const fin = (o) => Object.assign({ credit_limit_minor: null, credit_limit_from: o.credit_limit_minor != null ? 'party' : null, over_limit: false, interest_minor: 0, interest_state: 'on', last_remind: null }, o);
   const ROWS = [
     fin({ party_id: 'pa', party_no: 'P-00001', name: 'Sri Hardware', side: 'customer', balance_minor: 12000000, oldest_due: '2026-06-01', credit_limit_minor: 10000000, over_limit: true, interest_minor: 150000, buckets: { lt_6m: 12000000 } }),
     fin({ party_id: 'pb', party_no: 'P-00002', name: 'Lakshmi Stores', side: 'customer', balance_minor: 4500000, oldest_due: '2026-08-15', credit_limit_minor: 10000000, interest_minor: 20000, last_remind: '2026-09-20', buckets: { lt_6m: 4500000 } }),
-    fin({ party_id: 'pc', party_no: 'P-00003', name: 'Kumar Traders', side: 'customer', balance_minor: 800000, buckets: { not_due: 800000 } }),
+    fin({ party_id: 'pc', party_no: 'P-00003', name: 'Kumar Traders', side: 'customer', balance_minor: 800000, interest_minor: null, interest_state: 'not_set', buckets: { not_due: 800000 } }),
     fin({ party_id: 'ps', party_no: 'P-00004', name: 'Bharat Steel', side: 'supplier', balance_minor: -300000, buckets: { lt_1y: 300000 } }),
     fin({ party_id: 'pz', party_no: 'P-00005', name: 'Settled Sons', side: 'customer', balance_minor: 0 }),
   ];
@@ -45,7 +46,7 @@ W.run('finance', async (w) => {
       const asOf = new Date().toISOString().slice(0, 10), plain = books.dues(S.rows.map((x) => books.dueRow({ party_no: x.party_no, name: x.name, party_id: x.party_id, side: x.side, balance_minor: x.balance_minor, oldest_due: x.oldest_due, buckets: x.buckets })), { asOf });
       C.check('GET', p, 200, plain, 'walk-finance: ');   /* the contract holds the plain answer; the finance fields (credit limit, over_limit, interest, last remind) are served beside it */
       const extra = Object.fromEntries(S.rows.map((x) => [x.party_id, x]));
-      return J(r0, 200, Object.assign({}, plain, { parties: plain.parties.map((x) => Object.assign({}, x, { credit_limit_minor: extra[x.party_id].credit_limit_minor, over_limit: extra[x.party_id].over_limit, interest_minor: extra[x.party_id].interest_minor, last_remind: extra[x.party_id].last_remind })) }));
+      return J(r0, 200, Object.assign({}, plain, { parties: plain.parties.map((x) => Object.assign({}, x, { credit_limit_minor: extra[x.party_id].credit_limit_minor, credit_limit_from: extra[x.party_id].credit_limit_from, over_limit: extra[x.party_id].over_limit, interest_minor: extra[x.party_id].interest_minor, interest_state: extra[x.party_id].interest_state, last_remind: extra[x.party_id].last_remind })) }));
     }
     if (/\/pay(\/|-)preview$/.test(p)) return J(r, 200, { proposal: [], warnings: [] });   /* no open bill: Remind has nothing to remind about */
     if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Fixture Shop', currency_code: 'INR' } });
@@ -78,9 +79,10 @@ W.run('finance', async (w) => {
     const r = await txt('[data-testid="fin-row-pa"]'), head = await txt('[data-testid="fin-group-over"]'), others = await txt('[data-testid="fin-group-coll"]');
     return { ok: /Over limit/.test(r) && /1 party/.test(head) && /they owe you/.test(head) && /2 parties/.test(others), saw: 'row: ' + /Over limit/.test(r) + ' | head "' + head.slice(0, 70) + '" | other group "' + others.slice(0, 70) + '"' };
   });
-  await w.step('F5', 'Collections -> Kumar Traders (within terms) shows dashes for limit and interest, not zeros', async () => {
+  await w.step('F5', 'Collections -> Kumar Traders (no terms set anywhere) says "Not set" for limit and interest - never a zero or a guessed rate', async () => {
     const r = await txt('[data-testid="fin-row-pc"]'), hasInterest = await page.locator('[data-testid="fin-row-pc"] [data-b="interest"]').count();
-    return { ok: hasInterest === 0 && /—/.test(r), saw: r.slice(0, 120) };
+    const unset = await page.locator('[data-testid="fin-row-pc"] [data-b="limit-unset"], [data-testid="fin-row-pc"] [data-b="interest-unset"]').count();
+    return { ok: hasInterest === 0 && unset === 2 && /Not set/.test(r), saw: unset + ' "Not set" cell(s); ' + r.slice(0, 120) };
   });
   await w.step('F6', 'Collections -> type "lakshmi" in the search box -> one party is left', async () => {
     await page.fill('[data-testid="listctl-search-fin-collect"]', 'lakshmi'); await page.waitForTimeout(400);

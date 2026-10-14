@@ -447,6 +447,8 @@
     'Not here yet': 'Pas encore disponible',
     'Not in the network model yet': 'Pas encore dans le modèle de réseau',
     'Not set': 'Non défini',
+    'Set it in Terms': 'À définir dans Conditions',
+    'Off': 'Désactivé',
     'Note': 'Note',
     'Notes': 'Notes',
     'Nothing is created': 'Rien n’est créé',

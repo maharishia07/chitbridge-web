@@ -476,6 +476,8 @@
     'Not here yet': 'غير متاح بعد',
     'Not in the network model yet': 'ليس في نموذج الشبكة بعد',
     'Not set': 'غير محدّد',
+    'Set it in Terms': 'حدّده في الشروط',
+    'Off': 'متوقّف',
     'Note': 'ملاحظة',
     'Notes': 'ملاحظات',
     'Nothing is created': 'لم يُنشأ شيء',
