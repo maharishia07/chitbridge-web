@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
+<script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>CMDB Record</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -219,7 +220,6 @@
   /* the API: ?api=… for a test server, else the live one — the same rule as testing.html */
   var API = (new URLSearchParams(location.search).get('api')) || window.CB_API;
   function sess(){ try { return JSON.parse(localStorage.getItem('cb_sess') || 'null'); } catch (_) { return null; } }
-  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' })[c]; }); }
   function $(id){ return document.getElementById(id); }
   async function call(p){
     var s = sess();

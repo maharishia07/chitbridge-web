@@ -16,6 +16,7 @@ cx.window = cx; cx.self = cx; Object.keys(win).forEach((k) => { if (!(k in cx)) 
 vm.runInContext(fs.readFileSync(__dirname + '/../public/engine/money.js', 'utf8'), cx);
 vm.runInContext(fs.readFileSync(__dirname + '/../public/engine/tax.js', 'utf8'), cx);
 ['CBMoney', 'CBTax', 'CBTaxSlab', 'CBTaxPacks'].forEach((k) => { if (win[k] && !cx[k]) cx[k] = win[k]; });
+vm.runInContext(fs.readFileSync(__dirname + '/../public/app/helpers.js', 'utf8'), cx);   /* T2-WEBPRIMS: the one esc, loaded first as on the page */
 vm.runInContext(fs.readFileSync(__dirname + '/../public/app/cart.js', 'utf8'), cx);
 const CB = cx.CBCart || win.CBCart; ok(CB && typeof CB.money === 'function', 'CBCart loads beside the tax engine');
 ok((cx.CBTax || win.CBTax) && typeof (cx.CBTax || win.CBTax).splitLineTax === 'function', 'the engine exposes splitLineTax (the one split the counter bill uses)');

@@ -49,7 +49,6 @@
     return { page: base, script: b.script, installed: false, fallback: true, asked: asked, note: t };
   }
 
-  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function noteHTML(page) {
     var r = resolve(page);
     if (!r.fallback) return '';

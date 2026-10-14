@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
+<script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Shop — Chit &amp; Bridge</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -386,7 +387,6 @@ function regionBar(){
     +'<div style="font-size:12px;color:#3a4048;margin-top:6px">Showing for <b>'+esc(_REGION)+'</b> · unit <b>'+esc(rc.units||'')+'</b> · language <b>'+esc(rc.language||'')+'</b>'+(curOf(null)?(' · <span style="color:#6a707a">priced by the seller in <b>'+esc(curOf(null))+'</b></span>'):'')+((rc.jurisdiction&&rc.jurisdiction.compliance)?(' · <span style="color:#b4453f">'+esc(rc.jurisdiction.compliance)+'</span>'):'')+'</div>'
     +'</div>';
 }
-function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
 function el(id){ return document.getElementById(id); }
 function swatch(c){ return '<span class="dot" title="'+esc((c.name||'')+' '+(c.hex||''))+'" style="background:'+esc(c.hex||'#ccc')+'"></span>'; }
 function comboHtml(cm){ return '<div class="combo"><span style="display:inline-flex;gap:3px">'+((cm.colours||[]).map(swatch).join(''))+'</span><span class="cbname">'+esc(cm.name||'')+'</span><span class="cbcols">'+((cm.colours||[]).map(function(c){return esc(c.name);}).join(' + '))+'</span></div>'; }

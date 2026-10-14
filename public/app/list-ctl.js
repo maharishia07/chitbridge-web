@@ -39,7 +39,6 @@
 
   /* ── its own words: every string is written here in English and goes through the host's translator (opts.t) when one is given (see T) ── */
   /* ── its own escaping ── */
-  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function plain(h) { return String(h == null ? '' : h).replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\s+/g, ' ').trim(); }
 
   /* ── its own memory: browser storage under its own prefix, an in-memory fallback when storage throws ── */

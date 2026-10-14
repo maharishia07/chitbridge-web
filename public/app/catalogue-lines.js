@@ -97,7 +97,7 @@ root.cbMediaEmbed = function (m) {
   return '';
 };
 root.cbMediaGallery = function (d, o) {
-  o = o || {}; var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  o = o || {};
   var m = Array.isArray(d && d.media) ? d.media : [];
   var pic = function (x) { return x.key ? ((o.apiBase || '') + '/api/products/media/' + encodeURIComponent(o.itemId || '') + '/' + encodeURIComponent(x.id)) : (x.url || ''); };
   var phone = o.size === 'phone';

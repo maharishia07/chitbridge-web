@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
+<script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Test Report · Chit &amp; Bridge</title>
 <!--
@@ -1176,8 +1177,6 @@ function uuid(){
     var r = Math.random()*16|0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16); });
 }
 
-function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){
-  return ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' })[c]; }); }
 
 /** ⚠️ "3 minutes ago" is what a tester wants; a timestamp is what a log wants. */
 function ago(iso){

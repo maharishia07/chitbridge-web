@@ -32,6 +32,7 @@
   cart gets the whole width because choosing what to order is the longest, most back-and-forth part; everything
   else is a short form, and short forms are better one at a time than crowded together.
 -->
+<script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <script src="app/catalogue-lines.js"></script>
 <script src="app/locale.js"></script>   <!-- cart-ui reads CBLocale (money/symbol) — as shop.html and the app load it (2026-09-28) -->
 <script src="engine/money.js"></script>   <!-- ⭐ the one rounder, BEFORE cart.js — it has no copy of its own (2026-09-28) -->
@@ -119,8 +120,6 @@ var STEPS=[{k:'items',n:'Items',t:'What are you sending?'},
            {k:'details',n:'Details',t:'Subject, delivery and anything attached'},
            {k:'review',n:'Review',t:'Check it, then send'}];
 
-function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){
-  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 function money(n){ return '₹'+Number(n).toLocaleString('en-IN'); }
 
 function armCart(){

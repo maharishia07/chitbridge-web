@@ -360,11 +360,6 @@
     return null;
   }
 
-  function esc(s) {
-    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-    });
-  }
   function rowsOf(cat) {
     return (typeof root.cbLineRows === 'function')
       ? root.cbLineRows(cat)
@@ -1897,11 +1892,6 @@
      That bug cost hours on 2026-08-15 (`MSG` in cap-messages) and it is invisible to `node --check`. */
   var CBCAT = { io: null, moreIo: null, seq: 0, win: {} };
 
-  function esc(s) {
-    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-    });
-  }
   function dataOf(r) { return (r && r.item && (r.item.item_data || r.item)) || {}; }
   /**
    * ⚠️ MONEY IS FORMATTED BY CBCart.fmt, NOT HERE. This file had its own `money()` for about an hour and that was

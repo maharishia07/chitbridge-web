@@ -43,7 +43,6 @@ function ensureEP() {
   return true;
 }
 function T(s) { return typeof tx === 'function' ? tx(s) : s; }
-function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 
 var W = { title: 'Activity', none: 'No activity yet', clear: 'Clear all', cleared: 'Activity cleared', forYou: 'For you', rest: 'Everything else',
   ask: 'Clear all activity?', askBody: 'This clears your Activity list. The events are kept — chits, statuses and disputes are unchanged.',

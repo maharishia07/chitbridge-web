@@ -11,6 +11,7 @@
 'use strict';
 const fs = require('fs'), path = require('path');
 const PUB = path.join(__dirname, '..', 'public');
+require('vm').runInThisContext(fs.readFileSync(path.join(PUB, 'app', 'helpers.js'), 'utf8'));   /* T2-WEBPRIMS: shop.html loads the one esc first */
 const SC = require(path.join(PUB, 'app', 'showcase-templates.js'));
 let pass = 0, fail = 0;
 const ok = (n, c, w) => { if (c) { pass++; console.log('   ok   ' + n); } else { fail++; console.log('   FAIL ' + n + (w ? '\n          ' + w : '')); } };

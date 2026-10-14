@@ -85,6 +85,7 @@
 
 <div class="slip" id="slip"></div>
 
+<script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <script>
 /* ── the bill, as data. The till will hand the same shape to this template. ─────────────────────────────────── */
 var SHOP = {
@@ -132,7 +133,6 @@ function calc(kind){
 }
 
 /* ── the slip ──────────────────────────────────────────────────────────────────────────────────────────────── */
-function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' })[c]; }); }
 function when(d){
   var p = function(n){ return (n < 10 ? '0' : '') + n; };
   return p(d.getDate()) + '/' + p(d.getMonth()+1) + '/' + d.getFullYear() + '  ' + p(d.getHours()) + ':' + p(d.getMinutes());

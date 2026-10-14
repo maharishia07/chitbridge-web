@@ -76,7 +76,6 @@ var W = {
   viewOnly: 'View only — you can read, not reply',
 };
 function T(s) { return typeof tx === 'function' ? tx(s) : s; }
-function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 function fill(s, v) { return String(s).replace(/\{(\w+)\}/g, function (_, k) { return v[k] == null ? '' : v[k]; }); }
 function when(ts) {
   if (!ts) return '';

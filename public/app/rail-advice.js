@@ -55,7 +55,6 @@ var W = {
 };
 var STATE_WORDS = { none: '', sent: '✉ advice sent', delivered: '✉ advice sent · delivered', shared: '↗ advice shared', disputed: '⚑ advice disputed' };
 function T(s) { return typeof tx === 'function' ? tx(s) : s; }
-function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 function fill(s, v) { return String(s).replace(/\{(\w+)\}/g, function (_, k) { return v[k] == null ? '' : v[k]; }); }
 function when(ts) {
   if (!ts) return '';

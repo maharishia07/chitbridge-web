@@ -23,7 +23,6 @@
   /* the STANDARD PAGE SKELETON (decision 2026-10-09, "one frame style on every app page"): sidebar + main pane, styled by /app/page-skeleton.css.
      skeleton: { name, icon: <svg path d>, sections: [{ k, label, icon: <svg path d> }], active: k, onSection: fn(k) } */
   function skeleton(doc, sk) {
-    var esc = function (t) { return String(t == null ? '' : t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
     var svg = function (d, cls) { return '<svg' + (cls ? ' class="' + cls + '"' : '') + ' viewBox="0 0 24 24" aria-hidden="true"><path d="' + esc(d) + '"/></svg>'; };
     var app = doc.createElement('div'); app.className = 'app'; app.setAttribute('data-testid', 'skel-app');
     app.innerHTML = '<aside class="side" id="side" data-testid="skel-side"><div class="brand"><div class="logo">' + svg(sk.icon) + '</div><div class="brand-name label">' + esc(sk.name) + '</div></div>'

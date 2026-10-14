@@ -19,7 +19,6 @@
   var STAND = { active: 'In', invited: 'Invited you', asked: 'You asked', requested: 'Asked', suspended: 'Paused', none: 'Not yet' };
 
   function T(s) { return typeof root.tx === 'function' ? root.tx(s) : s; }
-  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function $(id) { return root.document.getElementById(id); }
 
   /* ⭐ the endpoint registry — the ONE declaration shape (accounts-shell.js) the round-trip scanner reads

@@ -35,11 +35,6 @@
   var F = {};      // ns -> flow state
   var SEQ = 0;
 
-  function esc(s) {
-    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-    });
-  }
   function doc(id) { return (typeof document !== 'undefined' && id) ? document.getElementById(id) : null; }
   function opt(s, k, dflt) { var v = s && s.o && s.o[k]; return v === undefined ? dflt : v; }
   function call(s, k, arg, dflt) {

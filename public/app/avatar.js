@@ -334,7 +334,6 @@
     var s = doc.createElement('style'); s.id = 'cbav-css'; s.textContent = CSS;
     (doc.head || doc.documentElement).appendChild(s);
   }
-  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 
   var M = null;                                             /* the mounted avatar: { el, o } — one per page */
   var openNow = false;

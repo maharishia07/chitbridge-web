@@ -29,6 +29,7 @@
   ⚠️ A WARNING IS NOT HIDDEN BEHIND THE CHIP. Outstanding clearances show ON it; the overlay is for detail, never
   for the fact that there is something to know.
 -->
+<script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <script src="app/catalogue-lines.js"></script>
 <script src="app/locale.js"></script>   <!-- cart-ui reads CBLocale (money/symbol) — as shop.html and the app load it (2026-09-28) -->
 <script src="engine/money.js"></script>   <!-- ⭐ the one rounder, BEFORE cart.js — it has no copy of its own (2026-09-28) -->
@@ -149,8 +150,6 @@ var S={sup:null,q:'',step:0,by:'',addr:'',note:''};
 /* ⭐ Three steps. No "To" — on a supplier order the recipient was never a question. */
 var STEPS=[{n:'Items'},{n:'Details'},{n:'Review'}];
 
-function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){
-  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 function money(n){ return '₹'+Number(n).toLocaleString('en-IN'); }
 
 /* ── the ONE place this screen configures the shared cart ── */

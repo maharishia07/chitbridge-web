@@ -53,7 +53,6 @@
   var K = { el: null, o: {}, view: 'orders_in', rows: [], counts: null, total: 0, truncated: false, list: null, people: null, open: null, thread: null };
 
   function T(s) { return typeof root.tx === 'function' ? root.tx(s) : s; }
-  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function $(id) { return root.document.getElementById(id); }
   function WF() { return root.CBWorkflow; }
 

@@ -1,6 +1,7 @@
 <!doctype html>
 <meta charset="utf-8">
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
+<script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Network Lab</title>
 <!--
@@ -198,8 +199,6 @@ var CATS={
 var S={st:null,q:'',step:0,by:'',addr:'',note:''};
 var STEPS=[{n:'Items'},{n:'Details'},{n:'Review'}];   /* three — the store IS the recipient */
 
-function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){
-  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 function money(n){ return '₹'+Number(n).toLocaleString('en-IN'); }
 function isMe(){ return S.st && S.st.id===ME; }
 

@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
+<script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Standards</title>
 <!-- ⭐ STANDARDS — the laws and standards we follow, and what is still missing (docs/design/standards-page is the design; docs/design/standards/REQUIREMENT.md the ask).
@@ -173,7 +174,6 @@ abbr.gl:focus-visible{outline:2px solid var(--blue,#3F66A6);outline-offset:1px}
 <script>
 'use strict';
 /* the two helpers cap-standards.js paints with (it calls esc() and tx() from whatever page loads it); this page is English, so tx() is the identity */
-function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 function tx(s){ return s; }
 /* a row's "go" key → the customer-facing app that is its home. Every other key is a pane of the workshop (app.html) and gets no button
    (IX0: catalogue · locale · appearance · integrations · readiness · returns wait for their small app — docs/design/INDEX-NOT-APP.md). */

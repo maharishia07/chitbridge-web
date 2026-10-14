@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
+<script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Store</title>
 <style>
@@ -59,7 +60,6 @@
   var NET = new URLSearchParams(location.search).get('net') || '';
   var STATE = { all: [], categories: [], q: '', cat: '', cart: {}, cur: '' };
 
-  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]; }); }
   function rs(v){ if (v == null) return ''; try { return CBLocale.money(Number(v), STATE.cur || ''); } catch(e){ return (STATE.cur ? STATE.cur + ' ' : '') + v; } }   /* CX0: the store's currency through the locale engine, never ₹ en-IN by name */
   function toast(m){ var t = document.getElementById('toast'); t.textContent = m; t.className = 'toast show'; setTimeout(function(){ t.className = 'toast'; }, 1800); }
 

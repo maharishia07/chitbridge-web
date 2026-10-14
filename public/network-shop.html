@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
+<script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Network shop — Chit &amp; Bridge</title>
 <style>
@@ -57,8 +58,6 @@ var API = (new URLSearchParams(location.search).get('api')) || window.CB_API;
 var NET = (new URLSearchParams(location.search).get('bridge') || '').trim();
 var DATA = null, Q = '', DEPT = null;
 
-function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){
-  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 var SYM = { INR:'₹', USD:'$', AED:'AED ', EUR:'€', GBP:'£' };
 function money(amt, ccy){ if(amt==null||amt==='') return '—'; return (SYM[ccy]||((ccy||'')+' '))+amt; }
 
