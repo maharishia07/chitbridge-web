@@ -60,7 +60,7 @@ const refusal = (msg, code) => Object.assign({ error: msg, message: msg }, code 
 /** GET /api/books/daybook */
 const daybook = (entries, o) => Object.assign({ currency: 'INR', from: DAY, to: DAY, entries: entries || [], count: (entries || []).length }, o || {});
 /** a day book entry with every key the API sends (a missing doc_date is the posting date, no reversal, a line with no party / counter / rate says so) */
-const entry = (e) => Object.assign({ doc_date: e.posting_date, reverses_entry_id: null }, e, { source: source(e.source), lines: (e.lines || []).map((l) => Object.assign({ party_id: null, party_name: null, counter: null, rate: null }, l)) });
+const entry = (e) => Object.assign({ doc_date: e.posting_date, reverses_entry_id: null, reversed_by: null, reversed_by_id: null }, e, { source: source(e.source), lines: (e.lines || []).map((l) => Object.assign({ party_id: null, party_name: null, counter: null, rate: null }, l)) });
 /** the period answer of POST /periods/:fy/:p/lock|unlock */
 const lockAnswer = (fy, period, status) => ({ ok: true, period: { fiscal_year: fy, period, status } });
 Object.assign(module.exports, { entry, lockAnswer, source, posted, ledger, assetRow, recRow, todoRow, eventsAnswer, refusal, daybook });

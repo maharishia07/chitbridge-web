@@ -306,7 +306,7 @@
       '<div class="cs-head" data-testid="cs-head">' + head + '</div>'
       + '<div class="cs-who"><span data-testid="cs-who">' + E(m.who) + '</span> <span class="cs-step" data-testid="cs-step">' + E(T(STEP[m.status] || m.status)) + '</span></div>'
       + pageNoteHTML()
-      + orderHTML(m) + linesHTML(m) + (m.purpose === 'order' && !(m.money && m.money.by_rate) ? '' : gstHTML(m)) + totalHTML(m) + tenderHTML(m)
+      + orderHTML(m) + linesHTML(m) + (m.purpose === 'order' && !m.counterBill && !(m.money && m.money.by_rate) ? '' : gstHTML(m)) + totalHTML(m) + tenderHTML(m)
       + (m.agreement ? (root.CBRepeat ? root.CBRepeat.panelHTML() : '<div class="cs-sec">' + E(T('Repeat supply')) + '</div><div class="cs-mute" data-testid="rp-panel">' + E(T('Reading…')) + '</div>') : '')
       + (serverSaid(m) ? '<div class="cs-note" data-testid="cs-why">' + E(serverSaid(m).why) + '</div>' : '')
       + (serverSaid(m) && serverSaid(m).cands.length ? '<div class="cs-use" data-testid="cs-pick">' + serverSaid(m).cands.map(function (c, j) {

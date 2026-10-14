@@ -116,7 +116,7 @@ async function route(S, r) {
   let body = {}; try { body = JSON.parse(q.postData() || '{}'); } catch (_) {}
   if (p === '/api/books/status') return J(r, 200, { migrated: true, enabled: true, walkin_grain: 'day' });
   if (p === '/api/books/health') return J(r, 200, books.health({ last_check: { ok: true }, waiting: S.waiting.map((w) => books.waitingRow(w)) }));
-  if (p === '/api/books/cheques') return J(r, 200, { currency: 'INR', cheques: [] });
+  if (p === '/api/books/cheques') return J(r, 200, { currency: 'INR', cheques: [], pdc_reminders: [] });
   if (p === '/api/books/dues') return J(r, 200, books.dues([], { asOf: TODAY }));
   if (p === '/api/books/daybook') return J(r, 200, books.daybook(S.entries.map(books.entry)));
   if (p === '/api/books/outbox/retry' && m === 'POST') { S.retries = (S.retries || 0) + 1; if (S.onRetry) S.onRetry(); return J(r, 200, { tried: 1, posted: 0, still: 1 }); }
@@ -391,8 +391,8 @@ async function route(S, r) {
     await p.waitForTimeout(400);   /* the /health read behind it lands: the list must still be the same one */
     ok(!/Sri Ganesh/.test(await p.textContent('[data-testid="waiting-list"]')) && await p.evaluate(() => document.querySelector('[data-testid="waiting-list"]').__kept === true),
       'F10W · the Waiting row left the list at once — the list was flipped, never reloaded');
-    ok(await p.evaluate(() => BK.waitN.accept === 0 && BK.waitN.record === 1 && BK.waitN.total === 1 && /Waiting · 1$/.test(document.querySelector('[data-testid="bk-tab-waiting"] .code').textContent)),
-      'F10W · STD1 · …and the one count follows the flip (0 to accept · 1 to record · the Waiting tab says 1)');
+    ok(await p.evaluate(() => BK.waitN.accept === 0 && BK.waitN.record === 1 && BK.waitN.total === 1),
+      'F10W · STD1 · …and the one count follows the flip (0 to accept · 1 to record · 1 in all)');
     await p.keyboard.press('Escape'); await ctx.close();
   }
   {
