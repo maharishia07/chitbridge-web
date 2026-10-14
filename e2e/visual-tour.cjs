@@ -35,6 +35,8 @@ const THEME = arg('theme', 'cream'), WIDTH = Number(arg('width', 1366));
 const BASE = String(arg('base', process.env.CB_WEB_BASE || 'http://localhost:5173')).replace(/\/+$/, '');
 const API = String(arg('api', process.env.CB_API_BASE || 'http://localhost:3000')).replace(/\/+$/, '');
 const EMAIL = arg('email', process.env.TOUR_EMAIL || 'simstores@test.example');
+/* signed out, the storefront is toured on the shop api scripts/seed-local.cjs PUBLISHES (simstores' catalogue is private: "Shop not found") */
+const STORE_EMAIL = arg('store-email', process.env.TOUR_STORE_EMAIL || 'mayur@local.test');
 const MAX_CLICKS = Number(arg('clicks', process.env.TOUR_MAX_CLICKS || 40));
 const OPS = Number(arg('ops', 6));
 const ONLY = arg('pages', '') ? String(arg('pages')).split(',') : null;
@@ -192,7 +194,7 @@ async function main() {
   /* the signed-in session (Part B): the two calls the Sign in screen makes, against the LOCAL api — real-stack.signIn */
   let sess = null, bridge = '';
   try {
-    const s = await R.signIn(API, EMAIL); bridge = (s.entity && s.entity.bridge_id) || ''; if (PART === 'b') sess = s.session;
+    const s = await R.signIn(API, PART === 'b' ? EMAIL : STORE_EMAIL); bridge = (s.entity && s.entity.bridge_id) || ''; if (PART === 'b') sess = s.session;
   } catch (e) { if (PART === 'b') { console.log('TOUR STOPPED · cannot sign in ' + EMAIL + ' on ' + API + ': ' + e.message); await w.close(); process.exit(1); } }
 
   const ctx = await w.contextAt();
@@ -217,8 +219,11 @@ async function main() {
   const go = async (u) => {
     let status = 0;
     try { const r = await page.goto(BASE + u, { waitUntil: 'domcontentloaded', timeout: 20000 }); status = r ? r.status() : 0; } catch (e) { bucket.pageerr.push('navigation: ' + String(e.message).split('\n')[0]); }
-    await settle(page, 1200); return status;
+    await settle(page, 1200);
+    if (declineNow && await page.locator('[data-testid="signin-later"]:visible').count()) { await page.locator('[data-testid="signin-later"]').first().click({ timeout: 3000 }).catch(() => {}); await page.waitForTimeout(400); }
+    return status;
   };
+  let declineNow = false;   /* after a page's first state: the counter's PIN offer is declined on every reload (see the page loop) */
   const shot = async (name) => { const f = name + '.png'; try { await page.screenshot({ path: path.join(OUT, f) }); return f; } catch (_) { return null; } };
   const fileOf = (u) => { const f = String(u).split(/[?#]/)[0].replace(/^\//, ''); return f || 'index.html'; };
 
@@ -437,9 +442,17 @@ async function main() {
   for (const u of pages) {
     if (Date.now() > deadline) { states.push({ nn: nn(), run: RUN, part: PART, page: fileOf(u), code: codeOf(fileOf(u)).code, url: u, kind: 'skipped', result: 'not reached in this command\'s time budget — run with --pages ' + slug(fileOf(u)), shots: [], console: [], failed: [] }); continue; }
     const file = fileOf(u); take();
+    declineNow = false;
     const status = await go(u);
     const st = await screenState(u, null, { status });
     if (status >= 400) continue;
+    /* a window that covers the whole screen on arrival (the counter's PIN offer) is shot once, above; then declined so the screen under it is toured */
+    if (PART === 'b' && await page.locator('[data-testid="signin-later"]:visible').count()) {
+      st.blocker = 'a window covers the screen on arrival: ' + ((await page.locator('[data-testid="signin-later"]').first().evaluate((b) => { const d = b.closest('[role=dialog],dialog,.modal,.cbsi,div'); const h = d && d.querySelector('h2,h3'); return h ? h.textContent.trim() : 'a window'; }).catch(() => 'a window')));
+      await page.locator('[data-testid="signin-later"]').first().click({ timeout: 3000 }).catch(() => {}); await page.waitForTimeout(500);
+      await screenState(u, 'after-not-now', { from: st.nn });
+    }
+    declineNow = PART === 'b';
     if (PART === 'a') { if (MAX_CLICKS > 0) await clickAll(u, file); continue; }
     if (OPS > 0) await randomOps(u, file, 'main');
     for (const s of (await sectionsOf(file))) {
@@ -468,7 +481,10 @@ async function main() {
 function report() {
   const runs = fs.existsSync(OUT) ? fs.readdirSync(OUT).filter((f) => /^run-.*\.json$/.test(f)).map((f) => JSON.parse(fs.readFileSync(path.join(OUT, f), 'utf8'))) : [];
   if (!runs.length) { console.log('no run-*.json in ' + OUT); process.exit(1); }
-  const states = [].concat(...runs.map((r) => r.states));
+  /* a page re-toured later (same part · theme · width, e.g. `--pages till` after a fix to the harness) supersedes the earlier run's states of it */
+  const latest = new Map();
+  runs.forEach((r) => r.states.forEach((s) => { const k = r.part + '|' + r.theme + '|' + r.width + '|' + s.page; if (!latest.has(k) || latest.get(k) < r.at) latest.set(k, r.at); }));
+  const states = [].concat(...runs.map((r) => r.states.filter((s) => latest.get(r.part + '|' + r.theme + '|' + r.width + '|' + s.page) === r.at)));
   fs.writeFileSync(path.join(OUT, 'tour.json'), JSON.stringify({ at: new Date().toISOString(), runs: runs.map((r) => ({ run: r.run, base: r.base, at: r.at, states: r.states.length, refused: r.refused })), states }, null, 1));
   const F = new Map();   /* key → { rank, what, code, page, shots[], repro, n, runs:Set } */
   const add = (rank, key, what, s, repro) => {
@@ -479,8 +495,9 @@ function report() {
   const index = states.find((s) => s.kind === 'screen' && s.page === 'index.html' && s.step === 'top' && s.part === 'a' && s.frame && s.frame.title) || states.find((s) => s.kind === 'screen' && s.page === 'index.html' && s.frame && s.frame.title);
   const idx = index ? index.frame : null;
   for (const s of states) {
-    for (const c of s.console || []) add(/^pageerror/.test(c) ? 'broken' : 'broken', s.page + '|console|' + c.slice(0, 70), 'console error on ' + s.page + ': `' + c.slice(0, 140).replace(/`/g, "'") + '`', s, how(s));
-    for (const q of s.failed || []) add(/^(5\d\d|FAILED)/.test(q) ? 'broken' : 'inconsistent', s.page + '|req|' + q.replace(/\?.*/, '').slice(0, 80), 'request failed on ' + s.page + ': `' + q.slice(0, 120) + '`', s, how(s));
+    /* "Failed to load resource" carries no address — the same request is in s.failed WITH its address, so it is counted there */
+    for (const c of (s.console || []).filter((x) => !/^Failed to load resource/.test(x))) add('broken', s.page + '|console|' + c.slice(0, 70), 'console error on ' + s.page + ': `' + c.slice(0, 140).replace(/`/g, "'") + '`', s, how(s));
+    for (const q of s.failed || []) add(/^(5\d\d|404|FAILED)/.test(q) ? 'broken' : 'inconsistent', s.page + '|req|' + q.replace(/\?.*/, '').slice(0, 80), 'request failed on ' + s.page + ': `' + q.slice(0, 120) + '`', s, how(s));
     if (s.status >= 400) add('broken', s.page + '|status', s.page + ' answers HTTP ' + s.status, s, how(s));
     if (s.result === 'error') add('broken', s.page + '|err|' + (s.element ? s.element.label : s.step), 'a control errored on ' + s.page + ': "' + (s.element ? s.element.label : s.step) + '" — ' + String(s.error || '').slice(0, 120), s, how(s));
     if (s.result === 'cannot be clicked') add('inconsistent', s.page + '|noclick|' + s.element.label, 'a box on ' + s.page + ' cannot be clicked: "' + String(s.element.label).slice(0, 50) + '" — something covers it, or it is never on screen', s, how(s));
@@ -488,10 +505,13 @@ function report() {
     if (s.kind === 'form' && s.completed === false) add('broken', s.page + '|form|' + s.step, s.step + ': ' + s.validation, s, how(s));
     if (s.kind === 'form' && s.validation === '(nothing said)') add('inconsistent', s.page + '|formsay|' + s.step, s.step + ': the empty submit says nothing (no line on what to fix)', s, how(s));
     if (s.kind === 'form' && /NOT greyed/.test(s.validation || '')) add('inconsistent', s.page + '|agree', s.validation, s, how(s));
+    if (s.blocker) add('inconsistent', s.page + '|blocker', s.page + ' — ' + s.blocker + ' (every visit, before anything else can be done)', s, how(s));
     if (s.kind === 'skipped') add('inconsistent', s.page + '|skipped', s.page + ' was not reached: ' + s.result, s, how(s));
     if (s.kind !== 'screen' && s.kind !== 'form') continue;
     for (const x of s.sideways || []) add('inconsistent', s.page + '|side|' + x.split(' ')[0], 'sideways scroll on ' + s.page + ': ' + x, s, how(s));
-    for (const x of s.underBar || []) add('inconsistent', s.page + '|bar|' + x.slice(0, 50), 'a control is covered on ' + s.page + ': ' + x, s, how(s));
+    /* covered controls: one finding per page and per bar that covers them (the controls named in it) */
+    const bars = {}; (s.underBar || []).forEach((x) => { const b = x.split(' under ').pop(); (bars[b] = bars[b] || []).push(x.split(' under ')[0]); });
+    Object.keys(bars).forEach((b) => add('inconsistent', s.page + '|bar|' + b, 'controls covered by `' + b + '` on ' + s.page + ' (they cannot be brought out from under it): ' + bars[b].slice(0, 5).join(', ') + (bars[b].length > 5 ? ' +' + (bars[b].length - 5) : ''), s, how(s)));
     for (const x of s.appLinks || []) add('inconsistent', s.page + '|app|' + x.slice(0, 40), s.page + ' links to the workshop (app.html): `' + x.slice(0, 80).replace(/`/g, "'") + '`', s, how(s));
     for (const x of s.contrast || []) { const r = parseFloat(x); add(r < 3 ? 'inconsistent' : 'cosmetic', s.page + '|contrast|' + x.replace(/^[\d.]+:1 \(need [\d.]+\) /, '').slice(0, 50), 'contrast ' + x + ' on ' + s.page, s, how(s)); }
     for (const x of s.clipped || []) add('cosmetic', s.page + '|clip|' + x.slice(0, 30), 'clipped text on ' + s.page + ': "' + x + '"', s, how(s));
