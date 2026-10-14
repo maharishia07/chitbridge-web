@@ -42,11 +42,17 @@ jobs:
           node-version: 20
       - run: npm install
       - run: npx playwright install --with-deps chromium
+      - name: Say if the testers' code is missing
+        env:
+          CODE: ${{ secrets.E2E_TESTER_CODE }}
+        run: if [ -z "$CODE" ]; then echo "::warning title=E2E_TESTER_CODE missing::The secret E2E_TESTER_CODE is not set — specs that sign in will be SKIPPED (not passed)."; fi
       - name: Run the suite
         run: npx playwright test ${{ github.event.inputs.grep && format('-g "{0}"', github.event.inputs.grep) || '' }}
         env:
           CB_WEB_BASE: ${{ github.event.inputs.web_base }}
-          CB_DEV_OTP: ${{ vars.CB_DEV_OTP || '123456' }}
+          # SEC1: the testers' sign-in code for the deployed api — a SECRET Athi sets (Settings → Secrets → Actions). Unset → every
+          # spec that signs in SKIPS with a ::warning naming it (e2e/lib/signin-code.cjs); there is no hard-coded fallback.
+          E2E_TESTER_CODE: ${{ secrets.E2E_TESTER_CODE }}
           CB_SHOP_BRIDGE: ${{ vars.CB_SHOP_BRIDGE }}
       - name: Upload report + traces (the filmstrip)
         if: ${{ !cancelled() }}

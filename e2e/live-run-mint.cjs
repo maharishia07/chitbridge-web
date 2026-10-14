@@ -22,7 +22,7 @@ const F = require('./fixtures.js');
 
 const WEB = process.env.CB_WEB || 'https://chitbridge-web.vercel.app';
 const API = process.env.CB_API || 'https://chitbridge-api-production.up.railway.app';
-const OTP = process.env.DEV_OTP || '123456';
+const OTP = require('./lib/signin-code.cjs').codeOrSkip(API);   // SEC1: E2E_TESTER_CODE on a deployed api (unset → skipped with a warning)
 
 let pass = 0, fail = 0;
 const ok = (name, cond, detail) => {

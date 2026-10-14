@@ -265,7 +265,7 @@ async function walk(b, WEB, tag, dev, reg, opts) {
   say('⚠️ the user-ID box does not capitalise, correct or spell-check what is typed',
       wa.autocapitalize === 'none' && wa.autocorrect === 'off' && wa.spellcheck === 'false', JSON.stringify(wa));
   say('with the keyboard up, the code box and "Sign in" are still on screen', !!a.fitCode && !a.fitCode.out.length, a.fitCode ? 'off-screen=' + JSON.stringify(a.fitCode.out) : 'no code stage');
-  say('the code box brings up the number pad and takes six digits', a.otpAttrs && a.otpAttrs.inputmode === 'numeric' && a.otpAttrs.maxlength === '6', JSON.stringify(a.otpAttrs));
+  say('the code box brings up the number pad and takes a six-digit code or a tester code (SEC1: up to 64)', a.otpAttrs && a.otpAttrs.inputmode === 'numeric' && a.otpAttrs.maxlength === '64', JSON.stringify(a.otpAttrs));
   /* ⭐ M08: a phone is a PERSON on a device — it keeps the session, mints no key, claims no counter */
   say('⭐ user id + 123456 → the phone reloads into the shop, signed in as a person (no key)', a.who === 'Athi' && !a.key && a.person === 'ent-a' && a.enrols === 0, 'who=' + a.who + ' key=' + a.key + ' person=' + a.person + ' enrols=' + a.enrols + ' stuck=' + (a.stuck || '-') + ' "' + a.why + '"');
   say('the counter PIN step fits the phone', !a.fitPin || !a.fitPin.out.length, a.fitPin ? JSON.stringify(a.fitPin.out) : 'not offered');

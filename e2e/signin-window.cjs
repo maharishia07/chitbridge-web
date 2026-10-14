@@ -28,6 +28,8 @@ const PHONE = { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch:
 const LAPTOP = { viewport: { width: 1366, height: 768 } };
 
 /* ── a stand-in ChitBridge for the APPS' walk (the lab carries its own, in the page) ── */
+/* SEC1 · a stand-in TESTER_CODE (8+ characters, not digits only) — the window must send it AS TYPED, past the engine's 4/6-digit shape */
+const TESTER = 'Lantern-4821';
 function apiStandIn() {
   const calls = [];
   const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64').replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
@@ -46,7 +48,7 @@ function apiStandIn() {
       issued = '123456'; return j(200, { message: 'Verification code sent to your email', kind: 'entity', need: 'code', id: 'mayuri123' });
     }
     if (u === '/api/signin/verify') {
-      if (b.otp !== issued) return j(400, { error: 'Verification failed', message: 'Invalid or expired OTP' });
+      if (b.otp !== issued && b.otp !== TESTER) return j(400, { error: 'Verification failed', message: 'Invalid or expired OTP' });   /* SEC1: the stand-in's TESTER_CODE */
       issued = null;
       return j(200, { token: token({ identity_id: 'ent-mayur', identity_type: 'entity', display_name: 'Mayur Bhavan', bridge_id: 'CB-MAYUR' }),
         identity: { identity_id: 'ent-mayur', display_name: 'Mayur Bhavan', user_id: 'mayuri123', identity_type: 'entity', bridge_id: 'CB-MAYUR', entity_id: 'ent-mayur' } });
@@ -239,13 +241,15 @@ const fits = (p) => p.evaluate(() => {
     say(D + ' CB Accounts signed out: the window is IN the card; no link to the workshop', inCard === 1 && bounce === 0, 'window=' + inCard + ' bounce=' + bounce);
     await tap('[data-testid="signin-id"]'); await p.keyboard.type('athi@mayur.test'); await tap('[data-testid="signin-go"]');
     await p.waitForSelector('[data-testid="signin-code"]', { timeout: 10000 });
-    await tap('[data-testid="signin-code"]'); await p.keyboard.type('123456'); await tap('[data-testid="signin-verify"]');
+    const CODE = dev.isMobile ? TESTER : '123456';   /* the phone signs in with the TESTER code: 8+ characters, letters and all */
+    await tap('[data-testid="signin-code"]'); await p.keyboard.type(CODE); await tap('[data-testid="signin-verify"]');
     await p.waitForFunction(() => !!localStorage.getItem('cb_sess'), null, { timeout: 10000 }).catch(() => {});
     await p.waitForTimeout(800);
     const sess = await p.evaluate(() => { try { return JSON.parse(localStorage.getItem('cb_sess')); } catch (_) { return null; } });
     const owner = await p.evaluate(() => { try { return JSON.parse(localStorage.getItem('cb_owner')); } catch (_) { return null; } });
     await p.screenshot({ path: path.join(SHOTS, 'signin-' + D.trim() + '-accounts-in.png') });
     say(D + ' CB Accounts: e-mail + code → the apps\' session (cb_sess: token · role · name · entity · bridgeId) and CBOnePerson claims it', !!(sess && sess.token && sess.role === 'entity' && sess.entity === 'Mayur Bhavan' && sess.bridgeId === 'CB-MAYUR') && !!(owner && owner.ent), JSON.stringify(sess) + ' owner=' + JSON.stringify(owner));
+    say(D + ' …the code reached /api/signin/verify exactly as typed (' + (dev.isMobile ? 'a tester code, 12 characters' : 'six digits') + ')', api.calls.some((c) => c.u === '/api/signin/verify' && c.b.otp === CODE), api.calls.filter((c) => c.u === '/api/signin/verify').map((c) => String(c.b.otp || '').length + ' chars').join(' '));
     say(D + ' …and every call went to the sign-in door only', api.calls.filter((c) => /^\/api\/(signin|entities\/register)/.test(c.u)).every((c) => /^\/api\/signin\//.test(c.u)), api.calls.map((c) => c.u).filter((u) => /signin|register/.test(u)).join(' '));
     /* the index: signed out, the avatar's door opens the window in place */
     await p.evaluate(() => { localStorage.removeItem('cb_sess'); localStorage.removeItem('cb_owner'); });

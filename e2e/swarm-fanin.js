@@ -7,10 +7,11 @@ const API = process.env.CB_API || 'https://chitbridge-api-production.up.railway.
 const N = Number(process.env.CB_SENDERS || 99);
 const MB = Number(process.env.CB_PAYLOAD_MB || 1);
 const BATCH = Number(process.env.CB_BATCH || 12);
+const OTP = require('./lib/signin-code.cjs').codeOrSkip(API);   // SEC1: E2E_TESTER_CODE on a deployed api (unset → skipped with a warning)
 
 async function authFixed(email, name) {                       // create-or-reuse (register re-issues OTP for an existing email)
   await fetch(API + '/api/entities/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, display_name: name }) });
-  const r = await fetch(API + '/api/entities/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, otp: '123456' }) });
+  const r = await fetch(API + '/api/entities/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, otp: OTP }) });
   const j = await r.json().catch(() => ({}));
   return j.token;
 }

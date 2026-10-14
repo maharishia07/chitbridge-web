@@ -362,6 +362,6 @@ test('[DEMO-PRESTIGE] a brand, five stores, their counters, and an offer that tr
 
   /* ════ 6 · THE SUMMARY ════ */
   fs.writeFileSync(OUT, JSON.stringify({ ran: new Date().toISOString(), source: SOURCE, activities: log,
-    sign_in: { otp: '123456', brand: 'prestige.brand@test.example', stores: STORES.map((s) => ({ area: s.area, email: s.email })) } }, null, 2));
+    sign_in: { otp: '<the tester code — E2E_TESTER_CODE, shared privately>', brand: 'prestige.brand@test.example', stores: STORES.map((s) => ({ area: s.area, email: s.email })) } }, null, 2));
   for (const st of stores) await st.ctx.close().catch(() => {});
 });

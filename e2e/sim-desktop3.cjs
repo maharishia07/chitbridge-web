@@ -31,7 +31,7 @@ const ROOT = path.join(__dirname, '..', 'public');
 const KIT = path.join(__dirname, '..', '..', 'chitbridge-api', 'tools', 'tally-connector');
 const SHOP = 'desktop3';
 const EMAIL = 'athi.narayanan.74+desktop3@gmail.com';
-const OTP = '123456';
+const OTP = require('./lib/signin-code.cjs').codeOrSkip(API);   // SEC1: E2E_TESTER_CODE on the deployed api (unset → skipped with a warning)
 /** ⭐ where Athi will look. A named folder, not a temp dir, because the whole point is that he can open it. */
 const HOME = 'C:\\dev\\counter-sim\\desktop3';
 const PORT = 7351;

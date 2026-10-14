@@ -1,8 +1,9 @@
 // MODULE: Storefront — a customer orders from a public shop → a chit lands back with the shop.
 // FLOW: open shop → pick a finish → Order → qty/name/contact → Send code → OTP → Place order → "Order placed".
-// DATA: CB_SHOP_BRIDGE = a seeded public shop's bridge id; DEV_OTP=123456.
+// DATA: CB_SHOP_BRIDGE = a seeded public shop's bridge id; the sign-in code from fixtures (E2E_TESTER_CODE on a deployed api).
 // LOCATORS: shop-order-* · shop-combo · shop-qty · shop-name · shop-area · shop-contact · shop-send-code · shop-otp · shop-place-order
 const { test, expect } = require('@playwright/test');
+require('../fixtures').needCode(test);   // SEC1: no sign-in code for this target (E2E_TESTER_CODE) → the file SKIPS with a CI warning
 const { shopCheckout } = require('../flows/storefront');
 const { DEV_OTP } = require('../fixtures');
 
