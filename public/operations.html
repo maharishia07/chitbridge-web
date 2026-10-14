@@ -22,7 +22,10 @@
 :root[data-themed]{--side:var(--card);--line-side:var(--line);--ink-2:var(--ink);--muted-2:var(--grey);--muted:var(--grey);--hover-nav:color-mix(in srgb,var(--ink) 8%,var(--card));--surface:var(--card);--ground:var(--paper);--line-3:var(--line);
   --accent:var(--blue-2,var(--blue));--accent-text:var(--blue-d,var(--blue));--accent-ink:var(--card);
   --green-t:var(--ok-tint);--green-b:var(--line);--green-d:var(--ok-2);--amber-t:var(--warn-tint);--amber-b:var(--gold-line,var(--line));--amber-i:var(--warn-2);
-  --red-t:var(--danger-tint,var(--card));--red-b:var(--line);--red-i:color-mix(in srgb,var(--disp,#8e3517) 78%,var(--ink))}
+  --red-t:var(--danger-tint,var(--card));--red-b:var(--line)}
+/* the red that carries WORDS (as crm.html's --red-text): the avatar's list rule points --red-i at the theme's --disp-2, a BORDER red (3:1 in Dark) —
+   re-pointed here at the theme's own --disp toward the ink, one step more specific than the avatar's rule */
+html:root[data-tokens="list"][data-themed]{--red-i:color-mix(in srgb,var(--disp,#8e3517) 70%,var(--ink))}
 *{box-sizing:border-box}
 body{margin:0;background:var(--ground,#fbf6ec);color:var(--ink,#2a2418);font-family:var(--sans);font-size:15px;line-height:1.45}
 button{font-family:inherit;cursor:pointer}
@@ -38,6 +41,7 @@ button{font-family:inherit;cursor:pointer}
 .fl{display:block;font-size:13.5px;font-weight:600;margin:12px 0 4px;color:var(--ink,#2a2418)}
 .act{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:40px;padding:0 16px;border:1px solid var(--accent,#1f5f5b);border-radius:9px;background:var(--accent,#1f5f5b);color:var(--accent-ink,#fbf6ec);font-size:14px;font-weight:600}
 .act.quiet{background:transparent;border-color:var(--line-3,#d8ccb0);color:var(--ink,#2a2418)}
+.cbl:not(#_) .act{color:var(--accent-ink,#fbf6ec)}.cbl:not(#_) .act.quiet{color:var(--ink,#2a2418)}   /* CBList weighs its rules with :not(#_) and sets button{color:inherit}; the page's one action keeps its own ink (as crm.html :not(#_)) */
 .act[disabled]{cursor:not-allowed}
 .act[data-action-state="busy"]{opacity:.7}
 .inp{width:100%;border:1px solid var(--line-3,#d8ccb0);border-radius:9px;padding:10px 12px;font:inherit;font-size:14px;background:var(--surface,#fffdf8);color:var(--ink,#2a2418)}

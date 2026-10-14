@@ -51,7 +51,7 @@ var CBStock = (function () {
   function cols() {
     return [
       { key: 'name', label: t('Item'), prio: 1, w: 280, sort: 'az', html: true, cell: function (r) { return esc(nameOf(r)); } },
-      { key: 'qty', label: t('On hand'), prio: 2, w: 170, num: true, sort: 'least', html: true, tid: function (r) { return 'stock-qty-' + r.id; }, cell: function (r) {
+      { key: 'qty', label: t('On hand'), prio: 2, w: 230, num: true, sort: 'least', html: true, tid: function (r) { return 'stock-qty-' + r.id; }, cell: function (r) {
           var q = esc(qtyOf(r.qty)) + (r.unit ? ' <span class="sub">' + esc(r.unit) + '</span>' : '');
           if (r.qty < 0) return '<span class="tag red" data-testid="stock-below-' + esc(r.id) + '">⚠ ' + q + ' · ' + esc(t('below zero')) + '</span>';
           if (r.qty === 0) return '<span class="tag amber">' + q + ' · ' + esc(t('none left')) + '</span>';

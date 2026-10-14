@@ -102,9 +102,9 @@ var CBSuppliers = (function () {
       onRetry: load,
       empty: { title: t('No suppliers yet.'), sub: t('Add one by their User ID or email, or just a name.') },
       /* ⭐ Trade / Other are the list's own saved views — the kind decides what a delivery from them does, so the add dialog asks it again */
-      views: { tid: 'sup-view', items: [{ key: 'trade', label: t('Trade — to sell'), filt: { kind: 'resale' } }, { key: 'other', label: t('Other — to use'), filt: { kind: 'own_use' } }] },
+      views: { tid: 'sup-view', items: [{ key: 'trade', label: t('To sell'), filt: { kind: 'resale' } }, { key: 'other', label: t('To use'), filt: { kind: 'own_use' } }] },
       preset: { filt: { kind: 'resale' } },
-      filters: [{ key: 'kind', label: t('Kind'), all: t('Trade and other'), options: [{ v: 'resale', label: t('Trade — to sell') }, { v: 'own_use', label: t('Other — to use') }], match: function (x, v) { return supKindOf(x) === v; } },
+      filters: [{ key: 'kind', label: t('Kind'), all: t('To sell or to use'), options: [{ v: 'resale', label: t('To sell') }, { v: 'own_use', label: t('To use') }], match: function (x, v) { return supKindOf(x) === v; } },
         { key: 'ready', label: t('Can you order?'), all: t('Any'), options: [{ v: 'cat', label: t('Can order · catalogue') }, { v: 'nocat', label: t('On ChitBridge · no catalogue') }, { v: 'off', label: t('Not on ChitBridge') }, { v: 'one', label: t('Orders stay with you') }], match: function (x, v) { return ready(x).k === v; } }],
       search: function (x) { return [x.nickname, x.display_name, x.category, x.user_id, x.bridge_id, x.facts && x.facts.gstin].filter(Boolean).join(' '); },
       sorts: [
