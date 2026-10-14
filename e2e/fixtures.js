@@ -156,7 +156,9 @@ async function mintEntity(page, { role = 'business', email, name, fresh = false,
     .waitFor({ state: 'visible', timeout: 4000 }).then(() => true).catch(() => false);
   if (loggedIn) return { existing: true, email: null, name: null };
   /* SEC1: a new shop needs a code to type — none for this target → skip LOUDLY here, before anything is registered */
-  if (!DEV_OTP) { warnNoCode(); require('@playwright/test').test.skip(true, NO_CODE); }
+  /* inside a Playwright test → test.skip; in a STANDALONE harness (till-demo.cjs…) test.skip throws, so exit 78 = SKIP
+     (run-shard prints it as SKIP — never PASS, never FAIL) */
+  if (!DEV_OTP) { warnNoCode(); try { require('@playwright/test').test.skip(true, NO_CODE); } catch (_) { console.log('SKIP · ' + NO_CODE); process.exit(78); } }
   // LOGGED OUT: /app.html now defaults to the Sign-in screen → reach onboarding via "New here? Create an entity"
   // (the welcome screen at #/welcome still carries onb-getstarted). Fall back to the hash route if the link moved.
   if (!(await page.getByTestId('onb-getstarted').isVisible().catch(() => false))) {
