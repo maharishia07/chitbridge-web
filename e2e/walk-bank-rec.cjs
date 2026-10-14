@@ -24,6 +24,7 @@
  * Screenshots: e2e/shots/walk-bank-rec-*.png
  */
 'use strict';
+const TD = require('./lib/today.cjs');
 const { chromium } = require('@playwright/test');
 const http = require('http'), fs = require('fs'), path = require('path');
 const ROOT = path.join(__dirname, '..'), PUB = path.join(ROOT, 'public'), SHOTS = path.join(__dirname, 'shots');
@@ -32,7 +33,7 @@ const C = require('./lib/contract.cjs'), books = require('./lib/books-api.cjs'),
 const J = C.json;
 let pass = 0, fail = 0;
 const ok = (id, c, m) => { if (c) { pass++; console.log(id + ' · PASS · ' + m); } else { fail++; console.log(id + ' · FAIL · ' + m); } };
-const tok = (c) => { const e = (o) => Buffer.from(JSON.stringify(o)).toString('base64').replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_'); return e({ alg: 'none' }) + '.' + e(Object.assign({ exp: Math.floor(Date.now() / 1000) + 3600 }, c)) + '.x'; };
+const tok = (c) => { const e = (o) => Buffer.from(JSON.stringify(o)).toString('base64').replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_'); return e({ alg: 'none' }) + '.' + e(Object.assign({ exp: Math.floor(TD.nowMs() / 1000) + 3600 }, c)) + '.x'; };
 const OWNER = { token: tok({ identity_id: 'ent-M', identity_type: 'entity' }), role: 'entity', name: 'Mayur', entity: 'Mayur Bhavan', entityId: 'ent-M' };
 const VIEWER = { token: tok({ identity_id: 'act-9', identity_type: 'actor', parent_entity_id: 'ent-M', parent_entity_name: 'Mayur Bhavan', display_name: 'Auditor', access_level: 'viewer' }), role: 'actor', name: 'Auditor', entity: 'Mayur Bhavan', entityId: 'ent-M' };
 const READ_ONLY = 'Your access is view-only. You can read this chit but not change it.';   /* the rail's own sentence (api lib/rail say('read_only')) */

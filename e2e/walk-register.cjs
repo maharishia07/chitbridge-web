@@ -13,6 +13,7 @@
  * One line per path: "ID · path · PASS/FAIL (what it saw)". Screenshots: e2e/shots/walk-register-NN.png.
  */
 'use strict';
+const TD = require('./lib/today.cjs');
 const W = require('./lib/walk.cjs');
 const REAL = process.argv.includes('--real');
 const J = (r, status, body) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
@@ -21,7 +22,7 @@ const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64').replace(/=+
 const walk = async (w) => {
   const { page, ctx, base } = w;
   const S = { calls: [], stack: null };
-  const handle = 'walkreg' + String(Date.now()).slice(-6), email = handle + '@test.example';
+  const handle = 'walkreg' + String(Date.now()).slice(-6), email = handle + '@test.example';   /* clock-ok: a unique handle */
   let api = base;
   if (REAL) {
     S.stack = await require('./lib/real-stack.cjs').up({ webBase: base });
@@ -34,7 +35,7 @@ const walk = async (w) => {
       if (p === '/api/entities/register') return J(r, 200, { email });
       if (p === '/api/entities/constitutions') return J(r, 200, { constitutions: [{ key: 'base', label: 'Base', is_default: true, capabilities: [] }] });
       if (p === '/api/entities/verify') {
-        const token = b64({ alg: 'none' }) + '.' + b64({ identity_id: 'ent-new', identity_type: 'entity', display_name: handle, exp: Math.floor(Date.now() / 1000) + 3600 }) + '.x';
+        const token = b64({ alg: 'none' }) + '.' + b64({ identity_id: 'ent-new', identity_type: 'entity', display_name: handle, exp: Math.floor(TD.nowMs() / 1000) + 3600 }) + '.x';
         return J(r, 200, { token, entity: { identity_id: 'ent-new', identity_type: 'entity', display_name: handle, bridge_id: 'CBNEW0001' } });
       }
       if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: handle, ui_prefs: {} } });

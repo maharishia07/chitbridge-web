@@ -13,10 +13,11 @@
  * One line per path: "ID · path · PASS/FAIL (what it saw)". Screenshots: e2e/shots/walk-home-NN.png.
  */
 'use strict';
+const TD = require('./lib/today.cjs');
 const fs = require('fs'), path = require('path');
 const W = require('./lib/walk.cjs');
 const books = require('./lib/books-api.cjs'), crmApi = require('./lib/crm-api.cjs');
-const FX = crmApi.resolve(JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'golden-parties.json'), 'utf8')), Date.now());   /* the designer's golden parties: so the CRM page draws a real toolbar */
+const FX = crmApi.resolve(JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'golden-parties.json'), 'utf8')), TD.nowMs());   /* the designer's golden parties: so the CRM page draws a real toolbar */
 const C = require('./lib/contract.cjs');   /* M43: every /api/books and /api/crm answer this stand-in serves is held to the API contract */
 const J = (r, status, body) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
 

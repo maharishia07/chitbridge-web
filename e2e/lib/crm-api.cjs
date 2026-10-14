@@ -10,6 +10,7 @@
  * "late dues" flag, next follow-up on the list) is simply not here: the page must cope with its absence, and the harness proves it does.
  */
 'use strict';
+const TD = require('./today.cjs');
 
 /* "@-26h" / "@+3d" → an ISO time relative to the run */
 function resolve(x, now) {
@@ -37,7 +38,7 @@ function party(p, rec) {
   o.terms = {};
   if (roles.customer) o.terms.customer = { credit_days: cu.credit_days == null ? null : cu.credit_days, credit_limit_minor: cu.credit_limit_minor == null ? null : cu.credit_limit_minor };
   if (roles.supplier) o.terms.supplier = { credit_days: su.credit_days == null ? null : su.credit_days, credit_limit_minor: su.credit_limit_minor == null ? null : su.credit_limit_minor };
-  o.dues = p.balance_minor == null ? null : { balance_minor: p.balance_minor, oldest_due: day(p.oldest_due), overdue: p.dues_overdue != null ? !!p.dues_overdue : (p.balance_minor !== 0 && !!p.oldest_due && day(p.oldest_due) < day(new Date().toISOString())), side: roles.customer && roles.supplier ? 'both' : (roles.customer ? 'customer' : 'supplier') };
+  o.dues = p.balance_minor == null ? null : { balance_minor: p.balance_minor, oldest_due: day(p.oldest_due), overdue: p.dues_overdue != null ? !!p.dues_overdue : (p.balance_minor !== 0 && !!p.oldest_due && day(p.oldest_due) < day(TD.nowIso())), side: roles.customer && roles.supplier ? 'both' : (roles.customer ? 'customer' : 'supplier') };
   const theirs = r.gstn_profile || null, mine = gst ? gst.value : null;
   o.gstin = { value: mine || theirs, source: mine ? 'shop' : (theirs ? 'profile' : null), theirs, differs: !!(mine && theirs && mine !== theirs) };
   o.name = p.nickname || p.display_name;
@@ -70,7 +71,7 @@ function list(rows, opt) {
 
 /** a follow-up in the API's shape (lib/crm-followups.js shape): late / today / due_day by the shop's day */
 function followupOne(f, now) {
-  const t = now || Date.now(), d = day(f.due_at), today = day(new Date(t).toISOString());
+  const t = now || TD.nowMs(), d = day(f.due_at), today = day(new Date(t).toISOString());
   return { followup_id: f.followup_id, party_id: f.party_id, party_no: f.party_no || null, party_name: f.party_name || null, party_listed: f.party_removed ? false : true, what: f.what, due_at: f.due_at, due_day: d,
     assignee_user_id: f.assignee_user_id || null, assignee_name: f.assignee_name || null, source: f.source || 'manual', done_at: f.done_at || null, created_at: f.created_at || f.due_at,
     late: !f.done_at && d < today, today: !f.done_at && d === today,
@@ -122,6 +123,6 @@ function timeline(tl, id, q) {
 }
 /** POST /parties/:id/interactions → 201 { interaction } */
 function interaction(b, now) {
-  return { interaction: { interaction_id: 'ix-new', party_id: 'pid', kind: b.kind, direction: b.kind === 'note' ? null : b.direction, body: b.body, at: new Date(now || Date.now()).toISOString(), by_user_id: 'u1', created_at: new Date(now || Date.now()).toISOString() } };
+  return { interaction: { interaction_id: 'ix-new', party_id: 'pid', kind: b.kind, direction: b.kind === 'note' ? null : b.direction, body: b.body, at: new Date(now || TD.nowMs()).toISOString(), by_user_id: 'u1', created_at: new Date(now || TD.nowMs()).toISOString() } };
 }
 module.exports = { resolve, party, list, record, followupOne, followups, entry, timeline, interaction, rolesOf };

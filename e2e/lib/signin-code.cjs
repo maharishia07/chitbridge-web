@@ -30,7 +30,7 @@ function fillDay(template, ms) {
   if (template.search(DAY_SLOT) < 0) return template;   // search(), not test(): a /g regex keeps its place between calls
   const zone = String(process.env.E2E_TESTER_CODE_TZ || '').trim() || 'Asia/Kolkata';
   const w = {};
-  for (const p of new Intl.DateTimeFormat('en-US', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date(ms == null ? Date.now() : ms))) w[p.type] = p.value;
+  for (const p of new Intl.DateTimeFormat('en-US', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date(ms == null ? Date.now() : ms))) w[p.type] = p.value;   /* clock-ok: the api's own tester code is the REAL day's */
   return template.replace(DAY_SLOT, (_, f) => (f === 'yymmdd' ? w.year.slice(2) : w.year) + w.month + w.day);
 }
 const NO_CODE = 'E2E_TESTER_CODE is not set — the testers\' sign-in code for a deployed api is a GitHub secret (repo Settings → Secrets → Actions → E2E_TESTER_CODE). Skipped, not passed.';

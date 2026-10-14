@@ -20,6 +20,7 @@
  * Shots: e2e/shots/walk-x-p2p-NN.png (the buyer's page, per step) and e2e/shots/wxp2p-<name>.png (the other party, the phone).
  */
 'use strict';
+const TD = require('./lib/today.cjs');
 const path = require('path'), fs = require('fs');
 const W = require('./lib/walk.cjs');
 
@@ -33,7 +34,7 @@ const BUYER = process.env.WX_BUYER || 'simstores', SUPPLIER = process.env.WX_SUP
 const DEPTH_BUYER = process.env.WX_DEPTH_BUYER || 'walkbuyer', VIEWER = process.env.WX_VIEWER || ('vani@' + DEPTH_BUYER);
 const OTP = process.env.DEV_OTP || '123456';
 const SHOTS = path.join(__dirname, 'shots');
-const RUN = String(Date.now()).slice(-4);   /* a suffix so a re-run on the same stack adds a new supply, not a second 'Packing tape' */
+const RUN = String(Date.now()).slice(-4);   /* a suffix so a re-run on the same stack adds a new supply, not a second 'Packing tape' */   /* clock-ok: a unique run suffix */
 
 if (!REAL) { console.log('walk x-p2p: NOTE · needs the real stack (--real); the fixture walks cannot stand in for a two-party flow that posts a ledger'); process.exit(0); }
 
@@ -71,7 +72,7 @@ async function ensureBuyer(id) {
   await w('/api/books/enable', {});
   const chart = (await http('/api/books/accounts', 'GET', null, tok)).b, accounts = (chart && chart.accounts) || [];
   const code = (role) => (accounts.find((a) => a.role === role) || {}).code;
-  await w('/api/books/opening', { date: new Date().toISOString().slice(0, 10), client_ref: 'walk-x-p2p/opening', rows: [{ code: code('cash') || '1400', dr_minor: 20000000 }, { code: code('capital') || '3000', cr_minor: 20000000 }] });
+  await w('/api/books/opening', { date: TD.TODAY, client_ref: 'walk-x-p2p/opening', rows: [{ code: code('cash') || '1400', dr_minor: 20000000 }, { code: code('capital') || '3000', cr_minor: 20000000 }] });
   await w('/api/relationships/suppliers', { supplier_bridge_id: SUPPLIER, supply_kind: 'resale' });
   await w('/api/actors', { display_name: 'Viewer Vani', actor_key: 'vani', hat: 'view_only', access_level: 'viewer' });
   return party(id);
@@ -262,7 +263,7 @@ const walk = async (w) => {
       const cat = await buyer.get('/api/relationships/suppliers/' + sup.me.identity_id + '/catalogue');
       const items = ((cat.b && cat.b.items) || []).slice(0, 2);
       const lines = items.map((it, i) => { const d = it.item_data || {}; return { particulars: d.name, quantity: i + 2, unit: d.unit || 'piece', price: Number(d.price && d.price.amount || 0), gst_rate: Number(d.gst_rate || 0), hsn: d.hsn || undefined, item_id: it.item_id }; });
-      const at = new Date().toISOString(), no = 'KT/26-27/' + String(Math.floor(Math.random() * 9000) + 1000);
+      const at = TD.nowIso(), no = 'KT/26-27/' + String(Math.floor(Math.random() * 9000) + 1000);
       const made = supplierBillBody(sup, buyer, lines, no, at);
       const r = await sup.post('/api/chits/send', made.body);
       S.bill = { no, total: made.total, chit_id: r.b && r.b.chit_id, lines };

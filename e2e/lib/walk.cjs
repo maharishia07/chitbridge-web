@@ -15,6 +15,7 @@
  */
 'use strict';
 const path = require('path'), fs = require('fs'), http = require('http');
+const TD = require('./today.cjs');
 const SHOW = process.argv.includes('--show') || process.env.WALK_SHOW === '1';
 const ROOT = path.join(__dirname, '..', '..');
 const PUB = path.join(ROOT, 'public');
@@ -38,7 +39,7 @@ function serve(api) {
 const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64').replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
 /** the session the apps store: a token whose identity is the (fixture) shop */
 function session(name, entity) {
-  const token = b64({ alg: 'none' }) + '.' + b64({ identity_id: 'ent-walk', identity_type: 'entity', exp: Math.floor(Date.now() / 1000) + 3600 }) + '.x';
+  const token = b64({ alg: 'none' }) + '.' + b64({ identity_id: 'ent-walk', identity_type: 'entity', exp: Math.floor(TD.nowMs() / 1000) + 3600 }) + '.x';
   return JSON.stringify({ token, role: 'entity', name: name || 'Fixture Owner', entity: entity || 'Fixture Shop', bridgeId: 'CBWALK0001' });
 }
 
@@ -80,10 +81,13 @@ async function start(name, opts) {
       c.on('request', (q) => { let h = ''; try { h = new URL(q.url()).host; } catch (_) {} if (h === PROD) { refused.push(q.method() + ' ' + q.url()); console.log('REFUSED · a local walk asked the PRODUCTION host: ' + q.method() + ' ' + q.url()); } });
       await c.route((u) => u.host === PROD, (r) => r.abort('blockedbyclient'));
     }
+    /* QW1-TODAY: CB_TODAY fixes the page's clock (timers still run) — stand-in walks only; a real api cannot be moved, so there the page keeps real time */
+    if (TD.injected && !opts.base) await c.clock.setFixedTime(TD.now());
     /* silence window.print: a walk must never open a print dialog (it would hold the browser for ever) */
     await c.addInitScript(() => { try { window.print = function () { window.__printed = (window.__printed || 0) + 1; }; } catch (_) {} });
     return c;
   };
+  if (TD.injected) console.log('CB_TODAY ' + TD.TODAY + (opts.base ? ' — NOT applied to the page: this walk runs on a real api whose clock is not injectable yet' : ' — the page clock is fixed to ' + TD.now().toISOString()));
   const ctx = await contextAt({ timezoneId: opts.timezoneId, locale: opts.locale, geolocation: opts.geolocation });
   const page = await ctx.newPage();
   const errs = []; page.on('pageerror', (e) => errs.push(String(e && e.message || e)));
@@ -132,4 +136,4 @@ async function run(name, body) {
   finally { if (w) await w.close(); process.exit(code); }
 }
 
-module.exports = { run, start, session, banner, SHOW };
+module.exports = { run, start, session, banner, SHOW, TODAY: TD.TODAY, now: TD.now, nowIso: TD.nowIso, nowMs: TD.nowMs, dayPlus: TD.dayPlus };

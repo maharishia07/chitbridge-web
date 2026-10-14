@@ -12,6 +12,7 @@
  * One line per path: "ID · path · PASS/FAIL (what it saw)". Screenshots: e2e/shots/walk-employees-NN.png.
  */
 'use strict';
+const TD = require('./lib/today.cjs');
 const W = require('./lib/walk.cjs');
 const { measure } = require('./lib/theme-measure.cjs');
 const J = (r, status, body) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
@@ -28,7 +29,7 @@ W.run('employees', async (w) => {
   const S = { calls: [], addRefused: false, listDenied: false, nextId: 4, people: [] };
   const may = (o) => Object.assign({ access: { ok: true }, email: { ok: true }, reset_pin: { ok: true }, switch: { ok: true, to: 'off' }, cover: { ok: true } }, o || {});
   S.people = [
-    { id: 'p1', name: 'Asha Kumar', user_id: 'asha01@walk-shop.br', role: 'Cashier', phone: '9840000001', state: 'on', jobs: 0, last_at: new Date().toISOString(), access: CHOICES[0], may: may(), cover: null, cover_options: [{ id: 'p2', name: 'Ravi Nair' }] },
+    { id: 'p1', name: 'Asha Kumar', user_id: 'asha01@walk-shop.br', role: 'Cashier', phone: '9840000001', state: 'on', jobs: 0, last_at: TD.nowIso(), access: CHOICES[0], may: may(), cover: null, cover_options: [{ id: 'p2', name: 'Ravi Nair' }] },
     { id: 'p2', name: 'Ravi Nair', user_id: 'ravi02@walk-shop.br', role: 'Manager', phone: '9840000002', state: 'on', jobs: 2, last_at: null, access: CHOICES[1],
       may: may({ reset_pin: { ok: false, why: "Only the owner can reset a manager's code." } }), cover: null, cover_options: [{ id: 'p1', name: 'Asha Kumar' }] },
     { id: 'p3', name: 'Meena Iyer', user_id: 'meena03@walk-shop.br', role: 'Helper', phone: '', state: 'off', jobs: 0, last_at: null, access: CHOICES[0], may: may({ switch: { ok: true, to: 'on' } }), cover: null, cover_options: [] },

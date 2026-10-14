@@ -13,6 +13,7 @@
  * One line per path: "ID · path · PASS/FAIL (what it saw)". Screenshots: e2e/shots/walk-repeat-supply-NN.png.
  */
 'use strict';
+const TD = require('./lib/today.cjs');
 const fs = require('fs');
 const path = require('path');
 const W = require('./lib/walk.cjs');
@@ -21,7 +22,7 @@ const J = (r, status, body) => r.fulfill({ status, contentType: 'application/jso
 const clone = (x) => JSON.parse(JSON.stringify(x));
 const FX = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'web-api.contract.json'), 'utf8')).routes;
 const SHOP = '11111111-1111-4111-8111-111111111111', CUST = '22222222-2222-4222-8222-222222222222';
-const TODAY = new Date().toISOString().slice(0, 10);
+const TODAY = TD.TODAY;
 const plus = (d, n) => new Date(Date.parse(d + 'T00:00:00Z') + n * 86400000).toISOString().slice(0, 10);
 
 /* ── the agreement's own step table, as lib/repeat-supply may() answers it (the stand-in is the server here) ── */
@@ -93,7 +94,7 @@ W.run('repeat-supply', async (w) => {
       if (S.refuse && S.refuse.verb === v) return J(r, 422, { code: 'REPEAT_WRONG_STATE', error: S.refuse.say, message: S.refuse.say });
       const may = actions(a, side)[v] || { ok: false, why: 'wrong_state', say: WHY.wrong_state };
       if (!may.ok) return J(r, 422, { code: 'REPEAT_' + may.why.toUpperCase(), error: may.say, message: may.say });
-      const stamp = { state_by: side === 'seller' ? SHOP : CUST, state_at: new Date().toISOString(), state_note: body.reason || null };
+      const stamp = { state_by: side === 'seller' ? SHOP : CUST, state_at: TD.nowIso(), state_note: body.reason || null };
       let extra = {};
       if (v === 'run') { const d = a.next_on; a.runs[d] = 'run-' + d; a.runs_done += 1; a.last_run_on = d; a.next_on = plus(d, 7); extra = { ran: [{ date: d, chit_id: 'run-' + d, duplicate: false }], problems: [] }; }
       else if (v === 'skip') { a.skips.push({ date: a.next_on, by_entity_id: stamp.state_by, reason: body.reason || null, at: stamp.state_at }); a.next_on = plus(a.next_on, 7); }
