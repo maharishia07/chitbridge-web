@@ -719,6 +719,43 @@ console.log('\n17 · no platform host in the site');
     .filter((f) => !/<script src="\/config\.js"><\/script>/.test(fs.readFileSync(f, 'utf8')));
   if (pagesNeed.length) fail('page(s) read the api base but do not load /config.js first: ' + pagesNeed.map((f) => path.relative(ROOT, f)).join(', '));
   else pass('every page that reads the api base loads /config.js');
+
+  /* SEC0 (14 Oct): the Supabase PROJECT REF is the api's env (the host in DATABASE_URL / S3_ENDPOINT), never a literal in a public repo —
+     the api had it in 7 files, this repo in none. The pattern is gitleaks' own rule in .gitleaks.toml (id cb-supabase-project-ref), read
+     here so CI's gitleaks and this offline guard run ONE regex. Every tracked file is held to it; the api and engines beside this
+     checkout are read too and reported (their own guard fails them: api tests/hosting-neutral.test.cjs §6). */
+  const { execFileSync } = require('child_process');
+  const ruleOf = (dir) => {
+    const toml = fs.readFileSync(path.join(dir, '.gitleaks.toml'), 'utf8');
+    const m = /\[\[rules\]\]\s*\nid = "cb-supabase-project-ref"[\s\S]*?\nregex = '''([^\n]+)'''/.exec(toml);
+    return m ? new RegExp(m[1], 'g') : null;
+  };
+  const refHits = (dir, R) => execFileSync('git', ['-C', dir, 'ls-files', '-z'], { encoding: 'utf8', maxBuffer: 64 << 20 }).split('\0').filter(Boolean)
+    .flatMap((f) => {
+      let s; try { s = fs.readFileSync(path.join(dir, f), 'utf8'); } catch (_) { return []; }   // tracked but absent from this checkout
+      if (s.indexOf('\0') >= 0) return [];                                                     // binary
+      const m = s.match(R);
+      return m ? [f + ' (' + m[0].slice(0, 40) + ')'] : [];
+    });
+  const own = ruleOf(ROOT);
+  if (!own) fail('.gitleaks.toml has no rule cb-supabase-project-ref — the Supabase project ref would pass secret scanning');
+  else {
+    const ref20 = 'bcdfg'.repeat(4);   // the shape, built here: never a literal ref in this file
+    const catches = ['db.' + ref20 + '.supabase.co', 'supabase.com/dashboard/project/' + ref20, 'cb_app.' + ref20, 'Supabase `' + ref20 + '`'].every((s) => s.match(own));
+    const spares = ['db.example-host.supabase.co', 'https://<ref>.supabase.co', 'postgres.<project-ref>'].every((s) => !s.match(own));
+    if (!catches || !spares) fail('rule cb-supabase-project-ref ' + (catches ? 'trips on the placeholders <ref> / db.example-host.supabase.co' : 'misses a shape the ref was found in'));
+    const bad = refHits(ROOT, own);
+    if (bad.length) fail(bad.length + ' tracked file(s) carry a Supabase project ref — it is env only (api DATABASE_URL / S3_ENDPOINT): ' + bad.slice(0, 8).join('; '));
+    else pass('no tracked file carries a Supabase project ref (rule cb-supabase-project-ref from .gitleaks.toml)');
+    ['chitbridge-api', 'chitbridge-engines'].forEach((r) => {
+      const d = path.join(ROOT, '..', r);
+      if (!fs.existsSync(path.join(d, '.git'))) return;
+      let h = [];
+      try { h = refHits(d, (fs.existsSync(path.join(d, '.gitleaks.toml')) && ruleOf(d)) || own); } catch (_) { return; }
+      if (h.length) warn(r + ' (beside) carries a Supabase project ref in ' + h.length + ' file(s): ' + h.slice(0, 8).join('; '));
+      else pass(r + ' (beside): no Supabase project ref');
+    });
+  }
 }
 
 /* 18 · FIX-INT5a (13 Oct): docs/process/PRN.md was tracked — PRN is a Windows device name, and `git checkout` failed on the owner's PC.

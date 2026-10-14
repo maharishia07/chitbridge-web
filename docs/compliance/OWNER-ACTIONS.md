@@ -45,4 +45,9 @@ record + timeline routes ARE the access summary) and erase-a-person (large; dry-
 | ☐ | **First tabletop drill** of `INCIDENT-RUNBOOK.md`; record it in `INCIDENT-REGISTER.md` | K5 evidence; SOC 2 CC7.4 / ISO 27001 5.24 | The register row |
 | ☐ | **Watch the report-only CSP** for a week (browser console on the live site), then ask for it to be enforced | Threat model F1 | List of violations seen |
 | ☐ | **Decide owner MFA** (second sign-in step) — a build round, needed before any ATO lodging (DSP framework) | ISO 27001 A.8.5; ATO DSP OSF ◐ | The decision + round name |
+
+## SEC0 · the Supabase project ref (2026-10-14)
+| ✔ | Action | Why (rule) | Proof to keep |
+|---|---|---|---|
+| ☐ | **Decide what to do about git HISTORY**: the project ref was in 7 public api files until SEC0 (now env only, a gitleaks rule + guards in api and web fail a new one) and it stays in every clone's history — history was NOT rewritten. Either accept it (the ref alone opens nothing: the keys are env, RLS is on, the dashboard needs the owner's login) or create a new Supabase project and move the data. A build round does neither | ISO 27001 A.8.12 / SOC 2 CC6.1 (attack surface a reviewer will ask about) | The decision, dated; if a new project: its region (ap-south-1) and the cut-over date |
 | ☐ | **Confirm open legal questions** 1–7 of CO0 §7 with a lawyer (intermediary status, UAE Executive Regulation, AU coverage) | — | Written advice |
