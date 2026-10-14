@@ -65,7 +65,7 @@ function list(rows, opt) {
     a.dues = a.dues ? Object.assign({}, a.dues, { side: a.roles.customer && a.roles.supplier ? 'both' : (a.roles.customer ? 'customer' : 'supplier') }) : null;
   });
   /* the API's own count of late dues: the parties it marked (lib/crm markLate) — the banner and the rows are one number */
-  return { parties: out, walk_ins: walk, count: out.length, truncated: false, alerts: { dues_overdue: out.filter((a) => a.dues && a.dues.overdue).length } };
+  return { parties: out, walk_ins: walk, count: out.length, total: out.length, page: 1, limit: 5000, truncated: false, alerts: { dues_overdue: out.filter((a) => a.dues && a.dues.overdue).length } };
 }
 
 /** a follow-up in the API's shape (lib/crm-followups.js shape): late / today / due_day by the shop's day */
@@ -82,6 +82,14 @@ function followups(fus, now) {
   return { followups: list2, late: list2.filter((x) => x.late).length, today: list2.filter((x) => x.today).length };
 }
 
+/** contact_prefs as the API answers before b306 (MKT-SRV1 G5 — lib/privacy.contactPrefsOf with no rows): service on legitimate use, offers need consent */
+function prefsBefore() {
+  const may = {};
+  ['phone', 'sms', 'whatsapp', 'email', 'chitbridge'].forEach((c) => { may[c] = {
+    service: { may: true, code: 'LEGITIMATE_USE', why: 'Messages about their own orders are allowed.' },
+    marketing: { may: false, code: 'NO_CONSENT', why: 'No consent for offers on ' + c + '. Ask them first.' } }; });
+  return { migrated: false, may };
+}
 /** GET /parties/:id: the party row + merged_from + relationship + points + migrated + this party's open follow-ups */
 function record(rows, id, rec, fus, now) {
   const row = rows.filter((x) => x.party_id === id)[0] || rows[0], r = rec || {};
@@ -94,6 +102,7 @@ function record(rows, id, rec, fus, now) {
       completion: { closed: 0, completed: 0, rejected_or_cancelled: 0, completion_rate_pct: (r.scorecard && r.scorecard.completion_rate_pct) || null } },
     points: pts ? { programme: pts.programme || 'Rewards', points: pts.balance != null ? pts.balance : pts.points, worth: 0 } : null,
     migrated: true,
+    contact_prefs: prefsBefore(),
     followups: (fus || []).filter((f) => f.party_id === id && !f.done_at).map((f) => followupOne(f, now)),
   });
 }
