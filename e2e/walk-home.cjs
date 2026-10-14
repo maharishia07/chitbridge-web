@@ -23,7 +23,7 @@ const J = (r, status, body) => r.fulfill({ status, contentType: 'application/jso
 W.run('home', async (w) => {
   const { page, ctx, base } = w;
   /* the day as the log found it: 24 in, 0 out, 21 stuck; 1 supplier, 2 customers (self excluded); one posting waiting for the ledger */
-  const RAIL = { suppliers: 1, customers: 2, in: 24, out: 0, stuck: 21 };
+  const RAIL = crmApi.railFacts({ suppliers: 1, customers: 2, in: 24, out: 0, stuck: 21 });
   await ctx.route('**/api/**', (r0) => {
     const r = C.wrap(r0);
     const u = new URL(r.request().url());

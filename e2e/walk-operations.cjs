@@ -20,7 +20,9 @@
 const W = require('./lib/walk.cjs');
 const { measure } = require('./lib/theme-measure.cjs');
 const REAL = process.argv.includes('--real');
-const J = (r, status, body) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+const C = require('./lib/contract.cjs');   /* M43: every answer for a route in the API contract is held to it (RAIL-LAB-SRV1: the facts family) */
+const J = C.json;
+const crmApi = require('./lib/crm-api.cjs');   /* RAIL-LAB-SRV1: the rail card (GET /api/facts/rail) from its one builder */
 const ymd = (days) => new Date(Date.now() + days * 86400000).toISOString().slice(0, 10);
 
 const walk = async (w) => {
@@ -63,7 +65,7 @@ const walk = async (w) => {
       if (mm && m === 'PATCH') { const x = SUPS.find((s) => s.supplier_list_id === mm[1]); Object.assign(x, body); return J(r, 200, { message: 'ok' }); }
       if (mm && m === 'DELETE') { const i = SUPS.findIndex((s) => s.supplier_list_id === mm[1]); if (i >= 0) SUPS.splice(i, 1); return J(r, 200, { message: 'Supplier removed' }); }
       if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Fixture Shop', country_code: 'IN', currency_code: 'INR' } });
-      if (p === '/api/facts/rail') return J(r, 200, { suppliers: 2, customers: 0, in: 0, out: 0, stuck: 0 });
+      if (p === '/api/facts/rail') return J(r, 200, crmApi.railFacts({ suppliers: 2, customers: 0, in: 0, out: 0, stuck: 0 }));
       return J(r, 200, {});
     });
     await ctx.addInitScript((s) => { try { localStorage.setItem('cb_sess', s); } catch (_) {} }, W.session('Fixture Owner', 'Fixture Shop'));

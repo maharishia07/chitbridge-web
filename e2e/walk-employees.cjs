@@ -14,7 +14,9 @@
 'use strict';
 const W = require('./lib/walk.cjs');
 const { measure } = require('./lib/theme-measure.cjs');
-const J = (r, status, body) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+const C = require('./lib/contract.cjs');   /* M43: every answer for a route in the API contract is held to it (RAIL-LAB-SRV1: the facts family) */
+const J = C.json;
+const crmApi = require('./lib/crm-api.cjs');   /* RAIL-LAB-SRV1: the rail card (GET /api/facts/rail) from its one builder */
 
 W.run('employees', async (w) => {
   const { page, ctx, base } = w;
@@ -41,7 +43,7 @@ W.run('employees', async (w) => {
     let body = null; try { body = q.postData() ? JSON.parse(q.postData()) : null; } catch (_) {}
     if (m !== 'GET') S.calls.push(m + ' ' + p + (body ? ' ' + JSON.stringify(body) : ''));
     if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Fixture Shop', currency_code: 'INR' } });
-    if (p === '/api/facts/rail') return J(r, 200, { suppliers: 0, customers: 0, in: 0, out: 0, stuck: 0 });
+    if (p === '/api/facts/rail') return J(r, 200, crmApi.railFacts({ suppliers: 0, customers: 0, in: 0, out: 0, stuck: 0 }));
     if (p === '/api/people' && m === 'GET') {
       if (S.listDenied) return J(r, 403, { message: 'This sign-in cannot open this.' });
       return J(r, 200, { people: S.people, may: { add: S.addRefused ? { ok: false, why: 'Only the owner can add people.' } : { ok: true } }, access_choices: CHOICES, counts: counts(),

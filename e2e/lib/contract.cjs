@@ -96,13 +96,21 @@ function check(method, pathname, status, body, who) {
   return best;
 }
 
+/**
+ * ⭐ THE ROUTE FAMILIES THE CONTRACT HOLDS — ONE list (RAIL-LAB-SRV1, 2026-10-14: it was written out four times, here twice and in
+ * e2e/contract.cjs twice; adding `facts` for GET /api/facts/rail meant editing all four). An answer under one of these prefixes is checked
+ * when the contract lists its route; a route the contract does not list is never checked (check() answers nothing for it).
+ */
+const FAMILIES = ['books', 'crm', 'work', 'repeat', 'tax', 'facts'];   /* tax: the Tax Lab reads (TAX-SRV1); facts: facts/rail (RAIL-LAB-SRV1) + facts/tax-lab */
+const HELD = new RegExp('^/api/(' + FAMILIES.join('|') + ')(/|$)');
+
 /** a Playwright Route whose fulfill() is checked on the way out */
 function wrap(route, who) {
   const req = route.request();
   return new Proxy(route, {
     get(t, k) {
       if (k === 'fulfill') return (o) => {
-        try { const u = new URL(req.url()); const b = o && o.body != null ? JSON.parse(o.body) : null; if (b !== null && /^\/api\/(books|crm|work|repeat)(\/|$)/.test(u.pathname)) check(req.method(), u.pathname, (o && o.status) || 200, b, who); } catch (_) {}
+        try { const u = new URL(req.url()); const b = o && o.body != null ? JSON.parse(o.body) : null; if (b !== null && HELD.test(u.pathname)) check(req.method(), u.pathname, (o && o.status) || 200, b, who); } catch (_) {}
         return t.fulfill(o);
       };
       const v = t[k]; return typeof v === 'function' ? v.bind(t) : v;
@@ -112,7 +120,7 @@ function wrap(route, who) {
 
 /** the harnesses' J(): serve a JSON answer - checked against the contract on the way out, then fulfilled exactly as before */
 function json(r, status, o) {
-  try { const q = r.request(), u = new URL(q.url()); if (/^\/api\/(books|crm|work|repeat)(\/|$)/.test(u.pathname)) check(q.method(), u.pathname, status, JSON.parse(JSON.stringify(o)), ''); } catch (_) {}
+  try { const q = r.request(), u = new URL(q.url()); if (HELD.test(u.pathname)) check(q.method(), u.pathname, status, JSON.parse(JSON.stringify(o)), ''); } catch (_) {}
   return r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(o) });
 }
 
@@ -123,4 +131,4 @@ function finish() {
   return [bad.length === 0, 'every answer the stand-in served for a route in the API contract has the API\'s keys, nesting and types (' + STATE.checked + ' answers over ' + STATE.routes.size + ' routes)'
     + (bad.length ? ' - ' + bad.slice(0, process.env.CONTRACT_ALL ? 99 : 4).map((b) => b.where + ': ' + b.problems.slice(0, 3).join('; ')).join(' | ') : '')];
 }
-module.exports = { FILE, load, problems, entriesFor, check, wrap, json, finish, STATE };
+module.exports = { FILE, FAMILIES, HELD, load, problems, entriesFor, check, wrap, json, finish, STATE };

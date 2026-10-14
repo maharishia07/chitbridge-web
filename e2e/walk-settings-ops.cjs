@@ -13,7 +13,9 @@
 'use strict';
 const W = require('./lib/walk.cjs');
 const REAL = process.argv.includes('--real');
-const J = (r, status, body) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+const C = require('./lib/contract.cjs');   /* M43: every answer for a route in the API contract is held to it (RAIL-LAB-SRV1: the facts family) */
+const J = C.json;
+const crmApi = require('./lib/crm-api.cjs');   /* RAIL-LAB-SRV1: the rail card (GET /api/facts/rail) from its one builder */
 
 const walk = async (w) => {
   const { page, ctx, base } = w;
@@ -75,7 +77,7 @@ const walk = async (w) => {
       if (p === '/api/entities/entitlements') return J(r, 200, { plan: 'test', name: 'Test', sellable: false, limited: false, features: ['chits'], enforced: false,
         quotas: { entities: { state: 'unlimited' }, actors: { state: 'unset' }, chits_per_month: { state: 'capped', limit: 500 } } });
       if (p === '/api/entities/usage') return J(r, 200, { window_days: 30, counts: { billed: 12 }, total_cost_usd: 0.0123, by_meter: [{ meter: 'chit.send', events: 12, cost: 0.0123 }] });
-      if (p === '/api/facts/rail') return J(r, 200, { suppliers: 0, customers: 0, in: 0, out: 0, stuck: 0 });
+      if (p === '/api/facts/rail') return J(r, 200, crmApi.railFacts({ suppliers: 0, customers: 0, in: 0, out: 0, stuck: 0 }));
       return J(r, 200, {});
     });
     await ctx.addInitScript((s) => { try { localStorage.setItem('cb_api_base', location.origin); localStorage.setItem('cb_sess', s); } catch (_) {} }, W.session('Fixture Owner', 'Fixture Shop'));

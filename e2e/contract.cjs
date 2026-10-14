@@ -24,7 +24,9 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail
 const raw = JSON.parse(fs.readFileSync(C.FILE, 'utf8'));
 const routes = Object.keys(raw.routes || {});
 ok(routes.length > 30, 'the contract lists ' + routes.length + ' routes');
-ok(routes.every((k) => /^(GET|POST|PATCH|PUT|DELETE) \/api\/(books|crm|work|repeat|tax|facts\/tax-lab)(\/|$| )/.test(k) && raw.routes[k].status > 0 && 'example' in raw.routes[k]), 'every entry is "METHOD /api/(books|crm|work|repeat|tax|facts/tax-lab)/…" with a status and an example');   /* repeat: RI1 (/api/repeat itself has no tail) · tax + facts/tax-lab: the Tax Lab reads (TAX-SRV1) */
+/* the families are ONE list (e2e/lib/contract.cjs FAMILIES — RAIL-LAB-SRV1 added `facts` for GET /api/facts/rail); repeat: RI1 (/api/repeat itself has no tail) */
+const FAM = C.FAMILIES.join('|');
+ok(routes.every((k) => new RegExp('^(GET|POST|PATCH|PUT|DELETE) /api/(' + FAM + ')(/|$| )').test(k) && raw.routes[k].status > 0 && 'example' in raw.routes[k]), 'every entry is "METHOD /api/(' + FAM + ')/…" with a status and an example');
 (raw._selftest || []).forEach((c, i) => {
   const p = C.problems(c.example, c.actual, c.optional || [], '', c.free || []);
   ok((p.length === 0) === c.conforms, 'selftest ' + (i + 1) + ': ' + c.name + (p.length ? ' [' + p[0] + ']' : ''));
@@ -56,6 +58,9 @@ if (crmApi) {
   one('POST', '/api/crm/followups', 201, { followup: crmApi.followupOne(fx.followups[0]) });
   one('PATCH', '/api/crm/followups/' + fx.followups[0].followup_id, 200, { followup: crmApi.followupOne(fx.followups[0]) });
   one('POST', '/api/crm/parties/pid-1/interactions', 201, crmApi.interaction({ kind: 'call', direction: 'out', body: 'x' }));
+  /* RAIL-LAB-SRV1: the Home rail card (GET /api/facts/rail) — the one builder every harness serves it from, in both of the server's answers */
+  one('GET', '/api/facts/rail', 200, crmApi.railFacts({ in: 24, out: 0, stuck: 21 }));
+  one('GET', '/api/facts/rail', 200, crmApi.railFacts({ lab: true }));
   ok(C.STATE.bad.length === before, 'the CRM stand-in\'s builders (list, record, timeline, follow-ups, interaction) conform to the contract' + (C.STATE.bad.length > before ? ' - ' + C.STATE.bad.slice(before).slice(0, 4).map((b) => b.where + ': ' + b.problems.slice(0, 3).join('; ')).join(' | ') : ''));
   ok(C.STATE.routes.size >= 5, 'those builders reached ' + C.STATE.routes.size + ' contract routes');
 }
@@ -64,7 +69,7 @@ if (crmApi) {
 const files = fs.readdirSync(__dirname).filter((f) => /\.cjs$/.test(f) && f !== 'contract.cjs');
 /* INT5b: a harness SERVES when one of its .route( patterns is an /api path — a real-stack walk (walk-x-o2c --real) only CALLS the api and
    routes nothing but fonts (whose host, googleapis, once matched a bare "api") */
-const serves = files.filter((f) => { const s = fs.readFileSync(path.join(__dirname, f), 'utf8'); return /\.route\([^,\n]*\/api\b/.test(s) && /['"`]\/api\/(books|crm|work|repeat|tax|facts\/tax-lab)(\/|['"`])/.test(s); });
+const serves = files.filter((f) => { const s = fs.readFileSync(path.join(__dirname, f), 'utf8'); return /\.route\([^,\n]*\/api\b/.test(s) && new RegExp('[\'"`]/api/(' + FAM + ')(/|[\'"`])').test(s); });
 const unwrapped = serves.filter((f) => !/lib\/contract\.cjs/.test(fs.readFileSync(path.join(__dirname, f), 'utf8')));
 ok(unwrapped.length === 0, serves.length + ' harnesses answer /api/books, /api/crm, /api/work or /api/repeat calls; each holds its answers to the contract' + (unwrapped.length ? ' - NOT: ' + unwrapped.join(', ') : ''));
 
