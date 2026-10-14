@@ -64,6 +64,9 @@ async function start(name, opts) {
   /* opts.base (HX0): walk a site that is already running — the compose stack's web container — instead of serving this checkout; WX: e2e/lib/stack-local.cjs's site, its api on 3000 */
   const { srv, base } = opts.base ? { srv: null, base: String(opts.base).replace(/\/+$/, '') } : await serve();
   const browser = await chromium.launch(SHOW ? { headless: false, slowMo: 450, args: ['--window-size=1360,900', '--window-position=40,20'] } : {});
+  /* QW1-TODAY: CB_TODAY fixes the page's clock (timers still run) in EVERY context this browser opens (contextAt, or a walk's own browser.newContext) —
+     stand-in walks only; a real api cannot be moved, so there the page keeps real time */
+  if (TD.injected && !opts.base) { const open = browser.newContext.bind(browser); browser.newContext = async (o) => { const c = await open(o); await c.clock.setFixedTime(TD.now()); return c; }; }
   /* ⚠️ FX-QA1: A LOCAL WALK NEVER REACHES PRODUCTION. On a running local site (opts.base) any request to the host public/config.js ships is refused
      and named — a loud FAIL at the end, whoever answered it (a later stand-in route can win the route; the request event still sees it).
      Every context the walk opens (contextAt, GOV-SPIN) carries the same guard. */
@@ -81,8 +84,6 @@ async function start(name, opts) {
       c.on('request', (q) => { let h = ''; try { h = new URL(q.url()).host; } catch (_) {} if (h === PROD) { refused.push(q.method() + ' ' + q.url()); console.log('REFUSED · a local walk asked the PRODUCTION host: ' + q.method() + ' ' + q.url()); } });
       await c.route((u) => u.host === PROD, (r) => r.abort('blockedbyclient'));
     }
-    /* QW1-TODAY: CB_TODAY fixes the page's clock (timers still run) — stand-in walks only; a real api cannot be moved, so there the page keeps real time */
-    if (TD.injected && !opts.base) await c.clock.setFixedTime(TD.now());
     /* silence window.print: a walk must never open a print dialog (it would hold the browser for ever) */
     await c.addInitScript(() => { try { window.print = function () { window.__printed = (window.__printed || 0) + 1; }; } catch (_) {} });
     return c;

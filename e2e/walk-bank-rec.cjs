@@ -89,6 +89,7 @@ function stand() {
   async function open(S, o) {
     o = o || {};
     const ctx = await b.newContext({ viewport: o.vp || { width: 1366, height: 900 }, locale: 'en-IN', timezoneId: 'Asia/Kolkata', serviceWorkers: 'block' });
+    if (TD.injected) await ctx.clock.setFixedTime(TD.now());   /* QW1-TODAY: the token's exp is CB_TODAY-based */
     await ctx.route(/^https?:\/\/(?!127\.0\.0\.1)/, (r) => r.abort());
     ctx.on('request', (rq) => { S.reqs.push({ m: rq.method(), u: rq.url(), h: JSON.stringify(rq.headers()), d: rq.postData() || '' }); });
     await ctx.route('**/api/**', (r) => {

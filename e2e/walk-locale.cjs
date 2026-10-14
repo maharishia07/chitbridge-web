@@ -130,7 +130,7 @@ const SCREENS = [
   { id: 'home', url: '/', ready: '[data-testid="cbshell"]' },
   { id: 'till', url: '/till.html', ready: null, seed: async (page) => {
     await page.waitForFunction(() => typeof window.screenSet === 'function' && typeof window.setMode === 'function', null, { timeout: 30000 });
-    await page.evaluate((items) => { window.S = { shop: { name: 'Fixture Shop', currency: 'INR' }, items, offers: [], at: TD.nowIso() }; setMode('sell'); try { applyLook(); } catch (_) {} try { paintChips(); } catch (_) {} items.slice(0, 3).forEach((i) => addItem(i, 1)); try { price(); } catch (_) {} }, TILL_ITEMS);
+    await page.evaluate((items) => { window.S = { shop: { name: 'Fixture Shop', currency: 'INR' }, items, offers: [], at: new Date().toISOString() /* clock-ok: in the page, whose clock is CB_TODAY */ }; setMode('sell'); try { applyLook(); } catch (_) {} try { paintChips(); } catch (_) {} items.slice(0, 3).forEach((i) => addItem(i, 1)); try { price(); } catch (_) {} }, TILL_ITEMS);
   } },
   { id: 'shop', url: '/shop.html?s=' + SHOP, ready: null },
   { id: 'accounts', url: '/accounts.html', ready: '[data-testid="shell-header"], header, h1' },
