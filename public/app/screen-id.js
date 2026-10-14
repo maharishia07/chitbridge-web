@@ -147,6 +147,8 @@
   }
   if (root.document && root.addEventListener) {
     root.document.addEventListener('click', onTap, true);
+    /* a language pack lands after the chip was painted (app/locale.js pack(): a script, no event of its own): its load repaints the name */
+    root.document.addEventListener('load', function (e) { var t = e.target; if (t && t.id && String(t.id).indexOf('cb-strings-') === 0) paint(); }, true);
     /* a hash-routed page (Finance, CRM, Settings, Accounts) moves between sections by its address: the chip follows it */
     root.addEventListener('hashchange', function () { if (S.app && BYAPP[S.app] && BYAPP[S.app][hashKey()]) { S.key = hashKey(); paint(); } });
   }
