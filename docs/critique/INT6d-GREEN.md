@@ -12,4 +12,6 @@
 
 **(d) Risks** — the gitleaks rule cannot be run here (no binary, no web): the fix is by construction (short literal), not by test. The walks run headless with one injected today (e2e/lib/today.cjs); push before the long runs.
 
+**Found while building (22:50 UTC = 04:20 IST, the batch's own window)** — the api gate had TWO more reds the brief did not name, both by the clock, not the code: `crm-followups` (the stubbed shop had no stated country → since T2-NATDEF its day is UTC, while the test's days are India's) and `home-facts` (the cheque fixture's dates were the runner's UTC date, the card's today is the shop's). Fixed in the tests by stating the shop's country and dating in the shop's day — the same primitive (books-hooks dayOf). `e2e/crm.cjs` (a harness, not on the shard list) fails at its follow-up delete on the base too — unchanged, noted.
+
 **(e) VERDICT: BUILD WITH CHANGES** — (1) as briefed; (2) stand-ins to the standing contract, no `--write` noise; (3) NOT buildable here: the board generator is absent — reported with the 32 file names so the owner's rerun is one line.
