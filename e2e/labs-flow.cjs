@@ -265,7 +265,8 @@ function route(S, r) {
     /* N18: the index is the shell's Home — a Lab is a manifest card (shell-card-<id>) with its facts spot (shell-facts-<id>) */
     { key: 'product', title: 'Product Lab', tile: 'shell-card-product-lab', fact: 'shell-facts-product-lab', href: 'product-lab.html' },
     { key: 'offer', title: 'Offer Lab', tile: 'shell-card-offer-lab', fact: 'shell-facts-offer-lab', href: 'offer-lab-next.html' },
-    { key: 'combo', title: 'Combo Lab', tile: 'shell-card-combo-lab', fact: 'shell-facts-combo-lab', href: 'combo-lab.html' },
+    /* T2-LABS: the tile still links combo-lab.html, which forwards to the Offer Lab's combo mode — the page the person lands on */
+    { key: 'combo', title: 'Combo Lab', tile: 'shell-card-combo-lab', fact: 'shell-facts-combo-lab', href: 'offer-lab-next.html?mode=combo' },
   ];
   const VIEWPORTS = [{ w: 1280, label: '1280' }, { w: 390, label: '390' }];
   const STATES = [{ signedOut: false, label: 'in' }, { signedOut: true, label: 'out' }];
