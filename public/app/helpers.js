@@ -26,27 +26,30 @@ function scrErr(e, subject, retry){
 }
 
 function cap(s){ return s[0].toUpperCase()+s.slice(1); }
-/* ⭐ CX0 (2026-10-13): THE SHOP'S PACK, ON EVERY PAGE — the registered pack of SESSION.country (CBRegulation, bundled in app/tax.js). One reader; a screen
-   that needs the pack's word asks here, never a second `if (country === 'IN')`. null = no registry on the page or no country known (then India's words, as before). */
-function shopReg(){ try { var c = (typeof SESSION !== 'undefined' && SESSION && SESSION.country) || ''; return (window.CBRegulation && c && CBRegulation.packFor(String(c).toUpperCase())) || null; } catch (_) { return null; } }
-/* ⭐ FX-QA1: THE PACK'S OWN WORDS for what a form asks — the tax id, the postal code, the region. ONE helper; a screen never types "GSTIN" or "PIN".
-   The pack's `words` first (engines: reg-in/reg-au/reg-ae `words: { taxId, postcode, region }` — not yet carried); until then the words keyed by the
-   pack's id here; no pack known → India's words, as before (CX0). English is the key: the caller passes the word through tx. */
+/* ⭐ CX0 (2026-10-13): THE SHOP'S PACK, ON EVERY PAGE — the registered pack of the shop's country (CBRegulation, bundled in app/tax.js). One reader; a screen
+   that needs the pack's word asks here, never a second `if (country === 'IN')`. `cc` (STD2): a screen that holds the shop's country itself passes it
+   (CB Settings › Your shop, from /me) instead of writing the global SESSION.country. null = no registry on the page or no country known. */
+function shopReg(cc){ try { var c = cc || (typeof SESSION !== 'undefined' && SESSION && SESSION.country) || ''; return (window.CBRegulation && c && CBRegulation.packFor(String(c).toUpperCase())) || null; } catch (_) { return null; } }
+/* ⭐ FX-QA1 + STD2: THE PACK'S OWN WORDS for what a form asks — the tax id, the postal code, the region. ONE helper; a screen never types "GSTIN" or "PIN".
+   The pack's `words` first (engines: `words: { taxId, postcode, region }` — not yet carried); then the words keyed by the pack's id here — the tax id is
+   the api's profile.taxIdWordOf answer for the same pack (what GET /entities/constitutions sends as countries[].tax.id); NO pack known → NEUTRAL words,
+   never India's (STD2: no India for an unstated country). English is the key: the caller passes the word through tx. */
 var PACK_WORDS = {
   IN: { taxId: 'GSTIN', postcode: 'PIN', region: 'State' },
   AU: { taxId: 'ABN', postcode: 'Postcode', region: 'State' },
   AE: { taxId: 'TRN', postcode: 'P.O. Box', region: 'Emirate' },
 };
-function packWord(kind){
-  var p = shopReg(), own = p && p.words && p.words[kind];
+var PACK_WORDS_NONE = { taxId: 'Tax number', postcode: 'Postcode', region: 'Region' };
+function packWord(kind, cc){
+  var p = shopReg(cc), own = p && p.words && p.words[kind];
   if (own) return own;
-  var w = (p && PACK_WORDS[String(p.id || '').toUpperCase()]) || (p && p.abn ? PACK_WORDS.AU : p && p.trn ? PACK_WORDS.AE : PACK_WORDS.IN);
-  return w[kind] || PACK_WORDS.IN[kind] || '';
+  var w = (p && PACK_WORDS[String(p.id || '').toUpperCase()]) || PACK_WORDS_NONE;
+  return w[kind] || PACK_WORDS_NONE[kind] || '';
 }
-/** the pack's own word for a tax id: GSTIN · ABN · TRN — packWord('taxId') — till.html keeps its own copy, it is a page without helpers.js */
-function taxIdWord(){ return packWord('taxId'); }
+/** the pack's own word for a tax id: GSTIN · ABN · TRN — "Tax number" with no pack. The till reads the server's (snapshot shop.tax_id_word), never a copy */
+function taxIdWord(cc){ return packWord('taxId', cc); }
 /** does the shop's tax turn on the STATE (India's CGST/SGST · IGST, pack.tax.supply 'state')? false under a border pack (Australia, the UAE); true when no pack is known */
-function packSplitsByState(){ var p = shopReg(); return !p || !p.tax || !p.tax.supply || p.tax.supply === 'state'; }
+function packSplitsByState(cc){ var p = shopReg(cc); return !p || !p.tax || !p.tax.supply || p.tax.supply === 'state'; }
 /** UPI is India's payment mode (reg-in chart.paymentModes.upi) — offered only where the shop's pack carries it; true when no pack is known */
 function payHasUpi(){ var p = shopReg(); return !p || !!(p.chart && p.chart.paymentModes && p.chart.paymentModes.upi); }
 /** does the shop's pack carry India's HSN rule (reg-in tax.hsn_digits)? CX4: the "HSN" words, the exposure switch and the Rule 46 note follow it; true when no pack is known */
