@@ -22,7 +22,7 @@
  * their areas (an area with none is not in the menu), a header chip naming the view and one line on Home saying what it is for. Without it: every entry.
  * WHAT IT READS: the manifest, GET /api/entities/header (N19: { business, licences[], trade_ready }) and each built entry's `facts`
  * URL. Nothing else. A 404 or a failure is an EMPTY STATE that says so — never a made-up number.
- * WHAT IT NEVER DOES: load an application's script (only the units CBAvatar · CBKural · CBSignin · CBBell, each IF the page loaded
+ * WHAT IT NEVER DOES: load an application's script (only the units CBAvatar · CBKural · CBSignin · CBBell · CBScreenId, each IF the page loaded
  * it); link into the workshop (a card with no utility page is a dashed chip, I12); decide a licence band or a penalty (the server's
  * `band` and `note` say it — a scheme rule in data, Q8); add a packaging word the plan dropped (FIT Q5).
  *
@@ -93,7 +93,7 @@
     '.cbsh-who .chev{color:var(--sh-muted);font-size:10px;transition:transform .14s}',
     '.cbsh-hdr.open .cbsh-who .chev{transform:rotate(180deg)}',
     '.cbsh-grow{flex:1}',
-    '.cbsh-lic:empty,.cbsh-bell:empty,.cbsh-ed:empty{display:none}',
+    '.cbsh-lic:empty,.cbsh-bell:empty,.cbsh-ed:empty,.cbsh-sid:empty{display:none}.cbsh-sid{display:flex;--ink:var(--sh-ink,#14201a);--line:var(--sh-line,#d8ccb0)}',
     '.cbsh-chip{display:inline-flex;align-items:center;gap:7px;height:28px;padding:0 11px;border-radius:8px;font-size:12.5px;font-weight:600;white-space:nowrap;border:1px solid}',
     '.cbsh-chip .d{font-family:var(--f-num,"IBM Plex Mono",monospace);font-weight:700}.cbsh-chip .sm{display:none}',
     '.cbsh-chip.due{background:var(--sh-blue-t);border-color:var(--sh-blue-b);color:var(--sh-blue-i)}',
@@ -278,6 +278,7 @@
           (person ? '<button type="button" class="cbsh-who" data-testid="shell-shop" aria-expanded="false" aria-controls="' + sheetId + '"><b></b><span class="chev" aria-hidden="true">▼</span></button>' : '') +
           (mode === 'app' ? '<div class="cbsh-sw"><button type="button" class="cbsh-swb" data-testid="shell-switcher" aria-haspopup="true" aria-expanded="false"></button><div class="cbsh-swpop" data-testid="shell-switcher-menu" hidden></div></div>' : '') +
           '<span class="cbsh-grow"></span>' +
+          (mode !== 'bar' ? '<span class="cbsh-sid" data-testid="shell-screen-id"></span>' : '') +   /* SCREEN-ID: this screen's name · code (app/screen-id.js, if the page loaded it) */
           '<span class="cbsh-ed" data-testid="shell-edition"></span>' +
           '<span class="cbsh-lic" data-testid="shell-licence"></span>' +
           '<span class="cbsh-bell" data-testid="shell-bell" data-slot="bell"></span>' +
@@ -304,6 +305,8 @@
     var $ = function (s) { return el.querySelector(s); };
     var hdr = $('.cbsh-hdr'), sheet = $('.cbsh-sheet'), who = $('.cbsh-who'), main = $('.cbsh-main');
     var slots = { bell: $('.cbsh-bell'), alerts: null, home: null, work: $('[data-slot="work"]') };
+    /* SCREEN-ID: the app's screen code in the bar — the one chip (CBScreenId); a frame with sections names the section (page-frame.js setActive) */
+    if (mode !== 'bar' && root.CBScreenId) { root.CBScreenId.here(host ? host.app : 'home'); $('.cbsh-sid').appendChild(root.CBScreenId.chip()); }
 
     /* ── the bar ── */
     function paintBar() {
