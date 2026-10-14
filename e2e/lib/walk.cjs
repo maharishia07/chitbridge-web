@@ -10,7 +10,8 @@
  *     node e2e/walk-bill.cjs --show        (or WALK_SHOW=1, which `node toolset/pack.cjs bill --show` sets)
  *   a HEADED browser at a readable pace (slowMo), a caption banner on the page for each step in plain words, green/red on screen after each
  *   step, and at the end a RESULTS PAGE (one line per path) that stays open until the window is closed. Default is headless and fast.
- *   ONE browser either way. Nothing here touches production: the site is served from this checkout and the API is a stand-in answering inside the page.
+ *   ONE browser either way. Nothing here touches production: the site is served from this checkout and the API is a stand-in answering inside the page;
+ *   a walk on a running local site (opts.base) has every request to the production host refused and FAILS naming it (FX-QA1).
  */
 'use strict';
 const path = require('path'), fs = require('fs'), http = require('http');
@@ -64,6 +65,13 @@ async function start(name, opts) {
   const browser = await chromium.launch(SHOW ? { headless: false, slowMo: 450, args: ['--window-size=1360,900', '--window-position=40,20'] } : {});
   const ctx = await browser.newContext({ viewport: opts.viewport || { width: 1280, height: 860 }, locale: 'en-IN', timezoneId: 'Asia/Kolkata', serviceWorkers: 'block' });
   await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
+  /* ⚠️ FX-QA1: A LOCAL WALK NEVER REACHES PRODUCTION. On a running local site (opts.base) any request to the host public/config.js ships is refused
+     and named — a loud FAIL at the end, whoever answered it (a later stand-in route can win the route; the request event still sees it). */
+  const PROD = opts.base ? require('./stack-local.cjs').productionHost() : null, refused = [];
+  if (PROD) {
+    ctx.on('request', (q) => { let h = ''; try { h = new URL(q.url()).host; } catch (_) {} if (h === PROD) { refused.push(q.method() + ' ' + q.url()); console.log('REFUSED · a local walk asked the PRODUCTION host: ' + q.method() + ' ' + q.url()); } });
+    await ctx.route((u) => u.host === PROD, (r) => r.abort('blockedbyclient'));
+  }
   /* silence window.print: a walk must never open a print dialog (it would hold the browser for ever) */
   await ctx.addInitScript(() => { try { window.print = function () { window.__printed = (window.__printed || 0) + 1; }; } catch (_) {} });
   const page = await ctx.newPage();
@@ -71,7 +79,7 @@ async function start(name, opts) {
   const results = [];
   let n = 0;
   const w = {
-    SHOW, base, browser, ctx, page, errs, results,
+    SHOW, base, browser, ctx, page, errs, results, refused,
     /** one path: fn returns { ok, saw } (or throws - which is a FAIL that says what threw) */
     async step(id, pathText, fn) {
       n++;
@@ -88,6 +96,7 @@ async function start(name, opts) {
     note(id, pathText, why) { results.push({ id, path: pathText, ok: true, saw: why, note: true }); console.log(id + ' · ' + pathText + ' · NOTE (' + why + ')'); },
     /** the end: print the verdict, in show mode leave a results page open, then close and exit */
     async finish() {
+      if (refused.length) results.push({ id: 'LOCAL', path: 'a local walk never reaches the production host (' + PROD + ')', ok: false, saw: refused.length + ' request(s) refused: ' + refused.slice(0, 3).join(' | ') });
       const bad = results.filter((r) => !r.ok).length;
       console.log('\nwalk ' + name + ': ' + (results.length - bad) + ' of ' + results.length + ' paths passed' + (errs.length ? ' · page errors: ' + errs.slice(0, 2).join(' | ') : ''));
       if (SHOW) {

@@ -29,8 +29,22 @@ function cap(s){ return s[0].toUpperCase()+s.slice(1); }
 /* ⭐ CX0 (2026-10-13): THE SHOP'S PACK, ON EVERY PAGE — the registered pack of SESSION.country (CBRegulation, bundled in app/tax.js). One reader; a screen
    that needs the pack's word asks here, never a second `if (country === 'IN')`. null = no registry on the page or no country known (then India's words, as before). */
 function shopReg(){ try { var c = (typeof SESSION !== 'undefined' && SESSION && SESSION.country) || ''; return (window.CBRegulation && c && CBRegulation.packFor(String(c).toUpperCase())) || null; } catch (_) { return null; } }
-/** the pack's own word for a tax id: GSTIN · ABN · TRN (reg-au `abn` · reg-ae `trn`; India's word until reg-in carries `taxId`) — till.html keeps its own copy, it is a page without helpers.js */
-function taxIdWord(){ var p = shopReg(); return p && p.abn ? 'ABN' : p && p.trn ? 'TRN' : 'GSTIN'; }
+/* ⭐ FX-QA1: THE PACK'S OWN WORDS for what a form asks — the tax id, the postal code, the region. ONE helper; a screen never types "GSTIN" or "PIN".
+   The pack's `words` first (engines: reg-in/reg-au/reg-ae `words: { taxId, postcode, region }` — not yet carried); until then the words keyed by the
+   pack's id here; no pack known → India's words, as before (CX0). English is the key: the caller passes the word through tx. */
+var PACK_WORDS = {
+  IN: { taxId: 'GSTIN', postcode: 'PIN', region: 'State' },
+  AU: { taxId: 'ABN', postcode: 'Postcode', region: 'State' },
+  AE: { taxId: 'TRN', postcode: 'P.O. Box', region: 'Emirate' },
+};
+function packWord(kind){
+  var p = shopReg(), own = p && p.words && p.words[kind];
+  if (own) return own;
+  var w = (p && PACK_WORDS[String(p.id || '').toUpperCase()]) || (p && p.abn ? PACK_WORDS.AU : p && p.trn ? PACK_WORDS.AE : PACK_WORDS.IN);
+  return w[kind] || PACK_WORDS.IN[kind] || '';
+}
+/** the pack's own word for a tax id: GSTIN · ABN · TRN — packWord('taxId') — till.html keeps its own copy, it is a page without helpers.js */
+function taxIdWord(){ return packWord('taxId'); }
 /** does the shop's tax turn on the STATE (India's CGST/SGST · IGST, pack.tax.supply 'state')? false under a border pack (Australia, the UAE); true when no pack is known */
 function packSplitsByState(){ var p = shopReg(); return !p || !p.tax || !p.tax.supply || p.tax.supply === 'state'; }
 /** UPI is India's payment mode (reg-in chart.paymentModes.upi) — offered only where the shop's pack carries it; true when no pack is known */
