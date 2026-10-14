@@ -110,8 +110,8 @@ function go(){ if (window.CBFrame) CBFrame.ended(); }   /* api()'s 401 → drop 
   function secOf(){ var h = (location.hash || '').replace(/^#\/?/, '').split(/[?&]/)[0]; return SECTIONS.some(function (s) { return s.k === h; }) ? h : 'shop'; }
   /** the verify answer → the apps' session (cb_sess, CBSignin.sessionOf — the one reading), claimed for this browser (CBOnePerson) → Home */
   function registered(r){
-    /* STD2: kept by the sign-in window's own writer (CBSignin.keep — cb_sess with `duty`, then CBOnePerson.claim), never a second copy here */
-    CBSignin.keep({}, CBSignin.sessionOf(r));
+    /* STD2: kept by the sign-in window's own writer (CBSignin.keepSession — cb_sess with `duty`, then CBOnePerson.claim), never a second copy here */
+    CBSignin.keepSession({}, CBSignin.sessionOf(r));
     location.href = '/';
   }
   function paint(k){
