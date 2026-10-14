@@ -72,6 +72,11 @@ function finDenied(why, title) {
   s.innerHTML = '<div class="card" data-testid="fin-denied" style="opacity:.75"><h2>' + esc(tx(title || (why ? 'Cash position' : 'Collections'))) + '</h2><p data-testid="fin-denied-why">' + esc(tx(why || FIN_OWNER_ONLY)) + '</p></div>';
 }
 
+/** "Not set" for a term no one has set (FIN-R1) — the hint says where it is set: CB Finance › Terms, the one place */
+function finNotSet(what) {
+  return '<span data-b="' + what + '-unset" style="color:var(--grey)" title="' + esc(tx('Set it in Terms')) + '">' + esc(tx('Not set')) + '</span>';
+}
+
 /* ── the columns: every figure is the server's ── */
 function finCols() {
   var c = function () { return FIN.cur; };
@@ -83,10 +88,14 @@ function finCols() {
       var ag = bkDuesAge(p);
       return p.oldest_due ? '<span data-b="due">' + esc(bkDate(p.oldest_due)) + '</span>' + (ag ? ' <span data-b="age" style="color:var(--grey)">· ' + esc(tx(ag)) + '</span>' : '') : dash; } },
     { key: 'limit', label: tx('Limit'), prio: 4, sort: 'limit', num: true, w: 170, html: true, cell: function (p) {
-      if (p.credit_limit_minor == null) return dash;
+      /* FIN-R1: the server's code says where the limit came from (party · shop) — null = no limit set anywhere, said in words */
+      if (p.credit_limit_minor == null) return p.credit_limit_from === null ? finNotSet('limit') : dash;
       return '<span data-b="limit">' + esc(bkMoney(Number(p.credit_limit_minor), c())) + '</span>'
         + (p.over_limit ? ' <span class="tag red" data-b="over">⚠ ' + esc(tx('Over limit')) + '</span>' : ''); } },
     { key: 'interest', label: tx('Interest due'), prio: 5, sort: 'interest', num: true, w: 150, html: true, cell: function (p) {
+      /* FIN-R1: interest follows the customer's Terms; interest_state (on · off · not_set) is the server's code — never a guessed rate */
+      if (p.interest_state === 'not_set') return finNotSet('interest');
+      if (p.interest_state === 'off') return '<span data-b="interest-off" style="color:var(--grey)">' + esc(tx('Off')) + '</span>';
       return Number(p.interest_minor) > 0 ? '<span data-b="interest" title="' + esc(tx('Shown, never charged')) + '">' + esc(bkMoney(Number(p.interest_minor), c())) + '</span>' : dash; } },
     { key: 'last', label: tx('Last reminded'), prio: 6, w: 130, html: true, cell: function (p) { return p.last_remind ? esc(bkDate(p.last_remind)) : dash; } },
     { key: 'act', label: ' ', prio: 1, pin: 'end', w: 170, html: true, cell: function (p) {

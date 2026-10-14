@@ -448,6 +448,8 @@
     'Not here yet': 'अभी उपलब्ध नहीं',
     'Not in the network model yet': 'अभी नेटवर्क मॉडल में नहीं',
     'Not set': 'तय नहीं',
+    'Set it in Terms': 'शर्तों में तय करें',
+    'Off': 'बंद',
     'Note': 'टिप्पणी',
     'Notes': 'टिप्पणियाँ',
     'Nothing is created': 'कुछ नहीं बना',
