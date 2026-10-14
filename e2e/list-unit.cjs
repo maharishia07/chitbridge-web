@@ -359,6 +359,38 @@ const THROWING_STORAGE = () => { const boom = function () { throw new Error('sto
     await c2.close();
   }
 
+  /* ─────────────────────────── 8 · THE LABEL OPENS, THE CARET TOGGLES (FX-F10W) ─────────────────────────── */
+  /* the F10 walk: a Waiting row's NAME has to open the bill (onOpen) exactly as its amount does — only the ▸ glyph opens the next level.
+     Every list in the lab, in grid AND lines, at 1366 and 390: the first cell's text → onOpen once, nothing expands; ▸ → expands, onOpen not called. */
+  console.log('\n== list-unit: the label opens, the caret toggles ==');
+  for (const vp of [{ width: 1366, height: 768 }, { width: 390, height: 844 }]) {
+    const { ctx: c8, p: q } = await open({ viewport: vp, traps: false });
+    for (const k of ['daybook', 'dues', 'big']) {
+      await pick(q, k);
+      for (const view of ['grid', 'lines']) {
+        await q.click('[data-testid="view-' + view + '-lab-' + k + '"]', { timeout: 3000 });
+        await q.evaluate((key) => { window.__opened = []; const L = CBList.get(key);
+          /* the page's own next level where it has one; a stand-in otherwise, so every list has a ▸ */
+          L.refresh(Object.assign({ onOpen: function (r) { window.__opened.push(r); } }, document.querySelector('[data-caret]') ? {} : { next: function () { return '<div>next</div>'; } })); }, 'lab-' + k);
+        await q.waitForSelector('[data-row] [data-caret]', { timeout: 4000 });
+        const lab = await q.evaluate(() => {   /* a point on the first cell's TEXT, past the caret */
+          const row = document.querySelector('[data-row]'), car = row.querySelector('[data-caret]'), cell = row.querySelector('.cbl-cell.first, .cbl-lflow');
+          const c = car.getBoundingClientRect(), r = cell.getBoundingClientRect(), x = Math.min(r.right - 4, Math.max(c.right, r.left) + 12);
+          return { x, y: r.top + Math.min(r.height / 2, 10), id: row.getAttribute('data-row'), hit: (document.elementFromPoint(x, r.top + Math.min(r.height / 2, 10)) || {}).className || '' };
+        });
+        await q.mouse.click(lab.x, lab.y);
+        const a = await q.evaluate(() => ({ opened: window.__opened.length, next: document.querySelectorAll('.cbl-next').length }));
+        ok(a.opened === 1 && a.next === 0, vp.width + ' · ' + k + ' · ' + view + ': the label opens the row (onOpen once), nothing expands — ' + JSON.stringify(a) + ' hit ' + lab.hit);
+        await q.click('[data-row="' + lab.id + '"] [data-caret]');
+        const c = await q.evaluate(() => ({ opened: window.__opened.length, next: document.querySelectorAll('.cbl-next').length }));
+        ok(c.opened === 1 && c.next === 1, vp.width + ' · ' + k + ' · ' + view + ': only the ▸ toggles the next level, and it does not open the row — ' + JSON.stringify(c));
+        await q.click('[data-row="' + lab.id + '"] [data-caret]');
+        ok(await q.locator('.cbl-next').count() === 0, vp.width + ' · ' + k + ' · ' + view + ': ▸ again closes it');
+      }
+    }
+    await c8.close();
+  }
+
   ok(errs.length === 0, 'no page error anywhere' + (errs.length ? ': ' + errs.join(' | ') : ''));
   await b.close(); S.close();
   console.log('\n  ' + pass + ' passed, ' + fail + ' failed\n');

@@ -15,7 +15,7 @@ something needs them before any navigation happens.
 router renders a placeholder until `_capLoading` clears, which is the only reason the
 old duplicate `networkScreen()` in app.html was safe to delete.
 
-## Capabilities (46)
+## Capabilities (47)
 
 | file | loading · nav key | what it is |
 |---|---|---|
@@ -44,6 +44,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-finance-terms.js` | — | cap-finance-terms.js — CB Finance · Terms (round F2): the shop's DEFAULT credit terms and each party's OWN, set in ONE place |
 | `cap-finance.js` | — | cap-finance.js — CB Finance · Collections (round F1): who owes you, how old, the limit, the interest it has earned, Remind, Receive |
 | `cap-folders.js` | lazy · folders | FOLDERS capability (lazy; loaded via ensureCap('folders')) |
+| `cap-fx.js` | — | cap-fx.js — FOREIGN CURRENCY (FX1, 2026-10-14): CB Accounts › Setup › Rates, and Month lock's "Foreign balances" line |
 | `cap-iddocs.js` | lazy · on demand |  |
 | `cap-intake.js` | lazy · intake | THE INTAKE INBOX. Lazy via ensureCap('intake') |
 | `cap-legend.js` | lazy · on demand | the 🔑 LEGEND capability: a live map of "what we serve" |
@@ -126,4 +127,4 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 
 ---
 
-*99 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*100 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*

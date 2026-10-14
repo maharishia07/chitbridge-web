@@ -19,8 +19,11 @@ const BREAKS = [
   ['an invented total when none is recorded', SHEET, `E(t == null ? T('not recorded') : money(t, m.cur))`, `E(t == null ? money(0, m.cur) : money(t, m.cur))`],
   ['Accept without the choice', SHEET, `if (m.billRx) { CS.useAsk = true; CS.note = null; return paint(); } return move('act'); }`, `return move('act'); }`],
   ['Accept: the status first, the use after', SHEET, `if (use && to === 'act' && m.billRx) await api('billUse', { params: { id: id }, body: { use: use } });\n      var word`, `var word`],
-  ['the step read from the shared status', SHEET, `status: billRx ? billStepStatus(log) : String(h.current_status || h.status || 'pending')`, `status: String(h.current_status || h.status || 'pending')`],
-  ['the to-do and Waiting not re-read after Accept', SHEET, `try { if (typeof bkHealthLoad === 'function') bkHealthLoad()`, `try { if (false) bkHealthLoad()`],
+  ['the step read from the shared status', SHEET, `status: billRx ? billStepStatus(log, captured ? String(h.current_status || h.status || 'pending') : null) : String(h.current_status || h.status || 'pending')`, `status: String(h.current_status || h.status || 'pending')`],
+  ['the to-do and Waiting not re-read after Accept', SHEET, `if (typeof root.bkHealthLoad === 'function') root.bkHealthLoad()`, `if (false) root.bkHealthLoad()`],
+  /* STD1: Accept greys from the SERVER's may/why on the read (actions.accept) — off the Books page too */
+  ['Accept not greyed by the read\'s may/why (STD1)', SHEET, `var a = m && m.billRx ? m.may : null;`, `var a = null;`],
+  ['the bill class guessed, not the read\'s doc (STD1)', SHEET, `billRx = !!(r && r.doc === 'bill_received')`, `billRx = purpose === 'invoice' && !iSent`],
   ['the counter named by the till, not the series', SHEET, `counter: counterOfBill(bill, bj.till),`, `counter: bj.till && (bj.till.name || bj.till.id) || '',`],
   ['the ledger route not redirected (#/app/ledger)', APP, `if(SESSION.token && _lg) return ledgerDoorClosed(_lg[1]);`, ``],
   ['a remembered cb_nav of ledger not redirected', APP, `if(SESSION.token && UI.nav==="ledger" && /^#\\/app$|^#\\/?$/.test(h)) return ledgerDoorClosed();`, ``],

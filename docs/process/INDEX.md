@@ -17,6 +17,7 @@ Athi, 2026-10-12: *"for each function we are building we need to have a SAP kind
 | [C2V](C2V.md) | Client to verified (the practice door) | no SAP module — the incumbents (Xero HQ / QBOA / MYOB Practice, docs/research/COMPARE-AU-BOOKS-2026-10.md §2) are a baseline only; built on our construct (docs/design/practice-door/REQUIREMENT.md §0) | practice → request → grant → dashboard → open client → ask → end | 0 | 1 | 6 |
 | [MVI](MVI.md) | Move in (from Xero / QuickBooks) | FI (conversion: opening balances, master data) | chart of accounts → contacts → items → opening balances | 4 | 0 | 0 |
 | [PRN](PRN-flow.md) | Parallel run (their Tally / Xero period beside ours) | FI (audit: parallel run, reconciliation of statements) | load their period → compare, differences first → the auditor's file | 2 | 1 | 0 |
+| [FX](FX.md) | Foreign currency (a bill in another currency, its settlement, the period-end revaluation) | FI (foreign currency valuation · realised / unrealised exchange differences) | the day's rate → a foreign bill posts at its day's rate; its payment settles with the exchange gain or loss → revalue at the month end, reversed next month | 3 | 0 | 0 |
 
 ## Flows × modules — which module owns which step
 
@@ -31,6 +32,7 @@ Athi, 2026-10-12: *"for each function we are building we need to have a SAP kind
 | C2V |  |  | 1 practice (MISSING)<br>2 request (MISSING)<br>3 grant (MISSING)<br>4 dashboard (MISSING)<br>5 open client (MISSING)<br>6 ask ⚠️<br>7 end (MISSING) |  |  |  |  |  |
 | MVI |  |  | 1 chart of accounts<br>2 contacts<br>3 items<br>4 opening balances |  |  |  |  |  |
 | PRN |  |  | 1 load their period<br>2 compare, differences first<br>3 the auditor's file ⚠️ |  |  |  |  |  |
+| FX |  |  | 1 the day's rate<br>2 a foreign bill posts at its day's rate; its payment settles with the exchange gain or loss<br>3 revalue at the month end, reversed next month |  |  |  |  |  |
 
 ## The modules
 
