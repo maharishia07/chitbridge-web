@@ -1223,6 +1223,9 @@ function stdCounts(){
 var STD_COMPAT_STATUS = { works: 'live', partly: 'part', planned: 'plan' };
 var STD_COMPAT_PROOF = { live: 'Tested live', 'stand-in': 'Proven on a stand-in', 'not-yet': 'Not yet' };
 var STD_COMPAT_FIT = { 'one-to-one': 'One-to-one', alongside: 'Works alongside', gap: 'Gap' };
+/* T3-COMPAT: which way a row moves (compat.json `dir`) — [symbol, word, the sentence with {s} = the outside system]; the Works with view shows the symbol first */
+var STD_COMPAT_DIR = { in: ['⇣', 'In', 'From {s} into ChitBridge'], out: ['⇡', 'Out', 'From ChitBridge to {s}'],
+  both: ['⇅', 'Both ways', 'Between ChitBridge and {s}, both ways'], beside: ['⇆', 'Side by side', 'Read from {s} and laid beside ours; nothing is posted'] };
 function stdCompatRows(json){
   var rows = (json && Array.isArray(json.rows)) ? json.rows : [];
   var areas = STD_AREAS.map(function(a){ return a[0]; }), ctry = STD_COUNTRIES.map(function(c){ return c[0]; }), pas = STD_PRODUCT_AREAS.map(function(a){ return a[0]; });
@@ -1234,7 +1237,8 @@ function stdCompatRows(json){
     return { a: x.area, pa: x.pa, k: 'compat', c: x.c.slice(), p: x.p, m: s === 'live' ? undefined : (x.m || x.roadmap || 'Not built yet'),
       g: 'Compatibility', n: x.system + ' — ' + x.service, w: (STD_COMPAT_FIT[x.fit] || x.fit || '') + ' · ' + x.service,
       ex: '—', s: s, note: x.roadmap || x.note || undefined, at: 'Settings › Integrations', go: 'integrations',
-      proof: proof, fit: STD_COMPAT_FIT[x.fit] || x.fit, compat: x.id };
+      proof: proof, fit: STD_COMPAT_FIT[x.fit] || x.fit, compat: x.id,
+      dir: STD_COMPAT_DIR[x.dir] ? x.dir : undefined, moves: STD_COMPAT_DIR[x.dir] ? STD_COMPAT_DIR[x.dir][2].replace('{s}', x.system) : undefined, code: x.code || '' };
   });
 }
 

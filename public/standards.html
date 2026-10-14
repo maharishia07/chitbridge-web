@@ -210,6 +210,9 @@ let COMPAT_ERR = '';
 function addCompat(json){ stdCompatRows(json).forEach((r) => ROWS.push({ ix: ROWS.length, r: r })); }
 const AREA = (r) => lab(STD_AREAS, r.a), PAREA = (r) => lab(STD_PRODUCT_AREAS, r.pa), KIND = (r) => lab(STD_KINDS, r.k), COUNTRY = (r) => r.c.map((c) => lab(STD_COUNTRIES, c)).join(' · '), STATUS = (r) => lab(STD_STATUS, r.s);
 const SORD = { live: 0, part: 1, plan: 2 };
+/* T3-COMPAT: which way a compatibility row moves — the symbol before its words (STD_COMPAT_DIR, cap-standards.js), the sentence as its title */
+const DIRW = (r) => r.dir ? STD_COMPAT_DIR[r.dir][1] + ': ' + r.moves : '';
+function dirSym(r){ return r.dir ? '<span data-testid="std-dir" data-dir="' + esc(r.dir) + '" title="' + esc(DIRW(r)) + '" aria-label="' + esc(DIRW(r)) + '">' + esc(STD_COMPAT_DIR[r.dir][0]) + '</span> ' : ''; }
 function countOf(rows){ var n = { live: 0, part: 0, plan: 0 }; rows.forEach((r) => { n[r.s]++; }); return n; }
 
 /* ═════ THE DECLARATION — what this page tells CBList ═════ */
@@ -242,7 +245,7 @@ const GROUP_ORDER = STD_AREAS.map((a) => a[0]).concat(STD_KINDS.map((k) => k[0])
 function cols(){
   return [
     { key: 'what', label: 'What it does for you', prio: 1, w: 250, sort: 'what', html: true, value: (x) => x.r.p,
-      cell: (x) => '<span title="' + esc(x.r.p) + '">' + stdGloss(esc(x.r.p), { focus: false }) + '</span>' },
+      cell: (x) => dirSym(x.r) + '<span title="' + esc(x.r.p) + '">' + stdGloss(esc(x.r.p), { focus: false }) + '</span>' },
     { key: 'std', label: 'Reference', prio: 2, w: 230, sort: 'std', html: true, value: (x) => x.r.n,
       cell: (x) => '<span class="sn" title="' + esc(x.r.n) + '">' + stdGloss(esc(x.r.n), { focus: false }) + '</span>' },
     /* the KIND, a column of its own (M41-K): Law · Standard · Practice · Compatibility — the same word the Kind filter and the Group by use */
@@ -281,6 +284,8 @@ function nextOf(x){
   if (r.eq) h += '<dt>Elsewhere</dt><dd>' + esc(r.eq) + '</dd>';
   if (shown.indexOf('at') < 0 && r.at) h += '<dt>In the app</dt><dd>' + esc(r.at) + '</dd>';
   if (r.why) h += '<dt>Why it matters</dt><dd>' + rich(r.why) + '</dd>';
+  if (r.k === 'compat') h += '<dt>Moves</dt><dd data-testid="std-moves-' + x.ix + '">' + (r.dir ? esc(STD_COMPAT_DIR[r.dir][0] + ' ' + DIRW(r)) : '—') + '</dd>'
+    + '<dt>Code</dt><dd data-testid="std-code-' + x.ix + '">' + (r.code ? '<code>' + esc(r.code) + '</code>' : 'Not written yet') + '</dd>';
   if (r.k === 'compat') h += '<dt>Fit</dt><dd>' + esc(r.fit || '') + '</dd><dt>Proof</dt><dd data-testid="std-proof-' + x.ix + '">' + esc(r.proof || 'Not yet') + '</dd>';
   /* CPS1: the Country Standard's row opens to the GENERATED matrix — every member × every registered pack, read from the engines' file, never typed here */
   if (r.matrix === 'country') h += '<dt>Matrix</dt><dd data-testid="std-country-matrix">' + countryMatrixHTML() + '</dd>';
@@ -319,6 +324,8 @@ function statementOf(r){
   if (r.m) t.push('Missing: ' + r.m);
   if (r.note && r.s !== 'live') t.push('In full: ' + plain(r.note));
   if (r.eq) t.push('Elsewhere: ' + r.eq);
+  if (r.dir) t.push('Moves: ' + DIRW(r));
+  if (r.k === 'compat') t.push('Code: ' + (r.code || 'not written yet'));
   if (r.proof) t.push('Proof: ' + r.proof);
   t.push('Checked ' + checkedLabel() + ' (ChitBridge standards register)');
   return t.join('\n');
@@ -359,8 +366,8 @@ function mountList(){
   LIST = CBList.mount($('std_list'), {
     key: 'standards', rows: ROWS, id: (x) => 's' + x.ix, rowTid: (x) => 'std-row-' + x.ix, fill: false,
     columns: cols, defaultCols: DEFAULT_COLS, cardMax: 3, store: choices,
-    head: () => ({ title: 'Standards', chips: [{ text: 'checked ' + checkedLabel(), tid: 'std-checked' }], slot: slot }),
-    search: (x) => { var r = x.r; return [r.p, r.n, r.w, r.m, r.limit, r.note, r.at, plain(r.ex), r.eq, AREA(r), PAREA(r), KIND(r), COUNTRY(r), STATUS(r), r.g].join(' '); },
+    head: () => ({ title: worksWith() ? 'Works with' : 'Standards', chips: [{ text: 'checked ' + checkedLabel(), tid: 'std-checked' }], slot: slot }),
+    search: (x) => { var r = x.r; return [r.p, r.n, r.w, r.m, r.limit, r.note, r.at, plain(r.ex), r.eq, AREA(r), PAREA(r), KIND(r), COUNTRY(r), STATUS(r), r.g, DIRW(r), r.code].join(' '); },
     searchHint: 'Search standards',
     filters: FILTERS, sorts: SORTS,
     group: { options: [['area', 'Area'], ['country', 'Country'], ['kind', 'Kind'], ['none', 'None']], default: 'area', tid: 'std', by: groupBy, order: GROUP_ORDER,
@@ -371,6 +378,10 @@ function mountList(){
       { id: 'copy', label: 'Copy for a buyer or CA', tid: 'std-copy', run: (x) => copyText(statementOf(x.r)) },
     ],
     empty: { title: 'No standards on the register', sub: 'The register could not be read.' },
+    /* T3-COMPAT: Works with open and data/compat.json unread → the unit's could-not-read state, never "these filters match nothing" */
+    state: () => (COMPAT_ERR && worksWith() ? 'error' : null),
+    error: { title: 'The systems we work with could not be read.', sub: 'The standards are all here. Try again in a moment.' },
+    onRetry: () => loadCompat().then(() => { LIST.refresh(ROWS); paintMatrix(); }),
   });
 }
 
@@ -406,7 +417,7 @@ function paintMatrix(){
   h += '</div>';
   if (COMPAT_ERR) h += '<p class="mx-note" data-testid="std-compat-err">' + esc(COMPAT_ERR) + '</p>';
   if (other) h += '<p class="mx-note" data-testid="std-mx-note">The matrix counts the whole register; the list also has your search or other filters.</p>';
-  h += '<div class="mx-more"><button type="button" class="tbtn" data-sheet="why" data-testid="std-open-why">Why follow standards ›</button><button type="button" class="tbtn" data-sheet="record" data-testid="std-open-record">One record, every standard ›</button></div>';
+  h += '<div class="mx-more"><button type="button" class="tbtn" data-act="works" data-testid="std-open-works" aria-pressed="' + worksWith() + '">⇅ Works with ›</button><button type="button" class="tbtn" data-sheet="why" data-testid="std-open-why">Why follow standards ›</button><button type="button" class="tbtn" data-sheet="record" data-testid="std-open-record">One record, every standard ›</button></div>';
   $('mxBody').innerHTML = h;
   LAST = JSON.stringify(f) + '|' + LIST.state().q;
 }
@@ -452,8 +463,26 @@ function watch(){
   var host = $('std_list');
   new MutationObserver(() => { if (!LIST) return; fit();
     if (curDim() !== GLAST){ GLAST = curDim(); setFilters({}); paintMatrix(); return; }   /* Group by changed: the table follows, with a clean slate as the old Count by had */
+    syncWorks();
     var now = JSON.stringify(nowFilt()) + '|' + LIST.state().q; if (now !== LAST) paintMatrix(); }).observe(host, { childList: true, subtree: true, characterData: true });
 }
+
+/* ═════ WORKS WITH (T3-COMPAT) — not a second list: the register's own Kind filter at Compatibility, opened by #works-with (Home's
+   Compatibility door) or the matrix pane's button. The address and the title follow the filter, so clearing the Kind chip leaves it. ═════ */
+function worksWith(){ return nowFilt().kind === 'compat'; }
+const urlFor = (search) => location.pathname + (search || '') + (worksWith() ? '#works-with' : '');
+let WW = false;
+function syncWorks(){
+  var on = worksWith(); if (on === WW) return; WW = on;
+  history.replaceState(null, '', urlFor(location.search));
+  LIST.refresh({});   /* the title row says Works with / Standards */
+}
+function openWorks(){
+  clearSearch(); setFilters({ kind: 'compat' });
+  $('app').setAttribute('data-view', 'list'); paintMatrix(); syncWorks();
+  var l = $('std_list').querySelector('.cbl-list'); if (l) l.scrollTop = 0;
+}
+window.addEventListener('hashchange', () => { if (LIST && location.hash === '#works-with' && !worksWith()) openWorks(); });
 
 /* ═════ the two sheets — their content is the register's own renderers, called once ═════ */
 function openSheet(which){
@@ -461,11 +490,11 @@ function openSheet(which){
   d.innerHTML = '<div class="sh-head"><h2>' + (W ? 'Why follow standards' : 'One record, every standard') + '</h2><button type="button" class="sh-x" data-act="sheetx" data-testid="std-sheet-x" aria-label="Close">✕</button></div>'
     + '<div class="sh-body" data-testid="std-sheet-' + which + '">' + stdGloss(W ? stdWhyHTML({ compact: false }) : stdRecordHTML({ compact: false })) + '</div>';
   if (!d.open){ try{ d.showModal(); }catch(_){ d.setAttribute('open', ''); } }
-  try{ history.replaceState(null, '', '?sheet=' + which); }catch(_){}
+  try{ history.replaceState(null, '', urlFor('?sheet=' + which)); }catch(_){}
 }
 function closeSheet(){
   var d = $('sheet'); try{ d.close(); }catch(_){ d.removeAttribute('open'); } d.innerHTML = '';
-  try{ history.replaceState(null, '', location.pathname); }catch(_){}
+  try{ history.replaceState(null, '', urlFor('')); }catch(_){}
 }
 $('sheet').addEventListener('cancel', (e) => { e.preventDefault(); closeSheet(); });
 $('sheet').addEventListener('click', (e) => { if (e.target === $('sheet')) closeSheet(); });
@@ -476,6 +505,7 @@ document.addEventListener('click', (ev) => {
   if (t.hasAttribute('data-sheet')){ openSheet(t.getAttribute('data-sheet')); return; }
   var a = t.getAttribute('data-act');
   if (a === 'back') $('app').setAttribute('data-view', 'matrix');
+  else if (a === 'works') openWorks();
   else if (a === 'sheetx') closeSheet();
 });
 
@@ -505,15 +535,20 @@ function start(){
   var q = new URLSearchParams(location.search);
   if (q.get('sheet') === 'why' || q.get('sheet') === 'record') openSheet(q.get('sheet'));
   if (q.get('view') === 'list') $('app').setAttribute('data-view', 'list');
+  if (location.hash === '#works-with') openWorks();
   /* CPS1: ?std=country (from Country setup) — the list, searched down to the Country Standard's row through the unit's own search box */
   if (q.get('std') === 'country'){ var cq = $('std_list').querySelector('[data-cbl-q]'); if (cq){ cq.value = 'Country Standard'; cq.dispatchEvent(new Event('input', { bubbles: true })); } $('app').setAttribute('data-view', 'list'); }
 }
 if (window.CBKural) CBKural.mount({ route: 'planning' });
 /* two files are read before the first paint: the Compatibility rows (M41) and the country matrix (CPS1) — each failure is said in its place, never silent */
-Promise.all([
-  fetch('/data/compat.json', { cache: 'no-store' })
+/* the Compatibility rows, read once at the start and again from Works with's Try again; a failure is kept in COMPAT_ERR and said, and logged */
+function loadCompat(){
+  return fetch('/data/compat.json', { cache: 'no-store' })
     .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-    .then((j) => { addCompat(j); }, () => { COMPAT_ERR = 'Compatibility rows could not be read — the standards below are complete; reload to try again.'; }),
+    .then((j) => { addCompat(j); COMPAT_ERR = ''; }, (e) => { console.warn('standards: data/compat.json could not be read', e); COMPAT_ERR = 'Compatibility rows could not be read — the standards below are complete; reload to try again.'; });
+}
+Promise.all([
+  loadCompat(),
   fetch('/data/country-matrix.json', { cache: 'no-store' })
     .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
     .then((j) => { if (j && Array.isArray(j.rows) && Array.isArray(j.packs) && j.counts && j.missing) CMX = j; else throw new Error('not a matrix'); }, (e) => { CMX_ERR = 'The country matrix could not be read (data/country-matrix.json' + (e && e.message ? ': ' + e.message : '') + ') — reload to try again. The standard itself is chitbridge-engines docs/COUNTRY-STANDARD.md.'; }),
