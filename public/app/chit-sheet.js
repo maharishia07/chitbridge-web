@@ -271,6 +271,8 @@
     return TITLE[m.purpose] || (m.purpose ? m.purpose.charAt(0).toUpperCase() + m.purpose.slice(1).replace(/_/g, ' ') : 'Task');
   }
   function kindWord(m) { return m.counterBill ? 'Counter bill' : (m.billRx ? 'Supplier bill' : 'Task'); }
+  /* SCREEN-ID: the sheet's kind = its screen code (app/screen-id.js bySheet) — the same code from whichever page opened it */
+  function sheetKind(m) { return m.counterBill ? 'bill' : (m.billRx ? 'supplierbill' : 'task'); }
 
   /* R10 - the rail units where the person already is. "Messages and files" is the chit's thread (CBThread, R02) and the picker (CBAttach, R07),
      each mounted with ITS OWN api: the units decide who may post (the engine's `chit.actions`, a refusal with its `why`); this file decides nothing.
@@ -324,6 +326,8 @@
     var d = host(); if (!d) return;
     var m = CS.view, ttl = d.querySelector('[data-testid="cs-title"]');
     if (ttl) ttl.textContent = T(m ? titleFor(m) : 'Bill');
+    var sid = d.querySelector('[data-testid="cs-screen-id"]');   /* the popup names its own screen; the page form is named by its page's header */
+    if (sid) sid.innerHTML = m && CS.mode === 'dialog' && root.CBScreenId ? root.CBScreenId.sheetHTML(sheetKind(m)) : '';
     if (!m) { d.querySelector('.cs-body').innerHTML = CS.err ? '<div class="cs-mute" data-testid="cs-err">' + esc(CS.err) + '</div>' : '<div class="cs-mute">' + esc(T('Reading…')) + '</div>'; d.querySelector('.cs-acts').innerHTML = ''; return; }
     var head = [T(kindWord(m)), m.no, when(m.at), counterWord(m.counter), m.by].filter(Boolean).map(function (x, i) { return i === 1 ? '<b class="mono" data-testid="cs-no">' + esc(x) + '</b>' : esc(x); }).join(' · ');
     d.querySelector('.cs-body').innerHTML =
@@ -358,6 +362,7 @@
     + '#chitsheet[open]{display:flex;flex-direction:column}#chitsheet::backdrop{background:rgba(15,46,61,.45)}'
     + '.cs .cs-top{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--line,#E7E2D8);font-size:var(--fs-3,14px);font-weight:700}'
     + '.cs .cs-top button{cursor:pointer;min-width:44px;min-height:44px;border:0;background:none;font-size:var(--fs-4,16px);color:inherit}'
+    + '.cs .cs-top .cs-sid{margin-inline-start:auto;margin-inline-end:4px}.cs .cs-top .cs-sid:empty{display:none}.cs .cs-top .cbsid{min-width:0;min-height:26px;border:1px solid var(--line,#E7E2D8);font-size:var(--fs-1,11px)}'
     + '.cs .cs-body{padding:12px 14px;overflow:auto;flex:1;min-height:0;overscroll-behavior:contain;font-size:var(--fs-2,12.5px)}'
     + '.cs .cs-head{font-size:var(--fs-2,12.5px);color:var(--grey,#494F56)}.cs .cs-who{margin:4px 0 10px;font-size:var(--fs-3,14px);font-weight:700}'
     + '.cs .cs-step{margin-inline-start:6px;border:1px solid var(--line,#E7E2D8);border-radius:99px;padding:1px 8px;font-size:var(--fs-1,11px);font-weight:600;color:var(--prog,#7d6126)}'
@@ -382,7 +387,7 @@
     var d = document.getElementById('chitsheet'); if (d) return d;
     ensureCSS();
     d = document.createElement('dialog'); d.id = 'chitsheet'; d.className = 'cs'; d.setAttribute('aria-label', T('Bill'));
-    d.innerHTML = '<div class="cs-top"><span data-testid="cs-title">' + esc(T('Bill')) + '</span><button type="button" data-testid="cs-close" aria-label="' + esc(T('Close')) + '" onclick="CBSheet.close()">✕</button></div><div class="cs-body"></div><div class="cs-acts" data-testid="cs-acts"></div>';
+    d.innerHTML = '<div class="cs-top"><span data-testid="cs-title">' + esc(T('Bill')) + '</span><span class="cs-sid" data-testid="cs-screen-id"></span><button type="button" data-testid="cs-close" aria-label="' + esc(T('Close')) + '" onclick="CBSheet.close()">✕</button></div><div class="cs-body"></div><div class="cs-acts" data-testid="cs-acts"></div>';
     /* R10-4: a close event is queued; if a new chit was opened meanwhile the sheet is open again and that late event must not wipe it (the read would be dropped and the sheet stay on Reading) */
     d.addEventListener('close', function () { if (d.open) return; lock(false); if (CS.mode === 'dialog') CS.id = null; });
     d.addEventListener('click', function (e) { if (e.target === d) CBSheet.close(); });

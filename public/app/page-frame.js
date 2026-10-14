@@ -9,6 +9,7 @@
  *   CBFrame.mount({ app: 'kyb', surface: 'kyb', work: <element the page draws in> }) → { token, session, shell }
  *   skeleton: { name, icon, sections, active, onSection } draws the standard sidebar + main pane around the page (link /app/page-skeleton.css).
  *   kural: a route of app/kurals.json draws the foldable footer band (load /app/kural.js); left out, no band.
+ *   screen code: load /app/screen-id.js and the header carries this screen's name · code (CBScreenId; the section on show, SCREEN-ID).
  *   Load first: /engine/screen.js · (/app/edition.js: the person's edition, AX1) · /app/avatar.js · /engine/signin.js · /app/signin-ui.js · /app/one-person.js · /app/accounts-shell.js · /app/rail-bell.js · /app/shell.js
  *   signin: false — a public page (works signed out): no sign-in window in the page, the avatar's "Sign in" goes to Home's. area: the switcher's area.
  */
@@ -22,7 +23,7 @@
   }
   /* the STANDARD PAGE SKELETON (decision 2026-10-09, "one frame style on every app page"): sidebar + main pane, styled by /app/page-skeleton.css.
      skeleton: { name, icon: <svg path d>, sections: [{ k, label, icon: <svg path d> }], active: k, onSection: fn(k) } */
-  function skeleton(doc, sk) {
+  function skeleton(doc, sk, appId) {
     var svg = function (d, cls) { return '<svg' + (cls ? ' class="' + cls + '"' : '') + ' viewBox="0 0 24 24" aria-hidden="true"><path d="' + esc(d) + '"/></svg>'; };
     var app = doc.createElement('div'); app.className = 'app'; app.setAttribute('data-testid', 'skel-app');
     app.innerHTML = '<aside class="side" id="side" data-testid="skel-side"><div class="brand"><div class="logo">' + svg(sk.icon) + '</div><div class="brand-name label">' + esc(sk.name) + '</div></div>'
@@ -37,7 +38,8 @@
     tg.onclick = function () { fit(!side.classList.contains('collapsed')); };
     var mq = root.matchMedia && root.matchMedia('(min-width:761px) and (max-width:1100px)');
     if (mq) { fit(mq.matches); if (mq.addEventListener) mq.addEventListener('change', function () { fit(mq.matches); }); }
-    function setActive(k) { Array.prototype.forEach.call(app.querySelectorAll('.nav-btn[data-sec]'), function (b) { b.classList.toggle('active', b.getAttribute('data-sec') === k); }); }
+    /* SCREEN-ID: the section on show is the screen the header chip names (app/screen-id.js, if the page loaded it) */
+    function setActive(k) { Array.prototype.forEach.call(app.querySelectorAll('.nav-btn[data-sec]'), function (b) { b.classList.toggle('active', b.getAttribute('data-sec') === k); }); if (root.CBScreenId) root.CBScreenId.here(appId, k); }
     Array.prototype.forEach.call(app.querySelectorAll('.nav-btn[data-sec]'), function (b) {
       b.onclick = function () { var k = b.getAttribute('data-sec'); setActive(k); if (sk.onSection) sk.onSection(k); };
     });
@@ -45,7 +47,7 @@
   }
   function mount(o) {
     o = o || {};
-    var sess = session(), doc = root.document, sk = o.skeleton ? skeleton(doc, o.skeleton) : null, host;
+    var sess = session(), doc = root.document, sk = o.skeleton ? skeleton(doc, o.skeleton, o.app) : null, host;
     if (sk) host = sk.host; else { host = doc.createElement('div'); host.id = 'shell'; doc.body.insertBefore(host, doc.body.firstChild); }
     /* CL3: signin:false = a PUBLIC page (the Country lab) — it works signed out, so no sign-in window sits over it; the avatar's door is
        "Sign in", a link to Home's one sign-in window. area names the switcher's area when the page has no manifest entry (labs). */
@@ -57,6 +59,7 @@
       signin: open ? { surface: o.surface || o.app, need: 'person', registerHref: '/settings.html#/new', onIn: function () { root.location.reload(); } } : false,   /* false: no window at all, even where signin-ui.js is loaded */
       avatar: open ? { onSignIn: function () { var s = host.querySelector('.cbsh-signin'); if (s && s.scrollIntoView) s.scrollIntoView({ block: 'center' }); } } : { signInHref: '/' }
     });
+    if (sk && root.CBScreenId) root.CBScreenId.here(o.app, o.skeleton.active);   /* the shell named the app; the skeleton names the section it opened on */
     if (sk && o.kural && root.CBKural) { root.CBKural.mount(); root.CBKural.set(o.kural); }   /* the one kural band at the FOOT, outside the head - as CB Finance / CRM / Accounts */
     if (o.work && sk) sk.screen.appendChild(o.work);
     else if (o.work && shell && shell.slots && shell.slots.work) shell.slots.work.appendChild(o.work);
