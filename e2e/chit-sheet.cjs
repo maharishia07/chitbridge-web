@@ -35,7 +35,7 @@ const SHOP = 'Books Shop', TODAY = new Date().toISOString().slice(0, 10);
 /* the REAL engine, the real invoice: the adopted tax.js run in a sandbox, CBTax.determine() once, CBTax.moneyOf() to read it */
 const vm = require('vm');
 const eng = { }; eng.window = eng; eng.self = eng; vm.createContext(eng);
-for (const f of ['engine/money.js', 'app/tax.js']) vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), eng);
+for (const f of ['engine/money.js', 'engine/tax.js']) vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), eng);
 const LINES = [{ name: 'Rice 5kg', unit: 'piece', qty: 2, unit_price: 97.16, discount: 10, gst_rate: 12 }, { name: 'Soap', unit: 'piece', qty: 3, unit_price: 98.7, discount: 0, gst_rate: 18 },
                { name: 'Oil 1L', unit: 'piece', qty: 1, unit_price: 89.48, discount: 5.25, gst_rate: 12 }, { name: 'Tea', unit: 'piece', qty: 2, unit_price: 54.8, discount: 0, gst_rate: 18 }];
 const INV = eng.CBTax.determine({ seller: { Gstin: '33AAAAA0000A1Z5', State: '33', LglNm: SHOP }, buyer: { LglNm: 'Walk-in', State: '', Pos: '33' }, lines: LINES, priceIncludesTax: true });
@@ -109,7 +109,9 @@ function chitRead(S, id) {
   const ch = S.chits[id], w = (S.waiting || []).filter((x) => x.chit_id === id).slice(-1)[0] || null;
   const wait = w ? { todo: w.todo || 'record', name: w.name || null, why: w.reason || w.why || null, candidates: w.candidates || [] } : null;
   const accept = ch.doc === 'bill_received' && wait && wait.todo !== 'accept' ? { ok: false, why: 'books_waiting', say: wait.why, todo: wait.todo } : { ok: true };
-  return Object.assign({}, ch, { books_wait: wait, actions: Object.assign({}, ch.actions || {}, { accept }) });
+  /* FX-F10W2: and `actions.reject` — the level alone refuses it; it needs a reason (forBill + workflow needsOf) */
+  const reject = ch.doc === 'bill_received' ? (S.rejectRefused ? { ok: false, why: 'read_only', say: 'You can only read this bill.' } : { ok: true, needs: ['reason'] }) : undefined;
+  return Object.assign({}, ch, { books_wait: wait, actions: Object.assign({}, ch.actions || {}, { accept }, reject ? { reject } : {}) });
 }
 async function route(S, r) {
   const q = r.request(), u = new URL(q.url()), p = u.pathname, m = q.method();
@@ -123,6 +125,8 @@ async function route(S, r) {
   if (p.startsWith('/api/books')) return J(r, 200, {});
   let x;
   if ((x = p.match(/^\/api\/chits\/([^/]+)\/status$/)) && m === 'PUT') {
+    /* FX-F10W2: the server refuses a bill's reject without a reason (routes/chits.js moveStatus: reason_required) */
+    if (body.status === 'rejected' && !String(body.note || '').trim() && S.chits[x[1]].doc === 'bill_received') return J(r, 400, { error: 'Reason required', code: 'reason_required', message: 'Say why you are rejecting this bill — the reason goes on the bill.' });
     S.statusCalls.push({ id: x[1], body }); S.calls.push('status');
     /* a bill I received: since "bills-private" my step is a bill_step row in MY state_log — the shared status is the seller's and does not move */
     /* FX-F10W: a captured receipt IS a bill (folder-inventory bill_received) — its step is a bill_step too, the header's status never moves */
@@ -248,7 +252,7 @@ async function route(S, r) {
     const S = standIn(); const { ctx, p } = await open(S);
     await p.click('[data-testid="db-src-JV/2026-27/000002"]'); await waitSheet(p, 'AM-81');
     const a = await acts(p);
-    ok(JSON.stringify(a) === JSON.stringify(['accept', 'dispute', 'goodsin', 'page']), 'supplier bill icon row = Accept · Dispute · Goods in · Open page — got ' + a.join(' · '));
+    ok(JSON.stringify(a) === JSON.stringify(['accept', 'reject', 'dispute', 'goodsin', 'page']), 'supplier bill icon row = Accept · Reject · Dispute · Goods in · Open page — got ' + a.join(' · '));
     ok(/Supplier bill/.test(await p.textContent('[data-testid="cs-head"]')) && /Agro Mills/.test(await p.textContent('[data-testid="cs-who"]')) && /To accept/.test(await p.textContent('[data-testid="cs-step"]')), 'a supplier bill: who is Agro Mills, step "To accept"');
     ok(/2,?380\.95/.test(await p.textContent('[data-testid="cs-gst-5"]')) && /59\.52/.test(await p.textContent('[data-testid="cs-gst-5"]')) && /59\.53/.test(await p.textContent('[data-testid="cs-gst-5"]')), 'its GST row is the chit\'s own (taxable 2,380.95 · CGST 59.52 · SGST 59.53)');
     ok(await p.textContent('[data-testid="cs-title"]') === 'Supplier bill', 'the title of a bill received is "Supplier bill"');
@@ -344,9 +348,10 @@ async function route(S, r) {
     await p.evaluate(() => bkTab('waiting')); await p.waitForSelector('[data-testid="wait-0"]', { timeout: 8000 });
     await p.waitForFunction(() => /Agro Mills/.test((document.querySelector('[data-testid="wait-0"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
     const heads = await p.$$eval('#bk_body .lhead .lhcell', (els) => els.map((x) => x.textContent.replace(/[⇅▲▼]/g, '').trim()));
-    ok(JSON.stringify(heads) === JSON.stringify(['Party', 'Amount', 'Step']), 'Waiting is the Task table, its top three columns by priority: ' + heads.join(' · '));
-    /* the rest are one tick away in the columns chooser (bill no, date) */
-    await p.click('[data-testid="cols-btn-waiting"]'); await p.click('[data-testid="cols-waiting-no"]'); await p.click('[data-testid="cols-waiting-date"]'); await p.click('[data-testid="cols-btn-waiting"]');
+    /* FX-F10W2: the four a person needs (defaultCols) — the top-three default left Bill no out */
+    ok(JSON.stringify(heads) === JSON.stringify(['Party', 'Bill no', 'Amount', 'Step']), 'Waiting is the Task table, its columns Party · Bill no · Amount · Step: ' + heads.join(' · '));
+    /* the rest are one tick away in the columns chooser (date) */
+    await p.click('[data-testid="cols-btn-waiting"]'); await p.click('[data-testid="cols-waiting-date"]'); await p.click('[data-testid="cols-btn-waiting"]');
     const row0 = (await p.textContent('[data-testid="wait-0"]')).replace(/\s+/g, ' ');
     ok(/Agro Mills/.test(row0) && /AM-81/.test(row0) && /2,500\.00/.test(row0) && /To accept/.test(row0), 'a supplier bill row reads supplier · bill no · amount (summary_json.money.total) · step: "' + row0.trim() + '"');
     const body = await p.textContent('#bk_body');
@@ -405,6 +410,49 @@ async function route(S, r) {
     await p.waitForFunction(() => /Accepted/.test((document.querySelector('[data-testid="cs-step"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
     ok(/Accepted/.test(await p.textContent('[data-testid="cs-step"]')) && await p.locator('[data-testid="cs-act-accept"]').count() === 0,
       'F10W · "Already accepted" (noop) is painted as Accepted even when the read lags — a second Accept is never offered');
+    await p.keyboard.press('Escape'); await ctx.close();
+  }
+  /* ── 3e2 · FX-F10W2: REJECT, with its reason — the existing status step (PUT /status rejected + note); the row leaves Waiting; the popup reads the receipt's own money ── */
+  {
+    const S = standIn();
+    S.chits.rc1.header.business_json.their_bill.total = 441;
+    S.chits.rc1.header.business_json.input_tax = { taxable: 420, tax: 21, supply: 'intra', heads: [{ name: 'CGST', rate: 2.5, amount: 10.5 }, { name: 'SGST', rate: 2.5, amount: 10.5 }], inclusive: false, vendor_state: '33' };
+    S.chits.rc1.detail.line_items = [{ particulars: 'Toor dal', quantity: 4, unit: 'kg', price: 105, value: 420, gst_rate: 5 }];   /* the receipt line's own value, no `total` */
+    S.waiting = [{ id: 21, chit_id: 'rc1', ref: 'chit:rc1', todo: 'record', reason: 'Their bill SG-103 says ₹441.00, goods ₹400.00 + tax ₹20.00 come to ₹420.00 — ₹21.00 apart. Ask Sri Ganesh Provisions to correct it, or reject it and record their bill by hand.', tries: 0, since: TODAY + 'T04:20:00Z' },
+      { id: 7, chit_id: 'ch1', ref: 'bill:ch1', reason: 'September is locked. Open it again to record this bill.', tries: 3, since: TODAY + 'T05:00:00Z' }];
+    const { ctx, p } = await open(S);
+    await p.evaluate(() => bkTab('waiting')); await p.waitForSelector('[data-testid="wait-0"]', { timeout: 8000 });
+    const hd = await p.$$eval('[data-testid="waiting-list"] .cbl-head [data-col], [data-testid="waiting-list"] [role="columnheader"]', (els) => els.map((e) => e.textContent.trim())).catch(() => []);
+    const wtext = await p.textContent('[data-testid="waiting-list"]');
+    ok(/Bill no/.test(wtext) && /SG-103/.test(wtext) && /Party/.test(wtext) && /Amount/.test(wtext) && /Step/.test(wtext), 'FX-F10W2 · Waiting at 1360 shows Party · Bill no · Amount · Step (Bill no was left out) — ' + JSON.stringify(hd));
+    await p.evaluate(() => openChitSheet('rc1')); await waitSheet(p, 'SG-103');
+    ok(/420/.test(await p.textContent('[data-testid="cs-line-0"]')) && !/—/.test((await p.$$eval('[data-testid="cs-line-0"] td', (t) => t.map((x) => x.textContent))).pop()),
+      'FX-F10W2 · the receipt line shows its own value (₹420), never "—"');
+    ok(await p.locator('[data-testid="cs-gst-none"]').count() === 0 && /21/.test(await p.textContent('[data-testid="cs-gst-total"]')), 'FX-F10W2 · the GST the counter recorded (input_tax ₹21) is shown — never "not recorded" when it is');
+    const a = await p.$$eval('[data-testid="cs-acts"] .cs-act', (els) => els.map((e) => e.getAttribute('data-testid').replace('cs-act-', '')));
+    ok(JSON.stringify(a) === JSON.stringify(['accept', 'reject', 'page']) && await p.locator('[data-testid="cs-act-reject"]:not([disabled])').count() === 1,
+      'FX-F10W2 · a captured receipt offers Accept · Reject · Open page; Reject is live while the books wait on a gap (rejecting is the fix they name) — got ' + a.join(' · '));
+    await p.click('[data-testid="cs-act-reject"]');
+    ok(await p.locator('[data-testid="cs-reason"]').count() === 1 && S.statusCalls.length === 0, 'FX-F10W2 · Reject asks why first — nothing sent by the tap');
+    await p.click('[data-testid="cs-reject-go"]'); await p.waitForTimeout(150);
+    ok(S.statusCalls.length === 0 && /reason/i.test(await p.textContent('[data-testid="cs-note"]')), 'FX-F10W2 · …no reason → nothing sent, said');
+    await p.fill('[data-testid="cs-reason"]', 'Their bill is ₹21 more than the goods and tax');
+    await p.click('[data-testid="cs-reject-go"]');
+    await p.waitForFunction(() => /Rejected/.test((document.querySelector('[data-testid="cs-step"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
+    ok(S.statusCalls.length === 1 && S.statusCalls[0].body.status === 'rejected' && S.statusCalls[0].body.note === 'Their bill is ₹21 more than the goods and tax',
+      'FX-F10W2 · → PUT /status { status: rejected, note: <the reason> } once — the reason goes on the bill — ' + JSON.stringify(S.statusCalls));
+    ok(/Rejected/.test(await p.textContent('[data-testid="cs-step"]')) && await p.locator('[data-testid="cs-act-accept"]').count() === 0 && await p.locator('[data-testid="cs-act-reject"]').count() === 0,
+      'FX-F10W2 · the sheet says Rejected and offers neither Accept nor Reject again (the bill_step "rejected" is read as rejected)');
+    await p.waitForFunction(() => !/SG-103/.test((document.querySelector('[data-testid="waiting-list"]') || {}).textContent || ''), null, { timeout: 5000 }).catch(() => {});
+    ok(!/SG-103/.test(await p.textContent('[data-testid="waiting-list"]')), 'FX-F10W2 · its Waiting row left the list (the server closed it: "Rejected — not posted")');
+    await p.keyboard.press('Escape'); await ctx.close();
+  }
+  {
+    const S = standIn(); S.rejectRefused = true;
+    const { ctx, p } = await open(S);
+    await p.evaluate(() => openChitSheet('rc1')); await waitSheet(p, 'SG-103');
+    const rj = p.locator('#chitsheet [data-testid="cs-act-reject"]');
+    ok(await rj.count() === 1 && await rj.isDisabled() && /only read/.test(await rj.getAttribute('title') || ''), 'FX-F10W2 · a refused Reject (actions.reject) is shown greyed WITH the server\'s sentence');
     await p.keyboard.press('Escape'); await ctx.close();
   }
   /* ── 3f · FX-F10W: "Who is Sri Ganesh?" carries the shop's near match — "Is this Sri Ganesh Provisions (P-00001)?" links, never a second party ── */

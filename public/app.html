@@ -1684,13 +1684,13 @@ body.lab-only #cbtestpanel{
 <!-- WHICH PRICE APPLIES — Part D declared tiered/regional/time-boxed pricing for months and nothing evaluated
      it. Pure resolver, same posture as offers.js; not wired to a screen yet. -->
 <script src="/app/price-resolve.js"></script>
-<!-- ⚠️⚠️ GENERATED MIRRORS of chitbridge-api/lib/tax.js and lib/tax-slab.js — see the header in each file, and
-     chitbridge-api/scripts/mirror-pure-libs.cjs, which writes them. NEVER edited here.
+<!-- ⚠️⚠️ ADOPTED from chitbridge-engines by tools/adopt.cjs (engines.lock.json) — engine/tax.js is THE one tax bundle (packs + regulation +
+     tax-packs + tax-slab + tax), the same file the counter and Country Lab load (T1-TAX: app/tax.js, a second bundle, is gone). NEVER edited here.
      Athi, 2026-09-03: *"each tab in the catalogue is going to attach those and it has to showcase the outcome …
      so it can be verified then and there."* Showing the invoice split on the product needs the REAL
      determination; a lookalike would agree on every example anyone tries and diverge on the one that matters.
      Eager, not lazy: the product's Pricing & tax pane lives in app.html itself. -->
-<script src="/app/tax.js"></script>
+<script src="/engine/tax.js"></script>
 <script src="/app/chit-sheet.js"></script>   <!-- THE CHIT SHEET: a chit as a popup, with the actions its step allows -->
 <script src="/app/tax-slab.js"></script>
 <script src="/app/barcode.js"></script>  <!-- Code 128 of the SKU for the product page (Barcode tab); pure, no network -->
@@ -4323,7 +4323,7 @@ function themePaletteHTML(){
     + "</div>"
     + needs.map(a11yRow).join("")
     + "<div style=\"font-size:var(--fs-1);color:var(--grey);line-height:1.5;margin-top:4px\">"
-    +   "Standard: <b>WCAG 2.2</b> (contrast 1.4.3 / 1.4.6 / 1.4.11) · colour-blind palette: <b>Okabe–Ito</b>."
+    +   "Standard: <b>WCAG 2.2</b> (contrast 1.4.3 / 1.4.11) · colour-blind palette: <b>Okabe–Ito</b>."
     + "</div>";
 }
 
@@ -6338,6 +6338,12 @@ async function ccAiFill(){
     ccRenderItems();
     if(typeof toast==='function')toast(txn('AI filled {count} line item — review, edit, then send ✓',
           'AI filled {count} line items — review, edit, then send ✓', rows.length));
+    /* T1-AI: the server checks each quantity against the words (lib/line-guard.js) — branch on its code, show which rows. */
+    var qc=j&&j.data&&j.data.quantity_check;
+    if(qc&&qc.code==='QTY_NEEDS_CHECK'&&err){
+      var names=rows.filter(function(li){ return li&&li.needs_human; }).map(function(li){ return String(li.particulars||'item'); }).slice(0,4).join(', ');
+      err.textContent=txn('{count} row needs your check','{count} rows need your check',qc.needs_human)+' ('+names+'): the words say another quantity or "don\'t want". Fix before sending.';
+    }
   }catch(e){ if(err)err.textContent=(e&&e.message)||'AI fill failed'; }
   finally{ var b2=document.getElementById('cc_aibtn'); if(b2){ b2.disabled=false; b2.textContent='✨ Fill'; } }
 }
@@ -13994,7 +14000,7 @@ async function prodPricingLoad(){
  * specific, but there are slabs, so define slab and attach the slab to the product"* — and, on every attach
  * screen: *"it has to showcase the outcome … so it can be verified then and there."*
  *
- * ⚠️⚠️ THE OUTCOME IS COMPUTED BY lib/tax.js ITSELF (app/tax.js is its generated mirror), NEVER BY ARITHMETIC
+ * ⚠️⚠️ THE OUTCOME IS COMPUTED BY lib/tax.js ITSELF (engine/tax.js is its adopted release), NEVER BY ARITHMETIC
  * WRITTEN HERE. A screen that halves the rate its own way agrees with the engine on every example anyone tries
  * and diverges on the one that matters — an odd rate, an inclusive price, a discount. Same rule for the
  * resolution: `CBTaxSlab.resolve` is the API's own function, so what this pane shows is what an order will do.

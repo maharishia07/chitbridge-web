@@ -3,12 +3,12 @@
  * Nothing here reaches localhost:3000, port 7351 or the live site: every /api/** call is fulfilled by ctx.route before it can leave the browser (and the
  * page is made to refuse any other host). The Standards page itself reads NO API (the register is cap-standards.js), so the stand-in's job is to PROVE that.
  *
- *  1  the register (cap-standards.js): 81 rows — the designer's 61, then CPS1's Country Standard, LOC0's pseudo-localisation, CO3's 4 record-keeping rows,
- *     CO1's 7 privacy rows and CO2's 7 security rows, in that order — 35 in force · 32 partly · 14 planned; every row has area · kind · applies-in · plain words; every Partly and Planned
- *     row says what is missing; the first 44 rows' words are the register's own, unchanged; the 17 additions carry their stated statuses; no second WCAG row
- *  2  laptop 1366×768: title · "checked 13 Oct 2026" · the matrix beside the list; the matrix's All row IS the register's counts; the list is a CBList mount
+ *  1  the register (cap-standards.js), COUNTED FROM THE SOURCE (STDREG1: never a fixed number — e2e/standards-one-list.cjs guards it): every row has an id,
+ *     area · product area · kind · applies-in · plain words; every Partly and Planned row says what is missing; each round's rows are named by id (CO3 · CO1 ·
+ *     CO2 · STDREG1) and carry their stated statuses; an In force row added since STDREG1 names its proof; no second WCAG contrast row
+ *  2  laptop 1366×768: title · "checked <STD_CHECKED>" · the matrix beside the list; the matrix's All row IS the register's counts; the list is a CBList mount
  *     (three columns, a resize handle on each, only the rows scroll) with the head at most 20% of the window; no sideways scroll
- *  3  THE CELL IS THE LIST'S FILTER: Money & GST × Partly → 3 rows, two of the unit's own chips, one lit cell; a row heading filters the row, a column heading the
+ *  3  THE CELL IS THE LIST'S FILTER: Money & GST × Partly → its rows, two of the unit's own chips, one lit cell; a row heading filters the row, a column heading the
  *     status; a "—" cell does nothing; clearing a chip clears the cell; changing the unit's Filters popover moves the lit cell; Count by Country and Kind
  *  4  search · no match · Group by · a row opens with label : value and the two buttons; Copy puts the standard, clause, status and what is missing on the clipboard;
  *     Open in the app goes to the app's own door; a row with no place in the app has no such button; a New row says so
@@ -37,23 +37,32 @@ const J = (r, status, o) => r.fulfill({ status, contentType: 'application/json',
 function readRegister(file) {
   const ctx = { tx: (s) => s, esc: (s) => String(s) };
   vm.createContext(ctx);
-  vm.runInContext(fs.readFileSync(file, 'utf8') + ';this.R = { S: STANDARDS, A: STD_AREAS, K: STD_KINDS, C: STD_COUNTRIES, ST: STD_STATUS, CH: STD_CHECKED, WHY: STD_WHY, REC: STD_RECORD, compat: stdCompatRows, abbrs: stdAbbrs, gl: stdGlossary, GL: STD_GLOSSARY };', ctx);
+  vm.runInContext(fs.readFileSync(file, 'utf8') + ';this.R = { S: STANDARDS, A: STD_AREAS, PA: STD_PRODUCT_AREAS, K: STD_KINDS, C: STD_COUNTRIES, ST: STD_STATUS, CH: STD_CHECKED, WHY: STD_WHY, REC: STD_RECORD, compat: stdCompatRows, abbrs: stdAbbrs, gl: stdGlossary, GL: STD_GLOSSARY };', ctx);
   return ctx.R;
 }
 const REG = readRegister(path.join(PUB, 'app', 'cap-standards.js'));
-/* the register's rows, in order (INT4, 13 Oct 2026): the designer's 61, then each round's additions where it appended them — named here once, so a
-   count below says which round moved it. CO is the compliance rounds' rows (CO3 · CO1 · CO2), proved by their own rule (section 1, last block). */
-const AT = { CPS1: [61, 62], LOC0: [62, 63], CO3: [63, 67], CO1: [67, 74], CO2: [74, 81] };
-const ROWS = (k) => REG.S.slice(AT[k][0], AT[k][1]);
-const CO = REG.S.slice(AT.CO3[0]);
+/* each round's rows, BY ID (STDREG1, 14 Oct 2026: rows were sliced by position — 61, 62, 63 … — so a row added mid-list moved every round's slice; ids do not
+   move). CO is the compliance rounds' rows (CO3 · CO1 · CO2), proved by their own rule (section 1, last block). */
+const BYID = {}; REG.S.forEach((r) => { BYID[r.id] = r; });
+const IDS = {
+  CO3: ['in-records-retention', 'in-books-in-india', 'au-records-retention', 'ae-records-retention'],
+  CO1: ['privacy-processors', 'it-act-43a', 'it-intermediary-rules', 'dpdp-children', 'au-privacy-apps', 'ae-pdpl-rights', 'ae-pdpl-ropa'],
+  CO2: ['cert-in', 'dpdp-breach', 'au-ndb', 'ae-pdpl-breach', 'iso27001-a8-15', 'csp3', 'iso27001-a8-5'],
+};
+const ROWS = (k) => IDS[k].map((id) => BYID[id]).filter(Boolean);
+const CO = ROWS('CO3').concat(ROWS('CO1'), ROWS('CO2'));
+const NEW = REG.S.filter((r) => r.added === '2026-10-14');   /* STDREG1's rows */
 const COUNT = { live: 0, part: 0, plan: 0 }; REG.S.forEach((r) => { COUNT[r.s]++; });
 /* M41: the page lists the register AND the Compatibility rows of public/data/compat.json (the 4th Kind); ALL is what the list and the matrix hold */
 const COMPAT_JSON = JSON.parse(fs.readFileSync(path.join(PUB, 'data', 'compat.json'), 'utf8'));
 const CROWS = REG.compat(COMPAT_JSON);
+const cjHas = (sys) => (COMPAT_JSON.rows || []).some((x) => x.system === sys);
 const ALL = REG.S.concat(CROWS), N = ALL.length;
 const CA = { live: 0, part: 0, plan: 0 }; ALL.forEach((r) => { CA[r.s]++; });
 const shownAll = () => new RegExp('^' + N + ' shown');
-const DESIGN = (() => { const g = { window: {} }; vm.createContext(g); vm.runInContext(fs.readFileSync(path.join(ROOT, 'docs', 'design', 'standards-page', 'data.js'), 'utf8'), g); return g.window.STD_PAGE; })();
+/* the design's data.js is DERIVED from the register (STDREG1): load it the way its index.html does — data.js, then the register — and read what it built */
+const DESIGN_DERIVED = (() => { const g = {}; g.window = g; vm.createContext(g); vm.runInContext(fs.readFileSync(path.join(ROOT, 'docs', 'design', 'standards-page', 'data.js'), 'utf8'), g); vm.runInContext(fs.readFileSync(path.join(PUB, 'app', 'cap-standards.js'), 'utf8'), g); return vm.runInContext('window.STD_PAGE', g); })();
+const CHECKED = new Date(REG.CH + 'T12:00:00Z').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });   /* "14 Oct 2026" — as the page says it */
 
 /* the stand-in: every /api call is recorded and answered with nothing — the page is expected to ask for none */
 async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.calls.push(q.method() + ' ' + u.pathname); return J(r, 200, {}); }
@@ -107,34 +116,29 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     const CO3 = ['Companies Act 2013 s.128(5) · CGST Act s.36, Rules 56–57', 'Companies (Accounts) Rules r.3(5)–(6)',
       'TAA 1953 Sch 1 s.382-5 · Corporations Act 2001 s.286', 'Tax Procedures Decree-Law 28/2022 · Corporate Tax Decree-Law 47/2022 Art. 56'];
     const CO1 = ROWS('CO1'), CO2 = ROWS('CO2');
-    ok(REG.S.length === 81 && ROWS('CO3').map((r) => r.n).join('|') === CO3.join('|') && ROWS('CO3').every((r) => r.s === 'part' && r.added === '2026-10-13'),
-      'the register holds 81 standards (44 + the 17 adopted 2–3 Oct 2026 + the Country Standard, CPS1 + pseudo-localisation, LOC0 + CO3\'s 4 record-keeping rows, each Partly + CO1\'s 7 privacy rows + CO2\'s 7 security rows): ' + REG.S.length);
-    /* N11 (9c8cdc58, 2026-10-08): ISO 8601 moved Partly → In force with a stated limit, proven by chitbridge-api tests/iso8601.test.cjs; CPS1: the Country Standard, In force with a limit; LOC0: pseudo-localisation, Partly */
-    ok(COUNT.live === 35 && COUNT.part === 32 && COUNT.plan === 14, 'in force 35 · partly 32 (16 + CO3\'s 4 + CO1\'s 6 + CO2\'s 6) · planned 14 (12 + CO1\'s 1 + CO2\'s 1) (' + COUNT.live + ' · ' + COUNT.part + ' · ' + COUNT.plan + ')');
-    const fields = REG.S.filter((r) => !r.a || !r.k || !Array.isArray(r.c) || !r.c.length || !r.p);
-    ok(fields.length === 0, 'every row has an area, a kind, an applies-in and the plain-words line' + (fields.length ? ' — missing on ' + fields.map((r) => r.n).join('; ') : ''));
+    ok(ROWS('CO3').length === 4 && ROWS('CO3').map((r) => r.n).join('|') === CO3.join('|') && ROWS('CO3').every((r) => r.s === 'part' && r.added === '2026-10-13'),
+      'CO3\'s 4 record-keeping rows are on the register by id, each Partly');
+    ok(COUNT.live + COUNT.part + COUNT.plan === REG.S.length && REG.S.length >= 109, 'the register holds ' + REG.S.length + ' standards, counted from the source: in force ' + COUNT.live + ' · partly ' + COUNT.part + ' · planned ' + COUNT.plan);
+    const fields = REG.S.filter((r) => !r.id || !r.a || !r.pa || !r.k || !Array.isArray(r.c) || !r.c.length || !r.p);
+    ok(fields.length === 0, 'every row has an id, an area, a product area, a kind, an applies-in and the plain-words line' + (fields.length ? ' — missing on ' + fields.map((r) => r.n).join('; ') : ''));
     const areas = REG.A.map((a) => a[0]), kinds = REG.K.map((k) => k[0]), ctry = REG.C.map((c) => c[0]);
-    ok(REG.S.every((r) => areas.indexOf(r.a) >= 0 && kinds.indexOf(r.k) >= 0 && r.c.every((c) => ctry.indexOf(c) >= 0)), 'every area, kind and country code is one the vocabularies define');
+    const pas = REG.PA.map((a) => a[0]);
+    ok(REG.S.every((r) => areas.indexOf(r.a) >= 0 && pas.indexOf(r.pa) >= 0 && kinds.indexOf(r.k) >= 0 && r.c.every((c) => ctry.indexOf(c) >= 0)), 'every area, product area, kind and country code is one the vocabularies define');
     const noMiss = REG.S.filter((r) => r.s !== 'live' && !(r.m && r.m.length > 3));
     ok(noMiss.length === 0, 'every Partly and Planned row says what is missing' + (noMiss.length ? ' — ' + noMiss.map((r) => r.n).join('; ') : ''));
     ok(REG.S.every((r) => r.s !== 'live' || !r.m), 'an In force row carries no "missing" line (a stated limit is `limit`, shown as Limit:)');
-    ok(REG.S.filter((r) => r.limit).map((r) => r.n).sort().join('|') === ['AS 2 / Ind AS 2', 'CGST Act s.9(3)/9(4) + notifications; s.49(4), Rule 86(2)', 'Schedule III, Companies Act (Division I)', 'ISO 8601', 'Country Standard (chitbridge-engines docs/COUNTRY-STANDARD.md)'].sort().join('|'), 'the five In force rows with a stated limit carry it: Schedule III, AS 2, reverse charge, ISO 8601 (N11), the Country Standard (CPS1)');
-    /* the words are the register's own: row by row against the designer's data (which was built from the register), every field both hold */
-    const keys = ['g', 'n', 'w', 'ex', 'exWhy', 's', 'note', 'at', 'go', 'why', 'a', 'k', 'p', 'm', 'limit', 'eq'];
-    const diff = [];
-    const MOVED = { 'ISO 8601': 'N11', 'Digital Personal Data Protection Act 2023': 'CO1' };   /* a row the register has moved on from the design's data, on purpose, with its reason */
-    DESIGN.rows.forEach((d, i) => { const r = REG.S[i]; if (r && MOVED[r.n]) return; keys.forEach((k) => { if ((r && r[k] || undefined) !== (d[k] || undefined)) diff.push(i + ':' + k); }); if (!r || JSON.stringify(r.c) !== JSON.stringify(d.c)) diff.push(i + ':c'); });
-    /* the designer's data is the register AS OF 3 Oct 2026 (61 rows); rows adopted later (CPS1: the Country Standard · LOC0: pseudo-localisation) follow it, and are not in it */
-    ok(DESIGN.rows.length === 61 && REG.S.length >= DESIGN.rows.length && diff.length === 0, 'the designer\'s 61 rows equal the register\'s first 61, field for field' + (diff.length ? ' — ' + diff.slice(0, 6).join(' ') : ''));
-    const added = REG.S.slice(0, AT.CO3[0]).filter((r) => r.added);
-    ok(added.length === 19 && added.filter((r) => r.s === 'live').length === 12 && added.filter((r) => r.s === 'part').length === 5 && added.filter((r) => r.s === 'plan').length === 2, 'the 19 additions carry their stated statuses: 12 in force, 5 partly (LOC0\'s pseudo-localisation is Partly), 2 planned');
+    ok(REG.S.filter((r) => r.limit).every((r) => r.s === 'live') && ['schedule-iii', 'as2-inventories', 'gst-rcm', 'iso8601', 'country-standard'].every((id) => BYID[id] && BYID[id].limit), 'a stated limit sits only on an In force row; Schedule III, AS 2, reverse charge, ISO 8601 (N11) and the Country Standard (CPS1) still carry theirs');
+    /* the design's data.js is derived from the register, row for row (STDREG1: it held a 61-row copy, compared field for field — a second list) */
+    ok(DESIGN_DERIVED.rows.length === REG.S.length && DESIGN_DERIVED.rows.every((d, i) => d.key === REG.S[i].id && d.n === REG.S[i].n && d.s === REG.S[i].s), 'the design\'s data.js builds its ' + DESIGN_DERIVED.rows.length + ' rows from the register itself — no copy to drift');
+    const added = REG.S.filter((r) => r.added === '2026-10-03');
+    ok(added.length === 17 && added.filter((r) => r.s === 'live').length === 11 && added.filter((r) => r.s === 'part').length === 4 && added.filter((r) => r.s === 'plan').length === 2, 'the 17 adopted 2–3 Oct 2026 carry their stated statuses: 11 in force, 4 partly, 2 planned');
     const cm = REG.S.filter((r) => r.matrix === 'country');
     ok(cm.length === 1 && cm[0].c.join() === 'IN,AU,AE' && cm[0].s === 'live' && cm[0].limit, 'ONE Country Standard row (CPS1): applies in IN · AU · AE, In force with a stated limit, its opened row paints the matrix');
     const CMXJ = JSON.parse(fs.readFileSync(path.join(PUB, 'data', 'country-matrix.json'), 'utf8'));
     ok(Array.isArray(CMXJ.rows) && CMXJ.rows.length > 80 && CMXJ.packs.map((x) => x.id).join() === 'IN,AU,AE' && CMXJ.packs.every((x) => CMXJ.missing[x.id] && CMXJ.counts[x.id]), 'data/country-matrix.json is the engines\' generated matrix: ' + CMXJ.rows.length + ' members × IN · AU · AE, with counts and the ❌ list per pack (engines v' + CMXJ.engines + ')');
     ok(CO1.length === 7 && CO1.every((r) => r.a === 'people' && r.k === 'law' && r.s !== 'live' && r.added === '2026-10-13') && ['IN', 'AU', 'AE'].every((c) => CO1.some((r) => r.c.indexOf(c) >= 0)), 'CO1: 7 privacy rows for India, Australia and the UAE — none claims In force (the owner acts and the ◐ citations come first)');
-    ok(REG.S.filter((r) => /WCAG/.test(r.n) && /1\.4\.3/.test(r.n)).length === 1 && /16 themes/.test(REG.S[11].note), 'no second WCAG contrast row: the existing one now says all 16 themes');
-    ok(REG.CH === '2026-10-13', 'the register says when it was last checked (STD_CHECKED)');
+    ok(REG.S.filter((r) => /WCAG/.test(r.n) && /1\.4\.3/.test(r.n)).length === 1 && /16 themes/.test(BYID['wcag-1.4.3'].note), 'no second WCAG contrast row: the existing one now says all 16 themes');
+    ok(/^\d{4}-\d{2}-\d{2}$/.test(REG.CH) && REG.CH >= '2026-10-14', 'the register says when it was last checked (STD_CHECKED ' + REG.CH + ')');
     ok(CO1.length === 7 && CO1.every((r) => r.a === 'people' && r.k === 'law' && r.s !== 'live') && ['IN', 'AU', 'AE'].every((c) => CO1.some((r) => r.c.indexOf(c) >= 0)), 'CO1: 7 privacy rows for India, Australia and the UAE — none claims In force (the owner acts and the ◐ citations come first)');
     ok(new Set(REG.S.map((r) => r.n)).size === REG.S.length, 'no standard is listed twice');
     /* M41 · Compatibility: ONE file, every row a valid register row, honest about proof */
@@ -157,6 +161,16 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     ok(CO.length === 18 && CO.every((r) => (r.k === 'law' || r.k === 'std') && r.s !== 'live' && r.at && r.why && (r.s === 'plan' || (r.note && r.note.length > 80))), 'the ' + CO.length + ' compliance rows (CO3 · CO1 · CO2) are laws or standards, none In force, each with where the proof is and why — and, unless Planned, what is in force and what is not');
     ok(['IN', 'AU', 'AE'].every((c) => CO.some((r) => r.c.indexOf(c) >= 0 && r.k === 'law')), 'India, Australia and the UAE each have a law row from the compliance rounds');
     ok(CO2.filter((r) => r.k === 'law').every((r) => /\b(Act|Decree-Law|Directions|Rules)\b/.test(r.n)), 'every CO2 law row names its legal reference in its title');
+    /* STDREG1 (14 Oct 2026) · what was missing, and the rows that said more than the code does */
+    const want = ['beckn-core', 'ondc-registry', 'ondc-igm', 'ondc-rsf', 'ondc-taxonomy', 'au-gst-bas', 'aasb-101', 'aasb-102', 'au-div40', 'au-abn', 'ae-vat-201', 'pint-ae', 'ae-trn', 'hsn-sac', 'gstin-check', 'fx-ias21', 'openapi', 'gs1-ai', 'wcag-1.4.6'];
+    ok(want.every((id) => BYID[id] && BYID[id].added === '2026-10-14'), 'STDREG1\'s rows are on the register (' + NEW.length + ' added 14 Oct 2026): Beckn · ONDC registry, IGM, RSF, taxonomy · BAS · AASB 101/102 · Division 40 · ABN · VAT 201 · PINT-AE · TRN · HSN/SAC · GSTIN · IAS 21 · OpenAPI · GS1 batch/expiry/serial · WCAG 1.4.6');
+    ok(NEW.filter((r) => r.s === 'live').every((r) => /Proof: |tests?\//.test(r.note || '')), 'every In force row STDREG1 added names the test that proves it (' + NEW.filter((r) => r.s === 'live').map((r) => r.id).join(' · ') + ')');
+    ok(BYID['ondc-registry'].s === 'plan' && /Beckn-compatible, not ONDC-registered/.test(BYID['ondc-registry'].note) && /Beckn-compatible, not ONDC-registered/.test(BYID['beckn-core'].note), 'the recorded decision stands, on both rows: Beckn-compatible, not ONDC-registered');
+    ok(/200%/.test(BYID['wcag-1.4.4'].w) && BYID['wcag-1.4.4'].s !== 'live' && /132%/.test(BYID['wcag-1.4.4'].m), 'WCAG 1.4.4 says 200%, and says what we test (132%) — not In force');
+    ok(BYID['wcag-1.4.6'].s !== 'live' && !/1\.4\.6/.test(BYID['wcag-1.4.3'].n), 'WCAG 1.4.6 is its own row and not In force: the contrast test measures AA only');
+    ok(/AAL1/.test(BYID['nist-800-63b'].m) && !/about AAL2/i.test(BYID['nist-800-63b'].m), 'NIST SP 800-63B: one factor is AAL1');
+    ok(BYID['wco-hs'].s === 'part' && BYID['oauth2-oidc'].s === 'part' && /Zoho/.test(BYID['oauth2-oidc'].note), 'HS codes and OAuth 2 are up to what exists: HSN filed, Zoho reached with OAuth 2 — each Partly');
+    ok(cjHas('Xero'), 'compat.json names Xero (the Australian launch depends on it)');
   }
 
   /* ── the page's own source ── */
@@ -177,7 +191,7 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
   {
     const { ctx, p } = await open(S);
     ok(/^Standards$/.test((await p.textContent('.cbl-title h1')).trim()), 'the title row says Standards');
-    ok(/checked 13 Oct 2026/.test(await p.textContent('[data-testid="std-checked"]')), 'and "checked 13 Oct 2026" — once; the counts are in the matrix, not repeated up here');
+    ok(new RegExp('checked ' + CHECKED).test(await p.textContent('[data-testid="std-checked"]')), 'and "checked ' + CHECKED + '" — once; the counts are in the matrix, not repeated up here');
     ok(await p.locator('.cbl-title').innerText().then((t) => !/\b33\b/.test(t)), 'the title row does not repeat the totals the matrix\'s All row says');
     ok((await p.textContent('[data-testid="shop-name"]')).trim() === 'Mayur Bhavan', 'the signed-in shop is named in the title row');
     ok(await p.locator('#std_list.cbl').count() === 1 && await p.locator('#std_list .cbl-hdr').count() === 1, 'the list is a CBList mount (its header, its tools)');
@@ -209,17 +223,17 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     /* ── 3 · THE CELL IS THE LIST'S FILTER ── */
     await p.click('[data-testid="std-cell-money-part"]'); await p.waitForTimeout(250);
     const want3 = ALL.map((r, i) => [r, i]).filter(([r]) => r.a === 'money' && r.s === 'part').map(([, i]) => String(i)).sort();
-    ok((await rowIds(p)).sort().join() === want3.join() && want3.length === 3, 'Money & GST × Partly: the list shows exactly those 3 (' + (await count(p)) + ')');
-    ok(new RegExp('3 shown of ' + N).test(await count(p)), 'and says "3 shown of ' + N + '"');
+    ok((await rowIds(p)).sort().join() === want3.join() && want3.length >= 3, 'Money & GST × Partly: the list shows exactly those ' + want3.length + ' (' + (await count(p)) + ')');
+    ok(new RegExp(want3.length + ' shown of ' + N).test(await count(p)), 'and says "' + want3.length + ' shown of ' + N + '"');
     const ch = await chips(p);
     ok(ch.length === 2 && ch.indexOf('Status: Partly') >= 0 && ch.indexOf('Area: Money & GST') >= 0, 'the unit\'s own chips carry the choice (' + ch.join(' · ') + ')');
     ok((await pressed(p)).join() === 'std-cell-money-part', 'exactly one cell is lit');
     const missing = await p.$$eval('[data-testid^="std-row-"] [data-testid="std-status-more"]', (n) => n.map((x) => x.parentElement.textContent.replace(/\s+/g, ' ').trim()));
-    ok(missing.length === 3 && missing.every((t) => /^[^a-z]*Partly — ./.test(t)), 'each of the three rows says what is missing IN its Status cell, after the word: ' + missing[0]);
+    ok(missing.length === want3.length && missing.every((t) => /^[^a-z]*Partly — ./.test(t)), 'each of the ' + want3.length + ' rows says what is missing IN its Status cell, after the word: ' + missing[0]);
     ok(await p.locator('[data-testid^="std-row-"] .miss').count() === 0, 'and no "Missing:" text sits in the title any more');
     /* TIDY 1 · Kind is a column of its own: the same four words as the Kind filter, no tag inside the Reference text */
     const kinds = await p.$$eval('[data-testid^="std-row-"] [data-testid="std-kind"]', (n) => n.map((x) => x.textContent.trim()));
-    ok(kinds.length === 3 && kinds.every((k) => ['Law', 'Standard', 'Practice', 'Compatibility'].indexOf(k) >= 0), 'the Kind column holds one of Law · Standard · Practice · Compatibility: ' + kinds.join(' · '));
+    ok(kinds.length === want3.length && kinds.every((k) => ['Law', 'Standard', 'Practice', 'Compatibility'].indexOf(k) >= 0), 'the Kind column holds one of Law · Standard · Practice · Compatibility: ' + kinds.join(' · '));
     ok(await p.locator('[data-testid^="std-row-"] .sn .kind').count() === 0, 'and the kind tag is gone from the Reference text');
     /* TIDY 2 · ONE LINE per row on the laptop: every row is as tall as one line of text, and the table fills the width */
     const geo = await p.evaluate(() => { const rs = Array.from(document.querySelectorAll('#std_list .cbl-row')); const hs = rs.map((r) => r.getBoundingClientRect().height); const row = rs[0].getBoundingClientRect(), box = document.querySelector('#std_list .cbl-list').getBoundingClientRect(); return { max: Math.max.apply(null, hs), n: rs.length, fill: row.width / box.width }; });
@@ -303,8 +317,10 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     console.log('     groups: ' + JSON.stringify(gk));
     ok(gk.length === 4 && /Law/.test(gk[0]) && /Standard/.test(gk[1]) && /Practice/.test(gk[2]) && /Compatibility/.test(gk[3]), 'Group by Kind: Law · Standard · Practice · Compatibility, in that order, each with its count: ' + gk[0]);
     await p.click('[data-testid="cbl-group-standards"] [data-group="country"]'); await p.waitForTimeout(200);
+    /* the unit draws 50 rows at a time: scroll until every row is drawn, so the last group's head is there (STDREG1: more rows than two pages) */
+    for (let k = 0; k < Math.ceil(N / 50) + 1; k++) { await p.evaluate(() => { const l = document.querySelector('#std_list .cbl-list'); l.scrollTop = l.scrollHeight; }); await p.waitForTimeout(300); }
     const gc = await p.$$eval('#std_list .cbl-group', (n) => n.map((x) => x.textContent.replace(/^[^A-Za-z]+/, '').replace(/\s+/g, ' ').trim().split(' ·')[0].replace(/\s*\d+$/, '').trim()));
-    ok(gc.join('|') === 'India|Australia|UAE|India and global|Global|India, Australia, UAE', 'Group by Country: one country alone (India · Australia · UAE), India and global, Global, then the rows that apply in all three (' + gc.join(' | ') + ')');
+    ok(gc.join('|') === 'India|Australia|UAE|India and global|Australia and global|Global|India, Australia, UAE', 'Group by Country: one country alone (India · Australia · UAE), India and global, Australia and global (Xero, STDREG1), Global, then the rows that apply in all three (' + gc.join(' | ') + ')');
     await p.click('[data-testid="cbl-group-standards"] [data-group="area"]'); await p.waitForTimeout(200);
 
     /* CPS1: the Country Standard row opens to the GENERATED matrix — the engines' counts, painted, not computed here */
@@ -343,7 +359,7 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     await p.screenshot({ path: path.join(SHOTS, 'standards-row.png') });
     await p.click('[data-testid="std-copy"]'); await p.waitForTimeout(250);
     const clip = await p.evaluate(() => navigator.clipboard.readText());
-    ok(/GSTR-1 \/ GSTR-3B/.test(clip) && /Status: Partly/.test(clip) && /Missing: /.test(clip) && /Kind: Law/.test(clip) && /Checked 13 Oct 2026/.test(clip), 'Copy puts the standard, kind, status, what is missing and the date on the clipboard');
+    ok(/GSTR-1 \/ GSTR-3B/.test(clip) && /Status: Partly/.test(clip) && /Missing: /.test(clip) && /Kind: Law/.test(clip) && new RegExp('Checked ' + CHECKED).test(clip), 'Copy puts the standard, kind, status, what is missing and the date on the clipboard');
     ok(!/<[a-z]/i.test(clip) && clip.indexOf('⭐') < 0, 'and it is plain text — no markup, no code-comment markers');
     ok(/Copied/.test(await p.textContent('#toast')), 'and says Copied');
     /* a row with a long note says what is missing IN FULL when opened */
@@ -474,7 +490,8 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     await p.screenshot({ path: path.join(SHOTS, 'standards-phone-matrix.png') });
     await p.click('[data-testid="std-cell-money-part"]'); await p.waitForTimeout(300);
     ok(await p.locator('#main').isVisible() && !(await p.locator('#mxp').isVisible()), 'a cell opens page two: the list');
-    ok((await rowIds(p)).length === 3, 'with the 3 rows of the cell');
+    const mp = ALL.filter((r) => r.a === 'money' && r.s === 'part').length;
+    ok((await rowIds(p)).length === mp, 'with the ' + mp + ' rows of the cell (counted from the source)');
     ok(await p.locator('.who .back').isVisible(), 'and a ‹ back');
     w = await width(p);
     ok(w.sw === 390, 'phone, list page: document.scrollWidth === 390 (' + w.sw + ')');

@@ -3659,7 +3659,7 @@ function appearanceSettingsHTML(){
         + '</div>')
 
     + '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5;margin-top:8px">'
-    +   'Standards: <b>WCAG 2.2</b> (1.4.3 / 1.4.6 contrast · 1.4.4 resize text · 2.3.3 animation from interactions) · '
+    +   'Standards: <b>WCAG 2.2</b> (1.4.3 contrast · 1.4.4 resize text · 2.3.3 animation from interactions) · '
     +   'colour-blind palette <b>' + tx('Okabe–Ito') + '</b>.'
     + '</div>';
 }

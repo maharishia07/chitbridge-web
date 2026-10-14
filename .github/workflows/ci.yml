@@ -10,6 +10,7 @@ name: web-ci
 # NOT here, and why (run them locally with `npm run check`):
 #   check:engines   reads ../chitbridge-engines (a sibling checkout)
 #   check:envelope  reads ../chitbridge-api (a sibling checkout)
+#   (check:pins also reads the api — it IS here: the api is public and is checked out as the job's last step)
 #   check:till      needs Playwright (a browser) — an install this job deliberately does not do
 
 on:
@@ -64,6 +65,24 @@ jobs:
         run: node e2e/process-map.cjs
       - name: Docs beside the code have not drifted (MODULES.md; regenerate with node tools/gen-modules-doc.cjs)
         run: node e2e/docs-guard.cjs
+      # ⭐ T1-TAX (14 Oct): the web and the api pin the SAME engine versions — web's packs sat at v1.42 while the api booked on v1.45.
+      # The api is public; checked out LAST (after every other step) so no earlier guard sees a second tree. Twin branch as walks.yml.
+      - name: Twin api branch?
+        id: twin
+        env:
+          B: ${{ github.head_ref || github.ref_name }}
+        run: |
+          if [ -n "$B" ] && git ls-remote --exit-code --heads https://github.com/maharishia07/chitbridge-api "$B" >/dev/null 2>&1; then
+            echo "ref=$B" >> "$GITHUB_OUTPUT"; else echo "ref=main" >> "$GITHUB_OUTPUT"; fi
+      - uses: actions/checkout@v4
+        with:
+          repository: maharishia07/chitbridge-api
+          ref: ${{ steps.twin.outputs.ref }}
+          path: .side/chitbridge-api
+      - name: Every engine both the web and the api pin is at one version (e2e/engines-pins-agree.cjs)
+        env:
+          CB_API_REPO: .side/chitbridge-api
+        run: node e2e/engines-pins-agree.cjs
 
 
   scan:

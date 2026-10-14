@@ -118,9 +118,9 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `strings-ta.js` | — |  |
 | `table-resize.js` | — | drag a column edge; the width is yours and it is remembered |
 | `tax-slab.js` | eager | ADOPTED from chitbridge-engines v1.2.0 · tax-slab · sha256 439500a95910ff8bd55d4a1c422e2c4e810f509c7a6af2f1cd4e34aa239bc98d — DO NOT EDIT HERE. Change |
-| `tax.js` | eager | ADOPTED BUNDLE from chitbridge-engines · reg-in v1.42.0 + reg-au v1.42.0 + reg-ae v1.42.0 + regulation v1.42.0 + tax-packs v1.37.0 + tax v1.43.0 — DO |
 | `test-menu-tree.js` | — | the product as a menu. ONE shape, two surfaces |
 | `test-verdict.js` | — | what would make this red green. ONE judgement, two surfaces |
+| `their-bill.js` | — | their-bill.js — DOES THEIR BILL AGREE WITH WHAT WAS COUNTED? One rule, every host (FX-F10W2, QA-W1 F10) |
 | `units.js` | eager | vendored VERBATIM from chitbridge-api/lib/units.js (one unit · three names: ours · UN/ECE Rec 20 · GST UQC) |
 | `variant.js` | eager | ADOPTED from chitbridge-engines v1.4.0 · variant · sha256 2b82dcbaba8ad8590623ef72d41979894d4390468abf74d862f158d7d4e48946 — DO NOT EDIT HERE. Change |
 | `workflow.js` | — | ADOPTED from chitbridge-engines v1.33.0 · workflow · sha256 f8c7a43048bc1b8453a1c2ec43b6eed7f619feee4c67eaba046c6cea370f0a5b — DO NOT EDIT HERE. Chang |
