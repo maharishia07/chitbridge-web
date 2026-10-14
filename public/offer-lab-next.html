@@ -750,6 +750,7 @@ button{cursor:pointer}
 .combohead{font-size:.92em;color:var(--muted);margin-bottom:12px;padding:10px 12px;background:var(--panel);border-radius:var(--r)}
 .combohead b{display:block;margin-top:4px;color:var(--green);font-size:1.05em}
 </style>
+<link rel="stylesheet" href="lab/combo-mode.css">   <!-- T2-LABS: the Combo Lab's look (?mode=combo) — every rule names the builder -->
 <script src="/engine/screen.js"></script>
 <script src="/app/avatar.js"></script>   <!-- CBAvatar: the one avatar (Profile · Support · Sign out) and the look it owns — the same on every page -->
 </head>
@@ -766,7 +767,7 @@ button{cursor:pointer}
     <span class="chip" id="bizName">—</span>
     <span class="grow"></span>
     <button class="chip tool" onclick="openPriceOverlay()" title="Cost and price for every item"><span class="g">₹</span><span class="tx">Price list</span></button>
-    <button class="chip tool" onclick="window.open('combo-lab.html','cb_combo_lab')" title="Combos and modifiers"><span class="g">▣</span><span class="tx">Combos</span></button>
+    <button class="chip tool" onclick="window.open('offer-lab-next.html?mode=combo','cb_combo_lab')" title="Combos and modifiers"><span class="g">▣</span><span class="tx">Combos</span></button>
     <button class="chip tool" onclick="document.getElementById('labImportFile').click()" title="A spreadsheet with Name, Category, Price and Cost columns — stays in this tab, nothing is saved"><span class="g">↓</span><span class="tx">Import</span></button>
     <input type="file" id="labImportFile" accept=".xlsx,.xls,.csv" hidden onchange="importSpreadsheet(this)">
     <button class="chip tool" onclick="exportCsv()" title="Everything on screen right now, as a CSV"><span class="g">↑</span><span class="tx">Export</span></button>
@@ -819,6 +820,45 @@ button{cursor:pointer}
   </div>
 </div>
 
+<!--
+  ⭐⭐⭐ THE MODIFIER LAB — SAME WINDOW STYLE AS THE PRICE LIST (Athi: "try how the modifiers can be created
+  and once if they are happy… apply it to the real product"), its own instance because the shape of the job
+  is different (pick ONE product, then build against it) — but the chrome (.ovl/.ovlpanel/.ovlhead/.ovlx) is
+  the exact same CSS the price list already proved out, precisely so a third icon has somewhere to land too.
+-->
+<div class="ovl" id="modLabOverlay" role="dialog" aria-modal="true" aria-labelledby="modLabTitle">
+  <div class="ovlpanel">
+    <div class="ovlhead">
+      <h2 id="modLabTitle">Combos and modifiers</h2>
+      <button class="ovlx" onclick="closeModLab()" aria-label="Close" title="Close">✕</button>
+    </div>
+    <!-- ⭐ [2026-09-27] two tabs, each carrying its own count (paintModLab() fills modLabTabs; see its own
+         header comment). #modLabSearch stays a STATIC element, never replaced by innerHTML on repaint — only
+         its placeholder changes per tab — so a keystroke never loses its own cursor position mid-type. -->
+    <div class="tabs" id="modLabTabs"></div>
+    <div class="ovltools">
+      <div style="display:flex;gap:10px;align-items:center">
+        <input type="text" id="modLabSearch" placeholder="Search products…" oninput="modLabSearch(this.value)" style="flex:1">
+        <span id="modLabBarExtra"></span>
+      </div>
+    </div>
+    <div class="ovlbody" id="modLabBody"></div>
+    <div class="ovlfoot" id="modLabFoot"></div>
+  </div>
+</div>
+<!-- ⭐⭐⭐ [TILL/OFFR-08] "how it appears in the counter app" — CBVariant.chooserHTML(), the SAME function
+     till.html's own combo dialog calls, so there is nothing here that could show a different combo than the
+     one a customer would actually see. -->
+<div class="ovl" id="comboTillPreviewOverlay" role="dialog" aria-modal="true" aria-labelledby="comboTillPreviewTitle">
+  <div class="ovlpanel" style="max-width:520px">
+    <div class="ovlhead">
+      <h2 id="comboTillPreviewTitle">Preview</h2>
+      <button class="ovlx" onclick="closeComboTillPreview()" aria-label="Close" title="Close">✕</button>
+    </div>
+    <div class="ovlbody" id="comboTillPreviewBody" style="padding:16px 20px"></div>
+    <div class="ovlfoot" id="comboTillPreviewFoot"></div>
+  </div>
+</div>
 <!-- ══ "Work it out"'s own result — an overlay over the controls, not a panel pushed in under them ══ -->
 <div class="scrim" id="workScrim" onclick="if(event.target===this)closeWork()">
   <div class="sheet" role="dialog" aria-modal="true" aria-label="What this offer does">
@@ -840,11 +880,10 @@ button{cursor:pointer}
   </div>
 </div>
 <!--
-  ⭐⭐⭐ [Labs split, 2026-09-26] THE MODIFIER/COMBO LAB MOVED TO ITS OWN PAGE. Athi: "bring offer lab and
-  combo lab as a separate item rather than in one place. I guess combo lab earned its place now." It lived
-  here as an overlay (same .ovl/.ovlpanel/.ovlhead/.ovlx chrome the price list uses); combo-lab.html is a
-  standalone copy of this page's own shared machinery with that overlay opened as the whole page instead of a
-  modal on top of this one. See "🧩 Combo Lab ↗" below, and combo-lab.html's own header comment for the split.
+  ⭐⭐⭐ [Labs split, 2026-09-26 → T2-LABS, 2026-10-14] THE COMBO LAB IS A MODE OF THIS PAGE. Athi first: "bring offer lab and
+  combo lab as a separate item" — so combo-lab.html became its own page, as a COPY of this one. Athi, 2026-10-14: "our labs
+  should not use a separate piece of code". The builder's own code is lab/combo-mode.js (moved as it was); ?mode=combo opens
+  it as the page, under its own title; combo-lab.html forwards here, so every old link still lands in it.
 -->
 <!--
   ⭐⭐⭐ THE ARITHMETIC IS THE REAL ENGINE, NOT A REIMPLEMENTATION (Athi: "we have already built the offer
@@ -863,6 +902,8 @@ button{cursor:pointer}
 <!-- ⭐ CBVariant — the SAME module app.html's Modifiers tab and the till's own chooser both use. Pure, no
      DOM, no fetch — the Modifier lab below is a paint over its authoring verbs, exactly like that tab is. -->
 <script src="engine/variant.js"></script>
+<!-- the Combo Lab (?mode=combo) — its builder, moved from combo-lab.html; it reads this page's state and helpers -->
+<script src="lab/combo-mode.js"></script>
 <!--
   ⭐⭐ VENDORED, NOT A CDN LINK (Athi: "possibly excel... bring it here"). vendor/xlsx.full.min.js is SheetJS
   (Apache-2.0), served from this same origin so the public/demo mode's "zero network calls" claim a few lines
@@ -1065,6 +1106,36 @@ function num(v){var n=parseFloat(v); return isFinite(n)?n:0;}
 function R2(n){return Math.round(n*100)/100;}
 function byId(id){for(var i=0;i<P.length;i++) if(P[i].id===id) return P[i]; return null;}
 function catName(id){for(var i=0;i<CATS.length;i++) if(CATS[i].id===id) return CATS[i].name; return '';}
+/**
+ * ⭐⭐⭐ [found live, 2026-10-01] "the Choose a product picker shows category CHIPS and a middle column of raw
+ * category UUIDs (e.g. 55e14791-27cb-…) instead of category names." Real cause: a REAL product's own
+ * item_data.categories holds a category DEFINITION's id (kind:'category', the same definitions app.html's
+ * own catName() resolves through cbDefsCached('category') — see app.html:13209), never a human name — but
+ * buildBiz(), below, only ever grouped products by whatever that raw value was, so for 'mine' it built
+ * cats:[[uuid,uuid],…] and this page's OWN catName() (just above) faithfully echoed the uuid straight back as
+ * the "name". CATNAMES is the one lookup map (loadCatNames(), called alongside the real catalogue read) that
+ * resolves it properly; catDisplayName() falls back to 'Other' — never the raw id — only when the value is
+ * actually UUID-shaped, so the sample books and a spreadsheet import (whose "categories" are already plain
+ * words like "Vegetables") are untouched.
+ */
+var CATNAMES={};
+function catDisplayName(id){
+  if(CATNAMES[id]) return CATNAMES[id];
+  if(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return 'Other';
+  return id;
+}
+async function loadCatNames(){
+  try {
+    var r=await fetch(API+'/api/definitions?kind=category&all=1', {headers:{Authorization:'Bearer '+savedToken()}});
+    if(r.ok){
+      var j=await r.json();
+      var defs=j.definitions||j.rows||(Array.isArray(j)?j:[]);
+      var m={};
+      defs.forEach(function(d){ var id=d.definition_id||d.id; if(id) m[id]=d.name||''; });
+      CATNAMES=m;
+    }
+  } catch(e){ console.warn('Offer Lab: category names did not load — keeping the names already shown', e); }   /* a stale name beats a UUID on screen */
+}
 function M0(n){ if(n==null||isNaN(n)) return '—';
   var neg=n<-0.004; n=Math.abs(n);
   return (neg?'−₹':'₹')+Math.round(n).toLocaleString('en-IN'); }
@@ -2850,6 +2921,7 @@ async function labUseMine(quiet){
   var sess=null; try{ sess=JSON.parse(localStorage.getItem('cb_sess')||'null'); }catch(_){}
   var who=(sess&&(sess.entity||sess.name))||'your shop';
   loadCostAccess();   /* alongside, not blocking — the catalogue read matters more and must not wait on this */
+  var catNamesReady=loadCatNames();   /* same: runs alongside, awaited below, right before names are actually used */
   try {
     var r=await fetch(API+'/api/products?limit=500', {headers:{Authorization:'Bearer '+savedToken()}});
     if(!r.ok) throw new Error('HTTP '+r.status);
@@ -2857,6 +2929,7 @@ async function labUseMine(quiet){
     var amountOf=function(v){ return (v&&typeof v==='object'&&v.amount!=null)?Number(v.amount):Number(v)||0; };
     var items=(j.items||j.products||j.rows||(Array.isArray(j)?j:[])).filter(function(p){ return p&&p.item_data&&amountOf(p.item_data.price)>0; });
     if(!items.length) return labUseCache(who,'no priced products yet');
+    await catNamesReady;   /* CATNAMES must be filled before buildBiz() (inside labApplyCatalogue) reads it */
     await LabDB.set('catalogue', {items:items, who:who, at:Date.now()});
     labApplyCatalogue(items, who, false);
     return true;
@@ -2876,7 +2949,7 @@ async function labUseCache(who,why){
  */
 function buildBiz(key, rows, who){
   var byCat={}; rows.forEach(function(p){ byCat[p[2]]=(byCat[p[2]]||0)+1; });
-  var cats=Object.keys(byCat).map(function(c){ return [c,c]; });
+  var cats=Object.keys(byCat).map(function(c){ return [c,catDisplayName(c)]; });
   var firstItem=(rows[0]||[])[0], secondItem=(rows[1]||rows[0]||[])[0];
   BIZ[key]={ name:who, cats:cats, prods:rows, margin:25, cap:10,
     d:{ catId:(cats[0]||[])[0]||'', itemId:firstItem||'', itemIds:firstItem?[firstItem]:[], pctOff:10, rsOff:10, tiers:[[2,5],[5,10],[10,15]], tierView:2,
@@ -2903,6 +2976,7 @@ function labApplyCatalogue(items, who, fromCache){
   applyBiz('mine');
   if(fromCache) toastSay(who+' — showing what was cached here; offline right now, so this may be a little behind.');
   render();
+  if (modLabOpen()) paintModLab();   /* the Combo Lab mode: its picker's first paint may have been the sample book */
 }
 
 /**
@@ -3341,6 +3415,9 @@ function render(){
 }
 applyBiz('hotel');
 render();
+/* ⭐ T2-LABS: ?mode=combo IS the Combo Lab — the builder opens as the page, under its own name */
+var LAB_MODE=new URLSearchParams(location.search).get('mode')==='combo'?'combo':'offer';
+if(LAB_MODE==='combo'){ document.title='Combo Lab'; document.querySelector('.top .title').textContent='Combo Lab'; openModLab(); }
 /* ⭐ signed in → try your own catalogue quietly; queued writes from a previous offline session try to send
  * now too. Neither blocks the first paint — the samples are already on screen the instant this loads. */
 labPaintQueue();
@@ -3361,7 +3438,7 @@ if (savedLive()) loadSaved();
 <script src="app/one-person.js"></script>
 <script>
 CBOnePerson.attach({ quiet: true, who: (function(){ var w = CBOnePerson.stored(); return function(){ return w; }; })(),
-  label: function(){ return 'The Offer Lab'; },
+  label: function(){ return LAB_MODE==='combo' ? 'The Combo Lab' : 'The Offer Lab'; },
   onLeave: function(by){ return Promise.resolve(labDrainOutbox()).catch(function(){}).then(function(){ location.replace('/?left=' + encodeURIComponent(by || '')); }); },
   onWipe: function(){ return Promise.resolve(labDrainOutbox()).catch(function(){}).then(function(){ location.replace('/?cleaned=1'); }); } });
 </script>
