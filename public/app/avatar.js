@@ -9,7 +9,7 @@
  *
  *   CBAvatar.mount(el, { person, items, onSignOut, … })   draw the button and its menu into `el`
  *   CBAvatar.apply()                                       put the saved look on <html> (runs at load, BEFORE first paint)
- *   CBAvatar.hydrate(prefs)                                the server's per-person appearance (true if something changed)
+ *   CBAvatar.hydrate(prefs)                                the server's per-person appearance — the truth; absent = default unless pending (true if something changed)
  *   CBAvatar.set(kind, value)                              kind: theme · font · fs · weight · motion · stripes · edition — saves, applies, syncs
  *   CBAvatar.get() · .themeKey() · .close() · .signOut() · .THEMES · .FONTS · .TEXT_SIZES · .FS_BASE
  *
@@ -67,6 +67,7 @@
 
   function lsGet(k, d) { try { return root.localStorage.getItem(k) || d; } catch (_) { return d; } }
   function lsSet(k, v) { try { root.localStorage.setItem(k, v); } catch (_) {} }
+  function lsDel(k) { try { root.localStorage.removeItem(k); } catch (_) {} }
 
   /* ── what is saved ── */
   function pref(kind) { return lsGet(KEY[kind], DEFAULTS[kind]); }
@@ -160,38 +161,69 @@
     try { var s = JSON.parse(root.localStorage.getItem('cb_sess') || 'null'); return (s && s.token) || ''; } catch (_) { return ''; }
   }
   var HOST = {};                                            /* what the mounted page told us (apiBase · token · sync) */
+  /* ⭐ F9 (FX-UX2): THE PENDING MARK. A choice made on this device is held in cb_prefs_pending ({ kind: value }) until a push the server
+     answers ok:true carries it; hydrate never resets a marked kind (offline, signed out, before the column exists — the push answers
+     {pending:true} or {queued:true}, never ok:true). A mark whose value the server already holds was landed: it goes. */
+  var PEND = 'cb_prefs_pending';
+  function pendGet() { try { var o = JSON.parse(root.localStorage.getItem(PEND) || '{}'); return o && typeof o === 'object' ? o : {}; } catch (_) { return {}; } }
+  function pendPut(o) { try { if (Object.keys(o).length) root.localStorage.setItem(PEND, JSON.stringify(o)); else root.localStorage.removeItem(PEND); } catch (_) {} }
+  function pendMark(kind) { var o = pendGet(); o[kind] = pref(kind); pendPut(o); }
+  /** a push landed: every kind it carried whose mark still holds the value sent is no longer pending */
+  function landed(sent, r) {
+    if (!r || r.ok !== true || r.pending) return;
+    var o = pendGet();
+    Object.keys(o).forEach(function (k) { if (has(sent, k) && sent[k] === o[k]) delete o[k]; });
+    pendPut(o);
+  }
   function push(now) {
     if (HOST.sync === false) return;
     var body = { theme: pref('theme'), fs: pref('fs'), motion: pref('motion'), stripes: pref('stripes'), edition: pref('edition'), font: pref('font'), weight: pref('weight') };   /* every synced key rides every push */
-    /* the app's (and CB Accounts') own door: CBPrefs debounces, queues offline and stays silent before the migration */
-    try { if (typeof CBPrefs !== 'undefined' && typeof SESSION !== 'undefined' && SESSION && SESSION.token) { CBPrefs.push('ui', body); return; } } catch (_) {}
+    /* the app's (and CB Accounts') own door: CBPrefs debounces, queues offline and stays silent before the migration; its answer clears the mark */
+    try { if (typeof CBPrefs !== 'undefined' && typeof SESSION !== 'undefined' && SESSION && SESSION.token) { CBPrefs.push('ui', body, function (r) { landed(body, r); }); return; } } catch (_) {}
     var base = apiBaseOf(HOST), tok = tokenOf(HOST);
     if (!base || !tok || !root.fetch) return;
     if (pushTimer) { try { root.clearTimeout(pushTimer); } catch (_) {} }
     var send = function (keep) {
       try {
         return root.fetch(base + '/api/entities/me/prefs/ui', { method: 'PATCH', cache: 'no-store', keepalive: !!keep,
-          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify(body) }).catch(function () {});
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify(body) })
+          .then(function (r) { return r.ok ? r.json() : null; }).then(function (j) { landed(body, j); }).catch(function () {});
       } catch (_) { return null; }
     };
     if (now) return send(true);   /* the page redraws at once (an edition): sent now, and kept alive across the reload */
     pushTimer = root.setTimeout(function () { send(false); }, 400);
   }
-  /** The server wins — that is the feature — EXCEPT when it has nothing (an empty object means "never chosen"). */
+  /** the one test of a value for a kind — set() and hydrate() ask the same question */
+  function valid(kind, v) {
+    if (kind === 'theme') return v === 'device' || (has(THEMES, v) && !!THEMES[v]);
+    if (kind === 'fs') return TEXT_SIZES.some(function (x) { return x[0] === v; });
+    if (kind === 'font') return FONTS.some(function (x) { return x[0] === v; });
+    if (kind === 'weight') return v === 'normal' || v === 'bold';
+    if (kind === 'motion') return ['auto', 'reduce', 'full'].indexOf(v) >= 0;
+    if (kind === 'stripes') return STRIPES.some(function (x) { return x[0] === v; });
+    if (kind === 'edition') return EDITION.test(String(v));
+    return false;
+  }
+  /**
+   * The server's ui_prefs is the truth for a signed-in person (every kind is pushed since CU3) — ONE rule for all seven kinds (F9, FX-UX2):
+   *   · the server holds a value → this device takes it;
+   *   · the server holds none (absent / null / '') → this device goes back to the DEFAULT (an edition cleared on the server no longer
+   *     leaves "Auditor view" on the machine) — EXCEPT a kind still marked pending (a choice whose push has not landed): kept, and pushed again.
+   * A showing link (cb_edition_tab) keeps its tab: CBEdition reads the tab first, and editionReload does not redraw a held tab.
+   */
   function hydrate(prefs) {
     if (!prefs || typeof prefs !== 'object') return false;
-    if (!prefs.theme && !prefs.fs && !prefs.motion && !prefs.stripes && !prefs.edition && !prefs.font && !prefs.weight) return false;
-    var changed = false, edNow = pref('edition');
+    var changed = false, edNow = pref('edition'), pend = pendGet(), again = false;
     try {
-      if (prefs.theme && (prefs.theme === 'device' || (has(THEMES, prefs.theme) && THEMES[prefs.theme])) && prefs.theme !== pref('theme')) { lsSet(KEY.theme, prefs.theme); changed = true; }
-      if (prefs.fs && TEXT_SIZES.some(function (x) { return x[0] === prefs.fs; }) && prefs.fs !== pref('fs')) { lsSet(KEY.fs, prefs.fs); changed = true; }
-      if (prefs.motion && ['auto', 'reduce', 'full'].indexOf(prefs.motion) >= 0 && prefs.motion !== pref('motion')) { lsSet(KEY.motion, prefs.motion); changed = true; }
-      if (prefs.stripes && STRIPES.some(function (x) { return x[0] === prefs.stripes; }) && prefs.stripes !== pref('stripes')) { lsSet(KEY.stripes, prefs.stripes); changed = true; }
-      if (prefs.edition && EDITION.test(prefs.edition) && prefs.edition !== edNow) { lsSet(KEY.edition, prefs.edition); changed = true; }
-      if (prefs.font && FONTS.some(function (x) { return x[0] === prefs.font; }) && prefs.font !== pref('font')) { lsSet(KEY.font, prefs.font); changed = true; }
-      if (prefs.weight && (prefs.weight === 'normal' || prefs.weight === 'bold') && prefs.weight !== pref('weight')) { lsSet(KEY.weight, prefs.weight); changed = true; }
+      Object.keys(KEY).forEach(function (k) {
+        var v = prefs[k], held = v != null && v !== '';
+        if (has(pend, k)) { if (held && String(v) === pend[k]) { delete pend[k]; pendPut(pend); } else again = true; return; }
+        if (held) { if (valid(k, v) && v !== pref(k)) { lsSet(KEY[k], v); changed = true; } return; }
+        if (pref(k) !== DEFAULTS[k]) { lsDel(KEY[k]); changed = true; }
+      });
       if (changed) { apply(); repaint(); }
       if (pref('edition') !== edNow) editionReload();   /* this person's saved showing differs from what this machine drew: draw it again */
+      if (again) push();                                 /* the choice that never landed goes up now */
     } catch (_) {}
     return changed;
   }
@@ -214,15 +246,9 @@
   }
 
   function set(kind, value) {
-    if (!has(KEY, kind)) return;
-    if (kind === 'theme' && value !== 'device' && !(has(THEMES, value) && THEMES[value])) return;
-    if (kind === 'fs' && !TEXT_SIZES.some(function (x) { return x[0] === value; })) return;
-    if (kind === 'font' && !FONTS.some(function (x) { return x[0] === value; })) return;
-    if (kind === 'weight' && value !== 'normal' && value !== 'bold') return;
-    if (kind === 'motion' && ['auto', 'reduce', 'full'].indexOf(value) < 0) return;
-    if (kind === 'stripes' && !STRIPES.some(function (x) { return x[0] === value; })) return;
-    if (kind === 'edition' && !EDITION.test(String(value))) return;
+    if (!has(KEY, kind) || !valid(kind, value)) return;
     lsSet(KEY[kind], value);
+    pendMark(kind);                                         /* held against a server reset until a push lands (F9) */
     apply();
     if (kind === 'edition') { push(true); if (root.CBEdition) root.CBEdition.clearTab(); return editionReload(true); }   /* the person's own choice outranks a showing link */
     push();                                                 /* every kind reaches the server since CU3 (font · weight were device-only) */
@@ -500,6 +526,6 @@
   apply();
   if (doc && doc.addEventListener) doc.addEventListener('DOMContentLoaded', function () { BASE = null; apply(); });
 
-  root.CBAvatar = { mount: mount, apply: apply, hydrate: hydrate, set: set, get: get, personOf: personOf, sessionPerson: sessionPerson, themeKey: themeKey, applyTheme: themeApply, push: push, themeBase: themeBase, isOpen: function () { return openNow; }, close: close, signOut: signOut,
+  root.CBAvatar = { mount: mount, apply: apply, hydrate: hydrate, set: set, get: get, personOf: personOf, sessionPerson: sessionPerson, themeKey: themeKey, applyTheme: themeApply, push: push, pending: pendGet, themeBase: themeBase, isOpen: function () { return openNow; }, close: close, signOut: signOut,
     THEMES: THEMES, FONTS: FONTS, TEXT_SIZES: TEXT_SIZES, FS_BASE: FS_BASE, fontStack: fontStack };
 })(typeof window !== 'undefined' ? window : this);

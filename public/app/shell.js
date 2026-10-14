@@ -534,7 +534,8 @@
     if (root.CBBell && root.CBBell.mount) root.CBBell.mount(slots.bell, { apiBase: base, token: token, person: person });   /* person null = signed out: no bell, even with a token still saved */
     /* ⭐ M14: signed out, the shell's own slot holds THE ONE SIGN-IN WINDOW (CBSignin.mount) — the page hands its contract through
        o.signin (surface · need · onIn · deviceId …); the avatar's Sign in door only brings the person to it. */
-    if (!person && mode !== 'bar' && root.CBSignin && typeof root.CBSignin.mount === 'function') {
+    /* signin:false (FX-UX2) — a public section that loads the sign-in unit for its own use (CB Settings › New shop reads CBSignin.sessionOf): no window over it */
+    if (!person && mode !== 'bar' && o.signin !== false && root.CBSignin && typeof root.CBSignin.mount === 'function') {
       var so = { apiBase: base, surface: 'index', need: 'person' };
       Object.keys(o.signin || {}).forEach(function (k) { so[k] = o.signin[k]; });
       root.CBSignin.mount($('.cbsh-signin'), so);
