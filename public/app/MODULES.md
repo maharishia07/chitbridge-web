@@ -15,7 +15,7 @@ something needs them before any navigation happens.
 router renders a placeholder until `_capLoading` clears, which is the only reason the
 old duplicate `networkScreen()` in app.html was safe to delete.
 
-## Capabilities (52)
+## Capabilities (57)
 
 | file | loading · nav key | what it is |
 |---|---|---|
@@ -34,6 +34,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-country.js` | lazy · on demand | cap-country.js — COUNTRY SETUP (CS1, 2026-10-12): the step after registration, before the books open (lazy; ensureCap('country') → #/country) |
 | `cap-crm-calls.js` | — | cap-crm-calls.js — CB CRM L2: THE CALL DESK. The Calls tab (a CBList mount, the Follow-ups list's own look): today's queue, one-tap outcome buttons |
 | `cap-crm-chits.js` | — | cap-crm-chits.js — THE CHITS BEHIND THE HOME RAIL: In · Out · Stuck, stuck first (black-box H1 · H4 · H10) |
+| `cap-crm-groups.js` | — | cap-crm-groups.js — CB CRM: GROUPS & SEGMENTS and the SHOP WINDOW (T3-P2-CRM, 2026-10-14; docs/design/crm/REQUIREMENT-segments.md) |
 | `cap-crm-leads.js` | — | cap-crm-leads.js — CB CRM L1: LEADS AS PARTIES (+ L3: Import from a CSV, at the foot of this file). The Leads tab (a CBList mount, the Parties list's |
 | `cap-crm-record.js` | — | cap-crm-record.js — CB CRM: ONE party's record, its timeline, the Log sheet, the Next block, and the party edit |
 | `cap-crm.js` | — | cap-crm.js — CB CRM: the parties list (home), follow-ups, Add party, and the plumbing every CRM screen shares |
@@ -42,7 +43,9 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-employees.js` | — |  |
 | `cap-entry.js` | — | cap-entry.js — ＋ ENTRY on the Day book: what happened → with whom / what → how much, when, on what paper → check and save |
 | `cap-finance-cash.js` | — | cap-finance-cash.js — CB Finance · Cash (round F3): today's cash and bank, then day by day what comes in and goes out for 7 or 30 days, and the FIRST |
+| `cap-finance-cheques.js` | — | cap-finance-cheques.js — CB Finance · Cheques (round T3-P1-MONEY): the cheques in hand (received, and the ones you wrote), the steps the server |
 | `cap-finance-pay.js` | — | cap-finance-pay.js — CB Finance · Payables (round F4): what WE owe each supplier, aged, MSME day 45 and its risk (India), the supplier's early-pay off |
+| `cap-finance-returns.js` | — | cap-finance-returns.js — CB Finance · Returns (round T3-P1-MONEY): COUNTRY-FIRST. An Indian shop downloads the GSTR-1 / GSTR-3B files the server |
 | `cap-finance-terms.js` | — | cap-finance-terms.js — CB Finance · Terms (round F2): the shop's DEFAULT credit terms and each party's OWN, set in ONE place |
 | `cap-finance.js` | — | cap-finance.js — CB Finance · Collections (round F1): who owes you, how old, the limit, the interest it has earned, Remind, Receive |
 | `cap-folders.js` | lazy · folders | FOLDERS capability (lazy; loaded via ensureCap('folders')) |
@@ -59,9 +62,11 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-readiness.js` | lazy · readiness | TRADE capability (lazy; ensureCap('readiness')). Two tabs: |
 | `cap-register.js` | lazy · on demand | THE REGISTER. Lazy (ensureCap('register')) |
 | `cap-repeat.js` | lazy · on demand | cap-repeat.js — REPEAT SUPPLY as an AGREEMENT both parties hold (round RI1, 2026-10-12): CB Finance › Repeat supply (the seller's list), |
+| `cap-rewards.js` | eager | cap-rewards.js — THE REWARDS PANE, ONE COPY (T3-P2-CRM, 2026-10-14): what a customer holds in points, what it is worth, how it was earned, |
 | `cap-service.js` | lazy · on demand | cap-service.js — a chit AS A SERVICE REQUEST. Lazy-loaded (ensureCap('service')) |
 | `cap-settings.js` | — | CB SETTINGS › Counters & keys · Connectors · Policy · Plan & usage (T3-SETTINGS, 2026-10-14; SET2 of INDEX-NOT-APP.md) |
 | `cap-shop.js` | — | YOUR SHOP: the shop's own particulars, ONE implementation painted in two places (SET1, 2026-10-13) |
+| `cap-showcase.js` | eager | cap-showcase.js — THE SHOP WINDOW CHOOSER, ONE COPY (T3-P2-CRM, 2026-10-14): the registered showcase templates (app/showcase-templates.js, |
 | `cap-standards.js` | lazy · on demand |  |
 | `cap-stock.js` | — | STOCK: what is on the shelf, per product, from the ONE stock reader (T3-OPS, 2026-10-14; CB Operations › Stock) |
 | `cap-suppliers.js` | eager | SUPPLIERS: who you buy from, whether you can order from them, add · link · remove (T3-OPS, 2026-10-14; CB Operations › Suppliers) |
@@ -126,4 +131,4 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 
 ---
 
-*99 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*104 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*

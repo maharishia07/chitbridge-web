@@ -37,10 +37,11 @@
         ['BKS019', 'gstclose', 'GST close & pay'], ['BKS020', 'yearclose', 'Year close'], ['BKS021', 'packs', 'Packs'], ['BKS022', 'opening', 'Opening balances'],
         ['BKS023', 'accounts', 'Shop ledgers'], ['BKS024', 'movein', 'Move in'], ['BKS025', 'rates', 'Rates']] },
       { app: 'finance', name: 'CB Finance', page: '/finance.html', hash: true, rows: [
-        ['FIN001', 'collections', 'Collections'], ['FIN002', 'payables', 'Payables'], ['FIN003', 'cash', 'Cash'], ['FIN004', 'terms', 'Terms'], ['FIN005', 'repeat', 'Repeat supply']] },
+        ['FIN001', 'collections', 'Collections'], ['FIN002', 'payables', 'Payables'], ['FIN003', 'cash', 'Cash'], ['FIN004', 'terms', 'Terms'], ['FIN005', 'repeat', 'Repeat supply'], ['FIN006', 'cheques', 'Cheques'], ['FIN007', 'returns', 'Returns']] },   /* FIN006–007: T3-P1-MONEY */
       { app: 'crm', name: 'CB CRM', page: '/crm.html', hash: true, rows: [
         ['CRM001', 'parties', 'Parties'], ['CRM002', 'chits', 'Chits'], ['CRM003', 'followups', 'Follow-ups'], ['CRM004', 'leads', 'Leads', 'Parties › Leads'],
-        ['CRM005', 'calls', 'Calls', 'Parties › Calls'], ['CRM006', 'party', 'Party', 'Parties › a party'], ['CRM007', 'chit', 'Chit page', 'a sheet › Open page']] },
+        ['CRM005', 'calls', 'Calls', 'Parties › Calls'], ['CRM006', 'party', 'Party', 'Parties › a party'], ['CRM007', 'chit', 'Chit page', 'a sheet › Open page'],
+        ['CRM008', 'groups', 'Groups & segments'], ['CRM009', 'showcase', 'Shop window']] },   /* CRM008–009: T3-P2-CRM */
       { app: 'tasks', name: 'CB Tasks & Orders', page: '/tasks.html', rows: [
         ['TSK001', 'orders_in', 'Orders in'], ['TSK002', 'orders_out', 'Orders out'], ['TSK003', 'tasks', 'Tasks'], ['TSK004', 'done', 'Done']] },
       { app: 'settings', name: 'Settings', page: '/settings.html', hash: true, rows: [

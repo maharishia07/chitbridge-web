@@ -58,6 +58,7 @@ var CB_PARTY_EP = {
   supDel:          {m:"DELETE",p:"/api/relationships/suppliers/:id", ok:"✓"},
   supPatch:        {m:"PATCH", p:"/api/relationships/suppliers/:id", ok:"y"},       // Stage B — owner-side fields (nickname/preferred/notes/category)
   entitySearch:    {m:"GET",  p:"/api/entities/search",                    ok:"✓"},   // ?q= live recipient lookup (name/bridge_id)
+  custRewards:     {m:"GET",  p:"/api/relationships/customers/:id/rewards", ok:"✓"},   // what this customer holds in points, and what it means — the ONE rewards pane (app/cap-rewards.js), read by the workshop's Customers pane and CB CRM's record (T3-P2-CRM; moved from app.html)
   /* ⭐ read by BOTH CB CRM and CB Finance — one name, one place (the registry guard fails a second declaration) */
   crmParties:      {m:"GET",  p:"/api/crm/parties",                        ok:"y"},   // { parties:[…], alerts:{…} } — one read, no per-row fetch; terms.customer per party
   booksTerms:      {m:"GET",  p:"/api/books/terms",                        ok:"y"},   // ?party_id&side → { terms_migrated, may_set, why_not, default, party, events } — CB Finance sets, CRM reads
@@ -65,6 +66,7 @@ var CB_PARTY_EP = {
   crmFollowAdd:    {m:"POST", p:"/api/crm/followups",                      ok:"y"},   // { party_id, what, due_at, source: manual|dues|interaction, assignee_user_id? } → 201 { followup }
 };
 
+/* ── the shop's policy flags (b130) — the workshop's Settings › Policy AND CB CRM's Shop window (showcase_template, T3-P2-CRM) read and write them; MOVED from app.html's EP ── */
 /* ── the shop's OWN particulars — what the workshop's Profile · Country setup AND CB Settings (settings.html, SET1 2026-10-13) read and write.
    MOVED from app.html's EP (one name per endpoint, e2e/ep-aliases.cjs): the profile (PATCH /entities/profile), the vault (GET /governance/profile),
    Country setup (CS1) ── */
@@ -103,6 +105,8 @@ var CB_SETTINGS_EP = {
   entityUsage:    {m:'GET',    p:'/api/entities/usage',           ok:'✓'},
   entitlements:   {m:'GET',    p:'/api/entities/entitlements',    ok:'y'},   // the plan and every quota as a STATE (unlimited · unset · capped) — reporting only (enforced:false)
 };
+/* T3-P2-CRM: the policy slice of CB_SETTINGS_EP for crm.html's Shop window — the SAME entries (ep-aliases: one endpoint, one name), never a second declaration */
+var CB_POLICY_EP = { policyGet: CB_SETTINGS_EP.policyGet, policySet: CB_SETTINGS_EP.policySet };
 
 /* ── the chit sheet's three calls (chit-sheet.js reads one chit, moves its step, says what a bill's goods are for) —
    MOVED from app.html's EP so the app and CB Accounts open the same sheet through the same endpoints ── */

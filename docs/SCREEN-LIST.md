@@ -39,6 +39,8 @@ Register: `public/app/screen-id.js` (declared rows, merged into `CBSCREENS`) + `
 | FIN003 | Cash | CB Finance | /finance.html | /finance.html#/cash · CB Finance › Cash |
 | FIN004 | Terms | CB Finance | /finance.html | /finance.html#/terms · CB Finance › Terms |
 | FIN005 | Repeat supply | CB Finance | /finance.html | /finance.html#/repeat · CB Finance › Repeat supply |
+| FIN006 | Cheques | CB Finance | /finance.html | /finance.html#/cheques · CB Finance › Cheques |
+| FIN007 | Returns | CB Finance | /finance.html | /finance.html#/returns · CB Finance › Returns |
 | CRM001 | Parties | CB CRM | /crm.html | /crm.html#/parties · CB CRM › Parties |
 | CRM002 | Chits | CB CRM | /crm.html | /crm.html#/chits · CB CRM › Chits |
 | CRM003 | Follow-ups | CB CRM | /crm.html | /crm.html#/followups · CB CRM › Follow-ups |
@@ -46,6 +48,8 @@ Register: `public/app/screen-id.js` (declared rows, merged into `CBSCREENS`) + `
 | CRM005 | Calls | CB CRM | /crm.html | Parties › Calls |
 | CRM006 | Party | CB CRM | /crm.html | Parties › a party |
 | CRM007 | Chit page | CB CRM | /crm.html | a sheet › Open page |
+| CRM008 | Groups & segments | CB CRM | /crm.html | /crm.html#/groups · CB CRM › Groups & segments |
+| CRM009 | Shop window | CB CRM | /crm.html | /crm.html#/showcase · CB CRM › Shop window |
 | TSK001 | Orders in | CB Tasks & Orders | /tasks.html | /tasks.html · CB Tasks & Orders › Orders in |
 | TSK002 | Orders out | CB Tasks & Orders | /tasks.html | /tasks.html · CB Tasks & Orders › Orders out |
 | TSK003 | Tasks | CB Tasks & Orders | /tasks.html | /tasks.html · CB Tasks & Orders › Tasks |
