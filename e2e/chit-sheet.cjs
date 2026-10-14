@@ -91,6 +91,13 @@ function standIn() {
   S.entries = [e(1, 'ch1', 'C2/26-27/0002', 'bill', SHOP), e(2, 'sb1', 'AM-81', 'purchase', 'Mani')];
   for (let i = 3; i < 40; i++) S.entries.push(e(i, null, 'X' + i, 'bill', 'Mani', { source_chit_id: null, source: null }));   /* filler so the Day book scrolls */
   S.waiting = [{ id: 1, chit_id: 'sb1', ref: 'bill:sb1', reason: 'Waiting for you to confirm Agro Mills’ bill AM-81.', tries: 0, since: TODAY + 'T04:00:00Z', stuck: true }];
+  /* F10: MY counter receipt carrying their bill (their_bill no + total) — the supplier bill to accept; sent by me, the header's status stays 'pending' */
+  S.chits.rc1 = { header: { chit_id: 'rc1', purpose: 'receipt', current_status: 'pending', manual_subject: 'Receipt R/0007', created_at: TODAY + 'T04:20:00.000Z', sender_entity_id: 'ent-books',
+    all_recipients: [me], summary_json: { currency_code: 'INR' },
+    business_json: { doc: 'receipt', till: { id: 'C1' }, their_bill: { no: 'SG-103', total: 45 }, party: { name: 'Sri Ganesh Provisions', party_id: '33333333-3333-4333-8333-333333333333' } } },
+    state_log: [], detail: { line_items: [{ particulars: 'Rice 1kg', quantity: 1, unit: 'bag', price: 45, total: 45, gst_rate: 0 }] } };
+  S.chits.rc2 = JSON.parse(JSON.stringify(S.chits.rc1)); S.chits.rc2.header.chit_id = 'rc2'; S.chits.rc2.header.business_json.their_bill.no = 'SG-102'; S.chits.rc2.header.business_json.party = { name: 'Sri Ganesh' };
+  S.parties = { 'P-00001': { party_id: '33333333-3333-4333-8333-333333333333', name: 'Sri Ganesh Provisions' } };
   return S;
 }
 async function route(S, r) {
@@ -101,16 +108,22 @@ async function route(S, r) {
   if (p === '/api/books/cheques') return J(r, 200, { currency: 'INR', cheques: [] });
   if (p === '/api/books/dues') return J(r, 200, books.dues([], { asOf: TODAY }));
   if (p === '/api/books/daybook') return J(r, 200, books.daybook(S.entries.map(books.entry)));
+  if (p === '/api/books/outbox/retry' && m === 'POST') { S.retries = (S.retries || 0) + 1; if (S.onRetry) S.onRetry(); return J(r, 200, { tried: 1, posted: 0, still: 1 }); }
   if (p.startsWith('/api/books')) return J(r, 200, {});
   let x;
   if ((x = p.match(/^\/api\/chits\/([^/]+)\/status$/)) && m === 'PUT') {
     S.statusCalls.push({ id: x[1], body }); S.calls.push('status');
     /* a bill I received: since "bills-private" my step is a bill_step row in MY state_log — the shared status is the seller's and does not move */
-    if (S.chits[x[1]].header.purpose === 'invoice') { (S.chits[x[1]].state_log = S.chits[x[1]].state_log || []).push({ action: 'bill_step', code: 'B-2100', step: body.status, mine: true }); S.waiting = S.waiting.filter((w) => w.chit_id !== x[1]); }
+    /* FX-F10W: a captured receipt IS a bill (folder-inventory bill_received) — its step is a bill_step too, the header's status never moves */
+    if (/^(invoice|receipt)$/.test(S.chits[x[1]].header.purpose)) { if (!S.staleRead) (S.chits[x[1]].state_log = S.chits[x[1]].state_log || []).push({ action: 'bill_step', code: 'B-2100', step: body.status, mine: true }); S.waiting = S.waiting.filter((w) => w.chit_id !== x[1]); }
     else S.chits[x[1]].header.current_status = body.status;
-    return J(r, 200, { ok: true });
+    /* the server's answer (routes/chits.js moveStatus): "pending → accepted", or the noop "Already accepted" */
+    return J(r, 200, S.noop ? { message: 'Already ' + body.status, chit_id: x[1], status: body.status, noop: true } : { message: 'Chit ' + body.status, warning: null, chit_id: x[1], previous_status: 'pending', new_status: body.status });
   }
-  if ((x = p.match(/^\/api\/chits\/([^/]+)\/use$/)) && m === 'PUT') { S.useCalls.push({ id: x[1], body }); S.calls.push('use'); return J(r, 200, { ok: true }); }
+  if ((x = p.match(/^\/api\/chits\/([^/]+)\/use$/)) && m === 'PUT') { S.useCalls.push({ id: x[1], body }); S.calls.push('use');
+    /* FX-F10W: { party: { party_no } } — the server resolves it in MY supplier list and writes party.party_id on my receipt */
+    if (body.party && S.parties && S.parties[body.party.party_no]) { const pt = S.parties[body.party.party_no]; S.chits[x[1]].header.business_json.party = { name: pt.name, party_id: pt.party_id }; return J(r, 200, { ok: true, party: Object.assign({ party_no: body.party.party_no }, pt) }); }
+    return J(r, 200, { ok: true }); }
   if ((x = p.match(/^\/api\/chits\/([^/]+)\/dispute/)) && m === 'POST') { S.disputes++; return J(r, 200, { ok: true }); }
   if ((x = p.match(/^\/api\/chits\/([^/]+)$/)) && m === 'GET') { S.chitReads++; return S.chits[x[1]] ? J(r, 200, S.chits[x[1]]) : J(r, 404, { error: 'no chit' }); }
   if (p === '/api/folders' && m === 'GET') return J(r, 200, { folders: [
@@ -348,6 +361,74 @@ async function route(S, r) {
     await c2.close();
   }
   /* ── 3c · the other two readings: summary_json.money alone · neither (opened from the page, as a link would) ── */
+  /* ── 3e · FX-F10W: a captured receipt — Accept repaints the sheet from the server's answer, and its Waiting row leaves without a reload ── */
+  {
+    const S = standIn();
+    S.waiting = [{ id: 11, chit_id: 'rc1', ref: 'chit:rc1', reason: 'Waiting for you to confirm the goods were received (bill SG-103 from Sri Ganesh Provisions)', tries: 0, since: TODAY + 'T04:20:00Z' },
+      { id: 7, chit_id: 'ch1', ref: 'bill:ch1', reason: 'September is locked. Open it again to record this bill.', tries: 3, since: TODAY + 'T05:00:00Z' }];   /* a second row keeps the list on screen */
+    const { ctx, p } = await open(S);
+    await p.evaluate(() => bkTab('waiting')); await p.waitForSelector('[data-testid="wait-0"]', { timeout: 8000 });
+    await p.waitForFunction(() => /Sri Ganesh Provisions/.test((document.querySelector('[data-testid="wait-0"]') || {}).textContent || ''), null, { timeout: 8000 });
+    await p.evaluate(() => { document.querySelector('[data-testid="waiting-list"]').__kept = true; });
+    await p.getByText('Sri Ganesh Provisions').first().click(); await waitSheet(p, 'SG-103');
+    ok(await sheetOpen(p) && /To accept/.test(await p.textContent('[data-testid="cs-step"]')), 'F10W · the NAME on the Waiting row opens the receipt\'s sheet, "To accept"');
+    await p.click('[data-testid="cs-act-accept"]');
+    await p.waitForFunction(() => /Accepted/.test((document.querySelector('[data-testid="cs-step"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
+    ok(/Accepted/.test(await p.textContent('[data-testid="cs-step"]')) && await p.locator('[data-testid="cs-act-accept"]').count() === 0 && S.statusCalls.length === 1,
+      'F10W · "pending → accepted": the sheet repaints its step (Accepted) and drops Accept — one status call — got ' + (await p.textContent('[data-testid="cs-step"]')));
+    await p.waitForFunction(() => !/Sri Ganesh/.test((document.querySelector('[data-testid="waiting-list"]') || {}).textContent || ''), null, { timeout: 5000 }).catch(() => {});
+    await p.waitForTimeout(400);   /* the /health read behind it lands: the list must still be the same one */
+    ok(!/Sri Ganesh/.test(await p.textContent('[data-testid="waiting-list"]')) && await p.evaluate(() => document.querySelector('[data-testid="waiting-list"]').__kept === true),
+      'F10W · the Waiting row left the list at once — the list was flipped, never reloaded');
+    ok(await p.evaluate(() => { const n = bkTodoCounts(null, null, { waiting: BK.waiting }); return n.accept === 0 && n.waiting === 1; }), 'F10W · …and the To do\'s counts follow (0 to accept · 1 to record)');
+    await p.keyboard.press('Escape'); await ctx.close();
+  }
+  {
+    /* the server already moved it (a second door) — the answer is the noop "Already accepted", and a read that has not caught up still says pending */
+    const S = standIn(); S.noop = true; S.staleRead = true;
+    S.waiting = [{ id: 11, chit_id: 'rc1', ref: 'chit:rc1', reason: 'Waiting for you to confirm the goods were received (bill SG-103 from Sri Ganesh Provisions)', tries: 0, since: TODAY + 'T04:20:00Z' }];
+    const { ctx, p } = await open(S);
+    await p.evaluate(() => openChitSheet('rc1')); await waitSheet(p, 'SG-103');
+    await p.click('[data-testid="cs-act-accept"]');
+    await p.waitForFunction(() => /Accepted/.test((document.querySelector('[data-testid="cs-step"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
+    ok(/Accepted/.test(await p.textContent('[data-testid="cs-step"]')) && await p.locator('[data-testid="cs-act-accept"]').count() === 0,
+      'F10W · "Already accepted" (noop) is painted as Accepted even when the read lags — a second Accept is never offered');
+    await p.keyboard.press('Escape'); await ctx.close();
+  }
+  /* ── 3f · FX-F10W: "Who is Sri Ganesh?" carries the shop's near match — "Is this Sri Ganesh Provisions (P-00001)?" links, never a second party ── */
+  {
+    const S = standIn();
+    const toAccept = { id: 12, chit_id: 'rc2', ref: 'chit:rc2', reason: 'Waiting for you to confirm the goods were received (bill SG-102 from Sri Ganesh Provisions)', tries: 1, since: TODAY + 'T04:10:00Z' };
+    S.waiting = [{ id: 12, chit_id: 'rc2', ref: 'chit:rc2', reason: 'Who is Sri Ganesh? Add them as a supplier — then bill SG-102 waits for you to accept it.', tries: 0, since: TODAY + 'T04:10:00Z',
+      candidates: [{ name: 'Sri Ganesh Provisions', party_no: 'P-00001' }] }];
+    S.onRetry = () => { if (S.chits.rc2.header.business_json.party.party_id) S.waiting = [toAccept]; };
+    const { ctx, p } = await open(S);
+    await p.evaluate(() => bkTab('waiting')); await p.waitForSelector('[data-testid="wait-link-0-0"]', { timeout: 8000 });
+    ok(/^Is this Sri Ganesh Provisions \(P-00001\)\?$/.test((await p.textContent('[data-testid="wait-link-0-0"]')).trim()) && await p.locator('[data-testid="wait-addsup-0"]').count() === 1,
+      'F10W · the row asks "Is this Sri Ganesh Provisions (P-00001)?" first; Add supplier stays the second choice');
+    ok(/^1 supplier to add/.test(await p.evaluate(() => { const n = bkTodoCounts(null, null, { waiting: BK.waiting }); return n.supplier + ' supplier to add · ' + n.accept; })), 'F10W · the To do counts it as a supplier to add (the server\'s todo), not a bill to accept');
+    await p.click('[data-testid="wait-link-0-0"]');
+    await p.waitForFunction(() => /To accept/.test((document.querySelector('[data-testid="wait-0"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
+    ok(S.useCalls.length === 1 && JSON.stringify(S.useCalls[0].body) === JSON.stringify({ party: { party_no: 'P-00001' } }) && S.retries === 1,
+      'F10W · the pick writes the party through PUT /use { party: { party_no } } (the server resolves it), then the books try again — ' + JSON.stringify(S.useCalls));
+    ok(/To accept/.test(await p.textContent('[data-testid="wait-0"]')) && await p.locator('[data-testid^="wait-addsup-"]').count() === 0, 'F10W · …and the bill moved to "To accept" — no second supplier was added');
+    await ctx.close();
+  }
+  {
+    const S = standIn();
+    S.waiting = [{ id: 12, chit_id: 'rc2', ref: 'chit:rc2', reason: 'Who is Sri Ganesh? Add them as a supplier — then bill SG-102 waits for you to accept it.', tries: 0, since: TODAY + 'T04:10:00Z',
+      candidates: [{ name: 'Sri Ganesh Provisions', party_no: 'P-00001' }] }];
+    S.onRetry = () => { S.waiting = [{ id: 12, chit_id: 'rc2', ref: 'chit:rc2', reason: 'Waiting for you to confirm the goods were received (bill SG-102 from Sri Ganesh Provisions)', tries: 1, since: TODAY + 'T04:10:00Z' }]; };
+    const { ctx, p } = await open(S);
+    await p.evaluate(() => bkTab('waiting')); await p.waitForSelector('[data-testid="wait-0"]', { timeout: 8000 });
+    await p.evaluate(() => openChitSheet('rc2')); await waitSheet(p, 'SG-102');
+    ok(/Is this Sri Ganesh Provisions \(P-00001\)\?/.test(await p.textContent('[data-testid="cs-pick"]')) && await p.locator('[data-testid="cs-act-supplier"]').count() === 1, 'F10W · the popup shows the same near match, with Add supplier beside it');
+    await p.click('[data-testid="cs-link-0"]');
+    await p.waitForFunction(() => !document.querySelector('[data-testid="cs-pick"]') && /Sri Ganesh Provisions/.test((document.querySelector('[data-testid="cs-who"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
+    ok(S.useCalls.length === 1 && S.useCalls[0].body.party.party_no === 'P-00001' && await p.locator('[data-testid="cs-pick"]').count() === 0 && /Sri Ganesh Provisions/.test(await p.textContent('[data-testid="cs-who"]'))
+      && await p.locator('[data-testid="cs-act-accept"]:not([disabled])').count() === 1, 'F10W · picking it in the popup links the receipt; the sheet reads again: Sri Ganesh Provisions, Accept offered');
+    await p.keyboard.press('Escape'); await ctx.close();
+  }
   {
     const S = standIn(); const { ctx, p } = await open(S);
     await p.evaluate(() => openChitSheet('ch2')); await waitSheet(p, 'C1/26-27/0003');

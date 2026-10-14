@@ -2242,7 +2242,7 @@ async function bkWaitLink(i, j, btn) {
 }
 /**
  * FX-F10W ([[feedback-repaint-locally]]): a bill the popup just accepted leaves the Waiting list at once — the row is flipped out of BK.waiting
- * and the list, its count and the menu's number repaint; no reload. The books post it a moment later, so a /health read in that moment may still
+ * and the list and its count repaint; no reload. The books post it a moment later, so a /health read in that moment may still
  * list it as "to confirm": BK.gone keeps it out until the server says something else about it.
  */
 function bkWaitGone(chitId) {
@@ -2251,7 +2251,6 @@ function bkWaitGone(chitId) {
   BK.waiting = (BK.waiting || []).filter(function (w) { return w.chit_id !== chitId; });
   bkWaitingCount();
   var wl = CBList.get('waiting'); if (wl && BK.tab === 'waiting') wl.refresh();
-  try { if (typeof navPaint === 'function' && typeof BK.tab === 'string') navPaint(BK.tab); } catch (_) {}
 }
 function bkWaitDate(w) { var m = bkWaitModel(w), d = bkWaitDay(w); return String((m && m.at) || (d && d.day) || w.since || ''); }
 function bkWaitNext(w) {
