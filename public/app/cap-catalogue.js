@@ -70,7 +70,8 @@
     if (C.list && !more) C.list.refresh();
     return root.api('prodList', { query: query }).then(function (r) {
       if (gen !== C.gen) return;
-      var rows = (r && r.items) || [];
+      /* core.js unwrap hands back the ITEMS ARRAY with total · status_counts · category_counts riding on it (SIBS) */
+      var rows = Array.isArray(r) ? r : ((r && r.items) || []);
       C.items = more ? C.items.concat(rows) : rows;
       C.total = r && typeof r.total === 'number' ? r.total : C.items.length;
       if (!more) C.counts = r && r.status_counts || null;
