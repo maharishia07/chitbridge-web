@@ -1219,6 +1219,7 @@ function stdCounts(){
  * list, matrix, filters and Copy treat it like any standard. The rows live in ONE file, public/data/compat.json, which the Compatibility lab
  * (N04) reads too — never a second list here. This maps a compat.json row onto a register row; a row the file gets wrong is dropped, not guessed.
  *   status works → In force · partly → Partly · planned → Planned.   proof live → "Tested live <date>" · stand-in → "Proven on a stand-in" · not-yet → "Not yet".
+ *   T3-COMPAT: dir → `dir` + `moves` (STD_COMPAT_DIR's sentence) · code → `code` — the Works with view (standards.html#works-with) shows both.
  */
 var STD_COMPAT_STATUS = { works: 'live', partly: 'part', planned: 'plan' };
 var STD_COMPAT_PROOF = { live: 'Tested live', 'stand-in': 'Proven on a stand-in', 'not-yet': 'Not yet' };
