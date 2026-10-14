@@ -1021,11 +1021,12 @@
    *     never said    avl —              (never "avl 0")
    *     no date       avl 14 · dt ?      (the missing date is shown as missing, not quietly dropped)
    */
-  var MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  /* T2-WEBPRIMS: day and month in the reader's words (CBLocale.date) — no typed Jan…Dec; a host without the locale engine shows the ISO day */
   function shortDate(s) {
     var d = new Date(s);
     if (isNaN(d)) return String(s);
-    return ('0' + d.getDate()).slice(-2) + ' ' + MON[d.getMonth()];
+    if (root.CBLocale && root.CBLocale.date) return root.CBLocale.date(d, { day: '2-digit', month: 'short' });
+    return d.toISOString().slice(0, 10);
   }
   function availHTML(ns, r) {
     if (opt(ns, 'hideAvail', true)) return '';
@@ -1904,7 +1905,7 @@
     if (n == null || !isFinite(n)) return '';
     /* ⚠️ ONE FORMAT EVERYWHERE. Beside the app, its own formatter (locale · currency · sign · two decimals) rules — the
        sheet read "₹610" and "₹-61" above "549.00 ₹" (Athi, 2026-09-05). The storefront keeps CBCart.fmt. */
-    if (typeof root.fmtMoney === 'function') { try { return root.fmtMoney(n, (typeof root.myCur === 'function') ? root.myCur() : 'INR'); } catch (_) {} }
+    if (typeof root.fmtMoney === 'function' && typeof root.myCur === 'function') { try { return root.fmtMoney(n, root.myCur()); } catch (e) { if (typeof console !== 'undefined') console.warn('cart: the app formatter failed — the price shows in the cart\'s own format', e); } }   /* T2-WEBPRIMS: every page loads fmtMoney now — myCur says "beside the app" */
     return (root.CBCart && root.CBCart.fmt) ? root.CBCart.fmt(ns, n) : String(n);
   }
 

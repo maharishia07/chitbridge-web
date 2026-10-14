@@ -198,7 +198,6 @@ var CATS={
 var S={st:null,q:'',step:0,by:'',addr:'',note:''};
 var STEPS=[{n:'Items'},{n:'Details'},{n:'Review'}];   /* three — the store IS the recipient */
 
-function money(n){ return '₹'+Number(n).toLocaleString('en-IN'); }
 function isMe(){ return S.st && S.st.id===ME; }
 
 function armCart(){
@@ -270,11 +269,11 @@ function stepReview(){
     + '<div class="rev"><div class="h">Items · '+sel.length+'<span class="e" onclick="go(0)">Change</span></div>'
     + sel.map(function(l){
         return '<div class="r"><span class="k">'+l.qty+' × '+esc(l.unit)+'</span><span style="flex:1">'+esc(l.name)
-          + (l.offered?'<span style="color:#6a707a;font-size:11.5px"> · your offer '+money(l.unit_price)
-              +' <span style="text-decoration:line-through;opacity:.6">'+money(l.asking_price)+'</span></span>':'')
-          + '</span><b>'+(l.line_total==null?'—':money(l.line_total))+'</b></div>'; }).join('')
+          + (l.offered?'<span style="color:#6a707a;font-size:11.5px"> · your offer '+CBCart.fmt('net', l.unit_price)
+              +' <span style="text-decoration:line-through;opacity:.6">'+CBCart.fmt('net', l.asking_price)+'</span></span>':'')
+          + '</span><b>'+(l.line_total==null?'—':CBCart.fmt('net', l.line_total))+'</b></div>'; }).join('')
     + '<div class="tot"><span style="flex:1">'+(T.offered?'Total at your offer':'Total')+'</span>'
-    + '<span>'+(T.amount?money(T.amount)+(T.partial?'+':''):'—')+'</span></div></div>'
+    + '<span>'+(T.amount?CBCart.fmt('net', T.amount)+(T.partial?'+':''):'—')+'</span></div></div>'
     + (T.offered?'<div class="note">This contains an OFFER — your price, not theirs.</div>':'')
     + '<div class="rev"><div class="h">Details<span class="e" onclick="go(1)">Change</span></div>'
     + '<div class="r"><span class="k">Needed by</span><span>'+(S.by?esc(S.by):'—')+'</span></div>'

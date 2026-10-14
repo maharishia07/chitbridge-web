@@ -41,7 +41,6 @@ var RP_VERB = { accept: 'Accept', counter: 'Counter', decline: 'Decline', skip: 
 var RP_TONE = { proposed: 'amber', agreed: 'green', countered: 'amber', paused: '', declined: '', ended: '' };
 
 function rpT(s) { return typeof tx === 'function' ? tx(s) : s; }
-function rpE(s) { return typeof esc === 'function' ? esc(s) : String(s == null ? '' : s); }
 /** "every 2 weeks" · "every day" — the schedule in words, from the server's fields */
 function rpEvery(a) { var u = RP_UNIT[a.unit] || [a.unit, a.unit]; var n = Number(a.every) || 1; return rpT('every') + ' ' + (n > 1 ? n + ' ' + rpT(u[1]) : rpT(u[0])); }
 /** the per-run money as the agreement chit was frozen with — a mapping, never a sum */
@@ -52,15 +51,15 @@ function rpSession() { return (typeof SESS !== 'undefined' && SESS) || (typeof S
 function rpBtn(a, verb, tid, cls, sayInline) {
   var v = (a.actions || {})[verb]; if (!v) return '';
   var ok = !!v.ok, say = v.say || '';
-  return '<button type="button" class="' + (cls || 'act sm') + '" data-testid="' + rpE(tid) + '" data-verb="' + verb + '"' + (ok ? '' : ' disabled aria-disabled="true" title="' + rpE(say) + '" data-why="' + rpE(say) + '"')
-    + ' onclick="CBRepeat.act(\'' + rpE(a.agreement_id) + '\',\'' + verb + '\',this)">' + rpE(rpT(RP_VERB[verb] || verb)) + '</button>'
+  return '<button type="button" class="' + (cls || 'act sm') + '" data-testid="' + esc(tid) + '" data-verb="' + verb + '"' + (ok ? '' : ' disabled aria-disabled="true" title="' + esc(say) + '" data-why="' + esc(say) + '"')
+    + ' onclick="CBRepeat.act(\'' + esc(a.agreement_id) + '\',\'' + verb + '\',this)">' + esc(rpT(RP_VERB[verb] || verb)) + '</button>'
     /* greyed WITH its sentence: a disabled button never answers a tap, so the sentence stands beside it */
-    + (!ok && sayInline ? '<div class="hint" data-testid="' + rpE(tid) + '-say">' + rpE(say) + '</div>' : '');
+    + (!ok && sayInline ? '<div class="hint" data-testid="' + esc(tid) + '-say">' + esc(say) + '</div>' : '');
 }
 /** the greyed verbs' sentences, once each, with the verbs they refuse — under the panel's buttons */
 function rpSaysHTML(a, verbs) {
   var by = {}; verbs.forEach(function (v) { var x = (a.actions || {})[v]; if (x && !x.ok && x.say) (by[x.say] = by[x.say] || []).push(rpT(RP_VERB[v] || v)); });
-  return Object.keys(by).map(function (say) { return '<div class="hint" data-testid="rp-says">' + rpE(by[say].join(' · ') + ': ' + say) + '</div>'; }).join('');
+  return Object.keys(by).map(function (say) { return '<div class="hint" data-testid="rp-says">' + esc(by[say].join(' · ') + ': ' + say) + '</div>'; }).join('');
 }
 
 /* ── the Finance tab: the seller's agreements ─────────────────────────────────────────────────────────────── */
@@ -83,12 +82,12 @@ function rpRetry() { rpLoad(); }
 /** the one line above the list: what is due (the server's rows) and the button that runs it — or the migration sentence, greyed */
 function rpHead() {
   var h = document.getElementById('rp_head'); if (!h) return;
-  if (RP.state === 'denied') { h.innerHTML = '<p data-testid="rp-denied" style="opacity:.75">' + rpE(rpT('Only the owner or a sales person may see agreements.')) + '</p>'; return; }
-  if (!RP.migrated) { h.innerHTML = '<p data-testid="rp-not-yet" style="opacity:.75">' + rpE(rpT(RP.msg || 'Repeat supply arrives after the next update.')) + '</p>'; return; }
+  if (RP.state === 'denied') { h.innerHTML = '<p data-testid="rp-denied" style="opacity:.75">' + esc(rpT('Only the owner or a sales person may see agreements.')) + '</p>'; return; }
+  if (!RP.migrated) { h.innerHTML = '<p data-testid="rp-not-yet" style="opacity:.75">' + esc(rpT(RP.msg || 'Repeat supply arrives after the next update.')) + '</p>'; return; }
   var due = RP.rows.filter(function (a) { return a.due; }).length;
-  h.innerHTML = '<div class="kv"><b data-testid="rp-due">' + rpE(due ? (typeof txn === 'function' ? txn('{count} run due', '{count} runs due', due) : due + ' due') : rpT('Nothing due today')) + '</b>'
-    + '<span><button type="button" class="act sm" data-testid="rp-run-due"' + (due ? '' : ' disabled aria-disabled="true" title="' + rpE(rpT('Nothing is due.')) + '"') + ' onclick="rpSweep(this)">' + rpE(rpT('Run what is due')) + '</button>'
-    + ' <span id="rp_why" data-testid="rp-why" class="hint"' + (RP.said ? ' data-tone="' + rpE(RP.said.tone) + '"' : '') + '>' + rpE(RP.said ? RP.said.text : '') + '</span></span></div>';
+  h.innerHTML = '<div class="kv"><b data-testid="rp-due">' + esc(due ? (typeof txn === 'function' ? txn('{count} run due', '{count} runs due', due) : due + ' due') : rpT('Nothing due today')) + '</b>'
+    + '<span><button type="button" class="act sm" data-testid="rp-run-due"' + (due ? '' : ' disabled aria-disabled="true" title="' + esc(rpT('Nothing is due.')) + '"') + ' onclick="rpSweep(this)">' + esc(rpT('Run what is due')) + '</button>'
+    + ' <span id="rp_why" data-testid="rp-why" class="hint"' + (RP.said ? ' data-tone="' + esc(RP.said.tone) + '"' : '') + '>' + esc(RP.said ? RP.said.text : '') + '</span></span></div>';
 }
 function rpSweep(btn) {
   return CBAction.run(btn, function () { return api('repeatSweep', { body: {} }); },
@@ -101,12 +100,12 @@ function rpSweep(btn) {
 function rpCols() {
   var dash = '<span style="color:var(--grey)">—</span>';
   return [
-    { key: 'customer', label: rpT('Customer'), prio: 1, sort: 'name', w: 220, html: true, cell: function (a) { return '<b>' + rpE(a.customer && a.customer.name || rpT('Customer')) + '</b><div class="hint" data-b="each">' + rpE(rpEvery(a)) + (a.mode === 'send' ? ' · ' + rpE(rpT('sent')) : ' · ' + rpE(rpT('drafted'))) + '</div>'; } },
-    { key: 'money', label: rpT('Each run'), prio: 3, num: true, w: 130, html: true, cell: function (a) { return '<span data-b="money">' + rpE(rpMoney(a)) + '</span>'; } },
-    { key: 'next', label: rpT('Next run'), prio: 2, sort: 'next', w: 150, html: true, cell: function (a) { return a.state === 'agreed' || a.state === 'paused' ? '<span data-b="next">' + rpE(rpDate(a.next_on)) + '</span>' + (a.due ? ' <span class="tag amber">' + rpE(rpT('Due')) + '</span>' : '') : dash; } },
-    { key: 'last', label: rpT('Last run'), prio: 4, w: 130, html: true, cell: function (a) { return a.last_run_on ? '<span data-b="last">' + rpE(rpDate(a.last_run_on)) + '</span> <span class="hint">' + rpE(String(a.runs_done)) + (a.runs_max ? '/' + rpE(String(a.runs_max)) : '') + '</span>' : dash; } },
+    { key: 'customer', label: rpT('Customer'), prio: 1, sort: 'name', w: 220, html: true, cell: function (a) { return '<b>' + esc(a.customer && a.customer.name || rpT('Customer')) + '</b><div class="hint" data-b="each">' + esc(rpEvery(a)) + (a.mode === 'send' ? ' · ' + esc(rpT('sent')) : ' · ' + esc(rpT('drafted'))) + '</div>'; } },
+    { key: 'money', label: rpT('Each run'), prio: 3, num: true, w: 130, html: true, cell: function (a) { return '<span data-b="money">' + esc(rpMoney(a)) + '</span>'; } },
+    { key: 'next', label: rpT('Next run'), prio: 2, sort: 'next', w: 150, html: true, cell: function (a) { return a.state === 'agreed' || a.state === 'paused' ? '<span data-b="next">' + esc(rpDate(a.next_on)) + '</span>' + (a.due ? ' <span class="tag amber">' + esc(rpT('Due')) + '</span>' : '') : dash; } },
+    { key: 'last', label: rpT('Last run'), prio: 4, w: 130, html: true, cell: function (a) { return a.last_run_on ? '<span data-b="last">' + esc(rpDate(a.last_run_on)) + '</span> <span class="hint">' + esc(String(a.runs_done)) + (a.runs_max ? '/' + esc(String(a.runs_max)) : '') + '</span>' : dash; } },
     { key: 'state', label: rpT('Their side'), prio: 1, sort: 'state', w: 200, html: true, cell: function (a) {
-      return '<span class="tag ' + (RP_TONE[a.state] || '') + '" data-b="state">' + rpE(rpT(a.words || a.state)) + '</span>' + (a.state_note ? '<div class="hint" data-b="note">' + rpE(a.state_note) + '</div>' : ''); } },
+      return '<span class="tag ' + (RP_TONE[a.state] || '') + '" data-b="state">' + esc(rpT(a.words || a.state)) + '</span>' + (a.state_note ? '<div class="hint" data-b="note">' + esc(a.state_note) + '</div>' : ''); } },
     { key: 'act', label: ' ', prio: 1, pin: 'end', w: 170, html: true, cell: function (a) {
       var v = a.state === 'countered' ? 'agree' : a.state === 'paused' ? 'resume' : 'run';
       return '<span style="display:inline-flex;gap:6px;flex-direction:column;align-items:flex-start" onclick="event.stopPropagation()">' + rpBtn(a, v, 'rp-' + v + '-' + a.agreement_id, 'cbl-tbtn', true) + '</span>'; } },
@@ -143,23 +142,23 @@ function rpDraftOf(m) {
   var today = typeof bkToday === 'function' ? bkToday() : new Date().toISOString().slice(0, 10);
   return { chit_id: m.id, lines: m.lines || [], who: m.who || '', every: 1, unit: 'weekly', start_on: today, until: 'none', runs: 12, on: '', mode: 'draft' };
 }
-function rpField(label, input) { return '<div class="kv"><b style="flex:1 1 140px">' + rpE(label) + '</b><span style="flex:1 1 160px">' + input + '</span></div>'; }
+function rpField(label, input) { return '<div class="kv"><b style="flex:1 1 140px">' + esc(label) + '</b><span style="flex:1 1 160px">' + input + '</span></div>'; }
 function rpStepSchedule() {
   var d = RP.draft, sel = function (v) { return d.unit === v ? ' selected' : ''; }, chk = function (k, v) { return d[k] === v ? ' checked' : ''; };
-  return rpField(rpT('Every'), '<input class="inp" id="rp_every" data-testid="rp-every" inputmode="numeric" value="' + rpE(String(d.every)) + '" style="width:70px" oninput="CBRepeat.read()"> '
-      + '<select class="inp" id="rp_unit" data-testid="rp-unit" onchange="CBRepeat.read()"><option value="daily"' + sel('daily') + '>' + rpE(rpT('day(s)')) + '</option><option value="weekly"' + sel('weekly') + '>' + rpE(rpT('week(s)')) + '</option><option value="monthly"' + sel('monthly') + '>' + rpE(rpT('month(s)')) + '</option></select>')
-    + rpField(rpT('From'), '<input class="inp" type="date" id="rp_start" data-testid="rp-start" value="' + rpE(d.start_on) + '" onchange="CBRepeat.read()">')
-    + rpField(rpT('Until'), '<label><input type="radio" name="rp_until" value="none" data-testid="rp-until-none"' + chk('until', 'none') + ' onchange="CBRepeat.read()"> ' + rpE(rpT('You end it')) + '</label> '
-      + '<label><input type="radio" name="rp_until" value="runs" data-testid="rp-until-runs"' + chk('until', 'runs') + ' onchange="CBRepeat.read()"> <input class="inp" id="rp_runs" data-testid="rp-runs" inputmode="numeric" value="' + rpE(String(d.runs)) + '" style="width:60px" oninput="CBRepeat.read()"> ' + rpE(rpT('runs')) + '</label> '
-      + '<label><input type="radio" name="rp_until" value="on" data-testid="rp-until-on"' + chk('until', 'on') + ' onchange="CBRepeat.read()"> <input class="inp" type="date" id="rp_on" data-testid="rp-on" value="' + rpE(d.on) + '" onchange="CBRepeat.read()"></label>')
-    + rpField(rpT('Each run'), '<label><input type="radio" name="rp_mode" value="draft" data-testid="rp-mode-draft"' + chk('mode', 'draft') + ' onchange="CBRepeat.read()"> ' + rpE(rpT('Draft for me to send')) + '</label> '
-      + '<label><input type="radio" name="rp_mode" value="send" data-testid="rp-mode-send"' + chk('mode', 'send') + ' onchange="CBRepeat.read()"> ' + rpE(rpT('Send it')) + '</label>');
+  return rpField(rpT('Every'), '<input class="inp" id="rp_every" data-testid="rp-every" inputmode="numeric" value="' + esc(String(d.every)) + '" style="width:70px" oninput="CBRepeat.read()"> '
+      + '<select class="inp" id="rp_unit" data-testid="rp-unit" onchange="CBRepeat.read()"><option value="daily"' + sel('daily') + '>' + esc(rpT('day(s)')) + '</option><option value="weekly"' + sel('weekly') + '>' + esc(rpT('week(s)')) + '</option><option value="monthly"' + sel('monthly') + '>' + esc(rpT('month(s)')) + '</option></select>')
+    + rpField(rpT('From'), '<input class="inp" type="date" id="rp_start" data-testid="rp-start" value="' + esc(d.start_on) + '" onchange="CBRepeat.read()">')
+    + rpField(rpT('Until'), '<label><input type="radio" name="rp_until" value="none" data-testid="rp-until-none"' + chk('until', 'none') + ' onchange="CBRepeat.read()"> ' + esc(rpT('You end it')) + '</label> '
+      + '<label><input type="radio" name="rp_until" value="runs" data-testid="rp-until-runs"' + chk('until', 'runs') + ' onchange="CBRepeat.read()"> <input class="inp" id="rp_runs" data-testid="rp-runs" inputmode="numeric" value="' + esc(String(d.runs)) + '" style="width:60px" oninput="CBRepeat.read()"> ' + esc(rpT('runs')) + '</label> '
+      + '<label><input type="radio" name="rp_until" value="on" data-testid="rp-until-on"' + chk('until', 'on') + ' onchange="CBRepeat.read()"> <input class="inp" type="date" id="rp_on" data-testid="rp-on" value="' + esc(d.on) + '" onchange="CBRepeat.read()"></label>')
+    + rpField(rpT('Each run'), '<label><input type="radio" name="rp_mode" value="draft" data-testid="rp-mode-draft"' + chk('mode', 'draft') + ' onchange="CBRepeat.read()"> ' + esc(rpT('Draft for me to send')) + '</label> '
+      + '<label><input type="radio" name="rp_mode" value="send" data-testid="rp-mode-send"' + chk('mode', 'send') + ' onchange="CBRepeat.read()"> ' + esc(rpT('Send it')) + '</label>');
 }
 function rpStepReview() {
   var d = RP.draft, u = RP_UNIT[d.unit] || [d.unit, d.unit], n = Number(d.every) || 1;
   var until = d.until === 'runs' ? (typeof txn === 'function' ? txn('{count} run', '{count} runs', Number(d.runs)) : d.runs + ' runs') : d.until === 'on' ? rpT('until') + ' ' + rpDate(d.on) : rpT('until you end it');
-  return '<div class="kv"><b>' + rpE(d.who) + '</b><span data-testid="rp-review">' + rpE(rpT('every') + ' ' + (n > 1 ? n + ' ' + rpT(u[1]) : rpT(u[0])) + ' · ' + rpT('from') + ' ' + rpDate(d.start_on) + ' · ' + until + ' · ' + (d.mode === 'send' ? rpT('each run is sent') : rpT('each run is drafted for you'))) + '</span></div>'
-    + '<p class="hint" data-testid="rp-review-lines">' + rpE((typeof txn === 'function' ? txn('{count} line', '{count} lines', d.lines.length) : d.lines.length + ' lines') + ' · ' + rpT('the customer accepts, counters or declines before anything is billed')) + '</p>'
+  return '<div class="kv"><b>' + esc(d.who) + '</b><span data-testid="rp-review">' + esc(rpT('every') + ' ' + (n > 1 ? n + ' ' + rpT(u[1]) : rpT(u[0])) + ' · ' + rpT('from') + ' ' + rpDate(d.start_on) + ' · ' + until + ' · ' + (d.mode === 'send' ? rpT('each run is sent') : rpT('each run is drafted for you'))) + '</span></div>'
+    + '<p class="hint" data-testid="rp-review-lines">' + esc((typeof txn === 'function' ? txn('{count} line', '{count} lines', d.lines.length) : d.lines.length + ' lines') + ' · ' + rpT('the customer accepts, counters or declines before anything is billed')) + '</p>'
     + '<p class="hint" id="rp_send_why" data-testid="rp-send-why"></p>';
 }
 function rpRead() {
@@ -184,7 +183,7 @@ function rpStart(chitId, m) {
   if (typeof modal !== 'function' || typeof CBSteps === 'undefined') { if (typeof toast === 'function') toast(rpT('Open this bill on the app to repeat it')); return; }
   if (typeof CBSheet !== 'undefined' && CBSheet.close) CBSheet.close();
   RP.draft = rpDraftOf(m || { id: chitId });
-  modal('<div class="mhd"><div class="t" data-testid="rp-title">' + rpE(rpT('Repeat this bill')) + '</div><div class="sub" id="rp_sub"></div></div><div id="rp_rail"></div><div class="mbody" id="rp_body"></div><div class="mfoot" id="rp_foot"></div>');
+  modal('<div class="mhd"><div class="t" data-testid="rp-title">' + esc(rpT('Repeat this bill')) + '</div><div class="sub" id="rp_sub"></div></div><div id="rp_rail"></div><div class="mbody" id="rp_body"></div><div class="mfoot" id="rp_foot"></div>');
   if (RP.flow) RP.flow.destroy();
   RP.flow = CBSteps.create({
     steps: [{ k: 'schedule', n: rpT('Schedule'), t: rpT('How often, from when, until when') }, { k: 'review', n: rpT('Review'), t: rpT('The customer agrees before anything is billed') }],
@@ -208,7 +207,7 @@ function rpStart(chitId, m) {
 
 /** the sheet's model → is this chit an agreement? (business_json.repeat is stamped at send on both copies) */
 function rpIsAgreement(m) { return !!(m && m.bj && m.bj.repeat && m.bj.repeat.agreement_id); }
-function rpPanelHTML() { return '<div class="cs-sec">' + rpE(rpT('Repeat supply')) + '</div><div data-testid="rp-panel" id="rp_panel"><div class="cs-mute">' + rpE(rpT('Reading…')) + '</div></div>'; }
+function rpPanelHTML() { return '<div class="cs-sec">' + esc(rpT('Repeat supply')) + '</div><div data-testid="rp-panel" id="rp_panel"><div class="cs-mute">' + esc(rpT('Reading…')) + '</div></div>'; }
 /** mount after the sheet has painted: read the agreement as THIS side sees it and paint the verbs the server allows */
 async function rpPanel(m) {
   var el = document.getElementById('rp_panel'); if (!el || !rpIsAgreement(m)) return;
@@ -219,7 +218,7 @@ async function rpPanel(m) {
     rpPanelPaint();
   } catch (e) {
     var w = typeof CBAction !== 'undefined' ? CBAction.words(e, rpT('Could not read the agreement')) : rpT('Could not read the agreement');
-    el.innerHTML = '<div class="cs-mute" data-testid="rp-panel-err">' + rpE(w) + '</div>';
+    el.innerHTML = '<div class="cs-mute" data-testid="rp-panel-err">' + esc(w) + '</div>';
   }
 }
 function rpPanelPaint() {
@@ -229,11 +228,11 @@ function rpPanelPaint() {
   var line = rpEvery(a) + ' · ' + until + ' · ' + (a.mode === 'send' ? rpT('each run is sent') : rpT('each run is drafted'));
   var verbs = seller ? ['run', 'pause', 'resume', 'agree', 'refuse', 'skip', 'end'] : ['accept', 'counter', 'decline', 'skip'];
   var c = a.counter;
-  el.innerHTML = '<div class="cs-row"><span data-testid="rp-schedule">' + rpE(line) + '</span><span class="tag ' + (RP_TONE[a.state] || '') + '" data-testid="rp-state">' + rpE(rpT(a.words || a.state)) + '</span></div>'
-    + '<div class="cs-row cs-mute"><span>' + rpE(rpT('Next run')) + '</span><span data-testid="rp-next">' + rpE(/^(agreed|paused)$/.test(a.state) ? rpDate(a.next_on) : '—') + '</span></div>'
-    + '<div class="cs-row cs-mute"><span>' + rpE(rpT('Last run')) + '</span><span data-testid="rp-last">' + rpE(a.last_run_on ? rpDate(a.last_run_on) + ' · ' + a.runs_done : '—') + '</span></div>'
-    + (a.state_note ? '<div class="cs-row cs-mute"><span>' + rpE(rpT('Note')) + '</span><span data-testid="rp-note">' + rpE(a.state_note) + '</span></div>' : '')
-    + (c ? '<div class="cs-note" data-testid="rp-counter">' + rpE(rpT('Proposed change') + ': ' + rpCounterWords(c, p.lines)) + '</div>' : '')
+  el.innerHTML = '<div class="cs-row"><span data-testid="rp-schedule">' + esc(line) + '</span><span class="tag ' + (RP_TONE[a.state] || '') + '" data-testid="rp-state">' + esc(rpT(a.words || a.state)) + '</span></div>'
+    + '<div class="cs-row cs-mute"><span>' + esc(rpT('Next run')) + '</span><span data-testid="rp-next">' + esc(/^(agreed|paused)$/.test(a.state) ? rpDate(a.next_on) : '—') + '</span></div>'
+    + '<div class="cs-row cs-mute"><span>' + esc(rpT('Last run')) + '</span><span data-testid="rp-last">' + esc(a.last_run_on ? rpDate(a.last_run_on) + ' · ' + a.runs_done : '—') + '</span></div>'
+    + (a.state_note ? '<div class="cs-row cs-mute"><span>' + esc(rpT('Note')) + '</span><span data-testid="rp-note">' + esc(a.state_note) + '</span></div>' : '')
+    + (c ? '<div class="cs-note" data-testid="rp-counter">' + esc(rpT('Proposed change') + ': ' + rpCounterWords(c, p.lines)) + '</div>' : '')
     + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 4px" data-testid="rp-verbs">' + verbs.map(function (v) { return rpBtn(a, v, 'rp-act-' + v); }).join('') + '</div>' + rpSaysHTML(a, verbs)
     + '<div id="rp_form" data-testid="rp-form"></div><div class="cs-mute" id="rp_panel_why" data-testid="rp-panel-why"></div>';
 }
@@ -245,17 +244,17 @@ function rpCounterWords(c, lines) {
 /** the Counter form: a quantity per line, how often, from when, a note */
 function rpCounterForm(p) {
   var a = p.a;
-  return '<div class="cs-sec">' + rpE(rpT('Your counter')) + '</div>'
-    + (p.lines || []).map(function (l, i) { return '<div class="cs-row"><span>' + rpE(l.particulars || l.name || '') + '</span><input class="inp" data-testid="rp-cq-' + i + '" data-line="' + rpE(l.line_id || '') + '" inputmode="numeric" style="width:70px" value="' + rpE(String(l.quantity != null ? l.quantity : (l.qty || ''))) + '"></div>'; }).join('')
-    + '<div class="cs-row"><span>' + rpE(rpT('Every')) + '</span><span><input class="inp" id="rp_c_every" data-testid="rp-c-every" inputmode="numeric" style="width:60px" value="' + rpE(String(a.every)) + '"> <select class="inp" id="rp_c_unit" data-testid="rp-c-unit">'
-      + ['daily', 'weekly', 'monthly'].map(function (u) { return '<option value="' + u + '"' + (a.unit === u ? ' selected' : '') + '>' + rpE(rpT(RP_UNIT[u][0])) + '</option>'; }).join('') + '</select></span></div>'
-    + '<div class="cs-row"><span>' + rpE(rpT('From')) + '</span><input class="inp" type="date" id="rp_c_start" data-testid="rp-c-start" value="' + rpE(a.next_on || '') + '"></div>'
-    + '<input class="inp" id="rp_c_note" data-testid="rp-c-note" placeholder="' + rpE(rpT('Why (they will read it)')) + '" style="width:100%;margin:6px 0">'
-    + '<button type="button" class="act sm" data-testid="rp-c-send" onclick="CBRepeat.sendCounter(this)">' + rpE(rpT('Send counter')) + '</button>';
+  return '<div class="cs-sec">' + esc(rpT('Your counter')) + '</div>'
+    + (p.lines || []).map(function (l, i) { return '<div class="cs-row"><span>' + esc(l.particulars || l.name || '') + '</span><input class="inp" data-testid="rp-cq-' + i + '" data-line="' + esc(l.line_id || '') + '" inputmode="numeric" style="width:70px" value="' + esc(String(l.quantity != null ? l.quantity : (l.qty || ''))) + '"></div>'; }).join('')
+    + '<div class="cs-row"><span>' + esc(rpT('Every')) + '</span><span><input class="inp" id="rp_c_every" data-testid="rp-c-every" inputmode="numeric" style="width:60px" value="' + esc(String(a.every)) + '"> <select class="inp" id="rp_c_unit" data-testid="rp-c-unit">'
+      + ['daily', 'weekly', 'monthly'].map(function (u) { return '<option value="' + u + '"' + (a.unit === u ? ' selected' : '') + '>' + esc(rpT(RP_UNIT[u][0])) + '</option>'; }).join('') + '</select></span></div>'
+    + '<div class="cs-row"><span>' + esc(rpT('From')) + '</span><input class="inp" type="date" id="rp_c_start" data-testid="rp-c-start" value="' + esc(a.next_on || '') + '"></div>'
+    + '<input class="inp" id="rp_c_note" data-testid="rp-c-note" placeholder="' + esc(rpT('Why (they will read it)')) + '" style="width:100%;margin:6px 0">'
+    + '<button type="button" class="act sm" data-testid="rp-c-send" onclick="CBRepeat.sendCounter(this)">' + esc(rpT('Send counter')) + '</button>';
 }
 function rpReasonForm(verb, label, ph) {
-  return '<div class="cs-row"><input class="inp" id="rp_reason" data-testid="rp-reason" placeholder="' + rpE(ph) + '" style="flex:1">'
-    + '<button type="button" class="act sm" data-testid="rp-' + verb + '-go" onclick="CBRepeat.go(\'' + verb + '\',this)">' + rpE(label) + '</button></div>';
+  return '<div class="cs-row"><input class="inp" id="rp_reason" data-testid="rp-reason" placeholder="' + esc(ph) + '" style="flex:1">'
+    + '<button type="button" class="act sm" data-testid="rp-' + verb + '-go" onclick="CBRepeat.go(\'' + verb + '\',this)">' + esc(label) + '</button></div>';
 }
 /** a verb pressed: the forms that need words first (counter · skip · decline · end · pause · refuse); the rest go straight to the server */
 function rpAct(id, verb, btn) {

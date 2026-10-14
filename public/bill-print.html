@@ -86,6 +86,7 @@
 <div class="slip" id="slip"></div>
 
 <script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
+<script src="/app/locale.js"></script>   <!-- CBLocale: the rupee written the rupee's way, as on the till's slip -->
 <script>
 /* ── the bill, as data. The till will hand the same shape to this template. ─────────────────────────────────── */
 var SHOP = {
@@ -96,6 +97,7 @@ var SHOP = {
   gstin: '33AABCK1234F1Z6'          /* used only on a tax invoice / bill of supply */
 };
 var BILL = {
+  currency: 'INR',   /* the sample shop's money — the slip writes it as the till does (fmtMoney · CBLocale.money) */
   no: 'C1/26-27/0041',
   at: new Date(),
   till: 'Counter 1',
@@ -113,7 +115,6 @@ var BILL = {
 
 /* ── money ─────────────────────────────────────────────────────────────────────────────────────────────────── */
 function r2(n){ return Math.round((Number(n)||0)*100)/100; }
-function money(n){ return (Number(n)||0).toFixed(2); }
 function calc(kind){
   var taxed = kind === 'tax';
   var lines = BILL.lines.map(function(l){
@@ -160,8 +161,8 @@ function render(){
 
   var items = m.lines.map(function(l){
     return '<div class="item">'
-      + '<div class="row"><span class="l">' + esc(l.name) + '</span><span class="v">' + money(l.net) + '</span></div>'
-      + '<div class="row small qty"><span class="l">' + l.qty + ' ' + esc(l.unit) + ' x ' + money(l.price)
+      + '<div class="row"><span class="l">' + esc(l.name) + '</span><span class="v">' + fmtMoney(l.net, BILL.currency) + '</span></div>'
+      + '<div class="row small qty"><span class="l">' + l.qty + ' ' + esc(l.unit) + ' x ' + fmtMoney(l.price, BILL.currency)
         + (l.off ? '   (-' + l.off + '%)' : '')
         + (kind === 'tax' && l.rate ? '   GST ' + l.rate + '%' : '')
         + '</span><span class="v"></span></div>'
@@ -169,27 +170,27 @@ function render(){
   }).join('');
 
   var totals = '<div class="rule"></div>'
-    + (m.save > 0 ? '<div class="row"><span class="l">Items</span><span class="v">' + money(m.gross) + '</span></div>'
-                  + '<div class="row"><span class="l">You saved</span><span class="v">-' + money(m.save) + '</span></div>' : '')
+    + (m.save > 0 ? '<div class="row"><span class="l">Items</span><span class="v">' + fmtMoney(m.gross, BILL.currency) + '</span></div>'
+                  + '<div class="row"><span class="l">You saved</span><span class="v">-' + fmtMoney(m.save, BILL.currency) + '</span></div>' : '')
     + (kind === 'tax'
-        ? '<div class="row"><span class="l">Taxable</span><span class="v">' + money(m.base) + '</span></div>'
+        ? '<div class="row"><span class="l">Taxable</span><span class="v">' + fmtMoney(m.base, BILL.currency) + '</span></div>'
           + Object.keys(m.byRate).sort(function(a,b){ return a-b; }).map(function(k){
               var h = m.byRate[k], half = r2(h.tax / 2);
-              return '<div class="row small"><span class="l">CGST ' + (k/2) + '% </span><span class="v">' + money(half) + '</span></div>'
-                   + '<div class="row small"><span class="l">SGST ' + (k/2) + '% </span><span class="v">' + money(half) + '</span></div>';
+              return '<div class="row small"><span class="l">CGST ' + (k/2) + '% </span><span class="v">' + fmtMoney(half, BILL.currency) + '</span></div>'
+                   + '<div class="row small"><span class="l">SGST ' + (k/2) + '% </span><span class="v">' + fmtMoney(half, BILL.currency) + '</span></div>';
             }).join('')
-          + '<div class="row"><span class="l">Total GST</span><span class="v">' + money(m.tax) + '</span></div>'
+          + '<div class="row"><span class="l">Total GST</span><span class="v">' + fmtMoney(m.tax, BILL.currency) + '</span></div>'
         : '')
     + '<div class="solid"></div>'
-    + '<div class="row big"><span class="l">TOTAL</span><span class="v">' + money(m.net) + '</span></div>'
+    + '<div class="row big"><span class="l">TOTAL</span><span class="v">' + fmtMoney(m.net, BILL.currency) + '</span></div>'
     + '<div class="solid"></div>'
-    + BILL.paid.map(function(p){ return '<div class="row small"><span class="l">' + esc(p.how) + '</span><span class="v">' + money(p.amount) + '</span></div>'; }).join('')
-    + (change > 0 ? '<div class="row small b"><span class="l">Change</span><span class="v">' + money(change) + '</span></div>' : '');
+    + BILL.paid.map(function(p){ return '<div class="row small"><span class="l">' + esc(p.how) + '</span><span class="v">' + fmtMoney(p.amount, BILL.currency) + '</span></div>'; }).join('')
+    + (change > 0 ? '<div class="row small b"><span class="l">Change</span><span class="v">' + fmtMoney(change, BILL.currency) + '</span></div>' : '');
 
   var hsn = (kind === 'tax')
     ? '<div class="rule"></div><table class="hsn"><tr><th>HSN</th><th>Taxable</th><th>Rate</th><th>Tax</th></tr>'
       + m.lines.filter(function(l){ return l.rate; }).map(function(l){
-          return '<tr><td>' + esc(l.hsn) + '</td><td>' + money(l.base) + '</td><td>' + l.rate + '%</td><td>' + money(l.tax) + '</td></tr>';
+          return '<tr><td>' + esc(l.hsn) + '</td><td>' + fmtMoney(l.base, BILL.currency) + '</td><td>' + l.rate + '%</td><td>' + fmtMoney(l.tax, BILL.currency) + '</td></tr>';
         }).join('') + '</table>'
     : '';
 

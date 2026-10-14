@@ -6,7 +6,7 @@
  *   CBRegistration.mount(host, onDone)   paint the form into host; onDone(verifyAnswer, userId) when the code is verified
  *   host null                             app.html's auth card at #root (app.html: CBRegistration.mount(null, regIn) — regIn keeps its old next step)
  * Host globals it reads (both pages have them): api · EP (register · ownerVerify · constitutions from CB_SHOP_EP) · tx · txf · esc · val ·
- * window.CBGov (app/govcontext.js) · csuCountryName · CSU_MONTHS (app/cap-country.js — settings.html carries it; app.html loads it on demand, ensureCap). app.html's card only: onbBanner · modeRibbon · logo · STAGES · CFG.STAGE · go.
+ * window.CBGov (app/govcontext.js) · csuCountryName (app/cap-country.js — settings.html carries it; app.html loads it on demand, ensureCap). app.html's card only: onbBanner · modeRibbon · logo · STAGES · CFG.STAGE · go.
  * Flow step: R2R step 1 · country — registration is its door (docs/process/flows.json).
  */
 'use strict';
@@ -83,7 +83,7 @@ function regSpinRows(){
     var tax = [pk.tax && pk.tax.scheme, pk.tax && pk.tax.id].filter(Boolean).join(' · ');
     var off = pk.offer || {}, zone = { value: off.timezone || '', from: off.from || tx('you pick it after signing in') };   /* the server's offer (STD2) */
     out.push({ key: 'currency', what: tx('Money'), value: esc(pk.currency || ''), from: txf('the usual currency in {c}', { c: name }), known: !!pk.currency });
-    out.push({ key: 'year', what: tx('Year starts'), value: esc(pk.fy_start_month ? tx((typeof CSU_MONTHS !== 'undefined' && CSU_MONTHS[pk.fy_start_month - 1]) || String(pk.fy_start_month)) : ''), from: txf('the {c} pack', { c: name }), known: !!pk.fy_start_month });
+    out.push({ key: 'year', what: tx('Year starts'), value: esc(pk.fy_start_month ? (monthNames('long')[pk.fy_start_month - 1] || String(pk.fy_start_month)) : ''), from: txf('the {c} pack', { c: name }), known: !!pk.fy_start_month });
     out.push({ key: 'tax', what: tx('Tax'), value: esc(tax), from: (pk.tax && pk.tax.return) ? txf('returns: {r}', { r: pk.tax.return }) : txf('the {c} pack', { c: name }), known: !!tax });
     out.push({ key: 'format', what: tx('Format'), value: pk.locale ? regFormatSample(pk.locale) : '', from: txf('how {c} writes numbers and dates', { c: name }), known: !!pk.locale });
     out.push({ key: 'language', what: tx('Language'), value: (pk.languages || []).slice(0, 2).map(regLangHTML).join(' · '), from: txf('the {c} pack', { c: name }), known: !!(pk.languages && pk.languages.length) });

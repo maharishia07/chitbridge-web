@@ -30,7 +30,6 @@
 var CSU = { p: null, loading: false, readErr: false, edit: null, src: {}, open: {}, err: '', later: false, host: null, onDone: null };
 /* host · onDone (SET1, 2026-10-13): a small app (settings.html, CB Settings › Country) mounts the SAME rows in its own pane — CBCountry.mount(host, onDone).
    With no host the step paints app.html's auth card at #root, as CS1 built it. One renderer, two frames; never a second copy of the rows. */
-var CSU_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 /** CS2: the server's pack row for a country ({ code, name, currency, fy_start_month, zones, locale }) — null when the server sent no list or has no pack for it */
 function csuPackOf(code) {
   code = String(code || '').toUpperCase();
@@ -238,8 +237,8 @@ function renderCountrySetup() {
         csuSel('cs-country', 'country', countryOpts, e.country), fixed)
       + csuRow('currency', tx('Money'), esc(e.currency || tx('not known')), fixedWhy || s.currency,
         curOpts.length ? csuSel('cs-currency', 'currency', curOpts, e.currency) : '<input class="inp" id="cs-currency" data-testid="cs-currency" maxlength="3" placeholder="' + esc((csuPackOf(e.country) || csuPack(e.country) || {}).currency || '') + '" value="' + esc(e.currency) + '" onchange="csuSet(\'currency\', this.value)">', fixed)
-      + csuRow('fy', tx('Year starts'), esc(CSU_MONTHS[(e.fy || 1) - 1] || ''), s.fy_start_month,
-        csuSel('cs-fy', 'fy', CSU_MONTHS.map(function (m, i) { return { v: i + 1, t: m }; }), e.fy))
+      + csuRow('fy', tx('Year starts'), esc(monthNames('long')[(e.fy || 1) - 1] || ''), s.fy_start_month,
+        csuSel('cs-fy', 'fy', monthNames('long').map(function (m, i) { return { v: i + 1, t: m }; }), e.fy))
       + ((zones.length || e.timezone)
         ? csuRow('timezone', tx('Time zone'), e.timezone ? '<span translate="no">' + esc(e.timezone.replace(/_/g, ' ')) + '</span>' : esc(tx('not picked yet')), s.timezone,   /* the IANA id is an identifier, never translated (LOCALE-STANDARD) */
             csuSel('cs-timezone', 'timezone', zoneOpts, e.timezone), !zoneAsk)

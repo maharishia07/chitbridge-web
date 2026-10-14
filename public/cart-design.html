@@ -120,7 +120,6 @@ var STEPS=[{k:'items',n:'Items',t:'What are you sending?'},
            {k:'details',n:'Details',t:'Subject, delivery and anything attached'},
            {k:'review',n:'Review',t:'Check it, then send'}];
 
-function money(n){ return '₹'+Number(n).toLocaleString('en-IN'); }
 
 function armCart(){
   CBCart.init('cc', CAT, {
@@ -215,8 +214,8 @@ function stepReview(){
   return '<div class="rev"><div class="h">Lines · '+sel.length+'<span class="e" onclick="go(0)">Change</span></div>'
     + sel.map(function(l){
         return '<div class="r"><span class="k">'+l.qty+' × '+esc(l.unit)+'</span><span style="flex:1">'+esc(l.name)+'</span>'
-          + '<b>'+(l.line_total==null?'—':money(l.line_total))+'</b></div>'; }).join('')
-    + '<div class="tot"><span style="flex:1">Total</span><span>'+(T.amount?money(T.amount)+(T.partial?'+':''):'—')+'</span></div></div>'
+          + '<b>'+(l.line_total==null?'—':CBCart.fmt('cc', l.line_total))+'</b></div>'; }).join('')
+    + '<div class="tot"><span style="flex:1">Total</span><span>'+(T.amount?CBCart.fmt('cc', T.amount)+(T.partial?'+':''):'—')+'</span></div></div>'
     + (T.partial?'<div class="note">Some lines have no price — the total covers only the priced ones.</div>':'')
     + '<div class="rev"><div class="h">To<span class="e" onclick="go(1)">Change</span></div>'
     + '<div class="r">'+(S.to.length?S.to.map(function(t){return esc(t.role)+' '+esc(t.name);}).join(' · ')

@@ -70,6 +70,8 @@
   <div class="right" id="page"></div>
 </div>
 
+<script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: fmtMoney — the ONE money formatter -->
+<script src="/app/locale.js"></script>
 <script>
 /* ── THE MODEL BEING TRIED ────────────────────────────────────────────────────────────────────────────────────
    Every setting on a store is one of three things, and the difference is the whole design:
@@ -157,10 +159,8 @@ function visOpts(s){
  * unambiguous in every locale, a symbol needs a lookup that will always be missing an entry.
  *
  * A wrong symbol is worse than an ugly one. It does not look broken; it looks like a price.
+ * T2-WEBPRIMS: the one formatter (fmtMoney → CBLocale.money) takes the symbol FROM THE CODE (Intl), so no symbol map can default to ₹.
  */
-function money(n, cur){
-  return String(cur || '???') + ' ' + n.toLocaleString(undefined, { maximumFractionDigits: 0 });
-}
 function landed(eur, cur){
   var base = eur * (LANDED.rate[cur] || 1);
   var imp  = base * LANDED.importPct / 100;
@@ -181,14 +181,14 @@ function catalogueTab(s){
 
   var rows = SKUS.map(function(k){
     var L = landed(k.eur, cur);
-    var priced = mode === 'convert' ? money(L.total, cur) : (k.own && k.own[s.key] ? money(k.own[s.key], cur) : null);
+    var priced = mode === 'convert' ? fmtMoney(L.total, cur) : (k.own && k.own[s.key] ? fmtMoney(k.own[s.key], cur) : null);
     return '<div class="fld"><div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">'
       + '<b style="font-size:13.5px">' + k.name + '</b>'
       + '<span style="font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:var(--grey)">' + k.sku + '</span>'
       + '<span style="font-size:11px;color:var(--grey)">' + k.img + ' · ' + k.vid + '</span>'
       + '<span class="src inh" style="margin-inline-start:auto">PRODUCT FROM NETWORK</span></div>'
       + '<div class="val" style="margin-top:6px">'
-      + '<span style="color:var(--grey);font-size:12.5px">reference ' + money(k.eur, 'EUR') + '</span>'
+      + '<span style="color:var(--grey);font-size:12.5px">reference ' + fmtMoney(k.eur, 'EUR') + '</span>'
       + '<span style="font-size:12.5px"><span class=arw>→</span></span>'
       + (priced
           ? '<b style="font-size:15px">' + priced + '</b><span class="src ' + (mode === 'convert' ? 'inh' : 'own') + '">'
@@ -196,7 +196,7 @@ function catalogueTab(s){
           : '<b style="font-size:14px;color:#a5382e">no price yet</b><span class="src cap">NEEDS A PRICE</span>')
       + '</div>'
       + (mode === 'convert'
-          ? '<div class="note">' + money(L.base, cur) + ' converted · +' + LANDED.importPct + '% import · +'
+          ? '<div class="note">' + fmtMoney(L.base, cur) + ' converted · +' + LANDED.importPct + '% import · +'
             + LANDED.handlePct + '% handling · +' + LANDED.taxPct + '% tax</div>'
           : '<div class="note">This store names its own number. The reference is shown so it has something to price against.</div>')
       + '</div>';

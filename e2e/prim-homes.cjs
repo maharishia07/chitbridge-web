@@ -27,12 +27,15 @@ const HOME = 'public/app/helpers.js';
 const DEF = /(?:^|[^\w$.])(?:function\s+(esc|escapeHtml|escHtml|money)\s*\(|(?:var|let|const)\s+(esc|escapeHtml|escHtml|money)\s*=\s*(?:function\b|\([^)]*\)\s*=>|[A-Za-z_$][\w$]*\s*=>))/g;
 /** a month-name list typed out: ['Jan','Feb' … or ["January", "February" … */
 const MONTHS = /\[\s*(['"])Jan(?:uary)?\1\s*,\s*(['"])Feb(?:ruary)?\2/g;
+/** an escaper by its BODY, whatever it is called (cbDefEsc · peE · h · labEsc were all esc): a replace that writes &amp; and &lt; on one line */
+const ESC_BODY = /\.replace\([^\n]*['"]&amp;['"][^\n]*['"]&lt;['"]|\.replace\([^\n]*['"]&lt;['"][^\n]*['"]&amp;['"]/g;
 
 /** file → name → how many it may keep, and why. ⚠️ It only shrinks. */
 const ALLOW = {
   'public/till.html': { esc: 1, money: 1 },   // the counter: vendored from the api kit, runs offline — its own one helper (master: api tools/tally-connector/till.html)
   'public/promo.html': { money: 1 },          // the shop screen: vendored from the kit, same reason
-  'public/app/cart.js': { money: 1 },         // CBCart.money(lines, o) — the cart's TOTALS calculator, not a formatter
+  'public/app/cart.js': { money: 2 },         // CBCart.money(lines, o) — the cart's TOTALS calculator, not a formatter · money(ns, n) — picks the app's fmtMoney or the cart's CBCart.fmt (both CBLocale.money); formats nothing itself
+  'public/app/barcode.js': { 'esc-body': 1 }, // the Code 128 label inside an SVG string — built where no page (and no helpers.js) exists, e.g. e2e/barcode-check
 };
 
 function vendored(src) { return /\bADOPTED\b[^\n]{0,80}chitbridge-engines/.test(src.slice(0, 400)); }
@@ -54,13 +57,15 @@ function defsIn(src) {
     while ((m = DEF.exec(ln))) out.push({ name: m[1] || m[2], line: i + 1 });
     MONTHS.lastIndex = 0;
     while ((m = MONTHS.exec(ln))) out.push({ name: 'months', line: i + 1 });
+    ESC_BODY.lastIndex = 0;
+    if (ESC_BODY.test(ln) && !DEF.test(ln)) out.push({ name: 'esc-body', line: i + 1 });
   });
   return out;
 }
 
 function scan() {
   const found = [], bad = [];
-  filesOf(WEB).forEach((f) => {
+  filesOf(WEB).concat([path.join(ROOT, 'index.html')]).forEach((f) => {
     const rel = path.relative(ROOT, f).split(path.sep).join('/');
     if (rel === HOME) return;
     const src = fs.readFileSync(f, 'utf8');
@@ -78,7 +83,7 @@ function scan() {
   return { found, bad };
 }
 
-module.exports = { DEF, MONTHS, ALLOW, defsIn, scan, HOME };
+module.exports = { DEF, MONTHS, ESC_BODY, ALLOW, defsIn, scan, HOME };
 
 if (require.main === module) {
   const { found, bad } = scan();
