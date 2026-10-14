@@ -50,6 +50,7 @@ Register: `public/app/screen-id.js` (declared rows, merged into `CBSCREENS`) + `
 | CRM007 | Chit page | CB CRM | /crm.html | a sheet › Open page |
 | CRM008 | Groups & segments | CB CRM | /crm.html | /crm.html#/groups · CB CRM › Groups & segments |
 | CRM009 | Shop window | CB CRM | /crm.html | /crm.html#/showcase · CB CRM › Shop window |
+| CRM010 | Privacy | CB CRM | /crm.html | /crm.html#/privacy · CB CRM › Privacy |
 | TSK001 | Orders in | CB Tasks & Orders | /tasks.html | /tasks.html · CB Tasks & Orders › Orders in |
 | TSK002 | Orders out | CB Tasks & Orders | /tasks.html | /tasks.html · CB Tasks & Orders › Orders out |
 | TSK003 | Tasks | CB Tasks & Orders | /tasks.html | /tasks.html · CB Tasks & Orders › Tasks |

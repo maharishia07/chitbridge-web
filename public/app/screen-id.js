@@ -41,7 +41,7 @@
       { app: 'crm', name: 'CB CRM', page: '/crm.html', hash: true, rows: [
         ['CRM001', 'parties', 'Parties'], ['CRM002', 'chits', 'Chits'], ['CRM003', 'followups', 'Follow-ups'], ['CRM004', 'leads', 'Leads', 'Parties › Leads'],
         ['CRM005', 'calls', 'Calls', 'Parties › Calls'], ['CRM006', 'party', 'Party', 'Parties › a party'], ['CRM007', 'chit', 'Chit page', 'a sheet › Open page'],
-        ['CRM008', 'groups', 'Groups & segments'], ['CRM009', 'showcase', 'Shop window']] },   /* CRM008–009: T3-P2-CRM */
+        ['CRM008', 'groups', 'Groups & segments'], ['CRM009', 'showcase', 'Shop window'], ['CRM010', 'privacy', 'Privacy']] },   /* CRM008–009: T3-P2-CRM · CRM010: T3-P3-CONSENT */
       { app: 'tasks', name: 'CB Tasks & Orders', page: '/tasks.html', rows: [
         ['TSK001', 'orders_in', 'Orders in'], ['TSK002', 'orders_out', 'Orders out'], ['TSK003', 'tasks', 'Tasks'], ['TSK004', 'done', 'Done']] },
       { app: 'settings', name: 'Settings', page: '/settings.html', hash: true, rows: [
