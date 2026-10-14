@@ -15,6 +15,7 @@
  * One line per path: "ID · path · PASS/FAIL (what it saw)". Screenshots: e2e/shots/walk-catalogue-NN.png.
  */
 'use strict';
+const TD = require('./lib/today.cjs');   /* QW1-TODAY: the one injected today (CB_TODAY) — never the runner's clock */
 const W = require('./lib/walk.cjs');
 const { rule13 } = require('./lib/rule13.cjs');
 const REAL = process.argv.includes('--real');
@@ -97,7 +98,7 @@ const walk = async (w) => {
   const txt = (sel) => page.locator(sel).first().innerText().then((s) => s.replace(/\s+/g, ' ').trim()).catch(() => '');
   const wrote = (re) => S.calls.filter((c) => re.test(c));
   /* ?t= : a same-hash goto keeps the page (and an open sheet) — every visit is a fresh load, as walk-settings notes */
-  const items = async (hash) => { await page.goto(base + '/catalogue.html?t=' + Date.now() + (hash || '#/items')); await page.waitForSelector('[data-testid="cat-items"] .cbl-row, [data-testid="cbl-empty-catalogue-items"], [data-testid="cat-read-err"]', { timeout: 30000 }); await page.waitForTimeout(400); };
+  const items = async (hash) => { await page.goto(base + '/catalogue.html?t=' + Date.now() + (hash || '#/items')); await page.waitForSelector('[data-testid="cat-items"] .cbl-row, [data-testid="cbl-empty-catalogue-items"], [data-testid="cat-read-err"]', { timeout: 30000 }); await page.waitForTimeout(400); };   /* clock-ok: a cache-busting suffix, not a business date */
   const rows = () => page.locator('[data-testid="cat-items"] .cbl-row').count();
 
   await items();
@@ -163,7 +164,7 @@ const walk = async (w) => {
       return { ok: /not shown/.test(col) && disabled !== null && /does not include cost or price/.test(why), saw: '"' + col + '" · disabled=' + (disabled !== null) + ' · "' + why + '"' };
     });
   }
-  const catgs = async () => { await page.goto(base + '/catalogue.html?t=' + Date.now() + '#/categories'); await page.waitForSelector('[data-testid="cat-categories"] .cbl-row, [data-testid="cbl-empty-catalogue-categories"], [data-testid="catg-read-err"]', { timeout: 30000 }); await page.waitForTimeout(400); };
+  const catgs = async () => { await page.goto(base + '/catalogue.html?t=' + Date.now() + '#/categories'); await page.waitForSelector('[data-testid="cat-categories"] .cbl-row, [data-testid="cbl-empty-catalogue-categories"], [data-testid="catg-read-err"]', { timeout: 30000 }); await page.waitForTimeout(400); };   /* clock-ok: a cache-busting suffix, not a business date */
   await w.step('C8', 'Categories: the shelf as a list with the server\'s counts; the sidebar marks Categories; the chip says CTG002', async () => {
     await catgs();
     const c = await txt('[data-testid="catg-count"]'), n = await page.locator('[data-testid="cat-categories"] .cbl-row').count();
@@ -178,7 +179,7 @@ const walk = async (w) => {
       return { ok: posts.length === 1 && /Pulses/.test(posts[0]) && /"parent":"c1"/.test(posts[0]) && puts.length === 1 && /live/.test(puts[0]) && n === 4, saw: posts.length + ' POST · ' + puts.length + ' PUT · ' + n + ' rows' };
     });
   }
-  const imp = async () => { await page.goto(base + '/catalogue.html?t=' + Date.now() + '#/import'); await page.waitForSelector('[data-testid="cat-check-run"]', { timeout: 30000 }); await page.waitForTimeout(300); };
+  const imp = async () => { await page.goto(base + '/catalogue.html?t=' + Date.now() + '#/import'); await page.waitForSelector('[data-testid="cat-check-run"]', { timeout: 30000 }); await page.waitForTimeout(300); };   /* clock-ok: a cache-busting suffix, not a business date */
   await w.step('C10', 'Import: paste rows -> Check -> the preflight (writes nothing) -> a decision per column, Import enabled only when the file is sound', async () => {
     await imp();
     await page.fill('[data-testid="cat-check-text"]', 'Product,Rate,Colour\nBlue mug,12.5,blue\nRed mug,12.5,red'); await page.click('[data-testid="cat-check-run"]'); await page.waitForTimeout(1200);

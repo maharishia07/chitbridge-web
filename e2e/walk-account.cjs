@@ -11,6 +11,7 @@
  * One line per path: "ID · path · PASS/FAIL (what it saw)". Screenshots: e2e/shots/walk-account-NN.png.
  */
 'use strict';
+const TD = require('./lib/today.cjs');   /* QW1-TODAY: the one injected today (CB_TODAY) — never the runner's clock */
 const W = require('./lib/walk.cjs');
 const REAL = process.argv.includes('--real');
 const C = require('./lib/contract.cjs');   /* M43: every answer for a route in the API contract is held to it (the facts family) */
@@ -20,8 +21,8 @@ const crmApi = require('./lib/crm-api.cjs');   /* RAIL-LAB-SRV1: the rail card (
 const walk = async (w) => {
   const { page, ctx, base } = w;
   const S = { calls: [], gets: [], coassist: false, sesFail: false, misFail: false, truncated: false };
-  const now = Math.floor(Date.now() / 1000);
-  const ago = (min) => new Date(Date.now() - min * 60000).toISOString();
+  const now = Math.floor(TD.nowMs() / 1000);
+  const ago = (min) => new Date(TD.nowMs() - min * 60000).toISOString();
   const DEV_WHY = 'Only the owner may see or remove every device.';
   const ok = { ok: true, code: null, why: null };
   const SESSIONS = () => [
@@ -137,7 +138,7 @@ const walk = async (w) => {
     await w.step('R2', '7 days -> one GET /folders/mis with `since` inside the last week (the one window rule); the page computes nothing, the figures are the answer\'s', async () => {
       S.gets.length = 0; await page.click('[data-testid="fm-period-7"]'); await page.waitForSelector('[data-testid="fm-row-open"]', { timeout: 8000 }); await page.waitForTimeout(400);
       const g = S.gets.filter((x) => /\/api\/folders\/mis/.test(x)), since = g.length ? decodeURIComponent((g[0].split('since=')[1] || '').split('&')[0]) : '';
-      const days = since ? (Date.now() - Date.parse(since)) / 864e5 : -1, pressed = await attr('[data-testid="fm-period-7"]', 'aria-pressed'), sent = await txt('[data-testid="fm-closed-sent"]');
+      const days = since ? (TD.nowMs() - Date.parse(since)) / 864e5 : -1, pressed = await attr('[data-testid="fm-period-7"]', 'aria-pressed'), sent = await txt('[data-testid="fm-closed-sent"]');
       return { ok: g.length === 1 && days > 6.9 && days < 7.1 && pressed === 'true' && sent === '2', saw: g.length + ' read · since ' + days.toFixed(2) + ' days ago · closed sent ' + sent };
     });
     await w.step('R3', 'a stuck number -> CB CRM › Chits with the Stuck tab preset (the list that holds them), never the workshop', async () => {

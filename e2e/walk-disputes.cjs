@@ -18,6 +18,7 @@
  * One line per path: "ID · path · PASS/FAIL (what it saw)". Screenshots: e2e/shots/walk-disputes-NN.png.
  */
 'use strict';
+const TD = require('./lib/today.cjs');   /* QW1-TODAY: the one injected today (CB_TODAY) — never the runner's clock */
 const W = require('./lib/walk.cjs');
 const C = require('./lib/contract.cjs');
 const J = (r, status, body) => C.json(r, status, body);
@@ -113,7 +114,7 @@ W.run(REAL ? 'disputes-real' : 'disputes', async (w) => {
     if (mm && m === 'POST') {
       if (S.level === 'viewer') return J(r, 403, { error: 'Not permitted', message: SAY.read_only, why: 'read_only' });
       const id = 'n' + S.disputes.length, parties = body.participant_entity_ids || [];
-      S.disputes.push(disp(id, mm[1], { category: body.category, reason: body.reason, created_at: new Date().toISOString(),
+      S.disputes.push(disp(id, mm[1], { category: body.category, reason: body.reason, created_at: TD.nowIso(),
         roster: [{ entity_id: ME, display_name: NAME[ME], role: 'raiser' }].concat(parties.map((e) => ({ entity_id: e, display_name: NAME[e], role: 'party' }))) }));
       return J(r, 200, { dispute_id: id, category: body.category, reason: body.reason, status: 'open', warning: null, scope: parties.length ? 'targeted' : 'chit_wide', message: 'Dispute raised' });
     }
@@ -127,7 +128,7 @@ W.run(REAL ? 'disputes-real' : 'disputes', async (w) => {
     }
     mm = /^\/api\/chits\/([^/]+)\/messages$/.exec(p);
     if (mm && m === 'GET') return J(r, 200, { messages: [{ message_id: 'm1', chit_id: mm[1], thread_type: 'external', message_text: '[quality] Brake pads arrived cracked, 4 of 10', is_dispute: true, dispute_id: 'd1', sender_display_name: NAME[ME], sender_entity_id: ME, created_at: iso(2) }], count: 1 });
-    if (mm && m === 'POST') return J(r, 200, { message_id: 'm2', thread_type: 'external', message_text: body.message_text, sender_display_name: 'You', created_at: new Date().toISOString() });
+    if (mm && m === 'POST') return J(r, 200, { message_id: 'm2', thread_type: 'external', message_text: body.message_text, sender_display_name: 'You', created_at: TD.nowIso() });
     mm = /^\/api\/chits\/([^/]+)$/.exec(p);
     if (mm && m === 'GET') {
       const d = S.disputes.find((x) => x.chit_id === mm[1]) || {};

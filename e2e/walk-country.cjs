@@ -33,6 +33,7 @@
  *   node e2e/walk-country.cjs --show                              watch it
  */
 'use strict';
+const TD = require('./lib/today.cjs');
 const W = require('./lib/walk.cjs');
 const { measure } = require('./lib/theme-measure.cjs');   /* the contrast measurement, one copy */
 const J = (o) => ({ status: 200, contentType: 'application/json', body: JSON.stringify(o) });
@@ -64,7 +65,7 @@ async function stubRegistration(ctx, prof, sent) {
       const row = COUNTRIES.find((c) => c.code === sent.put.country) || {};
       return r.fulfill(J(Object.assign({}, prof, { done: true, required: false, country: { code: sent.put.country, name: row.name || sent.put.country }, currency: sent.put.currency,
         fy_start_month: sent.put.fy_start_month, timezone: sent.put.timezone || prof.timezone },
-        changed ? { rederived: { from: prof.country.code, to: sent.put.country, chart: 0, by: 'ent-walk', at: new Date().toISOString() } } : {})));
+        changed ? { rederived: { from: prof.country.code, to: sent.put.country, chart: 0, by: 'ent-walk', at: TD.nowIso() } } : {})));
     }
     return r.fulfill(J(prof));
   });

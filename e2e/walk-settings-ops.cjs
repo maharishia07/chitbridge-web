@@ -11,6 +11,7 @@
  * One line per path: "ID · path · PASS/FAIL (what it saw)". Screenshots: e2e/shots/walk-settings-ops-NN.png.
  */
 'use strict';
+const TD = require('./lib/today.cjs');   /* QW1-TODAY: the one injected today (CB_TODAY) — never the runner's clock */
 const W = require('./lib/walk.cjs');
 const REAL = process.argv.includes('--real');
 const C = require('./lib/contract.cjs');   /* M43: every answer for a route in the API contract is held to it (RAIL-LAB-SRV1: the facts family) */
@@ -20,7 +21,7 @@ const crmApi = require('./lib/crm-api.cjs');   /* RAIL-LAB-SRV1: the rail card (
 const walk = async (w) => {
   const { page, ctx, base } = w;
   const S = { calls: [], coassist: false, ctrFail: false, opened: [] };
-  const ago = (min) => new Date(Date.now() - min * 60000).toISOString();
+  const ago = (min) => new Date(TD.nowMs() - min * 60000).toISOString();
   const OWNER_SAYS = 'Only the owner can change the counters.';
   const COUNTERS = () => [
     { id: 'C1', name: 'Front desk', state: 'open', held_by: { name: 'counter C1 · Win32', seen: { ip: '10.0.0.4', at: ago(2) } }, next: 42, last_no: 'C1/26-27/0041', closed_at: null },

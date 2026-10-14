@@ -13,10 +13,11 @@
  * Screenshots: e2e/shots/walk-screen-id-NN.png.
  */
 'use strict';
+const TD = require('./lib/today.cjs');
 const W = require('./lib/walk.cjs');
 const { measure } = require('./lib/theme-measure.cjs');
 
-const SHOP = 'Fixture Shop', TODAY = new Date().toISOString().slice(0, 10);
+const SHOP = 'Fixture Shop', TODAY = TD.TODAY;
 const me = { role: 'sender', display_name: SHOP, entity_id: 'ent-walk' };
 const line = { particulars: 'Rice 5kg', quantity: 1, unit: 'piece', price: 100, total: 100 };
 const CHITS = {

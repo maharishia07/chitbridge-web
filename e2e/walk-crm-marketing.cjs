@@ -17,6 +17,7 @@
  * One line per path: "ID · path · PASS/FAIL (what it saw)". Screenshots: e2e/shots/walk-crm-marketing-NN.png.
  */
 'use strict';
+const TD = require('./lib/today.cjs');   /* QW1-TODAY: the one injected today (CB_TODAY) — never the runner's clock */
 const fs = require('fs'), path = require('path');
 const W = require('./lib/walk.cjs');
 const C = require('./lib/contract.cjs');
@@ -24,9 +25,9 @@ const crmApi = require('./lib/crm-api.cjs');
 const { rule13 } = require('./lib/rule13.cjs');
 const J = C.json;
 const REAL = process.argv.includes('--real');
-const FX = crmApi.resolve(JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'golden-parties.json'), 'utf8')), Date.now());
+const FX = crmApi.resolve(JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'golden-parties.json'), 'utf8')), TD.nowMs());
 const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64').replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
-const claims = (c) => b64({ alg: 'none' }) + '.' + b64(Object.assign({ exp: Math.floor(Date.now() / 1000) + 3600 }, c)) + '.x';
+const claims = (c) => b64({ alg: 'none' }) + '.' + b64(Object.assign({ exp: Math.floor(TD.nowMs() / 1000) + 3600 }, c)) + '.x';
 const VIEWER = JSON.stringify({ token: claims({ identity_id: 'act-2', identity_type: 'actor', parent_entity_id: 'ent-walk', display_name: 'Vel', access_level: 'viewer' }), role: 'actor', name: 'Vel', entity: 'Fixture Shop', bridgeId: 'CBWALK0001' });
 const NO_TOKEN = 'WHATSAPP_TOKEN is not set — outbound is not configured';
 

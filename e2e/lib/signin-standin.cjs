@@ -13,6 +13,7 @@
  *                                              and the chosen person's practice fields (typed ids, code / PIN, level, costs, hat)
  */
 'use strict';
+const TD = require('./today.cjs');   /* QW1-TODAY: the one injected today (CB_TODAY) — never the runner's clock */
 const http = require('http');
 
 const SHOP = { id: 'ent-mayur', name: 'Mayur Bhavan', bridge: 'CB-MAYUR', userid: 'mayuri123' };
@@ -49,7 +50,7 @@ function start(port) {
   reset('owner', 'first');
   const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64').replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
   function tokenOf(p, device, surface) {
-    const now = Math.floor(Date.now() / 1000), life = device ? (surface === 'till' ? 30 : 7) * 86400 : 7 * 86400;
+    const now = Math.floor(TD.nowMs() / 1000), life = device ? (surface === 'till' ? 30 : 7) * 86400 : 7 * 86400;
     const c = { identity_id: 'id-' + p.id, identity_type: p.kind, display_name: p.name, bridge_id: p.kind === 'entity' ? (p.shop || SHOP).bridge : 'CB-' + p.name.toUpperCase(), iat: now, exp: now + life };
     if (p.kind !== 'entity') { c.parent_entity_id = (p.shop || SHOP).id; c.parent_entity_name = (p.shop || SHOP).name; c.parent_bridge_id = (p.shop || SHOP).bridge; }
     if (device) { c.kind = 'person'; c.jti = 'j-' + Math.random().toString(36).slice(2, 8); c.device_id = device; c.surface = surface; }

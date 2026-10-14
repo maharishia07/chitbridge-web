@@ -42,7 +42,7 @@ async function realBooks() {
   const srv = await new Promise((res) => { const s = app.listen(0, '127.0.0.1', () => res(s)); });
   /* ONE "today" for the walk (the area pack's pitfall): 5 Nov 2026 — October is over */
   const K = require(path.join(API, 'lib', 'books-hooks')), realDay = K.dayOf, DAY = '2026-11-05';
-  K.dayOf = (ts, c) => (ts instanceof Date && Math.abs(ts.getTime() - Date.now()) < 5000 ? DAY : realDay(ts, c));
+  K.dayOf = (ts, c) => (ts instanceof Date && Math.abs(ts.getTime() - Date.now()) < 5000 ? DAY : realDay(ts, c));   /* clock-ok: matches the posting instant of this very call, the walk's own DAY is fixed */
   require(path.join(API, 'lib', 'shop-clock')).set(DAY + 'T06:00:00Z');
   const call = (m, p, b) => fetch('http://127.0.0.1:' + srv.address().port + '/api/books' + p, { method: m, headers: { 'content-type': 'application/json' }, body: b ? JSON.stringify(b) : undefined });
   await X.store.saveSetting(X.db, IN_SHOP, { enabled: false }); await call('POST', '/enable', {});

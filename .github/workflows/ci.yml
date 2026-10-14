@@ -35,6 +35,8 @@ jobs:
         run: node e2e/dup-functions.cjs
       - name: The labs are thin pages over the engines (T2-LABS ratchet)
         run: node e2e/lab-thin.cjs
+      - name: Walks run on one injected today (QW1)
+        run: node e2e/guard-walk-today.cjs
       - name: Static guards
         run: node e2e/guard-static.cjs
       - name: Every typed amount is the one money input (M36)

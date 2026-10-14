@@ -15,6 +15,7 @@
  * One line per path: "ID · path · PASS/FAIL (what it saw)". Screenshots: e2e/shots/walk-tasks-NN.png.
  */
 'use strict';
+const TD = require('./lib/today.cjs');
 const W = require('./lib/walk.cjs');
 const C = require('./lib/contract.cjs');   /* M43: every /api/work answer this stand-in serves is held to the API contract */
 const J = (r, status, body) => C.json(r, status, body);
@@ -33,7 +34,7 @@ W.run('tasks', async (w) => {
   const line = (id, what, qty, unit, price, delivered, who) => ({ line_id: id, particulars: what, qty, unit, price_minor: price, delivered, removed: false,
     assignment: who ? { assignee_actor_id: who.id, assignee_name: who.name, assignee_type: 'human', history: [] } : null, settings: { due: null, task: null, note: null, state: 'open' } });
   const row = (id, o) => Object.assign({ chit_id: id, kind: 'order_in', side: 'sell', status: 'pending', subject: 'Order', ref: null, party: null, party_id: null, channel: null, fulfilment: null,
-    address: null, requested_for: null, remark: null, total_minor: null, currency: 'INR', billed: false, despatched: false, assignee: null, created_at: new Date(Date.now() - 2 * 3600e3).toISOString(), age_days: 0, lines: [] }, o);
+    address: null, requested_for: null, remark: null, total_minor: null, currency: 'INR', billed: false, despatched: false, assignee: null, created_at: new Date(TD.nowMs() - 2 * 3600e3).toISOString(), age_days: 0, lines: [] }, o);
   const seed = () => {
     S.rows = [
       row('c1', { subject: 'Order SO-1', ref: 'SO-1', party: 'Meena', party_id: 'cust-1', channel: 'online', fulfilment: 'pickup', requested_for: '2026-10-13', remark: 'Ring first', total_minor: 120050,
@@ -123,7 +124,7 @@ W.run('tasks', async (w) => {
     if (mm && m === 'PUT') { const x = find(mm[1]); if (!x) return J(r, 404, { error: 'Chit not found' }); if (body.action === 'return') x.assignee = null; else { const t = PEOPLE.find((y) => y.id === body.target_actor_id); x.assignee = t ? { id: t.id, name: t.name } : null; } return J(r, 200, { message: 'ok' }); }
     mm = /^\/api\/chits\/([^/]+)\/messages$/.exec(p);
     if (mm && m === 'GET') return J(r, 200, { messages: [], count: 0 });
-    if (mm && m === 'POST') return J(r, 200, { message_id: 'm1', thread_type: body.thread_type, message_text: body.message_text, sender_display_name: 'You', created_at: new Date().toISOString() });
+    if (mm && m === 'POST') return J(r, 200, { message_id: 'm1', thread_type: body.thread_type, message_text: body.message_text, sender_display_name: 'You', created_at: TD.nowIso() });
     mm = /^\/api\/chits\/([^/]+)$/.exec(p);
     if (mm && m === 'GET') return J(r, 200, { chit_id: mm[1], actions: { message_external: { ok: true }, message_internal: { ok: true } } });
     return J(r, 404, { error: 'not found' });

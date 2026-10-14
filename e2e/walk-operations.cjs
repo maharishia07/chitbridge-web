@@ -17,18 +17,19 @@
  * One line per path: "ID · path · PASS/FAIL (what it saw)". Screenshots: e2e/shots/walk-operations-NN.png.
  */
 'use strict';
+const TD = require('./lib/today.cjs');   /* QW1-TODAY: the one injected today (CB_TODAY) — never the runner's clock */
 const W = require('./lib/walk.cjs');
 const { measure } = require('./lib/theme-measure.cjs');
 const REAL = process.argv.includes('--real');
 const C = require('./lib/contract.cjs');   /* M43: every answer for a route in the API contract is held to it (RAIL-LAB-SRV1: the facts family) */
 const J = C.json;
 const crmApi = require('./lib/crm-api.cjs');   /* RAIL-LAB-SRV1: the rail card (GET /api/facts/rail) from its one builder */
-const ymd = (days) => new Date(Date.now() + days * 86400000).toISOString().slice(0, 10);
+const ymd = (days) => TD.dayPlus(days);
 
 const walk = async (w) => {
   const { page, ctx, base } = w;
   const S = { calls: [], stock: 'ok', addRefuse: false, stack: null };
-  const STOCK = () => ({ at: new Date().toISOString(), balances: {
+  const STOCK = () => ({ at: TD.nowIso(), balances: {
     rice: { qty: 6.5, avg_cost: 50, name: 'Ponni Rice', unit: 'kg', lots: [{ lot: 'B1', qty: 4, expires_at: ymd(-3) }, { lot: 'B2', qty: 2.5, expires_at: ymd(10) }] },
     dal: { qty: -1, avg_cost: 140, name: 'Toor Dal', unit: 'kg', lots: [] },
     salt: { qty: 0, avg_cost: 20, name: 'Salt', unit: null, lots: [] },
@@ -51,7 +52,7 @@ const walk = async (w) => {
       if (m !== 'GET') S.calls.push(m + ' ' + p + (body ? ' ' + JSON.stringify(body) : ''));
       if (p === '/api/till/stock') {
         if (S.stock === 'fail') return J(r, 500, { error: 'Failed', message: 'boom' });
-        if (S.stock === 'off') return J(r, 200, { balances: {}, at: new Date().toISOString(), not_ready: 'STOCK_LEDGER_MISSING', says: 'Stock is not switched on for this shop yet. Receive a delivery and it starts.' });
+        if (S.stock === 'off') return J(r, 200, { balances: {}, at: TD.nowIso(), not_ready: 'STOCK_LEDGER_MISSING', says: 'Stock is not switched on for this shop yet. Receive a delivery and it starts.' });
         return J(r, 200, STOCK());
       }
       if (p === '/api/relationships/suppliers' && m === 'GET') return J(r, 200, { suppliers: SUPS, count: SUPS.length });
@@ -75,8 +76,8 @@ const walk = async (w) => {
   const txt = (sel) => page.locator(sel).first().innerText().then((s) => s.replace(/\s+/g, ' ').trim()).catch(() => '');
   const wrote = (re) => S.calls.filter((c) => re.test(c));
   /* a fresh load each time (?r=): a same-hash goto keeps the page (walk-settings T6A) */
-  const stock = async () => { await page.goto(base + '/operations.html?r=' + Date.now() + '#/stock'); await page.waitForSelector('[data-testid="ops-stock"] .cbl-list', { timeout: 20000 }); await page.waitForFunction(() => !document.querySelector('[data-testid="ops-stock"] [aria-busy="true"]'), null, { timeout: 15000 }).catch(() => {}); await page.waitForTimeout(250); };
-  const sups = async () => { await page.goto(base + '/operations.html?r=' + Date.now() + '#/suppliers'); await page.waitForSelector('[data-testid="ops-suppliers"] .cbl-list', { timeout: 20000 }); await page.waitForFunction(() => !document.querySelector('[data-testid="ops-suppliers"] [aria-busy="true"]'), null, { timeout: 15000 }).catch(() => {}); await page.waitForTimeout(250); };
+  const stock = async () => { await page.goto(base + '/operations.html?r=' + Date.now() + '#/stock'); await page.waitForSelector('[data-testid="ops-stock"] .cbl-list', { timeout: 20000 }); await page.waitForFunction(() => !document.querySelector('[data-testid="ops-stock"] [aria-busy="true"]'), null, { timeout: 15000 }).catch(() => {}); await page.waitForTimeout(250); };   /* clock-ok: a cache-busting suffix, not a business date */
+  const sups = async () => { await page.goto(base + '/operations.html?r=' + Date.now() + '#/suppliers'); await page.waitForSelector('[data-testid="ops-suppliers"] .cbl-list', { timeout: 20000 }); await page.waitForFunction(() => !document.querySelector('[data-testid="ops-suppliers"] [aria-busy="true"]'), null, { timeout: 15000 }).catch(() => {}); await page.waitForTimeout(250); };   /* clock-ok: a cache-busting suffix, not a business date */
   const order = (pre) => page.$$eval('[data-testid^="' + pre + '"]', (ns) => ns.map((n) => n.getAttribute('data-testid')));
 
   if (REAL) {

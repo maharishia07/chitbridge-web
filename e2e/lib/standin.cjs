@@ -4,10 +4,11 @@
  * state machine that mirrors chitbridge-api's rules (routes/crm.js · lib/crm-calls.js OUTCOMES · lib/crm.js isLead): standIn({ l2c: l2cState() }).
  * A walk without `l2c` is answered exactly as before. */
 'use strict';
+const TD = require('./today.cjs');
 const fs = require('fs'), path = require('path');
 const C = require('./contract.cjs'), crmApi = require('./crm-api.cjs'), books = require('./books-api.cjs');
 const J = C.json;
-const TODAY = new Date().toISOString().slice(0, 10);
+const TODAY = TD.TODAY;
 const FIX = path.join(__dirname, '..', 'fixtures', 'golden-parties.json');
 /* the stand-in: a shop with the Ledger on, nothing waiting, a closed walk-in day (so no notice is on screen), three parties */
 const fx = JSON.parse(fs.readFileSync(FIX, 'utf8'));
@@ -27,7 +28,7 @@ const OUTCOMES = [
 ];
 const NOT_READY = 'Lead stages arrive after the next update.';
 const localDay = (d) => { const p = (n) => String(n).padStart(2, '0'); return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); };
-const today = () => localDay(new Date());
+const today = () => localDay(TD.now());
 const addDays = (day, n) => { const d = new Date(day + 'T00:00:00'); d.setDate(d.getDate() + n); return localDay(d); };
 /** a day → the instant the api stores for it: the SHOP's midnight (Asia/Kolkata, the walks' browser zone), never the runner's (the page shows the day, not "12:00 am") */
 const dayAt = (day) => new Date(day + 'T00:00:00+05:30').toISOString();
@@ -43,7 +44,7 @@ const pvLaw = (c) => PV_LAW[c] || { country: c || null, known: false, law: null,
 function privState(o) {
   o = o || {};
   const P = { country: o.country || 'IN', migrated: o.migrated !== false, reqsMigrated: o.reqsMigrated !== false, prefs: [], reqs: [], seq: 0 };
-  if (o.seed) P.reqs.push({ request_id: uuid(901), party_id: null, who: 'Kumar (walk-in)', kind: 'access', country: P.country, received_at: new Date(Date.now() - 40 * 86400e3).toISOString(), due_at: new Date(Date.now() - 10 * 86400e3).toISOString(), answered_at: null, outcome: null, answer: null });
+  if (o.seed) P.reqs.push({ request_id: uuid(901), party_id: null, who: 'Kumar (walk-in)', kind: 'access', country: P.country, received_at: new Date(TD.nowMs() - 40 * 86400e3).toISOString(), due_at: new Date(TD.nowMs() - 10 * 86400e3).toISOString(), answered_at: null, outcome: null, answer: null });
   return P;
 }
 function pvMay(rows, channel, purpose) {   /* lib/privacy.mayMessage, newest first */
@@ -66,19 +67,19 @@ function pvNote(P, party, b, by) {
   if (typeof b.allowed !== 'boolean') return [400, errBody('Say yes or no.', 'BAD_REQUEST')];
   const before = pvRows(P, party).find((r) => r.channel === channel && r.purpose === purpose);
   const withdrawn = !b.allowed && before && before.allowed && before.basis === 'consent';
-  const row = { pref_id: uuid(800 + (++P.seq)), party_id: party, channel, purpose, allowed: b.allowed, basis: purpose === 'marketing' ? 'consent' : 'legitimate_use', notice_version: null, noted_at: new Date(Date.now() + P.seq * 1000).toISOString(), noted_by: by, withdrawn_at: withdrawn ? new Date().toISOString() : null };
+  const row = { pref_id: uuid(800 + (++P.seq)), party_id: party, channel, purpose, allowed: b.allowed, basis: purpose === 'marketing' ? 'consent' : 'legitimate_use', notice_version: null, noted_at: new Date(TD.nowMs() + P.seq * 1000).toISOString(), noted_by: by, withdrawn_at: withdrawn ? TD.nowIso() : null };
   P.prefs.push(row); return [201, { pref: Object.assign({}, row, { party_id: undefined }) }];
 }
-const reqShape = (r) => Object.assign({}, r, { late: !r.answered_at && Date.parse(r.due_at) < Date.now(), answered_late: !!r.answered_at && Date.parse(r.answered_at) > Date.parse(r.due_at) });
+const reqShape = (r) => Object.assign({}, r, { late: !r.answered_at && Date.parse(r.due_at) < TD.nowMs(), answered_late: !!r.answered_at && Date.parse(r.answered_at) > Date.parse(r.due_at) });
 function pvRequests(P, o) {
   const all = P.reqs.filter((r) => (!o.open || !r.answered_at) && (!o.party_id || r.party_id === o.party_id)).sort((a, b) => ((!!a.answered_at) - (!!b.answered_at)) || (Date.parse(a.due_at) - Date.parse(b.due_at)));
   const limit = Math.min(200, Math.max(1, Number(o.limit) || 50)), page = Math.max(1, Number(o.page) || 1);
-  return { requests: all.slice((page - 1) * limit, page * limit).map(reqShape), total: all.length, page, limit, open: all.filter((r) => !r.answered_at).length, late: all.filter((r) => !r.answered_at && Date.parse(r.due_at) < Date.now()).length };
+  return { requests: all.slice((page - 1) * limit, page * limit).map(reqShape), total: all.length, page, limit, open: all.filter((r) => !r.answered_at).length, late: all.filter((r) => !r.answered_at && Date.parse(r.due_at) < TD.nowMs()).length };
 }
 function pvLog(P, b, party) {
   const kind = String(b.kind || '').toLowerCase(); if (PV_KINDS.indexOf(kind) < 0) return [400, errBody('Kind is access, correct, erase, withdraw, nominate or grievance.', 'BAD_REQUEST')];
   const who = String(b.who || '').trim(); if (!who) return [400, errBody('Who asked? A name, phone or e-mail.', 'BAD_REQUEST')];
-  const rec = b.received_at ? Date.parse(b.received_at) : Date.now();
+  const rec = b.received_at ? Date.parse(b.received_at) : TD.nowMs();
   const r = { request_id: uuid(700 + (++P.seq)), party_id: party || b.party_id || null, who, kind, country: P.country, received_at: new Date(rec).toISOString(), due_at: new Date(rec + (kind === 'grievance' && P.country === 'IN' ? 15 : 30) * 86400e3).toISOString(), answered_at: null, outcome: null, answer: null };
   P.reqs.push(r); return [201, { request: reqShape(r) }];
 }
@@ -102,7 +103,7 @@ function privRoute(S, r, q, u, p, m, body, owner) {
     const rq = P.reqs.find((z) => z.request_id === x[1] && !z.answered_at); if (!rq) return J(r, 409, errBody('Not found, or already answered — an answer is given once.', 'ANSWERED'));
     const o = String((body || {}).outcome || ''); if (['done', 'partly', 'refused'].indexOf(o) < 0) return J(r, 400, errBody('Outcome is done, partly or refused.', 'BAD_REQUEST'));
     if (!String((body || {}).answer || '').trim()) return J(r, 400, errBody('Write what was done, or why not.', 'BAD_REQUEST'));
-    Object.assign(rq, { answered_at: new Date().toISOString(), outcome: o, answer: String(body.answer).trim() }); return J(r, 200, { request: reqShape(rq) });
+    Object.assign(rq, { answered_at: TD.nowIso(), outcome: o, answer: String(body.answer).trim() }); return J(r, 200, { request: reqShape(rq) });
   }
   /* the shopper's own surface: the storefront token names the party (S.priv.shopper) and the shop */
   if (p.indexOf('/api/privacy/me') === 0) {
@@ -127,7 +128,7 @@ function privRoute(S, r, q, u, p, m, body, owner) {
 function l2cState(o) {
   const L = { leads: [], seq: 0, fu: [], ix: [], stages: [], migrated: true, listFails: 0 };
   /* { seed: true }: one untouched lead already there (a view-only login has something to look at, and nothing to do) */
-  if (o && o.seed) L.leads.push({ n: 1, party_id: uuid(1), party_no: 'P-0101', name: 'Seed Lead Selvi', phone: '9800000001', stage: 'lead', since: new Date(Date.now() - 86400e3).toISOString(), txn: 0, last_txn_at: null });
+  if (o && o.seed) L.leads.push({ n: 1, party_id: uuid(1), party_no: 'P-0101', name: 'Seed Lead Selvi', phone: '9800000001', stage: 'lead', since: new Date(TD.nowMs() - 86400e3).toISOString(), txn: 0, last_txn_at: null });
   return L;
 }
 const errBody = (msg, code) => ({ code, error: msg, message: msg });
@@ -154,23 +155,23 @@ function tlEntries(L, id) {
   L.fu.filter((f) => f.party_id === id).forEach((f) => { out.push({ kind: 'followup', at: f.created_at, followup_id: f.followup_id, what: f.what, due_at: f.due_at }); if (f.done_at) out.push({ kind: 'followup_done', at: f.done_at, followup_id: f.followup_id, what: f.what }); });
   return out.sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
 }
-function addFu(L, party_id, what, day, source) { const f = { followup_id: 'fu-' + (++L.seq), party_id, what, due_at: dayAt(day), due_day: day, assignee_user_id: null, source: source || 'manual', done_at: null, created_at: new Date().toISOString() }; L.fu.push(f); return f; }
+function addFu(L, party_id, what, day, source) { const f = { followup_id: 'fu-' + (++L.seq), party_id, what, due_at: dayAt(day), due_day: day, assignee_user_id: null, source: source || 'manual', done_at: null, created_at: TD.nowIso() }; L.fu.push(f); return f; }
 /** the api's follow-up shape with the SHOP's day (crm-api.followupOne reads the UTC date off due_at; the shop's midnight is the evening before in UTC) */
 function fuShape(f) {
   const t = today(), d = f.due_day || localDay(new Date(f.due_at)), week = addDays(t, 6);
   return Object.assign(crmApi.followupOne(f), { due_day: d, late: !f.done_at && d < t, today: !f.done_at && d === t, bucket: d < t ? 'late' : d === t ? 'today' : d <= week ? 'week' : 'later' });
 }
 function addIx(L, party_id, kind, direction, body) { const x = Object.assign(crmApi.interaction({ kind, direction, body }).interaction, { interaction_id: 'ix-' + (++L.seq), party_id }); L.ix.push(x); return x; }   /* the api's interaction shape (crm-api.cjs), this party's id */
-function setStage(L, l, stage) { l.stage = stage; l.since = new Date().toISOString(); L.stages.push({ party_id: l.party_id, stage, at: l.since }); return { stage, since: l.since }; }
+function setStage(L, l, stage) { l.stage = stage; l.since = TD.nowIso(); L.stages.push({ party_id: l.party_id, stage, at: l.since }); return { stage, since: l.since }; }
 
 /** the walk's "counter bills the lead": txn_count 1 — the server's rule (isLead: txn_count 0) ends the lead */
-function l2cBill(L, name) { const l = L.leads.find((x) => x.name === name); if (!l) return { status: 404, no: '—' }; l.txn = 1; l.last_txn_at = new Date().toISOString(); return { status: 201, no: 'FX/' + l.n, total: 100 }; }
+function l2cBill(L, name) { const l = L.leads.find((x) => x.name === name); if (!l) return { status: 404, no: '—' }; l.txn = 1; l.last_txn_at = TD.nowIso(); return { status: 201, no: 'FX/' + l.n, total: 100 }; }
 /** the walk's bare POST stage (what the server answers, no page involved) */
 function l2cStage(L, name, stage) { const l = L.leads.find((x) => x.name === name); if (!l) return { status: 404, code: 'NOT_FOUND' }; if (!isLead(l)) return { status: 409, code: 'IS_CUSTOMER' }; setStage(L, l, stage); return { status: 200, code: '' }; }
 /** a view-only co-assist's session (hat view_only in the token, as lib/access signs it) */
 function viewerSession() {
   const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64').replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
-  const token = b64({ alg: 'none' }) + '.' + b64({ identity_id: 'act-2', identity_type: 'actor', parent_entity_id: 'ent-walk', parent_entity_name: 'Mayur Bhavan', display_name: 'Vel', hat: 'view_only', exp: Math.floor(Date.now() / 1000) + 3600 }) + '.x';
+  const token = b64({ alg: 'none' }) + '.' + b64({ identity_id: 'act-2', identity_type: 'actor', parent_entity_id: 'ent-walk', parent_entity_name: 'Mayur Bhavan', display_name: 'Vel', hat: 'view_only', exp: Math.floor(TD.nowMs() / 1000) + 3600 }) + '.x';
   return JSON.stringify({ token, role: 'actor', hat: 'view_only', name: 'Vel', entity: 'Mayur Bhavan', bridgeId: 'CBWALK0001' });
 }
 
@@ -192,7 +193,7 @@ function l2cRoute(L, r, q, u, p, m, body) {
     if (!name) return J(r, 400, errBody('Give the lead a name.', 'BAD_NAME'));
     if (L.leads.some((l) => l.name.toLowerCase() === name.toLowerCase())) return J(r, 409, errBody('That name is already on your list.', 'EXISTS'));
     const stage = (body || {}).stage || 'lead'; if (STAGES.indexOf(stage) < 0) return J(r, 400, errBody('That is not one of the stages.', 'BAD_GROUP'));
-    const n = L.leads.length + 1, l = { n, party_id: uuid(n), party_no: 'P-01' + String(n).padStart(2, '0'), name, phone: (body || {}).phone || null, stage, since: new Date().toISOString(), txn: 0, last_txn_at: null };
+    const n = L.leads.length + 1, l = { n, party_id: uuid(n), party_no: 'P-01' + String(n).padStart(2, '0'), name, phone: (body || {}).phone || null, stage, since: TD.nowIso(), txn: 0, last_txn_at: null };
     L.leads.push(l); L.stages.push({ party_id: l.party_id, stage, at: l.since });
     return J(r, 201, { party: { party_id: l.party_id, display_name: name, party_no: l.party_no, kind: 'local', on_chitbridge: false, lead: { stage, since: l.since } } });
   }
@@ -216,7 +217,7 @@ function l2cRoute(L, r, q, u, p, m, body) {
         else { const pick = b.after == null || b.after === '' ? (o.key === 'call_back' ? 'tomorrow' : null) : String(b.after); if (pick == null) return J(r, 400, errBody('When is the demo?', 'NEED_DAY')); if (!(pick in o.presets)) return J(r, 400, errBody('Pick today, tomorrow or 3 days.', 'BAD_AFTER')); day = addDays(t, o.presets[pick]); }
       } else day = addDays(t, o.days);
     }
-    L.fu.filter((f) => f.party_id === l.party_id && !f.done_at).forEach((f) => { f.done_at = new Date().toISOString(); });
+    L.fu.filter((f) => f.party_id === l.party_id && !f.done_at).forEach((f) => { f.done_at = TD.nowIso(); });
     const interaction = Object.assign({ owner: 'ent-walk' }, addIx(L, l.party_id, 'call', 'out', o.label));   /* the outcome's 201 names the owner, as the api's does */
     const followup = day ? fuShape(addFu(L, l.party_id, o.then, day, 'interaction')) : null;
     const stage = o.stage && isLead(l) ? setStage(L, l, o.stage) : null;
@@ -257,7 +258,7 @@ function l2cRoute(L, r, q, u, p, m, body) {
   if ((x = p.match(/^\/api\/crm\/followups\/([^/]+)$/)) && (m === 'PATCH' || m === 'DELETE')) {
     const f = L.fu.find((y) => y.followup_id === decodeURIComponent(x[1])); if (!f) return J(r, 404, errBody('Not your follow-up.', 'NOT_FOUND'));
     if (m === 'DELETE') { L.fu = L.fu.filter((y) => y !== f); return J(r, 200, { ok: true }); }
-    const b = body || {}; if (b.done === true) f.done_at = new Date().toISOString(); if (b.due_at) f.due_at = b.due_at; if (b.assignee_user_id !== undefined) f.assignee_user_id = b.assignee_user_id;
+    const b = body || {}; if (b.done === true) f.done_at = TD.nowIso(); if (b.due_at) f.due_at = b.due_at; if (b.assignee_user_id !== undefined) f.assignee_user_id = b.assignee_user_id;
     return J(r, 200, { followup: fuShape(Object.assign({}, fuRows(L).find((y) => y.followup_id === f.followup_id))) });
   }
   return null;
@@ -284,7 +285,7 @@ async function route(S, r) {
   if (p === '/api/crm/parties' && m === 'GET') return J(r, 200, crmApi.list(fx.list, { records: fx.records }));
   if ((x = p.match(/^\/api\/crm\/parties\/([^/]+)$/)) && m === 'GET' && S.priv) {   /* T3-P3-CONSENT: the record with THIS walk's consent rows (lib/privacy.contactPrefsOf) */
     const id = decodeURIComponent(x[1]), row = fx.list.find((z) => z.party_id === id || z.party_no === id) || fx.list[0];
-    return J(r, 200, Object.assign(crmApi.record(fx.list, row.party_id, fx.records[row.party_id], [], Date.now()), { contact_prefs: pvContactPrefs(S.priv, row.party_id) }));
+    return J(r, 200, Object.assign(crmApi.record(fx.list, row.party_id, fx.records[row.party_id], [], TD.nowMs()), { contact_prefs: pvContactPrefs(S.priv, row.party_id) }));
   }
   if ((x = p.match(/^\/api\/crm\/parties\/([^/]+)\/timeline$/)) && S.priv) { const id = decodeURIComponent(x[1]), row = fx.list.find((z) => z.party_id === id || z.party_no === id) || fx.list[0]; return J(r, 200, { party_id: row.party_id, entries: [], next_before: null, migrated: true }); }
   if (p === '/api/crm/followups') return J(r, 200, crmApi.followups([]));

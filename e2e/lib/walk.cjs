@@ -15,6 +15,7 @@
  */
 'use strict';
 const path = require('path'), fs = require('fs'), http = require('http');
+const TD = require('./today.cjs');
 const SHOW = process.argv.includes('--show') || process.env.WALK_SHOW === '1';
 const ROOT = path.join(__dirname, '..', '..');
 const PUB = path.join(ROOT, 'public');
@@ -38,7 +39,7 @@ function serve(api) {
 const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64').replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
 /** the session the apps store: a token whose identity is the (fixture) shop */
 function session(name, entity) {
-  const token = b64({ alg: 'none' }) + '.' + b64({ identity_id: 'ent-walk', identity_type: 'entity', exp: Math.floor(Date.now() / 1000) + 3600 }) + '.x';
+  const token = b64({ alg: 'none' }) + '.' + b64({ identity_id: 'ent-walk', identity_type: 'entity', exp: Math.floor(TD.nowMs() / 1000) + 3600 }) + '.x';
   return JSON.stringify({ token, role: 'entity', name: name || 'Fixture Owner', entity: entity || 'Fixture Shop', bridgeId: 'CBWALK0001' });
 }
 
@@ -63,6 +64,9 @@ async function start(name, opts) {
   /* opts.base (HX0): walk a site that is already running — the compose stack's web container — instead of serving this checkout; WX: e2e/lib/stack-local.cjs's site, its api on 3000 */
   const { srv, base } = opts.base ? { srv: null, base: String(opts.base).replace(/\/+$/, '') } : await serve();
   const browser = await chromium.launch(SHOW ? { headless: false, slowMo: 450, args: ['--window-size=1360,900', '--window-position=40,20'] } : {});
+  /* QW1-TODAY: CB_TODAY fixes the page's clock (timers still run) in EVERY context this browser opens (contextAt, or a walk's own browser.newContext) —
+     stand-in walks only; a real api cannot be moved, so there the page keeps real time */
+  if (TD.injected && !opts.base) { const open = browser.newContext.bind(browser); browser.newContext = async (o) => { const c = await open(o); await c.clock.setFixedTime(TD.now()); return c; }; }
   /* ⚠️ FX-QA1: A LOCAL WALK NEVER REACHES PRODUCTION. On a running local site (opts.base) any request to the host public/config.js ships is refused
      and named — a loud FAIL at the end, whoever answered it (a later stand-in route can win the route; the request event still sees it).
      Every context the walk opens (contextAt, GOV-SPIN) carries the same guard. */
@@ -84,6 +88,7 @@ async function start(name, opts) {
     await c.addInitScript(() => { try { window.print = function () { window.__printed = (window.__printed || 0) + 1; }; } catch (_) {} });
     return c;
   };
+  if (TD.injected) console.log('CB_TODAY ' + TD.TODAY + (opts.base ? ' — NOT applied to the page: this walk runs on a real api whose clock is not injectable yet' : ' — the page clock is fixed to ' + TD.now().toISOString()));
   const ctx = await contextAt({ timezoneId: opts.timezoneId, locale: opts.locale, geolocation: opts.geolocation });
   const page = await ctx.newPage();
   const errs = []; page.on('pageerror', (e) => errs.push(String(e && e.message || e)));
@@ -132,4 +137,4 @@ async function run(name, body) {
   finally { if (w) await w.close(); process.exit(code); }
 }
 
-module.exports = { run, start, session, banner, SHOW };
+module.exports = { run, start, session, banner, SHOW, TODAY: TD.TODAY, now: TD.now, nowIso: TD.nowIso, nowMs: TD.nowMs, dayPlus: TD.dayPlus };

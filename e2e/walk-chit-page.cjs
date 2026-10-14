@@ -11,6 +11,7 @@
  * One line per path: "ID · path · PASS/FAIL (what it saw)". Screenshots: e2e/shots/walk-chit-page-NN.png.
  */
 'use strict';
+const TD = require('./lib/today.cjs');
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const W = require('./lib/walk.cjs');
 const { measure } = require('./lib/theme-measure.cjs');
@@ -18,7 +19,7 @@ const ROOT = path.join(__dirname, '..', 'public');
 const C = require('./lib/contract.cjs');   /* M43: every /api/books · /api/crm answer this stand-in serves is held to the API contract (INT4) */
 const J = (r, status, body) => C.json(r, status, body);
 const crmApi = require('./lib/crm-api.cjs');   /* RAIL-LAB-SRV1: the rail card (GET /api/facts/rail) from its one builder */
-const SHOP = 'Fixture Shop', TODAY = new Date().toISOString().slice(0, 10);
+const SHOP = 'Fixture Shop', TODAY = TD.TODAY;
 
 /* the frozen invoice the counter determined - the one money engine, run once here, so the page's figures have a reference to the paisa */
 const eng = {}; eng.window = eng; eng.self = eng; vm.createContext(eng);

@@ -13,6 +13,7 @@
  * One line per path: "ID · path · PASS/FAIL (what it saw)". Screenshots: e2e/shots/walk-finance-NN.png.
  */
 'use strict';
+const TD = require('./lib/today.cjs');
 const W = require('./lib/walk.cjs');
 const books = require('./lib/books-api.cjs');
 const C = require('./lib/contract.cjs');   /* M43: every /api/books answer this stand-in serves is held to the API contract */
@@ -44,7 +45,7 @@ W.run('finance', async (w) => {
       if (S.mode === 'denied') return J(r, 403, { message: 'Only the owner may see collections.' });
       if (S.mode === 'off') return J(r, 404, { message: 'Books is not switched on' });
       if (S.mode === 'broken') return J(r, 500, { message: 'database timeout at 10.0.0.5' });
-      const asOf = new Date().toISOString().slice(0, 10), plain = books.dues(S.rows.map((x) => books.dueRow({ party_no: x.party_no, name: x.name, party_id: x.party_id, side: x.side, balance_minor: x.balance_minor, oldest_due: x.oldest_due, buckets: x.buckets })), { asOf });
+      const asOf = TD.TODAY, plain = books.dues(S.rows.map((x) => books.dueRow({ party_no: x.party_no, name: x.name, party_id: x.party_id, side: x.side, balance_minor: x.balance_minor, oldest_due: x.oldest_due, buckets: x.buckets })), { asOf });
       C.check('GET', p, 200, plain, 'walk-finance: ');   /* the contract holds the plain answer; the finance fields (credit limit, over_limit, interest, last remind) are served beside it */
       const extra = Object.fromEntries(S.rows.map((x) => [x.party_id, x]));
       return J(r0, 200, Object.assign({}, plain, { parties: plain.parties.map((x) => Object.assign({}, x, { credit_limit_minor: extra[x.party_id].credit_limit_minor, credit_limit_from: extra[x.party_id].credit_limit_from, over_limit: extra[x.party_id].over_limit, interest_minor: extra[x.party_id].interest_minor, interest_state: extra[x.party_id].interest_state, last_remind: extra[x.party_id].last_remind })) }));

@@ -28,7 +28,7 @@ const want = (s) => !ONLY || ONLY.includes(s);
 const SHOTS = path.join(__dirname, 'shots');
 const LAPTOP = { width: 1366, height: 768 }, PHONE = { width: 390, height: 844 };
 const OWNER = 'simstores', OWNER_EMAIL = 'simstores@test.example', AU = 'austores', AU_EMAIL = 'austores@test.example';
-const RUN = String(Date.now()).slice(-7);                 /* a fresh shopper per run — the loader's shop is shared across runs */
+const RUN = String(Date.now()).slice(-7);                 /* a fresh shopper per run — the loader's shop is shared across runs */   /* clock-ok: a unique run suffix */
 const SHOPPER = { contact: '9' + RUN.padStart(9, '0'), name: 'Walk Shopper ' + RUN, location: '12 Walk Street, Madurai' };
 const norm = (s) => String(s || '').replace(/\s+/g, ' ').trim();
 
