@@ -183,7 +183,8 @@ W.run('x-r2r', async (w) => {
     await w.step('Y6', 'GST close defaults to last month in the shop\'s year', async () => {
       await open(page, base, 'gstclose'); const p = await page.locator('#pg_p').inputValue().catch(() => ''), fy = await page.locator('#pg_fy').inputValue().catch(() => '');
       const lbl = await page.$eval('#pg_p', (s) => s.options[s.selectedIndex].textContent).catch(() => '');
-      const d = new Date(); d.setDate(0); const want = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getMonth()];
+      /* T2-WEBPRIMS: last month in the PAGE's own words (helpers.js monthNames → CBLocale: en-IN writes "Sept"), never a list typed here */
+      const want = await page.evaluate(() => { const d = new Date(); d.setDate(0); return monthNames('short')[d.getMonth()]; }).catch(() => '');
       return { ok: lbl === want, saw: fy + ' · month ' + p + ' = ' + lbl + ' (last month is ' + want + ')' };
     });
 

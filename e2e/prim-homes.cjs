@@ -35,6 +35,7 @@ const ALLOW = {
   'public/till.html': { esc: 1, money: 1 },   // the counter: vendored from the api kit, runs offline — its own one helper (master: api tools/tally-connector/till.html)
   'public/promo.html': { money: 1 },          // the shop screen: vendored from the kit, same reason
   'public/app/cart.js': { money: 2 },         // CBCart.money(lines, o) — the cart's TOTALS calculator, not a formatter · money(ns, n) — picks the app's fmtMoney or the cart's CBCart.fmt (both CBLocale.money); formats nothing itself
+  'public/app/list-ctl.js': { esc: 1 },      // CBList is a self-contained unit — e2e/list-unit.cjs traps every host global (esc too) and fails if the file borrows one
   'public/app/barcode.js': { 'esc-body': 1 }, // the Code 128 label inside an SVG string — built where no page (and no helpers.js) exists, e.g. e2e/barcode-check
 };
 
