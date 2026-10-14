@@ -18,6 +18,7 @@ Athi, 2026-10-12: *"for each function we are building we need to have a SAP kind
 | [MVI](MVI.md) | Move in (from Xero / QuickBooks) | FI (conversion: opening balances, master data) | chart of accounts → contacts → items → opening balances | 4 | 0 | 0 |
 | [PRN](PRN-flow.md) | Parallel run (their Tally / Xero period beside ours) | FI (audit: parallel run, reconciliation of statements) | load their period → compare, differences first → the auditor's file | 2 | 1 | 0 |
 | [FX](FX.md) | Foreign currency (a bill in another currency, its settlement, the period-end revaluation) | FI (foreign currency valuation · realised / unrealised exchange differences) | the day's rate → a foreign bill posts at its day's rate; its payment settles with the exchange gain or loss → revalue at the month end, reversed next month | 3 | 0 | 0 |
+| [TRADE](TRADE.md) | Trade across a border (the lanes a shop can sell into, its clearances, the papers of a deal) | GTS (compliance · documents) | see the lanes: what each market asks of a shop from ITS country and sector → gather a clearance → the deal's papers: commercial invoice (with the day's rate), packing list, certificate of origin → find the trades abroad on Task and Order | 0 | 4 | 0 |
 
 ## Flows × modules — which module owns which step
 
@@ -33,6 +34,7 @@ Athi, 2026-10-12: *"for each function we are building we need to have a SAP kind
 | MVI |  |  | 1 chart of accounts<br>2 contacts<br>3 items<br>4 opening balances |  |  |  |  |  |
 | PRN |  |  | 1 load their period<br>2 compare, differences first<br>3 the auditor's file ⚠️ |  |  |  |  |  |
 | FX |  |  | 1 the day's rate<br>2 a foreign bill posts at its day's rate; its payment settles with the exchange gain or loss<br>3 revalue at the month end, reversed next month |  |  |  |  |  |
+| TRADE |  |  |  |  | 4 find the trades abroad on Task and Order ⚠️ | 1 see the lanes: what each market asks of a shop from ITS country and sector ⚠️<br>2 gather a clearance ⚠️<br>3 the deal's papers: commercial invoice (with the day's rate), packing list, certificate of origin ⚠️ |  |  |
 
 ## The modules
 
@@ -72,6 +74,10 @@ Athi, 2026-10-12: *"for each function we are building we need to have a SAP kind
 - **L2C step 6 · consent & privacy requests** — CO1: built and tested in the api; no screen yet, and migrations b306 / b307 are drafts the owner runs (docs/compliance/OWNER-ACTIONS.md).
 - **C2V step 6 · ask** — The ONE composer (CBThread), the ladder (a commenter posts internally, an editor externally, a viewer reads and sees the sentence) and msg_type 'query' (migrations/000_baseline_part2.sql CHECK) exist and are reused as they are. No due date and no answered flag: the thread's last message says whose turn it is (REQUIREMENT §9). Missing: the anchor for a MONTH's question (the month's pack as a message subject beside chit_id — owner Q1, decided before CA2) and the cross-client count threads_waiting_on_client in last_check.summary.
 - **PRN step 3 · the auditor's file** — CSV from the server; the PDF is the browser's print of the page (no PDF library added).
+- **TRADE step 1 · see the lanes: what each market asks of a shop from ITS country and sector** — TRADE-SRV1: the server answers from the shop's stated country and sector (asked when unstated: code ORIGIN_UNSTATED · SECTOR_UNSTATED); AU and AE lanes need b538. The screen still sends paint / IN — the web round follows.
+- **TRADE step 2 · gather a clearance** — TRADE-SRV1 G8: refused 403 with the rail's sentence and a code; the reads carry may.gather — the screen does not grey with it yet.
+- **TRADE step 3 · the deal's papers: commercial invoice (with the day's rate), packing list, certificate of origin** — TRADE-SRV1 G4/G5/G7: packing list; ?context_ref= lists one deal's papers; the rate is the owner's for the invoice's day (FX_RATE_MISSING says which rate to add). The screen does not list by deal yet.
+- **TRADE step 4 · find the trades abroad on Task and Order** — TRADE-SRV1 G3: ?abroad=1 on the shared list filter. No filter chip on the lists yet (the web round).
 
 ## How a new function joins the map
 
