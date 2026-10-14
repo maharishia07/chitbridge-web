@@ -100,14 +100,18 @@ function fqRepaint(id) {
 function fqDueCell(c) {
   var p = FQ.pdc[c.payment_id], dash = '<span style="color:var(--grey)">—</span>';
   if (!p) return c.direction === 'out' ? '<span class="sub" data-b="written">' + esc(tx('Written by you')) + '</span>' : dash;
-  var cls = p.state === 'overdue_for_deposit' ? ' red' : p.state === 'deposit_today' ? ' amber' : '', fu = FQ.fu[c.payment_id];
-  return '<span class="tag' + cls + '" data-b="pdc-' + esc(p.state) + '">' + esc(tx(FQ_STATE[p.state] || p.state)) + (p.state === 'not_yet' ? ' · ' + esc(bkDate(p.cheque_date)) : '') + '</span>'
+  /* the state as WORDS in the page's text colours (.late / .late.red carry AA in every theme — the Collections' Age words); a tinted chip read 3.5:1 in Dark */
+  var cls = p.state === 'overdue_for_deposit' ? 'late red' : p.state === 'deposit_today' ? 'due' : 'sub', fu = FQ.fu[c.payment_id];   /* today: bold ink (.due), amber read 3.8:1 in Dark */
+  return '<span class="' + cls + '" data-b="pdc-' + esc(p.state) + '">' + esc(tx(FQ_STATE[p.state] || p.state)) + (p.state === 'not_yet' ? ' · ' + esc(bkDate(p.cheque_date)) : '') + '</span>'
     + (fu ? ' <span class="sub" data-b="fu-set">' + esc(tx('Reminder set')) + '</span>'
       : ' <button type="button" class="cbl-tbtn" data-testid="fq-remind-' + esc(c.payment_id) + '" onclick="event.stopPropagation();fqRemindMe(\'' + esc(c.payment_id) + '\',this)">' + esc(tx('Remind me')) + '</button>');
 }
 function fqCols() {
   var cols = bkChequeCols();   /* party · cheque · dated · amount · status (the steps the server offers, as buttons) */
-  cols.splice(3, 0, { key: 'due', label: tx('To deposit'), prio: 2, sort: 'due', w: 250, html: true, tid: function (c) { return 'fq-due-' + c.payment_id; }, cell: fqDueCell });
+  cols.splice(3, 0, { key: 'due', label: tx('To deposit'), prio: 2, sort: 'due', w: 200, html: true, tid: function (c) { return 'fq-due-' + c.payment_id; }, cell: fqDueCell });
+  /* six columns in a 1366 px window: the workshop's widths (1240) scrolled the list sideways (rule 13); the same cells, narrower */
+  var w = { party: 190, cheque: 160, dated: 110, amount: 120, status: 260 };
+  cols.forEach(function (c) { if (w[c.key]) c.w = w[c.key]; });
   return cols;
 }
 /** what is said on top: the post-dated cheques past or on their day (the server's states; counted, never summed) */

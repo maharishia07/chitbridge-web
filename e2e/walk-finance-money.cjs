@@ -132,7 +132,8 @@ W.run(REAL ? 'finance-money-real' : 'finance-money', async (w) => {
     await open('cheques');
     await w.step('Q1', 'Finance -> Cheques -> five cheques, grouped Received (4) and Written by you (1); the Cheques nav is current; on top "2 cheques to deposit"', async () => {
       const n = await rows(), cur = await page.locator(T('fin-nav-cheques') + '[aria-current="page"]').count(), gi = await txt(T('fq-group-in')), go = await txt(T('fq-group-out')), note = await txt(T('fq-pdc'));
-      return { ok: n === 5 && cur === 1 && /Received/.test(gi) && /4 cheques/.test(gi) && /Written by you/.test(go) && /1 cheque/.test(go) && note === '2 cheques to deposit', saw: n + ' rows; nav ' + cur + '; "' + gi + '" / "' + go + '"; notice "' + note + '"' };
+      /* the group head is set in capitals by the list's own style: the words are held case-blind */
+      return { ok: n === 5 && cur === 1 && /Received/i.test(gi) && /4 cheques/.test(gi) && /Written by you/i.test(go) && /1 cheque/.test(go) && note === '2 cheques to deposit', saw: n + ' rows; nav ' + cur + '; "' + gi + '" / "' + go + '"; notice "' + note + '"' };
     });
     await w.step('Q2', 'Cheques -> opened by READING only: /api/books/cheques asked, nothing written', async () => {
       return { ok: S.asked[0] === '/api/books/cheques' && S.writes.length === 0, saw: 'asked ' + S.asked.join(', ') + '; writes ' + S.writes.length };
@@ -210,7 +211,9 @@ W.run(REAL ? 'finance-money-real' : 'finance-money', async (w) => {
       S.writes = []; await open('returns', T('fr-gstr'));
       const h = await txt(T('fr-gstr') + ' h2'), opts = await page.locator(T('fr-month') + ' option').count(), v = await page.locator(T('fr-month')).inputValue().catch(() => ''), label = await page.locator(T('fr-month') + ' option').first().innerText().catch(() => '');
       const b1 = await page.locator(T('fr-gstr1')).count(), b3 = await page.locator(T('fr-gstr3b')).count(), cur = await page.locator(T('fin-nav-returns') + '[aria-current="page"]').count();
-      return { ok: h === 'GSTR-1 and GSTR-3B' && opts === 12 && v === LM.v && label.trim() === LM.label && b1 === 1 && b3 === 1 && cur === 1 && S.writes.length === 0,
+      /* the month word is CBLocale's (en-IN says "Sept"): the first three letters and the year are what is held */
+      const lbl = label.trim(), lblOk = lbl.slice(0, 3) === LM.label.slice(0, 3) && lbl.slice(-4) === LM.label.slice(-4);
+      return { ok: h === 'GSTR-1 and GSTR-3B' && opts === 12 && v === LM.v && lblOk && b1 === 1 && b3 === 1 && cur === 1 && S.writes.length === 0,
         saw: '"' + h + '"; ' + opts + ' months, first ' + v + ' "' + label.trim() + '" (want ' + LM.v + ' ' + LM.label + '); buttons ' + b1 + '/' + b3 + '; nav ' + cur + '; writes ' + S.writes.length };
     });
     await w.step('R2', 'Returns -> GSTR-1 file -> the page asked /api/tax/gstr?month=' + LM.v + '&form=gstr1 and the browser SAVED gstr1-' + LM.v + '.json (the server\'s JSON, nothing added); said beside the button', async () => {

@@ -2102,7 +2102,8 @@ function bkChequeKeep(c) {
     amount_minor: c.amount_minor != null ? c.amount_minor : was.amount_minor, currency: c.currency || was.currency || null,
     cheque_no: c.cheque_no || c.number || was.cheque_no || '', cheque_bank: c.cheque_bank || c.bank || was.cheque_bank || '',
     cheque_date: c.cheque_date || c.date || was.cheque_date || null, status: bkChequeStatus(c.status || was.status),
-    next: Array.isArray(c.next) ? c.next : (c.status ? null : (was.next || null)) };
+    next: Array.isArray(c.next) ? c.next : (c.status ? null : (was.next || null)),
+    direction: c.direction || was.direction || 'in' };   /* T3-P1-MONEY (widened): in = received · out = written by the shop — CB Finance › Cheques groups on it; a recorded Receive is `in` */
   return BK.cheques[id];
 }
 function bkChequeStepsHTML(c) {
@@ -2110,7 +2111,8 @@ function bkChequeStepsHTML(c) {
   var id = esc(c.payment_id), next = bkChequeNext(c);
   return '<span data-testid="chq-status-' + id + '" style="font-weight:600">' + tx(BK_CHQ_WORD[c.status]) + '</span>'
     + (next.length ? ' <span class="supacts" style="display:inline-flex;gap:6px;margin:0 0 0 8px">' + next.map(function (s) {
-        return '<button data-testid="chq-' + s + '-' + id + '" onclick="bkChequeStep(\'' + id + '\',\'' + s + '\')">' + tx(BK_CHQ_WORD[s]) + '</button>'; }).join('') + '</span>' : '');
+        /* class cbl-tbtn (T3-P1-MONEY): the list's own small button — a bare <button> wore the browser's colours and failed AA in Dark; outside a list the class has no rule */
+        return '<button type="button" class="cbl-tbtn" data-testid="chq-' + s + '-' + id + '" onclick="bkChequeStep(\'' + id + '\',\'' + s + '\')">' + tx(BK_CHQ_WORD[s]) + '</button>'; }).join('') + '</span>' : '');
 }
 async function bkChequeStep(id, to) {
   var c = BK.cheques[id]; if (!c || bkChequeNext(c).indexOf(to) < 0) return;
