@@ -39,11 +39,11 @@ function publishAnswer(btn){
   var edit = _kbEditId;
   return CBAction.run(btn || document.getElementById('kb_pub'), function () { return api("assistPublish", { body: { question: q, answer: a, context: c, qa_id: edit || undefined } }); },
     { key: 'kb-publish', out: 'kb_err', failed: tx('Could not publish'),
-      outcome: function () { if (x) { x.textContent = edit ? tx('Updated — the assistant says it now.') : tx('Published — the assistant says it now.'); x.setAttribute('data-tone', 'ok'); } kbNew(); CBAssist.reload(); } });
+      outcome: function () { kbNew(); CBAssist.said(edit ? tx('Updated — the assistant says it now.') : tx('Published — the assistant says it now.')); CBAssist.reload(); } });
 }
 
 var CBAssist = (function () {
-  var K = { el: null, o: {}, may: null, state: 'loading', err: null, list: null };
+  var K = { el: null, o: {}, may: null, state: 'loading', err: null, list: null, said: '' };   /* said: the last outcome, kept over the form's repaint */
   function T(s) { return typeof tx === 'function' ? tx(s) : s; }
   /** the server's answer for Publish / Edit — a sentence when refused, '' when allowed (still reading: refused until it answers) */
   function refused() { var m = K.may && K.may.publish; return !m ? T('Checking whether you can publish…') : m.ok === false ? (m.say || T('Only a help desk publishes answers.')) : ''; }
@@ -57,7 +57,7 @@ var CBAssist = (function () {
       + '<div class="tk-act' + (no ? ' no' : '') + '"><button type="button" class="act composebtn" id="kb_pub" data-testid="kb-publish"' + dis + ' title="' + esc(no || T('Publish')) + '">' + esc(T('📣 Publish')) + '</button>'
       + '<button type="button" class="act quiet composebtn ghost" id="kb_new" data-testid="kb-new"' + dis + '>' + esc(T('＋ New')) + '</button>'
       + (no ? '<span class="why" data-testid="kb-publish-why">' + esc(no) + '</span>' : '') + '</div>'
-      + '<div class="tk-out" id="kb_err" role="status" data-testid="kb-out"></div></div>';
+      + '<div class="tk-out" id="kb_err" role="status" data-testid="kb-out" data-tone="ok">' + esc(K.said) + '</div></div>';
   }
   function paintForm() {
     var f = K.el && K.el.querySelector('#kb_formbox'); if (!f) return;
@@ -98,11 +98,12 @@ var CBAssist = (function () {
     return Promise.all([who, qs]).then(function () { paintForm(); paintList(); });
   }
   function mount(el, o) {
-    K.el = el; K.o = o || {}; K.list = null; K.may = null; _kbEditId = '';
+    K.el = el; K.o = o || {}; K.list = null; K.may = null; K.said = ''; _kbEditId = '';
     el.innerHTML = '<div class="kb-top sub" data-testid="kb-how">' + esc(T('Questions reach a help desk as chits in its Tasks. The answers published here are what the assistant says.')) + '</div>'
       + '<div id="kb_formbox"></div><div class="tk-list" id="kb_list" data-testid="kb-list"></div>';
     paintForm(); paintList(); load();
     return { reload: load };
   }
-  return { mount: mount, reload: function () { if (K.el && document.body.contains(K.el)) return load(); } };
+  return { mount: mount, said: function (w) { K.said = String(w || ''); var x = document.getElementById('kb_err'); if (x) x.textContent = K.said; },
+    reload: function () { if (K.el && document.body.contains(K.el)) return load(); } };
 })();
