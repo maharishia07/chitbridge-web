@@ -78,8 +78,8 @@ function crmGroupsCols() {
 function crmGroupTid(r) { return String(r.key).replace(/[^A-Za-z0-9_-]/g, '_'); }
 function crmGroupsBar() {
   var why = crmGroupsMay('group');
-  var btn = why ? crmViewOnlyBtn('crm-grp-new', '+ ' + tx('New group'), why) : '<button type="button" class="act sm" data-testid="crm-grp-new" data-crm="grpnew">+ ' + esc(tx('New group')) + '</button>';
-  if (GROUPS.loaded && !GROUPS.migrated) btn = crmViewOnlyBtn('crm-grp-new', '+ ' + tx('New group'), tx('Named groups need one database step (b205).'));
+  var btn = why ? crmViewOnlyBtn('crm-grp-add', '+ ' + tx('New group'), why) : '<button type="button" class="act sm" data-testid="crm-grp-add" data-crm="grpnew">+ ' + esc(tx('New group')) + '</button>';
+  if (GROUPS.loaded && !GROUPS.migrated) btn = crmViewOnlyBtn('crm-grp-add', '+ ' + tx('New group'), tx('Named groups need one database step (b205).'));
   crmBar('<strong>' + esc(tx('CB CRM')) + '</strong>', btn, true);
 }
 function crmGroupsNotices() {

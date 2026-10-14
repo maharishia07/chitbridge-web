@@ -125,6 +125,7 @@ const walk = async (w) => {
   /* a hash-only goto is no navigation in Playwright: reload so the page reads again */
   const groups = async () => { await page.goto(base + '/crm.html#/groups'); await page.reload(); await page.waitForSelector('[data-testid="crm-grp-count-regular"]', { timeout: 20000 }); await page.waitForTimeout(300); };
   /* a CBList row opens its ▸ level on a click of the row itself (list-ctl.js: role=row, aria-expanded) */
+  const inRow = (key, sel) => page.locator('.cbl-next[data-next="' + key + '"] ' + sel).first();
   const openRow = async (tid) => { const row = page.locator('[data-testid="' + tid + '"]').first(); if ((await row.getAttribute('aria-expanded')) !== 'true') await row.click(); await page.waitForTimeout(300); };
 
   /* ── 1 · GROUPS & SEGMENTS ── */
@@ -143,7 +144,7 @@ const walk = async (w) => {
     return { ok: link && /Chola Auto Care/.test(mini) && /1 may be sent offers/.test(may) && /Offers only for them\s*1/.test(mini), saw: mini.slice(0, 160) };
   });
   await w.step('G3', 'Groups -> + New group "VIP" -> tick two customers -> Save: ONE POST { name, add[2] }, the toast says the members, the row appears with the server\'s count', async () => {
-    await page.click('[data-testid="crm-grp-new"]'); await page.waitForSelector('[data-testid="crm-grp-sheet"]', { timeout: 5000 });
+    await page.click('[data-testid="crm-grp-add"]'); await page.waitForSelector('[data-testid="crm-grp-sheet"]', { timeout: 5000 });
     await page.fill('#crm_grp_name', 'VIP');
     await page.click('[data-testid="crm-grp-cand-P-0002"] input'); await page.click('[data-testid="crm-grp-cand-P-0006"] input');
     const n = await txt('[data-testid="crm-grp-n"]');
@@ -153,7 +154,7 @@ const walk = async (w) => {
   });
   await w.step('G4', 'VIP -> Send offer message -> Who may be sent?: the SERVER\'s dry answer by code (1 may · 1 not — no consent yet); Send -> the one sender\'s outcome per member, in words', async () => {
     await openRow('crm-grp-group_VIP');
-    await page.locator('[data-testid="crm-grp-send"]').first().click(); await page.waitForSelector('[data-testid="crm-send-sheet"]', { timeout: 5000 });
+    await inRow('group:VIP', '[data-testid="crm-grp-send"]').click(); await page.waitForSelector('[data-testid="crm-send-sheet"]', { timeout: 5000 });
     await page.fill('#crm_send_text', 'Diwali offer: 10% off this week');
     const goBefore = await page.locator('[data-testid="crm-send-go"]').isDisabled();
     await page.click('[data-testid="crm-send-check"]'); await page.waitForSelector('[data-testid="crm-send-may"]', { timeout: 8000 });
@@ -165,7 +166,7 @@ const walk = async (w) => {
   });
   await w.step('G5', 'VIP -> Delete group: asks first, then ONE DELETE; the row is gone and the Parties list no longer carries the name', async () => {
     await page.keyboard.press('Escape'); await page.waitForTimeout(200);
-    await page.locator('[data-testid="crm-grp-delete"]').first().click(); await page.waitForSelector('[data-testid="confirm"]', { timeout: 5000 });
+    await inRow('group:VIP', '[data-testid="crm-grp-delete"]').click(); await page.waitForSelector('[data-testid="confirm"]', { timeout: 5000 });
     const ask = await txt('[data-testid="confirm"]');
     await page.click('[data-testid="confirm-ok"]'); await page.waitForTimeout(800);
     const gone = !(await has('[data-testid="crm-grp-count-group_VIP"]')), dels = S.calls.filter((c) => /DELETE \/api\/crm\/groups\/VIP/.test(c)).length;
@@ -173,13 +174,13 @@ const walk = async (w) => {
   });
   await w.step('G6', 'Workshops -> Delete group: the confirm names the offer that is only for it ("will reach no one") — Keep', async () => {
     await openRow('crm-grp-group_Workshops');
-    await page.locator('[data-testid="crm-grp-delete"]').first().click(); await page.waitForSelector('[data-testid="confirm"]', { timeout: 5000 });
+    await inRow('group:Workshops', '[data-testid="crm-grp-delete"]').click(); await page.waitForSelector('[data-testid="confirm"]', { timeout: 5000 });
     const ask = await txt('[data-testid="confirm"]');
     await page.keyboard.press('Escape'); await page.waitForTimeout(200); const dels = S.calls.filter((c) => /DELETE \/api\/crm\/groups\/Workshops/.test(c)).length;
     return { ok: /1 offer is only for this group/.test(ask) && /reach no one/.test(ask) && /Delete anyway/.test(ask) && dels === 0, saw: '"' + ask.slice(0, 120) + '" · DELETE ×' + dels };
   });
   await w.step('G7', 'Groups -> See all in Parties: the Parties list opens filtered to the group (its rows are the members)', async () => {
-    await page.locator('[data-testid="crm-grp-open"]').first().click(); await page.waitForTimeout(700);
+    await inRow('group:Workshops', '[data-testid="crm-grp-open"]').click(); await page.waitForTimeout(700);
     const rows = await page.locator('[data-testid^="crm-row-"]').count(), url = page.url();
     return { ok: /#\/parties\?group=Workshops/.test(url) && rows === 1, saw: url.replace(base, '') + ' · ' + rows + ' row(s)' };
   });
@@ -191,10 +192,10 @@ const walk = async (w) => {
   await w.step('G9', 'A view-only login -> Groups: + New group, Send and Delete are SHOWN, greyed, each with the server\'s sentence; never hidden', async () => {
     S.level = 'viewer'; await ctx.addInitScript((s) => { try { localStorage.setItem('cb_sess', s); } catch (_) {} }, VIEWER); await page.evaluate((s) => localStorage.setItem('cb_sess', s), VIEWER);
     await groups();
-    const newBtn = page.locator('[data-testid="crm-grp-new"]'), nNew = await newBtn.count(), newOff = await newBtn.first().isDisabled(), newWhy = await txt('[data-testid="crm-grp-new-why"]');
+    const newBtn = page.locator('[data-testid="crm-grp-add"]'), nNew = await newBtn.count(), newOff = await newBtn.first().isDisabled(), newWhy = await txt('[data-testid="crm-grp-add-why"]');
     await openRow('crm-grp-group_Workshops');
-    const sendOff = await page.locator('[data-testid="crm-grp-send"]').first().isDisabled(), delOff = await page.locator('[data-testid="crm-grp-delete"]').first().isDisabled();
-    const sendWhy = await page.locator('[data-testid="crm-grp-send"]').first().getAttribute('title'), delWhy = await page.locator('[data-testid="crm-grp-delete"]').first().getAttribute('title');
+    const sendOff = await inRow('group:Workshops', '[data-testid="crm-grp-send"]').isDisabled(), delOff = await inRow('group:Workshops', '[data-testid="crm-grp-delete"]').isDisabled();
+    const sendWhy = await inRow('group:Workshops', '[data-testid="crm-grp-send"]').getAttribute('title'), delWhy = await inRow('group:Workshops', '[data-testid="crm-grp-delete"]').getAttribute('title');
     return { ok: nNew === 1 && newOff && /only view/.test(newWhy) && sendOff && /only view/.test(sendWhy || '') && delOff && /Only the owner deletes/.test(delWhy || ''), saw: 'New group ×' + nNew + ': "' + newWhy + '" · Send: "' + sendWhy + '" · Delete: "' + delWhy + '"' };
   });
   S.level = 'owner'; await ctx.addInitScript((s) => { try { localStorage.setItem('cb_sess', s); } catch (_) {} }, W.session('Fixture Owner', 'Fixture Shop')); await page.evaluate((s) => localStorage.setItem('cb_sess', s), W.session('Fixture Owner', 'Fixture Shop'));
