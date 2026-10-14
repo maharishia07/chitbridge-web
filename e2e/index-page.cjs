@@ -156,7 +156,7 @@ async function run() {
       const chips = await pg.$$eval('.cbsh-sc', (cs) => cs.map((c) => ({ id: c.dataset.testid, st: c.dataset.state, link: c.tagName === 'A' || !!c.querySelector('a'), via: c.dataset.via === '1', href: c.getAttribute('href'), tag: (c.querySelector('.tag') || {}).textContent })));
       ok(chips.length && chips.every((c) => (c.via ? /^\/[a-z-]+\.html$/.test(c.href || '') : !c.link) && (c.st === 'workshop' || c.st === 'coming' || c.st === 'works') && c.tag), '1366 · every chip is dashed, names its state, and is not a link (bar a workshop item that names its closest built page: Catalogue to Product Lab)');
       const before = pg.url(), pages = ctx.pages().length;
-      await pg.click('[data-testid="shell-chip-stock"]'); await pg.waitForTimeout(250);
+      await pg.click('[data-testid="shell-chip-delivery"]'); await pg.waitForTimeout(250);   /* delivery: still a coming chip (Stock became a built card in T3-OPS) */
       ok(pg.url() === before && ctx.pages().length === pages, '1366 · a workshop chip opens nothing');
       /* reads: only budgeted ones; null facts paint nothing */
       const unbudgeted = seen.filter((p) => !BUDGETED.includes(p));
