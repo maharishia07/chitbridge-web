@@ -6019,44 +6019,9 @@ async function saveAutoAssign(){ const x=document.getElementById("st_aerr"); if(
   if(mode==='default_assignee' && !da){ if(x)x.textContent="Pick a default assignee for this mode."; return; }
   try{ await api("saveSettings",{body:{auto_assign_mode:mode, default_assignee_actor_id:da||null}}); toast("Auto-assign saved ✓"); }catch(e){ if(x)x.textContent=e.message; } }
 
-/* ---- ASSISTANT — knowledge base: the help desk publishes answers to its own catalogue -> served live ----
-   Queries are handled the hard way (chits in GOV-01-Help's Task inbox: message + close). This screen is the
-   one new atom: Publish-to-catalogue. loadGaps() name kept (renderApp dispatch) — it now loads the KB screen. */
-function assistReviewScreen(){ return scr("🧠 Assistant — knowledge base","kbbody","assistreview"); }
-var _kbItems=[], _kbEditId='';
-async function loadGaps(){ const h=document.getElementById("kbbody"); if(!h)return;
-  const me=(typeof SESSION!=='undefined')?SESSION:{}; const isHelp=(me.name==='GOV-01-Help'||me.isHelpdesk);
-  const form = isHelp
-    ? '<div style="'+_CARD+'"><div class="sec" id="kb_formhd" style="margin:0 0 6px">' + tx('Publish an answer') + '</div>'
-      +'<label class="fl">' + tx('Question') + '</label><input class="inp" id="kb_q" data-testid="kb-question" placeholder="e.g. How do I export to Excel?">'
-      +'<label class="fl">' + tx('Answer') + '</label><textarea class="inp" id="kb_a" data-testid="kb-answer" rows="4" placeholder="The answer the assistant should give…" style="width:100%;resize:vertical"></textarea>'
-      +'<label class="fl">Context <span style="color:var(--grey);font-size:var(--fs-1)">— screens (comma), or * for everywhere</span></label><input class="inp" id="kb_c" data-testid="kb-context" placeholder="e.g. task, order  (or *)" value="*">'
-      +'<div class="err" id="kb_err"></div><div style="display:flex;gap:7px;margin-top:9px"><button class="composebtn" id="kb_pub" data-testid="kb-publish" onclick="publishAnswer()">' + tx('📣 Publish to catalogue') + '</button><button class="composebtn ghost" data-testid="kb-new" onclick="kbNew()">＋ New / clear</button></div>'
-      +'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">' + txf('Add a new answer, or press {edit} on one below to refine it.', {
-          edit: '<b>' + tx('Edit') + '</b>' }) + '</div>'
-      /* ⭐ "catalogue → projection" is how it works, not what to do. */
-      + specNote('assist.answers.projection', 'Answers are served to the assistant instantly (catalogue <span class=arw>→</span> projection).')
-      + '</div>'
-    : '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:11px 13px;font-size:var(--fs-2);color:var(--warn-3);margin-bottom:11px">This is the help-desk knowledge base. Queries arrive as chits in <b>' + tx('GOV-01-Help') + '</b>\'s Task inbox — operate as GOV-01-Help to answer, close, and publish here.</div>';
-  h.innerHTML=form+'<div style="font-size:var(--fs-2);color:var(--grey);margin:12px 0 6px">' + tx('Published answers (') + '<span id="kb_n">…</span>)</div><div id="kb_list"><div class="loadwrap"><span class="spin"></span> loading…</div></div>';
-  if(window.CBOffline)CBOffline.autodraft(h,'kb.form');   // draft the question/answer/context you're writing
-  try{ _kbItems=(await api("assistQuestions"))||[]; const n=document.getElementById("kb_n"); if(n)n.textContent=_kbItems.length;
-    const L=document.getElementById("kb_list"); if(L) L.innerHTML = _kbItems.length ? _kbItems.map(function(e){
-      const eb = isHelp ? '<button class="composebtn" style="padding:2px 9px;font-size:var(--fs-1);flex:none" onclick="kbEdit(\''+esc(e.id)+'\')">' + tx('Edit') + '</button>' : '';
-      return '<div style="'+_CARD+';padding:9px 11px"><div style="display:flex;gap:8px;align-items:flex-start"><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:var(--fs-2)">'+esc(e.q)+'</div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">'+esc(e.a)+'</div><div style="font-size:var(--fs-1);color:var(--grey-4);margin-top:3px">'+esc(Array.isArray(e.context)?e.context.join(', '):'')+'</div></div>'+eb+'</div></div>'; }).join('') : '<div style="color:var(--grey);font-size:var(--fs-2)">None yet.</div>';
-  }catch(e){ const L=document.getElementById("kb_list"); if(L)L.innerHTML=scrErr(e); } }
-function kbEdit(id){ const it=_kbItems.find(function(x){return x.id===id;}); if(!it)return; _kbEditId=id;
-  const q=document.getElementById("kb_q"),a=document.getElementById("kb_a"),c=document.getElementById("kb_c"),hd=document.getElementById("kb_formhd"),pb=document.getElementById("kb_pub");
-  if(q)q.value=it.q||''; if(a)a.value=it.a||''; if(c)c.value=(Array.isArray(it.context)?it.context.join(', '):'*'); if(hd)hd.textContent='Edit answer'; if(pb)pb.textContent='💾 Update';
-  if(q&&q.scrollIntoView)q.scrollIntoView({behavior:'smooth',block:'center'}); }
-function kbNew(){ if(window.CBOffline)CBOffline.clearDraft('kb.form'); _kbEditId=''; const q=document.getElementById("kb_q"),a=document.getElementById("kb_a"),c=document.getElementById("kb_c"),hd=document.getElementById("kb_formhd"),pb=document.getElementById("kb_pub"),x=document.getElementById("kb_err");
-  if(q)q.value=''; if(a)a.value=''; if(c)c.value='*'; if(hd)hd.textContent='Publish an answer'; if(pb)pb.textContent='📣 Publish to catalogue'; if(x)x.textContent=''; }
-async function publishAnswer(){ const x=document.getElementById("kb_err"); if(x)x.textContent="";
-  const q=val("kb_q"), a=val("kb_a"); const c=(val("kb_c")||"").split(',').map(function(s){return s.trim();}).filter(Boolean);
-  if(!q||!a){ if(x)x.textContent="Question and answer are both required."; return; }
-  try{ await api("assistPublish",{body:{question:q, answer:a, context:c, qa_id:_kbEditId||undefined}}); toast(_kbEditId?"Updated ✓ — live":"Published ✓ — live in the assistant"); kbNew(); loadGaps(); }
-  catch(e){ if(x)x.textContent=(e&&e.message)||"Could not publish"; } }
-
+/* ---- ASSISTANT — knowledge base: MOVED to app/cap-assist.js (T3-DISPUTES-ASSIST, 2026-10-14) — assistReviewScreen · loadGaps · kbEdit · kbNew ·
+   publishAnswer, on CBList, Publish greyed with the server's may.publish. CB Tasks & Orders › CB Assist paints the same module; ensureCap('admin')
+   loads it with this file (app.html CAP_WITH). */
 
 /* ⚠️ storefrontCardHTML and saveStorefront were removed on 2026-08-20. The Storefront PANEL they drew was
    folded into iamHTML as a section, which made both unreachable; their one irreplaceable control

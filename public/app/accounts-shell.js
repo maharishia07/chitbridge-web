@@ -26,6 +26,7 @@
 var CB_HOMES = {
   counter: '/till.html',                               /* the counter IS the till (the Day book's "close the day on the counter") */
   task: '/tasks.html', order: '/tasks.html',           /* CB Tasks & Orders */
+  disputes: '/tasks.html?view=disputes', assistreview: '/tasks.html?view=assist',   /* CB Tasks & Orders › Disputes · CB Assist (T3-DISPUTES-ASSIST) */
   customers: '/crm.html#/parties?role=customer', suppliers: '/crm.html#/parties?role=supplier',
   ledger: '/accounts.html', network: '/network.html', coassists: '/employees.html',
   profile: '/know-your-business.html',                 /* the avatar's own choice for Profile (avatar.js, H34) */
@@ -88,6 +89,20 @@ var CB_SHEET_EP = {
   /* the open chits behind Home's In · Out · Stuck, with the rail's why — MOVED here from cap-crm.js (TO1b) so CRM (cap-crm-chits.js) and
      Tasks & Orders (cap-tasks.js: the Stuck mark on an order) register it ONCE; not a /api/crm route */
   railChits:       {m:"GET",  p:"/api/facts/rail/chits",          ok:"y"},
+};
+
+/* ── T3-DISPUTES-ASSIST: the dispute routes and the knowledge base's — MOVED from app.html's EP (one name per endpoint, e2e/ep-aliases.cjs) so the
+   workshop (cap-dispute.js · cap-assist.js) and CB Tasks & Orders › Disputes · CB Assist (tasks.html) register each route ONCE ── */
+var CB_DISPUTE_EP = {
+  dispute:         {m:"POST", p:"/api/chits/:id/disputes",       ok:"✓"},  // raise: { category, reason, participant_entity_ids? } — rail.can 'dispute' decides (actions.dispute on the chit read)
+  disputeQueue:    {m:"GET",  p:"/api/chits/disputes/queue",     ok:"✓"},  // ?status=open|resolved|all&page&limit → { rows, total, page, limit, total_open }; each row side · may.resolve
+  disputes:        {m:"GET",  p:"/api/chits/:id/disputes",       ok:"✓"},  // disputes + roster for one chit
+  resolveDispute:  {m:"PUT",  p:"/api/chits/:id/disputes/:disputeId/resolve", ok:"✓"},  // {resolution_note, target_entity_id?} — the raiser only (may.resolve says so first)
+};
+var CB_ASSIST_EP = {
+  assistQuestions: {m:"GET",  p:"/api/assist/questions",        ok:"y"},  // DB-backed Q&A library, context-filtered (?context=screen). Single source; feeds the AI too.
+  assistPublish:   {m:"POST", p:"/api/assist/publish",          ok:"y"},  // help desk publishes a Q&A to its catalogue (serves live)
+  assistWhoami:    {m:"GET",  p:"/api/assist/whoami",            ok:"y"},  // { is_helpdesk, may: { publish: { ok, why, say } } } — the server's may/why for Publish
 };
 
 /* ── the chit-sheet helpers both pages share (MOVED from app.html, not copied) ── */

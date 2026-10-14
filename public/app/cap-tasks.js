@@ -277,6 +277,16 @@
     var may = c.billed ? { ok: false, say: T('Already billed') } : c.stage === 'closed' ? { ok: false, say: T('This order is closed') } : { ok: true };
     return actRow('tk_do_bill', T('Bill it'), may, K.o.embed ? '' : '<span class="why">' + esc(T('on the till')) + '</span>', may.ok ? '' : 'quiet');
   }
+  /**
+   * Raise a dispute (DSP step 1): an ORDER only — a task is the shop's own note, there is no other side. The form is the workshop's (cap-dispute.js
+   * quickDispute, loaded by the page); the server's may/why for it rides the chit read the form makes (actions.dispute — /api/work/:id does not
+   * answer `dispute`: the engines' workflow ACTIONS lacks it, queued in the T3-DISPUTES-ASSIST report). A page without the form greys it, saying so.
+   */
+  function disputeRow(c) {
+    if (c.kind === 'task') return '';
+    var may = typeof root.quickDispute === 'function' ? { ok: true } : { ok: false, say: T('Raise a dispute from CB Tasks & Orders.') };
+    return actRow('tk_do_dispute', T('⚑ Dispute'), may);
+  }
   function tkBill(c) {
     if (K.o.embed) { tell('bill', { chit_id: c.chit_id, kind: c.kind, stage: c.stage, word: c.word, party: c.party || null }); return; }
     root.location.href = '/till.html';
@@ -304,6 +314,7 @@
     var r0 = byId(c.chit_id); if (r0) { c.stuck = !!r0.stuck; c.stuck_why = r0.stuck_why || null; }   /* the rail's stuck mark rides the list row; the sheet paints it */
     var steps = STEPS.map(function (a) { return actRow('tk_do_' + a, stepLabel(a, c), acts[a], '', a === 'accept' || a === 'complete' ? '' : 'quiet'); });
     steps.splice(1, 0, billRow(c));   /* Accept → Bill it → Delivered, the brief's order */
+    steps.push(disputeRow(c));        /* T3-DISPUTES-ASSIST: an order is disputed with the other side; the form greys Raise by the chit read's actions.dispute */
     steps = steps.join('');
     /* the whole task's holder (the list column prefers the lines' summary, b143's rule; the sheet shows both: the task's, then the lines held) */
     var who = ((c.assignee && c.assignee.name) || T('No one')) + (c.lines_assigned_n ? ' · ' + c.lines_assigned_n + ' ' + T(c.lines_assigned_n === 1 ? 'line held' : 'lines held') : '');
@@ -317,6 +328,7 @@
       + '<div class="tk-block"><div class="tk-h">' + esc(T('Messages')) + '</div><div id="tk_thread" data-testid="tk-thread"></div></div>');
     STEPS.forEach(function (a) { var b = $('tk_do_' + a); if (b && acts[a] && acts[a].ok !== false) b.onclick = function () { tkMove(c, a, b); }; });
     var bill = $('tk_do_bill'); if (bill && !bill.disabled) bill.onclick = function () { tkBill(c); };
+    var disp = $('tk_do_dispute'); if (disp && !disp.disabled) disp.onclick = function () { closeSheet(); root.quickDispute(c.chit_id); };
     if (acts.assign_task && acts.assign_task.ok !== false) $('tk_assign').onclick = function () { assignPanel(c, null); };
     (c.lines || []).forEach(function (l) {
       var k = l.line_id, la = $('tk_la_' + k), ld = $('tk_ld_' + k), lv = $('tk_lv_' + k);

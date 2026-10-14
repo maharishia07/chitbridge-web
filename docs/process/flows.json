@@ -429,6 +429,44 @@
           "test": ["engines:tests/fx.test.js", "api:tests/fx-rates.test.cjs"],
           "status": "ok", "note": "Debtors and creditors only; a currency with no closing rate is named and nothing is revalued." }
       ]
+    },
+    {
+      "id": "DSP", "name": "Disputes (raise on a chit · the list · resolve, per party)", "sap": "no SAP module — a dispute between two companies' copies is our construct (the rail's USP); an ERP's dispute case lives inside one company",
+      "steps": [
+        { "n": 1, "step": "raise a dispute on a chit", "module": "TasksOrders", "who": "either party (an editor login; the server's actions.dispute greys it otherwise)",
+          "screen": [{ "file": "web:public/app/chit-sheet.js", "fn": "actionsFor" }, { "file": "web:public/app/cap-dispute.js", "fn": "quickDispute" }, { "file": "web:public/app/cap-dispute.js", "fn": "confirmDispute" }],
+          "engine": [{ "file": "api:lib/rail-actions.js", "fn": "actions" }, { "file": "engines:src/rail.js", "fn": "can" }],
+          "route": [{ "m": "POST", "p": "/:chit_id/disputes", "file": "api:routes/chits.js" }],
+          "chit": "read (the chit; the dispute is one copy per party, per-copy RLS)", "ledger": "none (an open dispute holds a received bill on Waiting — books-hooks buyerGate)",
+          "test": ["api:tests/dispute-scoping.test.cjs", "api:tests/rail-actions.test.cjs", "web:e2e/walk-disputes.cjs"],
+          "status": "ok", "note": "T3-DISPUTES-ASSIST: the chit sheet's Dispute is greyed with the chit read's actions.dispute sentence; the form runs on any page with modal()." },
+        { "n": 2, "step": "the disputes list (CB Tasks & Orders › Disputes)", "module": "TasksOrders", "who": "anyone holding a copy of the disputed chit",
+          "screen": [{ "file": "web:public/app/cap-dispute.js", "fn": "CBDisputes" }, { "file": "web:public/tasks.html", "fn": "showPane" }],
+          "engine": [{ "file": "api:lib/rail-actions.js", "fn": "forDispute" }],
+          "route": [{ "m": "GET", "p": "/disputes/queue", "file": "api:routes/chits.js" }],
+          "chit": "read", "ledger": "none",
+          "test": ["api:tests/dispute-scoping.test.cjs", "api:tests/disputes-small-app.test.cjs", "web:e2e/walk-disputes.cjs"],
+          "status": "ok", "note": "The server pages (status · page · limit → total); the screen reads the first 100 and says so. Each row carries side and may.resolve." },
+        { "n": 3, "step": "resolve, with one party or all", "module": "TasksOrders", "who": "the side that raised it (may.resolve greys it for everyone else, with the sentence)",
+          "screen": [{ "file": "web:public/app/cap-dispute.js", "fn": "resolveDispute" }, { "file": "web:public/app/cap-dispute.js", "fn": "submitResolve" }],
+          "engine": [{ "file": "api:lib/rail-actions.js", "fn": "forDispute" }],
+          "route": [{ "m": "PUT", "p": "/:chit_id/disputes/:dispute_id/resolve", "file": "api:routes/chits.js" }],
+          "chit": "read", "ledger": "a settled dispute releases an accepted bill to post (books-hooks afterChit)",
+          "test": ["api:tests/dispute-scoping.test.cjs", "web:e2e/walk-disputes.cjs"],
+          "status": "ok", "note": "Per-party resolve sits in the row's next level when more than one party is still open." }
+      ]
+    },
+    {
+      "id": "AST", "name": "CB Assist (what the assistant answers: the help desk's knowledge base)", "sap": "no SAP module",
+      "steps": [
+        { "n": 1, "step": "review the answers; a help desk publishes or edits one", "module": "TasksOrders", "who": "anyone reads; a help desk publishes (whoami may.publish greys it for others, with the sentence)",
+          "screen": [{ "file": "web:public/app/cap-assist.js", "fn": "CBAssist" }, { "file": "web:public/app/cap-assist.js", "fn": "loadGaps" }],
+          "engine": [{ "file": "api:routes/assist.js", "fn": "router" }],
+          "route": [{ "m": "GET", "p": "/questions", "file": "api:routes/assist.js" }, { "m": "GET", "p": "/whoami", "file": "api:routes/assist.js" }, { "m": "POST", "p": "/publish", "file": "api:routes/assist.js" }],
+          "chit": "none (a question reaches the help desk as a chit in its Tasks; the answer is published here)", "ledger": "none",
+          "test": ["api:tests/disputes-small-app.test.cjs", "web:e2e/walk-disputes.cjs"],
+          "status": "warn", "note": "Accept / reject of what the assistant DRAFTED is not built: the server keeps no drafts (GET /assist/gaps answers [] · POST /assist/resolve 410)." }
+      ]
     }
   ]
 }

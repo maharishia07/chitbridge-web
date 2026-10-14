@@ -10,7 +10,11 @@
      the LIST is CBList; every write goes through CBAction; the thread is CBThread. The screens are app/cap-tasks.js; this page is the gate and the frame.
      Which steps are open is the SERVER's answer (GET /api/work/:id → actions, may/why). ?embed=1[&view=orders_in|…][&open=<chit_id>] draws the same
      screen with no frame, for another page to open in a dialog (app/embed-host.js) — it tells its host { cb: 'tasks', event: 'open' | 'moved' | 'assigned'
-     | 'close' } (docs/design/tasks-orders/EMBED.md). Linked from Home (app/manifest.json), never from app.html. -->
+     | 'close' } (docs/design/tasks-orders/EMBED.md). Linked from Home (app/manifest.json), never from app.html.
+     T3-DISPUTES-ASSIST (2026-10-14): two more sections, the workshop's own modules loaded here — never a copy:
+       Disputes  (?view=disputes) → app/cap-dispute.js CBDisputes: the list (CBList), a row opens its chit in THE CHIT SHEET (chit-sheet.js),
+                                    raise / resolve are the module's forms over this page's modal(), greyed by the server's may/why
+       CB Assist (?view=assist)   → app/cap-assist.js CBAssist: what the assistant answers; Publish greyed by whoami may.publish -->
 <link rel="stylesheet" href="/app/page-skeleton.css">   <!-- the standard page skeleton (sidebar + main pane), drawn by CBFrame -->
 <style>
 :root{ --ink:#2a2418; --muted:#5c5240; --line:#e6dcc6; --line-3:#d8ccb0; --surface:#fffdf8; --ground:#fbf6ec; --hover:#f3ead7; --accent:#1f5f5b; --accent-ink:#fbf6ec;
@@ -21,7 +25,27 @@ body{margin:0;background:var(--ground,#fbf6ec);color:var(--ink,#2a2418);font-fam
 button{font-family:inherit;cursor:pointer}
 .mono{font-family:var(--mono)}
 .sub{color:var(--muted,#5c5240);font-size:13px}
-#tk{display:flex;flex-direction:column;gap:12px;padding:16px 20px 40px;min-height:60vh}
+#tk,.tk-pane{display:flex;flex-direction:column;gap:12px;padding:16px 20px 40px;min-height:60vh}
+.tk-pane[hidden],#tk[hidden]{display:none}
+/* the three panes share the skeleton's screen (page-skeleton.css gives #tk this when it is the screen's child; now #tk_work is) */
+.cbsk .screen > #tk_work{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+.cbsk #tk_work > #tk,.cbsk #tk_work > .tk-pane{flex:1 1 auto;min-height:0;padding:16px 20px 20px;overflow:auto}
+@media (max-width:760px){.cbsk #tk_work > #tk,.cbsk #tk_work > .tk-pane{padding-left:12px;padding-right:12px}}
+.kb-form{display:flex;flex-direction:column;gap:6px;max-width:640px}
+.kb-form .tk-act{margin-top:6px}
+textarea.inp{resize:vertical;min-height:72px}
+/* the page's modal() — the workshop's raise / resolve forms (cap-dispute.js) open here: .mhd · .mbody · .mfoot, as app.html draws them */
+dialog.sheet .mhd .t{font-family:var(--serif);font-size:20px;font-weight:700;padding-right:28px}
+dialog.sheet .mbody{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+dialog.sheet .mbody select,dialog.sheet .mbody textarea{width:100%;font:inherit;font-size:14px;padding:10px 12px;border:1px solid var(--line-3,#d8ccb0);border-radius:9px;background:var(--surface,#fffdf8);color:var(--ink,#2a2418)}
+dialog.sheet .mbody textarea{min-height:96px;resize:vertical}
+dialog.sheet .mfoot{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px}
+dialog.sheet .mfoot button{min-height:40px;padding:0 16px;border:1px solid var(--line-3,#d8ccb0);border-radius:9px;background:transparent;color:var(--ink,#2a2418);font-size:14px;font-weight:600}
+dialog.sheet .mfoot button.danger{background:var(--red-i,#8E3517);border-color:var(--red-i,#8E3517);color:var(--accent-ink,#fbf6ec)}
+dialog.sheet .mfoot button.pri{background:var(--accent,#1f5f5b);border-color:var(--accent,#1f5f5b);color:var(--accent-ink,#fbf6ec)}
+dialog.sheet .mfoot button[disabled]{opacity:.55;cursor:not-allowed}
+dialog.sheet .err{color:var(--red-i,#8E3517);font-size:13px;min-height:1em}
+dialog.sheet .fl{font-size:13px;font-weight:600}
 body.embed #tk{padding:14px 16px;min-height:100vh}
 .tk-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .tk-count{font-size:15px}
@@ -70,7 +94,9 @@ dialog.sheet .mx{position:absolute;right:8px;top:8px;border:0;background:transpa
 </style>
 </head>
 <body>
-<div id="tk" data-testid="tk-screen"><div class="loadwrap"><span class="spin"></span> Loading</div></div>
+<div id="tk_work"><div id="tk" data-testid="tk-screen"><div class="loadwrap"><span class="spin"></span> Loading</div></div>
+<div id="dp" class="tk-pane" data-testid="dp-screen" hidden></div><div id="ca" class="tk-pane" data-testid="ca-screen" hidden></div></div>
+<dialog class="sheet" id="tk_modal" data-testid="tk-modal"></dialog>   <!-- the page's modal(): the workshop's raise / resolve forms (cap-dispute.js) -->
 <div id="toast"></div>
 <script src="/engine/screen.js"></script>
 <script src="/app/edition.js"></script>   <!-- CBEdition (AX1): the showing this person chose — the switcher, the bell and the avatar's Edition choice follow it -->
@@ -85,6 +111,14 @@ const CFG = { API_BASE: window.CB_API };
 let SESSION = { token: null, role: null, name: null, entity: null, bridgeId: null };
 const EP = {};
 function go(){ if (typeof CB_TASKS_ENDED === 'function') CB_TASKS_ENDED(); }
+/* ── the app's modal(html) / closeModal() on this page's <dialog> (as crm.html · finance.html declare theirs): cap-dispute.js's raise and resolve forms open here ── */
+function modal(html){
+  const d = document.getElementById('tk_modal');
+  d.innerHTML = '<button type="button" class="mx" onclick="closeModal()" aria-label="Close" title="Close">✕</button>' + html;
+  if (!d.open) { try { d.showModal(); } catch (_) { d.setAttribute('open', ''); } }
+}
+function closeModal(){ const d = document.getElementById('tk_modal'); try { d.close(); } catch (_) { d.removeAttribute('open'); } d.innerHTML = ''; }
+function val(id){ const el = document.getElementById(id); return el ? el.value.trim() : ''; }   /* cap-dispute.js reads the resolve note with it (app.html's own) */
 </script>
 <script src="/app/core.js"></script>   <!-- api() + the registry: every read and write of this page goes through it (the round-trip budget reads the registry) -->
 <script src="/app/accounts-shell.js"></script>   <!-- CBAction (M64) · tx · toast · CBConfirm · CB_SHEET_EP (status: the ONE status writer's route) -->
@@ -101,6 +135,10 @@ function go(){ if (typeof CB_TASKS_ENDED === 'function') CB_TASKS_ENDED(); }
 <script src="/app/list-ctl.js"></script>   <!-- CBList: the one list control -->
 <script src="/app/rail-thread.js"></script>   <!-- CBThread: the ONE composer + list for a chit's messages -->
 <script src="/app/cap-tasks.js"></script>
+<script src="/engine/tax.js"></script>        <!-- CBTax.moneyOf: the chit sheet reads a frozen invoice through it -->
+<script src="/app/chit-sheet.js"></script>    <!-- THE CHIT SHEET: a dispute's chit opens in it (openChitSheet) — Dispute greyed by the read's actions.dispute -->
+<script src="/app/cap-dispute.js"></script>   <!-- Disputes: CBDisputes (the list) · quickDispute / resolveDispute (the forms, over modal()) — the workshop's module -->
+<script src="/app/cap-assist.js"></script>    <!-- CB Assist: CBAssist (the knowledge base) — the workshop's #/assistreview module -->
 <script>
 'use strict';
 (function () {
@@ -108,26 +146,56 @@ function go(){ if (typeof CB_TASKS_ENDED === 'function') CB_TASKS_ENDED(); }
   CFG.API_BASE = q.get('api') || (window.CBShell && CBShell.apiBase && CBShell.apiBase()) || CFG.API_BASE;
   var host = document.getElementById('tk'), app = null, frame = null;
   if (embed) document.body.classList.add('embed');
-  Object.assign(EP, CB_SHEET_EP, CB_THREAD_EP, CB_WORK_EP);
+  Object.assign(EP, CB_SHEET_EP, CB_THREAD_EP, CB_WORK_EP, CB_DISPUTE_EP, CB_ASSIST_EP);
+  var tkModal = document.getElementById('tk_modal');
+  tkModal.addEventListener('cancel', function (e) { e.preventDefault(); closeModal(); });
+  tkModal.addEventListener('click', function (e) { if (e.target === tkModal) closeModal(); });
+  /* T3-DISPUTES-ASSIST: the two sections beside the folders — each pane mounted once, on first visit */
+  var PANES = { disputes: { el: 'dp', mount: function (el) { return CBDisputes.mount(el, { onEnded: window.CB_TASKS_ENDED }); } },
+                assist:   { el: 'ca', mount: function (el) { return CBAssist.mount(el); } } };
+  var mounted = {};
+  var pane = PANES[view] && !embed ? view : null;
+  /** show a section: a folder is CBTasks' (one list, refetched); Disputes / CB Assist are their modules' panes (DSP step 2 · AST step 1) */
+  function showPane(k) {
+    var p = PANES[k] || null;
+    document.getElementById('tk').hidden = !!p;
+    Object.keys(PANES).forEach(function (n) { document.getElementById(PANES[n].el).hidden = n !== k; });
+    try { history.replaceState(null, '', location.pathname + '?view=' + encodeURIComponent(k)); } catch (_) {}
+    if (frame && frame.skeleton) frame.skeleton.setActive(k);
+    if (!SESSION.token) return;
+    if (p) { if (!mounted[k]) mounted[k] = p.mount(document.getElementById(p.el)); return; }
+    if (app) app.show(k); else tasks(k);   /* the folders load when a folder is first shown, never behind another section */
+  }
+  function tasks(v) {
+    app = CBTasks.mount(host, { token: SESSION.token, base: CFG.API_BASE, embed: embed, view: v, open: openId, onEnded: window.CB_TASKS_ENDED,
+      onView: function (x) { if (frame && frame.skeleton) frame.skeleton.setActive(x); } });
+  }
   var ICON = { tasks: 'M9 11l3 3 8-8M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9',
     orders_in: 'M12 3v12M6 9l6 6 6-6M4 21h16', orders_out: 'M12 21V9M6 15l6-6 6 6M4 3h16', done: 'M20 6L9 17l-5-5' };
   /** a 401 from the API: the session is no longer good (core.js api() calls go() → this) */
   window.CB_TASKS_ENDED = function () { if (embed) start(null); else CBFrame.ended(); };
   /** the bell's row opens THAT order HERE (REQUIREMENT §6; rail-bell.js presses openChit when the page has one) — the same sheet, over whichever folder is open */
   window.openChit = function (id) { if (app && id) app.open(String(id)); };
+  /* the chit sheet's "Open page": the chit page in CB CRM (chitPageHref, accounts-shell.js) — never the workshop */
+  window.openChitPage = function (id) { if (id) location.href = chitPageHref(id); };
   function start(token, api) {
-    if (!token) { host.innerHTML = '<div class="empty" data-testid="tk-signin"><div class="t">' + (embed ? 'Sign in first' : 'Sign in above') + '</div></div>'; return; }
+    if (!token) { host.hidden = false; host.innerHTML = '<div class="empty" data-testid="tk-signin"><div class="t">' + (embed ? 'Sign in first' : 'Sign in above') + '</div></div>'; return; }
     SESSION.token = token;
+    var me = window.CBOnePerson && CBOnePerson.who(SESSION);   /* chitIsSelf (accounts-shell.js) knows me by id — a dispute's own side is never shown as "the other" */
+    if (me && me.ent) SESSION.entityId = me.ent;
     if (api) CFG.API_BASE = api;
-    app = CBTasks.mount(host, { token: token, base: CFG.API_BASE, embed: embed, view: view, open: openId, onEnded: window.CB_TASKS_ENDED,
-      onView: function (v) { if (frame && frame.skeleton) frame.skeleton.setActive(v); } });
+    if (pane) return showPane(pane);
+    tasks(view);
   }
   if (!embed) {
     var tabs = (window.CBWorkflow ? CBWorkflow.tabs() : []).filter(function (t) { return CBTasks.VIEWS.indexOf(t.id) >= 0; });
-    frame = CBFrame.mount({ app: 'tasks', kural: 'tasks', work: host,
-      skeleton: { name: 'Tasks & Orders', icon: ICON.tasks, active: CBTasks.VIEWS.indexOf(view) >= 0 ? view : 'orders_in',
-        sections: [].concat(tabs.map(function (t) { return { k: t.id, label: t.label, icon: ICON[t.id] || ICON.tasks }; })),
-        onSection: function (k) { if (app) app.show(k); } } });
+    ICON.disputes = 'M12 3v18M5 7h14M5 7l-3 6a3 3 0 0 0 6 0zM19 7l-3 6a3 3 0 0 0 6 0zM8 21h8';
+    ICON.assist = 'M12 3l1.8 4.6L18 9l-4.2 1.4L12 15l-1.8-4.6L6 9l4.2-1.4zM18 15l.9 2.1L21 18l-2.1.9L18 21l-.9-2.1L15 18l2.1-.9z';
+    frame = CBFrame.mount({ app: 'tasks', kural: 'tasks', work: document.getElementById('tk_work'),
+      skeleton: { name: 'Tasks & Orders', icon: ICON.tasks, active: pane || (CBTasks.VIEWS.indexOf(view) >= 0 ? view : 'orders_in'),
+        sections: [].concat(tabs.map(function (t) { return { k: t.id, label: t.label, icon: ICON[t.id] || ICON.tasks }; }),
+          [{ k: 'disputes', label: 'Disputes', icon: ICON.disputes }, { k: 'assist', label: 'CB Assist', icon: ICON.assist }]),
+        onSection: showPane } });
     if (frame.session) SESSION = Object.assign({}, SESSION, frame.session);
     start(frame.token); return;
   }

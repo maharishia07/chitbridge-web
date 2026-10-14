@@ -273,46 +273,181 @@ async function loadDisputes(){
   }catch(e){ host.innerHTML=scrErr(e, tx('disputes'), 'loadDisputes()'); }
 }
 
+/* ── T3-DISPUTES-ASSIST: the raise and resolve forms run on ANY page that has modal()/closeModal() — the workshop's, and CB Tasks & Orders'
+ *    (tasks.html declares them on its own <dialog>, as CRM / Finance / Accounts do). Nothing here needs the workshop's UI: its rows are
+ *    touched only when it is there. The write goes through CBAction (M64: one press one write, the outcome said in the form); the open list
+ *    (CBDisputes, below) reads again after. The words a page without the workshop's MSG reads are the same sentences. */
+var _DISP_RAISE = { id: null, parties: [], back: false };
+function dispSaid(k, n, e){
+  if (typeof MSG !== 'undefined' && MSG[k]) return k === 'fail' ? MSG.fail(n, e) : MSG[k](n);
+  return k === 'disputeRaised' ? tx('Dispute raised ⚑ — both parties notified') : k === 'disputeResolved' ? tx('Dispute resolved ✓') : tx("That didn't go through — try again");
+}
+/** a refused rail verdict → its sentence (the engine's own words, CBRail.WHY, when the page loads /engine/rail.js); '' when it may */
+function dispRefused(v){ return v && v.ok === false ? (v.say || (window.CBRail && CBRail.WHY && CBRail.WHY[v.why]) || tx('You cannot raise a dispute on this chit.')) : ''; }
+function dispWorkshop(){ return typeof UI !== 'undefined' && UI && Array.isArray(UI.rows); }
+function dispAfter(){ if (window.CBDisputes && CBDisputes.changed) CBDisputes.changed(); }
+
 /* ── Raise flow (FR-D1): candidates = everyone on the chit except me (chitIsSelf); ticking parties makes
  *    it a TARGETED dispute (only those parties see it, BR-D2); none ticked = chit-wide. */
 async function quickDispute(idArg, opt){ var ids=idArg?[idArg]:(typeof needTarget==='function'?needTarget():[]); if(!ids.length)return;
   if(ids.length>1){ toast("Raise a dispute on one chit at a time — each is its own matter."); return; }
-  var id=ids[0]; MODALS.disp={id, parties:[], back:!!(opt&&opt.back)};
-  var partyRows='';
+  var id=ids[0]; _DISP_RAISE={id:id, parties:[], back:!!(opt&&opt.back)};
+  var partyRows='', no='';
   try{ var r=await api("chit",{params:{id}}); var h=(r&&r.header)||r||{}; var seen={};
+    no=dispRefused(r&&r.actions&&r.actions.dispute);   /* the server's may/why (rail.can 'dispute' on the chit read): Raise shown, greyed with it */
     var parties=(h.all_recipients||[]).filter(function(x){ return x&&x.entity_id&&!chitIsSelf(x.entity_id,x.display_name)&&!seen[x.entity_id]&&(seen[x.entity_id]=1); });
-    MODALS.disp.parties=parties;
-    if(parties.length){ partyRows='<div style="font-size:var(--fs-2);color:var(--grey);margin:9px 0 3px">Between which parties? <span style="color:#9aa3ad">(none ticked = everyone involved)</span></div>'+parties.map(function(p){ return '<label style="display:flex;gap:8px;align-items:center;padding:3px 0;font-size:var(--fs-2);cursor:pointer"><input type="checkbox" class="dispparty" value="'+p.entity_id+'"> '+nm(p.display_name,'party')+' <span style="font-size:var(--fs-1);color:var(--grey);text-transform:uppercase">'+esc(p.role||'')+'</span></label>'; }).join(''); }
-  }catch(_){}
-  modal('<div class="mhd"><div class="t">' + tx('⚑ Raise dispute') + '</div></div><div class="mbody"><div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:7px">Pick a category and give a reason (min 10 characters). The parties you select are notified and carry the dispute status.</div><select id="dispcat" data-testid="dispute-category" style="width:100%;margin-bottom:8px;padding:8px;border:1px solid var(--line);border-radius:6px"><option value="quality">' + tx('Quality') + '</option><option value="quantity">' + tx('Quantity') + '</option><option value="delivery">' + tx('Delivery') + '</option><option value="payment">' + tx('Payment') + '</option><option value="docs">' + tx('Docs') + '</option><option value="other" selected>' + tx('Other') + '</option></select>'+partyRows+'<textarea id="dispreason" data-testid="dispute-reason" oninput="window.CBOffline&&CBOffline.saveDraft(\'disp.reason.'+id+'\',this.value)" placeholder="e.g. Quantity short by 2 units — please replace">'+esc((window.CBOffline&&CBOffline.loadDraft('disp.reason.'+id))||'')+'</textarea></div><div class="mfoot"><button onclick="closeModal()">' + tx('Cancel') + '</button><button class="danger" data-testid="dispute-raise" onclick="confirmDispute()">' + tx('Raise dispute') + '</button></div>');
+    _DISP_RAISE.parties=parties;
+    if(parties.length){ partyRows='<div style="font-size:var(--fs-2);color:var(--grey);margin:9px 0 3px">Between which parties? <span style="color:var(--grey)">(none ticked = everyone involved)</span></div>'+parties.map(function(p){ return '<label style="display:flex;gap:8px;align-items:center;padding:3px 0;font-size:var(--fs-2);cursor:pointer"><input type="checkbox" class="dispparty" value="'+p.entity_id+'"> '+nm(p.display_name,'party')+' <span style="font-size:var(--fs-1);color:var(--grey);text-transform:uppercase">'+esc(p.role||'')+'</span></label>'; }).join(''); }
+  }catch(e){ if(typeof cblog==='function') cblog('warn','dispute: the parties of '+id+' could not be read — '+((e&&e.message)||e)); partyRows='<div style="font-size:var(--fs-2);color:var(--grey);margin:9px 0 3px">' + tx('The parties could not be read. Raised now, it goes to everyone on the chit.') + '</div>'; }
+  modal('<div class="mhd"><div class="t">' + tx('⚑ Raise dispute') + '</div></div><div class="mbody"><div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:7px">Pick a category and give a reason (min 10 characters). The parties you select are notified and carry the dispute status.</div><select id="dispcat" data-testid="dispute-category" style="width:100%;margin-bottom:8px;padding:8px;border:1px solid var(--line);border-radius:6px"><option value="quality">' + tx('Quality') + '</option><option value="quantity">' + tx('Quantity') + '</option><option value="delivery">' + tx('Delivery') + '</option><option value="payment">' + tx('Payment') + '</option><option value="docs">' + tx('Docs') + '</option><option value="other" selected>' + tx('Other') + '</option></select>'+partyRows+'<textarea id="dispreason" data-testid="dispute-reason" oninput="window.CBOffline&&CBOffline.saveDraft(\'disp.reason.'+id+'\',this.value)" placeholder="e.g. Quantity short by 2 units — please replace">'+esc((window.CBOffline&&CBOffline.loadDraft('disp.reason.'+id))||'')+'</textarea><div class="err" id="disp_err" data-testid="dispute-err" role="status">'+(no?esc(no):'')+'</div></div><div class="mfoot"><button onclick="closeModal()">' + tx('Cancel') + '</button><button class="danger" data-testid="dispute-raise" onclick="confirmDispute(this)"'+(no?' disabled aria-disabled="true" title="'+esc(no)+'"':'')+'>' + tx('Raise dispute') + '</button></div>');
 }
-async function confirmDispute(){ var id=MODALS.disp.id, back=!!MODALS.disp.back; var el=document.getElementById('dispreason'); var reason=(el?el.value:"").trim(); var cat=(document.getElementById('dispcat')||{}).value||'other';
-  if(reason.length<10){ toast("Reason must be at least 10 characters"); return; }
+async function confirmDispute(btn){ var id=_DISP_RAISE.id, back=!!_DISP_RAISE.back; var el=document.getElementById('dispreason'); var reason=(el?el.value:"").trim(); var cat=(document.getElementById('dispcat')||{}).value||'other';
+  var err=document.getElementById('disp_err'); if(err) err.textContent='';
+  if(reason.length<10){ if(err) err.textContent=tx('Reason must be at least 10 characters'); else toast("Reason must be at least 10 characters"); return; }
   var parties=[].slice.call(document.querySelectorAll('.dispparty:checked')).map(function(e){return e.value;});
-  closeModal();
   var body={category:cat,reason}; if(parties.length)body.participant_entity_ids=parties;
-  try{ var _dr2=await api("dispute",{params:{id},body}); if(window.CBOffline)CBOffline.clearDraft('disp.reason.'+id); if(_dr2&&_dr2.warning)toast(_dr2.warning); var i=UI.rows.findIndex(function(x){return x.id===id;}); if(i>=0)UI.rows[i].dispute=true; }catch(e){ toast(MSG.fail("raise the dispute", e)); return; }
-  if(typeof refreshRollup==='function')refreshRollup(); toast(MSG.disputeRaised(1)); if(typeof announce==='function')announce('Dispute raised');
+  var res=await CBAction.run(btn||null, function(){ return api("dispute",{params:{id},body}); }, { key:'dispute-raise-'+id, failed:tx("Couldn't raise the dispute"),
+    onFail:function(w){ if(err) err.textContent=w; else toast(w); },
+    outcome:function(r){ if(window.CBOffline)CBOffline.clearDraft('disp.reason.'+id); closeModal(); toast(r&&r.warning ? r.warning : dispSaid('disputeRaised', 1)); } });
+  if(!res.ok) return;
+  if(dispWorkshop()){ var i=UI.rows.findIndex(function(x){return x.id===id;}); if(i>=0)UI.rows[i].dispute=true; }
+  if(typeof refreshRollup==='function')refreshRollup(); if(typeof announce==='function')announce('Dispute raised');
+  dispAfter();
   if(back && typeof openChitSheet==='function'){ openChitSheet(id); return; }   /* raised from the chit sheet: back to the sheet, the page behind untouched */
+  if(!dispWorkshop()) return;
   if(UI.sel===id){ UI.dtab='messages'; await openChit(id); } else { renderApp(); }
 }
 
-/* ── Resolve flow (BR-D3): raiser-only; per party (partyId) or chit-wide (no partyId). */
+/* ── Resolve flow (BR-D3): raiser-only; per party (partyId) or chit-wide (no partyId). The server's may.resolve greys it first (CBDisputes). */
 function resolveDispute(chitId, disputeId, partyId, partyNameEnc){
   var partyName=partyNameEnc?decodeURIComponent(partyNameEnc):'';
   var who=partyName?'<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:8px">Resolving with <b>'+esc(partyName)+'</b>. Any other parties stay open until you resolve them too.</div>':'';
-  modal('<div class="mhd"><div class="t">Resolve dispute'+(partyName?' — '+esc(partyName):'')+'</div></div><div class="mbody">'+who+'<label class="fl">' + tx('Resolution note (required)') + '</label><textarea id="resnote" data-testid="dispute-resolve-note" oninput="window.CBOffline&&CBOffline.saveDraft(\'disp.resolve.'+disputeId+'\',this.value)" placeholder="How was this resolved…">'+esc((window.CBOffline&&CBOffline.loadDraft('disp.resolve.'+disputeId))||'')+'</textarea><div class="err" id="res_err"></div></div><div class="mfoot"><button onclick="closeModal()">' + tx('Cancel') + '</button><button class="pri" data-testid="dispute-resolve-submit" onclick="submitResolve(\''+chitId+'\',\''+disputeId+'\',\''+(partyId||'')+'\')">' + tx('Resolve') + '</button></div>');
+  modal('<div class="mhd"><div class="t">Resolve dispute'+(partyName?' — '+esc(partyName):'')+'</div></div><div class="mbody">'+who+'<label class="fl" for="resnote">' + tx('Resolution note (required)') + '</label><textarea id="resnote" data-testid="dispute-resolve-note" oninput="window.CBOffline&&CBOffline.saveDraft(\'disp.resolve.'+disputeId+'\',this.value)" placeholder="How was this resolved…">'+esc((window.CBOffline&&CBOffline.loadDraft('disp.resolve.'+disputeId))||'')+'</textarea><div class="err" id="res_err" role="status"></div></div><div class="mfoot"><button onclick="closeModal()">' + tx('Cancel') + '</button><button class="pri" data-testid="dispute-resolve-submit" onclick="submitResolve(\''+chitId+'\',\''+disputeId+'\',\''+(partyId||'')+'\',this)">' + tx('Resolve') + '</button></div>');
 }
-async function submitResolve(chitId, disputeId, partyId){
+async function submitResolve(chitId, disputeId, partyId, btn){
   var note=val("resnote"); var err=document.getElementById("res_err"); if(err)err.textContent="";
   if(!note){ if(err)err.textContent="A resolution note is required."; return; }
   var body={resolution_note:note}; if(partyId)body.target_entity_id=partyId;
-  try{ var _rr=await api("resolveDispute",{params:{id:chitId,disputeId},body}); if(window.CBOffline)CBOffline.clearDraft('disp.resolve.'+disputeId); closeModal(); toast(MSG.disputeResolved());
-    if(document.getElementById("disprows"))loadDisputes();
-    if(UI.sel===chitId){ var i=UI.rows.findIndex(function(x){return x.id===chitId;});
-      // FULLY resolved → 0 open, but bump the resolved count so openChit STILL fetches disputes (else the Closed
-      // dispute + its wall vanish). Partial (per-party) resolve leaves dispute=true, so the fetch already fires.
-      if(i>=0 && _rr && _rr.status==='resolved'){ UI.rows[i].dispute=false; UI.rows[i].dispResolved=(UI.rows[i].dispResolved||0)+1; }
-      await openChit(chitId); } }
-  catch(e){ if(err)err.textContent=e.message; }
+  var res=await CBAction.run(btn||null, function(){ return api("resolveDispute",{params:{id:chitId,disputeId},body}); }, { key:'dispute-resolve-'+disputeId, failed:tx("Couldn't resolve it"),
+    onFail:function(w){ if(err) err.textContent=w; else toast(w); },
+    outcome:function(){ if(window.CBOffline)CBOffline.clearDraft('disp.resolve.'+disputeId); closeModal(); toast(dispSaid('disputeResolved')); } });
+  if(!res.ok) return;
+  var _rr=res.value;
+  dispAfter();
+  if(document.getElementById("disprows"))loadDisputes();
+  if(dispWorkshop() && UI.sel===chitId){ var i=UI.rows.findIndex(function(x){return x.id===chitId;});
+    // FULLY resolved → 0 open, but bump the resolved count so openChit STILL fetches disputes (else the Closed
+    // dispute + its wall vanish). Partial (per-party) resolve leaves dispute=true, so the fetch already fires.
+    if(i>=0 && _rr && _rr.status==='resolved'){ UI.rows[i].dispute=false; UI.rows[i].dispResolved=(UI.rows[i].dispResolved||0)+1; }
+    await openChit(chitId); }
 }
+
+/**
+ * ── ⭐ CBDisputes — THE DISPUTES LIST AS A MOUNT (T3-DISPUTES-ASSIST, 2026-10-14): CB Tasks & Orders › Disputes (tasks.html?view=disputes).
+ *
+ * A dispute is work, so it lives beside the orders and tasks. ONE list (CBList, the five controls: search · filters · sort · paging · count),
+ * one row per dispute: the chit · kind · reason · with whom · where it stands · whose side · raised on. A row opens its chit in THE CHIT SHEET
+ * (openChitSheet, chit-sheet.js) — Dispute there is greyed by the chit read's own actions.dispute (rail.can). Resolve is SHOWN on every row
+ * and greyed with the server's sentence (the queue's may.resolve: lib/rail-actions forDispute — the raiser only, an open one, the access
+ * level); pressed, it is the form above (resolveDispute → submitResolve). Per-party Resolve sits in the row's next level (disputeResolveBtns).
+ *
+ * The server pages (GET /chits/disputes/queue ?status=all&limit=100 → rows · total · page · limit); this reads its first page and says
+ * "first 100 of N" when there are more — the Tasks folders' rule (cap-tasks.js LIMIT). Oldest first by default: in a dispute queue the
+ * oldest open one is the one rotting (the workshop queue's rule, above).
+ *
+ *   CBDisputes.mount(el, { onEnded }) → { reload }     CBDisputes.changed() — a write anywhere on the page: read again if mounted
+ * Flow steps: docs/process/flows.json DSP step 1 · raise (quickDispute) · DSP step 2 · the list (this) · DSP step 3 · resolve (resolveDispute).
+ */
+var CBDisputes = (function(){
+  var D = { el: null, o: {}, rows: [], total: 0, state: 'loading', err: null, list: null };
+  var LIMIT = 100;
+  var KIND = { quality: 'Quality', quantity: 'Quantity', delivery: 'Delivery', payment: 'Payment', docs: 'Docs', other: 'Other' };
+  function T(s){ return typeof tx === 'function' ? tx(s) : s; }
+  function kindWord(d){ return T(KIND[d.category] || cap(String(d.category || 'other'))); }
+  function sideWord(d){ return T(d.side === 'mine' ? 'Raised by you' : 'Against you'); }
+  function withWord(d){ var p = disputeParties(d).map(function(x){ return x.display_name || T('party'); });
+    return d.side === 'mine' ? (p.join(', ') || T('Everyone on the chit')) : (d.raised_by_display_name || T('The other side')); }
+  function onWord(d){ if (!d.created_at) return ''; try { return (window.CBLocale && CBLocale.date(d.created_at, { day: 'numeric', month: 'short' })) || String(d.created_at).slice(0, 10); } catch (e) { return String(d.created_at).slice(0, 10); } }
+  function statusTag(d){ var open = d.status === 'open'; return '<span class="tag ' + (open ? 'amber' : 'green') + '" data-testid="dp-status-' + esc(d.dispute_id) + '">' + esc(T(open ? 'Open' : 'Resolved')) + '</span>'; }
+  function mayResolve(d){ var m = d.may && d.may.resolve; return m && m.ok === false ? (m.say || T('You cannot resolve this one')) : ''; }
+  function cols(){
+    return [
+      { key: 'what', label: T('Chit'), prio: 1, w: 240, html: true, sort: 'what', value: function(d){ return d.auto_subject || d.purpose || ''; },
+        cell: function(d){ return '<b>' + esc(d.auto_subject || d.purpose || T('Chit')) + '</b>'; } },
+      { key: 'reason', label: T('Reason'), prio: 2, w: 260, value: function(d){ return d.reason || ''; }, cell: function(d){ return d.reason || ''; } },
+      { key: 'status', label: T('Where it is'), prio: 3, w: 120, html: true, hfilter: 'status', value: function(d){ return d.status; }, cell: statusTag },
+      { key: 'kind', label: T('Kind'), prio: 4, w: 110, hfilter: 'kind', value: kindWord, cell: kindWord },
+      { key: 'with', label: T('With'), prio: 5, w: 180, value: withWord, cell: withWord },
+      { key: 'side', label: T('Side'), prio: 6, w: 130, hfilter: 'side', value: sideWord, cell: sideWord },
+      { key: 'on', label: T('Raised on'), prio: 7, w: 110, value: function(d){ return d.created_at || ''; }, cell: onWord },
+      { key: 'note', label: T('How it ended'), prio: 8, w: 220, value: function(d){ return d.resolution_note || ''; }, cell: function(d){ return d.resolution_note || ''; } }
+    ];
+  }
+  /** a row's next level: the reason in full, who is in it, and — for the raiser — Resolve per party (BR-D3) */
+  function mini(d){
+    var parties = disputeParties(d), open = d.status === 'open';
+    var per = open && !mayResolve(d) && parties.filter(function(p){ return p.dispute_status !== 'resolved'; }).length > 1 ? disputeResolveBtns(parties, d.chit_id, d.dispute_id, true, 'cbl-btn') : '';
+    return '<div class="sub" data-testid="dp-mini-' + esc(d.dispute_id) + '"><b>' + esc(kindWord(d)) + '</b> — ' + esc(d.reason || '')
+      + (parties.length ? '<div>' + esc(T('Parties')) + ': ' + disputeChips(parties, 'tag') + '</div>' : '')
+      + (d.resolution_note ? '<div>✓ ' + esc(d.resolution_note) + '</div>' : '') + '</div>'
+      + (per ? '<div class="cbl-acts" data-testid="dp-per-party">' + per + '</div>' : '');
+  }
+  function load(){
+    D.state = 'loading'; if (D.list) D.list.refresh();
+    return api('disputeQueue', { query: { status: 'all', limit: LIMIT } }).then(function(j){
+      j = j || {};
+      D.rows = Array.isArray(j.rows) ? j.rows : (j.disputes || []); D.total = j.total == null ? D.rows.length : Number(j.total) || 0;
+      D.state = 'ready'; D.err = null; paint();
+    }, function(e){
+      if (typeof cblog === 'function') cblog('error', 'disputes: the list could not be read — ' + ((e && e.message) || e));
+      if (e && e.status === 401 && typeof D.o.onEnded === 'function') return D.o.onEnded();
+      D.state = 'error'; D.err = e; paint();
+    });
+  }
+  function errWords(){ var e = D.err; return e && e.status === 403 ? T('This sign-in cannot open disputes.') : T("Couldn't read your disputes. Check the connection and try again."); }
+  function countHTML(){
+    var n = D.total, shown = D.rows.length;
+    return '<span class="tk-count" data-testid="dp-count"><b>' + n + '</b> ' + esc(T(n === 1 ? 'dispute' : 'disputes')) + (shown < n ? ' · ' + esc(T('first')) + ' ' + shown + ' ' + esc(T('shown')) : '') + '</span>';
+  }
+  function paint(){
+    if (!D.el) return;
+    var bar = D.el.querySelector('#dp_bar'); if (bar) bar.innerHTML = D.state === 'ready' ? countHTML() : '';
+    if (D.list) { D.list.refresh(); return; }
+    var kinds = Object.keys(KIND);
+    D.list = CBList.mount(D.el.querySelector('#dp_list'), {
+      key: 'disputes', t: T, rows: function(){ return D.rows; }, id: function(d){ return d.dispute_id; }, rowTid: function(d){ return 'dp-row-' + d.dispute_id; },
+      columns: cols(), defaultCols: ['what', 'reason', 'status'], cardMax: 3,
+      state: function(){ return D.state; }, error: errWords, onRetry: function(){ load(); },
+      empty: { title: T('No disputes'), sub: T('When you or the other side raises one on a chit, it shows here.') },
+      search: function(d){ return [d.auto_subject, d.purpose, d.reason, d.category, d.raised_by_display_name, withWord(d), d.resolution_note].join(' '); },
+      searchHint: T('Chit, reason or business'),
+      filters: [
+        { key: 'status', label: T('Where it is'), all: T('Open and resolved'), options: [{ v: 'open', label: T('Open') }, { v: 'resolved', label: T('Resolved') }],
+          match: function(d, v){ return v === 'open' ? d.status === 'open' : d.status !== 'open'; } },
+        { key: 'side', label: T('Side'), all: T('Both sides'), options: [{ v: 'mine', label: T('Raised by you') }, { v: 'theirs', label: T('Against you') }],
+          match: function(d, v){ return d.side === v; } },
+        { key: 'kind', label: T('Kind'), all: T('Every kind'), options: kinds.map(function(k){ return { v: k, label: T(KIND[k]) }; }), match: function(d, v){ return d.category === v; } }
+      ],
+      preset: { filt: { status: 'open' } },
+      sorts: [
+        { key: 'old', label: T('Oldest first'), cmp: function(a, b){ return Date.parse(a.created_at || 0) - Date.parse(b.created_at || 0); } },
+        { key: 'new', label: T('Newest first'), cmp: function(a, b){ return Date.parse(b.created_at || 0) - Date.parse(a.created_at || 0); } },
+        { key: 'kind', label: T('By kind'), cmp: function(a, b){ return String(a.category || '').localeCompare(String(b.category || '')); } }
+      ],
+      onOpen: function(d){ if (typeof openChitSheet === 'function') openChitSheet(d.chit_id); },
+      next: mini,
+      actions: [
+        { id: 'open', label: T('Open chit'), icon: '↗', tid: 'dp-open', run: function(d){ if (typeof openChitSheet === 'function') openChitSheet(d.chit_id); } },
+        { id: 'resolve', label: T('Resolve'), icon: '✓', tid: 'dp-resolve', why: mayResolve, run: function(d){ if (!mayResolve(d)) resolveDispute(d.chit_id, d.dispute_id); } }
+      ]
+    });
+  }
+  function mount(el, o){
+    D.el = el; D.o = o || {}; D.list = null; D.rows = []; D.total = 0;
+    el.innerHTML = '<div class="tk-top" id="dp_bar" data-testid="dp-bar"></div><div class="tk-list" id="dp_list" data-testid="dp-list"></div>';
+    paint(); load();
+    return { reload: load };
+  }
+  function changed(){ if (D.el && document.body.contains(D.el)) load(); }
+  return { mount: mount, changed: changed };
+})();

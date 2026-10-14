@@ -75,6 +75,7 @@
       no: captured && tb ? String(tb.no == null ? '' : tb.no).trim() : (bill || h.manual_subject || h.auto_subject || ''), at: bj.billed_at || h.created_at,
       /* STD1: what the books wait on for this chit, and may I accept it — the SERVER's answers on the read (books_wait · actions.accept) */
       wait: (r && r.books_wait) || null, may: (r && r.actions && r.actions.accept) || null, mayReject: (r && r.actions && r.actions.reject) || null,
+      mayDispute: (r && r.actions && r.actions.dispute) || null,   /* T3-DISPUTES-ASSIST: the rail's own verdict (rail.can 'dispute') on the chit read */
       counter: counterOfBill(bill, bj.till), by: bj.till && bj.till.by && bj.till.by.name || '',
       who: counterBill ? ((bj.customer && bj.customer.name) || T('Walk-in')) : captured ? ((bj.party && bj.party.name) || T('Not named')) : (billRx ? ((sum.bill_received && sum.bill_received.from) || senderName) : (others.map(function (x) { return x.display_name; }).join(', ') || senderName)),
       /* a captured bill not yet frozen: the money it carries is THEIR total as the door typed it (read; the server taxes the lines when it posts) */
@@ -177,6 +178,11 @@
   function refusedReject(m) {
     var a = m && m.billRx ? m.mayReject : null;
     return a && a.ok === false ? (a.say || T('You cannot reject this bill')) : null;
+  }
+  /** T3-DISPUTES-ASSIST: the server refused Dispute on this chit (actions.dispute — the access level, a copy I hold) → its sentence; else null */
+  function refusedDispute(m) {
+    var a = m ? m.mayDispute : null;
+    return a && a.ok === false ? (a.say || (root.CBRail && root.CBRail.WHY && root.CBRail.WHY[a.why]) || T('You cannot raise a dispute on this chit')) : null;
   }
   /** STD1: ONE builder for "Is this Sri Ganesh Provisions (P-00001)?" — the sheet and the Waiting row (cap-books) both ask it */
   function isThis(c) { return c && c.party_no ? tf('Is this {name} ({no})?', { name: c.name, no: c.party_no }) : tf('Is this {name}?', { name: c && c.name }); }
@@ -332,9 +338,9 @@
     railMount(d, m);
     if (m.agreement) repeatCap().then(function (rp) { if (rp && CS.view === m) { if (!document.getElementById('rp_panel')) paint(); else rp.panel(m); } });
     /* the page form has no "Open page": the person is on it */
-    var no = refusedAccept(m), noR = refusedReject(m);
+    var no = refusedAccept(m), noR = refusedReject(m), noD = refusedDispute(m);
     d.querySelector('.cs-acts').innerHTML = actsOf(m).filter(function (k) { return !(CS.mode === 'page' && k === 'page'); }).map(function (k) {
-      var why = k === 'accept' ? no : k === 'reject' ? noR : null, refused = !!why;   /* the server's refusal (actions.accept / .reject): shown, greyed, with its sentence */
+      var why = k === 'accept' ? no : k === 'reject' ? noR : k === 'dispute' ? noD : null, refused = !!why;   /* the server's refusal (actions.accept / .reject / .dispute): shown, greyed, with its sentence */
       return '<button type="button" class="cs-act" data-testid="cs-act-' + k + '" onclick="CBSheet.act(\'' + k + '\')"' + (CS.busy || refused ? ' disabled' : '') + ' title="' + esc(refused ? why : T(ACT[k][1])) + '"><span class="ic" aria-hidden="true">' + ACT[k][0] + '</span><span>' + esc(T(ACT[k][1])) + '</span></button>';
     }).join('');
   }
@@ -455,9 +461,12 @@
     if (k === 'print') { try { window.print(); } catch (_) {} return; }
     if (k === 'return') { CS.note = T('Returns are made at the counter, against the bill.'); return paint(); }
     if (k === 'dispute') {
-      /* the full page's own dispute form; it opens over the app (not over the sheet), and puts the sheet back when it is raised */
+      if (refusedDispute(m)) return;   /* greyed: the server refused it, and said why */
+      /* the page's own dispute form (cap-dispute.js); it opens over the page (not over the sheet), and puts the sheet back when it is raised.
+         A page without the form says where it is, never a silent close (T3-DISPUTES-ASSIST: it closed and did nothing on CRM / Finance) */
+      if (typeof quickDispute !== 'function') { CS.note = T('Raise a dispute from CB Tasks & Orders.'); return paint(); }
       close();
-      if (typeof quickDispute === 'function') quickDispute(id, { back: true });
+      quickDispute(id, { back: true });
       return;
     }
     if (k === 'repeat') { repeatCap().then(function (rp) { if (rp) rp.start(id, m); else { CS.note = T('Repeat supply is not available on this page.'); paint(); } }); return; }

@@ -18,6 +18,8 @@ Athi, 2026-10-12: *"for each function we are building we need to have a SAP kind
 | [MVI](MVI.md) | Move in (from Xero / QuickBooks) | FI (conversion: opening balances, master data) | chart of accounts → contacts → items → opening balances | 4 | 0 | 0 |
 | [PRN](PRN-flow.md) | Parallel run (their Tally / Xero period beside ours) | FI (audit: parallel run, reconciliation of statements) | load their period → compare, differences first → the auditor's file | 2 | 1 | 0 |
 | [FX](FX.md) | Foreign currency (a bill in another currency, its settlement, the period-end revaluation) | FI (foreign currency valuation · realised / unrealised exchange differences) | the day's rate → a foreign bill posts at its day's rate; its payment settles with the exchange gain or loss → revalue at the month end, reversed next month | 3 | 0 | 0 |
+| [DSP](DSP.md) | Disputes (raise on a chit · the list · resolve, per party) | no SAP module — a dispute between two companies' copies is our construct (the rail's USP); an ERP's dispute case lives inside one company | raise a dispute on a chit → the disputes list (CB Tasks & Orders › Disputes) → resolve, with one party or all | 3 | 0 | 0 |
+| [AST](AST.md) | CB Assist (what the assistant answers: the help desk's knowledge base) | no SAP module | review the answers; a help desk publishes or edits one | 0 | 1 | 0 |
 
 ## Flows × modules — which module owns which step
 
@@ -33,6 +35,8 @@ Athi, 2026-10-12: *"for each function we are building we need to have a SAP kind
 | MVI |  |  | 1 chart of accounts<br>2 contacts<br>3 items<br>4 opening balances |  |  |  |  |  |
 | PRN |  |  | 1 load their period<br>2 compare, differences first<br>3 the auditor's file ⚠️ |  |  |  |  |  |
 | FX |  |  | 1 the day's rate<br>2 a foreign bill posts at its day's rate; its payment settles with the exchange gain or loss<br>3 revalue at the month end, reversed next month |  |  |  |  |  |
+| DSP |  |  |  |  | 1 raise a dispute on a chit<br>2 the disputes list (CB Tasks & Orders › Disputes)<br>3 resolve, with one party or all |  |  |  |
+| AST |  |  |  |  | 1 review the answers; a help desk publishes or edits one ⚠️ |  |  |  |
 
 ## The modules
 
@@ -72,6 +76,7 @@ Athi, 2026-10-12: *"for each function we are building we need to have a SAP kind
 - **L2C step 6 · consent & privacy requests** — CO1: built and tested in the api; no screen yet, and migrations b306 / b307 are drafts the owner runs (docs/compliance/OWNER-ACTIONS.md).
 - **C2V step 6 · ask** — The ONE composer (CBThread), the ladder (a commenter posts internally, an editor externally, a viewer reads and sees the sentence) and msg_type 'query' (migrations/000_baseline_part2.sql CHECK) exist and are reused as they are. No due date and no answered flag: the thread's last message says whose turn it is (REQUIREMENT §9). Missing: the anchor for a MONTH's question (the month's pack as a message subject beside chit_id — owner Q1, decided before CA2) and the cross-client count threads_waiting_on_client in last_check.summary.
 - **PRN step 3 · the auditor's file** — CSV from the server; the PDF is the browser's print of the page (no PDF library added).
+- **AST step 1 · review the answers; a help desk publishes or edits one** — Accept / reject of what the assistant DRAFTED is not built: the server keeps no drafts (GET /assist/gaps answers [] · POST /assist/resolve 410).
 
 ## How a new function joins the map
 
