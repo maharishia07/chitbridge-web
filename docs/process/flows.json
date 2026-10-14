@@ -506,6 +506,40 @@
           "test": ["web:e2e/walk-settings-ops.cjs"],
           "status": "warn", "note": "Reporting only: no route gates on plan (enforced:false) and every sellable tier's quotas are not decided — shown as 'Not decided yet', never as unlimited." }
       ]
+    },
+    {
+      "id": "TRADE", "name": "Trade across a border (the lanes a shop can sell into, its clearances, the papers of a deal)", "sap": "GTS (compliance · documents)",
+      "steps": [
+        { "n": 1, "step": "see the lanes: what each market asks of a shop from ITS country and sector", "module": "Operations", "who": "anyone in the shop",
+          "screen": [{ "file": "web:public/app/cap-readiness.js", "fn": "loadLanes" }, { "file": "web:public/app/cap-readiness.js", "fn": "loadLaneReadiness" }],
+          "engine": [{ "file": "api:lib/readiness.js", "fn": "resolveLaneMatrix" }, { "file": "api:lib/readiness.js", "fn": "laneOf" }, { "file": "api:lib/readiness.js", "fn": "standardApplies" }],
+          "route": [{ "m": "GET", "p": "/api/governance/lanes", "file": "api:routes/governance.js" }, { "m": "GET", "p": "/api/governance/readiness", "file": "api:routes/governance.js" }],
+          "chit": "none", "ledger": "none",
+          "test": ["api:tests/trade-srv1.test.cjs"],
+          "status": "warn", "note": "TRADE-SRV1: the server answers from the shop's stated country and sector (asked when unstated: code ORIGIN_UNSTATED · SECTOR_UNSTATED); AU and AE lanes need b538. The screen still sends paint / IN — the web round follows." },
+        { "n": 2, "step": "gather a clearance", "module": "Operations", "who": "the owner or an editor (a viewer is told why not)",
+          "screen": [{ "file": "web:public/app/cap-readiness.js", "fn": "gatherReadiness" }, { "file": "web:public/app/cap-readiness.js", "fn": "submitGather" }],
+          "engine": [{ "file": "api:lib/readiness.js", "fn": "gatherDocument" }, { "file": "api:lib/access.js", "fn": "mayWrite" }],
+          "route": [{ "m": "POST", "p": "/api/governance/compliance", "file": "api:routes/governance.js" }, { "m": "POST", "p": "/api/governance/verify", "file": "api:routes/governance.js" }],
+          "chit": "none (evidence may name an owned chit)", "ledger": "none",
+          "test": ["api:tests/trade-srv1.test.cjs"],
+          "status": "warn", "note": "TRADE-SRV1 G8: refused 403 with the rail's sentence and a code; the reads carry may.gather — the screen does not grey with it yet." },
+        { "n": 3, "step": "the deal's papers: commercial invoice (with the day's rate), packing list, certificate of origin", "module": "Operations", "who": "the owner or an editor issues · signs · attaches",
+          "screen": [{ "file": "web:public/authority-forms.html", "fn": "resolve" }, { "file": "web:public/authority-forms.html", "fn": "issue" }, { "file": "web:public/authority-forms.html", "fn": "attach" }],
+          "engine": [{ "file": "api:lib/forms.js", "fn": "resolveForm" }, { "file": "api:lib/forms.js", "fn": "shopOf" }, { "file": "api:lib/forms.js", "fn": "listInstances" }, { "file": "api:lib/fx-rates.js", "fn": "rateOn" }],
+          "route": [{ "m": "POST", "p": "/api/forms/:key/resolve", "file": "api:routes/forms.js" }, { "m": "POST", "p": "/api/forms/:key/issue", "file": "api:routes/forms.js" }, { "m": "GET", "p": "/api/forms/instances/all", "file": "api:routes/forms.js" }],
+          "chit": "read (the order, context_ref) · the issued paper attaches to it, one copy per party", "ledger": "none",
+          "test": ["api:tests/trade-srv1.test.cjs"],
+          "status": "warn", "note": "TRADE-SRV1 G4/G5/G7: packing list; ?context_ref= lists one deal's papers; the rate is the owner's for the invoice's day (FX_RATE_MISSING says which rate to add). The screen does not list by deal yet." },
+        { "n": 4, "step": "find the trades abroad on Task and Order", "module": "TasksOrders",
+          "who": "anyone in the shop",
+          "screen": [],
+          "engine": [{ "file": "api:lib/country-setup.js", "fn": "abroadSql" }],
+          "route": [{ "m": "GET", "p": "/api/chits/inbox", "file": "api:routes/chits.js" }, { "m": "GET", "p": "/api/chits/sent", "file": "api:routes/chits.js" }],
+          "chit": "read (summary_json.currency_code, all_recipients)", "ledger": "none",
+          "test": ["api:tests/trade-srv1.test.cjs"],
+          "status": "warn", "note": "TRADE-SRV1 G3: ?abroad=1 on the shared list filter. No filter chip on the lists yet (the web round)." }
+      ]
     }
   ]
 }

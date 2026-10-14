@@ -21,6 +21,7 @@ Athi, 2026-10-12: *"for each function we are building we need to have a SAP kind
 | [DSP](DSP.md) | Dispute to settled (the USP: per-party, confidential) | SD-CM (complaints) · FI-AR (disputed items) | raise → work the queue → resolve | 2 | 1 | 0 |
 | [CBA](CBA.md) | Question to answer (CB Assist) | — (the help desk's knowledge base) | draft an answer → accept = publish | 1 | 1 | 0 |
 | [SET](SET.md) | Shop setup (counters · connectors · rules · plan) | BC (customising · authorisations · licence) | counters and keys: add, open on this PC, release; make and revoke a key → connectors: download the kit, say which ones you use, approve the PC → rules: set a policy flag, who may change each said by the server → plan and usage: the plan, each quota as a state, what was billed | 3 | 1 | 0 |
+| [TRADE](TRADE.md) | Trade across a border (the lanes a shop can sell into, its clearances, the papers of a deal) | GTS (compliance · documents) | see the lanes: what each market asks of a shop from ITS country and sector → gather a clearance → the deal's papers: commercial invoice (with the day's rate), packing list, certificate of origin → find the trades abroad on Task and Order | 0 | 4 | 0 |
 
 ## Flows × modules — which module owns which step
 
@@ -39,6 +40,7 @@ Athi, 2026-10-12: *"for each function we are building we need to have a SAP kind
 | DSP |  |  |  |  | 1 raise<br>2 work the queue<br>3 resolve ⚠️ |  |  |  |  |
 | CBA |  |  |  |  | 1 draft an answer ⚠️<br>2 accept = publish |  |  |  |  |
 | SET |  |  |  |  |  |  |  |  | 1 counters and keys: add, open on this PC, release; make and revoke a key<br>2 connectors: download the kit, say which ones you use, approve the PC<br>3 rules: set a policy flag, who may change each said by the server<br>4 plan and usage: the plan, each quota as a state, what was billed ⚠️ |
+| TRADE |  |  |  |  | 4 find the trades abroad on Task and Order ⚠️ | 1 see the lanes: what each market asks of a shop from ITS country and sector ⚠️<br>2 gather a clearance ⚠️<br>3 the deal's papers: commercial invoice (with the day's rate), packing list, certificate of origin ⚠️ |  |  |  |
 
 ## The modules
 
@@ -82,6 +84,10 @@ Athi, 2026-10-12: *"for each function we are building we need to have a SAP kind
 - **DSP step 3 · resolve** — Resolve is not a rail action yet: its rule is composed in api lib/dispute-may (engines change queued: rail ACTIONS + resolve_dispute).
 - **CBA step 1 · draft an answer** — A draft is never stored: Accept publishes it, Reject throws it away (the old gap queue is retired: /assist/gaps · /assist/resolve).
 - **SET step 4 · plan and usage: the plan, each quota as a state, what was billed** — Reporting only: no route gates on plan (enforced:false) and every sellable tier's quotas are not decided — shown as 'Not decided yet', never as unlimited.
+- **TRADE step 1 · see the lanes: what each market asks of a shop from ITS country and sector** — TRADE-SRV1: the server answers from the shop's stated country and sector (asked when unstated: code ORIGIN_UNSTATED · SECTOR_UNSTATED); AU and AE lanes need b538. The screen still sends paint / IN — the web round follows.
+- **TRADE step 2 · gather a clearance** — TRADE-SRV1 G8: refused 403 with the rail's sentence and a code; the reads carry may.gather — the screen does not grey with it yet.
+- **TRADE step 3 · the deal's papers: commercial invoice (with the day's rate), packing list, certificate of origin** — TRADE-SRV1 G4/G5/G7: packing list; ?context_ref= lists one deal's papers; the rate is the owner's for the invoice's day (FX_RATE_MISSING says which rate to add). The screen does not list by deal yet.
+- **TRADE step 4 · find the trades abroad on Task and Order** — TRADE-SRV1 G3: ?abroad=1 on the shared list filter. No filter chip on the lists yet (the web round).
 
 ## How a new function joins the map
 
