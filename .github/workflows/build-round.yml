@@ -58,6 +58,15 @@ jobs:
           path: .side/chitbridge-engines
           fetch-depth: 0
           token: ${{ secrets.ROUNDS_PAT }}
+      # 14 Oct (Athi: "we keep building but if we don't follow what our learnings are, then we go to square one"): every round can READ the
+      # docs repo (C:/dev on the PC — specs by area, DISCIPLINES.md, INVARIANTS.md, area packs). C:/dev/<path> in a brief = ../chitbridge-docs/<path>.
+      # Read-only by intent; if the token cannot see it the round still runs (the brief carries DISCIPLINES.md inline).
+      - uses: actions/checkout@v4
+        continue-on-error: true
+        with:
+          repository: maharishia07/chitbridge-docs
+          path: .side/chitbridge-docs
+          token: ${{ secrets.ROUNDS_PAT }}
       - if: inputs.kind == 'research'
         uses: actions/checkout@v4
         with:
@@ -66,6 +75,7 @@ jobs:
       - name: Lay the other repos beside this one, as on the dev PC
         run: |
           mv .side/* "$GITHUB_WORKSPACE/.." && rmdir .side
+          [ -d ../chitbridge-docs ] && sudo mkdir -p /c && sudo ln -sfn "$(cd ../chitbridge-docs && pwd)" /c/dev || true
           for r in . ../chitbridge-api ../chitbridge-engines; do
             [ -d "$r/.git" ] && git -C "$r" config user.name "claude-round" && git -C "$r" config user.email "noreply@anthropic.com"
           done
