@@ -304,8 +304,9 @@ async function testLoad(force) {
   try {
     /* two calls for the whole panel — never one per case. See the round-trip note in routes/testing.js. */
     await testEnsureVerdict();
-    var a = await api('testCases');
-    var b = await api('testResults');
+    /* ⭐ T2-PAGING: both lists page now, and the board sums the WHOLE set — so every page, through the one reader */
+    var a = { cases: await testEvery('testCases', 'cases') };
+    var b = await testEvery('testResults', 'results');
     /* ⭐ a third read, and worth its round trip: without it a tester works through cases that were written
        against wording nobody stands behind any more, and records passes that prove nothing. */
     var st = await api('testStale');
@@ -1634,6 +1635,30 @@ function testActRow(acts) {
 }
 
 var TEST_REQ_STATES = ['raised', 'accepted', 'implemented', 'rejected'];
+/**
+ * ⭐ T2-PAGING — the board's lists answer total · page · limit (DISCIPLINES §2). Three small readers on the app's own
+ * pagers, so no view here keeps a private one:
+ *   testEvery(ep, key, query)  every page of a list the board SUMS (cases, results, the screen map) — CBList.every
+ *   testPgArm(id, slot, key, ep, filterGet)  the Requirements / Incidents view past its first page — PG + pgFooter
+ *   testCountAll(d)            every state together = the sum of `counts` (`total` is the pager's: this filter's rows)
+ */
+function testEvery(ep, key, query) {
+  return CBList.every(function (page) { return api(ep, { query: Object.assign({}, query || {}, { page: page }) }); }, key);
+}
+function testPgArm(id, slot, key, ep, filterGet) {
+  var d = CBTEST[slot];
+  pgInit(id, { limit: (d && d.limit) || 500, repaint: testRepaint,
+    count: function () { return ((CBTEST[slot] || {})[key] || []).length; },
+    fetch: function (page, limit) {
+      return api(ep, { query: { state: filterGet(), page: page, limit: limit } })
+        .then(function (r) { var a = ((r && r[key]) || []).slice(); a.total = r && r.total; return a; });
+    },
+    store: function (rows) { var cur = CBTEST[slot]; if (cur) cur[key] = (cur[key] || []).concat(rows); } });
+  var p = PG[id]; p.page = 1; p.total = (d && d.total) || 0; p.done = !d || ((d[key] || []).length >= p.total);
+}
+function testCountAll(d) {
+  return d && d.counts ? Object.keys(d.counts).reduce(function (s, k) { return s + (d.counts[k] || 0); }, 0) : 0;
+}
 function testReqFilterGet() {
   try { var v = localStorage.getItem('cb_test_reqf'); return v || 'open'; } catch (_) { return 'open'; }
 }
@@ -1643,7 +1668,8 @@ function testReqFilter(v) {
 }
 async function testReqLoad() {
   CBTEST.reqBusy = true; testRepaint();
-  try { CBTEST.reqs = await api('testReqList', { query: { state: testReqFilterGet() } }); CBTEST.reqErr = null; }
+  try { CBTEST.reqs = await api('testReqList', { query: { state: testReqFilterGet() } }); CBTEST.reqErr = null;
+        testPgArm('testReq', 'reqs', 'requirements', 'testReqList', testReqFilterGet); }
   catch (e) { CBTEST.reqErr = (e && e.message) || 'Could not read them.'; }
   CBTEST.reqBusy = false; testRepaint();
 }
@@ -1752,7 +1778,7 @@ function testReqHTML() {
        ['implemented', 'Implemented'], ['rejected', 'Rejected'], ['all', 'Everything']]
     .map(function (x) {
       var on = f === x[0];
-      var n = d && d.counts ? (x[0] === 'open' ? d.open : (x[0] === 'all' ? d.total : d.counts[x[0]])) : null;
+      var n = d && d.counts ? (x[0] === 'open' ? d.open : (x[0] === 'all' ? testCountAll(d) : d.counts[x[0]])) : null;
       return '<button data-testid="reqf-' + x[0] + '" onclick="testReqFilter(\'' + x[0] + '\')" '
         + 'style="' + TEST_CHIP + (on ? TEST_CHIP_ON : TEST_CHIP_OFF) + '">'
         + esc(x[1]) + (n == null ? '' : ' <b>' + n + '</b>') + '</button>';
@@ -1766,7 +1792,7 @@ function testReqHTML() {
     /* ⚠️ AN EMPTY LIST SAYS WHICH EMPTY IT IS. "Nothing raised yet" and "nothing left to action" are different
        facts and only one of them is good news. */
     return h + '<div style="color:var(--grey-4,#646A72);font-size:var(--fs-1);padding:8px 0">'
-      + (d && d.total ? 'Nothing in this state — ' + d.total + ' captured altogether.'
+      + (testCountAll(d) ? 'Nothing in this state — ' + testCountAll(d) + ' captured altogether.'
                       : 'Nothing raised yet.')
       + '</div>';
   }
@@ -1794,7 +1820,7 @@ function testReqHTML() {
       last: null, inc: null, req: q, caseKey: q.raised_from || null,
     }));
   }).join('');
-  return h;
+  return h + pgFooter('testReq');   /* T2-PAGING: past the first page — the app's one pager footer */
 }
 
 /**
@@ -1950,7 +1976,8 @@ async function testNewsRefresh(what) {
 
 async function testIncLoad() {
   CBTEST.incBusy = true; testRepaint();
-  try { CBTEST.incs = await api('testIncList', { query: { state: testIncFilterGet() } }); CBTEST.incErr = null; }
+  try { CBTEST.incs = await api('testIncList', { query: { state: testIncFilterGet() } }); CBTEST.incErr = null;
+        testPgArm('testInc', 'incs', 'incidents', 'testIncList', testIncFilterGet); }
   catch (e) { CBTEST.incErr = (e && e.message) || 'Could not read them.'; }
   CBTEST.incBusy = false; testRepaint();
 }
@@ -2071,7 +2098,7 @@ function testIncHTML() {
        ['resolved', 'Resolved'], ['closed', 'Closed'], ['all', 'Everything']]
     .map(function (x) {
       var on = f === x[0];
-      var n = d && d.counts ? (x[0] === 'open' ? d.open : (x[0] === 'all' ? d.total : d.counts[x[0]])) : null;
+      var n = d && d.counts ? (x[0] === 'open' ? d.open : (x[0] === 'all' ? testCountAll(d) : d.counts[x[0]])) : null;
       return '<button data-testid="incf-' + x[0] + '" onclick="testIncFilter(\'' + x[0] + '\')" '
         + 'style="' + TEST_CHIP + (on ? TEST_CHIP_ON : TEST_CHIP_OFF) + '">'
         + esc(x[1]) + (n == null ? '' : ' <b>' + n + '</b>') + '</button>';
@@ -2096,7 +2123,7 @@ function testIncHTML() {
   if (!list.length) {
     /* ⚠️ AN EMPTY LIST SAYS WHICH EMPTY IT IS: "none recorded" and "none left open" are different facts. */
     return h + '<div style="color:var(--grey-4,#646A72);font-size:var(--fs-1);padding:8px 0">'
-      + (d && d.total ? 'Nothing in this state \u2014 ' + d.total + ' recorded altogether.'
+      + (testCountAll(d) ? 'Nothing in this state \u2014 ' + testCountAll(d) + ' recorded altogether.'
                       : 'Nothing recorded yet.')
       + '</div>';
   }
@@ -2177,7 +2204,7 @@ function testIncHTML() {
       + testActRow(acts)
       + '</div>';
   }).join('');
-  return h;
+  return h + pgFooter('testInc');   /* T2-PAGING: past the first page — the app's one pager footer */
 }
 
 /**
@@ -2211,8 +2238,7 @@ async function testScrLoad() {
   CBTEST.scrBusy = true; testRepaint();
   try {
     /* the latest word per case — the ledger is append-only, so this endpoint already collapses it */
-    var rows = await api('testResults', {});
-    CBTEST.scrRes = Array.isArray(rows) ? rows : ((rows && rows.results) || []);
+    CBTEST.scrRes = await testEvery('testResults', 'results');
     /**
      * ⭐⭐ AND WHAT CAME OUT OF TESTING IT. Athi, 2026-09-12: *"if there are issues, incident raised or
      * requirement written."* Both already carry the screen code — that is what the code was for — so the
@@ -2220,10 +2246,11 @@ async function testScrLoad() {
      * ⚠️ Every state, not the open ones: a screen with three incidents all resolved has a history worth
      * seeing, and a count that hides them reads as a screen nothing has ever gone wrong on.
      */
-    try { var inc = await api('testIncList', { query: { state: 'all' } });
-          CBTEST.scrInc = (inc && inc.incidents) || []; } catch (_) { CBTEST.scrInc = []; }
-    try { var rq = await api('testReqList', { query: { state: 'all' } });
-          CBTEST.scrReq = (rq && rq.requirements) || []; } catch (_) { CBTEST.scrReq = []; }
+    /* a list that cannot be read leaves its column empty on the map (the results still show) — and the log says which */
+    try { CBTEST.scrInc = await testEvery('testIncList', 'incidents', { state: 'all' }); }
+    catch (e) { cblog('warn', 'screen map: incidents not read — ' + ((e && e.message) || e)); CBTEST.scrInc = []; }
+    try { CBTEST.scrReq = await testEvery('testReqList', 'requirements', { state: 'all' }); }
+    catch (e) { cblog('warn', 'screen map: requirements not read — ' + ((e && e.message) || e)); CBTEST.scrReq = []; }
     CBTEST.scrErr = null;
   } catch (e) { CBTEST.scrErr = (e && e.message) || 'Could not read the results.'; }
   CBTEST.scrBusy = false; testRepaint();
@@ -6684,9 +6711,9 @@ function screenCasesPaint() {
 function testFindLoadClosed() {
   if (CBTEST._closedReq) return;
   CBTEST._closedReq = 1;
-  api('testCasesAll').then(function (r) {
+  testEvery('testCases', 'cases', { all: 1 }).then(function (rows) {
     CBTEST._closedReq = 0;
-    CBTEST.closedCases = ((r && r.cases) || []).filter(function (c) {
+    CBTEST.closedCases = rows.filter(function (c) {
       return c.status === 'retired' && /-H\d+$/.test(String(c.case_key || ''));
     });
     testPaint();
