@@ -78,6 +78,27 @@
 <script>
 var API=(new URLSearchParams(location.search).get('api'))||(window.CBShell&&CBShell.apiBase&&CBShell.apiBase())||window.CB_API;
 var TOK=null,_stage='email',FORMS=[],SEL=null,CTX='',MANUAL={},RESOLVED=null,ISSUED=null,_restored=false,ORDERS=null;
+/* TRADE-SRV1 G8: the server's may/why for issue · sign · attach (GET /api/forms `may`); a refused button is greyed WITH its sentence, never tried */
+var MAY={};
+function mayOf(a){ return (MAY&&MAY[a])||{may:true,why:null}; }
+function mayAttr(a){ var m=mayOf(a); return m.may?'':' disabled title="'+esc(m.why||'')+'" data-testid="af-'+a+'-refused"'; }
+/* G5: the papers already issued for the picked deal (GET /api/forms/instances/all?context_ref=) — painted under the picker, read on demand */
+var PAPERS=null;
+async function papersLoad(){
+  PAPERS=null; var box=el('papers'); if(!box) return;
+  if(!CTX){ box.innerHTML=''; return; }
+  var r=await api('GET','/api/forms/instances/all?context_ref='+encodeURIComponent(CTX)+'&limit=20');
+  if(r.status!==200||!r.j){ box.innerHTML='<div class="note" data-testid="papers-err">Could not read this order’s papers.</div>'; return; }
+  PAPERS=r.j; papersDraw();
+}
+function papersDraw(){
+  var box=el('papers'); if(!box||!PAPERS) return;
+  var list=PAPERS.instances||[], total=Number(PAPERS.total)||0;
+  if(!total){ box.innerHTML='<div class="note" data-testid="papers-none">No papers issued for this order yet.</div>'; return; }
+  box.innerHTML='<div class="note" style="margin-bottom:4px;font-weight:700" data-testid="papers-count">'+total+' paper'+(total===1?'':'s')+' for this order</div>'
+    +list.map(function(p){ return '<div class="note" data-testid="paper-row"><a href="#" onclick="loadInstance(\''+esc(p.form_id)+'\');return false">'+esc(p.title||p.form_key)+'</a> &middot; '+esc(String(p.created_at||'').slice(0,10))+(p.signed_at?' &middot; signed':'')+'</div>'; }).join('')
+    +(total>list.length?'<div class="note">and '+(total-list.length)+' more</div>':'');
+}
 /* K3: nobody knows a chit id - the shop's own recent orders (the existing chits reads: orders that came in, orders that went out) are PICKED, not typed. */
 function orderLabel(c){
   var sj=c.summary_json||{}, v=sj.total_value!=null?Number(sj.total_value):null, cur=sj.currency_code||'INR';
@@ -111,17 +132,22 @@ function srcChip(s){if(!s)return '';var c=s==='order'?'c-order':'c-declared';ret
 function loginView(){ CBFrame.ended(); }
 async function boot(){
   var r=await api('GET','/api/forms'); if(r.status===401){TOK=null;return loginView('Session expired');}
-  FORMS=(r.j&&r.j.forms)||[]; render();
-  ordersLoad().then(function(){ var c=el('ctx'); if(c){ CTX=(c.value||CTX||'').trim(); var h=c.parentNode; c.outerHTML=orderSelect('ctx',CTX,'No order — fill from my data'); c=el('ctx'); if(c) c.onchange=function(){ if(SEL) resolve(); }; } }).catch(function(){});
+  FORMS=(r.j&&r.j.forms)||[]; MAY=(r.j&&r.j.may)||{}; render();
+  ordersLoad().then(function(){ var c=el('ctx'); if(c){ CTX=(c.value||CTX||'').trim(); var h=c.parentNode; c.outerHTML=orderSelect('ctx',CTX,'No order — fill from my data'); c=el('ctx'); if(c) c.onchange=ctxChanged; } papersLoad(); }).catch(function(){});
 }
+function ctxChanged(){ CTX=((el('ctx')||{}).value||'').trim(); papersLoad(); if(SEL) resolve(); }
 function render(){
+  var m=mayOf('issue');
   var picker='<div class="card noprint"><div class="note" style="margin-bottom:7px;font-weight:700">Pick a form</div>'
+    +(m.may?'':'<div class="banner notready" data-testid="af-may-why">'+esc(m.why||'')+'</div>')
     +FORMS.map(function(f){return '<div class="formcard'+(SEL===f.key?' on':'')+'" onclick="pick(\''+f.key+'\')"><div class="t">'+esc(f.title)+'</div><div class="a">'+esc(f.authority||'')+' &middot; '+f.field_count+' fields</div></div>';}).join('')
     +'<label>Draw from one of your orders (optional)</label>'+orderSelect('ctx',CTX,'No order — fill from my data')+'<div class="note" style="margin-top:4px">Pick an order to fill the buyer, invoice and value from it.</div>'
+    +'<div id="papers" style="margin-top:8px"></div>'
     +'</div>';
   el('app').innerHTML=picker+'<div id="work"></div>';
   if(SEL) resolve();
-  var cx=el('ctx'); if(cx) cx.onchange=function(){ if(SEL) resolve(); };
+  var cx=el('ctx'); if(cx) cx.onchange=ctxChanged;
+  papersDraw();
 }
 function pick(k){ SEL=k; ISSUED=null; _restored=false;
   var d=(window.CBOffline&&CBOffline.loadDraft('af.'+k));
@@ -149,7 +175,7 @@ function drawForm(){
   var prov=d.provenance?('<div class="prov">Provenance: '+Object.keys(d.provenance).map(function(k){return d.provenance[k]+' '+esc(k);}).join(' &middot; ')+' &middot; '+((d.completeness||{}).pct||0)+'% filled</div>'):'';
   el('work').innerHTML='<div class="card noprint"><div class="row" style="justify-content:space-between"><b style="font-size:14px">'+esc(d.title||SEL)+'</b><span class="note">'+esc(d.authority||'')+'</span></div>'
     +restoredNote+banner+rows+prov
-    +'<div class="row" style="margin-top:12px"><button class="ok" id="issueBtn" '+(d.ready?'':'disabled')+' onclick="issue()">Issue &amp; freeze</button>'
+    +'<div class="row" style="margin-top:12px"><button class="ok" id="issueBtn" '+(d.ready&&mayOf('issue').may?'':'disabled')+(mayOf('issue').may?'':' title="'+esc(mayOf('issue').why||'')+'" data-testid="af-issue-refused"')+' onclick="issue()">Issue &amp; freeze</button>'
     +'<button class="gh" onclick="resolve()">Re-fill</button></div>'
     +'<div class="note" style="margin-top:8px">'+esc(d.note||'')+'</div><div id="issueErr" class="err"></div></div>';
 }
@@ -158,7 +184,7 @@ async function issue(){
   if(window.CBOffline&&!CBOffline.online()){ el('issueErr').innerHTML='<span class="note" style="color:var(--warn)">⏳ You&rsquo;re offline &mdash; your filled form is saved as a draft. Issue it when you&rsquo;re back online (issuing needs the server to freeze &amp; number it).</span>'; return; }
   el('issueBtn').disabled=true;
   var r=await api('POST','/api/forms/'+SEL+'/issue',{context_ref:CTX||undefined,manual:MANUAL});
-  if(r.status===200){ ISSUED=r.j; if(window.CBOffline)CBOffline.clearDraft('af.'+SEL); loadInstance(r.j.form_id); }
+  if(r.status===200){ ISSUED=r.j; if(window.CBOffline)CBOffline.clearDraft('af.'+SEL); loadInstance(r.j.form_id); papersLoad(); }
   else { el('issueErr').textContent=(r.j&&(r.j.message||r.j.error))||('Issue failed ('+r.status+')'); el('issueBtn').disabled=false; }
 }
 async function loadInstance(id){
@@ -177,12 +203,12 @@ function drawDoc(inst){
     +'<div class="sig"><div>'+(inst.signed_at?'<div class="note" style="color:#2f7a45;font-weight:700">Signed '+esc(String(inst.signed_at).slice(0,10))+'</div>':'')+'</div>'+sig+'</div>'
     +'<div class="meta">Issued via Chit &amp; Bridge &middot; content hash '+esc(String(inst.content_hash||'').slice(0,24))+'… &middot; This is a self-prepared submission; verify at the issuing authority.</div></div>';
   var controls='<div class="card noprint"><div class="banner ready">✓ Issued &amp; frozen'+(inst.signed_at?' &amp; signed':'')+'.</div><div class="row">'
-    +(inst.signed_at?'':'<button class="pri" onclick="sign(\''+inst.form_id+'\')">Sign (authorised signatory)</button>')
+    +(inst.signed_at?'':'<button class="pri"'+mayAttr('sign')+' onclick="sign(\''+inst.form_id+'\')">Sign (authorised signatory)</button>')
     +'<button class="gh" onclick="window.print()">Print / Save PDF</button>'
     +'<button class="gh" onclick="pick(\''+SEL+'\')">New form</button></div><div id="signErr" class="err"></div>'
     +'<label style="margin-top:12px">Transfer on the rail — file onto a chit (per-copy)</label>'
     +'<div class="row"><div style="flex:1;min-width:150px">'+orderSelect('attach_chit',CTX,'Pick the order to file it on')+'</div>'
-    +'<button class="ok" onclick="attach(\''+inst.form_id+'\')">File on rail</button></div>'
+    +'<button class="ok"'+mayAttr('attach')+' onclick="attach(\''+inst.form_id+'\')">File on rail</button></div>'
     +'<div id="attachMsg" style="margin-top:6px"></div>'
     +'<div class="note" style="margin-top:4px">Files the frozen form as an attachment on that chit — every participant gets their own copy to view, verify at source, or dispute.</div></div>';
   el('work').innerHTML=controls+doc;

@@ -26,27 +26,29 @@ var RD_SKILL = { 'sds':'sds', 'exim-policy':'export-declaration', 'reach':'evide
   'bis':'product-classify' };   // which clearance standards have a drafting skill (the co-assist drafts the doc/evidence checklist)
 function _rdSkill(it){ return it ? (RD_SKILL[it.standard]||null) : null; }
 // advisory co-assist buttons (reuse the global aiRun) — standards to adopt, and who can carry a gap
+/* TRADE-SRV1 G2: the lane is the SERVER's (origin = the shop's country, sector = its stated one) — nothing here stands in with India · paint · EU.
+   An unstated value goes to the co-assist as null ("[to confirm]"), never as a guess. */
 function aiSuggestStandards(){
   if(typeof aiRun!=='function') return;
-  aiRun('standards-suggest', { sector:(UI.laneVertical||'paint'), market:(UI.laneDest||'EU'), origin:(UI.laneOrigin||'IN') }, {title:'✨ Standards to adopt'});
+  aiRun('standards-suggest', { sector:(UI.laneVertical||null), market:(UI.laneDest||null), origin:(UI.laneOrigin||null) }, {title:'✨ Standards to adopt'});
 }
 function aiSuggestPartner(std, doc){
   if(typeof aiRun!=='function') return;
   var it=((UI.laneRd&&UI.laneRd.clearances)||(UI.readiness&&UI.readiness.clearances)||[]).filter(function(c){return c.standard===std&&c.doc===doc;})[0];
-  aiRun('partner-suggest', { gap:(it&&(it.title||it.doc))||std, standard:std, market:(UI.laneDest||'EU') }, {title:'✨ Suggest a partner'});
+  aiRun('partner-suggest', { gap:(it&&(it.title||it.doc))||std, standard:std, market:(UI.laneDest||null) }, {title:'✨ Suggest a partner'});
 }
 function _aiCtxExporter(){ return { name:((UI.profile&&UI.profile.legal_name)||(UI.profile&&UI.profile.name)||'[to confirm]') }; }
 // clearance path — draft a document from the standard/product the entity holds. Passes an ATTACH target so a document
 // draft can be ACCEPTED → filed as the clearance's evidence on the rail (closes the advise→produce loop).
 async function aiDraftReadiness(std, doc, skill){
   var it=((UI.laneRd&&UI.laneRd.clearances)||(UI.readiness&&UI.readiness.clearances)||[]).filter(function(c){return c.standard===std&&c.doc===doc;})[0];
-  return _aiDraft(skill, std, { standard:std, document:doc, sector:(UI.laneVertical||'paint'),
-    origin:(UI.laneOrigin||'IN'), destination:(UI.laneDest||null), product:{ description:doc }, exporter:_aiCtxExporter() },
+  return _aiDraft(skill, std, { standard:std, document:doc, sector:(UI.laneVertical||null),
+    origin:(UI.laneOrigin||null), destination:(UI.laneDest||null), product:{ description:doc }, exporter:_aiCtxExporter() },
     { standard:std, doc:doc, title:(it&&it.title)||doc, skill:skill });
 }
 // commerce path — draft a commercial document/advice from the current trade lane (order specifics → [to confirm])
 async function aiDraftCommerce(skill, label){
-  return _aiDraft(skill, label, { area:label, sector:(UI.laneVertical||'paint'), origin:(UI.laneOrigin||'IN'),
+  return _aiDraft(skill, label, { area:label, sector:(UI.laneVertical||null), origin:(UI.laneOrigin||null),
     destination:(UI.laneDest||null), incoterm:'CIF', lc:{ type:'irrevocable confirmed', amount:'[to confirm]', expiry:'[to confirm]', incoterm:'CIF' },
     order:{ note:'draft from the current lane; fill order specifics [to confirm]' }, exporter:_aiCtxExporter() });
 }
@@ -143,10 +145,8 @@ async function rdLoadDeclaration(){
   try{ var s=localStorage.getItem('cb_rd_lane'); if(s){ var L=JSON.parse(s)||{};
     if(!UI.laneVertical && L.vert) UI.laneVertical=L.vert;
     if(!UI.laneDest && L.dest){ UI.laneDest=L.dest; UI.laneRd=undefined; } } }catch(_){}
-  // ORIGIN = the entity's registered country (not a choice) — fixed home jurisdiction
-  /* ⭐ meNow() — the entity's country is almost always already in UI._me by the time the readiness screen
-     opens, and this only wants that one field. */
-  try{ var me=await meNow(); if(me && me.country){ var o=_mapOrigin(me.country); if(o!==UI.laneOrigin){ UI.laneOrigin=o; UI.laneRd=undefined; } } }catch(_){ if(!UI.laneOrigin) UI.laneOrigin='IN'; }
+  /* ORIGIN = the entity's registered country (not a choice) — the SERVER answers it on /lanes (origin: identities.country, TRADE-SRV1 G2);
+     this screen no longer maps a country into a bloc or falls back to India. */
   if(typeof renderApp==='function') bgRenderApp();
 }
   // has evidence + not expired
@@ -159,9 +159,15 @@ function _rdRungChip(it){ var r=it&&it.rung, map={verified:['var(--ok-3)','verif
   return '<span title="trust rung — how strongly it is evidenced" style="font-size:var(--fs-1);font-weight:800;text-transform:uppercase;letter-spacing:.03em;color:'+x[0]+';background:'+x[0]+'1e;border-radius:4px;padding:2px 5px;flex:0 0 auto">'+x[1]+'</span>'; }
 // persist the current lane to the entity's profile (+ local restore) — the selectors ARE the saved profile now.
 function saveLane(){
-  var vert=UI.laneVertical||'paint', dest=UI.laneDest||'EU', origin=UI.laneOrigin||'IN';
+  var vert=UI.laneVertical||null, dest=UI.laneDest||null, origin=UI.laneOrigin||null;
   try{ localStorage.setItem('cb_rd_lane', JSON.stringify({vert:vert,dest:dest,origin:origin})); }catch(_){}
-  try{ api('profilePut',{body:{trade_mode:(dest===origin?'domestic':'export'), markets:[dest], sectors:[vert], adopted:(UI.profile&&UI.profile.adopted)||[]}}).then(function(p){UI.profile=p;}).catch(function(){}); }catch(_){}
+  if(!dest) return;   /* nothing chosen yet — nothing to declare */
+  /* G8: the server said whether this login may change the trade profile — a refused save is not attempted, and not silent */
+  var may=(UI.laneMatrix&&UI.laneMatrix.may&&UI.laneMatrix.may.gather)||{may:true};
+  if(!may.may){ if(typeof toast==='function') toast(may.why||''); return; }
+  api('profilePut',{body:{trade_mode:(dest===origin?'domestic':'export'), markets:[dest], sectors:(vert?[vert]:[]), adopted:(UI.profile&&UI.profile.adopted)||[]}})
+    .then(function(p){UI.profile=p;})
+    .catch(function(e){ if(typeof cblog==='function') cblog('warn','saveLane → '+((e&&e.message)||'failed')); if(typeof toast==='function') toast((e&&e.message)||'The lane was not saved.'); });
 }
 function _rdStatus(st){
   if(st==='gathered') return {col:'var(--ok-3)',ic:'✓',lbl:'gathered'};
@@ -233,11 +239,16 @@ function _rdDetailPane(it){
   var verifyBtn = (idType && it.rung!=='verified')
     ? '<button onclick="verifyReadiness(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\',\''+idType+'\')" title="Checked against the source registry, live" style="font-size:var(--fs-2);font-weight:700;border:1px solid var(--ok-3);background:var(--ok-tint);color:var(--ok-3);border-radius:9px;padding:7px 12px;cursor:pointer">' + tx('🔗 Verify at source') + '</button>' : '';
   var skill=_rdSkill(it);
+  /* G8: the SERVER's may/why — a refused Gather / Verify is greyed WITH its sentence (the same pattern as cap-compare's may.load) */
+  var mayG=_rdMay('gather'), mayV=_rdMay('verify');
+  var grey=function(m){ return m.may ? '' : ' disabled title="'+esc(m.why||'')+'"'; };
+  if(verifyBtn && !mayV.may) verifyBtn=verifyBtn.replace('<button ', '<button'+grey(mayV)+' data-testid="rd-verify-refused" ');
   var draftBtn = skill
     ? '<button onclick="aiDraftReadiness(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\',\''+skill+'\')" title="AI drafts it — you review and confirm" style="font-size:var(--fs-2);font-weight:700;border:1px solid var(--purple);background:var(--purple-tint);color:var(--purple);border-radius:9px;padding:7px 12px;cursor:pointer">' + tx('✨ Draft with AI') + '</button>' : '';
   var actBtn = (it.status==='gathered')
     ? '<span style="font-size:var(--fs-2);color:'+m.col+';font-weight:700">'+m.lbl+'</span>'
-    : '<button onclick="gatherReadiness(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\')" style="font-size:var(--fs-2);font-weight:700;border:1px solid '+(it.status==='pending'?'var(--line)':m.col)+';background:'+(it.status==='pending'?'var(--card)':m.col)+';color:'+(it.status==='pending'?'var(--blue-2)':'var(--on-accent)')+';border-radius:9px;padding:7px 13px;cursor:pointer">'+(it.status==='pending'?'Gather':'Renew')+'</button>';
+    : '<button'+grey(mayG)+(mayG.may?'':' data-testid="rd-gather-refused"')+' onclick="gatherReadiness(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\')" style="font-size:var(--fs-2);font-weight:700;border:1px solid '+(it.status==='pending'?'var(--line)':m.col)+';background:'+(it.status==='pending'?'var(--card)':m.col)+';color:'+(it.status==='pending'?'var(--blue-2)':'var(--on-accent)')+';border-radius:9px;padding:7px 13px;cursor:pointer">'+(it.status==='pending'?'Gather':'Renew')+'</button>';
+  var mayNote = (!mayG.may) ? '<div data-testid="rd-may-why" style="margin:10px 16px 0;font-size:var(--fs-1);color:var(--grey)">'+esc(mayG.why||'')+'</div>' : '';
   var held=_rdHeld(it), r=it.rung, live=(it.status==='gathered'||it.status==='expiring');
   var banner = (held && r==='verified')
       ? '<div style="margin:10px 16px 0;font-size:var(--fs-2);color:var(--ok-2);background:var(--ok-tint);border:1px solid #bfe3cb;border-radius:9px;padding:9px 12px">✓ <b>' + tx('Verified at source') + '</b> — the platform confirmed this against the registry. Buyers see this as met.</div>'
@@ -250,7 +261,12 @@ function _rdDetailPane(it){
     ? '<div style="margin:8px 16px 0;font-size:var(--fs-1);color:var(--ok-2);background:var(--ok-tint);border:1px solid #bfe3cb;border-radius:9px;padding:8px 11px">🔗 <b>' + tx('Live source-check') + '</b> — the platform verifies this '+idType.toUpperCase()+' against the <b>source registry</b>, invoked live. Confirmed at source, not your word for it.</div>'
     : '<div style="margin:8px 16px 0;font-size:var(--fs-1);color:var(--grey);background:var(--card);border:1px solid var(--line);border-radius:9px;padding:8px 11px">📄 <b>' + tx('Document evidence') + '</b> — your certificate + issuer link. A <b>live source-check is not wired for this standard yet</b> (it needs the issuing body’s registry).</div>';
   return '<div style="padding:14px 16px 0"><div style="display:flex;align-items:flex-start;gap:10px"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:var(--fs-3)">'+esc(it.title||it.doc)+rung+'</div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">from <span class="mono" style="color:var(--blue)">'+esc(it.standard)+'</span></div></div><div style="flex:0 0 auto;display:flex;gap:6px;align-items:center">'+draftBtn+verifyBtn+actBtn+'</div></div></div>'
-    + banner + vmode + _rdExpand(it);
+    + mayNote + banner + vmode + _rdExpand(it);
+}
+/** the server's may/why for a trade write (lanes · readiness answers carry `may { gather, verify }`); unknown = allowed, the write still asks the server */
+function _rdMay(action){
+  var src=(UI.laneRd&&UI.laneRd.may)||(UI.laneMatrix&&UI.laneMatrix.may)||null;
+  var m=src&&src[action]; return m||{may:true,why:null,code:null};
 }
 // ── COMMERCIAL COVER (live /instruments) — the invariant spine beneath the industry-variable compliance ──
 async function loadCommerce(){
@@ -264,23 +280,37 @@ function _frmBadge(c){
   return '<span style="font-size:var(--fs-1);font-weight:800;letter-spacing:.03em;text-transform:uppercase;border-radius:5px;padding:2px 6px;background:'+x[0]+'1e;color:'+x[0]+'">FRM · '+x[1]+'</span>';
 }
 // ── MY READINESS (supplier) — spin the globe: readiness resolved per destination ──
+/* TRADE-SRV1 G1/G2: the lanes, the origin and the sector are the SERVER's answer (/lanes: origin = the shop's country, vertical = its stated
+   sector, lanes[] with `domestic`, asked[] with a code, may{}). No country → 422 TRADE_ORIGIN_UNSTATED: the screen paints that sentence with
+   the Country setup button (readinessScreen). */
 async function loadLanes(){
-  try{ UI.laneMatrix = await api('lanes', {query:{vertical:'paint', origin:UI.laneOrigin||'IN'}}); }
-  catch(e){ UI.laneMatrix = {error:(e&&e.message)||'Could not load', lanes:[]}; }
+  UI.laneRefused = null;
+  try{ UI.laneMatrix = await api('lanes', {query:{vertical:(UI.laneVertical||undefined)}}); }
+  catch(e){
+    UI.laneMatrix = {error:(e&&e.message)||'Could not load', lanes:[]};
+    var code=e&&e.data&&e.data.code;   /* the server's code rides on e.data (core.js apiOnce) — the screen branches on it, never on the words */
+    if(code==='TRADE_ORIGIN_UNSTATED') UI.laneRefused = { code:code, why:(e.message||'') };
+  }
+  if(UI.laneMatrix && !UI.laneMatrix.error){
+    UI.laneOrigin = UI.laneMatrix.origin || null;
+    UI.laneVertical = UI.laneMatrix.vertical || null;
+  }
   if(UI.laneMatrix && UI.laneMatrix.lanes && UI.laneMatrix.lanes.length){
     if(!UI.laneDest || !UI.laneMatrix.lanes.some(function(l){return l.dest_key===UI.laneDest;})) UI.laneDest = UI.laneMatrix.lanes[0].dest_key;
     loadLaneReadiness(UI.laneDest);
-  }
+  } else if(UI.laneRd===undefined){ UI.laneRd = {error:(UI.laneMatrix&&UI.laneMatrix.error)||'No lanes yet.'}; }
   if(typeof renderApp==='function') bgRenderApp();
 }
 async function loadLaneReadiness(dest){
   UI.laneRd = undefined;
-  try{ UI.laneRd = await api('readinessOwn', {query:{destination:dest, vertical:(UI.laneVertical||'paint'), origin:UI.laneOrigin||'IN'}}); }
-  catch(e){ UI.laneRd = {error:(e&&e.message)||'Could not load'}; }
+  if(!dest){ UI.laneRd = {error:'No lanes yet.'}; if(typeof renderApp==='function') bgRenderApp(); return; }
+  try{ UI.laneRd = await api('readinessOwn', {query:{destination:dest, vertical:(UI.laneVertical||undefined)}}); }
+  catch(e){ UI.laneRd = {error:(e&&e.message)||'Could not load'}; if(e && e.data && e.data.code==='TRADE_ORIGIN_UNSTATED') UI.laneRefused = { code:e.data.code, why:(e.message||'') }; }
   if(typeof renderApp==='function') bgRenderApp();
 }
 function setLaneDest(dest){ UI.laneDest=dest; UI.laneRd=undefined; if(typeof renderApp==='function')renderApp(); loadLaneReadiness(dest); saveLane(); }
-function setLaneVertical(v){ UI.laneVertical=v; UI.laneRd=undefined; if(typeof renderApp==='function')renderApp(); loadLaneReadiness(UI.laneDest||'EU'); saveLane(); }
+/* a sector change re-resolves the matrix too (the lane percentages depend on it); '' = no sector, the server answers with `asked` */
+function setLaneVertical(v){ UI.laneVertical=v||null; UI.laneRd=undefined; UI.laneMatrix=undefined; if(typeof renderApp==='function')renderApp(); loadLanes(); saveLane(); }
 // one-line explanation per tab (shown as an ⓘ strip under the tab bar)
 function _rdTabInfo(tab){
   var m={ certification:'Standing certifications your organisation holds — audited and renewed, valid across every order.',
@@ -291,24 +321,24 @@ function _rdTabInfo(tab){
 }
 // ── CHECK A SUPPLIER (buyer) ──
 // compact spin-the-globe: origin → destination selectors (shown in the Clearances tab header).
-function _mapOrigin(c){ c=String(c||'').toUpperCase();
-  if(['IN','IND','INDIA'].indexOf(c)>=0) return 'IN';
-  if(['US','USA','UNITED STATES'].indexOf(c)>=0) return 'US';
-  if(['AE','SA','QA','KW','OM','BH','UAE','GCC','GULF'].indexOf(c)>=0) return 'GULF';
-  if(['EU','DE','FR','IT','ES','NL','BE','PL','SE','AT','IE','PT','GR','DK','FI'].indexOf(c)>=0) return 'EU';
-  return 'IN';
-}
+/* the sectors the matrix knows (vertical_category keys) — the server reads the shop's stated one; this list only offers a choice */
+var RD_SECTORS=[['paint','Chemical / Paint'],['food','Food'],['textiles','Textiles'],['electronics','Electronics'],['pharma','Pharmaceutical'],['automobile','Automobile']];
+/** the country's name a person reads — ICU's (Intl.DisplayNames), the code when it has none; the server's `origin` is a code */
+function _rdCountryName(code){ if(!code) return ''; try{ var n=new Intl.DisplayNames([navigator.language||'en'],{type:'region'}).of(code); if(n&&n!==code&&!/unknown/i.test(n)) return n; }catch(_){} return code; }
 function _rdDestSelectors(){
-  var dest=UI.laneDest||'EU', origin=UI.laneOrigin||'IN', vert=UI.laneVertical||'paint';
-  var dOpts=[['EU','European Union'],['US','United States'],['GULF','Gulf (GCC)'],['IN','Domestic (India)']];
-  var vOpts=[['paint','Chemical / Paint'],['food','Food'],['textiles','Textiles'],['electronics','Electronics'],['pharma','Pharmaceutical'],['automobile','Automobile']];
-  var oName=({IN:'India',US:'United States',EU:'European Union',GULF:'Gulf (GCC)'})[origin]||origin;
+  var M=UI.laneMatrix||{}, dest=UI.laneDest||'', origin=UI.laneOrigin||'', vert=UI.laneVertical||'';
+  /* G1: the destinations are the server's lanes (b571: AU · AE beside EU · US · GULF · IN), the shop's own marked "home" — never a list typed here */
+  var dOpts=(M.lanes||[]).map(function(l){ return [l.dest_key, l.dest_name+(l.domestic?' (home)':'')]; });
+  var vOpts=[['', tx('Pick a sector')]].concat(RD_SECTORS);
   var ss='font-size:var(--fs-2);font-weight:700;border:1px solid var(--line);border-radius:9px;padding:5px 8px;background:var(--card);color:var(--ink)';
-  var opt=function(list,v){return list.map(function(x){return '<option value="'+x[0]+'"'+(x[0]===v?' selected':'')+'>'+x[1]+'</option>';}).join('');};
+  var opt=function(list,v){return list.map(function(x){return '<option value="'+esc(x[0])+'"'+(x[0]===v?' selected':'')+'>'+esc(x[1])+'</option>';}).join('');};
   var rd=UI.laneRd, s=(rd&&rd.summary)||{}, cnt=(rd&&!rd.error&&s.total!=null)?('<span style="font-size:var(--fs-1);color:var(--grey)">'+(s.met||0)+' of '+(s.total||0)+' met</span>'):'';
-  return '<span style="font-size:var(--fs-1);color:var(--grey)">sector</span><select onchange="setLaneVertical(this.value)" style="'+ss+'">'+opt(vOpts,vert)+'</select>'
-    +'<span style="font-size:var(--fs-1);color:var(--grey)" title="Your registered country (fixed)">🌍 from <b style="color:var(--ink)">'+esc(oName)+'</b></span>'
-    +'<span style="font-size:var(--fs-1);color:var(--grey)">ship to</span><select onchange="setLaneDest(this.value)" style="'+ss+'">'+opt(dOpts,dest)+'</select>'+cnt;
+  /* G2: no sector stated → the server's `asked` sentence beside the select (its code decides, not the words) */
+  var ask=(M.asked||[]).filter(function(a){return a.code==='TRADE_SECTOR_UNSTATED';})[0];
+  var askH=ask?'<span data-testid="rd-sector-asked" style="font-size:var(--fs-1);color:var(--warn-2)">'+esc(ask.why)+'</span>':'';
+  return '<span style="font-size:var(--fs-1);color:var(--grey)">sector</span><select data-testid="rd-sector" onchange="setLaneVertical(this.value)" style="'+ss+'">'+opt(vOpts,vert)+'</select>'+askH
+    +(origin?'<span data-testid="rd-origin" style="font-size:var(--fs-1);color:var(--grey)" title="Your registered country (fixed)">🌍 from <b style="color:var(--ink)">'+esc(_rdCountryName(origin))+'</b></span>':'')
+    +(dOpts.length?'<span style="font-size:var(--fs-1);color:var(--grey)">ship to</span><select data-testid="rd-dest" onchange="setLaneDest(this.value)" style="'+ss+'">'+opt(dOpts,dest)+'</select>'+cnt:'');
 }
 // header: tabs (Clearances | Commercial cover) within Trade ready + the spin-the-globe selectors on the Clearances tab.
 function _rdHeader(){
@@ -327,7 +357,8 @@ function _mtxCell(on,common,color){ return '<td style="text-align:center;padding
 // the sector × standard matrix — LIVE from the engine (resolve every sector for the current lane), common vs specific.
 async function openSectorMatrix(){
   var secs=[['paint','🧪','Chemical','var(--blue-2)'],['food','🍎','Food','var(--ok-3)'],['textiles','🧵','Textiles','var(--purple-2)'],['electronics','🔌','Electronics','var(--warn-2)'],['pharma','💊','Pharma','var(--blue-2)'],['automobile','🚗','Auto','var(--disp)']];
-  var dest=UI.laneDest||'EU', origin=UI.laneOrigin||'IN';
+  var dest=UI.laneDest||null, origin=UI.laneOrigin||null;
+  if(!dest||!origin){ if(typeof toast==='function') toast(tx('Pick a lane first.')); return; }
   if(typeof modal==='function'){
     modal('<div class="mhd" style="display:flex;align-items:center;gap:8px"><div class="t" style="flex:1;padding-inline-end:30px">' + tx('🧮 Sector × standard — common vs specific') + '</div></div><div class="mbody" style="padding:14px 16px"><div id="mtxbody" style="font-size:var(--fs-2);color:var(--grey)">Resolving every sector for '+esc(origin)+' <span class=arw>→</span> '+esc(dest)+'…</div></div>');
     /**
@@ -346,9 +377,9 @@ async function openSectorMatrix(){
   }
   var rows={};
   for(var i=0;i<secs.length;i++){
-    try{ var rd=await api('readinessOwn',{query:{destination:dest, vertical:secs[i][0], origin:origin}});
+    try{ var rd=await api('readinessOwn',{query:{destination:dest, vertical:secs[i][0]}});
       ((rd&&rd.clearances)||[]).forEach(function(c){ if(!rows[c.standard]) rows[c.standard]={std:c.standard,sectors:{}}; rows[c.standard].sectors[secs[i][0]]=true; });
-    }catch(e){}
+    }catch(e){ if(typeof cblog==='function') cblog('warn','sector matrix '+secs[i][0]+' → '+((e&&e.message)||'failed')); }   /* that column stays empty; the others still resolve */
   }
   var list=Object.keys(rows).map(function(k){ var on=secs.map(function(s){return !!rows[k].sectors[s[0]];}); return {std:k,name:STDNAME[k]||k,on:on,n:on.filter(Boolean).length}; });
   list.sort(function(a,b){ return (b.n-a.n)||a.std.localeCompare(b.std); });
@@ -471,8 +502,16 @@ function readinessScreen(){
   if(tab==='commercial'){
     return shell(_rdComTwoPane());
   }
-  var dest=UI.laneDest||'EU';
-  if(UI.laneRd===undefined){ if(typeof loadLaneReadiness==='function') loadLaneReadiness(dest); return shell('<div style="flex:1;display:grid;place-items:center;color:var(--grey);font-size:var(--fs-2)">'+(typeof loader==='function'?loader('Resolving clearances…'):'Loading…')+'</div>'); }
+  /* G2: the lanes come first (they carry the origin, the sector and the destinations); the readiness of the chosen lane follows */
+  if(UI.laneMatrix===undefined){ UI.laneMatrix=null; if(typeof loadLanes==='function') loadLanes(); }
+  if(UI.laneRefused){   /* TRADE_ORIGIN_UNSTATED: the server's sentence, with the button that fixes it (Country setup) */
+    return shell('<div data-testid="rd-origin-unstated" style="padding:20px;display:grid;gap:10px;justify-items:start">'
+      +'<div style="font-size:var(--fs-3);font-weight:700">'+tx('Country not set')+'</div>'
+      +'<div style="font-size:var(--fs-2);color:var(--grey)">'+esc(UI.laneRefused.why)+'</div>'
+      +'<button type="button" class="composebtn pri" onclick="if(typeof go===\'function\')go(\'#/country\')">'+tx('Country setup')+'</button></div>');
+  }
+  var dest=UI.laneDest||null;
+  if(UI.laneRd===undefined){ return shell('<div style="flex:1;display:grid;place-items:center;color:var(--grey);font-size:var(--fs-2)">'+(typeof loader==='function'?loader('Resolving clearances…'):'Loading…')+'</div>'); }
   var rd=UI.laneRd;
   if(rd.error) return shell('<div style="padding:20px">'+(typeof emptyState==='function'?emptyState('⚠️','Could not load', esc(rd.error)):esc(rd.error))+'</div>');
   var items=(rd.clearances)||[];
@@ -480,6 +519,7 @@ function readinessScreen(){
   return shell(_rdTwoPane(list));
 }
 function verifyReadiness(standard, doc, id_type){
+  var mv=_rdMay('verify'); if(!mv.may){ if(typeof toast==='function') toast(mv.why||''); return; }   /* G8: refused by the server — said, not tried */
   UI.rdVerify = { standard:standard, doc:doc, id_type:id_type };
   var inS='width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:var(--fs-2);margin:5px 0 13px;box-sizing:border-box';
   var body = '<div class="mbody" style="padding:16px 18px">'
@@ -506,7 +546,8 @@ async function submitVerify(){
   }catch(e){ if(btn){ btn.disabled=false; btn.textContent='🔗 Verify ID'; } if(err) err.textContent=(e&&e.message)||'Verification failed'; }
 }
 function gatherReadiness(standard, doc){
-  var it = ((UI.readiness&&UI.readiness.clearances)||[]).filter(function(c){ return c.standard===standard && c.doc===doc; })[0];
+  var mg=_rdMay('gather'); if(!mg.may){ if(typeof toast==='function') toast(mg.why||''); return; }   /* G8 */
+  var it = ((UI.laneRd&&UI.laneRd.clearances)||(UI.readiness&&UI.readiness.clearances)||[]).filter(function(c){ return c.standard===standard && c.doc===doc; })[0];
   UI.rdGather = { standard:standard, doc:doc, title:(it&&it.title)||doc };
   var far = new Date(Date.now()+365*86400000).toISOString().slice(0,10);
   var inS = 'width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:var(--fs-2);margin:5px 0 13px;box-sizing:border-box';

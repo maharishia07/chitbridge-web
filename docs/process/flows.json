@@ -11,7 +11,8 @@
     { "id": "TasksOrders", "name": "Tasks & Orders", "page": "web:public/tasks.html", "sap": "SD (order) · MM (purchase order)" },
     { "id": "Operations", "name": "Operations", "page": "web:public/app.html", "sap": "MM (supplies, stock, intake)" },
     { "id": "Employees", "name": "Employees", "page": "web:public/employees.html", "sap": "HCM" },
-    { "id": "Network", "name": "Network", "page": "web:public/network.html", "sap": "SD (storefront) · CTP" }
+    { "id": "Network", "name": "Network", "page": "web:public/network.html", "sap": "SD (storefront) · CTP" },
+    { "id": "Documents", "name": "Documents", "page": "web:public/authority-forms.html", "sap": "SD-FT (export documents: certificate of origin, commercial invoice)" }
   ],
   "flows": [
     {
@@ -428,6 +429,33 @@
           "chit": "none", "ledger": "two entries in one transaction: the unrealised difference on 4260 at the month end, its reversal on the next month's first day",
           "test": ["engines:tests/fx.test.js", "api:tests/fx-rates.test.cjs"],
           "status": "ok", "note": "Debtors and creditors only; a currency with no closing rate is named and nothing is revalued." }
+      ]
+    },
+    {
+      "id": "TRD", "name": "Trade (a lane from the shop's own country, its papers by deal, the deals abroad)", "sap": "SD-FT (foreign trade: export documents, country of origin) — the incumbents are a baseline; built on the rail (a paper is a per-copy attachment on the chit)",
+      "steps": [
+        { "n": 1, "step": "the lanes from the shop's own country, the sector asked when unstated", "module": "Operations", "who": "any login reads; an editor or the owner gathers / verifies (the server's may/why)",
+          "screen": [{ "file": "web:public/app/cap-readiness.js", "fn": "loadLanes" }, { "file": "web:public/app/cap-readiness.js", "fn": "_rdDestSelectors" }, { "file": "web:public/app/cap-readiness.js", "fn": "_rdMay" }],
+          "engine": [{ "file": "api:lib/readiness.js", "fn": "laneContext" }, { "file": "api:lib/readiness.js", "fn": "resolveLaneMatrix" }, { "file": "api:lib/profile.js", "fn": "homeOf" }, { "file": "api:lib/trade-may.js", "fn": "mayWrite" }],
+          "route": [{ "m": "GET", "p": "/api/governance/lanes", "file": "api:routes/governance.js" }, { "m": "GET", "p": "/api/governance/readiness", "file": "api:routes/governance.js" }, { "m": "POST", "p": "/api/governance/compliance", "file": "api:routes/governance.js" }],
+          "chit": "a gathered clearance is a self-chit carrying the document", "ledger": "none",
+          "test": ["api:tests/trade-lanes.test.cjs"],
+          "status": "ok", "note": "TRADE-SRV1: origin = identities.country (never IN), AU and AE lanes (b571), domestic derived; no country → 422 TRADE_ORIGIN_UNSTATED with the Country setup button." },
+        { "n": 2, "step": "the deals abroad on the Task / Order list", "module": "Operations", "who": "any login of the shop",
+          "screen": [{ "file": "web:public/app.html", "fn": "advParams" }, { "file": "web:public/app.html", "fn": "advPanel" }],
+          "engine": [{ "file": "api:lib/folder-inventory.js", "fn": "abroadSql" }],
+          "route": [{ "m": "GET", "p": "/api/chits/inbox", "file": "api:routes/chits.js" }, { "m": "GET", "p": "/api/chits/sent", "file": "api:routes/chits.js" }],
+          "chit": "read (the copies whose other party is registered in another country)", "ledger": "none",
+          "test": ["api:tests/trade-lanes.test.cjs"],
+          "status": "ok", "note": "?abroad=1 — one term in the shared filter builder; a party with no country is not abroad." },
+        { "n": 3, "step": "the papers of a deal: the day's rate and the pack's tax word on the commercial invoice, the issued papers by deal", "module": "Documents", "who": "an editor or the owner issues, signs, files (the server's may/why); any login reads",
+          "_module_note": "Documents = public/authority-forms.html (added to modules[] by TRADE-SRV1)",
+          "screen": [{ "file": "web:public/authority-forms.html", "fn": "papersLoad" }, { "file": "web:public/authority-forms.html", "fn": "mayAttr" }],
+          "engine": [{ "file": "api:lib/forms.js", "fn": "dayRateFor" }, { "file": "api:lib/forms.js", "fn": "listInstances" }, { "file": "api:lib/fx-rates.js", "fn": "rateOn" }],
+          "route": [{ "m": "GET", "p": "/api/forms", "file": "api:routes/forms.js" }, { "m": "GET", "p": "/api/forms/instances/all", "file": "api:routes/forms.js" }, { "m": "POST", "p": "/api/forms/:key/issue", "file": "api:routes/forms.js" }, { "m": "GET", "p": "/api/books/fx-rates", "file": "api:routes/books.js" }],
+          "chit": "an issued paper files onto the deal's chit as a per-copy attachment", "ledger": "none (the rate is read, never posted here)",
+          "test": ["api:tests/trade-forms.test.cjs"],
+          "status": "ok", "note": "TRADE-SRV1 G5–G7: ?context_ref= lists the deal's papers (total · page · limit); the exchange rate is the FX1 reader's day rate, in words with its source and day; GSTIN · ABN · TRN by pack." }
       ]
     }
   ]
