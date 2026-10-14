@@ -11,7 +11,7 @@
  *   CBShopPrivacy.open({ api, token, host, sheet(inner), done })   api = the api base · token = the order's session (memory only) · host = the
  *   sheet's element · sheet = shop.html's shopSheet · done = its Done button markup
  *
- * ⭐ REUSE: shop.html's sheet, tokens and classes (.sg · .meta); helpers.js esc. ⭐ NEW PATH: no storefront screen showed a shopper their data.
+ * ⭐ REUSE: shop.html's sheet, tokens and classes (.sg · .meta); helpers.js esc (the ONE copy — loaded by shop.html before this file). ⭐ NEW PATH: no storefront screen showed a shopper their data.
  * The server decides: may_consent / may_request carry { may, code, why } — a refused button is greyed WITH its sentence, never hidden.
  */
 (function (root) {
@@ -23,7 +23,6 @@
   var KIND = { access: 'A copy of my data', correct: 'Correct my data', erase: 'Erase my data', withdraw: 'Withdraw consent', nominate: 'Name a nominee', grievance: 'Raise a grievance' };
   var OUT = { done: 'Done', partly: 'Partly done', refused: 'Refused' };
   var WORD = { CONSENT: ['Yes', 'ok'], NO_CONSENT: ['Not asked', ''], CONSENT_WITHDRAWN: ['Withdrawn', 'no'], SAID_NO: ['No', 'no'], OPTED_OUT: ['Stopped', 'no'], LEGITIMATE_USE: ['Allowed', ''] };
-  var e_ = function (s) { return typeof root.esc === 'function' ? root.esc(s) : String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
   var day = function (iso) { if (!iso) return ''; var d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }); };
   var BTN = 'border:1px solid var(--accent,#3F66A6);border-radius:9px;padding:7px 12px;background:var(--card,#fff);color:var(--accent,#3F66A6);font-weight:700;font-size:13px;cursor:pointer';
   var OFF = 'border:1px solid var(--line,#e7e3d8);border-radius:9px;padding:7px 12px;background:var(--card,#fff);color:var(--ink-3,#8A8374);font-weight:700;font-size:13px;cursor:not-allowed';
@@ -34,34 +33,34 @@
     return fetch(o.api + path, { method: method, headers: Object.assign({ Authorization: 'Bearer ' + o.token }, body ? { 'Content-Type': 'application/json' } : {}), body: body ? JSON.stringify(body) : undefined })
       .then(function (r) { return r.json().then(function (j) { return { status: r.status, j: j || {} }; }); });
   }
-  var head = function (t) { return '<div class="sg" style="font-weight:800;font-size:17px;margin-bottom:6px" data-testid="shop-priv-title">' + e_(t) + '</div>'; };
-  var sec = function (t, inner, tid) { return '<div style="margin-top:14px" data-testid="' + tid + '"><div style="font-weight:700;font-size:13.5px;margin-bottom:4px">' + e_(t) + '</div>' + inner + '</div>'; };
-  var chip = function (v, tid) { var w = WORD[(v || {}).code] || ['Unknown', '']; return '<span style="display:inline-block;padding:1px 9px;border-radius:999px;font-size:12px;font-weight:700;' + CHIP[w[1]] + '" title="' + e_((v || {}).why || '') + '" data-testid="' + tid + '" data-code="' + e_((v || {}).code || '') + '">' + e_(w[0]) + '</span>'; };
-  var btn = function (label, data, tid, why) { return '<button type="button" ' + data + ' data-testid="' + tid + '" style="' + (why ? OFF : BTN) + '"' + (why ? ' disabled aria-disabled="true" title="' + e_(why) + '"' : '') + '>' + e_(label) + '</button>'; };
-  var paintErr = function (msg) { var o = S.o; o.host.innerHTML = o.sheet(head('Your privacy') + '<div class="meta" data-testid="shop-priv-err" style="color:var(--disp,#b4453f)">' + e_(msg) + '</div><div style="display:flex;gap:8px;margin-top:14px"><button type="button" onclick="CBShopPrivacy.reload()" style="' + BTN + ';flex:1">Try again</button>' + o.done + '</div>'); };
+  var head = function (t) { return '<div class="sg" style="font-weight:800;font-size:17px;margin-bottom:6px" data-testid="shop-priv-title">' + esc(t) + '</div>'; };
+  var sec = function (t, inner, tid) { return '<div style="margin-top:14px" data-testid="' + tid + '"><div style="font-weight:700;font-size:13.5px;margin-bottom:4px">' + esc(t) + '</div>' + inner + '</div>'; };
+  var chip = function (v, tid) { var w = WORD[(v || {}).code] || ['Unknown', '']; return '<span style="display:inline-block;padding:1px 9px;border-radius:999px;font-size:12px;font-weight:700;' + CHIP[w[1]] + '" title="' + esc((v || {}).why || '') + '" data-testid="' + tid + '" data-code="' + esc((v || {}).code || '') + '">' + esc(w[0]) + '</span>'; };
+  var btn = function (label, data, tid, why) { return '<button type="button" ' + data + ' data-testid="' + tid + '" style="' + (why ? OFF : BTN) + '"' + (why ? ' disabled aria-disabled="true" title="' + esc(why) + '"' : '') + '>' + esc(label) + '</button>'; };
+  var paintErr = function (msg) { var o = S.o; o.host.innerHTML = o.sheet(head('Your privacy') + '<div class="meta" data-testid="shop-priv-err" style="color:var(--disp,#b4453f)">' + esc(msg) + '</div><div style="display:flex;gap:8px;margin-top:14px"><button type="button" onclick="CBShopPrivacy.reload()" style="' + BTN + ';flex:1">Try again</button>' + o.done + '</div>'); };
 
   function paint() {
     var o = S.o, d = S.d, law = d.law || {}, shop = (d.shop && d.shop.name) || 'this shop';
-    var lawLine = law.known ? '<b>' + e_(law.short || law.law) + '</b> · ' + e_(law.consent || '') : e_(law.note || '');
-    var held = (d.held || []).map(function (h) { return '<div style="display:flex;gap:10px;font-size:13px;padding:3px 0;border-top:1px dashed var(--line,#e7e3d8)" data-testid="shop-priv-held-' + e_(h.key) + '"><span style="flex:0 0 42%;color:var(--ink-2,#3a4048)">' + e_(h.label) + '</span><span style="flex:1' + (h.value ? '' : ';color:var(--ink-3,#8A8374)') + '">' + e_(h.value || 'Not held') + '</span></div>'; }).join('');
+    var lawLine = law.known ? '<b>' + esc(law.short || law.law) + '</b> · ' + esc(law.consent || '') : esc(law.note || '');
+    var held = (d.held || []).map(function (h) { return '<div style="display:flex;gap:10px;font-size:13px;padding:3px 0;border-top:1px dashed var(--line,#e7e3d8)" data-testid="shop-priv-held-' + esc(h.key) + '"><span style="flex:0 0 42%;color:var(--ink-2,#3a4048)">' + esc(h.label) + '</span><span style="flex:1' + (h.value ? '' : ';color:var(--ink-3,#8A8374)') + '">' + esc(h.value || 'Not held') + '</span></div>'; }).join('');
     var mc = d.may_consent || { may: true }, whyC = mc.may ? '' : (mc.why || 'Not available yet.');
     var may = (d.consent && d.consent.may) || {};
     var offers = ORDER.map(function (c) {
       var v = (may[c] || {}).marketing || { code: 'NO_CONSENT' };
       var b = v.may ? btn('No', 'data-priv="consent" data-ch="' + c + '" data-v="0"', 'shop-priv-no-' + c, whyC) : btn('Yes', 'data-priv="consent" data-ch="' + c + '" data-v="1"', 'shop-priv-yes-' + c, whyC);
-      return '<div style="display:flex;align-items:center;gap:8px;font-size:13px;padding:4px 0;border-top:1px dashed var(--line,#e7e3d8)" data-testid="shop-priv-ch-' + c + '"><span style="flex:1">' + e_(CH[c]) + '</span>' + chip(v, 'shop-priv-chip-' + c) + b + '</div>';
+      return '<div style="display:flex;align-items:center;gap:8px;font-size:13px;padding:4px 0;border-top:1px dashed var(--line,#e7e3d8)" data-testid="shop-priv-ch-' + c + '"><span style="flex:1">' + esc(CH[c]) + '</span>' + chip(v, 'shop-priv-chip-' + c) + b + '</div>';
     }).join('');
     var mr = d.may_request || { may: true }, whyR = mr.may ? '' : (mr.why || 'Not available yet.');
     var kinds = (law.kinds || Object.keys(KIND)).filter(function (k) { return KIND[k]; });
     var ask = '<div style="display:flex;flex-wrap:wrap;gap:6px">' + kinds.map(function (k) { return btn(KIND[k], 'data-priv="request" data-kind="' + k + '"', 'shop-priv-ask-' + k, whyR); }).join('') + '</div>'
-      + (whyR ? '<div class="meta" data-testid="shop-priv-ask-why">' + e_(whyR) + '</div>' : '')
-      + '<div class="meta" style="margin-top:6px">' + e_('The shop answers within ' + (law.due_days || 30) + ' days. Erasure runs through ChitBridge’s lifecycle path.') + '</div>';
+      + (whyR ? '<div class="meta" data-testid="shop-priv-ask-why">' + esc(whyR) + '</div>' : '')
+      + '<div class="meta" style="margin-top:6px">' + esc('The shop answers within ' + (law.due_days || 30) + ' days. Erasure runs through ChitBridge’s lifecycle path.') + '</div>';
     var reqs = ((d.requests && d.requests.requests) || []);
-    var made = reqs.length ? reqs.map(function (r) { return '<div style="display:flex;gap:8px;font-size:13px;padding:3px 0;border-top:1px dashed var(--line,#e7e3d8)" data-testid="shop-priv-req"><span style="flex:1">' + e_(KIND[r.kind] || r.kind) + '</span><span style="color:var(--ink-2,#3a4048)">' + e_(r.answered_at ? (OUT[r.outcome] || 'Answered') + ' · ' + day(r.answered_at) : 'Due ' + day(r.due_at)) + '</span></div>'; }).join('') : '';
+    var made = reqs.length ? reqs.map(function (r) { return '<div style="display:flex;gap:8px;font-size:13px;padding:3px 0;border-top:1px dashed var(--line,#e7e3d8)" data-testid="shop-priv-req"><span style="flex:1">' + esc(KIND[r.kind] || r.kind) + '</span><span style="color:var(--ink-2,#3a4048)">' + esc(r.answered_at ? (OUT[r.outcome] || 'Answered') + ' · ' + day(r.answered_at) : 'Due ' + day(r.due_at)) + '</span></div>'; }).join('') : '';
     var msg = '<div class="meta" id="shop_priv_msg" role="status" data-testid="shop-priv-msg" style="min-height:1em"></div>';
     o.host.innerHTML = o.sheet(head('Your privacy') + '<div class="meta" data-testid="shop-priv-law">' + lawLine + '</div>'
       + sec('What ' + shop + ' holds', held, 'shop-priv-held')
-      + sec('Offers from ' + shop, offers + (whyC ? '<div class="meta" data-testid="shop-priv-consent-why">' + e_(whyC) + '</div>' : ''), 'shop-priv-offers')
+      + sec('Offers from ' + shop, offers + (whyC ? '<div class="meta" data-testid="shop-priv-consent-why">' + esc(whyC) + '</div>' : ''), 'shop-priv-offers')
       + sec('Ask the shop', ask, 'shop-priv-ask')
       + (made ? sec('Your requests', made, 'shop-priv-made') : '')
       + msg + '<div style="display:flex;margin-top:14px">' + o.done + '</div>');

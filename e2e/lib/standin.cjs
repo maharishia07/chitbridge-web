@@ -33,6 +33,96 @@ const addDays = (day, n) => { const d = new Date(day + 'T00:00:00'); d.setDate(d
 const dayAt = (day) => new Date(day + 'T00:00:00+05:30').toISOString();
 const uuid = (n) => '20000000-0000-4000-8000-' + String(n).padStart(12, '0');
 
+/* ═══ T3-P3-CONSENT — consent (b306) and the privacy-request register (b307), the api's rules in the page (lib/privacy.js mayMessage · gate · DUE_DAYS) ═══ */
+const PV_CH = ['phone', 'sms', 'whatsapp', 'email', 'chitbridge'], PV_PU = ['service', 'marketing'];
+const PV_KINDS = ['access', 'correct', 'erase', 'withdraw', 'nominate', 'grievance'];
+const PV_LAW = { IN: { country: 'IN', known: true, law: 'Digital Personal Data Protection Act 2023', short: 'DPDP Act', authority: 'Data Protection Board of India', consent: 'Offers need your consent. You may withdraw it at any time.', rights: 'You may see, correct or erase your data, or name a nominee.', kinds: PV_KINDS, note: null, due_days: 30 },
+  AU: { country: 'AU', known: true, law: 'Privacy Act 1988 (Cth)', short: 'Privacy Act', authority: 'Office of the Australian Information Commissioner', consent: 'Offers need your consent. You may opt out at any time.', rights: 'You may see and correct your data.', kinds: ['access', 'correct', 'withdraw', 'grievance'], note: null, due_days: 30 } };
+const pvLaw = (c) => PV_LAW[c] || { country: c || null, known: false, law: null, short: null, authority: null, consent: 'Offers need your consent. You may withdraw it at any time.', rights: 'You may see, correct or erase your data.', kinds: PV_KINDS, note: c ? 'No privacy pack for ' + c + ' yet. Every request kind is offered.' : 'The shop has no country set, so its privacy law is not known.', due_days: 30 };
+/** privState({ country, migrated, reqsMigrated, seed }) — the rows one walk writes; `seed` plants one late request */
+function privState(o) {
+  o = o || {};
+  const P = { country: o.country || 'IN', migrated: o.migrated !== false, reqsMigrated: o.reqsMigrated !== false, prefs: [], reqs: [], seq: 0 };
+  if (o.seed) P.reqs.push({ request_id: uuid(901), party_id: null, who: 'Kumar (walk-in)', kind: 'access', country: P.country, received_at: new Date(Date.now() - 40 * 86400e3).toISOString(), due_at: new Date(Date.now() - 10 * 86400e3).toISOString(), answered_at: null, outcome: null, answer: null });
+  return P;
+}
+function pvMay(rows, channel, purpose) {   /* lib/privacy.mayMessage, newest first */
+  const r = rows.find((x) => x.channel === channel && x.purpose === purpose);
+  if (purpose === 'marketing') {
+    if (!r) return { may: false, code: 'NO_CONSENT', why: 'No consent for offers on ' + channel + '. Ask them first.' };
+    if (!r.allowed) return r.withdrawn_at ? { may: false, code: 'CONSENT_WITHDRAWN', why: 'They withdrew consent for offers on ' + channel + '.' } : { may: false, code: 'SAID_NO', why: 'They said no to offers on ' + channel + '.' };
+    return { may: true, code: 'CONSENT', why: 'They agreed to offers on ' + channel + '.' };
+  }
+  if (r && !r.allowed) return { may: false, code: 'OPTED_OUT', why: 'They asked not to be messaged on ' + channel + '.' };
+  return { may: true, code: 'LEGITIMATE_USE', why: 'Messages about their own orders are allowed.' };
+}
+const pvRows = (P, party) => P.prefs.filter((x) => x.party_id === party).slice().reverse();
+function pvMayAll(rows) { const may = {}; PV_CH.forEach((c) => { may[c] = {}; PV_PU.forEach((p) => { may[c][p] = pvMay(rows, c, p); }); }); return may; }
+const pvContactPrefs = (P, party) => ({ migrated: P.migrated, may: pvMayAll(P.migrated ? pvRows(P, party) : []) });
+function pvNote(P, party, b, by) {
+  const channel = String(b.channel || '').toLowerCase(), purpose = String(b.purpose || '').toLowerCase();
+  if (PV_CH.indexOf(channel) < 0) return [400, errBody('Channel is phone, sms, whatsapp, email or chitbridge.', 'BAD_REQUEST')];
+  if (PV_PU.indexOf(purpose) < 0) return [400, errBody('Purpose is service or marketing.', 'BAD_REQUEST')];
+  if (typeof b.allowed !== 'boolean') return [400, errBody('Say yes or no.', 'BAD_REQUEST')];
+  const before = pvRows(P, party).find((r) => r.channel === channel && r.purpose === purpose);
+  const withdrawn = !b.allowed && before && before.allowed && before.basis === 'consent';
+  const row = { pref_id: uuid(800 + (++P.seq)), party_id: party, channel, purpose, allowed: b.allowed, basis: purpose === 'marketing' ? 'consent' : 'legitimate_use', notice_version: null, noted_at: new Date(Date.now() + P.seq * 1000).toISOString(), noted_by: by, withdrawn_at: withdrawn ? new Date().toISOString() : null };
+  P.prefs.push(row); return [201, { pref: Object.assign({}, row, { party_id: undefined }) }];
+}
+const reqShape = (r) => Object.assign({}, r, { late: !r.answered_at && Date.parse(r.due_at) < Date.now(), answered_late: !!r.answered_at && Date.parse(r.answered_at) > Date.parse(r.due_at) });
+function pvRequests(P, o) {
+  const all = P.reqs.filter((r) => (!o.open || !r.answered_at) && (!o.party_id || r.party_id === o.party_id)).sort((a, b) => ((!!a.answered_at) - (!!b.answered_at)) || (Date.parse(a.due_at) - Date.parse(b.due_at)));
+  const limit = Math.min(200, Math.max(1, Number(o.limit) || 50)), page = Math.max(1, Number(o.page) || 1);
+  return { requests: all.slice((page - 1) * limit, page * limit).map(reqShape), total: all.length, page, limit, open: all.filter((r) => !r.answered_at).length, late: all.filter((r) => !r.answered_at && Date.parse(r.due_at) < Date.now()).length };
+}
+function pvLog(P, b, party) {
+  const kind = String(b.kind || '').toLowerCase(); if (PV_KINDS.indexOf(kind) < 0) return [400, errBody('Kind is access, correct, erase, withdraw, nominate or grievance.', 'BAD_REQUEST')];
+  const who = String(b.who || '').trim(); if (!who) return [400, errBody('Who asked? A name, phone or e-mail.', 'BAD_REQUEST')];
+  const rec = b.received_at ? Date.parse(b.received_at) : Date.now();
+  const r = { request_id: uuid(700 + (++P.seq)), party_id: party || b.party_id || null, who, kind, country: P.country, received_at: new Date(rec).toISOString(), due_at: new Date(rec + (kind === 'grievance' && P.country === 'IN' ? 15 : 30) * 86400e3).toISOString(), answered_at: null, outcome: null, answer: null };
+  P.reqs.push(r); return [201, { request: reqShape(r) }];
+}
+const NOT_PV = (n) => errBody('Privacy records need migration ' + n + ' — not run yet.', 'PRIVACY_NOT_MIGRATED');
+/** the routes: the shop's (auth, as the CRM calls them) and the shopper's (/api/privacy/me, the storefront token) */
+function privRoute(S, r, q, u, p, m, body, owner) {
+  const P = S.priv; let x;
+  if ((x = p.match(/^\/api\/crm\/parties\/([^/]+)\/contact-prefs$/))) {
+    if (!P.migrated) return J(r, 503, NOT_PV('b306'));
+    const party = decodeURIComponent(x[1]);
+    if (m === 'POST') { const [st, o] = pvNote(P, party, body || {}, owner ? 'ent-walk' : 'act-2'); return J(r, st, o); }
+    return J(r, 200, { party_id: party, history: pvRows(P, party).map((h) => Object.assign({}, h, { party_id: undefined })), may: pvMayAll(pvRows(P, party)), law: pvLaw(P.country) });
+  }
+  if (p === '/api/crm/privacy-requests') {
+    if (!P.reqsMigrated) return J(r, 503, NOT_PV('b307'));
+    if (m === 'POST') { const [st, o] = pvLog(P, body || {}, null); return J(r, st, o); }
+    return J(r, 200, Object.assign(pvRequests(P, { open: u.searchParams.get('open') === '1', page: u.searchParams.get('page'), limit: u.searchParams.get('limit') }), { may_answer: !!owner, why: owner ? null : 'Only the owner answers a privacy request.' }));
+  }
+  if ((x = p.match(/^\/api\/crm\/privacy-requests\/([^/]+)\/answer$/)) && m === 'POST') {
+    if (!owner) return J(r, 403, errBody('Only the owner answers a privacy request.', 'OWNER_ONLY'));
+    const rq = P.reqs.find((z) => z.request_id === x[1] && !z.answered_at); if (!rq) return J(r, 409, errBody('Not found, or already answered — an answer is given once.', 'ANSWERED'));
+    const o = String((body || {}).outcome || ''); if (['done', 'partly', 'refused'].indexOf(o) < 0) return J(r, 400, errBody('Outcome is done, partly or refused.', 'BAD_REQUEST'));
+    if (!String((body || {}).answer || '').trim()) return J(r, 400, errBody('Write what was done, or why not.', 'BAD_REQUEST'));
+    Object.assign(rq, { answered_at: new Date().toISOString(), outcome: o, answer: String(body.answer).trim() }); return J(r, 200, { request: reqShape(rq) });
+  }
+  /* the shopper's own surface: the storefront token names the party (S.priv.shopper) and the shop */
+  if (p.indexOf('/api/privacy/me') === 0) {
+    const me = P.shopper || uuid(555), auth = q.headers().authorization || '';
+    if (!/^Bearer /.test(auth)) return J(r, 401, errBody('Sign in to view this', 'UNAUTHORISED'));
+    if (p === '/api/privacy/me' && m === 'GET') {
+      const rows = P.migrated ? pvRows(P, me) : [], rq = P.reqsMigrated ? pvRequests(P, { party_id: me, limit: 50 }) : null;
+      return J(r, 200, { shop: { name: 'Mayur Bhavan', country: P.country }, law: pvLaw(P.country),
+        held: [{ key: 'name', label: 'Name', value: 'Kumar' }, { key: 'phone', label: 'Phone', value: '+91 98400 00009' }, { key: 'contact', label: 'Sign-in contact', value: null }, { key: 'orders', label: 'Orders and bills', value: 'On the chits you and the shop both hold (My orders).' }],
+        consent: { migrated: P.migrated, history: rows.map((h) => Object.assign({}, h, { party_id: undefined })), may: pvMayAll(rows) },
+        requests: rq ? { migrated: true, requests: rq.requests, total: rq.total } : { migrated: false, requests: [], total: 0 },
+        may_consent: P.migrated ? { may: true, code: 'OK', why: null } : { may: false, code: 'PRIVACY_NOT_MIGRATED', why: 'Not set up yet at this shop. Ask the shop directly.' },
+        may_request: P.reqsMigrated ? { may: true, code: 'OK', why: null } : { may: false, code: 'PRIVACY_NOT_MIGRATED', why: 'Not set up yet at this shop. Ask the shop directly.' } });
+    }
+    if (p === '/api/privacy/me/consent' && m === 'POST') { if (!P.migrated) return J(r, 503, NOT_PV('b306')); const [st, o] = pvNote(P, me, body || {}, me); return J(r, st, st === 201 ? Object.assign(o, { may: pvMayAll(pvRows(P, me)) }) : o); }
+    if (p === '/api/privacy/me/requests' && m === 'POST') { if (!P.reqsMigrated) return J(r, 503, NOT_PV('b307')); const [st, o] = pvLog(P, Object.assign({}, body || {}, { who: 'Kumar' }), me); return J(r, st, o); }
+  }
+  return null;
+}
+
 /** the mutable world one walk writes into: leads, their stage history, calls (interactions) and follow-ups */
 function l2cState(o) {
   const L = { leads: [], seq: 0, fu: [], ix: [], stages: [], migrated: true, listFails: 0 };
@@ -177,6 +267,7 @@ async function route(S, r) {
   const q = r.request(), u = new URL(q.url()), p = u.pathname, m = q.method(); let x;
   S.calls.push(m + ' ' + p);
   if (S.l2c) { let body = null; try { body = q.postDataJSON(); } catch (_) {} const done = l2cRoute(S.l2c, r, q, u, p, m, body); if (done) return done; }
+  if (S.priv) { let body = null; try { body = q.postDataJSON(); } catch (_) {} const done = privRoute(S, r, q, u, p, m, body, !S.viewer); if (done) return done; }
   if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Mayur Bhavan', currency_code: 'INR' } });
   if (p === '/api/books/health') return J(r, 200, books.health());
   if (p === '/api/books/todo') return J(r, 200, []);
@@ -191,9 +282,15 @@ async function route(S, r) {
   if ((x = p.match(/^\/api\/books\/party\/([^/]+)\/statement$/))) return J(r, 200, books.statement(decodeURIComponent(x[1])));   /* the record's Ledger section (as crm.cjs answers it) */
   if (p === '/api/books/terms') return J(r, 200, { terms_migrated: true, may_set: true, why_not: null, default: {}, party: null, events: [] });   /* the record's credit-terms read (CB_PARTY_EP booksTerms), as the contract shapes it */
   if (p === '/api/crm/parties' && m === 'GET') return J(r, 200, crmApi.list(fx.list, { records: fx.records }));
+  if ((x = p.match(/^\/api\/crm\/parties\/([^/]+)$/)) && m === 'GET' && S.priv) {   /* T3-P3-CONSENT: the record with THIS walk's consent rows (lib/privacy.contactPrefsOf) */
+    const id = decodeURIComponent(x[1]), row = fx.list.find((z) => z.party_id === id || z.party_no === id) || fx.list[0];
+    return J(r, 200, Object.assign(crmApi.record(fx.list, row.party_id, fx.records[row.party_id], [], Date.now()), { contact_prefs: pvContactPrefs(S.priv, row.party_id) }));
+  }
+  if ((x = p.match(/^\/api\/crm\/parties\/([^/]+)\/timeline$/)) && S.priv) { const id = decodeURIComponent(x[1]), row = fx.list.find((z) => z.party_id === id || z.party_no === id) || fx.list[0]; return J(r, 200, { party_id: row.party_id, entries: [], next_before: null, migrated: true }); }
   if (p === '/api/crm/followups') return J(r, 200, crmApi.followups([]));
   if (m === 'GET') return J(r, 200, {});
   return J(r, 200, { ok: true });
 }
 exports.standIn = standIn; exports.route = route;
 exports.l2cState = l2cState; exports.l2cBill = l2cBill; exports.l2cStage = l2cStage; exports.viewerSession = viewerSession;
+exports.privState = privState;
