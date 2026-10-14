@@ -552,7 +552,7 @@ var CBSettings = (function () {
       '<h2 class="sx-h2">' + esc(T('Every device of the shop')) + '</h2>', '<div id="sx_dev_bar"></div>', lineOut('sx_dev_out'), '<div class="sx-list" id="sx_dev_list" data-testid="sx-dev-list"></div>',
       '<h2 class="sx-h2">' + esc(T('Keys for other systems')) + '</h2>', '<div id="sx_keys_card" data-testid="sx-keys-card"></div>',
       '<h2 class="sx-h2">' + esc(T('Vault')) + '</h2>',
-      '<p class="sub">' + esc(T('The papers the shop keeps: identity, signatory, bank, licences. They fill every form for an authority.')) + ' <a class="sx-link" href="/authority-forms.html" data-testid="sx-vault-forms">' + esc(T('Forms for an authority')) + ' ›</a></p>',
+      '<p class="sub">' + esc(T('Identity, signatory, bank and licences — kept once, they fill every form for an authority')) + ' · <a class="sx-link" href="/authority-forms.html" data-testid="sx-vault-forms">' + esc(T('Forms for an authority')) + ' ›</a></p>',
       '<div id="vaulthost" data-testid="sx-vault"></div>']);
     var sl = null, dl = null;
     var sesRows = function () { var d = H.data.ses; return (d && d.r && d.r.sessions) || []; };
