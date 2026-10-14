@@ -745,7 +745,7 @@ console.log('\n18 · no tracked path a Windows checkout cannot write');
 }
 
 /* 19 · T2-WEBPRIMS (14 Oct): ONE HOME PER PRIMITIVE — esc · money · the month words live in app/helpers.js. 79 definitions outside it on 14 Oct
-   (esc 41 · renamed escapers 9 · money 25 · Jan…Dec 3); 6 remain, each named in e2e/prim-homes.cjs ALLOW with its reason. A new copy fails here. */
+   (esc 41 · renamed escapers 9 · money 25 · Jan…Dec 3); 7 remain, each named in e2e/prim-homes.cjs ALLOW with its reason. A new copy fails here. */
 console.log('\n19 · one esc · one money formatter · one month list (app/helpers.js)');
 {
   const { scan, HOME } = require('./prim-homes.cjs');
