@@ -176,8 +176,8 @@ abbr.gl:focus-visible{outline:2px solid var(--blue,#3F66A6);outline-offset:1px}
 /* the two helpers cap-standards.js paints with (it calls esc() and tx() from whatever page loads it); this page is English, so tx() is the identity */
 function tx(s){ return s; }
 /* a row's "go" key → the customer-facing app that is its home. Every other key is a pane of the workshop (app.html) and gets no button
-   (IX0: catalogue · locale · appearance · integrations · readiness · returns wait for their small app — docs/design/INDEX-NOT-APP.md). */
-var HOME = { till: '/till.html', coassists: '/employees.html', task: '/tasks.html', network: '/network.html', identity: '/know-your-business.html' };
+   (IX0: catalogue · locale · appearance · readiness · returns wait for their small app — docs/design/INDEX-NOT-APP.md). */
+var HOME = { till: '/till.html', coassists: '/employees.html', task: '/tasks.html', network: '/network.html', identity: '/know-your-business.html', integrations: '/settings.html#/connectors' };   /* integrations: CB Settings › Connectors (T3-SETTINGS) */
 /* the places stdGoto() (cap-standards.js) sends a reader to: a customer home from the map above, never the workshop; a Settings section has no customer page yet */
 function navTo(k){ if (HOME[k]) location.href = HOME[k]; }
 function setSetSec(){}
