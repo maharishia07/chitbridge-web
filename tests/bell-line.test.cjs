@@ -7,6 +7,7 @@ const fs = require('fs'), path = require('path'), assert = require('assert');
 process.env.TZ = 'Asia/Kolkata';
 globalThis.window = globalThis;
 globalThis.document = { createElement: () => ({ setAttribute() {}, appendChild() {} }), head: { appendChild() {} }, documentElement: { appendChild() {} }, addEventListener() {} };
+require('vm').runInThisContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'helpers.js'), 'utf8'));   /* T2-WEBPRIMS: the page's one esc · fmtMoney */
 eval(fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'rail-bell.js'), 'utf8'));
 const L = globalThis.CBBell.line;
 const o = L({ action: 'delivered', purpose: 'order', direction: 'received', action_by_display_name: 'athi', auto_subject: 'Order from athi — 09 Oct 2026',

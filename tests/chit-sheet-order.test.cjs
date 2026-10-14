@@ -6,7 +6,7 @@
 'use strict';
 const fs = require('fs'), path = require('path'), assert = require('assert');
 globalThis.window = globalThis;
-globalThis.fmtMoney = (n) => '₹' + Number(n).toFixed(2);
+require('vm').runInThisContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'helpers.js'), 'utf8'));   /* T2-WEBPRIMS: the page's one esc · fmtMoney, not a stub */
 globalThis.document = { getElementById: () => null };
 globalThis.counterOfBill = () => '';
 globalThis.chitIsSelf = (en) => en === 'm';

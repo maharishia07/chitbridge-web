@@ -1444,7 +1444,7 @@ function stdGloss(html, o){
     function one(m){
       var g = stdGlossary(m); if (!g) return m;
       var t = g[1] + (g[2] ? ' — ' + g[2] : '');
-      return '<abbr class="gl"' + tab + ' data-gl="' + m + '" title="' + String(t).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;') + '">' + m + '</abbr>';
+      return '<abbr class="gl"' + tab + ' data-gl="' + m + '" title="' + esc(t) + '">' + m + '</abbr>';
     }
     /* a numbered reference (ISO 4217) first, then the single words in what is left */
     var parts = seg.split(STD_REF_RE), refs = seg.match(STD_REF_RE) || [];

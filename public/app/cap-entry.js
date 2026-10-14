@@ -28,7 +28,6 @@ var EN = { step: 1, events: null, ev: null, v: {}, lines: [], pv: null, pvBusy: 
 /* the four kinds of "who / what" field live on step 2; the rest are step 3 — a layout choice, never a rule of the books. A field may name its own step. */
 var EN_STEP2 = { party: 1, ledger: 1, bank: 1, asset_class: 1, loan: 1, lines: 1, choice: 1 };
 
-function enE(v) { return typeof esc === 'function' ? esc(v) : String(v == null ? '' : v).replace(/[<>"&]/g, function (c) { return { '<': '&lt;', '>': '&gt;', '"': '&quot;', '&': '&amp;' }[c]; }); }
 function enCss() {
   if (document.getElementById('en_css')) return;
   var s = document.createElement('style'); s.id = 'en_css';
@@ -60,7 +59,7 @@ function enDlg() {
   var d = document.getElementById('entrysheet'); if (d) return d;
   enCss();
   d = document.createElement('dialog'); d.id = 'entrysheet'; d.setAttribute('aria-label', tx('New entry'));
-  d.innerHTML = '<div class="en-top"><span data-testid="en-title"></span><button type="button" data-testid="en-close" aria-label="' + enE(tx('Close')) + '" onclick="enClose()">✕</button></div><div class="en-dots" id="en_dots"></div><div class="en-body" id="en_body"></div><div class="en-acts" id="en_acts"></div>';
+  d.innerHTML = '<div class="en-top"><span data-testid="en-title"></span><button type="button" data-testid="en-close" aria-label="' + esc(tx('Close')) + '" onclick="enClose()">✕</button></div><div class="en-dots" id="en_dots"></div><div class="en-body" id="en_body"></div><div class="en-acts" id="en_acts"></div>';
   d.addEventListener('close', function () { try { document.documentElement.style.overflow = ''; } catch (_) {} });
   d.addEventListener('click', function (e) { if (e.target === d) enClose(); });
   document.body.appendChild(d);
@@ -108,21 +107,21 @@ function enPaint() {
   if (T) T.textContent = EN.saved ? tx('Saved') : EN.ev ? tx(EN.ev.label) : tx('New entry');
   var order = enSteps();
   dots.innerHTML = EN.saved || EN.denied ? '' : order.map(function (n) { return '<i class="' + (n <= EN.step ? 'on' : '') + '"></i>'; }).join('');
-  if (EN.denied) { body.innerHTML = '<div class="en-warn" data-testid="en-denied">' + enE(tx('Only the owner and co-assists the owner has allowed can add entries. You can read everything.')) + '</div>'; acts.innerHTML = '<button class="en-btn" onclick="enClose()">' + enE(tx('Close')) + '</button>'; return; }
-  if (EN.err) { body.innerHTML = '<div class="en-bad" data-testid="en-err">' + enE(EN.err) + '<button type="button" data-testid="en-retry" onclick="enOpen()">' + enE(tx('Try again')) + '</button></div>'; acts.innerHTML = ''; return; }
-  if (!EN.events) { body.innerHTML = '<div class="loadwrap"><span class="spin"></span> ' + enE(tx('Reading…')) + '</div>'; acts.innerHTML = ''; return; }
+  if (EN.denied) { body.innerHTML = '<div class="en-warn" data-testid="en-denied">' + esc(tx('Only the owner and co-assists the owner has allowed can add entries. You can read everything.')) + '</div>'; acts.innerHTML = '<button class="en-btn" onclick="enClose()">' + esc(tx('Close')) + '</button>'; return; }
+  if (EN.err) { body.innerHTML = '<div class="en-bad" data-testid="en-err">' + esc(EN.err) + '<button type="button" data-testid="en-retry" onclick="enOpen()">' + esc(tx('Try again')) + '</button></div>'; acts.innerHTML = ''; return; }
+  if (!EN.events) { body.innerHTML = '<div class="loadwrap"><span class="spin"></span> ' + esc(tx('Reading…')) + '</div>'; acts.innerHTML = ''; return; }
   if (EN.saved) return enPaintSaved(body, acts);
-  var h = '<h3 data-testid="en-step-' + EN.step + '">' + enE(tx(enStepWord(EN.step))) + '</h3>';
-  if (EN.step === 1) { body.innerHTML = h + enGridHTML(); acts.innerHTML = '<button class="en-btn" onclick="enClose()">' + enE(tx('Cancel')) + '</button>'; return; }
+  var h = '<h3 data-testid="en-step-' + EN.step + '">' + esc(tx(enStepWord(EN.step))) + '</h3>';
+  if (EN.step === 1) { body.innerHTML = h + enGridHTML(); acts.innerHTML = '<button class="en-btn" onclick="enClose()">' + esc(tx('Cancel')) + '</button>'; return; }
   if (EN.step === 4) { body.innerHTML = h + enPreviewHTML(); }
   else body.innerHTML = h + enFormHTML(EN.step);
   enActs();
 }
 function enActs() {
   var acts = document.getElementById('en_acts'), last = EN.step === 4, pv = EN.pv, can = enCanSave();
-  acts.innerHTML = '<button class="en-btn" data-testid="en-back" onclick="enBack()">‹ ' + enE(tx('Back')) + '</button>'
-    + (last ? '<button class="en-btn pri" data-testid="en-save" id="en_save" onclick="enSave(this)"' + (can ? '' : ' disabled') + '>' + enE(tx('Save')) + '</button>'
-            : '<button class="en-btn pri" data-testid="en-next" id="en_next" onclick="enNext()"' + (enStepReady(EN.step) ? '' : ' disabled') + '>' + enE(tx('Next')) + ' ›</button>');
+  acts.innerHTML = '<button class="en-btn" data-testid="en-back" onclick="enBack()">‹ ' + esc(tx('Back')) + '</button>'
+    + (last ? '<button class="en-btn pri" data-testid="en-save" id="en_save" onclick="enSave(this)"' + (can ? '' : ' disabled') + '>' + esc(tx('Save')) + '</button>'
+            : '<button class="en-btn pri" data-testid="en-next" id="en_next" onclick="enNext()"' + (enStepReady(EN.step) ? '' : ' disabled') + '>' + esc(tx('Next')) + ' ›</button>');
 }
 /* Save is on only when the SERVER said the journal balances and refused nothing — the page never works that out itself */
 function enCanSave() { var pv = EN.pv; return !!(pv && pv.balanced === true && !(pv.refusals || []).length && !EN.pvBusy && !EN.saving); }
@@ -135,8 +134,8 @@ function enGridHTML() {
   groups.forEach(function (g) { by[g] = by[g].filter(function (e) { if (e.kind === 'journal') { last = e; return false; } return true; }); });
   return groups.map(function (g, gi) {
     var tiles = by[g].concat(gi === groups.length - 1 && last ? [last] : []);
-    return '<div class="en-sec">' + enE(g ? tx(g) : tx('Your own journal')) + '</div>' + '<div class="en-grid">' + tiles.map(function (ev) {
-      return '<button type="button" class="en-tile" data-testid="en-event-' + enE(ev.id) + '" onclick="enPick(\'' + enE(ev.id) + '\')"><span class="ic" aria-hidden="true">' + enE(ev.icon || '＋') + '</span><span>' + enE(tx(ev.label)) + '</span></button>';
+    return '<div class="en-sec">' + esc(g ? tx(g) : tx('Your own journal')) + '</div>' + '<div class="en-grid">' + tiles.map(function (ev) {
+      return '<button type="button" class="en-tile" data-testid="en-event-' + esc(ev.id) + '" onclick="enPick(\'' + esc(ev.id) + '\')"><span class="ic" aria-hidden="true">' + esc(ev.icon || '＋') + '</span><span>' + esc(tx(ev.label)) + '</span></button>';
     }).join('') + '</div>';
   }).join('');
 }
@@ -167,35 +166,35 @@ function enOptions(f) {
 /** a ledger the shop added itself (the chart carries no role on it) — the server still refuses one outside Loans and advances, in words */
 function enShopLedger(code) { var a = (EN.accounts || []).filter(function (x) { return String(x.code) === String(code); })[0]; return !!a && !a.role; }
 function enLedgerSelect(id, cur, onch, onlyGroup) {
-  var bands = bkLtModel(EN.accounts || []), h = '<option value="">' + enE(tx('Choose…')) + '</option>';
+  var bands = bkLtModel(EN.accounts || []), h = '<option value="">' + esc(tx('Choose…')) + '</option>';
   bands.forEach(function (b) {
     var gs = b.groups.filter(function (g) { return !onlyGroup || g.title === onlyGroup; }); var inner = '', own = onlyGroup === 'Stock & advances';
-    gs.forEach(function (g) { g.accts.forEach(function (a) { if (own && !enShopLedger(a.code)) return; inner += '<option value="' + enE(a.code) + '"' + (a.code === cur ? ' selected' : '') + '>' + enE(a.code + ' · ' + a.name) + '</option>'; }); });
-    if (inner) h += '<optgroup label="' + enE(tx(b.title)) + '">' + inner + '</optgroup>';
+    gs.forEach(function (g) { g.accts.forEach(function (a) { if (own && !enShopLedger(a.code)) return; inner += '<option value="' + esc(a.code) + '"' + (a.code === cur ? ' selected' : '') + '>' + esc(a.code + ' · ' + a.name) + '</option>'; }); });
+    if (inner) h += '<optgroup label="' + esc(tx(b.title)) + '">' + inner + '</optgroup>';
   });
   return '<select id="' + id + '" onchange="' + onch + '">' + h + '</select>';
 }
 function enFieldHTML(f) {
   var k = f.key, v = EN.v[k] == null ? '' : EN.v[k], lab = tx(f.label || EN_LABEL[k] || ({ party: 'Who', ledger: 'Which ledger', bank: 'Which bank', asset_class: 'What kind', loan: 'Which loan', amount: 'How much', date: 'Date', paid_by: 'Paid by', doc_no: 'Bill / receipt no.', photo: 'Photo of the paper', narration: 'Note', text: k })[f.kind] || k), tid = 'en-f-' + k;
-  var wrap = function (inner) { return '<label class="en-f"><span>' + enE(lab) + '</span>' + inner + '</label>'; };
-  var on = 'enSet(\'' + enE(k) + '\',this.value)';
-  if (f.kind === 'pick' && f.pick === 'ledger') return '<label class="en-f"><span>' + enE(lab) + '</span>' + enLedgerSelect(tid, v, on, 'Stock & advances').replace('<select ', '<select data-testid="' + tid + '" ')  + '</label>';
+  var wrap = function (inner) { return '<label class="en-f"><span>' + esc(lab) + '</span>' + inner + '</label>'; };
+  var on = 'enSet(\'' + esc(k) + '\',this.value)';
+  if (f.kind === 'pick' && f.pick === 'ledger') return '<label class="en-f"><span>' + esc(lab) + '</span>' + enLedgerSelect(tid, v, on, 'Stock & advances').replace('<select ', '<select data-testid="' + tid + '" ')  + '</label>';
   if (f.kind === 'pick') return wrap(enSelect(tid, enOptions(f), v, on));
-  if (f.kind === 'ledger') return '<label class="en-f"><span>' + enE(lab) + '</span>' + enLedgerSelect(tid, v, on).replace('<select ', '<select data-testid="' + tid + '" ') + '</label>';
-  if (f.kind === 'bank') return '<label class="en-f"><span>' + enE(lab) + '</span>' + (enOptions(f).length ? enSelect(tid, enOptions(f), v, on) : enLedgerSelect(tid, v, on, 'Cash & bank').replace('<select ', '<select data-testid="' + tid + '" ')) + '</label>';
-  if (f.kind === 'party' || f.kind === 'asset_class' || f.kind === 'loan' || f.kind === 'choice') { var o = enOptions(f); return o.length ? wrap(enSelect(tid, o, v, on)) : wrap('<input data-testid="' + tid + '" value="' + enE(v) + '" oninput="' + on + '">'); }
+  if (f.kind === 'ledger') return '<label class="en-f"><span>' + esc(lab) + '</span>' + enLedgerSelect(tid, v, on).replace('<select ', '<select data-testid="' + tid + '" ') + '</label>';
+  if (f.kind === 'bank') return '<label class="en-f"><span>' + esc(lab) + '</span>' + (enOptions(f).length ? enSelect(tid, enOptions(f), v, on) : enLedgerSelect(tid, v, on, 'Cash & bank').replace('<select ', '<select data-testid="' + tid + '" ')) + '</label>';
+  if (f.kind === 'party' || f.kind === 'asset_class' || f.kind === 'loan' || f.kind === 'choice') { var o = enOptions(f); return o.length ? wrap(enSelect(tid, o, v, on)) : wrap('<input data-testid="' + tid + '" value="' + esc(v) + '" oninput="' + on + '">'); }
   if (f.kind === 'amount') return wrap(bkMoneyInput({ id: tid, text: v == null ? '' : String(v), on: on, extra: 'onchange="enCheckDate()"' }));
-  if (f.kind === 'date') return wrap('<input data-testid="' + tid + '" type="date" value="' + enE(v) + '" onchange="enSet(\'date\',this.value);enCheckDate()">') + '<div id="en_dateref">' + enRefusalHTML(EN.dateRef) + '</div>';
+  if (f.kind === 'date') return wrap('<input data-testid="' + tid + '" type="date" value="' + esc(v) + '" onchange="enSet(\'date\',this.value);enCheckDate()">') + '<div id="en_dateref">' + enRefusalHTML(EN.dateRef) + '</div>';
   if (f.kind === 'paid_by') {
     var m = (f.options && f.options.length ? enOptions(f) : [{ v: 'cash', l: tx('Cash') }, { v: 'bank', l: tx('Bank') }, { v: 'upi', l: tx('UPI') }, { v: 'cheque', l: tx('Cheque') }]);
-    return wrap(enSelect(tid, m, v, 'enSet(\'paid_by\',this.value);enPaintKeep()')) + (v === 'cheque' ? '<label class="en-f"><span>' + enE(tx('Cheque no.')) + '</span><input data-testid="en-f-cheque_no" value="' + enE(EN.v.cheque_no || '') + '" oninput="enSet(\'cheque_no\',this.value)"></label><label class="en-f"><span>' + enE(tx('Cheque date')) + '</span><input data-testid="en-f-cheque_date" type="date" value="' + enE(EN.v.cheque_date || '') + '" onchange="enSet(\'cheque_date\',this.value)"></label>' : '');
+    return wrap(enSelect(tid, m, v, 'enSet(\'paid_by\',this.value);enPaintKeep()')) + (v === 'cheque' ? '<label class="en-f"><span>' + esc(tx('Cheque no.')) + '</span><input data-testid="en-f-cheque_no" value="' + esc(EN.v.cheque_no || '') + '" oninput="enSet(\'cheque_no\',this.value)"></label><label class="en-f"><span>' + esc(tx('Cheque date')) + '</span><input data-testid="en-f-cheque_date" type="date" value="' + esc(EN.v.cheque_date || '') + '" onchange="enSet(\'cheque_date\',this.value)"></label>' : '');
   }
-  if (f.kind === 'photo') return wrap('<input data-testid="' + tid + '" type="file" accept="image/*,application/pdf" onchange="enPhoto(this)">') + (EN.photo ? '<div class="en-why" data-testid="en-photo-name">📎 ' + enE(EN.photo.name) + '</div>' : '');
+  if (f.kind === 'photo') return wrap('<input data-testid="' + tid + '" type="file" accept="image/*,application/pdf" onchange="enPhoto(this)">') + (EN.photo ? '<div class="en-why" data-testid="en-photo-name">📎 ' + esc(EN.photo.name) + '</div>' : '');
   if (f.kind === 'lines') return enLinesHTML();
-  return wrap('<input data-testid="' + tid + '" value="' + enE(v) + '" oninput="' + on + '">');
+  return wrap('<input data-testid="' + tid + '" value="' + esc(v) + '" oninput="' + on + '">');
 }
-function enSelect(id, opts, cur, onch) { return '<select data-testid="' + id + '" onchange="' + onch + '"><option value="">' + enE(tx('Choose…')) + '</option>' + opts.map(function (o) { return '<option value="' + enE(o.v) + '"' + (String(o.v) === String(cur) ? ' selected' : '') + '>' + enE(o.l) + '</option>'; }).join('') + '</select>'; }
-function enFormHTML(step) { return enFields(step).map(enFieldHTML).join('') || '<div class="en-why">' + enE(tx('Nothing to ask here')) + '</div>'; }
+function enSelect(id, opts, cur, onch) { return '<select data-testid="' + id + '" onchange="' + onch + '"><option value="">' + esc(tx('Choose…')) + '</option>' + opts.map(function (o) { return '<option value="' + esc(o.v) + '"' + (String(o.v) === String(cur) ? ' selected' : '') + '>' + esc(o.l) + '</option>'; }).join('') + '</select>'; }
+function enFormHTML(step) { return enFields(step).map(enFieldHTML).join('') || '<div class="en-why">' + esc(tx('Nothing to ask here')) + '</div>'; }
 function enSet(k, v) { EN.v[k] = v; EN.pv = null; var b = document.getElementById('en_next'); if (b) b.disabled = !enStepReady(EN.step); }
 function enPaintKeep() { enPaint(); }
 function enStepReady(step) {
@@ -216,12 +215,12 @@ function enPhoto(inp) {
 
 /* ── the journal's own lines (the CA's door): ledger · Dr/Cr · amount. The server says whether they balance. ── */
 function enLinesHTML() {
-  return '<div class="en-sec">' + enE(tx('Lines')) + '</div>' + EN.lines.map(function (l, i) {
+  return '<div class="en-sec">' + esc(tx('Lines')) + '</div>' + EN.lines.map(function (l, i) {
     return '<div class="en-ln" data-testid="en-line-' + i + '">' + enLedgerSelect('en_lc' + i, l.code, 'enLine(' + i + ',\'code\',this.value)').replace('<select ', '<select data-testid="en-line-code-' + i + '" ')
       + '<select data-testid="en-line-side-' + i + '" onchange="enLine(' + i + ',\'side\',this.value)"><option value="dr"' + (l.side === 'dr' ? ' selected' : '') + '>Dr</option><option value="cr"' + (l.side === 'cr' ? ' selected' : '') + '>Cr</option></select>'
       + bkMoneyInput({ id: 'en-line-amt-' + i, text: l.amt == null ? '' : String(l.amt), on: 'enLine(' + i + ',\'amt\',this.value)' })
-      + '<button type="button" class="en-btn" style="padding:0" aria-label="' + enE(tx('Remove')) + '" data-testid="en-line-del-' + i + '" onclick="enLineDel(' + i + ')"' + (EN.lines.length <= 2 ? ' disabled' : '') + '>✕</button></div>';
-  }).join('') + '<button type="button" class="en-btn" data-testid="en-line-add" onclick="enLineAdd()">＋ ' + enE(tx('Add a line')) + '</button>';
+      + '<button type="button" class="en-btn" style="padding:0" aria-label="' + esc(tx('Remove')) + '" data-testid="en-line-del-' + i + '" onclick="enLineDel(' + i + ')"' + (EN.lines.length <= 2 ? ' disabled' : '') + '>✕</button></div>';
+  }).join('') + '<button type="button" class="en-btn" data-testid="en-line-add" onclick="enLineAdd()">＋ ' + esc(tx('Add a line')) + '</button>';
 }
 function enLine(i, k, v) { EN.lines[i][k] = v; EN.pv = null; var b = document.getElementById('en_next'); if (b) b.disabled = !enStepReady(EN.step); }
 function enLineAdd() { EN.lines.push({ code: '', side: 'dr', amt: '' }); enPaint(); }
@@ -256,7 +255,7 @@ async function enPreview() {
   catch (e) { if (seq !== EN.seq) return; EN.pv = { balanced: false, refusals: [{ code: 'READ', message: bkWhy(e, tx('Could not check this entry')), fix: { label: tx('Try again'), retry: true } }], lines: [] }; }
   EN.pvBusy = false; enPaint2();
 }
-function enPaint2() { var b = document.getElementById('en_body'); if (!b) return; if (EN.step === 4) { b.innerHTML = '<h3 data-testid="en-step-4">' + enE(tx(enStepWord(4))) + '</h3>' + enPreviewHTML(); enActs(); } }
+function enPaint2() { var b = document.getElementById('en_body'); if (!b) return; if (EN.step === 4) { b.innerHTML = '<h3 data-testid="en-step-4">' + esc(tx(enStepWord(4))) + '</h3>' + enPreviewHTML(); enActs(); } }
 /* a locked month is refused the moment the date is picked: the server's answer, shown under the date */
 async function enCheckDate() {
   var seq = ++EN.seq, d = EN.v.date; EN.dateRef = null;
@@ -275,28 +274,28 @@ function enFixGo(i, w) {
 /* every refusal and every warning carries a button that takes the person to the fix */
 function enRefusalHTML(list, w) {
   w = w || 'date';
-  return (list || []).map(function (x, i) { return '<div class="en-bad" data-testid="en-refusal-' + enE(x.code || i) + '">' + enE(x.message) + '<button type="button" data-testid="en-fix-' + enE(x.code || i) + '" onclick="enFixGo(' + i + ',\'' + w + '\')">' + enE((x.fix && x.fix.label) || tx('Change it')) + '</button></div>'; }).join('');
+  return (list || []).map(function (x, i) { return '<div class="en-bad" data-testid="en-refusal-' + esc(x.code || i) + '">' + esc(x.message) + '<button type="button" data-testid="en-fix-' + esc(x.code || i) + '" onclick="enFixGo(' + i + ',\'' + w + '\')">' + esc((x.fix && x.fix.label) || tx('Change it')) + '</button></div>'; }).join('');
 }
 function enWarnHTML(list) {
-  return (list || []).map(function (x, i) { return '<div class="en-warn" data-testid="en-warning-' + enE(x.code || i) + '">' + enE(x.message) + '<button type="button" data-testid="en-wfix-' + enE(x.code || i) + '" onclick="enFixGo(' + i + ',\'warnings\')">' + enE((x.fix && x.fix.label) || tx('Change it')) + '</button></div>'; }).join('');
+  return (list || []).map(function (x, i) { return '<div class="en-warn" data-testid="en-warning-' + esc(x.code || i) + '">' + esc(x.message) + '<button type="button" data-testid="en-wfix-' + esc(x.code || i) + '" onclick="enFixGo(' + i + ',\'warnings\')">' + esc((x.fix && x.fix.label) || tx('Change it')) + '</button></div>'; }).join('');
 }
 function enLineHTML(l, c) {
-  var rate = l.rate != null && l.rate !== '' ? ' ' + enE(String(l.rate)) + '%' : '';
-  return '<div data-testid="en-pline-' + enE(l.code) + '">' + CBList.nextRow(['<span class="mono">' + enE(l.code) + '</span> ' + enE(l.name) + rate + (l.party_name ? ' · ' + enE(l.party_name) : ''),
-      l.dr_minor ? enE(bkMoney(l.dr_minor, c)) : '', l.cr_minor ? enE(bkMoney(l.cr_minor, c)) : ''], [110, 110])
-    + '<div class="en-why" data-testid="en-prule-' + enE(l.code) + '"><span class="en-chip" data-testid="en-ptype-' + enE(l.code) + '">' + enE(tx(l.type || '')) + '</span> ' + enE(l.rule || '') + '</div></div>';
+  var rate = l.rate != null && l.rate !== '' ? ' ' + esc(String(l.rate)) + '%' : '';
+  return '<div data-testid="en-pline-' + esc(l.code) + '">' + CBList.nextRow(['<span class="mono">' + esc(l.code) + '</span> ' + esc(l.name) + rate + (l.party_name ? ' · ' + esc(l.party_name) : ''),
+      l.dr_minor ? esc(bkMoney(l.dr_minor, c)) : '', l.cr_minor ? esc(bkMoney(l.cr_minor, c)) : ''], [110, 110])
+    + '<div class="en-why" data-testid="en-prule-' + esc(l.code) + '"><span class="en-chip" data-testid="en-ptype-' + esc(l.code) + '">' + esc(tx(l.type || '')) + '</span> ' + esc(l.rule || '') + '</div></div>';
 }
 function enPreviewHTML() {
-  var pv = EN.pv; if (!pv) return '<div class="loadwrap"><span class="spin"></span> ' + enE(tx('Checking…')) + '</div>';
+  var pv = EN.pv; if (!pv) return '<div class="loadwrap"><span class="spin"></span> ' + esc(tx('Checking…')) + '</div>';
   var c = pv.currency, v = pv.voucher || {};
   var grey = 'color:var(--grey);font-size:var(--fs-1);text-transform:uppercase';
-  return '<div style="margin-bottom:8px"><span class="en-chip" data-testid="en-voucher">' + enE((v.series || 'MJ') + (v.kind ? ' · ' + tx(v.kind) : '')) + '</span> '
+  return '<div style="margin-bottom:8px"><span class="en-chip" data-testid="en-voucher">' + esc((v.series || 'MJ') + (v.kind ? ' · ' + tx(v.kind) : '')) + '</span> '
     /* WX-R2R: a refused entry with no lines has no two sides — the refusal (with its fix) is the one thing said; "do not match" sent the owner to the amounts when the DATE was the fix */
-    + (pv.balanced === true ? '<span class="en-ok" data-testid="en-balanced">✓ ' + enE(tx('Both sides match')) + '</span>' : (pv.refusals || []).length && !(pv.lines || []).length ? '' : '<b data-testid="en-unbalanced" style="color:var(--red-i,#8E3517)">' + enE(tx('The two sides do not match')) + '</b>') + '</div>'
+    + (pv.balanced === true ? '<span class="en-ok" data-testid="en-balanced">✓ ' + esc(tx('Both sides match')) + '</span>' : (pv.refusals || []).length && !(pv.lines || []).length ? '' : '<b data-testid="en-unbalanced" style="color:var(--red-i,#8E3517)">' + esc(tx('The two sides do not match')) + '</b>') + '</div>'
     + enRefusalHTML(pv.refusals, 'refusals') + enWarnHTML(pv.warnings)
-    + '<div style="' + grey + '">' + CBList.nextRow([enE(tx('Code')) + ' · ' + enE(tx('Ledger')), enE(tx('Debit')), enE(tx('Credit'))], [110, 110]) + '</div>'
+    + '<div style="' + grey + '">' + CBList.nextRow([esc(tx('Code')) + ' · ' + esc(tx('Ledger')), esc(tx('Debit')), esc(tx('Credit'))], [110, 110]) + '</div>'
     + (pv.lines || []).map(function (l) { return enLineHTML(l, c); }).join('')
-    + (pv.narration ? '<div class="en-why" style="border:0;margin-top:8px">' + enE(pv.narration) + '</div>' : '');
+    + (pv.narration ? '<div class="en-why" style="border:0;margin-top:8px">' + esc(pv.narration) + '</div>' : '');
 }
 
 /* ── save: one tap, one record ── */
@@ -320,10 +319,10 @@ async function enSave(btn) {
 }
 function enPaintSaved(body, acts) {
   var s = EN.saved, no = s.entry_no || s.no || '';
-  body.innerHTML = '<h3 data-testid="en-saved"><span class="en-ok">✓</span> ' + enE(tx('Saved')) + '</h3><div data-testid="en-saved-no" class="en-chip">' + enE(no) + '</div>'
-    + '<div class="en-why" style="border:0;margin-top:10px">' + enE(tx('It is now in the Day book, Ledgers and Trial balance.')) + '</div>';
-  acts.innerHTML = '<button class="en-btn" data-testid="en-reverse-now" onclick="enReverse(\'' + enE(s.entry_id || s.id || '') + '\',\'' + enE(no) + '\',true)">↩ ' + enE(tx('Reverse this entry')) + '</button>'
-    + '<button class="en-btn pri" data-testid="en-done" onclick="enClose()">' + enE(tx('Done')) + '</button>';
+  body.innerHTML = '<h3 data-testid="en-saved"><span class="en-ok">✓</span> ' + esc(tx('Saved')) + '</h3><div data-testid="en-saved-no" class="en-chip">' + esc(no) + '</div>'
+    + '<div class="en-why" style="border:0;margin-top:10px">' + esc(tx('It is now in the Day book, Ledgers and Trial balance.')) + '</div>';
+  acts.innerHTML = '<button class="en-btn" data-testid="en-reverse-now" onclick="enReverse(\'' + esc(s.entry_id || s.id || '') + '\',\'' + esc(no) + '\',true)">↩ ' + esc(tx('Reverse this entry')) + '</button>'
+    + '<button class="en-btn pri" data-testid="en-done" onclick="enClose()">' + esc(tx('Done')) + '</button>';
 }
 
 /* ── Reverse this entry: a plain confirm, then the mirror entry (insert-only) ── */
@@ -336,8 +335,8 @@ function enPaintSaved(body, acts) {
 function enReverse(id, no, fromSheet, done) {
   if (!id) return;
   EN.why = '';
-  var body = enE(txf('{no} stays as it is. A new entry that cancels it is added.', { no: no || '' }))
-    + '<input class="inp" id="en_reason" data-testid="en-reason" placeholder="' + enE(tx('Reason')) + '" aria-label="' + enE(tx('Reason')) + '" maxlength="120" style="margin-top:8px" oninput="EN.why=this.value">';
+  var body = esc(txf('{no} stays as it is. A new entry that cancels it is added.', { no: no || '' }))
+    + '<input class="inp" id="en_reason" data-testid="en-reason" placeholder="' + esc(tx('Reason')) + '" aria-label="' + esc(tx('Reason')) + '" maxlength="120" style="margin-top:8px" oninput="EN.why=this.value">';
   confirmAsk(tx('Reverse this entry?'), body, tx('Reverse'), function () {
     var why = String(EN.why || '').trim() || tx(fromSheet ? 'Reversed from the Day book' : 'Reversed from the row');
     bkOnce('rev-' + id, null, async function () {

@@ -114,8 +114,8 @@ function testToolTag(name, path) {
 /** ⭐ ONE WAY TO SAY WHICH SCREEN, EVERYWHERE: the ID first, because that is the part that travels. */
 function testScreenLabel(code, name) {
   var n = name || (typeof codeName === 'function' ? (codeName(code) || '') : '');
-  return '<code style="font-weight:700">' + testEsc(code || '?') + '</code>'
-    + (n ? ' <span style="font-weight:400">\u00b7 ' + testEsc(n) + '</span>' : '');
+  return '<code style="font-weight:700">' + esc(code || '?') + '</code>'
+    + (n ? ' <span style="font-weight:400">\u00b7 ' + esc(n) + '</span>' : '');
 }
 
 var CBTEST = { on: false, cases: [], last: {}, area: '', kind: '', open: null, run: null, busy: false, adding: false, stale: {}, cover: [], suggest: null };
@@ -346,7 +346,7 @@ async function testLoad(force) {
     });
   } catch (e) {
     /* ⚠️ a toast fades in four seconds; the reason a read failed has to stay until it is dealt with */
-    CBTEST.notice = { tone: 'bad', text: 'Could not read the test cases \u2014 ' + testEsc(e.message) };
+    CBTEST.notice = { tone: 'bad', text: 'Could not read the test cases \u2014 ' + esc(e.message) };
     if (typeof toast === 'function') toast(tx('Could not read the test cases') + ' — ' + e.message, true);
   }
   CBTEST.busy = false;
@@ -543,10 +543,6 @@ function testPanelOpen() {
   testLoad();
 }
 
-function testEsc(s) {
-  return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
-    return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; });
-}
 /**
  * ── ⚠️⚠️⚠️ A VALUE GOING INTO onclick="fn('HERE')" IS IN TWO NESTED LANGUAGES ──────────────────────────────
  *
@@ -570,7 +566,7 @@ function testEsc(s) {
  * [[feedback-check-after-the-wire]]
  */
 function testJs(s) {
-  return testEsc(String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/'/g, "\\'"));
+  return esc(String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/'/g, "\\'"));
 }
 function testAgo(iso) {
   if (!iso) return '';
@@ -968,7 +964,7 @@ function testPaint() {
     +     'style="font-size:var(--fs-1);color:' + (CBTEST.area || CBTEST.kind
               ? 'var(--blue,#3F66A6)' : 'var(--grey-4,#646A72)')
     +     ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:14em">'
-    +     testEsc([CBTEST.kind, CBTEST.area].filter(Boolean).join(' \u00b7 ') || 'All areas') + '</span>'
+    +     esc([CBTEST.kind, CBTEST.area].filter(Boolean).join(' \u00b7 ') || 'All areas') + '</span>'
     +   '<button data-testid="test-setup" title="Setup \u2014 who is testing, which run, focus, size" '
     +     'onclick="testSetupToggle()" style="' + ico
     +     (CBTEST.setup ? ';background:var(--ink,#0F2E3D);color:var(--card,#fff);'
@@ -1005,7 +1001,7 @@ function testPaint() {
           if (!on.length) return '';
           return '<div style="flex:1 1 100%;font-size:var(--fs-1);color:var(--blue,#3F66A6);margin-top:3px">'
             + '<b>' + shown.length + '</b> of ' + CBTEST.cases.length + ' \u00b7 filtered by '
-            + testEsc(on.join(' \u00b7 '))
+            + esc(on.join(' \u00b7 '))
             + '</div>';
         })()
     + '</div>'
@@ -1098,7 +1094,7 @@ function testPaint() {
       })()
     + (CBTEST.run.label
         ? '<div style="margin-top:3px;font-size:var(--fs-1);color:var(--grey-2,#545A61)">Recording into: '
-          + testEsc(CBTEST.run.label) + '</div>'
+          + esc(CBTEST.run.label) + '</div>'
         : '')
     /* ⭐ THE COUNTDOWN. Naming the area and the number left is what turns "please test the suppliers screen"
        into something a person can finish. ⚠️ It reports the gap for the WHOLE board, not this run, because
@@ -1109,10 +1105,10 @@ function testPaint() {
         var done = a.total - a.untested;
         return '<div style="margin-top:5px;font-size:var(--fs-1);padding:4px 7px;border-radius:6px;'
           + (a.untested ? 'background:var(--warn-tint);color:var(--warn-2)' : 'background:var(--ok-tint);color:var(--ok-2)')
-          + '">Focus ' + testEsc(a.module_key) + ' \u00b7 ' + done + ' of ' + a.total
+          + '">Focus ' + esc(a.module_key) + ' \u00b7 ' + done + ' of ' + a.total
           + (a.untested ? ' \u00b7 ' + a.untested + ' still to run' : ' \u00b7 all run') + '</div>';
       })() : (CBTEST.suggest ? '<div style="margin-top:5px;font-size:var(--fs-1);color:var(--warn-2)">'
-          + 'Nothing has been run in ' + testEsc(CBTEST.suggest) + ' yet.</div>' : ''))
+          + 'Nothing has been run in ' + esc(CBTEST.suggest) + ' yet.</div>' : ''))
     + '';
 
   /* ⚠️ THE HEAD IS WRITTEN SEPARATELY so that minimising can hide the body and keep this. */
@@ -1331,21 +1327,21 @@ function testPaint() {
            * ⭐ min-width:0 lets the flex item shrink at all (it defaults to auto, which is why it did not), and
            * the ellipsis keeps the start of the key, which is the half that identifies it.
            */
-          +   '<span title="' + testEsc(gk) + '" style="font-family:ui-monospace,Menlo,monospace;'
+          +   '<span title="' + esc(gk) + '" style="font-family:ui-monospace,Menlo,monospace;'
           +     'font-size:var(--fs-1);font-weight:700;min-width:0;'
           +     'background:var(--ink,#0F2E3D);color:var(--card,#fff);border-radius:4px;padding:1px 5px;'
-          +     'white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + testEsc(gk) + '</span>'
+          +     'white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(gk) + '</span>'
           + '</span>'
           + '<span style="font-size:var(--fs-2);min-width:0;overflow:hidden;display:flex;gap:6px;'
           + 'align-items:baseline">'
           +   '<span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'
-          +     testEsc(list[0].module_name || '') + '</span>'
+          +     esc(list[0].module_name || '') + '</span>'
           /**
            * ⭐ ADD A CASE HERE. ⚠️ stopPropagation is not optional: this sits inside the row's fold handler, so
            * without it pressing + would also collapse the area you were adding to — the exact double-fire
            * already fixed once on the Report's drill-down numbers.
            */
-          +   '<button title="Add a case to ' + testEsc(gk) + '" '
+          +   '<button title="Add a case to ' + esc(gk) + '" '
           +     'onclick="event.stopPropagation();testAddOpen(\'' + testJs(gk) + '\')" '
           +     'style="flex:0 0 auto;border:1px solid var(--grey-4,#646A72);background:var(--card,#fff);'
           +     'color:var(--grey-2,#545A61);border-radius:5px;font:inherit;font-size:var(--fs-1);'
@@ -1413,7 +1409,7 @@ function testPaint() {
         +  '<div onclick="testOpen(\'' + testJs(c.case_key) + '\')" style="display:grid;'
         +    'grid-template-columns:' + TEST_ROW_COLS + ';gap:7px;align-items:baseline;'
         +    'padding:7px 9px;cursor:pointer">'
-        +    '<span title="' + testEsc(c.case_key) + '" style="font-family:ui-monospace,Menlo,monospace;'
+        +    '<span title="' + esc(c.case_key) + '" style="font-family:ui-monospace,Menlo,monospace;'
         +      'font-size:var(--fs-1);font-weight:700;'
         +      'background:' + (col ? col[1] : 'var(--neutral-tint)') + ';color:' + (col ? col[0] : 'var(--grey-2)')
         +      ';border-radius:4px;padding:2px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'
@@ -1421,14 +1417,14 @@ function testPaint() {
            twenty-two characters on a hundred rows — it identifies nothing and costs the width the title needs.
            ⚠ NOT ellipsised from the left with direction:rtl, which is what I reached for first: that reorders
            the slashes in a path and produces `js.x/stpircs/` — the exact bidi trap already written down. */
-        +      '">' + testEsc(testShortKey(c.case_key)) + '</span>'
+        +      '">' + esc(testShortKey(c.case_key)) + '</span>'
         +    '<span style="min-width:0;font-size:var(--fs-2);line-height:1.35;overflow:hidden;'
         +      'text-overflow:ellipsis;white-space:nowrap'
         /* ⚠ 244 of the automated files state no claim in their header. Repeating the filename in the title
            column — `akums-demo.js   akums-demo.js` — fills the row with nothing and hides the fact. */
         +      (c.automated && !c.claim ? ';color:var(--grey-2);font-style:italic' : '') + '">'
         /* ⭐ name the FILE and the fix — "no claim written in the file" named neither (Athi, 2026-09-12) */
-        +      testEsc(c.automated && !c.claim
+        +      esc(c.automated && !c.claim
                 ? '\u26a0 no heading in ' + String(c.case_key).split('/').pop()
                 : (c.title || ''))
         /**
@@ -1445,20 +1441,20 @@ function testPaint() {
          * would be a category error dressed as a hint.
          */
         +      (c.menu && testScreenName(c.menu)
-        ? '<span style="color:var(--grey-4,#646A72);font-weight:400"> \u00b7 ' + testEsc(testScreenName(c.menu))
+        ? '<span style="color:var(--grey-4,#646A72);font-weight:400"> \u00b7 ' + esc(testScreenName(c.menu))
           + '</span>' : '')
         +      '</span>'
 
         /* ⭐ the KIND in its own track — see the note on the grid */
         +    '<span style="font-size:var(--fs-1);color:var(--grey-2);white-space:nowrap;overflow:hidden;'
         +      'text-overflow:ellipsis" title="What kind of test this is">'
-        +      testEsc(c.test_type || '\u2014') + '</span>'
+        +      esc(c.test_type || '\u2014') + '</span>'
         /* ⭐ the verdict, in its own column, so it is always in the same place on every row */
         +    '<span style="font-size:var(--fs-1);white-space:nowrap;font-weight:' + (l ? '700' : '400') + ';'
         +      'color:' + (col ? col[0] : 'var(--grey-2)') + '">'
-        +      (l ? testEsc(l.status.toUpperCase()) : 'not run')
+        +      (l ? esc(l.status.toUpperCase()) : 'not run')
         +      '<span style="font-weight:400;color:var(--grey-2);margin-inline-start:5px">'
-        +      (l ? testEsc(testAgo(l.at)) : '') + '</span>'
+        +      (l ? esc(testAgo(l.at)) : '') + '</span>'
         /**
          * ⭐ AND WHAT WOULD MAKE IT GREEN, under the verdict rather than beside it — the panel has no width to
          * spare, and this is the line a tester acts on.
@@ -1467,13 +1463,13 @@ function testPaint() {
          */
         +      (typeof testVerdictLabel === 'function' && l && l.status !== 'pass'
                 ? '<span style="display:block;font-weight:400;font-size:var(--fs-1);color:var(--grey-2)" title="'
-                  + testEsc(testVerdict(c, l).why) + '">' + testEsc(testVerdictLabel(c, l)) + '</span>'
+                  + esc(testVerdict(c, l).why) + '">' + esc(testVerdictLabel(c, l)) + '</span>'
                 : '')
         +      '</span>'
         /* ⚠️ THE SPEC MOVED, SO THE CASE IS SUSPECT — said on the row, not hidden behind a filter. A green
            case whose clause has changed is the most misleading thing a board can show. */
         + (CBTEST.stale[c.case_key]
-            ? '<span title="' + testEsc('The clause this case proves has changed since it was written — '
+            ? '<span title="' + esc('The clause this case proves has changed since it was written — '
                 + 'clause ' + CBTEST.stale[c.case_key].clause + ' is now v' + CBTEST.stale[c.case_key].clause_now
                 + ', this case cites v' + CBTEST.stale[c.case_key].cited_version + '.')
               + '" style="font-size:var(--fs-1);background:var(--warn-tint);color:var(--warn-2);border-radius:4px;'
@@ -1699,15 +1695,15 @@ function testReqFormHTML() {
     +   '<select id="reqPri" style="' + inp + ';width:auto;margin:0">'
     +     '<option>High</option><option selected>Medium</option><option>Low</option></select>'
     +   '<input id="reqCase" style="' + inp + ';width:auto;flex:1;margin:0" placeholder="from case (optional)" value="'
-    +     testEsc(CBTEST.focusCase || '') + '">'
+    +     esc(CBTEST.focusCase || '') + '">'
     /* ⚠️ SHOWN, NOT SILENT. Capturing where somebody is standing without telling them is the kind of quiet
        cleverness that makes people distrust a tool — it says what it will record, before they press Raise. */
     + '</div><div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);margin-top:5px">'
     +   (typeof screenCode === 'function' && screenCode()
-        ? 'Recorded against <b>' + testEsc(screenCode()) + '</b>'
+        ? 'Recorded against <b>' + esc(screenCode()) + '</b>'
         : 'No screen code here — this one will be recorded without it')
     +   (document.querySelector('[data-testid="popup-code"]')
-        ? ' and <b>' + testEsc(String(document.querySelector('[data-testid="popup-code"]').textContent).trim()) + '</b>'
+        ? ' and <b>' + esc(String(document.querySelector('[data-testid="popup-code"]').textContent).trim()) + '</b>'
         : '')
     +   '<button onclick="testReqSend()" style="' + base + 'font-weight:700">Raise</button>'
     +   '<button onclick="testReqForm(0)" style="' + base + '">Cancel</button>'
@@ -1759,12 +1755,12 @@ function testReqHTML() {
       var n = d && d.counts ? (x[0] === 'open' ? d.open : (x[0] === 'all' ? d.total : d.counts[x[0]])) : null;
       return '<button data-testid="reqf-' + x[0] + '" onclick="testReqFilter(\'' + x[0] + '\')" '
         + 'style="' + TEST_CHIP + (on ? TEST_CHIP_ON : TEST_CHIP_OFF) + '">'
-        + testEsc(x[1]) + (n == null ? '' : ' <b>' + n + '</b>') + '</button>';
+        + esc(x[1]) + (n == null ? '' : ' <b>' + n + '</b>') + '</button>';
     }).join('');
 
   var h = testReqFormHTML() + '<div style="margin:6px 0 8px">' + chips + '</div>';
   if (CBTEST.reqBusy) return h + '<div style="color:var(--grey-4,#646A72);font-size:var(--fs-1)">reading…</div>';
-  if (CBTEST.reqErr) return h + '<div style="color:var(--disp);font-size:var(--fs-1)">' + testEsc(CBTEST.reqErr) + '</div>';
+  if (CBTEST.reqErr) return h + '<div style="color:var(--disp);font-size:var(--fs-1)">' + esc(CBTEST.reqErr) + '</div>';
   var list = (d && d.requirements) || [];
   if (!list.length) {
     /* ⚠️ AN EMPTY LIST SAYS WHICH EMPTY IT IS. "Nothing raised yet" and "nothing left to action" are different
@@ -1838,7 +1834,7 @@ function testScreenCode(menu) {
     var code = window.CBSCREENS.byPath[String(menu)];
     return code ? '<code style="font-family:\'Space Mono\',ui-monospace,monospace;font-size:var(--fs-1);'
       + 'color:var(--grey-2);background:var(--neutral-tint);border-radius:5px;padding:0 5px;user-select:all;'
-      + 'margin-inline-end:5px" title="' + testEsc(String(menu)) + '">' + testEsc(code) + '</code>' : '';
+      + 'margin-inline-end:5px" title="' + esc(String(menu)) + '">' + esc(code) + '</code>' : '';
   } catch (_) { return ''; }
 }
 
@@ -1891,10 +1887,10 @@ function testAsk(question, hint, okLabel) {
     CBTEST._askDone = finish;
     var inp = 'width:100%;font:inherit;font-size:var(--fs-2);padding:7px 9px;border:1px solid '
       + 'var(--grey-4,#646A72);border-radius:8px;background:var(--card,#fff);box-sizing:border-box';
-    modal('<div class="mhead"><b>' + testEsc(question) + '</b></div>'
+    modal('<div class="mhead"><b>' + esc(question) + '</b></div>'
       + '<div class="mbody">'
       + (hint ? '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-bottom:6px">'
-          + testEsc(hint) + '</div>' : '')
+          + esc(hint) + '</div>' : '')
       + '<textarea id="cbaskbox" rows="3" style="' + inp + '"></textarea></div>'
       + '<div class="mfoot">'
       + '<button class="pri" data-testid="ask-ok" onclick="testAskOk()">' + (okLabel || 'Save') + '</button> '
@@ -2030,7 +2026,7 @@ function testIncFormHTML() {
     +   '<button onclick="testIncSend()" style="' + btn + '">Record</button>'
     +   '<button onclick="testIncForm(false)" style="' + btn + '">Cancel</button>'
     +   '<span style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">Recorded against '
-    +     (sc ? '<code>' + testEsc(sc) + '</code>' : 'no screen') + ' \u00b7 now</span>'
+    +     (sc ? '<code>' + esc(sc) + '</code>' : 'no screen') + ' \u00b7 now</span>'
     + '</div></div>';
 }
 function testIncForm(on) { CBTEST.incForm = !!on; testPaint(); }
@@ -2078,7 +2074,7 @@ function testIncHTML() {
       var n = d && d.counts ? (x[0] === 'open' ? d.open : (x[0] === 'all' ? d.total : d.counts[x[0]])) : null;
       return '<button data-testid="incf-' + x[0] + '" onclick="testIncFilter(\'' + x[0] + '\')" '
         + 'style="' + TEST_CHIP + (on ? TEST_CHIP_ON : TEST_CHIP_OFF) + '">'
-        + testEsc(x[1]) + (n == null ? '' : ' <b>' + n + '</b>') + '</button>';
+        + esc(x[1]) + (n == null ? '' : ' <b>' + n + '</b>') + '</button>';
     }).join('');
 
   /* ⭐ THE ONE LINE A RELEASE GATE ASKS FOR, above the list rather than inside it: how many open, at what
@@ -2094,7 +2090,7 @@ function testIncHTML() {
   var h = testIncFormHTML() + gate + '<div style="margin:6px 0 8px">' + chips + '</div>';
   if (CBTEST.incBusy) return h + '<div style="color:var(--grey-4,#646A72);font-size:var(--fs-1)">reading\u2026</div>';
   if (CBTEST.incErr) {
-    return h + '<div style="color:var(--disp);font-size:var(--fs-1)">' + testEsc(CBTEST.incErr) + '</div>';
+    return h + '<div style="color:var(--disp);font-size:var(--fs-1)">' + esc(CBTEST.incErr) + '</div>';
   }
   var list = (d && d.incidents) || [];
   if (!list.length) {
@@ -2145,36 +2141,36 @@ function testIncHTML() {
     /* ⭐ THE TWO DURATIONS, SHOWN ONLY WHEN THEY SAY SOMETHING. "0 min unnoticed" is noise on a row somebody
        recorded while it was happening; an hour unnoticed is the whole story of that incident. */
     var clock = '';
-    if (q.unnoticed_mins) clock += testEsc(q.unnoticed_mins + ' min before anybody knew');
-    if (q.open_mins) clock += (clock ? ' \u00b7 ' : '') + testEsc(q.open_mins + ' min to resolve');
+    if (q.unnoticed_mins) clock += esc(q.unnoticed_mins + ' min before anybody knew');
+    if (q.open_mins) clock += (clock ? ' \u00b7 ' : '') + esc(q.open_mins + ' min to resolve');
     var code = function (v) {
       return v ? '<code style="font-family:\'Space Mono\',ui-monospace,monospace;font-size:var(--fs-1);'
-        + 'background:var(--neutral-tint);border-radius:5px;padding:0 5px;user-select:all">' + testEsc(v) + '</code>' : '';
+        + 'background:var(--neutral-tint);border-radius:5px;padding:0 5px;user-select:all">' + esc(v) + '</code>' : '';
     };
     return '<div style="border-bottom:1px solid var(--line,#e7e3d8);padding:7px 0">'
       + '<div style="display:flex;align-items:baseline;gap:7px;flex-wrap:wrap">'
       +   '<b style="color:' + (SEV[q.severity] || SEV['Sev-3']) + ';font-size:var(--fs-1)" title="'
-      +     testEsc(q.severity_means || '') + '">' + testEsc(q.severity) + '</b>'
-      +   '<code style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + testEsc(q.ref) + '</code>'
+      +     esc(q.severity_means || '') + '">' + esc(q.severity) + '</b>'
+      +   '<code style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + esc(q.ref) + '</code>'
       +   '<span style="font-size:var(--fs-1);background:var(--neutral-tint,#f2efe6);border-radius:5px;'
-      +     'padding:1px 6px">' + testEsc(q.state) + '</span>'
+      +     'padding:1px 6px">' + esc(q.state) + '</span>'
       +   code(q.screen_code) + code(q.popup_code)
-      +   (q.affected ? '<span style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + testEsc(q.affected)
+      +   (q.affected ? '<span style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + esc(q.affected)
             + '</span>' : '')
       + '</div>'
-      + '<div style="font-size:var(--fs-2);margin-top:2px">' + testEsc(q.observed) + '</div>'
+      + '<div style="font-size:var(--fs-2);margin-top:2px">' + esc(q.observed) + '</div>'
       /* ⭐ THE SEVERITY IN WORDS, not only its number: "Sev-2" means whatever the reader assumes. */
       + '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);margin-top:2px">'
-      +   testEsc(q.severity_means || '') + (clock ? ' \u00b7 ' + clock : '') + '</div>'
+      +   esc(q.severity_means || '') + (clock ? ' \u00b7 ' + clock : '') + '</div>'
       /* ⭐ THE CHANGE THAT FIXED IT, as a citation into git — never a copy of the commit message. */
       + ((q.changes || []).length ? '<div style="font-size:var(--fs-1);margin-top:2px">fixed by '
-          + q.changes.map(function (c) { return '<code>' + testEsc(String(c.sha).slice(0, 8)) + '</code>'
-              + (c.repo ? ' in ' + testEsc(c.repo) : ''); }).join(' \u00b7 ') + '</div>' : '')
+          + q.changes.map(function (c) { return '<code>' + esc(String(c.sha).slice(0, 8)) + '</code>'
+              + (c.repo ? ' in ' + esc(c.repo) : ''); }).join(' \u00b7 ') + '</div>' : '')
       + (q.why ? '<div style="font-size:var(--fs-1);color:var(--grey-2,#545A61);margin-top:2px">because: '
-          + testEsc(q.why) + '</div>' : '')
+          + esc(q.why) + '</div>' : '')
       + '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);margin-top:3px">'
-      +   testEsc(q.raised_by || 'someone')
-      +   (q.happened_at ? ' \u00b7 ' + testEsc(String(q.happened_at).replace('T', ' ').slice(0, 16)) : '')
+      +   esc(q.raised_by || 'someone')
+      +   (q.happened_at ? ' \u00b7 ' + esc(String(q.happened_at).replace('T', ' ').slice(0, 16)) : '')
       + '</div>'
       /* ⚠️ ON ITS OWN LINE. Buried at the end of a grey "who and when" line, an action reads as more
          metadata — and the thing that looked like a button was the filter at the top of the page. */
@@ -2310,8 +2306,8 @@ function testCtlOptions(code, sel) {
     }).map(function (r) {
       var label = String(r.screen).split(' \u2022 ').pop();
       /* \u2b50 the control chosen in the checklist below arrives here already selected, so the two cannot disagree */
-      return '<option value="' + testEsc(r.code) + '"' + (sel && sel === r.code ? ' selected' : '') + '>'
-        + testEsc(r.code) + ' \u00b7 ' + testEsc(label) + '</option>';
+      return '<option value="' + esc(r.code) + '"' + (sel && sel === r.code ? ' selected' : '') + '>'
+        + esc(r.code) + ' \u00b7 ' + esc(label) + '</option>';
     }).join('');
   } catch (_) { return ''; }
 }
@@ -2423,7 +2419,7 @@ function testControlsHTML(code) {
     return '<div style="' + pad + ';border-top:1px solid var(--line,#efece4);margin-top:10px">'
       + '<div style="font-weight:700;font-size:var(--fs-2);margin-bottom:3px">What to check on this screen</div>'
       + '<div style="font-size:var(--fs-1);color:var(--grey-2,#545A61)">The register names no controls on '
-      + testEsc(got.screen.path) + ' yet. Controls are swept from the app’s own source into the register '
+      + esc(got.screen.path) + ' yet. Controls are swept from the app’s own source into the register '
       + '(<code>screens.cjs</code>); a screen built outside it — the Counter is one — has none until it '
       + 'is swept. Record what you check here as a case and it will still be found under this screen.</div></div>';
   }
@@ -2431,7 +2427,7 @@ function testControlsHTML(code) {
   var bad  = list.filter(function (x) { return x.last && x.last.status === 'fail'; }).length;
   var blank = list.filter(function (x) { return !x.real.length; }).length;
   var chip = function (v, word, tip, col) {
-    return '<span title="' + testEsc(tip) + '" style="display:inline-block;font-size:var(--fs-1);'
+    return '<span title="' + esc(tip) + '" style="display:inline-block;font-size:var(--fs-1);'
       + 'padding:2px 9px;margin:0 5px 4px 0;border-radius:11px;background:var(--paper,#faf8f3);'
       + 'border:1px solid var(--grey-4,#646A72);color:' + (col || 'var(--grey-2,#545A61)') + '"><b>'
       + v + '</b> ' + word + '</span>';
@@ -2440,7 +2436,7 @@ function testControlsHTML(code) {
   var h = '<div style="' + pad + ';border-top:1px solid var(--line,#efece4);margin-top:10px">'
     + '<div style="font-weight:700;font-size:var(--fs-2);margin-bottom:2px">What to check on this screen</div>'
     + '<div style="font-size:var(--fs-1);color:var(--grey-2,#545A61);margin-bottom:5px">'
-    + 'Every control the register names on ' + testEsc(got.screen.path)
+    + 'Every control the register names on ' + esc(got.screen.path)
     + ', and everything anyone has written a check for. Pick one and it becomes the thing you are testing; the '
     + 'form above then files against it.'
     /**
@@ -2468,32 +2464,32 @@ function testControlsHTML(code) {
      * ⚠️ Never invented. A purpose guessed by this panel would be a claim about behaviour nobody has verified.
      */
     var says = x.real.length
-      ? testEsc(String(x.real[0].title || '').replace(/\s*—\s*what does it do\?\s*$/, ''))
+      ? esc(String(x.real[0].title || '').replace(/\s*—\s*what does it do\?\s*$/, ''))
       : (x.purpose
-        ? testEsc(x.purpose)
+        ? esc(x.purpose)
         : '<span style="color:var(--grey-2,#545A61)">⚠ nobody has written what this should do — use it, '
           + 'then say what happened</span>');
     var mark = x.last
       ? '<span style="font-size:var(--fs-1);font-weight:700;color:'
         + (x.last.status === 'pass' ? 'var(--ok-2,#1B7F4B)' : x.last.status === 'fail' ? 'var(--bad-2,#B3261E)' : 'var(--grey-2,#545A61)')
-        + '">' + testEsc(x.last.status) + '</span>'
+        + '">' + esc(x.last.status) + '</span>'
       : '<span style="font-size:var(--fs-1);color:var(--grey-2,#545A61)">not run</span>';
     /* ⭐ a row somebody WROTE is marked as theirs, so the list does not pass it off as something the register
        found — and so it is obvious that writing one is how the list grows. */
     var mark = x.written
       ? '<span title="written by a tester, not swept from the source" style="font-size:var(--fs-1);'
         + 'color:var(--grey-2,#545A61)">written</span>'
-      : '<code style="font-size:var(--fs-1);color:var(--grey-2,#545A61)">' + testEsc(x.code) + '</code>';
-    return '<div data-testid="ctlrow-' + testEsc(x.code) + '" style="display:flex;gap:8px;align-items:flex-start;'
+      : '<code style="font-size:var(--fs-1);color:var(--grey-2,#545A61)">' + esc(x.code) + '</code>';
+    return '<div data-testid="ctlrow-' + esc(x.code) + '" style="display:flex;gap:8px;align-items:flex-start;'
       + 'padding:5px 7px;border:1px solid ' + (on ? 'var(--ok-2,#1B7F4B)' : 'var(--line,#efece4)')
       + ';border-radius:7px;margin-bottom:4px;background:' + (on ? 'var(--ok-tint,#eaf5ee)' : 'transparent') + '">'
       + '<span style="flex:none">' + mark + '</span>'
       + '<div style="flex:1 1 auto;min-width:0">'
-      +   '<div style="font-size:var(--fs-2);font-weight:600;overflow-wrap:anywhere">' + testEsc(x.label) + '</div>'
+      +   '<div style="font-size:var(--fs-2);font-weight:600;overflow-wrap:anywhere">' + esc(x.label) + '</div>'
       +   '<div style="font-size:var(--fs-1);overflow-wrap:anywhere">' + says + '</div>'
       + '</div>'
       + '<div style="flex:none;text-align:right">' + mark + '<br>'
-      +   '<button data-testid="ctlpick-' + testEsc(x.code) + '" onclick="testCtlPick(\'' + testJs(x.code)
+      +   '<button data-testid="ctlpick-' + esc(x.code) + '" onclick="testCtlPick(\'' + testJs(x.code)
       +     '\',\'' + testJs(x.label) + '\')" style="font:inherit;font-size:var(--fs-1);padding:2px 9px;'
       +     'border:1px solid var(--grey-4,#646A72);border-radius:7px;cursor:pointer;background:var(--card,#fff);'
       +     'margin-top:2px">' + (on ? 'testing' : 'Test this') + '</button>'
@@ -3204,7 +3200,7 @@ function testTechHTML() {
       .map(function (x) {
         /* ⭐ the definition rides on the chip that offers it — see the cut list, rule 3 */
         return '<button onclick="testTech(\'' + x[0] + '\')" '
-          + 'title="' + testEsc((TEST_TECH_EG[x[0]] || {}).what || '') + '" style="' + tab
+          + 'title="' + esc((TEST_TECH_EG[x[0]] || {}).what || '') + '" style="' + tab
           + (t.kind === x[0] ? on : off) + '">' + x[1] + '</button>';
       }).join('');
   if (!t.kind) return h + '</div>';
@@ -3237,12 +3233,12 @@ function testTechHTML() {
     var rest = fields.filter(function (f) { return testTechFor(f.kind) !== t.kind; });
     var fchip = function (f, strong) {
       return '<button onclick="testTechPick(\'' + testJs(f.key) + '\')" '
-        + 'title="' + testEsc(f.kind + ' · e.g. ' + f.sample + ' · ' + f.from) + '" '
+        + 'title="' + esc(f.kind + ' · e.g. ' + f.sample + ' · ' + f.from) + '" '
         + 'style="font:inherit;font-size:var(--fs-1);padding:3px 9px;border-radius:11px;cursor:pointer;'
         + 'margin-inline-end:4px;margin-bottom:4px;border:0;background:'
         + (strong ? 'var(--ok-tint,#eaf4ee);color:var(--ok-2,#1B7F4B);font-weight:700'
                   : 'var(--neutral-tint,#f2efe6);color:var(--grey-2,#545A61)') + '">'
-        + testEsc(f.key) + ' <span style="opacity:.7">' + testEsc(f.kind) + '</span></button>';
+        + esc(f.key) + ' <span style="opacity:.7">' + esc(f.kind) + '</span></button>';
     };
     h += '<label style="' + lbl + '">Which field? · <span style="font-weight:400;color:var(--grey-4,#646A72)">'
       + 'read from what this screen just sent to the server</span></label>'
@@ -3276,7 +3272,7 @@ function testTechHTML() {
         + 'style="font:inherit;font-size:var(--fs-1);padding:2px 9px;'
         + 'border-radius:11px;cursor:pointer;border:0;background:var(--neutral-tint,#f2efe6);'
         + 'color:var(--grey-2,#545A61);margin-inline-end:6px">⚠ Use what it has sent</button>'
-        + testEsc(sv.join(', '))
+        + esc(sv.join(', '))
         + '</div>';
     }
   }
@@ -3318,10 +3314,10 @@ function testTechHTML() {
    */
   var F = (t.from || {});
   var range = (F.lo !== undefined && F.lo !== '' && F.hi !== '')
-    ? (', ' + testEsc(F.lo) + ' to ' + testEsc(F.hi))
-    : (F.classes || F.states || F.conds ? (', ' + testEsc(F.classes || F.states || F.conds)) : '');
+    ? (', ' + esc(F.lo) + ' to ' + esc(F.hi))
+    : (F.classes || F.states || F.conds ? (', ' + esc(F.classes || F.states || F.conds)) : '');
   h += testSec((NAMED[F.kind || t.kind] || 'This technique') + ' \u00b7 ' + rows.length + ' case(s)',
-    'for <b>' + testEsc(F.field || 'the field') + '</b>' + range + ' \u00b7 ' + src);
+    'for <b>' + esc(F.field || 'the field') + '</b>' + range + ' \u00b7 ' + src);
 
   /**
    * ⭐⭐ A TABLE, BECAUSE IT IS TABULAR. Athi: *"the test below can be in a tabular format — not sure what is
@@ -3342,8 +3338,8 @@ function testTechHTML() {
     +   '<th style="' + th + ';text-align:end">\u2192 Create</th></tr>'
     + rows.map(function (d, i) {
         return '<tr><td style="' + td + ';color:var(--grey-4,#646A72)">' + (i + 1) + '</td>'
-          + '<td style="' + td + '">' + testEsc(d.do) + '</td>'
-          + '<td style="' + td + ';color:var(--grey-2)">' + testEsc(d.see) + '</td>'
+          + '<td style="' + td + '">' + esc(d.do) + '</td>'
+          + '<td style="' + td + ';color:var(--grey-2)">' + esc(d.see) + '</td>'
           + '<td style="' + td + ';text-align:end">'
           /* ⚠️ THE PAYOFF OF THE WHOLE FLOW WAS THE FAINTEST CONTROL ON SCREEN: a --card button with a
              --line border, on a --card row — 1.15:1 in light. Every table action takes TEST_BTN_SMALL. */
@@ -3512,7 +3508,7 @@ function testCaseFormHTML() {
   var segOn = TUI.on, segOff = TUI.off;
   var chips = ['case', 'inc', 'req'].map(function (k) {
     return '<button data-testid="wkind-' + k + '" onclick="testWriteKind(\'' + k + '\')" '
-      + 'title="' + testEsc(WKIND[k].says) + '" style="' + seg
+      + 'title="' + esc(WKIND[k].says) + '" style="' + seg
       + (kind === k ? segOn : segOff)
       + (k === 'case' ? '' : ';border-inline-start:1px solid var(--line,#e7e3d8)') + '">'
       + WKIND[k].label + '</button>';
@@ -3536,7 +3532,7 @@ function testCaseFormHTML() {
 
   return '<div style="border:1px solid var(--line,#e7e3d8);border-radius:9px;padding:9px;margin:2px 0 9px">'
     + '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-bottom:4px">What are you recording on '
-    +   '<code>' + testEsc(w.code) + '</code> <b>' + testEsc(w.name) + '</b>?</div>'
+    +   '<code>' + esc(w.code) + '</code> <b>' + esc(w.name) + '</b>?</div>'
     + '<div style="display:inline-flex;border:1px solid var(--grey-4,#646A72);border-radius:8px;'
     +   'overflow:hidden;margin-bottom:6px">' + chips + '</div>'
 
@@ -3565,8 +3561,8 @@ function testCaseFormHTML() {
       ? '<div data-testid="wctl-now" style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;'
         + 'margin:0 0 6px;padding:5px 9px;border:1px solid var(--ok-2,#1B7F4B);border-radius:7px;'
         + 'background:var(--ok-tint,#eaf5ee);font-size:var(--fs-1)">'
-        + '<span>Testing now</span><code>' + testEsc(CBTEST.ctlNow.code) + '</code>'
-        + '<b style="overflow-wrap:anywhere">' + testEsc(CBTEST.ctlNow.label) + '</b>'
+        + '<span>Testing now</span><code>' + esc(CBTEST.ctlNow.code) + '</code>'
+        + '<b style="overflow-wrap:anywhere">' + esc(CBTEST.ctlNow.label) + '</b>'
         + '<span style="flex:1 1 auto"></span>'
         + '<button onclick="testCtlPick(\'' + testJs(CBTEST.ctlNow.code) + '\',\'\')" style="' + btn
         + ';padding:1px 8px">clear</button></div>'
@@ -3785,7 +3781,7 @@ async function testCaseSend(outcome) {
 function testScrHTML() {
   if (CBTEST.scrBusy) return '<div style="color:var(--grey-4,#646A72);font-size:var(--fs-1)">reading…</div>';
   if (CBTEST.scrErr) {
-    return '<div style="color:var(--disp);font-size:var(--fs-1)">' + testEsc(CBTEST.scrErr) + '</div>';
+    return '<div style="color:var(--disp);font-size:var(--fs-1)">' + esc(CBTEST.scrErr) + '</div>';
   }
   var cases = CBTEST.cases || [], res = CBTEST.scrRes || [];
   var last = {};
@@ -3868,7 +3864,7 @@ function testScrHTML() {
   var onlyGeneric = list.filter(function (x) { return x.total && !x.real; }).length;
   /* ⭐ four counts as four chips: the sentence they used to wear said nothing the numbers did not */
   var scrChip = function (v, word, tip) {
-    return '<span title="' + testEsc(tip) + '" style="display:inline-block;font-size:var(--fs-1);'
+    return '<span title="' + esc(tip) + '" style="display:inline-block;font-size:var(--fs-1);'
       + 'padding:2px 9px;margin:0 5px 4px 0;border-radius:11px;background:var(--paper,#faf8f3);'
       + 'border:1px solid var(--grey-4,#646A72);color:var(--grey-2,#545A61)"><b>' + v + '</b> ' + word
       + '</span>';
@@ -3916,15 +3912,15 @@ function testScrHTML() {
       + '<td style="padding:4px 6px 4px 0;white-space:nowrap"><code onclick="testScrOpen(\'' + x.code
       +   '\')" title="Show the cases on this screen" style="font-family:\'Space Mono\','
       +   'ui-monospace,monospace;cursor:pointer;text-decoration:underline;text-underline-offset:2px">'
-      +   testEsc(x.code) + '</code></td>'
-      + '<td style="padding:4px 6px">' + testEsc(x.name)
+      +   esc(x.code) + '</code></td>'
+      + '<td style="padding:4px 6px">' + esc(x.name)
       /* ⭐ a screen with nothing on it says so in words, where the eye already is */
       +   (x.total ? '' : '<span style="color:var(--grey-4,#646A72);font-size:var(--fs-1)"> \u00b7 no case yet</span>')
       +   (x.total && !x.real
         ? '<span style="color:var(--disp,#B3261E);font-size:var(--fs-1)"> \u00b7 generic only</span>' : '')
       /* ⭐ WHAT IT DOES, under the name — the sentence a tester needs before deciding what to evidence */
       +   (x.purpose ? '<div style="font-size:var(--fs-1);color:var(--grey-2,#545A61)">'
-        + testEsc(x.purpose) + '</div>' : '')
+        + esc(x.purpose) + '</div>' : '')
       + '</td>'
       + num(x.total)
       + num(x.pass, 'var(--ok,#1B7F4B)')
@@ -4184,7 +4180,7 @@ function testCiteHTML(c) {
     + 'background:var(--paper,#faf8f3);border-inline-start:2px solid var(--line,#e7e3d8);border-radius:0 6px 6px 0">'
     + '<span title="A published clause. If it changes, '
     + 'recheck every case that cites it">Required by <b>'
-    + testEsc(bits.join(' \u00b7 ')) + '</b></span></div>';
+    + esc(bits.join(' \u00b7 ')) + '</b></span></div>';
 }
 
 function testCaseDetailHTML(c) {
@@ -4200,15 +4196,15 @@ function testCaseDetailHTML(c) {
   (c.steps || []).forEach(function (st, i) {
     h += '<div style="display:flex;gap:6px;' + pad + '">'
       + '<span style="color:var(--grey-4,#646A72);min-width:12px">' + (i + 1) + '</span>'
-      + '<span style="flex:1">' + testEsc(Array.isArray(st) ? (st[0] || '') : String(st))
+      + '<span style="flex:1">' + esc(Array.isArray(st) ? (st[0] || '') : String(st))
       +   '<span style="display:block;color:var(--grey-2)">\u2192 '
-      +     testEsc(Array.isArray(st) ? (st[1] || '') : '') + '</span></span></div>';
+      +     esc(Array.isArray(st) ? (st[1] || '') : '') + '</span></span></div>';
   });
-  h += lab('Before you start:', testEsc(c.pre || ''));
-  h += lab('Use:', testEsc(c.data || ''));
-  h += lab('Priority:', testEsc(c.priority || ''));
-  h += lab('Control:', testEsc(c.control_code || ''));
-  h += lab('Note:', testEsc(c.note || ''));
+  h += lab('Before you start:', esc(c.pre || ''));
+  h += lab('Use:', esc(c.data || ''));
+  h += lab('Priority:', esc(c.priority || ''));
+  h += lab('Control:', esc(c.control_code || ''));
+  h += lab('Note:', esc(c.note || ''));
   h += testCiteHTML(c);
 
   /* ⭐ the fourth box, kept with the case whether or not a verdict was ever given */
@@ -4216,7 +4212,7 @@ function testCaseDetailHTML(c) {
     h += '<div style="margin-top:5px;padding:5px 7px;background:var(--card,#fff);'
       + 'border:1px solid var(--line,#efece4);border-radius:7px">'
       + '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">What was being seen when this was '
-      + 'written</div><div style="font-size:var(--fs-2)">' + testEsc(c.observed) + '</div></div>';
+      + 'written</div><div style="font-size:var(--fs-2)">' + esc(c.observed) + '</div></div>';
   }
   /* ⚠️ the picture is fetched with the token, never an <img src> — the endpoint needs an Authorization
      header and a plain link carries none, which is the "404, then unauthorised" this already cost once */
@@ -4231,13 +4227,13 @@ function testCaseDetailHTML(c) {
     var col = l.status === 'pass' ? 'var(--ok-2,#1B7F4B)'
       : (l.status === 'fail' || l.status === 'blocked') ? 'var(--disp,#B3261E)' : 'var(--grey-4,#646A72)';
     h += '<div style="margin-top:6px;padding-top:5px;border-top:1px solid var(--line,#efece4)">'
-      + '<b style="font-size:var(--fs-1);color:' + col + '">' + testEsc(String(l.status).toUpperCase())
+      + '<b style="font-size:var(--fs-1);color:' + col + '">' + esc(String(l.status).toUpperCase())
       + '</b> <span style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">'
-      + testEsc(l.tester_name || 'someone') + (l.at ? ' \u00b7 ' + testEsc(String(l.at).slice(0, 16)
+      + esc(l.tester_name || 'someone') + (l.at ? ' \u00b7 ' + esc(String(l.at).slice(0, 16)
           .replace('T', ' ')) : '') + '</span>'
-      + (l.note ? '<div style="' + pad + '">' + testEsc(l.note) + '</div>' : '')
+      + (l.note ? '<div style="' + pad + '">' + esc(l.note) + '</div>' : '')
       + (l.evidence ? '<div style="' + pad + ';color:var(--grey-2);word-break:break-word">'
-          + testEsc(l.evidence) + '</div>' : '')
+          + esc(l.evidence) + '</div>' : '')
       + '</div>';
   }
 
@@ -4256,14 +4252,14 @@ function testCaseDetailHTML(c) {
     .filter(function (x) { return x.case_key === c.case_key; });
   raised.forEach(function (x) {
     h += '<div style="margin-top:5px;padding-top:5px;border-top:1px solid var(--line,#efece4)">'
-      + '<code style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + testEsc(x.ref || x.clause || '')
-      + '</code> <span style="font-size:var(--fs-1)">' + testEsc(x.state || '') + '</span>'
-      + (x.observed ? '<div style="' + pad + '">' + testEsc(x.observed) + '</div>' : '')
-      + (x.requirement ? '<div style="' + pad + '">' + testEsc(x.requirement) + '</div>' : '')
+      + '<code style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + esc(x.ref || x.clause || '')
+      + '</code> <span style="font-size:var(--fs-1)">' + esc(x.state || '') + '</span>'
+      + (x.observed ? '<div style="' + pad + '">' + esc(x.observed) + '</div>' : '')
+      + (x.requirement ? '<div style="' + pad + '">' + esc(x.requirement) + '</div>' : '')
       + (x.evidence_id
         ? '<button class="btn" style="display:inline-block;width:auto;margin-top:4px;'
           + 'font-size:var(--fs-1);padding:3px 10px" onclick="testShotView(' + "'"
-          + testEsc(x.evidence_id) + "'" + ')">\u1f5bc\ufe0f Screenshot</button>'
+          + esc(x.evidence_id) + "'" + ')">\u1f5bc\ufe0f Screenshot</button>'
         : '<div style="' + pad + ';color:var(--grey-4,#646A72)">No screenshot was attached to this one.</div>')
       + '</div>';
   });
@@ -4322,10 +4318,10 @@ function testCaseListHTML(code) {
       + '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);margin-bottom:3px">Closed on this screen</div>'
       + shutAll.map(function (c) {
           return '<div style="padding:5px 0;border-top:1px solid var(--line,#efece4)">'
-            + '<code style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + testEsc(c.case_key) + '</code> '
-            + '<span style="font-size:var(--fs-2)">' + testEsc(c.title || '') + '</span>'
+            + '<code style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + esc(c.case_key) + '</code> '
+            + '<span style="font-size:var(--fs-2)">' + esc(c.title || '') + '</span>'
             + (c.closed_note ? '<div style="font-size:var(--fs-1);color:var(--grey-2)">closed: '
-                + testEsc(c.closed_note) + (c.closed_by ? ' · ' + testEsc(c.closed_by) : '') + '</div>' : '')
+                + esc(c.closed_note) + (c.closed_by ? ' · ' + esc(c.closed_by) : '') + '</div>' : '')
             + ' <button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);'
             + 'padding:1px 8px" onclick="testHandClose(\'' + testJs(c.case_key) + '\',true)">Open again'
             + '</button></div>';
@@ -4350,14 +4346,14 @@ function testCaseListHTML(code) {
     if (done) {
       return '<div style="display:flex;gap:8px;align-items:baseline;padding:3px 0;'
         +   'border-top:1px solid var(--line,#efece4);opacity:.72">'
-        + '<code style="font-size:var(--fs-1);color:var(--grey-2)">' + testEsc(c.case_key) + '</code>'
+        + '<code style="font-size:var(--fs-1);color:var(--grey-2)">' + esc(c.case_key) + '</code>'
         + '<span style="font-size:var(--fs-1);flex:1 1 12em;min-width:0;overflow:hidden;'
-        +   'text-overflow:ellipsis;white-space:nowrap">' + testEsc(c.title || '') + '</span>'
+        +   'text-overflow:ellipsis;white-space:nowrap">' + esc(c.title || '') + '</span>'
         + '<span style="font-size:var(--fs-1);font-weight:700;color:' + col + '">PASS</span>'
         + '<button class="btn" style="font-size:var(--fs-1);padding:0 7px" onclick="testCaseOpen(\''
-        +   testEsc(c.case_key) + '\')">Open</button>'
+        +   esc(c.case_key) + '\')">Open</button>'
         + '<button class="btn" style="font-size:var(--fs-1);padding:0 7px" onclick="testRetest(\''
-        +   testEsc(c.case_key) + '\')">Re-test</button>'
+        +   esc(c.case_key) + '\')">Re-test</button>'
         + (CBTEST.openCase === c.case_key
             ? '<div style="flex:1 1 100%">' + testCaseDetailHTML(c) + '</div>' : '')
         + '</div>';
@@ -4370,7 +4366,7 @@ function testCaseListHTML(code) {
       + '<button onclick="testCaseOpen(\'' + testJs(c.case_key) + '\')" title="Open it" '
       +   'style="font:inherit;font-size:var(--fs-1);color:var(--grey-2);background:none;border:0;'
       +   'padding:0;cursor:pointer;text-align:start">'
-      +   (isOpen ? '\u25be ' : '\u25b8 ') + '<code>' + testEsc(c.case_key) + '</code></button>'
+      +   (isOpen ? '\u25be ' : '\u25b8 ') + '<code>' + esc(c.case_key) + '</code></button>'
       /**
        * \u2b50 THE PICTURE IS ANNOUNCED ON THE ROW, not only inside it. Athi, 2026-09-13: *"I attached the
        * screenshot, but it is not appearing in the cases tab?"* \u2014 it WAS attached and it WAS saved; it sat two
@@ -4380,17 +4376,17 @@ function testCaseListHTML(code) {
           + '\')" style="font-size:var(--fs-1);background:none;border:0;cursor:pointer;padding:0">'
           + '\ud83d\uddbc\ufe0f</button>' : '')
       + '<span style="flex:1 1 16em;min-width:0">'
-      +   '<div style="font-size:var(--fs-2)">' + testEsc(c.title || '') + '</div>'
+      +   '<div style="font-size:var(--fs-2)">' + esc(c.title || '') + '</div>'
       +   (exp ? '<div style="font-size:var(--fs-1);color:var(--grey-2,#545A61)">should see: '
-        + testEsc(exp) + '</div>' : '')
-      +   '<input id="cbt_n_' + testEsc(c.case_key) + '" placeholder="what you are seeing instead \u2014 leave '
+        + esc(exp) + '</div>' : '')
+      +   '<input id="cbt_n_' + esc(c.case_key) + '" placeholder="what you are seeing instead \u2014 leave '
       +     'empty if it matched" style="width:100%;font:inherit;font-size:var(--fs-1);margin-top:3px;'
       +     'padding:3px 6px;border:1px solid var(--grey-4,#646A72);border-radius:6px;'
       +     'background:var(--card,#fff)">'
       +   (isOpen ? testCaseDetailHTML(c) : '')
       + '</span>'
       + '<span style="font-size:var(--fs-1);font-weight:700;color:' + col + '">'
-      +   (l ? testEsc(String(l.status).toUpperCase()) : 'not run') + '</span>'
+      +   (l ? esc(String(l.status).toUpperCase()) : 'not run') + '</span>'
       + '<span style="display:flex;gap:4px;flex:0 0 auto;align-items:center">'
       + testMarkBtn(c.case_key, 'pass', 'Pass', 'var(--ok-2)', 'var(--ok-tint)')
       + '<button class="btn" onclick="testFromCase(\'' + testJs(c.case_key) + '\',\'inc\')" '
@@ -4833,13 +4829,13 @@ function testCovSetTab(v) {
  */
 function testCovWhyNotRun(c) {
   var pill = function (txt, tip, warn) {
-    return '<span title="' + testEsc(tip) + '" style="display:inline-block;font-size:var(--fs-1);'
+    return '<span title="' + esc(tip) + '" style="display:inline-block;font-size:var(--fs-1);'
       + 'padding:1px 8px;border-radius:10px;border:1px solid '
       + (warn ? 'var(--warn-2,#8a6100);color:var(--warn-2,#8a6100)' : 'var(--grey-4,#646A72);color:var(--grey-2,#545A61)')
       + ';background:var(--paper,#faf8f3)">' + txt + '</span>';
   };
   if (c.automated && c.run_by) {
-    return pill('automated \u00b7 ' + testEsc(c.run_by),
+    return pill('automated \u00b7 ' + esc(c.run_by),
       'It is in a suite and that suite has not run since the board was last read. Run it, or press Passed / '
       + 'Failed here after you have watched it.');
   }
@@ -4924,9 +4920,9 @@ function testBehindHTML(code) {
     var a = asset(p);
     return '<div style="font-size:var(--fs-2);padding:2px 0;overflow:hidden;text-overflow:ellipsis;'
       +   'white-space:nowrap">'
-      + (a ? '<code style="font-size:var(--fs-1);color:var(--grey-2)">' + testEsc(a.code) + '</code> ' : '')
-      + testEsc(p)
-      + (a && a.stage ? ' <span style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">\u00b7 ' + testEsc(a.stage)
+      + (a ? '<code style="font-size:var(--fs-1);color:var(--grey-2)">' + esc(a.code) + '</code> ' : '')
+      + esc(p)
+      + (a && a.stage ? ' <span style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">\u00b7 ' + esc(a.stage)
           + '</span>' : '')
       + '</div>';
   };
@@ -4941,16 +4937,16 @@ function testBehindHTML(code) {
       +   'border-top:1px solid var(--line,#efece4)">'
       + '<span style="flex:1 1 auto;min-width:0">'
       +   '<span style="font-size:var(--fs-2);display:block;overflow:hidden;text-overflow:ellipsis;'
-      +     'white-space:nowrap">' + (warn ? '\u26a0\ufe0f ' : '') + testEsc(c.title || c.case_key) + '</span>'
+      +     'white-space:nowrap">' + (warn ? '\u26a0\ufe0f ' : '') + esc(c.title || c.case_key) + '</span>'
       +   '<span style="font-size:var(--fs-1);color:var(--grey-4,#646A72);display:block;overflow:hidden;'
-      +     'text-overflow:ellipsis;white-space:nowrap">' + testEsc(c.case_key)
-      +     (c.test_type ? ' \u00b7 ' + testEsc(c.test_type) : '')
-      +     ((c.areas || []).length ? ' \u00b7 ' + testEsc(c.areas.join(', ')) : '') + '</span>'
+      +     'text-overflow:ellipsis;white-space:nowrap">' + esc(c.case_key)
+      +     (c.test_type ? ' \u00b7 ' + esc(c.test_type) : '')
+      +     ((c.areas || []).length ? ' \u00b7 ' + esc(c.areas.join(', ')) : '') + '</span>'
       +   '<span style="font-size:var(--fs-1);color:var(--grey-4,#646A72);display:block">\u2937 '
-      +     testEsc(x.why) + '</span>'
+      +     esc(x.why) + '</span>'
       + '</span>'
       + '<span style="font-size:var(--fs-1);font-weight:700;flex:0 0 auto;color:' + col + '">'
-      +   (l ? testEsc(st.toUpperCase()) : 'not run') + '</span>'
+      +   (l ? esc(st.toUpperCase()) : 'not run') + '</span>'
       + '</div>';
   };
 
@@ -5022,11 +5018,11 @@ function testBehindHTML(code) {
       h += todo.map(function (x) {
         return '<div style="display:flex;gap:8px;align-items:baseline;padding:4px 0;'
           + 'border-top:1px solid var(--line,#e7e3d8)">'
-          + '<code style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + testEsc(x.code) + '</code>'
-          + '<span style="flex:1 1 auto;min-width:0;font-size:var(--fs-2)">' + testEsc(x.label) + '</span>'
+          + '<code style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + esc(x.code) + '</code>'
+          + '<span style="flex:1 1 auto;min-width:0;font-size:var(--fs-2)">' + esc(x.label) + '</span>'
           + '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:2px 9px" '
           + 'onclick="testCoverCase(\'' + testJs(code) + '\',\'' + testJs(x.code) + '\',\''
-          + testEsc(String(x.label).replace(/'/g, ' ')) + '\')">Write a case</button>'
+          + esc(String(x.label).replace(/'/g, ' ')) + '\')">Write a case</button>'
           + '</div>';
       }).join('');
     } else {
@@ -5045,8 +5041,8 @@ function testBehindHTML(code) {
             var m = testCaseMark(c);
             return '<div style="display:flex;gap:8px;align-items:baseline;padding:4px 0;'
               + 'border-top:1px solid var(--line,#e7e3d8)">'
-              + '<code style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + testEsc(x.code) + '</code>'
-              + '<span style="flex:1 1 auto;min-width:0;font-size:var(--fs-2)">' + testEsc(c.title || '')
+              + '<code style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + esc(x.code) + '</code>'
+              + '<span style="flex:1 1 auto;min-width:0;font-size:var(--fs-2)">' + esc(c.title || '')
               + '</span>'
               + '<span style="font-size:var(--fs-1);font-weight:700;color:' + m[1] + '">' + m[0] + '</span>'
               + '</div>';
@@ -5365,7 +5361,7 @@ function testDiagByScreen() {
     return '<tr style="border-top:1px solid var(--line,#efece4)'
       + (r.code === CBTEST.popupFor ? ';background:var(--paper,#faf8f3)' : '') + '">'
       + '<td style="padding:4px 6px 4px 0"><code style="font-size:var(--fs-1);color:var(--grey-2)">'
-      +   testEsc(r.code) + '</code> ' + testEsc(r.name)
+      +   esc(r.code) + '</code> ' + esc(r.name)
       +   (r.worstCalls ? ' <span style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + r.worstCalls
         + ' calls</span>' : '') + '</td>'
       + '<td style="text-align:end;padding:4px 6px">' + r.visits + '</td>'
@@ -5510,7 +5506,7 @@ function testDiagHTML() {
   h += testFigures([
     [mine.length, 'API calls'],
     [total + ' ms', 'in total'],
-    [slow.key ? ((slow.ms || 0) + ' ms') : null, 'slowest · ' + testEsc(slow.key || '')],
+    [slow.key ? ((slow.ms || 0) + ' ms') : null, 'slowest · ' + esc(slow.key || '')],
     [bad.length || null, 'failed', 'var(--disp,#B3261E)'],
     [srvKnown.length ? (srvMs + ' ms') : null, 'inside the server'],
     [srvKnown.length ? (Math.max(0, total - srvMs) + ' ms') : null, 'on the network'],
@@ -5527,7 +5523,7 @@ function testDiagHTML() {
    */
   var findings = [];
   if (rep.length) {
-    findings.push('<b>The same call, repeated:</b> ' + testEsc(rep.join(' · '))
+    findings.push('<b>The same call, repeated:</b> ' + esc(rep.join(' · '))
       + ' — that is the thing to fix, not the milliseconds.');
   }
   if (bad.length) findings.push('<b>' + bad.length + ' call(s) failed.</b> A failed call is not a slow call.');
@@ -5560,7 +5556,7 @@ function testDiagHTML() {
       h += testSec('Dropped by the response envelope', '',
         'These arrived from the server and did not survive unwrap() — harmless unless something needed them');
       h += testNotes(dk.slice(0, 12).map(function (k) {
-        return '<code>' + testEsc(k) + '</code> — ' + testEsc(drop[k].join(', '));
+        return '<code>' + esc(k) + '</code> — ' + esc(drop[k].join(', '));
       }), 'warn');
     }
   } catch (_) {}
@@ -5583,10 +5579,10 @@ function testDiagHTML() {
       +   '<button onclick="testCallOpen(' + "'" + testJs(c.rid || '') + "'" + ')" '
       +     'title="See the real call" style="font:inherit;font-size:var(--fs-1);background:none;'
       +     'border:0;padding:0;cursor:pointer;color:var(--grey-2);text-decoration:underline;'
-      +     'text-underline-offset:2px"><code>' + testEsc(c.key) + '</code></button></td>'
+      +     'text-underline-offset:2px"><code>' + esc(c.key) + '</code></button></td>'
       + '<td style="padding:4px 6px;font-size:var(--fs-1);color:var(--grey-2);max-width:16em;'
-      +   'overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + testEsc(c.path || '') + '">'
-      +   testEsc(c.m + ' ' + (c.path || '')) + '</td>'
+      +   'overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(c.path || '') + '">'
+      +   esc(c.m + ' ' + (c.path || '')) + '</td>'
       + '<td style="text-align:end;padding:4px 6px;font-weight:' + ((c.ms || 0) > 1500 ? '700' : '400')
       +   ';color:' + ((c.ms || 0) > 1500 ? 'var(--disp,#B3261E)' : 'inherit') + '">' + (c.ms || 0) + '</td>'
       + (srvKnown.length
@@ -5627,7 +5623,7 @@ function testDiagHTML() {
       + 'background:var(--danger-tint,#fbeceb);border-radius:0 8px 8px 0;font-size:var(--fs-1)">'
       + '<b>Slower than it has been:</b><br>'
       + slower.map(function (x) {
-          return testEsc(x.key) + ' \u2014 <b>' + x.now + ' ms</b> now, best was ' + x.was + ' ms';
+          return esc(x.key) + ' \u2014 <b>' + x.now + ' ms</b> now, best was ' + x.was + ' ms';
         }).join('<br>')
       + '<br><span style="color:var(--grey-2)" title="Best earlier visit, so one slow visit cannot hide a regression">vs best earlier visit</span></div>';
   }
@@ -5716,19 +5712,19 @@ function testCallDetailHTML(c) {
     + t + '</div>'; };
 
   var h = '<div style="padding:6px 2px 9px">';
-  h += lab('Asked for') + '<div style="' + pre + '">' + testEsc(c.m + ' ' + (c.path || '')) + '</div>';
+  h += lab('Asked for') + '<div style="' + pre + '">' + esc(c.m + ' ' + (c.path || '')) + '</div>';
   if (c.q && Object.keys(c.q).length) {
-    h += lab('Parameters') + '<div style="' + pre + '">' + testEsc(JSON.stringify(c.q, null, 1)) + '</div>';
+    h += lab('Parameters') + '<div style="' + pre + '">' + esc(JSON.stringify(c.q, null, 1)) + '</div>';
   }
   if (c.sent) {
-    h += lab('Sent (secrets removed)') + '<div style="' + pre + '">' + testEsc(c.sent) + '</div>';
+    h += lab('Sent (secrets removed)') + '<div style="' + pre + '">' + esc(c.sent) + '</div>';
   }
   if (c.body) {
     h += lab('Came back' + (c.body.length >= 1200 ? ' \u2014 first 1200 characters only' : ''))
-      + '<div style="' + pre + '">' + testEsc(c.body) + '</div>';
+      + '<div style="' + pre + '">' + esc(c.body) + '</div>';
   }
   h += lab('Identity')
-    + '<div style="' + pre + '">' + testEsc('id ' + (c.rid || '\u2014')
+    + '<div style="' + pre + '">' + esc('id ' + (c.rid || '\u2014')
         + '  \u00b7  status ' + (c.status || '\u2014')
         + '  \u00b7  ' + (c.ms || 0) + ' ms total'
         + (c.srv != null ? '  \u00b7  ' + c.srv + ' ms in the server' : '')
@@ -5870,7 +5866,7 @@ function testLab(t, colour) {
 function testSec(title, hint, tip) {
   return '<div style="margin:13px 0 5px;padding-top:9px;border-top:1px solid var(--line,#e7e3d8)">'
     + '<div style="font-size:var(--fs-2);font-weight:800;letter-spacing:.05em;text-transform:uppercase;'
-    +   'color:var(--ink,#20303b)"' + (tip ? ' title="' + testEsc(tip) + '"' : '') + '>' + title
+    +   'color:var(--ink,#20303b)"' + (tip ? ' title="' + esc(tip) + '"' : '') + '>' + title
     +   (tip ? ' <span style="color:var(--grey-4,#646A72);font-weight:400">\u24d8</span>' : '') + '</div>'
     + (hint ? '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);margin-top:1px">' + hint + '</div>' : '')
     + '</div>';
@@ -6136,7 +6132,7 @@ function testDiagLayersHTML(mine) {
 
   var row = function (label, ms, note, colour) {
     return '<tr style="border-top:1px solid var(--line,#efece4)">'
-      + '<td style="padding:4px 6px 4px 0;font-size:var(--fs-2)" title="' + testEsc(note || '') + '">' + label
+      + '<td style="padding:4px 6px 4px 0;font-size:var(--fs-2)" title="' + esc(note || '') + '">' + label
       +   (note ? ' <span style="color:var(--grey-4,#646A72)">\u24d8</span>' : '')
       + '</td>'
       + '<td style="text-align:end;padding:4px 6px;font-weight:700'
@@ -6213,11 +6209,11 @@ function testDiagByApi() {
     var code = codeOf(g.route);
     return '<tr style="border-top:1px solid var(--line,#efece4)">'
       + '<td style="padding:4px 6px 4px 0">'
-      +   (code ? '<code style="font-size:var(--fs-1);color:var(--grey-2)">' + testEsc(code) + '</code> ' : '')
-      +   '/api/' + testEsc(g.route)
+      +   (code ? '<code style="font-size:var(--fs-1);color:var(--grey-2)">' + esc(code) + '</code> ' : '')
+      +   '/api/' + esc(g.route)
       +   (g.bad ? ' <b style="color:var(--disp,#B3261E);font-size:var(--fs-1)">' + g.bad + ' failed</b>' : '')
       +   '<span style="display:block;font-size:var(--fs-1);color:var(--grey-4,#646A72)">'
-      +     (who.length ? 'asked by ' + testEsc(who.map(function (k) {
+      +     (who.length ? 'asked by ' + esc(who.map(function (k) {
             return scrName(k) + ' \u00d7' + g.screens[k]; }).join(', '))
           : 'no screen recorded')
       +   '</span></td>'
@@ -7233,7 +7229,7 @@ function testWorkRowHTML(x) {
   } else if (x.status === 'failed' && x.caseKey) {
     /* ⚠️ a red verdict with nothing raised is a fault on nobody's list — this is the row that fixes that */
     acts += b('Raise an incident', 'testFromCase(\'' + testJs(x.caseKey) + '\',\'inc\',null,\''
-      + testEsc(String(x.seen || 'It failed').replace(/'/g, ' ')) + '\')', 'var(--disp,#B3261E)',
+      + esc(String(x.seen || 'It failed').replace(/'/g, ' ')) + '\')', 'var(--disp,#B3261E)',
       'Turn this red verdict into something somebody owns');
   } else if (x.status === 'change') {
     acts += b('✓ Accept it', 'testReqSet(\'' + id + '\',\'accepted\')', 'var(--ok-2,#1B7F4B)',
@@ -7254,7 +7250,7 @@ function testWorkRowHTML(x) {
   } else if (x.status === 'closed' && x.caseKey && !x.inc && !x.req) {
     acts += b('Open again', 'testHandClose(\'' + testJs(x.caseKey) + '\',true)', null, 'Put it back on the list');
   }
-  if (x.screen) acts += b('Open ' + testEsc(x.screen), 'testHandOpen(\'' + testJs(x.screen) + '\')', null,
+  if (x.screen) acts += b('Open ' + esc(x.screen), 'testHandOpen(\'' + testJs(x.screen) + '\')', null,
                           'Go to the screen it is about');
   /**
    * ⭐ RE-GRADING IS A JUDGEMENT AND BELONGS WITH THE OTHER ACTIONS. What looked like one awkward screen
@@ -7280,26 +7276,26 @@ function testWorkRowHTML(x) {
     + '<div style="display:flex;gap:7px;align-items:baseline;flex-wrap:wrap">'
     +   '<span data-testid="work-status" style="font-size:var(--fs-1);font-weight:700;border-radius:5px;'
     +     'padding:1px 8px;color:#fff;background:' + W.ink + '">' + W.label + '</span>'
-    +   (x.key ? '<code style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + testEsc(x.key) + '</code>' : '')
+    +   (x.key ? '<code style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + esc(x.key) + '</code>' : '')
     +   (x.sev ? '<span style="font-size:var(--fs-1);color:var(--disp,#B3261E)" title="'
-        + testEsc(x.means || '') + '">' + testEsc(x.sev) + '</span>' : '')
-    +   (x.pri ? '<span style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + testEsc(x.pri)
+        + esc(x.means || '') + '">' + esc(x.sev) + '</span>' : '')
+    +   (x.pri ? '<span style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + esc(x.pri)
         + '</span>' : '')
-    +   (x.popup ? '<code style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + testEsc(x.popup)
+    +   (x.popup ? '<code style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + esc(x.popup)
         + '</code>' : '')
-    +   '<b style="font-size:var(--fs-2);flex:1 1 14em;min-width:0">' + testEsc(x.title) + '</b>'
+    +   '<b style="font-size:var(--fs-2);flex:1 1 14em;min-width:0">' + esc(x.title) + '</b>'
     + '</div>'
     /* ⭐ AND WHAT HAPPENS NEXT, in words, on every row. "Failed" tells you the past; this tells you the job. */
     + '<div style="font-size:var(--fs-1);margin-top:2px;color:'
     +   (x.forMe ? 'var(--warn-2,#8a6100);font-weight:700' : 'var(--grey-2)') + '">'
     +   'next: ' + (x.forMe ? 'YOURS — retest it and say whether it holds' : W.tell) + '</div>'
     + '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:1px">'
-    +   (x.screen ? '<b>' + testEsc(x.screen) + '</b> ' + testEsc(codeName(x.screen) || '') + ' · ' : '')
-    +   (x.by ? 'by ' + testEsc(x.by) : 'author not recorded')
-    +   (x.at ? ' · ' + testEsc(String(x.at).slice(0, 16).replace('T', ' ')) : '')
-    +   (x.inc ? ' · incident <code>' + testEsc(x.inc.ref || '') + '</code>' : '')
-    +   (x.req ? ' · requirement <code>' + testEsc(x.req.clause || '') + '</code>' : '')
-    +   (x.affected ? ' · ' + testEsc(x.affected) : '')
+    +   (x.screen ? '<b>' + esc(x.screen) + '</b> ' + esc(codeName(x.screen) || '') + ' · ' : '')
+    +   (x.by ? 'by ' + esc(x.by) : 'author not recorded')
+    +   (x.at ? ' · ' + esc(String(x.at).slice(0, 16).replace('T', ' ')) : '')
+    +   (x.inc ? ' · incident <code>' + esc(x.inc.ref || '') + '</code>' : '')
+    +   (x.req ? ' · requirement <code>' + esc(x.req.clause || '') + '</code>' : '')
+    +   (x.affected ? ' · ' + esc(x.affected) : '')
     + '</div>'
     /* ⭐ THE SEVERITY IN WORDS AND THE TWO CLOCKS — shown only when they say something. "0 min unnoticed"
        is noise on a row somebody recorded while it was happening; an hour unnoticed IS the story. */
@@ -7309,13 +7305,13 @@ function testWorkRowHTML(x) {
            x.openMins ? (x.openMins + ' min to resolve') : null]
           .filter(Boolean).map(testEsc).join(' \u00b7 ') + '</div>'
       : '')
-    + (x.seen ? '<div style="font-size:var(--fs-1);margin-top:1px">seen: ' + testEsc(x.seen) + '</div>' : '')
+    + (x.seen ? '<div style="font-size:var(--fs-1);margin-top:1px">seen: ' + esc(x.seen) + '</div>' : '')
     + (x.fixed ? '<div style="font-size:var(--fs-1);margin-top:3px;padding:4px 7px;'
         + 'background:var(--warn-tint,#fdf6e6);border-radius:6px">fixed: '
-        + testEsc(x.fixed.subject || x.fixed.sha || '') + (x.fixed.by ? ' · ' + testEsc(x.fixed.by) : '')
+        + esc(x.fixed.subject || x.fixed.sha || '') + (x.fixed.by ? ' · ' + esc(x.fixed.by) : '')
         + '</div>' : '')
     + (shut && x.why ? '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:3px">closed: '
-        + testEsc(x.why) + '</div>' : '')
+        + esc(x.why) + '</div>' : '')
     + '<div style="margin-top:5px">' + acts + '</div>'
     + '</div>';
 }
@@ -7417,45 +7413,45 @@ function testHandHTML() {
       + '<div style="display:flex;gap:7px;align-items:baseline;flex-wrap:wrap">'
       +   '<span style="font-size:var(--fs-1);font-weight:700;border-radius:5px;padding:1px 7px;color:'
       +     k[1] + ';background:' + k[2] + '">' + k[0] + '</span>'
-      +   (x.sev ? '<span style="font-size:var(--fs-1);color:var(--disp,#B3261E)">' + testEsc(x.sev)
+      +   (x.sev ? '<span style="font-size:var(--fs-1);color:var(--disp,#B3261E)">' + esc(x.sev)
         + '</span>' : '')
-      +   (x.key ? '<code style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + testEsc(x.key) + '</code>' : '')
-      +   '<b style="font-size:var(--fs-2);flex:1 1 14em;min-width:0">' + testEsc(x.title) + '</b>'
+      +   (x.key ? '<code style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + esc(x.key) + '</code>' : '')
+      +   '<b style="font-size:var(--fs-2);flex:1 1 14em;min-width:0">' + esc(x.title) + '</b>'
       +   '<span style="font-size:var(--fs-1);font-weight:700;color:'
       +     (shut ? 'var(--ok-2,#1B7F4B)' : ver ? 'var(--warn-2,#8a6100)' : 'var(--grey-4,#646A72)') + '">'
-      +     testEsc((x.stateWord || (shut ? 'closed' : 'open')).toUpperCase()) + '</span>'
+      +     esc((x.stateWord || (shut ? 'closed' : 'open')).toUpperCase()) + '</span>'
       +   (forMe ? '<span style="font-size:var(--fs-1);font-weight:700;color:var(--ok-2,#1B7F4B)">'
         + '· yours to retest</span>' : '')
       + '</div>'
       /* where, who and when — the three things a finding is useless without */
       + '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:2px">'
-      +   (x.screen ? '<b>' + testEsc(x.screen) + '</b> ' + testEsc(codeName(x.screen) || '') + ' \u00b7 ' : '')
-      +   (x.by ? 'by ' + testEsc(x.by) : 'author not recorded')
-      +   (x.at ? ' \u00b7 ' + testEsc(String(x.at).slice(0, 16).replace('T', ' ')) : '')
+      +   (x.screen ? '<b>' + esc(x.screen) + '</b> ' + esc(codeName(x.screen) || '') + ' \u00b7 ' : '')
+      +   (x.by ? 'by ' + esc(x.by) : 'author not recorded')
+      +   (x.at ? ' \u00b7 ' + esc(String(x.at).slice(0, 16).replace('T', ' ')) : '')
       + '</div>'
-      + (x.doIt ? '<div style="font-size:var(--fs-1);color:var(--grey-2)">do: ' + testEsc(x.doIt)
+      + (x.doIt ? '<div style="font-size:var(--fs-1);color:var(--grey-2)">do: ' + esc(x.doIt)
           + '</div>' : '')
-      + (x.exp ? '<div style="font-size:var(--fs-1);color:var(--grey-2)">should see: ' + testEsc(x.exp)
+      + (x.exp ? '<div style="font-size:var(--fs-1);color:var(--grey-2)">should see: ' + esc(x.exp)
           + '</div>' : '')
-      + (x.seen ? '<div style="font-size:var(--fs-1);margin-top:1px">seen: ' + testEsc(x.seen) + '</div>' : '')
+      + (x.seen ? '<div style="font-size:var(--fs-1);margin-top:1px">seen: ' + esc(x.seen) + '</div>' : '')
       /* ⭐ the answer travels with the question: what was changed, by whom, so a retest starts informed */
       + (ver ? '<div style="font-size:var(--fs-1);margin-top:3px;padding:4px 7px;background:var(--warn-tint,#fdf6e6);'
-          + 'border-radius:6px">fixed: ' + testEsc((x.fixedBy && (x.fixedBy.subject || x.fixedBy.sha)) || x.closedNote
-            || 'no account given') + (x.fixedBy && x.fixedBy.by ? ' · ' + testEsc(x.fixedBy.by) : '') + '</div>' : '')
+          + 'border-radius:6px">fixed: ' + esc((x.fixedBy && (x.fixedBy.subject || x.fixedBy.sha)) || x.closedNote
+            || 'no account given') + (x.fixedBy && x.fixedBy.by ? ' · ' + esc(x.fixedBy.by) : '') + '</div>' : '')
       /* the account of the closure, which is the whole point of asking for one */
       + (shut && x.closedNote
           ? '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:3px;padding:4px 7px;'
-            + 'background:var(--paper,#faf8f3);border-radius:6px">closed: ' + testEsc(x.closedNote)
-            + (x.closedBy ? ' \u00b7 ' + testEsc(x.closedBy) : '') + '</div>'
+            + 'background:var(--paper,#faf8f3);border-radius:6px">closed: ' + esc(x.closedNote)
+            + (x.closedBy ? ' \u00b7 ' + esc(x.closedBy) : '') + '</div>'
         : shut ? '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);margin-top:3px">closed, no reason recorded</div>' : '')
       + (x.last ? '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);margin-top:2px">'
-          + testEsc(String(x.last.status).toUpperCase()) + ' by ' + testEsc(x.last.tester_name || 'someone')
+          + esc(String(x.last.status).toUpperCase()) + ' by ' + esc(x.last.tester_name || 'someone')
           + '</div>' : '')
       /* ── the actions ── */
       + '<div style="margin-top:5px">'
       +   (x.screen ? '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);'
         + 'padding:2px 9px" onclick="testHandOpen(' + "'" + testJs(x.screen) + "'" + ')">Open '
-        + testEsc(x.screen) + '</button> ' : '')
+        + esc(x.screen) + '</button> ' : '')
       +   (x.shot ? '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);'
         + 'padding:2px 9px" onclick="testShotView(' + "'" + testJs(x.shot) + "'" + ')">'
         + '\u1f5bc\ufe0f Screenshot</button> ' : '')
@@ -7497,7 +7493,7 @@ function testHandHTML() {
         + 'onclick="testFindFixed(\'' + testJs(String(x.id || '')) + '\')">Mark it fixed</button>'
       : '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:2px 9px" '
       +     'onclick="testFindClose(\'' + x.kind + '\',\'' + testJs(String(x.id || '')) + '\',\''
-      +     testEsc(String(x.key || '')) + '\',false)">\u2713 Close</button>')
+      +     esc(String(x.key || '')) + '\',false)">\u2713 Close</button>')
       + '</div>'
       + '</div>';
   }).join('');
@@ -7597,7 +7593,7 @@ function testViewToggleHTML() {
     + '<option value="" disabled' + (inMore ? '' : ' selected') + ' style="' + optS + '">More \u2026</option>'
     + TEST_VIEW_MORE.map(function (m) {
         return '<option value="' + m[0] + '"' + (v === m[0] ? ' selected' : '') + ' style="' + optS + '" '
-          + 'title="' + testEsc(m[2]) + '">' + m[1] + '</option>';
+          + 'title="' + esc(m[2]) + '">' + m[1] + '</option>';
       }).join('')
     + '</select>'
     + '</span>';
@@ -7626,7 +7622,7 @@ function testSetupHTML() {
   /* ── what this sitting is ── */
   h += testSec('This sitting');
   h += row('Who is testing',
-    '<input type="text" placeholder="' + testEsc(testDefaultWho()) + '" value="' + testEsc(testWho()) + '"'
+    '<input type="text" placeholder="' + esc(testDefaultWho()) + '" value="' + esc(testWho()) + '"'
     + ' onchange="testSetWho(this.value)" style="' + sel + ';width:100%;box-sizing:border-box">');
   h += row('How it is being run',
     '<select onchange="testSetKind(this.value)" style="' + sel + '">'
@@ -7634,7 +7630,7 @@ function testSetupHTML() {
        ['t0', 'T0 \u00b7 Claude, quick check'], ['t1', 'T1 \u00b7 Claude, one spec'],
        ['t2', 'T2 \u00b7 Claude, one surface'], ['t3', 'T3 \u00b7 Claude, everything']].map(function (k) {
         return '<option value="' + k[0] + '"' + (CBTEST.run.kind === k[0] ? ' selected' : '') + '>'
-          + testEsc(k[1]) + '</option>'; }).join('')
+          + esc(k[1]) + '</option>'; }).join('')
     + '</select>');
   /* ⭐ FOCUS PINS, IT DOES NOT LOCK. A panel that refuses to show anything but one module is a panel somebody
      closes — and then nothing is tested at all. It makes the gap impossible to miss and counts it down. */
@@ -7643,9 +7639,9 @@ function testSetupHTML() {
     + '<option value="">Anywhere</option>'
     + CBTEST.cover.map(function (a) {
         var left = a.untested;
-        return '<option value="' + testEsc(a.module_key) + '"'
+        return '<option value="' + esc(a.module_key) + '"'
           + ((CBTEST.run.focus === a.module_key) ? ' selected' : '') + '>'
-          + testEsc(a.module_key) + (left ? ' \u00b7 ' + left + ' left' : ' \u00b7 done')
+          + esc(a.module_key) + (left ? ' \u00b7 ' + left + ' left' : ' \u00b7 done')
           + (a.high_untested ? ' \u26a0' : '') + '</option>'; }).join('')
     + '</select>');
 
@@ -7662,7 +7658,7 @@ function testSetupHTML() {
                  while leaving it out lets the absence read as "not applicable" */
               if (!c[k] && k !== 'penetration') return '';
               return '<option value="' + k + '"' + (CBTEST.kind === k ? ' selected' : '') + '>'
-                + testEsc(TEST_KIND_LABEL[k]) + ' \u00b7 ' + (c[k] || 0) + '</option>';
+                + esc(TEST_KIND_LABEL[k]) + ' \u00b7 ' + (c[k] || 0) + '</option>';
             }).join('');
       })()
     + '</select>');
@@ -7670,8 +7666,8 @@ function testSetupHTML() {
     '<select onchange="testSetArea(this.value)" style="' + sel + '">'
     + '<option value=""' + (CBTEST.area ? '' : ' selected') + '>All areas \u00b7 ' + testKindTotal() + '</option>'
     + testAreas().map(function (a) {
-        return '<option value="' + testEsc(a.key) + '"' + (CBTEST.area === a.key ? ' selected' : '') + '>'
-             + testEsc(a.key + ' \u00b7 ' + a.name) + ' \u00b7 ' + a.n + '</option>'; }).join('')
+        return '<option value="' + esc(a.key) + '"' + (CBTEST.area === a.key ? ' selected' : '') + '>'
+             + esc(a.key + ' \u00b7 ' + a.name) + ' \u00b7 ' + a.n + '</option>'; }).join('')
     + '</select>');
 
   /* ── the panel itself ── */
@@ -7788,7 +7784,7 @@ function testMenuHTML(shown) {
      */
     h += '<div onclick="testFold(\'' + testJs(gkey) + '\')" style="display:flex;gap:6px;align-items:baseline;cursor:pointer;padding:5px 6px;border-bottom:1px solid var(--line,#efece4)">'
       + '<span style="' + q + '">' + (gopen ? '\u25be' : '\u25b8') + '</span>'
-      + '<b style="font-size:var(--fs-2)">' + testEsc(g.name) + '</b>'
+      + '<b style="font-size:var(--fs-2)">' + esc(g.name) + '</b>'
       + '<span style="' + q + '">' + g.doors.length + ' door(s)</span>'
       + '<span style="flex:1 1 auto"></span>'
       + '<span style="' + q + ';font-variant-numeric:tabular-nums">' + g.run + ' of ' + g.total + ' run</span>'
@@ -7805,7 +7801,7 @@ function testMenuHTML(shown) {
            *"so can you give the metrics by screen name as well?"* — the figures were already here; what was
            missing was the name to put in front of them. */
         + testScreenCode(g.name + ' › ' + d.name)
-        + '<span style="font-size:var(--fs-2)">' + testEsc(d.name) + '</span>'
+        + '<span style="font-size:var(--fs-2)">' + esc(d.name) + '</span>'
         + '<span style="flex:1 1 auto"></span>'
         /**
          * ⭐ THE THREE FIGURES A DOOR OWES A TESTER: how many controls, how many have ever been run, and how
@@ -7830,10 +7826,10 @@ function testMenuHTML(shown) {
         h += '<div style="border-inline-start:2px solid ' + (l ? (l.status === 'fail' || l.status === 'blocked'
               ? 'var(--disp)' : 'var(--ok-2)') : 'var(--line,#e7e3d8)') + ';margin-inline-start:26px">'
           + '<div onclick="testOpen(\'' + testJs(c.case_key) + '\')" style="display:flex;gap:6px;align-items:baseline;cursor:pointer;padding:3px 6px">'
-          +   '<span style="font-size:var(--fs-2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + testEsc(c.title || c.case_key) + '</span>'
+          +   '<span style="font-size:var(--fs-2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(c.title || c.case_key) + '</span>'
           +   '<span style="flex:1 1 auto"></span>'
           +   (c.generated ? '<span style="' + q + '">swept ·</span>' : '')
-          +   '<span style="' + q + '">' + (l ? testEsc(l.status) : 'not run') + '</span>'
+          +   '<span style="' + q + '">' + (l ? esc(l.status) : 'not run') + '</span>'
           + '</div>'
           + (isOpen ? testCaseBodyHTML(c) : '')
           + '</div>';
@@ -7856,29 +7852,29 @@ function testCaseBodyHTML(c) {
   /* ⭐ the screen CODE first, then the path it names — the code is what gets quoted, the path is what
      makes it readable the first time. */
   if (c.menu) h += '<div style="font-size:var(--fs-1);color:var(--grey-2);letter-spacing:.03em;margin-bottom:6px">'
-    + testScreenCode(c.menu) + '<b>' + testEsc(testScreenName(c.menu) || c.menu) + '</b>'
-    + (testScreenName(c.menu) ? ' \u00b7 ' + testEsc(c.menu) : '') + '</div>';
+    + testScreenCode(c.menu) + '<b>' + esc(testScreenName(c.menu) || c.menu) + '</b>'
+    + (testScreenName(c.menu) ? ' \u00b7 ' + esc(c.menu) : '') + '</div>';
   if (c.generated) h += '<div style="margin-bottom:7px"><span title="It names the control but carries no '
     + 'written expectation. Judge it against what the screen is FOR, and if you decide what it should do, '
     + 'write that into the case." style="display:inline-block;font-size:var(--fs-1);padding:1px 8px;'
     + 'border-radius:10px;background:#fff8ea;border:1px solid #f0e3c4;color:#7a5c17">'
     + 'swept \u00b7 no expectation</span></div>';
-  if (c.pre) h += '<div style="color:var(--grey-2,var(--grey-2));margin-bottom:5px"><b>Before:</b> ' + testEsc(c.pre) + '</div>';
-  if (c.data) h += '<div style="color:var(--grey-2,var(--grey-2));margin-bottom:5px"><b>Use:</b> ' + testEsc(c.data) + '</div>';
+  if (c.pre) h += '<div style="color:var(--grey-2,var(--grey-2));margin-bottom:5px"><b>Before:</b> ' + esc(c.pre) + '</div>';
+  if (c.data) h += '<div style="color:var(--grey-2,var(--grey-2));margin-bottom:5px"><b>Use:</b> ' + esc(c.data) + '</div>';
   (c.steps || []).forEach(function (s, i) {
     h += '<div style="display:flex;gap:6px;margin:4px 0">'
       +  '<span style="color:var(--grey);min-width:13px">' + (i + 1) + '</span>'
-      +  '<span style="flex:1">' + testEsc(s[0])
-      +    '<span style="display:block;color:var(--grey-2,var(--grey-2))">→ ' + testEsc(s[1]) + '</span></span></div>';
+      +  '<span style="flex:1">' + esc(s[0])
+      +    '<span style="display:block;color:var(--grey-2,var(--grey-2))">→ ' + esc(s[1]) + '</span></span></div>';
   });
   if (c.note) h += '<div style="margin-top:6px;padding:6px 8px;background:var(--paper,#faf8f3);'
-    + 'border:1px solid var(--line,#efece4);border-radius:7px;color:var(--grey-2,var(--grey-2))">' + testEsc(c.note) + '</div>';
+    + 'border:1px solid var(--line,#efece4);border-radius:7px;color:var(--grey-2,var(--grey-2))">' + esc(c.note) + '</div>';
 
   /* ⭐ EVIDENCE IS A FIELD OF ITS OWN, because Athi asked for it and because "what you saw" and "where to look at
      it" are different sentences. A note is prose; evidence is a bill number, a spec name, a screenshot filename. */
-  h += '<input type="text" id="cbt_n_' + testEsc(c.case_key) + '" placeholder="What did you see?" '
+  h += '<input type="text" id="cbt_n_' + esc(c.case_key) + '" placeholder="What did you see?" '
     +  'style="width:100%;margin-top:8px;font-size:var(--fs-2);padding:5px 7px">'
-    +  '<input type="text" id="cbt_e_' + testEsc(c.case_key) + '" placeholder="Evidence — bill number, screenshot" '
+    +  '<input type="text" id="cbt_e_' + esc(c.case_key) + '" placeholder="Evidence — bill number, screenshot" '
     +  'style="width:100%;margin-top:5px;font-size:var(--fs-2);padding:5px 7px">'
     /**
      * ⚠ SAY WHETHER THE CALLS ARE BEING KEPT, and say it from the SAME condition the recorder uses. This line
@@ -8285,11 +8281,11 @@ function testAddHTML() {
     + '<div style="font-size:var(--fs-1);color:' + (chosen ? 'var(--blue,#3F66A6)' : 'var(--grey-2,#545A61)')
     +   ';margin-bottom:8px">'
     +   (chosen
-        ? 'Adding to <b>' + testEsc(suggested) + '</b>' + (named ? ' \u00b7 ' + testEsc(named) : '')
+        ? 'Adding to <b>' + esc(suggested) + '</b>' + (named ? ' \u00b7 ' + esc(named) : '')
         : '<span title="Press + on an area row to be sure, or edit it below.">\u26a0 suggested</span>')
     + '</div>'
     + '<label style="font-size:var(--fs-1);color:var(--grey-2,var(--grey-2))">Area</label>'
-    + '<input type="text" id="cbt_a_mod" value="' + testEsc(suggested) + '" '
+    + '<input type="text" id="cbt_a_mod" value="' + esc(suggested) + '" '
     +   'style="width:100%;margin-bottom:7px;padding:5px 7px;font-size:var(--fs-2)">'
     + '<label style="font-size:var(--fs-1);color:var(--grey-2,var(--grey-2))">What should happen</label>'
     + '<input type="text" id="cbt_a_title" placeholder="e.g. A local supplier cannot be sent a chit" '

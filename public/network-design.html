@@ -34,11 +34,10 @@
 <script>
 /* the Network Lab sketch — sample rows only; the server's validate answers, this page decides nothing about what would break */
 var LAB=[{name:'Clothing',owned:true,ref:''},{name:'Shoes',owned:true,ref:''}];
-function labEsc(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function labPaint(){
   document.getElementById('labRows').innerHTML=LAB.map(function(n,i){
-    return '<div class="row"><input class="nm" value="'+labEsc(n.name)+'" placeholder="Name" oninput="LAB['+i+'].name=this.value" data-testid="lab-name-'+i+'">'
-      +(n.owned?'<span class="s" style="font-size:12px;color:var(--grey)">your store</span>':'<input value="'+labEsc(n.ref)+'" placeholder="their handle, e.g. ravi.timbers" oninput="LAB['+i+'].ref=this.value" data-testid="lab-ref-'+i+'">')
+    return '<div class="row"><input class="nm" value="'+esc(n.name)+'" placeholder="Name" oninput="LAB['+i+'].name=this.value" data-testid="lab-name-'+i+'">'
+      +(n.owned?'<span class="s" style="font-size:12px;color:var(--grey)">your store</span>':'<input value="'+esc(n.ref)+'" placeholder="their handle, e.g. ravi.timbers" oninput="LAB['+i+'].ref=this.value" data-testid="lab-ref-'+i+'">')
       +'<button type="button" onclick="LAB.splice('+i+',1);labPaint()" aria-label="Remove">✕</button></div>';}).join('');
 }
 function labAdd(own){LAB.push({name:'',owned:own,ref:''});labPaint();}
@@ -54,10 +53,10 @@ function labCheck(){
   fetch(api+'/api/network-design/validate',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+tok},body:JSON.stringify({sample:true,draft:{nodes:nodes}})})
     .then(function(r){return r.json().then(function(j){if(!r.ok)throw new Error(j.message||'No answer');return j;});})
     .then(function(v){
-      out.innerHTML='<div class="says '+(v.ok?'good':'bad')+'" data-testid="lab-says">'+labEsc(v.says)+'</div>'
-        +(v.breaks&&v.breaks.length?'<ul>'+v.breaks.map(function(b){return '<li><b>'+labEsc(b.name)+'</b> — '+labEsc(b.reason)+'</li>';}).join('')+'</ul>':'')
-        +(v.would&&v.would.create.length?'<div class="s" style="font-size:12.5px;color:var(--grey)">Would make: '+v.would.create.map(function(c){return labEsc(c.handle);}).join(', ')+'</div>':'');})
-    .catch(function(e){out.innerHTML='<div class="says bad">'+labEsc(e.message||'Could not check — try again.')+'</div>';})
+      out.innerHTML='<div class="says '+(v.ok?'good':'bad')+'" data-testid="lab-says">'+esc(v.says)+'</div>'
+        +(v.breaks&&v.breaks.length?'<ul>'+v.breaks.map(function(b){return '<li><b>'+esc(b.name)+'</b> — '+esc(b.reason)+'</li>';}).join('')+'</ul>':'')
+        +(v.would&&v.would.create.length?'<div class="s" style="font-size:12.5px;color:var(--grey)">Would make: '+v.would.create.map(function(c){return esc(c.handle);}).join(', ')+'</div>':'');})
+    .catch(function(e){out.innerHTML='<div class="says bad">'+esc(e.message||'Could not check — try again.')+'</div>';})
     .then(function(){btn.disabled=false;});
 }
 document.addEventListener("DOMContentLoaded",labPaint);

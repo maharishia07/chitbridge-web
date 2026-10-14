@@ -55,8 +55,6 @@ var CBPick = (function () {
   var HOST_LIST = 'cbpick_pk';
   var HOST_BAR = 'cbcartbar_pk';
   var open_ = null;                    // the one in flight; a second open replaces it
-
-  function esc_(s) { return (typeof esc === 'function') ? esc(s) : String(s == null ? '' : s); }
   function tx_(s) { return (typeof tx === 'function') ? tx(s) : s; }
 
   /**
@@ -114,13 +112,13 @@ var CBPick = (function () {
   }
 
   function shell(o, body) {
-    return '<div class="mhd"><div class="t">' + esc_(o.title || tx_('Catalogue')) + '</div>'
-      + (o.subtitle ? '<div class="s">' + esc_(o.subtitle) + '</div>' : '') + '</div>'
+    return '<div class="mhd"><div class="t">' + esc(o.title || tx_('Catalogue')) + '</div>'
+      + (o.subtitle ? '<div class="s">' + esc(o.subtitle) + '</div>' : '') + '</div>'
       + '<div class="mbody" style="padding:11px 12px">' + body + '</div>'
       + '<div class="mfoot"><button data-testid="pick-cancel" onclick="CBPick.cancel()">'
-      + esc_(tx_('Cancel')) + '</button>'
+      + esc(tx_('Cancel')) + '</button>'
       + '<button class="pri" data-testid="pick-confirm" onclick="CBPick.confirm()">'
-      + esc_(o.confirm || tx_('Use these')) + '</button></div>';
+      + esc(o.confirm || tx_('Use these')) + '</button></div>';
   }
 
   /**
@@ -132,9 +130,9 @@ var CBPick = (function () {
   function paintLoading(o) {
     var skel = (typeof CBCatUI !== 'undefined' && CBCatUI.skeletonHTML)
       ? CBCatUI.skeletonHTML({ rows: 7 })
-      : '<div style="padding:20px;color:var(--grey)"><span class="spin"></span> ' + esc_(tx_('reading…')) + '</div>';
+      : '<div style="padding:20px;color:var(--grey)"><span class="spin"></span> ' + esc(tx_('reading…')) + '</div>';
     modal(shell(o, '<div style="font-size:var(--fs-2);color:var(--grey);padding:2px 2px 9px">'
-      + '<span class="spin"></span> ' + esc_(tx_('reading your catalogue…')) + '</div>' + skel), true);
+      + '<span class="spin"></span> ' + esc(tx_('reading your catalogue…')) + '</div>' + skel), true);
   }
 
   function paintPicker(o, cart) {
@@ -200,7 +198,7 @@ var CBPick = (function () {
         }).catch(function (e) {
           if (state.done) return;
           modal(shell(o, '<div style="padding:18px;color:var(--disp);font-size:var(--fs-2)">'
-            + esc_((typeof MSG !== 'undefined' && MSG.fail) ? MSG.fail('read the catalogue', e)
+            + esc((typeof MSG !== 'undefined' && MSG.fail) ? MSG.fail('read the catalogue', e)
               : tx_('Could not read the catalogue.')) + '</div>'), true);
         });
       });

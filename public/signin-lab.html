@@ -95,7 +95,6 @@ body{background:var(--page);color:var(--ink);font:15px/1.45 'IBM Plex Sans','Seg
 <script>
 (function () {
 'use strict';
-var h = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
 var $ = function (id) { return document.getElementById(id); };
 var toastT; function toast(t) { var e = $('toast'); e.textContent = t; e.hidden = false; clearTimeout(toastT); toastT = setTimeout(function () { e.hidden = true; }, 2400); }
 
@@ -219,10 +218,10 @@ function mountWindow() {
 function typedFor(p) { return sel.by === 'mobile' ? p.mobile : sel.by === 'email' ? p.email : p.userid; }
 function paintHint() {
   var p = LIVE[sel.who], typed = typedFor(p);
-  var cred = (p.kind === 'actor' && p.pin) ? 'PIN <code>' + h(p.pin) + '</code>' : 'code <code>' + h(p.code) + '</code>' + (p.operator ? ' (from the network)' : '');
+  var cred = (p.kind === 'actor' && p.pin) ? 'PIN <code>' + esc(p.pin) + '</code>' : 'code <code>' + esc(p.code) + '</code>' + (p.operator ? ' (from the network)' : '');
   var extra = sel.stage === 'first' && p.kind === 'actor' ? ' · then choose a PIN' : sel.stage === 'locked' ? ' · this account is locked' : sel.stage === 'removed' ? ' · the owner removed this device' : '';
-  $('hint').innerHTML = typed ? 'Type <code data-testid="lab-typed">' + h(typed) + '</code> · ' + cred + extra
-                              : 'This ' + h(p.label.toLowerCase()) + ' has no ' + h(sel.by === 'mobile' ? 'mobile' : sel.by === 'email' ? 'e-mail' : 'user id') + '. Pick another way in.';
+  $('hint').innerHTML = typed ? 'Type <code data-testid="lab-typed">' + esc(typed) + '</code> · ' + cred + extra
+                              : 'This ' + esc(p.label.toLowerCase()) + ' has no ' + esc(sel.by === 'mobile' ? 'mobile' : sel.by === 'email' ? 'e-mail' : 'user id') + '. Pick another way in.';
   if (sel.who === 'shared' && sel.by !== 'userid') $('hint').innerHTML += ' · the owner has it too · it will ask which one you are';
 }
 
@@ -250,35 +249,35 @@ function paintAfter(s) {
   var life = claims.exp && claims.iat ? Math.round((claims.exp - claims.iat) / 86400) + ' days' : '—';
   var kindWord = p.kind === 'entity' ? (p.operator ? 'network store (owner)' : 'owner') : p.kind === 'actor' ? 'employee' : 'customer';
   var head = '<div class="panel" data-testid="lab-signed-in"><h3>Signed in</h3><dl class="kv">' +
-    '<dt>Who</dt><dd data-testid="lab-who">' + h(s.name) + '</dd>' +
-    '<dt>Stored id</dt><dd data-testid="lab-stored-id">' + h(p.id) + '</dd>' +
-    '<dt>Kind</dt><dd data-testid="lab-kind">' + h(kindWord) + (p.hat && p.kind === 'actor' ? ' · hat ' + h(p.hat) : '') + '</dd>' +
-    '<dt>Shop</dt><dd>' + h(s.entity) + '</dd>' +
-    '<dt>Device</dt><dd data-testid="lab-device">' + h(s.device_id ? s.device_id + ' (listed · the owner can remove it)' : 'not named · not listed') + '</dd>' +
-    '<dt>Signed in for</dt><dd data-testid="lab-life">' + h(life) + (s.surface ? ' · ' + h(s.surface) : '') + '</dd>' +
-    '<dt>Method</dt><dd data-testid="lab-method">' + h(p.method === 'pin' ? 'PIN' : 'code') + (p.kind === 'actor' && p.method === 'code' ? ' · then a PIN was set' : '') + '</dd>' +
-    '<dt>Kept as</dt><dd>' + h(Object.keys(STORE.all).join(', ') || '—') + '</dd></dl></div>';
+    '<dt>Who</dt><dd data-testid="lab-who">' + esc(s.name) + '</dd>' +
+    '<dt>Stored id</dt><dd data-testid="lab-stored-id">' + esc(p.id) + '</dd>' +
+    '<dt>Kind</dt><dd data-testid="lab-kind">' + esc(kindWord) + (p.hat && p.kind === 'actor' ? ' · hat ' + esc(p.hat) : '') + '</dd>' +
+    '<dt>Shop</dt><dd>' + esc(s.entity) + '</dd>' +
+    '<dt>Device</dt><dd data-testid="lab-device">' + esc(s.device_id ? s.device_id + ' (listed · the owner can remove it)' : 'not named · not listed') + '</dd>' +
+    '<dt>Signed in for</dt><dd data-testid="lab-life">' + esc(life) + (s.surface ? ' · ' + esc(s.surface) : '') + '</dd>' +
+    '<dt>Method</dt><dd data-testid="lab-method">' + esc(p.method === 'pin' ? 'PIN' : 'code') + (p.kind === 'actor' && p.method === 'code' ? ' · then a PIN was set' : '') + '</dd>' +
+    '<dt>Kept as</dt><dd>' + esc(Object.keys(STORE.all).join(', ') || '—') + '</dd></dl></div>';
   var lvl = levelOf(p);
   var me = { level: lvl }, chit = { held: true, received: 'pending' };
   var acts = (window.CBRail && CBRail.actions) ? CBRail.actions(chit, me) : {};
   var actRows = Object.keys(acts).map(function (a) {
     var v = acts[a];
-    return '<div class="row ' + (v.ok ? 'ok' : 'no') + '" data-testid="lab-action" data-action="' + h(a) + '" data-ok="' + v.ok + '"><span class="m n">' + h(a.replace(/_/g, ' ')) + '</span><span class="s">' + h(v.ok ? '' : CBRail.say(v.why)) + '</span></div>';
+    return '<div class="row ' + (v.ok ? 'ok' : 'no') + '" data-testid="lab-action" data-action="' + esc(a) + '" data-ok="' + v.ok + '"><span class="m n">' + esc(a.replace(/_/g, ' ')) + '</span><span class="s">' + esc(v.ok ? '' : CBRail.say(v.why)) + '</span></div>';
   }).join('');
   manifest().then(function (m) {
     var built = (m.entries || []).filter(function (e) { return e.state === 'built'; });
     var appRows = built.map(function (e) {
       var v = mayOpen(e, p);
-      return '<div class="row ' + (v.ok ? 'ok' : 'no') + '" data-testid="lab-app" data-app="' + h(e.id) + '" data-ok="' + v.ok + '"><span class="m n">' + h(e.name) + '</span><span class="s">' + h(v.ok ? (e.route || '') : v.why) + '</span></div>';
+      return '<div class="row ' + (v.ok ? 'ok' : 'no') + '" data-testid="lab-app" data-app="' + esc(e.id) + '" data-ok="' + v.ok + '"><span class="m n">' + esc(e.name) + '</span><span class="s">' + esc(v.ok ? (e.route || '') : v.why) + '</span></div>';
     }).join('');
-    var planned = PLANNED_ROLES.map(function (r) { return '<div class="row plan" data-testid="lab-planned"><span class="m n">' + h(r.role) + '</span><span class="s">' + h(r.flow) + ' · planned role — not built</span></div>'; }).join('');
+    var planned = PLANNED_ROLES.map(function (r) { return '<div class="row plan" data-testid="lab-planned"><span class="m n">' + esc(r.role) + '</span><span class="s">' + esc(r.flow) + ' · planned role — not built</span></div>'; }).join('');
     $('after').innerHTML = head +
       '<div class="panel" data-testid="lab-can"><h3>What you can do</h3>' +
       '<h4>Apps (manifest.json)</h4>' + appRows +
-      '<h4>Actions on a chit you hold (rail.js · level <span class="tag" data-testid="lab-level">' + h(lvl) + '</span>)</h4>' + actRows +
+      '<h4>Actions on a chit you hold (rail.js · level <span class="tag" data-testid="lab-level">' + esc(lvl) + '</span>)</h4>' + actRows +
       '<h4>Also</h4>' +
       '<div class="row ' + (p.kind === 'entity' || p.can_see_costs ? 'ok' : 'no') + '" data-testid="lab-costs"><span class="m n">See costs and margins</span><span class="s">can_see_costs (lib/cost.js)</span></div>' +
-      '<div class="row" data-testid="lab-hatgate"><span class="n">Writes under the ' + h(p.hat || 'own') + ' hat</span><span class="s">decided by the server (hat-gate.js)</span></div>' +
+      '<div class="row" data-testid="lab-hatgate"><span class="n">Writes under the ' + esc(p.hat || 'own') + ' hat</span><span class="s">decided by the server (hat-gate.js)</span></div>' +
       '<h4>Planned roles</h4>' + planned + '</div>';
     $('after').hidden = false;
   });
@@ -289,9 +288,9 @@ function paintRoadmap() {
   manifest().then(function (m) {
     var groups = { built: [], workshop: [], coming: [] };
     (m.entries || []).forEach(function (e) { (groups[e.state] || (groups[e.state] = [])).push(e); });
-    $('roadmap').innerHTML = '<h3>Roadmap — ' + (m.entries || []).length + ' entries (manifest v' + h(m.version || '') + ')</h3>' + Object.keys(groups).map(function (st) {
-      return '<h4 data-testid="roadmap-group" data-state="' + h(st) + '" data-count="' + groups[st].length + '">' + h(st) + ' · ' + groups[st].length + '</h4>' + groups[st].map(function (e) {
-        return '<div class="row" data-testid="roadmap-entry" data-state="' + h(st) + '"><span class="n">' + h(e.name) + (e.area ? ' <span class="tag">' + h(e.area) + '</span>' : '') + '</span><span class="s">' + h(whoCanOpen(e)) + (e.route ? ' · ' + h(e.route) : '') + '</span></div>';
+    $('roadmap').innerHTML = '<h3>Roadmap — ' + (m.entries || []).length + ' entries (manifest v' + esc(m.version || '') + ')</h3>' + Object.keys(groups).map(function (st) {
+      return '<h4 data-testid="roadmap-group" data-state="' + esc(st) + '" data-count="' + groups[st].length + '">' + esc(st) + ' · ' + groups[st].length + '</h4>' + groups[st].map(function (e) {
+        return '<div class="row" data-testid="roadmap-entry" data-state="' + esc(st) + '"><span class="n">' + esc(e.name) + (e.area ? ' <span class="tag">' + esc(e.area) + '</span>' : '') + '</span><span class="s">' + esc(whoCanOpen(e)) + (e.route ? ' · ' + esc(e.route) : '') + '</span></div>';
       }).join('');
     }).join('');
   });
@@ -299,7 +298,7 @@ function paintRoadmap() {
 
 /* ═════ THE STRIP ═════ */
 function btns(id, list, key) {
-  $(id).innerHTML = list.map(function (x) { return '<button type="button" data-' + key + '="' + h(x[0]) + '" aria-pressed="' + (sel[key] === x[0]) + '" data-testid="lab-' + key + '-' + h(x[0]) + '">' + h(x[1]) + '</button>'; }).join('');
+  $(id).innerHTML = list.map(function (x) { return '<button type="button" data-' + key + '="' + esc(x[0]) + '" aria-pressed="' + (sel[key] === x[0]) + '" data-testid="lab-' + key + '-' + esc(x[0]) + '">' + esc(x[1]) + '</button>'; }).join('');
 }
 function paintProto() {
   btns('pWho', Object.keys(PEOPLE).map(function (k) { return [k, PEOPLE[k].label]; }), 'who');

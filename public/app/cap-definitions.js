@@ -836,11 +836,11 @@ function cbDefPickHTML(x, v){
    */
   if (Array.isArray(x.pick)) {
     var cur = (v === undefined || v === null || v === '') ? String(x.pick[0][0]) : String(v);
-    return '<select class="inp" data-testid="cbdef-pick-' + cbDefEsc(x.k) + '"'
+    return '<select class="inp" data-testid="cbdef-pick-' + esc(x.k) + '"'
       + ' onchange="cbDefSetRule(\'' + x.k + '\',this.value)">'
       + x.pick.map(function (p) {
-          return '<option value="' + cbDefEsc(p[0]) + '"' + (cur === String(p[0]) ? ' selected' : '') + '>'
-            + cbDefEsc(p[1]) + '</option>'; }).join('')
+          return '<option value="' + esc(p[0]) + '"' + (cur === String(p[0]) ? ' selected' : '') + '>'
+            + esc(p[1]) + '</option>'; }).join('')
       + '</select>';
   }
   var list = (typeof _CATG !== 'undefined' && _CATG) ? _CATG : null;
@@ -852,12 +852,12 @@ function cbDefPickHTML(x, v){
     return '<div class="cbdef-hint">No categories yet, so this offer applies to <b>everything</b>. '
       + 'Make one under <b>' + tx('Categories') + '</b> to target it.</div>';
   }
-  return '<select class="inp" data-testid="cbdef-pick-' + cbDefEsc(x.k) + '"'
+  return '<select class="inp" data-testid="cbdef-pick-' + esc(x.k) + '"'
     + ' onchange="cbDefSetRule(\'' + x.k + '\',this.value)">'
     + '<option value="">— everything —</option>'
     + list.map(function (c) {
-        return '<option value="' + cbDefEsc(c.id) + '"' + (String(v) === String(c.id) ? ' selected' : '') + '>'
-          + cbDefEsc(c.name) + '</option>'; }).join('')
+        return '<option value="' + esc(c.id) + '"' + (String(v) === String(c.id) ? ' selected' : '') + '>'
+          + esc(c.name) + '</option>'; }).join('')
     + '</select>';
 }
 /**
@@ -896,12 +896,12 @@ function cbDefPickProductHTML(x, v){
   if (!_CBDEF_PRODS.length) {
     return '<div class="cbdef-hint">Your catalogue is empty, so there is nothing to give away yet.</div>';
   }
-  return '<select class="inp" data-testid="cbdef-pick-' + cbDefEsc(x.k) + '"'
+  return '<select class="inp" data-testid="cbdef-pick-' + esc(x.k) + '"'
     + ' onchange="cbDefSetReward(this.value)">'
     + '<option value="">— one of the qualifying items —</option>'
     + _CBDEF_PRODS.map(function (p) {
-        return '<option value="' + cbDefEsc(p.id) + '"' + (String(v) === String(p.id) ? ' selected' : '') + '>'
-          + cbDefEsc(p.name) + '</option>'; }).join('')
+        return '<option value="' + esc(p.id) + '"' + (String(v) === String(p.id) ? ' selected' : '') + '>'
+          + esc(p.name) + '</option>'; }).join('')
     + '</select>'
     /* ⚠️ ONE LINE. This was three sentences of engine reasoning; the outcome strip below now SHOWS the same
        thing ("earned 1 × Sunflower Oil free — added to your order"), so the paragraph was explaining a
@@ -914,7 +914,7 @@ function cbDefTestAsHTML(){
   var f = CBDEF_FORM, r = (f && f.rules) || {}; if (!r.customer_group) return '';
   var who = r.customer_name || String(r.customer_group).replace(/^customer:/, '');
   return '<label style="display:flex;align-items:center;gap:6px;margin-top:6px;font-size:var(--fs-2)"><input type="checkbox" data-testid="cbdef-test-as"' + (CBDEF_TEST.asCustomer !== false ? ' checked' : '') + ' onchange="CBDEF_TEST.asCustomer=this.checked;cbDefTestRun()"> '
-    + tx('test as') + ' <b>' + cbDefEsc(who) + '</b> <span style="color:var(--grey)">— ' + tx('untick to see what everyone else gets') + '</span></label>';
+    + tx('test as') + ' <b>' + esc(who) + '</b> <span style="color:var(--grey)">— ' + tx('untick to see what everyone else gets') + '</span></label>';
 }
 
 /* ── "Only for": the Customers list's own groups, then each customer by name (value 'customer:<identity_id>') ── */
@@ -936,14 +936,14 @@ function cbDefPickCustomerHTML(x, v){
   if (_CBDEF_CUSTS === undefined) cbDefCustsLive().then(function(){ if (CBDEF_FORM) cbDefPaintForm(); });
   if (_CBDEF_CUSTS === undefined || _CBDEF_CUSTS === null) return '<div class="cbdef-hint">' + tx('reading your customers…') + '</div>';
   var cur = String(v || '');
-  return '<select class="inp" data-testid="cbdef-pick-' + cbDefEsc(x.k) + '" onchange="cbDefSetCustomer(this.value)">'
+  return '<select class="inp" data-testid="cbdef-pick-' + esc(x.k) + '" onchange="cbDefSetCustomer(this.value)">'
     + '<option value="">' + tx('— everyone —') + '</option>'
     + '<optgroup label="' + tx('A group of customers') + '">'
     + CBDEF_GROUPS.map(function (g) { return '<option value="' + g[0] + '"' + (cur === g[0] ? ' selected' : '') + '>' + tx(g[1]) + '</option>'; }).join('')
     + '</optgroup>'
-    + (_CBDEF_GNAMES.length ? '<optgroup label="' + tx('Your named groups') + '">' + _CBDEF_GNAMES.map(function (g) { var val = 'group:' + g; return '<option value="' + cbDefEsc(val) + '"' + (cur === val ? ' selected' : '') + '>' + cbDefEsc(g) + '</option>'; }).join('') + '</optgroup>' : '')
+    + (_CBDEF_GNAMES.length ? '<optgroup label="' + tx('Your named groups') + '">' + _CBDEF_GNAMES.map(function (g) { var val = 'group:' + g; return '<option value="' + esc(val) + '"' + (cur === val ? ' selected' : '') + '>' + esc(g) + '</option>'; }).join('') + '</optgroup>' : '')
     + (_CBDEF_CUSTS.length ? '<optgroup label="' + tx('One customer') + '">'
-        + _CBDEF_CUSTS.map(function (c) { var val = 'customer:' + c.id; return '<option value="' + cbDefEsc(val) + '"' + (cur === val ? ' selected' : '') + '>' + cbDefEsc(c.name) + '</option>'; }).join('')
+        + _CBDEF_CUSTS.map(function (c) { var val = 'customer:' + c.id; return '<option value="' + esc(val) + '"' + (cur === val ? ' selected' : '') + '>' + esc(c.name) + '</option>'; }).join('')
         + '</optgroup>' : '')
     + '</select>'
     + '<div class="cbdef-hint">' + tx('Never on the public storefront. Reaches them on Suppliers, in the cart and on the order.') + '</div>';
@@ -1014,35 +1014,35 @@ function cbDefSetCheck(k, on){ cbDefSetRule(k, on ? true : ''); cbDefPaintPrevie
 
 /** ONE field, whatever its shape. Every branch keeps the `cbdef-rule-<key>` test id a spec drives. */
 function cbDefFieldHTML(x, v){
-  var id = 'cbdef-rule-' + cbDefEsc(String(x.k).replace(/\./g, '-'));
+  var id = 'cbdef-rule-' + esc(String(x.k).replace(/\./g, '-'));
   var set = function (expr) { return ' oninput="cbDefSetRule(\'' + x.k + '\',' + expr + ');cbDefPaintPreview()"'; };
   if (x.check) {
     return '<label class="cbdef-check"><input type="checkbox" data-testid="' + id + '"' + (v ? ' checked' : '')
-      + ' onchange="cbDefSetCheck(\'' + x.k + '\',this.checked)"><span>' + cbDefEsc(x.label) + '</span></label>';
+      + ' onchange="cbDefSetCheck(\'' + x.k + '\',this.checked)"><span>' + esc(x.label) + '</span></label>';
   }
   if (x.sel) {
     return '<select class="inp" data-testid="' + id + '" onchange="cbDefSetRule(\'' + x.k + '\',this.value);cbDefPaintPreview()">'
       + x.sel.map(function (o) {
-          return '<option value="' + cbDefEsc(o.v) + '"' + (String(v) === String(o.v) ? ' selected' : '') + '>'
-            + cbDefEsc(tx(o.label)) + '</option>'; }).join('') + '</select>';
+          return '<option value="' + esc(o.v) + '"' + (String(v) === String(o.v) ? ' selected' : '') + '>'
+            + esc(tx(o.label)) + '</option>'; }).join('') + '</select>';
   }
   if (x.tiers) {
-    return '<textarea class="inp" rows="3" data-testid="' + id + '" placeholder="' + cbDefEsc(x.ph || '') + '"'
-      + ' oninput="cbDefSetTiers(this.value)">' + cbDefEsc(cbDefTiersText(v)) + '</textarea>';
+    return '<textarea class="inp" rows="3" data-testid="' + id + '" placeholder="' + esc(x.ph || '') + '"'
+      + ' oninput="cbDefSetTiers(this.value)">' + esc(cbDefTiersText(v)) + '</textarea>';
   }
   if (x.area) {
-    return '<textarea class="inp" rows="4" data-testid="' + id + '" placeholder="' + cbDefEsc(x.ph || '') + '"'
+    return '<textarea class="inp" rows="4" data-testid="' + id + '" placeholder="' + esc(x.ph || '') + '"'
       + set('this.value.split(\'\\n\').filter(Boolean)') + '>'
-      + cbDefEsc(Array.isArray(v) ? v.join('\n') : v) + '</textarea>';
+      + esc(Array.isArray(v) ? v.join('\n') : v) + '</textarea>';
   }
   /* ⚠️ A REAL DATE CONTROL. valid_from/valid_to were text boxes captioned "YYYY-MM-DD" — a format instruction is
      what you write when the field cannot check itself, and offers.js compares these as dates. */
   var type = x.date ? ' type="date"' : (x.num ? ' inputmode="decimal"' : '');
   var val = x.date ? String(v || '').slice(0, 10) : v;
-  var box = '<input class="inp"' + type + ' data-testid="' + id + '" value="' + cbDefEsc(val) + '"'
-    + ' placeholder="' + cbDefEsc(x.ph || '') + '"' + set('this.value,' + (x.num ? 'true' : 'false')) + '>';
+  var box = '<input class="inp"' + type + ' data-testid="' + id + '" value="' + esc(val) + '"'
+    + ' placeholder="' + esc(x.ph || '') + '"' + set('this.value,' + (x.num ? 'true' : 'false')) + '>';
   /* ⭐ MONEY SAYS ITS CURRENCY, A RATE SAYS % (Athi, 2026-09-06 10:35: "in front of amount put a currency symbol") — a bare box is a number, not money */
-  if (x.money) { var sym = (typeof CBLocale !== 'undefined' && CBLocale.symbol) ? CBLocale.symbol((typeof SESSION !== 'undefined' && SESSION && SESSION.currency) || 'INR') : '₹'; return '<span class="cbdef-adorn"><b>' + cbDefEsc(sym) + '</b>' + box + '</span>'; }
+  if (x.money) { var sym = (typeof CBLocale !== 'undefined' && CBLocale.symbol) ? CBLocale.symbol((typeof SESSION !== 'undefined' && SESSION && SESSION.currency) || 'INR') : '₹'; return '<span class="cbdef-adorn"><b>' + esc(sym) + '</b>' + box + '</span>'; }
   if (x.pct) return '<span class="cbdef-adorn cbdef-adorn-after">' + box + '<b>%</b></span>';
   return box;
 }
@@ -1067,7 +1067,7 @@ function cbDefFormHTML(){
    * it tighter.
    */
   return '<div class="mhd cbdef-formhd"><div class="t">'
-    + cbDefEsc((editing ? tx('Edit') : tx('New')) + ' ' + (A.one || f.kind)) + '</div>'
+    + esc((editing ? tx('Edit') : tx('New')) + ' ' + (A.one || f.kind)) + '</div>'
     /**
      * ⭐ THE FREEZE RULE IS SAID ON THE EDIT FORM, WHERE IT MATTERS. Someone changing "Carton of 6" to 12 needs
      * to know, at that moment, that chits already stamped keep the 6 — otherwise the safe behaviour reads as a
@@ -1076,8 +1076,8 @@ function cbDefFormHTML(){
      * ⚠️ ONE LINE, NOT A PARAGRAPH. It was three sentences at the top of the form, which is where a reader
      * stops reading; the rule is the same and it now sits beside the version it is talking about.
      */
-    + (editing ? '<span class="cbdef-vpill" title="' + cbDefEsc(tx('Saving the rules makes a new version. Chits already stamped keep the one they froze.'))
-        + '">v' + cbDefEsc(f.version || 1) + ' · ' + tx('saving makes v') + (Number(f.version || 1) + 1) + '</span>' : '')
+    + (editing ? '<span class="cbdef-vpill" title="' + esc(tx('Saving the rules makes a new version. Chits already stamped keep the one they froze.'))
+        + '">v' + esc(f.version || 1) + ' · ' + tx('saving makes v') + (Number(f.version || 1) + 1) + '</span>' : '')
     + '</div>'
     + '<div class="mbody cbdef-body" data-mv-fit>'
     + '<div class="cbdef-grid">'
@@ -1085,15 +1085,15 @@ function cbDefFormHTML(){
         ? '<label class="fl cbdef-w2">' + tx('Kind') + '</label>'
           + '<select class="inp cbdef-w2" data-testid="cbdef-sub" onchange="cbDefSetSub(this.value)">'
           + subs.map(function (s) {
-              return '<option value="' + cbDefEsc(s) + '"' + (s === f.sub ? ' selected' : '') + '>'
-                + cbDefEsc(cbDefSubHead(f.kind, s)) + '</option>'; }).join('') + '</select>'
+              return '<option value="' + esc(s) + '"' + (s === f.sub ? ' selected' : '') + '>'
+                + esc(cbDefSubHead(f.kind, s)) + '</option>'; }).join('') + '</select>'
           /* ⚠️ THE KEY IS STILL SHOWN, small. It is what the rules are stored under and what a spec drives; a
              screen that hides its own identifiers costs the next person an hour finding them. */
-          + '<div class="cbdef-hint cbdef-w2"><code>' + cbDefEsc(f.sub) + '</code>' + (tail ? ' · ' + cbDefEsc(tail) : '') + '</div>'
+          + '<div class="cbdef-hint cbdef-w2"><code>' + esc(f.sub) + '</code>' + (tail ? ' · ' + esc(tail) : '') + '</div>'
         : '')
     + '<label class="fl cbdef-w2">' + tx('Name') + '</label>'
     + '<div class="cbdef-f cbdef-w2">'
-    + '<input class="inp" data-testid="cbdef-name" value="' + cbDefEsc(f.name) + '"'
+    + '<input class="inp" data-testid="cbdef-name" value="' + esc(f.name) + '"'
     /* ⚠️ Per KIND. The fallthrough used to hand `requirement` the category placeholder — a form headed "New
        requirement" asking for a name and suggesting "Spices". A placeholder is an instruction; a wrong one
        teaches the wrong thing. */
@@ -1118,10 +1118,10 @@ function cbDefFormHTML(){
     + fields.map(function (x) {
         var v = cbDefGetRule(x.k); v = (v == null ? '' : v);
         var w = x.half ? '' : ' cbdef-w2';
-        return (x.check ? '' : '<label class="fl' + w + '">' + cbDefEsc(x.label) + '</label>')
+        return (x.check ? '' : '<label class="fl' + w + '">' + esc(x.label) + '</label>')
           + '<div class="cbdef-f' + w + '">'
           + (x.pick ? cbDefPickHTML(x, v) : cbDefFieldHTML(x, v))
-          + (x.hint ? '<div class="cbdef-hint">' + cbDefEsc(tx(x.hint)) + '</div>' : '')
+          + (x.hint ? '<div class="cbdef-hint">' + esc(tx(x.hint)) + '</div>' : '')
           + '</div>';
       }).join('')
     + (f.kind === 'requirement' ? '<div class="cbdef-w2">' + cbDefStdChipsHTML() + '</div>' : '')
@@ -1136,7 +1136,7 @@ function cbDefFormHTML(){
      */
     + '<label class="fl cbdef-w2">' + tx('Note to yourself') + '</label>'
     + '<div class="cbdef-f cbdef-w2">'
-    +   '<input class="inp" value="' + cbDefEsc(f.note) + '" placeholder="' + tx('optional') + '"'
+    +   '<input class="inp" value="' + esc(f.note) + '" placeholder="' + tx('optional') + '"'
     +   ' oninput="cbDefSetField(\'note\',this.value)">'
     +   '<div class="cbdef-hint">' + tx(f.kind === 'tax' ? 'On your tax slabs list. Buyers never see it.' : f.kind === 'pricing' ? 'On your pricing list. Buyers never see it.' : 'On your offers list. Buyers never see it.') + '</div>'
     + '</div>'
@@ -1190,8 +1190,8 @@ function cbDefStdChipsHTML(){
     + '<div class="cbdef-stds">' + list.map(function(s){
         var on = !!chosen[s.key];
         return '<button type="button" class="cbdef-stdchip' + (on ? ' on' : '') + '"'
-          + ' title="' + cbDefEsc(s.title) + '"'
-          + ' onclick="cbDefToggleStd(\'' + cbDefEsc(s.key) + '\')">' + (on ? '✓ ' : '') + cbDefEsc(s.key) + '</button>';
+          + ' title="' + esc(s.title) + '"'
+          + ' onclick="cbDefToggleStd(\'' + esc(s.key) + '\')">' + (on ? '✓ ' : '') + esc(s.key) + '</button>';
       }).join('') + '</div>';
 }
 function cbDefToggleStd(key){
@@ -1220,14 +1220,13 @@ var CBDEF_SAMPLE = 1000;
 function cbDefPreviewHTML(){
   var f = CBDEF_FORM;
   if (!f || f.kind !== 'offer' || typeof CBOffers === 'undefined') return '';
-  var sym = (typeof curSym === 'function') ? curSym() : '';
-  var money = function (n) { return sym + n; };
+  /* T2-WEBPRIMS: amounts through the shop's one formatter (inr = fmtMoney · myCur), never `symbol + n` — the engines take it as their ctx.money */
   var o = Object.assign({ id: 'preview', kind: f.sub, label: f.name || tx('This offer') }, f.rules);
   var cat = (f.rules.applies_to || {}).category || null;
   var qty2 = CBOffers.sampleQty([o], CBDEF_SAMPLE);
   var promise = null;
   /* ⭐ PREVIEWED AS THE CUSTOMER IT IS FOR (Athi, 2026-09-06 19:27: "the offer computation not works properly during test?") — a customer-only offer fails closed for a stranger, so the seller's own preview must stand in that customer's shoes */
-  try { promise = CBOffers.promise(o, { now: new Date(), money: money, customer_groups: o.customer_group ? [o.customer_group] : [] }); } catch (e) {}
+  try { promise = CBOffers.promise(o, { now: new Date(), money: inr, customer_groups: o.customer_group ? [o.customer_group] : [] }); } catch (e) {}
   var one = cbDefPreviewRow(o, 1, cat, money), many = cbDefPreviewRow(o, qty2, cat, money);
   /* ⚠️ The window is the FIRST thing said when it is closed, because every row under it would otherwise show a
      discount the basket will refuse. within() is what returns this, through evaluate's `skipped`. */
@@ -1236,9 +1235,9 @@ function cbDefPreviewHTML(){
   return '<div class="cbdef-prev" data-testid="cbdef-preview">'
     + '<div class="cbdef-prevhd">' + tx('What a buyer sees') + '</div>'
     + (gate
-        ? '<div class="cbdef-prevgate" data-testid="cbdef-preview-gate">' + cbDefEsc(gate) + '</div>'
+        ? '<div class="cbdef-prevgate" data-testid="cbdef-preview-gate">' + esc(gate) + '</div>'
         : '<div class="cbdef-prevbadge" data-testid="cbdef-preview-badge">'
-          + (promise ? cbDefEsc(promise)
+          + (promise ? esc(promise)
              /* ⚠️ "INCOMPLETE" WOULD BE A LIE FOR TWO KINDS. Shipping and price_range return null from promise()
                 BY DESIGN — one line cannot promise an order-level delivery term, and a band is the price rather
                 than a discount off one. Telling their author to finish a finished offer is worse than silence. */
@@ -1247,13 +1246,13 @@ function cbDefPreviewHTML(){
                  : tx('no badge yet — the terms are incomplete')) + '</span>')
           + '</div>')
     + [one, many].map(function (r) {
-        return '<div class="cbdef-prevrow"><span class="q">' + r.qty + ' × ' + cbDefEsc(money(CBDEF_SAMPLE)) + '</span>'
-          + '<span class="m">' + cbDefEsc(money(r.was)) + ' → <b>' + cbDefEsc(money(r.now)) + '</b></span>'
-          + '<span class="w">' + cbDefEsc(r.why) + '</span></div>';
+        return '<div class="cbdef-prevrow"><span class="q">' + r.qty + ' × ' + esc(inr(CBDEF_SAMPLE)) + '</span>'
+          + '<span class="m">' + esc(inr(r.was)) + ' → <b>' + esc(inr(r.now)) + '</b></span>'
+          + '<span class="w">' + esc(r.why) + '</span></div>';
       }).join('')
-    + '<div class="cbdef-hint">' + tx('A sample product at ') + cbDefEsc(money(CBDEF_SAMPLE))
+    + '<div class="cbdef-hint">' + tx('A sample product at ') + esc(inr(CBDEF_SAMPLE))
     + (cat ? tx(', in the category this offer targets') : '')
-    + (f.sub === 'shipping' ? tx(', with ') + cbDefEsc(money(200)) + tx(' delivery') : '') + '.</div>'
+    + (f.sub === 'shipping' ? tx(', with ') + esc(inr(200)) + tx(' delivery') : '') + '.</div>'
     + '</div>';
 }
 /** One worked line, run through evaluate() exactly as the cart runs it. */
@@ -1407,13 +1406,13 @@ function cbDefGoHome(nav, sec){
 async function cbDefTakeoverAsk(id, why){
   var slabs = [];
   try { slabs = (await cbDefsLive('tax', true)).filter(function (x) { return String(x.definition_id || x.id) !== String(id) && (!x.status || x.status === 'live'); }); } catch (_) {}
-  var opts = (typeof cbSlabOptionsHTML === 'function') ? cbSlabOptionsHTML(slabs, '') : slabs.map(function (x) { return '<option value="' + cbDefEsc(x.definition_id || x.id) + '">' + cbDefEsc(x.name) + '</option>'; }).join('');
+  var opts = (typeof cbSlabOptionsHTML === 'function') ? cbSlabOptionsHTML(slabs, '') : slabs.map(function (x) { return '<option value="' + esc(x.definition_id || x.id) + '">' + esc(x.name) + '</option>'; }).join('');
   /* the app's own modal frame — .mhd / .mbody / .mfoot, as the definition form uses it */
   modal('<div class="mhd"><div class="t">' + tx('Pick the slab that takes over') + '</div></div>'
-    + '<div class="mbody"><div style="margin-bottom:8px">' + cbDefEsc(why) + '</div>'
+    + '<div class="mbody"><div style="margin-bottom:8px">' + esc(why) + '</div>'
     + '<select class="inp" id="cbdef_takeover" data-testid="cbdef-takeover" style="width:100%">' + opts + '</select>'
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">' + tx('Every product and category that cites the retiring slab is re-pointed first, with the new rate travelling onto each product.') + '</div></div>'
-    + '<div class="mfoot"><button class="pri" data-testid="cbdef-takeover-go" onclick="cbDefTakeoverGo(\'' + cbDefEsc(id) + '\')">' + tx('Retire and hand over') + '</button>'
+    + '<div class="mfoot"><button class="pri" data-testid="cbdef-takeover-go" onclick="cbDefTakeoverGo(\'' + esc(id) + '\')">' + tx('Retire and hand over') + '</button>'
     + '<button onclick="closeModal()">' + tx('Cancel') + '</button></div>', false);
 }
 function cbDefTakeoverGo(id){
@@ -1422,7 +1421,7 @@ function cbDefTakeoverGo(id){
   closeModal(); _cbDefRetire(id, v);
 }
 function cbDefRetire(id, name){
-  confirmAsk('Retire “' + cbDefEsc(name) + '”?',
+  confirmAsk('Retire “' + esc(name) + '”?',
     'It leaves the shelf and <b>cannot be used again</b>.'
     + '<div style="margin-top:7px">' + txf('It is {notdeleted} — chits that already cite it stay explainable.', { notdeleted: '<b>' + tx('not deleted') + '</b>' }) + '</div>',
     'Retire', function(){ _cbDefRetire(id); }, true);
@@ -1443,11 +1442,6 @@ async function _cbDefRetire(id, takeover){
 }
 
 /* ── render ──────────────────────────────────────────────────────────────────────────────────────────────────── */
-function cbDefEsc(s){
-  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-  });
-}
 
 /* ⚠️ renderApp(), not a local paint — this screen returns HTML to the router like every other
    capability, so the router is the only thing that owns the frame. */
@@ -1507,17 +1501,17 @@ function cbDefLabelOnce(r){
 function cbDefSectionHTML(s){
   var open = !!CBDEF.open[s.key];
   var count = s.rows ? s.rows.length : 0;
-  var head = '<div class="cbdef-head" data-testid="cbdef-' + cbDefEsc(s.key) + '"'
-    + ' onclick="cbDefToggle(\'' + cbDefEsc(s.key) + '\')">'
+  var head = '<div class="cbdef-head" data-testid="cbdef-' + esc(s.key) + '"'
+    + ' onclick="cbDefToggle(\'' + esc(s.key) + '\')">'
     + '<span class="cbdef-ico">' + s.icon + '</span>'
-    + '<span class="cbdef-t">' + cbDefEsc(s.title) + '</span>'
+    + '<span class="cbdef-t">' + esc(s.title) + '</span>'
     /* ⚠️ "not loaded" is NOT "0". An empty list and a missing source look identical on screen and mean opposite
        things — one says the catalogue may have none of these, the other says this screen cannot tell you. */
     + '<span class="cbdef-n">' + (s.rows ? count + ' kind' + (count === 1 ? '' : 's') : 'not loaded') + '</span>'
     + '<span class="cbdef-caret">' + (open ? '▾' : '<span class=arw>▸</span>') + '</span></div>';
   if (!open) return '<div class="cbdef-sec">' + head + '</div>';
 
-  var body = '<div class="cbdef-blurb">' + cbDefEsc(s.blurb) + '</div>';
+  var body = '<div class="cbdef-blurb">' + esc(s.blurb) + '</div>';
   if (!s.rows) {
     body += '<div class="cbdef-empty">This registry has not loaded on this page, so its kinds cannot be listed. '
           + 'It is not that there are none.</div>';
@@ -1531,16 +1525,16 @@ function cbDefSectionHTML(s){
            explanation can be given below."* The issuing body moved down with the rest: it is an explanation of
            the scheme, not part of its name, and inline it made the one line people scan the crowded one. */
         + '<div class="cbdef-name">'
-        + '<code class="cbdef-code">' + cbDefEsc(code) + '</code>'
-        + (lab ? '<span class="cbdef-lab">' + cbDefEsc(lab) + '</span>' : '')
+        + '<code class="cbdef-code">' + esc(code) + '</code>'
+        + (lab ? '<span class="cbdef-lab">' + esc(lab) + '</span>' : '')
         + '</div>'
-        + (r.who ? '<div class="cbdef-who">' + cbDefEsc(r.who) + '</div>' : '')
-        + (r.note ? '<div class="cbdef-note">' + cbDefEsc(r.note) + '</div>' : '')
+        + (r.who ? '<div class="cbdef-who">' + esc(r.who) + '</div>' : '')
+        + (r.note ? '<div class="cbdef-note">' + esc(r.note) + '</div>' : '')
         /* ⭐ A worked example is what turns a scheme name into something someone can act on. */
-        + (r.eg ? '<div class="cbdef-eg"><span class="cbdef-eglab">e.g.</span> ' + cbDefEsc(r.eg) + '</div>' : '')
+        + (r.eg ? '<div class="cbdef-eg"><span class="cbdef-eglab">e.g.</span> ' + esc(r.eg) + '</div>' : '')
         /* ⚠️ rel="noopener" — a target=_blank link without it hands the opened page a handle on ours. */
-        + (r.url ? '<div class="cbdef-link"><a href="' + cbDefEsc(r.url) + '" target="_blank" rel="noopener noreferrer">'
-                 + cbDefEsc(r.url.replace(/^https?:\/\//, '')) + ' ↗</a></div>' : '')
+        + (r.url ? '<div class="cbdef-link"><a href="' + esc(r.url) + '" target="_blank" rel="noopener noreferrer">'
+                 + esc(r.url.replace(/^https?:\/\//, '')) + ' ↗</a></div>' : '')
         + '</div>';
     }).join('');
   }
@@ -1555,7 +1549,7 @@ function cbDefSectionHTML(s){
    * verifiable by whoever wants to verify it, and stops being a footnote on everybody else's screen.
    */
   if (typeof specOn === 'function' && specOn()) {
-    body += '<div class="cbdef-src">read from <code>' + cbDefEsc(s.source) + '</code></div>';
+    body += '<div class="cbdef-src">read from <code>' + esc(s.source) + '</code></div>';
   }
   return '<div class="cbdef-sec">' + head + '<div class="cbdef-body">' + body + '</div></div>';
 }
@@ -1578,9 +1572,9 @@ function cbDefKindsInline(kind){
   return '<div class="cbdef-kindsin">'
     + '<div class="cbdef-kindshd">Built from — ' + s.rows.length + ' kind' + (s.rows.length === 1 ? '' : 's') + '</div>'
     + s.rows.map(function (r) {
-        return '<div class="cbdef-kindrow"><code class="cbdef-code">' + cbDefEsc(r.code) + '</code>'
-          + '<span class="cbdef-kindlbl">' + cbDefEsc(r.label) + '</span>'
-          + (r.note ? '<span class="cbdef-kindnote">' + cbDefEsc(r.note) + '</span>' : '') + '</div>';
+        return '<div class="cbdef-kindrow"><code class="cbdef-code">' + esc(r.code) + '</code>'
+          + '<span class="cbdef-kindlbl">' + esc(r.label) + '</span>'
+          + (r.note ? '<span class="cbdef-kindnote">' + esc(r.note) + '</span>' : '') + '</div>';
       }).join('')
     + '</div>';
 }
@@ -1600,22 +1594,22 @@ function cbDefMineHTML(){
        * and tries to publish it.
        */
       var st = d.status === 'live' ? 'live' : d.status === 'retired' ? 'retired' : 'draft';
-      return '<div class="cbdef-mine-row' + (st === 'retired' ? ' is-retired' : '') + '" data-testid="cbdef-mine-' + cbDefEsc(d.definition_id) + '">'
-        + '<span class="cbdef-mine-n">' + cbDefEsc(d.name) + '</span>'
-        + (d.sub_kind ? '<code class="cbdef-code">' + cbDefEsc(d.sub_kind) + '</code>' : '')
+      return '<div class="cbdef-mine-row' + (st === 'retired' ? ' is-retired' : '') + '" data-testid="cbdef-mine-' + esc(d.definition_id) + '">'
+        + '<span class="cbdef-mine-n">' + esc(d.name) + '</span>'
+        + (d.sub_kind ? '<code class="cbdef-code">' + esc(d.sub_kind) + '</code>' : '')
         + '<span class="cbdef-badge ' + st + '">' + st + '</span>'
         /* ⭐ THE VERSION IS ON SCREEN. It is the thing a stamped chit points at, so hiding it would make the
            freeze rule invisible in the one place someone might need to check it. */
-        + '<span class="cbdef-ver">v' + cbDefEsc(d.current_version) + '</span>'
+        + '<span class="cbdef-ver">v' + esc(d.current_version) + '</span>'
         + '<span class="cbdef-acts">'
-        +   '<span onclick="cbDefEdit(\'' + cbDefEsc(d.definition_id) + '\')">' + tx('Edit') + '</span>'
-        +   '<span onclick="cbDefSetStatus(\'' + cbDefEsc(d.definition_id) + '\',\'' + (live ? 'draft' : 'live') + '\')">'
+        +   '<span onclick="cbDefEdit(\'' + esc(d.definition_id) + '\')">' + tx('Edit') + '</span>'
+        +   '<span onclick="cbDefSetStatus(\'' + esc(d.definition_id) + '\',\'' + (live ? 'draft' : 'live') + '\')">'
         +   (live ? 'Unpublish' : 'Publish') + '</span>'
-        +   '<span onclick="cbDefRetire(\'' + cbDefEsc(d.definition_id) + '\',\'' + cbDefEsc(d.name) + '\')">' + tx('Retire') + '</span>'
+        +   '<span onclick="cbDefRetire(\'' + esc(d.definition_id) + '\',\'' + esc(d.name) + '\')">' + tx('Retire') + '</span>'
         + '</span>'
         /* ⚠️ The author's note, same as the Catalogue setup row — it was saved by the form and displayed by
            nothing, on either list. See cbDefFormHTML's Note field. */
-        + (d.note ? '<div class="cbdef-mine-note">' + cbDefEsc(d.note) + '</div>' : '')
+        + (d.note ? '<div class="cbdef-mine-note">' + esc(d.note) + '</div>' : '')
         + '</div>';
     }).join('');
 
@@ -1638,18 +1632,18 @@ function cbDefMineHTML(){
       + '<div class="cbdef-head cbdef-head-mine" data-testid="cbdef-mine-head-' + kind + '"'
       +   ' onclick="cbDefToggle(\'' + mkey + '\')">'
       +   '<span class="cbdef-ico">' + A.icon + '</span>'
-      +   '<span class="cbdef-t">' + cbDefEsc(A.title) + '</span>'
+      +   '<span class="cbdef-t">' + esc(A.title) + '</span>'
       +   '<span class="cbdef-n">' + mine.length + (retired.length ? ' · ' + retired.length + ' retired' : '') + '</span>'
       /* stopPropagation — otherwise the button also collapses the section it is about to act on.
          ⚠️ A kind with a `home` is authored on ITS OWN SCREEN, so this offers the door rather than a second
          Create form. Two places to author one thing is the duplication this screen exists to have removed. */
       +   (A.home
-            ? '<button class="cbdef-new" data-testid="cbdef-home-' + kind + '" onclick="event.stopPropagation();cbDefGoHome(\'' + A.home.nav + '\',\'' + (A.home.sec || '') + '\')">' + cbDefEsc(A.home.label) + '</button>'
+            ? '<button class="cbdef-new" data-testid="cbdef-home-' + kind + '" onclick="event.stopPropagation();cbDefGoHome(\'' + A.home.nav + '\',\'' + (A.home.sec || '') + '\')">' + esc(A.home.label) + '</button>'
             : '<button class="cbdef-new" data-testid="cbdef-new-' + kind + '" onclick="event.stopPropagation();cbDefNew(\'' + kind + '\')">+ New</button>')
       +   '<span class="cbdef-caret">' + (mopen ? '▾' : '<span class=arw>▸</span>') + '</span>'
       + '</div>'
       + (mopen ? ('<div class="cbdef-body">'
-      +   '<div class="cbdef-blurb">' + cbDefEsc(A.blurb) + '</div>'
+      +   '<div class="cbdef-blurb">' + esc(A.blurb) + '</div>'
       /* ⚠️ An empty shelf says what to do, not "0 results". Nobody arrives here knowing what a definition is for. */
       +   (rows || '<div class="cbdef-none">' + txf('None yet. {new} to name one — then a catalogue can use it.', { new: '<b>+ ' + tx('New') + '</b>' }) + '</div>')
       /* The vocabulary this kind is built from, in the same section rather than a second one further down. Still
@@ -1660,7 +1654,7 @@ function cbDefMineHTML(){
   }).join('');
 
   return '<div class="cbdef-mine">'
-    + (CBDEF.err ? '<div class="cbdef-err">' + cbDefEsc(CBDEF.err) + '</div>' : '')
+    + (CBDEF.err ? '<div class="cbdef-err">' + esc(CBDEF.err) + '</div>' : '')
     + out + '</div>';
 }
 
@@ -1872,8 +1866,8 @@ function cbDefTestHTML(f){
 }
 function cbDefTestOptions(){
   var P = CBDEF_TEST.prods;
-  if (!P) return '<option value="">' + cbDefEsc(tx('Pick a product…')) + '</option>';
-  return '<option value="">' + cbDefEsc(tx('Pick a product…')) + '</option>' + P.map(function(p){ var d = p.item_data || {}; var id = p.item_id || p.id; return '<option value="' + cbDefEsc(id) + '"' + (id === CBDEF_TEST.pid ? ' selected' : '') + '>' + cbDefEsc(d.name || id) + '</option>'; }).join('');
+  if (!P) return '<option value="">' + esc(tx('Pick a product…')) + '</option>';
+  return '<option value="">' + esc(tx('Pick a product…')) + '</option>' + P.map(function(p){ var d = p.item_data || {}; var id = p.item_id || p.id; return '<option value="' + esc(id) + '"' + (id === CBDEF_TEST.pid ? ' selected' : '') + '>' + esc(d.name || id) + '</option>'; }).join('');
 }
 async function cbDefTestLoad(){
   if (CBDEF_TEST.prods) return;
@@ -1888,7 +1882,7 @@ function cbDefTestRun(){
   var _grp = (f.rules && f.rules.customer_group) ? String(f.rules.customer_group) : '';
   var _groups = (_grp && CBDEF_TEST.asCustomer !== false) ? [_grp] : [];
   var p = (CBDEF_TEST.prods || []).find(function(x){ return (x.item_id || x.id) === CBDEF_TEST.pid; });
-  if (!p) { out.innerHTML = '<div style="font-size:var(--fs-1);color:var(--grey)">' + cbDefEsc(tx('Pick a product to test against.')) + '</div>'; return; }
+  if (!p) { out.innerHTML = '<div style="font-size:var(--fs-1);color:var(--grey)">' + esc(tx('Pick a product to test against.')) + '</div>'; return; }
   var d = Object.assign({}, p.item_data || {}, { item_id: p.item_id || p.id });
   /* the rule as it stands on the form — the engine reads the rules object with kind and id on it */
   var offer = Object.assign({ id: f.id || 'test', label: f.name || 'this offer', kind: f.sub }, f.rules || {});
@@ -1905,11 +1899,11 @@ function cbDefTestRun(){
     var skipped = (ev && ev.skipped) || [];
     if (!(per.off > 0) && !(ev && ev.claims && ev.claims.length)) {
       why = '<div data-testid="cbdef-test-why" style="margin-top:6px;padding:8px 10px;border-radius:8px;background:var(--warn-tint);color:var(--warn-2);font-size:var(--fs-2)">'
-          + cbDefEsc(missing || (skipped.length ? skipped.map(function(s){ return s.why || s.reason || ''; }).filter(Boolean).join(' · ') : tx('Nothing comes off this product at this quantity — the rule does not reach it (scope, dates, minimum, or an empty value).')))
+          + esc(missing || (skipped.length ? skipped.map(function(s){ return s.why || s.reason || ''; }).filter(Boolean).join(' · ') : tx('Nothing comes off this product at this quantity — the rule does not reach it (scope, dates, minimum, or an empty value).')))
           + '</div>';
     } else {
-      why = '<div data-testid="cbdef-test-why" style="margin-top:6px;font-size:var(--fs-2);color:var(--ok-2);font-weight:700">' + cbDefEsc((per.off > 0 ? fmtMoney(per.off, myCur ? myCur() : 'INR') + ' ' + tx('off') : '') + (ev.claims && ev.claims.length ? ' · ' + ev.claims.length + ' ' + tx('free item(s)') : '')) + '</div>';
+      why = '<div data-testid="cbdef-test-why" style="margin-top:6px;font-size:var(--fs-2);color:var(--ok-2);font-weight:700">' + esc((per.off > 0 ? fmtMoney(per.off, myCur ? myCur() : 'INR') + ' ' + tx('off') : '') + (ev.claims && ev.claims.length ? ' · ' + ev.claims.length + ' ' + tx('free item(s)') : '')) + '</div>';
     }
-  } catch (e) { why = '<div style="font-size:var(--fs-1);color:var(--grey)">' + cbDefEsc(String(e && e.message || e)) + '</div>'; }
+  } catch (e) { why = '<div style="font-size:var(--fs-1);color:var(--grey)">' + esc(String(e && e.message || e)) + '</div>'; }
   out.innerHTML = html + why;
 }
