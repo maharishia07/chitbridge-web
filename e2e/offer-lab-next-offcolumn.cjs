@@ -39,8 +39,8 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(48) + '· ' + d 
     const html = outLine();
     /* two real tiffin items at different prices, per HOTEL's own sample data */
     const idli = byId('idli'); const paper = byId('paper');   /* ₹40 and ₹85 */
-    const rIdli = row(idli, combo(offerFrac(idli), loyFrac()));
-    const rPaper = row(paper, combo(offerFrac(paper), loyFrac()));
+    const rIdli = row(idli, CBOffers.compound([offerFrac(idli)*100, loyFrac()*100])/100);
+    const rPaper = row(paper, CBOffers.compound([offerFrac(paper)*100, loyFrac()*100])/100);
     return {
       html,
       noStaleNote: !/\d+% \+ \d+% = <b>\d+(\.\d+)?% off<\/b>/.test(html),
@@ -59,7 +59,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(48) + '· ' + d 
   console.log('\n── the % screen (where every item DOES share one rate) still shows it correctly, per row ' + '─'.repeat(0));
   const flat = await p.evaluate(() => {
     pickGoal('percent'); S.scope = 'cat'; S.catId = 'tiffin'; S.pctOff = 25; S.loyOn = true; S.loyPct = 5; S.round = '0'; apply();
-    const idli = byId('idli'); const r = row(idli, combo(offerFrac(idli), loyFrac()));
+    const idli = byId('idli'); const r = row(idli, CBOffers.compound([offerFrac(idli)*100, loyFrac()*100])/100);
     return { offPct: Math.round((idli.price - r.shown) / idli.price * 1000) / 10, expect: Math.round((1 - (1 - 0.25) * (1 - 0.05)) * 1000) / 10 };
   });
   say('25% + 5% loyalty compounds to 28.75%, not 30%, and is now shown per row correctly',

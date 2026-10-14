@@ -1181,7 +1181,7 @@ function toggleMarkup(){ SHOW_MARKUP=!SHOW_MARKUP; paintWork(); }
 function percentRows(){
   return items().map(function(p){
     var pub=row(p, offerFrac(p));
-    var all=(loyMode()==='pct') ? row(p, combo(offerFrac(p), loyFrac())) : pub;
+    var all=(loyMode()==='pct') ? row(p, CBOffers.compound([offerFrac(p)*100, loyFrac()*100])/100) : pub;
     if(all.shown>pub.shown){
       all=Object.assign({},all,{shown:pub.shown,status:pub.status,
         margin:p.cost==null?null:marginPct(pub.shown,p.cost),
@@ -1241,7 +1241,7 @@ function percentTableHTML(rs){
       '<th class="grp" rowspan="2">Meets your '+num(S.margin)+'%?</th>'+
     '</tr><tr class="sub">'+
       '<th class="grp">after '+num(S.pctOff)+'%</th>'+
-      (showLoy?'<th class="grp">after '+(Math.round(combo(num(S.pctOff)/100,loyFrac())*1000)/10)+'%</th>':'')+
+      (showLoy?'<th class="grp">after '+(Math.round(CBOffers.compound([num(S.pctOff), loyFrac()*100])*10)/10)+'%</th>':'')+
     '</tr></thead><tbody>'+
     rs.map(function(r){
       var ans=percentAnswer(r), ansHtml=(typeof ans==='string')?ans:ans.html;
@@ -1300,7 +1300,7 @@ function percentBillHeadHTML(off,all,showLoy){
 }
 function percentBillHTML(rs){
   var showLoy=loyMode()==='pct';
-  var off=num(S.pctOff), all=Math.round(combo(off/100,loyFrac())*1000)/10;
+  var off=num(S.pctOff), all=Math.round(CBOffers.compound([off, loyFrac()*100])*10)/10;
   var was=0, pay=0, loyPay=0, lines=percentBillHeadHTML(off,all,showLoy);
   rs.forEach(function(r){
     was+=r.p.price; pay+=r.pub.shown; loyPay+=r.all.shown;
@@ -1404,7 +1404,7 @@ function paintWork(){
      */
     var rs=percentRows(), showLoy=loyMode()==='pct';
     demo.style.display=''; demo.innerHTML=workDemoHTML(percentVerdictHTML(rs));
-    var combined=Math.round(combo(num(S.pctOff)/100,loyFrac())*1000)/10;
+    var combined=Math.round(CBOffers.compound([num(S.pctOff), loyFrac()*100])*10)/10;
     document.getElementById('workTitle').textContent=l.title;
     document.getElementById('workTag').textContent=(showLoy?num(S.pctOff)+'% + '+num(S.loyPct)+'% = '+combined+'%':num(S.pctOff)+'%')+' off · '+rs.length+' items';
     /* ⭐ [found live, 2026-09-26] "mock up toggle on top of the panel, we have space" — the tab-switcher pill
@@ -1703,10 +1703,9 @@ function loyMode(){
   return 'na';
 }
 function loyFrac(){ return loyMode()==='pct' ? Math.min(.95,num(S.loyPct)/100) : 0; }
-function combo(a,b){ return 1-(1-a)*(1-b); }
 /**
  * ⭐⭐⭐ THE ONE PLACE THE REAL ENGINE ANSWERS "WHAT DOES A % OFF COME TO" (Phase: offer-lab adoption).
- * `frac` is already the combined offer+loyalty fraction (combo(), above) — a single percent_off asked of
+ * `frac` is already the combined offer+loyalty fraction (CBOffers.compound — the engine's percent-on-percent) — a single percent_off asked of
  * CBOffers.evaluate() at that percentage is mathematically identical to price*(1-frac), and provably so:
  * verified against the spec's own §10 checks (10% off ₹70 → ₹63, compounded 10%+10% → 19% not 20%) before
  * this file was written. The difference from computing it locally is provenance, not the number — every
@@ -1717,7 +1716,6 @@ function combo(a,b){ return 1-(1-a)*(1-b); }
  * nothing about either.
  */
 function engineFinal(unitPrice, frac){
-  if(!(window.CBOffers && window.CBOffers.evaluate)) return R2(unitPrice*(1-frac));   /* engine missing: never blank the screen */
   var pct=Math.min(99,Math.max(0,frac*100));
   if(pct<=0) return R2(unitPrice);
   var r=CBOffers.evaluate({ lines:[{key:'x',qty:1,unitPrice:unitPrice}],
@@ -1726,7 +1724,6 @@ function engineFinal(unitPrice, frac){
 }
 /** ⭐ buy N of ONE item, get 1 more free (or at a %) — same-item buy_x_get_y, N+1 units on one line */
 function engineBuyGetPay(unitPrice, buy, get, getPercent){
-  if(!(window.CBOffers && window.CBOffers.evaluate)) return R2(unitPrice*buy);
   var r=CBOffers.evaluate({ lines:[{key:'x',qty:buy+get,unitPrice:unitPrice}],
     offers:[{id:'preview',kind:'buy_x_get_y',buy:buy,get:get,get_percent:getPercent==null?100:getPercent,scope:'line'}] });
   return R2(r.line_net.x);
@@ -1735,7 +1732,6 @@ function engineBuyGetPay(unitPrice, buy, get, getPercent){
  * lib/offers-engine.js added for "buy rice, get oil free". Returns what is paid for A; B's line (if it were on
  * the same basket) would show as free — the wizard only ever prices the pair it was given, per spec §4. */
 function engineBuyGetPayCross(aItemId, aPrice, bItemId, bQty, getPercent){
-  if(!(window.CBOffers && window.CBOffers.evaluate)) return R2(aPrice);
   /* ⚠️ applies_to.item_ids RESTRICTS "BUY" TO A SPECIFICALLY, or the engine would count B's own line towards
      the purchase requirement too — the exact cross-item wiring lib/offers-engine.js was built for. */
   var r=CBOffers.evaluate({ lines:[{key:'a',item_id:aItemId,qty:1,unitPrice:aPrice},{key:'b',item_id:bItemId,qty:bQty,unitPrice:0}],
@@ -1746,7 +1742,6 @@ function engineBuyGetPayCross(aItemId, aPrice, bItemId, bQty, getPercent){
 /** ⭐ buy a FEW, the cheapest of them is free — mix_and_match, one line of N units of a single item. What N of
  * ONE product pays after the cheapest of the N is free, the same kind the cheapest-of-a-mixed-shelf save uses. */
 function engineMixMatchPay(unitPrice, n){
-  if(!(window.CBOffers && window.CBOffers.evaluate)) return R2(unitPrice*(n-1));
   var r=CBOffers.evaluate({ lines:[{key:'x',qty:n,unitPrice:unitPrice}],
     offers:[{id:'preview',kind:'mix_and_match',buy:n-1,get:1,get_percent:100,scope:'line'}] });
   return R2(r.line_net.x);
@@ -1786,8 +1781,8 @@ function totals(rs){
     marginBefore: pb>0?Math.round((pb-cb)/pb*100):0,
     marginAfter:  pa>0?Math.round((pa-cb)/pa*100):0};
 }
-function lineRows(){ var f=combo(0,loyFrac());
-  return items().map(function(p){ return row(p, combo(offerFrac(p), loyFrac())); }); }
+function lineRows(){
+  return items().map(function(p){ return row(p, CBOffers.compound([offerFrac(p)*100, loyFrac()*100])/100); }); }
 
 /* ── ladders (max three steps, always) ─────────────────────────────────── */
 function tiers(){ return (S.tiers||[]).map(function(t){return {qty:num(t[0]),pct:num(t[1])};}); }
@@ -2137,7 +2132,7 @@ function loyBoxHTML(){
 /**
  * ⭐⭐⭐ [2026-09-26, per offer-lab-controls_1.html] "The combined figure is a sentence, not a formula —
  * `10% + 10% off = 19%` reads like broken arithmetic, anyone checking it gets 20. It now says which customer
- * pays what." Reworded to the doc's own exact sentence; the underlying math (combo()) is unchanged.
+ * pays what." Reworded to the doc's own exact sentence; the underlying math (CBOffers.compound) is unchanged.
  * ⚠️⚠️ [found by review, 2026-09-26] CLAMPED, matching offerFrac()/loyFrac()'s own 99%/95% caps — both fields
  * are plain text inputs with no real limit (the `max` attribute is cosmetic only, edit() never clamps), so
  * typing e.g. 150% loyalty used to make this sentence say "145% off" while the SAME modal's header tag and
@@ -2146,7 +2141,7 @@ function loyBoxHTML(){
  */
 function sumLineHTML(){
   var off=Math.min(99,num(S.pctOff)), loy=S.loyOn?Math.min(95,num(S.loyPct)):0;
-  var c=Math.round(combo(off/100,loy/100)*1000)/10;
+  var c=Math.round(CBOffers.compound([off, loy])*10)/10;
   return S.loyOn
     ? '<span class="big">'+c+'%</span><span class="wd">off for a loyalty customer. Everyone else pays <b>'+
       off+'%</b> less. '+(off&&loy?'Not '+R2(off+loy)+'% — the bonus comes off what is left.':'')+'</span>'
@@ -2299,12 +2294,14 @@ function cartPreviewLines(items){
     return { key:p.id, item_id:p.id, name:p.name, category:p.cat, qty:qty, unitPrice:p.price, cost:p.cost };
   });
 }
+/** ⭐ what THIS screen's offer does to these lines — CBOffers.evaluate() with the kind and rule a save would store.
+ * The cart preview and the bundle / big-bill screens all ask it here (T2-LABS: those two did their sums by hand). */
+function previewEval(lines){ return CBOffers.evaluate({ lines:lines, offers:[Object.assign({id:'preview',kind:subKindOf()}, ruleParamsOf())] }); }
 function cartPreviewHTML(){
   var items=cartPreviewItems(); var sub=subKindOf();
   if(!items.length || !sub) return '';
   var lines=cartPreviewLines(items);
-  var offer=Object.assign({id:'preview',kind:sub}, ruleParamsOf());
-  var ev; try{ ev=CBOffers.evaluate({ lines:lines, offers:[offer] }); }catch(e){ return ''; }
+  var ev; try{ ev=previewEval(lines); }catch(e){ return ''; }
   var costTotal=0, costKnown=true;
   lines.forEach(function(l){ if(l.cost==null) costKnown=false; else costTotal+=l.cost*l.qty; });
   var margin=(costKnown && ev.total>0) ? Math.round((ev.total-costTotal)/ev.total*100) : null;
@@ -2566,7 +2563,8 @@ function outCheap(){
 /* ── two things, one price ─────────────────────────────────────────── */
 function outBundle(){
   var a=byId(S.bunA), b=byId(S.bunB); if(!a||!b) return '';
-  var was=a.price+b.price, pay=num(S.bunPrice);
+  /* ⭐ the engine's bundle_price on the pair — a price not below the two apart gives nothing, and the page says what it charges */
+  var was=a.price+b.price, pay=previewEval([{key:'a',item_id:a.id,qty:1,unitPrice:a.price},{key:'b',item_id:b.id,qty:1,unitPrice:b.price}]).total;
   var cost=(a.cost==null||b.cost==null)?null:a.cost+b.cost;
   var make=cost==null?null:R2(pay-cost), m=cost==null?null:marginPct(pay,cost);
   var h=headline([[M0(pay),'they pay','',M0(was)],
@@ -2586,15 +2584,17 @@ function outBundle(){
 
 /* ── a big bill gets something back ────────────────────────────────── */
 function outSpend(){
-  var at=Math.max(1,num(S.spendAt)), give=num(S.spendVal), am=avgM();
+  /* ⭐ what a bill of b gets back is the engine's threshold on a bill of b (capped at the bill), never the typed figure */
+  var giveAt=function(b){ return -previewEval([{key:'x',qty:1,unitPrice:b}]).goods_adjustment; };
+  var at=Math.max(1,num(S.spendAt)), give=giveAt(at), am=avgM();
   var bills=[at,at*2,at*4];
   var heads=bills.map(function(b,i){return [M0(b),'',i===0];});
   var rows=[
-    ['Share', bills.map(function(b){return PC(give/b*100);})],
+    ['Share', bills.map(function(b){return PC(giveAt(b)/b*100);})],
     ['Goods', bills.map(function(b){return M0(b*(1-am));})],
-    ['You make', bills.map(function(b){return M0(b*am-give);}),true],
+    ['You make', bills.map(function(b){return M0(b*am-giveAt(b));}),true],
     ['Margin', bills.map(function(b){
-       var m=Math.round((b*am-give)/(b-give)*100);
+       var m=Math.round((b*am-giveAt(b))/(b-giveAt(b))*100);
        return '<span style="color:'+(m<0?'var(--red-i)':m<num(S.margin)?'var(--amber-i)':'var(--green-d)')+
          '">'+m+'%</span><span class="sub">'+Math.round(am*100)+'%</span>';}),true]
   ];
@@ -2971,14 +2971,15 @@ function exportCsv(){
   setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
 }
 /** ⭐ ONE ENGINE KIND PER SCREEN — the same registry lib/offers-engine.js's KINDS already names */
-function subKindOf(){
-  if(S.goal==='percent') return 'percent_off';
-  if(S.goal==='amount') return 'amount_off';
-  if(S.goal==='qty') return 'tier_price';
-  if(S.goal==='bundle') return 'bundle_price';
-  if(S.goal==='spend') return 'threshold';
-  if(S.goal==='ship') return 'shipping';
-  if(S.goal==='free') return S.freeShape==='cheapest'?'mix_and_match':S.freeShape==='anything'?'threshold':'buy_x_get_y';
+function subKindOf(st){
+  st=st||S;   /* a saved offer's snapshot too (engineOfferOf) — one goal→kind map */
+  if(st.goal==='percent') return 'percent_off';
+  if(st.goal==='amount') return 'amount_off';
+  if(st.goal==='qty') return 'tier_price';
+  if(st.goal==='bundle') return 'bundle_price';
+  if(st.goal==='spend') return 'threshold';
+  if(st.goal==='ship') return 'shipping';
+  if(st.goal==='free') return st.freeShape==='cheapest'?'mix_and_match':st.freeShape==='anything'?'threshold':'buy_x_get_y';
   return null;   /* 'band' — refuse a very small/large bill — has no engine kind yet; kept local-only, see §the plan */
 }
 /** the concrete rule this screen is CURRENTLY showing, in the exact field names lib/offers-engine.js reads */
@@ -3093,62 +3094,38 @@ async function dropSaved(id){
 function toastSay(t){ var n=document.getElementById('labtoast'); if(n){ n.textContent=t; n.hidden=false; } else alert(t); }
 
 /**
- * ── commercetools' rule, borrowed: only ONE item-level discount may apply to an item (highest ranked wins);
- * bill-level ones can stack. So two live offers touching the same shelf is a collision worth naming, not a
- * silent race.
- *
- * ⭐⭐⭐ [2026-09-26] ONE SHARED "DOES THIS SCOPE COVER THAT ITEM" TEST — lifted out of clash() so
- * overlayApplyRows() (the new checkbox picker) can ask the SAME question per-row, live, while picking, rather
- * than only after saving. `snap.itemIds` is the current shape; `snap.itemId` (singular) is read too, so an
- * older saved offer from before this field existed is still understood correctly.
+ * ── ⭐⭐ TWO OFFERS ON ONE SHELF — THE ENGINE'S QUESTION, NOT THIS PAGE'S (T2-LABS, 2026-10-14) ──────────────────
+ * commercetools' rule: only ONE item-level discount may apply to an item; bill-level ones can stack. This page held
+ * the only copy of that test (scopeCoversItem · scopesOverlap · clashDetail, 2026-09-26). It is CBOffers.covers /
+ * clashes now (engines v1.46.0) and the SERVER refuses a live clash on save (OFFER_CLASH) — so here it only paints.
+ * engineOfferOf()/engineItemOf() say a saved offer and a product in the engine's words: the kind subKindOf() saves,
+ * the scope ruleParamsOf() saves (an older snapshot's single `itemId` read too).
  */
-function scopeCoversItem(snap,p){
-  if(!p) return false;
-  if(snap.scope==='cat') return p.cat===snap.catId;
-  var ids=(snap.itemIds&&snap.itemIds.length)?snap.itemIds:(snap.itemId?[snap.itemId]:[]);
-  return ids.indexOf(p.id)>=0;
+function engineOfferOf(sv){
+  var s=sv.snap||{}, ids=(s.itemIds&&s.itemIds.length)?s.itemIds:(s.itemId?[s.itemId]:[]);
+  return {id:sv.id, kind:subKindOf(s), scope:'line', applies_to:s.scope==='cat'?{category:s.catId}:{item_ids:ids}};
 }
-function scopesOverlap(a,b){
-  if(a.scope==='cat'&&b.scope==='cat') return a.catId===b.catId;
-  var aIds=(a.itemIds&&a.itemIds.length)?a.itemIds:(a.itemId?[a.itemId]:[]);
-  var bIds=(b.itemIds&&b.itemIds.length)?b.itemIds:(b.itemId?[b.itemId]:[]);
-  if(a.scope==='item'&&b.scope==='item') return aIds.some(function(id){return bIds.indexOf(id)>=0;});
-  var itemSide=a.scope==='item'?aIds:bIds, catSide=a.scope==='item'?b.catId:a.catId;
-  return itemSide.some(function(id){ var p=byId(id); return p&&p.cat===catSide; });
-}
+function engineItemOf(p){ return {item_id:p.id, category:p.cat, name:p.name}; }
 /**
- * ⭐ [found live, 2026-09-26] "here we are showcasing overlapping? do we need to avoid? we should showcase
- * which item overlaps" — the collision itself is real and worth keeping (commercetools' own rule, see above:
- * only one item-level discount may apply to an item, so two live offers touching the same shelf is a genuine
- * problem, not noise to hide) — what was missing was WHICH item. clashDetail() resolves the actual items each
- * conflicting offer shares with this one (scopeCoversItem(), the same per-item test the "Apply it to" picker
- * already uses), not just how many offers conflict.
+ * ⭐ [found live, 2026-09-26] "we should showcase which item overlaps" — each conflicting offer with the items it shares
+ * with this one, from CBOffers.clashes over this shop's products. Two drafts never clash (nothing runs yet); the
+ * server answers the same question for a live one.
  */
 function clashDetail(sv){
-  if(['percent','amount','qty'].indexOf(sv.snap.goal)<0) return null;
-  var mine=sv.snap.scope==='cat'?catItems(sv.snap.catId):
-    (sv.snap.itemIds&&sv.snap.itemIds.length?sv.snap.itemIds.map(byId):(sv.snap.itemId?[byId(sv.snap.itemId)]:[])).filter(Boolean);
-  var hits=[];
-  SAVED.forEach(function(x){
-    if(x.id===sv.id||x.biz!==sv.biz) return;
-    if(x.status==='draft'&&sv.status==='draft') return;
-    if(['percent','amount','qty'].indexOf(x.snap.goal)<0) return;
-    if(!scopesOverlap(sv.snap,x.snap)) return;
-    var items=mine.filter(function(p){return scopeCoversItem(x.snap,p);}).map(function(p){return p.name;});
-    hits.push({title:x.title, status:x.status, items:items});
-  });
-  return hits.length?hits:null;
+  var others=SAVED.filter(function(x){ return x.id!==sv.id && x.biz===sv.biz && !(x.status==='draft'&&sv.status==='draft'); });
+  var hits=CBOffers.clashes(engineOfferOf(sv), others.map(engineOfferOf), P.map(engineItemOf));
+  if(!hits.length) return null;
+  return hits.map(function(h){ var x=others.filter(function(o){return o.id===h.offer.id;})[0];
+    return {title:x.title, status:x.status, items:h.items.map(function(i){return i.name;})}; });
 }
 /** ⭐ Athi, live: "if any of the item is already in the offer it has to highlight, which offer it is already
- * included." The same overlap test clash() uses, asked per PRODUCT instead of per saved-offer-pair, so the
- * picker can say so BEFORE a save ever happens, not just warn after. First match wins (rare in practice —
- * a shop with two live overlapping offers already has a clash() warning on both of them). */
+ * included." CBOffers.covers, asked per PRODUCT, so the picker says so BEFORE a save. First match wins. */
 function offerCoveringItem(p){
   for(var i=0;i<SAVED.length;i++){
     var x=SAVED[i];
     if(x.biz!==S.biz||x.status==='retired') continue;
     if(['percent','amount','qty'].indexOf(x.snap.goal)<0) continue;
-    if(scopeCoversItem(x.snap,p)) return x;
+    if(CBOffers.covers(engineOfferOf(x), engineItemOf(p))) return x;
   }
   return null;
 }

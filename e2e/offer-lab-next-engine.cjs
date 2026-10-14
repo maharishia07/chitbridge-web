@@ -26,7 +26,7 @@ const T = { '.html':'text/html', '.js':'text/javascript', '.css':'text/css' };
   const percentCheck = await p.evaluate(() => {
     pickGoal('percent');
     S.scope = 'item'; S.itemId = 'masala'; S.pctOff = 10; apply();
-    var r = row(byId('masala'), combo(offerFrac(byId('masala')), loyFrac()));
+    var r = row(byId('masala'), CBOffers.compound([offerFrac(byId('masala'))*100, loyFrac()*100])/100);
     return { shown: r.shown, margin: r.margin, status: r.status };
   });
   console.log('10% off masala dosa:', JSON.stringify(percentCheck), '(expect shown=63 margin=40)');
