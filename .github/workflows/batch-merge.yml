@@ -1,12 +1,12 @@
 name: batch-merge
 # ⭐ The BATCH MERGE runs in the cloud (Athi 13 Oct: merge in batches; nothing may depend on the owner's PC — its background jobs are killed when
-# memory runs low). 12:00 and 20:00 IST, or by hand. Lands every open PR labelled `ready-to-land` (not `hold`) in engines → api → web order —
+# memory runs low). 04:00 and 16:00 IST (live by 07:00 / 19:00), or by hand. Lands every open PR labelled `ready-to-land` (not `hold`) in engines → api → web order —
 # scripts/batch-merge.sh has the rules (re-tested on the current main, merge only fully green, delete the branch). Uses ROUNDS_PAT (contents +
 # pull requests + workflows on the three repos). The report is kept as an artifact (no secrets in it — titles and results only).
 on:
   schedule:
-    - cron: '30 6 * * *'     # 12:00 IST
-    - cron: '30 14 * * *'    # 20:00 IST
+    - cron: '30 22 * * *'    # 04:00 IST — deployed before 07:00 (Athi 14 Oct: reviews 07:00–10:00)
+    - cron: '30 10 * * *'    # 16:00 IST — deployed before 19:00 (Athi tests in the evening)
   workflow_dispatch:
 concurrency:
   group: batch-merge
