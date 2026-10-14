@@ -26,7 +26,16 @@ const walk = async (w) => {
   const KEYS = [{ jti: 'k-till', name: 'counter C1 · Win32 · 2026-10-01', scopes: ['till'], last4: 'a1b2', created_at: '2026-10-01T09:00:00Z', seen: { at: ago(2), ip: '10.0.0.4', agent: 'Mozilla/5.0 (Windows NT 10.0) Chrome/120' } },
     { jti: 'k-svc', name: 'Price feed', scopes: ['services'], last4: 'c3d4', created_at: '2026-09-20T09:00:00Z', seen: null }];
   const FLAGS = { trade_side: 'sell', trade_cover: 'off', books_at: 'accepted', tol_weight_bp: 50, dispute_scope: 'per-party', connectors_in_use: [] };
-  const SCHEMA = { trade_side: {}, trade_cover: {}, books_at: {}, tol_weight_bp: {}, connectors_in_use: {}, gst_registration: {}, self_copy_pref: {} };
+  /* the rows ARE the server's (T2-POLICY: schema[key].ui + bound_schema — the web holds no flag list): the shape GET /entities/policy answers */
+  const ui = (order, label, more) => Object.assign({ label, level: 'entity', gov: 'entity', order, help: '' }, more || {});
+  const SCHEMA = { trade_side: { type: 'enum', options: ['sell', 'receive'], def: 'sell', ui: ui(1, 'This entity') },
+    gst_registration: { type: 'enum', options: ['regular', 'composition', 'unregistered', 'sez'], def: 'regular', ui: ui(2, 'GST registration') },
+    books_at: { type: 'enum', options: ['received', 'accepted', 'completed', 'manual'], def: 'accepted', ui: ui(3, 'Orders go to the books') },
+    tol_weight_bp: { type: 'number', def: 50, ui: ui(4, 'Short delivery allowed (weighed goods)', { scale: 100, suffix: '%', step: 0.01 }) },
+    trade_cover: { type: 'enum', options: ['off', 'on'], def: 'off', ui: ui(5, 'Trade cover on chits') },
+    self_copy_pref: { type: 'enum', options: ['received', 'both', 'sent'], def: 'received', ui: ui(6, 'Self-chit copy', { labels: { received: 'Task only', both: 'Both Task and Order', sent: 'Order only' } }) },
+    connectors_in_use: { type: 'list', def: [] } };
+  const BOUND_SCHEMA = { dispute_scope: { type: 'enum', options: ['per-party', 'shared'], def: 'per-party', ui: ui(7, 'Dispute messages', { level: 'platform', gov: 'bound', help: 'Set by the platform' }) } };
   const ok = { ok: true, code: null, why: null };
   const MAY = { trade_side: ok, trade_cover: ok, books_at: ok, tol_weight_bp: ok, connectors_in_use: ok, gst_registration: ok, self_copy_pref: ok,
     dispute_scope: { ok: false, code: 'PLATFORM_BOUND', why: 'Set by the platform for every shop.' } };
@@ -61,7 +70,7 @@ const walk = async (w) => {
       if (p === '/api/integrations/status') return J(r, 200, { connectors: RUN });
       if (/^\/api\/integrations\/download\//.test(p)) { S.calls.push('GET ' + p + u.search); return r.fulfill({ status: 200, contentType: 'application/zip', body: 'PK' }); }
       if (/\/approve$/.test(p)) return J(r, 200, { ok: true, enrol: { approved: true } });
-      if (p === '/api/entities/policy' && m === 'GET') return J(r, 200, { flags: FLAGS, schema: SCHEMA, bound: { dispute_scope: 'per-party' }, may: MAY });
+      if (p === '/api/entities/policy' && m === 'GET') return J(r, 200, { flags: FLAGS, schema: SCHEMA, bound: { dispute_scope: 'per-party' }, bound_schema: BOUND_SCHEMA, may: MAY });
       if (p === '/api/entities/policy' && m === 'PATCH') { Object.assign(FLAGS, body); return J(r, 200, { flags: FLAGS }); }
       if (p === '/api/entities/entitlements') return J(r, 200, { plan: 'test', name: 'Test', sellable: false, limited: false, features: ['chits'], enforced: false,
         quotas: { entities: { state: 'unlimited' }, actors: { state: 'unset' }, chits_per_month: { state: 'capped', limit: 500 } } });
