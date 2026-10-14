@@ -96,13 +96,16 @@ function check(method, pathname, status, body, who) {
   return best;
 }
 
+/** the route families the contract holds: an answer under one of these is checked on the way out (network-offers: NET-SRV1) */
+const HELD = /^\/api\/(books|crm|work|repeat|network-offers)(\/|$)/;
+
 /** a Playwright Route whose fulfill() is checked on the way out */
 function wrap(route, who) {
   const req = route.request();
   return new Proxy(route, {
     get(t, k) {
       if (k === 'fulfill') return (o) => {
-        try { const u = new URL(req.url()); const b = o && o.body != null ? JSON.parse(o.body) : null; if (b !== null && /^\/api\/(books|crm|work|repeat)(\/|$)/.test(u.pathname)) check(req.method(), u.pathname, (o && o.status) || 200, b, who); } catch (_) {}
+        try { const u = new URL(req.url()); const b = o && o.body != null ? JSON.parse(o.body) : null; if (b !== null && HELD.test(u.pathname)) check(req.method(), u.pathname, (o && o.status) || 200, b, who); } catch (_) {}
         return t.fulfill(o);
       };
       const v = t[k]; return typeof v === 'function' ? v.bind(t) : v;
@@ -112,7 +115,7 @@ function wrap(route, who) {
 
 /** the harnesses' J(): serve a JSON answer - checked against the contract on the way out, then fulfilled exactly as before */
 function json(r, status, o) {
-  try { const q = r.request(), u = new URL(q.url()); if (/^\/api\/(books|crm|work|repeat)(\/|$)/.test(u.pathname)) check(q.method(), u.pathname, status, JSON.parse(JSON.stringify(o)), ''); } catch (_) {}
+  try { const q = r.request(), u = new URL(q.url()); if (HELD.test(u.pathname)) check(q.method(), u.pathname, status, JSON.parse(JSON.stringify(o)), ''); } catch (_) {}
   return r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(o) });
 }
 

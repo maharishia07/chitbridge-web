@@ -429,6 +429,18 @@
           "test": ["engines:tests/fx.test.js", "api:tests/fx-rates.test.cjs"],
           "status": "ok", "note": "Debtors and creditors only; a currency with no closing rate is named and nothing is revalued." }
       ]
+    },
+    {
+      "id": "NET", "name": "Join a network (a store and a brand: ask, invite, approve, pause, leave)", "sap": "SD (partner determination) · no SAP equivalent for the two-sided consent",
+      "steps": [
+        { "n": 1, "step": "membership", "module": "Network", "who": "a store (asks, accepts an invitation, leaves) and the brand (invites, approves, pauses, resumes, removes) — the server says who may, with the sentence",
+          "screen": [{ "file": "web:public/app/network-app.js", "fn": "load" }],
+          "engine": [{ "file": "api:lib/network-membership.js", "fn": "standing" }, { "file": "api:lib/network-membership.js", "fn": "edgesOf" }, { "file": "api:lib/network-membership.js", "fn": "mayOf" }, { "file": "api:src/services/network.js", "fn": "mayAct" }],
+          "route": [{ "m": "GET", "p": "/api/network-offers", "file": "api:routes/network-offers.js" }, { "m": "POST", "p": "/api/network/connections", "file": "api:src/routes/network.js" }, { "m": "POST", "p": "/api/network/connections/:id/approve", "file": "api:src/routes/network.js" }, { "m": "POST", "p": "/api/network/connections/:id/decline", "file": "api:src/routes/network.js" }],
+          "chit": "none — a commercial edge (cb_edge, b261: one per brand) both businesses hold", "ledger": "none",
+          "test": ["api:tests/network-member-view.test.cjs", "api:tests/network-authority.test.cjs", "web:e2e/network-guard.cjs"],
+          "status": "warn", "note": "NET-SRV1 (2026-10-14): the server answers every row's may/why from the one rule table (mayAct) and names the brand's and its root's bridge id; a store sees the brand it asked without selling for it yet. The screen that shows the actions waits for its design — network-app.js paints the standing word only." }
+      ]
     }
   ]
 }

@@ -93,7 +93,16 @@ const STAFF = [
   { id: 'p2', name: 'Ravi Nair', user_id: 'ravi02@walk-shop.br', role: 'Manager', phone: '9840000002', state: 'on', jobs: 2, last_at: null, access: CHOICES[1], may: may({ reset_pin: { ok: false, why: "Only the owner can reset a manager's code." } }), cover: null, cover_options: [] },
   { id: 'p3', name: 'Meena Iyer', user_id: 'meena03@walk-shop.br', role: 'Helper', phone: '', state: 'off', jobs: 0, last_at: null, access: CHOICES[0], may: may({ switch: { ok: true, to: 'on' } }), cover: null, cover_options: [] },
 ];
-const NETWORK = { networks: [{ brand_id: 'b1', brand_name: 'Big Brand', policy: 'follow', offers: [{ offer_id: 'o1', title: 'Festival 10% off', state: 'open', choice: null, starts: '2026-10-20', ends: '2026-11-05' }] }], price_notices: [], may_design: { ok: false, why: 'Only the owner may design a network.' } };
+/* GET /api/network-offers as the API's contract holds it (NET-SRV1): the store half under `store`, each network with its membership, the
+   server's may/why per action and the brand's / its root's bridge id; the brand half empty for a plain store. The old stand-in sent keys the
+   API never had (offer_id · title · state · starts · ends) — the contract now catches that. */
+const NO = (why) => ({ ok: false, why });
+const NETWORK = { brand: { members: [], is_brand: false, policy: 'opt_in', stores: 0, offers: [], catalogue: null },
+  store: { networks: [{ brand_id: 'b1', brand_name: 'Big Brand', policy: 'opt_in', brand_bridge_id: 'CBBRAND0001', root_bridge_id: 'CBBRAND0001',
+    membership: { state: 'active', via: 'joined', edge_id: 'edge-1', brand_node: 'node-b1' },
+    may: { request: NO('Already in the network.'), approve: NO('Already in the network.'), decline: NO('Already in the network.'), suspend: NO('only the network can suspend or resume a member'), resume: NO('Not paused.'), disconnect: { ok: true, why: null } },
+    offers: [{ id: 'o1', name: 'Festival 10% off', kind: 'percent_off', live: true, at: '2026-10-20T00:00:00.000Z', until: '2026-11-05T00:00:00.000Z', choice: null, applies: false }] }], price_notices: [] },
+  may_design: { ok: false, why: 'Only the owner may design a network.' } };
 const STORES = { stores: [{ entity_id: 'e1', name: 'Fresh Mart', city: 'Chennai', status: 'member' }] };
 const COUNTRY = { migrated: true, done: false, required: true, country: { code: 'IN', name: 'India' }, currency: 'INR', fy_start_month: 4, tax: { registered: false, number: null, scheme: null }, source: { country: 'time zone', currency: 'country', fy_start_month: 'country' }, pack: { id: 'IN', version: '1.0.0', books: true, code: null, why: null } };
 const TODAY = new Date().toISOString().slice(0, 10);
