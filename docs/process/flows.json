@@ -20,7 +20,7 @@
         { "n": 1, "step": "enquiry", "module": "Network", "who": "a buyer the catalogue was delivered to",
           "screen": [{ "file": "web:public/app.html", "fn": "enquirySend" }],
           "engine": [],
-          "route": [{ "m": "POST", "p": "/api/catalogue/enquiry/:item_id", "file": "api:routes/catalogue.js" }, { "m": "GET", "p": "/api/catalogue/enquiry/:item_id", "file": "api:routes/catalogue.js" }],
+          "route": [{ "m": "POST", "p": "/api/catalogue/enquiry/:item_id", "file": "api:routes/catalogue.js" }, { "m": "GET", "p": "/api/catalogue/enquiry/:item_id", "file": "api:routes/catalogue.js" }, { "m": "GET", "p": "/api/catalogue/enquiry", "file": "api:routes/catalogue.js" }],
           "chit": "none — a message thread on the item", "ledger": "none",
           "test": [],
           "status": "warn", "note": "No engine function and no test: the route writes the thread itself (RLS scopes the read)." },
