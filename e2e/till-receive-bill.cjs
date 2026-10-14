@@ -104,6 +104,25 @@ const SG = '33333333-3333-4333-8333-333333333333';
     JSON.stringify(plain.chit && plain.chit.business_json.their_bill));
   say('…the second known supplier is carried by id too', plain.chit && plain.chit.business_json.party.party_id === '44444444-4444-4444-8444-444444444444', JSON.stringify(plain.chit && plain.chit.business_json.party));
 
+  console.log('\n── STK-FIX1b · a second scanned batch of the same product is its own receiving line ───────────');
+  const two = await p.evaluate(async () => {
+    rcvClear(); RCV.vendor = 'Lakshmi Agencies'; document.getElementById('rcv_vendor').value = RCV.vendor; rcvVendorPick();
+    const pill = { item_id: 'i9', name: 'Paracetamol 500', unit: 'strip', price: 10 };
+    rcvAdd(pill, 10, { batch: 'AC2431', expiry: '2028-03-31' });   /* what lotFromScan hands over for a GS1 (10)…(17)… pack */
+    rcvAdd(pill, 5, { batch: 'AC2432', expiry: '2027-01-31' });
+    rcvAdd(pill, 2, { batch: 'ac2431' });                           /* the first batch again, as the scanner may type it */
+    const rows = document.querySelectorAll('#rcv_lines [data-testid^="rcv-line-"]').length;
+    const lines = RCV.lines.map((l) => [l.counted, l.lot && l.lot.batch, l.lot && l.lot.expiry]);
+    await rcvConfirm();
+    const chit = window.__q.filter((c) => c.purpose === 'receipt').pop();
+    return { rows, lines, items: chit ? chit.line_items.map((x) => [x.quantity, x.item_data && x.item_data.lot]) : null };
+  });
+  say('two batches → two lines on the screen (not merged onto line 1)', two.rows === 2 && two.lines.length === 2, JSON.stringify(two.lines));
+  say('…each with its own code, count and expiry; the rescan added to ITS line', JSON.stringify(two.lines) === JSON.stringify([[12, 'AC2431', '2028-03-31'], [5, 'AC2432', '2027-01-31']]), JSON.stringify(two.lines));
+  say('…and the chit carries two lines, each item_data.lot = { batch, expiry } (what stock-from-chit.lotOf reads)',
+    !!two.items && two.items.length === 2 && two.items[0][1].batch === 'AC2431' && two.items[1][1].batch === 'AC2432' && two.items[1][1].expiry === '2027-01-31', JSON.stringify(two.items));
+  await p.evaluate(() => { try { document.getElementById('slipdlg').close(); } catch (_) {} });
+
   console.log('\n── FX-F10W · a snapshot stored by an older counter (no suppliers) is read again once on start ───────────');
   const heal = await p.evaluate(async () => {
     const calls = []; const was = { refresh: HOST.refresh, state: HOST.state, lineUp: window.lineUp };
