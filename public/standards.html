@@ -76,6 +76,7 @@ button,a,select,input{font:inherit;color:inherit} button{cursor:pointer} a{text-
   #std_list .cbl-row .kind{white-space:nowrap;overflow-wrap:normal}
   #std_list .cbl-hc.r{justify-content:flex-start!important}
   #std_list .cbl-row .kind{margin-inline-start:0}
+  #std_list[data-works] .cbl-row .cbl-cell{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
 }
 .c-live,.c-live b{color:var(--green)} .c-part,.c-part b{color:var(--amber-i)} .c-plan,.c-plan b{color:var(--muted)}
 /* in a row the WORD is ink (AA on every theme and on the zebra stripe); the symbol carries the colour */
@@ -148,6 +149,10 @@ abbr.gl:focus-visible{outline:2px solid var(--blue,#3F66A6);outline-offset:1px}
   .who .shop{display:none}
   .who .home{width:34px;padding:0;justify-content:center}
   .who .home .hw{display:none}
+  /* T3-COMPAT: the view tabs share the title row's second line with ‹ ⌂ 🔔 avatar — a symbol each on a phone (aria-label keeps the words), the tab counts on a laptop only */
+  .who .back{width:34px;padding:0;justify-content:center}
+  .who .back .bw{display:none}
+  #std_list .cbl-vtab .n{display:none}
   .mx-body{padding:12px 16px 20px}
   .sd{grid-template-columns:minmax(0,1fr);gap:2px}
   .sd dd{margin-bottom:6px}
@@ -350,7 +355,7 @@ function fallbackCopy(t, done){
 /* ═════ the title row's right end (the unit's head.slot): ‹ back · shop · Home · the avatar ═════ */
 function slot(el){
   var s = session(), name = s ? (s.entity || s.name || '') : '';
-  el.innerHTML = '<span class="who"><button type="button" class="back" data-act="back" data-testid="std-back" aria-label="Back to the matrix">‹ Matrix</button>'
+  el.innerHTML = '<span class="who"><button type="button" class="back" data-act="back" data-testid="std-back" aria-label="Back to the matrix">‹<span class="bw">&nbsp;Matrix</span></button>'
     + (name ? '<span class="shop" data-testid="shop-name">' + esc(name) + '</span>' : '')
     + (s ? '<span id="cb-bell-slot" class="bellslot" data-testid="bell-slot"></span>' : '')
     + '<a class="home" href="/" data-testid="std-home" aria-label="Home">⌂<span class="hw">&nbsp;Home</span></a><span id="cb-avatar" data-cb-avatar data-testid="avatar-slot"></span></span>';
@@ -374,7 +379,7 @@ function mountList(){
     search: (x) => { var r = x.r; return [r.p, r.n, r.w, r.m, r.limit, r.note, r.at, plain(r.ex), r.eq, AREA(r), PAREA(r), KIND(r), COUNTRY(r), STATUS(r), r.g, r.dirWords, r.code, r.test].join(' '); },
     searchHint: 'Search standards',
     filters: FILTERS, sorts: SORTS,
-    views: { tid: 'std-view', items: [{ key: 'all', label: 'Everything', filt: {} }, WORKS] },
+    views: { tid: 'std-view', inTitle: true, items: [{ key: 'all', label: 'All', filt: {}, tip: 'Every standard and every system we work with' }, WORKS] },
     group: { options: [['area', 'Area'], ['country', 'Country'], ['kind', 'Kind'], ['none', 'None']], default: 'area', tid: 'std', by: groupBy, order: GROUP_ORDER,
       fig: (rows) => { var n = countOf(rows.map((x) => x.r)); return rows.length + ' · ● ' + n.live + ' ◐ ' + n.part + ' ○ ' + n.plan; } },
     next: nextOf,
@@ -383,6 +388,10 @@ function mountList(){
       { id: 'copy', label: 'Copy for a buyer or CA', tid: 'std-copy', run: (x) => copyText(statementOf(x.r)) },
     ],
     empty: { title: 'No standards on the register', sub: 'The register could not be read.' },
+    /* T3-COMPAT: the Works with tab when data/compat.json could not be read says so in words, never "nothing matches"; Try again reloads the page */
+    state: () => (COMPAT_ERR && worksOn() ? 'error' : undefined),
+    error: { title: 'The Works with list could not be read.', sub: 'The standards are all here. Reload to try again.' },
+    onRetry: () => location.reload(),
   });
 }
 
@@ -429,6 +438,7 @@ let FITKEY = '';
 function fit(){
   var st = LIST && LIST.state(), host = $('std_list'); if (!st) return;
   var keys = st.cols.concat(worksOn() ? ['dir', 'status'] : ['status']), mine = Object.keys(st.widths || {}).length > 0, key = keys.join(',') + '|' + mine;
+  host.toggleAttribute('data-works', worksOn());   /* T3-COMPAT: the Works with tab is short (14 rows) — its cells wrap, so no word is cut to … */
   if (key === FITKEY) return; FITKEY = key;
   if (mine){ host.removeAttribute('data-fill'); return; }
   host.style.setProperty('--std-tpl', keys.map((k) => 'minmax(0,' + (WEIGHT[k] || 1.5) + 'fr)').join(' ')); host.setAttribute('data-fill', '1');
