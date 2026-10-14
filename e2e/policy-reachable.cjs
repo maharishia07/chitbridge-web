@@ -81,9 +81,16 @@ let web = '';
 console.log('\n── every policy flag the API reads can be set by somebody ──');
 console.log('  ' + keys.length + ' flag(s) declared in lib/policy.js');
 
+/* ⭐ T2-POLICY (2026-10-14): the Business rules card's rows are DEFINED in lib/policy.js (`const CARD`, sent as schema[key].ui) and the
+   card paints whatever the server sends — so a flag with a CARD row is reachable without its key appearing in this repo. */
+const cardAt = src.indexOf('const CARD');
+const cardKeys = cardAt < 0 ? [] : [...src.slice(cardAt, src.indexOf('};', cardAt)).matchAll(/^\s{2}([a-z_][a-z0-9_]*):\s*\{/gm)].map((m) => m[1]);
+const cardPainted = cardKeys.length && /polDefs\(\)/.test(web) && /\.ui\b/.test(web);
+console.log('  ' + cardKeys.length + ' of them on the Business rules card (lib/policy.js CARD → schema[key].ui)' + (cardPainted ? '' : ' — but the web does not paint it'));
 const unreachable = [];
 for (const k of keys) {
   if (web.indexOf(k) >= 0) { pass++; continue; }
+  if (cardPainted && cardKeys.indexOf(k) >= 0) { pass++; continue; }
   if (DELIBERATELY_UNREACHABLE[k]) { pass++; unreachable.push(k); continue; }
   fails.push('`' + k + '` is read by the API and appears NOWHERE in the web app — nobody can set it, and nothing '
     + 'says it was never chosen. Give it a control, or add it to DELIBERATELY_UNREACHABLE with the reason.');
