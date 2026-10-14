@@ -3,7 +3,7 @@
  * e2e/walk-returns.cjs - THE SHOP'S OWN RETURN, WALKED (BAS1, 2026-10-12): Accounts › GST for an Australian shop (BAS) and a UAE shop (VAT return).
  * Black box: the real accounts.html, the real cap-period.js / cap-books.js; the API is a stand-in answering inside the page in the shapes chitbridge-api
  * routes/books.js GET /returns sends (checked against e2e/fixtures/web-api.contract.json on the way out). Nothing leaves the machine.
- *   R0  an Indian shop (422 RETURN_FROM_RAIL) -> the GST close & pay form, as before
+ *   R0  an Indian shop (200 form:null RETURN_FROM_RAIL, TOUR-FIX1) -> the server's sentence above the GST close & pay form
  *   R1  an Australian shop -> the menu and the title say BAS; the quarter that ended is chosen; G1 · 1A · 1B · 9 as rows, the server's figures; To pay; Prepared, not lodged — ATO
  *   R2  Full BAS -> ONE GET with simpler=0 -> G2 G3 G10 G11 join the rows
  *   R3  Copy figures -> the clipboard holds the boxes as one block (code · label · amount), plain digits for the portal
@@ -69,7 +69,7 @@ function vat201(emirate, period) {
     notes: ['the whole of Box 1 is reported under ' + (emirate || 'the Emirate of the fixed establishment (none was handed in)') + ' — the ledgers carry no Emirate (ER Art. 72(2))', 'VAT-exclusive, and including zero-rated and exempt purchases (the ledgers hold them under the same accounts); the VAT column is what was posted to Input VAT'],
     cite: 'RET (FTA VAT Returns guide, Aug 2021) §3.2 and Boxes 1–15; RET-UM (EmaraTax VAT201 user manual, Oct 2022); ER Art. 64(5), Art. 72' });
 }
-const IN_422 = { code: 'RETURN_FROM_RAIL', error: 'India\'s GSTR-1 and GSTR-3B are read from the frozen invoices on the rail (GET /api/tax/gstr), not from the ledgers.', message: 'India\'s GSTR-1 and GSTR-3B are read from the frozen invoices on the rail (GET /api/tax/gstr), not from the ledgers.' };
+const IN_RAIL = { form: null, pack: 'IN', code: 'RETURN_FROM_RAIL', why: 'Your GSTR-1 and GSTR-3B are made from your bills, not from these books. Close and pay the month\'s GST here.', rail: '/api/tax/gstr' };
 const acct = (code, name, nature, role, parent) => ({ account_id: '00000000-0000-4000-8000-0000000' + code + '0', code, name, is_group: false, tally_group: '', nature, role, parent_code: parent, active: true });
 const CHART = { accounts: [acct('1400', 'Cash on hand', 'asset', 'cash', 'G1400'), acct('2200', 'GST collected', 'liability', 'gst_collected', 'G2200'), acct('2210', 'GST paid', 'liability', 'gst_paid', 'G2200'), acct('4000', 'Sales', 'income', 'sales', 'G4000')] };
 
@@ -86,7 +86,7 @@ async function stub(ctx, kind, S) {
     if (p === '/api/books/dues') return J(r, 200, books.dues([]));
     if (/^\/api\/books\/ledger\//.test(p)) return J(r, 200, books.ledger('2200', 'GST collected', [{ date: '2026-07-01', what: 'Walk-in day', ref: 'SV/2026-27/000001', dr_minor: 0, cr_minor: 1000 }], { currency: 'AUD', from: u.searchParams.get('from') || '2026-07-01', to: u.searchParams.get('to') || '2026-09-30', closing_minor: 1000 }));
     if (p === '/api/books/returns') {
-      if (kind === 'IN') return J(r, 422, IN_422);
+      if (kind === 'IN') return J(r, 200, IN_RAIL);   /* TOUR-FIX1: the API answers (200 form:null) — the 422 the page swallowed is gone */
       if (kind === 'AU') return J(r, 200, bas(u.searchParams.get('simpler') !== '0', u.searchParams.get('period')));
       return J(r, 200, u.searchParams.get('stagger') ? vat201(u.searchParams.get('emirate'), u.searchParams.get('period')) : vatNeeds());
     }
@@ -116,7 +116,8 @@ W.run('returns', async (w) => {
   await w.step('R0', 'An Indian shop -> Accounts > GST close & pay: the close form, as before (its GSTR comes from the rail)', async () => {
     await IN.page.waitForSelector('[data-testid="pg-form"]', { timeout: 15000 });
     const asked = IN.S.calls.filter((c) => /GET \/api\/books\/returns/.test(c)).length, word = await navWord(IN.page);
-    return { ok: asked === 1 && word === 'GST close & pay' && (await count(IN.page, '[data-testid="pr-card"]')) === 0 && IN.errs.length === 0, saw: 'asked once, got 422 -> the close form; menu says "' + word + '"' + (IN.errs.length ? ' · page error ' + IN.errs[0] : '') };
+    const why = await IN.page.locator('[data-testid="pg-rail-why"]').innerText().catch(() => '');
+    return { ok: asked === 1 && word === 'GST close & pay' && /made from your bills/.test(why) && (await count(IN.page, '[data-testid="pr-card"]')) === 0 && IN.errs.length === 0, saw: 'asked once, got 200 form:null -> "' + why + '" above the close form; menu says "' + word + '"' + (IN.errs.length ? ' · page error ' + IN.errs[0] : '') };
   });
   await IN.ctx.close();
 
