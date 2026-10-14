@@ -453,5 +453,6 @@
     start();
     return { reload: reload, show: show, open: tkOpen, close: closeSheet };
   }
-  root.CBTasks = { mount: mount, VIEWS: VIEWS, EP: CB_WORK_EP };
+  /* actRow is shared (T3-DISPUTES-ASSIST): CBDispute (cap-dispute.js) draws Raise / Resolve the same way — shown always, greyed WITH the server's sentence */
+  root.CBTasks = { mount: mount, VIEWS: VIEWS, EP: CB_WORK_EP, actRow: actRow };
 })(typeof window !== 'undefined' ? window : globalThis);

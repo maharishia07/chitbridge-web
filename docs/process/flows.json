@@ -429,6 +429,49 @@
           "test": ["engines:tests/fx.test.js", "api:tests/fx-rates.test.cjs"],
           "status": "ok", "note": "Debtors and creditors only; a currency with no closing rate is named and nothing is revalued." }
       ]
+    },
+    {
+      "id": "DSP", "name": "Dispute to settled (the USP: per-party, confidential)", "sap": "SD-CM (complaints) · FI-AR (disputed items)",
+      "steps": [
+        { "n": 1, "step": "raise", "module": "TasksOrders", "who": "a party on the chit (an editor of the shop)",
+          "screen": [{ "file": "web:public/app/cap-dispute.js", "fn": "raise" }, { "file": "web:public/app/cap-dispute.js", "fn": "quickDispute" }],
+          "engine": [{ "file": "api:lib/dispute-may.js", "fn": "raise" }, { "file": "api:lib/rail.js", "fn": "can" }],
+          "route": [{ "m": "GET", "p": "/api/chits/:chit_id/disputes", "file": "api:routes/chits.js" }, { "m": "POST", "p": "/api/chits/:chit_id/disputes", "file": "api:routes/chits.js" }],
+          "chit": "the chit itself — a dispute copy per party on the roster (chit_disputes, per-copy RLS)", "ledger": "none (a supplier bill under an open dispute waits — books-hooks buyerGate)",
+          "test": ["api:tests/dispute-scoping.test.cjs", "web:e2e/walk-disputes.cjs"],
+          "status": "ok", "note": "Raise is shown always, greyed with the rail's sentence (actions.raise); who it may name is the server's (raise_parties)." },
+        { "n": 2, "step": "work the queue", "module": "TasksOrders", "who": "the shop: what it raised, what is against it",
+          "screen": [{ "file": "web:public/app/cap-dispute.js", "fn": "listLoad" }, { "file": "web:public/app/cap-dispute.js", "fn": "inSheet" }],
+          "engine": [],
+          "route": [{ "m": "GET", "p": "/api/chits/disputes/queue", "file": "api:routes/chits.js" }],
+          "chit": "read (the chit sheet opens the chit; the dispute's room is its own thread)", "ledger": "none",
+          "test": ["api:tests/dispute-scoping.test.cjs", "web:e2e/walk-disputes.cjs"],
+          "status": "ok", "note": "Server-paged (status · side · q · sort · page); the room is CBThread scoped to the dispute's roster." },
+        { "n": 3, "step": "resolve", "module": "TasksOrders", "who": "the business that raised it — per party or all",
+          "screen": [{ "file": "web:public/app/cap-dispute.js", "fn": "resolveAsk" }, { "file": "web:public/app/cap-dispute.js", "fn": "resolveDispute" }],
+          "engine": [{ "file": "api:lib/dispute-may.js", "fn": "resolve" }],
+          "route": [{ "m": "PUT", "p": "/api/chits/:chit_id/disputes/:dispute_id/resolve", "file": "api:routes/chits.js" }],
+          "chit": "the dispute copies close per party; the raiser's when none is left open", "ledger": "a bill held by the dispute is released (books-hooks afterChit)",
+          "test": ["api:tests/dispute-scoping.test.cjs", "web:e2e/walk-disputes.cjs"],
+          "status": "warn", "note": "Resolve is not a rail action yet: its rule is composed in api lib/dispute-may (engines change queued: rail ACTIONS + resolve_dispute)." }
+      ]
+    },
+    {
+      "id": "CBA", "name": "Question to answer (CB Assist)", "sap": "— (the help desk's knowledge base)",
+      "steps": [
+        { "n": 1, "step": "draft an answer", "module": "TasksOrders", "who": "the help desk; CB Assist proposes",
+          "screen": [{ "file": "web:public/app/cap-assist.js", "fn": "draft" }],
+          "engine": [{ "file": "api:lib/ai.js", "fn": "invokeSkill" }],
+          "route": [{ "m": "POST", "p": "/api/governance/ai-draft", "file": "api:routes/governance.js" }],
+          "chit": "none", "ledger": "none", "test": ["web:e2e/walk-disputes.cjs"],
+          "status": "warn", "note": "A draft is never stored: Accept publishes it, Reject throws it away (the old gap queue is retired: /assist/gaps · /assist/resolve)." },
+        { "n": 2, "step": "accept = publish", "module": "TasksOrders", "who": "the help desk (others see it greyed, with why)",
+          "screen": [{ "file": "web:public/app/cap-assist.js", "fn": "publish" }, { "file": "web:public/app/cap-admin.js", "fn": "publishAnswer" }],
+          "engine": [],
+          "route": [{ "m": "GET", "p": "/api/assist/whoami", "file": "api:routes/assist.js" }, { "m": "POST", "p": "/api/assist/publish", "file": "api:routes/assist.js" }, { "m": "GET", "p": "/api/assist/questions", "file": "api:routes/assist.js" }],
+          "chit": "none", "ledger": "none", "test": ["web:e2e/walk-disputes.cjs"],
+          "status": "ok", "note": "Publish is shown always, greyed with the server's sentence (whoami actions.publish)." }
+      ]
     }
   ]
 }
