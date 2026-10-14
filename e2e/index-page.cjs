@@ -112,7 +112,7 @@ async function run() {
       if (u.pathname === '/api/entities/header') return J(r, 404, { error: 'not found' });            /* N19 built, not live: the empty state stays */
       if (u.pathname === '/api/books/health') {
         if (p.booksOff) return J(r, 404, { error: 'Not found' });
-        return J(r, 200, books.health({ waiting: (p.waiting || []).map((w) => books.waitingRow(w)) }));
+        return J(r, 200, books.health(Object.assign({ waiting: (p.waiting || []).map((w) => books.waitingRow(w)) }, p.health || {})));
       }
       if (FACTS[u.pathname]) return J(r, 200, FACTS[u.pathname]);
       return J(r, 404, { error: 'not found' });
@@ -180,7 +180,7 @@ async function run() {
     /* ── 4 · 1366, a planted manifest and a planted API: facts, the rail, the alerts ── */
     {
       const { ctx } = await profile(1366, 800, { manifest: PLANTED, waiting: [{ id: 1, reason: 'Paid by Points — there is no ledger for Points yet.' }, { id: 2, reason: 'September is locked.' },
-        { id: 3, reason: 'Waiting for you to confirm the goods were received (bill SG-103 from Sri Ganesh Provisions)' }, { id: 4, reason: 'Who is Sri Ganesh? Add them as a supplier — then bill SG-102 waits for you to accept it.' }], pair: { ent: 'ent-C', name: 'Mayuri123' } });
+        { id: 3, todo: 'accept', reason: 'Waiting for you to confirm the goods were received (bill SG-103 from Sri Ganesh Provisions)' }, { id: 4, todo: 'add_supplier', name: 'Sri Ganesh', reason: 'Who is Sri Ganesh? Add them as a supplier — then bill SG-102 waits for you to accept it.' }], pair: { ent: 'ent-C', name: 'Mayuri123' } });
       const pg = await open(ctx);
       await pg.waitForSelector('[data-testid="rail"]', { timeout: 8000 }).catch(() => {});
       const f = (await pg.locator('[data-testid="shell-facts-till"]').innerText()).replace(/\s+/g, ' ');
@@ -202,6 +202,17 @@ async function run() {
       ok(rows.every((r) => r.fix), 'planted · every alert carries the button that fixes it');
       for (const a of Object.keys(BUDGET)) { const n = await areaWords(pg, a); ok(n >= 0 && n <= BUDGET[a], 'planted 1366 · words in ' + a + ': ' + n + ' ≤ ' + BUDGET[a]); }
       await pg.screenshot({ path: path.join(SHOTS, 'index-alerts.png') });
+      await ctx.close();
+    }
+    /* ── 4b · STD1: Home says the server's ONE count (/health todo — GROUP BY over every waiting row), never the 50-row page's length ── */
+    {
+      const page = Array.from({ length: 50 }, (_, i) => ({ id: i + 1, todo: 'accept', reason: 'Waiting for you to confirm the goods (bill B' + i + ')' }));
+      const { ctx } = await profile(1366, 800, { manifest: PLANTED, waiting: page, health: { total: 211, todo: { accept: 120, add_supplier: 90, record: 1 } } });
+      const pg = await open(ctx);
+      await pg.waitForSelector('[data-testid="ledger-accept"]', { timeout: 8000 }).catch(() => {});
+      const t = (id) => pg.evaluate((x) => ((document.querySelector('[data-testid="' + x + '"]') || {}).textContent || '').replace(/\s+/g, ' '), id);
+      ok(/\b120 supplier bills to accept/.test(await t('ledger-accept')) && /\b90 suppliers to add/.test(await t('ledger-supplier')) && /\b1 waiting to be recorded/.test(await t('ledger-waiting')),
+        'STD1 · > 50 rows: Home says the server\'s count (120 · 90 · 1), not the page of 50 (' + (await t('ledger-accept')) + ')');
       await ctx.close();
     }
 
