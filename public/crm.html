@@ -93,9 +93,10 @@ svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke
   .main{position:relative}
   .main.overbar .bar{position:absolute;top:0;right:0;z-index:8;height:56px;min-height:0;border:0;background:transparent;padding:0 20px;flex-wrap:nowrap}
   .main.overbar .crumb{display:none}
+  .main.overbar .bar .cbsid .cbsid-n,.main.overbar .bar .cbsid .cbsid-d{display:none}   /* SCREEN-ID: over the title row the chip is its code (the name is the title beside it) */
   .main.overbar .home{height:32px}
   .main.overbar .act.sm{min-height:32px}
-  .main.overbar .screen .cbl:not(#_) .cbl-title{padding-right:440px;min-height:56px;box-sizing:border-box}   /* :not(#_) = the unit's own weight: the room for the bar was being out-voted (UI10) */   /* the title row is the header line: 56 px, the same as the sidebar's brand */
+  .main.overbar .screen .cbl:not(#_) .cbl-title{padding-right:520px;min-height:56px;box-sizing:border-box}   /* :not(#_) = the unit's own weight: the room for the bar was being out-voted (UI10) */   /* the title row is the header line: 56 px, the same as the sidebar's brand */
 }
 .screen{flex:1;min-height:0;overflow-y:auto}
 .screen.flush{overflow:hidden;overflow:clip;padding:0;display:flex;flex-direction:column}
