@@ -8,7 +8,7 @@
  *   P4  STD2 · helpers.packWord / taxIdWord — IN GSTIN·PIN·State · AU ABN·Postcode·State · AE TRN·P.O. Box·Emirate · NO pack → Tax number·Postcode·Region
  *       (never India's); a screen holding the country passes it (cc) instead of writing SESSION.country
  *   P5  STD2 guard · no file under public/ outside app/helpers.js holds a tax-ID word table or a `pack.abn ? 'ABN'` reading (the till reads the server's)
- *   P6  STD2 · register-form reuses csuCountryName · CSU_MONTHS and paints the server's offer; settings keeps the session via CBSignin.keepSession (never over the engine's keep); cap-shop
+ *   P6  STD2 · register-form reuses csuCountryName · monthNames (helpers.js, T2-WEBPRIMS — CSU_MONTHS is gone) and paints the server's offer; settings keeps the session via CBSignin.keepSession (never over the engine's keep); cap-shop
  *       never writes SESSION.country
  *   node e2e/cx4-pack-words.cjs
  */
@@ -66,8 +66,8 @@ function page(country, currency) {
   /* P6 — the register panel paints, the session is kept by its one writer */
   const src = (f) => blank(fs.readFileSync(path.join(PUB, f), 'utf8'));
   const rf = src('app/register-form.js');
-  ok('P6 register-form: no regZoneFor / regSourceOf / own months / RTL list / .in address / dev copy; reads csuCountryName · CSU_MONTHS · countries[].offer',
-    !/regZoneFor|regSourceOf|'January','February'|\(ar\|ur\|fa\|he\)|@business\.in|check endpoint/.test(rf) && /csuCountryName\(/.test(rf) && /CSU_MONTHS\[/.test(rf) && /pk\.offer/.test(rf) && /query:\{tz:tz\}/.test(rf));
+  ok('P6 register-form: no regZoneFor / regSourceOf / own months / RTL list / .in address / dev copy; reads csuCountryName · monthNames · countries[].offer',
+    !/regZoneFor|regSourceOf|'January','February'|\(ar\|ur\|fa\|he\)|@business\.in|check endpoint/.test(rf) && /csuCountryName\(/.test(rf) && /monthNames\('long'\)\[/.test(rf) && /pk\.offer/.test(rf) && /query:\{tz:tz\}/.test(rf));
   ok('P6 settings.html registered() keeps the session through CBSignin.keepSession (with duty); signin-ui exports it WITHOUT replacing the engine\'s keep (the counter\'s)', /CBSignin\.keepSession\(\{\}, CBSignin\.sessionOf\(r\)\)/.test(src('settings.html')) && !/setItem\('cb_sess'/.test(src('settings.html')) && /E\.keepSession = keep;/.test(src('app/signin-ui.js')) && !/E\.keep = /.test(src('app/signin-ui.js')));
   ok('P6 cap-shop never writes the global SESSION.country', !/SESSION\.country\s*=/.test(src('app/cap-shop.js')));
 
