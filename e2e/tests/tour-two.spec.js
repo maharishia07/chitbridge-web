@@ -12,7 +12,8 @@ const { mintEntity, addProduct, clickNav, settle, openTab, shopAdd } = require('
 
 const PAUSE = Number(process.env.TOUR_PAUSE || 8000);
 const HEADED = !!process.env.TOUR_HEADED || process.argv.includes('--headed');
-const DEV_OTP = process.env.CB_DEV_OTP || '123456';
+const DEV_OTP = require('../fixtures').signinCode();   // SEC1: the tester code (E2E_TESTER_CODE) on a deployed api, the local code on a local one
+require('../fixtures').needCode(test);   // no code → the file SKIPS with a CI warning naming the secret
 const API = process.env.CB_API_BASE || 'https://chitbridge-api-production.up.railway.app';
 let N = 0;
 
@@ -88,7 +89,7 @@ test('the two-party tour: a buyer orders, the seller rings, the invoice carries 
   await ok(buyer, 'basket: ' + basket.tax.join(' · ') + ' · total ' + basket.total);
 
   await caption(buyer, 'BUYER', 'Order with a phone number and a code', 'the customer rail: /order/start (OTP to the contact) → /order/confirm — the order becomes a CHIT delivered to the seller, priced by the server with the live offers',
-    'Checkout › contact › Send code › 123456 › Place order', 'Order placed');
+    'Checkout › contact › Send code › the code › Place order', 'Order placed');
   /* the seller's window listens at the one seam the client owns — the arrival is asserted, not assumed */
   await seller.evaluate(() => { window.__cbArrived = []; const orig = window.cbPushArrived; window.cbPushArrived = function (d) { window.__cbArrived.push(d); return orig(d); }; });
   /* the checkout is ONE driver (e2e/flows/storefront.js) — the same steps [SHOP-01] takes */

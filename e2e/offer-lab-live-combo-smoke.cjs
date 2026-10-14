@@ -24,7 +24,7 @@ const WEB = 'https://chitbridge-web.vercel.app';
 const API = 'https://chitbridge-api-production.up.railway.app';
 const EMAIL = 'mayuri123@demo-cb.com';
 const DISPLAY_NAME = 'Mayur Bhavan';
-const OTP = '123456';
+const OTP = require('./lib/signin-code.cjs').codeOrSkip(API);   // SEC1: E2E_TESTER_CODE on the deployed api (unset → skipped with a warning)
 
 let bad = 0;
 const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(76) + '· ' + d + '  ' + (ok ? 'OK' : (bad++, '✗ FAILED'))); };

@@ -1,8 +1,9 @@
 // MODULE: Onboarding / Mint  (the DoD core — a human mints an entity through the real front door)
 // FLOW:   welcome → get-started → role → vertical → continue → register(name,email) → verify(vertical,OTP) → app
-// DATA:   fresh email per run + DEV_OTP=123456
+// DATA:   fresh email per run + DEV_OTP armed
 // LOCATORS: onb-getstarted · onb-role-* · onb-bp-* · onb-continue · reg-name · reg-email · reg-submit · reg-vertical-* · reg-otp
 const { test, expect } = require('@playwright/test');
+require('../fixtures').needCode(test);   // SEC1: no sign-in code for this target (E2E_TESTER_CODE) → the file SKIPS with a CI warning
 const { uniqueEmail, uniqueName, DEV_OTP, passCountryStep } = require('../fixtures');
 
 test.describe('Module · Onboarding / Mint', () => {

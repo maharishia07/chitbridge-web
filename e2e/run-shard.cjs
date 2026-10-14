@@ -73,6 +73,8 @@ for (const [f, k, n] of runs) {
     env: Object.assign({}, process.env, { NODE_PATH: path.join(E2E, 'node_modules') }),
   });
   const s = ((Date.now() - t0) / 1000).toFixed(0) + 's';
+  /* SEC1: exit 78 = the harness SKIPPED itself (a missing secret, said in its output) — counted as SKIP, never PASS, never FAIL */
+  if (r.status === 78) { console.log('  SKIP ' + f.padEnd(34) + '   skipped itself: ' + (String(r.stdout || '').split('\n').filter((l) => /SKIP|missing/.test(l)).slice(-1)[0] || '')); continue; }
   const ok = r.status === 0 && !r.error;
   if (KNOWN[f]) {
     known++;

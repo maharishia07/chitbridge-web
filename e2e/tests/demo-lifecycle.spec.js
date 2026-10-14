@@ -7,6 +7,7 @@
 //   7 · Settings › Integrations › Running connectors shows it checked in (the co-assist connector actor)
 // Screens land in e2e/demo-out/lifecycle-*.png; the order CSV content is printed.
 const { test, expect } = require('@playwright/test');
+require('../fixtures').needCode(test);   // SEC1: no sign-in code for this target (E2E_TESTER_CODE) → the file SKIPS with a CI warning
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -65,7 +66,7 @@ test('DEMO lifecycle: CSV products up → storefront order from another system �
       await shop.getByTestId('shop-contact').fill('kumar' + Date.now().toString().slice(-6) + '@example.com');
       const started = shop.waitForResponse((r) => /\/order\/start$/.test(r.url()) && r.request().method() === 'POST', { timeout: 30000 });
       await shop.locator('[data-testid="shop-cart-submit"], [data-testid="shop-send-code"]').first().click(); const sj = await (await started).json().catch(() => ({}));
-      const otpBox = shop.locator('[data-testid="shop-otp"], #o_otp, input[inputmode="numeric"]').first(); await otpBox.waitFor({ timeout: 20000 }); await otpBox.fill(sj.dev_otp || '123123');
+      const otpBox = shop.locator('[data-testid="shop-otp"], #o_otp, input[inputmode="numeric"]').first(); await otpBox.waitFor({ timeout: 20000 }); await otpBox.fill(sj.dev_otp || require('../fixtures').signinCode('customer'));
       const confirmed = shop.waitForResponse((r) => /\/order\/confirm$/.test(r.url()) && r.request().method() === 'POST', { timeout: 45000 });
       await shop.locator('[data-testid="shop-cart-submit"], [data-testid="shop-place-order"]').first().click({ timeout: 20000 });
       const cj = await (await confirmed).json().catch(() => ({})); chitId = cj.chit_id; expect(chitId, JSON.stringify(cj).slice(0, 200)).toBeTruthy();

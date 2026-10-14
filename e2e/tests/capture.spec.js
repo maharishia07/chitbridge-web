@@ -3,6 +3,7 @@
 // FLOW: open intake → login → simulate an inbound message → it lands in the inbox → (AI) structure → create chit.
 // LOCATORS: cap-channel · cap-from · cap-text · cap-simulate · cap-structure · cap-create-chit  (+ #lg_email/#lg_otp/#lg_btn)
 const { test, expect } = require('@playwright/test');
+require('../fixtures').needCode(test);   // SEC1: no sign-in code for this target (E2E_TESTER_CODE) → the file SKIPS with a CI warning
 const { uniqueEmail, DEV_OTP } = require('../fixtures');
 
 test.describe('Module · Capture (WhatsApp / email → chit)', () => {
