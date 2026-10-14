@@ -31,23 +31,126 @@ function govCtx(){
   try { if (!_govCtx && window.CBGov) _govCtx = CBGov.read(); } catch (_) { _govCtx = null; }
   return _govCtx;
 }
+/**
+ * ⭐⭐ GOV-SPIN (Athi, 14 Oct): A REGIONAL SPIN STATES ITS COUNTRY, AND THE REGISTRANT ACCEPTS IT. GET /entities/constitutions (fetched before
+ * this step paints) now carries `installation { country, name, timezone }` (b382) and `countries[]` — the packs a registrant may choose, each
+ * with what it applies (currency · year · tax · format · languages). When the installation states a country it is offered FIRST, with its
+ * source in words; the browser's guess is shown beside it only when it differs; another country only from the server's list (tighten-only),
+ * else the panel says why. The ONE reg-agree accepts it; verify carries the choice (country_source) and the SERVER decides what is stored.
+ * This file computes nothing: every value is the server's pack row or the browser's own Intl. No spin data (an older api) → the rows above.
+ * Flow step: Onboarding · Register (docs/process/flows.json).
+ */
+function regPackOf(code){
+  var l = (REG.spin && Array.isArray(REG.spin.countries)) ? REG.spin.countries : [];
+  for (var i = 0; i < l.length; i++) if (l[i] && l[i].code === code) return l[i];
+  return null;
+}
+function regInstCountry(){ return (REG.spin && REG.spin.installation && REG.spin.installation.country) || ''; }
+function regBrowserCountry(){ var g = govCtx(); return (g && g.country && g.country.value) || ''; }
+function regCountryName(code){
+  if (!code) return '';
+  var pk = regPackOf(code); if (pk && pk.name) return pk.name;
+  try { var R = window.CBLocale && CBLocale.REGIONS; if (R && R[code] && R[code].name) return R[code].name; } catch (_) {}
+  try { var n = new Intl.DisplayNames(['en'], { type: 'region' }).of(code); if (n && n !== code) return n; } catch (_) {}
+  return code;
+}
+/** where the country on the panel came from — the same three codes the server records (it re-decides them from the facts) */
+function regSourceOf(code){ return code && code === regInstCountry() ? 'installation' : code && code === regBrowserCountry() ? 'browser' : 'chosen'; }
+/** the first country offered: the installation's, else the browser's when the server may serve it, else none (the panel says so) */
+function regFirstCountry(){
+  var inst = regInstCountry(), br = regBrowserCountry();
+  if (inst) return inst;
+  if (br && (!REG.spin || !REG.spin.countries || regPackOf(br))) return br;
+  return '';
+}
+/** a language's English name, and for a right-to-left one its own name too, isolated so it never flips the row ([[project-arabic-rtl]]) */
+function regLangHTML(code){
+  var en = code, own = '';
+  try { en = new Intl.DisplayNames(['en'], { type: 'language' }).of(code) || code; } catch (_) {}
+  if (/^(ar|ur|fa|he)$/.test(code)) { try { own = new Intl.DisplayNames([code], { type: 'language' }).of(code) || ''; } catch (_) {} }
+  return esc(en) + (own && own !== en ? ' <bdi dir="rtl" lang="' + esc(code) + '">' + esc(own) + '</bdi>' : '');
+}
+/** how numbers and dates print in the pack's format — the browser's own Intl, one fixed sample */
+function regFormatSample(locale){
+  try {
+    var n = new Intl.NumberFormat(locale).format(1234.5), d = new Intl.DateTimeFormat(locale, { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(2026, 9, 14));
+    return '<bdi dir="auto">' + esc(n) + '</bdi> · <bdi dir="auto">' + esc(d) + '</bdi>';
+  } catch (_) { return esc(locale); }
+}
+/** the zone the server will store (country-setup.offerOf): the device's when it is the pack's, else its one zone, else the installation's */
+function regZoneFor(pk){
+  var dev = (govCtx() && govCtx().timezone && govCtx().timezone.value) || '', z = (pk && pk.zones) || [], inst = REG.spin && REG.spin.installation && REG.spin.installation.timezone;
+  if (dev && z.indexOf(dev) >= 0) return { value: dev, from: tx('your device clock') };
+  if (z.length === 1) return { value: z[0], from: txf('the {c} pack', { c: pk.name }) };
+  if (inst && z.indexOf(inst) >= 0) return { value: inst, from: tx('this ChitBridge') };
+  return { value: '', from: tx('you pick it after signing in') };
+}
+/** the rows when the server sent its countries: the country (with its source), then what that country's pack applies */
+function regSpinRows(){
+  var c = REG.country, inst = regInstCountry(), pk = regPackOf(c), name = regCountryName(c), out = [];
+  var g = govCtx(), from = !c ? tx('you set this after signing in') : c === inst ? txf('This ChitBridge runs in {c}', { c: name })
+    : c === regBrowserCountry() ? ((g && g.country && g.country.from) || tx('your browser')) : tx('you chose it');
+  out.push({ key: 'country', what: tx('Country'), value: esc(name), from: from, known: !!c });
+  if (pk) {
+    var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    var tax = [pk.tax && pk.tax.scheme, pk.tax && pk.tax.id].filter(Boolean).join(' · ');
+    var zone = regZoneFor(pk);
+    out.push({ key: 'currency', what: tx('Money'), value: esc(pk.currency || ''), from: txf('the usual currency in {c}', { c: name }), known: !!pk.currency });
+    out.push({ key: 'year', what: tx('Year starts'), value: esc(pk.fy_start_month ? tx(months[pk.fy_start_month - 1]) : ''), from: txf('the {c} pack', { c: name }), known: !!pk.fy_start_month });
+    out.push({ key: 'tax', what: tx('Tax'), value: esc(tax), from: (pk.tax && pk.tax.return) ? txf('returns: {r}', { r: pk.tax.return }) : txf('the {c} pack', { c: name }), known: !!tax });
+    out.push({ key: 'format', what: tx('Format'), value: pk.locale ? regFormatSample(pk.locale) : '', from: txf('how {c} writes numbers and dates', { c: name }), known: !!pk.locale });
+    out.push({ key: 'language', what: tx('Language'), value: (pk.languages || []).slice(0, 2).map(regLangHTML).join(' · '), from: txf('the {c} pack', { c: name }), known: !!(pk.languages && pk.languages.length) });
+    out.push({ key: 'timezone', what: tx('Time zone'), value: esc(zone.value), from: zone.from, known: !!zone.value });
+  }
+  /* the device row as the browser reads it (CBGov.rows) — the rest above replace its guesses */
+  govRows().forEach(function (r) { if (r.key === 'device') out.push({ key: r.key, what: r.what, value: esc(r.value), from: r.from, known: r.known }); });
+  return out;
+}
+/** the line beside the country: the browser's differing guess, the choice the server allows, or why there is none */
+function regCountryChoice(){
+  var inst = regInstCountry(), br = regBrowserCountry(), list = (REG.spin && REG.spin.countries) || [], h = '';
+  if (inst && br && br !== inst) h += '<div data-testid="reg-gov-browser">' + esc(txf('Your browser says {c}', { c: regCountryName(br) })) + '</div>';
+  if (list.length > 1) {
+    h += '<label style="display:block;margin-top:4px">' + esc(tx('Another country')) + ' <select class="inp" data-testid="reg-country" style="width:auto;max-width:100%;display:inline-block;padding:4px 8px" onchange="REG.country=this.value;REG.agreed=false;renderRegister()">'
+      + (REG.country ? '' : '<option value="" selected>' + esc(tx('Pick one')) + '</option>')
+      + list.map(function (c) { return '<option value="' + esc(c.code) + '"' + (c.code === REG.country ? ' selected' : '') + '>' + esc(c.name || c.code) + '</option>'; }).join('')
+      + '</select></label>';
+  } else if (inst && br && br !== inst) {
+    h += '<div data-testid="reg-gov-why">' + esc(txf('This ChitBridge serves {c} only.', { c: regCountryName(inst) })) + '</div>';
+  }
+  return h;
+}
 function govPanel(){
-  var rows = govRows();
+  var spin = !!(REG.spin && Array.isArray(REG.spin.countries) && REG.spin.countries.length);
+  var rows = spin ? regSpinRows() : govRows().map(function (r) { return { key: r.key, what: r.what, value: esc(r.value), from: r.from, known: r.known }; });
   if (!rows.length) return '';
+  var hd = regInstCountry() ? tx('Check these. They set your tax and money.') : tx('We filled these in from your browser. Change any of them after you sign in.');
   return '<div class="govbox" data-testid="reg-gov">'
-    + '<div class="govhd">We filled these in from your browser. Change any of them after you sign in.</div>'
+    + '<div class="govhd">' + esc(hd) + '</div>'
     + rows.map(function(r){
         return '<div class="govrow' + (r.known ? '' : ' unknown') + '" data-testid="reg-gov-' + r.key + '">'
           + '<span class="gw">' + esc(r.what) + '</span>'
-          + '<span class="gv">' + esc(r.known ? r.value : 'not known') + '</span>'
-          + '<span class="gf">' + esc(r.known ? r.from : 'you can set this after signing in') + '</span>'
+          + '<span class="gv">' + (r.known ? r.value : esc(tx('not known'))) + '</span>'
+          + '<span class="gf">' + esc(r.known ? r.from : tx('you can set this after signing in')) + '</span>'
+          + (spin && r.key === 'country' ? '<div class="gf">' + regCountryChoice() + '</div>' : '')
           + '</div>';
       }).join('')
     + '</div>'
-    /* ⚠️⚠️ THE GATE. Not a notice — a question about the country that decides their tax. */
+    /* ⚠️⚠️ THE GATE. Not a notice — a question about the country that decides their tax. GOV-SPIN: the same one control accepts the country. */
     + '<label class="govagree"><input type="checkbox" id="r_agree" data-testid="reg-agree"'
     + (REG.agreed ? ' checked' : '') + ' onchange="REG.agreed=this.checked;renderRegister()">'
     + '<span>These are right, and I accept the terms of use.</span></label>';
+}
+/** what verify sends: the browser's context, with the country the person ACCEPTED and where it came from (the server re-decides the source) */
+function regPayload(){
+  if (!window.CBGov) return undefined;
+  var p = CBGov.payload(govCtx());
+  if (REG.spin && REG.country) {
+    var pk = regPackOf(REG.country);
+    p.country = REG.country; p.country_source = regSourceOf(REG.country);
+    if (pk && pk.currency) p.currency_code = pk.currency;
+  }
+  return p;
 }
 function renderRegister(){
   const R=REG; const who='style="font-size:var(--fs-2);color:var(--grey);margin-bottom:8px"'; const muted='style="color:var(--grey);font-weight:400"';
@@ -128,7 +231,9 @@ async function doRegister(){
       const r=await api("register",{body:{user_id:R.name, display_name:R.name, email:R.email,
         context:(window.CBGov?CBGov.payload(govCtx()):undefined)}});
       R.email=(r&&r.email)||R.email; R.busy=false; R.step="otp";
-      try{ const c=await api("constitutions"); REG.verticals=(c&&c.constitutions)||[]; const dv=(REG.verticals.find(function(x){return x.is_default;})||REG.verticals[0]); REG.constitution=dv?dv.key:null; }catch(_){ REG.verticals=[]; }
+      try{ const c=await api("constitutions"); REG.verticals=(c&&c.constitutions)||[]; const dv=(REG.verticals.find(function(x){return x.is_default;})||REG.verticals[0]); REG.constitution=dv?dv.key:null;
+        /* GOV-SPIN: the installation's country and the packs a registrant may choose — the panel's first country is the installation's */
+        REG.spin=(c&&Array.isArray(c.countries))?{installation:c.installation||null, allowed:c.allowed_countries||null, countries:c.countries}:null; REG.country=regFirstCountry(); }catch(_){ REG.verticals=[]; REG.spin=null; }
       return renderRegister();
     }
     /**
@@ -137,7 +242,7 @@ async function doRegister(){
      * ⚠️ `agreed_at` IS THE EVIDENCE, not the tick. A boolean says somebody ticked a box; a timestamp says when.
      */
     const r=await api("ownerVerify",{body:{email:R.email, otp:v_otp, constitution:R.constitution||undefined,
-      context:(window.CBGov?CBGov.payload(govCtx()):undefined), agreed_at:new Date().toISOString()}});
+      context:regPayload(), agreed_at:new Date().toISOString()}});
     R.busy=false;
     /* the host's next step: app.html's regIn (the session · a paired counter · #/country) or CB Settings' (keep the session, open Home) */
     if(REG_AT.onDone) return REG_AT.onDone(r, R.name);

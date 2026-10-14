@@ -59,3 +59,7 @@ engines.lock.json    which engine versions this app adopts
 
 Push to `main` → Vercel deploys. A change to any `public/app/*.js` must bump `CB_BUILD` in `public/app.html`
 (`node e2e/cb-build-guard.cjs` fails otherwise) or browsers keep the old copy.
+
+---
+
+**Proprietary.** © 2026 ChitBridge. All rights reserved — published for review only, not open source. See [LICENSE](LICENSE).

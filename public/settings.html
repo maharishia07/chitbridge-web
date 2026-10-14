@@ -8,7 +8,7 @@
 <!-- ⭐ CB Settings — the shop's own setup as a small app (SET1, 2026-10-13; docs/design/INDEX-NOT-APP.md §3 row 1). Owner: "in the index still lot of
      function goes to backend app, we have to ensure that all works from here." The FRAME is CBFrame's standard skeleton (sidebar + full-width main,
      page-frame.js + page-skeleton.css); the SCREENS are the workshop's own, MOVED into modules and loaded by both pages — never a second copy:
-       Your shop  → app/cap-shop.js   (the Profile's Business section + the vault's business-identity rows: GSTIN · address · state · PIN)
+       Your shop  → app/cap-shop.js   (the Profile's Business section + the vault's business-identity rows: the tax id · address · region · postal code, in the pack's words)
        Country    → app/cap-country.js (CS1's Country setup, mounted in this pane: CBCountry.mount)
      Every write goes through CBAction (M64); who may write is the server's answer (403 → its sentence, painted). This page is the gate and the frame.
      Later rounds add Counters & keys + Connectors (SET2) and the register flow (SET3) as sections here — ONE settings app, never one page per screen. -->
@@ -79,6 +79,7 @@ function go(){ if (window.CBFrame) CBFrame.ended(); }   /* api()'s 401 → drop 
 <script src="/app/locale.js"></script>          <!-- CBLocale.region → the licence number's name (GSTIN · TRN · VAT …) -->
 <script src="/app/govcontext.js"></script>      <!-- CBGov: what the browser tells about a new shop (the register form's gov panel; Country setup's prefill) — AFTER locale -->
 <script src="/app/helpers.js"></script>         <!-- esc -->
+<script src="/app/tax.js"></script>             <!-- CBRegulation: the shop's pack → its words (helpers.js packWord: ABN · Postcode · TRN · Emirate) and Country setup's csuPack (FX-QA1) -->
 <script src="/engine/signin.js"></script>
 <script src="/app/signin-ui.js"></script>
 <script src="/app/one-person.js"></script>
