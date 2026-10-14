@@ -272,7 +272,8 @@ if (typeof window !== 'undefined') { window.__cblog = __cblog; window.cblog = cb
 var CBPrefs = (function(){
   var timers = {};
   return {
-    push: function(kind, obj){
+    /* done (optional, FX-UX2): called with the server's answer — {ok:true} landed · {queued:true} offline · null refused/failed; the avatar's pending mark reads it */
+    push: function(kind, obj, done){
       /* ⚠️ CU3: the server merges (RFC 7386, CU2) — a key not sent is KEPT. CBLocale.push sends prefs(), which leaves out
          cleared keys, so "use my device's zone" / "regional default" never reached the server. snapshot() is the same
          keys with every clear as '' (= remove). Until the locale engine sends snapshot() itself, this door does. */
@@ -283,7 +284,7 @@ var CBPrefs = (function(){
       timers[kind] = setTimeout(function(){
         try {
           if (typeof api !== 'function' || !(typeof SESSION !== 'undefined' && SESSION && SESSION.token)) return;
-          api('savePrefs', { params: { kind: kind }, body: obj || {} }).catch(function(){});
+          api('savePrefs', { params: { kind: kind }, body: obj || {} }).then(function(r){ if (done) done(r); }, function(){ if (done) done(null); });
         } catch(_){}
       }, 400);
     }
