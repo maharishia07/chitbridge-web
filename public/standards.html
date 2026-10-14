@@ -69,6 +69,7 @@ button,a,select,input{font:inherit;color:inherit} button{cursor:pointer} a{text-
 @container list (min-width:780px){   /* wide enough for five shared columns; narrower, the unit's own widths and its sideways scroll */
   #std_list[data-fill] .cbl-grid{min-width:0!important}
   #std_list[data-fill] .cbl-hdr,#std_list[data-fill] .cbl-row{grid-template-columns:var(--std-tpl)!important}
+  #std_list[data-fill] .cbl-hc:last-child .cbl-rz{inset-inline-end:0}   /* T3-COMPAT: the columns fit the width; the last column's resize handle stuck 4 px past it (a sideways scroll, rule 13) */
 }
 @container list (min-width:621px){
   #std_list .cbl-row .cbl-cell{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -423,7 +424,7 @@ function paintMatrix(){
 }
 let LAST = '', GLAST = '';
 /* the list's columns share the width: weights per column, set on the host; a person who dragged a width keeps their own (no data-fill) */
-const WEIGHT = { what: 4, std: 2.4, kind: 1.6, where: 1.3, area: 1.3, parea: 1.4, at: 2, ex: 2.2, status: 3.2 };
+const WEIGHT = { what: 3.6, std: 2.4, kind: 1.6, where: 2, area: 1.3, parea: 1.4, at: 2, ex: 2.2, status: 3.2 };
 let FITKEY = '';
 function fit(){
   var st = LIST && LIST.state(), host = $('std_list'); if (!st) return;
