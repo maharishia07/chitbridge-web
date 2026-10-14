@@ -102,7 +102,7 @@
     return {
       owner: !!opts.owner,
       shop: { name: String(s.display_name || 'Shop'), line: String(s.tagline || s.about || ''), place: String(s.address || ''), hours: String(s.hours || ''), open: (s.business_status || 'open') === 'open',
-        phone: String(s.phone || ''), whatsapp: String(s.whatsapp || ''), logo: s.logo_url || '', url: String(opts.url || ''), currency: s.currency_code || 'INR' },
+        phone: String(s.phone || ''), whatsapp: String(s.whatsapp || ''), logo: s.logo_url || '', url: String(opts.url || ''), currency: s.currency_code || null },   /* CART-REG1: none stated → none (the page's money fn prints the bare amount) */
       categories: (data.categories || []).map(function (k) { return { id: String(k.id || k.definition_id || k.name), name: String(k.name || '') }; }).filter(function (k) { return k.name; }),
       items: items,
       choice: { template: sh.template || '', sections: Array.isArray(sh.sections) ? sh.sections : [] }

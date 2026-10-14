@@ -931,10 +931,8 @@
   }
   function fmt(ns, n) {
     var cur = currencyOf(ns);
-    if (!cur) {   /* no money stated: the amount alone, two decimals, the reader's grouping — no symbol stands in for a currency nobody named */
-      var v = Number(n || 0);
-      try { return v.toLocaleString(CBLocale.locale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 }); } catch (e) { return v.toFixed(2); }
-    }
+    /* no money stated: the amount alone (CBLocale.amount) — no symbol stands in for a currency nobody named */
+    if (!cur) return (typeof CBLocale !== 'undefined' && CBLocale && CBLocale.amount) ? CBLocale.amount(n) : Number(n || 0).toFixed(2);
     if (typeof CBLocale !== 'undefined' && CBLocale && typeof CBLocale.money === 'function') {
       try { return CBLocale.money(Number(n || 0), cur); } catch (_) {}
     }
