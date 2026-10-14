@@ -82,6 +82,20 @@ const walk = async (w) => {
     await page.click('[data-testid="cs-save"]'); await page.waitForSelector('[data-testid="shop-card"]', { timeout: 8000 });
     return { ok: wrote(/PUT \/api\/governance\/country-setup/) === 1 && /settings\.html#\/shop$/.test(page.url()), saw: wrote(/PUT \/api\/governance\/country-setup/) + ' PUT · now at ' + page.url().replace(base, '') };
   });
+  /* FX-QA1 (QA-W1 finding 3): the field words come from the shop's country pack (helpers.js packWord), never a typed "GSTIN" / "PIN" */
+  await w.step('T6A', 'Your shop in Australia · the UAE · India -> the pack\'s words: ABN · Postcode / TRN · P.O. Box · Emirate / GSTIN · PIN', async () => {
+    const words = async (cc) => {
+      ME.country = cc; ME.country_code = cc;
+      await page.goto(base + '/settings.html?cc=' + cc + '#/shop'); await page.waitForSelector('[data-testid="vault-only-identity"]', { timeout: 20000 }); await page.waitForTimeout(300);   /* a fresh load: a same-hash goto keeps the page */
+      return page.evaluate(() => ({ lic: (document.querySelector('label.fl') || {}).textContent || '', why: (document.querySelector('[data-testid="shop-why"]') || {}).textContent || '',
+        sug: [...document.querySelectorAll('#vsug_identity option')].map((o) => o.value).join(',') }));
+    };
+    const au = await words('AU'), ae = await words('AE'), ind = await words('IN');
+    const ok = /^ABN/.test(au.lic) && /ABN/.test(au.why) && !/GSTIN|PIN/.test(au.lic + au.why + au.sug) && /Postcode/.test(au.sug)
+      && /^TRN/.test(ae.lic) && !/GSTIN|PIN/.test(ae.lic + ae.why + ae.sug) && /P\.O\. Box/.test(ae.sug) && /Emirate/.test(ae.sug)
+      && /^GSTIN/.test(ind.lic) && /GSTIN/.test(ind.why) && /PIN/.test(ind.why) && /,PIN,/.test(ind.sug);
+    return { ok, saw: 'AU "' + au.lic.split(' ')[0] + '" · "' + au.why.trim() + '" · ' + au.sug.split(',').slice(4, 6) + ' | AE "' + ae.lic.split(' ')[0] + '" · ' + ae.sug.split(',').slice(4, 6) + ' | IN "' + ind.lic.split(' ')[0] + '" · "' + ind.why.trim() + '"' };
+  });
 
   /* ── RULE 13: two themes × two widths × two sections ── */
   const audit = () => page.evaluate(() => {

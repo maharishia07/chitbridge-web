@@ -179,7 +179,8 @@
     if (HOST.sync === false) return;
     var body = { theme: pref('theme'), fs: pref('fs'), motion: pref('motion'), stripes: pref('stripes'), edition: pref('edition'), font: pref('font'), weight: pref('weight') };   /* every synced key rides every push */
     /* the app's (and CB Accounts') own door: CBPrefs debounces, queues offline and stays silent before the migration; its answer clears the mark */
-    try { if (typeof CBPrefs !== 'undefined' && typeof SESSION !== 'undefined' && SESSION && SESSION.token) { CBPrefs.push('ui', body, function (r) { landed(body, r); }); return; } } catch (_) {}
+    /* …except a push that must outlive this page (an edition reloads at once): CBPrefs's 400 ms debounce would die with the page, so it is sent now, kept alive (FX-QA1) */
+    try { if (!now && typeof CBPrefs !== 'undefined' && typeof SESSION !== 'undefined' && SESSION && SESSION.token) { CBPrefs.push('ui', body, function (r) { landed(body, r); }); return; } } catch (_) {}
     var base = apiBaseOf(HOST), tok = tokenOf(HOST);
     if (!base || !tok || !root.fetch) return;
     if (pushTimer) { try { root.clearTimeout(pushTimer); } catch (_) {} }
@@ -525,6 +526,8 @@
   /* before first paint, from local storage alone — no network, no mount needed (a page with no menu still wears the look) */
   apply();
   if (doc && doc.addEventListener) doc.addEventListener('DOMContentLoaded', function () { BASE = null; apply(); });
+  /* FX-QA1: a choice made offline goes up when the connection comes back — not only on the next page's pull (the mark, F9, says what is still owed) */
+  if (root.addEventListener) root.addEventListener('online', function () { if (Object.keys(pendGet()).length) push(); });
 
   root.CBAvatar = { mount: mount, apply: apply, hydrate: hydrate, set: set, get: get, personOf: personOf, sessionPerson: sessionPerson, themeKey: themeKey, applyTheme: themeApply, push: push, pending: pendGet, themeBase: themeBase, isOpen: function () { return openNow; }, close: close, signOut: signOut,
     THEMES: THEMES, FONTS: FONTS, TEXT_SIZES: TEXT_SIZES, FS_BASE: FS_BASE, fontStack: fontStack };
