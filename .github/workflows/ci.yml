@@ -46,6 +46,7 @@ jobs:
       - name: Screen reads, lazy screens, modals, tax, markup, controls, order, calls, a11y, endpoints
         run: |
           node e2e/screen-reads.cjs
+          node e2e/signin-code.test.cjs
           node e2e/lazy-screen-guard.cjs
           npm run check:modal
           npm run check:tax
