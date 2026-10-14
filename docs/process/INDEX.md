@@ -50,7 +50,7 @@ Athi, 2026-10-12: *"for each function we are building we need to have a SAP kind
 ## The backlog — every step the code does not have
 
 - **O2C step 2 · quote** — Nothing stores a priced offer to a named party before an order. Evidence: api lib/instruments.js names the stage ('Catalogue, quote & terms') and lib/beckn-map.js maps a Beckn quote, but no route, chit kind or screen raises one.
-- **INV step 4 · count** — No route or screen takes a physical count. Evidence: api routes/integrations.js says 'returns and stock counting are version 2'; lib/stock-store.js shrinkage() reports reason-coded losses but nothing writes a count; lib/books-period.js closingStock refuses 'automatic' because quantities on hand are not kept for it.
+- **INV step 4 · count** — No route or screen takes a physical count. Evidence: api routes/integrations.js says 'returns and stock counting are version 2'; lib/stock-store.js shrinkage() reports reason-coded losses but nothing writes a count; closing stock 'automatic' (step 5) refuses a product below zero and asks for a count no screen can take yet.
 - **H2P step 4 · payroll** — grep attendance|payroll|payslip|salary over api routes/, lib/ and migrations/ finds nothing outside the chart (engines src/reg-in.js). A salary can only be posted as a typed expense (class salary → 6020).
 - **H2P step 5 · payment** — Only POST /api/books/entries (a typed, owner-only journal) can record a salary paid. No employee party, no advice, no payslip.
 - **C2V step 1 · practice** — No entity kind 'practice': api lib/entitykind.js declares supplier · network · actor · shopper · internal · test only; POST /api/entities/register (routes/entities.js) mints a shop. The practice page (web:public/practice.html) does not exist; its module row joins modules[] when it does (round CA3).
@@ -65,7 +65,7 @@ Athi, 2026-10-12: *"for each function we are building we need to have a SAP kind
 - **O2C step 1 · enquiry** — No engine function and no test: the route writes the thread itself (RLS scopes the read).
 - **P2P step 1 · need** — No test exercises lib/supply-store.js or routes/supplies.js by name.
 - **INV step 3 · issue / sale** — A supply issued leaves stock but no expense entry is raised; the cost reaches the books only through the supplier bill (P2P step 4, use).
-- **INV step 5 · closing stock** — Manual value only; the automatic mode is refused until a count (step 4) exists.
+- **INV step 5 · closing stock** — T1-INV (2026-10-14): method 'automatic' values the ledger's quantities (weighted average, as at the end of the day) and is refused only when something is missing, with a code and the products named (STOCK_LEDGER_MISSING · STOCK_LEDGER_EMPTY · STOCK_BELOW_ZERO · STOCK_UNCOSTED · STOCK_UNREADABLE). The screen still offers the typed value only; the engine still takes a value (posting.js closing_stock refuses 'automatic' — engines change queued).
 - **H2P step 3 · attendance** — What exists is the counter sign-in, release and break state, and a work PATTERN (shift blueprints). Nothing records a day worked, hours or leave as an attendance register.
 - **L2C step 3 · demo** — The demo itself (held, who, what was shown) has no record beyond the follow-up row.
 - **L2C step 4 · trial** — 'trial' is one of the lead_stage groups; no outcome moves to it and nothing starts, times or ends a trial.
