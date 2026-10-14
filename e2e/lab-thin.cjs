@@ -27,10 +27,10 @@ const argRoot = process.argv.indexOf('--root');
 const ROOT = argRoot > 0 ? path.resolve(process.argv[argRoot + 1]) : path.join(__dirname, '..', 'public');
 const LIST = process.argv.includes('--list');
 
-/* ⭐ THE RATCHET — measured 2026-10-14. Before this round (main): NAMES 17 · COPIES 3,528. Lower a number when it goes down; never raise one. */
+/* ⭐ THE RATCHET — measured 2026-10-14. Before this round (main): NAMES 17 · COPIES 3,528; after: 11 · 201. Lower a number when it goes down; never raise one. */
 const NAMES_MAX = { 'offer-lab-next.html': 0, 'signin-lab.html': 0, 'combo-lab.html': 0, 'lab/combo-mode.js': 0,
   'conversion-lab.html': 3, 'country-lab.html': 2, 'product-lab.html': 6 };   /* a lab not listed: 0 */
-const COPIES_MAX = 205;
+const COPIES_MAX = 201;
 
 const read = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
 const DECL = /^(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/;

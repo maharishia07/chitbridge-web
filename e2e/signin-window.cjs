@@ -4,7 +4,8 @@
  * or an E-MAIL — the .br / .cr grammar is added behind the scenes; an employee's first sign-in asks for a PIN; every method lives in
  * CBSignin (slots, hidden until shipped).
  *
- * ⭐ THE SIGN-IN LAB (public/signin-lab.html) IS THE GALLERY: it mounts the SAME module the apps mount, over a stand-in ChitBridge that
+ * ⭐ THE SIGN-IN LAB (public/signin-lab.html) IS THE GALLERY: it mounts the SAME module the apps mount, against a real server — here the
+ * practice ChitBridge (e2e/lib/signin-standin.cjs, T2-LABS: it used to live IN the page, replacing window.fetch) that
  * lives in the page. Every combination is walked here at 1366×768 and at 390×844 (touch, typed codes), shots to e2e/shots/signin-*.png:
  *   owner by e-mail · owner by mobile · employee by mobile → code → set PIN → the PIN works · customer by e-mail ·
  *   one contact → two identities → the chooser · a spent code is not re-sent · locked · device removed · social/SSO/passkey slots hidden
@@ -19,6 +20,8 @@
 const { chromium } = require('@playwright/test');
 const http = require('http'), fs = require('fs'), path = require('path');
 const { serve } = require('./lib/serve.cjs');
+const practice = require('./lib/signin-standin.cjs');   /* T2-LABS: the lab's practice server, out of the page */
+let PRACTICE_API = '';
 const ROOT = path.join(__dirname, '..');
 const SHOTS = path.join(__dirname, 'shots');
 let bad = 0;
@@ -65,7 +68,7 @@ async function lab(b, WEB, dev, q, steps) {
   const phone = !!dev.isMobile, tap = (sel) => (phone ? p.tap(sel) : p.click(sel));
   const tag = (phone ? 'phone-' : 'laptop-') + q.replace(/[^a-z0-9]+/gi, '-');
   const shot = async (n) => { const f = 'signin-' + tag + '-' + n + '.png'; await p.screenshot({ path: path.join(SHOTS, f), fullPage: !phone }); return f; };
-  await p.goto(WEB + '/signin-lab.html?' + q);
+  await p.goto(WEB + '/signin-lab.html?' + q + '&api=' + encodeURIComponent(PRACTICE_API));
   await p.waitForSelector('[data-testid="signin-window"]', { state: 'attached', timeout: 15000 });
   const res = { shots: [], errs, p, ctx, tap, shot, phone };
   try { await steps(res); } catch (e) { res.err = String(e && e.message || e); }
@@ -108,7 +111,7 @@ async function signIn(r, opts) {
     r.shots.push(await r.shot('2c-wrong'));
     await r.p.fill('[data-testid="' + (pinBox ? 'signin-pin' : 'signin-code') + '"]', '');
   }
-  const cred = opts.cred || (await r.p.evaluate(() => { const l = window.__lab.live(); const p = l[window.__lab.sel.who]; return (p.kind === 'actor' && p.pin) ? p.pin : p.code; }));
+  const cred = opts.cred || (await r.p.evaluate(() => { const c = window.__lab.practice().person.cred; return c.pin || c.code; }));
   await r.tap('[data-testid="' + (pinBox ? 'signin-pin' : 'signin-code') + '"]'); await r.p.keyboard.type(cred);
   await r.tap('[data-testid="signin-verify"]');
   await r.p.waitForSelector('[data-testid="signin-pin1"], [data-testid="signin-in"], [data-testid="signin-why"]', { timeout: 10000 });
@@ -145,6 +148,7 @@ const fits = (p) => p.evaluate(() => {
 (async () => {
   fs.mkdirSync(SHOTS, { recursive: true });
   const web = await serve(ROOT.endsWith('public') ? ROOT : path.join(ROOT, 'public'));
+  const prac = await practice.start(); PRACTICE_API = prac.url;
   const WEB = 'http://127.0.0.1:' + web.port;
   const b = await chromium.launch();
   const errs = [];
@@ -253,7 +257,7 @@ const fits = (p) => p.evaluate(() => {
     say(D + ' …and every call went to the sign-in door only', api.calls.filter((c) => /^\/api\/(signin|entities\/register)/.test(c.u)).every((c) => /^\/api\/signin\//.test(c.u)), api.calls.map((c) => c.u).filter((u) => /signin|register/.test(u)).join(' '));
     /* the index: signed out, the avatar's door opens the window in place */
     await p.evaluate(() => { localStorage.removeItem('cb_sess'); localStorage.removeItem('cb_owner'); });
-    await p.goto(WEB.replace(/\/$/, '') + '/signin-lab.html?who=owner');   /* warm the origin, then the root index served below */
+    await p.goto(WEB.replace(/\/$/, '') + '/signin-lab.html?who=owner&api=' + encodeURIComponent(PRACTICE_API));   /* warm the origin, then the root index served below */
     await ctx.close();
   }
   /* the repo-root index.html at / (as it deploys): the door is a BUTTON that opens the window, no app.html link */
@@ -289,7 +293,7 @@ const fits = (p) => p.evaluate(() => {
     await ctx.close();
   }
   idx.close(); api.srv.close();
-  await b.close(); web.close();
+  await b.close(); web.close(); await prac.close();
   console.log('\nshots: e2e/shots/signin-*.png');
   say('no page errors', errs.length === 0, errs.length ? errs.join(' | ').slice(0, 300) : 'none');
   console.log('\n' + (bad ? '✗ ' + bad + ' FAILED\n' : '✓ all good\n'));
