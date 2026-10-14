@@ -84,6 +84,8 @@ dialog.sheet .mx{position:absolute;right:8px;top:8px;border:0;background:transpa
 #toast .toast{background:var(--ink,#2a2418);color:var(--paper,#fbf6ec);padding:12px 16px;border-radius:10px;font-size:14px}
 #netpill{position:fixed;right:12px;bottom:12px;font-size:12px;color:var(--grey,#5c5240)}
 @media (max-width:480px){ .cat-two{grid-template-columns:1fr} .cat-acts{align-items:stretch;width:100%} .cat-acts .act{width:100%} }
+/* the preflight's decision table (the workshop's painter, lifted) stacks on a phone: one block per column of the file, never a sideways scroll (rule 13) */
+@media (max-width:620px){ .cat-import table thead{display:none} .cat-import table,.cat-import tbody,.cat-import tr,.cat-import td{display:block;width:100%} .cat-import td{min-width:0!important;border-bottom:0!important;padding:3px 0!important} .cat-import tr{border-bottom:1px dashed var(--line,#e6dcc6);padding:6px 0} .cat-import td:nth-child(2){display:inline-block;width:auto} }
 </style>
 </head>
 <body>

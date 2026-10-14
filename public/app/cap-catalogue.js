@@ -342,7 +342,8 @@ var CBCatalogueApp = (function () {
       if (S.q) q.q = S.q;
       if (S.status) q.status = S.status === 'unavailable' ? 'not-available' : S.status;   /* the api's negation word for the chip's status (the workshop's note) */
       var r = await api('prodList', { query: q });
-      S.items = (r && r.items) || [];
+      /* core.js unwrap() collapses {items:[…]} into the array and carries total · truncated · status_counts · category_counts · uncategorised on it (SIBS) — the workshop reads both shapes, so does this */
+      S.items = Array.isArray(r) ? r : ((r && r.items) || []);
       S.total = r && r.total != null ? Number(r.total) : S.items.length;
       S.truncated = !!(r && r.truncated);
       S.counts = (r && r.status_counts) || null; S.catCounts = (r && r.category_counts) || null; S.uncat = Number(r && r.uncategorised) || 0;
@@ -404,7 +405,7 @@ var CBCatalogueApp = (function () {
       empty: function () { return { title: S.q || S.status ? T('Nothing matches.') : T('No items yet.'), sub: S.q || S.status ? T('Clear the search or the status filter.') : T('Add one with ＋ New item, or import a sheet.') }; },
       /* the SERVER filters by status: this filter's only job is to say which status, and to be a chip a person can clear */
       filters: [{ key: 'status', label: T('Status'), all: T('Any status'), options: Object.keys(STATUS_WORDS).map(function (k) { return { v: k, label: T(STATUS_WORDS[k]) }; }), match: function () { return true; } }],
-      search: function (p) { return pName(pData(p)); }, searchHint: T('Search name, code, description'),
+      search: function (p) { return pName(pData(p)); }, searchHint: T('Search name or code'),
       remote: { total: function () { return S.total; }, foot: footHTML,
         onQuery: function (q) { var st = (q.filt && q.filt.status) || ''; if (Array.isArray(st)) st = st[0] || ''; var nq = String(q.q || '').trim(); if (nq === S.q && st === S.status) return; S.q = nq; S.status = st; S.offset = 0; readItems(); } },
       onOpen: function (p) { openItem(prodId(p)); }
@@ -434,7 +435,12 @@ var CBCatalogueApp = (function () {
   function readForm(orig) {
     var next = Object.assign({}, orig || {}, { name: (val('ct_name') || '').trim(), unit: (val('ct_unit') || '').trim() || 'unit', code: (val('ct_code') || '').trim(), desc: (val('ct_desc') || '').trim() });
     var pe = el('ct_price');
-    if (pe && !pe.disabled) { var t = String(pe.value || '').replace(/[,\s]/g, ''); if (t === '') delete next.price; else next.price = Number(t); }
+    if (pe && !pe.disabled) {
+      var t = String(pe.value || '').replace(/[,\s]/g, ''), had = cbHasPrice(orig && orig.price) ? cbAmount(orig.price) : null;
+      if (t === '') delete next.price;
+      else if (had !== null && Number(t) === had) next.price = orig.price;   /* the same amount: the stored {amount,currency} is kept, so the diff carries no price */
+      else next.price = Number(t);                                            /* a bare number, as the workshop sends it — the server stamps the shop's currency (money.stampPrice) */
+    }
     var decl = el('ct_declared');
     if (decl) Array.prototype.forEach.call(decl.querySelectorAll('input[data-key]'), function (x) { var k = x.getAttribute('data-key'), raw = (x.value || '').trim(); if (raw === '') { delete next[k]; return; } next[k] = (x.getAttribute('data-type') === 'number' && isFinite(+raw)) ? +raw : raw; });
     return next;
@@ -562,7 +568,7 @@ var CBCatalogueApp = (function () {
   function importHTML() {
     return '<div class="cat-import" data-testid="cat-import">'
       + '<h2 class="cat-h">' + esc(T('Import a sheet')) + '</h2>'
-      + '<p class="sub">' + esc(T('Choose a spreadsheet or paste its rows. We read the headings first and show how they line up. Nothing is imported until you say so.')) + '</p>'
+      + '<p class="sub">' + esc(T('Choose a spreadsheet or paste its rows. We check the headings first; nothing is imported until you say so.')) + '</p>'
       + '<div class="cat-sheet-acts"><button type="button" class="act quiet" data-testid="cat-template" onclick="downloadCatalogueTemplate(this)">📄 ' + esc(T('Download the template')) + '</button></div><div id="cat_tpl_out" data-testid="cat-template-out"></div>'
       + '<label class="fl" for="cf_file">' + esc(T('File (.csv or .xlsx)')) + '</label><input type="file" id="cf_file" accept=".csv,text/csv,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" data-testid="cat-check-file" onchange="_cfPick(this)">'
       + '<div class="sub" id="cf_file_name" data-testid="cat-check-filename"></div>'
@@ -587,7 +593,8 @@ var CBCatalogueApp = (function () {
   function changed() { if (S.sec === 'items') readItems(); if (typeof cbCatgLive === 'function') cbCatgLive(true); }
   function mount(host, o) {
     o = o || {}; S.host = host; S.me = o.me || null; S.onSection = o.onSection || null; S.limit = PAGE;
-    var first = readCosts().then(function () { if (typeof cbCatgLive === 'function') return cbCatgLive(); }).then(function () { show(o.section || 'items'); });
+    /* before the first paint: who may see prices (the server's field), the live shelf (category names on the rows), the declared columns (the sheet's extra facts) */
+    var first = readCosts().then(function () { if (typeof cbCatgLive === 'function') return cbCatgLive(); }).then(function () { return catDeclared(); }).then(function () { show(o.section || 'items'); });
     return { show: show, refresh: function () { if (S.sec === 'items') readItems(); else if (S.sec === 'categories') readCatgs(); }, ready: first };
   }
   return { mount: mount, show: show, page: page, changed: changed, state: function () { return S; } };
