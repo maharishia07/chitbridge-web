@@ -7,7 +7,7 @@
  *   host null                             app.html's auth card at #root (app.html: CBRegistration.mount(null, regIn) — regIn keeps its old next step)
  * Host globals it reads (both pages have them): api · EP (register · ownerVerify · constitutions from CB_SHOP_EP) · tx · txf · esc · val ·
  * window.CBGov (app/govcontext.js). app.html's card only: onbBanner · modeRibbon · logo · STAGES · CFG.STAGE · go.
- * Flow step: Onboarding · Register (docs/process/flows.json).
+ * Flow step: R2R step 1 · country — registration is its door (docs/process/flows.json).
  */
 'use strict';
 var REG = {step:"form", name:"", email:"", busy:false, err:""};
