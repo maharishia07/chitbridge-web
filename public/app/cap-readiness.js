@@ -14,7 +14,7 @@ if (typeof EP !== 'undefined') {
     /* ⚠️ profileGet/profilePut are core's (app.html). Re-registering them here overwrote core's entry by
        load order, and `profileSave` was a SECOND name for the same PUT — which mattered, because core.js
        OUTBOX_KEYS is keyed by NAME: one of the twins was queued when offline and the other was not. */
-    aiDraft:         {m:'POST', p:'/api/governance/ai-draft',              ok:'y'},
+    /* aiDraft → CB_ASSIST_EP (app/accounts-shell.js, T3-DISPUTES-ASSIST): registered once, merged by app.html and tasks.html */
     aiSkills:        {m:'GET',  p:'/api/governance/ai-skills',             ok:'y'},
     aiUsage:         {m:'GET',  p:'/api/governance/ai-usage',              ok:'y'},
   });

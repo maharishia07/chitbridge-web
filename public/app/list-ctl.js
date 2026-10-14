@@ -32,6 +32,7 @@
  *
  * SERVER-PAGED LISTS (Platform): pass `remote:{ total, onQuery(q), foot() }`. The unit then neither filters nor sorts: it draws
  * the page it was given in its own look, asks the page's pager for the next one through `onQuery`, and paints `foot()` below.
+ *   `remote.filters: true` (T3) also draws the Filters control: each choice is handed to `onQuery` ({ filt, sort }), never applied here.
  */
 (function (root) {
   'use strict';
@@ -456,7 +457,9 @@
     if (!box) { box = root.document.createElement('div'); box.className = 'cbl-tools'; box.setAttribute('data-cbl-part', 'tools'); box.setAttribute('role', 'toolbar'); box.setAttribute('aria-label', T(I, 'View')); var l = $(I, ':scope > .cbl-list'); I.el.insertBefore(box, l); }
     var o = I.o, R = I.r, s = I.s, m = matched(I), fn = activeFilters(I).length, k = esc(I.key), sorts = sortChoices(I);
     var tids = o.tids || {}, tl = o.tools || {}, h = tl.search === false ? '' : '<div class="cbl-search"><span aria-hidden="true">🔍</span><input type="search" data-cbl-q id="cbl-q-' + k + '" data-testid="listctl-search-' + k + '" placeholder="' + esc(o.searchHint || T(I, 'Search')) + '" value="' + esc(R.q) + '" aria-label="' + esc(T(I, 'Search')) + '"></div>';
-    if (!remote(I) && ((o.filters && o.filters.length) || sorts.length > 1)) {
+    /* T3-DISPUTES-ASSIST: a server-paged list that ALSO filters on the server says so (remote.filters: true) — the same Filters control, and every choice
+       goes to its onQuery (q.filt · q.sort) instead of narrowing the page in hand; a remote list without it keeps the control off, as before */
+    if ((!remote(I) || o.remote.filters === true) && ((o.filters && o.filters.length) || sorts.length > 1)) {
       h += '<span class="cbl-anchor"><button type="button" class="cbl-tbtn' + (fn ? ' on' : '') + '" data-cbl-pop="filt" id="cbl-filt-' + k + '" data-testid="cbl-filters-' + k + '" aria-haspopup="dialog" aria-expanded="' + (I.pop === 'filt') + '">' + esc(T(I, 'Filters')) + ' ▾' + (fn ? ' <span class="badge">' + fn + '</span>' : '') + '</button>' + (I.pop === 'filt' ? filtPop(I, sorts) : '') + '</span>';
     }
     var g = o.group, gm = groupMode(I);

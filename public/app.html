@@ -1775,12 +1775,9 @@ const EP = {
   msgCount:        {m:"GET",  p:"/api/folders/messages?count=1", ok:"y"},
   // --- assistant tier-1 LLM proxy — NOT BUILT yet; gated off via CFG.ASSIST_LLM. The model key stays SERVER-side. ---
   assist:          {m:"POST", p:"/api/assist",                  ok:"?"},  // backend proxies to the model (no-oversell prompt + library grounding)
-  assistQuestions: {m:"GET",  p:"/api/assist/questions",        ok:"y"},  // DB-backed Q&A library, context-filtered (?context=screen). Single source; feeds the AI too.
   assistGap:       {m:"POST", p:"/api/assist/gap",              ok:"y"},  // capture an unanswered question as a draft (learning feedback)
   assistGaps:      {m:"GET",  p:"/api/assist/gaps",             ok:"y"},  // review queue — captured gaps awaiting an answer
   assistResolve:   {m:"POST", p:"/api/assist/resolve",          ok:"y"},  // approve (with answer) / reject a gap
-  assistPublish:   {m:"POST", p:"/api/assist/publish",          ok:"y"},  // help desk publishes a Q&A to its catalogue (serves live)
-  assistWhoami:    {m:"GET",  p:"/api/assist/whoami",            ok:"y"},  // is the logged-in entity a helpdesk instance?
   assistStandards: {m:"GET",  p:"/api/assist/standards",         ok:"y"},  // compliance conform-check: standards available to check against
   assistConform:   {m:"POST", p:"/api/assist/conform",           ok:"y"},  // FIRST LIGHT of AI-as-actor — deterministic verdict + (keyed) AI narrative + acted_by
   catalogueSources:{m:"GET",  p:"/api/assist/catalogue-sources",  ok:"y"},  // catalogue-structure slot: sources the handler can structure
@@ -1861,7 +1858,6 @@ const EP = {
   actorDelegate:   {m:"PUT",   p:"/api/actors/:id/delegate",     ok:"y"},  // D1 — set leave-cover delegate (loop-checked)
   changePin:       {m:"PUT",   p:"/api/actors/change-pin",       ok:"✓"},  // actor changes own PIN (current -> new)
   shopStatus:      {m:"PATCH",p:"/api/entities/profile",         ok:"✓"},  // shop status = PATCH profile {business_status}
-  dispute:         {m:"POST", p:"/api/chits/:id/disputes",       ok:"✓"},  // raise dispute (built)
   delChit:         {m:"DELETE",p:"/api/chits/:id",               ok:"✓"},  // exists (soft-void/trash)
   /* `restore` was declared twice (here and below); an object literal keeps only the LAST, so this one never
      existed at runtime. Both pointed at the same path so nothing broke — but the same class of silent shadowing
@@ -1912,9 +1908,7 @@ const EP = {
   channelAutoRaise:{m:"POST", p:"/api/channels/:id/auto-raise",  ok:"✓"},   // b131 — hands-free raising, per line
   attUpload:       {m:"POST", p:"/api/attachments",             ok:"✓"},  // upload a file (base64) after a chit/message exists
   addActor:        {m:"POST", p:"/api/actors",                   ok:"✓"},  // create an actor
-  disputeQueue:    {m:"GET",  p:"/api/chits/disputes/queue",     ok:"✓"},  // all open disputes
-  disputes:        {m:"GET",  p:"/api/chits/:id/disputes",       ok:"✓"},  // disputes + roster for one chit
-  resolveDispute:  {m:"PUT",  p:"/api/chits/:id/disputes/:disputeId/resolve", ok:"✓"},  // {resolution_note}
+  /* dispute · disputes · disputeQueue · resolveDispute → CB_DISPUTE_EP; assistQuestions · assistPublish · assistWhoami · aiDraft → CB_ASSIST_EP (app/accounts-shell.js, T3-DISPUTES-ASSIST): CB Tasks & Orders › Disputes and CB Assist register the same routes once */
   /* The billing ledger for the CALLER's own entity — there is no entity parameter, so it cannot be asked about
      anyone else. Read on demand when the Usage section is opened, never as part of painting a profile. */
   entityUsage:     {m:"GET",   p:"/api/entities/usage",          ok:"✓"},
@@ -2040,7 +2034,7 @@ const EP = {
   netResume:      {m:"POST", p:"/api/network/connections/:id/resume",     ok:"✓"},
   netDisconnect:  {m:"POST", p:"/api/network/connections/:id/disconnect", ok:"✓"},
 };
-Object.assign(EP, CB_BOOKS_EP, CB_SHEET_EP, CB_PARTY_EP, CB_THREAD_EP, CB_SHOP_EP);   /* CB_SHOP_EP (SET1): the shop's own profile · vault · country setup — shared with settings.html */   /* the Ledger's boot endpoints and the party add/edit/remove/search routes — declared once, in app/accounts-shell.js, shared with accounts.html and crm.html */
+Object.assign(EP, CB_BOOKS_EP, CB_SHEET_EP, CB_PARTY_EP, CB_THREAD_EP, CB_SHOP_EP, CB_DISPUTE_EP, CB_ASSIST_EP);   /* CB_SHOP_EP (SET1): the shop's own profile · vault · country setup — shared with settings.html */   /* the Ledger's boot endpoints and the party add/edit/remove/search routes — declared once, in app/accounts-shell.js, shared with accounts.html and crm.html */
 
 /* deepClone → app/helpers.js */
 /* STORE starts EMPTY. It once had a demo dataset beside it and the rule was that a demo constant must never be

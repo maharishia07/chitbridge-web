@@ -89,6 +89,22 @@ var CB_SHEET_EP = {
      Tasks & Orders (cap-tasks.js: the Stuck mark on an order) register it ONCE; not a /api/crm route */
   railChits:       {m:"GET",  p:"/api/facts/rail/chits",          ok:"y"},
 };
+/* ⭐ T3-DISPUTES-ASSIST: the dispute routes and CB Assist's — MOVED here from app.html's EP (aiDraft from cap-readiness.js) so the workshop and
+   CB Tasks & Orders (tasks.html: cap-dispute.js CBDispute · cap-assist.js CBAssistReview) register each route ONCE, under the name it had
+   (e2e/ep-aliases.cjs; core.js OUTBOX_KEYS keeps resolveDispute by name). The queue pages and answers may/why (api T3); the chit's disputes
+   answer actions.raise · raise_parties and each dispute's actions.resolve. */
+var CB_DISPUTE_EP = {
+  dispute:         {m:"POST", p:"/api/chits/:id/disputes",       ok:"✓"},  // raise { category, reason, participant_entity_ids? }
+  disputes:        {m:"GET",  p:"/api/chits/:id/disputes",       ok:"✓"},  // the chit's disputes + roster · actions.raise · raise_parties
+  disputeQueue:    {m:"GET",  p:"/api/chits/disputes/queue",     ok:"✓"},  // ?status=&side=&q=&sort=&page=&limit= → rows · total · counts (no page = all open, as before)
+  resolveDispute:  {m:"PUT",  p:"/api/chits/:id/disputes/:disputeId/resolve", ok:"✓"},  // { resolution_note, target_entity_id? }
+};
+var CB_ASSIST_EP = {
+  assistQuestions: {m:"GET",  p:"/api/assist/questions",        ok:"y"},  // DB-backed Q&A library, context-filtered (?context=screen). Single source; feeds the AI too.
+  assistPublish:   {m:"POST", p:"/api/assist/publish",          ok:"y"},  // help desk publishes a Q&A to its catalogue (serves live)
+  assistWhoami:    {m:"GET",  p:"/api/assist/whoami",            ok:"y"},  // is_helpdesk · actions.publish (may/why)
+  aiDraft:         {m:"POST", p:"/api/governance/ai-draft",       ok:"y"},  // { skill_id, context } → { draft } — CB Assist proposes, a person confirms
+};
 
 /* ── the chit-sheet helpers both pages share (MOVED from app.html, not copied) ── */
 /** is this entity me? by id when the session knows it, else by the shop's name */
