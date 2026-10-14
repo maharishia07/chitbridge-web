@@ -2197,10 +2197,11 @@ function bkWaitCols() {
   var dash = '<span style="color:var(--grey)">—</span>';
   return [
     { key: 'who', label: tx('Party'), prio: 1, sort: 'who', w: 240, html: true, cell: function (w) { var m = bkWaitModel(w), d = bkWaitDay(w); return m && m.who ? esc(m.who) : d ? esc(tx('Walk-in day') + ' · ' + tx('Counter') + ' ' + d.counter) : dash; } },
-    { key: 'no', label: tx('Bill no'), prio: 4, sort: 'no', w: 170, html: true, cell: function (w) { var m = bkWaitModel(w); return m && m.no ? '<span class="mono">' + esc(m.no) + '</span>' : dash; } },
-    { key: 'amount', label: tx('Amount'), prio: 2, sort: 'amount', num: true, w: 140, html: true, cell: function (w) { var m = bkWaitModel(w), t = m && m.money && m.money.total; return t != null ? esc(bkMajor(t, m.cur)) : dash; } },
+    /* FX-F10W2: Party · Bill no · Amount · Step keep their place at ≥ 1024 px — the bill number was the first to go at 1366 */
+    { key: 'no', label: tx('Bill no'), prio: 2, sort: 'no', w: 170, html: true, cell: function (w) { var m = bkWaitModel(w); return m && m.no ? '<span class="mono">' + esc(m.no) + '</span>' : dash; } },
+    { key: 'amount', label: tx('Amount'), prio: 3, sort: 'amount', num: true, w: 140, html: true, cell: function (w) { var m = bkWaitModel(w), t = m && m.money && m.money.total; return t != null ? esc(bkMajor(t, m.cur)) : dash; } },
     { key: 'date', label: tx('Date'), prio: 5, sort: 'date', w: 120, html: true, cell: function (w) { var m = bkWaitModel(w), d = bkWaitDay(w); return esc(bkDate((m && m.at) || (d && d.day) || w.since)); } },
-    { key: 'step', label: tx('Step'), prio: 3, sort: 'step', w: 300, html: true, cell: function (w) {
+    { key: 'step', label: tx('Step'), prio: 4, sort: 'step', w: 300, html: true, cell: function (w) {
         var i = (BK.waiting || []).indexOf(w), m = bkWaitModel(w);
         /* a posting that failed says why, in the server's words; a bill waiting on a person says which step it is at */
         /* F10/F11: a bill naming a supplier the books do not know carries the fix — the existing add-party door (supAdd), then a retry */
@@ -2313,6 +2314,8 @@ async function bkWaitingView(body) {
     if (!list.length) return;
     CBList.mount(document.getElementById('bkl_waiting'), {
       key: 'waiting', t: tx, rows: function () { return BK.waiting || []; }, id: bkWaitId, columns: bkWaitCols(),
+      /* FX-F10W2: the four a person needs, in the prio order (Party · Bill no · Amount · Step) — the top-three default left Bill no out */
+      defaultCols: ['who', 'no', 'amount', 'step'],
       rowTid: function (w) { return 'wait-' + (BK.waiting || []).indexOf(w); },
       /* a row opens the bill's sheet; its caret opens the lines */
       onOpen: function (w) { if (w.chit_id) openChitSheet(w.chit_id); },
