@@ -1643,6 +1643,7 @@ body.lab-only #cbtestpanel{
 <script src="/app/list-legacy.js"></script>
 <!-- module 3: the canonical catalogue model (shape · migration · four-leg chain · compute-job derivation). Shared by cap-network.js and headless consumers. -->
 <script src="/app/catalogue-model.js"></script>
+<script src="/app/cap-catalogue.js"></script>   <!-- T3-CATALOGUE: the catalogue primitives MOVED out of this file (CB_CATALOGUE_EP · prodId/pData · cbAmount · the declared columns · the import preflight painters · the template) + CBCatalogueApp for catalogue.html -->
 <!-- ⚠️ DATA, NOT BEHAVIOUR — the per-trade starter categories (real Google Product Taxonomy nodes). Loaded
      eagerly beside catalogue-model because it is small and the Categories screen offers it on arrival; a lazy
      load would mean the "Start from a standard set" button appears before the sets it offers exist. -->
@@ -1826,7 +1827,6 @@ const EP = {
   enquirySend:     {m:"POST", p:"/api/catalogue/enquiry/:itemId",        ok:"✓"},
   catFaceGet:      {m:"GET",  p:"/api/catalogue-face",                    ok:"✓"},  // b112 — load this entity's saved catalogue face (cross-device)
   catFacePut:      {m:"PUT",  p:"/api/catalogue-face",                    ok:"✓"},  // b112 — save (upsert) the whole catalogue face config
-  schemaFields:    {m:"GET",  p:"/api/schemas/fields",                     ok:"✓"},  // the columns this catalogue declares — what a variant can be keyed or grouped on
   schemaFieldDrop: {m:"DELETE", p:"/api/schemas/fields/:key",              ok:"✓"},  // remove a column — refused with a COUNT once anything records a value in it
   schemaFieldOrder:{m:"PATCH", p:"/api/schemas/fields/order",             ok:"✓"},  // move one up or down — order is presentation, so it stays free for ever
   schemaFieldPatch:{m:"PATCH", p:"/api/schemas/fields/:key",              ok:"✓"},  // what a column IS: label · type (while unused) · unit (Rec 20) · required · source
@@ -1946,11 +1946,8 @@ const EP = {
    * wrong; the server filters correctly when asked directly. Watching the request settled it in one call, where
    * two rounds of reasoning had not.
    */
-  defList:         {m:"GET",   p:"/api/definitions",             ok:"y"},   // ?all=1 via defListAll
   defListLive:     {m:"GET",   p:"/api/definitions?kind=offer&status=live", ok:"y"},   // the offers a cart applies
-  defListAll:      {m:"GET",   p:"/api/definitions?all=1",       ok:"y"},   // the shelf, incl. retired
   defGet:          {m:"GET",   p:"/api/definitions/:id",         ok:"y"},   // + full version history
-  defAdd:          {m:"POST",  p:"/api/definitions",             ok:"y"},
   /* ⭐ THE TEST BOARD (b219). Cases are `definition`s of kind 'testcase', so nothing here is a new kind of
      record — only the RESULT ledger is new, because results accumulate and a definition does not. */
   testCasesAll:    {m:"GET",  p:"/api/testing/cases?all=1",       ok:"y"},   // including the closed
@@ -1989,10 +1986,7 @@ const EP = {
   testIncList:     {m:"GET",   p:"/api/testing/incidents",        ok:"y"},   // ?state=open — raised or being looked at
   testIncSet:      {m:"PATCH", p:"/api/testing/incidents/:id",    ok:"y"},   // ⚠ append-only, and resolving must cite a commit
   testGherkinIn:   {m:"POST",  p:"/api/testing/cases/gherkin",   ok:"y"},   // .feature text in: clause + cases together
-  defSave:         {m:"PUT",   p:"/api/definitions/:id",         ok:"y"},   // rules change => NEW VERSION
-  defRetire:       {m:"DELETE",p:"/api/definitions/:id",         ok:"y"},   // retires, never deletes
   defFreeze:       {m:"POST",  p:"/api/definitions/freeze",      ok:"y"},   // the copy AND the pointer
-  prodList:        {m:"GET",   p:"/api/products",                ok:"✓"},
   tillPair:        {m:"POST",  p:"/api/till/pair",               ok:"✓"},   // a six-character code a TV can be told over the phone
   /* TAX — read before MIS is ever opened (a chit view, a spec): the core table, not cap-admin's lazy one. routes/tax.js, reads only. */
   taxLedger:       {m:"GET",   p:"/api/tax/ledger",              ok:"✓"},
@@ -2006,23 +2000,16 @@ const EP = {
   /* MEDIA — pictures and videos on the private object store; the API streams the public read */
   prodMediaAdd:    {m:"POST",  p:"/api/products/:id/media",         ok:"✓"},
   prodMediaDel:    {m:"DELETE",p:"/api/products/:id/media/:mid",    ok:"✓"},
-  prodAdd:         {m:"POST",  p:"/api/products",                ok:"✓"},  // {item_data:{name,price}}
   /* ⭐ MANY IN ONE. The wizard posted one request per item, sequentially — 40 items was ~20s. */
   prodAddMany:     {m:"POST",  p:"/api/products/bulk",           ok:"y"},  // {items:[item_data,…]} — one transaction
-  prodDel:         {m:"DELETE",p:"/api/products/:id",            ok:"✓"},
-  prodEdit:        {m:"PATCH", p:"/api/products/:id",            ok:"✓"},  // {item_data} — full edit (already live)
   exposureDefaults:{m:"PATCH", p:"/api/entities/me/exposure",     ok:"✓"},  // the business's default "Shown to customers" switches
   /* ⚠️ NOT prodEdit. A status change MERGES onto the row (jsonb ||), so it cannot lose a price or a synonym
      list — which is exactly what a PATCH of the whole item_data would risk. Set a flag; never amend the row. */
-  prodStatus:      {m:"PUT",   p:"/api/products/:id/status",     ok:"✓"},  // {status, until?, replaced_by?, note?}
   /* ⭐ The TICKED SET in one round trip. available/unavailable only — retired and redundant carry a per-item
      reason, so they stay on the single-item route. */
   prodStatusBulk:  {m:"POST",  p:"/api/products/status/bulk", ok:"y"},  // {ids:[…], status}
   /* ⭐ Many edits, one transaction. prodCategoriseApply looped one PATCH per product — this is that fix. */
   prodBulkUpdate:  {m:"POST",  p:"/api/products/bulk-update", ok:"y"},  // {items:[{id,item_data}]}
-  prodTemplate:    {m:"GET",   p:"/api/products/template",       ok:"✓"},  // the blank sheet in THIS catalogue's format
-  prodPreflight:   {m:"POST",  p:"/api/products/import/preflight",ok:"✓"}, // read a file before it becomes data — WRITES NOTHING
-  prodImport:      {m:"POST",  p:"/api/products/import",         ok:"✓"},  // the commit half — a decision per column, confirm:true required
   prodStarters:    {m:"GET",   p:"/api/products/starter-columns",ok:"✓"},  // the standard column set for a trade
   prodStarterAdopt:{m:"POST",  p:"/api/products/starter-columns",ok:"✓"},  // adopt one — ADDITIVE, never retypes an existing column
   // --- NET tree (NET-01 Spine) · live /api/network · cb_entity/cb_edge. NOTE: cb_* id-space — resolve self via netLookup(bridge_id); Dev needs backfill ---
@@ -2040,7 +2027,7 @@ const EP = {
   netResume:      {m:"POST", p:"/api/network/connections/:id/resume",     ok:"✓"},
   netDisconnect:  {m:"POST", p:"/api/network/connections/:id/disconnect", ok:"✓"},
 };
-Object.assign(EP, CB_BOOKS_EP, CB_SHEET_EP, CB_PARTY_EP, CB_THREAD_EP, CB_SHOP_EP);   /* CB_SHOP_EP (SET1): the shop's own profile · vault · country setup — shared with settings.html */   /* the Ledger's boot endpoints and the party add/edit/remove/search routes — declared once, in app/accounts-shell.js, shared with accounts.html and crm.html */
+Object.assign(EP, CB_BOOKS_EP, CB_SHEET_EP, CB_PARTY_EP, CB_THREAD_EP, CB_SHOP_EP, CB_DEFS_EP, CB_CATALOGUE_EP);   /* CB_DEFS_EP (core.js) + CB_CATALOGUE_EP (cap-catalogue.js), T3-CATALOGUE: the definitions and product routes, declared once, shared with catalogue.html */   /* CB_SHOP_EP (SET1): the shop's own profile · vault · country setup — shared with settings.html */   /* the Ledger's boot endpoints and the party add/edit/remove/search routes — declared once, in app/accounts-shell.js, shared with accounts.html and crm.html */
 
 /* deepClone → app/helpers.js */
 /* STORE starts EMPTY. It once had a demo dataset beside it and the rule was that a demo constant must never be
@@ -5783,9 +5770,7 @@ function navTo(k){if(k==="ledger") return ledgerDoorClosed();try{ if(typeof CBCa
  * duplicate code, call it perfectly.'
  */
 /* ⚠️ LOOSE, not strict: amountOf() throws on a legacy bare number and 24 call sites pass one. */
-function cbAmount(v){ var n=CBMoney.amountOfLoose(v); return isFinite(n)?n:0; }
 function cbCurrency(v){ return CBMoney.currencyOf(v); }
-function cbHasPrice(v){ return v!=null&&v!==''&&(typeof v!=='object'||typeof v.amount==='number'); }
 const LIMITS = { to:5, cc:5, for:1, items:50, attachments:10 };
 let CC={items:[], rcpts:[], fields:{}};
 const DEFAULT_SCHEMA_FIELDS=[
@@ -10595,13 +10580,6 @@ function catalogueScreen(){
   const showDetail = (UI.vp==='mob') && UI.mdetail;
   return `<div class="panel ${showDetail?'showdetail':''}" id="panel" style="--lw:${UI.lw}px;--lh:${UI.lh}px">${list}${divider}${detail}</div>`;
 }
-function pData(p){ return (p&&(p.item_data||p.data))||{}; }
-function pName(d){ return d.name||d.product||'item'; }
-function pUnit(d){ return d.unit||'unit'; }
-function pPrice(d){ return cbAmount(d.price); }
-function pCode(d){ return d.code||d.hsn||d.sku||''; }
-function pDesc(d){ return d.desc||d.description||d.note||''; }
-function prodId(p){ return p.item_id||p.id; }
 /**
  * ⚠️ TWO FILTERS, AND THE CATEGORY ONE IS NOT A SEARCH. `UI._prodCatg` is set by the chip row and by the
  * Categories screen handing over its "uncategorised" count — so the number you press on one screen lands you on
@@ -11728,65 +11706,6 @@ function setProdMode(m){ UI.prodMode=m; paintProdDetail(); if(m==='edit') ctEnsu
   /* the marked section stays in view across View ↔ Edit (Athi, 2026-09-06 10:4x: "consists of marked, but the scroll didn't go there") — the repaint reset it */
   if(UI.prodTab) setTimeout(function(){ try{ setProdTab(UI.prodTab); }catch(_){} }, 260); }
 function newProduct(){ UI.prodSel=null; UI.prodMode='new'; ctEnsureDeclaredThenPaint(); if(UI.vp==='mob'){ UI.mdetail=true; const p=document.getElementById('panel'); if(p)p.classList.add('showdetail'); } paintProdList(); paintProdDetail(); }
-function ctField(k,label,v,extra){ return `<label class="fl">${label}</label><input class="inp" id="ct_${k}" data-testid="cat-field-${k}" value="${esc(v==null?'':v)}" ${extra||''}>`; }
-/**
- * ── ⭐⭐ THE DECLARED COLUMNS, ON THE PRODUCT ──────────────────────────────────────────────────────────────────
- * Athi, 2026-09-03 (observation 4): *"I have added multiple columns from template, it reflects in catalogue
- * fields in the column panel here. But when I check the columns in catalogue, none of these are reflecting
- * here, what is the relation between actual column and the column defined."*
- *
- * There was none. FIX-1 bound every declaration to the STORE (nothing in item_data is undeclared, proven live
- * on 4,987 items), and nothing bound the declaration to the FORM: prodEditForm was eight hard-coded inputs, so
- * a column declared in Catalogue setup › Columns reached the template, the export and the import — every door
- * except the one a person actually uses. The Columns panel governed what a FILE may carry; the form governed
- * what a PERSON may type; and the two never met. This is the other half of FIX-1.
- *
- * ⚠️ RENDERED FROM THE DECLARATION, NOT FROM THE ITEM. The keys come from `catDeclared()` (schema_fields, in
- * display_order); the item only supplies values. So a freshly declared column appears on every product at once,
- * empty, which is what "declared" means — and a key that exists in one item's data but in no declaration cannot
- * appear here, because after FIX-1 there is no such key.
- *
- * ⚠️ THE FIXED EIGHT STAY FIXED. name · unit · price · code · description · highlight have their own controls
- * (a currency prefix, a textarea, the "not a discount" warning) and are excluded here by KEY, so a declaration
- * that also carries them does not render a second, dumber input for the same value.
- *
- * ⚠️ A VALUE THAT IS NOT A SCALAR IS SHOWN, NOT EDITED. An imported object under a declared key (rare, but
- * jsonb allows it) renders as read-only text; an <input> would turn it into the string "[object Object]" on the
- * next Save. The form must never be the thing that flattens a record it could not display.
- */
-const CT_FIXED_KEYS = ['name','unit','price','code','hsn','sku','desc','description','note','highlight'];
-function ctDeclaredList(){
-  return (UI._catFields||[]).filter(function(f){ return f && f.field_key && CT_FIXED_KEYS.indexOf(f.field_key) < 0; });
-}
-/**
- * ⚠️⚠️ THE HOST ALWAYS EXISTS. With no columns declared this returned '' — no #ct_declared in the form — and the
- * "fill the block when the declaration lands" path fell back to repainting the WHOLE form, wiping the name being
- * typed (the tour's fresh entity has no columns; the specs declare one first, so they never saw it — 2026-09-05).
- * Now the block is always in the form (hidden when empty) and the late fill only ever touches it.
- */
-function ctDeclaredFields(d){
-  const rows = ctDeclaredRows(d);
-  return `<div id="ct_declared_wrap"${rows?'':' hidden'}><div class="sec" style="margin-top:14px">${tx('More about this product')}</div>`
-    + `<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:6px">${tx('The columns your catalogue declares — shaped in Catalogue setup › Columns.')}</div>`
-    + `<div id="ct_declared" data-testid="cat-declared">${rows}</div></div>`;
-}
-function ctDeclaredRows(d){
-  const list = ctDeclaredList(); if(!list.length) return '';
-  const rows = list.map(function(f){
-    const k = f.field_key, v = d ? d[k] : undefined, isNum = f.field_type === 'number';
-    const label = esc(f.field_name || k) + (f.required ? ' <span style="color:var(--disp)">*</span>' : '');
-    if (v != null && typeof v === 'object') {
-      return `<label class="fl">${label}</label><div class="inp" style="color:var(--grey)" data-testid="cat-field-${esc(k)}" title="${esc(tx('imported as structured data — edit it through the spreadsheet'))}">${esc(JSON.stringify(v))}</div>`;
-    }
-    return `<label class="fl">${label}</label><input class="inp" id="ct_f_${esc(k)}" data-testid="cat-field-${esc(k)}" data-key="${esc(k)}" data-type="${esc(f.field_type||'text')}"${isNum ? ' inputmode="decimal"' : ''} value="${esc(v==null?'':v)}">`;
-  }).join('');
-  return rows;
-}
-/** The declared columns that carry a value, as view rows. Only scalars: an object is a record, not a value. */
-function ctDeclaredViewRows(d, kv){
-  return ctDeclaredList().filter(function(f){ const v = d[f.field_key]; return v != null && v !== '' && typeof v !== 'object'; })
-    .map(function(f){ return kv(esc(f.field_name || f.field_key), d[f.field_key]); }).join('');
-}
 /**
  * Download the catalogue as CSV.
  *
@@ -11839,35 +11758,6 @@ async function exportCatalogueCSV(btn){
  * Two steps rather than one link: the server returns JSON because the guidance CANNOT live in the CSV — a comment
  * row would parse as a product. So the file downloads and the notes are shown beside it.
  */
-async function downloadCatalogueTemplate(btn){
-  const was = btn ? btn.textContent : null;
-  if(btn){ btn.disabled = true; btn.textContent = '📄 …'; }
-  try{
-    const t = await api('prodTemplate');
-    const blob = new Blob(['﻿' + t.csv], { type: 'text/csv;charset=utf-8' });   // BOM: Excel mangles ₹ without it
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = t.filename || 'catalogue-template.csv';
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
-
-    const cols = (t.columns||[]).map(function(c){
-      const opt = (t.optional||[]).indexOf(c) >= 0;
-      return '<span style="display:inline-block;border:1px solid var(--line);border-radius:6px;padding:2px 7px;margin:0 4px 4px 0;font-size:var(--fs-1);font-family:ui-monospace,monospace;'
-        + (opt ? 'color:var(--grey);border-style:dashed' : 'font-weight:600') + '">' + esc(c) + '</span>';
-    }).join('');
-    modal('<div class="mhd">' + tx('📄 Catalogue template') + '</div><div class="mbody">'
-      + '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:9px">Downloaded as <b>' + esc(t.filename||'') + '</b> — these are the columns your catalogue accepts. Dashed ones are optional.</div>'
-      + '<div style="margin-bottom:10px">' + cols + '</div>'
-      + '<ul style="font-size:var(--fs-2);line-height:1.65;padding-inline-start:18px;margin:0">'
-      + (t.notes||[]).map(function(n){ return '<li>' + esc(n) + '</li>'; }).join('')
-      + '</ul></div><div class="mfoot"><button class="pri" onclick="closeModal()">' + tx('Got it') + '</button></div>');
-  }catch(e){
-    if(typeof toast === 'function') toast((e && e.message) || 'Could not build the template.');
-  }finally{
-    if(btn){ btn.disabled = false; btn.textContent = was; }
-  }
-}
 /**
  * checkCatalogueFile — read a spreadsheet BEFORE any of it becomes data.
  *
@@ -11998,140 +11888,6 @@ async function _cfAdoptSet(btn){
   }catch(e){ out.innerHTML = '<div style="font-size:var(--fs-2);color:var(--disp)">'+esc((e&&e.message)||'Could not add the columns.')+'</div>'; }
   finally{ btn.disabled = false; btn.textContent = was; }
 }
-function _cfPick(input){
-  var f = input && input.files && input.files[0]; if(!f) return;
-  var rd = new FileReader();
-  rd.onload = function(){ var el = document.getElementById('cf_text'); if(el) el.value = String(rd.result||'').replace(/^﻿/,''); };
-  rd.readAsText(f);
-}
-async function _cfRun(btn){
-  var text = (document.getElementById('cf_text')||{}).value || '';
-  var out = document.getElementById('cf_out'); if(!out) return;
-  if(!text.trim()){ out.innerHTML = '<div style="font-size:var(--fs-2);color:var(--disp)">Choose a file or paste some rows first.</div>'; return; }
-  var was = btn ? btn.textContent : null; if(btn){ btn.disabled = true; btn.textContent = 'Reading…'; }
-  try{
-    var res = await api('prodPreflight', { body:{ csv: text } });
-    var r = res.report;
-    UI._cf = { csv: text, accepted: res.accepted||[], optional: res.optional||[], report: r };
-
-    // How each verdict reads, and what it DEFAULTS the decision to. A blocked column has no choice at all — the
-    // control is removed rather than merely pre-set, because a disabled dropdown still looks like a decision
-    // someone could change.
-    var HOW = {
-      exact:         ['✓','var(--ok-2)','matches your catalogue'],
-      synonym:       ['✓','var(--ok-2)','recognised under another name'],
-      contains:      ['?','var(--warn-2)','probably this — confirm'],
-      fuzzy:         ['?','var(--warn-2)','guessed — confirm this'],
-      ambiguous:     ['?','var(--warn-2)','could be more than one thing'],
-      'not-accepted':['—','var(--grey-2)','your catalogue does not use this'],
-      unmatched:     ['—','var(--grey-2)','not recognised'],
-      conflict:      ['!','var(--warn-2)','another column matched this better'],
-      blocked:       ['⨯','var(--disp)','a file may not set this'],
-      empty:         ['—','var(--grey-2)','this column has no heading']
-    };
-    var accepted = res.accepted || [];
-    var rowsHtml = (r.mapping||[]).map(function(m, i){
-      var h = HOW[m.how] || ['?','var(--grey-2)',m.how];
-      var control;
-      if(m.how === 'blocked' || m.how === 'empty'){
-        control = '<span style="font-size:var(--fs-1);color:'+h[1]+'">not importable</span>';
-      } else {
-        var opts = ['<option value="ignore">' + tx('Leave it out') + '</option>'];
-        accepted.forEach(function(f){
-          var sel = (m.canonical === f) ? ' selected' : '';
-          opts.push('<option value="map:'+esc(f)+'"'+sel+'>Use as '+esc(f)+'</option>');
-        });
-        // Only offer to CREATE where nothing in the catalogue claimed it — otherwise the obvious click is the one
-        // that grows a second column meaning the same thing.
-        if(!m.canonical) opts.push('<option value="create" selected>' + tx('Add as a new column') + '</option>');
-        control = '<select data-cfcol="'+esc(m.incoming||'')+'" data-testid="cf-decide-'+i+'" class="inp" style="font-size:var(--fs-2);padding:3px 6px;width:100%">'+opts.join('')+'</select>';
-      }
-      return '<tr>'
-        + '<td style="padding:5px 8px;border-bottom:1px dashed var(--line);font-family:ui-monospace,monospace;font-size:var(--fs-2)">'+esc(m.incoming||'(blank)')+'</td>'
-        + '<td style="padding:5px 8px;border-bottom:1px dashed var(--line);color:'+h[1]+';font-weight:700;text-align:center">'+h[0]+'</td>'
-        + '<td style="padding:5px 8px;border-bottom:1px dashed var(--line);min-width:150px">'+control+'</td>'
-        + '<td style="padding:5px 8px;border-bottom:1px dashed var(--line);font-size:var(--fs-1);color:var(--grey)">'+esc(m.conflict||m.why||h[2])+'</td>'
-        + '</tr>';
-    }).join('');
-
-    var s = r.summary || {};
-    var blocking = (s.errors || 0) > 0;
-    var badge = blocking
-      ? '<span style="background:var(--danger-tint);color:var(--disp);border-radius:6px;padding:3px 9px;font-size:var(--fs-1);font-weight:700">'+s.errors+' row problem(s) — fix the file first</span>'
-      : (r.ready
-        ? '<span style="background:var(--ok-tint);color:var(--disp);border-radius:6px;padding:3px 9px;font-size:var(--fs-1);font-weight:700">' + tx('Every column is placed') + '</span>'
-        : '<span style="background:var(--warn-tint);color:var(--warn-3);border-radius:6px;padding:3px 9px;font-size:var(--fs-1);font-weight:700">' + tx('Check the choices below, then import') + '</span>');
-    var issues = (r.issues||[]).slice(0,25).map(function(i){
-      var c = i.severity==='error' ? 'var(--disp)' : (i.severity==='info' ? 'var(--grey-2)' : 'var(--warn-2)');
-      return '<li style="color:'+c+'">line '+i.row+' · <b>'+esc(i.column)+'</b> — '+esc(i.message)+'</li>';
-    }).join('');
-
-    out.innerHTML = badge
-      + '<div style="font-size:var(--fs-2);margin:9px 0 6px">'+s.rows+' row(s) read · <b>'+s.importable+'</b> would import · '+s.errors+' error(s) · '+s.warnings+' warning(s)</div>'
-      + '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead><tr>'
-      + ['In your file','','What to do with it','Why'].map(function(h){ return '<th style="text-align:start;padding:5px 8px;font-size:var(--fs-1);text-transform:uppercase;color:var(--grey);border-bottom:1px solid var(--line)">'+h+'</th>'; }).join('')
-      + '</tr></thead><tbody>'+rowsHtml+'</tbody></table></div>'
-      + ((r.notes||[]).length ? '<ul style="font-size:var(--fs-2);line-height:1.6;padding-inline-start:18px;margin:10px 0 0">'+r.notes.map(function(n){ return '<li>'+esc(n)+'</li>'; }).join('')+'</ul>' : '')
-      + (issues ? '<div style="font-size:var(--fs-1);text-transform:uppercase;color:var(--grey);margin:10px 0 4px">' + tx('Rows') + '</div><ul style="font-size:var(--fs-2);line-height:1.6;padding-inline-start:18px;margin:0">'+issues+'</ul>'
-          + ((r.issues||[]).length>25 ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px">…and '+((r.issues||[]).length-25)+' more.</div>' : '') : '')
-      + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:11px;border-top:1px solid var(--line);padding-top:8px">' + txf('Reading the file changed nothing. {import} applies the choices above — it adds and updates products, and never deletes one.', {
-      import: '<b>' + tx('Import') + '</b>' }) + '</div>';
-
-    // The Import button is enabled only when the file itself is sound. Row errors are not a warning to click past:
-    // the server refuses them too, and offering the button anyway teaches people to ignore it.
-    var ib = document.getElementById('cf_import');
-    if(ib){ ib.disabled = blocking; ib.style.opacity = blocking ? '.5' : '1';
-      ib.title = blocking ? 'Fix the row problems first' : 'Apply these choices to your catalogue'; }
-  }catch(e){
-    out.innerHTML = '<div style="font-size:var(--fs-2);color:var(--disp)">'+esc((e&&e.message)||'Could not read the file.')+'</div>';
-  }finally{ if(btn){ btn.disabled = false; btn.textContent = was; } }
-}
-/**
- * _cfImport — apply the per-column choices.
- *
- * The decisions come from the dropdowns, NOT from the preflight's suggestions: what the person sees on screen is
- * exactly what is sent. The server re-reads the file and re-checks every decision, so nothing here is trusted.
- */
-function _cfImport(btn){
-  if(!UI._cf){ if(typeof toast==='function') toast('Check a file first.'); return; }
-  var out = document.getElementById('cf_out');
-  var sels = Array.prototype.slice.call(document.querySelectorAll('[data-cfcol]'));
-  var decisions = sels.map(function(el){
-    var v = el.value || 'ignore';
-    if(v === 'create') return { incoming: el.getAttribute('data-cfcol'), action: 'create' };
-    if(v.indexOf('map:') === 0) return { incoming: el.getAttribute('data-cfcol'), action: 'map', field: v.slice(4) };
-    return { incoming: el.getAttribute('data-cfcol'), action: 'ignore' };
-  });
-  var creating = decisions.filter(function(d){ return d.action === 'create'; }).length;
-  var using = decisions.filter(function(d){ return d.action !== 'ignore'; }).length;
-  if(!using){ if(typeof toast==='function') toast('Every column is set to be left out.'); return; }
-  confirmAsk('Import using ' + using + ' column' + (using===1?'':'s') + '?',
-    (creating ? 'It also adds <b>' + creating + ' new column' + (creating===1?'':'s') + '</b> to your catalogue.<div style="margin-top:7px">' : '<div>')
-    + txf('Products are {au}. Nothing is deleted.', { au: '<b>' + tx('added or updated') + '</b>' }) + '</div>',
-    'Import', function(){ _cfImportRun(btn, decisions, out); });
-}
-async function _cfImportRun(btn, decisions, out){
-  var was = btn.textContent; btn.disabled = true; btn.textContent = 'Importing…';
-  try{
-    var r = await api('prodImport', { body:{ csv: UI._cf.csv, decisions: decisions, confirm: true } });
-    var sum = r.summary || {};
-    out.innerHTML = '<div style="background:var(--ok-tint);color:var(--ok-2);border-radius:6px;padding:8px 10px;font-size:var(--fs-2);font-weight:700">'+esc(r.message||'Imported')+'</div>'
-      + ((r.created_columns||[]).length ? '<div style="font-size:var(--fs-2);color:var(--grey);margin-top:8px">Your catalogue now also has: '+r.created_columns.map(esc).join(', ')+'. The next template you download will include them.</div>' : '')
-      + '<ul style="font-size:var(--fs-2);line-height:1.6;padding-inline-start:18px;margin:10px 0 0">'
-      + (r.outcome||[]).slice(0,40).map(function(o){
-          var c = o.action==='failed' ? 'var(--disp)' : 'var(--ink)';
-          return '<li style="color:'+c+'">line '+o.line+' · '+esc(o.name||'')+' — '+esc(o.action)+(o.message?': '+esc(o.message):'')+'</li>';
-        }).join('')
-      + '</ul>'
-      + ((r.outcome||[]).length>40 ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px">…and '+((r.outcome||[]).length-40)+' more.</div>' : '');
-    btn.disabled = true; btn.style.opacity = '.5';
-    if(typeof loadProducts === 'function') loadProducts();
-  }catch(e){
-    out.innerHTML = '<div style="font-size:var(--fs-2);color:var(--disp)">'+esc((e&&e.message)||'Could not import.')+' Nothing was changed.</div>';
-    btn.disabled = false;
-  }finally{ btn.textContent = was; }
-}
-
 /**
  * ⭐⭐ CATEGORY ON THE PRODUCT FORM — the form people actually use.
  *
@@ -12600,7 +12356,6 @@ function prodEffectiveField(){
 /* CU4: it asked for a capital-T dateTime on CBLocale (no such function), so every caller printed the OS locale. The one formatter, with the year it always showed */
 function fmtDateTime(x){ try{ return CBLocale.datetime(x,{ day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }); }catch(_){ return String(x); } }
 function prodEffectiveAt(){ const v=val('ct_effective'); if(!v) return null; const t=new Date(v); return (t.getTime()>Date.now()+30000)?t.toISOString():null; }
-function prodDiff(cur, next){ const out={}; Object.keys(next||{}).forEach(k=>{ if(JSON.stringify((cur||{})[k])!==JSON.stringify(next[k])) out[k]=next[k]; }); return out; }
 
 /* ═══ EVERY FIELD THIS ITEM CARRIES ════════════════════════════════════════════════════════════════════════════
  * Athi, 2026-08-13: *"the other information like synonym etc are not visible… clicking one item possibly bring
@@ -12687,12 +12442,6 @@ function catFieldRow(k, v){
  * another system; listing them as "you could fill this in" invites someone to forge a record of something that
  * never happened. The read-only set already says which those are — one definition, used for both jobs.
  */
-const catDeclared = async function(){
-  if (UI._catFields) return UI._catFields;                 // once per session — this is a definition, not data
-  try { const r = await api('schemaFields'); UI._catFields = (r && r.fields) || []; }
-  catch (_) { UI._catFields = []; }                        // no definition is not an error; it just means no hints
-  return UI._catFields;
-};
 function catUnusedRow(k, label, why, required){
   return '<div style="display:flex;gap:10px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:var(--fs-2)">'
     + '<b style="min-width:118px;color:var(--grey);font-weight:600;font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.03em">'

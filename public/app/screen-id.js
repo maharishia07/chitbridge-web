@@ -46,6 +46,8 @@
       { app: 'settings', name: 'Settings', page: '/settings.html', hash: true, rows: [
         ['SET001', 'shop', 'Your shop'], ['SET002', 'country', 'Country'], ['SET003', 'new', 'New shop', 'the sign-in window › New shop? Register']] },
       { app: 'employees', name: 'CB Employees', page: '/employees.html', rows: [['EMP001', 'people', 'People']] },
+      { app: 'catalogue', name: 'Catalogue', page: '/catalogue.html', hash: true, rows: [
+        ['CTG001', 'items', 'Items'], ['CTG002', 'categories', 'Categories'], ['CTG003', 'import', 'Import']] },
       { app: 'network', name: 'Network', page: '/network.html', rows: [['NET001', 'mine', 'My network'], ['NET002', 'offers', 'Offers'], ['NET003', 'design', 'Design']] },
       { app: 'country-lab', name: 'Country lab', page: '/country-lab.html', rows: [['CLB001', 'compare', 'Side by side'], ['CLB002', 'ready', 'Where we are']] },
       { app: 'kyb', name: 'Know your business', page: '/know-your-business.html', rows: [['KYB001', null, 'Know your business']] },

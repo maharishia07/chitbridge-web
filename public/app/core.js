@@ -1164,3 +1164,13 @@ async function apiOnce(key, {params, query, body}={}){
     if(--_inflight<=0){ _inflight=0; _netBusy(false); }
   }
 }
+
+/* ── the DEFINITIONS routes (cbDefsLive · cbCatgLive above read them) — MOVED here from app.html's EP (T3-CATALOGUE) so app.html and catalogue.html
+   register each ONCE (e2e/ep-aliases.cjs); a page merges them with Object.assign(EP, CB_DEFS_EP) as it merges CB_SHOP_EP ── */
+var CB_DEFS_EP = {
+  defList:         {m:"GET",   p:"/api/definitions",             ok:"y"},   // ?all=1 via defListAll
+  defListAll:      {m:"GET",   p:"/api/definitions?all=1",       ok:"y"},   // the shelf, incl. retired
+  defAdd:          {m:"POST",  p:"/api/definitions",             ok:"y"},
+  defSave:         {m:"PUT",   p:"/api/definitions/:id",         ok:"y"},   // rules change => NEW VERSION
+  defRetire:       {m:"DELETE",p:"/api/definitions/:id",         ok:"y"},   // retires, never deletes
+};

@@ -9,7 +9,7 @@ let fail = 0; const bad = (m) => { fail++; console.log('FAIL ' + m); }; const ok
 
 /* the small apps — add a new one HERE, and give it the skeleton */
 const OWN = ['finance.html', 'crm.html', 'accounts.html'];      /* the page draws <aside class="side"> + <main class="main"> itself */
-const FRAMED = ['employees.html', 'network.html', 'tasks.html', 'country-lab.html', 'settings.html'];   /* CBFrame.mount({ skeleton }) draws it (the Country lab: CL3, public — signin:false · CB Settings: SET1) */
+const FRAMED = ['employees.html', 'network.html', 'tasks.html', 'country-lab.html', 'settings.html', 'catalogue.html'];   /* CBFrame.mount({ skeleton }) draws it (the Country lab: CL3, public — signin:false · CB Settings: SET1) */
 /* pages that load the frame or the list control but are not small apps: the app itself, the labs and the standards page, and two older single-purpose pages (their own round) */
 const NOT_APPS = ['app.html', 'list-lab.html', 'standards.html', 'authority-forms.html', 'know-your-business.html'];
 
