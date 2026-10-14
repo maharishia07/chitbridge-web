@@ -216,8 +216,9 @@ function countOf(rows){ var n = { live: 0, part: 0, plan: 0 }; rows.forEach((r) 
 const FILTERS = [
   { key: 'status', label: 'Status', all: 'Any', options: STD_STATUS.map((s) => ({ v: s[0], label: s[1] })), match: (x, v) => x.r.s === v },
   { key: 'area', label: 'Area', all: 'Any', options: STD_AREAS.map((a) => ({ v: a[0], label: a[1] })), match: (x, v) => x.r.a === v },
-  /* STDREG1: the PRODUCT area (`pa`, STD_PRODUCT_AREAS) — the part of the product a row lives in, beside the business Area */
-  { key: 'parea', label: 'Product area', all: 'Any', options: STD_PRODUCT_AREAS.map((a) => ({ v: a[0], label: a[1] })), match: (x, v) => x.r.pa === v },
+  /* STDREG1: the PRODUCT area (`pa`, STD_PRODUCT_AREAS) — the part of the product a row lives in, beside the business Area. A filter, a column (⚙) and a
+     sort; not a Group by button — a fifth button wraps the toolbar past the head's 20% (the walk measures it) */
+  { key: 'parea', label: 'Product area', all: 'Any', options: STD_PRODUCT_AREAS.filter((a) => STANDARDS.some((r) => r.pa === a[0])).map((a) => ({ v: a[0], label: a[1] })), match: (x, v) => x.r.pa === v },
   { key: 'kind', label: 'Kind', all: 'Any', options: STD_KINDS.map((k) => ({ v: k[0], label: k[1] })), match: (x, v) => x.r.k === v },
   { key: 'country', label: 'Applies in', all: 'Any', options: STD_COUNTRIES.map((c) => ({ v: c[0], label: c[1] })), match: (x, v) => x.r.c.indexOf(v) >= 0 },
 ];
@@ -225,7 +226,6 @@ function groupBy(x, mode){
   var r = x.r;
   if (mode === 'area') return [lab(STD_AREAS, r.a), r.a];
   if (mode === 'kind') return [lab(STD_KINDS, r.k), r.k];
-  if (mode === 'parea') return [PAREA(r), r.pa];
   if (mode === 'country'){ var l = countryGroup(r.c); return [l, l]; }
   return null;
 }
@@ -237,7 +237,7 @@ function countryGroup(c){
   if (own.length < c.length) return own.map((x) => lab(STD_COUNTRIES, x)).join(', ') + ' and global';
   return c.map((x) => lab(STD_COUNTRIES, x)).join(', ');   /* commas: the group head's own " · " separates the label from its count */
 }
-const GROUP_ORDER = STD_AREAS.map((a) => a[0]).concat(STD_PRODUCT_AREAS.map((a) => a[0]), STD_KINDS.map((k) => k[0]), STD_COUNTRIES.filter((c) => c[0] !== 'GLOBAL').map((c) => c[1]),
+const GROUP_ORDER = STD_AREAS.map((a) => a[0]).concat(STD_KINDS.map((k) => k[0]), STD_COUNTRIES.filter((c) => c[0] !== 'GLOBAL').map((c) => c[1]),
   STD_COUNTRIES.filter((c) => c[0] !== 'GLOBAL').map((c) => c[1] + ' and global'), ['Global', STD_COUNTRIES.filter((c) => c[0] !== 'GLOBAL').map((c) => c[1]).join(', ')]);   /* STDREG1: any "<country> and global" (Xero: Australia and global) */
 function cols(){
   return [
@@ -363,7 +363,7 @@ function mountList(){
     search: (x) => { var r = x.r; return [r.p, r.n, r.w, r.m, r.limit, r.note, r.at, plain(r.ex), r.eq, AREA(r), PAREA(r), KIND(r), COUNTRY(r), STATUS(r), r.g].join(' '); },
     searchHint: 'Search standards',
     filters: FILTERS, sorts: SORTS,
-    group: { options: [['area', 'Area'], ['parea', 'Product area'], ['country', 'Country'], ['kind', 'Kind'], ['none', 'None']], default: 'area', tid: 'std', by: groupBy, order: GROUP_ORDER,
+    group: { options: [['area', 'Area'], ['country', 'Country'], ['kind', 'Kind'], ['none', 'None']], default: 'area', tid: 'std', by: groupBy, order: GROUP_ORDER,
       fig: (rows) => { var n = countOf(rows.map((x) => x.r)); return rows.length + ' · ● ' + n.live + ' ◐ ' + n.part + ' ○ ' + n.plan; } },
     next: nextOf,
     actions: [
@@ -375,18 +375,16 @@ function mountList(){
 }
 
 /* ═════ THE MATRIX — the second pane ═════
-   Rows by Area, Product area, Country or Kind; columns In force · Partly · Planned. A cell sets the LIST'S OWN filters (a row and a status), so the unit's chips
+   Rows by Area, Country or Kind; columns In force · Partly · Planned. A cell sets the LIST'S OWN filters (a row and a status), so the unit's chips
    and the lit cell are the same state shown twice, and the Filters popover can undo it. The matrix counts the whole register. */
-/* ONE grouping choice: the left table counts by whatever the list's Group by says (Area · Product area · Country · Kind; None = the whole register only) */
-const DIMS = [['area', 'Area'], ['parea', 'Product area'], ['country', 'Country'], ['kind', 'Kind']];
+/* ONE grouping choice: the left table counts by whatever the list's Group by says (Area · Country · Kind; None = the whole register only) */
+const DIMS = [['area', 'Area'], ['country', 'Country'], ['kind', 'Kind']];
 function curDim(){ var g = LIST && LIST.state().group; return DIMS.some((d) => d[0] === g) ? g : (g === 'none' ? 'none' : 'area'); }
 let DIM = 'area';
 function mxRows(){
   if (DIM === 'none') return [];
   if (DIM === 'country') return STD_COUNTRIES.map((c) => ({ id: c[0], label: c[1], has: (r) => r.c.indexOf(c[0]) >= 0 }));
   if (DIM === 'kind') return STD_KINDS.map((k) => ({ id: k[0], label: k[1], sub: k[2], has: (r) => r.k === k[0] }));
-  /* STDREG1: the product areas that hold at least one row (twenty would mostly be "—") */
-  if (DIM === 'parea') return STD_PRODUCT_AREAS.filter((a) => ROWS.some((x) => x.r.pa === a[0])).map((a) => ({ id: a[0], label: a[1], has: (r) => r.pa === a[0] }));
   return STD_AREAS.map((a) => ({ id: a[0], label: a[1], has: (r) => r.a === a[0] }));
 }
 function nowFilt(){ var s = LIST && LIST.state(); return (s && s.filt) || {}; }

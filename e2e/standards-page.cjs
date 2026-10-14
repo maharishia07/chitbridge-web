@@ -317,6 +317,8 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     console.log('     groups: ' + JSON.stringify(gk));
     ok(gk.length === 4 && /Law/.test(gk[0]) && /Standard/.test(gk[1]) && /Practice/.test(gk[2]) && /Compatibility/.test(gk[3]), 'Group by Kind: Law · Standard · Practice · Compatibility, in that order, each with its count: ' + gk[0]);
     await p.click('[data-testid="cbl-group-standards"] [data-group="country"]'); await p.waitForTimeout(200);
+    /* the unit draws 50 rows at a time: scroll until every row is drawn, so the last group's head is there (STDREG1: more rows than two pages) */
+    for (let k = 0; k < Math.ceil(N / 50) + 1; k++) { await p.evaluate(() => { const l = document.querySelector('#std_list .cbl-list'); l.scrollTop = l.scrollHeight; }); await p.waitForTimeout(300); }
     const gc = await p.$$eval('#std_list .cbl-group', (n) => n.map((x) => x.textContent.replace(/^[^A-Za-z]+/, '').replace(/\s+/g, ' ').trim().split(' ·')[0].replace(/\s*\d+$/, '').trim()));
     ok(gc.join('|') === 'India|Australia|UAE|India and global|Australia and global|Global|India, Australia, UAE', 'Group by Country: one country alone (India · Australia · UAE), India and global, Australia and global (Xero, STDREG1), Global, then the rows that apply in all three (' + gc.join(' | ') + ')');
     await p.click('[data-testid="cbl-group-standards"] [data-group="area"]'); await p.waitForTimeout(200);
@@ -488,7 +490,8 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     await p.screenshot({ path: path.join(SHOTS, 'standards-phone-matrix.png') });
     await p.click('[data-testid="std-cell-money-part"]'); await p.waitForTimeout(300);
     ok(await p.locator('#main').isVisible() && !(await p.locator('#mxp').isVisible()), 'a cell opens page two: the list');
-    ok((await rowIds(p)).length === 3, 'with the 3 rows of the cell');
+    const mp = ALL.filter((r) => r.a === 'money' && r.s === 'part').length;
+    ok((await rowIds(p)).length === mp, 'with the ' + mp + ' rows of the cell (counted from the source)');
     ok(await p.locator('.who .back').isVisible(), 'and a ‹ back');
     w = await width(p);
     ok(w.sw === 390, 'phone, list page: document.scrollWidth === 390 (' + w.sw + ')');
