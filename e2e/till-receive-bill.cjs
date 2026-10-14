@@ -101,6 +101,25 @@ const SG = '33333333-3333-4333-8333-333333333333';
     JSON.stringify(plain.chit && plain.chit.business_json.their_bill));
   say('…the second known supplier is carried by id too', plain.chit && plain.chit.business_json.party.party_id === '44444444-4444-4444-8444-444444444444', JSON.stringify(plain.chit && plain.chit.business_json.party));
 
+  console.log('\n── FX-F10W · a snapshot stored by an older counter (no suppliers) is read again once on start ───────────');
+  const heal = await p.evaluate(async () => {
+    const calls = []; const was = { refresh: HOST.refresh, state: HOST.state, lineUp: window.lineUp };
+    HOST.refresh = async function () { calls.push('refresh'); return { ok: true }; };
+    window.lineUp = function () { return true; };
+    const run = async (snap) => { FIRST_READ = false; HOST.state = async function () { return { snapshot: snap }; }; calls.length = 0; await load(); await new Promise((r) => setTimeout(r, 50)); return calls.length; };
+    const base = JSON.parse(JSON.stringify(S));
+    const old = JSON.parse(JSON.stringify(base)); delete old.suppliers;
+    const out = { lacks: snapLacks(old), has: snapLacks(base), oldRefreshed: await run(old) };
+    out.again = await (async () => { calls.length = 0; await load(); await new Promise((r) => setTimeout(r, 50)); return calls.length; })();   /* once per page: FIRST_READ */
+    out.newRefreshed = await run(base);
+    HOST.refresh = was.refresh; HOST.state = was.state; window.lineUp = was.lineUp;
+    return out;
+  });
+  say('a stored snapshot without `suppliers` is lacking a key this build reads (SNAP_NEEDS)', heal.lacks === true && heal.has === false, JSON.stringify(heal));
+  say('…so the counter refreshes once on start — the existing HOST.refresh, no new route', heal.oldRefreshed === 1, String(heal.oldRefreshed));
+  say('…and only once per page (the same FIRST_READ guard a blank counter uses)', heal.again === 0, String(heal.again));
+  say('a snapshot that carries every key is not read again on start', heal.newRefreshed === 0, String(heal.newRefreshed));
+
   say('no page errors', errs.length === 0, errs.slice(0, 2).join(' | ') || 'none');
   await b.close(); srv.close();
   console.log('\n' + (bad ? '✗ ' + bad + ' FAILED' : '✓ till-receive-bill: all checks passed') + '\n');

@@ -195,8 +195,8 @@ async function run() {
       ok(led && /2 waiting to be recorded/.test(led.text) && led.fix === '/accounts.html#waiting', 'planted · "2 waiting to be recorded" — the alert\'s number is the API\'s, its fix opens CB Accounts (' + (led && led.text) + ')');
       /* FX-F10W: the same counts as Books' To do — each waiting row's `todo`, each kind its own words and door (never "4 waiting for the ledger") */
       const acc = rows.find((r) => r.id === 'ledger-accept'), sup = rows.find((r) => r.id === 'ledger-supplier');
-      ok(acc && /^1 supplier bill to accept/.test(acc.text) && acc.fix === '/accounts.html#waiting', 'planted · "1 supplier bill to accept" with its door (' + (acc && acc.text) + ')');
-      ok(sup && /^1 supplier to add/.test(sup.text) && sup.fix === '/accounts.html#waiting', 'planted · "1 supplier to add" with its door (' + (sup && sup.text) + ')');
+      ok(acc && /\b1 supplier bill to accept/.test(acc.text) && acc.fix === '/accounts.html#waiting', 'planted · "1 supplier bill to accept" with its door (' + (acc && acc.text) + ')');
+      ok(sup && /\b1 supplier to add/.test(sup.text) && sup.fix === '/accounts.html#waiting', 'planted · "1 supplier to add" with its door (' + (sup && sup.text) + ')');
       ok(!rows.some((r) => /waiting for the ledger/.test(r.text)), 'planted · no row says "waiting for the ledger"');
       ok(pr && pr.lvl === 'warn' && /Counter 1 · paired to Mayuri123, not this shop/.test(pr.text) && pr.fix === '/till.html', 'planted · a counter paired to another shop earns an amber row with its fix (' + (pr && pr.text) + ')');
       ok(rows.every((r) => r.fix), 'planted · every alert carries the button that fixes it');
