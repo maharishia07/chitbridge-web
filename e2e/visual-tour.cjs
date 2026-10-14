@@ -195,6 +195,9 @@ async function main() {
   let sess = null, bridge = '';
   try {
     const s = await R.signIn(API, PART === 'b' ? EMAIL : STORE_EMAIL); bridge = (s.entity && s.entity.bridge_id) || ''; if (PART === 'b') sess = s.session;
+    /* signed in, the account's saved appearance is the truth (CBAvatar.hydrate) — the device's cb_theme alone would be painted over, so the theme
+       is set the way the avatar menu sets it: the app's own door, PATCH /api/entities/me/prefs/ui (this shop, on the LOCAL api only) */
+    if (PART === 'b') { const t = await R.j(API + '/api/entities/me/prefs/ui', { method: 'PATCH', token: s.token, body: { theme: THEME } }); if (t.status >= 300) console.log('theme not saved on the account (' + t.status + ') — signed-in shots keep the account\'s theme'); }
   } catch (e) { if (PART === 'b') { console.log('TOUR STOPPED · cannot sign in ' + EMAIL + ' on ' + API + ': ' + e.message); await w.close(); process.exit(1); } }
 
   const ctx = await w.contextAt();
@@ -500,11 +503,11 @@ function report() {
   const index = states.find((s) => s.kind === 'screen' && s.page === 'index.html' && s.step === 'top' && s.part === 'a' && s.frame && s.frame.title) || states.find((s) => s.kind === 'screen' && s.page === 'index.html' && s.frame && s.frame.title);
   const idx = index ? index.frame : null;
   for (const s of states) {
-    /* "Failed to load resource" carries no address — the same request is in s.failed WITH its address, so it is counted there */
-    for (const c of (s.console || []).filter((x) => !/^Failed to load resource/.test(x))) add('broken', s.page + '|console|' + c.slice(0, 70), 'console error on ' + s.page + ': `' + c.slice(0, 140).replace(/`/g, "'") + '`', s, how(s));
     /* a run written before reach had its own bucket kept the tour's tab timeouts as page errors — they are reach, not the product */
     s.reach = (s.reach || []).concat((s.console || []).filter((x) => /^pageerror: (tab "|navigation:)/.test(x)).map((x) => x.replace(/^pageerror: /, '')));
     s.console = (s.console || []).filter((x) => !/^pageerror: (tab "|navigation:)/.test(x));
+    /* "Failed to load resource" carries no address — the same request is in s.failed WITH its address, so it is counted there */
+    for (const c of (s.console || []).filter((x) => !/^Failed to load resource/.test(x))) add('broken', s.page + '|console|' + c.slice(0, 70), 'console error on ' + s.page + ': `' + c.slice(0, 140).replace(/`/g, "'") + '`', s, how(s));
     (s.reach || []).forEach((x) => reach.push({ page: s.page, code: s.code, what: x, shot: (s.shots || [])[0] || '—', run: s.run }));
     for (const q of (s.failed || []).filter((x) => { const k = KNOWN.find((K) => K.re.test(x)); if (k) { known.set(k.why, (known.get(k.why) || 0) + 1); } return !k; })) add(/^(5\d\d|404|FAILED)/.test(q) ? 'broken' : 'inconsistent', s.page + '|req|' + q.replace(/\?.*/, '').slice(0, 80), 'request failed on ' + s.page + ': `' + q.slice(0, 120) + '`', s, how(s));
     if (s.status >= 400) add('broken', s.page + '|status', s.page + ' answers HTTP ' + s.status, s, how(s));
