@@ -99,6 +99,9 @@ function go(){ if (window.CBFrame) CBFrame.ended(); }   /* api()'s 401 → drop 
   /* ⭐ New shop (SET3 · FX-UX2): the sign-in window's "New shop? Register" opens HERE — a customer never enters the workshop (INDEX-NOT-APP.md).
      A public section: no sign-in window over it (signin:false; the avatar's Sign in goes to Home's), the only section in the sidebar, and
      the SAME form app.html #/register paints (app/register-form.js). Verified → the session is kept as the sign-in window keeps it → Home. */
+  /* ⚠️ FX-UX2: the head's CFG ran BEFORE shell.js loaded, so CBShell.apiBase was never asked and a local stack's page wrote to the deploy's api.
+     Asked again here, now that the shell is loaded (cb_api_base · localhost → :3000 · else CB_API — the one rule, shell.js apiBase). */
+  if (window.CBShell && CBShell.apiBase) CFG.API_BASE = CBShell.apiBase() || CFG.API_BASE;
   var NEW = { k: 'new', label: 'New shop', icon: 'M12 5v14M5 12h14' };
   var isNew = /^#\/?new\b/.test(location.hash || '');
   if (isNew) SECTIONS = [NEW];
