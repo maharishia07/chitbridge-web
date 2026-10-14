@@ -1218,23 +1218,27 @@ function stdCounts(){
  * ⭐ COMPATIBILITY — the 4th Kind (M41 · BACKLOG T49). Every outside system we work with is a row of the SAME register shape, so the page's
  * list, matrix, filters and Copy treat it like any standard. The rows live in ONE file, public/data/compat.json, which the Compatibility lab
  * (N04) reads too — never a second list here. This maps a compat.json row onto a register row; a row the file gets wrong is dropped, not guessed.
+ *   dir in · out · both (STD_COMPAT_DIR) — a row without one is dropped; code / test = the chitbridge-api files that do and prove the move ('' = none).
  *   status works → In force · partly → Partly · planned → Planned.   proof live → "Tested live <date>" · stand-in → "Proven on a stand-in" · not-yet → "Not yet".
  */
 var STD_COMPAT_STATUS = { works: 'live', partly: 'part', planned: 'plan' };
 var STD_COMPAT_PROOF = { live: 'Tested live', 'stand-in': 'Proven on a stand-in', 'not-yet': 'Not yet' };
 var STD_COMPAT_FIT = { 'one-to-one': 'One-to-one', alongside: 'Works alongside', gap: 'Gap' };
+/* T3-COMPAT: which way a compatibility row moves — [symbol, word, the sentence with the system's name]. The Works with tab's Moves column and the opened row say it. */
+var STD_COMPAT_DIR = { 'in': ['↓', 'In', 'From {s} into ChitBridge'], out: ['↑', 'Out', 'From ChitBridge out to {s}'], both: ['⇅', 'Both ways', 'Both ways between ChitBridge and {s}'] };
 function stdCompatRows(json){
   var rows = (json && Array.isArray(json.rows)) ? json.rows : [];
   var areas = STD_AREAS.map(function(a){ return a[0]; }), ctry = STD_COUNTRIES.map(function(c){ return c[0]; }), pas = STD_PRODUCT_AREAS.map(function(a){ return a[0]; });
   return rows.filter(function(x){
-    return x && x.system && x.service && x.p && STD_COMPAT_STATUS[x.status] && areas.indexOf(x.area) >= 0 && pas.indexOf(x.pa) >= 0 && Array.isArray(x.c) && x.c.length && x.c.every(function(c){ return ctry.indexOf(c) >= 0; });
+    return x && x.system && x.service && x.p && STD_COMPAT_STATUS[x.status] && areas.indexOf(x.area) >= 0 && pas.indexOf(x.pa) >= 0 && Array.isArray(x.c) && x.c.length && x.c.every(function(c){ return ctry.indexOf(c) >= 0; }) && !!STD_COMPAT_DIR[x.dir];
   }).map(function(x){
     var s = STD_COMPAT_STATUS[x.status];
     var proof = (STD_COMPAT_PROOF[x.proof] || 'Not yet') + (x.proof_at ? ' ' + x.proof_at : '') + (x.proof_ref ? ' — ' + x.proof_ref : '');
     return { a: x.area, pa: x.pa, k: 'compat', c: x.c.slice(), p: x.p, m: s === 'live' ? undefined : (x.m || x.roadmap || 'Not built yet'),
       g: 'Compatibility', n: x.system + ' — ' + x.service, w: (STD_COMPAT_FIT[x.fit] || x.fit || '') + ' · ' + x.service,
       ex: '—', s: s, note: x.roadmap || x.note || undefined, at: 'Settings › Integrations', go: 'integrations',
-      proof: proof, fit: STD_COMPAT_FIT[x.fit] || x.fit, compat: x.id };
+      proof: proof, fit: STD_COMPAT_FIT[x.fit] || x.fit, compat: x.id,
+      dir: x.dir, dirWords: STD_COMPAT_DIR[x.dir][2].replace('{s}', x.system), code: x.code || '', test: x.test || '' };
   });
 }
 

@@ -90,6 +90,7 @@
     /* SAVED VIEWS as tabs above the tools row: one tap sets the list's own filters (no second filter engine) */
     '.cbl .cbl-views{display:flex;align-items:center;gap:6px;padding:2px 20px 6px;background:var(--cl-page);overflow-x:auto;scrollbar-width:none}',
     '.cbl .cbl-views::-webkit-scrollbar{display:none}',
+    '.cbl .cbl-title .cbl-views.in-title{padding:0;background:none;overflow:visible;flex-wrap:wrap}',
     '.cbl .cbl-vtab{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;height:30px;border:1px solid var(--cl-line);background:var(--cl-card);border-radius:999px;padding:0 12px;font-size:calc(13px * var(--k,1));font-weight:600;white-space:nowrap;margin:0;color:var(--cl-ink)}',
     '.cbl .cbl-vtab .n{font-family:var(--cl-num);font-size:calc(11.5px * var(--k,1));color:var(--cl-muted);font-weight:500}',
     '.cbl .cbl-vtab[aria-selected="true"]{background:var(--cl-ink);border-color:var(--cl-ink);color:var(--cl-page)}',
@@ -144,6 +145,8 @@
     '.cbl .cbl-hc .sort{border:0;background:none;padding:0;font:inherit;color:inherit;letter-spacing:inherit;text-transform:inherit;display:inline-flex;gap:3px;align-items:center}',
     '.cbl .cbl-hc .arrow{color:var(--cl-blue);font-size:calc(11px * var(--k,1))}',
     '.cbl .cbl-rz{position:absolute;inset-inline-end:-4px;top:0;bottom:0;width:9px;cursor:col-resize;z-index:2;border:0;background:none;padding:0;touch-action:none}',
+    /* T3-COMPAT: the LAST column's handle stays inside the grid — hung 4 px past its edge it gave every filled list a 4 px sideways scroll (rule 13) */
+    '.cbl .cbl-hc:last-child > .cbl-rz{inset-inline-end:0}',
     '.cbl .cbl-rz::after{content:"";position:absolute;inset-inline-start:4px;top:6px;bottom:6px;width:1px;background:var(--cl-line)}',
     '.cbl .cbl-rz:hover::after,.cbl .cbl-rz:focus-visible::after,.cbl .cbl-rz.drag::after{width:3px;inset-inline-start:3px;background:var(--cl-blue)}',
     '.cbl .cbl-row{display:grid;align-items:center;border-bottom:1px solid var(--cl-hair);cursor:pointer;position:relative}',
@@ -430,8 +433,11 @@
     } else {
       out += chips.map(chipHTML).join('') + notes.map(noteHTML).join('');
     }
+    /* T3-COMPAT: views.inTitle — the saved-view tabs sit in the title row, after the chips, instead of a row of their own (a head that must stay short) */
+    if (I.o.views && I.o.views.inTitle) out += '<span class="cbl-views in-title" data-cbl-part="views" role="tablist" aria-label="' + esc(T(I, 'Views')) + '"></span>';
     if (typeof h.slot === 'function') out += '<span class="cbl-slot" data-cbl-part="slot" style="margin-inline-start:auto;display:flex;align-items:center;gap:8px"></span>';
     box.innerHTML = out;
+    if (I.o.views && I.o.views.inTitle) paintViews(I);
     if (typeof h.slot === 'function') { var sl = box.querySelector(':scope > .cbl-slot'); if (sl) safe(function () { h.slot(sl); }); }
   }
   function periodPop(I, p) {
@@ -498,8 +504,9 @@
     return ka.length === kb.length && kb.every(function (k) { return a[k] === b[k]; });
   }
   function paintViews(I) {
-    var vs = I.o.views && I.o.views.items, box = $(I, ':scope > .cbl-views');
+    var vs = I.o.views && I.o.views.items, inT = !!(I.o.views && I.o.views.inTitle), box = $(I, inT ? ':scope > .cbl-title > .cbl-views' : ':scope > .cbl-views');
     if (!vs || !vs.length || remote(I)) { if (box) box.remove(); return; }
+    if (!box && inT) return;   /* no title row painted (yet): paintTitle paints the tabs with it */
     if (!box) {
       box = root.document.createElement('div'); box.className = 'cbl-views'; box.setAttribute('data-cbl-part', 'views'); box.setAttribute('role', 'tablist'); box.setAttribute('aria-label', T(I, 'Views'));
       var tl = $(I, ':scope > .cbl-tools'), l = $(I, ':scope > .cbl-list'); I.el.insertBefore(box, tl || l);

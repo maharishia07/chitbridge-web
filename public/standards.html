@@ -76,6 +76,8 @@ button,a,select,input{font:inherit;color:inherit} button{cursor:pointer} a{text-
   #std_list .cbl-row .kind{white-space:nowrap;overflow-wrap:normal}
   #std_list .cbl-hc.r{justify-content:flex-start!important}
   #std_list .cbl-row .kind{margin-inline-start:0}
+  #std_list[data-works] .cbl-row .cbl-cell{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+  #std_list[data-works] .cbl-row .st{white-space:normal}
 }
 .c-live,.c-live b{color:var(--green)} .c-part,.c-part b{color:var(--amber-i)} .c-plan,.c-plan b{color:var(--muted)}
 /* in a row the WORD is ink (AA on every theme and on the zebra stripe); the symbol carries the colour */
@@ -148,6 +150,10 @@ abbr.gl:focus-visible{outline:2px solid var(--blue,#3F66A6);outline-offset:1px}
   .who .shop{display:none}
   .who .home{width:34px;padding:0;justify-content:center}
   .who .home .hw{display:none}
+  /* T3-COMPAT: the view tabs share the title row's second line with ‹ ⌂ 🔔 avatar — a symbol each on a phone (aria-label keeps the words), the tab counts on a laptop only */
+  .who .back{width:34px;padding:0;justify-content:center}
+  .who .back .bw{display:none}
+  #std_list .cbl-vtab .n{display:none}
   .mx-body{padding:12px 16px 20px}
   .sd{grid-template-columns:minmax(0,1fr);gap:2px}
   .sd dd{margin-bottom:6px}
@@ -239,6 +245,10 @@ function countryGroup(c){
 }
 const GROUP_ORDER = STD_AREAS.map((a) => a[0]).concat(STD_KINDS.map((k) => k[0]), STD_COUNTRIES.filter((c) => c[0] !== 'GLOBAL').map((c) => c[1]),
   STD_COUNTRIES.filter((c) => c[0] !== 'GLOBAL').map((c) => c[1] + ' and global'), ['Global', STD_COUNTRIES.filter((c) => c[0] !== 'GLOBAL').map((c) => c[1]).join(', ')]);   /* STDREG1: any "<country> and global" (Xero: Australia and global) */
+/* T3-COMPAT: the "Works with" tab is a saved view of THIS list (CBList views) — Kind = Compatibility, nothing else; #works-with opens it (Home's Compatibility card) */
+const WORKS = { key: 'works-with', label: 'Works with', filt: { kind: 'compat' }, tip: 'Every outside system we work with: what moves, which way, and its proof' };
+function worksOn(){ var f = nowFilt(), k = Object.keys(f).filter((x) => f[x]); return k.length === 1 && f.kind === 'compat'; }
+function dirCell(x){ var d = STD_COMPAT_DIR[x.r.dir]; return d ? '<span class="st" title="' + esc(x.r.dirWords) + '" data-testid="std-dir"><span aria-hidden="true">' + esc(d[0]) + '</span> ' + esc(d[1]) + '</span>' : '—'; }
 function cols(){
   return [
     { key: 'what', label: 'What it does for you', prio: 1, w: 250, sort: 'what', html: true, value: (x) => x.r.p,
@@ -253,11 +263,13 @@ function cols(){
     { key: 'parea', label: 'Product area', prio: 4, w: 160, sort: 'parea', cell: (x) => PAREA(x.r) },
     { key: 'at', label: 'Where in the app', prio: 5, w: 220, cell: (x) => x.r.at || '—' },
     { key: 'ex', label: 'Clause or example', prio: 6, w: 230, mono: true, cell: (x) => plain(x.r.ex) || '—' },
+    /* T3-COMPAT: in the Works with tab, which way it moves sits pinned beside the status (a symbol AND a word); the other views do not carry it */
+  ].concat(worksOn() ? [{ key: 'dir', label: 'Moves', pin: 'end', w: 120, sort: 'dir', html: true, value: (x) => x.r.dir || '', cell: dirCell }] : []).concat([
     /* the status: a symbol AND a word AND a colour, never colour alone; pinned at the end like an amount */
     { key: 'status', label: 'Status', pin: 'end', w: 120, sort: 'status', html: true, value: (x) => SORD[x.r.s],
       cell: (x) => { var more = x.r.m ? x.r.m : x.r.limit ? 'limit: ' + x.r.limit : '', t = STATUS(x.r) + (more ? ' — ' + more : '');
         return '<span class="st st-' + esc(x.r.s) + '" title="' + esc(t) + '"><span aria-hidden="true">' + esc(lab(STD_STATUS, x.r.s, 2)) + '</span> ' + esc(STATUS(x.r)) + '</span>' + (more ? '<span class="stm" data-testid="std-status-more"> — ' + esc(more) + '</span>' : ''); } },
-  ];
+  ]);
 }
 const byText = (f) => (a, b) => String(f(a)).localeCompare(String(f(b)), undefined, { numeric: true, sensitivity: 'base' });
 const SORTS = [
@@ -268,6 +280,7 @@ const SORTS = [
   { key: 'where', label: 'Applies in', cmp: byText((x) => COUNTRY(x.r)) },
   { key: 'area', label: 'Area', cmp: byText((x) => AREA(x.r)) },
   { key: 'parea', label: 'Product area', cmp: byText((x) => PAREA(x.r)) },
+  { key: 'dir', label: 'Moves', cmp: byText((x) => x.r.dir || '~') },
 ];
 
 /* what a row opens to: everything a buyer or CA checks, nothing the row already shows */
@@ -281,7 +294,9 @@ function nextOf(x){
   if (r.eq) h += '<dt>Elsewhere</dt><dd>' + esc(r.eq) + '</dd>';
   if (shown.indexOf('at') < 0 && r.at) h += '<dt>In the app</dt><dd>' + esc(r.at) + '</dd>';
   if (r.why) h += '<dt>Why it matters</dt><dd>' + rich(r.why) + '</dd>';
-  if (r.k === 'compat') h += '<dt>Fit</dt><dd>' + esc(r.fit || '') + '</dd><dt>Proof</dt><dd data-testid="std-proof-' + x.ix + '">' + esc(r.proof || 'Not yet') + '</dd>';
+  if (r.k === 'compat') h += '<dt>Moves</dt><dd data-testid="std-moves-' + x.ix + '">' + esc(r.dirWords || '') + '</dd><dt>Fit</dt><dd>' + esc(r.fit || '') + '</dd><dt>Proof</dt><dd data-testid="std-proof-' + x.ix + '">' + esc(r.proof || 'Not yet') + '</dd>'
+    + '<dt>Code</dt><dd data-testid="std-code-' + x.ix + '">' + (r.code ? '<code>chitbridge-api ' + esc(r.code) + '</code>' : 'Not built yet') + '</dd>'
+    + '<dt>Test</dt><dd data-testid="std-test-' + x.ix + '">' + (r.test ? '<code>chitbridge-api ' + esc(r.test) + '</code>' : r.s === 'live' ? 'No test in the suite yet — the proof above is the run' : 'No test yet') + '</dd>';
   /* CPS1: the Country Standard's row opens to the GENERATED matrix — every member × every registered pack, read from the engines' file, never typed here */
   if (r.matrix === 'country') h += '<dt>Matrix</dt><dd data-testid="std-country-matrix">' + countryMatrixHTML() + '</dd>';
   h += '<dt>Source</dt><dd>' + (r.k === 'compat' ? 'The compatibility register (data/compat.json), shared with the Compatibility lab'
@@ -319,7 +334,9 @@ function statementOf(r){
   if (r.m) t.push('Missing: ' + r.m);
   if (r.note && r.s !== 'live') t.push('In full: ' + plain(r.note));
   if (r.eq) t.push('Elsewhere: ' + r.eq);
+  if (r.dirWords) t.push('Moves: ' + r.dirWords);
   if (r.proof) t.push('Proof: ' + r.proof);
+  if (r.k === 'compat') t.push('Code: ' + (r.code ? 'chitbridge-api ' + r.code : 'not built yet') + ' · Test: ' + (r.test ? 'chitbridge-api ' + r.test : 'none yet'));
   t.push('Checked ' + checkedLabel() + ' (ChitBridge standards register)');
   return t.join('\n');
 }
@@ -339,7 +356,7 @@ function fallbackCopy(t, done){
 /* ═════ the title row's right end (the unit's head.slot): ‹ back · shop · Home · the avatar ═════ */
 function slot(el){
   var s = session(), name = s ? (s.entity || s.name || '') : '';
-  el.innerHTML = '<span class="who"><button type="button" class="back" data-act="back" data-testid="std-back" aria-label="Back to the matrix">‹ Matrix</button>'
+  el.innerHTML = '<span class="who"><button type="button" class="back" data-act="back" data-testid="std-back" aria-label="Back to the matrix">‹<span class="bw">&nbsp;Matrix</span></button>'
     + (name ? '<span class="shop" data-testid="shop-name">' + esc(name) + '</span>' : '')
     + (s ? '<span id="cb-bell-slot" class="bellslot" data-testid="bell-slot"></span>' : '')
     + '<a class="home" href="/" data-testid="std-home" aria-label="Home">⌂<span class="hw">&nbsp;Home</span></a><span id="cb-avatar" data-cb-avatar data-testid="avatar-slot"></span></span>';
@@ -360,9 +377,10 @@ function mountList(){
     key: 'standards', rows: ROWS, id: (x) => 's' + x.ix, rowTid: (x) => 'std-row-' + x.ix, fill: false,
     columns: cols, defaultCols: DEFAULT_COLS, cardMax: 3, store: choices,
     head: () => ({ title: 'Standards', chips: [{ text: 'checked ' + checkedLabel(), tid: 'std-checked' }], slot: slot }),
-    search: (x) => { var r = x.r; return [r.p, r.n, r.w, r.m, r.limit, r.note, r.at, plain(r.ex), r.eq, AREA(r), PAREA(r), KIND(r), COUNTRY(r), STATUS(r), r.g].join(' '); },
+    search: (x) => { var r = x.r; return [r.p, r.n, r.w, r.m, r.limit, r.note, r.at, plain(r.ex), r.eq, AREA(r), PAREA(r), KIND(r), COUNTRY(r), STATUS(r), r.g, r.dirWords, r.code, r.test].join(' '); },
     searchHint: 'Search standards',
     filters: FILTERS, sorts: SORTS,
+    views: { tid: 'std-view', inTitle: true, items: [{ key: 'all', label: 'All', filt: {}, tip: 'Every standard and every system we work with' }, WORKS] },
     group: { options: [['area', 'Area'], ['country', 'Country'], ['kind', 'Kind'], ['none', 'None']], default: 'area', tid: 'std', by: groupBy, order: GROUP_ORDER,
       fig: (rows) => { var n = countOf(rows.map((x) => x.r)); return rows.length + ' · ● ' + n.live + ' ◐ ' + n.part + ' ○ ' + n.plan; } },
     next: nextOf,
@@ -371,6 +389,10 @@ function mountList(){
       { id: 'copy', label: 'Copy for a buyer or CA', tid: 'std-copy', run: (x) => copyText(statementOf(x.r)) },
     ],
     empty: { title: 'No standards on the register', sub: 'The register could not be read.' },
+    /* T3-COMPAT: the Works with tab when data/compat.json could not be read says so in words, never "nothing matches"; Try again reloads the page */
+    state: () => (COMPAT_ERR && worksOn() ? 'error' : undefined),
+    error: { title: 'The Works with list could not be read.', sub: 'The standards are all here. Reload to try again.' },
+    onRetry: () => location.reload(),
   });
 }
 
@@ -412,11 +434,12 @@ function paintMatrix(){
 }
 let LAST = '', GLAST = '';
 /* the list's columns share the width: weights per column, set on the host; a person who dragged a width keeps their own (no data-fill) */
-const WEIGHT = { what: 4, std: 2.4, kind: 1.6, where: 1.3, area: 1.3, parea: 1.4, at: 2, ex: 2.2, status: 3.2 };
+const WEIGHT = { what: 4, std: 2.4, kind: 1.6, where: 1.3, area: 1.3, parea: 1.4, at: 2, ex: 2.2, dir: 1.9, status: 3.2 };
 let FITKEY = '';
 function fit(){
   var st = LIST && LIST.state(), host = $('std_list'); if (!st) return;
-  var keys = st.cols.concat(['status']), mine = Object.keys(st.widths || {}).length > 0, key = keys.join(',') + '|' + mine;
+  var keys = st.cols.concat(worksOn() ? ['dir', 'status'] : ['status']), mine = Object.keys(st.widths || {}).length > 0, key = keys.join(',') + '|' + mine;
+  host.toggleAttribute('data-works', worksOn());   /* T3-COMPAT: the Works with tab is short (14 rows) — its cells wrap, so no word is cut to … */
   if (key === FITKEY) return; FITKEY = key;
   if (mine){ host.removeAttribute('data-fill'); return; }
   host.style.setProperty('--std-tpl', keys.map((k) => 'minmax(0,' + (WEIGHT[k] || 1.5) + 'fr)').join(' ')); host.setAttribute('data-fill', '1');
@@ -452,8 +475,17 @@ function watch(){
   var host = $('std_list');
   new MutationObserver(() => { if (!LIST) return; fit();
     if (curDim() !== GLAST){ GLAST = curDim(); setFilters({}); paintMatrix(); return; }   /* Group by changed: the table follows, with a clean slate as the old Count by had */
-    var now = JSON.stringify(nowFilt()) + '|' + LIST.state().q; if (now !== LAST) paintMatrix(); }).observe(host, { childList: true, subtree: true, characterData: true });
+    var now = JSON.stringify(nowFilt()) + '|' + LIST.state().q; if (now !== LAST){ paintMatrix(); worksHash(); } }).observe(host, { childList: true, subtree: true, characterData: true });
 }
+
+/* T3-COMPAT: the address says the tab — #works-with while the Works with view is lit, so the link can be shared; any other filter drops it */
+function worksHash(){
+  var want = worksOn() ? '#works-with' : '';
+  if (location.hash === want || (!want && !location.hash)) return;
+  try{ history.replaceState(null, '', location.pathname + location.search + want); }catch(e){ console.warn('standards: the address could not follow the tab', e); }
+}
+function openWorks(){ clearSearch(); setFilters(WORKS.filt); $('app').setAttribute('data-view', 'list'); paintMatrix(); }
+window.addEventListener('hashchange', () => { if (location.hash === '#works-with' && !worksOn()) openWorks(); });
 
 /* ═════ the two sheets — their content is the register's own renderers, called once ═════ */
 function openSheet(which){
@@ -461,11 +493,11 @@ function openSheet(which){
   d.innerHTML = '<div class="sh-head"><h2>' + (W ? 'Why follow standards' : 'One record, every standard') + '</h2><button type="button" class="sh-x" data-act="sheetx" data-testid="std-sheet-x" aria-label="Close">✕</button></div>'
     + '<div class="sh-body" data-testid="std-sheet-' + which + '">' + stdGloss(W ? stdWhyHTML({ compact: false }) : stdRecordHTML({ compact: false })) + '</div>';
   if (!d.open){ try{ d.showModal(); }catch(_){ d.setAttribute('open', ''); } }
-  try{ history.replaceState(null, '', '?sheet=' + which); }catch(_){}
+  try{ history.replaceState(null, '', '?sheet=' + which + location.hash); }catch(_){}
 }
 function closeSheet(){
   var d = $('sheet'); try{ d.close(); }catch(_){ d.removeAttribute('open'); } d.innerHTML = '';
-  try{ history.replaceState(null, '', location.pathname); }catch(_){}
+  try{ history.replaceState(null, '', location.pathname + location.hash); }catch(_){}
 }
 $('sheet').addEventListener('cancel', (e) => { e.preventDefault(); closeSheet(); });
 $('sheet').addEventListener('click', (e) => { if (e.target === $('sheet')) closeSheet(); });
@@ -505,6 +537,7 @@ function start(){
   var q = new URLSearchParams(location.search);
   if (q.get('sheet') === 'why' || q.get('sheet') === 'record') openSheet(q.get('sheet'));
   if (q.get('view') === 'list') $('app').setAttribute('data-view', 'list');
+  if (location.hash === '#works-with') openWorks();   /* T3-COMPAT: Home's Compatibility card */
   /* CPS1: ?std=country (from Country setup) — the list, searched down to the Country Standard's row through the unit's own search box */
   if (q.get('std') === 'country'){ var cq = $('std_list').querySelector('[data-cbl-q]'); if (cq){ cq.value = 'Country Standard'; cq.dispatchEvent(new Event('input', { bubbles: true })); } $('app').setAttribute('data-view', 'list'); }
 }
