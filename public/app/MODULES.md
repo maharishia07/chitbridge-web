@@ -15,7 +15,7 @@ something needs them before any navigation happens.
 router renders a placeholder until `_capLoading` clears, which is the only reason the
 old duplicate `networkScreen()` in app.html was safe to delete.
 
-## Capabilities (47)
+## Capabilities (52)
 
 | file | loading · nav key | what it is |
 |---|---|---|
@@ -29,6 +29,8 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-cmdb.js` | lazy · on demand |  |
 | `cap-compare.js` | — | cap-compare.js — PARALLEL RUN (PR1, 2026-10-13): CB Accounts › Books › Parallel run. An auditor keeps the shop's books in Tally (IN) or Xero / QuickBo |
 | `cap-connector.js` | lazy · connectors | IoT / ERP connector MANAGEMENT (lazy; loaded via ensureCap('connector') on INVOCATION) |
+| `cap-connectors.js` | — | CONNECTORS: what you can attach (the catalogue, with the server's may/why per country), who has checked in, and who |
+| `cap-counters.js` | — | COUNTERS & KEYS: the shop's counters (the register), the PCs ever paired, and the keys other systems sign in with — |
 | `cap-country.js` | lazy · on demand | cap-country.js — COUNTRY SETUP (CS1, 2026-10-12): the step after registration, before the books open (lazy; ensureCap('country') → #/country) |
 | `cap-crm-calls.js` | — | cap-crm-calls.js — CB CRM L2: THE CALL DESK. The Calls tab (a CBList mount, the Follow-ups list's own look): today's queue, one-tap outcome buttons |
 | `cap-crm-chits.js` | — | cap-crm-chits.js — THE CHITS BEHIND THE HOME RAIL: In · Out · Stuck, stuck first (black-box H1 · H4 · H10) |
@@ -48,12 +50,15 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-iddocs.js` | lazy · on demand |  |
 | `cap-intake.js` | lazy · intake | THE INTAKE INBOX. Lazy via ensureCap('intake') |
 | `cap-legend.js` | lazy · on demand | the 🔑 LEGEND capability: a live map of "what we serve" |
+| `cap-locale.js` | — | LOCALISATION: language · formats · numerals · calendar · hour cycle · first day · time zone · currency, with the live preview |
 | `cap-match.js` | lazy · match | THE THREE-WAY MATCH (lazy; ensureCap('match')) |
 | `cap-messages.js` | lazy · messages | REPLIES: every external conversation that still wants you, across every chit. Lazy |
 | `cap-move-in.js` | — | cap-move-in.js — MOVE IN FROM XERO / QUICKBOOKS (IM1, 2026-10-12): CB Accounts › Setup › Move in. One entry for the five exports a practice |
 | `cap-network-member.js` | — |  |
 | `cap-network.js` | lazy · network | DESIGN-FIRST network builder. Lazy via ensureCap('network') |
 | `cap-period.js` | — | cap-period.js — MONTH & YEAR END on CB Accounts: Closing stock · Assets & depreciation · Accruals & recurring · GST close & pay · Year close |
+| `cap-plan.js` | — | PLAN & USAGE: the shop's plan as the SERVER records it (identities.plan · the constitution's plan_menu limits · chits today — |
+| `cap-policy.js` | — | POLICY: the shop's business rules (per-entity policy flags, server-persisted, b130) — ONE implementation painted in two |
 | `cap-readiness.js` | lazy · readiness | TRADE capability (lazy; ensureCap('readiness')). Two tabs: |
 | `cap-register.js` | lazy · on demand | THE REGISTER. Lazy (ensureCap('register')) |
 | `cap-repeat.js` | lazy · on demand | cap-repeat.js — REPEAT SUPPLY as an AGREEMENT both parties hold (round RI1, 2026-10-12): CB Finance › Repeat supply (the seller's list), |
@@ -128,4 +133,4 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 
 ---
 
-*101 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*106 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*

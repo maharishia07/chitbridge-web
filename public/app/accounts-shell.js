@@ -30,6 +30,7 @@ var CB_HOMES = {
   ledger: '/accounts.html', network: '/network.html', coassists: '/employees.html',
   profile: '/know-your-business.html',                 /* the avatar's own choice for Profile (avatar.js, H34) */
   shop: '/settings.html#/shop', country: '/settings.html#/country', settings: '/settings.html',  /* CB Settings (SET1): Your shop · Country setup */
+  counters: '/settings.html#/counters', connectors: '/settings.html#/connectors', policy: '/settings.html#/policy', locale: '/settings.html#/policy', plan: '/settings.html#/plan',   /* CB Settings (T3-SETTINGS): Counters & keys · Connectors · Policy & Localisation · Plan & usage */
   chit: '/crm.html#/chit/'                             /* + the chit id: the chit PAGE in CB CRM (CRM2) — chitPageHref(id) below */
 };
 /* the sheet's "Open page" (chit-sheet.js `page` → openChitPage on each ledger page): the chit page in CB CRM, never the workshop */
@@ -72,6 +73,10 @@ var CB_SHOP_EP = {
   register:         {m:"POST",  p:"/api/entities/register",              ok:"✓"},   // OTP request (register doubles as owner login)
   ownerVerify:      {m:"POST",  p:"/api/entities/verify",                ok:"✓"},   // verify OTP → token
   constitutions:    {m:"GET",   p:"/api/entities/constitutions",         ok:"y"},   // public: the verticals to choose at sign-up
+  /* T3-SETTINGS: the policy flags and the billed usage — CB Settings › Policy and › Plan & usage read them; MOVED from app.html's EP (cap-catsetup · cap-policy · cap-plan call them) */
+  policyGet:        {m:"GET",   p:"/api/entities/policy",               ok:"✓"},   // b130 — per-entity flags, on the ENTITY; + may[key] (who may change, T3-SETTINGS)
+  policySet:        {m:"PATCH", p:"/api/entities/policy",               ok:"✓"},
+  entityUsage:      {m:"GET",   p:"/api/entities/usage",                ok:"✓"},   // what this entity has been BILLED for (the usage ledger)
 };
 
 /* ── the chit sheet's three calls (chit-sheet.js reads one chit, moves its step, says what a bill's goods are for) —

@@ -53,6 +53,10 @@ Register: `public/app/screen-id.js` (declared rows, merged into `CBSCREENS`) + `
 | SET001 | Your shop | Settings | /settings.html | /settings.html#/shop · Settings › Your shop |
 | SET002 | Country | Settings | /settings.html | /settings.html#/country · Settings › Country |
 | SET003 | New shop | Settings | /settings.html | the sign-in window › New shop? Register |
+| SET004 | Counters & keys | Settings | /settings.html | /settings.html#/counters · Settings › Counters & keys |
+| SET005 | Connectors | Settings | /settings.html | /settings.html#/connectors · Settings › Connectors |
+| SET006 | Policy & Localisation | Settings | /settings.html | /settings.html#/policy · Settings › Policy & Localisation |
+| SET007 | Plan & usage | Settings | /settings.html | /settings.html#/plan · Settings › Plan & usage |
 | EMP001 | People | CB Employees | /employees.html | /employees.html · CB Employees › People |
 | NET001 | My network | Network | /network.html | /network.html · Network › My network |
 | NET002 | Offers | Network | /network.html | /network.html · Network › Offers |
