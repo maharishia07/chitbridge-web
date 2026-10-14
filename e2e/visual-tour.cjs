@@ -204,7 +204,7 @@ async function main() {
   await ctx.setDefaultTimeout(8000);
   let page = await ctx.newPage(); await page.setViewportSize(viewport);
   /* the bucket the listeners fill; swapped at every state */
-  let bucket = { console: [], failed: [], pageerr: [], dialogs: [] };
+  let bucket = { console: [], failed: [], pageerr: [], dialogs: [], reach: [] };   /* reach = the TOUR could not get somewhere (a tab it could not press) — not the product's error */
   const wire = (p) => {
     p.on('console', (m) => { if (m.type() === 'error' && !/fonts\.(googleapis|gstatic)|ERR_FAILED$|Failed to load resource: net::ERR_FAILED/.test(m.text())) bucket.console.push(m.text().slice(0, 200)); });
     p.on('pageerror', (e) => bucket.pageerr.push(String(e && e.message || e).slice(0, 200)));
@@ -213,12 +213,12 @@ async function main() {
     p.on('dialog', (d) => { bucket.dialogs.push(d.type() + ': ' + d.message().slice(0, 80)); d.dismiss().catch(() => {}); });
   };
   wire(page);
-  const take = () => { const b = bucket; bucket = { console: [], failed: [], pageerr: [], dialogs: [] }; return b; };
+  const take = () => { const b = bucket; bucket = { console: [], failed: [], pageerr: [], dialogs: [], reach: [] }; return b; };
 
   const settle = async (p, ms) => { try { await p.waitForLoadState('load', { timeout: 10000 }); } catch (_) { /* a slow page is shot as it is */ } await p.waitForTimeout(ms || 900); };
   const go = async (u) => {
     let status = 0;
-    try { const r = await page.goto(BASE + u, { waitUntil: 'domcontentloaded', timeout: 20000 }); status = r ? r.status() : 0; } catch (e) { bucket.pageerr.push('navigation: ' + String(e.message).split('\n')[0]); }
+    try { const r = await page.goto(BASE + u, { waitUntil: 'domcontentloaded', timeout: 20000 }); status = r ? r.status() : 0; } catch (e) { bucket.reach.push('navigation: ' + String(e.message).split('\n')[0]); }
     await settle(page, 1200);
     if (declineNow && await page.locator('[data-testid="signin-later"]:visible').count()) { await page.locator('[data-testid="signin-later"]').first().click({ timeout: 3000 }).catch(() => {}); await page.waitForTimeout(400); }
     return status;
@@ -245,7 +245,7 @@ async function main() {
     await page.evaluate(scrollStep, 0).catch(() => {});
     const b = take();
     const st = Object.assign({ nn: n, run: RUN, part: PART, theme: THEME, width: WIDTH, page: file, code: id.code, name: id.name || fr.h1 || fr.title || file,
-      url: page.url().replace(BASE, ''), step: step || 'top', kind: 'screen', shots,
+      url: page.url().replace(BASE, ''), step: step || 'top', kind: 'screen', shots, reach: b.reach,
       console: b.console.concat(b.pageerr.map((x) => 'pageerror: ' + x)), failed: b.failed, dialogs: b.dialogs,
       sideways: a.scroll, clipped: a.clip, underBar: Array.from(new Set(ub.concat(a.cover))).slice(0, 12), appLinks: a.app, budget: a.budget,
       contrast: pairs.filter((x) => !x.grad && x.ratio < x.need).map((x) => x.ratio + ':1 (need ' + x.need + ') "' + x.text + '" ' + x.tag).slice(0, 15),
@@ -359,7 +359,8 @@ async function main() {
 
   /** PART B: the page's own tabs / sections (hash links, role=tab, the sidebar) */
   async function sectionsOf(file) {
-    return page.evaluate(([file, TABS, MAX]) => {
+    return page.evaluate(([file, TABS, MAX, dangerSrc]) => {
+      const DANGER = new RegExp(dangerSrc, 'i');
       const vis = (el) => { const r = el.getBoundingClientRect(); return r.width > 1 && r.height > 1 && getComputedStyle(el).visibility !== 'hidden'; };
       const out = [], seen = new Set();
       document.querySelectorAll('a[href]').forEach((a) => {
@@ -371,11 +372,12 @@ async function main() {
       document.querySelectorAll(TABS).forEach((b, i) => {
         if (!vis(b) || b.closest('.cbsh-hdr')) return; const l = (b.innerText || '').replace(/\s+/g, ' ').trim().slice(0, 40); if (!l || seen.has('btn:' + l)) return;
         /* a group header or a collapse toggle is not a section — and its state is kept, so clicking it would hide the next tabs */
+        if (DANGER.test(l + ' ' + (b.dataset.testid || ''))) return;   /* the tour never pays, sends or saves — not even through a "tab" (the counter's Pay ›) */
         if (b.hasAttribute('aria-expanded') || /grp|group|toggle|collapse/i.test(String(b.className) + ' ' + (b.dataset.testid || '')) || /^(collapse|expand|show more|less)$/i.test(l)) return;
         seen.add('btn:' + l); out.push({ how: 'tab', label: l, testid: b.dataset.testid || '', idx: i });
       });
       return out.slice(0, MAX);
-    }, [file, TABS, MAX_SECTIONS]).catch(() => []);
+    }, [file, TABS, MAX_SECTIONS, DANGER.source]).catch(() => []);
   }
 
   /* a small seeded random — the same run picks the same operations (a finding reproduces) */
@@ -464,7 +466,7 @@ async function main() {
         /* the same control, found again after the reload by its place among the page's tabs (a test id when it has one) */
         await page.evaluate(([TABS, idx]) => { document.querySelectorAll('[data-tour-sec]').forEach((e) => e.removeAttribute('data-tour-sec')); const el = document.querySelectorAll(TABS)[idx]; if (el) el.setAttribute('data-tour-sec', '1'); }, [TABS, s.idx]).catch(() => {});
         const b = s.testid ? page.locator('[data-testid="' + s.testid + '"]:visible').first() : page.locator('[data-tour-sec]').first();
-        await b.click({ timeout: 3000 }).catch((e) => { bucket.pageerr.push('tab "' + s.label + '": ' + String(e.message).split('\n')[0].slice(0, 100)); });
+        await b.click({ timeout: 3000 }).catch((e) => { bucket.reach.push('tab "' + s.label + '" could not be pressed: ' + String(e.message).split('\n')[0].slice(0, 100)); });
         await settle(page, 700);
       }
       await screenState(page.url().replace(BASE, ''), slug(s.label || s.hash), { section: s.label || s.hash, from: st.nn });
@@ -486,6 +488,9 @@ function report() {
   runs.forEach((r) => r.states.forEach((s) => { const k = r.part + '|' + r.theme + '|' + r.width + '|' + s.page; if (!latest.has(k) || latest.get(k) < r.at) latest.set(k, r.at); }));
   const states = [].concat(...runs.map((r) => r.states.filter((s) => latest.get(r.part + '|' + r.theme + '|' + r.width + '|' + s.page) === r.at)));
   fs.writeFileSync(path.join(OUT, 'tour.json'), JSON.stringify({ at: new Date().toISOString(), runs: runs.map((r) => ({ run: r.run, base: r.base, at: r.at, states: r.states.length, refused: r.refused })), states }, null, 1));
+  /* what the LOCAL stack causes and production does not — listed with its reason, never ranked */
+  const KNOWN = [{ re: /^404 GET \/api\/state\b/, why: 'the counter asks the shop-PC program\'s /api/state when it is served over http (public/till.html:6490 skips it on https) — a local-stack effect' }];
+  const known = new Map(), reach = [];
   const F = new Map();   /* key → { rank, what, code, page, shots[], repro, n, runs:Set } */
   const add = (rank, key, what, s, repro) => {
     const k = rank + '|' + key; const f = F.get(k) || { rank, what, code: s.code, page: s.page, shots: [], repro, n: 0, runs: new Set() };
@@ -497,7 +502,11 @@ function report() {
   for (const s of states) {
     /* "Failed to load resource" carries no address — the same request is in s.failed WITH its address, so it is counted there */
     for (const c of (s.console || []).filter((x) => !/^Failed to load resource/.test(x))) add('broken', s.page + '|console|' + c.slice(0, 70), 'console error on ' + s.page + ': `' + c.slice(0, 140).replace(/`/g, "'") + '`', s, how(s));
-    for (const q of s.failed || []) add(/^(5\d\d|404|FAILED)/.test(q) ? 'broken' : 'inconsistent', s.page + '|req|' + q.replace(/\?.*/, '').slice(0, 80), 'request failed on ' + s.page + ': `' + q.slice(0, 120) + '`', s, how(s));
+    /* a run written before reach had its own bucket kept the tour's tab timeouts as page errors — they are reach, not the product */
+    s.reach = (s.reach || []).concat((s.console || []).filter((x) => /^pageerror: (tab "|navigation:)/.test(x)).map((x) => x.replace(/^pageerror: /, '')));
+    s.console = (s.console || []).filter((x) => !/^pageerror: (tab "|navigation:)/.test(x));
+    (s.reach || []).forEach((x) => reach.push({ page: s.page, code: s.code, what: x, shot: (s.shots || [])[0] || '—', run: s.run }));
+    for (const q of (s.failed || []).filter((x) => { const k = KNOWN.find((K) => K.re.test(x)); if (k) { known.set(k.why, (known.get(k.why) || 0) + 1); } return !k; })) add(/^(5\d\d|404|FAILED)/.test(q) ? 'broken' : 'inconsistent', s.page + '|req|' + q.replace(/\?.*/, '').slice(0, 80), 'request failed on ' + s.page + ': `' + q.slice(0, 120) + '`', s, how(s));
     if (s.status >= 400) add('broken', s.page + '|status', s.page + ' answers HTTP ' + s.status, s, how(s));
     if (s.result === 'error') add('broken', s.page + '|err|' + (s.element ? s.element.label : s.step), 'a control errored on ' + s.page + ': "' + (s.element ? s.element.label : s.step) + '" — ' + String(s.error || '').slice(0, 120), s, how(s));
     if (s.result === 'cannot be clicked') add('inconsistent', s.page + '|noclick|' + s.element.label, 'a box on ' + s.page + ' cannot be clicked: "' + String(s.element.label).slice(0, 50) + '" — something covers it, or it is never on screen', s, how(s));
@@ -513,7 +522,9 @@ function report() {
     const bars = {}; (s.underBar || []).forEach((x) => { const b = x.split(' under ').pop(); (bars[b] = bars[b] || []).push(x.split(' under ')[0]); });
     Object.keys(bars).forEach((b) => add('inconsistent', s.page + '|bar|' + b, 'controls covered by `' + b + '` on ' + s.page + ' (they cannot be brought out from under it): ' + bars[b].slice(0, 5).join(', ') + (bars[b].length > 5 ? ' +' + (bars[b].length - 5) : ''), s, how(s)));
     for (const x of s.appLinks || []) add('inconsistent', s.page + '|app|' + x.slice(0, 40), s.page + ' links to the workshop (app.html): `' + x.slice(0, 80).replace(/`/g, "'") + '`', s, how(s));
-    for (const x of s.contrast || []) { const r = parseFloat(x); add(r < 3 ? 'inconsistent' : 'cosmetic', s.page + '|contrast|' + x.replace(/^[\d.]+:1 \(need [\d.]+\) /, '').slice(0, 50), 'contrast ' + x + ' on ' + s.page, s, how(s)); }
+    /* contrast: one finding per page and per kind of element (the lowest first, three examples) */
+    const byTag = {}; (s.contrast || []).forEach((x) => { const t = x.split(' ').pop(); (byTag[t] = byTag[t] || []).push(x); });
+    Object.keys(byTag).forEach((t) => { const xs = byTag[t].sort((a, b) => parseFloat(a) - parseFloat(b)); add(parseFloat(xs[0]) < 3 ? 'inconsistent' : 'cosmetic', s.page + '|contrast|' + t + '|' + s.theme, 'contrast below AA on ' + s.page + ' (' + s.theme + '), `' + t + '`: ' + xs.slice(0, 3).map((x) => x.replace(/ \S+$/, '')).join(' · ') + (xs.length > 3 ? ' +' + (xs.length - 3) : ''), s, how(s)); });
     for (const x of s.clipped || []) add('cosmetic', s.page + '|clip|' + x.slice(0, 30), 'clipped text on ' + s.page + ': "' + x + '"', s, how(s));
     for (const x of s.budget || []) add('cosmetic', s.page + '|budget|' + x.slice(0, 40), 'copy over the text budget on ' + s.page + ': ' + x, s, how(s));
     const fr = s.frame || {};
@@ -554,6 +565,11 @@ function report() {
     if (rows.length > (rank === 'cosmetic' ? 80 : 150)) md.push('', '… ' + (rows.length - (rank === 'cosmetic' ? 80 : 150)) + ' more in tour.json.');
     md.push('');
   }
+  md.push('## Known local-stack effects (not ranked)', '');
+  if (!known.size) md.push('None.'); else known.forEach((n, why) => md.push('- ' + why + ' — ' + n + '×'));
+  md.push('', '## Where the tour could not reach (not ranked — a tab it could not press, a page that would not load)', '');
+  if (!reach.length) md.push('None.'); else reach.slice(0, 40).forEach((r) => md.push('- ' + r.code + ' · ' + r.page + ' (' + r.run + '): ' + r.what.replace(/\|/g, '/')));
+  md.push('');
   md.push('## Empty-state wording across pages', '');
   if (!empties.size) md.push('No empty state was on screen.'); else Array.from(empties.entries()).slice(0, 30).forEach(([t, p]) => md.push('- "' + t + '" — ' + Array.from(p).join(', ')));
   md.push('', '## Inventory (mark the screen inventory)', '', '| code | name | page | visited | issues |', '|---|---|---|---|---|');
