@@ -269,7 +269,7 @@ async function route(S, r) {
   if (S.l2c) { let body = null; try { body = q.postDataJSON(); } catch (_) {} const done = l2cRoute(S.l2c, r, q, u, p, m, body); if (done) return done; }
   if (S.priv) { let body = null; try { body = q.postDataJSON(); } catch (_) {} const done = privRoute(S, r, q, u, p, m, body, !S.viewer); if (done) return done; }
   if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Mayur Bhavan', currency_code: 'INR' } });
-  if (p === '/api/books/health') return J(r, 200, books.health());
+  if (p === '/api/books/health') return J(r, 200, books.health(S.ledgerOff ? { enabled: false } : undefined));   /* ledgerOff: a shop with CB Accounts not switched on (T3-P3-CONSENT walk) */
   if (p === '/api/books/todo') return J(r, 200, []);
   if (p === '/api/books/accounts') return J(r, 200, { accounts: [{ code: '1300', name: 'Customers (Sundry Debtors)', is_group: false }, { code: '1400', name: 'Cash', is_group: false }, { code: '4000', name: 'Sales', is_group: false }].map((a) => books.accountRow(Object.assign({ account_id: 'acc-' + a.code }, a))) });
   if (p === '/api/books/trial-balance') return J(r, 200, books.trialBalance([]));

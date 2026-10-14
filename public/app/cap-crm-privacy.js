@@ -10,7 +10,8 @@
  * The server decides: a viewer's Yes/No is greyed with its sentence; before b306/b307 the block says so in words, never "nothing here". */
 'use strict';
 var PRV = { rows: [], total: 0, page: 1, limit: 50, open: 0, late: 0, state: 'idle', err: null, api: null, mayAnswer: false, why: null, migrated: true, params: {}, busy: false };
-var CRM_CONSENT_WORD = { CONSENT: ['Agreed', 'green'], LEGITIMATE_USE: ['Allowed', ''], NO_CONSENT: ['Not asked', 'amber'], CONSENT_WITHDRAWN: ['Withdrawn', 'red'], SAID_NO: ['Said no', 'red'], OPTED_OUT: ['Stopped', 'red'] };
+/* tones: green = agreed, amber = needs a hand (not asked · said no · withdrawn · stopped), plain = allowed by law. Red is for a stopped sale, not for consent (SYSTEM.md colour rule; rule 13: amber reads AA in both themes) */
+var CRM_CONSENT_WORD = { CONSENT: ['Agreed', 'green'], LEGITIMATE_USE: ['Allowed', ''], NO_CONSENT: ['Not asked', 'amber'], CONSENT_WITHDRAWN: ['Withdrawn', 'amber'], SAID_NO: ['Said no', 'amber'], OPTED_OUT: ['Stopped', 'amber'] };
 var CRM_REQ_KIND = { access: 'A copy', correct: 'Correct', erase: 'Erase', withdraw: 'Withdraw consent', nominate: 'Nominate', grievance: 'Grievance' };
 var CRM_REQ_OUT = { done: 'Done', partly: 'Partly', refused: 'Refused' };
 var CRM_CONSENT_CH = ['whatsapp', 'sms', 'email', 'phone', 'chitbridge'];
@@ -134,7 +135,7 @@ function crmPrivacy(frame, params) {
   var el = document.getElementById('crm_prv');
   var due = function (r) {
     if (r.answered_at) return '<span class="tag' + (r.answered_late ? ' amber' : ' green') + '">' + esc(tx(CRM_REQ_OUT[r.outcome] || 'Answered')) + (r.answered_late ? ' · ' + esc(tx('late')) : '') + '</span>';
-    return '<span class="tag' + (r.late ? ' red' : '') + '" data-testid="crm-prv-due-' + r.request_id + '">' + (r.late ? esc(tx('Late')) + ' · ' : '') + esc(bkDate(r.due_at)) + '</span>';
+    return '<span class="tag' + (r.late ? ' amber' : '') + '" data-testid="crm-prv-due-' + r.request_id + '">' + (r.late ? esc(tx('Late')) + ' · ' : '') + esc(bkDate(r.due_at)) + '</span>';   /* amber: AA in both themes (rule 13); the word says late */
   };
   PRV.api = CBList.mount(el, {
     key: 'crm-privacy', t: tx, rows: function () { return PRV.state === 'ready' ? PRV.rows : []; }, id: function (r) { return r.request_id; }, rowTid: function (r) { return 'crm-prv-' + r.request_id; },
@@ -174,12 +175,13 @@ async function crmPrivLoad() {
   try {
     var q = { page: PRV.page, limit: PRV.limit }; if (PRV.openOnly) q.open = '1';
     var r = await api('crmPrivReqs', { query: q });
-    PRV.rows = r.requests || []; PRV.total = Number(r.total) || PRV.rows.length; PRV.open = Number(r.open) || 0; PRV.late = Number(r.late) || 0;
+    /* core.js api() collapses { requests[], … } to the array and carries total · page · limit · open · late · may_answer · why on it (SIBS) */
+    PRV.rows = Array.isArray(r) ? r : (r.requests || []); PRV.total = Number(r.total) || PRV.rows.length; PRV.open = Number(r.open) || 0; PRV.late = Number(r.late) || 0;
     PRV.mayAnswer = !!r.may_answer; PRV.why = r.why || null; PRV.limit = Number(r.limit) || PRV.limit; PRV.state = 'ready'; PRV.err = null;
   } catch (e) { PRV.state = e && e.status === 503 ? 'notyet' : 'error'; PRV.err = e; }
   crmPrivRefresh();
 }
-function crmPrivRefresh() { var a = PRV.api; if (a && document.getElementById('crm_prv')) a.refresh(); }
+function crmPrivRefresh() { var a = PRV.api; if (a && document.getElementById('crm_prv')) a.refresh(); if (CRM.route && CRM.route.view === 'privacy') crmNav('privacy'); }   /* the nav's late count follows the load */
 
 /* ── Log a request (who · what · when · which law) — the owner or staff; the date the law sets is the SERVER's ── */
 function crmPrivReqOpen(pre) {

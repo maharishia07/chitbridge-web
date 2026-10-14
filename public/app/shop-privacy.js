@@ -42,7 +42,7 @@
   function paint() {
     var o = S.o, d = S.d, law = d.law || {}, shop = (d.shop && d.shop.name) || 'this shop';
     var lawLine = law.known ? '<b>' + esc(law.short || law.law) + '</b> · ' + esc(law.consent || '') : esc(law.note || '');
-    var held = (d.held || []).map(function (h) { return '<div style="display:flex;gap:10px;font-size:13px;padding:3px 0;border-top:1px dashed var(--line,#e7e3d8)" data-testid="shop-priv-held-' + esc(h.key) + '"><span style="flex:0 0 42%;color:var(--ink-2,#3a4048)">' + esc(h.label) + '</span><span style="flex:1' + (h.value ? '' : ';color:var(--ink-3,#8A8374)') + '">' + esc(h.value || 'Not held') + '</span></div>'; }).join('');
+    var held = (d.held || []).map(function (h) { return '<div style="display:flex;gap:10px;font-size:13px;padding:3px 0;border-top:1px dashed var(--line,#e7e3d8)" data-testid="shop-priv-held-' + esc(h.key) + '"><span style="flex:0 0 42%;color:var(--ink-2,#3a4048)">' + esc(h.label) + '</span><span style="flex:1' + (h.value ? '' : ';color:var(--ink-2,#3a4048);font-style:italic') + '">' + esc(h.value || 'Not held') + '</span></div>'; }).join('');
     var mc = d.may_consent || { may: true }, whyC = mc.may ? '' : (mc.why || 'Not available yet.');
     var may = (d.consent && d.consent.may) || {};
     var offers = ORDER.map(function (c) {

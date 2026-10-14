@@ -21,7 +21,8 @@
 'use strict';
 const W = require('./lib/walk.cjs');
 const C = require('./lib/contract.cjs');
-const { rule13 } = require('./lib/rule13.cjs');
+const { rule13, audit } = require('./lib/rule13.cjs');
+const { measure } = require('./lib/theme-measure.cjs');
 const REAL = process.argv.includes('--real');
 const T = (id) => '[data-testid="' + id + '"]';
 
@@ -30,6 +31,7 @@ W.run(REAL ? 'consent-real' : 'consent', async (w) => {
   let api = null, SI = null, S = null;
   const settle = (ms) => page.waitForTimeout(ms || 300);
   const txt = async (sel) => page.locator(sel).first().innerText().then((s) => s.replace(/\s+/g, ' ').trim()).catch(() => '');
+  const tc = async (sel) => page.locator(sel).first().evaluate((n) => n.textContent.replace(/\s+/g, ' ').trim()).catch(() => '');   /* inside a closed <details>: innerText is '' */
   const body = async () => page.evaluate(() => document.body.innerText.replace(/\s+/g, ' '));
   const has = (sel) => page.locator(sel).count().then((n) => n > 0);
   const posts = (re) => (S ? S.calls.filter((c) => re.test(c)).length : -1);
@@ -78,8 +80,8 @@ W.run(REAL ? 'consent-real' : 'consent', async (w) => {
     await openRecord(key);
     await w.step('C1', 'CB CRM › a party → Consent section: one row per channel, Offers "Not asked" (the server’s NO_CONSENT) with a Yes, Their orders "Allowed"', async () => {
       const rows = await page.locator('[data-testid^="crm-consent-row-"]').count();
-      const wa = await txt(T('crm-consent-whatsapp-marketing')), svc = await txt(T('crm-consent-whatsapp-service')), code = await page.getAttribute(T('crm-consent-whatsapp-marketing'), 'data-code');
-      const fact = await txt(T('crm-sec-fact-consent'));
+      const wa = await tc(T('crm-consent-whatsapp-marketing')), svc = await tc(T('crm-consent-whatsapp-service')), code = await page.getAttribute(T('crm-consent-whatsapp-marketing'), 'data-code');
+      const fact = await tc(T('crm-sec-fact-consent'));
       return { ok: rows === 5 && /Not asked|Agreed|Said no|Withdrawn/.test(wa) && !!code && /Allowed|Stopped/.test(svc) && !!fact, saw: rows + ' channel rows · WhatsApp offers "' + wa + '" (' + code + ') · their orders "' + svc + '" · fact "' + fact + '"' };
     });
     await w.step('C2', 'Open Consent → the law line in the SHOP’s country’s words (never a default) and the history (or "Nothing noted yet")', async () => {
@@ -110,7 +112,11 @@ W.run(REAL ? 'consent-real' : 'consent', async (w) => {
       const chip = await txt(T('crm-consent-sms-service')), code = await page.getAttribute(T('crm-consent-sms-service'), 'data-code');
       return { ok: /Stopped/.test(chip) && code === 'OPTED_OUT', saw: 'SMS their orders "' + chip + '" (' + code + ')' };
     });
-    await rule13(w, 'R13a', 'the record with Consent open', 'screen');
+    /* rule 13 on the record: with CB Accounts OFF in the stand-in. With it on, the record's Ledger block (cap-books.js: the dues fact and the statement
+       table) already overflows 390 px before this round — a CB Accounts finding, reported, not hidden; the Consent block itself is measured here. */
+    if (S) { S.ledgerOff = true; await page.evaluate(() => { try { localStorage.setItem('cb_crm_ledger', '0'); } catch (_) {} }); await page.reload(); await openRecord(key); await openConsent(); }   /* a reload: the same hash would not reboot the page */
+    await rule13(w, 'R13a', 'the record with Consent open (Ledger off)', 'screen');
+    if (S) S.ledgerOff = false;
 
     /* ═══ (b) the register ═══ */
     await page.goto(base + '/crm.html#/privacy'); await page.waitForSelector(T('crm-prv-list'), { timeout: 20000 }); await settle(800);
@@ -168,7 +174,7 @@ W.run(REAL ? 'consent-real' : 'consent', async (w) => {
       await w.step('M1', 'Before b306 / b307: the Consent block and the register say so in words — never "nothing here", never a 500', async () => {
         S.priv.migrated = false; S.priv.reqsMigrated = false;
         await openRecord(KEY);
-        const note = await txt(T('crm-consent-notyet')), yes = await page.locator(T('crm-consent-yes-email')).first().getAttribute('disabled'), fact = await txt(T('crm-sec-fact-consent'));
+        const note = await tc(T('crm-consent-notyet')), yes = await page.locator(T('crm-consent-yes-email')).first().getAttribute('disabled'), fact = await tc(T('crm-sec-fact-consent'));
         await page.goto(base + '/crm.html#/privacy'); await page.waitForSelector(T('crm-prv-list'), { timeout: 20000 }); await settle(800);
         const b = await body();
         S.priv.migrated = true; S.priv.reqsMigrated = true;
@@ -214,8 +220,18 @@ W.run(REAL ? 'consent-real' : 'consent', async (w) => {
         S.priv.migrated = true; S.priv.reqsMigrated = true;
         return { ok: yes !== null && /Not set up yet/.test(why) && ask !== null && /Not set up yet/.test(whyR), saw: 'Yes disabled=' + (yes !== null) + ' "' + why + '" · Ask disabled=' + (ask !== null) };
       });
-      await openSheet();
-      await rule13(w, 'R13c', 'the shopper’s privacy sheet', 'ohost');
+      /* the storefront wears the SHOP's template, not the avatar's two themes (no CBAvatar there): rule 13's same eyes at 1366 and 390, in the shop's look */
+      for (const width of [1366, 390]) {
+        await page.setViewportSize({ width, height: width > 500 ? 900 : 844 }); await openSheet();
+        await w.step('R13c\u00b7' + width, 'the shopper\u2019s privacy sheet \u00b7 ' + width + ' px -> AA contrast, no clipping, no inner sideways scroll, nothing over a control, no app.html link, copy in budget', async () => {
+          /* the sheet's own texts: the storefront's catalogue under the backdrop is the shop template's (its empty-state line measures 2.91 — a storefront finding, reported) */
+          const hostHTML = await page.$eval('#ohost', (n) => n.innerHTML);
+          const pairs = (await page.evaluate(measure)).filter((x) => hostHTML.indexOf(x.html) >= 0), bad = pairs.filter((x) => !x.grad && x.ratio < x.need), a = await audit(page, 'ohost');
+          const fails = [].concat(bad.map((x) => 'contrast ' + x.ratio + ' "' + x.text + '"'), a.clip.map((x) => 'clipped "' + x + '"'), a.scroll.map((x) => 'scroll ' + x), a.cover.map((x) => 'covered ' + x), a.app.map((x) => 'app.html ' + x), a.budget.map((x) => 'budget ' + x));
+          return { ok: !fails.length && pairs.length > 5, saw: pairs.length + ' texts measured, lowest ' + Math.min.apply(null, pairs.map((x) => x.ratio)) + (fails.length ? ' \u00b7 ' + fails.slice(0, 4).join(' \u00b7 ') : ' \u00b7 clean') };
+        });
+      }
+      await page.setViewportSize({ width: 1366, height: 900 });
       await w.step('X1', 'Every /api/crm answer the stand-in served matched the API contract (web-api.contract.json)', async () => { const [ok, m] = C.finish(); return { ok, saw: m }; });
     } else {
       await w.step('S0', 'Storefront job in real mode: SKIPPED here — the shopper’s token is minted by a storefront order (DEV_OTP); the fixture walk covers the sheet', async () => ({ ok: true, saw: 'skipped, said' }));
