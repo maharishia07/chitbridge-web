@@ -748,10 +748,10 @@ function render(data){
   var prods=(data.items||[]);
   var prodHtml = productListHtml(data, cur);
   var enq = '<div class="enq">Order with your phone or email — no account needed.</div>';
-  var previewBar = (data.preview && data.preview.visibility !== 'public') ? '<div class="msg" style="background:#fff7e6;border:1px solid #f1d28a;color:#7a5a00;border-radius:9px;padding:8px 10px;margin:0 0 8px;font-size:13px">👁️ Your online shop — preview. Your catalogue is <b>'+esc(data.preview.visibility||'private')+'</b>, customers cannot see this yet. Profile › Visibility › Public puts it live.</div>' : '';
+  var previewBar = (data.preview && data.preview.visibility !== 'public') ? '<div class="msg" data-testid="shop-private" style="background:#fff7e6;border:1px solid #f1d28a;color:#7a5a00;border-radius:9px;padding:8px 10px;margin:0 0 8px;font-size:13px">🔒 Private — only you see this. Your catalogue is <b>'+esc(data.preview.visibility||'private')+'</b>; customers cannot see it yet. Profile › Visibility › Public puts it live.</div>' : '';
   if(_ONLY){ el('app').innerHTML = previewBar + (prods.length ? productCrumb(prods[0], data) + prodHtml + supLinkHtml()
                                                              : '<div class="msg">Not on the storefront — hidden, or another shop.</div>'); return; }
-  el('app').innerHTML = head + regionBar() + finHtml + prodHtml
+  el('app').innerHTML = previewBar + head + regionBar() + finHtml + prodHtml
     + (finHtml||prodHtml?enq:'<div class="msg">This shop has nothing on display yet.</div>')
     /* ⚠️ OUTSIDE the ternary. An empty shop still has customers, and the emptier it is the more likely the
        person reading this is the one with a problem. */
@@ -1384,8 +1384,13 @@ function vizToOrder(){ var idx=_VIZ.idx, comboName=_VIZ.combo&&_VIZ.combo.name; 
  * server sends the catalogue. The storefront_access test stays only for an api that predates the cut (no code, no token yet).
  */
 function shopLoad(){
-  var tok = _PREVIEW && _ownerToken() ? _ownerToken() : _MYTOK;
-  return fetch(API+'/api/catalogue/'+encodeURIComponent(BRIDGE)+(_PREVIEW?'?preview=1':''), tok ? { headers: { Authorization: 'Bearer ' + tok } } : undefined).then(function(r){ return r.json().then(function(j){ return {status:r.status, j:j}; }); })
+  /* SEC4: a shopper's own token re-reads a sign-in-first shop. TOUR-FIX1: the OWNER opening their own private shop (Home › Your online shop)
+     is not a stranger — a 404 with this browser's own session is asked once more as the owner's preview (the API decides: only THIS shop's
+     owner gets through; anyone else keeps "Shop not found"). One reader for both. */
+  var _cat=function(pv){ var tok = pv && _ownerToken() ? _ownerToken() : _MYTOK;
+    return fetch(API+'/api/catalogue/'+encodeURIComponent(BRIDGE)+(pv?'?preview=1':''), tok ? { headers: { Authorization: 'Bearer ' + tok } } : undefined).then(function(r){ return r.json().then(function(j){ return {status:r.status, j:j}; }); }); };
+  return _cat(_PREVIEW)
+    .then(function(res){ if(res.status===404 && !_PREVIEW && _ownerToken()) return _cat(true).then(function(own){ if(own.status===200){ _PREVIEW=true; return own; } return res; }); return res; })
     .then(function(res){ if(res.status!==200){
       /* ⚠️ the door stays open: the catalogue may be private or gone, but the shop is still there and a
          buyer with a problem about last week's order has nowhere else to go. supLinkHtml() has no name to

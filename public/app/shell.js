@@ -182,12 +182,13 @@
     '.cbsh-alerts:empty,.cbsh-home:empty,.cbsh-signin:empty{display:none}.cbsh-alerts{display:flex;flex-direction:column;gap:7px;margin-bottom:16px}',
     '.cbsh-foot{flex:0 0 auto}.cbsh-foot:empty{display:none}.cbsh-pfoot{display:none}',
     '.cbsh-slotwork{min-height:100%}',
+    /* TOUR-FIX1: the drawer buttons sit at the top of the work and scroll WITH it — a sticky row covered the cards scrolled under it (shell-card-documents) */
     /* CB SIDES (public/app/sides.js): two reference panels. From 1480 px they sit beside the work area and scroll on their own; below it they are two drawers behind the toolbar buttons, one open at a time; a phone drawer is full width */
     '.cbsh-work{position:relative}.cbsh-side,.cbsh-tools{display:none}',
     '@media(min-width:1480px){.cbsh.has-sides .cbsh-side{display:block;flex:0 0 300px;width:300px;align-self:flex-start;max-height:calc(100% - 24px);margin:12px 0;overflow:auto}.cbsh.has-sides .cbsh-side.l{margin-left:14px}.cbsh.has-sides .cbsh-side.r{margin-right:14px}}',
-    '@media(max-width:1479px){.cbsh.has-sides .cbsh-tools{display:flex;gap:10px;position:sticky;top:0;z-index:5;background:var(--sh-page);padding:8px 0;border-bottom:1px solid var(--sh-soft);margin-bottom:10px}.cbsh.has-sides .cbsh-tools .cbsd-btn{display:inline-block}',
+    '@media(max-width:1479px){.cbsh.has-sides .cbsh-tools{display:flex;gap:10px;background:var(--sh-page);padding:8px 0;border-bottom:1px solid var(--sh-soft);margin-bottom:10px}.cbsh.has-sides .cbsh-tools .cbsd-btn{display:inline-block}',
     '.cbsh.has-sides .cbsh-side.drawer{display:block;position:absolute;top:48px;bottom:0;width:min(330px,92vw);z-index:40;margin:0;border-radius:0;overflow:auto;box-shadow:0 0 30px var(--sh-shadow)}',
-    '.cbsh.has-sides .cbsh-side.l.drawer{left:var(--sh-navw)}.cbsh.has-sides .cbsh-side.r.drawer{right:0}.cbsh .cbsd-x{display:inline-block}.cbsh.has-sides .cbsh-cap{top:43px}}',
+    '.cbsh.has-sides .cbsh-side.l.drawer{left:var(--sh-navw)}.cbsh.has-sides .cbsh-side.r.drawer{right:0}.cbsh .cbsd-x{display:inline-block}}',
     '@media(max-width:700px){.cbsh.has-sides .cbsh-side.drawer{left:0!important;right:0!important;width:100%}}',
     '@media(max-width:1100px){.cbsh-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.cbsh-sin{grid-template-columns:1fr 1.4fr}.cbsh-sin .cbsh-col:nth-child(3){grid-column:1/-1}}',
     /* PHONE — a different layout: bottom tabs, one area at a time, rows, the sheet drops over the page, the kural once on Home */
