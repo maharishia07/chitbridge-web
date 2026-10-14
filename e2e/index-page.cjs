@@ -80,7 +80,7 @@ async function run() {
   ok(man.rail && 'route' in man.rail && 'facts' in man.rail && !/app\.html/.test(JSON.stringify(man)), 'manifest · the rail widget is declared (route · facts), and nothing names app.html');
   const eff = (e) => (e.works && e.state === 'workshop' ? 'built' : e.state);   /* the roadmap's reading of a row (manifest `works`) */
   const BUILT = man.entries.filter((e) => e.state === 'built'), REST = man.entries.filter((e) => e.state !== 'built');
-  for (const w of ['Catalogue', 'CB Accounts', 'Till', 'Standards', 'Suppliers', 'Co-assist', 'Connectors', 'Your shop', 'Counters & keys', 'CB CRM', 'Product Lab', 'Offer Lab', 'Combo Lab']) {
+  for (const w of ['CB Catalogue', 'CB Accounts', 'Till', 'Standards', 'Suppliers', 'Co-assist', 'Connectors', 'Your shop', 'Counters & keys', 'CB CRM', 'Product Lab', 'Offer Lab', 'Combo Lab']) {
     ok(man.entries.some((e) => e.name === w), 'manifest · the old index\'s "' + w + '" is a manifest row');
   }
 

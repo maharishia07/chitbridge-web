@@ -82,9 +82,9 @@ W.run('home', async (w) => {
     for (const h of [a, b]) { const p2 = await ctx.newPage(); await p2.goto(base + h); await p2.waitForSelector('[data-testid="shell-header"], header, h1', { timeout: 15000 }).catch(() => {}); lands.push(await p2.evaluate(() => !!document.querySelector('[data-testid="shell-header"]'))); await p2.close(); }
     return { ok: !!a && !!b && !/app\.html/.test(a + b) && lands.every(Boolean), saw: a + ' (shell header ' + lands[0] + ') - ' + b + ' (shell header ' + lands[1] + ')' };
   });
-  await w.step('H36-r', 'Home -> Catalogue chip -> a way to the catalogue (Product Lab)', async () => {
-    const h = await page.locator('[data-testid="shell-chip-catalogue"]').first().evaluate((e) => (e.tagName === 'A' ? e : e.querySelector('a') || {}).getAttribute ? (e.tagName === 'A' ? e : e.querySelector('a')).getAttribute('href') : null).catch(() => null);
-    return { ok: /product-lab\.html/.test(h || ''), saw: 'the chip links to ' + h };
+  await w.step('H36-r', 'Home -> Catalogue card -> CB Catalogue (T3-CATALOGUE: built, its own small app)', async () => {
+    const h = await page.locator('[data-testid="shell-card-catalogue"]').first().getAttribute('href').catch(() => null);
+    return { ok: /\/catalogue\.html/.test(h || ''), saw: 'the card links to ' + h };
   });
   await w.step('H37', 'Left menu -> Running -> scrolls Home to that section', async () => {
     const nav = page.locator('[data-testid="shell-nav-running"]').first();
