@@ -217,11 +217,22 @@
   }
   /* the GST summary as the counter prints it (till.html taxSummaryHTML is the reference shape): the frozen by_rate, as it is held.
      A head the chit does not hold is "—", never worked out; the footing row is the chit's own totals, never a column sum. */
+  /* ⭐ RCM-POST (2026-10-14): REVERSE CHARGE IS SAID, NOT SUMMED. The frozen invoice carries the buyer's own tax in its RCM heads (engines v1.20
+     RcmCgstAmt…; CBTax.moneyOf reads them as `rcm`), and NOTHING in the heads a screen sums — so a bill under reverse charge shows GST 0.00, which is
+     the 2 Oct "GST ₹0.00 on the reprint" shape unless the sheet says why. `mo.rcm` IS the code (present only on such a bill); the sentence is for
+     people. The buyer's copy (a bill I received, or one sent to me) says I pay it; the seller's copy says the buyer does. The figure is the engine's. */
+  function rcmHTML(m) {
+    var mo = m.money || {}, r = mo.rcm;
+    if (!r || typeof r !== 'object') return '';
+    var iPay = !(m.iSent || m.counterBill);
+    return '<div class="cs-row cs-rcm" data-testid="cs-rcm" data-side="' + (iPay ? 'buyer' : 'seller') + '"><span>' + esc(T(iPay ? 'Reverse charge — you pay the tax' : 'Reverse charge — the buyer pays the tax')) + '</span>'
+      + '<b data-testid="cs-rcm-tax">' + esc(fmtMoney(r.tax, m.cur, '—')) + '</b></div>';
+  }
   function gstHTML(m) {
     var mo = m.money || {}, by = mo.by_rate || null;
     var rates = by ? Object.keys(by).sort(function (a, b) { return Number(a) - Number(b); }) : [];
     if (!rates.length) {
-      return '<div class="cs-sec">' + esc(T('GST')) + '</div>' + (mo.tax != null
+      return '<div class="cs-sec">' + esc(T('GST')) + '</div>' + rcmHTML(m) + (mo.tax != null
         ? '<div class="cs-row"><span>' + esc(T('GST total')) + '</span><b data-testid="cs-gst-total">' + esc(fmtMoney(mo.tax, m.cur, '—')) + '</b></div>'
         : '<div class="cs-mute" data-testid="cs-gst-none">' + esc(T('Rate-wise GST is not recorded on this bill')) + '</div>');
     }
@@ -234,7 +245,7 @@
       var rows1 = rates.map(function (rt) { var v = by[rt] || {}, b = v.taxable != null ? v.taxable : v.base, tv = head && v[head] != null ? v[head] : v.tax;
         return '<tr data-testid="cs-gst-' + esc(rt) + '"><td>' + esc(rt) + '%</td><td class="n">' + esc(fmtMoney(b, m.cur, '—')) + '</td><td class="n">' + esc(fmtMoney(tv, m.cur, '—')) + '</td></tr>'; }).join('');
       var foot1 = mo.taxable != null ? '<tr class="tot"><td></td><td class="n">' + esc(fmtMoney(mo.taxable, m.cur, '—')) + '</td><td class="n">' + esc(fmtMoney(mo.tax, m.cur, '—')) + '</td></tr>' : '';
-      return '<div class="cs-sec">' + esc(hw + ' ' + T('summary')) + '</div><table class="cs-lines" data-testid="cs-gst"><thead><tr><th>' + esc(T('Rate')) + '</th><th class="n">' + esc(T('Taxable')) + '</th><th class="n">' + esc(hw) + '</th></tr></thead><tbody>' + rows1 + foot1 + '</tbody></table>';
+      return '<div class="cs-sec">' + esc(hw + ' ' + T('summary')) + '</div>' + rcmHTML(m) + '<table class="cs-lines" data-testid="cs-gst"><thead><tr><th>' + esc(T('Rate')) + '</th><th class="n">' + esc(T('Taxable')) + '</th><th class="n">' + esc(hw) + '</th></tr></thead><tbody>' + rows1 + foot1 + '</tbody></table>';
     }
     var rows = rates.map(function (rt) {
       var v = by[rt] || {}, b = v.taxable != null ? v.taxable : v.base;
@@ -242,7 +253,7 @@
     }).join('');
     var foot = mo.taxable != null
       ? '<tr class="tot"><td></td><td class="n">' + esc(fmtMoney(mo.taxable, m.cur, '—')) + '</td><td class="n">' + esc(fmtMoney(inter ? mo.igst : mo.cgst, m.cur, '—')) + '</td><td class="n">' + (inter ? '' : esc(fmtMoney(mo.sgst, m.cur, '—'))) + '</td></tr>' : '';
-    return '<div class="cs-sec">' + esc(T(inter ? 'IGST summary' : 'GST summary')) + '</div><table class="cs-lines" data-testid="cs-gst"><thead><tr><th>' + esc(T('Rate')) + '</th><th class="n">' + esc(T('Taxable')) + '</th><th class="n">' + esc(T(inter ? 'IGST' : 'CGST')) + '</th><th class="n">' + (inter ? '' : esc(T('SGST'))) + '</th></tr></thead><tbody>' + rows + foot + '</tbody></table>';
+    return '<div class="cs-sec">' + esc(T(inter ? 'IGST summary' : 'GST summary')) + '</div>' + rcmHTML(m) + '<table class="cs-lines" data-testid="cs-gst"><thead><tr><th>' + esc(T('Rate')) + '</th><th class="n">' + esc(T('Taxable')) + '</th><th class="n">' + esc(T(inter ? 'IGST' : 'CGST')) + '</th><th class="n">' + (inter ? '' : esc(T('SGST'))) + '</th></tr></thead><tbody>' + rows + foot + '</tbody></table>';
   }
   function totalHTML(m, tid) {
     var mo = m.money || {}, t = mo.total;
