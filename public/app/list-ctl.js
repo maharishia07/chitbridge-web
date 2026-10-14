@@ -964,5 +964,24 @@
   /* forget what a person typed, chose and opened in list `key` (a different record is on screen under the same list: a new ledger, the other tab) */
   function reset(key) { delete STATE[String(key)]; }
 
-  root.CBList = { mount: mount, nextRow: nextRow, get: get, reset: reset };
+  /**
+   * EVERY PAGE of a server-paged list (DISCIPLINES §2: top-level total · page · limit), for a screen that sums the WHOLE set
+   * rather than drawing it (the test board's coverage and verdicts — T2-PAGING). `fetchPage(n)` answers page n: an array, or
+   * an object holding the rows under `key`. Pages are read until the rows reach the answer's `total` (an answer with no
+   * total is one page). Resolves to every row; a failed page rejects, so the caller says it could not read.
+   */
+  function every(fetchPage, key) {
+    var all = [];
+    function step(page) {
+      return Promise.resolve(fetchPage(page)).then(function (r) {
+        var rows = Array.isArray(r) ? r : ((r && r[key]) || []);
+        all = all.concat(rows);
+        var more = rows.length && r.total != null && all.length < r.total && !(r.limit && rows.length < r.limit) && page < 200;
+        return more ? step(page + 1) : all;
+      });
+    }
+    return step(1);
+  }
+
+  root.CBList = { mount: mount, nextRow: nextRow, get: get, reset: reset, every: every };
 })(typeof window !== 'undefined' ? window : this);
