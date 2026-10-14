@@ -26,6 +26,8 @@ const walk = async (w) => {
   const COUNTERS = () => [
     { id: 'C1', name: 'Front desk', state: 'open', held_by: { name: 'counter C1 · Win32', seen: { ip: '10.0.0.4', at: ago(2) } }, next: 42, last_no: 'C1/26-27/0041', closed_at: null },
     { id: 'C2', name: 'Billing 2', state: 'closed', held_by: null, next: 7, last_no: 'C2/26-27/0006', closed_at: ago(600) }];
+  /* the minted secret the stand-in shows once: fake by construction (a prefix + a run of x), so no scanner reads it as a key (INT6d-GREEN: gitleaks generic-api-key) */
+  const NEW_KEY = 'cbk_test_' + 'x'.repeat(12);
   const KEYS = [{ jti: 'k-till', name: 'counter C1 · Win32 · 2026-10-01', scopes: ['till'], last4: 'a1b2', created_at: '2026-10-01T09:00:00Z', seen: { at: ago(2), ip: '10.0.0.4', agent: 'Mozilla/5.0 (Windows NT 10.0) Chrome/120' } },
     { jti: 'k-svc', name: 'Price feed', scopes: ['services'], last4: 'c3d4', created_at: '2026-09-20T09:00:00Z', seen: null }];
   const FLAGS = { trade_side: 'sell', trade_cover: 'off', books_at: 'accepted', tol_weight_bp: 50, dispute_scope: 'per-party', connectors_in_use: [] };
@@ -67,7 +69,7 @@ const walk = async (w) => {
       if (/\/open$/.test(p)) return J(r, 200, { key: 'tk-walk', counter: { id: 'C2', state: 'open' } });
       if (/\/release$/.test(p)) return J(r, 200, { ok: true, id: 'C1' });
       if (p === '/api/keys' && m === 'GET') return J(r, 200, { keys: KEYS, scopes: ['till', 'services'] });
-      if (p === '/api/keys' && m === 'POST') return J(r, 201, { key: 'cbk_walk_secret_0001', jti: 'k-new', name: body && body.name });
+      if (p === '/api/keys' && m === 'POST') return J(r, 201, { key: NEW_KEY, jti: 'k-new', name: body && body.name });
       if (/^\/api\/keys\//.test(p) && m === 'DELETE') return J(r, 200, { ok: true });
       if (p === '/api/integrations/catalogue') return J(r, 200, { connectors: CAT });
       if (p === '/api/integrations/status') return J(r, 200, { connectors: RUN });
@@ -122,7 +124,7 @@ const walk = async (w) => {
       const k1 = await txt('[data-testid="sx-key-seen-k-till"]'), k2 = await txt('[data-testid="sx-key-seen-k-svc"]');
       await page.fill('[data-testid="sx-key-name"]', 'Website'); await page.selectOption('[data-testid="sx-key-scope"]', 'connector'); await page.click('[data-testid="sx-key-mint"]'); await page.waitForTimeout(600);
       const post = wrote(/^POST \/api\/keys/), shown = await txt('[data-testid="sx-key-value"]');
-      return { ok: /min ago|just now/.test(k1) && /Never reached/.test(k2) && post.length === 1 && /"scopes":\["connector","services"\]/.test(post[0]) && shown === 'cbk_walk_secret_0001', saw: '"' + k1 + '" · "' + k2 + '" · ' + (post[0] || '').slice(0, 80) + ' · shown ' + shown };
+      return { ok: /min ago|just now/.test(k1) && /Never reached/.test(k2) && post.length === 1 && /"scopes":\["connector","services"\]/.test(post[0]) && shown === NEW_KEY, saw: '"' + k1 + '" · "' + k2 + '" · ' + (post[0] || '').slice(0, 80) + ' · shown ' + shown };
     });
     await w.step('S6', 'the price-feed key -> Revoke -> confirm -> one DELETE /api/keys/k-svc', async () => {
       await openRow('sx-key-k-svc'); await act('revoke', 'k-svc').click(); await yes();

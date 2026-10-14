@@ -65,8 +65,14 @@ function list(rows, opt) {
     if (a.roles.supplier && !a.terms.supplier) a.terms.supplier = { credit_days: null, credit_limit_minor: null };
     a.dues = a.dues ? Object.assign({}, a.dues, { side: a.roles.customer && a.roles.supplier ? 'both' : (a.roles.customer ? 'customer' : 'supplier') }) : null;
   });
-  /* the API's own count of late dues: the parties it marked (lib/crm markLate) — the banner and the rows are one number */
-  return { parties: out, walk_ins: walk, count: out.length, total: out.length, page: 1, limit: 5000, truncated: false, alerts: { dues_overdue: out.filter((a) => a.dues && a.dues.overdue).length } };
+  return listPage(out, { walk_ins: walk });
+}
+/** GET /parties' envelope around any party rows (the golden list, a leads view, an imported list): T2-PAGING's total · page · limit beside
+ *  count · truncated · walk_ins, and the API's own count of late dues — the parties it marked (lib/crm markLate) — so the banner and the rows
+ *  are one number. INT6d-GREEN: every stand-in wraps through here; three of them hand-built the envelope and drifted from the contract. */
+function listPage(parties, extra) {
+  return Object.assign({ parties, walk_ins: [], count: parties.length, total: parties.length, page: 1, limit: 5000, truncated: false,
+    alerts: { dues_overdue: parties.filter((a) => a.dues && a.dues.overdue).length } }, extra || {});
 }
 
 /** a follow-up in the API's shape (lib/crm-followups.js shape): late / today / due_day by the shop's day */
@@ -148,4 +154,4 @@ function railFacts(o) {
   if (!x.truncated) { out.in = x.in == null ? 0 : x.in; out.out = x.out == null ? 0 : x.out; out.tasks = x.tasks == null ? 0 : x.tasks; out.stuck = x.stuck == null ? 0 : x.stuck; }   /* tasks: TOUR-FIX1 — the Tasks folder count the api answers beside in / out */
   return out;
 }
-module.exports = { resolve, party, list, record, followupOne, followups, entry, timeline, interaction, rolesOf, railFacts };
+module.exports = { resolve, party, list, listPage, record, prefsBefore, followupOne, followups, entry, timeline, interaction, rolesOf, railFacts };

@@ -179,13 +179,13 @@ function viewerSession() {
 function l2cRoute(L, r, q, u, p, m, body) {
   let x;
   if (p === '/api/crm/parties' && m === 'GET' && u.searchParams.get('view') === 'leads') {
-    const rows = L.leads.filter(isLead).map((l) => leadRow(L, l));
-    return J(r, 200, { parties: L.migrated ? rows : [], walk_ins: [], count: L.migrated ? rows.length : 0, truncated: false, alerts: { dues_overdue: 0 }, leads_migrated: L.migrated });
+    const rows = L.migrated ? L.leads.filter(isLead).map((l) => leadRow(L, l)) : [];
+    return J(r, 200, crmApi.listPage(rows, { leads_migrated: L.migrated }));   /* the one envelope (total · page · limit), as the contract says */
   }
   if (p === '/api/crm/parties' && m === 'GET') {
     const base = crmApi.list(fx.list, { records: fx.records });   /* the golden parties, plus every lead that has traded (a customer now) */
     const grown = L.leads.filter((l) => !isLead(l)).map((l) => leadRow(L, l));
-    return J(r, 200, Object.assign({}, base, { parties: base.parties.concat(grown), count: base.count + grown.length }));
+    return J(r, 200, crmApi.listPage(base.parties.concat(grown), { walk_ins: base.walk_ins }));
   }
   if (p === '/api/crm/leads' && m === 'POST') {
     if (!L.migrated) return J(r, 503, errBody(NOT_READY, 'LEADS_NOT_MIGRATED'));
@@ -244,7 +244,8 @@ function l2cRoute(L, r, q, u, p, m, body) {
     const l = findLead(L, decodeURIComponent(x[1])); if (!l) return null;
     const row = leadRow(L, l), stage = row.lead.stage;
     row.lead = Object.assign({}, row.lead, { moves: STAGES.filter((g) => g !== stage), may: L.migrated ? { ok: true } : { ok: false, why: NOT_READY } });
-    return J(r, 200, Object.assign(row, { merged_from: null, relationship: null, points: null, migrated: true, followups: fuRows(L).filter((f) => f.party_id === l.party_id && !f.done_at).map(fuShape) }));
+    /* contact_prefs: a lead has no consent rows yet — the same answer the record builder gives (crm-api prefsBefore: service allowed, offers need consent) */
+    return J(r, 200, Object.assign(row, { merged_from: null, relationship: null, points: null, migrated: true, contact_prefs: crmApi.prefsBefore(), followups: fuRows(L).filter((f) => f.party_id === l.party_id && !f.done_at).map(fuShape) }));
   }
   if (p === '/api/crm/followups' && m === 'GET') {
     const done = u.searchParams.get('done') === '1';

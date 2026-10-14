@@ -72,7 +72,7 @@ async function route(S, r) {
       customer: { list_id: 'cl-' + q2.party_id, segment: 'new', segment_override: null, txn_count: 0, last_txn_at: null, groups: [], customer_type: 'entity', added_via: 'lead' },
       lead: { stage: q2.stage || 'lead', since: '2026-10-09T09:00:00.000Z' }, legal_name: null, nickname: null, state_code: null, tax_ids: [], terms: { customer: { credit_days: null, credit_limit_minor: null } }, dues: null,
       gstin: { value: null, source: null, theirs: null, differs: false }, name: q2.display_name }));
-    return J(r, 200, { parties: S.leadsOff ? [] : L, walk_ins: [], count: S.leadsOff ? 0 : L.length, truncated: false, alerts: { dues_overdue: 0 }, leads_migrated: !S.leadsOff });
+    return J(r, 200, crmApi.listPage(S.leadsOff ? [] : L, { leads_migrated: !S.leadsOff }));   /* the one envelope (total · page · limit), as the contract says */
   }
   if (p === '/api/crm/leads' && m === 'POST') {
     if (S.leadsOff) return J(r, 503, { code: 'LEADS_NOT_MIGRATED', error: 'Lead stages arrive after the next update.', message: 'Lead stages arrive after the next update.' });

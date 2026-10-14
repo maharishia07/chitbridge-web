@@ -18,6 +18,7 @@ const TD = require('./lib/today.cjs');
 const fs = require('fs'), path = require('path'), os = require('os');
 const W = require('./lib/walk.cjs');
 const C = require('./lib/contract.cjs');   /* every answer served for a route in the API contract is checked (e2e/fixtures/web-api.contract.json) */
+const crmApi = require('./lib/crm-api.cjs');   /* the one GET /parties envelope (listPage: total · page · limit) */
 const J = C.json;
 const FIX = path.join(__dirname, 'fixtures', 'leads-import.csv');
 const WAIT = 'Lead stages arrive after the next update.';
@@ -78,7 +79,7 @@ async function route(r) {
   if (p === '/api/crm/followups' && m === 'GET') return J(r, 200, { followups: [], late: 0, today: 0 });
   if (p === '/api/crm/parties' && m === 'GET') {
     const L = u.searchParams.get('view') === 'leads' ? (S.leadsOff ? [] : leads().map(leadRow)) : [];
-    return J(r, 200, { parties: L, walk_ins: [], count: L.length, truncated: false, alerts: { dues_overdue: 0 }, leads_migrated: !S.leadsOff });
+    return J(r, 200, crmApi.listPage(L, { leads_migrated: !S.leadsOff }));
   }
   if (p === '/api/crm/leads/import' && m === 'POST') {
     if (S.leadsOff) return J(r, 503, { code: 'LEADS_NOT_MIGRATED', error: WAIT, message: WAIT });
