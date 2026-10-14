@@ -79,7 +79,7 @@
       + (d.price!=null ? '<div class="price">'+price(d.price)+'</div>' : '')
       + '</div></div>';
   }
-  function render(data){
+  function render(data, signin){
     var shop = data.shop || {};
     CUR = shop.currency_code || '';
     var head = '';
@@ -96,7 +96,9 @@
     });
     var prods = data.items || [];
     if (prods.length) out += '<div class="sechd">Products</div><div class="grid">' + prods.map(productCard).join('') + '</div>';
-    if (!finishes.length && !prods.length) out = head + '<div class="empty">This catalogue has no published items yet.</div>';
+    if (signin) out = head + '<div class="empty" data-testid="embed-signin">Sign in at the shop to see this catalogue. '
+      + '<a href="/shop.html?s=' + encodeURIComponent(BRIDGE) + '" target="_blank" rel="noopener">Open the shop</a></div>';
+    else if (!finishes.length && !prods.length) out = head + '<div class="empty">This catalogue has no published items yet.</div>';
     if (BRAND) out += '<div class="foot">Live catalogue</div>';
     el('app').innerHTML = out;
     postHeight();
@@ -106,9 +108,12 @@
   window.addEventListener('load', postHeight);
   window.addEventListener('resize', postHeight);
   if (!BRIDGE) { el('app').innerHTML = '<div class="empty">No catalogue specified. Add <code>?bridge=YOUR_BRIDGE_ID</code>.</div>'; return; }
+  /* SEC4: a sign-in-first shop answers 401 code SIGNIN_REQUIRED with its card alone — the frame says so and links to the shop's own sign-in */
   fetch(API + '/api/catalogue/' + encodeURIComponent(BRIDGE))
-    .then(function(r){ if(!r.ok) throw new Error('not found'); return r.json(); })
-    .then(render)
+    .then(function(r){ return r.json().catch(function(){ return {}; }).then(function(j){
+      if (r.status === 401 && j && j.code === 'SIGNIN_REQUIRED') return { signin: j.shop };
+      if (!r.ok) throw new Error('not found'); return j; }); })
+    .then(function(d){ if (d && d.signin !== undefined) render({ shop: d.signin || {} }, true); else render(d); })
     .catch(function(){ el('app').innerHTML = '<div class="empty">Catalogue unavailable.</div>'; });
 })();
 </script>

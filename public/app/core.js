@@ -771,6 +771,12 @@ function cbPushArrived(d){
       return;
     }
   }catch(_){}
+  /* ⭐ SEC4 — somebody asked about one of my products (POST /catalogue/enquiry/:item_id rings the owner): its own words, never "New chit" */
+  if(d && d.kind==='enquiry'){
+    try{ if(typeof toast==='function') toast(tx('New enquiry')+(d.who?(' · '+d.who):'')); }
+    catch(e){ console.error('Bell: the enquiry toast could not be shown —', (e && e.message) || e); }
+    return;
+  }
   /**
    * ⚠️ AND ONLY A CHIT SAYS "New chit". Every kind this function did not recognise fell through to this toast,
    * so changing an offer announced a chit that did not exist — a notification that is WRONG is worse than one

@@ -786,7 +786,8 @@ function sfLoginVerify(){
   _lg.busy=true; _lg.err=null; renderLoginGate(_SHOPDATA.shop);
   fetch(API+'/api/catalogue/'+encodeURIComponent(BRIDGE)+'/login/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({identifier:_lg.contact,otp:_lg.otp})})
     .then(function(r){return r.json().then(function(j){return{status:r.status,j:j};});})
-    .then(function(res){ if(res.status!==200){ _lg.busy=false; _lg.err=(res.j&&res.j.message)||'Verification failed.'; renderLoginGate(_SHOPDATA.shop); return; } render(_SHOPDATA); })
+    /* SEC4: the server keeps the catalogue until a customer of THIS shop signs in — so the signed-in token reads it again (memory only) */
+    .then(function(res){ if(res.status!==200){ _lg.busy=false; _lg.err=(res.j&&res.j.message)||'Verification failed.'; renderLoginGate(_SHOPDATA.shop); return; } _lg.busy=false; if(res.j&&res.j.token) _MYTOK=res.j.token; shopLoad(); })
     .catch(function(e){ _lg.busy=false; _lg.err=e.message; renderLoginGate(_SHOPDATA.shop); });
 }
 /**
@@ -1347,16 +1348,24 @@ function vizToOrder(){ var idx=_VIZ.idx, comboName=_VIZ.combo&&_VIZ.combo.name; 
   if(!BRIDGE){ el('app').innerHTML='<div class="msg">No shop specified.</div>'; return; }
   // load the region layers first (for the spin-the-globe switcher), then the shop
   fetch(API+'/api/assist/regions').then(function(r){return r.json();}).then(function(j){ _REGIONS=(j&&j.regions)||[]; if(_REGIONS.length && !_REGIONS.find(function(x){return x.region_code===_REGION;})) _REGION=_REGIONS[0].region_code; }).catch(function(){}).then(function(){
-    fetch(API+'/api/catalogue/'+encodeURIComponent(BRIDGE)+(_PREVIEW?'?preview=1':''), _PREVIEW && _ownerToken() ? { headers: { Authorization: 'Bearer ' + _ownerToken() } } : undefined).then(function(r){ return r.json().then(function(j){ return {status:r.status, j:j}; }); })
-      .then(function(res){ if(res.status!==200){
+    shopLoad();
+  });
+})();
+/* the shop's catalogue: the owner's preview token, else the signed-in customer's (SEC4 — a sign-in-first shop answers
+   401 code SIGNIN_REQUIRED with the shop card alone until then, and the gate paints from that card) */
+function shopLoad(){
+  var tok = _PREVIEW && _ownerToken() ? _ownerToken() : _MYTOK;
+  fetch(API+'/api/catalogue/'+encodeURIComponent(BRIDGE)+(_PREVIEW?'?preview=1':''), tok ? { headers: { Authorization: 'Bearer ' + tok } } : undefined).then(function(r){ return r.json().then(function(j){ return {status:r.status, j:j}; }); })
+      .then(function(res){
+        if(res.status===401 && res.j && res.j.code==='SIGNIN_REQUIRED' && res.j.shop){ _SHOPDATA=res.j; renderLoginGate(res.j.shop); return; }
+        if(res.status!==200){
         /* ⚠️ the door stays open: the catalogue may be private or gone, but the shop is still there and a
            buyer with a problem about last week's order has nowhere else to go. supLinkHtml() has no name to
            show yet; /support/preview supplies it the moment the panel opens. */
         el('app').innerHTML='<div class="msg">'+esc((res.j&&res.j.message)||'Shop not found or has no public catalogue.')+'</div>'
-          + (BRIDGE ? supLinkHtml() : ''); return; } _SHOPDATA=res.j; if(res.j.shop&&res.j.shop.storefront_access==='login'){ renderLoginGate(res.j.shop); } else { render(res.j); } })
+          + (BRIDGE ? supLinkHtml() : ''); return; } _SHOPDATA=res.j; if(res.j.shop&&res.j.shop.storefront_access==='login'&&!_MYTOK){ renderLoginGate(res.j.shop); } else { render(res.j); } })
       .catch(function(e){ el('app').innerHTML='<div class="msg">Could not reach the shop. '+esc(e.message||'')+'</div>'; });
-  });
-})();
+}
 </script>
 </body>
 </html>
