@@ -19,7 +19,7 @@ const ROOT = path.join(__dirname, '..'), PUB = process.env.FRAME_PUB || path.joi
 const { standIn, route } = require('./lib/standin.cjs');
 const T = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.webmanifest': 'application/manifest+json' };
 const PAGES = [['crm', '/crm.html'], ['accounts', '/accounts.html'], ['standards', '/standards.html'], ['product-lab', '/product-lab.html'], ['offer-lab-next', '/offer-lab-next.html'],
-  ['combo-lab', '/combo-lab.html'], ['know-your-business', '/know-your-business.html'], ['authority-forms', '/authority-forms.html'], ['index', '/']];
+  ['combo-lab', '/offer-lab-next.html?mode=combo'], ['know-your-business', '/know-your-business.html'], ['authority-forms', '/authority-forms.html'], ['index', '/']];
 const WIDTHS = [[390, 844], [957, 800], [1366, 768], [1568, 900], [1920, 1020]];
 const only = (process.env.ONLY || '').split(',').filter(Boolean);
 const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64').replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
