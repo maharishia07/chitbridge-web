@@ -165,10 +165,9 @@ function booksAlert(){
   var g = GEN;
   return read('/api/books/health').then(function(r){
     if (g !== GEN) return;
-    /* FX-F10W: the same counts as Books' To do — each waiting row's `todo` (the server's one reading, books-hooks todoOf), each kind with its
-       own words and door, never "2 waiting for the ledger". An older server sends no `todo`: its rows are said as one line, as before. */
-    var rows = (r && r.waiting) || [], n = { accept: 0, add_supplier: 0, record: 0 };
-    rows.forEach(function(w){ n[w && n.hasOwnProperty(w.todo) ? w.todo : 'record']++; });
+    /* FX-F10W · STD1: the same counts as Books' To do and the Accounts card — /health `todo`, the server's ONE count (GROUP BY over every
+       waiting row, never this 50-row page), each kind with its own words and door, never "2 waiting for the ledger". */
+    var t = (r && r.todo) || {}, n = { accept: Number(t.accept) || 0, add_supplier: Number(t.add_supplier) || 0, record: Number(t.record) || 0 };
     var pl = function(k, one, many){ return n[k] + ' ' + (n[k] === 1 ? one : many); };
     ['ledger-accept', 'ledger-supplier', 'ledger-waiting'].forEach(alertDrop);
     if (n.accept) alert_('ledger-accept', 'warn', '🕗', pl('accept', 'supplier bill to accept', 'supplier bills to accept'), '', 'Open the bills', '/accounts.html#waiting');

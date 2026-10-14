@@ -850,30 +850,39 @@ function bkDaySales(entries, day) {
 }
 /**
  * ⭐ THE TO-DO — what waits on you, one line each, a tap away. Only a count above zero earns a row (SYSTEM rule 1);
- * all quiet collapses into one line. Every count is the server's: /health waiting[] (a received supplier bill waits
- * as "Waiting for you to confirm …" — one opens its sheet, several open Waiting; the rest are the ledger's to record), /dues (a
+ * all quiet collapses into one line. Every count is the server's: /health `todo` (STD1: the one count — bills to accept, one opens its
+ * sheet, several open Waiting; suppliers to add; the rest are the ledger's to record), /dues (a
  * customer with any bucket past "Not due"), /cheques (a held cheque with a step still open).
  */
 function bkTodoCounts(dues, cheques, health) {
-  var waiting = (health && health.waiting) || [];
-  var confirm = waiting.filter(function (w) { return bkWaitTodo(w) === 'accept'; }), toAdd = waiting.filter(function (w) { return bkWaitTodo(w) === 'add_supplier'; });
+  var waiting = (health && health.waiting) || [], n = bkWaitN(health);
+  var confirm = waiting.filter(function (w) { return bkWaitTodo(w) === 'accept'; });
   var overdue = ((dues && dues.parties) || []).filter(function (p) {
     if (bkDuesSide(p) !== 'rcv') return false;
     var b = p.buckets || {};
     return Object.keys(b).some(function (k) { return k !== 'not_due' && Number(b[k] || 0); });
   });
   var chq = ((cheques && cheques.cheques) || []).filter(function (x) { return bkChequeNext({ status: bkChequeStatus(x.status), next: Array.isArray(x.next) ? x.next : null }).length > 0; });
-  return { accept: confirm.length, acceptIds: confirm.map(function (w) { return w.chit_id; }).filter(Boolean), supplier: toAdd.length, overdue: overdue.length, cheques: chq.length,
-    waiting: waiting.length - confirm.length - toAdd.length };
+  return { accept: n.accept, acceptIds: confirm.map(function (w) { return w.chit_id; }).filter(Boolean), supplier: n.add_supplier, overdue: overdue.length, cheques: chq.length,
+    waiting: n.record };
 }
 /**
- * FX-F10W: what a Waiting row asks of the owner — the SERVER's reading (`todo`: accept · add_supplier · record, books-hooks todoOf), the one
- * Home's alert and the Accounts card count by. An older server sends none: its sentences are read as before (bkWaitFailed · bkWaitWho).
+ * STD1: what a Waiting row asks of the owner is the row's DATA — `todo` (accept · add_supplier · record), written when the books parked it
+ * (api books-hooks park). Never read from the sentence: `reason` is for people, and a copy edit must not change what a screen does.
  */
-function bkWaitTodo(w) {
-  if (w && w.todo) return w.todo;
-  var why = String((w && (w.reason || w.why)) || '');
-  return /^Waiting for you to confirm/.test(why) ? 'accept' : bkWaitWho(w) ? 'add_supplier' : 'record';
+var BK_TODOS = ['accept', 'add_supplier', 'record'];
+function bkWaitTodo(w) { return w && BK_TODOS.indexOf(w.todo) >= 0 ? w.todo : 'record'; }
+/**
+ * STD1 · THE ONE COUNT — /health's `total` and `todo` (api books-store waitingCount: GROUP BY over every open row, never the 50-row page), less
+ * the bills this page has just accepted that the server still lists (bkWaitGone). Home's alert and the Accounts card say the same numbers.
+ */
+function bkWaitN(r) {
+  var rows = (r && r.waiting) || [], t = (r && r.todo) || null, gone = function (w) { return !!(BK.gone && BK.gone[w.chit_id]) && bkWaitTodo(w) === 'accept'; };
+  var n = t ? { total: Number(r.total) || 0, accept: Number(t.accept) || 0, add_supplier: Number(t.add_supplier) || 0, record: Number(t.record) || 0 }
+    : rows.reduce(function (a, w) { a[bkWaitTodo(w)]++; a.total++; return a; }, { total: 0, accept: 0, add_supplier: 0, record: 0 });   /* an answer without counts: its rows' own todo */
+  var g = rows.filter(gone).length;
+  n.accept = Math.max(0, n.accept - g); n.total = Math.max(0, n.total - g);
+  return n;
 }
 /**
  * ⭐ THE DAY BOOK, THE WAY A DAY BOOK READS (Athi, 2026-10-01: "expand all, collapse all, search, filter, daily view,
@@ -2110,6 +2119,7 @@ function bkChequeRepaint(id) {
 async function bkHealthLoad() {
   var r = await api('booksHealth');
   BK.waiting = ((r && r.waiting) || []).filter(function (w) { return !(BK.gone && BK.gone[w.chit_id] && bkWaitTodo(w) === 'accept'); });   /* FX-F10W: an accepted bill stays gone (bkWaitGone) */
+  BK.waitN = bkWaitN(r);   /* STD1: the one count, not this page's length */
   if (r && r.year) BK.year = r.year;   /* the shop's year (bkFyNow) */
   if (r && r.currency) BK.cur = r.currency;
   bkWaitingCount();
@@ -2123,7 +2133,7 @@ async function bkChequesLoad() {
 }
 function bkWaitingCount() {
   var el = document.querySelector('[data-testid="bk-tab-waiting"] .code'); if (!el) return;
-  var n = (BK.waiting || []).length;
+  var n = BK.waitN ? BK.waitN.total : (BK.waiting || []).length;
   el.textContent = '🕗 ' + tx('Waiting') + (n ? ' · ' + n : '');
 }
 /**
@@ -2169,7 +2179,8 @@ async function bkChequesView(body) {
  * `summary_json.money.total`, READ from the chit, never summed here.
  */
 function bkWaitId(w) { return String(w.chit_id || w.id || w.ref || ''); }
-function bkWaitFailed(w) { return !/^Waiting for you to confirm/.test(String(w.reason || w.why || '')); }
+/** a row that is not simply waiting for acceptance — something failed or needs a fix (the row's todo, STD1) */
+function bkWaitFailed(w) { return bkWaitTodo(w) !== 'accept'; }
 function bkWaitModel(w) { var r = w && w.chit_id && BK.wchit && BK.wchit[w.chit_id]; try { return r && window.CBSheet ? CBSheet.model(r) : null; } catch (_) { return null; } }
 /** a walk-in DAY waiting (job 'day': no bill of its own) — its counter and day, read from the server's own source ref "walkin:<counter>:<day>" (WX-R2R:
     those rows said "— · —", so the owner could not tell which day of which counter was stuck) */
@@ -2188,15 +2199,15 @@ function bkWaitCols() {
         var who = bkWaitWho(w);
         /* FX-F10W: the shop's near matches come FIRST ("Is this Sri Ganesh Provisions (P-00001)?" — the server's candidates); adding a new party is the second choice */
         if (who) return '<span data-testid="wait-why-' + i + '" style="color:var(--warn-2)">' + esc(w.reason || w.why) + '</span> '
-          + bkWaitCands(w).map(function (c, j) { return '<button type="button" class="supact-pri" data-testid="wait-link-' + i + '-' + j + '" onclick="event.stopPropagation(); bkWaitLink(' + i + ', ' + j + ', this)">' + esc(bkCandWord(c)) + '</button> '; }).join('')
+          + bkWaitCands(w).map(function (c, j) { return '<button type="button" class="supact-pri" data-testid="wait-link-' + i + '-' + j + '" onclick="event.stopPropagation(); bkWaitLink(' + i + ', ' + j + ', this)">' + esc(CBSheet.isThis(c)) + '</button> '; }).join('')
           + '<button type="button"' + (bkWaitCands(w).length ? '' : ' class="supact-pri"') + ' data-testid="wait-addsup-' + i + '" onclick="event.stopPropagation(); bkWaitAddSupplier(' + i + ', this)">' + esc(tx('Add supplier')) + '</button>';
         if (bkWaitFailed(w)) return '<span data-testid="wait-why-' + i + '" style="color:var(--warn-2)">' + esc(w.reason || w.why || tx('No reason given')) + '</span>';
         return m ? esc(CBSheet.stepWord(m)) : dash;
       } },
   ];
 }
-/** F11: the name in the server's "Who is <name>? Add them as a supplier …" (books-hooks receiptBill) — read from its sentence, as bkWaitFailed reads "Waiting for you to confirm" */
-function bkWaitWho(w) { var m = /^Who is (.+)\? Add them as a supplier/.exec(String((w && (w.reason || w.why)) || '')); return m ? m[1] : null; }
+/** the supplier name a row asks to add — the row's `name` (STD1: data the books parked, never parsed from the sentence) */
+function bkWaitWho(w) { return bkWaitTodo(w) === 'add_supplier' && w.name ? String(w.name) : null; }
 /**
  * F11: add <name> as a supplier through the EXISTING door (POST /relationships/suppliers { name } — a local party, as the Suppliers screen adds
  * one), then ask the books to try again: the bill now names a supplier the books know and waits for acceptance. → the sentence to show, or null.
@@ -2206,20 +2217,19 @@ async function bkAddSupplier(name) {
   try { await api('supAdd', { body: { name: name, supply_kind: 'resale' } }); }
   catch (e) { if (!(e && (e.status === 409 || /already/i.test(String(e.message || ''))))) return bkWhy(e, tx('Could not add the supplier')); }
   try { await api('booksRetry', { body: {} }); } catch (e) { return bkWhy(e, tx('Added — try again from Waiting')); }
-  try { await bkHealthLoad(); } catch (_) {}
-  return null;
+  return bkHealthAgain(tx('Added — open Waiting again to see the bill'));
 }
 async function bkWaitAddSupplier(i, btn) {
   var w = (BK.waiting || [])[i], name = bkWaitWho(w); if (!name) return;
   await bkOnce('addsup-' + i, btn, async function () {
     var said = await bkAddSupplier(name);
-    var body = document.getElementById('bk_body'); if (body && BK.tab === 'waiting') await bkWaitingView(body);
+    /* STD1: the ROW flips (the list repaints its rows from the new /health read) — the view, its search and scroll stay */
+    var wl = CBList.get('waiting'); if (wl && BK.tab === 'waiting') wl.refresh();
     var out = document.getElementById('wait_out'); if (out) out.textContent = said || txf('{name} added as a supplier', { name: name });
   });
 }
-/** FX-F10W: the server's near matches on a "Who is …?" row (≤ 3, names + party_no) — [] from an older server */
+/** FX-F10W: the server's near matches on an add_supplier row (≤ 3, names + party_no) */
 function bkWaitCands(w) { return bkWaitTodo(w) === 'add_supplier' && Array.isArray(w && w.candidates) ? w.candidates.slice(0, 3) : []; }
-function bkCandWord(c) { return c.party_no ? txf('Is this {name} ({no})?', { name: c.name, no: c.party_no }) : txf('Is this {name}?', { name: c.name }); }
 /**
  * FX-F10W: "it is this one" — MY receipt names that supplier through the existing writer of a buyer's fact on a bill before acceptance
  * (PUT /chits/:id/use { party }: the SERVER resolves the number in my list and writes party.party_id), then the books try again: the bill
@@ -2229,8 +2239,12 @@ async function bkLinkSupplier(chitId, c) {
   try { await api('billUse', { params: { id: chitId }, body: { party: c.party_no ? { party_no: c.party_no } : { name: c.name } } }); }
   catch (e) { return bkWhy(e, tx('Could not link the supplier')); }
   try { await api('booksRetry', { body: {} }); } catch (e) { return bkWhy(e, tx('Linked — try again from Waiting')); }
-  try { await bkHealthLoad(); } catch (_) {}
-  return null;
+  return bkHealthAgain(tx('Linked — open Waiting again to see the bill'));
+}
+/** STD1: read /health again after a fix; a read that fails is logged and SAID (the fix itself is done) → the sentence, or null */
+async function bkHealthAgain(said) {
+  try { await bkHealthLoad(); return null; }
+  catch (e) { console.error('Books: the Waiting list could not be read again —', (e && e.message) || e); return said; }
 }
 async function bkWaitLink(i, j, btn) {
   var w = (BK.waiting || [])[i], c = bkWaitCands(w)[j]; if (!w || !c || !w.chit_id) return;
@@ -2248,7 +2262,9 @@ async function bkWaitLink(i, j, btn) {
 function bkWaitGone(chitId) {
   if (!chitId) return;
   BK.gone = BK.gone || {}; BK.gone[chitId] = true;
+  var left = (BK.waiting || []).filter(function (w) { return w.chit_id === chitId && bkWaitTodo(w) === 'accept'; }).length;
   BK.waiting = (BK.waiting || []).filter(function (w) { return w.chit_id !== chitId; });
+  if (BK.waitN && left) { BK.waitN.accept = Math.max(0, BK.waitN.accept - left); BK.waitN.total = Math.max(0, BK.waitN.total - left); }
   bkWaitingCount();
   var wl = CBList.get('waiting'); if (wl && BK.tab === 'waiting') wl.refresh();
 }

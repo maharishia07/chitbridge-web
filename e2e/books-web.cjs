@@ -45,9 +45,9 @@ function standIn() {
        "waiting to be recorded". */
     waiting: [{ id: 1, chit_id: 'ch7', ref: 'bill:ch7', why: 'Paid by Points — there is no ledger for Points yet.', tries: 3, since: '2026-09-28T10:00:00Z' },
               { id: 2, chit_id: 'ch8', ref: 'chit:ch8', why: 'September is locked. Open it again to record this bill.', tries: 1, since: '2026-09-29T09:00:00Z', stuck: true },
-              { id: 3, chit_id: 'sb1', ref: 'bill:sb1', why: 'Waiting for you to confirm Agro Mills’ bill AM-81.', tries: 0, since: '2026-09-30T08:00:00Z', stuck: true },
-              { id: 4, chit_id: 'sb2', ref: 'bill:sb2', why: 'Waiting for you to confirm Agro Mills’ bill AM-82.', tries: 0, since: '2026-09-30T09:00:00Z', stuck: true },
-              { id: 5, chit_id: 'sb3', ref: 'bill:sb3', why: 'Waiting for you to confirm a counter bill from Meena Traders.', tries: 0, since: '2026-09-30T10:00:00Z', stuck: true }],
+              { id: 3, chit_id: 'sb1', ref: 'bill:sb1', todo: 'accept', why: 'Waiting for you to confirm Agro Mills’ bill AM-81.', tries: 0, since: '2026-09-30T08:00:00Z', stuck: true },
+              { id: 4, chit_id: 'sb2', ref: 'bill:sb2', todo: 'accept', why: 'Waiting for you to confirm Agro Mills’ bill AM-82.', tries: 0, since: '2026-09-30T09:00:00Z', stuck: true },
+              { id: 5, chit_id: 'sb3', ref: 'bill:sb3', todo: 'accept', why: 'Waiting for you to confirm a counter bill from Meena Traders.', tries: 0, since: '2026-09-30T10:00:00Z', stuck: true }],
     /* a cheque the server itself lists as held (recorded at the counter, or in an earlier session) — and one already
        cleared (`next` empty), which the to-do must NOT count */
     chequeLists: 0, serverCheques: [{ payment_id: 'chq9', party_id: 'c2', name: 'Meena Traders', amount_minor: 50000, cheque_no: '778899', cheque_bank: 'SBI', status: 'cheque_received' },
@@ -93,7 +93,7 @@ async function route(S, r) {
     if (p === '/api/books/enable' && m === 'POST') { S.enables = (S.enables || 0) + 1; S.enabled = true; return J(r, 200, books.enable({ parties_numbered: 3 })); }
     if (!S.enabled) return J(r, 404, { error: 'Not found' });
     let x;
-    if (p === '/api/books/health') return J(r, 200, books.health({ last_check: { ok: true }, waiting: S.waiting.map((w) => books.waitingRow({ id: w.id, chit_id: w.chit_id, ref: w.ref, reason: w.why, tries: w.tries, since: w.since })) }));   /* routes/books.js GET /health: the sentence is `reason`; cheques are NOT here */
+    if (p === '/api/books/health') return J(r, 200, books.health({ last_check: { ok: true }, waiting: S.waiting.map((w) => books.waitingRow({ id: w.id, chit_id: w.chit_id, ref: w.ref, reason: w.why, tries: w.tries, since: w.since, todo: w.todo || 'record', name: w.name || null })) }));   /* routes/books.js GET /health: the sentence is `reason`; cheques are NOT here */
     if (p === '/api/books/cheques' && m === 'GET') { S.chequeLists++; /* 2026-10-02: a cheque recorded in the APP is held on the server too, and CB Accounts (a fresh page, no session memory) lists it from there */
     const held = Object.keys(S.payments).filter((k) => S.payments[k].mode === 'cheque' && !S.chequeSteps.some((x) => x.id === k && x.body.status === 'cleared')).map((k) => ({ payment_id: k, party_id: S.payments[k].party_id, name: 'Ravi Stores', amount_minor: Math.round(Number(S.payments[k].amount || 0) * 100), cheque_no: S.payments[k].cheque_no, cheque_bank: S.payments[k].cheque_bank, status: S.chequeSteps.some((x) => x.id === k && x.body.status === 'deposited') ? 'cheque_deposited' : 'cheque_received', next: S.chequeSteps.some((x) => x.id === k && x.body.status === 'deposited') ? ['cleared'] : ['deposited'] }));
       return J(r, 200, { currency: 'INR', cheques: held.concat(S.serverCheques.map((c) => Object.assign({ next: ['deposited'] }, c))) }); }   /* GET /cheques: the held ones, each with the steps the engine accepts now */
