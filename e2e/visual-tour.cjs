@@ -41,7 +41,7 @@ const MAX_CLICKS = Number(arg('clicks', process.env.TOUR_MAX_CLICKS || 40));
 const OPS = Number(arg('ops', 6));
 const ONLY = arg('pages', '') ? String(arg('pages')).split(',') : null;
 const [SHARD, SHARDS] = String(arg('shard', '1/1')).split('/').map(Number);
-const RUN = PART + '-' + THEME + '-' + WIDTH + (SHARDS > 1 ? '-s' + SHARD : '');
+const RUN = PART + '-' + THEME + '-' + WIDTH + (SHARDS > 1 ? '-s' + SHARD : '') + (ONLY ? '-p-' + ONLY.join('-').replace(/[^a-z0-9-]+/gi, '').slice(0, 40) : '');   /* a --pages run never overwrites the full run's file */
 
 /* ⚠️ what the tour never clicks, by its words (label · test id · title): anything that writes, pays, sends, prints, leaves or signs out.
    "Open a form and cancel" is allowed — New / Add open a form; the form's own Save is one of these words. */
