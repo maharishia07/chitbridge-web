@@ -441,7 +441,7 @@ function acRowHTML(x){ if(typeof acTypeOf==='function'){ var _ct=acTypeOf(x); if
   const coverLines=(x.del||coversNames.length)?'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px;line-height:1.45">'+(x.del?('🛡 Covered by <b style="color:var(--ink);font-weight:600">'+coverNm+'</b>'):'')+((x.del&&coversNames.length)?'<br>':'')+(coversNames.length?('🤝 Covers for <b style="color:var(--ink);font-weight:600">'+coversNames.join(', ')+'</b>'):'')+'</div>':'';
   return `<div class="row ${x.id===UI.acSel?'sel':''}" data-ac="${x.id}" style="${dim}" onclick="selectActor('${x.id}')">
     <div style="width:9px;height:9px;border-radius:50%;flex:0 0 auto;margin-top:5px;background:${x.shift==='on_shift'?'var(--ok-3)':x.shift==='on_break'?'var(--warn-2)':'var(--grey-2)'}"></div>
-    <div class="main2"><div class="l1"><span class="code">${esc(x.name)}</span><span class="optchip" style="background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">${hatLabel(x.hat)}</span>${x.pinSet?'':(x.otp?'<span class="optchip" style="background:var(--warn-tint);color:var(--warn-3);border-color:var(--warn-3)">' + tx('⏳ invite') + '</span>':'')}<span class="amt" style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">${x.load}/${x.max||'∞'}</span></div>
+    <div class="main2"><div class="l1"><span class="code">${esc(x.name)}</span><span class="optchip" style="background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">${hatLabel(x.hat)}</span>${x.pinSet?'':(x.invite?'<span class="optchip" style="background:var(--warn-tint);color:var(--warn-3);border-color:var(--warn-3)">' + tx('⏳ invite') + '</span>':'')}<span class="amt" style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">${x.load}/${x.max||'∞'}</span></div>
       <div class="l2">${esc(x.role||'—')} · <span class="mono">${acLogin(x)}</span> <span class="optchip ${acShc(x.shift)}">${acShLabel(x.shift)}</span>${x.status!=='active'?'<span class="optchip off">'+esc(x.status)+'</span>':''}${(x.shift!=='on_shift'&&x.returnDate)?' · returns '+acDate(x.returnDate):''}</div>${coverLines}</div>
     <div class="rowgo" aria-hidden="true">›</div></div>`; }
 function acRowsHTML(){ if((UI.acTypeF||'all')==='ai') return aiRowsHTML(); const r=acVisible(); if(!r.length){ const _tf=UI.acTypeF||'all'; const _reg=(window.ACTOR_TYPES||{})[_tf];     /**
@@ -583,8 +583,9 @@ function acDetailHTML(){ const x=UI.acDet;
       +'</div>';
     const loginState = x.pinSet
       ? '<div class="sec">' + tx('Login') + '</div><div style="'+_CARD+';background:var(--ok-tint);border-color:var(--ok-2);color:var(--on-card)"><div style="font-size:var(--fs-2);color:var(--ok-2);font-weight:600">✓ Active — PIN set. They sign in with their User ID + PIN.</div></div>'
-      : (x.otp
-          ? '<div class="sec">' + tx('Login — pending invite') + '</div><div style="'+_CARD+';background:var(--blue-tint);border-color:var(--blue-tint-line);color:var(--on-card)"><div style="font-size:var(--fs-1);color:var(--blue-d);text-transform:uppercase;letter-spacing:.4px;font-weight:700">' + tx('User ID') + '</div><div class="mono" style="font-weight:700;font-size:var(--fs-2);word-break:break-all">'+esc(acLogin(x))+'</div><div style="font-size:var(--fs-1);color:var(--blue-d);text-transform:uppercase;letter-spacing:.4px;font-weight:700;margin-top:7px">' + tx('One-time code') + '</div><div class="mono" style="font-weight:800;font-size:var(--fs-5);letter-spacing:3px;color:var(--blue-d)">'+esc(x.otp)+'</div><div style="font-size:var(--fs-1);color:var(--blue-d);margin-top:6px">Share these so they can sign in &amp; set their PIN. Not set a PIN yet.</div></div>'
+      /* SEC2: the list never carries the code (pin_state) — the card says one is waiting and where it went, never what it is */
+      : (x.invite
+          ? '<div class="sec">' + tx('Login — pending invite') + '</div><div style="'+_CARD+';background:var(--blue-tint);border-color:var(--blue-tint-line);color:var(--on-card)"><div style="font-size:var(--fs-1);color:var(--blue-d);text-transform:uppercase;letter-spacing:.4px;font-weight:700">' + tx('User ID') + '</div><div class="mono" style="font-weight:700;font-size:var(--fs-2);word-break:break-all">'+esc(acLogin(x))+'</div><div style="font-size:var(--fs-1);color:var(--blue-d);margin-top:6px">' + tx('A first code is waiting. It was sent to their e-mail. Lost it? Use Re-invite below.') + '</div></div>'
           : '<div class="sec">' + tx('Login — pending') + '</div><div style="'+_CARD+';background:var(--warn-tint);border-color:var(--warn-3);color:var(--on-card)"><div style="font-size:var(--fs-2);color:var(--warn-3)">' + txf('No active one-time code and no PIN yet — use {reinvite} below to issue a code.', { reinvite: '<b>' + tx('Re-invite') + '</b>' }) + '</div></div>');
     /* ⭐ A CONNECTOR IS NOT A PERSON (Athi, 2026-09-06, the Tally kit's card: "type says human? hat says editor"). A kit or a device has
        no login to re-invite, nobody covers its leave, and it takes no tasks — what matters is WHAT it is, WHERE it runs and WHEN it last
@@ -617,17 +618,17 @@ function acDetailHTML(){ const x=UI.acDet;
   return `${head}<div class="db">${body}</div><div class="actbar">${bar}</div>`;
 }
 /* acShift removed (dead) — entity set-shift used the self-only /break route (400 for entity); actors self-manage shift. Entity set-shift = backlog. */
-async function acReinvite(id){ const x=(UI.acts||[]).find(a=>a.id===id)||{}; try{ const r=await api("actorOtp",{params:{id}}); const otp=(r&&(r.otp||r.dev_otp))||''; const lf=(r&&r.login_format)||acLogin(x); actorInviteModal('✉️ New code — '+(x.name||'co-assist'), x.name, lf, otp); }catch(e){ toast(MSG.fail("re-invite", e)); } }
+async function acReinvite(id){ const x=(UI.acts||[]).find(a=>a.id===id)||{}; try{ const r=await api("actorOtp",{params:{id}}); const otp=(r&&(r.otp||r.dev_otp))||''; const lf=(r&&r.login_format)||acLogin(x); actorInviteModal('✉️ New code — '+(x.name||'co-assist'), x.name, lf, otp, r); }catch(e){ toast(MSG.fail("re-invite", e)); } }
 function acResetPin(id){ const x=(UI.acts||[]).find(a=>a.id===id)||{};
   confirmAsk('Reset PIN', 'Reset <b>'+esc(x.name||'this co-assist')+'</b>&rsquo;s PIN? A new one-time code is issued and they set a new PIN on next login.', 'Reset PIN', async function(){
-    try{ const r=await api("actorPinReset",{params:{id}}); const otp=(r&&(r.otp||r.dev_otp))||''; const lf=(r&&r.login_format)||acLogin(x); actorInviteModal('🔑 PIN reset — '+(x.name||'co-assist'), x.name, lf, otp); }catch(e){ toast(MSG.fail("reset the PIN", e)); }
+    try{ const r=await api("actorPinReset",{params:{id}}); const otp=(r&&(r.otp||r.dev_otp))||''; const lf=(r&&r.login_format)||acLogin(x); actorInviteModal('🔑 PIN reset — '+(x.name||'co-assist'), x.name, lf, otp, r); }catch(e){ toast(MSG.fail("reset the PIN", e)); }
   }); }
 function acStatus(id, action){ const x=(UI.acts||[]).find(a=>a.id===id); if(!x)return;
   const routed = x.load>0 ? ' ' + txn('Their {count} active task returns to the pool.',
                                     'Their {count} active tasks return to the pool.', x.load) : '';
   const run=async function(){ const body={action}; if(x.load>0)body.task_action='pool'; if(action==='remove')body.confirm='REMOVE';
     try{ const r=await api("actorStatus",{params:{id},body}); UI.acSel=null; UI.acDet=null; UI.mdetail=false; await loadCoassists();
-      if(action==='reactivate'){ const otp=(r&&(r.otp||r.dev_otp))||''; const lf=(r&&r.login_format)||acLogin(x); actorInviteModal('↩ '+(x.name||'co-assist')+' reactivated', x.name, lf, otp); }
+      if(action==='reactivate'){ const otp=(r&&(r.otp||r.dev_otp))||''; const lf=(r&&r.login_format)||acLogin(x); actorInviteModal('↩ '+(x.name||'co-assist')+' reactivated', x.name, lf, otp, r); }
       else { const parts=[];
         if(r&&r.tasks_routed>0) parts.push(r.tasks_routed+' task'+(r.tasks_routed>1?'s':'')+(body.task_action==='actor'?' reassigned to a colleague':' returned to the pool'));
         if(r&&r.had_cover) parts.push('own leave-cover cleared');
