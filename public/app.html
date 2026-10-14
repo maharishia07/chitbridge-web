@@ -1895,8 +1895,6 @@ const EP = {
   captureStructure:{m:"POST", p:"/api/capture/:id/structure",    ok:"✓"},
   captureConvert:  {m:"POST", p:"/api/capture/:id/convert",      ok:"✓"},  // the receipt: this capture became that chit
   captureRaise:    {m:"POST", p:"/api/capture/:id/raise",        ok:"✓"},  // build the request payload — creates NOTHING
-  policyGet:       {m:"GET",  p:"/api/entities/policy",          ok:"✓"},  // b130 — per-entity flags, on the ENTITY
-  policySet:       {m:"PATCH",p:"/api/entities/policy",          ok:"✓"},
   captureDismiss:  {m:"POST", p:"/api/capture/:id/dismiss",      ok:"✓"},
   // CHANNELS (b123) — which inbound number/address reaches this entity. The map the capture webhooks resolve against.
   channelsList:    {m:"GET",  p:"/api/channels",                 ok:"✓"},
@@ -1909,9 +1907,7 @@ const EP = {
   attUpload:       {m:"POST", p:"/api/attachments",             ok:"✓"},  // upload a file (base64) after a chit/message exists
   addActor:        {m:"POST", p:"/api/actors",                   ok:"✓"},  // create an actor
   /* dispute · disputes · disputeQueue · resolveDispute → CB_DISPUTE_EP; assistQuestions · assistPublish · assistWhoami · aiDraft → CB_ASSIST_EP (app/accounts-shell.js, T3-DISPUTES-ASSIST): CB Tasks & Orders › Disputes and CB Assist register the same routes once */
-  /* The billing ledger for the CALLER's own entity — there is no entity parameter, so it cannot be asked about
-     anyone else. Read on demand when the Usage section is opened, never as part of painting a profile. */
-  entityUsage:     {m:"GET",   p:"/api/entities/usage",          ok:"✓"},
+  /* policyGet · policySet · entityUsage → CB_SETTINGS_EP (app/accounts-shell.js, T3-SETTINGS): CB Settings reads them too */
   /* savePrefs (b165/b166) — MOVED to core.js (CB_PREFS_EP), beside CBPrefs, its one caller: every page that loads core.js knows it (FX-QA1) */
   getSettings:     {m:"GET",   p:"/api/actors/settings",         ok:"✓"},
   saveSettings:    {m:"PUT",   p:"/api/actors/settings",         ok:"✓"},
@@ -2033,7 +2029,7 @@ const EP = {
   netResume:      {m:"POST", p:"/api/network/connections/:id/resume",     ok:"✓"},
   netDisconnect:  {m:"POST", p:"/api/network/connections/:id/disconnect", ok:"✓"},
 };
-Object.assign(EP, CB_BOOKS_EP, CB_SHEET_EP, CB_PARTY_EP, CB_THREAD_EP, CB_SHOP_EP, CB_DISPUTE_EP, CB_ASSIST_EP);   /* CB_SHOP_EP (SET1): the shop's own profile · vault · country setup — shared with settings.html */   /* the Ledger's boot endpoints and the party add/edit/remove/search routes — declared once, in app/accounts-shell.js, shared with accounts.html and crm.html */
+Object.assign(EP, CB_BOOKS_EP, CB_SHEET_EP, CB_PARTY_EP, CB_THREAD_EP, CB_SHOP_EP, CB_DISPUTE_EP, CB_ASSIST_EP, CB_SETTINGS_EP);   /* CB_SETTINGS_EP (T3-SETTINGS): counters · keys · connectors · policy · plan & usage — shared with settings.html */   /* CB_SHOP_EP (SET1): the shop's own profile · vault · country setup — shared with settings.html */   /* the Ledger's boot endpoints and the party add/edit/remove/search routes — declared once, in app/accounts-shell.js, shared with accounts.html and crm.html */
 
 /* deepClone → app/helpers.js */
 /* STORE starts EMPTY. It once had a demo dataset beside it and the rule was that a demo constant must never be
@@ -4655,7 +4651,7 @@ function capScreen(name){
 function hasCap(k){ return (SESSION.capabilities||[]).indexOf(k)>=0; }   // one capability check, used by all gates
 const _capPromise = {}, _capWithPromise = {};
 /* a capability split by job loads its other halves first (P2: network = the design builder + its member half, cap-network-member.js) */
-const CAP_WITH = { network:['network-member'], admin:['shop'] };   /* admin: the Profile's Business section and the vault live in cap-shop.js (SET1: CB Settings paints them too) */
+const CAP_WITH = { network:['network-member'], admin:['shop', 'settings'] };   /* admin: the Profile's Business section and the vault live in cap-shop.js (SET1); polDefsOf and the counters/keys/kit helpers in cap-settings.js (T3-SETTINGS) — CB Settings paints both */
 function ensureCap(name){
   if(CAP_LOADED[name]) return Promise.resolve();
   if(CAP_WITH[name]){

@@ -15,7 +15,7 @@ something needs them before any navigation happens.
 router renders a placeholder until `_capLoading` clears, which is the only reason the
 old duplicate `networkScreen()` in app.html was safe to delete.
 
-## Capabilities (50)
+## Capabilities (51)
 
 | file | loading · nav key | what it is |
 |---|---|---|
@@ -59,6 +59,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-register.js` | lazy · on demand | THE REGISTER. Lazy (ensureCap('register')) |
 | `cap-repeat.js` | lazy · on demand | cap-repeat.js — REPEAT SUPPLY as an AGREEMENT both parties hold (round RI1, 2026-10-12): CB Finance › Repeat supply (the seller's list), |
 | `cap-service.js` | lazy · on demand | cap-service.js — a chit AS A SERVICE REQUEST. Lazy-loaded (ensureCap('service')) |
+| `cap-settings.js` | — | CB SETTINGS › Counters & keys · Connectors · Policy · Plan & usage (T3-SETTINGS, 2026-10-14; SET2 of INDEX-NOT-APP.md) |
 | `cap-shop.js` | — | YOUR SHOP: the shop's own particulars, ONE implementation painted in two places (SET1, 2026-10-13) |
 | `cap-standards.js` | lazy · on demand |  |
 | `cap-stock.js` | — | STOCK: what is on the shelf, per product, from the ONE stock reader (T3-OPS, 2026-10-14; CB Operations › Stock) |
@@ -124,4 +125,4 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 
 ---
 
-*97 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*98 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*

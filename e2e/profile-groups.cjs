@@ -49,6 +49,8 @@ Object.assign(sb, {
   textSize: () => 'm', motionPref: () => 'auto', apGet: (k, d) => (k in store ? store[k] : d),
   STANDARDS: [], GOV: [],
 });
+/* CAP_WITH.admin (app.html): helpers.js (taxIdWord · packWord), cap-shop.js (SET1) and cap-settings.js (T3-SETTINGS) load before cap-admin.js */
+for (const f of ['helpers.js', 'cap-shop.js', 'cap-settings.js']) vm.runInContext(fs.readFileSync(path.join(W, 'app', f), 'utf8'), ctx, { filename: f });
 vm.runInContext(fs.readFileSync(path.join(W, 'app', 'cap-admin.js'), 'utf8'), ctx, { filename: 'cap-admin.js' });
 
 const html = ctx.iamMeHTML({

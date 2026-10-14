@@ -18,21 +18,27 @@ Athi, 2026-10-12: *"for each function we are building we need to have a SAP kind
 | [MVI](MVI.md) | Move in (from Xero / QuickBooks) | FI (conversion: opening balances, master data) | chart of accounts → contacts → items → opening balances | 4 | 0 | 0 |
 | [PRN](PRN-flow.md) | Parallel run (their Tally / Xero period beside ours) | FI (audit: parallel run, reconciliation of statements) | load their period → compare, differences first → the auditor's file | 2 | 1 | 0 |
 | [FX](FX.md) | Foreign currency (a bill in another currency, its settlement, the period-end revaluation) | FI (foreign currency valuation · realised / unrealised exchange differences) | the day's rate → a foreign bill posts at its day's rate; its payment settles with the exchange gain or loss → revalue at the month end, reversed next month | 3 | 0 | 0 |
+| [DSP](DSP.md) | Dispute to settled (the USP: per-party, confidential) | SD-CM (complaints) · FI-AR (disputed items) | raise → work the queue → resolve | 2 | 1 | 0 |
+| [CBA](CBA.md) | Question to answer (CB Assist) | — (the help desk's knowledge base) | draft an answer → accept = publish | 1 | 1 | 0 |
+| [SET](SET.md) | Shop setup (counters · connectors · rules · plan) | BC (customising · authorisations · licence) | counters and keys: add, open on this PC, release; make and revoke a key → connectors: download the kit, say which ones you use, approve the PC → rules: set a policy flag, who may change each said by the server → plan and usage: the plan, each quota as a state, what was billed | 3 | 1 | 0 |
 
 ## Flows × modules — which module owns which step
 
-| flow | CRM | Finance | Accounts | Till | Tasks & Orders | Operations | Employees | Network |
-|---|---|---|---|---|---|---|---|---|
-| O2C |  | 6 receipt<br>8 cash position<br>9 repeat supply | 7 posted | 5 invoice | 2 quote (MISSING)<br>3 order<br>4 delivery |  |  | 1 enquiry ⚠️ |
-| P2P |  | 7 payables | 4 supplier bill<br>5 payment<br>6 posted |  | 2 PO | 1 need ⚠️<br>3 goods receipt |  |  |
-| R2R |  | 8 cash position | 1 country<br>2 entries<br>4 month lock<br>5 GST<br>6 year close<br>7 statements<br>9 bank reconciliation | 3 day close |  |  |  |  |
-| INV |  |  | 5 closing stock ⚠️ | 2 stock<br>3 issue / sale ⚠️ |  | 1 receipt<br>4 count (MISSING) |  |  |
-| H2P |  |  | 5 payment (MISSING) | 3 attendance ⚠️ |  |  | 1 person<br>2 access<br>4 payroll (MISSING) |  |
-| L2C | 1 lead<br>2 call<br>3 demo ⚠️<br>4 trial ⚠️<br>5 customer<br>6 consent & privacy requests ⚠️ |  |  |  |  |  |  |  |
-| C2V |  |  | 1 practice (MISSING)<br>2 request (MISSING)<br>3 grant (MISSING)<br>4 dashboard (MISSING)<br>5 open client (MISSING)<br>6 ask ⚠️<br>7 end (MISSING) |  |  |  |  |  |
-| MVI |  |  | 1 chart of accounts<br>2 contacts<br>3 items<br>4 opening balances |  |  |  |  |  |
-| PRN |  |  | 1 load their period<br>2 compare, differences first<br>3 the auditor's file ⚠️ |  |  |  |  |  |
-| FX |  |  | 1 the day's rate<br>2 a foreign bill posts at its day's rate; its payment settles with the exchange gain or loss<br>3 revalue at the month end, reversed next month |  |  |  |  |  |
+| flow | CRM | Finance | Accounts | Till | Tasks & Orders | Operations | Employees | Network | Settings |
+|---|---|---|---|---|---|---|---|---|---|
+| O2C |  | 6 receipt<br>8 cash position<br>9 repeat supply | 7 posted | 5 invoice | 2 quote (MISSING)<br>3 order<br>4 delivery |  |  | 1 enquiry ⚠️ |  |
+| P2P |  | 7 payables | 4 supplier bill<br>5 payment<br>6 posted |  | 2 PO | 1 need ⚠️<br>3 goods receipt |  |  |  |
+| R2R |  | 8 cash position | 1 country<br>2 entries<br>4 month lock<br>5 GST<br>6 year close<br>7 statements<br>9 bank reconciliation | 3 day close |  |  |  |  |  |
+| INV |  |  | 5 closing stock ⚠️ | 2 stock<br>3 issue / sale ⚠️ |  | 1 receipt<br>4 count (MISSING) |  |  |  |
+| H2P |  |  | 5 payment (MISSING) | 3 attendance ⚠️ |  |  | 1 person<br>2 access<br>4 payroll (MISSING) |  |  |
+| L2C | 1 lead<br>2 call<br>3 demo ⚠️<br>4 trial ⚠️<br>5 customer<br>6 consent & privacy requests ⚠️ |  |  |  |  |  |  |  |  |
+| C2V |  |  | 1 practice (MISSING)<br>2 request (MISSING)<br>3 grant (MISSING)<br>4 dashboard (MISSING)<br>5 open client (MISSING)<br>6 ask ⚠️<br>7 end (MISSING) |  |  |  |  |  |  |
+| MVI |  |  | 1 chart of accounts<br>2 contacts<br>3 items<br>4 opening balances |  |  |  |  |  |  |
+| PRN |  |  | 1 load their period<br>2 compare, differences first<br>3 the auditor's file ⚠️ |  |  |  |  |  |  |
+| FX |  |  | 1 the day's rate<br>2 a foreign bill posts at its day's rate; its payment settles with the exchange gain or loss<br>3 revalue at the month end, reversed next month |  |  |  |  |  |  |
+| DSP |  |  |  |  | 1 raise<br>2 work the queue<br>3 resolve ⚠️ |  |  |  |  |
+| CBA |  |  |  |  | 1 draft an answer ⚠️<br>2 accept = publish |  |  |  |  |
+| SET |  |  |  |  |  |  |  |  | 1 counters and keys: add, open on this PC, release; make and revoke a key<br>2 connectors: download the kit, say which ones you use, approve the PC<br>3 rules: set a policy flag, who may change each said by the server<br>4 plan and usage: the plan, each quota as a state, what was billed ⚠️ |
 
 ## The modules
 
@@ -46,6 +52,7 @@ Athi, 2026-10-12: *"for each function we are building we need to have a SAP kind
 | Operations | `web:public/app.html` | MM (supplies, stock, intake) |
 | Employees | `web:public/employees.html` | HCM |
 | Network | `web:public/network.html` | SD (storefront) · CTP |
+| Settings | `web:public/settings.html` | BC (customising · authorisations) |
 
 ## The backlog — every step the code does not have
 
@@ -72,6 +79,9 @@ Athi, 2026-10-12: *"for each function we are building we need to have a SAP kind
 - **L2C step 6 · consent & privacy requests** — CO1: built and tested in the api; no screen yet, and migrations b306 / b307 are drafts the owner runs (docs/compliance/OWNER-ACTIONS.md).
 - **C2V step 6 · ask** — The ONE composer (CBThread), the ladder (a commenter posts internally, an editor externally, a viewer reads and sees the sentence) and msg_type 'query' (migrations/000_baseline_part2.sql CHECK) exist and are reused as they are. No due date and no answered flag: the thread's last message says whose turn it is (REQUIREMENT §9). Missing: the anchor for a MONTH's question (the month's pack as a message subject beside chit_id — owner Q1, decided before CA2) and the cross-client count threads_waiting_on_client in last_check.summary.
 - **PRN step 3 · the auditor's file** — CSV from the server; the PDF is the browser's print of the page (no PDF library added).
+- **DSP step 3 · resolve** — Resolve is not a rail action yet: its rule is composed in api lib/dispute-may (engines change queued: rail ACTIONS + resolve_dispute).
+- **CBA step 1 · draft an answer** — A draft is never stored: Accept publishes it, Reject throws it away (the old gap queue is retired: /assist/gaps · /assist/resolve).
+- **SET step 4 · plan and usage: the plan, each quota as a state, what was billed** — Reporting only: no route gates on plan (enforced:false) and every sellable tier's quotas are not decided — shown as 'Not decided yet', never as unlimited.
 
 ## How a new function joins the map
 

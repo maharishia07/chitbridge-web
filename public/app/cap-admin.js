@@ -6,15 +6,7 @@
  * (Co-assists is planned to move here too, once its shared actor helpers are separated.) */
 
 if (typeof EP !== 'undefined') { Object.assign(EP, {
-  keysList:  {m:'GET',    p:'/api/keys',                    ok:'y'},   // API keys for other systems (routes/keys.js)
-  keysMint:  {m:'POST',   p:'/api/keys',                    ok:'✓'},
-  keysRevoke:{m:'DELETE', p:'/api/keys/:jti',               ok:'✓'},
-  /* ⭐ the shop's counters as standing identities (routes/counters.js, 2026-09-17) */
-  counters:       {m:'GET',  p:'/api/counters',                  ok:'✓'},
-  counterAdd:     {m:'POST', p:'/api/counters',                  ok:'✓'},
-  counterRename:  {m:'PATCH',p:'/api/counters/:id',              ok:'✓'},
-  counterOpen:    {m:'POST', p:'/api/counters/:id/open',         ok:'✓'},
-  counterRelease: {m:'POST', p:'/api/counters/:id/release',      ok:'✓'},
+  /* keysList · keysMint · keysRevoke · counters · counterAdd · counterRename · counterOpen · counterRelease → CB_SETTINGS_EP (app/accounts-shell.js, T3-SETTINGS) */
   /* ⭐ a brand releases offers to its stores; a store takes them or not (routes/network-offers.js, 2026-09-17) */
   netOffers:        {m:'GET',  p:'/api/network-offers',              ok:'✓'},
   netOfferPolicy:   {m:'PUT',  p:'/api/network-offers/policy',       ok:'✓'},
@@ -25,9 +17,7 @@ if (typeof EP !== 'undefined') { Object.assign(EP, {
   netCatPublish:    {m:'POST', p:'/api/network-offers/catalogue/publish', ok:'✓'},
   netCatCancel:     {m:'POST', p:'/api/network-offers/catalogue/cancel',  ok:'✓'},
   netCatPrice:      {m:'POST', p:'/api/network-offers/catalogue/price',   ok:'✓'},
-  intCatalogue:{m:'GET',  p:'/api/integrations/catalogue',  ok:'y'},   // the connectors that exist (routes/integrations.js)
-  intStatus: {m:'GET',    p:'/api/integrations/status',     ok:'y'},
-  intApprove:{m:'POST',   p:'/api/integrations/:id/approve', ok:'✓'},  // the owner approves a connector's PC (the handshake)   // the connectors that have checked in
+  /* intCatalogue · intStatus · intApprove → CB_SETTINGS_EP (app/accounts-shell.js, T3-SETTINGS) */
   intProfileMap:{m:'GET', p:'/api/integrations/profile-map',ok:'y'},   // what we look for about the store · where from · how trusted
   intStreams:{m:'GET',    p:'/api/integrations/streams',    ok:'y'},   // who owns which stream (2026-09-07)
   intStreamsSet:{m:'PUT', p:'/api/integrations/streams',    ok:'✓'},   // hand a stream to another connector
@@ -4338,19 +4328,14 @@ function intEnrolHTML(r){
 async function intApprove(id){ try { await api('intApprove', { params: { id: id } }); toast(tx('Approved — the connector starts within a minute.')); _INT_RUN = undefined; loadSettings(); } catch (e) { toast(tx('Could not approve') + ': ' + (e && e.message || e)); } }
 async function intReject(jti){ try { await api('keysRevoke', { params: { jti: jti } }); toast(tx('Key revoked — that kit can no longer connect.')); _INT_RUN = undefined; _KEYS = undefined; loadSettings(); } catch (e) { toast(tx('Could not revoke') + ': ' + (e && e.message || e)); } }
 
-/** the kit, fetched with the session so the key rides inside; saved through a blob like the tax export (misTaxDownload) */
+/** the kit through the session (kitDownload, app/cap-settings.js — the one fetch); the workshop says the outcome in a toast */
 async function intDownloadKit(id, adapter){
   try {
-    var base = (typeof CFG !== 'undefined' && CFG.API_BASE) || '';
-    var r = await fetch(base + '/api/integrations/download/' + encodeURIComponent(id) + '?adapter=' + encodeURIComponent(adapter), { headers: { Authorization: 'Bearer ' + SESSION.token } });
-    if (!r.ok) throw new Error('download failed (' + r.status + ')');
-    var blob = await r.blob();
-    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'chitbridge-connector-' + id + '.zip'; document.body.appendChild(a); a.click(); a.remove();
+    await kitDownload(id, adapter);
     toast(tx('Downloaded — your key is inside. Unzip on the Tally PC and double-click start.cmd.'));
     _INT_RUN = undefined;   /* the new key shows under Your keys on the next paint */
   } catch (e) { toast(tx('Could not download') + ': ' + (e && e.message || e)); }
 }
-
 /**
  * ⭐ THE HOME OF CONNECTORS (Athi, 2026-09-05: "include the tally connector as a downloadable option in the system itself …
  * all should reside as part of Integrations; if we build more, it should stay there"). The catalogue comes from the API
@@ -5076,11 +5061,7 @@ async function ctrOpenHere(id){
   try {
     var r = await api('counterOpen', { params: { id: id } });
     if (!r || !r.key) throw new Error(tx('no key came back'));
-    try { localStorage.setItem('cb_till_key', r.key); localStorage.setItem('cb_till_entity', SESSION.entityId || ''); } catch (_) {}
-    var addr = '/till.html#key=' + encodeURIComponent(r.key)
-             + '&shop=' + encodeURIComponent(SESSION.entityId || '')
-             + '&as=' + encodeURIComponent(SESSION.entity || '');
-    window.open(addr, '_blank', 'noopener');
+    ctrOpenTill(r.key);   /* app/cap-settings.js — the one opener, CB Settings › Counters & keys calls it too */
     ctrReload();
   } catch (e) {
     /* ⚠️ held elsewhere is the ordinary refusal — say who has it, in the server's own words */
@@ -5154,24 +5135,7 @@ function intPairingsHTML(){
     + tx('Each pairing is one PC opening a counter. A closed pairing is kept as history; its counter can be opened again above.') + '</div>'
     + rows + note + '</div>';
 }
-function _keySeenAt(k){ return (k && k.seen && k.seen.at) ? new Date(k.seen.at).getTime() : 0; }
-function _keyAgo(iso){
-  if (!iso) return '';
-  var s = Math.round((Date.now() - new Date(iso).getTime()) / 1000);
-  if (s < 90) return tx('just now');
-  if (s < 5400) return Math.round(s / 60) + ' min ago';
-  if (s < 172800) return Math.round(s / 3600) + ' h ago';
-  return Math.round(s / 86400) + ' days ago';
-}
-/** ⭐ a user-agent is unreadable; the shop only needs to recognise WHICH MACHINE this was */
-function _agentName(ua){
-  var u = String(ua || '');
-  var os = /Windows/.test(u) ? 'Windows' : /Android/.test(u) ? 'Android' : /iPhone|iPad/.test(u) ? 'iPhone/iPad'
-         : /Mac OS X/.test(u) ? 'Mac' : /Linux/.test(u) ? 'Linux' : '';
-  var br = /Edg\//.test(u) ? 'Edge' : /Chrome\//.test(u) ? 'Chrome' : /Firefox\//.test(u) ? 'Firefox'
-         : /Safari\//.test(u) ? 'Safari' : '';
-  return [os, br].filter(Boolean).join(' · ') || tx('unknown');
-}
+/* _keySeenAt · _keyAgo · _agentName → app/cap-settings.js (T3-SETTINGS: CB Settings › Counters & keys reads them too) */
 var _CLOSE_ARMED = null;
 /**
  * ⚠️⚠️ CLOSING A COUNTER REVOKES ITS KEY EVERYWHERE, AND ANYTHING IT HAD NOT SENT IS STRANDED ON THAT PC. The
@@ -5249,14 +5213,14 @@ function integrationsSettingsHTML(){
     + '<div style="font-size:var(--fs-2)">' + tx('Another system sends lines and gets back the governed answer — the unit price at a quantity, what comes off and why, the tax, the whole invoice — from the same engines the storefront, compose and the chit use.') + '</div>'
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px"><code>/api/offers</code> · <code>/api/pricing</code> · <code>/api/tax</code> · <code>/api/invoice</code> — <a href="' + esc(base) + '/api/openapi.json" target="_blank" rel="noopener">' + tx('the contract (openapi.json)') + '</a></div></div>'
     + '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('Your keys') + '</div>' + rows
-    + '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><input class="inp" id="int_key_name" data-testid="int-key-name" placeholder="' + esc(tx('Name — which system')) + '" style="flex:1 1 200px"><select class="inp" id="int_key_scope" data-testid="int-key-scope" style="flex:0 0 220px"><option value="services">' + esc(tx('services — offers, pricing, tax, invoice')) + '</option><option value="offers">' + esc(tx('offers only')) + '</option><option value="pricing">' + esc(tx('pricing only')) + '</option><option value="tax">' + esc(tx('tax only')) + '</option><option value="invoice">' + esc(tx('invoice only')) + '</option><option value="till">' + esc(tx('till — the counter: bill on this device, offline too')) + '</option><option value="connector">' + esc(tx('connector — products, orders, the bell, and the services')) + '</option><option value="testing">' + esc(tx('testing — a build posts test results to the board')) + '</option></select><button class="pri" data-testid="int-key-mint" onclick="intKeyMint()">' + tx('Mint a key') + '</button></div>'
+    + '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><input class="inp" id="int_key_name" data-testid="int-key-name" placeholder="' + esc(tx('Name — which system')) + '" style="flex:1 1 200px"><select class="inp" id="int_key_scope" data-testid="int-key-scope" style="flex:0 0 220px">' + KEY_SCOPES.map(function(o){ return '<option value="' + esc(o[0]) + '">' + esc(tx(o[1])) + '</option>'; }).join('') + '</select><button class="pri" data-testid="int-key-mint" onclick="intKeyMint()">' + tx('Mint a key') + '</button></div>'
     + '<div id="int_key_out">' + (_KEY_SHOWN || '') + '</div></div>';
 }
 async function intKeyMint(){
   var nm = (document.getElementById('int_key_name') || {}).value || '';
   var sc = (document.getElementById('int_key_scope') || {}).value || 'offers';
   /* a connector key also evaluates offers — the scope names the larger surface (routes/keys.js · middleware/auth.js KEY_ROUTES) */
-  try { var r = await api('keysMint', { body: { name: nm || 'key', scopes: sc === 'connector' ? ['connector', 'services'] : [sc] } });
+  try { var r = await api('keysMint', { body: { name: nm || 'key', scopes: keyScopesOf(sc) } });
     _KEY_SHOWN = '<div data-testid="int-key-shown" style="margin-top:10px;padding:10px;border:1px dashed var(--warn-3);border-radius:9px;font-size:var(--fs-1)"><b>' + tx('Copy it now — it is shown once.') + '</b><div style="word-break:break-all;font-family:monospace;margin-top:6px" data-testid="int-key-value">' + esc(r.key) + '</div><div style="color:var(--grey);margin-top:6px">' + tx('Send it as') + ' <code>X-Api-Key: …</code> ' + tx('or') + ' <code>Authorization: Bearer …</code></div></div>';
     _KEYS = undefined; if (typeof toast === 'function') toast(tx('Key minted ✓'));
     loadSettings();   /* the list repaints; the shown key rides _KEY_SHOWN into the repaint */
@@ -5658,16 +5622,9 @@ async function saveSettings(){ const x=document.getElementById("st_err"); if(x)x
  * of them wrong. The server now sends each flag's card row as `schema[key].ui` (and `bound_schema` for the locked ones);
  * polDefs() reads them. Nothing about a flag is defined in this file.
  */
-function polDefs(){
-  var out=[];
-  function add(key,f){ if(!f||!f.ui) return; var u=f.ui;
-    out.push({ key:key, label:u.label, type:f.type, options:u.options||f.options, labels:u.labels, def:f.def, level:u.level, gov:u.gov,
-               help:u.help, scale:u.scale, suffix:u.suffix, step:u.step, order:u.order }); }
-  var s=_POL.schema||{}, b=_POL.bound||{};
-  Object.keys(s).forEach(function(k){ add(k,s[k]); });
-  Object.keys(b).forEach(function(k){ add(k,b[k]); });
-  return out.sort(function(x,y){ return x.order-y.order; });
-}
+/* polDefsOf · polShown · polStored → app/cap-settings.js (T3-SETTINGS × T2-POLICY): the workshop's Business rules card and CB Settings › Policy
+   paint the SAME server schema (schema[key].ui + bound_schema) through one reader — no flag list on the web */
+function polDefs(){ return polDefsOf(_POL.schema, _POL.bound); }
 var _POL = { flags:null, schema:null, bound:null, busy:false, err:null, migrated:true };
 function _polVal(def){ var o=_POL.flags||{}; return (o[def.key]!==undefined)?o[def.key]:def.def; }
 function _polLocked(gov){ return gov==='bound'||gov==='protected'||gov==='inherited'; }
@@ -5681,8 +5638,7 @@ async function setPolFlag(key, v){
    * rounding is deliberate: the flag type truncates, so 0.505% would land as 50 either way, and doing it here
    * means the number that comes back matches the number that was typed.
    */
-  if(def&&def.type==='number'&&def.scale) v=(v===''?0:Math.round(Number(v)*def.scale));
-  else if(def&&def.type==='number') v=(v===''?0:Number(v));
+  v=polStored(def, v);   /* the shown unit → the stored one (app/cap-settings.js) */
   _POL.busy=true; _POL.err=null; paintPolicy();
   try{
     var body={}; body[key]=v;
@@ -5716,7 +5672,7 @@ function _polControl(def){ var v=_polVal(def);
   if(def.type==='enum') return '<select'+dis+' data-testid="pol-'+esc(def.key)+'" onchange="setPolFlag(\''+def.key+'\',this.value)" style="padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)">'+def.options.map(function(o){ var lbl=(def.labels&&def.labels[o])||o; return '<option value="'+esc(o)+'"'+(String(v)===String(o)?' selected':'')+'>'+esc(lbl)+'</option>'; }).join('')+'</select>';
   if(def.type==='number'){
     /* ⭐ shown in the unit a person thinks in; `setPolFlag` puts it back into the unit the flag is stored in */
-    var shown = def.scale ? (Number(v)/def.scale) : v;
+    var shown = polShown(def, v);
     return '<input type="number"'+dis+(def.step?' step="'+esc(String(def.step))+'"':'')+' min="0"'
       + ' data-testid="pol-'+esc(def.key)+'" value="'+esc(String(shown))+'"'
       + ' onchange="setPolFlag(\''+def.key+'\',this.value)"'

@@ -30,6 +30,7 @@ var CB_HOMES = {
   ledger: '/accounts.html', network: '/network.html', coassists: '/employees.html',
   profile: '/know-your-business.html',                 /* the avatar's own choice for Profile (avatar.js, H34) */
   shop: '/settings.html#/shop', country: '/settings.html#/country', settings: '/settings.html',  /* CB Settings (SET1): Your shop · Country setup */
+  integrations: '/settings.html#/connectors', counters: '/settings.html#/counters', policy: '/settings.html#/policy', plan: '/settings.html#/plan',  /* CB Settings (T3-SETTINGS) */
   chit: '/crm.html#/chit/'                             /* + the chit id: the chit PAGE in CB CRM (CRM2) — chitPageHref(id) below */
 };
 /* the sheet's "Open page" (chit-sheet.js `page` → openChitPage on each ledger page): the chit page in CB CRM, never the workshop */
@@ -73,6 +74,30 @@ var CB_SHOP_EP = {
   register:         {m:"POST",  p:"/api/entities/register",              ok:"✓"},   // OTP request (register doubles as owner login)
   ownerVerify:      {m:"POST",  p:"/api/entities/verify",                ok:"✓"},   // verify OTP → token
   constitutions:    {m:"GET",   p:"/api/entities/constitutions",         ok:"y"},   // public: the verticals to choose at sign-up
+};
+
+/* ── CB SETTINGS › Counters & keys · Connectors · Policy · Plan & usage (T3-SETTINGS, 2026-10-14) — what the workshop's Settings › Integrations and the
+   Profile's Usage read AND CB Settings reads (app/cap-settings.js). MOVED from cap-admin.js's EP and app.html's EP (one name per endpoint, e2e/ep-aliases.cjs).
+   Who may write is the server's answer: counters writes are owner only (lib/owner.gate), GET /counters and GET /entities/policy say `may` ── */
+var CB_SETTINGS_EP = {
+  keysList:       {m:'GET',    p:'/api/keys',                     ok:'y'},   // API keys for other systems (routes/keys.js)
+  keysMint:       {m:'POST',   p:'/api/keys',                     ok:'✓'},
+  keysRevoke:     {m:'DELETE', p:'/api/keys/:jti',                ok:'✓'},
+  /* ⭐ the shop's counters as standing identities (routes/counters.js, 2026-09-17) */
+  counters:       {m:'GET',    p:'/api/counters',                 ok:'✓'},   // { counters, free, may:{ manage } }
+  counterAdd:     {m:'POST',   p:'/api/counters',                 ok:'✓'},
+  counterRename:  {m:'PATCH',  p:'/api/counters/:id',             ok:'✓'},
+  counterOpen:    {m:'POST',   p:'/api/counters/:id/open',        ok:'✓'},
+  counterRelease: {m:'POST',   p:'/api/counters/:id/release',     ok:'✓'},
+  intCatalogue:   {m:'GET',    p:'/api/integrations/catalogue',   ok:'y'},   // the connectors that exist (routes/integrations.js), each with the pack's may/why
+  intStatus:      {m:'GET',    p:'/api/integrations/status',      ok:'y'},   // the connectors that have checked in
+  intApprove:     {m:'POST',   p:'/api/integrations/:id/approve', ok:'✓'},   // the owner approves a connector's PC (the handshake)
+  policyGet:      {m:'GET',    p:'/api/entities/policy',          ok:'✓'},   // b130 — per-entity flags, on the ENTITY; + may per flag (T3-SETTINGS)
+  policySet:      {m:'PATCH',  p:'/api/entities/policy',          ok:'✓'},
+  /* The billing ledger for the CALLER's own entity — there is no entity parameter, so it cannot be asked about
+     anyone else. Read on demand when the Usage section is opened, never as part of painting a profile. */
+  entityUsage:    {m:'GET',    p:'/api/entities/usage',           ok:'✓'},
+  entitlements:   {m:'GET',    p:'/api/entities/entitlements',    ok:'y'},   // the plan and every quota as a STATE (unlimited · unset · capped) — reporting only (enforced:false)
 };
 
 /* ── the chit sheet's three calls (chit-sheet.js reads one chit, moves its step, says what a bill's goods are for) —
