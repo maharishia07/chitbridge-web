@@ -269,6 +269,14 @@ if (typeof window !== 'undefined') { window.__cblog = __cblog; window.cblog = cb
  * ⚠️ DEBOUNCED PER KIND, not globally. Someone trying three themes to see which they like should cost one
  * write; but a theme change must never cancel a pending language change, which one shared timer would do.
  */
+/* ⭐ FX-QA1: THE ROW CBPrefs CALLS LIVES BESIDE IT, not in each page's EP. Tasks · Accounts · CRM · Finance · Settings declare an EP of their own
+   rows (const EP = {}) and load this file, so avatar.js handed every push to CBPrefs → api('savePrefs') → "no endpoint" — the edition chosen on
+   Tasks stayed pending until Employees (a page without core.js) sent it. api() answers this row on every host (epOf); a page never lists it. */
+var CB_PREFS_EP = {
+  savePrefs:       {m:"PATCH", p:"/api/entities/me/prefs/:kind", ok:"✓"},  // b165/b166 · ONE endpoint for both preference sets; params:{kind:"locale"|"ui"}
+};
+/** the page's row for a name, else core's own (CB_PREFS_EP) — the one lookup api() and apiOnce() share */
+function epOf(key){ return (typeof EP !== 'undefined' && EP[key]) || CB_PREFS_EP[key] || null; }
 var CBPrefs = (function(){
   var timers = {};
   return {
@@ -894,7 +902,7 @@ function _apiCopy(v) {
 
 function api(key, opts) {
   var o = opts || {};
-  var ep = EP[key];
+  var ep = epOf(key);
   if (!ep || ep.m !== 'GET') return apiOnce(key, opts);
 
   var dk;
@@ -914,7 +922,7 @@ function api(key, opts) {
 }
 
 async function apiOnce(key, {params, query, body}={}){
-  const ep = EP[key]; if(!ep) throw new Error("no endpoint "+key);
+  const ep = epOf(key); if(!ep) throw new Error("no endpoint "+key);
   cblog('debug', ep.m + ' ' + key);
   // Double-fire guard: block a repeat of the SAME in-flight mutation (same endpoint+params). GETs are free.
   const lockKey = (ep.m!=='GET') ? (key+':'+JSON.stringify(params||{})) : null;

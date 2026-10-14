@@ -67,6 +67,12 @@ var VAULT_SUGGEST = {
   logistics: [['Port of loading','port_loading'],['Preferred Incoterm','incoterm'],['Mode','mode']],
   other:     [],
 };
+/** a section's suggestions in the shop's own words (FX-QA1): the identity's region and postal code from the pack (packWord, helpers.js) — the TAG stays,
+    so a form's pre-fill finds `state` / `pincode` whatever the row is called (an AU shop's "Postcode", a UAE shop's "Emirate") */
+function vaultSuggest(type){
+  var words = { state: packWord('region'), pincode: packWord('postcode') };
+  return (VAULT_SUGGEST[type] || []).map(function(x){ return words[x[1]] ? [words[x[1]], x[1]] : x; });
+}
 /* Hints only where the format cannot be guessed, keyed by TAG rather than position — a row keeps its hint
    wherever the user puts it. ⚠️ These are India-shaped on purpose (GSTIN/PAN/IFSC) but they are now attached to
    OPTIONAL tags, so a business that never uses them never sees them. */
@@ -87,7 +93,7 @@ function vaultCardHTML(vault, encrypted){
   var secs=(UI._vault&&UI._vault.sections)||[];
   var shown=secs.map(function(s,i){ return [s,i]; }).filter(function(p){ return !only||p[0].type===only; });
   var body=shown.length ? shown.map(function(p){ return vaultSectionHTML(p[0],p[1]); }).join('')
-    : '<div style="color:var(--grey);font-size:var(--fs-2);padding:9px 0" data-testid="vault-empty">' + (only ? esc(tx('Nothing here yet. Add it, then fill in the legal name, address, city, state and PIN.')) : 'Nothing here yet. Add a section below and name the details you actually have — anything we don’t recognise is still saved.') + '</div>';
+    : '<div style="color:var(--grey);font-size:var(--fs-2);padding:9px 0" data-testid="vault-empty">' + (only ? esc(txf('Nothing here yet. Add it, then fill in the legal name, address, city, {region} and {postcode}.', { region: tx(packWord('region')).toLowerCase(), postcode: tx(packWord('postcode')) })) : 'Nothing here yet. Add a section below and name the details you actually have — anything we don’t recognise is still saved.') + '</div>';
   var addOpts=Object.keys(VAULT_SECTION_TYPES).filter(function(t){ return !only||t===only; }).map(function(t){ return '<option value="'+t+'">'+esc(VAULT_SECTION_TYPES[t])+'</option>'; }).join('');
   if (only) return '<div style="'+_CARD+';margin-top:10px" data-testid="vault-only-'+esc(only)+'"><div class="sec" style="margin:0">'+esc(VAULT_SECTION_TYPES[only]||only)+'</div>'
     +encBanner+body
@@ -154,7 +160,7 @@ function vaultRowHTML(r,i,j,type){
    which is exactly the contract we want: type "IFSC code" and get the tag, type anything else and keep it. */
 function vaultDatalists(){
   return Object.keys(VAULT_SUGGEST).map(function(t){
-    return '<datalist id="vsug_'+t+'">'+VAULT_SUGGEST[t].map(function(s){ return '<option value="'+esc(s[0])+'">'; }).join('')+'</datalist>';
+    return '<datalist id="vsug_'+t+'">'+vaultSuggest(t).map(function(s){ return '<option value="'+esc(s[0])+'">'; }).join('')+'</datalist>';
   }).join('');
 }
 function _vaultSecs(){ UI._vault=UI._vault||{sections:[]}; UI._vault.sections=UI._vault.sections||[]; return UI._vault.sections; }
@@ -179,7 +185,7 @@ function vaultSetRow(i,j,field,v){
   if(field!=='name'){ r[field]=v; return; }
   r.name=v;
   var before=r.tag||'';
-  var hit=(VAULT_SUGGEST[s.type]||[]).filter(function(x){ return x[0].toLowerCase()===String(v).trim().toLowerCase(); })[0];
+  var hit=vaultSuggest(s.type).concat(VAULT_SUGGEST[s.type]||[]).filter(function(x){ return x[0].toLowerCase()===String(v).trim().toLowerCase(); })[0];
   r.tag=hit?hit[1]:'';
   if(!!VAULT_ENUM[before] !== !!VAULT_ENUM[r.tag]) _vaultPaint();
 }
@@ -223,6 +229,7 @@ async function saveVaultUI(){
  * asserting that every business on earth is Indian. */
 function shopLicLabel(){
   try {
+    if (shopReg()) return taxIdWord();   /* FX-QA1: the shop's pack names it (helpers.js packWord); the region table below only for a country with no pack */
     var r = CBLocale.region && CBLocale.region();
     return ({ IN:'GSTIN', AE:'TRN', SA:'VAT number', GB:'VAT / company number', DE:'USt-IdNr.', FR:'SIRET', SG:'UEN', US:'EIN' })[r] || 'Licence number';
   } catch (_) { return 'Licence number'; }
@@ -301,7 +308,9 @@ var CBShop = (function () {
     var h = H.host; if (!h) return;
     UI._vaultOnly = 'identity';
     h.innerHTML = card(tx('Your shop'), shopCardHTML(H.me), 'shop-card')
-      + '<p class="sub" data-testid="shop-why">' + esc0(tx('These go on every bill. A tax invoice names one state: the GSTIN, the address and the PIN must agree.')) + '</p>'
+      + '<p class="sub" data-testid="shop-why">' + esc0(packSplitsByState()
+        ? txf('These go on every bill. A tax invoice names one state: the {id}, the address and the {postcode} must agree.', { id: taxIdWord(), postcode: tx(packWord('postcode')) })
+        : txf('These go on every bill: the {id} and the address.', { id: taxIdWord() })) + '</p>'
       + '<div id="vaulthost" data-testid="shop-identity"></div>';
     var b = document.getElementById('shop-save'); if (b) b.onclick = function () { shopSave(b); };
     loadVault();
@@ -309,9 +318,11 @@ var CBShop = (function () {
   function read(){
     if (H.loading) return; H.loading = true;
     api('me').then(function (r) { H.me = (r && (r.entity || r)) || {}; }, function (e) { H.me = {}; if (e && e.status === 401 && typeof CBFrame !== 'undefined') CBFrame.ended(); })
-      .then(function () { H.loading = false; paint(); });
+      .then(function () { H.loading = false; shopCountry(H.me); paint(); });
   }
-  function mount(host, o){ H.host = host; H.me = (o && o.me) || null; if (H.me) paint(); else read(); }
+  /** the shop's country from /me → SESSION.country, so shopReg() names its pack's words on this page (CX0; settings has no books health to read it from) */
+  function shopCountry(me){ var c = me && (me.country || me.country_code); if (c && typeof SESSION !== 'undefined' && SESSION) SESSION.country = String(c).toUpperCase(); }
+  function mount(host, o){ H.host = host; H.me = (o && o.me) || null; if (H.me) { shopCountry(H.me); paint(); } else read(); }
   return { mount: mount, refresh: read, paint: paint };
 })();
 /** Your shop › Save: one press, one PATCH, the outcome said where it happened (M64); the server's refusal in its own words */

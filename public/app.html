@@ -1918,7 +1918,7 @@ const EP = {
   /* The billing ledger for the CALLER's own entity — there is no entity parameter, so it cannot be asked about
      anyone else. Read on demand when the Usage section is opened, never as part of painting a profile. */
   entityUsage:     {m:"GET",   p:"/api/entities/usage",          ok:"✓"},
-  savePrefs:       {m:"PATCH", p:"/api/entities/me/prefs/:kind", ok:"✓"},  // b165/b166 · ONE endpoint for both preference sets; params:{kind:"locale"|"ui"}
+  /* savePrefs (b165/b166) — MOVED to core.js (CB_PREFS_EP), beside CBPrefs, its one caller: every page that loads core.js knows it (FX-QA1) */
   getSettings:     {m:"GET",   p:"/api/actors/settings",         ok:"✓"},
   saveSettings:    {m:"PUT",   p:"/api/actors/settings",         ok:"✓"},
   /* `entitySearch` likewise — declared again further down, which is the definition that actually applied. */
