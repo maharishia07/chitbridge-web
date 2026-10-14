@@ -43,7 +43,8 @@ W.run('home', async (w) => {
 
   await w.step('H1', 'Home -> the rail shows 24 in - 0 out - 21 stuck, and each digit is a door', async () => {
     const pips = await page.$$eval('.pip', (as) => as.map((a) => ({ t: a.textContent.trim(), href: a.getAttribute('href') })));
-    const want = { in: /#\/chits\?tab=in$/, out: /#\/chits\?tab=out$/, stuck: /#\/chits\?tab=stuck$/ };
+    /* TOUR-FIX1: in / out are Tasks & Orders' folder counts, so each opens THAT folder (tasks.html?view=…); stuck stays the rail's CRM door */
+    const want = { in: /\/tasks\.html\?view=orders_in$/, out: /\/tasks\.html\?view=orders_out$/, stuck: /#\/chits\?tab=stuck$/ };
     const okIn = pips.some((p) => p.t === '24 in' && want.in.test(p.href || '')), okOut = pips.some((p) => p.t === '0 out' && want.out.test(p.href || '')), okStuck = pips.some((p) => p.t === '21 stuck' && want.stuck.test(p.href || ''));
     return { ok: okIn && okOut && okStuck, saw: 'chips: ' + pips.map((p) => p.t + ' -> ' + (p.href || 'NOT A LINK')).join(' | ') };
   });
@@ -267,7 +268,12 @@ W.run('home', async (w) => {
   });
   await page.setViewportSize({ width: 1280, height: 860 });
   await w.step('H14-chip', 'Home -> the Connectors chip does not say WORKSHOP when Tally + Zoho work (manifest works = true)', async () => {
-    await goPage('/'); await page.waitForSelector('[data-testid="shell-chip-connectors"]', { timeout: 15000 });
+    await goPage('/'); await page.waitForSelector('[data-testid="shell-chip-connectors"], [data-testid="shell-card-connectors"]', { timeout: 15000 });
+    /* T3-SETTINGS: Connectors is BUILT (CB Settings › Connectors) — a built door is a card, never a chip, so it cannot say workshop */
+    if (await page.locator('[data-testid="shell-card-connectors"]').count()) {
+      const others = await page.$$eval('[data-testid^="shell-chip-"][data-state="workshop"]', (e) => e.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
+      return { ok: others.every((t) => !/Connectors/.test(t)), saw: 'Connectors is a built card (CB Settings); chips still marked workshop: ' + others.length };
+    }
     const c = await page.locator('[data-testid="shell-chip-connectors"]').first().evaluate((e) => ({ st: e.getAttribute('data-state'), t: e.textContent.replace(/\s+/g, ' ').trim() }));
     const others = await page.$$eval('[data-testid^="shell-chip-"][data-state="workshop"]', (e) => e.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
     return { ok: c.st === 'works' && !/workshop/i.test(c.t) && /works today/i.test(c.t) && others.every((t) => !/Connectors/.test(t)), saw: '"' + c.t + '" (state ' + c.st + '); chips still marked workshop: ' + others.length };
