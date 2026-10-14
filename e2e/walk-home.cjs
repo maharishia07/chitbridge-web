@@ -121,7 +121,7 @@ W.run('home', async (w) => {
     const own = new Set(man.entries.filter((e) => e.state === 'built' && e.facts).map((e) => e.facts));
     const known = new Set(['/api/facts/rail', '/api/books/health', '/api/entities/me', '/api/entities/header', '/api/crm/parties', '/api/crm/followups', '/api/entities/sides']);
     const strange = [...new Set(reqs)].filter((p) => !own.has(p) && !known.has(p) && !/^\/api\/(notifications|events|sides|me|session|counters|catalogue|offers|network|messages|reference)/.test(p));
-    return { ok: !strange.length && !reqs.some((p) => !own.has(p) && /finance|marketing|people|operations/.test(p)),   /* a pillar's own built card (its manifest facts URL, e.g. /api/facts/operations since T3-OPS) is not a box reading */ saw: reqs.length + ' calls (' + [...new Set(reqs)].join(', ') + ')' + (strange.length ? ' - NEW: ' + strange.join() : '') };
+    return { ok: !strange.length && !reqs.some((p) => !own.has(p) && /finance|marketing|people|operations/.test(p)),   /* a pillar's own built card (its manifest facts URL, e.g. /api/facts/operations since T3-OPS, /api/facts/people since PEOPLE-SRV1) is not a box reading */ saw: reqs.length + ' calls (' + [...new Set(reqs)].join(', ') + ')' + (strange.length ? ' - NEW: ' + strange.join() : '') };
   });
   const PS = path.join(__dirname, 'shots', 'pillars'); fs.mkdirSync(PS, { recursive: true });
   await w.step('P4', 'Home at 1366 and 390 -> the boxes fit the width (no sideways scroll), shots saved', async () => {
