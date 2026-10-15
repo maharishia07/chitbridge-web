@@ -15,7 +15,7 @@
 'use strict';
 const fs = require('fs'), path = require('path'), { spawnSync } = require('child_process');
 const E2E = __dirname;
-const files = fs.readdirSync(E2E).filter((f) => /^(walk|till)-[a-z0-9-]+\.cjs$/.test(f)).sort();
+const files = fs.readdirSync(E2E).filter((f) => /^(walk|till)-[a-z0-9-]+\.cjs$/.test(f)).sort();   /* SHELL-ONE: walk-shell-frame.cjs (every page wears the frame) runs with the walks; visual-tour.cjs is VTOUR's local-stack tour (its own workflow) */
 if (process.argv[2] === '--list') { console.log(files.join('\n')); process.exit(0); }
 /**
  * ⭐ REPEAT (K2b, 2026-10-14): a file that once flaked runs this many times INSIDE its shard, every run must pass — and

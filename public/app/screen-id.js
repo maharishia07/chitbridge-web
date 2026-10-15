@@ -56,7 +56,36 @@
       { app: 'network', name: 'Network', page: '/network.html', rows: [['NET001', 'mine', 'My network'], ['NET002', 'offers', 'Offers'], ['NET003', 'design', 'Design']] },
       { app: 'country-lab', name: 'Country lab', page: '/country-lab.html', rows: [['CLB001', 'compare', 'Side by side'], ['CLB002', 'ready', 'Where we are']] },
       { app: 'kyb', name: 'Know your business', page: '/know-your-business.html', rows: [['KYB001', null, 'Know your business']] },
-      { app: 'documents', name: 'Documents', page: '/authority-forms.html', rows: [['DOC001', null, 'Documents']] }
+      { app: 'documents', name: 'Documents', page: '/authority-forms.html', rows: [['DOC001', null, 'Documents']] },
+      /* SHELL-ONE (2026-10-15): every page wears the frame, so every page has its code — the standards page, the storefront, the shop screen, the labs */
+      { app: 'standards', name: 'Standards', page: '/standards.html', rows: [['STD001', 'list', 'Standards'], ['STD002', 'works-with', 'Works with', '/standards.html#works-with · Home › Compatibility']] },
+      { app: 'storefront', name: 'Shop', page: '/shop.html', rows: [['SHP001', null, 'Shop', '/shop.html?s=<shop> · Home › Your online shop, or a customer\'s link']] },
+      { app: 'network-shop', name: 'Network shop', page: '/network-shop.html', rows: [['NSH001', null, 'Network shop', '/network-shop.html?bridge=<network>']] },
+      { app: 'store', name: 'Store', page: '/store.html', rows: [['STR001', null, 'Store', '/store.html?net=<network>']] },
+      { app: 'embed', name: 'Catalogue embed', page: '/embed.html', rows: [['EMB001', null, 'Catalogue embed', '/embed.html?bridge=<shop> · inside another site']] },
+      { app: 'promo', name: 'Shop screen', page: '/promo.html', rows: [['PRM001', null, 'Shop screen', '/promo.html#key=… · the till › Shop screen']] },
+      { app: 'product-lab', name: 'Product Lab', page: '/product-lab.html', rows: [['PLB001', null, 'Product Lab']] },
+      { app: 'offer-lab', name: 'Offer Lab', page: '/offer-lab-next.html', rows: [['OLB001', 'offer', 'Offer Lab', '/offer-lab-next.html · Home › Labs'], ['OLB002', 'combo', 'Combo Lab', '/offer-lab-next.html?mode=combo · Home › Labs']] },
+      { app: 'conversion-lab', name: 'Conversion lab', page: '/conversion-lab.html', rows: [['CVL001', null, 'Conversion lab', '/conversion-lab.html · the Country lab']] },
+      { app: 'network-lab', name: 'Network Lab', page: '/network-design.html', rows: [['NLB001', null, 'Network Lab', '/network-design.html · Home › Labs']] }
+    ],
+    /* SHELL-ONE: DESIGN REFERENCES — pages kept as the drawing a build was checked against, or a tool's own board. NOT customer navigation: no
+       Home card, no link from a framed page; they wear no frame and carry no code. A page here that gains a customer door moves UP into apps. */
+    references: [
+      ['/design-mock.html', 'Design mock', 'the catalogue/row drawing the workshop was built against'],
+      ['/cart-design.html', 'Cart design', 'the shared cart\'s drawing (app/cart.js is the build)'],
+      ['/storefront-design.html', 'Storefront design', 'the storefront\'s paper prototype (shop.html is the build)'],
+      ['/supplier-design.html', 'Supplier design', 'the suppliers screen\'s paper prototype (operations.html is the build)'],
+      ['/list-lab.html', 'List lab', 'app/list-ctl.js on a bare page — the list standard\'s pass mark'],
+      ['/signin-lab.html', 'Sign-in lab', 'the one sign-in window on a bare page'],
+      ['/screen-gallery.html', 'Screen library', 'the gallery of screen drawings'],
+      ['/lifecycle-test.html', 'Lifecycle test', 'the rail\'s lifecycle board (a tool)'],
+      ['/testing.html', 'Test board', 'the test board and its printable report (a tool)'],
+      ['/intake.html', 'Intake inbox', 'the intake inbox prototype'],
+      ['/iot-howitworks.html', 'IoT — how it works', 'a showcase page opened in an overlay by the workshop'],
+      ['/bill-print.html', 'Bill print', 'the printed bill (a print surface, single-theme by decision)'],
+      ['/offer-lab.html', 'Offer Lab (old address)', 'forwards to offer-lab-next.html'],
+      ['/combo-lab.html', 'Combo Lab (old address)', 'forwards to offer-lab-next.html?mode=combo']
     ],
     /* the chit sheet (app/chit-sheet.js CBSheet) — one painter, three kinds (its sheetKind()); opened from every page that loads it */
     sheets: [

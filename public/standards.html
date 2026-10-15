@@ -48,7 +48,7 @@ button,a,select,input{font:inherit;color:inherit} button{cursor:pointer} a{text-
 .body{flex:1;min-height:0;display:flex}
 .main{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column}
 .main #std_list{flex:1;min-height:0}
-/* the title row's right end: ‹ back (phone, list page) · shop · Home · avatar */
+/* the title row's right end: ‹ back (phone, list page); the frame carries the rest (SHELL-ONE) */
 .who{display:flex;align-items:center;gap:8px;min-width:0}
 .who .shop{font-size:calc(13.5px * var(--k,1));color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
 .who .home,.who .back{display:inline-flex;align-items:center;height:34px;padding:0 12px;border:1px solid var(--line);border-radius:9px;background:var(--card);font-size:calc(13.5px * var(--k,1));font-weight:600;white-space:nowrap}
@@ -165,6 +165,7 @@ abbr.gl:focus-visible{outline:2px solid var(--blue,#3F66A6);outline-offset:1px}
 </head>
 <body>
 <div class="app" id="app" data-view="matrix">
+  <div id="shell" data-testid="std-shell"></div>   <!-- THE ONE FRAME (SHELL-ONE): mark · Standards · chip · ⌂ Home · bell · avatar -->
   <div class="body">
     <!-- the matrix pane: count by Area · Country · Kind × In force · Partly · Planned. A cell is the list's own filter. -->
     <nav class="mxp" id="mxp" aria-label="Standards matrix"><div class="brand"><div class="logo" aria-hidden="true">&#9776;</div><div class="brand-name">CB Standards</div></div><div class="mx-body" id="mxBody" data-testid="std-matrix"></div></nav>
@@ -190,6 +191,10 @@ function setSetSec(){}
 </script>
 <script src="/app/list-ctl.js"></script>   <!-- CBList: the list here is a mount on it -->
 <script src="/app/rail-bell.js"></script>   <!-- CBBell.mount: the bell, the same one every app header has -->
+<script src="/app/one-person.js"></script>   <!-- CBOnePerson: whose session this browser holds (CBFrame.session) -->
+<script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the bar (SHELL-ONE) -->
+<script src="/app/shell.js"></script>   <!-- CBShell: THE ONE HEADER (SHELL-ONE) — mounted into #shell by CBFrame -->
+<script src="/app/page-frame.js"></script>   <!-- CBFrame.mount({ host }): the frame every page wears -->
 <script src="/app/kural.js"></script>   <!-- CBKural: the kural band, ONE place below the page, the same on every page -->
 <script src="/app/cap-standards.js"></script>   <!-- the register, its vocabularies, the two sheets, stdGoto -->
 <script>
@@ -353,16 +358,12 @@ function fallbackCopy(t, done){
   if (ok) done(); else toast('Could not copy. Select the text in the row and copy it.');
 }
 
-/* ═════ the title row's right end (the unit's head.slot): ‹ back · shop · Home · the avatar ═════ */
+/* ═════ the title row's right end (the unit's head.slot): ‹ back (phone, list page). The shop · Home · bell · avatar are the frame's (SHELL-ONE) ═════ */
 function slot(el){
-  var s = session(), name = s ? (s.entity || s.name || '') : '';
-  el.innerHTML = '<span class="who"><button type="button" class="back" data-act="back" data-testid="std-back" aria-label="Back to the matrix">‹<span class="bw">&nbsp;Matrix</span></button>'
-    + (name ? '<span class="shop" data-testid="shop-name">' + esc(name) + '</span>' : '')
-    + (s ? '<span id="cb-bell-slot" class="bellslot" data-testid="bell-slot"></span>' : '')
-    + '<a class="home" href="/" data-testid="std-home" aria-label="Home">⌂<span class="hw">&nbsp;Home</span></a><span id="cb-avatar" data-cb-avatar data-testid="avatar-slot"></span></span>';
-  if (s && typeof CBBell !== 'undefined') { if (!window.__cbBell) window.__cbBell = document.createElement('span'); $('cb-bell-slot').appendChild(window.__cbBell); if (!window.__cbBell.querySelector('[data-testid="bell-btn"]')) CBBell.mount(window.__cbBell, { apiBase: apiBase(), token: s.token, person: CBAvatar && CBAvatar.personOf ? CBAvatar.personOf(s) : null }); }
-  if (typeof CBAvatar !== 'undefined') CBAvatar.mount($('cb-avatar'), { person: s ? CBAvatar.personOf(s) : null, items: ['profile', 'support', 'signout'], apiBase: apiBase(), token: s && s.token });
+  el.innerHTML = '<span class="who"><button type="button" class="back" data-act="back" data-testid="std-back" aria-label="Back to the matrix">‹<span class="bw">&nbsp;Matrix</span></button></span>';
 }
+/* SHELL-ONE: the frame, once; signed out its avatar is the Sign in door to Home's window */
+function framePaint(){ if (window.CBFrame) CBFrame.mount({ app: 'standards', host: $('shell'), signin: false }); }
 
 /* the unit remembers a person's choices per list key through the host's `store` when one is given (list-ctl.js › loadChoices). This one keeps them in
    the browser as the unit would, and always hands back a column choice — the unit's state() reads it, and a first visit has none yet. */
@@ -530,6 +531,7 @@ window.addEventListener('scroll', glHide, true);
 
 /* ═══ START ═══ — the register is here already; Compatibility is read first so the list and the matrix hold it from the first paint */
 function start(){
+  framePaint();   /* the frame first (SHELL-ONE) */
   mountList();
   fit();
   paintMatrix();

@@ -20,12 +20,12 @@
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--page);color:var(--ink);
-  font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:15px;line-height:1.45}
+  font-family:var(--f-ui,'IBM Plex Sans',system-ui,sans-serif);font-size:15px;line-height:1.45}   /* SYSTEM.md §2: one face, the avatar's reading font honoured (SHELL-ONE) */
 button,input,select{font:inherit;color:inherit}
 button{cursor:pointer}
 .mono{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums}
 .wrap{max-width:1240px;margin:0 auto;padding:20px 22px 60px}
-.top{display:flex;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap}
+.labtools{display:flex;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap}   /* the lab's tools row (its header is the frame's — SHELL-ONE) */
 .title{font-family:'Bricolage Grotesque',sans-serif;font-size:25px;font-weight:800;letter-spacing:-.02em;margin:0}
 .grow{flex:1}
 .chip{height:36px;padding:0 13px;border-radius:10px;border:1px solid var(--line);background:var(--card);
@@ -752,19 +752,26 @@ button{cursor:pointer}
 .combohead b{display:block;margin-top:4px;color:var(--green);font-size:1.05em}
 </style>
 <link rel="stylesheet" href="lab/combo-mode.css">   <!-- T2-LABS: the Combo Lab's look (?mode=combo) — every rule names the builder -->
-<script src="/engine/screen.js"></script>
-<script src="/app/avatar.js"></script>   <!-- CBAvatar: the one avatar (Profile · Support · Sign out) and the look it owns — the same on every page -->
+<!-- THE ONE FRAME (SHELL-ONE): the header every page wears — mark · name · the screen chip · ⌂ Home · the avatar (Sign in). Nothing of it is drawn here. -->
+<script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies -->
+<script src="/app/avatar.js"></script>      <!-- CBAvatar: the one avatar / Sign in door -->
+<script src="/app/one-person.js"></script>  <!-- CBOnePerson: whose session this browser holds (CBFrame.session) -->
+<script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the bar -->
+<script src="/app/shell.js"></script>       <!-- CBShell: the bar -->
+<script src="/app/page-frame.js"></script>  <!-- CBFrame.mount({ bar: true }): the header only; the page's own body under it -->
 </head>
 <body>
+<div id="shell" data-testid="olab-shell"></div>   <!-- THE ONE FRAME (SHELL-ONE): mark · Offer Lab / Combo Lab · chip · ⌂ Home · avatar -->
+<script>(function(){ if (!window.CBFrame) return; var combo = new URLSearchParams(location.search).get('mode') === 'combo';
+  CBFrame.mount({ app:'offer-lab', bar:true, signin:false, host:document.getElementById('shell'), title: combo ? { icon:'▣', name:'Combo Lab' } : { icon:'%', name:'Offer Lab' } });
+  if (combo && window.CBScreenId) CBScreenId.here('offer-lab', 'combo'); })();</script>
 <div class="wrap">
 
   <!-- ⭐⭐⭐ [2026-09-26, per Athi's own design doc] "Price list, Combos, Import and Export move to the top
        bar as icons. They are other tools, not settings." "Saved offers" and "Use my catalogue" DROPPED from
        here — rule 3 ("the same string never appears twice on one screen"): both already say themselves once,
        on the card and in the sample-data notice below. -->
-  <div class="top">
-    <h1 class="title">Offer Lab</h1>
-    <a class="chip" data-testid="nav-home" href="/" title="The index — the whole shop on one page" style="text-decoration:none">⌂ Home</a>
+  <div class="labtools">   <!-- the lab's tools row (its title, Home and avatar are the frame's — SHELL-ONE) -->
     <span class="chip" id="bizName">—</span>
     <span class="grow"></span>
     <button class="chip tool" onclick="openPriceOverlay()" title="Cost and price for every item"><span class="g">₹</span><span class="tx">Price list</span></button>
@@ -773,7 +780,6 @@ button{cursor:pointer}
     <input type="file" id="labImportFile" accept=".xlsx,.xls,.csv" hidden onchange="importSpreadsheet(this)">
     <button class="chip tool" onclick="exportCsv()" title="Everything on screen right now, as a CSV"><span class="g">↑</span><span class="tx">Export</span></button>
     <div class="bizSw" id="bizSw"></div>
-    <span id="cbav"></span><script>if(window.CBAvatar)CBAvatar.mount(document.getElementById('cbav'),{person:CBAvatar.sessionPerson(),items:['profile','support','signout']});</script>
   </div>
   <!-- ⚠️⚠️⚠️ [OFFR-01] SAID ONCE, ON EVERY SCREEN, NOT ONLY INSIDE ONE OVERLAY'S FOOTER. The modifier lab's
        own footer already said "Using a sample catalogue — Apply tries it here, not on a real product" —
@@ -1939,7 +1945,7 @@ function prodOpts(list){ return list.map(function(p){
  * it," so this follows the doc's own HTML/class names (.loyrow/.now/.fine/.open/.grid/.fld — new; everything
  * else is this file's existing .inp/.two/.lbl/.seg/.btn/.acts, which the doc's own prototype was built
  * against). What moved:
- *   · Price list / Combos / Import / Export → top-bar tool icons (see the .top HTML). Modifiers' whole card is
+ *   · Price list / Combos / Import / Export → top-bar tool icons (see the .labtools HTML). Modifiers' whole card is
  *     GONE — "X items already carry a modifier" was rule 6's exact target ("only a failing thing earns a
  *     row"); the ▣ Combos icon is where that work happens now, needing no status line here.
  *   · Never-sell-below-cost + Prices-shown-as + Where-cost-comes-from + Staff-access (four cards) → one
@@ -3418,7 +3424,7 @@ applyBiz('hotel');
 render();
 /* ⭐ T2-LABS: ?mode=combo IS the Combo Lab — the builder opens as the page, under its own name */
 var LAB_MODE=new URLSearchParams(location.search).get('mode')==='combo'?'combo':'offer';
-if(LAB_MODE==='combo'){ document.title='Combo Lab'; document.querySelector('.top .title').textContent='Combo Lab'; openModLab(); }
+if(LAB_MODE==='combo'){ document.title='Combo Lab'; openModLab(); }   /* the bar's title said Combo Lab at mount (SHELL-ONE) */
 /* ⭐ signed in → try your own catalogue quietly; queued writes from a previous offline session try to send
  * now too. Neither blocks the first paint — the samples are already on screen the instant this loads. */
 labPaintQueue();

@@ -12,6 +12,14 @@
  *   screen code: load /app/screen-id.js and the header carries this screen's name · code (CBScreenId; the section on show, SCREEN-ID).
  *   Load first: /engine/screen.js · (/app/edition.js: the person's edition, AX1) · /app/avatar.js · /engine/signin.js · /app/signin-ui.js · /app/one-person.js · /app/accounts-shell.js · /app/rail-bell.js · /app/shell.js
  *   signin: false — a public page (works signed out): no sign-in window in the page, the avatar's "Sign in" goes to Home's. area: the switcher's area.
+ *   SHELL-ONE (2026-10-15, every page wears the same frame — Athi: "lot of in-consistencies in each page before sign-in itself"):
+ *   host: <element>  the page's own place for the header (an app with its own sidebar: CB Accounts · CRM · Finance put it at the top of their main pane)
+ *   bar: true        the HEADER ONLY (the storefront, a lab, the shop screen): mark · name · chip · ⌂ Home · avatar, the page's own body under it
+ *   homeHref         where ⌂ Home goes (default '/'); the storefront passes the shop's own front
+ *   title            { icon, name } the bar's name for a page with no manifest entry (a lab) or whose name is data (the shop's)
+ *   avatar           extra CBAvatar options (onSignIn: a page that hosts the one sign-in window in its own card scrolls to it)
+ *   level            the server's word for a login that is not the owner (editor · view-only), said after the shop's name in the bar
+ *   FLOW  mount → session() → skeleton()? → CBShell.mount(host, { host:{app|bar}, person, signin, avatar, title, homeHref, fit }) → work into the slot
  */
 (function (root) {
   'use strict';
@@ -45,19 +53,39 @@
     });
     return { host: app.querySelector('#shell'), screen: app.querySelector('#screen'), setActive: setActive };
   }
+  /** where the header is drawn: the skeleton's slot, the page's own element (host), else a div put first in the body */
+  function headerHost(doc, o, sk) {
+    if (sk) return sk.host;
+    if (o.host) return o.host;
+    var host = doc.createElement('div'); host.id = 'shell'; doc.body.insertBefore(host, doc.body.firstChild);
+    return host;
+  }
+  /** the avatar's door: a page with the sign-in window scrolls to it; a public page links to Home's; a page's own extras ride along */
+  function avatarOptions(o, host, open) {
+    var base = open ? { onSignIn: function () { var s = host.querySelector('.cbsh-signin'); if (s && s.scrollIntoView) s.scrollIntoView({ block: 'center' }); } } : { signInHref: o.homeHref || '/' };
+    Object.keys(o.avatar || {}).forEach(function (k) { base[k] = o.avatar[k]; });
+    return base;
+  }
+  /** the bar's person: the session's, with the page's level word (editor · view-only) when it has one */
+  function personOf(sess, level) {
+    var person = sess && root.CBAvatar ? root.CBAvatar.personOf(sess) : null;
+    if (person && level) person.level = String(level);
+    return person;
+  }
+  /* mounts THE ONE HEADER (CBShell) for this page and hands it the page's work; every page goes through here (SHELL-ONE) */
   function mount(o) {
     o = o || {};
-    var sess = session(), doc = root.document, sk = o.skeleton ? skeleton(doc, o.skeleton, o.app) : null, host;
-    if (sk) host = sk.host; else { host = doc.createElement('div'); host.id = 'shell'; doc.body.insertBefore(host, doc.body.firstChild); }
+    var sess = session(), doc = root.document, sk = o.skeleton ? skeleton(doc, o.skeleton, o.app) : null, host = headerHost(doc, o, sk);
     /* CL3: signin:false = a PUBLIC page (the Country lab) — it works signed out, so no sign-in window sits over it; the avatar's door is
        "Sign in", a link to Home's one sign-in window. area names the switcher's area when the page has no manifest entry (labs). */
     var open = o.signin !== false;
     var shell = root.CBShell.mount(host, {
-      host: { app: o.app }, kural: sk ? false : (o.kural || false), homeHref: '/', area: o.area,
-      person: sess && root.CBAvatar ? root.CBAvatar.personOf(sess) : null, token: sess && sess.token,
+      host: o.bar ? { bar: true, app: o.app } : { app: o.app }, kural: sk ? false : (o.kural || false), homeHref: o.homeHref || '/', area: o.area,
+      title: o.title || null, fit: (sk || o.host) ? 'pane' : undefined,   /* in a page's own pane the header is a block, never the full-window frame */
+      person: personOf(sess, o.level), token: sess && sess.token,
       /* the one sign-in window, in the shell's own slot; signed in -> this page reads again with the session it now holds */
       signin: open ? { surface: o.surface || o.app, need: 'person', registerHref: '/settings.html#/new', onIn: function () { root.location.reload(); } } : false,   /* false: no window at all, even where signin-ui.js is loaded */
-      avatar: open ? { onSignIn: function () { var s = host.querySelector('.cbsh-signin'); if (s && s.scrollIntoView) s.scrollIntoView({ block: 'center' }); } } : { signInHref: '/' }
+      avatar: avatarOptions(o, host, open)
     });
     if (sk && root.CBScreenId) root.CBScreenId.here(o.app, o.skeleton.active);   /* the shell named the app; the skeleton names the section it opened on */
     if (sk && o.kural && root.CBKural) { root.CBKural.mount(); root.CBKural.set(o.kural); }   /* the one kural band at the FOOT, outside the head - as CB Finance / CRM / Accounts */

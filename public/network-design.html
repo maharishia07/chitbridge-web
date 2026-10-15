@@ -65,11 +65,18 @@ document.addEventListener("DOMContentLoaded",labPaint);
 <script src="engine/locale.js"></script>   <!-- cart-ui reads CBLocale (money/symbol) — as shop.html and the app load it (2026-09-28) -->
 <script src="engine/money.js"></script>   <!-- ⭐ the one rounder, BEFORE cart.js — it has no copy of its own (2026-09-28) -->
 <script src="app/cart.js"></script>
+<!-- THE ONE FRAME (SHELL-ONE): the header every page wears — mark · name · the screen chip · ⌂ Home · the avatar (Sign in). Nothing of it is drawn here. -->
+<script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies -->
+<script src="/app/avatar.js"></script>      <!-- CBAvatar: the one avatar / Sign in door -->
+<script src="/app/one-person.js"></script>  <!-- CBOnePerson: whose session this browser holds (CBFrame.session) -->
+<script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the bar -->
+<script src="/app/shell.js"></script>       <!-- CBShell: the bar -->
+<script src="/app/page-frame.js"></script>  <!-- CBFrame.mount({ bar: true }): the header only; the page's own body under it -->
 <style>
   :root{ --ink:#1d2530; --grey:#6a707a; --line:#e3e6ea; --paper:#f7f8fa; --blue:#3F66A6; --blue-soft:#eef4ff;
          --gold-soft:#FBF6E9; --gold-line:#efe3c4; --good:#2c7a43; --warn:#8a5a1e; --bad:#a5382e; }
   *{box-sizing:border-box}
-  body{margin:0;background:#eef0f4;color:var(--ink);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  body{margin:0;background:var(--paper,#eef0f4);color:var(--ink);font:15px/1.55 var(--f-ui,'IBM Plex Sans',system-ui,sans-serif)}   /* SYSTEM.md §2: one face on every page (SHELL-ONE) */
   .wrap{max-width:1040px;margin:20px auto;background:#fff;border-radius:16px;overflow:hidden;
         box-shadow:0 10px 40px rgba(20,30,50,.13);display:flex;height:88vh}
   .left{width:300px;flex:none;border-inline-end:1px solid var(--line);display:flex;flex-direction:column;background:var(--paper)}
@@ -140,8 +147,9 @@ document.addEventListener("DOMContentLoaded",labPaint);
   .lab ul{margin:4px 0;padding-inline-start:20px}
 </style>
 
+<div id="shell" data-testid="nlab-shell"></div>   <!-- THE ONE FRAME (SHELL-ONE): mark · Network Lab · chip · ⌂ Home · avatar -->
+<script>if (window.CBFrame) CBFrame.mount({ app:'network-lab', bar:true, signin:false, host:document.getElementById('shell'), title:{ icon:'⌾', name:'Network Lab' } });</script>
 <div class="lab" id="lab" data-testid="lab">
-  <h1>Network Lab</h1>
   <div class="s" style="font-size:12.5px;color:var(--grey)">Sample data — nothing is saved or made. Sketch a network, then see what would break.</div>
   <div id="labRows"></div>
   <div class="row"><button type="button" onclick="labAdd(true)" data-testid="lab-add-own">＋ Store of yours</button>

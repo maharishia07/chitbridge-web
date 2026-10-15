@@ -226,7 +226,8 @@ async function route(S, r) {
     ok(await p.locator('[data-testid="shop-name"]').textContent() === 'Mayur Bhavan', 'the pinned header names the shop');
     const labels = await p.$$eval('#nav .nav-btn', (b) => b.map((x) => x.getAttribute('aria-label')));
     ok(JSON.stringify(labels) === JSON.stringify(VIEWS.map((v) => v[1])), 'the sidebar lists every view, in the menu\'s order: ' + labels.join(' · '));
-    ok(await p.evaluate(() => document.querySelector('.top') && getComputedStyle(document.querySelector('.top')).position === 'sticky'), 'the header is pinned');
+    ok(await p.evaluate(() => document.querySelector('.titlebar') && getComputedStyle(document.querySelector('.titlebar')).position === 'sticky' && getComputedStyle(document.querySelector('#shell')).position === 'sticky'), 'the frame and the title row are pinned');
+    ok(await p.locator('[data-testid="shell-header"]').count() === 1 && await p.locator('[data-testid="shell-home"]').count() === 1 && await p.locator('.home,[data-testid="acc-home"]').count() === 0 && await p.locator('.cbav-btn').count() === 1, 'SHELL-ONE: the frame is the one header — one shell header, one ⌂ Home, no Home of the page\'s own, one avatar');
     /* the menu's groups (Athi, 2026-10-03): To do alone, then Books · Every day · Period end · Setup, each folds; the header's line is level with the brand's */
     const grps = await p.$$eval('#nav .nav-grp', (g) => g.map((x) => x.textContent.trim()));
     ok(JSON.stringify(grps) === JSON.stringify(['Books', 'Outstandings', 'Period end', 'Setup']), 'the menu is grouped: ' + grps.join(' · '));
@@ -237,7 +238,7 @@ async function route(S, r) {
     ok(await p.locator('[data-testid="acc-nav-packs"]').isHidden() && await p.getAttribute('[data-testid="acc-grp-setup"]', 'aria-expanded') === 'false', 'a group folds');
     await p.click('[data-testid="acc-grp-setup"]');
     ok(await p.locator('[data-testid="acc-nav-packs"]').isVisible(), 'and opens again');
-    { const hb = await p.evaluate(() => [document.querySelector('.brand').getBoundingClientRect().bottom, document.querySelector('.top').getBoundingClientRect().bottom].map(Math.round));
+    { const hb = await p.evaluate(() => [document.querySelector('.brand').getBoundingClientRect().bottom, document.querySelector('[data-testid="shell-header"]').getBoundingClientRect().bottom].map(Math.round));
       ok(hb[0] === hb[1], 'the header\'s line is level with the brand\'s (' + hb.join(' / ') + ')'); }
 
     /* ⭐ THE ⚙ COLUMNS CHOOSER IS STYLED ON THIS PAGE TOO (2026-10-02, Athi's live screenshot: on CB Accounts it opened as bare
@@ -390,7 +391,7 @@ async function route(S, r) {
       ok(z.length >= 5 && z[0] === z[2] && z[1] === z[3] && z[0] !== z[1], 'ZEBRA: the ledger / statement table alternates its rows from one token shade (' + z.slice(0, 3).join(' / ') + ')');
       await p.screenshot({ path: path.join(SHOTS, 'lists', 'accounts-ledger-zebra-1366.png') }).catch(() => {});
     }
-    ok(await p.locator('#who').count() === 1 && await p.locator('.cbl-title #who').count() === 1 && await p.locator('#cbav button').count() === 1, 'the shop · Home · avatar are ONE node, moved into the title row (never copied): one #who, one avatar button');
+    ok(await p.locator('[data-testid="shell-header"]').count() === 1 && await p.locator('.cbl-title .who,#who').count() === 0 && await p.locator('.cbav-btn').count() === 1, 'the shop · Home · avatar are the frame\'s and stay above the open ledger (SHELL-ONE): one shell header, nothing moved into the title row, one avatar button');
     ok(await p.locator('[data-testid="lg-sum"]').count() === 1 && /^Opening ₹0\.00 · Closing ₹12,400\.00 Dr$/.test((await p.textContent('[data-testid="lg-sum"]')).trim()), 'ONE figures line: "Opening ₹0.00 · Closing ₹12,400.00 Dr"');
     await p.click('[data-testid="lg-acc-1500"]'); await p.waitForFunction(() => /Balance/.test((document.querySelector('[data-testid="lg-sum"]') || {}).textContent || ''), null, { timeout: 8000 });
     ok(await p.locator('[data-testid="lg-sum"]').count() === 1 && /^Balance ₹5,000\.00 Dr$/.test((await p.textContent('[data-testid="lg-sum"]')).trim()), 'opening = closing → ONE word "Balance ₹5,000.00 Dr", said once');
@@ -560,8 +561,8 @@ async function route(S, r) {
     ok(!(await p.locator('[data-testid="avatar-menu"]').isVisible()), 'Escape closes the menu');
     await panelShots(p, 'laptop', 1360);
     await p.screenshot({ path: path.join(SHOTS, 'cb-accounts-laptop.png') });
-    ok(await p.getAttribute('[data-testid="acc-home"]', 'href') === '/', '⌂ Home links to /');
-    await Promise.all([p.waitForURL(base + '/'), p.click('[data-testid="acc-home"]')]);
+    ok(await p.getAttribute('[data-testid="shell-home"]', 'href') === '/', '⌂ Home links to /');
+    await Promise.all([p.waitForURL(base + '/'), p.click('[data-testid="shell-home"]')]);
     ok(new URL(p.url()).pathname === '/', 'Home goes to /');
     await p.goBack();
     await p.waitForSelector('[data-testid="acc-nav-daybook"]');
@@ -696,9 +697,9 @@ async function route(S, r) {
     const w2 = await width(p);
     ok(w2.sw === 390, 'Ledgers (the tree) at 390 px: scrollWidth === 390');
     /* the phone is TWO PAGES: page one is the tree (with its find box, the page's own "Ledgers" header and the avatar) — a ledger opens page two, ‹ comes back */
-    const pg1 = await p.evaluate(() => { const tree = document.querySelector('.lt-tree'), top = document.querySelector('.top'), l = document.querySelector('#lt_tree'); const r = l.getBoundingClientRect();
-      return { tree: getComputedStyle(tree).display, pane: getComputedStyle(document.querySelector('.lt-pane')).display, top: top && getComputedStyle(top).display, h1: (document.querySelector('#title') || {}).textContent, av: !!document.querySelector('.top [data-cb-avatar], .top #cbav button, .top #cbav *'), head: Math.round(r.top / innerHeight * 100) }; });
-    ok(pg1.tree !== 'none' && pg1.pane === 'none' && pg1.top !== 'none' && pg1.h1 === 'Ledgers' && pg1.av, 'phone page one: the tree, the page header "Ledgers" with the avatar, and no squeezed side panel');
+    const pg1 = await p.evaluate(() => { const tree = document.querySelector('.lt-tree'), top = document.querySelector('.titlebar'), l = document.querySelector('#lt_tree'); const r = l.getBoundingClientRect();
+      return { tree: getComputedStyle(tree).display, pane: getComputedStyle(document.querySelector('.lt-pane')).display, top: top && getComputedStyle(top).display, h1: (document.querySelector('#title') || {}).textContent, av: !!document.querySelector('[data-testid="shell-header"] .cbav-btn'), head: Math.round(r.top / innerHeight * 100) }; });
+    ok(pg1.tree !== 'none' && pg1.pane === 'none' && pg1.top !== 'none' && pg1.h1 === 'Ledgers' && pg1.av, 'phone page one: the tree, the title row "Ledgers" under the frame (with the avatar), and no squeezed side panel');
     ok(pg1.head <= 30, 'phone page one: the head is ' + pg1.head + '% of the window (limit 30%)');
     await p.screenshot({ path: path.join(SHOTS, 'cb-accounts-phone.png'), fullPage: false });
     await p.click('[data-testid="lg-acc-1300"]');
@@ -706,9 +707,9 @@ async function route(S, r) {
     await p.waitForTimeout(300);
     const ph = await p.evaluate(() => { const tr = document.querySelector('[data-testid="stmt-row-0"]'), t = document.querySelector('.lt-tree'), l = document.querySelector('#lg_out .cbl-list'), hdr = document.querySelector('#lg_out .cbl-hdr');
       return { tree: getComputedStyle(t).display, row: getComputedStyle(tr).display, rad: parseFloat(getComputedStyle(tr).borderTopLeftRadius), back: getComputedStyle(document.querySelector('[data-testid="lt-back"]')).display, sw: document.documentElement.scrollWidth, head: getComputedStyle(document.querySelector('#lg_out .lhead')).display,
-        pct: Math.round((l.getBoundingClientRect().top + (hdr && hdr.offsetParent ? hdr.offsetHeight : 0)) / innerHeight * 100), top: getComputedStyle(document.querySelector('.top')).display, who: !!document.querySelector('.cbl-title .who'), h1: document.querySelector('.cbl-title h1').textContent }; });
+        pct: Math.round((l.getBoundingClientRect().top + (hdr && hdr.offsetParent ? hdr.offsetHeight : 0)) / innerHeight * 100), top: getComputedStyle(document.querySelector('.titlebar')).display, who: !!document.querySelector('[data-testid="shell-header"] .cbav-btn') && !document.querySelector('.cbl-title .who'), h1: document.querySelector('.cbl-title h1').textContent }; });
     ok(ph.tree === 'none' && ph.back !== 'none' && ph.row === 'flex' && ph.rad > 0 && ph.head === 'none', 'at 390 px a chosen ledger is page two: the tree is gone, entries are one card per row, and ‹ is the way back');
-    ok(ph.top === 'none' && ph.who && ph.h1 === 'Customers', 'page two: the list\'s title row is the header (‹ Customers … home · avatar); the page header steps aside');
+    ok(ph.top === 'none' && ph.who && ph.h1 === 'Customers', 'page two: the list\'s title row is the heading (‹ Customers); the page\'s title row steps aside, the frame (home · avatar) stays (SHELL-ONE)');
     ok(ph.pct <= 30, 'phone page two: the head is ' + ph.pct + '% of the window (limit 30%)');
     ok(ph.sw === 390, 'the ledger\'s entries at 390 px: document.scrollWidth === 390 (' + ph.sw + ')');
     await p.screenshot({ path: path.join(SHOTS, 'party-ledgers-phone.png'), fullPage: false });
@@ -717,8 +718,8 @@ async function route(S, r) {
     const jl = await p.evaluate(() => { const n = document.querySelector('[data-testid="db-lines-JV/2026-27/000011"]'), l = document.querySelector('#lg_out .cbl-list'); const first = n.querySelector('.cbl-nrow > span:first-child'); return { nsw: n.scrollWidth, ncw: n.clientWidth, lsw: l.scrollWidth, lcw: l.clientWidth, w: first.getBoundingClientRect().width }; });
     ok(jl.nsw <= jl.ncw + 1 && jl.lsw <= jl.lcw + 1 && jl.w >= 110, 'the opened entry on a phone: the journal does not scroll sideways, and its figures take only the room they need (ledger column ' + Math.round(jl.w) + ' px)');
     await p.click('[data-testid="lt-back"]');
-    ok(await p.evaluate(() => getComputedStyle(document.querySelector('.lt-tree')).display !== 'none' && getComputedStyle(document.querySelector('.top')).display !== 'none'), 'ʻ‹ʼ returns to the tree (and the page header is back with the avatar)');
-    ok(await p.evaluate(() => !!document.querySelector('.top-row #who .home') ) && await p.locator('.top-row #who #cbav button').count() >= 1, 'the shop · Home · avatar are back in the page header (one node, moved, never copied)');
+    ok(await p.evaluate(() => getComputedStyle(document.querySelector('.lt-tree')).display !== 'none' && getComputedStyle(document.querySelector('.titlebar')).display !== 'none'), 'ʻ‹ʼ returns to the tree (and the page header is back with the avatar)');
+    ok(await p.locator('[data-testid="shell-home"]').count() === 1 && await p.locator('[data-testid="shell-header"] .cbav-btn').count() === 1, 'the shop · Home · avatar never left the frame (one node each, SHELL-ONE) — and the page header (one node, moved, never copied)');
     /* a table is one card per row below 620 px, each cell named by its column */
     await nav(p, 'tb');
     await p.waitForSelector('table.bktab');

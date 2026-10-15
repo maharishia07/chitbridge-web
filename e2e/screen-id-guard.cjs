@@ -33,8 +33,7 @@ for (const f of pages) {
   const src = rd(f);
   for (const m of src.matchAll(/CBFrame\.mount\(\{\s*app:\s*'([a-z-]+)'/g)) frameApps[m[1]] = f;
 }
-frameApps.home = 'index.html';
-['accounts', 'finance', 'crm'].forEach((a) => { frameApps[a] = 'public/' + a + '.html'; });   /* the three apps with their own header */
+frameApps.home = 'index.html';   /* SHELL-ONE: accounts · finance · crm mount CBFrame like every other page — found by the regex above, no own header any more */
 const missingApps = Object.keys(frameApps).filter((a) => !REG.byApp[a]);
 ok('every app frame has its screens in the register (' + Object.keys(frameApps).length + ')' + (missingApps.length ? ': ' + missingApps.join(' · ') : ''), missingApps.length === 0);
 const unloaded = Object.entries(frameApps).filter(([, f]) => {
@@ -94,8 +93,8 @@ ok('the chip is built only in app/screen-id.js' + (placers.length ? ': also ' + 
 const shell = rd('public/app/shell.js'), frame = rd('public/app/page-frame.js');
 ok('the CBShell bar places the chip (every CBFrame page and Home)', /\$\('\.cbsh-sid'\)\.appendChild\(root\.CBScreenId\.chip\(\)\)/.test(shell));
 ok('the skeleton\'s section is the screen the chip names (setActive → CBScreenId.here)', /function setActive\(k\)[^\n]*CBScreenId\.here\(appId, k\)/.test(frame));
-const own = ['accounts', 'finance', 'crm'].filter((a) => !/CBScreenId\.chip\(\)/.test(rd('public/' + a + '.html')));
-ok('the three own headers carry the chip in their who group' + (own.length ? ': not ' + own.join(' · ') : ''), own.length === 0);
+const own = ['accounts', 'finance', 'crm', 'standards'].filter((a) => /CBScreenId\.chip\(\)|class="who"[^\n]*cb-avatar|CBAvatar\.mount\(/.test(rd('public/' + a + '.html')));
+ok('no page draws its own header any more — the chip, the Home and the avatar are the frame\'s (SHELL-ONE)' + (own.length ? ': still ' + own.join(' · ') : ''), own.length === 0);
 
 /* ── 6 · the inventory is what the register says ── */
 const r = spawnSync(process.execPath, [path.join(WEB, 'tools', 'screen-list.cjs'), '--check'], { encoding: 'utf8' });

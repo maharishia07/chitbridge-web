@@ -77,7 +77,8 @@ console.log('\n── 2 · COPIES: lines one lab file carries that another lab f
 const L = {}, sets = {};
 /* INT6b: a line that only LOADS a shared file (`<script src="/app/helpers.js"></script>  <!-- … -->`) is the reuse this check asks for, not a
    copy — T2-WEBPRIMS put the one helpers.js load into every lab and the count rose 201 → 206 with no logic copied */
-const LOAD_ONLY = /^<script\s+src="[^"]+"\s*><\/script>\s*(<!--.*-->)?$/;
+/* SHELL-ONE: a line that is only an HTML comment (the frame's one-line note above the frame's loads) is prose, not logic */
+const LOAD_ONLY = /^<script\s+src="[^"]+"\s*><\/script>\s*(<!--.*-->)?$|^<!--.*-->$/;
 for (const f of labFilesForCopies) { L[f] = read(f).split('\n').map((s) => s.trim()).filter((s) => s.length >= 12 && !LOAD_ONLY.test(s)); sets[f] = new Set(L[f]); }
 let copies = 0; const per = {};
 for (const f of labFilesForCopies) { per[f] = L[f].filter((l) => labFilesForCopies.some((g) => g !== f && sets[g].has(l))).length; copies += per[f]; }

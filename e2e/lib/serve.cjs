@@ -7,8 +7,11 @@ exports.PUBLIC = path.join(__dirname, '..', '..', 'public');
 exports.serve = function (root) {
   root = root || exports.PUBLIC;
   const srv = http.createServer((q, r) => {
-    const p = decodeURIComponent(q.url.split('?')[0]), f = path.join(root, p === '/' ? 'index.html' : p);
-    if (!f.startsWith(root)) { r.statusCode = 403; return r.end('no'); }
+    const p = decodeURIComponent(q.url.split('?')[0]);
+    /* SHELL-ONE: Home is the repo-root index.html (as it deploys); on the public/ root '/' and '/index.html' serve it, so a tour of every page starts at Home */
+    const home = root === exports.PUBLIC && (p === '/' || p === '/index.html');
+    const f = home ? path.join(root, '..', 'index.html') : path.join(root, p === '/' ? 'index.html' : p);
+    if (!home && !f.startsWith(root)) { r.statusCode = 403; return r.end('no'); }
     fs.readFile(f, (e, d) => {
       if (e) { r.statusCode = 404; return r.end('not found'); }
       r.setHeader('content-type', T[path.extname(f)] || 'application/octet-stream'); r.setHeader('cache-control', 'no-store'); r.end(d);

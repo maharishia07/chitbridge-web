@@ -38,11 +38,10 @@
   --ok:#5FBF8C; --ok-t:#1B2E24; --warn:#E08A63; --warn-t:#33211A; --accent:#7FB0F0;
 }}
 *{box-sizing:border-box}
-body{margin:0;background:var(--page);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
-header{padding:14px 16px;border-bottom:1px solid var(--line);background:var(--card);
-  display:flex;flex-wrap:wrap;gap:10px;align-items:baseline;position:sticky;top:0;z-index:5}
-header h1{margin:0;font-size:1.15em}
-header .u{color:var(--dim);font-size:.85em}
+body{margin:0;background:var(--page);color:var(--ink);font:15px/1.45 var(--f-ui,'IBM Plex Sans',system-ui,sans-serif)}   /* SYSTEM.md §2: one face on every page (SHELL-ONE) */
+/* SHELL-ONE: the header is the frame's (CBFrame, bar mode); under it the lab's one line about the catalogue */
+.tools{padding:8px 16px;border-bottom:1px solid var(--line);background:var(--card);display:flex;flex-wrap:wrap;gap:10px;align-items:baseline}
+.tools .u{color:var(--dim);font-size:.85em}
 /* ⭐⭐ THE STEP STRIP IS OFFER LAB'S, NOT A NEW ONE. Athi: *"think how we can make it happen without
    complication, take any help from other product if there a flow."* offer-lab-next.html already walks a
    shopkeeper through numbered steps with .stp — same markup, same on/done states, same click-to-go-back.
@@ -89,15 +88,18 @@ tr.has .whose{color:var(--ok)}
 .card h3{margin:0 0 4px;font-size:.95em}
 @media (max-width:560px){ th:nth-child(6),td:nth-child(6){display:none} }
 </style>
-<script src="/engine/screen.js"></script>
-<script src="/app/avatar.js"></script>   <!-- CBAvatar: the one avatar (Profile · Support · Sign out) and the look it owns — the same on every page -->
+<!-- THE ONE FRAME (SHELL-ONE): the header every page wears — mark · name · the screen chip · ⌂ Home · the avatar (Sign in). Nothing of it is drawn here. -->
+<script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies -->
+<script src="/app/avatar.js"></script>      <!-- CBAvatar: the one avatar / Sign in door -->
+<script src="/app/one-person.js"></script>  <!-- CBOnePerson: whose session this browser holds (CBFrame.session) -->
+<script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the bar -->
+<script src="/app/shell.js"></script>       <!-- CBShell: the bar -->
+<script src="/app/page-frame.js"></script>  <!-- CBFrame.mount({ bar: true }): the header only; the page's own body under it -->
 </head>
 <body>
-<header>
-  <h1>Product Lab</h1>
-  <a data-testid="nav-home" href="/" title="The index — the whole shop on one page" style="color:inherit;opacity:.8;text-decoration:none;font-size:13px">⌂ Home</a>
-  <span class="u" id="who">…</span><span id="cbav"></span><script>if(window.CBAvatar)CBAvatar.mount(document.getElementById('cbav'),{person:CBAvatar.sessionPerson(),items:['profile','support','signout']});</script>
-</header>
+<div id="shell" data-testid="plab-shell"></div>
+<script>if (window.CBFrame) CBFrame.mount({ app:'product-lab', bar:true, signin:false, host:document.getElementById('shell'), title:{ icon:'◈', name:'Product Lab' } });</script>
+<div class="tools"><span class="u" id="who">…</span></div>
 <div class="wrap">
   <div class="steps" id="steps"></div>
   <div id="say"></div>
