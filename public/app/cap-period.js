@@ -466,19 +466,32 @@ async function peGstView(body) {
     + peField('pg_p', 'Month', peSel('pg_p', bkMonths().map((m, i) => [String(i + 1), m]), String(lastP)))
     + '</div><div class="supacts">' + peBtn('pg-close', 'Close the month', 'peGstClose(this)') + '</div><div id="pg_out" class="pe-slot"></div></div><div id="pg_res"></div>';
 }
+/** the heads this close answered — the pack's (the server's `heads`); an older server answered India alone, so its four heads stand in */
+const peGstHeadsOf = (r) => (r && Array.isArray(r.heads) && r.heads.length ? r.heads : peHeads);
+const peGstRcmHeadsOf = (r) => Object.keys((r && r.rcm_minor) || {});
+/** the close's answer painted: credit used · reverse charge where owed · what is payable per head · what is carried (the pack's word) — every head the server named, nothing summed here */
 function peGstSetOff(r) {
-  const used = r.utilised || [];
+  const used = r.utilised || [], heads = peGstHeadsOf(r), rcm = peGstRcmHeadsOf(r), head = (k) => esc(String(k).toUpperCase());
+  const row = (tid, label, minor) => '<div class="pe-row" data-testid="' + tid + '"><span>' + label + '</span><span class="mono">' + esc(peMoney(minor)) + '</span></div>';
   let h = '<div class="pe-card" data-testid="pg-setoff"><div class="pe-sub">' + esc(tx('Credit used')) + '</div>';
-  h += used.length ? '<div class="pe-rows">' + used.map((u, i) => '<div class="pe-row" data-testid="pg-used-' + i + '"><span>' + esc(String(u.from).toUpperCase()) + ' → ' + esc(String(u.against).toUpperCase()) + '</span><span class="mono">' + esc(peMoney(u.amount_minor)) + '</span></div>').join('') + '</div>'
+  h += used.length ? '<div class="pe-rows">' + used.map((u, i) => row('pg-used-' + i, head(u.from) + ' → ' + head(u.against), u.amount_minor)).join('') + '</div>'
     : '<div class="pe-note" data-testid="pg-nouse">' + esc(tx('No credit was used')) + '</div>';
-  if (r.rcm_minor) {
-    h += '<div class="pe-sub">' + esc(tx('Reverse charge — paid in cash')) + '</div><div class="pe-rows">'
-      + ['cgst', 'sgst', 'igst'].filter((k) => r.rcm_minor[k]).map((k) => '<div class="pe-row" data-testid="pg-rcm-' + k + '"><span>' + k.toUpperCase() + '</span><span class="mono">' + esc(peMoney(r.rcm_minor[k])) + '</span></div>').join('') + '</div>';
-  }
-  h += '<div class="pe-sub">' + esc(tx('To pay by challan')) + '</div><div class="pe-rows">'
-    + peHeads.filter((k) => (r.payable_minor || {})[k + '_minor']).map((k) => '<div class="pe-row" data-testid="pg-pay-' + k + '"><span>' + k.toUpperCase() + '</span><span class="mono">' + esc(peMoney(r.payable_minor[k + '_minor'])) + '</span></div>').join('') + '</div>';
+  if (rcm.length) h += '<div class="pe-sub">' + esc(tx('Reverse charge — paid in cash')) + '</div><div class="pe-rows">' + rcm.filter((k) => r.rcm_minor[k]).map((k) => row('pg-rcm-' + k, head(k), r.rcm_minor[k])).join('') + '</div>';
+  h += '<div class="pe-sub">' + esc(r.form ? txf('To pay · {form}', { form: r.form }) : tx('To pay by challan')) + '</div><div class="pe-rows">'
+    + heads.filter((k) => (r.payable_minor || {})[k + '_minor']).map((k) => row('pg-pay-' + k, head(k), r.payable_minor[k + '_minor'])).join('') + '</div>';
+  const carried = heads.filter((k) => (r.carried_minor || {})[k + '_minor']);
+  if (carried.length && r.carried_word) h += '<div class="pe-sub" data-testid="pg-carried-word">' + esc(r.carried_word) + '</div><div class="pe-rows">' + carried.map((k) => row('pg-carried-' + k, head(k), r.carried_minor[k + '_minor'])).join('') + '</div>';
   h += '<div class="pe-total" data-testid="pg-total"><span>' + esc(tx('Payable')) + '</span><span class="mono">' + esc(peMoney(r.pay_total_minor)) + '</span></div></div>';
   return h;
+}
+/** one painter for a close's answer wherever it was asked from (the month form · the return): the note on top, the set-off, the pay form when something is payable */
+function peGstPaintClose(r, resId, outId) {
+  let h = peGstSetOff(r);
+  if (r.duplicate) h = '<div class="pe-note" data-testid="pg-dup">' + esc(txf('Already closed · {no}', { no: r.entry_no || '' })) + '</div>' + h;
+  else if (r.nothing_to_set_off) h = '<div class="pe-note" data-testid="pg-nothing">' + esc(r.form ? tx('Nothing to set off this period') : tx('Nothing to set off this month')) + '</div>' + h;
+  else h = '<div class="pe-ok" data-testid="pg-closed">✓ ' + esc(txf(r.form ? 'Period closed · {no}' : 'Month closed · {no}', { no: r.entry_no || '' })) + '</div>' + h;
+  if (r.pay_total_minor > 0) h += peGstPayForm(r);
+  peEl(resId).innerHTML = h; peEl(outId).innerHTML = '';
 }
 async function peGstClose(btn) {
   const fy = peVal('pg_fy'), period = Number(peVal('pg_p'));
@@ -486,30 +499,44 @@ async function peGstClose(btn) {
     try {
       const r = await api('perGstClose', { body: { fy, period, client_ref: 'gstclose-' + fy + '-' + period } }) || {};
       PE.gst = Object.assign({ fy, period }, r);
-      let h = peGstSetOff(r);
-      if (r.duplicate) h = '<div class="pe-note" data-testid="pg-dup">' + esc(txf('Already closed · {no}', { no: r.entry_no || '' })) + '</div>' + h;
-      else if (r.nothing_to_set_off) h = '<div class="pe-note" data-testid="pg-nothing">' + esc(tx('Nothing to set off this month')) + '</div>' + h;
-      else h = '<div class="pe-ok" data-testid="pg-closed">✓ ' + esc(txf('Month closed · {no}', { no: r.entry_no || '' })) + '</div>' + h;
-      if (r.pay_total_minor > 0) h += peGstPayForm(r);
-      peEl('pg_res').innerHTML = h; peEl('pg_out').innerHTML = '';
+      peGstPaintClose(r, 'pg_res', 'pg_out');
     } catch (e) { peBad('pg_out', e); peEl('pg_res').innerHTML = ''; }
   });
 }
+/** the picks the return was read with (frequency · stagger), handed to the close and the payment exactly as GET /returns took them — the server resolves the period from them */
+const peRetPicks = (R) => { const a = (R && R.asked) || {}, o = {}; if (a.frequency) o.frequency = a.frequency; if (a.stagger != null && a.stagger !== '') o.stagger = a.stagger; return o; };
+/** W2-BOOKS: the RETURN's period closed from the return screen (AU BAS · AE VAT201) — the server's own period id; a refusal (PERIOD_NOT_ENDED · RCM_NETTING_NOT_BUILT) is its sentence in the slot */
+async function peGstCloseReturn(btn) {
+  const R = PE_RET.r, P = R && R.period; if (!P) return;
+  const picks = peRetPicks(R);
+  await bkOnce('pe-gst-close', btn, async () => {
+    try {
+      const r = await api('perGstClose', { body: Object.assign({ period: P.period, client_ref: 'gstclose-' + P.period }, picks) }) || {};
+      PE.gst = Object.assign({ period: P.period, picks }, r);
+      peGstPaintClose(r, 'pr_close_res', 'pr_close_out');
+    } catch (e) { peBad('pr_close_out', e); peEl('pr_close_res').innerHTML = ''; }
+  });
+}
+/** the payment form: paid from · the pack's reference (its label and hint come from the server — never "challan" typed for another country) · an amount per head the close left payable */
 function peGstPayForm(r) {
-  const heads = peHeads.filter((k) => (r.payable_minor || {})[k + '_minor']), rc = ['cgst', 'sgst', 'igst'].filter((k) => (r.rcm_minor || {})[k]);
+  const heads = peGstHeadsOf(r).filter((k) => (r.payable_minor || {})[k + '_minor']), rc = peGstRcmHeadsOf(r).filter((k) => r.rcm_minor[k]);
+  const label = r.ref_label || 'Challan number', hint = r.ref_hint || tx('The CPIN on the challan');   /* no ref words: an older server, which answered India alone */
   return '<div class="pe-card" data-testid="pg-pay-form"><div class="pe-form">'
     + peField('pgp_bank', 'Paid from', peSel('pgp_bank', peMODES, 'bank'))
-    + peField('pgp_ch', 'Challan number', peInput('pgp_ch', '', tx('The CPIN on the challan')))
+    + peField('pgp_ch', label, peInput('pgp_ch', '', hint))
     + heads.map((k) => peField('pgp_' + k, k.toUpperCase(), peAmt('pgp_' + k, peText(r.payable_minor[k + '_minor'])))).join('')
     + rc.map((k) => peField('pgr_' + k, k.toUpperCase() + ' · ' + tx('reverse charge'), peAmt('pgr_' + k, peText(r.rcm_minor[k])))).join('')
     + '</div><div class="supacts">' + peBtn('pg-pay', 'Pay', 'peGstPay(this)') + '</div><div id="pgp_out" class="pe-slot"></div></div>';
 }
+/** the payment posted: the heads the close named, the pack's reference; a month close (IN) sends fy · period · challan_no, a return close sends the period id · payment_ref · the picks */
 async function peGstPay(btn) {
   const g = PE.gst || {}, amounts = {}, rcm = {};
-  for (const k of peHeads) { const e = peEl('pgp_' + k); if (e) { const m = bkMoneyMinor(e.value); if (isNaN(m)) return peBad('pgp_out', tx('Each amount must be a number.')); amounts[k + '_minor'] = m; } }
-  for (const k of ['cgst', 'sgst', 'igst']) { const e = peEl('pgr_' + k); if (e) { const m = bkMoneyMinor(e.value); if (isNaN(m)) return peBad('pgp_out', tx('Each amount must be a number.')); rcm[k + '_minor'] = m; } }
-  if (!peVal('pgp_ch')) return peBad('pgp_out', tx('Give the challan number (the CPIN).'));
-  const body = { fy: g.fy, period: g.period, amounts, bank: peVal('pgp_bank'), challan_no: peVal('pgp_ch') };
+  const read = (id, into, key) => { const e = peEl(id); if (!e) return true; const m = bkMoneyMinor(e.value); if (isNaN(m)) return false; into[key + '_minor'] = m; return true; };
+  for (const k of peGstHeadsOf(g)) if (!read('pgp_' + k, amounts, k)) return peBad('pgp_out', tx('Each amount must be a number.'));
+  for (const k of peGstRcmHeadsOf(g)) if (!read('pgr_' + k, rcm, k)) return peBad('pgp_out', tx('Each amount must be a number.'));
+  const ref = peVal('pgp_ch');
+  if (!ref) return peBad('pgp_out', g.ref_label ? txf('Give the {what}.', { what: g.ref_label.toLowerCase() }) : tx('Give the challan number (the CPIN).'));
+  const body = Object.assign(g.form ? Object.assign({ period: g.period, payment_ref: ref }, g.picks || {}) : { fy: g.fy, period: g.period, challan_no: ref }, { amounts, bank: peVal('pgp_bank') });
   if (Object.keys(rcm).length) body.rcm = rcm;
   await bkOnce('pe-gst-pay', btn, async () => {
     try { const r = await api('perGstPay', { body }) || {}; peOk('pgp_out', esc(txf('Paid · {no}', { no: r.entry_no || '' }))); }
@@ -570,8 +597,19 @@ function peReturnPaint(r) {
     + '<div class="pe-note" data-testid="pr-prepared">' + esc(r.prepared + ' — ' + txf('lodge it in the {who} portal ({portal})', { who: r.authority, portal: r.portal })) + '</div>'
     + '</div><div id="pr_list" data-testid="pr-list"></div>';
   if ((r.notes || []).length) h += '<div class="pe-card" data-testid="pr-basis"><div class="pe-sub">' + esc(tx('How it was read')) + '</div>' + r.notes.map((n, i) => '<div class="pe-note" data-testid="pr-note-' + i + '">' + esc(n) + '</div>').join('') + '</div>';
+  h += peReturnCloseCard(r);
   host.innerHTML = h;
   peReturnList(r);
+}
+/** W2-BOOKS: close and pay THIS period from the return (the same close & pay India has, per return period) — the server decides: a period still running (`ended` false) is greyed with the day it ends */
+function peReturnCloseCard(r) {
+  const P = r.period; if (!P) return '';
+  const why = P.ended ? '' : txf('Ends on {day}', { day: bkDate(P.end) });
+  return '<div class="pe-card" data-testid="pr-close-card"><div class="pe-sub">' + esc(tx('Close and pay')) + '</div>'
+    + '<div class="pe-note">' + esc(txf('Set the period\'s credit against its tax in the books, then record what was paid to the {who}.', { who: r.authority })) + '</div>'
+    + '<div class="supacts">' + (why ? '<button type="button" class="supact-pri" data-testid="pr-close" disabled title="' + esc(why) + '">' + esc(txf('Close {period}', { period: P.label })) + '</button>' : peBtn('pr-close', txf('Close {period}', { period: P.label }), 'peGstCloseReturn(this)')) + '</div>'
+    + (why ? '<div class="pe-note" data-testid="pr-close-why">' + esc(why) + '</div>' : '')
+    + '<div id="pr_close_out" class="pe-slot"></div></div><div id="pr_close_res"></div>';
 }
 /** the boxes as the Task table (CBList): box · label · amount (· VAT) · the ledgers it counts, each a chip that opens it */
 function peReturnList(r) {

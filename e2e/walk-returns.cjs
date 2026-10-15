@@ -5,10 +5,12 @@
  * routes/books.js GET /returns sends (checked against e2e/fixtures/web-api.contract.json on the way out). Nothing leaves the machine.
  *   R0  an Indian shop (200 form:null RETURN_FROM_RAIL, TOUR-FIX1) -> the server's sentence above the GST close & pay form
  *   R1  an Australian shop -> the menu and the title say BAS; the quarter that ended is chosen; G1 · 1A · 1B · 9 as rows, the server's figures; To pay; Prepared, not lodged — ATO
+ *   R1b (W2-BOOKS) Close and pay under the BAS: Close Q1 -> ONE POST /gst/close {period} -> the set-off, To pay · BAS, the ATO payment reference asked (no challan) -> Pay -> ONE POST /gst/pay {payment_ref}
  *   R2  Full BAS -> ONE GET with simpler=0 -> G2 G3 G10 G11 join the rows
  *   R3  Copy figures -> the clipboard holds the boxes as one block (code · label · amount), plain digits for the portal
  *   R4  a box's ledger chip -> the Ledgers page opens on 2200 GST collected for the quarter (the ledger read carries from=2026-07-01&to=2026-09-30)
  *   R5  a UAE shop -> VAT return; no stagger yet: the server's sentence, no box; pick stagger 1 -> ONE GET with stagger=1 -> Boxes 1–15, Box 14, To pay, FTA / EmaraTax
+ *   R5b (W2-BOOKS) the VAT return closes its period (reverse charge beside the set-off); the RCM netting edge -> the server's sentence, no form
  *   R6  390 px (AU) -> the return paints and nothing scrolls sideways
  *   R7  every answer the stand-in served matches the API contract
  *   R8  (CX2) Month lock in the shop's own year: IN Apr–Mar · AU Jul–Jun · AE Jan–Dec ('2026'), at 1366/390 in light and dark — AA, no clip, no sideways scroll, no app.html
@@ -73,6 +75,13 @@ const IN_RAIL = { form: null, pack: 'IN', code: 'RETURN_FROM_RAIL', why: 'Your G
 const acct = (code, name, nature, role, parent) => ({ account_id: '00000000-0000-4000-8000-0000000' + code + '0', code, name, is_group: false, tally_group: '', nature, role, parent_code: parent, active: true });
 const CHART = { accounts: [acct('1400', 'Cash on hand', 'asset', 'cash', 'G1400'), acct('2200', 'GST collected', 'liability', 'gst_collected', 'G2200'), acct('2210', 'GST paid', 'liability', 'gst_paid', 'G2200'), acct('4000', 'Sales', 'income', 'sales', 'G4000')] };
 
+const RCM_WHY = 'Reverse-charge tax is owed this period and the recoverable tax is more than the due tax. The return nets them on the form; this close cannot post that netting yet — lodge from the return and record the payment by hand.';
+/* the server's close names the period WITHOUT `ended` (that flag is the list's, GET /returns) */
+const RP = (P) => { const o = Object.assign({}, P); delete o.ended; return o; };
+const CLOSE_AU = (period) => { const P = AU_PERIODS.find((x) => x.period === period) || AU_PERIODS[4]; return { period: P.period, date: P.end, utilised: [{ from: 'gst', against: 'gst', amount_minor: 80000 }], payable_minor: { gst_minor: 15000 }, carried_minor: { gst_minor: 0 }, pay_total_minor: 15000,
+  form: 'BAS', heads: ['gst'], return_period: RP(P), ref_label: 'Payment reference number', ref_hint: 'The payment reference number on the BAS', carried_word: 'GST refund due from the ATO', ok: true, entry_id: '00000000-0000-4000-8000-000000000130', entry_no: 'MJ/2026-27/000011', posting_date: P.end, doc_date: P.end, moved: false, lines: 2, items: 0, note: null }; };
+const CLOSE_AE = (period) => { const P = AE_PERIODS.find((x) => x.period === period) || AE_PERIODS[4]; return { period: P.period, date: P.end, utilised: [{ from: 'vat', against: 'vat', amount_minor: 280000 }], payable_minor: { vat_minor: 195000 }, carried_minor: { vat_minor: 0 }, pay_total_minor: 235000, rcm_minor: { vat: 40000 }, cash_minor: { vat: 235000 },
+  form: 'VAT201', heads: ['vat'], return_period: RP(P), ref_label: 'Payment reference', ref_hint: 'The EmaraTax payment reference', carried_word: 'VAT recoverable from the FTA', ok: true, entry_id: '00000000-0000-4000-8000-000000000130', entry_no: 'MJ/2026/000011', posting_date: P.end, doc_date: P.end, moved: false, lines: 2, items: 0, note: null }; };
 /** the stand-in for one shop: `kind` is 'IN' | 'AU' | 'AE'; every /api/books answer is checked against the contract (C.json) */
 async function stub(ctx, kind, S) {
   await ctx.route('**/api/**', (r) => {
@@ -85,6 +94,17 @@ async function stub(ctx, kind, S) {
     if (p === '/api/books/accounts') return J(r, 200, CHART);
     if (p === '/api/books/dues') return J(r, 200, books.dues([]));
     if (/^\/api\/books\/ledger\//.test(p)) return J(r, 200, books.ledger('2200', 'GST collected', [{ date: '2026-07-01', what: 'Walk-in day', ref: 'SV/2026-27/000001', dr_minor: 0, cr_minor: 1000 }], { currency: 'AUD', from: u.searchParams.get('from') || '2026-07-01', to: u.searchParams.get('to') || '2026-09-30', closing_minor: 1000 }));
+    /* W2-BOOKS: the close & pay of a RETURN period, as lib/books-period gstClose / gstPay answer a pack with a return (heads · words from the pack) */
+    if (p === '/api/books/gst/close' && kind !== 'IN') {
+      const b = r.request().postDataJSON() || {};
+      if (kind === 'AE' && b.period === '2026-05/2026-07') return J(r, 422, { code: 'RCM_NETTING_NOT_BUILT', error: RCM_WHY, message: RCM_WHY });
+      return J(r, 200, kind === 'AU' ? CLOSE_AU(b.period) : CLOSE_AE(b.period));
+    }
+    if (p === '/api/books/gst/pay' && kind !== 'IN') {
+      const b = r.request().postDataJSON() || {};
+      if (!b.payment_ref) return J(r, 400, { error: 'Which payment? Give the reference.', message: 'Which payment? Give the reference.' });
+      return J(r, 200, { payment_ref: b.payment_ref, paid_minor: b.amounts && b.amounts.gst_minor ? { gst: b.amounts.gst_minor } : { vat: (b.amounts || {}).vat_minor || 0 }, ok: true, entry_id: '00000000-0000-4000-8000-000000000131', entry_no: kind === 'AU' ? 'MJ/2026-27/000012' : 'MJ/2026/000012', posting_date: '2026-10-15', doc_date: '2026-10-15', moved: false, lines: 2, items: 0, note: null });
+    }
     if (p === '/api/books/returns') {
       if (kind === 'IN') return J(r, 200, IN_RAIL);   /* TOUR-FIX1: the API answers (200 form:null) — the 422 the page swallowed is gone */
       if (kind === 'AU') return J(r, 200, bas(u.searchParams.get('simpler') !== '0', u.searchParams.get('period')));
@@ -131,6 +151,20 @@ W.run('returns', async (w) => {
     const ok = word === 'BAS' && title === 'BAS' && period === '2026-Q1' && rows.join() === 'G1,1A,1B,9' && /950\.00/.test(a1) && /To pay/.test(tot) && /150\.00/.test(tot) && /Prepared, not lodged/.test(prep) && /ATO/.test(prep) && AU.errs.length === 0;
     return { ok, saw: 'menu "' + word + '" · title "' + title + '" · period ' + period + ' · rows ' + rows.join(' ') + ' · 1A ' + a1 + ' · ' + tot + ' · ' + prep + (AU.errs.length ? ' · page error ' + AU.errs[0] : '') };
   });
+  await w.step('R1b', 'W2-BOOKS: Close and pay under the BAS -> Close 2026-27 Q1 -> ONE POST /gst/close with the period id -> GST -> GST 800.00 used, To pay · BAS 150.00; the pay form asks the ATO payment reference number (no challan); Pay -> ONE POST /gst/pay with payment_ref -> Paid', async () => {
+    await AU.page.waitForSelector('[data-testid="pr-close"]', { timeout: 15000 });
+    const label = await text(AU.page, '[data-testid="pr-close"]');
+    await AU.page.click('[data-testid="pr-close"]');
+    await AU.page.waitForSelector('[data-testid="pg-pay-form"]', { timeout: 15000 });
+    const closes = AU.S.calls.filter((c) => /POST \/api\/books\/gst\/close/.test(c)).length, used = await text(AU.page, '[data-testid="pg-used-0"]'), toPay = await AU.page.locator('[data-testid="pg-setoff"] .pe-sub').nth(1).innerText();
+    const total = await text(AU.page, '[data-testid="pg-total"]'), refLabel = await AU.page.locator('[data-testid="pg-pay-form"] label.pe-f span').nth(1).innerText(), page = await AU.page.locator('#pr_host').innerText();
+    await AU.page.fill('#pgp_ch', '551234567');
+    await AU.page.click('[data-testid="pg-pay"]');
+    await AU.page.waitForSelector('[data-testid="pe-ok"]', { timeout: 15000 });
+    const pays = AU.S.calls.filter((c) => /POST \/api\/books\/gst\/pay/.test(c)).length, paid = await text(AU.page, '[data-testid="pe-ok"]');
+    return { ok: /Close 2026-27 Q1/.test(label) && closes === 1 && /GST → GST/.test(used) && /800\.00/.test(used) && /to pay · bas/i.test(toPay) && /150\.00/.test(total) && refLabel === 'Payment reference number' && !/challan|CPIN/i.test(page) && pays === 1 && /Paid · MJ\/2026-27\/000012/.test(paid) && AU.errs.length === 0,
+      saw: label + ' -> ' + closes + ' close · ' + used + ' · ' + toPay + ' ' + total + ' · ref: ' + refLabel + ' · ' + pays + ' pay -> ' + paid + (AU.errs.length ? ' · ERRORS ' + AU.errs.join(' | ') : '') };
+  });
   await w.step('R2', 'Full BAS -> ONE GET with simpler=0 -> G2 G3 G10 G11 join the rows (G11 5,000.00, its basis beside it)', async () => {
     const before = AU.S.calls.length;
     await AU.page.selectOption('#pr_s', '0');
@@ -173,6 +207,20 @@ W.run('returns', async (w) => {
     const tot = await text(AE.page, '[data-testid="pr-total"]'), prep = await text(AE.page, '[data-testid="pr-prepared"]'), period = await AE.page.inputValue('#pr_p');
     const ok = word === 'VAT return' && /FTA assigns the Tax Period/.test(needs) && none && gets.length === 1 && /stagger=1/.test(gets[0]) && rows === 15 && /2,350\.00/.test(b14) && /95,000\.00/.test(b1) && /To pay/.test(tot) && /FTA/.test(prep) && /EmaraTax/.test(prep) && period === '2026-02/2026-04' && AE.errs.length === 0;
     return { ok, saw: 'menu "' + word + '" · first: ' + needs.slice(0, 40) + '… · then ' + gets.join(' ') + ' · ' + rows + ' boxes · Box 1 ' + b1 + ' · Box 14 ' + b14 + ' · ' + tot + ' · ' + period + (AE.errs.length ? ' · page error ' + AE.errs[0] : '') };
+  });
+  await w.step('R5b', 'W2-BOOKS: the VAT return closes its period too (Feb–Apr: Input VAT 2,800.00 against Output VAT; reverse charge 400.00 beside it; To pay · VAT201 2,350.00; the EmaraTax reference asked); May–Jul (reverse charge owed, recoverable > due) -> the server\'s RCM_NETTING_NOT_BUILT sentence, no form', async () => {
+    await AE.page.waitForSelector('[data-testid="pr-close"]', { timeout: 15000 });
+    await AE.page.click('[data-testid="pr-close"]');
+    await AE.page.waitForSelector('[data-testid="pg-pay-form"]', { timeout: 15000 });
+    const used = await text(AE.page, '[data-testid="pg-used-0"]'), rcm = await text(AE.page, '[data-testid="pg-rcm-vat"]'), total = await text(AE.page, '[data-testid="pg-total"]');
+    const refLabel = await AE.page.locator('[data-testid="pg-pay-form"] label.pe-f span').nth(1).innerText();
+    await AE.page.selectOption('#pr_p', '2026-05/2026-07');
+    await AE.page.waitForSelector('[data-testid="pr-close"]', { timeout: 15000 });
+    await AE.page.click('[data-testid="pr-close"]');
+    await AE.page.waitForSelector('#pr_close_out .pe-bad, #pr_close_out [data-testid="pe-bad"]', { timeout: 15000 });
+    const why = await AE.page.locator('#pr_close_out').innerText(), forms = await count(AE.page, '[data-testid="pg-pay-form"]');
+    return { ok: /VAT → VAT/.test(used) && /2,800\.00/.test(used) && /400\.00/.test(rcm) && /2,350\.00/.test(total) && refLabel === 'Payment reference' && /nets them on the form/.test(why) && forms === 0 && AE.errs.length === 0,
+      saw: used + ' · rcm ' + rcm + ' · ' + total + ' · ref: ' + refLabel + ' · May–Jul -> "' + why.slice(0, 80) + '…" forms=' + forms + (AE.errs.length ? ' · ERRORS ' + AE.errs.join(' | ') : '') };
   });
   await AE.ctx.close();
 
