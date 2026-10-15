@@ -16,8 +16,9 @@ const DOOR = /app\.html|(?<!\.html)#\/app\b|(?<!\.html)#\/welcome\b|(?<!\.html)#
 
 /* ── THE GAPS: a door that still opens the workshop, its small-app home, and the round that moves the screen (docs/design/INDEX-NOT-APP.md) ── */
 const ALLOW = [
+  /* TASKS-NEW row struck at INT6c: TOUR-FIX1 made ＋ New a "New task" sheet in tasks.html (a self-chit) — no workshop door */
   { file: 'public/app/network-app.js',  re: /nw-builder.*\/app\.html#\/network|\/app\.html#\/network.*nw-builder/, round: 'NET2', app: 'network', what: 'Open the builder (make the network the design checked)' },
-  { file: 'public/till.html',           re: /'https:\/\/chitbridge-web\.vercel\.app\/app\.html' : \(location\.origin \+ '\/app\.html'\)/, round: 'SET2', app: 'settings', what: 'cbHome()\'s own literal' },
+  { file: 'public/till.html',           re: /\(window\.CB_WEB \|\| 'https:\/\/chitbridge-web\.vercel\.app'\) \+ '\/app\.html'\)/, round: 'SET2', app: 'settings', what: 'cbHome()\'s own literal' },
   { file: 'public/till.html',           re: /window\.open\(cbHome\(\) \+ '#\/app', '_blank', 'noopener'\)/, round: 'SET2', app: 'settings', what: 'whoseShopFix: pair this PC to the right counter (Counters & keys)' },
   { file: 'public/till.html',           re: /cbHome\(\) \+ '#\/app\/catalogue'/,               round: 'CAT1', app: 'catalogue', what: 'billWarnFix: an item\'s tax rate (the state half opens CB Settings › Your shop since SET1)' },
 ];

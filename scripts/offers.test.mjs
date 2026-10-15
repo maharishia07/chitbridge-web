@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const ctx = createContext({ console });
-runInContext(readFileSync(join(ROOT, 'public/app/offers.js'), 'utf8'), ctx, { filename: 'offers.js' });
+runInContext(readFileSync(join(ROOT, 'public/engine/offers.js'), 'utf8'), ctx, { filename: 'offers.js' });
 const CBOffers = ctx.CBOffers;
 
 let pass = 0, fail = 0;

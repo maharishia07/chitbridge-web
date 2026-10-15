@@ -187,6 +187,38 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(68) + '· ' + d 
   await p.waitForSelector('[data-testid="till-usign-in"]', { timeout: 10000 });
   say('and the new PIN works offline straight away', (await who()) === 'X Clerk', 'who=' + (await who()));
 
+  console.log('\n── TOUR-FIX1: a session HANDED OVER (no one typed a sign-in) never opens the window over the counter ' + '─'.repeat(0));
+  await ctx.setOffline(false);
+  await p.evaluate(() => { try { usignOut(); usignClose(); } catch (_) {} });
+  const handed = await p.evaluate(() => {
+    var who0 = { id: 'u-new', name: 'New Person', kind: 'employee', entity: (S && S.entity_id) || null };
+    localStorage.setItem('cb_till_whonext', JSON.stringify({ person: who0, idn: null, shop: null, at: Date.now(), via: null }));
+    whoAdoptPending();
+    var dlg = document.getElementById('usigndlg');
+    openWho();
+    var btn = !!document.querySelector('[data-testid="till-who-pin"]');
+    document.getElementById('whodlg').close();
+    return { open: !!(dlg && dlg.open), btn: btn, note: (document.getElementById('lastnote') || {}).textContent || '' };
+  });
+  say('the PIN offer waits: no window over the bill', handed.open === false, 'usigndlg open=' + handed.open);
+  say('… and sits on "Who is at the counter?" as Keep a counter PIN, said once in the footer', handed.btn && /Keep a counter PIN/.test(handed.note), 'button=' + handed.btn + ' · "' + handed.note + '"');
+  await p.evaluate(() => openWho()); await p.click('[data-testid="till-who-pin"]');
+  await p.waitForSelector('[data-testid="signin-pin1"]', { timeout: 10000 }).catch(() => {});
+  const pinStep = await p.locator('[data-testid="signin-pin1"]').isVisible().catch(() => false), body = await p.evaluate(() => { var d = document.getElementById('usigndlg'); return (d && d.open) + ' ' + (document.getElementById('usignbody') || {}).textContent; });
+  say('pressing it opens the window on the PIN step', pinStep, body.slice(0, 120));
+  await p.evaluate(() => usignClose());
+
+  console.log('\n── TOUR-FIX1: the counter wears the look chosen everywhere else (cb_theme) until it chooses its own (cb_till_theme) ' + '─'.repeat(0));
+  const look = await p.evaluate(() => {
+    var keep = localStorage.getItem('cb_till_theme'), out = {};
+    localStorage.removeItem('cb_till_theme'); localStorage.setItem('cb_theme', 'dark'); applyLook(); out.shared = document.documentElement.getAttribute('data-theme');
+    localStorage.setItem('cb_till_theme', 'light'); applyLook(); out.own = document.documentElement.getAttribute('data-theme');
+    localStorage.removeItem('cb_theme'); if (keep == null) localStorage.removeItem('cb_till_theme'); else localStorage.setItem('cb_till_theme', keep); applyLook();
+    return out;
+  });
+  say('Dark chosen on Home, nothing chosen here → the counter paints dark', look.shared === 'dark', 'data-theme=' + look.shared);
+  say('a look chosen ON the counter still wins (light)', look.own === 'light', 'data-theme=' + look.own);
+
   console.log('\nconsole/page errors:', errs.length ? errs.join(' | ').slice(0, 300) : 'none');
   say('no page errors', errs.length === 0, errs.length + ' error(s)');
   await b.close(); web.close(); api.close();

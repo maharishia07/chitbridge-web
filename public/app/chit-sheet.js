@@ -217,11 +217,22 @@
   }
   /* the GST summary as the counter prints it (till.html taxSummaryHTML is the reference shape): the frozen by_rate, as it is held.
      A head the chit does not hold is "—", never worked out; the footing row is the chit's own totals, never a column sum. */
+  /* ⭐ RCM-POST (2026-10-14): REVERSE CHARGE IS SAID, NOT SUMMED. The frozen invoice carries the buyer's own tax in its RCM heads (engines v1.20
+     RcmCgstAmt…; CBTax.moneyOf reads them as `rcm`), and NOTHING in the heads a screen sums — so a bill under reverse charge shows GST 0.00, which is
+     the 2 Oct "GST ₹0.00 on the reprint" shape unless the sheet says why. `mo.rcm` IS the code (present only on such a bill); the sentence is for
+     people. The buyer's copy (a bill I received, or one sent to me) says I pay it; the seller's copy says the buyer does. The figure is the engine's. */
+  function rcmHTML(m) {
+    var mo = m.money || {}, r = mo.rcm;
+    if (!r || typeof r !== 'object') return '';
+    var iPay = !(m.iSent || m.counterBill);
+    return '<div class="cs-row cs-rcm" data-testid="cs-rcm" data-side="' + (iPay ? 'buyer' : 'seller') + '"><span>' + esc(T(iPay ? 'Reverse charge — you pay the tax' : 'Reverse charge — the buyer pays the tax')) + '</span>'
+      + '<b data-testid="cs-rcm-tax">' + esc(fmtMoney(r.tax, m.cur, '—')) + '</b></div>';
+  }
   function gstHTML(m) {
     var mo = m.money || {}, by = mo.by_rate || null;
     var rates = by ? Object.keys(by).sort(function (a, b) { return Number(a) - Number(b); }) : [];
     if (!rates.length) {
-      return '<div class="cs-sec">' + esc(T('GST')) + '</div>' + (mo.tax != null
+      return '<div class="cs-sec">' + esc(T('GST')) + '</div>' + rcmHTML(m) + (mo.tax != null
         ? '<div class="cs-row"><span>' + esc(T('GST total')) + '</span><b data-testid="cs-gst-total">' + esc(fmtMoney(mo.tax, m.cur, '—')) + '</b></div>'
         : '<div class="cs-mute" data-testid="cs-gst-none">' + esc(T('Rate-wise GST is not recorded on this bill')) + '</div>');
     }
@@ -234,7 +245,7 @@
       var rows1 = rates.map(function (rt) { var v = by[rt] || {}, b = v.taxable != null ? v.taxable : v.base, tv = head && v[head] != null ? v[head] : v.tax;
         return '<tr data-testid="cs-gst-' + esc(rt) + '"><td>' + esc(rt) + '%</td><td class="n">' + esc(fmtMoney(b, m.cur, '—')) + '</td><td class="n">' + esc(fmtMoney(tv, m.cur, '—')) + '</td></tr>'; }).join('');
       var foot1 = mo.taxable != null ? '<tr class="tot"><td></td><td class="n">' + esc(fmtMoney(mo.taxable, m.cur, '—')) + '</td><td class="n">' + esc(fmtMoney(mo.tax, m.cur, '—')) + '</td></tr>' : '';
-      return '<div class="cs-sec">' + esc(hw + ' ' + T('summary')) + '</div><table class="cs-lines" data-testid="cs-gst"><thead><tr><th>' + esc(T('Rate')) + '</th><th class="n">' + esc(T('Taxable')) + '</th><th class="n">' + esc(hw) + '</th></tr></thead><tbody>' + rows1 + foot1 + '</tbody></table>';
+      return '<div class="cs-sec">' + esc(hw + ' ' + T('summary')) + '</div>' + rcmHTML(m) + '<table class="cs-lines" data-testid="cs-gst"><thead><tr><th>' + esc(T('Rate')) + '</th><th class="n">' + esc(T('Taxable')) + '</th><th class="n">' + esc(hw) + '</th></tr></thead><tbody>' + rows1 + foot1 + '</tbody></table>';
     }
     var rows = rates.map(function (rt) {
       var v = by[rt] || {}, b = v.taxable != null ? v.taxable : v.base;
@@ -242,7 +253,7 @@
     }).join('');
     var foot = mo.taxable != null
       ? '<tr class="tot"><td></td><td class="n">' + esc(fmtMoney(mo.taxable, m.cur, '—')) + '</td><td class="n">' + esc(fmtMoney(inter ? mo.igst : mo.cgst, m.cur, '—')) + '</td><td class="n">' + (inter ? '' : esc(fmtMoney(mo.sgst, m.cur, '—'))) + '</td></tr>' : '';
-    return '<div class="cs-sec">' + esc(T(inter ? 'IGST summary' : 'GST summary')) + '</div><table class="cs-lines" data-testid="cs-gst"><thead><tr><th>' + esc(T('Rate')) + '</th><th class="n">' + esc(T('Taxable')) + '</th><th class="n">' + esc(T(inter ? 'IGST' : 'CGST')) + '</th><th class="n">' + (inter ? '' : esc(T('SGST'))) + '</th></tr></thead><tbody>' + rows + foot + '</tbody></table>';
+    return '<div class="cs-sec">' + esc(T(inter ? 'IGST summary' : 'GST summary')) + '</div>' + rcmHTML(m) + '<table class="cs-lines" data-testid="cs-gst"><thead><tr><th>' + esc(T('Rate')) + '</th><th class="n">' + esc(T('Taxable')) + '</th><th class="n">' + esc(T(inter ? 'IGST' : 'CGST')) + '</th><th class="n">' + (inter ? '' : esc(T('SGST'))) + '</th></tr></thead><tbody>' + rows + foot + '</tbody></table>';
   }
   function totalHTML(m, tid) {
     var mo = m.money || {}, t = mo.total;
@@ -293,6 +304,20 @@
     body.appendChild(CS.rail.el);
   }
 
+  /* ⭐ T3-DISPUTES-ASSIST: a page that carries the dispute capability (CBDispute, app/cap-dispute.js — CB Tasks & Orders) gets the chit's disputes
+     HERE: each one with whom · why · its room, Raise and Resolve greyed with the server's sentence. The section is the capability's; the sheet only
+     gives it a place, built once per chit and moved into each repaint (as railMount above), so a repaint does not re-read it or lose a typed reason. */
+  function dispMount(d, m) {
+    var body = d.querySelector('.cs-body'), id = m.id || CS.id;
+    if (!body || !id || !root.CBDispute || !root.CBDispute.sheet) return;   /* a page opts in (tasks.html: CBDispute.sheet = true); the workshop's sheet is unchanged */
+    if (!CS.disp || CS.disp.id !== id) {
+      var el = document.createElement('div'); el.setAttribute('data-testid', 'cs-disputes');
+      CS.disp = { id: id, el: el };
+      root.CBDispute.inSheet(el, id);
+    }
+    body.appendChild(CS.disp.el);
+  }
+
   /* the page form only: the chit's history as the state_log holds it — when · what · who. Read, never worked out; the step words are the sheet's own. */
   var LOGWORD = { created: 'Created', delivered: 'Delivered', message_sent: 'Message sent', amended: 'Amended', bill_step: 'Step', assigned: 'Assigned', dispute_opened: 'Disputed', dispute_resolved: 'Dispute closed' };
   function historyHTML() {
@@ -333,6 +358,7 @@
       + (CS.useAsk ? '<div class="cs-use" data-testid="cs-use">' + billUseChoiceHTML([m], 'CBSheet.use')
         + '<button type="button" class="optchip" data-testid="cs-use-auto" onclick="CBSheet.use(\'\')">' + esc(T('Let my catalogue decide')) + '</button></div>' : '')
       + (CS.mode === 'page' ? historyHTML() : '');
+    dispMount(d, m);
     railMount(d, m);
     if (m.agreement) repeatCap().then(function (rp) { if (rp && CS.view === m) { if (!document.getElementById('rp_panel')) paint(); else rp.panel(m); } });
     /* the page form has no "Open page": the person is on it */
@@ -381,7 +407,7 @@
   }
   /* the page behind does not scroll while the sheet is open — and it is not touched, so closing returns to the same place */
   function lock(on) { try { document.documentElement.style.overflow = on ? 'hidden' : ''; document.body.classList.toggle('cs-open', !!on); } catch (_) {} }
-  function reset(id) { CS.id = id; CS.rail = null; CS.chit = null; CS.view = null; CS.err = null; CS.note = null; CS.useAsk = false; CS.busy = false; CS.rejectAsk = false; CS.reason = ''; }
+  function reset(id) { CS.id = id; CS.rail = null; CS.disp = null; CS.chit = null; CS.view = null; CS.err = null; CS.note = null; CS.useAsk = false; CS.busy = false; CS.rejectAsk = false; CS.reason = ''; }
   function readSaid(e) { return (typeof MSG !== 'undefined' && MSG.fail) ? MSG.fail('read this chit', e) : T('Could not read this chit'); }
 
   /* ── THE PAGE FORM: the same sections, full-width, in a page's own element (CB CRM › crm.html#/chit/<id>) ─────────────────── */
@@ -460,6 +486,8 @@
     if (k === 'print') { try { window.print(); } catch (_) {} return; }
     if (k === 'return') { CS.note = T('Returns are made at the counter, against the bill.'); return paint(); }
     if (k === 'dispute') {
+      /* T3: where the dispute capability is on the page (CBDispute), Raise opens IN the sheet's own dispute section — greyed there with the server's why */
+      if (root.CBDispute && root.CBDispute.sheet && CS.disp && CS.disp.id === id) { root.CBDispute.raise(); return; }
       /* the full page's own dispute form; it opens over the app (not over the sheet), and puts the sheet back when it is raised */
       close();
       if (typeof quickDispute === 'function') quickDispute(id, { back: true });

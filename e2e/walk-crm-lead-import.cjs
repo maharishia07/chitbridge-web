@@ -14,15 +14,17 @@
  * One line per path: "ID · path · PASS/FAIL (what it saw)". Screenshots: e2e/shots/walk-crm-lead-import-NN.png.
  */
 'use strict';
+const TD = require('./lib/today.cjs');
 const fs = require('fs'), path = require('path'), os = require('os');
 const W = require('./lib/walk.cjs');
 const C = require('./lib/contract.cjs');   /* every answer served for a route in the API contract is checked (e2e/fixtures/web-api.contract.json) */
+const crmApi = require('./lib/crm-api.cjs');   /* the one GET /parties envelope (listPage: total · page · limit) */
 const J = C.json;
 const FIX = path.join(__dirname, 'fixtures', 'leads-import.csv');
 const WAIT = 'Lead stages arrive after the next update.';
 const CAP = 'Import up to 500 leads at a time. Split the file.';
 const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64').replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
-const claims = (c) => b64({ alg: 'none' }) + '.' + b64(Object.assign({ exp: Math.floor(Date.now() / 1000) + 3600 }, c)) + '.x';
+const claims = (c) => b64({ alg: 'none' }) + '.' + b64(Object.assign({ exp: Math.floor(TD.nowMs() / 1000) + 3600 }, c)) + '.x';
 const VIEWER = JSON.stringify({ token: claims({ identity_id: 'act-2', identity_type: 'actor', parent_entity_id: 'ent-walk', display_name: 'Vel', hat: 'view_only' }), role: 'actor', name: 'Vel', entity: 'Fixture Shop' });
 
 /* ── the stand-in: the shop's parties, and the api's own rule for this fixture (normalise by the one helper's digits · dedupe · merge / skip) ── */
@@ -77,7 +79,7 @@ async function route(r) {
   if (p === '/api/crm/followups' && m === 'GET') return J(r, 200, { followups: [], late: 0, today: 0 });
   if (p === '/api/crm/parties' && m === 'GET') {
     const L = u.searchParams.get('view') === 'leads' ? (S.leadsOff ? [] : leads().map(leadRow)) : [];
-    return J(r, 200, { parties: L, walk_ins: [], count: L.length, truncated: false, alerts: { dues_overdue: 0 }, leads_migrated: !S.leadsOff });
+    return J(r, 200, crmApi.listPage(L, { leads_migrated: !S.leadsOff }));
   }
   if (p === '/api/crm/leads/import' && m === 'POST') {
     if (S.leadsOff) return J(r, 503, { code: 'LEADS_NOT_MIGRATED', error: WAIT, message: WAIT });

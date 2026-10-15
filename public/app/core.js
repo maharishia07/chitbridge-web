@@ -126,7 +126,8 @@ function unwrap(j, _key){
    */
   var SIBS = ["total","page","limit","next","truncated","count","offset","status_counts","open","counts",   /* next: PERF1 — a keyset list's cursor (chits inbox/sent, books pages) */
               "category_counts","uncategorised","actor_health","actor_last_seen",
-              "migrated","supplier","groups","project"];
+              "migrated","supplier","groups","project",
+              "late","may_answer","why"];   /* T3-P3-CONSENT: GET /api/crm/privacy-requests answers { requests[], total, page, limit, open, late, may_answer, why } — the register greys Answer on may_answer/why */
   for(const mk of SIBS) if(mk in j){ try{ Object.defineProperty(a, mk, {value:j[mk], enumerable:false, configurable:true, writable:true}); }catch(_){ a[mk]=j[mk]; } }
   /* ⚠️ everything NOT on the list, and not the array itself, is gone from here on — so it is written down */
   try{ cbDropNote(_key, Object.keys(j).filter(function(x){ return x !== k && SIBS.indexOf(x) < 0; })); }catch(_){}
@@ -1164,3 +1165,13 @@ async function apiOnce(key, {params, query, body}={}){
     if(--_inflight<=0){ _inflight=0; _netBusy(false); }
   }
 }
+
+/* ── the DEFINITIONS routes (cbDefsLive · cbCatgLive above read them) — MOVED here from app.html's EP (T3-CATALOGUE) so app.html and catalogue.html
+   register each ONCE (e2e/ep-aliases.cjs); a page merges them with Object.assign(EP, CB_DEFS_EP) as it merges CB_SHOP_EP ── */
+var CB_DEFS_EP = {
+  defList:         {m:"GET",   p:"/api/definitions",             ok:"y"},   // ?all=1 via defListAll
+  defListAll:      {m:"GET",   p:"/api/definitions?all=1",       ok:"y"},   // the shelf, incl. retired
+  defAdd:          {m:"POST",  p:"/api/definitions",             ok:"y"},
+  defSave:         {m:"PUT",   p:"/api/definitions/:id",         ok:"y"},   // rules change => NEW VERSION
+  defRetire:       {m:"DELETE",p:"/api/definitions/:id",         ok:"y"},   // retires, never deletes
+};

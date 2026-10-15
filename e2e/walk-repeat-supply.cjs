@@ -13,15 +13,17 @@
  * One line per path: "ID · path · PASS/FAIL (what it saw)". Screenshots: e2e/shots/walk-repeat-supply-NN.png.
  */
 'use strict';
+const TD = require('./lib/today.cjs');
 const fs = require('fs');
 const path = require('path');
 const W = require('./lib/walk.cjs');
 const C = require('./lib/contract.cjs');   /* M43: every /api/repeat answer this stand-in serves is held to the API contract */
 const J = (r, status, body) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+const crmApi = require('./lib/crm-api.cjs');   /* RAIL-LAB-SRV1: the rail card (GET /api/facts/rail) from its one builder */
 const clone = (x) => JSON.parse(JSON.stringify(x));
 const FX = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'web-api.contract.json'), 'utf8')).routes;
 const SHOP = '11111111-1111-4111-8111-111111111111', CUST = '22222222-2222-4222-8222-222222222222';
-const TODAY = new Date().toISOString().slice(0, 10);
+const TODAY = TD.TODAY;
 const plus = (d, n) => new Date(Date.parse(d + 'T00:00:00Z') + n * 86400000).toISOString().slice(0, 10);
 
 /* ── the agreement's own step table, as lib/repeat-supply may() answers it (the stand-in is the server here) ── */
@@ -93,7 +95,7 @@ W.run('repeat-supply', async (w) => {
       if (S.refuse && S.refuse.verb === v) return J(r, 422, { code: 'REPEAT_WRONG_STATE', error: S.refuse.say, message: S.refuse.say });
       const may = actions(a, side)[v] || { ok: false, why: 'wrong_state', say: WHY.wrong_state };
       if (!may.ok) return J(r, 422, { code: 'REPEAT_' + may.why.toUpperCase(), error: may.say, message: may.say });
-      const stamp = { state_by: side === 'seller' ? SHOP : CUST, state_at: new Date().toISOString(), state_note: body.reason || null };
+      const stamp = { state_by: side === 'seller' ? SHOP : CUST, state_at: TD.nowIso(), state_note: body.reason || null };
       let extra = {};
       if (v === 'run') { const d = a.next_on; a.runs[d] = 'run-' + d; a.runs_done += 1; a.last_run_on = d; a.next_on = plus(d, 7); extra = { ran: [{ date: d, chit_id: 'run-' + d, duplicate: false }], problems: [] }; }
       else if (v === 'skip') { a.skips.push({ date: a.next_on, by_entity_id: stamp.state_by, reason: body.reason || null, at: stamp.state_at }); a.next_on = plus(a.next_on, 7); }
@@ -116,7 +118,7 @@ W.run('repeat-supply', async (w) => {
       return J(r0, 404, { error: 'Not found' });
     }
     if (p === '/api/entities/me') return J(r0, 200, { entity: { display_name: S.me === 'customer' ? 'Ravi Stores' : 'Fixture Shop', currency_code: 'INR' } });
-    if (p === '/api/facts/rail') return J(r0, 200, { suppliers: 1, customers: 3, in: 0, out: 0, stuck: 0 });
+    if (p === '/api/facts/rail') return J(r0, 200, crmApi.railFacts({ suppliers: 1, customers: 3, in: 0, out: 0, stuck: 0 }));
     return J(r0, 404, { error: 'not found' });
   });
   const asSeller = async () => { S.me = 'seller'; await ctx.addInitScript((s) => { try { localStorage.setItem('cb_api_base', location.origin); localStorage.setItem('cb_sess', s); } catch (_) {} }, W.session('Fixture Owner', 'Fixture Shop')); };
@@ -124,7 +126,7 @@ W.run('repeat-supply', async (w) => {
 
   const txt = (sel) => page.locator(sel).first().innerText().then((s) => s.replace(/\s+/g, ' ').trim()).catch(() => '');
   const body = () => page.evaluate(() => document.body.innerText.replace(/\s+/g, ' '));
-  const open = async (hash, until) => { await page.goto(base + '/finance.html?t=' + Date.now() + (hash || '#/repeat'));   /* a fresh load every time (a hash alone would not reload) */ await page.waitForSelector(until || '[data-testid^="rp-row-"]', { timeout: 20000 }).catch(() => {}); await page.waitForTimeout(400); };
+  const open = async (hash, until) => { await page.goto(base + '/finance.html?t=' + Date.now() + (hash || '#/repeat'));   /* clock-ok: cache-bust — a fresh load every time (a hash alone would not reload) */ await page.waitForSelector(until || '[data-testid^="rp-row-"]', { timeout: 20000 }).catch(() => {}); await page.waitForTimeout(400); };
   const sheet = async (chitId) => { await page.evaluate((id) => openChitSheet(id), chitId); await page.waitForSelector('[data-testid="rp-verbs"], [data-testid="cs-act-repeat"], [data-testid="rp-panel-err"]', { timeout: 15000 }).catch(() => {}); await page.waitForTimeout(300); };
   const writesTo = (tail) => S.writes.filter((x) => x.endsWith(tail)).length;
 

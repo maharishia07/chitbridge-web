@@ -16,7 +16,9 @@
 'use strict';
 const W = require('./lib/walk.cjs');
 const { measure } = require('./lib/theme-measure.cjs');
-const J = (r, status, body) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+const C = require('./lib/contract.cjs');   /* M43: every answer for a route in the API contract is held to it (RAIL-LAB-SRV1: the facts family) */
+const J = C.json;
+const crmApi = require('./lib/crm-api.cjs');   /* RAIL-LAB-SRV1: the rail card (GET /api/facts/rail) from its one builder */
 
 const walk = async (w) => {
   const { page, ctx, base } = w;
@@ -40,7 +42,7 @@ const walk = async (w) => {
     if (p === '/api/governance/profile' && m === 'GET') return J(r, 200, { vault: VAULT, vault_encrypted: true });
     if (p === '/api/governance/profile/vault' && m === 'PUT') return J(r, 200, { ok: true });
     if (p === '/api/governance/country-setup') { if (m === 'PUT') S.csDone = true; return J(r, 200, CS()); }
-    if (p === '/api/facts/rail') return J(r, 200, { suppliers: 0, customers: 0, in: 0, out: 0, stuck: 0 });
+    if (p === '/api/facts/rail') return J(r, 200, crmApi.railFacts({ suppliers: 0, customers: 0, in: 0, out: 0, stuck: 0 }));
     return J(r, 200, {});
   });
   await ctx.addInitScript((s) => { try { localStorage.setItem('cb_api_base', location.origin); localStorage.setItem('cb_sess', s); } catch (_) {} }, W.session('Fixture Owner', 'Fixture Shop'));

@@ -8,6 +8,13 @@
 // result set, so it lands in neither the changes nor the removals and the till's merge keeps it for ever. This spec cannot issue a
 // raw SQL delete, so it reproduces the STATE that a delete leaves behind (a copy holding a row the shop does not have) and proves
 // the counter notices and heals it. That is the mechanism, tested where it actually lives.
+//
+// ⚠️ CTR-VERIFY (T3-FIXES, 2026-10-14) — THE COUNTER'S OWN REPORT IS RETIRED HERE, HONESTLY. verifyCounter() (the "agrees with
+// ChitBridge" slip: right shop, full count, 8 sampled rows, clock age) was deleted from the till on 25 Sep (api be02d62b): it was a
+// dead twin no click could reach, and Athi chose delete over reviving it. Its steps here could no longer pass. What still stands,
+// and is still proven below: the SERVER's second opinion (GET /api/till/verify — count, shop, a sample spread to the shelf's end),
+// compared against the counter's copy by this spec; the ghost row a delete leaves behind, healed by ↻; every row stamped with one
+// shop; another shop's catalogue and queue refused. Restoring the report in the counter is a till change for its own round.
 const { test, expect } = require('@playwright/test');
 const { mintEntity, clickNav } = require('../fixtures');
 const API = process.env.CB_API_BASE || 'https://chitbridge-api-production.up.railway.app';
@@ -59,11 +66,15 @@ test('[TILL-05] the counter checks itself against the shop, and heals a copy tha
     /* the count line Athi asked for — it must say the true total, not the number of rows drawn */
     await expect(till.locator('[data-testid="till-shelf-count"]')).toContainText('4 products on this counter');
 
-    const report = await till.evaluate(async () => { await verifyCounter();
-      return document.getElementById('slipbox').textContent; });
-    expect(report, 'the check did not pass on a counter that is correct').toContain('agrees with ChitBridge');
-    expect(report).toContain('Everything is here');
-    expect(report).toContain('What is here is right');
+    /* the server's sample, compared with the counter's copy HERE (the counter's own report was retired — see the header) */
+    const v = await (await page.request.get(API + '/api/till/verify', { headers: { 'X-Api-Key': key } })).json();
+    const agree = await till.evaluate((sample) => {
+      const mine = (S && S.items) || [];
+      return { count: mine.length, wrong: sample.filter((r) => { const o = mine.find((i) => i.item_id === r.item_id);
+        return !o || String(o.name) !== String(r.name) || Number(o.price) !== Number(r.price); }).map((r) => r.name) };
+    }, v.sample || []);
+    expect(agree.count, 'everything is here').toBe(v.total);
+    expect(agree.wrong, 'what is here is right — name and price agree with the shop').toEqual([]);
   });
 
   await test.step('⚠️⚠️ a copy holding a row the shop does not have — what a DELETE leaves behind', async () => {
@@ -77,20 +88,16 @@ test('[TILL-05] the counter checks itself against the shop, and heals a copy tha
     });
     expect(await till.evaluate(() => (S.items || []).length), 'the ghost is in the copy').toBe(5);
 
-    /* the check must SAY so, in words, before anything is repaired */
-    const bad = await till.evaluate(async () => { await verifyCounter();
-      return document.getElementById('slipbox').textContent; });
-    expect(bad, 'the check passed a counter holding stock the shop does not have').toContain('does NOT agree');
+    /* the server's count disagrees with the copy before anything is repaired */
+    const v = await (await page.request.get(API + '/api/till/verify', { headers: { 'X-Api-Key': key } })).json();
+    expect(v.total, 'the shop still has four — the copy holds one it does not').toBe(4);
 
     /* and a refresh must heal it: the merge will not add up, so the whole shop comes down again */
     await till.evaluate(() => refresh());
     await till.waitForFunction(() => (S.items || []).length === 4, null, { timeout: 60000 });
     const names = await till.evaluate(() => (S.items || []).map((i) => i.name));
     expect(names, 'the ghost survived a refresh — the delta merge is not self-healing').not.toContain('Ghost stock 1 kg');
-
-    const good = await till.evaluate(async () => { await verifyCounter();
-      return document.getElementById('slipbox').textContent; });
-    expect(good, 'it did not recover').toContain('agrees with ChitBridge');
+    expect(names.length, 'it did not recover to the shop\'s own count').toBe(v.total);
   });
 
   expect(threw, 'the counter threw').toEqual([]);
@@ -138,9 +145,7 @@ test('[TILL-06] the counter stamps every row with its shop, and refuses to merge
     /* ⚠️ the WHOLE entity id, not a prefix — it never crosses the wire, so there is nothing to save by shortening the one
        value the audit is about, and a prefix can collide */
     expect(kinds[0], 'the stamp is not this shop').toBe(shopA);
-
-    const report = await till.evaluate(async () => { await verifyCounter(); return document.getElementById('slipbox').textContent; });
-    expect(report, 'the check does not report the count Athi asked for').toContain('Every row is from one shop');
+    /* (the counter's "Every row is from one shop" line went with verifyCounter on 25 Sep — the count above IS that check) */
   });
 
   await test.step('⚠️⚠️ ANOTHER SHOP CATALOGUE IS REFUSED — through the real refresh, not a simulation', async () => {

@@ -391,6 +391,27 @@ const THROWING_STORAGE = () => { const boom = function () { throw new Error('sto
     await c8.close();
   }
 
+  /* ─────────────────────────── A SERVER-PAGED LIST WITH FILTERS (T3-CATALOGUE widening) ─────────────────────────── */
+  console.log('\n== list-unit: remote + filters ==');
+  {
+    const { ctx: c9, p: q } = await open();
+    const r = await q.evaluate(() => {
+      const host = document.createElement('div'); host.id = 'remote_host'; host.style.height = '400px'; document.body.appendChild(host);
+      window.__queries = [];
+      CBList.mount(host, { key: 'remote-filt', rows: [{ id: 'a', name: 'A', st: 'x' }, { id: 'b', name: 'B', st: 'y' }], id: (x) => x.id, columns: [{ key: 'name', label: 'Name', prio: 1 }],
+        filters: [{ key: 'st', label: 'State', all: 'Any', options: [{ v: 'x', label: 'X' }, { v: 'y', label: 'Y' }], match: () => true }],
+        remote: { total: () => 2, onQuery: (qq) => { window.__queries.push(qq); } } });
+      const btn = host.querySelector('[data-testid="cbl-filters-remote-filt"]');
+      return { btn: !!btn, rows: host.querySelectorAll('.cbl-row').length };
+    });
+    ok(r.btn && r.rows === 2, 'a remote list that declares filters shows Filters ▾ and draws the page it was given — ' + JSON.stringify(r));
+    await q.click('[data-testid="cbl-filters-remote-filt"]'); await q.waitForSelector('[data-testid="cbl-filters-pop-remote-filt"] select[data-filt="st"]', { timeout: 3000 });
+    await q.selectOption('[data-testid="cbl-filters-pop-remote-filt"] select[data-filt="st"]', 'y'); await q.waitForTimeout(450);   /* the pager is asked after the unit's 250 ms debounce */
+    const after = await q.evaluate(() => ({ queries: window.__queries.map((x) => x.filt), rows: document.querySelectorAll('#remote_host .cbl-row').length }));
+    ok(after.queries.length === 1 && after.queries[0].st === 'y' && after.rows === 2, 'a filter change goes to the pager (onQuery filt) and the unit filters nothing itself — ' + JSON.stringify(after));
+    await c9.close();
+  }
+
   ok(errs.length === 0, 'no page error anywhere' + (errs.length ? ': ' + errs.join(' | ') : ''));
   await b.close(); S.close();
   console.log('\n  ' + pass + ' passed, ' + fail + ' failed\n');

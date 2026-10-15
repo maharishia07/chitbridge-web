@@ -794,6 +794,7 @@
 </style>
 <script src="/engine/screen.js"></script>
 <script src="/app/avatar.js"></script>   <!-- CBAvatar: the one avatar (Profile · Support · Sign out) and the look it owns — the same on every page -->
+<script src="/app/list-ctl.js"></script>   <!-- CBList.every: the board's lists page (T2-PAGING) and the board sums the whole set -->
 </head>
 <body>
 
@@ -1432,8 +1433,9 @@ async function load(){
   document.getElementById('who').textContent = s ? ('signed in as ' + (s.entity || s.name || 'your business')) : 'not signed in';
   try {
     /* two calls, not one per case — see the round-trip note in routes/testing.js */
-    var a = await call('/api/testing/cases');
-    var b = await call('/api/testing/results');
+    /* ⭐ T2-PAGING: both lists page now (total · page · limit) and the board sums the WHOLE set — every page, one reader */
+    var a = { cases: await CBList.every(function (p) { return call('/api/testing/cases?page=' + p); }, 'cases') };
+    var b = { results: await CBList.every(function (p) { return call('/api/testing/results?page=' + p); }, 'results') };
     /* ⭐ which cases were written against wording that has since changed. A green case whose clause has
        moved is the most misleading thing a board can show, so it is read every time, not on request. */
     var st = await call('/api/testing/stale');

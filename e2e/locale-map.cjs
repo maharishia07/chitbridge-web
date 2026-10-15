@@ -46,7 +46,7 @@ const sb = {
 };
 sb.window = sb; sb.globalThis = sb;
 const ctx = vm.createContext(sb);
-vm.runInContext(fs.readFileSync(path.join(W, 'app', 'locale.js'), 'utf8'), ctx, { filename: 'locale.js' });
+vm.runInContext(fs.readFileSync(path.join(W, 'engine', 'locale.js'), 'utf8'), ctx, { filename: 'locale.js' });
 Object.assign(sb, {
   esc: (x) => String(x == null ? '' : x), tx: (x) => x,
   txf: (t, v) => String(t).replace(/\{(\w+)\}/g, (m, k) => v[k]),
@@ -60,6 +60,8 @@ Object.assign(sb, {
   textSize: () => 'm', motionPref: () => 'auto', apGet: (k, d) => (k in store ? store[k] : d),
   STANDARDS: [], GOV: [],
 });
+/* CAP_WITH.admin (app.html): helpers.js (taxIdWord · packWord), cap-shop.js (SET1) and cap-settings.js (T3-SETTINGS) load before cap-admin.js */
+for (const f of ['helpers.js', 'cap-shop.js', 'cap-settings.js']) vm.runInContext(fs.readFileSync(path.join(W, 'app', f), 'utf8'), ctx, { filename: f });
 vm.runInContext(fs.readFileSync(path.join(W, 'app', 'cap-admin.js'), 'utf8'), ctx, { filename: 'cap-admin.js' });
 
 const ENTITY = {

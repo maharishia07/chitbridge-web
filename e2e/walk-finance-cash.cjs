@@ -16,6 +16,7 @@
 const W = require('./lib/walk.cjs');
 const C = require('./lib/contract.cjs');
 const J = (r, status, body) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+const crmApi = require('./lib/crm-api.cjs');   /* RAIL-LAB-SRV1: the rail card (GET /api/facts/rail) from its one builder */
 
 /**
  * ⭐ ONE CLOCK (F3b, 2026-10-13): the walk ran red in the cloud at 23:37 UTC — the stand-in built its day 0 as the IST day (13 Oct) while the page's
@@ -74,7 +75,7 @@ W.run('finance-cash', async (w) => {
       return J(r, 200, answer(u.searchParams.get('days') === '30' ? 30 : 7));
     }
     if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Fixture Shop', currency_code: 'INR' } });
-    if (p === '/api/facts/rail') return J(r, 200, { suppliers: 1, customers: 3, in: 0, out: 0, stuck: 0 });
+    if (p === '/api/facts/rail') return J(r, 200, crmApi.railFacts({ suppliers: 1, customers: 3, in: 0, out: 0, stuck: 0 }));
     return J(r, 404, { error: 'not found' });
   });
   await ctx.addInitScript((s) => { try { localStorage.setItem('cb_api_base', location.origin); localStorage.setItem('cb_sess', s); } catch (_) {} }, W.session('Fixture Owner', 'Fixture Shop'));

@@ -6,6 +6,7 @@
  * values on top: books.health({ waiting: [..] }). e2e/lib/contract.cjs holds whatever a harness serves to the contract, builders or not.
  */
 'use strict';
+const TD = require('./today.cjs');
 const ENGINES = { posting: 'injected', packs: 'injected', receivables: 'injected', ledger: 'injected', bookpack: 'injected', period: 'injected' };
 
 /** GET /api/books/health */
@@ -35,7 +36,7 @@ const periods = (rows) => ({ periods: rows || [] });
 module.exports = { ENGINES, health, csStatus, statement, dues, dueRow, periods, periodRow };
 
 /* ── the period-end answers ── */
-const DAY = new Date().toISOString().slice(0, 10);
+const DAY = TD.TODAY;
 /** what every posting route answers beside its own keys: the entry made (lib/books postEntry → { ok, entry_id, entry_no, posting_date, doc_date, moved, lines, items, note }) */
 const posted = (o) => Object.assign({ ok: true, entry_id: 'e1', entry_no: 'MJ/26-27/0001', posting_date: DAY, doc_date: DAY, moved: false, lines: 2, items: 0, note: null }, o || {});
 /** the `source` of a day book entry or a ledger line (routes/books.js sourceOf): ALL these keys when there is one, null when the entry has no source chit */
@@ -88,7 +89,9 @@ const bs = (assets, liabilities, equity, o) => { const a = (assets || []).map((x
 const enable = (o) => Object.assign({ ok: true, accounts_added: 80, fiscal_year: '2026-27', parties_numbered: null }, o || {});
 /** one account of GET /api/books/accounts */
 const accountRow = (o) => Object.assign({ account_id: 'acc', code: '1000', name: 'Account', is_group: false, tally_group: 'Group', nature: 'asset', role: null, parent_code: null, active: true }, o || {});
-Object.assign(module.exports, { waitingRow, trialBalance, pl, bs, enable, accountRow });
+/* GET /api/books/cheques (T3-P1-MONEY shape): the cheques in hand, the post-dated reminders and the owner's switch — the contract's keys, asOf = the one injected today */
+const cheques = (o) => Object.assign({ currency: 'INR', asOf: DAY, cheques: [], pdc_reminders: [], remind: { on: true, lead_days: 7, from: null, may_set: true, why_not: null } }, o || {});
+Object.assign(module.exports, { waitingRow, trialBalance, pl, bs, enable, accountRow, cheques });
 
 /* ── payments (M26, chitbridge-api #57): the preview, the one-call record, the 409 ── */
 const rs = (minor) => { const v = minor / 100; return '₹' + v.toLocaleString('en-IN', { minimumFractionDigits: Number.isInteger(v) ? 0 : 2, maximumFractionDigits: 2 }); };

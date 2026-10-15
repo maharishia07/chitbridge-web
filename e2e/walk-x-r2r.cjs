@@ -184,7 +184,7 @@ W.run('x-r2r', async (w) => {
       await open(page, base, 'gstclose'); const p = await page.locator('#pg_p').inputValue().catch(() => ''), fy = await page.locator('#pg_fy').inputValue().catch(() => '');
       const lbl = await page.$eval('#pg_p', (s) => s.options[s.selectedIndex].textContent).catch(() => '');
       /* T2-WEBPRIMS: last month in the PAGE's own words (helpers.js monthNames → CBLocale: en-IN writes "Sept"), never a list typed here */
-      const want = await page.evaluate(() => { const d = new Date(); d.setDate(0); return monthNames('short')[d.getMonth()]; }).catch(() => '');
+      const want = await page.evaluate(() => { const d = new Date(); d.setDate(0); return monthNames('short')[d.getMonth()]; }).catch(() => '');   /* clock-ok: runs in the page, whose clock is CB_TODAY */
       return { ok: lbl === want, saw: fy + ' · month ' + p + ' = ' + lbl + ' (last month is ' + want + ')' };
     });
 

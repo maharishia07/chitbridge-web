@@ -74,6 +74,8 @@ sandbox.window = sandbox;
 const ctx = vm.createContext(sandbox);
 /* Load the capability the same way the browser does: a classic script into shared global scope. */
 try {
+  /* CAP_WITH.admin (app.html): helpers.js (taxIdWord · packWord), cap-shop.js (SET1) and cap-settings.js (T3-SETTINGS) load before cap-admin.js — it calls what they hold */
+  for (const f of ['helpers.js', 'cap-shop.js', 'cap-settings.js']) vm.runInContext(fs.readFileSync(path.join(ROOT, 'app', f), 'utf8'), ctx, { filename: f });
   vm.runInContext(fs.readFileSync(path.join(ROOT, 'app', 'cap-admin.js'), 'utf8'), ctx, { filename: 'cap-admin.js' });
   vm.runInContext(fs.readFileSync(path.join(ROOT, 'app', 'cap-iddocs.js'), 'utf8'), ctx, { filename: 'cap-iddocs.js' });
 } catch (e) {
@@ -93,7 +95,7 @@ try {
  * until the line runs, so every screen that nothing calls is a screen where this is waiting.
  */
 try {
-  vm.runInContext(fs.readFileSync(path.join(ROOT, 'app', 'locale.js'), 'utf8'), ctx, { filename: 'locale.js' });
+  vm.runInContext(fs.readFileSync(path.join(ROOT, 'engine', 'locale.js'), 'utf8'), ctx, { filename: 'locale.js' });
   vm.runInContext(fs.readFileSync(path.join(ROOT, 'app', 'catalogue-lines.js'), 'utf8'), ctx, { filename: 'catalogue-lines.js' });
   vm.runInContext(fs.readFileSync(path.join(ROOT, 'app', 'cart.js'), 'utf8'), ctx, { filename: 'cart.js' });
 } catch (e) {

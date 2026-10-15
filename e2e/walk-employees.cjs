@@ -12,9 +12,12 @@
  * One line per path: "ID · path · PASS/FAIL (what it saw)". Screenshots: e2e/shots/walk-employees-NN.png.
  */
 'use strict';
+const TD = require('./lib/today.cjs');
 const W = require('./lib/walk.cjs');
 const { measure } = require('./lib/theme-measure.cjs');
-const J = (r, status, body) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+const C = require('./lib/contract.cjs');   /* M43: every answer for a route in the API contract is held to it (RAIL-LAB-SRV1: the facts family) */
+const J = C.json;
+const crmApi = require('./lib/crm-api.cjs');   /* RAIL-LAB-SRV1: the rail card (GET /api/facts/rail) from its one builder */
 
 W.run('employees', async (w) => {
   const { page, ctx, base } = w;
@@ -28,7 +31,7 @@ W.run('employees', async (w) => {
   const S = { calls: [], addRefused: false, listDenied: false, nextId: 4, people: [] };
   const may = (o) => Object.assign({ access: { ok: true }, email: { ok: true }, reset_pin: { ok: true }, switch: { ok: true, to: 'off' }, cover: { ok: true } }, o || {});
   S.people = [
-    { id: 'p1', name: 'Asha Kumar', user_id: 'asha01@walk-shop.br', role: 'Cashier', phone: '9840000001', state: 'on', jobs: 0, last_at: new Date().toISOString(), access: CHOICES[0], may: may(), cover: null, cover_options: [{ id: 'p2', name: 'Ravi Nair' }] },
+    { id: 'p1', name: 'Asha Kumar', user_id: 'asha01@walk-shop.br', role: 'Cashier', phone: '9840000001', state: 'on', jobs: 0, last_at: TD.nowIso(), access: CHOICES[0], may: may(), cover: null, cover_options: [{ id: 'p2', name: 'Ravi Nair' }] },
     { id: 'p2', name: 'Ravi Nair', user_id: 'ravi02@walk-shop.br', role: 'Manager', phone: '9840000002', state: 'on', jobs: 2, last_at: null, access: CHOICES[1],
       may: may({ reset_pin: { ok: false, why: "Only the owner can reset a manager's code." } }), cover: null, cover_options: [{ id: 'p1', name: 'Asha Kumar' }] },
     { id: 'p3', name: 'Meena Iyer', user_id: 'meena03@walk-shop.br', role: 'Helper', phone: '', state: 'off', jobs: 0, last_at: null, access: CHOICES[0], may: may({ switch: { ok: true, to: 'on' } }), cover: null, cover_options: [] },
@@ -41,7 +44,7 @@ W.run('employees', async (w) => {
     let body = null; try { body = q.postData() ? JSON.parse(q.postData()) : null; } catch (_) {}
     if (m !== 'GET') S.calls.push(m + ' ' + p + (body ? ' ' + JSON.stringify(body) : ''));
     if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Fixture Shop', currency_code: 'INR' } });
-    if (p === '/api/facts/rail') return J(r, 200, { suppliers: 0, customers: 0, in: 0, out: 0, stuck: 0 });
+    if (p === '/api/facts/rail') return J(r, 200, crmApi.railFacts({ suppliers: 0, customers: 0, in: 0, out: 0, stuck: 0 }));
     if (p === '/api/people' && m === 'GET') {
       if (S.listDenied) return J(r, 403, { message: 'This sign-in cannot open this.' });
       return J(r, 200, { people: S.people, may: { add: S.addRefused ? { ok: false, why: 'Only the owner can add people.' } : { ok: true } }, access_choices: CHOICES, counts: counts(),

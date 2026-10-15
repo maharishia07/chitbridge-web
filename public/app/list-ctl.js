@@ -32,6 +32,7 @@
  *
  * SERVER-PAGED LISTS (Platform): pass `remote:{ total, onQuery(q), foot() }`. The unit then neither filters nor sorts: it draws
  * the page it was given in its own look, asks the page's pager for the next one through `onQuery`, and paints `foot()` below.
+ *   `remote.filters: true` (T3) also draws the Filters control: each choice is handed to `onQuery` ({ filt, sort }), never applied here.
  */
 (function (root) {
   'use strict';
@@ -90,6 +91,7 @@
     /* SAVED VIEWS as tabs above the tools row: one tap sets the list's own filters (no second filter engine) */
     '.cbl .cbl-views{display:flex;align-items:center;gap:6px;padding:2px 20px 6px;background:var(--cl-page);overflow-x:auto;scrollbar-width:none}',
     '.cbl .cbl-views::-webkit-scrollbar{display:none}',
+    '.cbl .cbl-title .cbl-views.in-title{padding:0;background:none;overflow:visible;flex-wrap:wrap}',
     '.cbl .cbl-vtab{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;height:30px;border:1px solid var(--cl-line);background:var(--cl-card);border-radius:999px;padding:0 12px;font-size:calc(13px * var(--k,1));font-weight:600;white-space:nowrap;margin:0;color:var(--cl-ink)}',
     '.cbl .cbl-vtab .n{font-family:var(--cl-num);font-size:calc(11.5px * var(--k,1));color:var(--cl-muted);font-weight:500}',
     '.cbl .cbl-vtab[aria-selected="true"]{background:var(--cl-ink);border-color:var(--cl-ink);color:var(--cl-page)}',
@@ -144,6 +146,8 @@
     '.cbl .cbl-hc .sort{border:0;background:none;padding:0;font:inherit;color:inherit;letter-spacing:inherit;text-transform:inherit;display:inline-flex;gap:3px;align-items:center}',
     '.cbl .cbl-hc .arrow{color:var(--cl-blue);font-size:calc(11px * var(--k,1))}',
     '.cbl .cbl-rz{position:absolute;inset-inline-end:-4px;top:0;bottom:0;width:9px;cursor:col-resize;z-index:2;border:0;background:none;padding:0;touch-action:none}',
+    /* T3-COMPAT: the LAST column's handle stays inside the grid — hung 4 px past its edge it gave every filled list a 4 px sideways scroll (rule 13) */
+    '.cbl .cbl-hc:last-child > .cbl-rz{inset-inline-end:0}',
     '.cbl .cbl-rz::after{content:"";position:absolute;inset-inline-start:4px;top:6px;bottom:6px;width:1px;background:var(--cl-line)}',
     '.cbl .cbl-rz:hover::after,.cbl .cbl-rz:focus-visible::after,.cbl .cbl-rz.drag::after{width:3px;inset-inline-start:3px;background:var(--cl-blue)}',
     '.cbl .cbl-row{display:grid;align-items:center;border-bottom:1px solid var(--cl-hair);cursor:pointer;position:relative}',
@@ -430,8 +434,11 @@
     } else {
       out += chips.map(chipHTML).join('') + notes.map(noteHTML).join('');
     }
+    /* T3-COMPAT: views.inTitle — the saved-view tabs sit in the title row, after the chips, instead of a row of their own (a head that must stay short) */
+    if (I.o.views && I.o.views.inTitle) out += '<span class="cbl-views in-title" data-cbl-part="views" role="tablist" aria-label="' + esc(T(I, 'Views')) + '"></span>';
     if (typeof h.slot === 'function') out += '<span class="cbl-slot" data-cbl-part="slot" style="margin-inline-start:auto;display:flex;align-items:center;gap:8px"></span>';
     box.innerHTML = out;
+    if (I.o.views && I.o.views.inTitle) paintViews(I);
     if (typeof h.slot === 'function') { var sl = box.querySelector(':scope > .cbl-slot'); if (sl) safe(function () { h.slot(sl); }); }
   }
   function periodPop(I, p) {
@@ -456,7 +463,10 @@
     if (!box) { box = root.document.createElement('div'); box.className = 'cbl-tools'; box.setAttribute('data-cbl-part', 'tools'); box.setAttribute('role', 'toolbar'); box.setAttribute('aria-label', T(I, 'View')); var l = $(I, ':scope > .cbl-list'); I.el.insertBefore(box, l); }
     var o = I.o, R = I.r, s = I.s, m = matched(I), fn = activeFilters(I).length, k = esc(I.key), sorts = sortChoices(I);
     var tids = o.tids || {}, tl = o.tools || {}, h = tl.search === false ? '' : '<div class="cbl-search"><span aria-hidden="true">🔍</span><input type="search" data-cbl-q id="cbl-q-' + k + '" data-testid="listctl-search-' + k + '" placeholder="' + esc(o.searchHint || T(I, 'Search')) + '" value="' + esc(R.q) + '" aria-label="' + esc(T(I, 'Search')) + '"></div>';
-    if (!remote(I) && ((o.filters && o.filters.length) || sorts.length > 1)) {
+    /* T3-DISPUTES-ASSIST: a server-paged list that ALSO filters on the server says so (remote.filters: true) — the same Filters control, and every choice
+       goes to its onQuery (q.filt · q.sort) instead of narrowing the page in hand. T3-CATALOGUE (widened, additively): a server-paged list that DECLARES
+       filters gets the Filters ▾ too (a change goes to its pager, the unit still filters nothing itself); sorts alone show it only when the unit sorts (not remote) or the list opted in */
+    if ((o.filters && o.filters.length) || ((!remote(I) || o.remote.filters === true) && sorts.length > 1)) {
       h += '<span class="cbl-anchor"><button type="button" class="cbl-tbtn' + (fn ? ' on' : '') + '" data-cbl-pop="filt" id="cbl-filt-' + k + '" data-testid="cbl-filters-' + k + '" aria-haspopup="dialog" aria-expanded="' + (I.pop === 'filt') + '">' + esc(T(I, 'Filters')) + ' ▾' + (fn ? ' <span class="badge">' + fn + '</span>' : '') + '</button>' + (I.pop === 'filt' ? filtPop(I, sorts) : '') + '</span>';
     }
     var g = o.group, gm = groupMode(I);
@@ -498,8 +508,9 @@
     return ka.length === kb.length && kb.every(function (k) { return a[k] === b[k]; });
   }
   function paintViews(I) {
-    var vs = I.o.views && I.o.views.items, box = $(I, ':scope > .cbl-views');
+    var vs = I.o.views && I.o.views.items, inT = !!(I.o.views && I.o.views.inTitle), box = $(I, inT ? ':scope > .cbl-title > .cbl-views' : ':scope > .cbl-views');
     if (!vs || !vs.length || remote(I)) { if (box) box.remove(); return; }
+    if (!box && inT) return;   /* no title row painted (yet): paintTitle paints the tabs with it */
     if (!box) {
       box = root.document.createElement('div'); box.className = 'cbl-views'; box.setAttribute('data-cbl-part', 'views'); box.setAttribute('role', 'tablist'); box.setAttribute('aria-label', T(I, 'Views'));
       var tl = $(I, ':scope > .cbl-tools'), l = $(I, ':scope > .cbl-list'); I.el.insertBefore(box, tl || l);
@@ -965,5 +976,24 @@
   /* forget what a person typed, chose and opened in list `key` (a different record is on screen under the same list: a new ledger, the other tab) */
   function reset(key) { delete STATE[String(key)]; }
 
-  root.CBList = { mount: mount, nextRow: nextRow, get: get, reset: reset };
+  /**
+   * EVERY PAGE of a server-paged list (DISCIPLINES §2: top-level total · page · limit), for a screen that sums the WHOLE set
+   * rather than drawing it (the test board's coverage and verdicts — T2-PAGING). `fetchPage(n)` answers page n: an array, or
+   * an object holding the rows under `key`. Pages are read until the rows reach the answer's `total` (an answer with no
+   * total is one page). Resolves to every row; a failed page rejects, so the caller says it could not read.
+   */
+  function every(fetchPage, key) {
+    var all = [];
+    function step(page) {
+      return Promise.resolve(fetchPage(page)).then(function (r) {
+        var rows = Array.isArray(r) ? r : ((r && r[key]) || []);
+        all = all.concat(rows);
+        var more = rows.length && r.total != null && all.length < r.total && !(r.limit && rows.length < r.limit) && page < 200;
+        return more ? step(page + 1) : all;
+      });
+    }
+    return step(1);
+  }
+
+  root.CBList = { mount: mount, nextRow: nextRow, get: get, reset: reset, every: every };
 })(typeof window !== 'undefined' ? window : this);

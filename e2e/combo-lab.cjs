@@ -29,7 +29,11 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
   const p = await b.newPage();
   const errs = [];
   p.on('pageerror', (e) => errs.push(String(e)));
-  await p.goto('http://127.0.0.1:' + srv.address().port + '/combo-lab.html');
+  /* ⭐ T2-LABS: the Combo Lab is a mode of the Offer Lab — combo-lab.html only forwards (every old link still lands here) */
+  await p.goto('http://127.0.0.1:' + srv.address().port + '/combo-lab.html?api=x');
+  await p.waitForURL(/offer-lab-next\.html\?mode=combo&api=x$/, { timeout: 10000 }).catch(() => {});
+  say('combo-lab.html forwards to offer-lab-next.html?mode=combo, keeping what it was asked', /offer-lab-next\.html\?mode=combo&api=x$/.test(p.url()), p.url());
+  await p.goto('http://127.0.0.1:' + srv.address().port + '/offer-lab-next.html?mode=combo');
   await p.waitForTimeout(200);
 
   console.log('\n── ⭐⭐⭐ [Labs split] the page IS the lab now — no "open" step, a product picker first ' + '─'.repeat(0));

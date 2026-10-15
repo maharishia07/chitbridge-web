@@ -4,7 +4,7 @@
  * category id exactly; compose and the product preview add the ancestors." So "10% off Fruits" showed on the owner's
  * product page and not in the shop window for a product filed under Fruits › Dried Fruits.
  *
- * ⭐ THE REAL ENGINE, THE REAL WALKER: public/app/offers.js evaluates a basket line whose categories come through
+ * ⭐ THE REAL ENGINE, THE REAL WALKER: public/engine/offers.js evaluates a basket line whose categories come through
  * catalogue-lines.js's cbCatgAncestors, over categories in the PUBLIC payload's shape ({id, parent}) — and again over
  * the app's definition shape ({definition_id, rules:{parent}}), which core.js now walks through the same function.
  * Plus a wiring check that shop.html sends every offer line through it.
@@ -18,7 +18,7 @@ let bad = 0;
 const say = (l, ok, d) => { console.log('  ' + (ok ? 'OK ' : '✗  ') + l + (d ? '  · ' + d : '')); if (!ok) bad++; };
 
 const sb = { console, Date }; sb.window = sb; sb.self = sb; sb.globalThis = sb; vm.createContext(sb);
-for (const f of ['engine/money.js', 'app/offers.js', 'app/catalogue-lines.js']) vm.runInContext(fs.readFileSync(path.join(PUB, f), 'utf8'), sb);
+for (const f of ['engine/money.js', 'engine/offers.js', 'app/catalogue-lines.js']) vm.runInContext(fs.readFileSync(path.join(PUB, f), 'utf8'), sb);
 const O = sb.CBOffers, up = sb.cbCatgAncestors;
 console.log('── an offer on a parent category reaches its children in the shop window ──');
 say('the engine and the walker load', !!(O && O.evaluate && O.perLine && typeof up === 'function'));

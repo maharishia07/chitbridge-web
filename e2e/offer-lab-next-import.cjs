@@ -61,11 +61,11 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(48) + '· ' + d 
   const worked = await p.evaluate(() => {
     pickGoal('percent'); S.scope = 'item'; S.itemId = P.filter((x) => x.name === 'Pencil')[0].id; S.pctOff = 10; apply();
     /* ⚠️ MOVED, NOT DELETED (2026-09-28). Since 2026-09-26 the per-offer loyalty switch follows the shop-wide one
-       (S.loyOn = S.custOn, on by default), so combo(offer, loyalty) is the LOYALTY price — ₹10 → ₹9 → ₹8.10,
+       (S.loyOn = S.custOn, on by default), so CBOffers.compound(offer, loyalty) is the LOYALTY price — ₹10 → ₹9 → ₹8.10,
        rounded down to ₹8, margin (8−4)/8 = 50%, which is right. The ₹9 / ~56% this case always meant is the PUBLIC
-       price, row(p, offerFrac(p)). Both are asserted now, each against its own formula. */
-    var pub = row(byId(S.itemId), offerFrac(byId(S.itemId)));
-    var loy = row(byId(S.itemId), combo(offerFrac(byId(S.itemId)), loyFrac()));
+       price, priceRow(p, offerFrac(p)). Both are asserted now, each against its own formula. */
+    var pub = priceRow(byId(S.itemId), offerFrac(byId(S.itemId)));
+    var loy = priceRow(byId(S.itemId), CBOffers.compound([offerFrac(byId(S.itemId))*100, loyFrac()*100])/100);
     return { shown: pub.shown, margin: pub.margin, loyOn: S.loyOn, loyShown: loy.shown, loyMargin: loy.margin,
              loyExpect: S.loyOn ? Math.round(((loy.shown - 4) / loy.shown) * 100) : null };
   });

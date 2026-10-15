@@ -34,7 +34,7 @@
   function T(s) { return typeof root.tx === 'function' ? root.tx(s) : s; }
   function TF(s, v) { return typeof root.txf === 'function' ? root.txf(s, v) : s.replace(/\{(\w+)\}/g, function (w, k) { return k in v ? v[k] : w; }); }
   function eff(e) { return e.works && e.state === 'workshop' ? 'built' : e.state; }
-  function chip(st) { var s = STATE[st] || STATE.coming; return '<span class="rm-chip rm-' + esc(st) + '" data-state="' + esc(st) + '"><span aria-hidden="true">' + s.sym + '</span> ' + s.word + '</span>'; }
+  function chip(st) { var s = STATE[st] || STATE.coming; return '<span class="rm-chip rm-' + esc(st) + '" data-state="' + esc(st) + '"><span aria-hidden="true">' + s.sym + '</span> ' + esc(T(s.word)) + '</span>'; }
   function count(es, st) { return es.filter(function (e) { return eff(e) === st; }).length; }
   /* a place that stands for several rows is "built" only when all are; some built = part built */
   function stateOf(es) { if (!es.length) return 'coming'; var b = count(es, 'built'); return b === es.length ? 'built' : (b ? 'partly' : eff(es[0])); }
@@ -98,11 +98,11 @@
   function compare() {
     var head = ['', 'ChitBridge', 'Tally', 'Zoho', 'WhatsApp', 'Paper'];
     return '<ul class="rm-attrs" data-testid="rm-attrs">' + ATTRS.map(function (a, i) {
-      var m = a[1] == null ? '' : MARKS[COMPARE[a[1]][1]], mk = m ? '<span class="rm-chip rm-' + (COMPARE[a[1]][1] === 'yes' ? 'built' : 'partly') + '" data-testid="rm-attr-mark-' + i + '"><span aria-hidden="true">' + m[0] + '</span> ' + m[1] + '</span>' : '';
+      var m = a[1] == null ? '' : MARKS[COMPARE[a[1]][1]], mk = m ? '<span class="rm-chip rm-' + (COMPARE[a[1]][1] === 'yes' ? 'built' : 'partly') + '" data-testid="rm-attr-mark-' + i + '"><span aria-hidden="true">' + m[0] + '</span> ' + esc(T(m[1])) + '</span>' : '';
       return '<li data-testid="rm-attr-' + i + '"><span class="rm-n">' + esc(a[0]) + '</span>' + mk + '<span class="rm-f">' + esc(a[2]) + '</span></li>';
     }).join('') + '</ul>'
       + '<div style="overflow-x:auto"><table data-testid="rm-compare"><thead><tr>' + head.map(function (h) { return '<th>' + h + '</th>'; }).join('') + '</tr></thead><tbody>'
-      + COMPARE.map(function (r) { return '<tr><td>' + esc(r[0]) + '</td>' + r.slice(1).map(function (m) { var k = MARKS[m]; return '<td class="rm-' + m + '"><span aria-hidden="true">' + k[0] + '</span> ' + k[1] + '</td>'; }).join('') + '</tr>'; }).join('')
+      + COMPARE.map(function (r) { return '<tr><td>' + esc(r[0]) + '</td>' + r.slice(1).map(function (m) { var k = MARKS[m]; return '<td class="rm-' + m + '"><span aria-hidden="true">' + k[0] + '</span> ' + esc(T(k[1])) + '</td>'; }).join('') + '</tr>'; }).join('')
       + '</tbody></table></div><p class="rm-note">Partly = some of it works today. Planned = not built. Use the rail beside your books, not instead of them.</p>';
   }
   function mount(el, manifest, opts) {

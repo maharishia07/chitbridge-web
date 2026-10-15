@@ -45,7 +45,7 @@ async function realBooks() {
   const app = express(); app.use(express.json({ limit: '8mb' })); app.use('/api/books', require(path.join(API, 'routes', 'books')));
   const srv = await new Promise((res) => { const s = app.listen(0, '127.0.0.1', () => res(s)); });
   const K = require(path.join(API, 'lib', 'books-hooks')), realDay = K.dayOf; let DAY = '2026-10-05';
-  K.dayOf = (ts, c) => (ts instanceof Date && Math.abs(ts.getTime() - Date.now()) < 5000 ? DAY : realDay(ts, c));
+  K.dayOf = (ts, c) => (ts instanceof Date && Math.abs(ts.getTime() - Date.now()) < 5000 ? DAY : realDay(ts, c));   /* clock-ok: matches the posting instant of this very call, the walk's own DAY is fixed */
   const call = (m, p, b) => fetch('http://127.0.0.1:' + srv.address().port + '/api/books' + p, { method: m, headers: { 'content-type': 'application/json' }, body: b ? JSON.stringify(b) : undefined });
   /* India: two bills on the rail (the second on the 28th) and a purchase typed here */
   await X.store.saveSetting(X.db, IN_SHOP, { enabled: false }); await call('POST', '/enable', {});

@@ -16,7 +16,9 @@
 const fs = require('fs'), path = require('path');
 const W = require('./lib/walk.cjs');
 const { measure } = require('./lib/theme-measure.cjs');
-const J = (r, status, body) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+const C = require('./lib/contract.cjs');   /* M43: every answer for a route in the API contract is held to it (RAIL-LAB-SRV1: the facts family) */
+const J = C.json;
+const crmApi = require('./lib/crm-api.cjs');   /* RAIL-LAB-SRV1: the rail card (GET /api/facts/rail) from its one builder */
 const MAN = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'manifest.json'), 'utf8'));
 const AUD = MAN.editions.auditor.entries;
 const OFF = MAN.entries.filter((e) => AUD.indexOf(e.id) < 0).map((e) => e.id);
@@ -28,7 +30,7 @@ const walk = async (w) => {
     const u = new URL(r.request().url());
     if (u.pathname === '/api/entities/me/prefs/ui') { try { patches.push(JSON.parse(r.request().postData() || '{}')); } catch (_) {} return J(r, 200, { ok: true }); }
     if (u.pathname === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Fixture Shop', currency_code: 'INR', ui_prefs: {} } });
-    if (u.pathname === '/api/facts/rail') return J(r, 200, { suppliers: 1, customers: 2, in: 3, out: 1, stuck: 0 });
+    if (u.pathname === '/api/facts/rail') return J(r, 200, crmApi.railFacts({ suppliers: 1, customers: 2, in: 3, out: 1, stuck: 0 }));
     return J(r, 404, { error: 'not found' });
   });
   await ctx.addInitScript((s) => { try { localStorage.setItem('cb_api_base', location.origin); localStorage.setItem('cb_sess', s); if (!localStorage.getItem('cb_theme')) localStorage.setItem('cb_theme', 'cream'); } catch (_) {} }, W.session('Fixture Owner', 'Fixture Shop'));

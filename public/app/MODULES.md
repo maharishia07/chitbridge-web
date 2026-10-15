@@ -15,14 +15,16 @@ something needs them before any navigation happens.
 router renders a placeholder until `_capLoading` clears, which is the only reason the
 old duplicate `networkScreen()` in app.html was safe to delete.
 
-## Capabilities (47)
+## Capabilities (59)
 
 | file | loading · nav key | what it is |
 |---|---|---|
 | `cap-admin.js` | lazy · mis, profile, settings, assistreview | the "admin" capability (progressively loaded on demand) |
 | `cap-adopt.js` | lazy · on demand | TAKING A SUPPLIER'S DELIVERY INTO YOUR OWN CATALOGUE |
+| `cap-assist.js` | — |  |
 | `cap-bank.js` | — | cap-bank.js — BANK on CB Accounts (Daily): a statement file is read, matched to the shop's bank ledger, and the lines the Ledger lacks are added |
 | `cap-books.js` | lazy · ledger | cap-books.js — THE LEDGER: parties, statements, payments, day book, trial balance, P&L, balance sheet, dues, month |
+| `cap-catalogue.js` | eager | THE CATALOGUE'S PRIMITIVES, ONE COPY, and the catalogue as a small app (T3-CATALOGUE, 2026-10-14) |
 | `cap-categories.js` | lazy · categories |  |
 | `cap-catsetup.js` | lazy · catsetup |  |
 | `cap-chit2.js` | lazy · on demand | DESIGN 2: the chit as LINE-LEVEL work (lazy; ensureCap('chit2')) |
@@ -32,7 +34,9 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-country.js` | lazy · on demand | cap-country.js — COUNTRY SETUP (CS1, 2026-10-12): the step after registration, before the books open (lazy; ensureCap('country') → #/country) |
 | `cap-crm-calls.js` | — | cap-crm-calls.js — CB CRM L2: THE CALL DESK. The Calls tab (a CBList mount, the Follow-ups list's own look): today's queue, one-tap outcome buttons |
 | `cap-crm-chits.js` | — | cap-crm-chits.js — THE CHITS BEHIND THE HOME RAIL: In · Out · Stuck, stuck first (black-box H1 · H4 · H10) |
+| `cap-crm-groups.js` | — | cap-crm-groups.js — CB CRM: GROUPS & SEGMENTS and the SHOP WINDOW (T3-P2-CRM, 2026-10-14; docs/design/crm/REQUIREMENT-segments.md) |
 | `cap-crm-leads.js` | — | cap-crm-leads.js — CB CRM L1: LEADS AS PARTIES (+ L3: Import from a CSV, at the foot of this file). The Leads tab (a CBList mount, the Parties list's |
+| `cap-crm-privacy.js` | — | cap-crm-privacy.js — CB CRM: a party's CONSENT (the record's Consent block) and the shop's PRIVACY REQUESTS register (#/privacy) |
 | `cap-crm-record.js` | — | cap-crm-record.js — CB CRM: ONE party's record, its timeline, the Log sheet, the Next block, and the party edit |
 | `cap-crm.js` | — | cap-crm.js — CB CRM: the parties list (home), follow-ups, Add party, and the plumbing every CRM screen shares |
 | `cap-definitions.js` | lazy · definitions | DEFINITIONS · the shelf a catalogue takes things off. (lazy capability) |
@@ -40,7 +44,9 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-employees.js` | — |  |
 | `cap-entry.js` | — | cap-entry.js — ＋ ENTRY on the Day book: what happened → with whom / what → how much, when, on what paper → check and save |
 | `cap-finance-cash.js` | — | cap-finance-cash.js — CB Finance · Cash (round F3): today's cash and bank, then day by day what comes in and goes out for 7 or 30 days, and the FIRST |
+| `cap-finance-cheques.js` | — | cap-finance-cheques.js — CB Finance · Cheques (round T3-P1-MONEY): the cheques in hand (received, and the ones you wrote), the steps the server |
 | `cap-finance-pay.js` | — | cap-finance-pay.js — CB Finance · Payables (round F4): what WE owe each supplier, aged, MSME day 45 and its risk (India), the supplier's early-pay off |
+| `cap-finance-returns.js` | — | cap-finance-returns.js — CB Finance · Returns (round T3-P1-MONEY): COUNTRY-FIRST. An Indian shop downloads the GSTR-1 / GSTR-3B files the server |
 | `cap-finance-terms.js` | — | cap-finance-terms.js — CB Finance · Terms (round F2): the shop's DEFAULT credit terms and each party's OWN, set in ONE place |
 | `cap-finance.js` | — | cap-finance.js — CB Finance · Collections (round F1): who owes you, how old, the limit, the interest it has earned, Remind, Receive |
 | `cap-folders.js` | lazy · folders | FOLDERS capability (lazy; loaded via ensureCap('folders')) |
@@ -50,6 +56,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-legend.js` | lazy · on demand | the 🔑 LEGEND capability: a live map of "what we serve" |
 | `cap-match.js` | lazy · match | THE THREE-WAY MATCH (lazy; ensureCap('match')) |
 | `cap-messages.js` | lazy · messages | REPLIES: every external conversation that still wants you, across every chit. Lazy |
+| `cap-mis.js` | — | CB FINANCE › REPORTS: the rail measured, by the server, as one list (T3-P4-ACCOUNT, 2026-10-14) |
 | `cap-move-in.js` | — | cap-move-in.js — MOVE IN FROM XERO / QUICKBOOKS (IM1, 2026-10-12): CB Accounts › Setup › Move in. One entry for the five exports a practice |
 | `cap-network-member.js` | — |  |
 | `cap-network.js` | lazy · network | DESIGN-FIRST network builder. Lazy via ensureCap('network') |
@@ -57,9 +64,14 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-readiness.js` | lazy · readiness | TRADE capability (lazy; ensureCap('readiness')). Two tabs: |
 | `cap-register.js` | lazy · on demand | THE REGISTER. Lazy (ensureCap('register')) |
 | `cap-repeat.js` | lazy · on demand | cap-repeat.js — REPEAT SUPPLY as an AGREEMENT both parties hold (round RI1, 2026-10-12): CB Finance › Repeat supply (the seller's list), |
+| `cap-rewards.js` | eager | cap-rewards.js — THE REWARDS PANE, ONE COPY (T3-P2-CRM, 2026-10-14): what a customer holds in points, what it is worth, how it was earned, |
 | `cap-service.js` | lazy · on demand | cap-service.js — a chit AS A SERVICE REQUEST. Lazy-loaded (ensureCap('service')) |
+| `cap-settings.js` | — | CB SETTINGS › Counters & keys · Connectors · Policy · Plan & usage (T3-SETTINGS, 2026-10-14; SET2 of INDEX-NOT-APP.md) |
 | `cap-shop.js` | — | YOUR SHOP: the shop's own particulars, ONE implementation painted in two places (SET1, 2026-10-13) |
+| `cap-showcase.js` | eager | cap-showcase.js — THE SHOP WINDOW CHOOSER, ONE COPY (T3-P2-CRM, 2026-10-14): the registered showcase templates (app/showcase-templates.js, |
 | `cap-standards.js` | lazy · on demand |  |
+| `cap-stock.js` | — | STOCK: what is on the shelf, per product, from the ONE stock reader (T3-OPS, 2026-10-14; CB Operations › Stock) |
+| `cap-suppliers.js` | eager | SUPPLIERS: who you buy from, whether you can order from them, add · link · remove (T3-OPS, 2026-10-14; CB Operations › Suppliers) |
 | `cap-supplies.js` | lazy · on demand | SUPPLIES: what the shop buys to USE, never to sell |
 | `cap-tasks.js` | — |  |
 | `cap-testing.js` | lazy · on demand |  |
@@ -67,7 +79,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-workforce.js` | lazy · coassists | the CO-ASSIST (workforce) capability: FUNCTIONALITY only |
 | `cap-worklist.js` | lazy · on demand | MY WORK, across every chit. Lazy (ensureCap('worklist')) |
 
-## Shared (54)
+## Shared (48)
 
 | file | loading | what it is |
 |---|---|---|
@@ -85,20 +97,16 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `country-ready.js` | — |  |
 | `edition.js` | — |  |
 | `embed-host.js` | — |  |
-| `govcontext.js` | eager | ADOPTED from chitbridge-engines v1.42.0 · govcontext · sha256 d6eaa7aab22daeb73b006f25996a23d74ca571bb1260d61dfd56669f21e59a82 — DO NOT EDIT HERE. Cha |
 | `helpers.js` | eager | generic, dependency-free helpers (module 2 of the app split) |
 | `kural.js` | — |  |
 | `list-ctl.js` | eager |  |
 | `list-legacy.js` | eager |  |
-| `locale.js` | eager | ADOPTED from chitbridge-engines v1.42.0 · locale · sha256 cf7b24baeeb7b19538f75d2b286b11c5f46d51c3fc865ffe11a6d26d5aefa427 — DO NOT EDIT HERE. Change |
 | `network-app.js` | — |  |
-| `offers.js` | eager | ADOPTED from chitbridge-engines v1.3.0 · offers · sha256 b90632d3ffa35196adcee8722269468dc83255edd327e2ff28e3cb07f5d82dee — DO NOT EDIT HERE. Change i |
 | `one-person.js` | eager | one-person.js — ONE BROWSER, ONE SHOP AT A TIME |
 | `page-frame.js` | — |  |
 | `page.js` | eager | CBPage: WHICH DETAIL PAGE OPENS A CHIT (N03, 2026-10-07 · decisions M-D6 / M-D7) |
 | `pick.js` | eager | CBPick: open the catalogue over any screen and hand the selection back |
 | `price-resolve.js` | eager | WHICH PRICE APPLIES, AND WHY. (classic script, shared global scope) |
-| `pricing.js` | eager | ADOPTED from chitbridge-engines v1.3.0 · pricing · sha256 8fa9a3ec7cae3c049222706433c6fcfac7aaa33cae27d4a259ed60359ba208fd — DO NOT EDIT HERE. Change |
 | `rail-advice.js` | eager | rail-advice.js — CBAdvice.mount: the payment ADVICE, OUT — send it to a party on the rail, share it with one who is not (M30, 2026-10-09) |
 | `rail-bell.js` | — | rail-bell.js — CBBell.mount: THE BELL, mountable in any header (R06, 2026-10-09) |
 | `rail-thread.js` | eager | rail-thread.js — CBThread.mount: ONE composer + ONE list for a chit's messages, threaded by line (R02, 2026-10-09) |
@@ -106,8 +114,8 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `roadmap.js` | — | roadmap.js — CBRoadmap: THE FRONT DOOR'S ROADMAP, drawn from public/app/manifest.json and from nothing else |
 | `screen-id.js` | — |  |
 | `screens.js` | eager | GENERATED by screens.cjs — DO NOT EDIT. Run `node screens.cjs` and commit |
-| `search.js` | eager | ADOPTED from chitbridge-engines v1.4.0 · search · sha256 3e6b74d84e1fa082d5aa7d676f53421b263beafd8c455dfe9719f7d25cd841fa — DO NOT EDIT HERE. Change i |
 | `shell.js` | — |  |
+| `shop-privacy.js` | — |  |
 | `showcase-templates.js` | eager |  |
 | `sides.js` | — |  |
 | `signin-ui.js` | — | signin-ui.js — CBSignin.mount: THE ONE SIGN-IN WINDOW, for every app (M14, DECISIONS 2026-10-08) |
@@ -118,14 +126,12 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `strings-qps.js` | — |  |
 | `strings-ta.js` | — |  |
 | `table-resize.js` | — | drag a column edge; the width is yours and it is remembered |
-| `tax-slab.js` | eager | ADOPTED from chitbridge-engines v1.2.0 · tax-slab · sha256 439500a95910ff8bd55d4a1c422e2c4e810f509c7a6af2f1cd4e34aa239bc98d — DO NOT EDIT HERE. Change |
 | `test-menu-tree.js` | — | the product as a menu. ONE shape, two surfaces |
 | `test-verdict.js` | — | what would make this red green. ONE judgement, two surfaces |
 | `their-bill.js` | — | their-bill.js — DOES THEIR BILL AGREE WITH WHAT WAS COUNTED? One rule, every host (FX-F10W2, QA-W1 F10) |
 | `units.js` | eager | vendored VERBATIM from chitbridge-api/lib/units.js (one unit · three names: ours · UN/ECE Rec 20 · GST UQC) |
-| `variant.js` | eager | ADOPTED from chitbridge-engines v1.4.0 · variant · sha256 2b82dcbaba8ad8590623ef72d41979894d4390468abf74d862f158d7d4e48946 — DO NOT EDIT HERE. Change |
 | `workflow.js` | — | ADOPTED from chitbridge-engines v1.33.0 · workflow · sha256 f8c7a43048bc1b8453a1c2ec43b6eed7f619feee4c67eaba046c6cea370f0a5b — DO NOT EDIT HERE. Chang |
 
 ---
 
-*101 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*107 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*

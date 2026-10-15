@@ -18,9 +18,9 @@ const C = require('./lib/contract.cjs');   /* M43: every /api/crm answer the fix
 const REAL = process.argv.includes('--real');
 const T = (s) => '[data-testid="' + s + '"]';
 const LAP = { width: 1366, height: 768 }, PHONE = { width: 390, height: 844 };
-const tag = new Date().toISOString().slice(11, 19).replace(/:/g, '');   /* re-runnable: this run's leads carry its time */
+const tag = new Date().toISOString().slice(11, 19).replace(/:/g, '');   /* re-runnable: this run's leads carry its time */   /* clock-ok: a time-of-day tag for re-runs, not a business date */
 const NAMES = { a: 'Lead Anbu ' + tag, b: 'Lead Bala ' + tag, c: 'Lead Chitra ' + tag, d: 'Lead Devi ' + tag };
-const PHONES = { a: '9' + String(Date.now()).slice(-9), b: '8' + String(Date.now()).slice(-9), c: '7' + String(Date.now()).slice(-9), d: '6' + String(Date.now()).slice(-9) };
+const PHONES = { a: '9' + String(Date.now()).slice(-9), b: '8' + String(Date.now()).slice(-9), c: '7' + String(Date.now()).slice(-9), d: '6' + String(Date.now()).slice(-9) };   /* clock-ok: a unique phone suffix */
 
 W.run(REAL ? 'x-l2c-real' : 'x-l2c', async (w) => {   /* two sets of shots: walk-x-l2c-real-NN.png (this stack) · walk-x-l2c-NN.png (the fixture) */
   const { page, ctx, base } = w;
@@ -255,7 +255,7 @@ W.run(REAL ? 'x-l2c-real' : 'x-l2c', async (w) => {   /* two sets of shots: walk
     /* ── the refused state: a view-only login ───────────────────────────────────────────────────────────────────── */
     await w.step('L20', 'A view-only login: + Add lead · Move to… · Log · every call outcome SHOWN and greyed with "Your login can only view" — and the server refuses the write', async () => {
       /* the viewer needs a row in today's call queue to look at: one untouched lead, added by the shop (the fixture seeds its own) */
-      if (REAL) await api.j('/api/crm/leads', { method: 'POST', token, body: { name: 'Lead Esai ' + tag, phone: '5' + String(Date.now()).slice(-9) } });
+      if (REAL) await api.j('/api/crm/leads', { method: 'POST', token, body: { name: 'Lead Esai ' + tag, phone: '5' + String(Date.now()).slice(-9) } });   /* clock-ok: a unique phone suffix */
       const ctx2 = await w.browser.newContext({ viewport: LAP, locale: 'en-IN', timezoneId: 'Asia/Kolkata', serviceWorkers: 'block' });
       await ctx2.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
       const p2 = await ctx2.newPage(); p2.on('pageerror', (e) => w.errs.push(String(e && e.message || e)));

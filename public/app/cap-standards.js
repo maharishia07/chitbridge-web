@@ -495,7 +495,7 @@ var STANDARDS = [
     added:'2026-10-03' },
   { id:'dpdp-2023', pa:'crm', a:'people', k:'law', c:['IN'],
     p:"Customer data used only for its purpose, with consent; people can see, correct or erase theirs",
-    m:"Consent and request records built, not yet switched on; no notice yet",
+    m:"Consent and requests recorded in CB CRM and on the shop page; migrations and notice are the owner's",
     eq:"Like the GDPR in the EU",
     g:"People & privacy", n:"Digital Personal Data Protection Act 2023", w:"Purpose, consent, the right to see, correct and erase",
     s:"part",
@@ -623,7 +623,7 @@ var STANDARDS = [
     added:'2026-10-13' },
   { id:'au-privacy-apps', pa:'crm', a:'people', k:'law', c:['AU'],
     p:"Customers' data used only for its purpose; offers only with consent; they can see and correct it",
-    m:"Consent and requests built, not switched on; no Australian policy yet",
+    m:"Consent and requests recorded in CB CRM and on the shop page; no Australian policy yet",
     eq:"Like the GDPR in the EU",
     g:"People & privacy", n:"Privacy Act 1988 (Cth), APPs 1, 5, 6, 7, 12, 13 + Spam Act 2003 s.16", w:"Policy, collection notice, direct marketing, access and correction",
     s:"part",
@@ -634,7 +634,7 @@ var STANDARDS = [
     added:'2026-10-13' },
   { id:'ae-pdpl-rights', pa:'crm', a:'people', k:'law', c:['AE'],
     p:"Personal data used with consent, and people can see, correct or erase theirs",
-    m:"Consent and requests built, not switched on; its regulation not issued",
+    m:"Consent and requests recorded in CB CRM and on the shop page; its regulation not issued",
     eq:"Like the GDPR in the EU",
     g:"People & privacy", n:"UAE PDPL, Federal Decree-Law 45/2021, Art.4–6, 13–18", w:"Consent, the data subject's rights",
     s:"part",
@@ -1218,23 +1218,27 @@ function stdCounts(){
  * ⭐ COMPATIBILITY — the 4th Kind (M41 · BACKLOG T49). Every outside system we work with is a row of the SAME register shape, so the page's
  * list, matrix, filters and Copy treat it like any standard. The rows live in ONE file, public/data/compat.json, which the Compatibility lab
  * (N04) reads too — never a second list here. This maps a compat.json row onto a register row; a row the file gets wrong is dropped, not guessed.
+ *   dir in · out · both (STD_COMPAT_DIR) — a row without one is dropped; code / test = the chitbridge-api files that do and prove the move ('' = none).
  *   status works → In force · partly → Partly · planned → Planned.   proof live → "Tested live <date>" · stand-in → "Proven on a stand-in" · not-yet → "Not yet".
  */
 var STD_COMPAT_STATUS = { works: 'live', partly: 'part', planned: 'plan' };
 var STD_COMPAT_PROOF = { live: 'Tested live', 'stand-in': 'Proven on a stand-in', 'not-yet': 'Not yet' };
 var STD_COMPAT_FIT = { 'one-to-one': 'One-to-one', alongside: 'Works alongside', gap: 'Gap' };
+/* T3-COMPAT: which way a compatibility row moves — [symbol, word, the sentence with the system's name]. The Works with tab's Moves column and the opened row say it. */
+var STD_COMPAT_DIR = { 'in': ['↓', 'In', 'From {s} into ChitBridge'], out: ['↑', 'Out', 'From ChitBridge out to {s}'], both: ['⇅', 'Both ways', 'Both ways between ChitBridge and {s}'] };
 function stdCompatRows(json){
   var rows = (json && Array.isArray(json.rows)) ? json.rows : [];
   var areas = STD_AREAS.map(function(a){ return a[0]; }), ctry = STD_COUNTRIES.map(function(c){ return c[0]; }), pas = STD_PRODUCT_AREAS.map(function(a){ return a[0]; });
   return rows.filter(function(x){
-    return x && x.system && x.service && x.p && STD_COMPAT_STATUS[x.status] && areas.indexOf(x.area) >= 0 && pas.indexOf(x.pa) >= 0 && Array.isArray(x.c) && x.c.length && x.c.every(function(c){ return ctry.indexOf(c) >= 0; });
+    return x && x.system && x.service && x.p && STD_COMPAT_STATUS[x.status] && areas.indexOf(x.area) >= 0 && pas.indexOf(x.pa) >= 0 && Array.isArray(x.c) && x.c.length && x.c.every(function(c){ return ctry.indexOf(c) >= 0; }) && !!STD_COMPAT_DIR[x.dir];
   }).map(function(x){
     var s = STD_COMPAT_STATUS[x.status];
     var proof = (STD_COMPAT_PROOF[x.proof] || 'Not yet') + (x.proof_at ? ' ' + x.proof_at : '') + (x.proof_ref ? ' — ' + x.proof_ref : '');
     return { a: x.area, pa: x.pa, k: 'compat', c: x.c.slice(), p: x.p, m: s === 'live' ? undefined : (x.m || x.roadmap || 'Not built yet'),
       g: 'Compatibility', n: x.system + ' — ' + x.service, w: (STD_COMPAT_FIT[x.fit] || x.fit || '') + ' · ' + x.service,
       ex: '—', s: s, note: x.roadmap || x.note || undefined, at: 'Settings › Integrations', go: 'integrations',
-      proof: proof, fit: STD_COMPAT_FIT[x.fit] || x.fit, compat: x.id };
+      proof: proof, fit: STD_COMPAT_FIT[x.fit] || x.fit, compat: x.id,
+      dir: x.dir, dirWords: STD_COMPAT_DIR[x.dir][2].replace('{s}', x.system), code: x.code || '', test: x.test || '' };
   });
 }
 

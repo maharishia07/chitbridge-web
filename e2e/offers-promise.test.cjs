@@ -12,7 +12,7 @@
  * Run: node e2e/offers-promise.test.cjs
  */
 const assert = require('assert');
-const { CBOffers: O } = require('../public/app/offers.js');
+const { CBOffers: O } = require('../public/engine/offers.js');
 
 let pass = 0, fail = 0;
 const t = (name, fn) => {

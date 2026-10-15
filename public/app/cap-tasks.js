@@ -59,6 +59,8 @@
   function ensureEP() {
     if (typeof EP === 'undefined' || !EP) return false;
     [root.CB_SHEET_EP, root.CB_THREAD_EP, CB_WORK_EP].forEach(function (set) { if (set) for (var k in set) if (!EP[k]) EP[k] = set[k]; });
+    /* ＋ New task sends through the chit send, under app.html's name for it (one name per endpoint — as rail-advice.js registers it) */
+    if (!EP.createChit) EP.createChit = { m: 'POST', p: '/api/chits/send', ok: '✓' };
     return true;
   }
   /** the one call: core.js api() (auth · the registry · a server refusal keeps its words and its status for CBAction.words) */
@@ -219,10 +221,12 @@
         return '<option value="' + v + '"' + (v === K.view ? ' selected' : '') + '>' + esc(viewLabel(v) + c) + '</option>';
       }).join('') + '</select>';
     }
-    /* ＋ New (the brief's sixth tab): start a chit or an order to a supplier — the ONE composer, app.html's Compose, through its #/app/compose door; not in a frame (the counter stays where it is) */
-    var fresh = K.o.embed ? '' : '<a class="act quiet" id="tk_new" data-testid="tk-new" href="/app.html#/app/compose">' + esc(T('＋ New')) + '</a>';
+    /* ＋ New (TOUR-FIX1): a task, started HERE in this page's own sheet — never the workshop (index-not-app). An order to a supplier waits for the
+       compose route outside app.html (docs/design/tasks-orders/REQUIREMENT.md §＋ New). */
+    var fresh = K.o.embed ? '' : '<button type="button" class="act quiet" id="tk_new" data-testid="tk-new">' + esc(T('＋ New')) + '</button>';
     b.innerHTML = '<span class="tk-count" data-testid="tk-count">' + count + '</span>' + pick + fresh;
     var sel = $('tk_view'); if (sel) sel.onchange = function () { show(sel.value); };
+    var nb = $('tk_new'); if (nb) nb.onclick = tkNew;
     if (typeof K.o.onCounts === 'function') { try { K.o.onCounts(K.counts); } catch (_) {} }
   }
 
@@ -426,6 +430,29 @@
         outcome: function () { $('tk_out').textContent = T('Recorded') + ' ' + qty + ' ' + (l.unit || '') + '.'; changed(c.chit_id, 'moved', { line_id: l.line_id, delivered: qty }); } });
   }
 
+  /**
+   * ＋ New task (TOUR-FIX1): one line — what needs doing — sent as a chit to the shop itself (POST /api/chits/send, the body cap-readiness already
+   * sends for a note to self). It lands in Tasks (a chit that came to me and is not an order); the server decides who may send. No flow step: a
+   * shop's own to-do is not an O2C / P2P step (module TasksOrders).
+   */
+  function tkNew() {
+    sheet('<h2 data-testid="tk-new-title">' + esc(T('New task')) + '</h2>'
+      + '<div class="tk-panel"><label class="sub" for="tk_new_what">' + esc(T('What needs doing?')) + '</label>'
+      + '<input class="inp" id="tk_new_what" data-testid="tk-new-what" maxlength="200" autocomplete="off">'
+      + '<button type="button" class="act" id="tk_new_go" data-testid="tk-new-go">' + esc(T('Add task')) + '</button></div>'
+      + '<div id="tk_out" class="tk-out" role="status" data-testid="tk-out"></div>');
+    var inp = $('tk_new_what'); inp.focus();
+    inp.onkeydown = function (e) { if (e.key === 'Enter') { e.preventDefault(); $('tk_new_go').click(); } };
+    $('tk_new_go').onclick = function () {
+      var what = String($('tk_new_what').value || '').trim();
+      if (!what) { $('tk_out').textContent = T('Type what needs doing first.'); return; }
+      return root.CBAction.run($('tk_new_go'), function () {
+        return call('createChit', { body: { recipients: [{ name: 'self', role: 'to' }], manual_subject: what, subject: what, purpose: 'general', line_items: [] } });
+      }, { key: 'tk-new', failed: T("Couldn't add the task"), out: 'tk_out',
+        outcome: function () { closeSheet(); if (typeof root.toast === 'function') root.toast(T('Task added.')); show('tasks'); } });
+    };
+  }
+
   /* ── the screen ── */
   function show(view) {
     if (VIEWS.indexOf(view) < 0) view = 'orders_in';
@@ -453,5 +480,6 @@
     start();
     return { reload: reload, show: show, open: tkOpen, close: closeSheet };
   }
-  root.CBTasks = { mount: mount, VIEWS: VIEWS, EP: CB_WORK_EP };
+  /* actRow is shared (T3-DISPUTES-ASSIST): CBDispute (cap-dispute.js) draws Raise / Resolve the same way — shown always, greyed WITH the server's sentence */
+  root.CBTasks = { mount: mount, VIEWS: VIEWS, EP: CB_WORK_EP, actRow: actRow };
 })(typeof window !== 'undefined' ? window : globalThis);

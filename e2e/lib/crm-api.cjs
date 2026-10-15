@@ -10,6 +10,7 @@
  * "late dues" flag, next follow-up on the list) is simply not here: the page must cope with its absence, and the harness proves it does.
  */
 'use strict';
+const TD = require('./today.cjs');
 
 /* "@-26h" / "@+3d" → an ISO time relative to the run */
 function resolve(x, now) {
@@ -37,7 +38,7 @@ function party(p, rec) {
   o.terms = {};
   if (roles.customer) o.terms.customer = { credit_days: cu.credit_days == null ? null : cu.credit_days, credit_limit_minor: cu.credit_limit_minor == null ? null : cu.credit_limit_minor };
   if (roles.supplier) o.terms.supplier = { credit_days: su.credit_days == null ? null : su.credit_days, credit_limit_minor: su.credit_limit_minor == null ? null : su.credit_limit_minor };
-  o.dues = p.balance_minor == null ? null : { balance_minor: p.balance_minor, oldest_due: day(p.oldest_due), overdue: p.dues_overdue != null ? !!p.dues_overdue : (p.balance_minor !== 0 && !!p.oldest_due && day(p.oldest_due) < day(new Date().toISOString())), side: roles.customer && roles.supplier ? 'both' : (roles.customer ? 'customer' : 'supplier') };
+  o.dues = p.balance_minor == null ? null : { balance_minor: p.balance_minor, oldest_due: day(p.oldest_due), overdue: p.dues_overdue != null ? !!p.dues_overdue : (p.balance_minor !== 0 && !!p.oldest_due && day(p.oldest_due) < day(TD.nowIso())), side: roles.customer && roles.supplier ? 'both' : (roles.customer ? 'customer' : 'supplier') };
   const theirs = r.gstn_profile || null, mine = gst ? gst.value : null;
   o.gstin = { value: mine || theirs, source: mine ? 'shop' : (theirs ? 'profile' : null), theirs, differs: !!(mine && theirs && mine !== theirs) };
   o.name = p.nickname || p.display_name;
@@ -64,13 +65,19 @@ function list(rows, opt) {
     if (a.roles.supplier && !a.terms.supplier) a.terms.supplier = { credit_days: null, credit_limit_minor: null };
     a.dues = a.dues ? Object.assign({}, a.dues, { side: a.roles.customer && a.roles.supplier ? 'both' : (a.roles.customer ? 'customer' : 'supplier') }) : null;
   });
-  /* the API's own count of late dues: the parties it marked (lib/crm markLate) — the banner and the rows are one number */
-  return { parties: out, walk_ins: walk, count: out.length, truncated: false, alerts: { dues_overdue: out.filter((a) => a.dues && a.dues.overdue).length } };
+  return listPage(out, { walk_ins: walk });
+}
+/** GET /parties' envelope around any party rows (the golden list, a leads view, an imported list): T2-PAGING's total · page · limit beside
+ *  count · truncated · walk_ins, and the API's own count of late dues — the parties it marked (lib/crm markLate) — so the banner and the rows
+ *  are one number. INT6d-GREEN: every stand-in wraps through here; three of them hand-built the envelope and drifted from the contract. */
+function listPage(parties, extra) {
+  return Object.assign({ parties, walk_ins: [], count: parties.length, total: parties.length, page: 1, limit: 5000, truncated: false,
+    alerts: { dues_overdue: parties.filter((a) => a.dues && a.dues.overdue).length } }, extra || {});
 }
 
 /** a follow-up in the API's shape (lib/crm-followups.js shape): late / today / due_day by the shop's day */
 function followupOne(f, now) {
-  const t = now || Date.now(), d = day(f.due_at), today = day(new Date(t).toISOString());
+  const t = now || TD.nowMs(), d = day(f.due_at), today = day(new Date(t).toISOString());
   return { followup_id: f.followup_id, party_id: f.party_id, party_no: f.party_no || null, party_name: f.party_name || null, party_listed: f.party_removed ? false : true, what: f.what, due_at: f.due_at, due_day: d,
     assignee_user_id: f.assignee_user_id || null, assignee_name: f.assignee_name || null, source: f.source || 'manual', done_at: f.done_at || null, created_at: f.created_at || f.due_at,
     late: !f.done_at && d < today, today: !f.done_at && d === today,
@@ -82,6 +89,14 @@ function followups(fus, now) {
   return { followups: list2, late: list2.filter((x) => x.late).length, today: list2.filter((x) => x.today).length };
 }
 
+/** contact_prefs as the API answers before b306 (MKT-SRV1 G5 — lib/privacy.contactPrefsOf with no rows): service on legitimate use, offers need consent */
+function prefsBefore() {
+  const may = {};
+  ['phone', 'sms', 'whatsapp', 'email', 'chitbridge'].forEach((c) => { may[c] = {
+    service: { may: true, code: 'LEGITIMATE_USE', why: 'Messages about their own orders are allowed.' },
+    marketing: { may: false, code: 'NO_CONSENT', why: 'No consent for offers on ' + c + '. Ask them first.' } }; });
+  return { migrated: false, may };
+}
 /** GET /parties/:id: the party row + merged_from + relationship + points + migrated + this party's open follow-ups */
 function record(rows, id, rec, fus, now) {
   const row = rows.filter((x) => x.party_id === id)[0] || rows[0], r = rec || {};
@@ -94,6 +109,7 @@ function record(rows, id, rec, fus, now) {
       completion: { closed: 0, completed: 0, rejected_or_cancelled: 0, completion_rate_pct: (r.scorecard && r.scorecard.completion_rate_pct) || null } },
     points: pts ? { programme: pts.programme || 'Rewards', points: pts.balance != null ? pts.balance : pts.points, worth: 0 } : null,
     migrated: true,
+    contact_prefs: prefsBefore(),
     followups: (fus || []).filter((f) => f.party_id === id && !f.done_at).map((f) => followupOne(f, now)),
   });
 }
@@ -122,6 +138,20 @@ function timeline(tl, id, q) {
 }
 /** POST /parties/:id/interactions → 201 { interaction } */
 function interaction(b, now) {
-  return { interaction: { interaction_id: 'ix-new', party_id: 'pid', kind: b.kind, direction: b.kind === 'note' ? null : b.direction, body: b.body, at: new Date(now || Date.now()).toISOString(), by_user_id: 'u1', created_at: new Date(now || Date.now()).toISOString() } };
+  return { interaction: { interaction_id: 'ix-new', party_id: 'pid', kind: b.kind, direction: b.kind === 'note' ? null : b.direction, body: b.body, at: new Date(now || TD.nowMs()).toISOString(), by_user_id: 'u1', created_at: new Date(now || TD.nowMs()).toISOString() } };
 }
-module.exports = { resolve, party, list, record, followupOne, followups, entry, timeline, interaction, rolesOf };
+/**
+ * GET /api/facts/rail → the Home rail card, as lib/home-facts.rail sends it (RAIL-LAB-SRV1, 2026-10-14): the CRM's party counts, the open
+ * in / out / stuck, and `may_sample` — the SERVER's may/why for the Rail Lab: a live shop `{ ok: false, why: 'live_shop', say }`, a lab (test)
+ * shop `{ ok: true }`. ONE builder: it was hand-drawn in twelve harnesses, and none of them could ever carry a key the api added.
+ *   railFacts({ suppliers?, customers?, in?, out?, tasks?, stuck?, lab?: true, truncated?: true })   truncated: in/out/stuck omitted, as the api omits them
+ */
+const RAIL_SAY = 'This is a live shop, so a lab chit cannot be sent from it. Try it in a test shop.';
+function railFacts(o) {
+  const x = o || {};
+  const out = { suppliers: x.suppliers == null ? 0 : x.suppliers, customers: x.customers == null ? 0 : x.customers,
+    may_sample: x.lab ? { ok: true } : { ok: false, why: 'live_shop', say: RAIL_SAY } };
+  if (!x.truncated) { out.in = x.in == null ? 0 : x.in; out.out = x.out == null ? 0 : x.out; out.tasks = x.tasks == null ? 0 : x.tasks; out.stuck = x.stuck == null ? 0 : x.stuck; }   /* tasks: TOUR-FIX1 — the Tasks folder count the api answers beside in / out */
+  return out;
+}
+module.exports = { resolve, party, list, listPage, record, prefsBefore, followupOne, followups, entry, timeline, interaction, rolesOf, railFacts };

@@ -1628,11 +1628,14 @@ body.lab-only #cbtestpanel{
 <!-- ⭐ MONEY — an amount is never a bare number. The ONE reader (lib/money.js, vendored). Loaded BEFORE
      everything that reads a price, because cbAmount() and the cart both forward to it. -->
 <script src="/engine/money.js"></script>
-<script src="/app/locale.js"></script>
+<script src="/engine/locale.js"></script>
 <script src="/app/showcase-templates.js"></script>   <!-- CBShowcase: the template names the Settings › Policy chooser lists (S2) -->
+<script src="/app/cap-showcase.js"></script>   <!-- CBShowcasePick: the chooser itself, ONE copy (T3-P2-CRM) — Settings › Policy and CB CRM's Shop window draw it -->
+<script src="/app/cap-rewards.js"></script>   <!-- CBRewards: the points pane, ONE copy (T3-P2-CRM) — the Customers pane here and CB CRM's record paint it -->
 <!-- ⭐ what we can work out about a shop without asking it — AFTER locale, whose REGIONS it reads -->
-<script src="/app/govcontext.js"></script>
+<script src="/engine/govcontext.js"></script>
 <script src="/app/helpers.js"></script>
+<script src="/app/cap-suppliers.js"></script>   <!-- supName · supKindOf · isUserId (MOVED, T3-OPS) — CB Operations › Suppliers reads the same; CBSuppliers is not mounted here -->
 <script src="/app/register-form.js"></script>   <!-- the register form (#/register) — shared with CB Settings › New shop; govCtx with it (cap-country reads it) -->
 <script src="/app/one-person.js"></script>   <!-- ONE BROWSER, ONE SHOP: the check route()'s gate asks (2026-10-01) -->
 <script src="/app/page.js"></script>   <!-- CBPage: which detail page opens a chit — business_json.page, the registry app/pages.json, base + a note when not installed (N03) -->
@@ -1643,6 +1646,7 @@ body.lab-only #cbtestpanel{
 <script src="/app/list-legacy.js"></script>
 <!-- module 3: the canonical catalogue model (shape · migration · four-leg chain · compute-job derivation). Shared by cap-network.js and headless consumers. -->
 <script src="/app/catalogue-model.js"></script>
+<script src="/app/cap-catalogue.js"></script>   <!-- T3-CATALOGUE: the catalogue primitives MOVED out of this file (CB_CATALOGUE_EP · prodId/pData · cbAmount · the declared columns · the import preflight painters · the template) + CBCatalogueApp for catalogue.html -->
 <!-- ⚠️ DATA, NOT BEHAVIOUR — the per-trade starter categories (real Google Product Taxonomy nodes). Loaded
      eagerly beside catalogue-model because it is small and the Categories screen offers it on arrival; a lazy
      load would mean the "Start from a standard set" button appears before the sets it offers exist. -->
@@ -1661,7 +1665,7 @@ body.lab-only #cbtestpanel{
 <!-- ⭐ CBVariant — ONE PRODUCT, MANY COMBINATIONS ([TILL-33]/[TILL-76]). The SAME file the counter loads
      (/engine/variant.js) — one module owns what a modifier IS, read (the till's chooser) and written (the
      product page's Modifiers tab), so the two can never disagree about the shape. Pure, no DOM, no fetch. -->
-<script src="/app/variant.js"></script>
+<script src="/engine/variant.js"></script>
 <!-- The redesigned catalogue ROW. A renderer only — it owns no quantity rule; every mutation routes through
      CBCart. Loaded AFTER cart-ui.js because it reads CBCart.fmt. -->
 <!-- ⭐ CBPick — open the catalogue OVER any screen and get the selection back. The four screens that
@@ -1670,11 +1674,11 @@ body.lab-only #cbtestpanel{
 <script src="/app/pick.js"></script>
 <!-- Offers as a subject of their own — a PURE engine, not wired to a screen yet. Loaded so Definitions can
      read its registry of kinds; see SPEC-offers-tax.md. -->
-<script src="/app/offers.js"></script>
+<script src="/engine/offers.js"></script>
 <!-- ⭐ ONE SEARCH FOR THE COUNTER AND THE CATALOGUE (2026-09-08). The master of the engine the till loads as /engine/search.js:
      what "ac co" means is defined once, so the two screens cannot answer a shopkeeper's own words differently. -->
-<script src="/app/search.js"></script>
-<script src="/app/pricing.js"></script>
+<script src="/engine/search.js"></script>
+<script src="/engine/pricing.js"></script>
 <!-- ⭐ REWARDS. The SAME file the counter loads (/engine/rewards.js, generated from the API's lib/rewards.js) — one
      URL, not a third copy, so what a point is worth cannot differ between the shop and the till. Definitions reads
      its registry of earning kinds; nothing else in the app calls it yet. -->
@@ -1690,9 +1694,8 @@ body.lab-only #cbtestpanel{
      so it can be verified then and there."* Showing the invoice split on the product needs the REAL
      determination; a lookalike would agree on every example anyone tries and diverge on the one that matters.
      Eager, not lazy: the product's Pricing & tax pane lives in app.html itself. -->
-<script src="/engine/tax.js"></script>
+<script src="/engine/tax.js"></script>   <!-- the adopted BUNDLE: reg-* packs + regulation + tax-packs + tax-slab (CBTaxSlab) + tax (CBTax), one file (T2-ENGONCE) -->
 <script src="/app/chit-sheet.js"></script>   <!-- THE CHIT SHEET: a chit as a popup, with the actions its step allows -->
-<script src="/app/tax-slab.js"></script>
 <script src="/app/barcode.js"></script>  <!-- Code 128 of the SKU for the product page (Barcode tab); pure, no network -->
 <!-- ATTACH + VIEW, shared. Loaded here so `cbAttachType` is the SINGLE type→icon mapping for every screen; the
      copy that used to live in this file is gone. See BACKLOG-attach-ui-sweep.md for what is deliberately NOT
@@ -1775,12 +1778,9 @@ const EP = {
   msgCount:        {m:"GET",  p:"/api/folders/messages?count=1", ok:"y"},
   // --- assistant tier-1 LLM proxy — NOT BUILT yet; gated off via CFG.ASSIST_LLM. The model key stays SERVER-side. ---
   assist:          {m:"POST", p:"/api/assist",                  ok:"?"},  // backend proxies to the model (no-oversell prompt + library grounding)
-  assistQuestions: {m:"GET",  p:"/api/assist/questions",        ok:"y"},  // DB-backed Q&A library, context-filtered (?context=screen). Single source; feeds the AI too.
   assistGap:       {m:"POST", p:"/api/assist/gap",              ok:"y"},  // capture an unanswered question as a draft (learning feedback)
   assistGaps:      {m:"GET",  p:"/api/assist/gaps",             ok:"y"},  // review queue — captured gaps awaiting an answer
   assistResolve:   {m:"POST", p:"/api/assist/resolve",          ok:"y"},  // approve (with answer) / reject a gap
-  assistPublish:   {m:"POST", p:"/api/assist/publish",          ok:"y"},  // help desk publishes a Q&A to its catalogue (serves live)
-  assistWhoami:    {m:"GET",  p:"/api/assist/whoami",            ok:"y"},  // is the logged-in entity a helpdesk instance?
   assistStandards: {m:"GET",  p:"/api/assist/standards",         ok:"y"},  // compliance conform-check: standards available to check against
   assistConform:   {m:"POST", p:"/api/assist/conform",           ok:"y"},  // FIRST LIGHT of AI-as-actor — deterministic verdict + (keyed) AI narrative + acted_by
   catalogueSources:{m:"GET",  p:"/api/assist/catalogue-sources",  ok:"y"},  // catalogue-structure slot: sources the handler can structure
@@ -1811,7 +1811,6 @@ const EP = {
   workRoutePreview: {m:"GET",  p:"/api/entities/routing/preview",           ok:"✓"},
   workRoutingSet:   {m:"PUT",  p:"/api/entities/routing",                   ok:"✓"},
   custGroupNames:  {m:"GET",  p:"/api/relationships/customers/groups",    ok:"✓"},  // the seller's NAMED groups (decision 2, 2026-09-06)
-  custRewards:     {m:"GET",  p:"/api/relationships/customers/:id/rewards"},   // what this customer holds, and what it means
   custGroupsSet:   {m:"POST", p:"/api/relationships/customers/:id/groups", ok:"✓"},  // place a customer in named groups  // add a customer by hand (User ID · bridge id · email) — before their first order  // the seller places a customer in a group (segment_override) — offers "Only for" that group reach them  // the shop's CRM — end-customers locked under it
   netDesignGet:    {m:"GET",  p:"/api/network-design",                    ok:"✓"},  // b111 — load this entity's saved network design (cross-device)
   netDesignPut:    {m:"PUT",  p:"/api/network-design",                    ok:"✓"},  // b111 — save (upsert) the whole design draft
@@ -1826,7 +1825,6 @@ const EP = {
   enquirySend:     {m:"POST", p:"/api/catalogue/enquiry/:itemId",        ok:"✓"},
   catFaceGet:      {m:"GET",  p:"/api/catalogue-face",                    ok:"✓"},  // b112 — load this entity's saved catalogue face (cross-device)
   catFacePut:      {m:"PUT",  p:"/api/catalogue-face",                    ok:"✓"},  // b112 — save (upsert) the whole catalogue face config
-  schemaFields:    {m:"GET",  p:"/api/schemas/fields",                     ok:"✓"},  // the columns this catalogue declares — what a variant can be keyed or grouped on
   schemaFieldDrop: {m:"DELETE", p:"/api/schemas/fields/:key",              ok:"✓"},  // remove a column — refused with a COUNT once anything records a value in it
   schemaFieldOrder:{m:"PATCH", p:"/api/schemas/fields/order",             ok:"✓"},  // move one up or down — order is presentation, so it stays free for ever
   schemaFieldPatch:{m:"PATCH", p:"/api/schemas/fields/:key",              ok:"✓"},  // what a column IS: label · type (while unused) · unit (Rec 20) · required · source
@@ -1861,7 +1859,6 @@ const EP = {
   actorDelegate:   {m:"PUT",   p:"/api/actors/:id/delegate",     ok:"y"},  // D1 — set leave-cover delegate (loop-checked)
   changePin:       {m:"PUT",   p:"/api/actors/change-pin",       ok:"✓"},  // actor changes own PIN (current -> new)
   shopStatus:      {m:"PATCH",p:"/api/entities/profile",         ok:"✓"},  // shop status = PATCH profile {business_status}
-  dispute:         {m:"POST", p:"/api/chits/:id/disputes",       ok:"✓"},  // raise dispute (built)
   delChit:         {m:"DELETE",p:"/api/chits/:id",               ok:"✓"},  // exists (soft-void/trash)
   /* `restore` was declared twice (here and below); an object literal keeps only the LAST, so this one never
      existed at runtime. Both pointed at the same path so nothing broke — but the same class of silent shadowing
@@ -1899,8 +1896,6 @@ const EP = {
   captureStructure:{m:"POST", p:"/api/capture/:id/structure",    ok:"✓"},
   captureConvert:  {m:"POST", p:"/api/capture/:id/convert",      ok:"✓"},  // the receipt: this capture became that chit
   captureRaise:    {m:"POST", p:"/api/capture/:id/raise",        ok:"✓"},  // build the request payload — creates NOTHING
-  policyGet:       {m:"GET",  p:"/api/entities/policy",          ok:"✓"},  // b130 — per-entity flags, on the ENTITY
-  policySet:       {m:"PATCH",p:"/api/entities/policy",          ok:"✓"},
   captureDismiss:  {m:"POST", p:"/api/capture/:id/dismiss",      ok:"✓"},
   // CHANNELS (b123) — which inbound number/address reaches this entity. The map the capture webhooks resolve against.
   channelsList:    {m:"GET",  p:"/api/channels",                 ok:"✓"},
@@ -1912,12 +1907,8 @@ const EP = {
   channelAutoRaise:{m:"POST", p:"/api/channels/:id/auto-raise",  ok:"✓"},   // b131 — hands-free raising, per line
   attUpload:       {m:"POST", p:"/api/attachments",             ok:"✓"},  // upload a file (base64) after a chit/message exists
   addActor:        {m:"POST", p:"/api/actors",                   ok:"✓"},  // create an actor
-  disputeQueue:    {m:"GET",  p:"/api/chits/disputes/queue",     ok:"✓"},  // all open disputes
-  disputes:        {m:"GET",  p:"/api/chits/:id/disputes",       ok:"✓"},  // disputes + roster for one chit
-  resolveDispute:  {m:"PUT",  p:"/api/chits/:id/disputes/:disputeId/resolve", ok:"✓"},  // {resolution_note}
-  /* The billing ledger for the CALLER's own entity — there is no entity parameter, so it cannot be asked about
-     anyone else. Read on demand when the Usage section is opened, never as part of painting a profile. */
-  entityUsage:     {m:"GET",   p:"/api/entities/usage",          ok:"✓"},
+  /* dispute · disputes · disputeQueue · resolveDispute → CB_DISPUTE_EP; assistQuestions · assistPublish · assistWhoami · aiDraft → CB_ASSIST_EP (app/accounts-shell.js, T3-DISPUTES-ASSIST): CB Tasks & Orders › Disputes and CB Assist register the same routes once */
+  /* policyGet · policySet · entityUsage → CB_SETTINGS_EP (app/accounts-shell.js, T3-SETTINGS): CB Settings reads them too */
   /* savePrefs (b165/b166) — MOVED to core.js (CB_PREFS_EP), beside CBPrefs, its one caller: every page that loads core.js knows it (FX-QA1) */
   getSettings:     {m:"GET",   p:"/api/actors/settings",         ok:"✓"},
   saveSettings:    {m:"PUT",   p:"/api/actors/settings",         ok:"✓"},
@@ -1926,7 +1917,6 @@ const EP = {
   connPending:     {m:"GET",   p:"/api/connections/pending",     ok:"✓"},
   connRequest:     {m:"POST",  p:"/api/connections/request",     ok:"✓"},  // {to_entity_id}
   connRespond:     {m:"PUT",   p:"/api/connections/:id/respond", ok:"✓"},  // {action:accept|reject}
-  supList:         {m:"GET",   p:"/api/relationships/suppliers", ok:"✓"},
   supCatalogue:    {m:"GET",   p:"/api/relationships/suppliers/:sid/catalogue", ok:"✓"},
   /* ⚠️ ok:"y" — NEW, and the client falls back to the per-supplier fan-out when it 404s. Web and API deploy
      separately, so "the endpoint is not there yet" is a normal state, not an error. */
@@ -1946,11 +1936,8 @@ const EP = {
    * wrong; the server filters correctly when asked directly. Watching the request settled it in one call, where
    * two rounds of reasoning had not.
    */
-  defList:         {m:"GET",   p:"/api/definitions",             ok:"y"},   // ?all=1 via defListAll
   defListLive:     {m:"GET",   p:"/api/definitions?kind=offer&status=live", ok:"y"},   // the offers a cart applies
-  defListAll:      {m:"GET",   p:"/api/definitions?all=1",       ok:"y"},   // the shelf, incl. retired
   defGet:          {m:"GET",   p:"/api/definitions/:id",         ok:"y"},   // + full version history
-  defAdd:          {m:"POST",  p:"/api/definitions",             ok:"y"},
   /* ⭐ THE TEST BOARD (b219). Cases are `definition`s of kind 'testcase', so nothing here is a new kind of
      record — only the RESULT ledger is new, because results accumulate and a definition does not. */
   testCasesAll:    {m:"GET",  p:"/api/testing/cases?all=1",       ok:"y"},   // including the closed
@@ -1989,15 +1976,12 @@ const EP = {
   testIncList:     {m:"GET",   p:"/api/testing/incidents",        ok:"y"},   // ?state=open — raised or being looked at
   testIncSet:      {m:"PATCH", p:"/api/testing/incidents/:id",    ok:"y"},   // ⚠ append-only, and resolving must cite a commit
   testGherkinIn:   {m:"POST",  p:"/api/testing/cases/gherkin",   ok:"y"},   // .feature text in: clause + cases together
-  defSave:         {m:"PUT",   p:"/api/definitions/:id",         ok:"y"},   // rules change => NEW VERSION
-  defRetire:       {m:"DELETE",p:"/api/definitions/:id",         ok:"y"},   // retires, never deletes
   defFreeze:       {m:"POST",  p:"/api/definitions/freeze",      ok:"y"},   // the copy AND the pointer
-  prodList:        {m:"GET",   p:"/api/products",                ok:"✓"},
   tillPair:        {m:"POST",  p:"/api/till/pair",               ok:"✓"},   // a six-character code a TV can be told over the phone
   /* TAX — read before MIS is ever opened (a chit view, a spec): the core table, not cap-admin's lazy one. routes/tax.js, reads only. */
   taxLedger:       {m:"GET",   p:"/api/tax/ledger",              ok:"✓"},
   taxInvoice:      {m:"GET",   p:"/api/tax/invoice/:id",         ok:"✓"},
-  taxGstr:         {m:"GET",   p:"/api/tax/gstr",                ok:"✓"},
+  /* taxGstr → CB_BOOKS_EP (app/accounts-shell.js, T3-P1-MONEY): CB Finance › Returns downloads the same files */
   /* PUBLISH ON A DATE — a parked change with an effective time (lib/schedule.js; dark until b203 runs) */
   prodSchedule:    {m:"POST",  p:"/api/products/:id/schedule",   ok:"✓"},
   prodScheduled:   {m:"GET",   p:"/api/products/:id/schedule",   ok:"✓"},
@@ -2006,23 +1990,16 @@ const EP = {
   /* MEDIA — pictures and videos on the private object store; the API streams the public read */
   prodMediaAdd:    {m:"POST",  p:"/api/products/:id/media",         ok:"✓"},
   prodMediaDel:    {m:"DELETE",p:"/api/products/:id/media/:mid",    ok:"✓"},
-  prodAdd:         {m:"POST",  p:"/api/products",                ok:"✓"},  // {item_data:{name,price}}
   /* ⭐ MANY IN ONE. The wizard posted one request per item, sequentially — 40 items was ~20s. */
   prodAddMany:     {m:"POST",  p:"/api/products/bulk",           ok:"y"},  // {items:[item_data,…]} — one transaction
-  prodDel:         {m:"DELETE",p:"/api/products/:id",            ok:"✓"},
-  prodEdit:        {m:"PATCH", p:"/api/products/:id",            ok:"✓"},  // {item_data} — full edit (already live)
   exposureDefaults:{m:"PATCH", p:"/api/entities/me/exposure",     ok:"✓"},  // the business's default "Shown to customers" switches
   /* ⚠️ NOT prodEdit. A status change MERGES onto the row (jsonb ||), so it cannot lose a price or a synonym
      list — which is exactly what a PATCH of the whole item_data would risk. Set a flag; never amend the row. */
-  prodStatus:      {m:"PUT",   p:"/api/products/:id/status",     ok:"✓"},  // {status, until?, replaced_by?, note?}
   /* ⭐ The TICKED SET in one round trip. available/unavailable only — retired and redundant carry a per-item
      reason, so they stay on the single-item route. */
   prodStatusBulk:  {m:"POST",  p:"/api/products/status/bulk", ok:"y"},  // {ids:[…], status}
   /* ⭐ Many edits, one transaction. prodCategoriseApply looped one PATCH per product — this is that fix. */
   prodBulkUpdate:  {m:"POST",  p:"/api/products/bulk-update", ok:"y"},  // {items:[{id,item_data}]}
-  prodTemplate:    {m:"GET",   p:"/api/products/template",       ok:"✓"},  // the blank sheet in THIS catalogue's format
-  prodPreflight:   {m:"POST",  p:"/api/products/import/preflight",ok:"✓"}, // read a file before it becomes data — WRITES NOTHING
-  prodImport:      {m:"POST",  p:"/api/products/import",         ok:"✓"},  // the commit half — a decision per column, confirm:true required
   prodStarters:    {m:"GET",   p:"/api/products/starter-columns",ok:"✓"},  // the standard column set for a trade
   prodStarterAdopt:{m:"POST",  p:"/api/products/starter-columns",ok:"✓"},  // adopt one — ADDITIVE, never retypes an existing column
   // --- NET tree (NET-01 Spine) · live /api/network · cb_entity/cb_edge. NOTE: cb_* id-space — resolve self via netLookup(bridge_id); Dev needs backfill ---
@@ -2040,7 +2017,7 @@ const EP = {
   netResume:      {m:"POST", p:"/api/network/connections/:id/resume",     ok:"✓"},
   netDisconnect:  {m:"POST", p:"/api/network/connections/:id/disconnect", ok:"✓"},
 };
-Object.assign(EP, CB_BOOKS_EP, CB_SHEET_EP, CB_PARTY_EP, CB_THREAD_EP, CB_SHOP_EP);   /* CB_SHOP_EP (SET1): the shop's own profile · vault · country setup — shared with settings.html */   /* the Ledger's boot endpoints and the party add/edit/remove/search routes — declared once, in app/accounts-shell.js, shared with accounts.html and crm.html */
+Object.assign(EP, CB_BOOKS_EP, CB_SHEET_EP, CB_PARTY_EP, CB_THREAD_EP, CB_SHOP_EP, CB_DISPUTE_EP, CB_ASSIST_EP, CB_SETTINGS_EP, CB_DEFS_EP, CB_CATALOGUE_EP, CB_MIS_EP);   /* CB_MIS_EP (T3-P4-ACCOUNT): the rail measured — shared with finance.html */   /* CB_DEFS_EP (core.js) + CB_CATALOGUE_EP (cap-catalogue.js), T3-CATALOGUE: the definitions and product routes, declared once, shared with catalogue.html */   /* CB_SETTINGS_EP (T3-SETTINGS): counters · keys · connectors · policy · plan & usage — shared with settings.html */   /* CB_SHOP_EP (SET1): the shop's own profile · vault · country setup — shared with settings.html */   /* the Ledger's boot endpoints and the party add/edit/remove/search routes — declared once, in app/accounts-shell.js, shared with accounts.html and crm.html */
 
 /* deepClone → app/helpers.js */
 /* STORE starts EMPTY. It once had a demo dataset beside it and the rule was that a demo constant must never be
@@ -4615,7 +4592,7 @@ const CAP_GATED = { connectors:'connector', disputes:'dispute' };
  * said nothing — because the browser was still running yesterday’s file. A fix that cannot be fetched is not
  * a fix, and nothing in the build would have said so.
  */
-const CB_BUILD = '2026-10-14a';   /* ⚠️ bumped 2026-10-14 (a: STD1 — cap-books.js reads each Waiting row's todo/name as data and /health's one count; chit-sheet.js takes the bill class, the books' wait and Accept's may/why from the chit read); 2026-10-13 (a: CX4 — cap-iddocs.js draws only the documents the server lists for the shop's country; helpers.js packHasHsn: the HSN words, switch and Rule 46 note only under India's pack; myCur reads the pack's money); 2026-10-08 (a: M25 + M36 — cap-books.js bkOwes (balances in words, never a minus) and bkMoneyInput (the ONE money input: symbol · decimals · minor units) used by cap-entry.js, cap-period.js, cap-bank.js; accounts.html + crm.html lose the width cap); 2026-10-07 (b: core.js SIBS keeps "project" (api #40) so check:envelope is green again; M64 — cap-books.js: Record a payment, Lock a month and Close for good go through CBAction (app/accounts-shell.js) — one press one write, Close for good asks first, the outcome said beside the control; bkOnce is now CBAction.once; a: N03 — cap-chit2.js shows the "made with X@v — page not installed" note; app/page.js + app/pages.json, the named, versioned detail pages); 2026-10-04 (a:public/till.html — Back never leaves the phone till: a popstate on the product sheet, Today's bills or maintenance closes that sheet instead of leaving the page, and a bill in hand asks "Leave the counter?" first (T66); the receipt carries Share (navigator.share, with WhatsApp/SMS/Copy where that is missing) and reopens afterwards as "Last bill C…  ›" on the bill area, which also now says "Paid — start the next bill" instead of staying blank (T67); Today's bills reads "8 pm – 9 pm · 2 bills · ₹460" and "Both bills reached the shop", never "(s)" (T69) — no cap-*.js touched, so this bump is the change log kept current, not a cache-buster); 2026-10-03 (p: standards.html + cap-standards.js + cap-admin.js + index.html — the Standards page (matrix · list · two sheets), the register widened with area · kind · applies-in · plain words · what is missing, 17 additions, Settings › Standards keeps what you follow and the door, the Standards door on the index page; n: engines/versions.json re-vendored from the API (bank-recon 1.18.0); m: cap-crm.js + cap-crm-record.js + cap-entry.js - CB CRM reads the API's real list, record, timeline and follow-ups, Log sends the kinds the API takes, Remove and Add walk-in use the CRM's own routes, Reverse sends its reason; l: cap-crm-record.js + crm.html — the record and its timeline read the API's real shapes (a record that cannot be read ends in Try again, never a spinner), the Supplier chip reads in Dark; k: merge of main into this branch; j: Month & year end pages + Bank (cap-period.js, cap-bank.js; cap-entry.js takes a suggested entry; the Bank page tells the shop, not the engine's builders, when a bank format is unconfirmed); j: cap-crm.js + crm.html — CRM reads the API's roles object (the live list failed); a chosen theme reaches CB CRM's top bar and menu; i: the To do home + the Ledgers quick fixes, cap-books.js + cap-folders.js + accounts.html; g: merge of main into this branch; d: INTEGRATION of ＋ Entry on the Day book (cap-entry.js: previews one at a time, field labels, the server's real event and preview shapes; cap-books.js: ＋ Entry slot and Reverse) with the avatar menu fitting short windows (avatar.js); f: tax + tax-packs 1.20.0 adopted (RCM), the counter re-vendored; e: accounts.html + list-ctl.js — a chosen theme reaches CB Accounts' top bar and side menu; list cells break only words too long for the line; c: INTEGRATION of the three drafts #30 CBList + #32 CBAvatar + #31 CB CRM, tested together once, all harnesses green (crm.html mounts CBAvatar in its title row); CRM part, as shipped: CB CRM — crm.html, cap-crm.js, cap-crm-record.js; b: CBAvatar — ONE avatar on every page, public/app/avatar.js, the frozen simple menu, themes from engines screen v1.15.0 (16, with Terminal), Bold text; app.html's THEMES / FONTS / TEXT_SIZES / FS_BASE and the appearance code MOVED into it; a: CBList — list-ctl.js is the list control as a self-sustaining unit, list-legacy.js keeps the thin card-list names, and every list (Task · Waiting · Day book · Dues · Ledgers · Cheques · Customers · Suppliers · Platform) is mounted on it: cap-books.js, cap-folders.js, cap-register.js, app.html, accounts.html); 2026-10-02 (o: merge of main into this branch; k: cap-books.js — Month lock lists the twelve months with their state, Packs waits for a locked month; n: merge of main into this branch; i: app.html — a customer can be added by NAME, not on ChitBridge; m: merge of main into this branch; j: app.html — an older bill with no stored figures says "Known error", a newer one shows the red error; l: list-ctl.js + app.html — the ⚙ columns chooser's rules moved into list-ctl.js, so CB Accounts shows it styled; h: app.html + list-ctl.js + cap-books.js — ONE column chooser + grid/lines view for every table: Task's ⚙ columns moved into tblCols*, the other lists show their top three; g: cap-books.js + list-ctl.js — Cheques are a Task table too, the hover peek repeats no test id, a folded CRM row keeps its ChitBridge ID findable; f: ONE TABLE — list-ctl.js now holds the Task table (header · rows · template · fit · peek · lazyWrap) the Task screen, the Ledger's Waiting · Day book · Dues · ledger lists and the CRM's Customers · Suppliers all draw with; cap-books.js — the Ledgers are a folder tree, Customers and Suppliers folders of parties; cap-folders.js — _folderNode/_folderPanes; chit-sheet.js — stepWord; e: merge of #15 + #19 — the web reads the frozen invoice — chit-sheet.js, accounts-shell.js, accounts.html, the Ledger door closed · cap-books.js — 1300/2100 open into one ledger per party, every row names its party, the cashier reads "rung by"; c: PR #10 gate courtesy — one-person.js, the notice — merged onto main; b: PR #7 CB Accounts — accounts-shell.js, cap-admin.js, cap-books.js view hook — merged onto main; a: cap-books.js — the Day book reads like a day book, PR #9); 2026-10-01 (c: chit-sheet.js + cap-books.js — the to-do opens the sheet, the sheet is titled for its document; a: cap-books.js — the Ledgers view regrouped into four bands for the index page) — a stale stamp keeps browsers on the old copies (e2e/cb-build-guard) · earlier the same day (o: cap-books.js + accounts.html + kural.js + cap-crm.js — the Ledgers page rebuilt to the designer's handoff (two panes, CBList sized by its pane, one figures line, Dr/Cr everywhere, Reverse on an opened line) and the kural footer CBKural on every CB page; n: engines/versions.json re-vendored from the API (bank-recon 1.18.0); m: cap-crm.js + cap-crm-record.js + cap-entry.js - CB CRM reads the API's real list, record, timeline and follow-ups, Log sends the kinds the API takes, Remove and Add walk-in use the CRM's own routes, Reverse sends its reason; l: cap-crm-record.js + crm.html — the record and its timeline read the API's real shapes (a record that cannot be read ends in Try again, never a spinner), the Supplier chip reads in Dark; k: merge of main into this branch; j: Month & year end pages + Bank (cap-period.js, cap-bank.js; cap-entry.js takes a suggested entry; the Bank page tells the shop, not the engine's builders, when a bank format is unconfirmed); j: cap-crm.js + crm.html — CRM reads the API's roles object (the live list failed); a chosen theme reaches CB CRM's top bar and menu; i: the To do home + the Ledgers quick fixes, cap-books.js + cap-folders.js + accounts.html; g: merge of main into this branch; d: INTEGRATION of ＋ Entry on the Day book (cap-entry.js: previews one at a time, field labels, the server's real event and preview shapes; cap-books.js: ＋ Entry slot and Reverse) with the avatar menu fitting short windows (avatar.js); f: tax + tax-packs 1.20.0 adopted (RCM), the counter re-vendored; e: accounts.html + list-ctl.js — a chosen theme reaches CB Accounts' top bar and side menu; list cells break only words too long for the line; c: INTEGRATION of the three drafts #30 CBList + #32 CBAvatar + #31 CB CRM, tested together once, all harnesses green (crm.html mounts CBAvatar in its title row); CRM part, as shipped: CB CRM — crm.html, cap-crm.js, cap-crm-record.js; b: CBAvatar — ONE avatar on every page, public/app/avatar.js, the frozen simple menu, themes from engines screen v1.15.0 (16, with Terminal), Bold text; app.html's THEMES / FONTS / TEXT_SIZES / FS_BASE and the appearance code MOVED into it; a: CBList — list-ctl.js is the list control as a self-sustaining unit, list-legacy.js keeps the thin card-list names, and every list (Task · Waiting · Day book · Dues · Ledgers · Cheques · Customers · Suppliers · Platform) is mounted on it: cap-books.js, cap-folders.js, cap-register.js, app.html, accounts.html); 2026-10-02 (o: merge of main into this branch; k: cap-books.js — Month lock lists the twelve months with their state, Packs waits for a locked month; n: merge of main into this branch; i: app.html — a customer can be added by NAME, not on ChitBridge; m: merge of main into this branch; j: app.html — an older bill with no stored figures says "Known error", a newer one shows the red error; l: list-ctl.js + app.html — the ⚙ columns chooser's rules moved into list-ctl.js, so CB Accounts shows it styled; h: app.html + list-ctl.js + cap-books.js — ONE column chooser + grid/lines view for every table: Task's ⚙ columns moved into tblCols*, the other lists show their top three; g: cap-books.js + list-ctl.js — Cheques are a Task table too, the hover peek repeats no test id, a folded CRM row keeps its ChitBridge ID findable; f: ONE TABLE — list-ctl.js now holds the Task table (header · rows · template · fit · peek · lazyWrap) the Task screen, the Ledger's Waiting · Day book · Dues · ledger lists and the CRM's Customers · Suppliers all draw with; cap-books.js — the Ledgers are a folder tree, Customers and Suppliers folders of parties; cap-folders.js — _folderNode/_folderPanes; chit-sheet.js — stepWord; e: merge of #15 + #19 — the web reads the frozen invoice — chit-sheet.js, accounts-shell.js, accounts.html, the Ledger door closed · cap-books.js — 1300/2100 open into one ledger per party, every row names its party, the cashier reads "rung by"; c: PR #10 gate courtesy — one-person.js, the notice — merged onto main; b: PR #7 CB Accounts — accounts-shell.js, cap-admin.js, cap-books.js view hook — merged onto main; a: cap-books.js — the Day book reads like a day book, PR #9); 2026-10-01 (c: chit-sheet.js + cap-books.js — the to-do opens the sheet, the sheet is titled for its document; a: cap-books.js — the Ledgers view regrouped into four bands for the index page) — a stale stamp keeps browsers on the old copies (e2e/cb-build-guard) */
+const CB_BUILD = '2026-10-14f';   /* ⚠️ bumped 2026-10-14 (f: T3-P2-CRM — cap-crm-groups.js final (the New-group button's own test id, the send outcome in three facts); e: T3-CATALOGUE — app/cap-catalogue.js born: the catalogue primitives MOVED out of app.html (CB_CATALOGUE_EP · cbAmount · prodId/pData · the declared columns · the import preflight painters, now taking a workbook), core.js holds CB_DEFS_EP, list-ctl.js shows Filters ▾ on a server-paged list; d: INT6b — T2-PAGING's list-ctl.js CBList.every + cap-testing.js paging, with T3 below; c: T3 — cap-dispute.js: the dispute room hands CBThread disputeByline; b: T3-DISPUTES-ASSIST — cap-dispute.js carries CBDispute (tasks.html › Disputes), cap-readiness.js loses aiDraft to accounts-shell.js CB_ASSIST_EP, chit-sheet.js gives a page's dispute capability a place; a: STD1 — cap-books.js reads each Waiting row's todo/name as data and /health's one count; chit-sheet.js takes the bill class, the books' wait and Accept's may/why from the chit read); 2026-10-13 (a: CX4 — cap-iddocs.js draws only the documents the server lists for the shop's country; helpers.js packHasHsn: the HSN words, switch and Rule 46 note only under India's pack; myCur reads the pack's money); 2026-10-08 (a: M25 + M36 — cap-books.js bkOwes (balances in words, never a minus) and bkMoneyInput (the ONE money input: symbol · decimals · minor units) used by cap-entry.js, cap-period.js, cap-bank.js; accounts.html + crm.html lose the width cap); 2026-10-07 (b: core.js SIBS keeps "project" (api #40) so check:envelope is green again; M64 — cap-books.js: Record a payment, Lock a month and Close for good go through CBAction (app/accounts-shell.js) — one press one write, Close for good asks first, the outcome said beside the control; bkOnce is now CBAction.once; a: N03 — cap-chit2.js shows the "made with X@v — page not installed" note; app/page.js + app/pages.json, the named, versioned detail pages); 2026-10-04 (a:public/till.html — Back never leaves the phone till: a popstate on the product sheet, Today's bills or maintenance closes that sheet instead of leaving the page, and a bill in hand asks "Leave the counter?" first (T66); the receipt carries Share (navigator.share, with WhatsApp/SMS/Copy where that is missing) and reopens afterwards as "Last bill C…  ›" on the bill area, which also now says "Paid — start the next bill" instead of staying blank (T67); Today's bills reads "8 pm – 9 pm · 2 bills · ₹460" and "Both bills reached the shop", never "(s)" (T69) — no cap-*.js touched, so this bump is the change log kept current, not a cache-buster); 2026-10-03 (p: standards.html + cap-standards.js + cap-admin.js + index.html — the Standards page (matrix · list · two sheets), the register widened with area · kind · applies-in · plain words · what is missing, 17 additions, Settings › Standards keeps what you follow and the door, the Standards door on the index page; n: engines/versions.json re-vendored from the API (bank-recon 1.18.0); m: cap-crm.js + cap-crm-record.js + cap-entry.js - CB CRM reads the API's real list, record, timeline and follow-ups, Log sends the kinds the API takes, Remove and Add walk-in use the CRM's own routes, Reverse sends its reason; l: cap-crm-record.js + crm.html — the record and its timeline read the API's real shapes (a record that cannot be read ends in Try again, never a spinner), the Supplier chip reads in Dark; k: merge of main into this branch; j: Month & year end pages + Bank (cap-period.js, cap-bank.js; cap-entry.js takes a suggested entry; the Bank page tells the shop, not the engine's builders, when a bank format is unconfirmed); j: cap-crm.js + crm.html — CRM reads the API's roles object (the live list failed); a chosen theme reaches CB CRM's top bar and menu; i: the To do home + the Ledgers quick fixes, cap-books.js + cap-folders.js + accounts.html; g: merge of main into this branch; d: INTEGRATION of ＋ Entry on the Day book (cap-entry.js: previews one at a time, field labels, the server's real event and preview shapes; cap-books.js: ＋ Entry slot and Reverse) with the avatar menu fitting short windows (avatar.js); f: tax + tax-packs 1.20.0 adopted (RCM), the counter re-vendored; e: accounts.html + list-ctl.js — a chosen theme reaches CB Accounts' top bar and side menu; list cells break only words too long for the line; c: INTEGRATION of the three drafts #30 CBList + #32 CBAvatar + #31 CB CRM, tested together once, all harnesses green (crm.html mounts CBAvatar in its title row); CRM part, as shipped: CB CRM — crm.html, cap-crm.js, cap-crm-record.js; b: CBAvatar — ONE avatar on every page, public/app/avatar.js, the frozen simple menu, themes from engines screen v1.15.0 (16, with Terminal), Bold text; app.html's THEMES / FONTS / TEXT_SIZES / FS_BASE and the appearance code MOVED into it; a: CBList — list-ctl.js is the list control as a self-sustaining unit, list-legacy.js keeps the thin card-list names, and every list (Task · Waiting · Day book · Dues · Ledgers · Cheques · Customers · Suppliers · Platform) is mounted on it: cap-books.js, cap-folders.js, cap-register.js, app.html, accounts.html); 2026-10-02 (o: merge of main into this branch; k: cap-books.js — Month lock lists the twelve months with their state, Packs waits for a locked month; n: merge of main into this branch; i: app.html — a customer can be added by NAME, not on ChitBridge; m: merge of main into this branch; j: app.html — an older bill with no stored figures says "Known error", a newer one shows the red error; l: list-ctl.js + app.html — the ⚙ columns chooser's rules moved into list-ctl.js, so CB Accounts shows it styled; h: app.html + list-ctl.js + cap-books.js — ONE column chooser + grid/lines view for every table: Task's ⚙ columns moved into tblCols*, the other lists show their top three; g: cap-books.js + list-ctl.js — Cheques are a Task table too, the hover peek repeats no test id, a folded CRM row keeps its ChitBridge ID findable; f: ONE TABLE — list-ctl.js now holds the Task table (header · rows · template · fit · peek · lazyWrap) the Task screen, the Ledger's Waiting · Day book · Dues · ledger lists and the CRM's Customers · Suppliers all draw with; cap-books.js — the Ledgers are a folder tree, Customers and Suppliers folders of parties; cap-folders.js — _folderNode/_folderPanes; chit-sheet.js — stepWord; e: merge of #15 + #19 — the web reads the frozen invoice — chit-sheet.js, accounts-shell.js, accounts.html, the Ledger door closed · cap-books.js — 1300/2100 open into one ledger per party, every row names its party, the cashier reads "rung by"; c: PR #10 gate courtesy — one-person.js, the notice — merged onto main; b: PR #7 CB Accounts — accounts-shell.js, cap-admin.js, cap-books.js view hook — merged onto main; a: cap-books.js — the Day book reads like a day book, PR #9); 2026-10-01 (c: chit-sheet.js + cap-books.js — the to-do opens the sheet, the sheet is titled for its document; a: cap-books.js — the Ledgers view regrouped into four bands for the index page) — a stale stamp keeps browsers on the old copies (e2e/cb-build-guard) · earlier the same day (o: cap-books.js + accounts.html + kural.js + cap-crm.js — the Ledgers page rebuilt to the designer's handoff (two panes, CBList sized by its pane, one figures line, Dr/Cr everywhere, Reverse on an opened line) and the kural footer CBKural on every CB page; n: engines/versions.json re-vendored from the API (bank-recon 1.18.0); m: cap-crm.js + cap-crm-record.js + cap-entry.js - CB CRM reads the API's real list, record, timeline and follow-ups, Log sends the kinds the API takes, Remove and Add walk-in use the CRM's own routes, Reverse sends its reason; l: cap-crm-record.js + crm.html — the record and its timeline read the API's real shapes (a record that cannot be read ends in Try again, never a spinner), the Supplier chip reads in Dark; k: merge of main into this branch; j: Month & year end pages + Bank (cap-period.js, cap-bank.js; cap-entry.js takes a suggested entry; the Bank page tells the shop, not the engine's builders, when a bank format is unconfirmed); j: cap-crm.js + crm.html — CRM reads the API's roles object (the live list failed); a chosen theme reaches CB CRM's top bar and menu; i: the To do home + the Ledgers quick fixes, cap-books.js + cap-folders.js + accounts.html; g: merge of main into this branch; d: INTEGRATION of ＋ Entry on the Day book (cap-entry.js: previews one at a time, field labels, the server's real event and preview shapes; cap-books.js: ＋ Entry slot and Reverse) with the avatar menu fitting short windows (avatar.js); f: tax + tax-packs 1.20.0 adopted (RCM), the counter re-vendored; e: accounts.html + list-ctl.js — a chosen theme reaches CB Accounts' top bar and side menu; list cells break only words too long for the line; c: INTEGRATION of the three drafts #30 CBList + #32 CBAvatar + #31 CB CRM, tested together once, all harnesses green (crm.html mounts CBAvatar in its title row); CRM part, as shipped: CB CRM — crm.html, cap-crm.js, cap-crm-record.js; b: CBAvatar — ONE avatar on every page, public/app/avatar.js, the frozen simple menu, themes from engines screen v1.15.0 (16, with Terminal), Bold text; app.html's THEMES / FONTS / TEXT_SIZES / FS_BASE and the appearance code MOVED into it; a: CBList — list-ctl.js is the list control as a self-sustaining unit, list-legacy.js keeps the thin card-list names, and every list (Task · Waiting · Day book · Dues · Ledgers · Cheques · Customers · Suppliers · Platform) is mounted on it: cap-books.js, cap-folders.js, cap-register.js, app.html, accounts.html); 2026-10-02 (o: merge of main into this branch; k: cap-books.js — Month lock lists the twelve months with their state, Packs waits for a locked month; n: merge of main into this branch; i: app.html — a customer can be added by NAME, not on ChitBridge; m: merge of main into this branch; j: app.html — an older bill with no stored figures says "Known error", a newer one shows the red error; l: list-ctl.js + app.html — the ⚙ columns chooser's rules moved into list-ctl.js, so CB Accounts shows it styled; h: app.html + list-ctl.js + cap-books.js — ONE column chooser + grid/lines view for every table: Task's ⚙ columns moved into tblCols*, the other lists show their top three; g: cap-books.js + list-ctl.js — Cheques are a Task table too, the hover peek repeats no test id, a folded CRM row keeps its ChitBridge ID findable; f: ONE TABLE — list-ctl.js now holds the Task table (header · rows · template · fit · peek · lazyWrap) the Task screen, the Ledger's Waiting · Day book · Dues · ledger lists and the CRM's Customers · Suppliers all draw with; cap-books.js — the Ledgers are a folder tree, Customers and Suppliers folders of parties; cap-folders.js — _folderNode/_folderPanes; chit-sheet.js — stepWord; e: merge of #15 + #19 — the web reads the frozen invoice — chit-sheet.js, accounts-shell.js, accounts.html, the Ledger door closed · cap-books.js — 1300/2100 open into one ledger per party, every row names its party, the cashier reads "rung by"; c: PR #10 gate courtesy — one-person.js, the notice — merged onto main; b: PR #7 CB Accounts — accounts-shell.js, cap-admin.js, cap-books.js view hook — merged onto main; a: cap-books.js — the Day book reads like a day book, PR #9); 2026-10-01 (c: chit-sheet.js + cap-books.js — the to-do opens the sheet, the sheet is titled for its document; a: cap-books.js — the Ledgers view regrouped into four bands for the index page) — a stale stamp keeps browsers on the old copies (e2e/cb-build-guard) */
 const CAP_LOADED = {};
 /**
  * ⭐⭐ A LAZY SCREEN THAT HAS NOT ARRIVED YET MUST NOT THROW. Eleven of sixteen lazy screens called their
@@ -4662,7 +4639,7 @@ function capScreen(name){
 function hasCap(k){ return (SESSION.capabilities||[]).indexOf(k)>=0; }   // one capability check, used by all gates
 const _capPromise = {}, _capWithPromise = {};
 /* a capability split by job loads its other halves first (P2: network = the design builder + its member half, cap-network-member.js) */
-const CAP_WITH = { network:['network-member'], admin:['shop'] };   /* admin: the Profile's Business section and the vault live in cap-shop.js (SET1: CB Settings paints them too) */
+const CAP_WITH = { network:['network-member'], admin:['shop', 'settings', 'mis'] };   /* mis: misWindow (the one period → since rule) lives in cap-mis.js (T3-P4-ACCOUNT) */   /* admin: the Profile's Business section and the vault live in cap-shop.js (SET1); polDefsOf and the counters/keys/kit helpers in cap-settings.js (T3-SETTINGS) — CB Settings paints both */
 function ensureCap(name){
   if(CAP_LOADED[name]) return Promise.resolve();
   if(CAP_WITH[name]){
@@ -5783,9 +5760,7 @@ function navTo(k){if(k==="ledger") return ledgerDoorClosed();try{ if(typeof CBCa
  * duplicate code, call it perfectly.'
  */
 /* ⚠️ LOOSE, not strict: amountOf() throws on a legacy bare number and 24 call sites pass one. */
-function cbAmount(v){ var n=CBMoney.amountOfLoose(v); return isFinite(n)?n:0; }
 function cbCurrency(v){ return CBMoney.currencyOf(v); }
-function cbHasPrice(v){ return v!=null&&v!==''&&(typeof v!=='object'||typeof v.amount==='number'); }
 const LIMITS = { to:5, cc:5, for:1, items:50, attachments:10 };
 let CC={items:[], rcpts:[], fields:{}};
 const DEFAULT_SCHEMA_FIELDS=[
@@ -7766,7 +7741,7 @@ function suppliersScreen(){
   setTimeout(paintSupList, 0);   /* the rows are a CBList mount: painted once the panel is in the page */
   return `<div class="panel ${showDetail?'showdetail':''}" id="panel" style="--lw:${UI.lw}px;--lh:${UI.lh}px">${list}${divider}${detail}</div>`;
 }
-function supName(x){ return (x&&(x.nickname||x.display_name))||'—'; }
+/* supName · supKindOf → app/cap-suppliers.js (T3-OPS: CB Operations › Suppliers paints the same list) */
 /**
  * ⭐⭐ TWO TABS, ONE LIST (Athi, 2026-09-10): *"we have already the supplier menu — add the business here and,
  * while adding or maybe later through edit, set a flag: is he the supplier for my sales or is he the facilitator?
@@ -7784,7 +7759,6 @@ function supName(x){ return (x&&(x.nickname||x.display_name))||'—'; }
  * list that already exists.
  */
 function supKind(){ return UI.supKind==='own_use'?'own_use':'resale'; }
-function supKindOf(x){ return (x&&x.supply_kind==='own_use')?'own_use':'resale'; }
 function supKindCount(k){ return (UI.sups||[]).filter(function(x){ return supKindOf(x)===k; }).length; }
 function supKindTabsHTML(){
   const b=function(k,icon,label,tid){
@@ -9624,39 +9598,9 @@ function custNamedGroupsHTML(c){
  * second opinion about what somebody is owed is exactly what must not exist.
  */
 async function custRewardsLoad(id){
-  var box=document.getElementById('cu_rw'); if(!box) return;
-  var row=function(l,v){return '<div class="kv" style="display:flex;gap:8px;padding:9px 13px;border-bottom:1px dashed var(--line);font-size:var(--fs-2)"><b style="min-width:112px;color:var(--grey);font-weight:600;font-size:var(--fs-1);text-transform:uppercase">'+l+'</b><span style="font-weight:600;flex:1">'+v+'</span></div>';};
-  try{
-    var r=await api('custRewards',{ params:{ id:id } });
-    if(!document.getElementById('cu_rw')) return;                 /* they moved on while it was reading */
-    if(!r || !r.programme){
-      box.innerHTML=row(tx('Programme'),'<span style="color:var(--grey)">'+esc((r&&r.says)||tx('This shop does not run a points programme.'))+'</span>');
-      return;
-    }
-    /* ⚠️ THE MONEY IS FORMATTED HERE, in the shop's own locale — the engine returned a bare figure on purpose */
-    var m=function(n){ try{ return CBLocale.money(n, (UI.me&&UI.me.currency)||'INR'); }catch(_){ return String(n); } };
-    box.innerHTML =
-        row(tx('Balance'),'<b style="font-size:var(--fs-4)" data-testid="cust-rw-points">'+(r.points||0)+'</b> '
-            + (r.money_known?'<span style="color:var(--grey)">· '+tx('the shop owes')+' '+m(r.worth||0)+'</span>':''))
-      /* ⭐ the sentence the engine wrote — worth this much off, or enough for that */
-      + row(tx('Worth'),esc(r.says||'—'))
-      + row(tx('Earned by'),esc(r.earns||'—'))
-      + (r.next?row(tx('Next'),esc(r.next.name)+' <span style="color:var(--grey)">· '+r.next.short+' '+tx('more')+'</span>'):'')
-      + (r.expires_months?row(tx('Expires'),txf('{n} months after they are earned',{n:r.expires_months})):
-                          row(tx('Expires'),'<span style="color:var(--grey)">'+tx('never — this shop has not set an expiry')+'</span>'))
-      + (r.expired_now?row(tx('Just expired'),'<span style="color:var(--warn)">'+r.expired_now+'</span>'):'')
-      /* ⚠️ WHERE THEY CAME FROM, on the same screen. "412 points" with no history is a number nobody can argue with,
-         and a customer standing at a counter disputing a balance needs the shopkeeper to be able to look. */
-      + ((r.recent&&r.recent.length)?'<div style="padding:9px 13px;font-size:var(--fs-1)">'
-          + r.recent.slice(0,8).map(function(e){
-              return '<div style="display:flex;justify-content:space-between;gap:8px;padding:2px 0">'
-                + '<span style="color:var(--grey)">'+esc(String(e.at).slice(0,10))+' · '+esc(e.why)+(e.ref?' · '+esc(e.ref):'')+'</span>'
-                + '<b>'+(e.points>0?'+':'')+e.points+'</b></div>'; }).join('')
-          + '</div>':'');
-  }catch(e){
-    if(document.getElementById('cu_rw'))
-      box.innerHTML=row(tx('Points'),'<span style="color:var(--grey)">'+esc((e&&e.message)||tx('Could not be read'))+'</span>');
-  }
+  /* T3-P2-CRM: the pane is app/cap-rewards.js (CBRewards) — ONE copy, painted here and on CB CRM's record; the money is formatted in the shop's locale */
+  if(typeof CBRewards==='undefined') return;
+  return CBRewards.load('cu_rw', { id:id, api:api, t:tx, money:function(n){ try{ return CBLocale.money(n, (UI.me&&UI.me.currency)||'INR'); }catch(_){ return String(n); } } });
 }
 async function custSaveNamedGroups(id, groups){ try{ var r=await api('custGroupsSet',{ params:{ id:id }, body:{ groups:groups } }); var c=(UI.custs||[]).find(function(x){return x.customer_list_id===id;}); if(c) c.groups=r.groups||groups; _CUST_GNAMES=undefined; paintCustList(); paintCustDetail(); toast(tx('Groups saved')); }catch(e){ toast((e&&e.message)||tx('Could not save the groups')); } }
 function custToggleNamedGroup(id, g, on){ var c=(UI.custs||[]).find(function(x){return x.customer_list_id===id;}); if(!c) return; var set=(c.groups||[]).filter(function(x){return x!==g;}); if(on) set.push(g); custSaveNamedGroups(id, set); }
@@ -10595,13 +10539,6 @@ function catalogueScreen(){
   const showDetail = (UI.vp==='mob') && UI.mdetail;
   return `<div class="panel ${showDetail?'showdetail':''}" id="panel" style="--lw:${UI.lw}px;--lh:${UI.lh}px">${list}${divider}${detail}</div>`;
 }
-function pData(p){ return (p&&(p.item_data||p.data))||{}; }
-function pName(d){ return d.name||d.product||'item'; }
-function pUnit(d){ return d.unit||'unit'; }
-function pPrice(d){ return cbAmount(d.price); }
-function pCode(d){ return d.code||d.hsn||d.sku||''; }
-function pDesc(d){ return d.desc||d.description||d.note||''; }
-function prodId(p){ return p.item_id||p.id; }
 /**
  * ⚠️ TWO FILTERS, AND THE CATEGORY ONE IS NOT A SEARCH. `UI._prodCatg` is set by the chip row and by the
  * Categories screen handing over its "uncategorised" count — so the number you press on one screen lands you on
@@ -10655,7 +10592,7 @@ function prodVisible(ctx){
     }));
     return prodSorted(list);                       /* the answer is on its way; the shelf stands until it lands */
   }
-  /* ⭐ THE COUNTER'S SEARCH, THE SAME FILE (app/search.js): "ac co" reaches Aachi Coriander here too, and a code with a hyphen in it
+  /* ⭐ THE COUNTER'S SEARCH, THE SAME FILE (engine/search.js): "ac co" reaches Aachi Coriander here too, and a code with a hyphen in it
      finds its product. No limit — this list renders its rows lazily and the count under the box must be the true one. */
   if(typeof CBSearch!=='undefined') return prodSorted(CBSearch.search(list, q, { text:prodSearchText, stamp:prodTextStamp(), name:(p)=>pName(pData(p)), barcode:'', limit:Infinity }));
   const lq=q.toLowerCase();
@@ -11728,65 +11665,6 @@ function setProdMode(m){ UI.prodMode=m; paintProdDetail(); if(m==='edit') ctEnsu
   /* the marked section stays in view across View ↔ Edit (Athi, 2026-09-06 10:4x: "consists of marked, but the scroll didn't go there") — the repaint reset it */
   if(UI.prodTab) setTimeout(function(){ try{ setProdTab(UI.prodTab); }catch(_){} }, 260); }
 function newProduct(){ UI.prodSel=null; UI.prodMode='new'; ctEnsureDeclaredThenPaint(); if(UI.vp==='mob'){ UI.mdetail=true; const p=document.getElementById('panel'); if(p)p.classList.add('showdetail'); } paintProdList(); paintProdDetail(); }
-function ctField(k,label,v,extra){ return `<label class="fl">${label}</label><input class="inp" id="ct_${k}" data-testid="cat-field-${k}" value="${esc(v==null?'':v)}" ${extra||''}>`; }
-/**
- * ── ⭐⭐ THE DECLARED COLUMNS, ON THE PRODUCT ──────────────────────────────────────────────────────────────────
- * Athi, 2026-09-03 (observation 4): *"I have added multiple columns from template, it reflects in catalogue
- * fields in the column panel here. But when I check the columns in catalogue, none of these are reflecting
- * here, what is the relation between actual column and the column defined."*
- *
- * There was none. FIX-1 bound every declaration to the STORE (nothing in item_data is undeclared, proven live
- * on 4,987 items), and nothing bound the declaration to the FORM: prodEditForm was eight hard-coded inputs, so
- * a column declared in Catalogue setup › Columns reached the template, the export and the import — every door
- * except the one a person actually uses. The Columns panel governed what a FILE may carry; the form governed
- * what a PERSON may type; and the two never met. This is the other half of FIX-1.
- *
- * ⚠️ RENDERED FROM THE DECLARATION, NOT FROM THE ITEM. The keys come from `catDeclared()` (schema_fields, in
- * display_order); the item only supplies values. So a freshly declared column appears on every product at once,
- * empty, which is what "declared" means — and a key that exists in one item's data but in no declaration cannot
- * appear here, because after FIX-1 there is no such key.
- *
- * ⚠️ THE FIXED EIGHT STAY FIXED. name · unit · price · code · description · highlight have their own controls
- * (a currency prefix, a textarea, the "not a discount" warning) and are excluded here by KEY, so a declaration
- * that also carries them does not render a second, dumber input for the same value.
- *
- * ⚠️ A VALUE THAT IS NOT A SCALAR IS SHOWN, NOT EDITED. An imported object under a declared key (rare, but
- * jsonb allows it) renders as read-only text; an <input> would turn it into the string "[object Object]" on the
- * next Save. The form must never be the thing that flattens a record it could not display.
- */
-const CT_FIXED_KEYS = ['name','unit','price','code','hsn','sku','desc','description','note','highlight'];
-function ctDeclaredList(){
-  return (UI._catFields||[]).filter(function(f){ return f && f.field_key && CT_FIXED_KEYS.indexOf(f.field_key) < 0; });
-}
-/**
- * ⚠️⚠️ THE HOST ALWAYS EXISTS. With no columns declared this returned '' — no #ct_declared in the form — and the
- * "fill the block when the declaration lands" path fell back to repainting the WHOLE form, wiping the name being
- * typed (the tour's fresh entity has no columns; the specs declare one first, so they never saw it — 2026-09-05).
- * Now the block is always in the form (hidden when empty) and the late fill only ever touches it.
- */
-function ctDeclaredFields(d){
-  const rows = ctDeclaredRows(d);
-  return `<div id="ct_declared_wrap"${rows?'':' hidden'}><div class="sec" style="margin-top:14px">${tx('More about this product')}</div>`
-    + `<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:6px">${tx('The columns your catalogue declares — shaped in Catalogue setup › Columns.')}</div>`
-    + `<div id="ct_declared" data-testid="cat-declared">${rows}</div></div>`;
-}
-function ctDeclaredRows(d){
-  const list = ctDeclaredList(); if(!list.length) return '';
-  const rows = list.map(function(f){
-    const k = f.field_key, v = d ? d[k] : undefined, isNum = f.field_type === 'number';
-    const label = esc(f.field_name || k) + (f.required ? ' <span style="color:var(--disp)">*</span>' : '');
-    if (v != null && typeof v === 'object') {
-      return `<label class="fl">${label}</label><div class="inp" style="color:var(--grey)" data-testid="cat-field-${esc(k)}" title="${esc(tx('imported as structured data — edit it through the spreadsheet'))}">${esc(JSON.stringify(v))}</div>`;
-    }
-    return `<label class="fl">${label}</label><input class="inp" id="ct_f_${esc(k)}" data-testid="cat-field-${esc(k)}" data-key="${esc(k)}" data-type="${esc(f.field_type||'text')}"${isNum ? ' inputmode="decimal"' : ''} value="${esc(v==null?'':v)}">`;
-  }).join('');
-  return rows;
-}
-/** The declared columns that carry a value, as view rows. Only scalars: an object is a record, not a value. */
-function ctDeclaredViewRows(d, kv){
-  return ctDeclaredList().filter(function(f){ const v = d[f.field_key]; return v != null && v !== '' && typeof v !== 'object'; })
-    .map(function(f){ return kv(esc(f.field_name || f.field_key), d[f.field_key]); }).join('');
-}
 /**
  * Download the catalogue as CSV.
  *
@@ -11839,35 +11717,6 @@ async function exportCatalogueCSV(btn){
  * Two steps rather than one link: the server returns JSON because the guidance CANNOT live in the CSV — a comment
  * row would parse as a product. So the file downloads and the notes are shown beside it.
  */
-async function downloadCatalogueTemplate(btn){
-  const was = btn ? btn.textContent : null;
-  if(btn){ btn.disabled = true; btn.textContent = '📄 …'; }
-  try{
-    const t = await api('prodTemplate');
-    const blob = new Blob(['﻿' + t.csv], { type: 'text/csv;charset=utf-8' });   // BOM: Excel mangles ₹ without it
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = t.filename || 'catalogue-template.csv';
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
-
-    const cols = (t.columns||[]).map(function(c){
-      const opt = (t.optional||[]).indexOf(c) >= 0;
-      return '<span style="display:inline-block;border:1px solid var(--line);border-radius:6px;padding:2px 7px;margin:0 4px 4px 0;font-size:var(--fs-1);font-family:ui-monospace,monospace;'
-        + (opt ? 'color:var(--grey);border-style:dashed' : 'font-weight:600') + '">' + esc(c) + '</span>';
-    }).join('');
-    modal('<div class="mhd">' + tx('📄 Catalogue template') + '</div><div class="mbody">'
-      + '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:9px">Downloaded as <b>' + esc(t.filename||'') + '</b> — these are the columns your catalogue accepts. Dashed ones are optional.</div>'
-      + '<div style="margin-bottom:10px">' + cols + '</div>'
-      + '<ul style="font-size:var(--fs-2);line-height:1.65;padding-inline-start:18px;margin:0">'
-      + (t.notes||[]).map(function(n){ return '<li>' + esc(n) + '</li>'; }).join('')
-      + '</ul></div><div class="mfoot"><button class="pri" onclick="closeModal()">' + tx('Got it') + '</button></div>');
-  }catch(e){
-    if(typeof toast === 'function') toast((e && e.message) || 'Could not build the template.');
-  }finally{
-    if(btn){ btn.disabled = false; btn.textContent = was; }
-  }
-}
 /**
  * checkCatalogueFile — read a spreadsheet BEFORE any of it becomes data.
  *
@@ -11998,140 +11847,6 @@ async function _cfAdoptSet(btn){
   }catch(e){ out.innerHTML = '<div style="font-size:var(--fs-2);color:var(--disp)">'+esc((e&&e.message)||'Could not add the columns.')+'</div>'; }
   finally{ btn.disabled = false; btn.textContent = was; }
 }
-function _cfPick(input){
-  var f = input && input.files && input.files[0]; if(!f) return;
-  var rd = new FileReader();
-  rd.onload = function(){ var el = document.getElementById('cf_text'); if(el) el.value = String(rd.result||'').replace(/^﻿/,''); };
-  rd.readAsText(f);
-}
-async function _cfRun(btn){
-  var text = (document.getElementById('cf_text')||{}).value || '';
-  var out = document.getElementById('cf_out'); if(!out) return;
-  if(!text.trim()){ out.innerHTML = '<div style="font-size:var(--fs-2);color:var(--disp)">Choose a file or paste some rows first.</div>'; return; }
-  var was = btn ? btn.textContent : null; if(btn){ btn.disabled = true; btn.textContent = 'Reading…'; }
-  try{
-    var res = await api('prodPreflight', { body:{ csv: text } });
-    var r = res.report;
-    UI._cf = { csv: text, accepted: res.accepted||[], optional: res.optional||[], report: r };
-
-    // How each verdict reads, and what it DEFAULTS the decision to. A blocked column has no choice at all — the
-    // control is removed rather than merely pre-set, because a disabled dropdown still looks like a decision
-    // someone could change.
-    var HOW = {
-      exact:         ['✓','var(--ok-2)','matches your catalogue'],
-      synonym:       ['✓','var(--ok-2)','recognised under another name'],
-      contains:      ['?','var(--warn-2)','probably this — confirm'],
-      fuzzy:         ['?','var(--warn-2)','guessed — confirm this'],
-      ambiguous:     ['?','var(--warn-2)','could be more than one thing'],
-      'not-accepted':['—','var(--grey-2)','your catalogue does not use this'],
-      unmatched:     ['—','var(--grey-2)','not recognised'],
-      conflict:      ['!','var(--warn-2)','another column matched this better'],
-      blocked:       ['⨯','var(--disp)','a file may not set this'],
-      empty:         ['—','var(--grey-2)','this column has no heading']
-    };
-    var accepted = res.accepted || [];
-    var rowsHtml = (r.mapping||[]).map(function(m, i){
-      var h = HOW[m.how] || ['?','var(--grey-2)',m.how];
-      var control;
-      if(m.how === 'blocked' || m.how === 'empty'){
-        control = '<span style="font-size:var(--fs-1);color:'+h[1]+'">not importable</span>';
-      } else {
-        var opts = ['<option value="ignore">' + tx('Leave it out') + '</option>'];
-        accepted.forEach(function(f){
-          var sel = (m.canonical === f) ? ' selected' : '';
-          opts.push('<option value="map:'+esc(f)+'"'+sel+'>Use as '+esc(f)+'</option>');
-        });
-        // Only offer to CREATE where nothing in the catalogue claimed it — otherwise the obvious click is the one
-        // that grows a second column meaning the same thing.
-        if(!m.canonical) opts.push('<option value="create" selected>' + tx('Add as a new column') + '</option>');
-        control = '<select data-cfcol="'+esc(m.incoming||'')+'" data-testid="cf-decide-'+i+'" class="inp" style="font-size:var(--fs-2);padding:3px 6px;width:100%">'+opts.join('')+'</select>';
-      }
-      return '<tr>'
-        + '<td style="padding:5px 8px;border-bottom:1px dashed var(--line);font-family:ui-monospace,monospace;font-size:var(--fs-2)">'+esc(m.incoming||'(blank)')+'</td>'
-        + '<td style="padding:5px 8px;border-bottom:1px dashed var(--line);color:'+h[1]+';font-weight:700;text-align:center">'+h[0]+'</td>'
-        + '<td style="padding:5px 8px;border-bottom:1px dashed var(--line);min-width:150px">'+control+'</td>'
-        + '<td style="padding:5px 8px;border-bottom:1px dashed var(--line);font-size:var(--fs-1);color:var(--grey)">'+esc(m.conflict||m.why||h[2])+'</td>'
-        + '</tr>';
-    }).join('');
-
-    var s = r.summary || {};
-    var blocking = (s.errors || 0) > 0;
-    var badge = blocking
-      ? '<span style="background:var(--danger-tint);color:var(--disp);border-radius:6px;padding:3px 9px;font-size:var(--fs-1);font-weight:700">'+s.errors+' row problem(s) — fix the file first</span>'
-      : (r.ready
-        ? '<span style="background:var(--ok-tint);color:var(--disp);border-radius:6px;padding:3px 9px;font-size:var(--fs-1);font-weight:700">' + tx('Every column is placed') + '</span>'
-        : '<span style="background:var(--warn-tint);color:var(--warn-3);border-radius:6px;padding:3px 9px;font-size:var(--fs-1);font-weight:700">' + tx('Check the choices below, then import') + '</span>');
-    var issues = (r.issues||[]).slice(0,25).map(function(i){
-      var c = i.severity==='error' ? 'var(--disp)' : (i.severity==='info' ? 'var(--grey-2)' : 'var(--warn-2)');
-      return '<li style="color:'+c+'">line '+i.row+' · <b>'+esc(i.column)+'</b> — '+esc(i.message)+'</li>';
-    }).join('');
-
-    out.innerHTML = badge
-      + '<div style="font-size:var(--fs-2);margin:9px 0 6px">'+s.rows+' row(s) read · <b>'+s.importable+'</b> would import · '+s.errors+' error(s) · '+s.warnings+' warning(s)</div>'
-      + '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead><tr>'
-      + ['In your file','','What to do with it','Why'].map(function(h){ return '<th style="text-align:start;padding:5px 8px;font-size:var(--fs-1);text-transform:uppercase;color:var(--grey);border-bottom:1px solid var(--line)">'+h+'</th>'; }).join('')
-      + '</tr></thead><tbody>'+rowsHtml+'</tbody></table></div>'
-      + ((r.notes||[]).length ? '<ul style="font-size:var(--fs-2);line-height:1.6;padding-inline-start:18px;margin:10px 0 0">'+r.notes.map(function(n){ return '<li>'+esc(n)+'</li>'; }).join('')+'</ul>' : '')
-      + (issues ? '<div style="font-size:var(--fs-1);text-transform:uppercase;color:var(--grey);margin:10px 0 4px">' + tx('Rows') + '</div><ul style="font-size:var(--fs-2);line-height:1.6;padding-inline-start:18px;margin:0">'+issues+'</ul>'
-          + ((r.issues||[]).length>25 ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px">…and '+((r.issues||[]).length-25)+' more.</div>' : '') : '')
-      + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:11px;border-top:1px solid var(--line);padding-top:8px">' + txf('Reading the file changed nothing. {import} applies the choices above — it adds and updates products, and never deletes one.', {
-      import: '<b>' + tx('Import') + '</b>' }) + '</div>';
-
-    // The Import button is enabled only when the file itself is sound. Row errors are not a warning to click past:
-    // the server refuses them too, and offering the button anyway teaches people to ignore it.
-    var ib = document.getElementById('cf_import');
-    if(ib){ ib.disabled = blocking; ib.style.opacity = blocking ? '.5' : '1';
-      ib.title = blocking ? 'Fix the row problems first' : 'Apply these choices to your catalogue'; }
-  }catch(e){
-    out.innerHTML = '<div style="font-size:var(--fs-2);color:var(--disp)">'+esc((e&&e.message)||'Could not read the file.')+'</div>';
-  }finally{ if(btn){ btn.disabled = false; btn.textContent = was; } }
-}
-/**
- * _cfImport — apply the per-column choices.
- *
- * The decisions come from the dropdowns, NOT from the preflight's suggestions: what the person sees on screen is
- * exactly what is sent. The server re-reads the file and re-checks every decision, so nothing here is trusted.
- */
-function _cfImport(btn){
-  if(!UI._cf){ if(typeof toast==='function') toast('Check a file first.'); return; }
-  var out = document.getElementById('cf_out');
-  var sels = Array.prototype.slice.call(document.querySelectorAll('[data-cfcol]'));
-  var decisions = sels.map(function(el){
-    var v = el.value || 'ignore';
-    if(v === 'create') return { incoming: el.getAttribute('data-cfcol'), action: 'create' };
-    if(v.indexOf('map:') === 0) return { incoming: el.getAttribute('data-cfcol'), action: 'map', field: v.slice(4) };
-    return { incoming: el.getAttribute('data-cfcol'), action: 'ignore' };
-  });
-  var creating = decisions.filter(function(d){ return d.action === 'create'; }).length;
-  var using = decisions.filter(function(d){ return d.action !== 'ignore'; }).length;
-  if(!using){ if(typeof toast==='function') toast('Every column is set to be left out.'); return; }
-  confirmAsk('Import using ' + using + ' column' + (using===1?'':'s') + '?',
-    (creating ? 'It also adds <b>' + creating + ' new column' + (creating===1?'':'s') + '</b> to your catalogue.<div style="margin-top:7px">' : '<div>')
-    + txf('Products are {au}. Nothing is deleted.', { au: '<b>' + tx('added or updated') + '</b>' }) + '</div>',
-    'Import', function(){ _cfImportRun(btn, decisions, out); });
-}
-async function _cfImportRun(btn, decisions, out){
-  var was = btn.textContent; btn.disabled = true; btn.textContent = 'Importing…';
-  try{
-    var r = await api('prodImport', { body:{ csv: UI._cf.csv, decisions: decisions, confirm: true } });
-    var sum = r.summary || {};
-    out.innerHTML = '<div style="background:var(--ok-tint);color:var(--ok-2);border-radius:6px;padding:8px 10px;font-size:var(--fs-2);font-weight:700">'+esc(r.message||'Imported')+'</div>'
-      + ((r.created_columns||[]).length ? '<div style="font-size:var(--fs-2);color:var(--grey);margin-top:8px">Your catalogue now also has: '+r.created_columns.map(esc).join(', ')+'. The next template you download will include them.</div>' : '')
-      + '<ul style="font-size:var(--fs-2);line-height:1.6;padding-inline-start:18px;margin:10px 0 0">'
-      + (r.outcome||[]).slice(0,40).map(function(o){
-          var c = o.action==='failed' ? 'var(--disp)' : 'var(--ink)';
-          return '<li style="color:'+c+'">line '+o.line+' · '+esc(o.name||'')+' — '+esc(o.action)+(o.message?': '+esc(o.message):'')+'</li>';
-        }).join('')
-      + '</ul>'
-      + ((r.outcome||[]).length>40 ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px">…and '+((r.outcome||[]).length-40)+' more.</div>' : '');
-    btn.disabled = true; btn.style.opacity = '.5';
-    if(typeof loadProducts === 'function') loadProducts();
-  }catch(e){
-    out.innerHTML = '<div style="font-size:var(--fs-2);color:var(--disp)">'+esc((e&&e.message)||'Could not import.')+' Nothing was changed.</div>';
-    btn.disabled = false;
-  }finally{ btn.textContent = was; }
-}
-
 /**
  * ⭐⭐ CATEGORY ON THE PRODUCT FORM — the form people actually use.
  *
@@ -12600,7 +12315,6 @@ function prodEffectiveField(){
 /* CU4: it asked for a capital-T dateTime on CBLocale (no such function), so every caller printed the OS locale. The one formatter, with the year it always showed */
 function fmtDateTime(x){ try{ return CBLocale.datetime(x,{ day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }); }catch(_){ return String(x); } }
 function prodEffectiveAt(){ const v=val('ct_effective'); if(!v) return null; const t=new Date(v); return (t.getTime()>Date.now()+30000)?t.toISOString():null; }
-function prodDiff(cur, next){ const out={}; Object.keys(next||{}).forEach(k=>{ if(JSON.stringify((cur||{})[k])!==JSON.stringify(next[k])) out[k]=next[k]; }); return out; }
 
 /* ═══ EVERY FIELD THIS ITEM CARRIES ════════════════════════════════════════════════════════════════════════════
  * Athi, 2026-08-13: *"the other information like synonym etc are not visible… clicking one item possibly bring
@@ -12687,12 +12401,6 @@ function catFieldRow(k, v){
  * another system; listing them as "you could fill this in" invites someone to forge a record of something that
  * never happened. The read-only set already says which those are — one definition, used for both jobs.
  */
-const catDeclared = async function(){
-  if (UI._catFields) return UI._catFields;                 // once per session — this is a definition, not data
-  try { const r = await api('schemaFields'); UI._catFields = (r && r.fields) || []; }
-  catch (_) { UI._catFields = []; }                        // no definition is not an error; it just means no hints
-  return UI._catFields;
-};
 function catUnusedRow(k, label, why, required){
   return '<div style="display:flex;gap:10px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:var(--fs-2)">'
     + '<b style="min-width:118px;color:var(--grey);font-weight:600;font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.03em">'
@@ -17363,7 +17071,7 @@ function val(id){const el=document.getElementById(id);return el?el.value.trim():
  * where it does not (a one-word name of 8+ letters), addSupplier now falls through to the local offer on a 404
  * rather than dead-ending. Neither test has to be perfect because the failure is caught downstream.
  */
-function isUserId(v){ v=(v||"").trim(); return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) || (v.length>=8 && !/\s/.test(v)); }
+/* isUserId → app/cap-suppliers.js (T3-OPS) */
 function logoMark(s){return `<svg width="${s}" height="${s}" viewBox="0 0 32 32"><circle cx="16" cy="16" r="12.5" fill="none" stroke="var(--gold)" stroke-width="1.6"/><path d="M7 19 Q16 9 25 19" fill="none" stroke="var(--gold)" stroke-width="2.4" stroke-linecap="round"/><circle cx="7" cy="19" r="1.6" fill="var(--gold)"/><circle cx="25" cy="19" r="1.6" fill="var(--gold)"/></svg>`;}
 function logo(){return `<div class="brand">${logoMark(26)} Chit &amp; Bridge</div>`;}
 function setStage(k){ const s=STAGES[k]; if(!s) return; if(!s.mock && !s.base){ toast(s.label+" — API base not set yet (config)."); return; } CFG.STAGE=k; if(s.mock) STORE=deepClone(DEMO); route(); }
