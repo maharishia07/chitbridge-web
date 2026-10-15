@@ -22,6 +22,7 @@
 const path = require('path');
 const W = require('./lib/walk.cjs');
 const books = require('./lib/books-api.cjs'), crmApi = require('./lib/crm-api.cjs');
+const C = require('./lib/contract.cjs');   /* M43: every /api/books answer this stand-in serves is held to the API contract */
 const J = (r, status, body) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
 const INDIA = /GSTIN|\bPAN\b|₹/;
 const WIDE = { width: 1366, height: 860 }, PHONE = { width: 390, height: 800 };
@@ -74,7 +75,8 @@ function answers(shop) {
 const walk = async (w) => {
   const { page, ctx, base } = w;
   const S = { shop: SHOPS[0], a: answers(SHOPS[0]) };
-  await ctx.route('**/api/**', (r) => {
+  await ctx.route('**/api/**', (r0) => {
+    const r = C.wrap(r0);
     const u = new URL(r.request().url()), p = u.pathname;
     if (p === '/api/entities/header') return J(r, 200, S.a.header);
     if (p === '/api/entities/sides') return J(r, 200, S.a.sides);
@@ -111,7 +113,7 @@ const walk = async (w) => {
     });
     await w.step(cc + '-2', who + ' · the shop sheet › TRADE READY lists the pack\'s checks (' + X.checks.join(' · ') + ')', async () => {
       await page.click('.cbsh-who'); await page.waitForSelector('[data-testid="shell-sheet-full"]', { state: 'visible', timeout: 5000 });
-      const checks = await page.$$eval('[data-testid="shell-check"]', (els) => els.map((e) => e.textContent.replace(/\s+/g, ' ').trim()));
+      const checks = await page.$$eval('[data-testid="shell-check"]', (els) => els.map((e) => e.textContent.replace(/✓/g, '').replace(/\s+/g, ' ').trim()));
       const sheet = await txt('[data-testid="shell-sheet-full"]');
       return { ok: checks.join('|') === X.checks.join('|') && india(cc, sheet), saw: checks.join(' · ') };
     });
@@ -148,10 +150,11 @@ const walk = async (w) => {
   await home();
   await w.step('P-2', 'AU · Home at 390 px: the sheet lists ABN, no sideways scroll, the card wears A$', async () => {
     await page.click('.cbsh-who'); await page.waitForSelector('[data-testid="shell-sheet-full"]', { state: 'visible', timeout: 5000 });
-    const checks = await page.$$eval('[data-testid="shell-check"]', (els) => els.map((e) => e.textContent.replace(/\s+/g, ' ').trim()));
+    const checks = await page.$$eval('[data-testid="shell-check"]', (els) => els.map((e) => e.textContent.replace(/✓/g, '').replace(/\s+/g, ' ').trim()));
     const ok = await noSideways(), card = await txt('[data-testid="shell-card-accounts"] .g');
     return { ok: ok && checks.includes('ABN') && !checks.some((c) => INDIA.test(c)) && card === 'A$', saw: (ok ? 'no sideways scroll' : 'SIDEWAYS SCROLL') + ' · ' + checks.join(' · ') + ' · card ' + card };
   });
+  await w.step('M43', 'the stand-in answered every /api/books call as the API contract says', async () => { const [ok, saw] = C.finish(); return { ok, saw }; });
 };
 walk.opts = { viewport: WIDE };
 W.run('au-words', walk);
