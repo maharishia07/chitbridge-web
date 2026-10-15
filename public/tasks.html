@@ -1,5 +1,9 @@
 <!doctype html>
 <html lang="en" data-tokens="list">
+<!-- OWNS  the Tasks page: the rail's task list as its own page (the Task table of app.html, one CBList), a row opens the chit.
+     CALLED BY Home's Tasks card (manifest /tasks.html) and the bell.
+     FLOW  load → CBFrame → GET /api/chits/inbox (paged) → CBList paints → openChit
+     CARD 01-rail-core-the-chit/tasks-page -->
 <head>
 <meta charset="utf-8">
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->

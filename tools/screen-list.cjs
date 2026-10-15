@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 /**
+ * OWNS  docs/SCREEN-LIST.md — generated from the register (public/app/screen-id.js DECLARED), never typed.
+ * CALLED BY e2e/screen-id-guard.cjs (the list must match the register), by hand after a screen is added.
+ * CARD 29-qa-test-tooling-ux-locale-and-design-system/screen-id
  * tools/screen-list.cjs — THE SCREEN LIST, GENERATED FROM THE REGISTER (round SCREEN-ID, 2026-10-14).
  *
  * Athi, 2026-10-14: *"assuming we call one function from another screen, and it has a screen, it should be reflecting"* — so the list says,

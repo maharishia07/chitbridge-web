@@ -1,4 +1,6 @@
 /* cap-crm-record.js — CB CRM: ONE party's record, its timeline, the Log sheet, the Next block, and the party edit.
+ * FLOW  crmRecordOpen(route) → the party and timeline reads (crmParty · crmTimeline) → crmRecordPaint → the actions greyed by the server's may/why
+ * CARD 11-crm-and-marketing/crm-record
  * Loaded by crm.html after cap-crm.js (which owns the list, the router and the shared helpers). docs/design/crm/REQUIREMENT-record.md ·
  * REQUIREMENT-timeline.md · FLOWS F3–F8 · the designer handoff, where the FROZEN list standard wins: both timeline views are CBList
  * mounts (the record's latest five, and the full server-paged history) — no entry, row or card is drawn by hand.
@@ -156,8 +158,7 @@ async function crmRecordOpen(route) {
   try {
     /* a walk-in is a phone that holds points, not a party: the API has no record of it (its party_id is null) - the row is all there is */
     var got = p.kind === 'walk-in' ? [{}, null] : await Promise.all([api('crmParty', { params: { id: p.party_id } }), api('crmTimeline', { params: { id: p.party_id }, query: { limit: 100 } }).catch(function () { return null; })]);
-    rec = got[0]; head = got[1];
-    crmMaySet(rec && rec.may);   /* the server's may/why for this login rides the record (W2-CRM) */
+    rec = got[0]; head = got[1]; crmMaySet(crmMayOf(rec));   /* the server's may/why for this login rides the record (W2-CRM) */
     /* the person may have LEFT this record while the read was out (WX-L2C: a stage move re-reads the record; Leads opened meanwhile, and the
        record painted over the Leads list under the Leads bar): a read that lands on another screen paints nothing */
     if (tok !== CRMR.tok || CRM.route !== route) return;
@@ -264,6 +265,11 @@ function crmViewerActionsHTML(p, rec) {
   }
   return '<div class="actbar pin" role="toolbar" aria-label="' + esc(tx('Actions')) + '" data-testid="crm-actions" data-level="viewer">' + b.join('') + '<span class="why" data-testid="crm-actions-why">' + esc(why) + '</span></div>';
 }
+/** W2-CRM: Remove is SHOWN to every login; the SERVER's may.remove greys it with its sentence (owner only), open dues grey it too */
+function crmRemoveItemHTML(p, icon) {
+  var mayRemove = crmMayRemove(), removeWhy = !mayRemove.ok ? mayRemove.why : (CRM.ledger && !!p.balance_minor ? tx('dues open') : '');
+  return '<button type="button" class="danger" data-crm="rremove" data-testid="crm-more-remove"' + (removeWhy ? ' disabled aria-disabled="true" title="' + esc(removeWhy) + '"' : '') + '>' + icon('warn') + esc(tx('Remove from my parties')) + (removeWhy ? '<span class="why" data-testid="crm-more-remove-why">' + esc(removeWhy) + '</span>' : '') + '</button>';
+}
 function crmActionsHTML(p, rec) {
   if (!crmEdit()) return crmViewerActionsHTML(p, rec);
   var c = rec.contacts || {}, phone = (c.phones || [])[0], mail = (c.emails || []).filter(function (m) { return !(rec.mail_bounced && rec.mail_bounced.to === m); })[0] || (c.emails || [])[0], mb = crmMailBlock(p, rec), primary, inline = [];
@@ -286,10 +292,7 @@ function crmActionsHTML(p, rec) {
   if (mb && p.kind !== 'walk-in') more.push('<button type="button" disabled data-testid="crm-act-mail-off" title="' + esc(mb) + '">' + icon('mail') + esc(tx('Mail')) + '<span class="why" data-testid="crm-mail-why">' + esc(mb) + '</span></button>');
   if (!mb && inline.indexOf(mailBtn) >= 0) more.push('<a class="narrow-only" style="display:flex;align-items:center;gap:8px;min-height:40px;padding:0 12px;text-decoration:none;color:var(--ink)" href="mailto:' + esc(mail || '') + '">' + icon('mail') + esc(tx('Mail')) + '</a>');
   if (p.kind !== 'walk-in' && p.roles.length === 1) more.push('<button type="button" data-crm="alsorole" data-testid="crm-more-also">' + icon('plus') + esc(tx(p.roles[0] === 'customer' ? 'Also a supplier' : 'Also a customer')) + '</button>');
-  if (p.kind !== 'walk-in') {   /* W2-CRM: Remove is SHOWN to every login; the SERVER's may.remove greys it with its sentence (owner only), open dues grey it too */
-    var mayRemove = crmMayRemove(), removeWhy = !mayRemove.ok ? mayRemove.why : (CRM.ledger && !!p.balance_minor ? tx('dues open') : '');
-    more.push('<button type="button" class="danger" data-crm="rremove" data-testid="crm-more-remove"' + (removeWhy ? ' disabled aria-disabled="true" title="' + esc(removeWhy) + '"' : '') + '>' + icon('warn') + esc(tx('Remove from my parties')) + (removeWhy ? '<span class="why" data-testid="crm-more-remove-why">' + esc(removeWhy) + '</span>' : '') + '</button>');
-  }
+  if (p.kind !== 'walk-in') more.push(crmRemoveItemHTML(p, icon));
   var wide = p.kind === 'walk-in' ? '' : '<button type="button" class="act quiet wide-only" data-crm="rfu" data-testid="crm-act-fu">' + icon('clock') + esc(tx('Follow-up')) + '</button><button type="button" class="act quiet wide-only" data-crm="redit" data-testid="crm-act-edit">' + icon('pencil') + esc(tx('Edit')) + '</button>';
   return '<div class="actbar pin" role="toolbar" aria-label="' + esc(tx('Actions')) + '" data-testid="crm-actions">' + primary + inline.join('') + '<button type="button" class="act quiet" data-crm="rlog" data-testid="crm-act-log">' + icon('note') + esc(tx('Log')) + '</button>' + wide
     + crmStageBtn(p) + '<span class="more"><button type="button" class="act quiet" data-crm="rmore" aria-haspopup="true" aria-expanded="' + CRMR.menu + '" data-testid="crm-act-more">' + icon('dots') + esc(tx('More')) + '</button>' + (CRMR.menu && more.length ? '<div class="menu" role="menu" data-testid="crm-more-menu">' + more.join('') + '</div>' : '') + '</span></div>';

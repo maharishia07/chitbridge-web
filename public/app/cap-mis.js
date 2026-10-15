@@ -1,4 +1,5 @@
 /* app/cap-mis.js — CB FINANCE › REPORTS: the rail measured, by the server, as one list (T3-P4-ACCOUNT, 2026-10-14).
+ * CARD 16-finance/reports
  *
  * Owner, 14 Oct: "follow the same design standards or better … much simpler". The workshop's MIS (cap-admin.js misScreen · _loadMIS) draws seven
  * bands over TWO answers: the server's one measurement (GET /api/folders/mis → lib/measure, the engine the folder pane, the scorecard and Home's rail

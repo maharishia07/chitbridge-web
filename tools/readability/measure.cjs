@@ -346,9 +346,11 @@ function countComments(blocks, relPath, counters) {
   }
 }
 
+/** a `'use strict';` directive is not the file's first code: the api's modules open `// @stage` · 'use strict' · the header block (INT7b) */
+const isDirective = (node) => node && node.type === 'ExpressionStatement' && typeof node.directive === 'string';
 /** the comment that opens the file (first chunk); for HTML also the page's first <!-- --> */
 function readHeader(syntaxTree, comments, relPath, text) {
-  const body = syntaxTree.body;
+  const body = syntaxTree.body.filter((node) => !isDirective(node));
   const firstCode = body.length ? body[0].loc.start.line : Infinity;
   const leading = comments.filter((comment) => comment.loc.start.line <= Math.min(firstCode, HEADER_MAX_LINE)).slice(0, HEADER_MAX_COMMENTS);
   let header = leading.map((comment) => comment.value).join('\n');

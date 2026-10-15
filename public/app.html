@@ -1,5 +1,9 @@
 <!DOCTYPE html>
 <html lang="en" data-tokens="list">
+<!-- OWNS  the workshop: the Task panel and every capability screen (cap-*.js loaded on demand) — not a customer page (index-not-app).
+     CALLED BY the walks and the design references only; no customer page links it (e2e/index-not-app.cjs).
+     FLOW  load → core.js api() → the Task table (listHeader · rowGrid) → a screen opens → ensureCap → its panel paints
+     CARD 01-rail-core-the-chit/task-panel -->
 <head>
 <meta charset="UTF-8">
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
@@ -15256,12 +15260,12 @@ const PG = {};
 function pgInit(id, cfg){ PG[id] = { cfg, page:0, total:0, loading:false, done:false, capNote:'' }; }
 function pgReset(id){ const p=PG[id]; if(p){ p.page=0; p.total=0; p.loading=false; p.done=false; p.capNote=''; } }
 function pgDone(id){ const p=PG[id]; return !p || p.done; }
+/* W2-RAIL R2: the server says when a page was CUT (`capped` + `cap_note`, lib/page-limit capOf) — kept on the pager, painted by pgFooter */
+function pgCapNoteOf(res){ return (res && res.capped && res.cap_note) ? String(res.cap_note) : ''; }
 async function pgNext(id){ const p=PG[id]; if(!p||p.loading||p.done) return;
   p.loading=true; try{ p.cfg.repaint&&p.cfg.repaint(); }catch(_){}
   try{ const lim=p.cfg.limit||50; const res=await p.cfg.fetch(p.page+1, lim); const raw=(res||[]); const rows=p.cfg.map?raw.map(p.cfg.map):raw.slice();
-    if(res&&res.total!=null) p.total=res.total; p.page++; p.cfg.store(rows, p.page===1);
-    /* W2-RAIL R2: the server says when a page was CUT (`capped` + `cap_note`, lib/page-limit capOf) — kept, painted by pgFooter */
-    p.capNote = (res&&res.capped&&res.cap_note) ? String(res.cap_note) : '';
+    if(res&&res.total!=null) p.total=res.total; p.page++; p.cfg.store(rows, p.page===1); p.capNote=pgCapNoteOf(res);
     if(raw.length===0 || raw.length<lim || (p.total>0 && p.cfg.count()>=p.total)) p.done=true;
   }catch(_){ }
   finally{ p.loading=false; try{ p.cfg.repaint&&p.cfg.repaint(); }catch(_){}; } }
@@ -15275,11 +15279,11 @@ function pgTotalText(id){ const p=PG[id]; if(!p||!p.total)return ''; const shown
 function pgFooter(id){ const p=PG[id]; if(!p)return ''; const c=p.cfg.count();
   if(p.loading) return '<div class="listend"><span class="spin"></span> loading more…'+(p.total>0?(' ('+c+'/'+p.total+')'):'')+'</div>';
   /* W2-RAIL R2: a cut page says so, in the server's words (never a silent 200-row ceiling) */
-  const cap = p.capNote ? '<div class="listend" data-testid="pg-cap-note">'+esc(p.capNote)+'</div>' : '';
-  if(!p.done) return cap+'<div class="listend"><button class="composebtn" onclick="pgNext(\''+id+'\')">' + tx('↓ Load more') + '</button>'+(p.total>0?('<span style="color:var(--grey)">'+c+' of '+p.total+' loaded</span>'):'')+'</div>';
+  const capLine = p.capNote ? '<div class="listend" data-testid="pg-cap-note">'+esc(p.capNote)+'</div>' : '';
+  if(!p.done) return capLine+'<div class="listend"><button class="composebtn" onclick="pgNext(\''+id+'\')">' + tx('↓ Load more') + '</button>'+(p.total>0?('<span style="color:var(--grey)">'+c+' of '+p.total+' loaded</span>'):'')+'</div>';
   /* The total is stated once, at the top (pgTotalText). Down here the only new information is that the list has
      ended — repeating "16 total" was the second half of the same duplication. */
-  return cap+'<div class="listend">— end of list —</div>'; }
+  return capLine+'<div class="listend">— end of list —</div>'; }
 /* static footer for small, non-paginated lists (count + end marker, no Load more) */
 /* the Task/Order list bar */
 function pgPaintTotal(){ const lt=document.getElementById("listtotal"); if(!lt)return; lt.innerHTML='<span class="lttxt"><button class="colcog fold" onclick="event.stopPropagation();toggleLhFold()" title="'+(UI.lhFold?'Show search, filters and tools':'Fold search and tools away')+'">'+(UI.lhFold?tx('⌄ show tools'):tx('⌃ hide tools'))+'</button>'+esc(pgTotalText('list'))+'</span><span class="lttools">'+sortPresetSelect()+'<button class="colcog" onclick="event.stopPropagation();toggleLegend()" title="Legend / key">' + tx('🔑 key') + '</button>'+(UI.legendOpen?listLegend():'')+'</span>'; }

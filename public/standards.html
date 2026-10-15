@@ -1,5 +1,9 @@
 <!doctype html>
 <html lang="en" data-tokens="list">
+<!-- OWNS  the Standards page: the register (cap-standards.js), Works with (compat.json), Compared with (compare.json), the country matrix — one CBList.
+     CALLED BY Home's Standards and Compatibility cards, Settings › Standards, Country setup (?std=country).
+     FLOW  load → compat.json · compare.json · country-matrix.json → start(): framePaint → mountList → paintMatrix → a row opens (nextOf)
+     CARD 29-qa-test-tooling-ux-locale-and-design-system/standards-page -->
 <head>
 <meta charset="utf-8">
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
@@ -239,14 +243,14 @@ function addCompat(json){ stdCompatRows(json).forEach((r) => ROWS.push({ ix: ROW
 /* ⭐ STD-COMPARE: the "Compared with" tab's rows — ONE file, public/data/compare.json, mapped by stdCompareRows (cap-standards.js). Not standards, so never in ROWS,
    the matrix or the All view: the view carries them itself (CBList views[].rows). ix 'c<n>' keeps their ids and test ids apart from the register's. */
 let CMP_ROWS = [], CMP_ERR = '';
-function addCompare(json){ CMP_ROWS = stdCompareRows(json).map((r, i) => ({ ix: 'c' + i, r: r })); }
+function addCompare(json){ CMP_ROWS = stdCompareRows(json).map((row, index) => ({ ix: 'c' + index, r: row })); }
 const CMP_STATUS_ORDER = { ahead: 0, level: 1, behind: 2, 'n/a': 3 };
 const CMP_COUNTRY_FALLBACK = 'IN';   /* no shop country known (not signed in, or /me not landed yet): India, the first pack */
 const AREA = (r) => lab(STD_AREAS, r.a), PAREA = (r) => lab(STD_PRODUCT_AREAS, r.pa), KIND = (r) => lab(STD_KINDS, r.k), COUNTRY = (r) => r.c.map((c) => lab(STD_COUNTRIES, c)).join(' · '), STATUS = (r) => lab(STD_STATUS, r.s);
 const SORD = { live: 0, part: 1, plan: 2 };
 function countOf(rows){ var n = { live: 0, part: 0, plan: 0 }; rows.forEach((r) => { n[r.s]++; }); return n; }
 /* STD-COMPARE: a group head's figure on the Compared with tab — ahead · level · behind (n/a rows are in the count, not in the three) */
-function cmpFig(rows){ var n = { ahead: 0, level: 0, behind: 0, 'n/a': 0 }; rows.forEach((x) => { n[x.r.cs]++; }); return rows.length + ' · ▲ ' + n.ahead + ' = ' + n.level + ' ▼ ' + n.behind; }
+function cmpFig(rows){ var counts = { ahead: 0, level: 0, behind: 0, 'n/a': 0 }; rows.forEach((x) => { counts[x.r.cs]++; }); return rows.length + ' · ▲ ' + counts.ahead + ' = ' + counts.level + ' ▼ ' + counts.behind; }
 
 /* ═════ THE DECLARATION — what this page tells CBList ═════ */
 const FILTERS = [
@@ -256,13 +260,13 @@ const FILTERS = [
      sort; not a Group by button — a fifth button wraps the toolbar past the head's 20% (the walk measures it) */
   { key: 'parea', label: 'Product area', all: 'Any', options: STD_PRODUCT_AREAS.filter((a) => STANDARDS.some((r) => r.pa === a[0])).map((a) => ({ v: a[0], label: a[1] })), match: (x, v) => x.r.pa === v },
   /* STD-COMPARE: 'compare' is the Compared-with view's own key — a choice in this popover is the tab, said twice; it is not a Kind of the register (STD_KINDS), so the matrix never counts it */
-  { key: 'kind', label: 'Kind', all: 'Any', options: STD_KINDS.map((k) => ({ v: k[0], label: k[1] })).concat([{ v: 'compare', label: 'Compared with' }]), match: (x, v) => x.r.k === v },
+  { key: 'kind', label: 'Kind', all: 'Any', options: STD_KINDS.map((kind) => ({ v: kind[0], label: kind[1] })).concat([{ v: 'compare', label: 'Compared with' }]), match: (x, value) => x.r.k === value },
   { key: 'country', label: 'Applies in', all: 'Any', options: STD_COUNTRIES.map((c) => ({ v: c[0], label: c[1] })), match: (x, v) => x.r.c.indexOf(v) >= 0 },
 ];
 /* STD-COMPARE: the Package filter — its choices are the packages compare.json names (read before the first paint), so it joins FILTERS in start() */
 function packageFilter(){
   var names = []; CMP_ROWS.forEach((x) => { if (names.indexOf(x.r.pkg) < 0) names.push(x.r.pkg); });
-  return { key: 'package', label: 'Package', all: 'Any', options: names.sort().map((n) => ({ v: n, label: n })), match: (x, v) => x.r.pkg === v };
+  return { key: 'package', label: 'Package', all: 'Any', options: names.sort().map((name) => ({ v: name, label: name })), match: (x, value) => x.r.pkg === value };
 }
 function groupBy(x, mode){
   var r = x.r;
@@ -291,11 +295,12 @@ const COMPARED = { key: 'compared-with', label: 'Compared with', filt: { kind: '
 function comparedOn(){ return nowFilt().kind === 'compare'; }
 /* the status of a comparison: a symbol AND a word, never colour alone (STD_COMPARE_STATUS); a claim from memory says "to confirm" beside it */
 function cmpStatusCell(x){
-  var s = STD_COMPARE_STATUS[x.r.cs] || STD_COMPARE_STATUS['n/a'], cls = x.r.cs === 'n/a' ? 'na' : x.r.cs;
-  return '<span class="st cs-' + esc(cls) + '" data-testid="std-cmp-status" title="' + esc(s[1] + ' — ' + STD_COMPARE_VERIFIED[x.r.verified]) + '"><span aria-hidden="true">' + esc(s[0]) + '</span> ' + esc(s[1]) + '</span>'
+  var status = STD_COMPARE_STATUS[x.r.cs] || STD_COMPARE_STATUS['n/a'], statusClass = x.r.cs === 'n/a' ? 'na' : x.r.cs;
+  return '<span class="st cs-' + esc(statusClass) + '" data-testid="std-cmp-status" title="' + esc(status[1] + ' — ' + STD_COMPARE_VERIFIED[x.r.verified]) + '"><span aria-hidden="true">' + esc(status[0]) + '</span> ' + esc(status[1]) + '</span>'
     + (x.r.verified === 'memory' ? ' <span class="tc" data-testid="std-cmp-confirm">to confirm</span>' : '');
 }
 const CMP_DEFAULT_COLS = ['pkg', 'cap', 'theirs', 'ours'];
+/* the Compared-with view's own columns — package · capability · theirs · ours first (CMP_DEFAULT_COLS), the register's shared ones after */
 function compareCols(){
   return [
     { key: 'pkg', label: 'Package', prio: 1, w: 150, sort: 'pkg', cell: (x) => x.r.pkg },
@@ -343,42 +348,44 @@ const SORTS = [
   /* STD-COMPARE: the Compared-with view's own sorts (its rows carry pkg · capability · cs; a register row sorts to the end) */
   { key: 'pkg', label: 'Package', cmp: byText((x) => x.r.pkg || '~') },
   { key: 'cap', label: 'Capability', cmp: byText((x) => x.r.capability || '~') },
-  { key: 'cstatus', label: 'Compared', cmp: (a, b) => (CMP_STATUS_ORDER[a.r.cs] || 0) - (CMP_STATUS_ORDER[b.r.cs] || 0) || byText((x) => x.r.pkg || '~')(a, b) },
+  { key: 'cstatus', label: 'Compared', cmp: (left, right) => (CMP_STATUS_ORDER[left.r.cs] || 0) - (CMP_STATUS_ORDER[right.r.cs] || 0) || byText((x) => x.r.pkg || '~')(left, right) },
 ];
 
 /* ⭐ STD-COMPARE: what a comparison row opens to — theirs · ours · better · the status in words · verified · every source (a link, a document on this web
    checkout, or a document in the docs library said in words — never a dead link) */
-function sourceHTML(src, ix){
-  if (!src.length) return '<span class="miss">No source named — treat the row as unverified.</span>';
-  return src.map((s, i) => {
-    var tid = ' data-testid="std-cmp-src-' + ix + '-' + i + '"';
-    if (s.url) return '<span class="src"><a href="' + esc(s.url) + '" target="_blank" rel="noopener"' + tid + '>' + esc(s.url) + '</a></span>';
-    var where = s.where ? ' § ' + s.where : '';
-    if (s.copy) return '<span class="src"' + tid + '><code>' + esc(s.doc) + '</code>' + esc(where) + ' — a copy is in this repository, chitbridge-web ' + esc(s.copy) + '</span>';
-    return '<span class="src"' + tid + '><code>' + esc(s.doc) + '</code>' + esc(where) + ' — in the docs library (C:/dev/docs), not on the web</span>';
+function sourceHTML(sources, rowIndex){
+  if (!sources.length) return '<span class="miss">No source named — treat the row as unverified.</span>';
+  return sources.map((source, index) => {
+    var testId = ' data-testid="std-cmp-src-' + rowIndex + '-' + index + '"';
+    if (source.url) return '<span class="src"><a href="' + esc(source.url) + '" target="_blank" rel="noopener"' + testId + '>' + esc(source.url) + '</a></span>';
+    var where = source.where ? ' § ' + source.where : '';
+    if (source.copy) return '<span class="src"' + testId + '><code>' + esc(source.doc) + '</code>' + esc(where) + ' — a copy is in this repository, chitbridge-web ' + esc(source.copy) + '</span>';
+    return '<span class="src"' + testId + '><code>' + esc(source.doc) + '</code>' + esc(where) + ' — in the docs library (C:/dev/docs), not on the web</span>';
   }).join('');
 }
+/* what a comparison row opens to: capability · theirs · ours · better because · the status in words · verified · its sources */
 function compareNext(x){
-  var r = x.r, s = STD_COMPARE_STATUS[r.cs] || STD_COMPARE_STATUS['n/a'], h = '<dl class="sd" data-testid="std-detail-' + x.ix + '">';
-  h += '<dt>Capability</dt><dd>' + esc(r.capability) + ' · ' + esc(r.pkg) + ' · ' + esc(r.countryName) + '</dd>';
-  h += '<dt>Theirs</dt><dd>' + esc(r.theirs || '—') + '</dd><dt>Ours</dt><dd>' + esc(r.ours || '—') + '</dd>';
-  if (r.better) h += '<dt>Better because</dt><dd>' + esc(r.better) + '</dd>';
-  h += '<dt>Compared</dt><dd><span class="st cs-' + esc(r.cs === 'n/a' ? 'na' : r.cs) + '"><span aria-hidden="true">' + esc(s[0]) + '</span> ' + esc(s[1]) + '</span>'
-    + (r.cs === 'n/a' ? ' <span class="exw">The sources say nothing we can hold either side to.</span>' : '') + '</dd>';
-  h += '<dt>Verified</dt><dd data-testid="std-cmp-verified-' + x.ix + '">' + esc(STD_COMPARE_VERIFIED[r.verified]) + '</dd>';
-  h += '<dt>Source</dt><dd data-testid="std-cmp-sources-' + x.ix + '">' + sourceHTML(r.src, x.ix) + '</dd></dl>';
-  return stdGloss(h);
+  var row = x.r, status = STD_COMPARE_STATUS[row.cs] || STD_COMPARE_STATUS['n/a'], html = '<dl class="sd" data-testid="std-detail-' + x.ix + '">';
+  html += '<dt>Capability</dt><dd>' + esc(row.capability) + ' · ' + esc(row.pkg) + ' · ' + esc(row.countryName) + '</dd>';
+  html += '<dt>Theirs</dt><dd>' + esc(row.theirs || '—') + '</dd><dt>Ours</dt><dd>' + esc(row.ours || '—') + '</dd>';
+  if (row.better) html += '<dt>Better because</dt><dd>' + esc(row.better) + '</dd>';
+  html += '<dt>Compared</dt><dd><span class="st cs-' + esc(row.cs === 'n/a' ? 'na' : row.cs) + '"><span aria-hidden="true">' + esc(status[0]) + '</span> ' + esc(status[1]) + '</span>'
+    + (row.cs === 'n/a' ? ' <span class="exw">The sources say nothing we can hold either side to.</span>' : '') + '</dd>';
+  html += '<dt>Verified</dt><dd data-testid="std-cmp-verified-' + x.ix + '">' + esc(STD_COMPARE_VERIFIED[row.verified]) + '</dd>';
+  html += '<dt>Source</dt><dd data-testid="std-cmp-sources-' + x.ix + '">' + sourceHTML(row.src, x.ix) + '</dd></dl>';
+  return stdGloss(html);
 }
 /* the row's first web source — what "Open the source" opens; a row with none is greyed with the sentence (never a dead link) */
-function sourceUrl(r){ var s = r.src.filter((x) => x.url)[0]; return s ? s.url : ''; }
+function sourceUrl(row){ var webSource = row.src.filter((x) => x.url)[0]; return webSource ? webSource.url : ''; }
 function sourceWhy(x){ return sourceUrl(x.r) ? '' : 'The source is a document in the docs library (' + (x.r.src[0] ? x.r.src[0].doc : 'none named') + '), not a page on the web.'; }
 /* "See it": a comparison about the books themselves (their GL/TB/P&L beside ours) is what the parallel run shows live */
 const CMP_SEE = { 'core books': 'compare' };
 function seeKey(x){ return x.r.cmp ? CMP_SEE[x.r.capability] || '' : ''; }
 
+/* STD-COMPARE: a comparison row opens to its own detail; a standard to the register's */
+function openNext(x){ return x.r.cmp ? compareNext(x) : nextOf(x); }
 /* what a row opens to: everything a buyer or CA checks, nothing the row already shows */
 function nextOf(x){
-  if (x.r.cmp) return compareNext(x);   /* STD-COMPARE */
   var r = x.r, shown = (CBList.get('standards') && CBList.get('standards').state().cols) || [], h = '<dl class="sd" data-testid="std-detail-' + x.ix + '">';
   h += '<dt>Covers</dt><dd>' + esc(r.w) + '</dd>';
   if (shown.indexOf('std') < 0) h += '<dt>Reference</dt><dd>' + esc(r.n) + '</dd>';
@@ -436,14 +443,14 @@ function statementOf(r){
   return t.join('\n');
 }
 /* STD-COMPARE: the comparison a buyer or CA pastes — both sides, the status word, how it was verified, every source */
-function compareStatement(r){
-  var s = STD_COMPARE_STATUS[r.cs] || STD_COMPARE_STATUS['n/a'];
-  var t = [r.pkg + ' · ' + r.countryName + ' — ' + r.capability, 'Theirs: ' + (r.theirs || '—'), 'Ours: ' + (r.ours || '—')];
-  if (r.better) t.push('Better because: ' + r.better);
-  t.push('Compared: ' + s[1] + ' · Verified: ' + STD_COMPARE_VERIFIED[r.verified]);
-  t.push('Source: ' + r.src.map((x) => x.url || (x.doc + (x.where ? ' ' + x.where : ''))).join(' ; '));
-  t.push('Checked ' + checkedLabel() + ' (ChitBridge country comparison, data/compare.json)');
-  return t.join('\n');
+function compareStatement(row){
+  var status = STD_COMPARE_STATUS[row.cs] || STD_COMPARE_STATUS['n/a'];
+  var lines = [row.pkg + ' · ' + row.countryName + ' — ' + row.capability, 'Theirs: ' + (row.theirs || '—'), 'Ours: ' + (row.ours || '—')];
+  if (row.better) lines.push('Better because: ' + row.better);
+  lines.push('Compared: ' + status[1] + ' · Verified: ' + STD_COMPARE_VERIFIED[row.verified]);
+  lines.push('Source: ' + row.src.map((x) => x.url || (x.doc + (x.where ? ' ' + x.where : ''))).join(' ; '));
+  lines.push('Checked ' + checkedLabel() + ' (ChitBridge country comparison, data/compare.json)');
+  return lines.join('\n');
 }
 var tt;
 function toast(t){ var e = $('toast'); e.textContent = t; e.hidden = false; clearTimeout(tt); tt = setTimeout(() => { e.hidden = true; }, 2600); }
@@ -484,8 +491,8 @@ function mountList(){
     filters: FILTERS, sorts: SORTS,
     views: { tid: 'std-view', inTitle: true, items: [{ key: 'all', label: 'All', filt: {}, tip: 'Every standard and every system we work with' }, WORKS, COMPARED] },
     group: { options: [['area', 'Area'], ['country', 'Country'], ['kind', 'Kind'], ['none', 'None']], default: 'area', tid: 'std', by: groupBy, order: GROUP_ORDER,
-      fig: (rows) => { if (rows.length && rows[0].r.cmp) return cmpFig(rows); var n = countOf(rows.map((x) => x.r)); return rows.length + ' · ● ' + n.live + ' ◐ ' + n.part + ' ○ ' + n.plan; } },
-    next: nextOf,
+      fig: (rows) => { if (rows.length && rows[0].r.cmp) return cmpFig(rows); var counts = countOf(rows.map((x) => x.r)); return rows.length + ' · ● ' + counts.live + ' ◐ ' + counts.part + ' ○ ' + counts.plan; } },
+    next: openNext,
     actions: [
       { id: 'go', label: 'Open in the app ›', tid: 'std-go', when: (x) => !!HOME[x.r.go] && !(window.CBEdition && CBEdition.hidesHref(HOME[x.r.go])), run: (x) => { location.href = HOME[x.r.go]; } },   /* only a CUSTOMER home — never app.html, the workshop */
       /* STD-COMPARE: a comparison row opens its source (a new tab, never this page lost); a core-books row shows the parallel run — the live tie-out */
@@ -552,9 +559,9 @@ function fit(){
   host.style.setProperty('--std-tpl', keys.map((k) => 'minmax(0,' + (WEIGHT[k] || 1.5) + 'fr)').join(' ')); host.setAttribute('data-fill', '1');
 }
 /* the column keys on screen for the lit view: the unit's chosen columns are the register's while a data-file view shows its own (stale keys fall to that view's defaults) */
-function shownKeysNow(st){
-  if (comparedOn()){ var own = compareCols().map((c) => c.key), mine = st.cols.filter((k) => own.indexOf(k) >= 0); return (mine.length ? mine : CMP_DEFAULT_COLS).concat(['cstatus']); }
-  return st.cols.concat(worksOn() ? ['dir', 'status'] : ['status']);
+function shownKeysNow(state){
+  if (comparedOn()){ var ownKeys = compareCols().map((col) => col.key), mine = state.cols.filter((key) => ownKeys.indexOf(key) >= 0); return (mine.length ? mine : CMP_DEFAULT_COLS).concat(['cstatus']); }
+  return state.cols.concat(worksOn() ? ['dir', 'status'] : ['status']);
 }
 
 /* the unit has no setter, and its filters are its own: the matrix speaks to it the way its Filters popover does — one change event on a
@@ -600,14 +607,14 @@ function openWorks(){ clearSearch(); setFilters(WORKS.filt); $('app').setAttribu
 /* STD-COMPARE: the Compared with tab opens on the shop's country — the avatar's one /me read (CBAvatar.shopCountry, announced as `cb:me`) — else India.
    COUNTRY_SET remembers what this page chose, so a country the person picked is never overwritten when /me lands later. */
 let COUNTRY_SET = '';
-function shopCountryKnown(){ var c = window.CBAvatar && CBAvatar.shopCountry ? CBAvatar.shopCountry() : null; return c && CMP_ROWS.some((x) => x.r.c[0] === c) ? c : ''; }
+function shopCountryKnown(){ var country = window.CBAvatar && CBAvatar.shopCountry ? CBAvatar.shopCountry() : null; return country && CMP_ROWS.some((x) => x.r.c[0] === country) ? country : ''; }
 function openCompared(){
   COUNTRY_SET = shopCountryKnown() || CMP_COUNTRY_FALLBACK;
   clearSearch(); setFilters(Object.assign({ country: COUNTRY_SET }, COMPARED.filt)); $('app').setAttribute('data-view', 'list'); paintMatrix();
 }
 document.addEventListener('cb:me', () => {
-  var c = shopCountryKnown(); if (!c || !comparedOn() || nowFilt().country !== COUNTRY_SET || c === COUNTRY_SET) return;
-  COUNTRY_SET = c; setFilters(Object.assign({}, nowFilt(), { country: c }));
+  var country = shopCountryKnown(); if (!country || !comparedOn() || nowFilt().country !== COUNTRY_SET || country === COUNTRY_SET) return;
+  COUNTRY_SET = country; setFilters(Object.assign({}, nowFilt(), { country: country }));
 });
 window.addEventListener('hashchange', () => {
   if (location.hash === '#works-with' && !worksOn()) openWorks();
@@ -679,7 +686,7 @@ Promise.all([
     .then((j) => { addCompat(j); }, () => { COMPAT_ERR = 'Compatibility rows could not be read — the standards below are complete; reload to try again.'; }),
   fetch('/data/compare.json', { cache: 'no-store' })
     .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-    .then((j) => { addCompare(j); }, () => { CMP_ERR = 'The country comparison could not be read (data/compare.json) — the standards are complete; reload to try again.'; }),
+    .then((json) => { addCompare(json); }, () => { CMP_ERR = 'The country comparison could not be read (data/compare.json) — the standards are complete; reload to try again.'; }),
   fetch('/data/country-matrix.json', { cache: 'no-store' })
     .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
     .then((j) => { if (j && Array.isArray(j.rows) && Array.isArray(j.packs) && j.counts && j.missing) CMX = j; else throw new Error('not a matrix'); }, (e) => { CMX_ERR = 'The country matrix could not be read (data/country-matrix.json' + (e && e.message ? ': ' + e.message : '') + ') — reload to try again. The standard itself is chitbridge-engines docs/COUNTRY-STANDARD.md.'; }),

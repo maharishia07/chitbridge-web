@@ -1,5 +1,9 @@
 <!doctype html>
 <html lang="en" data-tokens="list">
+<!-- OWNS  the CB Settings page: Business · Counters & keys · Connectors · Policy & Localisation · Plan & usage · Standards.
+     CALLED BY Home's Settings card (manifest /settings.html) and the avatar's menu.
+     FLOW  load → CBFrame → the section's read → paint → a save → CBAction → the server's answer
+     CARD 28-platform-and-operations/settings -->
 <head>
 <meta charset="utf-8">
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->

@@ -1,5 +1,9 @@
 <!doctype html>
 <html lang="en" data-tokens="list">
+<!-- OWNS  the CB Accounts page: Ledger · Day book · Dues · Month & year end · Returns (cap-books.js · cap-period.js paint the server's figures).
+     CALLED BY Home's Accounts card (manifest /accounts.html), CB Finance and CRM links to a party's statement.
+     FLOW  load → whoPaint (CBFrame) → the section's read (GET /api/books/…) → paint; a 401 ends the session
+     CARD 16-finance/cb-accounts -->
 <head>
 <meta charset="utf-8">
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
@@ -431,9 +435,9 @@ function railFit(){ const s = $('side'), t = $('toggleNav'); s.classList.toggle(
 if (railMq.addEventListener) railMq.addEventListener('change', railFit); railFit();
 /* the frame: mounted once per session change (the shell mounts the bell and the avatar itself); signed out, the avatar's door scrolls to the sign-in card */
 function whoPaint(){
-  const tok = SESS ? SESS.token : null;
-  if (FRAME && FRAME.token === tok && (FRAME.session ? FRAME.session.token : null) === tok) return;
-  FRAME = CBFrame.mount({ app: 'accounts', host: $('shell'), signin: false, avatar: { onSignIn: () => { const h = $('signin-host'); if (h && h.scrollIntoView) h.scrollIntoView({ block: 'center' }); } } });
+  const sessionToken = SESS ? SESS.token : null;
+  if (FRAME && FRAME.token === sessionToken && (FRAME.session ? FRAME.session.token : null) === sessionToken) return;
+  FRAME = CBFrame.mount({ app: 'accounts', host: $('shell'), signin: false, avatar: { onSignIn: () => { const signinHost = $('signin-host'); if (signinHost && signinHost.scrollIntoView) signinHost.scrollIntoView({ block: 'center' }); } } });
   if (window.CBScreenId && !CBScreenId.current()) CBScreenId.here('accounts');
 }
 /* the SMALL APP a screen key hands over to (CB_HOMES, accounts-shell.js) — never the workshop (IX0); no home yet → said, not a dead door */

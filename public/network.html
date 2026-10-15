@@ -1,5 +1,9 @@
 <!doctype html>
 <html lang="en" data-tokens="list">
+<!-- OWNS  the Network page: the networks this shop is in, the requests to join and the offers across them (may/why per row).
+     CALLED BY Home's Network card (manifest /network.html).
+     FLOW  load → CBFrame → GET /api/network-offers · /network → CBList paints
+     CARD network-and-trade/network -->
 <head>
 <meta charset="utf-8">
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->

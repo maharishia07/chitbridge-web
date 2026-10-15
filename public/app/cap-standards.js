@@ -1,4 +1,6 @@
 /**
+ * FLOW  the register (STANDARDS) → stdRowFor · stdCounts · stdCompatRows · stdCompareRows → the Standards page and the Legend paint what they read here
+ * CARD 29-qa-test-tooling-ux-locale-and-design-system/standards-register
  * cap-standards.js — THE REGISTER OF STANDARDS, and the argument for following them.
  *
  * ⚠️ ITS OWN MODULE BECAUSE TWO SCREENS NEED IT. Settings › Standards is where a reader checks what we

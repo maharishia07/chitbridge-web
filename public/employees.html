@@ -1,5 +1,9 @@
 <!doctype html>
 <html lang="en" data-tokens="list">
+<!-- OWNS  the People page: the shop's people, their hats, sessions and breaks (the server answers may/why on every action).
+     CALLED BY Home's People card (manifest /employees.html) and Settings.
+     FLOW  load → CBFrame → GET /api/actors → CBList paints → an action → CBAction → repaint
+     CARD 28-platform-and-operations/people -->
 <head>
 <meta charset="utf-8">
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->

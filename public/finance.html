@@ -1,5 +1,9 @@
 <!doctype html>
 <html lang="en" data-tokens="list">
+<!-- OWNS  the CB Finance page: dues · cash position · collections · reports (cap-finance.js · cap-mis.js paint the server's figures).
+     CALLED BY Home's Finance card (manifest /finance.html) and CB Accounts.
+     FLOW  load → whoPaint (CBFrame) → the section's read → paint
+     CARD 16-finance/cb-finance -->
 <head>
 <meta charset="utf-8">
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
@@ -402,9 +406,9 @@ if (railMq.addEventListener) railMq.addEventListener('change', railFit); railFit
 /* SHELL-ONE: the frame, mounted once per session change (the shell mounts the bell and the avatar itself); signed out, the avatar's door scrolls to the sign-in card */
 let FRAME = null;
 function whoPaint(){
-  const tok = SESS ? SESS.token : null;
-  if (FRAME && (FRAME.session ? FRAME.session.token : null) === tok) return;
-  FRAME = CBFrame.mount({ app: 'finance', host: $('shell'), signin: false, avatar: { onSignIn: () => { const h = $('signin-host'); if (h && h.scrollIntoView) h.scrollIntoView({ block: 'center' }); } } });
+  const sessionToken = SESS ? SESS.token : null;
+  if (FRAME && (FRAME.session ? FRAME.session.token : null) === sessionToken) return;
+  FRAME = CBFrame.mount({ app: 'finance', host: $('shell'), signin: false, avatar: { onSignIn: () => { const signinHost = $('signin-host'); if (signinHost && signinHost.scrollIntoView) signinHost.scrollIntoView({ block: 'center' }); } } });
   if (window.CBScreenId && !CBScreenId.current()) CBScreenId.here('finance');
 }
 function finCard(html, bad){

@@ -1,5 +1,9 @@
 <!doctype html>
 <html lang="en">
+<!-- OWNS  the Catalogue page: the shop's products as it keeps them (one CBList), their offers and slabs attached with the downstream result shown beside.
+     CALLED BY Home's Catalogue card (manifest) and the storefront's links.
+     FLOW  load → CBFrame → GET /api/products (paged) → CBList paints → a change → CBAction → repaint
+     CARD storefront-and-catalogue/catalogue -->
 <head>
 <meta charset="utf-8">
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->

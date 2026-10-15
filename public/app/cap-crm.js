@@ -65,14 +65,16 @@ var CRM_PAGE = 300;   /* one page of follow-ups or calls asked of the server (it
 /* ── who is looking: the SERVER's may/why (CRM.may, from the first read) decides; the session's role is the guess until it lands ── */
 function crmOwner() { return SESSION.role === 'entity'; }
 /** the server's `may` rides every CRM read (GET /parties · /parties/:id · /followups · /calls): kept once, so every screen asks the same answer */
-function crmMaySet(may) { if (may && typeof may === 'object' && (may.write || may.remove)) CRM.may = may; }
+function crmMaySet(mayAnswer) { if (mayAnswer && typeof mayAnswer === 'object' && (mayAnswer.write || mayAnswer.remove)) CRM.may = mayAnswer; }
+/** the `may` an answer carries (a record, a list), or nothing — one reader, so a caller never spells `answer && answer.may` */
+function crmMayOf(answer) { return answer && answer.may; }
 /** the sentence this page says for the server's refusal CODE (design rule 1: the server's message is never rendered) */
 var CRM_MAY_WORD = { read_only: 'Your login can only view', comment_only: 'Your login can only comment', OWNER_ONLY: 'Only the owner can remove a party' };
-function crmViewWhy() { var w = CRM.may && CRM.may.write; return tx(CRM_MAY_WORD[w && w.code] || CRM_MAY_WORD.read_only); }
+function crmViewWhy() { var writeMay = CRM.may && CRM.may.write; return tx(CRM_MAY_WORD[writeMay && writeMay.code] || CRM_MAY_WORD.read_only); }
 /** may this login remove a party? the server's `may.remove` (owner only), with the page's words for its code; before the answer: the session's role */
 function crmMayRemove() {
-  var r = CRM.may && CRM.may.remove;
-  if (r) return { ok: !!r.ok, why: r.ok ? '' : tx(CRM_MAY_WORD[r.code] || CRM_MAY_WORD.OWNER_ONLY) };
+  var remove = CRM.may && CRM.may.remove;
+  if (remove) return { ok: !!remove.ok, why: remove.ok ? '' : tx(CRM_MAY_WORD[remove.code] || CRM_MAY_WORD.OWNER_ONLY) };
   return { ok: crmOwner(), why: crmOwner() ? '' : tx(CRM_MAY_WORD.OWNER_ONLY) };
 }
 /** the co-assist's hat rides in their signed token (lib/access.js); the session record does not keep it, so it is read from the token's own payload */
@@ -90,7 +92,7 @@ function crmRole() {
 }
 function crmEdit() { return crmRole() !== 'viewer'; }
 /** YYYY-MM-DD + n days → YYYY-MM-DD (whole days on a calendar; no zone, no clock — the day itself is the server's shop_day) */
-function crmDayPlus(day, n) { var d = new Date(day + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
+function crmDayPlus(dayIso, days) { var d = new Date(dayIso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + days); return d.toISOString().slice(0, 10); }
 /** the shop's today: the server's shop_day (GET /followups · /calls); the phone's date only before any answer landed */
 function crmShopDay() { return CRM.shopDay || crmLocalISO(new Date()); }
 
@@ -247,7 +249,7 @@ function crmFuFrom(f) {
 async function crmFuRead(query) {
   var head = null;
   var rows = await CBList.every(function (page) {
-    return api('crmFollowups', { query: Object.assign({}, query, { page: page, limit: CRM_PAGE }) }).then(function (r) { if (!head) head = r || {}; return r; });
+    return api('crmFollowups', { query: Object.assign({}, query, { page: page, limit: CRM_PAGE }) }).then(function (answer) { if (!head) head = answer || {}; return answer; });
   }, 'followups');
   crmMaySet(head && head.may);
   if (head && head.shop_day) CRM.shopDay = head.shop_day;
@@ -308,8 +310,7 @@ async function crmLoad(quiet) {
     if (g !== CRM.loadGen) return;
     var rows = ((r && r.parties) || (Array.isArray(r) ? r : [])).concat(((r && r.walk_ins) || []).map(crmWalkInFrom));
     CRM.rows = crmNormalize(rows); CRM.alerts = (r && r.alerts) || {}; CRM.currency = (CRM.rows[0] && CRM.rows[0].currency) || CRM.currency;
-    crmMaySet(r && r.may);   /* the server's may/why for this login — the bar's action is painted again from it below */
-    await crmFuJoin(CRM.rows, r);
+    crmMaySet(crmMayOf(r)); await crmFuJoin(CRM.rows, r);   /* the server's may/why for this login — the bar's action is painted again from it below */
     if (g !== CRM.loadGen) return;
     crmIndex(); CRM.state = 'ready'; CRM.loaded = true; CRM.err = null;
   } catch (e) {
@@ -622,8 +623,8 @@ async function crmFuLoad() {
   CRM.fuState = 'loading'; crmFuRefresh();
   try {
     var scope = CRM.fuScope || (crmOwner() ? 'all' : 'mine');
-    var r = await crmFuRead({ scope: scope, done: CRM.fuDone ? '1' : '0' });   /* every page, to the server's total */
-    CRM.fu = (r.followups || []).map(crmFuFrom); CRM.coAssists = r.co_assists || CRM.coAssists; CRM.fuState = 'ready'; CRM.fuErr = null;
+    var answer = await crmFuRead({ scope: scope, done: CRM.fuDone ? '1' : '0' });   /* every page, to the server's total */
+    CRM.fu = (answer.followups || []).map(crmFuFrom); CRM.coAssists = answer.co_assists || CRM.coAssists; CRM.fuState = 'ready'; CRM.fuErr = null;
   } catch (e) { CRM.fuState = e && e.status === 503 ? 'notyet' : 'error'; CRM.fuErr = e; }
   crmBarAction(); crmFuRefresh();
 }
@@ -774,23 +775,27 @@ async function crmFuSave() {
 }
 
 /* ═══ ONE click door for every control this file draws outside a CBList cell (data-crm="…") ═════════════════════ */
+/* the table of this file's own clicks (data-crm="…" → what happens); a row's args: the control, its data-id, its data-v, the event */
+var CRM_CLICK = {
+  add: function () { return crmGo('#/parties/add'); },
+  fuadd: function () { return crmFuAddOpen(null); },
+  fudone: function (ctl, id, value, ev) { ev.stopPropagation(); return crmFuAct(id, { done: true }); },
+  fusnooze: function (ctl, id, value, ev) { ev.stopPropagation(); return crmFuAct(id, { after: ctl.getAttribute('data-when') === 'week' ? 'week' : 'tomorrow' }); },
+  fuassign: function (ctl, id, value, ev) { ev.stopPropagation(); return crmFuAct(id, { assignee_user_id: (SESSION.userId || SESSION.name || '') }); },
+  fudel: function (ctl, id, value, ev) { ev.stopPropagation(); return api('crmFollowDel', { params: { id: id } }).then(function () { toast(tx('Deleted')); crmFuLoad(); }, function () { toast(tx("Couldn't delete that. Try again.")); }); },
+  addrole: function (ctl, id, value) { ADD.role = value; document.querySelectorAll('[data-crm="addrole"]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-v') === value)); }); },
+  addopen: function (ctl) { return crmGo('#/party/' + encodeURIComponent(ctl.getAttribute('data-k'))); },
+  addfound: function (ctl) { return crmAddGo('found', (ADD.found || [])[+ctl.getAttribute('data-i')]); },
+  addlocal: function () { return crmAddGo('local'); },
+  fupreset: function (ctl, id, value) { document.getElementById('crm_fu_due').value = crmDayPlus(crmShopDay(), value === 'tomorrow' ? 1 : value === 'week' ? 7 : 0); },   /* from the SHOP's day, not the phone's */
+  fupick: function (ctl) { FUADD.party = CRM.byKey[ctl.getAttribute('data-k')]; document.getElementById('crm_fu_pq').value = FUADD.party.display_name; document.getElementById('crm_fu_pres').innerHTML = ''; },
+  fusave: function () { return crmFuSave(); },
+  minichit: function (ctl, id, value, ev) { ev.stopPropagation(); if (typeof openChitSheet === 'function') openChitSheet(id); }
+};
 document.addEventListener('click', function (ev) {
   var t = ev.target.closest && ev.target.closest('[data-crm]'); if (!t) return;
   var a = t.getAttribute('data-crm'), id = t.getAttribute('data-id'), v = t.getAttribute('data-v');
-  if (a === 'add') return crmGo('#/parties/add');
-  if (a === 'fuadd') return crmFuAddOpen(null);
-  if (a === 'fudone') { ev.stopPropagation(); return crmFuAct(id, { done: true }); }
-  if (a === 'fusnooze') { ev.stopPropagation(); return crmFuAct(id, { after: t.getAttribute('data-when') === 'week' ? 'week' : 'tomorrow' }); }
-  if (a === 'fuassign') { ev.stopPropagation(); return crmFuAct(id, { assignee_user_id: (SESSION.userId || SESSION.name || '') }); }
-  if (a === 'fudel') { ev.stopPropagation(); return api('crmFollowDel', { params: { id: id } }).then(function () { toast(tx('Deleted')); crmFuLoad(); }, function () { toast(tx("Couldn't delete that. Try again.")); }); }
-  if (a === 'addrole') { ADD.role = v; document.querySelectorAll('[data-crm="addrole"]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-v') === v)); }); return; }
-  if (a === 'addopen') return crmGo('#/party/' + encodeURIComponent(t.getAttribute('data-k')));
-  if (a === 'addfound') return crmAddGo('found', (ADD.found || [])[+t.getAttribute('data-i')]);
-  if (a === 'addlocal') return crmAddGo('local');
-  if (a === 'fupreset') { document.getElementById('crm_fu_due').value = crmDayPlus(crmShopDay(), v === 'tomorrow' ? 1 : v === 'week' ? 7 : 0); return; }   /* from the SHOP's day, not the phone's */
-  if (a === 'fupick') { FUADD.party = CRM.byKey[t.getAttribute('data-k')]; document.getElementById('crm_fu_pq').value = FUADD.party.display_name; document.getElementById('crm_fu_pres').innerHTML = ''; return; }
-  if (a === 'fusave') return crmFuSave();
-  if (a === 'minichit') { ev.stopPropagation(); if (typeof openChitSheet === 'function') openChitSheet(id); return; }
+  if (CRM_CLICK[a]) return CRM_CLICK[a](t, id, v, ev);
   if (typeof crmLeadClick === 'function' && crmLeadClick(a, t)) return;
   if (typeof crmCallClick === 'function' && crmCallClick(a, t)) return;
   if (typeof crmGroupsClick === 'function' && crmGroupsClick(a, t)) return;

@@ -1,5 +1,9 @@
 <!doctype html>
 <html lang="en" data-tokens="list">
+<!-- OWNS  the CB CRM page: parties · leads · follow-ups · calls · a party's record (cap-crm*.js paint the server's answers and its may/why).
+     CALLED BY Home's CRM card (manifest /crm.html), CB Accounts and the Task panel's party links.
+     FLOW  load → whoPaint (CBFrame) → crmLoad (GET /api/crm/parties) → the router → the view's CBList paints
+     CARD 11-crm-and-marketing/cb-crm -->
 <head>
 <meta charset="utf-8">
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
@@ -426,11 +430,11 @@ if (railMq.addEventListener) railMq.addEventListener('change', railFit); railFit
 /* SHELL-ONE: the frame, mounted once per session change (the shell mounts the bell and the avatar itself); signed out, the avatar's door scrolls to the sign-in card */
 let FRAME = null;
 function whoPaint(){
-  const tok = SESS ? SESS.token : null, role = typeof crmRole === 'function' ? crmRole() : 'owner';
+  const sessionToken = SESS ? SESS.token : null, role = typeof crmRole === 'function' ? crmRole() : 'owner';
   /* a login's LEVEL in the server's own words (lib/access: editor · view-only), after the shop's name — never the internal word "co-assist" on screen (ai-eye E-8) */
   const level = role === 'owner' ? '' : (role === 'editor' ? 'editor' : 'view-only');
-  if (FRAME && (FRAME.session ? FRAME.session.token : null) === tok && FRAME.level === level) return;
-  FRAME = CBFrame.mount({ app: 'crm', host: $('shell'), signin: false, level, avatar: { onSignIn: () => { const h = $('signin-host'); if (h && h.scrollIntoView) h.scrollIntoView({ block: 'center' }); } } });
+  if (FRAME && (FRAME.session ? FRAME.session.token : null) === sessionToken && FRAME.level === level) return;
+  FRAME = CBFrame.mount({ app: 'crm', host: $('shell'), signin: false, level, avatar: { onSignIn: () => { const signinHost = $('signin-host'); if (signinHost && signinHost.scrollIntoView) signinHost.scrollIntoView({ block: 'center' }); } } });
   FRAME.level = level;
   if (window.CBScreenId && !CBScreenId.current()) CBScreenId.here('crm');
 }

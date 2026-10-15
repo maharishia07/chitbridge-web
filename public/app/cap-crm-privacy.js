@@ -1,4 +1,5 @@
 /* cap-crm-privacy.js — CB CRM: a party's CONSENT (the record's Consent block) and the shop's PRIVACY REQUESTS register (#/privacy).
+ * CARD 11-crm-and-marketing/crm-privacy
  * T3-P3-CONSENT (2026-10-14). Loaded by crm.html after cap-crm-record.js. Flow: CRM step 6 "consent & privacy requests" (docs/process/flows.json).
  *
  * ⭐ REUSE (rule 1): crmSec (the record's own section) · CBList (the history and the register) · modal/closeModal (crm.html's sheet) · crmBar ·

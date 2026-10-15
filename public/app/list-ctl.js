@@ -1,4 +1,6 @@
 /**
+ * CALLED BY every list on every page — app.html (the Task table), crm, accounts, finance, standards, employees, network (CBList.mount · CBList.every).
+ * CARD 29-qa-test-tooling-ux-locale-and-design-system/list-control
  * ── ⭐⭐⭐ CBList — THE LIST CONTROL, AS A SELF-SUSTAINING UNIT ───────────────────────────────────────────────────────
  *
  * Athi, 2026-10-02: *"can we keep it as a control so it can be used anywhere … with its own ui/ux and as a self
@@ -304,9 +306,9 @@
 
   /* ═════ the data: rows → matched → ordered → grouped items ═════ */
   /* the mount's own rows; allRows = the lit view's own rows when it has them (STD-COMPARE), else these */
-  function baseRows(I) { var r = typeof I.o.rows === 'function' ? safe(function () { return I.o.rows(); }, []) : I.o.rows; return Array.isArray(r) ? r : []; }
-  function viewRows(I) { var v = litOwnView(I); if (!v) return null; var r = safe(function () { return v.rows(); }, []); return Array.isArray(r) ? r : []; }
-  function allRows(I) { return viewRows(I) || baseRows(I); }
+  function baseRows(inst) { var rows = typeof inst.o.rows === 'function' ? safe(function () { return inst.o.rows(); }, []) : inst.o.rows; return Array.isArray(rows) ? rows : []; }
+  function viewRows(inst) { var view = litOwnView(inst); if (!view) return null; var rows = safe(function () { return view.rows(); }, []); return Array.isArray(rows) ? rows : []; }
+  function allRows(inst) { return viewRows(inst) || baseRows(inst); }
   function rid(I, row, i) { var v = I.o.id ? I.o.id(row) : row && row.id; return String(v == null ? 'r' + i : v); }
   function columns(I) { return (typeof I.o.columns === 'function' ? I.o.columns() : I.o.columns) || []; }
   function pinned(I) { return columns(I).filter(function (c) { return c.pin === 'end'; }); }
@@ -513,14 +515,14 @@
     });
     return ok;
   }
-  function viewOn(I, v) {
-    var a = I.r.filt, b = v.filt || {}, ka = Object.keys(a).filter(function (k) { return a[k]; }), kb = Object.keys(b);
-    var own = kb.every(function (k) { return a[k] === b[k]; });
-    return v.rows ? kb.length > 0 && own : ka.length === kb.length && own;   /* a view with its own rows stays lit while its filters are in force (its country filter may change) */
+  function viewOn(inst, view) {
+    var a = inst.r.filt, b = view.filt || {}, ka = Object.keys(a).filter(function (k) { return a[k]; }), kb = Object.keys(b);
+    var sameOwn = kb.every(function (k) { return a[k] === b[k]; });
+    return view.rows ? kb.length > 0 && sameOwn : ka.length === kb.length && sameOwn;   /* a view with its own rows stays lit while its filters are in force (its country filter may change) */
   }
-  function litOwnView(I) {
-    var vs = (I.o.views && I.o.views.items) || [], out = null;
-    vs.forEach(function (v) { if (!out && typeof v.rows === 'function' && viewOn(I, v)) out = v; });
+  function litOwnView(inst) {
+    var views = (inst.o.views && inst.o.views.items) || [], out = null;
+    views.forEach(function (view) { if (!out && typeof view.rows === 'function' && viewOn(inst, view)) out = view; });
     return out;
   }
   function paintViews(I) {
@@ -533,7 +535,7 @@
     }
     var rows = baseRows(I), vt = I.o.views.tid || 'views';
     box.innerHTML = vs.map(function (v) {
-      var n = (typeof v.rows === 'function' ? safe(function () { return v.rows(); }, []) : rows.filter(function (r) { return viewMatches(I, v, r); })).length, on = viewOn(I, v);
+      var n = (typeof v.rows === 'function' ? safe(function () { return v.rows(); }, []) : rows.filter(function (row) { return viewMatches(I, v, row); })).length, on = viewOn(I, v);
       return '<button type="button" role="tab" class="cbl-vtab" data-view-tab="' + esc(v.key) + '" aria-selected="' + on + '" data-testid="' + esc(vt) + '-' + esc(v.key) + '"' + (v.tip ? ' title="' + esc(T(I, v.tip)) + '"' : '') + '>' + esc(T(I, v.label)) + ' <span class="n">' + n + '</span></button>';
     }).join('');
   }

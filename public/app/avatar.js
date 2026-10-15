@@ -1,4 +1,7 @@
 /**
+ * CALLED BY app/shell.js (the frame mounts the one avatar), app/page-frame.js (its options), till.html; the pages read CBAvatar.shopCountry / applyTheme.
+ * FLOW  mount(slot) → session → the button and its menu → applyTheme → the one /me read → `cb:me` announced to the page
+ * CARD 29-qa-test-tooling-ux-locale-and-design-system/avatar
  * ── ⭐⭐⭐ CBAvatar — THE AVATAR: ONE CONTROL ON EVERY CHITBRIDGE PAGE ──────────────────────────────────────────────
  *
  * Athi, 2026-10-02: *"Avatar should be a single control used across everywhere … no repeat … it is already that way only and

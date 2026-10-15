@@ -1,4 +1,8 @@
 <!doctype html>
+<!-- OWNS  the Network design page: a brand's network built, validated and published (POST /api/network-design/build · /validate).
+     CALLED BY network.html and Home's Network card.
+     FLOW  load → CBFrame → the design read → paint → build/validate → the server's verdict painted
+     CARD network-and-trade/network-design -->
 <meta charset="utf-8">
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
 <script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->

@@ -1,5 +1,9 @@
 <!doctype html>
 <html lang="en">
+<!-- OWNS  the Storefront: a shop's public front (its items, the cart, the order) — the shop's own name in its brand row, the frame's bar above.
+     CALLED BY a shop's public link (/shop.html?…), network-shop.html, the QR on a bill.
+     FLOW  load → shopFrame (CBFrame bar) → the catalogue read → paint → cart → order (POST /api/orders)
+     CARD storefront-and-catalogue/storefront -->
 <head>
 <meta charset="utf-8">
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
@@ -1386,7 +1390,7 @@ function vizDraw(combo){ var cv=el('viz_canvas'); if(!cv||!_VIZ.img)return; var 
 function vizToOrder(){ var idx=_VIZ.idx, comboName=_VIZ.combo&&_VIZ.combo.name; vizClose(); _ord={idx:idx, step:'contact', combo:comboName}; orderRender(); }
 /* SHELL-ONE: the one frame, the bar only — ⌂ Home is THIS shop's front (the page without its ?item), the avatar's door is Home's sign-in; the shop's
    own name stays in its brand row below (rule 3: one string once), so the bar names the page */
-function shopFrontHref(){ var q=new URLSearchParams(location.search); q.delete('item'); q.delete('showcase'); var qs=q.toString(); return location.pathname+(qs?'?'+qs:''); }
+function shopFrontHref(){ var query=new URLSearchParams(location.search); query.delete('item'); query.delete('showcase'); var queryString=query.toString(); return location.pathname+(queryString?'?'+queryString:''); }
 function shopFrame(){ if(!window.CBFrame) return; CBFrame.mount({ app:'storefront', bar:true, signin:false, host:el('shell'), homeHref:shopFrontHref(), title:{ icon:'◇', name:tx('Shop') } }); }
 (function(){
   shopFrame();

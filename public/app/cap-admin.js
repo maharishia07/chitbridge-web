@@ -1,4 +1,8 @@
 /* app/cap-admin.js — the "admin" capability (progressively loaded on demand).
+ * OWNS  the workshop's admin screens: MIS · Profile · Settings · governance (the panels, their reads and their paint).
+ * CALLED BY app.html ensureCap('admin') the first time one of those screens opens (CAP_OF).
+ * FLOW  ensureCap → the screen opens → api(…) → the panel paints; a write goes through the M64 action state
+ * CARD 28-platform-and-operations/admin-screens
  * Injected by ensureCap('admin') the first time an admin screen (CAP_OF) is opened.
  * Classic script, shared global scope: references Core/helpers globals that are eager and already
  * present before this loads — api, mapApiActor, hatAssignable, menuAssist, scr, opt, inr, esc,

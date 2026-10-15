@@ -1,4 +1,6 @@
 /**
+ * CALLED BY app/shell.js (the chip in the bar), app/page-frame.js setActive (a section), every small app's screens and sheets (CBScreenId.here).
+ * CARD 29-qa-test-tooling-ux-locale-and-design-system/screen-id
  * screen-id.js — CBScreenId: EVERY SMALL-APP SCREEN AND SHEET NUMBERED, AND THE ONE CHIP THAT SHOWS IT (round SCREEN-ID, 2026-10-14).
  *
  * Athi, 2026-10-14: *"if we have not numbered each screen it has to be numbered … if we are calling the task details from accounts, task

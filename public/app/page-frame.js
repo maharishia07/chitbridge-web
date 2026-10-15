@@ -1,4 +1,6 @@
 /**
+ * CALLED BY accounts · crm · finance · know-your-business · settings · the labs and the storefront pages (CBFrame.mount, SHELL-ONE: every page wears the one frame).
+ * CARD 29-qa-test-tooling-ux-locale-and-design-system/page-frame
  * page-frame.js — CBFrame: the frame an older single-purpose page (Know your business, Documents) wears so it is part of the application.
  *
  * Athi's black-box, 2026-10-09 (H23/H24): those two pages asked for an e-mail and a code AGAIN while the owner was signed in, and had no header,
@@ -54,16 +56,16 @@
     return { host: app.querySelector('#shell'), screen: app.querySelector('#screen'), setActive: setActive };
   }
   /** where the header is drawn: the skeleton's slot, the page's own element (host), else a div put first in the body */
-  function headerHost(doc, o, sk) {
-    if (sk) return sk.host;
-    if (o.host) return o.host;
+  function headerHost(doc, opts, skel) {
+    if (skel) return skel.host;
+    if (opts.host) return opts.host;
     var host = doc.createElement('div'); host.id = 'shell'; doc.body.insertBefore(host, doc.body.firstChild);
     return host;
   }
   /** the avatar's door: a page with the sign-in window scrolls to it; a public page links to Home's; a page's own extras ride along */
-  function avatarOptions(o, host, open) {
-    var base = open ? { onSignIn: function () { var s = host.querySelector('.cbsh-signin'); if (s && s.scrollIntoView) s.scrollIntoView({ block: 'center' }); } } : { signInHref: o.homeHref || '/' };
-    Object.keys(o.avatar || {}).forEach(function (k) { base[k] = o.avatar[k]; });
+  function avatarOptions(opts, host, open) {
+    var base = open ? { onSignIn: function () { var s = host.querySelector('.cbsh-signin'); if (s && s.scrollIntoView) s.scrollIntoView({ block: 'center' }); } } : { signInHref: opts.homeHref || '/' };
+    Object.keys(opts.avatar || {}).forEach(function (key) { base[key] = opts.avatar[key]; });
     return base;
   }
   /** the bar's person: the session's, with the page's level word (editor · view-only) when it has one */
@@ -72,26 +74,29 @@
     if (person && level) person.level = String(level);
     return person;
   }
-  /* mounts THE ONE HEADER (CBShell) for this page and hands it the page's work; every page goes through here (SHELL-ONE) */
-  function mount(o) {
-    o = o || {};
-    var sess = session(), doc = root.document, sk = o.skeleton ? skeleton(doc, o.skeleton, o.app) : null, host = headerHost(doc, o, sk);
-    /* CL3: signin:false = a PUBLIC page (the Country lab) — it works signed out, so no sign-in window sits over it; the avatar's door is
-       "Sign in", a link to Home's one sign-in window. area names the switcher's area when the page has no manifest entry (labs). */
-    var open = o.signin !== false;
-    var shell = root.CBShell.mount(host, {
-      host: o.bar ? { bar: true, app: o.app } : { app: o.app }, kural: sk ? false : (o.kural || false), homeHref: o.homeHref || '/', area: o.area,
-      title: o.title || null, fit: (sk || o.host) ? 'pane' : undefined,   /* in a page's own pane the header is a block, never the full-window frame */
-      person: personOf(sess, o.level), token: sess && sess.token,
+  /* what CBShell.mount is told for this page. CL3: signin:false = a PUBLIC page (the Country lab) — it works signed out, so no sign-in window
+     sits over it; the avatar's door is "Sign in", a link to Home's one sign-in window. area names the switcher's area when the page has no manifest entry (labs). */
+  function shellOptions(opts, sess, skel, host, open) {
+    return {
+      host: opts.bar ? { bar: true, app: opts.app } : { app: opts.app }, kural: skel ? false : (opts.kural || false), homeHref: opts.homeHref || '/', area: opts.area,
+      title: opts.title || null, fit: (skel || opts.host) ? 'pane' : undefined,   /* in a page's own pane the header is a block, never the full-window frame */
+      person: personOf(sess, opts.level), token: sess && sess.token,
       /* the one sign-in window, in the shell's own slot; signed in -> this page reads again with the session it now holds */
-      signin: open ? { surface: o.surface || o.app, need: 'person', registerHref: '/settings.html#/new', onIn: function () { root.location.reload(); } } : false,   /* false: no window at all, even where signin-ui.js is loaded */
-      avatar: avatarOptions(o, host, open)
-    });
-    if (sk && root.CBScreenId) root.CBScreenId.here(o.app, o.skeleton.active);   /* the shell named the app; the skeleton names the section it opened on */
-    if (sk && o.kural && root.CBKural) { root.CBKural.mount(); root.CBKural.set(o.kural); }   /* the one kural band at the FOOT, outside the head - as CB Finance / CRM / Accounts */
-    if (o.work && sk) sk.screen.appendChild(o.work);
-    else if (o.work && shell && shell.slots && shell.slots.work) shell.slots.work.appendChild(o.work);
-    return { token: sess ? sess.token : null, session: sess, shell: shell, skeleton: sk };
+      signin: open ? { surface: opts.surface || opts.app, need: 'person', registerHref: '/settings.html#/new', onIn: function () { root.location.reload(); } } : false,   /* false: no window at all, even where signin-ui.js is loaded */
+      avatar: avatarOptions(opts, host, open)
+    };
+  }
+  /* mounts THE ONE HEADER (CBShell) for this page and hands it the page's work; every page goes through here (SHELL-ONE) */
+  function mount(opts) {
+    opts = opts || {};
+    var sess = session(), doc = root.document, skel = opts.skeleton ? skeleton(doc, opts.skeleton, opts.app) : null, host = headerHost(doc, opts, skel);
+    var open = opts.signin !== false;
+    var shell = root.CBShell.mount(host, shellOptions(opts, sess, skel, host, open));
+    if (skel && root.CBScreenId) root.CBScreenId.here(opts.app, opts.skeleton.active);   /* the shell named the app; the skeleton names the section it opened on */
+    if (skel && opts.kural && root.CBKural) { root.CBKural.mount(); root.CBKural.set(opts.kural); }   /* the one kural band at the FOOT, outside the head - as CB Finance / CRM / Accounts */
+    if (opts.work && skel) skel.screen.appendChild(opts.work);
+    else if (opts.work && shell && shell.slots && shell.slots.work) shell.slots.work.appendChild(opts.work);
+    return { token: sess ? sess.token : null, session: sess, shell: shell, skeleton: skel };
   }
   /** a 401 from the API: the session is no longer good - drop it and show the sign-in window (it is the same window the apps show) */
   function ended() {

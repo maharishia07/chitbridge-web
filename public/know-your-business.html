@@ -1,5 +1,9 @@
 <!doctype html>
 <html lang="en">
+<!-- OWNS  the Know your business page: the shop's registrations, licences and filings as the server knows them.
+     CALLED BY Home's area links and Settings › Business.
+     FLOW  load → CBFrame → GET /api/entities/me (+ licences) → paint
+     CARD 28-platform-and-operations/know-your-business -->
 <head>
 <meta charset="utf-8">
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->

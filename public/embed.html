@@ -1,5 +1,9 @@
 <!doctype html>
 <html lang="en">
+<!-- OWNS  the catalogue embed: one shop's catalogue inside another site (an iframe), read-only, the storefront's own rows.
+     CALLED BY store.html and outside sites that embed a shop (?bridge=).
+     FLOW  load → CBFrame (bar) → the shop's catalogue read → paint
+     CARD storefront-and-catalogue/embed -->
 <head>
 <meta charset="utf-8">
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->

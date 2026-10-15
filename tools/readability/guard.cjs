@@ -26,11 +26,13 @@ const functionKey = (fn) => (fn.name || '') + '(' + fn.params.join(',') + ')';
 
 const groupBy = (list, keyOf) => { const groups = new Map(); for (const item of list) { const key = keyOf(item); if (key) (groups.get(key) || groups.set(key, []).get(key)).push(item); } return groups; };
 
-/** head function → the same function in the base file: by name + params (ordinal), else by name alone */
+/** head function → the same function in the base file: by name + params, the NEAREST line among twins (a route file holds many
+ *  `async (req, res) =>` handlers — the first untaken one paired a 120-line handler with a 30-line one, INT7b), else by name alone */
 function matchBase(headFns, baseFns) {
   const byKey = groupBy(baseFns, functionKey), byName = groupBy(baseFns, (fn) => fn.name);
   const pairs = new Map(), taken = new Set();
-  const take = (fn, twins) => { const twin = (twins || []).find((candidate) => !taken.has(candidate)); if (twin) { pairs.set(fn, twin); taken.add(twin); } };
+  const nearest = (fn, twins) => twins.filter((candidate) => !taken.has(candidate)).sort((left, right) => Math.abs(left.line - fn.line) - Math.abs(right.line - fn.line))[0];
+  const take = (fn, twins) => { const twin = nearest(fn, twins || []); if (twin) { pairs.set(fn, twin); taken.add(twin); } };
   for (const fn of headFns) take(fn, byKey.get(functionKey(fn)));
   for (const fn of headFns) if (!pairs.has(fn) && fn.name) take(fn, byName.get(fn.name));
   return pairs;
@@ -111,13 +113,15 @@ function ruleMinimums(file, trace, today) {
   return { level, rule: 'test-minimums', text: `${file} (${row.layer}): §7 minimums not evidenced by its tests: ${missing.join(' · ')}` + (level === 'warn' ? ` — a warning until ${MINIMUMS_FAIL_FROM}` : '') };
 }
 
-/** the file's score may not rise above its ratchet row (a file with no row is new: it must score 0) */
-function ruleRatchet(file, head, rows) {
+/** the file's score may not rise above its ratchet row (a file with no row is new: it must score 0) — nor above the BASE the change
+ *  started from: a row written before other rounds landed cannot blame this change for their score (INT7b: assign-chit row 5, base 13) */
+function ruleRatchet(file, head, base, rows) {
   if (!rows) return { level: 'warn', rule: 'ratchet', text: `${file}: no ${ratchet.RATCHET_FILE} in this repo yet (write it: --write)`, score: ratchet.score(head) };
-  const now = ratchet.score(head), row = rows[file] || null;
-  const allowed = row ? row.score : 0;
+  const now = ratchet.score(head), row = rows[file] || null, floor = base ? ratchet.score(base) : null;
+  const reference = floor && (!row || floor.score > row.score) ? floor : row;
+  const allowed = reference ? reference.score : 0;
   if (now.score > allowed) {
-    const reason = ratchet.risen(row, now).join(', ');
+    const reason = ratchet.risen(reference, now).join(', ');
     return { level: 'fail', rule: 'ratchet', text: `${file}: readability score ${allowed} → ${now.score} is worse than the ratchet (${reason || 'no row: new code must score 0'})`, score: now };
   }
   if (row && now.score < row.score) return { level: 'info', rule: 'ratchet', text: `${file}: score ${row.score} → ${now.score} — tighten the ratchet (--write)`, score: now };
@@ -132,7 +136,7 @@ function judgeFile(entry, context) {
   const headFns = head.functions.filter((fn) => !fn.wrapper), baseFns = base ? base.functions.filter((fn) => !fn.wrapper) : [];
   const touchedFns = entry.status === 'added' ? headFns : headFns.filter((fn) => overlaps(fn, entry.ranges));
   const pairs = matchBase(touchedFns, baseFns);
-  const scored = ruleRatchet(entry.file, head, context.ratchetRows);
+  const scored = ruleRatchet(entry.file, head, base, context.ratchetRows);
   const findings = [
     ...touchedFns.map((fn) => ruleHardLimits(entry.file, fn, pairs.get(fn) || null)),
     ...ruleNewCryptic(entry.file, head, base, addedLines),

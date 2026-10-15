@@ -1,4 +1,7 @@
 /* cap-crm-leads.js — CB CRM L1: LEADS AS PARTIES (+ L3: Import from a CSV, at the foot of this file). The Leads tab (a CBList mount, the Parties list's own look), Add lead, and the record's
+ * CALLED BY crm.html (loaded after cap-crm.js): the Leads tab, Add lead, the stage chip and "Move to…", Import from a CSV.
+ * FLOW  crmLeadsEnsure → GET /api/crm/parties?view=leads → the CBList mount paints → a stage move → CBAction → the server's answer repainted
+ * CARD 11-crm-and-marketing/crm-leads
  * stage chip + "Move to…". A lead IS a party (the API's added_via 'lead'); its stage is the server's (memberships, b297) — this page only labels it.
  * ⚠️ BEFORE the API's b297 runs the writes answer 503 LEADS_NOT_MIGRATED: the page says "Lead stages arrive after the next update." — never silence,
  *   never the server's message. Every write goes through CBAction (M64). Needs cap-crm.js (CRM · crmLoad · crmNormalize · crmFuJoin · cells).
