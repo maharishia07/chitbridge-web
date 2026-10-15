@@ -105,8 +105,8 @@
   }
   function renderCats(){
     var el = document.getElementById('cats');
-    var chips = ['<span class="chip ' + (STATE.cat === '' ? 'on' : '') + '" onclick="setCat(\'\')">All</span>'];
-    STATE.categories.forEach(function(c){ chips.push('<span class="chip ' + (STATE.cat === c ? 'on' : '') + '" onclick="setCat(\'' + esc(c).replace(/'/g,"\\'") + '\')">' + esc(c) + '</span>'); });
+    var chips = ['<span class="chip ' + (STATE.cat === '' ? 'on' : '') + '" data-cat="">All</span>'];
+    STATE.categories.forEach(function(c){ chips.push('<span class="chip ' + (STATE.cat === c ? 'on' : '') + '" data-cat="' + esc(c) + '">' + esc(c) + '</span>'); });
     el.innerHTML = chips.join('');
   }
   function renderBody(){
@@ -122,6 +122,11 @@
     }).join('') + '</div>';
   }
   window.setCat = function(c){ STATE.cat = c; renderCats(); renderBody(); };
+  /* SEC-FIX2 H4: a chip carries its category as DATA (esc'd once) and one listener reads it back — no handler is ever built from a shop's text. */
+  document.getElementById('cats').addEventListener('click', function(e){
+    var chip = e.target.closest('[data-cat]');
+    if (chip) window.setCat(chip.getAttribute('data-cat'));
+  });
 
   document.getElementById('q').addEventListener('input', function(e){ STATE.q = e.target.value; renderBody(); });
 

@@ -502,10 +502,10 @@ function comboLibraryRowsHTML(filterQ){
       + '<div style="font-size:12px;color:var(--muted)">'+n+' group'+(n===1?'':'s')+' · '+opts+' option'+(opts===1?'':'s')
         + (t.product_item_id ? (linkedProduct ? ' · live as "'+esc(linkedProduct.name)+'"' : ' · was pushed, product no longer found') : ' · not on your product list yet')+'</div></div>'
       + '<div style="display:flex;gap:6px;flex-wrap:wrap">'
-      + '<button class="btn sm" onclick="openComboTillPreview(\''+esc(t.name).replace(/'/g,"\\'")+'\','+(t.price==null?'null':Number(t.price))+',comboLibDef(\''+t.id+'\'))">👁 Preview</button>'
+      + '<button class="btn sm" onclick="openComboTillPreview(\''+esc(String(t.name).replace(/\\/g,'\\\\').replace(/'/g,"\\'"))+'\','+(t.price==null?'null':Number(t.price))+',comboLibDef(\''+t.id+'\'))">👁 Preview</button>'
       + '<button class="btn sm" onclick="modLabUseTemplate(\''+t.id+'\')">Use</button>'
       + '<button class="btn sm pri" onclick="modLabPushTemplate(\''+t.id+'\')">'+(t.product_item_id?'⟳ Update product':'✚ Push to products')+'</button>'
-      + '<button class="btn sm" onclick="modLabDeleteTemplate(\''+t.id+'\',\''+esc(t.name).replace(/'/g,"\\'")+'\')">✕</button></div></div>';
+      + '<button class="btn sm" onclick="modLabDeleteTemplate(\''+t.id+'\',\''+esc(String(t.name).replace(/\\/g,'\\\\').replace(/'/g,"\\'"))+'\')">✕</button></div></div>';
   };
   /** ⭐⭐ [OFFR-08→simplified] Athi: "we don't need a permanent copy in the library, whatever exists we can
    * showcase... preview and edit option should be there." No auto-save just to be listed — this row reads
@@ -516,7 +516,7 @@ function comboLibraryRowsHTML(filterQ){
     return '<div class="kv" style="padding:10px 12px;border:1px dashed var(--line);border-radius:9px;margin-bottom:8px;display:flex;align-items:center;gap:10px;justify-content:space-between;flex-wrap:wrap">'
       + '<div><div style="font-weight:700">'+esc(p.name)+' · '+M0(p.price)+'</div>'
       + '<div style="font-size:12px;color:var(--muted)">'+n+' group'+(n===1?'':'s')+' · already on your product list</div></div>'
-      + '<div style="display:flex;gap:6px"><button class="btn sm" onclick="openComboTillPreview(\''+esc(p.name).replace(/'/g,"\\'")+'\','+p.price+',JSON.parse(this.dataset.g))" data-g=\''+esc(JSON.stringify(p.modifiers||[]))+'\'>👁 Preview</button>'
+      + '<div style="display:flex;gap:6px"><button class="btn sm" onclick="openComboTillPreview(\''+esc(String(p.name).replace(/\\/g,'\\\\').replace(/'/g,"\\'"))+'\','+p.price+',JSON.parse(this.dataset.g))" data-g=\''+esc(JSON.stringify(p.modifiers||[]))+'\'>👁 Preview</button>'
       + '<button class="btn sm pri" onclick="modLabCloseLibrary();modLabPick(\''+p.id+'\')">✏️ Edit</button></div></div>';
   };
   if(!COMBO_LIB.loaded) return '<div class="hs" style="padding:24px">Loading…</div>';
