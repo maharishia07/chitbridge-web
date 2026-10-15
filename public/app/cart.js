@@ -452,7 +452,7 @@
     try {
       var line = { key: String(item_id), item_id: item_id, sku: d.sku || d.code || null, categories: lineCatgs(d),
                    excluded: Array.isArray(d.offers_excluded) ? d.offers_excluded.map(String) : [], qty: q, unitPrice: base };
-      var ev = root.CBOffers.evaluate({ lines: [line], offers: offers, ctx: ctx || { now: new Date(), currency: 'INR' } });
+      var ev = root.CBOffers.evaluate({ lines: [line], offers: offers, ctx: ctx || { now: new Date(), currency: null } });
       var per = root.CBOffers.perLine(ev, [line]) || {}, p = per[String(item_id)];
       /* ⭐ THE PREVIEW SAYS WHAT ONE UNIT WOULD COST IF ADDED — basket-level offers included, as they are once the row is in the basket
          (compute → M.rowOff); a row must not promise ₹180 and charge ₹170 (OFF-03, 2026-09-06). A threshold the line alone cannot reach
@@ -469,7 +469,7 @@
   function dealFor(d, offers, o) {
     o = o || {}; d = d || {};
     var base = (o.price != null) ? Number(o.price) : CBMoney.amountOfLoose(d.price);
-    return dealCalc(d, d.item_id || o.item_id || 'x', base, o.qty || 1, offers, { now: new Date(), currency: o.currency || 'INR', customer_groups: o.customer_groups || [], money: o.money || function (n) { return String(n); } });
+    return dealCalc(d, d.item_id || o.item_id || 'x', base, o.qty || 1, offers, { now: new Date(), currency: o.currency || null, customer_groups: o.customer_groups || [], money: o.money || function (n) { return String(n); } });
   }
   function dealOf(ns, r, base) {
     var s = C[ns]; if (!s || !r || r.type !== 'line') return null;
@@ -484,7 +484,7 @@
       return { unit: Math.max(0, roundMoney_(base - p.off / q)), off: p.off, label: p.label || 'offer', ids: p.ids || [], line_off: p.line_off, cart_off: p.cart_off };
     }
     s.deals = s.deals || {}; if (Object.prototype.hasOwnProperty.call(s.deals, key)) return s.deals[key];
-    var out = dealCalc(d, r.item_id, base, q, offers, { now: new Date(), currency: (s.cat.shop && s.cat.shop.currency_code) || 'INR', customer_groups: viewerGroups(s.cat), money: function (n) { return fmt(ns, n); } });
+    var out = dealCalc(d, r.item_id, base, q, offers, { now: new Date(), currency: currencyOf(ns), customer_groups: viewerGroups(s.cat), money: function (n) { return fmt(ns, n); } });
     s.deals[key] = out; return out;
   }
   function unitPrice(ns, r, opt) {
@@ -554,7 +554,7 @@
     var key = EL.map(function (l) { return l.key + ':' + l.qty + ':' + l.unitPrice + ':' + (l.tax && l.tax.rate != null ? l.tax.rate : '-'); }).join(',')
             + '|' + offs.map(function (o) { return o.id; }).join(',') + '|' + viewerGroups(s.cat).join(',');
     if (s._M && s._M.key === key) return s._M.M;
-    var M = money(EL, { offers: offs, ctx: { now: new Date(), currency: (s.cat.shop && s.cat.shop.currency_code) || 'INR', customer_groups: viewerGroups(s.cat), money: function (n) { return fmt(ns, n); } }, taxOf: function (id, l) { return (l && l.tax) || null; } });
+    var M = money(EL, { offers: offs, ctx: { now: new Date(), currency: currencyOf(ns), customer_groups: viewerGroups(s.cat), money: function (n) { return fmt(ns, n); } }, taxOf: function (id, l) { return (l && l.tax) || null; } });
     M.per = (offs.length && root.CBOffers && root.CBOffers.perLine) ? (root.CBOffers.perLine(M.ev, EL) || {}) : {};
     M.lines = EL;
     /* ⭐ THE ROW'S WHOLE SHARE (Athi, 2026-09-06 18:50: "it has to reduce both"): the line's own offers plus its share of every basket-level
@@ -887,7 +887,7 @@
   /* ── rendering ───────────────────────────────────────────────────────────────────────────────────────────── */
   function doc(id) { return (typeof document !== 'undefined' && id) ? document.getElementById(id) : null; }
   /* ⚠️ Same defect as catalogue-ui: the fallback assumed India. See the note there. */
-  function sym(ns) { return opt(ns, 'symbol', CBLocale.symbol((typeof SESSION !== 'undefined' && SESSION && SESSION.currency) || 'INR')); }
+  function sym(ns) { var c = currencyOf(ns); return opt(ns, 'symbol', c ? CBLocale.symbol(c) : ''); }
   /**
    * ⚠️ DIGIT GROUPING IS OFF BY DEFAULT, and that is deliberate.
    *
@@ -904,10 +904,33 @@
    * page declares (`currency`), else the session's, else INR. The old `symbol`/`groupDigits` path stays only for a
    * page that loads no locale.js.
    */
-  function currencyOf(ns) { return opt(ns, 'currency', (typeof SESSION !== 'undefined' && SESSION && SESSION.currency) || 'INR'); }
+  /**
+   * ⭐ CART-REG1 (T1-ORD, 2026-10-14) — THE CART'S CURRENCY, ONE ANSWER: the page's (`currency`), else the SHOP's on the catalogue it holds
+   * (shop.currency_code — the seller's prices are in the seller's money), else the session's, else NONE. It answered 'INR' when nobody had
+   * said; a shop that never stated its money now prints bare amounts and the server's one sentence (shop.money_why, code NO_MONEY) under
+   * the total — never a rupee sign on a guess.
+   */
+  function currencyOf(ns) {
+    var s = C[ns], shop = s && s.cat && s.cat.shop;
+    return opt(ns, 'currency', (shop && shop.currency_code) || (typeof SESSION !== 'undefined' && SESSION && SESSION.currency) || null);
+  }
+  /** the words when no money is stated: the page's `moneyWhy`, else the catalogue's shop.money_why.why (api country-setup.MONEY_UNSTATED) */
+  function moneyWhy(ns) {
+    if (currencyOf(ns)) return '';
+    var s = C[ns], mw = s && s.cat && s.cat.shop && s.cat.shop.money_why;
+    return opt(ns, 'moneyWhy', (mw && mw.why) || '');
+  }
+  function moneyWhyHTML(ns) {
+    var w = moneyWhy(ns);
+    return w ? '<div data-testid="cart-money-why" style="color:var(--warn-2,#6b5a36);font-size:var(--fs-1,12px);padding:4px 12px 8px">' + esc(w) + '</div>' : '';
+  }
   function fmt(ns, n) {
+    var cur = currencyOf(ns);
+    /* no money stated: the amount alone (CBLocale.number, two decimals — INT6a: the engine's own reader, no hand edit to the adopted copy)
+       — no symbol stands in for a currency nobody named */
+    if (!cur) return (typeof CBLocale !== 'undefined' && CBLocale && CBLocale.number) ? CBLocale.number(n, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : Number(n || 0).toFixed(2);
     if (typeof CBLocale !== 'undefined' && CBLocale && typeof CBLocale.money === 'function') {
-      try { return CBLocale.money(Number(n || 0), currencyOf(ns)); } catch (_) {}
+      try { return CBLocale.money(Number(n || 0), cur); } catch (_) {}
     }
     return sym(ns) + (opt(ns, 'groupDigits', false)
       ? Number(n).toLocaleString(opt(ns, 'locale', CBLocale.locale()))
@@ -1460,7 +1483,7 @@
      nothing reads is a feature that exists on one screen only); it is warned, not refused, so a typo never blanks a screen. */
   var WRAP = ['listEl', 'barEl', 'popupEl', 'popupBodyEl', 'popupClass', 'cartTitle', 'checkoutLabel', 'emptyHint', 'noCatalogue', 'from',
     'accent', 'soft', 'symbol', 'currency', 'locale', 'groupDigits', 'hideAvail', 'staleDays', 'onCheckout', 'onChange', 'rowExtra', 'renderer',
-    'categories', 'barHideEmpty', 'summaryEl', 'summaryTestid', 'summary', 'sectionOf', 'pageSize', 'compact', 'priceIncludesTax'];
+    'categories', 'barHideEmpty', 'summaryEl', 'summaryTestid', 'summary', 'sectionOf', 'pageSize', 'compact', 'priceIncludesTax', 'moneyWhy'];
 
   /**
    * ════════════════════════════════════════════════════════════════════════════════════════════════════════════
@@ -1539,11 +1562,12 @@
         o = o || {};
         var T = total(ns), tid = o.totalTestid || 'cart-total';
         var MR = (!T.offered && !T.partial) ? h.moneyRows({ totalTestid: tid, taxTestid: o.taxTestid || 'cart-tax' }) : null;
-        if (MR) return '<div data-testid="' + esc(tid.replace(/-total$/, '')) + '-money" style="margin:6px 12px 8px">' + MR.html + '</div>'   /* the frame is the block's own (cbcart-money); the outlet places it */;
+        if (MR) return '<div data-testid="' + esc(tid.replace(/-total$/, '')) + '-money" style="margin:6px 12px 8px">' + MR.html + '</div>' + moneyWhyHTML(ns)   /* the frame is the block's own (cbcart-money); the outlet places it */;
         return '<div style="display:flex;padding:10px 12px;border-top:2px solid var(--line);font-size:var(--fs-3);font-weight:800">'
           + '<span style="flex:1">' + (T.offered ? 'Total at your offer' : 'Total') + '</span>'
           + '<span data-testid="' + esc(tid) + '">' + (T.amount ? esc(fmt(ns, T.amount)) + (T.partial ? '+' : '') : '—') + '</span></div>'
-          + (T.partial ? '<div style="color:var(--warn-2);font-size:var(--fs-1);padding:0 12px 8px">Some lines have no price — the total covers only the priced ones.</div>' : '');
+          + (T.partial ? '<div style="color:var(--warn-2);font-size:var(--fs-1);padding:0 12px 8px">Some lines have no price — the total covers only the priced ones.</div>' : '')
+          + moneyWhyHTML(ns);
       },
       rows: function () { return rows(ns); },
       selected: function () { return selected(ns); },
@@ -1703,7 +1727,7 @@
     return roundMoney_(Number(sp && sp.tax) || 0);
   }
   function money(lines, o) {
-    o = o || {}; var offers = o.offers || [], ctx = o.ctx || { now: new Date(), currency: 'INR', money: function (n) { return String(n); } };
+    o = o || {}; var offers = o.offers || [], ctx = o.ctx || { now: new Date(), currency: null, money: function (n) { return String(n); } };
     var taxOf = typeof o.taxOf === 'function' ? o.taxOf : function () { return null; };
     var incl = !!(o.priceIncludesTax != null ? o.priceIncludesTax : ctx.priceIncludesTax);   /* WX-O2C: the shop's shelf prices include tax */
     var gross = lines.reduce(function (s, l) { return s + (Number(l.unitPrice) || 0) * (Number(l.qty) || 0); }, 0);
@@ -1732,7 +1756,7 @@
    *   moneyFromLines(lines, ctx) → the model moneyRowsHTML takes
    */
   function moneyFromLines(lines, ctx) {
-    ctx = ctx || { now: new Date(), currency: 'INR', money: function (n) { return String(n); } };
+    ctx = ctx || { now: new Date(), currency: null, money: function (n) { return String(n); } };
     var incl = !!ctx.priceIncludesTax;   /* WX-O2C: the lines were priced tax-inclusive (the chit's invoice says so) */
     var gross = 0, adjustments = [], byRate = {}, taxTotal = 0, untaxed = 0, after = 0, cartParts = {};   /* a cart-scope offer prorated over N lines is ONE row again here */
     (lines || []).forEach(function (l, i) {
@@ -1905,7 +1929,7 @@
     if (n == null || !isFinite(n)) return '';
     /* ⚠️ ONE FORMAT EVERYWHERE. Beside the app, its own formatter (locale · currency · sign · two decimals) rules — the
        sheet read "₹610" and "₹-61" above "549.00 ₹" (Athi, 2026-09-05). The storefront keeps CBCart.fmt. */
-    if (typeof root.fmtMoney === 'function' && typeof root.myCur === 'function') { try { return root.fmtMoney(n, root.myCur()); } catch (e) { if (typeof console !== 'undefined') console.warn('cart: the app formatter failed — the price shows in the cart\'s own format', e); } }   /* T2-WEBPRIMS: every page loads fmtMoney now — myCur says "beside the app" */
+    if (typeof root.fmtMoney === 'function' && typeof root.myCur === 'function') { try { return root.fmtMoney(n, root.myCur()); } catch (e) { if (typeof console !== 'undefined') console.warn('cart: the app formatter failed — the price shows in the cart\'s own format', e); } }   /* T2-WEBPRIMS: every page loads fmtMoney now — myCur says "beside the app"; CART-REG1: no INR guess, CBCart.fmt below */
     return (root.CBCart && root.CBCart.fmt) ? root.CBCart.fmt(ns, n) : String(n);
   }
 
@@ -2068,7 +2092,7 @@
     /* ⚠️ WAS '₹' AS THE DEFAULT. A symbol is not decoration — it states which currency a figure is in, and a
        rupee sign in front of a dirham amount is a wrong number, not a cosmetic slip. The business's own currency
        is stamped on its prices; this asks the layer for its symbol instead of assuming India. */
-    var sym = opts.sym || CBLocale.symbol((typeof SESSION !== 'undefined' && SESSION && SESSION.currency) || 'INR');
+    var sym = opts.sym || ((typeof SESSION !== 'undefined' && SESSION && SESSION.currency) ? CBLocale.symbol(SESSION.currency) : '');   /* CART-REG1: no money stated → no symbol */
     var name = r.variant || d.name || d.product || 'item';
     var hint = hintOf(r);
 

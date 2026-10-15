@@ -1,6 +1,6 @@
 {
  "_what": "walk-locale.cjs baseline — per screen × width: untranslated = rendered English text nodes not pseudo-localised (strings = the distinct ones, so a rise names the new words); clipped = text boxes that clip at +40 %. A ratchet: the walk fails when a number rises. Rewrite ONLY with --write after a conversion round.",
- "_written": "2026-10-13",
+ "_written": "2026-10-14",
  "home": {
   "390": {
    "untranslated": 129,
@@ -8,7 +8,7 @@
    "pack": true,
    "clipped_sample": [],
    "strings": [
-    "1 waiting for the ledger",
+    "1 waiting to be recorded",
     "2 out",
     "24 in",
     "3 stuck",
@@ -73,7 +73,7 @@
    "clipped_sample": [],
    "strings": [
     "1 new order",
-    "1 waiting for the ledger",
+    "1 waiting to be recorded",
     "2 out",
     "24 in",
     "3 stuck",
@@ -220,7 +220,7 @@
     "Start your shop",
     "This shop",
     "Type it again",
-    "You had a bill open with 3 items · ₹63.00, left at 11:40 pm.",
+    "You had a bill open with 3 items · 63.00, left at 8:45 pm.",
     "Your new PIN"
    ]
   },
@@ -236,7 +236,7 @@
     "Cash",
     "Close",
     "Continue that bill",
-    "Counter DC8D",
+    "Counter DMOC",
     "Counter PIN",
     "Ctrl ↑↓",
     "Enter",
@@ -251,7 +251,7 @@
     "F9",
     "Four digits, to sign in here without the internet.",
     "Line good · 0.3 s",
-    "No GSTIN on this shop, so no GST is charged or shown (Settings → Profile).",
+    "No Tax number on this shop, so no GST is charged or shown (Settings → Profile).",
     "Not now",
     "Nothing has been sold and no number has been taken.",
     "Nothing matches.",
@@ -269,7 +269,7 @@
     "TOTAL",
     "This shop",
     "Type it again",
-    "You had a bill open with 3 items · ₹63.00, left at 11:40 pm.",
+    "You had a bill open with 3 items · 63.00, left at 8:45 pm.",
     "Your new PIN",
     "add",
     "bills",
@@ -285,7 +285,7 @@
     "re-read the shop",
     "save & print",
     "search",
-    "today 0 · ₹0.00",
+    "today 0 · 0.00",
     "who",
     "· F9",
     "↓↑ PgUp/PgDn",
@@ -296,14 +296,13 @@
  },
  "shop": {
   "390": {
-   "untranslated": 8,
+   "untranslated": 7,
    "clipped": 0,
-   "pack": false,
+   "pack": true,
    "clipped_sample": [],
    "strings": [
     ". Prices are set by the shop; design & colour, where shown, are referenced from the brand catalogue.",
     "About the shop",
-    "GSTIN",
     "Open",
     "Order with your phone or email — no account needed.",
     "Powered by",
@@ -312,14 +311,13 @@
    ]
   },
   "1366": {
-   "untranslated": 8,
+   "untranslated": 7,
    "clipped": 0,
-   "pack": false,
+   "pack": true,
    "clipped_sample": [],
    "strings": [
     ". Prices are set by the shop; design & colour, where shown, are referenced from the brand catalogue.",
     "About the shop",
-    "GSTIN",
     "Open",
     "Order with your phone or email — no account needed.",
     "Powered by",

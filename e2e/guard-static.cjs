@@ -756,5 +756,21 @@ console.log('\n19 · one esc · one money formatter · one month list (app/helpe
   if (!bad.length) pass(n + ' definition(s) outside ' + HOME + ', every one named in e2e/prim-homes.cjs ALLOW');
 }
 
+/* 20 · T2-POLICY (14 Oct): the policy flags are DEFINED once — chitbridge-api lib/policy.js FLAGS (+ its CARD rows, sent as schema[key].ui).
+   This repo held a second table (cap-admin.js POLICY_FLAGS: label · help · level · gov) and the two drifted. Ratchet at zero: no file in
+   public/ declares a list of flag rows (`{ key:'…', label:…, type:'enum'|'number' … }`) or a POLICY_FLAGS table. */
+console.log('\n20 · one definition of the policy flags (the server\'s)');
+{
+  const ROW = /\{\s*key\s*:\s*'[a-z_]+'\s*,\s*label\s*:[^}]*\btype\s*:\s*'(enum|number|set)'/;
+  const hits = [];
+  const files = ['app.html'].concat(CAPS.map((f) => 'app/' + f));
+  for (const f of files) {
+    const src = fs.readFileSync(path.join(WEB, f), 'utf8');
+    if (/\bPOLICY_FLAGS\s*=/.test(src) || ROW.test(src)) hits.push(f);
+  }
+  if (hits.length) fail(hits.length + ' file(s) define policy flag rows of their own (read schema[key].ui from GET /api/entities/policy instead): ' + hits.join(', '));
+  else pass('no policy flag rows defined in the web — the card paints the server\'s schema (0, was 1)');
+}
+
 console.log('\n== GUARD ==  ' + hard + ' failure(s) · ' + soft + ' warning(s)');
 process.exit(hard ? 1 : 0);

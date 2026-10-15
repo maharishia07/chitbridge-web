@@ -5651,97 +5651,31 @@ async function saveSettings(){ const x=document.getElementById("st_err"); if(x)x
  * ENFORCE them never heard. `self_copy_pref` was the sharpest version of that — it has a real, enforced column, and
  * this card wrote past it into localStorage, so the one flag with teeth was the one the UI had disconnected.
  *
- * The schema still lives here (the card renders from data, not from markup), but the VALUES now come from and go
- * to /api/entities/policy, which validates against its own whitelist. The server never trusts this list.
+ * The VALUES come from and go to /api/entities/policy, which validates against its own whitelist.
+ *
+ * ⭐ T2-POLICY (2026-10-14): AND SO DO THE ROWS. A second table of these flags lived here (label · help · level · gov ·
+ * labels · scale) beside lib/policy.js FLAGS, and the two drifted — self_copy_pref's default was stated three times, two
+ * of them wrong. The server now sends each flag's card row as `schema[key].ui` (and `bound_schema` for the locked ones);
+ * polDefs() reads them. Nothing about a flag is defined in this file.
  */
-var POLICY_FLAGS = [
-  /* ⚠️ AN ENTITY IS CREATED FOR A PURPOSE. Athi: *"sell and purchase never been the same entity. while testing we
-     are trying to test all the possibility in the same business, so for us it seems the same entity will do
-     everything, but that is not going to be the case."* Which side of the trade an entity is on does not change
-     message to message — which is why this is a setting here and not the per-raise toggle I first built. */
-  { key:'trade_side',        label:'This entity',           type:'enum',   options:['sell','receive'],              def:'sell', level:'entity',        gov:'entity',   help:'SELL — inbound messages are priced from your catalogue where the item matches. RECEIVE — they are not: a catalogue price is what you SELL at, and pricing goods coming IN off it puts a figure on the record nobody agreed.' },
-  /* ⭐ Tally's "registration type", as a policy flag — what an invoice may CHARGE before any rate applies. Read by
-     lib/tax.js on every determination (STUDY-gst-structure-2026-09-04 §6 G2). */
-  { key:'gst_registration',  label:'GST registration',       type:'enum',   options:['regular','composition','unregistered','sez'], def:'regular', level:'entity', gov:'entity', help:'REGULAR — charges GST and claims credit. COMPOSITION — flat % on turnover, no GST on invoices, no credit. UNREGISTERED — no GSTIN; buys as a consumer. SEZ — supplies to you are zero-rated.' },
-  /* ⭐ Athi, 2026-09-06 11:30: the chit's Summary is the cart's money and the delivery — commercial cover only where the trade needs it */
-  /* ⭐ BOOKS AT (Athi, 2026-09-06: "there must be some trigger to be allowed to go to Tally, from the task") — when a connector books an order */
-  { key:'books_at',          label:'Orders go to the books',  type:'enum',   options:['received','accepted','completed','manual'], def:'accepted', level:'entity', gov:'entity',   help:'When a connector (Tally · Zoho · GoFrugal) books an order as a voucher. received — the moment it arrives. accepted — once you accept it (the usual case). completed — once it is done. manual — only when you press "Send to books" on the Task. The Task always says whether and when it was written.' },
-  /* ⭐ Athi, 2026-09-07: "do we have a mechanism to check if not posted before the next day?" — the window after which an order the
-     trigger released, and nothing booked, is called overdue in Settings › Integrations › In the books. */
-  { key:'books_overdue_hours', label:'Overdue after (hours)', type:'number', def:12, level:'entity', gov:'entity', help:'How long an order released by the trigger may go unbooked before reconciliation calls it overdue. 12 = by the next morning.' },
-  /**
-   * ── ⭐⭐⭐ HOW MUCH DIFFERENCE IS NOT A DISPUTE ────────────────────────────────────────────────────────────
-   *
-   * ⚠️⚠️ THESE THREE HAVE BEEN LIVE SINCE 2026-09-08 WITH NO WAY TO SET THEM. routes/till.js reads them on every
-   * receipt and every reconciliation; nothing anywhere could change them, so every shop on the platform has been
-   * running the defaults and none of them was ever asked. A policy nobody can see is a policy nobody agreed to.
-   *
-   * Their own note, kept: *"Loose goods do not arrive to the gram: moisture, dust and the weighbridge move a
-   * lorry of rice by a few kilos, and a counter that called every one of those a shortage would teach the shop
-   * to ignore the word."*
-   *
-   * ⚠️⚠️ NOT THE SAME THING AS Catalogue → Units of measure, and the words must keep them apart. That one asks
-   * *"the scale reads 1.010 — what goes on the bill?"* and is FLAT. This one asks *"ordered 1000 kg, 998
-   * arrived — is that a dispute?"* and is a PERCENTAGE, because a lorry's variance scales with the lorry.
-   *
-   * ⭐ STORED IN BASIS POINTS, SHOWN AS A PERCENTAGE. The flag type truncates, so half a percent had to be 50
-   * rather than 0.5 — but nobody types basis points. `scale` renders the human number and stores the integer.
-   */
-  { key:'tol_weight_bp',     label:'Short delivery allowed (weighed goods)', type:'number', scale:100, suffix:'%', step:0.01,
-    def:50, level:'entity', gov:'entity',
-    help:'How much less than ordered may arrive on WEIGHED goods before the counter calls it short. 0.50% is the usual figure — moisture, dust and the weighbridge move a lorry by a few kilos. Set 0 to call every gram.' },
-  { key:'tol_count_units',   label:'Short delivery allowed (counted goods)', type:'number', suffix:'units',
-    def:0, level:'entity', gov:'entity',
-    help:'The same question for goods that are COUNTED, in whole units rather than a percentage. 0 is right for almost every shop — a packet is a packet, and one missing is one missing.' },
-  { key:'tol_rate_bp',       label:'Rate difference allowed',               type:'number', scale:100, suffix:'%', step:0.01,
-    def:0, level:'entity', gov:'entity',
-    help:'How far a supplier\'s billed RATE may differ from the order before it is named. ⚠️ Keep this at 0 unless you mean it: a quantity can be short by weather, a price cannot. "Close enough" on a rate is a decision somebody made, and it belongs in front of a person.' },
-  { key:'trade_cover',       label:'Trade cover on chits',    type:'enum',   options:['off','on'],                    def:'off',  level:'entity', gov:'entity',   help:'ON — the Summary of a chit also shows the supplier clearances and the commercial-cover (FRM) frame. OFF — the financial summary of the cart and the delivery only (most trades).' },
-  /**
-   * ⚠️ `def` WAS `both` HERE TOO — A THIRD DECLARATION OF ONE DEFAULT. The engine (routes/chits.js) did
-   * `received`, lib/policy.js said `both`, and so did this. Three statements of one rule, two of them wrong.
-   * ⭐ Athi settled it 2026-08-16: *"mostly it is task, a billing counter, very rarely this become order… so the
-   * default is task, if the user changes to order copy, then we need to honour that"* — which is exactly what the
-   * engine already did. The saved column is read first; this is only the fallback, so an explicit choice stands.
-   * ⚠️ Guarded by tests/policy-defaults.test.js in the API repo, which reads BOTH sides and fails if they part.
-   */
-  { key:'self_copy_pref',    label:'Self-chit copy',        type:'enum',   options:['received','both','sent'],
-    labels:{ received:'Task only', both:'Both Task and Order', sent:'Order only' },
-    def:'received', level:'entity',        gov:'entity',   help:'' },
-  /**
-   * ⭐⭐ WHICH DETAIL PAGE THIS BUSINESS READS ITS WORK ON. Athi, 2026-08-24: *"we have to attach design 1 or
-   * design 2 per entity so we can attach only one design for a store."*
-   *
-   * ⭐ THE NAMES ARE ERP'S, NOT OURS — SAP, Oracle and every dealer system call this distinction the ATOM OF
-   * WORK, and it is the same distinction in a workshop, a kitchen and a trading desk. "Design 1" and "design 2"
-   * were our internal shorthand and meant nothing to anyone else.
-   *
-   * ⚠️ A DEFAULT, NOT THE RECORD. A chit is stamped with the design when it is created and keeps it for life,
-   * so changing this decides how the NEXT job reads — never how an existing one does. That is the whole point:
-   * *"so we avoid complication of moving from one record type to another."*
-   */
-  { key:'detail_design',     label:'Detail page',           type:'enum',   options:['chit','lines'],
-    labels:{ chit:'Order level', lines:'Line level' },
-    def:'chit', level:'entity',        gov:'entity',
-    help:'Order level — the chit is the unit of work. Line level — each line has its own person, parts and cost. Applies to new chits.' },
-  { key:'chit_expiry_days',  label:'Chit expiry (days)',    type:'number', def:0,  level:'work-pattern', gov:'chosen',   help:'0 = no expiry' },
-  { key:'retention_days',    label:'Retention (days)',      type:'number', def:0,  level:'entity',        gov:'chosen',   help:'0 = keep' },
-  { key:'dispute_scope',     label:'Dispute messages',      type:'enum',   options:['per-party','shared'],          def:'per-party', level:'platform', gov:'bound', help:'Set by the platform' },
-  /* ⭐ Athi, 2026-09-18 (quick-keys handoff, decision 2): "keep it as a choice in settings". Read by the counter's
-     Level-2 quick-key state since then and settable by nobody until 2026-09-28 (e2e/policy-reachable.cjs). The help
-     says plainly that shift close changes nothing yet — there are no shifts to close against. */
-  { key:'quick_key_reset_at', label:'Counter sold-out marks clear', type:'enum', options:['business_day','shift_close'],
-    labels:{ business_day:'At the day roll', shift_close:'At shift close' }, def:'business_day', level:'entity', gov:'entity',
-    help:'When a counter\'s sold-out marks on its quick keys clear themselves. At the day roll — the usual case. At shift close works like the day roll until shifts are recorded.' },
-];
-var _POL = { flags:null, busy:false, err:null, migrated:true };
+function polDefs(){
+  var out=[];
+  function add(key,f){ if(!f||!f.ui) return; var u=f.ui;
+    out.push({ key:key, label:u.label, type:f.type, options:u.options||f.options, labels:u.labels, def:f.def, level:u.level, gov:u.gov,
+               help:u.help, scale:u.scale, suffix:u.suffix, step:u.step, order:u.order }); }
+  var s=_POL.schema||{}, b=_POL.bound||{};
+  Object.keys(s).forEach(function(k){ add(k,s[k]); });
+  Object.keys(b).forEach(function(k){ add(k,b[k]); });
+  return out.sort(function(x,y){ return x.order-y.order; });
+}
+var _POL = { flags:null, schema:null, bound:null, busy:false, err:null, migrated:true };
 function _polVal(def){ var o=_POL.flags||{}; return (o[def.key]!==undefined)?o[def.key]:def.def; }
 function _polLocked(gov){ return gov==='bound'||gov==='protected'||gov==='inherited'; }
 /* ⚠️ THE WRITE IS AWAITED AND ITS ANSWER IS SHOWN. The old version toasted "set ✓" the instant you changed a
    dropdown, whatever happened afterwards — which is the exact habit that let a dead setting look alive for months.
    The card repaints from what the SERVER returns, so what is on screen is what is stored. */
 async function setPolFlag(key, v){
-  var def=POLICY_FLAGS.filter(function(d){return d.key===key;})[0];
+  var def=polDefs().filter(function(d){return d.key===key;})[0];
   /**
    * ⚠️ A SCALED FIELD IS STORED IN ITS OWN UNIT, NOT THE ONE ON SCREEN. 0.50% is shown, 50 is stored — and the
    * rounding is deliberate: the flag type truncates, so 0.505% would land as 50 either way, and doing it here
@@ -5763,7 +5697,7 @@ async function setPolFlag(key, v){
 }
 async function loadPolicy(){
   _POL.busy=true; _POL.err=null; paintPolicy();
-  try{ var r=await api('policyGet'); _POL.flags=(r&&r.flags)||{}; _POL.migrated=!(_POL.flags._migrated===false); }
+  try{ var r=await api('policyGet'); _POL.flags=(r&&r.flags)||{}; _POL.schema=(r&&r.schema)||null; _POL.bound=(r&&r.bound_schema)||null; _POL.migrated=!(_POL.flags._migrated===false); }
   catch(e){ _POL.err=(e&&e.message)||'Could not read your policy flags.'; }
   _POL.busy=false; paintPolicy();
 }
@@ -5973,7 +5907,7 @@ async function scPick(n){ await setPolFlag('showcase_template',n); paintShowcase
 function paintShowcase(){ var h=document.getElementById('scard'); if(h) h.outerHTML=showcaseCard(); }
 function policyFlagsCard(){ loadPolicy(); return '<div style="'+_CARD+';margin-top:10px" id="polflags">'+policyFlagsInner()+'</div>'; }
 function policyFlagsInner(){
-  var rows=POLICY_FLAGS.map(function(def){ return '<div style="display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)">'
+  var rows=polDefs().map(function(def){ return '<div style="display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)">'
     +'<div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><span style="font-weight:600;font-size:var(--fs-2)">'+esc(def.label)+'</span>'+govKlass(def.gov)+'<span style="font-size:var(--fs-1);font-family:\'Space Mono\';background:var(--neutral-tint);color:var(--grey-2);border-radius:5px;padding:1px 6px">'+esc(def.level)+'</span></div>'
     /* ⚠️ AN EMPTY help RENDERS NOTHING, NOT AN EMPTY DIV. Four of these were trimmed to direction today and
        one removed outright; without this each would leave a 2px-margined empty element under its control —
@@ -5991,7 +5925,7 @@ function policyFlagsInner(){
         'Per-entity toggles cover what the 7-layer block does not yet carry — same governance grammar '
       + '(<b>class</b> + <b>level</b>): 🔒 <b>platform-bound</b> cannot be relaxed · <b>tighten-only</b> may be '
       + 'made stricter · <b>entity</b> is set freely.')
-    +warn+rows+err
+    +warn+(rows||(_POL.busy?'<div style="font-size:var(--fs-1);color:var(--grey);padding:8px 0">'+tx('Reading your business rules…')+'</div>':''))+err
     +'<div style="font-size:var(--fs-1);color:var(--grey);font-style:italic;margin-top:8px">'
     + txf('Stored on your business, not on this device. {enforced} whether you keep a copy, and whether you buy or sell. Expiry and retention: ⏳ {pending}.', {
         enforced: '<b>' + tx('Working today:') + '</b>', pending: tx('pending') }) + '</div>';
