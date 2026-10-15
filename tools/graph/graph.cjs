@@ -28,6 +28,10 @@
  * ⚠️ WHAT IT CANNOT SEE, SAID PLAINLY: static names only. Dynamic dispatch (`window[name]()`), a holder chain longer than one
  * (`a.b.c()`), SQL built from variables, and a route reached only by a storefront script it does not scan are all invisible.
  * It over-links on purpose where it is unsure (a callback reference counts as a call): impact must err towards MORE tests.
+ *
+ * OWNS      the knowledge graph: its nodes, edges and the three questions over it; tools/graph/out/{calls,graph}.json (gitignored)
+ * CALLED BY e2e/knowledge-graph.cjs (web CI), tools/graph/trace.cjs (READ-GUARD: trace.json per repo), by hand
+ * CARD      qa/knowledge-graph
  */
 'use strict';
 const fs = require('fs');
@@ -63,6 +67,36 @@ const norm = (p) => String(p).split('?')[0].replace(/\/$/, '').replace(/:[A-Za-z
 /* ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════
    BUILD
    ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════ */
+const NOT_WEB_CODE = /(^|\/)(vendor|_design|fixture|node_modules)\//;   /* over the path INSIDE the web root (the fixture root itself is one) */
+/** the web's own code: pages, public scripts (engine copies told apart), and — READ-GUARD — tools/ + scripts/ (not their tests) */
+function addWebCode(webRoot, addFile) {
+  const publicDir = path.join(webRoot, 'public');
+  const isOwnCode = (filePath) => !NOT_WEB_CODE.test(path.relative(webRoot, filePath).split(path.sep).join('/'));
+  walk(publicDir, (filePath) => /\.html$/.test(filePath) && isOwnCode(filePath) && (path.dirname(filePath) === publicDir || /\/cmdb\//.test(filePath))).sort().forEach((filePath) => addFile('web', filePath, 'page'));
+  walk(publicDir, (filePath) => /\.js$/.test(filePath) && !/\.min\.js$/.test(filePath) && isOwnCode(filePath)).sort().forEach((filePath) => addFile('web', filePath, /\/engine\//.test(filePath) ? 'web-engine' : 'web-script'));
+  for (const dir of ['tools', 'scripts']) walk(path.join(webRoot, dir), (filePath) => /\.(cjs|js|mjs)$/.test(filePath) && !/\.test\.(cjs|js|mjs)$/.test(filePath) && isOwnCode(filePath)).sort().forEach((filePath) => addFile('web', filePath, 'web-tool'));
+}
+
+/** a test naming a module by path string → that module's file node (web: app/ engine/ tools/ scripts/; api: lib/ routes/ … tools/ scripts/) */
+const FILE_NAMED = {
+  web: [/(?:^|[\/'"\s])(?:public\/)?((?:app|engine)\/[\w.-]+\.js)$/, /(?:^|[\/'"\s])((?:tools|scripts)\/[\w.\/-]+\.(?:cjs|js|mjs))$/],
+  api: [/(?:^|[\/'"\s])((?:lib|routes|middleware|src|governance|tools|scripts)\/[\w.\/-]+\.c?js)$/],
+  engines: [/(?:^|[\/'"\s])((?:src|tools)\/[\w.\/-]+\.c?js)$/]
+};
+function fileNamedBy(repo, text, byId) {
+  for (const pattern of FILE_NAMED[repo] || []) {
+    const match = pattern.exec(text);
+    if (!match) continue;
+    const id = byId.has('file:' + repo + ':public/' + match[1]) ? 'file:' + repo + ':public/' + match[1] : 'file:' + repo + ':' + match[1];
+    if (byId.has(id)) return id;
+  }
+  return null;
+}
+/** every module a test names by path string gets a tested-by edge (READ-GUARD: the trace row of a tool or a lib) */
+function linkNamedFiles(testFile, byId, edge) {
+  for (const text of testFile.scan.strings) { const named = fileNamedBy(testFile.repo, text.text, byId); if (named) edge(named, testFile.id, 'tested-by', 'reads'); }
+}
+
 function build() {
   const t0 = Date.now();
   const meta = { generated: new Date().toISOString().slice(0, 10), roots: {}, present: {}, notes: [], counts: {} };
@@ -79,9 +113,7 @@ function build() {
   const files = [];   // { repo, rel, abs, kind }
   const addFile = (repo, abs, kind) => { if (exists(abs)) files.push({ repo, abs, rel: rel(repo, abs), kind }); };
   const W = ROOTS.web, A = ROOTS.api, E = ROOTS.engines;
-  /* web */
-  walk(path.join(W, 'public'), (p) => /\.html$/.test(p) && !/\/(vendor|_design)\//.test(p) && (path.dirname(p) === path.join(W, 'public') || /\/cmdb\//.test(p))).sort().forEach((p) => addFile('web', p, 'page'));
-  walk(path.join(W, 'public'), (p) => /\.js$/.test(p) && !/\.min\.js$/.test(p) && !/\/(vendor|_design)\//.test(p)).sort().forEach((p) => addFile('web', p, /\/engine\//.test(p) ? 'web-engine' : 'web-script'));
+  addWebCode(W, addFile);   /* pages · public scripts · tools/ + scripts/ (READ-GUARD: a tool is a module with a trace row too) */
   const webTests = [].concat(
     walk(path.join(W, 'e2e'), (p) => /\.(cjs|js|mjs)$/.test(p) && path.dirname(p) === path.join(W, 'e2e')),
     walk(path.join(W, 'tests'), (p) => /\.(cjs|js|mjs)$/.test(p)),
@@ -89,7 +121,7 @@ function build() {
   webTests.forEach((p) => addFile('web', p, 'test'));
   /* api */
   if (meta.present.api) {
-    ['lib', 'routes', 'src', 'middleware', 'governance'].forEach((d) => walk(path.join(A, d), (p) => /\.js$/.test(p)).sort().forEach((p) => addFile('api', p, /\/routes\//.test(p) ? 'route-file' : 'api-lib')));
+    ['lib', 'routes', 'src', 'middleware', 'governance', 'tools', 'scripts'].forEach((d) => walk(path.join(A, d), (p) => /\.c?js$/.test(p) && !/\.test\.c?js$/.test(p)).sort().forEach((p) => addFile('api', p, /\/routes\//.test(p) ? 'route-file' : 'api-lib')));
     addFile('api', path.join(A, 'server.js'), 'api-lib');
     walk(path.join(A, 'tests'), (p) => /\.(test\.)?(cjs|js)$/.test(p) && !/\/(fixtures|support|helpers?)\//.test(p)).sort().forEach((p) => addFile('api', p, 'test'));
   }
@@ -416,13 +448,13 @@ function build() {
     }
     /* a WEB test names what it tests by string: a page, a #/app/<nav> deep link, an app/ or engine/ file, a function name;
        and by identifier when it evaluates a function in the page (page.evaluate(() => sendChit())) */
+    if (isTest) linkNamedFiles(f, byId, edge);
     if (isTest && f.repo === 'web') {
       for (const s of f.scan.strings) {
         let m;
         if ((m = /(?:^|[\/'"\s])([a-z0-9-]+\.html)(?:[#?]|$)/.exec(s.text)) && byId.get('screen:web:public/' + m[1])) edge('screen:web:public/' + m[1], f.id, 'tested-by', 'opens');
         if ((m = /(?:^|\/)cmdb\/record\.html/.exec(s.text)) && byId.get('screen:web:public/cmdb/record.html')) edge('screen:web:public/cmdb/record.html', f.id, 'tested-by', 'opens');
         if ((m = /#\/app\/([a-z][a-z0-9-]*)/.exec(s.text)) && byNav[m[1]]) edge('screen:web:public/app.html#' + m[1], f.id, 'tested-by', 'opens');
-        if ((m = /(?:^|[\/'"\s])(?:public\/)?((?:app|engine)\/[\w.-]+\.js)$/.exec(s.text)) && byId.get('file:web:public/' + m[1])) edge('file:web:public/' + m[1], f.id, 'tested-by', 'reads');
         if (/^[A-Za-z_$][\w$]*$/.test(s.text) && webTopNames.has(s.text)) for (const fn of webTopNames.get(s.text)) edge(fn.id, f.id, 'tested-by', 'names');
       }
       for (const r of S.refsTo(f.scan.code, new Set(webTopNames.keys()))) for (const fn of webTopNames.get(r.name)) edge(fn.id, f.id, 'tested-by', 'mentions');
