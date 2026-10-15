@@ -50,7 +50,11 @@
   var PNAME = { marketing: 'Marketing', sales: 'Sales', finance: 'Finance', accounting: 'Accounts', operations: 'Operations', people: 'People', trade: 'Trade' };
   var PDEFAULT = { selling: 'sales', running: 'accounting', labs: 'labs', setup: 'setup' };
   var AREAS = ['home', 'selling', 'running', 'labs', 'setup'];
-  var ICON = { home: '⌂', selling: '▤', running: '₹', labs: '◈', setup: '⚙' };
+  /* AU-WORDS (15 Oct): a MONEY icon is the SHOP's currency symbol — CBLocale.symbol of the header's business.currency (the pack's money) — never ₹
+     for every shop (Athi on live austore1: "CB Accounts ₹"). The manifest and ICON write the neutral currency sign ¤; glyph() swaps it on paint and
+     paintMoneyGlyphs() re-swaps what was painted before the header arrived. No currency known → ¤ stays. */
+  var MONEY_GLYPH = '¤';
+  var ICON = { home: '⌂', selling: '▤', running: MONEY_GLYPH, labs: '◈', setup: '⚙' };
 
   /* a manifest entry's name and line go through the catalogue (tx, accounts-shell.js — English is the key); a page without it shows the English */
   function T(s) { return typeof root.tx === 'function' ? root.tx(s) : s; }
@@ -290,7 +294,7 @@
       (mode === 'bar' ? '' :
         '<div class="cbsh-work">' +
           (mode === 'home' ? '<nav class="cbsh-nav" data-testid="shell-nav" aria-label="Areas">' + AREAS.map(function (a) {
-            return '<button type="button" class="cbsh-nv" data-go="' + a + '" data-testid="shell-nav-' + a + '"><span class="i" aria-hidden="true">' + ICON[a] + '</span><span class="t">' + esc(W.areas[a]) + '</span></button>';
+            return '<button type="button" class="cbsh-nv" data-go="' + a + '" data-testid="shell-nav-' + a + '"><span class="i" aria-hidden="true">' + glyph(ICON[a]) + '</span><span class="t">' + esc(W.areas[a]) + '</span></button>';
           }).join('') + '</nav>' : '') +
           (mode === 'home' ? '<div class="cbsh-pfoot" data-testid="shell-pfoot"></div>' : '') +
           (sides ? '<aside class="cbsh-side l" data-slot="sideL"></aside>' : '') +
@@ -325,6 +329,19 @@
       spot.innerHTML = ed ? '<span class="cbsh-chip due" data-testid="shell-edition-chip" data-edition="' + esc(ed.key) + '">' + esc(ed.chip) + '</span>' : '';
       var line = $('[data-testid="shell-edition-line"]');
       if (line) { line.textContent = ed ? ed.line : ''; line.hidden = !(ed && ed.line); }
+    }
+
+    /* ── the money glyph: the shop's own currency symbol once the header names its currency; ¤ before that or with none ── */
+    function moneySymbol() {
+      var currency = S.header && S.header.business && S.header.business.currency, L = root.CBLocale;
+      if (!currency || !L || typeof L.symbol !== 'function') return MONEY_GLYPH;
+      try { return L.symbol(currency) || MONEY_GLYPH; } catch (e) { if (root.console) root.console.warn('shell moneySymbol: the locale could not name ' + currency, e); return MONEY_GLYPH; }
+    }
+    /* an entry's icon as painted: a money icon becomes the shop's symbol and is marked, so a later header read can re-swap it */
+    function glyph(icon) { return icon === MONEY_GLYPH ? '<span data-glyph="money">' + esc(moneySymbol()) + '</span>' : esc(icon); }
+    function paintMoneyGlyphs() {
+      var symbol = moneySymbol();
+      Array.prototype.forEach.call(doc.querySelectorAll('[data-glyph="money"]'), function (el) { el.textContent = symbol; });
     }
 
     /* ── the sheet: the business · licences · trade ready — or the empty state that says they are not available yet ── */
@@ -381,15 +398,15 @@
     }
     function card(e) {
       return '<a class="cbsh-box" href="' + esc(routeOf(e)) + '" data-testid="shell-card-' + esc(e.id) + '" data-id="' + esc(e.id) + '">' +
-        '<span class="arw" aria-hidden="true">›</span><span class="g" aria-hidden="true">' + esc(e.icon) + '</span><h4>' + esc(T(e.name)) + '</h4>' +
+        '<span class="arw" aria-hidden="true">›</span><span class="g" aria-hidden="true">' + glyph(e.icon) + '</span><h4>' + esc(T(e.name)) + '</h4>' +
         (e.what ? '<p class="what">' + esc(T(e.what)) + '</p>' : '') + '<span class="facts" data-testid="shell-facts-' + esc(e.id) + '"></span></a>';
     }
     function chip(e) {
       /* H14/P2-5: a workshop row whose function WORKS today (manifest `works`, the roadmap's rule) says so - never the word workshop */
       var st = e.state === 'workshop' ? (e.works ? 'works' : 'workshop') : 'coming';
       /* H36: a workshop item with no page of its own may name the closest built page (`via`): the chip becomes a link there, still marked workshop */
-      if (e.via) return '<a class="cbsh-sc" href="' + esc(e.via) + '" data-testid="shell-chip-' + esc(e.id) + '" data-state="' + st + '" data-via="1"' + (e.via_note ? ' title="' + esc(e.via_note) + '"' : '') + '><span class="g" aria-hidden="true">' + esc(e.icon) + '</span><b>' + esc(T(e.name)) + '</b><span class="tag">' + esc(T(W.tag[st])) + '</span></a>';
-      return '<span class="cbsh-sc" data-testid="shell-chip-' + esc(e.id) + '" data-state="' + st + '"><span class="g" aria-hidden="true">' + esc(e.icon) + '</span><b>' + esc(T(e.name)) + '</b><span class="tag">' + esc(T(W.tag[st])) + '</span></span>';
+      if (e.via) return '<a class="cbsh-sc" href="' + esc(e.via) + '" data-testid="shell-chip-' + esc(e.id) + '" data-state="' + st + '" data-via="1"' + (e.via_note ? ' title="' + esc(e.via_note) + '"' : '') + '><span class="g" aria-hidden="true">' + glyph(e.icon) + '</span><b>' + esc(T(e.name)) + '</b><span class="tag">' + esc(T(W.tag[st])) + '</span></a>';
+      return '<span class="cbsh-sc" data-testid="shell-chip-' + esc(e.id) + '" data-state="' + st + '"><span class="g" aria-hidden="true">' + glyph(e.icon) + '</span><b>' + esc(T(e.name)) + '</b><span class="tag">' + esc(T(W.tag[st])) + '</span></span>';
     }
     function paintAreas() {
       var box = $('.cbsh-areas'); if (!box) return;
@@ -480,10 +497,10 @@
       var b = $('.cbsh-swb'), pop = $('.cbsh-swpop'); if (!b) return;
       var me = ((S.manifest && S.manifest.entries) || []).filter(function (e) { return e && e.id === host.app; })[0];
       var cur = (me && me.area) || o.area || 'home';
-      b.innerHTML = '<span aria-hidden="true">' + esc((me && me.icon) || ICON[cur]) + '</span><span>' + esc((me && me.name) || W.areas[cur]) + '</span><span class="chev" aria-hidden="true">▼</span>';
+      b.innerHTML = '<span aria-hidden="true">' + glyph((me && me.icon) || ICON[cur]) + '</span><span>' + esc((me && me.name) || W.areas[cur]) + '</span><span class="chev" aria-hidden="true">▼</span>';
       b.setAttribute('aria-label', W.switcher);
       pop.innerHTML = areasShown().map(function (a) {
-        return '<a href="' + esc(homeHref + (a === 'home' ? '' : '#' + a)) + '" data-testid="shell-switch-' + a + '"' + (a === cur ? ' aria-current="true"' : '') + '><span class="i" aria-hidden="true">' + ICON[a] + '</span>' + esc(W.areas[a]) + '</a>';
+        return '<a href="' + esc(homeHref + (a === 'home' ? '' : '#' + a)) + '" data-testid="shell-switch-' + a + '"' + (a === cur ? ' aria-current="true"' : '') + '><span class="i" aria-hidden="true">' + glyph(ICON[a]) + '</span>' + esc(W.areas[a]) + '</a>';
       }).join('');
     }
     function swOpen(v) { var b = $('.cbsh-swb'), pop = $('.cbsh-swpop'); if (!b) return; pop.hidden = !v; b.setAttribute('aria-expanded', v ? 'true' : 'false'); }
@@ -560,7 +577,7 @@
       .then(function () { paintEdition(); if (mode === 'home') { paintAreas(); if (first !== 'home') go(first); readFacts(); } if (mode === 'app') paintSwitcher(); });
 
     var hdrP = person ? get('/api/entities/header').then(function (h) { S.header = h || null; S.headerState = h ? 'ok' : 'none'; }, function () { S.header = null; S.headerState = 'none'; })
-      .then(function () { paintBar(); paintSheet(); }) : Promise.resolve();
+      .then(function () { paintBar(); paintSheet(); paintMoneyGlyphs(); }) : Promise.resolve();
 
     var api = {
       el: el, slots: slots, mode: mode,
