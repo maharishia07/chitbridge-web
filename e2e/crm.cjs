@@ -153,6 +153,7 @@ async function route(S, r) {
     if (S.dup && (body.tax_ids || []).some((t) => t.value === 'DUPLICATE')) return J(r, 409, { error: 'This GSTIN is already on P-0001 Agro Mills', code: 'DUPLICATE_PARTY' });
     return J(r, 200, { ok: true });
   }
+  if (p === '/api/books/terms') return J(r, 200, { terms_migrated: true, may_set: true, why_not: null, default: {}, party: null, events: [] });   /* the record's Tax & terms read — the contract's shape (as e2e/lib/standin.cjs answers it) */
   if (m === 'GET') return J(r, 200, {});
   return J(r, 200, { ok: true });
 }
@@ -636,8 +637,8 @@ async function route(S, r) {
     const S = standIn(), { ctx, p } = await open(S, { viewport: { width: 390, height: 844 } });
     await homeReady(p);
     let w = await sw(p); ok(w.sw === 390 && w.over <= 0, 'phone home: document.scrollWidth === ' + w.sw + ' (390), the screen scrolls sideways by ' + w.over + ' px');
-    const hd = await p.evaluate(() => document.querySelector('#crm_list .cbl-list').getBoundingClientRect().top / innerHeight);
-    ok(hd <= 0.35, 'phone: everything above the rows is ' + Math.round(100 * hd) + '% of the window (≤ 30% + the bar; the API sends one alert - the late follow-ups - and a lone alert is a line under the title, two would fold into one chip)');
+    const hd = await p.evaluate(() => ({ top: document.querySelector('#crm_list .cbl-list').getBoundingClientRect().top / innerHeight, bar: (document.querySelector('.cbsh-hdr') ? document.querySelector('.cbsh-hdr').getBoundingClientRect().height : 0) / innerHeight }));
+    ok(hd.top <= 0.30 + hd.bar, 'phone: everything above the rows is ' + Math.round(100 * hd.top) + '% of the window (≤ 30% + the bar, ' + Math.round(100 * hd.bar) + '%; the API sends one alert - the late follow-ups - and a lone alert is a line under the title, two would fold into one chip)');
     ok(await p.evaluate(() => getComputedStyle(document.querySelector('#crm_list [data-row]')).display !== 'none') && (await p.locator('#crm_list [data-row]').count()) === 7, 'phone: one card per party');
     ok(await p.locator('[data-testid="crm-add"]').isVisible(), 'phone: Add party stays reachable');
     await p.screenshot({ path: path.join(SHOTS, 'crm-home-phone.png') });
@@ -660,7 +661,7 @@ async function route(S, r) {
     /* the record exactly as the API builds it (crm-api.cjs), then the three things this scenario is about: merged_from as an object, points as { points }, a follow-up due today */
     const record = Object.assign(crmApi.record(S0.list, 'pid-0002', S0.fx.records['pid-0002'], []), { merged_from: { party_id: 'pid-old', party_no: 'P-0009' }, points: { programme: 'Club', points: 340, worth: 34 },
       followups: [crmApi.followupOne({ followup_id: 'f1', party_id: 'pid-0002', party_no: 'P-0002', party_name: 'Chola Auto Care', what: 'Ring about the rate', due_at: new Date().toISOString(), assignee_user_id: 'u2', assignee_name: 'Divya', source: 'manual' })] });
-    const timeline = { party_id: 'pid-0002', next_before: null, migrated: true, entries: [
+    const timeline = { party_id: 'pid-0002', next_before: null, migrated: true, total: 0, page: 1, limit: 100, entries: [
       { kind: 'chit', at: new Date(Date.now() - 3600e3).toISOString(), chit_id: 'ch-1', direction: 'out', status: 'accepted', purpose: 'order', doc_kind: 'bill', bill_no: 'B-12', title: 'Bill B-12', value: 125.5, currency: 'INR', open_disputes: 0 },
       { kind: 'ledger', at: new Date(Date.now() - 7200e3).toISOString(), ref: 'R-1', ledger_kind: 'receipt', source: null, amount_minor: 5000, currency: 'INR', doc_date: '2026-10-03' },
       { kind: 'interaction', at: new Date(Date.now() - 9000e3).toISOString(), interaction_id: 'ix-1', interaction_kind: 'call', direction: 'out', body: 'Rang about the rate', by: 'u1' },
@@ -778,7 +779,7 @@ async function route(S, r) {
         band: r('#cbkural,#cbkural-reserve'), list: r('.cbl-list'), collapse: r('#toggleNav') }; });
     await p.waitForTimeout(450);   /* a fixed beat, BEFORE the slow line has answered anything: what is on screen now is the FIRST paint */
     const first = await box();
-    ok(first.navN === 3 && first.rows === 0 && first.skel >= 5, 'FIRST PAINT, data still on its way: the three menu items, skeleton rows (' + first.skel + '), no data row yet');
+    ok(first.navN >= 3 && first.rows === 0 && first.skel >= 5, 'FIRST PAINT, data still on its way: the menu items (' + first.navN + ' — W2-CRM: every one is shown, the server greys), skeleton rows (' + first.skel + '), no data row yet');
     ok(!!first.title && !!first.tools && !!first.hdr && !!first.views, 'FIRST PAINT: the title "Parties", the views, the toolbar and the column header are all there');
     ok(!!first.band && first.band[3] >= 40, 'FIRST PAINT: the kural\'s room is kept (' + (first.band && first.band[3]) + ' px) so the page is not shortened when it arrives');
     await p.waitForSelector('[data-testid^="crm-row-"]', { timeout: 15000 }); await p.waitForTimeout(500);
@@ -895,7 +896,7 @@ async function route(S, r) {
       S.list.forEach((q) => { if (q.party_no === 'P-0004') Object.assign(q, { kind: 'person', bridge_id: 'CBC3TQ3NEX', user_id: null, on_chitbridge: false, why_not: 'shopper', segment: 'new', balance_minor: 0, display_name: 'athi', phone: '+91 98940 55621' }); });
       const record = Object.assign(crmApi.record(S.list, 'pid-0004', S.fx.records['pid-0004'], []), { tax_ids: [] });
       record.customer = Object.assign({}, record.customer, { added_via: 'catalogue', segment: 'new', txn_count: 1 });
-      const now = Date.now(), timeline = { party_id: 'pid-0004', next_before: null, migrated: true, entries: [
+      const now = Date.now(), timeline = { party_id: 'pid-0004', next_before: null, migrated: true, total: 0, page: 1, limit: 100, entries: [
         { kind: 'chit', at: new Date(now - 3600e3).toISOString(), chit_id: 'ch-o1', direction: 'in', status: 'pending', purpose: 'order', doc_kind: null, title: 'Online order · 09 Oct', value: 90, currency: 'INR', open_disputes: 0 },
         { kind: 'ledger', at: new Date(now - 7200e3).toISOString(), ref: 'pay:0d102689-e69d-41be-b175-08762c7afbdc', ledger_kind: 'receipt', source: null, amount_minor: 100, currency: 'INR', doc_date: '2026-10-03' }] };
       S.live = { record, timeline };

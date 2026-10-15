@@ -166,7 +166,7 @@ function crmDueCell(p) {
 /** the next follow-up is ALWAYS on the row; an overdue one is red, says Late, and carries its date */
 function crmFuCell(p) {
   if (!p.next_followup_at) return '<span class="sub">—</span>';
-  if (p.next_followup_late) return '<span class="late red" data-testid="crm-fu-late"><span aria-hidden="true">⚠</span> ' + esc(tx('Late')) + ' · ' + esc(bkDate(p.next_followup_at)) + '</span>';
+  if (p.next_followup_late) return '<span class="late red" style="white-space:nowrap" data-testid="crm-fu-late"><span aria-hidden="true">⚠</span> ' + esc(tx('Late')) + ' · ' + esc(bkDate(p.next_followup_at)) + '</span>';   /* one line, as the due form is (the one face wraps it otherwise) */
   return '<span style="white-space:nowrap">' + esc(crmWhen(p.next_followup_at)) + '</span>';
 }
 /** the party is ONE line: the name and its number — nothing stacked under it (role · connection · dues have their own columns) */
