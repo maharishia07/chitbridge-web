@@ -76,10 +76,12 @@ const acct = (code, name, nature, role, parent) => ({ account_id: '00000000-0000
 const CHART = { accounts: [acct('1400', 'Cash on hand', 'asset', 'cash', 'G1400'), acct('2200', 'GST collected', 'liability', 'gst_collected', 'G2200'), acct('2210', 'GST paid', 'liability', 'gst_paid', 'G2200'), acct('4000', 'Sales', 'income', 'sales', 'G4000')] };
 
 const RCM_WHY = 'Reverse-charge tax is owed this period and the recoverable tax is more than the due tax. The return nets them on the form; this close cannot post that netting yet — lodge from the return and record the payment by hand.';
+/* the server's close names the period WITHOUT `ended` (that flag is the list's, GET /returns) */
+const RP = (P) => { const o = Object.assign({}, P); delete o.ended; return o; };
 const CLOSE_AU = (period) => { const P = AU_PERIODS.find((x) => x.period === period) || AU_PERIODS[4]; return { period: P.period, date: P.end, utilised: [{ from: 'gst', against: 'gst', amount_minor: 80000 }], payable_minor: { gst_minor: 15000 }, carried_minor: { gst_minor: 0 }, pay_total_minor: 15000,
-  form: 'BAS', heads: ['gst'], return_period: P, ref_label: 'Payment reference number', ref_hint: 'The payment reference number on the BAS', carried_word: 'GST refund due from the ATO', ok: true, entry_id: '00000000-0000-4000-8000-000000000130', entry_no: 'MJ/2026-27/000011', posting_date: P.end, doc_date: P.end, moved: false, lines: 2, items: 0, note: null }; };
+  form: 'BAS', heads: ['gst'], return_period: RP(P), ref_label: 'Payment reference number', ref_hint: 'The payment reference number on the BAS', carried_word: 'GST refund due from the ATO', ok: true, entry_id: '00000000-0000-4000-8000-000000000130', entry_no: 'MJ/2026-27/000011', posting_date: P.end, doc_date: P.end, moved: false, lines: 2, items: 0, note: null }; };
 const CLOSE_AE = (period) => { const P = AE_PERIODS.find((x) => x.period === period) || AE_PERIODS[4]; return { period: P.period, date: P.end, utilised: [{ from: 'vat', against: 'vat', amount_minor: 280000 }], payable_minor: { vat_minor: 195000 }, carried_minor: { vat_minor: 0 }, pay_total_minor: 235000, rcm_minor: { vat: 40000 }, cash_minor: { vat: 235000 },
-  form: 'VAT201', heads: ['vat'], return_period: P, ref_label: 'Payment reference', ref_hint: 'The EmaraTax payment reference', carried_word: 'VAT recoverable from the FTA', ok: true, entry_id: '00000000-0000-4000-8000-000000000130', entry_no: 'MJ/2026/000011', posting_date: P.end, doc_date: P.end, moved: false, lines: 2, items: 0, note: null }; };
+  form: 'VAT201', heads: ['vat'], return_period: RP(P), ref_label: 'Payment reference', ref_hint: 'The EmaraTax payment reference', carried_word: 'VAT recoverable from the FTA', ok: true, entry_id: '00000000-0000-4000-8000-000000000130', entry_no: 'MJ/2026/000011', posting_date: P.end, doc_date: P.end, moved: false, lines: 2, items: 0, note: null }; };
 /** the stand-in for one shop: `kind` is 'IN' | 'AU' | 'AE'; every /api/books answer is checked against the contract (C.json) */
 async function stub(ctx, kind, S) {
   await ctx.route('**/api/**', (r) => {
@@ -160,7 +162,7 @@ W.run('returns', async (w) => {
     await AU.page.click('[data-testid="pg-pay"]');
     await AU.page.waitForSelector('[data-testid="pe-ok"]', { timeout: 15000 });
     const pays = AU.S.calls.filter((c) => /POST \/api\/books\/gst\/pay/.test(c)).length, paid = await text(AU.page, '[data-testid="pe-ok"]');
-    return { ok: /Close 2026-27 Q1/.test(label) && closes === 1 && /GST → GST/.test(used) && /800\.00/.test(used) && /To pay · BAS/.test(toPay) && /150\.00/.test(total) && refLabel === 'Payment reference number' && !/challan|CPIN/i.test(page) && pays === 1 && /Paid · MJ\/2026-27\/000012/.test(paid) && AU.errs.length === 0,
+    return { ok: /Close 2026-27 Q1/.test(label) && closes === 1 && /GST → GST/.test(used) && /800\.00/.test(used) && /to pay · bas/i.test(toPay) && /150\.00/.test(total) && refLabel === 'Payment reference number' && !/challan|CPIN/i.test(page) && pays === 1 && /Paid · MJ\/2026-27\/000012/.test(paid) && AU.errs.length === 0,
       saw: label + ' -> ' + closes + ' close · ' + used + ' · ' + toPay + ' ' + total + ' · ref: ' + refLabel + ' · ' + pays + ' pay -> ' + paid + (AU.errs.length ? ' · ERRORS ' + AU.errs.join(' | ') : '') };
   });
   await w.step('R2', 'Full BAS -> ONE GET with simpler=0 -> G2 G3 G10 G11 join the rows (G11 5,000.00, its basis beside it)', async () => {
@@ -206,10 +208,6 @@ W.run('returns', async (w) => {
     const ok = word === 'VAT return' && /FTA assigns the Tax Period/.test(needs) && none && gets.length === 1 && /stagger=1/.test(gets[0]) && rows === 15 && /2,350\.00/.test(b14) && /95,000\.00/.test(b1) && /To pay/.test(tot) && /FTA/.test(prep) && /EmaraTax/.test(prep) && period === '2026-02/2026-04' && AE.errs.length === 0;
     return { ok, saw: 'menu "' + word + '" · first: ' + needs.slice(0, 40) + '… · then ' + gets.join(' ') + ' · ' + rows + ' boxes · Box 1 ' + b1 + ' · Box 14 ' + b14 + ' · ' + tot + ' · ' + period + (AE.errs.length ? ' · page error ' + AE.errs[0] : '') };
   });
-  await AE.ctx.close();
-
-  /* R6 · a phone */
-  const P = await open(w, 'AU', 'Bondi Grocer', 'Australia/Sydney', { width: 390, height: 844 });
   await w.step('R5b', 'W2-BOOKS: the VAT return closes its period too (Feb–Apr: Input VAT 2,800.00 against Output VAT; reverse charge 400.00 beside it; To pay · VAT201 2,350.00; the EmaraTax reference asked); May–Jul (reverse charge owed, recoverable > due) -> the server\'s RCM_NETTING_NOT_BUILT sentence, no form', async () => {
     await AE.page.waitForSelector('[data-testid="pr-close"]', { timeout: 15000 });
     await AE.page.click('[data-testid="pr-close"]');
@@ -224,6 +222,10 @@ W.run('returns', async (w) => {
     return { ok: /VAT → VAT/.test(used) && /2,800\.00/.test(used) && /400\.00/.test(rcm) && /2,350\.00/.test(total) && refLabel === 'Payment reference' && /nets them on the form/.test(why) && forms === 0 && AE.errs.length === 0,
       saw: used + ' · rcm ' + rcm + ' · ' + total + ' · ref: ' + refLabel + ' · May–Jul -> "' + why.slice(0, 80) + '…" forms=' + forms + (AE.errs.length ? ' · ERRORS ' + AE.errs.join(' | ') : '') };
   });
+  await AE.ctx.close();
+
+  /* R6 · a phone */
+  const P = await open(w, 'AU', 'Bondi Grocer', 'Australia/Sydney', { width: 390, height: 844 });
   await w.step('R6', '390 px: the BAS paints and nothing scrolls sideways', async () => {
     await P.page.waitForSelector('[data-testid="pr-box-1A"]', { timeout: 15000 });
     await P.page.waitForTimeout(300);
