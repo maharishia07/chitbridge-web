@@ -27,6 +27,14 @@ A country reaches registration from TWO sides; a walk can set both.
 the ticked country, and (`--real`) the stored country + its source; one api per installation in turn. Screenshots go to `e2e/out/`
 (never committed).
 
+## The visual tour (VTOUR, 2026-10-14)
+
+`e2e/visual-tour.cjs` walks the whole product on the LOCAL stack: Part A signed out (every page top → bottom, every box that does not
+write/pay/send clicked, Sign in and New shop with the local code), Part B signed in as the simulated shop (each tab, random safe
+operations). Codes come from `public/app/screens.js`; a page with none is UNNUMBERED. `--report` merges `e2e/out/tour/run-*.json` into
+`tour.json` + `TOUR-FINDINGS.md` (ranked broken · inconsistent · cosmetic + the inventory). On GitHub: Actions → visual-tour (on demand,
+artifact `visual-tour`). The last run's findings: `docs/testing/TOUR-FINDINGS.md`.
+
 ## Shared pieces
 
 - `lib/walk.cjs` — the walk skeleton (steps, shots, show mode, `contextAt`).
