@@ -14,7 +14,7 @@
      NEW here and nowhere else: the matrix pane (counts by Area · Country · Kind × In force · Partly · Planned), whose every cell IS the list's
      own filter — it sets the unit's Status and Area / Kind / Applies in filters and keeps no filter of its own (one value, one control).
      The page paints the register and counts it; it reads nothing from the API and computes nothing a shop's figure depends on.
-     STD-COMPARE (15 Oct 2026): a second saved view, "Compared with" — the country comparison of accounting packages, data/compare.json mapped by
+     STD-COMPARE (15 Oct 2026): a second saved view, "Compared with" — the country comparison of book-keeping packages, data/compare.json mapped by
      stdCompareRows (cap-standards.js) — a CBList view with its OWN rows (list-ctl.js views[].rows), its own columns, the Applies-in filter as its country
      filter (the shop's country from the avatar's one /me read, `cb:me`; else India) and a Package filter; a row opens its sources; a core-books row
      offers "See it" → the parallel run (accounts.html#compare). #compared-with addresses it. Never a second list or page. -->
@@ -163,12 +163,19 @@ abbr.gl:focus-visible{outline:2px solid var(--blue,#3F66A6);outline-offset:1px}
   .who .back{width:34px;padding:0;justify-content:center}
   .who .back .bw{display:none}
   #std_list .cbl-vtab .n{display:none}
+  /* STD-COMPARE: three tabs — on a phone the title row is TWO lines: "Standards" with ‹ ⌂ 🔔 avatar, then the tabs on a line of their own; the
+     "checked" chip moves to the matrix page (mx-checked) so the head stays within its budget (standards-page.cjs: ≤ 35% with a cell chosen) */
+  #std_list .cbl-title .cbl-views.in-title{order:3;flex-basis:100%}
+  #std_list .cbl-title > .cbl-chip[data-testid="std-checked"]{display:none}   /* the unit's own phone rule carries an id's weight (.cbl:not(#_)); this one carries more */
+  .mx-checked{display:block}
   .mx-body{padding:12px 16px 20px}
   .sd{grid-template-columns:minmax(0,1fr);gap:2px}
   .sd dd{margin-bottom:6px}
   dialog.sheet{width:100%}
 }
-@container stdpage (max-width: 1200px) and (min-width: 641px){ .who .shop{display:none} }
+/* STD-COMPARE: with three tabs the title row holds the shop's name only on a wide screen (it is in the avatar's menu too); below 1400 px the row stays one line */
+@container stdpage (max-width: 1400px) and (min-width: 641px){ .who .shop{display:none} }
+.mx-checked{display:none;font-size:calc(12.5px * var(--k,1));color:var(--muted);margin:8px 2px 0}
 @media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
 </style>
 </head>
@@ -275,7 +282,7 @@ const WORKS = { key: 'works-with', label: 'Works with', filt: { kind: 'compat' }
 function worksOn(){ var f = nowFilt(), k = Object.keys(f).filter((x) => f[x]); return k.length === 1 && f.kind === 'compat'; }
 function dirCell(x){ var d = STD_COMPAT_DIR[x.r.dir]; return d ? '<span class="st" title="' + esc(x.r.dirWords) + '" data-testid="std-dir"><span aria-hidden="true">' + esc(d[0]) + '</span> ' + esc(d[1]) + '</span>' : '—'; }
 /* ⭐ STD-COMPARE: the "Compared with" tab — a view with its OWN rows (CMP_ROWS); lit while Kind = compare, whatever country or package is added (list-ctl.js viewOn) */
-const COMPARED = { key: 'compared-with', label: 'Compared with', filt: { kind: 'compare' }, rows: () => CMP_ROWS, tip: 'How we compare with the accounting packages of each country, capability by capability, with the source of every claim' };
+const COMPARED = { key: 'compared-with', label: 'Compared with', filt: { kind: 'compare' }, rows: () => CMP_ROWS, tip: 'How we compare with the book-keeping packages of each country, capability by capability, with the source of every claim' };
 function comparedOn(){ return nowFilt().kind === 'compare'; }
 /* the status of a comparison: a symbol AND a word, never colour alone (STD_COMPARE_STATUS); a claim from memory says "to confirm" beside it */
 function cmpStatusCell(x){
@@ -526,6 +533,7 @@ function paintMatrix(){
   if (COMPAT_ERR) h += '<p class="mx-note" data-testid="std-compat-err">' + esc(COMPAT_ERR) + '</p>';
   if (CMP_ERR) h += '<p class="mx-note" data-testid="std-compare-err">' + esc(CMP_ERR) + '</p>';
   if (other) h += '<p class="mx-note" data-testid="std-mx-note">The matrix counts the whole register; the list also has your search or other filters.</p>';
+  h += '<p class="mx-checked" data-testid="std-checked-phone">Register checked ' + esc(checkedLabel()) + '</p>';   /* the phone's copy of the title chip (hidden there) */
   h += '<div class="mx-more"><button type="button" class="tbtn" data-sheet="why" data-testid="std-open-why">Why follow standards ›</button><button type="button" class="tbtn" data-sheet="record" data-testid="std-open-record">One record, every standard ›</button></div>';
   $('mxBody').innerHTML = h;
   LAST = JSON.stringify(f) + '|' + LIST.state().q;

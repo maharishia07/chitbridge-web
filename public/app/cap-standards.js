@@ -148,7 +148,7 @@ var STANDARDS = [
     s:'part',
     /* STD-COMPARE (15 Oct 2026): In force → Partly. Proved against the code: grep -E "(margin|padding|border)-(left|right)|\b(left|right)\s*:" over public/*.html + public/app/*.js
        finds ~200 hits in 15 files (margin-left 50 · right: 49 · left: 39 · border-right 22 · border-left 16 · padding-right 12 · margin-right 10 · padding-left 8). */
-    note:'378 physical properties were converted in the workshop (app.html). The small apps built since (CB Accounts, CRM, Finance, Settings, the till) still write margin-left, padding-right and left:/right: — about 200 across 15 files — so an Arabic reader gets a mirrored page in some places and not others. Missing: the same sweep over the small apps, and a guard that counts physical properties and only lets the count fall.',
+    note:'378 physical properties were converted in the workshop. The small apps built since (CB Accounts, CRM, Finance, Settings, the till) still write margin-left, padding-right and left:/right: — about 200 across 15 files — so an Arabic reader gets a mirrored page in some places and not others. Missing: the same sweep over the small apps, and a guard that counts physical properties and only lets the count fall.',
     at:'Whole product', go:'appearance', why:'Arabic became possible in one sweep instead of a parallel stylesheet nobody would maintain.' },
 
   { id:'rfc7386', pa:'catalogue', a:'build', k:'std', c:['GLOBAL'],
@@ -1251,7 +1251,7 @@ function stdCompatRows(json){
 }
 
 /**
- * ⭐ COMPARED WITH (STD-COMPARE, 2026-10-15): the country comparison of accounting packages — ONE file, public/data/compare.json (the rows of
+ * ⭐ COMPARED WITH (STD-COMPARE, 2026-10-15): the country comparison of book-keeping packages — ONE file, public/data/compare.json (the rows of
  * C:/dev/docs/14-accounting/compare.json, byte for byte), read by the Standards page's "Compared with" tab (a CBList view with its own rows).
  * These rows are NOT standards: they never join STANDARDS, the matrix or the All view. This maps a compare.json row onto the row the tab paints;
  * a row the file gets wrong is dropped, not guessed. The file's own fields (country · package · capability · theirs · ours · better · status ·
