@@ -24,7 +24,7 @@ function crmConsentChip(v, tid) {
 }
 /** why a Yes/No may not be pressed now — '' when it may (the viewer's sentence; the not-migrated sentence) */
 function crmConsentWhyNot(cp) {
-  if (!crmEdit()) return tx('Your login can only view');
+  if (!crmEdit()) return crmViewWhy();
   if (!cp || !cp.migrated) return tx('Consent records start after an update.');
   return '';
 }
@@ -55,7 +55,7 @@ function crmConsentHTML(p, rec) {
   var cp = rec.contact_prefs || null, why = crmConsentWhyNot(cp);
   var head = cp && !cp.migrated ? '<div class="hint" data-testid="crm-consent-notyet">' + esc(tx('Consent records start after an update. Nothing is lost.')) + '</div>' : '';
   var reqBtn = crmEdit() ? '<button type="button" class="act sm ghost" data-crm="privreq" data-testid="crm-consent-request">' + esc(tx('Privacy request')) + '</button>'
-    : crmViewOnlyBtn('crm-consent-request', tx('Privacy request'), tx('Your login can only view'));
+    : crmViewOnlyBtn('crm-consent-request', tx('Privacy request'), crmViewWhy());
   var body = head + '<div class="consent-rows" data-testid="crm-consent-rows">' + crmConsentRows(cp) + '</div>'
     + (why && cp && cp.migrated ? '<div class="why" data-testid="crm-consent-why">' + esc(why) + '</div>' : '')
     + '<div class="hint" id="crm_consent_law" data-testid="crm-consent-law"></div>'
@@ -101,7 +101,7 @@ async function crmConsentSet(p, ch, pu, allowed) {
     CRMR.keep.consentOpen = true;
     crmRecordOpen(CRM.route);
   } catch (e) {
-    toast(e && e.status === 503 ? tx('Consent records start after an update. Nothing is lost.') : e && e.status === 403 ? tx('Your login can only view') : tx("Couldn't save that. Try again."));
+    toast(e && e.status === 503 ? tx('Consent records start after an update. Nothing is lost.') : e && e.status === 403 ? crmViewWhy() : tx("Couldn't save that. Try again."));
   } finally { PRV.busy = false; }
 }
 /** the click door the record hands here (crmRecordClick → crmPrivacyClick): true when handled */
@@ -128,7 +128,7 @@ function crmConsentMount(p) {
 /* ═══ 2 · THE REGISTER — #/privacy: every request to see, correct, erase, withdraw, nominate or complain, on the law's clock ═══ */
 function crmPrivacy(frame, params) {
   PRV.params = params || {};
-  crmBar('<a href="#/parties" data-testid="crm-back">‹ ' + esc(tx('Parties')) + '</a>', crmEdit() ? '<button type="button" class="act sm" data-crm="prvadd" data-testid="crm-prv-add">+ ' + esc(tx('Log a request')) + '</button>' : crmViewOnlyBtn('crm-prv-add', '+ ' + tx('Log a request'), tx('Your login can only view')), true);
+  crmBar('<a href="#/parties" data-testid="crm-back">‹ ' + esc(tx('Parties')) + '</a>', crmEdit() ? '<button type="button" class="act sm" data-crm="prvadd" data-testid="crm-prv-add">+ ' + esc(tx('Log a request')) + '</button>' : crmViewOnlyBtn('crm-prv-add', '+ ' + tx('Log a request'), crmViewWhy()), true);
   var s = document.getElementById('screen'); s.className = 'screen flush';
   s.innerHTML = '<div id="crm_prv" data-testid="crm-prv-list"></div>';
   if (PRV.api && PRV.api.destroy) { try { PRV.api.destroy(); } catch (_) {} }

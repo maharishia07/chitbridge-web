@@ -19,7 +19,7 @@ function crmStageChip(lead) {
 function crmLeadWords(e) {
   var code = e && e.data && e.data.code;
   if (e && e.status === 503) return tx(CRM_LEADS_WAIT);
-  if (e && e.status === 403) return tx('Your login can only view');   /* the server's level gate (lib/access) — the sentence, never "Try again" (WX-L2C) */
+  if (e && e.status === 403) return crmViewWhy();   /* the server's level gate (lib/access) — the sentence, never "Try again" (WX-L2C) */
   if (code === 'EXISTS') return tx('That name is already on your list.');
   if (code === 'BAD_PHONE') return tx('That phone number does not look right.');
   if (code === 'BAD_NAME') return tx('Give the lead a name.');
@@ -63,7 +63,7 @@ function crmLeadCols() {
     { key: 'last', label: 'Last activity', prio: 5, w: 190, html: true, cell: crmLastCell, value: function (p) { return p.last_at || ''; } }];
 }
 function crmLeadAddBtn() {
-  if (!crmEdit()) return crmViewOnlyBtn('crm-lead-add', '+ ' + tx('Add lead'), tx('Your login can only view'));   /* shown, greyed, with the server's sentence (FX-L2C) */
+  if (!crmEdit()) return crmViewOnlyBtn('crm-lead-add', '+ ' + tx('Add lead'), crmViewWhy());   /* shown, greyed, with the server's sentence (FX-L2C) */
   var off = LEADS.loaded && !LEADS.ready;
   return '<button type="button" class="act sm' + (off ? ' ghost' : '') + '" data-testid="crm-lead-add" data-crm="leadadd"' + (off ? ' disabled title="' + esc(tx(CRM_LEADS_WAIT)) + '"' : '') + '>+ ' + esc(tx('Add lead')) + '</button>';
 }
@@ -221,7 +221,7 @@ function crmImportCounts(p) {
 }
 
 function crmLeadImportBtn() {
-  if (!crmEdit()) return crmViewOnlyBtn('crm-lead-import', tx('Import'), tx('Your login can only view'));   /* shown, greyed, with the server's sentence — never hidden (the show-action rule, FX-L2C) */
+  if (!crmEdit()) return crmViewOnlyBtn('crm-lead-import', tx('Import'), crmViewWhy());   /* shown, greyed, with the server's sentence — never hidden (the show-action rule, FX-L2C) */
   var off = LEADS.loaded && !LEADS.ready;
   return '<button type="button" class="act sm' + (off ? ' ghost' : '') + '" data-testid="crm-lead-import" data-crm="leadimport"' + (off ? ' disabled title="' + esc(tx(CRM_LEADS_WAIT)) + '"' : '') + '>' + esc(tx('Import')) + '</button>';
 }

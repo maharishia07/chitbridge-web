@@ -91,7 +91,7 @@ async function route(S, r) {
   }
   if (p === '/api/crm/parties' && m === 'GET') {
     if (S.listFails > 0) { S.listFails--; return J(r, 500, { error: 'boom' }); }
-    return J(r, 200, crmApi.list(S.list, { careless: S.careless, records: fx.records }));
+    return J(r, 200, Object.assign(crmApi.list(S.list, { careless: S.careless, records: fx.records }), { may: crmApi.mayOf(r) }));   /* W2-CRM: the server's may/why rides the list */
   }
   if (S.live && (x = p.match(/^\/api\/crm\/parties\/([^/]+)\/timeline$/))) return J(r, 200, S.live.timeline);
   if (S.live && (x = p.match(/^\/api\/crm\/parties\/([^/]+)$/)) && m === 'GET') return S.live.recordFails ? J(r, 500, { error: 'Failed', message: 'boom' }) : S.live.raw ? r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(S.live.record) }) /* a deliberately malformed answer: not held to the contract */ : J(r, 200, S.live.record);
@@ -121,13 +121,13 @@ async function route(S, r) {
     if (!row) return J(r, 404, { code: 'NOT_FOUND', error: 'Not found', message: 'Not your party.' });
     const rec = crmApi.record(S.list, row.party_id, fx.records[row.party_id], S.fu);
     if (!S.migrated) { rec.migrated = false; rec.followups = []; }
-    return J(r, 200, rec);
+    return J(r, 200, Object.assign(rec, { may: crmApi.mayOf(r) }));
   }
   if (p === '/api/crm/followups' && m === 'GET') {
     if (!S.interactionsOk || !S.migrated) return J(r, 503, { code: 'CRM_NOT_MIGRATED', error: 'Not migrated yet', message: 'CB CRM needs migration b276 — not run yet.' });
     const scope = u.searchParams.get('scope'), done = u.searchParams.get('done') === '1', me = S.me || 'Athi';
     S.fuQueries = (S.fuQueries || []).concat([scope + '/' + (done ? 1 : 0)]);
-    return J(r, 200, crmApi.followups(S.fu.filter((f) => (done ? !!f.done_at : !f.done_at) && (scope !== 'mine' || f.assignee_name === me))));
+    return J(r, 200, Object.assign(crmApi.followups(S.fu.filter((f) => (done ? !!f.done_at : !f.done_at) && (scope !== 'mine' || f.assignee_name === me))), { may: crmApi.mayOf(r) }));
   }
   if (p === '/api/crm/followups' && m === 'POST') {
     if (!S.interactionsOk || !S.migrated) return J(r, 503, { code: 'CRM_NOT_MIGRATED', error: 'Not migrated yet', message: 'CB CRM needs migration b276 — not run yet.' });
@@ -136,7 +136,8 @@ async function route(S, r) {
   }
   if ((x = p.match(/^\/api\/crm\/followups\/([^/]+)$/))) {
     const f = S.fu.find((y) => y.followup_id === x[1]);
-    if (m === 'PATCH') { S.fuPatch = body; if (f && body.done) f.done_at = new Date().toISOString(); if (f && body.due_at) { f.due_at = body.due_at; f.late = false; } return J(r, 200, { followup: crmApi.followupOne(f || { followup_id: x[1], party_id: 'pid-0001', what: '', due_at: new Date().toISOString() }) }); }
+    /* W2-CRM: a snooze is a WORD ({ after }) the api turns into the shop's day; a date (due_at) is a day too */
+    if (m === 'PATCH') { S.fuPatch = body; if (f && body.done) f.done_at = new Date().toISOString(); if (f && (body.due_at || body.after)) { f.due_at = body.after ? new Date(Date.now() + (body.after === 'week' ? 7 : 1) * 86400e3).toISOString() : body.due_at; f.late = false; } return J(r, 200, { followup: crmApi.followupOne(f || { followup_id: x[1], party_id: 'pid-0001', what: '', due_at: new Date().toISOString() }) }); }
     if (m === 'DELETE') { S.fu = S.fu.filter((y) => y.followup_id !== x[1]); S.fuDeleted = x[1]; return J(r, 200, { ok: true }); }
   }
   /* ── the existing relationship routes ── */
@@ -483,7 +484,7 @@ async function route(S, r) {
     await p.click('[data-testid="crm-fu-fu-03"] [data-caret]'); await p.waitForSelector('[data-testid="crm-fu-mini-fu-03"]');
     ok(await p.locator('.cbl-next [data-act]').count() === 4, 'the follow-up mini-card shows every action: Done · Snooze tomorrow · Snooze next week · Open party');
     await p.click('.cbl-next [data-testid="crm-fu-snooze-tomorrow"]'); await p.waitForTimeout(400);
-    ok(S.fuPatch && S.fuPatch.due_at && !S.fuPatch.done, 'Snooze → Tomorrow sends a new due_at');
+    ok(S.fuPatch && S.fuPatch.after === 'tomorrow' && !S.fuPatch.due_at && !S.fuPatch.done, 'Snooze → Tomorrow sends the WORD { after: tomorrow } — the server lands it on the shop\'s day, never this phone\'s clock (W2-CRM)');
     await p.click('[data-testid="crm-fu-del-fu-09"]'); await p.waitForTimeout(400);
     ok(S.fuDeleted === 'fu-09', 'Delete removes a follow-up of a party that is no longer yours');
     await p.click('[data-testid="cbl-filters-crm-followups"]'); await p.selectOption('[data-testid="listctl-filter-scope"]', 'mine'); await p.waitForTimeout(500);
@@ -573,7 +574,8 @@ async function route(S, r) {
     await homeReady(p);
     ok(await p.locator('[data-testid="crm-add"]').count() === 1, 'a co-assist can add a party');
     await p.click('[data-testid="crm-row-P-0003"]'); await recReady(p);
-    ok(await p.locator('[data-testid="crm-more-remove"]').count() === 0 && !/Merge|Import|Export|Link to ChitBridge/i.test(await text(p, '.rec')) && !/Merge|Import|Export/i.test(await text(p, 'nav')), 'a co-assist sees no Import / Export / Merge / Remove');
+    await p.click('[data-testid="crm-act-more"]'); await p.waitForSelector('[data-testid="crm-more-menu"]', { timeout: 8000 });   /* Remove sits in More: open it to see it greyed */
+    ok(await p.locator('[data-testid="crm-more-remove"]').count() === 1 && await p.locator('[data-testid="crm-more-remove"]').isDisabled() && /Only the owner/.test(await text(p, '[data-testid="crm-more-remove"]')) && !/Merge|Import|Export|Link to ChitBridge/i.test(await text(p, '.rec')) && !/Merge|Import|Export/i.test(await text(p, 'nav')), 'a co-assist sees no Import / Export / Merge; Remove is SHOWN, greyed, with the server\'s owner-only sentence (W2-CRM: the server says may/why)');
     await ctx.close();
   }
   {
@@ -584,7 +586,7 @@ async function route(S, r) {
     ok(await p.locator('[data-testid="crm-actions"]').count() === 1 && await p.locator('[data-testid="crm-actions"] button:not([disabled])').count() === 0 && /only view/.test(await text(p, '[data-testid="crm-actions-why"]')) && await p.locator('[data-testid="crm-next"] button').count() === 0 && await p.locator('[data-testid="crm-next-done-fu-03"]').count() === 0, 'a viewer: every action shown, greyed, with the server\'s one sentence (FX-L2C)');
     ok(await p.locator('[data-testid="crm-next"]').count() === 1, 'a viewer still SEES what is due (Next stays)');
     await p.evaluate(() => { location.hash = '#/followups'; }); await p.waitForSelector('[data-testid^="crm-fu-fu-"]', { timeout: 10000 });
-    ok(await p.locator('[data-testid^="crm-fu-done-"]').count() === 0 && await p.locator('[data-testid="crm-fu-add"]').count() === 0, 'a viewer: no Done, no Add follow-up');
+    ok(await p.locator('[data-testid^="crm-fu-done-"]').count() === 0 && await p.locator('[data-testid="crm-fu-add"]').count() === 1 && await p.locator('[data-testid="crm-fu-add"]').isDisabled() && /only view/.test(await text(p, '[data-testid="crm-fu-add-why"]')), 'a viewer: no Done; Add follow-up SHOWN, greyed, with the sentence from the server\'s code (W2-CRM)');
     await ctx.close();
   }
 
