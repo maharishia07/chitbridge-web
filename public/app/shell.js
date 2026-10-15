@@ -63,6 +63,15 @@
 
   /* a manifest entry's name and line go through the catalogue (tx, accounts-shell.js — English is the key); a page without it shows the English */
   function T(s) { return typeof root.tx === 'function' ? root.tx(s) : s; }
+  /* ⭐ the frame's words are said AGAIN when a language pack lands: every pack calls renderApp() on its way out (strings-*.js), and a page
+     defines its own renderApp AFTER the frame is drawn — so the global is held behind a setter: the page's function runs, then the frame's
+     resay (⌂ Home · the title · the switcher · the areas). One place; no page copies it (walk-locale: "Home" was plain English on every page). */
+  var pageRender = typeof root.renderApp === 'function' ? root.renderApp : null, frameResay = null;
+  try {
+    Object.defineProperty(root, 'renderApp', { configurable: true,
+      get: function () { return function () { if (pageRender) pageRender(); if (frameResay) frameResay(); }; },
+      set: function (fn) { pageRender = typeof fn === 'function' ? fn : null; } });
+  } catch (e) { if (root.cbQuiet) root.cbQuiet('shell:renderApp', e); }
   function lsGet(k) { try { return root.localStorage.getItem(k); } catch (_) { return null; } }
 
   /** the API base, decided the way the pages decide it (CFG.API_BASE) — here once, so a page that mounts the shell need not copy it.
@@ -96,8 +105,8 @@
     '.cbsh.pane{position:static;display:block;background:transparent;--sh-bar:55px}',   /* + its 1px line = 56: the sidebar brand row's height (page-skeleton.css .brand), so the two header lines meet (Round U rule f) */
     '.cbsh.pane .cbsh-work:not(:has(.cbsh-signin:not(:empty))):not(:has(.cbsh-slotwork:not(:empty))){display:none}',
     /* ⌂ Home — the one way home on every page (app + bar modes); the switcher's look, so the bar has one kind of button */
-    '.cbsh-home{display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 10px;border:1px solid var(--sh-line);border-radius:8px;background:var(--sh-card);font-size:13px;font-weight:600;white-space:nowrap}',
-    '.cbsh-home:hover{background:var(--sh-panel)}',
+    '.cbsh-tohome{display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 10px;border:1px solid var(--sh-line);border-radius:8px;background:var(--sh-card);font-size:13px;font-weight:600;white-space:nowrap}',
+    '.cbsh-tohome:hover{background:var(--sh-panel)}',
     '.cbsh-title{display:inline-flex;align-items:center;gap:7px;min-width:0;font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
     /* header */
     '.cbsh-hdr{flex:0 0 auto;position:relative;z-index:20;background:var(--sh-card);border-bottom:1px solid var(--sh-line)}',
@@ -210,7 +219,7 @@
     /* PHONE — a different layout: bottom tabs, one area at a time, rows, the sheet drops over the page, the kural once on Home */
     '@media(max-width:700px){',
     '.cbsh{--sh-bar:52px}.cbsh-bar{padding:0 13px;gap:9px}.cbsh-who{padding:4px 6px;margin-left:-6px}',
-    '.cbsh-home .hw{display:none}.cbsh-home{padding:0 8px}.cbsh-title{font-size:13px}',   /* a phone: ⌂ alone (aria-label keeps the word) */
+    '.cbsh-tohome .hw{display:none}.cbsh-tohome{padding:0 8px}.cbsh-title{font-size:13px}',   /* a phone: ⌂ alone (aria-label keeps the word) */
     /* a phone, signed in: the shop's name is the bar's name — the page's title would cut it (area pitfall: "the shared top bar cuts the shop name at 390 px"); signed out the title shows */
     '.cbsh-bar:has(.cbsh-who) .cbsh-title{display:none}',
     '.cbsh-chip .lbl,.cbsh-chip .lg{display:none}.cbsh-chip .sm{display:inline}.cbsh-chip{padding:0 10px;gap:6px}',
@@ -277,7 +286,7 @@
   /** SHELL-ONE: in bar mode the bar names its page (the shop, the lab) — { icon, name }; nothing otherwise */
   function titleHTML(frame) {
     if (frame.mode !== 'bar' || !frame.title) return '';
-    return '<span class="cbsh-title" data-testid="shell-title"><span aria-hidden="true">' + esc(frame.title.icon || '') + '</span><span>' + esc(frame.title.name || '') + '</span></span>';
+    return '<span class="cbsh-title" data-testid="shell-title"><span aria-hidden="true">' + esc(frame.title.icon || '') + '</span><span class="tw">' + esc(T(frame.title.name || '')) + '</span></span>';
   }
   /** the header: the bar (mark · shop · switcher or title · chip · edition · licence · bell · ⌂ Home · avatar) and the shop's sheet */
   function headerHTML(frame) {
@@ -293,7 +302,7 @@
       '<span class="cbsh-lic" data-testid="shell-licence"></span>' +
       '<span class="cbsh-bell" data-testid="shell-bell" data-slot="bell"></span>' +
       /* SHELL-ONE: ⌂ Home on every page but Home itself — the storefront's frame.homeHref is the shop's front */
-      (frame.mode !== 'home' ? '<a class="cbsh-home" href="' + esc(frame.homeHref) + '" data-testid="shell-home" aria-label="' + esc(W.areas.home) + '"><span aria-hidden="true">' + ICON.home + '</span><span class="hw">' + esc(T(W.areas.home)) + '</span></a>' : '') +
+      (frame.mode !== 'home' ? '<a class="cbsh-tohome" href="' + esc(frame.homeHref) + '" data-testid="shell-home" aria-label="' + esc(T(W.areas.home)) + '"><span aria-hidden="true">' + ICON.home + '</span><span class="hw">' + esc(T(W.areas.home)) + '</span></a>' : '') +   /* .cbsh-tohome, never .cbsh-home: that is Home's own slot (INT7b: the link's rule had laid Home's sections in a row) */
       '<span class="cbsh-av" data-testid="shell-avatar"></span>' +
       '</div>' +
       (frame.person ? '<div class="cbsh-sheet" id="' + frame.sheetId + '" role="region" data-testid="shell-sheet" hidden></div><div class="cbsh-scrim" data-testid="shell-scrim"></div>' : '') +
@@ -530,13 +539,21 @@
       var cur = (me && me.area) || o.area || 'home';
       /* the app's name: its manifest entry; else the page's own title (SHELL-ONE: a lab, a page with no card); else the area */
       var icon = (me && me.icon) || (o.title && o.title.icon) || ICON[cur], name = (me && me.name) || (o.title && o.title.name) || W.areas[cur];
-      b.innerHTML = '<span aria-hidden="true">' + esc(icon) + '</span><span>' + esc(name) + '</span><span class="chev" aria-hidden="true">▼</span>';
+      b.innerHTML = '<span aria-hidden="true">' + esc(icon) + '</span><span>' + esc(T(name)) + '</span><span class="chev" aria-hidden="true">▼</span>';   /* through the catalogue: an area is a word (walk-locale) */
       b.setAttribute('aria-label', W.switcher);
       pop.innerHTML = areasShown().map(function (a) {
         return '<a href="' + esc(homeHref + (a === 'home' ? '' : '#' + a)) + '" data-testid="shell-switch-' + a + '"' + (a === cur ? ' aria-current="true"' : '') + '><span class="i" aria-hidden="true">' + ICON[a] + '</span>' + esc(W.areas[a]) + '</a>';
       }).join('');
     }
     function swOpen(v) { var b = $('.cbsh-swb'), pop = $('.cbsh-swpop'); if (!b) return; pop.hidden = !v; b.setAttribute('aria-expanded', v ? 'true' : 'false'); }
+    /* the frame's words through the catalogue again (a pack landed after the first paint): ⌂ Home, the bar's title, the switcher, the areas */
+    frameResay = function () {
+      var homeWord = $('.cbsh-tohome .hw'), homeLink = $('.cbsh-tohome'), titleWord = $('.cbsh-title .tw');
+      if (homeWord) homeWord.textContent = T(W.areas.home); if (homeLink) homeLink.setAttribute('aria-label', T(W.areas.home));
+      if (titleWord && o.title) titleWord.textContent = T(o.title.name || '');
+      paintSwitcher();
+      AREAS.forEach(function (a) { var t = $('.cbsh-nv[data-go="' + a + '"] .t'); if (t) t.textContent = T(W.areas[a]); });
+    };
 
     /* ── the kural: the footer band on a laptop; once, at the foot of Home, on a phone ── */
     function placeKural() {

@@ -1391,7 +1391,7 @@ function vizToOrder(){ var idx=_VIZ.idx, comboName=_VIZ.combo&&_VIZ.combo.name; 
 /* SHELL-ONE: the one frame, the bar only — ⌂ Home is THIS shop's front (the page without its ?item), the avatar's door is Home's sign-in; the shop's
    own name stays in its brand row below (rule 3: one string once), so the bar names the page */
 function shopFrontHref(){ var query=new URLSearchParams(location.search); query.delete('item'); query.delete('showcase'); var queryString=query.toString(); return location.pathname+(queryString?'?'+queryString:''); }
-function shopFrame(){ if(!window.CBFrame) return; CBFrame.mount({ app:'storefront', bar:true, signin:false, host:el('shell'), homeHref:shopFrontHref(), title:{ icon:'◇', name:tx('Shop') } }); }
+function shopFrame(){ if(!window.CBFrame) return; CBFrame.mount({ app:'storefront', bar:true, signin:false, host:el('shell'), homeHref:shopFrontHref(), title:{ icon:'◇', name:'Shop' } });   /* the frame says the title through the catalogue, and again when a pack lands */ }
 (function(){
   shopFrame();
   if(!BRIDGE){ el('app').innerHTML='<div class="msg">No shop specified.</div>'; return; }
