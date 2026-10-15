@@ -12,7 +12,7 @@
  * working list (e2e/list-unit.cjs); a page that makes this file reach for one fails e2e/list-unit-breaks.cjs.
  *
  *   CBList.mount(el, { key, rows, columns, view, group, filters, sorts, search, next, actions, bulk, onOpen,
- *                      head:{ title, period, notices, slot(el) }, t, store, ... }) → { refresh, destroy }
+ *                      head:{ title, period, notices, slot(el) }, t, store, ... }) → { refresh, destroy, state, open(id, on) }
  *
  * THE AVATAR SLOT: `head.slot(el)` is called with an empty span at the END of the title row (pushed to the far edge) every time the
  * title row is drawn — a page with no chrome of its own mounts CBAvatar there, and the head stays three rows. The unit draws the span
@@ -259,7 +259,9 @@
       refresh: function (x) { return refresh(I, x); },
       destroy: function () { teardown(I); INST = INST.filter(function (y) { return y !== I; }); if (el.__cbl === I) { el.__cbl = null; el.innerHTML = ''; el.classList.remove('cbl'); } },
       el: el,
-      state: function () { return { cols: I.s.cols.slice(), widths: JSON.parse(JSON.stringify(I.s.widths)), view: I.s.view, group: I.s.group, sort: I.s.sort, q: R.q, filt: JSON.parse(JSON.stringify(R.filt)) }; }
+      state: function () { return { cols: I.s.cols.slice(), widths: JSON.parse(JSON.stringify(I.s.widths)), view: I.s.view, group: I.s.group, sort: I.s.sort, q: R.q, filt: JSON.parse(JSON.stringify(R.filt)) }; },
+      /* open(id, on) — a page opens (or closes, on === false) one row's next level itself: the call desk's Next moves to the row that follows (W1-CRM) */
+      open: function (id, on) { var rowId = String(id); if (isOpen(I, rowId) !== (on !== false)) toggleRow(I, rowId, true); else { R.hl = rowId; refocusRow(I, rowId); } }
     };
     I.api = api;
     return api;
