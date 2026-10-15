@@ -17,7 +17,7 @@ Athi, 2026-10-12: *"for each function we are building we need to have a SAP kind
 | [M2R](M2R.md) | Market to reach (T3-P2-CRM: a set of customers, their consent, one send, the shop window) | SD / CRM marketing (campaign) — a baseline, not a spec: our set is the one segment rule + customer_list.groups, our send asks the one gate | group → reach → send → shop window → rewards | 4 | 1 | 0 |
 | [C2V](C2V.md) | Client to verified (the practice door) | no SAP module — the incumbents (Xero HQ / QBOA / MYOB Practice, docs/research/COMPARE-AU-BOOKS-2026-10.md §2) are a baseline only; built on our construct (docs/design/practice-door/REQUIREMENT.md §0) | practice → request → grant → dashboard → open client → ask → end | 0 | 1 | 6 |
 | [MVI](MVI.md) | Move in (from Xero / QuickBooks) | FI (conversion: opening balances, master data) | chart of accounts → contacts → items → opening balances | 4 | 0 | 0 |
-| [PRN](PRN-flow.md) | Parallel run (their Tally / Xero period beside ours) | FI (audit: parallel run, reconciliation of statements) | load their period → compare, differences first → the auditor's file | 2 | 1 | 0 |
+| [PRN](PRN-flow.md) | Parallel run (their Tally / Xero period beside ours) | FI (audit: parallel run, reconciliation of statements) | load their period → compare, differences first → the auditor's file → see where we stand against their package (the door back in) | 3 | 1 | 0 |
 | [FX](FX.md) | Foreign currency (a bill in another currency, its settlement, the period-end revaluation) | FI (foreign currency valuation · realised / unrealised exchange differences) | the day's rate → a foreign bill posts at its day's rate; its payment settles with the exchange gain or loss → revalue at the month end, reversed next month | 3 | 0 | 0 |
 | [DSP](DSP.md) | Dispute to settled (the USP: per-party, confidential) | SD-CM (complaints) · FI-AR (disputed items) | raise → work the queue → resolve | 2 | 1 | 0 |
 | [CBA](CBA.md) | Question to answer (CB Assist) | — (the help desk's knowledge base) | draft an answer → accept = publish | 1 | 1 | 0 |
@@ -37,7 +37,7 @@ Athi, 2026-10-12: *"for each function we are building we need to have a SAP kind
 | M2R | 1 group<br>2 reach<br>3 send ⚠️<br>4 shop window<br>5 rewards |  |  |  |  |  |  |  |  |
 | C2V |  |  | 1 practice (MISSING)<br>2 request (MISSING)<br>3 grant (MISSING)<br>4 dashboard (MISSING)<br>5 open client (MISSING)<br>6 ask ⚠️<br>7 end (MISSING) |  |  |  |  |  |  |
 | MVI |  |  | 1 chart of accounts<br>2 contacts<br>3 items<br>4 opening balances |  |  |  |  |  |  |
-| PRN |  |  | 1 load their period<br>2 compare, differences first<br>3 the auditor's file ⚠️ |  |  |  |  |  |  |
+| PRN |  |  | 1 load their period<br>2 compare, differences first<br>3 the auditor's file ⚠️<br>4 see where we stand against their package (the door back in) |  |  |  |  |  |  |
 | FX |  |  | 1 the day's rate<br>2 a foreign bill posts at its day's rate; its payment settles with the exchange gain or loss<br>3 revalue at the month end, reversed next month |  |  |  |  |  |  |
 | DSP |  |  |  |  | 1 raise<br>2 work the queue<br>3 resolve ⚠️ |  |  |  |  |
 | CBA |  |  |  |  | 1 draft an answer ⚠️<br>2 accept = publish |  |  |  |  |
