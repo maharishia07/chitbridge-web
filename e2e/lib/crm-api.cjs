@@ -129,12 +129,13 @@ function entry(e, i) {
     default: return { kind: 'change', at, field: e.line, old: null, new: null, by: e.by || null };
   }
 }
-/** GET /parties/:id/timeline?before=<iso>&limit=<n>: newest first, { party_id, entries, next_before, migrated } - no per-kind counts, no kind / q filters */
+/** GET /parties/:id/timeline?before=<iso>&limit=<n>: newest first, { party_id, entries, next_before, migrated, total, page, limit } - no per-kind counts, no kind / q filters.
+ *  LIM2 (W1-PLAT): the one pager's envelope rides beside the cursor as the api sends it — total = the rows this page could see, page always 1 of the cursor */
 function timeline(tl, id, q) {
   const all = ((tl && (tl.many || tl.entries)) || []).map(entry).sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
   const o = q || {}, limit = Math.max(1, Math.min(100, Number(o.limit) || 30)), before = o.before ? Date.parse(o.before) : Infinity;
   const rows = all.filter((e) => Date.parse(e.at) < before), page = rows.slice(0, limit);
-  return { party_id: id, entries: page, next_before: rows.length > limit ? page[page.length - 1].at : null, migrated: true };
+  return { party_id: id, entries: page, next_before: rows.length > limit ? page[page.length - 1].at : null, migrated: true, total: rows.length, page: 1, limit };
 }
 /** POST /parties/:id/interactions → 201 { interaction } */
 function interaction(b, now) {
