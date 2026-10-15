@@ -38,7 +38,8 @@ const item = (o) => Object.assign({ kind: 'due_in', ref: 'x', party_id: null, na
  * the day as the server states it: ₹50,000 in hand · a ₹5,000 cheque from Mala dated tomorrow · Mala's ₹20,000 due in two days · Sri Traders' ₹90,000 to pay in
  * three days (→ ₹15,000 short that day) · nothing else inside 7 days; GST ₹8,000 due the 20th of next month (inside 30 days only when it is). Fixed numbers.
  */
-function answer(days) {
+/* nodate: a shop whose pack will not guess the return date (AE without its FTA stagger) — the server sends due_date null and says why (W1-FIN) */
+function answer(days, nodate) {
   const rows = [];
   let bal = 5000000, inT = 0, outT = 0, low = { date: dayN(0), balance_minor: bal }, short = null;
   for (let i = 0; i < days; i++) {
@@ -46,7 +47,7 @@ function answer(days) {
     if (i === 1) items.push(item({ kind: 'cheque_in', ref: 'pay:c1', party_id: MALA, name: 'Mala Stores', amount_minor: 500000, date, due_date: date, cheque_no: '000777' }));
     if (i === 2) items.push(item({ kind: 'due_in', ref: 'SB-2', party_id: MALA, name: 'Mala Stores', amount_minor: 2000000, date, due_date: date }));
     if (i === 3) items.push(item({ kind: 'due_out', ref: 'PB-1', party_id: SRI, name: 'Sri Traders', amount_minor: 9000000, date, due_date: date }));
-    if (days === 30 && i === 20) items.push(item({ kind: 'gst', ref: 'gst:' + date, name: 'GST', amount_minor: 800000, date, due_date: date }));
+    if (days === 30 && i === 20 && !nodate) items.push(item({ kind: 'gst', ref: 'gst:' + date, name: 'GST', amount_minor: 800000, date, due_date: date }));
     const in_minor = items.filter((x) => /_in$/.test(x.kind)).reduce((t, x) => t + x.amount_minor, 0), out_minor = items.filter((x) => !/_in$/.test(x.kind)).reduce((t, x) => t + x.amount_minor, 0);
     bal += in_minor - out_minor; inT += in_minor; outT += out_minor;
     if (bal < low.balance_minor) low = { date, balance_minor: bal };
@@ -54,10 +55,12 @@ function answer(days) {
     rows.push({ date, in_minor, out_minor, balance_minor: bal, items });
   }
   const gstDue = days === 30 ? dayN(20) : dayN(45);
+  const gst = nodate ? { payable_minor: 800000, form: 'VAT201', short: 'VAT return', due_date: null, counted: false, why: 'Due date unknown until the return period is picked under Returns.' }
+    : { payable_minor: 800000, form: 'GSTR-3B', short: 'GST', due_date: gstDue, counted: days === 30, why: null };
   return { asOf: dayN(0), days, from: dayN(0), to: dayN(days - 1), currency: 'INR', opening_minor: 5000000, opening: [{ role: 'cash', code: '1400', name: 'Cash', balance_minor: 1000000 }, { role: 'bank', code: '1500', name: 'Bank', balance_minor: 4000000 }],
     in_minor: inT, out_minor: outT, closing_minor: bal, lowest: low, shortfall: short, words: short.words,
     uncounted: { overdue_in_minor: 1200000, overdue_parties: 1, disputed_in_minor: 0, disputed_out_minor: 0, words: '₹12,000 overdue from 1 party is not counted until it is promised or paid.' },
-    gst: { payable_minor: 800000, due_date: gstDue, counted: days === 30, why: null }, series: rows };
+    gst, series: rows };
 }
 
 W.run('finance-cash', async (w) => {
@@ -72,7 +75,7 @@ W.run('finance-cash', async (w) => {
       if (S.mode === 'denied') return J(r, 403, { error: 'Only the owner may see the cash position.', message: 'Only the owner may see the cash position.' });
       if (S.mode === 'off') return J(r, 404, { error: 'Not found' });
       if (S.mode === 'broken') return J(r, 500, { error: 'Failed', message: 'database timeout at 10.0.0.5' });
-      return J(r, 200, answer(u.searchParams.get('days') === '30' ? 30 : 7));
+      return J(r, 200, answer(u.searchParams.get('days') === '30' ? 30 : 7, S.mode === 'nodate'));
     }
     if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Fixture Shop', currency_code: 'INR' } });
     if (p === '/api/facts/rail') return J(r, 200, crmApi.railFacts({ suppliers: 1, customers: 3, in: 0, out: 0, stuck: 0 }));
@@ -129,6 +132,12 @@ W.run('finance-cash', async (w) => {
     await page.click('[data-testid="fc-days-30"]'); await page.waitForTimeout(700);
     const n = await rows(), gst = await txt('[data-testid="fc-gst"]'), pressed = await page.locator('[data-testid="fc-days-30"][aria-pressed="true"]').count();
     return { ok: /days=30/.test(S.asked[S.asked.length - 1] || '') && n === 30 && /GST/.test(gst) && /8,000/.test(gst) && !/after this window/.test(gst) && pressed === 1 && S.writes.length === 0, saw: 'asked ' + S.asked[S.asked.length - 1] + '; ' + n + ' rows; gst chip "' + gst + '"; writes ' + S.writes.length };
+  });
+  await w.step('C8b', 'Cash (the pack will not guess the return date: AE without its stagger) -> the chip says the pack\'s word, the figure and the server\'s sentence — no date, nothing counted', async () => {
+    S.mode = 'nodate'; await open(); await page.waitForTimeout(500);
+    const gst = await txt('[data-testid="fc-gst"]'), gstRows = await page.locator('[data-testid^="fc-row-"]:has-text("Return to pay")').count();
+    S.mode = 'ok'; await open(); await page.click('[data-testid="fc-days-30"]'); await page.waitForTimeout(700);   /* back to the 30-day view C8 left for C9 */
+    return { ok: /^VAT return/.test(gst) && /8,000/.test(gst) && /picked under Returns/.test(gst) && !/after this window/.test(gst) && gstRows === 0, saw: 'gst chip "' + gst + '"; return rows ' + gstRows };
   });
   await w.step('C9', 'Cash -> filter "Money moving" -> only the days with something behind them stay', async () => {
     const before = await rows();

@@ -21,7 +21,8 @@ var FC_EP = {
 };
 Object.assign(EP, FC_EP);
 var FC_OWNER_ONLY = 'Only the owner may see the cash position.';
-var FC_KIND = { due_in: 'Bill due', due_out: 'Bill to pay', cheque_in: 'Cheque in hand', cheque_out: 'Cheque written', gst: 'GST challan' };
+/* `gst` is the server's kind for the tax return; its row's name is the pack's own word (GST · BAS · VAT return) — W1-FIN, never "GST" typed here */
+var FC_KIND = { due_in: 'Bill due', due_out: 'Bill to pay', cheque_in: 'Cheque in hand', cheque_out: 'Cheque written', gst: 'Return to pay' };
 
 function fcIsIn(it) { return /_in$/.test(String(it && it.kind)); }
 
@@ -113,9 +114,14 @@ function fcHead() {
   if (r && FC.state === 'ready') {
     notices.push({ cls: r.shortfall ? 'warn' : '', tid: 'fc-words', text: r.words, onOpen: function () { if (r.shortfall && FC.api) FC.api.refresh(); } });
     if (r.uncounted && r.uncounted.words) notices.push({ cls: 'warn', tid: 'fc-uncounted', text: r.uncounted.words });
-    if (r.gst && Number(r.gst.payable_minor) > 0) chips.push({ tid: 'fc-gst', text: tx('GST') + ' ' + bkMoney(r.gst.payable_minor, r.currency) + ' · ' + bkDate(r.gst.due_date) + (r.gst.counted ? '' : ' · ' + tx('after this window')) });
+    if (r.gst && Number(r.gst.payable_minor) > 0) chips.push({ tid: 'fc-gst', text: fcReturnChip(r.gst, r.currency) });
   }
   return { title: tx('Cash position'), notices: notices, chips: chips };
+}
+/** the return chip: the pack's word (gst.short) · the figure · its date and whether it is inside the window — or, with no date (the pack would not guess), the server's sentence */
+function fcReturnChip(g, cur) {
+  var when = g.due_date ? bkDate(g.due_date) + (g.counted ? '' : ' · ' + tx('after this window')) : (g.why || tx('due date not known'));
+  return g.short + ' ' + bkMoney(g.payable_minor, cur) + ' · ' + when;
 }
 function fcMount(frame) {
   var s = document.getElementById('screen'); if (!s) return;
