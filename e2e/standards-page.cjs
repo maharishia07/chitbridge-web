@@ -169,7 +169,10 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     ok(/200%/.test(BYID['wcag-1.4.4'].w) && BYID['wcag-1.4.4'].s !== 'live' && /132%/.test(BYID['wcag-1.4.4'].m), 'WCAG 1.4.4 says 200%, and says what we test (132%) — not In force');
     ok(BYID['wcag-1.4.6'].s !== 'live' && !/1\.4\.6/.test(BYID['wcag-1.4.3'].n), 'WCAG 1.4.6 is its own row and not In force: the contrast test measures AA only');
     ok(/AAL1/.test(BYID['nist-800-63b'].m) && !/about AAL2/i.test(BYID['nist-800-63b'].m), 'NIST SP 800-63B: one factor is AAL1');
-    ok(BYID['wco-hs'].s === 'part' && BYID['oauth2-oidc'].s === 'part' && /Zoho/.test(BYID['oauth2-oidc'].note), 'HS codes and OAuth 2 are up to what exists: HSN filed, Zoho reached with OAuth 2 — each Partly');
+    ok(BYID['wco-hs'].s === 'part' && BYID['oauth2-oidc'].s === 'live' && BYID['oauth2-oidc'].limit && /Zoho/.test(BYID['oauth2-oidc'].note), 'HS codes and OAuth 2 are up to what exists: HSN filed (Partly); Zoho reached with OAuth 2 — In force, the OIDC decision a stated Limit (STD-COMPARE)');
+    /* STD-COMPARE (15 Oct 2026): the five audit fixes, each proved against the code (docs/critique/STD-COMPARE.md a) */
+    ok(BYID['wcag-1.4.6'].s === 'part' && /High Contrast/.test(BYID['wcag-1.4.6'].m) && BYID['css-logical'].s === 'part' && /physical/.test(BYID['css-logical'].m), 'WCAG 1.4.6 is Partly (one theme measured at 7:1) and CSS logical properties Partly (the small apps still carry physical ones)');
+    ok(['gherkin', 'oauth2-oidc', 'medusa-model'].every((id) => BYID[id].s === 'live' && BYID[id].limit && !BYID[id].m && /Proof: /.test(BYID[id].note)), 'Gherkin, OAuth 2 and the Medusa model are In force with nothing missing: the decision not to adopt more is a Limit, the proof is named');
     ok(cjHas('Xero'), 'compat.json names Xero (the Australian launch depends on it)');
   }
 

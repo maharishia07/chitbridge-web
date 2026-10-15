@@ -449,7 +449,13 @@
           "route": [{ "m": "GET", "p": "/api/books/compare/:id/csv", "file": "api:routes/books.js" }],
           "chit": "none", "ledger": "read",
           "test": ["api:tests/parallel-run.test.cjs"],
-          "status": "warn", "note": "CSV from the server; the PDF is the browser's print of the page (no PDF library added)." }
+          "status": "warn", "note": "CSV from the server; the PDF is the browser's print of the page (no PDF library added)." },
+        { "n": 4, "step": "see where we stand against their package (the door back in)", "module": "Accounts", "who": "the owner, or the shop's auditor — anyone reading the Standards page (it reads no API)",
+          "screen": [{ "file": "web:public/app/cap-standards.js", "fn": "stdCompareRows" }, { "file": "web:public/standards.html", "fn": "compareNext" }, { "file": "web:public/standards.html", "fn": "openCompared" }],
+          "engine": [], "route": [],
+          "chit": "none", "ledger": "none (a comparison is words, never a posting)",
+          "test": ["web:e2e/walk-standards-compare.cjs"],
+          "status": "ok", "note": "STD-COMPARE (2026-10-15): the Standards page's Compared with tab — data/compare.json (country · package · capability · theirs · ours · status), the shop's country first; a core-books row offers See it → step 2 (accounts.html#compare). A claim marked 'to confirm' is from memory, not a cited source." }
       ]
     },
     {

@@ -48,11 +48,12 @@ var STANDARDS = [
     at:'POST /api/testing/results/junit', go:'testing', why:'A private results format would strand every automated run inside one screen, and would have to be re-implemented by anything that ever wanted to read it.' },
   { id:'gherkin', pa:'testing', a:'build', k:'prac', c:['GLOBAL'],
     p:"Each rule and its test are written as one text",
-    m:"The format is adopted; its runner deliberately is not",
     g:'Verification', n:'Gherkin', w:'The spec and the test as one text — Given / When / Then',
     ex:"Given Counter open on Sell", exWhy:"Our case shape already WAS Given/When/Then (pre / step / expected), so nothing is translated — the file is rendered and read back, and all 110 real cases round-trip unchanged.",
-    s:'part',
-    note:'The FORMAT is adopted; Cucumber the RUNNER is deliberately not — every “When I click the row” would need a step definition, a second codebase mapping sentences onto clicks.',
+    s:'live', limit:'the format, not the Cucumber runner',
+    /* STD-COMPARE (15 Oct 2026): Partly → In force. Nothing is missing from what was adopted: GET /api/testing/cases/gherkin writes the board as .feature text and
+       POST /api/testing/cases/gherkin reads it back (chitbridge-api routes/testing.js; tests/testing-board-writes.test.cjs). The runner is a decision, a stated limit. */
+    note:'Proof: chitbridge-api routes/testing.js writes and reads .feature text (tests/testing-board-writes.test.cjs). The FORMAT is adopted; Cucumber the RUNNER is deliberately not — every “When I click the row” would need a step definition, a second codebase mapping sentences onto clicks.',
     at:'Testing — export/import .feature', go:'testing', why:'A .feature file carries the spec clause (the Feature description) and the cases against it in one text, so neither can be edited without the other in front of you.' },
   { id:'bcp47', pa:'locale', a:'look', k:'std', c:['GLOBAL'],
     p:"Your language is named the way every system names it",
@@ -107,12 +108,14 @@ var STANDARDS = [
   /* STDREG1 (14 Oct 2026): 1.4.6 (enhanced contrast, 7:1) split out of the 1.4.3 row — nothing measures it, so it is not In force */
   { id:'wcag-1.4.6', pa:'settings', a:'look', k:'std', c:['GLOBAL'],
     p:"Extra-strong contrast for readers with low vision",
-    m:"Not tested; our check stops at 4.5:1",
+    m:"One theme (High Contrast) is measured at 7:1; the other sixteen at 4.5:1 only",
     g:'Accessibility', n:'WCAG 2.2 — 1.4.6', w:'Enhanced text contrast, 7:1 (level AAA)',
-    ex:"7:1 or more (AA asks 4.5:1)", exWhy:"The 1.4.3 example above would pass 7:1, but no test measures every theme against it — so we do not claim it.",
-    s:'plan',
-    note:"The theme-contrast test measures the AA level (4.5:1). Some themes may already reach 7:1; none is checked. Missing: the same measurement at 7:1, and a theme that promises it.",
-    at:'Appearance · themes', go:'appearance', why:'A claim the test does not measure is a guess; this row stays Planned until the test says otherwise.',
+    ex:"7:1 or more (AA asks 4.5:1)", exWhy:"The High Contrast theme promises 7:1 and e2e/a11y-contrast.cjs holds it to 7; every other theme is held to 4.5:1 — so the claim is one theme's, not the product's.",
+    s:'part',
+    /* STD-COMPARE (15 Oct 2026): Planned → Partly. Proved against the code: chitbridge-engines src/screen.js theme `hc` carries a11y { level:'AAA', standard:'WCAG 2.2 AAA (1.4.6) — 7:1' };
+       e2e/a11y-contrast.cjs:179 measures a theme that claims AAA at 7:1 (TEXT = 7) and the rest at 4.5. */
+    note:"The contrast test (e2e/a11y-contrast.cjs) holds a theme to the level it claims: High Contrast claims AAA and is measured at 7:1; the sixteen others claim AA and are measured at 4.5:1. Missing: 7:1 on every theme, or a plain word on each theme saying which level it reaches.",
+    at:'Appearance · themes', go:'appearance', why:'A reader with low vision can pick the one theme that is measured for them; the row says Partly until every theme is measured at 7:1 or says it is not.',
     added:'2026-10-14' },
   { id:'wcag-1.4.4', pa:'settings', a:'look', k:'std', c:['GLOBAL'],
     p:"Text can grow and nothing breaks",
@@ -141,8 +144,11 @@ var STANDARDS = [
   { id:'css-logical', pa:'locale', a:'look', k:'std', c:['GLOBAL'],
     p:"Right-to-left languages such as Arabic lay out correctly",
     g:'Accessibility', n:'CSS Logical Properties', w:'Right-to-left layout without a second stylesheet', ex:"margin-inline-start: 12px", exWhy:"Mirrors automatically in Arabic. <code>margin-left</code> would have needed a second stylesheet nobody maintains.",
-    s:'live',
-    note:'378 physical properties converted.',
+    m:"The small apps still carry about 200 physical left/right properties across 15 files",
+    s:'part',
+    /* STD-COMPARE (15 Oct 2026): In force → Partly. Proved against the code: grep -E "(margin|padding|border)-(left|right)|\b(left|right)\s*:" over public/*.html + public/app/*.js
+       finds ~200 hits in 15 files (margin-left 50 · right: 49 · left: 39 · border-right 22 · border-left 16 · padding-right 12 · margin-right 10 · padding-left 8). */
+    note:'378 physical properties were converted in the workshop. The small apps built since (CB Accounts, CRM, Finance, Settings, the till) still write margin-left, padding-right and left:/right: — about 200 across 15 files — so an Arabic reader gets a mirrored page in some places and not others. Missing: the same sweep over the small apps, and a guard that counts physical properties and only lets the count fall.',
     at:'Whole product', go:'appearance', why:'Arabic became possible in one sweep instead of a parallel stylesheet nobody would maintain.' },
 
   { id:'rfc7386', pa:'catalogue', a:'build', k:'std', c:['GLOBAL'],
@@ -298,10 +304,11 @@ var STANDARDS = [
     why:'Removes the manual add/remove step for a business that already runs an HR system.' },
   { id:'oauth2-oidc', pa:'signin', a:'people', k:'std', c:['GLOBAL'],
     p:"Your connector reaches Zoho Books with Zoho's own sign-in; ours stays our own",
-    m:"Used to reach Zoho; sign-in to us is not federated, on purpose",
     g:'Identity & access', n:'OAuth 2 · OIDC', w:'Delegated access to another system; federated sign-in',
-    s:'part', ex:'Authorization: Zoho-oauthtoken …',
-    note:'In use: the connector reaches Zoho Books with an OAuth 2 access token and refreshes it (chitbridge-api tools/tally-connector/adapters/zoho.js, proven on a stand-in by tests against fake-zoho). Not adopted: OpenID Connect sign-in to ChitBridge — see below.',
+    s:'live', limit:'OAuth 2 to reach Zoho; OIDC sign-in to us deliberately not', ex:'Authorization: Zoho-oauthtoken …',
+    /* STD-COMPARE (15 Oct 2026): Partly → In force. Nothing is missing from what was adopted: chitbridge-api tools/tally-connector/adapters/zoho.js:16-20 holds the OAuth 2
+       access token and renews it from the refresh token; e2e/connector-zoho.test.cjs proves the connector on a stand-in. The OIDC non-adoption is a decision, a stated limit. */
+    note:'Proof: the connector reaches Zoho Books with an OAuth 2 access token and refreshes it (chitbridge-api tools/tally-connector/adapters/zoho.js; e2e/connector-zoho.test.cjs against a stand-in Zoho). Not adopted: OpenID Connect sign-in to ChitBridge — see below.',
     exWhy:'⚠️ Deliberately not adopted. We ISSUE credentials rather than delegating to an identity provider — a chit is signed by a party we authenticated, and federating that would put a third party between a business and its own record.',
     at:'Sign-in — where it would replace our own', go:'',
     why:'Would let people sign in with an existing account — at the cost of who vouches for the signature on a chit.' },
@@ -971,10 +978,11 @@ var STANDARDS = [
     added:'2026-10-14' },
   { id:'medusa-model', pa:'catalogue', a:'sell', k:'prac', c:['GLOBAL'],
     p:"Product fields checked against a widely used open model",
-    m:"Read for naming; nothing tests it",
     g:'Records & data', n:'Medusa product model (read, not adopted)', w:'An open commerce model read field by field to name ours',
-    s:'part',
-    note:"Read, not adopted: it confirmed hs_code, origin_country, sku, barcode, material and weight; variant-as-a-record was not taken (a trader writes a flat price list). No Medusa code is used (app/catalogue-model.js FIELD_STANDARDS).",
+    s:'live', limit:'read for naming; not adopted as a model',
+    /* STD-COMPARE (15 Oct 2026): Partly → In force. Nothing is missing from what was adopted: app/catalogue-model.js FIELD_STANDARDS names every field's standard (medusa-model at :532)
+       and scripts/standards-doc.js reads that table and fails when a field has none. Not adopting the model is a decision, a stated limit. */
+    note:"Proof: app/catalogue-model.js FIELD_STANDARDS names the standard behind each field (medusa-model among them); scripts/standards-doc.js prints that table as the catalogue's standards document. Read, not adopted: it confirmed hs_code, origin_country, sku, barcode, material and weight; variant-as-a-record was not taken (a trader writes a flat price list). No Medusa code is used.",
     at:'Catalogue', go:'catalogue',
     why:"Better, not copied: we take its names where they fit and say where we differ.",
     added:'2026-10-14' },
@@ -1239,6 +1247,36 @@ function stdCompatRows(json){
       ex: '—', s: s, note: x.roadmap || x.note || undefined, at: 'Settings › Integrations', go: 'integrations',
       proof: proof, fit: STD_COMPAT_FIT[x.fit] || x.fit, compat: x.id,
       dir: x.dir, dirWords: STD_COMPAT_DIR[x.dir][2].replace('{s}', x.system), code: x.code || '', test: x.test || '' };
+  });
+}
+
+/**
+ * ⭐ COMPARED WITH (STD-COMPARE, 2026-10-15): the country comparison of book-keeping packages — ONE file, public/data/compare.json (the rows of
+ * C:/dev/docs/14-accounting/compare.json, byte for byte), read by the Standards page's "Compared with" tab (a CBList view with its own rows).
+ * These rows are NOT standards: they never join STANDARDS, the matrix or the All view. This maps a compare.json row onto the row the tab paints;
+ * a row the file gets wrong is dropped, not guessed. The file's own fields (country · package · capability · theirs · ours · better · status ·
+ * source · verified · id) are its dictionary (its `about`); here only: cs = STD_COMPARE_STATUS[status] (symbol · word), c = [country] so the page's
+ * "Applies in" filter and Country group read it, k = 'compare' (the view's own filter key), src = the source split into links and documents.
+ *   source: "https://… ; 14-accounting/FILE.md s4" → [{ url }, { doc, where }]; a document on this web checkout (STD_COMPARE_DOCS) says so; another
+ *   says it lives in the docs library — greyed with that sentence, never a dead link.   verified: source | memory (memory = "to confirm" on the row).
+ */
+var STD_COMPARE_STATUS = { ahead: ['▲', 'Ahead'], level: ['=', 'Level'], behind: ['▼', 'Behind'], 'n/a': ['—', 'Not compared'] };
+var STD_COMPARE_VERIFIED = { source: 'In the cited source', memory: 'To confirm — from memory, the sources are silent' };
+var STD_COMPARE_DOCS = { '14-accounting/COMPARE-AU-BOOKS-2026-10.md': 'docs/research/COMPARE-AU-BOOKS-2026-10.md' };   /* a copy in THIS repo (chitbridge-web) */
+function stdCompareSources(text) {
+  return String(text || '').split(';').map(function (part) { return part.trim(); }).filter(Boolean).map(function (part) {
+    if (/^https?:\/\//.test(part)) return { url: part };
+    var words = part.split(/\s+/), doc = words[0], where = words.slice(1).join(' ');
+    return { doc: doc, where: where, copy: STD_COMPARE_DOCS[doc] || '' };
+  });
+}
+function stdCompareRows(json) {
+  var rows = (json && Array.isArray(json.rows)) ? json.rows : [], countries = (json && json.countries) || {};
+  return rows.filter(function (x) {
+    return x && x.id && countries[x.country] && x['package'] && x.capability && STD_COMPARE_STATUS[x.status] && STD_COMPARE_VERIFIED[x.verified];
+  }).map(function (x) {
+    return { cmp: x.id, k: 'compare', c: [x.country], countryName: countries[x.country], pkg: x['package'], capability: x.capability,
+      theirs: x.theirs || '', ours: x.ours || '', better: x.better || '', cs: x.status, verified: x.verified, src: stdCompareSources(x.source) };
   });
 }
 
