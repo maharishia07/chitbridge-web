@@ -200,7 +200,7 @@ async function route(S, r) {
     ok(!/\balert\s*\(/.test(all), 'no alert() anywhere');
     ok(!/accounting|books of account/i.test(all.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')), 'the source carries neither forbidden word on a screen');
     ok(/CBOnePerson\.attach\(/.test(html), 'the one-shop gate is attached');
-    ok(/id="cb-avatar"[^>]*><\/span>/.test(html) && !/class="avatar"|avatar-btn|avmenu/.test(html), 'the avatar slot (#cb-avatar) is present and EMPTY — CBAvatar mounts there; this page draws none');
+    ok(/id="shell"[^>]*><\/div>/.test(html) && !/class="avatar"|avatar-btn|avmenu|CBAvatar\.mount\(|cb-avatar/.test(html.replace(/<!--[\s\S]*?-->/g, '')), 'the frame\'s host (#shell) is present and EMPTY — CBFrame mounts the one header (avatar · Home · chip) there; this page draws none (SHELL-ONE)');
     ok(!/role=\\?["']columnheader|<thead|class=\\?["'][^"']*\blhead\b/.test(all), 'no column header is drawn by hand — every list is a CBList mount');
     ok((js.match(/CBList\.mount\(/g) || []).length >= 4, 'home, follow-ups and both timeline views are CBList mounts (' + (js.match(/CBList\.mount\(/g) || []).length + ')');
     const code = js.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');

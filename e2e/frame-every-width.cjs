@@ -57,7 +57,7 @@ function measure() {
   const av = Array.from(document.querySelectorAll('[data-testid="avatar-btn"],.cb-avatar,#cbav,[data-cbavatar],.cbsh-who,.cbav-btn')).filter(vis)[0];
   const ov = online && av ? (() => { const a = online.getBoundingClientRect(), c = av.getBoundingClientRect(); return Math.min(a.right, c.right) - Math.max(a.left, c.left) > 2 && Math.min(a.bottom, c.bottom) - Math.max(a.top, c.top) > 2; })() : false;
   const sh = Array.from(document.querySelectorAll('aside .brand,.side .brand')).filter(vis)[0];
-  const mh = Array.from(document.querySelectorAll('.main > [data-testid="shell-header"],.main.overbar .cbl-title,.main:not(.overbar) .bar,main > header')).filter(vis)[0];   /* SHELL-ONE: the frame's bar is the main column's header line */
+  const mh = Array.from(document.querySelectorAll('.main > #shell [data-testid="shell-header"],.main.overbar .cbl-title,.main:not(.overbar) .bar,main > header')).filter(vis)[0];   /* SHELL-ONE: the frame's bar is the main column's header line */
   return {
     sw: document.documentElement.scrollWidth, iw: innerWidth, ih: innerHeight, hits: hits.slice(0, 6), nHits: hits.length,
     band: band ? { drawn: !!br, inShellFoot: !!band.closest('[data-testid="shell-foot"],[data-testid="shell-pfoot"]'), inHead: !!band.closest('header,.bar,.top,.topbar,.titlerow,.cbl-title,.cbsh-hd,.cbsh-head,[role=banner]'), top: br && Math.round(br.top), bottom: br && Math.round(br.bottom), w: br && Math.round(br.width), l: br && Math.round(br.left), parent: band.parentElement && (band.parentElement.tagName + '.' + band.parentElement.className) } : null,
