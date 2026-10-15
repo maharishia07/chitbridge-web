@@ -180,12 +180,12 @@ function l2cRoute(L, r, q, u, p, m, body) {
   let x;
   if (p === '/api/crm/parties' && m === 'GET' && u.searchParams.get('view') === 'leads') {
     const rows = L.migrated ? L.leads.filter(isLead).map((l) => leadRow(L, l)) : [];
-    return J(r, 200, crmApi.listPage(rows, { leads_migrated: L.migrated }));   /* the one envelope (total · page · limit), as the contract says */
+    return J(r, 200, crmApi.listPage(rows, { leads_migrated: L.migrated, may: crmApi.mayOf(r) }));   /* the one envelope (total · page · limit), as the contract says */
   }
   if (p === '/api/crm/parties' && m === 'GET') {
     const base = crmApi.list(fx.list, { records: fx.records });   /* the golden parties, plus every lead that has traded (a customer now) */
     const grown = L.leads.filter((l) => !isLead(l)).map((l) => leadRow(L, l));
-    return J(r, 200, crmApi.listPage(base.parties.concat(grown), { walk_ins: base.walk_ins }));
+    return J(r, 200, crmApi.listPage(base.parties.concat(grown), { walk_ins: base.walk_ins, may: crmApi.mayOf(r) }));
   }
   if (p === '/api/crm/leads' && m === 'POST') {
     if (!L.migrated) return J(r, 503, errBody(NOT_READY, 'LEADS_NOT_MIGRATED'));
@@ -202,8 +202,8 @@ function l2cRoute(L, r, q, u, p, m, body) {
     L.fu.filter((f) => !f.done_at && (f.due_day || localDay(new Date(f.due_at))) <= t).forEach((f) => { const l = findLead(L, f.party_id); if (!l) return; const d = f.due_day || localDay(new Date(f.due_at)); const last = L.ix.filter((x) => x.party_id === l.party_id && x.kind === 'call').slice(-1)[0];
       calls.push({ party_id: l.party_id, party_name: l.name, phone: l.phone, stage: isLead(l) ? l.stage : 'lead', followup_id: f.followup_id, what: f.what, due_day: d, assignee_user_id: null, new: false, last_outcome: last ? last.body : null, last_at: last ? last.at : null, late: d < t, today: d === t }); });
     L.leads.filter((l) => isLead(l) && !L.ix.some((x) => x.party_id === l.party_id) && !L.fu.some((f) => f.party_id === l.party_id && !f.done_at)).forEach((l) => calls.push({ party_id: l.party_id, party_name: l.name, phone: l.phone, stage: l.stage, followup_id: null, what: null, due_day: null, assignee_user_id: null, new: true, last_outcome: null, last_at: null, late: false, today: false }));
-    return J(r, 200, { calls, count: calls.length, late: calls.filter((c) => c.late).length, today: calls.filter((c) => c.today).length,
-      outcomes: OUTCOMES.map((o) => ({ key: o.key, label: o.label, ask: !!o.ask, presets: o.presets ? Object.keys(o.presets) : [], moves: o.stage || null })), may: L.migrated ? { ok: true } : { ok: false, why: NOT_READY } });
+    return J(r, 200, { calls, total: calls.length, page: 1, limit: calls.length, count: calls.length, late: calls.filter((c) => c.late).length, today: calls.filter((c) => c.today).length, shop_day: t,
+      outcomes: OUTCOMES.map((o) => ({ key: o.key, label: o.label, ask: !!o.ask, presets: o.presets ? Object.keys(o.presets) : [], moves: o.stage || null })), may: Object.assign(L.migrated ? { ok: true } : { ok: false, why: NOT_READY }, { write: crmApi.mayOf(r).write }) });
   }
   if ((x = p.match(/^\/api\/crm\/parties\/([^/]+)\/outcome$/)) && m === 'POST') {
     const l = findLead(L, decodeURIComponent(x[1])), b = body || {}, o = OUTCOMES.find((k) => k.key === b.outcome);
@@ -244,12 +244,12 @@ function l2cRoute(L, r, q, u, p, m, body) {
     const row = leadRow(L, l), stage = row.lead.stage;
     row.lead = Object.assign({}, row.lead, { moves: STAGES.filter((g) => g !== stage), may: L.migrated ? { ok: true } : { ok: false, why: NOT_READY } });
     /* contact_prefs: a lead has no consent rows yet — the same answer the record builder gives (crm-api prefsBefore: service allowed, offers need consent) */
-    return J(r, 200, Object.assign(row, { merged_from: null, relationship: null, points: null, migrated: true, contact_prefs: crmApi.prefsBefore(), followups: fuRows(L).filter((f) => f.party_id === l.party_id && !f.done_at).map(fuShape) }));
+    return J(r, 200, Object.assign(row, { may: crmApi.mayOf(r), merged_from: null, relationship: null, points: null, migrated: true, contact_prefs: crmApi.prefsBefore(), followups: fuRows(L).filter((f) => f.party_id === l.party_id && !f.done_at).map(fuShape) }));
   }
   if (p === '/api/crm/followups' && m === 'GET') {
     const done = u.searchParams.get('done') === '1';
     const list2 = fuRows(L).filter((f) => !!f.done_at === done).map(fuShape);
-    return J(r, 200, { followups: list2, late: list2.filter((x) => x.late).length, today: list2.filter((x) => x.today).length });
+    return J(r, 200, { followups: list2, total: list2.length, page: 1, limit: list2.length, late: list2.filter((x) => x.late).length, today: list2.filter((x) => x.today).length, shop_day: today(), may: crmApi.mayOf(r) });   /* W2-CRM: the one envelope · the shop's day · the server's may */
   }
   if (p === '/api/crm/followups' && m === 'POST') {
     const b = body || {}, l = findLead(L, b.party_id); if (!l) return J(r, 404, errBody('Not your party.', 'NOT_FOUND'));
@@ -282,13 +282,13 @@ async function route(S, r) {
   if (p === '/api/books/periods') return J(r, 200, books.periods([]));
   if ((x = p.match(/^\/api\/books\/party\/([^/]+)\/statement$/))) return J(r, 200, books.statement(decodeURIComponent(x[1])));   /* the record's Ledger section (as crm.cjs answers it) */
   if (p === '/api/books/terms') return J(r, 200, { terms_migrated: true, may_set: true, why_not: null, default: {}, party: null, events: [] });   /* the record's credit-terms read (CB_PARTY_EP booksTerms), as the contract shapes it */
-  if (p === '/api/crm/parties' && m === 'GET') return J(r, 200, crmApi.list(fx.list, { records: fx.records }));
+  if (p === '/api/crm/parties' && m === 'GET') return J(r, 200, Object.assign(crmApi.list(fx.list, { records: fx.records }), { may: crmApi.mayOf(r) }));
   if ((x = p.match(/^\/api\/crm\/parties\/([^/]+)$/)) && m === 'GET' && S.priv) {   /* T3-P3-CONSENT: the record with THIS walk's consent rows (lib/privacy.contactPrefsOf) */
     const id = decodeURIComponent(x[1]), row = fx.list.find((z) => z.party_id === id || z.party_no === id) || fx.list[0];
-    return J(r, 200, Object.assign(crmApi.record(fx.list, row.party_id, fx.records[row.party_id], [], TD.nowMs()), { contact_prefs: pvContactPrefs(S.priv, row.party_id) }));
+    return J(r, 200, Object.assign(crmApi.record(fx.list, row.party_id, fx.records[row.party_id], [], TD.nowMs()), { contact_prefs: pvContactPrefs(S.priv, row.party_id), may: crmApi.mayOf(r) }));
   }
   if ((x = p.match(/^\/api\/crm\/parties\/([^/]+)\/timeline$/)) && S.priv) { const id = decodeURIComponent(x[1]), row = fx.list.find((z) => z.party_id === id || z.party_no === id) || fx.list[0]; return J(r, 200, crmApi.timelinePage([], row.party_id, { limit: u.searchParams.get('limit') })); }
-  if (p === '/api/crm/followups') return J(r, 200, crmApi.followups([]));
+  if (p === '/api/crm/followups') return J(r, 200, Object.assign(crmApi.followups([]), { may: crmApi.mayOf(r) }));
   if (m === 'GET') return J(r, 200, {});
   return J(r, 200, { ok: true });
 }

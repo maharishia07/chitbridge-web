@@ -71,7 +71,7 @@ function list(rows, opt) {
  *  count · truncated · walk_ins, and the API's own count of late dues — the parties it marked (lib/crm markLate) — so the banner and the rows
  *  are one number. INT6d-GREEN: every stand-in wraps through here; three of them hand-built the envelope and drifted from the contract. */
 function listPage(parties, extra) {
-  return Object.assign({ parties, walk_ins: [], count: parties.length, total: parties.length, page: 1, limit: 5000, truncated: false,
+  return Object.assign({ parties, walk_ins: [], count: parties.length, total: parties.length, page: 1, limit: 5000, truncated: false, may: mayOf(null),   /* W2-CRM: the owner's may unless the handler hands the request's in */
     alerts: { dues_overdue: parties.filter((a) => a.dues && a.dues.overdue).length } }, extra || {});
 }
 
@@ -84,9 +84,30 @@ function followupOne(f, now) {
     /* the API's own bucket (lib/crm-followups bucketOf): late · today · the next six days · later — from the day, never the page's clock */
     bucket: d < today ? 'late' : d === today ? 'today' : d <= day(new Date(Date.parse(today) + 6 * 86400e3).toISOString()) ? 'week' : 'later' };
 }
+/** GET /followups as the api answers it (W2-CRM): the one envelope (total · page · limit — the whole list in one page, as a shop's few follow-ups fit),
+ *  late · today of the whole set, and shop_day (the shop's calendar day the page's presets count from) */
 function followups(fus, now) {
-  const list2 = fus.map((f) => followupOne(f, now));
-  return { followups: list2, late: list2.filter((x) => x.late).length, today: list2.filter((x) => x.today).length };
+  const list2 = fus.map((f) => followupOne(f, now)), t = now || TD.nowMs();
+  return { followups: list2, total: list2.length, page: 1, limit: list2.length, may: mayOf(null), late: list2.filter((x) => x.late).length, today: list2.filter((x) => x.today).length, shop_day: day(new Date(t).toISOString()) };
+}
+/** the login a request carries (the stand-in's signed-nothing token: claims in the payload) → 'owner' · 'editor' · 'commenter' · 'viewer' */
+function levelOf(req) {
+  const h = String((req && req.headers && req.headers.authorization) || ''), tok = h.replace(/^Bearer\s+/i, '');
+  let c = {};
+  try { c = JSON.parse(Buffer.from(tok.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8')); } catch (_) { c = {}; }
+  if (!tok || c.identity_type === 'entity' || !c.identity_type) return 'owner';
+  const lvl = String(c.access_level || c.level || '').toLowerCase(), hat = String(c.hat || c.actor_hat || '').toLowerCase();
+  if (lvl === 'viewer' || /^(view_only|view|viewer|audit|mis)$/.test(hat)) return 'viewer';
+  if (lvl === 'commenter' || /^(comment|commenter)$/.test(hat)) return 'commenter';
+  return 'editor';
+}
+/** the api's `may` on every CRM read (routes/crm.js crmMay — lib/access.mayWrite + lib/owner.may): the rail's words for write, the owner's for remove */
+function mayOf(req) {
+  const level = levelOf(req), writes = level === 'owner' || level === 'editor';
+  const WHY = { read_only: 'Your access is view-only. You can read this chit but not change it.', comment_only: 'Your access is comment-only. You can reply internally, but not act or answer the other party.' };
+  const code = level === 'commenter' ? 'comment_only' : 'read_only';
+  return { write: writes ? { may: true, code: null, why: null } : { may: false, code, why: WHY[code] },
+    remove: level === 'owner' ? { ok: true, code: null, why: null } : { ok: false, code: 'OWNER_ONLY', why: 'Only the owner can remove a party.' } };
 }
 
 /** contact_prefs as the API answers before b306 (MKT-SRV1 G5 — lib/privacy.contactPrefsOf with no rows): service on legitimate use, offers need consent */
@@ -111,6 +132,7 @@ function record(rows, id, rec, fus, now) {
     migrated: true,
     contact_prefs: prefsBefore(),
     followups: (fus || []).filter((f) => f.party_id === id && !f.done_at).map((f) => followupOne(f, now)),
+    may: mayOf(null),   /* W2-CRM: the record carries the server's may/why; a handler overrides it with the request's */
   });
 }
 
@@ -160,4 +182,4 @@ function railFacts(o) {
   if (!x.truncated) { out.in = x.in == null ? 0 : x.in; out.out = x.out == null ? 0 : x.out; out.tasks = x.tasks == null ? 0 : x.tasks; out.stuck = x.stuck == null ? 0 : x.stuck; }   /* tasks: TOUR-FIX1 — the Tasks folder count the api answers beside in / out */
   return out;
 }
-module.exports = { resolve, party, list, listPage, record, prefsBefore, followupOne, followups, entry, timeline, timelinePage, interaction, rolesOf, railFacts };
+module.exports = { resolve, party, list, listPage, record, prefsBefore, followupOne, followups, entry, timeline, timelinePage, interaction, rolesOf, railFacts, levelOf, mayOf };

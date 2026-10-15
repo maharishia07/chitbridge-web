@@ -287,7 +287,7 @@
           "test": ["api:tests/crm-leads.test.cjs", "api:tests/crm-leads-import.test.cjs", "api:tests/crm-read.test.cjs", "web:e2e/crm.cjs", "web:e2e/walk-crm-lead-import.cjs"],
           "status": "ok", "note": "" },
         { "n": 2, "step": "call", "module": "CRM", "who": "the shop's staff (the call desk)",
-          "screen": [{ "file": "web:public/app/cap-crm-calls.js", "fn": "crmCallSend" }, { "file": "web:public/app/cap-crm-calls.js", "fn": "crmCallScriptHTML" }, { "file": "web:public/app/cap-crm-calls.js", "fn": "crmCallNext" }],
+          "screen": [{ "file": "web:public/app/cap-crm-calls.js", "fn": "crmCallSend" }, { "file": "web:public/app/cap-crm-calls.js", "fn": "crmCallScriptHTML" }, { "file": "web:public/app/cap-crm-calls.js", "fn": "crmCallNext" }, { "file": "web:public/app/cap-crm.js", "fn": "crmFuRead" }, { "file": "web:public/app/cap-crm.js", "fn": "crmViewWhy" }, { "file": "web:public/app/cap-crm.js", "fn": "crmMayRemove" }, { "file": "web:public/app/cap-crm.js", "fn": "crmShopDay" }],
           "engine": [{ "file": "api:lib/crm-calls.js", "fn": "queue" }, { "file": "api:lib/crm-calls.js", "fn": "outcome" }, { "file": "api:lib/crm-followups.js", "fn": "create" }],
           "route": [{ "m": "GET", "p": "/api/crm/calls", "file": "api:routes/crm.js" }, { "m": "POST", "p": "/api/crm/parties/:id/outcome", "file": "api:routes/crm.js" }, { "m": "POST", "p": "/api/crm/followups", "file": "api:routes/crm.js" }],
           "chit": "none — an interaction and the next follow-up", "ledger": "none",
