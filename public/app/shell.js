@@ -552,7 +552,7 @@
       if (homeWord) homeWord.textContent = T(W.areas.home); if (homeLink) homeLink.setAttribute('aria-label', T(W.areas.home));
       if (titleWord && o.title) titleWord.textContent = T(o.title.name || '');
       paintSwitcher();
-      AREAS.forEach(function (a) { var t = $('.cbsh-nv[data-go="' + a + '"] .t'); if (t) t.textContent = T(W.areas[a]); });
+      AREAS.forEach(function (area) { var label = $('.cbsh-nv[data-go="' + area + '"] .t'); if (label) label.textContent = T(W.areas[area]); });
     };
 
     /* ── the kural: the footer band on a laptop; once, at the foot of Home, on a phone ── */
