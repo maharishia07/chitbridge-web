@@ -79,7 +79,8 @@ function vaultSuggest(type){
   var list = (VAULT_SUGGEST[type] || []).map(function(x){ return words[x[1]] ? [words[x[1]], x[1]] : x; });
   if (type === 'identity') list = [list[0], [words.gstin, 'gstin']].concat(list.slice(1));
   if (type === 'bank') { var code = BANK_CODE_WORDS[cc] || BANK_CODE_WORDS.IN; list = list.filter(function(x){ return x[1] !== 'ifsc'; }); list.splice(2, 0, code); }
-  if (type === 'licence') list = [[words.gstin, 'gstin']].concat(cc === 'IN' ? [['PAN', 'pan']] : cc === 'AU' ? [['ACN', 'acn']] : []).concat(LICENCE_ROWS, list.filter(function(x){ return cc === 'IN' || ['gstin', 'pan'].indexOf(x[1]) < 0; }).slice(cc === 'IN' ? 2 : 0));
+  if (type === 'licence') { var india = cc === 'IN', pan = list.filter(function(x){ return x[1] === 'pan'; });   /* India's second id comes from the one list above, never a second literal */
+    list = [[words.gstin, 'gstin']].concat(india ? pan : cc === 'AU' ? [['ACN', 'acn']] : []).concat(LICENCE_ROWS, list.filter(function(x){ return ['gstin', 'pan'].indexOf(x[1]) < 0 && (india || ['iec', 'lut', 'ad_code'].indexOf(x[1]) < 0); })); }
   return list;
 }
 /** W23: a licence's standard rows — name · number · issuer · valid until — offered first in every country */
@@ -146,7 +147,7 @@ function vaultSectionHTML(sec, i){
 }
 /* One row: the name the USER gives it, and the value. The tag rides along invisibly when the name is one we know. */
 function vaultRowHTML(r,i,j,type){
-  var tag=r.tag||'', hint=(tag==='gstin'&&taxIdWord(shopCc())!=='GSTIN')?'':(VAULT_HINT[tag]||''), enums=VAULT_ENUM[tag];   /* W19: India's 15-character hint only under India's word */
+  var tag=r.tag||'', hint=(tag==='gstin'&&shopCc()!=='IN')?'':(VAULT_HINT[tag]||''), enums=VAULT_ENUM[tag];   /* W19: India's 15-character hint only on an Indian shop */
   var val;
   if (enums) {
     /* ⚠️ Blank stays FIRST and selectable — these are defaults, not answers. An unrecognised stored value is kept

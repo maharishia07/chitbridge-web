@@ -54,7 +54,7 @@
   table.hsn th:first-child, table.hsn td:first-child { text-align:left; }
 
   html[data-preview] .controls { display:none; }
-  html[data-preview] body { background:#fff; }
+  html[data-preview] body { background:var(--paper); }
   html[data-preview] .slip { margin:0 auto; }
   @media print {
     body { background:#fff; }
@@ -97,7 +97,8 @@ var SHOP = {
   line1: '14, Poonamallee High Road',
   line2: 'Chennai 600 126 · Tamil Nadu',
   phone: '044 2259 2632',
-  gstin: '33AABCK1234F1Z6'          /* used only on a tax invoice / bill of supply */
+  gstin: '33AABCK1234F1Z6',         /* used only on a tax invoice / bill of supply */
+  tax_id_word: 'GSTIN'              /* the sample shop is Indian: its pack's word; a preview hands the shop's own (tax.id_word) */
 };
 var BILL = {
   currency: 'INR',   /* the sample shop's money — the slip writes it as the till does (fmtMoney · CBLocale.money) */
@@ -153,7 +154,7 @@ window.addEventListener('message', function (ev) {
 function headHTML(showTaxId){
   if (!SIG || !SIG.head) return '<div class="c b big">' + esc(SHOP.name) + '</div>'
     + '<div class="c small">' + esc(SHOP.line1) + '</div>' + '<div class="c small">' + esc(SHOP.line2) + '</div>'
-    + '<div class="c small">Ph ' + esc(SHOP.phone) + '</div>' + (showTaxId ? '<div class="c small">GSTIN ' + esc(SHOP.gstin) + '</div>' : '');
+    + '<div class="c small">Ph ' + esc(SHOP.phone) + '</div>' + (showTaxId ? '<div class="c small">' + esc(SHOP.tax_id_word) + ' ' + esc(SHOP.gstin) + '</div>' : '');
   return SIG.head.map(function (l) {
     if (l.only_taxed && !showTaxId) return '';
     if (l.logo) return '<div class="c"><img src="' + esc(l.logo) + '" alt="" style="max-width:60%;max-height:18mm" data-testid="slip-logo"></div>';
@@ -161,7 +162,7 @@ function headHTML(showTaxId){
   }).join('');
 }
 /** the tax words: the pack's (a preview says GST · VAT, split by state or one line, the id's word); India's words otherwise */
-function taxWords(){ return (SIG && SIG.tax) || { word: 'GST', split: true, rate: 18, id_word: 'GSTIN' }; }
+function taxWords(){ return (SIG && SIG.tax) || { word: 'GST', split: true, rate: 18, id_word: SHOP.tax_id_word }; }
 /* ── the slip ──────────────────────────────────────────────────────────────────────────────────────────────── */
 function when(d){
   var p = function(n){ return (n < 10 ? '0' : '') + n; };

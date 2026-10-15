@@ -173,7 +173,8 @@ function csuBigWords(n, words, cur) {
 }
 function csuMoneyExamples(cur, words) {
   var L = window.CBLocale, M = window.CBMoney, sym = '', money = '', date = '', dec = 2;
-  try { sym = L.symbol(cur); money = L.money(CSU_SAMPLE, cur); date = L.date(Date.now()); } catch (e) { if (typeof cblog === 'function') cblog('error', 'country setup: locale example: ' + ((e && e.message) || e)); }
+  /* the symbol as the BILL writes it (A$ · ₹ · AED): the currency part of the money example, under the money's own tag — not the reader's */
+  try { money = L.money(CSU_SAMPLE, cur); date = L.date(Date.now()); sym = String(money).replace(/[\d.,\s\u00a0]/g, '') || L.symbol(cur); } catch (e) { if (typeof cblog === 'function') cblog('error', 'country setup: locale example: ' + ((e && e.message) || e)); }
   try { dec = M && M.decimals ? M.decimals(cur) : 2; } catch (_) { dec = 2; }
   return { symbol: sym || cur, number: money, decimals: dec, date: date, words: csuBigWords(CSU_SAMPLE, words, cur), lakhPack: csuMoneyTag(cur) === 'en-IN' };
 }
