@@ -1,5 +1,5 @@
 #!/bin/sh
-# scripts/batch-merge.sh — the BATCH MERGE, run by .github/workflows/batch-merge.yml (12:00 + 20:00 IST, or by hand). Athi 13 Oct: merge to main in
+# scripts/batch-merge.sh — the BATCH MERGE, run by .github/workflows/batch-merge.yml (04:00 + 16:00 IST, or by hand). Athi 13 Oct: merge to main in
 # batches, never continuously; nothing important may depend on the owner's PC (its background jobs get killed when memory runs low).
 # Lands every OPEN PR labelled `ready-to-land` (and not `hold`) in the three repos, in the order engines → web → api (14 Oct: twins land web first), oldest first. For each:
 # bring it up to date with main, wait for its checks ON that base, merge only if every check is green — the ONLY tolerated red is a check named
@@ -19,6 +19,13 @@ for repo in chitbridge-engines chitbridge-web chitbridge-api; do
               -q '[.[] | select([.labels[].name] | index("hold") | not)] | sort_by(.createdAt) | .[].number'); do
     title=$(gh pr view "$pr" -R "$OWNER/$repo" --json title -q .title)
     ok=""
+    # 14 Oct night (twice in one day: INT6a, ENG-REW1): an api PR whose WEB TWIN (same branch name) is still open never lands alone —
+    # api main ahead of web main breaks the pins/contract/snapshot guards for every other PR. It waits for the next batch.
+    if [ "$repo" = chitbridge-api ]; then
+      hb=$(gh pr view "$pr" -R "$OWNER/$repo" --json headRefName -q .headRefName)
+      tw=$(gh pr list -R "$OWNER/chitbridge-web" --state open --head "$hb" --json number -q '.[0].number // empty')
+      [ -n "$tw" ] && { row "$repo" "$pr" "$title" "⏸ waits for its web twin #$tw"; continue; }
+    fi
     if [ "$repo" = chitbridge-api ] && [ "$(behind "$repo" "$pr")" = 0 ]; then
       br=$(gh pr view "$pr" -R "$OWNER/$repo" --json headRefName -q .headRefName)
       for id in $(gh run list -R "$OWNER/$repo" --branch "$br" --limit 2 --json databaseId -q ".[].databaseId"); do gh run rerun "$id" -R "$OWNER/$repo" >/dev/null 2>&1; done; sleep 60
