@@ -127,8 +127,11 @@ function unwrap(j, _key){
   var SIBS = ["total","page","limit","next","truncated","count","offset","status_counts","open","counts",   /* next: PERF1 — a keyset list's cursor (chits inbox/sent, books pages) */
               "category_counts","uncategorised","actor_health","actor_last_seen",
               "migrated","supplier","groups","project",
-              "late","may_answer","why",   /* T3-P3-CONSENT: GET /api/crm/privacy-requests answers { requests[], total, page, limit, open, late, may_answer, why } — the register greys Answer on may_answer/why */
-              "capped","cap_note"];        /* W2-RAIL R2: a cut list SAYS SO — `capped` (the code) and `cap_note` (the sentence) ride beside the chits array on inbox · sent · folder; pgFooter prints it. ⚠️ no square bracket in this comment: e2e/api-envelope.cjs reads the list up to the first one */
+              "late","may_answer","why",
+              "capped","cap_note"];
+  /* late · may_answer · why — T3-P3-CONSENT: GET /api/crm/privacy-requests answers { requests[], total, page, limit, open, late, may_answer, why } — the register greys Answer on may_answer/why
+     capped · cap_note — W2-RAIL R2: a cut list SAYS SO — `capped` (the code) and `cap_note` (the sentence) ride beside the chits array on inbox · sent · folder; pgFooter prints it.
+     ⚠️ no square bracket INSIDE the array above: e2e/api-envelope.cjs reads the list up to the first one (which is why these notes sit below it) */
   for(const mk of SIBS) if(mk in j){ try{ Object.defineProperty(a, mk, {value:j[mk], enumerable:false, configurable:true, writable:true}); }catch(_){ a[mk]=j[mk]; } }
   /* ⚠️ everything NOT on the list, and not the array itself, is gone from here on — so it is written down */
   try{ cbDropNote(_key, Object.keys(j).filter(function(x){ return x !== k && SIBS.indexOf(x) < 0; })); }catch(_){}
