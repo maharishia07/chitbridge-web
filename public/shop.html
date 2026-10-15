@@ -6,9 +6,8 @@
 <script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Shop — Chit &amp; Bridge</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root{ --font-ui:Inter,system-ui,sans-serif; --ink:#20303b; --grey:#8a949c; --line:#e7e3d8; --blue:#3F66A6; --gold-soft:#f7f2e3; --gold-line:#e6d9a8; --paper:#faf8f3;
+  :root{ --font-ui:var(--f-ui,'IBM Plex Sans',system-ui,sans-serif); --ink:#20303b; --grey:#8a949c; --line:#e7e3d8; --blue:#3F66A6; --gold-soft:#f7f2e3; --gold-line:#e6d9a8; --paper:#faf8f3;
     /* ⚠️ THE SHARED CART (app/cart-ui.js) SPEAKS THE APP'S TOKENS. This page defined seven of them; the other twenty-one
        resolved to nothing, so the basket panel had NO background — the product list showed through it (Athi's tallytest
        screenshot, 2026-09-05: "look and feel is not good"). The app's light values, verbatim; the theme unit will own them later. */
@@ -18,19 +17,19 @@
   *{ box-sizing:border-box; }
   body{ margin:0; font-family:var(--font-ui); color:var(--ink); background:var(--paper); }   /* the app's type token — one cart, one face */
   .wrap{ max-width:860px; margin:0 auto; padding:8px 14px 110px; }
-  .sg{ font-family:'Space Grotesk',-apple-system,sans-serif; }
+  .sg{ font-family:var(--f-display,'Bricolage Grotesque',sans-serif); }   /* SYSTEM.md §2: the display face (SHELL-ONE) */
   .hd{ display:flex; align-items:center; gap:10px; padding:4px 0 6px; margin-bottom:0; }
   .logo{ width:44px; height:44px; border-radius:12px; background:#eef3fb; display:flex; align-items:center; justify-content:center; font-size:22px; }
   .shopname{ font-weight:800; font-size:20px; }
   .badge{ font-size:11px; font-weight:700; border-radius:20px; padding:2px 9px; }
-  .b-ver{ background:#e8f3ec; color:#2f7a45; } .b-open{ background:#e8f3ec; color:#2f7a45; } .b-closed{ background:#fbeae9; color:#b4453f; } .b-away{ background:#f7f2e3; color:#7a5e22; }
-  .sechd{ font-size:11px; font-weight:800; color:#6a44a8; text-transform:uppercase; letter-spacing:.5px; margin:22px 0 10px; }
-  .card{ border:1px solid var(--line); border-radius:14px; padding:15px 16px; margin-bottom:12px; background:#fff; }
+  .b-ver,.b-open{ background:var(--ok-tint,#e8f3ec); color:var(--ok-2,#2f7a45); } .b-closed{ background:var(--danger-tint,#fbeae9); color:var(--disp-2,#b4453f); } .b-away{ background:var(--warn-tint,#f7f2e3); color:var(--warn-2,#7a5e22); }
+  .sechd{ font-size:11px; font-weight:800; color:var(--purple-2,#6a44a8); text-transform:uppercase; letter-spacing:.5px; margin:22px 0 10px; }
+  .card{ border:1px solid var(--line); border-radius:14px; padding:15px 16px; margin-bottom:12px; background:var(--card,#fff); }
   .fname{ font-weight:800; font-size:17px; }
   .meta{ font-size:12px; color:var(--grey-3); }   /* CX4 walk: --grey read 2.9:1 on the paper — --grey-3 is AA */
-  .story{ font-size:13px; color:#3a4048; line-height:1.6; margin:6px 0 9px; }
+  .story{ font-size:13px; color:var(--ink-2,#3a4048); line-height:1.6; margin:6px 0 9px; }
   .chip{ display:inline-block; font-size:11px; border-radius:8px; padding:2px 9px; margin:0 5px 5px 0; }
-  .c-tex{ background:#F0EAF9; color:#6a44a8; } .c-reg{ background:#eef3fb; color:#345488; } .c-eff{ background:#f3f0e8; color:#7a5e22; }
+  .c-tex{ background:var(--purple-tint,#F0EAF9); color:var(--purple-2,#6a44a8); } .c-reg{ background:var(--blue-tint-bg,#eef3fb); color:var(--blue-d,#345488); } .c-eff{ background:var(--warn-tint,#f3f0e8); color:var(--warn-2,#7a5e22); }
   .cclabel{ font-size:10px; color:var(--grey); text-transform:uppercase; letter-spacing:.4px; font-weight:700; margin:8px 0 3px; }
   .combo{ display:flex; align-items:center; gap:8px; margin-top:5px; }
   .dot{ display:inline-block; width:18px; height:18px; border-radius:50%; border:1px solid rgba(0,0,0,.15); }
@@ -61,16 +60,24 @@
   .shopdock .cbcart-bar{ width:100%; justify-content:center; height:44px; }
   .cbcat-was + .cbcat-offered::before{ content:'→ '; color:var(--grey,#8a949c); font-weight:400; }
   .cbcat-sec{ font:700 15px var(--font-ui); color:var(--ink); padding:12px 2px 6px; border-bottom:2px solid var(--accent); margin-top:4px; scroll-margin-top:64px; }
-.offbadge{display:inline-block;margin-inline-start:6px;padding:1px 7px;border-radius:999px;font-size:11px;font-weight:700;background:#fff5e0;border:1px solid #e8cf9a;color:#8a5a12;white-space:nowrap}
+.offbadge{display:inline-block;margin-inline-start:6px;padding:1px 7px;border-radius:999px;font-size:11px;font-weight:700;background:var(--warn-tint,#fff5e0);border:1px solid var(--warn-3,#e8cf9a);color:var(--warn-2,#8a5a12);white-space:nowrap}
 </style>
 </head>
 <body>
+<div id="shell" data-testid="shop-shell"></div>   <!-- THE ONE FRAME (SHELL-ONE): the bar — ⌂ Home is THIS shop's front -->
 <div class="wrap" id="app"><div class="msg">Loading shop…</div></div>
 <script src="cb-offline.js"></script>
 <script src="engine/offers.js"></script>
 <script src="engine/pricing.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script src="app/catalogue-lines.js"></script>
+<!-- THE ONE FRAME (SHELL-ONE): the header every page wears — mark · name · the screen chip · ⌂ Home · the avatar (Sign in). Nothing of it is drawn here. -->
+<script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies -->
+<script src="/app/avatar.js"></script>      <!-- CBAvatar: the one avatar / Sign in door -->
+<script src="/app/one-person.js"></script>  <!-- CBOnePerson: whose session this browser holds (CBFrame.session) -->
+<script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the bar -->
+<script src="/app/shell.js"></script>       <!-- CBShell: the bar -->
+<script src="/app/page-frame.js"></script>  <!-- CBFrame.mount({ bar: true }): the header only; the page's own body under it -->
 <script src="app/accounts-shell.js"></script>   <!-- INT6a-LOCALE: the string door (CBSTR · cbLang · tx) — the shop had none, so no language pack could load here -->
 <script src="engine/locale.js"></script>   <!-- cart-ui reads CBLocale (money/symbol) — the app loads it, the shop must too (found by the tour, 2026-09-05); one home since T2-ENGONCE -->
 <script src="engine/money.js"></script>   <!-- ⭐ the one rounder, BEFORE cart.js — it has no copy of its own (2026-09-28) -->
@@ -1377,7 +1384,12 @@ function vizDraw(combo){ var cv=el('viz_canvas'); if(!cv||!_VIZ.img)return; var 
   if(combo&&combo.colours&&combo.colours.length){ ctx.save(); ctx.globalCompositeOperation='multiply'; ctx.globalAlpha=0.5; var cols=combo.colours; var g=ctx.createLinearGradient(x,0,x+w,0); cols.forEach(function(c,i){ g.addColorStop(cols.length>1?(i/(cols.length-1)):0, c.hex||'#ccc'); }); ctx.fillStyle=g; ctx.fillRect(x,y,w,h); ctx.restore(); }
 }
 function vizToOrder(){ var idx=_VIZ.idx, comboName=_VIZ.combo&&_VIZ.combo.name; vizClose(); _ord={idx:idx, step:'contact', combo:comboName}; orderRender(); }
+/* SHELL-ONE: the one frame, the bar only — ⌂ Home is THIS shop's front (the page without its ?item), the avatar's door is Home's sign-in; the shop's
+   own name stays in its brand row below (rule 3: one string once), so the bar names the page */
+function shopFrontHref(){ var q=new URLSearchParams(location.search); q.delete('item'); q.delete('showcase'); var qs=q.toString(); return location.pathname+(qs?'?'+qs:''); }
+function shopFrame(){ if(!window.CBFrame) return; CBFrame.mount({ app:'storefront', bar:true, signin:false, host:el('shell'), homeHref:shopFrontHref(), title:{ icon:'◇', name:tx('Shop') } }); }
 (function(){
+  shopFrame();
   if(!BRIDGE){ el('app').innerHTML='<div class="msg">No shop specified.</div>'; return; }
   // load the region layers first (for the spin-the-globe switcher), then the shop
   fetch(API+'/api/assist/regions').then(function(r){return r.json();}).then(function(j){ _REGIONS=(j&&j.regions)||[]; if(_REGIONS.length && !_REGIONS.find(function(x){return x.region_code===_REGION;})) _REGION=_REGIONS[0].region_code; }).catch(function(){}).then(shopLoad);

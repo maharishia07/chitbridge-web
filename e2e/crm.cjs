@@ -238,9 +238,9 @@ async function route(S, r) {
     ok(await p.locator('#crm_list .cbl-rz').count() === 6, 'every column has its drag handle (adjustable columns)');
     ok(await p.locator('#crm_list [data-hf="role"]').count() === 1 && await p.locator('#crm_list [data-hf="rail"]').count() === 1, 'Role and On ChitBridge carry their own filter in the column heading');
     /* the frozen head: title row (shop · Home · avatar slot ride in it) + tools + column header ≤ 20% of 1366×768 */
-    const hd = await p.evaluate(() => { const q = (s) => document.querySelector(s), r = (e) => e ? e.getBoundingClientRect() : { top: 0, bottom: 0 }; const list = q('#crm_list .cbl-list'); return { top: r(q('#crm_list')).top, rows: r(list).top, h: innerHeight, bar: r(q('.bar')).bottom }; });
-    ok((hd.rows - hd.top) <= 0.2 * hd.h, 'everything above the rows is ' + Math.round((hd.rows - hd.top)) + ' px of ' + hd.h + ' (' + Math.round(100 * (hd.rows - hd.top) / hd.h) + '%) — within 20% (the shop · Home · avatar bar rides in the title row)');
-    ok(hd.top <= 4, 'nothing sits above the list: its title row is the top of the screen');
+    const hd = await p.evaluate(() => { const q = (s) => document.querySelector(s), r = (e) => e ? e.getBoundingClientRect() : { top: 0, bottom: 0 }; const list = q('#crm_list .cbl-list'); return { top: r(q('#crm_list')).top, rows: r(list).top, h: innerHeight, frame: r(q('[data-testid="shell-header"]')).bottom }; });
+    ok((hd.rows - hd.top) <= 0.2 * hd.h, 'everything above the rows is ' + Math.round((hd.rows - hd.top)) + ' px of ' + hd.h + ' (' + Math.round(100 * (hd.rows - hd.top) / hd.h) + '%) — within 20% (the page\'s one action rides in the title row; the shop · Home · avatar are the frame\'s)');
+    ok(hd.top <= hd.frame + 1 && hd.frame <= 60, 'only the frame (' + Math.round(hd.frame) + ' px) sits above the list: its title row starts right under it (SHELL-ONE)');
     /* only the rows scroll */
     const sc = await p.evaluate(() => { const l = document.querySelector('#crm_list .cbl-list'), h = document.querySelector('#crm_list .cbl-hdr'), t0 = h.getBoundingClientRect().top; l.scrollTop = 400; return { t0, t1: h.getBoundingClientRect().top, page: document.documentElement.scrollTop, scr: document.getElementById('screen').scrollTop }; });
     ok(sc.t0 === sc.t1 && sc.page === 0 && sc.scr === 0, 'only the rows scroll: the column header stays at ' + sc.t1 + ' px, the page and the screen do not move');
@@ -327,7 +327,7 @@ async function route(S, r) {
     await p.click('[data-testid="crm-row-P-0003"]'); await recReady(p, 'Ravi Traders');
     ok(/#\/party\/P-0003/.test(p.url()), 'a row opens its record at #/party/P-0003');
     /* INTEGRATION: the slot is no longer empty at run time - CBAvatar mounts there (the source still draws none; line above). The frozen check: it holds ONE CBAvatar control and nothing else. */
-    ok(await p.evaluate(() => { const s = document.querySelector('#cb-avatar'); return !!s && s.querySelectorAll('.cbav').length === 1 && s.querySelectorAll('[data-testid="avatar"],[data-testid="signin-door"]').length === 1; }), 'the avatar slot holds ONE CBAvatar on the record');
+    ok(await p.evaluate(() => { const s = document.querySelector('[data-testid="shell-avatar"]'); return !!s && document.querySelectorAll('.cbav').length === 1 && s.querySelectorAll('[data-testid="avatar"],[data-testid="signin-door"]').length === 1; }), 'the frame\'s avatar slot holds ONE CBAvatar on the record');
     await ctx.close();
   }
 

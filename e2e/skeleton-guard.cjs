@@ -9,6 +9,9 @@ let fail = 0; const bad = (m) => { fail++; console.log('FAIL ' + m); }; const ok
 
 /* the small apps — add a new one HERE, and give it the skeleton */
 const OWN = ['finance.html', 'crm.html', 'accounts.html'];      /* the page draws <aside class="side"> + <main class="main"> itself */
+/* SHELL-ONE: pages that wear the frame's BAR only (CBFrame.mount({ bar: true }) — header: mark · name · chip · ⌂ Home · avatar) over their own body: the storefront
+   (the shop's own brand row and cart under it), the shop screen, the labs; standards.html mounts the frame in app mode above its own two panes (host) */
+const BAR = ['shop.html', 'network-shop.html', 'store.html', 'embed.html', 'promo.html', 'product-lab.html', 'conversion-lab.html', 'offer-lab-next.html', 'network-design.html', 'standards.html'];
 const FRAMED = ['employees.html', 'network.html', 'tasks.html', 'country-lab.html', 'settings.html', 'operations.html', 'catalogue.html'];   /* CBFrame.mount({ skeleton }) draws it (the Country lab: CL3, public — signin:false · CB Settings: SET1 · CB Operations: T3-OPS · CB Catalogue: T3-CATALOGUE) */
 /* pages that load the frame or the list control but are not small apps: the app itself, the labs and the standards page, and two older single-purpose pages (their own round) */
 /* testing.html: the test board's printable report — it loads list-ctl.js only for CBList.every (every page of a paged list, T2-PAGING), it mounts no list */
@@ -25,6 +28,12 @@ const frame = read('public/app/page-frame.js'), css = read('public/app/page-skel
 if (!/class="side"/.test(frame) || !/class="main"/.test(frame) || !/toggleNav/.test(frame) || !/Collapse/.test(frame)) bad('page-frame.js: skeleton() must draw the sidebar, main pane and Collapse');
 else ok('page-frame.js draws the skeleton');
 if (!/\.cbsk \.side\b/.test(css) || !/\.cbsk \.main\b/.test(css)) bad('page-skeleton.css lacks the .side / .main rules');
+BAR.forEach((f) => {
+  const h = read('public/' + f);
+  if (f === 'standards.html' ? !/CBFrame\.mount\(\{\s*app:\s*'standards',\s*host:/.test(h) : !/CBFrame\.mount\(\{\s*app:\s*'[a-z-]+',\s*bar:\s*true/.test(h)) bad(f + ': must mount the frame (CBFrame.mount({ app, bar: true }) — or host: for standards)');
+  else if (/<header[\s>]|class="top"|class="bar"|CBAvatar\.mount\(|id="cbav"/.test(h.replace(/<!--[\s\S]*?-->/g, ''))) bad(f + ': still draws a header of its own (<header>, .top, .bar, its own CBAvatar.mount) — the frame is the one header');
+  else ok(f + ': the frame\'s bar over its own body');
+});
 FRAMED.forEach((f) => {
   const h = read('public/' + f);
   const m = /CBFrame\.mount\(\{[\s\S]*?skeleton:\s*\{[\s\S]*?sections:\s*(\[|[A-Z_]+\b)/.exec(h);   /* a literal list, or the page's own constant (settings.html SECTIONS) */
@@ -35,7 +44,7 @@ FRAMED.forEach((f) => {
 });
 /* discovery: any other page that loads the frame or the list control must be listed above */
 fs.readdirSync(pub).filter((f) => /\.html$/.test(f)).forEach((f) => {
-  if (OWN.includes(f) || FRAMED.includes(f) || NOT_APPS.includes(f)) return;
+  if (OWN.includes(f) || FRAMED.includes(f) || NOT_APPS.includes(f) || BAR.includes(f)) return;
   const h = read('public/' + f);
   if (/src="\/app\/(page-frame|list-ctl)\.js"/.test(h) || /<aside[^>]*class="side"/.test(h)) {
     if (f === 'till.html') return;   /* the till has its own sidebar; it is a counter, not a small app page */
@@ -43,14 +52,25 @@ fs.readdirSync(pub).filter((f) => /\.html$/.test(f)).forEach((f) => {
   }
 });
 /* ── ONE SHELL ON EVERY PAGE, EVEN WITHOUT A LOGIN (CL3, owner 13 Oct: "if login not required, still avatar, and font, and other things should be
-   intact"). Every public/*.html loads the standard shell (/app/shell.js — CBShell: header, avatar with Sign in, fonts, tokens, text size, kural), or
-   is on the list below of pages that do not YET. The list only SHRINKS: a new page that skips the shell fails, and a listed page that now loads
-   the shell fails until it is struck from the list. CB Accounts · CRM · Finance draw the skeleton themselves (OWN) and their header is their own
-   until they move to CBShell; the till is the counter (host { bar } is its round); the rest are labs, design pages and the shop's public pages. ── */
-const SHELL_NOT_YET = ['accounts.html', 'app.html', 'bill-print.html', 'cart-design.html', 'combo-lab.html', 'conversion-lab.html', 'crm.html',
-  'design-mock.html', 'embed.html', 'finance.html', 'intake.html', 'iot-howitworks.html', 'lifecycle-test.html', 'list-lab.html', 'network-design.html',
-  'network-shop.html', 'offer-lab-next.html', 'offer-lab.html', 'product-lab.html', 'promo.html', 'screen-gallery.html', 'shop.html', 'signin-lab.html',
-  'standards.html', 'store.html', 'storefront-design.html', 'supplier-design.html', 'testing.html', 'till.html'];
+   intact"; SHELL-ONE, 15 Oct: every small app, every public page and every lab wears it — the three own headers are gone). Every public/*.html loads
+   the standard shell (/app/shell.js through CBFrame.mount — the header, avatar with Sign in, fonts, tokens, text size), or is on the list below WITH
+   ITS REASON. The list only SHRINKS: a new page that skips the shell fails, and a listed page that now loads the shell fails until it is struck.
+   What is left: the workshop (app.html — index-not-app keeps customers out of it), the vendored counter (till.html, the api's master: its bar is the
+   api's round), the print surface, and the DESIGN REFERENCES (public/app/screen-id.js DECLARED.references — not customer navigation). ── */
+const SHELL_NOT_YET_WHY = {
+  'app.html': 'the workshop (IX0: no customer path lands in it)', 'till.html': 'VENDORED from chitbridge-api tools/tally-connector/till.html — its bar is the api\'s round',
+  'bill-print.html': 'the printed bill: a print surface, single-theme by decision', 'cart-design.html': 'design reference', 'design-mock.html': 'design reference',
+  'storefront-design.html': 'design reference', 'supplier-design.html': 'design reference', 'list-lab.html': 'the list unit on a bare page (its pass mark)',
+  'signin-lab.html': 'the sign-in window on a bare page', 'screen-gallery.html': 'the gallery of screen drawings', 'lifecycle-test.html': 'a tool board',
+  'testing.html': 'the test board', 'intake.html': 'a prototype, no customer door', 'iot-howitworks.html': 'a showcase opened in the workshop\'s overlay',
+  'offer-lab.html': 'forwards to offer-lab-next.html', 'combo-lab.html': 'forwards to offer-lab-next.html?mode=combo'
+};   /* shell-lab.html mounts CBShell itself (the unit's pass mark, e2e/shell.cjs): it loads the shell, so it is not here */
+const SHELL_NOT_YET = Object.keys(SHELL_NOT_YET_WHY);
+/* every page on the no-shell list is a design reference in the register, or one of the named exceptions (the workshop · the counter · the print surface · the two forwards) */
+const refs = (() => { const w = {}; new Function('window', 'globalThis', read('public/app/screen-id.js'))(w, w); return (w.CBScreenId.DECLARED.references || []).map((r) => r[0].replace(/^\//, '')); })();
+const EXCEPTIONS = ['app.html', 'till.html'];
+SHELL_NOT_YET.forEach((f) => { if (!refs.includes(f) && !EXCEPTIONS.includes(f)) bad(f + ': skips the shell but is neither a design reference in app/screen-id.js DECLARED.references nor the workshop / the counter'); });
+refs.forEach((f) => { if (!SHELL_NOT_YET.includes(f)) bad(f + ': a design reference in the register must be on the no-shell list here (or stop being a reference)'); });
 const shellPages = [];
 fs.readdirSync(pub).filter((f) => /\.html$/.test(f)).sort().forEach((f) => {
   const loads = read('public/' + f).indexOf('src="/app/shell.js"') >= 0;

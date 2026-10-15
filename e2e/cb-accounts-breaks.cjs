@@ -7,7 +7,7 @@ const fs = require('fs'), path = require('path'), cp = require('child_process');
 const W = path.join(__dirname, '..');
 const CAPB = 'public/app/cap-books.js', LCTL = 'public/app/list-ctl.js';
 const AV = 'public/app/avatar.js';   /* the avatar is CBAvatar now: its Profile link and its sign-out live here, not on the page */
-const PAGE = 'public/accounts.html', SHELL = 'public/app/accounts-shell.js';   /* N18: the index tile is a manifest card now (e2e/index-page.cjs); its breaks left with it */
+const PAGE = 'public/accounts.html', SHELL = 'public/app/accounts-shell.js', FRAME = 'public/app/page-frame.js';   /* SHELL-ONE: ⌂ Home is the frame's */   /* N18: the index tile is a manifest card now (e2e/index-page.cjs); its breaks left with it */
 const A = 'e2e/cb-accounts.cjs';
 const BREAKS = [
   /* the four the task names */
@@ -23,7 +23,7 @@ const BREAKS = [
   ['Switch on is sent before the owner confirms', PAGE, `    ask: confirmAsk,\n    working: () => { b.disabled = true;`, `    ask: (t, bd, ok, go) => go(),\n    working: () => { b.disabled = true;`, A],
   ['a failed read is mistaken for a Ledger that is off', PAGE, `    if (e && e.status === 404) return offCard();\n    return failedCard();`, `    return offCard();`, A],
   ['Sign out keeps the session (the avatar\'s sign-out, public/app/avatar.js)', AV, `      root.localStorage.removeItem('cb_sess');\n`, ``, A],
-  ['Home goes somewhere else', PAGE, `<a class="home" href="/" data-testid="acc-home" aria-label="Home">`, `<a class="home" href="/app.html" data-testid="acc-home" aria-label="Home">`, A],
+  ['Home goes somewhere else (the frame\'s ⌂ Home, public/app/page-frame.js)', FRAME, `homeHref: o.homeHref || '/'`, `homeHref: o.homeHref || '/app.html'`, A],
   ['Profile goes somewhere else (the avatar\'s Profile link)', AV, `o.profileHref || PROFILE_HREF`, `o.profileHref || '/app.html#/app/settings'`, A],
   ['a code the design never named vanishes', CAPB, `title = g ? g[1] : 'Other';`, `title = g ? g[1] : 'Other'; if (!g) return;`, A],
   ['the step chip is decided by the page, not the server', PAGE, `data-step="\${esc(b.step || '')}">\${esc(b.label)}</span>`, `data-step="\${esc(b.step || '')}">\${esc(b.step)}</span>`, A],
@@ -58,8 +58,8 @@ const BREAKS = [
   ['LP ‹ is missing on a phone ledger', CAPB, `data-lt="back" data-testid="lt-back" aria-label="' + esc(tx('Back to all ledgers')) + '">‹</button>'`, `data-lt="back" data-testid="lt-back" style="display:none" aria-label="' + esc(tx('Back to all ledgers')) + '">‹</button>'`, A],
   ['LP the Statement button opens nothing', CAPB, `try { window.open('/crm.html#/party/'`, `try { void ('/crm.html#/party/'`, A],
   ['LP an agreement chip is drawn without the API\'s date', CAPB, `    if (ag) h.chips.push(`, `    if (true) h.chips.push(`, A],
-  ['LP the shop · Home · avatar are copied, not moved', PAGE, `BK.slotWho = (el) => { el.appendChild(WHO); };`, `BK.slotWho = (el) => { el.appendChild(WHO.cloneNode(true)); };`, A],
-  ['LP the page header stays above the open ledger (head past 20%)', PAGE, `body.lg-on.lg-sel .top{display:none}`, `body.lg-on.lg-sel .top{display:flex}`, A],
+  ['SHELL-ONE the page draws a Home of its own beside the frame\'s', PAGE, `<h1 id="title">CB Accounts</h1>`, `<h1 id="title">CB Accounts</h1><a class="home" href="/" data-testid="acc-home">⌂ Home</a>`, A],
+  ['LP the page title row stays above the open ledger (head past 20%)', PAGE, `body.lg-on.lg-sel .titlebar{display:none}`, `body.lg-on.lg-sel .titlebar{display:flex}`, A],
   ['LP a balance is read per ledger (a per-leaf fetch)', CAPB, `function bkLtBal(code) {\n`, `function bkLtBal(code) {\n  api('booksLedger', { params: { account: code }, query: bkRange('lg') }).catch(function () {});\n`, A],
   ['LP the list is not held inside its pane (it runs under the kural footer)', CAPB, `'#bk_lt #lg_out{flex:1 1 auto;min-height:0}',`, `'#bk_lt #lg_out{flex:0 0 auto}',`, A],
   ['LP the opened entry offers no Reverse', CAPB, `actions: typeof enReverse === 'function' ? [{ id: 'reverse', icon: '↩', label: 'Reverse this entry', tid: 'lg-reverse',`, `actions: false ? [{ id: 'reverse', icon: '↩', label: 'Reverse this entry', tid: 'lg-reverse',`, A],

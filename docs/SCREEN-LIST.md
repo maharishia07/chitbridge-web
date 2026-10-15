@@ -77,6 +77,18 @@ Register: `public/app/screen-id.js` (declared rows, merged into `CBSCREENS`) + `
 | CLB002 | Where we are | Country lab | /country-lab.html | /country-lab.html · Country lab › Where we are |
 | KYB001 | Know your business | Know your business | /know-your-business.html | /know-your-business.html |
 | DOC001 | Documents | Documents | /authority-forms.html | /authority-forms.html |
+| STD001 | Standards | Standards | /standards.html | /standards.html · Standards › Standards |
+| STD002 | Works with | Standards | /standards.html | /standards.html#works-with · Home › Compatibility |
+| SHP001 | Shop | Shop | /shop.html | /shop.html?s=<shop> · Home › Your online shop, or a customer's link |
+| NSH001 | Network shop | Network shop | /network-shop.html | /network-shop.html?bridge=<network> |
+| STR001 | Store | Store | /store.html | /store.html?net=<network> |
+| EMB001 | Catalogue embed | Catalogue embed | /embed.html | /embed.html?bridge=<shop> · inside another site |
+| PRM001 | Shop screen | Shop screen | /promo.html | /promo.html#key=… · the till › Shop screen |
+| PLB001 | Product Lab | Product Lab | /product-lab.html | /product-lab.html |
+| OLB001 | Offer Lab | Offer Lab | /offer-lab-next.html | /offer-lab-next.html · Home › Labs |
+| OLB002 | Combo Lab | Offer Lab | /offer-lab-next.html | /offer-lab-next.html?mode=combo · Home › Labs |
+| CVL001 | Conversion lab | Conversion lab | /conversion-lab.html | /conversion-lab.html · the Country lab |
+| NLB001 | Network Lab | Network Lab | /network-design.html | /network-design.html · Home › Labs |
 
 ## Sheets — one screen, wherever it is opened from
 
@@ -85,6 +97,25 @@ Register: `public/app/screen-id.js` (declared rows, merged into `CBSCREENS`) + `
 | TSK005 | Task details | app/chit-sheet.js | a task, order or invoice row › its sheet | CB Accounts (/accounts.html) · CB Finance (/finance.html) · CB CRM (/crm.html) · CB Tasks & Orders (/tasks.html) · the workshop (/app.html) |
 | BIL001 | Bill | app/chit-sheet.js | a counter bill row › its sheet | CB Accounts (/accounts.html) · CB Finance (/finance.html) · CB CRM (/crm.html) · CB Tasks & Orders (/tasks.html) · the workshop (/app.html) |
 | BIL002 | Supplier bill | app/chit-sheet.js | a bill received › its sheet | CB Accounts (/accounts.html) · CB Finance (/finance.html) · CB CRM (/crm.html) · CB Tasks & Orders (/tasks.html) · the workshop (/app.html) |
+
+## Design references — not customer navigation (no Home card, no frame, no code)
+
+| Page | Name | What it is |
+|---|---|---|
+| /design-mock.html | Design mock | the catalogue/row drawing the workshop was built against |
+| /cart-design.html | Cart design | the shared cart's drawing (app/cart.js is the build) |
+| /storefront-design.html | Storefront design | the storefront's paper prototype (shop.html is the build) |
+| /supplier-design.html | Supplier design | the suppliers screen's paper prototype (operations.html is the build) |
+| /list-lab.html | List lab | app/list-ctl.js on a bare page — the list standard's pass mark |
+| /signin-lab.html | Sign-in lab | the one sign-in window on a bare page |
+| /screen-gallery.html | Screen library | the gallery of screen drawings |
+| /lifecycle-test.html | Lifecycle test | the rail's lifecycle board (a tool) |
+| /testing.html | Test board | the test board and its printable report (a tool) |
+| /intake.html | Intake inbox | the intake inbox prototype |
+| /iot-howitworks.html | IoT — how it works | a showcase page opened in an overlay by the workshop |
+| /bill-print.html | Bill print | the printed bill (a print surface, single-theme by decision) |
+| /offer-lab.html | Offer Lab (old address) | forwards to offer-lab-next.html |
+| /combo-lab.html | Combo Lab (old address) | forwards to offer-lab-next.html?mode=combo |
 
 ## The workshop (app.html) — 932 rows in public/app/screens.js, listed in C:/dev/SCREENS.md
 

@@ -75,6 +75,13 @@ function render(L) {
   out.push('|---|---|---|---|---|');
   for (const r of L.rows.filter((x) => x.kind === 'sheet')) out.push('| ' + [r.code, r.screen, r.file, r.reach, openedFrom(r.code) || '—'].map(esc).join(' | ') + ' |');
   out.push('');
+  /* SHELL-ONE: the design references — kept, not customer navigation, no frame, no code */
+  out.push('## Design references — not customer navigation (no Home card, no frame, no code)');
+  out.push('');
+  out.push('| Page | Name | What it is |');
+  out.push('|---|---|---|');
+  for (const r of (L.declared.references || [])) out.push('| ' + [r[0], r[1], r[2]].map(esc).join(' | ') + ' |');
+  out.push('');
   const g = {};
   L.workshop.forEach((r) => { const k = r.group + ' (' + r.code.slice(0, 3) + ')'; g[k] = (g[k] || 0) + 1; });
   out.push('## The workshop (app.html) — ' + L.workshop.length + ' rows in public/app/screens.js, listed in C:/dev/SCREENS.md');

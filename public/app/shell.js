@@ -11,11 +11,18 @@
  *     host      null            → HOME: the five areas, a side rail (a phone: bottom tabs, one area at a time)
  *               { app: 'id' }   → INSIDE AN APP: the rail collapses to a switcher in the bar; the app draws in shell.slots.work
  *               { bar: true }   → THE BAR ONLY (the counter, the vendor page): mark · shop · licence · bell · avatar, nothing else
- *     person    { name, role, entity, owner } (default: CBAvatar.sessionPerson()); null = signed out
+ *     person    { name, role, entity, owner, level? } (default: CBAvatar.sessionPerson()); null = signed out; level = the server's word for a
+ *               login that is not the owner (editor · view-only, lib/access) — said after the shop's name (CB CRM, SHELL-ONE)
  *     apiBase · token   where /api lives, and the bearer (default: CBShell.apiBase() and the saved session's token)
  *     avatar    extra options passed straight to CBAvatar.mount (items, onSignOut, …)
  *     kural     the CBKural route (default 'planning'); false = no kural
- *     homeHref  where the switcher's areas point (default '/'; an area is homeHref + '#' + area)
+ *     homeHref  where the switcher's areas and the ⌂ Home control point (default '/'; an area is homeHref + '#' + area).
+ *               SHELL-ONE: a storefront passes the SHOP's front — "Home" there is the shop, never ChitBridge's index
+ *     title     { icon, name } — the app's name in the bar for a page with no manifest entry (a lab; the storefront: the shop's name);
+ *               with a manifest entry the switcher names the app itself (SHELL-ONE)
+ *     fit       'pane' — the shell is a block INSIDE a page's own pane (an app with its own sidebar), not the full-window frame (SHELL-ONE)
+ *   THE ONE HEADER (SHELL-ONE, 2026-10-15 — Athi: "lot of in-consistencies in each page before sign-in itself"): mark · the app's name ·
+ *   the screen chip · ⌂ Home · the bell · the avatar (or "Sign in") — on EVERY page, in every mode. Nothing of it is drawn by a page.
  *   shell.slots { bell, alerts, home, work } · shell.open() · .close() · .isOpen() · .go(area) · .area() · .header() · .manifest() · .ready (Promise)
  *
  * EDITIONS (AX1): if the page loaded /app/edition.js, CBEdition decides which entries this showing draws — only those cards, their pillar boxes and
@@ -83,6 +90,13 @@
     '.cbsh *,.cbsh *::before,.cbsh *::after{box-sizing:border-box}',
     ':where(.cbsh) :where(button,a){font:inherit;color:inherit}:where(.cbsh) :where(button){cursor:pointer}:where(.cbsh) :where(a){text-decoration:none}',
     '.cbsh.full{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--sh-page);z-index:1}',
+    /* SHELL-ONE fit:"pane": the shell sits in a page's own main pane (an app with its own sidebar, a CBFrame skeleton) — a block, not the window */
+    '.cbsh.pane{position:static;display:block;background:transparent;--sh-bar:55px}',   /* + its 1px line = 56: the sidebar brand row's height (page-skeleton.css .brand), so the two header lines meet (Round U rule f) */
+    '.cbsh.pane .cbsh-work:not(:has(.cbsh-signin:not(:empty))):not(:has(.cbsh-slotwork:not(:empty))){display:none}',
+    /* ⌂ Home — the one way home on every page (app + bar modes); the switcher's look, so the bar has one kind of button */
+    '.cbsh-home{display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 10px;border:1px solid var(--sh-line);border-radius:8px;background:var(--sh-card);font-size:13px;font-weight:600;white-space:nowrap}',
+    '.cbsh-home:hover{background:var(--sh-panel)}',
+    '.cbsh-title{display:inline-flex;align-items:center;gap:7px;min-width:0;font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
     /* header */
     '.cbsh-hdr{flex:0 0 auto;position:relative;z-index:20;background:var(--sh-card);border-bottom:1px solid var(--sh-line)}',
     '.cbsh-bar{height:var(--sh-bar);display:flex;align-items:center;gap:10px;padding:0 14px}',
@@ -194,6 +208,7 @@
     /* PHONE — a different layout: bottom tabs, one area at a time, rows, the sheet drops over the page, the kural once on Home */
     '@media(max-width:700px){',
     '.cbsh{--sh-bar:52px}.cbsh-bar{padding:0 13px;gap:9px}.cbsh-who{padding:4px 6px;margin-left:-6px}',
+    '.cbsh-home .hw{display:none}.cbsh-home{padding:0 8px}.cbsh-title{font-size:13px}',   /* a phone: ⌂ alone (aria-label keeps the word) */
     '.cbsh-chip .lbl,.cbsh-chip .lg{display:none}.cbsh-chip .sm{display:inline}.cbsh-chip{padding:0 10px;gap:6px}',
     '.cbsh-sheet{position:absolute;left:0;right:0;top:var(--sh-bar);max-height:calc(100dvh - var(--sh-bar) - 70px);box-shadow:0 14px 28px var(--sh-shadow);border-bottom:1px solid var(--sh-line)}',
     '.cbsh-hdr.open .cbsh-scrim{display:block;position:fixed;inset:var(--sh-bar) 0 0 0;background:var(--sh-scrim);z-index:-1}',
@@ -227,6 +242,14 @@
     var s = doc.createElement('style'); s.id = 'cbsh-css'; s.textContent = CSS;
     (doc.head || doc.documentElement).appendChild(s);
   }
+  /* SHELL-ONE: the type SYSTEM.md §2 names (Bricolage Grotesque · IBM Plex Sans · IBM Plex Mono) comes WITH the frame, once — a page never links its own face */
+  var FONTS_HREF = 'https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap';
+  function addFonts() {
+    if (!doc || !doc.head) return;
+    var has = [].some.call(doc.querySelectorAll('link[rel="stylesheet"]'), function (l) { return /IBM\+Plex\+Sans/.test(l.getAttribute('href') || ''); });
+    if (has) return;
+    var l = doc.createElement('link'); l.id = 'cbsh-fonts'; l.rel = 'stylesheet'; l.href = FONTS_HREF; doc.head.appendChild(l);
+  }
 
   /* ── licences: the server says the band (ok · due · soon · gone) and any penalty words; the shell only words the days ── */
   function daysWord(l) {
@@ -246,8 +269,9 @@
   function mount(el, o) {
     if (!el) return null;
     o = o || {};
-    addCss();
+    addCss(); addFonts();
     var host = o.host || null, mode = host && host.bar ? 'bar' : host ? 'app' : 'home';
+    var appId = host && host.app ? String(host.app) : '';   /* bar mode too (SHELL-ONE): the storefront and the labs name their app for the chip */
     var sess = session();
     var person = o.person !== undefined ? o.person : (root.CBAvatar && root.CBAvatar.sessionPerson ? root.CBAvatar.sessionPerson() : null);
     var token = o.token || (sess && sess.token) || '';
@@ -259,7 +283,8 @@
 
     el.innerHTML = '';
     el.classList.add('cbsh');
-    if (mode !== 'bar') el.classList.add('full');
+    el.classList.remove('full', 'pane');
+    if (mode !== 'bar') el.classList.add(o.fit === 'pane' ? 'pane' : 'full');
     el.setAttribute('data-testid', 'cbshell');
     el.setAttribute('data-mode', mode);
 
@@ -276,13 +301,16 @@
       '<header class="cbsh-hdr" data-testid="shell-header">' +
         '<div class="cbsh-bar" data-testid="shell-bar">' +
           '<span class="cbsh-mark" aria-hidden="true" data-testid="shell-mark">▣</span>' +
-          (person ? '<button type="button" class="cbsh-who" data-testid="shell-shop" aria-expanded="false" aria-controls="' + sheetId + '"><b></b><span class="chev" aria-hidden="true">▼</span></button>' : '') +
+          (person ? '<button type="button" class="cbsh-who" data-testid="shell-shop" aria-expanded="false" aria-controls="' + sheetId + '"><b data-testid="shop-name"></b><span class="chev" aria-hidden="true">▼</span></button>' : '') +
           (mode === 'app' ? '<div class="cbsh-sw"><button type="button" class="cbsh-swb" data-testid="shell-switcher" aria-haspopup="true" aria-expanded="false"></button><div class="cbsh-swpop" data-testid="shell-switcher-menu" hidden></div></div>' : '') +
+          (mode === 'bar' && o.title ? '<span class="cbsh-title" data-testid="shell-title"><span aria-hidden="true">' + esc(o.title.icon || '') + '</span><span>' + esc(o.title.name || '') + '</span></span>' : '') +   /* SHELL-ONE: the bar names its page (the shop, the lab) */
           '<span class="cbsh-grow"></span>' +
-          (mode !== 'bar' ? '<span class="cbsh-sid" data-testid="shell-screen-id"></span>' : '') +   /* SCREEN-ID: this screen's name · code (app/screen-id.js, if the page loaded it) */
+          (mode !== 'bar' || appId ? '<span class="cbsh-sid" data-testid="shell-screen-id"></span>' : '') +   /* SCREEN-ID: this screen's name · code (app/screen-id.js, if the page loaded it) */
           '<span class="cbsh-ed" data-testid="shell-edition"></span>' +
           '<span class="cbsh-lic" data-testid="shell-licence"></span>' +
           '<span class="cbsh-bell" data-testid="shell-bell" data-slot="bell"></span>' +
+          /* SHELL-ONE: ⌂ Home on every page but Home itself — the storefront's homeHref is the shop's front */
+          (mode !== 'home' ? '<a class="cbsh-home" href="' + esc(homeHref) + '" data-testid="shell-home" aria-label="' + esc(W.areas.home) + '"><span aria-hidden="true">' + ICON.home + '</span><span class="hw">' + esc(T(W.areas.home)) + '</span></a>' : '') +
           '<span class="cbsh-av" data-testid="shell-avatar"></span>' +
         '</div>' +
         (person ? '<div class="cbsh-sheet" id="' + sheetId + '" role="region" data-testid="shell-sheet" hidden></div><div class="cbsh-scrim" data-testid="shell-scrim"></div>' : '') +
@@ -307,11 +335,11 @@
     var hdr = $('.cbsh-hdr'), sheet = $('.cbsh-sheet'), who = $('.cbsh-who'), main = $('.cbsh-main');
     var slots = { bell: $('.cbsh-bell'), alerts: null, home: null, work: $('[data-slot="work"]') };
     /* SCREEN-ID: the app's screen code in the bar — the one chip (CBScreenId); a frame with sections names the section (page-frame.js setActive) */
-    if (mode !== 'bar' && root.CBScreenId) { root.CBScreenId.here(host ? host.app : 'home'); $('.cbsh-sid').appendChild(root.CBScreenId.chip()); }
+    if ((mode !== 'bar' || appId) && root.CBScreenId) { root.CBScreenId.here(appId || 'home'); $('.cbsh-sid').appendChild(root.CBScreenId.chip()); }
 
     /* ── the bar ── */
     function paintBar() {
-      if (who) { who.querySelector('b').textContent = shopName(); who.setAttribute('aria-label', shopName()); }
+      if (who) { var lvl = person && person.level ? ' · ' + person.level : ''; who.querySelector('b').textContent = shopName() + lvl; who.setAttribute('aria-label', shopName() + lvl); }
       if (sheet) sheet.setAttribute('aria-label', shopName());
       var lic = $('.cbsh-lic'), w = S.header ? worstOf(S.header.licences) : null;
       lic.innerHTML = w ? '<button type="button" class="cbsh-chip ' + w.band + '" data-testid="shell-licence-chip" data-band="' + w.band + '">' + (w.band === 'due' ? '●' : '⚠') +
@@ -480,7 +508,9 @@
       var b = $('.cbsh-swb'), pop = $('.cbsh-swpop'); if (!b) return;
       var me = ((S.manifest && S.manifest.entries) || []).filter(function (e) { return e && e.id === host.app; })[0];
       var cur = (me && me.area) || o.area || 'home';
-      b.innerHTML = '<span aria-hidden="true">' + esc((me && me.icon) || ICON[cur]) + '</span><span>' + esc((me && me.name) || W.areas[cur]) + '</span><span class="chev" aria-hidden="true">▼</span>';
+      /* the app's name: its manifest entry; else the page's own title (SHELL-ONE: a lab, a page with no card); else the area */
+      var icon = (me && me.icon) || (o.title && o.title.icon) || ICON[cur], name = (me && me.name) || (o.title && o.title.name) || W.areas[cur];
+      b.innerHTML = '<span aria-hidden="true">' + esc(icon) + '</span><span>' + esc(name) + '</span><span class="chev" aria-hidden="true">▼</span>';
       b.setAttribute('aria-label', W.switcher);
       pop.innerHTML = areasShown().map(function (a) {
         return '<a href="' + esc(homeHref + (a === 'home' ? '' : '#' + a)) + '" data-testid="shell-switch-' + a + '"' + (a === cur ? ' aria-current="true"' : '') + '><span class="i" aria-hidden="true">' + ICON[a] + '</span>' + esc(W.areas[a]) + '</a>';

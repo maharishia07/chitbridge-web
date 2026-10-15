@@ -14,7 +14,7 @@
 <style>
 :root{ --ink:#2a2418; --muted:#5c5240; --line:#e6dcc6; --line-3:#d8ccb0; --surface:#fffdf8; --ground:#fbf6ec; --hover:#f3ead7; --accent:#1f5f5b; --accent-ink:#fbf6ec;
   --green-t:#E8F4ED; --green-b:#A9D3BC; --green-d:#0D4A2B; --amber-t:#FDF3DC; --amber-b:#EFD39A; --amber-i:#7A5205; --red-i:#8E3517;
-  --mono:'IBM Plex Mono',ui-monospace,monospace; --sans:'IBM Plex Sans',system-ui,sans-serif; --serif:'Source Serif 4',Georgia,serif; }
+  --mono:'IBM Plex Mono',ui-monospace,monospace; --sans:var(--f-ui,'IBM Plex Sans',system-ui,sans-serif);   /* --f-ui is the reading font the avatar chooses (SHELL-ONE: one face) */ --serif:'Source Serif 4',Georgia,serif; }
 *{box-sizing:border-box}
 body{margin:0;background:var(--paper,var(--ground,#fbf6ec));color:var(--ink,#2a2418);font-family:var(--sans);font-size:15px;line-height:1.45}
 button{font-family:inherit;cursor:pointer}

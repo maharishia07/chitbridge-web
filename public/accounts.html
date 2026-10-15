@@ -84,18 +84,14 @@ svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke
 
 /* Main */
 .main{flex-grow:1;min-width:0;height:100%;overflow-y:auto}
-.top{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--ground) 96%,transparent);backdrop-filter:blur(6px);border-bottom:1px solid var(--line);min-height:64px;justify-content:center;padding:8px 40px;display:flex;flex-direction:column;gap:16px}
-.top-row{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+/* SHELL-ONE: the header is THE ONE FRAME (CBFrame → CBShell, #shell at the top of the main pane): mark · CB Accounts · the screen chip · ⌂ Home · bell · avatar.
+   Nothing of it is drawn or styled here. Below it the view's own title row (the screen's heading), sticky with the content. */
+#shell{position:sticky;top:0;z-index:11}
+.titlebar{position:sticky;top:56px;z-index:10;background:color-mix(in srgb,var(--ground) 96%,transparent);backdrop-filter:blur(6px);border-bottom:1px solid var(--line);min-height:56px;justify-content:center;padding:8px 40px;display:flex;flex-direction:column;gap:16px}   /* 56 = the shell bar in a pane (shell.js .cbsh.pane: 55 + its line), the sidebar brand's height */
 .titles{display:flex;flex-direction:column;gap:4px;min-width:0}
-h1{margin:0;font-family:var(--serif);font-size:30px;font-weight:700;letter-spacing:-.01em}
+h1{margin:0;font-family:var(--f-display,'Bricolage Grotesque',sans-serif);font-size:28px;font-weight:800;letter-spacing:-.015em}   /* SYSTEM.md §2: the display face (no serif, SHELL-ONE) */
 .summary{font-size:13.5px;color:var(--muted)}
 .summary:empty{display:none}
-/* the shop, the way home, and the avatar — the app's own (Profile · Sign out) */
-.who{display:flex;align-items:center;gap:12px;position:relative}
-.shop{font-size:13.5px;color:var(--muted)}
-.home{display:inline-flex;align-items:center;height:40px;padding:0 14px;border:1px solid var(--line-3);border-radius:8px;background:var(--surface);color:var(--ink);font-size:13.5px;font-weight:600;text-decoration:none}
-.home:hover{background:var(--hover)}
-/* the avatar and its menu are CBAvatar (app/avatar.js) — nothing of them is drawn or styled here */
 
 .bk-skel{display:flex;flex-direction:column;gap:10px;padding:4px 0}
 .bk-skel i{display:block;height:38px;border-radius:8px;background:linear-gradient(90deg,var(--line-2),var(--sub),var(--line-2));background-size:200% 100%;animation:bksk 1.2s linear infinite}
@@ -217,15 +213,11 @@ dialog.sheet .mfoot button[disabled]{opacity:.6}
 .scroll::-webkit-scrollbar-thumb{background:var(--line-3);border-radius:10px;border:3px solid var(--ground)}
 
 
-/* ⭐ THE LEDGERS VIEW (docs/design/ledgers-page): full-bleed two panes, only the rows scroll. With a ledger open the list's own title row is the header — shop · Home · avatar ride in it — so this page's header steps aside. */
+/* ⭐ THE LEDGERS VIEW (docs/design/ledgers-page): full-bleed two panes, only the rows scroll. With a ledger open the list's own title row is the view's heading; the page's title row steps aside. The frame (shop · Home · avatar) is the shell's and stays — SHELL-ONE. */
 body.lg-on .main{display:flex;flex-direction:column;overflow:hidden}
 body.lg-on .content{padding:0;max-width:none;flex:1 1 auto;min-height:0;gap:0}
 body.lg-on #bk_body{height:100%;min-height:0}
-body.lg-on.lg-sel .top{display:none}
-body.lg-on .cbl-slot .who{gap:8px}
-body.lg-on .cbl-slot .home{height:34px;padding:0 10px}
-body.lg-on .cbl-slot .home .hw{display:none}
-body.lg-on .cbl-slot .shop{display:none}
+body.lg-on.lg-sel .titlebar{display:none}   /* the list's own title row is the view's heading; the frame above stays (SHELL-ONE) */
 /* the menu rests as its icon rail on this view (as it does on a phone), so the list keeps the room its title row and tools row need — one line each, the head within 20% */
 @media (min-width:761px){body.lg-on .nav-grp{min-height:0;height:1px;margin:8px 10px;padding:0;background:var(--line-3);pointer-events:none}body.lg-on .nav-gchev{display:none}body.lg-on .nav-sec.shut .nav-btn{display:flex}body.lg-on .side{width:68px}body.lg-on .side .label,body.lg-on #toggleNav{display:none}body.lg-on .brand{padding:0 15px}body.lg-on .nav-btn .n{position:absolute;margin:0;transform:translate(12px,-12px);padding:0 5px}body.lg-on .nav-btn{position:relative}}
 
@@ -235,15 +227,13 @@ body.lg-on .cbl-slot .shop{display:none}
   .side .label,#toggleNav{display:none}
   .nav-grp{min-height:0;height:1px;margin:8px 10px;padding:0;background:var(--line-3);pointer-events:none}.nav-gchev{display:none}.nav-sec.shut .nav-btn{display:flex}
   .brand{padding:0 15px}
-  .top,.content{padding-left:16px;padding-right:16px}
+  .titlebar,.content{padding-left:16px;padding-right:16px}
   .nav-btn .n{position:absolute;margin:0;transform:translate(12px,-12px);padding:0 5px}
   .nav-btn{position:relative}
 }
 @media (max-width:620px){
-  .top{padding-top:14px;gap:12px}
+  .titlebar{padding-top:14px;gap:12px}
   h1{font-size:24px}
-  .who{gap:8px}
-  .shop{display:none}
   #bk_body table.bktab,#bk_body table.bktab tbody,#bk_body table.bktab tfoot,#bk_body table.bktab tr,#bk_body table.bktab td{display:block;width:100%}
   #bk_body table.bktab thead{display:none}
   #bk_body table.bktab tr{border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:8px 12px;margin-bottom:8px}
@@ -278,15 +268,13 @@ body.lg-on .cbl-slot .shop{display:none}
   </aside>
 
   <main class="main scroll">
-    <header class="top">
-      <div class="top-row">
-        <div class="titles">
-          <h1 id="title">CB Accounts</h1>
-          <div class="summary" id="summary"></div>
-        </div>
-        <div class="who" id="who"></div>
+    <div id="shell" data-testid="acc-shell"></div>   <!-- THE ONE HEADER (CBFrame → CBShell, SHELL-ONE): mark · CB Accounts · chip · ⌂ Home · bell · avatar -->
+    <div class="titlebar">
+      <div class="titles">
+        <h1 id="title">CB Accounts</h1>
+        <div class="summary" id="summary"></div>
       </div>
-    </header>
+    </div>
     <div class="content" id="content" data-testid="acc-content"></div>
   </main>
 </div>
@@ -343,6 +331,8 @@ function go(){ signedOut('Your session ended. Please sign in again.'); }   /* ap
 <script src="/engine/signin.js"></script>   <!-- CBSignin: the sign-in RULES (engines signin) -->
 <script src="/app/signin-ui.js"></script>   <!-- CBSignin.mount: THE ONE SIGN-IN WINDOW (M14) — the signed-out card mounts it -->
 <script src="/app/kural.js"></script>   <!-- CBKural: the kural footer — ONE band at the foot of every CB page, mounted here the way CBAvatar is -->
+<script src="/app/shell.js"></script>   <!-- CBShell: THE ONE HEADER (SHELL-ONE) — mounted into #shell by CBFrame -->
+<script src="/app/page-frame.js"></script>   <!-- CBFrame.mount({ host }): the frame every page wears; this page's own sidebar stays -->
 <script>
 'use strict';
 /* ═══ CB ACCOUNTS — the page. It paints; the numbers are the server's (SYSTEM rule 12). ═══════════════════════════ */
@@ -382,8 +372,8 @@ const TITLES = { ledgers: 'Ledgers', todo: 'To do' };   /* the Ledgers view keep
 
 /* the Ledgers' grouping (bands → groups → ledgers, decided by CODE) lives in app/cap-books.js — one copy, drawn as the folder tree */
 const $ = (id) => document.getElementById(id);
-const WHO = $('who');   /* the shop · Home · avatar: ONE node, held here — on a ledger it rides in the list's title row (BK.slotWho), everywhere else it is in the page header */
-const whoHome = () => { const row = document.querySelector('.top-row'); if (row && WHO.parentNode !== row) row.appendChild(WHO); };
+/* SHELL-ONE: the shop · Home · avatar are the frame's (CBShell in #shell) — never moved into a list's title row any more; the frame stays on every view */
+let FRAME = null;
 const ACC = { billTab: 'B-2100', gen: 0 };
 let SESS = null, MINE = null, ON = false;
 
@@ -439,17 +429,12 @@ $('toggleNav').addEventListener('click', () => {
 const railMq = window.matchMedia('(min-width:761px) and (max-width:1100px)');
 function railFit(){ const s = $('side'), t = $('toggleNav'); s.classList.toggle('collapsed', railMq.matches); const open = !s.classList.contains('collapsed'); t.setAttribute('aria-expanded', String(open)); t.setAttribute('aria-label', open ? 'Collapse sidebar' : 'Expand sidebar'); }
 if (railMq.addEventListener) railMq.addEventListener('change', railFit); railFit();
+/* the frame: mounted once per session change (the shell mounts the bell and the avatar itself); signed out, the avatar's door scrolls to the sign-in card */
 function whoPaint(){
-  const nm = SESS ? (SESS.entity || SESS.name || '') : '';
-  WHO.innerHTML = `<span class="shop" data-testid="shop-name">${esc(nm)}</span>
-    <span id="cb-bell-slot" data-testid="bell-slot"></span><a class="home" href="/" data-testid="acc-home" aria-label="Home">⌂ <span class="hw">Home</span></a><span id="cbav"></span>`;
-  /* R06 — the bell (app/rail-bell.js): ONE host element, mounted once, moved into each repaint of the bar so the stream is not re-ticketed */
-  if (typeof CBBell !== 'undefined' && SESS) { if (!window.__cbBell) window.__cbBell = document.createElement('span'); $('cb-bell-slot').appendChild(window.__cbBell);
-    /* mounted once it is on the page and the session is set; a bell drawn before the session landed (no button) is mounted again */
-    if (!window.__cbBell.querySelector('[data-testid="bell-btn"]')) CBBell.mount(window.__cbBell, { context: { host: 'accounts' } }); }
-  /* the avatar is CBAvatar: Profile opens the app's profile, Sign out is the app's (session and per-person nav memory go; the app's other tabs hear cb_sess go). No Settings here — that stays in the app. */
-  CBAvatar.mount($('cbav'), { person: CBAvatar.personOf(SESS), items: ['profile', 'support', 'signout'], apiBase: CFG.API_BASE, token: SESS && SESS.token });
-  if (window.CBScreenId) { if (!CBScreenId.current()) CBScreenId.here('accounts'); WHO.insertBefore(CBScreenId.chip(), WHO.firstChild); }   /* SCREEN-ID: this screen's name · code, one element moved into each repaint (the bell's pattern) */
+  const tok = SESS ? SESS.token : null;
+  if (FRAME && FRAME.token === tok && (FRAME.session ? FRAME.session.token : null) === tok) return;
+  FRAME = CBFrame.mount({ app: 'accounts', host: $('shell'), signin: false, avatar: { onSignIn: () => { const h = $('signin-host'); if (h && h.scrollIntoView) h.scrollIntoView({ block: 'center' }); } } });
+  if (window.CBScreenId && !CBScreenId.current()) CBScreenId.here('accounts');
 }
 /* the SMALL APP a screen key hands over to (CB_HOMES, accounts-shell.js) — never the workshop (IX0); no home yet → said, not a dead door */
 function navTo(k){ var h = CB_HOMES[k]; if (h) location.href = h; else toast(tx('Not built outside the workshop yet.')); }
@@ -474,7 +459,7 @@ function chrome(view){
   if (window.CBScreenId) CBScreenId.here('accounts', nav[0]);   /* SCREEN-ID: the view on show is the screen the chip names */
   navPaint(nav[0]);
   document.body.classList.toggle('lg-on', nav[0] === 'ledgers');
-  if (nav[0] !== 'ledgers') { document.body.classList.remove('lg-sel'); whoHome(); }
+  if (nav[0] !== 'ledgers') document.body.classList.remove('lg-sel');
   $('title').hidden = false;
   $('title').textContent = TITLES[nav[0]] || nav[1];
   $('summary').textContent = '';
@@ -482,15 +467,13 @@ function chrome(view){
   if (window.CBKural) CBKural.set(KURAL_OF[nav[0]] || 'accounts');
 }
 BK.onTab = (t) => chrome(t);
-/* the Ledgers view: when a ledger is open the list's own title row IS the page header — it carries the shop · Home · avatar (BK.slotWho), and this page's header steps aside so the head stays within 20% */
-BK.slotWho = (el) => { el.appendChild(WHO); };
-BK.onLedger = (sel) => { document.body.classList.toggle('lg-sel', !!sel); if (!sel) whoHome(); };
+/* the Ledgers view: when a ledger is open the list's own title row is the view's heading and this page's title row steps aside (the frame stays — SHELL-ONE) */
+BK.onLedger = (sel) => { document.body.classList.toggle('lg-sel', !!sel); };
 BK.views = { bills: (body) => accBills(body), todo: (body) => accTodo(body), receivables: (b) => bkDues(b, 'rcv'), payables: (b) => bkDues(b, 'pay'),
   closingstock: (b) => peStockView(b), assets: (b) => peAssetsView(b), accruals: (b) => peAccrualsView(b), gstclose: (b) => peGstView(b), yearclose: (b) => peYearView(b),
   bank: (b) => bankView(b), movein: (b) => miView(b), compare: (b) => cmpView(b), rates: (b) => fxView(b) };   /* the Ledgers view is cap-books.js's own: the folder tree + the Task table */
 function show(view){
   if (!ON) { chrome(NAV.some((n) => n[0] === view) ? view : 'todo'); return; }   /* the frame is up before the Ledger has answered: a tap on the menu is remembered (the hash) and opened when it does */
-  whoHome();
   $('content').innerHTML = '<div id="bk_body" data-testid="bk-body"></div>';
   bkTab(view, true);
 }
@@ -608,10 +591,10 @@ function cardLabels(root){
 new MutationObserver(() => cardLabels($('content'))).observe($('content'), { childList: true, subtree: true });
 
 /* ═══ THE STATES BEFORE THE LEDGER: signed out · another shop still here · the Ledger off ═══════════════════════ */
-function card(html, bad){ whoHome(); document.body.classList.remove('lg-on', 'lg-sel'); $('title').hidden = true; $('content').innerHTML = `<div class="card${bad ? ' bad' : ''}" data-testid="acc-card">${html}</div>`; $('summary').textContent = ''; }
+function card(html, bad){ document.body.classList.remove('lg-on', 'lg-sel'); $('title').hidden = true; $('content').innerHTML = `<div class="card${bad ? ' bad' : ''}" data-testid="acc-card">${html}</div>`; $('summary').textContent = ''; }
 function signedOut(why){
   SESS = null; MINE = null; ON = false; ACC.gen++;
-  WHO.innerHTML = '';
+  whoPaint();   /* the frame stays: its avatar is the Sign in door to the card below */
   navPaint(''); $('nav').innerHTML = '';
   /* ⭐ M14: the one sign-in window, here in the card — mobile number or e-mail, the first-time PIN step; signed in → start() */
   card(`<h2>${esc(why || 'You are signed out')}</h2><div id="signin-host" data-testid="signin-host"></div>`);
