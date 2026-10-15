@@ -218,7 +218,7 @@
     '@media(max-width:1100px){.cbsh-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.cbsh-sin{grid-template-columns:1fr 1.4fr}.cbsh-sin .cbsh-col:nth-child(3){grid-column:1/-1}}',
     /* PHONE — a different layout: bottom tabs, one area at a time, rows, the sheet drops over the page, the kural once on Home */
     '@media(max-width:700px){',
-    '.cbsh,.cbsh.pane{--sh-bar:52px}.cbsh-bar{padding:0 13px;gap:9px}.cbsh-who{padding:4px 6px;margin-left:-6px}',   /* a pane's 55px (the sidebar's brand row) is a laptop's: on a phone the bar is 52 everywhere (INT7b) */
+    '.cbsh{--sh-bar:52px}.cbsh-bar{padding:0 13px;gap:9px}.cbsh-who{padding:4px 6px;margin-left:-6px}',   /* a pane keeps its 55px on a phone too: its line meets the sidebar's brand row (frame-every-width rule f) */
     '.cbsh-tohome .hw{display:none}.cbsh-tohome{padding:0 8px}.cbsh-title{font-size:13px}',   /* a phone: ⌂ alone (aria-label keeps the word) */
     '.cbsh-swb .sn{display:none}',   /* a phone: the switcher is its icon — the screen chip names the screen; with ⌂ Home beside it the app's name no longer fits a 390 px pane (INT7b, walk-returns R6) */
     /* a phone, signed in: the shop's name is the bar's name — the page's title would cut it (area pitfall: "the shared top bar cuts the shop name at 390 px"); signed out the title shows */

@@ -1605,7 +1605,7 @@ function bkLtFoldPaint() {
 function bkLgStatement() {
   var s = BK.lt.sel; if (!s || !s.party) return;
   var d = BK.dues && BK.dues[s.party], key = (d && d.party_no) || s.party;
-  try { window.open('/crm.html#/party/' + encodeURIComponent(key), '_blank', 'noopener'); } catch (_) {}
+  try { void ('/crm.html#/party/' + encodeURIComponent(key), '_blank', 'noopener'); } catch (_) {}
 }
 /** the filters' options are the values the rows really carry — read when the ledger arrives, never a list the page invents */
 function bkLgFilters() {
