@@ -3,7 +3,7 @@
  * e2e/walk-compat.cjs — COMPATIBILITY, WALKED (round T3-COMPAT, 2026-10-14): Home's Compatibility card → the Standards page's "Works with" tab.
  * Black box: the real Home (index.html + shell.js + manifest.json) and the real standards.html, with the real data/compat.json and cap-standards.js.
  * The Standards page reads no API; Home's stand-in answers {} (the Compatibility card has no facts read — none exists, so it shows no figure).
- *   C1  Home -> Compatibility is a built card, opens /standards.html#works-with, shows no invented figure, never app.html
+ *   C1  Home -> Compatibility is a built card, opens /standards.html#compared-with (STD-COMPARE: the Compared with tab, Works with one tab away), shows no invented figure, never app.html
  *   C2  #works-with -> the Works with tab is lit, the list is exactly the compat.json rows, each with Moves (In · Out · Both ways) and a status
  *   C3  a row opens to what moves, which way, its proof, its code and its test (the chitbridge-api paths); a planned row says "Not built yet"
  *   C4  the tab is the list's own filter: Everything lists the whole register (no Moves column, the address loses #works-with); Works with brings both back
@@ -50,16 +50,19 @@ W.run('compat', async (w) => {
   const shown = () => page.$$eval('[data-testid^="std-row-"]', (els) => els.map((e) => +e.getAttribute('data-testid').slice(8)));
   const lit = () => page.$$eval('[data-testid^="std-view-"]', (els) => els.filter((e) => e.getAttribute('aria-selected') === 'true').map((e) => e.getAttribute('data-testid')));
 
-  await w.step('C1', 'Home -> Compatibility is a built card that opens the Works with tab, with no invented figure', async () => {
+  await w.step('C1', 'Home -> Compatibility is a built card that opens the Standards page on the Compared with tab (Works with beside it), with no invented figure', async () => {
     await page.goto(base + '/'); await page.waitForSelector('[data-testid="cbshell"]', { timeout: 20000 }); await page.waitForTimeout(600);
     const href = await page.getAttribute('[data-testid="shell-card-compatibility"]', 'href').catch(() => null);
     const facts = await page.locator('[data-testid="shell-facts-compatibility"]').innerText().catch(() => 'missing');
     const chip = await page.locator('[data-testid="shell-chip-compatibility"]').count();
-    return { ok: href === '/standards.html#works-with' && !facts.trim() && chip === 0 && !/app\.html/.test(href || ''), saw: 'card → ' + href + ' · facts "' + facts.trim() + '" · chip ' + chip };
+    await page.click('[data-testid="shell-card-compatibility"]'); await page.waitForURL(/standards\.html#compared-with/, { timeout: 15000 });
+    await page.waitForSelector('[data-testid="std-view-works-with"]', { timeout: 15000 }); await page.waitForTimeout(400);
+    const tabs = await lit();
+    return { ok: href === '/standards.html#compared-with' && !facts.trim() && chip === 0 && !/app\.html/.test(href || '') && tabs.join() === 'std-view-compared-with', saw: 'card → ' + href + ' · facts "' + facts.trim() + '" · chip ' + chip + ' · tabs ' + tabs.join() };
   });
 
-  await w.step('C2', 'Home card -> Standards #works-with: the tab is lit and the list is exactly the ' + CROWS.length + ' compat.json rows, each with Moves and a status', async () => {
-    await page.click('[data-testid="shell-card-compatibility"]'); await page.waitForURL(/standards\.html#works-with/, { timeout: 15000 });
+  await w.step('C2', 'Works with tab -> #works-with: the tab is lit and the list is exactly the ' + CROWS.length + ' compat.json rows, each with Moves and a status', async () => {
+    await page.click('[data-testid="std-view-works-with"]'); await page.waitForURL(/standards\.html#works-with/, { timeout: 15000 });
     await page.waitForSelector('[data-testid^="std-row-"]', { timeout: 15000 }); await page.waitForTimeout(400);
     const ids = await shown(), kinds = await page.$$eval('[data-testid^="std-row-"] [data-testid="std-kind"]', (e) => e.map((x) => x.textContent.trim()));
     const dirs = await page.$$eval('[data-testid^="std-row-"] [data-testid="std-dir"]', (e) => e.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));

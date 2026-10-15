@@ -291,7 +291,7 @@ function compareCols(){
     { key: 'theirs', label: 'Theirs', prio: 2, w: 260, cell: (x) => x.r.theirs || '—' },
     { key: 'ours', label: 'Ours', prio: 2, w: 260, cell: (x) => x.r.ours || '—' },
     { key: 'better', label: 'Better because', prio: 3, w: 220, cell: (x) => x.r.better || '—' },
-    { key: 'where', label: 'Country', prio: 4, w: 110, sort: 'where', cell: (x) => x.r.countryName },
+    { key: 'ctry', label: 'Country', prio: 4, w: 110, sort: 'ctry', cell: (x) => x.r.countryName },   /* its own key: a register column choice (where) must not survive into this view */
     { key: 'cstatus', label: 'Compared', pin: 'end', w: 150, sort: 'cstatus', html: true, value: (x) => CMP_STATUS_ORDER[x.r.cs], cell: cmpStatusCell },
   ];
 }
@@ -532,7 +532,7 @@ function paintMatrix(){
 }
 let LAST = '', GLAST = '';
 /* the list's columns share the width: weights per column, set on the host; a person who dragged a width keeps their own (no data-fill) */
-const WEIGHT = { what: 4, std: 2.4, kind: 1.6, where: 1.3, area: 1.3, parea: 1.4, at: 2, ex: 2.2, dir: 1.9, status: 3.2, pkg: 1.6, cap: 1.8, theirs: 3, ours: 3, better: 2.4, cstatus: 1.8 };
+const WEIGHT = { what: 4, std: 2.4, kind: 1.6, where: 1.3, area: 1.3, parea: 1.4, at: 2, ex: 2.2, dir: 1.9, status: 3.2, pkg: 1.6, cap: 1.8, theirs: 3, ours: 3, better: 2.4, ctry: 1.2, cstatus: 1.8 };
 let FITKEY = '';
 function fit(){
   var st = LIST && LIST.state(), host = $('std_list'); if (!st) return;
