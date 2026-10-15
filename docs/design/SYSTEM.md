@@ -54,6 +54,18 @@ and My device), text size (Small 92% · Medium 100% · Large 115% · Extra large
 five reading fonts. A screen that draws its own list header or its own avatar fails the guards. A change to the frozen
 look is a new decision (DECISIONS.md), not a build choice.
 
+## 3c · ONE FRAME on every page (SHELL-ONE, 2026-10-15 — Athi, 14 Oct: "lot of in-consistencies in each page before sign-in itself")
+Every page — Home, every small app, the standards page, the storefront (shop · network shop · store · embed), the shop screen and the labs —
+renders the SAME header through `CBFrame.mount` (`public/app/page-frame.js`) → `CBShell` (`public/app/shell.js`): mark · the app's name ·
+the screen chip · ⌂ Home · the bell · the ONE avatar (or "Sign in"). A page draws none of it: no `<header>`, no `.top` / `.bar`, no
+`CBAvatar.mount` of its own. Three shapes, one unit: `skeleton` (sidebar + main pane), `host` (an app with its own sidebar puts it at the
+top of its main pane, `fit:'pane'`, 56 px to meet the brand row), `bar: true` (the header only, over the page's own body — the storefront
+and the labs). The storefront keeps the shop's brand colour as `--accent`; its ⌂ Home is the shop's own front (`homeHref`). Type is §2's
+stack on every page: `var(--f-ui,'IBM Plex Sans',system-ui,sans-serif)` for the body (the avatar's reading font reaches it), the display
+face for headings — no serif, no page-local face. Design references (`screen-id.js` DECLARED.references → `docs/SCREEN-LIST.md`) wear no
+frame and are not customer navigation. Proved by `e2e/visual-tour.cjs` (every page, signed in and out, Cream/Dark at 1366/390) and
+`e2e/skeleton-guard.cjs` (a page without the frame fails).
+
 ## 3b · The kural footer, `CBKural` (Athi's decision, 2026-10-03; part of the frozen look)
 Every CB page carries ONE band at the foot: `public/app/kural.js`, `window.CBKural`, mounted like `CBAvatar` (`CBKural.mount()`, then
 `CBKural.set(route)` as the screen changes). The kural of a page is its `route` in `docs/design/kural-kit/kurals.json`

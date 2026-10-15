@@ -209,6 +209,8 @@
     '@media(max-width:700px){',
     '.cbsh{--sh-bar:52px}.cbsh-bar{padding:0 13px;gap:9px}.cbsh-who{padding:4px 6px;margin-left:-6px}',
     '.cbsh-home .hw{display:none}.cbsh-home{padding:0 8px}.cbsh-title{font-size:13px}',   /* a phone: ⌂ alone (aria-label keeps the word) */
+    /* a phone, signed in: the shop's name is the bar's name — the page's title would cut it (area pitfall: "the shared top bar cuts the shop name at 390 px"); signed out the title shows */
+    '.cbsh-bar:has(.cbsh-who) .cbsh-title{display:none}',
     '.cbsh-chip .lbl,.cbsh-chip .lg{display:none}.cbsh-chip .sm{display:inline}.cbsh-chip{padding:0 10px;gap:6px}',
     '.cbsh-sheet{position:absolute;left:0;right:0;top:var(--sh-bar);max-height:calc(100dvh - var(--sh-bar) - 70px);box-shadow:0 14px 28px var(--sh-shadow);border-bottom:1px solid var(--sh-line)}',
     '.cbsh-hdr.open .cbsh-scrim{display:block;position:fixed;inset:var(--sh-bar) 0 0 0;background:var(--sh-scrim);z-index:-1}',
@@ -266,6 +268,44 @@
     return c[0] || null;
   }
 
+  /* THE FRAME's markup, one template (SHELL-ONE): the header (mark · shop · switcher or title · chip · edition · licence · bell · ⌂ Home · avatar),
+     then — not in bar mode — the work area (Home: the rail and the areas; an app: the sign-in slot and the work slot) and the foot.
+     f = { mode, person, sheetId, title, appId, homeHref, sides } */
+  function frameHTML(f) {
+    return '<header class="cbsh-hdr" data-testid="shell-header">' +
+      '<div class="cbsh-bar" data-testid="shell-bar">' +
+      '<span class="cbsh-mark" aria-hidden="true" data-testid="shell-mark">▣</span>' +
+      (f.person ? '<button type="button" class="cbsh-who" data-testid="shell-shop" aria-expanded="false" aria-controls="' + f.sheetId + '"><b data-testid="shop-name"></b><span class="chev" aria-hidden="true">▼</span></button>' : '') +
+      (f.mode === 'app' ? '<div class="cbsh-sw"><button type="button" class="cbsh-swb" data-testid="shell-switcher" aria-haspopup="true" aria-expanded="false"></button><div class="cbsh-swpop" data-testid="shell-switcher-menu" hidden></div></div>' : '') +
+      (f.mode === 'bar' && f.title ? '<span class="cbsh-title" data-testid="shell-title"><span aria-hidden="true">' + esc(f.title.icon || '') + '</span><span>' + esc(f.title.name || '') + '</span></span>' : '') +   /* SHELL-ONE: the bar names its page (the shop, the lab) */
+      '<span class="cbsh-grow"></span>' +
+      (f.mode !== 'bar' || f.appId ? '<span class="cbsh-sid" data-testid="shell-screen-id"></span>' : '') +   /* SCREEN-ID: this screen's name · code (app/screen-id.js, if the page loaded it) */
+      '<span class="cbsh-ed" data-testid="shell-edition"></span>' +
+      '<span class="cbsh-lic" data-testid="shell-licence"></span>' +
+      '<span class="cbsh-bell" data-testid="shell-bell" data-slot="bell"></span>' +
+      /* SHELL-ONE: ⌂ Home on every page but Home itself — the storefront's f.homeHref is the shop's front */
+      (f.mode !== 'home' ? '<a class="cbsh-home" href="' + esc(f.homeHref) + '" data-testid="shell-home" aria-label="' + esc(W.areas.home) + '"><span aria-hidden="true">' + ICON.home + '</span><span class="hw">' + esc(T(W.areas.home)) + '</span></a>' : '') +
+      '<span class="cbsh-av" data-testid="shell-avatar"></span>' +
+      '</div>' +
+      (f.person ? '<div class="cbsh-sheet" id="' + f.sheetId + '" role="region" data-testid="shell-sheet" hidden></div><div class="cbsh-scrim" data-testid="shell-scrim"></div>' : '') +
+    '</header>' +
+    (f.mode === 'bar' ? '' :
+      '<div class="cbsh-work">' +
+      (f.mode === 'home' ? '<nav class="cbsh-nav" data-testid="shell-nav" aria-label="Areas">' + AREAS.map(function (a) {
+        return '<button type="button" class="cbsh-nv" data-go="' + a + '" data-testid="shell-nav-' + a + '"><span class="i" aria-hidden="true">' + ICON[a] + '</span><span class="t">' + esc(W.areas[a]) + '</span></button>';
+      }).join('') + '</nav>' : '') +
+      (f.mode === 'home' ? '<div class="cbsh-pfoot" data-testid="shell-pfoot"></div>' : '') +
+      (f.sides ? '<aside class="cbsh-side l" data-slot="sideL"></aside>' : '') +
+      '<main class="cbsh-main" data-testid="shell-main" data-tab="home"><div class="cbsh-inner">' +
+        (f.sides ? '<div class="cbsh-tools" data-testid="shell-sidetools"><button type="button" data-slot="btnL"></button><button type="button" data-slot="btnR"></button></div>' : '') +
+        '<div class="cbsh-signin" data-testid="shell-signin"></div>' +
+        (f.mode === 'home' ? '<div class="cbsh-areas" data-testid="shell-areas"></div>' : '<div class="cbsh-slotwork" data-slot="work"></div>') +
+      '</div></main>' +
+      (f.sides ? '<aside class="cbsh-side r" data-slot="sideR"></aside>' : '') +
+      '</div>' +
+      '<div class="cbsh-foot" data-testid="shell-foot"></div>');
+  }
+
   function mount(el, o) {
     if (!el) return null;
     o = o || {};
@@ -297,39 +337,7 @@
     var sides = mode === 'home' && !!person && !!(root.CBSides && root.CBSides.mount);
     if (sides) el.classList.add('has-sides');
 
-    el.innerHTML =
-      '<header class="cbsh-hdr" data-testid="shell-header">' +
-        '<div class="cbsh-bar" data-testid="shell-bar">' +
-          '<span class="cbsh-mark" aria-hidden="true" data-testid="shell-mark">▣</span>' +
-          (person ? '<button type="button" class="cbsh-who" data-testid="shell-shop" aria-expanded="false" aria-controls="' + sheetId + '"><b data-testid="shop-name"></b><span class="chev" aria-hidden="true">▼</span></button>' : '') +
-          (mode === 'app' ? '<div class="cbsh-sw"><button type="button" class="cbsh-swb" data-testid="shell-switcher" aria-haspopup="true" aria-expanded="false"></button><div class="cbsh-swpop" data-testid="shell-switcher-menu" hidden></div></div>' : '') +
-          (mode === 'bar' && o.title ? '<span class="cbsh-title" data-testid="shell-title"><span aria-hidden="true">' + esc(o.title.icon || '') + '</span><span>' + esc(o.title.name || '') + '</span></span>' : '') +   /* SHELL-ONE: the bar names its page (the shop, the lab) */
-          '<span class="cbsh-grow"></span>' +
-          (mode !== 'bar' || appId ? '<span class="cbsh-sid" data-testid="shell-screen-id"></span>' : '') +   /* SCREEN-ID: this screen's name · code (app/screen-id.js, if the page loaded it) */
-          '<span class="cbsh-ed" data-testid="shell-edition"></span>' +
-          '<span class="cbsh-lic" data-testid="shell-licence"></span>' +
-          '<span class="cbsh-bell" data-testid="shell-bell" data-slot="bell"></span>' +
-          /* SHELL-ONE: ⌂ Home on every page but Home itself — the storefront's homeHref is the shop's front */
-          (mode !== 'home' ? '<a class="cbsh-home" href="' + esc(homeHref) + '" data-testid="shell-home" aria-label="' + esc(W.areas.home) + '"><span aria-hidden="true">' + ICON.home + '</span><span class="hw">' + esc(T(W.areas.home)) + '</span></a>' : '') +
-          '<span class="cbsh-av" data-testid="shell-avatar"></span>' +
-        '</div>' +
-        (person ? '<div class="cbsh-sheet" id="' + sheetId + '" role="region" data-testid="shell-sheet" hidden></div><div class="cbsh-scrim" data-testid="shell-scrim"></div>' : '') +
-      '</header>' +
-      (mode === 'bar' ? '' :
-        '<div class="cbsh-work">' +
-          (mode === 'home' ? '<nav class="cbsh-nav" data-testid="shell-nav" aria-label="Areas">' + AREAS.map(function (a) {
-            return '<button type="button" class="cbsh-nv" data-go="' + a + '" data-testid="shell-nav-' + a + '"><span class="i" aria-hidden="true">' + ICON[a] + '</span><span class="t">' + esc(W.areas[a]) + '</span></button>';
-          }).join('') + '</nav>' : '') +
-          (mode === 'home' ? '<div class="cbsh-pfoot" data-testid="shell-pfoot"></div>' : '') +
-          (sides ? '<aside class="cbsh-side l" data-slot="sideL"></aside>' : '') +
-          '<main class="cbsh-main" data-testid="shell-main" data-tab="home"><div class="cbsh-inner">' +
-            (sides ? '<div class="cbsh-tools" data-testid="shell-sidetools"><button type="button" data-slot="btnL"></button><button type="button" data-slot="btnR"></button></div>' : '') +
-            '<div class="cbsh-signin" data-testid="shell-signin"></div>' +
-            (mode === 'home' ? '<div class="cbsh-areas" data-testid="shell-areas"></div>' : '<div class="cbsh-slotwork" data-slot="work"></div>') +
-          '</div></main>' +
-          (sides ? '<aside class="cbsh-side r" data-slot="sideR"></aside>' : '') +
-        '</div>' +
-        '<div class="cbsh-foot" data-testid="shell-foot"></div>');
+    el.innerHTML = frameHTML({ mode: mode, person: person, sheetId: sheetId, title: o.title, appId: appId, homeHref: homeHref, sides: sides });
 
     var $ = function (s) { return el.querySelector(s); };
     var hdr = $('.cbsh-hdr'), sheet = $('.cbsh-sheet'), who = $('.cbsh-who'), main = $('.cbsh-main');
