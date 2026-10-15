@@ -135,7 +135,8 @@ W.run('finance-cash', async (w) => {
   });
   await w.step('C8b', 'Cash (the pack will not guess the return date: AE without its stagger) -> the chip says the pack\'s word, the figure and the server\'s sentence — no date, nothing counted', async () => {
     S.mode = 'nodate'; await open(); await page.waitForTimeout(500);
-    const gst = await txt('[data-testid="fc-gst"]'), gstRows = await page.locator('[data-testid^="fc-row-"]:has-text("Return to pay")').count(); S.mode = 'ok'; await open();
+    const gst = await txt('[data-testid="fc-gst"]'), gstRows = await page.locator('[data-testid^="fc-row-"]:has-text("Return to pay")').count();
+    S.mode = 'ok'; await open(); await page.click('[data-testid="fc-days-30"]'); await page.waitForTimeout(700);   /* back to the 30-day view C8 left for C9 */
     return { ok: /^VAT return/.test(gst) && /8,000/.test(gst) && /picked under Returns/.test(gst) && !/after this window/.test(gst) && gstRows === 0, saw: 'gst chip "' + gst + '"; return rows ' + gstRows };
   });
   await w.step('C9', 'Cash -> filter "Money moving" -> only the days with something behind them stay', async () => {
