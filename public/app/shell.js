@@ -220,6 +220,7 @@
     '@media(max-width:700px){',
     '.cbsh{--sh-bar:52px}.cbsh-bar{padding:0 13px;gap:9px}.cbsh-who{padding:4px 6px;margin-left:-6px}',
     '.cbsh-tohome .hw{display:none}.cbsh-tohome{padding:0 8px}.cbsh-title{font-size:13px}',   /* a phone: ⌂ alone (aria-label keeps the word) */
+    '.cbsh-swb .sn{display:none}',   /* a phone: the switcher is its icon — the screen chip names the screen; with ⌂ Home beside it the app's name no longer fits a 390 px pane (INT7b, walk-returns R6) */
     /* a phone, signed in: the shop's name is the bar's name — the page's title would cut it (area pitfall: "the shared top bar cuts the shop name at 390 px"); signed out the title shows */
     '.cbsh-bar:has(.cbsh-who) .cbsh-title{display:none}',
     '.cbsh-chip .lbl,.cbsh-chip .lg{display:none}.cbsh-chip .sm{display:inline}.cbsh-chip{padding:0 10px;gap:6px}',
@@ -539,7 +540,8 @@
       var cur = (me && me.area) || o.area || 'home';
       /* the app's name: its manifest entry; else the page's own title (SHELL-ONE: a lab, a page with no card); else the area */
       var icon = (me && me.icon) || (o.title && o.title.icon) || ICON[cur], name = (me && me.name) || (o.title && o.title.name) || W.areas[cur];
-      b.innerHTML = '<span aria-hidden="true">' + esc(icon) + '</span><span>' + esc(T(name)) + '</span><span class="chev" aria-hidden="true">▼</span>';   /* through the catalogue: an area is a word (walk-locale) */
+      b.innerHTML = '<span aria-hidden="true">' + esc(icon) + '</span><span class="sn">' + esc(T(name)) + '</span><span class="chev" aria-hidden="true">▼</span>';   /* through the catalogue: an area is a word (walk-locale) */
+      b.setAttribute('title', T(name));
       b.setAttribute('aria-label', W.switcher);
       pop.innerHTML = areasShown().map(function (a) {
         return '<a href="' + esc(homeHref + (a === 'home' ? '' : '#' + a)) + '" data-testid="shell-switch-' + a + '"' + (a === cur ? ' aria-current="true"' : '') + '><span class="i" aria-hidden="true">' + ICON[a] + '</span>' + esc(W.areas[a]) + '</a>';
