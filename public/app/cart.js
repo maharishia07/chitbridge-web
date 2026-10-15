@@ -1,5 +1,7 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════
+ * CALLED BY shop.html · store.html · embed.html · network-shop.html and app.html's compose (CBCart.create — the one basket, SHELL-ONE's storefront pages).
+ * CARD storefront-and-catalogue/cart
  * CAPABILITY: CART — one basket, everywhere (app/cart.js). Athi, 2026-09-05: "the cart is a single view we should be able to
  * embed anywhere so we get the same style and response everywhere — single source of truth; convert as a capability and
  * remove duplicate code, so we can work on one piece of code."

@@ -112,8 +112,8 @@
     ON_COLOUR_PAIRS.forEach(function (pair) { all[pair[0]] = 1; });
     Object.keys(all).forEach(function (v) { r.style.removeProperty(v); });
     var vars = t.vars || {}, derived = onColoursOf(vars);
-    Object.keys(vars).forEach(function (v) { r.style.setProperty(v, vars[v]); });
-    Object.keys(derived).forEach(function (v) { r.style.setProperty(v, derived[v]); });
+    Object.keys(vars).forEach(function (token) { r.style.setProperty(token, vars[token]); });
+    Object.keys(derived).forEach(function (token) { r.style.setProperty(token, derived[token]); });
     r.style.colorScheme = t.scheme || 'light';              /* the caret, scrollbars, autofill and date picker are drawn by the browser */
     r.setAttribute('data-theme', key);
     if (Object.keys(t.vars || {}).length) r.setAttribute('data-themed', key); else r.removeAttribute('data-themed');   /* a page's own names key off THIS: Cream overrides nothing */
