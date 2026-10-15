@@ -719,6 +719,43 @@ console.log('\n17 · no platform host in the site');
     .filter((f) => !/<script src="\/config\.js"><\/script>/.test(fs.readFileSync(f, 'utf8')));
   if (pagesNeed.length) fail('page(s) read the api base but do not load /config.js first: ' + pagesNeed.map((f) => path.relative(ROOT, f)).join(', '));
   else pass('every page that reads the api base loads /config.js');
+
+  /* SEC0 (14 Oct): the Supabase PROJECT REF is the api's env (the host in DATABASE_URL / S3_ENDPOINT), never a literal in a public repo —
+     the api had it in 7 files, this repo in none. The pattern is gitleaks' own rule in .gitleaks.toml (id cb-supabase-project-ref), read
+     here so CI's gitleaks and this offline guard run ONE regex. Every tracked file is held to it; the api and engines beside this
+     checkout are read too and reported (their own guard fails them: api tests/hosting-neutral.test.cjs §6). */
+  const { execFileSync } = require('child_process');
+  const ruleOf = (dir) => {
+    const toml = fs.readFileSync(path.join(dir, '.gitleaks.toml'), 'utf8');
+    const m = /\[\[rules\]\]\s*\nid = "cb-supabase-project-ref"[\s\S]*?\nregex = '''([^\n]+)'''/.exec(toml);
+    return m ? new RegExp(m[1], 'g') : null;
+  };
+  const refHits = (dir, R) => execFileSync('git', ['-C', dir, 'ls-files', '-z'], { encoding: 'utf8', maxBuffer: 64 << 20 }).split('\0').filter(Boolean)
+    .flatMap((f) => {
+      let s; try { s = fs.readFileSync(path.join(dir, f), 'utf8'); } catch (_) { return []; }   // tracked but absent from this checkout
+      if (s.indexOf('\0') >= 0) return [];                                                     // binary
+      const m = s.match(R);
+      return m ? [f + ' (' + m[0].slice(0, 40) + ')'] : [];
+    });
+  const own = ruleOf(ROOT);
+  if (!own) fail('.gitleaks.toml has no rule cb-supabase-project-ref — the Supabase project ref would pass secret scanning');
+  else {
+    const ref20 = 'bcdfg'.repeat(4);   // the shape, built here: never a literal ref in this file
+    const catches = ['db.' + ref20 + '.supabase.co', 'supabase.com/dashboard/project/' + ref20, 'cb_app.' + ref20, 'Supabase `' + ref20 + '`'].every((s) => s.match(own));
+    const spares = ['db.example-host.supabase.co', 'https://<ref>.supabase.co', 'postgres.<project-ref>'].every((s) => !s.match(own));
+    if (!catches || !spares) fail('rule cb-supabase-project-ref ' + (catches ? 'trips on the placeholders <ref> / db.example-host.supabase.co' : 'misses a shape the ref was found in'));
+    const bad = refHits(ROOT, own);
+    if (bad.length) fail(bad.length + ' tracked file(s) carry a Supabase project ref — it is env only (api DATABASE_URL / S3_ENDPOINT): ' + bad.slice(0, 8).join('; '));
+    else pass('no tracked file carries a Supabase project ref (rule cb-supabase-project-ref from .gitleaks.toml)');
+    ['chitbridge-api', 'chitbridge-engines'].forEach((r) => {
+      const d = path.join(ROOT, '..', r);
+      if (!fs.existsSync(path.join(d, '.git'))) return;
+      let h = [];
+      try { h = refHits(d, (fs.existsSync(path.join(d, '.gitleaks.toml')) && ruleOf(d)) || own); } catch (_) { return; }
+      if (h.length) warn(r + ' (beside) carries a Supabase project ref in ' + h.length + ' file(s): ' + h.slice(0, 8).join('; '));
+      else pass(r + ' (beside): no Supabase project ref');
+    });
+  }
 }
 
 /* 18 · FIX-INT5a (13 Oct): docs/process/PRN.md was tracked — PRN is a Windows device name, and `git checkout` failed on the owner's PC.
@@ -754,6 +791,61 @@ console.log('\n19 · one esc · one money formatter · one month list (app/helpe
   bad.forEach((b) => fail(b.file + ' defines `' + b.name + '` ×' + b.lines.length + ' (line ' + b.lines.join(', ') + ') — call the one in ' + HOME + ' (esc · fmtMoney · monthNames)'
     + (b.may ? '; allowed ' + b.may : '')));
   if (!bad.length) pass(n + ' definition(s) outside ' + HOME + ', every one named in e2e/prim-homes.cjs ALLOW');
+}
+
+/* 20 · T2-POLICY (14 Oct): the policy flags are DEFINED once — chitbridge-api lib/policy.js FLAGS (+ its CARD rows, sent as schema[key].ui).
+   This repo held a second table (cap-admin.js POLICY_FLAGS: label · help · level · gov) and the two drifted. Ratchet at zero: no file in
+   public/ declares a list of flag rows (`{ key:'…', label:…, type:'enum'|'number' … }`) or a POLICY_FLAGS table. */
+console.log('\n20 · one definition of the policy flags (the server\'s)');
+{
+  const ROW = /\{\s*key\s*:\s*'[a-z_]+'\s*,\s*label\s*:[^}]*\btype\s*:\s*'(enum|number|set)'/;
+  const hits = [];
+  const files = ['app.html'].concat(CAPS.map((f) => 'app/' + f));
+  for (const f of files) {
+    const src = fs.readFileSync(path.join(WEB, f), 'utf8');
+    if (/\bPOLICY_FLAGS\s*=/.test(src) || ROW.test(src)) hits.push(f);
+  }
+  if (hits.length) fail(hits.length + ' file(s) define policy flag rows of their own (read schema[key].ui from GET /api/entities/policy instead): ' + hits.join(', '));
+  else pass('no policy flag rows defined in the web — the card paints the server\'s schema (0, was 1)');
+}
+
+/* 21 · T2-ENGONCE (14 Oct): eight engines were adopted TWICE — public/app/X.js AND public/engine/X.js (6,191 duplicated lines, MAINT-1 D3).
+   public/engine/ is the one home of an adopted engine; every page loads that copy. An engine stamped ADOPTED in two web files (a bundle
+   counts each part it carries), a lock entry with two paths, or a page that loads /app/<adopted engine>.js fails. Ratchet: zero. */
+console.log('\n21 · each adopted engine has ONE home in web (public/engine)');
+{
+  const ROOT = path.join(__dirname, '..');
+  const STAMP = /^\/\* ADOPTED from chitbridge-engines v\d+\.\d+\.\d+ · ([a-z0-9-]+) · sha256 /gm;
+  const where = {};
+  const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).forEach((e) => {
+    const f = path.join(dir, e.name);
+    if (e.isDirectory()) { if (e.name !== 'node_modules') walk(f); return; }
+    if (!/\.(js|cjs|mjs)$/.test(e.name)) return;
+    for (const m of fs.readFileSync(f, 'utf8').matchAll(STAMP)) (where[m[1]] = where[m[1]] || new Set()).add(path.relative(ROOT, f).replace(/\\/g, '/'));
+  });
+  walk(WEB);
+  const twice = Object.keys(where).filter((n) => where[n].size > 1);
+  if (twice.length) fail(twice.length + ' engine(s) adopted in more than one web file: ' + twice.map((n) => n + ' (' + [...where[n]].join(' + ') + ')').join(' · '));
+  else pass(Object.keys(where).length + ' adopted engines, each in exactly one web file');
+  const outside = Object.keys(where).filter((n) => [...where[n]].some((f) => !/^public\/(engine|app)\//.test(f)));
+  if (outside.length) fail('adopted engine(s) outside public/engine or public/app: ' + outside.join(', '));
+  const lock = JSON.parse(fs.readFileSync(path.join(ROOT, 'engines.lock.json'), 'utf8'));
+  const paths = {};
+  Object.entries(lock.adopt || {}).forEach(([n, ps]) => ps.forEach((p) => (paths[n] = paths[n] || []).push(p)));
+  Object.entries(lock.bundles || {}).forEach(([p, ns]) => ns.forEach((n) => (paths[n] = paths[n] || []).push(p)));
+  const lockTwice = Object.keys(paths).filter((n) => paths[n].length > 1);
+  if (lockTwice.length) fail('engines.lock.json gives ' + lockTwice.length + ' engine(s) more than one path: ' + lockTwice.map((n) => n + ' → ' + paths[n].join(' + ')).join(' · '));
+  else pass('engines.lock.json lists one path per engine (' + Object.keys(paths).length + ')');
+  /* a load of /app/<engine>.js whose app/ copy is gone (the deleted second copies) — app/units.js is NOT an adopted engine (a hand-vendored
+     CBUnits, custodian finding T2-ENGONCE), so it is judged by whether the file exists, not by its name */
+  const gone = Object.keys(where).filter((n) => !fs.existsSync(path.join(WEB, 'app', n + '.js')));
+  const LOADS = new RegExp('src=["\']\\.?\\/?app\\/(' + gone.join('|') + ')\\.js["\']', 'g');
+  const loads = [];
+  [ROOT, WEB].forEach((d) => fs.readdirSync(d).filter((f) => f.endsWith('.html')).forEach((f) => {
+    for (const m of fs.readFileSync(path.join(d, f), 'utf8').matchAll(LOADS)) loads.push(path.relative(ROOT, path.join(d, f)) + ' → app/' + m[1] + '.js');
+  }));
+  if (loads.length) fail(loads.length + ' page load(s) of an engine that lives in public/engine, not app/: ' + loads.slice(0, 8).join(', '));
+  else pass('no page loads an adopted engine from app/');
 }
 
 console.log('\n== GUARD ==  ' + hard + ' failure(s) · ' + soft + ' warning(s)');

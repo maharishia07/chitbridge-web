@@ -89,6 +89,12 @@
         + (shop.is_verified?'<span class="badge">✓ Verified</span>':'') + '</div>';
     }
     var out = head;
+    /* SEC4: a sign-in-first shop sends a stranger its card and a code, never its items — say so, and open the shop where a customer can sign in */
+    if (data.sign_in && data.sign_in.code === 'sign_in_first') {
+      el('app').innerHTML = head + '<div class="empty" data-testid="embed-sign-in-first">' + esc(data.sign_in.say || 'This shop asks customers to sign in first.')
+        + '<div style="margin-top:12px"><a href="/shop.html?s=' + encodeURIComponent(BRIDGE) + '" target="_blank" rel="noopener" style="color:var(--ink);font-weight:700;text-decoration:underline">Open the shop to sign in</a></div></div>';
+      postHeight(); return;
+    }
     var finishes = data.finishes || [];
     finishes.forEach(function(f){
       out += '<div class="sechd">'+esc(f.title || f.collection || 'Designer finishes')+'</div>'

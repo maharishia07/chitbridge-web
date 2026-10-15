@@ -10,6 +10,7 @@
  * One line per path: "ID · path · PASS/FAIL (what it saw)". Screenshots: e2e/shots/walk-bill-NN.png.
  */
 'use strict';
+const TD = require('./lib/today.cjs');
 const W = require('./lib/walk.cjs');
 
 W.run('bill', async (w) => {
@@ -25,7 +26,7 @@ W.run('bill', async (w) => {
     try { WHO = { name: 'Walk Cashier' }; } catch (_) {}
     var spice = [{ name: 'Spice', required: true, max: 1, options: [{ name: 'Medium', price: 0 }, { name: 'Hot', price: 10 }] }];
     window.S = { shop: { name: 'Walk Cafe', currency: 'INR', gstin: '29ABCPE1234F1Z7', state_code: '29', reg_type: 'regular', address: 'Bengaluru, Karnataka 560001' },
-      at: new Date().toISOString(), offers: [], slabs: [],
+      at: TD.nowIso(), offers: [], slabs: [],
       items: [{ item_id: 'dosa', name: 'Masala Dosa', price: 70, unit: 'plate', _rate: 5 },
               { item_id: 'poori', name: 'Poori', price: 50, unit: 'plate' },
               { item_id: 'paneer', name: 'Chilli Paneer', price: 185, unit: 'plate', _rate: 5, item_data: { modifiers: spice } },

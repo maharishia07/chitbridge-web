@@ -40,6 +40,12 @@ const LINES = [{ name: 'Rice 5kg', unit: 'piece', qty: 2, unit_price: 97.16, dis
                { name: 'Oil 1L', unit: 'piece', qty: 1, unit_price: 89.48, discount: 5.25, gst_rate: 12 }, { name: 'Tea', unit: 'piece', qty: 2, unit_price: 54.8, discount: 0, gst_rate: 18 }];
 const INV = eng.CBTax.determine({ seller: { Gstin: '33AAAAA0000A1Z5', State: '33', LglNm: SHOP }, buyer: { LglNm: 'Walk-in', State: '', Pos: '33' }, lines: LINES, priceIncludesTax: true });
 const EXP = eng.CBTax.moneyOf(INV, 'INR');   /* what every screen must show, to the paisa */
+/* RCM-POST: a GTA's freight bill from an UNREGISTERED transporter to the registered shop — the line names its category (rcm_category), the engine assesses it as the
+   recipient's purchase (rcm: true, as api lib/tax-lines invoiceFor does): the tax sits in the RCM heads, the supplier charges none, the bill total is the freight */
+const RCM_INV = eng.CBTax.determine({ rcm: true, seller: { LglNm: 'Sri Ram Transport', State: '33', Country: 'IN', RegType: 'unregistered' },
+  buyer: { Gstin: '33AAAAA0000A1Z5', LglNm: SHOP, State: '33', Pos: '33', Country: 'IN' },
+  lines: [{ name: 'Freight Salem to Chennai', unit: 'trip', hsn: '996511', qty: 1, unit_price: 10000, rate: 18, rcm_category: 'gta' }] });
+const RCM_EXP = eng.CBTax.moneyOf(RCM_INV, 'INR');
 const f2 = (n) => Number(n).toFixed(2);
 
 /* ── the stand-in: three chits (a counter bill, a supplier bill, a task) and the Ledger's day book that points at them ── */
@@ -82,14 +88,21 @@ function standIn() {
     business_json: { bill_no: 'AM-81' } },
     state_log: [{ action: 'status', previous_status: null, new_status: 'pending', mine: false }], doc: 'bill_received',   /* STD1: the server says what it is (folder-inventory docOf) */
     detail: { line_items: [{ particulars: 'Basmati 25kg', quantity: 10, unit: 'bag', price: 238.095, total: 2380.95, gst_rate: 5 }] } };
+  /* RCM-POST: a supplier bill under reverse charge — the frozen invoice says so (moneyOf(inv).rcm); the sheet must SAY who pays, never print GST 0.00 unexplained */
+  S.chits.sb2 = { header: { chit_id: 'sb2', purpose: 'invoice', current_status: 'pending', manual_subject: 'SRT-7', created_at: TODAY + 'T04:30:00.000Z',
+    all_recipients: [{ role: 'sender', display_name: 'Sri Ram Transport', entity_id: 'ent-srt' }, { role: 'receiver', display_name: SHOP, entity_id: 'ent-books' }],
+    summary_json: { currency_code: 'INR', bill_received: { from: 'Sri Ram Transport', total: RCM_EXP.total }, money: { total: RCM_EXP.total, tax: 0 } },
+    business_json: { bill_no: 'SRT-7', invoice: RCM_INV } },
+    state_log: [{ action: 'status', previous_status: null, new_status: 'pending', mine: false }], doc: 'bill_received',
+    detail: { line_items: [{ particulars: 'Freight Salem to Chennai', quantity: 1, unit: 'trip', price: 10000, total: 10000, gst_rate: 18, hsn: '996511', rcm_category: 'gta' }] } };
   S.chits.tk1 = { header: { chit_id: 'tk1', purpose: 'general', current_status: 'pending', manual_subject: 'Fix the shutter', created_at: TODAY + 'T03:00:00.000Z',
     all_recipients: [{ role: 'sender', display_name: 'Agro Mills', entity_id: 'ent-agro' }, { role: 'receiver', display_name: SHOP, entity_id: 'ent-books' }],
     summary_json: {}, business_json: {} }, detail: { line_items: [{ particulars: 'Shutter repair', quantity: 1, unit: 'job', price: 800, total: 800 }] } };
   const e = (n, id, ref, kind, by, extra) => Object.assign({ entry_id: 'e' + n, entry_no: 'JV/2026-27/00000' + n, posting_date: TODAY, doc_date: TODAY, event_type: 'sale_bill', source_chit_id: id, narration: 'Sale',
     source: { chit_id: id, ref, kind, counter: 'C2', by, count: null, how: 'UPI', how_ref: null, split: null, doc_at: TODAY + 'T05:10:00.000Z', recorded_at: TODAY + 'T05:10:03.000Z' },
     lines: [{ code: '1400', name: 'Cash', dr_minor: 68201, cr_minor: 0 }, { code: '4000', name: 'Sales', dr_minor: 0, cr_minor: 68201 }] }, extra || {});
-  S.entries = [e(1, 'ch1', 'C2/26-27/0002', 'bill', SHOP), e(2, 'sb1', 'AM-81', 'purchase', 'Mani')];
-  for (let i = 3; i < 40; i++) S.entries.push(e(i, null, 'X' + i, 'bill', 'Mani', { source_chit_id: null, source: null }));   /* filler so the Day book scrolls */
+  S.entries = [e(1, 'ch1', 'C2/26-27/0002', 'bill', SHOP), e(2, 'sb1', 'AM-81', 'purchase', 'Mani'), e(3, 'sb2', 'SRT-7', 'purchase', 'Mani')];
+  for (let i = 4; i < 40; i++) S.entries.push(e(i, null, 'X' + i, 'bill', 'Mani', { source_chit_id: null, source: null }));   /* filler so the Day book scrolls */
   S.waiting = [{ id: 1, chit_id: 'sb1', ref: 'bill:sb1', todo: 'accept', reason: 'Waiting for you to confirm Agro Mills’ bill AM-81.', tries: 0, since: TODAY + 'T04:00:00Z', stuck: true }];
   /* F10: MY counter receipt carrying their bill (their_bill no + total) — the supplier bill to accept; sent by me, the header's status stays 'pending' */
   S.chits.rc1 = { header: { chit_id: 'rc1', purpose: 'receipt', current_status: 'pending', manual_subject: 'Receipt R/0007', created_at: TODAY + 'T04:20:00.000Z', sender_entity_id: 'ent-books',
@@ -118,7 +131,7 @@ async function route(S, r) {
   let body = {}; try { body = JSON.parse(q.postData() || '{}'); } catch (_) {}
   if (p === '/api/books/status') return J(r, 200, { migrated: true, enabled: true, walkin_grain: 'day' });
   if (p === '/api/books/health') return J(r, 200, books.health({ last_check: { ok: true }, waiting: S.waiting.map((w) => books.waitingRow(w)) }));
-  if (p === '/api/books/cheques') return J(r, 200, { currency: 'INR', cheques: [], pdc_reminders: [] });
+  if (p === '/api/books/cheques') return J(r, 200, books.cheques());   /* the one cheques builder (e2e/lib/books-api.cjs) — asOf + remind as the master says since T3-P1 */
   if (p === '/api/books/dues') return J(r, 200, books.dues([], { asOf: TODAY }));
   if (p === '/api/books/daybook') return J(r, 200, books.daybook(S.entries.map(books.entry)));
   if (p === '/api/books/outbox/retry' && m === 'POST') { S.retries = (S.retries || 0) + 1; if (S.onRetry) S.onRetry(); return J(r, 200, { tried: 1, posted: 0, still: 1 }); }
@@ -621,6 +634,24 @@ async function route(S, r) {
     ok(await p.evaluate(() => document.documentElement.scrollWidth) === 390, 'phone: scrollWidth === 390 with the sheet open');
     ok(await p.evaluate(() => { const d = document.getElementById('chitsheet'), r = d.getBoundingClientRect(); return d.scrollWidth <= d.clientWidth + 1 && r.left >= 0 && r.right <= 390; }), 'phone: the sheet fits the 390 screen and nothing in it runs sideways');
     await shot(p, 'chit-sheet-phone'); await shot(p, 'chit-sheet-invoice-phone');
+    await ctx.close();
+  }
+
+  /* ── 13 · RCM-POST: a bill under reverse charge SAYS who pays the tax, from the frozen invoice's own code (moneyOf(inv).rcm) ── */
+  {
+    const S = standIn(); const { ctx, p } = await open(S);
+    await p.click('[data-testid="db-src-JV/2026-27/000003"]'); await waitSheet(p, 'SRT-7');
+    const sheet = await p.textContent('#chitsheet');
+    ok(RCM_EXP.rcm && RCM_EXP.rcm.tax === 1800 && RCM_EXP.tax === 0 && RCM_EXP.total === 10000, 'the engine: tax 1,800 in the RCM heads, 0 charged, total 10,000 (the fixture is a real reverse-charge invoice)');
+    ok(await p.locator('[data-testid="cs-rcm"]').count() === 1 && /Reverse charge — you pay the tax/.test(sheet), 'the buyer\'s sheet says "Reverse charge — you pay the tax"');
+    ok((await p.textContent('[data-testid="cs-rcm-tax"]')).replace(/[₹,\s]/g, '') === f2(RCM_EXP.rcm.tax), 'the figure beside it is moneyOf(invoice).rcm.tax — ' + f2(RCM_EXP.rcm.tax));
+    ok(await p.getAttribute('[data-testid="cs-rcm"]', 'data-side') === 'buyer', 'the side is the buyer\'s (a bill received)');
+    ok((await p.textContent('[data-testid="cs-total"]')).replace(/[₹,\s]/g, '') === f2(RCM_EXP.total), 'the total stays the supplier\'s bill (10,000 — no tax added by the screen)');
+    await shot(p, 'chit-sheet-rcm');
+    await p.keyboard.press('Escape'); await p.waitForTimeout(200);
+    /* a bill with NO reverse charge carries no such row — the code is absent, so is the sentence */
+    await p.click('[data-testid="db-src-JV/2026-27/000002"]'); await waitSheet(p, 'AM-81');
+    ok(await p.locator('[data-testid="cs-rcm"]').count() === 0, 'a plain supplier bill has no reverse-charge row');
     await ctx.close();
   }
 

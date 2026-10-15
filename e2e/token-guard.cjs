@@ -6,7 +6,7 @@
  * this is the cheap half that runs anywhere (CI included): it counts the literals in the SOURCE and lets the count only go DOWN.
  *
  * WHAT COUNTS as a raw colour: #hex (3/4/6/8 digits), rgb()/rgba()/hsl()/hsla(), and a named colour (white, black, red …) after a colour property —
- * in every public/*.html, every public/app/*.js and the root index.html (CSS blocks, inline style strings, injected CSS, template strings).
+ * in every public/*.html, every public/app/*.js, every public/lab/*.js|css and the root index.html (CSS blocks, inline style strings, injected CSS, template strings).
  * WHAT DOES NOT (these ARE the theming):
  *   · a token DEFINITION      --name: #hex      (:root, [data-themed], [data-theme] blocks, and '--name': '#hex' theme data in JS)
  *   · a var() FALLBACK        var(--x, #hex)    (the value used when the token is not defined — the page's original)
@@ -26,7 +26,9 @@ const ROOT = process.env.TG_ROOT || path.join(__dirname, '..');
 const BASE = path.join(__dirname, 'token-guard.baseline.json');
 const FILES = [path.join(ROOT, 'index.html')]
   .concat(fs.readdirSync(path.join(ROOT, 'public')).filter((f) => f.endsWith('.html')).map((f) => path.join(ROOT, 'public', f)))
-  .concat(fs.readdirSync(path.join(ROOT, 'public', 'app')).filter((f) => f.endsWith('.js')).map((f) => path.join(ROOT, 'public', 'app', f)));
+  .concat(fs.readdirSync(path.join(ROOT, 'public', 'app')).filter((f) => f.endsWith('.js')).map((f) => path.join(ROOT, 'public', 'app', f)))
+  /* T2-LABS: a lab's own module (public/lab/*.js · *.css — the Combo Lab moved there) is a page's code too; moving a colour must not hide it */
+  .concat(fs.existsSync(path.join(ROOT, 'public', 'lab')) ? fs.readdirSync(path.join(ROOT, 'public', 'lab')).filter((f) => /\.(js|css)$/.test(f)).map((f) => path.join(ROOT, 'public', 'lab', f)) : []);
 
 const NAMED = 'white|black|red|green|blue|gray|grey|orange|yellow|purple|pink|brown|navy|teal|silver|gold|maroon|lime|aqua|cyan|magenta|ivory|beige';
 const PROP = '(?:color|background(?:-color)?|border(?:-(?:top|right|bottom|left|color|inline|block)[a-z-]*)?|fill|stroke|outline(?:-color)?|box-shadow|text-shadow|caret-color|accent-color)';

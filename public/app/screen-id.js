@@ -37,15 +37,22 @@
         ['BKS019', 'gstclose', 'GST close & pay'], ['BKS020', 'yearclose', 'Year close'], ['BKS021', 'packs', 'Packs'], ['BKS022', 'opening', 'Opening balances'],
         ['BKS023', 'accounts', 'Shop ledgers'], ['BKS024', 'movein', 'Move in'], ['BKS025', 'rates', 'Rates']] },
       { app: 'finance', name: 'CB Finance', page: '/finance.html', hash: true, rows: [
-        ['FIN001', 'collections', 'Collections'], ['FIN002', 'payables', 'Payables'], ['FIN003', 'cash', 'Cash'], ['FIN004', 'terms', 'Terms'], ['FIN005', 'repeat', 'Repeat supply']] },
+        ['FIN001', 'collections', 'Collections'], ['FIN002', 'payables', 'Payables'], ['FIN003', 'cash', 'Cash'], ['FIN004', 'terms', 'Terms'], ['FIN005', 'repeat', 'Repeat supply'], ['FIN006', 'cheques', 'Cheques'], ['FIN007', 'returns', 'Returns'], ['FIN008', 'reports', 'Reports']] },   /* FIN006–007: T3-P1-MONEY · FIN008: T3-P4-ACCOUNT */
       { app: 'crm', name: 'CB CRM', page: '/crm.html', hash: true, rows: [
         ['CRM001', 'parties', 'Parties'], ['CRM002', 'chits', 'Chits'], ['CRM003', 'followups', 'Follow-ups'], ['CRM004', 'leads', 'Leads', 'Parties › Leads'],
-        ['CRM005', 'calls', 'Calls', 'Parties › Calls'], ['CRM006', 'party', 'Party', 'Parties › a party'], ['CRM007', 'chit', 'Chit page', 'a sheet › Open page']] },
+        ['CRM005', 'calls', 'Calls', 'Parties › Calls'], ['CRM006', 'party', 'Party', 'Parties › a party'], ['CRM007', 'chit', 'Chit page', 'a sheet › Open page'],
+        ['CRM008', 'groups', 'Groups & segments'], ['CRM009', 'showcase', 'Shop window'], ['CRM010', 'privacy', 'Privacy']] },   /* CRM008–009: T3-P2-CRM · CRM010: T3-P3-CONSENT */
       { app: 'tasks', name: 'CB Tasks & Orders', page: '/tasks.html', rows: [
         ['TSK001', 'orders_in', 'Orders in'], ['TSK002', 'orders_out', 'Orders out'], ['TSK003', 'tasks', 'Tasks'], ['TSK004', 'done', 'Done']] },
       { app: 'settings', name: 'Settings', page: '/settings.html', hash: true, rows: [
-        ['SET001', 'shop', 'Your shop'], ['SET002', 'country', 'Country'], ['SET003', 'new', 'New shop', 'the sign-in window › New shop? Register']] },
+        ['SET001', 'shop', 'Your shop'], ['SET002', 'country', 'Country'], ['SET003', 'new', 'New shop', 'the sign-in window › New shop? Register'],
+        /* T3-SETTINGS (INT6c): the four CB Settings sections */
+        ['SET004', 'counters', 'Counters & keys'], ['SET005', 'connectors', 'Connectors'], ['SET006', 'policy', 'Policy'], ['SET007', 'plan', 'Plan & usage'], ['SET008', 'account', 'Account']] },   /* SET008: T3-P4-ACCOUNT */
+      /* T3-OPS (INT6c): CB Operations — Stock + Suppliers */
+      { app: 'operations', name: 'CB Operations', page: '/operations.html', hash: true, rows: [['OPS001', 'stock', 'Stock'], ['OPS002', 'suppliers', 'Suppliers']] },
       { app: 'employees', name: 'CB Employees', page: '/employees.html', rows: [['EMP001', 'people', 'People']] },
+      { app: 'catalogue', name: 'Catalogue', page: '/catalogue.html', hash: true, rows: [
+        ['CTG001', 'items', 'Items'], ['CTG002', 'categories', 'Categories'], ['CTG003', 'import', 'Import']] },
       { app: 'network', name: 'Network', page: '/network.html', rows: [['NET001', 'mine', 'My network'], ['NET002', 'offers', 'Offers'], ['NET003', 'design', 'Design']] },
       { app: 'country-lab', name: 'Country lab', page: '/country-lab.html', rows: [['CLB001', 'compare', 'Side by side'], ['CLB002', 'ready', 'Where we are']] },
       { app: 'kyb', name: 'Know your business', page: '/know-your-business.html', rows: [['KYB001', null, 'Know your business']] },

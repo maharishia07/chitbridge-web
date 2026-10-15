@@ -131,7 +131,7 @@ createContext(ctx);
 /* The REAL modules, in the order app.html loads them. */
 /* ⚠ locale.js FIRST. cart-ui and catalogue-ui both reach for CBLocale to format money, and without it
    the cart bar throws mid-paint — which the old null-returning DOM stub hid, because paintBar never ran. */
-runInContext(read('public/app/locale.js'), ctx, { filename: 'locale.js' });
+runInContext(read('public/engine/locale.js'), ctx, { filename: 'locale.js' });
 runInContext(read('public/app/step-flow.js'), ctx, { filename: 'step-flow.js' });
 runInContext(read('public/app/catalogue-model.js'), ctx, { filename: 'catalogue-model.js' });
 runInContext(read('public/app/catalogue-lines.js'), ctx, { filename: 'catalogue-lines.js' });

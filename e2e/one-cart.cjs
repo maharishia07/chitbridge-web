@@ -6,7 +6,7 @@
  * truth … keep it as a practice". The storefront had its own basket math for two days and drifted (no GST on the Suppliers
  * screen, a badge no screen could show). This guard fails the moment a second implementation appears:
  *   – only app/cart.js (the CART capability) may build the "Total incl. tax" row or a per-rate tax table (`byRate`);
- *   – only app/cart.js and app/offers.js may call CBOffers.evaluate for a BASKET (the product page's single-line preview
+ *   – only app/cart.js and engine/offers.js may call CBOffers.evaluate for a BASKET (the product page's single-line preview
  *     and the offer form's test panel are allowed: they preview one product, they never total a basket).
  */
 const fs = require('fs'); const path = require('path');
@@ -14,7 +14,7 @@ const PUB = process.env.ONE_CART_ROOT || path.join(__dirname, '..', 'public');  
 const files = ['app.html', 'shop.html'].concat(fs.readdirSync(path.join(PUB, 'app')).filter((f) => f.endsWith('.js')).map((f) => 'app/' + f));
 const OWNER = 'app/cart.js';
 /* the renderer pair (cart-ui + catalogue-ui) and the engine itself may evaluate; anyone else only for ONE line ("lines:[line]") */
-const ALLOW_EVALUATE = new Set([OWNER, 'app/offers.js',
+const ALLOW_EVALUATE = new Set([OWNER, 'engine/offers.js',
   'app.html'              /* the product page previews ONE product (prodOfferCartHTML, the bulk preview) — and the Compose cart, see DEBT below */,
   'app/cap-definitions.js' /* the offer form's preview and Test panel: one product */]);
 /* KNOWN DEBT, printed every run until it is gone: the Compose cart (CC.offers) still totals its own offers — step 3 of the convergence */
@@ -63,7 +63,7 @@ const OUTLETS = {
                          ["Catalogue list (the seller's own products, read-only rows)", '[CAT-01] · e2e/shot-rows.cjs'],
                          ['Design 1 chit › Content + Summary (read-only: the chit IS the cart; Summary = its money block + delivery, cover by flag)', '[PAR-03] the order page and its Summary equal the cart'],],
   'offer-lab-next.html': [['Offer lab (the engine as a page: the same rows, badges and money block)', '[LAB-01] the offer lab: switch, see, compare, advise']],
-  'app/cap-network.js': [['Network › a store catalogue',      'network-cascade']],
+  'app/cap-network-member.js': [['Network › a store catalogue (the member half of Network, split from cap-network.js)', 'network-cascade']],
   'app/pick.js':        [['CBPick overlay (worklist: take materials)', 'order-steps › the picker over any screen']],
   'app/cap-chit2.js':   [["The chit's Order tab (read-only: the chit IS the cart)", '[PAR-03] the order page equals the cart']],
 };

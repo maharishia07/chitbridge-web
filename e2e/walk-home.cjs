@@ -13,17 +13,18 @@
  * One line per path: "ID · path · PASS/FAIL (what it saw)". Screenshots: e2e/shots/walk-home-NN.png.
  */
 'use strict';
+const TD = require('./lib/today.cjs');
 const fs = require('fs'), path = require('path');
 const W = require('./lib/walk.cjs');
 const books = require('./lib/books-api.cjs'), crmApi = require('./lib/crm-api.cjs');
-const FX = crmApi.resolve(JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'golden-parties.json'), 'utf8')), Date.now());   /* the designer's golden parties: so the CRM page draws a real toolbar */
+const FX = crmApi.resolve(JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'golden-parties.json'), 'utf8')), TD.nowMs());   /* the designer's golden parties: so the CRM page draws a real toolbar */
 const C = require('./lib/contract.cjs');   /* M43: every /api/books and /api/crm answer this stand-in serves is held to the API contract */
 const J = (r, status, body) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
 
 W.run('home', async (w) => {
   const { page, ctx, base } = w;
   /* the day as the log found it: 24 in, 0 out, 21 stuck; 1 supplier, 2 customers (self excluded); one posting waiting for the ledger */
-  const RAIL = { suppliers: 1, customers: 2, in: 24, out: 0, stuck: 21 };
+  const RAIL = crmApi.railFacts({ suppliers: 1, customers: 2, in: 24, out: 0, stuck: 21 });
   await ctx.route('**/api/**', (r0) => {
     const r = C.wrap(r0);
     const u = new URL(r.request().url());
@@ -43,7 +44,8 @@ W.run('home', async (w) => {
 
   await w.step('H1', 'Home -> the rail shows 24 in - 0 out - 21 stuck, and each digit is a door', async () => {
     const pips = await page.$$eval('.pip', (as) => as.map((a) => ({ t: a.textContent.trim(), href: a.getAttribute('href') })));
-    const want = { in: /#\/chits\?tab=in$/, out: /#\/chits\?tab=out$/, stuck: /#\/chits\?tab=stuck$/ };
+    /* TOUR-FIX1: in / out are Tasks & Orders' folder counts, so each opens THAT folder (tasks.html?view=…); stuck stays the rail's CRM door */
+    const want = { in: /\/tasks\.html\?view=orders_in$/, out: /\/tasks\.html\?view=orders_out$/, stuck: /#\/chits\?tab=stuck$/ };
     const okIn = pips.some((p) => p.t === '24 in' && want.in.test(p.href || '')), okOut = pips.some((p) => p.t === '0 out' && want.out.test(p.href || '')), okStuck = pips.some((p) => p.t === '21 stuck' && want.stuck.test(p.href || ''));
     return { ok: okIn && okOut && okStuck, saw: 'chips: ' + pips.map((p) => p.t + ' -> ' + (p.href || 'NOT A LINK')).join(' | ') };
   });
@@ -82,9 +84,9 @@ W.run('home', async (w) => {
     for (const h of [a, b]) { const p2 = await ctx.newPage(); await p2.goto(base + h); await p2.waitForSelector('[data-testid="shell-header"], header, h1', { timeout: 15000 }).catch(() => {}); lands.push(await p2.evaluate(() => !!document.querySelector('[data-testid="shell-header"]'))); await p2.close(); }
     return { ok: !!a && !!b && !/app\.html/.test(a + b) && lands.every(Boolean), saw: a + ' (shell header ' + lands[0] + ') - ' + b + ' (shell header ' + lands[1] + ')' };
   });
-  await w.step('H36-r', 'Home -> Catalogue chip -> a way to the catalogue (Product Lab)', async () => {
-    const h = await page.locator('[data-testid="shell-chip-catalogue"]').first().evaluate((e) => (e.tagName === 'A' ? e : e.querySelector('a') || {}).getAttribute ? (e.tagName === 'A' ? e : e.querySelector('a')).getAttribute('href') : null).catch(() => null);
-    return { ok: /product-lab\.html/.test(h || ''), saw: 'the chip links to ' + h };
+  await w.step('H36-r', 'Home -> Catalogue card -> CB Catalogue (T3-CATALOGUE: built, its own small app)', async () => {
+    const h = await page.locator('[data-testid="shell-card-catalogue"]').first().getAttribute('href').catch(() => null);
+    return { ok: /\/catalogue\.html/.test(h || ''), saw: 'the card links to ' + h };
   });
   await w.step('H37', 'Left menu -> Running -> scrolls Home to that section', async () => {
     const nav = page.locator('[data-testid="shell-nav-running"]').first();
@@ -97,7 +99,7 @@ W.run('home', async (w) => {
   const PIL = ['marketing', 'sales', 'finance', 'accounting', 'operations', 'people', 'trade'];
   await w.step('P1', 'Manifest -> every entry has a pillar, and the pillars are the nine known words', async () => {
     const known = PIL.concat(['labs', 'setup']), bad = man.entries.filter((e) => known.indexOf(e.pillar) < 0).map((e) => e.id);
-    const need = ['marketing', 'finance', 'operations', 'people', 'trade'].filter((id) => { const e = man.entries.find((x) => x.id === id); return !e || e.state === 'built' && !e.route || !e.what && id !== 'trade'; });
+    const need = ['marketing', 'finance', 'operations', 'people', 'trade'].filter((id) => { const e = man.entries.find((x) => x.id === id); return !e || e.state === 'built' && !e.route || !e.what && id !== 'trade'; });   /* marketing: built since T3-P2-CRM (route + facts) */
     return { ok: !bad.length && !need.length, saw: bad.length ? 'no/odd pillar: ' + bad.join() : need.length ? 'missing box: ' + need.join() : man.entries.length + ' entries, all placed; the coming boxes exist' };
   });
   const reqs = []; const onReq = (rq) => { const u = new URL(rq.url()); if (u.pathname.indexOf('/api/') === 0) reqs.push(u.pathname); };
@@ -108,7 +110,7 @@ W.run('home', async (w) => {
     const r = await page.evaluate(() => {
       const ps = [...document.querySelectorAll('.cbsh-pil')].map((p) => p.dataset.pillar);
       const ids = [...document.querySelectorAll('[data-testid^="shell-card-"],[data-testid^="shell-chip-"]')].map((e) => e.dataset.id || e.getAttribute('data-testid').replace(/^shell-(card|chip)-/, ''));
-      const comingFacts = ['marketing', 'finance', 'operations', 'people', 'trade'].map((id) => { const c = document.querySelector('[data-testid="shell-chip-' + id + '"]'); return c ? c.innerText.replace(/\s+/g, ' ').trim() : 'MISSING ' + id; });
+      const comingFacts = ['operations', 'people', 'trade'].map((id) => { const c = document.querySelector('[data-testid="shell-chip-' + id + '"]'); return c ? c.innerText.replace(/\s+/g, ' ').trim() : 'MISSING ' + id; });   /* marketing (T3-P2-CRM) and finance are cards now */
       const cap = (document.querySelector('.cbsh-sec.selling .cbsh-cap b') || {}).textContent;
       const rows = ['selling', 'running'].map((a) => [...document.querySelectorAll('.cbsh-sec.' + a + ' .cbsh-pil')].map((p) => Math.round(p.getBoundingClientRect().top)).filter((v, i, x) => x.indexOf(v) === i).length);
       return { ps, dup: ids.filter((v, i) => ids.indexOf(v) !== i), comingFacts, cap, rows };
@@ -121,7 +123,7 @@ W.run('home', async (w) => {
     const own = new Set(man.entries.filter((e) => e.state === 'built' && e.facts).map((e) => e.facts));
     const known = new Set(['/api/facts/rail', '/api/books/health', '/api/entities/me', '/api/entities/header', '/api/crm/parties', '/api/crm/followups', '/api/entities/sides']);
     const strange = [...new Set(reqs)].filter((p) => !own.has(p) && !known.has(p) && !/^\/api\/(notifications|events|sides|me|session|counters|catalogue|offers|network|messages|reference)/.test(p));
-    return { ok: !strange.length && !reqs.some((p) => /finance|marketing|people|operations/.test(p)), saw: reqs.length + ' calls (' + [...new Set(reqs)].join(', ') + ')' + (strange.length ? ' - NEW: ' + strange.join() : '') };
+    return { ok: !strange.length && !reqs.some((p) => !own.has(p) && /finance|marketing|people|operations/.test(p)),   /* a pillar's own built card (its manifest facts URL, e.g. /api/facts/operations since T3-OPS) is not a box reading; CB Employees: /api/facts/people, PEOPLE-SRV1 */ saw: reqs.length + ' calls (' + [...new Set(reqs)].join(', ') + ')' + (strange.length ? ' - NEW: ' + strange.join() : '') };
   });
   const PS = path.join(__dirname, 'shots', 'pillars'); fs.mkdirSync(PS, { recursive: true });
   await w.step('P4', 'Home at 1366 and 390 -> the boxes fit the width (no sideways scroll), shots saved', async () => {
@@ -267,7 +269,12 @@ W.run('home', async (w) => {
   });
   await page.setViewportSize({ width: 1280, height: 860 });
   await w.step('H14-chip', 'Home -> the Connectors chip does not say WORKSHOP when Tally + Zoho work (manifest works = true)', async () => {
-    await goPage('/'); await page.waitForSelector('[data-testid="shell-chip-connectors"]', { timeout: 15000 });
+    await goPage('/'); await page.waitForSelector('[data-testid="shell-chip-connectors"], [data-testid="shell-card-connectors"]', { timeout: 15000 });
+    /* T3-SETTINGS: Connectors is BUILT (CB Settings › Connectors) — a built door is a card, never a chip, so it cannot say workshop */
+    if (await page.locator('[data-testid="shell-card-connectors"]').count()) {
+      const others = await page.$$eval('[data-testid^="shell-chip-"][data-state="workshop"]', (e) => e.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
+      return { ok: others.every((t) => !/Connectors/.test(t)), saw: 'Connectors is a built card (CB Settings); chips still marked workshop: ' + others.length };
+    }
     const c = await page.locator('[data-testid="shell-chip-connectors"]').first().evaluate((e) => ({ st: e.getAttribute('data-state'), t: e.textContent.replace(/\s+/g, ' ').trim() }));
     const others = await page.$$eval('[data-testid^="shell-chip-"][data-state="workshop"]', (e) => e.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
     return { ok: c.st === 'works' && !/workshop/i.test(c.t) && /works today/i.test(c.t) && others.every((t) => !/Connectors/.test(t)), saw: '"' + c.t + '" (state ' + c.st + '); chips still marked workshop: ' + others.length };

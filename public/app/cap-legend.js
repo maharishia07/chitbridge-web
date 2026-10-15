@@ -52,7 +52,7 @@ const CAP_CATALOGUE = [
   { id:'money-language', name:'Money & language — one renderer, one string layer', icon:'💱', load:'eager', maturity:3, target:4,
     gov:3, govTarget:4, governedUnder:'the standards register (ECMA-402 · CLDR · BCP 47 · RFC 4647 · ISO 4217)',
     governedBy:[
-      'ONE RENDERER: CBLocale.money(amount, code) — app/locale.js, vendored to /engine/locale.js for the counter and the shop screen',
+      'ONE RENDERER: CBLocale.money(amount, code) — engine/locale.js, vendored to /engine/locale.js for the counter and the shop screen',
       'THE READER GROUPS, THE CURRENCY DOES NOT: grouping and separators come from the reader\'s locale (India is 2-2-3, not 3-3-3); the currency sets only the symbol and the decimals (JPY 0 · INR/USD/AED 2 · KWD/BHD 3)',
       'ltr() strips the LRM/RLM/ALM marks an Arabic-region format inserts — they serve an RTL paragraph and mislead the bidi algorithm on an LTR page (a price once read "10 / ₹ 620.00KG")',
       'A PRICE IS A STAMPED VALUE — { amount, currency } — never a bare number; reading one with Number() is NaN and silently drops the product',

@@ -20,6 +20,7 @@ const C = require('./lib/contract.cjs');
 const books = require('./lib/books-api.cjs');
 const { measure } = require('./lib/theme-measure.cjs');
 const J = (r, status, body) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+const crmApi = require('./lib/crm-api.cjs');   /* RAIL-LAB-SRV1: the rail card (GET /api/facts/rail) from its one builder */
 
 /* ⭐ ONE CLOCK (as walk-finance-cash, F3b): the browser and the stand-in read the same instant; the stand-in's days are that instant's day in the shop's zone */
 const ZONE = 'Asia/Kolkata';
@@ -78,7 +79,7 @@ W.run('finance-payables', async (w) => {
     if (p === '/api/books/payments' && q.method() === 'POST') { S.pay = b; return J(r, 200, books.payRecorded(MALA_BILLS, b, 'Mala Mills', { balance_minor: -60000 })); }
     if (p === '/api/books/entries' && q.method() === 'POST') { S.entry = b; S.paid = true; return J(r, 200, books.posted({ entry_no: 'MJ/26-27/0007', items: 3 })); }
     if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Fixture Shop', currency_code: 'INR' } });
-    if (p === '/api/facts/rail') return J(r, 200, { suppliers: 4, customers: 3, in: 0, out: 0, stuck: 0 });
+    if (p === '/api/facts/rail') return J(r, 200, crmApi.railFacts({ suppliers: 4, customers: 3, in: 0, out: 0, stuck: 0 }));
     return J(r, 404, { error: 'not found' });
   });
   await ctx.addInitScript((s) => { try { localStorage.setItem('cb_api_base', location.origin); localStorage.setItem('cb_sess', s); } catch (_) {} }, W.session('Fixture Owner', 'Fixture Shop'));

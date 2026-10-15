@@ -56,8 +56,6 @@ const DEBT = {
   'app/cap-catsetup.js::id': 'the tax register of the catalogue set-up (Product · slab · price): a read-only audit table',
   'app/cap-match.js::matchDetail': 'the three-way match detail (Line · counted · invoiced): a read-only comparison table',
   'app/cap-register.js::rgHead': 'the RAIDA register (15 columns, in a modal): a hand-drawn .lhead list, next to move',
-  'combo-lab.html::paintPriceOvBody': 'Lab: a price-override input grid', 'combo-lab.html::g3': 'Lab: a preview table',
-  'combo-lab.html::cartPreviewHTML': 'Lab: the cart preview table', 'combo-lab.html::outLine': 'Lab: an output table', 'combo-lab.html::outQty': 'Lab: an output table',
   'conversion-lab.html::markup': 'Lab: the conversion tables (items, prices, rates), inputs per row',
   'offer-lab-next.html::markup': 'Lab: a static table', 'offer-lab-next.html::percentTableHTML': 'Lab: the percent table',
   'offer-lab-next.html::paintPriceOvBody': 'Lab: a price-override input grid', 'offer-lab-next.html::g3': 'Lab: a preview table',
@@ -94,6 +92,8 @@ function scope() {
   for (const f of ['app.html', 'accounts.html', 'crm.html']) files.push(f);
   for (const e of fs.readdirSync(path.join(ROOT, 'app'))) if (/\.js$/.test(e)) files.push('app/' + e);
   for (const e of fs.readdirSync(ROOT)) if (/lab.*\.html$/.test(e)) files.push(e);
+  /* T2-LABS: a lab's own module (public/lab/*.js — the Combo Lab moved there) is the Labs too */
+  if (fs.existsSync(path.join(ROOT, 'lab'))) for (const e of fs.readdirSync(path.join(ROOT, 'lab'))) if (/\.js$/.test(e)) files.push('lab/' + e);
   return files.filter((f) => fs.existsSync(path.join(ROOT, f)));
 }
 function findHeaders() {

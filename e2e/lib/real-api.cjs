@@ -15,6 +15,7 @@
  * Env: CB_API_DIR (default ../chitbridge-api beside this checkout) · CB_DB (default the loader's postgres://postgres:pw@127.0.0.1:5432/cb_sim)
  *      CB_SHOP (simstores) · CB_OTP (123456). A database URL whose host is not local is refused here too (the loader's rule). */
 'use strict';
+const TD = require('./today.cjs');
 const path = require('path'), net = require('net');
 const { spawn } = require('child_process');
 
@@ -88,10 +89,10 @@ async function start(opts) {
     const lines = [{ particulars: d.name, quantity: 1, unit: d.unit || 'nos', price, total: price, item_id: it.item_id || it.id, hsn: d.hsn, gst_rate: rate }];
     const seller = TL.partyOf({ gstn: meRow.gstn, display_name: meRow.display_name, country: meRow.country || 'IN', policy_flags: meRow.policy_flags }, { entity_id: String(meRow.identity_id || meRow.entity_id || '') });
     const buyer = { LglNm: party.display_name, Gstin: null, State: null, Country: seller.Country || 'IN', RegType: 'unregistered', Ph: null, Em: null, entity_id: null, Pos: seller.State };
-    const at = new Date().toISOString();
+    const at = TD.nowIso();
     const inv = TL.invoiceFor({ lines, seller, buyer, currency: 'INR', at, priceIncludesTax: true }).invoice;
     const total = Number(inv.ValDtls && inv.ValDtls.TotInvVal) || price;
-    const no = 'WX/' + String(Date.now()).slice(-6);
+    const no = 'WX/' + String(Date.now()).slice(-6);   /* clock-ok: a unique bill-no suffix */
     const body = { recipients: [{ self: true, name: 'self' }], purpose: 'order', subject: 'Counter sale ' + no, manual_subject: 'Counter sale ' + no, client_ref: no,
       business_json: { customer: { name: party.display_name, party_id: party.party_id }, till: { id: 'C1', name: 'Counter 1', host: 'walk', by: null }, bill_no: no, billed_at: at, catalogue_version: null,
         payment: { mode: 'cash', paid: total, change: 0, parts: [{ how: 'cash', amount: total }] }, slip: 'cash', terms: null, credit_override: null, invoice: inv },

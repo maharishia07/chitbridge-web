@@ -27,6 +27,7 @@
  * Screenshots: e2e/shots/walk-locale-<screen>-<width>.png (one per screen × width).
  */
 'use strict';
+const TD = require('./lib/today.cjs');
 const fs = require('fs'), path = require('path');
 const W = require('./lib/walk.cjs');
 const books = require('./lib/books-api.cjs'), crmApi = require('./lib/crm-api.cjs');
@@ -44,7 +45,7 @@ const PEOPLE = [{ id: 'p1', name: 'Asha Kumar', state: 'on' }, { id: 'p2', name:
 const PARTIES = ['Sri Hardware', 'Lakshmi Stores', 'Kumar Traders', 'Bharat Steel', 'Settled Sons', 'Ravi Stores', 'Chola Auto Care', 'Agro Mills', 'Kavi Traders', 'Fresh Farms', 'Kumar Stores', 'Meena', 'Lakshmi'];
 const TILL_ITEMS = [];
 for (let i = 0; i < 24; i++) TILL_ITEMS.push({ item_id: 'p' + i, name: 'Product number ' + i, code: 'P' + i, category: ['Tiffin', 'Drinks', 'Sweets'][i % 3], unit: 'plate', price: 20 + i });
-const FX = crmApi.resolve(JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'golden-parties.json'), 'utf8')), Date.now());
+const FX = crmApi.resolve(JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'golden-parties.json'), 'utf8')), TD.nowMs());
 const SHOP_FIX = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'shop-catalogue.json'), 'utf8'));
 const DATA_KEYS = /^(name|display_name|legal_name|nickname|subject|manual_subject|auto_subject|particulars|party|counterparty_name|brand_name|user_id|email|phone|address|city|role|remark|note|ref|bill_no|party_no|code|category|unit|gstn|gstin)$/;
 /** every string value under a data-ish key, anywhere in a fixture object */
@@ -70,7 +71,7 @@ const DUES = [
 const line = (id, what, qty, unit, price, delivered, who) => ({ line_id: id, particulars: what, qty, unit, price_minor: price, delivered, removed: false,
   assignment: who ? { assignee_actor_id: who.id, assignee_name: who.name, assignee_type: 'human', history: [] } : null, settings: { due: null, task: null, note: null, state: 'open' } });
 const row = (id, o) => Object.assign({ chit_id: id, kind: 'order_in', side: 'sell', status: 'pending', subject: 'Order', ref: null, party: null, party_id: null, channel: null, fulfilment: null,
-  address: null, requested_for: null, remark: null, total_minor: null, currency: 'INR', billed: false, despatched: false, assignee: null, created_at: new Date(Date.now() - 2 * 3600e3).toISOString(), age_days: 0, lines: [] }, o);
+  address: null, requested_for: null, remark: null, total_minor: null, currency: 'INR', billed: false, despatched: false, assignee: null, created_at: new Date(TD.nowMs() - 2 * 3600e3).toISOString(), age_days: 0, lines: [] }, o);
 const WORK = [
   row('c1', { subject: 'Order SO-1', ref: 'SO-1', party: 'Meena', party_id: 'cust-1', channel: 'online', fulfilment: 'pickup', requested_for: '2026-10-13', remark: 'Ring first', total_minor: 120050, lines: [line('l1', 'Tomato', 5, 'kg', 10000, 0, null), line('l2', 'Onion', 3, 'kg', 23350, 1, PEOPLE[0])] }),
   row('c2', { subject: 'Order SO-2', ref: 'SO-2', party: 'Kumar Stores', party_id: 'cust-2', status: 'accepted', total_minor: 48000, assignee: { id: 'p1', name: 'Asha Kumar' }, age_days: 3, lines: [line('l3', 'Rice 25 kg bag', 2, 'bag', 24000, 0, null)] }),
@@ -89,19 +90,19 @@ const CHOICES = [
 ];
 const may = (o) => Object.assign({ access: OK, reset_pin: OK, switch: { ok: true, to: 'off' }, cover: OK }, o || {});
 const STAFF = [
-  { id: 'p1', name: 'Asha Kumar', user_id: 'asha01@walk-shop.br', role: 'Cashier', phone: '9840000001', state: 'on', jobs: 0, last_at: new Date().toISOString(), access: CHOICES[0], may: may(), cover: null, cover_options: [{ id: 'p2', name: 'Ravi Nair' }] },
+  { id: 'p1', name: 'Asha Kumar', user_id: 'asha01@walk-shop.br', role: 'Cashier', phone: '9840000001', state: 'on', jobs: 0, last_at: TD.nowIso(), access: CHOICES[0], may: may(), cover: null, cover_options: [{ id: 'p2', name: 'Ravi Nair' }] },
   { id: 'p2', name: 'Ravi Nair', user_id: 'ravi02@walk-shop.br', role: 'Manager', phone: '9840000002', state: 'on', jobs: 2, last_at: null, access: CHOICES[1], may: may({ reset_pin: { ok: false, why: "Only the owner can reset a manager's code." } }), cover: null, cover_options: [] },
   { id: 'p3', name: 'Meena Iyer', user_id: 'meena03@walk-shop.br', role: 'Helper', phone: '', state: 'off', jobs: 0, last_at: null, access: CHOICES[0], may: may({ switch: { ok: true, to: 'on' } }), cover: null, cover_options: [] },
 ];
 const NETWORK = { networks: [{ brand_id: 'b1', brand_name: 'Big Brand', policy: 'follow', offers: [{ offer_id: 'o1', title: 'Festival 10% off', state: 'open', choice: null, starts: '2026-10-20', ends: '2026-11-05' }] }], price_notices: [], may_design: { ok: false, why: 'Only the owner may design a network.' } };
 const STORES = { stores: [{ entity_id: 'e1', name: 'Fresh Mart', city: 'Chennai', status: 'member' }] };
 const COUNTRY = { migrated: true, done: false, required: true, country: { code: 'IN', name: 'India' }, currency: 'INR', fy_start_month: 4, tax: { registered: false, number: null, scheme: null }, source: { country: 'time zone', currency: 'country', fy_start_month: 'country' }, pack: { id: 'IN', version: '1.0.0', books: true, code: null, why: null } };
-const TODAY = new Date().toISOString().slice(0, 10);
+const TODAY = TD.TODAY;
 
 function answer(p, u, m) {
   if (p === '/api/entities/me') return ME;
   if (p === '/api/entities/header') return { business: { display_name: 'Fixture Shop', bridge_id: 'CBWALK0001' }, licences: [], trade_ready: true };
-  if (p === '/api/facts/rail') return { suppliers: 1, customers: 3, in: 24, out: 2, stuck: 3 };
+  if (p === '/api/facts/rail') return crmApi.railFacts({ suppliers: 1, customers: 3, in: 24, out: 2, stuck: 3 });
   if (p === '/api/facts/rail/chits') return { overdue_days: 7, truncated: false, items: [] };
   if (p === '/api/books/health') return books.health({ waiting: [books.waitingRow({ id: 1, chit_id: 'ch7', ref: 'bill:ch7', reason: 'September is locked.', tries: 3, since: '2026-09-28T10:00:00Z' })] });
   if (p === '/api/books/todo') return [books.todoRow({ kind: 'months_not_locked', count: 2, words: '2 months are over but still open: August 2026, September 2026.', action: { label: 'Lock the months', screen: 'periods', call: 'POST /api/books/periods/:fy/:period/lock' } })];
@@ -129,7 +130,7 @@ const SCREENS = [
   { id: 'home', url: '/', ready: '[data-testid="cbshell"]' },
   { id: 'till', url: '/till.html', ready: null, seed: async (page) => {
     await page.waitForFunction(() => typeof window.screenSet === 'function' && typeof window.setMode === 'function', null, { timeout: 30000 });
-    await page.evaluate((items) => { window.S = { shop: { name: 'Fixture Shop', currency: 'INR' }, items, offers: [], at: new Date().toISOString() }; setMode('sell'); try { applyLook(); } catch (_) {} try { paintChips(); } catch (_) {} items.slice(0, 3).forEach((i) => addItem(i, 1)); try { price(); } catch (_) {} }, TILL_ITEMS);
+    await page.evaluate((items) => { window.S = { shop: { name: 'Fixture Shop', currency: 'INR' }, items, offers: [], at: new Date().toISOString() /* clock-ok: in the page, whose clock is CB_TODAY */ }; setMode('sell'); try { applyLook(); } catch (_) {} try { paintChips(); } catch (_) {} items.slice(0, 3).forEach((i) => addItem(i, 1)); try { price(); } catch (_) {} }, TILL_ITEMS);
   } },
   { id: 'shop', url: '/shop.html?s=' + SHOP, ready: null },
   { id: 'accounts', url: '/accounts.html', ready: '[data-testid="shell-header"], header, h1' },
@@ -262,7 +263,7 @@ W.run('locale', async (w) => {
   await w.step('M43', 'the stand-in answered every /api/books, /api/crm and /api/work call as the API contract says', async () => { const [ok, saw] = C.finish(); return { ok, saw }; });
 
   if (WRITE) {
-    const out = { _what: 'walk-locale.cjs baseline — per screen × width: untranslated = rendered English text nodes not pseudo-localised (strings = the distinct ones, so a rise names the new words); clipped = text boxes that clip at +40 %. A ratchet: the walk fails when a number rises. Rewrite ONLY with --write after a conversion round.', _written: new Date().toISOString().slice(0, 10) };
+    const out = { _what: 'walk-locale.cjs baseline — per screen × width: untranslated = rendered English text nodes not pseudo-localised (strings = the distinct ones, so a rise names the new words); clipped = text boxes that clip at +40 %. A ratchet: the walk fails when a number rises. Rewrite ONLY with --write after a conversion round.', _written: TD.TODAY };
     Object.keys(measured).forEach((id) => { out[id] = {}; Object.keys(measured[id]).forEach((k) => { const r = measured[id][k]; out[id][k] = { untranslated: r.untranslated, clipped: r.clipped, pack: r.pack, clipped_sample: r.clippedSample, strings: r.strings }; }); });
     fs.writeFileSync(BASE_FILE, JSON.stringify(out, null, 1) + '\n');
     console.log('\nbaseline written: e2e/locale-baseline.json');

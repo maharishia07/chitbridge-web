@@ -25,7 +25,8 @@
 const path = require('path'), fs = require('fs');
 const ROOT = path.join(__dirname, '..');
 const SHOTS = path.join(__dirname, 'shots');
-const J = (r, status, o) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(o) });
+const C = require('./lib/contract.cjs');   /* M43: every answer for a route in the API contract is held to it (RAIL-LAB-SRV1: the facts family) */
+const J = C.json;
 
 /* N19's answer, planted (FIT row 95 shape). Bands and the penalty note are the SERVER's — the shell only shows them. */
 const HEADER = {

@@ -75,6 +75,9 @@
 
   /** The theme that is actually on the page. `device` (or nothing saved) asks the operating system ONCE, at load, and is not live. */
   function themeKey() {
+    /* TOUR-FIX1: a page that loads the theme library AFTER this file (the till: avatar.js, then /engine/screen.js) took an empty table here and
+       answered Cream for every saved theme — the library is read again the first time it is there */
+    if (!Object.keys(THEMES).length && root.CBScreen && root.CBScreen.APP_THEMES) { K = root.CBScreen; THEMES = K.APP_THEMES; }
     var p = pref('theme');
     if (p !== 'device' && has(THEMES, p) && THEMES[p]) return p;
     if (p !== 'device') return 'cream';                     /* a stale or unknown saved name never stamps itself on <html> */

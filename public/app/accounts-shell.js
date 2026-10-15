@@ -30,6 +30,7 @@ var CB_HOMES = {
   ledger: '/accounts.html', network: '/network.html', coassists: '/employees.html',
   profile: '/know-your-business.html',                 /* the avatar's own choice for Profile (avatar.js, H34) */
   shop: '/settings.html#/shop', country: '/settings.html#/country', settings: '/settings.html',  /* CB Settings (SET1): Your shop · Country setup */
+  integrations: '/settings.html#/connectors', counters: '/settings.html#/counters', policy: '/settings.html#/policy', plan: '/settings.html#/plan',  /* CB Settings (T3-SETTINGS) */
   chit: '/crm.html#/chit/'                             /* + the chit id: the chit PAGE in CB CRM (CRM2) — chitPageHref(id) below */
 };
 /* the sheet's "Open page" (chit-sheet.js `page` → openChitPage on each ledger page): the chit page in CB CRM, never the workshop */
@@ -38,6 +39,8 @@ function chitPageHref(id){ return CB_HOMES.chit + encodeURIComponent(id); }
 /* ── the Ledger's boot endpoints ── */
 var CB_BOOKS_EP = {
   booksHealth:     {m:"GET",  p:"/api/books/health",                      ok:"y"},   // 404 = the Ledger is off for this shop → the door stays hidden
+  /* ⭐ T3-P1-MONEY: read by BOTH the workshop's Tax band (cap-admin.js misTaxExport) and CB Finance › Returns (cap-finance-returns.js) — one name, one place */
+  taxGstr:         {m:"GET",  p:"/api/tax/gstr",                          ok:"✓"},   // ?month=YYYY-MM&form=gstr1|gstr3b → the offline-tool JSON (tax-lines gstr1 · gstr3b), downloaded by helpers.js gstrDownload
   booksStatus:     {m:"GET",  p:"/api/books/status",                      ok:"y"},   // owner: { migrated, enabled, walkin_grain } — answers while off
   booksEnable:     {m:"POST", p:"/api/books/enable",                      ok:"y"},   // owner: the switch (Settings › Your business › Ledger)
   booksSetting:    {m:"POST", p:"/api/books/setting",                     ok:"y"},   // owner: { enabled:false } switches it off; nothing deleted
@@ -50,15 +53,20 @@ var CB_BOOKS_EP = {
 var CB_PARTY_EP = {
   custGroup:       {m:"PATCH",p:"/api/relationships/customers/:id",       ok:"✓"},
   custAdd:         {m:"POST", p:"/api/relationships/customers",           ok:"✓"},   // { handle } on ChitBridge · { name, phone } a local party
+  supList:         {m:"GET",  p:"/api/relationships/suppliers", ok:"✓"},            // MOVED from app.html (T3-OPS): the workshop's Suppliers and CB Operations › Suppliers
   supAdd:          {m:"POST", p:"/api/relationships/suppliers", ok:"✓"},            // { supplier_bridge_id } · { name }
   supDel:          {m:"DELETE",p:"/api/relationships/suppliers/:id", ok:"✓"},
   supPatch:        {m:"PATCH", p:"/api/relationships/suppliers/:id", ok:"y"},       // Stage B — owner-side fields (nickname/preferred/notes/category)
   entitySearch:    {m:"GET",  p:"/api/entities/search",                    ok:"✓"},   // ?q= live recipient lookup (name/bridge_id)
+  custRewards:     {m:"GET",  p:"/api/relationships/customers/:id/rewards", ok:"✓"},   // what this customer holds in points, and what it means — the ONE rewards pane (app/cap-rewards.js), read by the workshop's Customers pane and CB CRM's record (T3-P2-CRM; moved from app.html)
   /* ⭐ read by BOTH CB CRM and CB Finance — one name, one place (the registry guard fails a second declaration) */
   crmParties:      {m:"GET",  p:"/api/crm/parties",                        ok:"y"},   // { parties:[…], alerts:{…} } — one read, no per-row fetch; terms.customer per party
   booksTerms:      {m:"GET",  p:"/api/books/terms",                        ok:"y"},   // ?party_id&side → { terms_migrated, may_set, why_not, default, party, events } — CB Finance sets, CRM reads
+  /* ⭐ T3-P1-MONEY: written by BOTH CB CRM (the follow-up sheet) and CB Finance › Cheques (Remind me = a follow-up due on the cheque's date) — one name, one place */
+  crmFollowAdd:    {m:"POST", p:"/api/crm/followups",                      ok:"y"},   // { party_id, what, due_at, source: manual|dues|interaction, assignee_user_id? } → 201 { followup }
 };
 
+/* ── the shop's policy flags (b130) — the workshop's Settings › Policy AND CB CRM's Shop window (showcase_template, T3-P2-CRM) read and write them; MOVED from app.html's EP ── */
 /* ── the shop's OWN particulars — what the workshop's Profile · Country setup AND CB Settings (settings.html, SET1 2026-10-13) read and write.
    MOVED from app.html's EP (one name per endpoint, e2e/ep-aliases.cjs): the profile (PATCH /entities/profile), the vault (GET /governance/profile),
    Country setup (CS1) ── */
@@ -74,6 +82,42 @@ var CB_SHOP_EP = {
   constitutions:    {m:"GET",   p:"/api/entities/constitutions",         ok:"y"},   // public: the verticals to choose at sign-up
 };
 
+/* ── CB SETTINGS › Counters & keys · Connectors · Policy · Plan & usage (T3-SETTINGS, 2026-10-14) — what the workshop's Settings › Integrations and the
+   Profile's Usage read AND CB Settings reads (app/cap-settings.js). MOVED from cap-admin.js's EP and app.html's EP (one name per endpoint, e2e/ep-aliases.cjs).
+   Who may write is the server's answer: counters writes are owner only (lib/owner.gate), GET /counters and GET /entities/policy say `may` ── */
+var CB_SETTINGS_EP = {
+  keysList:       {m:'GET',    p:'/api/keys',                     ok:'y'},   // API keys for other systems (routes/keys.js)
+  keysMint:       {m:'POST',   p:'/api/keys',                     ok:'✓'},
+  keysRevoke:     {m:'DELETE', p:'/api/keys/:jti',                ok:'✓'},
+  /* ⭐ the shop's counters as standing identities (routes/counters.js, 2026-09-17) */
+  counters:       {m:'GET',    p:'/api/counters',                 ok:'✓'},   // { counters, free, may:{ manage } }
+  counterAdd:     {m:'POST',   p:'/api/counters',                 ok:'✓'},
+  counterRename:  {m:'PATCH',  p:'/api/counters/:id',             ok:'✓'},
+  counterOpen:    {m:'POST',   p:'/api/counters/:id/open',        ok:'✓'},
+  counterRelease: {m:'POST',   p:'/api/counters/:id/release',     ok:'✓'},
+  intCatalogue:   {m:'GET',    p:'/api/integrations/catalogue',   ok:'y'},   // the connectors that exist (routes/integrations.js), each with the pack's may/why
+  intStatus:      {m:'GET',    p:'/api/integrations/status',      ok:'y'},   // the connectors that have checked in
+  intApprove:     {m:'POST',   p:'/api/integrations/:id/approve', ok:'✓'},   // the owner approves a connector's PC (the handshake)
+  policyGet:      {m:'GET',    p:'/api/entities/policy',          ok:'✓'},   // b130 — per-entity flags, on the ENTITY; + may per flag (T3-SETTINGS)
+  policySet:      {m:'PATCH',  p:'/api/entities/policy',          ok:'✓'},
+  /* The billing ledger for the CALLER's own entity — there is no entity parameter, so it cannot be asked about
+     anyone else. Read on demand when the Usage section is opened, never as part of painting a profile. */
+  entityUsage:    {m:'GET',    p:'/api/entities/usage',           ok:'✓'},
+  entitlements:   {m:'GET',    p:'/api/entities/entitlements',    ok:'y'},   // the plan and every quota as a STATE (unlimited · unset · capped) — reporting only (enforced:false)
+  /* T3-P4-ACCOUNT: where this person is signed in (M05 sessions, routes/signin.js) — CB Settings › Account › Sessions; the first web reader of these routes */
+  sessionsList:   {m:'GET',    p:'/api/signin/sessions',          ok:'y'},   // { sessions:[{ jti, device_id, surface, iat, exp, current, device:{ label, kind, seen } }], legacy, may:{ devices } }
+  devicesList:    {m:'GET',    p:'/api/signin/devices',           ok:'y'},   // owner only (lib/owner.gate): every device of the shop with its live count
+  sessionRevoke:  {m:'POST',   p:'/api/signin/sessions/revoke',   ok:'✓'},   // { jti } my own (the owner: anyone's) · { device_id } the owner removes a device
+};
+
+/* ── the rail measured (T3-P4-ACCOUNT): ONE name for GET /api/folders/mis — CB Finance › Reports (app/cap-mis.js) and the workshop's MIS
+   (cap-admin.js) read the server's measurement through it; MOVED here from cap-admin.js's own EP rows (ep-aliases: one endpoint, one name) ── */
+var CB_MIS_EP = {
+  misMetrics:     {m:'GET',    p:'/api/folders/mis',              ok:'y'},   // { overdue_days, since, truncated, all, received, sent } — lib/measure, the rail's overdue rule
+};
+/* T3-P2-CRM: the policy slice of CB_SETTINGS_EP for crm.html's Shop window — the SAME entries (ep-aliases: one endpoint, one name), never a second declaration */
+var CB_POLICY_EP = { policyGet: CB_SETTINGS_EP.policyGet, policySet: CB_SETTINGS_EP.policySet };
+
 /* ── the chit sheet's three calls (chit-sheet.js reads one chit, moves its step, says what a bill's goods are for) —
    MOVED from app.html's EP so the app and CB Accounts open the same sheet through the same endpoints ── */
 var CB_SHEET_EP = {
@@ -88,6 +132,22 @@ var CB_SHEET_EP = {
   /* the open chits behind Home's In · Out · Stuck, with the rail's why — MOVED here from cap-crm.js (TO1b) so CRM (cap-crm-chits.js) and
      Tasks & Orders (cap-tasks.js: the Stuck mark on an order) register it ONCE; not a /api/crm route */
   railChits:       {m:"GET",  p:"/api/facts/rail/chits",          ok:"y"},
+};
+/* ⭐ T3-DISPUTES-ASSIST: the dispute routes and CB Assist's — MOVED here from app.html's EP (aiDraft from cap-readiness.js) so the workshop and
+   CB Tasks & Orders (tasks.html: cap-dispute.js CBDispute · cap-assist.js CBAssistReview) register each route ONCE, under the name it had
+   (e2e/ep-aliases.cjs; core.js OUTBOX_KEYS keeps resolveDispute by name). The queue pages and answers may/why (api T3); the chit's disputes
+   answer actions.raise · raise_parties and each dispute's actions.resolve. */
+var CB_DISPUTE_EP = {
+  dispute:         {m:"POST", p:"/api/chits/:id/disputes",       ok:"✓"},  // raise { category, reason, participant_entity_ids? }
+  disputes:        {m:"GET",  p:"/api/chits/:id/disputes",       ok:"✓"},  // the chit's disputes + roster · actions.raise · raise_parties
+  disputeQueue:    {m:"GET",  p:"/api/chits/disputes/queue",     ok:"✓"},  // ?status=&side=&q=&sort=&page=&limit= → rows · total · counts (no page = all open, as before)
+  resolveDispute:  {m:"PUT",  p:"/api/chits/:id/disputes/:disputeId/resolve", ok:"✓"},  // { resolution_note, target_entity_id? }
+};
+var CB_ASSIST_EP = {
+  assistQuestions: {m:"GET",  p:"/api/assist/questions",        ok:"y"},  // DB-backed Q&A library, context-filtered (?context=screen). Single source; feeds the AI too.
+  assistPublish:   {m:"POST", p:"/api/assist/publish",          ok:"y"},  // help desk publishes a Q&A to its catalogue (serves live)
+  assistWhoami:    {m:"GET",  p:"/api/assist/whoami",            ok:"y"},  // is_helpdesk · actions.publish (may/why)
+  aiDraft:         {m:"POST", p:"/api/governance/ai-draft",       ok:"y"},  // { skill_id, context } → { draft } — CB Assist proposes, a person confirms
 };
 
 /* ── the chit-sheet helpers both pages share (MOVED from app.html, not copied) ── */

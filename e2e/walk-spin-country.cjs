@@ -16,6 +16,7 @@
  * Screenshots: e2e/out/walk-spin-country-<case>.png (e2e/out is never committed).
  */
 'use strict';
+const TD = require('./lib/today.cjs');
 const path = require('path'), fs = require('fs');
 const W = require('./lib/walk.cjs');
 const { rule13 } = require('./lib/rule13.cjs');
@@ -85,7 +86,7 @@ const walk = async (w) => {
         if (p === '/api/entities/register') return J(r, 200, { email: JSON.parse(q.postData() || '{}').email });
         if (p === '/api/entities/constitutions') return J(r, 200, spinAnswer(INST[k] || k, allowed, new URL(q.url()).searchParams.get('tz')));
         if (p === '/api/entities/verify') {
-          const token = b64({ alg: 'none' }) + '.' + b64({ identity_id: 'ent-new', identity_type: 'entity', display_name: 'spin', exp: Math.floor(Date.now() / 1000) + 3600 }) + '.x';
+          const token = b64({ alg: 'none' }) + '.' + b64({ identity_id: 'ent-new', identity_type: 'entity', display_name: 'spin', exp: Math.floor(TD.nowMs() / 1000) + 3600 }) + '.x';
           return J(r, 200, { token, entity: { identity_id: 'ent-new', identity_type: 'entity', display_name: 'spin', bridge_id: 'CBNEW0001' } });
         }
         if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'spin', ui_prefs: {} } });
@@ -94,7 +95,7 @@ const walk = async (w) => {
     }
     await ctx.addInitScript((a) => { try { localStorage.removeItem('cb_sess'); if (a) localStorage.setItem('cb_api_base', a); } catch (_) {} }, stack ? stack.api : w.base);
     const page = await ctx.newPage();
-    const handle = ('sp' + (typeof k === 'string' ? k : 'x') + br.slice(0, 3) + Date.now().toString(36)).toLowerCase().replace(/[^a-z0-9]/g, '');
+    const handle = ('sp' + (typeof k === 'string' ? k : 'x') + br.slice(0, 3) + Date.now().toString(36)).toLowerCase().replace(/[^a-z0-9]/g, '');   /* clock-ok: a unique handle */
     const email = handle + '@test.example';
     await page.goto(w.base + '/settings.html#/new');
     await page.waitForSelector('[data-testid="reg-name"]', { timeout: 20000 });

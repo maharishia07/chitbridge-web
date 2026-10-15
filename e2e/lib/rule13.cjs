@@ -14,7 +14,8 @@ const audit = (page, hostId) => page.evaluate((hostId) => {
     if (!vis(el) || el.closest('#cb-avatar,#toast,script,style')) return;
     const cs = getComputedStyle(el), hasText = [...el.childNodes].some((n) => n.nodeType === 3 && n.nodeValue.trim());
     if (/auto|scroll/.test(cs.overflowX) && el.scrollWidth > el.clientWidth + 1) out.scroll.push(el.tagName + '.' + el.className + ' ' + el.scrollWidth + '>' + el.clientWidth);
-    if (host.contains(el) && hasText && (cs.textOverflow === 'ellipsis' || /hidden|clip/.test(cs.overflowX)) && el.scrollWidth > el.clientWidth + 1) out.clip.push(el.textContent.trim().slice(0, 40));
+    /* T3-P2-CRM: screen-reader-only text (.sr-only, 1 px wide by design) is for the reader, not clipped on the screen */
+    if (host.contains(el) && hasText && !el.classList.contains('sr-only') && (cs.textOverflow === 'ellipsis' || /hidden|clip/.test(cs.overflowX)) && el.scrollWidth > el.clientWidth + 1) out.clip.push(el.textContent.trim().slice(0, 40));
     const href = (el.getAttribute('href') || '') + ' ' + (el.getAttribute('onclick') || '');
     if (/app\.html/.test(href)) out.app.push(el.outerHTML.slice(0, 80));
   });

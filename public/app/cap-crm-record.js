@@ -239,8 +239,9 @@ function crmNextHTML(p, rec) {
 }
 /* ── the actions: Message (on ChitBridge) › Call › Mail; Log · Follow-up · Edit · More. Hidden for a viewer, never disabled-and-unexplained ── */
 function crmMailBlock(p, rec) {
-  var e = (rec.prefs || []).filter(function (x) { return x.channel === 'email'; })[0], c = rec.contacts || {};
-  if (e && e.allowed === false) return tx('They asked not to be mailed');
+  /* T3-P3-CONSENT: the api's one shape — contact_prefs.may (lib/privacy.mayAll); the old `prefs` array was never sent */
+  var e = rec.contact_prefs && rec.contact_prefs.may && rec.contact_prefs.may.email && rec.contact_prefs.may.email.service, c = rec.contacts || {};
+  if (e && e.may === false) return e.why || tx('They asked not to be mailed');
   if (!(c.emails || []).length) return tx('No e-mail yet');
   return '';
 }
@@ -311,13 +312,10 @@ function crmRecordPaint(p, rec) {
   var all = (rec.counts && rec.counts.all) != null ? rec.counts.all : (rec.timeline_head || []).length;
   secs.push(crmSec('timeline', 'Timeline', all ? esc(crmPlural(all, 'entry', 'entries')) : '', '<div class="tl-wrap"><div id="crm_tlhead" data-testid="crm-tl-head"></div></div>'
     + (all > 5 ? '<div style="padding-top:10px"><a class="act sm ghost" href="#/party/' + esc(crmKey(p)) + '/timeline" data-testid="crm-tl-all">' + esc(txf('See all {n}', { n: all })) + '</a></div>' : ''), true));
-  /* Who & contact */
-  var prefsSent = Array.isArray(rec.prefs);   // the API sends no contact preferences today - then the row is left out, not filled with "Not recorded"
-  var prefs = (rec.prefs || []).map(function (x) { return CRM_CHAN[x.channel] ? esc(tx(CRM_CHAN[x.channel])) + ': ' + esc(x.allowed === false ? tx('Not allowed') : x.allowed ? tx('Allowed') + (x.purpose ? ' · ' + tx(x.purpose) : '') : tx('Not recorded')) : ''; }).filter(Boolean);
-  if (prefsSent) ['email', 'phone', 'whatsapp'].forEach(function (ch) { if (!(rec.prefs || []).some(function (x) { return x.channel === ch; })) prefs.push(esc(tx(CRM_CHAN[ch])) + ': ' + esc(tx('Not recorded'))); });
+  /* Who & contact (contact preferences moved to the Consent section — T3-P3-CONSENT, one place) */
   var who = crmKV('Legal name', R.legal_name && R.legal_name !== R.display_name ? esc(R.legal_name) : '')
     + crmKV('Phone', (c.phones || []).map(esc).join('<br>')) + crmKV('E-mail', (c.emails || []).map(function (m) { return esc(m) + (rec.mail_bounced && rec.mail_bounced.to === m ? ' <span class="tag amber">' + esc(tx('bounced')) + '</span>' : ''); }).join('<br>'))
-    + crmKV('Address', esc(c.address || '')) + (p.city ? crmKV('City', esc(p.city)) : '') + crmKV('Contact preferences', prefsSent ? prefs.join('<br>') : '')
+    + crmKV('Address', esc(c.address || '')) + (p.city ? crmKV('City', esc(p.city)) : '')
     + (!(c.phones || []).length && !(c.emails || []).length && p.kind !== 'walk-in' ? '<div class="kv"><span>' + esc(tx('No phone or e-mail yet')) + '</span></div>' : '');
   secs.push(crmSec('who', 'Who & contact', '', who || '<div class="hint">' + esc(tx('Nothing more is recorded')) + '</div>', true));
   /* Tax & terms */
@@ -335,9 +333,13 @@ function crmRecordPaint(p, rec) {
     crmKV('Bills', esc(String(bf.bills))) + crmKV('Last bill', bf.lastBill ? esc(bkDate(bf.lastBill)) : '') + crmKV('Not billed yet', ufact ? esc(ufact) : '') + crmKV('Customer since', cu.since ? esc(bkDate(cu.since)) : '') + crmKV('Added from', cu.added_via ? esc(tx(CRM_ADDED[cu.added_via] || cu.added_via)) : '')
     + crmKV('Segment', cu.segment && cu.segment !== 'new' ? esc(tx(CRM_SEG[cu.segment] || cu.segment)) + (cu.segment_override ? ' · ' + esc(tx('set by you')) : '') : '') + crmKV('Groups', (cu.groups || []).map(function (g) { return '<span class="tag">' + esc(g) + '</span>'; }).join(' '))
     + crmKV('Points', rec.points ? esc(String(rec.points.balance)) + (rec.points.programme ? ' · ' + esc(rec.points.programme) : '') : ''), one));
+  /* T3-P2-CRM: Rewards — the engine's pane (app/cap-rewards.js, ONE copy with the workshop): the fact is the record's own points figure; the pane reads when the fold opens */
+  if (cu && p.kind !== 'walk-in') secs.push(crmSec('rewards', 'Rewards', rec.points ? esc(String(rec.points.points != null ? rec.points.points : rec.points.balance)) + ' ' + esc(tx('points')) + (rec.points.programme ? ' · ' + esc(rec.points.programme) : '') : '', '<div id="crm_rw" data-testid="crm-rewards"></div>', false));
   if (su) secs.push(crmSec('supplier', 'Supplier', su.category ? esc(su.category) : '',
     crmKV('Category', esc(su.category || '')) + crmKV('Preferred', su.preferred ? esc(tx('Yes')) : '') + crmKV('Supplies', esc(tx(su.supply_kind === 'resale' ? 'For resale' : su.supply_kind === 'own_use' ? 'For the shop' : su.supply_kind || '')))
     + crmKV('Catalogue', su.catalogue ? esc(tx('On ChitBridge')) : '') + (su.notes ? '<div class="kv" data-testid="crm-notes"><b>' + esc(tx('Notes')) + '</b><span>📌 ' + esc(su.notes) + '</span></div>' : ''), one));
+  /* Consent — the record's own contact_prefs (cap-crm-privacy.js: the chip from the server's code, Yes/No greyed with the sentence) */
+  if (typeof crmConsentHTML === 'function') secs.push(crmConsentHTML(p, rec));
   /* Ledger — cap-books.js's own block; off → one line and the owner's switch */
   if (p.kind !== 'walk-in') {
     var kind = cu ? 'customer' : 'supplier', pid = p.party_id;
@@ -349,11 +351,14 @@ function crmRecordPaint(p, rec) {
   s.innerHTML = '<div class="rec" data-testid="crm-record" data-party="' + esc(p.party_id) + '">' + merged + crmHeaderHTML(R) + crmIdentityHTML(R, rec) + crmNextHTML(R, rec) + crmActionsHTML(R, rec) + secs.join('') + '</div>';
   /* the mounts */
   crmEditPrep(p, rec);
+  if (typeof crmConsentMount === 'function') crmConsentMount(p);
   var head = document.getElementById('crm_tlhead');
   if (head) { if (CRMR.headApi) { try { CRMR.headApi.destroy(); } catch (_) {} } CRMR.headApi = CBList.mount(head, { key: 'crm-tl-head', t: tx, fill: false, view: 'grid', tools: { search: false, csv: false, count: false }, rows: function () { return rec.timeline_head || []; }, id: function (e) { return e.id; },   /* the section head already says "N entries" — one count (ai-eye E-18) */
     columns: crmTlCols, defaultCols: ['what', 'when', 'state', 'amount'], rowTid: function (e) { return 'crm-tl-' + e.id; }, onOpen: crmEntryOpen, next: crmEntryNext, empty: { title: tx('Nothing yet with this party.'), sub: tx('Use Log to record a call or note.') } }); }
   var led = document.getElementById('crm_ledger');
   if (led) led.innerHTML = partyBooksHTML(cu ? 'customer' : 'supplier', p.party_id, crmLedgerRow(p, rec), true);
+  var rwSec = document.querySelector('[data-testid="crm-sec-rewards"]');
+  if (rwSec && typeof CBRewards !== 'undefined') { var rwOnce = function () { if (rwSec.open && !rwSec.getAttribute('data-read')) { rwSec.setAttribute('data-read', '1'); CBRewards.load('crm_rw', { id: p.party_id, api: api, t: tx, money: function (n) { try { return CBLocale.money(n, p.currency || CRM.currency); } catch (_) { return String(n); } }   /* the same formatter the workshop's pane uses */ }); } }; rwSec.addEventListener('toggle', rwOnce); rwOnce(); }
   if (CRM.ledger) crmTermsFill(p.party_id, cu ? 'customer' : 'supplier');
 }
 /** F2: the credit terms that apply to this party, READ-ONLY (CB Finance · Terms is the one place that sets them) + the changes made to them.
@@ -503,6 +508,7 @@ async function crmLogSave() {
 /* ═══ ONE click door for the record's controls (cap-crm.js hands every data-crm it does not own to this) ═══════════ */
 function crmRecordClick(a, t, ev) {
   var p = CRMR.p, rec = CRMR.rec || {}, v = t.getAttribute('data-v');
+  if (typeof crmPrivacyClick === 'function' && crmPrivacyClick(a, t)) return;   /* consent Yes/No · the register (cap-crm-privacy.js) */
   if (a === 'rmore') { CRMR.menu = !CRMR.menu; return crmRecordPaint(p, rec); }
   if (a === 'recretry') return crmRecordOpen(CRM.route);
   if (a === 'rlog') return crmLogOpen(p);

@@ -121,7 +121,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(46) + '· ' + d 
 
   console.log('\n── ⭐ the cost-drift warning survives a page reload (it is on the server, not in memory) ' + '─'.repeat(0));
   await p.evaluate(() => { byId('masala').cost = 999; });   /* the catalogue's own cost moved after saving */
-  await p.evaluate(() => { go(3); });
+  await p.evaluate(() => { labStep(3); });
   await p.waitForTimeout(150);
   const drift = await p.evaluate(() => document.querySelector('.p-stale') ? document.querySelector('.p-stale').textContent : null);
   say('"1 cost changed since" shows, computed against what was actually saved', /1 cost changed/.test(drift || ''), '"' + drift + '"');

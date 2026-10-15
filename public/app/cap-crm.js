@@ -22,7 +22,7 @@ var CRM_EP = {
   crmTimeline:   { m: 'GET',    p: '/api/crm/parties/:id/timeline',        ok: 'y' },   // ?kind=&q=&before= — server-paged, 50 a page
   crmLog:        { m: 'POST',   p: '/api/crm/parties/:id/interactions',    ok: 'y' },   // 503 "not migrated yet" before b276
   crmFollowups:  { m: 'GET',    p: '/api/crm/followups',                   ok: 'y' },   // ?scope=mine|all&done=0|1
-  crmFollowAdd:  { m: 'POST',   p: '/api/crm/followups',                   ok: 'y' },
+  /* crmFollowAdd → CB_PARTY_EP (app/accounts-shell.js, T3-P1-MONEY): CB Finance › Cheques files a follow-up through the same row */
   crmFollowSet:  { m: 'PATCH',  p: '/api/crm/followups/:id',               ok: 'y' },   // { done:true } · { due_at } · { assignee_user_id }
   crmFollowDel:  { m: 'DELETE', p: '/api/crm/followups/:id',               ok: 'y' },
   crmWalkIn:     { m: 'POST',   p: '/api/crm/walk-ins/add',               ok: 'y' },   // { phone, name? } → 201 { party, points_claimed }: a phone that holds points becomes a local customer
@@ -31,8 +31,19 @@ var CRM_EP = {
   crmStage:      { m: 'POST',   p: '/api/crm/parties/:id/stage',          ok: 'y' },   // { stage } → { ok, lead } — "Move to…": a new memberships row, history kept (L1)
   crmLeadImport: { m: 'POST',   p: '/api/crm/leads/import',               ok: 'y' },   // { rows[≤500], dry? } → 200 the plan (dry) · 201 { added, merged, skipped[], rows[] } · 400 TOO_MANY · 503 before b297 (L3)
   crmCalls:      { m: 'GET',    p: '/api/crm/calls',                      ok: 'y' },   // ?scope=mine|all → { calls, outcomes, may, late } — today's queue + the server's outcome buttons (L2)
-  crmOutcome:    { m: 'POST',   p: '/api/crm/parties/:id/outcome',        ok: 'y' },   // { outcome, after?|due_at? } → 201 { interaction, followup, stage, suggest } — one transaction (L2)
+  crmOutcome:    { m: 'POST',   p: '/api/crm/parties/:id/outcome',        ok: 'y' },
+  /* T3-P3-CONSENT: consent (b306) and the privacy-request register (b307) — cap-crm-privacy.js; 503 PRIVACY_NOT_MIGRATED before the migrations */
+  crmPrefs:      { m: 'GET',    p: '/api/crm/parties/:id/contact-prefs',   ok: 'y' },   // { history[], may[channel][purpose] { may, code, why }, law }
+  crmPrefSet:    { m: 'POST',   p: '/api/crm/parties/:id/contact-prefs',   ok: 'y' },   // { channel, purpose, allowed } → 201 { pref } (append-only; a withdrawal is a new row)
+  crmPrivReqs:   { m: 'GET',    p: '/api/crm/privacy-requests',            ok: 'y' },   // ?open=1&page=&limit= → { requests, total, page, limit, open, late, may_answer, why }
+  crmPrivReqAdd: { m: 'POST',   p: '/api/crm/privacy-requests',            ok: 'y' },   // { who, kind, received_at?, party_id?, country? } → 201 { request } — due_at is the law's
+  crmPrivReqAnswer: { m: 'POST', p: '/api/crm/privacy-requests/:id/answer', ok: 'y' },  // owner only: { outcome, answer } → { request } — answered once   // { outcome, after?|due_at? } → 201 { interaction, followup, stage, suggest } — one transaction (L2)
   crmRemove:     { m: 'DELETE', p: '/api/crm/parties/:id',                 ok: 'y' },   // "Remove from my parties" - owner only, 409 HAS_DUES, hides the party and deletes nothing
+  /* T3-P2-CRM: segments & groups (cap-crm-groups.js) — the one segment rule counted · named groups written as a set · a send through the one gate */
+  crmSegments:   { m: 'GET',    p: '/api/crm/segments',                    ok: 'y' },   // { segments[], groups[], groups_migrated, consent_migrated, channel, purpose, customers, may }
+  crmGroupSet:   { m: 'POST',   p: '/api/crm/groups',                      ok: 'y' },   // { name, add[], remove[] } → 201 { name, added, removed, count } · 409 GROUPS_NOT_MIGRATED before b205
+  crmGroupDel:   { m: 'DELETE', p: '/api/crm/groups/:name',                ok: 'y' },   // owner only → { name, removed }
+  crmSegSend:    { m: 'POST',   p: '/api/crm/segments/:key/send',          ok: 'y' },   // { text, dry? } → dry: who may (by code); real: the one sender per allowed member
 };
 
 var CRM = { gen: 0, loadGen: 0, rows: [], byKey: {}, alerts: {}, currency: 'INR', state: 'loading', err: null, loaded: false, api: null,
@@ -269,7 +280,10 @@ function crmNav(active) {
     ['chits', 'Chits', 'M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6', (typeof CHITS !== 'undefined' && CHITS.state === 'ready' && chitsStuckCount()) ? '<span class="n" data-testid="crm-nav-n-chits" title="' + esc(tx('Stuck chits')) + '">' + chitsStuckCount() + '</span>' : ''],
     ['leads', 'Leads', 'M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.4 6.6 19.5l1.2-6L3.3 9.3l6.1-.7z', ''],
     ['calls', 'Calls', 'M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2', (typeof CALLS !== 'undefined' && CALLS.loaded && CALLS.rows.length) ? '<span class="n' + (CALLS.late ? '' : ' quiet') + '" data-testid="crm-nav-n-calls">' + CALLS.rows.length + '</span>' : ''],
-    ['followups', 'Follow-ups', 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M12 7v5l3 2', late ? '<span class="n" data-testid="crm-nav-n-followups" title="' + esc(crmPlural(late, 'late follow-up', 'late follow-ups')) + '">' + late + '</span>' : '']];
+    ['followups', 'Follow-ups', 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M12 7v5l3 2', late ? '<span class="n" data-testid="crm-nav-n-followups" title="' + esc(crmPlural(late, 'late follow-up', 'late follow-ups')) + '">' + late + '</span>' : ''],
+    ['groups', 'Groups', 'M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6M17 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6M3 20c0-3 2.7-5 6-5s6 2 6 5M15 15c3 0 6 2 6 5', (typeof GROUPS !== 'undefined' && GROUPS.loaded && GROUPS.rows.length) ? '<span class="n quiet" data-testid="crm-nav-n-groups">' + GROUPS.rows.filter(function (r) { return r.kind === 'group'; }).length + '</span>' : ''],
+    ['showcase', 'Shop window', 'M3 9l1.5-5h15L21 9M3 9h18M3 9v3a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0V9M5 13v8h14v-8M10 21v-5h4v5', ''],
+    ['privacy', 'Privacy', 'M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6zM9 12l2 2 4-4', (typeof PRV !== 'undefined' && PRV.state === 'ready' && PRV.late) ? '<span class="n" data-testid="crm-nav-n-privacy" title="' + esc(tx('Late privacy requests')) + '">' + PRV.late + '</span>' : '']];
   document.getElementById('nav').innerHTML = items.map(function (x) {
     return '<a class="nav-btn' + (x[0] === active ? ' active' : '') + '" href="#/' + x[0] + '" data-testid="crm-nav-' + x[0] + '" aria-label="' + esc(tx(x[1])) + '"' + (x[0] === active ? ' aria-current="page"' : '') + '>'
       + '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + x[2] + '"/></svg><span class="label">' + esc(tx(x[1])) + '</span>' + x[3] + '</a>';
@@ -317,6 +331,21 @@ function crmRoute(frame) {
   if (seg[0] === 'calls') {
     CRM.route = { nav: 'calls', view: 'calls', sub: '', params: params };
     crmNav('calls'); crmCalls(frame);
+    return;
+  }
+  if (seg[0] === 'groups' && typeof crmGroups === 'function') {   /* T3-P2-CRM: Groups & segments (cap-crm-groups.js) */
+    CRM.route = { nav: 'groups', view: 'groups', sub: '', params: params };
+    crmNav('groups'); crmGroups(frame);
+    return;
+  }
+  if (seg[0] === 'showcase' && typeof crmShowcase === 'function') {   /* T3-P2-CRM: the Shop window — pick · preview · share */
+    CRM.route = { nav: 'showcase', view: 'showcase', sub: '', params: params };
+    crmNav('showcase'); crmShowcase(frame);
+    return;
+  }
+  if (seg[0] === 'privacy') {   /* T3-P3-CONSENT: the privacy-request register (cap-crm-privacy.js) */
+    CRM.route = { nav: 'privacy', view: 'privacy', sub: '', params: params };
+    crmNav('privacy'); crmPrivacy(frame, params);
     return;
   }
   if (seg[0] === 'followups') {
@@ -465,6 +494,14 @@ function crmViews() {
   v.push({ key: 'quiet', label: 'No contact in 30 days', filt: { quiet: '30' } });
   return { tid: 'crm-view', items: v };
 }
+/** the filters a link may preset: ?role= (the Home rail's doors) · ?seg= / ?group= (the Groups screen's "See all in Parties", T3-P2-CRM) — the list's own filters, nothing new */
+function crmHomePreset() {
+  var q = (CRM.route && CRM.route.params) || {}, f = {};
+  if (/^(customer|supplier|both)$/.test(q.role || '')) f.role = q.role;
+  if (q.seg && CRM_SEG[q.seg]) f.seg = q.seg;
+  if (q.group) f.group = q.group;
+  return Object.keys(f).length ? { filt: f } : null;
+}
 function crmHome(frame) {
   crmBar('<strong>' + esc(tx('CB CRM')) + '</strong>', crmAddBtn(), true);
   var s = document.getElementById('screen'); s.className = 'screen flush';
@@ -478,7 +515,7 @@ function crmHome(frame) {
     empty: { title: tx('No parties yet'), sub: tx('Customers appear when you bill them; suppliers when you add them. Use + Add party.') },
     search: function (p) { return [p.display_name, p.nickname, p.legal_name, p.party_no, p.user_id, p.phone, p.email, (p.tax_ids || []).map(function (t) { return t.value; }).join(' '), (p.groups || []).join(' ')].join(' '); },
     searchHint: tx('Name, ID, phone, e-mail'),
-    filters: crmFilters(), sorts: crmPartySorts(), preset: (CRM.route && CRM.route.params && /^(customer|supplier|both)$/.test(CRM.route.params.role || '')) ? { filt: { role: CRM.route.params.role } } : null,
+    filters: crmFilters(), sorts: crmPartySorts(), preset: crmHomePreset(),
     group: { options: [['none', 'None'], ['role', 'Role'], ['conn', 'Connection'], ['seg', 'Segment']], default: 'none', tid: 'crm-parties', as: 'select', tips: { conn: CRM_CONN_TIP },
       fig: function (rows) { return crmGroupFig(rows); },
       by: function (p, mode) {
@@ -703,5 +740,6 @@ document.addEventListener('click', function (ev) {
   if (a === 'minichit') { ev.stopPropagation(); if (typeof openChitSheet === 'function') openChitSheet(id); return; }
   if (typeof crmLeadClick === 'function' && crmLeadClick(a, t)) return;
   if (typeof crmCallClick === 'function' && crmCallClick(a, t)) return;
+  if (typeof crmGroupsClick === 'function' && crmGroupsClick(a, t)) return;
   if (typeof crmRecordClick === 'function') return crmRecordClick(a, t, ev);
 });

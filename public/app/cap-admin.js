@@ -6,15 +6,7 @@
  * (Co-assists is planned to move here too, once its shared actor helpers are separated.) */
 
 if (typeof EP !== 'undefined') { Object.assign(EP, {
-  keysList:  {m:'GET',    p:'/api/keys',                    ok:'y'},   // API keys for other systems (routes/keys.js)
-  keysMint:  {m:'POST',   p:'/api/keys',                    ok:'✓'},
-  keysRevoke:{m:'DELETE', p:'/api/keys/:jti',               ok:'✓'},
-  /* ⭐ the shop's counters as standing identities (routes/counters.js, 2026-09-17) */
-  counters:       {m:'GET',  p:'/api/counters',                  ok:'✓'},
-  counterAdd:     {m:'POST', p:'/api/counters',                  ok:'✓'},
-  counterRename:  {m:'PATCH',p:'/api/counters/:id',              ok:'✓'},
-  counterOpen:    {m:'POST', p:'/api/counters/:id/open',         ok:'✓'},
-  counterRelease: {m:'POST', p:'/api/counters/:id/release',      ok:'✓'},
+  /* keysList · keysMint · keysRevoke · counters · counterAdd · counterRename · counterOpen · counterRelease → CB_SETTINGS_EP (app/accounts-shell.js, T3-SETTINGS) */
   /* ⭐ a brand releases offers to its stores; a store takes them or not (routes/network-offers.js, 2026-09-17) */
   netOffers:        {m:'GET',  p:'/api/network-offers',              ok:'✓'},
   netOfferPolicy:   {m:'PUT',  p:'/api/network-offers/policy',       ok:'✓'},
@@ -25,9 +17,7 @@ if (typeof EP !== 'undefined') { Object.assign(EP, {
   netCatPublish:    {m:'POST', p:'/api/network-offers/catalogue/publish', ok:'✓'},
   netCatCancel:     {m:'POST', p:'/api/network-offers/catalogue/cancel',  ok:'✓'},
   netCatPrice:      {m:'POST', p:'/api/network-offers/catalogue/price',   ok:'✓'},
-  intCatalogue:{m:'GET',  p:'/api/integrations/catalogue',  ok:'y'},   // the connectors that exist (routes/integrations.js)
-  intStatus: {m:'GET',    p:'/api/integrations/status',     ok:'y'},
-  intApprove:{m:'POST',   p:'/api/integrations/:id/approve', ok:'✓'},  // the owner approves a connector's PC (the handshake)   // the connectors that have checked in
+  /* intCatalogue · intStatus · intApprove → CB_SETTINGS_EP (app/accounts-shell.js, T3-SETTINGS) */
   intProfileMap:{m:'GET', p:'/api/integrations/profile-map',ok:'y'},   // what we look for about the store · where from · how trusted
   intStreams:{m:'GET',    p:'/api/integrations/streams',    ok:'y'},   // who owns which stream (2026-09-07)
   intStreamsSet:{m:'PUT', p:'/api/integrations/streams',    ok:'✓'},   // hand a stream to another connector
@@ -40,8 +30,8 @@ if (typeof EP !== 'undefined') { Object.assign(EP, {
   /* ⭐ THE SERVER'S MEASUREMENT (backlog 29). MIS was the THIRD implementation of open/overdue/ageing/unread;
      lib/measure.js already served the folder pane and the counterparty scorecard. This makes it three consumers
      of one definition rather than two definitions. ⚠️ Above all it brings OVERDUE, which MIS simply did not have
-     — the screen titled "What is stuck?" did not know what late meant. */
-  misMetrics: {m:'GET', p:'/api/folders/mis', ok:'y'},
+     — the screen titled "What is stuck?" did not know what late meant.
+     misMetrics → CB_MIS_EP (app/accounts-shell.js, T3-P4-ACCOUNT): CB Finance › Reports reads the same name; app.html merges it. */
 }); }
 // ── TRADE DOCUMENTS VAULT — MOVED to app/cap-shop.js (SET1, 2026-10-13): CB Settings › Your shop paints the same rows. Loaded first by CAP_WITH.admin. ──
 /**
@@ -245,14 +235,11 @@ function misTax(){
     + '<div class="sec">' + tx('The chits behind it') + ' · ' + L.count + '</div>'
     + (rows || '<div class="misnote">' + tx('No chit in this month.') + '</div>');
 }
-/* The offline-tool JSON, opened in a new tab (the browser saves it) — the same read the band shows, as a file. */
+/* The offline-tool JSON, saved as a file — the same read the band shows. T3-P1-MONEY: the download is helpers.js gstrDownload, the ONE copy CB Finance › Returns uses too. */
 function misTaxExport(form){
   const base = (typeof apiBase === 'function') ? apiBase() : '';
   const url = base + '/api/tax/gstr?month=' + encodeURIComponent(misTaxMonth()) + '&form=' + form;
-  api('taxGstr', { query: { month: misTaxMonth(), form: form } }).then(function(j){
-    const blob = new Blob([JSON.stringify(j, null, 2)], { type: 'application/json' });
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = form + '-' + misTaxMonth() + '.json'; document.body.appendChild(a); a.click(); a.remove();
-  }).catch(function(e){ toast((e && e.message) || 'Could not build the export.', true); });
+  gstrDownload(misTaxMonth(), form).catch(function(){ toast(tx('Could not build the file. Try again.'), true); });   /* the server's sentence never reaches the band (design rule 1) */
   return url;
 }
 /**
@@ -554,7 +541,7 @@ async function _loadMIS(){
     /* ⚠️ The window is computed BEFORE the fetch because the server has to measure the same one — see `since`
        below. A period selector on screen beside a figure measured over all time is worse than no selector. */
     const _days = misPeriod() === 'all' ? null : parseInt(misPeriod(), 10);
-    const _since = _days ? new Date(Date.now() - _days * 864e5).toISOString() : undefined;
+    const _since = misWindow(misPeriod());   /* ONE window rule (app/cap-mis.js, T3-P4-ACCOUNT): the same `since` CB Finance › Reports sends */
     const [inb, snt, dq, ac, sp, msgRaw, srv] = await Promise.all([
       api('inbox'), api('sent').catch(function(){ return []; }),
       api('disputeQueue').catch(function(){ return {}; }),
@@ -4338,19 +4325,14 @@ function intEnrolHTML(r){
 async function intApprove(id){ try { await api('intApprove', { params: { id: id } }); toast(tx('Approved — the connector starts within a minute.')); _INT_RUN = undefined; loadSettings(); } catch (e) { toast(tx('Could not approve') + ': ' + (e && e.message || e)); } }
 async function intReject(jti){ try { await api('keysRevoke', { params: { jti: jti } }); toast(tx('Key revoked — that kit can no longer connect.')); _INT_RUN = undefined; _KEYS = undefined; loadSettings(); } catch (e) { toast(tx('Could not revoke') + ': ' + (e && e.message || e)); } }
 
-/** the kit, fetched with the session so the key rides inside; saved through a blob like the tax export (misTaxDownload) */
+/** the kit through the session (kitDownload, app/cap-settings.js — the one fetch); the workshop says the outcome in a toast */
 async function intDownloadKit(id, adapter){
   try {
-    var base = (typeof CFG !== 'undefined' && CFG.API_BASE) || '';
-    var r = await fetch(base + '/api/integrations/download/' + encodeURIComponent(id) + '?adapter=' + encodeURIComponent(adapter), { headers: { Authorization: 'Bearer ' + SESSION.token } });
-    if (!r.ok) throw new Error('download failed (' + r.status + ')');
-    var blob = await r.blob();
-    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'chitbridge-connector-' + id + '.zip'; document.body.appendChild(a); a.click(); a.remove();
+    await kitDownload(id, adapter);
     toast(tx('Downloaded — your key is inside. Unzip on the Tally PC and double-click start.cmd.'));
     _INT_RUN = undefined;   /* the new key shows under Your keys on the next paint */
   } catch (e) { toast(tx('Could not download') + ': ' + (e && e.message || e)); }
 }
-
 /**
  * ⭐ THE HOME OF CONNECTORS (Athi, 2026-09-05: "include the tally connector as a downloadable option in the system itself …
  * all should reside as part of Integrations; if we build more, it should stay there"). The catalogue comes from the API
@@ -5076,11 +5058,7 @@ async function ctrOpenHere(id){
   try {
     var r = await api('counterOpen', { params: { id: id } });
     if (!r || !r.key) throw new Error(tx('no key came back'));
-    try { localStorage.setItem('cb_till_key', r.key); localStorage.setItem('cb_till_entity', SESSION.entityId || ''); } catch (_) {}
-    var addr = '/till.html#key=' + encodeURIComponent(r.key)
-             + '&shop=' + encodeURIComponent(SESSION.entityId || '')
-             + '&as=' + encodeURIComponent(SESSION.entity || '');
-    window.open(addr, '_blank', 'noopener');
+    ctrOpenTill(r.key);   /* app/cap-settings.js — the one opener, CB Settings › Counters & keys calls it too */
     ctrReload();
   } catch (e) {
     /* ⚠️ held elsewhere is the ordinary refusal — say who has it, in the server's own words */
@@ -5154,24 +5132,7 @@ function intPairingsHTML(){
     + tx('Each pairing is one PC opening a counter. A closed pairing is kept as history; its counter can be opened again above.') + '</div>'
     + rows + note + '</div>';
 }
-function _keySeenAt(k){ return (k && k.seen && k.seen.at) ? new Date(k.seen.at).getTime() : 0; }
-function _keyAgo(iso){
-  if (!iso) return '';
-  var s = Math.round((Date.now() - new Date(iso).getTime()) / 1000);
-  if (s < 90) return tx('just now');
-  if (s < 5400) return Math.round(s / 60) + ' min ago';
-  if (s < 172800) return Math.round(s / 3600) + ' h ago';
-  return Math.round(s / 86400) + ' days ago';
-}
-/** ⭐ a user-agent is unreadable; the shop only needs to recognise WHICH MACHINE this was */
-function _agentName(ua){
-  var u = String(ua || '');
-  var os = /Windows/.test(u) ? 'Windows' : /Android/.test(u) ? 'Android' : /iPhone|iPad/.test(u) ? 'iPhone/iPad'
-         : /Mac OS X/.test(u) ? 'Mac' : /Linux/.test(u) ? 'Linux' : '';
-  var br = /Edg\//.test(u) ? 'Edge' : /Chrome\//.test(u) ? 'Chrome' : /Firefox\//.test(u) ? 'Firefox'
-         : /Safari\//.test(u) ? 'Safari' : '';
-  return [os, br].filter(Boolean).join(' · ') || tx('unknown');
-}
+/* _keySeenAt · _keyAgo · _agentName → app/cap-settings.js (T3-SETTINGS: CB Settings › Counters & keys reads them too) */
 var _CLOSE_ARMED = null;
 /**
  * ⚠️⚠️ CLOSING A COUNTER REVOKES ITS KEY EVERYWHERE, AND ANYTHING IT HAD NOT SENT IS STRANDED ON THAT PC. The
@@ -5249,14 +5210,14 @@ function integrationsSettingsHTML(){
     + '<div style="font-size:var(--fs-2)">' + tx('Another system sends lines and gets back the governed answer — the unit price at a quantity, what comes off and why, the tax, the whole invoice — from the same engines the storefront, compose and the chit use.') + '</div>'
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px"><code>/api/offers</code> · <code>/api/pricing</code> · <code>/api/tax</code> · <code>/api/invoice</code> — <a href="' + esc(base) + '/api/openapi.json" target="_blank" rel="noopener">' + tx('the contract (openapi.json)') + '</a></div></div>'
     + '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('Your keys') + '</div>' + rows
-    + '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><input class="inp" id="int_key_name" data-testid="int-key-name" placeholder="' + esc(tx('Name — which system')) + '" style="flex:1 1 200px"><select class="inp" id="int_key_scope" data-testid="int-key-scope" style="flex:0 0 220px"><option value="services">' + esc(tx('services — offers, pricing, tax, invoice')) + '</option><option value="offers">' + esc(tx('offers only')) + '</option><option value="pricing">' + esc(tx('pricing only')) + '</option><option value="tax">' + esc(tx('tax only')) + '</option><option value="invoice">' + esc(tx('invoice only')) + '</option><option value="till">' + esc(tx('till — the counter: bill on this device, offline too')) + '</option><option value="connector">' + esc(tx('connector — products, orders, the bell, and the services')) + '</option><option value="testing">' + esc(tx('testing — a build posts test results to the board')) + '</option></select><button class="pri" data-testid="int-key-mint" onclick="intKeyMint()">' + tx('Mint a key') + '</button></div>'
+    + '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><input class="inp" id="int_key_name" data-testid="int-key-name" placeholder="' + esc(tx('Name — which system')) + '" style="flex:1 1 200px"><select class="inp" id="int_key_scope" data-testid="int-key-scope" style="flex:0 0 220px">' + KEY_SCOPES.map(function(o){ return '<option value="' + esc(o[0]) + '">' + esc(tx(o[1])) + '</option>'; }).join('') + '</select><button class="pri" data-testid="int-key-mint" onclick="intKeyMint()">' + tx('Mint a key') + '</button></div>'
     + '<div id="int_key_out">' + (_KEY_SHOWN || '') + '</div></div>';
 }
 async function intKeyMint(){
   var nm = (document.getElementById('int_key_name') || {}).value || '';
   var sc = (document.getElementById('int_key_scope') || {}).value || 'offers';
   /* a connector key also evaluates offers — the scope names the larger surface (routes/keys.js · middleware/auth.js KEY_ROUTES) */
-  try { var r = await api('keysMint', { body: { name: nm || 'key', scopes: sc === 'connector' ? ['connector', 'services'] : [sc] } });
+  try { var r = await api('keysMint', { body: { name: nm || 'key', scopes: keyScopesOf(sc) } });
     _KEY_SHOWN = '<div data-testid="int-key-shown" style="margin-top:10px;padding:10px;border:1px dashed var(--warn-3);border-radius:9px;font-size:var(--fs-1)"><b>' + tx('Copy it now — it is shown once.') + '</b><div style="word-break:break-all;font-family:monospace;margin-top:6px" data-testid="int-key-value">' + esc(r.key) + '</div><div style="color:var(--grey);margin-top:6px">' + tx('Send it as') + ' <code>X-Api-Key: …</code> ' + tx('or') + ' <code>Authorization: Bearer …</code></div></div>';
     _KEYS = undefined; if (typeof toast === 'function') toast(tx('Key minted ✓'));
     loadSettings();   /* the list repaints; the shown key rides _KEY_SHOWN into the repaint */
@@ -5651,104 +5612,30 @@ async function saveSettings(){ const x=document.getElementById("st_err"); if(x)x
  * ENFORCE them never heard. `self_copy_pref` was the sharpest version of that — it has a real, enforced column, and
  * this card wrote past it into localStorage, so the one flag with teeth was the one the UI had disconnected.
  *
- * The schema still lives here (the card renders from data, not from markup), but the VALUES now come from and go
- * to /api/entities/policy, which validates against its own whitelist. The server never trusts this list.
+ * The VALUES come from and go to /api/entities/policy, which validates against its own whitelist.
+ *
+ * ⭐ T2-POLICY (2026-10-14): AND SO DO THE ROWS. A second table of these flags lived here (label · help · level · gov ·
+ * labels · scale) beside lib/policy.js FLAGS, and the two drifted — self_copy_pref's default was stated three times, two
+ * of them wrong. The server now sends each flag's card row as `schema[key].ui` (and `bound_schema` for the locked ones);
+ * polDefs() reads them. Nothing about a flag is defined in this file.
  */
-var POLICY_FLAGS = [
-  /* ⚠️ AN ENTITY IS CREATED FOR A PURPOSE. Athi: *"sell and purchase never been the same entity. while testing we
-     are trying to test all the possibility in the same business, so for us it seems the same entity will do
-     everything, but that is not going to be the case."* Which side of the trade an entity is on does not change
-     message to message — which is why this is a setting here and not the per-raise toggle I first built. */
-  { key:'trade_side',        label:'This entity',           type:'enum',   options:['sell','receive'],              def:'sell', level:'entity',        gov:'entity',   help:'SELL — inbound messages are priced from your catalogue where the item matches. RECEIVE — they are not: a catalogue price is what you SELL at, and pricing goods coming IN off it puts a figure on the record nobody agreed.' },
-  /* ⭐ Tally's "registration type", as a policy flag — what an invoice may CHARGE before any rate applies. Read by
-     lib/tax.js on every determination (STUDY-gst-structure-2026-09-04 §6 G2). */
-  { key:'gst_registration',  label:'GST registration',       type:'enum',   options:['regular','composition','unregistered','sez'], def:'regular', level:'entity', gov:'entity', help:'REGULAR — charges GST and claims credit. COMPOSITION — flat % on turnover, no GST on invoices, no credit. UNREGISTERED — no GSTIN; buys as a consumer. SEZ — supplies to you are zero-rated.' },
-  /* ⭐ Athi, 2026-09-06 11:30: the chit's Summary is the cart's money and the delivery — commercial cover only where the trade needs it */
-  /* ⭐ BOOKS AT (Athi, 2026-09-06: "there must be some trigger to be allowed to go to Tally, from the task") — when a connector books an order */
-  { key:'books_at',          label:'Orders go to the books',  type:'enum',   options:['received','accepted','completed','manual'], def:'accepted', level:'entity', gov:'entity',   help:'When a connector (Tally · Zoho · GoFrugal) books an order as a voucher. received — the moment it arrives. accepted — once you accept it (the usual case). completed — once it is done. manual — only when you press "Send to books" on the Task. The Task always says whether and when it was written.' },
-  /* ⭐ Athi, 2026-09-07: "do we have a mechanism to check if not posted before the next day?" — the window after which an order the
-     trigger released, and nothing booked, is called overdue in Settings › Integrations › In the books. */
-  { key:'books_overdue_hours', label:'Overdue after (hours)', type:'number', def:12, level:'entity', gov:'entity', help:'How long an order released by the trigger may go unbooked before reconciliation calls it overdue. 12 = by the next morning.' },
-  /**
-   * ── ⭐⭐⭐ HOW MUCH DIFFERENCE IS NOT A DISPUTE ────────────────────────────────────────────────────────────
-   *
-   * ⚠️⚠️ THESE THREE HAVE BEEN LIVE SINCE 2026-09-08 WITH NO WAY TO SET THEM. routes/till.js reads them on every
-   * receipt and every reconciliation; nothing anywhere could change them, so every shop on the platform has been
-   * running the defaults and none of them was ever asked. A policy nobody can see is a policy nobody agreed to.
-   *
-   * Their own note, kept: *"Loose goods do not arrive to the gram: moisture, dust and the weighbridge move a
-   * lorry of rice by a few kilos, and a counter that called every one of those a shortage would teach the shop
-   * to ignore the word."*
-   *
-   * ⚠️⚠️ NOT THE SAME THING AS Catalogue → Units of measure, and the words must keep them apart. That one asks
-   * *"the scale reads 1.010 — what goes on the bill?"* and is FLAT. This one asks *"ordered 1000 kg, 998
-   * arrived — is that a dispute?"* and is a PERCENTAGE, because a lorry's variance scales with the lorry.
-   *
-   * ⭐ STORED IN BASIS POINTS, SHOWN AS A PERCENTAGE. The flag type truncates, so half a percent had to be 50
-   * rather than 0.5 — but nobody types basis points. `scale` renders the human number and stores the integer.
-   */
-  { key:'tol_weight_bp',     label:'Short delivery allowed (weighed goods)', type:'number', scale:100, suffix:'%', step:0.01,
-    def:50, level:'entity', gov:'entity',
-    help:'How much less than ordered may arrive on WEIGHED goods before the counter calls it short. 0.50% is the usual figure — moisture, dust and the weighbridge move a lorry by a few kilos. Set 0 to call every gram.' },
-  { key:'tol_count_units',   label:'Short delivery allowed (counted goods)', type:'number', suffix:'units',
-    def:0, level:'entity', gov:'entity',
-    help:'The same question for goods that are COUNTED, in whole units rather than a percentage. 0 is right for almost every shop — a packet is a packet, and one missing is one missing.' },
-  { key:'tol_rate_bp',       label:'Rate difference allowed',               type:'number', scale:100, suffix:'%', step:0.01,
-    def:0, level:'entity', gov:'entity',
-    help:'How far a supplier\'s billed RATE may differ from the order before it is named. ⚠️ Keep this at 0 unless you mean it: a quantity can be short by weather, a price cannot. "Close enough" on a rate is a decision somebody made, and it belongs in front of a person.' },
-  { key:'trade_cover',       label:'Trade cover on chits',    type:'enum',   options:['off','on'],                    def:'off',  level:'entity', gov:'entity',   help:'ON — the Summary of a chit also shows the supplier clearances and the commercial-cover (FRM) frame. OFF — the financial summary of the cart and the delivery only (most trades).' },
-  /**
-   * ⚠️ `def` WAS `both` HERE TOO — A THIRD DECLARATION OF ONE DEFAULT. The engine (routes/chits.js) did
-   * `received`, lib/policy.js said `both`, and so did this. Three statements of one rule, two of them wrong.
-   * ⭐ Athi settled it 2026-08-16: *"mostly it is task, a billing counter, very rarely this become order… so the
-   * default is task, if the user changes to order copy, then we need to honour that"* — which is exactly what the
-   * engine already did. The saved column is read first; this is only the fallback, so an explicit choice stands.
-   * ⚠️ Guarded by tests/policy-defaults.test.js in the API repo, which reads BOTH sides and fails if they part.
-   */
-  { key:'self_copy_pref',    label:'Self-chit copy',        type:'enum',   options:['received','both','sent'],
-    labels:{ received:'Task only', both:'Both Task and Order', sent:'Order only' },
-    def:'received', level:'entity',        gov:'entity',   help:'' },
-  /**
-   * ⭐⭐ WHICH DETAIL PAGE THIS BUSINESS READS ITS WORK ON. Athi, 2026-08-24: *"we have to attach design 1 or
-   * design 2 per entity so we can attach only one design for a store."*
-   *
-   * ⭐ THE NAMES ARE ERP'S, NOT OURS — SAP, Oracle and every dealer system call this distinction the ATOM OF
-   * WORK, and it is the same distinction in a workshop, a kitchen and a trading desk. "Design 1" and "design 2"
-   * were our internal shorthand and meant nothing to anyone else.
-   *
-   * ⚠️ A DEFAULT, NOT THE RECORD. A chit is stamped with the design when it is created and keeps it for life,
-   * so changing this decides how the NEXT job reads — never how an existing one does. That is the whole point:
-   * *"so we avoid complication of moving from one record type to another."*
-   */
-  { key:'detail_design',     label:'Detail page',           type:'enum',   options:['chit','lines'],
-    labels:{ chit:'Order level', lines:'Line level' },
-    def:'chit', level:'entity',        gov:'entity',
-    help:'Order level — the chit is the unit of work. Line level — each line has its own person, parts and cost. Applies to new chits.' },
-  { key:'chit_expiry_days',  label:'Chit expiry (days)',    type:'number', def:0,  level:'work-pattern', gov:'chosen',   help:'0 = no expiry' },
-  { key:'retention_days',    label:'Retention (days)',      type:'number', def:0,  level:'entity',        gov:'chosen',   help:'0 = keep' },
-  { key:'dispute_scope',     label:'Dispute messages',      type:'enum',   options:['per-party','shared'],          def:'per-party', level:'platform', gov:'bound', help:'Set by the platform' },
-  /* ⭐ Athi, 2026-09-18 (quick-keys handoff, decision 2): "keep it as a choice in settings". Read by the counter's
-     Level-2 quick-key state since then and settable by nobody until 2026-09-28 (e2e/policy-reachable.cjs). The help
-     says plainly that shift close changes nothing yet — there are no shifts to close against. */
-  { key:'quick_key_reset_at', label:'Counter sold-out marks clear', type:'enum', options:['business_day','shift_close'],
-    labels:{ business_day:'At the day roll', shift_close:'At shift close' }, def:'business_day', level:'entity', gov:'entity',
-    help:'When a counter\'s sold-out marks on its quick keys clear themselves. At the day roll — the usual case. At shift close works like the day roll until shifts are recorded.' },
-];
-var _POL = { flags:null, busy:false, err:null, migrated:true };
+/* polDefsOf · polShown · polStored → app/cap-settings.js (T3-SETTINGS × T2-POLICY): the workshop's Business rules card and CB Settings › Policy
+   paint the SAME server schema (schema[key].ui + bound_schema) through one reader — no flag list on the web */
+function polDefs(){ return polDefsOf(_POL.schema, _POL.bound); }
+var _POL = { flags:null, schema:null, bound:null, busy:false, err:null, migrated:true };
 function _polVal(def){ var o=_POL.flags||{}; return (o[def.key]!==undefined)?o[def.key]:def.def; }
 function _polLocked(gov){ return gov==='bound'||gov==='protected'||gov==='inherited'; }
 /* ⚠️ THE WRITE IS AWAITED AND ITS ANSWER IS SHOWN. The old version toasted "set ✓" the instant you changed a
    dropdown, whatever happened afterwards — which is the exact habit that let a dead setting look alive for months.
    The card repaints from what the SERVER returns, so what is on screen is what is stored. */
 async function setPolFlag(key, v){
-  var def=POLICY_FLAGS.filter(function(d){return d.key===key;})[0];
+  var def=polDefs().filter(function(d){return d.key===key;})[0];
   /**
    * ⚠️ A SCALED FIELD IS STORED IN ITS OWN UNIT, NOT THE ONE ON SCREEN. 0.50% is shown, 50 is stored — and the
    * rounding is deliberate: the flag type truncates, so 0.505% would land as 50 either way, and doing it here
    * means the number that comes back matches the number that was typed.
    */
-  if(def&&def.type==='number'&&def.scale) v=(v===''?0:Math.round(Number(v)*def.scale));
-  else if(def&&def.type==='number') v=(v===''?0:Number(v));
+  v=polStored(def, v);   /* the shown unit → the stored one (app/cap-settings.js) */
   _POL.busy=true; _POL.err=null; paintPolicy();
   try{
     var body={}; body[key]=v;
@@ -5763,7 +5650,7 @@ async function setPolFlag(key, v){
 }
 async function loadPolicy(){
   _POL.busy=true; _POL.err=null; paintPolicy();
-  try{ var r=await api('policyGet'); _POL.flags=(r&&r.flags)||{}; _POL.migrated=!(_POL.flags._migrated===false); }
+  try{ var r=await api('policyGet'); _POL.flags=(r&&r.flags)||{}; _POL.schema=(r&&r.schema)||null; _POL.bound=(r&&r.bound_schema)||null; _POL.migrated=!(_POL.flags._migrated===false); }
   catch(e){ _POL.err=(e&&e.message)||'Could not read your policy flags.'; }
   _POL.busy=false; paintPolicy();
 }
@@ -5782,7 +5669,7 @@ function _polControl(def){ var v=_polVal(def);
   if(def.type==='enum') return '<select'+dis+' data-testid="pol-'+esc(def.key)+'" onchange="setPolFlag(\''+def.key+'\',this.value)" style="padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)">'+def.options.map(function(o){ var lbl=(def.labels&&def.labels[o])||o; return '<option value="'+esc(o)+'"'+(String(v)===String(o)?' selected':'')+'>'+esc(lbl)+'</option>'; }).join('')+'</select>';
   if(def.type==='number'){
     /* ⭐ shown in the unit a person thinks in; `setPolFlag` puts it back into the unit the flag is stored in */
-    var shown = def.scale ? (Number(v)/def.scale) : v;
+    var shown = polShown(def, v);
     return '<input type="number"'+dis+(def.step?' step="'+esc(String(def.step))+'"':'')+' min="0"'
       + ' data-testid="pol-'+esc(def.key)+'" value="'+esc(String(shown))+'"'
       + ' onchange="setPolFlag(\''+def.key+'\',this.value)"'
@@ -5964,16 +5851,17 @@ async function _chUnbind(id){
    showcase_template via setPolFlag — one source), and the live preview is the shop's own page in a frame (shop.html ?showcase=). */
 function showcaseCard(){
   if(typeof CBShowcase==='undefined') return '';
+  /* T3-P2-CRM: the chooser is app/cap-showcase.js (CBShowcasePick) — ONE copy, drawn here and on CB CRM's Shop window; a click on a template saves the flag (scPick) */
   var cur=((_POL&&_POL.flags)||{}).showcase_template||CBShowcase.DEFAULT, id=(SESSION&&(SESSION.user_id||SESSION.bridge_id))||'';
-  var btn=Object.keys(CBShowcase.TEMPLATES).map(function(n){ var t=CBShowcase.TEMPLATES[n]; return '<button class="btn'+(n===cur?' primary':'')+'" data-testid="sc-pick" data-name="'+esc(n)+'" onclick="scPick(this.dataset.name)">'+esc(t.vertical+' · '+t.template)+'</button>'; }).join(' ');
-  return '<div style="'+_CARD+';margin-top:10px" id="scard"><div class="sec" style="margin:0 0 6px">'+tx('Your shop window')+'</div><div style="display:flex;gap:6px;flex-wrap:wrap">'+btn+'</div>'
-    +(id?'<iframe title="'+tx('Preview')+'" data-testid="sc-preview" src="/shop.html?s='+encodeURIComponent(id)+'&preview=1&showcase='+encodeURIComponent(cur)+'" style="width:100%;max-width:390px;height:560px;border:1px solid var(--line);border-radius:12px;margin-top:10px"></iframe>':'')+'</div>';
+  return '<div style="'+_CARD+';margin-top:10px" id="scard"><div class="sec" style="margin:0 0 6px">'+tx('Your shop window')+'</div>'
+    +(typeof CBShowcasePick!=='undefined'?CBShowcasePick.html({ current:cur, shopId:id, t:tx, cls:'btn', clsOn:'btn primary', origin:'' }):'')+'</div>';
 }
+document.addEventListener('click', function(ev){ var t=ev.target.closest&&ev.target.closest('#scard [data-sc-pick]'); if(t&&!t.disabled) scPick(t.getAttribute('data-sc-pick')); });
 async function scPick(n){ await setPolFlag('showcase_template',n); paintShowcase(); }
 function paintShowcase(){ var h=document.getElementById('scard'); if(h) h.outerHTML=showcaseCard(); }
 function policyFlagsCard(){ loadPolicy(); return '<div style="'+_CARD+';margin-top:10px" id="polflags">'+policyFlagsInner()+'</div>'; }
 function policyFlagsInner(){
-  var rows=POLICY_FLAGS.map(function(def){ return '<div style="display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)">'
+  var rows=polDefs().map(function(def){ return '<div style="display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)">'
     +'<div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><span style="font-weight:600;font-size:var(--fs-2)">'+esc(def.label)+'</span>'+govKlass(def.gov)+'<span style="font-size:var(--fs-1);font-family:\'Space Mono\';background:var(--neutral-tint);color:var(--grey-2);border-radius:5px;padding:1px 6px">'+esc(def.level)+'</span></div>'
     /* ⚠️ AN EMPTY help RENDERS NOTHING, NOT AN EMPTY DIV. Four of these were trimmed to direction today and
        one removed outright; without this each would leave a 2px-margined empty element under its control —
@@ -5991,7 +5879,7 @@ function policyFlagsInner(){
         'Per-entity toggles cover what the 7-layer block does not yet carry — same governance grammar '
       + '(<b>class</b> + <b>level</b>): 🔒 <b>platform-bound</b> cannot be relaxed · <b>tighten-only</b> may be '
       + 'made stricter · <b>entity</b> is set freely.')
-    +warn+rows+err
+    +warn+(rows||(_POL.busy?'<div style="font-size:var(--fs-1);color:var(--grey);padding:8px 0">'+tx('Reading your business rules…')+'</div>':''))+err
     +'<div style="font-size:var(--fs-1);color:var(--grey);font-style:italic;margin-top:8px">'
     + txf('Stored on your business, not on this device. {enforced} whether you keep a copy, and whether you buy or sell. Expiry and retention: ⏳ {pending}.', {
         enforced: '<b>' + tx('Working today:') + '</b>', pending: tx('pending') }) + '</div>';

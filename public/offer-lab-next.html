@@ -751,6 +751,7 @@ button{cursor:pointer}
 .combohead{font-size:.92em;color:var(--muted);margin-bottom:12px;padding:10px 12px;background:var(--panel);border-radius:var(--r)}
 .combohead b{display:block;margin-top:4px;color:var(--green);font-size:1.05em}
 </style>
+<link rel="stylesheet" href="lab/combo-mode.css">   <!-- T2-LABS: the Combo Lab's look (?mode=combo) — every rule names the builder -->
 <script src="/engine/screen.js"></script>
 <script src="/app/avatar.js"></script>   <!-- CBAvatar: the one avatar (Profile · Support · Sign out) and the look it owns — the same on every page -->
 </head>
@@ -767,7 +768,7 @@ button{cursor:pointer}
     <span class="chip" id="bizName">—</span>
     <span class="grow"></span>
     <button class="chip tool" onclick="openPriceOverlay()" title="Cost and price for every item"><span class="g">₹</span><span class="tx">Price list</span></button>
-    <button class="chip tool" onclick="window.open('combo-lab.html','cb_combo_lab')" title="Combos and modifiers"><span class="g">▣</span><span class="tx">Combos</span></button>
+    <button class="chip tool" onclick="window.open('offer-lab-next.html?mode=combo','cb_combo_lab')" title="Combos and modifiers"><span class="g">▣</span><span class="tx">Combos</span></button>
     <button class="chip tool" onclick="document.getElementById('labImportFile').click()" title="A spreadsheet with Name, Category, Price and Cost columns — stays in this tab, nothing is saved"><span class="g">↓</span><span class="tx">Import</span></button>
     <input type="file" id="labImportFile" accept=".xlsx,.xls,.csv" hidden onchange="importSpreadsheet(this)">
     <button class="chip tool" onclick="exportCsv()" title="Everything on screen right now, as a CSV"><span class="g">↑</span><span class="tx">Export</span></button>
@@ -820,6 +821,45 @@ button{cursor:pointer}
   </div>
 </div>
 
+<!--
+  ⭐⭐⭐ THE MODIFIER LAB — SAME WINDOW STYLE AS THE PRICE LIST (Athi: "try how the modifiers can be created
+  and once if they are happy… apply it to the real product"), its own instance because the shape of the job
+  is different (pick ONE product, then build against it) — but the chrome (.ovl/.ovlpanel/.ovlhead/.ovlx) is
+  the exact same CSS the price list already proved out, precisely so a third icon has somewhere to land too.
+-->
+<div class="ovl" id="modLabOverlay" role="dialog" aria-modal="true" aria-labelledby="modLabTitle">
+  <div class="ovlpanel">
+    <div class="ovlhead">
+      <h2 id="modLabTitle">Combos and modifiers</h2>
+      <button class="ovlx" onclick="closeModLab()" aria-label="Close" title="Close">✕</button>
+    </div>
+    <!-- ⭐ [2026-09-27] two tabs, each carrying its own count (paintModLab() fills modLabTabs; see its own
+         header comment). #modLabSearch stays a STATIC element, never replaced by innerHTML on repaint — only
+         its placeholder changes per tab — so a keystroke never loses its own cursor position mid-type. -->
+    <div class="tabs" id="modLabTabs"></div>
+    <div class="ovltools">
+      <div style="display:flex;gap:10px;align-items:center">
+        <input type="text" id="modLabSearch" placeholder="Search products…" oninput="modLabSearch(this.value)" style="flex:1">
+        <span id="modLabBarExtra"></span>
+      </div>
+    </div>
+    <div class="ovlbody" id="modLabBody"></div>
+    <div class="ovlfoot" id="modLabFoot"></div>
+  </div>
+</div>
+<!-- ⭐⭐⭐ [TILL/OFFR-08] "how it appears in the counter app" — CBVariant.chooserHTML(), the SAME function
+     till.html's own combo dialog calls, so there is nothing here that could show a different combo than the
+     one a customer would actually see. -->
+<div class="ovl" id="comboTillPreviewOverlay" role="dialog" aria-modal="true" aria-labelledby="comboTillPreviewTitle">
+  <div class="ovlpanel" style="max-width:520px">
+    <div class="ovlhead">
+      <h2 id="comboTillPreviewTitle">Preview</h2>
+      <button class="ovlx" onclick="closeComboTillPreview()" aria-label="Close" title="Close">✕</button>
+    </div>
+    <div class="ovlbody" id="comboTillPreviewBody" style="padding:16px 20px"></div>
+    <div class="ovlfoot" id="comboTillPreviewFoot"></div>
+  </div>
+</div>
 <!-- ══ "Work it out"'s own result — an overlay over the controls, not a panel pushed in under them ══ -->
 <div class="scrim" id="workScrim" onclick="if(event.target===this)closeWork()">
   <div class="sheet" role="dialog" aria-modal="true" aria-label="What this offer does">
@@ -841,16 +881,15 @@ button{cursor:pointer}
   </div>
 </div>
 <!--
-  ⭐⭐⭐ [Labs split, 2026-09-26] THE MODIFIER/COMBO LAB MOVED TO ITS OWN PAGE. Athi: "bring offer lab and
-  combo lab as a separate item rather than in one place. I guess combo lab earned its place now." It lived
-  here as an overlay (same .ovl/.ovlpanel/.ovlhead/.ovlx chrome the price list uses); combo-lab.html is a
-  standalone copy of this page's own shared machinery with that overlay opened as the whole page instead of a
-  modal on top of this one. See "🧩 Combo Lab ↗" below, and combo-lab.html's own header comment for the split.
+  ⭐⭐⭐ [Labs split, 2026-09-26 → T2-LABS, 2026-10-14] THE COMBO LAB IS A MODE OF THIS PAGE. Athi first: "bring offer lab and
+  combo lab as a separate item" — so combo-lab.html became its own page, as a COPY of this one. Athi, 2026-10-14: "our labs
+  should not use a separate piece of code". The builder's own code is lab/combo-mode.js (moved as it was); ?mode=combo opens
+  it as the page, under its own title; combo-lab.html forwards here, so every old link still lands in it.
 -->
 <!--
   ⭐⭐⭐ THE ARITHMETIC IS THE REAL ENGINE, NOT A REIMPLEMENTATION (Athi: "we have already built the offer
   engine, that is being served everywhere as a capability... how we enhance it to adopt this"). This page IS
-  the v5 prototype/spec — same layout, same one-screen-per-offer flow, same wording — but `row()` and the
+  the v5 prototype/spec — same layout, same one-screen-per-offer flow, same wording — but `priceRow()` and the
   free/bundle/bill screens now ask window.CBOffers.evaluate(), the exact function the till, the storefront and
   the order page call, instead of a parallel set of formulas that could quietly drift from what a real bill
   does. Verified against the spec's own §10 checks before this file was written: every number matched, once
@@ -864,6 +903,8 @@ button{cursor:pointer}
 <!-- ⭐ CBVariant — the SAME module app.html's Modifiers tab and the till's own chooser both use. Pure, no
      DOM, no fetch — the Modifier lab below is a paint over its authoring verbs, exactly like that tab is. -->
 <script src="engine/variant.js"></script>
+<!-- the Combo Lab (?mode=combo) — its builder, moved from combo-lab.html; it reads this page's state and helpers -->
+<script src="lab/combo-mode.js"></script>
 <!--
   ⭐⭐ VENDORED, NOT A CDN LINK (Athi: "possibly excel... bring it here"). vendor/xlsx.full.min.js is SheetJS
   (Apache-2.0), served from this same origin so the public/demo mode's "zero network calls" claim a few lines
@@ -1066,11 +1107,42 @@ function num(v){var n=parseFloat(v); return isFinite(n)?n:0;}
 function R2(n){return Math.round(n*100)/100;}
 function byId(id){for(var i=0;i<P.length;i++) if(P[i].id===id) return P[i]; return null;}
 function catName(id){for(var i=0;i<CATS.length;i++) if(CATS[i].id===id) return CATS[i].name; return '';}
+/**
+ * ⭐⭐⭐ [found live, 2026-10-01] "the Choose a product picker shows category CHIPS and a middle column of raw
+ * category UUIDs (e.g. 55e14791-27cb-…) instead of category names." Real cause: a REAL product's own
+ * item_data.categories holds a category DEFINITION's id (kind:'category', the same definitions app.html's
+ * own catName() resolves through cbDefsCached('category') — see app.html:13209), never a human name — but
+ * buildBiz(), below, only ever grouped products by whatever that raw value was, so for 'mine' it built
+ * cats:[[uuid,uuid],…] and this page's OWN catName() (just above) faithfully echoed the uuid straight back as
+ * the "name". CATNAMES is the one lookup map (loadCatNames(), called alongside the real catalogue read) that
+ * resolves it properly; catDisplayName() falls back to 'Other' — never the raw id — only when the value is
+ * actually UUID-shaped, so the sample books and a spreadsheet import (whose "categories" are already plain
+ * words like "Vegetables") are untouched.
+ */
+var CATNAMES={};
+function catDisplayName(id){
+  if(CATNAMES[id]) return CATNAMES[id];
+  if(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return 'Other';
+  return id;
+}
+async function loadCatNames(){
+  try {
+    var r=await fetch(API+'/api/definitions?kind=category&all=1', {headers:{Authorization:'Bearer '+savedToken()}});
+    if(r.ok){
+      var j=await r.json();
+      var defs=j.definitions||j.rows||(Array.isArray(j)?j:[]);
+      var m={};
+      defs.forEach(function(d){ var id=d.definition_id||d.id; if(id) m[id]=d.name||''; });
+      CATNAMES=m;
+    }
+  } catch(e){ console.warn('Offer Lab: category names did not load — keeping the names already shown', e); }   /* a stale name beats a UUID on screen */
+}
 function M0(n){ if(n==null||isNaN(n)) return '—';
   var neg=n<-0.004; n=Math.abs(n);
   return (neg?'−₹':'₹')+Math.round(n).toLocaleString('en-IN'); }
 function PC(n){ if(n==null||!isFinite(n)) return '—';
   return (Math.round(n*10)/10)+'%'; }
+/* esc() is app/helpers.js's — the one escaper (T2-LABS: this page had its own copy) */
 
 function marginPct(price,cost){return price>0?Math.round(((price-cost)/price)*100):0;}
 function roundDown(v,cap){
@@ -1114,7 +1186,7 @@ function edit(k,v){
   if(key){ var el=document.querySelector('[data-key="'+key+'"]'); if(el){ el.focus(); try{ el.setSelectionRange(start,end); }catch(_){} } }
 }
 function editKeep(k,v){ S[k]=v; render(); }
-function go(n){ S.step=n; render(); window.scrollTo({top:0,behavior:'smooth'});
+function labStep(n){ S.step=n; render(); window.scrollTo({top:0,behavior:'smooth'});
   if(n===3 && savedLive()) loadSaved();   /* the shelf may have changed on another tab/device since last look */
   closeWork();   /* navigating away from "Work it out" must not leave its result floating over the next screen */
 }
@@ -1158,7 +1230,7 @@ function dragSheetStart(e){
 /**
  * ── ⭐⭐⭐ [2026-09-26] THE RESULT PANEL, per Athi's own offer-lab-result.html — scoped to the 'percent' goal,
  * exactly what the doc covers. Every other goal kind keeps the PREVIOUS doc's plain modal (outHTML(), "Change
- * it" to close). Reuses row() TWICE per item (once at the base rate, once at the combined rate) rather than
+ * it" to close). Reuses priceRow() TWICE per item (once at the base rate, once at the combined rate) rather than
  * reimplementing the pricing math the doc's own prototype does from scratch — so below-cost handling
  * (S.belowAct) and rounding stay exactly as correct here as everywhere else on this page.
  */
@@ -1167,9 +1239,9 @@ var SHOW_MARKUP=false;   /* the header's own "Markup" toggle — a display prefe
   of the offer, so it is never saved with it; resets to off each open, same as WORK_PANEL */
 function toggleMarkup(){ SHOW_MARKUP=!SHOW_MARKUP; paintWork(); }
 /**
- * ⭐⭐⭐ [found by review, 2026-09-26] A LOYALTY CUSTOMER CAN NEVER PAY MORE THAN EVERYONE ELSE. row('exclude')
+ * ⭐⭐⭐ [found by review, 2026-09-26] A LOYALTY CUSTOMER CAN NEVER PAY MORE THAN EVERYONE ELSE. priceRow('exclude')
  * means "leave this item's price alone rather than sell it below cost" — read literally, "alone" is the
- * item's own FULL price, which is correct for row() taken on its own. But taken as the LOYALTY price
+ * item's own FULL price, which is correct for priceRow() taken on its own. But taken as the LOYALTY price
  * specifically, on an item whose base offer alone is still fine (didn't need excluding), "leave it alone" can
  * land ABOVE the base-offer price — a loyalty bonus that charges the loyalty customer MORE than a regular one
  * for the identical item, and percentDecide() then picked whichever margin was BETTER, silently reporting a
@@ -1180,8 +1252,8 @@ function toggleMarkup(){ SHOW_MARKUP=!SHOW_MARKUP; paintWork(); }
  */
 function percentRows(){
   return items().map(function(p){
-    var pub=row(p, offerFrac(p));
-    var all=(loyMode()==='pct') ? row(p, combo(offerFrac(p), loyFrac())) : pub;
+    var pub=priceRow(p, offerFrac(p));
+    var all=(loyMode()==='pct') ? priceRow(p, CBOffers.compound([offerFrac(p)*100, loyFrac()*100])/100) : pub;
     if(all.shown>pub.shown){
       all=Object.assign({},all,{shown:pub.shown,status:pub.status,
         margin:p.cost==null?null:marginPct(pub.shown,p.cost),
@@ -1241,7 +1313,7 @@ function percentTableHTML(rs){
       '<th class="grp" rowspan="2">Meets your '+num(S.margin)+'%?</th>'+
     '</tr><tr class="sub">'+
       '<th class="grp">after '+num(S.pctOff)+'%</th>'+
-      (showLoy?'<th class="grp">after '+(Math.round(combo(num(S.pctOff)/100,loyFrac())*1000)/10)+'%</th>':'')+
+      (showLoy?'<th class="grp">after '+(Math.round(CBOffers.compound([num(S.pctOff), loyFrac()*100])*10)/10)+'%</th>':'')+
     '</tr></thead><tbody>'+
     rs.map(function(r){
       var ans=percentAnswer(r), ansHtml=(typeof ans==='string')?ans:ans.html;
@@ -1300,7 +1372,7 @@ function percentBillHeadHTML(off,all,showLoy){
 }
 function percentBillHTML(rs){
   var showLoy=loyMode()==='pct';
-  var off=num(S.pctOff), all=Math.round(combo(off/100,loyFrac())*1000)/10;
+  var off=num(S.pctOff), all=Math.round(CBOffers.compound([off, loyFrac()*100])*10)/10;
   var was=0, pay=0, loyPay=0, lines=percentBillHeadHTML(off,all,showLoy);
   rs.forEach(function(r){
     was+=r.p.price; pay+=r.pub.shown; loyPay+=r.all.shown;
@@ -1404,7 +1476,7 @@ function paintWork(){
      */
     var rs=percentRows(), showLoy=loyMode()==='pct';
     demo.style.display=''; demo.innerHTML=workDemoHTML(percentVerdictHTML(rs));
-    var combined=Math.round(combo(num(S.pctOff)/100,loyFrac())*1000)/10;
+    var combined=Math.round(CBOffers.compound([num(S.pctOff), loyFrac()*100])*10)/10;
     document.getElementById('workTitle').textContent=l.title;
     document.getElementById('workTag').textContent=(showLoy?num(S.pctOff)+'% + '+num(S.loyPct)+'% = '+combined+'%':num(S.pctOff)+'%')+' off · '+rs.length+' items';
     /* ⭐ [found live, 2026-09-26] "mock up toggle on top of the panel, we have space" — the tab-switcher pill
@@ -1703,10 +1775,9 @@ function loyMode(){
   return 'na';
 }
 function loyFrac(){ return loyMode()==='pct' ? Math.min(.95,num(S.loyPct)/100) : 0; }
-function combo(a,b){ return 1-(1-a)*(1-b); }
 /**
  * ⭐⭐⭐ THE ONE PLACE THE REAL ENGINE ANSWERS "WHAT DOES A % OFF COME TO" (Phase: offer-lab adoption).
- * `frac` is already the combined offer+loyalty fraction (combo(), above) — a single percent_off asked of
+ * `frac` is already the combined offer+loyalty fraction (CBOffers.compound — the engine's percent-on-percent) — a single percent_off asked of
  * CBOffers.evaluate() at that percentage is mathematically identical to price*(1-frac), and provably so:
  * verified against the spec's own §10 checks (10% off ₹70 → ₹63, compounded 10%+10% → 19% not 20%) before
  * this file was written. The difference from computing it locally is provenance, not the number — every
@@ -1717,7 +1788,6 @@ function combo(a,b){ return 1-(1-a)*(1-b); }
  * nothing about either.
  */
 function engineFinal(unitPrice, frac){
-  if(!(window.CBOffers && window.CBOffers.evaluate)) return R2(unitPrice*(1-frac));   /* engine missing: never blank the screen */
   var pct=Math.min(99,Math.max(0,frac*100));
   if(pct<=0) return R2(unitPrice);
   var r=CBOffers.evaluate({ lines:[{key:'x',qty:1,unitPrice:unitPrice}],
@@ -1726,7 +1796,6 @@ function engineFinal(unitPrice, frac){
 }
 /** ⭐ buy N of ONE item, get 1 more free (or at a %) — same-item buy_x_get_y, N+1 units on one line */
 function engineBuyGetPay(unitPrice, buy, get, getPercent){
-  if(!(window.CBOffers && window.CBOffers.evaluate)) return R2(unitPrice*buy);
   var r=CBOffers.evaluate({ lines:[{key:'x',qty:buy+get,unitPrice:unitPrice}],
     offers:[{id:'preview',kind:'buy_x_get_y',buy:buy,get:get,get_percent:getPercent==null?100:getPercent,scope:'line'}] });
   return R2(r.line_net.x);
@@ -1735,7 +1804,6 @@ function engineBuyGetPay(unitPrice, buy, get, getPercent){
  * lib/offers-engine.js added for "buy rice, get oil free". Returns what is paid for A; B's line (if it were on
  * the same basket) would show as free — the wizard only ever prices the pair it was given, per spec §4. */
 function engineBuyGetPayCross(aItemId, aPrice, bItemId, bQty, getPercent){
-  if(!(window.CBOffers && window.CBOffers.evaluate)) return R2(aPrice);
   /* ⚠️ applies_to.item_ids RESTRICTS "BUY" TO A SPECIFICALLY, or the engine would count B's own line towards
      the purchase requirement too — the exact cross-item wiring lib/offers-engine.js was built for. */
   var r=CBOffers.evaluate({ lines:[{key:'a',item_id:aItemId,qty:1,unitPrice:aPrice},{key:'b',item_id:bItemId,qty:bQty,unitPrice:0}],
@@ -1746,7 +1814,6 @@ function engineBuyGetPayCross(aItemId, aPrice, bItemId, bQty, getPercent){
 /** ⭐ buy a FEW, the cheapest of them is free — mix_and_match, one line of N units of a single item. What N of
  * ONE product pays after the cheapest of the N is free, the same kind the cheapest-of-a-mixed-shelf save uses. */
 function engineMixMatchPay(unitPrice, n){
-  if(!(window.CBOffers && window.CBOffers.evaluate)) return R2(unitPrice*(n-1));
   var r=CBOffers.evaluate({ lines:[{key:'x',qty:n,unitPrice:unitPrice}],
     offers:[{id:'preview',kind:'mix_and_match',buy:n-1,get:1,get_percent:100,scope:'line'}] });
   return R2(r.line_net.x);
@@ -1760,7 +1827,7 @@ function engineMixMatchPay(unitPrice, n){
  * already said. Collapsed to one 3-way choice ("When an offer goes below cost": Leave it out / Sell it at
  * cost / Do it anyway); FRESH's default ('exclude') keeps the exact behaviour a shop had before this change.
  */
-function row(p,frac){
+function priceRow(p,frac){
   var base=p.price, want=engineFinal(base,frac), status='ok';
   if(p.cost==null) status='nocost';
   else if(want < p.cost-0.005){
@@ -1786,8 +1853,8 @@ function totals(rs){
     marginBefore: pb>0?Math.round((pb-cb)/pb*100):0,
     marginAfter:  pa>0?Math.round((pa-cb)/pa*100):0};
 }
-function lineRows(){ var f=combo(0,loyFrac());
-  return items().map(function(p){ return row(p, combo(offerFrac(p), loyFrac())); }); }
+function lineRows(){
+  return items().map(function(p){ return priceRow(p, CBOffers.compound([offerFrac(p)*100, loyFrac()*100])/100); }); }
 
 /* ── ladders (max three steps, always) ─────────────────────────────────── */
 function tiers(){ return (S.tiers||[]).map(function(t){return {qty:num(t[0]),pct:num(t[1])};}); }
@@ -1915,8 +1982,8 @@ function renderS0(){
        '</div>'+
      '</div>'+
      '<div class="acts">'+
-       '<button class="btn pri" onclick="go(1)">Create an offer</button>'+
-       '<button class="btn" onclick="go(3)">Saved offers <b>'+SAVED.length+'</b></button>'+
+       '<button class="btn pri" onclick="labStep(1)">Create an offer</button>'+
+       '<button class="btn" onclick="labStep(3)">Saved offers <b>'+SAVED.length+'</b></button>'+
      '</div>'+
      '<div class="fine">'+
        '<span>Below cost: '+BELOW_TXT[S.belowAct]+'</span>'+
@@ -1960,7 +2027,7 @@ function renderS0(){
  * right, and doesn't read as "back." One helper, same wording, same place (top-left of the card) on every
  * screen after Settings.
  */
-function backBtn(step){ return '<button class="btn sm back" onclick="go('+step+')">← Back</button>'; }
+function backBtn(step){ return '<button class="btn sm back" onclick="labStep('+step+')">← Back</button>'; }
 function renderS1(){
   var h='<div class="card pad"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">'+
         '<h2 class="h">What kind of offer?</h2>'+backBtn(0)+'</div>'+
@@ -2137,7 +2204,7 @@ function loyBoxHTML(){
 /**
  * ⭐⭐⭐ [2026-09-26, per offer-lab-controls_1.html] "The combined figure is a sentence, not a formula —
  * `10% + 10% off = 19%` reads like broken arithmetic, anyone checking it gets 20. It now says which customer
- * pays what." Reworded to the doc's own exact sentence; the underlying math (combo()) is unchanged.
+ * pays what." Reworded to the doc's own exact sentence; the underlying math (CBOffers.compound) is unchanged.
  * ⚠️⚠️ [found by review, 2026-09-26] CLAMPED, matching offerFrac()/loyFrac()'s own 99%/95% caps — both fields
  * are plain text inputs with no real limit (the `max` attribute is cosmetic only, edit() never clamps), so
  * typing e.g. 150% loyalty used to make this sentence say "145% off" while the SAME modal's header tag and
@@ -2146,7 +2213,7 @@ function loyBoxHTML(){
  */
 function sumLineHTML(){
   var off=Math.min(99,num(S.pctOff)), loy=S.loyOn?Math.min(95,num(S.loyPct)):0;
-  var c=Math.round(combo(off/100,loy/100)*1000)/10;
+  var c=Math.round(CBOffers.compound([off, loy])*10)/10;
   return S.loyOn
     ? '<span class="big">'+c+'%</span><span class="wd">off for a loyalty customer. Everyone else pays <b>'+
       off+'%</b> less. '+(off&&loy?'Not '+R2(off+loy)+'% — the bonus comes off what is left.':'')+'</span>'
@@ -2299,12 +2366,14 @@ function cartPreviewLines(items){
     return { key:p.id, item_id:p.id, name:p.name, category:p.cat, qty:qty, unitPrice:p.price, cost:p.cost };
   });
 }
+/** ⭐ what THIS screen's offer does to these lines — CBOffers.evaluate() with the kind and rule a save would store.
+ * The cart preview and the bundle / big-bill screens all ask it here (T2-LABS: those two did their sums by hand). */
+function previewEval(lines){ return CBOffers.evaluate({ lines:lines, offers:[Object.assign({id:'preview',kind:subKindOf()}, ruleParamsOf())] }); }
 function cartPreviewHTML(){
   var items=cartPreviewItems(); var sub=subKindOf();
   if(!items.length || !sub) return '';
   var lines=cartPreviewLines(items);
-  var offer=Object.assign({id:'preview',kind:sub}, ruleParamsOf());
-  var ev; try{ ev=CBOffers.evaluate({ lines:lines, offers:[offer] }); }catch(e){ return ''; }
+  var ev; try{ ev=previewEval(lines); }catch(e){ return ''; }
   var costTotal=0, costKnown=true;
   lines.forEach(function(l){ if(l.cost==null) costKnown=false; else costTotal+=l.cost*l.qty; });
   var margin=(costKnown && ev.total>0) ? Math.round((ev.total-costTotal)/ev.total*100) : null;
@@ -2390,12 +2459,12 @@ function outQty(){
      '</tr></thead><tbody>'+
      its.map(function(p){
        return '<tr>'+nameCell(p)+costCell(p)+'<td class="num" data-l="Price">'+M0(p.price)+'</td>'+
-         ts.map(function(t){ var r=row(p,t.pct/100);
+         ts.map(function(t){ var r=priceRow(p,t.pct/100);
            return '<td class="slab" data-l="buy '+t.qty+'+"><span class="cell">'+
              '<span class="cp">'+M0(r.shown)+'</span>'+mgnSpan(r.margin,r.status)+'</span></td>';}).join('')+
          (ts.length<3?'<td></td>':'')+'</tr>';}).join('')+
      '</tbody><tfoot><tr><td colspan="2"><b>All '+its.length+'</b></td><td></td>'+
-     ts.map(function(t){ var tt=totals(its.map(function(p){return row(p,t.pct/100);}));
+     ts.map(function(t){ var tt=totals(its.map(function(p){return priceRow(p,t.pct/100);}));
        return '<td class="slab" data-l="buy '+t.qty+'+"><span class="cell">'+
          '<span class="cm '+(tt.marginAfter<num(S.margin)?'under':'')+'" style="font-size:15px">'+
          tt.marginAfter+'%</span></span></td>';}).join('')+
@@ -2403,7 +2472,7 @@ function outQty(){
 
   if(loyMode()==='top'&&S.loyOn){
     var top=ts[ts.length-1], one=its[0];
-    var r=one?row(one,top.pct/100):null;
+    var r=one?priceRow(one,top.pct/100):null;
     h+='<div class="note n-ok"><span class="ic">●</span><div>Loyalty: '+top.pct+'% from the first one'+
        (r?' · '+esc(one.name)+' '+M0(r.shown)+' · '+mgnText(r.margin,r.status):'')+'</div></div>';
   }
@@ -2566,7 +2635,8 @@ function outCheap(){
 /* ── two things, one price ─────────────────────────────────────────── */
 function outBundle(){
   var a=byId(S.bunA), b=byId(S.bunB); if(!a||!b) return '';
-  var was=a.price+b.price, pay=num(S.bunPrice);
+  /* ⭐ the engine's bundle_price on the pair — a price not below the two apart gives nothing, and the page says what it charges */
+  var was=a.price+b.price, pay=previewEval([{key:'a',item_id:a.id,qty:1,unitPrice:a.price},{key:'b',item_id:b.id,qty:1,unitPrice:b.price}]).total;
   var cost=(a.cost==null||b.cost==null)?null:a.cost+b.cost;
   var make=cost==null?null:R2(pay-cost), m=cost==null?null:marginPct(pay,cost);
   var h=headline([[M0(pay),'they pay','',M0(was)],
@@ -2586,15 +2656,17 @@ function outBundle(){
 
 /* ── a big bill gets something back ────────────────────────────────── */
 function outSpend(){
-  var at=Math.max(1,num(S.spendAt)), give=num(S.spendVal), am=avgM();
+  /* ⭐ what a bill of b gets back is the engine's threshold on a bill of b (capped at the bill), never the typed figure */
+  var giveAt=function(b){ return -previewEval([{key:'x',qty:1,unitPrice:b}]).goods_adjustment; };
+  var at=Math.max(1,num(S.spendAt)), give=giveAt(at), am=avgM();
   var bills=[at,at*2,at*4];
   var heads=bills.map(function(b,i){return [M0(b),'',i===0];});
   var rows=[
-    ['Share', bills.map(function(b){return PC(give/b*100);})],
+    ['Share', bills.map(function(b){return PC(giveAt(b)/b*100);})],
     ['Goods', bills.map(function(b){return M0(b*(1-am));})],
-    ['You make', bills.map(function(b){return M0(b*am-give);}),true],
+    ['You make', bills.map(function(b){return M0(b*am-giveAt(b));}),true],
     ['Margin', bills.map(function(b){
-       var m=Math.round((b*am-give)/(b-give)*100);
+       var m=Math.round((b*am-giveAt(b))/(b-giveAt(b))*100);
        return '<span style="color:'+(m<0?'var(--red-i)':m<num(S.margin)?'var(--amber-i)':'var(--green-d)')+
          '">'+m+'%</span><span class="sub">'+Math.round(am*100)+'%</span>';}),true]
   ];
@@ -2705,7 +2777,7 @@ function label(){
 function keyNumber(){
   if(S.goal==='percent'||S.goal==='amount'){ var t=totals(lineRows()); return [t.marginAfter+'%','margin']; }
   if(S.goal==='qty'){ var ts=tiers(), top=ts[ts.length-1];
-    var tt=totals(items().map(function(p){return row(p,top.pct/100);})); return [tt.marginAfter+'%','at '+top.qty+'+']; }
+    var tt=totals(items().map(function(p){return priceRow(p,top.pct/100);})); return [tt.marginAfter+'%','at '+top.qty+'+']; }
   return ['—','see it'];
 }
 /**
@@ -2850,6 +2922,7 @@ async function labUseMine(quiet){
   var sess=null; try{ sess=JSON.parse(localStorage.getItem('cb_sess')||'null'); }catch(_){}
   var who=(sess&&(sess.entity||sess.name))||'your shop';
   loadCostAccess();   /* alongside, not blocking — the catalogue read matters more and must not wait on this */
+  var catNamesReady=loadCatNames();   /* same: runs alongside, awaited below, right before names are actually used */
   try {
     var r=await fetch(API+'/api/products?limit=500', {headers:{Authorization:'Bearer '+savedToken()}});
     if(!r.ok) throw new Error('HTTP '+r.status);
@@ -2857,6 +2930,7 @@ async function labUseMine(quiet){
     var amountOf=function(v){ return (v&&typeof v==='object'&&v.amount!=null)?Number(v.amount):Number(v)||0; };
     var items=(j.items||j.products||j.rows||(Array.isArray(j)?j:[])).filter(function(p){ return p&&p.item_data&&amountOf(p.item_data.price)>0; });
     if(!items.length) return labUseCache(who,'no priced products yet');
+    await catNamesReady;   /* CATNAMES must be filled before buildBiz() (inside labApplyCatalogue) reads it */
     await LabDB.set('catalogue', {items:items, who:who, at:Date.now()});
     labApplyCatalogue(items, who, false);
     return true;
@@ -2876,7 +2950,7 @@ async function labUseCache(who,why){
  */
 function buildBiz(key, rows, who){
   var byCat={}; rows.forEach(function(p){ byCat[p[2]]=(byCat[p[2]]||0)+1; });
-  var cats=Object.keys(byCat).map(function(c){ return [c,c]; });
+  var cats=Object.keys(byCat).map(function(c){ return [c,catDisplayName(c)]; });
   var firstItem=(rows[0]||[])[0], secondItem=(rows[1]||rows[0]||[])[0];
   BIZ[key]={ name:who, cats:cats, prods:rows, margin:25, cap:10,
     d:{ catId:(cats[0]||[])[0]||'', itemId:firstItem||'', itemIds:firstItem?[firstItem]:[], pctOff:10, rsOff:10, tiers:[[2,5],[5,10],[10,15]], tierView:2,
@@ -2903,6 +2977,7 @@ function labApplyCatalogue(items, who, fromCache){
   applyBiz('mine');
   if(fromCache) toastSay(who+' — showing what was cached here; offline right now, so this may be a little behind.');
   render();
+  if (modLabOpen()) paintModLab();   /* the Combo Lab mode: its picker's first paint may have been the sample book */
 }
 
 /**
@@ -2971,14 +3046,15 @@ function exportCsv(){
   setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
 }
 /** ⭐ ONE ENGINE KIND PER SCREEN — the same registry lib/offers-engine.js's KINDS already names */
-function subKindOf(){
-  if(S.goal==='percent') return 'percent_off';
-  if(S.goal==='amount') return 'amount_off';
-  if(S.goal==='qty') return 'tier_price';
-  if(S.goal==='bundle') return 'bundle_price';
-  if(S.goal==='spend') return 'threshold';
-  if(S.goal==='ship') return 'shipping';
-  if(S.goal==='free') return S.freeShape==='cheapest'?'mix_and_match':S.freeShape==='anything'?'threshold':'buy_x_get_y';
+function subKindOf(st){
+  st=st||S;   /* a saved offer's snapshot too (engineOfferOf) — one goal→kind map */
+  if(st.goal==='percent') return 'percent_off';
+  if(st.goal==='amount') return 'amount_off';
+  if(st.goal==='qty') return 'tier_price';
+  if(st.goal==='bundle') return 'bundle_price';
+  if(st.goal==='spend') return 'threshold';
+  if(st.goal==='ship') return 'shipping';
+  if(st.goal==='free') return st.freeShape==='cheapest'?'mix_and_match':st.freeShape==='anything'?'threshold':'buy_x_get_y';
   return null;   /* 'band' — refuse a very small/large bill — has no engine kind yet; kept local-only, see §the plan */
 }
 /** the concrete rule this screen is CURRENTLY showing, in the exact field names lib/offers-engine.js reads */
@@ -3024,7 +3100,7 @@ async function saveOffer(){
       SAVED.unshift({id:'o'+(++SEQ), when:new Date(), biz:S.biz, title:l.title, detail:l.detail,
         n:k[0], k:k[1], status:'draft', snap:snapshot(), costs:costPrint()});
     }
-    EDITING=null; go(3); return;
+    EDITING=null; labStep(3); return;
   }
   if(!sub){ toastSay('This one cannot be saved to the shelf yet — work it out here for now.'); return; }
   var rules=Object.assign(ruleParamsOf(), { _lab:{ snap:snapshot(), costs:costPrint(), at:new Date().toISOString(),
@@ -3035,7 +3111,7 @@ async function saveOffer(){
     : await defFetch('POST','',{ kind:'offer', sub_kind:sub, name:saveName(l), status:'draft', rules:rules });
   if(!r.ok){ toastSay((r.body&&r.body.message)||'That did not save.'); return; }
   EDITING=null;
-  await loadSaved(); go(3);
+  await loadSaved(); labStep(3);
 }
 /** ⭐ mirrors the shelf into SAVED's own shape, so renderS3/clash/costMoved need not know the source */
 async function loadSaved(){
@@ -3073,7 +3149,7 @@ function openSaved(id){
      that old only ever saved column 1's number (ruleParamsOf()'s own old behaviour), so 0 is not a guess —
      it is exactly what ruleParamsOf() actually used at the time. */
   if(sv.snap.freeChosen==null) S.freeChosen=0;
-  S.applied=true; go(2);
+  S.applied=true; labStep(2);
 }
 async function setStatus(id,st){
   if(!savedLive()){ SAVED.forEach(function(x){ if(x.id===id) x.status=st; }); render(); return; }
@@ -3093,62 +3169,38 @@ async function dropSaved(id){
 function toastSay(t){ var n=document.getElementById('labtoast'); if(n){ n.textContent=t; n.hidden=false; } else alert(t); }
 
 /**
- * ── commercetools' rule, borrowed: only ONE item-level discount may apply to an item (highest ranked wins);
- * bill-level ones can stack. So two live offers touching the same shelf is a collision worth naming, not a
- * silent race.
- *
- * ⭐⭐⭐ [2026-09-26] ONE SHARED "DOES THIS SCOPE COVER THAT ITEM" TEST — lifted out of clash() so
- * overlayApplyRows() (the new checkbox picker) can ask the SAME question per-row, live, while picking, rather
- * than only after saving. `snap.itemIds` is the current shape; `snap.itemId` (singular) is read too, so an
- * older saved offer from before this field existed is still understood correctly.
+ * ── ⭐⭐ TWO OFFERS ON ONE SHELF — THE ENGINE'S QUESTION, NOT THIS PAGE'S (T2-LABS, 2026-10-14) ──────────────────
+ * commercetools' rule: only ONE item-level discount may apply to an item; bill-level ones can stack. This page held
+ * the only copy of that test (scopeCoversItem · scopesOverlap · clashDetail, 2026-09-26). It is CBOffers.covers /
+ * clashes now (engines v1.46.0) and the SERVER refuses a live clash on save (OFFER_CLASH) — so here it only paints.
+ * engineOfferOf()/engineItemOf() say a saved offer and a product in the engine's words: the kind subKindOf() saves,
+ * the scope ruleParamsOf() saves (an older snapshot's single `itemId` read too).
  */
-function scopeCoversItem(snap,p){
-  if(!p) return false;
-  if(snap.scope==='cat') return p.cat===snap.catId;
-  var ids=(snap.itemIds&&snap.itemIds.length)?snap.itemIds:(snap.itemId?[snap.itemId]:[]);
-  return ids.indexOf(p.id)>=0;
+function engineOfferOf(sv){
+  var s=sv.snap||{}, ids=(s.itemIds&&s.itemIds.length)?s.itemIds:(s.itemId?[s.itemId]:[]);
+  return {id:sv.id, kind:subKindOf(s), scope:'line', applies_to:s.scope==='cat'?{category:s.catId}:{item_ids:ids}};
 }
-function scopesOverlap(a,b){
-  if(a.scope==='cat'&&b.scope==='cat') return a.catId===b.catId;
-  var aIds=(a.itemIds&&a.itemIds.length)?a.itemIds:(a.itemId?[a.itemId]:[]);
-  var bIds=(b.itemIds&&b.itemIds.length)?b.itemIds:(b.itemId?[b.itemId]:[]);
-  if(a.scope==='item'&&b.scope==='item') return aIds.some(function(id){return bIds.indexOf(id)>=0;});
-  var itemSide=a.scope==='item'?aIds:bIds, catSide=a.scope==='item'?b.catId:a.catId;
-  return itemSide.some(function(id){ var p=byId(id); return p&&p.cat===catSide; });
-}
+function engineItemOf(p){ return {item_id:p.id, category:p.cat, name:p.name}; }
 /**
- * ⭐ [found live, 2026-09-26] "here we are showcasing overlapping? do we need to avoid? we should showcase
- * which item overlaps" — the collision itself is real and worth keeping (commercetools' own rule, see above:
- * only one item-level discount may apply to an item, so two live offers touching the same shelf is a genuine
- * problem, not noise to hide) — what was missing was WHICH item. clashDetail() resolves the actual items each
- * conflicting offer shares with this one (scopeCoversItem(), the same per-item test the "Apply it to" picker
- * already uses), not just how many offers conflict.
+ * ⭐ [found live, 2026-09-26] "we should showcase which item overlaps" — each conflicting offer with the items it shares
+ * with this one, from CBOffers.clashes over this shop's products. Two drafts never clash (nothing runs yet); the
+ * server answers the same question for a live one.
  */
 function clashDetail(sv){
-  if(['percent','amount','qty'].indexOf(sv.snap.goal)<0) return null;
-  var mine=sv.snap.scope==='cat'?catItems(sv.snap.catId):
-    (sv.snap.itemIds&&sv.snap.itemIds.length?sv.snap.itemIds.map(byId):(sv.snap.itemId?[byId(sv.snap.itemId)]:[])).filter(Boolean);
-  var hits=[];
-  SAVED.forEach(function(x){
-    if(x.id===sv.id||x.biz!==sv.biz) return;
-    if(x.status==='draft'&&sv.status==='draft') return;
-    if(['percent','amount','qty'].indexOf(x.snap.goal)<0) return;
-    if(!scopesOverlap(sv.snap,x.snap)) return;
-    var items=mine.filter(function(p){return scopeCoversItem(x.snap,p);}).map(function(p){return p.name;});
-    hits.push({title:x.title, status:x.status, items:items});
-  });
-  return hits.length?hits:null;
+  var others=SAVED.filter(function(x){ return x.id!==sv.id && x.biz===sv.biz && !(x.status==='draft'&&sv.status==='draft'); });
+  var hits=CBOffers.clashes(engineOfferOf(sv), others.map(engineOfferOf), P.map(engineItemOf));
+  if(!hits.length) return null;
+  return hits.map(function(h){ var x=others.filter(function(o){return o.id===h.offer.id;})[0];
+    return {title:x.title, status:x.status, items:h.items.map(function(i){return i.name;})}; });
 }
 /** ⭐ Athi, live: "if any of the item is already in the offer it has to highlight, which offer it is already
- * included." The same overlap test clash() uses, asked per PRODUCT instead of per saved-offer-pair, so the
- * picker can say so BEFORE a save ever happens, not just warn after. First match wins (rare in practice —
- * a shop with two live overlapping offers already has a clash() warning on both of them). */
+ * included." CBOffers.covers, asked per PRODUCT, so the picker says so BEFORE a save. First match wins. */
 function offerCoveringItem(p){
   for(var i=0;i<SAVED.length;i++){
     var x=SAVED[i];
     if(x.biz!==S.biz||x.status==='retired') continue;
     if(['percent','amount','qty'].indexOf(x.snap.goal)<0) continue;
-    if(scopeCoversItem(x.snap,p)) return x;
+    if(CBOffers.covers(engineOfferOf(x), engineItemOf(p))) return x;
   }
   return null;
 }
@@ -3344,11 +3396,11 @@ function render(){
     '<div class="strip">Margin <b>'+num(S.margin)+'%</b><span>·</span>'+
     (S.round==='0'?'exact':S.round==='1'?'whole ₹':'ends '+(S.round==='5'?'0 or 5':'0'))+
     '<span>·</span>loyalty '+(S.custOn?'up to <b>'+num(S.cap)+'%</b>':'off')+
-    '<button onclick="go(0)">Change</button></div>';
+    '<button onclick="labStep(0)">Change</button></div>';
 
   var names=['Settings','Offer','Work it out'];
   document.getElementById('steps').innerHTML = S.step===3?'' : names.map(function(n,i){
-    return '<button class="stp '+(S.step===i?'on':S.step>i?'done':'')+'" onclick="go('+i+')">'+
+    return '<button class="stp '+(S.step===i?'on':S.step>i?'done':'')+'" onclick="labStep('+i+')">'+
       '<span class="n">'+(i+1)+'</span><span><span class="t">'+n+'</span></span></button>';}).join('');
 
   [0,1,2,3].forEach(function(i){
@@ -3364,6 +3416,9 @@ function render(){
 }
 applyBiz('hotel');
 render();
+/* ⭐ T2-LABS: ?mode=combo IS the Combo Lab — the builder opens as the page, under its own name */
+var LAB_MODE=new URLSearchParams(location.search).get('mode')==='combo'?'combo':'offer';
+if(LAB_MODE==='combo'){ document.title='Combo Lab'; document.querySelector('.top .title').textContent='Combo Lab'; openModLab(); }
 /* ⭐ signed in → try your own catalogue quietly; queued writes from a previous offline session try to send
  * now too. Neither blocks the first paint — the samples are already on screen the instant this loads. */
 labPaintQueue();
@@ -3371,7 +3426,7 @@ labDrainOutbox();
 if (savedLive()) labUseMine(true);
 /**
  * ⚠️ [found live, 2026-09-26] "it says saved offers 0, but there are quite a number of saved offers" —
- * loadSaved() was only ever called AFTER landing on step 3 (go(3)'s own trigger) or after a save/status
+ * loadSaved() was only ever called AFTER landing on step 3 (labStep(3)'s own trigger) or after a save/status
  * change. The Settings screen's own "Saved offers <n>" badge reads SAVED.length directly, so on a fresh
  * signed-in load — before step 3 has ever been visited THIS session — it always showed 0, whatever the shelf
  * actually held. Loaded here too, at boot, alongside the catalogue.
@@ -3384,7 +3439,7 @@ if (savedLive()) loadSaved();
 <script src="app/one-person.js"></script>
 <script>
 CBOnePerson.attach({ quiet: true, who: (function(){ var w = CBOnePerson.stored(); return function(){ return w; }; })(),
-  label: function(){ return 'The Offer Lab'; },
+  label: function(){ return LAB_MODE==='combo' ? 'The Combo Lab' : 'The Offer Lab'; },
   onLeave: function(by){ return Promise.resolve(labDrainOutbox()).catch(function(){}).then(function(){ location.replace('/?left=' + encodeURIComponent(by || '')); }); },
   onWipe: function(){ return Promise.resolve(labDrainOutbox()).catch(function(){}).then(function(){ location.replace('/?cleaned=1'); }); } });
 </script>

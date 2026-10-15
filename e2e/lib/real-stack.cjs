@@ -51,8 +51,8 @@ async function up(o) {
   const log = []; const keep = (c) => { const s = String(c); log.push(s); if (log.length > 200) log.shift(); if (process.env.CB_API_LOG) process.stderr.write(s); };
   child.stdout.on('data', keep); child.stderr.on('data', keep);
   const api = 'http://127.0.0.1:' + port;
-  const t0 = Date.now();
-  while (Date.now() - t0 < 30000) {
+  const t0 = Date.now();   /* clock-ok: a wait timer */
+  while (Date.now() - t0 < 30000) {   /* clock-ok: a wait timer */
     if (child.exitCode !== null) throw new Error('real-stack: the api exited ' + child.exitCode + '\n' + log.join(''));
     try { const r = await j(api + '/health'); if (r.status === 200) break; } catch (_) {}
     await new Promise((r) => setTimeout(r, 250));

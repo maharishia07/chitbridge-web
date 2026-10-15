@@ -26,6 +26,7 @@ const PUB = path.join(ROOT, 'public');
 const SHOTS = path.join(__dirname, 'shots');
 const C = require('./lib/contract.cjs'), books = require('./lib/books-api.cjs');
 const J = C.json;
+const crmApi = require('./lib/crm-api.cjs');   /* RAIL-LAB-SRV1: the rail card (GET /api/facts/rail) from its one builder */
 const T = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.webmanifest': 'application/manifest+json' };
 
 /* ⭐ THE READS THE PAGE MAY MAKE: each has a line in chitbridge-api/round-trips.budget.json (DB10, I19) — or is the shell's own N19 read.
@@ -54,7 +55,7 @@ const PLANTED = { version: 2,
 const FACTS = {
   '/api/facts/till': { lines: [{ text: '12 bills · {money}', money: { amount: 4280, currency: 'INR' } }, { text: '1 bill waiting to send', tone: 'dn', act: { label: 'Send now', href: '/till.html' } }] },
   '/api/facts/accounts': { lines: ['Ledger up to 7 Oct'] },
-  '/api/facts/rail': { suppliers: 4, customers: 128, in: 3, out: 2, stuck: 1 }
+  '/api/facts/rail': crmApi.railFacts({ suppliers: 4, customers: 128, in: 3, out: 2, tasks: 4, stuck: 1 })
 };
 
 async function run() {
@@ -80,7 +81,7 @@ async function run() {
   ok(man.rail && 'route' in man.rail && 'facts' in man.rail && !/app\.html/.test(JSON.stringify(man)), 'manifest · the rail widget is declared (route · facts), and nothing names app.html');
   const eff = (e) => (e.works && e.state === 'workshop' ? 'built' : e.state);   /* the roadmap's reading of a row (manifest `works`) */
   const BUILT = man.entries.filter((e) => e.state === 'built'), REST = man.entries.filter((e) => e.state !== 'built');
-  for (const w of ['Catalogue', 'CB Accounts', 'Till', 'Standards', 'Suppliers', 'Co-assist', 'Connectors', 'Your shop', 'Counters & keys', 'CB CRM', 'Product Lab', 'Offer Lab', 'Combo Lab']) {
+  for (const w of ['Catalogue', 'CB Accounts', 'Till', 'Standards', 'Suppliers', 'CB Assist', 'Connectors', 'Your shop', 'Counters & keys', 'CB CRM', 'Product Lab', 'Offer Lab', 'Combo Lab']) {
     ok(man.entries.some((e) => e.name === w), 'manifest · the old index\'s "' + w + '" is a manifest row');
   }
 
@@ -155,7 +156,7 @@ async function run() {
       const chips = await pg.$$eval('.cbsh-sc', (cs) => cs.map((c) => ({ id: c.dataset.testid, st: c.dataset.state, link: c.tagName === 'A' || !!c.querySelector('a'), via: c.dataset.via === '1', href: c.getAttribute('href'), tag: (c.querySelector('.tag') || {}).textContent })));
       ok(chips.length && chips.every((c) => (c.via ? /^\/[a-z-]+\.html$/.test(c.href || '') : !c.link) && (c.st === 'workshop' || c.st === 'coming' || c.st === 'works') && c.tag), '1366 · every chip is dashed, names its state, and is not a link (bar a workshop item that names its closest built page: Catalogue to Product Lab)');
       const before = pg.url(), pages = ctx.pages().length;
-      await pg.click('[data-testid="shell-chip-stock"]'); await pg.waitForTimeout(250);
+      await pg.click('[data-testid="shell-chip-delivery"]'); await pg.waitForTimeout(250);   /* delivery: still a coming chip (Stock became a built card in T3-OPS) */
       ok(pg.url() === before && ctx.pages().length === pages, '1366 · a workshop chip opens nothing');
       /* reads: only budgeted ones; null facts paint nothing */
       const unbudgeted = seen.filter((p) => !BUDGETED.includes(p));
