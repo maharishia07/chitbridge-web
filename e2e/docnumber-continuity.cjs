@@ -22,7 +22,8 @@ const fn = [
   'var S = { shop: { country: COUNTRY } };',
   'var ls = { get: (k, d) => (STORE[k] === undefined ? d : STORE[k]), set: (k, v) => { STORE[k] = v; } };',
   'var DB = { get: async (k) => BOXES[k], set: async (k, v) => { BOXES[k] = v; } };',
-  'function fyOf(d){ var y=d.getFullYear(), apr=d.getMonth()>=3, a=apr?y:y-1; return String(a).slice(2)+"-"+String(a+1).slice(2); }',
+  /* W1-TILL: the page keeps no April formula — nextNumber asks the engine through DOCNUM() (the bare CBDoc the page's window provides) */
+  'var CBDoc = window.CBDoc;', grab('DOCNUM'),
   grab('docCountry'), grab('tillId'),
   /* ⚠️ nextNumber now reads DOC_TAGS (receipt/despatch/credit/expense/subscription series) — taken from the page
      itself, never retyped here, so the table this test runs against is the one the counter runs (2026-09-27) */

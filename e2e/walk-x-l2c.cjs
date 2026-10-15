@@ -133,6 +133,30 @@ W.run(REAL ? 'x-l2c-real' : 'x-l2c', async (w) => {   /* two sets of shots: walk
       const tel = await count(T('crm-call-tel-' + ((await callRow(NAMES.a).getAttribute('data-testid')) || '').replace('crm-call-row-', '')));
       return { ok: /New/.test(row) && acts.length === 6 && tel === 1, saw: 'row "' + row + '" · outcomes: ' + acts.join(' · ') };
     });
+    /* ── W1-CRM: the call screen = the row's next level: the stage's script (three lines) + Next, above the server's outcomes ── */
+    await w.step('L09a', 'The open row is the call screen: "Script · Demo" (L07 moved this lead to Demo) with three lines, "First call", and a Next button above the six outcomes', async () => {
+      const script = page.locator(T('crm-call-script')).first(); await script.waitFor({ timeout: 5000 }).catch(() => {});
+      const head = await txt(T('crm-call-script') + ' .nh'), lines = await count(T('crm-call-script') + ' [data-testid^="crm-call-line-"]'), stage = await script.getAttribute('data-stage').catch(() => '');
+      const line1 = await txt(T('crm-call-line-1')), first = await txt(T('crm-call-script') + ' .s'), next = await count(T('crm-call-next'));
+      const above = await page.evaluate(() => { const s = document.querySelector('[data-testid="crm-call-script"]'), b = document.querySelector('.cbl-next .cbl-acts'); return !!(s && b) && !!(s.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING); });
+      return { ok: /script/i.test(head) && /demo/i.test(head) && stage === 'demo' && lines === 3 && /Confirm the demo/.test(line1) && /First call/.test(first) && next === 1 && above,
+        saw: '"' + head + '" · ' + lines + ' lines · 1: "' + line1 + '" · "' + first + '" · Next: ' + next + ' · outcomes below the script: ' + above };
+    });
+    await require('./lib/rule13.cjs').rule13(w, 'L09r', 'the call screen (Calls, the script open)', 'crm_calls');
+    await w.step('L09b', 'Next on the last row on the list: nothing written, the row closes, the page says it was the last call', async () => {
+      await go('#/calls', T('crm-calls')); await callRow(NAMES.a).waitFor({ timeout: 15000 }); await settle(400);
+      const rowId = await callRow(NAMES.a).getAttribute('data-row');
+      const opened = await page.evaluate((id) => { const a = CBList.get('crm-calls'); if (!a) return false; a.open(id, true); return true; }, rowId); await settle(200);
+      const following = await page.evaluate(() => typeof crmCallFollowing === 'function' ? crmCallFollowing(document.querySelector('[data-testid="crm-call-next"]').getAttribute('data-id')) : 'nofn');
+      const writesBefore = REAL ? 0 : (S ? S.calls.filter((c) => /outcome/.test(c)).length : 0);
+      await page.click(T('crm-call-next')); await settle(400);
+      const t = await toast(), aOpen = await callRow(NAMES.a).getAttribute('aria-expanded');
+      const openedNext = following ? await page.locator('[data-row="' + following + '"]').first().getAttribute('aria-expanded') : null;
+      const writesAfter = REAL ? 0 : (S ? S.calls.filter((c) => /outcome/.test(c)).length : 0);
+      const ok = opened && aOpen === 'false' && writesAfter === writesBefore && (following ? openedNext === 'true' : /last call/.test(t));
+      await page.evaluate((id) => { CBList.get('crm-calls').open(id, true); }, rowId); await settle(200);   /* open again: L10 logs its outcome on this row */
+      return { ok, saw: (following ? 'the following row opened: ' + openedNext : 'last row · toast "' + t + '"') + ' · this row open after: ' + aOpen + ' · outcome writes: ' + writesBefore + ' → ' + writesAfter };
+    });
     await w.step('L10', 'Outcome "No answer" → Saved · the lead leaves today\'s queue · a Ring again follow-up for tomorrow', async () => {
       await page.click(T('crm-call-no_answer')); const t = await waitToast(/Saved/);
       await page.waitForFunction((n) => !Array.from(document.querySelectorAll('[data-row][data-testid^="crm-call-row-"]')).some((r) => r.textContent.indexOf(n) >= 0), NAMES.a, { timeout: 15000 }).catch(() => {});
@@ -157,12 +181,26 @@ W.run(REAL ? 'x-l2c-real' : 'x-l2c', async (w) => {   /* two sets of shots: walk
     await w.step('L12', 'Add lead "' + NAMES.c + '" · "Not now" → stage Not now (parked) · "' + NAMES.d + '" · "Wrong number" → Lost, no follow-up', async () => {
       for (const k of ['c', 'd']) { await go('#/leads', T('crm-leads')); await page.click(T('crm-lead-add')); await page.waitForSelector(T('crm-lead-sheet')); await page.fill(T('crm-lead-name'), NAMES[k]); await page.fill(T('crm-lead-phone'), PHONES[k]); await page.click(T('crm-lead-save')); await leadRow(NAMES[k]).waitFor({ timeout: 15000 }); }
       await go('#/calls', T('crm-calls')); await callRow(NAMES.c).waitFor({ timeout: 15000 }); await settle(300);
-      await callRow(NAMES.c).locator('[data-caret]').first().click().catch(() => {}); await settle(200); await page.click(T('crm-call-not_now')); await waitToast(/Saved/); await settle(800);
-      await callRow(NAMES.d).locator('[data-caret]').first().click().catch(() => {}); await settle(200); await page.click(T('crm-call-wrong_number')); await waitToast(/Saved/); await settle(800);
+      /* W1-CRM: Next moves from this row to the one that follows; an outcome saved opens the following row by itself (the next call is on screen) */
+      const cId = await callRow(NAMES.c).getAttribute('data-row');
+      await page.evaluate((id) => { CBList.get('crm-calls').open(id, true); }, cId); await settle(200);
+      const afterC = await page.evaluate((id) => crmCallFollowing(id), cId);
+      await page.click(T('crm-call-next')); await settle(300);
+      const nextOpened = afterC ? await page.locator('[data-row="' + afterC + '"]').first().getAttribute('aria-expanded') : null;
+      const cClosed = await callRow(NAMES.c).getAttribute('aria-expanded');
+      /* back to C (the following row closed again), log Not now on C: the row that followed C opens by itself */
+      await page.evaluate((ids) => { const a = CBList.get('crm-calls'); if (ids[1]) a.open(ids[1], false); a.open(ids[0], true); }, [cId, afterC]); await settle(200);
+      await page.locator('.cbl-next[data-next="' + cId + '"] ' + T('crm-call-not_now')).click(); await waitToast(/Saved/); await settle(800);   /* the open panel is the row's SIBLING (CBList nextHTML) */
+      const autoOpened = afterC ? await page.locator('[data-row="' + afterC + '"]').first().getAttribute('aria-expanded') : null;
+      const nextSaw = 'Next → following row ' + (afterC ? 'opened: ' + nextOpened : 'none (last)') + ' · C closed: ' + (cClosed === 'false') + ' · after Not now the following row opened by itself: ' + autoOpened;
+      const nextOk = cClosed === 'false' && (!afterC || (nextOpened === 'true' && autoOpened === 'true'));
+      const dId = await callRow(NAMES.d).getAttribute('data-row');
+      await page.evaluate((id) => { CBList.get('crm-calls').open(id, true); }, dId); await settle(200);
+      await page.locator('.cbl-next[data-next="' + dId + '"] ' + T('crm-call-wrong_number')).click(); await waitToast(/Saved/); await settle(800);
       await go('#/leads', T('crm-leads')); await settle(800);
       const rc = (await leadRow(NAMES.c).innerText()).replace(/\s+/g, ' '), rd = (await leadRow(NAMES.d).innerText()).replace(/\s+/g, ' ');
       await go('#/followups', T('crm-fu-list')); await settle(600); const fuD = await page.locator('[data-row][data-testid^="crm-fu-"]', { hasText: NAMES.d }).count();
-      return { ok: /Not now/.test(rc) && /Lost/.test(rd) && fuD === 0, saw: 'C "' + rc + '" · D "' + rd + '" · follow-ups for D: ' + fuD };
+      return { ok: nextOk && /Not now/.test(rc) && /Lost/.test(rd) && fuD === 0, saw: nextSaw + ' · C "' + rc + '" · D "' + rd + '" · follow-ups for D: ' + fuD };
     });
     await w.step('L13', 'Follow-ups: the Ring again row → Done → it leaves the open list', async () => {
       const fu = page.locator('[data-row][data-testid^="crm-fu-"]', { hasText: NAMES.a }).first();

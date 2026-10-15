@@ -19,20 +19,24 @@ W.run('bill', async (w) => {
   await page.goto(base + '/till.html');
   await page.waitForFunction(() => typeof window.modOpen === 'function' && typeof window.parkBill === 'function' && typeof window.dayClose === 'function' && window.CBTax, null, { timeout: 30000 });
   /* the fixture shop and its shelf */
-  await page.evaluate((api) => {
+  /* INT7a-GREEN: the walk's one today (lib/today.cjs) is Node's — handed INTO the page as an argument, never named inside it */
+  await page.evaluate((given) => {
+    var api = given.api;
     CloudHost.key = 'demo-key'; CloudHost.api = api; HOST = CloudHost;
     window.ageAllow = async () => true;
     window.tillStopped = async () => false;                 /* the fixture counter counts as signed in and paired: the gate is walked by hand (H20), not here */
     try { WHO = { name: 'Walk Cashier' }; } catch (_) {}
     var spice = [{ name: 'Spice', required: true, max: 1, options: [{ name: 'Medium', price: 0 }, { name: 'Hot', price: 10 }] }];
-    window.S = { shop: { name: 'Walk Cafe', currency: 'INR', gstin: '29ABCPE1234F1Z7', state_code: '29', reg_type: 'regular', address: 'Bengaluru, Karnataka 560001' },
-      at: TD.nowIso(), offers: [], slabs: [],
-      items: [{ item_id: 'dosa', name: 'Masala Dosa', price: 70, unit: 'plate', _rate: 5 },
+    window.S = { shop: { name: 'Walk Cafe', country: 'IN', currency: 'INR', gstin: '29ABCPE1234F1Z7', state_code: '29', reg_type: 'regular', address: 'Bengaluru, Karnataka 560001' },   /* country IN stated: GST is India's pack's answer (W1-TILL) */
+      /* a REAL slab, cited the way the catalogue cites it (tax_slab → slabs[].id, as till-country-bill's shelf does): the engine resolves the
+         rate from it (CBTax.slab.resolve), so only Poori — which cites none — is the unrated line. `_rate` was only the tile's paint cache. */
+      at: given.nowIso, offers: [], slabs: [{ id: 'std', name: 'Standard', rate: 5 }],
+      items: [{ item_id: 'dosa', name: 'Masala Dosa', price: 70, unit: 'plate', tax_slab: 'std' },
               { item_id: 'poori', name: 'Poori', price: 50, unit: 'plate' },
-              { item_id: 'paneer', name: 'Chilli Paneer', price: 185, unit: 'plate', _rate: 5, item_data: { modifiers: spice } },
-              { item_id: 'tea', name: 'Tea', price: 10, unit: 'cup', _rate: 5 }] };
+              { item_id: 'paneer', name: 'Chilli Paneer', price: 185, unit: 'plate', tax_slab: 'std', item_data: { modifiers: spice } },
+              { item_id: 'tea', name: 'Tea', price: 10, unit: 'cup', tax_slab: 'std' }] };
     CART = []; MODE = 'sell'; PARKED = []; try { ls.set(shopLs('cb_till_dayclosed'), 'null'); } catch (_) {}
-  }, base);
+  }, { api: base, nowIso: TD.nowIso() });
   /* a sign-in or pairing sheet over the till would hide the controls - close any dialog that opened by itself */
   await page.evaluate(() => { document.querySelectorAll('dialog[open]').forEach((d) => { try { d.close(); } catch (_) {} }); });
 
@@ -46,10 +50,17 @@ W.run('bill', async (w) => {
     const total = await page.locator('[data-testid="till-total"]').first().innerText().catch(() => '');
     return { ok: c.length === 1 && c[0].name === 'Masala Dosa' && c[0].price === 70, saw: JSON.stringify(c) + ' - total on screen: ' + (total || 'not drawn') };
   });
-  await w.step('BF1', 'Add Poori (the shelf has no tax rate for it) -> the till says so, naming Poori', async () => {
-    await type('Poori'); const c = await cart(); const n = await note(); const t = await screenText();
-    const said = /Poori has no tax rate/.test(n) || /Poori has no tax rate/.test(t);
-    return { ok: c.length === 2 && said, saw: 'bill has ' + c.length + ' lines; the till said: "' + (/no tax rate/.test(n) ? n : (t.match(/[^.]{0,40}has no tax rate[^.]{0,60}/) || ['nothing about a missing rate'])[0]).trim() + '"' };
+  /* M40 (walk 2026-10-10): ONE line on the bill with a count and Fix ›; the name sits behind Fix › (billWarnFix) — the same shape till-bill-checks proves */
+  await w.step('BF1', 'Add Poori (the shelf has no tax rate for it) -> the bill says "1 item has no tax rate · Fix ›" -> Fix › names Poori', async () => {
+    await type('Poori'); const c = await cart(); const t = await screenText();
+    const line = (t.match(/⚠ 1 item has no tax rate[^⚠]{0,12}Fix ›/) || [''])[0].trim();
+    let named = '';
+    if (line) {
+      await page.click('[data-testid="till-warn-norate-fix"]'); await page.waitForSelector('#askdlg[open]', { timeout: 6000 }).catch(() => null);
+      named = await page.evaluate(() => (document.getElementById('askbody') || {}).textContent || '');
+      await page.click('#askno').catch(() => null); await page.waitForTimeout(250);   /* Close — the walk never opens the catalogue */
+    }
+    return { ok: c.length === 2 && !!line && /Poori/.test(named), saw: 'bill has ' + c.length + ' lines; the bill says "' + (line || 'nothing about a missing rate') + '"; Fix › says "' + named.replace(/\s+/g, ' ').trim().slice(0, 90) + '"' };
   });
   await w.step('BF3', 'Add Chilli Paneer -> the choice sheet opens -> pick Hot, Add -> the bill line carries "Hot" and its price', async () => {
     await page.fill('#q', 'Chilli Paneer'); await page.waitForTimeout(250); await page.press('#q', 'Enter');

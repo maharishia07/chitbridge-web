@@ -237,8 +237,7 @@ function l2cRoute(L, r, q, u, p, m, body) {
   }
   if ((x = p.match(/^\/api\/crm\/parties\/([^/]+)\/timeline$/)) && m === 'GET') {
     const l = findLead(L, decodeURIComponent(x[1])); if (!l) return null;
-    const es = tlEntries(L, l.party_id), limit = Math.max(1, Math.min(100, Number(u.searchParams.get('limit')) || 30));
-    return J(r, 200, { party_id: l.party_id, entries: es.slice(0, limit), next_before: es.length > limit ? es[limit - 1].at : null, migrated: true });
+    return J(r, 200, crmApi.timelinePage(tlEntries(L, l.party_id), l.party_id, { before: u.searchParams.get('before'), limit: u.searchParams.get('limit') }));   /* the one envelope (crm-api) */
   }
   if ((x = p.match(/^\/api\/crm\/parties\/([^/]+)$/)) && m === 'GET') {
     const l = findLead(L, decodeURIComponent(x[1])); if (!l) return null;
@@ -288,7 +287,7 @@ async function route(S, r) {
     const id = decodeURIComponent(x[1]), row = fx.list.find((z) => z.party_id === id || z.party_no === id) || fx.list[0];
     return J(r, 200, Object.assign(crmApi.record(fx.list, row.party_id, fx.records[row.party_id], [], TD.nowMs()), { contact_prefs: pvContactPrefs(S.priv, row.party_id) }));
   }
-  if ((x = p.match(/^\/api\/crm\/parties\/([^/]+)\/timeline$/)) && S.priv) { const id = decodeURIComponent(x[1]), row = fx.list.find((z) => z.party_id === id || z.party_no === id) || fx.list[0]; return J(r, 200, { party_id: row.party_id, entries: [], next_before: null, migrated: true }); }
+  if ((x = p.match(/^\/api\/crm\/parties\/([^/]+)\/timeline$/)) && S.priv) { const id = decodeURIComponent(x[1]), row = fx.list.find((z) => z.party_id === id || z.party_no === id) || fx.list[0]; return J(r, 200, crmApi.timelinePage([], row.party_id, { limit: u.searchParams.get('limit') })); }
   if (p === '/api/crm/followups') return J(r, 200, crmApi.followups([]));
   if (m === 'GET') return J(r, 200, {});
   return J(r, 200, { ok: true });

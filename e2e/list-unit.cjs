@@ -95,7 +95,7 @@ const THROWING_STORAGE = () => { const boom = function () { throw new Error('sto
   const g = await p.evaluate(() => ({ cbl: typeof window.CBList, mount: typeof (window.CBList || {}).mount, keys: Object.keys(window.CBList || {}).sort().join(','), css: document.querySelectorAll('#cblist_css').length }));
   ok(g.cbl === 'object' && g.mount === 'function', 'CBList.mount exists on a page that defines no host globals');
   ok(g.css === 1, 'its CSS is injected once (#cblist_css)');
-  ok(g.keys === 'get,mount,nextRow,reset', 'the unit exports only mount · nextRow (its next-level row) · get · reset: ' + g.keys);
+  ok(g.keys === 'every,get,mount,nextRow,reset', 'the unit exports only mount · nextRow (its next-level row) · get · reset · every (the whole set page by page, T2-PAGING): ' + g.keys);
   const rows0 = await p.locator('.cbl-row').count();
   ok(rows0 > 10 && await p.locator('.cbl-hdr [role=columnheader]').count() >= 3, 'the Day book draws ' + rows0 + ' rows under a header on the bare page');
   const fonts = await p.evaluate(() => getComputedStyle(document.querySelector('.cbl')).backgroundColor);

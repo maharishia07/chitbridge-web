@@ -31,7 +31,9 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(70) + '· ' + (d
 
   console.log('\n── BF1 · no tax rate: said at the till, and the slip does not claim a tax invoice');
   const r1 = await p.evaluate(() => {
-    S = { shop: { name: 'Mayur Bhavan', gstin: '29ABCPE1234F1Z7', state_code: '29', reg_type: 'regular', address: 'Karnataka Layout, Bengaluru 560001' }, slabs: [], items: [] };
+    /* INT7a-GREEN: the stand-in STATES India (country IN) — the GSTIN state check, the GST word and the CGST/SGST split are India's
+       pack's answers, and since W1-TILL the counter answers India only for a stated India (docCountry → shopPack, the one reader) */
+    S = { shop: { name: 'Mayur Bhavan', gstin: '29ABCPE1234F1Z7', state_code: '29', reg_type: 'regular', country: 'IN', address: 'Karnataka Layout, Bengaluru 560001' }, slabs: [], items: [] };
     CART = [{ name: 'Poori', gst_rate: null, qty: 1 }, { name: 'Masala Dosa', gst_rate: 5, qty: 1 }];
     var warn = billWarnHTML();
     var bill = { kind: 'tax', no: 'C5/26-27/0001', at: Date.now(), total: 235, lines: [{ name: 'Poori', qty: 1, unit: 'plate', price: 50, net: 50, gst_rate: undefined }, { name: 'Masala Dosa', qty: 1, unit: 'plate', price: 185, net: 185, gst_rate: 5 }], payments: [], pos_state: '29' };
