@@ -83,16 +83,23 @@ const FILE_NAMED = {
   api: [/(?:^|[\/'"\s])((?:lib|routes|middleware|src|governance|tools|scripts)\/[\w.\/-]+?)(?:\.c?js)?$/, /(?:^|[\/'"\s])(tools\/tally-connector\/[\w.-]+\.html)$/],
   engines: [/(?:^|[\/'"\s])((?:src|tools)\/[\w.\/-]+\.c?js)$/]
 };
+/** the node id a test's string names, or null — the name may come without its extension (path.join(API, 'lib', 'rail')), a web
+ *  file may sit under public/, and a counter page is a screen node (INT7b) */
 function fileNamedBy(repo, text, byId) {
   for (const pattern of FILE_NAMED[repo] || []) {
     const match = pattern.exec(text);
     if (!match) continue;
-    /* the name may come without its extension (path.join(API, 'lib', 'rail')); a counter page is a screen node (INT7b) */
-    for (const rel of [match[1], match[1] + '.js', match[1] + '.cjs']) {
-      for (const prefix of ['file:' + repo + ':public/', 'file:' + repo + ':', 'screen:' + repo + ':']) if (byId.has(prefix + rel)) return prefix + rel;
-    }
+    const relPaths = [match[1], match[1] + '.js', match[1] + '.cjs'];
+    const candidates = ['file:' + repo + ':public/', 'file:' + repo + ':', 'screen:' + repo + ':'].flatMap((prefix) => relPaths.map((relPath) => prefix + relPath));
+    const found = candidates.find((id) => byId.has(id));
+    if (found) return found;
   }
   return null;
+}
+/** a test that OPENS a page drives the scripts that page loads with <script src> (not the workshop app.html, whose caps load lazily) — INT7b */
+function linkPageScripts(page, testFile, resolveWebSrc, edge) {
+  if (!page || page.rel === 'public/app.html') return;
+  for (const script of page.scripts || []) { const file = resolveWebSrc(page, script.src); if (file) edge(file.id, testFile.id, 'tested-by', 'page'); }
 }
 /** every module a test names by path string gets a tested-by edge (READ-GUARD: the trace row of a tool or a lib) */
 function linkNamedFiles(testFile, byId, edge) {
@@ -128,7 +135,7 @@ function build() {
     addFile('api', path.join(A, 'server.js'), 'api-lib');
     walk(path.join(A, 'tests'), (p) => /\.(test\.)?(cjs|js)$/.test(p) && !/\/(fixtures|support|helpers?)\//.test(p)).sort().forEach((p) => addFile('api', p, 'test'));
     /* the counter's pages (the till master and promo) are own code with a trace row: screens of the api repo (INT7b) */
-    walk(path.join(A, 'tools', 'tally-connector'), (p) => /\.html$/.test(p) && path.dirname(p) === path.join(A, 'tools', 'tally-connector')).sort().forEach((p) => addFile('api', p, 'page'));
+    walk(path.join(A, 'tools', 'tally-connector'), (filePath) => /\.html$/.test(filePath) && path.dirname(filePath) === path.join(A, 'tools', 'tally-connector')).sort().forEach((filePath) => addFile('api', filePath, 'page'));
   }
   /* engines */
   if (meta.present.engines) {
@@ -457,7 +464,7 @@ function build() {
     if (isTest && f.repo === 'web') {
       for (const s of f.scan.strings) {
         let m;
-        if ((m = /(?:^|[\/'"\s])([a-z0-9-]+\.html)(?:[#?]|$)/.exec(s.text)) && byId.get('screen:web:public/' + m[1])) edge('screen:web:public/' + m[1], f.id, 'tested-by', 'opens');
+        if ((m = /(?:^|[\/'"\s])([a-z0-9-]+\.html)(?:[#?]|$)/.exec(s.text)) && byId.get('screen:web:public/' + m[1])) { edge('screen:web:public/' + m[1], f.id, 'tested-by', 'opens'); linkPageScripts(webByRel.get('public/' + m[1]), f, resolveWebSrc, edge); }
         if ((m = /(?:^|\/)cmdb\/record\.html/.exec(s.text)) && byId.get('screen:web:public/cmdb/record.html')) edge('screen:web:public/cmdb/record.html', f.id, 'tested-by', 'opens');
         if ((m = /#\/app\/([a-z][a-z0-9-]*)/.exec(s.text)) && byNav[m[1]]) edge('screen:web:public/app.html#' + m[1], f.id, 'tested-by', 'opens');
         if (/^[A-Za-z_$][\w$]*$/.test(s.text) && webTopNames.has(s.text)) for (const fn of webTopNames.get(s.text)) edge(fn.id, f.id, 'tested-by', 'names');

@@ -38,6 +38,7 @@ const { chromium } = require('@playwright/test');
 const { serve } = require('./lib/serve.cjs');
 const { measure } = require('./lib/theme-measure.cjs');
 const { audit } = require('./lib/rule13.cjs');
+const TD = require('./lib/today.cjs');   /* QW1-TODAY: the one injected today — never the runner's clock */
 
 const ROOT = path.join(__dirname, '..');
 const SHOTS = path.join(__dirname, 'shots', 'tour');
@@ -73,7 +74,7 @@ function ownHeaderInSource(p) {
 }
 
 const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64').replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
-const TOKEN = b64({ alg: 'none' }) + '.' + b64({ identity_id: 'ent-tour', identity_type: 'entity', exp: Math.floor(Date.now() / 1000) + 3600 }) + '.x';
+const TOKEN = b64({ alg: 'none' }) + '.' + b64({ identity_id: 'ent-tour', identity_type: 'entity', exp: Math.floor(TD.nowMs() / 1000) + 3600 }) + '.x';
 const SESSION = JSON.stringify({ token: TOKEN, role: 'entity', name: 'Fixture Owner', entity: 'Fixture Shop', bridgeId: SHOP });
 
 /* runs in the page: the frame rows */

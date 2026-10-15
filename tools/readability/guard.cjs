@@ -93,11 +93,12 @@ function ruleCard(file, head) {
   return { level: 'fail', rule: 'card-line', text: `${file}: no \`// CARD <area>/<card-id>\` line in the module header — §6 Pass 3 (the TRACE matrix is generated from it)` };
 }
 
-/** the module's row in trace.json must name at least one test */
+/** the module's row in trace.json must name at least one test — a unit test or a walk (§6 Pass 3: "a test reaches the function (unit or walk)") */
 function ruleTraceRow(file, trace) {
   if (!trace || !trace.modules) return { level: 'warn', rule: 'trace-row', text: `${file}: no trace.json to check a test row against (run node tools/graph/trace.cjs)` };
   const row = trace.modules[file];
-  if (row && row.tests && row.tests.length) return null;
+  const reached = row ? (row.tests || []).length + (row.walks || []).length : 0;
+  if (reached) return null;
   return { level: 'fail', rule: 'trace-row', text: `${file}: no test reaches this module in trace.json (KG1 tested-by) — add a unit test or a walk, then node tools/graph/trace.cjs` };
 }
 
