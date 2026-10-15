@@ -218,7 +218,8 @@ const walk = async (w) => {
     const after = await chosen();
     await page.click('[data-testid="cs-save"]'); await page.waitForTimeout(800);
     const patch = S.calls.filter((c) => c.m === 'PATCH' && c.p === '/api/entities/policy').pop();
-    return { ok: /₹12,34,567\.89/.test(num) && choice && /12(\.3)? lakh/.test(words) && /1\.2 million/.test(after) && patch && patch.body.number_words === 'million', saw: num + ' · choice ' + choice + ' · "' + words.slice(0, 40) + '" → "' + after.slice(0, 40) + '" · ' + JSON.stringify(patch && patch.body) };
+    const sp = '[\\s\\u00a0\\u202f]';   /* ICU's compact notation joins the number and the word with a narrow no-break space */
+    return { ok: /₹12,34,567\.89/.test(num) && choice && new RegExp('12(\\.3)?' + sp + 'lakh').test(words) && new RegExp('1\\.2' + sp + 'million').test(after) && patch && patch.body.number_words === 'million', saw: num + ' · choice ' + choice + ' · "' + words.slice(0, 40) + '" → "' + after.slice(0, 40) + '" · ' + JSON.stringify(patch && patch.body) };
   });
   await go('print', '[data-testid="pr-editor"]');
   await w.step('A22', 'IN · the sample bill carries GSTIN, CGST/SGST and the HSN table; the address cannot be unticked (Rule 46)', async () => {
