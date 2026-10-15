@@ -439,6 +439,55 @@ var CBAction = (function () {
 })();
 
 /**
+ * ⭐ SET-WALK1 · W24 (2026-10-15) — NEVER LOSE IN-PROGRESS WORK: leaving a screen with unsaved edits asks "Save or discard?" — ONE helper
+ * for every form of every small app (the legal-name edit vanished when the tab moved to Account; DISCIPLINES §3 "never lose in-progress work").
+ *   CBUnsaved.form({ dirty: fn → bool, save: fn → Promise })   a screen registers how it knows it moved and how it saves (a screen that keeps a
+ *                                                           model: its own test; a plain form: CBUnsaved.domDirty(host) — any input whose value
+ *                                                           left its defaultValue). mount() of the next screen calls CBUnsaved.reset().
+ *   CBUnsaved.leave(go)                                     the page's router calls it BEFORE painting the next screen: nothing moved → go();
+ *                                                           moved → CBConfirm "Unsaved changes" · Save → save() then go() · Discard → go()
+ *                                                           (✕ / Escape = Discard, as the standard modal's Cancel). With no save fn: Discard · Stay.
+ * Also the browser's own leave (beforeunload) while something moved — the browser's sentence, since ours cannot be shown there.
+ */
+var CBUnsaved = (function () {
+  var S = { forms: [] };
+  function reset() { S.forms = []; }
+  function form(o) { if (o && typeof o.dirty === 'function') S.forms.push(o); return o; }
+  /** any input, select or textarea under host whose value left what the screen painted (a repaint after Save paints the saved values) */
+  function domDirty(host) {
+    var h = typeof host === 'string' ? document.getElementById(host) : host; if (!h) return false;
+    var els = h.querySelectorAll('input,textarea,select'), i, e;
+    for (i = 0; i < els.length; i++) {
+      e = els[i];
+      if (e.disabled || e.type === 'hidden' || e.type === 'button' || e.type === 'submit' || e.hasAttribute('data-unsaved-ignore')) continue;
+      if (e.tagName === 'SELECT') { var sel = e.options[e.selectedIndex]; if (sel && !sel.defaultSelected && e.querySelector('option[selected]')) return true; continue; }
+      if (e.type === 'checkbox' || e.type === 'radio') { if (e.checked !== e.defaultChecked) return true; continue; }
+      if (e.value !== e.defaultValue) return true;
+    }
+    return false;
+  }
+  function dirtyForms() { return S.forms.filter(function (f) { try { return !!f.dirty(); } catch (e) { if (typeof cblog === 'function') cblog('error', 'unsaved: a dirty test threw: ' + ((e && e.message) || e)); return false; } }); }
+  function isDirty() { return dirtyForms().length > 0; }
+  function leave(go, stay) {
+    var moved = dirtyForms();
+    if (!moved.length) return go();
+    var savers = moved.filter(function (f) { return typeof f.save === 'function'; });
+    var body = esc(tx(savers.length ? 'Save or discard what you typed?' : 'What you typed here is not saved. Discard it?'));
+    if (savers.length) {
+      CBConfirm(tx('Unsaved changes'), body, tx('Save'), function () {
+        Promise.all(savers.map(function (f) { return Promise.resolve().then(f.save); })).then(function () { reset(); go(); }, function (e) { if (typeof toast === 'function') toast(CBAction.words(e, tx('Could not save'))); if (stay) stay(); });
+      }, false, function () { reset(); go(); });
+      var cancel = document.querySelector('#cb_confirm [data-testid="confirm-cancel"]'); if (cancel) { cancel.textContent = tx('Discard'); cancel.setAttribute('data-testid', 'confirm-discard'); }
+    } else {
+      CBConfirm(tx('Unsaved changes'), body, tx('Discard'), function () { reset(); go(); }, true, function () { if (stay) stay(); });
+      var stayBtn = document.querySelector('#cb_confirm [data-testid="confirm-cancel"]'); if (stayBtn) stayBtn.textContent = tx('Stay');
+    }
+  }
+  if (typeof window !== 'undefined') window.addEventListener('beforeunload', function (ev) { if (isDirty()) { ev.preventDefault(); ev.returnValue = ''; } });
+  return { form: form, reset: reset, leave: leave, isDirty: isDirty, domDirty: domDirty };
+})();
+
+/**
  * ⭐ THE CONFIRM FOR A PAGE THAT IS NOT THE APP — one native <dialog>, used by accounts.html (it is that page's confirmAsk)
  * and by the index tile's Switch on. Same signature as the app's confirmAsk(title, bodyHtml, okLabel, onOk, danger, onCancel);
  * bodyHtml is raw HTML (escape dynamic parts in the caller). The app keeps its own modal host — confirmAsk there is bound to

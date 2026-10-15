@@ -192,6 +192,7 @@ function setSetSec(){}
 <script src="/app/rail-bell.js"></script>   <!-- CBBell.mount: the bell, the same one every app header has -->
 <script src="/app/kural.js"></script>   <!-- CBKural: the kural band, ONE place below the page, the same on every page -->
 <script src="/app/cap-standards.js"></script>   <!-- the register, its vocabularies, the two sheets, stdGoto -->
+<script src="/app/country-ready.js"></script>   <!-- CBCountryReady (W28c): the Country readiness sheet (?ready=<cc>) — the one unit the Country lab paints too -->
 <script>
 'use strict';
 /* ═══ STANDARDS — the page: the matrix pane, the CBList mount, the two sheets. The register is cap-standards.js. ═══ */
@@ -540,6 +541,24 @@ function start(){
   if (location.hash === '#works-with') openWorks();   /* T3-COMPAT: Home's Compatibility card */
   /* CPS1: ?std=country (from Country setup) — the list, searched down to the Country Standard's row through the unit's own search box */
   if (q.get('std') === 'country'){ var cq = $('std_list').querySelector('[data-cbl-q]'); if (cq){ cq.value = 'Country Standard'; cq.dispatchEvent(new Event('input', { bubbles: true })); } $('app').setAttribute('data-view', 'list'); }
+  /* SET-WALK1 · W28(c): ?ready=<cc> — "Where ChitBridge is for <country>" as the Country readiness sheet (moved OUT of Country setup; CBCountryReady is the one unit) */
+  if (q.get('ready')) openReady(String(q.get('ready')).toUpperCase().slice(0, 2));
+}
+/** W28(c) · Country readiness: one row per product area — ✅ · ⚠️ · ❌ · — from public/data/country-ready.json (CBCountryReady.view), in the page's sheet */
+function openReady(cc){
+  var d = $('sheet');
+  var name = cc; try { name = new Intl.DisplayNames(['en'], { type: 'region' }).of(cc) || cc; } catch (_) {}
+  d.innerHTML = '<div class="sh-head"><h2 data-testid="std-ready-title">Country readiness · ' + esc(name) + '</h2><button type="button" class="sh-x" data-act="sheetx" data-testid="std-sheet-x" aria-label="Close">✕</button></div>'
+    + '<div class="sh-body" data-testid="std-sheet-ready"><div class="hint" data-testid="std-ready-loading">Reading…</div></div>';
+  if (!d.open){ try{ d.showModal(); }catch(_){ d.setAttribute('open', ''); } }
+  var paint = function (html) { var b = d.querySelector('[data-testid="std-sheet-ready"]'); if (b) b.innerHTML = html; };
+  if (!window.CBCountryReady) return paint('<div class="hint" data-testid="std-ready-err">Could not read where ChitBridge is for each country.</div>');
+  CBCountryReady.load().then(function (data) {
+    var v = CBCountryReady.view(data, cc, name);
+    paint('<p class="hint" data-testid="' + (v.known ? 'std-ready-pack' : 'std-ready-none') + '">' + esc(v.known ? v.pack : v.none) + '</p>'
+      + '<dl>' + v.rows.map(function (r) { return '<dt data-testid="std-ready-row" data-state="' + esc(r.state) + '"><span aria-hidden="true">' + esc(r.sym) + '</span> ' + esc(r.area) + '</dt><dd>' + esc(r.line) + '</dd>'; }).join('') + '</dl>'
+      + '<p class="hint"><a href="/settings.html#/country" data-testid="std-ready-back">Country setup ›</a></p>');
+  }, function () { paint('<div class="hint" data-testid="std-ready-err">Could not read where ChitBridge is for each country.</div>'); });
 }
 if (window.CBKural) CBKural.mount({ route: 'planning' });
 /* two files are read before the first paint: the Compatibility rows (M41) and the country matrix (CPS1) — each failure is said in its place, never silent */

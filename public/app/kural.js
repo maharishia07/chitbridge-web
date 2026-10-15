@@ -111,6 +111,13 @@
     (DATA.kurals || []).forEach(function (x) { if (!k && x.route === route && bad.indexOf(x.no) < 0) k = x; });
     return k;
   }
+  /** W7: does this person want the band? pref `kural` — 'on' · 'off' · 'auto' (on only where Tamil is among the languages read, CBLocale.langs) */
+  function wanted() {
+    var p = 'auto'; try { p = (root.CBAvatar && root.CBAvatar.get && root.CBAvatar.get().kural) || 'auto'; } catch (_) { p = 'auto'; }
+    if (p === 'on') return true;
+    if (p === 'off') return false;
+    try { var ls = (root.CBLocale && root.CBLocale.langs && root.CBLocale.langs()) || []; return ls.indexOf('ta') >= 0; } catch (_) { return false; }
+  }
   /** the app's language, when the page has one; Tamil and everything unlisted read the English line (the `meaning.ta` slot stays empty by decision) */
   function lang() {
     var l = ''; try { l = String((root.CBLocale && root.CBLocale.lang && root.CBLocale.lang()) || doc.documentElement.lang || 'en').toLowerCase().slice(0, 2); } catch (_) { l = 'en'; }
@@ -163,7 +170,8 @@
     /* the phone's 7 s turn-taking keeps ITS clock across repaints (a repaint must not restart the count); it is stopped below when the band is not drawn or the person is in charge */
     /* ONE place: the band is never a part of a header, a bar or a title row, whoever mounted it or moved it there (Round U, 2026-10-09) */
     if (EL.closest(HEAD_SEL)) (HOST && !HOST.closest(HEAD_SEL) ? HOST : doc.body).appendChild(EL);
-    var k = find(ROUTE);
+    /* SET-WALK1 · W7: the band is the OWNER'S choice (CBAvatar pref `kural`: on · off · auto = only where the shop reads Tamil); off = no band, no room */
+    var k = wanted() ? find(ROUTE) : null;
     BLOCKED = blockedNow();
     /* a band that may not be drawn BESIDE a warning keeps its room (quiet, blank): the page does not grow and shrink as warnings come and go (UI9) */
     if (k && BLOCKED) makeRoom(prevH > 20 ? prevH : reserveH(), true); else unreserve();
@@ -215,6 +223,8 @@
       return load().then(function () { paint(); return root.CBKural; });
     },
     set: function (route) { ROUTE = route || ''; SECOND = false; PAUSED = false; return load().then(function () { paint(); }); },
+    repaint: function () { if (DATA) paint(); },   /* W7: the avatar's kural pref changed */
+    wanted: wanted,
     lead: function (l) { if (l !== 'ta' && l !== 'en') return; LEAD = l; lsSet('kural.lang', l); paint(); },
     route: function () { return ROUTE; },
     refresh: function () { paint(); },

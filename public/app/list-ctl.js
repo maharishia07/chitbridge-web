@@ -722,11 +722,18 @@
   }
   function selectedRows(I) { var ids = I.r.sel; return allRows(I).filter(function (r, i) { return ids[rid(I, r, i)]; }); }
 
-  /* the rows area fills the rest of the window: from its top edge to the bottom of the viewport, recalculated on resize */
+  /* the rows area fills the rest of the window: from its top edge to the bottom of the viewport, recalculated on resize.
+     ⭐ SET-WALK1 · W21 (15 Oct): an EMPTY or SHORT list is as tall as its content — the "only rows scroll" height applies only when the rows
+     overflow it. Before: every list took the window's rest (an empty sessions list painted 2,400 px of nothing), and a list scrolled up out of
+     a scrolling pane (its top NEGATIVE) grew by the scrolled distance. Now: the top is clamped at the window's edge, the natural height is
+     measured with the inline height off, and the window height is set only when the content would overflow it. */
   function fit(I) {
     if (I.o.fill === false || !I.el.getBoundingClientRect) return;
-    var top = I.el.getBoundingClientRect().top, h = Math.max(300, Math.floor(root.innerHeight - top - (I.o.bottom == null ? 8 : I.o.bottom)));
-    I.el.style.height = h + 'px';
+    var top = Math.max(0, I.el.getBoundingClientRect().top), avail = Math.max(300, Math.floor(root.innerHeight - top - (I.o.bottom == null ? 8 : I.o.bottom)));
+    I.el.style.height = '';
+    var natural = I.el.scrollHeight;
+    I.el.style.height = natural > avail ? avail + 'px' : '';
+    I.el.setAttribute('data-cbl-fit', natural > avail ? 'window' : 'content');
   }
 
   /* ═════ actions ═════ */

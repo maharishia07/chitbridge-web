@@ -116,7 +116,7 @@ function csuConstituted() { return !!(CSU.p && CSU.p.constituted); }
 /** the prefill: the server's answer first (it knows what registration stored), else what the browser worked out (M196) — each with its source */
 function csuPrefill() {
   var p = CSU.p, g = null; try { g = govCtx(); } catch (_) {}
-  var e = { country: '', currency: '', fy: 0, registered: false, number: '', scheme: 'regular', timezone: '' }, src = {};
+  var e = { country: '', currency: '', fy: 0, registered: false, number: '', scheme: 'regular', timezone: '', words: (CSU.flags && CSU.flags.number_words) || 'pack', supplies: (CSU.me && CSU.me.supplies) || 'goods' }, src = {};
   if (p) {
     e.country = (p.country && p.country.code) || ''; e.currency = p.currency || ''; e.fy = p.fy_start_month || 0;
     e.registered = !!(p.tax && p.tax.registered); e.number = (p.tax && p.tax.number) || ''; e.scheme = (p.tax && p.tax.scheme) || 'regular';
@@ -136,6 +136,9 @@ function csuPrefill() {
     e.country = g.country.value; src.country = g.country.from; e.currency = ''; e.fy = 0; }
   if (!e.country && g && g.country && g.country.value) { e.country = g.country.value; src.country = g.country.from; }
   if (!e.currency && g && g.currency && g.currency.value) { e.currency = g.currency.value; src.currency = g.currency.from; }
+  /* W10: the browser's guess worded the money's reason ("the usual currency in India") on an Australian shop — the reason names the SHOP's country */
+  if (e.country && src.currency && /the usual currency in /.test(String(src.currency)) && !p) src.currency = txf('the usual currency in {c}', { c: csuCountryName(e.country) });
+  if (e.country && p && !p.done && (!src.currency || /the usual currency in /.test(String(src.currency)))) src.currency = txf('the usual currency in {c}', { c: csuCountryName(e.country) });
   var pk = csuPackOf(e.country), rp = csuPack(e.country);
   /* the year: the server's pack row (CS2), else the regulation pack's (CX0: AU July · AE January), never India-or-January by guess */
   if (!e.fy) { e.fy = (pk && pk.fy_start_month) || (rp && rp.fiscalYear && rp.fiscalYear.startMonth) || (e.country === 'IN' ? 4 : 1);
@@ -150,12 +153,53 @@ function csuPrefill() {
 function csuRead() {
   if (CSU.loading) return;
   CSU.loading = true; CSU.readErr = false;
-  api('countrySetup').then(function (p) { CSU.p = p || null; }, function () { CSU.p = null; CSU.readErr = true; })
-    .then(function () { CSU.loading = false; csuPrefill(); renderCountrySetup(); });
+  /* W28 · W27(a): the words choice (policy_flags.number_words) and the supplies (identities.supplies) are read beside the step — their one writers stay PATCH /entities/policy and PATCH /entities/profile */
+  Promise.all([
+    api('countrySetup').then(function (p) { CSU.p = p || null; }, function () { CSU.p = null; CSU.readErr = true; }),
+    api('policyGet').then(function (r) { CSU.flags = (r && r.flags) || {}; }, function (e) { CSU.flags = {}; if (typeof cblog === 'function') cblog('error', 'country setup: policy read: ' + ((e && e.message) || e)); }),
+    api('me').then(function (r) { CSU.me = (r && (r.entity || r)) || {}; }, function (e) { CSU.me = {}; if (typeof cblog === 'function') cblog('error', 'country setup: /me read: ' + ((e && e.message) || e)); }),
+  ]).then(function () { CSU.loading = false; csuPrefill(); renderCountrySetup(); });
+}
+/* ── ⭐ SET-WALK1 · W28(b) — MONEY CONFIRMS MORE THAN THE CODE: the symbol · the number format · the words for big numbers · the decimals · the date,
+ * each a LIVE EXAMPLE from the SAME engine the bills use (CBLocale.money/symbol/date — the currency's own grouping, MONEY_LOCALE; CBMoney.decimals).
+ * This file computes nothing: it paints what the engine paints. The grouping is the currency's (not a choice: ₹12,34,567 is how rupees are
+ * written, A$1,234,567 how dollars are); the WORDS are the shop's (policy_flags.number_words — an Indian shop may say lakh/crore or million). */
+var CSU_SAMPLE = 1234567.89, CSU_WORDS = [['pack', 'as the money is written'], ['lakh', 'lakh · crore'], ['million', 'million']];
+function csuMoneyTag(cur) { try { return (window.CBLocale && CBLocale.moneyTag && CBLocale.moneyTag(cur)) || 'en-US'; } catch (_) { return 'en-US'; } }
+/** the words for a big number under a tag — Intl's compact notation (en-IN: "12 lakh" · en-US: "1.2 million"); the engine's own tag table decides which */
+function csuBigWords(n, words, cur) {
+  var tag = words === 'lakh' ? 'en-IN' : words === 'million' ? 'en-US' : csuMoneyTag(cur);
+  try { return new Intl.NumberFormat(tag, { notation: 'compact', compactDisplay: 'long', maximumFractionDigits: 1 }).format(n); } catch (_) { return String(n); }
+}
+function csuMoneyExamples(cur, words) {
+  var L = window.CBLocale, M = window.CBMoney, sym = '', money = '', date = '', dec = 2;
+  try { sym = L.symbol(cur); money = L.money(CSU_SAMPLE, cur); date = L.date(Date.now()); } catch (e) { if (typeof cblog === 'function') cblog('error', 'country setup: locale example: ' + ((e && e.message) || e)); }
+  try { dec = M && M.decimals ? M.decimals(cur) : 2; } catch (_) { dec = 2; }
+  return { symbol: sym || cur, number: money, decimals: dec, date: date, words: csuBigWords(CSU_SAMPLE, words, cur), lakhPack: csuMoneyTag(cur) === 'en-IN' };
+}
+/** the Money row's confirm block: symbol · number format · words · decimals · date, each a live example; the words a choice only where the money's own convention is lakh */
+function csuMoneyConfirmHTML(e) {
+  var x = csuMoneyExamples(e.currency, e.words);
+  var line = function (what, val, tid) { return '<div class="govrow" data-testid="cs-money-' + tid + '"><span class="gw">' + esc(what) + '</span><span class="gv" style="font-weight:600">' + val + '</span><span class="gf">' + esc(tx('live example')) + '</span></div>'; };
+  var wordsSel = x.lakhPack
+    ? csuSel('cs-words', 'words', CSU_WORDS.map(function (w) { return { v: w[0], t: tx(w[1]) + ' — ' + csuBigWords(CSU_SAMPLE, w[0], e.currency) }; }), e.words)
+    : '<span data-testid="cs-words-fixed">' + esc(x.words) + '</span>';
+  return '<div class="govbox" data-testid="cs-money-confirm" style="margin-top:4px">'
+    + line(tx('Symbol'), '<span translate="no">' + esc(x.symbol) + '</span>', 'symbol')
+    + line(tx('Number format'), '<span translate="no">' + esc(x.number) + '</span>', 'number')
+    + line(tx('Decimals'), esc(String(x.decimals)), 'decimals')
+    + line(tx('Big numbers'), wordsSel, 'words')
+    + line(tx('Date'), '<span translate="no">' + esc(x.date) + '</span>', 'date')
+    + '</div>';
+}
+/** W27(a): goods · services · both — the GST/WTO vocabulary; "both" is the common case (a garage sells a part and fits it) */
+function csuSuppliesRow(e) {
+  var opts = SHOP_SUPPLIES.map(function (o) { return { v: o[0], t: tx(o[1]) }; }), cur = opts.filter(function (o) { return o.v === e.supplies; })[0];
+  return csuRow('supplies', tx('Supplies'), esc(cur ? cur.t : tx('not said yet')), CSU.me && CSU.me.supplies ? tx('your shop') : tx('not set yet'), csuSel('cs-supplies', 'supplies', opts, e.supplies));
 }
 function csuSet(k, v) {
   if (!CSU.edit) return;
-  var map = { country: 'country', currency: 'currency', fy: 'fy_start_month', registered: 'tax', number: 'tax', scheme: 'tax', timezone: 'timezone' };
+  var map = { country: 'country', currency: 'currency', fy: 'fy_start_month', registered: 'tax', number: 'tax', scheme: 'tax', timezone: 'timezone', words: 'words', supplies: 'supplies' };
   if (k === 'country') {
     var c = String(v || '').toUpperCase(); CSU.edit.country = c;
     /* CS2: the whole shop follows the country — what its pack derives is painted now, the way the server sets it on save (derive) */
@@ -171,34 +215,15 @@ function csuSet(k, v) {
   else if (k === 'number') CSU.edit.number = String(v || '');
   else if (k === 'scheme') CSU.edit.scheme = String(v || 'regular');
   else if (k === 'timezone') CSU.edit.timezone = String(v || '');
-  if (k !== 'country') CSU.src[map[k]] = tx('typed'); else CSU.src.country = tx('typed');
+  else if (k === 'words') CSU.edit.words = String(v || 'pack');
+  else if (k === 'supplies') CSU.edit.supplies = String(v || 'goods');
+  /* W12: where the value came from, in words a person reads — "you chose", never "typed" */
+  if (k !== 'country') CSU.src[map[k]] = tx('you chose'); else CSU.src.country = tx('you chose');
+  CSU.touched = true;   /* W24: something moved since the read */
   CSU.err = '';
   renderCountrySetup();
 }
-/* CL3 · the readiness reader, loaded once on first paint (a small shared unit, not a cap); its data is read once per page */
-var CSU_READY = { data: null, state: '' };
-function csuReadyLoad() {
-  if (CSU_READY.state) return;
-  CSU_READY.state = 'loading';
-  var go2 = function () { CBCountryReady.load().then(function (d) { CSU_READY.data = d; CSU_READY.state = 'ok'; }, function () { CSU_READY.state = 'err'; }).then(function () { if (/^#\/country/.test(location.hash)) renderCountrySetup(); }); };
-  if (window.CBCountryReady) return go2();
-  var sc = document.createElement('script'); sc.src = '/app/country-ready.js?v=' + (typeof CB_BUILD !== 'undefined' ? CB_BUILD : ''); sc.onload = go2;
-  sc.onerror = function () { CSU_READY.state = 'err'; renderCountrySetup(); }; document.head.appendChild(sc);
-}
-/** "Where ChitBridge is for <country>": one row per product area — symbol · area · one line — in the gov panel's rows */
-function csuReadyHTML(cc) {
-  csuReadyLoad();
-  if (!cc || CSU_READY.state === 'loading' || !CSU_READY.state) return '';
-  if (CSU_READY.state === 'err') return '<div class="hint" data-testid="cs-ready-err">' + esc(tx('Could not read where ChitBridge is for each country.')) + '</div>';
-  var v = CBCountryReady.view(CSU_READY.data, cc, csuCountryName(cc));
-  return '<div class="govbox" data-testid="cs-ready">'
-    + '<div style="font-weight:700" data-testid="cs-ready-title">' + esc(v.title) + '</div>'
-    + '<div style="color:var(--grey);font-size:var(--fs-1)" data-testid="' + (v.known ? 'cs-ready-pack' : 'cs-ready-none') + '">' + esc(v.known ? v.pack : v.none) + '</div>'
-    + v.rows.map(function (r) {
-      return '<div class="govrow" data-testid="cs-ready-row" data-state="' + esc(r.state) + '"><span class="gw"><span aria-hidden="true">' + esc(r.sym) + '</span> ' + esc(r.area) + '</span><span class="gv" style="font-weight:600;font-size:var(--fs-2)">' + esc(r.line) + '</span></div>';
-    }).join('')
-    + '</div>';
-}
+/* CL3 → W28(c): the "Where ChitBridge is for <country>" rows left this step — they are Standards › Country readiness (standards.html ?ready=<cc>, the same CBCountryReady unit); the link above opens it */
 function csuOpen(k) { CSU.open[k] = !CSU.open[k]; renderCountrySetup(); }
 /**
  * one row: what · value · where it came from · Change (the registration's gov panel, with the one tap it lacked).
@@ -237,6 +262,7 @@ function renderCountrySetup() {
         csuSel('cs-country', 'country', countryOpts, e.country), fixed)
       + csuRow('currency', tx('Money'), esc(e.currency || tx('not known')), fixedWhy || s.currency,
         curOpts.length ? csuSel('cs-currency', 'currency', curOpts, e.currency) : '<input class="inp" id="cs-currency" data-testid="cs-currency" maxlength="3" placeholder="' + esc((csuPackOf(e.country) || csuPack(e.country) || {}).currency || '') + '" value="' + esc(e.currency) + '" onchange="csuSet(\'currency\', this.value)">', fixed)
+      + (e.currency ? csuMoneyConfirmHTML(e) : '')
       + csuRow('fy', tx('Year starts'), esc(monthNames('long')[(e.fy || 1) - 1] || ''), s.fy_start_month,
         csuSel('cs-fy', 'fy', monthNames('long').map(function (m, i) { return { v: i + 1, t: m }; }), e.fy))
       + ((zones.length || e.timezone)
@@ -249,7 +275,9 @@ function renderCountrySetup() {
         + csuSel('cs-tax-reg', 'registered', [{ v: 'no', t: tx('Not registered') }, { v: 'yes', t: txf('Registered for {s}', { s: csuScheme(e.country) }) }], e.registered ? 'yes' : 'no')
         + (e.registered ? '<input class="inp" id="cs-tax-number" data-testid="cs-tax-number" placeholder="' + esc(csuTaxIdHint(e.country)) + '" value="' + esc(e.number) + '" onchange="csuSet(\'number\', this.value)">' : '')
         + (e.registered && e.country === 'IN' ? csuSel('cs-tax-scheme', 'scheme', [{ v: 'regular', t: tx('Regular') }, { v: 'composition', t: tx('Composition') }], e.scheme) : '')
-        + '</div>');
+        + '</div>')
+      /* W27(a): the supplies live beside the registration — a tax attribute, not a bill line */
+      + csuSuppliesRow(e);
     body = '<div class="body">'
       + '<div style="color:var(--grey);font-size:var(--fs-2);margin-bottom:6px">' + esc(tx('We filled these in. Change any, then continue.')) + '</div>'
       + '<div class="govbox" data-testid="cs-rows">' + rows + '</div>'
@@ -263,10 +291,9 @@ function renderCountrySetup() {
           ? tx('Country and money never change once a shop has products or transactions. Register a new business for another country.')
           : tx('Country and money can still be corrected now. Once the shop has a product or a transaction they are fixed for good.')) + '</div>'
       /* CPS1: the Country Standard — what a country pack carries and what each pack still lacks (standards.html opens on that row's search) */
-      + '<div class="hint"><a href="/standards.html?std=country" data-testid="cs-standard" style="font-weight:600;color:var(--blue);cursor:pointer">' + esc(tx('What a country pack must carry — the Country Standard')) + ' ›</a></div>'
-      /* CL3: under Continue, so the step's one action stays beside its rows; the card scrolls to its top (.auth align-items:safe center)
-         and ends --scroll-tail above the fold (app.html's own rule), so its last row scrolls clear of the pinned Assistant button */
-      + csuReadyHTML(e.country)
+      + '<div class="hint"><a href="/standards.html?std=country" data-testid="cs-standard" style="font-weight:600;color:var(--blue);cursor:pointer">' + esc(tx('What a country pack must carry — the Country Standard')) + ' ›</a>'
+      /* W28(c): "Where ChitBridge is for <country>" is NOT a setup row — it lives under Standards › Country readiness (the same CBCountryReady unit); one link from here */
+      + (e.country ? ' · <a href="/standards.html?std=country&ready=' + esc(e.country) + '" data-testid="cs-ready-link" style="font-weight:600;color:var(--blue);cursor:pointer">' + esc(txf('Where ChitBridge is for {c}', { c: csuCountryName(e.country) })) + ' ›</a>' : '') + '</div>'
       + '</div>';
   }
   if (CSU.host) CSU.host.innerHTML = '<div class="cs"><h2 class="shop-h" data-testid="cs-title">' + esc(tx('Country setup')) + '</h2>' + body + '</div>';
@@ -280,9 +307,10 @@ function csuSave() {
   CSU.err = '';
   var body = { country: e.country, currency: e.currency, fy_start_month: e.fy, tax: { registered: !!e.registered, number: e.registered ? e.number : null, scheme: e.registered ? e.scheme : null },
                timezone: e.timezone || null, source: CSU.src };   /* CS2: the zone picked of the pack's several (a one-zone pack: the server sets it anyway) */
-  CBAction.run(btn, function () { return api('countrySetupSave', { body: body }); }, {
+  CBAction.run(btn, function () { return api('countrySetupSave', { body: body }).then(function (p) { return csuSaveBeside(e).then(function () { return p; }); }); }, {
     key: 'cs-save', busy: tx('Saving…'),
     outcome: function (p) {
+      CSU.touched = false;
       CSU.p = p || CSU.p; try { if (p && p.pack) SESSION.booksOn = false; } catch (_) {}
       /* CS2: a correction before the shop was constituted — the server says what it set again from the new pack */
       toast(p && p.rederived ? txf('Country corrected to {c} — money, year, tax, time zone and chart set again from its pack.', { c: csuCountryName(p.rederived.to) }) : tx('Country set.'));
@@ -297,7 +325,24 @@ function csuSave() {
     },
   });
 }
+/** W28 · W27(a): the two facts beside the step, each through its ONE writer, only when it moved — the words (policy_flags.number_words) and the supplies (identities.supplies) */
+function csuSaveBeside(e) {
+  var jobs = [];
+  if (e.words !== ((CSU.flags && CSU.flags.number_words) || 'pack')) jobs.push(api('policySet', { body: { number_words: e.words } }).then(function (r) { CSU.flags = (r && r.flags) || CSU.flags; }));
+  if (e.supplies !== ((CSU.me && CSU.me.supplies) || 'goods')) jobs.push(api('saveProfile', { body: { supplies: e.supplies } }).then(function () { CSU.me = Object.assign({}, CSU.me, { supplies: e.supplies }); }));
+  return Promise.all(jobs);
+}
 /** where the step goes when it is done: the HOST says (app.html's route sets the workshop's own; settings.html its Your shop) — this file names no door */
 function csuDone(){ if (CSU.onDone) CSU.onDone(); }
 /** CB Settings › Country (settings.html): the same rows, painted in the page's pane. Re-mounting re-reads nothing the server already answered. */
-var CBCountry = { mount: function (host, onDone) { CSU.host = host; CSU.onDone = onDone || null; renderCountrySetup(); } };
+var CBCountry = { mount: function (host, onDone) {
+  CSU.host = host; CSU.onDone = onDone || null; CSU.touched = false;
+  if (window.CBUnsaved) CBUnsaved.form({ dirty: function () { return !!CSU.touched; }, save: function () { return new Promise(function (ok, no) { var b = document.getElementById('cs-save'); if (!b) return ok(); csuSaveThen(ok, no); }); } });   /* W24 */
+  renderCountrySetup();
+} };
+/** W24: the same save as the button, awaited by CBUnsaved (resolve on the outcome, reject on a refusal) */
+function csuSaveThen(ok, no) {
+  var e = CSU.edit; if (!e) return ok();
+  var body = { country: e.country, currency: e.currency, fy_start_month: e.fy, tax: { registered: !!e.registered, number: e.registered ? e.number : null, scheme: e.registered ? e.scheme : null }, timezone: e.timezone || null, source: CSU.src };
+  api('countrySetupSave', { body: body }).then(function (p) { CSU.p = p || CSU.p; return csuSaveBeside(e); }).then(function () { CSU.touched = false; ok(); }, no);
+}

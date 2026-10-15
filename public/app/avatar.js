@@ -60,8 +60,10 @@
   ];
   var MONO = FONTS[4][2];
   /* edition (AX1): which showing of Home this person sees (public/app/edition.js reads it; the list is the manifest's `editions`) — kept and synced like text size */
-  var KEY = { theme: 'cb_theme', font: 'cb_font', fs: 'cb_fs', weight: 'cb_weight', motion: 'cb_motion', stripes: 'cb_stripes', edition: 'cb_edition' };
-  var DEFAULTS = { theme: 'device', font: 'default', fs: 'm', weight: 'normal', motion: 'auto', stripes: 'strong', edition: 'full' };
+  var KEY = { theme: 'cb_theme', font: 'cb_font', fs: 'cb_fs', weight: 'cb_weight', motion: 'cb_motion', stripes: 'cb_stripes', edition: 'cb_edition', kural: 'cb_kural' };
+  var DEFAULTS = { theme: 'device', font: 'default', fs: 'm', weight: 'normal', motion: 'auto', stripes: 'strong', edition: 'full', kural: 'auto' };
+  /* SET-WALK1 · W7: the Thirukkural band — auto (on only where the shop reads Tamil: CBLocale.langs has 'ta') · on · off; the owner's choice, synced like the rest */
+  var KURAL = [['auto', 'Where Tamil is read'], ['on', 'On'], ['off', 'Off']];
   var EDITION = /^[a-z][a-z0-9-]{0,23}$/;
   var STRIPES = [['off', 'Off'], ['light', 'Light'], ['strong', 'Strong']];   /* row stripes (Excel's banded rows): Strong is the default and the list unit's own 9%; Light 5%; Off none */
 
@@ -71,7 +73,7 @@
 
   /* ── what is saved ── */
   function pref(kind) { return lsGet(KEY[kind], DEFAULTS[kind]); }
-  function get() { return { theme: pref('theme'), font: pref('font'), fs: pref('fs'), weight: pref('weight'), motion: pref('motion'), stripes: pref('stripes'), edition: pref('edition') }; }
+  function get() { return { theme: pref('theme'), font: pref('font'), fs: pref('fs'), weight: pref('weight'), motion: pref('motion'), stripes: pref('stripes'), edition: pref('edition'), kural: pref('kural') }; }
 
   /** The theme that is actually on the page. `device` (or nothing saved) asks the operating system ONCE, at load, and is not live. */
   function themeKey() {
@@ -150,6 +152,8 @@
   function apply() {
     if (!doc || !doc.documentElement) return;
     try { themeApply(); fontApply(); sizeApply(); weightApply(); motionApply(); stripesApply(); } catch (_) {}
+    /* W7: the band reads the pref itself (CBKural.repaint); told here so a change shows at once */
+    try { if (root.CBKural && root.CBKural.repaint) root.CBKural.repaint(); } catch (e) { console.warn('avatar: the kural band did not repaint', (e && e.message) || e); }
   }
 
   /* ── the person's appearance follows them (b166) — silent when there is nothing to reach ── */
@@ -180,7 +184,7 @@
   }
   function push(now) {
     if (HOST.sync === false) return;
-    var body = { theme: pref('theme'), fs: pref('fs'), motion: pref('motion'), stripes: pref('stripes'), edition: pref('edition'), font: pref('font'), weight: pref('weight') };   /* every synced key rides every push */
+    var body = { theme: pref('theme'), fs: pref('fs'), motion: pref('motion'), stripes: pref('stripes'), edition: pref('edition'), font: pref('font'), weight: pref('weight'), kural: pref('kural') };   /* every synced key rides every push */
     /* the app's (and CB Accounts') own door: CBPrefs debounces, queues offline and stays silent before the migration; its answer clears the mark */
     /* …except a push that must outlive this page (an edition reloads at once): CBPrefs's 400 ms debounce would die with the page, so it is sent now, kept alive (FX-QA1) */
     try { if (!now && typeof CBPrefs !== 'undefined' && typeof SESSION !== 'undefined' && SESSION && SESSION.token) { CBPrefs.push('ui', body, function (r) { landed(body, r); }); return; } } catch (_) {}
@@ -206,6 +210,7 @@
     if (kind === 'motion') return ['auto', 'reduce', 'full'].indexOf(v) >= 0;
     if (kind === 'stripes') return STRIPES.some(function (x) { return x[0] === v; });
     if (kind === 'edition') return EDITION.test(String(v));
+    if (kind === 'kural') return KURAL.some(function (x) { return x[0] === v; });
     return false;
   }
   /**
@@ -383,6 +388,10 @@
       editionsHtml() +
       '<h4>Row stripes</h4><div class="cbav-stripes" role="group" aria-label="Row stripes" data-testid="stripes-group">' + STRIPES.map(function (x) {
         return '<button type="button" data-testid="stripes-' + x[0] + '" data-av-stripes="' + x[0] + '" aria-pressed="' + (pref('stripes') === x[0]) + '">' + x[1] + '</button>';
+      }).join('') + '</div>' +
+      /* W7: the Thirukkural band — the stripes look, never a new one */
+      '<h4>Thirukkural</h4><div class="cbav-stripes" role="group" aria-label="Thirukkural" data-testid="kural-group">' + KURAL.map(function (x) {
+        return '<button type="button" data-testid="kural-' + x[0] + '" data-av-kural="' + x[0] + '" aria-pressed="' + (pref('kural') === x[0]) + '">' + x[1] + '</button>';
       }).join('') + '</div></div>' +
       '<div class="cbav-c"><h4>Text size</h4><div class="cbav-sizes" role="group" aria-label="Text size">' + TEXT_SIZES.map(function (x, i) {
         return '<button type="button" data-testid="fs-' + x[0] + '" data-av-fs="' + x[0] + '" aria-pressed="' + (fsNow === x[0]) + '" title="' + x[1] + ' (' + Math.round(x[2] * 100) + '%)" aria-label="' + x[1] + '" style="font-size:' + [13, 16, 20, 25][i] + 'px">A</button>';
@@ -459,6 +468,7 @@
       if ((b = t.closest('[data-av-fs]'))) return set('fs', b.getAttribute('data-av-fs'));
       if ((b = t.closest('[data-av-weight]'))) return set('weight', b.getAttribute('data-av-weight'));
       if ((b = t.closest('[data-av-stripes]'))) return set('stripes', b.getAttribute('data-av-stripes'));
+      if ((b = t.closest('[data-av-kural]'))) return set('kural', b.getAttribute('data-av-kural'));
       if ((b = t.closest('[data-av-edition]'))) return set('edition', b.getAttribute('data-av-edition'));
       if ((b = t.closest('[data-av-font]'))) return set('font', b.getAttribute('data-av-font'));
       if ((b = t.closest('[data-av-motion]'))) return set('motion', pref('motion') === 'reduce' ? 'auto' : 'reduce');
