@@ -159,7 +159,7 @@ function _schemaFields(schema, vals){
       inp='<input id="f_'+esc(k)+'" data-testid="shop-f-'+esc(k)+'"'+(p.type==='number'||p.type==='integer'?' inputmode="decimal"':'')
         +(p.maxLength?' maxlength="'+p.maxLength+'"':'')+' value="'+esc(v)+'" '+fld+'>';
     }
-    return '<label style="font-size:12px;color:#6a707a">'+label+'</label>'+inp;
+    return '<label style="font-size:12px;color:var(--grey-3,#6a707a)">'+label+'</label>'+inp;
   }).join('');
 }
 // ── CARRIED DOCUMENTS (SPEC-document-carrying) — the submission is the filled form AND its proof. The input appears
@@ -172,7 +172,7 @@ function _docBlock(){
   var mb=function(n){ return (n/1048576).toFixed(1)+' MB'; };
   var rows=_docs.map(function(f,i){ return '<div style="display:flex;align-items:center;gap:8px;font-size:12px;padding:5px 8px;border:1px solid #e7e3d8;border-radius:8px;margin-bottom:5px;background:#fbfaf7"><span style="flex:1">📎 '+esc(f.name)+'</span><span style="color:#8a949c">'+esc(mb(f.size))+'</span><button onclick="_docRemove('+i+')" style="border:0;background:none;color:#b4453f;cursor:pointer;font-size:15px">×</button></div>'; }).join('');
   var full=_docs.length>=d.max;
-  return '<label style="font-size:12px;color:#6a707a">'+esc(d.label)+(d.required?' <span style="color:#b4453f">*</span>':' <span style="color:#9aa3a7">· optional</span>')+'</label>'
+  return '<label style="font-size:12px;color:var(--grey-3,#6a707a)">'+esc(d.label)+(d.required?' <span style="color:#b4453f">*</span>':' <span style="color:#9aa3a7">· optional</span>')+'</label>'
     +'<div style="margin:3px 0 11px">'+rows
     +(full?'<div style="font-size:11px;color:#8a949c">Maximum '+d.max+' reached.</div>'
           :'<label style="display:block;border:1.5px dashed #cfc3e8;border-radius:10px;padding:12px;text-align:center;cursor:pointer;color:#6a44a8;font-weight:600;font-size:12.5px">📎 Attach '+esc(d.label.toLowerCase())
@@ -237,7 +237,7 @@ function _readBanner(){
   return '<div style="margin:0 0 11px;padding:9px 11px;border:1px solid #cfe6cf;border-radius:9px;background:#eef7ee;font-size:12px;color:#2e7a45">'
     +'<b>Read '+n+' field'+(n===1?'':'s')+' from your '+esc(Object.values(_read)[0].from)+'.</b>'
     +(left.length?' You still need to fill '+left.length+'.':' Nothing left to fill.')
-    +'<div style="font-size:10.5px;color:#6a707a;margin-top:3px">Check them — you can change anything before sending.</div></div>';
+    +'<div style="font-size:10.5px;color:var(--grey-3,#6a707a);margin-top:3px">Check them — you can change anything before sending.</div></div>';
 }
 function _docRemove(i){ _docs.splice(i,1); orderRender(); }
 function _docPick(ev){
@@ -397,7 +397,7 @@ function regionBar(){
     // The region sets UNIT and LANGUAGE. It no longer claims to set the currency, because it never should have —
     // the price is the seller's and is shown as the seller declared it. Stating where the money comes from, rather
     // than implying the reader's region decides it, is the whole correction.
-    +'<div style="font-size:12px;color:#3a4048;margin-top:6px">Showing for <b>'+esc(_REGION)+'</b> · unit <b>'+esc(rc.units||'')+'</b> · language <b>'+esc(rc.language||'')+'</b>'+(curOf(null)?(' · <span style="color:#6a707a">priced by the seller in <b>'+esc(curOf(null))+'</b></span>'):'')+((rc.jurisdiction&&rc.jurisdiction.compliance)?(' · <span style="color:#b4453f">'+esc(rc.jurisdiction.compliance)+'</span>'):'')+'</div>'
+    +'<div style="font-size:12px;color:#3a4048;margin-top:6px">Showing for <b>'+esc(_REGION)+'</b> · unit <b>'+esc(rc.units||'')+'</b> · language <b>'+esc(rc.language||'')+'</b>'+(curOf(null)?(' · <span style="color:var(--grey-3,#6a707a)">priced by the seller in <b>'+esc(curOf(null))+'</b></span>'):'')+((rc.jurisdiction&&rc.jurisdiction.compliance)?(' · <span style="color:#b4453f">'+esc(rc.jurisdiction.compliance)+'</span>'):'')+'</div>'
     +'</div>';
 }
 function el(id){ return document.getElementById(id); }
@@ -688,9 +688,9 @@ function shopUpiBlock(res, isCart){
   var link=shopUpiLink(upi, s.display_name||s.name||'', amount, ref); var img='';
   try{ if(typeof qrcode==='function'){ var qr=qrcode(0,'M'); qr.addData(link); qr.make(); img=qr.createImgTag(4,8); img=img.replace('<img ','<img data-testid="shop-upi-qr" alt="Pay by UPI" '); } }catch(e){}
   return '<div data-testid="shop-upi" style="margin-top:14px;padding:12px;border:1px dashed var(--accent);border-radius:12px;text-align:center"><div style="font-weight:800;font-size:14px">'+esc('Pay '+cbFmt(amount)+' by UPI')+'</div>'
-    +'<div style="font-size:12px;color:#6a707a;margin:4px 0 8px">'+esc('to '+upi+' · ref CB-'+String(ref).slice(0,8))+'</div>'+(img?'<div>'+img+'</div>':'')
+    +'<div style="font-size:12px;color:var(--grey-3,#6a707a);margin:4px 0 8px">'+esc('to '+upi+' · ref CB-'+String(ref).slice(0,8))+'</div>'+(img?'<div>'+img+'</div>':'')
     +'<a data-testid="shop-upi-link" href="'+esc(link)+'" style="display:inline-block;margin-top:8px;border:1px solid #3F66A6;border-radius:9px;padding:8px 14px;color:#3F66A6;font-weight:700;text-decoration:none">Open my UPI app</a>'
-    +'<div style="font-size:11px;color:#6a707a;margin-top:6px">'+esc('The shop confirms the payment on its side.')+'</div></div>';
+    +'<div style="font-size:11px;color:var(--grey-3,#6a707a);margin-top:6px">'+esc('The shop confirms the payment on its side.')+'</div></div>';
 }
 function cbFmt(n){ var c=curOf(null); try{ return (typeof CBLocale!=='undefined')?(c?CBLocale.money(n,c):CBLocale.number(n,{minimumFractionDigits:2,maximumFractionDigits:2})):(_shopSym()+Number(n).toFixed(2)); }catch(e){ return _shopSym()+n; } }   /* CX0: the SHOP's currency, never INR by name; none stated → the bare amount (CART-REG1) */
 function shopCartBarHtml(){ if(!_CART) return ''; try{ if(typeof CBCatUI!=='undefined'&&CBCatUI.barHTML) return CBCatUI.barHTML(_CART); }catch(e){} return _CART.barHTML(); }   /* the same chip as the app; first paint = every repaint */   /* ⚠️ dropped by the stock patch for ~25 min on 2026-09-05 — every storefront said 'Could not reach the shop' */
@@ -737,7 +737,7 @@ function render(data){
   /* ⭐ A SHOP'S OWN HEADER (Athi, 2026-09-06: "bring the shop-related information so it looks a real website"): the logo or the initial,
      the name large, then the facts a customer looks for — where it is, its GSTIN, whether it is open — and nothing about the rail. */
   var initial=esc(String(s.display_name||'S').trim().charAt(0).toUpperCase());
-  var logo=s.logo_url?'<img src="'+esc(s.logo_url)+'" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:12px">':'<span style="font-size:22px;font-weight:600;color:#fff">'+initial+'</span>';
+  var logo=s.logo_url?'<img src="'+esc(s.logo_url)+'" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:12px">':'<span style="font-size:22px;font-weight:600;color:var(--on-accent,#fff)">'+initial+'</span>';
   var head='<div class="hd" data-testid="shop-head"><div class="logo" style="width:36px;height:36px;border-radius:10px;background:var(--accent,#3F66A6);display:grid;place-items:center;overflow:hidden;flex:none">'+logo+'</div>'
     +'<div style="flex:1;min-width:0"><div class="shopname sg" style="font-size:19px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(s.display_name||'Shop')+'</div>'+booksNote+'</div>'
     +'<div style="display:flex;align-items:center;gap:4px;flex:none">'+statusBadge+(s.is_verified?'<span class="badge b-ver">✓ Verified</span>':'')+'</div></div>';
@@ -828,7 +828,7 @@ var _sup = null;
 
 function supLinkHtml(){
   var s=(_SHOPDATA&&_SHOPDATA.shop)||{};
-  return '<div style="text-align:center;margin:10px 0 2px;font-size:12.5px;color:#6a707a">'
+  return '<div style="text-align:center;margin:10px 0 2px;font-size:12.5px;color:var(--grey-3,#6a707a)">'
     + 'Something wrong with an order? '
     + '<a href="#" data-testid="shop-support" onclick="supOpen();return false" '
     + 'style="color:var(--accent);font-weight:600">Report a problem to '+esc(s.display_name||'the shop')+'</a>'
@@ -861,7 +861,7 @@ function supNoteHtml(){
   if(_sup.dead) return '<div style="background:#fdeceb;border:1px solid #f0bdb8;border-radius:10px;padding:9px 12px;'
     + 'font-size:12.5px;color:#8a2c25;margin-bottom:10px"><b>This will not reach anyone</b><div>'+esc(_sup.err||'')+'</div></div>';
   if(!_sup.to) return '<div style="background:#f6f5f1;border:1px solid #e7e3d8;border-radius:10px;padding:9px 12px;'
-    + 'font-size:12.5px;color:#6a707a;margin-bottom:10px">Checking where this will go…</div>';
+    + 'font-size:12.5px;color:var(--grey-3,#6a707a);margin-bottom:10px">Checking where this will go…</div>';
   /* ⚠️ ‘closed’ is SAID, not used to refuse. A complaint about an order already placed must not hit a dead
      end — but promising a quick answer from a shop that is shut would be the other kind of lie. */
   return '<div style="background:'+(_sup.accepting?'#eef7f0':'#FBF6E9')+';border:1px solid '
@@ -880,22 +880,22 @@ function supRender(){
   if(_sup.step==='say'){
     /* ⚠️ the urgency words are the SERVER’s; with none, the question is simply not asked rather than asked
        with wording invented here that the shop has never seen. */
-    body='<label style="font-size:12px;color:#6a707a;display:block;margin-bottom:4px">What went wrong?</label>'
+    body='<label style="font-size:12px;color:var(--grey-3,#6a707a);display:block;margin-bottom:4px">What went wrong?</label>'
       + '<textarea id="sup_what" data-testid="shop-support-what" rows="4" '
       + 'placeholder="What you ordered, and what happened instead" oninput="supSet(&#39;what&#39;,this.value)" '+fld+'>'
       + esc(_sup.what||'')+'</textarea>'
-      + (_sup.urgency ? '<div style="font-size:12px;color:#6a707a;margin:11px 0 4px">How much is it holding you up?</div>'
+      + (_sup.urgency ? '<div style="font-size:12px;color:var(--grey-3,#6a707a);margin:11px 0 4px">How much is it holding you up?</div>'
           + _sup.urgency.map(function(u){
               return '<label style="display:flex;gap:8px;align-items:flex-start;padding:5px 0;cursor:pointer;font-size:13px">'
                 + '<input type="radio" name="sup_sev" value="'+esc(u[0])+'"'+(u[0]===_sup.sev?' checked':'')
                 + ' data-testid="shop-sev-'+esc(u[0])+'" onchange="supSet(&#39;sev&#39;,this.value)" style="margin-top:3px">'
-                + '<span><b>'+esc(u[1])+'</b><div style="color:#6a707a;font-size:11.5px">'+esc(u[2])+'</div></span></label>';
+                + '<span><b>'+esc(u[1])+'</b><div style="color:var(--grey-3,#6a707a);font-size:11.5px">'+esc(u[2])+'</div></span></label>';
             }).join('') : '')
-      + '<label style="font-size:12px;color:#6a707a;display:block;margin:11px 0 4px">Your phone or email</label>'
+      + '<label style="font-size:12px;color:var(--grey-3,#6a707a);display:block;margin:11px 0 4px">Your phone or email</label>'
       + '<input id="sup_contact" data-testid="shop-support-contact" placeholder="so the shop can reply" '
       + 'value="'+esc(_sup.contact||'')+'" oninput="supSet(&#39;contact&#39;,this.value)" '+fld+'>';
   } else {
-    body='<div style="font-size:13px;color:#6a707a;margin-bottom:8px">We sent a 6-digit code to '
+    body='<div style="font-size:13px;color:var(--grey-3,#6a707a);margin-bottom:8px">We sent a 6-digit code to '
       + esc(_sup.contact)+'.</div>'
       + '<input id="sup_otp" data-testid="shop-support-otp" autocomplete="one-time-code" inputmode="numeric" maxlength="64" '
       + 'placeholder="6-digit code" value="'+esc(_sup.otp||'')+'" oninput="supSet(&#39;otp&#39;,this.value)" '+fld+'>';   /* SEC2: a sign-in code is never printed on the page — it is sent to the person */
@@ -903,9 +903,9 @@ function supRender(){
   var act=_sup.step==='say'
     ? '<button data-testid="shop-support-code" onclick="supSendCode()"'+(_sup.dead?' disabled':'')
       + ' style="width:100%;border:0;border-radius:10px;padding:12px;background:'+(_sup.dead?'#c9ccd1':'var(--accent)')
-      + ';color:#fff;font-weight:700;font-size:14px;cursor:'+(_sup.dead?'not-allowed':'pointer')+'">Send me a code</button>'
+      + ';color:var(--on-accent,#fff);font-weight:700;font-size:14px;cursor:'+(_sup.dead?'not-allowed':'pointer')+'">Send me a code</button>'
     : '<button data-testid="shop-support-send" onclick="supSubmit()" style="width:100%;border:0;border-radius:10px;'
-      + 'padding:12px;background:var(--accent);color:#fff;font-weight:700;font-size:14px;cursor:pointer">Send it</button>';
+      + 'padding:12px;background:var(--accent);color:var(--on-accent,#fff);font-weight:700;font-size:14px;cursor:pointer">Send it</button>';
 
   supHost().innerHTML='<div style="position:fixed;inset:0;background:rgba(15,22,32,.5);z-index:900;display:flex;'
     + 'align-items:center;justify-content:center;padding:12px" onclick="if(event.target===this)supClose()">'
@@ -973,10 +973,10 @@ function supSubmit(){
         + '<div style="background:#fff;width:100%;max-width:430px;border-radius:16px;padding:22px;text-align:center">'
         + '<div style="font-size:34px;line-height:1">✓</div>'
         + '<div class="sg" style="font-size:17px;font-weight:800;margin:8px 0 4px">'+esc(to)+' has it</div>'
-        + '<div style="font-size:13px;color:#6a707a;line-height:1.5">It is in their work queue. They can reply on '
+        + '<div style="font-size:13px;color:var(--grey-3,#6a707a);line-height:1.5">It is in their work queue. They can reply on '
         + esc(sent)+'.</div>'
         + '<button data-testid="shop-support-done" onclick="supClose()" style="margin-top:16px;width:100%;border:0;'
-        + 'border-radius:10px;padding:12px;background:var(--accent);color:#fff;font-weight:700;font-size:14px;cursor:pointer">Done</button>'
+        + 'border-radius:10px;padding:12px;background:var(--accent);color:var(--on-accent,#fff);font-weight:700;font-size:14px;cursor:pointer">Done</button>'
         + '</div></div>';
     })
     .catch(function(e){ if(!_sup)return; _sup.busy=false; _sup.err=e.message; supRender(); });
@@ -1120,8 +1120,8 @@ function _cartModeFieldsHtml(){
 function _cartStepReview(){
   var shopName=(_SHOPDATA&&_SHOPDATA.shop&&_SHOPDATA.shop.display_name)||'The shop';
   var row=function(k,v){ return '<div style="display:flex;gap:10px;padding:7px 0;border-top:1px dashed #e7e3d8;font-size:13px">'
-    + '<span style="min-width:104px;color:#6a707a;font-size:11.5px">'+k+'</span><span style="flex:1">'+v+'</span></div>'; };
-  var hd=function(t,step){ return '<div style="font-size:11px;font-weight:800;color:#6a707a;text-transform:uppercase;letter-spacing:.05em;display:flex;margin-top:10px">'+t
+    + '<span style="min-width:104px;color:var(--grey-3,#6a707a);font-size:11.5px">'+k+'</span><span style="flex:1">'+v+'</span></div>'; };
+  var hd=function(t,step){ return '<div style="font-size:11px;font-weight:800;color:var(--grey-3,#6a707a);text-transform:uppercase;letter-spacing:.05em;display:flex;margin-top:10px">'+t
     + (step==null?'':'<span style="margin-inline-start:auto;color:var(--accent);cursor:pointer;text-transform:none;letter-spacing:0;font-size:11.5px" onclick="_CFLOW.go('+step+')">Change</span>') + '</div>'; };
   return hd('Your basket · '+_ord.lines.length, null)
     + _ord.lines.map(function(L,i){ return row(L.qty+' × '+esc(L.unit||''), '<span>'+esc(L.name)+'</span><b style="float:inline-end">'+_cartLineTotal(i)+'</b>'); }).join('')
@@ -1144,11 +1144,11 @@ function _cartStepWho(){
   var otpStep=(_ord.step==='otp');
   return _cartStepReview()
     +'<div class="meta" style="margin:14px 0 8px">Last step — so the shop can reach you about this order.</div>'
-    +'<label style="font-size:12px;color:#6a707a">Your name <span style="color:#9aa3a7">· optional</span></label>'
+    +'<label style="font-size:12px;color:var(--grey-3,#6a707a)">Your name <span style="color:#9aa3a7">· optional</span></label>'
     +'<input id="o_name" data-testid="shop-name" placeholder="optional" value="'+esc(_ord.name||'')+'" oninput="_cartSet(&#39;name&#39;,this.value)" '+fld+'>'
-    +'<label style="font-size:12px;color:#6a707a">Phone or email</label>'
+    +'<label style="font-size:12px;color:var(--grey-3,#6a707a)">Phone or email</label>'
     +'<input id="o_contact" data-testid="shop-contact" placeholder="9876543210 or you@email.com" '+(otpStep?'disabled':'')+' value="'+esc(_ord.contact||'')+'" oninput="_cartSet(&#39;contact&#39;,this.value)" '+fld+'>'
-    +(otpStep?('<label style="font-size:12px;color:#6a707a">6-digit code sent to you</label><input id="o_otp" data-testid="shop-otp" inputmode="numeric" autocomplete="one-time-code" maxlength="64" value="'+esc(_ord.otp||'')+'" oninput="_cartSet(&#39;otp&#39;,this.value)" '+fld+'>'):'')
+    +(otpStep?('<label style="font-size:12px;color:var(--grey-3,#6a707a)">6-digit code sent to you</label><input id="o_otp" data-testid="shop-otp" inputmode="numeric" autocomplete="one-time-code" maxlength="64" value="'+esc(_ord.otp||'')+'" oninput="_cartSet(&#39;otp&#39;,this.value)" '+fld+'>'):'')
     /* No account, no password. The code IS the identity — the same rail the signed-in app uses, entered once. */
     +'<div class="meta">No account needed. The code confirms it is really you, and your order becomes a record you both hold.</div>'
     +(_ord._err?'<div style="color:#b4453f;font-size:12.5px;margin-top:8px">'+esc(_ord._err)+'</div>':'')
@@ -1204,19 +1204,19 @@ function orderRender(msg, err){
     // the attach control comes FIRST on a readable catalogue — upload, then see the fields already filled
     +(_isPayload()?(_docBlock()+_readBanner()+_schemaFields(_cur().schema, _ord.payload)):(
       ''
-    +(comboOpts?'<label style="font-size:12px;color:#6a707a">Colour combination</label><select id="o_combo" data-testid="shop-combo" '+fld+'>'+comboOpts+'</select>':'')
-    +'<label style="font-size:12px;color:#6a707a">Quantity'+(function(){ var p=itemPrice(it); return p&&p.u?' ('+esc(p.u)+')':''; })()+(minL?' <span style="color:#9aa3a7">· min '+minL+' L (set by the brand)</span>':'')+'</label><input id="o_qty" data-testid="shop-qty" inputmode="decimal" value="'+esc(_ord.qty||String(minL||1))+'" '+fld+'>'
+    +(comboOpts?'<label style="font-size:12px;color:var(--grey-3,#6a707a)">Colour combination</label><select id="o_combo" data-testid="shop-combo" '+fld+'>'+comboOpts+'</select>':'')
+    +'<label style="font-size:12px;color:var(--grey-3,#6a707a)">Quantity'+(function(){ var p=itemPrice(it); return p&&p.u?' ('+esc(p.u)+')':''; })()+(minL?' <span style="color:#9aa3a7">· min '+minL+' L (set by the brand)</span>':'')+'</label><input id="o_qty" data-testid="shop-qty" inputmode="decimal" value="'+esc(_ord.qty||String(minL||1))+'" '+fld+'>'
     // SPEC-negotiation-position — the buyer's POSITION. The seller's price stays the catalogue's; this rides on the chit.
     +(_isNegotiable()?(function(){ var b=itemBand(it);
-        return '<label style="font-size:12px;color:#6a707a">Your offer'+(function(){ var p=itemPrice(it); return p&&p.u?' (per '+esc(p.u)+')':''; })()
+        return '<label style="font-size:12px;color:var(--grey-3,#6a707a)">Your offer'+(function(){ var p=itemPrice(it); return p&&p.u?' (per '+esc(p.u)+')':''; })()
           +(b?' <span style="color:#9aa3a7">· seller’s range '+esc(_bandText(b,cur))+'</span>':' <span style="color:#9aa3a7">· name your price</span>')+'</label>'
           +'<input id="o_offer" data-testid="shop-offer" inputmode="decimal" placeholder="'+(b&&b.min!=null?esc(String(b.min)):'your price')+'" value="'+esc(_ord.offer||'')+'" '+fld+'>'
-          +'<div style="font-size:11px;color:#6a707a;margin:-6px 0 11px">This is an <b>offer</b> — the shop accepts or counters. Nothing is charged.</div>'; })():'')
+          +'<div style="font-size:11px;color:var(--grey-3,#6a707a);margin:-6px 0 11px">This is an <b>offer</b> — the shop accepts or counters. Nothing is charged.</div>'; })():'')
     ))
-    +'<label style="font-size:12px;color:#6a707a">Your name</label><input id="o_name" data-testid="shop-name" placeholder="optional" value="'+esc(_ord.name||'')+'" '+fld+'>'
+    +'<label style="font-size:12px;color:var(--grey-3,#6a707a)">Your name</label><input id="o_name" data-testid="shop-name" placeholder="optional" value="'+esc(_ord.name||'')+'" '+fld+'>'
     +'<label style="font-size:12px;color:var(--grey-3,#6a707a)">Your area — pincode or city <span style="color:var(--grey,#9aa3a7)">· optional</span></label><input id="o_loc" data-testid="shop-area" placeholder="'+esc(_areaExample())+'" value="'+esc(_ord.loc||'')+'" '+fld+'>'
-    +'<label style="font-size:12px;color:#6a707a">Phone or email</label><input id="o_contact" data-testid="shop-contact" placeholder="9876543210 or you@email.com" '+(otpStep?'disabled':'')+' value="'+esc(_ord.contact||'')+'" '+fld+'>'
-    +(otpStep?('<label style="font-size:12px;color:#6a707a">6-digit code sent to you</label><input id="o_otp" data-testid="shop-otp" inputmode="numeric" autocomplete="one-time-code" maxlength="64" value="'+esc(_ord.otp||'')+'" '+fld+'>'):'')
+    +'<label style="font-size:12px;color:var(--grey-3,#6a707a)">Phone or email</label><input id="o_contact" data-testid="shop-contact" placeholder="9876543210 or you@email.com" '+(otpStep?'disabled':'')+' value="'+esc(_ord.contact||'')+'" '+fld+'>'
+    +(otpStep?('<label style="font-size:12px;color:var(--grey-3,#6a707a)">6-digit code sent to you</label><input id="o_otp" data-testid="shop-otp" inputmode="numeric" autocomplete="one-time-code" maxlength="64" value="'+esc(_ord.otp||'')+'" '+fld+'>'):'')
     +(err?'<div style="color:#b4453f;font-size:12.5px;margin-bottom:8px">'+esc(err)+'</div>':'')
     +(msg?'<div style="color:#2e7a45;font-size:12.5px;margin-bottom:8px">'+esc(msg)+'</div>':'')
     +(_ord.busy?'<button disabled style="width:100%;border:0;border-radius:10px;padding:12px;background:#9db4d6;color:#fff;font-weight:700;font-size:14px">⏳ Processing…</button>'

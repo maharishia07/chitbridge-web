@@ -94,7 +94,7 @@
     '--sh-amber-t:var(--amber-t,var(--warn-tint,#FDF3DC));--sh-amber-b:var(--amber-b,var(--warn-3,#EFD39A));--sh-amber-i:var(--amber-i,var(--warn-2,#7A5205));',
     '--sh-red-t:var(--red-t,var(--danger-tint,#FBEAE3));--sh-red-b:var(--red-b,var(--disp-2,#E7B9A8));--sh-red-i:var(--red-i,var(--disp-2,#8E3517));',
     '--sh-blue-t:var(--blue-t,var(--blue-tint-bg,#E4EEFA));--sh-blue-b:var(--blue-b,var(--blue-tint-line,#B9D2EF));--sh-blue-i:var(--blue-i,var(--blue-d,#174A87));',
-    '--sh-on:var(--on-accent,#FFFFFF);--sh-scrim:rgba(29,27,22,.32);--sh-shadow:rgba(29,27,22,.18);--sh-hover:rgba(0,0,0,.04);',
+    '--sh-on:var(--on-ok,var(--on-accent,#FFFFFF));--sh-scrim:rgba(29,27,22,.32);--sh-shadow:rgba(29,27,22,.18);--sh-hover:rgba(0,0,0,.04);',
     '--sh-bar:44px;--sh-navw:58px;',
     'box-sizing:border-box;color:var(--sh-ink);font-family:var(--f-ui,"IBM Plex Sans",system-ui,sans-serif);font-size:calc(14.5px * var(--k,1));line-height:1.42;text-align:start}',
     ':root[data-themed] .cbsh{--sh-green-d:color-mix(in srgb,var(--ok-2,#0D4A2B) 80%,var(--ink,#1D1B16))}',
@@ -218,7 +218,11 @@
     '@media(max-width:1100px){.cbsh-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.cbsh-sin{grid-template-columns:1fr 1.4fr}.cbsh-sin .cbsh-col:nth-child(3){grid-column:1/-1}}',
     /* PHONE — a different layout: bottom tabs, one area at a time, rows, the sheet drops over the page, the kural once on Home */
     '@media(max-width:700px){',
-    '.cbsh{--sh-bar:52px}.cbsh-bar{padding:0 13px;gap:9px}.cbsh-who{padding:4px 6px;margin-left:-6px}',   /* a pane keeps its 55px on a phone too: its line meets the sidebar's brand row (frame-every-width rule f) */
+    '.cbsh{--sh-bar:52px}.cbsh-bar{padding:0 13px;gap:6px;container-type:inline-size}.cbsh-who{padding:4px 4px;margin-left:-4px;flex:1 1 auto}.cbsh-who b{font-size:14px}',   /* a pane keeps its 55px on a phone too: its line meets the sidebar's brand row (frame-every-width rule f) */
+    /* INT7b-GREEN: a 390 px bar held 405 px (mark · shop · switcher · chip · bell · ⌂ · avatar, 9 px gaps) and cut the shop's name to 55 px. The name takes the slack
+       (the spacer gives way to it) at 14 px; a bar narrower than its need (a pane beside the sidebar, ~326 px) shows the whole name or none — never "F…" (the button's aria-label still says it) */
+    '.cbsh-bar:has(.cbsh-who) .cbsh-grow{display:none}',
+    '@container (max-width:359px){.cbsh-who b{display:none}}',
     '.cbsh-tohome .hw{display:none}.cbsh-tohome{padding:0 8px}.cbsh-title{font-size:13px}',   /* a phone: ⌂ alone (aria-label keeps the word) */
     '.cbsh-swb .sn{display:none}',   /* a phone: the switcher is its icon — the screen chip names the screen; with ⌂ Home beside it the app's name no longer fits a 390 px pane (INT7b, walk-returns R6) */
     /* a phone, signed in: the shop's name is the bar's name — the page's title would cut it (area pitfall: "the shared top bar cuts the shop name at 390 px"); signed out the title shows */

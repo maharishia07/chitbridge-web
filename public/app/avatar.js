@@ -90,13 +90,30 @@
   }
 
   /* ── applying ── */
+  /* ON-COLOURS (INT7b-GREEN, 2026-10-15): the ink that reads on a theme's accent and on its ok green. A theme that names the colour but not its
+     on-colour gets it from the engine's ONE calculation (CBScreen.onColour, screen.js — never a second luminance sum here): Dark's --blue #6892DB
+     and --ok #2E9E5E took the pages' own white at 3.1:1 (the storefront's logo, + and the frame's mark). A theme's own --on-accent / --on-ok wins;
+     under a theme the pages' accent IS --blue (page-skeleton.css, shop.html). */
+  var ON_COLOUR_PAIRS = [['--on-accent', ['--accent', '--blue']], ['--on-ok', ['--ok']]];
+  function onColoursOf(vars) {
+    var derived = {}, onColour = root.CBScreen && root.CBScreen.onColour;
+    if (typeof onColour !== 'function') return derived;
+    ON_COLOUR_PAIRS.forEach(function (pair) {
+      var onToken = pair[0], baseToken = pair[1].filter(function (token) { return vars[token]; })[0];
+      if (baseToken && !vars[onToken]) derived[onToken] = onColour(vars[baseToken]);
+    });
+    return derived;
+  }
   /** Apply a theme to the page. With a key it is a PREVIEW (nothing saved) — what Settings' contrast check and the palette cards use. */
   function themeApply(forKey) {
     var r = doc.documentElement, key = (forKey && has(THEMES, forKey) && THEMES[forKey]) ? forKey : themeKey(), t = THEMES[key] || { vars: {} };
     var all = {};
     Object.keys(THEMES).forEach(function (k) { Object.keys(THEMES[k].vars || {}).forEach(function (v) { all[v] = 1; }); });
+    ON_COLOUR_PAIRS.forEach(function (pair) { all[pair[0]] = 1; });
     Object.keys(all).forEach(function (v) { r.style.removeProperty(v); });
-    Object.keys(t.vars || {}).forEach(function (v) { r.style.setProperty(v, t.vars[v]); });
+    var vars = t.vars || {}, derived = onColoursOf(vars);
+    Object.keys(vars).forEach(function (v) { r.style.setProperty(v, vars[v]); });
+    Object.keys(derived).forEach(function (v) { r.style.setProperty(v, derived[v]); });
     r.style.colorScheme = t.scheme || 'light';              /* the caret, scrollbars, autofill and date picker are drawn by the browser */
     r.setAttribute('data-theme', key);
     if (Object.keys(t.vars || {}).length) r.setAttribute('data-themed', key); else r.removeAttribute('data-themed');   /* a page's own names key off THIS: Cream overrides nothing */

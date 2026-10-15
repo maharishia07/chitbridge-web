@@ -2965,7 +2965,7 @@
       '.cbcat-stp button,.cbcat-add{width:30px;height:30px;border-radius:50%;border:1px solid var(--blue,var(--blue));',
       'background:var(--card);color:var(--blue,var(--blue));font-size:15px;font-weight:800;line-height:1;display:grid;',
       'place-items:center;cursor:pointer;font-family:inherit;flex:none}',
-      '.cbcat-add{background:var(--blue,var(--blue));color:#fff}',
+      '.cbcat-add{background:var(--blue,var(--blue));color:var(--on-accent,#fff)}',
       '.cbcat-stp input{width:52px;height:30px;border:1px solid var(--line,var(--line));border-radius:9px;',
       'text-align:center;font-size:var(--fs-2);font-variant-numeric:tabular-nums;font-family:inherit}',
       /* Sits INSIDE the price column, so it must not widen it — hence the same 78px the column is. */
