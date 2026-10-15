@@ -266,8 +266,8 @@ function crmViewerActionsHTML(p, rec) {
   return '<div class="actbar pin" role="toolbar" aria-label="' + esc(tx('Actions')) + '" data-testid="crm-actions" data-level="viewer">' + b.join('') + '<span class="why" data-testid="crm-actions-why">' + esc(why) + '</span></div>';
 }
 /** W2-CRM: Remove is SHOWN to every login; the SERVER's may.remove greys it with its sentence (owner only), open dues grey it too */
-function crmRemoveItemHTML(p, icon) {
-  var mayRemove = crmMayRemove(), removeWhy = !mayRemove.ok ? mayRemove.why : (CRM.ledger && !!p.balance_minor ? tx('dues open') : '');
+function crmRemoveItemHTML(party, icon) {
+  var mayRemove = crmMayRemove(), removeWhy = !mayRemove.ok ? mayRemove.why : (CRM.ledger && !!party.balance_minor ? tx('dues open') : '');
   return '<button type="button" class="danger" data-crm="rremove" data-testid="crm-more-remove"' + (removeWhy ? ' disabled aria-disabled="true" title="' + esc(removeWhy) + '"' : '') + '>' + icon('warn') + esc(tx('Remove from my parties')) + (removeWhy ? '<span class="why" data-testid="crm-more-remove-why">' + esc(removeWhy) + '</span>' : '') + '</button>';
 }
 function crmActionsHTML(p, rec) {

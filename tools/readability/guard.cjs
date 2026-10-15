@@ -113,12 +113,14 @@ function ruleMinimums(file, trace, today) {
   return { level, rule: 'test-minimums', text: `${file} (${row.layer}): §7 minimums not evidenced by its tests: ${missing.join(' · ')}` + (level === 'warn' ? ` — a warning until ${MINIMUMS_FAIL_FROM}` : '') };
 }
 
+/** the reference a file is held to: its ratchet row, or the base's own score when that is higher (a row written before other rounds landed) */
+const higherOf = (row, floor) => (floor && (!row || floor.score > row.score) ? floor : row);
 /** the file's score may not rise above its ratchet row (a file with no row is new: it must score 0) — nor above the BASE the change
  *  started from: a row written before other rounds landed cannot blame this change for their score (INT7b: assign-chit row 5, base 13) */
 function ruleRatchet(file, head, base, rows) {
   if (!rows) return { level: 'warn', rule: 'ratchet', text: `${file}: no ${ratchet.RATCHET_FILE} in this repo yet (write it: --write)`, score: ratchet.score(head) };
   const now = ratchet.score(head), row = rows[file] || null, floor = base ? ratchet.score(base) : null;
-  const reference = floor && (!row || floor.score > row.score) ? floor : row;
+  const reference = higherOf(row, floor);
   const allowed = reference ? reference.score : 0;
   if (now.score > allowed) {
     const reason = ratchet.risen(reference, now).join(', ');

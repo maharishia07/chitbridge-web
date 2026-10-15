@@ -779,18 +779,18 @@ async function crmFuSave() {
 var CRM_CLICK = {
   add: function () { return crmGo('#/parties/add'); },
   fuadd: function () { return crmFuAddOpen(null); },
-  fudone: function (ctl, id, value, ev) { ev.stopPropagation(); return crmFuAct(id, { done: true }); },
-  fusnooze: function (ctl, id, value, ev) { ev.stopPropagation(); return crmFuAct(id, { after: ctl.getAttribute('data-when') === 'week' ? 'week' : 'tomorrow' }); },
-  fuassign: function (ctl, id, value, ev) { ev.stopPropagation(); return crmFuAct(id, { assignee_user_id: (SESSION.userId || SESSION.name || '') }); },
-  fudel: function (ctl, id, value, ev) { ev.stopPropagation(); return api('crmFollowDel', { params: { id: id } }).then(function () { toast(tx('Deleted')); crmFuLoad(); }, function () { toast(tx("Couldn't delete that. Try again.")); }); },
-  addrole: function (ctl, id, value) { ADD.role = value; document.querySelectorAll('[data-crm="addrole"]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-v') === value)); }); },
-  addopen: function (ctl) { return crmGo('#/party/' + encodeURIComponent(ctl.getAttribute('data-k'))); },
-  addfound: function (ctl) { return crmAddGo('found', (ADD.found || [])[+ctl.getAttribute('data-i')]); },
+  fudone: function (control, id, value, event) { event.stopPropagation(); return crmFuAct(id, { done: true }); },
+  fusnooze: function (control, id, value, event) { event.stopPropagation(); return crmFuAct(id, { after: control.getAttribute('data-when') === 'week' ? 'week' : 'tomorrow' }); },
+  fuassign: function (control, id, value, event) { event.stopPropagation(); return crmFuAct(id, { assignee_user_id: (SESSION.userId || SESSION.name || '') }); },
+  fudel: function (control, id, value, event) { event.stopPropagation(); return api('crmFollowDel', { params: { id: id } }).then(function () { toast(tx('Deleted')); crmFuLoad(); }, function () { toast(tx("Couldn't delete that. Try again.")); }); },
+  addrole: function (control, id, value) { ADD.role = value; document.querySelectorAll('[data-crm="addrole"]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-v') === value)); }); },
+  addopen: function (control) { return crmGo('#/party/' + encodeURIComponent(control.getAttribute('data-k'))); },
+  addfound: function (control) { return crmAddGo('found', (ADD.found || [])[+control.getAttribute('data-i')]); },
   addlocal: function () { return crmAddGo('local'); },
-  fupreset: function (ctl, id, value) { document.getElementById('crm_fu_due').value = crmDayPlus(crmShopDay(), value === 'tomorrow' ? 1 : value === 'week' ? 7 : 0); },   /* from the SHOP's day, not the phone's */
-  fupick: function (ctl) { FUADD.party = CRM.byKey[ctl.getAttribute('data-k')]; document.getElementById('crm_fu_pq').value = FUADD.party.display_name; document.getElementById('crm_fu_pres').innerHTML = ''; },
+  fupreset: function (control, id, value) { document.getElementById('crm_fu_due').value = crmDayPlus(crmShopDay(), value === 'tomorrow' ? 1 : value === 'week' ? 7 : 0); },   /* from the SHOP's day, not the phone's */
+  fupick: function (control) { FUADD.party = CRM.byKey[control.getAttribute('data-k')]; document.getElementById('crm_fu_pq').value = FUADD.party.display_name; document.getElementById('crm_fu_pres').innerHTML = ''; },
   fusave: function () { return crmFuSave(); },
-  minichit: function (ctl, id, value, ev) { ev.stopPropagation(); if (typeof openChitSheet === 'function') openChitSheet(id); }
+  minichit: function (control, id, value, event) { event.stopPropagation(); if (typeof openChitSheet === 'function') openChitSheet(id); }
 };
 document.addEventListener('click', function (ev) {
   var t = ev.target.closest && ev.target.closest('[data-crm]'); if (!t) return;

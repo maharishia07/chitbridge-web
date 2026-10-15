@@ -194,16 +194,25 @@ function newWalk(chunk, relPath) {
   return { chunk, relPath, lineOf, endLineOf, functions: [], declarations: [], identifierUses: Object.create(null), literals: [], emptyCatches: [], stack: [], commentEndLines: new Map() };
 }
 
+/** is this function expression an IIFE / module wrapper: called at once (or .call'ed), near the top, and long — or the module's own top-level IIFE at any length (INT7b: page-frame.js, 82 lines) */
+function isWrapperNode(node, parent, stack, lines) {
+  if (node.type === 'FunctionDeclaration' || !parent) return false;
+  const calledAtOnce = (parent.type === 'CallExpression' && parent.callee === node) || (parent.type === 'MemberExpression' && parent.object === node);
+  const insideAFunction = stack.slice(0, -1).some((ancestor) => FUNCTION_TYPES.has(ancestor.type));
+  return calledAtOnce && stack.length <= WRAPPER_MAX_DEPTH && (!insideAFunction || lines > WRAPPER_MIN_LINES);
+}
+/** a comment ends on the line above the function's statement, or above the function's own line (a nested function's what-line, INT7b) */
+function commentAbove(walk, statement, node) {
+  return walk.commentEndLines.has(statement.loc.start.line - 1) || walk.commentEndLines.has(node.loc.start.line - 1);
+}
 /** a function node: record it, open a new nesting/complexity context, declare its params */
 function enterFunction(walk, node, parent) {
   const statement = enclosingStatement(walk.stack, node);
   const name = functionName(node, parent);
   const lines = walk.endLineOf(node) - walk.lineOf(node) + 1;
-  const isWrapper = node.type !== 'FunctionDeclaration' && parent && ((parent.type === 'CallExpression' && parent.callee === node) ||
-    (parent.type === 'MemberExpression' && parent.object === node)) && walk.stack.length <= WRAPPER_MAX_DEPTH && lines > WRAPPER_MIN_LINES;
   const params = node.params.flatMap((param) => patternNames(param, []).map((id) => id.name));
   const record = { file: walk.relPath, name, anon: !name, params, line: walk.lineOf(node), endLine: walk.endLineOf(node), len: lines, depth: 0, complexity: 1,
-    hasAbove: walk.commentEndLines.has(statement.loc.start.line - 1), wrapper: !!isWrapper, stmtLine: walk.lineOf(statement) };
+    hasAbove: commentAbove(walk, statement, node), wrapper: isWrapperNode(node, parent, walk.stack, lines), stmtLine: walk.lineOf(statement) };
   walk.functions.push(record);
   node.params.forEach((param) => patternNames(param, []).forEach((id) => walk.declarations.push({ name: id.name, line: walk.lineOf(id), kind: 'param' })));
   if (node.id && node.type === 'FunctionDeclaration') walk.declarations.push({ name: node.id.name, line: walk.lineOf(node.id), kind: 'function' });

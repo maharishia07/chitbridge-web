@@ -274,14 +274,19 @@
      then — not in bar mode — the work area (Home: the rail and the areas; an app: the sign-in slot and the work slot) and the foot.
      frame = { mode, person, sheetId, title, appId, homeHref, sides } */
   function frameHTML(frame) { return headerHTML(frame) + workHTML(frame); }
-  /* the header: the bar (mark · shop · switcher or title · chip · edition · licence · bell · ⌂ Home · avatar) and the shop's sheet */
+  /** SHELL-ONE: in bar mode the bar names its page (the shop, the lab) — { icon, name }; nothing otherwise */
+  function titleHTML(frame) {
+    if (frame.mode !== 'bar' || !frame.title) return '';
+    return '<span class="cbsh-title" data-testid="shell-title"><span aria-hidden="true">' + esc(frame.title.icon || '') + '</span><span>' + esc(frame.title.name || '') + '</span></span>';
+  }
+  /** the header: the bar (mark · shop · switcher or title · chip · edition · licence · bell · ⌂ Home · avatar) and the shop's sheet */
   function headerHTML(frame) {
     return '<header class="cbsh-hdr" data-testid="shell-header">' +
       '<div class="cbsh-bar" data-testid="shell-bar">' +
       '<span class="cbsh-mark" aria-hidden="true" data-testid="shell-mark">▣</span>' +
       (frame.person ? '<button type="button" class="cbsh-who" data-testid="shell-shop" aria-expanded="false" aria-controls="' + frame.sheetId + '"><b data-testid="shop-name"></b><span class="chev" aria-hidden="true">▼</span></button>' : '') +
       (frame.mode === 'app' ? '<div class="cbsh-sw"><button type="button" class="cbsh-swb" data-testid="shell-switcher" aria-haspopup="true" aria-expanded="false"></button><div class="cbsh-swpop" data-testid="shell-switcher-menu" hidden></div></div>' : '') +
-      (frame.mode === 'bar' && frame.title ? '<span class="cbsh-title" data-testid="shell-title"><span aria-hidden="true">' + esc(frame.title.icon || '') + '</span><span>' + esc(frame.title.name || '') + '</span></span>' : '') +   /* SHELL-ONE: the bar names its page (the shop, the lab) */
+      titleHTML(frame) +
       '<span class="cbsh-grow"></span>' +
       (frame.mode !== 'bar' || frame.appId ? '<span class="cbsh-sid" data-testid="shell-screen-id"></span>' : '') +   /* SCREEN-ID: this screen's name · code (app/screen-id.js, if the page loaded it) */
       '<span class="cbsh-ed" data-testid="shell-edition"></span>' +
@@ -294,7 +299,7 @@
       (frame.person ? '<div class="cbsh-sheet" id="' + frame.sheetId + '" role="region" data-testid="shell-sheet" hidden></div><div class="cbsh-scrim" data-testid="shell-scrim"></div>' : '') +
     '</header>';
   }
-  /* the work area under the header — nothing in bar mode; Home: the rail and the areas; an app: the sign-in slot and the work slot; then the foot */
+  /** the work area under the header — nothing in bar mode; Home: the rail and the areas; an app: the sign-in slot and the work slot; then the foot */
   function workHTML(frame) {
     if (frame.mode === 'bar') return '';
     return '<div class="cbsh-work">' +
