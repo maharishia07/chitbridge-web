@@ -92,7 +92,9 @@ function followups(fus, now) {
 }
 /** the login a request carries (the stand-in's signed-nothing token: claims in the payload) → 'owner' · 'editor' · 'commenter' · 'viewer' */
 function levelOf(req) {
-  const h = String((req && req.headers && req.headers.authorization) || ''), tok = h.replace(/^Bearer\s+/i, '');
+  /* a Playwright route (route.request().headers()), a Playwright request (headers()), or a node request (headers) — the stand-ins hand in any of the three */
+  const headers = !req ? {} : typeof req.request === 'function' ? (req.request().headers() || {}) : typeof req.headers === 'function' ? (req.headers() || {}) : (req.headers || {});
+  const h = String(headers.authorization || headers.Authorization || ''), tok = h.replace(/^Bearer\s+/i, '');
   let c = {};
   try { c = JSON.parse(Buffer.from(tok.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8')); } catch (_) { c = {}; }
   if (!tok || c.identity_type === 'entity' || !c.identity_type) return 'owner';

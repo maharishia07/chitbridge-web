@@ -137,7 +137,7 @@ async function route(S, r) {
   if ((x = p.match(/^\/api\/crm\/followups\/([^/]+)$/))) {
     const f = S.fu.find((y) => y.followup_id === x[1]);
     /* W2-CRM: a snooze is a WORD ({ after }) the api turns into the shop's day; a date (due_at) is a day too */
-    if (m === 'PATCH') { S.fuPatch = body; if (f && body.done) f.done_at = new Date().toISOString(); if (f && (body.due_at || body.after)) { f.due_at = body.after ? resolve(body.after === 'week' ? '@+7d' : '@+1d') : body.due_at; f.late = false; } return J(r, 200, { followup: crmApi.followupOne(f || { followup_id: x[1], party_id: 'pid-0001', what: '', due_at: new Date().toISOString() }) }); }
+    if (m === 'PATCH') { S.fuPatch = body; if (f && body.done) f.done_at = new Date().toISOString(); if (f && (body.due_at || body.after)) { f.due_at = body.after ? new Date(Date.now() + (body.after === 'week' ? 7 : 1) * 86400e3).toISOString() : body.due_at; f.late = false; } return J(r, 200, { followup: crmApi.followupOne(f || { followup_id: x[1], party_id: 'pid-0001', what: '', due_at: new Date().toISOString() }) }); }
     if (m === 'DELETE') { S.fu = S.fu.filter((y) => y.followup_id !== x[1]); S.fuDeleted = x[1]; return J(r, 200, { ok: true }); }
   }
   /* ── the existing relationship routes ── */
@@ -574,6 +574,7 @@ async function route(S, r) {
     await homeReady(p);
     ok(await p.locator('[data-testid="crm-add"]').count() === 1, 'a co-assist can add a party');
     await p.click('[data-testid="crm-row-P-0003"]'); await recReady(p);
+    await p.click('[data-testid="crm-act-more"]'); await p.waitForSelector('[data-testid="crm-more-menu"]', { timeout: 8000 });   /* Remove sits in More: open it to see it greyed */
     ok(await p.locator('[data-testid="crm-more-remove"]').count() === 1 && await p.locator('[data-testid="crm-more-remove"]').isDisabled() && /Only the owner/.test(await text(p, '[data-testid="crm-more-remove"]')) && !/Merge|Import|Export|Link to ChitBridge/i.test(await text(p, '.rec')) && !/Merge|Import|Export/i.test(await text(p, 'nav')), 'a co-assist sees no Import / Export / Merge; Remove is SHOWN, greyed, with the server\'s owner-only sentence (W2-CRM: the server says may/why)');
     await ctx.close();
   }

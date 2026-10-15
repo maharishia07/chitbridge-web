@@ -229,10 +229,15 @@ function crmWalkInFrom(w) {
     dues_overdue: false, next_followup_at: null, next_followup_late: false, unread: 0, points: { balance: Number(w.points) || 0, programme: '' }, nickname: null, legal_name: null, state_code: null };
 }
 /** a follow-up as the API sends it (late · today · due_day · party_listed, NO bucket) → the page's row */
+/* W2-CRM: the server's `bucket` used to END this mapping (`if (f.bucket) return f`), so party_removed / assignee_left were never set against the real API
+   (the walk's "No longer your party" row was red on main); only the bucket is skipped now, and an older answer without one is bucketed from the SHOP's day */
 function crmFuFrom(f) {
-  if (!f || f.bucket) return f;
-  var o = Object.assign({}, f), t = crmLocalISO(new Date()), wk = crmLocalISO(new Date(Date.now() + 6 * 86400000));   // This week = the next six days after today
-  o.bucket = f.late ? 'late' : f.today ? 'today' : (f.due_day && f.due_day <= wk && f.due_day > t) ? 'week' : 'later';
+  if (!f) return f;
+  var o = Object.assign({}, f);
+  if (!f.bucket) {
+    var today = crmShopDay(), weekEnd = crmDayPlus(today, 6);   // This week = the next six days after today
+    o.bucket = f.late ? 'late' : f.today ? 'today' : (f.due_day && f.due_day <= weekEnd && f.due_day > today) ? 'week' : 'later';
+  }
   if (f.party_listed === false) o.party_removed = true;
   if (f.assignee_user_id && !f.assignee_name) o.assignee_left = true;   // an assignee with no name on file has left the team
   return o;
