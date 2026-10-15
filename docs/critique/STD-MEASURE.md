@@ -2,7 +2,7 @@
 
 (a) Assumptions checked
 - "MAINT-1 measuring scope (vendored copies excluded)" — UNKNOWN: no MAINT-1 file in web/api/engines, and ../chitbridge-docs is empty on this runner. I rebuild the scope from the vendoring markers instead: web `public/engine/*` + `public/till.html` (engines.lock.json, "ADOPTED from" headers), api adopted `lib/*` copies (engines.lock.json), fixtures, lockfiles, images.
-- "jscpd as in MAINT-1" — UNKNOWN: jscpd is in no package.json/lockfile. Brief forbids a new dependency → the script runs `npx --no jscpd` only if it is already installed, else uses its own 6-line-window duplicate finder (stated in the output).
+- "jscpd as in MAINT-1" — UNKNOWN: jscpd is in no package.json/lockfile and the brief forbids a new dependency → the script has its own 6-line-window duplicate finder (said in its header).
 - "web tools/graph KG1" — TRUE: tools/graph/scan.cjs exports scanJs (functions, lines, params, requires). Reused for unit size / params / fan-in; not copied.
 - "engines if reachable" — TRUE: ../chitbridge-engines exists beside the checkouts; the script takes any root.
 - "existing CI workflows — add, never duplicate" — TRUE: no codeql.yml in either repo (web: ci, e2e, walks, build-round, batch-merge; api: ci, governance, backup-restore, uptime).
