@@ -136,9 +136,9 @@ function timeline(tl, id, q) {
 }
 /** the timeline ANSWER from API-shaped entries (any order): newest first, cut by ?before= and ?limit=, with the cursor and the one pager's
  *  envelope. ONE envelope for every stand-in — standin.cjs's L2C and privacy timelines drew their own and never carried total · page · limit (INT7a) */
-function timelinePage(apiEntries, id, q) {
+function timelinePage(apiEntries, id, query) {
   const all = (apiEntries || []).slice().sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
-  const o = q || {}, limit = Math.max(1, Math.min(100, Number(o.limit) || 30)), before = o.before ? Date.parse(o.before) : Infinity;
+  const asked = query || {}, limit = Math.max(1, Math.min(100, Number(asked.limit) || 30)), before = asked.before ? Date.parse(asked.before) : Infinity;
   const rows = all.filter((e) => Date.parse(e.at) < before), page = rows.slice(0, limit);
   return { party_id: id, entries: page, next_before: rows.length > limit ? page[page.length - 1].at : null, migrated: true, total: rows.length, page: 1, limit };
 }
