@@ -21,3 +21,6 @@ tools/graph/out/
 
 # test run output (screenshots) — never committed
 e2e/out/
+
+# READ-GUARD: the TRACE rows per module, generated from KG1 by `node tools/graph/trace.cjs` — never committed (it would churn on every PR)
+trace.json

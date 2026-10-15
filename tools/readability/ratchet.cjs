@@ -68,12 +68,13 @@ function tighten(existing, scores) {
   return { rows, refused, lowered };
 }
 
+/** one row per line, files sorted — a diff shows exactly which file moved */
 function write(root, rows) {
-  const sorted = {};
-  sorted._about = 'readability ratchet (DISCIPLINES §6): one row per own-code file, score = ' + COUNTERS.join(' + ') +
+  const about = 'readability ratchet (DISCIPLINES §6): one row per own-code file, score = ' + COUNTERS.join(' + ') +
     '. A file may score LESS than its row, never more. Lower it with `node tools/readability.cjs --write` (web) / `--repo api --write`; it never raises.';
-  for (const file of Object.keys(rows).sort()) sorted[file] = rows[file];
-  fs.writeFileSync(ratchetPath(root), JSON.stringify(sorted, null, 1) + '\n');
+  const lines = ['  "_about": ' + JSON.stringify(about)];
+  for (const file of Object.keys(rows).sort()) lines.push('  ' + JSON.stringify(file) + ': ' + JSON.stringify(rows[file]));
+  fs.writeFileSync(ratchetPath(root), '{\n' + lines.join(',\n') + '\n}\n');
 }
 
 /** which counters rose between two breakdowns — the words a failure needs */
