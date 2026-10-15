@@ -91,7 +91,7 @@ async function route(S, r) {
   }
   if (p === '/api/crm/parties' && m === 'GET') {
     if (S.listFails > 0) { S.listFails--; return J(r, 500, { error: 'boom' }); }
-    return J(r, 200, crmApi.list(S.list, { careless: S.careless, records: fx.records }));
+    return J(r, 200, Object.assign(crmApi.list(S.list, { careless: S.careless, records: fx.records }), { may: crmApi.mayOf(r) }));   /* W2-CRM: the server's may/why rides the list */
   }
   if (S.live && (x = p.match(/^\/api\/crm\/parties\/([^/]+)\/timeline$/))) return J(r, 200, S.live.timeline);
   if (S.live && (x = p.match(/^\/api\/crm\/parties\/([^/]+)$/)) && m === 'GET') return S.live.recordFails ? J(r, 500, { error: 'Failed', message: 'boom' }) : S.live.raw ? r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(S.live.record) }) /* a deliberately malformed answer: not held to the contract */ : J(r, 200, S.live.record);
@@ -121,13 +121,13 @@ async function route(S, r) {
     if (!row) return J(r, 404, { code: 'NOT_FOUND', error: 'Not found', message: 'Not your party.' });
     const rec = crmApi.record(S.list, row.party_id, fx.records[row.party_id], S.fu);
     if (!S.migrated) { rec.migrated = false; rec.followups = []; }
-    return J(r, 200, rec);
+    return J(r, 200, Object.assign(rec, { may: crmApi.mayOf(r) }));
   }
   if (p === '/api/crm/followups' && m === 'GET') {
     if (!S.interactionsOk || !S.migrated) return J(r, 503, { code: 'CRM_NOT_MIGRATED', error: 'Not migrated yet', message: 'CB CRM needs migration b276 — not run yet.' });
     const scope = u.searchParams.get('scope'), done = u.searchParams.get('done') === '1', me = S.me || 'Athi';
     S.fuQueries = (S.fuQueries || []).concat([scope + '/' + (done ? 1 : 0)]);
-    return J(r, 200, crmApi.followups(S.fu.filter((f) => (done ? !!f.done_at : !f.done_at) && (scope !== 'mine' || f.assignee_name === me))));
+    return J(r, 200, Object.assign(crmApi.followups(S.fu.filter((f) => (done ? !!f.done_at : !f.done_at) && (scope !== 'mine' || f.assignee_name === me))), { may: crmApi.mayOf(r) }));
   }
   if (p === '/api/crm/followups' && m === 'POST') {
     if (!S.interactionsOk || !S.migrated) return J(r, 503, { code: 'CRM_NOT_MIGRATED', error: 'Not migrated yet', message: 'CB CRM needs migration b276 — not run yet.' });
@@ -136,7 +136,8 @@ async function route(S, r) {
   }
   if ((x = p.match(/^\/api\/crm\/followups\/([^/]+)$/))) {
     const f = S.fu.find((y) => y.followup_id === x[1]);
-    if (m === 'PATCH') { S.fuPatch = body; if (f && body.done) f.done_at = new Date().toISOString(); if (f && body.due_at) { f.due_at = body.due_at; f.late = false; } return J(r, 200, { followup: crmApi.followupOne(f || { followup_id: x[1], party_id: 'pid-0001', what: '', due_at: new Date().toISOString() }) }); }
+    /* W2-CRM: a snooze is a WORD ({ after }) the api turns into the shop's day; a date (due_at) is a day too */
+    if (m === 'PATCH') { S.fuPatch = body; if (f && body.done) f.done_at = new Date().toISOString(); if (f && (body.due_at || body.after)) { f.due_at = body.after ? new Date(Date.now() + (body.after === 'week' ? 7 : 1) * 86400e3).toISOString() : body.due_at; f.late = false; } return J(r, 200, { followup: crmApi.followupOne(f || { followup_id: x[1], party_id: 'pid-0001', what: '', due_at: new Date().toISOString() }) }); }
     if (m === 'DELETE') { S.fu = S.fu.filter((y) => y.followup_id !== x[1]); S.fuDeleted = x[1]; return J(r, 200, { ok: true }); }
   }
   /* ── the existing relationship routes ── */
@@ -152,6 +153,7 @@ async function route(S, r) {
     if (S.dup && (body.tax_ids || []).some((t) => t.value === 'DUPLICATE')) return J(r, 409, { error: 'This GSTIN is already on P-0001 Agro Mills', code: 'DUPLICATE_PARTY' });
     return J(r, 200, { ok: true });
   }
+  if (p === '/api/books/terms') return J(r, 200, { terms_migrated: true, may_set: true, why_not: null, default: {}, party: null, events: [] });   /* the record's Tax & terms read — the contract's shape (as e2e/lib/standin.cjs answers it) */
   if (m === 'GET') return J(r, 200, {});
   return J(r, 200, { ok: true });
 }
@@ -200,7 +202,7 @@ async function route(S, r) {
     ok(!/\balert\s*\(/.test(all), 'no alert() anywhere');
     ok(!/accounting|books of account/i.test(all.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')), 'the source carries neither forbidden word on a screen');
     ok(/CBOnePerson\.attach\(/.test(html), 'the one-shop gate is attached');
-    ok(/id="cb-avatar"[^>]*><\/span>/.test(html) && !/class="avatar"|avatar-btn|avmenu/.test(html), 'the avatar slot (#cb-avatar) is present and EMPTY — CBAvatar mounts there; this page draws none');
+    ok(/id="shell"[^>]*><\/div>/.test(html) && !/class="avatar"|avatar-btn|avmenu|CBAvatar\.mount\(|cb-avatar/.test(html.replace(/<!--[\s\S]*?-->/g, '')), 'the frame\'s host (#shell) is present and EMPTY — CBFrame mounts the one header (avatar · Home · chip) there; this page draws none (SHELL-ONE)');
     ok(!/role=\\?["']columnheader|<thead|class=\\?["'][^"']*\blhead\b/.test(all), 'no column header is drawn by hand — every list is a CBList mount');
     ok((js.match(/CBList\.mount\(/g) || []).length >= 4, 'home, follow-ups and both timeline views are CBList mounts (' + (js.match(/CBList\.mount\(/g) || []).length + ')');
     const code = js.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
@@ -238,9 +240,9 @@ async function route(S, r) {
     ok(await p.locator('#crm_list .cbl-rz').count() === 6, 'every column has its drag handle (adjustable columns)');
     ok(await p.locator('#crm_list [data-hf="role"]').count() === 1 && await p.locator('#crm_list [data-hf="rail"]').count() === 1, 'Role and On ChitBridge carry their own filter in the column heading');
     /* the frozen head: title row (shop · Home · avatar slot ride in it) + tools + column header ≤ 20% of 1366×768 */
-    const hd = await p.evaluate(() => { const q = (s) => document.querySelector(s), r = (e) => e ? e.getBoundingClientRect() : { top: 0, bottom: 0 }; const list = q('#crm_list .cbl-list'); return { top: r(q('#crm_list')).top, rows: r(list).top, h: innerHeight, bar: r(q('.bar')).bottom }; });
-    ok((hd.rows - hd.top) <= 0.2 * hd.h, 'everything above the rows is ' + Math.round((hd.rows - hd.top)) + ' px of ' + hd.h + ' (' + Math.round(100 * (hd.rows - hd.top) / hd.h) + '%) — within 20% (the shop · Home · avatar bar rides in the title row)');
-    ok(hd.top <= 4, 'nothing sits above the list: its title row is the top of the screen');
+    const hd = await p.evaluate(() => { const q = (s) => document.querySelector(s), r = (e) => e ? e.getBoundingClientRect() : { top: 0, bottom: 0 }; const list = q('#crm_list .cbl-list'); return { top: r(q('#crm_list')).top, rows: r(list).top, h: innerHeight, frame: r(q('[data-testid="shell-header"]')).bottom }; });
+    ok((hd.rows - hd.top) <= 0.2 * hd.h, 'everything above the rows is ' + Math.round((hd.rows - hd.top)) + ' px of ' + hd.h + ' (' + Math.round(100 * (hd.rows - hd.top) / hd.h) + '%) — within 20% (the page\'s one action rides in the title row; the shop · Home · avatar are the frame\'s)');
+    ok(hd.top <= hd.frame + 1 && hd.frame <= 60, 'only the frame (' + Math.round(hd.frame) + ' px) sits above the list: its title row starts right under it (SHELL-ONE)');
     /* only the rows scroll */
     const sc = await p.evaluate(() => { const l = document.querySelector('#crm_list .cbl-list'), h = document.querySelector('#crm_list .cbl-hdr'), t0 = h.getBoundingClientRect().top; l.scrollTop = 400; return { t0, t1: h.getBoundingClientRect().top, page: document.documentElement.scrollTop, scr: document.getElementById('screen').scrollTop }; });
     ok(sc.t0 === sc.t1 && sc.page === 0 && sc.scr === 0, 'only the rows scroll: the column header stays at ' + sc.t1 + ' px, the page and the screen do not move');
@@ -327,7 +329,7 @@ async function route(S, r) {
     await p.click('[data-testid="crm-row-P-0003"]'); await recReady(p, 'Ravi Traders');
     ok(/#\/party\/P-0003/.test(p.url()), 'a row opens its record at #/party/P-0003');
     /* INTEGRATION: the slot is no longer empty at run time - CBAvatar mounts there (the source still draws none; line above). The frozen check: it holds ONE CBAvatar control and nothing else. */
-    ok(await p.evaluate(() => { const s = document.querySelector('#cb-avatar'); return !!s && s.querySelectorAll('.cbav').length === 1 && s.querySelectorAll('[data-testid="avatar"],[data-testid="signin-door"]').length === 1; }), 'the avatar slot holds ONE CBAvatar on the record');
+    ok(await p.evaluate(() => { const s = document.querySelector('[data-testid="shell-avatar"]'); return !!s && document.querySelectorAll('.cbav').length === 1 && s.querySelectorAll('[data-testid="avatar"],[data-testid="signin-door"]').length === 1; }), 'the frame\'s avatar slot holds ONE CBAvatar on the record');
     await ctx.close();
   }
 
@@ -483,7 +485,7 @@ async function route(S, r) {
     await p.click('[data-testid="crm-fu-fu-03"] [data-caret]'); await p.waitForSelector('[data-testid="crm-fu-mini-fu-03"]');
     ok(await p.locator('.cbl-next [data-act]').count() === 4, 'the follow-up mini-card shows every action: Done · Snooze tomorrow · Snooze next week · Open party');
     await p.click('.cbl-next [data-testid="crm-fu-snooze-tomorrow"]'); await p.waitForTimeout(400);
-    ok(S.fuPatch && S.fuPatch.due_at && !S.fuPatch.done, 'Snooze → Tomorrow sends a new due_at');
+    ok(S.fuPatch && S.fuPatch.after === 'tomorrow' && !S.fuPatch.due_at && !S.fuPatch.done, 'Snooze → Tomorrow sends the WORD { after: tomorrow } — the server lands it on the shop\'s day, never this phone\'s clock (W2-CRM)');
     await p.click('[data-testid="crm-fu-del-fu-09"]'); await p.waitForTimeout(400);
     ok(S.fuDeleted === 'fu-09', 'Delete removes a follow-up of a party that is no longer yours');
     await p.click('[data-testid="cbl-filters-crm-followups"]'); await p.selectOption('[data-testid="listctl-filter-scope"]', 'mine'); await p.waitForTimeout(500);
@@ -573,7 +575,8 @@ async function route(S, r) {
     await homeReady(p);
     ok(await p.locator('[data-testid="crm-add"]').count() === 1, 'a co-assist can add a party');
     await p.click('[data-testid="crm-row-P-0003"]'); await recReady(p);
-    ok(await p.locator('[data-testid="crm-more-remove"]').count() === 0 && !/Merge|Import|Export|Link to ChitBridge/i.test(await text(p, '.rec')) && !/Merge|Import|Export/i.test(await text(p, 'nav')), 'a co-assist sees no Import / Export / Merge / Remove');
+    await p.click('[data-testid="crm-act-more"]'); await p.waitForSelector('[data-testid="crm-more-menu"]', { timeout: 8000 });   /* Remove sits in More: open it to see it greyed */
+    ok(await p.locator('[data-testid="crm-more-remove"]').count() === 1 && await p.locator('[data-testid="crm-more-remove"]').isDisabled() && /Only the owner/.test(await text(p, '[data-testid="crm-more-remove"]')) && !/Merge|Import|Export|Link to ChitBridge/i.test(await text(p, '.rec')) && !/Merge|Import|Export/i.test(await text(p, 'nav')), 'a co-assist sees no Import / Export / Merge; Remove is SHOWN, greyed, with the server\'s owner-only sentence (W2-CRM: the server says may/why)');
     await ctx.close();
   }
   {
@@ -584,7 +587,7 @@ async function route(S, r) {
     ok(await p.locator('[data-testid="crm-actions"]').count() === 1 && await p.locator('[data-testid="crm-actions"] button:not([disabled])').count() === 0 && /only view/.test(await text(p, '[data-testid="crm-actions-why"]')) && await p.locator('[data-testid="crm-next"] button').count() === 0 && await p.locator('[data-testid="crm-next-done-fu-03"]').count() === 0, 'a viewer: every action shown, greyed, with the server\'s one sentence (FX-L2C)');
     ok(await p.locator('[data-testid="crm-next"]').count() === 1, 'a viewer still SEES what is due (Next stays)');
     await p.evaluate(() => { location.hash = '#/followups'; }); await p.waitForSelector('[data-testid^="crm-fu-fu-"]', { timeout: 10000 });
-    ok(await p.locator('[data-testid^="crm-fu-done-"]').count() === 0 && await p.locator('[data-testid="crm-fu-add"]').count() === 0, 'a viewer: no Done, no Add follow-up');
+    ok(await p.locator('[data-testid^="crm-fu-done-"]').count() === 0 && await p.locator('[data-testid="crm-fu-add"]').count() === 1 && await p.locator('[data-testid="crm-fu-add"]').isDisabled() && /only view/.test(await text(p, '[data-testid="crm-fu-add-why"]')), 'a viewer: no Done; Add follow-up SHOWN, greyed, with the sentence from the server\'s code (W2-CRM)');
     await ctx.close();
   }
 
@@ -634,8 +637,8 @@ async function route(S, r) {
     const S = standIn(), { ctx, p } = await open(S, { viewport: { width: 390, height: 844 } });
     await homeReady(p);
     let w = await sw(p); ok(w.sw === 390 && w.over <= 0, 'phone home: document.scrollWidth === ' + w.sw + ' (390), the screen scrolls sideways by ' + w.over + ' px');
-    const hd = await p.evaluate(() => document.querySelector('#crm_list .cbl-list').getBoundingClientRect().top / innerHeight);
-    ok(hd <= 0.35, 'phone: everything above the rows is ' + Math.round(100 * hd) + '% of the window (≤ 30% + the bar; the API sends one alert - the late follow-ups - and a lone alert is a line under the title, two would fold into one chip)');
+    const hd = await p.evaluate(() => ({ top: document.querySelector('#crm_list .cbl-list').getBoundingClientRect().top / innerHeight, bar: (document.querySelector('.cbsh-hdr') ? document.querySelector('.cbsh-hdr').getBoundingClientRect().height : 0) / innerHeight }));
+    ok(hd.top <= 0.30 + hd.bar, 'phone: everything above the rows is ' + Math.round(100 * hd.top) + '% of the window (≤ 30% + the bar, ' + Math.round(100 * hd.bar) + '%; the API sends one alert - the late follow-ups - and a lone alert is a line under the title, two would fold into one chip)');
     ok(await p.evaluate(() => getComputedStyle(document.querySelector('#crm_list [data-row]')).display !== 'none') && (await p.locator('#crm_list [data-row]').count()) === 7, 'phone: one card per party');
     ok(await p.locator('[data-testid="crm-add"]').isVisible(), 'phone: Add party stays reachable');
     await p.screenshot({ path: path.join(SHOTS, 'crm-home-phone.png') });
@@ -658,7 +661,7 @@ async function route(S, r) {
     /* the record exactly as the API builds it (crm-api.cjs), then the three things this scenario is about: merged_from as an object, points as { points }, a follow-up due today */
     const record = Object.assign(crmApi.record(S0.list, 'pid-0002', S0.fx.records['pid-0002'], []), { merged_from: { party_id: 'pid-old', party_no: 'P-0009' }, points: { programme: 'Club', points: 340, worth: 34 },
       followups: [crmApi.followupOne({ followup_id: 'f1', party_id: 'pid-0002', party_no: 'P-0002', party_name: 'Chola Auto Care', what: 'Ring about the rate', due_at: new Date().toISOString(), assignee_user_id: 'u2', assignee_name: 'Divya', source: 'manual' })] });
-    const timeline = { party_id: 'pid-0002', next_before: null, migrated: true, entries: [
+    const timeline = { party_id: 'pid-0002', next_before: null, migrated: true, total: 0, page: 1, limit: 100, entries: [
       { kind: 'chit', at: new Date(Date.now() - 3600e3).toISOString(), chit_id: 'ch-1', direction: 'out', status: 'accepted', purpose: 'order', doc_kind: 'bill', bill_no: 'B-12', title: 'Bill B-12', value: 125.5, currency: 'INR', open_disputes: 0 },
       { kind: 'ledger', at: new Date(Date.now() - 7200e3).toISOString(), ref: 'R-1', ledger_kind: 'receipt', source: null, amount_minor: 5000, currency: 'INR', doc_date: '2026-10-03' },
       { kind: 'interaction', at: new Date(Date.now() - 9000e3).toISOString(), interaction_id: 'ix-1', interaction_kind: 'call', direction: 'out', body: 'Rang about the rate', by: 'u1' },
@@ -776,7 +779,7 @@ async function route(S, r) {
         band: r('#cbkural,#cbkural-reserve'), list: r('.cbl-list'), collapse: r('#toggleNav') }; });
     await p.waitForTimeout(450);   /* a fixed beat, BEFORE the slow line has answered anything: what is on screen now is the FIRST paint */
     const first = await box();
-    ok(first.navN === 3 && first.rows === 0 && first.skel >= 5, 'FIRST PAINT, data still on its way: the three menu items, skeleton rows (' + first.skel + '), no data row yet');
+    ok(first.navN >= 3 && first.rows === 0 && first.skel >= 5, 'FIRST PAINT, data still on its way: the menu items (' + first.navN + ' — W2-CRM: every one is shown, the server greys), skeleton rows (' + first.skel + '), no data row yet');
     ok(!!first.title && !!first.tools && !!first.hdr && !!first.views, 'FIRST PAINT: the title "Parties", the views, the toolbar and the column header are all there');
     ok(!!first.band && first.band[3] >= 40, 'FIRST PAINT: the kural\'s room is kept (' + (first.band && first.band[3]) + ' px) so the page is not shortened when it arrives');
     await p.waitForSelector('[data-testid^="crm-row-"]', { timeout: 15000 }); await p.waitForTimeout(500);
@@ -893,7 +896,7 @@ async function route(S, r) {
       S.list.forEach((q) => { if (q.party_no === 'P-0004') Object.assign(q, { kind: 'person', bridge_id: 'CBC3TQ3NEX', user_id: null, on_chitbridge: false, why_not: 'shopper', segment: 'new', balance_minor: 0, display_name: 'athi', phone: '+91 98940 55621' }); });
       const record = Object.assign(crmApi.record(S.list, 'pid-0004', S.fx.records['pid-0004'], []), { tax_ids: [] });
       record.customer = Object.assign({}, record.customer, { added_via: 'catalogue', segment: 'new', txn_count: 1 });
-      const now = Date.now(), timeline = { party_id: 'pid-0004', next_before: null, migrated: true, entries: [
+      const now = Date.now(), timeline = { party_id: 'pid-0004', next_before: null, migrated: true, total: 0, page: 1, limit: 100, entries: [
         { kind: 'chit', at: new Date(now - 3600e3).toISOString(), chit_id: 'ch-o1', direction: 'in', status: 'pending', purpose: 'order', doc_kind: null, title: 'Online order · 09 Oct', value: 90, currency: 'INR', open_disputes: 0 },
         { kind: 'ledger', at: new Date(now - 7200e3).toISOString(), ref: 'pay:0d102689-e69d-41be-b175-08762c7afbdc', ledger_kind: 'receipt', source: null, amount_minor: 100, currency: 'INR', doc_date: '2026-10-03' }] };
       S.live = { record, timeline };

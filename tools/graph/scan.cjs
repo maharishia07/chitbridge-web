@@ -1,6 +1,12 @@
 /**
  * tools/graph/scan.cjs — the hand-written source scanner behind tools/graph/graph.cjs (KG1, 2026-10-12).
  *
+ * OWNS      the lexer (code with strings and comments blanked · the strings list) and the per-file scan: functions · calls · refs ·
+ *           requires · joined paths · exports · globals · api keys/paths · SQL tables · markup handlers.
+ * CALLED BY tools/graph/graph.cjs (build), tools/graph/trace.cjs through it, e2e/knowledge-graph.cjs (the guard on this tool).
+ * FLOW      lex(src) ──▶ scanJs(code, strings) | scanHtml(src) ──▶ { functions, calls, requires, joinedPaths, … } ──▶ graph.build()
+ * CARD      29-qa-test-tooling-ux-locale-and-design-system/knowledge-graph
+ *
  * No parser dependency: acorn/espree are in none of the three repos' lockfiles, and a dependency was ruled out for this
  * round. What this does instead is a one-pass lexer that KNOWS strings, template literals (with `${…}` nesting),
  * comments and regex literals, and hands back two views of a file:
@@ -181,6 +187,39 @@ function sqlTables(text) {
 /* ── 4 · one JS source ───────────────────────────────────────────────────────────────────────────────────────────── */
 const NAME = '[A-Za-z_$][\\w$]*';
 
+/** the string segments inside the path.join( / path.resolve( call that opens at `from`, joined with '/' — null when none */
+function joinedSegments(code, strings, from) {
+  const to = code.indexOf(')', from);
+  if (to < 0) return null;
+  const segments = strings.filter((segment) => segment.start > from && segment.start < to).map((segment) => segment.text);
+  return segments.length ? segments.join('/') : null;
+}
+/** require(path.join(__dirname, '..', 'lib', 'x')) — the form the api tests use — as a relative spec (INT7b: without it a lib's test gave no tested-by edge) */
+function joinedRequireSpec(code, strings, pos) {
+  const head = /^\s*path\.(?:join|resolve)\(\s*__dirname\s*,/.exec(code.slice(pos, pos + 40));
+  if (!head) return null;
+  const joined = joinedSegments(code, strings, pos + head[0].length);
+  if (!joined) return null;
+  return /^\.\.?\//.test(joined) ? joined : './' + joined;
+}
+/** the string literal that opens within 3 bytes of `pos` (the argument of require( ), else null */
+function literalStringAt(strings, pos) {
+  for (const literal of strings) { if (literal.start - 1 >= pos && literal.start - 1 <= pos + 3) return literal.text; if (literal.start > pos + 3) break; }
+  return null;
+}
+/** what a require( ) at `pos` asks for: its string literal, else the joined path.join(__dirname, …) form */
+function requireSpecAt(code, strings, pos) { return literalStringAt(strings, pos) || joinedRequireSpec(code, strings, pos); }
+/** every path.join(ROOT, 'app', 'x.js') / path.resolve(...) of string segments as ONE joined path, so a test that READS a module by
+ *  path.join names it (INT7b: the standards walks read cap-standards.js that way and the register had no tested-by edge) */
+function joinedPathsIn(code, strings) {
+  const joinedPaths = [], reJoin = /\bpath\.(?:join|resolve)\s*\(/g;
+  let match;
+  while ((match = reJoin.exec(code))) {
+    const joined = joinedSegments(code, strings, match.index + match[0].length);
+    if (joined) joinedPaths.push({ text: joined, start: match.index, pos: match.index });
+  }
+  return joinedPaths;
+}
 /**
  * scanJs(src, opts) — functions, calls, refs, requires, exports and the strings that matter.
  *   functions[]  { name, kind, start, end, line, endLine, paramsAt }   start/end = body braces (inclusive of `{` … `}`)
@@ -269,10 +308,9 @@ function scanJs(src, opts) {
 
   /* requires */
   const requires = [];
-  const strAt = (pos) => { for (const s of strings) { if (s.start - 1 >= pos && s.start - 1 <= pos + 3) return s.text; if (s.start > pos + 3) break; } return null; };
   const reReq = /\brequire\s*\(/g;
   while ((m = reReq.exec(code))) {
-    const spec = strAt(m.index + m[0].length);
+    const spec = requireSpecAt(code, strings, m.index + m[0].length);
     if (!spec) continue;
     /* the statement this require sits in: back to the start of the line */
     const ls = code.lastIndexOf('\n', m.index) + 1;
@@ -282,9 +320,9 @@ function scanJs(src, opts) {
     if ((mm = new RegExp('(?:const|let|var)\\s+(' + NAME + ')\\s*=').exec(stmt))) alias = mm[1];
     else if ((mm = /(?:const|let|var)\s*\{([^}]*)\}\s*=/.exec(stmt))) names = mm[1].split(',').map((x) => x.trim().split(/\s*:\s*/)).filter((p) => p[0]).map((p) => ({ exported: p[0], local: p[1] || p[0] }));
     else if ((mm = new RegExp('(' + NAME + ')\\s*=\\s*$').exec(stmt))) alias = mm[1];
-    /* const { a } = require('x').sub  — rare; ignored */
-    requires.push({ spec, alias, names, pos: m.index });
+    requires.push({ spec, alias, names, pos: m.index });   /* const { a } = require('x').sub — rare; ignored */
   }
+  const joinedPaths = joinedPathsIn(code, strings);
 
   /* exports */
   const exportsOut = new Set();
@@ -330,7 +368,7 @@ function scanJs(src, opts) {
     }
   }
 
-  return { code, strings, functions, calls, requires, exports: [...exportsOut], globals: [...globals], apiKeys, apiPaths, handlers, toLine: L };
+  return { code, strings, joinedPaths, functions, calls, requires, exports: [...exportsOut], globals: [...globals], apiKeys, apiPaths, handlers, toLine: L };
 }
 
 /** the identifiers in `code` that name one of `names` and are used as values (not called, not a property) */

@@ -1,4 +1,7 @@
 /* app/core.js — shared client module for the Task Panel (module 1 of the app split).
+ * OWNS  the envelope: unwrap() (the {ok,data,error} answer, its list siblings kept), api() (auth · 401/422/500 branching), fill().
+ * FLOW  api(key) → EP[key] → fetch → unwrap → the panel paints; a 401 ends the session (CBFrame.ended)
+ * CARD 01-rail-core-the-chit/task-panel-core
  * Loaded by /app.html BEFORE its main inline script (classic script, shared global scope).
  * Exposes: fill(), unwrap() (the {ok,data,error} envelope), api() (auth + 401/422/500 branching).
  * Depends on host globals defined in app.html: EP, CFG, SESSION, demoApi, go.
@@ -36,6 +39,7 @@ function cbDropNote(key, keys){
     keys.forEach(function(f){ if(seen.indexOf(f) < 0) seen.push(f); });
   }catch(_){}
 }
+/* capped · cap_note (SIBS below) — W2-RAIL R2: a cut list SAYS SO — `capped` (the code) and `cap_note` (the sentence) ride beside the chits array on inbox · sent · folder; pgFooter prints it */
 function unwrap(j, _key){
   if(j==null||typeof j!=="object"||Array.isArray(j)) return j;
   if("ok" in j && ("data" in j || "error" in j)){ if(j.ok===false) throw new Error(j.error||"Request failed"); return j.data; }
@@ -127,7 +131,7 @@ function unwrap(j, _key){
   var SIBS = ["total","page","limit","next","truncated","count","offset","status_counts","open","counts",   /* next: PERF1 — a keyset list's cursor (chits inbox/sent, books pages) */
               "category_counts","uncategorised","actor_health","actor_last_seen",
               "migrated","supplier","groups","project",
-              "late","may_answer","why"];   /* T3-P3-CONSENT: GET /api/crm/privacy-requests answers { requests[], total, page, limit, open, late, may_answer, why } — the register greys Answer on may_answer/why */
+              "late","may_answer","why","capped","cap_note"];   /* late · may_answer · why — T3-P3-CONSENT: GET /api/crm/privacy-requests answers { requests[], total, page, limit, open, late, may_answer, why } — the register greys Answer on may_answer/why. ⚠️ no square bracket INSIDE the array: e2e/api-envelope.cjs reads the list up to the first one */
   for(const mk of SIBS) if(mk in j){ try{ Object.defineProperty(a, mk, {value:j[mk], enumerable:false, configurable:true, writable:true}); }catch(_){ a[mk]=j[mk]; } }
   /* ⚠️ everything NOT on the list, and not the array itself, is gone from here on — so it is written down */
   try{ cbDropNote(_key, Object.keys(j).filter(function(x){ return x !== k && SIBS.indexOf(x) < 0; })); }catch(_){}

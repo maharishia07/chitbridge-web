@@ -11,8 +11,9 @@ const sandbox = { window: win, console, setTimeout, clearTimeout, document: { ge
 sandbox.self = win; Object.assign(win, sandbox); sandbox.window = win;
 const cx = vm.createContext(sandbox);
 cx.window = cx; cx.self = cx; Object.keys(win).forEach((k) => { if (!(k in cx)) cx[k] = win[k]; });
-for (const f of ['engine/money.js', 'engine/tax.js', 'app/locale.js', 'app/helpers.js', 'app/cart.js']) vm.runInContext(fs.readFileSync(__dirname + '/../public/' + f, 'utf8'), cx);
-/* INT6a: app/helpers.js loaded too — cart.js's esc is the page's one (T2-WEBPRIMS), as on every page */
+for (const f of ['engine/money.js', 'engine/tax.js', 'engine/locale.js', 'app/helpers.js', 'app/cart.js']) vm.runInContext(fs.readFileSync(__dirname + '/../public/' + f, 'utf8'), cx);
+/* INT6a: app/helpers.js loaded too — cart.js's esc is the page's one (T2-WEBPRIMS), as on every page.
+   W2-SHOP: locale.js is read from public/engine (T2-ENGONCE moved it there; the test still asked app/ and could not run) */
 const CB = cx.CBCart; ok(CB && typeof CB.create === 'function', 'CBCart loads beside locale.js');
 
 const WHY = 'Set the shop’s money and the month its year starts (Country setup) — nothing is billed or booked on a guess.';

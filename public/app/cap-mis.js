@@ -1,4 +1,5 @@
 /* app/cap-mis.js — CB FINANCE › REPORTS: the rail measured, by the server, as one list (T3-P4-ACCOUNT, 2026-10-14).
+ * CARD 16-finance/reports
  *
  * Owner, 14 Oct: "follow the same design standards or better … much simpler". The workshop's MIS (cap-admin.js misScreen · _loadMIS) draws seven
  * bands over TWO answers: the server's one measurement (GET /api/folders/mis → lib/measure, the engine the folder pane, the scorecard and Home's rail
@@ -11,6 +12,9 @@
  * Dropped from the workshop MIS, and why: Position · Flow · Friction · Trust · Plan · Tax bands (browser sums, a second answer), the sparkline,
  *   "✨ Explain" (AI narration over a client sum), the two-pane rail. A statutory tax figure is CB Accounts' GST close, not a report tile.
  * Host globals (finance.html, as cap-finance-cash.js): api · EP (CB_MIS_EP misMetrics) · esc · tx · txn · CBList · CBLocale · ftNav · FIN.
+ * Owns: the Reports tab's state (FM) and the two MIS rules both surfaces share — misWindow (period → since) and misReadAt (the read stamp).
+ * Called by: finance.html (fmMount) · app/cap-admin.js (misWindow · misReadAt — the workshop's MIS, loaded with this file: app.html CAP_WITH admin).
+ * FLOW  Reports tab → fmMount() → fmLoad() → GET /api/folders/mis?since=misWindow(period) → fmPaintTop() (misReadAt) + CBList rows (fmRows) → a figure → ftNav(list)
  * Flow step: R2R · reports (docs/process/flows.json).
  */
 'use strict';
@@ -20,6 +24,9 @@ function misWindow(period) {
   var d = (period === 'all' || !period) ? null : parseInt(period, 10);
   return d ? new Date(Date.now() - d * 864e5).toISOString() : undefined;
 }
+/** the ONE read stamp of a measurement — "live · 10:32", WHEN the page read the server's figures (W2-SHOP, 15 Oct: the workshop MIS in
+ *  cap-admin.js and this tab each wrote their own; the cart's stock stamp is the only other "as of" and one-cart.cjs keeps it that way) */
+function misReadAt(readAtMs) { return tx('live') + ' · ' + CBLocale.time(readAtMs); }
 
 var FM = { gen: 0, period: '30', r: null, state: 'loading', err: null, api: null, asOf: null };
 
@@ -107,7 +114,7 @@ function fmHead() {
 function fmPaintTop() {
   var el = document.getElementById('fm_top'); if (!el) return;
   var pill = function (p, words) { return '<button type="button" class="tab" role="tab" aria-pressed="' + (FM.period === p ? 'true' : 'false') + '" data-testid="fm-period-' + p + '" onclick="fmSetPeriod(\'' + p + '\')">' + esc(words) + '</button>'; };
-  var asOf = FM.state === 'ready' && FM.asOf ? '<span class="sub" data-testid="fm-asof" style="margin-inline-start:12px">' + esc(tx('as of') + ' ' + CBLocale.time(FM.asOf)) + '</span>' : '';
+  var asOf = FM.state === 'ready' && FM.asOf ? '<span class="sub" data-testid="fm-asof" style="margin-inline-start:12px">' + esc(misReadAt(FM.asOf)) + '</span>' : '';
   el.innerHTML = '<div class="tabs" role="tablist" aria-label="' + esc(tx('Which window')) + '" style="margin:10px 20px 0;display:flex;align-items:center;flex-wrap:wrap">'
     + pill('7', txn('{count} day', '{count} days', 7)) + pill('30', txn('{count} day', '{count} days', 30)) + pill('all', tx('All time')) + asOf + '</div>';
 }

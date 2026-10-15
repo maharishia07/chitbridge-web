@@ -1,4 +1,5 @@
 /* cap-crm-calls.js — CB CRM L2: THE CALL DESK. The Calls tab (a CBList mount, the Follow-ups list's own look): today's queue, one-tap outcome buttons.
+ * CARD 11-crm-and-marketing/crm-calls
  * ⭐ THE SERVER DECIDES: GET /api/crm/calls sends the queue AND the list of outcomes; the next-follow-up days and the stage moves live in the API's
  *   lib/crm-calls.js (OUTCOMES). This page only gives each outcome its word and its picture (CALL_WORD · CALL_ICO) and sends { outcome, after? | due_at? }.
  * ⚠️ BEFORE the API's b297 runs an outcome that moves a stage answers 503 LEADS_NOT_MIGRATED: the button is greyed WITH its sentence, and the server still refuses.
@@ -17,7 +18,6 @@ var CALLS = { rows: [], outcomes: [], may: { ok: true }, state: 'loading', err: 
 var CALL_WORD = { no_answer: 'No answer', call_back: 'Call back', interested: 'Interested', demo_booked: 'Demo booked', not_now: 'Not now', wrong_number: 'Wrong number' };
 var CALL_ICO = { no_answer: '📵', call_back: '↩', interested: '👍', demo_booked: '📅', not_now: '⏳', wrong_number: '🚫' };
 var CALL_PRESET = { today: 'Today', tomorrow: 'Tomorrow', '3days': 'In 3 days' };
-var CALL_VIEW_ONLY = 'Your login can only view';
 var CALL_LAST = 'That was the last call on the list.';
 /* the script for each stage the server names (api lib/memberships KINDS.lead_stage): open · ask · close, one line each. A shop's own script,
    when the server sends one on the call (call.script, a later widening), is painted in place of these. */
@@ -35,7 +35,7 @@ function crmCallWords(e) {
   var code = e && e.data && e.data.code;
   if (code === 'LEADS_NOT_MIGRATED') return tx(CRM_LEADS_WAIT);
   if (code === 'CRM_NOT_MIGRATED') return tx('Calls and follow-ups start after an update. Nothing is lost.');
-  if (e && e.status === 403) return tx(CALL_VIEW_ONLY);   /* the server's level gate — the same sentence the greyed button carries (WX-L2C) */
+  if (e && e.status === 403) return crmViewWhy();   /* the server's level gate — the same sentence the greyed button carries (WX-L2C) */
   if (code === 'NEED_DAY') return tx('Pick a day.');
   if (code === 'BAD_DUE' || code === 'BAD_AFTER') return tx('Pick a day from today.');
   if (code === 'NOT_FOUND') return tx('Not your party.');
@@ -43,14 +43,28 @@ function crmCallWords(e) {
 }
 
 /* ═══ THE READ ═══════════════════════════════════════════════════════════════════════════════════════════════════ */
+/* every page of the queue, to the server's total (W2-CRM: the one pager — never a silent cut at 300); the first page carries the outcomes, may and shop_day */
+async function crmCallsRead(scope) {
+  var head = null;
+  var rows = await CBList.every(function (page) {
+    return api('crmCalls', { query: { scope: scope, page: page, limit: CRM_PAGE } }).then(function (answer) { if (!head) head = answer || {}; return answer; });
+  }, 'calls');
+  return { rows: rows, head: head || {} };
+}
+/* what the first page said, kept once: the rows, the outcome table, the server's may, the late count and the shop's day */
+function crmCallsApply(read) {
+  var head = read.head;
+  CALLS.rows = read.rows.map(function (c) { return Object.assign({ id: c.followup_id || 'new-' + c.party_id }, c); });
+  CALLS.outcomes = head.outcomes || []; CALLS.may = head.may || { ok: true }; CALLS.late = Number(head.late) || 0;
+  crmMaySet(head.may); if (head.shop_day) CRM.shopDay = head.shop_day;   /* the server's may.write and its day, kept once for every CRM screen */
+}
 async function crmCallsLoad(quiet) {
   var g = ++CALLS.gen;
   if (!quiet || !CALLS.loaded) { CALLS.state = 'loading'; crmCallsRefresh(); }
   try {
-    var r = await api('crmCalls', { query: { scope: CALLS.scope || (crmOwner() ? 'all' : 'mine') } });
+    var read = await crmCallsRead(CALLS.scope || (crmOwner() ? 'all' : 'mine'));
     if (g !== CALLS.gen) return;
-    CALLS.rows = ((r && r.calls) || []).map(function (c) { return Object.assign({ id: c.followup_id || 'new-' + c.party_id }, c); });
-    CALLS.outcomes = (r && r.outcomes) || []; CALLS.may = (r && r.may) || { ok: true }; CALLS.late = Number(r && r.late) || 0;
+    crmCallsApply(read);
     CALLS.state = 'ready'; CALLS.loaded = true; CALLS.err = null;
   } catch (e) {
     if (g !== CALLS.gen) return;
@@ -75,7 +89,7 @@ function crmCallLast(c) { return c.last_outcome ? esc(tx(c.last_outcome)) + (c.l
 /** why this outcome is greyed for this login — the sentence; '' = allowed (the server still refuses) */
 function crmCallWhy(o) {
   return function () {
-    if (!crmEdit()) return tx(CALL_VIEW_ONLY);
+    if (!crmEdit()) return crmViewWhy();
     if (o.moves && CALLS.may && CALLS.may.ok === false) return tx(CRM_LEADS_WAIT);
     return '';
   };

@@ -1,5 +1,9 @@
 <!doctype html>
 <html lang="en" data-tokens="list">
+<!-- OWNS  the Operations page: counters · connectors · the day (open · close) · the queue — what runs in the shop and whether it is well.
+     CALLED BY Home's Operations card (manifest /operations.html).
+     FLOW  load → CBFrame → GET /api/facts/… · /api/till/… → paint
+     CARD 28-platform-and-operations/operations -->
 <head>
 <meta charset="utf-8">
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
@@ -17,7 +21,7 @@
 /* the Cream values of the names the lists and the skeleton paint with (tasks.html's set); a chosen theme re-points them (data-themed below) */
 :root{ --ink:#2a2418; --muted:#5c5240; --grey:#5c5240; --line:#e6dcc6; --line-3:#d8ccb0; --surface:#fffdf8; --card:#fffdf8; --ground:#fbf6ec; --paper:#fbf6ec; --hover:#f3ead7; --accent:#1f5f5b; --accent-ink:#fbf6ec;
   --green-t:#E8F4ED; --green-b:#A9D3BC; --green-d:#0D4A2B; --amber-t:#FDF3DC; --amber-b:#EFD39A; --amber-i:#7A5205; --red-t:#FBEAE3; --red-b:#E7B9A8; --red-i:#8E3517;
-  --mono:'IBM Plex Mono',ui-monospace,monospace; --sans:'IBM Plex Sans',system-ui,sans-serif; --serif:'Source Serif 4',Georgia,serif; }
+  --mono:'IBM Plex Mono',ui-monospace,monospace; --sans:var(--f-ui,'IBM Plex Sans',system-ui,sans-serif);   /* --f-ui is the reading font the avatar chooses (SHELL-ONE: one face) */ --serif:'Source Serif 4',Georgia,serif; }
 /* a chosen theme (CBAvatar stamps data-themed) re-points this page's names at the theme's own — as settings.html / finance.html; Cream is untouched */
 :root[data-themed]{--side:var(--card);--line-side:var(--line);--ink-2:var(--ink);--muted-2:var(--grey);--muted:var(--grey);--hover-nav:color-mix(in srgb,var(--ink) 8%,var(--card));--surface:var(--card);--ground:var(--paper);--line-3:var(--line);
   --accent:var(--blue-2,var(--blue));--accent-text:var(--blue-d,var(--blue));--accent-ink:var(--card);

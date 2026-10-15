@@ -329,7 +329,7 @@ function route(S, r) {
           ok(lab.key, onLabPage, 'clicking the tile opens ' + lab.href + ' (' + state + ')', 'landed on ' + (await p.url()));
 
           /* Home link carries the same testid on every Lab page */
-          const homeHref = await p.getAttribute('[data-testid="nav-home"]', 'href').catch(() => null);
+          const homeHref = await p.getAttribute('[data-testid="shell-home"]', 'href').catch(() => null);
           ok(lab.key, homeHref === '/', lab.title + ' header carries Home → / (' + state + ')', 'href was "' + homeHref + '"');
 
           /* 2 · the Lab's own main flow */
@@ -353,7 +353,7 @@ function route(S, r) {
              sits behind that modal, permanently, and is never the documented way out any more. */
           const alreadyHome = (() => { const u = (p.url() || '').replace(base, '').split('?')[0].split('#')[0]; return u === '/' || u === '/index.html' || u === ''; })();
           if (!alreadyHome) {
-            await p.click('[data-testid="nav-home"]');
+            await p.click('[data-testid="shell-home"]');
             await p.waitForLoadState('load').catch(() => {});
             await settle(p);
           }

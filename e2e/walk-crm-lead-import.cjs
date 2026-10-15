@@ -76,7 +76,7 @@ async function route(r) {
   let body = null; try { body = q.postDataJSON(); } catch (_) {}
   if (m !== 'GET') S.bodies.push({ m, p, body });
   if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Fixture Shop', currency_code: 'INR' } });
-  if (p === '/api/crm/followups' && m === 'GET') return J(r, 200, { followups: [], late: 0, today: 0 });
+  if (p === '/api/crm/followups' && m === 'GET') return J(r, 200, Object.assign(crmApi.followups([]), { may: crmApi.mayOf(r) }));   /* the one envelope (total · page · limit · shop_day), as the contract holds it; may = THIS login's */
   if (p === '/api/crm/parties' && m === 'GET') {
     const L = u.searchParams.get('view') === 'leads' ? (S.leadsOff ? [] : leads().map(leadRow)) : [];
     return J(r, 200, crmApi.listPage(L, { leads_migrated: !S.leadsOff }));

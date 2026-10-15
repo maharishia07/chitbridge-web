@@ -1,4 +1,7 @@
 /**
+ * CALLED BY app/shell.js (the frame mounts the one avatar), app/page-frame.js (its options), till.html; the pages read CBAvatar.shopCountry / applyTheme.
+ * FLOW  mount(slot) → session → the button and its menu → applyTheme → the one /me read → `cb:me` announced to the page
+ * CARD 29-qa-test-tooling-ux-locale-and-design-system/avatar
  * ── ⭐⭐⭐ CBAvatar — THE AVATAR: ONE CONTROL ON EVERY CHITBRIDGE PAGE ──────────────────────────────────────────────
  *
  * Athi, 2026-10-02: *"Avatar should be a single control used across everywhere … no repeat … it is already that way only and
@@ -12,6 +15,7 @@
  *   CBAvatar.hydrate(prefs)                                the server's per-person appearance — the truth; absent = default unless pending (true if something changed)
  *   CBAvatar.set(kind, value)                              kind: theme · font · fs · weight · motion · stripes · edition — saves, applies, syncs
  *   CBAvatar.get() · .themeKey() · .close() · .signOut() · .THEMES · .FONTS · .TEXT_SIZES · .FS_BASE
+ *   CBAvatar.shopCountry()                                 the shop's country from the one /me read (null until it lands); `cb:me` on document announces it — STD-COMPARE
  *
  * ⭐ ONE FILE, ONE GLOBAL, NO IMPORTS, NO BUILD STEP, NO NETWORK NEEDED — so the counter can load it as it loads /engine/screen.js.
  *    The look applies from local storage alone; the server sync is optional and silent when offline. `person` is an INPUT
@@ -86,13 +90,30 @@
   }
 
   /* ── applying ── */
+  /* ON-COLOURS (INT7b-GREEN, 2026-10-15): the ink that reads on a theme's accent and on its ok green. A theme that names the colour but not its
+     on-colour gets it from the engine's ONE calculation (CBScreen.onColour, screen.js — never a second luminance sum here): Dark's --blue #6892DB
+     and --ok #2E9E5E took the pages' own white at 3.1:1 (the storefront's logo, + and the frame's mark). A theme's own --on-accent / --on-ok wins;
+     under a theme the pages' accent IS --blue (page-skeleton.css, shop.html). */
+  var ON_COLOUR_PAIRS = [['--on-accent', ['--accent', '--blue']], ['--on-ok', ['--ok']]];
+  function onColoursOf(vars) {
+    var derived = {}, onColour = root.CBScreen && root.CBScreen.onColour;
+    if (typeof onColour !== 'function') return derived;
+    ON_COLOUR_PAIRS.forEach(function (pair) {
+      var onToken = pair[0], baseToken = pair[1].filter(function (token) { return vars[token]; })[0];
+      if (baseToken && !vars[onToken]) derived[onToken] = onColour(vars[baseToken]);
+    });
+    return derived;
+  }
   /** Apply a theme to the page. With a key it is a PREVIEW (nothing saved) — what Settings' contrast check and the palette cards use. */
   function themeApply(forKey) {
     var r = doc.documentElement, key = (forKey && has(THEMES, forKey) && THEMES[forKey]) ? forKey : themeKey(), t = THEMES[key] || { vars: {} };
     var all = {};
     Object.keys(THEMES).forEach(function (k) { Object.keys(THEMES[k].vars || {}).forEach(function (v) { all[v] = 1; }); });
+    ON_COLOUR_PAIRS.forEach(function (pair) { all[pair[0]] = 1; });
     Object.keys(all).forEach(function (v) { r.style.removeProperty(v); });
-    Object.keys(t.vars || {}).forEach(function (v) { r.style.setProperty(v, t.vars[v]); });
+    var vars = t.vars || {}, derived = onColoursOf(vars);
+    Object.keys(vars).forEach(function (token) { r.style.setProperty(token, vars[token]); });
+    Object.keys(derived).forEach(function (token) { r.style.setProperty(token, derived[token]); });
     r.style.colorScheme = t.scheme || 'light';              /* the caret, scrollbars, autofill and date picker are drawn by the browser */
     r.setAttribute('data-theme', key);
     if (Object.keys(t.vars || {}).length) r.setAttribute('data-themed', key); else r.removeAttribute('data-themed');   /* a page's own names key off THIS: Cream overrides nothing */
@@ -245,9 +266,18 @@
              does (app.html CBLocale.hydrate), so number · date · grouping follow the shop's country (REGIONS[country] = the pack's locale) on every
              page, not en-IN by default. One read for both; a page with pull:false hydrates itself. */
           try { if (root.CBLocale && root.CBLocale.hydrate) root.CBLocale.hydrate(e.locale_prefs || {}, { country: e.country || null }); } catch (_) {}
+          announceShop(e);
         }).catch(function () {});
     } catch (_) {}
   }
+  /* STD-COMPARE (2026-10-15): the SAME /me read tells the page the shop's country — `cb:me` on document, { country } — so a page that reads no API of its
+     own (the Standards page's Compared with tab opens on the shop's country) asks here, never a second /me. shopCountry() answers a late reader. */
+  var SHOP_COUNTRY = null;
+  function announceShop(entity) {
+    SHOP_COUNTRY = entity && entity.country ? String(entity.country).toUpperCase() : null;
+    try { root.document.dispatchEvent(new CustomEvent('cb:me', { detail: { country: SHOP_COUNTRY } })); } catch (e) { if (root.console) root.console.warn('avatar: cb:me not announced', e); }
+  }
+  function shopCountry() { return SHOP_COUNTRY; }
 
   function set(kind, value) {
     if (!has(KEY, kind) || !valid(kind, value)) return;
@@ -532,5 +562,5 @@
   if (root.addEventListener) root.addEventListener('online', function () { if (Object.keys(pendGet()).length) push(); });
 
   root.CBAvatar = { mount: mount, apply: apply, hydrate: hydrate, set: set, get: get, personOf: personOf, sessionPerson: sessionPerson, themeKey: themeKey, applyTheme: themeApply, push: push, pending: pendGet, themeBase: themeBase, isOpen: function () { return openNow; }, close: close, signOut: signOut,
-    THEMES: THEMES, FONTS: FONTS, TEXT_SIZES: TEXT_SIZES, FS_BASE: FS_BASE, fontStack: fontStack };
+    THEMES: THEMES, FONTS: FONTS, TEXT_SIZES: TEXT_SIZES, FS_BASE: FS_BASE, fontStack: fontStack, shopCountry: shopCountry };
 })(typeof window !== 'undefined' ? window : this);

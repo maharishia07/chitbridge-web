@@ -24,6 +24,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0     # READ-GUARD: the readability guard diffs against origin/main (merge-base) — it needs the history
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -70,6 +72,13 @@ jobs:
         run: node e2e/process-map.cjs
       - name: Docs beside the code have not drifted (MODULES.md; regenerate with node tools/gen-modules-doc.cjs)
         run: node e2e/docs-guard.cjs
+      # ⭐ READ-GUARD (DISCIPLINES §6, 15 Oct): every §6 rule bites once on a fixture, then the guard judges ONLY the code this push/PR
+      # touched — a hard limit crossed, a NEW cryptic name, a new empty catch, a module with no header / CARD line / test row (trace.json,
+      # built fresh from KG1), a file scoring worse than readability.ratchet.json. Today's backlog blocks nobody: untouched code is not judged.
+      - name: The §6 readability guard bites on its fixtures (e2e/readability-guard.cjs)
+        run: node e2e/readability-guard.cjs
+      - name: Only the code this change touched is judged (readability --changed --ratchet; the checklist numbers are printed)
+        run: node tools/readability.cjs --changed --base origin/main --ratchet --md
       # ⭐ T1-TAX (14 Oct): the web and the api pin the SAME engine versions — web's packs sat at v1.42 while the api booked on v1.45.
       # The api is public; checked out LAST (after every other step) so no earlier guard sees a second tree. Twin branch as walks.yml.
       - name: Twin api branch?
@@ -89,6 +98,27 @@ jobs:
           CB_API_REPO: .side/chitbridge-api
         run: node e2e/engines-pins-agree.cjs
 
+
+  pr-checklist:
+    # ⭐ READ-GUARD (DISCIPLINES §6): a PR's body carries the §6 checklist WITH NUMBERS (.github/pull_request_template.md), filled from
+    # `node tools/readability.cjs --changed --ratchet --md`. Skipped for a dependency bot's PR and for a docs-only PR (tools/pr-checklist.cjs decides).
+    # The body travels in an env var, never inside a shell line.
+    name: pr-checklist (§6 numbers in the PR body)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: The PR body carries the §6 checklist with numbers (bots' dependency PRs and docs-only PRs skip)
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+        run: node tools/pr-checklist.cjs --author "$PR_AUTHOR" --base "$PR_BASE"
 
   scan:
     # E02 — dependency + secret scanning on every push/PR.

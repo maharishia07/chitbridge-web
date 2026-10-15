@@ -13,7 +13,7 @@
 #modLabOverlay{position:static;inset:auto;z-index:auto;padding:0 22px 60px;background:transparent;max-width:1240px;margin:0 auto}
 #modLabOverlay.on{display:block}
 #modLabOverlay .ovlpanel{width:100%;max-height:none;height:auto;border:1px solid var(--line);box-shadow:none;overflow:visible}
-body:has(#modLabOverlay.on) .wrap>:not(.top):not(#labSampleNote):not(#labqueue):not(#labtoast){display:none}
+body:has(#modLabOverlay.on) .wrap>:not(.labtools):not(#labSampleNote):not(#labqueue):not(#labtoast){display:none}
 @media(max-width:620px){#modLabOverlay{padding:0 12px 40px}#modLabOverlay .ovlpanel{height:auto;max-height:none;border-radius:var(--r)}}
 /**
  * ⭐ [found live, 2026-09-27] "the item should appear as a pop up" — the new "+ Add to another product" chip

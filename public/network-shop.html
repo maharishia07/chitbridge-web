@@ -1,5 +1,9 @@
 <!doctype html>
 <html lang="en">
+<!-- OWNS  a network member's shop front: the brand's catalogue as this shop sells it (?bridge=).
+     CALLED BY store.html, network.html and a member's public link.
+     FLOW  load → CBFrame (bar) → the member's catalogue read → paint → to the cart
+     CARD network-and-trade/network-shop -->
 <head>
 <meta charset="utf-8">
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
@@ -7,20 +11,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Network shop — Chit &amp; Bridge</title>
 <style>
-  :root{ --ink:#20303b; --grey:#8a949c; --line:#e7e3d8; --blue:#3F66A6; --paper:#faf8f3; --violet:#6a44a8; }
+  :root{ --ink:#20303b; --grey:#8a949c; --line:#e7e3d8; --blue:#3F66A6; --paper:#faf8f3; --card:#ffffff; --violet:#6a44a8; }   /* the theme names (a chosen theme writes them on <html>) */
   *{ box-sizing:border-box; }
-  body{ margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; color:var(--ink); background:var(--paper); }
+  body{ margin:0; font-family:var(--f-ui,'IBM Plex Sans',system-ui,sans-serif); color:var(--ink); background:var(--paper); }   /* SYSTEM.md §2: one face on every page (SHELL-ONE) */
   .wrap{ max-width:900px; margin:0 auto; padding:20px 16px 60px; }
-  .sg{ font-family:'Space Grotesk',-apple-system,sans-serif; }
+  .sg{ font-family:var(--f-display,'Bricolage Grotesque',sans-serif); }
   .hd{ display:flex; align-items:center; gap:12px; padding:14px 0 16px; border-bottom:1px solid var(--line); }
   .logo{ width:46px; height:46px; border-radius:13px; background:#efeaf9; display:flex; align-items:center; justify-content:center; font-size:23px; }
   .netname{ font-weight:800; font-size:21px; }
   .meta{ font-size:12px; color:var(--grey); }
-  .srch{ display:flex; align-items:center; gap:8px; border:1px solid var(--line); background:#fff; border-radius:11px; padding:9px 12px; margin:16px 0 6px; }
+  .srch{ display:flex; align-items:center; gap:8px; border:1px solid var(--line); background:var(--card,#fff); border-radius:11px; padding:9px 12px; margin:16px 0 6px; }
   .srch input{ flex:1; border:0; outline:0; font-size:15px; background:transparent; color:var(--ink); }
   .chips{ display:flex; flex-wrap:wrap; gap:6px; margin:8px 0 4px; }
-  .chip{ font-size:12px; border:1px solid var(--line); background:#fff; border-radius:20px; padding:5px 12px; cursor:pointer; color:var(--ink); }
-  .chip.on{ background:var(--ink); color:#fff; border-color:var(--ink); }
+  .chip{ font-size:12px; border:1px solid var(--line); background:var(--card,#fff); border-radius:20px; padding:5px 12px; cursor:pointer; color:var(--ink); }
+  .chip.on{ background:var(--ink); color:var(--paper,#fff); border-color:var(--ink); }
   .dept{ margin-top:22px; }
   .depthd{ display:flex; align-items:baseline; gap:9px; padding-bottom:7px; border-bottom:2px solid var(--violet); }
   .deptname{ font-weight:800; font-size:17px; }
@@ -35,7 +39,19 @@
 </style>
 </head>
 <body>
+<div id="shell" data-testid="nshop-shell"></div>   <!-- THE ONE FRAME (SHELL-ONE) -->
 <div class="wrap" id="app"><div class="msg">Loading…</div></div>
+<!-- THE ONE FRAME (SHELL-ONE): the header every page wears — mark · name · the screen chip · ⌂ Home · the avatar (Sign in). Nothing of it is drawn here. -->
+<script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies -->
+<script src="/app/avatar.js"></script>      <!-- CBAvatar: the one avatar / Sign in door -->
+<script src="/app/one-person.js"></script>  <!-- CBOnePerson: whose session this browser holds (CBFrame.session) -->
+<script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the bar -->
+<script src="/app/shell.js"></script>       <!-- CBShell: the bar -->
+<script src="/app/page-frame.js"></script>  <!-- CBFrame.mount({ bar: true }): the header only; the page's own body under it -->
+<script>
+/* SHELL-ONE: the bar — ⌂ Home is this network's front; the avatar's door is Home's sign-in */
+if (window.CBFrame) CBFrame.mount({ app:'network-shop', bar:true, signin:false, host:document.getElementById('shell'), homeHref:location.pathname+location.search, title:{ icon:'◇', name:'Network shop' } });
+</script>
 <script>
 /**
  * network-shop.html (was network.html; that name is now the member app, P2) — ONE shopfront over many departments.

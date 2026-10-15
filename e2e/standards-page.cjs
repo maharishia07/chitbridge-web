@@ -169,7 +169,10 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     ok(/200%/.test(BYID['wcag-1.4.4'].w) && BYID['wcag-1.4.4'].s !== 'live' && /132%/.test(BYID['wcag-1.4.4'].m), 'WCAG 1.4.4 says 200%, and says what we test (132%) — not In force');
     ok(BYID['wcag-1.4.6'].s !== 'live' && !/1\.4\.6/.test(BYID['wcag-1.4.3'].n), 'WCAG 1.4.6 is its own row and not In force: the contrast test measures AA only');
     ok(/AAL1/.test(BYID['nist-800-63b'].m) && !/about AAL2/i.test(BYID['nist-800-63b'].m), 'NIST SP 800-63B: one factor is AAL1');
-    ok(BYID['wco-hs'].s === 'part' && BYID['oauth2-oidc'].s === 'part' && /Zoho/.test(BYID['oauth2-oidc'].note), 'HS codes and OAuth 2 are up to what exists: HSN filed, Zoho reached with OAuth 2 — each Partly');
+    ok(BYID['wco-hs'].s === 'part' && BYID['oauth2-oidc'].s === 'live' && BYID['oauth2-oidc'].limit && /Zoho/.test(BYID['oauth2-oidc'].note), 'HS codes and OAuth 2 are up to what exists: HSN filed (Partly); Zoho reached with OAuth 2 — In force, the OIDC decision a stated Limit (STD-COMPARE)');
+    /* STD-COMPARE (15 Oct 2026): the five audit fixes, each proved against the code (docs/critique/STD-COMPARE.md a) */
+    ok(BYID['wcag-1.4.6'].s === 'part' && /High Contrast/.test(BYID['wcag-1.4.6'].m) && BYID['css-logical'].s === 'part' && /physical/.test(BYID['css-logical'].m), 'WCAG 1.4.6 is Partly (one theme measured at 7:1) and CSS logical properties Partly (the small apps still carry physical ones)');
+    ok(['gherkin', 'oauth2-oidc', 'medusa-model'].every((id) => BYID[id].s === 'live' && BYID[id].limit && !BYID[id].m && /Proof: /.test(BYID[id].note)), 'Gherkin, OAuth 2 and the Medusa model are In force with nothing missing: the decision not to adopt more is a Limit, the proof is named');
     ok(cjHas('Xero'), 'compat.json names Xero (the Australian launch depends on it)');
   }
 
@@ -212,8 +215,10 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
       if (String(want) !== got) { cellsOk = false; console.log('     cell ' + a[0] + '/' + st + ' want ' + want + ' got ' + got); }
     }
     ok(cellsOk, 'all 21 area × status cells equal the register\'s own count (and a nothing is "—")');
-    const hdrB = await p.evaluate(() => document.querySelector('#std_list .cbl-hdr').getBoundingClientRect().bottom), ih = 768;
-    ok(hdrB / ih <= 0.20, 'the head (title · tools · column header) is ' + Math.round(hdrB / ih * 100) + '% of the window (limit 20%)');
+    /* SHELL-ONE: the frame (the one header, 56 px) sits above the list on every page; the list's own head — title · tools · column header — is what the 20% holds */
+    const frameB = () => p.evaluate(() => (document.querySelector('[data-testid="shell-header"]') || { getBoundingClientRect: () => ({ bottom: 0 }) }).getBoundingClientRect().bottom);
+    const hdrB = await p.evaluate(() => document.querySelector('#std_list .cbl-hdr').getBoundingClientRect().bottom) - await frameB(), ih = 768;
+    ok(hdrB / ih <= 0.20, 'the head (title · tools · column header, under the frame) is ' + Math.round(hdrB / ih * 100) + '% of the window (limit 20%)');
     ok(await p.evaluate(() => { const l = document.querySelector('#std_list .cbl-list'); return l.scrollHeight > l.clientHeight && getComputedStyle(l).overflowY !== 'visible'; }), 'only the rows scroll (the list is its own scroller; the head stays)');
     const w = await width(p);
     ok(w.sw <= w.iw, 'no sideways scroll on the laptop (' + w.sw + '/' + w.iw + ')');
@@ -239,7 +244,7 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     const geo = await p.evaluate(() => { const rs = Array.from(document.querySelectorAll('#std_list .cbl-row')); const hs = rs.map((r) => r.getBoundingClientRect().height); const row = rs[0].getBoundingClientRect(), box = document.querySelector('#std_list .cbl-list').getBoundingClientRect(); return { max: Math.max.apply(null, hs), n: rs.length, fill: row.width / box.width }; });
     ok(geo.n > 0 && geo.max <= 44, 'one line per row at 1366: the tallest of ' + geo.n + ' rows is ' + Math.round(geo.max) + ' px (limit 44)');
     ok(geo.fill >= 0.97, 'and the table fills the width of the list (' + Math.round(geo.fill * 100) + '%)');
-    const hdrB2 = await p.evaluate(() => document.querySelector('#std_list .cbl-hdr').getBoundingClientRect().bottom);
+    const hdrB2 = await p.evaluate(() => document.querySelector('#std_list .cbl-hdr').getBoundingClientRect().bottom) - await frameB();
     console.log('     head with a cell chosen: ' + Math.round(hdrB2 / ih * 100) + '% (two chips; the unit wraps them to a line of their own)');
     ok(hdrB2 / ih <= 0.25, 'the head with a cell chosen stays within 25% (' + Math.round(hdrB2 / ih * 100) + '%)');
     await p.screenshot({ path: path.join(SHOTS, 'standards-cell.png') });
@@ -497,7 +502,7 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     ok(w.sw === 390, 'phone, list page: document.scrollWidth === 390 (' + w.sw + ')');
     const cards = await p.evaluate(() => { const r = document.querySelector('[data-testid^="std-row-"]'); return { card: !!r.closest('.cbl-card, .cbl-row') && getComputedStyle(r).display, w: r.getBoundingClientRect().width, labs: Array.from(r.querySelectorAll('.cbl-cell')).length }; });
     ok(cards.w <= 390 && cards.labs <= 4, 'each row is a card within the width, at most plain words · reference · applies in · status (' + cards.labs + ' fields)');
-    const head = await p.evaluate(() => document.querySelector('#std_list .cbl-hdr, #std_list .cbl-list').getBoundingClientRect().top);
+    const head = await p.evaluate(() => document.querySelector('#std_list .cbl-hdr, #std_list .cbl-list').getBoundingClientRect().top - (document.querySelector('[data-testid="shell-header"]') || { getBoundingClientRect: () => ({ bottom: 0 }) }).getBoundingClientRect().bottom);   /* under the frame (SHELL-ONE) */
     ok(head / 844 <= 0.35, 'the head on the list page is ' + Math.round(head / 844 * 100) + '% of the phone (limit 35% with a cell chosen)');
     await p.click('[data-testid^="std-row-"]'); await p.waitForTimeout(250);
     ok(await p.locator('[data-testid^="std-detail-"]').count() === 1, 'a card opens');
@@ -602,7 +607,7 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     await ctx.close();
   }
 
-  const other = S.calls.filter((c) => c !== 'GET /api/entities/me' && c !== 'GET /api/notifications' && c !== 'GET /api/events/ticket' && c !== 'POST /api/events/ticket');   /* the header's bell (Round U: the one frame) reads the notifications; the register is still the file */
+  const other = S.calls.filter((c) => c !== 'GET /api/entities/me' && c !== 'GET /api/entities/header' && c !== 'GET /api/notifications' && c !== 'GET /api/events/ticket' && c !== 'POST /api/events/ticket');   /* SHELL-ONE: the frame's sheet reads /entities/header (one trip) */   /* the header's bell (Round U: the one frame) reads the notifications; the register is still the file */
   ok(other.length === 0, 'the Standards page reads nothing from the API — the register is the file; the only call is the avatar\'s own GET /api/entities/me (' + S.calls.length + ' of it' + (other.length ? '; ALSO ' + other[0] : '') + ')');
   ok(threw.length === 0, 'no page error' + (threw.length ? ': ' + threw[0] : ''));
   ok(offHost.length === 0, 'nothing tried to leave the browser' + (offHost.length ? ': ' + offHost[0] : ''));

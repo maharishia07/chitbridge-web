@@ -47,16 +47,16 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
   say('the page boots straight into the lab, no "open" click needed', opened.onLoad, 'modLabOverlay is on from page load');
   say('the tab is titled for what it is', opened.title === 'Combo Lab', opened.title);
   say('openModLab() still exists, for a reset/reopen', opened.stillCallable, 'confirmed');
-  /* L3 (small-fixes): the lab opens IN the page frame - the header (title · Home · shop · avatar) is on screen above it, it is not a fixed pop-up over an empty page */
+  /* L3 (small-fixes): the lab opens IN the page frame - the header (the frame's: title · Home · avatar, SHELL-ONE) is on screen above it, it is not a fixed pop-up over an empty page */
   for (const vp of [{ width: 1366, height: 800 }, { width: 390, height: 844 }]) {
     await p.setViewportSize(vp); await p.waitForTimeout(250);
     const f = await p.evaluate(() => {
       const vis = (e) => { if (!e) return false; const r = e.getBoundingClientRect(), cs = getComputedStyle(e); return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none'; };
-      const top = document.querySelector('.top'), ov = document.getElementById('modLabOverlay'), panel = ov && ov.querySelector('.ovlpanel');
+      const top = document.querySelector('[data-testid="shell-header"]'), ov = document.getElementById('modLabOverlay'), panel = ov && ov.querySelector('.ovlpanel');
       const topB = top ? top.getBoundingClientRect() : null, pB = panel ? panel.getBoundingClientRect() : null;
       /* what is painted at the header's centre is the header, not the lab's scrim */
       const hit = topB ? document.elementFromPoint(topB.left + 20, topB.top + topB.height / 2) : null;
-      return { title: vis(document.querySelector('.top .title')), home: vis(document.querySelector('[data-testid="nav-home"]')), avatar: vis(document.querySelector('#cbav .cbav-btn, #cbav [data-testid="avatar"], #cbav button, #cbav a')),
+      return { title: vis(document.querySelector('[data-testid="shell-title"]')), home: vis(document.querySelector('[data-testid="shell-home"]')), avatar: vis(document.querySelector('[data-testid="shell-avatar"] .cbav-btn, [data-testid="shell-avatar"] [data-testid="signin-door"]')),
         pos: ov ? getComputedStyle(ov).position : '', headerHit: !!(hit && top && top.contains(hit)), below: !!(topB && pB && pB.top >= topB.bottom - 1), sw: document.documentElement.scrollWidth, iw: window.innerWidth,
         inert: ['strip', 'steps'].every((id) => { const e = document.getElementById(id); return !e || !vis(e) || !e.innerText.trim(); }) };
     });

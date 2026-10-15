@@ -1,5 +1,9 @@
 <!doctype html>
 <html lang="en" data-tokens="list">
+<!-- OWNS  the CB CRM page: parties · leads · follow-ups · calls · a party's record (cap-crm*.js paint the server's answers and its may/why).
+     CALLED BY Home's CRM card (manifest /crm.html), CB Accounts and the Task panel's party links.
+     FLOW  load → whoPaint (CBFrame) → crmLoad (GET /api/crm/parties) → the router → the view's CBList paints
+     CARD 11-crm-and-marketing/cb-crm -->
 <head>
 <meta charset="utf-8">
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
@@ -11,7 +15,7 @@
      columns, only the rows scroll. The SCREENS are app/cap-crm.js (home · follow-ups · add) and app/cap-crm-record.js (record ·
      timeline · log); this page is only the shell, the gate and the router. Data: the CRM API (chitbridge-api /api/crm/*); every
      figure (dues, counts, "late") is the server's — the page paints, it computes nothing (SYSTEM rule 12).
-     The avatar: ONE control on every page (CBAvatar, app/avatar.js) — #cb-avatar is its slot in the title row; CBAvatar.mount draws it, this page draws none.
+     The avatar: ONE control on every page (CBAvatar, app/avatar.js) — the frame (CBShell, SHELL-ONE) mounts it; this page draws none.
      ⚠️ Never the banned words on a screen — the Ledger's own word for CB Accounts' books. -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap">
 <style>
@@ -21,7 +25,7 @@
   --ink:#2a2418; --ink-2:#3d3527; --muted:var(--grey); --muted-2:#5c5240;
   --line:#e6dcc6; --line-2:#efe6d3; --line-3:#d8ccb0; --hover:#f3ead7;
   --accent:#1f5f5b; --accent-ink:#fbf6ec;
-  --mono:'IBM Plex Mono',ui-monospace,monospace; --serif:'Source Serif 4',Georgia,serif; --sans:'IBM Plex Sans',system-ui,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,monospace; --serif:'Source Serif 4',Georgia,serif; --sans:var(--f-ui,'IBM Plex Sans',system-ui,sans-serif);   /* --f-ui is the reading font the avatar chooses (SHELL-ONE: one face) */
   --green:#16693F; --green-d:#0D4A2B; --green-t:#E8F4ED; --green-b:#A9D3BC;
   --amber:#E0A020; --amber-t:#FDF3DC; --amber-b:#EFD39A; --amber-i:#7A5205;
   --red:#C4562F; --red-t:#FBEAE3; --red-b:#E7B9A8; --red-i:#8E3517;
@@ -76,27 +80,22 @@ svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke
 .side-foot{padding:8px;border-top:1px solid var(--line-side)}
 .side-foot .nav-btn{font-size:13px;color:var(--muted-2)}
 
-/* main · a slim bar (shop · Home · the avatar's slot · the page's one action), then the screen */
+/* SHELL-ONE: the header is THE ONE FRAME (CBFrame → CBShell, #shell at the top of the main pane): mark · CB CRM · the screen chip · ⌂ Home · bell · avatar.
+   Nothing of it is drawn or styled here. Under it the page's own tools row: the crumb and the page's one action. */
 .main{flex-grow:1;min-width:0;height:100%;display:flex;flex-direction:column;overflow:hidden}
-.bar{flex-shrink:0;min-height:56px;background:color-mix(in srgb,var(--ground) 96%,transparent);border-bottom:1px solid var(--line);padding:6px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.tools{flex-shrink:0;min-height:44px;border-bottom:1px solid var(--line);padding:4px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.tools:not(:has(.crumb:not(:empty))):not(:has(#crm-bar-act:not(:empty))){display:none}   /* nothing to say, no row */
 .crumb{display:flex;align-items:center;gap:8px;min-width:0;font-size:13.5px;color:var(--muted)}
 .crumb a{color:var(--accent-text);text-decoration:none;font-weight:600}
 .crumb a:hover{text-decoration:underline}
-.who{display:flex;align-items:center;gap:10px;position:relative}
-.shop{font-size:13.5px;color:var(--muted)}
-.home{display:inline-flex;align-items:center;height:36px;padding:0 12px;border:1px solid var(--line-3);border-radius:8px;background:var(--surface);color:var(--ink);font-size:13.5px;font-weight:600;text-decoration:none}
-.home:hover{background:var(--hover)}
-#cb-avatar{display:inline-block;min-width:0;min-height:0}
-/* ⭐ THE FROZEN HEAD (list-standard): shop · Home · avatar belong IN the list's title row, so on a list screen the bar is laid over the right end of
-   the unit's own title row (which keeps room for it) — everything above the rows stays three rows, ≤ 20% of the window. Other screens keep the bar. */
+/* ⭐ THE FROZEN HEAD (list-standard): on a list screen the page's one ACTION is laid over the right end of the unit's own title row (which keeps
+   room for it), under the frame — everything above the rows stays the frame line + three rows. The shop · Home · avatar are the frame's (SHELL-ONE). */
 @media (min-width:761px){
   .main{position:relative}
-  .main.overbar .bar{position:absolute;top:0;right:0;z-index:8;height:56px;min-height:0;border:0;background:transparent;padding:0 20px;flex-wrap:nowrap}
+  .main.overbar .tools{position:absolute;top:56px;right:0;z-index:8;height:56px;min-height:0;border:0;background:transparent;padding:0 20px;flex-wrap:nowrap;display:flex}   /* 56 = the shell bar in a pane (shell.js .cbsh.pane: 55 + its line), the sidebar brand's height */
   .main.overbar .crumb{display:none}
-  .main.overbar .bar .cbsid .cbsid-n,.main.overbar .bar .cbsid .cbsid-d{display:none}   /* SCREEN-ID: over the title row the chip is its code (the name is the title beside it) */
-  .main.overbar .home{height:32px}
   .main.overbar .act.sm{min-height:32px}
-  .main.overbar .screen .cbl:not(#_) .cbl-title{padding-right:520px;min-height:56px;box-sizing:border-box}   /* :not(#_) = the unit's own weight: the room for the bar was being out-voted (UI10) */   /* the title row is the header line: 56 px, the same as the sidebar's brand */
+  .main.overbar .screen .cbl:not(#_) .cbl-title{padding-right:200px;min-height:56px;box-sizing:border-box}   /* :not(#_) = the unit's own weight: the room for the action was being out-voted (UI10) */
 }
 .screen{flex:1;min-height:0;overflow-y:auto}
 .screen.flush{overflow:hidden;overflow:clip;padding:0;display:flex;flex-direction:column}
@@ -163,6 +162,7 @@ svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke
 .due .w{font-weight:600;font-size:var(--fs-1)}
 .rchips .due{display:inline-flex;align-items:center;gap:4px;min-height:22px;padding:0 8px;border-radius:999px;border:1px solid var(--line-3);background:var(--surface);font-size:12px;font-weight:600}
 .rchips .due.get{border-color:var(--green-b)}.rchips .due.give{border-color:var(--red-b)}
+.rchips .due{white-space:normal;flex-wrap:wrap}   /* a record chip wraps its late line on a phone — never past the screen's edge (INT7b: crm.cjs phone record) */
 .due.get{color:var(--green-d)}.due.give{color:var(--red-text)}.due.settled{color:var(--muted);font-weight:600}
 .conn{font-weight:800;font-size:16px;line-height:1}.conn.on{color:var(--green-d)}.conn.off{color:var(--muted)}
 .fu1{display:flex;align-items:center;gap:8px;min-width:0}.fut{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.fua{display:inline-flex;gap:6px;flex:0 0 auto}
@@ -222,7 +222,8 @@ svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke
 .rsec>summary::-webkit-details-marker{display:none}
 .rsec>summary::before{content:"▸";color:var(--muted);font-size:12px;transition:transform .15s}
 .rsec[open]>summary::before{transform:rotate(90deg)}
-.rsec>summary .fact{margin-left:auto;font-weight:400;color:var(--muted);font-size:13px;text-align:right}
+.rsec>summary .fact{margin-left:auto;min-width:0;font-weight:400;color:var(--muted);font-size:13px;text-align:right}
+.rsec>summary .fact .due{white-space:normal}   /* a section's fact wraps on a phone — the dues figure and its late line, never past the screen's edge (INT7b) */
 .consent-rows .kv{flex-direction:column;gap:4px}.consent-cells{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center;min-width:0}.consent-cells .cc{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}.consent-cells i{font-style:normal;color:var(--muted,#5E594D);font-size:12px}
 .rsec .rbody{padding:4px 14px 14px;border-top:1px solid var(--line-2)}
 .kv{display:flex;gap:10px;padding:8px 0;border-bottom:1px dashed var(--line-2);font-size:14px;flex-wrap:wrap}
@@ -282,7 +283,7 @@ dialog.sheet::backdrop{background:var(--scrim)}
   .side{width:64px}
   .side .label,#toggleNav{display:none}
   .brand{padding:0 15px}
-  .bar{padding-left:12px;padding-right:12px}
+  .tools{padding-left:12px;padding-right:12px}
   .nav-btn .n{position:absolute;margin:0;transform:translate(12px,-12px);padding:0 5px}
   .nav-btn{position:relative}
   .content,.rec{padding-left:16px;padding-right:16px}
@@ -292,8 +293,6 @@ dialog.sheet::backdrop{background:var(--scrim)}
 }
 @media (max-width:620px){
   .shop{display:none}
-  .home .hw{display:none}   /* the phone bar holds the page action, the bell, Home and the avatar on one line: Home is its symbol (as CB Accounts) */
-  .home{padding:0 11px}
   .rec h1{font-size:23px}
   .actbar.pin{position:fixed;left:64px;right:0;bottom:0;z-index:30;background:var(--surface);border-top:1px solid var(--line);padding:8px 12px;gap:6px;flex-wrap:wrap}   /* two per row when four do not fit — nothing cut off (ai-eye E-19) */
   .actbar.pin .wide-only{display:none}
@@ -304,7 +303,7 @@ dialog.sheet::backdrop{background:var(--scrim)}
 }
 @media (min-width:621px){ .narrow-only{display:none !important} }
 @media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
-@media print{.side,.bar,#toast{display:none !important}.main{margin:0}.content{padding:0}}   /* the chit page prints as the document (its Print action), not the frame */
+@media print{.side,#shell,.tools,#toast{display:none !important}.main{margin:0}.content{padding:0}}   /* the chit page prints as the document (its Print action), not the frame */
 </style>
 </head>
 <body>
@@ -323,10 +322,8 @@ dialog.sheet::backdrop{background:var(--scrim)}
   </aside>
 
   <main class="main">
-    <header class="bar">
-      <div class="crumb" id="crumb"></div>
-      <div class="who" id="who"></div>
-    </header>
+    <div id="shell" data-testid="crm-shell"></div>   <!-- THE ONE HEADER (CBFrame → CBShell, SHELL-ONE): mark · CB CRM · chip · ⌂ Home · bell · avatar -->
+    <div class="tools" id="tools"><div class="crumb" id="crumb"></div><span id="crm-bar-act"></span></div>
     <div class="screen" id="screen" data-testid="crm-screen"></div>
   </main>
 </div>
@@ -362,6 +359,8 @@ function go(){ signedOut('Your session ended. Please sign in again.'); }   /* ap
 <script src="/app/list-ctl.js"></script>   <!-- CBList: every list here is a mount on it -->
 <script src="/engine/tax.js"></script>
 <script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the header, and every sheet's own (SCREEN-ID) -->
+<script src="/app/shell.js"></script>   <!-- CBShell: THE ONE HEADER (SHELL-ONE) — mounted into #shell by CBFrame -->
+<script src="/app/page-frame.js"></script>   <!-- CBFrame.mount({ host }): the frame every page wears; this page's own sidebar stays -->
 <script src="/app/chit-sheet.js"></script>   <!-- THE CHIT SHEET: a bill, a chit, a message in the timeline opens it in place; full-page at #/chit/<id> (CBSheet.mount, CRM2) -->
 <script src="/app/page.js"></script>   <!-- CBPage: the "made with X@v — page not installed" note on the chit page (N03) -->
 <script src="/app/cap-folders.js"></script>
@@ -430,26 +429,20 @@ $('toggleNav').addEventListener('click', () => {
 const railMq = window.matchMedia('(min-width:761px) and (max-width:1100px)');
 function railFit(){ const s = $('side'), t = $('toggleNav'); s.classList.toggle('collapsed', railMq.matches); const open = !s.classList.contains('collapsed'); t.setAttribute('aria-expanded', String(open)); t.setAttribute('aria-label', open ? 'Collapse sidebar' : 'Expand sidebar'); }
 if (railMq.addEventListener) railMq.addEventListener('change', railFit); railFit();
+/* SHELL-ONE: the frame, mounted once per session change (the shell mounts the bell and the avatar itself); signed out, the avatar's door scrolls to the sign-in card */
+let FRAME = null;
 function whoPaint(){
-  const nm = SESS ? (SESS.entity || SESS.name || '') : '';
-  const role = typeof crmRole === 'function' ? crmRole() : 'owner';
-  /* a login's LEVEL in the server's own words (lib/access: editor · view-only) — never the internal word "co-assist" on screen (ai-eye E-8) */
-  $('who').innerHTML = `<span class="shop" data-testid="shop-name" data-level="${esc(role)}">${esc(nm)}${role !== 'owner' ? ' · ' + esc(role === 'editor' ? 'editor' : 'view-only') : ''}</span>`
-    + `<span id="crm-bar-act"></span>`
-    + `<span id="cb-bell-slot" data-testid="bell-slot"></span>`
-    + `<a class="home" href="/" data-testid="crm-home" aria-label="Home">⌂<span class="hw">&nbsp;Home</span></a>`
-    + `<span id="cb-avatar" data-cb-avatar data-testid="avatar-slot"></span>`;
-  /* R06 — the bell (app/rail-bell.js): ONE host element, mounted once, moved into each repaint of the bar so the stream is not re-ticketed */
-  if (typeof CBBell !== 'undefined' && SESS) { if (!window.__cbBell) window.__cbBell = document.createElement('span'); $('cb-bell-slot').appendChild(window.__cbBell);
-    /* mounted once it is on the page and the session is set; a bell drawn before the session landed (no button) is mounted again */
-    if (!window.__cbBell.querySelector('[data-testid="bell-btn"]')) CBBell.mount(window.__cbBell, { context: { host: 'crm' } }); }
-  /* the avatar is CBAvatar (app/avatar.js), the same control as CB Accounts: Profile · Support · Sign out; Settings stays in the app */
-  if (typeof CBAvatar !== 'undefined') CBAvatar.mount($('cb-avatar'), { person: CBAvatar.personOf(SESS), items: ['profile', 'support', 'signout'], apiBase: CFG.API_BASE, token: SESS && SESS.token });
-  if (window.CBScreenId) { if (!CBScreenId.current()) CBScreenId.here('crm'); $('who').insertBefore(CBScreenId.chip(), $('who').firstChild); }   /* SCREEN-ID: this screen's name · code, one element moved into each repaint (the bell's pattern) */
+  const sessionToken = SESS ? SESS.token : null, role = typeof crmRole === 'function' ? crmRole() : 'owner';
+  /* a login's LEVEL in the server's own words (lib/access: editor · view-only), after the shop's name — never the internal word "co-assist" on screen (ai-eye E-8) */
+  const level = role === 'owner' ? '' : (role === 'editor' ? 'editor' : 'view-only');
+  if (FRAME && (FRAME.session ? FRAME.session.token : null) === sessionToken && FRAME.level === level) return;
+  FRAME = CBFrame.mount({ app: 'crm', host: $('shell'), signin: false, level, avatar: { onSignIn: () => { const signinHost = $('signin-host'); if (signinHost && signinHost.scrollIntoView) signinHost.scrollIntoView({ block: 'center' }); } } });
+  FRAME.level = level;
+  if (window.CBScreenId && !CBScreenId.current()) CBScreenId.here('crm');
 }
 function signedOut(why){
   SESS = null; MINE = null; CRM.gen++;
-  $('who').innerHTML = ''; $('nav').innerHTML = ''; $('crumb').innerHTML = '';
+  whoPaint(); $('nav').innerHTML = ''; $('crumb').innerHTML = '';   /* the frame stays: its avatar is the Sign in door to the card below */
   /* ⭐ M14: the one sign-in window, here in the card — mobile number or e-mail, the first-time PIN step; signed in → start() */
   /* the card's own heading only when there is a reason to give (a session that ended, another tab): the window has its title, and "You are signed out"
      stayed over the PIN step of a first sign-in (WX-L2C, 2026-10-13) */

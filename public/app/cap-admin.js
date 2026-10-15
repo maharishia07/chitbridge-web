@@ -1,4 +1,8 @@
 /* app/cap-admin.js — the "admin" capability (progressively loaded on demand).
+ * OWNS  the workshop's admin screens: MIS · Profile · Settings · governance (the panels, their reads and their paint).
+ * CALLED BY app.html ensureCap('admin') the first time one of those screens opens (CAP_OF).
+ * FLOW  ensureCap → the screen opens → api(…) → the panel paints; a write goes through the M64 action state
+ * CARD 28-platform-and-operations/admin-screens
  * Injected by ensureCap('admin') the first time an admin screen (CAP_OF) is opened.
  * Classic script, shared global scope: references Core/helpers globals that are eager and already
  * present before this loads — api, mapApiActor, hatAssignable, menuAssist, scr, opt, inr, esc,
@@ -124,7 +128,7 @@ function misScreen(){
      lives inside that band. Same rule that puts the Suppliers tabs above its list. */
   var bar = '<div class="misbar"><span class="misttl">' + tx('📊 MIS') + '</span>'
     + '<span class="seg">' + seg('7', '7 days') + seg('30', '30 days') + seg('all', 'All time') + '</span>'
-    + '<span class="misbar-r">' + (m ? '<span class="misasof">live · ' + esc(m.asOf) + '</span>' : '')
+    + '<span class="misbar-r">' + (m ? '<span class="misasof">' + esc(m.asOf) + '</span>' : '')   /* the one read stamp: cap-mis.js misReadAt (W2-SHOP) */
     + '<button class="composebtn" onclick="aiRun(\'metrics-narrate\',UI._mis,{title:\'📊 Explain my metrics\'})" title="AI narrates what your numbers say">' + tx('✨ Explain') + '</button></span></div>';
   var list = '<div class="list"><div class="lh" style="padding:0">' + bar + '</div>'
     + '<div class="rows" id="mis_rail">' + rail + '</div></div>';
@@ -654,7 +658,7 @@ async function _loadMIS(){
          the call failed; every reader must handle that rather than fall back to a second implementation. */
       srv: srv,
       periodLabel: misPeriod() === 'all' ? 'all time' : ('last ' + misPeriod() + 'd'),
-      asOf: CBLocale.time(Date.now()),
+      asOf: misReadAt(Date.now()),   /* "live · 10:32" — the same stamp CB Finance › Reports paints (cap-mis.js, loaded with this capability) */
       currency: 'INR'
     };
     const h = document.getElementById('misbody'); if (h) h.innerHTML = misBandHTML(misBand(), UI._mis);

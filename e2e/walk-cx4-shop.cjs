@@ -5,12 +5,13 @@
  * (shop.country · shop.tax_id_word, no upi_id under a pack without UPI). For each shop, at 1366 and 390 px, light and dark:
  *   X1  the shop's head names its tax id with the pack's word — GSTIN · ABN · TRN — and never "GSTIN" for AU / AE
  *   X2  the price is in the shop's money (₹ · A$ / AUD · AED), never ₹ for AU / AE
- *   X3  every text element reads at AA (4.5:1, large 3:1) against what it sits on; no inner horizontal scroll; no link to app.html
+ *   X3  every text element reads at AA (4.5:1, large 3:1) against what it sits on — lib/theme-measure.cjs, the one reader; no inner horizontal scroll; no link to app.html
  *   NODE_PATH=e2e/node_modules node e2e/walk-cx4-shop.cjs
  */
 'use strict';
 const W = require('./lib/walk.cjs');
-const C = require('./lib/contrast.cjs');
+const { measure } = require('./lib/theme-measure.cjs');   /* the one contrast reader */
+const { audit } = require('./lib/rule13.cjs');           /* the one rule-13 audit: inner scroll · app.html */
 const J = (o) => ({ status: 200, contentType: 'application/json', body: JSON.stringify(o) });
 
 const SHOPS = {
@@ -52,28 +53,14 @@ W.run('cx4-shop', async (w) => {
           const ok = SYM[cc].test(t) && (cc === 'IN' || !/₹/.test(t));
           return { ok, saw: (t.match(/(₹|A\$|AUD|AED|د\.إ)\s?[\d,.]+/) || ['no price'])[0] };
         });
+        /* INT7b-GREEN: measured by the ONE reader (lib/theme-measure.cjs — backgrounds composited, a color-mix's color() read; this walk's own parser
+           read "Sign in" as 1.00 against the header) and the one audit (lib/rule13.cjs: inner scroll, app.html). The rule is unchanged: 4.5:1, large 3:1. */
         await w.step('X3', tag + ' · AA contrast · no inner scroll · no app.html link', async () => {
-          const r = await page.evaluate(() => {
-            const rgb = (s) => { const m = String(s).match(/rgba?\(([^)]+)\)/); if (!m) return null; const p = m[1].split(',').map(Number); return { c: p.slice(0, 3), a: p.length > 3 ? p[3] : 1 }; };
-            const bgOf = (el) => { for (let e = el; e; e = e.parentElement) { const b = rgb(getComputedStyle(e).backgroundColor); if (b && b.a > 0.5) return b.c; if (getComputedStyle(e).backgroundImage !== 'none') return null; } return [255, 255, 255]; };
-            const out = []; const els = document.querySelectorAll('body *');
-            for (const el of els) {
-              if (!el.offsetParent && getComputedStyle(el).position !== 'fixed') continue;
-              const own = Array.from(el.childNodes).some((n) => n.nodeType === 3 && n.textContent.trim());
-              if (!own) continue;
-              const cs = getComputedStyle(el); if (cs.visibility === 'hidden' || Number(cs.opacity) === 0) continue;
-              const bg = bgOf(el); const fg = rgb(cs.color); if (!bg || !fg) continue;
-              const size = parseFloat(cs.fontSize), bold = Number(cs.fontWeight) >= 700;
-              out.push({ t: el.textContent.trim().slice(0, 30), fg: fg.c, bg, large: size >= 24 || (bold && size >= 18.66) });
-            }
-            const scrollers = Array.from(document.querySelectorAll('body *')).filter((e) => { const cs = getComputedStyle(e); return /auto|scroll/.test(cs.overflowX) && e.scrollWidth > e.clientWidth + 1 && e.clientWidth > 0; }).map((e) => e.className || e.tagName);
-            return { out, wide: document.documentElement.scrollWidth > window.innerWidth + 1, scrollers, appLinks: document.querySelectorAll('a[href*="app.html"]').length };
-          });
-          const hex = (a) => '#' + a.map((v) => Math.round(v).toString(16).padStart(2, '0')).join('');
-          const low = r.out.filter((x) => C.ratio(hex(x.fg), hex(x.bg)) < (x.large ? 3 : 4.5));
-          const ok = !low.length && !r.wide && !r.scrollers.length && !r.appLinks;
-          return { ok, saw: r.out.length + ' texts' + (low.length ? ' · LOW: ' + low.slice(0, 3).map((x) => '"' + x.t + '" ' + C.ratio(hex(x.fg), hex(x.bg)).toFixed(2)).join(', ') : ' · all AA')
-            + (r.wide ? ' · page wider than the window' : '') + (r.scrollers.length ? ' · inner scroll: ' + r.scrollers.slice(0, 2).join(',') : '') + (r.appLinks ? ' · app.html link' : '') };
+          const pairs = await page.evaluate(measure), auditOut = await audit(page, 'shell');
+          const low = pairs.filter((x) => !x.grad && x.ratio < x.need);
+          const ok = !low.length && !auditOut.scroll.length && !auditOut.app.length;
+          return { ok, saw: pairs.length + ' texts' + (low.length ? ' · LOW: ' + low.slice(0, 3).map((x) => '"' + x.text + '" ' + x.ratio.toFixed(2)).join(', ') : ' · all AA')
+            + (auditOut.scroll.length ? ' · inner scroll: ' + auditOut.scroll.slice(0, 2).join(',') : '') + (auditOut.app.length ? ' · app.html link' : '') };
         });
       }
     }
