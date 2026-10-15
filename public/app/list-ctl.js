@@ -30,6 +30,11 @@
  * ESCAPING IS ITS OWN JOB: every value painted here goes through this file's `esc`. A column renders trusted markup only if it
  * says so (`html: true`), and `next(row)` is trusted markup by contract: the page that builds it escapes its own data.
  *
+ * SAVED VIEWS (T3-COMPAT): `views:{ items:[{ key, label, filt, tip, rows? }], tid, inTitle }` — a tab sets the list's own filters. STD-COMPARE
+ * (2026-10-15): a view may carry its OWN rows (`rows: () => [...]`, a second data file mapped onto its own columns): while that tab is lit — its
+ * `filt` in force, other filters may be added — the unit draws those rows instead of the mount's, and the tab counts them. A view without `rows`
+ * is unchanged: a filter over the mount's rows, lit only when the filters are exactly its own.
+ *
  * SERVER-PAGED LISTS (Platform): pass `remote:{ total, onQuery(q), foot() }`. The unit then neither filters nor sorts: it draws
  * the page it was given in its own look, asks the page's pager for the next one through `onQuery`, and paints `foot()` below.
  *   `remote.filters: true` (T3) also draws the Filters control: each choice is handed to `onQuery` ({ filt, sort }), never applied here.
@@ -296,7 +301,10 @@
   }
 
   /* ═════ the data: rows → matched → ordered → grouped items ═════ */
-  function allRows(I) { var r = typeof I.o.rows === 'function' ? safe(function () { return I.o.rows(); }, []) : I.o.rows; return Array.isArray(r) ? r : []; }
+  /* the mount's own rows; allRows = the lit view's own rows when it has them (STD-COMPARE), else these */
+  function baseRows(I) { var r = typeof I.o.rows === 'function' ? safe(function () { return I.o.rows(); }, []) : I.o.rows; return Array.isArray(r) ? r : []; }
+  function viewRows(I) { var v = litOwnView(I); if (!v) return null; var r = safe(function () { return v.rows(); }, []); return Array.isArray(r) ? r : []; }
+  function allRows(I) { return viewRows(I) || baseRows(I); }
   function rid(I, row, i) { var v = I.o.id ? I.o.id(row) : row && row.id; return String(v == null ? 'r' + i : v); }
   function columns(I) { return (typeof I.o.columns === 'function' ? I.o.columns() : I.o.columns) || []; }
   function pinned(I) { return columns(I).filter(function (c) { return c.pin === 'end'; }); }
@@ -307,8 +315,8 @@
     return best ? best.key : null;
   }
   function defaultCols(I) {
-    var cs = choosable(I), keys = cs.map(function (c) { return c.key; });
-    if (Array.isArray(I.o.defaultCols) && I.o.defaultCols.length) return I.o.defaultCols.filter(function (k) { return keys.indexOf(k) >= 0; });
+    var cs = choosable(I), keys = cs.map(function (c) { return c.key; }), want = val(I.o.defaultCols);   /* a function when a view has columns of its own (STD-COMPARE) */
+    if (Array.isArray(want) && want.length) return want.filter(function (k) { return keys.indexOf(k) >= 0; });
     var byPrio = cs.slice().sort(function (a, b) { return (a.prio || 99) - (b.prio || 99); }).slice(0, 3).map(function (c) { return c.key; });
     return keys.filter(function (k) { return byPrio.indexOf(k) >= 0; });
   }
@@ -505,7 +513,13 @@
   }
   function viewOn(I, v) {
     var a = I.r.filt, b = v.filt || {}, ka = Object.keys(a).filter(function (k) { return a[k]; }), kb = Object.keys(b);
-    return ka.length === kb.length && kb.every(function (k) { return a[k] === b[k]; });
+    var own = kb.every(function (k) { return a[k] === b[k]; });
+    return v.rows ? kb.length > 0 && own : ka.length === kb.length && own;   /* a view with its own rows stays lit while its filters are in force (its country filter may change) */
+  }
+  function litOwnView(I) {
+    var vs = (I.o.views && I.o.views.items) || [], out = null;
+    vs.forEach(function (v) { if (!out && typeof v.rows === 'function' && viewOn(I, v)) out = v; });
+    return out;
   }
   function paintViews(I) {
     var vs = I.o.views && I.o.views.items, inT = !!(I.o.views && I.o.views.inTitle), box = $(I, inT ? ':scope > .cbl-title > .cbl-views' : ':scope > .cbl-views');
@@ -515,9 +529,9 @@
       box = root.document.createElement('div'); box.className = 'cbl-views'; box.setAttribute('data-cbl-part', 'views'); box.setAttribute('role', 'tablist'); box.setAttribute('aria-label', T(I, 'Views'));
       var tl = $(I, ':scope > .cbl-tools'), l = $(I, ':scope > .cbl-list'); I.el.insertBefore(box, tl || l);
     }
-    var rows = allRows(I), vt = I.o.views.tid || 'views';
+    var rows = baseRows(I), vt = I.o.views.tid || 'views';
     box.innerHTML = vs.map(function (v) {
-      var n = rows.filter(function (r) { return viewMatches(I, v, r); }).length, on = viewOn(I, v);
+      var n = (typeof v.rows === 'function' ? safe(function () { return v.rows(); }, []) : rows.filter(function (r) { return viewMatches(I, v, r); })).length, on = viewOn(I, v);
       return '<button type="button" role="tab" class="cbl-vtab" data-view-tab="' + esc(v.key) + '" aria-selected="' + on + '" data-testid="' + esc(vt) + '-' + esc(v.key) + '"' + (v.tip ? ' title="' + esc(T(I, v.tip)) + '"' : '') + '>' + esc(T(I, v.label)) + ' <span class="n">' + n + '</span></button>';
     }).join('');
   }

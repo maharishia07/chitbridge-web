@@ -12,6 +12,7 @@
  *   CBAvatar.hydrate(prefs)                                the server's per-person appearance — the truth; absent = default unless pending (true if something changed)
  *   CBAvatar.set(kind, value)                              kind: theme · font · fs · weight · motion · stripes · edition — saves, applies, syncs
  *   CBAvatar.get() · .themeKey() · .close() · .signOut() · .THEMES · .FONTS · .TEXT_SIZES · .FS_BASE
+ *   CBAvatar.shopCountry()                                 the shop's country from the one /me read (null until it lands); `cb:me` on document announces it — STD-COMPARE
  *
  * ⭐ ONE FILE, ONE GLOBAL, NO IMPORTS, NO BUILD STEP, NO NETWORK NEEDED — so the counter can load it as it loads /engine/screen.js.
  *    The look applies from local storage alone; the server sync is optional and silent when offline. `person` is an INPUT
@@ -245,9 +246,18 @@
              does (app.html CBLocale.hydrate), so number · date · grouping follow the shop's country (REGIONS[country] = the pack's locale) on every
              page, not en-IN by default. One read for both; a page with pull:false hydrates itself. */
           try { if (root.CBLocale && root.CBLocale.hydrate) root.CBLocale.hydrate(e.locale_prefs || {}, { country: e.country || null }); } catch (_) {}
+          announceShop(e);
         }).catch(function () {});
     } catch (_) {}
   }
+  /* STD-COMPARE (2026-10-15): the SAME /me read tells the page the shop's country — `cb:me` on document, { country } — so a page that reads no API of its
+     own (the Standards page's Compared with tab opens on the shop's country) asks here, never a second /me. shopCountry() answers a late reader. */
+  var SHOP_COUNTRY = null;
+  function announceShop(entity) {
+    SHOP_COUNTRY = entity && entity.country ? String(entity.country).toUpperCase() : null;
+    try { root.document.dispatchEvent(new CustomEvent('cb:me', { detail: { country: SHOP_COUNTRY } })); } catch (e) { if (root.console) root.console.warn('avatar: cb:me not announced', e); }
+  }
+  function shopCountry() { return SHOP_COUNTRY; }
 
   function set(kind, value) {
     if (!has(KEY, kind) || !valid(kind, value)) return;
@@ -532,5 +542,5 @@
   if (root.addEventListener) root.addEventListener('online', function () { if (Object.keys(pendGet()).length) push(); });
 
   root.CBAvatar = { mount: mount, apply: apply, hydrate: hydrate, set: set, get: get, personOf: personOf, sessionPerson: sessionPerson, themeKey: themeKey, applyTheme: themeApply, push: push, pending: pendGet, themeBase: themeBase, isOpen: function () { return openNow; }, close: close, signOut: signOut,
-    THEMES: THEMES, FONTS: FONTS, TEXT_SIZES: TEXT_SIZES, FS_BASE: FS_BASE, fontStack: fontStack };
+    THEMES: THEMES, FONTS: FONTS, TEXT_SIZES: TEXT_SIZES, FS_BASE: FS_BASE, fontStack: fontStack, shopCountry: shopCountry };
 })(typeof window !== 'undefined' ? window : this);
