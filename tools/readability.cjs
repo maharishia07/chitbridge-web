@@ -3,7 +3,7 @@
  *
  * OWNS    six counts per repo over OWN code (R1 cryptic names · R2 uncommented functions · R3 long/deep functions ·
  *         R4 module headers · R5 comment quality · R6 repeated magic values). Reads files, writes nothing but its report.
- * CALLED  by hand: `node tools/readability.cjs --roots web=.,api=../chitbridge-api,engines=../chitbridge-engines [--json out.json] [--md]`
+ * CALLED  by hand: `node tools/readability.cjs --roots web=.,api=../chitbridge-api,engines=../chitbridge-engines [--json out.json] [--detail <repo> R2|R3|R4]`
  *         Needs `acorn` (NOT a dependency of this repo): found via NODE_PATH, ./node_modules, or `npm i acorn` in a temp dir.
  * FLOW    collect files (scope rule below) → parse each JS file / each inline <script> of an HTML page with acorn →
  *         one walk per file collects functions, declarations, comments, literals → aggregate per repo → print.
@@ -148,7 +148,7 @@ function analyse(file, facts) {
         // comment directly above: ends on the line before (or the same line trailing is NOT counted)
         const above = commentEndLines.get(stmt.loc.start.line - 1);
         const wrapper = node.type !== 'FunctionDeclaration' && parent && ((parent.type === 'CallExpression' && parent.callee === node) ||
-          (parent.type === 'MemberExpression' && parent.object === node)) && stack.length <= 6 && node.loc.start.line <= 40 && (E(node) - L(node)) > 150;
+          (parent.type === 'MemberExpression' && parent.object === node)) && stack.length <= 6 && (E(node) - L(node)) > 150;
         const f = { wrapper, name, anon: !name, line: L(node), len: lineN, hasAbove: !!above, depth: 0, file: rel, stmtLine: startLine };
         fns.push(f);
         ctx = f; d = 0;
