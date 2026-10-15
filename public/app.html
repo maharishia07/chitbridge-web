@@ -14364,7 +14364,10 @@ function chitPaymentCell(c, cell, quoted){
   return cell(tx('Payment'), val);
 }
 /* CX0: payHasUpi · payModeOpts live in app/helpers.js (every page's) — UPI is offered only where the shop's pack carries it */
+/* PAY-FIX H2: one key per OPEN of the sheet — a retry of this press repeats it (the books answer 'Already recorded'), a second press on the same chit mints a new one */
+let PAY_PRESS_REF=null;
 function chitMarkPaid(id, amount){
+  PAY_PRESS_REF='press-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8);
   modal(`<div class="mhd"><div class="t">${esc(tx('Mark paid'))}</div><div class="s">${esc(tx('What you received, and the reference on it'))}</div></div><div class="mbody" style="display:grid;gap:8px">
     <select class="inp" id="pay_method" data-testid="pay-method">${payModeOpts()}<option value="cash">${esc(tx('Cash'))}</option><option value="card">${esc(tx('Card'))}</option><option value="bank">${esc(tx('Bank transfer'))}</option><option value="other">${esc(tx('Other'))}</option></select>
     <input class="inp" id="pay_ref" data-testid="pay-ref" placeholder="${esc(tx('UPI transaction id / reference'))}">
@@ -14373,7 +14376,7 @@ function chitMarkPaid(id, amount){
 }
 async function chitPaySubmit(id){
   const method=(document.getElementById('pay_method')||{}).value||(payHasUpi()?'upi':'cash'), ref=(document.getElementById('pay_ref')||{}).value||'', amount=parseFloat((document.getElementById('pay_amount')||{}).value);
-  try{ const r=await api('chitPay', { params:{ id }, body:{ method, ref: ref||undefined, amount: isFinite(amount)?amount:undefined } }); closeModal(); toast(tx('Payment recorded ✓')); const c=UI.rows&&UI.rows.find(x=>x.id===id); if(c){ c.business_json=Object.assign({}, c.business_json||{}, { payment:r.payment }); if(c.header) c.header.business_json=Object.assign({}, c.header.business_json||{}, { payment:r.payment }); } if(typeof openChit==='function') openChit(id, true); }
+  try{ const r=await api('chitPay', { params:{ id }, body:{ method, ref: ref||undefined, amount: isFinite(amount)?amount:undefined, client_ref: PAY_PRESS_REF||undefined } }); closeModal(); toast(r&&r.replayed?tx('Already recorded'):tx('Payment recorded ✓')); const c=UI.rows&&UI.rows.find(x=>x.id===id); if(c){ c.business_json=Object.assign({}, c.business_json||{}, { payment:r.payment }); if(c.header) c.header.business_json=Object.assign({}, c.header.business_json||{}, { payment:r.payment }); } if(typeof openChit==='function') openChit(id, true); }
   catch(e){ toast((e&&e.message)||tx('Could not record'), true); }
 }
 async function chitUnpay(id){
