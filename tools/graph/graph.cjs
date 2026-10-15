@@ -80,21 +80,24 @@ function addWebCode(webRoot, addFile) {
 /** a test naming a module by path string → that module's file node (web: app/ engine/ tools/ scripts/; api: lib/ routes/ … tools/ scripts/) */
 const FILE_NAMED = {
   web: [/(?:^|[\/'"\s])(?:public\/)?((?:app|engine)\/[\w.-]+\.js)$/, /(?:^|[\/'"\s])((?:tools|scripts)\/[\w.\/-]+\.(?:cjs|js|mjs))$/],
-  api: [/(?:^|[\/'"\s])((?:lib|routes|middleware|src|governance|tools|scripts)\/[\w.\/-]+\.c?js)$/],
+  api: [/(?:^|[\/'"\s])((?:lib|routes|middleware|src|governance|tools|scripts)\/[\w.\/-]+?)(?:\.c?js)?$/, /(?:^|[\/'"\s])(tools\/tally-connector\/[\w.-]+\.html)$/],
   engines: [/(?:^|[\/'"\s])((?:src|tools)\/[\w.\/-]+\.c?js)$/]
 };
 function fileNamedBy(repo, text, byId) {
   for (const pattern of FILE_NAMED[repo] || []) {
     const match = pattern.exec(text);
     if (!match) continue;
-    const id = byId.has('file:' + repo + ':public/' + match[1]) ? 'file:' + repo + ':public/' + match[1] : 'file:' + repo + ':' + match[1];
-    if (byId.has(id)) return id;
+    /* the name may come without its extension (path.join(API, 'lib', 'rail')); a counter page is a screen node (INT7b) */
+    for (const rel of [match[1], match[1] + '.js', match[1] + '.cjs']) {
+      for (const prefix of ['file:' + repo + ':public/', 'file:' + repo + ':', 'screen:' + repo + ':']) if (byId.has(prefix + rel)) return prefix + rel;
+    }
   }
   return null;
 }
 /** every module a test names by path string gets a tested-by edge (READ-GUARD: the trace row of a tool or a lib) */
 function linkNamedFiles(testFile, byId, edge) {
-  for (const text of testFile.scan.strings) { const named = fileNamedBy(testFile.repo, text.text, byId); if (named) edge(named, testFile.id, 'tested-by', 'reads'); }
+  const named = testFile.scan.strings.concat(testFile.scan.joinedPaths || []);   /* a path.join(...) of string segments names a file too (INT7b) */
+  for (const text of named) { const file = fileNamedBy(testFile.repo, text.text, byId); if (file) edge(file, testFile.id, 'tested-by', 'reads'); }
 }
 
 function build() {
@@ -124,6 +127,8 @@ function build() {
     ['lib', 'routes', 'src', 'middleware', 'governance', 'tools', 'scripts'].forEach((d) => walk(path.join(A, d), (p) => /\.c?js$/.test(p) && !/\.test\.c?js$/.test(p)).sort().forEach((p) => addFile('api', p, /\/routes\//.test(p) ? 'route-file' : 'api-lib')));
     addFile('api', path.join(A, 'server.js'), 'api-lib');
     walk(path.join(A, 'tests'), (p) => /\.(test\.)?(cjs|js)$/.test(p) && !/\/(fixtures|support|helpers?)\//.test(p)).sort().forEach((p) => addFile('api', p, 'test'));
+    /* the counter's pages (the till master and promo) are own code with a trace row: screens of the api repo (INT7b) */
+    walk(path.join(A, 'tools', 'tally-connector'), (p) => /\.html$/.test(p) && path.dirname(p) === path.join(A, 'tools', 'tally-connector')).sort().forEach((p) => addFile('api', p, 'page'));
   }
   /* engines */
   if (meta.present.engines) {
@@ -141,14 +146,14 @@ function build() {
     if (f.kind === 'page') {
       const h = S.scanHtml(src);
       f.scripts = h.scripts; f.markupHandlers = h.handlers;
-      f.scan = { code: '', strings: [], functions: [], calls: [], requires: [], exports: [], globals: [], apiKeys: [], apiPaths: [], handlers: [] };
+      f.scan = { code: '', strings: [], joinedPaths: [], functions: [], calls: [], requires: [], exports: [], globals: [], apiKeys: [], apiPaths: [], handlers: [] };
       /* a page's code view is the inline blocks laid at their offsets, so positions are page positions */
       let code = src.replace(/[^\n]/g, ' ');
       for (const b of h.inline) {
         const j = S.scanJs(b.code, { baseLine: b.baseLine });
         code = code.slice(0, b.offset) + j.code + code.slice(b.offset + j.code.length);
         const shift = (arr) => arr.forEach((x) => { if (x.pos != null) x.pos += b.offset; if (x.start != null) x.start += b.offset; if (x.end != null) x.end += b.offset; if (x.paramsAt != null) x.paramsAt += b.offset; if (x.declAt != null) x.declAt += b.offset; });
-        ['strings', 'functions', 'calls', 'requires', 'apiKeys', 'apiPaths', 'handlers'].forEach((k) => { shift(j[k]); f.scan[k] = f.scan[k].concat(j[k]); });
+        ['strings', 'joinedPaths', 'functions', 'calls', 'requires', 'apiKeys', 'apiPaths', 'handlers'].forEach((k) => { shift(j[k]); f.scan[k] = f.scan[k].concat(j[k]); });
         f.scan.exports = f.scan.exports.concat(j.exports); f.scan.globals = f.scan.globals.concat(j.globals);
       }
       f.scan.code = code;
@@ -204,7 +209,7 @@ function build() {
     f.scan.apiPaths.forEach((c) => { c.owner = f.owner(c.pos); });
     f.scan.strings.forEach((s) => { s.owner = f.owner(s.start); });
     /* nodes for files (not pages — a page IS its screen node — and not tests, which are test nodes) */
-    if (f.kind === 'page') node(f.id, { kind: 'screen', screen: 'page', repo: 'web', file: f.rel, lab: /-(lab|design|next)\.html$|design-mock|screen-gallery|lifecycle-test|shell-lab/.test(f.rel) });
+    if (f.kind === 'page') node(f.id, { kind: 'screen', screen: 'page', repo: f.repo, file: f.rel, lab: /-(lab|design|next)\.html$|design-mock|screen-gallery|lifecycle-test|shell-lab/.test(f.rel) });
     else if (f.kind === 'test') node(f.id, { kind: 'test', repo: f.repo, file: f.rel });
     else node(f.id, { kind: 'file', repo: f.repo, file: f.rel, fileKind: f.kind, adopted: f.adopted || undefined });
   }

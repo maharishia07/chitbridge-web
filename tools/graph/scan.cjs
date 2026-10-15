@@ -271,8 +271,20 @@ function scanJs(src, opts) {
   const requires = [];
   const strAt = (pos) => { for (const s of strings) { if (s.start - 1 >= pos && s.start - 1 <= pos + 3) return s.text; if (s.start > pos + 3) break; } return null; };
   const reReq = /\brequire\s*\(/g;
+  /* require(path.join(__dirname, '..', 'lib', 'x')) — the form the api tests use (INT7b: without it a lib's test gave no tested-by edge) */
+  const rePathJoin = /^\s*path\.(?:join|resolve)\(\s*__dirname\s*,/;
+  const joinedSpec = (pos) => {
+    const head = rePathJoin.exec(code.slice(pos, pos + 40));
+    if (!head) return null;
+    const from = pos + head[0].length, to = code.indexOf(')', from);
+    if (to < 0) return null;
+    const segments = strings.filter((s) => s.start > from && s.start < to).map((s) => s.text);
+    if (!segments.length) return null;
+    const joined = segments.join('/');
+    return /^\.\.?\//.test(joined) ? joined : './' + joined;
+  };
   while ((m = reReq.exec(code))) {
-    const spec = strAt(m.index + m[0].length);
+    const spec = strAt(m.index + m[0].length) || joinedSpec(m.index + m[0].length);
     if (!spec) continue;
     /* the statement this require sits in: back to the start of the line */
     const ls = code.lastIndexOf('\n', m.index) + 1;
@@ -284,6 +296,16 @@ function scanJs(src, opts) {
     else if ((mm = new RegExp('(' + NAME + ')\\s*=\\s*$').exec(stmt))) alias = mm[1];
     /* const { a } = require('x').sub  — rare; ignored */
     requires.push({ spec, alias, names, pos: m.index });
+  }
+  /* path.join(ROOT, 'app', 'x.js') / path.resolve(...) with string segments → ONE joined path, so a test that READS a module by
+     path.join names it (INT7b: the standards walks read cap-standards.js that way and the register had no tested-by edge) */
+  const joinedPaths = [];
+  const reJoin = /\bpath\.(?:join|resolve)\s*\(/g;
+  while ((m = reJoin.exec(code))) {
+    const from = m.index + m[0].length, to = code.indexOf(')', from);
+    if (to < 0) continue;
+    const segments = strings.filter((s) => s.start > from && s.start < to).map((s) => s.text);
+    if (segments.length) joinedPaths.push({ text: segments.join('/'), start: m.index, pos: m.index });
   }
 
   /* exports */
@@ -330,7 +352,7 @@ function scanJs(src, opts) {
     }
   }
 
-  return { code, strings, functions, calls, requires, exports: [...exportsOut], globals: [...globals], apiKeys, apiPaths, handlers, toLine: L };
+  return { code, strings, joinedPaths, functions, calls, requires, exports: [...exportsOut], globals: [...globals], apiKeys, apiPaths, handlers, toLine: L };
 }
 
 /** the identifiers in `code` that name one of `names` and are used as values (not called, not a property) */
