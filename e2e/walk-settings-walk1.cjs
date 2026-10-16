@@ -85,10 +85,10 @@ const walk = async (w) => {
     const first = await page.$$eval('[data-testid^="skel-nav-"]', (b) => b.map((x) => x.getAttribute('data-sec')));
     return { ok: /#\/country$/.test(page.url()) && first[0] === 'country' && first[1] === 'shop' && first.indexOf('print') > 0, saw: page.url().replace(base, '') + ' · ' + first.join(' › ') };
   });
-  await w.step('A2', 'AU · Money confirms more than the code: symbol A$, number format A$1,234,567.89, 2 decimals, the date, "1.2 million" — each a live example; the words are not a choice (the money is million-grouped)', async () => {
+  await w.step('A2', 'AU · Money confirms more than the code: symbol A$, number format A$1,234,567,890.89 (a long sample, W29), 2 decimals, the date, "1.2 billion" — each a live example; the words are not a choice (the money is million-grouped)', async () => {
     const sym = await txt('[data-testid="cs-money-symbol"] .gv'), num = await txt('[data-testid="cs-money-number"] .gv'), dec = await txt('[data-testid="cs-money-decimals"] .gv'), words = await txt('[data-testid="cs-money-words"] .gv'), date = await txt('[data-testid="cs-money-date"] .gv');
     const fixedWords = await has('[data-testid="cs-words-fixed"]');
-    return { ok: /A\$/.test(sym) && /A\$1,234,567\.89/.test(num) && dec === '2' && /1\.2 million/.test(words) && fixedWords && date.length > 6, saw: [sym, num, dec, words, date].join(' · ') };
+    return { ok: /A\$/.test(sym) && /A\$1,234,567,890\.89/.test(num) && dec === '2' && /1\.2 billion/.test(words) && fixedWords && date.length > 6, saw: [sym, num, dec, words, date].join(' · ') };
   });
   await w.step('A3', 'AU · the money\'s reason names AUSTRALIA (never "the usual currency in India"); the readiness block is gone, a link to Standards › Country readiness stands instead; Supplies sits beside the tax row', async () => {
     const src = await txt('[data-testid="cs-src-currency"]'), ready = await has('[data-testid="cs-ready"]'), link = await page.getAttribute('[data-testid="cs-ready-link"]', 'href').catch(() => '');
@@ -211,7 +211,7 @@ const walk = async (w) => {
   /* ── the IN stand-in: lakh words, CGST/SGST, the Indian rows ── */
   S.cc = 'IN'; S.vault = VAULT();
   await go('country', '[data-testid="cs-rows"]');
-  await w.step('A21', 'IN · Money: ₹12,34,567.89 (lakh grouping — the money\'s own), the words a CHOICE (as the money is written · lakh · million) with "12 lakh"; choosing million → one PATCH { number_words }', async () => {
+  await w.step('A21', 'IN · Money: ₹1,23,45,67,890.89 (lakh grouping — the money\'s own, W29 long sample), the words a CHOICE (as the money is written · lakh · million) with "123.5 crore"; choosing million → one PATCH { number_words }', async () => {
     const chosen = () => page.$eval('#cs-words', (n) => n.options[n.selectedIndex].textContent).catch(() => '');
     const num = (await txt('[data-testid="cs-money-number"] .gv')).replace(/[\u200b-\u200f\u00a0\u202f]/g, ''), choice = await has('#cs-words'), words = await chosen();   /* ICU may put a thin/no-break space after ₹ */
     await page.selectOption('#cs-words', 'million'); await page.waitForTimeout(200);
@@ -219,7 +219,7 @@ const walk = async (w) => {
     await page.click('[data-testid="cs-save"]'); await page.waitForTimeout(800);
     const patch = S.calls.filter((c) => c.m === 'PATCH' && c.p === '/api/entities/policy').pop();
     const sp = '[\\s\\u00a0\\u202f]';   /* ICU's compact notation joins the number and the word with a narrow no-break space */
-    return { ok: /₹12,34,567\.89/.test(num) && choice && new RegExp('12(\\.3)?' + sp + 'lakh').test(words) && new RegExp('1\\.2' + sp + 'million').test(after) && patch && patch.body.number_words === 'million', saw: num + ' · choice ' + choice + ' · "' + words.slice(0, 40) + '" → "' + after.slice(0, 40) + '" · ' + JSON.stringify(patch && patch.body) };
+    return { ok: /₹1,23,45,67,890\.89/.test(num) && choice && new RegExp('123(\\.5)?' + sp + 'crore').test(words) && new RegExp('1\\.2' + sp + 'billion').test(after) && patch && patch.body.number_words === 'million', saw: num + ' · choice ' + choice + ' · "' + words.slice(0, 40) + '" → "' + after.slice(0, 40) + '" · ' + JSON.stringify(patch && patch.body) };
   });
   await go('print', '[data-testid="pr-editor"]');
   await w.step('A22', 'IN · the sample bill carries GSTIN, CGST/SGST and the HSN table; the address cannot be unticked (Rule 46)', async () => {

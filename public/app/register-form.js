@@ -69,7 +69,7 @@ function regLangHTML(code){
 /** how numbers and dates print in the pack's format — the browser's own Intl, one fixed sample */
 function regFormatSample(locale){
   try {
-    var n = new Intl.NumberFormat(locale).format(1234.5), d = new Intl.DateTimeFormat(locale, { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(2026, 9, 14));
+    var n = new Intl.NumberFormat(locale).format(1234567890.5), d = new Intl.DateTimeFormat(locale, { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(2026, 9, 14));
     return '<bdi dir="auto">' + esc(n) + '</bdi> · <bdi dir="auto">' + esc(d) + '</bdi>';
   } catch (_) { return esc(locale); }
 }

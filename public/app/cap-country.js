@@ -162,9 +162,9 @@ function csuRead() {
 }
 /* ── ⭐ SET-WALK1 · W28(b) — MONEY CONFIRMS MORE THAN THE CODE: the symbol · the number format · the words for big numbers · the decimals · the date,
  * each a LIVE EXAMPLE from the SAME engine the bills use (CBLocale.money/symbol/date — the currency's own grouping, MONEY_LOCALE; CBMoney.decimals).
- * This file computes nothing: it paints what the engine paints. The grouping is the currency's (not a choice: ₹12,34,567 is how rupees are
- * written, A$1,234,567 how dollars are); the WORDS are the shop's (policy_flags.number_words — an Indian shop may say lakh/crore or million). */
-var CSU_SAMPLE = 1234567.89, CSU_WORDS = [['pack', 'as the money is written'], ['lakh', 'lakh · crore'], ['million', 'million']];
+ * This file computes nothing: it paints what the engine paints. The grouping is the currency's (not a choice: ₹1,23,45,67,890 is how rupees are
+ * written, A$1,234,567,890 how dollars are; INT7c W29: a long sample, so the grouping shows from the 3rd comma on); the WORDS are the shop's (policy_flags.number_words — an Indian shop may say lakh/crore or million). */
+var CSU_SAMPLE = 1234567890.89, CSU_WORDS = [['pack', 'as the money is written'], ['lakh', 'lakh · crore'], ['million', 'million']];
 function csuMoneyTag(cur) { try { return (window.CBLocale && CBLocale.moneyTag && CBLocale.moneyTag(cur)) || 'en-US'; } catch (_) { return 'en-US'; } }
 /** the words for a big number under a tag — Intl's compact notation (en-IN: "12 lakh" · en-US: "1.2 million"); the engine's own tag table decides which */
 function csuBigWords(n, words, cur) {
