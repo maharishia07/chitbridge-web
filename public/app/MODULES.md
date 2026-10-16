@@ -15,7 +15,7 @@ something needs them before any navigation happens.
 router renders a placeholder until `_capLoading` clears, which is the only reason the
 old duplicate `networkScreen()` in app.html was safe to delete.
 
-## Capabilities (60)
+## Capabilities (62)
 
 | file | loading · nav key | what it is |
 |---|---|---|
@@ -68,6 +68,8 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-rewards.js` | eager | cap-rewards.js — THE REWARDS PANE, ONE COPY (T3-P2-CRM, 2026-10-14): what a customer holds in points, what it is worth, how it was earned, |
 | `cap-service.js` | lazy · on demand | cap-service.js — a chit AS A SERVICE REQUEST. Lazy-loaded (ensureCap('service')) |
 | `cap-settings.js` | — | CB SETTINGS › Counters & keys · Connectors · Policy · Plan & usage (T3-SETTINGS, 2026-10-14; SET2 of INDEX-NOT-APP.md) |
+| `cap-setup-in.js` | — | THE INDIA PACK'S PART OF START HERE AND YOUR BUSINESS (BUILD-R1, 2026-10-16). An INDIA-PACK PATH (e2e/india-words-guard.cjs ALLOW) |
+| `cap-setup.js` | — | START HERE and YOUR BUSINESS: the accepted Settings design, round 1 (BUILD-R1, 2026-10-16) |
 | `cap-shop.js` | — | YOUR SHOP: the shop's own particulars, ONE implementation painted in two places (SET1, 2026-10-13) |
 | `cap-showcase.js` | eager | cap-showcase.js — THE SHOP WINDOW CHOOSER, ONE COPY (T3-P2-CRM, 2026-10-14): the registered showcase templates (app/showcase-templates.js, |
 | `cap-standards.js` | lazy · on demand |  |
@@ -135,4 +137,4 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 
 ---
 
-*108 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*110 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
