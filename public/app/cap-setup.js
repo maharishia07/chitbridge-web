@@ -526,7 +526,7 @@ var CBSetup = (function () {
     var target = focusedKey ? host.querySelector('[data-k="' + focusedKey + '"]') : (STATE.focusKey ? host.querySelector('[data-k="' + STATE.focusKey + '"]') : null);
     if (!target) return;
     target.focus();
-    try { if (caret != null && target.setSelectionRange && !STATE.focusKey) target.setSelectionRange(caret, caret); } catch (failure) { if (window.cbQuiet) cbQuiet('setup:caret', failure); }
+    try { if (caret != null && target.setSelectionRange && !STATE.focusKey) target.setSelectionRange(caret, caret); } catch (failure) { if (window.cbQuiet) window.cbQuiet('setup:caret', failure); }
   }
   /** paint the screen; keep the scroll place and the cursor */
   function paint() {
