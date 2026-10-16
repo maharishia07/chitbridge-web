@@ -182,11 +182,11 @@ var CBPrint = (function () {
   function openPreview() {
     var overlay = document.createElement('div');
     overlay.setAttribute('data-testid', 'pr-overlay');
-    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.55);overflow:auto;padding:24px 16px;display:flex;justify-content:center;align-items:flex-start';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:var(--scrim);overflow:auto;padding:24px 16px;display:flex;justify-content:center;align-items:flex-start';
     var frame = document.createElement('iframe');
     frame.title = tx('Sample bill'); frame.src = '/bill-print.html?preview=1';
     frame.setAttribute('scrolling', 'no');
-    frame.style.cssText = 'border:0;background:#fff;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.35);width:' + (held.model.paper === 'a4' ? 'min(794px,100%)' : '340px') + ';height:400px';
+    frame.style.cssText = 'border:0;background:var(--paper,var(--card));border-radius:6px;box-shadow:var(--shadow-menu);width:' + (held.model.paper === 'a4' ? 'min(794px,100%)' : '340px') + ';height:400px';
     function fitHeight() {
       try { var doc = frame.contentDocument; frame.style.height = Math.max(doc.documentElement.scrollHeight, doc.body.scrollHeight) + 'px'; } catch (failure) { logQuiet('preview-fit', failure); }
     }
