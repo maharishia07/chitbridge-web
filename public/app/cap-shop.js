@@ -20,6 +20,7 @@
  * Host globals (as every cap-*.js): api · EP · UI · SESSION · esc · tx · txf · toast · val · _CARD · CBAction · CBLocale (optional) · CBOffline (optional).
  * Loaded by app.html through CAP_WITH.admin (before cap-admin.js) and by settings.html directly.
  * Flow step: Onboarding · country (docs/process/flows.json) and O2C · invoice — the invoice party these rows feed.
+ * CARD 28-platform-and-operations/know-your-business
  */
 'use strict';
 if (typeof EP !== 'undefined') { Object.assign(EP, {
@@ -75,22 +76,38 @@ var BANK_CODE_WORDS = { IN: ['IFSC code', 'ifsc'], AU: ['BSB', 'bsb'], AE: ['IBA
     the bank's code word per pack, the licence's first rows per pack (ABN/ACN · TRN · GSTIN/PAN) — the TAG stays, so a form's pre-fill finds
     `state` / `pincode` / `gstin` whatever the row is called (an AU shop's "Postcode" and "ABN", a UAE shop's "Emirate" and "TRN") */
 function vaultSuggest(type){
-  var cc = shopCc(), words = { state: packWord('region', cc), pincode: packWord('postcode', cc), gstin: taxIdWord(cc) };
+  var countryCode = shopCc(), words = { state: packWord('region', countryCode), pincode: packWord('postcode', countryCode), gstin: taxIdWord(countryCode) };
   var list = (VAULT_SUGGEST[type] || []).map(function(x){ return words[x[1]] ? [words[x[1]], x[1]] : x; });
-  if (type === 'identity') list = [list[0], [words.gstin, 'gstin']].concat(list.slice(1));
-  if (type === 'bank') { var code = BANK_CODE_WORDS[cc] || BANK_CODE_WORDS.IN; list = list.filter(function(x){ return x[1] !== 'ifsc'; }); list.splice(2, 0, code); }
-  if (type === 'licence') { var india = cc === 'IN', pan = list.filter(function(x){ return x[1] === 'pan'; });   /* India's second id comes from the one list above, never a second literal */
-    list = [[words.gstin, 'gstin']].concat(india ? pan : cc === 'AU' ? [['ACN', 'acn']] : []).concat(LICENCE_ROWS, list.filter(function(x){ return ['gstin', 'pan'].indexOf(x[1]) < 0 && (india || ['iec', 'lut', 'ad_code'].indexOf(x[1]) < 0); })); }
-  return list;
+  var adjust = SUGGEST_BY_TYPE[type];
+  return adjust ? adjust(list, countryCode, words) : list;
 }
+/** identity: the tax id (the pack's word) comes second, after the legal name */
+function identitySuggest(list, countryCode, words){ return [list[0], [words.gstin, 'gstin']].concat(list.slice(1)); }
+/** bank: the pack's own code word (BSB · IBAN · IFSC) replaces India's IFSC row, third in the list */
+function bankSuggest(list, countryCode){
+  var codeWord = BANK_CODE_WORDS[countryCode] || BANK_CODE_WORDS.IN, others = list.filter(function(x){ return x[1] !== 'ifsc'; });
+  others.splice(2, 0, codeWord);
+  return others;
+}
+/** licence: the tax id, India's PAN / AU's ACN, the standard licence rows, then the rest (India-only ids dropped elsewhere) */
+function licenceSuggest(list, countryCode, words){
+  var isIndia = countryCode === 'IN', panRows = list.filter(function(x){ return x[1] === 'pan'; });   /* India's second id comes from the one list above, never a second literal */
+  var secondId = isIndia ? panRows : countryCode === 'AU' ? [['ACN', 'acn']] : [];
+  var rest = list.filter(function(x){ return ['gstin', 'pan'].indexOf(x[1]) < 0 && (isIndia || ['iec', 'lut', 'ad_code'].indexOf(x[1]) < 0); });
+  return [[words.gstin, 'gstin']].concat(secondId, LICENCE_ROWS, rest);
+}
+var SUGGEST_BY_TYPE = { identity: identitySuggest, bank: bankSuggest, licence: licenceSuggest };
 /** W23: a licence's standard rows — name · number · issuer · valid until — offered first in every country */
 var LICENCE_ROWS = [['Licence name', 'licence_name'], ['Licence number', 'licence_no'], ['Issued by', 'issuer'], ['Valid until', 'valid_until']];
+/** W19/W23: the tags a new section of each type opens with */
+var STARTER_TAGS = { identity: ['legal_name', 'gstin', 'address', 'state', 'pincode'], licence: ['licence_name', 'licence_no', 'issuer', 'valid_until'], bank: ['bank_name', 'account_no'], signatory: ['name', 'designation'] };
 /** W19/W23: the rows a new section opens with — the standard fields first (country-aware), free rows still allowed after */
 function vaultStarterRows(type, fill){
-  var f = fill || {};
-  var picks = type === 'identity' ? ['legal_name', 'gstin', 'address', 'state', 'pincode'] : type === 'licence' ? ['licence_name', 'licence_no', 'issuer', 'valid_until'] : type === 'bank' ? ['bank_name', 'account_no'] : type === 'signatory' ? ['name', 'designation'] : [];
-  var sug = vaultSuggest(type);
-  var rows = picks.map(function(tag){ var hit = sug.filter(function(x){ return x[1] === tag; })[0]; return { name: hit ? hit[0] : tag, tag: tag, value: f[tag] || '' }; });
+  var filled = fill || {}, suggestions = vaultSuggest(type);
+  var rows = (STARTER_TAGS[type] || []).map(function(tag){
+    var suggestion = suggestions.filter(function(x){ return x[1] === tag; })[0];
+    return { name: suggestion ? suggestion[0] : tag, tag: tag, value: filled[tag] || '' };
+  });
   return rows.length ? rows : [{ name: '', value: '' }];
 }
 /* Hints only where the format cannot be guessed, keyed by TAG rather than position — a row keeps its hint
@@ -145,9 +162,13 @@ function vaultSectionHTML(sec, i){
     +rows
     +'<button class="composebtn ghost" style="margin-top:8px" onclick="vaultAddRow('+i+')">+ add detail</button></div>';
 }
+/** W19: a row's value hint by tag — India's 15-character GSTIN hint only on an Indian shop */
+function vaultRowHint(tag){ return (tag==='gstin'&&shopCc()!=='IN') ? '' : (VAULT_HINT[tag]||''); }
+/** the name box's placeholder: "detail name — e.g." the section's first suggestion in the shop's own words */
+function vaultNamePlaceholder(type){ return txf('detail name — e.g. {x}', { x: (vaultSuggest(type)[0]||['Name'])[0] }); }
 /* One row: the name the USER gives it, and the value. The tag rides along invisibly when the name is one we know. */
 function vaultRowHTML(r,i,j,type){
-  var tag=r.tag||'', hint=(tag==='gstin'&&shopCc()!=='IN')?'':(VAULT_HINT[tag]||''), enums=VAULT_ENUM[tag];   /* W19: India's 15-character hint only on an Indian shop */
+  var tag=r.tag||'', hint=vaultRowHint(tag), enums=VAULT_ENUM[tag];
   var val;
   if (enums) {
     /* ⚠️ Blank stays FIRST and selectable — these are defaults, not answers. An unrecognised stored value is kept
@@ -167,7 +188,7 @@ function vaultRowHTML(r,i,j,type){
     /* ⚠️ BOTH FIELDS FLEX, AND NEITHER HAS A FIXED BASIS. The detail pane is ~350px at its narrowest and that is
        also the phone width; a 190px fixed name column pushed the remove button onto its own line, which reads as
        a stray control belonging to nothing. Let them shrink together and the row stays one row. */
-    +'<input class="inp" list="vsug_'+esc(type)+'" style="flex:1 1 130px;min-width:110px;margin:0" placeholder="'+esc(txf('detail name — e.g. {x}', { x: (vaultSuggest(type)[0]||['Name'])[0] }))+'" value="'+esc(r.name||'')+'" oninput="vaultSetRow('+i+','+j+',\'name\',this.value)">'
+    +'<input class="inp" list="vsug_'+esc(type)+'" style="flex:1 1 130px;min-width:110px;margin:0" placeholder="'+esc(vaultNamePlaceholder(type))+'" value="'+esc(r.name||'')+'" oninput="vaultSetRow('+i+','+j+',\'name\',this.value)">'
     +val
     /* the trust rung the profile map gave this row (declared → copied → checked → verified) and where it came from —
        a row a connector copied says so; a row you typed says nothing (declared is the floor, not a badge) */
@@ -186,7 +207,7 @@ function vaultDatalists(){
 function _vaultSecs(){ UI._vault=UI._vault||{sections:[]}; UI._vault.sections=UI._vault.sections||[]; return UI._vault.sections; }
 function _vaultPaint(){ var h=document.getElementById('vaulthost'); if(h) h.innerHTML=vaultCardHTML(null,UI._vaultEnc)+vaultDatalists()+vaultEnd(); }
 /** W22: the section the picker holds — remembered as it is chosen (UI._vaultAddType), so a repaint between the choice and the press cannot reset it */
-function vaultPickType(v){ UI._vaultAddType=String(v||''); }
+function vaultPickType(value){ UI._vaultAddType=String(value||''); }
 function vaultAddSection(){ var s=document.getElementById('v_addtype'), type=UI._vaultAddType||(s&&s.value)||(UI._vaultOnly||'other');
   _vaultSecs().push({type:VAULT_SECTION_TYPES[type]?type:'other',label:'',rows:vaultStarterRows(type)}); _vaultPaint(); }
 function vaultDelSection(i){ _vaultSecs().splice(i,1); _vaultPaint(); }
@@ -211,6 +232,14 @@ function vaultSetRow(i,j,field,v){
   r.tag=hit?hit[1]:'';
   if(!!VAULT_ENUM[before] !== !!VAULT_ENUM[r.tag]) _vaultPaint();
 }
+/** read the vault from the server and hold it as the base for the next patch; a failed read holds an empty vault and is logged */
+async function readVault(){
+  /* ⭐ profileGet, core's one name for this GET — `vaultGet` was a third alias for it (see e2e/ep-aliases.cjs) */
+  try{ var profile=(await api('profileGet'))||{};
+    /* The server normalises legacy group-shaped vaults to {sections} on read, so there is exactly one shape here. */
+    vaultHold({sections:((profile.vault||{}).sections)||[]}, profile.vault_version); UI._vaultEnc=!!profile.vault_encrypted;
+  }catch(failure){ vaultHold({sections:[]}, null); UI._vaultEnc=false; if(typeof cblog==='function')cblog('error','vault read: '+((failure&&failure.message)||failure)); }
+}
 async function loadVault(){
   var host=document.getElementById('vaulthost'); if(!host) return;
   /* ⚠️ THE END MARKER IS PAINTED HERE, NOT BY profSecHTML — it is a claim that you have seen everything, so it
@@ -218,14 +247,8 @@ async function loadVault(){
   /* ⭐ ALREADY IN HAND — /entities/me?include=vault brought it with the profile, so the vault section paints
      without a second round trip. The fetch below still runs on every other path: a direct open, a refresh after
      a save, an actor profile. See _profSeedIncluded. */
-  if (UI._vaultSeeded) { UI._vaultSeeded = false; }
-  else {
-    /* ⭐ profileGet, core's one name for this GET — `vaultGet` was a third alias for it (see e2e/ep-aliases.cjs) */
-    try{ var p=(await api('profileGet'))||{};
-      /* The server normalises legacy group-shaped vaults to {sections} on read, so there is exactly one shape here. */
-      vaultHold({sections:((p.vault||{}).sections)||[]}, p.vault_version); UI._vaultEnc=!!p.vault_encrypted;
-    }catch(e){ vaultHold({sections:[]}, null); UI._vaultEnc=false; if(typeof cblog==='function')cblog('error','vault read: '+((e&&e.message)||e)); }
-  }
+  if (UI._vaultSeeded) UI._vaultSeeded = false;
+  else await readVault();
   var h2=document.getElementById('vaulthost'); if(!h2) return;   // ⚠️ re-query: a repaint may have landed mid-fetch
   h2.innerHTML=vaultCardHTML(null,UI._vaultEnc)+vaultDatalists()+vaultEnd();
   if(window.CBOffline)CBOffline.autodraft(h2,'app.vault',{overwrite:true});   // restore unsaved edits over the server copy
@@ -242,30 +265,40 @@ function vaultHold(vault, version){
   UI._vaultVersion = version == null ? null : String(version);
 }
 /** a unique key: the base, then #2, #3 … on a repeat (the api's vault-patch.uniqueKey) */
-function vaultUniqueKey(base, seen){ var key=base, n=1; while(seen[key]){ n+=1; key=base+'#'+n; } seen[key]=true; return key; }
+function vaultUniqueKey(base, seen){ var key=base, copy=1; while(seen[key]){ copy+=1; key=base+'#'+copy; } seen[key]=true; return key; }
 /** sections keyed `type|label`, rows keyed `t:<tag>` else `n:<name>` — the api's vault-patch.keyed, one rule on both sides */
 function vaultKeys(sections){
-  var out={}, seenSections={};
-  (sections||[]).forEach(function(sec){
+  var keyed={}, seenSections={};
+  (sections||[]).forEach(function(section){
     var rows={}, seenRows={};
-    (sec.rows||[]).forEach(function(r){ rows[vaultUniqueKey(r.tag?'t:'+String(r.tag).toLowerCase():'n:'+String(r.name||''), seenRows)]=r; });
-    out[vaultUniqueKey(String(sec.type||'other')+'|'+String(sec.label||''), seenSections)]={ type:sec.type, label:sec.label||'', rows:rows };
+    (section.rows||[]).forEach(function(row){ rows[vaultUniqueKey(row.tag?'t:'+String(row.tag).toLowerCase():'n:'+String(row.name||''), seenRows)]=row; });
+    keyed[vaultUniqueKey(String(section.type||'other')+'|'+String(section.label||''), seenSections)]={ type:section.type, label:section.label||'', rows:rows };
   });
-  return out;
+  return keyed;
 }
 /** a row as the server stores it: name · value · tag (the provenance rides back untouched) */
-function vaultRowBody(r){ var o={ name:r.name||'', value:r.value||'', tag:r.tag||'' }; if(r.source) o.source=r.source; if(r.as_of) o.as_of=r.as_of; if(r.rung) o.rung=r.rung; return o; }
-function vaultRowSame(a,b){ return !!a && !!b && (a.name||'')===(b.name||'') && (a.value||'')===(b.value||'') && (a.tag||'')===(b.tag||''); }
+function vaultRowBody(row){ var body={ name:row.name||'', value:row.value||'', tag:row.tag||'' }; if(row.source) body.source=row.source; if(row.as_of) body.as_of=row.as_of; if(row.rung) body.rung=row.rung; return body; }
+/** do two rows carry the same name · value · tag? (an empty field equals a missing one) */
+function vaultRowSame(before,after){ return !!before && !!after && ['name','value','tag'].every(function(field){ return (before[field]||'')===(after[field]||''); }); }
+/** a section that is NEW: all its rows, as the server stores them */
+function vaultNewSectionPatch(section){
+  var rows={}; Object.keys(section.rows).forEach(function(rowKey){ rows[rowKey]=vaultRowBody(section.rows[rowKey]); });
+  return { type:section.type, label:section.label, rows:rows };
+}
+/** a section that exists on both sides: only the rows that were removed (null) or changed; null when no row moved */
+function vaultRowsPatch(before, after){
+  var rows={}, moved=false;
+  Object.keys(before.rows).forEach(function(rowKey){ if(!after.rows[rowKey]){ rows[rowKey]=null; moved=true; } });
+  Object.keys(after.rows).forEach(function(rowKey){ if(!vaultRowSame(before.rows[rowKey], after.rows[rowKey])){ rows[rowKey]=vaultRowBody(after.rows[rowKey]); moved=true; } });
+  return moved ? { rows:rows } : null;
+}
 /** the merge-patch from the copy read to the model now: only sections and rows that moved; null = removed; empty when nothing moved */
 function vaultPatch(base, now){
-  var was=vaultKeys(base), is=vaultKeys(now), sections={}, any=false;
-  Object.keys(was).forEach(function(k){ if(!is[k]){ sections[k]=null; any=true; } });
-  Object.keys(is).forEach(function(k){
-    var sec=is[k], old=was[k], rows={}, moved=false;
-    if(!old){ var all={}; Object.keys(sec.rows).forEach(function(rk){ all[rk]=vaultRowBody(sec.rows[rk]); }); sections[k]={ type:sec.type, label:sec.label, rows:all }; any=true; return; }
-    Object.keys(old.rows).forEach(function(rk){ if(!sec.rows[rk]){ rows[rk]=null; moved=true; } });
-    Object.keys(sec.rows).forEach(function(rk){ if(!vaultRowSame(old.rows[rk], sec.rows[rk])){ rows[rk]=vaultRowBody(sec.rows[rk]); moved=true; } });
-    if(moved){ sections[k]={ rows:rows }; any=true; }
+  var before=vaultKeys(base), is=vaultKeys(now), sections={}, any=false;
+  Object.keys(before).forEach(function(key){ if(!is[key]){ sections[key]=null; any=true; } });
+  Object.keys(is).forEach(function(key){
+    var section = before[key] ? vaultRowsPatch(before[key], is[key]) : vaultNewSectionPatch(is[key]);
+    if(section){ sections[key]=section; any=true; }
   });
   return any ? { sections:sections } : null;
 }
@@ -273,25 +306,30 @@ function vaultPatch(base, now){
 function vaultConflictHTML(words){
   return '<span data-testid="vault-conflict">'+esc(words)+'</span> <button type="button" class="composebtn ghost" data-testid="vault-reload" onclick="loadVault()" style="margin-inline-start:8px;min-height:30px">'+esc(tx('Reload'))+'</button>';
 }
+/** a one-line toast, where the page has one */
+function vaultSay(words){ if(typeof toast==='function') toast(words); }
+/** show why a save failed: a stale version (409) gets the sentence and a Reload button, anything else its own words */
+function vaultSaveFailed(failure, errorBox){
+  if(!errorBox) return;
+  if(failure&&failure.status===409) errorBox.innerHTML=vaultConflictHTML((failure.data&&failure.data.message)||failure.message||tx('Changed since you opened it — reload?'));
+  else errorBox.textContent=(failure&&failure.message)||tx('Could not save the vault');
+}
+/** Save the vault: the merge-patch of what moved, with the version read; the answer becomes the new base */
 async function saveVaultUI(){
   var err=document.getElementById('vault_err'); if(err)err.textContent='';
   /* ⚠️ THE MODEL IS THE TRUTH, not the DOM — every control writes straight into UI._vault as it is typed, so the
      save reads one object rather than scraping ids. That is what makes repeatable sections possible at all: there
      is no stable id to scrape when the same section can exist twice. The server drops empty rows; we send as-is. */
   var patch=vaultPatch(UI._vaultBase||[], _vaultSecs());
-  if(!patch){ if(typeof toast==='function')toast(tx('Nothing to save.')); return; }
+  if(!patch) return vaultSay(tx('Nothing to save.'));
   UI._party = undefined;   /* the Invoice row's supplier block re-reads after a vault save */
   try{
-    var r=await api('vaultSave',{body:{version:UI._vaultVersion, patch:patch}});
-    vaultHold((r&&r.vault)||{sections:_vaultSecs()}, r&&r.version);
-    if(window.CBOffline)CBOffline.clearDraft('app.vault'); if(typeof toast==='function')toast(tx('Vault saved ✓'));
+    var answer=await api('vaultSave',{body:{version:UI._vaultVersion, patch:patch}});
+    vaultHold((answer&&answer.vault)||{sections:_vaultSecs()}, answer&&answer.version);
+    if(window.CBOffline)CBOffline.clearDraft('app.vault'); vaultSay(tx('Vault saved ✓'));
     _vaultPaint();
   }
-  catch(e){
-    if(!err) return;
-    if(e&&e.status===409) err.innerHTML=vaultConflictHTML((e.data&&e.data.message)||e.message||tx('Changed since you opened it — reload?'));
-    else err.textContent=(e&&e.message)||tx('Could not save the vault');
-  }
+  catch(failure){ vaultSaveFailed(failure, err); }
 }
 
 /* ── YOUR SHOP — the Business section of the profile (MOVED from iamHTML, cap-admin.js): the licence number · address · supplies the
@@ -382,8 +420,8 @@ var CBShop = (function () {
   /** W14b: one place for the address — an EMPTY Business identity opens with the shop's own details already in its rows (nothing is saved until Save) */
   function prefillIdentity(){
     var secs = _vaultSecs(); if (secs.some(function (x) { return x.type === 'identity'; })) return;
-    var me = H.me || {}; if (!me.address && !me.gstn && !me.display_name) return;
-    secs.push({ type: 'identity', label: '', rows: vaultStarterRows('identity', { legal_name: me.legal_name || '', gstin: me.gstn || '', address: me.address || '' }) });
+    var shop = H.me || {}; if (!shop.address && !shop.gstn && !shop.display_name) return;
+    secs.push({ type: 'identity', label: '', rows: vaultStarterRows('identity', { legal_name: shop.legal_name || '', gstin: shop.gstn || '', address: shop.address || '' }) });
     _vaultPaint();
   }
   function read(){
