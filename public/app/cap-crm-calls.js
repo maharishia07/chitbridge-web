@@ -78,6 +78,8 @@ function crmCallsRefresh() { var a = CALLS.api; if (a && a.el && document.body.c
 
 /* ═══ THE ROW ════════════════════════════════════════════════════════════════════════════════════════════════════ */
 function crmCallPhone(c) {
+  /* R4: a "do not call" party — the server says may_call:false with the sentence (call_why); the number is shown, the tap-to-call is not */
+  if (c.phone && c.may_call === false) return '<span data-testid="crm-call-nocall-' + esc(c.party_id) + '">' + esc(c.phone) + '</span> <span class="sub">' + esc(c.call_why || tx('Do not call')) + '</span>';
   return c.phone ? '<a href="tel:' + esc(String(c.phone).replace(/\s+/g, '')) + '" data-testid="crm-call-tel-' + esc(c.party_id) + '">' + esc(c.phone) + '</a>' : '<span class="sub">' + esc(tx('no phone')) + '</span>';
 }
 function crmCallDue(c) {
@@ -144,7 +146,7 @@ function crmCallPick(c, o) {
 /** the one write (M64): the outcome goes to the server; saved → this call leaves the queue and the row that followed it opens, so the next call is on screen */
 function crmCallSend(call, chosen, extra, btn) {
   var msg = document.getElementById('crm_call_msg');
-  return CBAction.run(btn, async function () { return api('crmOutcome', { params: { id: call.party_id }, body: Object.assign({ outcome: chosen.key }, extra) }); }, {
+  return CBAction.run(btn, async function () { return api('crmOutcome', { params: { id: call.party_id }, body: Object.assign({ outcome: chosen.key, followup_id: call.followup_id || undefined }, extra) }); }   /* R5: the call answers the follow-up its row came from, nobody else's */, {
     key: 'call-outcome:' + call.party_id, busy: btn ? tx('Saving…') : undefined,
     onFail: function (words, e) { if (msg) msg.textContent = crmCallWords(e); else toast(crmCallWords(e)); },
     outcome: async function (r) {
