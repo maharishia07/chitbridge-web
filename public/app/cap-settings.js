@@ -18,6 +18,8 @@
  *                                     #setbody (which needs renderApp · setSec · loadSettings).
  * Host globals (as every cap-*.js): api · EP (CB_SETTINGS_EP) · SESSION · CFG · esc · fmtMoney (helpers.js, the money unit) · tx · toast · CBAction · CBConfirm · CBList · CBLocale (optional).
  * Flow step: Onboarding · counters & keys / connectors / policy / plan (docs/process/flows.json, the SET rows).
+ * CALLED BY settings.html (CBSettings.mount per section) and the workshop's Integrations / Profile cards (the moved helpers) · FLOW mount(host, section) → load the section's reads → CBList rows → CBAction writes.
+ * CARD 28-platform-and-operations/settings
  */
 'use strict';
 
@@ -110,6 +112,21 @@ async function kitDownload(id, adapter){
 /* ── CB SETTINGS › the four sections — the page's host mounts one at a time ─────────────────────────────────────────────────────────── */
 var CBSettings = (function () {
   var H = { host: null, sec: null, lists: [], data: {} };
+  /* W15: the kinds offered = the server's `scopes` (the kinds THIS login may mint — 'testing' is the platform's); KEY_SCOPES only words them. Before the answer: the shop's usual kinds. */
+  function keyKinds() {
+    var keysData = H.data.keys, served = keysData && keysData.r && Array.isArray(keysData.r.scopes) ? keysData.r.scopes : null;
+    return KEY_SCOPES.filter(function (scope) { return served ? served.indexOf(scope[0]) >= 0 : scope[0] !== 'testing'; });
+  }
+  /* W18: a sign-in older than the list (legacy) is not in the server's rows — this device is still painted, from the page's own session, so the list never hides where you are */
+  function hereRow() {
+    var sess = (typeof SESSION !== 'undefined' && SESSION) || {};
+    return { jti: sess.jti || 'this-device', device_id: sess.device_id || '', surface: sess.surface || 'settings', iat: sess.iat || null, exp: sess.exp || null, current: true, legacy: true, device: { kind: 'web', label: '' } };
+  }
+  /** the server's sign-in rows; on a legacy sign-in with no current row, this device's own row first */
+  function sessionRows() {
+    var answer = H.data.ses, rows = (answer && answer.r && answer.r.sessions) || [];
+    return answer && answer.r && answer.r.legacy && !rows.some(function (row) { return row.current; }) ? [hereRow()].concat(rows) : rows;
+  }
   function T(s) { return typeof tx === 'function' ? tx(s) : s; }
   function $(id) { return document.getElementById(id); }
   function btnOf(act, id) { return document.querySelector('[data-act="' + act + '"][data-actrow="' + (window.CSS && CSS.escape ? CSS.escape(id) : id) + '"]'); }
@@ -220,7 +237,7 @@ var CBSettings = (function () {
     function heard(k) { return k.seen && k.seen.at ? _keyAgo(k.seen.at) + (k.seen.ip ? ' · ' + k.seen.ip : '') : T('Never reached ChitBridge'); }
     function paintKeyBar() {
       $('sx_key_bar').innerHTML = bar('<span class="sx-add"><label class="sx-lbl" for="sx_key_name">' + esc(T('New key')) + '</label><input class="inp" id="sx_key_name" data-testid="sx-key-name" placeholder="' + esc(T('Which system')) + '" maxlength="80">'
-        + '<label class="sx-lbl" for="sx_key_scope">' + esc(T('It may')) + '</label><select class="inp" id="sx_key_scope" data-testid="sx-key-scope">' + KEY_SCOPES.map(function (s) { return '<option value="' + esc(s[0]) + '">' + esc(T(s[1])) + '</option>'; }).join('') + '</select>'
+        + '<label class="sx-lbl" for="sx_key_scope">' + esc(T('It may')) + '</label><select class="inp" id="sx_key_scope" data-testid="sx-key-scope">' + keyKinds().map(function (s) { return '<option value="' + esc(s[0]) + '">' + esc(T(s[1])) + '</option>'; }).join('') + '</select>'
         + btn('sx_key_mint', T('Make a key')) + '</span>');
       $('sx_key_mint').onclick = function () {
         var b = $('sx_key_mint');
@@ -230,7 +247,7 @@ var CBSettings = (function () {
             readKeys(); } });
       };
     }
-    function readKeys() { return load('keys', 'keysList', null, function () { if (kl) kl.refresh(); }); }
+    function readKeys() { return load('keys', 'keysList', null, function () { paintKeyBar(); if (kl) kl.refresh(); }); }
     kl = list($('sx_key_list'), {
       key: 'set-keys', rows: keyRows, id: function (k) { return k.jti; }, rowTid: function (k) { return 'sx-key-' + k.jti; },
       state: function () { return listState('keys'); }, error: function () { return listErr('keys'); }, onRetry: function () { readKeys(); },
@@ -262,6 +279,9 @@ var CBSettings = (function () {
     paintKeyBar(); readKeys();
   }
 
+  /* W16: the catalogue's may.code → the row's words (a sentence the client branches on ships with a code): NOT_FOR_COUNTRY · NOT_YET_FOR_COUNTRY (sold there, our kit is not built for that pack yet) · NOT_YET (no kit at all) */
+  var MAY_WORDS = { NOT_FOR_COUNTRY: 'Not for your country', NOT_YET_FOR_COUNTRY: 'Not yet for your country', NOT_YET: 'Not built yet' };
+  function mayWords(verdict) { return T(MAY_WORDS[(verdict && verdict.code) || ''] || 'Not for your shop'); }
   /* ═════ CONNECTORS ═════ */
   function connectors() {
     frame(['<h1 class="sx-h" data-testid="sx-title">' + esc(T('Connectors')) + '</h1>',
@@ -292,7 +312,7 @@ var CBSettings = (function () {
           cell: function (c) { return '<b>' + esc(c.name) + '</b>' + (inUse().indexOf(c.id) >= 0 ? ' <span class="tag green" data-testid="sx-con-inuse-' + esc(c.id) + '">' + esc(T('We use this')) + '</span>' : ''); } },
         { key: 'does', label: T('What it does'), prio: 3, w: 300, cell: function (c) { return c.does || ''; } },
         { key: 'here', label: T('For your shop'), prio: 2, w: 170, html: true, value: function (c) { return c.may && c.may.ok === false ? 'no' : 'yes'; },
-          cell: function (c) { var no = c.may && c.may.ok === false; return '<span class="tag' + (no ? '' : ' green') + '" data-testid="sx-con-may-' + esc(c.id) + '">' + esc(no ? T('Not for your country') : T('Works here')) + '</span>'; } },
+          cell: function (c) { var no = c.may && c.may.ok === false; return '<span class="tag' + (no ? '' : ' green') + '" data-testid="sx-con-may-' + esc(c.id) + '" data-code="' + esc((c.may && c.may.code) || '') + '">' + esc(no ? mayWords(c.may) : T('Works here')) + '</span>'; } },
       ],
       search: function (c) { return [c.name, c.does].join(' '); },
       filters: [{ key: 'use', label: T('In use'), all: T('All'), options: [{ v: 'yes', label: T('We use these') }, { v: 'no', label: T('Not used') }],
@@ -374,12 +394,16 @@ var CBSettings = (function () {
         var v = flags[d.key] !== undefined ? flags[d.key] : d.def;
         /* the server's answer when it gives one; an older server: the class the list states (bound · protected · inherited are locked) — the PATCH still decides */
         var m = may[d.key] || ((d.gov === 'bound' || d.gov === 'protected' || d.gov === 'inherited') ? { ok: false, why: T('Set by the platform for every shop.') } : { ok: true });
+        /* W11: the registration is set in ONE place — Country setup (PUT /governance/country-setup writes the flag); here it is read, with the door */
+        if (d.key === 'gst_registration') m = { ok: false, code: 'SET_IN_COUNTRY', why: T('Set under Country, with the registration number.') };
         return { key: d.key, def: d, v: v, may: m };
       });
     }
     function shown(x) {
       var d = x.def, v = polShown(d, x.v);
       if (d.type === 'enum') return T((d.labels && d.labels[x.v]) || String(x.v));
+      /* AU-WORDS: a number the server names (ui.labels[value] — "No expiry", "Keep — the law here asks 5 years") reads as its word, never "0" */
+      if (d.labels && d.labels[String(x.v)] !== undefined) return T(d.labels[String(x.v)]);
       return String(v) + (d.suffix ? ' ' + T(d.suffix) : '');
     }
     function control(x) {
@@ -398,13 +422,14 @@ var CBSettings = (function () {
         { key: 'label', label: T('Rule'), prio: 1, w: 260, sort: 'label', cell: function (x) { return T(x.def.label); }, value: function (x) { return T(x.def.label); } },
         { key: 'value', label: T('Now'), prio: 2, w: 170, cell: shown, value: shown },
         { key: 'who', label: T('Who may change it'), prio: 3, w: 200, html: true, value: function (x) { return x.may.ok === false ? 'no' : 'yes'; },
-          cell: function (x) { var no = x.may.ok === false; return '<span class="tag' + (no ? '' : ' green') + '" data-testid="sx-pol-who-' + esc(x.key) + '">' + esc(no ? (x.may.code === 'PLATFORM_BOUND' ? T('The platform') : T('The owner')) : T('You')) + '</span>'; } },
+          cell: function (x) { var no = x.may.ok === false; return '<span class="tag' + (no ? '' : ' green') + '" data-testid="sx-pol-who-' + esc(x.key) + '">' + esc(no ? (x.may.code === 'PLATFORM_BOUND' ? T('The platform') : x.may.code === 'SET_IN_COUNTRY' ? T('Country setup') : T('The owner')) : T('You')) + '</span>'; } },
       ],
       search: function (x) { return [T(x.def.label), x.def.help, shown(x)].join(' '); },
       filters: [{ key: 'who', label: T('Who may change it'), all: T('Anyone'), options: [{ v: 'you', label: T('You') }, { v: 'not', label: T('Not you') }],
         match: function (x, v) { return v === 'you' ? x.may.ok !== false : x.may.ok === false; } }],
       next: function (x) {
-        return '<div class="sx-next" data-testid="sx-pol-next-' + esc(x.key) + '">' + (x.def.help ? '<div class="sub">' + esc(T(x.def.help)) + '</div>' : '') + control(x) + '</div>';
+        return '<div class="sx-next" data-testid="sx-pol-next-' + esc(x.key) + '">' + (x.def.help ? '<div class="sub">' + esc(T(x.def.help)) + '</div>' : '') + control(x)
+          + (x.may.code === 'SET_IN_COUNTRY' ? '<a class="sx-link" href="/settings.html#/country" data-testid="sx-pol-country-door">' + esc(T('Change it under Country')) + ' ›</a>' : '') + '</div>';
       },
       actions: [{ id: 'save', label: T('Save'), tid: 'sx-pol-save', why: function (x) { return grey(x.may); },
         run: function (x) {
@@ -486,7 +511,7 @@ var CBSettings = (function () {
       '<p class="sub">' + esc(T('Identity, signatory, bank and licences — kept once, they fill every form for an authority')) + ' · <a class="sx-link" href="/authority-forms.html" data-testid="sx-vault-forms">' + esc(T('Forms for an authority')) + ' ›</a></p>',
       '<div id="vaulthost" data-testid="sx-vault"></div>']);
     var sl = null, dl = null;
-    var sesRows = function () { var d = H.data.ses; return (d && d.r && d.r.sessions) || []; };
+    var sesRows = sessionRows;
     var devMay = function () { var d = H.data.ses; return (d && d.r && d.r.may && d.r.may.devices) || null; };
     var devRows = function () { var d = H.data.dev; return (d && d.r && d.r.devices) || []; };
     function surface(s) { return T(SURFACE_WORDS[s] || s || 'Web'); }
@@ -496,7 +521,7 @@ var CBSettings = (function () {
     function paintSesBar() {
       var d = H.data.ses || {}, rows = sesRows();
       $('sx_ses_bar').innerHTML = bar('<span class="sx-count" data-testid="sx-ses-count"><b>' + rows.length + '</b> ' + esc(T(rows.length === 1 ? 'sign-in' : 'sign-ins'))
-        + (d.r && d.r.legacy ? ' · <span class="tag amber" data-testid="sx-ses-legacy">' + esc(T('This sign-in is older than the list — sign in again to see it here.')) + '</span>' : '') + '</span>');
+        + (d.r && d.r.legacy ? ' · <span class="tag amber" data-testid="sx-ses-legacy">' + esc(T('This sign-in is older than the list — it is shown from this device; sign in again to list it on the server.')) + '</span>' : '') + '</span>');
     }
     function readSes() { return load('ses', function () { return api('sessionsList'); }, null, function () { paintSesBar(); if (sl) sl.refresh(); paintDevBar(); if (dl) dl.refresh(); }); }
     sl = list($('sx_ses_list'), {
@@ -520,7 +545,7 @@ var CBSettings = (function () {
           + (d.seen ? '<div class="sub">' + esc(T('Last seen') + ' ' + _keyAgo(d.seen)) + '</div>' : '')
           + (s.current ? '<div class="sub">' + esc(T(CURRENT_WHY)) + '</div>' : '') + '</div>';
       },
-      actions: [{ id: 'signout', label: T('Sign out this device'), tid: 'sx-ses-signout', why: function (s) { return s.current ? T(CURRENT_WHY) : ''; },
+      actions: [{ id: 'signout', label: T('Sign out this device'), tid: 'sx-ses-signout', why: function (s) { return s.current ? T(CURRENT_WHY) : s.legacy ? T('Sign in again first — then it is listed on the server.') : ''; },
         run: function (s) {
           CBAction.run(btnOf('signout', s.jti), function () { return api('sessionRevoke', { body: { jti: s.jti } }); },
             { key: 'sx-ses-signout-' + s.jti, confirm: { title: T('Sign out') + ' ' + deviceOf(s) + '?', body: esc(T('That device is signed out now. Nothing on it is lost.')), yes: T('Sign out'), danger: true },

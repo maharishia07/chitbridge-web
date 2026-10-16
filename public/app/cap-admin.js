@@ -3012,7 +3012,7 @@ function govLocaleLang(){
   } catch(_){ return '—'; }
 }
 function govLocaleFormat(){
-  try { return CBLocale.locale() + ' · ' + CBLocale.money(1234.5, 'INR') + ' · ' + CBLocale.date(Date.now()); }
+  try { return CBLocale.locale() + ' · ' + CBLocale.money(1234567890.5, 'INR') + ' · ' + CBLocale.date(Date.now()); }
   catch(_){ return '—'; }
 }
 function govLocaleDir(){

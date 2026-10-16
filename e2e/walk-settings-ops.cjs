@@ -45,7 +45,7 @@ const walk = async (w) => {
   const MAY = { trade_side: ok, trade_cover: ok, books_at: ok, tol_weight_bp: ok, connectors_in_use: ok, gst_registration: ok, self_copy_pref: ok,
     dispute_scope: { ok: false, code: 'PLATFORM_BOUND', why: 'Set by the platform for every shop.' } };
   const CAT = [{ id: 'tally', name: 'Tally', does: 'Products and stock up, orders down as vouchers.', adapters: ['tally'], default_adapter: 'tally', steps: ['Download', 'Unzip on the Tally PC', 'Double-click start.cmd'], may: { ok: true } },
-    { id: 'zoho', name: 'Zoho Books', does: 'Invoices and payments both ways.', adapters: ['zoho'], may: { ok: false, why: 'Zoho Books is not offered for shops in this country yet.' } }];
+    { id: 'zoho', name: 'Zoho Books', does: 'Invoices and payments both ways.', adapters: ['zoho'], may: { ok: false, code: 'NOT_YET_FOR_COUNTRY', why: 'Our Zoho Books kit is built for India\'s GST so far — not yet for a Australia shop.' } }];   /* SET-WALK1 W16: the code words the row */
   const RUN = [{ id: 'k9', actor_id: 'act-9', name: 'Tally on OFFICE-PC', adapter: 'tally', host: 'OFFICE-PC', last_seen: ago(3), key_jti: 'k9', enrol: { approved: false, host: 'OFFICE-PC', company: 'Fixture Shop' } }];
   let api = base;
 
@@ -68,7 +68,7 @@ const walk = async (w) => {
       if (/^\/api\/counters\/C\d$/.test(p) && m === 'PATCH') return J(r, 200, { ok: true });
       if (/\/open$/.test(p)) return J(r, 200, { key: 'tk-walk', counter: { id: 'C2', state: 'open' } });
       if (/\/release$/.test(p)) return J(r, 200, { ok: true, id: 'C1' });
-      if (p === '/api/keys' && m === 'GET') return J(r, 200, { keys: KEYS, scopes: ['till', 'services'] });
+      if (p === '/api/keys' && m === 'GET') return J(r, 200, { keys: KEYS, scopes: ['services', 'offers', 'pricing', 'tax', 'invoice', 'till', 'connector'] });   /* SET-WALK1 W15: the kinds THIS login may mint — a shop never sees 'testing' */
       if (p === '/api/keys' && m === 'POST') return J(r, 201, { key: NEW_KEY, jti: 'k-new', name: body && body.name });
       if (/^\/api\/keys\//.test(p) && m === 'DELETE') return J(r, 200, { ok: true });
       if (p === '/api/integrations/catalogue') return J(r, 200, { connectors: CAT });
@@ -149,11 +149,11 @@ const walk = async (w) => {
 
   /* ── CONNECTORS ── */
   await go('connectors', '[data-testid="sx-con-tally"]');
-  await w.step('S9', 'Connectors: Tally "Works here"; Zoho "Not for your country" — its Download shown and greyed with the server\'s sentence', async () => {
+  await w.step('S9', 'Connectors: Tally "Works here"; Zoho "Not yet for your country" (from its code, W16) — its Download shown and greyed with the server\'s sentence', async () => {
     const t = await txt('[data-testid="sx-con-may-tally"]'), z = await txt('[data-testid="sx-con-may-zoho"]');
     if (REAL) return { ok: !!t, saw: 'tally "' + t + '"' };
     await openRow('sx-con-zoho'); const dis = await act('kit', 'zoho').isDisabled(), why = await txt('.cbl-next[data-next="zoho"] .cbl-why');
-    return { ok: /Works here/.test(t) && /Not for your country/.test(z) && dis && /not offered/.test(why), saw: '"' + t + '" · "' + z + '" · greyed ' + dis + ' "' + why + '"' };
+    return { ok: /Works here/.test(t) && /Not yet for your country/.test(z) && dis && /not yet for a/.test(why), saw: '"' + t + '" · "' + z + '" · greyed ' + dis + ' "' + why + '"' };
   });
   if (!REAL) {
     await w.step('S10', 'Tally -> We use this -> one PATCH /entities/policy { connectors_in_use: ["tally"] }; the row says "We use this"', async () => {

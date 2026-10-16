@@ -8,7 +8,7 @@
 const { measure } = require('./theme-measure.cjs');
 
 const audit = (page, hostId) => page.evaluate((hostId) => {
-  const host = document.getElementById(hostId) || document.body, out = { clip: [], scroll: [], cover: [], app: [], budget: [] };
+  const host = document.getElementById(hostId) || document.body, out = { clip: [], scroll: [], cover: [], app: [], budget: [], blank: [] };
   const vis = (el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(el).visibility !== 'hidden'; };
   document.querySelectorAll('body *').forEach((el) => {
     if (!vis(el) || el.closest('#cb-avatar,#toast,script,style')) return;
@@ -24,6 +24,13 @@ const audit = (page, hostId) => page.evaluate((hostId) => {
     if (!vis(c)) return; c.scrollIntoView({ block: 'center' }); const r = c.getBoundingClientRect();
     const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
     if (hit && hit !== c && !c.contains(hit) && !hit.contains(c) && !hit.closest('#toast') && !(c.tagName === 'INPUT' && hit.closest('label') && hit.closest('label').contains(c))) out.cover.push((c.dataset.testid || c.id || c.tagName) + ' under ' + (hit.id || hit.className || hit.tagName));
+  });
+  /* SET-WALK1 W21: no BLANK AREA — a CBList (or any scroller) taller than what it holds by more than a row paints nothing there */
+  host.querySelectorAll('.cbl').forEach((el) => {
+    if (!vis(el)) return;
+    const box = el.querySelector(':scope > .cbl-list'); if (!box) return;
+    const blank = box.clientHeight - box.scrollHeight;
+    if (blank > 48 && el.getAttribute('data-cbl-fit') !== 'window') out.blank.push((el.getAttribute('data-cbl') || el.id || 'list') + ' ' + blank + 'px of nothing');
   });
   host.querySelectorAll('p,.hint,.sub,.err').forEach((n) => {
     const t = n.textContent.replace(/\s+/g, ' ').trim(); if (!t) return;
@@ -44,7 +51,7 @@ async function rule13(w, id, label, hostId, page) {
         await page.evaluate((t) => { CBAvatar.applyTheme(t); }, theme); await page.waitForTimeout(150);
         const pairs = await page.evaluate(measure), bad = pairs.filter((x) => !x.grad && x.ratio < x.need), a = await audit(page, hostId);
         const fails = [].concat(bad.map((x) => 'contrast ' + x.ratio + ' "' + x.text + '"'), a.clip.map((x) => 'clipped "' + x + '"'), a.scroll.map((x) => 'scroll ' + x),
-          a.cover.map((x) => 'covered ' + x), a.app.map((x) => 'app.html ' + x), a.budget.map((x) => 'budget ' + x));
+          a.cover.map((x) => 'covered ' + x), a.app.map((x) => 'app.html ' + x), a.budget.map((x) => 'budget ' + x), (a.blank || []).map((x) => 'blank ' + x));
         return { ok: !fails.length && pairs.length > 5, saw: pairs.length + ' texts measured, lowest ' + Math.min.apply(null, pairs.map((x) => x.ratio)) + (fails.length ? ' · ' + fails.slice(0, 4).join(' · ') : ' · clean') };
       });
     }

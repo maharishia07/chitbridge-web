@@ -295,6 +295,7 @@ dialog.sheet::backdrop{background:var(--scrim)}
   .shop{display:none}
   .rec h1{font-size:23px}
   .actbar.pin{position:fixed;left:64px;right:0;bottom:0;z-index:30;background:var(--surface);border-top:1px solid var(--line);padding:8px 12px;gap:6px;flex-wrap:wrap}   /* two per row when four do not fit — nothing cut off (ai-eye E-19) */
+  .rec{padding-bottom:200px}   /* the pinned bar is up to three rows tall here: the record's last control scrolls clear of it (rule 13: nothing over a control) */
   .actbar.pin .wide-only{display:none}
   .actbar.pin .act{flex:1 1 calc(50% - 3px);min-width:0;justify-content:center;padding:0 8px}
   .actbar.pin .more{flex:1 1 calc(50% - 3px)}

@@ -4643,7 +4643,7 @@ function capScreen(name){
 function hasCap(k){ return (SESSION.capabilities||[]).indexOf(k)>=0; }   // one capability check, used by all gates
 const _capPromise = {}, _capWithPromise = {};
 /* a capability split by job loads its other halves first (P2: network = the design builder + its member half, cap-network-member.js) */
-const CAP_WITH = { network:['network-member'], admin:['shop', 'settings', 'mis'] };   /* mis: misWindow (the one period → since rule) lives in cap-mis.js (T3-P4-ACCOUNT) */   /* admin: the Profile's Business section and the vault live in cap-shop.js (SET1); polDefsOf and the counters/keys/kit helpers in cap-settings.js (T3-SETTINGS) — CB Settings paints both */
+const CAP_WITH = { network:['network-member'], admin:['shop', 'settings', 'mis'], country:['shop'] };   /* country: its supplies row reads SHOP_SUPPLIES from cap-shop.js (INT7c: the first-run step had no shop half) */   /* mis: misWindow (the one period → since rule) lives in cap-mis.js (T3-P4-ACCOUNT) */   /* admin: the Profile's Business section and the vault live in cap-shop.js (SET1); polDefsOf and the counters/keys/kit helpers in cap-settings.js (T3-SETTINGS) — CB Settings paints both */
 function ensureCap(name){
   if(CAP_LOADED[name]) return Promise.resolve();
   if(CAP_WITH[name]){
@@ -14364,16 +14364,30 @@ function chitPaymentCell(c, cell, quoted){
   return cell(tx('Payment'), val);
 }
 /* CX0: payHasUpi · payModeOpts live in app/helpers.js (every page's) — UPI is offered only where the shop's pack carries it */
+/* PAY-FIX H2: one key per OPEN of the sheet — a retry of this press repeats it (the books answer 'Already recorded'), a second press on the same chit mints a new one */
+let PAY_PRESS_REF=null;
 function chitMarkPaid(id, amount){
+  PAY_PRESS_REF='press-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8);
   modal(`<div class="mhd"><div class="t">${esc(tx('Mark paid'))}</div><div class="s">${esc(tx('What you received, and the reference on it'))}</div></div><div class="mbody" style="display:grid;gap:8px">
     <select class="inp" id="pay_method" data-testid="pay-method">${payModeOpts()}<option value="cash">${esc(tx('Cash'))}</option><option value="card">${esc(tx('Card'))}</option><option value="bank">${esc(tx('Bank transfer'))}</option><option value="other">${esc(tx('Other'))}</option></select>
     <input class="inp" id="pay_ref" data-testid="pay-ref" placeholder="${esc(tx('UPI transaction id / reference'))}">
     <span class="cbdef-adorn" style="display:flex;align-items:center;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--on-card);overflow:hidden"><b style="padding:0 10px;color:var(--grey-2);font-size:var(--fs-2)">${esc((typeof CBLocale!=='undefined'&&CBLocale.symbol)?CBLocale.symbol((SESSION&&SESSION.currency)||'INR'):'₹')}</b><input class="inp" id="pay_amount" data-testid="pay-amount" type="number" step="0.01" value="${esc(String(amount||''))}" placeholder="${esc(tx('Amount'))}" style="border:0;margin:0;flex:1;min-width:0;background:transparent"></span></div>
     <div class="mfoot"><button onclick="closeModal()">${esc(tx('Cancel'))}</button><button class="pri" id="mok" data-testid="pay-ok" onclick="chitPaySubmit('${id}')">${esc(tx('Record'))}</button></div>`);
 }
+/** what the Mark-paid sheet holds now: the method (UPI where the pack has it, else cash), the reference typed, the amount as a number */
+function readPayForm(){
+  const field=(fieldId)=>(document.getElementById(fieldId)||{}).value;
+  return { method: field('pay_method')||(payHasUpi()?'upi':'cash'), ref: field('pay_ref')||'', amount: parseFloat(field('pay_amount')) };
+}
+/** keep the recorded payment on the open row (and its header copy), so the sheet shows it without a re-read */
+function keepPaymentOnRow(id, payment){
+  const row=UI.rows&&UI.rows.find(x=>x.id===id); if(!row) return;
+  row.business_json=Object.assign({}, row.business_json||{}, { payment });
+  if(row.header) row.header.business_json=Object.assign({}, row.header.business_json||{}, { payment });
+}
 async function chitPaySubmit(id){
-  const method=(document.getElementById('pay_method')||{}).value||(payHasUpi()?'upi':'cash'), ref=(document.getElementById('pay_ref')||{}).value||'', amount=parseFloat((document.getElementById('pay_amount')||{}).value);
-  try{ const r=await api('chitPay', { params:{ id }, body:{ method, ref: ref||undefined, amount: isFinite(amount)?amount:undefined } }); closeModal(); toast(tx('Payment recorded ✓')); const c=UI.rows&&UI.rows.find(x=>x.id===id); if(c){ c.business_json=Object.assign({}, c.business_json||{}, { payment:r.payment }); if(c.header) c.header.business_json=Object.assign({}, c.header.business_json||{}, { payment:r.payment }); } if(typeof openChit==='function') openChit(id, true); }
+  const form=readPayForm();
+  try{ const r=await api('chitPay', { params:{ id }, body:{ method: form.method, ref: form.ref||undefined, amount: isFinite(form.amount)?form.amount:undefined, client_ref: PAY_PRESS_REF||undefined } }); closeModal(); toast(r&&r.replayed?tx('Already recorded'):tx('Payment recorded ✓')); keepPaymentOnRow(id, r.payment); if(typeof openChit==='function') openChit(id, true); }
   catch(e){ toast((e&&e.message)||tx('Could not record'), true); }
 }
 async function chitUnpay(id){

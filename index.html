@@ -226,7 +226,10 @@ function facts(){
 function pairPaint(p){
   if (!MINE) return;
   if (p && p.paired && p.ent !== MINE.ent)
-    alert_('till-paired', 'warn', '▤', p.counter + ' · paired to ' + CBOnePerson.shopName(p) + ', not this shop', '', 'Open the counter', '/till.html', true);
+    /* SET-WALK1 · W6: the button PAIRS IT HERE — the counter opens for this shop (the address shape cap-settings ctrOpenTill uses: #shop=<ent>&as=<name>)
+       and re-pairs on its own sign-in; Home never writes the counter's keys (one-person.js: read-only by design) */
+    alert_('till-paired', 'warn', '▤', p.counter + ' · paired to ' + CBOnePerson.shopName(p) + ', not this shop', '', 'Pair here',
+      '/till.html#shop=' + encodeURIComponent(MINE.ent || '') + '&as=' + encodeURIComponent(MINE.name || ''), true);
   else alertDrop('till-paired');
 }
 

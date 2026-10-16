@@ -11,6 +11,10 @@
   Nothing here talks to the server. Open the file, choose the paper width and the kind of bill, press Print, and send it to the
   thermal printer. What survives this test becomes the till's slip template (TILL-SPEC-2026-09-07.md §5.4).
 
+  OWNS the slip's one renderer (the print test, and the live preview of CB Settings › Print setup) · CALLED BY: opened on its own, or in a frame by
+  app/cap-print.js (/bill-print.html?preview=1, one postMessage). FLOW  load → render() → (preview) onPreviewMessage → render() again → Print.
+  CARD 20-settings-governance-and-plan/print-setup
+
   THERMAL PRINTING, THE FEW THINGS THAT MATTER:
    · The paper is 80mm or 58mm wide; the PRINTABLE strip is narrower (72mm / 48mm). Everything is sized to the printable strip.
    · The roll has no page length: `@page { size: <width> auto }` and zero margins, or the driver adds an A4 page around the slip.
@@ -53,6 +57,9 @@
   table.hsn th, table.hsn td { text-align:right; padding:1px 0; }
   table.hsn th:first-child, table.hsn td:first-child { text-align:left; }
 
+  html[data-preview] .controls { display:none; }
+  html[data-preview] body { background:var(--paper); }
+  html[data-preview] .slip { margin:0 auto; }
   @media print {
     body { background:#fff; }
     .controls { display:none !important; }
@@ -94,7 +101,8 @@ var SHOP = {
   line1: '14, Poonamallee High Road',
   line2: 'Chennai 600 126 · Tamil Nadu',
   phone: '044 2259 2632',
-  gstin: '33AABCK1234F1Z6'          /* used only on a tax invoice / bill of supply */
+  gstin: '33AABCK1234F1Z6',         /* used only on a tax invoice / bill of supply */
+  tax_id_word: 'GSTIN'              /* the sample shop is Indian: its pack's word; a preview hands the shop's own (tax.id_word) */
 };
 var BILL = {
   currency: 'INR',   /* the sample shop's money — the slip writes it as the till does (fmtMoney · CBLocale.money) */
@@ -133,6 +141,36 @@ function calc(kind){
   return { lines: lines, gross: sum('gross'), save: sum('save'), net: sum('net'), base: sum('base'), tax: sum('tax'), byRate: byRate };
 }
 
+/* ── ⭐ SET-WALK1 · W27 (2026-10-15): THIS PAGE IS THE LIVE PREVIEW OF CB SETTINGS › PRINT SETUP. Opened as /bill-print.html?preview=1 in a frame,
+   it takes ONE message { cb_preview, head:[{text,big,only_taxed,logo}], footer, paper, kind, currency, tax:{word,split,rate,id_word} } and paints
+   the same slip with the shop's signature at its head — the one renderer, never a lookalike. Without a message it is the print test it always was. */
+var PREVIEW = /[?&]preview=1/.test(location.search), signature = null;
+if (PREVIEW) document.documentElement.setAttribute('data-preview', '1');
+/** the settings page's one message: keep the signature, then repaint the same slip with it (currency, the pack's rate, the kind, the paper) */
+function onPreviewMessage(event){
+  var message = event.data; if (!message || !message.cb_preview) return;
+  signature = message;
+  if (message.currency) BILL.currency = message.currency;
+  if (message.tax && message.tax.rate) BILL.lines.forEach(function (line) { if (line.rate) line.rate = Number(message.tax.rate) || line.rate; });   /* the pack's standard rate on the taxed sample lines */
+  var kindBox = document.getElementById('kind'); if (kindBox && message.kind) kindBox.value = message.kind;
+  setW(message.paper === 'a4' ? '80' : (message.paper || '80'));
+}
+window.addEventListener('message', onPreviewMessage);
+/** one signature head line as the slip draws it: the shop's logo, a big line or a small one (a tax-id-only line is dropped on an untaxed bill) */
+function headLineHTML(line, showTaxId){
+  if (line.only_taxed && !showTaxId) return '';
+  if (line.logo) return '<div class="c"><img src="' + esc(line.logo) + '" alt="" style="max-width:60%;max-height:18mm" data-testid="slip-logo"></div>';
+  return '<div class="c ' + (line.big ? 'b big' : 'small') + '" data-testid="slip-head-' + esc(line.tag || '') + '">' + esc(line.text) + '</div>';
+}
+/** the paper's head: the signature's lines in the shop's order (a preview), else the sample shop's five lines */
+function headHTML(showTaxId){
+  if (!signature || !signature.head) return '<div class="c b big">' + esc(SHOP.name) + '</div>'
+    + '<div class="c small">' + esc(SHOP.line1) + '</div>' + '<div class="c small">' + esc(SHOP.line2) + '</div>'
+    + '<div class="c small">Ph ' + esc(SHOP.phone) + '</div>' + (showTaxId ? '<div class="c small">' + esc(SHOP.tax_id_word) + ' ' + esc(SHOP.gstin) + '</div>' : '');
+  return signature.head.map(function (line) { return headLineHTML(line, showTaxId); }).join('');
+}
+/** the tax words: the pack's (a preview says GST · VAT, split by state or one line, the id's word); India's words otherwise */
+function taxWords(){ return (signature && signature.tax) || { word: 'GST', split: true, rate: 18, id_word: SHOP.tax_id_word }; }
 /* ── the slip ──────────────────────────────────────────────────────────────────────────────────────────────── */
 function when(d){
   var p = function(n){ return (n < 10 ? '0' : '') + n; };
@@ -146,12 +184,7 @@ function render(){
   var paid = BILL.paid.reduce(function(a,p){ return r2(a + p.amount); }, 0);
   var change = r2(paid - m.net);
 
-  var head = ''
-    + '<div class="c b big">' + esc(SHOP.name) + '</div>'
-    + '<div class="c small">' + esc(SHOP.line1) + '</div>'
-    + '<div class="c small">' + esc(SHOP.line2) + '</div>'
-    + '<div class="c small">Ph ' + esc(SHOP.phone) + '</div>'
-    + (showGstin ? '<div class="c small">GSTIN ' + esc(SHOP.gstin) + '</div>' : '')
+  var head = headHTML(showGstin)
     + '<div class="solid"></div>'
     + '<div class="c b">' + title + '</div>'
     + '<div class="rule"></div>'
@@ -164,7 +197,7 @@ function render(){
       + '<div class="row"><span class="l">' + esc(l.name) + '</span><span class="v">' + fmtMoney(l.net, BILL.currency) + '</span></div>'
       + '<div class="row small qty"><span class="l">' + l.qty + ' ' + esc(l.unit) + ' x ' + fmtMoney(l.price, BILL.currency)
         + (l.off ? '   (-' + l.off + '%)' : '')
-        + (kind === 'tax' && l.rate ? '   GST ' + l.rate + '%' : '')
+        + (kind === 'tax' && l.rate ? '   ' + esc(taxWords().word) + ' ' + l.rate + '%' : '')
         + '</span><span class="v"></span></div>'
       + '</div>';
   }).join('');
@@ -175,11 +208,12 @@ function render(){
     + (kind === 'tax'
         ? '<div class="row"><span class="l">Taxable</span><span class="v">' + fmtMoney(m.base, BILL.currency) + '</span></div>'
           + Object.keys(m.byRate).sort(function(a,b){ return a-b; }).map(function(k){
-              var h = m.byRate[k], half = r2(h.tax / 2);
+              var h = m.byRate[k], half = r2(h.tax / 2), words = taxWords();
+              if (!words.split) return '<div class="row small"><span class="l">' + esc(words.word) + ' ' + k + '% </span><span class="v">' + fmtMoney(h.tax, BILL.currency) + '</span></div>';   /* AU · AE: one line, the pack's rate */
               return '<div class="row small"><span class="l">CGST ' + (k/2) + '% </span><span class="v">' + fmtMoney(half, BILL.currency) + '</span></div>'
                    + '<div class="row small"><span class="l">SGST ' + (k/2) + '% </span><span class="v">' + fmtMoney(half, BILL.currency) + '</span></div>';
             }).join('')
-          + '<div class="row"><span class="l">Total GST</span><span class="v">' + fmtMoney(m.tax, BILL.currency) + '</span></div>'
+          + '<div class="row"><span class="l">Total ' + esc(taxWords().word) + '</span><span class="v">' + fmtMoney(m.tax, BILL.currency) + '</span></div>'
         : '')
     + '<div class="solid"></div>'
     + '<div class="row big"><span class="l">TOTAL</span><span class="v">' + fmtMoney(m.net, BILL.currency) + '</span></div>'
@@ -187,7 +221,7 @@ function render(){
     + BILL.paid.map(function(p){ return '<div class="row small"><span class="l">' + esc(p.how) + '</span><span class="v">' + fmtMoney(p.amount, BILL.currency) + '</span></div>'; }).join('')
     + (change > 0 ? '<div class="row small b"><span class="l">Change</span><span class="v">' + fmtMoney(change, BILL.currency) + '</span></div>' : '');
 
-  var hsn = (kind === 'tax')
+  var hsn = (kind === 'tax' && taxWords().split)
     ? '<div class="rule"></div><table class="hsn"><tr><th>HSN</th><th>Taxable</th><th>Rate</th><th>Tax</th></tr>'
       + m.lines.filter(function(l){ return l.rate; }).map(function(l){
           return '<tr><td>' + esc(l.hsn) + '</td><td>' + fmtMoney(l.base, BILL.currency) + '</td><td>' + l.rate + '%</td><td>' + fmtMoney(l.tax, BILL.currency) + '</td></tr>';
@@ -196,7 +230,7 @@ function render(){
 
   var foot = '<div class="rule"></div>'
     + (kind === 'supply' ? '<div class="c small">Composition taxable person.<br>Not eligible to collect tax on supplies.</div><div class="rule"></div>' : '')
-    + '<div class="c small">Thank you · visit again</div>'
+    + '<div class="c small" data-testid="slip-footer">' + esc(signature && signature.footer ? signature.footer : 'Thank you · visit again') + '</div>'
     + '<div class="c small">Billed on ChitBridge</div>'
     + '<div style="height:10mm"></div>';   /* the cutter takes the last line otherwise */
 

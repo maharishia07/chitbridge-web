@@ -49,7 +49,8 @@
       { app: 'settings', name: 'Settings', page: '/settings.html', hash: true, rows: [
         ['SET001', 'shop', 'Your shop'], ['SET002', 'country', 'Country'], ['SET003', 'new', 'New shop', 'the sign-in window › New shop? Register'],
         /* T3-SETTINGS (INT6c): the four CB Settings sections */
-        ['SET004', 'counters', 'Counters & keys'], ['SET005', 'connectors', 'Connectors'], ['SET006', 'policy', 'Policy'], ['SET007', 'plan', 'Plan & usage'], ['SET008', 'account', 'Account']] },   /* SET008: T3-P4-ACCOUNT */
+        ['SET004', 'counters', 'Counters & keys'], ['SET005', 'connectors', 'Connectors'], ['SET006', 'policy', 'Policy'], ['SET007', 'plan', 'Plan & usage'], ['SET008', 'account', 'Account'],   /* SET008: T3-P4-ACCOUNT */
+        ['SET009', 'print', 'Print setup', 'what prints on the bill — the bill\'s signature, previewed live (SET-WALK1 W27)']] },
       /* T3-OPS (INT6c): CB Operations — Stock + Suppliers */
       { app: 'operations', name: 'CB Operations', page: '/operations.html', hash: true, rows: [['OPS001', 'stock', 'Stock'], ['OPS002', 'suppliers', 'Suppliers']] },
       { app: 'employees', name: 'CB Employees', page: '/employees.html', rows: [['EMP001', 'people', 'People']] },
@@ -169,8 +170,12 @@
   /* a tap copies the code; the chip says so for a moment. A browser that refuses the clipboard: the code stays on screen to read. */
   function copied(b, ok) {
     var n = b.querySelector('.cbsid-c'); if (!n) return;   /* said on the CODE: it is the part every width shows (a phone and a list's title row hide the name) */
+    /* W9: the chip says WHAT was copied and what to do with it, not a bare "Copied" — on the chip for a moment, and as a toast where the page has one */
     var was = n.textContent; n.textContent = T(ok ? 'Copied' : 'Not copied'); b.setAttribute('data-copied', ok ? '1' : '0');
-    setTimeout(function () { n.textContent = was; b.removeAttribute('data-copied'); }, 1400);
+    var said = T(ok ? 'Screen code copied — paste it when you report a problem' : 'Not copied — read the code off the chip and type it when you report a problem');
+    b.setAttribute('data-copied-says', said);
+    if (typeof root.toast === 'function') { try { root.toast(said); } catch (e) { console.warn('screen id: the toast failed', (e && e.message) || e); } }
+    setTimeout(function () { n.textContent = was; b.removeAttribute('data-copied'); b.removeAttribute('data-copied-says'); }, 1400);
   }
   function onTap(e) {
     var b = e.target && e.target.closest ? e.target.closest('.cbsid[data-cbsid]') : null; if (!b) return;

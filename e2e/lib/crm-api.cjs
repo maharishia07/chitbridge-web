@@ -38,7 +38,7 @@ function party(p, rec) {
   o.terms = {};
   if (roles.customer) o.terms.customer = { credit_days: cu.credit_days == null ? null : cu.credit_days, credit_limit_minor: cu.credit_limit_minor == null ? null : cu.credit_limit_minor };
   if (roles.supplier) o.terms.supplier = { credit_days: su.credit_days == null ? null : su.credit_days, credit_limit_minor: su.credit_limit_minor == null ? null : su.credit_limit_minor };
-  o.dues = p.balance_minor == null ? null : { balance_minor: p.balance_minor, oldest_due: day(p.oldest_due), overdue: p.dues_overdue != null ? !!p.dues_overdue : (p.balance_minor !== 0 && !!p.oldest_due && day(p.oldest_due) < day(TD.nowIso())), side: roles.customer && roles.supplier ? 'both' : (roles.customer ? 'customer' : 'supplier') };
+  o.dues = p.balance_minor == null ? null : { balance_minor: p.balance_minor, oldest_due: day(p.oldest_due), overdue: p.dues_overdue != null ? !!p.dues_overdue : (p.balance_minor !== 0 && !!p.oldest_due && day(p.oldest_due) < day(TD.nowIso())), side: roles.customer && roles.supplier ? 'both' : (roles.customer ? 'customer' : 'supplier'), open_side: p.balance_minor !== 0 };
   const theirs = r.gstn_profile || null, mine = gst ? gst.value : null;
   o.gstin = { value: mine || theirs, source: mine ? 'shop' : (theirs ? 'profile' : null), theirs, differs: !!(mine && theirs && mine !== theirs) };
   o.name = p.nickname || p.display_name;

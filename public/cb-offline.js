@@ -7,6 +7,8 @@
 //      reconnect (queue-and-replay), carrying an Idempotency-Key so a replay can never double-apply (needs the
 //      server-side idempotency check — Phase 2; until then use submit() only for genuinely-offline captures).
 // Storage is localStorage (small, synchronous, survives reload/crash). Swap to IndexedDB later for large payloads.
+// OWNS the drafts and the outbox · CALLED BY every page that saves work (app.html, till.html, the small apps) through CBOffline.
+// FLOW  submit(req) → online? send → classify (done · reject · retry) → retry/offline: enqueue → 'online' event → flush() replays      CARD 28-platform-and-operations/offline
 (function (root) {
   var LSK = 'cb.outbox.v1', DKP = 'cb.draft.';
   var ls = (function () { try { var t = '__cb'; root.localStorage.setItem(t, '1'); root.localStorage.removeItem(t); return root.localStorage; } catch (e) { return null; } })();
@@ -41,10 +43,22 @@
     return root.fetch(cfg.apiBase + req.path, { method: req.method || 'POST', headers: h, body: req.body ? JSON.stringify(req.body) : undefined });
   }
   // classify a response: done (drop), reject (drop + surface — a 4xx won't fix itself on retry), retry (keep)
-  function classify(status) {
-    if ((status >= 200 && status < 300) || status === 409) return 'done';   // 409 = server saw this Idempotency-Key already
+  // PAY-FIX L3: a replayed key answers with the FIRST answer (2xx), so a 409 is never "done". IDEMPOTENCY_IN_PROGRESS means the
+  // first try is still running (or died) — keep it and try again; any other 409 is the shop's own conflict — surface it.
+  function classify(status, code) {
+    if (status >= 200 && status < 300) return 'done';
+    if (status === 409 && code === 'IDEMPOTENCY_IN_PROGRESS') return 'retry';
     if (status >= 400 && status < 500) return 'reject';
     return 'retry';
+  }
+  // the machine code of a 409 body (null when the body is not JSON) — read from a clone so the caller can still read the response
+  function codeOf(response) {
+    if (response.status !== 409 || !response.clone) return Promise.resolve(null);
+    return response.clone().json().then(function (body) { return body && body.code || null; }, function () { return null; });
+  }
+  // send one request and classify its answer: → { response, kind } (kind: done · reject · retry); a network failure rejects
+  function sendAndClassify(req) {
+    return rawSend(req).then(function (response) { return codeOf(response).then(function (code) { return { response: response, kind: classify(response.status, code) }; }); });
   }
   var flushing = false;
   function flush() {
@@ -53,10 +67,9 @@
     var q = readQ(), still = [], rejected = [], sent = 0;
     return q.reduce(function (p, req) {
       return p.then(function () {
-        return rawSend(req).then(function (r) {
-          var k = classify(r.status);
-          if (k === 'done') { sent++; }
-          else if (k === 'reject') { req.tries++; req.error = 'rejected ' + r.status; rejected.push(req); }
+        return sendAndClassify(req).then(function (result) {
+          if (result.kind === 'done') { sent++; }
+          else if (result.kind === 'reject') { req.tries++; req.error = 'rejected ' + result.response.status; rejected.push(req); }
           else { req.tries++; still.push(req); }
         }).catch(function () { req.tries++; still.push(req); });   // network error → keep for next reconnect
       });
@@ -71,10 +84,9 @@
   function submit(req) {
     req.id = req.id || req.idem || uuid();
     if (online()) {
-      return rawSend(req).then(function (r) {
-        var k = classify(r.status);
-        if (k === 'retry') { enqueue(req); return { ok: true, queued: true, online: false, id: req.id }; }
-        return { ok: k === 'done', online: true, status: r.status, res: r, id: req.id };
+      return sendAndClassify(req).then(function (result) {
+        if (result.kind === 'retry') { enqueue(req); return { ok: true, queued: true, online: false, id: req.id }; }
+        return { ok: result.kind === 'done', online: true, status: result.response.status, res: result.response, id: req.id };
       }).catch(function () { enqueue(req); return { ok: true, queued: true, online: false, id: req.id }; });
     }
     enqueue(req); return Promise.resolve({ ok: true, queued: true, online: false, id: req.id });

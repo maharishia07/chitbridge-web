@@ -64,8 +64,10 @@
   ];
   var MONO = FONTS[4][2];
   /* edition (AX1): which showing of Home this person sees (public/app/edition.js reads it; the list is the manifest's `editions`) — kept and synced like text size */
-  var KEY = { theme: 'cb_theme', font: 'cb_font', fs: 'cb_fs', weight: 'cb_weight', motion: 'cb_motion', stripes: 'cb_stripes', edition: 'cb_edition' };
-  var DEFAULTS = { theme: 'device', font: 'default', fs: 'm', weight: 'normal', motion: 'auto', stripes: 'strong', edition: 'full' };
+  var KEY = { theme: 'cb_theme', font: 'cb_font', fs: 'cb_fs', weight: 'cb_weight', motion: 'cb_motion', stripes: 'cb_stripes', edition: 'cb_edition', kural: 'cb_kural' };
+  var DEFAULTS = { theme: 'device', font: 'default', fs: 'm', weight: 'normal', motion: 'auto', stripes: 'strong', edition: 'full', kural: 'auto' };
+  /* SET-WALK1 · W7: the Thirukkural band — auto (on only where the shop reads Tamil: CBLocale.langs has 'ta') · on · off; the owner's choice, synced like the rest */
+  var KURAL = [['auto', 'Where Tamil is read'], ['on', 'On'], ['off', 'Off']];
   var EDITION = /^[a-z][a-z0-9-]{0,23}$/;
   var STRIPES = [['off', 'Off'], ['light', 'Light'], ['strong', 'Strong']];   /* row stripes (Excel's banded rows): Strong is the default and the list unit's own 9%; Light 5%; Off none */
 
@@ -75,7 +77,7 @@
 
   /* ── what is saved ── */
   function pref(kind) { return lsGet(KEY[kind], DEFAULTS[kind]); }
-  function get() { return { theme: pref('theme'), font: pref('font'), fs: pref('fs'), weight: pref('weight'), motion: pref('motion'), stripes: pref('stripes'), edition: pref('edition') }; }
+  function get() { return { theme: pref('theme'), font: pref('font'), fs: pref('fs'), weight: pref('weight'), motion: pref('motion'), stripes: pref('stripes'), edition: pref('edition'), kural: pref('kural') }; }
 
   /** The theme that is actually on the page. `device` (or nothing saved) asks the operating system ONCE, at load, and is not live. */
   function themeKey() {
@@ -171,6 +173,8 @@
   function apply() {
     if (!doc || !doc.documentElement) return;
     try { themeApply(); fontApply(); sizeApply(); weightApply(); motionApply(); stripesApply(); } catch (_) {}
+    /* W7: the band reads the pref itself (CBKural.repaint); told here so a change shows at once */
+    try { if (root.CBKural && root.CBKural.repaint) root.CBKural.repaint(); } catch (e) { console.warn('avatar: the kural band did not repaint', (e && e.message) || e); }
   }
 
   /* ── the person's appearance follows them (b166) — silent when there is nothing to reach ── */
@@ -201,7 +205,7 @@
   }
   function push(now) {
     if (HOST.sync === false) return;
-    var body = { theme: pref('theme'), fs: pref('fs'), motion: pref('motion'), stripes: pref('stripes'), edition: pref('edition'), font: pref('font'), weight: pref('weight') };   /* every synced key rides every push */
+    var body = { theme: pref('theme'), fs: pref('fs'), motion: pref('motion'), stripes: pref('stripes'), edition: pref('edition'), font: pref('font'), weight: pref('weight'), kural: pref('kural') };   /* every synced key rides every push */
     /* the app's (and CB Accounts') own door: CBPrefs debounces, queues offline and stays silent before the migration; its answer clears the mark */
     /* …except a push that must outlive this page (an edition reloads at once): CBPrefs's 400 ms debounce would die with the page, so it is sent now, kept alive (FX-QA1) */
     try { if (!now && typeof CBPrefs !== 'undefined' && typeof SESSION !== 'undefined' && SESSION && SESSION.token) { CBPrefs.push('ui', body, function (r) { landed(body, r); }); return; } } catch (_) {}
@@ -227,6 +231,7 @@
     if (kind === 'motion') return ['auto', 'reduce', 'full'].indexOf(v) >= 0;
     if (kind === 'stripes') return STRIPES.some(function (x) { return x[0] === v; });
     if (kind === 'edition') return EDITION.test(String(v));
+    if (kind === 'kural') return KURAL.some(function (x) { return x[0] === v; });
     return false;
   }
   /**
@@ -381,6 +386,13 @@
     }).join('');
   }
 
+  /** one heading and a row of pressable choices for a saved preference (`kind` names the pref, its data-av-<kind> attribute and its test ids) */
+  function choiceGroup(heading, kind, choices) {
+    return '<h4>' + heading + '</h4><div class="cbav-stripes" role="group" aria-label="' + heading + '" data-testid="' + kind + '-group">' + choices.map(function (choice) {
+      return '<button type="button" data-testid="' + kind + '-' + choice[0] + '" data-av-' + kind + '="' + choice[0] + '" aria-pressed="' + (pref(kind) === choice[0]) + '">' + choice[1] + '</button>';
+    }).join('') + '</div>';
+  }
+
   function menuHtml(o) {
     var P = o.person || {}, items = o.items || ['profile', 'settings', 'support', 'signout'];
     var showSettings = items.indexOf('settings') >= 0 && !!P.owner;
@@ -411,9 +423,9 @@
       (up.length ? '<div class="cbav-items">' + up.join('') + '</div>' : '') +
       '<div class="cbav-cols"><div class="cbav-c"><h4>Appearance</h4><div class="cbav-sw" role="group" aria-label="Theme">' + swatches() + '</div>' +
       editionsHtml() +
-      '<h4>Row stripes</h4><div class="cbav-stripes" role="group" aria-label="Row stripes" data-testid="stripes-group">' + STRIPES.map(function (x) {
-        return '<button type="button" data-testid="stripes-' + x[0] + '" data-av-stripes="' + x[0] + '" aria-pressed="' + (pref('stripes') === x[0]) + '">' + x[1] + '</button>';
-      }).join('') + '</div></div>' +
+      choiceGroup('Row stripes', 'stripes', STRIPES) +
+      /* W7: the Thirukkural band — the stripes look, never a new one */
+      choiceGroup('Thirukkural', 'kural', KURAL) + '</div>' +
       '<div class="cbav-c"><h4>Text size</h4><div class="cbav-sizes" role="group" aria-label="Text size">' + TEXT_SIZES.map(function (x, i) {
         return '<button type="button" data-testid="fs-' + x[0] + '" data-av-fs="' + x[0] + '" aria-pressed="' + (fsNow === x[0]) + '" title="' + x[1] + ' (' + Math.round(x[2] * 100) + '%)" aria-label="' + x[1] + '" style="font-size:' + [13, 16, 20, 25][i] + 'px">A</button>';
       }).join('') + '</div>' +
@@ -475,33 +487,35 @@
     root.location.href = o.signInHref || '/';
   }
 
+  /** the saved looks a menu button sets by its data-av-<kind> attribute */
+  var PICK_KINDS = ['theme', 'fs', 'weight', 'stripes', 'kural', 'edition', 'font'];
+  /** the menu's `data-av` actions: sign out · sign in · profile · settings · support (each only when the page gave its callback) */
+  function onMenuAction(e, action, o) {
+    var closeThen = function (callback) { e.preventDefault(); openNow = false; paint(); return callback(); };
+    if (action === 'signout') { e.preventDefault(); return signOut(); }
+    if (action === 'signin' && typeof o.onSignIn === 'function') { e.preventDefault(); return o.onSignIn(); }
+    if (action === 'profile' && o.onProfile) return closeThen(o.onProfile);
+    if (action === 'settings' && o.onSettings) return closeThen(o.onSettings);
+    if (action === 'support' && o.onSupport) return closeThen(o.onSupport);
+  }
+  /** one click anywhere: outside the menu closes it; inside, the button's data-av-* attribute says what it does */
+  function onDocClick(e) {
+    if (!M || !M.el) return;
+    var target = e.target; if (!target || !target.closest) return;
+    if (!M.el.contains(target)) { if (openNow) close(); return; }
+    var options = M.o, button;
+    if (target.closest('.cbav-btn')) { openNow = !openNow; paint(); return; }
+    var picked = PICK_KINDS.filter(function (kind) { return target.closest('[data-av-' + kind + ']'); })[0];
+    if (picked) return set(picked, target.closest('[data-av-' + picked + ']').getAttribute('data-av-' + picked));
+    if (target.closest('[data-av-motion]')) return set('motion', pref('motion') === 'reduce' ? 'auto' : 'reduce');
+    if ((button = target.closest('[data-av-lang]'))) { if (options.languages && options.languages.onPick) options.languages.onPick(button.getAttribute('data-av-lang')); return; }
+    if ((button = target.closest('[data-av]'))) return onMenuAction(e, button.getAttribute('data-av'), options);
+  }
   var wired = false;
   function wire() {
     if (wired || !doc) return; wired = true;
     if (root.addEventListener) root.addEventListener('resize', function () { if (openNow) fit(); });
-    doc.addEventListener('click', function (e) {
-      if (!M || !M.el) return;
-      var t = e.target; if (!t || !t.closest) return;
-      if (!M.el.contains(t)) { if (openNow) close(); return; }
-      var o = M.o, b;
-      if ((b = t.closest('.cbav-btn'))) { openNow = !openNow; paint(); return; }
-      if ((b = t.closest('[data-av-theme]'))) return set('theme', b.getAttribute('data-av-theme'));
-      if ((b = t.closest('[data-av-fs]'))) return set('fs', b.getAttribute('data-av-fs'));
-      if ((b = t.closest('[data-av-weight]'))) return set('weight', b.getAttribute('data-av-weight'));
-      if ((b = t.closest('[data-av-stripes]'))) return set('stripes', b.getAttribute('data-av-stripes'));
-      if ((b = t.closest('[data-av-edition]'))) return set('edition', b.getAttribute('data-av-edition'));
-      if ((b = t.closest('[data-av-font]'))) return set('font', b.getAttribute('data-av-font'));
-      if ((b = t.closest('[data-av-motion]'))) return set('motion', pref('motion') === 'reduce' ? 'auto' : 'reduce');
-      if ((b = t.closest('[data-av-lang]'))) { var c = b.getAttribute('data-av-lang'); if (o.languages && o.languages.onPick) o.languages.onPick(c); return; }
-      if ((b = t.closest('[data-av]'))) {
-        var k = b.getAttribute('data-av');
-        if (k === 'signout') { e.preventDefault(); return signOut(); }
-        if (k === 'signin' && typeof o.onSignIn === 'function') { e.preventDefault(); return o.onSignIn(); }
-        if (k === 'profile' && o.onProfile) { e.preventDefault(); openNow = false; paint(); return o.onProfile(); }
-        if (k === 'settings' && o.onSettings) { e.preventDefault(); openNow = false; paint(); return o.onSettings(); }
-        if (k === 'support' && o.onSupport) { e.preventDefault(); openNow = false; paint(); return o.onSupport(); }
-      }
-    });
+    doc.addEventListener('click', onDocClick);
     doc.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && openNow) {
         close(); var btn = M && M.el && M.el.querySelector('.cbav-btn'); if (btn) { try { btn.focus(); } catch (_) {} }

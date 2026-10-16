@@ -2,7 +2,9 @@
  * The list VIEW (rows, badges, health) lives in cap-workforce and renders from flags — this module is only the
  * heavy Tier-2 management: the device cockpit, provisioning/connection-string, add-device, regenerate, and the
  * one-drop package installer. It SELF-REGISTERS its renderer into ACTOR_MANAGE, so the generic dispatcher finds it.
- * Backend: routes/connectors.js + migration b62. Nothing ships to entities that never open a connector. */
+ * Backend: routes/connectors.js + migration b62. Nothing ships to entities that never open a connector.
+ * OWNS the connector cockpit · CALLED BY app.html's ensureCap('connector') (the Co-assists list opens it) · FLOW  invoke → load → register into ACTOR_MANAGE → paint
+ * CARD 28-platform-and-operations/connector-cockpit */
 
 if (typeof EP !== 'undefined') {
   Object.assign(EP, {
@@ -96,7 +98,7 @@ function piCockpit(x){
   var header='<div style="position:sticky;top:0;background:var(--card);z-index:5;padding-bottom:10px;border-bottom:1px solid var(--line);color:var(--on-card)">'
     +'<button class="dback" onclick="backToList()">‹ Co-assists</button>'
     +'<div style="display:flex;align-items:center;gap:9px;margin-top:6px"><span style="font-size:var(--fs-4);font-weight:700">'+esc(x.name)+'</span> '+tchip+' '+_hdot(health)
-      +'<span style="margin-inline-start:auto;display:inline-flex;gap:7px">'+ico('ℹ️','How it works',"acHowItWorks("+(iot?'true':'false')+")")+ico('⚡',(iot?'Test connection':'Ping — mark live'),"acPing('"+x.id+"')")+ico('🔑','Connection string',"UI.acProvOpen=!UI.acProvOpen;paintAcDetail()")+(iot?ico('📦','Create package — one-drop Pi installer',"acCreatePackage('"+x.id+"')"):'')+ico('＋','Add '+(iot?'device':'endpoint'),"UI.acAddDev=!UI.acAddDev;paintAcDetail()")+ico('🗑','Delete this '+(iot?'gateway':'system'),"acDeleteConnector('"+x.id+"','"+esc(x.name).replace(/'/g,"\\'")+"')")+'</span></div>'
+      +'<span style="margin-inline-start:auto;display:inline-flex;gap:7px">'+ico('ℹ️','How it works',"acHowItWorks("+(iot?'true':'false')+")")+ico('⚡',(iot?'Test connection':'Ping — mark live'),"acPing('"+x.id+"')")+ico('🔑','Connection string',"UI.acProvOpen=!UI.acProvOpen;paintAcDetail()")+(iot?ico('📦','Create package — one-drop Pi installer',"acCreatePackage('"+x.id+"')"):'')+ico('＋','Add '+(iot?'device':'endpoint'),"UI.acAddDev=!UI.acAddDev;paintAcDetail()")+ico('🗑','Delete this '+(iot?'gateway':'system'),"acDeleteConnector('"+x.id+"','"+esc(String(x.name).replace(/\\/g,'\\\\').replace(/'/g,"\\'"))+"')")+'</span></div>'
     +'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px">📍 '+esc(x.site||'no site')+' · '+esc(health)+'</div></div>';
   var offline = health==='offline' ? '<div style="background:var(--danger-tint);border:1px solid #f0c9c6;color:var(--disp);border-radius:9px;padding:9px 11px;font-size:var(--fs-2);font-weight:600;margin:10px 0">⚠ '+(iot?'Gateway':'System')+' OFFLINE — no '+(iot?'device':'endpoint')+' below can signal until it is back.</div>' : '';
   var prov = UI.acProvOpen ? _provPanel(iot, x.id) : '';

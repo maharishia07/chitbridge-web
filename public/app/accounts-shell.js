@@ -16,6 +16,7 @@
  *
  * ⚠️ Declares only `var` / function names the app does not declare with let/const (EP, CFG, SESSION, UI are the host
  * page's own). ⚠️ NEVER the banned words on a screen — it is the Ledger / CB Accounts.
+ * FLOW  loaded right after core.js → tx / friendlyErr / toast → CBAction → CBUnsaved → CBLedger → the page's own script      CARD 29-qa-test-tooling-ux-locale-and-design-system/accounts-shell
  */
 'use strict';
 
@@ -436,6 +437,64 @@ var CBAction = (function () {
     return res;
   }
   return { run: actRun, once: actOnce, words: actWords, ask: actAsk };
+})();
+
+/**
+ * ⭐ SET-WALK1 · W24 (2026-10-15) — NEVER LOSE IN-PROGRESS WORK: leaving a screen with unsaved edits asks "Save or discard?" — ONE helper
+ * for every form of every small app (the legal-name edit vanished when the tab moved to Account; DISCIPLINES §3 "never lose in-progress work").
+ *   CBUnsaved.form({ dirty: fn → bool, save: fn → Promise })   a screen registers how it knows it moved and how it saves (a screen that keeps a
+ *                                                           model: its own test; a plain form: CBUnsaved.domDirty(host) — any input whose value
+ *                                                           left its defaultValue). mount() of the next screen calls CBUnsaved.reset().
+ *   CBUnsaved.leave(go)                                     the page's router calls it BEFORE painting the next screen: nothing moved → go();
+ *                                                           moved → CBConfirm "Unsaved changes" · Save → save() then go() · Discard → go()
+ *                                                           (✕ / Escape = Discard, as the standard modal's Cancel). With no save fn: Discard · Stay.
+ * Also the browser's own leave (beforeunload) while something moved — the browser's sentence, since ours cannot be shown there.
+ */
+var CBUnsaved = (function () {
+  var pending = { forms: [] };
+  var IGNORED_TYPES = ['hidden', 'button', 'submit'];
+  function reset() { pending.forms = []; }
+  function form(registration) { if (registration && typeof registration.dirty === 'function') pending.forms.push(registration); return registration; }
+  /** has this one input, select or textarea moved from what the screen painted? */
+  function inputMoved(input) {
+    if (input.disabled || IGNORED_TYPES.indexOf(input.type) >= 0 || input.hasAttribute('data-unsaved-ignore')) return false;
+    if (input.tagName === 'SELECT') { var chosen = input.options[input.selectedIndex]; return !!(chosen && !chosen.defaultSelected && input.querySelector('option[selected]')); }
+    if (input.type === 'checkbox' || input.type === 'radio') return input.checked !== input.defaultChecked;
+    return input.value !== input.defaultValue;
+  }
+  /** any input, select or textarea under host whose value left what the screen painted (a repaint after Save paints the saved values) */
+  function domDirty(host) {
+    var container = typeof host === 'string' ? document.getElementById(host) : host;
+    return !!container && Array.prototype.some.call(container.querySelectorAll('input,textarea,select'), inputMoved);
+  }
+  /** does this registered form say it moved? a dirty test that throws counts as "did not move" and is logged, never silent */
+  function formMoved(registration) {
+    try { return !!registration.dirty(); } catch (err) { if (typeof cblog === 'function') cblog('error', 'unsaved: a dirty test threw: ' + ((err && err.message) || err)); return false; }
+  }
+  function dirtyForms() { return pending.forms.filter(formMoved); }
+  function isDirty() { return dirtyForms().length > 0; }
+  /** Save or discard: Save runs every form's save() then goes on; the dialog's Cancel button is relabelled Discard */
+  function askSaveOrDiscard(savers, body, goOn, stay) {
+    CBConfirm(tx('Unsaved changes'), body, tx('Save'), function () {
+      Promise.all(savers.map(function (registration) { return Promise.resolve().then(registration.save); })).then(function () { reset(); goOn(); }, function (err) { if (typeof toast === 'function') toast(CBAction.words(err, tx('Could not save'))); if (stay) stay(); });
+    }, false, function () { reset(); goOn(); });
+    var cancel = document.querySelector('#cb_confirm [data-testid="confirm-cancel"]'); if (cancel) { cancel.textContent = tx('Discard'); cancel.setAttribute('data-testid', 'confirm-discard'); }
+  }
+  /** nothing can save it: Discard or Stay (the dialog's Cancel button reads Stay) */
+  function askDiscardOrStay(body, goOn, stay) {
+    CBConfirm(tx('Unsaved changes'), body, tx('Discard'), function () { reset(); goOn(); }, true, function () { if (stay) stay(); });
+    var stayButton = document.querySelector('#cb_confirm [data-testid="confirm-cancel"]'); if (stayButton) stayButton.textContent = tx('Stay');
+  }
+  /** nothing moved → goOn(); something moved → ask (Save or Discard when a form can save, Discard or Stay when none can) */
+  function leave(goOn, stay) {
+    var moved = dirtyForms();
+    if (!moved.length) return goOn();
+    var savers = moved.filter(function (registration) { return typeof registration.save === 'function'; });
+    var body = esc(tx(savers.length ? 'Save or discard what you typed?' : 'What you typed here is not saved. Discard it?'));
+    if (savers.length) askSaveOrDiscard(savers, body, goOn, stay); else askDiscardOrStay(body, goOn, stay);
+  }
+  if (typeof window !== 'undefined') window.addEventListener('beforeunload', function (event) { if (isDirty()) { event.preventDefault(); event.returnValue = ''; } });
+  return { form: form, reset: reset, leave: leave, isDirty: isDirty, domDirty: domDirty };
 })();
 
 /**

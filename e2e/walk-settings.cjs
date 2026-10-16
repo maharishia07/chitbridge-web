@@ -39,8 +39,8 @@ const walk = async (w) => {
       if (S.refuseSave) return J(r, 403, { message: 'Only the owner can change the shop details.' });
       Object.assign(ME, body); return J(r, 200, { ok: true });
     }
-    if (p === '/api/governance/profile' && m === 'GET') return J(r, 200, { vault: VAULT, vault_encrypted: true });
-    if (p === '/api/governance/profile/vault' && m === 'PUT') return J(r, 200, { ok: true });
+    if (p === '/api/governance/profile' && m === 'GET') return J(r, 200, { vault: VAULT, vault_version: 'v7', vault_encrypted: true });
+    if (p === '/api/governance/profile/vault' && m === 'PUT') return J(r, 200, { vault: VAULT, version: 'v8' });
     if (p === '/api/governance/country-setup') { if (m === 'PUT') S.csDone = true; return J(r, 200, CS()); }
     if (p === '/api/facts/rail') return J(r, 200, crmApi.railFacts({ suppliers: 0, customers: 0, in: 0, out: 0, stuck: 0 }));
     return J(r, 200, {});
@@ -70,10 +70,13 @@ const walk = async (w) => {
     const e = await txt('[data-testid="shop-err"]'); S.refuseSave = false;
     return { ok: /Only the owner can change the shop details/.test(e) && !/403|undefined|Error/.test(e), saw: '"' + e + '"' };
   });
-  await w.step('T4', 'Your shop -> the identity card -> Save -> one PUT of the vault with the state row', async () => {
-    await shop(); await page.click('[data-testid="vault-save"]'); await page.waitForTimeout(600);
+  /* SET-WALK1 W25: Save sends a MERGE-PATCH of what moved (nothing moved → nothing sent, said in words); the state row's change travels alone, with the version */
+  await w.step('T4', 'Your shop -> the identity card -> Save with nothing changed -> no PUT, "Nothing to save."; change the state -> one PUT: the version + a patch of that row only', async () => {
+    await shop(); const before = S.calls.filter((c) => /PUT \/api\/governance\/profile\/vault/.test(c)).length;
+    await page.click('[data-testid="vault-save"]'); await page.waitForTimeout(500); const none = S.calls.filter((c) => /PUT \/api\/governance\/profile\/vault/.test(c)).length === before, toast = await txt('#toast');
+    await page.locator('[data-testid="vault-only-identity"] input').nth(8).fill('Kerala'); await page.click('[data-testid="vault-save"]'); await page.waitForTimeout(600);   /* label · (name, value) × rows: the State row's value */
     const put = S.calls.filter((c) => /PUT \/api\/governance\/profile\/vault/.test(c)).pop() || '';
-    return { ok: /Tamil Nadu/.test(put), saw: put.slice(0, 120) };
+    return { ok: none && /Nothing to save/.test(toast) && /"version":"v7"/.test(put) && /"t:state":\{[^}]*Kerala/.test(put) && !/Tamil Nadu/.test(put) && !/legal_name/.test(put), saw: 'no PUT ' + none + ' · "' + toast + '" · ' + put.slice(40, 200) };
   });
   await w.step('T5', 'CB Settings -> Country: the rows (country · money · year · tax), each with where it came from; the sidebar marks Country', async () => {
     await page.click('text=Country >> nth=0').catch(() => {}); await page.waitForSelector('[data-testid="cs-rows"]', { timeout: 10000 });

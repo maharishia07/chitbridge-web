@@ -261,43 +261,32 @@ W.run('country', async (w) => {
   });
   await in3.close();
   /* ── CL3 · Where ChitBridge is for the chosen country, on the step itself (the first browser, signed in by its registration) ── */
-  const ready = () => page.evaluate(() => ({ title: (document.querySelector('[data-testid="cs-ready-title"]') || {}).textContent || '', pack: (document.querySelector('[data-testid="cs-ready-pack"]') || {}).textContent || '',
-    none: (document.querySelector('[data-testid="cs-ready-none"]') || {}).textContent || '',
-    rows: [...document.querySelectorAll('[data-testid="cs-ready-row"]')].map((r) => ({ state: r.dataset.state, text: r.textContent.replace(/\s+/g, ' ').trim() })) }));
-  await w.step('C12', 'The step shows "Where ChitBridge is for India" — the pack line, one row per product area (✅ ⚠️ ❌), Payroll "—", the file\'s rows', async () => {
+  /* INT7c: SET-WALK1 W28(c) moved "Where ChitBridge is for <country>" to Standards › Country readiness — the step keeps ONE link to it, and that link follows the chosen country */
+  const readyHref = () => page.$eval('[data-testid="cs-ready-link"]', (a) => a.getAttribute('href')).catch(() => '');
+  await w.step('C12', 'The step is not a readiness table any more: no readiness block, ONE link to Standards › Country readiness for India', async () => {
     await page.goto(base + '/app.html#/country');
-    await page.waitForSelector('[data-testid="cs-ready-row"]', { timeout: 15000 });
-    const r = await ready(), file = await page.evaluate(() => fetch('/data/country-ready.json').then((x) => x.json()));
-    const IN = file.countries.IN, want = IN.areas.length + IN.out.length;
-    const same = r.rows.slice(0, IN.areas.length).every((x, i) => x.state === IN.areas[i].state && x.text.indexOf(IN.areas[i].area) >= 0);
-    const pay = r.rows.find((x) => /Payroll/.test(x.text));
-    const ok = /Where ChitBridge is for India/.test(r.title) && /India · GST · \d+ of \d+ rules ready · checked by a local accountant/.test(r.pack) && r.rows.length === want && same
-      && r.rows.every((x) => /^(✅|⚠️|❌|—) /.test(x.text)) && !!pay && pay.state === 'out' && /Not offered in India/.test(pay.text);
-    return { ok, saw: '"' + r.title + '" · "' + r.pack + '" · ' + r.rows.length + '/' + want + ' rows · = file ' + same + ' · "' + (pay ? pay.text : 'no payroll row') + '"' };
+    await page.waitForSelector('[data-testid="cs-rows"]', { timeout: 15000 });
+    const block = await page.$('[data-testid="cs-ready-title"]'), href = await readyHref();
+    return { ok: !block && /standards\.html\?std=country&ready=IN$/.test(href), saw: (block ? 'a readiness block is still on the step' : 'no block') + ' · ' + href };
   });
-  await w.step('C13', 'Change the country -> the UAE: the block follows the chosen country; Japan (no pack, not offered by the picker): it says so, never a made-up row', async () => {
+  await w.step('C13', 'Change the country -> the UAE: the readiness link follows the chosen country', async () => {
     const tap = () => page.$eval('[data-testid="cs-change-country"]', (a) => a.click());   /* the workshop's fixed dev ribbon sits over the link once scrolled: a person's tap, not a pointer at a covered spot */
     await tap();
     await page.selectOption('[data-testid="cs-country"]', 'AE'); await page.waitForTimeout(150);
-    const a = await ready();
-    /* INT5b: since CS2 the picker offers ONLY the registered packs (C8), so Japan cannot be picked — the block is asked for it directly, as a
-       pack-less country would draw it */
-    const b = await page.evaluate(() => { const d = document.createElement('div'); d.innerHTML = csuReadyHTML('JP'); const q = (t) => (d.querySelector('[data-testid="' + t + '"]') || {}).textContent || '';
-      return { title: q('cs-ready-title'), none: q('cs-ready-none'), rows: [...d.querySelectorAll('[data-testid="cs-ready-row"]')] }; });
+    const ae = await readyHref();
     await page.selectOption('[data-testid="cs-country"]', 'IN'); await page.waitForTimeout(150);
     await tap();
-    const ok = /United Arab Emirates/.test(a.title) && /VAT · \d+ of \d+ rules ready · not yet checked/.test(a.pack) && a.rows.length > 10 && /Japan/.test(b.title) && b.rows.length === 0 && /No pack for Japan yet/.test(b.none);
-    return { ok, saw: '"' + a.title + '" ' + a.rows.length + ' rows · "' + b.title + '" — "' + b.none + '"' };
+    return { ok: /ready=AE$/.test(ae), saw: ae };
   });
   for (const [th, wd, ht] of [['cream', 1366, 900], ['dark', 1366, 900], ['cream', 390, 844], ['dark', 390, 844]]) {
     await w.step('C14', 'Rule 13 on the step, ' + th + ' at ' + wd + ' px: AA · nothing clipped · no sideways scroll · the last row scrolls clear of the pinned buttons · the budget', async () => {
       /* loaded fresh at each width: app.html's own phone/laptop switch re-renders the app shell on a resize, whatever the route (a workshop
          behaviour outside this round — noted in the CL3 report), so a resize would walk away from the step rather than show it narrower */
-      await page.setViewportSize({ width: wd, height: ht }); await page.reload(); await page.waitForSelector('[data-testid="cs-ready-row"]', { timeout: 15000 });
+      await page.setViewportSize({ width: wd, height: ht }); await page.reload(); await page.waitForSelector('[data-testid="cs-rows"]', { timeout: 15000 });
       await page.evaluate((k) => { CBAvatar.applyTheme(k); }, th); await page.waitForTimeout(250);
       const where = await page.evaluate(() => location.hash + ' · ' + (document.getElementById('root') || {}).textContent.slice(0, 80));
-      if (!(await page.$('[data-testid="cs-ready"]'))) return { ok: false, saw: 'no block at ' + where };
-      await page.evaluate(() => document.querySelector('[data-testid="cs-ready"]').scrollIntoView({ block: 'center' }));
+      if (!(await page.$('[data-testid="cs-rows"]'))) return { ok: false, saw: 'no block at ' + where };
+      await page.evaluate(() => document.querySelector('[data-testid="cs-rows"]').scrollIntoView({ block: 'center' }));
       /* the step's own card is measured; the workshop's dev ribbon and Assistant button around it (app.html, localhost only) are not this screen */
       await page.evaluate(() => { const card = document.querySelector('[data-testid="cs-title"]').closest('.card'); card.setAttribute('data-walk-card', ''); for (let n = card.parentElement; n && n !== document.body; n = n.parentElement) n.setAttribute('data-walk-keep', ''); });
       await page.addStyleTag({ content: 'body *:not([data-walk-keep]):not([data-walk-card]):not([data-walk-card] *){visibility:hidden !important}' });
@@ -306,7 +295,7 @@ W.run('country', async (w) => {
       const r = await page.evaluate(() => {
         /* nothing floating over content = every row can be scrolled clear of the pinned controls: the pane at its END, the block's last row checked */
         const pane = document.querySelector('.auth'); pane.scrollTop = pane.scrollHeight;
-        const el = document.querySelector('[data-testid="cs-ready"]'), rows = el.querySelectorAll('[data-testid="cs-ready-row"]'), box = rows[rows.length - 1].getBoundingClientRect();
+        const el = document.querySelector('[data-testid="cs-rows"]'), rows = el.querySelectorAll('.govrow'), box = rows[rows.length - 1].getBoundingClientRect();
         const hits = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
         const floating = [...document.querySelectorAll('body *')].filter((x) => { const cs = getComputedStyle(x); if (cs.position !== 'fixed' && cs.position !== 'sticky') return false; if (x.contains(el)) return false; const rc = x.getBoundingClientRect(); return rc.width > 0 && rc.height > 0 && hits(rc, box); }).map((x) => x.tagName + '#' + x.id + '[' + (x.getAttribute('data-testid') || '') + ']' + x.textContent.trim().slice(0, 20));
         const card = el.getBoundingClientRect();

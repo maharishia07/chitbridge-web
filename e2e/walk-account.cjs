@@ -58,8 +58,8 @@ const walk = async (w) => {
       if (p === '/api/signin/devices') return S.coassist ? J(r, 403, { error: 'Forbidden', code: 'OWNER_ONLY', message: DEV_WHY }) : J(r, 200, { devices: DEVICES() });
       if (p === '/api/signin/sessions/revoke') return J(r, 200, { ok: true, revoked: body && body.device_id ? 'device' : 'session', removed: true });
       if (p === '/api/keys' && mth === 'GET') return J(r, 200, { keys: KEYS, scopes: ['till', 'services'] });
-      if (p === '/api/governance/profile' && mth === 'GET') return J(r, 200, { invoice_party: { complete: true, missing: [] }, vault: VAULT, vault_encrypted: true });
-      if (p === '/api/governance/profile/vault' && mth === 'PUT') return J(r, 200, { ok: true, vault: body && body.vault });
+      if (p === '/api/governance/profile' && mth === 'GET') return J(r, 200, { invoice_party: { complete: true, missing: [] }, vault: VAULT, vault_version: 'v7', vault_encrypted: true });
+      if (p === '/api/governance/profile/vault' && mth === 'PUT') return J(r, 200, { vault: VAULT, version: 'v8' });
       if (p === '/api/folders/mis') return S.misFail ? J(r, 500, { error: 'MIS failed' }) : J(r, 200, MIS(u.searchParams.get('since')));
       if (p === '/api/facts/rail') return J(r, 200, crmApi.railFacts({ suppliers: 0, customers: 0, in: 0, out: 0, stuck: 0 }));
       return J(r, 200, {});
@@ -111,11 +111,14 @@ const walk = async (w) => {
       const mint = await page.locator('[data-testid="sx-key-mint"]').count(), list = await page.locator('[data-testid="sx-key-list"]').count();
       return { ok: /2 keys/.test(n) && /counter C1/.test(last) && door === '/settings.html#/counters' && mint === 0 && list === 0, saw: n + ' · "' + last + '" · door ' + door + ' · mint buttons ' + mint };
     });
-    await w.step('A6', 'Vault: the workshop\'s own card, EVERY section (identity + the bank), encrypted at rest said; Save -> one PUT /governance/profile/vault with both sections', async () => {
+    /* SET-WALK1 W25: Save sends a MERGE-PATCH of what moved with the version — the bank row's change travels alone; the identity section is not re-sent */
+    await w.step('A6', 'Vault: the workshop\'s own card, EVERY section (identity + the bank), encrypted at rest said; change the IFSC -> Save -> one PUT: the version + a patch of that row only', async () => {
       await page.waitForSelector('[data-testid="vault-save"]', { timeout: 8000 });
-      const v = await txt('[data-testid="sx-vault"]'); await page.click('[data-testid="vault-save"]'); await page.waitForTimeout(600);
+      const v = await txt('[data-testid="sx-vault"]');
+      await page.evaluate(() => { const inputs = [...document.querySelectorAll('[data-testid="sx-vault"] input')]; const i = inputs.find((x) => x.value === 'HDFC0001234'); i.value = 'HDFC0009999'; i.dispatchEvent(new Event('input', { bubbles: true })); });
+      await page.click('[data-testid="vault-save"]'); await page.waitForTimeout(600);
       const put = wrote(/PUT \/api\/governance\/profile\/vault/);
-      return { ok: /Business identity/.test(v) && /Bank/.test(v) && /Encrypted at rest/.test(v) && put.length === 1 && /HDFC0001234/.test(put[0]) && /Fixture Shop Pvt Ltd/.test(put[0]), saw: 'card "' + v.slice(0, 60) + '…" · ' + put.length + ' PUT' };
+      return { ok: /Business identity/.test(v) && /Bank/.test(v) && /Encrypted at rest/.test(v) && put.length === 1 && /"version":"v7"/.test(put[0]) && /HDFC0009999/.test(put[0]) && !/Fixture Shop Pvt Ltd/.test(put[0]), saw: 'card "' + v.slice(0, 60) + '…" · ' + put.length + ' PUT · ' + put[0].slice(40, 160) };
     });
     await w.step('A7', 'the sessions read fails -> "Could not read this" + Try again in the list, never "No listed sign-in"', async () => {
       S.sesFail = true; await go('/settings.html#/account', '[data-testid="cbl-error-set-sessions"]');
