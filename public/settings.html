@@ -176,22 +176,26 @@ function go(){ if (window.CBFrame) CBFrame.ended(); }   /* api()'s 401 → drop 
     location.href = '/';
   }
   var shown = null;
+  /** set the address bar to a section (no history entry); a browser that refuses is logged — the screen still shows the right section */
+  function setAddress(section){
+    try { history.replaceState(null, '', '#/' + section); } catch (err) { if (window.cbQuiet) cbQuiet('settings:setAddress', err); }
+  }
   /* W24: a move between sections asks first when something typed is not saved (CBUnsaved, accounts-shell.js) — Stay puts the address back */
   function paint(k){
-    if (shown && shown !== k && window.CBUnsaved) return CBUnsaved.leave(function () { paintNow(k); }, function () { if (frame && frame.skeleton) frame.skeleton.setActive(shown); try { history.replaceState(null, '', '#/' + shown); } catch (_) {} });
+    if (shown && shown !== k && window.CBUnsaved) return CBUnsaved.leave(function () { paintNow(k); }, function () { if (frame && frame.skeleton) frame.skeleton.setActive(shown); setAddress(shown); });
     paintNow(k);
   }
-  function paintNow(k){
-    shown = k;
+  function paintNow(section){
+    shown = section;
     if (window.CBUnsaved) CBUnsaved.reset();
-    if (frame && frame.skeleton) frame.skeleton.setActive(k);
-    if (location.hash !== '#/' + k) { try { history.replaceState(null, '', '#/' + k); } catch (_) {} }
+    if (frame && frame.skeleton) frame.skeleton.setActive(section);
+    if (location.hash !== '#/' + section) setAddress(section);
     host.innerHTML = '';
-    host.classList.toggle('wide', CBSettings.SECTIONS.indexOf(k) >= 0 || k === 'print');
-    if (k === 'new') CBRegistration.mount(host, registered);
-    else if (CBSettings.SECTIONS.indexOf(k) >= 0) CBSettings.mount(host, k);
-    else if (k === 'country') CBCountry.mount(host, function () { location.hash = '#/shop'; });
-    else if (k === 'print') CBPrint.mount(host);
+    host.classList.toggle('wide', CBSettings.SECTIONS.indexOf(section) >= 0 || section === 'print');
+    if (section === 'new') CBRegistration.mount(host, registered);
+    else if (CBSettings.SECTIONS.indexOf(section) >= 0) CBSettings.mount(host, section);
+    else if (section === 'country') CBCountry.mount(host, function () { location.hash = '#/shop'; });
+    else if (section === 'print') CBPrint.mount(host);
     else CBShop.mount(host);
   }
   frame = CBFrame.mount({ app: 'settings', kural: 'settings', work: host, signin: isNew ? false : undefined,
