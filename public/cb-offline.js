@@ -41,10 +41,18 @@
     return root.fetch(cfg.apiBase + req.path, { method: req.method || 'POST', headers: h, body: req.body ? JSON.stringify(req.body) : undefined });
   }
   // classify a response: done (drop), reject (drop + surface — a 4xx won't fix itself on retry), retry (keep)
-  function classify(status) {
-    if ((status >= 200 && status < 300) || status === 409) return 'done';   // 409 = server saw this Idempotency-Key already
+  // PAY-FIX L3: a replayed key answers with the FIRST answer (2xx), so a 409 is never "done". IDEMPOTENCY_IN_PROGRESS means the
+  // first try is still running (or died) — keep it and try again; any other 409 is the shop's own conflict — surface it.
+  function classify(status, code) {
+    if (status >= 200 && status < 300) return 'done';
+    if (status === 409 && code === 'IDEMPOTENCY_IN_PROGRESS') return 'retry';
     if (status >= 400 && status < 500) return 'reject';
     return 'retry';
+  }
+  // the machine code of a 409 body (null when the body is not JSON) — read from a clone so the caller can still read r
+  function codeOf(r) {
+    if (r.status !== 409 || !r.clone) return Promise.resolve(null);
+    return r.clone().json().then(function (b) { return b && b.code || null; }, function () { return null; });
   }
   var flushing = false;
   function flush() {
@@ -53,8 +61,8 @@
     var q = readQ(), still = [], rejected = [], sent = 0;
     return q.reduce(function (p, req) {
       return p.then(function () {
-        return rawSend(req).then(function (r) {
-          var k = classify(r.status);
+        return rawSend(req).then(function (r) { return codeOf(r).then(function (code) { return [r, code]; }); }).then(function (pair) {
+          var r = pair[0], k = classify(r.status, pair[1]);
           if (k === 'done') { sent++; }
           else if (k === 'reject') { req.tries++; req.error = 'rejected ' + r.status; rejected.push(req); }
           else { req.tries++; still.push(req); }
@@ -71,8 +79,8 @@
   function submit(req) {
     req.id = req.id || req.idem || uuid();
     if (online()) {
-      return rawSend(req).then(function (r) {
-        var k = classify(r.status);
+      return rawSend(req).then(function (r) { return codeOf(r).then(function (code) { return [r, code]; }); }).then(function (pair) {
+        var r = pair[0], k = classify(r.status, pair[1]);
         if (k === 'retry') { enqueue(req); return { ok: true, queued: true, online: false, id: req.id }; }
         return { ok: k === 'done', online: true, status: r.status, res: r, id: req.id };
       }).catch(function () { enqueue(req); return { ok: true, queued: true, online: false, id: req.id }; });
