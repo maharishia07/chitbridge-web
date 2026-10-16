@@ -1,12 +1,18 @@
-// cb-offline.js — Chit & Bridge offline-resilience primitive (dependency-free, drop-in).
-// The product is online-first; this makes "the internet drops while half the work is happening" non-fatal WITHOUT
-// weakening the governance model. It does NOT transact offline — nothing is committed on a disconnected device (the
-// server still enforces RLS / freeze / verified rungs / definer guards at the real commit). It does two safe things:
-//   1) DRAFTS — autosave/restore work-in-progress locally, so a drop/reload never loses a half-filled form.
-//   2) OUTBOX — a mutation that can't reach the server is QUEUED and REPLAYS your real authenticated request on
-//      reconnect (queue-and-replay), carrying an Idempotency-Key so a replay can never double-apply (needs the
-//      server-side idempotency check — Phase 2; until then use submit() only for genuinely-offline captures).
-// Storage is localStorage (small, synchronous, survives reload/crash). Swap to IndexedDB later for large payloads.
+/* cb-offline.js — Chit & Bridge offline-resilience primitive (dependency-free, drop-in).
+The product is online-first; this makes "the internet drops while half the work is happening" non-fatal WITHOUT
+weakening the governance model. It does NOT transact offline — nothing is committed on a disconnected device (the
+server still enforces RLS / freeze / verified rungs / definer guards at the real commit). It does two safe things:
+  1) DRAFTS — autosave/restore work-in-progress locally, so a drop/reload never loses a half-filled form.
+  2) OUTBOX — a mutation that can't reach the server is QUEUED and REPLAYS your real authenticated request on
+     reconnect (queue-and-replay), carrying an Idempotency-Key so a replay can never double-apply (needs the
+     server-side idempotency check — Phase 2; until then use submit() only for genuinely-offline captures).
+Storage is localStorage (small, synchronous, survives reload/crash). Swap to IndexedDB later for large payloads.
+
+OWNS      the local drafts + the offline outbox (queue, replay, idempotency key); nothing else is stored here.
+CALLED BY app.html and the small pages that autosave a form or submit a capture (window.CBOffline).
+FLOW      configure({apiBase, token, onChange}) → saveDraft / submit → (offline) enqueue → 'online' event → flush() → paint()
+CARD      qa/cb-offline
+ */
 (function (root) {
   var LSK = 'cb.outbox.v1', DKP = 'cb.draft.';
   var ls = (function () { try { var t = '__cb'; root.localStorage.setItem(t, '1'); root.localStorage.removeItem(t); return root.localStorage; } catch (e) { return null; } })();
@@ -50,9 +56,9 @@
     return 'retry';
   }
   // the machine code of a 409 body (null when the body is not JSON) — read from a clone so the caller can still read r
-  function codeOf(r) {
-    if (r.status !== 409 || !r.clone) return Promise.resolve(null);
-    return r.clone().json().then(function (b) { return b && b.code || null; }, function () { return null; });
+  function codeOf(response) {
+    if (response.status !== 409 || !response.clone) return Promise.resolve(null);
+    return response.clone().json().then(function (body) { return body && body.code || null; }, function () { return null; });
   }
   var flushing = false;
   function flush() {
@@ -61,10 +67,10 @@
     var q = readQ(), still = [], rejected = [], sent = 0;
     return q.reduce(function (p, req) {
       return p.then(function () {
-        return rawSend(req).then(function (r) { return codeOf(r).then(function (code) { return [r, code]; }); }).then(function (pair) {
-          var r = pair[0], k = classify(r.status, pair[1]);
-          if (k === 'done') { sent++; }
-          else if (k === 'reject') { req.tries++; req.error = 'rejected ' + r.status; rejected.push(req); }
+        return rawSend(req).then(function (response) { return codeOf(response).then(function (code) { return [response, code]; }); }).then(function (pair) {
+          var response = pair[0], verdict = classify(response.status, pair[1]);
+          if (verdict === 'done') { sent++; }
+          else if (verdict === 'reject') { req.tries++; req.error = 'rejected ' + response.status; rejected.push(req); }
           else { req.tries++; still.push(req); }
         }).catch(function () { req.tries++; still.push(req); });   // network error → keep for next reconnect
       });
@@ -79,10 +85,10 @@
   function submit(req) {
     req.id = req.id || req.idem || uuid();
     if (online()) {
-      return rawSend(req).then(function (r) { return codeOf(r).then(function (code) { return [r, code]; }); }).then(function (pair) {
-        var r = pair[0], k = classify(r.status, pair[1]);
-        if (k === 'retry') { enqueue(req); return { ok: true, queued: true, online: false, id: req.id }; }
-        return { ok: k === 'done', online: true, status: r.status, res: r, id: req.id };
+      return rawSend(req).then(function (response) { return codeOf(response).then(function (code) { return [response, code]; }); }).then(function (pair) {
+        var response = pair[0], verdict = classify(response.status, pair[1]);
+        if (verdict === 'retry') { enqueue(req); return { ok: true, queued: true, online: false, id: req.id }; }
+        return { ok: verdict === 'done', online: true, status: response.status, res: response, id: req.id };
       }).catch(function () { enqueue(req); return { ok: true, queued: true, online: false, id: req.id }; });
     }
     enqueue(req); return Promise.resolve({ ok: true, queued: true, online: false, id: req.id });

@@ -2,7 +2,11 @@
  * The list VIEW (rows, badges, health) lives in cap-workforce and renders from flags — this module is only the
  * heavy Tier-2 management: the device cockpit, provisioning/connection-string, add-device, regenerate, and the
  * one-drop package installer. It SELF-REGISTERS its renderer into ACTOR_MANAGE, so the generic dispatcher finds it.
- * Backend: routes/connectors.js + migration b62. Nothing ships to entities that never open a connector. */
+ * Backend: routes/connectors.js + migration b62. Nothing ships to entities that never open a connector.
+ * OWNS      the connector cockpit, provisioning, add-device, regenerate and the package installer (the list view is cap-workforce's).
+ * CALLED BY ACTOR_MANAGE (the generic dispatcher in app.html) once ensureCap('connector') has loaded this file.
+ * FLOW      ensureCap('connector') → EP routes added → renderer registered into ACTOR_MANAGE → piCockpit() on a device row
+ * CARD      iot-and-connectors/cap-connector */
 
 if (typeof EP !== 'undefined') {
   Object.assign(EP, {

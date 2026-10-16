@@ -176,22 +176,27 @@ function go(){ if (window.CBFrame) CBFrame.ended(); }   /* api()'s 401 → drop 
     location.href = '/';
   }
   var shown = null;
-  /* W24: a move between sections asks first when something typed is not saved (CBUnsaved, accounts-shell.js) — Stay puts the address back */
-  function paint(k){
-    if (shown && shown !== k && window.CBUnsaved) return CBUnsaved.leave(function () { paintNow(k); }, function () { if (frame && frame.skeleton) frame.skeleton.setActive(shown); try { history.replaceState(null, '', '#/' + shown); } catch (_) {} });
-    paintNow(k);
+  /* put the address bar back on a section; the bar is cosmetic, so a browser that refuses is logged and the page carries on */
+  function setAddress(section){
+    if (location.hash === '#/' + section) return;
+    try { history.replaceState(null, '', '#/' + section); } catch (error) { console.warn('settings: the address bar did not move to #/' + section, (error && error.message) || error); }
   }
-  function paintNow(k){
-    shown = k;
+  /* W24: a move between sections asks first when something typed is not saved (CBUnsaved, accounts-shell.js) — Stay puts the address back */
+  function paint(section){
+    if (shown && shown !== section && window.CBUnsaved) return CBUnsaved.leave(function () { paintNow(section); }, function () { if (frame && frame.skeleton) frame.skeleton.setActive(shown); setAddress(shown); });
+    paintNow(section);
+  }
+  function paintNow(section){
+    shown = section;
     if (window.CBUnsaved) CBUnsaved.reset();
-    if (frame && frame.skeleton) frame.skeleton.setActive(k);
-    if (location.hash !== '#/' + k) { try { history.replaceState(null, '', '#/' + k); } catch (_) {} }
+    if (frame && frame.skeleton) frame.skeleton.setActive(section);
+    setAddress(section);
     host.innerHTML = '';
-    host.classList.toggle('wide', CBSettings.SECTIONS.indexOf(k) >= 0 || k === 'print');
-    if (k === 'new') CBRegistration.mount(host, registered);
-    else if (CBSettings.SECTIONS.indexOf(k) >= 0) CBSettings.mount(host, k);
-    else if (k === 'country') CBCountry.mount(host, function () { location.hash = '#/shop'; });
-    else if (k === 'print') CBPrint.mount(host);
+    host.classList.toggle('wide', CBSettings.SECTIONS.indexOf(section) >= 0 || section === 'print');
+    if (section === 'new') CBRegistration.mount(host, registered);
+    else if (CBSettings.SECTIONS.indexOf(section) >= 0) CBSettings.mount(host, section);
+    else if (section === 'country') CBCountry.mount(host, function () { location.hash = '#/shop'; });
+    else if (section === 'print') CBPrint.mount(host);
     else CBShop.mount(host);
   }
   frame = CBFrame.mount({ app: 'settings', kural: 'settings', work: host, signin: isNew ? false : undefined,

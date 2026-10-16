@@ -681,21 +681,35 @@ function start(){
   /* SET-WALK1 · W28(c): ?ready=<cc> — "Where ChitBridge is for <country>" as the Country readiness sheet (moved OUT of Country setup; CBCountryReady is the one unit) */
   if (q.get('ready')) openReady(String(q.get('ready')).toUpperCase().slice(0, 2));
 }
+var READY_ERROR_HTML = '<div class="hint" data-testid="std-ready-err">Could not read where ChitBridge is for each country.</div>';
+/** the country's name in English; the code itself when the browser has no region names (the sheet then reads "Country readiness · IN") */
+function regionName(countryCode){
+  try { return new Intl.DisplayNames(['en'], { type: 'region' }).of(countryCode) || countryCode; }
+  catch (error) { console.warn('standards: no region name for ' + countryCode, (error && error.message) || error); return countryCode; }
+}
+/** open the readiness sheet as a modal; a browser without showModal gets the plain open attribute */
+function showReadySheet(sheet){
+  if (sheet.open) return;
+  try { sheet.showModal(); }
+  catch (error) { console.warn('standards: the sheet opened without showModal', (error && error.message) || error); sheet.setAttribute('open', ''); }
+}
+/** the readiness rows (one per product area) and the pack line, as the sheet's body */
+function readyHtml(view){
+  var rows = view.rows.map(function (row) { return '<dt data-testid="std-ready-row" data-state="' + esc(row.state) + '"><span aria-hidden="true">' + esc(row.sym) + '</span> ' + esc(row.area) + '</dt><dd>' + esc(row.line) + '</dd>'; }).join('');
+  return '<p class="hint" data-testid="' + (view.known ? 'std-ready-pack' : 'std-ready-none') + '">' + esc(view.known ? view.pack : view.none) + '</p>'
+    + '<dl>' + rows + '</dl>'
+    + '<p class="hint"><a href="/settings.html#/country" data-testid="std-ready-back">Country setup ›</a></p>';
+}
 /** W28(c) · Country readiness: one row per product area — ✅ · ⚠️ · ❌ · — from public/data/country-ready.json (CBCountryReady.view), in the page's sheet */
-function openReady(cc){
-  var d = $('sheet');
-  var name = cc; try { name = new Intl.DisplayNames(['en'], { type: 'region' }).of(cc) || cc; } catch (_) {}
-  d.innerHTML = '<div class="sh-head"><h2 data-testid="std-ready-title">Country readiness · ' + esc(name) + '</h2><button type="button" class="sh-x" data-act="sheetx" data-testid="std-sheet-x" aria-label="Close">✕</button></div>'
+function openReady(countryCode){
+  var sheet = $('sheet');
+  var name = regionName(countryCode);
+  sheet.innerHTML = '<div class="sh-head"><h2 data-testid="std-ready-title">Country readiness · ' + esc(name) + '</h2><button type="button" class="sh-x" data-act="sheetx" data-testid="std-sheet-x" aria-label="Close">✕</button></div>'
     + '<div class="sh-body" data-testid="std-sheet-ready"><div class="hint" data-testid="std-ready-loading">Reading…</div></div>';
-  if (!d.open){ try{ d.showModal(); }catch(_){ d.setAttribute('open', ''); } }
-  var paint = function (html) { var b = d.querySelector('[data-testid="std-sheet-ready"]'); if (b) b.innerHTML = html; };
-  if (!window.CBCountryReady) return paint('<div class="hint" data-testid="std-ready-err">Could not read where ChitBridge is for each country.</div>');
-  CBCountryReady.load().then(function (data) {
-    var v = CBCountryReady.view(data, cc, name);
-    paint('<p class="hint" data-testid="' + (v.known ? 'std-ready-pack' : 'std-ready-none') + '">' + esc(v.known ? v.pack : v.none) + '</p>'
-      + '<dl>' + v.rows.map(function (r) { return '<dt data-testid="std-ready-row" data-state="' + esc(r.state) + '"><span aria-hidden="true">' + esc(r.sym) + '</span> ' + esc(r.area) + '</dt><dd>' + esc(r.line) + '</dd>'; }).join('') + '</dl>'
-      + '<p class="hint"><a href="/settings.html#/country" data-testid="std-ready-back">Country setup ›</a></p>');
-  }, function () { paint('<div class="hint" data-testid="std-ready-err">Could not read where ChitBridge is for each country.</div>'); });
+  showReadySheet(sheet);
+  var paintBody = function (html) { var body = sheet.querySelector('[data-testid="std-sheet-ready"]'); if (body) body.innerHTML = html; };
+  if (!window.CBCountryReady) return paintBody(READY_ERROR_HTML);
+  CBCountryReady.load().then(function (data) { paintBody(readyHtml(CBCountryReady.view(data, countryCode, name))); }, function () { paintBody(READY_ERROR_HTML); });
 }
 if (window.CBKural) CBKural.mount({ route: 'planning' });
 /* three files are read before the first paint: the Compatibility rows (M41), the comparison rows (STD-COMPARE) and the country matrix (CPS1) — each failure is said in its place, never silent */

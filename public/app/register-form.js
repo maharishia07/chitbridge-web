@@ -8,6 +8,9 @@
  * Host globals it reads (both pages have them): api · EP (register · ownerVerify · constitutions from CB_SHOP_EP) · tx · txf · esc · val ·
  * window.CBGov (engine/govcontext.js) · csuCountryName (app/cap-country.js — settings.html carries it; app.html loads it on demand, ensureCap). app.html's card only: onbBanner · modeRibbon · logo · STAGES · CFG.STAGE · go.
  * Flow step: R2R step 1 · country — registration is its door (docs/process/flows.json).
+ * OWNS the register form's markup, its two calls (register → code, verify) and the gov panel; the routes are the api's.
+ * CALLED BY app.html (#/register, CBRegistration.mount(null, regIn)) and settings.html (#/new, CBRegistration.mount(host, registered)).
+ * CARD 29-qa-test-tooling-ux-locale-and-design-system/register-form
  */
 'use strict';
 var REG = {step:"form", name:"", email:"", busy:false, err:""};
