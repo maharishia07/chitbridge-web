@@ -30,7 +30,6 @@ var CBPrint = (function () {
   var PAPERS = [['80', '80 mm slip'], ['58', '58 mm slip'], ['a4', 'A4']];
   var DEFAULT_PAPER = '80', DEFAULT_SHOWN = ['trade_name', 'tax_id', 'address', 'phone'], PREVIEW_DELAY_MS = 120, INPUT_MAX_LENGTH = 240;
   /** the lines a tax invoice MUST carry under the shop's pack — cannot be unticked; the cite is the pack's own */
-  var REQUIRED = { IN: ['trade_name', 'tax_id', 'address'], AU: ['trade_name', 'tax_id'], AE: ['trade_name', 'tax_id', 'address'] };
   var MOVE_BUTTON_STYLE = 'min-height:30px;padding:0 8px';
   /** walk R27 (2026-10-16): the head's fixed order — the logo on top, then the lines a tax invoice must carry; the shop orders only the rest.
       The footer always closes the bill. */
@@ -46,7 +45,11 @@ var CBPrint = (function () {
     if (!window.CBRegulation || !country) return null;
     try { return CBRegulation.packFor(country) || null; } catch (failure) { logQuiet('pack', failure); return null; }
   }
-  function requiredLines() { return REQUIRED[shopCountry()] || ['trade_name', 'tax_id']; }
+  /** R5: the pack's own required particulars through the country registry (IN · AU · AE: its frozen adapter, the same lines as REQUIRED had) */
+  function requiredLines() {
+    var packLines = window.CBCountries && shopCountry() ? (CBCountries.meta(shopCountry()).invoice || {}).requiredLines : null;
+    return packLines && packLines.length ? packLines.slice() : ['trade_name', 'tax_id'];
+  }
   function isRequired(tag) { return requiredLines().indexOf(tag) >= 0; }
   /** the pack's own cite for the "always" group (behind ⓘ), '' when it has none */
   function requiredCite() {
@@ -319,5 +322,5 @@ var CBPrint = (function () {
     if (window.CBUnsaved) CBUnsaved.form({ dirty: function () { return !!held.dirty; }, save: function () { return save(); } });   /* W24 */
     return read();
   }
-  return { mount: mount, signatureOf: signatureOf, headLinesOf: headLinesOf, rowsOf: rowsOf, LINES: LINES, PAPERS: PAPERS, REQUIRED: REQUIRED };
+  return { mount: mount, signatureOf: signatureOf, headLinesOf: headLinesOf, rowsOf: rowsOf, LINES: LINES, PAPERS: PAPERS, requiredLines: requiredLines };
 })();

@@ -57,7 +57,7 @@
       { app: 'catalogue', name: 'Catalogue', page: '/catalogue.html', hash: true, rows: [
         ['CTG001', 'items', 'Items'], ['CTG002', 'categories', 'Categories'], ['CTG003', 'import', 'Import']] },
       { app: 'network', name: 'Network', page: '/network.html', rows: [['NET001', 'mine', 'My network'], ['NET002', 'offers', 'Offers'], ['NET003', 'design', 'Design']] },
-      { app: 'country-lab', name: 'Country lab', page: '/country-lab.html', rows: [['CLB001', 'compare', 'Side by side'], ['CLB002', 'ready', 'Where we are']] },
+      { app: 'country-lab', name: 'Country lab', page: '/country-lab.html', rows: [['CLB001', 'compare', 'Side by side'], ['CLB002', 'ready', 'Where we are'], ['CLB003', 'countries', 'Countries']] },
       { app: 'kyb', name: 'Know your business', page: '/know-your-business.html', rows: [['KYB001', null, 'Know your business']] },
       { app: 'documents', name: 'Documents', page: '/authority-forms.html', rows: [['DOC001', null, 'Documents']] },
       /* SHELL-ONE (2026-10-15): every page wears the frame, so every page has its code — the standards page, the storefront, the shop screen, the labs */

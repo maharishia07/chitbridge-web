@@ -56,7 +56,7 @@ const fits = `(el) => { const cs = getComputedStyle(el); const cv = document.cre
 
 const walk = async (w) => {
   const { page, base } = w;
-  await page.goto(base + '/country-lab.html');
+  await page.goto(base + '/country-lab.html#/compare');   /* R6: the side-by-side tool is #/compare; the default is the Countries view */
   await page.waitForSelector('[data-testid="cl-rows"] tr[data-row]', { timeout: 15000 });
 
   await w.step('L1', 'The pickers list exactly the registered packs, then the setup step\'s other countries as pack-less', async () => {

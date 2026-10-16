@@ -56,14 +56,15 @@ Register: `public/app/screen-id.js` (declared rows, merged into `CBSCREENS`) + `
 | TSK002 | Orders out | CB Tasks & Orders | /tasks.html | /tasks.html · CB Tasks & Orders › Orders out |
 | TSK003 | Tasks | CB Tasks & Orders | /tasks.html | /tasks.html · CB Tasks & Orders › Tasks |
 | TSK004 | Done | CB Tasks & Orders | /tasks.html | /tasks.html · CB Tasks & Orders › Done |
-| SET001 | Your shop | Settings | /settings.html | /settings.html#/shop · Settings › Your shop |
+| SET001 | Your business | Settings | /settings.html | /settings.html#/shop · Settings › Your business |
 | SET002 | Country | Settings | /settings.html | /settings.html#/country · Settings › Country |
 | SET003 | New shop | Settings | /settings.html | the sign-in window › New shop? Register |
-| SET004 | Counters & keys | Settings | /settings.html | /settings.html#/counters · Settings › Counters & keys |
+| SET004 | Counters | Settings | /settings.html | /settings.html#/counters · Settings › Counters |
 | SET005 | Connectors | Settings | /settings.html | /settings.html#/connectors · Settings › Connectors |
 | SET006 | Policy | Settings | /settings.html | /settings.html#/policy · Settings › Policy |
 | SET007 | Plan & usage | Settings | /settings.html | /settings.html#/plan · Settings › Plan & usage |
 | SET008 | Account | Settings | /settings.html | /settings.html#/account · Settings › Account |
+| SET009 | Print setup | Settings | /settings.html | what prints on the bill — the bill's signature, previewed live (SET-WALK1 W27) |
 | OPS001 | Stock | CB Operations | /operations.html | /operations.html#/stock · CB Operations › Stock |
 | OPS002 | Suppliers | CB Operations | /operations.html | /operations.html#/suppliers · CB Operations › Suppliers |
 | EMP001 | People | CB Employees | /employees.html | /employees.html · CB Employees › People |
@@ -75,6 +76,7 @@ Register: `public/app/screen-id.js` (declared rows, merged into `CBSCREENS`) + `
 | NET003 | Design | Network | /network.html | /network.html · Network › Design |
 | CLB001 | Side by side | Country lab | /country-lab.html | /country-lab.html · Country lab › Side by side |
 | CLB002 | Where we are | Country lab | /country-lab.html | /country-lab.html · Country lab › Where we are |
+| CLB003 | Countries | Country lab | /country-lab.html | /country-lab.html · Country lab › Countries |
 | KYB001 | Know your business | Know your business | /know-your-business.html | /know-your-business.html |
 | DOC001 | Documents | Documents | /authority-forms.html | /authority-forms.html |
 | STD001 | Standards | Standards | /standards.html | /standards.html · Standards › Standards |
