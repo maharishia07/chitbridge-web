@@ -161,7 +161,7 @@ var CBPrint = (function () {
     return '<div data-testid="pr-editor">' + alwaysHeading() + requiredTags().map(lineRowHTML).join('')
       + groupHeadHTML(tx('Tick to print') + ' (' + tx('optional') + ')', 'pr-choice', '') + optionalTags().map(lineRowHTML).join('') + paperRowHTML()
       + '<div class="err" id="pr_err" data-testid="pr-err" style="margin-top:8px"></div>'
-      + '<button type="button" class="act" id="pr-save" data-testid="pr-save" style="margin-top:8px">' + esc(tx('Save')) + '</button>'
+      + '<button type="button" class="act" id="pr-save" data-testid="pr-save" hidden style="display:none;margin-top:8px">' + esc(tx('Save')) + '</button>'
       + '<p class="sub"><a class="sx-link" href="/settings.html#/shop" data-testid="pr-shop-link">' + esc(tx('Your business')) + ' ›</a></p></div>';
   }
   /** the preview column: the real renderer (bill-print.html) in a frame */
@@ -204,7 +204,7 @@ var CBPrint = (function () {
       + '<div class="pr-grid">' + editorHTML() + previewHTML() + '</div>';
     held.frame = document.getElementById('pr_frame');
     held.frame.addEventListener('load', tell);
-    host.onclick = onClick; host.oninput = onInput; host.onchange = onInput;
+    host.onclick = function (event) { onClick(event); if (event.target.closest && event.target.closest('[data-pr-move]')) saveSoon(); }; host.oninput = onInput; host.onchange = function (event) { onInput(event); saveSoon(); };
     document.getElementById('pr-save').onclick = save;
     document.getElementById('pr-preview-open').onclick = openPreview;
     document.getElementById('pr-print').onclick = printSample;
@@ -265,6 +265,16 @@ var CBPrint = (function () {
   function holdSignatureRows() {
     var sections = _vaultSecs(), section = sectionOfType(sections, 'signature');
     if (section) section.rows = rowsOf(held.model); else sections.push({ type: 'signature', label: '', rows: rowsOf(held.model) });
+  }
+  /** autosave (drift walk 16 Oct): a changed field or tick saves after a short pause; saves never overlap — one waits for the one in flight */
+  function saveSoon() {
+    clearTimeout(held.saveTimer);
+    held.saveTimer = setTimeout(function () {
+      if (held.saving) { held.saveAgain = true; return; }
+      held.saving = true;
+      Promise.resolve(save()).then(function () { held.saving = false; if (held.saveAgain) { held.saveAgain = false; saveSoon(); } },
+        function () { held.saving = false; });
+    }, 600);
   }
   /** Save: hold the rows, send the patch through CBAction; a stale version (409) shows the vault's Reload sentence */
   function save(source) {

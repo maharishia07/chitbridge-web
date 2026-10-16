@@ -160,10 +160,9 @@ const walk = async (w) => {
     const row = await txt('[data-row]'), tag = await has('[data-testid^="sx-ses-current-"]'), legacy = await txt('[data-testid="sx-ses-legacy"]');
     return { ok: tag && /This one/.test(row) && /older than the list/.test(legacy), saw: '"' + row.slice(0, 60) + '" · "' + legacy.slice(0, 60) + '"' };
   });
-  await w.step('A14', 'W22/W23 · pick "Licence & registration" in the picker → + add section → a LICENCE section with its standard rows first (ABN · ACN · name · number · issued by · valid until)', async () => {
-    await page.selectOption('[data-testid="vault-add-type"]', 'licence'); await page.click('[data-testid="vault-add-section"]'); await page.waitForTimeout(300);
-    const names = await page.$eval('#vaulthost', (n) => [...n.querySelectorAll('input[list="vsug_licence"]')].map((i) => i.value).join(','));
-    return { ok: /Licence name/.test(names) && /Licence number/.test(names) && /Issued by/.test(names) && /Valid until/.test(names), saw: names };
+  await w.step('A14', 'W22/W23 · WALK-REG 2026-10-16: removed by decision — the trade-documents vault (section picker) is not on a local shop\'s Account', async () => {
+    const hidden = await page.$eval('[data-testid="sx-vault-wrap"]', (n) => n.hidden).catch(() => false);
+    return { ok: hidden, saw: 'vault wrap hidden ' + hidden };
   });
 
   /* ── W15 · W16 · W11 ── */
@@ -208,7 +207,7 @@ const walk = async (w) => {
     return { ok: /TAX INVOICE/.test(text) && /ABN 51824753556/.test(text) && /GST 10%/.test(text) && !/CGST/.test(text) && !/HSN/.test(text) && /Thanks for shopping at Austore/.test(text), saw: text.slice(0, 160) };
   });
   await w.step('A20', 'W27 · Save → one PUT of the vault merge-patch carrying the `signature|` section (the rows by tag, the order, the paper)', async () => {
-    const before = puts().length; await page.selectOption('[data-testid="pr-paper"]', '58'); await page.click('[data-testid="pr-save"]'); await page.waitForTimeout(700);
+    const before = puts().length; await page.selectOption('[data-testid="pr-paper"]', '58'); await page.waitForTimeout(1600);   /* WALK-REG 2026-10-16: autosave on change, no Save click */
     const put = puts().slice(before)[0], b = (put && put.body) || {}, sec = b.patch && b.patch.sections && b.patch.sections['signature|'];
     const rows = sec && sec.rows ? sec.rows : {};
     return { ok: puts().length === before + 1 && !!sec && rows['t:footer'] && rows['t:footer'].value === 'Thanks for shopping at Austore' && rows['t:paper'] && rows['t:paper'].value === '58' && /trade_name/.test((rows['t:order'] || {}).value || ''), saw: JSON.stringify(b).slice(0, 180) };

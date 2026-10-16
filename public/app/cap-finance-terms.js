@@ -99,7 +99,7 @@ function ftShopPaint() {
   el.innerHTML = '<h2>' + esc(tx('Shop terms')) + ' <span class="hint" style="font-size:.6em;font-weight:500">(' + esc(tx('optional')) + ')</span> <span title="' + esc(tx('Used when a party has none of its own.')) + '" style="cursor:help;opacity:.7;font-size:.7em">ⓘ</span></h2>'
     + (why ? '<div class="hint" data-testid="ft-why" style="opacity:.85">' + esc(tx(why)) + '</div>' : '')
     + ftForm('fts', t.default, null, off)
-    + '<div style="display:flex;gap:10px;align-items:center"><button type="button" class="act" data-testid="ft-save" hidden' + (off ? ' disabled' : '') + ' onclick="ftSaveShop(this)">' + esc(tx('Save')) + '</button><span id="ft_why" data-testid="ft-out" class="hint"></span></div>'
+    + '<div style="display:flex;gap:10px;align-items:center"><button type="button" class="act" data-testid="ft-save" hidden style="display:none"' + (off ? ' disabled' : '') + ' onclick="ftSaveShop(this)">' + esc(tx('Save')) + '</button><span id="ft_why" data-testid="ft-out" class="hint"></span></div>'
     + '<h3 style="margin:14px 0 4px;font-size:14px">' + esc(tx('Changes')) + '</h3>' + bkTermEvents(t.events, bkCur(FT.cur), 'ft-event');
   /* autosave: a changed field saves the shop terms through the same ftSaveShop (the hidden button is its action handle) */
   if (!off && !el.dataset.auto) { el.dataset.auto = '1'; el.addEventListener('change', function (changeEvent) { if (changeEvent.target && /^fts_/.test(changeEvent.target.id || '')) { var saveButton = el.querySelector('[data-testid="ft-save"]'); if (saveButton) ftSaveShop(saveButton); } }); }

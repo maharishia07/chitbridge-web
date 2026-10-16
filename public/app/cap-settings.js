@@ -556,15 +556,17 @@ var CBSettings = (function () {
   /* ═════ ACCOUNT (T3-P4-ACCOUNT) — Sessions (GET /signin/sessions · the owner's devices) · API keys (a door to the one list) · Vault (cap-shop.js's card, every section) ═════ */
   var SURFACE_WORDS = { till: 'Counter', index: 'Home', app: 'Workshop', web: 'Web', settings: 'CB Settings', finance: 'CB Finance', accounts: 'CB Accounts', crm: 'CB CRM', tasks: 'CB Tasks & Orders', shop: 'Online shop', kyb: 'Know your business', employees: 'CB Employees', network: 'Network' };
   var CURRENT_WHY = 'The device you are on — use Sign out in the menu.';
+  /* WALK-REG R21/R43 (drift walk, 16 Oct): the trade-documents vault is export paperwork — kept for the workshop and forms, hidden on a local
+   * shop's Account until export is switched on (no opt-in flag yet; the host stays so the vault code keeps its target) */
   function account() {
     frame(['<h1 class="sx-h" data-testid="sx-title">' + esc(T('Account')) + '</h1>',
       '<h2 class="sx-h2">' + esc(T('Where you are signed in')) + ' <span class="sx-why" title="' + esc(T('Sign one out if a device is lost or shared.')) + '" style="cursor:help;opacity:.7">ⓘ</span></h2>',
       '<div id="sx_ses_bar"></div>', lineOut('sx_ses_out'), '<div class="sx-list" id="sx_ses_list" data-testid="sx-ses-list"></div>',
       '<h2 class="sx-h2">' + esc(T('Every device of the shop')) + '</h2>', '<div id="sx_dev_bar"></div>', lineOut('sx_dev_out'), '<div class="sx-list" id="sx_dev_list" data-testid="sx-dev-list"></div>',
       '<div id="sx_keys_card" data-testid="sx-keys-card" hidden></div>',
-      '<h2 class="sx-h2">' + esc(T('Vault')) + '</h2>',
+      '<div data-testid="sx-vault-wrap" hidden><h2 class="sx-h2">' + esc(T('Vault')) + '</h2>',
       '<p class="sub"><a class="sx-link" href="/authority-forms.html" data-testid="sx-vault-forms">' + esc(T('Forms for an authority')) + ' ›</a></p>',
-      '<div id="vaulthost" data-testid="sx-vault"></div>']);
+      '<div id="vaulthost" data-testid="sx-vault"></div></div>']);
     var sl = null, dl = null;
     var sesRows = sessionRows;
     var devMay = function () { var d = H.data.ses; return (d && d.r && d.r.may && d.r.may.devices) || null; };
