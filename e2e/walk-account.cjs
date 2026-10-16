@@ -112,13 +112,9 @@ const walk = async (w) => {
       return { ok: shownKeys === 0 && mint === 0 && list === 0, saw: 'visible key elements ' + shownKeys + ' · mint buttons ' + mint + ' · lists ' + list };
     });
     /* SET-WALK1 W25: Save sends a MERGE-PATCH of what moved with the version — the bank row's change travels alone; the identity section is not re-sent */
-    await w.step('A6', 'Vault: the workshop\'s own card, EVERY section (identity + the bank), encrypted at rest said; change the IFSC -> Save -> one PUT: the version + a patch of that row only', async () => {
-      await page.waitForSelector('[data-testid="vault-save"]', { timeout: 8000 });
-      const v = await txt('[data-testid="sx-vault"]');
-      await page.evaluate(() => { const inputs = [...document.querySelectorAll('[data-testid="sx-vault"] input')]; const i = inputs.find((x) => x.value === 'HDFC0001234'); i.value = 'HDFC0009999'; i.dispatchEvent(new Event('input', { bubbles: true })); });
-      await page.click('[data-testid="vault-save"]'); await page.waitForTimeout(600);
-      const put = wrote(/PUT \/api\/governance\/profile\/vault/);
-      return { ok: /Business identity/.test(v) && /Bank/.test(v) && /Encrypted at rest/.test(v) && put.length === 1 && /"version":"v7"/.test(put[0]) && /HDFC0009999/.test(put[0]) && !/Fixture Shop Pvt Ltd/.test(put[0]), saw: 'card "' + v.slice(0, 60) + '…" · ' + put.length + ' PUT · ' + put[0].slice(40, 160) };
+    await w.step('A6', 'WALK-REG 2026-10-16: removed by decision — the trade-documents vault is not on a local shop Account (it stays in the workshop)', async () => {
+      const hidden = await page.$eval('[data-testid="sx-vault-wrap"]', (n) => n.hidden).catch(() => false);
+      return { ok: hidden, saw: 'vault wrap hidden ' + hidden };
     });
     await w.step('A7', 'the sessions read fails -> "Could not read this" + Try again in the list, never "No listed sign-in"', async () => {
       S.sesFail = true; await go('/settings.html#/account', '[data-testid="cbl-error-set-sessions"]');
