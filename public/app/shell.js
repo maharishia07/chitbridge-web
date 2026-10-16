@@ -338,6 +338,42 @@
       '<div class="cbsh-foot" data-testid="shell-foot"></div>';
   }
 
+  /* SET-WALK1 · W8: the edition chip looked like a button and was a label. It IS a button now: a press opens the avatar menu on its Edition group
+     (the one switch, CBAvatar.set('edition')); the ✕ beside it goes straight back to Everything (the full showing). */
+  function editionChipsHTML(edition) {
+    if (!edition) return '';
+    return '<button type="button" class="cbsh-chip due" data-testid="shell-edition-chip" data-edition="' + esc(edition.key) + '" title="' + esc(W.editionOpen || 'Change what this shows') + '">' + esc(edition.chip) + '</button>'
+      + '<button type="button" class="cbsh-chip due" data-testid="shell-edition-off" aria-label="' + esc(W.editionOff || 'Show everything') + '" title="' + esc(W.editionOff || 'Show everything') + '" style="padding:0 8px;margin-inline-start:4px">✕</button>';
+  }
+  /** wire the two chips editionChipsHTML drew: the chip opens the choice, the ✕ returns to the full showing */
+  function wireEditionChips(spot) {
+    var openChip = spot.querySelector('[data-testid="shell-edition-chip"]'), offChip = spot.querySelector('[data-testid="shell-edition-off"]');
+    if (openChip) openChip.onclick = function () { openEditionChoice(); };
+    if (offChip) offChip.onclick = function () { if (root.CBAvatar && root.CBAvatar.set) root.CBAvatar.set('edition', 'full'); };
+  }
+  /** W8: open the avatar menu and put the Edition group in view — the choice lives in ONE place (avatar.js editionsHtml), the chip is its door */
+  function openEditionChoice() {
+    var avatarButton = root.document.querySelector('[data-testid="avatar"]');
+    if (!avatarButton) return;
+    if (!(root.CBAvatar && root.CBAvatar.isOpen && root.CBAvatar.isOpen())) avatarButton.click();
+    var group = root.document.querySelector('[data-testid="edition-group"]');
+    if (!group) return;
+    try { group.scrollIntoView({ block: 'nearest' }); } catch (err) { if (root.cbQuiet) root.cbQuiet('shell:openEditionChoice', err); }
+    var first = group.querySelector('button'); if (first) first.focus();
+  }
+  /* ── the money glyph: the shop's own currency symbol once the header names its currency; ¤ before that or with none ── */
+  function moneySymbol(header) {
+    var currency = header && header.business && header.business.currency, locale = root.CBLocale;
+    if (!currency || !locale || typeof locale.symbol !== 'function') return MONEY_GLYPH;
+    try { return locale.symbol(currency) || MONEY_GLYPH; } catch (err) { if (root.console) root.console.warn('shell moneySymbol: the locale could not name ' + currency, err); return MONEY_GLYPH; }
+  }
+  /** an entry's icon as painted: a money icon becomes the shop's symbol and is marked, so a later header read can re-swap it */
+  function moneyGlyph(icon, header) { return icon === MONEY_GLYPH ? '<span data-glyph="money">' + esc(moneySymbol(header)) + '</span>' : esc(icon); }
+  function paintMoneyGlyphs(pageDoc, header) {
+    var symbol = moneySymbol(header);
+    Array.prototype.forEach.call(pageDoc.querySelectorAll('[data-glyph="money"]'), function (node) { node.textContent = symbol; });
+  }
+
   function mount(el, o) {
     if (!el) return null;
     o = o || {};
@@ -389,39 +425,12 @@
     /* ── the edition: a chip in the bar naming the view (absent on the full app) — the chip look the licence uses, never a new one ── */
     function edition() { return root.CBEdition && S.manifest ? root.CBEdition.info(S.manifest) : null; }
     function paintEdition() {
-      var ed = edition(), spot = $('.cbsh-ed');
-      /* SET-WALK1 · W8: the chip looked like a button and was a label. It IS a button now: a press opens the avatar menu on its Edition group
-         (the one switch, CBAvatar.set('edition')); the ✕ beside it goes straight back to Everything (the full showing). */
-      spot.innerHTML = ed ? '<button type="button" class="cbsh-chip due" data-testid="shell-edition-chip" data-edition="' + esc(ed.key) + '" title="' + esc(W.editionOpen || 'Change what this shows') + '">' + esc(ed.chip) + '</button>'
-        + '<button type="button" class="cbsh-chip due" data-testid="shell-edition-off" aria-label="' + esc(W.editionOff || 'Show everything') + '" title="' + esc(W.editionOff || 'Show everything') + '" style="padding:0 8px;margin-inline-start:4px">✕</button>' : '';
-      var chip = spot.querySelector('[data-testid="shell-edition-chip"]'), off = spot.querySelector('[data-testid="shell-edition-off"]');
-      if (chip) chip.onclick = function () { openEditionChoice(); };
-      if (off) off.onclick = function () { if (root.CBAvatar && root.CBAvatar.set) root.CBAvatar.set('edition', 'full'); };
+      var ed = edition(), spot = $('.cbsh-ed'); spot.innerHTML = editionChipsHTML(ed); wireEditionChips(spot);
       var line = $('[data-testid="shell-edition-line"]');
       if (line) { line.textContent = ed ? ed.line : ''; line.hidden = !(ed && ed.line); }
     }
 
-    /** W8: open the avatar menu and put the Edition group in view — the choice lives in ONE place (avatar.js editionsHtml), the chip is its door */
-    function openEditionChoice() {
-      var btn = root.document.querySelector('[data-testid="avatar"]');
-      if (!btn) return;
-      if (!(root.CBAvatar && root.CBAvatar.isOpen && root.CBAvatar.isOpen())) btn.click();
-      var g = root.document.querySelector('[data-testid="edition-group"]');
-      if (g) { try { g.scrollIntoView({ block: 'nearest' }); } catch (_) {} var first = g.querySelector('button'); if (first) first.focus(); }
-    }
-    /* ── the money glyph: the shop's own currency symbol once the header names its currency; ¤ before that or with none ── */
-    function moneySymbol() {
-      var currency = S.header && S.header.business && S.header.business.currency, L = root.CBLocale;
-      if (!currency || !L || typeof L.symbol !== 'function') return MONEY_GLYPH;
-      try { return L.symbol(currency) || MONEY_GLYPH; } catch (e) { if (root.console) root.console.warn('shell moneySymbol: the locale could not name ' + currency, e); return MONEY_GLYPH; }
-    }
-    /* an entry's icon as painted: a money icon becomes the shop's symbol and is marked, so a later header read can re-swap it */
-    function glyph(icon) { return icon === MONEY_GLYPH ? '<span data-glyph="money">' + esc(moneySymbol()) + '</span>' : esc(icon); }
-    function paintMoneyGlyphs() {
-      var symbol = moneySymbol();
-      Array.prototype.forEach.call(doc.querySelectorAll('[data-glyph="money"]'), function (el) { el.textContent = symbol; });
-    }
-
+    function glyph(icon) { return moneyGlyph(icon, S.header); }   /* the module-level moneyGlyph, with this shell's header */
     /* ── the sheet: the business · licences · trade ready — or the empty state that says they are not available yet ── */
     function paintSheet() {
       if (!sheet) return;
@@ -666,7 +675,7 @@
       .then(function () { paintEdition(); if (mode === 'home') { paintAreas(); if (first !== 'home') go(first); readFacts(); } if (mode === 'app') paintSwitcher(); });
 
     var hdrP = person ? get('/api/entities/header').then(function (h) { S.header = h || null; S.headerState = h ? 'ok' : 'none'; }, function () { S.header = null; S.headerState = 'none'; })
-      .then(function () { paintBar(); paintSheet(); paintMoneyGlyphs(); }) : Promise.resolve();
+      .then(function () { paintBar(); paintSheet(); paintMoneyGlyphs(doc, S.header); }) : Promise.resolve();
 
     var api = {
       el: el, slots: slots, mode: mode,
