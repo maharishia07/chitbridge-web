@@ -2,7 +2,9 @@
  * The list VIEW (rows, badges, health) lives in cap-workforce and renders from flags — this module is only the
  * heavy Tier-2 management: the device cockpit, provisioning/connection-string, add-device, regenerate, and the
  * one-drop package installer. It SELF-REGISTERS its renderer into ACTOR_MANAGE, so the generic dispatcher finds it.
- * Backend: routes/connectors.js + migration b62. Nothing ships to entities that never open a connector. */
+ * Backend: routes/connectors.js + migration b62. Nothing ships to entities that never open a connector.
+ * OWNS the connector cockpit · CALLED BY app.html's ensureCap('connector') (the Co-assists list opens it) · FLOW  invoke → load → register into ACTOR_MANAGE → paint
+ * CARD 28-platform-and-operations/connector-cockpit */
 
 if (typeof EP !== 'undefined') {
   Object.assign(EP, {

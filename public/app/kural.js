@@ -23,6 +23,9 @@
  *  · Tokens only (--panel, --hair, --line, --ink, --muted, --faint), so it reads in all 16 themes. Never amber, never blue, no italic.
  *  · The verse is Noto Serif Tamil (loaded once from Google Fonts); a line breaks only at its middle, the rest indented.
  *
+ * OWNS the band and the room kept for it · CALLED BY every CB page's shell (CBKural.mount) and CB Accounts (CBKural.set) · CBAvatar (repaint on a pref change).
+ * FLOW  mount → load kurals.json → wanted()? → find(route) → paint → touch (the room's height)      CARD 29-qa-test-tooling-ux-locale-and-design-system/kural
+ *
  * ONE FILE, ONE GLOBAL. Nothing is read from the page except the document and (optionally) CBLocale.lang().
  */
 (function (root) {
@@ -113,11 +116,14 @@
   }
   /** W7: does this person want the band? pref `kural` — 'on' · 'off' · 'auto' (on only where Tamil is among the languages read, CBLocale.langs) */
   function wanted() {
-    var p = 'auto'; try { p = (root.CBAvatar && root.CBAvatar.get && root.CBAvatar.get().kural) || 'auto'; } catch (_) { p = 'auto'; }
-    if (p === 'on') return true;
-    if (p === 'off') return false;
-    try { var ls = (root.CBLocale && root.CBLocale.langs && root.CBLocale.langs()) || []; return ls.indexOf('ta') >= 0; } catch (_) { return false; }
+    var pref = 'auto';
+    try { pref = (root.CBAvatar && root.CBAvatar.get && root.CBAvatar.get().kural) || 'auto'; } catch (err) { quiet('wanted:pref', err); }
+    if (pref === 'on') return true;
+    if (pref === 'off') return false;
+    try { var langs = (root.CBLocale && root.CBLocale.langs && root.CBLocale.langs()) || []; return langs.indexOf('ta') >= 0; } catch (err) { quiet('wanted:langs', err); return false; }
   }
+  /** a failure the band survives (it falls back to the default) — logged through the page's cbQuiet when it has one, never silent */
+  function quiet(where, err) { if (root.cbQuiet) root.cbQuiet('kural:' + where, err); }
   /** the app's language, when the page has one; Tamil and everything unlisted read the English line (the `meaning.ta` slot stays empty by decision) */
   function lang() {
     var l = ''; try { l = String((root.CBLocale && root.CBLocale.lang && root.CBLocale.lang()) || doc.documentElement.lang || 'en').toLowerCase().slice(0, 2); } catch (_) { l = 'en'; }
@@ -158,14 +164,17 @@
     if (EL || RES) doc.documentElement.style.setProperty('--cbk-h', h + 'px');
   }
 
+  /** the footer element, once: attached to the host, its click and keyboard handlers wired */
+  function createBand() {
+    EL = doc.createElement('footer'); EL.id = 'cbkural'; EL.className = 'cbk'; EL.setAttribute('data-testid', 'kural-footer'); EL.setAttribute('aria-label', 'Thirukkural');
+    (HOST || doc.body).appendChild(EL);
+    EL.addEventListener('click', onClick); EL.addEventListener('keydown', function (e) { if ((e.key === 'Enter' || e.key === ' ') && e.target.closest && e.target.closest('[data-kswap]')) { e.preventDefault(); swap(); } });
+  }
+
   function paint() {
     if (!doc) return;
     css();
-    if (!EL) {
-      EL = doc.createElement('footer'); EL.id = 'cbkural'; EL.className = 'cbk'; EL.setAttribute('data-testid', 'kural-footer'); EL.setAttribute('aria-label', 'Thirukkural');
-      (HOST || doc.body).appendChild(EL);
-      EL.addEventListener('click', onClick); EL.addEventListener('keydown', function (e) { if ((e.key === 'Enter' || e.key === ' ') && e.target.closest && e.target.closest('[data-kswap]')) { e.preventDefault(); swap(); } });
-    }
+    if (!EL) createBand();
     var prevH = EL && !EL.hidden ? EL.offsetHeight : 0;
     /* the phone's 7 s turn-taking keeps ITS clock across repaints (a repaint must not restart the count); it is stopped below when the band is not drawn or the person is in charge */
     /* ONE place: the band is never a part of a header, a bar or a title row, whoever mounted it or moved it there (Round U, 2026-10-09) */

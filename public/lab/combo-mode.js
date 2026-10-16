@@ -10,6 +10,8 @@
  * exactly as it did when it sat in the same script. Styles: lab/combo-mode.css. Markup: #modLabOverlay and
  * #comboTillPreviewOverlay in offer-lab-next.html.
  * Flow: catalogue · Definitions shelf — combo / modifier templates (07-offers-pricing-and-combos, Combo Lab).
+ * CALLED BY offer-lab-next.html (loaded by it; ?mode=combo boots the builder) and combo-lab.html (forwards there).
+ * FLOW  offer-lab-next boots → comboBoot reads the Offer Lab state → builder paints → save a template      CARD 29-qa-test-tooling-ux-locale-and-design-system/offer-lab
  */
 /**
  * ── ⭐⭐⭐ THE MODIFIER LAB — TRY IT, THEN APPLY IT (Athi: "so people can try how the modifiers can be

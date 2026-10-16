@@ -386,6 +386,13 @@
     }).join('');
   }
 
+  /** one heading and a row of pressable choices for a saved preference (`kind` names the pref, its data-av-<kind> attribute and its test ids) */
+  function choiceGroup(heading, kind, choices) {
+    return '<h4>' + heading + '</h4><div class="cbav-stripes" role="group" aria-label="' + heading + '" data-testid="' + kind + '-group">' + choices.map(function (choice) {
+      return '<button type="button" data-testid="' + kind + '-' + choice[0] + '" data-av-' + kind + '="' + choice[0] + '" aria-pressed="' + (pref(kind) === choice[0]) + '">' + choice[1] + '</button>';
+    }).join('') + '</div>';
+  }
+
   function menuHtml(o) {
     var P = o.person || {}, items = o.items || ['profile', 'settings', 'support', 'signout'];
     var showSettings = items.indexOf('settings') >= 0 && !!P.owner;
@@ -416,13 +423,9 @@
       (up.length ? '<div class="cbav-items">' + up.join('') + '</div>' : '') +
       '<div class="cbav-cols"><div class="cbav-c"><h4>Appearance</h4><div class="cbav-sw" role="group" aria-label="Theme">' + swatches() + '</div>' +
       editionsHtml() +
-      '<h4>Row stripes</h4><div class="cbav-stripes" role="group" aria-label="Row stripes" data-testid="stripes-group">' + STRIPES.map(function (x) {
-        return '<button type="button" data-testid="stripes-' + x[0] + '" data-av-stripes="' + x[0] + '" aria-pressed="' + (pref('stripes') === x[0]) + '">' + x[1] + '</button>';
-      }).join('') + '</div>' +
+      choiceGroup('Row stripes', 'stripes', STRIPES) +
       /* W7: the Thirukkural band — the stripes look, never a new one */
-      '<h4>Thirukkural</h4><div class="cbav-stripes" role="group" aria-label="Thirukkural" data-testid="kural-group">' + KURAL.map(function (x) {
-        return '<button type="button" data-testid="kural-' + x[0] + '" data-av-kural="' + x[0] + '" aria-pressed="' + (pref('kural') === x[0]) + '">' + x[1] + '</button>';
-      }).join('') + '</div></div>' +
+      choiceGroup('Thirukkural', 'kural', KURAL) + '</div>' +
       '<div class="cbav-c"><h4>Text size</h4><div class="cbav-sizes" role="group" aria-label="Text size">' + TEXT_SIZES.map(function (x, i) {
         return '<button type="button" data-testid="fs-' + x[0] + '" data-av-fs="' + x[0] + '" aria-pressed="' + (fsNow === x[0]) + '" title="' + x[1] + ' (' + Math.round(x[2] * 100) + '%)" aria-label="' + x[1] + '" style="font-size:' + [13, 16, 20, 25][i] + 'px">A</button>';
       }).join('') + '</div>' +
@@ -484,34 +487,35 @@
     root.location.href = o.signInHref || '/';
   }
 
+  /** the saved looks a menu button sets by its data-av-<kind> attribute */
+  var PICK_KINDS = ['theme', 'fs', 'weight', 'stripes', 'kural', 'edition', 'font'];
+  /** the menu's `data-av` actions: sign out · sign in · profile · settings · support (each only when the page gave its callback) */
+  function onMenuAction(e, action, o) {
+    var closeThen = function (callback) { e.preventDefault(); openNow = false; paint(); return callback(); };
+    if (action === 'signout') { e.preventDefault(); return signOut(); }
+    if (action === 'signin' && typeof o.onSignIn === 'function') { e.preventDefault(); return o.onSignIn(); }
+    if (action === 'profile' && o.onProfile) return closeThen(o.onProfile);
+    if (action === 'settings' && o.onSettings) return closeThen(o.onSettings);
+    if (action === 'support' && o.onSupport) return closeThen(o.onSupport);
+  }
+  /** one click anywhere: outside the menu closes it; inside, the button's data-av-* attribute says what it does */
+  function onDocClick(e) {
+    if (!M || !M.el) return;
+    var target = e.target; if (!target || !target.closest) return;
+    if (!M.el.contains(target)) { if (openNow) close(); return; }
+    var options = M.o, button;
+    if (target.closest('.cbav-btn')) { openNow = !openNow; paint(); return; }
+    var picked = PICK_KINDS.filter(function (kind) { return target.closest('[data-av-' + kind + ']'); })[0];
+    if (picked) return set(picked, target.closest('[data-av-' + picked + ']').getAttribute('data-av-' + picked));
+    if (target.closest('[data-av-motion]')) return set('motion', pref('motion') === 'reduce' ? 'auto' : 'reduce');
+    if ((button = target.closest('[data-av-lang]'))) { if (options.languages && options.languages.onPick) options.languages.onPick(button.getAttribute('data-av-lang')); return; }
+    if ((button = target.closest('[data-av]'))) return onMenuAction(e, button.getAttribute('data-av'), options);
+  }
   var wired = false;
   function wire() {
     if (wired || !doc) return; wired = true;
     if (root.addEventListener) root.addEventListener('resize', function () { if (openNow) fit(); });
-    doc.addEventListener('click', function (e) {
-      if (!M || !M.el) return;
-      var t = e.target; if (!t || !t.closest) return;
-      if (!M.el.contains(t)) { if (openNow) close(); return; }
-      var o = M.o, b;
-      if ((b = t.closest('.cbav-btn'))) { openNow = !openNow; paint(); return; }
-      if ((b = t.closest('[data-av-theme]'))) return set('theme', b.getAttribute('data-av-theme'));
-      if ((b = t.closest('[data-av-fs]'))) return set('fs', b.getAttribute('data-av-fs'));
-      if ((b = t.closest('[data-av-weight]'))) return set('weight', b.getAttribute('data-av-weight'));
-      if ((b = t.closest('[data-av-stripes]'))) return set('stripes', b.getAttribute('data-av-stripes'));
-      if ((b = t.closest('[data-av-kural]'))) return set('kural', b.getAttribute('data-av-kural'));
-      if ((b = t.closest('[data-av-edition]'))) return set('edition', b.getAttribute('data-av-edition'));
-      if ((b = t.closest('[data-av-font]'))) return set('font', b.getAttribute('data-av-font'));
-      if ((b = t.closest('[data-av-motion]'))) return set('motion', pref('motion') === 'reduce' ? 'auto' : 'reduce');
-      if ((b = t.closest('[data-av-lang]'))) { var c = b.getAttribute('data-av-lang'); if (o.languages && o.languages.onPick) o.languages.onPick(c); return; }
-      if ((b = t.closest('[data-av]'))) {
-        var k = b.getAttribute('data-av');
-        if (k === 'signout') { e.preventDefault(); return signOut(); }
-        if (k === 'signin' && typeof o.onSignIn === 'function') { e.preventDefault(); return o.onSignIn(); }
-        if (k === 'profile' && o.onProfile) { e.preventDefault(); openNow = false; paint(); return o.onProfile(); }
-        if (k === 'settings' && o.onSettings) { e.preventDefault(); openNow = false; paint(); return o.onSettings(); }
-        if (k === 'support' && o.onSupport) { e.preventDefault(); openNow = false; paint(); return o.onSupport(); }
-      }
-    });
+    doc.addEventListener('click', onDocClick);
     doc.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && openNow) {
         close(); var btn = M && M.el && M.el.querySelector('.cbav-btn'); if (btn) { try { btn.focus(); } catch (_) {} }

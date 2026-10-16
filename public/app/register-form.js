@@ -8,6 +8,8 @@
  * Host globals it reads (both pages have them): api · EP (register · ownerVerify · constitutions from CB_SHOP_EP) · tx · txf · esc · val ·
  * window.CBGov (engine/govcontext.js) · csuCountryName (app/cap-country.js — settings.html carries it; app.html loads it on demand, ensureCap). app.html's card only: onbBanner · modeRibbon · logo · STAGES · CFG.STAGE · go.
  * Flow step: R2R step 1 · country — registration is its door (docs/process/flows.json).
+ * OWNS the new-shop form and its register / verify pair · CALLED BY app.html (#/register) and settings.html (#/new).
+ * FLOW  mount(host, onDone) → paint the form → register (e-mail → code) → verify → onDone      CARD 28-platform-and-operations/register-form
  */
 'use strict';
 var REG = {step:"form", name:"", email:"", busy:false, err:""};
