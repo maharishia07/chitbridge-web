@@ -60,21 +60,21 @@ const walk = async (w) => {
   });
   await w.step('T2', 'Your shop -> change the address -> Save -> one PATCH, "Shop details saved."', async () => {
     const before = wrote(/PATCH \/api\/entities\/profile/);
-    await page.fill('#pf_addr', '14 Bazaar Street, Madurai'); await page.click('[data-testid="shop-save"]'); await page.waitForTimeout(800);
-    const n = wrote(/PATCH \/api\/entities\/profile/) - before, toast = await txt('#toast');
-    return { ok: n === 1 && /14 Bazaar/.test(S.calls[S.calls.length - 1] || '') && /saved/i.test(toast), saw: n + ' PATCH; toast "' + toast + '"' };
+    await page.fill('#pf_addr', '14 Bazaar Street, Madurai'); await page.press('#pf_addr', 'Tab'); await page.waitForTimeout(1300);   /* WALK-REG 2026-10-16 R19: no Save button - the field saves itself, "Saved" beside it */
+    const n = wrote(/PATCH \/api\/entities\/profile/) - before, toast = await txt('[data-testid="saved-pf_addr"]'), hidden = await page.$eval('[data-testid="shop-save"]', (b) => getComputedStyle(b).display === 'none');
+    return { ok: n === 1 && /14 Bazaar/.test(S.calls[S.calls.length - 1] || '') && /Saved/.test(toast) && hidden, saw: n + ' PATCH; beside the field "' + toast + '"; Save hidden ' + hidden };
   });
   await w.step('T3', 'Your shop -> Save refused by the server -> its sentence painted under the fields, never a raw error', async () => {
     S.refuseSave = true; await shop();
-    await page.fill('#pf_addr', '15 Bazaar Street'); await page.click('[data-testid="shop-save"]'); await page.waitForTimeout(800);
+    await page.fill('#pf_addr', '15 Bazaar Street'); await page.press('#pf_addr', 'Tab'); await page.waitForTimeout(1300);   /* WALK-REG 2026-10-16 R19: autosave */
     const e = await txt('[data-testid="shop-err"]'); S.refuseSave = false;
     return { ok: /Only the owner can change the shop details/.test(e) && !/403|undefined|Error/.test(e), saw: '"' + e + '"' };
   });
   /* SET-WALK1 W25: Save sends a MERGE-PATCH of what moved (nothing moved → nothing sent, said in words); the state row's change travels alone, with the version */
   await w.step('T4', 'Your shop -> the identity card -> Save with nothing changed -> no PUT, "Nothing to save."; change the state -> one PUT: the version + a patch of that row only', async () => {
     await shop(); const before = S.calls.filter((c) => /PUT \/api\/governance\/profile\/vault/.test(c)).length;
-    await page.click('[data-testid="vault-save"]'); await page.waitForTimeout(500); const none = S.calls.filter((c) => /PUT \/api\/governance\/profile\/vault/.test(c)).length === before, toast = await txt('#toast');
-    await page.locator('[data-testid="vault-only-identity"] input[value="Tamil Nadu"]').fill('Kerala'); await page.click('[data-testid="vault-save"]'); await page.waitForTimeout(600);   /* WALK-REG 2026-10-16: found by its value — the section label input is gone on Your business */
+    await page.$eval('[data-testid="vault-save"]', (b) => b.click()); await page.waitForTimeout(500); const none = S.calls.filter((c) => /PUT \/api\/governance\/profile\/vault/.test(c)).length === before, toast = await txt('#toast');
+    const st = page.locator('[data-testid="vault-only-identity"] input[value="Tamil Nadu"]'); await st.fill('Kerala'); await st.press('Tab'); await page.waitForTimeout(1300);   /* WALK-REG 2026-10-16 R19: autosave on change; the hidden Save still answers "Nothing to save." above */   /* WALK-REG 2026-10-16: found by its value — the section label input is gone on Your business */
     const put = S.calls.filter((c) => /PUT \/api\/governance\/profile\/vault/.test(c)).pop() || '';
     return { ok: none && /Nothing to save/.test(toast) && /"version":"v7"/.test(put) && /"t:state":\{[^}]*Kerala/.test(put) && !/Tamil Nadu/.test(put) && !/legal_name/.test(put), saw: 'no PUT ' + none + ' · "' + toast + '" · ' + put.slice(40, 200) };
   });

@@ -7,6 +7,7 @@
 <head>
 <meta charset="utf-8">
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
+<script src="/engine/locale.js"></script>   <!-- CBLocale: the shop's money word / symbol (moneySymbol below) and its number format -->
 <script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Offer Lab</title>
@@ -778,7 +779,7 @@ button{cursor:pointer}
   <div class="labtools">   <!-- the lab's tools row (its title, Home and avatar are the frame's — SHELL-ONE) -->
     <span class="chip" id="bizName">—</span>
     <span class="grow"></span>
-    <button class="chip tool" onclick="openPriceOverlay()" title="Cost and price for every item"><span class="g">₹</span><span class="tx">Price list</span></button>
+    <button class="chip tool" onclick="openPriceOverlay()" title="Cost and price for every item"><span class="g" id="priceTool">₹</span><span class="tx">Price list</span></button>
     <button class="chip tool" onclick="window.open('offer-lab-next.html?mode=combo','cb_combo_lab')" title="Combos and modifiers"><span class="g">▣</span><span class="tx">Combos</span></button>
     <button class="chip tool" onclick="document.getElementById('labImportFile').click()" title="A spreadsheet with Name, Category, Price and Cost columns — stays in this tab, nothing is saved"><span class="g">↓</span><span class="tx">Import</span></button>
     <input type="file" id="labImportFile" accept=".xlsx,.xls,.csv" hidden onchange="importSpreadsheet(this)">
@@ -1147,9 +1148,34 @@ async function loadCatNames(){
     }
   } catch(e){ console.warn('Offer Lab: category names did not load — keeping the names already shown', e); }   /* a stale name beats a UUID on screen */
 }
+/* ⚠️ THE MONEY WORD IS THE SHOP'S, NOT THE RUPEE (WALK-REG 2026-10-16 R56: a UAE shop read "Whole ₹"). shopCurrency = the shop's currency from GET /api/entities/me
+   (null until it lands, and for a visitor with no account: then the page's own samples are rupee samples and read as rupees). moneySymbol() = its symbol/word from the
+   locale engine; inShopMoney() turns the rupee sign typed into this page's static wording into it. */
+var shopCurrency=null;
+function otherShopMoney(){ return !!shopCurrency && shopCurrency!=='INR'; }
+function currencyPiece(code){ return new Intl.NumberFormat(CBLocale.moneyTag(code),{style:'currency',currency:code}).formatToParts(0).find(function(piece){ return piece.type==='currency'; }); }
+function moneySymbol(){ var code=shopCurrency||'INR'; try{ var part=currencyPiece(code); return (part&&part.value)||code; }catch(_){ return code==='INR'?'₹':code; } }   /* the symbol as the BILL writes it (the money's own tag) — not the reader's script */
+function inShopMoney(text){ var line=String(text); return otherShopMoney() ? line.split('₹').join(moneySymbol()).split('Rupees off').join('Money off') : line; }
+function sampleName(name){ return otherShopMoney() ? 'Sample shop' : name; }   /* the Tiffin Corner is an Indian sample; another country gets a neutral one */
+/** the name on the page's header: the shop's own name, or a sample's (a neutral one outside India) */
+function bizTitle(brand){ return S.biz==='mine' ? brand.name : sampleName(brand.name); }
+/** the three-letter currency a /api/entities/me reply names, or '' */
+function currencyOfReply(body){ var entity=(body&&body.data)||body||{}; entity=entity.entity||entity; var code=String(entity.currency_code||'').toUpperCase(); return /^[A-Z]{3}$/.test(code) ? code : ''; }
+async function loadShopMoney(){
+  if(!savedLive()) return;
+  try{
+    var reply=await fetch(API+'/api/entities/me',{headers:{Authorization:'Bearer '+savedToken()}});
+    if(!reply.ok) return;
+    var code=currencyOfReply(await reply.json());
+    if(code&&code!==shopCurrency){ shopCurrency=code; var tool=document.getElementById('priceTool'); if(tool) tool.textContent=moneySymbol(); render(); }
+  }catch(err){ console.warn('Offer Lab: the shop currency did not load — keeping the rupee samples', err); }
+}
 function M0(n){ if(n==null||isNaN(n)) return '—';
   var neg=n<-0.004; n=Math.abs(n);
-  return (neg?'−₹':'₹')+Math.round(n).toLocaleString('en-IN'); }
+  var code=shopCurrency||'INR', out;
+  try{ out=new Intl.NumberFormat(CBLocale.moneyTag(code),{style:'currency',currency:code,minimumFractionDigits:0,maximumFractionDigits:0}).format(Math.round(n)); }
+  catch(_){ out='₹'+Math.round(n).toLocaleString('en-IN'); }
+  return (neg?'−':'')+out; }
 function PC(n){ if(n==null||!isFinite(n)) return '—';
   return (Math.round(n*10)/10)+'%'; }
 /* esc() is app/helpers.js's — the one escaper (T2-LABS: this page had its own copy) */
@@ -1330,7 +1356,7 @@ function percentTableHTML(rs){
       var mk=markupPct(r.p.price, r.p.cost);
       return '<tr>'+
         '<td data-l="">'+esc(r.p.name)+'</td>'+
-        '<td data-l="Cost"><span class="costin"><span>₹</span><input type="number" min="0" value="'+
+        '<td data-l="Cost"><span class="costin"><span>'+moneySymbol()+'</span><input type="number" min="0" value="'+
           (r.p.cost==null?'':r.p.cost)+'" placeholder="?" onchange="setCost(\''+r.p.id+'\',this.value)"></span></td>'+
         '<td data-l="Price now">'+M0(r.p.price)+'</td>'+
         (SHOW_MARKUP?'<td data-l="Markup">'+(mk==null?'—':mk+'%')+'</td>':'')+
@@ -1744,7 +1770,7 @@ function paintPriceOvBody(){
           '<td class="ovlprice">'+M0(p.price)+'</td>'+
           '<td>'+(costBlind
             ? '<span style="color:var(--muted)" title="Ask the owner for access">🔒</span>'
-            : '<div class="inp"><span>₹</span><input type="number" min="0" placeholder="—" value="'+
+            : '<div class="inp"><span>'+moneySymbol()+'</span><input type="number" min="0" placeholder="—" value="'+
               (p.cost==null?'':p.cost)+'" onchange="setCost(\''+p.id+'\',this.value)"></div>')+'</td>'+
           '<td class="ovlprice" style="color:'+(mk==null?'inherit':(mk<0?'var(--red-i)':'var(--green-d)'))+'">'+(costBlind?'🔒':(mk==null?'—':mk+'%'))+'</td></tr>';
       }).join('')+'</tbody></table>';
@@ -1997,7 +2023,7 @@ function renderS0(){
      '</div>'+
      '<div class="fine">'+
        '<span>Below cost: '+BELOW_TXT[S.belowAct]+'</span>'+
-       '<span class="dot">·</span><span>'+ROUND_TXT[S.round]+'</span>'+
+       '<span class="dot">·</span><span>'+inShopMoney(ROUND_TXT[S.round])+'</span>'+
        '<span class="dot">·</span><span>'+COST_TXT[S.costSource]+'</span>'+
        '<button onclick="toggleS0Open()">'+(S0_OPEN?'Close':'Change')+'</button>'+
      '</div>'+
@@ -2006,7 +2032,7 @@ function renderS0(){
          '<div class="fld"><span class="lbl">When an offer goes below cost</span>'+
            seg('belowAct',[['exclude','Leave it out'],['cap','Sell it at cost'],['warn','Do it anyway']])+'</div>'+
          '<div class="fld"><span class="lbl">Prices shown as</span>'+
-           seg('round',[['0','Exact'],['1','Whole ₹'],['5','Ends 0 or 5'],['10','Ends 0']])+
+           seg('round',[['0','Exact'],['1',inShopMoney('Whole ₹')],['5','Ends 0 or 5'],['10','Ends 0']])+
            '<div class="sub">Always rounded down, never above the normal price.</div></div>'+
          /* ⭐ "Typed on each item" still opens the price overlay on click, same as before — one thing to
             click, not a choice and then a separate hunt for where to actually type. */
@@ -2048,7 +2074,7 @@ function renderS1(){
     if(g.kind!==last){ last=g.kind;
       h+='<div class="grouphead">'+KINDS[g.kind]+'<i></i></div>'; }
     h+='<button class="goal '+(S.goal===g.id?'on':'')+'" onclick="pickGoal(\''+g.id+'\')">'+
-       '<span class="gi">'+g.icon+'</span><b>'+g.n+'</b><span class="ex">'+g.ex+'</span></button>';
+       '<span class="gi">'+inShopMoney(g.icon)+'</span><b>'+inShopMoney(g.n)+'</b><span class="ex">'+inShopMoney(g.ex)+'</span></button>';
   });
   return h+'</div></div>';
 }
@@ -2072,7 +2098,7 @@ function g3(heads,rows){
     }).join('')+'</tbody></table></div>';
 }
 function costCell(p){
-  return '<td class="hide" data-l="Cost"><span class="costIn"><span>₹</span>'+
+  return '<td class="hide" data-l="Cost"><span class="costIn"><span>'+moneySymbol()+'</span>'+
     '<input type="number" min="0" value="'+(p.cost==null?'':p.cost)+'" placeholder="?" '+
     'onchange="setCost(\''+p.id+'\',this.value)"></span></td>';
 }
@@ -2159,7 +2185,7 @@ function applyWhy(){
   var scopeOk = S.scope==='cat' ? !!S.catId : !!(S.itemIds && S.itemIds.length);
   if(!scopeOk) return 'Choose what it applies to first.';
   var val = S.goal==='percent' ? num(S.pctOff) : num(S.rsOff);
-  if(val<=0) return S.goal==='percent' ? 'Take off more than zero.' : 'Take off more than ₹0.';
+  if(val<=0) return S.goal==='percent' ? 'Take off more than zero.' : 'Take off more than '+moneySymbol()+'0.';
   return '';
 }
 function renderS2(){
@@ -2245,7 +2271,7 @@ function cfgHTML(){
     case 'amount':
       return scopeRow()+'<div class="pair">'+
         '<div class="box"><div class="boxhd"><span class="t">Take off each</span></div>'+
-          '<span class="numf"><span class="u">₹</span><input type="text" inputmode="decimal" min="0" value="'+esc(S.rsOff==null?'':String(S.rsOff))+'" data-key="rsOff" oninput="edit(\'rsOff\',this.value)"></span>'+
+          '<span class="numf"><span class="u">'+moneySymbol()+'</span><input type="text" inputmode="decimal" min="0" value="'+esc(S.rsOff==null?'':String(S.rsOff))+'" data-key="rsOff" oninput="edit(\'rsOff\',this.value)"></span>'+
           '<div class="hint">A different percentage on each item.</div></div>'+
         loyBoxHTML()+'</div>';
     case 'qty':
@@ -2255,7 +2281,7 @@ function cfgHTML(){
     case 'free':
       var h='<span class="lbl">Which shape?</span><div class="shapes">'+SHAPES.map(function(s){
         return '<button class="shape '+(S.freeShape===s.id?'on':'')+'" onclick="setShape(\''+s.id+'\')">'+
-          '<b>'+s.n+'</b><span>'+s.ex+'</span></button>';}).join('')+'</div>';
+          '<b>'+s.n+'</b><span>'+inShopMoney(s.ex)+'</span></button>';}).join('')+'</div>';
       if(S.freeShape==='anything')
         h+='<div class="two" style="margin-top:12px"><div class="f"><span class="lbl">What is free</span>'+
           selectOf(prodOpts(P),S.giftId,'setGift')+
@@ -2284,26 +2310,26 @@ function cfgHTML(){
         '<div class="f"><span class="lbl">and this</span>'+
         selectOf(prodOpts(P),S.bunB,'setB')+'</div></div>'+
         '<div class="f" style="max-width:280px"><span class="lbl">together cost</span>'+
-        '<div class="inp"><span>₹</span><input type="text" inputmode="decimal" min="0" value="'+esc(S.bunPrice==null?'':String(S.bunPrice))+'" data-key="bunPrice" oninput="edit(\'bunPrice\',this.value)"></div></div>';
+        '<div class="inp"><span>'+moneySymbol()+'</span><input type="text" inputmode="decimal" min="0" value="'+esc(S.bunPrice==null?'':String(S.bunPrice))+'" data-key="bunPrice" oninput="edit(\'bunPrice\',this.value)"></div></div>';
     case 'spend':
       return '<div class="two"><div class="f"><span class="lbl">Bill must reach</span>'+
-        '<div class="inp"><span>₹</span><input type="text" inputmode="decimal" min="0" value="'+esc(S.spendAt==null?'':String(S.spendAt))+'" data-key="spendAt" oninput="edit(\'spendAt\',this.value)"></div></div>'+
+        '<div class="inp"><span>'+moneySymbol()+'</span><input type="text" inputmode="decimal" min="0" value="'+esc(S.spendAt==null?'':String(S.spendAt))+'" data-key="spendAt" oninput="edit(\'spendAt\',this.value)"></div></div>'+
         '<div class="f"><span class="lbl">Then give back</span>'+
-        '<div class="inp"><span>₹</span><input type="text" inputmode="decimal" min="0" value="'+esc(S.spendVal==null?'':String(S.spendVal))+'" data-key="spendVal" oninput="edit(\'spendVal\',this.value)"></div></div></div>';
+        '<div class="inp"><span>'+moneySymbol()+'</span><input type="text" inputmode="decimal" min="0" value="'+esc(S.spendVal==null?'':String(S.spendVal))+'" data-key="spendVal" oninput="edit(\'spendVal\',this.value)"></div></div></div>';
     case 'ship':
       return '<div class="two"><div class="f"><span class="lbl">A delivery costs you</span>'+
-        '<div class="inp"><span>₹</span><input type="text" inputmode="decimal" min="0" value="'+esc(S.shipCost==null?'':String(S.shipCost))+'" data-key="shipCost" oninput="edit(\'shipCost\',this.value)"><span>a drop</span></div>'+
+        '<div class="inp"><span>'+moneySymbol()+'</span><input type="text" inputmode="decimal" min="0" value="'+esc(S.shipCost==null?'':String(S.shipCost))+'" data-key="shipCost" oninput="edit(\'shipCost\',this.value)"><span>a drop</span></div>'+
         '<div class="hint">Your average, per drop.</div>'+
         '<div class="f"><span class="lbl">Free above</span>'+
-        '<div class="inp"><span>₹</span><input type="text" inputmode="decimal" min="0" value="'+esc(S.shipAt==null?'':String(S.shipAt))+'" data-key="shipAt" oninput="edit(\'shipAt\',this.value)"></div></div></div>'+
+        '<div class="inp"><span>'+moneySymbol()+'</span><input type="text" inputmode="decimal" min="0" value="'+esc(S.shipAt==null?'':String(S.shipAt))+'" data-key="shipAt" oninput="edit(\'shipAt\',this.value)"></div></div></div>'+
         '<div class="f" style="max-width:280px"><span class="lbl">They still pay</span>'+
-        '<div class="inp"><span>₹</span><input type="text" inputmode="decimal" min="0" value="'+esc(S.shipCharge==null?'':String(S.shipCharge))+'" data-key="shipCharge" oninput="edit(\'shipCharge\',this.value)"></div>'+
+        '<div class="inp"><span>'+moneySymbol()+'</span><input type="text" inputmode="decimal" min="0" value="'+esc(S.shipCharge==null?'':String(S.shipCharge))+'" data-key="shipCharge" oninput="edit(\'shipCharge\',this.value)"></div>'+
         '<div class="hint">Zero means free.</div></div>';
     case 'band':
       return '<div class="two"><div class="f"><span class="lbl">Smallest bill allowed</span>'+
-        '<div class="inp"><span>₹</span><input type="text" inputmode="decimal" min="0" value="'+esc(S.bandLo==null?'':String(S.bandLo))+'" data-key="bandLo" oninput="edit(\'bandLo\',this.value)"></div></div>'+
+        '<div class="inp"><span>'+moneySymbol()+'</span><input type="text" inputmode="decimal" min="0" value="'+esc(S.bandLo==null?'':String(S.bandLo))+'" data-key="bandLo" oninput="edit(\'bandLo\',this.value)"></div></div>'+
         '<div class="f"><span class="lbl">Largest</span>'+
-        '<div class="inp"><span>₹</span><input type="text" inputmode="decimal" min="0" value="'+esc(S.bandHi==null?'':String(S.bandHi))+'" data-key="bandHi" oninput="edit(\'bandHi\',this.value)"></div></div></div>';
+        '<div class="inp"><span>'+moneySymbol()+'</span><input type="text" inputmode="decimal" min="0" value="'+esc(S.bandHi==null?'':String(S.bandHi))+'" data-key="bandHi" oninput="edit(\'bandHi\',this.value)"></div></div></div>';
   }
   return '';
 }
@@ -2505,7 +2531,7 @@ function outGift(){
   var g=byId(S.giftId); if(!g) return '';
   var am=avgM(), bills=(S.bills||[]).map(num);
   var heads=bills.map(function(b,i){
-    return ['<span class="inp" style="width:104px;height:31px"><span>₹</span>'+
+    return ['<span class="inp" style="width:104px;height:31px"><span>'+moneySymbol()+'</span>'+
       '<input type="number" min="1" value="'+b+'" onchange="setBill('+i+',this.value)"></span>','',false];});
   var rows=[
     ['Price of '+esc(g.name), bills.map(function(){return M0(g.price);})],
@@ -3379,7 +3405,7 @@ function renderS3(){
 /* ═══ SHELL ═══════════════════════════════════════════════════════════ */
 function render(){
   var B=BIZ[S.biz];
-  document.getElementById('bizName').textContent=B.name;
+  document.getElementById('bizName').textContent=bizTitle(B);
   /* ⚠️⚠️ THE SAMPLE SWITCHER IS GONE (Athi: "there is a Sri button appearing... we have to speak about the
      shop only"). "Sri Sai Pharma Distributors" sat one tap from the real shop's own name. HOTEL stays as the
      one thing the page boots with before a sign-in or an import replaces it; PHARMA (var PHARMA above) and
@@ -3404,7 +3430,7 @@ function render(){
 
   document.getElementById('strip').innerHTML = S.step===0?'' :
     '<div class="strip">Margin <b>'+num(S.margin)+'%</b><span>·</span>'+
-    (S.round==='0'?'exact':S.round==='1'?'whole ₹':'ends '+(S.round==='5'?'0 or 5':'0'))+
+    (S.round==='0'?'exact':S.round==='1'?inShopMoney('whole ₹'):'ends '+(S.round==='5'?'0 or 5':'0'))+
     '<span>·</span>loyalty '+(S.custOn?'up to <b>'+num(S.cap)+'%</b>':'off')+
     '<button onclick="labStep(0)">Change</button></div>';
 
@@ -3433,7 +3459,7 @@ if(LAB_MODE==='combo'){ document.title='Combo Lab'; openModLab(); }   /* the bar
  * now too. Neither blocks the first paint — the samples are already on screen the instant this loads. */
 labPaintQueue();
 labDrainOutbox();
-if (savedLive()) labUseMine(true);
+if (savedLive()) { loadShopMoney(); labUseMine(true); }
 /**
  * ⚠️ [found live, 2026-09-26] "it says saved offers 0, but there are quite a number of saved offers" —
  * loadSaved() was only ever called AFTER landing on step 3 (labStep(3)'s own trigger) or after a save/status

@@ -113,7 +113,9 @@ function mountShell(){
     /* ⭐ M14: THE FRONT DOOR. Signed out, the shell's own slot holds the one sign-in window (CBSignin.mount — the same module CB Accounts,
        CB CRM and the till mount); signed in → the Home repaints. The avatar's Sign in door brings the person to the box. */
     signin: { surface: 'index', need: 'person', registerHref: '/settings.html#/new', /* FX-UX2 (SET3): New shop is CB Settings' section — the same register form, never the workshop; the M37 P0 door is closed */ onIn: function(){ SESS = session(); MINE = SESS ? CBOnePerson.who(SESS) : null; open_(); } },
-    avatar: { onSignIn: signinOpen }
+    avatar: { onSignIn: signinOpen,
+      /* WALK-REG 2026-10-16 R1: the server says this shop is gone (404/401 on the /me read) -> the avatar clears the saved session and the sign-in shows, with one line */
+      onGone: function(){ signedOut(typeof tx === 'function' ? tx('This account is no longer here — sign in again') : 'This account is no longer here — sign in again'); } }
   });
   /* Home's slot: the rail widget (signed in) above the ROADMAP, which is for everyone, signed in or not, and reads no shop's figure */
   var home = SHELL.slots.home;

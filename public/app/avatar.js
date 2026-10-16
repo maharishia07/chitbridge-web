@@ -262,7 +262,12 @@
     if (!base || !tok || !root.fetch) return;
     try {
       root.fetch(base + '/api/entities/me', { cache: 'no-store', headers: { Authorization: 'Bearer ' + tok } })
-        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (r) {
+          /* WALK-REG 2026-10-16 R1: ONLY the server's definite "no such identity" (404/401) ends the local session; a network failure or 5xx
+             leaves it (the counter works offline). The page that asked (o.onGone) says why and shows the sign-in. */
+          if ((r.status === 404 || r.status === 401) && typeof o.onGone === 'function') { forget(); o.onGone(r.status); return null; }
+          return r.ok ? r.json() : null;
+        })
         .then(function (j) {
           if (!j) return;
           var d = (j && j.data) || j, e = (d && d.entity) || d || {};
@@ -475,15 +480,19 @@
   function repaint() { if (M) paint(); }
   function close() { if (!openNow) return; openNow = false; paint(); }
 
-  function signOut() {
-    var o = (M && M.o) || {};
-    openNow = false;
-    if (typeof o.onSignOut === 'function') return o.onSignOut();
-    /* the app's sign-out (logoutNow) for a page that has no app behind it: the session and the per-person nav memory go; every other tab hears cb_sess go */
+  /** the session and the per-person nav memory go; every other tab hears cb_sess go */
+  function forget() {
     try {
       root.localStorage.removeItem('cb_sess');
       Object.keys(root.localStorage).filter(function (k) { return /^cb_nav(@|$)/.test(k); }).forEach(function (k) { root.localStorage.removeItem(k); });
     } catch (_) {}
+  }
+  function signOut() {
+    var o = (M && M.o) || {};
+    openNow = false;
+    if (typeof o.onSignOut === 'function') return o.onSignOut();
+    /* the app's sign-out (logoutNow) for a page that has no app behind it */
+    forget();
     root.location.href = o.signInHref || '/';
   }
 

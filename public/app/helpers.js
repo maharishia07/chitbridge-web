@@ -2,7 +2,11 @@
  * Classic script, shared global scope. Loaded by /app.html AFTER core.js and BEFORE the main inline
  * script, so every panel can call these. HARD RULE for this file: pure leaves only — nothing here may
  * reference app state (UI/SESSION/STORE/…) or DOM at load time. Panel-specific mappers/renderers stay
- * in their panel module. Extracted verbatim from app.html (behaviour unchanged). */
+ * in their panel module. Extracted verbatim from app.html (behaviour unchanged).
+ *
+ * OWNS  the generic leaves: esc · opt · money and date formatters · month words
+ * FLOW  loaded after core.js → every panel and small app calls these pure functions      CARD 29-qa-test-tooling-ux-locale-and-design-system/helpers
+ */
 
 function deepClone(x){ return JSON.parse(JSON.stringify(x)); }
 
@@ -157,9 +161,15 @@ function fmtMoney(amount,code,empty){
 }
 /* ⭐ T2-WEBPRIMS: THE TWELVE MONTH WORDS in the reader's language (CBLocale's own date words) — 'short' Jan… · 'long' January…. Three files typed
    their own English Jan…Dec; a list built here follows the reader. Index 0 = January; a fiscal year rotates it at the caller. */
+/* month WORDS in the screen's language (WALK-REG R49, 16 Oct: a UAE shop read Arabic months on an English screen) — the ORDER of a date is the
+   country's; the WORD is the reader's. One helper: Country setup, Books, Returns, Register all read it. */
 function monthNames(form){
-  var out = [];
-  for (var i = 0; i < 12; i++) out.push(CBLocale.date(Date.UTC(2000, i, 15, 12), { month: form === 'long' ? 'long' : 'short', timeZone: 'UTC' }));
+  var out = [], tag = 'en';
+  try { tag = (window.CBLocale && CBLocale.lang && CBLocale.lang()) || 'en'; } catch (failure) { if (window.cbQuiet) window.cbQuiet('helpers:monthNames', failure); /* the language reader is missing: English words, still correct */ }
+  for (var i = 0; i < 12; i++) {
+    try { out.push(new Intl.DateTimeFormat(tag, { month: form === 'long' ? 'long' : 'short', timeZone: 'UTC' }).format(Date.UTC(2000, i, 15, 12))); }
+    catch (failure) { if (window.cbQuiet) window.cbQuiet('helpers:monthNames', failure); out.push(CBLocale.date(Date.UTC(2000, i, 15, 12), { month: form === 'long' ? 'long' : 'short', timeZone: 'UTC' })); }
+  }
   return out;
 }
 
