@@ -42,7 +42,7 @@ const walk = async (w) => {
     }
     return { ok: !leaks.length, saw: leaks.length ? 'LEAK ' + leaks.join(' · ') : all.length + ' countries clean' };
   });
-  await w.step('P3', 'the tax-ID box: the pack\'s own example passes, "x" is refused in its words (or "checked on save" where the pack carries no check)', async () => {
+  await w.step('P3', 'the tax-ID box refuses "x" with the pack\'s own check (or says "checked on save" where the pack carries no check)', async () => {
     const out = [];
     for (const c of all) {
       await page.click('[data-testid="cp-pick-' + c.id + '"]'); await page.waitForTimeout(100);

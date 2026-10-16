@@ -80,7 +80,7 @@
     var kinds = (pack.tax && pack.tax.supplyKinds) || {}, names = Object.keys(kinds);
     if (!names.length) return '';
     return '<table class="grid cp-kinds"><thead><tr><th>Supply</th><th class="r">Rate</th><th>Input credit</th></tr></thead><tbody>' + names.map(function (name) {
-      var kind = kinds[name]; return '<tr title="' + safe(kind.why || '') + '"><td>' + safe(kind.name || name) + '</td><td class="r">' + safe(kind.rate) + '%</td><td>' + (kind.credit ? '✓' : '—') + '</td></tr>';
+      var kind = kinds[name]; return '<tr title="' + safe(kind.why || '') + '"><td>' + safe(kind.name || name) + '</td><td class="r">' + (kind.rate == null ? 'your rate' : safe(kind.rate) + '%') + '</td><td>' + (kind.credit ? '✓' : '—') + '</td></tr>';
     }).join('') + '</tbody></table>';
   }
   /** the standard rate, or how many state rates a country without one carries; null when neither */
@@ -89,12 +89,12 @@
     return taxRules.stateRates ? safe(Object.keys(taxRules.stateRates).length + ' state rates') : null;
   }
   /** one rate country-wide, or split by state; null when the pack does not say */
-  function oneRateText(taxRules) { return { state: 'No — split by state', border: 'Yes' }[taxRules.supply] || null; }
+  function oneRateText(taxRules) { return taxRules.stateRates ? 'No — set by each state' : ({ state: 'No — split by state', border: 'Yes' }[taxRules.supply] || null); }
   /** tax: name, rates, one rate or by state, input credit, the registration threshold, the supply kinds */
   function taxCard(pack) {
     var taxRules = pack.tax || {}, registration = taxRules.registration || {}, credit = creditOf(pack);
     var rates = (taxRules.rates || []).map(function (rate) { return rate + '%'; });
-    return cardHTML('Tax', rowHTML('Name', safe(taxRules.scheme || (pack.words && pack.words.taxName))) + rowHTML('Rates', chips(rates))
+    return cardHTML('Tax', rowHTML('Name', safe((pack.words && pack.words.taxName) || taxRules.scheme)) + rowHTML('Rates', chips(rates))
       + rowHTML('Standard rate', standardRateText(taxRules)) + rowHTML('One rate country-wide', oneRateText(taxRules)) + rowHTML('Input tax', credit ? safe(credit) : null)
       + rowHTML('Must register above', registration.mandatory_minor != null ? safe(minorMoney(pack, registration.mandatory_minor)) : null, registration.cite)
       + kindsTable(pack), 'tax');
