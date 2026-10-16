@@ -37,9 +37,10 @@
 
   /* the slip */
   .slip { background:var(--paper); margin:18px auto; padding:4mm 3mm 10mm; }
+  .slip { width:72mm; font-size:12px; line-height:1.35; }
   body[data-w="80"] .slip { width:72mm; }
   body[data-w="58"] .slip { width:48mm; font-size:11px; }
-  .slip { width:72mm; font-size:12px; line-height:1.35; }
+  body[data-w="a4"] .slip { width:186mm; max-width:100%; font-size:13px; }   /* R26: the chosen paper, A4 too */
 
   .c { text-align:center; }
   .r { text-align:right; }
@@ -77,6 +78,7 @@
     <select id="w" onchange="setW(this.value)">
       <option value="80">80&nbsp;mm (3")</option>
       <option value="58">58&nbsp;mm (2")</option>
+      <option value="a4">A4</option>
     </select>
   </label>
   <label>Bill
@@ -87,13 +89,15 @@
     </select>
   </label>
   <button onclick="window.print()">Print</button>
-  <span class="hint">Printer settings: paper = the roll (80mm/58mm), margins = none, scale = 100%, headers and footers = off.</span>
+  <span class="hint" title="Paper = the roll (80mm/58mm) · margins none · scale 100% · headers and footers off" style="cursor:help">Printer settings ⓘ</span>
 </div>
 
 <div class="slip" id="slip"></div>
 
 <script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <script src="/engine/locale.js"></script>   <!-- CBLocale: the rupee written the rupee's way, as on the till's slip -->
+<script src="/engine/tax.js"></script>      <!-- CBTax.splitLineTax: each line's heads, the ONE place tax is worked out (R12: never halved here) · CBRegulation: the pack's tenders -->
+<script src="/engine/profilemap.js"></script> <!-- CBProfileMap: India's state from the GSTIN's first two digits (R25) -->
 <script>
 /* ── the bill, as data. The till will hand the same shape to this template. ─────────────────────────────────── */
 var SHOP = {
@@ -115,29 +119,42 @@ var BILL = {
     { name: 'Grapes',            hsn: '0806', qty: 2,   unit: 'kg',    price: 200, rate: 0  },
     { name: 'Cooking oil 1L',    hsn: '1512', qty: 1,   unit: 'litre', price: 250, rate: 5  },
     { name: 'Vegetables (mixed)',hsn: '0709', qty: 1.5, unit: 'kg',    price: 100, rate: 0  },
-    { name: 'Dish wash bar',     hsn: '3401', qty: 3,   unit: 'piece', price: 30,  rate: 18, off: 10 }   /* off = % off this line */
+    { name: 'Dish wash bar',     hsn: '3401', qty: 3,   unit: 'piece', price: 30,  rate: 5, off: 10 }    /* off = % off this line · soap 5 % from 22-09-2025 */
   ],
-  /* 881.00 due: half in cash, the rest on UPI — a split payment, which every counter takes and no slip should hide */
+  /* 881.00 due: half in cash, the rest on UPI (a card where the pack has no UPI — R47) — a split payment, which every counter takes and no slip should hide */
   paid: [ { how: 'Cash', amount: 500 }, { how: 'UPI', amount: 381 } ]
 };
+BILL.lines.forEach(function (line) { line.sample_rate = line.rate; });   /* the sample's own rate, kept so a pack's rate menu can be checked against it */
+/** R47: the second tender in the pack's own words — UPI where the pack takes UPI (chart.paymentModes), a card everywhere else */
+function tenderFor(country){
+  var pack = null;
+  try { pack = country && window.CBRegulation ? CBRegulation.packFor(country) : null; } catch (failure) { pack = null; }
+  return (!pack || (pack.chart && pack.chart.paymentModes && pack.chart.paymentModes.upi)) ? 'UPI' : 'Card';
+}
 
 /* ── money ─────────────────────────────────────────────────────────────────────────────────────────────────── */
 function r2(n){ return Math.round((Number(n)||0)*100)/100; }
+/** R12: each line's tax is the tax engine's (CBTax.splitLineTax — the shelf price INCLUDES the tax, as in every Indian shop): its heads (CGST and
+    SGST each at half the rate on the same base, or one GST/VAT head) and their sum. The slip only ADDS those heads up; it never halves a total. */
+function lineTax(net, rate, split){
+  if (!rate) return { assessable: net, tax: 0, heads: { cgst: 0, sgst: 0, igst: 0, vat: 0 } };
+  var answer = CBTax.splitLineTax({ net: net, rate: rate, priceIncludesTax: true, supply: split ? 'intra' : 'domestic', split: split });
+  return { assessable: answer.assessable, tax: answer.tax, heads: answer.heads };
+}
 function calc(kind){
-  var taxed = kind === 'tax';
+  var taxed = kind === 'tax', split = !!taxWords().split;
   var lines = BILL.lines.map(function(l){
     var gross = r2(l.price * l.qty);
     var save  = r2(gross * (l.off || 0) / 100);
     var net   = r2(gross - save);
-    /* on a tax invoice the shelf price INCLUDES GST, as it does in every Indian shop: the slip shows the split, not an addition */
     var rate  = taxed ? (l.rate || 0) : 0;
-    var base  = taxed ? r2(net * 100 / (100 + rate)) : net;
-    var tax   = r2(net - base);
-    return Object.assign({}, l, { gross: gross, save: save, net: net, base: base, tax: tax, rate: rate });
+    var t     = lineTax(net, rate, split);
+    return Object.assign({}, l, { gross: gross, save: save, net: net, base: t.assessable, tax: t.tax, heads: t.heads, rate: rate });
   });
   var sum = function(k){ return r2(lines.reduce(function(a,l){ return a + l[k]; }, 0)); };
   var byRate = {};
-  lines.forEach(function(l){ if(!l.rate) return; var k = String(l.rate); byRate[k] = byRate[k] || { base:0, tax:0 }; byRate[k].base = r2(byRate[k].base + l.base); byRate[k].tax = r2(byRate[k].tax + l.tax); });
+  lines.forEach(function(l){ if(!l.rate) return; var k = String(l.rate), h = byRate[k] = byRate[k] || { base:0, tax:0, cgst:0, sgst:0 };
+    h.base = r2(h.base + l.base); h.tax = r2(h.tax + l.tax); h.cgst = r2(h.cgst + l.heads.cgst); h.sgst = r2(h.sgst + l.heads.sgst); });
   return { lines: lines, gross: sum('gross'), save: sum('save'), net: sum('net'), base: sum('base'), tax: sum('tax'), byRate: byRate };
 }
 
@@ -151,9 +168,14 @@ function onPreviewMessage(event){
   var message = event.data; if (!message || !message.cb_preview) return;
   signature = message;
   if (message.currency) BILL.currency = message.currency;
-  if (message.tax && message.tax.rate) BILL.lines.forEach(function (line) { if (line.rate) line.rate = Number(message.tax.rate) || line.rate; });   /* the pack's standard rate on the taxed sample lines */
+  /* R47: a taxed sample line keeps its own rate when the pack's menu has it (India's 5 %), else takes the pack's standard rate (AU 10 %, AE 5 %) */
+  var menu = (message.tax && message.tax.rates) ? message.tax.rates.map(Number) : null;
+  if (message.tax && message.tax.rate) BILL.lines.forEach(function (line) { if (!line.sample_rate) return;
+    line.rate = (menu && menu.indexOf(line.sample_rate) >= 0) ? line.sample_rate : (Number(message.tax.rate) || line.sample_rate); });
+  BILL.paid[1].how = tenderFor(message.country);
   var kindBox = document.getElementById('kind'); if (kindBox && message.kind) kindBox.value = message.kind;
-  setW(message.paper === 'a4' ? '80' : (message.paper || '80'));
+  var paperBox = document.getElementById('w'); if (paperBox && message.paper) paperBox.value = message.paper;
+  setW(message.paper || '80');
 }
 window.addEventListener('message', onPreviewMessage);
 /** one signature head line as the slip draws it: the shop's logo, a big line or a small one (a tax-id-only line is dropped on an untaxed bill) */
@@ -168,6 +190,12 @@ function headHTML(showTaxId){
     + '<div class="c small">' + esc(SHOP.line1) + '</div>' + '<div class="c small">' + esc(SHOP.line2) + '</div>'
     + '<div class="c small">Ph ' + esc(SHOP.phone) + '</div>' + (showTaxId ? '<div class="c small">' + esc(SHOP.tax_id_word) + ' ' + esc(SHOP.gstin) + '</div>' : '');
   return signature.head.map(function (line) { return headLineHTML(line, showTaxId); }).join('');
+}
+/** R25: India's tax invoice names the supplier's state — "Maharashtra (27)" from the GSTIN's first two digits (CBProfileMap's table); '' elsewhere */
+function stateLine(){
+  if (!taxWords().split || !window.CBProfileMap) return '';
+  var id = signature ? signature.tax_id : SHOP.gstin, code = CBProfileMap.stateOfGstin(id), name = code && CBProfileMap.STATE_NAMES[code];
+  return name ? '<div class="c small" data-testid="slip-state">State: ' + esc(name) + ' (' + esc(code) + ')</div>' : '';
 }
 /** the tax words: the pack's (a preview says GST · VAT, split by state or one line, the id's word); India's words otherwise */
 function taxWords(){ return (signature && signature.tax) || { word: 'GST', split: true, rate: 18, id_word: SHOP.tax_id_word }; }
@@ -187,6 +215,7 @@ function render(){
   var head = headHTML(showGstin)
     + '<div class="solid"></div>'
     + '<div class="c b">' + title + '</div>'
+    + (kind === 'tax' ? stateLine() : '')
     + '<div class="rule"></div>'
     + '<div class="row small"><span class="l">No ' + esc(BILL.no) + '</span><span class="v">' + esc(when(BILL.at)) + '</span></div>'
     + '<div class="row small"><span class="l">' + esc(BILL.till) + ' · ' + esc(BILL.by) + '</span><span class="v">' + esc(BILL.customer.name) + '</span></div>'
@@ -208,10 +237,11 @@ function render(){
     + (kind === 'tax'
         ? '<div class="row"><span class="l">Taxable</span><span class="v">' + fmtMoney(m.base, BILL.currency) + '</span></div>'
           + Object.keys(m.byRate).sort(function(a,b){ return a-b; }).map(function(k){
-              var h = m.byRate[k], half = r2(h.tax / 2), words = taxWords();
+              var h = m.byRate[k], words = taxWords();
               if (!words.split) return '<div class="row small"><span class="l">' + esc(words.word) + ' ' + k + '% </span><span class="v">' + fmtMoney(h.tax, BILL.currency) + '</span></div>';   /* AU · AE: one line, the pack's rate */
-              return '<div class="row small"><span class="l">CGST ' + (k/2) + '% </span><span class="v">' + fmtMoney(half, BILL.currency) + '</span></div>'
-                   + '<div class="row small"><span class="l">SGST ' + (k/2) + '% </span><span class="v">' + fmtMoney(half, BILL.currency) + '</span></div>';
+              /* R12: the engine's per-line heads, summed — CGST + SGST is the total by construction */
+              return '<div class="row small"><span class="l">CGST ' + (k/2) + '% </span><span class="v">' + fmtMoney(h.cgst, BILL.currency) + '</span></div>'
+                   + '<div class="row small"><span class="l">SGST ' + (k/2) + '% </span><span class="v">' + fmtMoney(h.sgst, BILL.currency) + '</span></div>';
             }).join('')
           + '<div class="row"><span class="l">Total ' + esc(taxWords().word) + '</span><span class="v">' + fmtMoney(m.tax, BILL.currency) + '</span></div>'
         : '')
@@ -230,17 +260,23 @@ function render(){
 
   var foot = '<div class="rule"></div>'
     + (kind === 'supply' ? '<div class="c small">Composition taxable person.<br>Not eligible to collect tax on supplies.</div><div class="rule"></div>' : '')
-    + '<div class="c small" data-testid="slip-footer">' + esc(signature && signature.footer ? signature.footer : 'Thank you · visit again') + '</div>'
+    + footerHTML()
     + '<div class="c small">Billed on ChitBridge</div>'
     + '<div style="height:10mm"></div>';   /* the cutter takes the last line otherwise */
 
   document.getElementById('slip').innerHTML = head + items + totals + hsn + foot;
 }
+/** R25: the footer — the shop's ticked line, nothing when it is unticked (a preview); the sample's own on the print test */
+function footerHTML(){
+  var words = signature ? (signature.footer || '') : 'Thank you · visit again';
+  return words ? '<div class="c small" data-testid="slip-footer">' + esc(words) + '</div>' : '';
+}
+/** the paper: the slip's width and the one @page rule (a roll is its width × whatever the bill needs; A4 is A4) */
 function setW(w){
   document.body.setAttribute('data-w', w);
-  var mm = (w === '58') ? '48mm' : '72mm';
+  var page = w === 'a4' ? '@page { size: A4; margin: 12mm; }' : '@page { size: ' + (w === '58' ? '48mm' : '72mm') + ' auto; margin: 0; }';
   var st = document.getElementById('pagesize') || (function(){ var e = document.createElement('style'); e.id = 'pagesize'; document.head.appendChild(e); return e; })();
-  st.textContent = '@page { size: ' + mm + ' auto; margin: 0; }';
+  st.textContent = page;
   render();
 }
 setW('80');

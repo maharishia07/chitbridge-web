@@ -59,6 +59,9 @@ button{font-family:inherit;cursor:pointer}
 @keyframes sp{to{transform:rotate(360deg)}}
 /* T3-SETTINGS — the four list sections (app/cap-settings.js): CBList draws every list; these are the bars above them and the row's next level */
 #set.wide{max-width:1000px}
+/* R6 (WALK-REG 2026-10-16): New shop is a centred card, not a column pinned top-left */
+#set.reg{max-width:520px;margin:0 auto}
+#set.reg .cs{background:var(--card,#fffdf8);color:var(--on-card,#2a2418);border:1px solid var(--line,#e6dcc6);border-radius:15px;padding:18px 19px}
 #set.wide > *{flex-shrink:0}   /* #set is a fixed-height scroller: a list keeps its own height (its rows scroll inside it), never squeezed under the next bar */
 .sx-h{margin:0;font-family:var(--serif);font-size:21px;font-weight:700;color:var(--ink,#2a2418)}
 .sx-h2{margin:18px 0 0;font-family:var(--serif);font-size:18px;font-weight:700;color:var(--ink,#2a2418)}
@@ -147,11 +150,11 @@ function go(){ if (window.CBFrame) CBFrame.ended(); }   /* api()'s 401 → drop 
   /* SET-WALK1 · W28(a): Country setup is the FIRST Settings screen (and the landing one) — money, year, tax, time zone before anything else */
   var SECTIONS = [
     { k: 'country', label: 'Country',   icon: 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18' },
-    { k: 'shop',    label: 'Your shop', icon: 'M3 10l9-6 9 6M5 10v10h14V10M9 20v-6h6v6' },
+    { k: 'shop',    label: 'Your business', icon: 'M3 10l9-6 9 6M5 10v10h14V10M9 20v-6h6v6' },
     /* W27: what prints on the bill — the bill's signature, previewed live by the one renderer (app/cap-print.js) */
     { k: 'print',   label: 'Print setup', icon: 'M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v7H6z' },
     /* T3-SETTINGS: the workshop's Integrations, Business rules and Usage, as CBList sections (app/cap-settings.js) */
-    { k: 'counters',   label: 'Counters & keys', icon: 'M8 15a4 4 0 1 1 3.9-5H21v3h-2v2h-3v-2h-4.1A4 4 0 0 1 8 15' },
+    { k: 'counters',   label: 'Counters', icon: 'M8 15a4 4 0 1 1 3.9-5H21v3h-2v2h-3v-2h-4.1A4 4 0 0 1 8 15' },
     { k: 'connectors', label: 'Connectors',      icon: 'M4 8h14l-3-3M20 16H6l3 3' },
     { k: 'policy',     label: 'Policy',          icon: 'M5 21V4h12l-2 4 2 4H5' },
     { k: 'plan',       label: 'Plan & usage',    icon: 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18M12 7v5l3 3' },
@@ -192,6 +195,7 @@ function go(){ if (window.CBFrame) CBFrame.ended(); }   /* api()'s 401 → drop 
     if (location.hash !== '#/' + section) setAddress(section);
     host.innerHTML = '';
     host.classList.toggle('wide', CBSettings.SECTIONS.indexOf(section) >= 0 || section === 'print');
+    host.classList.toggle('reg', section === 'new');
     if (section === 'new') CBRegistration.mount(host, registered);
     else if (CBSettings.SECTIONS.indexOf(section) >= 0) CBSettings.mount(host, section);
     else if (section === 'country') CBCountry.mount(host, function () { location.hash = '#/shop'; });
@@ -203,7 +207,13 @@ function go(){ if (window.CBFrame) CBFrame.ended(); }   /* api()'s 401 → drop 
       sections: SECTIONS, active: secOf(), onSection: paint } });
   if (isNew) return paint('new');
   var sess = frame.session;
-  if (!sess || !sess.token) { host.innerHTML = '<div class="empty" data-testid="set-signin"><div class="t">Sign in above</div></div>'; return; }
+  /* Athi 16 Oct ("sign in above … not properly aligned"): the shell's one sign-in window is the screen — no second "Sign in above" beside it.
+     Only when no window was drawn (signin-ui.js not loaded) does the pane say it, centred. */
+  if (!sess || !sess.token) {
+    if (document.querySelector('[data-testid="signin-window"]')) { host.innerHTML = ''; host.style.display = 'none'; }
+    else host.innerHTML = '<div class="empty" data-testid="set-signin" style="margin:0 auto;width:100%;max-width:420px"><div class="t">' + (window.tx ? tx('Sign in above') : 'Sign in above') + '</div></div>';
+    return;
+  }
   var me = CBOnePerson.who(sess);
   SESSION = { token: sess.token, role: sess.role, name: sess.name, entity: sess.entity, bridgeId: sess.bridgeId, entityId: me && me.ent, actorId: sess.role === 'actor' ? (me && me.uid) : null,
     jti: sess.jti || null, device_id: sess.device_id || null, surface: sess.surface || null, exp: sess.exp || null };   /* W18: this device's own sign-in, painted when the server's list is older than it */

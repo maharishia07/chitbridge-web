@@ -120,26 +120,28 @@ var VAULT_HINT = { gstin:'15 characters', pan:'10 characters', ifsc:'11 characte
    renders the eleven ICC rules, one tagged `mode` renders the transport modes. Free-naming did not cost us the
    controlled vocabulary where a controlled vocabulary is right — it just stopped being mandatory everywhere. */
 var VAULT_ENUM = { incoterm:INCOTERMS, mode:SHIP_MODES };
+/** R21 (walk 2026-10-16): the identity as a LOCAL shop sees it — its rows and Save only; no section label, no + add detail, no ×, no section
+    title. The export / authority controls return when the shop opts into export (no such flag exists yet, so Your shop is always plain). */
+function vaultPlain(){ return !!UI._vaultOnly; }
 function vaultCardHTML(vault, encrypted){
   vault=vault||{};
   // F1 — honest at-rest signal. Encrypted (AES-256-GCM, key never in DB) → safe for real data; not configured → dummy only.
   var encBanner = encrypted
-    ? '<div style="font-size:var(--fs-1);color:var(--ok-2);background:var(--ok-tint);border:1px solid var(--ok-3,#bfe3cb);border-radius:9px;padding:7px 10px;margin:6px 0 2px">🔒 <b>' + tx('Encrypted at rest') + '</b> — stored ciphertext-only (a database dump can\'t read it). Safe for real banking &amp; tax details.</div>'
-    : '<div style="font-size:var(--fs-1);color:var(--warn-2);background:var(--warn-tint);border:1px solid var(--gold-line,#f0dcae);border-radius:9px;padding:7px 10px;margin:6px 0 2px">⚠ <b>' + tx('Encryption not configured') + '</b> — the vault won\'t save until the platform sets its encryption key. ' + txf('Use {dummy} for now.', { dummy: '<b>' + tx('dummy data only') + '</b>' }) + '</div>';
+    ? '<div style="font-size:var(--fs-1);color:var(--ok-2);background:var(--ok-tint);border:1px solid var(--ok-3,#bfe3cb);border-radius:9px;padding:7px 10px;margin:6px 0 2px">🔒 <b>' + tx('Encrypted at rest') + '</b> <span title="' + esc(tx('Only ciphertext is stored. Safe for real bank and tax details.')) + '" style="cursor:help">ⓘ</span></div>'
+    : '<div style="font-size:var(--fs-1);color:var(--warn-2);background:var(--warn-tint);border:1px solid var(--gold-line,#f0dcae);border-radius:9px;padding:7px 10px;margin:6px 0 2px">⚠ <b>' + tx('Encryption not configured') + '</b> — ' + esc(tx('the vault does not save yet.')) + ' <span title="' + esc(tx('The platform must set its encryption key first. Use dummy data only.')) + '" style="cursor:help">ⓘ</span></div>';
   var only=UI._vaultOnly||'';   /* SET1: a small app asks for ONE section type (identity); the workshop's Documents shows them all */
   var secs=(UI._vault&&UI._vault.sections)||[];
   var shown=secs.map(function(s,i){ return [s,i]; }).filter(function(p){ return (!only||p[0].type===only)&&!VAULT_HIDDEN_TYPES[p[0].type]; });
   var body=shown.length ? shown.map(function(p){ return vaultSectionHTML(p[0],p[1]); }).join('')
-    : '<div style="color:var(--grey);font-size:var(--fs-2);padding:9px 0" data-testid="vault-empty">' + (only ? esc(tx('Nothing here yet. Add it — the usual rows are offered first.')) : esc(tx('Nothing here yet. Add a section below — its usual rows come first; name any other detail you have.'))) + '</div>';
+    : '<div style="color:var(--grey);font-size:var(--fs-2);padding:9px 0" data-testid="vault-empty">' + esc(tx('Nothing here yet.')) + '</div>';
   var addOpts=Object.keys(VAULT_SECTION_TYPES).filter(function(t){ return (!only||t===only)&&!VAULT_HIDDEN_TYPES[t]; }).map(function(t){ return '<option value="'+t+'">'+esc(VAULT_SECTION_TYPES[t])+'</option>'; }).join('');
-  if (only) return '<div style="'+_CARD+';margin-top:10px" data-testid="vault-only-'+esc(only)+'"><div class="sec" style="margin:0">'+esc(VAULT_SECTION_TYPES[only]||only)+'</div>'
+  if (only) return '<div style="'+_CARD+';margin-top:10px" data-testid="vault-only-'+esc(only)+'">'+(vaultPlain() ? '' : '<div class="sec" style="margin:0">'+esc(VAULT_SECTION_TYPES[only]||only)+'</div>')
     +encBanner+body
     +'<div style="display:flex;gap:7px;align-items:center;margin-top:13px;flex-wrap:wrap"><select class="inp" id="v_addtype" hidden>'+addOpts+'</select>'
       +(shown.length ? '' : '<button type="button" class="composebtn ghost" data-testid="vault-add-section" onclick="vaultAddSection()">+ '+esc(tx('add the business identity'))+'</button>')+'</div>'
     +'<div class="err" id="vault_err" style="margin-top:8px"></div>'
     +'<button type="button" class="composebtn" style="margin-top:11px" data-testid="vault-save" onclick="saveVaultUI()">' + esc(tx('Save')) + '</button></div>';
-  return '<div style="'+_CARD+';margin-top:10px"><div class="sec" style="margin:0">🗂 Trade documents vault <span style="font-size:var(--fs-1);font-weight:600;color:var(--grey)">— fill once · pre-fills every form</span></div>'
-    +'<div style="font-size:var(--fs-1);color:var(--grey);margin:3px 0 2px;line-height:1.5">These recurring details auto-fill your Commercial Invoice, Packing List and other authority forms. At form time you\'ll only be asked the shipment-specifics (invoice no, dates, ports). <b>' + tx('Name each detail the way you know it') + '</b> — the suggestions are a shortcut, never a limit.</div>'
+  return '<div style="'+_CARD+';margin-top:10px"><div class="sec" style="margin:0">🗂 ' + esc(tx('Trade documents vault')) + ' <span title="' + esc(tx('Fill once. It pre-fills your Commercial Invoice, Packing List and other authority forms; at form time you are asked only the shipment details. Name each detail the way you know it.')) + '" style="cursor:help;font-weight:400;color:var(--grey)">ⓘ</span></div>'
     +encBanner
     +body
     +'<div style="display:flex;gap:7px;align-items:center;margin-top:13px;flex-wrap:wrap">'
@@ -151,6 +153,7 @@ function vaultCardHTML(vault, encrypted){
 /* One section — its type, an optional label that tells two of the same kind apart, and its rows. */
 function vaultSectionHTML(sec, i){
   var rows=(sec.rows||[]).map(function(r,j){ return vaultRowHTML(r,i,j,sec.type); }).join('');
+  if (vaultPlain()) return '<div style="margin-top:11px" data-testid="vault-plain">'+rows+'</div>';   /* R21 */
   return '<div style="border:1px solid var(--line);border-radius:11px;padding:11px 12px;margin-top:11px;background:var(--paper);color:var(--on-bg)">'
     +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">'
       +'<span style="font-size:var(--fs-2);font-weight:700;color:var(--ink)">'+esc(VAULT_SECTION_TYPES[sec.type]||sec.type)+'</span>'
@@ -195,7 +198,7 @@ function vaultRowHTML(r,i,j,type){
     +((r.rung&&r.rung!=='declared')||(r.source&&r.source!=='profile')
         ? '<span data-testid="vault-rung" title="'+esc((r.source?'from '+r.source:'')+(r.as_of?' · as of '+String(r.as_of).slice(0,10):''))+'" style="font-size:var(--fs-1);font-weight:800;padding:1px 6px;border-radius:9px;white-space:nowrap;color:'+(r.rung==='verified'?'var(--ok-2)':r.rung==='checked'?'var(--blue-2)':'var(--grey-2)')+';background:'+(r.rung==='verified'?'var(--ok-tint)':r.rung==='checked'?'var(--blue-tint-bg)':'var(--neutral-tint)')+'">'+esc(String(r.rung||'copied').toUpperCase())+(r.source&&r.source!=='profile'?' · '+esc(r.source):'')+'</span>'
         : '')
-    +'<button type="button" title="Remove this detail" onclick="vaultDelRow('+i+','+j+')" style="border:1px solid var(--line);background:var(--card);color:var(--grey);border-radius:8px;min-width:28px;min-height:28px;cursor:pointer">×</button></div>';
+    +(vaultPlain() ? '' : '<button type="button" title="Remove this detail" onclick="vaultDelRow('+i+','+j+')" style="border:1px solid var(--line);background:var(--card);color:var(--grey);border-radius:8px;min-width:28px;min-height:28px;cursor:pointer">×</button>')+'</div>';
 }
 /* The suggestion lists — one <datalist> per section type, emitted once. A datalist SUGGESTS and never restricts,
    which is exactly the contract we want: type "IFSC code" and get the tag, type anything else and keep it. */
@@ -346,7 +349,7 @@ function shopCc(){ return (typeof CBShop !== 'undefined' && CBShop.country && CB
 /** the three inputs (ids pf_gstn · pf_addr · pf_sup — saveProfile and SHOP_FIELDS read them by id) */
 function shopFieldsHTML(e, licLabel){
   return '<label class="fl">' + esc(licLabel)
-    +   ' <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— your business registration</span></label>'
+    +   ' <span title="' + esc(tx('Your business registration')) + '" style="color:var(--grey);font-weight:400;cursor:help">ⓘ</span></label>'
     + '<input class="inp" id="pf_gstn" value="' + esc(e.gstn || '') + '">'
     + '<label class="fl">' + tx('Address') + '</label>'
     + '<input class="inp" id="pf_addr" value="' + esc(e.address || '') + '">'
@@ -397,22 +400,15 @@ var CBShop = (function () {
     var who = SESSION && SESSION.actorId;
     return shopFieldsHTML(e || {}, shopLicLabel())
       + '<div class="err" id="pf_err_profile" data-testid="shop-err" style="margin-top:8px"></div>'
-      + (who ? '<p class="sub" data-testid="shop-ask-owner">' + esc0(tx('Only the owner can change these. Ask the owner.')) + '</p>'
+      + (who ? '<p class="sub" data-testid="shop-ask-owner">' + esc0(tx('Only the owner can change these.')) + '</p>'
              : '<button type="button" class="act" id="shop-save" data-testid="shop-save" style="margin-top:8px">' + esc0(tx('Save')) + '</button>');
-  }
-  /** W26: the line that says what the top box feeds, INSIDE the top box; the lower box says it feeds an authority's forms */
-  function billLine(){
-    return '<p class="sub" data-testid="shop-why" style="margin:10px 0 0">' + esc0(packSplitsByState(H.cc)
-      ? txf('These go on every bill. A tax invoice names one state: the {id}, the address and the {postcode} must agree.', { id: taxIdWord(H.cc), postcode: tx(packWord('postcode', H.cc)) })
-      : txf('These go on every bill: the {id} and the address.', { id: taxIdWord(H.cc) })) + '</p>';
   }
   function paint(){
     var h = H.host; if (!h) return;
     UI._vaultOnly = 'identity';
-    h.innerHTML = card(tx('Your shop'), shopCardHTML(H.me) + billLine(), 'shop-card')
-      + '<p class="sub" data-testid="shop-print-door"><a class="sx-link" href="/settings.html#/print" data-testid="shop-print-link">' + esc0(tx('What prints on the bill — Print setup')) + ' ›</a></p>'
-      + '<h2 class="shop-h" style="margin-top:14px" data-testid="shop-forms-title">' + esc0(tx('Used on forms for an authority')) + '</h2>'
-      + '<p class="sub" data-testid="shop-forms-why">' + esc0(tx('The legal name and address an authority form prints.')) + ' <a class="sx-link" href="/settings.html#/account" data-testid="shop-licences-link">' + esc0(tx('Licences & registrations')) + ' ›</a></p>'
+    /* walk 2026-10-16 (R19): "Your business"; the identity heading is "Your identity"; no explanation lines, no doors under the boxes */
+    h.innerHTML = card(tx('Your business'), shopCardHTML(H.me), 'shop-card')
+      + '<h2 class="shop-h" style="margin-top:14px" data-testid="shop-forms-title">' + esc0(tx('Your identity')) + '</h2>'
       + '<div id="vaulthost" data-testid="shop-identity"></div>';
     var b = document.getElementById('shop-save'); if (b) b.onclick = function () { shopSave(b); };
     loadVault().then(prefillIdentity);

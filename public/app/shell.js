@@ -48,7 +48,7 @@
     caption: { selling: 'CB Commerce', running: 'Running it', labs: 'Labs', setup: 'What it all stands on' },
     sub: { labs: 'Work the number out first. Nothing changes until you say so.', setup: 'Set once, rarely touched.' },
     tag: { coming: 'later', workshop: 'workshop', works: 'works today' },
-    yourShop: 'Your shop', business: 'The business', licences: 'Licences', trade: 'Trade ready', finish: 'Finish the checks',
+    yourShop: 'Your business', business: 'The business', licences: 'Licences', trade: 'Trade ready', finish: 'Finish the checks',
     renew: 'Renew', again: 'Apply again', notAdded: 'not added', registered: 'registered', notRegistered: 'not registered',
     days: ' days', years: ' years', expired: function (d) { return 'expired ' + d + 'd ago'; }, lapsed: 'lapsed',
     notYet: 'Licences and trade checks are not available yet.', loading: '…', noApps: 'The list of apps could not be read.',

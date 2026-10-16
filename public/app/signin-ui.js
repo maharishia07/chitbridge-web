@@ -68,7 +68,7 @@ var WORDS = {
   back: 'Not you? Start again',
   which: 'Which one are you?',
   setTitle: 'Choose a PIN',
-  setWhy: 'Four digits. You will use it next time.',
+  setWhy: 'Four digits, for next time.',
   pin1: 'Your new PIN',
   pin2: 'Type it again',
   save: 'Save PIN',
@@ -83,7 +83,7 @@ var WORDS = {
   at: 'at',
   /* the host's own credential (the till's counter PIN) — the same screens, named for what they are */
   localPin: 'Counter PIN',
-  localWhy: 'Four digits, to sign in here without the internet.',
+  localWhy: 'Four digits. Works without internet.',
   line: 'Use a code instead',
   later: 'Not now',
 };
@@ -372,7 +372,7 @@ function paint(host, m, c) {
     h = '<h2>' + esc(W.title) + '</h2>' + why +
       '<label>' + esc(W.id) + '<input name="id" data-testid="signin-id" type="text" inputmode="email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="go" value="' + esc(S.typed) + '"></label>' +
       '<button type="submit" class="cbsi-go" data-testid="signin-go"' + busy + '>' + esc(S.busy ? W.working : W.go) + '</button>' + slots +
-      (c.registerHref ? '<a class="cbsi-ln" data-testid="signin-register" href="' + esc(c.registerHref) + '">' + esc(W.register) + '</a>' : '');
+      (c.registerHref ? '<a class="cbsi-ln" data-cbsi="register" data-testid="signin-register" href="' + esc(c.registerHref) + '">' + esc(W.register) + '</a>' : '');
   } else if (S.at === 'choose') {
     h = '<h2>' + esc(W.which) + '</h2>' + why +
       S.choices.map(function (ch, i) {
@@ -434,6 +434,18 @@ function mount(host, c) {
     else if (k === 'line') m.line();
     else if (k === 'later') m.later();
     else if (k === 'method' && typeof c.onMethod === 'function') c.onMethod(t.getAttribute('data-method'));
+    else if (k === 'register') goRegister(e, t);
+  }
+  /* R45 (WALK-REG 2026-10-16): a register door on THIS page (settings.html#/new from settings.html) only moved the hash — the page had
+     already chosen sign-in, so the form never came until a reload. Same page, other hash → load it afresh; another page → the plain link. */
+  function goRegister(e, a) {
+    try {
+      var to = new URL(a.href, root.location.href), here = root.location;
+      if (to.origin !== here.origin || to.pathname !== here.pathname) return;
+      e.preventDefault();
+      here.href = to.href;
+      here.reload();
+    } catch (err) { if (root.cbQuiet) root.cbQuiet('signin:register', err); }
   }
   function onInput(e) { if (host.contains(e.target) && e.target.name === 'id') m.typed(e.target.value); }
   doc.addEventListener('submit', onSubmit);
