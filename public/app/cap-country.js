@@ -286,12 +286,12 @@ var CSU_ROW_OF = { registered: 'tax', number: 'tax', scheme: 'tax' };
  */
 function csuGstinWhy(number) {
   var profileMap = window.CBProfileMap; if (!profileMap) return '';
-  var checked = profileMap.gstinChecksum(number); if (checked.ok) return '';
-  if (checked.reason !== 'format') return tx('That GSTIN does not check out — look at the last character.');
+  var checked = profileMap.gstinChecksum(number), idWord = taxIdWord('IN'); if (checked.ok) return '';
+  if (checked.reason !== 'format') return txf('That {id} does not check out — look at the last character.', { id: idWord });
   var upper = String(number).trim().toUpperCase();
   return profileMap.gstinChecksum(upper.slice(0, 5) + 'C' + upper.slice(6)).reason === 'format'
-    ? tx('That does not look like a GSTIN (15 characters, e.g. 27AAPFU0939F1ZV).')
-    : tx('The PAN inside the GSTIN (characters 3–12) has no valid holder type at place 6 — P person, C company, F firm, H HUF, T trust, A association, B body of individuals, L local authority, J juridical person, G government.');
+    ? txf('That does not look like a {id} (15 characters, e.g. 27AAPFU0939F1ZV).', { id: idWord })
+    : txf('Place 6 of the {id} is the holder type and is not valid here — P person, C company, F firm, H HUF, T trust, A association, B body of individuals, L local authority, J juridical person, G government.', { id: idWord });
 }
 function csuTaxIdWhy(country, number) {
   var typed = String(number == null ? '' : number).trim(); if (!typed) return '';

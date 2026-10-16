@@ -351,7 +351,7 @@ var CSS = '.cbsi{max-width:420px;margin:0 auto;font:inherit;color:var(--ink,#1D1
   '.cbsi label{display:flex;flex-direction:column;gap:5px;font-size:13.5px;font-weight:600;color:var(--muted,var(--grey,#5E594D))}' +
   '.cbsi input{height:46px;padding:0 13px;border:1px solid var(--line,#DDD6C6);border-radius:10px;background:var(--card,#fff);color:var(--ink,#1D1B16);font:inherit;font-size:16px;width:100%;box-sizing:border-box}' +
   '.cbsi input:focus{outline:2px solid var(--green,#16693F);outline-offset:1px}' +
-  '.cbsi .cbsi-go,.cbsi .cbsi-m{height:46px;padding:0 16px;border-radius:10px;border:1px solid var(--green,#16693F);background:var(--green,#16693F);color:var(--on-green,#fff);font:inherit;font-size:15px;font-weight:700;cursor:pointer;width:100%}' +
+  '.cbsi .cbsi-go,.cbsi .cbsi-m{height:46px;padding:0 16px;border-radius:10px;border:1px solid var(--green,#16693F);background:var(--green,#16693F);color:var(--on-green,var(--card,#fff));font:inherit;font-size:15px;font-weight:700;cursor:pointer;width:100%}' +
   '.cbsi .cbsi-go[disabled]{opacity:.6;cursor:default}' +
   '.cbsi .cbsi-m{background:var(--card,#fff);color:var(--ink,#1D1B16);border-color:var(--line,#DDD6C6)}' +
   '.cbsi .cbsi-ln{display:inline-block;background:none;border:0;padding:6px 0;color:var(--blue-i,var(--blue-d,#174A87));text-decoration:underline;text-underline-offset:3px;font:inherit;font-size:13.5px;cursor:pointer;text-align:start;min-height:40px}' +
