@@ -380,6 +380,8 @@ var CBSettings = (function () {
     function shown(x) {
       var d = x.def, v = polShown(d, x.v);
       if (d.type === 'enum') return T((d.labels && d.labels[x.v]) || String(x.v));
+      /* AU-WORDS: a number the server names (ui.labels[value] — "No expiry", "Keep — the law here asks 5 years") reads as its word, never "0" */
+      if (d.labels && d.labels[String(x.v)] !== undefined) return T(d.labels[String(x.v)]);
       return String(v) + (d.suffix ? ' ' + T(d.suffix) : '');
     }
     function control(x) {
