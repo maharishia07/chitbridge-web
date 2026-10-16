@@ -80,7 +80,7 @@ function addWebCode(webRoot, addFile) {
 /** a test naming a module by path string → that module's file node (web: app/ engine/ tools/ scripts/; api: lib/ routes/ … tools/ scripts/) */
 const FILE_NAMED = {
   web: [/(?:^|[\/'"\s])(?:public\/)?((?:app|engine)\/[\w.-]+\.js)$/, /(?:^|[\/'"\s])((?:tools|scripts)\/[\w.\/-]+\.(?:cjs|js|mjs))$/],
-  api: [/(?:^|[\/'"\s])((?:lib|routes|middleware|src|governance|tools|scripts)\/[\w.\/-]+?)(?:\.c?js)?$/, /(?:^|[\/'"\s])(tools\/tally-connector\/[\w.-]+\.html)$/],
+  api: [/(?:^|[\/'"\s])((?:lib|routes|middleware|src|governance|tools|scripts)\/[\w.\/-]+?)(?:\.c?js)?$/, /(?:^|[\/'"\s])(tools\/tally-connector\/[\w.-]+\.html)$/, /(?:^|[\/'"\s])(server)\.js$/],   /* the api's one root file: a test that names server.js reaches it (INT7c-READ) */
   engines: [/(?:^|[\/'"\s])((?:src|tools)\/[\w.\/-]+\.c?js)$/]
 };
 /** the node id a test's string names, or null — the name may come without its extension (path.join(API, 'lib', 'rail')), a web
