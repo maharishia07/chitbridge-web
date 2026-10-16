@@ -9,6 +9,7 @@
  * ⭐ NEW PATHS (rule 4): FT (this tab's state) · FT_EP (the two /api/books/terms rows + crmParties, which finance.html did not load) · the tab switch
  * (#/terms) — Collections is one list, the nav had no second place to go.
  * ⚠️ Never error.message on a screen: a failure says what happened (CBAction.words) and the button stays.
+ * CARD 16-finance/terms-and-credit
  */
 'use strict';
 
@@ -95,11 +96,13 @@ function ftShopPaint() {
   if (FT.state === 'loading') { el.innerHTML = '<h2>' + esc(tx('Shop terms')) + '</h2><p class="hint">' + esc(tx('Loading…')) + '</p>'; return; }
   if (FT.state === 'error' || !FT.t) { el.innerHTML = '<h2>' + esc(tx('Shop terms')) + '</h2><p data-testid="ft-error">' + esc(tx('Could not read terms. Try again.')) + '</p><button type="button" class="act" data-testid="ft-retry" onclick="ftLoad()">' + esc(tx('Try again')) + '</button>'; return; }
   var t = FT.t, off = !t.terms_migrated || !t.may_set, why = !t.terms_migrated ? FT_NOT_YET : (t.may_set ? '' : (t.why_not || 'Only the owner may set terms.'));
-  el.innerHTML = '<h2>' + esc(tx('Shop terms')) + '</h2><p class="hint">' + esc(tx('Used when a party has none of its own.')) + '</p>'
+  el.innerHTML = '<h2>' + esc(tx('Shop terms')) + ' <span class="hint" style="font-size:.6em;font-weight:500">(' + esc(tx('optional')) + ')</span> <span title="' + esc(tx('Used when a party has none of its own.')) + '" style="cursor:help;opacity:.7;font-size:.7em">ⓘ</span></h2>'
     + (why ? '<div class="hint" data-testid="ft-why" style="opacity:.85">' + esc(tx(why)) + '</div>' : '')
     + ftForm('fts', t.default, null, off)
-    + '<div style="display:flex;gap:10px;align-items:center"><button type="button" class="act" data-testid="ft-save"' + (off ? ' disabled' : '') + ' onclick="ftSaveShop(this)">' + esc(tx('Save')) + '</button><span id="ft_why" data-testid="ft-out" class="hint"></span></div>'
+    + '<div style="display:flex;gap:10px;align-items:center"><button type="button" class="act" data-testid="ft-save" hidden' + (off ? ' disabled' : '') + ' onclick="ftSaveShop(this)">' + esc(tx('Save')) + '</button><span id="ft_why" data-testid="ft-out" class="hint"></span></div>'
     + '<h3 style="margin:14px 0 4px;font-size:14px">' + esc(tx('Changes')) + '</h3>' + bkTermEvents(t.events, bkCur(FT.cur), 'ft-event');
+  /* autosave: a changed field saves the shop terms through the same ftSaveShop (the hidden button is its action handle) */
+  if (!off && !el.dataset.auto) { el.dataset.auto = '1'; el.addEventListener('change', function (changeEvent) { if (changeEvent.target && /^fts_/.test(changeEvent.target.id || '')) { var saveButton = el.querySelector('[data-testid="ft-save"]'); if (saveButton) ftSaveShop(saveButton); } }); }
 }
 async function ftLoad(quiet) {
   var g = ++FT.gen;
@@ -117,7 +120,7 @@ function ftSaveShop(btn) {
   var r = ftRead('fts'), out = document.getElementById('ft_why');
   if (r.bad) { if (out) out.textContent = r.bad; return; }
   return CBAction.run(btn, function () { return api('booksTermsSet', { body: r.body }); },
-    { key: 'ft-save', out: 'ft_why', failed: tx('Could not save terms'), done: tx('Saved'), outcome: function () { ftLoad(true); } });
+    { key: 'ft-save', out: 'ft_why', failed: tx('Could not save terms'), done: '✓ ' + tx('Saved'), outcome: function () { ftLoad(true); } });
 }
 
 /* ── one party's own terms: the sheet ── */

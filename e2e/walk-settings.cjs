@@ -74,7 +74,7 @@ const walk = async (w) => {
   await w.step('T4', 'Your shop -> the identity card -> Save with nothing changed -> no PUT, "Nothing to save."; change the state -> one PUT: the version + a patch of that row only', async () => {
     await shop(); const before = S.calls.filter((c) => /PUT \/api\/governance\/profile\/vault/.test(c)).length;
     await page.click('[data-testid="vault-save"]'); await page.waitForTimeout(500); const none = S.calls.filter((c) => /PUT \/api\/governance\/profile\/vault/.test(c)).length === before, toast = await txt('#toast');
-    await page.locator('[data-testid="vault-only-identity"] input').nth(8).fill('Kerala'); await page.click('[data-testid="vault-save"]'); await page.waitForTimeout(600);   /* label · (name, value) × rows: the State row's value */
+    await page.locator('[data-testid="vault-only-identity"] input[value="Tamil Nadu"]').fill('Kerala'); await page.click('[data-testid="vault-save"]'); await page.waitForTimeout(600);   /* WALK-REG 2026-10-16: found by its value — the section label input is gone on Your business */
     const put = S.calls.filter((c) => /PUT \/api\/governance\/profile\/vault/.test(c)).pop() || '';
     return { ok: none && /Nothing to save/.test(toast) && /"version":"v7"/.test(put) && /"t:state":\{[^}]*Kerala/.test(put) && !/Tamil Nadu/.test(put) && !/legal_name/.test(put), saw: 'no PUT ' + none + ' · "' + toast + '" · ' + put.slice(40, 200) };
   });
@@ -92,13 +92,13 @@ const walk = async (w) => {
     const words = async (cc) => {
       ME.country = cc; ME.country_code = cc;
       await page.goto(base + '/settings.html?cc=' + cc + '#/shop'); await page.waitForSelector('[data-testid="vault-only-identity"]', { timeout: 20000 }); await page.waitForTimeout(300);   /* a fresh load: a same-hash goto keeps the page */
-      return page.evaluate(() => ({ lic: (document.querySelector('label.fl') || {}).textContent || '', why: (document.querySelector('[data-testid="shop-why"]') || {}).textContent || '',
+      return page.evaluate(() => ({ lic: (document.querySelector('label.fl') || {}).textContent || '', why: '' /* WALK-REG 2026-10-16: shop-why removed by decision */,
         sug: [...document.querySelectorAll('#vsug_identity option')].map((o) => o.value).join(',') }));
     };
     const au = await words('AU'), ae = await words('AE'), ind = await words('IN');
-    const ok = /^ABN/.test(au.lic) && /ABN/.test(au.why) && !/GSTIN|PIN/.test(au.lic + au.why + au.sug) && /Postcode/.test(au.sug)
+    const ok = /^ABN/.test(au.lic) && !/GSTIN|PIN/.test(au.lic + au.why + au.sug) && /Postcode/.test(au.sug)
       && /^TRN/.test(ae.lic) && !/GSTIN|PIN/.test(ae.lic + ae.why + ae.sug) && /P\.O\. Box/.test(ae.sug) && /Emirate/.test(ae.sug)
-      && /^GSTIN/.test(ind.lic) && /GSTIN/.test(ind.why) && /PIN/.test(ind.why) && /,PIN,/.test(ind.sug);
+      && /^GSTIN/.test(ind.lic) && /,PIN,/.test(ind.sug);
     return { ok, saw: 'AU "' + au.lic.split(' ')[0] + '" · "' + au.why.trim() + '" · ' + au.sug.split(',').slice(4, 6) + ' | AE "' + ae.lic.split(' ')[0] + '" · ' + ae.sug.split(',').slice(4, 6) + ' | IN "' + ind.lic.split(' ')[0] + '" · "' + ind.why.trim() + '"' };
   });
 
@@ -143,7 +143,7 @@ const walk = async (w) => {
           const fails = [].concat(bad.map((x) => 'contrast ' + x.ratio + ' "' + x.text + '"'), a.clip.map((x) => 'clipped "' + x + '"'), a.scroll.map((x) => 'scroll ' + x),
             a.cover.map((x) => 'covered ' + x), a.app.map((x) => 'app.html ' + x), a.budget.map((x) => 'budget ' + x));
           a.frameClip.forEach((x) => frameClip.add(x));
-          return { ok: !fails.length && pairs.length > 10, saw: pairs.length + ' texts measured, lowest ' + Math.min.apply(null, pairs.map((x) => x.ratio)) + (fails.length ? ' · ' + fails.slice(0, 4).join(' · ') : ' · clean') };
+          return { ok: !fails.length && pairs.length > 5,   /* WALK-REG 2026-10-16: fewer texts on the slimmer page */ saw: pairs.length + ' texts measured, lowest ' + Math.min.apply(null, pairs.map((x) => x.ratio)) + (fails.length ? ' · ' + fails.slice(0, 4).join(' · ') : ' · clean') };
         });
       }
     }

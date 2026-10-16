@@ -105,11 +105,11 @@ const walk = async (w) => {
       S.coassist = false;
       return { ok: why === DEV_WHY && err.indexOf(DEV_WHY) >= 0 && asked === 0, saw: '"' + why + '" · list says "' + err.slice(0, 70) + '" · devices asked ' + asked };
     });
-    await w.step('A5', 'API keys: the count and the last-heard key from the ONE keys read; the door opens Counters & keys — no second list, no Make a key here', async () => {
-      await go('/settings.html#/account', '[data-testid="sx-keys-count"]');
-      const n = await txt('[data-testid="sx-keys-count"]'), last = await txt('[data-testid="sx-keys-last"]'), door = await attr('[data-testid="sx-keys-door"]', 'href');
+    await w.step('A5', 'API keys: WALK-REG 2026-10-16: removed by decision - no key count, last-heard line, door or list for a shop owner (the Account keys card stays hidden)', async () => {
+      await go('/settings.html#/account', '[data-testid="sx-ses-list"]');
+      const shownKeys = await page.locator('[data-testid="sx-keys-count"]:visible, [data-testid="sx-keys-last"]:visible, [data-testid="sx-keys-door"]:visible, [data-testid="sx-keys-card"]:visible').count();
       const mint = await page.locator('[data-testid="sx-key-mint"]').count(), list = await page.locator('[data-testid="sx-key-list"]').count();
-      return { ok: /2 keys/.test(n) && /counter C1/.test(last) && door === '/settings.html#/counters' && mint === 0 && list === 0, saw: n + ' · "' + last + '" · door ' + door + ' · mint buttons ' + mint };
+      return { ok: shownKeys === 0 && mint === 0 && list === 0, saw: 'visible key elements ' + shownKeys + ' · mint buttons ' + mint + ' · lists ' + list };
     });
     /* SET-WALK1 W25: Save sends a MERGE-PATCH of what moved with the version — the bank row's change travels alone; the identity section is not re-sent */
     await w.step('A6', 'Vault: the workshop\'s own card, EVERY section (identity + the bank), encrypted at rest said; change the IFSC -> Save -> one PUT: the version + a patch of that row only', async () => {
@@ -167,7 +167,7 @@ const walk = async (w) => {
   /* ── RULE 13: both screens, Cream and Dark × 1366 and 390 px ── */
   const rule13 = require('./lib/rule13.cjs').rule13;
   await page.setViewportSize({ width: 1366, height: 900 });
-  await go('/settings.html#/account', '[data-testid="sx-keys-count"], [data-testid="sx-keys-err"]');
+  await go('/settings.html#/account', '[data-testid="sx-ses-list"]');   /* WALK-REG 2026-10-16: the keys card is hidden */
   if (!REAL) await openRow('sx-ses-j-phone');   /* the next level and its action are measured too */
   await rule13(w, 'R13a', 'CB Settings › Account', 'set');
   await page.setViewportSize({ width: 1366, height: 900 });

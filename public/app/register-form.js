@@ -68,10 +68,10 @@ function regLangHTML(code){
   try { own = new Intl.DisplayNames([code], { type: 'language' }).of(code) || ''; } catch (_) {}
   return esc(en) + (own && own.toLowerCase() !== en.toLowerCase() ? ' <bdi dir="auto" lang="' + esc(code) + '">' + esc(own) + '</bdi>' : '');
 }
-/** how numbers and dates print in the pack's format — the browser's own Intl, one fixed sample */
+/** how numbers and dates print in the pack's format — the browser's own Intl: one fixed number, today's date (R4: never a hard-coded day) */
 function regFormatSample(locale){
   try {
-    var n = new Intl.NumberFormat(locale).format(1234567890.5), d = new Intl.DateTimeFormat(locale, { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(2026, 9, 14));
+    var n = new Intl.NumberFormat(locale).format(1234567890.5), d = new Intl.DateTimeFormat(locale, { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date());
     return '<bdi dir="auto">' + esc(n) + '</bdi> · <bdi dir="auto">' + esc(d) + '</bdi>';
   } catch (_) { return esc(locale); }
 }
@@ -84,11 +84,11 @@ function regSpinRows(){
   if (pk) {
     var tax = [pk.tax && pk.tax.scheme, pk.tax && pk.tax.id].filter(Boolean).join(' · ');
     var off = pk.offer || {}, zone = { value: off.timezone || '', from: off.from || tx('you pick it after signing in') };   /* the server's offer (STD2) */
-    out.push({ key: 'currency', what: tx('Money'), value: esc(pk.currency || ''), from: txf('the usual currency in {c}', { c: name }), known: !!pk.currency });
-    out.push({ key: 'year', what: tx('Year starts'), value: esc(pk.fy_start_month ? (monthNames('long')[pk.fy_start_month - 1] || String(pk.fy_start_month)) : ''), from: txf('the {c} pack', { c: name }), known: !!pk.fy_start_month });
-    out.push({ key: 'tax', what: tx('Tax'), value: esc(tax), from: (pk.tax && pk.tax.return) ? txf('returns: {r}', { r: pk.tax.return }) : txf('the {c} pack', { c: name }), known: !!tax });
-    out.push({ key: 'format', what: tx('Format'), value: pk.locale ? regFormatSample(pk.locale) : '', from: txf('how {c} writes numbers and dates', { c: name }), known: !!pk.locale });
-    out.push({ key: 'language', what: tx('Language'), value: (pk.languages || []).slice(0, 2).map(regLangHTML).join(' · '), from: txf('the {c} pack', { c: name }), known: !!(pk.languages && pk.languages.length) });
+    out.push({ key: 'currency', what: tx('Money'), value: esc(pk.currency || ''), from: '', known: !!pk.currency });
+    out.push({ key: 'year', what: tx('Year starts'), value: esc(pk.fy_start_month ? (monthNames('long')[pk.fy_start_month - 1] || String(pk.fy_start_month)) : ''), from: '', known: !!pk.fy_start_month });
+    out.push({ key: 'tax', what: tx('Tax'), value: esc(tax), from: (pk.tax && pk.tax.return) ? txf('returns: {r}', { r: pk.tax.return }) : '', known: !!tax });
+    out.push({ key: 'format', what: tx('Format'), value: pk.locale ? regFormatSample(pk.locale) : '', from: '', known: !!pk.locale });
+    out.push({ key: 'language', what: tx('Language'), value: (pk.languages || []).slice(0, 2).map(regLangHTML).join(' · '), from: '', known: !!(pk.languages && pk.languages.length) });
     out.push({ key: 'timezone', what: tx('Time zone'), value: esc(zone.value), from: zone.from, known: !!zone.value });
   }
   /* the device row as the browser reads it (CBGov.rows) — the rest above replace its guesses */
@@ -113,14 +113,15 @@ function govPanel(){
   var spin = !!(REG.spin && Array.isArray(REG.spin.countries) && REG.spin.countries.length);
   var rows = spin ? regSpinRows() : govRows().map(function (r) { return { key: r.key, what: r.what, value: esc(r.value), from: r.from, known: r.known }; });
   if (!rows.length) return '';
-  var hd = regInstCountry() ? tx('Check these. They set your tax and money.') : tx('We filled these in from your browser. Change any of them after you sign in.');
+  /* walk 2026-10-16: ONE heading; what it means (and that a "not known" row is set after sign-in) behind ⓘ — never a line under every row */
+  var reason = regInstCountry() ? tx('They set your tax and money. Set any “not known” one after you sign in.') : tx('Filled in from your browser. Change any of them after you sign in.');
   return '<div class="govbox" data-testid="reg-gov">'
-    + '<div class="govhd">' + esc(hd) + '</div>'
+    + '<div class="govhd">' + esc(tx('Check these')) + ' <span title="' + esc(reason) + '" style="cursor:help;font-weight:400">ⓘ</span></div>'
     + rows.map(function(r){
         return '<div class="govrow' + (r.known ? '' : ' unknown') + '" data-testid="reg-gov-' + r.key + '">'
           + '<span class="gw">' + esc(r.what) + '</span>'
           + '<span class="gv">' + (r.known ? r.value : esc(tx('not known'))) + '</span>'
-          + '<span class="gf">' + esc(r.known ? r.from : tx('you can set this after signing in')) + '</span>'
+          + (r.known && r.from ? '<span class="gf">' + esc(r.from) + '</span>' : '')   /* R4: a row with no note of its own paints none; "set it after sign-in" is the heading's ⓘ, once */
           + (spin && r.key === 'country' ? '<div class="gf">' + regCountryChoice() + '</div>' : '')
           + '</div>';
       }).join('')
@@ -128,7 +129,7 @@ function govPanel(){
     /* ⚠️⚠️ THE GATE. Not a notice — a question about the country that decides their tax. GOV-SPIN: the same one control accepts the country. */
     + '<label class="govagree"><input type="checkbox" id="r_agree" data-testid="reg-agree"'
     + (REG.agreed ? ' checked' : '') + ' onchange="REG.agreed=this.checked;renderRegister()">'
-    + '<span>These are right, and I accept the terms of use.</span></label>';
+    + '<span>' + esc(tx('These are right, and I accept the terms of use.')) + '</span></label>';
 }
 /** what verify sends: the browser's context, with the country the person ACCEPTED and where it came from (the server re-decides the source) */
 function regPayload(){
@@ -157,30 +158,28 @@ function renderRegister(){
            acmetraders.clothing   a NETWORK node — . binds a store to its network
        Only the entity ever registers. Employees are created by the business, network stores are minted by their
        parent, and customers register at a storefront automatically. */
-    form = `${typeof onbBanner === 'function' ? onbBanner() : ''}<label class="fl">User ID</label><input class="inp" id="r_name" data-testid="reg-name" placeholder="acmetraders" autocapitalize="off" spellcheck="false" value="${esc(R.name)}">
-       <div style="font-size:var(--fs-1);color:var(--grey);margin:-2px 0 8px;line-height:1.5">${txf('8 characters or more · lowercase letters, numbers and dashes — nothing else.{br}No spaces, and no punctuation: {at} {dot} {tilde} each already mean something here — they make an employee, a network store, and a supplier you write down yourself — so they are kept for that.{br}{fixed} Your business name can be anything you like, spaces and all, and you set it after signing in.', {
-        at: '<b>@</b>', dot: '<b>.</b>', tilde: '<b>~</b>', br: '<br>',
-        fixed: '<b>' + tx('This cannot be changed later.') + '</b>' })}</div>
-       <label class="fl">Email</label><input class="inp" id="r_email" data-testid="reg-email" placeholder="you@yourshop.example" value="${esc(R.email)}">
+    form = `${typeof onbBanner === 'function' ? onbBanner() : ''}<label class="fl">${esc(tx('User ID'))}</label><input class="inp" id="r_name" data-testid="reg-name" placeholder="acmetraders" autocapitalize="off" spellcheck="false" value="${esc(R.name)}">
+       <div data-testid="reg-name-hint" style="font-size:var(--fs-1);color:var(--grey);margin:-2px 0 8px">${txf('8+ letters, numbers or dashes · {fixed}', { fixed: '<b>' + esc(tx("can't be changed later")) + '</b>' })}
+         <span data-testid="reg-name-why" tabindex="0" style="cursor:help" title="${esc(tx('No spaces, no @ . ~ (kept for staff, network stores and suppliers). Your business name can be anything; set it after you sign in.'))}">ⓘ</span></div>
+       <label class="fl">${esc(tx('Email'))}</label><input class="inp" id="r_email" data-testid="reg-email" placeholder="you@yourshop.example" value="${esc(R.email)}">
        ${R.err?`<div class="err">${R.err}</div>`:""}
-       <button class="btn gold" id="r_go" data-testid="reg-submit" ${R.busy?"disabled":""}>${R.busy?'<span class="spin"></span> Creating…':"Create entity <span class=arw>→</span>"}</button>`;
+       <button class="btn gold" id="r_go" data-testid="reg-submit" ${R.busy?"disabled":""}>${R.busy?'<span class="spin"></span> '+esc(tx('Registering…')):esc(tx('Register'))+' <span class=arw>→</span>'}</button>`;
   } else {
-    form = `<div ${who}>Entity <b>${esc(R.name)}</b> — verify to enter · <a onclick="regReset()">change</a></div>
+    form = `<div ${who}>${esc(tx('User ID'))} <b>${esc(R.name)}</b> · <a onclick="regReset()">${esc(tx('change'))}</a></div>
        ${regVerticalChooser()}
        ${govPanel()}
-       <label class="fl">OTP sent to ${esc(R.email)}</label><input class="inp" id="r_otp" data-testid="reg-otp" placeholder="6-digit code" autocomplete="one-time-code" inputmode="numeric">
+       <label class="fl">${esc(txf('Code sent to {e}', { e: R.email }))}</label><input class="inp" id="r_otp" data-testid="reg-otp" placeholder="6-digit code" autocomplete="one-time-code" inputmode="numeric">
        ${R.err?`<div class="err">${R.err}</div>`:""}
        <button class="btn gold" id="r_go" data-testid="reg-submit" ${(R.busy||!R.agreed)?"disabled":""}>${R.busy?'<span class="spin"></span> Verifying…':"Verify &amp; enter <span class=arw>→</span>"}</button>`;
   }
   /* ⭐ FX-UX2: a small app's pane — the same form, under the page's own heading; "Sign in" is Home's one sign-in window (never #/login) */
   if (REG_AT.host) {
-    REG_AT.host.innerHTML = '<div class="cs" data-testid="reg-screen"><h2 class="shop-h" data-testid="reg-title">' + esc(tx('Create your entity')) + '</h2>'
-      + '<p class="sub">' + esc(tx('Register your business on Chit & Bridge')) + '</p><div class="body">' + form
-      + '<div class="swap" style="margin-top:14px">' + esc(tx('Already registered?')) + ' <a href="/" data-testid="reg-signin">' + esc(tx('Sign in')) + '</a></div></div></div>';
+    REG_AT.host.innerHTML = '<div class="cs" data-testid="reg-screen"><h2 class="shop-h" data-testid="reg-title">' + esc(tx('Register your business')) + '</h2>'
+      + '<div class="body">' + form + '</div></div>';   /* R6 (WALK-REG 2026-10-16): "Sign in" is the top bar's — once, not again under the button */
   } else
   document.getElementById("root").innerHTML = modeRibbon() + `
   <div class="auth"><div class="card">
-    <div class="top">${logo()}<h1>Create your entity</h1><p class="sub">Register your business on Chit &amp; Bridge</p></div>
+    <div class="top">${logo()}<h1>${esc(tx('Register your business'))}</h1></div>
     <div class="body">
       ${form}
       <div class="hint"><b>${STAGES[CFG.STAGE].label}</b> — real OTP to your email via <span class="mono">${EP.register.p}</span>.</div>
@@ -247,16 +246,24 @@ async function doRegister(){
 function regVerticalChooser(){
   const vs=(REG.verticals)||[];
   if(!vs.length) return '';
-  return '<div style="margin:10px 0 4px"><div class="fl">Choose your setup <span style="font-weight:400;color:var(--grey)">(you can change later)</span></div>'
+  return '<div style="margin:10px 0 4px"><div class="fl">' + esc(tx('Choose your setup')) + ' <span style="font-weight:400;color:var(--grey);cursor:help" title="' + esc(tx('You can change it later.')) + '">ⓘ</span></div>'
     + vs.map(function(v){ const sel=(REG.constitution||'')===v.key; const caps=(v.capabilities||[]).join(' · ');
-        return '<div data-testid="reg-vertical-'+esc(v.key)+'" onclick="REG.constitution=\''+esc(v.key)+'\';renderRegister()" style="border:1px solid '+(sel?'var(--blue)':'var(--line)')+';background:'+(sel?'var(--blue-tint)':'var(--card)')+';color:' + (sel ? 'var(--on-card)' : 'var(--on-card)') + ';border-radius:9px;padding:9px 11px;margin-bottom:7px;cursor:pointer"><div style="font-weight:700;font-size:var(--fs-2);color:var(--ink)">'+(sel?'● ':'○ ')+esc(v.label||v.key)+(v.is_default?' <span style="font-size:var(--fs-1);color:var(--grey);font-weight:400">· default</span>':'')+'</div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">'+(v.vertical?('vertical: '+esc(v.vertical)+' · '):'')+'includes '+esc(caps||'core')+'</div></div>';
+        return '<div data-testid="reg-vertical-'+esc(v.key)+'" onclick="REG.constitution=\''+esc(v.key)+'\';renderRegister()" style="border:1px solid '+(sel?'var(--blue)':'var(--line)')+';background:'+(sel?'var(--blue-tint)':'var(--card)')+';color:var(--on-card);border-radius:9px;padding:9px 11px;margin-bottom:7px;cursor:pointer"><div style="font-weight:700;font-size:var(--fs-2);color:var(--ink)">'+(sel?'● ':'○ ')+esc(regSetupLabel(v))
+          +' <span data-testid="reg-vertical-why" style="font-weight:400;color:var(--grey);cursor:help" title="'+esc(txf('Includes: {caps}', { caps: caps || 'core' }))+'">ⓘ</span></div></div>';
       }).join('')
-    + '<div style="font-size:var(--fs-1);color:var(--grey);margin:2px 0 4px">' + txf('None fits? {tailor} — or {contact} to wire it quickly.', {
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin:2px 0 4px">' + txf('None fits? {tailor} · {contact}', {
         tailor:  '<a onclick="regTailor();return false" style="color:var(--blue);cursor:pointer;font-weight:600">' + tx('Tailor one') + '</a>',
-        contact: '<a onclick="regContact();return false" style="color:var(--blue);cursor:pointer;font-weight:600">' + tx('contact the team') + '</a>' }) + '</div>'
+        contact: '<a onclick="regContact();return false" style="color:var(--blue);cursor:pointer;font-weight:600">' + tx('Contact the team') + '</a>' }) + '</div>'
     + '</div>';
 }
-function regTailor(){ if(typeof toast==='function') toast("Tailoring — we'll wire a custom setup with you. For now, pick the closest and refine later."); }
+/** R3 (WALK-REG 2026-10-16): a setup's name in a shopkeeper's words — the default is "Standard", a vertical is its own name
+    (service-desk → Service desk); never the server's internal label ("Base constitution — any currency", "… vertical"). Painted only. */
+function regSetupLabel(setup){
+  if (setup.is_default) return tx('Standard (any business)');
+  const words = String(setup.vertical || setup.key || '').replace(/[-_]+/g, ' ').trim();
+  return words ? tx(words.charAt(0).toUpperCase() + words.slice(1)) : (setup.label || setup.key);
+}
+function regTailor(){ if(typeof toast==='function') toast(tx('Pick the closest for now — we tailor it with you later.')); }
 function regContact(){ try{ window.location.href='mailto:team@chitandbridge.com?subject='+encodeURIComponent('Tailor a setup for '+(REG.name||'my business')); }catch(_){ if(typeof toast==='function')toast('Email team@chitandbridge.com to wire a custom setup.'); } }
 
 

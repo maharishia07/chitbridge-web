@@ -136,7 +136,8 @@ var CBSettings = (function () {
   /** a read that failed is said in words, never painted as an empty list */
   function failWords(e) { return e && e.status === 403 ? { title: T('This sign-in cannot open this'), sub: CBAction.words(e, '') } : { title: T('Could not read this'), sub: T('Nothing was lost. Try again in a moment.') }; }
   function list(el, o) {
-    var l = CBList.mount(el, Object.assign({ t: T, view: 'lines' }, o));
+    /* WALK-REG R39/R41 (Athi, 16 Oct): every settings list OPENS in the grid — aligned, resizable columns; ☰ lines stays one click away */
+    var l = CBList.mount(el, Object.assign({ t: T, view: 'grid' }, o));
     H.lists.push(l); return l;
   }
   function frame(parts) { H.host.innerHTML = parts.join(''); }
@@ -159,17 +160,23 @@ var CBSettings = (function () {
 
   /* ═════ COUNTERS & KEYS ═════ */
   function counters() {
-    frame(['<h1 class="sx-h" data-testid="sx-title">' + esc(T('Counters & keys')) + '</h1>',
-      '<p class="sub">' + esc(T('Each counter keeps its own bill numbers. One PC holds a counter at a time.')) + '</p>',
+    frame(['<h1 class="sx-h" data-testid="sx-title">' + esc(T('Counters')) + '</h1>',
+      '',
       '<div id="sx_ctr_bar"></div>', lineOut('sx_ctr_out'), '<div class="sx-list" id="sx_ctr_list" data-testid="sx-ctr-list"></div>',
-      '<h2 class="sx-h2">' + esc(T('Keys for other systems')) + '</h2>', '<div id="sx_key_bar"></div>', lineOut('sx_key_out'), '<div class="sx-list" id="sx_key_list" data-testid="sx-key-list"></div>']);
-    var cl = null, kl = null;
+      '<details data-testid="sx-ctr-adv" style="margin-top:18px"><summary style="cursor:pointer;opacity:.75">' + esc(T('Advanced')) + '</summary>'
+        + '<div style="margin:10px 0;display:flex;gap:10px;align-items:center"><button class="btn" type="button" id="sx_ctr_app" data-testid="sx-ctr-app">' + esc(T('Install the counter')) + '</button>'
+        + '<span class="sx-why" title="' + esc(T('Opens the counter; use its Install button. It bills without the internet. Sign in once on that PC to pair it.')) + '" style="cursor:help;opacity:.7">ⓘ</span></div></details>']);
+    /* WALK-REG R53 (Athi: "no one will install if it has too many files"): the counter is an installable web app (till.webmanifest + till-sw.js) —
+     * open it; its own Install button (beforeinstallprompt) asks the browser, which asks the person. No zip. */
+    $('sx_ctr_app').onclick = function () { window.open('/till.html', '_blank', 'noopener'); };
+    /* WALK-REG R29/R31: the keys for other systems are no longer on this page — they sit with the connectors (keysSection, below) */
+    var cl = null;
     var manage = function () { var d = H.data.ctr; return (d && d.r && d.r.may && d.r.may.manage) || null; };
     var ctrRows = function () { var d = H.data.ctr; return (d && d.r && d.r.counters) || []; };
     function paintCtrBar() {
       var rows = ctrRows(), open = rows.filter(function (c) { return c.state === 'open' || c.state === 'break'; }).length;
       $('sx_ctr_bar').innerHTML = bar('<span class="sx-count" data-testid="sx-ctr-count"><b>' + rows.length + '</b> ' + esc(T(rows.length === 1 ? 'counter' : 'counters')) + ' · <b>' + open + '</b> ' + esc(T('open')) + '</span>'
-        + '<span class="sx-add"><label class="sx-lbl" for="sx_ctr_name">' + esc(T('New counter')) + '</label><input class="inp" id="sx_ctr_name" data-testid="sx-ctr-name" placeholder="' + esc(T('Front desk')) + '" maxlength="40"' + (grey(manage()) ? ' disabled' : '') + '>'
+        + '<span class="sx-add"><label class="sx-lbl" for="sx_ctr_name">' + esc(T('New counter')) + ' <span class="tag" data-testid="sx-ctr-optional">' + esc(T('Optional')) + '</span></label><input class="inp" id="sx_ctr_name" data-testid="sx-ctr-name" placeholder="' + esc(T('Front desk')) + '" maxlength="40"' + (grey(manage()) ? ' disabled' : '') + '>'
         + btn('sx_ctr_add', T('Add a counter'), manage()) + '</span>');
       var b = $('sx_ctr_add'); if (b && !grey(manage())) b.onclick = function () {
         CBAction.run(b, function () { return api('counterAdd', { body: { name: ($('sx_ctr_name').value || '').trim() } }); },
@@ -191,7 +198,7 @@ var CBSettings = (function () {
     cl = list($('sx_ctr_list'), {
       key: 'set-counters', rows: ctrRows, id: function (c) { return c.id; }, rowTid: function (c) { return 'sx-ctr-' + c.id; },
       state: function () { return listState('ctr'); }, error: function () { return listErr('ctr'); }, onRetry: function () { readCtr(); },
-      empty: { title: T('No counters yet'), sub: T('Add one above — then open it on the PC that bills.') },
+      empty: { title: T('No counters yet'), sub: T('Add one above.') },
       columns: [
         { key: 'id', label: T('Counter'), prio: 1, w: 210, sort: 'id', html: true, value: function (c) { return c.id + ' ' + c.name; },
           cell: function (c) { return '<b class="mono">' + esc(c.id) + '</b> ' + esc(c.name); } },
@@ -231,13 +238,27 @@ var CBSettings = (function () {
       ],
     });
     paintCtrBar(); readCtr();
+  }
 
-    /* keys: what other systems (and each counter PC) sign in with */
+  /* ═════ KEYS FOR OTHER SYSTEMS — what other systems (and each counter PC) sign in with. MOVED from Counters & keys to Connectors
+   *  (WALK-REG R29/R31, 16 Oct: keys belong with the connectors that use them); the ONE list, painted into the page's
+   *  #sx_key_bar · #sx_key_out · #sx_key_list. `after` runs after a revoke (a counter's key: the page re-reads what it shows). ═════ */
+  /** the Keys heading, with what a key is behind ⓘ (one place for the sentence; Connectors and Account both paint it) */
+  function keysHead() {
+    return '<h2 class="sx-h2">' + esc(T('Keys for other systems')) + ' <span class="sx-why" title="' + esc(T('A key lets another system or a counter PC sign in as your shop.')) + '" style="cursor:help;opacity:.7">ⓘ</span></h2>';
+  }
+  function keysHTML() {
+    /* WALK-REG (Athi, 16 Oct: 'we will hide key complexity ourselves and work through login credentials'): signing in + Download / pairing mint the key behind the scenes;
+     * the raw key list is folded away as Advanced, never in the way */
+    return [];   /* Athi, 16 Oct: "if we are hiding the complexity, we don't need to specify it here" — sign-in, Download and pairing make the keys */
+  }
+  function keysSection(after) {
+    var kl = null;
     var keyRows = function () { var d = H.data.keys; return (d && d.r && d.r.keys) || []; };
     function heard(k) { return k.seen && k.seen.at ? _keyAgo(k.seen.at) + (k.seen.ip ? ' · ' + k.seen.ip : '') : T('Never reached ChitBridge'); }
     function paintKeyBar() {
       $('sx_key_bar').innerHTML = bar('<span class="sx-add"><label class="sx-lbl" for="sx_key_name">' + esc(T('New key')) + '</label><input class="inp" id="sx_key_name" data-testid="sx-key-name" placeholder="' + esc(T('Which system')) + '" maxlength="80">'
-        + '<label class="sx-lbl" for="sx_key_scope">' + esc(T('It may')) + '</label><select class="inp" id="sx_key_scope" data-testid="sx-key-scope">' + keyKinds().map(function (s) { return '<option value="' + esc(s[0]) + '">' + esc(T(s[1])) + '</option>'; }).join('') + '</select>'
+        + '<label class="sx-lbl" for="sx_key_scope">' + esc(T('This key can')) + '</label><select class="inp" id="sx_key_scope" data-testid="sx-key-scope">' + keyKinds().map(function (kind) { return '<option value="' + esc(kind[0]) + '">' + esc(T(kind[1])) + '</option>'; }).join('') + '</select>'
         + btn('sx_key_mint', T('Make a key')) + '</span>');
       $('sx_key_mint').onclick = function () {
         var b = $('sx_key_mint');
@@ -251,10 +272,10 @@ var CBSettings = (function () {
     kl = list($('sx_key_list'), {
       key: 'set-keys', rows: keyRows, id: function (k) { return k.jti; }, rowTid: function (k) { return 'sx-key-' + k.jti; },
       state: function () { return listState('keys'); }, error: function () { return listErr('keys'); }, onRetry: function () { readKeys(); },
-      empty: { title: T('No keys yet'), sub: T('A key lets another system or a counter PC sign in as your shop.') },
+      empty: { title: T('No keys yet') },
       columns: [
         { key: 'name', label: T('Name'), prio: 1, w: 230, sort: 'name', cell: function (k) { return k.name || 'key'; } },
-        { key: 'scopes', label: T('It may'), prio: 3, w: 150, cell: function (k) { return (k.scopes || []).join(', '); } },
+        { key: 'scopes', label: T('This key can'), prio: 3, w: 150, cell: function (k) { return (k.scopes || []).join(', '); } },
         { key: 'seen', label: T('Last heard'), prio: 2, w: 190, sort: 'seen', html: true, value: function (k) { return heard(k); },
           cell: function (k) { var quiet = !k.seen || !k.seen.at || (Date.now() - _keySeenAt(k)) > 86400000; return '<span class="tag' + (quiet ? ' amber' : ' green') + '" data-testid="sx-key-seen-' + esc(k.jti) + '">' + esc(heard(k)) + '</span>'; } },
         { key: 'made', label: T('Made'), prio: 4, w: 130, cell: function (k) { return day(k.created_at); } },
@@ -266,14 +287,14 @@ var CBSettings = (function () {
         return '<div class="sx-next" data-testid="sx-key-next-' + esc(k.jti) + '"><div class="mono">…' + esc(k.last4 || '') + '</div>'
           + (k.seen && k.seen.agent ? '<div class="sub">' + esc(_agentName(k.seen.agent)) + '</div>' : '')
           + (k.diag && k.diag.verdict ? '<div class="sub">🩺 ' + esc(k.diag.verdict) + '</div>' : '')
-          + (!k.seen || !k.seen.at ? '<div class="sub">' + esc(T('Nothing from it has arrived. Look at the network on that PC, not at permissions.')) + '</div>' : '') + '</div>';
+          + (!k.seen || !k.seen.at ? '<div class="sub">' + esc(T('Check the network on that PC.')) + '</div>' : '') + '</div>';
       },
       actions: [{ id: 'revoke', label: T('Revoke'), tid: 'sx-key-revoke',
         run: function (k) {
           var till = (k.scopes || []).indexOf('till') >= 0;
           CBAction.run(btnOf('revoke', k.jti), function () { return api('keysRevoke', { params: { jti: k.jti } }); },
             { key: 'sx-key-revoke-' + k.jti, confirm: { title: T('Revoke') + ' ' + (k.name || 'key') + '?', body: esc(T(till ? 'That PC stops billing. Bills it has not sent stay on it.' : 'That system can no longer sign in.')), yes: T('Revoke'), danger: true },
-              failed: T('Could not revoke'), out: 'sx_key_out', outcome: function () { $('sx_key_out').textContent = T('Key revoked.'); readKeys(); readCtr(); } });
+              failed: T('Could not revoke'), out: 'sx_key_out', outcome: function () { $('sx_key_out').textContent = T('Key revoked.'); readKeys(); if (after) after(); } });
         } }],
     });
     paintKeyBar(); readKeys();
@@ -281,16 +302,34 @@ var CBSettings = (function () {
 
   /* W16: the catalogue's may.code → the row's words (a sentence the client branches on ships with a code): NOT_FOR_COUNTRY · NOT_YET_FOR_COUNTRY (sold there, our kit is not built for that pack yet) · NOT_YET (no kit at all) */
   var MAY_WORDS = { NOT_FOR_COUNTRY: 'Not for your country', NOT_YET_FOR_COUNTRY: 'Not yet for your country', NOT_YET: 'Not built yet' };
+  /* WALK-REG R32: the printable guide a connector has (public/guides/<id>.pdf, copied from docs/23-connectors-and-integrations/guides); else the server's docs page */
+  var GUIDES = { tally: '/guides/tally.pdf' };
+  function guideOf(connector) { var base = (typeof CFG !== 'undefined' && CFG.API_BASE) || ''; return GUIDES[connector.id] || (connector.docs ? base + connector.docs : ''); }
+  /** a row action drawn ON the row (CBList runs it by data-act/data-actrow, as it runs the opened row's buttons); greyed with the reason, never hidden */
+  function rowBtn(action, connector, label, reason) {
+    return '<button type="button" class="cbl-btn" data-act="' + action + '" data-actrow="' + esc(connector.id) + '" data-testid="sx-con-' + action + '-' + esc(connector.id) + '"' + (reason ? ' disabled aria-disabled="true" title="' + esc(reason) + '"' : '') + '>' + esc(label) + '</button>';
+  }
+  /** WALK-REG R32: Download and Guide on the row itself, not only inside it — the same row actions (kit · guide), drawn here (CBList dispatches data-act from any button in the list) */
+  function getItColumn() {
+    return { key: 'get', label: T('Get it'), prio: 1, w: 200, html: true, value: function () { return ''; },
+      cell: function (connector) { return rowBtn('kit', connector, T('Download'), grey(connector.may)) + ' ' + rowBtn('guide', connector, T('Guide'), guideOf(connector) ? '' : T('No guide yet')); } };
+  }
+  /** the Guide action — drawn on the row (the 'get' column); when:false keeps it out of the opened row so it is not shown twice (the Download action the same) */
+  function guideAction() {
+    return { id: 'guide', label: T('Guide'), tid: 'sx-con-guide', when: function () { return false; }, why: function (connector) { return guideOf(connector) ? '' : T('No guide yet'); },
+      run: function (connector) { var guideLink = guideOf(connector); if (guideLink) window.open(guideLink, '_blank', 'noopener'); } };
+  }
+  /** the key list is not drawn for a shop owner (WALK-REG R52) */
+  function keysSectionIfShown(after) { if ($('sx_key_bar')) keysSection(after); }
   function mayWords(verdict) { return T(MAY_WORDS[(verdict && verdict.code) || ''] || 'Not for your shop'); }
   /* ═════ CONNECTORS ═════ */
   function connectors() {
-    frame(['<h1 class="sx-h" data-testid="sx-title">' + esc(T('Connectors')) + '</h1>',
-      '<p class="sub">' + esc(T('A small program beside Tally, Zoho or a folder of files. Download, unzip, start — your key is inside.')) + '</p>',
-      lineOut('sx_con_out'), '<div class="sx-list" id="sx_con_list" data-testid="sx-con-list"></div>',
-      '<h2 class="sx-h2">' + esc(T('Running on your PCs')) + '</h2>', lineOut('sx_run_out'), '<div class="sx-list" id="sx_run_list" data-testid="sx-run-list"></div>']);
+    frame(['<h1 class="sx-h" data-testid="sx-title">' + esc(T('Connectors')) + ' <span class="sx-why" title="' + esc(T('A small program beside Tally, Zoho or a folder of files. Your key is inside the download.')) + '" style="cursor:help;font-size:.55em;opacity:.7">ⓘ</span></h1>',
+      '<h2 class="sx-h2">' + esc(T('Running on your PCs')) + '</h2>', lineOut('sx_run_out'), '<div class="sx-list" id="sx_run_list" data-testid="sx-run-list"></div>',   /* WALK-REG R35: what is RUNNING sits at the top of the page, never under the list */
+      '<h2 class="sx-h2">' + esc(T('All connectors')) + '</h2>', lineOut('sx_con_out'), '<div class="sx-list" id="sx_con_list" data-testid="sx-con-list"></div>'].concat(keysHTML()));
     var pol = null;
     function inUse() { var v = (pol && pol.connectors_in_use) || []; return Array.isArray(v) ? v.filter(function (x) { return x !== 'none'; }) : []; }
-    var catRows = function () { var d = H.data.cat; return (d && d.r && d.r.connectors) || []; };
+    var catRows = function () { var catData = H.data.cat; return ((catData && catData.r && catData.r.connectors) || []).filter(function (connector) { return connector.id !== 'till'; }); };   /* WALK-REG R51: our own counter lives on Counters › Advanced */
     var cl = null, rl = null;
     function readCat() {
       return Promise.all([load('cat', 'intCatalogue', null, function () { if (cl) cl.refresh(); }),
@@ -312,27 +351,27 @@ var CBSettings = (function () {
           cell: function (c) { return '<b>' + esc(c.name) + '</b>' + (inUse().indexOf(c.id) >= 0 ? ' <span class="tag green" data-testid="sx-con-inuse-' + esc(c.id) + '">' + esc(T('We use this')) + '</span>' : ''); } },
         { key: 'does', label: T('What it does'), prio: 3, w: 300, cell: function (c) { return c.does || ''; } },
         { key: 'here', label: T('For your shop'), prio: 2, w: 170, html: true, value: function (c) { return c.may && c.may.ok === false ? 'no' : 'yes'; },
-          cell: function (c) { var no = c.may && c.may.ok === false; return '<span class="tag' + (no ? '' : ' green') + '" data-testid="sx-con-may-' + esc(c.id) + '" data-code="' + esc((c.may && c.may.code) || '') + '">' + esc(no ? mayWords(c.may) : T('Works here')) + '</span>'; } },
+          cell: function (connector) { var no = connector.may && connector.may.ok === false; return '<span class="tag' + (no ? '' : ' green') + '" data-testid="sx-con-may-' + esc(connector.id) + '" data-code="' + esc((connector.may && connector.may.code) || '') + '">' + esc(no ? mayWords(connector.may) : T('Available')) + '</span>'; } },
+        getItColumn(),
       ],
       search: function (c) { return [c.name, c.does].join(' '); },
       filters: [{ key: 'use', label: T('In use'), all: T('All'), options: [{ v: 'yes', label: T('We use these') }, { v: 'no', label: T('Not used') }],
         match: function (c, v) { var u = inUse().indexOf(c.id) >= 0; return v === 'yes' ? u : !u; } }],
       next: function (c) {
         var grp = function (title, lines) { return lines && lines.length ? '<div class="sx-grp"><b>' + esc(T(title)) + '</b><ul>' + lines.map(function (l) { return '<li>' + esc(T(l)) + '</li>'; }).join('') + '</ul></div>' : ''; };
-        var base = (typeof CFG !== 'undefined' && CFG.API_BASE) || '';
         return '<div class="sx-next" data-testid="sx-con-next-' + esc(c.id) + '">'
           + (c.may && c.may.ok === false && c.may.why ? '<div class="sub" data-testid="sx-con-why-' + esc(c.id) + '">' + esc(c.may.why) + '</div>' : '')
           + grp('Before you start', c.needs) + grp('What to do', c.steps) + grp('If it does not work', c.watch_out)
-          + (c.runs_on ? '<div class="sub">' + esc(T('Runs on')) + ': ' + esc(c.runs_on) + '</div>' : '')
-          + (c.docs ? '<a class="sx-link" href="' + esc(base + c.docs) + '" target="_blank" rel="noopener" data-testid="sx-con-docs-' + esc(c.id) + '">' + esc(T('Instructions')) + '</a>' : '') + '</div>';
+          + (c.runs_on ? '<div class="sub">' + esc(T('Runs on')) + ': ' + esc(c.runs_on) + '</div>' : '') + '</div>';
       },
       actions: [
-        { id: 'kit', label: T('Download the kit'), tid: 'sx-con-kit', why: function (c) { return grey(c.may); },
+        { id: 'kit', label: T('Download'), tid: 'sx-con-kit', when: function () { return false; }, why: function (connector) { return grey(connector.may); },
           run: function (c) {
             var ad = c.default_adapter || (c.adapters || [])[0] || c.id;
             CBAction.run(btnOf('kit', c.id), function () { return kitDownload(c.id, ad); },
-              { key: 'sx-con-kit-' + c.id, failed: T('Could not download'), out: 'sx_con_out', outcome: function () { $('sx_con_out').textContent = T('Downloaded — your key is inside. Unzip it and start it.'); readRun(); } });
+              { key: 'sx-con-kit-' + c.id, failed: T('Could not download'), out: 'sx_con_out', outcome: function () { $('sx_con_out').textContent = T('Downloaded. Unzip it and start it.'); readRun(); } });
           } },
+        guideAction(),
         { id: 'use', label: T('We use this'), tid: 'sx-con-use', when: function (c) { return inUse().indexOf(c.id) < 0; }, why: function () { return grey(useMay()); }, run: function (c) { setUse(c, true); } },
         { id: 'unuse', label: T('We do not use this'), tid: 'sx-con-unuse', when: function (c) { return inUse().indexOf(c.id) >= 0; }, why: function () { return grey(useMay()); }, run: function (c) { setUse(c, false); } },
       ],
@@ -346,7 +385,7 @@ var CBSettings = (function () {
     rl = list($('sx_run_list'), {
       key: 'set-running', rows: runRows, id: function (r) { return r.actor_id || r.id; }, rowTid: function (r) { return 'sx-run-' + (r.actor_id || r.id); },
       state: function () { return listState('run'); }, error: function () { return listErr('run'); }, onRetry: function () { readRun(); },
-      empty: { title: T('None has checked in yet'), sub: T('A connector reports here each time it runs.') },
+      empty: { title: T('None has checked in yet') },
       columns: [
         { key: 'name', label: T('Connector'), prio: 1, w: 200, sort: 'name', cell: function (r) { return r.name || r.id; } },
         { key: 'where', label: T('Where'), prio: 3, w: 200, cell: function (r) { return [r.adapter, r.host].filter(Boolean).join(' · '); } },
@@ -377,20 +416,24 @@ var CBSettings = (function () {
       ],
     });
     readRun();
+    keysSectionIfShown(readRun);
   }
 
   /* ═════ POLICY — the flags of lib/policy that have words here, with who may change each (the server's may) ═════ */
   function policy() {
-    frame(['<h1 class="sx-h" data-testid="sx-title">' + esc(T('Policy')) + '</h1>',
-      '<p class="sub">' + esc(T('Rules saved on your business, not on this device.')) + ' <a class="sx-link" href="/settings.html#/country" data-testid="sx-pol-country">' + esc(T('Country, money and year')) + ' ›</a></p>',
+    frame(['<h1 class="sx-h" data-testid="sx-title">' + esc(T('Policy')) + ' <span class="sx-opt" data-testid="sx-pol-optional" title="' + esc(T('Defaults are set. Change any of them when you need to.')) + '" style="font-size:.55em;font-weight:500;opacity:.7">(' + esc(T('optional')) + ')</span></h1>',
+      '<p class="sub"><a class="sx-link" href="/settings.html#/country" data-testid="sx-pol-country">' + esc(T('Country, money and year')) + ' ›</a></p>',
       lineOut('sx_pol_out'), '<div class="sx-list sx-tall" id="sx_pol_list" data-testid="sx-pol-list"></div>']);
     var pl = null;
     var answer = function () { var d = H.data.pol; return (d && d.r) || {}; };
     function rows() {
       var r = answer(), flags = r.flags || {}, may = r.may || {};
       if (!r.flags) return [];
+      /* WALK-REG R36/R37 (Athi, 16 Oct): rows not shown here — the keys stay on the server. trade_cover · chit_expiry_days: nothing reads them yet;
+       * trade_side: decided, sell is the default */
+      var HIDDEN = { trade_cover: 1, chit_expiry_days: 1, trade_side: 1 };
       /* the rows ARE the server's (schema[key].ui + bound_schema, T2-POLICY) — the same reader the workshop's Business rules card uses */
-      return polDefsOf(r.schema, r.bound_schema || r.bound).map(function (d) {
+      return polDefsOf(r.schema, r.bound_schema || r.bound).filter(function (policyDef) { return !HIDDEN[policyDef.key]; }).map(function (d) {
         var v = flags[d.key] !== undefined ? flags[d.key] : d.def;
         /* the server's answer when it gives one; an older server: the class the list states (bound · protected · inherited are locked) — the PATCH still decides */
         var m = may[d.key] || ((d.gov === 'bound' || d.gov === 'protected' || d.gov === 'inherited') ? { ok: false, why: T('Set by the platform for every shop.') } : { ok: true });
@@ -417,7 +460,7 @@ var CBSettings = (function () {
     pl = list($('sx_pol_list'), {
       key: 'set-policy', rows: rows, id: function (x) { return x.key; }, rowTid: function (x) { return 'sx-pol-' + x.key; },
       state: function () { return listState('pol'); }, error: function () { return listErr('pol'); }, onRetry: function () { read(); },
-      empty: { title: T('No rules to set'), sub: T('This server does not keep policy rules yet.') },
+      empty: { title: T('No rules to set') },
       columns: [
         { key: 'label', label: T('Rule'), prio: 1, w: 260, sort: 'label', cell: function (x) { return T(x.def.label); }, value: function (x) { return T(x.def.label); } },
         { key: 'value', label: T('Now'), prio: 2, w: 170, cell: shown, value: shown },
@@ -427,25 +470,37 @@ var CBSettings = (function () {
       search: function (x) { return [T(x.def.label), x.def.help, shown(x)].join(' '); },
       filters: [{ key: 'who', label: T('Who may change it'), all: T('Anyone'), options: [{ v: 'you', label: T('You') }, { v: 'not', label: T('Not you') }],
         match: function (x, v) { return v === 'you' ? x.may.ok !== false : x.may.ok === false; } }],
+      /* WALK-REG (Athi, 16 Oct: "the text is too much and save button below the box"): ONE line — the control, an ⓘ holding the help, and the
+       * row saves itself on change ("✓ Saved" beside it). A rule set elsewhere shows only the door to where it is set. */
       next: function (x) {
-        return '<div class="sx-next" data-testid="sx-pol-next-' + esc(x.key) + '">' + (x.def.help ? '<div class="sub">' + esc(T(x.def.help)) + '</div>' : '') + control(x)
-          + (x.may.code === 'SET_IN_COUNTRY' ? '<a class="sx-link" href="/settings.html#/country" data-testid="sx-pol-country-door">' + esc(T('Change it under Country')) + ' ›</a>' : '') + '</div>';
+        var helpTip = x.def.help ? ' <span class="sx-why" title="' + esc(T(x.def.help)) + '" data-testid="sx-pol-why-' + esc(x.key) + '" style="cursor:help;opacity:.7">ⓘ</span>' : '';
+        if (x.may.code === 'SET_IN_COUNTRY') return '<div class="sx-next" data-testid="sx-pol-next-' + esc(x.key) + '"><a class="sx-link" href="/settings.html#/country" data-testid="sx-pol-country-door">' + esc(T('Change it under Country')) + ' ›</a>' + helpTip + '</div>';
+        return '<div class="sx-next" data-testid="sx-pol-next-' + esc(x.key) + '" style="display:flex;align-items:center;gap:8px">' + control(x) + helpTip
+          + '<span class="sub" id="sx_pol_ok_' + esc(x.key) + '" data-testid="sx-pol-ok-' + esc(x.key) + '"></span></div>';
       },
-      actions: [{ id: 'save', label: T('Save'), tid: 'sx-pol-save', why: function (x) { return grey(x.may); },
-        run: function (x) {
-          var el = $('sx_pol_' + x.key); if (!el) return;
-          var body = {}; body[x.key] = polStored(x.def, el.value);
-          CBAction.run(btnOf('save', x.key), function () { return api('policySet', { body: body }); },
-            { key: 'sx-pol-save-' + x.key, failed: T('Could not save that rule'), out: 'sx_pol_out', outcome: function (r) {
-              var d = H.data.pol; if (d && d.r && r && r.flags) d.r.flags = r.flags; if (typeof SESSION !== 'undefined' && r && r.flags) SESSION.policy_flags = r.flags;
-              $('sx_pol_out').textContent = T(x.def.label) + ' — ' + T('saved') + '.'; pl.refresh(); } });
-        } }],
     });
+    function polSave(key) {
+      var x = rows().filter(function (row) { return row.key === key; })[0], el = $('sx_pol_' + key);
+      if (!x || !el || grey(x.may)) return;
+      var body = {}, ok = $('sx_pol_ok_' + key); body[key] = polStored(x.def, el.value);
+      if (ok) ok.textContent = T('Saving…');
+      api('policySet', { body: body }).then(function (answer) {
+        var policyData = H.data.pol; if (policyData && policyData.r && answer && answer.flags) policyData.r.flags = answer.flags; if (typeof SESSION !== 'undefined' && answer && answer.flags) SESSION.policy_flags = answer.flags;
+        var savedMark = $('sx_pol_ok_' + key); if (savedMark) savedMark.textContent = '✓ ' + T('Saved');
+      }, function () { var savedMark = $('sx_pol_ok_' + key); if (savedMark) savedMark.textContent = T('Could not save that rule'); });
+    }
+    $('sx_pol_list').addEventListener('change', function (e) { var idMatch = e.target && e.target.id && /^sx_pol_(.+)$/.exec(e.target.id); if (idMatch && idMatch[1].indexOf('ok_') !== 0) polSave(idMatch[1]); });
     read();
   }
 
   /* ═════ PLAN & USAGE — GET /entities/entitlements (the plan, every quota as a STATE) + GET /entities/usage (what was billed) ═════ */
   var QUOTA_WORDS = { entities: 'Shops and branches', actors: 'People', chits_per_month: 'Chits a month', network_depth: 'Network levels', suppliers: 'Suppliers' };
+  /** WALK-REG R41: usage is BILLED IN US DOLLARS (usage_ledger.cost_usd · total_cost_usd), whatever the shop's own currency — so it says US$,
+   *  never a bare $ an Indian or Australian shop would read as its own money. The reader's format; only a lone $ symbol is named. */
+  function usDollars(amount) {
+    var text = fmtMoney(amount, 'USD', '—');
+    return text.indexOf('US') >= 0 ? text : text.replace(/(^|[^A-Za-z])\$/, function (all, lead) { return lead + 'US$'; });
+  }
   function plan() {
     frame(['<h1 class="sx-h" data-testid="sx-title">' + esc(T('Plan & usage')) + '</h1>', '<div id="sx_plan_head" data-testid="sx-plan-head"></div>',
       '<div class="sx-list" id="sx_quota_list" data-testid="sx-quota-list"></div>',
@@ -463,14 +518,14 @@ var CBSettings = (function () {
       $('sx_plan_head').innerHTML = d.state === 'error' ? '<div class="err" data-testid="sx-plan-err">' + esc(listErr('ent').title) + '</div>'
         : !e ? '<div class="loadwrap"><span class="spin"></span> ' + esc(T('Reading your plan…')) + '</div>'
         : '<div class="sx-card"><div class="sx-big" data-testid="sx-plan-name">' + esc(e.name || e.plan) + '</div>'
-          + '<p class="sub" data-testid="sx-plan-enforced">' + esc(e.enforced ? T('Your plan sets the limits below.') : T('Nothing is limited by your plan yet.')) + '</p></div>';
+          + '<p class="sub" data-testid="sx-plan-enforced">' + esc(e.enforced ? T('Your plan sets limits') : T('Nothing is limited yet')) + '</p></div>';
     }
     function paintUse() {
       var u = use(), d = H.data.use || {};
       $('sx_use_head').innerHTML = d.state === 'error' ? '<div class="err" data-testid="sx-use-err">' + esc(listErr('use').title) + '</div>'
         : !u ? '<div class="loadwrap"><span class="spin"></span> ' + esc(T('Reading your usage…')) + '</div>'
-        : u.not_enabled ? '<p class="sub" data-testid="sx-use-off">' + esc(T('Usage is not recorded on this server yet.')) + '</p>'
-        : '<div class="sx-card"><div class="sx-big" data-testid="sx-use-total">' + esc(fmtMoney(u.total_cost_usd, 'USD', '—')) + '</div>'
+        : u.not_enabled ? '<p class="sub" data-testid="sx-use-off">' + esc(T('Usage not recorded yet')) + '</p>'
+        : '<div class="sx-card"><div class="sx-big" data-testid="sx-use-total">' + esc(usDollars(u.total_cost_usd)) + '</div>'
           + '<p class="sub" data-testid="sx-use-billed">' + esc(((u.counts && u.counts.billed) || 0) + ' ' + T('events billed in') + ' ' + (u.window_days || 0) + ' ' + T('days')) + '</p></div>';
     }
     function readEnt() { return load('ent', 'entitlements', null, function () { paintHead(); if (ql) ql.refresh(); }); }
@@ -492,7 +547,7 @@ var CBSettings = (function () {
       columns: [
         { key: 'meter', label: T('Kind'), prio: 1, w: 220, mono: true, cell: function (m) { return m.meter; } },
         { key: 'events', label: T('Events'), prio: 2, w: 110, num: true, cell: function (m) { return String(m.events || 0); }, value: function (m) { return Number(m.events) || 0; } },
-        { key: 'cost', label: T('Cost'), prio: 3, w: 130, num: true, cell: function (m) { return fmtMoney(m.cost, 'USD', '—'); }, value: function (m) { return Number(m.cost) || 0; } },
+        { key: 'cost', label: T('Cost'), prio: 3, w: 130, num: true, cell: function (usageRow) { return usDollars(usageRow.cost); }, value: function (usageRow) { return Number(usageRow.cost) || 0; } },
       ],
     });
     paintHead(); paintUse(); readEnt(); readUse();
@@ -500,15 +555,15 @@ var CBSettings = (function () {
 
   /* ═════ ACCOUNT (T3-P4-ACCOUNT) — Sessions (GET /signin/sessions · the owner's devices) · API keys (a door to the one list) · Vault (cap-shop.js's card, every section) ═════ */
   var SURFACE_WORDS = { till: 'Counter', index: 'Home', app: 'Workshop', web: 'Web', settings: 'CB Settings', finance: 'CB Finance', accounts: 'CB Accounts', crm: 'CB CRM', tasks: 'CB Tasks & Orders', shop: 'Online shop', kyb: 'Know your business', employees: 'CB Employees', network: 'Network' };
-  var CURRENT_WHY = 'This is the device you are on. Use Sign out in the menu.';
+  var CURRENT_WHY = 'The device you are on — use Sign out in the menu.';
   function account() {
     frame(['<h1 class="sx-h" data-testid="sx-title">' + esc(T('Account')) + '</h1>',
-      '<p class="sub">' + esc(T('Where you are signed in. Sign one out if a device is lost or shared.')) + '</p>',
+      '<h2 class="sx-h2">' + esc(T('Where you are signed in')) + ' <span class="sx-why" title="' + esc(T('Sign one out if a device is lost or shared.')) + '" style="cursor:help;opacity:.7">ⓘ</span></h2>',
       '<div id="sx_ses_bar"></div>', lineOut('sx_ses_out'), '<div class="sx-list" id="sx_ses_list" data-testid="sx-ses-list"></div>',
       '<h2 class="sx-h2">' + esc(T('Every device of the shop')) + '</h2>', '<div id="sx_dev_bar"></div>', lineOut('sx_dev_out'), '<div class="sx-list" id="sx_dev_list" data-testid="sx-dev-list"></div>',
-      '<h2 class="sx-h2">' + esc(T('Keys for other systems')) + '</h2>', '<div id="sx_keys_card" data-testid="sx-keys-card"></div>',
+      '<div id="sx_keys_card" data-testid="sx-keys-card" hidden></div>',
       '<h2 class="sx-h2">' + esc(T('Vault')) + '</h2>',
-      '<p class="sub">' + esc(T('Identity, signatory, bank and licences — kept once, they fill every form for an authority')) + ' · <a class="sx-link" href="/authority-forms.html" data-testid="sx-vault-forms">' + esc(T('Forms for an authority')) + ' ›</a></p>',
+      '<p class="sub"><a class="sx-link" href="/authority-forms.html" data-testid="sx-vault-forms">' + esc(T('Forms for an authority')) + ' ›</a></p>',
       '<div id="vaulthost" data-testid="sx-vault"></div>']);
     var sl = null, dl = null;
     var sesRows = sessionRows;
@@ -521,7 +576,7 @@ var CBSettings = (function () {
     function paintSesBar() {
       var d = H.data.ses || {}, rows = sesRows();
       $('sx_ses_bar').innerHTML = bar('<span class="sx-count" data-testid="sx-ses-count"><b>' + rows.length + '</b> ' + esc(T(rows.length === 1 ? 'sign-in' : 'sign-ins'))
-        + (d.r && d.r.legacy ? ' · <span class="tag amber" data-testid="sx-ses-legacy">' + esc(T('This sign-in is older than the list — it is shown from this device; sign in again to list it on the server.')) + '</span>' : '') + '</span>');
+        + (d.r && d.r.legacy ? ' · <span class="tag amber" data-testid="sx-ses-legacy" title="' + esc(T('Shown from this device.')) + '">' + esc(T('Sign-in older than the list — sign in again')) + '</span>' : '') + '</span>');
     }
     function readSes() { return load('ses', function () { return api('sessionsList'); }, null, function () { paintSesBar(); if (sl) sl.refresh(); paintDevBar(); if (dl) dl.refresh(); }); }
     sl = list($('sx_ses_list'), {
@@ -542,10 +597,9 @@ var CBSettings = (function () {
       next: function (s) {
         var d = s.device || {};
         return '<div class="sx-next" data-testid="sx-ses-next-' + esc(s.jti) + '"><div class="mono sub">' + esc(s.device_id || '') + '</div>'
-          + (d.seen ? '<div class="sub">' + esc(T('Last seen') + ' ' + _keyAgo(d.seen)) + '</div>' : '')
-          + (s.current ? '<div class="sub">' + esc(T(CURRENT_WHY)) + '</div>' : '') + '</div>';
+          + (d.seen ? '<div class="sub">' + esc(T('Last seen') + ' ' + _keyAgo(d.seen)) + '</div>' : '') + '</div>';   /* the current device's reason is the Sign out button's own (why) — not a second time here */
       },
-      actions: [{ id: 'signout', label: T('Sign out this device'), tid: 'sx-ses-signout', why: function (s) { return s.current ? T(CURRENT_WHY) : s.legacy ? T('Sign in again first — then it is listed on the server.') : ''; },
+      actions: [{ id: 'signout', label: T('Sign out this device'), tid: 'sx-ses-signout', why: function (device) { return device.current ? T(CURRENT_WHY) : device.legacy ? T('Sign in again first.') : ''; },
         run: function (s) {
           CBAction.run(btnOf('signout', s.jti), function () { return api('sessionRevoke', { body: { jti: s.jti } }); },
             { key: 'sx-ses-signout-' + s.jti, confirm: { title: T('Sign out') + ' ' + deviceOf(s) + '?', body: esc(T('That device is signed out now. Nothing on it is lost.')), yes: T('Sign out'), danger: true },
@@ -569,7 +623,7 @@ var CBSettings = (function () {
     dl = list($('sx_dev_list'), {
       key: 'set-devices', rows: devRows, id: function (d) { return d.device_id; }, rowTid: function (d) { return 'sx-dev-' + d.device_id; },
       state: function () { return listState('dev'); }, error: function () { return listErr('dev'); }, onRetry: function () { readDev(); },
-      empty: { title: T('No device listed yet'), sub: T('A device is listed the first time someone signs in on it.') },
+      empty: { title: T('No device listed yet') },
       columns: [
         { key: 'id', label: T('Device'), prio: 1, w: 220, html: true, value: function (d) { return d.label || d.device_id; }, cell: function (d) { return '<b>' + esc(d.label || (d.kind === 'till' ? T('Counter phone or PC') : T('A browser'))) + '</b> <span class="mono sub">' + esc(String(d.device_id || '').slice(0, 12)) + '</span>'; } },
         { key: 'state', label: T('Now'), prio: 2, w: 170, html: true, value: devState,
@@ -584,7 +638,7 @@ var CBSettings = (function () {
       next: function (d) {
         return '<div class="sx-next" data-testid="sx-dev-next-' + esc(d.device_id) + '"><div class="mono sub">' + esc(d.device_id || '') + '</div>'
           + (d.till_prefix ? '<div class="sub">' + esc(T('Bills as') + ' ' + d.till_prefix) + '</div>' : '')
-          + (d.revoked_at ? '<div class="sub">' + esc(T('Removed') + ' ' + when(d.revoked_at)) + '</div>' : '<div class="sub">' + esc(T('Removing a device signs out everyone on it; it may not sign in again.')) + '</div>') + '</div>';
+          + (d.revoked_at ? '<div class="sub">' + esc(T('Removed') + ' ' + when(d.revoked_at)) + '</div>' : '') + '</div>';   /* what Remove does is said once, in its confirm */
       },
       actions: [{ id: 'remove', label: T('Remove this device'), tid: 'sx-dev-remove', when: function (d) { return !d.revoked_at; }, why: function () { return grey(devMay()); },
         run: function (d) {
@@ -595,14 +649,14 @@ var CBSettings = (function () {
     });
     paintSesBar(); paintDevBar(); readSes().then(readDev);
 
-    /* keys for other systems: the ONE list lives under Counters & keys (T3-SETTINGS) — here the count from the same read, and the door; never a second list or minting */
+    /* keys for other systems: the ONE list lives under Connectors (keysSection; was Counters & keys until WALK-REG R31) — here the count from the same read, and the door; never a second list or minting */
     function paintKeys() {
       var d = H.data.keys || {}, keys = (d.r && d.r.keys) || [], latest = keys.slice().sort(function (a, b) { return _keySeenAt(b) - _keySeenAt(a); })[0];
       $('sx_keys_card').innerHTML = '<div class="sx-card">' + (d.state === 'loading' ? '<div class="loadwrap"><span class="spin"></span> ' + esc(T('Reading your keys…')) + '</div>'
         : d.state === 'error' ? '<div class="err" data-testid="sx-keys-err">' + esc(listErr('keys').title) + '</div>'
         : '<div class="sx-big" data-testid="sx-keys-count">' + keys.length + ' ' + esc(T(keys.length === 1 ? 'key' : 'keys')) + '</div>'
-          + '<p class="sub" data-testid="sx-keys-last">' + esc(latest && latest.seen && latest.seen.at ? T('Last heard') + ': ' + (latest.name || 'key') + ' · ' + _keyAgo(latest.seen.at) : keys.length ? T('None has reached ChitBridge yet.') : T('A key lets another system or a counter PC sign in as your shop.')) + '</p>')
-        + '<a class="sx-link" href="/settings.html#/counters" data-testid="sx-keys-door">' + esc(T('Make, see or revoke a key')) + ' ›</a></div>';
+          + '<p class="sub" data-testid="sx-keys-last">' + esc(latest && latest.seen && latest.seen.at ? T('Last heard') + ': ' + (latest.name || 'key') + ' · ' + _keyAgo(latest.seen.at) : keys.length ? T('None has reached ChitBridge yet.') : T('No keys yet')) + '</p>')
+        + '<a class="sx-link" href="/settings.html#/connectors" data-testid="sx-keys-door">' + esc(T('Make, see or revoke a key')) + ' ›</a></div>';
     }
     load('keys', 'keysList', null, paintKeys);
 

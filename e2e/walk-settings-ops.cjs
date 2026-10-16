@@ -90,7 +90,8 @@ const walk = async (w) => {
   const txt = (sel) => page.locator(sel).first().innerText().then((s) => s.replace(/\s+/g, ' ').trim()).catch(() => '');
   const wrote = (re) => S.calls.filter((c) => re.test(c));
   const go = async (sec, ready) => { await page.goto(base + '/settings.html#/' + sec); await page.reload(); await page.waitForSelector(ready, { timeout: 20000 }); await page.waitForTimeout(300); };
-  const openRow = async (tid) => { await page.click('[data-testid="' + tid + '"]'); await page.waitForTimeout(200); };
+  /* WALK-REG 2026-10-16: lists open in the GRID, where a row opens from its caret (a tap on the row's middle can land on a cell's own button) */
+  const openRow = async (tid) => { const caret = page.locator('[data-testid="' + tid + '"] [data-caret]'); if (await caret.count()) await caret.first().click(); else await page.click('[data-testid="' + tid + '"]'); await page.waitForTimeout(200); };
   const act = (a, id) => page.locator('[data-act="' + a + '"][data-actrow="' + id + '"]');
   const yes = async () => { await page.waitForSelector('[data-testid="confirm-ok"]', { timeout: 5000 }); await page.click('[data-testid="confirm-ok"]'); await page.waitForTimeout(500); };
 
@@ -99,7 +100,7 @@ const walk = async (w) => {
   await w.step('S1', 'Counters & keys: one CBList, a line per counter (C1 open on its PC, C2 closed), the count from the same answer; the sidebar marks it', async () => {
     const c1 = await txt('[data-testid="sx-ctr-state-C1"]'), c2 = await txt('[data-testid="sx-ctr-state-C2"]'), n = await txt('[data-testid="sx-ctr-count"]');
     const side = await txt('[data-testid="skel-side"]');
-    return { ok: REAL ? /counter/.test(n) : (/Open on/.test(c1) && /Closed/.test(c2) && /2 counters · 1 open/.test(n) && /Counters & keys/.test(side)), saw: n + ' · C1 "' + c1 + '" · C2 "' + c2 + '"' };
+    return { ok: REAL ? /counter/.test(n) : (/Open on/.test(c1) && /Closed/.test(c2) && /2 counters · 1 open/.test(n) && /Counters/.test(side) && !/Counters & keys/.test(side)), saw: n + ' · C1 "' + c1 + '" · C2 "' + c2 + '"' };
   });
   if (!REAL) {
     await w.step('S2', 'type a name -> Add a counter -> one POST /api/counters with the name, the outcome said in words', async () => {
@@ -109,8 +110,10 @@ const walk = async (w) => {
     });
     await w.step('S3', 'C2 -> its next level (next bill number, the name) -> Open on this PC -> one POST open -> the till opens with the counter\'s key', async () => {
       await openRow('sx-ctr-C2'); const nx = await txt('[data-testid="sx-ctr-next-C2"]');
+      /* WALK-REG 2026-10-16: headless Chromium does not hand the page a popup after the awaited POST, so the walk records what the page asked window.open for */
+      await page.evaluate(() => { window.__opened = []; window.open = (u) => { window.__opened.push(String(u)); return null; }; });
       await act('open', 'C2').click(); await page.waitForTimeout(800);
-      const post = wrote(/POST \/api\/counters\/C2\/open/), till = S.opened.filter((u) => /till\.html#key=tk-walk/.test(u));
+      const post = wrote(/POST \/api\/counters\/C2\/open/), till = (await page.evaluate(() => window.__opened || [])).filter((u) => /till\.html#key=tk-walk/.test(u));
       return { ok: /0007/.test(nx) && post.length === 1 && till.length === 1, saw: 'next "' + nx.slice(0, 40) + '" · ' + post.length + ' open · till tabs ' + till.length };
     });
     await w.step('S4', 'C1 (open) -> Release -> the page\'s own confirm names what it costs -> Release -> one POST release', async () => {
@@ -120,17 +123,12 @@ const walk = async (w) => {
       const post = wrote(/POST \/api\/counters\/C1\/release/);
       return { ok: post.length === 1 && /not sent/.test(ask), saw: post.length + ' release · asked "' + ask.slice(0, 80) + '"' };
     });
-    await w.step('S5', 'Keys: the till key heard 2 min ago, the price-feed key "Never reached ChitBridge" in words; Make a key -> one POST with its scope, the secret shown once', async () => {
-      const k1 = await txt('[data-testid="sx-key-seen-k-till"]'), k2 = await txt('[data-testid="sx-key-seen-k-svc"]');
-      await page.fill('[data-testid="sx-key-name"]', 'Website'); await page.selectOption('[data-testid="sx-key-scope"]', 'connector'); await page.click('[data-testid="sx-key-mint"]'); await page.waitForTimeout(600);
-      const post = wrote(/^POST \/api\/keys/), shown = await txt('[data-testid="sx-key-value"]');
-      return { ok: /min ago|just now/.test(k1) && /Never reached/.test(k2) && post.length === 1 && /"scopes":\["connector","services"\]/.test(post[0]) && shown === NEW_KEY, saw: '"' + k1 + '" · "' + k2 + '" · ' + (post[0] || '').slice(0, 80) + ' · shown ' + shown };
+    await w.step('S5', 'Keys: WALK-REG 2026-10-16: removed by decision - no key list, no Make a key, no key row on Counters or Connectors for a shop owner', async () => {
+      const on = async () => (await page.locator('[data-testid="sx-key-list"], [data-testid="sx-key-mint"], [data-testid="sx-key-name"], [data-testid="sx-key-scope"], [data-testid^="sx-key-seen-"]').count());
+      const a = await on(); await go('connectors', '[data-testid="sx-con-tally"]'); const b = await on(); await go('counters', '[data-testid="sx-ctr-C1"]');
+      return { ok: a === 0 && b === 0 && wrote(/^POST \/api\/keys/).length === 0, saw: 'key controls on Counters ' + a + ', on Connectors ' + b };
     });
-    await w.step('S6', 'the price-feed key -> Revoke -> confirm -> one DELETE /api/keys/k-svc', async () => {
-      await openRow('sx-key-k-svc'); await act('revoke', 'k-svc').click(); await yes();
-      const del = wrote(/DELETE \/api\/keys\/k-svc/);
-      return { ok: del.length === 1, saw: del.length + ' DELETE' };
-    });
+    /* S6 (revoke a key) - WALK-REG 2026-10-16: removed by decision, there is no key list to revoke from */
     await w.step('S7', 'a CO-ASSIST: Add and every row action SHOWN, greyed with the server\'s sentence (may.manage); pressing sends nothing', async () => {
       S.coassist = true; const mine = () => S.calls.filter((c) => /\/api\/(counters|keys)/.test(c)); const before = mine().length;
       await go('counters', '[data-testid="sx-ctr-C1"]'); await openRow('sx-ctr-C2');
@@ -152,8 +150,8 @@ const walk = async (w) => {
   await w.step('S9', 'Connectors: Tally "Works here"; Zoho "Not yet for your country" (from its code, W16) — its Download shown and greyed with the server\'s sentence', async () => {
     const t = await txt('[data-testid="sx-con-may-tally"]'), z = await txt('[data-testid="sx-con-may-zoho"]');
     if (REAL) return { ok: !!t, saw: 'tally "' + t + '"' };
-    await openRow('sx-con-zoho'); const dis = await act('kit', 'zoho').isDisabled(), why = await txt('.cbl-next[data-next="zoho"] .cbl-why');
-    return { ok: /Works here/.test(t) && /Not yet for your country/.test(z) && dis && /not yet for a/.test(why), saw: '"' + t + '" · "' + z + '" · greyed ' + dis + ' "' + why + '"' };
+    await openRow('sx-con-zoho'); const dis = await act('kit', 'zoho').isDisabled(), why = await txt('[data-testid="sx-con-why-zoho"]');   /* WALK-REG 2026-10-16: tag is "Available"; Download is a row button sx-con-kit-<id> */
+    return { ok: /Available/.test(t) && /Not yet for your country/.test(z) && dis && /not yet for a/.test(why), saw: '"' + t + '" · "' + z + '" · greyed ' + dis + ' "' + why + '"' };
   });
   if (!REAL) {
     await w.step('S10', 'Tally -> We use this -> one PATCH /entities/policy { connectors_in_use: ["tally"] }; the row says "We use this"', async () => {
@@ -174,19 +172,23 @@ const walk = async (w) => {
   }
 
   /* ── POLICY ── */
-  await go('policy', '[data-testid="sx-pol-trade_side"]');
+  await go('policy', '[data-testid="sx-pol-tol_weight_bp"]');   /* WALK-REG 2026-10-16: trade_side, trade_cover, chit_expiry_days are hidden */
   await w.step('S13', 'Policy: one CBList of the rules with their words; "Dispute messages" says the platform decides, its Save greyed with the server\'s sentence', async () => {
-    const lbl = await txt('[data-testid="sx-pol-trade_side"]'), who = await txt('[data-testid="sx-pol-who-dispute_scope"]');
-    if (REAL) return { ok: /This entity/.test(lbl), saw: '"' + lbl + '"' };
-    await openRow('sx-pol-dispute_scope'); const dis = await act('save', 'dispute_scope').isDisabled(), why = await txt('.cbl-next[data-next="dispute_scope"] .cbl-why');
-    return { ok: /This entity/.test(lbl) && /platform/i.test(who) && dis && /Set by the platform/.test(why), saw: '"' + lbl.slice(0, 40) + '" · who "' + who + '" · greyed ' + dis + ' "' + why + '"' };
+    const has = (sel) => page.locator(sel).first().count().then((n) => n > 0);
+    const lbl = await txt('[data-testid="sx-pol-books_at"]'), who = await txt('[data-testid="sx-pol-who-dispute_scope"]');
+    const hidden = (await page.locator('[data-testid="sx-pol-trade_side"], [data-testid="sx-pol-trade_cover"], [data-testid="sx-pol-chit_expiry_days"]').count()) === 0;
+    const title = await txt('[data-testid="sx-title"]'), optional = await has('[data-testid="sx-pol-optional"]');
+    if (REAL) return { ok: /Orders go to the books/.test(lbl), saw: '"' + lbl + '"' };
+    /* WALK-REG 2026-10-16: no Save button - an opened row is the control + an info icon; a rule the platform sets has its control greyed, the reason in the icon's title */
+    await openRow('sx-pol-dispute_scope'); const dis = await page.locator('[data-testid="sx-pol-in-dispute_scope"]').isDisabled(), why = await page.getAttribute('[data-testid="sx-pol-why-dispute_scope"]', 'title').catch(() => ''), noSave = (await page.locator('[data-act="save"]').count()) === 0;
+    return { ok: /Orders go to the books/.test(lbl) && hidden && /Policy/.test(title) && optional && /platform/i.test(who) && dis && noSave && /Set by the platform/.test(why || ''), saw: '"' + lbl.slice(0, 40) + '" · hidden rows ' + hidden + ' · who "' + who + '" · greyed ' + dis + ' "' + why + '" · no Save ' + noSave };
   });
   if (!REAL) {
     await w.step('S14', 'the weighed-goods rule reads 0.5 % -> 0.75 -> Save -> one PATCH { tol_weight_bp: 75 } (stored in basis points, shown as a percentage)', async () => {
       const now = await txt('[data-testid="sx-pol-tol_weight_bp"]');
-      await openRow('sx-pol-tol_weight_bp'); await page.fill('[data-testid="sx-pol-in-tol_weight_bp"]', '0.75'); await act('save', 'tol_weight_bp').click(); await page.waitForTimeout(600);
-      const p = wrote(/PATCH \/api\/entities\/policy/).pop() || '', out = await txt('[data-testid="sx-pol-out"]');
-      return { ok: /0\.5 %/.test(now) && /"tol_weight_bp":75/.test(p) && /saved/.test(out), saw: '"' + now.slice(-30) + '" · ' + p.slice(0, 80) + ' · "' + out + '"' };
+      await openRow('sx-pol-tol_weight_bp'); await page.fill('[data-testid="sx-pol-in-tol_weight_bp"]', '0.75'); await page.dispatchEvent('[data-testid="sx-pol-in-tol_weight_bp"]', 'change'); await page.waitForTimeout(600);   /* WALK-REG 2026-10-16: autosaves on change, no Save */
+      const p = wrote(/PATCH \/api\/entities\/policy/).pop() || '', out = await txt('[data-testid="sx-pol-ok-tol_weight_bp"]');
+      return { ok: /0\.5 %/.test(now) && /"tol_weight_bp":75/.test(p) && /Saved/.test(out), saw: '"' + now.slice(-30) + '" · ' + p.slice(0, 80) + ' · "' + out + '"' };
     });
   }
 
@@ -208,7 +210,7 @@ const walk = async (w) => {
 
   /* ── RULE 13: each section, Cream and Dark × 1366 and 390 px ── */
   const rule13 = (id, label) => require('./lib/rule13.cjs').rule13(w, id, label, 'set');
-  for (const [k, ready, id] of [['counters', '[data-testid="sx-ctr-C1"]', 'R1'], ['connectors', '[data-testid="sx-con-tally"]', 'R2'], ['policy', '[data-testid="sx-pol-trade_side"]', 'R3'], ['plan', '[data-testid="sx-plan-name"]', 'R4']]) {
+  for (const [k, ready, id] of [['counters', '[data-testid="sx-ctr-C1"]', 'R1'], ['connectors', '[data-testid="sx-con-tally"]', 'R2'], ['policy', '[data-testid="sx-pol-tol_weight_bp"]', 'R3'], ['plan', '[data-testid="sx-plan-name"]', 'R4']]) {
     await page.setViewportSize({ width: 1366, height: 900 }); await go(k, ready);
     if (k === 'counters') await openRow(REAL ? 'sx-ctr-C1' : 'sx-ctr-C2');   /* the next level and its actions are measured too */
     await rule13(id, 'CB Settings › ' + k);

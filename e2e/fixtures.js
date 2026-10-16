@@ -88,8 +88,9 @@ async function passCountryStep(page, country) {
   if (!there) return false;
   if (country) {
     const want = String(country).toUpperCase();
-    await page.getByTestId('cs-change-country').click();           // the row's one tap — opens the picker
+    // WALK-REG 2026-10-16: a not-yet-answered row shows its picker INLINE; only an answered row has the edit icon (cs-change-country)
     const sel = page.getByTestId('cs-country');
+    if (!(await sel.isVisible().catch(() => false))) await page.getByTestId('cs-change-country').click();
     await sel.waitFor({ state: 'visible', timeout: 5000 });
     if ((await sel.inputValue()) !== want) {
       if (!(await sel.locator('option[value="' + want + '"]').count())) {

@@ -24,11 +24,14 @@
  *     and the server refuses a change with its sentence (409 COUNTRY_CHANGE_IS_NEW_ENTITY), painted here. Before it, a correction is free and
  *     the save's `rederived` says what was set again.
  *   (CL3's "Where ChitBridge is for <country>" rows moved to Standards › Country readiness, standards.html ?ready=<cc> — W28(c); one link here.)
+ * ── WALK-REG (2026-10-16, R8 R10 R10b R10c R14 R16 R46) — ONE RULE PER ROW: not yet answered → the picker inline (as "Big numbers"); answered →
+ *   the value + Change. No "not said yet", no Done, no grey provenance line (the label's hover holds it); money = one "Looks like" line; 🔒 on
+ *   Country and Money only; "Save & continue" the first time, "Save" + "Saved ✓" (stays) after; AU zones by city and state first.
  * OWNS the Country step (country · money · year · time zone · tax · supplies) · CALLED BY app.html's #/country (ensureCap('country')) and settings.html (CBCountry.mount).
  * FLOW  renderCountrySetup → csuRead (3 reads) → csuPrefill (server → clock → pack) → rows → csuSet per change → csuSave (the one write)      CARD 28-platform-and-operations/country-setup
  */
 'use strict';
-var CSU = { p: null, loading: false, readErr: false, edit: null, src: {}, open: {}, err: '', later: false, host: null, onDone: null };
+var CSU = { p: null, loading: false, readErr: false, edit: null, src: {}, open: {}, answered: {}, saved: false, err: '', later: false, host: null, onDone: null };
 /* host · onDone (SET1, 2026-10-13): a small app (settings.html, CB Settings › Country) mounts the SAME rows in its own pane — CBCountry.mount(host, onDone).
    With no host the step paints app.html's auth card at #root, as CS1 built it. One renderer, two frames; never a second copy of the rows. */
 /** CS2: the server's pack row for a country ({ code, name, currency, fy_start_month, zones, locale }) — null when the server sent no list or has no pack for it */
@@ -163,7 +166,7 @@ function csuYearFromPack(edit, sources) {
 /** the prefill: the server's answer first (it knows what registration stored), else what the browser worked out (M196) — each with its source */
 function csuPrefill() {
   var p = CSU.p, g = null; try { g = govCtx(); } catch (_) {}
-  var e = { country: '', currency: '', fy: 0, registered: false, number: '', scheme: 'regular', timezone: '', words: (CSU.flags && CSU.flags.number_words) || 'pack', supplies: (CSU.me && CSU.me.supplies) || 'goods' };
+  var e = { country: '', currency: '', fy: 0, registered: false, number: '', scheme: 'regular', timezone: '', words: (CSU.flags && CSU.flags.number_words) || 'pack', supplies: csuStoredSupplies() || 'goods' };
   var src = {};
   if (p) { csuStoredFields(p, e); src = csuStoredSources(p, g, e); }
   csuClockFills(e, src, p, g);
@@ -176,6 +179,8 @@ function csuPrefill() {
   if (z.ask && !z.value) CSU.open.timezone = true;   /* nothing to preselect: the picker is open from the start */
   CSU.edit = e; CSU.src = src;
 }
+/** WALK-REG R10: the shop's stored answer to "What you sell" — only goods · services · both count ('unknown' / none = nobody asked yet) */
+function csuStoredSupplies() { var stored = CSU.me && CSU.me.supplies; return SHOP_SUPPLIES.some(function (choice) { return choice[0] === stored; }) ? stored : ''; }
 /** read the step's three answers together (country setup · policy flags · the shop's own row), each failure said in the log and kept apart; then prefill and paint */
 function csuRead() {
   if (CSU.loading) return;
@@ -212,28 +217,24 @@ function csuMoneyExamples(currency, wordsChoice) {
   try { decimals = moneyUnit && moneyUnit.decimals ? moneyUnit.decimals(currency) : 2; } catch (failure) { csuLogExample('decimals example', failure); }
   return { symbol: symbol || currency, number: money, decimals: decimals, date: date, words: csuBigWords(CSU_SAMPLE, wordsChoice, currency), lakhPack: csuMoneyTag(currency) === 'en-IN' };
 }
-/** one live-example line of the money block: what · the example · "live example" */
+/** one line of the money block: what · the value (WALK-REG R10c/R46: no "live example" label — the example just shows) */
 function csuExampleLine(what, valueHtml, testId) {
-  return '<div class="govrow" data-testid="cs-money-' + testId + '"><span class="gw">' + esc(what) + '</span><span class="gv" style="font-weight:600">' + valueHtml + '</span><span class="gf">' + esc(tx('live example')) + '</span></div>';
+  return '<div class="govrow" data-testid="cs-money-' + testId + '"><span class="gw">' + esc(what) + '</span><span class="gv" style="font-weight:600">' + valueHtml + '</span></div>';
 }
-/** the Money row's confirm block: symbol · number format · words · decimals · date, each a live example; the words a choice only where the money's own convention is lakh */
+/** the Money row's confirm block (WALK-REG R46, Athi: "just show"): ONE line — the money as a bill writes it (symbol · grouping · decimals) · the date;
+    the words for big numbers a choice only where the money's own convention is lakh, inline like every unanswered row */
 function csuMoneyConfirmHTML(e) {
   var example = csuMoneyExamples(e.currency, e.words);
-  var wordsSelect = example.lakhPack
-    ? csuSel('cs-words', 'words', CSU_WORDS.map(function (choice) { return { v: choice[0], t: tx(choice[1]) + ' — ' + csuBigWords(CSU_SAMPLE, choice[0], e.currency) }; }), e.words)
-    : '<span data-testid="cs-words-fixed">' + esc(example.words) + '</span>';
+  var looks = '<span translate="no" data-testid="cs-money-number">' + esc(example.number || example.symbol) + '</span>' + (example.date ? ' · <span translate="no" data-testid="cs-money-date">' + esc(example.date) + '</span>' : '');
   return '<div class="govbox" data-testid="cs-money-confirm" style="margin-top:4px">'
-    + csuExampleLine(tx('Symbol'), '<span translate="no">' + esc(example.symbol) + '</span>', 'symbol')
-    + csuExampleLine(tx('Number format'), '<span translate="no">' + esc(example.number) + '</span>', 'number')
-    + csuExampleLine(tx('Decimals'), esc(String(example.decimals)), 'decimals')
-    + csuExampleLine(tx('Big numbers'), wordsSelect, 'words')
-    + csuExampleLine(tx('Date'), '<span translate="no">' + esc(example.date) + '</span>', 'date')
+    + csuExampleLine(tx('Looks like'), looks, 'looks')
+    + (example.lakhPack ? csuExampleLine(tx('Big numbers'), csuSel('cs-words', 'words', CSU_WORDS.map(function (choice) { return { v: choice[0], t: tx(choice[1]) + ' — ' + csuBigWords(CSU_SAMPLE, choice[0], e.currency) }; }), e.words), 'words') : '')
     + '</div>';
 }
-/** W27(a): goods · services · both — the GST/WTO vocabulary; "both" is the common case (a garage sells a part and fits it) */
+/** W27(a) → WALK-REG R10b: "What you sell" — goods · services · both (it decides HSN vs SAC); "both" is the common case (a garage sells a part and fits it) */
 function csuSuppliesRow(e) {
   var options = SHOP_SUPPLIES.map(function (choice) { return { v: choice[0], t: tx(choice[1]) }; }), current = options.filter(function (choice) { return choice.v === e.supplies; })[0];
-  return csuRow('supplies', tx('Supplies'), esc(current ? current.t : tx('not said yet')), CSU.me && CSU.me.supplies ? tx('your shop') : tx('not set yet'), csuSel('cs-supplies', 'supplies', options, e.supplies));
+  return csuRow('supplies', tx('What you sell'), current ? esc(current.t) : '', CSU.src.supplies, csuSel('cs-supplies', 'supplies', options, e.supplies));
 }
 /** the Country change: the whole shop follows it — what its pack derives is painted now, the way the server sets it on save (CS2 derive) */
 function csuApplyCountry(country) {
@@ -257,63 +258,103 @@ var CSU_CLEAN = {
 };
 /** the key under which the server records where a field's value came from */
 var CSU_SOURCE_KEY = { country: 'country', currency: 'currency', fy: 'fy_start_month', registered: 'tax', number: 'tax', scheme: 'tax', timezone: 'timezone', words: 'words', supplies: 'supplies' };
-/** one field changed on screen: hold the cleaned value, say "you chose" as its source (W12), mark the step touched (W24) and repaint */
+/** the row a field belongs to — the tax row holds three fields (registered · number · scheme) */
+var CSU_ROW_OF = { registered: 'tax', number: 'tax', scheme: 'tax' };
+/** one field changed on screen: hold the cleaned value, say "you chose" as its source (W12), mark the step touched (W24), close its row once answered
+    (WALK-REG R10c — the tax row stays open while it still needs the number), and repaint */
 function csuSet(field, typed) {
   if (!CSU.edit) return;
   if (field === 'country') csuApplyCountry(String(typed || '').toUpperCase());
   else if (CSU_CLEAN[field]) CSU.edit[field] = CSU_CLEAN[field](typed);
   /* W12: where the value came from, in words a person reads — "you chose", never "typed" */
   CSU.src[CSU_SOURCE_KEY[field]] = tx('you chose');
+  var row = CSU_ROW_OF[field] || field;
+  if (row !== 'tax' || !CSU.edit.registered || CSU.edit.number) { CSU.answered[row] = true; CSU.open[row] = false; }
   CSU.touched = true;   /* W24: something moved since the read */
-  CSU.err = '';
+  CSU.err = ''; CSU.saved = false;
   renderCountrySetup();
 }
 /* CL3 → W28(c): the "Where ChitBridge is for <country>" rows left this step — they are Standards › Country readiness (standards.html ?ready=<cc>, the same CBCountryReady unit); the link above opens it */
-function csuOpen(k) { CSU.open[k] = !CSU.open[k]; renderCountrySetup(); }
+/** Change: the row's picker opens in place; choosing closes it again (no "Done" — WALK-REG R10c) */
+function csuOpen(k) { CSU.open[k] = true; renderCountrySetup(); }
+/** WALK-REG R10c: a row is ANSWERED once the step was done (the server holds the owner's answer), the shop holds it (supplies), or it was chosen here */
+function csuAnswered(key) {
+  if (CSU.answered[key]) return true;
+  if (key === 'supplies') return !!csuStoredSupplies();
+  return !!(CSU.p && CSU.p.done);
+}
 /**
- * one row: what · value · where it came from · Change (the registration's gov panel, with the one tap it lacked).
- * CS2: `locked` — no Change at all (the value is fixed, or the pack sets it); the reason is the row's source line.
+ * one row — WALK-REG R10c, ONE RULE for every row: NOT YET ANSWERED (or no value) → the picker inline beside the label (as "Big numbers");
+ * ANSWERED → the value + "Change". `locked`: the value only, no picker (fixed, or the pack sets it). `lockHtml`: the 🔒 on Country and Money (R14).
+ * Where the value came from is no grey line under it any more — it is the label's hover (title); the hidden cs-src-<key> keeps it readable to the walks.
  */
-function csuRow(key, what, valueHtml, from, editHtml, locked) {
+function csuRow(key, what, valueHtml, from, editHtml, locked, lockHtml) {
+  var inline = !locked && (!valueHtml || !csuAnswered(key) || CSU.open[key]);
   return '<div class="govrow" data-testid="cs-row-' + key + '"' + (locked ? ' data-locked="1"' : '') + '>'
-    + '<span class="gw">' + esc(what) + '</span>'
-    + '<span class="gv" data-testid="cs-val-' + key + '">' + valueHtml + (locked ? '' : ' <a data-testid="cs-change-' + key + '" onclick="csuOpen(\'' + key + '\')" style="font-weight:600;color:var(--blue);cursor:pointer;margin-inline-start:6px">' + esc(CSU.open[key] ? tx('Done') : tx('Change')) + '</a>') + '</span>'
-    + '<span class="gf" data-testid="cs-src-' + key + '">' + esc(from || '') + '</span>'
-    + (CSU.open[key] && !locked ? '<span style="grid-column:1 / -1;padding-top:4px">' + editHtml + '</span>' : '')
+    + '<span class="gw"' + (from ? ' title="' + esc(from) + '"' : '') + '>' + esc(what) + (lockHtml || '') + '</span>'
+    + '<span class="gv" data-testid="cs-val-' + key + '">' + (inline ? editHtml
+        : (valueHtml || esc(tx('not known'))) + (locked ? '' : '<a data-testid="cs-change-' + key + '" onclick="csuOpen(\'' + key + '\')" title="' + esc(tx('Change')) + '" aria-label="' + esc(tx('Change')) + ' ' + esc(what) + '" role="button" style="float:inline-end;color:var(--blue);cursor:pointer;font-size:1.1em;padding:0 6px">✎</a>')) + '</span>'
+    + '<span class="gf" hidden data-testid="cs-src-' + key + '">' + esc(from || '') + '</span>'
     + '</div>';
 }
 function csuSel(id, k, opts, cur) {
   return '<select class="inp" id="' + id + '" data-testid="' + id + '" onchange="csuSet(\'' + k + '\', this.value)">'
-    + opts.map(function (o) { return '<option value="' + esc(o.v) + '"' + (String(o.v) === String(cur) ? ' selected' : '') + '>' + esc(o.t) + '</option>'; }).join('') + '</select>';
+    + opts.map(function (o) { return '<option value="' + esc(o.v) + '"' + (o.title ? ' title="' + esc(o.title) + '"' : '') + (o.off ? ' disabled' : '') + (String(o.v) === String(cur) && !o.off ? ' selected' : '') + '>' + esc(o.t) + '</option>'; }).join('') + '</select>';
 }
-/** the Time zone row: shown when the pack names zones or one is held; Change only where the pack names several */
+/**
+ * WALK-REG R46: the zones a person knows by city and state, first; every other zone the pack names stays below a divider. The value is always the
+ * IANA id (an identifier, never translated — LOCALE-STANDARD); the label is only what is read. A zone not listed here reads as its city.
+ */
+var CSU_ZONE_NAMES = {
+  'Australia/Sydney': 'Sydney (NSW, ACT)', 'Australia/Melbourne': 'Melbourne (VIC)', 'Australia/Brisbane': 'Brisbane (QLD)', 'Australia/Adelaide': 'Adelaide (SA)',
+  'Australia/Perth': 'Perth (WA)', 'Australia/Darwin': 'Darwin (NT)', 'Australia/Hobart': 'Hobart (TAS)',
+};
+/** the name a person reads for a zone: the common name above, else the zone's city */
+function csuZoneName(zone) { return CSU_ZONE_NAMES[zone] || String(zone || '').split('/').pop().replace(/_/g, ' '); }
+/** the Time zone row: shown when the pack names zones or one is held; a picker only where the pack names several — the common ones first (R46) */
 function csuTimezoneRow(e, sources) {
   var zones = csuZones(e.country);
   if (!zones.length && !e.timezone) return '';
-  var zoneOpts = (e.timezone && zones.indexOf(e.timezone) >= 0 ? [] : [{ v: '', t: tx('Pick the time zone') }]).concat(zones.map(function (zone) { return { v: zone, t: zone.replace(/_/g, ' ') }; }));
-  return csuRow('timezone', tx('Time zone'), e.timezone ? '<span translate="no">' + esc(e.timezone.replace(/_/g, ' ')) + '</span>' : esc(tx('not picked yet')), sources.timezone,   /* the IANA id is an identifier, never translated (LOCALE-STANDARD) */
-    csuSel('cs-timezone', 'timezone', zoneOpts, e.timezone), zones.length <= 1);
+  var common = Object.keys(CSU_ZONE_NAMES).filter(function (zone) { return zones.indexOf(zone) >= 0; }), rest = zones.filter(function (zone) { return !CSU_ZONE_NAMES[zone]; });
+  var opt = function (zone) { return { v: zone, t: csuZoneName(zone) }; };
+  var zoneOpts = (e.timezone && zones.indexOf(e.timezone) >= 0 ? [] : [{ v: '', t: tx('Pick the time zone') }]).concat(common.map(opt),
+    common.length && rest.length ? [{ v: '-', t: '──────────', off: true }] : [], rest.map(opt));
+  return csuRow('timezone', tx('Time zone'), e.timezone ? '<span translate="no" title="' + esc(e.timezone) + '">' + esc(csuZoneName(e.timezone)) + '</span>' : '', sources.timezone,
+    csuSel('cs-timezone', 'timezone', zoneOpts, e.timezone), zones.length <= 1 && !!e.timezone);
 }
-/** the tax registration row: registered or not, the number, and India's regular / composition scheme */
+/** WALK-REG R8: what Regular and Composition mean — an ⓘ, never a line under the row (India's GST; AU and AE have no composition) */
+var CSU_SCHEME_WHY = {
+  regular: 'GST on every bill, input credit, tax invoice',
+  composition: 'flat % of turnover, no GST on the bill, bill of supply, no input credit, no inter-state sales',
+};
+/** the ⓘ beside a scheme word: its meaning on hover */
+function csuSchemeInfo(scheme) { return ' <span data-testid="cs-scheme-info" title="' + esc(tx(CSU_SCHEME_WHY[scheme] || CSU_SCHEME_WHY.regular)) + '" style="cursor:help;color:var(--grey)">ⓘ</span>'; }
+/** the tax registration row: registered or not, India's regular / composition scheme, and the number */
 function csuTaxRow(e, sources) {
-  var summary = e.registered ? ((e.country === 'IN' ? (e.scheme === 'composition' ? tx('Composition') : tx('Regular')) + ' · ' : tx('Registered') + ' · ') + (e.number || '')) : tx('Not registered');
-  return csuRow('tax', csuScheme(e.country), esc(summary), sources.tax,
+  var india = e.country === 'IN';
+  var summary = e.registered ? ((india ? esc(e.scheme === 'composition' ? tx('Composition') : tx('Regular')) + csuSchemeInfo(e.scheme) + ' · ' : esc(tx('Registered')) + ' · ') + esc(e.number || '')) : esc(tx('Not registered'));
+  return csuRow('tax', csuScheme(e.country), summary, sources.tax,
     '<div style="display:grid;gap:6px">'
     + csuSel('cs-tax-reg', 'registered', [{ v: 'no', t: tx('Not registered') }, { v: 'yes', t: txf('Registered for {s}', { s: csuScheme(e.country) }) }], e.registered ? 'yes' : 'no')
+    + (e.registered && india ? '<span style="display:flex;align-items:center;gap:6px">' + csuSel('cs-tax-scheme', 'scheme', [{ v: 'regular', t: tx('Regular'), title: tx(CSU_SCHEME_WHY.regular) }, { v: 'composition', t: tx('Composition'), title: tx(CSU_SCHEME_WHY.composition) }], e.scheme) + csuSchemeInfo(e.scheme) + '</span>' : '')
     + (e.registered ? '<input class="inp" id="cs-tax-number" data-testid="cs-tax-number" placeholder="' + esc(csuTaxIdHint(e.country)) + '" value="' + esc(e.number) + '" onchange="csuSet(\'number\', this.value)">' : '')
-    + (e.registered && e.country === 'IN' ? csuSel('cs-tax-scheme', 'scheme', [{ v: 'regular', t: tx('Regular') }, { v: 'composition', t: tx('Composition') }], e.scheme) : '')
     + '</div>');
 }
-/** the Country and Money rows; once the shop holds a product or a transaction they are fixed — greyed, with the reason, never a Change (CS2) */
+/** WALK-REG R14: the 🔒 on the two rows that lock — Country and Money, at the first product or transaction (server isConstituted); once fixed, why */
+function csuLockHTML(fixed) {
+  var reason = fixed ? txf('Fixed — the shop has {w}. Another country needs a new business.', { w: csuFixedBy() }) : tx('Fixed after your first sale');
+  return ' <span data-testid="cs-lock" title="' + esc(reason) + '" aria-label="' + esc(reason) + '" style="cursor:help">🔒</span>';
+}
+/** the Country and Money rows; once the shop holds a product or a transaction they are fixed — the value and the 🔒, never a Change (CS2) */
 function csuCountryMoneyRows(e, sources, fixed) {
-  var fixedWhy = fixed ? txf('fixed — the shop already has {w}', { w: csuFixedBy() }) : null;
+  var lock = csuLockHTML(fixed);
   var countryOpts = csuCountries().map(function (code) { return { v: code, t: csuCountryName(code) + ' · ' + code }; });
   var curOpts = csuCurrencies(e.country).map(function (code) { return { v: code, t: code }; });
   var typedCurrency = '<input class="inp" id="cs-currency" data-testid="cs-currency" maxlength="3" placeholder="' + esc((csuPackOf(e.country) || csuPack(e.country) || {}).currency || '') + '" value="' + esc(e.currency) + '" onchange="csuSet(\'currency\', this.value)">';
-  return csuRow('country', tx('Country'), esc(csuCountryName(e.country) || tx('not known')), fixedWhy || sources.country, csuSel('cs-country', 'country', countryOpts, e.country), fixed)
-    + csuRow('currency', tx('Money'), esc(e.currency || tx('not known')), fixedWhy || sources.currency, curOpts.length ? csuSel('cs-currency', 'currency', curOpts, e.currency) : typedCurrency, fixed);
+  return csuRow('country', tx('Country'), esc(csuCountryName(e.country)), sources.country, csuSel('cs-country', 'country', countryOpts, e.country), fixed, lock)
+    + csuRow('currency', tx('Money'), esc(e.currency), sources.currency, curOpts.length ? csuSel('cs-currency', 'currency', curOpts, e.currency) : typedCurrency, fixed, lock);
 }
-/** all the step's rows: country · money (+ its live examples) · year · time zone · tax · supplies */
+/** all the step's rows: country · money (+ how it looks) · year · time zone · tax · supplies */
 function csuRowsHTML(e, sources, fixed) {
   return csuCountryMoneyRows(e, sources, fixed)
     + (e.currency ? csuMoneyConfirmHTML(e) : '')
@@ -326,26 +367,26 @@ function csuRowsHTML(e, sources, fixed) {
 }
 /** the two doors out of the step: the Country Standard, and "Where ChitBridge is for <country>" (Standards › Country readiness, W28(c)) */
 function csuLinksHTML(e) {
-  return '<div class="hint"><a href="/standards.html?std=country" data-testid="cs-standard" style="font-weight:600;color:var(--blue);cursor:pointer">' + esc(tx('What a country pack must carry — the Country Standard')) + ' ›</a>'
+  return '<div class="hint"><a href="/standards.html?std=country" data-testid="cs-standard" style="font-weight:600;color:var(--blue);cursor:pointer">' + esc(tx('Country Standard')) + ' ›</a>'
     /* W28(c): "Where ChitBridge is for <country>" is NOT a setup row — it lives under Standards › Country readiness (the same CBCountryReady unit); one link from here */
-    + (e.country ? ' · <a href="/standards.html?std=country&ready=' + esc(e.country) + '" data-testid="cs-ready-link" style="font-weight:600;color:var(--blue);cursor:pointer">' + esc(txf('Where ChitBridge is for {c}', { c: csuCountryName(e.country) })) + ' ›</a>' : '') + '</div>';
+    + (e.country ? ' · <a href="/standards.html?std=country&ready=' + esc(e.country) + '" data-testid="cs-ready-link" style="font-weight:600;color:var(--blue);cursor:pointer">' + esc(txf('ChitBridge in {c}', { c: csuCountryName(e.country) })) + ' ›</a>' : '') + '</div>';
 }
 /** the step's body once read: the rows, the pack's refusal or the read failure if any, the one action, the rule, the links */
 function csuBodyHTML(e, answer) {
   var fixed = csuConstituted(), noPack = answer && answer.pack && answer.pack.books === false && answer.pack.why;
+  /* WALK-REG R16: the first setup saves and moves on ("Save & continue"); a later visit saves and STAYS, with "Saved ✓" on the page */
+  var first = csuFirstSetup();
   var action = CSU.later
     ? '<button class="btn" id="cs-open" data-testid="cs-open" onclick="csuDone()">' + esc(tx(CSU.host ? 'Done' : 'Open the app')) + ' <span class=arw>→</span></button>'
-    : '<button class="btn" id="cs-save" data-testid="cs-save">' + esc(tx('Continue')) + ' <span class=arw>→</span></button>';
+    : '<button class="btn" id="cs-save" data-testid="cs-save">' + esc(first ? tx('Save & continue') : tx('Save')) + (first ? ' <span class=arw>→</span>' : '') + '</button>'
+      + (CSU.saved ? ' <span data-testid="cs-saved" role="status" style="color:var(--ok-2,#1d7a3a);font-weight:600;margin-inline-start:8px">' + esc(tx('Saved ✓')) + '</span>' : '');
   return '<div class="body">'
-    + '<div style="color:var(--grey);font-size:var(--fs-2);margin-bottom:6px">' + esc(tx('We filled these in. Change any, then continue.')) + '</div>'
     + '<div class="govbox" data-testid="cs-rows">' + csuRowsHTML(e, CSU.src, fixed) + '</div>'
     + (noPack ? '<div class="hint" data-testid="cs-nopack" style="color:var(--warn-2)">' + esc(answer.pack.why) + '</div>' : '')
-    + (CSU.readErr ? '<div class="hint" data-testid="cs-readerr">' + esc(tx('Could not read what registration stored — these are from this device.')) + '</div>' : '')
+    + (CSU.readErr ? '<div class="hint" data-testid="cs-readerr">' + esc(tx('Saved values not read — showing this device’s.')) + '</div>' : '')
     + (CSU.err ? '<div class="err" data-testid="cs-err">' + esc(CSU.err) + '</div>' : '')
     + action
-    + '<div class="hint" data-testid="cs-rule">' + esc(fixed
-        ? tx('Country and money never change once a shop has products or transactions. Register a new business for another country.')
-        : tx('Country and money can still be corrected now. Once the shop has a product or a transaction they are fixed for good.')) + '</div>'
+    /* WALK-REG R14: what locks is the 🔒 on the Country and Money rows (its ⓘ says when, or why once fixed) — no paragraph here */
     /* CPS1: the Country Standard — what a country pack carries and what each pack still lacks (standards.html opens on that row's search) */
     + csuLinksHTML(e) + '</div>';
 }
@@ -365,10 +406,13 @@ function csuSaveBody(e) {
   return { country: e.country, currency: e.currency, fy_start_month: e.fy, tax: { registered: !!e.registered, number: e.registered ? e.number : null, scheme: e.registered ? e.scheme : null },
     timezone: e.timezone || null, source: CSU.src };
 }
+/** WALK-REG R16: the first setup is the one before the server holds the owner's answer (country_setup_at) */
+function csuFirstSetup() { return !(CSU.p && CSU.p.done); }
 /** the one write — M64: one press, one call; a server refusal is said in the form, in its own words */
 function csuSave() {
   var btn = document.getElementById('cs-save'), e = CSU.edit; if (!e) return;
-  CSU.err = '';
+  var first = csuFirstSetup();
+  CSU.err = ''; CSU.saved = false;
   var body = csuSaveBody(e);
   CBAction.run(btn, function () { return api('countrySetupSave', { body: body }).then(function (p) { return csuSaveBeside(e).then(function () { return p; }); }); }, {
     key: 'cs-save', busy: tx('Saving…'),
@@ -376,8 +420,11 @@ function csuSave() {
       CSU.touched = false;
       CSU.p = p || CSU.p; try { if (p && p.pack) SESSION.booksOn = false; } catch (_) {}
       /* CS2: a correction before the shop was constituted — the server says what it set again from the new pack */
-      toast(p && p.rederived ? txf('Country corrected to {c} — money, year, tax, time zone and chart set again from its pack.', { c: csuCountryName(p.rederived.to) }) : tx('Country set.'));
-      csuDone();
+      if (p && p.rederived) toast(txf('Country now {c} — the rest set from its pack.', { c: csuCountryName(p.rederived.to) }));
+      else if (first) toast(tx('Country set.'));
+      /* WALK-REG R16: the first setup moves on; a later save stays here and says so on the page */
+      if (first) return csuDone();
+      CSU.saved = true; CSU.open = {}; renderCountrySetup();
     },
     onFail: function (words, err) {
       var st = err && err.status;
@@ -392,7 +439,8 @@ function csuSave() {
 function csuSaveBeside(e) {
   var jobs = [];
   if (e.words !== ((CSU.flags && CSU.flags.number_words) || 'pack')) jobs.push(api('policySet', { body: { number_words: e.words } }).then(function (r) { CSU.flags = (r && r.flags) || CSU.flags; }));
-  if (e.supplies !== ((CSU.me && CSU.me.supplies) || 'goods')) jobs.push(api('saveProfile', { body: { supplies: e.supplies } }).then(function () { CSU.me = Object.assign({}, CSU.me, { supplies: e.supplies }); }));
+  /* WALK-REG R10: what the picker SHOWS is what is saved — a shop with no stored answer saves the shown Goods too (it read "not said yet" after Continue) */
+  if (e.supplies !== csuStoredSupplies()) jobs.push(api('saveProfile', { body: { supplies: e.supplies } }).then(function () { CSU.me = Object.assign({}, CSU.me, { supplies: e.supplies }); }));
   return Promise.all(jobs);
 }
 /** where the step goes when it is done: the HOST says (app.html's route sets the workshop's own; settings.html its Your shop) — this file names no door */
