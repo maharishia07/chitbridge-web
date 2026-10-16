@@ -37,7 +37,7 @@ const SHOPS = [
     labels: { regular: 'VAT registered', unregistered: 'Not registered' }, keep: /5 years/ } },
   { cc: 'IN', name: 'Fixture Shop', currency: 'INR', taxId: '33AABCK1234F1Z6', expect: { taxWord: 'GSTIN', filings: 'GSTR-3B · Name your GSTIN', impact: 'Your GSTIN',
     checks: ['Address proven', 'Phone verified', 'PAN on file', 'GSTIN'], symbol: '₹', regLabel: 'GST registration', regNow: 'Regular', kinds: ['regular', 'composition', 'unregistered', 'sez'],
-    labels: { regular: 'Regular', composition: 'Composition', unregistered: 'Unregistered (no GSTIN)', sez: 'SEZ' }, keep: /9 years/ } },
+    labels: { regular: 'Regular', composition: 'Composition', unregistered: 'Unregistered (no GSTIN)', sez: 'SEZ' }, keep: /8 years/ } },
 ];
 
 /* ── the server's words: the api's own builders when they are beside this checkout, else the typed shapes ── */
@@ -59,7 +59,7 @@ function typedAnswers(shop) {
   const schema = {
     gst_registration: { type: 'enum', options: ['regular', 'composition', 'unregistered', 'sez'], def: 'regular', ui: ui(1, X.regLabel, { options: X.kinds, labels: X.labels, help: X.kinds.map((k) => X.labels[k].toUpperCase() + ' — …').join(' ') }) },
     chit_expiry_days: { type: 'number', def: 0, ui: ui(2, 'Chit expiry (days)', { level: 'work-pattern', gov: 'chosen', labels: { 0: 'No expiry' } }) },
-    retention_days: { type: 'number', def: 0, ui: ui(3, 'Retention (days)', { gov: 'chosen', labels: { 0: shop.cc === 'IN' ? 'Keep — at least 9 years' : 'Keep — the law here asks 5 years' } }) },
+    retention_days: { type: 'number', def: 0, ui: ui(3, 'Retention (days)', { gov: 'chosen', labels: { 0: shop.cc === 'IN' ? 'Keep — the law here asks 8 years' : 'Keep — the law here asks 5 years' } }) },
   };
   return { header, sides, policy: { flags: { gst_registration: 'regular', chit_expiry_days: 0, retention_days: 0 }, country: shop.cc, schema, bound: {}, bound_schema: {}, may: {} } };
 }
