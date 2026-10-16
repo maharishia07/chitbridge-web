@@ -140,7 +140,7 @@ function leadRow(L, l) {
     kind: 'local', on_chitbridge: false, may_trade: { ok: false, why: 'local' }, roles: { customer: true, supplier: false }, party_no: l.party_no, last_activity: l.last_at || null,
     customer: { list_id: 'cl-' + l.party_id, segment: 'new', segment_override: null, txn_count: l.txn, last_txn_at: l.txn ? l.last_txn_at : null, groups: [], customer_type: 'entity', added_via: 'lead' },
     lead: { stage, since: l.since }, legal_name: null, nickname: null, state_code: null, tax_ids: [], terms: { customer: { credit_days: null, credit_limit_minor: null } },
-    dues: { balance_minor: 0, oldest_due: null, side: 'customer', overdue: false }, gstin: { value: null, source: null, theirs: null, differs: false }, name: l.name };
+    dues: { balance_minor: 0, oldest_due: null, side: 'customer', open_side: false, overdue: false }, gstin: { value: null, source: null, theirs: null, differs: false }, name: l.name };
 }
 const findLead = (L, id) => L.leads.find((l) => l.party_id === id || l.party_no === id);
 const isLead = (l) => l.txn === 0;
@@ -200,8 +200,8 @@ function l2cRoute(L, r, q, u, p, m, body) {
   if (p === '/api/crm/calls' && m === 'GET') {
     const t = today(), calls = [];
     L.fu.filter((f) => !f.done_at && (f.due_day || localDay(new Date(f.due_at))) <= t).forEach((f) => { const l = findLead(L, f.party_id); if (!l) return; const d = f.due_day || localDay(new Date(f.due_at)); const last = L.ix.filter((x) => x.party_id === l.party_id && x.kind === 'call').slice(-1)[0];
-      calls.push({ party_id: l.party_id, party_name: l.name, phone: l.phone, stage: isLead(l) ? l.stage : 'lead', followup_id: f.followup_id, what: f.what, due_day: d, assignee_user_id: null, new: false, last_outcome: last ? last.body : null, last_at: last ? last.at : null, late: d < t, today: d === t }); });
-    L.leads.filter((l) => isLead(l) && !L.ix.some((x) => x.party_id === l.party_id) && !L.fu.some((f) => f.party_id === l.party_id && !f.done_at)).forEach((l) => calls.push({ party_id: l.party_id, party_name: l.name, phone: l.phone, stage: l.stage, followup_id: null, what: null, due_day: null, assignee_user_id: null, new: true, last_outcome: null, last_at: null, late: false, today: false }));
+      calls.push({ party_id: l.party_id, party_name: l.name, phone: l.phone, stage: isLead(l) ? l.stage : 'lead', followup_id: f.followup_id, what: f.what, due_day: d, assignee_user_id: null, new: false, last_outcome: last ? last.body : null, last_at: last ? last.at : null, late: d < t, today: d === t, may_call: true, call_why: null, call_code: null }); });
+    L.leads.filter((l) => isLead(l) && !L.ix.some((x) => x.party_id === l.party_id) && !L.fu.some((f) => f.party_id === l.party_id && !f.done_at)).forEach((l) => calls.push({ party_id: l.party_id, party_name: l.name, phone: l.phone, stage: l.stage, followup_id: null, what: null, due_day: null, assignee_user_id: null, new: true, last_outcome: null, last_at: null, late: false, today: false, may_call: true, call_why: null, call_code: null }));
     return J(r, 200, { calls, total: calls.length, page: 1, limit: calls.length, count: calls.length, late: calls.filter((c) => c.late).length, today: calls.filter((c) => c.today).length, shop_day: t,
       outcomes: OUTCOMES.map((o) => ({ key: o.key, label: o.label, ask: !!o.ask, presets: o.presets ? Object.keys(o.presets) : [], moves: o.stage || null })), may: Object.assign(L.migrated ? { ok: true } : { ok: false, why: NOT_READY }, { write: crmApi.mayOf(r).write }) });
   }

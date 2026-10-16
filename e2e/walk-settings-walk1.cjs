@@ -76,7 +76,7 @@ const walk = async (w) => {
 
   const txt = (sel) => page.locator(sel).first().innerText().then((s) => s.replace(/\s+/g, ' ').trim()).catch(() => '');
   const has = (sel) => page.locator(sel).first().count().then((n) => n > 0);
-  const go = async (sec, ready) => { await page.goto(base + '/settings.html?cc=' + S.cc + '&t=' + Date.now() + '#/' + sec); await page.waitForSelector(ready, { timeout: 20000 }); await page.waitForTimeout(350); };
+  const go = async (sec, ready) => { await page.goto(base + '/settings.html?cc=' + S.cc + '&t=' + Date.now() + '#/' + sec); await page.waitForSelector(ready, { timeout: 20000 }); await page.waitForTimeout(350); }; // clock-ok: cache-buster suffix on the URL, not a business date
   const puts = () => S.calls.filter((c) => c.m === 'PUT' && c.p === '/api/governance/profile/vault');
 
   /* ── W28 · W10 · W12 · W27(a): Country, on the AU shop ── */

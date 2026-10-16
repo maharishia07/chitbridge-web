@@ -78,10 +78,19 @@ const CHART = { accounts: [acct('1400', 'Cash on hand', 'asset', 'cash', 'G1400'
 const RCM_WHY = 'Reverse-charge tax is owed this period and the recoverable tax is more than the due tax. The return nets them on the form; this close cannot post that netting yet — lodge from the return and record the payment by hand.';
 /* the server's close names the period WITHOUT `ended` (that flag is the list's, GET /returns) */
 const RP = (P) => { const o = Object.assign({}, P); delete o.ended; return o; };
+/* the months a close locks, as lib/books-period lockCovered answers them: [{ fiscal_year, period }] — AU's year starts in July, the Emirates' in January */
+const LOCKED_BY = (P, yearStartMonth) => {
+  const out = [];
+  for (let at = new Date(P.start + 'T00:00:00Z'); at.toISOString().slice(0, 10) <= P.end; at.setUTCMonth(at.getUTCMonth() + 1)) {
+    const month = at.getUTCMonth() + 1, year = at.getUTCFullYear(), startYear = month >= yearStartMonth ? year : year - 1;
+    out.push({ fiscal_year: yearStartMonth === 1 ? String(year) : startYear + '-' + String(startYear + 1).slice(2), period: (month - yearStartMonth + 12) % 12 + 1 });
+  }
+  return out;
+};
 const CLOSE_AU = (period) => { const P = AU_PERIODS.find((x) => x.period === period) || AU_PERIODS[4]; return { period: P.period, date: P.end, utilised: [{ from: 'gst', against: 'gst', amount_minor: 80000 }], payable_minor: { gst_minor: 15000 }, carried_minor: { gst_minor: 0 }, pay_total_minor: 15000,
-  form: 'BAS', heads: ['gst'], return_period: RP(P), ref_label: 'Payment reference number', ref_hint: 'The payment reference number on the BAS', carried_word: 'GST refund due from the ATO', ok: true, entry_id: '00000000-0000-4000-8000-000000000130', entry_no: 'MJ/2026-27/000011', posting_date: P.end, doc_date: P.end, moved: false, lines: 2, items: 0, note: null }; };
+  form: 'BAS', heads: ['gst'], return_period: RP(P), ref_label: 'Payment reference number', ref_hint: 'The payment reference number on the BAS', carried_word: 'GST refund due from the ATO', ok: true, entry_id: '00000000-0000-4000-8000-000000000130', entry_no: 'MJ/2026-27/000011', posting_date: P.end, doc_date: P.end, moved: false, lines: 2, items: 0, note: null, locked: LOCKED_BY(P, 7) }; };
 const CLOSE_AE = (period) => { const P = AE_PERIODS.find((x) => x.period === period) || AE_PERIODS[4]; return { period: P.period, date: P.end, utilised: [{ from: 'vat', against: 'vat', amount_minor: 280000 }], payable_minor: { vat_minor: 195000 }, carried_minor: { vat_minor: 0 }, pay_total_minor: 235000, rcm_minor: { vat: 40000 }, cash_minor: { vat: 235000 },
-  form: 'VAT201', heads: ['vat'], return_period: RP(P), ref_label: 'Payment reference', ref_hint: 'The EmaraTax payment reference', carried_word: 'VAT recoverable from the FTA', ok: true, entry_id: '00000000-0000-4000-8000-000000000130', entry_no: 'MJ/2026/000011', posting_date: P.end, doc_date: P.end, moved: false, lines: 2, items: 0, note: null }; };
+  form: 'VAT201', heads: ['vat'], return_period: RP(P), ref_label: 'Payment reference', ref_hint: 'The EmaraTax payment reference', carried_word: 'VAT recoverable from the FTA', ok: true, entry_id: '00000000-0000-4000-8000-000000000130', entry_no: 'MJ/2026/000011', posting_date: P.end, doc_date: P.end, moved: false, lines: 2, items: 0, note: null, locked: LOCKED_BY(P, 1) }; };
 /** the stand-in for one shop: `kind` is 'IN' | 'AU' | 'AE'; every /api/books answer is checked against the contract (C.json) */
 async function stub(ctx, kind, S) {
   await ctx.route('**/api/**', (r) => {
