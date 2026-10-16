@@ -4643,7 +4643,7 @@ function capScreen(name){
 function hasCap(k){ return (SESSION.capabilities||[]).indexOf(k)>=0; }   // one capability check, used by all gates
 const _capPromise = {}, _capWithPromise = {};
 /* a capability split by job loads its other halves first (P2: network = the design builder + its member half, cap-network-member.js) */
-const CAP_WITH = { network:['network-member'], admin:['shop', 'settings', 'mis'] };   /* mis: misWindow (the one period → since rule) lives in cap-mis.js (T3-P4-ACCOUNT) */   /* admin: the Profile's Business section and the vault live in cap-shop.js (SET1); polDefsOf and the counters/keys/kit helpers in cap-settings.js (T3-SETTINGS) — CB Settings paints both */
+const CAP_WITH = { network:['network-member'], admin:['shop', 'settings', 'mis'], country:['shop'] };   /* country: its supplies row reads SHOP_SUPPLIES from cap-shop.js (INT7c: the first-run step had no shop half) */   /* mis: misWindow (the one period → since rule) lives in cap-mis.js (T3-P4-ACCOUNT) */   /* admin: the Profile's Business section and the vault live in cap-shop.js (SET1); polDefsOf and the counters/keys/kit helpers in cap-settings.js (T3-SETTINGS) — CB Settings paints both */
 function ensureCap(name){
   if(CAP_LOADED[name]) return Promise.resolve();
   if(CAP_WITH[name]){
