@@ -80,11 +80,13 @@ const walk = async (w) => {
   const puts = () => S.calls.filter((c) => c.m === 'PUT' && c.p === '/api/governance/profile/vault');
 
   /* ── W28 · W10 · W12 · W27(a): Country, on the AU shop ── */
-  await page.goto(base + '/settings.html'); await page.waitForSelector('[data-testid="cs-rows"]', { timeout: 20000 }); await page.waitForTimeout(300);
-  await w.step('A1', 'CB Settings opens on COUNTRY (the first section); the sidebar lists Country before Your shop', async () => {
+  /* BUILD-R1 2026-10-16: Settings opens on START HERE (the sidebar's first item, until its questions are answered); Country is the next item, one tap away */
+  await page.goto(base + '/settings.html'); await page.waitForSelector('[data-testid="start-screen"]', { timeout: 20000 }); await page.waitForTimeout(300);
+  await w.step('A1', 'CB Settings opens on START HERE (the first section); the sidebar lists Start here · Country · Your business   (BUILD-R1 2026-10-16)', async () => {
     const first = await page.$$eval('[data-testid^="skel-nav-"]', (b) => b.map((x) => x.getAttribute('data-sec')));
-    return { ok: /#\/country$/.test(page.url()) && first[0] === 'country' && first[1] === 'shop' && first.indexOf('print') > 0, saw: page.url().replace(base, '') + ' · ' + first.join(' › ') };
+    return { ok: /#\/start$/.test(page.url()) && first[0] === 'start' && first[1] === 'country' && first[2] === 'shop' && first.indexOf('print') > 0, saw: page.url().replace(base, '') + ' · ' + first.join(' › ') };
   });
+  await page.goto(base + '/settings.html#/country'); await page.waitForSelector('[data-testid="cs-rows"]', { timeout: 20000 }); await page.waitForTimeout(300);
   await w.step('A2', 'AU · Money confirms more than the code: symbol A$, number format A$1,234,567,890.89 (a long sample, W29), 2 decimals, the date, "1.2 billion" — each a live example; the words are not a choice (the money is million-grouped)', async () => {
     /* WALK-REG 2026-10-16: the money block is ONE line (cs-money-number · cs-money-date); the symbol and decimals rows are gone, and for a million-grouped money there is no words choice at all */
     const num = await txt('[data-testid="cs-money-number"]'), date = await txt('[data-testid="cs-money-date"]');
@@ -104,7 +106,7 @@ const walk = async (w) => {
   await w.step('A5', 'W24 · with that unsaved change, the sidebar\'s Your shop asks "Unsaved changes — Save or discard?"; Discard moves on', async () => {
     await page.click('[data-testid="skel-nav-shop"]'); await page.waitForSelector('[data-testid="confirm"]', { timeout: 5000 });
     const ask = await txt('[data-testid="confirm"]');
-    await page.click('[data-testid="confirm-discard"]'); await page.waitForSelector('[data-testid="shop-card"]', { timeout: 8000 });
+    await page.click('[data-testid="confirm-discard"]'); await page.waitForSelector('[data-testid="biz-screen"]', { timeout: 8000 });   /* BUILD-R1 2026-10-16: Your business is the seven cards */
     return { ok: /Unsaved changes/.test(ask) && /Save or discard/.test(ask) && /#\/shop$/.test(page.url()), saw: '"' + ask.slice(0, 80) + '" → ' + page.url().replace(base, '') };
   });
   await w.step('A6', 'Standards ?ready=AU → the Country readiness sheet (the rows CBCountryReady paints), with the door back to Country setup', async () => {
@@ -113,40 +115,40 @@ const walk = async (w) => {
     return { ok: /Country readiness · Australia/.test(t) && rows > 0 && back, saw: t + ' · ' + rows + ' rows' };
   });
 
-  /* ── W26 · W14b · W19 · W23 · W25 · W22: Your shop and the vault on AU ── */
-  await go('shop', '[data-testid="vault-only-identity"]');
-  await w.step('A7', 'Your shop · no bill line, no Supplies dropdown; the lower box is headed "Your identity"; no Licences / Print setup doors under the boxes', async () => {
-    /* WALK-REG 2026-10-16: removed by decision — shop-why, shop-print-link, shop-licences-link; the heading "Used on forms for an authority" is now "Your identity" */
-    const why = await has('[data-testid="shop-why"]');
-    const sup = await has('#pf_sup'), title = await txt('[data-testid="shop-forms-title"]'), lic = await has('[data-testid="shop-licences-link"]'), pr = await has('[data-testid="shop-print-link"]');
-    return { ok: !why && !sup && /Your identity/.test(title) && !lic && !pr, saw: 'bill line ' + why + ' · supplies ' + sup + ' · "' + title + '" · licences link ' + lic + ' · print link ' + pr };
+  /* ── W26 · W14b · W19 · W23 · W25 · W22: Your business and the vault on AU (BUILD-R1 2026-10-16: the seven cards; the vault's identity rows are the Contact and Tax cards' rows, the bank section a popup) ── */
+  await go('shop', '[data-testid="biz-screen"]');
+  await w.step('A7', 'Your business · the seven cards; none of the old blocks (no bill line, no Supplies dropdown pf_sup, no "Your identity" box, no Licences / Print setup doors)   (BUILD-R1 2026-10-16)', async () => {
+    const heads = await page.$$eval('[data-testid="biz-cards"] .card h2', (h) => h.length);
+    const why = await has('[data-testid="shop-why"]'), sup = await has('#pf_sup'), title = await has('[data-testid="shop-forms-title"]'), lic = await has('[data-testid="shop-licences-link"]'), pr = await has('[data-testid="shop-print-link"]');
+    return { ok: heads === 7 && !why && !sup && !title && !lic && !pr, saw: heads + ' cards · bill line ' + why + ' · supplies ' + sup + ' · identity box ' + title + ' · licences link ' + lic + ' · print link ' + pr };
   });
-  await w.step('A8', 'AU · the identity rows name ABN and Postcode (never GSTIN / PIN / IFSC); the bank suggestions say BSB; the detail-name placeholder names the first suggestion', async () => {
-    const sug = await page.$$eval('#vsug_identity option', (o) => o.map((x) => x.value).join(',')), bank = await page.$$eval('#vsug_bank option', (o) => o.map((x) => x.value).join(',')), ph = await page.getAttribute('[data-testid="vault-only-identity"] input[list]', 'placeholder').catch(() => '');
-    return { ok: /ABN/.test(sug) && /Postcode/.test(sug) && !/GSTIN|PIN/.test(sug) && /BSB/.test(bank) && !/IFSC/.test(bank) && !/IFSC/.test(ph || ''), saw: 'identity ' + sug.split(',').slice(0, 3) + ' · bank ' + bank.split(',').slice(0, 3) + ' · placeholder "' + ph + '"' };
+  await w.step('A8', 'AU · no India word on the page; the identity suggestions say ABN · Postcode (never GSTIN / PIN) and the bank popup\'s say BSB (never IFSC)   (BUILD-R1 2026-10-16)', async () => {
+    const all = await page.locator('#set').innerText();
+    await page.click('[data-testid="bank-add"]'); await page.waitForSelector('[data-testid="pop-vault"]', { timeout: 5000 });
+    const sug = await page.$$eval('#vsug_identity option', (o) => o.map((x) => x.value).join(',')), bank = await page.$$eval('#vsug_bank option', (o) => o.map((x) => x.value).join(','));
+    await page.click('[data-testid="pop-bank"] .df .act');
+    return { ok: !/GSTIN|\bPAN\b/.test(all) && /ABN/.test(sug) && /Postcode/.test(sug) && !/GSTIN|PIN/.test(sug) && /BSB/.test(bank) && !/IFSC/.test(bank), saw: 'identity ' + sug.split(',').slice(0, 3) + ' · bank ' + bank.split(',').slice(0, 3) };
   });
-  await w.step('A9', 'W25 · change the legal name → Save → ONE PUT carrying the version and a merge-patch of that row only (identity|, t:legal_name), nothing else', async () => {
+  await w.step('A9', 'W25 · change the registered name → ONE PUT carrying the version and a merge-patch of that row only (identity|, t:legal_name), nothing else   (BUILD-R1 2026-10-16 · SAVE-CARD 2026-10-16)', async () => {
     const before = puts().length;
-    const inp = page.locator('[data-testid="vault-only-identity"] input').nth(1);   /* WALK-REG 2026-10-16: no section label input on Your shop — the legal-name row's NAME, then its VALUE */
-    await inp.fill('Austore One Pty Ltd (new)'); await inp.press('Tab'); await page.waitForTimeout(1300);   /* WALK-REG 2026-10-16 R19: the field saves itself on change (no Save button) */
+    await page.click('[data-testid="edit-regd"]'); await page.fill('[data-testid="in-regd"]', 'Austore One Pty Ltd (new)'); await page.click('[data-testid="save-tax"]'); await page.waitForSelector('[data-testid="confirm-tax"]'); await page.click('[data-testid="confirm-tax"]'); await page.waitForTimeout(1500);   // SAVE-CARD 2026-10-16: Registered name is critical — Save, the Review, Confirm
     const put = puts().slice(before)[0], b = (put && put.body) || {};
     const sec = b.patch && b.patch.sections && b.patch.sections['identity|'], rows = sec && sec.rows ? Object.keys(sec.rows) : [];
     return { ok: puts().length === before + 1 && b.version === '1001' && rows.length === 1 && rows[0] === 't:legal_name' && /new\)/.test(JSON.stringify(sec.rows)) && !b.vault, saw: JSON.stringify(b).slice(0, 160) };
   });
-  await w.step('A10', 'W25 · the server says 409 (another screen saved first) → "Changed since you opened it — reload?" painted with a Reload button; Reload re-reads the vault', async () => {
+  await w.step('A10', 'W25 · the server says 409 (another screen saved first) → "Changed since you opened it" stays on the row, in red; the vault is re-read, so the row shows what the server holds   (BUILD-R1 2026-10-16 · SAVE-CARD 2026-10-16)', async () => {
     S.conflict = true;
-    const inp = page.locator('[data-testid="vault-only-identity"] input').nth(1); await inp.fill('Austore Two'); await inp.press('Tab'); await page.waitForTimeout(1300);   /* WALK-REG 2026-10-16 R19: autosave on change */
-    const said = await txt('[data-testid="vault-conflict"]'), btn = await has('[data-testid="vault-reload"]');
-    await page.click('[data-testid="vault-reload"]'); await page.waitForTimeout(500);
-    const after = await page.locator('[data-testid="vault-only-identity"] input').nth(1).inputValue();
-    return { ok: /Changed since you opened it/.test(said) && btn && /Austore One Pty Ltd/.test(after), saw: '"' + said + '" · reload ' + btn + ' · now "' + after + '"' };
+    await page.click('[data-testid="edit-regd"]'); await page.fill('[data-testid="in-regd"]', 'Austore Two'); await page.click('[data-testid="save-tax"]'); await page.waitForSelector('[data-testid="confirm-tax"]'); await page.click('[data-testid="confirm-tax"]'); await page.waitForTimeout(1500);   // SAVE-CARD 2026-10-16: Registered name is critical — Save, the Review, Confirm
+    const said = await txt('[data-testid="why-regd"]');
+    const after = await page.evaluate(() => UI._vault.sections.filter((section) => section.type === 'identity')[0].rows.filter((row) => row.tag === 'legal_name')[0].value);   /* the vault model, re-read after the refusal */
+    return { ok: /Changed since you opened it/.test(said) && /Austore One Pty Ltd/.test(after), saw: '"' + said + '" · the vault now holds "' + after + '"' };
   });
-  await w.step('A11', 'W14b · a shop with NO identity section opens one prefilled from the shop\'s own details (the address, the ABN) — nothing saved until Save', async () => {
+  await w.step('A11', 'W14b · a shop with NO identity section: the address row shows the shop\'s own address (one place for it); opening the page writes nothing   (BUILD-R1 2026-10-16)', async () => {
     S.vault = { sections: [] }; const before = puts().length;
-    await go('shop', '[data-testid="vault-only-identity"]');
-    const vals = await page.$eval('[data-testid="vault-only-identity"]', (n) => [...n.querySelectorAll('input')].map((i) => i.value).join(' | '));
+    await go('shop', '[data-testid="biz-screen"]');
+    const addr = await txt('[data-testid="val-addr"]');
     S.vault = VAULT();
-    return { ok: /12 Pitt Street/.test(vals) && /51824753556/.test(vals) && puts().length === before, saw: vals.slice(0, 120) };
+    return { ok: /12 Pitt Street/.test(addr) && puts().length === before, saw: addr.slice(0, 80) + ' · writes ' + (puts().length - before) };
   });
 
   /* ── W21 · W18 · W22 · W23: Account ── */
@@ -233,10 +235,13 @@ const walk = async (w) => {
     const addrLocked = (await page.locator('[data-testid="pr-show-address"]').count()) === 0;   /* WALK-REG 2026-10-16: no tick box at all on a required line */
     return { ok: /GSTIN 33AABCK1234F1Z6/.test(text) && /CGST/.test(text) && /HSN/.test(text) && addrLocked, saw: 'address locked ' + addrLocked + ' · ' + text.slice(0, 120) };
   });
-  await go('shop', '[data-testid="vault-only-identity"]');
-  await w.step('A23', 'IN · the identity rows still say GSTIN and PIN; the bank suggestions say IFSC', async () => {
+  await go('shop', '[data-testid="biz-screen"]');
+  await w.step('A23', 'IN · the tax row says GSTIN; the bank popup\'s suggestions still say GSTIN and PIN for the identity and IFSC for the bank   (BUILD-R1 2026-10-16)', async () => {
+    const label = await txt('[data-testid="row-taxNo"] .lb');
+    await page.click('[data-testid="bank-add"]'); await page.waitForSelector('[data-testid="pop-vault"]', { timeout: 5000 });
     const sug = await page.$$eval('#vsug_identity option', (o) => o.map((x) => x.value).join(',')), bank = await page.$$eval('#vsug_bank option', (o) => o.map((x) => x.value).join(','));
-    return { ok: /GSTIN/.test(sug) && /PIN/.test(sug) && /IFSC/.test(bank), saw: sug.split(',').slice(0, 3) + ' · ' + bank.split(',').slice(0, 3) };
+    await page.click('[data-testid="pop-bank"] .df .act');
+    return { ok: /^GSTIN/.test(label) && /GSTIN/.test(sug) && /PIN/.test(sug) && /IFSC/.test(bank), saw: label.split(' ')[0] + ' · ' + sug.split(',').slice(0, 3) + ' · ' + bank.split(',').slice(0, 3) };
   });
 
   /* ── W6 · W8 · W9 · W7: Home and the frame ── */
@@ -262,7 +267,7 @@ const walk = async (w) => {
 
   /* ── RULE 13 (with W21's blank-area check): AU country · shop · print · account; IN country · print ── */
   S.cc = 'AU'; S.vault = VAULT();
-  for (const [k, ready, id] of [['country', '[data-testid="cs-rows"]', 'R1'], ['shop', '[data-testid="vault-only-identity"]', 'R2'], ['print', '[data-testid="pr-editor"]', 'R3'], ['account', '[data-testid="sx-ses-list"]', 'R4']]) {
+  for (const [k, ready, id] of [['country', '[data-testid="cs-rows"]', 'R1'], ['start', '[data-testid="start-screen"]', 'R0'], ['shop', '[data-testid="biz-screen"]', 'R2'], ['print', '[data-testid="pr-editor"]', 'R3'], ['account', '[data-testid="sx-ses-list"]', 'R4']]) {
     await page.setViewportSize({ width: 1366, height: 900 }); await go(k, ready);
     await rule13(w, id, 'CB Settings › ' + k + ' (AU)', 'set');
   }

@@ -191,7 +191,7 @@ function csuRead() {
     api('countrySetup').then(function (answer) { CSU.p = answer || null; }, function () { CSU.p = null; CSU.readErr = true; }),
     api('policyGet').then(function (reply) { CSU.flags = (reply && reply.flags) || {}; }, function (failure) { CSU.flags = {}; logRead('policy read', failure); }),
     api('me').then(function (reply) { CSU.me = (reply && (reply.entity || reply)) || {}; }, function (failure) { CSU.me = {}; logRead('/me read', failure); }),
-  ]).then(function () { CSU.loading = false; csuPrefill(); renderCountrySetup(); });
+  ]).then(function () { CSU.loading = false; csuPrefill(); renderCountrySetup(); var after = CSU.afterRead; CSU.afterRead = null; if (after) after(CSU); });
 }
 /* ── ⭐ SET-WALK1 · W28(b) — MONEY CONFIRMS MORE THAN THE CODE: the symbol · the number format · the words for big numbers · the decimals · the date,
  * each a LIVE EXAMPLE from the SAME engine the bills use (CBLocale.money/symbol/date — the currency's own grouping, MONEY_LOCALE; CBMoney.decimals).
@@ -503,6 +503,16 @@ var CBCountry = { mount: function (host, onDone) {
   if (window.CBUnsaved) CBUnsaved.form({ dirty: function () { return !!CSU.touched; }, save: function () { return new Promise(function (ok, no) { var b = document.getElementById('cs-save'); if (!b) return ok(); csuSaveThen(ok, no); }); } });   /* W24 */
   renderCountrySetup();
 } };
+/** BUILD-R1 2026-10-16 (Start here · Your business, app/cap-setup.js): the step's data for ANOTHER screen, read once and shared — never a second reader or writer.
+    data(cb) calls cb(CSU) when the three reads are in (CSU.p · CSU.edit · CSU.flags · CSU.me); with no host of its own the rows paint into a detached element (harmless).
+    save() is the one write (csuSaveThen: the country-setup PUT, then the supplies / words beside it); a refusal rejects with the server's error. */
+CBCountry.data = function (cb) {
+  CSU.host = CSU.sink || (CSU.sink = document.createElement('div'));   /* always the detached sink: the Country screen's mount sets its own host again */
+  CSU.onDone = null;
+  if (CSU.p || CSU.readErr) return cb(CSU);
+  CSU.afterRead = cb; renderCountrySetup();
+};
+CBCountry.save = function () { return new Promise(function (ok, no) { csuSaveThen(ok, no); }); };
 /** W24: the same save as the button, awaited by CBUnsaved (resolve on the outcome, reject on a refusal) */
 function csuSaveThen(ok, no) {
   var e = CSU.edit; if (!e) return ok();

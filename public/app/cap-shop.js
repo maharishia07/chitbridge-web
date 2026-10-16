@@ -122,7 +122,7 @@ var VAULT_HINT = { gstin:'15 characters', pan:'10 characters', ifsc:'11 characte
 var VAULT_ENUM = { incoterm:INCOTERMS, mode:SHIP_MODES };
 /** R21 (walk 2026-10-16): the identity as a LOCAL shop sees it — its rows and Save only; no section label, no + add detail, no ×, no section
     title. The export / authority controls return when the shop opts into export (no such flag exists yet, so Your shop is always plain). */
-function vaultPlain(){ return !!UI._vaultOnly; }
+function vaultPlain(){ return UI._vaultOnly === 'identity'; }   /* BUILD-R1: only the identity is the plain, label-less list; the bank popup (cap-setup.js) keeps its section label and + add detail */
 function vaultCardHTML(vault, encrypted){
   vault=vault||{};
   // F1 — honest at-rest signal. Encrypted (AES-256-GCM, key never in DB) → safe for real data; not configured → dummy only.
@@ -138,7 +138,7 @@ function vaultCardHTML(vault, encrypted){
   if (only) return '<div style="'+_CARD+';margin-top:10px" data-testid="vault-only-'+esc(only)+'">'+(vaultPlain() ? '' : '<div class="sec" style="margin:0">'+esc(VAULT_SECTION_TYPES[only]||only)+'</div>')
     +encBanner+body
     +'<div style="display:flex;gap:7px;align-items:center;margin-top:13px;flex-wrap:wrap"><select class="inp" id="v_addtype" hidden>'+addOpts+'</select>'
-      +(shown.length ? '' : '<button type="button" class="composebtn ghost" data-testid="vault-add-section" onclick="vaultAddSection()">+ '+esc(tx('add the business identity'))+'</button>')+'</div>'
+      +(shown.length ? '' : '<button type="button" class="composebtn ghost" data-testid="vault-add-section" onclick="vaultAddSection()">+ '+esc(only==='identity' ? tx('add the business identity') : txf('add {x}', { x: String(VAULT_SECTION_TYPES[only]||only).replace(/^\S+\s/, '').toLowerCase() }))+'</button>')+'</div>'
     +'<div class="err" id="vault_err" style="margin-top:8px"></div>'
     +'<button type="button" class="composebtn" style="margin-top:11px;display:none" data-testid="vault-save" onclick="saveVaultUI()">' + esc(tx('Save')) + '</button></div>';   /* WALK-REG 2026-10-16 R19: the rows save themselves (CBShop autosave); style display:none, a .composebtn class overrides [hidden] */
   return '<div style="'+_CARD+';margin-top:10px"><div class="sec" style="margin:0">🗂 ' + esc(tx('Trade documents vault')) + ' <span title="' + esc(tx('Fill once. It pre-fills your Commercial Invoice, Packing List and other authority forms; at form time you are asked only the shipment details. Name each detail the way you know it.')) + '" style="cursor:help;font-weight:400;color:var(--grey)">ⓘ</span></div>'
@@ -489,7 +489,8 @@ var CBShop = (function () {
   /** the shop's country from /me, kept on THIS card (STD2: never written to the global SESSION.country) — the words above pass it to helpers.js shopReg(cc) */
   function shopCountry(me){ var c = me && (me.country || me.country_code); H.cc = c ? String(c).toUpperCase() : ''; }
   function mount(host, o){ H.host = host; H.me = (o && o.me) || null; if (H.me) { shopCountry(H.me); paint(); } else read(); }
-  return { mount: mount, refresh: read, paint: paint, country: function () { return H.cc; } };
+  /* BUILD-R1 2026-10-16: Start here / Your business (cap-setup.js) tell the vault's pack words which country they are in, without painting these two cards */
+  return { mount: mount, refresh: read, paint: paint, country: function () { return H.cc; }, setCountry: function (code) { H.cc = code ? String(code).toUpperCase() : ''; } };
 })();
 /** Your shop › Save: one press, one PATCH, the outcome said where it happened (M64); the server's refusal in its own words */
 function shopSave(btn){

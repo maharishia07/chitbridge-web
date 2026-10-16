@@ -50,6 +50,7 @@
         ['SET001', 'shop', 'Your business'], ['SET002', 'country', 'Country'], ['SET003', 'new', 'New shop', 'the sign-in window › New shop? Register'],
         /* T3-SETTINGS (INT6c): the four CB Settings sections */
         ['SET004', 'counters', 'Counters'], ['SET005', 'connectors', 'Connectors'], ['SET006', 'policy', 'Policy'], ['SET007', 'plan', 'Plan & usage'], ['SET008', 'account', 'Account'],   /* SET008: T3-P4-ACCOUNT */
+        ['SET010', 'start', 'Start here', 'the six questions that set the shop up (BUILD-R1)'],
         ['SET009', 'print', 'Print setup', 'what prints on the bill — the bill\'s signature, previewed live (SET-WALK1 W27)']] },
       /* T3-OPS (INT6c): CB Operations — Stock + Suppliers */
       { app: 'operations', name: 'CB Operations', page: '/operations.html', hash: true, rows: [['OPS001', 'stock', 'Stock'], ['OPS002', 'suppliers', 'Suppliers']] },

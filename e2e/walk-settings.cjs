@@ -23,12 +23,13 @@ const crmApi = require('./lib/crm-api.cjs');   /* RAIL-LAB-SRV1: the rail card (
 const walk = async (w) => {
   const { page, ctx, base } = w;
   const S = { calls: [], refuseSave: false, csDone: false };
-  const ME = { display_name: 'Fixture Shop', gstn: '33AABCK1234F1Z6', address: '12 Bazaar Street, Madurai', business_status: 'active', currency_code: 'INR', country_code: 'IN' };
+  /* BUILD-R1 2026-10-16: a checksum-valid tax number (Your business checks the stored one and derives State / PAN from it) and a phone row in the vault */
+  const ME = { display_name: 'Fixture Shop', gstn: '27AAPFU0939F1ZV', address: '12 Bazaar Street, Madurai', business_status: 'active', currency_code: 'INR', country_code: 'IN', country: 'IN' };
   const VAULT = { sections: [{ type: 'identity', label: '', rows: [
     { name: 'Legal name', tag: 'legal_name', value: 'Fixture Shop Pvt Ltd' }, { name: 'Address', tag: 'address', value: '12 Bazaar Street' },
-    { name: 'City', tag: 'city', value: 'Madurai' }, { name: 'State', tag: 'state', value: 'Tamil Nadu' }, { name: 'PIN / ZIP', tag: 'pincode', value: '625001' }] }] };
-  const CS = () => ({ migrated: true, done: S.csDone, required: !S.csDone, country: { code: 'IN', name: 'India' }, currency: 'INR', fy_start_month: 4,
-    tax: { registered: true, number: '33AABCK1234F1Z6', scheme: 'gst' }, source: {}, pack: { id: 'IN', version: '1.0.0', books: true, code: null, why: null } });
+    { name: 'Phone', tag: 'phone', value: '044 2259 2632' }, { name: 'City', tag: 'city', value: 'Madurai' }, { name: 'State', tag: 'state', value: 'Tamil Nadu' }, { name: 'PIN / ZIP', tag: 'pincode', value: '625001' }] }] };
+  const CS = () => ({ migrated: true, done: S.csDone, required: !S.csDone, country: { code: ME.country_code, name: ME.country_code }, currency: 'INR', fy_start_month: 4,
+    tax: { registered: true, number: ME.gstn, scheme: 'regular' }, source: {}, pack: { id: 'IN', version: '1.0.0', books: true, code: null, why: null } });
 
   await ctx.route('**/api/**', async (r) => {
     const q = r.request(), p = new URL(q.url()).pathname, m = q.method();
@@ -49,34 +50,33 @@ const walk = async (w) => {
 
   const txt = (sel) => page.locator(sel).first().innerText().then((s) => s.replace(/\s+/g, ' ').trim()).catch(() => '');
   const wrote = (re) => S.calls.filter((c) => re.test(c)).length;
-  const shop = async () => { await page.goto(base + '/settings.html#/shop'); await page.waitForSelector('[data-testid="shop-card"]', { timeout: 20000 }); await page.waitForSelector('[data-testid="vault-only-identity"]', { timeout: 10000 }); await page.waitForTimeout(300); };
+  const shop = async () => { await page.goto(base + '/settings.html#/shop'); await page.waitForSelector('[data-testid="biz-screen"]', { timeout: 20000 }); await page.waitForTimeout(300); };   /* BUILD-R1 2026-10-16: Your business is the seven cards */
   const country = async () => { await page.goto(base + '/settings.html#/country'); await page.waitForSelector('[data-testid="cs-rows"]', { timeout: 20000 }); await page.waitForTimeout(300); };
 
   await shop();
-  await w.step('T1', 'CB Settings -> Your shop: the GSTIN and address the bill prints, and the business identity with its state and PIN', async () => {
-    const card = await page.$eval('[data-testid="shop-card"]', (n) => [...n.querySelectorAll('input,textarea')].map((i) => i.value).join(' | ')).catch(() => '');
-    const idv = await page.$eval('[data-testid="vault-only-identity"]', (n) => [...n.querySelectorAll('input,textarea,select')].map((i) => i.value).join(' | ')).catch(() => '');
-    return { ok: /33AABCK1234F1Z6/.test(card) && /Bazaar/.test(card) && /Tamil Nadu/.test(idv) && /625001/.test(idv), saw: 'shop: ' + card.slice(0, 70) + ' · identity: ' + idv.slice(0, 70) };
+  await w.step('T1', 'CB Settings -> Your business: the tax number and address the bill prints, State and PAN derived from the number, the registered name and phone from the vault   (BUILD-R1 2026-10-16)', async () => {
+    const tax = await txt('[data-testid="val-taxNo"]'), addr = await txt('[data-testid="val-addr"]'), st = await txt('[data-testid="row-_state"]'), pan = await txt('[data-testid="row-_pan"]'), regd = await txt('[data-testid="val-regd"]'), phone = await txt('[data-testid="val-phone"]');
+    return { ok: /27AAPFU0939F1ZV/.test(tax) && /Bazaar/.test(addr) && /Maharashtra/.test(st) && /AAPFU0939F/.test(pan) && /Fixture Shop Pvt Ltd/.test(regd) && /2259/.test(phone), saw: [tax, addr, st, pan, regd, phone].join(' · ') };
   });
-  await w.step('T2', 'Your shop -> change the address -> Save -> one PATCH, "Shop details saved."', async () => {
+  await w.step('T2', 'Your business -> change the address -> the Save on the card writes it: one PATCH, "✓ Saved" on the card bar, no per-row Save   (BUILD-R1 2026-10-16 · SAVE-CARD 2026-10-16)', async () => {
     const before = wrote(/PATCH \/api\/entities\/profile/);
-    await page.fill('#pf_addr', '14 Bazaar Street, Madurai'); await page.press('#pf_addr', 'Tab'); await page.waitForTimeout(1300);   /* WALK-REG 2026-10-16 R19: no Save button - the field saves itself, "Saved" beside it */
-    const n = wrote(/PATCH \/api\/entities\/profile/) - before, toast = await txt('[data-testid="saved-pf_addr"]'), hidden = await page.$eval('[data-testid="shop-save"]', (b) => getComputedStyle(b).display === 'none');
-    return { ok: n === 1 && /14 Bazaar/.test(S.calls[S.calls.length - 1] || '') && /Saved/.test(toast) && hidden, saw: n + ' PATCH; beside the field "' + toast + '"; Save hidden ' + hidden };
+    await page.click('[data-testid="edit-addr"]'); await page.fill('[data-testid="in-addr"]', '14 Bazaar Street, Madurai'); await page.click('[data-testid="save-contact"]'); await page.waitForTimeout(1300);   // SAVE-CARD 2026-10-16: the card's Save writes
+    const n = wrote(/PATCH \/api\/entities\/profile/) - before, said = await txt('[data-testid="saved-contact"]'), patch = S.calls.filter((c) => /PATCH \/api\/entities\/profile/.test(c)).pop() || '';
+    return { ok: n === 1 && /14 Bazaar/.test(patch) && /Saved/.test(said), saw: n + ' PATCH · ' + patch.slice(0, 80) + ' · beside the row "' + said + '"' };
   });
-  await w.step('T3', 'Your shop -> Save refused by the server -> its sentence painted under the fields, never a raw error', async () => {
+  await w.step('T3', 'Your business -> the server refuses the change -> its sentence stays on the row, in red, never a raw error   (BUILD-R1 2026-10-16 · SAVE-CARD 2026-10-16: refused at Save)', async () => {
     S.refuseSave = true; await shop();
-    await page.fill('#pf_addr', '15 Bazaar Street'); await page.press('#pf_addr', 'Tab'); await page.waitForTimeout(1300);   /* WALK-REG 2026-10-16 R19: autosave */
-    const e = await txt('[data-testid="shop-err"]'); S.refuseSave = false;
-    return { ok: /Only the owner can change the shop details/.test(e) && !/403|undefined|Error/.test(e), saw: '"' + e + '"' };
+    await page.click('[data-testid="edit-addr"]'); await page.fill('[data-testid="in-addr"]', '15 Bazaar Street'); await page.click('[data-testid="save-contact"]'); await page.waitForTimeout(1300);   // SAVE-CARD 2026-10-16: the card's Save writes
+    const e = await txt('[data-testid="why-addr"]'), stays = await page.locator('[data-testid="in-addr"]').count(); S.refuseSave = false;
+    return { ok: /Only the owner can change the shop details/.test(e) && !/403|undefined|Error/.test(e) && stays === 1, saw: '"' + e + '" · the box stays ' + stays };
   });
-  /* SET-WALK1 W25: Save sends a MERGE-PATCH of what moved (nothing moved → nothing sent, said in words); the state row's change travels alone, with the version */
-  await w.step('T4', 'Your shop -> the identity card -> Save with nothing changed -> no PUT, "Nothing to save."; change the state -> one PUT: the version + a patch of that row only', async () => {
+  /* SET-WALK1 W25: the vault's write is a MERGE-PATCH of what moved, with the version; the phone row's change travels alone */
+  await w.step('T4', 'Your business -> change the phone -> one vault PUT: the version + a patch of that row only (nothing else of the identity)   (BUILD-R1 2026-10-16)', async () => {
     await shop(); const before = S.calls.filter((c) => /PUT \/api\/governance\/profile\/vault/.test(c)).length;
-    await page.$eval('[data-testid="vault-save"]', (b) => b.click()); await page.waitForTimeout(500); const none = S.calls.filter((c) => /PUT \/api\/governance\/profile\/vault/.test(c)).length === before, toast = await txt('#toast');
-    const st = page.locator('[data-testid="vault-only-identity"] input[value="Tamil Nadu"]'); await st.fill('Kerala'); await st.press('Tab'); await page.waitForTimeout(1300);   /* WALK-REG 2026-10-16 R19: autosave on change; the hidden Save still answers "Nothing to save." above */   /* WALK-REG 2026-10-16: found by its value — the section label input is gone on Your business */
-    const put = S.calls.filter((c) => /PUT \/api\/governance\/profile\/vault/.test(c)).pop() || '';
-    return { ok: none && /Nothing to save/.test(toast) && /"version":"v7"/.test(put) && /"t:state":\{[^}]*Kerala/.test(put) && !/Tamil Nadu/.test(put) && !/legal_name/.test(put), saw: 'no PUT ' + none + ' · "' + toast + '" · ' + put.slice(40, 200) };
+    if (await page.locator('[data-testid="undo-contact"]').isVisible()) await page.click('[data-testid="undo-contact"]');   // SAVE-CARD 2026-10-16: T3's refused address is still a draft — Undo it, so this Save carries the phone alone
+    await page.click('[data-testid="edit-phone"]'); await page.fill('[data-testid="in-phone"]', '044 2259 9999'); await page.click('[data-testid="save-contact"]'); await page.waitForTimeout(1300);   // SAVE-CARD 2026-10-16
+    const puts = S.calls.filter((c) => /PUT \/api\/governance\/profile\/vault/.test(c)), put = puts[puts.length - 1] || '';
+    return { ok: puts.length === before + 1 && /"version":"v8"/.test(put) /* the version the last save (T2's address, mirrored into the vault) answered */ && /"t:phone":{[^}]*9999/.test(put) && !/legal_name/.test(put) && !/Tamil Nadu/.test(put), saw: put.slice(40, 220) };
   });
   await w.step('T5', 'CB Settings -> Country: the rows (country · money · year · tax), each with where it came from; the sidebar marks Country', async () => {
     await page.click('text=Country >> nth=0').catch(() => {}); await page.waitForSelector('[data-testid="cs-rows"]', { timeout: 10000 });
@@ -84,22 +84,19 @@ const walk = async (w) => {
     return { ok: /India/.test(c) && /Country setup/.test(t) && /#\/country$/.test(page.url()), saw: t + ' · ' + c + ' · ' + page.url().replace(base, '') };
   });
   await w.step('T6', 'Country -> Continue -> one PUT, "Country set." and back to Your shop (never to the workshop)', async () => {
-    await page.click('[data-testid="cs-save"]'); await page.waitForSelector('[data-testid="shop-card"]', { timeout: 8000 });
+    await page.click('[data-testid="cs-save"]'); await page.waitForSelector('[data-testid="biz-screen"]', { timeout: 8000 });
     return { ok: wrote(/PUT \/api\/governance\/country-setup/) === 1 && /settings\.html#\/shop$/.test(page.url()), saw: wrote(/PUT \/api\/governance\/country-setup/) + ' PUT · now at ' + page.url().replace(base, '') };
   });
   /* FX-QA1 (QA-W1 finding 3): the field words come from the shop's country pack (helpers.js packWord), never a typed "GSTIN" / "PIN" */
-  await w.step('T6A', 'Your shop in Australia · the UAE · India -> the pack\'s words: ABN · Postcode / TRN · P.O. Box · Emirate / GSTIN · PIN', async () => {
+  await w.step('T6A', 'Your business in Australia · the UAE · India -> the pack\'s words on the tax row: ABN / TRN / GSTIN, and no India word on the other two   (BUILD-R1 2026-10-16)', async () => {
     const words = async (cc) => {
-      ME.country = cc; ME.country_code = cc;
-      await page.goto(base + '/settings.html?cc=' + cc + '#/shop'); await page.waitForSelector('[data-testid="vault-only-identity"]', { timeout: 20000 }); await page.waitForTimeout(300);   /* a fresh load: a same-hash goto keeps the page */
-      return page.evaluate(() => ({ lic: (document.querySelector('label.fl') || {}).textContent || '', why: '' /* WALK-REG 2026-10-16: shop-why removed by decision */,
-        sug: [...document.querySelectorAll('#vsug_identity option')].map((o) => o.value).join(',') }));
+      ME.country = cc; ME.country_code = cc; ME.gstn = ''; S.csDone = true;
+      await page.goto(base + '/settings.html?cc=' + cc + '#/shop'); await page.waitForSelector('[data-testid="biz-screen"]', { timeout: 20000 }); await page.waitForTimeout(300);   /* a fresh load: a same-hash goto keeps the page */
+      return page.evaluate(() => ({ lic: ((document.querySelector('[data-testid="row-taxNo"] .lb') || {}).textContent || ''), all: document.getElementById('set').innerText }));
     };
     const au = await words('AU'), ae = await words('AE'), ind = await words('IN');
-    const ok = /^ABN/.test(au.lic) && !/GSTIN|PIN/.test(au.lic + au.why + au.sug) && /Postcode/.test(au.sug)
-      && /^TRN/.test(ae.lic) && !/GSTIN|PIN/.test(ae.lic + ae.why + ae.sug) && /P\.O\. Box/.test(ae.sug) && /Emirate/.test(ae.sug)
-      && /^GSTIN/.test(ind.lic) && /,PIN,/.test(ind.sug);
-    return { ok, saw: 'AU "' + au.lic.split(' ')[0] + '" · "' + au.why.trim() + '" · ' + au.sug.split(',').slice(4, 6) + ' | AE "' + ae.lic.split(' ')[0] + '" · ' + ae.sug.split(',').slice(4, 6) + ' | IN "' + ind.lic.split(' ')[0] + '" · "' + ind.why.trim() + '"' };
+    const ok = /^ABN/.test(au.lic) && !/GSTIN|PAN/.test(au.all) && /^TRN/.test(ae.lic) && !/GSTIN|PAN/.test(ae.all) && /^GSTIN/.test(ind.lic);
+    return { ok, saw: 'AU "' + au.lic.split(' ')[0] + '" | AE "' + ae.lic.split(' ')[0] + '" | IN "' + ind.lic.split(' ')[0] + '"' };
   });
 
   /* ── RULE 13: two themes × two widths × two sections ── */

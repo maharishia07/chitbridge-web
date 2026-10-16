@@ -56,14 +56,16 @@ Register: `public/app/screen-id.js` (declared rows, merged into `CBSCREENS`) + `
 | TSK002 | Orders out | CB Tasks & Orders | /tasks.html | /tasks.html · CB Tasks & Orders › Orders out |
 | TSK003 | Tasks | CB Tasks & Orders | /tasks.html | /tasks.html · CB Tasks & Orders › Tasks |
 | TSK004 | Done | CB Tasks & Orders | /tasks.html | /tasks.html · CB Tasks & Orders › Done |
-| SET001 | Your shop | Settings | /settings.html | /settings.html#/shop · Settings › Your shop |
+| SET001 | Your business | Settings | /settings.html | /settings.html#/shop · Settings › Your business |
 | SET002 | Country | Settings | /settings.html | /settings.html#/country · Settings › Country |
 | SET003 | New shop | Settings | /settings.html | the sign-in window › New shop? Register |
-| SET004 | Counters & keys | Settings | /settings.html | /settings.html#/counters · Settings › Counters & keys |
+| SET004 | Counters | Settings | /settings.html | /settings.html#/counters · Settings › Counters |
 | SET005 | Connectors | Settings | /settings.html | /settings.html#/connectors · Settings › Connectors |
 | SET006 | Policy | Settings | /settings.html | /settings.html#/policy · Settings › Policy |
 | SET007 | Plan & usage | Settings | /settings.html | /settings.html#/plan · Settings › Plan & usage |
 | SET008 | Account | Settings | /settings.html | /settings.html#/account · Settings › Account |
+| SET010 | Start here | Settings | /settings.html | the six questions that set the shop up (BUILD-R1) |
+| SET009 | Print setup | Settings | /settings.html | what prints on the bill — the bill's signature, previewed live (SET-WALK1 W27) |
 | OPS001 | Stock | CB Operations | /operations.html | /operations.html#/stock · CB Operations › Stock |
 | OPS002 | Suppliers | CB Operations | /operations.html | /operations.html#/suppliers · CB Operations › Suppliers |
 | EMP001 | People | CB Employees | /employees.html | /employees.html · CB Employees › People |
