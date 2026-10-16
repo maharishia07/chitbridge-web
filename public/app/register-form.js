@@ -82,7 +82,7 @@ function regSpinRows(){
     : c === regBrowserCountry() ? ((g && g.country && g.country.from) || tx('your browser')) : tx('you chose it');
   out.push({ key: 'country', what: tx('Country'), value: esc(name), from: from, known: !!c });
   if (pk) {
-    var tax = [pk.tax && pk.tax.scheme, pk.tax && pk.tax.id].filter(Boolean).join(' · ');
+    var tax = [pk.tax && (pk.tax.name || pk.tax.scheme), pk.tax && pk.tax.id].filter(Boolean).join(' · ');
     var off = pk.offer || {}, zone = { value: off.timezone || '', from: off.from || tx('you pick it after signing in') };   /* the server's offer (STD2) */
     out.push({ key: 'currency', what: tx('Money'), value: esc(pk.currency || ''), from: '', known: !!pk.currency });
     out.push({ key: 'year', what: tx('Year starts'), value: esc(pk.fy_start_month ? (monthNames('long')[pk.fy_start_month - 1] || String(pk.fy_start_month)) : ''), from: '', known: !!pk.fy_start_month });

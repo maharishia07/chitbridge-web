@@ -27,7 +27,7 @@ Register: `public/app/screen-id.js` (declared rows, merged into `CBSCREENS`) + `
 | BKS016 | Closing stock | CB Accounts | /accounts.html | /accounts.html#closingstock · CB Accounts › Closing stock |
 | BKS017 | Assets & depreciation | CB Accounts | /accounts.html | /accounts.html#assets · CB Accounts › Assets & depreciation |
 | BKS018 | Accruals & recurring | CB Accounts | /accounts.html | /accounts.html#accruals · CB Accounts › Accruals & recurring |
-| BKS019 | GST close & pay | CB Accounts | /accounts.html | /accounts.html#gstclose · CB Accounts › GST close & pay |
+| BKS019 | Tax close & pay | CB Accounts | /accounts.html | /accounts.html#gstclose · CB Accounts › Tax close & pay |
 | BKS020 | Year close | CB Accounts | /accounts.html | /accounts.html#yearclose · CB Accounts › Year close |
 | BKS021 | Packs | CB Accounts | /accounts.html | /accounts.html#packs · CB Accounts › Packs |
 | BKS022 | Opening balances | CB Accounts | /accounts.html | /accounts.html#opening · CB Accounts › Opening balances |

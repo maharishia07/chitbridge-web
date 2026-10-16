@@ -574,7 +574,7 @@ async function peReturnLoad() {
   try { const r = await api('perReturn', { query: q }); if (r && r.form) return r; PE_RET.why = (r && r.code === 'RETURN_FROM_RAIL' && r.why) || ''; return null; }
   catch (e) { if (e && (e.status === 404 || (e.status === 422 && e.data && e.data.code === 'RETURN_FROM_RAIL'))) return null; throw e; }
 }
-/** the menu and the title say what the pack calls it — BAS, VAT return — instead of "GST close & pay" */
+/** the menu and the title say what the pack calls it — BAS, VAT return, GST return — instead of the neutral "Tax close & pay" */
 function peReturnWord(r) {
   const word = r.short || r.form;
   if (typeof NAV !== 'undefined' && Array.isArray(NAV)) { const n = NAV.find((x) => x[0] === 'gstclose'); if (n && n[1] !== word) { n[1] = word; if (typeof navPaint === 'function') navPaint('gstclose'); } }

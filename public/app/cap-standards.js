@@ -445,7 +445,7 @@ var STANDARDS = [
     p:"GST credit used in the legal order; CGST and SGST never cross",
     g:"Money & GST", n:"CGST Act s.49 / 49A / 49B, Rule 88A", w:"The order GST credit is used in",
     s:"live",
-    at:"Month & year end · GST close & pay",
+    at:"Month & year end · Tax close & pay",
     go:"gstclose",
     why:"Using credit in the wrong order means paying cash you did not owe.",
     added:'2026-10-03' },
