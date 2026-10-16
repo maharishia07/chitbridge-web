@@ -86,9 +86,10 @@ const walk = async (w) => {
     return { ok: /#\/country$/.test(page.url()) && first[0] === 'country' && first[1] === 'shop' && first.indexOf('print') > 0, saw: page.url().replace(base, '') + ' · ' + first.join(' › ') };
   });
   await w.step('A2', 'AU · Money confirms more than the code: symbol A$, number format A$1,234,567,890.89 (a long sample, W29), 2 decimals, the date, "1.2 billion" — each a live example; the words are not a choice (the money is million-grouped)', async () => {
-    const sym = await txt('[data-testid="cs-money-symbol"] .gv'), num = await txt('[data-testid="cs-money-number"] .gv'), dec = await txt('[data-testid="cs-money-decimals"] .gv'), words = await txt('[data-testid="cs-money-words"] .gv'), date = await txt('[data-testid="cs-money-date"] .gv');
-    const fixedWords = await has('[data-testid="cs-words-fixed"]');
-    return { ok: /A\$/.test(sym) && /A\$1,234,567,890\.89/.test(num) && dec === '2' && /1\.2 billion/.test(words) && fixedWords && date.length > 6, saw: [sym, num, dec, words, date].join(' · ') };
+    /* WALK-REG 2026-10-16: the money block is ONE line (cs-money-number · cs-money-date); the symbol and decimals rows are gone, and for a million-grouped money there is no words choice at all */
+    const num = await txt('[data-testid="cs-money-number"]'), date = await txt('[data-testid="cs-money-date"]');
+    const noWordsChoice = !(await has('#cs-words')), noRows = !(await has('[data-testid="cs-money-symbol"]')) && !(await has('[data-testid="cs-money-decimals"]'));
+    return { ok: /A\$1,234,567,890\.89/.test(num) && noWordsChoice && noRows && date.length > 6, saw: [num, date, 'words choice ' + !noWordsChoice].join(' · ') };
   });
   await w.step('A3', 'AU · the money\'s reason names AUSTRALIA (never "the usual currency in India"); the readiness block is gone, a link to Standards › Country readiness stands instead; Supplies sits beside the tax row', async () => {
     const src = await txt('[data-testid="cs-src-currency"]'), ready = await has('[data-testid="cs-ready"]'), link = await page.getAttribute('[data-testid="cs-ready-link"]', 'href').catch(() => '');
@@ -114,10 +115,11 @@ const walk = async (w) => {
 
   /* ── W26 · W14b · W19 · W23 · W25 · W22: Your shop and the vault on AU ── */
   await go('shop', '[data-testid="vault-only-identity"]');
-  await w.step('A7', 'Your shop · the bill line sits INSIDE the top box; no Supplies dropdown; the lower box is "Used on forms for an authority" with the Licences door and the Print setup door', async () => {
-    const inBox = await page.$eval('[data-testid="shop-card"]', (n) => !!n.querySelector('[data-testid="shop-why"]')).catch(() => false);
-    const sup = await has('#pf_sup'), title = await txt('[data-testid="shop-forms-title"]'), lic = await page.getAttribute('[data-testid="shop-licences-link"]', 'href').catch(() => ''), pr = await page.getAttribute('[data-testid="shop-print-link"]', 'href').catch(() => '');
-    return { ok: inBox && !sup && /Used on forms for an authority/.test(title) && /#\/account/.test(lic || '') && /#\/print/.test(pr || ''), saw: 'line in box ' + inBox + ' · supplies ' + sup + ' · "' + title + '" · ' + lic + ' · ' + pr };
+  await w.step('A7', 'Your shop · no bill line, no Supplies dropdown; the lower box is headed "Your identity"; no Licences / Print setup doors under the boxes', async () => {
+    /* WALK-REG 2026-10-16: removed by decision — shop-why, shop-print-link, shop-licences-link; the heading "Used on forms for an authority" is now "Your identity" */
+    const why = await has('[data-testid="shop-why"]');
+    const sup = await has('#pf_sup'), title = await txt('[data-testid="shop-forms-title"]'), lic = await has('[data-testid="shop-licences-link"]'), pr = await has('[data-testid="shop-print-link"]');
+    return { ok: !why && !sup && /Your identity/.test(title) && !lic && !pr, saw: 'bill line ' + why + ' · supplies ' + sup + ' · "' + title + '" · licences link ' + lic + ' · print link ' + pr };
   });
   await w.step('A8', 'AU · the identity rows name ABN and Postcode (never GSTIN / PIN / IFSC); the bank suggestions say BSB; the detail-name placeholder names the first suggestion', async () => {
     const sug = await page.$$eval('#vsug_identity option', (o) => o.map((x) => x.value).join(',')), bank = await page.$$eval('#vsug_bank option', (o) => o.map((x) => x.value).join(',')), ph = await page.getAttribute('[data-testid="vault-only-identity"] input[list]', 'placeholder').catch(() => '');
@@ -125,7 +127,7 @@ const walk = async (w) => {
   });
   await w.step('A9', 'W25 · change the legal name → Save → ONE PUT carrying the version and a merge-patch of that row only (identity|, t:legal_name), nothing else', async () => {
     const before = puts().length;
-    const inp = page.locator('[data-testid="vault-only-identity"] input').nth(2);   /* the label box, then the legal-name row's NAME, then its VALUE */
+    const inp = page.locator('[data-testid="vault-only-identity"] input').nth(1);   /* WALK-REG 2026-10-16: no section label input on Your shop — the legal-name row's NAME, then its VALUE */
     await inp.fill('Austore One Pty Ltd (new)'); await page.click('[data-testid="vault-save"]'); await page.waitForTimeout(600);
     const put = puts().slice(before)[0], b = (put && put.body) || {};
     const sec = b.patch && b.patch.sections && b.patch.sections['identity|'], rows = sec && sec.rows ? Object.keys(sec.rows) : [];
@@ -133,10 +135,10 @@ const walk = async (w) => {
   });
   await w.step('A10', 'W25 · the server says 409 (another screen saved first) → "Changed since you opened it — reload?" painted with a Reload button; Reload re-reads the vault', async () => {
     S.conflict = true;
-    const inp = page.locator('[data-testid="vault-only-identity"] input').nth(2); await inp.fill('Austore Two'); await page.click('[data-testid="vault-save"]'); await page.waitForTimeout(600);
+    const inp = page.locator('[data-testid="vault-only-identity"] input').nth(1); await inp.fill('Austore Two'); await page.click('[data-testid="vault-save"]'); await page.waitForTimeout(600);
     const said = await txt('[data-testid="vault-conflict"]'), btn = await has('[data-testid="vault-reload"]');
     await page.click('[data-testid="vault-reload"]'); await page.waitForTimeout(500);
-    const after = await page.locator('[data-testid="vault-only-identity"] input').nth(2).inputValue();
+    const after = await page.locator('[data-testid="vault-only-identity"] input').nth(1).inputValue();
     return { ok: /Changed since you opened it/.test(said) && btn && /Austore One Pty Ltd/.test(after), saw: '"' + said + '" · reload ' + btn + ' · now "' + after + '"' };
   });
   await w.step('A11', 'W14b · a shop with NO identity section opens one prefilled from the shop\'s own details (the address, the ABN) — nothing saved until Save', async () => {
@@ -165,12 +167,12 @@ const walk = async (w) => {
   });
 
   /* ── W15 · W16 · W11 ── */
-  await go('counters', '[data-testid="sx-key-scope"]');
-  await w.step('A15', 'W15 · the key kinds are the server\'s: no "testing" for a shop; offered when the server offers it', async () => {
-    const shop = await page.$$eval('[data-testid="sx-key-scope"] option', (o) => o.map((x) => x.value));
-    S.testing = true; await go('counters', '[data-testid="sx-key-scope"]'); await page.waitForTimeout(400);
-    const platform = await page.$$eval('[data-testid="sx-key-scope"] option', (o) => o.map((x) => x.value)); S.testing = false;
-    return { ok: shop.indexOf('testing') < 0 && platform.indexOf('testing') >= 0, saw: 'shop ' + shop.join(',') + ' · platform ' + platform.join(',') };
+  await go('counters', '[data-testid="sx-title"]');
+  await w.step('A15', 'W15 · WALK-REG 2026-10-16: removed by decision — NO key list or key-kind picker anywhere for a shop owner (Counters, even if the server offers "testing")', async () => {
+    const shop = await has('[data-testid="sx-key-scope"]');
+    S.testing = true; await go('counters', '[data-testid="sx-title"]'); await page.waitForTimeout(400);
+    const platform = await has('[data-testid="sx-key-scope"]'); S.testing = false;
+    return { ok: !shop && !platform, saw: 'key picker for a shop ' + shop + ' · with testing offered ' + platform };
   });
   await go('connectors', '[data-testid="sx-con-may-zoho"]');
   await w.step('A16', 'W16 · AU: Zoho Books "Not yet for your country" (its code), Tally "Not for your country", Xero "Not built yet" — words from the CODE, the sentence in the row\'s next level', async () => {
@@ -181,22 +183,26 @@ const walk = async (w) => {
   await w.step('A17', 'W11 · Policy shows GST registration READ-ONLY: who may = "Country setup", its Save greyed with the sentence, the door to Country', async () => {
     const who = await txt('[data-testid="sx-pol-who-gst_registration"]');
     await page.click('[data-testid="sx-pol-gst_registration"]'); await page.waitForTimeout(200);
-    const dis = await page.locator('[data-act="save"][data-actrow="gst_registration"]').isDisabled().catch(() => false), door = await page.getAttribute('[data-testid="sx-pol-country-door"]', 'href').catch(() => '');
+    /* WALK-REG 2026-10-16: Policy has no Save button any more (rows autosave on change) — a read-only row offers no control, only the door */
+    const dis = (await page.locator('[data-act="save"]').count()) === 0 && !(await has('[data-testid="sx-pol-in-gst_registration"]')), door = await page.getAttribute('[data-testid="sx-pol-country-door"]', 'href').catch(() => '');
     return { ok: /Country setup/.test(who) && dis && /#\/country/.test(door || ''), saw: '"' + who + '" · greyed ' + dis + ' · ' + door };
   });
 
   /* ── W27: Print setup ── */
   await go('print', '[data-testid="pr-editor"]');
   const slip = () => page.frames().find((f) => /bill-print\.html/.test(f.url()));
-  await w.step('A18', 'W27 · Print setup: the signature lines prefilled from the shop; the trading name and the ABN cannot be unticked (the pack\'s cite says why); the sample bill is painted by bill-print.html', async () => {
+  await w.step('A18', 'W27 · Print setup: the signature lines prefilled from the shop; the business name and the ABN carry no tick box (always on a tax invoice); the sample bill is painted by bill-print.html', async () => {
     const name = await page.inputValue('[data-testid="pr-in-trade_name"]'), abn = await page.inputValue('[data-testid="pr-in-tax_id"]');
-    const lockedName = await page.locator('[data-testid="pr-show-trade_name"]').isDisabled(), lockedAbn = await page.locator('[data-testid="pr-show-tax_id"]').isDisabled(), why = await txt('[data-testid="pr-locked-tax_id"]');
-    const addrFree = await page.locator('[data-testid="pr-show-address"]').isDisabled();
+    /* WALK-REG 2026-10-16: required lines (name, address, tax id) have NO tick box and no arrows; pr-locked-tax_id and a disabled pr-show-trade_name no longer exist */
+    const lockedName = (await page.locator('[data-testid="pr-show-trade_name"]').count()) === 0, lockedAbn = (await page.locator('[data-testid="pr-show-tax_id"]').count()) === 0, why = await txt('[data-testid="pr-always"]');
+    const addrFree = (await page.locator('[data-testid="pr-show-address"]').count()) === 0;   /* AU: the address is optional, so it keeps its tick box (!addrFree) */
     await page.waitForTimeout(800); const f = slip();
     const head = f ? await f.locator('[data-testid="slip-head-trade_name"]').innerText().catch(() => '') : '';
-    return { ok: name === 'Austore One' && abn === '51824753556' && lockedName && lockedAbn && /tax invoice must carry/.test(why) && !addrFree && /Austore One/.test(head), saw: name + ' · ' + abn + ' · locked ' + lockedName + '/' + lockedAbn + ' · "' + why.slice(0, 50) + '" · slip head "' + head + '"' };
+    return { ok: name === 'Austore One' && abn === '51824753556' && lockedName && lockedAbn && /always on a tax invoice/i.test(why) && !addrFree && /Austore One/.test(head), saw: name + ' · ' + abn + ' · locked ' + lockedName + '/' + lockedAbn + ' · "' + why.slice(0, 50) + '" · slip head "' + head + '"' };
   });
   await w.step('A19', 'W27 · AU: the sample says TAX INVOICE, ABN on the head, GST 10 % on ONE line (no CGST/SGST, no HSN table); typing a footer line shows on the paper at once', async () => {
+    /* WALK-REG 2026-10-16: the footer is an optional line — it reaches the paper only once ticked ("Tick to print (optional)") */
+    if (!(await page.locator('[data-testid="pr-show-footer"]').isChecked())) await page.locator('[data-testid="pr-show-footer"]').check();
     await page.fill('[data-testid="pr-in-footer"]', 'Thanks for shopping at Austore'); await page.waitForTimeout(500);
     const f = slip(), text = f ? (await f.locator('#slip').innerText().catch(() => '')).replace(/\s+/g, ' ') : '';
     return { ok: /TAX INVOICE/.test(text) && /ABN 51824753556/.test(text) && /GST 10%/.test(text) && !/CGST/.test(text) && !/HSN/.test(text) && /Thanks for shopping at Austore/.test(text), saw: text.slice(0, 160) };
@@ -213,7 +219,7 @@ const walk = async (w) => {
   await go('country', '[data-testid="cs-rows"]');
   await w.step('A21', 'IN · Money: ₹1,23,45,67,890.89 (lakh grouping — the money\'s own, W29 long sample), the words a CHOICE (as the money is written · lakh · million) with "123.5 crore"; choosing million → one PATCH { number_words }', async () => {
     const chosen = () => page.$eval('#cs-words', (n) => n.options[n.selectedIndex].textContent).catch(() => '');
-    const num = (await txt('[data-testid="cs-money-number"] .gv')).replace(/[\u200b-\u200f\u00a0\u202f]/g, ''), choice = await has('#cs-words'), words = await chosen();   /* ICU may put a thin/no-break space after ₹ */
+    const num = (await txt('[data-testid="cs-money-number"]')).replace(/[\u200b-\u200f\u00a0\u202f]/g, ''), choice = await has('#cs-words'), words = await chosen();   /* ICU may put a thin/no-break space after ₹ */
     await page.selectOption('#cs-words', 'million'); await page.waitForTimeout(200);
     const after = await chosen();
     await page.click('[data-testid="cs-save"]'); await page.waitForTimeout(800);
@@ -224,7 +230,7 @@ const walk = async (w) => {
   await go('print', '[data-testid="pr-editor"]');
   await w.step('A22', 'IN · the sample bill carries GSTIN, CGST/SGST and the HSN table; the address cannot be unticked (Rule 46)', async () => {
     await page.waitForTimeout(800); const f = slip(), text = f ? (await f.locator('#slip').innerText().catch(() => '')).replace(/\s+/g, ' ') : '';
-    const addrLocked = await page.locator('[data-testid="pr-show-address"]').isDisabled();
+    const addrLocked = (await page.locator('[data-testid="pr-show-address"]').count()) === 0;   /* WALK-REG 2026-10-16: no tick box at all on a required line */
     return { ok: /GSTIN 33AABCK1234F1Z6/.test(text) && /CGST/.test(text) && /HSN/.test(text) && addrLocked, saw: 'address locked ' + addrLocked + ' · ' + text.slice(0, 120) };
   });
   await go('shop', '[data-testid="vault-only-identity"]');

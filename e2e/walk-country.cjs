@@ -96,12 +96,11 @@ W.run('country', async (w) => {
     const ok = /India/.test(c) && /INR/.test(cur) && /April/.test(fy) && src.length > 0 && /Country setup/.test(title) && /#\/country/.test(await page.evaluate(() => location.hash));
     return { ok, saw: title + ' · ' + c + ' · ' + cur + ' · ' + fy + ' · from ' + src };
   });
-  await w.step('C2', 'Change (country) -> the picker opens; Done -> it closes', async () => {
-    await page.click('[data-testid="cs-change-country"]');
+  await w.step('C2', 'First setup: the country picker is INLINE (no Change tap, no Done); the edit icon appears only on an answered row', async () => {
+    /* WALK-REG 2026-10-16: a not-yet-answered row shows its dropdown inline; the "Done" toggles are removed by decision */
     const open = !!(await page.$('[data-testid="cs-country"]'));
-    await page.click('[data-testid="cs-change-country"]');
-    const closed = !(await page.$('[data-testid="cs-country"]'));
-    return { ok: open && closed, saw: 'picker ' + (open ? 'opened' : 'did not open') + ', then ' + (closed ? 'closed' : 'stayed') };
+    const noChange = !(await page.$('[data-testid="cs-change-country"]'));
+    return { ok: open && noChange, saw: 'picker ' + (open ? 'inline' : 'MISSING') + ', edit icon ' + (noChange ? 'absent' : 'SHOWN') };
   });
   await w.step('C3', 'Continue -> ONE PUT { country, currency, fy_start_month, tax, source } -> the app opens', async () => {
     await page.click('[data-testid="cs-save"]');
@@ -153,8 +152,7 @@ W.run('country', async (w) => {
     const noSentence = !(await p3.$('[data-testid="cs-nopack"]'));
     /* CS2: several zones -> the row has Change; open it and the picker holds the browser's zone */
     const tz = await text(p3, '[data-testid="cs-val-timezone"]'), tzSrc = await text(p3, '[data-testid="cs-src-timezone"]');
-    const askable = !!(await p3.$('[data-testid="cs-change-timezone"]'));
-    await p3.click('[data-testid="cs-change-timezone"]');
+    const askable = !!(await p3.$('[data-testid="cs-timezone"]'));   /* WALK-REG 2026-10-16: asked INLINE on first setup — no Change tap */
     const picked = await p3.$eval('[data-testid="cs-timezone"]', (el) => el.value);
     const nOpts = await p3.$$eval('[data-testid="cs-timezone"] option', (os) => os.length);
     await p3.click('[data-testid="cs-save"]');
@@ -205,8 +203,7 @@ W.run('country', async (w) => {
   const sent4 = {};
   await stubRegistration(in2, profile(), sent4);
   await w.step('C8', 'The country picker offers EXACTLY the registered packs (India - Australia - UAE), whatever the browser\'s locale', async () => {
-    await register(p4, base);
-    await p4.click('[data-testid="cs-change-country"]');
+    await register(p4, base);   /* WALK-REG 2026-10-16: the picker is inline on first setup */
     const codes = await p4.$$eval('[data-testid="cs-country"] option', (os) => os.map((o) => o.value));
     const want = COUNTRIES.map((c) => c.code);
     const ok = codes.length === want.length && want.every((c) => codes.includes(c));
@@ -218,14 +215,14 @@ W.run('country', async (w) => {
     const cur = await text(p4, '[data-testid="cs-val-currency"]'), fy = await text(p4, '[data-testid="cs-val-fy"]'), tz = await text(p4, '[data-testid="cs-val-timezone"]');
     const curSrc = await text(p4, '[data-testid="cs-src-currency"]'), fySrc = await text(p4, '[data-testid="cs-src-fy"]');
     const preselected = await p4.$eval('[data-testid="cs-timezone"]', (el) => el.value);
-    const rule = await text(p4, '[data-testid="cs-rule"]');
+    /* WALK-REG 2026-10-16: removed by decision — the cs-rule paragraph ("can still be corrected") */
     await p4.selectOption('[data-testid="cs-timezone"]', 'Australia/Perth');
     const tz2 = await text(p4, '[data-testid="cs-val-timezone"]');
     await p4.click('[data-testid="cs-save"]');
     await p4.waitForFunction(() => /#\/app/.test(location.hash), null, { timeout: 8000 });
     const p = sent4.put || {};
-    const ok = /AUD/.test(cur) && /July/.test(fy) && /not picked/.test(tz) && preselected === '' && /Australia pack/.test(curSrc) && /Australia pack/.test(fySrc) && /Perth/.test(tz2)
-      && /can still be corrected/.test(rule) && p.country === 'AU' && p.currency === 'AUD' && p.fy_start_month === 7 && p.timezone === 'Australia/Perth';
+    const ok = /AUD/.test(cur) && /July/.test(fy) && /Pick the time zone/.test(tz) && preselected === '' && /Australia pack/.test(curSrc) && /Australia pack/.test(fySrc) && /Perth/.test(tz2)
+      && p.country === 'AU' && p.currency === 'AUD' && p.fy_start_month === 7 && p.timezone === 'Australia/Perth';
     return { ok, saw: cur + ' (' + curSrc + ') · ' + fy + ' (' + fySrc + ') · zone first "' + tz + '" then ' + tz2 + ' · sent ' + JSON.stringify({ country: p.country, currency: p.currency, fy: p.fy_start_month, tz: p.timezone }) };
   });
   await in2.close();
@@ -246,9 +243,10 @@ W.run('country', async (w) => {
     await p5.waitForSelector('[data-testid="cs-row-country"][data-locked="1"]', { timeout: 8000 });
     const noCountryChange = !(await p5.$('[data-testid="cs-change-country"]')), noMoneyChange = !(await p5.$('[data-testid="cs-change-currency"]'));
     const fyChange = !!(await p5.$('[data-testid="cs-change-fy"]')), taxChange = !!(await p5.$('[data-testid="cs-change-tax"]'));
-    const why = await text(p5, '[data-testid="cs-src-country"]'), rule = await text(p5, '[data-testid="cs-rule"]');
-    const ok = noCountryChange && noMoneyChange && fyChange && taxChange && /fixed/.test(why) && /products/.test(why) && /never change/.test(rule);
-    return { ok, saw: 'country "' + why + '" · Change on country ' + (noCountryChange ? 'absent' : 'SHOWN') + ', money ' + (noMoneyChange ? 'absent' : 'SHOWN') + ', year ' + (fyChange ? 'there' : 'missing') + ' · rule "' + rule.slice(0, 50) + '…"' };
+    /* WALK-REG 2026-10-16: the reason now lives in the lock's title; cs-rule ("never change") removed by decision */
+    const why = await p5.$eval('[data-testid="cs-row-country"] [data-testid="cs-lock"]', (n) => n.getAttribute('title'));
+    const ok = noCountryChange && noMoneyChange && fyChange && taxChange && /Fixed/.test(why) && /products/.test(why);
+    return { ok, saw: 'country "' + why + '" · Change on country ' + (noCountryChange ? 'absent' : 'SHOWN') + ', money ' + (noMoneyChange ? 'absent' : 'SHOWN') + ', year ' + (fyChange ? 'there' : 'missing') + ' · lock "' + why.slice(0, 60) + '"' };
   });
   await w.step('C11', '... and a PUT the server refuses (409 COUNTRY_CHANGE_IS_NEW_ENTITY) -> its sentence painted in the form, the step stays', async () => {
     /* the screen never offers the change; the server is the one that decides — so push the refused body the way an old tab would */
@@ -271,11 +269,11 @@ W.run('country', async (w) => {
   });
   await w.step('C13', 'Change the country -> the UAE: the readiness link follows the chosen country', async () => {
     const tap = () => page.$eval('[data-testid="cs-change-country"]', (a) => a.click());   /* the workshop's fixed dev ribbon sits over the link once scrolled: a person's tap, not a pointer at a covered spot */
-    await tap();
+    if (await page.$('[data-testid="cs-change-country"]')) await tap();   /* an answered row: the edit icon opens the picker */
     await page.selectOption('[data-testid="cs-country"]', 'AE'); await page.waitForTimeout(150);
     const ae = await readyHref();
+    if (await page.$('[data-testid="cs-change-country"]')) await tap();   /* WALK-REG 2026-10-16: choosing a value answers the row and folds the picker — the edit icon reopens it */
     await page.selectOption('[data-testid="cs-country"]', 'IN'); await page.waitForTimeout(150);
-    await tap();
     return { ok: /ready=AE$/.test(ae), saw: ae };
   });
   for (const [th, wd, ht] of [['cream', 1366, 900], ['dark', 1366, 900], ['cream', 390, 844], ['dark', 390, 844]]) {
@@ -303,7 +301,7 @@ W.run('country', async (w) => {
         return { sw: document.documentElement.scrollWidth, iw: window.innerWidth, inner: el.scrollWidth > el.clientWidth + 1, floating, clipped,
           maxWords: Math.max(...[...el.querySelectorAll('.govrow, .hint')].map((x) => x.textContent.trim().split(/\s+/).length)) };
       });
-      const ok = pairs.length > 30 && bad.length === 0 && r.sw <= r.iw && !r.inner && r.floating.length === 0 && r.clipped === 0 && r.maxWords <= 20;
+      const ok = pairs.length > 10   /* WALK-REG 2026-10-16: fewer texts on the slimmer step */ && bad.length === 0 && r.sw <= r.iw && !r.inner && r.floating.length === 0 && r.clipped === 0 && r.maxWords <= 20;
       return { ok, saw: pairs.length + ' texts, ' + bad.length + ' below AA' + (bad.length ? ' (' + bad.slice(0, 3).map((x) => '"' + x.text + '" ' + x.ratio + '/' + x.need).join(', ') + ')' : '') + ' · scroll ' + r.sw + '/' + r.iw + ' · inner ' + r.inner + ' · floating ' + r.floating.length + (r.floating.length ? ' (' + r.floating[0] + ')' : '') + ' · clipped ' + r.clipped + ' · longest ' + r.maxWords + ' words' };
     });
   }

@@ -125,16 +125,19 @@ const walk = async (w) => {
     await w.step(cc + '-4', who + ' · Settings › Policy › the registration row is the pack\'s: "' + X.regLabel + '" now "' + X.regNow + '", offering ' + X.kinds.join(' · '), async () => {
       const row = await txt('[data-testid="sx-pol-gst_registration"]');
       await page.click('[data-testid="sx-pol-gst_registration"]'); await page.waitForTimeout(250);
-      const options = await page.$$eval('[data-testid="sx-pol-in-gst_registration"] option', (os) => os.map((o) => o.value));
-      const help = await txt('[data-testid="sx-pol-next-gst_registration"]');
-      return { ok: row.includes(X.regLabel) && row.includes(X.regNow) && options.join() === X.kinds.join() && india(cc, help), saw: 'row "' + row.slice(0, 60) + '" · options ' + options.join('/') };
+      /* WALK-REG 2026-10-16: the registration row is read-only here (set under Country) - there is no control, so no options to list; its info icon carries the help */
+      const help = await txt('[data-testid="sx-pol-next-gst_registration"]') + ' ' + (await page.getAttribute('[data-testid="sx-pol-why-gst_registration"]', 'title').catch(() => '') || '');
+      const door = await page.locator('[data-testid="sx-pol-country-door"]').count();
+      return { ok: row.includes(X.regLabel) && row.includes(X.regNow) && door === 1 && india(cc, help), saw: 'row "' + row.slice(0, 60) + '" · door to Country ' + door };
     });
     await w.step(cc + '-5', who + ' · Policy › Chit expiry reads "No expiry" and Retention the law\'s years — never "0"', async () => {
-      const expiry = await txt('[data-testid="sx-pol-chit_expiry_days"]'), keep = await txt('[data-testid="sx-pol-retention_days"]');
-      return { ok: /No expiry/.test(expiry) && X.keep.test(keep) && !/\b0\b/.test(expiry + keep), saw: '"' + expiry.slice(0, 50) + '" · "' + keep.slice(0, 60) + '"' };
+      /* WALK-REG 2026-10-16: removed by decision - the chit_expiry_days row is hidden (nothing reads it yet); only the retention years are asserted */
+      const expiry = '', hiddenExpiry = (await page.locator('[data-testid="sx-pol-chit_expiry_days"]').count()) === 0, keep = await txt('[data-testid="sx-pol-retention_days"]');
+      return { ok: hiddenExpiry && X.keep.test(keep) && !/\b0\b/.test(expiry + keep), saw: '"' + expiry.slice(0, 50) + '" · "' + keep.slice(0, 60) + '"' };
     });
     await w.step(cc + '-6', who + ' · the whole Policy list ' + (cc === 'IN' ? 'still says GSTIN (the control)' : 'holds no GSTIN / PAN / ₹'), async () => {
-      const all = await txt('[data-testid="sx-pol-list"]');
+      /* WALK-REG 2026-10-16: the helps moved into info icons (title=), so the words are read from the visible text AND the titles */
+      const all = (await txt('[data-testid="sx-pol-list"]')) + ' ' + (await page.$$eval('[data-testid="sx-pol-list"] [title]', (n) => n.map((x) => x.getAttribute('title')).join(' ')));
       return { ok: india(cc, all), saw: (all.match(INDIA) || ['no India word']).join(', ') + ' in ' + all.length + ' chars' };
     });
   }
