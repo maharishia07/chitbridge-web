@@ -46,7 +46,7 @@ Rules for every row: **not yet answered → the dropdown inline; answered → va
 3. **Tax & registration** — tax number, type (IN: Regular/Composition with ⓘ), **business structure derived from the PAN letter**
    inside the GSTIN (C company → ask CIN · LLP → LLPIN · P individual → nothing); AU: ABN (+ ACN for a company); AE: TRN
 4. **Licences** — only those the kind of business needs: FSSAI (food), drug licence (pharmacy), trade licence, Udyam/MSME
-5. **Bank & payments** — account, UPI (IN) — asked at the first invoice/payment
+5. **Bank & payments** — a SUMMARY card only (bank ••4521 · UPI id ✎); its owner is **Finance › Bank accounts** — ✎ opens that same screen as a popup (Athi: "we have to call that screen to set it in the shop settings"); asked at the first invoice/payment
 6. **Who signs** — signatory name + signature — asked when a bill/form needs it
 7. **Export** — IEC, ports, logistics — only when export is turned on (today's "Trade documents vault" lives here)
 Today these are spread over 4 places (Country, Your shop top block, Business identity vault, Print setup) — **one owner per field**.

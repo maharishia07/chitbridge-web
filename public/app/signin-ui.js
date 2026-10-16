@@ -47,6 +47,7 @@
  *      the host may give (registerHref) and nothing else.
  *
  * Reuse: CBSignin (engine) · CBOnePerson.claim / who (one browser, one shop) · CBAvatar (the sign-out side; signOut is there, not here).
+ * CARD 18-identity-sign-in-and-access/sign-in
  */
 (function (root) {
 'use strict';
@@ -406,6 +407,17 @@ function paint(host, m, c) {
   else if (first && S.at !== 'out') { try { first.focus({ preventScroll: true }); } catch (_) {} }
 }
 
+/* R45 (WALK-REG 2026-10-16): a register door on THIS page (settings.html#/new from settings.html) only moved the hash — the page had
+   already chosen sign-in, so the form never came until a reload. Same page, other hash → load it afresh; another page → the plain link. */
+function goRegister(e, link) {
+  try {
+    var to = new URL(link.href, root.location.href), here = root.location;
+    if (to.origin !== here.origin || to.pathname !== here.pathname) return;
+    e.preventDefault();
+    here.href = to.href;
+    here.reload();
+  } catch (err) { if (root.cbQuiet) root.cbQuiet('signin:register', err); }
+}
 /**
  * mount(host, contract) — the window, painted into `host`; the machine behind it is CBSignin.machine(contract).
  */
@@ -435,17 +447,6 @@ function mount(host, c) {
     else if (k === 'later') m.later();
     else if (k === 'method' && typeof c.onMethod === 'function') c.onMethod(t.getAttribute('data-method'));
     else if (k === 'register') goRegister(e, t);
-  }
-  /* R45 (WALK-REG 2026-10-16): a register door on THIS page (settings.html#/new from settings.html) only moved the hash — the page had
-     already chosen sign-in, so the form never came until a reload. Same page, other hash → load it afresh; another page → the plain link. */
-  function goRegister(e, a) {
-    try {
-      var to = new URL(a.href, root.location.href), here = root.location;
-      if (to.origin !== here.origin || to.pathname !== here.pathname) return;
-      e.preventDefault();
-      here.href = to.href;
-      here.reload();
-    } catch (err) { if (root.cbQuiet) root.cbQuiet('signin:register', err); }
   }
   function onInput(e) { if (host.contains(e.target) && e.target.name === 'id') m.typed(e.target.value); }
   doc.addEventListener('submit', onSubmit);

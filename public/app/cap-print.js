@@ -187,12 +187,12 @@ var CBPrint = (function () {
     frame.title = tx('Sample bill'); frame.src = '/bill-print.html?preview=1';
     frame.setAttribute('scrolling', 'no');
     frame.style.cssText = 'border:0;background:#fff;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.35);width:' + (held.model.paper === 'a4' ? 'min(794px,100%)' : '340px') + ';height:400px';
-    function fit() {
+    function fitHeight() {
       try { var doc = frame.contentDocument; frame.style.height = Math.max(doc.documentElement.scrollHeight, doc.body.scrollHeight) + 'px'; } catch (failure) { logQuiet('preview-fit', failure); }
     }
     function close() { document.removeEventListener('keydown', onKey); if (overlay.parentNode) overlay.parentNode.removeChild(overlay); }
     function onKey(event) { if (event.key === 'Escape') close(); }
-    frame.addEventListener('load', function () { frame.contentWindow.postMessage(message(), '*'); setTimeout(fit, 150); });
+    frame.addEventListener('load', function () { frame.contentWindow.postMessage(message(), '*'); setTimeout(fitHeight, 150); });
     overlay.addEventListener('click', function (event) { if (event.target === overlay) close(); });
     document.addEventListener('keydown', onKey);
     overlay.appendChild(frame); document.body.appendChild(overlay);

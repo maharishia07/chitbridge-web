@@ -180,7 +180,7 @@ function csuPrefill() {
   CSU.edit = e; CSU.src = src;
 }
 /** WALK-REG R10: the shop's stored answer to "What you sell" — only goods · services · both count ('unknown' / none = nobody asked yet) */
-function csuStoredSupplies() { var s = CSU.me && CSU.me.supplies; return SHOP_SUPPLIES.some(function (choice) { return choice[0] === s; }) ? s : ''; }
+function csuStoredSupplies() { var stored = CSU.me && CSU.me.supplies; return SHOP_SUPPLIES.some(function (choice) { return choice[0] === stored; }) ? stored : ''; }
 /** read the step's three answers together (country setup · policy flags · the shop's own row), each failure said in the log and kept apart; then prefill and paint */
 function csuRead() {
   if (CSU.loading) return;
@@ -342,8 +342,8 @@ function csuTaxRow(e, sources) {
 }
 /** WALK-REG R14: the 🔒 on the two rows that lock — Country and Money, at the first product or transaction (server isConstituted); once fixed, why */
 function csuLockHTML(fixed) {
-  var why = fixed ? txf('Fixed — the shop has {w}. Another country needs a new business.', { w: csuFixedBy() }) : tx('Fixed after your first sale');
-  return ' <span data-testid="cs-lock" title="' + esc(why) + '" aria-label="' + esc(why) + '" style="cursor:help">🔒</span>';
+  var reason = fixed ? txf('Fixed — the shop has {w}. Another country needs a new business.', { w: csuFixedBy() }) : tx('Fixed after your first sale');
+  return ' <span data-testid="cs-lock" title="' + esc(reason) + '" aria-label="' + esc(reason) + '" style="cursor:help">🔒</span>';
 }
 /** the Country and Money rows; once the shop holds a product or a transaction they are fixed — the value and the 🔒, never a Change (CS2) */
 function csuCountryMoneyRows(e, sources, fixed) {

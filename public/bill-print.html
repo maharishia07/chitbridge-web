@@ -128,7 +128,7 @@ BILL.lines.forEach(function (line) { line.sample_rate = line.rate; });   /* the 
 /** R47: the second tender in the pack's own words — UPI where the pack takes UPI (chart.paymentModes), a card everywhere else */
 function tenderFor(country){
   var pack = null;
-  try { pack = country && window.CBRegulation ? CBRegulation.packFor(country) : null; } catch (failure) { pack = null; }
+  try { pack = country && window.CBRegulation ? CBRegulation.packFor(country) : null; } catch (failure) { pack = null; if (window.cbQuiet) window.cbQuiet('bill-print:tender', failure); }
   return (!pack || (pack.chart && pack.chart.paymentModes && pack.chart.paymentModes.upi)) ? 'UPI' : 'Card';
 }
 
@@ -136,9 +136,9 @@ function tenderFor(country){
 function r2(n){ return Math.round((Number(n)||0)*100)/100; }
 /** R12: each line's tax is the tax engine's (CBTax.splitLineTax — the shelf price INCLUDES the tax, as in every Indian shop): its heads (CGST and
     SGST each at half the rate on the same base, or one GST/VAT head) and their sum. The slip only ADDS those heads up; it never halves a total. */
-function lineTax(net, rate, split){
-  if (!rate) return { assessable: net, tax: 0, heads: { cgst: 0, sgst: 0, igst: 0, vat: 0 } };
-  var answer = CBTax.splitLineTax({ net: net, rate: rate, priceIncludesTax: true, supply: split ? 'intra' : 'domestic', split: split });
+function lineTax(netAmount, rate, split){
+  if (!rate) return { assessable: netAmount, tax: 0, heads: { cgst: 0, sgst: 0, igst: 0, vat: 0 } };
+  var answer = CBTax.splitLineTax({ net: netAmount, rate: rate, priceIncludesTax: true, supply: split ? 'intra' : 'domestic', split: split });
   return { assessable: answer.assessable, tax: answer.tax, heads: answer.heads };
 }
 function calc(kind){
@@ -148,13 +148,13 @@ function calc(kind){
     var save  = r2(gross * (l.off || 0) / 100);
     var net   = r2(gross - save);
     var rate  = taxed ? (l.rate || 0) : 0;
-    var t     = lineTax(net, rate, split);
-    return Object.assign({}, l, { gross: gross, save: save, net: net, base: t.assessable, tax: t.tax, heads: t.heads, rate: rate });
+    var taxParts = lineTax(net, rate, split);
+    return Object.assign({}, l, { gross: gross, save: save, net: net, base: taxParts.assessable, tax: taxParts.tax, heads: taxParts.heads, rate: rate });
   });
   var sum = function(k){ return r2(lines.reduce(function(a,l){ return a + l[k]; }, 0)); };
   var byRate = {};
-  lines.forEach(function(l){ if(!l.rate) return; var k = String(l.rate), h = byRate[k] = byRate[k] || { base:0, tax:0, cgst:0, sgst:0 };
-    h.base = r2(h.base + l.base); h.tax = r2(h.tax + l.tax); h.cgst = r2(h.cgst + l.heads.cgst); h.sgst = r2(h.sgst + l.heads.sgst); });
+  lines.forEach(function(l){ if(!l.rate) return; var k = String(l.rate), slab = byRate[k] = byRate[k] || { base:0, tax:0, cgst:0, sgst:0 };
+    slab.base = r2(slab.base + l.base); slab.tax = r2(slab.tax + l.tax); slab.cgst = r2(slab.cgst + l.heads.cgst); slab.sgst = r2(slab.sgst + l.heads.sgst); });
   return { lines: lines, gross: sum('gross'), save: sum('save'), net: sum('net'), base: sum('base'), tax: sum('tax'), byRate: byRate };
 }
 
@@ -237,11 +237,11 @@ function render(){
     + (kind === 'tax'
         ? '<div class="row"><span class="l">Taxable</span><span class="v">' + fmtMoney(m.base, BILL.currency) + '</span></div>'
           + Object.keys(m.byRate).sort(function(a,b){ return a-b; }).map(function(k){
-              var h = m.byRate[k], words = taxWords();
-              if (!words.split) return '<div class="row small"><span class="l">' + esc(words.word) + ' ' + k + '% </span><span class="v">' + fmtMoney(h.tax, BILL.currency) + '</span></div>';   /* AU · AE: one line, the pack's rate */
+              var slab = m.byRate[k], words = taxWords();
+              if (!words.split) return '<div class="row small"><span class="l">' + esc(words.word) + ' ' + k + '% </span><span class="v">' + fmtMoney(slab.tax, BILL.currency) + '</span></div>';   /* AU · AE: one line, the pack's rate */
               /* R12: the engine's per-line heads, summed — CGST + SGST is the total by construction */
-              return '<div class="row small"><span class="l">CGST ' + (k/2) + '% </span><span class="v">' + fmtMoney(h.cgst, BILL.currency) + '</span></div>'
-                   + '<div class="row small"><span class="l">SGST ' + (k/2) + '% </span><span class="v">' + fmtMoney(h.sgst, BILL.currency) + '</span></div>';
+              return '<div class="row small"><span class="l">CGST ' + (k/2) + '% </span><span class="v">' + fmtMoney(slab.cgst, BILL.currency) + '</span></div>'
+                   + '<div class="row small"><span class="l">SGST ' + (k/2) + '% </span><span class="v">' + fmtMoney(slab.sgst, BILL.currency) + '</span></div>';
             }).join('')
           + '<div class="row"><span class="l">Total ' + esc(taxWords().word) + '</span><span class="v">' + fmtMoney(m.tax, BILL.currency) + '</span></div>'
         : '')

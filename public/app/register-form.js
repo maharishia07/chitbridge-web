@@ -114,9 +114,9 @@ function govPanel(){
   var rows = spin ? regSpinRows() : govRows().map(function (r) { return { key: r.key, what: r.what, value: esc(r.value), from: r.from, known: r.known }; });
   if (!rows.length) return '';
   /* walk 2026-10-16: ONE heading; what it means (and that a "not known" row is set after sign-in) behind ⓘ — never a line under every row */
-  var why = regInstCountry() ? tx('They set your tax and money. Set any “not known” one after you sign in.') : tx('Filled in from your browser. Change any of them after you sign in.');
+  var reason = regInstCountry() ? tx('They set your tax and money. Set any “not known” one after you sign in.') : tx('Filled in from your browser. Change any of them after you sign in.');
   return '<div class="govbox" data-testid="reg-gov">'
-    + '<div class="govhd">' + esc(tx('Check these')) + ' <span title="' + esc(why) + '" style="cursor:help;font-weight:400">ⓘ</span></div>'
+    + '<div class="govhd">' + esc(tx('Check these')) + ' <span title="' + esc(reason) + '" style="cursor:help;font-weight:400">ⓘ</span></div>'
     + rows.map(function(r){
         return '<div class="govrow' + (r.known ? '' : ' unknown') + '" data-testid="reg-gov-' + r.key + '">'
           + '<span class="gw">' + esc(r.what) + '</span>'
@@ -258,10 +258,10 @@ function regVerticalChooser(){
 }
 /** R3 (WALK-REG 2026-10-16): a setup's name in a shopkeeper's words — the default is "Standard", a vertical is its own name
     (service-desk → Service desk); never the server's internal label ("Base constitution — any currency", "… vertical"). Painted only. */
-function regSetupLabel(v){
-  if (v.is_default) return tx('Standard (any business)');
-  const w = String(v.vertical || v.key || '').replace(/[-_]+/g, ' ').trim();
-  return w ? tx(w.charAt(0).toUpperCase() + w.slice(1)) : (v.label || v.key);
+function regSetupLabel(setup){
+  if (setup.is_default) return tx('Standard (any business)');
+  const words = String(setup.vertical || setup.key || '').replace(/[-_]+/g, ' ').trim();
+  return words ? tx(words.charAt(0).toUpperCase() + words.slice(1)) : (setup.label || setup.key);
 }
 function regTailor(){ if(typeof toast==='function') toast(tx('Pick the closest for now — we tailor it with you later.')); }
 function regContact(){ try{ window.location.href='mailto:team@chitandbridge.com?subject='+encodeURIComponent('Tailor a setup for '+(REG.name||'my business')); }catch(_){ if(typeof toast==='function')toast('Email team@chitandbridge.com to wire a custom setup.'); } }

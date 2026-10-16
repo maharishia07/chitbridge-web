@@ -169,6 +169,10 @@ function vaultSectionHTML(sec, i){
 function vaultRowHint(tag){ return (tag==='gstin'&&shopCc()!=='IN') ? '' : (VAULT_HINT[tag]||''); }
 /** the name box's placeholder: "detail name — e.g." the section's first suggestion in the shop's own words */
 function vaultNamePlaceholder(type){ return txf('detail name — e.g. {x}', { x: (vaultSuggest(type)[0]||['Name'])[0] }); }
+/** the × that removes a row — none on a local shop's plain identity (R21) */
+function vaultRemoveButton(sectionIndex,rowIndex){
+  return vaultPlain() ? '' : '<button type="button" title="Remove this detail" onclick="vaultDelRow('+sectionIndex+','+rowIndex+')" style="border:1px solid var(--line);background:var(--card);color:var(--grey);border-radius:8px;min-width:28px;min-height:28px;cursor:pointer">×</button>';
+}
 /* One row: the name the USER gives it, and the value. The tag rides along invisibly when the name is one we know. */
 function vaultRowHTML(r,i,j,type){
   var tag=r.tag||'', hint=vaultRowHint(tag), enums=VAULT_ENUM[tag];
@@ -198,7 +202,7 @@ function vaultRowHTML(r,i,j,type){
     +((r.rung&&r.rung!=='declared')||(r.source&&r.source!=='profile')
         ? '<span data-testid="vault-rung" title="'+esc((r.source?'from '+r.source:'')+(r.as_of?' · as of '+String(r.as_of).slice(0,10):''))+'" style="font-size:var(--fs-1);font-weight:800;padding:1px 6px;border-radius:9px;white-space:nowrap;color:'+(r.rung==='verified'?'var(--ok-2)':r.rung==='checked'?'var(--blue-2)':'var(--grey-2)')+';background:'+(r.rung==='verified'?'var(--ok-tint)':r.rung==='checked'?'var(--blue-tint-bg)':'var(--neutral-tint)')+'">'+esc(String(r.rung||'copied').toUpperCase())+(r.source&&r.source!=='profile'?' · '+esc(r.source):'')+'</span>'
         : '')
-    +(vaultPlain() ? '' : '<button type="button" title="Remove this detail" onclick="vaultDelRow('+i+','+j+')" style="border:1px solid var(--line);background:var(--card);color:var(--grey);border-radius:8px;min-width:28px;min-height:28px;cursor:pointer">×</button>')+'</div>';
+    +vaultRemoveButton(i,j)+'</div>';
 }
 /* The suggestion lists — one <datalist> per section type, emitted once. A datalist SUGGESTS and never restricts,
    which is exactly the contract we want: type "IFSC code" and get the tag, type anything else and keep it. */

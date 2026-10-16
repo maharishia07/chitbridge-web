@@ -258,7 +258,7 @@ var CBSettings = (function () {
     function heard(k) { return k.seen && k.seen.at ? _keyAgo(k.seen.at) + (k.seen.ip ? ' · ' + k.seen.ip : '') : T('Never reached ChitBridge'); }
     function paintKeyBar() {
       $('sx_key_bar').innerHTML = bar('<span class="sx-add"><label class="sx-lbl" for="sx_key_name">' + esc(T('New key')) + '</label><input class="inp" id="sx_key_name" data-testid="sx-key-name" placeholder="' + esc(T('Which system')) + '" maxlength="80">'
-        + '<label class="sx-lbl" for="sx_key_scope">' + esc(T('This key can')) + '</label><select class="inp" id="sx_key_scope" data-testid="sx-key-scope">' + keyKinds().map(function (s) { return '<option value="' + esc(s[0]) + '">' + esc(T(s[1])) + '</option>'; }).join('') + '</select>'
+        + '<label class="sx-lbl" for="sx_key_scope">' + esc(T('This key can')) + '</label><select class="inp" id="sx_key_scope" data-testid="sx-key-scope">' + keyKinds().map(function (kind) { return '<option value="' + esc(kind[0]) + '">' + esc(T(kind[1])) + '</option>'; }).join('') + '</select>'
         + btn('sx_key_mint', T('Make a key')) + '</span>');
       $('sx_key_mint').onclick = function () {
         var b = $('sx_key_mint');
@@ -304,21 +304,32 @@ var CBSettings = (function () {
   var MAY_WORDS = { NOT_FOR_COUNTRY: 'Not for your country', NOT_YET_FOR_COUNTRY: 'Not yet for your country', NOT_YET: 'Not built yet' };
   /* WALK-REG R32: the printable guide a connector has (public/guides/<id>.pdf, copied from docs/23-connectors-and-integrations/guides); else the server's docs page */
   var GUIDES = { tally: '/guides/tally.pdf' };
-  function guideOf(c) { var base = (typeof CFG !== 'undefined' && CFG.API_BASE) || ''; return GUIDES[c.id] || (c.docs ? base + c.docs : ''); }
+  function guideOf(connector) { var base = (typeof CFG !== 'undefined' && CFG.API_BASE) || ''; return GUIDES[connector.id] || (connector.docs ? base + connector.docs : ''); }
   /** a row action drawn ON the row (CBList runs it by data-act/data-actrow, as it runs the opened row's buttons); greyed with the reason, never hidden */
-  function rowBtn(act, c, label, why) {
-    return '<button type="button" class="cbl-btn" data-act="' + act + '" data-actrow="' + esc(c.id) + '" data-testid="sx-con-' + act + '-' + esc(c.id) + '"' + (why ? ' disabled aria-disabled="true" title="' + esc(why) + '"' : '') + '>' + esc(label) + '</button>';
+  function rowBtn(action, connector, label, reason) {
+    return '<button type="button" class="cbl-btn" data-act="' + action + '" data-actrow="' + esc(connector.id) + '" data-testid="sx-con-' + action + '-' + esc(connector.id) + '"' + (reason ? ' disabled aria-disabled="true" title="' + esc(reason) + '"' : '') + '>' + esc(label) + '</button>';
   }
+  /** WALK-REG R32: Download and Guide on the row itself, not only inside it — the same row actions (kit · guide), drawn here (CBList dispatches data-act from any button in the list) */
+  function getItColumn() {
+    return { key: 'get', label: T('Get it'), prio: 1, w: 200, html: true, value: function () { return ''; },
+      cell: function (connector) { return rowBtn('kit', connector, T('Download'), grey(connector.may)) + ' ' + rowBtn('guide', connector, T('Guide'), guideOf(connector) ? '' : T('No guide yet')); } };
+  }
+  /** the Guide action — drawn on the row (the 'get' column); when:false keeps it out of the opened row so it is not shown twice (the Download action the same) */
+  function guideAction() {
+    return { id: 'guide', label: T('Guide'), tid: 'sx-con-guide', when: function () { return false; }, why: function (connector) { return guideOf(connector) ? '' : T('No guide yet'); },
+      run: function (connector) { var guideLink = guideOf(connector); if (guideLink) window.open(guideLink, '_blank', 'noopener'); } };
+  }
+  /** the key list is not drawn for a shop owner (WALK-REG R52) */
+  function keysSectionIfShown(after) { if ($('sx_key_bar')) keysSection(after); }
   function mayWords(verdict) { return T(MAY_WORDS[(verdict && verdict.code) || ''] || 'Not for your shop'); }
   /* ═════ CONNECTORS ═════ */
   function connectors() {
     frame(['<h1 class="sx-h" data-testid="sx-title">' + esc(T('Connectors')) + ' <span class="sx-why" title="' + esc(T('A small program beside Tally, Zoho or a folder of files. Your key is inside the download.')) + '" style="cursor:help;font-size:.55em;opacity:.7">ⓘ</span></h1>',
-      /* WALK-REG R35 (Athi, 16 Oct): what is RUNNING sits at the top of a page, never under the list */
-      '<h2 class="sx-h2">' + esc(T('Running on your PCs')) + '</h2>', lineOut('sx_run_out'), '<div class="sx-list" id="sx_run_list" data-testid="sx-run-list"></div>',
+      '<h2 class="sx-h2">' + esc(T('Running on your PCs')) + '</h2>', lineOut('sx_run_out'), '<div class="sx-list" id="sx_run_list" data-testid="sx-run-list"></div>',   /* WALK-REG R35: what is RUNNING sits at the top of the page, never under the list */
       '<h2 class="sx-h2">' + esc(T('All connectors')) + '</h2>', lineOut('sx_con_out'), '<div class="sx-list" id="sx_con_list" data-testid="sx-con-list"></div>'].concat(keysHTML()));
     var pol = null;
     function inUse() { var v = (pol && pol.connectors_in_use) || []; return Array.isArray(v) ? v.filter(function (x) { return x !== 'none'; }) : []; }
-    var catRows = function () { var d = H.data.cat; return ((d && d.r && d.r.connectors) || []).filter(function (c) { return c.id !== 'till'; }); };   /* WALK-REG R51: our own counter lives on Counters › Advanced */
+    var catRows = function () { var catData = H.data.cat; return ((catData && catData.r && catData.r.connectors) || []).filter(function (connector) { return connector.id !== 'till'; }); };   /* WALK-REG R51: our own counter lives on Counters › Advanced */
     var cl = null, rl = null;
     function readCat() {
       return Promise.all([load('cat', 'intCatalogue', null, function () { if (cl) cl.refresh(); }),
@@ -340,10 +351,8 @@ var CBSettings = (function () {
           cell: function (c) { return '<b>' + esc(c.name) + '</b>' + (inUse().indexOf(c.id) >= 0 ? ' <span class="tag green" data-testid="sx-con-inuse-' + esc(c.id) + '">' + esc(T('We use this')) + '</span>' : ''); } },
         { key: 'does', label: T('What it does'), prio: 3, w: 300, cell: function (c) { return c.does || ''; } },
         { key: 'here', label: T('For your shop'), prio: 2, w: 170, html: true, value: function (c) { return c.may && c.may.ok === false ? 'no' : 'yes'; },
-          cell: function (c) { var no = c.may && c.may.ok === false; return '<span class="tag' + (no ? '' : ' green') + '" data-testid="sx-con-may-' + esc(c.id) + '" data-code="' + esc((c.may && c.may.code) || '') + '">' + esc(no ? mayWords(c.may) : T('Available')) + '</span>'; } },
-        /* WALK-REG R32: Download and Guide on the row itself, not only inside it — the same row actions (kit · guide), drawn here (CBList dispatches data-act from any button in the list) */
-        { key: 'get', label: T('Get it'), prio: 1, w: 200, html: true, value: function () { return ''; },
-          cell: function (c) { return rowBtn('kit', c, T('Download'), grey(c.may)) + ' ' + rowBtn('guide', c, T('Guide'), guideOf(c) ? '' : T('No guide yet')); } },
+          cell: function (connector) { var no = connector.may && connector.may.ok === false; return '<span class="tag' + (no ? '' : ' green') + '" data-testid="sx-con-may-' + esc(connector.id) + '" data-code="' + esc((connector.may && connector.may.code) || '') + '">' + esc(no ? mayWords(connector.may) : T('Available')) + '</span>'; } },
+        getItColumn(),
       ],
       search: function (c) { return [c.name, c.does].join(' '); },
       filters: [{ key: 'use', label: T('In use'), all: T('All'), options: [{ v: 'yes', label: T('We use these') }, { v: 'no', label: T('Not used') }],
@@ -356,15 +365,13 @@ var CBSettings = (function () {
           + (c.runs_on ? '<div class="sub">' + esc(T('Runs on')) + ': ' + esc(c.runs_on) + '</div>' : '') + '</div>';
       },
       actions: [
-        /* kit · guide are drawn on the row (the 'get' column); when:false keeps them out of the opened row so they are not shown twice */
-        { id: 'kit', label: T('Download'), tid: 'sx-con-kit', when: function () { return false; }, why: function (c) { return grey(c.may); },
+        { id: 'kit', label: T('Download'), tid: 'sx-con-kit', when: function () { return false; }, why: function (connector) { return grey(connector.may); },
           run: function (c) {
             var ad = c.default_adapter || (c.adapters || [])[0] || c.id;
             CBAction.run(btnOf('kit', c.id), function () { return kitDownload(c.id, ad); },
               { key: 'sx-con-kit-' + c.id, failed: T('Could not download'), out: 'sx_con_out', outcome: function () { $('sx_con_out').textContent = T('Downloaded. Unzip it and start it.'); readRun(); } });
           } },
-        { id: 'guide', label: T('Guide'), tid: 'sx-con-guide', when: function () { return false; }, why: function (c) { return guideOf(c) ? '' : T('No guide yet'); },
-          run: function (c) { var u = guideOf(c); if (u) window.open(u, '_blank', 'noopener'); } },
+        guideAction(),
         { id: 'use', label: T('We use this'), tid: 'sx-con-use', when: function (c) { return inUse().indexOf(c.id) < 0; }, why: function () { return grey(useMay()); }, run: function (c) { setUse(c, true); } },
         { id: 'unuse', label: T('We do not use this'), tid: 'sx-con-unuse', when: function (c) { return inUse().indexOf(c.id) >= 0; }, why: function () { return grey(useMay()); }, run: function (c) { setUse(c, false); } },
       ],
@@ -409,7 +416,7 @@ var CBSettings = (function () {
       ],
     });
     readRun();
-    if ($('sx_key_bar')) keysSection(readRun);   /* the key list is not drawn for a shop owner (WALK-REG R52) */
+    keysSectionIfShown(readRun);
   }
 
   /* ═════ POLICY — the flags of lib/policy that have words here, with who may change each (the server's may) ═════ */
@@ -426,7 +433,7 @@ var CBSettings = (function () {
        * trade_side: decided, sell is the default */
       var HIDDEN = { trade_cover: 1, chit_expiry_days: 1, trade_side: 1 };
       /* the rows ARE the server's (schema[key].ui + bound_schema, T2-POLICY) — the same reader the workshop's Business rules card uses */
-      return polDefsOf(r.schema, r.bound_schema || r.bound).filter(function (d) { return !HIDDEN[d.key]; }).map(function (d) {
+      return polDefsOf(r.schema, r.bound_schema || r.bound).filter(function (policyDef) { return !HIDDEN[policyDef.key]; }).map(function (d) {
         var v = flags[d.key] !== undefined ? flags[d.key] : d.def;
         /* the server's answer when it gives one; an older server: the class the list states (bound · protected · inherited are locked) — the PATCH still decides */
         var m = may[d.key] || ((d.gov === 'bound' || d.gov === 'protected' || d.gov === 'inherited') ? { ok: false, why: T('Set by the platform for every shop.') } : { ok: true });
@@ -466,23 +473,23 @@ var CBSettings = (function () {
       /* WALK-REG (Athi, 16 Oct: "the text is too much and save button below the box"): ONE line — the control, an ⓘ holding the help, and the
        * row saves itself on change ("✓ Saved" beside it). A rule set elsewhere shows only the door to where it is set. */
       next: function (x) {
-        var why = x.def.help ? ' <span class="sx-why" title="' + esc(T(x.def.help)) + '" data-testid="sx-pol-why-' + esc(x.key) + '" style="cursor:help;opacity:.7">ⓘ</span>' : '';
-        if (x.may.code === 'SET_IN_COUNTRY') return '<div class="sx-next" data-testid="sx-pol-next-' + esc(x.key) + '"><a class="sx-link" href="/settings.html#/country" data-testid="sx-pol-country-door">' + esc(T('Change it under Country')) + ' ›</a>' + why + '</div>';
+        var helpTip = x.def.help ? ' <span class="sx-why" title="' + esc(T(x.def.help)) + '" data-testid="sx-pol-why-' + esc(x.key) + '" style="cursor:help;opacity:.7">ⓘ</span>' : '';
+        if (x.may.code === 'SET_IN_COUNTRY') return '<div class="sx-next" data-testid="sx-pol-next-' + esc(x.key) + '"><a class="sx-link" href="/settings.html#/country" data-testid="sx-pol-country-door">' + esc(T('Change it under Country')) + ' ›</a>' + helpTip + '</div>';
         return '<div class="sx-next" data-testid="sx-pol-next-' + esc(x.key) + '" style="display:flex;align-items:center;gap:8px">' + control(x) + why
           + '<span class="sub" id="sx_pol_ok_' + esc(x.key) + '" data-testid="sx-pol-ok-' + esc(x.key) + '"></span></div>';
       },
     });
     function polSave(key) {
-      var x = rows().filter(function (r) { return r.key === key; })[0], el = $('sx_pol_' + key);
+      var x = rows().filter(function (row) { return row.key === key; })[0], el = $('sx_pol_' + key);
       if (!x || !el || grey(x.may)) return;
       var body = {}, ok = $('sx_pol_ok_' + key); body[key] = polStored(x.def, el.value);
       if (ok) ok.textContent = T('Saving…');
-      api('policySet', { body: body }).then(function (r) {
-        var d = H.data.pol; if (d && d.r && r && r.flags) d.r.flags = r.flags; if (typeof SESSION !== 'undefined' && r && r.flags) SESSION.policy_flags = r.flags;
-        var o = $('sx_pol_ok_' + key); if (o) o.textContent = '✓ ' + T('Saved');
-      }, function () { var o = $('sx_pol_ok_' + key); if (o) o.textContent = T('Could not save that rule'); });
+      api('policySet', { body: body }).then(function (answer) {
+        var policyData = H.data.pol; if (policyData && policyData.r && answer && answer.flags) policyData.r.flags = answer.flags; if (typeof SESSION !== 'undefined' && answer && answer.flags) SESSION.policy_flags = answer.flags;
+        var savedMark = $('sx_pol_ok_' + key); if (savedMark) savedMark.textContent = '✓ ' + T('Saved');
+      }, function () { var savedMark = $('sx_pol_ok_' + key); if (savedMark) savedMark.textContent = T('Could not save that rule'); });
     }
-    $('sx_pol_list').addEventListener('change', function (e) { var m = e.target && e.target.id && /^sx_pol_(.+)$/.exec(e.target.id); if (m && m[1].indexOf('ok_') !== 0) polSave(m[1]); });
+    $('sx_pol_list').addEventListener('change', function (e) { var idMatch = e.target && e.target.id && /^sx_pol_(.+)$/.exec(e.target.id); if (idMatch && idMatch[1].indexOf('ok_') !== 0) polSave(idMatch[1]); });
     read();
   }
 
@@ -490,9 +497,9 @@ var CBSettings = (function () {
   var QUOTA_WORDS = { entities: 'Shops and branches', actors: 'People', chits_per_month: 'Chits a month', network_depth: 'Network levels', suppliers: 'Suppliers' };
   /** WALK-REG R41: usage is BILLED IN US DOLLARS (usage_ledger.cost_usd · total_cost_usd), whatever the shop's own currency — so it says US$,
    *  never a bare $ an Indian or Australian shop would read as its own money. The reader's format; only a lone $ symbol is named. */
-  function usd(v) {
-    var s = fmtMoney(v, 'USD', '—');
-    return s.indexOf('US') >= 0 ? s : s.replace(/(^|[^A-Za-z])\$/, function (all, pre) { return pre + 'US$'; });
+  function usDollars(amount) {
+    var text = fmtMoney(amount, 'USD', '—');
+    return text.indexOf('US') >= 0 ? text : text.replace(/(^|[^A-Za-z])\$/, function (all, lead) { return lead + 'US$'; });
   }
   function plan() {
     frame(['<h1 class="sx-h" data-testid="sx-title">' + esc(T('Plan & usage')) + '</h1>', '<div id="sx_plan_head" data-testid="sx-plan-head"></div>',
@@ -518,7 +525,7 @@ var CBSettings = (function () {
       $('sx_use_head').innerHTML = d.state === 'error' ? '<div class="err" data-testid="sx-use-err">' + esc(listErr('use').title) + '</div>'
         : !u ? '<div class="loadwrap"><span class="spin"></span> ' + esc(T('Reading your usage…')) + '</div>'
         : u.not_enabled ? '<p class="sub" data-testid="sx-use-off">' + esc(T('Usage not recorded yet')) + '</p>'
-        : '<div class="sx-card"><div class="sx-big" data-testid="sx-use-total">' + esc(usd(u.total_cost_usd)) + '</div>'
+        : '<div class="sx-card"><div class="sx-big" data-testid="sx-use-total">' + esc(usDollars(u.total_cost_usd)) + '</div>'
           + '<p class="sub" data-testid="sx-use-billed">' + esc(((u.counts && u.counts.billed) || 0) + ' ' + T('events billed in') + ' ' + (u.window_days || 0) + ' ' + T('days')) + '</p></div>';
     }
     function readEnt() { return load('ent', 'entitlements', null, function () { paintHead(); if (ql) ql.refresh(); }); }
@@ -540,7 +547,7 @@ var CBSettings = (function () {
       columns: [
         { key: 'meter', label: T('Kind'), prio: 1, w: 220, mono: true, cell: function (m) { return m.meter; } },
         { key: 'events', label: T('Events'), prio: 2, w: 110, num: true, cell: function (m) { return String(m.events || 0); }, value: function (m) { return Number(m.events) || 0; } },
-        { key: 'cost', label: T('Cost'), prio: 3, w: 130, num: true, cell: function (m) { return usd(m.cost); }, value: function (m) { return Number(m.cost) || 0; } },
+        { key: 'cost', label: T('Cost'), prio: 3, w: 130, num: true, cell: function (usageRow) { return usDollars(usageRow.cost); }, value: function (usageRow) { return Number(usageRow.cost) || 0; } },
       ],
     });
     paintHead(); paintUse(); readEnt(); readUse();
@@ -592,7 +599,7 @@ var CBSettings = (function () {
         return '<div class="sx-next" data-testid="sx-ses-next-' + esc(s.jti) + '"><div class="mono sub">' + esc(s.device_id || '') + '</div>'
           + (d.seen ? '<div class="sub">' + esc(T('Last seen') + ' ' + _keyAgo(d.seen)) + '</div>' : '') + '</div>';   /* the current device's reason is the Sign out button's own (why) — not a second time here */
       },
-      actions: [{ id: 'signout', label: T('Sign out this device'), tid: 'sx-ses-signout', why: function (s) { return s.current ? T(CURRENT_WHY) : s.legacy ? T('Sign in again first.') : ''; },
+      actions: [{ id: 'signout', label: T('Sign out this device'), tid: 'sx-ses-signout', why: function (device) { return device.current ? T(CURRENT_WHY) : device.legacy ? T('Sign in again first.') : ''; },
         run: function (s) {
           CBAction.run(btnOf('signout', s.jti), function () { return api('sessionRevoke', { body: { jti: s.jti } }); },
             { key: 'sx-ses-signout-' + s.jti, confirm: { title: T('Sign out') + ' ' + deviceOf(s) + '?', body: esc(T('That device is signed out now. Nothing on it is lost.')), yes: T('Sign out'), danger: true },

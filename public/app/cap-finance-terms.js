@@ -9,6 +9,7 @@
  * ⭐ NEW PATHS (rule 4): FT (this tab's state) · FT_EP (the two /api/books/terms rows + crmParties, which finance.html did not load) · the tab switch
  * (#/terms) — Collections is one list, the nav had no second place to go.
  * ⚠️ Never error.message on a screen: a failure says what happened (CBAction.words) and the button stays.
+ * CARD 16-finance/terms-and-credit
  */
 'use strict';
 
@@ -101,7 +102,7 @@ function ftShopPaint() {
     + '<div style="display:flex;gap:10px;align-items:center"><button type="button" class="act" data-testid="ft-save" hidden' + (off ? ' disabled' : '') + ' onclick="ftSaveShop(this)">' + esc(tx('Save')) + '</button><span id="ft_why" data-testid="ft-out" class="hint"></span></div>'
     + '<h3 style="margin:14px 0 4px;font-size:14px">' + esc(tx('Changes')) + '</h3>' + bkTermEvents(t.events, bkCur(FT.cur), 'ft-event');
   /* autosave: a changed field saves the shop terms through the same ftSaveShop (the hidden button is its action handle) */
-  if (!off && !el.dataset.auto) { el.dataset.auto = '1'; el.addEventListener('change', function (ev) { if (ev.target && /^fts_/.test(ev.target.id || '')) { var b = el.querySelector('[data-testid="ft-save"]'); if (b) ftSaveShop(b); } }); }
+  if (!off && !el.dataset.auto) { el.dataset.auto = '1'; el.addEventListener('change', function (changeEvent) { if (changeEvent.target && /^fts_/.test(changeEvent.target.id || '')) { var saveButton = el.querySelector('[data-testid="ft-save"]'); if (saveButton) ftSaveShop(saveButton); } }); }
 }
 async function ftLoad(quiet) {
   var g = ++FT.gen;
