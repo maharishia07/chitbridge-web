@@ -18,6 +18,10 @@
  *                                     #setbody (which needs renderApp · setSec · loadSettings).
  * Host globals (as every cap-*.js): api · EP (CB_SETTINGS_EP) · SESSION · CFG · esc · fmtMoney (helpers.js, the money unit) · tx · toast · CBAction · CBConfirm · CBList · CBLocale (optional).
  * Flow step: Onboarding · counters & keys / connectors / policy / plan (docs/process/flows.json, the SET rows).
+ * OWNS      the four Settings sections' screens (counters & keys, connectors, policy, plan & usage, account) and the key/policy words they share.
+ * CALLED BY settings.html (CBSettings.mount(host, section)); app.html loads it through CAP_WITH.admin so cap-admin.js can call the moved names.
+ * FLOW      CBSettings.mount → load(section) → the section's paint (list-ctl CBList) → CBAction.run per write → load() again
+ * CARD      29-qa-test-tooling-ux-locale-and-design-system/cap-settings
  */
 'use strict';
 
@@ -220,7 +224,7 @@ var CBSettings = (function () {
     function heard(k) { return k.seen && k.seen.at ? _keyAgo(k.seen.at) + (k.seen.ip ? ' · ' + k.seen.ip : '') : T('Never reached ChitBridge'); }
     function paintKeyBar() {
       $('sx_key_bar').innerHTML = bar('<span class="sx-add"><label class="sx-lbl" for="sx_key_name">' + esc(T('New key')) + '</label><input class="inp" id="sx_key_name" data-testid="sx-key-name" placeholder="' + esc(T('Which system')) + '" maxlength="80">'
-        + '<label class="sx-lbl" for="sx_key_scope">' + esc(T('It may')) + '</label><select class="inp" id="sx_key_scope" data-testid="sx-key-scope">' + keyKinds().map(function (s) { return '<option value="' + esc(s[0]) + '">' + esc(T(s[1])) + '</option>'; }).join('') + '</select>'
+        + '<label class="sx-lbl" for="sx_key_scope">' + esc(T('It may')) + '</label><select class="inp" id="sx_key_scope" data-testid="sx-key-scope">' + keyKinds().map(function (kind) { return '<option value="' + esc(kind[0]) + '">' + esc(T(kind[1])) + '</option>'; }).join('') + '</select>'
         + btn('sx_key_mint', T('Make a key')) + '</span>');
       $('sx_key_mint').onclick = function () {
         var b = $('sx_key_mint');
@@ -229,11 +233,6 @@ var CBSettings = (function () {
             $('sx_key_out').innerHTML = '<b>' + esc(T('Copy it now — it is shown once.')) + '</b><div class="mono sx-secret" data-testid="sx-key-value">' + esc(r && r.key || '') + '</div>';
             readKeys(); } });
       };
-    }
-    /* W15: the kinds offered = the server's `scopes` (the kinds THIS login may mint — 'testing' is the platform's); KEY_SCOPES only words them. Before the answer: the shop's usual kinds. */
-    function keyKinds() {
-      var d = H.data.keys, served = d && d.r && Array.isArray(d.r.scopes) ? d.r.scopes : null;
-      return KEY_SCOPES.filter(function (s) { return served ? served.indexOf(s[0]) >= 0 : s[0] !== 'testing'; });
     }
     function readKeys() { return load('keys', 'keysList', null, function () { paintKeyBar(); if (kl) kl.refresh(); }); }
     kl = list($('sx_key_list'), {
@@ -269,7 +268,17 @@ var CBSettings = (function () {
 
   /* W16: the catalogue's may.code → the row's words (a sentence the client branches on ships with a code): NOT_FOR_COUNTRY · NOT_YET_FOR_COUNTRY (sold there, our kit is not built for that pack yet) · NOT_YET (no kit at all) */
   var MAY_WORDS = { NOT_FOR_COUNTRY: 'Not for your country', NOT_YET_FOR_COUNTRY: 'Not yet for your country', NOT_YET: 'Not built yet' };
-  function mayWords(may) { return T(MAY_WORDS[(may && may.code) || ''] || 'Not for your shop'); }
+  function mayWords(answer) { return T(MAY_WORDS[(answer && answer.code) || ''] || 'Not for your shop'); }
+  /* W15: the kinds offered = the server's `scopes` (the kinds THIS login may mint — 'testing' is the platform's); KEY_SCOPES only words them. Before the answer: the shop's usual kinds. */
+  function keyKinds() {
+    var keysAnswer = H.data.keys, served = keysAnswer && keysAnswer.r && Array.isArray(keysAnswer.r.scopes) ? keysAnswer.r.scopes : null;
+    return KEY_SCOPES.filter(function (kind) { return served ? served.indexOf(kind[0]) >= 0 : kind[0] !== 'testing'; });
+  }
+  /* W18: a sign-in older than the list (legacy) is not in the server's rows — this device is still painted, from the page's own session, so the list never hides where you are */
+  function hereRow() {
+    var here = (typeof SESSION !== 'undefined' && SESSION) || {};
+    return { jti: here.jti || 'this-device', device_id: here.device_id || '', surface: here.surface || 'settings', iat: here.iat || null, exp: here.exp || null, current: true, legacy: true, device: { kind: 'web', label: '' } };
+  }
   /* ═════ CONNECTORS ═════ */
   function connectors() {
     frame(['<h1 class="sx-h" data-testid="sx-title">' + esc(T('Connectors')) + '</h1>',
@@ -499,12 +508,7 @@ var CBSettings = (function () {
       '<p class="sub">' + esc(T('Identity, signatory, bank and licences — kept once, they fill every form for an authority')) + ' · <a class="sx-link" href="/authority-forms.html" data-testid="sx-vault-forms">' + esc(T('Forms for an authority')) + ' ›</a></p>',
       '<div id="vaulthost" data-testid="sx-vault"></div>']);
     var sl = null, dl = null;
-    /* W18: a sign-in older than the list (legacy) is not in the server's rows — this device is still painted, from the page's own session, so the list never hides where you are */
-    function hereRow() {
-      var sess = (typeof SESSION !== 'undefined' && SESSION) || {};
-      return { jti: sess.jti || 'this-device', device_id: sess.device_id || '', surface: sess.surface || 'settings', iat: sess.iat || null, exp: sess.exp || null, current: true, legacy: true, device: { kind: 'web', label: '' } };
-    }
-    var sesRows = function () { var d = H.data.ses, rows = (d && d.r && d.r.sessions) || []; return d && d.r && d.r.legacy && !rows.some(function (s) { return s.current; }) ? [hereRow()].concat(rows) : rows; };
+    var sesRows = function () { var listing = H.data.ses, rows = (listing && listing.r && listing.r.sessions) || []; return listing && listing.r && listing.r.legacy && !rows.some(function (row) { return row.current; }) ? [hereRow()].concat(rows) : rows; };
     var devMay = function () { var d = H.data.ses; return (d && d.r && d.r.may && d.r.may.devices) || null; };
     var devRows = function () { var d = H.data.dev; return (d && d.r && d.r.devices) || []; };
     function surface(s) { return T(SURFACE_WORDS[s] || s || 'Web'); }
@@ -538,7 +542,7 @@ var CBSettings = (function () {
           + (d.seen ? '<div class="sub">' + esc(T('Last seen') + ' ' + _keyAgo(d.seen)) + '</div>' : '')
           + (s.current ? '<div class="sub">' + esc(T(CURRENT_WHY)) + '</div>' : '') + '</div>';
       },
-      actions: [{ id: 'signout', label: T('Sign out this device'), tid: 'sx-ses-signout', why: function (s) { return s.current ? T(CURRENT_WHY) : s.legacy ? T('Sign in again first — then it is listed on the server.') : ''; },
+      actions: [{ id: 'signout', label: T('Sign out this device'), tid: 'sx-ses-signout', why: function (row) { return row.current ? T(CURRENT_WHY) : row.legacy ? T('Sign in again first — then it is listed on the server.') : ''; },
         run: function (s) {
           CBAction.run(btnOf('signout', s.jti), function () { return api('sessionRevoke', { body: { jti: s.jti } }); },
             { key: 'sx-ses-signout-' + s.jti, confirm: { title: T('Sign out') + ' ' + deviceOf(s) + '?', body: esc(T('That device is signed out now. Nothing on it is lost.')), yes: T('Sign out'), danger: true },
