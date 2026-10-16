@@ -137,7 +137,7 @@
       "id": "R2R", "name": "Record to report", "sap": "FI-GL",
       "steps": [
         { "n": 1, "step": "country", "module": "Accounts", "who": "the owner, after registration and before the books open",
-          "screen": [{ "file": "web:public/app/register-form.js", "fn": "renderRegister" }, { "file": "web:public/app/register-form.js", "fn": "doRegister" }, { "file": "web:public/app/cap-country.js", "fn": "renderCountrySetup" }, { "file": "web:public/settings.html", "fn": "paint" }, { "file": "web:public/app/cap-country.js", "fn": "mount" }, { "file": "web:public/app/cap-shop.js", "fn": "mount" }, { "file": "web:public/country-lab.html", "fn": "paintRows" }, { "file": "web:public/app/cap-country.js", "fn": "csuReadyHTML" }, { "file": "web:public/country-lab.html", "fn": "paintReady" }, { "file": "web:public/app/country-ready.js", "fn": "view" }],
+          "screen": [{ "file": "web:public/app/register-form.js", "fn": "renderRegister" }, { "file": "web:public/app/register-form.js", "fn": "doRegister" }, { "file": "web:public/app/cap-country.js", "fn": "renderCountrySetup" }, { "file": "web:public/settings.html", "fn": "paint" }, { "file": "web:public/app/cap-country.js", "fn": "mount" }, { "file": "web:public/app/cap-shop.js", "fn": "mount" }, { "file": "web:public/country-lab.html", "fn": "paintRows" }, { "file": "web:public/country-lab.html", "fn": "paintReady" }, { "file": "web:public/app/country-ready.js", "fn": "view" }],
           "engine": [{ "file": "api:lib/country-setup.js", "fn": "gate" }, { "file": "engines:src/regulation.js", "fn": "status" }, { "file": "engines:src/tax.js", "fn": "determine" }],
           "route": [{ "m": "GET", "p": "/api/governance/country-setup", "file": "api:routes/governance.js" }, { "m": "PUT", "p": "/api/governance/country-setup", "file": "api:routes/governance.js" }],
           "chit": "none", "ledger": "none — the pack the chart, the year and the tax heads are read from",
@@ -563,8 +563,22 @@
           "engine": [{ "file":"api:lib/person-session.js", "fn":"devicesOf" }, { "file":"api:lib/owner.js", "fn":"may" }],
           "route": [{ "m":"GET", "p":"/sessions", "file":"api:routes/signin.js" }, { "m":"GET", "p":"/devices", "file":"api:routes/signin.js" }, { "m":"POST", "p":"/sessions/revoke", "file":"api:routes/signin.js" }, { "m":"PUT", "p":"/profile/vault", "file":"api:routes/governance.js" }],
           "chit": "none", "ledger": "none",
-          "test": ["api:tests/account-sessions.test.cjs", "web:e2e/walk-account.cjs"],
-          "status": "ok", "note": "T3-P4-ACCOUNT. The current session's Sign out is greyed (the server's `current`, a field); a co-assist sees Every device greyed with may.devices (code OWNER_ONLY). API keys stay ONE list under Counters & keys." }
+          "test": ["api:tests/account-sessions.test.cjs", "api:tests/vault-patch.test.cjs", "web:e2e/walk-account.cjs", "web:e2e/walk-settings-walk1.cjs"],
+          "status": "ok", "note": "T3-P4-ACCOUNT. The current session's Sign out is greyed (the server's `current`, a field); a co-assist sees Every device greyed with may.devices (code OWNER_ONLY). API keys stay ONE list under Counters & keys. SET-WALK1 (2026-10-15): the vault PUT is a MERGE-PATCH with a version (W25: lib/vault-patch over the keyed view; 409 VAULT_CHANGED 'Changed since you opened it — reload?'); an empty list is as tall as its content (W21, list-ctl fit); a legacy sign-in still lists this device (W18); the section picker's choice is what is added, with the section's standard rows first per country (W22/W23)." },
+        { "n": 6, "step": "print setup: the bill's signature (trading name · legal name · tax id · address · phone · e-mail · footer · logo, each with a shows-on-the-bill tick and an order; paper), previewed live by the one renderer", "module": "Settings", "who": "any signed-in person of the shop (the vault's writer)",
+          "screen": [{ "file": "web:public/app/cap-print.js", "fn": "mount" }, { "file": "web:public/app/cap-print.js", "fn": "signatureOf" }, { "file": "web:public/app/cap-print.js", "fn": "headLinesOf" }, { "file": "web:public/bill-print.html", "fn": "headHTML" }],
+          "engine": [{ "file": "api:lib/vault-patch.js", "fn": "applyVaultPatch" }, { "file": "api:lib/profile.js", "fn": "patchVault" }],
+          "route": [{ "m": "GET", "p": "/profile", "file": "api:routes/governance.js" }, { "m": "PUT", "p": "/profile/vault", "file": "api:routes/governance.js" }],
+          "chit": "none", "ledger": "none",
+          "test": ["api:tests/vault-patch.test.cjs", "web:e2e/walk-settings-walk1.cjs"],
+          "status": "warn", "note": "SET-WALK1 W27/W27b (2026-10-15). The signature is the vault section `signature` (rows by tag), saved by the same merge-patch. The LIVE preview is bill-print.html (postMessage) — the standalone renderer the till's slip was proven from; the till's own slipHTML (inside the vendored till.html) does not read the signature yet: an api-master change for the coordinator (routes/till snapshot shop + slipHeadHTML). Lines the pack requires on a tax invoice cannot be unticked (REQUIRED per pack, the pack's cite)." },
+        { "n": 7, "step": "country setup confirms the money: symbol · number format · the words for big numbers · decimals · date, each a live example from the bills' engine; supplies beside the tax registration; readiness under Standards", "module": "Settings", "who": "the owner",
+          "screen": [{ "file": "web:public/app/cap-country.js", "fn": "csuMoneyConfirmHTML" }, { "file": "web:public/app/cap-country.js", "fn": "csuSuppliesRow" }, { "file": "web:public/app/cap-country.js", "fn": "csuSaveBeside" }, { "file": "web:public/standards.html", "fn": "openReady" }],
+          "engine": [{ "file": "web:public/engine/locale.js", "fn": "money" }, { "file": "web:public/engine/money.js", "fn": "decimals" }],
+          "route": [{ "m": "PUT", "p": "/country-setup", "file": "api:routes/governance.js" }, { "m": "PATCH", "p": "/policy", "file": "api:routes/entities.js" }, { "m": "PATCH", "p": "/profile", "file": "api:routes/entities.js" }],
+          "chit": "none", "ledger": "none",
+          "test": ["web:e2e/walk-settings-walk1.cjs"],
+          "status": "warn", "note": "SET-WALK1 W28 (2026-10-15). The grouping is the currency's own (CBLocale.MONEY_LOCALE); the WORDS are the shop's (policy_flags.number_words — a choice only where the money is lakh-grouped). The live example of the words is Intl's compact notation under the engine's tag: a CBMoney.words engine (lakh/crore · million) is the engines ask for the coordinator; until it lands no bill prints words. The readiness block moved to standards.html ?ready=<cc> (CBCountryReady, the one unit)." }
       ]
     },
     {

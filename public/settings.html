@@ -75,8 +75,8 @@ button{font-family:inherit;cursor:pointer}
 .sx-out{min-height:20px;font-weight:600;color:var(--ok-2,#0d4a2b);overflow-wrap:anywhere}
 .sx-out[data-tone="error"]{color:var(--disp,#8e3517)}
 .sx-secret{margin-top:6px;padding:8px 10px;border:1px dashed var(--line,#e6dcc6);border-radius:9px;word-break:break-all;font-weight:400;color:var(--ink,#2a2418)}
-.sx-list{height:min(440px,70vh);min-height:260px;display:flex;flex-direction:column}
-.sx-list.sx-tall{height:min(620px,78vh)}
+/* W21: no pinned height — CBList sizes an empty or short list to its content and takes the window's rest only when its rows overflow (list-ctl.js fit) */
+.sx-list{display:flex;flex-direction:column}
 .sx-next{display:flex;flex-direction:column;gap:6px;max-width:640px}
 .sx-next .inp{max-width:360px}
 .sx-num{display:inline-flex;align-items:center;gap:8px}
@@ -92,6 +92,15 @@ button{font-family:inherit;cursor:pointer}
 #toast .toast{background:var(--ink,#2a2418);color:var(--paper,#fbf6ec);padding:12px 16px;border-radius:10px;font-size:14px}
 /* the network pill core.js paints while a read is in flight (one for every page) */
 #netpill{position:fixed;right:12px;bottom:12px;font-size:12px;color:var(--grey,#5c5240)}
+/* W27 Print setup: the editor on the left, the live sample bill on the right (the one renderer, bill-print.html, in a frame); one column at 390 px */
+.pr-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,360px);gap:16px;align-items:start}
+.pr-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0}
+.pr-row .inp{flex:1 1 180px;min-width:0}
+.pr-row label.tick{display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-2);white-space:nowrap}
+.pr-row .why{font-size:var(--fs-1);color:var(--grey,#5c5240);flex-basis:100%}
+.pr-prev{border:1px solid var(--line,#e6dcc6);border-radius:12px;background:var(--card,#fffdf8);padding:10px;position:sticky;top:0}
+.pr-prev iframe{width:100%;height:560px;border:0;border-radius:8px}
+@media (max-width:760px){.pr-grid{grid-template-columns:1fr}.pr-prev{position:static}.pr-prev iframe{height:480px}}
 </style>
 </head>
 <body>
@@ -114,6 +123,7 @@ function go(){ if (window.CBFrame) CBFrame.ended(); }   /* api()'s 401 → drop 
 <script src="/app/accounts-shell.js"></script>  <!-- tx · toast · CBAction · CB_HOMES · CB_SHOP_EP -->
 <script>Object.assign(EP, CB_SHOP_EP, CB_SETTINGS_EP);</script>   <!-- CB_SETTINGS_EP (T3-SETTINGS): counters · keys · connectors · policy · plan & usage -->
 <script src="/engine/locale.js"></script>          <!-- CBLocale: the page's language, direction and formats -->
+<script src="/engine/money.js"></script>           <!-- CBMoney: the money unit's decimals per currency — Country setup's live examples (W28) read it, never a second table -->
 <script src="/engine/govcontext.js"></script>      <!-- CBGov: what the browser tells about a new shop (the register form's gov panel; Country setup's prefill) — AFTER locale -->
 <script src="/app/helpers.js"></script>         <!-- esc -->
 <script src="/engine/tax.js"></script>             <!-- CBRegulation: the shop's pack → its words (helpers.js packWord: ABN · Postcode · TRN · Emirate) and Country setup's csuPack (FX-QA1) -->
@@ -130,12 +140,16 @@ function go(){ if (window.CBFrame) CBFrame.ended(); }   /* api()'s 401 → drop 
 <script src="/app/register-form.js"></script>   <!-- New shop (SET3 · FX-UX2): the register form app.html #/register paints, mounted here with CBRegistration.mount -->
 <script src="/app/list-ctl.js"></script>        <!-- CBList: the one list control (every list in the four sections below) -->
 <script src="/app/cap-settings.js"></script>    <!-- Counters & keys · Connectors · Policy · Plan & usage (T3-SETTINGS), mounted with CBSettings.mount -->
+<script src="/app/cap-print.js"></script>       <!-- Print setup (SET-WALK1 W27): the bill's signature, previewed live by bill-print.html; mounted with CBPrint.mount -->
 <script>
 'use strict';
 (function () {
+  /* SET-WALK1 · W28(a): Country setup is the FIRST Settings screen (and the landing one) — money, year, tax, time zone before anything else */
   var SECTIONS = [
-    { k: 'shop',    label: 'Your shop', icon: 'M3 10l9-6 9 6M5 10v10h14V10M9 20v-6h6v6' },
     { k: 'country', label: 'Country',   icon: 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18' },
+    { k: 'shop',    label: 'Your shop', icon: 'M3 10l9-6 9 6M5 10v10h14V10M9 20v-6h6v6' },
+    /* W27: what prints on the bill — the bill's signature, previewed live by the one renderer (app/cap-print.js) */
+    { k: 'print',   label: 'Print setup', icon: 'M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v7H6z' },
     /* T3-SETTINGS: the workshop's Integrations, Business rules and Usage, as CBList sections (app/cap-settings.js) */
     { k: 'counters',   label: 'Counters & keys', icon: 'M8 15a4 4 0 1 1 3.9-5H21v3h-2v2h-3v-2h-4.1A4 4 0 0 1 8 15' },
     { k: 'connectors', label: 'Connectors',      icon: 'M4 8h14l-3-3M20 16H6l3 3' },
@@ -154,21 +168,30 @@ function go(){ if (window.CBFrame) CBFrame.ended(); }   /* api()'s 401 → drop 
   var isNew = /^#\/?new\b/.test(location.hash || '');
   if (isNew) SECTIONS = [NEW];
   var host = document.getElementById('set'), frame = null;
-  function secOf(){ var h = (location.hash || '').replace(/^#\/?/, '').split(/[?&]/)[0]; return SECTIONS.some(function (s) { return s.k === h; }) ? h : 'shop'; }
+  function secOf(){ var h = (location.hash || '').replace(/^#\/?/, '').split(/[?&]/)[0]; return SECTIONS.some(function (s) { return s.k === h; }) ? h : 'country'; }
   /** the verify answer → the apps' session (cb_sess, CBSignin.sessionOf — the one reading), claimed for this browser (CBOnePerson) → Home */
   function registered(r){
     /* STD2: kept by the sign-in window's own writer (CBSignin.keepSession — cb_sess with `duty`, then CBOnePerson.claim), never a second copy here */
     CBSignin.keepSession({}, CBSignin.sessionOf(r));
     location.href = '/';
   }
+  var shown = null;
+  /* W24: a move between sections asks first when something typed is not saved (CBUnsaved, accounts-shell.js) — Stay puts the address back */
   function paint(k){
+    if (shown && shown !== k && window.CBUnsaved) return CBUnsaved.leave(function () { paintNow(k); }, function () { if (frame && frame.skeleton) frame.skeleton.setActive(shown); try { history.replaceState(null, '', '#/' + shown); } catch (_) {} });
+    paintNow(k);
+  }
+  function paintNow(k){
+    shown = k;
+    if (window.CBUnsaved) CBUnsaved.reset();
     if (frame && frame.skeleton) frame.skeleton.setActive(k);
     if (location.hash !== '#/' + k) { try { history.replaceState(null, '', '#/' + k); } catch (_) {} }
     host.innerHTML = '';
-    host.classList.toggle('wide', CBSettings.SECTIONS.indexOf(k) >= 0);
+    host.classList.toggle('wide', CBSettings.SECTIONS.indexOf(k) >= 0 || k === 'print');
     if (k === 'new') CBRegistration.mount(host, registered);
     else if (CBSettings.SECTIONS.indexOf(k) >= 0) CBSettings.mount(host, k);
     else if (k === 'country') CBCountry.mount(host, function () { location.hash = '#/shop'; });
+    else if (k === 'print') CBPrint.mount(host);
     else CBShop.mount(host);
   }
   frame = CBFrame.mount({ app: 'settings', kural: 'settings', work: host, signin: isNew ? false : undefined,
@@ -178,7 +201,8 @@ function go(){ if (window.CBFrame) CBFrame.ended(); }   /* api()'s 401 → drop 
   var sess = frame.session;
   if (!sess || !sess.token) { host.innerHTML = '<div class="empty" data-testid="set-signin"><div class="t">Sign in above</div></div>'; return; }
   var me = CBOnePerson.who(sess);
-  SESSION = { token: sess.token, role: sess.role, name: sess.name, entity: sess.entity, bridgeId: sess.bridgeId, entityId: me && me.ent, actorId: sess.role === 'actor' ? (me && me.uid) : null };
+  SESSION = { token: sess.token, role: sess.role, name: sess.name, entity: sess.entity, bridgeId: sess.bridgeId, entityId: me && me.ent, actorId: sess.role === 'actor' ? (me && me.uid) : null,
+    jti: sess.jti || null, device_id: sess.device_id || null, surface: sess.surface || null, exp: sess.exp || null };   /* W18: this device's own sign-in, painted when the server's list is older than it */
   window.addEventListener('hashchange', function () { paint(secOf()); });
   paint(secOf());
 })();
