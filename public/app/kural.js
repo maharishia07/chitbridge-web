@@ -24,6 +24,11 @@
  *  · The verse is Noto Serif Tamil (loaded once from Google Fonts); a line breaks only at its middle, the rest indented.
  *
  * ONE FILE, ONE GLOBAL. Nothing is read from the page except the document and (optionally) CBLocale.lang().
+ *
+ * OWNS      the kural band (draw · reserve its room · lead language · hide for today) and the owner's on/off/auto choice for it.
+ * CALLED BY CBFrame (page-frame.js) on every CB page, CBShell/CBAvatar (repaint when the preference moves), and pages with changing screens (set).
+ * FLOW      CBKural.mount({ route }) → load kurals.json → paint() → wanted()? find(route) → draw band / keep room → repaint() on a preference change
+ * CARD      29-qa-test-tooling-ux-locale-and-design-system/kural
  */
 (function (root) {
   'use strict';
@@ -111,13 +116,25 @@
     (DATA.kurals || []).forEach(function (x) { if (!k && x.route === route && bad.indexOf(x.no) < 0) k = x; });
     return k;
   }
+  /** the avatar's `kural` preference — 'on' · 'off' · 'auto' (auto when the avatar is not on the page or cannot say) */
+  function kuralPreference() {
+    try { return (root.CBAvatar && root.CBAvatar.get && root.CBAvatar.get().kural) || 'auto'; }
+    catch (error) { console.warn('kural: the avatar could not say the kural preference', (error && error.message) || error); return 'auto'; }
+  }
+  /** does the shop read Tamil (CBLocale.langs includes 'ta')? false when the locale unit is absent or cannot say */
+  function readsTamil() {
+    try { return ((root.CBLocale && root.CBLocale.langs && root.CBLocale.langs()) || []).indexOf('ta') >= 0; }
+    catch (error) { console.warn('kural: the locale could not say the languages read', (error && error.message) || error); return false; }
+  }
   /** W7: does this person want the band? pref `kural` — 'on' · 'off' · 'auto' (on only where Tamil is among the languages read, CBLocale.langs) */
   function wanted() {
-    var p = 'auto'; try { p = (root.CBAvatar && root.CBAvatar.get && root.CBAvatar.get().kural) || 'auto'; } catch (_) { p = 'auto'; }
-    if (p === 'on') return true;
-    if (p === 'off') return false;
-    try { var ls = (root.CBLocale && root.CBLocale.langs && root.CBLocale.langs()) || []; return ls.indexOf('ta') >= 0; } catch (_) { return false; }
+    var preference = kuralPreference();
+    if (preference === 'on') return true;
+    if (preference === 'off') return false;
+    return readsTamil();
   }
+  /** SET-WALK1 · W7: the band is the OWNER'S choice (CBAvatar pref `kural`: on · off · auto = only where the shop reads Tamil); off = no band, no room — the verse of this page's route, or none */
+  function verseToShow() { return wanted() ? find(ROUTE) : null; }
   /** the app's language, when the page has one; Tamil and everything unlisted read the English line (the `meaning.ta` slot stays empty by decision) */
   function lang() {
     var l = ''; try { l = String((root.CBLocale && root.CBLocale.lang && root.CBLocale.lang()) || doc.documentElement.lang || 'en').toLowerCase().slice(0, 2); } catch (_) { l = 'en'; }
@@ -170,8 +187,7 @@
     /* the phone's 7 s turn-taking keeps ITS clock across repaints (a repaint must not restart the count); it is stopped below when the band is not drawn or the person is in charge */
     /* ONE place: the band is never a part of a header, a bar or a title row, whoever mounted it or moved it there (Round U, 2026-10-09) */
     if (EL.closest(HEAD_SEL)) (HOST && !HOST.closest(HEAD_SEL) ? HOST : doc.body).appendChild(EL);
-    /* SET-WALK1 · W7: the band is the OWNER'S choice (CBAvatar pref `kural`: on · off · auto = only where the shop reads Tamil); off = no band, no room */
-    var k = wanted() ? find(ROUTE) : null;
+    var k = verseToShow();
     BLOCKED = blockedNow();
     /* a band that may not be drawn BESIDE a warning keeps its room (quiet, blank): the page does not grow and shrink as warnings come and go (UI9) */
     if (k && BLOCKED) makeRoom(prevH > 20 ? prevH : reserveH(), true); else unreserve();
