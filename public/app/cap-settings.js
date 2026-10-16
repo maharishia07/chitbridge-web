@@ -18,6 +18,8 @@
  *                                     #setbody (which needs renderApp · setSec · loadSettings).
  * Host globals (as every cap-*.js): api · EP (CB_SETTINGS_EP) · SESSION · CFG · esc · fmtMoney (helpers.js, the money unit) · tx · toast · CBAction · CBConfirm · CBList · CBLocale (optional).
  * Flow step: Onboarding · counters & keys / connectors / policy / plan (docs/process/flows.json, the SET rows).
+ * CALLED BY settings.html (CBSettings.mount per section) and the workshop's Integrations / Profile cards (the moved helpers) · FLOW mount(host, section) → load the section's reads → CBList rows → CBAction writes.
+ * CARD 28-platform-and-operations/settings
  */
 'use strict';
 
@@ -110,6 +112,21 @@ async function kitDownload(id, adapter){
 /* ── CB SETTINGS › the four sections — the page's host mounts one at a time ─────────────────────────────────────────────────────────── */
 var CBSettings = (function () {
   var H = { host: null, sec: null, lists: [], data: {} };
+  /* W15: the kinds offered = the server's `scopes` (the kinds THIS login may mint — 'testing' is the platform's); KEY_SCOPES only words them. Before the answer: the shop's usual kinds. */
+  function keyKinds() {
+    var keysData = H.data.keys, served = keysData && keysData.r && Array.isArray(keysData.r.scopes) ? keysData.r.scopes : null;
+    return KEY_SCOPES.filter(function (scope) { return served ? served.indexOf(scope[0]) >= 0 : scope[0] !== 'testing'; });
+  }
+  /* W18: a sign-in older than the list (legacy) is not in the server's rows — this device is still painted, from the page's own session, so the list never hides where you are */
+  function hereRow() {
+    var sess = (typeof SESSION !== 'undefined' && SESSION) || {};
+    return { jti: sess.jti || 'this-device', device_id: sess.device_id || '', surface: sess.surface || 'settings', iat: sess.iat || null, exp: sess.exp || null, current: true, legacy: true, device: { kind: 'web', label: '' } };
+  }
+  /** the server's sign-in rows; on a legacy sign-in with no current row, this device's own row first */
+  function sessionRows() {
+    var answer = H.data.ses, rows = (answer && answer.r && answer.r.sessions) || [];
+    return answer && answer.r && answer.r.legacy && !rows.some(function (row) { return row.current; }) ? [hereRow()].concat(rows) : rows;
+  }
   function T(s) { return typeof tx === 'function' ? tx(s) : s; }
   function $(id) { return document.getElementById(id); }
   function btnOf(act, id) { return document.querySelector('[data-act="' + act + '"][data-actrow="' + (window.CSS && CSS.escape ? CSS.escape(id) : id) + '"]'); }
@@ -230,11 +247,6 @@ var CBSettings = (function () {
             readKeys(); } });
       };
     }
-    /* W15: the kinds offered = the server's `scopes` (the kinds THIS login may mint — 'testing' is the platform's); KEY_SCOPES only words them. Before the answer: the shop's usual kinds. */
-    function keyKinds() {
-      var d = H.data.keys, served = d && d.r && Array.isArray(d.r.scopes) ? d.r.scopes : null;
-      return KEY_SCOPES.filter(function (s) { return served ? served.indexOf(s[0]) >= 0 : s[0] !== 'testing'; });
-    }
     function readKeys() { return load('keys', 'keysList', null, function () { paintKeyBar(); if (kl) kl.refresh(); }); }
     kl = list($('sx_key_list'), {
       key: 'set-keys', rows: keyRows, id: function (k) { return k.jti; }, rowTid: function (k) { return 'sx-key-' + k.jti; },
@@ -269,7 +281,7 @@ var CBSettings = (function () {
 
   /* W16: the catalogue's may.code → the row's words (a sentence the client branches on ships with a code): NOT_FOR_COUNTRY · NOT_YET_FOR_COUNTRY (sold there, our kit is not built for that pack yet) · NOT_YET (no kit at all) */
   var MAY_WORDS = { NOT_FOR_COUNTRY: 'Not for your country', NOT_YET_FOR_COUNTRY: 'Not yet for your country', NOT_YET: 'Not built yet' };
-  function mayWords(may) { return T(MAY_WORDS[(may && may.code) || ''] || 'Not for your shop'); }
+  function mayWords(verdict) { return T(MAY_WORDS[(verdict && verdict.code) || ''] || 'Not for your shop'); }
   /* ═════ CONNECTORS ═════ */
   function connectors() {
     frame(['<h1 class="sx-h" data-testid="sx-title">' + esc(T('Connectors')) + '</h1>',
@@ -499,12 +511,7 @@ var CBSettings = (function () {
       '<p class="sub">' + esc(T('Identity, signatory, bank and licences — kept once, they fill every form for an authority')) + ' · <a class="sx-link" href="/authority-forms.html" data-testid="sx-vault-forms">' + esc(T('Forms for an authority')) + ' ›</a></p>',
       '<div id="vaulthost" data-testid="sx-vault"></div>']);
     var sl = null, dl = null;
-    /* W18: a sign-in older than the list (legacy) is not in the server's rows — this device is still painted, from the page's own session, so the list never hides where you are */
-    function hereRow() {
-      var sess = (typeof SESSION !== 'undefined' && SESSION) || {};
-      return { jti: sess.jti || 'this-device', device_id: sess.device_id || '', surface: sess.surface || 'settings', iat: sess.iat || null, exp: sess.exp || null, current: true, legacy: true, device: { kind: 'web', label: '' } };
-    }
-    var sesRows = function () { var d = H.data.ses, rows = (d && d.r && d.r.sessions) || []; return d && d.r && d.r.legacy && !rows.some(function (s) { return s.current; }) ? [hereRow()].concat(rows) : rows; };
+    var sesRows = sessionRows;
     var devMay = function () { var d = H.data.ses; return (d && d.r && d.r.may && d.r.may.devices) || null; };
     var devRows = function () { var d = H.data.dev; return (d && d.r && d.r.devices) || []; };
     function surface(s) { return T(SURFACE_WORDS[s] || s || 'Web'); }
