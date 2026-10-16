@@ -386,34 +386,42 @@
     }).join('');
   }
 
-  function menuHtml(o) {
-    var P = o.person || {}, items = o.items || ['profile', 'settings', 'support', 'signout'];
+  /** the menu's two link groups: up (Profile · Settings) and down (Support · Sign out); each is a button when the page handles it, else a link out */
+  function menuLinks(options) {
+    var P = options.person || {}, items = options.items || ['profile', 'settings', 'support', 'signout'];
     var showSettings = items.indexOf('settings') >= 0 && !!P.owner;
     var has_ = function (k) { return items.indexOf(k) >= 0; };
     var up = [], down = [];
-    if (has_('profile')) up.push(o.onProfile
+    if (has_('profile')) up.push(options.onProfile
       ? '<button type="button" data-testid="nav-profile" data-av="profile">Profile</button>'
-      : '<a data-testid="nav-profile" data-av="profile" href="' + esc(o.profileHref || PROFILE_HREF) + '">Profile<span aria-hidden="true">↗</span></a>');
+      : '<a data-testid="nav-profile" data-av="profile" href="' + esc(options.profileHref || PROFILE_HREF) + '">Profile<span aria-hidden="true">↗</span></a>');
     /* IX0: Settings is drawn only where the page says where it goes (onSettings — the workshop's own — or settingsHref, a settings page when
        one exists). No default door into app.html: a utility page never sends a customer into the workshop (H34). */
-    if (showSettings && (o.onSettings || o.settingsHref)) up.push(o.onSettings
+    if (showSettings && (options.onSettings || options.settingsHref)) up.push(options.onSettings
       ? '<button type="button" data-testid="nav-settings" data-av="settings">Settings</button>'
-      : '<a data-testid="nav-settings" data-av="settings" href="' + esc(o.settingsHref) + '">Settings<span aria-hidden="true">↗</span></a>');
-    if (has_('support')) down.push(o.onSupport
+      : '<a data-testid="nav-settings" data-av="settings" href="' + esc(options.settingsHref) + '">Settings<span aria-hidden="true">↗</span></a>');
+    if (has_('support')) down.push(options.onSupport
       ? '<button type="button" data-testid="av-support" data-av="support">Support</button>'
-      : '<a data-testid="av-support" data-av="support" href="' + esc(o.supportHref || SUPPORT_HREF) + '">Support<span aria-hidden="true">↗</span></a>');
+      : '<a data-testid="av-support" data-av="support" href="' + esc(options.supportHref || SUPPORT_HREF) + '">Support<span aria-hidden="true">↗</span></a>');
     if (has_('signout')) down.push('<button type="button" data-testid="nav-signout" data-av="signout">Sign out</button>');
+    return { up: up, down: down };
+  }
+  /** the Language picker (one button per language, the current one pressed); empty when the page offers no languages */
+  function languagesHtml(languages) {
+    if (!(languages && languages.list)) return '';
+    return '<h4>Language</h4><div class="cbav-langs" role="group" aria-label="Language" data-testid="lang-picker">' + Object.keys(languages.list).map(function (code) {
+      return '<button type="button" data-testid="lang-' + esc(code) + '" data-av-lang="' + esc(code) + '" aria-pressed="' + (languages.current === code) + '">' + esc(languages.list[code]) + '</button>';
+    }).join('') + '</div>';
+  }
 
+  /** the avatar's pop-up menu: who you are, the links, the Appearance column (theme · stripes · kural) and the Text column (size · weight · motion · font · language) */
+  function menuHtml(o) {
+    var person = o.person || {}, links = menuLinks(o), upLinks = links.up, downLinks = links.down;
     var fsNow = pref('fs'), w = pref('weight'), f = pref('font');
-    var langs = '';
-    if (o.languages && o.languages.list) {
-      langs = '<h4>Language</h4><div class="cbav-langs" role="group" aria-label="Language" data-testid="lang-picker">' + Object.keys(o.languages.list).map(function (c) {
-        return '<button type="button" data-testid="lang-' + esc(c) + '" data-av-lang="' + esc(c) + '" aria-pressed="' + (o.languages.current === c) + '">' + esc(o.languages.list[c]) + '</button>';
-      }).join('') + '</div>';
-    }
+    var langs = languagesHtml(o.languages);
     return '<div class="cbav-pop" role="dialog" aria-label="Your menu" data-testid="avatar-menu">' +
-      '<div class="cbav-who"><span class="l">' + esc(letter(P)) + '</span><div><b>' + esc(P.name || P.entity || '') + '</b><span>' + esc(P.role || '') + '</span></div></div>' +
-      (up.length ? '<div class="cbav-items">' + up.join('') + '</div>' : '') +
+      '<div class="cbav-who"><span class="l">' + esc(letter(person)) + '</span><div><b>' + esc(person.name || person.entity || '') + '</b><span>' + esc(person.role || '') + '</span></div></div>' +
+      (upLinks.length ? '<div class="cbav-items">' + upLinks.join('') + '</div>' : '') +
       '<div class="cbav-cols"><div class="cbav-c"><h4>Appearance</h4><div class="cbav-sw" role="group" aria-label="Theme">' + swatches() + '</div>' +
       editionsHtml() +
       '<h4>Row stripes</h4><div class="cbav-stripes" role="group" aria-label="Row stripes" data-testid="stripes-group">' + STRIPES.map(function (x) {
@@ -433,7 +441,7 @@
       '<h4>Reading font</h4><div class="cbav-fonts" role="group" aria-label="Font">' + FONTS.map(function (x) {
         return '<button type="button" data-testid="font-' + x[0] + '" data-av-font="' + x[0] + '" aria-pressed="' + (f === x[0]) + '" style="font-family:' + esc(x[2]) + '">' + x[1] + '</button>';
       }).join('') + '</div>' + langs + '</div></div>' +
-      (down.length ? '<div class="cbav-items last">' + down.join('') + '</div>' : '') +
+      (downLinks.length ? '<div class="cbav-items last">' + downLinks.join('') + '</div>' : '') +
       '</div>';
   }
   /* AX1: the showings this app has (the manifest's `editions`, through CBEdition) — the Row stripes look, never a new one; absent with one edition or no CBEdition */
@@ -484,34 +492,44 @@
     root.location.href = o.signInHref || '/';
   }
 
+  /** the menu's preference buttons: the attribute each carries → the preference it sets (motion is a switch, language and the data-av links are handled apart) */
+  var PREF_BUTTONS = [['data-av-theme', 'theme'], ['data-av-fs', 'fs'], ['data-av-weight', 'weight'], ['data-av-stripes', 'stripes'],
+    ['data-av-kural', 'kural'], ['data-av-edition', 'edition'], ['data-av-font', 'font']];
+  /** a click on a preference button sets it; true when the click was one */
+  function clickedPreference(target) {
+    for (var i = 0; i < PREF_BUTTONS.length; i++) {
+      var button = target.closest('[' + PREF_BUTTONS[i][0] + ']');
+      if (button) { set(PREF_BUTTONS[i][1], button.getAttribute(PREF_BUTTONS[i][0])); return true; }
+    }
+    if (target.closest('[data-av-motion]')) { set('motion', pref('motion') === 'reduce' ? 'auto' : 'reduce'); return true; }
+    return false;
+  }
+  /** a click on a menu link (data-av): sign out · sign in · Profile · Settings · Support — the page's own handler when it gave one, else the link goes out */
+  function clickedLink(link, event, options) {
+    var which = link.getAttribute('data-av');
+    if (which === 'signout') { event.preventDefault(); return signOut(); }
+    if (which === 'signin' && typeof options.onSignIn === 'function') { event.preventDefault(); return options.onSignIn(); }
+    var handler = { profile: options.onProfile, settings: options.onSettings, support: options.onSupport }[which];
+    if (handler) { event.preventDefault(); openNow = false; paint(); return handler(); }
+  }
+  /** one click anywhere: outside the menu closes it; inside, the avatar button toggles it and the rest set a preference, pick a language or follow a link */
+  function onDocumentClick(event) {
+    if (!M || !M.el) return;
+    var target = event.target; if (!target || !target.closest) return;
+    if (!M.el.contains(target)) { if (openNow) close(); return; }
+    if (target.closest('.cbav-btn')) { openNow = !openNow; paint(); return; }
+    if (clickedPreference(target)) return;
+    var languageButton = target.closest('[data-av-lang]');
+    if (languageButton) { var picker = M.o.languages; if (picker && picker.onPick) picker.onPick(languageButton.getAttribute('data-av-lang')); return; }
+    var link = target.closest('[data-av]');
+    if (link) clickedLink(link, event, M.o);
+  }
+
   var wired = false;
   function wire() {
     if (wired || !doc) return; wired = true;
     if (root.addEventListener) root.addEventListener('resize', function () { if (openNow) fit(); });
-    doc.addEventListener('click', function (e) {
-      if (!M || !M.el) return;
-      var t = e.target; if (!t || !t.closest) return;
-      if (!M.el.contains(t)) { if (openNow) close(); return; }
-      var o = M.o, b;
-      if ((b = t.closest('.cbav-btn'))) { openNow = !openNow; paint(); return; }
-      if ((b = t.closest('[data-av-theme]'))) return set('theme', b.getAttribute('data-av-theme'));
-      if ((b = t.closest('[data-av-fs]'))) return set('fs', b.getAttribute('data-av-fs'));
-      if ((b = t.closest('[data-av-weight]'))) return set('weight', b.getAttribute('data-av-weight'));
-      if ((b = t.closest('[data-av-stripes]'))) return set('stripes', b.getAttribute('data-av-stripes'));
-      if ((b = t.closest('[data-av-kural]'))) return set('kural', b.getAttribute('data-av-kural'));
-      if ((b = t.closest('[data-av-edition]'))) return set('edition', b.getAttribute('data-av-edition'));
-      if ((b = t.closest('[data-av-font]'))) return set('font', b.getAttribute('data-av-font'));
-      if ((b = t.closest('[data-av-motion]'))) return set('motion', pref('motion') === 'reduce' ? 'auto' : 'reduce');
-      if ((b = t.closest('[data-av-lang]'))) { var c = b.getAttribute('data-av-lang'); if (o.languages && o.languages.onPick) o.languages.onPick(c); return; }
-      if ((b = t.closest('[data-av]'))) {
-        var k = b.getAttribute('data-av');
-        if (k === 'signout') { e.preventDefault(); return signOut(); }
-        if (k === 'signin' && typeof o.onSignIn === 'function') { e.preventDefault(); return o.onSignIn(); }
-        if (k === 'profile' && o.onProfile) { e.preventDefault(); openNow = false; paint(); return o.onProfile(); }
-        if (k === 'settings' && o.onSettings) { e.preventDefault(); openNow = false; paint(); return o.onSettings(); }
-        if (k === 'support' && o.onSupport) { e.preventDefault(); openNow = false; paint(); return o.onSupport(); }
-      }
-    });
+    doc.addEventListener('click', onDocumentClick);
     doc.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && openNow) {
         close(); var btn = M && M.el && M.el.querySelector('.cbav-btn'); if (btn) { try { btn.focus(); } catch (_) {} }
