@@ -475,7 +475,7 @@ var CBSettings = (function () {
       next: function (x) {
         var helpTip = x.def.help ? ' <span class="sx-why" title="' + esc(T(x.def.help)) + '" data-testid="sx-pol-why-' + esc(x.key) + '" style="cursor:help;opacity:.7">ⓘ</span>' : '';
         if (x.may.code === 'SET_IN_COUNTRY') return '<div class="sx-next" data-testid="sx-pol-next-' + esc(x.key) + '"><a class="sx-link" href="/settings.html#/country" data-testid="sx-pol-country-door">' + esc(T('Change it under Country')) + ' ›</a>' + helpTip + '</div>';
-        return '<div class="sx-next" data-testid="sx-pol-next-' + esc(x.key) + '" style="display:flex;align-items:center;gap:8px">' + control(x) + why
+        return '<div class="sx-next" data-testid="sx-pol-next-' + esc(x.key) + '" style="display:flex;align-items:center;gap:8px">' + control(x) + helpTip
           + '<span class="sub" id="sx_pol_ok_' + esc(x.key) + '" data-testid="sx-pol-ok-' + esc(x.key) + '"></span></div>';
       },
     });
