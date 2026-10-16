@@ -15,7 +15,7 @@ const src = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'cap-sho
 const lift = (name) => { const m = src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n')); if (!m) throw new Error(name + ' not found in cap-shop.js'); return m[0]; };
 const ctx = { UI: {}, console };
 vm.createContext(ctx);
-vm.runInContext(['vaultUniqueKey', 'vaultKeys', 'vaultRowBody', 'vaultRowSame', 'vaultPatch'].map(lift).join('\n'), ctx);
+vm.runInContext(['vaultUniqueKey', 'vaultKeys', 'vaultRowBody', 'vaultRowSame', 'vaultSectionPatch', 'vaultNewSectionPatch', 'vaultPatch'].map(lift).join('\n'), ctx);
 
 let pass = 0, fail = 0;
 const t = (label, got, want) => { const ok = JSON.stringify(got) === JSON.stringify(want); ok ? pass++ : fail++; console.log('  ' + (ok ? 'ok  ' : 'FAIL') + '  ' + label.padEnd(80) + (ok ? '' : JSON.stringify(got) + '   want ' + JSON.stringify(want))); };
