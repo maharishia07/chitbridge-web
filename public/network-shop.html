@@ -92,7 +92,7 @@ function render(){
   // meaningful cut, and it is the one thing a departmental store already trains people to do.
   var chips = '<div class="chips"><span class="chip'+(DEPT?'':' on')+'" onclick="pick(null)">All</span>'
     + (DATA.departments||[]).map(function(d){
-        return '<span class="chip'+(DEPT===d.bridge_id?' on':'')+'" onclick="pick(\''+esc(d.bridge_id)+'\')">'+esc(d.name)+'</span>'; }).join('')
+        return '<span class="chip'+(DEPT===d.bridge_id?' on':'')+'" onclick="pick(\''+esc(String(d.bridge_id).replace(/\\/g,'\\\\').replace(/'/g,"\\'"))+'\')">'+esc(d.name)+'</span>'; }).join('')
     + '</div>';
 
   var shown = (DATA.departments||[]).filter(function(d){ return !DEPT || d.bridge_id===DEPT; });
