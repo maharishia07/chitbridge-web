@@ -140,7 +140,7 @@ function vaultCardHTML(vault, encrypted){
     +'<div style="display:flex;gap:7px;align-items:center;margin-top:13px;flex-wrap:wrap"><select class="inp" id="v_addtype" hidden>'+addOpts+'</select>'
       +(shown.length ? '' : '<button type="button" class="composebtn ghost" data-testid="vault-add-section" onclick="vaultAddSection()">+ '+esc(tx('add the business identity'))+'</button>')+'</div>'
     +'<div class="err" id="vault_err" style="margin-top:8px"></div>'
-    +'<button type="button" class="composebtn" style="margin-top:11px" data-testid="vault-save" onclick="saveVaultUI()">' + esc(tx('Save')) + '</button></div>';
+    +'<button type="button" class="composebtn" style="margin-top:11px;display:none" data-testid="vault-save" onclick="saveVaultUI()">' + esc(tx('Save')) + '</button></div>';   /* WALK-REG 2026-10-16 R19: the rows save themselves (CBShop autosave); style display:none, a .composebtn class overrides [hidden] */
   return '<div style="'+_CARD+';margin-top:10px"><div class="sec" style="margin:0">🗂 ' + esc(tx('Trade documents vault')) + ' <span title="' + esc(tx('Fill once. It pre-fills your Commercial Invoice, Packing List and other authority forms; at form time you are asked only the shipment details. Name each detail the way you know it.')) + '" style="cursor:help;font-weight:400;color:var(--grey)">ⓘ</span></div>'
     +encBanner
     +body
@@ -321,6 +321,17 @@ function vaultSaveFailed(failure, errorBox){
   if(failure&&failure.status===409) errorBox.innerHTML=vaultConflictHTML((failure.data&&failure.data.message)||failure.message||tx('Changed since you opened it — reload?'));
   else errorBox.textContent=(failure&&failure.message)||tx('Could not save the vault');
 }
+/** WALK-REG 2026-10-16 R19: the autosave's vault write — the same merge-patch as saveVaultUI, but NOTHING repaints (the person is mid-form) and no toast;
+    the base and version move to what was just saved so the next change patches from here. → true saved · false nothing moved; a refusal throws */
+async function vaultSaveQuiet(){
+  var patch=vaultPatch(UI._vaultBase||[], _vaultSecs()); if(!patch) return false;
+  UI._party = undefined;
+  var answer=await api('vaultSave',{body:{version:UI._vaultVersion, patch:patch}});
+  UI._vaultBase=JSON.parse(JSON.stringify(_vaultSecs()));
+  UI._vaultVersion=(answer&&answer.version)==null ? UI._vaultVersion : String(answer.version);
+  if(window.CBOffline)CBOffline.clearDraft('app.vault');
+  return true;
+}
 /** Save the vault: the merge-patch of what moved, with the version read; the answer becomes the new base */
 async function saveVaultUI(){
   var err=document.getElementById('vault_err'); if(err)err.textContent='';
@@ -405,7 +416,7 @@ var CBShop = (function () {
     return shopFieldsHTML(e || {}, shopLicLabel())
       + '<div class="err" id="pf_err_profile" data-testid="shop-err" style="margin-top:8px"></div>'
       + (who ? '<p class="sub" data-testid="shop-ask-owner">' + esc0(tx('Only the owner can change these.')) + '</p>'
-             : '<button type="button" class="act" id="shop-save" data-testid="shop-save" style="margin-top:8px">' + esc0(tx('Save')) + '</button>');
+             : '<button type="button" class="act" id="shop-save" data-testid="shop-save" style="margin-top:8px;display:none">' + esc0(tx('Save')) + '</button>');
   }
   function paint(){
     var h = H.host; if (!h) return;
@@ -415,7 +426,53 @@ var CBShop = (function () {
       + '<h2 class="shop-h" style="margin-top:14px" data-testid="shop-forms-title">' + esc0(tx('Your identity')) + '</h2>'
       + '<div id="vaulthost" data-testid="shop-identity"></div>';
     var b = document.getElementById('shop-save'); if (b) b.onclick = function () { shopSave(b); };
+    if (!h._autosave) { h._autosave = true; h.addEventListener('change', onChange); }
     loadVault().then(prefillIdentity);
+  }
+  /* ── WALK-REG 2026-10-16 R19: the fields save themselves (the pattern of Print setup, cap-print.js saveSoon): a changed field saves after a short pause,
+     saves never overlap (one waits for the one in flight), and "✓ Saved" stands beside the field that was saved. The two Save buttons stay in the page,
+     hidden, for the walks and the keyboard-less tests that press them. A person who may not write (an actor) has no Save and no autosave. ── */
+  var autosave = { timer: null, saving: false, again: false, dirty: [] };
+  function onChange(event){
+    var target = event.target; if (!target || !target.closest || (SESSION && SESSION.actorId)) return;
+    var shopField = SHOP_FIELDS.some(function (pair) { return pair[0] === target.id; });
+    if (!shopField && !target.closest('#vaulthost')) return;
+    var old = target.nextElementSibling; if (old && old.getAttribute('data-saved')) old.remove();
+    if (autosave.dirty.indexOf(target) < 0) autosave.dirty.push(target);
+    saveSoon();
+  }
+  function saveSoon(){
+    clearTimeout(autosave.timer);
+    autosave.timer = setTimeout(function(){
+      if (autosave.saving) { autosave.again = true; return; }
+      autosave.saving = true;
+      var moved = autosave.dirty.splice(0);
+      saveNow(moved).then(function(){ autosave.saving = false; if (autosave.again || autosave.dirty.length) { autosave.again = false; saveSoon(); } });
+    }, 500);
+  }
+  function said(el){
+    if (!el || !el.parentNode) return;
+    var badge = document.createElement('span'); badge.setAttribute('data-saved', '1'); badge.setAttribute('data-testid', 'saved-' + (el.id || 'field')); badge.setAttribute('role', 'status');
+    badge.style.cssText = 'margin-inline-start:8px;font-size:var(--fs-1);color:var(--ok-2)'; badge.textContent = '✓ ' + tx('Saved');
+    el.parentNode.insertBefore(badge, el.nextSibling);
+  }
+  /** one pass: the shop fields that moved (one PATCH of just those), then the vault if any row moved; each outcome said beside its field */
+  async function saveNow(moved){
+    var shopEls = moved.filter(function (el) { return SHOP_FIELDS.some(function (pair) { return pair[0] === el.id; }); }), vaultEls = moved.filter(function (el) { return shopEls.indexOf(el) < 0; });
+    var profileErr = document.getElementById('pf_err_profile'), vaultErr = document.getElementById('vault_err');
+    if (shopEls.length) {
+      var body = {}; shopEls.forEach(function (el) { var pair = SHOP_FIELDS.filter(function (candidate) { return candidate[0] === el.id; })[0], value = val(el.id); if (value !== '') body[pair[1]] = value; });
+      if (Object.keys(body).length) {
+        if (profileErr) profileErr.textContent = '';
+        try { await api('saveProfile', { body: body }); if (typeof UI !== 'undefined') { UI._me = null; UI._party = undefined; } shopEls.forEach(said); }
+        catch (failure) { if (profileErr) profileErr.textContent = CBAction.words(failure, tx('Could not save')); }
+      }
+    }
+    if (vaultEls.length) {
+      if (vaultErr) vaultErr.textContent = '';
+      try { if (await vaultSaveQuiet()) vaultEls.forEach(said); }
+      catch (failure) { vaultSaveFailed(failure, vaultErr); }
+    }
   }
   /** W14b: one place for the address — an EMPTY Business identity opens with the shop's own details already in its rows (nothing is saved until Save) */
   function prefillIdentity(){

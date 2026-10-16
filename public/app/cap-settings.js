@@ -558,6 +558,11 @@ var CBSettings = (function () {
   var CURRENT_WHY = 'The device you are on — use Sign out in the menu.';
   /* WALK-REG R21/R43 (drift walk, 16 Oct): the trade-documents vault is export paperwork — kept for the workshop and forms, hidden on a local
    * shop's Account until export is switched on (no opt-in flag yet; the host stays so the vault code keeps its target) */
+  /* WALK-REG 2026-10-16 R43: a web page does not name its device yet (only the counter does), so its sign-in is never in the list — say so, not a bare "0 devices" beside "signed in here" */
+  function deviceListLegacyNote() {
+    var sessions = H.data.ses;
+    return (sessions && sessions.r && sessions.r.legacy) ? ' · <span class="tag amber" data-testid="sx-dev-legacy">' + esc(T('This browser is not counted — only counters name their device')) + '</span>' : '';
+  }
   function account() {
     frame(['<h1 class="sx-h" data-testid="sx-title">' + esc(T('Account')) + '</h1>',
       '<h2 class="sx-h2">' + esc(T('Where you are signed in')) + ' <span class="sx-why" title="' + esc(T('Sign one out if a device is lost or shared.')) + '" style="cursor:help;opacity:.7">ⓘ</span></h2>',
@@ -578,7 +583,7 @@ var CBSettings = (function () {
     function paintSesBar() {
       var d = H.data.ses || {}, rows = sesRows();
       $('sx_ses_bar').innerHTML = bar('<span class="sx-count" data-testid="sx-ses-count"><b>' + rows.length + '</b> ' + esc(T(rows.length === 1 ? 'sign-in' : 'sign-ins'))
-        + (d.r && d.r.legacy ? ' · <span class="tag amber" data-testid="sx-ses-legacy" title="' + esc(T('Shown from this device.')) + '">' + esc(T('Sign-in older than the list — sign in again')) + '</span>' : '') + '</span>');
+        + (d.r && d.r.legacy ? ' · <span class="tag amber" data-testid="sx-ses-legacy" title="' + esc(T('Shown from this device.')) + '">' + esc(T('This browser signs in without a device name — shown from this device only')) + '</span>' : '') + '</span>');
     }
     function readSes() { return load('ses', function () { return api('sessionsList'); }, null, function () { paintSesBar(); if (sl) sl.refresh(); paintDevBar(); if (dl) dl.refresh(); }); }
     sl = list($('sx_ses_list'), {
@@ -614,7 +619,7 @@ var CBSettings = (function () {
       var m = devMay(), rows = devRows(), live = rows.filter(function (d) { return !d.revoked_at && Number(d.sessions) > 0; }).length;
       $('sx_dev_bar').innerHTML = bar('<span class="sx-count" data-testid="sx-dev-count">' + (m && m.ok === false
         ? '<span class="sx-why" data-testid="sx-dev-why">' + esc(m.why || T('Not allowed for this sign-in.')) + '</span>'
-        : '<b>' + rows.length + '</b> ' + esc(T(rows.length === 1 ? 'device' : 'devices')) + ' · <b>' + live + '</b> ' + esc(T('signed in now'))) + '</span>');
+        : '<b>' + rows.length + '</b> ' + esc(T(rows.length === 1 ? 'device' : 'devices')) + ' · <b>' + live + '</b> ' + esc(T('signed in now')) + deviceListLegacyNote()) + '</span>');
     }
     function readDev() {
       var m = devMay();

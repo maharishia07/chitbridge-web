@@ -31,7 +31,7 @@
  * FLOW  renderCountrySetup → csuRead (3 reads) → csuPrefill (server → clock → pack) → rows → csuSet per change → csuSave (the one write)      CARD 28-platform-and-operations/country-setup
  */
 'use strict';
-var CSU = { p: null, loading: false, readErr: false, edit: null, src: {}, open: {}, answered: {}, saved: false, err: '', later: false, host: null, onDone: null };
+var CSU = { taxErr: '', pmLoading: false, p: null, loading: false, readErr: false, edit: null, src: {}, open: {}, answered: {}, saved: false, err: '', later: false, host: null, onDone: null };
 /* host · onDone (SET1, 2026-10-13): a small app (settings.html, CB Settings › Country) mounts the SAME rows in its own pane — CBCountry.mount(host, onDone).
    With no host the step paints app.html's auth card at #root, as CS1 built it. One renderer, two frames; never a second copy of the rows. */
 /** CS2: the server's pack row for a country ({ code, name, currency, fy_start_month, zones, locale }) — null when the server sent no list or has no pack for it */
@@ -81,9 +81,9 @@ function csuCurrencies(country) {
 /** the registered pack of a country (CBRegulation, engine/tax.js) — its scheme word, currency and year start; null when the page has no registry */
 function csuPack(code) { try { return (window.CBRegulation && code && CBRegulation.packFor(String(code).toUpperCase())) || null; } catch (_) { return null; } }
 /** the scheme's own word for the tax row: GST · GST · VAT (pack.tax.scheme); 'Tax' when no pack says */
-function csuScheme(code) { var p = csuPack(code); return (p && p.tax && p.tax.scheme) || tx('Tax'); }
+function csuScheme(code) { var pack = csuPack(code); return (pack && pack.tax && pack.tax.scheme) || tx('Tax'); }
 /** the tax-id the pack names (abn · trn · gstin), for the placeholder; India's GSTIN example until reg-in carries one */
-function csuTaxIdHint(code) { var p = csuPack(code); if (code === 'IN') return '33AAAAA0000A1Z5'; if (p && p.abn) return 'ABN · 11 digits'; if (p && p.trn) return 'TRN · 15 digits'; return tx('Registration number'); }
+function csuTaxIdHint(code) { var pack = csuPack(code); if (code === 'IN') return '27AAPFU0939F1ZV'; if (pack && pack.abn) return 'ABN · 11 digits'; if (pack && pack.trn) return 'TRN · 15 digits'; return tx('Registration number'); }
 /** CS2: the IANA zones a country's pack names — the server's list for the chosen country; for the shop's own country also the profile's `zones` */
 function csuZones(country) {
   var pk = csuPackOf(country);
@@ -209,11 +209,29 @@ function csuBigWords(amount, wordsChoice, currency) {
   var tag = wordsChoice === 'lakh' ? 'en-IN' : wordsChoice === 'million' ? 'en-US' : csuMoneyTag(currency);
   try { return new Intl.NumberFormat(tag, { notation: 'compact', compactDisplay: 'long', maximumFractionDigits: 1 }).format(amount); } catch (failure) { csuLogExample('big words', failure); return String(amount); }
 }
+/* ── WALK-REG 2026-10-16 R49: THE MONTH WORDS ARE THE SCREEN'S LANGUAGE; THE ORDER IS THE COUNTRY'S. A UAE shop's format tag is ar-AE, so CBLocale.date() put
+   "16 أكتوبر 2026" and an Arabic "Year starts" list on an English screen. Here the parts come from the country's own tag (day · month · year, in its order) and
+   only the month WORD is taken from the reader's language (CBLocale.lang(), the language tx() translates to). Same language and format → the engine's own answer. */
+function csuUiTag() { try { return (window.CBLocale && CBLocale.lang && CBLocale.lang()) || 'en'; } catch (failure) { csuLogExample('ui language', failure); return 'en'; } }
+function csuMonthWord(monthIndex, form) {
+  try { return new Intl.DateTimeFormat(csuUiTag(), { month: form === 'long' ? 'long' : 'short', timeZone: 'UTC' }).format(Date.UTC(2000, monthIndex, 15, 12)); }
+  catch (failure) { csuLogExample('month word', failure); return ''; }
+}
+function csuMonthNames(form) { return monthNames(form); }   /* the one helper (helpers.js) — kept as a name so callers here read the same */
+function csuDate(ts) {
+  var locale = window.CBLocale;
+  try {
+    var when = new Date(ts), zone = locale.zoned ? locale.zoned({}).timeZone : undefined;
+    var parts = new Intl.DateTimeFormat(locale.tag(), { day: '2-digit', month: 'short', year: 'numeric', timeZone: zone }).formatToParts(when);
+    var word = new Intl.DateTimeFormat(csuUiTag(), { month: 'short', timeZone: zone }).format(when);
+    return parts.map(function (part) { return part.type === 'month' ? word : part.value; }).join('');
+  } catch (failure) { csuLogExample('date example', failure); return locale.date(ts); }
+}
 /** the live examples for a currency, from the engine the bills use: money · date · the symbol part of the money · decimals */
 function csuMoneyExamples(currency, wordsChoice) {
   var locale = window.CBLocale, moneyUnit = window.CBMoney, symbol = '', money = '', date = '', decimals = 2;
   /* the symbol as the BILL writes it (A$ · ₹ · AED): the currency part of the money example, under the money's own tag — not the reader's */
-  try { money = locale.money(CSU_SAMPLE, currency); date = locale.date(Date.now()); symbol = String(money).replace(/[\d.,\s\u00a0]/g, '') || locale.symbol(currency); } catch (failure) { csuLogExample('locale example', failure); }
+  try { money = locale.money(CSU_SAMPLE, currency); date = csuDate(Date.now()); symbol = String(money).replace(/[\d.,\s\u00a0]/g, '') || locale.symbol(currency); } catch (failure) { csuLogExample('locale example', failure); }
   try { decimals = moneyUnit && moneyUnit.decimals ? moneyUnit.decimals(currency) : 2; } catch (failure) { csuLogExample('decimals example', failure); }
   return { symbol: symbol || currency, number: money, decimals: decimals, date: date, words: csuBigWords(CSU_SAMPLE, wordsChoice, currency), lakhPack: csuMoneyTag(currency) === 'en-IN' };
 }
@@ -260,6 +278,35 @@ var CSU_CLEAN = {
 var CSU_SOURCE_KEY = { country: 'country', currency: 'currency', fy: 'fy_start_month', registered: 'tax', number: 'tax', scheme: 'tax', timezone: 'timezone', words: 'words', supplies: 'supplies' };
 /** the row a field belongs to — the tax row holds three fields (registered · number · scheme) */
 var CSU_ROW_OF = { registered: 'tax', number: 'tax', scheme: 'tax' };
+/**
+ * R49 · R7: THE TAX NUMBER IS CHECKED WHEN THE PERSON LEAVES THE BOX, by the checker the server uses for that country (api profile.taxIdRefusal): a GSTIN by
+ * profile-map.gstinChecksum (the engine /engine/profilemap.js, loaded on first need), an ABN / TRN by the pack's own check() (CBRegulation, /engine/tax.js).
+ * Returns '' when fine (or when the checker is not here — the server still refuses on Save), else the reason in words. A GSTIN's 'format' answer covers a
+ * wrong shape AND a holder letter outside CPHFATBLJG; they are told apart as the server does (api profile.gstinCheck): swap in a valid letter and ask again.
+ */
+function csuGstinWhy(number) {
+  var profileMap = window.CBProfileMap; if (!profileMap) return '';
+  var checked = profileMap.gstinChecksum(number); if (checked.ok) return '';
+  if (checked.reason !== 'format') return tx('That GSTIN does not check out — look at the last character.');
+  var upper = String(number).trim().toUpperCase();
+  return profileMap.gstinChecksum(upper.slice(0, 5) + 'C' + upper.slice(6)).reason === 'format'
+    ? tx('That does not look like a GSTIN (15 characters, e.g. 27AAPFU0939F1ZV).')
+    : tx('The PAN inside the GSTIN (characters 3–12) has no valid holder type at place 6 — P person, C company, F firm, H HUF, T trust, A association, B body of individuals, L local authority, J juridical person, G government.');
+}
+function csuTaxIdWhy(country, number) {
+  var typed = String(number == null ? '' : number).trim(); if (!typed) return '';
+  if (country === 'IN') {
+    if (!window.CBProfileMap) {   /* load the engine once, then check again */
+      if (!CSU.pmLoading) { CSU.pmLoading = true; var script = document.createElement('script'); script.src = '/engine/profilemap.js';
+        script.onload = function () { if (CSU.edit && CSU.edit.country === 'IN') csuSet('number', CSU.edit.number); }; document.head.appendChild(script); }
+      return '';
+    }
+    return csuGstinWhy(typed);
+  }
+  var pack = csuPack(country), taxId = pack && (pack.abn || pack.trn || pack.gstin);
+  if (taxId && typeof taxId.check === 'function') { var verdict = taxId.check(typed); if (!verdict.ok) return tx(verdict.why || 'That tax number does not check out.'); }
+  return '';
+}
 /** one field changed on screen: hold the cleaned value, say "you chose" as its source (W12), mark the step touched (W24), close its row once answered
     (WALK-REG R10c — the tax row stays open while it still needs the number), and repaint */
 function csuSet(field, typed) {
@@ -269,7 +316,11 @@ function csuSet(field, typed) {
   /* W12: where the value came from, in words a person reads — "you chose", never "typed" */
   CSU.src[CSU_SOURCE_KEY[field]] = tx('you chose');
   var row = CSU_ROW_OF[field] || field;
-  if (row !== 'tax' || !CSU.edit.registered || CSU.edit.number) { CSU.answered[row] = true; CSU.open[row] = false; }
+  /* R49: a number the checker refuses keeps the row OPEN with the reason on it; any other change to the row re-reads the held number */
+  if (row === 'tax') CSU.taxErr = (CSU.edit.registered && CSU.edit.number) ? csuTaxIdWhy(CSU.edit.country, CSU.edit.number) : '';
+  if (field === 'country') CSU.taxErr = '';
+  if (CSU.taxErr) { CSU.open.tax = true; CSU.answered.tax = false; }
+  else if (row !== 'tax' || !CSU.edit.registered || CSU.edit.number) { CSU.answered[row] = true; CSU.open[row] = false; }
   CSU.touched = true;   /* W24: something moved since the read */
   CSU.err = ''; CSU.saved = false;
   renderCountrySetup();
@@ -338,6 +389,7 @@ function csuTaxRow(e, sources) {
     + csuSel('cs-tax-reg', 'registered', [{ v: 'no', t: tx('Not registered') }, { v: 'yes', t: txf('Registered for {s}', { s: csuScheme(e.country) }) }], e.registered ? 'yes' : 'no')
     + (e.registered && india ? '<span style="display:flex;align-items:center;gap:6px">' + csuSel('cs-tax-scheme', 'scheme', [{ v: 'regular', t: tx('Regular'), title: tx(CSU_SCHEME_WHY.regular) }, { v: 'composition', t: tx('Composition'), title: tx(CSU_SCHEME_WHY.composition) }], e.scheme) + csuSchemeInfo(e.scheme) + '</span>' : '')
     + (e.registered ? '<input class="inp" id="cs-tax-number" data-testid="cs-tax-number" placeholder="' + esc(csuTaxIdHint(e.country)) + '" value="' + esc(e.number) + '" onchange="csuSet(\'number\', this.value)">' : '')
+    + (e.registered && CSU.taxErr ? '<span data-testid="cs-tax-error" role="alert" style="color:var(--red,#b3261e);font-size:.9em">' + esc(CSU.taxErr) + '</span>' : '')
     + '</div>');
 }
 /** WALK-REG R14: the 🔒 on the two rows that lock — Country and Money, at the first product or transaction (server isConstituted); once fixed, why */
@@ -358,8 +410,8 @@ function csuCountryMoneyRows(e, sources, fixed) {
 function csuRowsHTML(e, sources, fixed) {
   return csuCountryMoneyRows(e, sources, fixed)
     + (e.currency ? csuMoneyConfirmHTML(e) : '')
-    + csuRow('fy', tx('Year starts'), esc(monthNames('long')[(e.fy || 1) - 1] || ''), sources.fy_start_month,
-      csuSel('cs-fy', 'fy', monthNames('long').map(function (name, index) { return { v: index + 1, t: name }; }), e.fy))
+    + csuRow('fy', tx('Year starts'), esc(csuMonthNames('long')[(e.fy || 1) - 1] || ''), sources.fy_start_month,
+      csuSel('cs-fy', 'fy', csuMonthNames('long').map(function (name, index) { return { v: index + 1, t: name }; }), e.fy))
     + csuTimezoneRow(e, sources)
     + csuTaxRow(e, sources)
     /* W27(a): the supplies live beside the registration — a tax attribute, not a bill line */

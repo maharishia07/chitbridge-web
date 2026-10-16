@@ -97,6 +97,7 @@
 <script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <script src="/engine/locale.js"></script>   <!-- CBLocale: the rupee written the rupee's way, as on the till's slip -->
 <script src="/engine/tax.js"></script>      <!-- CBTax.splitLineTax: each line's heads, the ONE place tax is worked out (R12: never halved here) · CBRegulation: the pack's tenders -->
+<script src="/engine/docnumber.js"></script> <!-- CBDoc: the bill number as the till writes it, by the shop's country (R49) -->
 <script src="/engine/profilemap.js"></script> <!-- CBProfileMap: India's state from the GSTIN's first two digits (R25) -->
 <script>
 /* ── the bill, as data. The till will hand the same shape to this template. ─────────────────────────────────── */
@@ -164,6 +165,13 @@ function calc(kind){
 var PREVIEW = /[?&]preview=1/.test(location.search), signature = null;
 if (PREVIEW) document.documentElement.setAttribute('data-preview', '1');
 /** the settings page's one message: keep the signature, then repaint the same slip with it (currency, the pack's rate, the kind, the paper) */
+/** the sample bill's number — composed by the ONE composer the till uses (CBDoc.compose), by the shop's country: India's Apr–Mar year (26-27); a country
+ *  whose rule has no year part (the UAE · Australia today) prints none. A preview that has not been told a country is the Indian sample shop. */
+function billNo(){
+  try { if (window.CBDoc && typeof CBDoc.compose === 'function') return CBDoc.compose({ country: (signature && signature.country) || 'IN', prefix: 'C1', seq: 41, at: BILL.at }); }
+  catch (failure) { if (window.cbQuiet) window.cbQuiet('bill-print:billNo', failure); }
+  return BILL.no;
+}
 function onPreviewMessage(event){
   var message = event.data; if (!message || !message.cb_preview) return;
   signature = message;
@@ -217,7 +225,7 @@ function render(){
     + '<div class="c b">' + title + '</div>'
     + (kind === 'tax' ? stateLine() : '')
     + '<div class="rule"></div>'
-    + '<div class="row small"><span class="l">No ' + esc(BILL.no) + '</span><span class="v">' + esc(when(BILL.at)) + '</span></div>'
+    + '<div class="row small"><span class="l">No ' + esc(billNo()) + '</span><span class="v">' + esc(when(BILL.at)) + '</span></div>'
     + '<div class="row small"><span class="l">' + esc(BILL.till) + ' · ' + esc(BILL.by) + '</span><span class="v">' + esc(BILL.customer.name) + '</span></div>'
     + '<div class="rule"></div>';
 

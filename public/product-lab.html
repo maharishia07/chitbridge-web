@@ -184,8 +184,14 @@ function have(r){ return !!DATA._have[keyOf(r)]; }
  * because this page will never change it — adopting SKIPS what the shop has, it does not overwrite.
  * (Athi: *"as per the stores catalogue, not from here, because we don't update the price."*)
  */
+/* ⚠️ THE STARTER TABLES ARE PRICED IN RUPEES (the lists are Chennai's) and carry no currency of their own. A suggestion is shown only on a
+   shop of the table's own money; any other shop gets a blank — a rupee figure under "AED" is a wrong price, not a hint. The local-name
+   languages (Tamil, Hindi…) belong to the same table: no list exists for another country, so that control is hidden there. */
+var TABLE_CURRENCY = 'INR';
+function tableFits(){ return !DATA || !DATA.currency || DATA.currency === TABLE_CURRENCY; }
+function suggestedOf(row){ return tableFits() ? row.price : null; }
 function priceOf(r){
-  if (!have(r)) return { n: r.price, whose: 'suggested' };
+  if (!have(r)) return { n: suggestedOf(r), whose: tableFits() ? 'suggested' : '' };
   var m = DATA._mine[keyOf(r)];
   return { n: (m && m.price != null) ? m.price : null, whose: 'yours' };
 }
@@ -211,7 +217,7 @@ function shown(){
   });
 }
 function localOf(r){
-  var n = r.names || {}, out = [];
+  var n = tableFits() ? (r.names || {}) : {}, out = [];
   (LANGS.length ? LANGS : Object.keys(n)).forEach(function(l){ (n[l] || []).forEach(function(w){
     if (out.indexOf(w) < 0) out.push(w); }); });
   return out.join(', ');
@@ -269,7 +275,7 @@ function buildChoose(){
         return '<button class="pill ' + (l.key === LIST.key ? 'on' : '') + '" data-testid="pl-list-' + esc(l.key)
           + '" onclick="pickList(\'' + esc(l.key) + '\')">' + esc(l.label) + ' <b>' + l.count + '</b></button>';
       }).join('') + '</div>'
-    + '<div class="row" id="langs" data-testid="pl-langs">' + (LIST.languages.length
+    + '<div class="row" id="langs" data-testid="pl-langs">' + (!tableFits() ? '' : LIST.languages.length
         ? '<span class="note">Also carry the local name:</span> ' + LIST.languages.map(function(l){
             return '<button class="pill ' + (LANGS.indexOf(l) >= 0 ? 'on' : '') + '" data-testid="pl-lang-' + esc(l)
               + '" onclick="toggleLang(\'' + esc(l) + '\')">' + esc((DATA.language_names || {})[l] || l) + '</button>';
@@ -326,7 +332,7 @@ function paintRows(){
       + '<td class="loc">' + esc(localOf(r)) + '</td>'
       + '<td>' + esc(r.unit) + '</td>'
       + '<td class="num">' + fmtMoney(pr.n, DATA.currency || 'INR', '—')
-        + '<div class="whose">' + (pr.whose === 'yours' ? 'yours' : 'suggested') + '</div></td>'
+        + (pr.whose ? '<div class="whose">' + (pr.whose === 'yours' ? 'yours' : 'suggested') + '</div>' : '') + '</td>'
       + '<td class="loc">' + esc(r.category || '') + '</td></tr>');
   });
   document.getElementById('tablewrap').innerHTML = rows.length
@@ -407,7 +413,7 @@ function pick(on, name, unit){
   if (on) {
     /* ⭐ the ROW is the source of the price and shelf — not the handler, which now carries only identity */
     var row = (LIST.rows || []).filter(function(r){ return r.name === name && r.unit === unit; })[0] || {};
-    PICKED[k] = { name: name, unit: unit, price: row.price, category: row.category || null };
+    PICKED[k] = { name: name, unit: unit, price: suggestedOf(row), category: row.category || null };
   } else delete PICKED[k];
   paintFoot(); paintSteps();
 }
@@ -415,7 +421,7 @@ function pickAll(on){
   shown().forEach(function(r){
     if (have(r)) return;
     var k = keyOf(r);
-    if (on) PICKED[k] = { name: r.name, unit: r.unit, price: r.price, category: r.category || null };
+    if (on) PICKED[k] = { name: r.name, unit: r.unit, price: suggestedOf(r), category: r.category || null };
     else delete PICKED[k];
   });
   paint();

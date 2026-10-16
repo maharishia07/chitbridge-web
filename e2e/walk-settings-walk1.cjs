@@ -128,14 +128,14 @@ const walk = async (w) => {
   await w.step('A9', 'W25 · change the legal name → Save → ONE PUT carrying the version and a merge-patch of that row only (identity|, t:legal_name), nothing else', async () => {
     const before = puts().length;
     const inp = page.locator('[data-testid="vault-only-identity"] input').nth(1);   /* WALK-REG 2026-10-16: no section label input on Your shop — the legal-name row's NAME, then its VALUE */
-    await inp.fill('Austore One Pty Ltd (new)'); await page.click('[data-testid="vault-save"]'); await page.waitForTimeout(600);
+    await inp.fill('Austore One Pty Ltd (new)'); await inp.press('Tab'); await page.waitForTimeout(1300);   /* WALK-REG 2026-10-16 R19: the field saves itself on change (no Save button) */
     const put = puts().slice(before)[0], b = (put && put.body) || {};
     const sec = b.patch && b.patch.sections && b.patch.sections['identity|'], rows = sec && sec.rows ? Object.keys(sec.rows) : [];
     return { ok: puts().length === before + 1 && b.version === '1001' && rows.length === 1 && rows[0] === 't:legal_name' && /new\)/.test(JSON.stringify(sec.rows)) && !b.vault, saw: JSON.stringify(b).slice(0, 160) };
   });
   await w.step('A10', 'W25 · the server says 409 (another screen saved first) → "Changed since you opened it — reload?" painted with a Reload button; Reload re-reads the vault', async () => {
     S.conflict = true;
-    const inp = page.locator('[data-testid="vault-only-identity"] input').nth(1); await inp.fill('Austore Two'); await page.click('[data-testid="vault-save"]'); await page.waitForTimeout(600);
+    const inp = page.locator('[data-testid="vault-only-identity"] input').nth(1); await inp.fill('Austore Two'); await inp.press('Tab'); await page.waitForTimeout(1300);   /* WALK-REG 2026-10-16 R19: autosave on change */
     const said = await txt('[data-testid="vault-conflict"]'), btn = await has('[data-testid="vault-reload"]');
     await page.click('[data-testid="vault-reload"]'); await page.waitForTimeout(500);
     const after = await page.locator('[data-testid="vault-only-identity"] input').nth(1).inputValue();
@@ -158,7 +158,8 @@ const walk = async (w) => {
   });
   await w.step('A13', 'W18 · a sign-in older than the list: THIS device is still listed, marked "This one", from the page\'s own session', async () => {
     const row = await txt('[data-row]'), tag = await has('[data-testid^="sx-ses-current-"]'), legacy = await txt('[data-testid="sx-ses-legacy"]');
-    return { ok: tag && /This one/.test(row) && /older than the list/.test(legacy), saw: '"' + row.slice(0, 60) + '" · "' + legacy.slice(0, 60) + '"' };
+    /* WALK-REG 2026-10-16 R43: the tag now says "without a device name" (was "older than the list - sign in again", which signing in again could not cure) */
+    return { ok: tag && /This one/.test(row) && /device name/.test(legacy), saw: '"' + row.slice(0, 60) + '" · "' + legacy.slice(0, 60) + '"' };
   });
   await w.step('A14', 'W22/W23 · WALK-REG 2026-10-16: removed by decision — the trade-documents vault (section picker) is not on a local shop\'s Account', async () => {
     const hidden = await page.$eval('[data-testid="sx-vault-wrap"]', (n) => n.hidden).catch(() => false);
