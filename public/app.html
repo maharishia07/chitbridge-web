@@ -14374,9 +14374,21 @@ function chitMarkPaid(id, amount){
     <span class="cbdef-adorn" style="display:flex;align-items:center;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--on-card);overflow:hidden"><b style="padding:0 10px;color:var(--grey-2);font-size:var(--fs-2)">${esc((typeof CBLocale!=='undefined'&&CBLocale.symbol)?CBLocale.symbol((SESSION&&SESSION.currency)||'INR'):'₹')}</b><input class="inp" id="pay_amount" data-testid="pay-amount" type="number" step="0.01" value="${esc(String(amount||''))}" placeholder="${esc(tx('Amount'))}" style="border:0;margin:0;flex:1;min-width:0;background:transparent"></span></div>
     <div class="mfoot"><button onclick="closeModal()">${esc(tx('Cancel'))}</button><button class="pri" id="mok" data-testid="pay-ok" onclick="chitPaySubmit('${id}')">${esc(tx('Record'))}</button></div>`);
 }
-async function chitPaySubmit(id){
+/** what the Mark-paid form holds: the method (UPI when the shop has it, else cash), the reference and the amount (NaN when left empty) */
+function readPayForm(){
   const method=(document.getElementById('pay_method')||{}).value||(payHasUpi()?'upi':'cash'), ref=(document.getElementById('pay_ref')||{}).value||'', amount=parseFloat((document.getElementById('pay_amount')||{}).value);
-  try{ const r=await api('chitPay', { params:{ id }, body:{ method, ref: ref||undefined, amount: isFinite(amount)?amount:undefined, client_ref: PAY_PRESS_REF||undefined } }); closeModal(); toast(r&&r.replayed?tx('Already recorded'):tx('Payment recorded ✓')); const c=UI.rows&&UI.rows.find(x=>x.id===id); if(c){ c.business_json=Object.assign({}, c.business_json||{}, { payment:r.payment }); if(c.header) c.header.business_json=Object.assign({}, c.header.business_json||{}, { payment:r.payment }); } if(typeof openChit==='function') openChit(id, true); }
+  return { method, ref, amount };
+}
+/** put the recorded payment on the list's copy of the chit (both the row and its header) so the sheet repaints with it before the refetch */
+function rememberPayment(id, payment){
+  const row=UI.rows&&UI.rows.find(x=>x.id===id); if(!row) return;
+  row.business_json=Object.assign({}, row.business_json||{}, { payment });
+  if(row.header) row.header.business_json=Object.assign({}, row.header.business_json||{}, { payment });
+}
+/** record the payment once per press (PAY_PRESS_REF is the idempotency reference); a replay says "Already recorded" */
+async function chitPaySubmit(id){
+  const form=readPayForm();
+  try{ const answer=await api('chitPay', { params:{ id }, body:{ method: form.method, ref: form.ref||undefined, amount: isFinite(form.amount)?form.amount:undefined, client_ref: PAY_PRESS_REF||undefined } }); closeModal(); toast(answer&&answer.replayed?tx('Already recorded'):tx('Payment recorded ✓')); rememberPayment(id, answer.payment); if(typeof openChit==='function') openChit(id, true); }
   catch(e){ toast((e&&e.message)||tx('Could not record'), true); }
 }
 async function chitUnpay(id){

@@ -16,6 +16,11 @@
  *
  * ⚠️ Declares only `var` / function names the app does not declare with let/const (EP, CFG, SESSION, UI are the host
  * page's own). ⚠️ NEVER the banned words on a screen — it is the Ledger / CB Accounts.
+ *
+ * OWNS      the string door (tx), toast, CBAction, CBLedger, CBUnsaved (never lose in-progress work) and the page-level CBConfirm.
+ * CALLED BY app.html, accounts.html, index.html (Ledger tile), settings.html and every small page that frames itself with CBFrame.
+ * FLOW      core.js → accounts-shell.js (tx · toast · CBAction · CBUnsaved) → the page's own script → CBUnsaved.form() per screen → leave() on a move
+ * CARD      29-qa-test-tooling-ux-locale-and-design-system/accounts-shell
  */
 'use strict';
 
@@ -450,42 +455,50 @@ var CBAction = (function () {
  * Also the browser's own leave (beforeunload) while something moved — the browser's sentence, since ours cannot be shown there.
  */
 var CBUnsaved = (function () {
-  var S = { forms: [] };
-  function reset() { S.forms = []; }
-  function form(o) { if (o && typeof o.dirty === 'function') S.forms.push(o); return o; }
+  var state = { forms: [] };
+  var NEVER_TYPED_TYPES = ['hidden', 'button', 'submit'];
+  function reset() { state.forms = []; }
+  function form(registration) { if (registration && typeof registration.dirty === 'function') state.forms.push(registration); return registration; }
+  /** did this ONE field's value leave what the screen painted (a select: its chosen option is not the painted one)? */
+  function fieldMoved(field) {
+    if (field.tagName === 'SELECT') { var chosen = field.options[field.selectedIndex]; return !!chosen && !chosen.defaultSelected && !!field.querySelector('option[selected]'); }
+    if (field.type === 'checkbox' || field.type === 'radio') return field.checked !== field.defaultChecked;
+    return field.value !== field.defaultValue;
+  }
+  /** a field the person does not type into (disabled · hidden · a button · marked data-unsaved-ignore) is never "unsaved" */
+  function isTypedField(field) { return !(field.disabled || NEVER_TYPED_TYPES.indexOf(field.type) >= 0 || field.hasAttribute('data-unsaved-ignore')); }
   /** any input, select or textarea under host whose value left what the screen painted (a repaint after Save paints the saved values) */
   function domDirty(host) {
-    var h = typeof host === 'string' ? document.getElementById(host) : host; if (!h) return false;
-    var els = h.querySelectorAll('input,textarea,select'), i, e;
-    for (i = 0; i < els.length; i++) {
-      e = els[i];
-      if (e.disabled || e.type === 'hidden' || e.type === 'button' || e.type === 'submit' || e.hasAttribute('data-unsaved-ignore')) continue;
-      if (e.tagName === 'SELECT') { var sel = e.options[e.selectedIndex]; if (sel && !sel.defaultSelected && e.querySelector('option[selected]')) return true; continue; }
-      if (e.type === 'checkbox' || e.type === 'radio') { if (e.checked !== e.defaultChecked) return true; continue; }
-      if (e.value !== e.defaultValue) return true;
-    }
-    return false;
+    var root = typeof host === 'string' ? document.getElementById(host) : host; if (!root) return false;
+    return Array.prototype.some.call(root.querySelectorAll('input,textarea,select'), function (field) { return isTypedField(field) && fieldMoved(field); });
   }
-  function dirtyForms() { return S.forms.filter(function (f) { try { return !!f.dirty(); } catch (e) { if (typeof cblog === 'function') cblog('error', 'unsaved: a dirty test threw: ' + ((e && e.message) || e)); return false; } }); }
+  function dirtyForms() { return state.forms.filter(function (registration) { try { return !!registration.dirty(); } catch (e) { if (typeof cblog === 'function') cblog('error', 'unsaved: a dirty test threw: ' + ((e && e.message) || e)); return false; } }); }
   function isDirty() { return dirtyForms().length > 0; }
-  function leave(go, stay) {
-    var moved = dirtyForms();
-    if (!moved.length) return go();
-    var savers = moved.filter(function (f) { return typeof f.save === 'function'; });
-    var body = esc(tx(savers.length ? 'Save or discard what you typed?' : 'What you typed here is not saved. Discard it?'));
-    if (savers.length) {
-      CBConfirm(tx('Unsaved changes'), body, tx('Save'), function () {
-        Promise.all(savers.map(function (f) { return Promise.resolve().then(f.save); })).then(function () { reset(); go(); }, function (e) { if (typeof toast === 'function') toast(CBAction.words(e, tx('Could not save'))); if (stay) stay(); });
-      }, false, function () { reset(); go(); });
-      var cancel = document.querySelector('#cb_confirm [data-testid="confirm-cancel"]'); if (cancel) { cancel.textContent = tx('Discard'); cancel.setAttribute('data-testid', 'confirm-discard'); }
-    } else {
-      CBConfirm(tx('Unsaved changes'), body, tx('Discard'), function () { reset(); go(); }, true, function () { if (stay) stay(); });
-      var stayBtn = document.querySelector('#cb_confirm [data-testid="confirm-cancel"]'); if (stayBtn) stayBtn.textContent = tx('Stay');
-    }
+  /** the confirm for forms that can save: Save then proceed, Discard (the Cancel button renamed) goes, ✕ / Escape = Discard */
+  function askSaveOrDiscard(savers, body, proceed, stay) {
+    CBConfirm(tx('Unsaved changes'), body, tx('Save'), function () {
+      Promise.all(savers.map(function (registration) { return Promise.resolve().then(registration.save); })).then(function () { reset(); proceed(); }, function (e) { if (typeof toast === 'function') toast(CBAction.words(e, tx('Could not save'))); if (stay) stay(); });
+    }, false, function () { reset(); proceed(); });
+    var cancel = document.querySelector('#cb_confirm [data-testid="confirm-cancel"]'); if (cancel) { cancel.textContent = tx('Discard'); cancel.setAttribute('data-testid', 'confirm-discard'); }
   }
-  if (typeof window !== 'undefined') window.addEventListener('beforeunload', function (ev) { if (isDirty()) { ev.preventDefault(); ev.returnValue = ''; } });
+  /** the confirm for forms with nothing to save: Discard goes, Stay (the Cancel button renamed) stays */
+  function askDiscard(body, proceed, stay) {
+    CBConfirm(tx('Unsaved changes'), body, tx('Discard'), function () { reset(); proceed(); }, true, function () { if (stay) stay(); });
+    var stayButton = document.querySelector('#cb_confirm [data-testid="confirm-cancel"]'); if (stayButton) stayButton.textContent = tx('Stay');
+  }
+  /** the router asks before painting the next screen: nothing moved → proceed(); moved → the confirm that fits (can some form save?) */
+  function leave(proceed, stay) {
+    var moved = dirtyForms();
+    if (!moved.length) return proceed();
+    var savers = moved.filter(function (registration) { return typeof registration.save === 'function'; });
+    var body = esc(tx(savers.length ? 'Save or discard what you typed?' : 'What you typed here is not saved. Discard it?'));
+    if (savers.length) askSaveOrDiscard(savers, body, proceed, stay);
+    else askDiscard(body, proceed, stay);
+  }
+  if (typeof window !== 'undefined') window.addEventListener('beforeunload', function (event) { if (isDirty()) { event.preventDefault(); event.returnValue = ''; } });
   return { form: form, reset: reset, leave: leave, isDirty: isDirty, domDirty: domDirty };
 })();
+
 
 /**
  * ⭐ THE CONFIRM FOR A PAGE THAT IS NOT THE APP — one native <dialog>, used by accounts.html (it is that page's confirmAsk)
