@@ -11,6 +11,7 @@ ok(/data-testid="cs-confirm"[^>]*onclick="csuSave\(\)"/.test(country), 'N0: one 
 ok(/\(assumed\) — confirm or change/.test(country), 'N0: the sentence names the country and both ways out');
 
 
+/* ── N1 · N2 · N4: the helpers, run as the page runs them (engines + helpers.js in one sandbox, no browser) ── */
 const vm = require('vm');
 const win = {}; const el0 = () => ({ style: {}, classList: { toggle() {}, add() {}, remove() {} }, setAttribute() {}, appendChild() {}, addEventListener() {} });
 const sandbox = { window: win, console, setTimeout, clearTimeout, document: { getElementById: () => null, querySelector: () => null, querySelectorAll: () => [], createElement: el0, addEventListener() {}, body: el0(), head: el0() }, localStorage: { getItem: () => null, setItem() {}, removeItem() {} }, navigator: { language: 'en-IN' } };
@@ -44,6 +45,17 @@ run('SESSION.country = "AU"; SESSION.currency = "AUD";');
 ok(run('packSplitsByState()') === false && run('payHasUpi()') === false && run('moneyCode()') === 'AUD', 'AU shop: no state split, no UPI, its own money');
 ok(run('moneyCode("usd")') === 'USD', 'a row\'s own currency wins over the shop\'s');
 
+/* N4: the books year starts where the setting or the pack says - no April of our own */
+const books = fs.readFileSync(__dirname + '/../public/app/cap-books.js', 'utf8');
+const startAt = books.indexOf('function bkYearStart()');
+const yearFn = books.slice(startAt, books.indexOf('\n', startAt));
+ok(!/\|\|\s*4\b|:\s*4\b/.test(yearFn), 'N4: bkYearStart has no "|| 4" / ": 4" fallback');
+const withYear = vm.createContext({ BK: { year: { start_month: 7 } }, shopReg: () => ({ fiscalYear: { startMonth: 4 } }) });
+vm.runInContext('function bkFyPack(){ return shopReg(); }' + yearFn, withYear);
+ok(vm.runInContext('bkYearStart()', withYear) === 7, 'N4: the books setting\'s start month wins');
+vm.runInContext('BK.year = null', withYear); ok(vm.runInContext('bkYearStart()', withYear) === 4, 'N4: else the pack\'s fiscalYear.startMonth (India: 4)');
+const noYear = vm.createContext({ BK: {}, shopReg: () => null }); vm.runInContext('function bkFyPack(){ return shopReg(); }' + yearFn, noYear);
+ok(vm.runInContext('bkYearStart()', noYear) === 1, 'N4: neither known -> the calendar year (1), never April');
 
 /* N1: the screens the sweep touched hold no INR fallback (read by literal path, so the module trace sees this test) */
 const path = require('path');

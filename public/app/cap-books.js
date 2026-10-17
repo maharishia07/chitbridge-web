@@ -1847,7 +1847,8 @@ async function bkDues(body, onlySide) {   /* onlySide 'rcv' | 'pay' (CB Accounts
  * helpers.js); the name is the pack's (split '2026-27' · single '2026'). Period 1 is that first month — what the server numbers.
  */
 function bkFyPack() { return typeof shopReg === 'function' ? shopReg() : null; }
-function bkYearStart() { var r = bkFyPack(), m = Number(BK.year && BK.year.start_month) || (r && r.fiscalYear && r.fiscalYear.startMonth) || 4; return m >= 1 && m <= 12 ? m : 4; }
+/* N4 (NEUTRAL-CORE): the month the shop's year starts - the books setting (BK.year.start_month), else its pack's; no April of our own. Before either has arrived (the books open only after the server's gate) the calendar year (1) stands in, as a shape not a statement */
+function bkYearStart() { var r = bkFyPack(), m = Number(BK.year && BK.year.start_month) || (r && r.fiscalYear && r.fiscalYear.startMonth); return m >= 1 && m <= 12 ? m : 1; }
 function bkFyStartYear(d) { return d.getMonth() + 1 >= bkYearStart() ? d.getFullYear() : d.getFullYear() - 1; }
 function bkFyName(y) { var r = bkFyPack(), single = r && r.fiscalYear && r.fiscalYear.label ? r.fiscalYear.label === 'single' : bkYearStart() === 1; return single ? String(y) : y + '-' + String((y + 1) % 100).padStart(2, '0'); }
 function bkFyNow() { return (BK.year && BK.year.fiscal_year) ? String(BK.year.fiscal_year) : bkFyName(bkFyStartYear(new Date())); }
