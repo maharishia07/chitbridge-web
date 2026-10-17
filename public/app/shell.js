@@ -419,6 +419,22 @@
     var word = countryWord(e.word);
     return word ? '<span data-word="' + esc(e.word) + '">' + esc(T(word)) + '</span>' : esc(T(e.name));
   }
+  /* Home's tiles and chips, said again IN PLACE when a pack lands after the manifest painted them (walk-locale L-home: 26 vs 100 by who won
+     the race). In place, not a repaint: that would wipe the facts and states readFacts already wrote. */
+  function resayTiles(pageEl, manifest) {
+    if (!manifest) return;
+    var entryById = {}; (manifest.entries || []).forEach(function (entry) { if (entry && entry.id) entryById[entry.id] = entry; });
+    [].forEach.call(pageEl.querySelectorAll('.cbsh-box[data-id]'), function (tile) {
+      var entry = entryById[tile.getAttribute('data-id')]; if (!entry) return;
+      var title = tile.querySelector('h4'); if (title) title.innerHTML = entryName(entry);
+      var purpose = tile.querySelector('.what'); if (purpose && entry.what) { purpose.textContent = T(entry.what); purpose.setAttribute('title', T(entry.what)); }
+    });
+    [].forEach.call(pageEl.querySelectorAll('.cbsh-sc[data-testid^="shell-chip-"]'), function (chip) {
+      var entry = entryById[chip.getAttribute('data-testid').slice('shell-chip-'.length)]; if (!entry) return;
+      var label = chip.querySelector('b'); if (label) label.innerHTML = entryName(entry);
+      var tag = chip.querySelector('.tag'), chipState = chip.getAttribute('data-state'); if (tag && W.tag[chipState]) tag.textContent = T(W.tag[chipState]);
+    });
+  }
   function paintCountryWords(pageDoc) {
     Array.prototype.forEach.call(pageDoc.querySelectorAll('[data-word]'), function (node) {
       var word = countryWord(node.getAttribute('data-word')); if (word) node.textContent = T(word);
@@ -689,24 +705,8 @@
       if (titleWord && o.title) titleWord.textContent = T(o.title.name || '');
       paintSwitcher();
       AREAS.forEach(function (area) { var label = $('.cbsh-nv[data-go="' + area + '"] .t'); if (label) label.textContent = T(W.areas[area]); });
-      resayTiles();
+      if (mode === 'home') resayTiles(el, S.manifest);
     };
-    /* Home's tiles and chips, said again IN PLACE when a pack lands after the manifest painted them (walk-locale L-home: 26 vs 100 by who won
-       the race). In place, not paintAreas(): a repaint would wipe the facts and states readFacts already wrote. */
-    function resayTiles() {
-      if (mode !== 'home' || !S.manifest) return;
-      var byId = {}; (S.manifest.entries || []).forEach(function (e) { if (e && e.id) byId[e.id] = e; });
-      [].forEach.call(el.querySelectorAll('.cbsh-box[data-id]'), function (n) {
-        var e = byId[n.getAttribute('data-id')]; if (!e) return;
-        var h = n.querySelector('h4'); if (h) h.innerHTML = entryName(e);
-        var w = n.querySelector('.what'); if (w && e.what) { w.textContent = T(e.what); w.setAttribute('title', T(e.what)); }
-      });
-      [].forEach.call(el.querySelectorAll('.cbsh-sc[data-testid^="shell-chip-"]'), function (n) {
-        var e = byId[n.getAttribute('data-testid').slice('shell-chip-'.length)]; if (!e) return;
-        var b = n.querySelector('b'); if (b) b.innerHTML = entryName(e);
-        var t = n.querySelector('.tag'), st = n.getAttribute('data-state'); if (t && W.tag[st]) t.textContent = T(W.tag[st]);
-      });
-    }
 
     /* ── the kural: the footer band on a laptop; once, at the foot of Home, on a phone ── */
     function placeKural() {
