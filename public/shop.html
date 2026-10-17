@@ -677,7 +677,7 @@ function shopBasketSummary(){
  * The amount is the server's total for the order; nothing here is charged or promised.
  */
 function shopUpiLink(upi, name, amount, ref){
-  var q='pa='+encodeURIComponent(upi)+'&pn='+encodeURIComponent(String(name||'').slice(0,60))+(amount?'&am='+encodeURIComponent(String(Math.round(Number(amount)*100)/100)):'')+'&cu=INR&tn='+encodeURIComponent('CB-'+String(ref||'').slice(0,8));
+  var q='pa='+encodeURIComponent(upi)+'&pn='+encodeURIComponent(String(name||'').slice(0,60))+(amount?'&am='+encodeURIComponent(String(Math.round(Number(amount)*100)/100)):'')+'&cu='+encodeURIComponent((typeof _SHOPDATA!=='undefined'&&_SHOPDATA&&_SHOPDATA.shop&&_SHOPDATA.shop.currency_code)||'')+'&tn='+encodeURIComponent('CB-'+String(ref||'').slice(0,8));
   return 'upi://pay?'+q;
 }
 function shopUpiBlock(res, isCart){

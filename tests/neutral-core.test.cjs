@@ -72,6 +72,14 @@ for (const screen of Object.keys(screens)) {
   ok(!/'INR'/.test(text), 'N1: ' + screen + ' holds no INR fallback');
 }
 
+/* N1 (app.html, shop.html): the pay field, the UPI links and the currency list state no India */
+const appSource = fs.readFileSync(path.join(__dirname, '..', 'public', 'app.html'), 'utf8');
+const shopSource = fs.readFileSync(path.join(__dirname, '..', 'public', 'shop.html'), 'utf8');
+ok(!appSource.includes('&cu=INR') && appSource.includes("'&cu='+encodeURIComponent(moneyCode()||'')"), 'N1: the UPI link carries the shop money, not a typed INR');
+ok(!shopSource.includes('&cu=INR') && shopSource.includes('_SHOPDATA.shop.currency_code'), 'N1: the storefront UPI link carries the shop money, not a typed INR');
+ok(appSource.includes("CBLocale.symbol(moneyCode()):'')}</b>"), 'N1: the pay-amount field shows the shop symbol, none when no money is stated (no rupee sign)');
+ok(/\['CHF','Swiss Franc . 2dp'\]\]\.sort\(/.test(appSource), 'N1: the currency list is sorted by code - none leads');
+
 /* the ratchet itself */
 const guard = require('child_process').spawnSync(process.execPath, [__dirname + '/../e2e/neutral-literals-guard.cjs'], { encoding: 'utf8' });
 ok(guard.status === 0, 'N1: the literal ratchet passes (' + (guard.stdout || '').trim().split('\n').pop().trim() + ')');

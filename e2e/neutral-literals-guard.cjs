@@ -25,11 +25,11 @@ const fs = require('fs'), path = require('path');
 const PUB = path.join(__dirname, '..', 'public');
 const LIST = process.argv.includes('--list');
 
-const NEUTRAL = /'INR'|"INR"|Asia\/Kolkata|en-IN/g;
+const NEUTRAL = /'INR'|"INR"|cu=INR|Asia\/Kolkata|en-IN/g;
 const SKIP = [/^engine\//, /^vendor\//, /^data\//, /^lab\//, /^pics\//, /^docs\//, /^till\.html$/, /^promo\.html$/, /-lab(-next)?\.html$/, /-design\.html$/, /^screen-gallery\.html$/, /^design-mock\.html$/, /^testing\.html$/];
 const ALLOW = {
   'app/cap-admin.js': { max: 4, why: 'locale demo rows (lakh grouping shown beside USD), the en-IN entry of the format list, and the zone pickers fallback list' },
-  'app/cap-standards.js': { max: 5, why: 'the Standards glossary: tag and zone EXAMPLES (en-IN, Asia/Kolkata) and what INR is - documentation, not a default' },
+  'app/cap-standards.js': { max: 6, why: 'the Standards glossary: tag, zone and UPI-link EXAMPLES (en-IN, Asia/Kolkata, cu=INR) and what INR is - documentation, not a default' },
   'app/cap-country.js': { max: 2, why: 'the lakh-words choice and the lakh-pack test: an India-pack path (rupee grouping), chosen by the money own tag' },
   'app.html': { max: 1, why: 'CURRENCIES: the currency picker names every ISO code, INR among them' },
   'bill-print.html': { max: 1, why: 'the sample shop of the print preview (a demo bill, not a real shop record)' },
