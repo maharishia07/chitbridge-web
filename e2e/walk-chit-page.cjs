@@ -162,7 +162,7 @@ const walk = async (w) => {
     await page.goBack(); await page.waitForTimeout(500); const back = await page.evaluate(() => location.hash);
     return { ok: hash === '#/chit/ch1' && dlgOpen === 0 && hist === 1 && popupPrint === 1 && back === '#/chits', saw: 'landed ' + hash + ' · popup closed ' + (dlgOpen === 0) + ' · back ' + back };
   });
-  await w.step('C15', 'The three ledger pages\' "Open page" and the registry point at CB CRM, none at the workshop (static)', async () => {
+  await w.step('C15', 'The three ledger pages\' "Open page" and the registry point at CRM, none at the workshop (static)', async () => {
     const rd = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
     const pages = ['accounts.html', 'finance.html', 'crm.html'].map((f) => { const s = rd(f); return f + ':' + (/function openChitPage\([^)]*\)\{[^\n]*chitPageHref/.test(s) && !/openChitPage[^\n]*app\.html/.test(s)); });
     const reg = JSON.parse(rd('app/pages.json')), baseRow = reg.pages.find((r) => r.name + '@' + r.version === reg.base);

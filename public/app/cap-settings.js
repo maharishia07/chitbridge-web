@@ -255,7 +255,7 @@ var CBSettings = (function () {
   function keysSection(after) {
     var kl = null;
     var keyRows = function () { var d = H.data.keys; return (d && d.r && d.r.keys) || []; };
-    function heard(k) { return k.seen && k.seen.at ? _keyAgo(k.seen.at) + (k.seen.ip ? ' · ' + k.seen.ip : '') : T('Never reached ChitBridge'); }
+    function heard(k) { return k.seen && k.seen.at ? _keyAgo(k.seen.at) + (k.seen.ip ? ' · ' + k.seen.ip : '') : T('Never reached us'); }
     function paintKeyBar() {
       $('sx_key_bar').innerHTML = bar('<span class="sx-add"><label class="sx-lbl" for="sx_key_name">' + esc(T('New key')) + '</label><input class="inp" id="sx_key_name" data-testid="sx-key-name" placeholder="' + esc(T('Which system')) + '" maxlength="80">'
         + '<label class="sx-lbl" for="sx_key_scope">' + esc(T('This key can')) + '</label><select class="inp" id="sx_key_scope" data-testid="sx-key-scope">' + keyKinds().map(function (kind) { return '<option value="' + esc(kind[0]) + '">' + esc(T(kind[1])) + '</option>'; }).join('') + '</select>'
@@ -554,7 +554,7 @@ var CBSettings = (function () {
   }
 
   /* ═════ ACCOUNT (T3-P4-ACCOUNT) — Sessions (GET /signin/sessions · the owner's devices) · API keys (a door to the one list) · Vault (cap-shop.js's card, every section) ═════ */
-  var SURFACE_WORDS = { till: 'Counter', index: 'Home', app: 'Workshop', web: 'Web', settings: 'CB Settings', finance: 'CB Finance', accounts: 'CB Accounts', crm: 'CB CRM', tasks: 'CB Tasks & Orders', shop: 'Online shop', kyb: 'Know your business', employees: 'CB Employees', network: 'Network' };
+  var SURFACE_WORDS = { till: 'Counter', index: 'Home', app: 'Workshop', web: 'Web', settings: 'Settings', finance: 'Finance', accounts: 'Accounts', crm: 'CRM', tasks: 'Tasks & Orders', shop: 'Online shop', kyb: 'Know your business', employees: 'Employees', network: 'Network' };
   var CURRENT_WHY = 'The device you are on — use Sign out in the menu.';
   /* WALK-REG R21/R43 (drift walk, 16 Oct): the trade-documents vault is export paperwork — kept for the workshop and forms, hidden on a local
    * shop's Account until export is switched on (no opt-in flag yet; the host stays so the vault code keeps its target) */
@@ -662,7 +662,7 @@ var CBSettings = (function () {
       $('sx_keys_card').innerHTML = '<div class="sx-card">' + (d.state === 'loading' ? '<div class="loadwrap"><span class="spin"></span> ' + esc(T('Reading your keys…')) + '</div>'
         : d.state === 'error' ? '<div class="err" data-testid="sx-keys-err">' + esc(listErr('keys').title) + '</div>'
         : '<div class="sx-big" data-testid="sx-keys-count">' + keys.length + ' ' + esc(T(keys.length === 1 ? 'key' : 'keys')) + '</div>'
-          + '<p class="sub" data-testid="sx-keys-last">' + esc(latest && latest.seen && latest.seen.at ? T('Last heard') + ': ' + (latest.name || 'key') + ' · ' + _keyAgo(latest.seen.at) : keys.length ? T('None has reached ChitBridge yet.') : T('No keys yet')) + '</p>')
+          + '<p class="sub" data-testid="sx-keys-last">' + esc(latest && latest.seen && latest.seen.at ? T('Last heard') + ': ' + (latest.name || 'key') + ' · ' + _keyAgo(latest.seen.at) : keys.length ? T('None has reached us yet.') : T('No keys yet')) + '</p>')
         + '<a class="sx-link" href="/settings.html#/connectors" data-testid="sx-keys-door">' + esc(T('Make, see or revoke a key')) + ' ›</a></div>';
     }
     load('keys', 'keysList', null, paintKeys);

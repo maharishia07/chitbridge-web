@@ -139,12 +139,12 @@ function crmRealEmail(v) {
 /* ── the chips: a status is an icon AND a word; the server's verdict (on_chitbridge · why_not · kind) decides, the page only words it ── */
 function crmRailChip(p) {
   if (p.kind === 'walk-in') return '<span class="tag walk" title="' + esc(tx('Phone only — points at the counter')) + '">' + crmIcon('walk') + esc(tx('Walk-in')) + '</span>';
-  if (p.on_chitbridge) return '<span class="tag on" title="' + esc(tx('Bills and messages reach them in their app')) + '">' + crmIcon('link') + esc(tx('On ChitBridge')) + '</span>';
+  if (p.on_chitbridge) return '<span class="tag on" title="' + esc(tx('Bills and messages reach them in their app')) + '">' + crmIcon('link') + esc(tx('On the network')) + '</span>';
   /* WX-L2C (2026-10-13, real stack): a MINTED party (the server's kind 'local' — every lead, every party added by name) carries a bridge_id too;
      it is Local, never a shopper account. The server's kind decides first; the bridge_id heuristic only for a party the server did not call local. */
   var shop = p.why_not === 'shopper' || (p.kind !== 'local' && !!p.bridge_id && p.why_not !== 'inactive' && p.why_not !== 'other_population');
   var w = p.why_not === 'inactive' ? tx('Account inactive') : p.why_not === 'other_population' ? tx('Test space') : shop ? tx('Shopper account') : tx('Local');
-  return '<span class="tag local" title="' + esc(shop ? tx('A shopper account on ChitBridge — they order from your shop. Bills are yours only') : tx('Not on ChitBridge — bills are yours only')) + '">' + crmIcon('house') + esc(w) + '</span>';
+  return '<span class="tag local" title="' + esc(shop ? tx('A shopper account on the network — they order from your shop. Bills are yours only') : tx('Not on the network — bills are yours only')) + '">' + crmIcon('house') + esc(w) + '</span>';
 }
 var CRM_ROLE = { customer: 'Customer', supplier: 'Supplier' };
 /** a LIVE lead (the server's lead.stage, not yet 'customer'): the stage chip is its one word — "Customer" / "New customer" / "Settled" beside it would say three things at once (WX-L2C) */
@@ -184,10 +184,10 @@ var CRM_ROLE_WORD = { customer: 'Customer', supplier: 'Supplier', both: 'Both', 
 function crmRoleWord(p) { return tx(CRM_ROLE_WORD[crmRoleKey(p)]); }
 /** On ChitBridge: ✓ when bills, orders and messages reach them in their app, – when they do not (a word for a screen reader, the sentence on hover) */
 function crmConnected(p) { return !!p.on_chitbridge && p.kind !== 'walk-in'; }
-var CRM_CONN_TIP = 'On ChitBridge: bills, orders and messages reach them in their app';
+var CRM_CONN_TIP = 'On the network: bills, orders and messages reach them in their app';
 function crmRailCell(p) {
   return crmConnected(p)
-    ? '<span class="conn on" data-testid="crm-conn-on" title="' + esc(tx(CRM_CONN_TIP)) + '"><span aria-hidden="true">✓</span><span class="sr-only">' + esc(tx('On ChitBridge')) + '</span></span>'
+    ? '<span class="conn on" data-testid="crm-conn-on" title="' + esc(tx(CRM_CONN_TIP)) + '"><span aria-hidden="true">✓</span><span class="sr-only">' + esc(tx('On the network')) + '</span></span>'
     : '<span class="conn off" data-testid="crm-conn-off" title="' + esc(tx('Not connected: you keep their record, they do not see it in an app')) + '"><span aria-hidden="true">–</span><span class="sr-only">' + esc(tx('Not connected')) + '</span></span>';
 }
 /** the last activity: the date, and what it was (a customer's last order · a walk-in's points at the counter) */
@@ -419,7 +419,7 @@ function crmPartyCols() {
   var cols = [
     { key: 'party', label: 'Party', prio: 1, w: 270, sort: 'name', html: true, cell: crmPartyCell, value: function (p) { return p.display_name; } },
     { key: 'role', label: 'Role', prio: 3, w: 120, sort: 'role', hfilter: 'role', cell: crmRoleWord, tid: function (p) { return 'crm-role-' + crmKey(p); }, value: function (p) { return crmRoleWord(p); } },
-    { key: 'rail', label: 'On ChitBridge', prio: 6, w: 150, sort: 'rail', hfilter: 'rail', html: true, cell: crmRailCell, value: function (p) { return crmConnected(p) ? 'a' : 'b'; } }];
+    { key: 'rail', label: 'On the network', prio: 6, w: 150, sort: 'rail', hfilter: 'rail', html: true, cell: crmRailCell, value: function (p) { return crmConnected(p) ? 'a' : 'b'; } }];
   if (CRM.ledger) cols.push({ key: 'dues', label: 'Dues', prio: 2, w: 200, sort: 'dues', html: true, cell: crmDueCell, value: function (p) { return p.balance_minor == null ? '' : p.balance_minor; } });
   cols.push(
     { key: 'last', label: 'Last activity', prio: 5, w: 200, sort: 'last', html: true, cell: crmLastCell, value: function (p) { return p.last_at || ''; } },
@@ -436,7 +436,7 @@ function crmGroupNames() { var s = {}; CRM.rows.forEach(function (p) { (p.groups
 function crmFilters() {
   var f = [
     { key: 'role', label: tx('Role'), all: tx('All roles'), options: [{ v: 'customer', label: tx('Customers') }, { v: 'supplier', label: tx('Suppliers') }, { v: 'both', label: tx('Both') }], match: function (p, v) { return v === 'both' ? p.roles.length === 2 : p.roles.indexOf(v) >= 0; } },
-    { key: 'rail', label: tx('On ChitBridge'), all: tx('All'), options: [{ v: 'on', label: tx('On ChitBridge') }, { v: 'off', label: tx('Not connected') }], match: function (p, v) { return v === 'on' ? crmConnected(p) : !crmConnected(p); } },
+    { key: 'rail', label: tx('On the network'), all: tx('All'), options: [{ v: 'on', label: tx('On the network') }, { v: 'off', label: tx('Not connected') }], match: function (p, v) { return v === 'on' ? crmConnected(p) : !crmConnected(p); } },
     { key: 'seg', label: tx('Segment'), all: tx('Any segment'), options: Object.keys(CRM_SEG).map(function (k) { return { v: k, label: tx(CRM_SEG[k]) }; }), match: function (p, v) { return p.segment === v; } },
     { key: 'group', label: tx('Group'), all: tx('Any group'), options: crmGroupNames(), match: function (p, v) { return (p.groups || []).indexOf(v) >= 0; } },
   ];
@@ -451,7 +451,7 @@ function crmPartySorts() {
   return [{ key: 'name', label: tx('Name'), cmp: by(function (p) { return p.display_name; }) },
     { key: 'last', label: tx('Last activity'), cmp: by(function (p) { return p.last_at || ''; }, true) },
     { key: 'role', label: tx('Role'), cmp: by(function (p) { return crmRoleWord(p); }) },
-    { key: 'rail', label: tx('On ChitBridge'), cmp: by(function (p) { return crmConnected(p) ? 'a' : 'b'; }) },
+    { key: 'rail', label: tx('On the network'), cmp: by(function (p) { return crmConnected(p) ? 'a' : 'b'; }) },
     { key: 'next', label: tx('Next follow-up'), cmp: by(function (p) { return p.next_followup_at || '9999'; }) },
     { key: 'dues', label: tx('Dues'), cmp: by(function (p) { return Math.abs(p.balance_minor || 0); }, true) },   // an ordering of the server's figures, not a sum
     { key: 'newest', label: tx('Newest'), cmp: by(function (p) { return p.party_no || ''; }, true) }];
@@ -517,7 +517,7 @@ function crmMiniAsync(p) {
 function crmWhyNot(p, act) {
   var viewer = !crmEdit(), walk = p.kind === 'walk-in', b = Number(p.balance_minor || 0);
   if (act === 'call') return p.phone ? '' : tx('No phone number yet');
-  if (act === 'message') return viewer ? crmViewWhy() : (walk ? tx('Add them to your parties first') : (crmConnected(p) ? '' : tx('Not on ChitBridge')));   /* one short reason beside a greyed button (ai-eye E-14) */
+  if (act === 'message') return viewer ? crmViewWhy() : (walk ? tx('Add them to your parties first') : (crmConnected(p) ? '' : tx('Not on the network')));   /* one short reason beside a greyed button (ai-eye E-14) */
   if (act === 'pay') return viewer ? crmViewWhy() : (walk ? tx('Add them to your parties first') : (!CRM.ledger ? tx('Switch on the Ledger first') : (!b ? tx('Nothing is due') : '')));
   if (act === 'followup') return viewer ? crmViewWhy() : (walk ? tx('Add them to your parties first') : '');
   return '';
@@ -557,7 +557,7 @@ function crmHomePreset() {
   return Object.keys(f).length ? { filt: f } : null;
 }
 function crmHome(frame) {
-  crmBar('<strong>' + esc(tx('CB CRM')) + '</strong>', crmAddBtn(), true);
+  crmBar('<strong>' + esc(tx('CRM')) + '</strong>', crmAddBtn(), true);
   var s = document.getElementById('screen'); s.className = 'screen flush';
   s.innerHTML = '<div id="crm_list" data-testid="crm-list"></div>';
   if (CRM.api && CRM.api.destroy) { try { CRM.api.destroy(); } catch (_) {} }
@@ -573,7 +573,7 @@ function crmHome(frame) {
     group: { options: [['none', 'None'], ['role', 'Role'], ['conn', 'Connection'], ['seg', 'Segment']], default: 'none', tid: 'crm-parties', as: 'select', tips: { conn: CRM_CONN_TIP },
       fig: function (rows) { return crmGroupFig(rows); },
       by: function (p, mode) {
-        if (mode === 'conn') { var on = crmConnected(p); return [on ? tx('On ChitBridge') : tx('Not connected'), on ? 'on' : 'off']; }
+        if (mode === 'conn') { var on = crmConnected(p); return [on ? tx('On the network') : tx('Not connected'), on ? 'on' : 'off']; }
         if (mode === 'role') { var r = crmRoleKey(p); return [tx(CRM_ROLE_WORD[r]), r]; }
         if (mode === 'seg') return p.segment ? [tx(CRM_SEG[p.segment] || p.segment), p.segment] : [tx('No segment'), 'none'];
         return null;
@@ -689,7 +689,7 @@ var ADD = { role: 'customer', q: '', busy: false, found: null };
 function crmAddOpen(q) {
   ADD.q = q || ''; ADD.found = null; ADD.busy = false;
   modal('<div class="mhd"><div class="t">' + esc(tx('Add party')) + '</div></div><div class="mbody" data-testid="crm-add-sheet">'
-    + '<p class="hint" style="margin:0">' + esc(tx('One field — we look on ChitBridge and in your parties first.')) + '</p>'
+    + '<p class="hint" style="margin:0">' + esc(tx('One field — we look on the network and in your parties first.')) + '</p>'
     + '<label>' + esc(tx('Who?')) + '<input class="inp" id="crm_addq" data-testid="crm-addq" value="' + esc(ADD.q) + '" placeholder="' + esc(tx('Name, User ID, phone or e-mail')) + '" autocomplete="off"></label>'
     + '<div class="supacts"><span class="hint">' + esc(tx('As')) + '</span><div class="seg2" role="group" aria-label="' + esc(tx('Role')) + '"><button type="button" data-crm="addrole" data-v="customer" aria-pressed="true" data-testid="crm-add-role-customer">' + esc(tx('Customer')) + '</button><button type="button" data-crm="addrole" data-v="supplier" aria-pressed="false" data-testid="crm-add-role-supplier">' + esc(tx('Supplier')) + '</button><button type="button" data-crm="addrole" data-v="both" aria-pressed="false" data-testid="crm-add-role-both">' + esc(tx('Both')) + '</button></div></div>'
     + '<div id="crm_addres" aria-live="polite" style="display:flex;flex-direction:column;gap:8px"></div></div>'
@@ -711,18 +711,18 @@ async function crmAddSearch() {
 function crmAddResults() {
   var box = document.getElementById('crm_addres'); if (!box) return;
   var q = ADD.q.trim(), ql = q.toLowerCase(), h = '';
-  if (!q) { box.innerHTML = '<p class="hint" style="margin:0">' + esc(tx('Type a name to add a local party, or a User ID / e-mail to find them on ChitBridge.')) + '</p>'; return; }
+  if (!q) { box.innerHTML = '<p class="hint" style="margin:0">' + esc(tx('Type a name to add a local party, or a User ID / e-mail to find them on the network.')) + '</p>'; return; }
   var mine = CRM.rows.filter(function (p) { return [p.display_name, p.nickname, p.party_no, p.user_id, p.phone, p.email].join(' ').toLowerCase().indexOf(ql) >= 0; }).slice(0, 4);
   mine.forEach(function (p) {
     h += '<div class="result" data-testid="crm-add-mine"><span><span class="k">' + esc(tx('Already your party')) + '</span><b>' + esc(p.display_name) + '</b> <span class="pno mono">' + esc(p.party_no || '') + '</span><br>' + crmRoleChips(p) + ' ' + crmRailChip(p) + '</span>'
       + '<button type="button" class="act sm ghost" data-crm="addopen" data-k="' + esc(crmKey(p)) + '">' + esc(tx('Open')) + '</button></div>';
   });
   (ADD.found || []).forEach(function (e, i) {
-    h += '<div class="result" data-testid="crm-add-found"><span><span class="k">' + esc(tx('On ChitBridge — is this them?')) + '</span><b>' + esc(e.display_name) + '</b><br><span class="mono hint">' + esc(e.user_id || '') + '</span><span class="hint">' + (e.city ? ' · ' + esc(e.city) : '') + '</span></span>'
+    h += '<div class="result" data-testid="crm-add-found"><span><span class="k">' + esc(tx('On the network — is this them?')) + '</span><b>' + esc(e.display_name) + '</b><br><span class="mono hint">' + esc(e.user_id || '') + '</span><span class="hint">' + (e.city ? ' · ' + esc(e.city) : '') + '</span></span>'
       + '<button type="button" class="act sm" data-crm="addfound" data-i="' + i + '" data-testid="crm-add-this">' + esc(tx('Add')) + '</button></div>';
   });
-  if (q.indexOf('@') >= 0 && !/\S+@\S+\.\S+/.test(q)) h += '<div class="banner" data-testid="crm-add-warn">' + crmIcon('warn') + '<span>' + esc(tx('Use their User ID or e-mail to find them on ChitBridge.')) + '</span></div>';
-  else h += '<div class="result" data-testid="crm-add-local"><span><span class="k">' + esc(tx('Not on ChitBridge')) + '</span><b>' + esc(txf('Add “{q}” as a local party', { q: q })) + '</b><br><span class="hint">' + esc(tx('Bills are yours only until they join.')) + '</span></span>'
+  if (q.indexOf('@') >= 0 && !/\S+@\S+\.\S+/.test(q)) h += '<div class="banner" data-testid="crm-add-warn">' + crmIcon('warn') + '<span>' + esc(tx('Use their User ID or e-mail to find them on the network.')) + '</span></div>';
+  else h += '<div class="result" data-testid="crm-add-local"><span><span class="k">' + esc(tx('Not on the network')) + '</span><b>' + esc(txf('Add “{q}” as a local party', { q: q })) + '</b><br><span class="hint">' + esc(tx('Bills are yours only until they join.')) + '</span></span>'
     + '<button type="button" class="act sm ghost" data-crm="addlocal" data-testid="crm-add-local-go">' + esc(tx('Add as local')) + '</button></div>';
   box.innerHTML = h;
 }

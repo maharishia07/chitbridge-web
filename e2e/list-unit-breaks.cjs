@@ -32,7 +32,7 @@ const BREAKS = [
   ['a column header stops saying how it is sorted', U, UNIT, 'role="columnheader" aria-sort="', 'role="columnheader" data-sort-state="'],
   ['a hand-drawn column header (role=columnheader) in the app', S, APP, "function platTablePaint(b, opts){", "function handDrawnList(){ return '<div role=\"columnheader\">Name</div>'; }\nfunction platTablePaint(b, opts){"],
   ['a hand-drawn <thead> list in a ledger view', S, BOOKS, "function bkLgMount(el, r) {", "function bkHandTable(){ return '<table><thead><tr><th>Date</th></tr></thead></table>'; }\nfunction bkLgMount(el, r) {"],
-  ['a hand-drawn .lhead in CB Accounts', S, 'accounts.html', "async function accBills(body){", "function accHandHead(){ return '<div class=\"lhead\">Who</div>'; }\nasync function accBills(body){"],
+  ['a hand-drawn .lhead in Accounts', S, 'accounts.html', "async function accBills(body){", "function accHandHead(){ return '<div class=\"lhead\">Who</div>'; }\nasync function accBills(body){"],
 ];
 const ONLY = process.env.BREAK_ONLY || '';
 let good = 0, ran = 0;

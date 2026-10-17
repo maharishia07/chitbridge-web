@@ -39,18 +39,29 @@ function shopReg(cc){ try { var c = cc || (typeof SESSION !== 'undefined' && SES
 /* ⭐ FX-QA1 + STD2: THE PACK'S OWN WORDS for what a form asks — the tax id, the postal code, the region. ONE helper; a screen never types "GSTIN" or "PIN".
    The pack's `words` first (engines: `words: { taxId, postcode, region }` — not yet carried); then the words keyed by the pack's id here — the tax id is
    the api's profile.taxIdWordOf answer for the same pack (what GET /entities/constitutions sends as countries[].tax.id); NO pack known → NEUTRAL words,
-   never India's (STD2: no India for an unstated country). English is the key: the caller passes the word through tx. */
+   never India's (STD2: no India for an unstated country). English is the key: the caller passes the word through tx.
+   NAMES-1 (2026-10-17, Athi): `stock` = what the shop calls the goods it holds — Inventory for a US shop, Stock elsewhere and with no country.
+   A row names only the words that differ; a missing word is the neutral one. A page without the registry (Home loads no engine/tax.js) keys the
+   row by the country code the caller passes — each pack's id is its country's code. */
 var PACK_WORDS = {
   IN: { taxId: 'GSTIN', postcode: 'PIN', region: 'State' },
   AU: { taxId: 'ABN', postcode: 'Postcode', region: 'State' },
   AE: { taxId: 'TRN', postcode: 'P.O. Box', region: 'Emirate' },
+  US: { stock: 'Inventory' },
 };
-var PACK_WORDS_NONE = { taxId: 'Tax number', postcode: 'Postcode', region: 'Region' };
+var PACK_WORDS_NONE = { taxId: 'Tax number', postcode: 'Postcode', region: 'Region', stock: 'Stock' };
 function packWord(kind, cc){
   var p = shopReg(cc), own = p && p.words && p.words[kind];
   if (own) return own;
-  var w = (p && PACK_WORDS[String(p.id || '').toUpperCase()]) || PACK_WORDS_NONE;
+  var w = PACK_WORDS[packRowKey(p, cc)] || PACK_WORDS_NONE;
   return w[kind] || PACK_WORDS_NONE[kind] || '';
+}
+/** which PACK_WORDS row: the registered pack's id, else (no registry on the page) the country code the caller passed */
+function packRowKey(pack, countryCode){ return String((pack && pack.id) || countryCode || '').toUpperCase(); }
+/** the shop's word for its goods (NAMES-1): Inventory · Stock. The page's country when it holds one; else the one /me read's (CBAvatar.shopCountry) */
+function stockWord(countryCode){
+  var country = countryCode || (window.CBAvatar && CBAvatar.shopCountry && CBAvatar.shopCountry()) || '';
+  return packWord('stock', country);
 }
 /** the pack's own word for a tax id: GSTIN · ABN · TRN — "Tax number" with no pack. The till reads the server's (snapshot shop.tax_id_word), never a copy */
 function taxIdWord(cc){ return packWord('taxId', cc); }

@@ -122,7 +122,7 @@ W.run('country', async (w) => {
     const stillContinues = !!(await p2.$('[data-testid="cs-save"]'));
     return { ok: why === JP_WHY && /Japan/.test(c) && stillContinues, saw: c + ' · "' + why.slice(0, 60) + '…" · Continue ' + (stillContinues ? 'offered' : 'missing') };
   });
-  await w.step('C5', 'CB Accounts for that shop -> the same sentence on the card, with the Country setup button (not "not switched on")', async () => {
+  await w.step('C5', 'Accounts for that shop -> the same sentence on the card, with the Country setup button (not "not switched on")', async () => {
     await p2.evaluate((s) => { localStorage.setItem('cb_sess', s); }, W.session('Walk Owner', 'Walk Shop'));
     await au.route('**/api/books/health', (r) => r.fulfill({ status: 422, contentType: 'application/json', body: JSON.stringify({ code: 'NO_COUNTRY_PACK', error: JP_WHY, message: JP_WHY }) }));
     await p2.goto(base + '/accounts.html');
@@ -131,7 +131,7 @@ W.run('country', async (w) => {
     const btn = !!(await p2.$('[data-testid="acc-country-setup"]')), off = !!(await p2.$('[data-testid="acc-off"]'));
     return { ok: why === JP_WHY && btn && !off, saw: h + ' · ' + why.slice(0, 50) + '… · button ' + (btn ? 'there' : 'missing') };
   });
-  await w.step('C6', 'An Indian shop whose setup is still to do -> CB Accounts says "Country setup first"', async () => {
+  await w.step('C6', 'An Indian shop whose setup is still to do -> Accounts says "Country setup first"', async () => {
     await au.unroute('**/api/books/health');
     await au.route('**/api/books/health', (r) => r.fulfill({ status: 422, contentType: 'application/json', body: JSON.stringify({ code: 'COUNTRY_SETUP_PENDING', error: 'Finish the country setup first — country, money, financial year and tax registration.', message: 'Finish the country setup first — country, money, financial year and tax registration.' }) }));
     await p2.goto(base + '/accounts.html');

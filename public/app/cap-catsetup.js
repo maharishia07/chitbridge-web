@@ -22,6 +22,8 @@
  * unchanged (declareVariants · startFromStandardSet · checkCatalogueFile · downloadCatalogueTemplate ·
  * exportCatalogueCSV · the face wizard). Moving a control must not become rewriting it — the point of the change
  * is WHERE things live, and a re-implementation would smuggle behaviour changes in under a re-organisation.
+ * CALLED BY app.html (the workshop) · assets.js · cap-cmdb.js · screens.js (the registry rows)
+ * // CARD 06-catalogue-pim/definitions-shelf
  */
 /* ⭐ OPENS ON BLUEPRINT, not Columns — the fastest way in is the one a reader should meet first. Someone with
    no blueprint for their trade reads one card and moves down the rail; someone with one is already there. */
@@ -635,7 +637,7 @@ function catsetBody(k){
       + 'your prices your own; adopting <b>by value</b> takes a copy that stops following them. The screen below '
       + 'asks which.</div>'
       + '<div class="catset-std">⭐ <b>Nobody publishing for your trade?</b> Then start from a <b>product list</b> in the '
-      + 'counter’s Product Lab — that one is a COPY that becomes yours — or use the panels below, which are the step-by-step '
+      + 'counter’s Price Lab — that one is a COPY that becomes yours — or use the panels below, which are the step-by-step '
       + 'way — columns first, then how a price is arrived at, then how customers order from you.</div>',
       '<button class="composebtn pri" data-testid="catset-blueprint" onclick="catsetBlueprint()">'
       + tx('📋 See the catalogues you can follow') + '</button>')

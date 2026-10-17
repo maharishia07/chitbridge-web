@@ -43,7 +43,7 @@ W.run(REAL ? 'disputes-real' : 'disputes', async (w) => {
         const bar = await txt('[data-testid="dp-bar"]'), fail = await page.locator('[data-testid="dp-fail"]').count(), list = await txt('[data-testid="dp-list"]');
         return { ok: !fail && /open · \d+ resolved/.test(bar) && !w.errs.length, saw: '"' + bar + '" · list "' + list.slice(0, 90) + '"' + (fail ? ' · FAILED: ' + await txt('[data-testid="dp-fail"]') : '') };
       });
-      await w.step('X2', 'Real api: CB Assist reads the answers and whoami; the shop is not a help desk, so Accept is greyed WITH the server\'s sentence', async () => {
+      await w.step('X2', 'Real api: Assist reads the answers and whoami; the shop is not a help desk, so Accept is greyed WITH the server\'s sentence', async () => {
         await open('assist');
         const cnt = await txt('[data-testid="ca-count"]'), dis = await page.$eval('#ca_accept', (b) => b.disabled).catch(() => null), why = await txt('[data-testid="ca_accept-why"]');
         return { ok: /answers? live/.test(cnt) && dis === true && /help desk/.test(why) && !w.errs.length, saw: '"' + cnt + '" · accept ' + (dis ? 'greyed: "' + why + '"' : 'OPEN') };
@@ -251,12 +251,12 @@ W.run(REAL ? 'disputes-real' : 'disputes', async (w) => {
 
   /* ── CB Assist ── */
   await open('assist');
-  await w.step('A1', 'Sidebar -> CB Assist: "2 answers live", the review box, the answers in a CBList; this shop is not a help desk, so Accept is shown greyed WITH the server\'s sentence', async () => {
+  await w.step('A1', 'Sidebar -> Assist: "2 answers live", the review box, the answers in a CBList; this shop is not a help desk, so Accept is shown greyed WITH the server\'s sentence', async () => {
     const cnt = await txt('[data-testid="ca-count"]'), n = await page.locator('[data-testid^="ca-row-"]').count(), dis = await greyed('ca_accept'), why = await txt('[data-testid="ca_accept-why"]'), lit = await page.$eval('[data-testid="skel-nav-assist"]', (b) => b.classList.contains('active'));
     return { ok: /2\s*answers live/.test(cnt) && n === 2 && dis === true && /Only a help desk/.test(why) && lit, saw: '"' + cnt + '" · ' + n + ' rows · accept ' + (dis ? 'greyed: "' + why + '"' : 'OPEN') };
   });
   S.helpdesk = true; await open('assist');
-  await w.step('A2', 'As the help desk: a question -> ✨ Draft -> ONE POST /governance/ai-draft { skill_id: assist-ask, context.question } -> the answer box holds the draft, marked "CB Assist drafted this"', async () => {
+  await w.step('A2', 'As the help desk: a question -> ✨ Draft -> ONE POST /governance/ai-draft { skill_id: assist-ask, context.question } -> the answer box holds the draft, marked "Assist drafted this"', async () => {
     await page.fill('[data-testid="ca-q"]', 'How do I change my shop address?'); await page.click('[data-testid="ca-draft"]'); await settle(900);
     const a = await page.inputValue('[data-testid="ca-a"]'), mark = await txt('[data-testid="ca-drafted"]'), call = S.calls.find((c) => /ai-draft/.test(c)) || '';
     return { ok: /"skill_id":"assist-ask"/.test(call) && /shop address/.test(call) && /Your shop/.test(a) && /drafted this/.test(mark), saw: call.slice(0, 120) + ' · draft "' + a.slice(0, 60) + '" · "' + mark + '"' };
@@ -279,12 +279,12 @@ W.run(REAL ? 'disputes-real' : 'disputes', async (w) => {
     const said = await txt('[data-testid="ca-out"]'), call = S.calls.filter((c) => /assist\/publish/.test(c)).pop() || '';
     return { ok: /print a bill again/.test(q) && /"qa_id":"q1"/.test(call) && /Updated\./.test(said), saw: 'opened "' + q + '" · ' + call.slice(0, 120) + ' · "' + said + '"' };
   });
-  await w.step('A6', 'CB Assist not connected on the server (503) -> said in words: write the answer yourself', async () => {
+  await w.step('A6', 'Assist not connected on the server (503) -> said in words: write the answer yourself', async () => {
     S.ai = 'off'; await page.fill('[data-testid="ca-q"]', 'Where are my reports?'); await page.click('[data-testid="ca-draft"]'); await settle(800);
     const said = await txt('[data-testid="ca-out"]'); S.ai = 'ok';
     return { ok: /not connected on this server/.test(said), saw: '"' + said + '"' };
   });
-  await R13.rule13(w, 'A7', 'CB Assist', 'ca');
+  await R13.rule13(w, 'A7', 'Assist', 'ca');
   await page.setViewportSize({ width: 1366, height: 900 }); await page.evaluate(() => CBAvatar.applyTheme('cream'));
 
   await w.step('Z1', 'Every answer the stand-in served for a route in the API contract matches it, and the page threw no error', async () => {

@@ -67,7 +67,7 @@ W.run(REAL ? 'x-l2c-real' : 'x-l2c', async (w) => {   /* two sets of shots: walk
     await page.setViewportSize(LAP);
 
     /* ── L01 · sign in, the CRM opens ───────────────────────────────────────────────────────────────────────────── */
-    await w.step('L01', 'Sign in as the shop → CB CRM opens on Leads', async () => {
+    await w.step('L01', 'Sign in as the shop → CRM opens on Leads', async () => {
       if (REAL) await signIn(page, api.shop, api.otp); else { await page.goto(base + '/crm.html#/leads'); await page.waitForSelector(T('shop-name'), { timeout: 20000 }); }
       await page.waitForSelector(T('crm-leads'), { timeout: 20000 }); await settle(600);
       const who = await txt(T('shop-name')), b = await body();
@@ -104,12 +104,12 @@ W.run(REAL ? 'x-l2c-real' : 'x-l2c', async (w) => {   /* two sets of shots: walk
 
     /* ── the record of a lead ───────────────────────────────────────────────────────────────────────────────────── */
     let aKey = '';
-    await w.step('L06', 'Open the lead → the record: New lead chip · Not on ChitBridge · Call · Log · Follow-up · Move to…', async () => {
+    await w.step('L06', 'Open the lead → the record: New lead chip · Not on the network · Call · Log · Follow-up · Move to…', async () => {
       await leadRow(NAMES.a).click(); await page.waitForSelector(T('crm-record'), { timeout: 15000 }); await recordReady();
       aKey = decodeURIComponent((await page.evaluate(() => location.hash)).replace(/^#\/party\//, ''));
       const acts = (await page.$$eval(T('crm-actions') + ' .act', (a) => a.map((x) => x.textContent.replace(/\s+/g, ' ').trim()))).filter(Boolean);
       const b = await body(), stage = await txt(T('crm-rec-name') + ' ~ .rchips ' + T('crm-stage-chip'));
-      return { ok: /New lead/.test(b) && /Not on ChitBridge/.test(b) && acts.some((a) => /^Move to/.test(a)) && acts.some((a) => /Log/.test(a)) && acts.some((a) => /Call/.test(a)), saw: 'chip "' + stage + '" · actions: ' + acts.join(' · ') };
+      return { ok: /New lead/.test(b) && /Not on the network/.test(b) && acts.some((a) => /^Move to/.test(a)) && acts.some((a) => /Log/.test(a)) && acts.some((a) => /Call/.test(a)), saw: 'chip "' + stage + '" · actions: ' + acts.join(' · ') };
     });
     await w.step('L07', 'Move to… → the sheet offers the moves the server allows; Demo → chip reads Demo (step 3 by hand)', async () => {
       await page.click(T('crm-act-stage')); await page.waitForSelector(T('crm-stage-sheet'));

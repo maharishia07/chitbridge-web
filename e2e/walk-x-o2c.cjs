@@ -425,7 +425,7 @@ W.run('x-o2c', async (w) => {
         return { ok: /Nobody owes you money/.test(t) || /Ravi Stores/.test(t) && /owe you/.test(t), saw: '"' + t.replace(/^.*?Receivables Simulated Stores/, '').slice(0, 120) + '"' };
       });
       await page.goto(base + '/finance.html#/collections'); await page.waitForSelector('[data-testid="fin-list"], [data-testid="fin-denied"], [data-testid="fin-off"]', { timeout: 20000 }).catch(() => {}); await settle(page, 2000);
-      await w.step('O6.5', 'CB Finance › Collections (owner) -> the list opens (nobody owes after the receipt, or Ravi Stores with Receive and Remind); Terms opens', async () => {
+      await w.step('O6.5', 'Finance › Collections (owner) -> the list opens (nobody owes after the receipt, or Ravi Stores with Receive and Remind); Terms opens', async () => {
         const t = await body(page);
         const rec = await page.locator('[data-testid^="fin-receive-"]').count(), rem = await page.locator('[data-testid^="fin-remind-"]').count();
         await page.click('[data-testid="fin-nav-terms"]').catch(() => {}); await settle(page, 1500);
@@ -441,7 +441,7 @@ W.run('x-o2c', async (w) => {
         return { ok: sw === 390 && tabs, saw: 'scrollWidth ' + sw + '; Issued tab ' + (tabs ? 'visible' : 'NOT visible') };
       });
       await ph.goto(base + '/finance.html#/collections'); await settle(ph, 3000);
-      await w.step('O6.7', 'CB Finance (390) -> no sideways scroll', async () => { const sw = await scrollW(ph); await shot(ph, 'finance-phone'); return { ok: sw === 390, saw: 'scrollWidth ' + sw }; });
+      await w.step('O6.7', 'Finance (390) -> no sideways scroll', async () => { const sw = await scrollW(ph); await shot(ph, 'finance-phone'); return { ok: sw === 390, saw: 'scrollWidth ' + sw }; });
       await ph.context().close();
     }
   }
@@ -546,7 +546,7 @@ W.run('x-o2c', async (w) => {
     else {
       const v = await newPage(LAPTOP, viewer.session);
       await v.goto(base + '/finance.html#/collections'); await v.waitForSelector('[data-testid="fin-denied"], [data-testid="fin-list"]', { timeout: 20000 }).catch(() => {}); await settle(v, 1200);
-      await w.step('O9.1', 'CB Finance as View Only -> "Only the owner may see collections." and no list', async () => {
+      await w.step('O9.1', 'Finance as View Only -> "Only the owner may see collections." and no list', async () => {
         const why = await txt(v, '[data-testid="fin-denied-why"]'), rows = await v.locator('[data-testid^="fin-row-"]').count();
         await shot(v, 'viewer-finance');
         return { ok: /Only the owner may see collections/.test(why) && rows === 0, saw: '"' + why + '"; ' + rows + ' rows' };

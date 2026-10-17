@@ -201,7 +201,7 @@ const walk = async (w) => {
     const q = await txt('[data-testid="sx-quota-state-actors"]'), cap = await txt('[data-testid="sx-quota-state-chits_per_month"]'), billed = await txt('[data-testid="sx-use-billed"]');
     return { ok: name === 'Test' && /Nothing is limited/.test(enf) && /Not decided yet/.test(q) && /Up to 500/.test(cap) && /12 events billed in 30 days/.test(billed), saw: name + ' · "' + enf + '" · actors "' + q + '" · "' + cap + '" · "' + billed + '"' };
   });
-  await w.step('S16', 'Home: the four doors are built, each routes into CB Settings (never the workshop); Counters & keys reads /api/facts/counters', async () => {
+  await w.step('S16', 'Home: the four doors are built, each routes into Settings (never the workshop); Counters & keys reads /api/facts/counters', async () => {
     const m = await page.evaluate(() => fetch('/app/manifest.json').then((r) => r.json()));
     const e = (id) => m.entries.filter((x) => x.id === id)[0] || {};
     const four = ['counters', 'connectors', 'governance', 'plan'].map(e);
@@ -213,7 +213,7 @@ const walk = async (w) => {
   for (const [k, ready, id] of [['counters', '[data-testid="sx-ctr-C1"]', 'R1'], ['connectors', '[data-testid="sx-con-tally"]', 'R2'], ['policy', '[data-testid="sx-pol-tol_weight_bp"]', 'R3'], ['plan', '[data-testid="sx-plan-name"]', 'R4']]) {
     await page.setViewportSize({ width: 1366, height: 900 }); await go(k, ready);
     if (k === 'counters') await openRow(REAL ? 'sx-ctr-C1' : 'sx-ctr-C2');   /* the next level and its actions are measured too */
-    await rule13(id, 'CB Settings › ' + k);
+    await rule13(id, 'Settings › ' + k);
   }
   if (S.stack) S.stack.stop();
   if (w.errs.length) w.note('T99', 'page errors seen during the walk', w.errs.slice(0, 3).join(' | '));

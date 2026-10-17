@@ -49,7 +49,7 @@ async function crmLeadsLoad(quiet) {
   crmNav(CRM.route && CRM.route.nav); crmLeadsRefresh();
   if (CRM.route && CRM.route.view === 'leads') crmLeadsBar();   /* Add lead · Import grey WITH the sentence once the read says b297 has not run */
 }
-function crmLeadsBar() { crmBar('<strong>' + esc(tx('CB CRM')) + '</strong>', crmLeadAddBtn() + crmLeadImportBtn(), true); }
+function crmLeadsBar() { crmBar('<strong>' + esc(tx('CRM')) + '</strong>', crmLeadAddBtn() + crmLeadImportBtn(), true); }
 function crmLeadsRefresh() { var a = LEADS.api; if (a && a.el && document.body.contains(a.el)) a.refresh(); }
 /** a lead opens on the same record as any party: its key must resolve (crmIndex calls this after every Parties read too) */
 function crmLeadsIndex() { LEADS.rows.forEach(function (p) { CRM.byKey[p.party_id] = p; if (p.party_no) CRM.byKey[p.party_no] = p; }); }

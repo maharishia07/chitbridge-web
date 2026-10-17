@@ -81,7 +81,7 @@ const walk = async (w) => {
 
   /* ── W28 · W10 · W12 · W27(a): Country, on the AU shop ── */
   await page.goto(base + '/settings.html'); await page.waitForSelector('[data-testid="cs-rows"]', { timeout: 20000 }); await page.waitForTimeout(300);
-  await w.step('A1', 'CB Settings opens on COUNTRY (the first section); the sidebar lists Country before Your shop', async () => {
+  await w.step('A1', 'Settings opens on COUNTRY (the first section); the sidebar lists Country before Your shop', async () => {
     const first = await page.$$eval('[data-testid^="skel-nav-"]', (b) => b.map((x) => x.getAttribute('data-sec')));
     return { ok: /#\/country$/.test(page.url()) && first[0] === 'country' && first[1] === 'shop' && first.indexOf('print') > 0, saw: page.url().replace(base, '') + ' · ' + first.join(' › ') };
   });
@@ -264,12 +264,12 @@ const walk = async (w) => {
   S.cc = 'AU'; S.vault = VAULT();
   for (const [k, ready, id] of [['country', '[data-testid="cs-rows"]', 'R1'], ['shop', '[data-testid="vault-only-identity"]', 'R2'], ['print', '[data-testid="pr-editor"]', 'R3'], ['account', '[data-testid="sx-ses-list"]', 'R4']]) {
     await page.setViewportSize({ width: 1366, height: 900 }); await go(k, ready);
-    await rule13(w, id, 'CB Settings › ' + k + ' (AU)', 'set');
+    await rule13(w, id, 'Settings › ' + k + ' (AU)', 'set');
   }
   S.cc = 'IN'; S.vault = VAULT();
   for (const [k, ready, id] of [['country', '[data-testid="cs-rows"]', 'R5'], ['print', '[data-testid="pr-editor"]', 'R6']]) {
     await page.setViewportSize({ width: 1366, height: 900 }); await go(k, ready);
-    await rule13(w, id, 'CB Settings › ' + k + ' (IN)', 'set');
+    await rule13(w, id, 'Settings › ' + k + ' (IN)', 'set');
   }
   if (w.errs.length) w.note('T99', 'page errors seen during the walk', w.errs.slice(0, 3).join(' | '));
 };

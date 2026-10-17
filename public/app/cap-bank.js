@@ -22,6 +22,8 @@
  * ⭐ ON THIS DEVICE: the accept marks, notes and the rules learned from what a person confirmed (CBBankRecon.step / learn) live in localStorage,
  *   beside the statement — undo takes an accept back and keeps the notes; a note never blocks accepting; a learned rule is only ever a suggestion,
  *   shown with where it came from. The count of lines that need a person rides to Accounts Home (bankTodoItem) in the same words.
+ * CALLED BY accounts.html (Daily › Bank) · app.html (the workshop)
+ * // CARD 16-finance/bank-reconciliation-and-bank-rail
  */
 'use strict';
 const BKB = { acct: '', preset: '', file: null, parsed: null, ledger: null, m: null, rows: [], tab: 'lines', bal: '' };
@@ -207,7 +209,7 @@ function bankList() {
       { id: 'accept', icon: '✓', label: 'Accept', tid: 'bank-accept', when: (r) => r.status === 'settled' || r.status === 'matched', run: (r) => bankAccept(r) },
       { id: 'record', icon: '₹', label: 'Record from the chit', tid: 'bank-record', when: (r) => r.status === 'told', why: () => (may.ok ? '' : may.say), run: (r) => bankRecord(r) },
       { id: 'ask', icon: '✉', label: 'Ask the party', tid: 'bank-ask', when: (r) => r.status === 'bank-only' || r.status === 'suggested' || r.status === 'check',
-        why: () => (!may.ok ? may.say : !((BKB.rail && BKB.rail.parties) || []).length ? tx('Nobody on ChitBridge to ask. Add it in your books instead.') : ''), run: (r) => bankAsk(r) },
+        why: () => (!may.ok ? may.say : !((BKB.rail && BKB.rail.parties) || []).length ? tx('Nobody on the network to ask. Add it in your books instead.') : ''), run: (r) => bankAsk(r) },
       { id: 'add', icon: '＋', label: 'Add missing', tid: 'bank-add', when: (r) => own && (r.status === 'suggested' || r.status === 'bank-only' || r.status === 'check') && !bankIsParty(r), run: (r) => bankAdd(r) },
       { id: 'dues', icon: '₹', label: 'Record it in Dues', tid: 'bank-dues', when: (r) => own && r.status !== 'told' && bankIsParty(r), run: () => bkTab('dues') },
       { id: 'undo', icon: '↶', label: 'Undo', tid: 'bank-undo', when: (r) => r.status === 'accepted', run: (r) => bankUndo(r) },

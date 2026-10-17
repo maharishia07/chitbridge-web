@@ -141,7 +141,7 @@ const gap = (l, d) => { todo++; console.log('  ' + String(l).padEnd(58) + '· ' 
   /* ── 4 · TAX, OFFERS, COMBOS ───────────────────────────────────────────────────────────────── */
   console.log('\n── 4 · tax, offers, combos — before anything is sold ' + '─'.repeat(9));
   gap('the counter walks them to a tax slab for the new products',
-    'Product Lab sets no gst_rate; nothing yet prompts for one');
+    'Price Lab sets no gst_rate; nothing yet prompts for one');
   gap('and then to Offer Lab / Combo Lab if they want either',
     'both exist in 🧪 Lab, but nothing links them into this sequence');
 

@@ -67,7 +67,7 @@ Legend: ✅ works from the pack · ⚠️ partial (named) · ❌ wrong or India'
 | Catalogue · HSN field, column, switch | ✅ | ✅ CX0 column · ✅ CX4 "Code" label, the HSN exposure switch and the Rule 46 note only under `pack.tax.hsn_digits` (`packHasHsn`) | ✅ CX4 | web `app/helpers.js packHasHsn`; `app.html` product form · info tab · exposure · sample invoice |
 | Catalogue · units · CSV import tax column | ✅ | ✅ "tax rate" maps | ✅ CX4 `vat · vat % · vat rate · vat percent` | api `lib/csv-preflight.js:60-61` |
 | Catalogue · an entity slab with no scheme | ✅ | ✅ | ❌ stamped "GST" (`homeScheme_` = the default country's) | api `lib/tax-slab.js:56, 102` (engines) |
-| **CB Accounts** · the books open in the shop's country · money · year | ✅ | ✅ CX0 (AU · AUD · July) | ✅ CX0 (AE · AED · January) | api `lib/books.js enable`; `routes/books.js:115` |
+| **Accounts** · the books open in the shop's country · money · year | ✅ | ✅ CX0 (AU · AUD · July) | ✅ CX0 (AE · AED · January) | api `lib/books.js enable`; `routes/books.js:115` |
 | Accounts · chart of accounts | ✅ | ✅ CS2 (accounts-packs v1.42 facade) + **CX2** the books core (posting · ledger · bookpack · period) at v1.42 — reads the pack | ✅ CS2 + **CX2** | api `engines.lock.json`; `tests/books-country.test.cjs` |
 | Accounts · statement words (Sch III / AASB 101 / IAS 1) | ✅ `pack.sch3` | ✅ **CX2** AASB 101 lines (the pack's `sch3` · `presentation`, ledger v1.42) | ✅ **CX2** IAS 1 | api `lib/ledger.js` v1.42 |
 | Accounts · the return (GSTR from the rail · BAS · VAT201) | ✅ | ✅ CS2/BAS1 — `packOf('AU').returns.id === 'BAS'`; the web paints the return first | ✅ VAT201 | api `lib/books-period.js:497-498`, `routes/books.js:1013`; web `app/cap-period.js:456-463` |
@@ -79,7 +79,7 @@ Legend: ✅ works from the pack · ⚠️ partial (named) · ❌ wrong or India'
 | Accounts · Tally export · GSTR-1 in the pack | ✅ | ✅ CX0 gated (`not_for_country` + sentence; api CX0 PR still open) · **CX2** the web paints `tally.why` under the manifest | ✅ | api `lib/books-pack.js:75-79, 101`; web `bkPackGet` |
 | Accounts · Insights "Tax" band | ✅ | ✅ CX0 (told where its return is) | ✅ | web `app/cap-admin.js:388-390` |
 | Accounts · `functional_currency \|\| 'INR'` · "a rupee" · zone | ✅ | ✅ **CX2** `B.curOf(s)` (the pack's money) ×17; "more than 1 AUD"; AU with no saved zone → `pack.timeZones[0]` (Sydney) | ✅ **CX2** | ⚠️ left: `books.js` payment/party `\|\| 'INR'` (×8, fed by the setting's currency) · `books-pack.js:54` `\|\| 'IN'` | api `routes/books.js:97`, `lib/books-period.js:102…497`, `lib/books-hooks.js:197, 205, 398, 429` |
-| **CB Finance** · dues ageing buckets | ✅ Sch III | ❌ India's buckets; `presentation.ageing` (AGE_AU) unread | ❌ | api `lib/ledger.js:453-463`, `lib/books-engines.js:160-165`; web `app/cap-books.js:1579-1594` |
+| **Finance** · dues ageing buckets | ✅ Sch III | ❌ India's buckets; `presentation.ageing` (AGE_AU) unread | ❌ | api `lib/ledger.js:453-463`, `lib/books-engines.js:160-165`; web `app/cap-books.js:1579-1594` |
 | Finance · MSME (interest words, 45 days, Udyam) | ✅ engine only | ✅ hidden — `pack.checks.msme` is reg-in's alone; no screen paints it | ✅ | api `lib/receivables.js:359-361`; `lib/reg-in.js:614` |
 | Finance · "Interest due" | ⚠️ a fixed 1.5 %/month guide | ❌ the same guide for every country, no law or term behind it | ❌ | api `lib/books-engines.js:173, 178` |
 | Finance · cash-flow tax line | ✅ | ❌ "GST by the 20th" — India's GSTR-3B date and heads | ❌ (and "GST", not VAT) | api `lib/books-cashflow.js:31-32, 124, 183`; web `app/cap-finance-cash.js:24, 116` |

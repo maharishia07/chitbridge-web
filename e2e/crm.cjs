@@ -101,7 +101,7 @@ async function route(S, r) {
     return J(r, 200, crmApi.timeline(fx.timelines[id] || { entries: [] }, id, { before: u.searchParams.get('before'), limit: u.searchParams.get('limit') }));
   }
   if ((x = p.match(/^\/api\/crm\/parties\/([^/]+)\/interactions$/)) && m === 'POST') {
-    if (!S.interactionsOk || !S.migrated) return J(r, 503, { code: 'CRM_NOT_MIGRATED', error: 'Not migrated yet', message: 'CB CRM needs migration b276 — not run yet.' });
+    if (!S.interactionsOk || !S.migrated) return J(r, 503, { code: 'CRM_NOT_MIGRATED', error: 'Not migrated yet', message: 'CRM needs migration b276 — not run yet.' });
     if (['call', 'visit', 'message', 'note'].indexOf(body.kind) < 0) return J(r, 400, { code: 'REFUSED', error: 'Kind is call, visit, message or note.', message: 'Kind is call, visit, message or note.' });
     S.logs.push(body); return J(r, 201, crmApi.interaction(body));
   }
@@ -124,13 +124,13 @@ async function route(S, r) {
     return J(r, 200, Object.assign(rec, { may: crmApi.mayOf(r) }));
   }
   if (p === '/api/crm/followups' && m === 'GET') {
-    if (!S.interactionsOk || !S.migrated) return J(r, 503, { code: 'CRM_NOT_MIGRATED', error: 'Not migrated yet', message: 'CB CRM needs migration b276 — not run yet.' });
+    if (!S.interactionsOk || !S.migrated) return J(r, 503, { code: 'CRM_NOT_MIGRATED', error: 'Not migrated yet', message: 'CRM needs migration b276 — not run yet.' });
     const scope = u.searchParams.get('scope'), done = u.searchParams.get('done') === '1', me = S.me || 'Athi';
     S.fuQueries = (S.fuQueries || []).concat([scope + '/' + (done ? 1 : 0)]);
     return J(r, 200, Object.assign(crmApi.followups(S.fu.filter((f) => (done ? !!f.done_at : !f.done_at) && (scope !== 'mine' || f.assignee_name === me))), { may: crmApi.mayOf(r) }));
   }
   if (p === '/api/crm/followups' && m === 'POST') {
-    if (!S.interactionsOk || !S.migrated) return J(r, 503, { code: 'CRM_NOT_MIGRATED', error: 'Not migrated yet', message: 'CB CRM needs migration b276 — not run yet.' });
+    if (!S.interactionsOk || !S.migrated) return J(r, 503, { code: 'CRM_NOT_MIGRATED', error: 'Not migrated yet', message: 'CRM needs migration b276 — not run yet.' });
     S.fuAdded = body;
     return J(r, 201, { followup: crmApi.followupOne({ followup_id: 'fu-new', party_id: body.party_id, what: body.what, due_at: body.due_at, assignee_user_id: body.assignee_user_id || 'athi', source: body.source || 'manual', created_at: new Date().toISOString() }) });
   }
@@ -198,7 +198,7 @@ async function route(S, r) {
   {
     const html = fs.readFileSync(path.join(PUB, 'crm.html'), 'utf8'), js = ['cap-crm.js', 'cap-crm-record.js'].map((f) => fs.readFileSync(path.join(PUB, 'app', f), 'utf8')).join('\n');
     const all = html + '\n' + js;
-    ok(/<title>CB CRM<\/title>/.test(html), 'the page is named CB CRM');
+    ok(/<title>CRM<\/title>/.test(html), 'the page is named CRM');
     ok(!/\balert\s*\(/.test(all), 'no alert() anywhere');
     ok(!/accounting|books of account/i.test(all.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')), 'the source carries neither forbidden word on a screen');
     ok(/CBOnePerson\.attach\(/.test(html), 'the one-shop gate is attached');
@@ -221,7 +221,7 @@ async function route(S, r) {
     ok((await text(p, '[data-testid="crm-role-P-0002"]')).trim() === 'Both', 'that one row says Both in its Role column (customer and supplier)');
     ok(nm('P-0008') === 0 && !/Folded/.test(await text(p, '#crm_list')), 'the merged party (P-0008, merged_into P-0001) is never listed');
     ok(await p.locator('[data-testid="crm-row-P-0003"] [data-testid="crm-conn-off"]').count() === 1 && await p.locator('[data-testid="crm-row-P-0001"] [data-testid="crm-conn-on"]').count() === 1 && await p.locator('[data-testid="crm-row-walkin-919876500021"] [data-testid="crm-conn-off"]').count() === 1,
-      'On ChitBridge column: P-0001 ✓ · P-0003 – · the walk-in –');
+      'On the network column: P-0001 ✓ · P-0003 – · the walk-in –');
     ok((await text(p, '[data-testid="crm-role-P-0003"]')).trim() === 'Supplier' && (await text(p, '[data-testid="crm-role-P-0006"]')).trim() === 'Customer', 'Role column: P-0003 Supplier · P-0006 Customer');
     /* ONE LINE: a row is as tall as one line of cells, and no chip, tag or second line is stacked under the name */
     const oneLine = await p.evaluate(() => Array.from(document.querySelectorAll('#crm_list .cbl-row')).map((r) => ({ h: Math.round(r.getBoundingClientRect().height), l2: !!r.querySelector('.l2,.tag'), name: (r.querySelector('.nm') || {}).textContent })));
@@ -238,7 +238,7 @@ async function route(S, r) {
     const headsClean = heads.map((h) => h.replace(/[▾●]/g, '').trim());
     ok(JSON.stringify(headsClean) === JSON.stringify(['PARTY', 'ROLE', 'ON CHITBRIDGE', 'DUES', 'LAST ACTIVITY', 'NEXT FOLLOW-UP']), 'the columns: ' + headsClean.join(' · ') + ' (last activity and next follow-up are always on the row)');
     ok(await p.locator('#crm_list .cbl-rz').count() === 6, 'every column has its drag handle (adjustable columns)');
-    ok(await p.locator('#crm_list [data-hf="role"]').count() === 1 && await p.locator('#crm_list [data-hf="rail"]').count() === 1, 'Role and On ChitBridge carry their own filter in the column heading');
+    ok(await p.locator('#crm_list [data-hf="role"]').count() === 1 && await p.locator('#crm_list [data-hf="rail"]').count() === 1, 'Role and On the network carry their own filter in the column heading');
     /* the frozen head: title row (shop · Home · avatar slot ride in it) + tools + column header ≤ 20% of 1366×768 */
     const hd = await p.evaluate(() => { const q = (s) => document.querySelector(s), r = (e) => e ? e.getBoundingClientRect() : { top: 0, bottom: 0 }; const list = q('#crm_list .cbl-list'); return { top: r(q('#crm_list')).top, rows: r(list).top, h: innerHeight, frame: r(q('[data-testid="shell-header"]')).bottom }; });
     ok((hd.rows - hd.top) <= 0.2 * hd.h, 'everything above the rows is ' + Math.round((hd.rows - hd.top)) + ' px of ' + hd.h + ' (' + Math.round(100 * (hd.rows - hd.top) / hd.h) + '%) — within 20% (the page\'s one action rides in the title row; the shop · Home · avatar are the frame\'s)');
@@ -276,8 +276,8 @@ async function route(S, r) {
     ok(await p.locator('[data-testid="crm-mini-phone-P-0003"] a[href^="tel:"]').count() === 1 && await p.locator('[data-testid="crm-mini-email-P-0003"] a[href^="mailto:"]').count() === 1, 'the phone is a tel: link and the e-mail a mailto: link');
     ok(/you'll give/.test(await text(p, '[data-testid="crm-mini-money-P-0003"]')) && /21 days/.test(await text(p, '[data-testid="crm-mini-terms-P-0003"]')) && /\d/.test(await text(p, '[data-testid="crm-mini-oldest-P-0003"]')), 'the money box: what you\'ll give · credit terms (21 days) · the oldest bill');
     const acts = await p.$$eval('#crm_list .cbl-next [data-act]', (b) => b.map((x) => x.getAttribute('data-act') + (x.disabled ? ':off' : '')));
-    ok(JSON.stringify(acts) === JSON.stringify(['call', 'message:off', 'pay', 'followup', 'open']), 'EVERY action is shown (Call · Message · Pay/Receive · Follow-up · Open record); Message is greyed for a party not on ChitBridge (' + acts.join(' ') + ')');
-    ok(/Not on ChitBridge/.test(await text(p, '[data-testid="crm-mini-message-why"]')) && /Not on ChitBridge/.test(await p.getAttribute('[data-testid="crm-mini-message"]', 'title')), 'the greyed Message carries its sentence, written out and on hover');
+    ok(JSON.stringify(acts) === JSON.stringify(['call', 'message:off', 'pay', 'followup', 'open']), 'EVERY action is shown (Call · Message · Pay/Receive · Follow-up · Open record); Message is greyed for a party not on the network (' + acts.join(' ') + ')');
+    ok(/Not on the network/.test(await text(p, '[data-testid="crm-mini-message-why"]')) && /Not on the network/.test(await p.getAttribute('[data-testid="crm-mini-message"]', 'title')), 'the greyed Message carries its sentence, written out and on hover');
     const h3 = await p.evaluate(() => Math.round(document.querySelector('[data-testid="crm-mini-P-0003"]').getBoundingClientRect().height));
     await p.click('[data-testid="crm-row-P-0006"] [data-caret]'); await p.waitForSelector('[data-testid="crm-mini-P-0006"]'); await p.waitForTimeout(600);
     const h6 = await p.evaluate(() => Math.round(document.querySelector('[data-testid="crm-mini-P-0006"]').getBoundingClientRect().height));
@@ -315,7 +315,7 @@ async function route(S, r) {
     ok(/Group/.test(await text(p, '[data-testid="cbl-glab-crm-parties"]')) && /bills, orders and messages reach them/.test(await p.evaluate(() => document.querySelector('[data-testid="cbl-group-crm-parties"]').title + ' ' + Array.from(document.querySelectorAll('[data-testid="crm-parties-group"] option')).map((o) => o.title).join(' '))), 'the label says Group and Connection explains itself in one line');
     await p.selectOption('[data-testid="crm-parties-group"]', 'conn'); await p.waitForTimeout(150);
     const gh = await p.$$eval('#crm_list [data-g]', (g) => g.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
-    ok(gh.length === 2 && /On ChitBridge/.test(gh[0]) && /Not connected/.test(gh[1]) && /parties/.test(gh[0]) && /you'll (get|give)/.test(gh.join(' ')), 'Group ▸ Connection: heads read On ChitBridge / Not connected with their count and dues (' + gh.join(' | ') + ')');
+    ok(gh.length === 2 && /On the network/.test(gh[0]) && /Not connected/.test(gh[1]) && /parties/.test(gh[0]) && /you'll (get|give)/.test(gh.join(' ')), 'Group ▸ Connection: heads read On the network / Not connected with their count and dues (' + gh.join(' | ') + ')');
     await p.selectOption('[data-testid="crm-parties-group"]', 'role'); await p.waitForTimeout(150);
     const gr = await p.$$eval('#crm_list [data-g]', (g) => g.map((x) => x.querySelector('b').textContent.trim()));
     ok(gr.join() === 'Supplier,Both,Customer' || (gr.indexOf('Both') >= 0 && gr.indexOf('Supplier') >= 0 && gr.indexOf('Customer') >= 0), 'Group ▸ Role: the same words as the Role column (' + gr.join(' · ') + ')');
@@ -342,8 +342,8 @@ async function route(S, r) {
     ok(await p.locator('[data-testid="crm-act-call"]').count() >= 1 && /^tel:/.test(await p.locator('[data-testid="crm-act-call"]').first().getAttribute('href')), 'LOCAL party: Call is the primary action (tel:)');
     ok(await p.locator('[data-testid="crm-act-mail"]').count() === 1, 'LOCAL party: Mail is offered (the e-mail preference is on)');
     const idt = await text(p, '[data-testid="crm-ident"]');
-    ok(!/none — kept by you/.test(idt) && !/User ID|ChitBridge ID/.test(idt) && !/CB[0-9A-Z]{8}/.test(idt) && /~shop\.sup-0001/.test(idt) === false, 'a minted party shows no ChitBridge ID and no empty ID boxes (C14: "none — kept by you" is gone)');
-    ok(/Not on ChitBridge — bills are yours only/.test(await text(p, '[data-testid="crm-verdict"]')), 'the verdict says it in words');
+    ok(!/none — kept by you/.test(idt) && !/User ID|Network ID/.test(idt) && !/CB[0-9A-Z]{8}/.test(idt) && /~shop\.sup-0001/.test(idt) === false, 'a minted party shows no Network ID and no empty ID boxes (C14: "none — kept by you" is gone)');
+    ok(/Not on the network — bills are yours only/.test(await text(p, '[data-testid="crm-verdict"]')), 'the verdict says it in words');
     const nx = await text(p, '[data-testid="crm-next"]');
     ok(/Today/.test(nx) && /pipe rate/.test(nx), 'Next: today\'s follow-up (the API marks it today:true)');
     ok(await p.locator('[data-testid="crm-next-done-fu-03"]').count() === 1, 'every alert in Next has its fix button (Done)');
@@ -366,9 +366,9 @@ async function route(S, r) {
     const { ctx, p } = await open(S, { hash: '#/party/P-0002' });
     await recReady(p, 'Chola Auto Care');
     ok(await p.locator('[data-testid="crm-act-message"]').count() === 1, 'ON-CHITBRIDGE party: Message is the primary action');
-    ok(/CB4M8RT2KD/.test(await text(p, '[data-testid="crm-ident"]')) && /chola-auto/.test(await text(p, '[data-testid="crm-ident"]')), 'the identity block: party no · User ID · ChitBridge ID shown together');
+    ok(/CB4M8RT2KD/.test(await text(p, '[data-testid="crm-ident"]')) && /chola-auto/.test(await text(p, '[data-testid="crm-ident"]')), 'the identity block: party no · User ID · Network ID shown together');
     const chips = await text(p, '.rchips');
-    ok(/Customer/.test(chips) && /Supplier/.test(chips) && /On ChitBridge/.test(chips) && /you'll get/.test(chips), 'header chips: both roles, On ChitBridge, the dues chip (youll get)');
+    ok(/Customer/.test(chips) && /Supplier/.test(chips) && /On the network/.test(chips) && /you'll get/.test(chips), 'header chips: both roles, On the network, the dues chip (youll get)');
     ok(/Sent/.test(await text(p, '[data-testid="crm-state-chit-ch-431"]')) && /3,864\.00/.test(await text(p, '[data-testid="crm-amt-chit-ch-431"]')), 'a chit shows its status word and amount (the API sends 3864 in MAJOR units → ₹3,864.00)');
     await p.click('[data-testid="crm-tl-chit-ch-431"]'); await p.waitForFunction(() => { const d = document.getElementById('chitsheet'); return !!(d && d.open); }, null, { timeout: 8000 }).catch(() => {});
     ok(await p.evaluate(() => { const d = document.getElementById('chitsheet'); return !!(d && d.open); }) && S.calls.some((c) => /\/api\/chits\/ch-431/.test(c)), 'an entry that is a chit opens the chit sheet in place (openChitSheet, ch-431)');
@@ -412,7 +412,7 @@ async function route(S, r) {
   {
     const S = standIn({ ledger: false }), { ctx, p } = await open(S, { hash: '#/party/P-0002' });
     await recReady(p, 'Chola Auto Care');
-    ok(/Dues show when CB Accounts is on/.test(await text(p, '[data-testid="crm-sec-ledger"]')) || (await p.click('[data-testid="crm-sec-ledger"] summary'), /Dues show when CB Accounts is on/.test(await text(p, '[data-testid="crm-sec-ledger"]'))), 'Ledger off: "Dues show when CB Accounts is on"');
+    ok(/Dues show when Accounts is on/.test(await text(p, '[data-testid="crm-sec-ledger"]')) || (await p.click('[data-testid="crm-sec-ledger"] summary'), /Dues show when Accounts is on/.test(await text(p, '[data-testid="crm-sec-ledger"]'))), 'Ledger off: "Dues show when Accounts is on"');
     ok(await p.locator('[data-testid="crm-ledger-on"]').count() === 1, 'the owner sees Switch on');
     ok(await p.locator('[data-testid="crm-next-dues"]').count() === 0 && !/they owe you/.test(await text(p, '.rchips')), 'Ledger off: no dues chip and no late-dues item');
     await ctx.close();
@@ -516,8 +516,8 @@ async function route(S, r) {
     await p.click('[data-testid="crm-add"]'); await p.waitForSelector('[data-testid="crm-addq"]');
     await p.fill('[data-testid="crm-addq"]', 'ravi'); await p.waitForSelector('[data-testid="crm-add-found"]', { timeout: 5000 });
     ok(await p.locator('[data-testid="crm-add-mine"]').count() === 2 && /Already your party/.test(await text(p, '[data-testid="crm-add-mine"]')), 'Add party: "Already your party" for the two Ravis');
-    ok(/On ChitBridge — is this them\?/.test(await text(p, '[data-testid="crm-add-found"]')) && /Ravi Hardwares/.test(await text(p, '[data-testid="crm-add-found"]')), 'Add party: "On ChitBridge — is this them?"');
-    ok(/Add “ravi” as a local party/.test(await text(p, '[data-testid="crm-add-local"]')) && /Bills are yours only until they join/.test(await text(p, '[data-testid="crm-add-local"]')), 'Add party: "Not on ChitBridge" → add as a local party');
+    ok(/On the network — is this them\?/.test(await text(p, '[data-testid="crm-add-found"]')) && /Ravi Hardwares/.test(await text(p, '[data-testid="crm-add-found"]')), 'Add party: "On the network — is this them?"');
+    ok(/Add “ravi” as a local party/.test(await text(p, '[data-testid="crm-add-local"]')) && /Bills are yours only until they join/.test(await text(p, '[data-testid="crm-add-local"]')), 'Add party: "Not on the network" → add as a local party');
     await p.screenshot({ path: path.join(SHOTS, 'crm-add-laptop.png') });
     await p.fill('[data-testid="crm-addq"]', 'rav@'); await p.waitForTimeout(300);
     ok(/Use their User ID or e-mail/.test(await text(p, '[data-testid="crm-add-warn"]')), 'an incomplete e-mail is told to use a User ID or full e-mail');
@@ -903,7 +903,7 @@ async function route(S, r) {
       const { ctx, p } = await open(S, { hash: '#/party/P-0004', viewport: vp }); await recReady(p); await openAll(p); await p.waitForTimeout(500);
       const w = vp.width, rec = await text(p, '[data-testid="crm-record"]');
       const ident = await text(p, '[data-testid="crm-ident"]'), chips = await text(p, '.rchips');
-      ok(/CBC3TQ3NEX/.test(ident) && !/Not on ChitBridge/.test(ident + chips) && !/none — kept by you/.test(ident) && /shopper account/i.test(ident), 'C14 @' + w + ': one truth - a ChitBridge ID is never shown beside "Not on ChitBridge"; it says shopper account, and the empty User ID box is gone (' + ident + ' || ' + chips + ')');
+      ok(/CBC3TQ3NEX/.test(ident) && !/Not on the network/.test(ident + chips) && !/none — kept by you/.test(ident) && /shopper account/i.test(ident), 'C14 @' + w + ': one truth - a Network ID is never shown beside "Not on the network"; it says shopper account, and the empty User ID box is gone (' + ident + ' || ' + chips + ')');
       ok(!/mailto:|@[a-z0-9-]+\.cr\b/.test(rec), 'C14 @' + w + ': no internal handle as an e-mail');
       const tags = await p.$$eval('.rchips > *', (e) => e.map((x) => x.className.split(' ')[0]));
       ok(tags.length >= 3 && tags.every((c) => c === 'tag' || c === 'due'), 'C15 @' + w + ': the head chips are one family (' + tags.join(',') + ')');
@@ -911,7 +911,7 @@ async function route(S, r) {
       const bar = await text(p, '[data-testid="crm-actions"]');
       ok(await p.locator('[data-testid="crm-act-pay"]').count() === 1 && await p.locator('[data-testid="crm-act-pay"]').isDisabled() && /Nothing is due/.test(await p.getAttribute('[data-testid="crm-act-pay"]', 'title')), 'C16/C2 @' + w + ': Pay / Receive is in the action row at the top - greyed WITH its sentence when nothing is due');
       ok(/Log/.test(bar) && (w < 700 || (/Follow-up/.test(bar) && /Edit/.test(bar))) && await p.locator('[data-testid="crm-act-call"]').count() >= 1, 'C16 @' + w + ': Call · Pay/Receive · Log · Follow-up · Edit sit in one row');
-      if (w > 700) ok(await p.locator('[data-testid="crm-act-message-off"]').count() === 1 && /Not on ChitBridge/.test(await p.getAttribute('[data-testid="crm-act-message-off"]', 'title')), 'C16 @' + w + ': Message is shown, greyed with its reason (the list card shows it the same way)');
+      if (w > 700) ok(await p.locator('[data-testid="crm-act-message-off"]').count() === 1 && /Not on the network/.test(await p.getAttribute('[data-testid="crm-act-message-off"]', 'title')), 'C16 @' + w + ': Message is shown, greyed with its reason (the list card shows it the same way)');
       const hd = await p.$$eval('#crm_tlhead .cbl-hc', (h) => h.map((x) => x.textContent.trim()));
       ok(hd.indexOf('Amount') >= 0, 'C17 @' + w + ': the timeline has an Amount column (' + hd.join(' · ') + ')');
       const amt = await text(p, '[data-testid="crm-amt-chit-ch-o1"]'), st = await text(p, '[data-testid="crm-state-chit-ch-o1"]');
@@ -929,7 +929,7 @@ async function route(S, r) {
       ok((led.match(/Ledger/gi) || []).length === 1 && !/Party no|Legal name|Nickname|Tax ids/.test(led) && await p.locator('[data-testid="party-edit"]').count() === 0 && await p.locator('[data-testid="party-pay"]').count() === 0, 'C19/C5 @' + w + ': the Ledger section has ONE title and money only (no repeated party no / names / tax ids / second Edit and Pay buttons)');
       ok(/Balance/.test(led) && /Oldest due/.test(led), 'C19 @' + w + ': ...it keeps the Balance and the statement');
       const tax = await text(p, '[data-testid="crm-sec-tax"]');
-      ok(/no GSTIN/.test(tax) && /no credit terms/.test(tax) && /CB Finance/.test(tax) && !/Nothing more is recorded/.test(tax), 'C25 @' + w + ': Tax & terms says what is missing and where to set it (' + tax.slice(0, 160) + ')');
+      ok(/no GSTIN/.test(tax) && /no credit terms/.test(tax) && /Finance/.test(tax) && !/Nothing more is recorded/.test(tax), 'C25 @' + w + ': Tax & terms says what is missing and where to set it (' + tax.slice(0, 160) + ')');
       ok((rec.match(/98940 55621/g) || []).length === 1, 'C26 @' + w + ': the phone is shown once (' + (rec.match(/98940 55621/g) || []).length + ')');
       ok(!/not built yet/i.test(rec), 'C4 @' + w + ': no builder words on a customer page');
       await p.click('[data-testid="crm-act-more"]'); await p.waitForSelector('[data-testid="crm-more-menu"]');
