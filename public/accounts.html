@@ -51,6 +51,8 @@
   --ink-2:var(--ink);--accent:var(--blue-2);--accent-text:var(--blue-d);--accent-ink:var(--card);--accent-hover:color-mix(in srgb,var(--accent) 82%,var(--ink));--tab-n:var(--ground);--shadow-toast:var(--shadow,0 10px 24px rgba(0,0,0,.4))}   /* an --ink-2 the theme sets inline wins */
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
+html{scroll-padding-top:120px}
+.cbl .cbl-list{scroll-padding-top:56px;scroll-padding-bottom:56px}   /* the list header is frozen: a row scrolled into view clears it */   /* the frozen header (56) + title bar (56+) never cover a control scrolled into view */
 body{background:var(--ground);color:var(--ink);font-family:var(--sans);font-size:calc(15px * var(--k,1));line-height:1.45}
 button{font-family:inherit;cursor:pointer}
 a{color:inherit}

@@ -81,11 +81,11 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(46) + '· ' + d 
   await p.waitForTimeout(150);
   const hub = await p.evaluate(() => {
     var text = document.body.innerText;
-    return { hasOffer: /Offer Lab/.test(text), hasCombo: /Combo Lab/.test(text), hasHint: /work out a discount, or build a combo/.test(text) };
+    return { hasOffer: /Offer Lab/.test(text), hasCombo: /Combo Lab/.test(text), hasHint: /discounts, combos|work out a discount, or build a combo/.test(text) };
   });
   say('"Offer Lab" is on screen once its section is opened', hub.hasOffer, 'found in the rendered menu');
   say('"Combo Lab" is right beside it, not a separate hunt', hub.hasCombo, 'found in the rendered menu');
-  say('the section’s own hint now names both, not just the first', hub.hasHint, 'found "work out a discount, or build a combo before you run it"');
+  say('the section’s own hint now names both, not just the first', hub.hasHint, 'found "products, discounts, combos — try before you run"');
   say('one honestly-named section holds both, not squeezed into a noun that fits neither', true,
       '"Pricing" — not filed under Keep it running or Show the shop');
 

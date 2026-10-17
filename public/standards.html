@@ -88,6 +88,8 @@ button,a,select,input{font:inherit;color:inherit} button{cursor:pointer} a{text-
   #std_list[data-works] .cbl-row .cbl-cell{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:break-word}
   #std_list[data-works] .cbl-row .st{white-space:normal}
 }
+/* the list header is frozen: a row scrolled into view clears it, and the "Show more" bar clears the bottom edge */
+#std_list .cbl-list{scroll-padding-top:56px;scroll-padding-bottom:56px}
 .c-live,.c-live b{color:var(--green)} .c-part,.c-part b{color:var(--amber-i)} .c-plan,.c-plan b{color:var(--muted)}
 /* in a row the WORD is ink (AA on every theme and on the zebra stripe); the symbol carries the colour */
 .st{color:var(--ink)} .st-live>span{color:var(--green-d,var(--green))} .st-part>span{color:var(--amber-i)} .st-plan>span{color:var(--muted)}
@@ -549,7 +551,7 @@ function paintMatrix(){
 }
 let LAST = '', GLAST = '';
 /* the list's columns share the width: weights per column, set on the host; a person who dragged a width keeps their own (no data-fill) */
-const WEIGHT = { what: 3.8, std: 2.4, kind: 1.6, where: 1.6, area: 1.3, parea: 1.4, at: 2, ex: 2.2, dir: 1.9, status: 3.2, pkg: 1.6, cap: 1.8, theirs: 3, ours: 3, better: 2.4, ctry: 1.2, cstatus: 1.8 };
+const WEIGHT = { what: 3.4, std: 2.4, kind: 1.6, where: 2.6, area: 1.3, parea: 1.4, at: 2, ex: 2.2, dir: 1.9, status: 3.2, pkg: 1.6, cap: 1.8, theirs: 3, ours: 3, better: 2.4, ctry: 1.2, cstatus: 1.8 };
 let FITKEY = '';
 function fit(){
   var st = LIST && LIST.state(), host = $('std_list'); if (!st) return;
