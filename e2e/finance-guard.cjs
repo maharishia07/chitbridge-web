@@ -44,7 +44,7 @@ if (!/bkMoneyInput\(/.test(ftc) || !/bkMoneyRead\(/.test(ftc)) bad('the limit is
 if (/_minor\s*[*\/+\-]|[*\/]\s*\w+\.\w*_minor|\*\s*100\b/.test(ftc)) bad('the Terms tab must not compute money'); else ok('Terms: no money computed');
 if (/e(rr)?\.message|error\.message/.test(ftc) || /\bconfirm\(|\balert\(/.test(ftc) || /#[0-9a-fA-F]{3,6}\b/.test(ftc)) bad('Terms: no raw server message, no browser dialog, no raw colour'); else ok('Terms: no raw message / dialog / colour');
 if (!/Terms arrive after the next update\./.test(ftc) || !/may_set/.test(ftc) || !/why_not/.test(ftc)) bad('Terms: the not-yet-migrated sentence and the server\'s may/why must be shown'); else ok('Terms: unmigrated and not-allowed said in words, greyed');
-if (/coming/.test(crmRec.replace(/\/\*[\s\S]*?\*\//g, '')) && /CB Finance[^'"]*coming/.test(crmRec)) bad('the CRM record still says CB Finance is coming'); else ok('CRM record: the "coming" text is gone');
+if (/coming/.test(crmRec.replace(/\/\*[\s\S]*?\*\//g, '')) && /Finance[^'"]*coming/.test(crmRec)) bad('the CRM record still says Finance is coming'); else ok('CRM record: the "coming" text is gone');
 if (!/booksTerms/.test(crmRec) || !/booksTerms/.test(crmJs) || !/crm-terms/.test(crmRec)) bad('the CRM record must read booksTerms (read-only) and show the changes'); else ok('CRM record reads terms, read-only');
 if (/booksTermsSet/.test(crmRec)) bad('the CRM record must not SET terms — Finance is the one place'); else ok('CRM record never sets terms');
 

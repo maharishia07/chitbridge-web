@@ -210,10 +210,10 @@ function crmIdentityHTML(p, rec) {
   var on = !!p.on_chitbridge, minted = p.kind === 'local' || !p.bridge_id;
   var cell = function (k, v, none, tid) { return '<div class="c"><div class="k">' + esc(tx(k)) + '</div><div class="v' + (v ? '' : ' none') + '" data-testid="' + tid + '">' + (v ? esc(v) : esc(tx(none))) + '</div></div>'; };
   var shopper = p.why_not === 'shopper' || (!on && !minted && !!p.bridge_id && p.why_not !== 'inactive' && p.why_not !== 'other_population');   /* a minted party (kind 'local') is never a shopper account, bridge_id or not (WX-L2C) */
-  var why = p.why_not === 'inactive' ? 'Account inactive — bills are yours only.' : p.why_not === 'other_population' ? 'Test space — bills are yours only.' : shopper ? 'A shopper account on ChitBridge — they order from your shop. Bills are yours only.' : 'Not on ChitBridge — bills are yours only.';
+  var why = p.why_not === 'inactive' ? 'Account inactive — bills are yours only.' : p.why_not === 'other_population' ? 'Test space — bills are yours only.' : shopper ? 'A shopper account on the network — they order from your shop. Bills are yours only.' : 'Not on the network — bills are yours only.';
   return '<div class="idblk' + (on ? '' : ' local') + '" data-testid="crm-ident">' + '<div class="cells">'
-    + cell('Party no', p.party_no, '—', 'crm-id-no') + (!minted && p.user_id ? cell('User ID', p.user_id, '—', 'crm-id-user') : '') + (!minted && p.bridge_id ? cell('ChitBridge ID', p.bridge_id, '—', 'crm-id-bridge') : '') + '</div>'
-    + (on ? '<div class="verdict on" data-testid="crm-verdict">' + crmIcon('link') + '<span><b>' + esc(tx('On ChitBridge')) + '</b> — ' + esc(tx('bills, orders and messages reach them in their app.')) + '</span></div>'
+    + cell('Party no', p.party_no, '—', 'crm-id-no') + (!minted && p.user_id ? cell('User ID', p.user_id, '—', 'crm-id-user') : '') + (!minted && p.bridge_id ? cell('Network ID', p.bridge_id, '—', 'crm-id-bridge') : '') + '</div>'
+    + (on ? '<div class="verdict on" data-testid="crm-verdict">' + crmIcon('link') + '<span><b>' + esc(tx('On the network')) + '</b> — ' + esc(tx('bills, orders and messages reach them in their app.')) + '</span></div>'
       : '<div class="verdict off" data-testid="crm-verdict">' + crmIcon('house') + '<span>' + esc(tx(why)) + '</span></div>') + '</div>';
 }
 /* ── Next: only failing or due things, each with its button (SYSTEM rule 1) ── */
@@ -301,7 +301,7 @@ function crmActionsHTML(p, rec) {
 function crmTaxMissing(p, R, cu, su) {
   var gst = (R.tax_ids || []).filter(function (t) { return t.scheme === taxIdWord(); })[0], miss = [], where = [];   /* CX0: the pack's tax-id word */
   if (!gst) { miss.push(txf('no {id}', { id: taxIdWord() })); where.push(txf('Add their {id} with Edit.', { id: taxIdWord() })); }
-  if (!((cu && cu.credit_days != null) || (su && su.credit_days != null))) { miss.push(tx('no credit terms')); where.push(tx('Set them in CB Finance, under Terms.')); }
+  if (!((cu && cu.credit_days != null) || (su && su.credit_days != null))) { miss.push(tx('no credit terms')); where.push(tx('Set them in Finance, under Terms.')); }
   return miss.length ? '<div class="hint" data-testid="crm-tax-missing"><b>' + esc(miss.join(' \u00b7 ')) + '</b> \u2014 ' + esc(where.join(' ')) + '</div>' : '';
 }
 function crmSec(id, title, fact, body, open) {
@@ -342,14 +342,14 @@ function crmRecordPaint(p, rec) {
   if (cu && p.kind !== 'walk-in') secs.push(crmSec('rewards', 'Rewards', rec.points ? esc(String(rec.points.points != null ? rec.points.points : rec.points.balance)) + ' ' + esc(tx('points')) + (rec.points.programme ? ' · ' + esc(rec.points.programme) : '') : '', '<div id="crm_rw" data-testid="crm-rewards"></div>', false));
   if (su) secs.push(crmSec('supplier', 'Supplier', su.category ? esc(su.category) : '',
     crmKV('Category', esc(su.category || '')) + crmKV('Preferred', su.preferred ? esc(tx('Yes')) : '') + crmKV('Supplies', esc(tx(su.supply_kind === 'resale' ? 'For resale' : su.supply_kind === 'own_use' ? 'For the shop' : su.supply_kind || '')))
-    + crmKV('Catalogue', su.catalogue ? esc(tx('On ChitBridge')) : '') + (su.notes ? '<div class="kv" data-testid="crm-notes"><b>' + esc(tx('Notes')) + '</b><span>📌 ' + esc(su.notes) + '</span></div>' : ''), one));
+    + crmKV('Catalogue', su.catalogue ? esc(tx('On the network')) : '') + (su.notes ? '<div class="kv" data-testid="crm-notes"><b>' + esc(tx('Notes')) + '</b><span>📌 ' + esc(su.notes) + '</span></div>' : ''), one));
   /* Consent — the record's own contact_prefs (cap-crm-privacy.js: the chip from the server's code, Yes/No greyed with the sentence) */
   if (typeof crmConsentHTML === 'function') secs.push(crmConsentHTML(p, rec));
   /* Ledger — cap-books.js's own block; off → one line and the owner's switch */
   if (p.kind !== 'walk-in') {
     var kind = cu ? 'customer' : 'supplier', pid = p.party_id;
     if (CRM.ledger) secs.push(crmSec('ledger', 'Ledger', p.balance_minor != null ? crmDueCell(p) : '', '<div id="crm_ledger" data-testid="crm-ledger"></div>', false));
-    else secs.push(crmSec('ledger', 'Ledger', '', '<p style="margin:8px 0">' + esc(tx('Dues show when CB Accounts is on')) + '</p>' + (crmOwner() ? '<button type="button" class="act sm" data-crm="ledgeron" data-testid="crm-ledger-on">' + esc(tx('Switch on')) + '</button>' : ''), false));
+    else secs.push(crmSec('ledger', 'Ledger', '', '<p style="margin:8px 0">' + esc(tx('Dues show when Accounts is on')) + '</p>' + (crmOwner() ? '<button type="button" class="act sm" data-crm="ledgeron" data-testid="crm-ledger-on">' + esc(tx('Switch on')) + '</button>' : ''), false));
   }
   if (crmOwner() && (rec.changes || []).length) secs.push(crmSec('changes', 'History of changes', esc(crmPlural(rec.changes.length, 'change', 'changes')), (rec.changes || []).map(function (x) { return '<div class="kv" data-testid="crm-change"><b>' + esc(bkDate(x.at)) + '</b><span>' + esc(x.line) + ' <span class="sub">· ' + esc(x.by || '') + '</span></span></div>'; }).join(''), false));
   s.className = 'screen';

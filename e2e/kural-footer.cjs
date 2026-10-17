@@ -121,16 +121,16 @@ const { standIn, route } = require('./lib/standin.cjs');
       await p.click('[data-testid="acc-nav-' + tab + '"]'); await p.waitForTimeout(500);
       const v = await view(p); got[tab] = v && !v.hidden ? v.no : 'none';
       /* a view with a warning on screen (the Day book's "Walk-ins not closed yet" is not in this stand-in) is the next test; here none is */
-      ok(got[tab] === String(byRoute(route_).no) || got[tab] === 'none', 'CB Accounts › ' + tab + ' → kural ' + byRoute(route_).no + ' (' + route_ + ') — ' + got[tab]);
+      ok(got[tab] === String(byRoute(route_).no) || got[tab] === 'none', 'Accounts › ' + tab + ' → kural ' + byRoute(route_).no + ' (' + route_ + ') — ' + got[tab]);
     }
-    ok(new Set(Object.values(got)).size >= 4, 'CB Accounts does not show one kural everywhere (' + JSON.stringify(got) + ')');
+    ok(new Set(Object.values(got)).size >= 4, 'Accounts does not show one kural everywhere (' + JSON.stringify(got) + ')');
     await ctx.close();
     const c2 = await open(standIn(), { path: '/crm.html' });
     await c2.p.waitForSelector('[data-testid="kural-footer"]:not([hidden])');
     const a = (await view(c2.p)).no;
     await c2.p.evaluate(() => { location.hash = '#/followups'; }); await c2.p.waitForTimeout(500);
     const bb = (await view(c2.p));
-    ok(a === '120' && bb && bb.no === '783', 'CB CRM: the parties list carries 120 and the follow-ups page 783 (' + a + ' → ' + (bb && bb.no) + ')');
+    ok(a === '120' && bb && bb.no === '783', 'CRM: the parties list carries 120 and the follow-ups page 783 (' + a + ' → ' + (bb && bb.no) + ')');
     await c2.ctx.close();
   }
 

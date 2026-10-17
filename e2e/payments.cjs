@@ -453,7 +453,7 @@ async function route(S, r) {
     ok((S.adv.reads || 0) === 0 && S.calls.filter((c) => /\/advice$/.test(c)).length === 0, 'E5 the outcome panel mounts CBAdvice from the record\'s own advice block — no second read');
     ok(await text(p, 'adv-send') === '✉ Send advice' && !(await p.getAttribute('[data-testid="adv-send"]', 'class') || '').split(' ').includes('off') && await p.locator('[data-testid="adv-share"]').count() === 1 && (await p.getAttribute('[data-testid="adv-share"]', 'class') || '').split(' ').includes('off'),
       'E5 on rail: Send advice is live, Share is shown greyed (every action shown; the server\'s may decides) (' + (await text(p, 'adv-send')) + ')');
-    ok(/is on ChitBridge — send the advice instead\./.test(await p.getAttribute('[data-testid="adv-share"]', 'title') || ''), 'E5 the greyed Share carries the server\'s sentence as its title');
+    ok(/is on the network — send the advice instead\./.test(await p.getAttribute('[data-testid="adv-share"]', 'title') || ''), 'E5 the greyed Share carries the server\'s sentence as its title');
     await p.click('[data-testid="adv-send"]');
     await p.waitForFunction(() => /✓/.test((document.querySelector('[data-testid="adv-out"]') || {}).textContent || ''), null, { timeout: 8000 });
     const sent = S.adv.sends[0] || {}, bj = sent.business_json || {}, pa = bj.payment_advice || {};
@@ -494,7 +494,7 @@ async function route(S, r) {
     const { ctx, p } = await open('/accounts.html', S);
     await p.waitForSelector('[data-testid="todo-row-advices_to_send"]', { timeout: 15000 });
     ok(await text(p, 'todo-words-advices_to_send') === '1 payment has no advice yet — Agro Mills does not know you paid.' && await text(p, 'todo-n-advices_to_send') === '1' && await text(p, 'todo-go-advices_to_send') === 'Send advice',
-      'E5 the CB Accounts To-do shows advices_to_send with the server\'s words, the count and its button (' + (await text(p, 'todo-words-advices_to_send')) + ')');
+      'E5 the Accounts To-do shows advices_to_send with the server\'s words, the count and its button (' + (await text(p, 'todo-words-advices_to_send')) + ')');
     await p.click('[data-testid="todo-go-advices_to_send"]'); await p.waitForSelector('[data-testid="lg-acc-2100"]', { timeout: 15000 });
     ok(true, 'E5 its button opens Ledgers (the party\'s statement row is where the advice is sent)');
     await p.click('[data-testid="lg-acc-2100"]'); await p.waitForSelector('[data-testid="lg-party-s1"]', { timeout: 8000 });
@@ -526,8 +526,8 @@ async function route(S, r) {
     const { ctx, p } = await openPay('/crm.html', S);
     await popup(p); await type(p, '2000');
     await p.click('[data-testid="pay_record"]'); await p.waitForSelector('[data-testid="pay_advice"] [data-testid="adv-copy"]', { timeout: 8000 });
-    ok((await p.getAttribute('[data-testid="adv-send"]', 'class') || '').split(' ').includes('off') && await text(p, 'adv-why-send') === 'Agro Mills is not on ChitBridge — share the advice instead.',
-      'E7 off rail: Send advice is shown greyed with the sentence "Agro Mills is not on ChitBridge — share the advice instead." (' + (await text(p, 'adv-why-send')) + ')');
+    ok((await p.getAttribute('[data-testid="adv-send"]', 'class') || '').split(' ').includes('off') && await text(p, 'adv-why-send') === 'Agro Mills is not on the network — share the advice instead.',
+      'E7 off rail: Send advice is shown greyed with the sentence "Agro Mills is not on the network — share the advice instead." (' + (await text(p, 'adv-why-send')) + ')');
     const words = adviceOf(S, 'pay1').words, wa = await p.getAttribute('[data-testid="adv-wa"]', 'href'), mail = await p.getAttribute('[data-testid="adv-mail"]', 'href');
     ok(wa === 'https://wa.me/?text=' + encodeURIComponent(words) && /^mailto:\?subject=/.test(mail) && mail.indexOf(encodeURIComponent(words)) > 0, 'E7 Share = WhatsApp (wa.me) and E-mail (mailto:) hrefs carry the words (' + words + ')');
     await p.click('[data-testid="adv-send"]', { force: true }); await p.waitForTimeout(200);

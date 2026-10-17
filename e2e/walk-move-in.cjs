@@ -89,7 +89,7 @@ W.run('move-in', async (w) => {
   await ctx.addInitScript((s) => { try { localStorage.setItem('cb_sess', s); } catch (_) {} }, W.session('Walk Owner', 'Walk Shop'));
   await stub(ctx, sent);
 
-  await w.step('M1', 'CB Accounts › Setup › Move in -> the three steps, the file picker, the source and the export to choose', async () => {
+  await w.step('M1', 'Accounts › Setup › Move in -> the three steps, the file picker, the source and the export to choose', async () => {
     await page.goto(base + '/accounts.html#movein');
     await page.waitForSelector('[data-testid="mi-steps"]', { timeout: 20000 });
     const chips = await page.$$eval('[data-testid^="step-"]', (els) => els.filter((e) => /^step-(file|columns|preview)$/.test(e.dataset.testid)).map((e) => e.textContent.trim()));

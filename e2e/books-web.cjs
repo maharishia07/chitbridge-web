@@ -30,7 +30,7 @@ function standIn() {
     customers: [
       { customer_list_id: 'cl1', customer_identity_id: 'c1', display_name: 'Ravi Stores', otp_contact: '9800000001', txn_count: 3, party_no: 'P-00001', user_id: 'ravi.stores', nickname: 'Ravi', tax_ids: [{ scheme: 'GSTIN', value: '33AAAAA0000A1Z5' }], credit_days: 30 },
       { customer_list_id: 'cl2', customer_identity_id: 'c2', display_name: 'Meena Traders', otp_contact: '9800000002', txn_count: 1, party_no: 'P-00002', tax_ids: [] }],
-    suppliers: [{ supplier_list_id: 'sl1', supplier_entity_id: 's1', display_name: 'Agro Mills', on_rail: false, party_no: 'P-00003', tax_ids: [], one_sided: { why: 'Agro Mills is not on ChitBridge, so their bills reach you only when you enter them' } }],
+    suppliers: [{ supplier_list_id: 'sl1', supplier_entity_id: 's1', display_name: 'Agro Mills', on_rail: false, party_no: 'P-00003', tax_ids: [], one_sided: { why: 'Agro Mills is not on the network, so their bills reach you only when you enter them' } }],
     items: {   /* open bills per party, minor units */
       c1: [{ against_ref: 'b1', bill_no: 'INV-1', due_date: '2026-08-01', open_minor: 300000, date: '2026-07-02', chit: 'ch1' },
            { against_ref: 'b2', bill_no: 'INV-2', due_date: '2026-09-01', open_minor: 200000, date: '2026-08-02', chit: 'ch2' },
@@ -200,9 +200,9 @@ async function route(S, r) {
   if (p === '/api/relationships/customers' && m === 'POST') {
     S.lastCustAdd = body;
     if (body.name) {
-      const row = { customer_list_id: 'clN', customer_identity_id: 'cN', display_name: body.name, otp_contact: body.phone || null, txn_count: 0, party_no: 'P-00009', user_id: '~shop.cus-0001', on_rail: false, tax_ids: [], one_sided: { why: 'not on ChitBridge — bills stay with you' } };
+      const row = { customer_list_id: 'clN', customer_identity_id: 'cN', display_name: body.name, otp_contact: body.phone || null, txn_count: 0, party_no: 'P-00009', user_id: '~shop.cus-0001', on_rail: false, tax_ids: [], one_sided: { why: 'not on the network — bills stay with you' } };
       S.customers.push(row); S.items.cN = []; S.receipts.cN = [];
-      return J(r, 200, { message: 'Customer added — not on ChitBridge — bills stay with you', customer: row });
+      return J(r, 200, { message: 'Customer added — not on the network — bills stay with you', customer: row });
     }
     return J(r, 404, { error: 'Not found', message: 'No business with that User ID, bridge ID, or email' });
   }
@@ -270,7 +270,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
     await p.waitForSelector('[data-testid="confirm-ok"]', { timeout: 4000 }).catch(() => {});
     await p.click('[data-testid="confirm-ok"]', { timeout: 2000 }).catch(() => {});
     await p.waitForTimeout(800);
-    ok(S.enables === 1 && await p.locator('[data-testid="nav-ledger"]').count() === 0, 'confirmed → POST /api/books/enable once; the workshop menu carries no Ledger door (P0: CB Accounts has its own page)');
+    ok(S.enables === 1 && await p.locator('[data-testid="nav-ledger"]').count() === 0, 'confirmed → POST /api/books/enable once; the workshop menu carries no Ledger door (P0: Accounts has its own page)');
     await p.evaluate(() => navTo('settings')); await p.waitForSelector('[data-testid="set-sec-business"]', { timeout: 15000 }); await p.click('[data-testid="set-sec-business"]');
     await p.waitForFunction(() => /On/.test((document.querySelector('[data-testid="biz-ledger-state"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
     ok(/On/.test(await p.textContent('[data-testid="biz-ledger-state"]').catch(() => '')) && await p.locator('[data-testid="biz-ledger-off"]').count() === 1, 'the card now says On (per day) and offers Switch off');
@@ -322,11 +322,11 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   await p.click('[data-testid="cols-btn-customers"]');
   /* the rest of this section reads every column, so they are all ticked now */
   const crmHeads = await p.$$eval('#tbl_customers .lhead .lhcell', (els) => els.map((x) => x.textContent.replace(/[⇅▲▼]/g, '').trim()));
-  ok(JSON.stringify(crmHeads) === JSON.stringify(['Party no', 'Name', 'Balance', 'ChitBridge ID', 'Oldest due', 'Credit terms', 'GSTIN']), 'the CRM table\'s columns: ' + crmHeads.join(' · '));
+  ok(JSON.stringify(crmHeads) === JSON.stringify(['Party no', 'Name', 'Balance', 'Network ID', 'Oldest due', 'Credit terms', 'GSTIN']), 'the CRM table\'s columns: ' + crmHeads.join(' · '));
   const crmRow = async (id) => (await p.$$eval('[data-testid="cust-row-' + id + '"] .lcell', (els) => els.map((x) => x.textContent.replace(/\s+/g, ' ').trim())));
   const r1 = await crmRow('c1'), r2 = await crmRow('c2');
   for (const r of [r1, r2]) r[0] = r[0].replace(/^▸\s*/, '');   /* the unit draws the row's caret in its first cell */
-  ok(r1[0] === 'P-00001' && r2[0] === 'P-00002' && r1[3] === 'ravi.stores' && /off-rail/.test(r2[3]), 'every row shows its party no and its ChitBridge ID (user id, or "off-rail" for a local party): ' + r1.slice(0, 3).join(' | ') + ' // ' + r2.slice(0, 3).join(' | '));
+  ok(r1[0] === 'P-00001' && r2[0] === 'P-00002' && r1[3] === 'ravi.stores' && /off-rail/.test(r2[3]), 'every row shows its party no and its Network ID (user id, or "off-rail" for a local party): ' + r1.slice(0, 3).join(' | ') + ' // ' + r2.slice(0, 3).join(' | '));
   ok(/6,000/.test(r1[2]) && /Aug/.test(r1[4]) && /30 days/.test(r1[5]) && r1[6] === '33AAAAA0000A1Z5', 'Balance · Oldest due · Credit terms · GSTIN come from the row\'s own fields: ' + r1.slice(2).join(' | '));
   /* GRID or LINES: the same columns, drawn two ways (the toggle sits beside ⚙ columns) */
   await p.click('[data-testid="view-lines-customers"]');
@@ -338,14 +338,14 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   await p.fill('[data-testid="listctl-search-customers"]', 'P-00002'); await p.waitForTimeout(300);
   ok(await p.locator('[data-testid^="cust-row-"]').count() === 1 && await p.locator('[data-testid="cust-row-c2"]').count() === 1, 'the search finds a party by its number (P-00002)');
   await p.fill('[data-testid="listctl-search-customers"]', 'ravi.stores'); await p.waitForTimeout(300);
-  ok(await p.locator('[data-testid^="cust-row-"]').count() === 1 && await p.locator('[data-testid="cust-row-c1"]').count() === 1, 'the search finds a party by its ChitBridge ID');
+  ok(await p.locator('[data-testid^="cust-row-"]').count() === 1 && await p.locator('[data-testid="cust-row-c1"]').count() === 1, 'the search finds a party by its Network ID');
   await p.fill('[data-testid="listctl-search-customers"]', ''); await p.waitForTimeout(300);
   /* ⭐ ADD BY NAME: a name (with a space) goes as {name, phone}; the list then shows them off-rail; an id-shaped word still goes as {handle} */
   await p.fill('[data-testid="cust-add-input"]', 'Kumar Tea Stall'); await p.fill('[data-testid="cust-add-phone"]', '98400 12345'); await p.click('[data-testid="cust-add"]');
   await p.waitForSelector('[data-testid="cust-row-cN"]', { timeout: 8000 }).catch(() => {});
   ok(S.lastCustAdd && S.lastCustAdd.name === 'Kumar Tea Stall' && S.lastCustAdd.phone === '98400 12345' && !S.lastCustAdd.handle, 'a typed name is sent as {name, phone}, not as a User ID');
   ok(await p.locator('[data-testid="cust-row-cN"]').count() === 1 && /off-rail/.test(await p.textContent('[data-testid="cust-row-cN"]').catch(() => '')), 'the new local customer is listed, marked off-rail');
-  ok(/not on ChitBridge — bills stay with you/.test(await p.textContent('body')), 'the toast shows the API message');
+  ok(/not on the network — bills stay with you/.test(await p.textContent('body')), 'the toast shows the API message');
   await p.fill('[data-testid="cust-add-input"]', 'ravi.stores'); await p.click('[data-testid="cust-add"]'); await p.waitForTimeout(300);
   ok(S.lastCustAdd && S.lastCustAdd.handle === 'ravi.stores' && !S.lastCustAdd.name, 'a User ID is still sent as {handle}');
   S.customers = S.customers.filter((c) => c.customer_identity_id !== 'cN'); delete S.items.cN; delete S.receipts.cN; await p.evaluate(() => loadCustomers()); await p.waitForTimeout(300);
@@ -460,7 +460,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   await p.evaluate(() => { closeModal(); booksAfterPay(); });
 
   /* the rail's Ledger item is ONE link to its own page now (2026-10-01, CB Accounts); the in-app screen stays reachable by URL / navTo */
-  ok(await p.locator('[data-testid="nav-ledger"]').count() === 0, 'P0: the workshop menu has no Ledger door any more (CB Accounts is its own app); navTo("ledger") still redirects, checked below');
+  ok(await p.locator('[data-testid="nav-ledger"]').count() === 0, 'P0: the workshop menu has no Ledger door any more (Accounts is its own app); navTo("ledger") still redirects, checked below');
   /* 6 · the Ledger screen */
   await ledgerGo(p);
   await p.waitForSelector('[data-testid="acc-nav-daybook"]', { timeout: 15000 });
@@ -505,7 +505,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   const todoAccept = await headOf('todo-accept'), todoOver = await headOf('todo-overdue'), todoChq = await headOf('todo-cheques'), todoWait = await headOf('todo-waiting');
   ok(/^3 supplier bills to accept/.test(todoAccept), 'to-do: 3 supplier bills to accept — the health rows "Waiting for you to confirm …" ("' + todoAccept + '")');
   ok(/^1 customer overdue/.test(todoOver), 'to-do: 1 customer overdue — a bucket past "Not due", customers only ("' + todoOver + '")');
-  ok(/^2 cheques to deposit \/ clear/.test(todoChq), 'to-do: 2 cheques to deposit / clear — the one held at the server and the one deposited in the app (held on the server too, 2026-10-02: CB Accounts reads it from there), each with a step still open; the cleared one not counted ("' + todoChq + '")');
+  ok(/^2 cheques to deposit \/ clear/.test(todoChq), 'to-do: 2 cheques to deposit / clear — the one held at the server and the one deposited in the app (held on the server too, 2026-10-02: Accounts reads it from there), each with a step still open; the cleared one not counted ("' + todoChq + '")');
   ok(/^2 waiting to be recorded/.test(todoWait), 'to-do: 2 waiting to be recorded — the health rows that are not supplier bills ("' + todoWait + '")');
   ok(await p.locator('[data-testid="todo-none"]').count() === 0, 'something waits → no quiet line');
   await noAccounting(p, 'day book strip and to-do');
@@ -926,7 +926,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   await p.waitForSelector('[data-testid="party-due-s1"]', { timeout: 15000 });
   ok(/2,500/.test(await p.textContent('[data-testid="party-due-s1"]')) && /You owe/.test(await p.getAttribute('[data-testid="party-due-s1"]', 'title')), 'supplier row: you owe 2,500');
   ok(await p.locator('#tbl_suppliers .lhead').count() === 1 && await p.locator('[data-testid="sup-row-sl1"].lrow').count() === 1 && /P-00003/.test(await p.textContent('[data-testid="party-no-s1"]')), 'the Suppliers list is the Task table too, with the Party no (P-00003)');
-  ok(/Agro Mills is not on ChitBridge/.test(await p.getAttribute('[data-testid="sup-row-sl1"] [data-testid="party-onesided"]', 'title').catch(() => '')), 'a one-sided supplier shows it quietly, the reason on hover');
+  ok(/Agro Mills is not on the network/.test(await p.getAttribute('[data-testid="sup-row-sl1"] [data-testid="party-onesided"]', 'title').catch(() => '')), 'a one-sided supplier shows it quietly, the reason on hover');
   await p.click('[data-testid="sup-details-sl1"]');
   await p.waitForSelector('[data-testid="party-books-s1"] [data-testid="party-pay"]', { timeout: 15000 });
   await p.waitForTimeout(700); await shot(p, '5-supplier-record');

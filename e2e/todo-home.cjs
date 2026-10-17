@@ -72,7 +72,7 @@ const SEVERAL = [
     await p.waitForSelector('[data-testid="todo-list"]', { timeout: 15000 });
     const labels = await p.$$eval('#nav .nav-btn', (x) => x.map((e) => e.getAttribute('aria-label')));
     ok(labels[0] === 'To do' && labels[1] === 'Day book', 'To do is first in the sidebar, before Day book (' + labels.slice(0, 3).join(' · ') + ')');
-    ok(await p.evaluate(() => document.querySelector('.nav-btn.active').getAttribute('aria-label')) === 'To do' && (await p.textContent('#title')).trim() === 'To do', 'CB Accounts opens on To do, and it is the lit entry');
+    ok(await p.evaluate(() => document.querySelector('.nav-btn.active').getAttribute('aria-label')) === 'To do' && (await p.textContent('#title')).trim() === 'To do', 'Accounts opens on To do, and it is the lit entry');
     ok(S.calls.filter((c) => c === 'GET /api/books/todo').length === 1, 'one read of GET /api/books/todo');
     const rows = await p.$$eval('.todo-row', (r) => r.map((x) => ({ kind: x.getAttribute('data-kind'), n: x.querySelector('.todo-n').textContent.trim(), words: x.querySelector('.todo-words').textContent.trim(), btn: Array.from(x.querySelectorAll('button')).map((b) => b.textContent.trim()), sym: x.querySelector('.todo-sym').textContent.trim() })));
     ok(rows.length === SEVERAL.length && rows.every((r, i) => r.kind === SEVERAL[i].kind), 'one row per item, in the API\'s order (' + rows.map((r) => r.kind).join(', ') + ')');

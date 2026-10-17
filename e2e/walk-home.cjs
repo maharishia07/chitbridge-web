@@ -106,7 +106,7 @@ W.run('home', async (w) => {
   page.on('request', onReq);
   await page.setViewportSize({ width: 1366, height: 800 }); await home(); await page.waitForTimeout(800);
   page.off('request', onReq);
-  await w.step('P2', 'Home -> CB Commerce: the seven pillar boxes in order (four, then three), each card once, the coming boxes show no figure', async () => {
+  await w.step('P2', 'Home -> Selling: the seven pillar boxes in order (four, then three), each card once, the coming boxes show no figure', async () => {
     const r = await page.evaluate(() => {
       const ps = [...document.querySelectorAll('.cbsh-pil')].map((p) => p.dataset.pillar);
       const ids = [...document.querySelectorAll('[data-testid^="shell-card-"],[data-testid^="shell-chip-"]')].map((e) => e.dataset.id || e.getAttribute('data-testid').replace(/^shell-(card|chip)-/, ''));
@@ -117,7 +117,7 @@ W.run('home', async (w) => {
     });
     const inOrder = r.ps.join() === PIL.join();
     const noFig = r.comingFacts.every((s) => !/\d/.test(s));
-    return { ok: inOrder && !r.dup.length && noFig && r.cap === 'CB Commerce' && r.rows.join() === '1,1', saw: 'title ' + r.cap + ' | boxes ' + r.ps.join(' > ') + ' | repeated: ' + (r.dup.join() || 'none') + ' | rows ' + r.rows.join('+') + ' | coming boxes: ' + r.comingFacts.join(' / ') };
+    return { ok: inOrder && !r.dup.length && noFig && r.cap === 'Selling' && r.rows.join() === '1,1', saw: 'title ' + r.cap + ' | boxes ' + r.ps.join(' > ') + ' | repeated: ' + (r.dup.join() || 'none') + ' | rows ' + r.rows.join('+') + ' | coming boxes: ' + r.comingFacts.join(' / ') };
   });
   await w.step('P3', 'Home -> the pillar boxes add no read: every /api call is one the manifest or Home already makes', async () => {
     const own = new Set(man.entries.filter((e) => e.state === 'built' && e.facts).map((e) => e.facts));
@@ -202,7 +202,7 @@ W.run('home', async (w) => {
   FX.list.forEach((q) => { if (q.party_no === 'P-0004') q.email = '9894055621@fixture-shop.cr'; if (q.party_no === 'P-0005') q.email = 'meena.s=outlook.com@fixture-shop.cr'; });
   await page.setViewportSize({ width: 1366, height: 800 });
   await goPage('/crm.html'); await page.waitForSelector('[data-testid^="crm-row-"]', { timeout: 15000 }); await page.waitForTimeout(300);
-  await w.step('C10', 'CRM -> Parties -> ONE line per party, in columns (Role · On ChitBridge · Dues · Last activity · Next follow-up), nothing stacked under the name', async () => {
+  await w.step('C10', 'CRM -> Parties -> ONE line per party, in columns (Role · On the network · Dues · Last activity · Next follow-up), nothing stacked under the name', async () => {
     const g = await page.evaluate(() => ({ heads: Array.from(document.querySelectorAll('#crm_list .cbl-hc')).map((h) => h.textContent.replace(/[▲▼⇅▾●]/g, '').trim()), rows: Array.from(document.querySelectorAll('#crm_list .cbl-row')).map((r) => Math.round(r.getBoundingClientRect().height)), stacked: document.querySelectorAll('#crm_list .cbl-row .l2, #crm_list .cbl-row .tag').length }));
     return { ok: /Party/i.test(g.heads[0]) && g.heads.some((h) => /^role$/i.test(h)) && g.heads.some((h) => /on chitbridge/i.test(h)) && g.rows.length >= 5 && g.rows.every((h) => h <= 56) && g.stacked === 0, saw: 'columns ' + g.heads.join(' · ') + '; row heights ' + g.rows.join('/') + ' px; ' + g.stacked + ' chips under a name' };
   });
@@ -216,7 +216,7 @@ W.run('home', async (w) => {
     await page.click('[data-testid="crm-row-P-0003"] [data-caret]'); await page.waitForSelector('[data-testid="crm-mini-P-0003"]'); await page.waitForTimeout(500);
     const g = await page.evaluate(() => ({ boxes: document.querySelectorAll('[data-testid="crm-mini-P-0003"] .mc-box').length, tel: !!document.querySelector('[data-testid="crm-mini-phone-P-0003"] a[href^="tel:"]'), acts: Array.from(document.querySelectorAll('#crm_list .cbl-next [data-act]')).map((b) => b.getAttribute('data-act') + (b.disabled ? ':off' : '')), why: (document.querySelector('[data-testid="crm-mini-message-why"]') || {}).textContent || '' }));
     await page.click('[data-testid="crm-row-P-0003"] [data-caret]');
-    return { ok: g.boxes === 3 && g.tel && g.acts.join() === 'call,message:off,pay,followup,open' && /Not on ChitBridge/.test(g.why), saw: g.boxes + ' boxes; actions ' + g.acts.join(' ') + '; Message says "' + g.why + '"' };
+    return { ok: g.boxes === 3 && g.tel && g.acts.join() === 'call,message:off,pay,followup,open' && /Not on the network/.test(g.why), saw: g.boxes + ' boxes; actions ' + g.acts.join(' ') + '; Message says "' + g.why + '"' };
   });
   await w.step('C9-O6', 'CRM -> an internal handle (…@fixture-shop.cr) is never shown as an e-mail — list, E-mail column, mini-card', async () => {
     await page.click('[data-testid="cols-btn-crm-parties"]'); await page.check('[data-testid="cols-crm-parties-email"]'); await page.keyboard.press('Escape'); await page.waitForTimeout(150);
@@ -273,7 +273,7 @@ W.run('home', async (w) => {
     /* T3-SETTINGS: Connectors is BUILT (CB Settings › Connectors) — a built door is a card, never a chip, so it cannot say workshop */
     if (await page.locator('[data-testid="shell-card-connectors"]').count()) {
       const others = await page.$$eval('[data-testid^="shell-chip-"][data-state="workshop"]', (e) => e.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
-      return { ok: others.every((t) => !/Connectors/.test(t)), saw: 'Connectors is a built card (CB Settings); chips still marked workshop: ' + others.length };
+      return { ok: others.every((t) => !/Connectors/.test(t)), saw: 'Connectors is a built card (Settings); chips still marked workshop: ' + others.length };
     }
     const c = await page.locator('[data-testid="shell-chip-connectors"]').first().evaluate((e) => ({ st: e.getAttribute('data-state'), t: e.textContent.replace(/\s+/g, ' ').trim() }));
     const others = await page.$$eval('[data-testid^="shell-chip-"][data-state="workshop"]', (e) => e.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));

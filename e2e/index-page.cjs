@@ -49,12 +49,12 @@ const PLANTED = { version: 2,
   entries: [
     { id: 'till', name: 'Till', route: '/till.html', icon: '▤', area: 'selling', pillar: 'sales', state: 'built', what: 'Take money at the counter.', facts: '/api/facts/till' },
     { id: 'storefront', name: 'Storefront', route: '/shop.html', icon: '◇', area: 'selling', pillar: 'marketing', state: 'built', what: 'Your shop on the web.', facts: null },
-    { id: 'marketing', name: 'CB Marketing', route: '/crm.html#/groups', icon: '◉', area: 'selling', pillar: 'marketing', state: 'built', what: 'Reach customers and bring them back.', facts: '/api/facts/marketing' },
+    { id: 'marketing', name: 'Marketing', route: '/crm.html#/groups', icon: '◉', area: 'selling', pillar: 'marketing', state: 'built', what: 'Reach customers and bring them back.', facts: '/api/facts/marketing' },
     { id: 'catalogue', name: 'Catalogue', route: null, icon: '▦', area: 'selling', pillar: 'marketing', state: 'workshop' },
     { id: 'orders', name: 'Orders', route: null, icon: '↓', area: 'selling', pillar: 'sales', state: 'coming' },
-    { id: 'finance', name: 'CB Finance', route: '/finance.html', icon: '◐', area: 'money', pillar: 'finance', state: 'built', what: 'Who owes you, who you owe.', facts: '/api/facts/finance' },
-    { id: 'accounts', name: 'CB Accounts', route: '/accounts.html', icon: '¤', area: 'money', pillar: 'accounting', state: 'built', what: 'What the shop made, and what it owes.', facts: '/api/facts/accounts' },
-    { id: 'crm', name: 'CB CRM', route: '/crm.html', icon: '◍', area: 'running', pillar: 'sales', state: 'built', what: 'Who buys, and how often.', facts: null },
+    { id: 'finance', name: 'Finance', route: '/finance.html', icon: '◐', area: 'money', pillar: 'finance', state: 'built', what: 'Who owes you, who you owe.', facts: '/api/facts/finance' },
+    { id: 'accounts', name: 'Accounts', route: '/accounts.html', icon: '¤', area: 'money', pillar: 'accounting', state: 'built', what: 'What the shop made, and what it owes.', facts: '/api/facts/accounts' },
+    { id: 'crm', name: 'CRM', route: '/crm.html', icon: '◍', area: 'running', pillar: 'sales', state: 'built', what: 'Who buys, and how often.', facts: null },
     { id: 'product-lab', name: 'Product Lab', route: '/product-lab.html', icon: '◈', area: 'labs', pillar: 'labs', state: 'built', what: 'Cost, price, and what each one leaves you.', facts: null },
     { id: 'tax-lab', name: 'Tax Lab', route: null, icon: '§', area: 'labs', pillar: 'labs', state: 'coming' },
     { id: 'standards', name: 'Standards', route: '/standards.html', icon: '≡', area: 'setup', pillar: 'setup', state: 'built', what: 'What a chit must contain.', facts: null },
@@ -101,7 +101,7 @@ async function run() {
   ok(man.rail && 'route' in man.rail && 'facts' in man.rail && !/app\.html/.test(JSON.stringify(man)), 'manifest · the rail widget is declared (route · facts), and nothing names app.html');
   const eff = (e) => (e.works && e.state === 'workshop' ? 'built' : e.state);   /* the roadmap's reading of a row (manifest `works`) */
   const BUILT = man.entries.filter((e) => e.state === 'built'), REST = man.entries.filter((e) => e.state !== 'built');
-  for (const w of ['Catalogue', 'CB Accounts', 'Till', 'Standards', 'Suppliers', 'CB Assist', 'Connectors', 'Your business', 'Counters', 'CB CRM', 'Product Lab', 'Offer Lab', 'Combo Lab']) {
+  for (const w of ['Catalogue', 'Accounts', 'Till', 'Standards', 'Suppliers', 'Assist', 'Connectors', 'Your business', 'Counters', 'CRM', 'Product Lab', 'Offer Lab', 'Combo Lab']) {
     ok(man.entries.some((e) => e.name === w), 'manifest · the old index\'s "' + w + '" is a manifest row');
   }
 
@@ -224,7 +224,7 @@ async function run() {
       /* RPT2: the Till card's teaser — the sparkline + "↑ +12% vs last year" (arrow + sign + words), a door into Reports › Trend, inside the tile's one row */
       const teaser = await pg.evaluate(() => { const t = document.querySelector('[data-testid="shell-facts-till"] [data-testid="shell-fact-trend"]'); return t ? { words: t.textContent.replace(/\s+/g, ' ').trim(), href: t.getAttribute('data-href'), svg: !!t.querySelector('svg[role="img"][aria-label]'), h: Math.round(t.getBoundingClientRect().height) } : null; });
       ok(teaser && teaser.svg && teaser.words === '↑ +12% vs last year' && teaser.href === '/finance.html#/reports/trend/week' && teaser.h <= 24, 'planted · the Till card carries the teaser: a sparkline + "↑ +12% vs last year", opening Reports › Trend, one line high (' + JSON.stringify(teaser) + ')');
-      ok(/Ledger up to 7 Oct/.test(await pg.locator('[data-testid="shell-facts-accounts"]').innerText()) && await pg.locator('[data-testid="shell-facts-accounts"] .more-n').count() === 0, 'planted · the CB Accounts tile: one line from the API, no +n');
+      ok(/Ledger up to 7 Oct/.test(await pg.locator('[data-testid="shell-facts-accounts"]').innerText()) && await pg.locator('[data-testid="shell-facts-accounts"] .more-n').count() === 0, 'planted · the Accounts tile: one line from the API, no +n');
       const fin = await pg.$eval('[data-testid="shell-facts-finance"]', (n) => ({ tile: n.innerText.replace(/\s+/g, ' ').trim(), n: (n.querySelector('.more-n') || {}).textContent, lines: [...n.querySelectorAll('.more .f')].map((x) => x.textContent.trim()) }));
       ok(/3 customers owe you/.test(fin.tile) && fin.n === '+2' && fin.lines.join('|') === '3 customers owe you|2 bills to pay|Cash is steady', 'planted · three lines → one on the tile, "+2", all three in the drop-down (' + fin.lines.join(' | ') + ')');
       /* STATUS: shell-state on every card whose facts answered (state, or lines); none on a card with no facts read */
@@ -247,7 +247,7 @@ async function run() {
       ok(rail.open === '/tasks.html', 'planted · the "Your work" Open goes where the manifest says (rail.route)');
       const rows = await pg.$$eval('[data-slot="alerts"] .al', (els) => els.map((e) => ({ id: e.dataset.testid, lvl: e.className.replace('al ', ''), text: e.textContent.replace(/\s+/g, ' ').trim(), fix: (e.querySelector('.fix') || {}).getAttribute && e.querySelector('.fix').getAttribute('href') })));
       const led = rows.find((r) => r.id === 'ledger-waiting'), pr = rows.find((r) => r.id === 'till-paired');
-      ok(led && /2 waiting to be recorded/.test(led.text) && led.fix === '/accounts.html#waiting', 'planted · "2 waiting to be recorded" — the alert\'s number is the API\'s, its fix opens CB Accounts (' + (led && led.text) + ')');
+      ok(led && /2 waiting to be recorded/.test(led.text) && led.fix === '/accounts.html#waiting', 'planted · "2 waiting to be recorded" — the alert\'s number is the API\'s, its fix opens Accounts (' + (led && led.text) + ')');
       /* FX-F10W: the same counts as Books' To do — each waiting row's `todo`, each kind its own words and door (never "4 waiting for the ledger") */
       const acc = rows.find((r) => r.id === 'ledger-accept'), sup = rows.find((r) => r.id === 'ledger-supplier');
       ok(acc && /\b1 supplier bill to accept/.test(acc.text) && acc.fix === '/accounts.html#waiting', 'planted · "1 supplier bill to accept" with its door (' + (acc && acc.text) + ')');

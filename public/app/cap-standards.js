@@ -150,7 +150,7 @@ var STANDARDS = [
     s:'part',
     /* STD-COMPARE (15 Oct 2026): In force → Partly. Proved against the code: grep -E "(margin|padding|border)-(left|right)|\b(left|right)\s*:" over public/*.html + public/app/*.js
        finds ~200 hits in 15 files (margin-left 50 · right: 49 · left: 39 · border-right 22 · border-left 16 · padding-right 12 · margin-right 10 · padding-left 8). */
-    note:'378 physical properties were converted in the workshop. The small apps built since (CB Accounts, CRM, Finance, Settings, the till) still write margin-left, padding-right and left:/right: — about 200 across 15 files — so an Arabic reader gets a mirrored page in some places and not others. Missing: the same sweep over the small apps, and a guard that counts physical properties and only lets the count fall.',
+    note:'378 physical properties were converted in the workshop. The small apps built since (Accounts, CRM, Finance, Settings, the till) still write margin-left, padding-right and left:/right: — about 200 across 15 files — so an Arabic reader gets a mirrored page in some places and not others. Missing: the same sweep over the small apps, and a guard that counts physical properties and only lets the count fall.',
     at:'Whole product', go:'appearance', why:'Arabic became possible in one sweep instead of a parallel stylesheet nobody would maintain.' },
 
   { id:'rfc7386', pa:'catalogue', a:'build', k:'std', c:['GLOBAL'],
@@ -216,7 +216,7 @@ var STANDARDS = [
     p:"Customers pay by UPI with the amount already filled in",
     g:'Commercial', n:'NPCI UPI deep link',    w:'upi://pay — the payee, amount and reference a UPI app reads',     ex:"upi://pay?pa=shop@okhdfc&am=140.00&cu=INR&tn=CB-C1-0007", exWhy:"India only, and the same string the storefront already builds — so a customer scanning at the counter and one scanning online reach the same payee with the same reference.",
     s:'live',
-    note:'lib/profile PAY_SCHEMES.upi, encoded by the counter and the storefront from one shape. The money moves bank to bank; nothing passes through ChitBridge and nothing here confirms a payment.',
+    note:'lib/profile PAY_SCHEMES.upi, encoded by the counter and the storefront from one shape. The money moves bank to bank; nothing passes through us and nothing here confirms a payment.',
     at:'Counter · Storefront', go:'till', why:'A shop with no card terminal can still be paid without cash, and a QR needs no internet to draw.' },
   { id:'iso18004-qr', pa:'till', a:'money', k:'std', c:['GLOBAL'],
     p:"The QR code prints and scans reliably",
@@ -504,12 +504,12 @@ var STANDARDS = [
     added:'2026-10-03' },
   { id:'dpdp-2023', pa:'crm', a:'people', k:'law', c:['IN'],
     p:"Customer data used only for its purpose, with consent; people can see, correct or erase theirs",
-    m:"Consent and requests recorded in CB CRM and on the shop page; migrations and notice are the owner's",
+    m:"Consent and requests recorded in CRM and on the shop page; migrations and notice are the owner's",
     eq:"Like the GDPR in the EU",
     g:"People & privacy", n:"Digital Personal Data Protection Act 2023", w:"Purpose, consent, the right to see, correct and erase",
     s:"part",
     note:"Since 13 Oct 2026: consent per channel and purpose is kept as rows that are never edited (s.6(10): the proof is ours to give), and every request to see, correct or erase gets the date the law sets. Both need migrations b306 and b307, which the owner runs. The privacy notice itself is the owner's to publish. Most operative duties start 13 May 2027 (DPDP Rules 2025).",
-    at:"CB CRM · a party › consent; privacy requests",
+    at:"CRM · a party › consent; privacy requests",
     go:"crm",
     why:"No scraping, no guessing sensitive facts: the customer’s data stays theirs.",
     added:'2026-10-03' },
@@ -608,7 +608,7 @@ var STANDARDS = [
     g:"People & privacy", n:"IT Act 2000 s.43A + SPDI Rules 2011, r.4 and r.5(9)", w:"Privacy policy on the website; grievance officer, one month",
     s:"part",
     note:"In force now, until the DPDP Rules replace them. The request register gives every grievance its due date from this rule; the policy and the officer's name are on the owner's action list in docs/compliance.",
-    at:"CB CRM · privacy requests",
+    at:"CRM · privacy requests",
     go:"crm",
     why:"The duty applies today, not in 2027 — and an unanswered complaint is the first thing a regulator asks about.",
     added:'2026-10-13' },
@@ -618,7 +618,7 @@ var STANDARDS = [
     g:"People & privacy", n:"IT (Intermediary Guidelines) Rules 2021, r.3(2)", w:"Grievance: acknowledge in 24 hours, resolve in 15 days",
     s:"part",
     note:"We may count as an intermediary because we carry records between businesses. Until a lawyer says otherwise the register uses this rule's 15 days for a grievance, the shorter clock.",
-    at:"CB CRM · privacy requests",
+    at:"CRM · privacy requests",
     go:"crm",
     why:"The stricter clock is safe either way; the looser one is a breach if the law applies.",
     added:'2026-10-13' },
@@ -632,23 +632,23 @@ var STANDARDS = [
     added:'2026-10-13' },
   { id:'au-privacy-apps', pa:'crm', a:'people', k:'law', c:['AU'],
     p:"Customers' data used only for its purpose; offers only with consent; they can see and correct it",
-    m:"Consent and requests recorded in CB CRM and on the shop page; no Australian policy yet",
+    m:"Consent and requests recorded in CRM and on the shop page; no Australian policy yet",
     eq:"Like the GDPR in the EU",
     g:"People & privacy", n:"Privacy Act 1988 (Cth), APPs 1, 5, 6, 7, 12, 13 + Spam Act 2003 s.16", w:"Policy, collection notice, direct marketing, access and correction",
     s:"part",
     note:"A business under A$3M turnover is usually exempt, but every larger shop must hold us to these by contract, so we comply as if covered. Requests get 30 days (the OAIC's usual reading of APP 12).",
-    at:"CB CRM · a party › consent; privacy requests",
+    at:"CRM · a party › consent; privacy requests",
     go:"crm",
     why:"Our larger Australian shops cannot use a system that would make them break this.",
     added:'2026-10-13' },
   { id:'ae-pdpl-rights', pa:'crm', a:'people', k:'law', c:['AE'],
     p:"Personal data used with consent, and people can see, correct or erase theirs",
-    m:"Consent and requests recorded in CB CRM and on the shop page; its regulation not issued",
+    m:"Consent and requests recorded in CRM and on the shop page; its regulation not issued",
     eq:"Like the GDPR in the EU",
     g:"People & privacy", n:"UAE PDPL, Federal Decree-Law 45/2021, Art.4–6, 13–18", w:"Consent, the data subject's rights",
     s:"part",
     note:"The Executive Regulation that sets the reply period is not issued, so the register uses 30 days as our own rule and says so. Shops in DIFC or ADGM fall under those free zones' own laws, not covered yet.",
-    at:"CB CRM · a party › consent; privacy requests",
+    at:"CRM · a party › consent; privacy requests",
     go:"crm",
     why:"Consent we can prove is the lawful basis the law starts from.",
     added:'2026-10-13' },
@@ -772,7 +772,7 @@ var STANDARDS = [
     m:"Not built; payment stays bank to bank",
     g:'Open network', n:'ONDC RSF (reconciliation and settlement framework)', w:'Who pays whom, when, and how both sides agree the figures',
     s:'plan',
-    note:"Not built. Nothing passes through ChitBridge today: a payment moves bank to bank and the chit records it.",
+    note:"Not built. Nothing passes through us today: a payment moves bank to bank and the chit records it.",
     at:'—', go:'',
     why:"Settlement agreed by both sides is the money half of the record; it waits on the registry decision.",
     added:'2026-10-14' },
@@ -793,7 +793,7 @@ var STANDARDS = [
     ex:"1A − 1B = the GST ledgers' net movement", exWhy:"Every label is a read of the posted books for the quarter, so the statement cannot disagree with them.",
     s:'part',
     note:"In force: the BAS is prepared from the posted books — Simpler BAS by default, the full labels on request (chitbridge-api lib/gst-returns.js returnFor → the AU pack; tests/books-returns.test.cjs; engines tests/reg-au.test.js). Missing: lodging through the tax office's online services.",
-    at:'CB Accounts · Returns', go:'returns',
+    at:'Accounts · Returns', go:'returns',
     why:"A return built from the books is the one figure the shop and its accountant do not have to reconcile by hand.",
     added:'2026-10-14' },
   { id:'aasb-101', pa:'accounts', a:'books', k:'std', c:['AU'],
@@ -802,7 +802,7 @@ var STANDARDS = [
     g:'Books', n:'AASB 101 Presentation of Financial Statements', w:'The lines of the balance sheet and the profit and loss, by nature',
     s:'live',
     note:"The AU pack's statement lines (chitbridge-api lib/reg-au.js, paras 54 and 82/102) are what an Australian shop's statements are laid out by. Proof: tests/books-country.test.cjs.",
-    at:'CB Accounts · Reports', go:'balance',
+    at:'Accounts · Reports', go:'balance',
     why:"An Australian bank or accountant reads the statements without asking how they were arranged.",
     added:'2026-10-14' },
   { id:'aasb-102', pa:'accounts', a:'books', k:'std', c:['AU'],
@@ -839,7 +839,7 @@ var STANDARDS = [
     g:'Money & tax', n:'Federal Decree-Law 8/2017 (VAT) · VAT 201 return', w:'Value added tax and its return, box by box',
     s:'part',
     note:"In force: the VAT 201 boxes are read from the posted books, by emirate where the form asks (chitbridge-api lib/gst-returns.js returnFor → the AE pack; tests/books-returns.test.cjs; engines tests/reg-ae.test.js). Missing: filing through the tax authority's portal.",
-    at:'CB Accounts · Returns', go:'returns',
+    at:'Accounts · Returns', go:'returns',
     why:"A return built from the books cannot disagree with them.",
     added:'2026-10-14' },
   { id:'pint-ae', pa:'accounts', a:'money', k:'law', c:['AE'],
@@ -890,7 +890,7 @@ var STANDARDS = [
     g:'Books', n:'IAS 21 · Ind AS 21 · AASB 121 (foreign exchange)', w:'A foreign transaction at its day\'s rate; open balances at the closing rate; the difference to profit or loss',
     s:'part',
     note:"Built: a foreign bill posts at the rate of its day (one the shop typed or imported, never fetched), a payment settles at its own day's rate with the gain or loss on its own ledger, and the month end revalues open foreign balances (chitbridge-api lib/fx-rates.js; tests/fx-rates.test.cjs; engines tests/fx.test.js). Missing: migrations b391 and b392, which the owner runs.",
-    at:'CB Accounts · Exchange rates', go:'',
+    at:'Accounts · Exchange rates', go:'',
     why:"A bill in dollars paid a month later is never the same rupees; the difference must land somewhere a CA can see.",
     added:'2026-10-14' },
   /* ── the platform ── */
@@ -1010,7 +1010,7 @@ var STD_STATUS = [['live','In force','●'],['part','Partly','◐'],['plan','Pla
    platform areas the area packs own (sign-in, compliance, settings, testing, the API). The 29-area product map (docs/planning/PRODUCT-AREA-MAP-2026-10-14.md)
    was not on hand when this was written: when it lands, it WIDENS this one array, and a row moves by its `pa` alone. `a` (STD_AREAS) stays the business view. */
 var STD_PRODUCT_AREAS = [['registration','Registration'],['country','Country setup'],['till','Till'],['print','Print / share'],['shop','Shop / online showcase'],
-  ['catalogue','Catalogue'],['accounts','CB Accounts'],['finance','CB Finance'],['crm','CRM'],['tasks','Tasks & Orders'],['connector','Connector'],
+  ['catalogue','Catalogue'],['accounts','Accounts'],['finance','Finance'],['crm','CRM'],['tasks','Tasks & Orders'],['connector','Connector'],
   ['employees','Employees'],['network','Network / rail'],['locale','Locale'],['payroll','Payroll'],
   ['signin','Sign-in & access'],['compliance','Compliance & security'],['settings','Settings & look'],['testing','Testing'],['api','Platform & API']];
 var STD_CHECKED = '2026-10-14';
@@ -1235,7 +1235,7 @@ var STD_COMPAT_STATUS = { works: 'live', partly: 'part', planned: 'plan' };
 var STD_COMPAT_PROOF = { live: 'Tested live', 'stand-in': 'Proven on a stand-in', 'not-yet': 'Not yet' };
 var STD_COMPAT_FIT = { 'one-to-one': 'One-to-one', alongside: 'Works alongside', gap: 'Gap' };
 /* T3-COMPAT: which way a compatibility row moves — [symbol, word, the sentence with the system's name]. The Works with tab's Moves column and the opened row say it. */
-var STD_COMPAT_DIR = { 'in': ['↓', 'In', 'From {s} into ChitBridge'], out: ['↑', 'Out', 'From ChitBridge out to {s}'], both: ['⇅', 'Both ways', 'Both ways between ChitBridge and {s}'] };
+var STD_COMPAT_DIR = { 'in': ['↓', 'In', 'From {s} into the network'], out: ['↑', 'Out', 'From the network out to {s}'], both: ['⇅', 'Both ways', 'Both ways between the network and {s}'] };
 function stdCompatRows(json){
   var rows = (json && Array.isArray(json.rows)) ? json.rows : [];
   var areas = STD_AREAS.map(function(a){ return a[0]; }), ctry = STD_COUNTRIES.map(function(c){ return c[0]; }), pas = STD_PRODUCT_AREAS.map(function(a){ return a[0]; });

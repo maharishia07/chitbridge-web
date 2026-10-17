@@ -78,7 +78,7 @@ const walk = async (w) => {
     const put = S.calls.filter((c) => /PUT \/api\/governance\/profile\/vault/.test(c)).pop() || '';
     return { ok: none && /Nothing to save/.test(toast) && /"version":"v7"/.test(put) && /"t:state":\{[^}]*Kerala/.test(put) && !/Tamil Nadu/.test(put) && !/legal_name/.test(put), saw: 'no PUT ' + none + ' · "' + toast + '" · ' + put.slice(40, 200) };
   });
-  await w.step('T5', 'CB Settings -> Country: the rows (country · money · year · tax), each with where it came from; the sidebar marks Country', async () => {
+  await w.step('T5', 'Settings -> Country: the rows (country · money · year · tax), each with where it came from; the sidebar marks Country', async () => {
     await page.click('text=Country >> nth=0').catch(() => {}); await page.waitForSelector('[data-testid="cs-rows"]', { timeout: 10000 });
     const c = await txt('[data-testid="cs-val-country"]'), t = await txt('[data-testid="cs-title"]');
     return { ok: /India/.test(c) && /Country setup/.test(t) && /#\/country$/.test(page.url()), saw: t + ' · ' + c + ' · ' + page.url().replace(base, '') };

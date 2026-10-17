@@ -307,7 +307,7 @@ async function route(S, r) {
     /* Open page: the one way out — the chit PAGE in CB CRM (crm.html#/chit/<id>, CRM2), in a new tab so the Day book keeps its place; never the workshop */
     await p.evaluate(() => { window.__opened = null; window.open = function (url) { window.__opened = url; return null; }; });
     await p.click('[data-testid="cs-act-page"]');
-    ok(!(await sheetOpen(p)) && await p.evaluate(() => window.__opened) === '/crm.html#/chit/sb1', 'Open page closes the sheet and opens the chit page in CB CRM (/crm.html#/chit/sb1) — the only navigation');
+    ok(!(await sheetOpen(p)) && await p.evaluate(() => window.__opened) === '/crm.html#/chit/sb1', 'Open page closes the sheet and opens the chit page in CRM (/crm.html#/chit/sb1) — the only navigation');
     await ctx.close();
   }
   /* ── 3 · a task, from the Waiting list ──────────────────────────────────────────────────────────── */
@@ -570,7 +570,7 @@ async function route(S, r) {
     ok(/Books Shop/.test(sub) && !/books-shop/.test(sub), 'Bills: who accepted is the display name ("Books Shop"), not the handle — ' + sub.replace(/\s+/g, ' ').trim());
     const pages0 = ctx.pages().length;
     await p.click('[data-testid="bill-sb1"]'); await waitSheet(p, 'AM-81');
-    ok(await sheetOpen(p) && ctx.pages().length === pages0, 'a Bills row opens the chit sheet in CB Accounts (openChitSheet is defined there), not a new tab');
+    ok(await sheetOpen(p) && ctx.pages().length === pages0, 'a Bills row opens the chit sheet in Accounts (openChitSheet is defined there), not a new tab');
     ok(/To accept/.test(await p.textContent('[data-testid="cs-step"]')), 'the sheet says the step from the chit\'s own state_log (no bill_step yet → To accept)');
     await ctx.close();
   }
@@ -579,7 +579,7 @@ async function route(S, r) {
     const S = standIn(); const { ctx, p } = await open(S);
     await p.goto(base + '/app.html#/app');
     await p.waitForSelector('[data-testid="nav-task"]', { timeout: 20000 });
-    ok(await p.locator('[data-testid="nav-bills"]').count() === 0, 'P0: the app menu has no Bills door any more (CB Accounts › Bills is the home); the redirects below still hold');
+    ok(await p.locator('[data-testid="nav-bills"]').count() === 0, 'P0: the app menu has no Bills door any more (Accounts › Bills is the home); the redirects below still hold');
     await p.goto(base + '/app.html#/app/ledger'); await p.waitForURL(/\/accounts\.html/, { timeout: 15000 }).catch(() => {});
     ok(/\/accounts\.html(#|$)/.test(p.url()), '#/app/ledger → /accounts.html (' + p.url().replace(base, '') + ')');
     await p.goto(base + '/app.html#/app/ledger/dues'); await p.waitForURL(/accounts\.html#dues/, { timeout: 15000 }).catch(() => {});

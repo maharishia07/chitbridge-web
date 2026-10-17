@@ -2,7 +2,7 @@
 /**
  * e2e/walk-au-words.cjs — AU-WORDS (2026-10-15): AN AUSTRALIAN OR UAE SHOP SEES ITS COUNTRY'S WORDS, CHOICES, CHECKS AND ICONS — NEVER INDIA'S.
  *
- * Athi on live austore1 (country AU), 15 Oct: Home's "Leans on us" › Filings said "Name your GSTIN" and "If you change · Your GSTIN"; the CB Accounts
+ * Athi on live austore1 (country AU), 15 Oct: Home's "Leans on us" › Filings said "Name your GSTIN" and "If you change · Your GSTIN"; the Accounts
  * card wore ₹; Settings › Policy offered REGULAR · COMPOSITION · UNREGISTERED (no GSTIN) · SEZ; the shop sheet's TRADE READY asked for "PAN on file"
  * and "GSTIN"; Retention / Chit expiry read "0 days". Each read India's words directly. Now every one reads the shop's COUNTRY PACK: the server
  * words the sides panel, the trade checks and the policy schema (api lib/pack-words — the one reader beside profile.taxIdWordOf); the shell paints
@@ -117,7 +117,7 @@ const walk = async (w) => {
       const sheet = await txt('[data-testid="shell-sheet-full"]');
       return { ok: checks.join('|') === X.checks.join('|') && india(cc, sheet), saw: checks.join(' · ') };
     });
-    await w.step(cc + '-3', who + ' · the CB Accounts card and the Running area wear the shop\'s money symbol (' + X.symbol + ')', async () => {
+    await w.step(cc + '-3', who + ' · the Accounts card and the Running area wear the shop\'s money symbol (' + X.symbol + ')', async () => {
       const card = await txt('[data-testid="shell-card-accounts"] .g'), nav = await txt('[data-testid="shell-nav-money"] .i');
       return { ok: card === X.symbol && nav === X.symbol, saw: 'card "' + card + '" · area "' + nav + '"' };
     });

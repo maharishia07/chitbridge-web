@@ -230,7 +230,7 @@ function cbDefRegistries(){
   out.push({
     key: 'reward', icon: '🎁', title: 'Reward earning kinds',
     blurb: 'How points can be earned. A programme picks a kind and sets its parameters — the shop decides the rate, '
-         + 'what a point converts into, and whether points expire. ChitBridge only carries the mechanism.',
+         + 'what a point converts into, and whether points expire. We only carry the mechanism.',
     source: 'lib/rewards.js · EARN_KINDS',
     rows: (typeof CBRewards !== 'undefined' && CBRewards.EARN_KINDS)
       ? Object.keys(CBRewards.EARN_KINDS).map(function (k) {

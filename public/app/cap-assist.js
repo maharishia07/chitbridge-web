@@ -33,14 +33,14 @@
   /* ── the read ── */
   function load() {
     var who = call('assistWhoami').then(function (j) { return (j && j.actions && j.actions.publish) || { ok: false, say: T('Could not check who may publish. Try again.') }; },
-      function (e) { say('error', 'CB Assist: who may publish could not be read — ' + ((e && e.message) || e)); return { ok: false, say: T('Could not check who may publish. Try again.') }; });
+      function (e) { say('error', 'Assist: who may publish could not be read — ' + ((e && e.message) || e)); return { ok: false, say: T('Could not check who may publish. Try again.') }; });
     return Promise.all([who, call('assistQuestions')]).then(function (r) {
       A.may = r[0]; A.items = Array.isArray(r[1]) ? r[1] : ((r[1] && r[1].data) || []);
     });
   }
   function fail(e) {
-    say('error', 'CB Assist: the answers could not be read — ' + ((e && e.message) || e));
-    A.el.innerHTML = '<div class="empty" data-testid="ca-fail"><div class="t">' + esc(T("Couldn't read CB Assist's answers. Check the connection and try again.")) + '</div>'
+    say('error', 'Assist: the answers could not be read — ' + ((e && e.message) || e));
+    A.el.innerHTML = '<div class="empty" data-testid="ca-fail"><div class="t">' + esc(T("Couldn't read Assist's answers. Check the connection and try again.")) + '</div>'
       + '<button type="button" class="act" id="ca_retry" data-testid="ca-retry">' + esc(T('Try again')) + '</button></div>';
     $('ca_retry').onclick = function () { mount(A.el); };
   }
@@ -48,11 +48,11 @@
   /* ── the review box: question → ✨ Draft → Accept (publish) · Reject (discard) ── */
   function reviewHTML() {
     var q = A.qa || {};
-    return '<div class="tk-h">' + esc(T(A.qa && A.qa.id ? 'Refine this answer' : 'What CB Assist drafted')) + '</div>'
+    return '<div class="tk-h">' + esc(T(A.qa && A.qa.id ? 'Refine this answer' : 'What Assist drafted')) + '</div>'
       + '<label class="sub" for="ca_q">' + esc(T('Question')) + '</label><input class="inp" id="ca_q" data-testid="ca-q" maxlength="400" autocomplete="off" value="' + esc(q.q || '') + '">'
       + '<div class="tk-act"><button type="button" class="act quiet" id="ca_draft" data-testid="ca-draft">' + esc(T('✨ Draft an answer')) + '</button></div>'
       + '<label class="sub" for="ca_a">' + esc(T('Answer')) + '</label><textarea class="inp" id="ca_a" data-testid="ca-a" rows="4" maxlength="4000">' + esc(q.a || '') + '</textarea>'
-      + (A.drafted ? '<div class="sub" data-testid="ca-drafted">' + esc(T('CB Assist drafted this. Read it before you accept.')) + '</div>' : '')
+      + (A.drafted ? '<div class="sub" data-testid="ca-drafted">' + esc(T('Assist drafted this. Read it before you accept.')) + '</div>' : '')
       + '<label class="sub" for="ca_c">' + esc(T('Where it shows (screens, or * for everywhere)')) + '</label><input class="inp" id="ca_c" data-testid="ca-c" autocomplete="off" value="' + esc((q.context || ['*']).join(', ')) + '">'
       + '<div class="tk-steps">' + root.CBTasks.actRow('ca_accept', T('Accept and publish'), A.may, '', '')
       + '<div class="tk-act"><button type="button" class="act quiet" id="ca_reject" data-testid="ca-reject">' + esc(T('Reject')) + '</button></div></div>'
@@ -72,11 +72,11 @@
     var f = form();
     if (f.q.length < 3) { $('ca_out').textContent = T('Type the question first.'); return; }
     return root.CBAction.run(btn, function () { return call('aiDraft', { body: { skill_id: 'assist-ask', context: { question: f.q, screens: f.context } } }); },
-      { key: 'ca-draft', busy: T('Drafting…'), out: 'ca_out', failed: T("CB Assist couldn't draft this. Write the answer yourself."),
-        onFail: function (w, e) { $('ca_out').textContent = e && e.status === 503 ? T('CB Assist is not connected on this server. Write the answer yourself.') : w; },
+      { key: 'ca-draft', busy: T('Drafting…'), out: 'ca_out', failed: T("Assist couldn't draft this. Write the answer yourself."),
+        onFail: function (w, e) { $('ca_out').textContent = e && e.status === 503 ? T('Assist is not connected on this server. Write the answer yourself.') : w; },
         outcome: function (r) {
           var text = r && (r.draft || (r.data && r.data.draft));
-          if (!text) { $('ca_out').textContent = T("CB Assist couldn't draft this. Write the answer yourself."); return; }
+          if (!text) { $('ca_out').textContent = T("Assist couldn't draft this. Write the answer yourself."); return; }
           A.qa = Object.assign({}, A.qa || {}, { q: f.q, a: String(text), context: f.context.length ? f.context : ['*'] }); A.drafted = true;
           paintReview(); $('ca_out').textContent = T('Drafted. Accept it, change it, or reject it.');
         } });
@@ -90,15 +90,15 @@
       { key: 'ca-publish', failed: T("That didn't publish"), out: 'ca_out',
         outcome: function () {
           var upd = !!body.qa_id; A.qa = null; A.drafted = false;
-          return load().then(function () { paintReview(); mountList(); $('ca_out').textContent = T(upd ? 'Updated. CB Assist answers with it now.' : 'Published. CB Assist answers with it now.'); },
-            function (e) { say('error', 'CB Assist: the list did not re-read after publishing — ' + ((e && e.message) || e)); $('ca_out').textContent = T('Published. The list did not refresh — open CB Assist again.'); });
+          return load().then(function () { paintReview(); mountList(); $('ca_out').textContent = T(upd ? 'Updated. Assist answers with it now.' : 'Published. Assist answers with it now.'); },
+            function (e) { say('error', 'Assist: the list did not re-read after publishing — ' + ((e && e.message) || e)); $('ca_out').textContent = T('Published. The list did not refresh — open Assist again.'); });
         } });
   }
 
   /* ── the list (CBList, client-side: the library is one read) ── */
   function mountList() {
     var host = $('ca_list'); if (!host) return;
-    if (A.list) { try { A.list.destroy(); } catch (x) { say('warn', 'CB Assist: list teardown — ' + x.message); } }
+    if (A.list) { try { A.list.destroy(); } catch (x) { say('warn', 'Assist: list teardown — ' + x.message); } }
     var wheres = [];
     A.items.forEach(function (e) { var w = whereWord(e.context); if (wheres.indexOf(w) < 0) wheres.push(w); });
     A.list = root.CBList.mount(host, {
@@ -111,7 +111,7 @@
       defaultCols: ['q', 'a', 'where'],
       filters: [{ key: 'where', label: T('Where it shows'), all: T('Anywhere'), options: wheres.map(function (w) { return { v: w, label: w }; }), match: function (e, v) { return whereWord(e.context) === v; } }],
       search: function (e) { return [e.q, e.a, whereWord(e.context)].join(' '); },
-      sorts: [{ key: 'as', label: T('As CB Assist lists them'), cmp: function () { return 0; } },
+      sorts: [{ key: 'as', label: T('As Assist lists them'), cmp: function () { return 0; } },
               { key: 'q', label: T('Question A–Z'), cmp: function (x, y) { return String(x.q || '').localeCompare(String(y.q || '')); } }],
       onOpen: function (e) { A.qa = { id: e.id, q: e.q, a: e.a, context: Array.isArray(e.context) && e.context.length ? e.context : ['*'] }; A.drafted = false; paintReview(); var q = $('ca_q'); if (q && q.scrollIntoView) q.scrollIntoView({ block: 'center' }); },
       empty: { title: T('No answers published yet') }

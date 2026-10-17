@@ -8,7 +8,7 @@
 <meta charset="utf-8">
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CB Accounts</title>
+<title>Accounts</title>
 <!-- ⭐ CB ACCOUNTS — the Ledger as its own page (Athi, 2026-10-01: "split the ledger system out of the rail menu
      and provide its own identity as CB Accounts and its own menu, profile page etc. — reuse the profile and avatar").
      The LOOK is the designer's handoff (docs/design/ledgers-page/: sidebar, pinned header, the Ledgers view); the RULES are
@@ -261,9 +261,9 @@ body.lg-on.lg-sel .titlebar{display:none}   /* the list's own title row is the v
   <aside class="side" id="side">
     <div class="brand">
       <div class="logo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h14v18H5zM9 7h6M9 11h6M9 15h4"/></svg></div>
-      <div class="brand-text label"><span class="brand-name">CB Accounts</span></div>
+      <div class="brand-text label"><span class="brand-name">Accounts</span></div>
     </div>
-    <nav class="nav scroll" id="nav" aria-label="CB Accounts"></nav>
+    <nav class="nav scroll" id="nav" aria-label="Accounts"></nav>
     <div class="side-foot">
       <button type="button" class="nav-btn" id="toggleNav" aria-label="Collapse sidebar" aria-expanded="true">
         <svg class="nav-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span class="label">Collapse</span>
@@ -275,7 +275,7 @@ body.lg-on.lg-sel .titlebar{display:none}   /* the list's own title row is the v
     <div id="shell" data-testid="acc-shell"></div>   <!-- THE ONE HEADER (CBFrame → CBShell, SHELL-ONE): mark · CB Accounts · chip · ⌂ Home · bell · avatar -->
     <div class="titlebar">
       <div class="titles">
-        <h1 id="title">CB Accounts</h1>
+        <h1 id="title">Accounts</h1>
         <div class="summary" id="summary"></div>
       </div>
     </div>
@@ -630,7 +630,7 @@ function closeFirst(r){
    index tile); anyone else is told whom to ask. */
 function offCard(){
   ON = false; navPaint(''); $('nav').innerHTML = '';
-  card(`<h2 data-testid="acc-off">CB Accounts is not switched on</h2>`
+  card(`<h2 data-testid="acc-off">Accounts is not switched on</h2>`
     + (isOwner() ? `<button type="button" class="act" data-testid="acc-switch-on" id="switchOn">Switch on</button>`
                  : `<p data-testid="acc-ask-owner">Ask the owner to switch it on</p>`));
   const b = $('switchOn');
@@ -643,7 +643,7 @@ function offCard(){
   });
 }
 function failedCard(){
-  card(`<h2>CB Accounts could not be read</h2><p>Check the connection, then try again.</p><button type="button" class="act" data-testid="acc-retry" id="retry">Try again</button>`, true);
+  card(`<h2>Accounts could not be read</h2><p>Check the connection, then try again.</p><button type="button" class="act" data-testid="acc-retry" id="retry">Try again</button>`, true);
   $('retry').onclick = () => start();
 }
 /* ⭐ CS1: the country decides whether books may open here — a country with no pack (or no country, or the setup still to do) is SAID in the
@@ -704,7 +704,7 @@ window.addEventListener('storage', (e) => {
 });
 /* the one-shop gate, attached the way the Labs attach it (offer-lab-next.html): this tab answers the roll and leaves when
    its shop is signed out or the browser is cleaned — to the home page, which reads nothing while that runs */
-CBOnePerson.attach({ quiet: true, who: () => MINE, label: () => 'CB Accounts',
+CBOnePerson.attach({ quiet: true, who: () => MINE, label: () => 'Accounts',
   onLeave: (by) => { location.replace('/?left=' + encodeURIComponent(by || '')); },
   onWipe: () => { location.replace('/?cleaned=1'); } });
 /* ⭐ THE # DECIDES THE PAGE (M138): Back, Forward and a typed or shared link land on the page the address says. chrome() writes the # with replaceState, which fires nothing, so a click never loops here. */

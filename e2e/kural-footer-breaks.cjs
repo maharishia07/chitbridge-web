@@ -31,10 +31,10 @@ const BREAKS = [
   /* the data and the pages */
   ['the page copy of kurals.json drifts from the kit', DATA, `Effort brings prosperity; lack of effort brings poverty.`, `Effort brings prosperity; lack of effort brings poverty!`, H],
   ['the excluded list loses 552', DATA, `"no": 552,`, `"no": 553,`, H],
-  ['CB Accounts does not mount the footer', ACC, `<script src="/app/kural.js"></script>   <!-- CBKural: the kural footer — ONE band at the foot of every CB page, mounted here the way CBAvatar is -->`, ``, H],
-  ['CB CRM does not mount the footer', CRM, `<script src="/app/kural.js"></script>   <!-- CBKural: the kural footer — one band at the foot, outside the head; never in a message -->`, ``, H],
+  ['Accounts does not mount the footer', ACC, `<script src="/app/kural.js"></script>   <!-- CBKural: the kural footer — ONE band at the foot of every CB page, mounted here the way CBAvatar is -->`, ``, H],
+  ['CRM does not mount the footer', CRM, `<script src="/app/kural.js"></script>   <!-- CBKural: the kural footer — one band at the foot, outside the head; never in a message -->`, ``, H],
   ['the index page does not mount the footer', IDX, `if (window.CBKural) CBKural.mount({ route: 'planning' });`, ``, H],
-  ['every CB Accounts view shows the same kural', ACC, `if (window.CBKural) CBKural.set(KURAL_OF[nav[0]] || 'accounts');`, `if (window.CBKural) CBKural.set('accounts');`, H],
+  ['every Accounts view shows the same kural', ACC, `if (window.CBKural) CBKural.set(KURAL_OF[nav[0]] || 'accounts');`, `if (window.CBKural) CBKural.set('accounts');`, H],
   ['the CRM follow-ups page shares the parties kural', CRMJS, `seg[0] === 'followups' ? 'crm-party' : 'crm-parties'`, `seg[0] === 'followups' ? 'crm-parties' : 'crm-parties'`, H],
 ];
 const ONLY = process.env.BREAK_ONLY || '';

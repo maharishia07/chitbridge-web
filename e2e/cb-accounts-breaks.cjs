@@ -58,7 +58,7 @@ const BREAKS = [
   ['LP ‹ is missing on a phone ledger', CAPB, `data-lt="back" data-testid="lt-back" aria-label="' + esc(tx('Back to all ledgers')) + '">‹</button>'`, `data-lt="back" data-testid="lt-back" style="display:none" aria-label="' + esc(tx('Back to all ledgers')) + '">‹</button>'`, A],
   ['LP the Statement button opens nothing', CAPB, `try { window.open('/crm.html#/party/'`, `try { void ('/crm.html#/party/'`, A],
   ['LP an agreement chip is drawn without the API\'s date', CAPB, `    if (ag) h.chips.push(`, `    if (true) h.chips.push(`, A],
-  ['SHELL-ONE the page draws a Home of its own beside the frame\'s', PAGE, `<h1 id="title">CB Accounts</h1>`, `<h1 id="title">CB Accounts</h1><a class="home" href="/" data-testid="acc-home">⌂ Home</a>`, A],
+  ['SHELL-ONE the page draws a Home of its own beside the frame\'s', PAGE, `<h1 id="title">Accounts</h1>`, `<h1 id="title">Accounts</h1><a class="home" href="/" data-testid="acc-home">⌂ Home</a>`, A],
   ['LP the page title row stays above the open ledger (head past 20%)', PAGE, `body.lg-on.lg-sel .titlebar{display:none}`, `body.lg-on.lg-sel .titlebar{display:flex}`, A],
   ['LP a balance is read per ledger (a per-leaf fetch)', CAPB, `function bkLtBal(code) {\n`, `function bkLtBal(code) {\n  api('booksLedger', { params: { account: code }, query: bkRange('lg') }).catch(function () {});\n`, A],
   ['LP the list is not held inside its pane (it runs under the kural footer)', CAPB, `'#bk_lt #lg_out{flex:1 1 auto;min-height:0}',`, `'#bk_lt #lg_out{flex:0 0 auto}',`, A],
@@ -67,7 +67,7 @@ const BREAKS = [
   ['ONE the ledger rows draw their own table', CAPB, `  return CBList.mount(el, {\n    key: 'ledger-' + kind,`, `  el.innerHTML = '<table class=bktab><tbody><tr><td>x</td></tr></tbody></table>';\n  return CBList.mount(document.createElement('div'), {\n    key: 'ledger-' + kind,`, A],
   ['ONE an entry has no next level', CAPB, `  var e = bkLgEntry(l), own =`, `  var e = null, own =`, A],
   ['ONE a bill number opens no sheet in the ledger', CAPB, `function bkBillPart(s, tid) {\n`, `function bkBillPart(s, tid) {\n  s = Object.assign({}, s, { chit_id: null });\n`, A],
-  ['the word accounting reaches the screen', PAGE, `<span class="brand-name">CB Accounts</span>`, `<span class="brand-name">CB Accounts accounting</span>`, A],
+  ['the word accounting reaches the screen', PAGE, `<span class="brand-name">Accounts</span>`, `<span class="brand-name">Accounts accounting</span>`, A],
   ['an alert() sneaks in', PAGE, `function navTo(k){`, `function navTo(k){ alert('hi');`, A],
   ['the Switch on call is copied into the page', PAGE, `call: (on) => CBLedger.call({ api: api }, on),`, `call: (on) => api('booksEnable', { body: {} }),`, A],
 ];

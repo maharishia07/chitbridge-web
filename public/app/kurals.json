@@ -1,5 +1,5 @@
 {
-  "_about": "Thirukkural library for the app. verse = Tamil couplet (2 lines), always shown in every language. meaning.<lang> = plain-language meaning; 'ta' and 'en' are required before release, other languages optional (fallback to 'en'). translit.<lang> = optional: the Tamil verse written in that language's script. placements: hero|strip|empty|splash|print|signin. group 'crm' = CB CRM pages (placement 'footer' = the CBKural footer band on CB pages).",
+  "_about": "Thirukkural library for the app. verse = Tamil couplet (2 lines), always shown in every language. meaning.<lang> = plain-language meaning; 'ta' and 'en' are required before release, other languages optional (fallback to 'en'). translit.<lang> = optional: the Tamil verse written in that language's script. placements: hero|strip|empty|splash|print|signin. group 'crm' = CRM pages (placement 'footer' = the CBKural footer band on CB pages).",
   "languages": {
     "required": [
       "ta",
@@ -455,7 +455,7 @@
       "no": 120,
       "route": "crm-parties",
       "group": "crm",
-      "app": "CB CRM",
+      "app": "CRM",
       "page": {
         "en": "Parties list",
         "ta": "வாடிக்கையாளர்கள்"
@@ -481,7 +481,7 @@
       "no": 783,
       "route": "crm-party",
       "group": "crm",
-      "app": "CB CRM",
+      "app": "CRM",
       "page": {
         "en": "Party page & timeline",
         "ta": "வாடிக்கையாளர் பக்கம்"
@@ -507,7 +507,7 @@
       "no": 100,
       "route": "crm-messages",
       "group": "crm",
-      "app": "CB CRM",
+      "app": "CRM",
       "page": {
         "en": "Messages & dues reminders",
         "ta": "செய்திகள் & நினைவூட்டல்கள்"
@@ -533,7 +533,7 @@
       "no": 788,
       "route": "crm-service",
       "group": "crm",
-      "app": "CB CRM",
+      "app": "CRM",
       "page": {
         "en": "Service & complaints",
         "ta": "சேவை & புகார்கள்"
@@ -559,7 +559,7 @@
       "no": 108,
       "route": "crm-disputes",
       "group": "crm",
-      "app": "CB CRM",
+      "app": "CRM",
       "page": {
         "en": "Disputes",
         "ta": "சச்சரவுகள்"
@@ -585,7 +585,7 @@
       "no": 103,
       "route": "crm-loyalty",
       "group": "crm",
-      "app": "CB CRM",
+      "app": "CRM",
       "page": {
         "en": "Loyalty & offers",
         "ta": "விசுவாசம் & சலுகைகள்"
@@ -611,7 +611,7 @@
       "no": 94,
       "route": "crm-leads",
       "group": "crm",
-      "app": "CB CRM",
+      "app": "CRM",
       "page": {
         "en": "Leads & enquiries",
         "ta": "விசாரணைகள்"

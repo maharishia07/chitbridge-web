@@ -126,7 +126,7 @@ const walk = async (w) => {
       await page.click('[data-testid="sup-view-other"]'); await page.waitForTimeout(300);
       const other = await order('sup-row-'), r3 = await txt('[data-testid="sup-ready-s3"]');
       await page.click('[data-testid="sup-view-trade"]'); await page.waitForTimeout(300);
-      return { ok: trade.join() === 'sup-row-s1,sup-row-s2' && /catalogue/i.test(r1) && /Not on ChitBridge/.test(r2) && other.join() === 'sup-row-s3' && /no catalogue/.test(r3), saw: trade.join(',') + ' "' + r1 + '" "' + r2 + '" | other ' + other.join(',') + ' "' + r3 + '"' };
+      return { ok: trade.join() === 'sup-row-s1,sup-row-s2' && /catalogue/i.test(r1) && /Not on the network/.test(r2) && other.join() === 'sup-row-s3' && /no catalogue/.test(r3), saw: trade.join(',') + ' "' + r1 + '" "' + r2 + '" | other ' + other.join(',') + ' "' + r3 + '"' };
     });
     await w.step('O7', 'Suppliers -> a row\'s next level says the certificate check is not here yet (OPS-S2), never a green tick', async () => {
       await page.click('[data-testid="sup-row-s1"]'); await page.waitForSelector('[data-testid="sup-next-s1"]', { timeout: 5000 });
@@ -139,7 +139,7 @@ const walk = async (w) => {
       const said = await txt('[data-testid="sup-add-out"]');
       await page.click('[data-testid="sup-add-local"]'); await page.waitForSelector('[data-testid="sup-row-s9"]', { timeout: 8000 }).catch(() => {});
       const posts = wrote(/POST \/api\/relationships\/suppliers/);
-      return { ok: /No ChitBridge business/.test(said) && posts.length === 2 && /supplier_bridge_id/.test(posts[0]) && /"name":"ramstores1"/.test(posts[1]) && (await page.locator('[data-testid="sup-row-s9"]').count()) === 1, saw: '"' + said + '" · ' + posts.join(' | ') };
+      return { ok: /No business/.test(said) && posts.length === 2 && /supplier_bridge_id/.test(posts[0]) && /"name":"ramstores1"/.test(posts[1]) && (await page.locator('[data-testid="sup-row-s9"]').count()) === 1, saw: '"' + said + '" · ' + posts.join(' | ') };
     });
     await w.step('O9', 'Add refused by the server -> its sentence in the dialog, never a raw error', async () => {
       S.addRefuse = true; await page.click('[data-testid="sup-add-open"]'); await page.fill('[data-testid="sup-add-q"]', 'Some Name'); await page.click('[data-testid="sup-add-go"]'); await page.waitForTimeout(600);
@@ -161,7 +161,7 @@ const walk = async (w) => {
       return { ok: after1 === 0 && d.length === 1 && /suppliers\/s2$/.test(d[0]), saw: 'after cancel ' + after1 + ' · ' + d.join(' | ') };
     });
   }
-  await w.step('O12', 'Home: CB Operations is built at /operations.html with a facts card; Stock and Suppliers point into it', async () => {
+  await w.step('O12', 'Home: Operations is built at /operations.html with a facts card; Stock and Suppliers point into it', async () => {
     const m = await page.evaluate(() => fetch('/app/manifest.json').then((r) => r.json()));
     const by = Object.fromEntries(m.entries.map((e) => [e.id, e]));
     const o = by.operations, s = by.stock, p = by.suppliers;

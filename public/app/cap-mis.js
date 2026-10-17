@@ -36,12 +36,12 @@ function fmSetPeriod(p) { FM.period = p; fmPaintTop(); fmLoad(); }
 
 /** the measures of one answer: the rows of the list — label · the three figures · where each opens (null = a duration, not a door) */
 var FM_ROWS = [
-  { key: 'count',    label: 'Chits',                 pick: function (m) { return m.count; },          door: { all: '/tasks.html', received: '/tasks.html?view=orders_in', sent: '/tasks.html?view=orders_out' }, opens: 'CB Tasks & Orders' },
-  { key: 'open',     label: 'Open',                  pick: function (m) { return m.open; },           door: { all: '/crm.html#/chits', received: '/crm.html#/chits?tab=in', sent: '/crm.html#/chits?tab=out' }, opens: 'CB CRM › Chits' },
-  { key: 'overdue',  label: 'Stuck',                 pick: function (m) { return m.overdue; },        door: { all: '/crm.html#/chits?tab=stuck', received: '/crm.html#/chits?tab=stuck', sent: '/crm.html#/chits?tab=stuck' }, opens: 'CB CRM › Chits › Stuck' },
-  { key: 'unread',   label: 'Not read yet',          pick: function (m) { return m.unread; },         door: { all: '/crm.html#/chits', received: '/crm.html#/chits?tab=in', sent: '/crm.html#/chits?tab=out' }, opens: 'CB CRM › Chits' },
-  { key: 'closed',   label: 'Closed',                pick: function (m) { return m.closed; },         door: { all: '/tasks.html?view=done', received: '/tasks.html?view=done', sent: '/tasks.html?view=done' }, opens: 'CB Tasks & Orders › Done' },
-  { key: 'disputed', label: 'In dispute',            pick: function (m) { return m.disputes && m.disputes.open; }, door: { all: '/tasks.html', received: '/tasks.html?view=orders_in', sent: '/tasks.html?view=orders_out' }, opens: 'CB Tasks & Orders' },
+  { key: 'count',    label: 'Chits',                 pick: function (m) { return m.count; },          door: { all: '/tasks.html', received: '/tasks.html?view=orders_in', sent: '/tasks.html?view=orders_out' }, opens: 'Tasks & Orders' },
+  { key: 'open',     label: 'Open',                  pick: function (m) { return m.open; },           door: { all: '/crm.html#/chits', received: '/crm.html#/chits?tab=in', sent: '/crm.html#/chits?tab=out' }, opens: 'CRM › Chits' },
+  { key: 'overdue',  label: 'Stuck',                 pick: function (m) { return m.overdue; },        door: { all: '/crm.html#/chits?tab=stuck', received: '/crm.html#/chits?tab=stuck', sent: '/crm.html#/chits?tab=stuck' }, opens: 'CRM › Chits › Stuck' },
+  { key: 'unread',   label: 'Not read yet',          pick: function (m) { return m.unread; },         door: { all: '/crm.html#/chits', received: '/crm.html#/chits?tab=in', sent: '/crm.html#/chits?tab=out' }, opens: 'CRM › Chits' },
+  { key: 'closed',   label: 'Closed',                pick: function (m) { return m.closed; },         door: { all: '/tasks.html?view=done', received: '/tasks.html?view=done', sent: '/tasks.html?view=done' }, opens: 'Tasks & Orders › Done' },
+  { key: 'disputed', label: 'In dispute',            pick: function (m) { return m.disputes && m.disputes.open; }, door: { all: '/tasks.html', received: '/tasks.html?view=orders_in', sent: '/tasks.html?view=orders_out' }, opens: 'Tasks & Orders' },
   { key: 'oldest',   label: 'Oldest, in days',       pick: function (m) { return m.clock && m.clock.oldest_age_days; }, door: null },
   { key: 'median',   label: 'Typical age, in days',  pick: function (m) { return m.clock && m.clock.median_age_days; }, door: null },
 ];
@@ -108,7 +108,7 @@ function fmNext(row) {
 function fmHead() {
   var r = FM.r, notices = [];
   if (r && FM.state === 'ready') {
-    notices.push({ tid: 'fm-rule', text: tx('Stuck = open for more than') + ' ' + txn('{count} day', '{count} days', Number(r.overdue_days)) + '. ' + tx('Change it under CB Settings › Policy.') });
+    notices.push({ tid: 'fm-rule', text: tx('Stuck = open for more than') + ' ' + txn('{count} day', '{count} days', Number(r.overdue_days)) + '. ' + tx('Change it under Settings › Policy.') });
     if (r.truncated) notices.push({ cls: 'warn', tid: 'fm-truncated', text: tx('Counted over the first 5,000 chits only — the rest are not in these figures.') });
   }
   return { title: tx('Reports'), notices: notices };

@@ -177,7 +177,7 @@ function crmCallClick(action, target) {
 
 /* ═══ THE CALLS TAB ═════════════════════════════════════════════════════════════════════════════════════════════ */
 function crmCalls(frame) {
-  crmBar('<strong>' + esc(tx('CB CRM')) + '</strong>', '', true);
+  crmBar('<strong>' + esc(tx('CRM')) + '</strong>', '', true);
   var s = document.getElementById('screen'); s.className = 'screen flush';
   s.innerHTML = '<div id="crm_calls" data-testid="crm-calls"></div>';
   /* no destroy() here: the old #crm_calls left the page with the innerHTML above, and CBList.mount prunes every instance whose element is gone (list-ctl.js prune) — the old try/catch was an empty catch */

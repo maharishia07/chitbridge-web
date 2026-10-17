@@ -57,14 +57,14 @@
      "of": 6
     },
     {
-     "area": "CB Accounts",
+     "area": "Accounts",
      "state": "ok",
      "line": "",
      "works": 11,
      "of": 11
     },
     {
-     "area": "CB Finance",
+     "area": "Finance",
      "state": "partial",
      "line": "\"Interest due\"",
      "works": 6,
@@ -172,14 +172,14 @@
      "of": 6
     },
     {
-     "area": "CB Accounts",
+     "area": "Accounts",
      "state": "partial",
      "line": "bank statement import presets",
      "works": 10,
      "of": 11
     },
     {
-     "area": "CB Finance",
+     "area": "Finance",
      "state": "partial",
      "line": "dues ageing buckets",
      "works": 4,
@@ -287,14 +287,14 @@
      "of": 6
     },
     {
-     "area": "CB Accounts",
+     "area": "Accounts",
      "state": "partial",
      "line": "bank statement import presets",
      "works": 11,
      "of": 12
     },
     {
-     "area": "CB Finance",
+     "area": "Finance",
      "state": "partial",
      "line": "dues ageing buckets",
      "works": 4,

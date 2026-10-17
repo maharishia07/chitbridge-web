@@ -8,7 +8,7 @@
 <meta charset="utf-8">
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CB Operations</title>
+<title>Operations</title>
 <!-- ⭐ CB Operations — Stock and Suppliers as a small app (T3-OPS, 2026-10-14; Home's "CB Operations" door, docs/design/INDEX-NOT-APP.md).
      The FRAME is CBFrame's standard skeleton (sidebar + full-width main, page-frame.js + page-skeleton.css), as settings.html and tasks.html.
      The SCREENS are modules, never drawn here:
@@ -115,7 +115,7 @@ function go(){ if (window.CBFrame) CBFrame.ended(); }   /* api()'s 401 → drop 
     if (k === 'suppliers') CBSuppliers.mount(host); else CBStock.mount(host);
   }
   frame = CBFrame.mount({ app: 'operations', work: host,   /* no kural: app/kurals.json has no operations route yet (picking one is the owner's) */
-    skeleton: { name: 'CB Operations', icon: 'M12 15a3 3 0 1 0 0-6a3 3 0 0 0 0 6M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1',
+    skeleton: { name: 'Operations', icon: 'M12 15a3 3 0 1 0 0-6a3 3 0 0 0 0 6M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1',
       sections: SECTIONS, active: secOf(), onSection: paint } });
   var sess = frame.session;
   if (!sess || !sess.token) { host.innerHTML = '<div class="empty" data-testid="ops-signin"><div class="t">Sign in above</div></div>'; return; }

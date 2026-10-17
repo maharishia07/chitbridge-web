@@ -207,7 +207,7 @@ function bankList() {
       { id: 'accept', icon: '✓', label: 'Accept', tid: 'bank-accept', when: (r) => r.status === 'settled' || r.status === 'matched', run: (r) => bankAccept(r) },
       { id: 'record', icon: '₹', label: 'Record from the chit', tid: 'bank-record', when: (r) => r.status === 'told', why: () => (may.ok ? '' : may.say), run: (r) => bankRecord(r) },
       { id: 'ask', icon: '✉', label: 'Ask the party', tid: 'bank-ask', when: (r) => r.status === 'bank-only' || r.status === 'suggested' || r.status === 'check',
-        why: () => (!may.ok ? may.say : !((BKB.rail && BKB.rail.parties) || []).length ? tx('Nobody on ChitBridge to ask. Add it in your books instead.') : ''), run: (r) => bankAsk(r) },
+        why: () => (!may.ok ? may.say : !((BKB.rail && BKB.rail.parties) || []).length ? tx('Nobody on the network to ask. Add it in your books instead.') : ''), run: (r) => bankAsk(r) },
       { id: 'add', icon: '＋', label: 'Add missing', tid: 'bank-add', when: (r) => own && (r.status === 'suggested' || r.status === 'bank-only' || r.status === 'check') && !bankIsParty(r), run: (r) => bankAdd(r) },
       { id: 'dues', icon: '₹', label: 'Record it in Dues', tid: 'bank-dues', when: (r) => own && r.status !== 'told' && bankIsParty(r), run: () => bkTab('dues') },
       { id: 'undo', icon: '↶', label: 'Undo', tid: 'bank-undo', when: (r) => r.status === 'accepted', run: (r) => bankUndo(r) },

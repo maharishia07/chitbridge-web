@@ -80,7 +80,7 @@ function crmGroupsBar() {
   var why = crmGroupsMay('group');
   var btn = why ? crmViewOnlyBtn('crm-grp-add', '+ ' + tx('New group'), why) : '<button type="button" class="act sm" data-testid="crm-grp-add" data-crm="grpnew">+ ' + esc(tx('New group')) + '</button>';
   if (GROUPS.loaded && !GROUPS.migrated) btn = crmViewOnlyBtn('crm-grp-add', '+ ' + tx('New group'), tx('Named groups need one database step (b205).'));
-  crmBar('<strong>' + esc(tx('CB CRM')) + '</strong>', btn, true);
+  crmBar('<strong>' + esc(tx('CRM')) + '</strong>', btn, true);
 }
 function crmGroupsNotices() {
   var n = [];
@@ -256,7 +256,7 @@ function crmSendGo(btn) {
 var SHOW = { flags: null, state: 'loading', err: null, gen: 0, party: null, rec: null, busy: false };
 function crmShopUrl() { var id = SESSION.bridgeId || SESSION.userId || ''; return location.origin + '/shop.html?s=' + encodeURIComponent(id); }
 function crmShowcase(frame) {
-  crmBar('<strong>' + esc(tx('CB CRM')) + '</strong>', '', false);
+  crmBar('<strong>' + esc(tx('CRM')) + '</strong>', '', false);
   var s = document.getElementById('screen'); s.className = 'screen';
   s.innerHTML = '<div class="content" data-testid="crm-showcase"><div class="rsec" style="padding:14px"><div class="sec">' + esc(tx('Shop window')) + '</div>'
     + '<p class="hint" style="margin:0 0 10px">' + esc(tx('Your customers see this page. Pick its look, then share the link with those who agreed to hear from you.')) + '</p>'

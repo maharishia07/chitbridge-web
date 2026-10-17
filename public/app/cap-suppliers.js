@@ -38,9 +38,9 @@ var CBSuppliers = (function () {
   /** readiness in three answers + the server's own sentence when it has one */
   function ready(x) {
     if (x.one_sided && x.one_sided.why) return { k: 'one', text: t('Orders stay with you'), why: x.one_sided.why, tone: 'amber' };
-    if (x.on_rail === false) return { k: 'off', text: t('Not on ChitBridge'), why: t('Record what you buy from them by hand.'), tone: '' };
+    if (x.on_rail === false) return { k: 'off', text: t('Not on the network'), why: t('Record what you buy from them by hand.'), tone: '' };
     if (x.has_catalogue) return { k: 'cat', text: t('Can order · catalogue'), why: t('Their catalogue is published: order from it in Tasks & Orders.'), tone: 'green' };
-    return { k: 'nocat', text: t('On ChitBridge · no catalogue'), why: t('They have published no catalogue, so what they stock is not known.'), tone: 'amber' };
+    return { k: 'nocat', text: t('On the network · no catalogue'), why: t('They have published no catalogue, so what they stock is not known.'), tone: 'amber' };
   }
   function taxCell(x) {
     var f = x.facts || {}; if (!f.gstin) return '<span class="sub">—</span>';
@@ -65,7 +65,7 @@ var CBSuppliers = (function () {
       { key: 'ready', label: t('Can you order?'), prio: 2, w: 230, sort: 'ready', html: true, tid: function (x) { return 'sup-ready-' + x.supplier_list_id; }, cell: function (x) {
           var r = ready(x); return '<span class="tag' + (r.tone ? ' ' + r.tone : '') + '">' + esc(r.text) + '</span>';
         } },
-      { key: 'cbid', label: t('ChitBridge ID'), prio: 3, w: 190, html: true, cell: function (x) {
+      { key: 'cbid', label: t('Network ID'), prio: 3, w: 190, html: true, cell: function (x) {
           var id = x.user_id || x.bridge_id; return (id && x.on_rail !== false) ? '<span class="mono">' + esc(id) + '</span>' : '<span class="sub">' + esc(t('off-rail')) + '</span>';
         } },
       { key: 'tax', label: t('Tax number'), prio: 4, w: 230, html: true, cell: taxCell },
@@ -105,7 +105,7 @@ var CBSuppliers = (function () {
       views: { tid: 'sup-view', items: [{ key: 'trade', label: t('To sell'), filt: { kind: 'resale' } }, { key: 'other', label: t('To use'), filt: { kind: 'own_use' } }] },
       preset: { filt: { kind: 'resale' } },
       filters: [{ key: 'kind', label: t('Kind'), all: t('To sell or to use'), options: [{ v: 'resale', label: t('To sell') }, { v: 'own_use', label: t('To use') }], match: function (x, v) { return supKindOf(x) === v; } },
-        { key: 'ready', label: t('Can you order?'), all: t('Any'), options: [{ v: 'cat', label: t('Can order · catalogue') }, { v: 'nocat', label: t('On ChitBridge · no catalogue') }, { v: 'off', label: t('Not on ChitBridge') }, { v: 'one', label: t('Orders stay with you') }], match: function (x, v) { return ready(x).k === v; } }],
+        { key: 'ready', label: t('Can you order?'), all: t('Any'), options: [{ v: 'cat', label: t('Can order · catalogue') }, { v: 'nocat', label: t('On the network · no catalogue') }, { v: 'off', label: t('Not on the network') }, { v: 'one', label: t('Orders stay with you') }], match: function (x, v) { return ready(x).k === v; } }],
       search: function (x) { return [x.nickname, x.display_name, x.category, x.user_id, x.bridge_id, x.facts && x.facts.gstin].filter(Boolean).join(' '); },
       sorts: [
         { key: 'pref', label: t('★ Preferred first'), cmp: function (a, b) { return (b.preferred ? 1 : 0) - (a.preferred ? 1 : 0) || supName(a).localeCompare(supName(b)); } },
@@ -148,7 +148,7 @@ var CBSuppliers = (function () {
       onFail: function (words, e) {
         /* ⭐ not found is a question, not a dead end: a one-word shop name of eight letters looks exactly like a handle */
         if (link && e && e.status === 404) {
-          out.innerHTML = esc(t('No ChitBridge business with that User ID or email.')) + ' <button type="button" class="act quiet" data-testid="sup-add-local">' + esc(t('Add as a local supplier')) + '</button>';
+          out.innerHTML = esc(t('No business with that User ID or email.')) + ' <button type="button" class="act quiet" data-testid="sup-add-local">' + esc(t('Add as a local supplier')) + '</button>';
           out.querySelector('button').onclick = function () { add(this, true); };
           return;
         }
