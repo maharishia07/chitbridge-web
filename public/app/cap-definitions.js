@@ -27,6 +27,10 @@
  * rendering an empty section that looks like "there are none" — an empty list and a missing source look identical
  * on screen and mean opposite things.
  */
+/* OWNS the Definitions workshop: offers, tax slabs, categories and their editors
+ * CALLED BY app.html (ensureCap('definitions'))
+ * FLOW ensureCap -> list definitions -> editor rows -> test panel evaluates through CBOffers with fmtMoney(moneyCode())
+ * CARD 07-catalogue-and-pricing/definitions */
 
 var CBDEF = { open: {}, mine: null, loading: false, err: '' };
 
@@ -1042,7 +1046,7 @@ function cbDefFieldHTML(x, v){
   var box = '<input class="inp"' + type + ' data-testid="' + id + '" value="' + esc(val) + '"'
     + ' placeholder="' + esc(x.ph || '') + '"' + set('this.value,' + (x.num ? 'true' : 'false')) + '>';
   /* ⭐ MONEY SAYS ITS CURRENCY, A RATE SAYS % (Athi, 2026-09-06 10:35: "in front of amount put a currency symbol") — a bare box is a number, not money */
-  if (x.money) { var sym = (typeof CBLocale !== 'undefined' && CBLocale.symbol) ? CBLocale.symbol((typeof SESSION !== 'undefined' && SESSION && SESSION.currency) || 'INR') : '₹'; return '<span class="cbdef-adorn"><b>' + esc(sym) + '</b>' + box + '</span>'; }
+  if (x.money) { var sym = (typeof CBLocale !== 'undefined' && CBLocale.symbol) ? (moneyCode() ? CBLocale.symbol(moneyCode()) : '') : '₹'; return '<span class="cbdef-adorn"><b>' + esc(sym) + '</b>' + box + '</span>'; }
   if (x.pct) return '<span class="cbdef-adorn cbdef-adorn-after">' + box + '<b>%</b></span>';
   return box;
 }
@@ -1894,7 +1898,7 @@ function cbDefTestRun(){
   var why = '';
   try {
     var lines = [cbOfferLine(0, d, CBDEF_TEST.qty)];
-    var ev = CBOffers.evaluate({ lines: lines, offers: [offer], money: function(n){ return fmtMoney(n, myCur ? myCur() : 'INR'); }, customer_groups: _groups });
+    var ev = CBOffers.evaluate({ lines: lines, offers: [offer], money: function(n){ return fmtMoney(n, moneyCode()); }, customer_groups: _groups });
     var per = (CBOffers.perLine(ev, lines) || {})['0'] || { off: 0 };
     var skipped = (ev && ev.skipped) || [];
     if (!(per.off > 0) && !(ev && ev.claims && ev.claims.length)) {
@@ -1902,7 +1906,7 @@ function cbDefTestRun(){
           + esc(missing || (skipped.length ? skipped.map(function(s){ return s.why || s.reason || ''; }).filter(Boolean).join(' · ') : tx('Nothing comes off this product at this quantity — the rule does not reach it (scope, dates, minimum, or an empty value).')))
           + '</div>';
     } else {
-      why = '<div data-testid="cbdef-test-why" style="margin-top:6px;font-size:var(--fs-2);color:var(--ok-2);font-weight:700">' + esc((per.off > 0 ? fmtMoney(per.off, myCur ? myCur() : 'INR') + ' ' + tx('off') : '') + (ev.claims && ev.claims.length ? ' · ' + ev.claims.length + ' ' + tx('free item(s)') : '')) + '</div>';
+      why = '<div data-testid="cbdef-test-why" style="margin-top:6px;font-size:var(--fs-2);color:var(--ok-2);font-weight:700">' + esc((per.off > 0 ? fmtMoney(per.off, moneyCode()) + ' ' + tx('off') : '') + (ev.claims && ev.claims.length ? ' · ' + ev.claims.length + ' ' + tx('free item(s)') : '')) + '</div>';
     }
   } catch (e) { why = '<div style="font-size:var(--fs-1);color:var(--grey)">' + esc(String(e && e.message || e)) + '</div>'; }
   out.innerHTML = html + why;

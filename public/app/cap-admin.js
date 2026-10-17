@@ -659,7 +659,7 @@ async function _loadMIS(){
       srv: srv,
       periodLabel: misPeriod() === 'all' ? 'all time' : ('last ' + misPeriod() + 'd'),
       asOf: misReadAt(Date.now()),   /* "live · 10:32" — the same stamp CB Finance › Reports paints (cap-mis.js, loaded with this capability) */
-      currency: 'INR'
+      currency: moneyCode()
     };
     const h = document.getElementById('misbody'); if (h) h.innerHTML = misBandHTML(misBand(), UI._mis);
     const r = document.getElementById('mis_rail');
@@ -3254,7 +3254,7 @@ function govLayersBlock(){ var t=UI.govTab||0; var L=GOV[t];
      * whichever screen you happened to open, so the row shows both and names them.
      */
     (function(){
-      var _rec = (typeof myCur === 'function') ? myCur() : (SESSION.currency || 'INR');
+      var _rec = moneyCode();
       var _gov = (UI._me && UI._me.governance && UI._me.governance.basics && UI._me.governance.basics.currency) || '';
       if (_gov && _rec && String(_gov).toUpperCase() !== String(_rec).toUpperCase()) {
         push('Currency', esc(_gov) + ' <span style="color:var(--warn-2)">— governed. Your entity record says '
@@ -3269,7 +3269,7 @@ function govLayersBlock(){ var t=UI.govTab||0; var L=GOV[t];
   /* ⚠️ The Consolidation view inherited from GOVSET — the localStorage decoy — so it echoed a value nothing
      used. It reads the same real sources the Constitution row does, and says so where there is none. */
   else if(t===6){
-    push('Currency (inherited)', esc(typeof myCur==='function' ? myCur() : (SESSION.currency||'INR')) + ' · from your entity record', 'inherited');
+    push('Currency (inherited)', esc(moneyCode() || '-') + ' · from your entity record', 'inherited');
     push('Timezone (inherited)', 'nothing to inherit — not stored', 'free');
     push('Language (inherited)', 'nothing to inherit — not stored', 'free');
   }
@@ -3536,7 +3536,7 @@ function standardsSettingsHTML(){
     ['Reading order', CBLocale.dir() === 'rtl' ? 'Right to left ←' : 'Left to right →'],
     ['Locale tag',    '<code>' + esc(CBLocale.tag()) + '</code>'],
     ['Numbers',       esc(CBLocale.number(123456789.5))],
-    ['Money',         esc(CBLocale.money(123456.5, (typeof SESSION !== 'undefined' && SESSION && SESSION.currency) || 'INR'))],
+    ['Money',         esc(fmtMoney(123456.5, moneyCode()))],
     ['Date',          esc(CBLocale.date(Date.now()))],
     ['Time',          esc(CBLocale.time(Date.now()))],
     ['Time zone',     esc(CBLocale.timezone())],
@@ -3980,7 +3980,7 @@ function _localeSettingsBody(){
     (tzAll.length ? tzAll : ['Asia/Kolkata','Asia/Dubai','Asia/Riyadh','Europe/London','Europe/Berlin','America/New_York','UTC'])
       .map(function(z){ return [z, z.split('/').join(' / ')]; }));
 
-  var myCurCode = (typeof SESSION !== 'undefined' && SESSION && SESSION.currency) || 'INR';
+  var myCurCode = moneyCode();
   var wi = CBLocale.weekInfo() || {};
   var DAY = { 1:'Mon', 2:'Tue', 3:'Wed', 4:'Thu', 5:'Fri', 6:'Sat', 7:'Sun' };
   var weekend = (wi.weekend || []).map(function(x){ return DAY[x] || x; }).join(' + ') || '—';
@@ -4744,7 +4744,7 @@ var _NETC_ADD = {}, _NETC_OUT = {};
 var _NETC_WORDS = { price: 'price', mrp: 'MRP', name: 'name', category: 'category', hsn: 'HSN', unit: 'unit', image: 'picture', desc: 'description' };
 function _netMoney(n){
   if (n === null || n === undefined || n === '') return '—';
-  try { return CBLocale.money(Number(n), (typeof SESSION !== 'undefined' && SESSION && SESSION.currency) || 'INR'); } catch (_) { return String(n); }
+  try { return fmtMoney(Number(n), moneyCode()); } catch (_) { return String(n); }
 }
 function _netFieldWords(f){
   var money = f.field === 'price' || f.field === 'mrp';

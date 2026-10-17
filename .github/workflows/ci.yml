@@ -43,6 +43,8 @@ jobs:
         run: node e2e/guard-static.cjs
       - name: No page string names GSTIN / PAN / ₹ outside an India-pack path (AU-WORDS ratchet)
         run: node e2e/india-words-guard.cjs
+      - name: No page guesses India's money, zone or locale (NEUTRAL-CORE N1 ratchet)
+        run: node e2e/neutral-literals-guard.cjs
       - name: Every typed amount is the one money input (M36)
         run: node e2e/money-input-guard.cjs
       - name: Cart, steps, adoption

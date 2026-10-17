@@ -11,9 +11,13 @@
  * Remind is bkRemind, one after another), the denied card (the server said "owner only" — the sentence, greyed).
  * ⚠️ Never error.message on a screen: a failure says what happened and offers Try again.
  */
+/* OWNS CB Finance, Collections: who owes the shop, how old, the limit, Remind, Receive
+ * CALLED BY finance.html (after cap-books.js, list-ctl.js, rail-thread.js)
+ * FLOW GET dues -> FIN.cur from the reply, else the books money -> CBList rows -> bkMoney / bkOwes
+ * CARD 16-finance/cb-finance */
 'use strict';
 
-var FIN = { gen: 0, rows: [], cur: 'INR', state: 'loading', err: null, api: null, queue: null, back: null };
+var FIN = { gen: 0, rows: [], cur: null, state: 'loading', err: null, api: null, queue: null, back: null };
 var FIN_OWNER_ONLY = 'Only the owner may see collections.';
 
 function finOwes(p) { return Number(p.balance_minor) > 0; }

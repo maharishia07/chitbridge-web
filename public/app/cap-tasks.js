@@ -36,6 +36,10 @@
  *
  *   CBTasks.mount(el, { token, base, embed, view, onEnded }) → { reload, show(view) }
  */
+/* OWNS Tasks and Orders as a standalone app
+ * CALLED BY tasks.html (and tasks.html?embed=1 as a frame)
+ * FLOW CBList rows from the work API -> the sheet -> amounts through bkMoney in the chit's own currency
+ * CARD 05-orders-and-workflow/tasks-and-orders */
 (function (root) {
   'use strict';
   /* the registry rows this screen adds (the scanner tools/endpoint-usage.cjs reads this shape); status · chit · wlAssign · wlDeliver · railChits come from CB_SHEET_EP, messages · sendMsg from CB_THREAD_EP */
@@ -165,7 +169,7 @@
       { key: 'what', label: T('What'), prio: 1, w: 260, sort: 'what', html: true, value: function (r) { return r.subject || ''; },
         cell: function (r) { var how = howWord(r); return '<b>' + esc(r.subject || T('Untitled')) + '</b>' + (r.party ? ' <span class="sub">' + esc(r.party) + '</span>' : '') + (how ? ' <span class="sub" data-testid="tk-how-' + esc(r.chit_id) + '">' + esc(how) + '</span>' : ''); } },
       { key: 'word', label: T('Where it is'), prio: 2, w: 150, sort: 'word', hfilter: 'state', html: true, cell: wordCell, value: function (r) { return r.word || ''; } },
-      { key: 'amount', label: T('Amount'), prio: 3, w: 130, num: true, sort: 'amount', cell: function (r) { return r.total_minor == null ? '' : root.bkMoney(r.total_minor, r.currency || 'INR'); }, value: function (r) { return Number(r.total_minor) || 0; } },
+      { key: 'amount', label: T('Amount'), prio: 3, w: 130, num: true, sort: 'amount', cell: function (r) { return r.total_minor == null ? '' : root.bkMoney(r.total_minor, r.currency); }, value: function (r) { return Number(r.total_minor) || 0; } },
       { key: 'who', label: T('Who has it'), prio: 4, w: 150, sort: 'who', hfilter: 'assignee', cell: whoWord, value: whoWord },
       { key: 'for', label: T('Asked for'), prio: 5, w: 110, sort: 'for', cell: forWord, value: function (r) { return r.requested_for || ''; } },
       { key: 'age', label: T('Age'), prio: 6, w: 90, sort: 'age', cell: function (r) { return ageWord(r.age_days); }, value: function (r) { return Number(r.age_days) || 0; } },
@@ -257,7 +261,7 @@
   function headLine(c) {
     var bits = [];
     if (c.party) bits.push(esc(c.party));
-    if (c.total_minor != null) bits.push('<span class="mono">' + esc(root.bkMoney(c.total_minor, c.currency || 'INR')) + '</span>');
+    if (c.total_minor != null) bits.push('<span class="mono">' + esc(root.bkMoney(c.total_minor, c.currency)) + '</span>');
     bits.push(esc(ageWord(c.age_days)));
     var how = howWord(c); if (how) bits.push(esc(how));
     if (c.requested_for) bits.push(esc(T('for')) + ' ' + esc(forWord(c)));
@@ -293,7 +297,7 @@
       + '<div class="tk-line-top"><b>' + esc(l.particulars || T('Line')) + '</b> <span class="mono">' + esc(l.qty) + ' ' + esc(l.unit || '') + '</span>'
       + '<span class="tag ' + (done ? '' : l.remaining > 0 ? 'amber' : 'green') + '" data-testid="tk-line-state-' + k + '">' + esc(T(done ? 'Done' : l.remaining > 0 ? 'Open' : 'Delivered')) + '</span>'
       + '<span class="sub" data-testid="tk-line-who-' + k + '">' + esc(who) + '</span>'
-      + (l.price_minor != null ? '<span class="sub mono">' + esc(root.bkMoney(l.price_minor, c.currency || 'INR')) + '</span>' : '') + '</div>'
+      + (l.price_minor != null ? '<span class="sub mono">' + esc(root.bkMoney(l.price_minor, c.currency)) + '</span>' : '') + '</div>'
       + '<div class="tk-line-sub sub">' + esc(T('Delivered')) + ' ' + esc(l.delivered) + ' · ' + esc(T('left')) + ' ' + esc(l.remaining)
       + (l.settings && l.settings.due ? ' · ' + esc(T('due')) + ' ' + esc(l.settings.due) : '') + (l.settings && l.settings.task ? ' · ' + esc(l.settings.task) : '') + '</div>'
       + '<div class="tk-line-acts">'

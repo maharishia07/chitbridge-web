@@ -15,6 +15,10 @@
  * panel in the sheet: the sheet's status verbs are the rail's; the agreement's verbs are its own table).
  * ⚠️ Never error.message on a screen: a failure says what happened (CBAction.words) and the button stays.
  */
+/* OWNS Repeat supply as an agreement both parties hold
+ * CALLED BY finance.html and app.html (ensureCap('repeat'))
+ * FLOW agreement chit -> rpMoney paints its total in the agreement's own currency -> actions per side
+ * CARD 16-finance/repeat-supply */
 'use strict';
 
 var RP = { gen: 0, rows: [], state: 'loading', err: null, api: null, migrated: true, msg: null, flow: null, draft: null, panel: null };
@@ -44,7 +48,7 @@ function rpT(s) { return typeof tx === 'function' ? tx(s) : s; }
 /** "every 2 weeks" · "every day" — the schedule in words, from the server's fields */
 function rpEvery(a) { var u = RP_UNIT[a.unit] || [a.unit, a.unit]; var n = Number(a.every) || 1; return rpT('every') + ' ' + (n > 1 ? n + ' ' + rpT(u[1]) : rpT(u[0])); }
 /** the per-run money as the agreement chit was frozen with — a mapping, never a sum */
-function rpMoney(a) { var m = a && a.money; if (!m || m.total == null) return '—'; return typeof fmtMoney === 'function' ? fmtMoney(m.total, a.currency || m.currency_code || 'INR') : String(m.total); }
+function rpMoney(a) { var m = a && a.money; if (!m || m.total == null) return '—'; return typeof fmtMoney === 'function' ? fmtMoney(m.total, a.currency || m.currency_code) : String(m.total); }
 function rpDate(d) { return typeof bkDate === 'function' ? bkDate(d) : (d || '—'); }
 function rpSession() { return (typeof SESS !== 'undefined' && SESS) || (typeof SESSION !== 'undefined' && SESSION) || {}; }
 /** a verb button: enabled when the server says ok; otherwise greyed, its sentence on the control and said on a tap */
