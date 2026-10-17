@@ -37,7 +37,7 @@ const CHITS = {
 const APPS = [
   ['/', 'HOM001', 'Home'], ['/accounts.html', 'BKS001', 'CB Accounts › To do'], ['/finance.html', 'FIN001', 'CB Finance › Collections'],
   ['/crm.html', 'CRM001', 'CB CRM › Parties'], ['/tasks.html', 'TSK001', 'CB Tasks & Orders › Orders in'], ['/settings.html#/shop', 'SET001', 'Settings › Your shop'],
-  ['/employees.html', 'EMP001', 'CB Employees › People'], ['/network.html', 'NET001', 'Network › My network'], ['/country-lab.html', 'CLB001', 'Country lab › Side by side'],
+  ['/employees.html', 'EMP001', 'CB Employees › People'], ['/network.html', 'NET001', 'Network › My network'], ['/country-lab.html', 'CLB003', 'Country lab › Countries'],
   ['/know-your-business.html', 'KYB001', 'Know your business'], ['/authority-forms.html', 'DOC001', 'Documents'],
   /* SHELL-ONE: every page wears the frame, so every page shows its code — the standards page, the storefront, the shop screen, the labs */
   ['/standards.html', 'STD001', 'Standards'], ['/shop.html?s=CBWALK0001', 'SHP001', 'Shop'], ['/network-shop.html?bridge=CBWALK0001', 'NSH001', 'Network shop'], ['/store.html?net=CBWALK0001', 'STR001', 'Store'],

@@ -9,7 +9,7 @@
  *   L3  IN -> AU: the ABN check box answers from the pack (a wrong digit is said); the GSTIN box from the profile-map engine
  *   L4  IN -> AU: the cart is billed by the tax engine under both - CGST+SGST on one side, one GST head on the other, the GST-free line said in the notes
  *   L5  AU -> AE: GST -> VAT, BAS -> VAT201 with its boxes, TRN 15 digits with no check digit (said); a kind the UAE pack does not know is said by the engine
- *   L6  IN -> JP (pack-less): the TO side paints the server's sentence; the cart is NOT billed under Japan; every row says "no pack"
+ *   L6  IN -> SA (pack-less): the TO side paints the server's sentence; the cart is NOT billed under Saudi Arabia; every row says "no pack"
  *   L7  this shop: with no product or transaction the rows that differ are the list; with one, the country is final and a new entity is named
  *   C1  (#1) Cream and Dark: every visible text is AA on the ground it is painted on (e2e/lib/theme-measure.cjs, the crm-themes eyes); the TO cell is
  *       marked by a rule, never a tinted column - its ground is the FROM cell's ground; the bill's differing figures are underlined, not tinted
@@ -27,7 +27,7 @@
  *       (sidebar + main), the kural foot, the shell's font on the lab, and the text size reaching the lab's own words
  *   R2  IN -> AU: "Where ChitBridge is for Australia" beside the TO side — the pack line, one row per product area (✅ ⚠️ ❌), Payroll "—",
  *       each row one short line, read from /data/country-ready.json (never typed: the rows equal the file's)
- *   R3  -> UAE: the block follows the TO side; -> Japan (pack-less): it says there is no pack, not a made-up row
+ *   R3  -> UAE: the block follows the TO side; -> Saudi Arabia (pack-less): it says there is no pack, not a made-up row
  *   R4  rule 13, SIGNED OUT, Cream and Dark at 1366 and 390: AA on every text, nothing clipped, no inner sideways scroll, nothing floating over
  *       the block, no link to app.html, the copy within its budget
  *   R5  the same, SIGNED IN (the avatar's initial, never "Sign in"); the readiness block and the flow are the same for both
@@ -38,7 +38,7 @@
 'use strict';
 const W = require('./lib/walk.cjs');
 const { measure } = require('./lib/theme-measure.cjs');   /* the contrast measurement, run INSIDE the page - one copy, shared with crm-themes.cjs */
-const JP_WHY = 'ChitBridge does not keep books for Japan yet — selling and the rail still work; books arrive when its pack ships.';
+const SA_WHY = 'ChitBridge does not keep books for Saudi Arabia yet — selling and the rail still work; books arrive when its pack ships.';
 const text = (page, sel) => page.evaluate((s) => { const el = document.querySelector(s); return el ? el.textContent.replace(/\s+/g, ' ').trim() : ''; }, sel);
 const verdicts = (page) => page.evaluate(() => { const o = {}; document.querySelectorAll('#rows-body tr[data-row]').forEach((t) => { o[t.dataset.row] = t.querySelector('.verdict').textContent.trim(); }); return o; });
 const pick = async (page, side, code) => { await page.selectOption('[data-testid="cl-' + side + '"]', code); await page.waitForTimeout(150); };
@@ -56,7 +56,7 @@ const fits = `(el) => { const cs = getComputedStyle(el); const cv = document.cre
 
 const walk = async (w) => {
   const { page, base } = w;
-  await page.goto(base + '/country-lab.html');
+  await page.goto(base + '/country-lab.html#/compare');   /* R6: the side-by-side tool is #/compare; the default is the Countries view */
   await page.waitForSelector('[data-testid="cl-rows"] tr[data-row]', { timeout: 15000 });
 
   await w.step('L1', 'The pickers list exactly the registered packs, then the setup step\'s other countries as pack-less', async () => {
@@ -66,7 +66,7 @@ const walk = async (w) => {
       chip: document.getElementById('src').textContent, nofuel: document.getElementById('nofuel').hidden,
     }));
     const withPack = r.opts.filter((o) => / pack /.test(o.t)).map((o) => o.v), without = r.opts.filter((o) => /no pack/.test(o.t)).map((o) => o.v);
-    const ok = r.nofuel && JSON.stringify(withPack) === JSON.stringify(r.packs) && without.includes('JP') && !without.some((c) => r.packs.includes(c));
+    const ok = r.nofuel && JSON.stringify(withPack) === JSON.stringify(r.packs) && without.includes('SA') && !without.some((c) => r.packs.includes(c));
     return { ok, saw: r.chip + ' · pack-less: ' + without.join(' ') };
   });
 
@@ -118,12 +118,12 @@ const walk = async (w) => {
     return { ok, saw: trn + ' · ' + notes.slice(0, 60) + '… · then: ' + notes2.slice(0, 40) + '…' };
   });
 
-  await w.step('L6', 'IN -> JP (pack-less): the server\'s sentence on the TO side, the cart NOT billed under Japan, every row says "no pack"', async () => {
-    await pick(page, 'from', 'IN'); await pick(page, 'to', 'JP');
+  await w.step('L6', 'IN -> SA (pack-less): the server\'s sentence on the TO side, the cart NOT billed under Saudi Arabia, every row says "no pack"', async () => {
+    await pick(page, 'from', 'IN'); await pick(page, 'to', 'SA');
     const st = await text(page, '[data-testid="cl-status-to"]'), bill = await text(page, '[data-testid="cl-bill-to"]'), v = await verdicts(page);
     const billedFrom = !!(await page.$('[data-testid="cl-total-from"]')), billedTo = !!(await page.$('[data-testid="cl-total-to"]'));
-    const ok = st.includes(JP_WHY) && bill.includes('not billed') && bill.includes(JP_WHY) && billedFrom && !billedTo && Object.values(v).every((x) => x === 'no pack');
-    return { ok, saw: st.slice(0, 80) + '… · IN billed ' + billedFrom + ' · JP billed ' + billedTo };
+    const ok = st.includes(SA_WHY) && bill.includes('not billed') && bill.includes(SA_WHY) && billedFrom && !billedTo && Object.values(v).every((x) => x === 'no pack');
+    return { ok, saw: st.slice(0, 80) + '… · IN billed ' + billedFrom + ' · SA billed ' + billedTo };
   });
 
   await w.step('L7', 'This shop: with no product or transaction the differing rows are the list; with one, the country is final and a new entity is named', async () => {
@@ -296,13 +296,13 @@ const walk = async (w) => {
       && !!pay && pay.state === 'out' && /Not offered in Australia/.test(pay.text) && r.rows.some((x) => x.state === 'partial') && r.rows.some((x) => x.state === 'ok');
     return { ok, saw: '"' + r.title + '" · "' + r.pack + '" · ' + r.rows.length + '/' + want + ' rows · symbols ' + syms + ' · = file ' + same + ' · longest ' + words + ' words · "' + (pay ? pay.text : 'no payroll row') + '" · e.g. "' + (r.rows[2] || {}).text + '"' };
   });
-  await w.step('R3', '-> UAE: the block follows the TO side; -> Japan (pack-less): it says there is no pack, never a made-up row', async () => {
+  await w.step('R3', '-> UAE: the block follows the TO side; -> Saudi Arabia (pack-less): it says there is no pack, never a made-up row', async () => {
     await pick(page, 'to', 'AE'); await page.waitForTimeout(150);
     const a = await ready();
-    await pick(page, 'to', 'JP'); await page.waitForTimeout(150);
+    await pick(page, 'to', 'SA'); await page.waitForTimeout(150);
     const b = await ready();
     await pick(page, 'to', 'AU'); await page.waitForTimeout(150);
-    const ok = /United Arab Emirates/.test(a.title) && /VAT/.test(a.pack) && a.rows.length > 10 && /Japan/.test(b.title) && b.rows.length === 0 && /No pack for Japan yet/.test(b.none);
+    const ok = /United Arab Emirates/.test(a.title) && /VAT/.test(a.pack) && a.rows.length > 10 && /Saudi Arabia/.test(b.title) && b.rows.length === 0 && /No pack for Saudi Arabia yet/.test(b.none);
     return { ok, saw: '"' + a.title + '" ' + a.rows.length + ' rows · "' + b.title + '" — "' + b.none + '"' };
   });
 

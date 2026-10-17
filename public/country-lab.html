@@ -128,6 +128,7 @@
   table.cmp tr.samefold td{ color:var(--grey-2,#545A61); } table.cmp tr.samefold .btn{ margin-right:8px; }
   table.cmp ul{ margin:2px 0 0 14px; padding:0; } table.cmp li{ margin:0 0 2px; }
   table.cmp .chip{ white-space:normal; }   /* a long answer chip ("valid GSTIN · 33AABCK1234F1Z6") wraps in its cell, never runs under the next (truncation is a bug) */
+  #src.chip{ white-space:normal; border-radius:10px; }   /* the packs list grows with every country (7 by 17 Oct): it wraps on a phone, never widens the pane */
   .two{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
   .bill .big{ font-size:var(--fs-5,22px); font-weight:800; letter-spacing:-.01em; }
   .bill .diff{ box-shadow:inset 0 -2px 0 var(--blue,#3F66A6); }   /* a figure that differs from the other side: underlined in the same --blue, never a tint */
@@ -155,6 +156,58 @@
 <link rel="stylesheet" href="/app/page-skeleton.css">   <!-- the standard page skeleton (sidebar + main pane), drawn by CBFrame (CL3) -->
 <script src="/engine/screen.js"></script>
 <script src="/app/avatar.js"></script>   <!-- CBAvatar: the one avatar (Profile · Support · Sign out) and the look it owns — the same on every page -->
+<style>
+  /* R6 · the Countries view: the list on the left, the country's cards on the right; one column on a phone (the list becomes a picker) */
+  .cp{ display:grid; grid-template-columns:minmax(220px,260px) 1fr; min-height:calc(100vh - 120px); }
+  .cp-side{ border-right:1px solid var(--line,#e7e3d8); background:var(--card,#fff); padding:12px; }
+  .cp-list{ display:flex; flex-direction:column; gap:4px; }
+  .cp-pick{ display:grid; grid-template-columns:28px 1fr auto auto; gap:8px; align-items:center; text-align:left; font:inherit; font-size:var(--fs-3,14px); padding:9px 10px; border:1px solid transparent; border-radius:9px; background:transparent; color:var(--ink,#20303b); cursor:pointer; min-height:44px; }
+  .cp-pick:hover{ background:var(--paper,#faf8f3); }
+  .cp-pick.on{ background:var(--paper,#faf8f3); border-color:var(--line,#e7e3d8); font-weight:700; }
+  .cp-pick:focus-visible{ outline:2px solid var(--blue,#3F66A6); outline-offset:1px; }
+  .cp-flag{ font-size:20px; line-height:1; } .cp-cur{ color:var(--grey-2,#545A61); font-size:var(--fs-1,11px); }
+  .cp-select{ display:none; width:100%; font:inherit; font-size:var(--fs-3,14px); line-height:1.4; min-height:44px; padding:8px 10px; margin-bottom:8px; box-sizing:border-box; }
+  .cp-main{ padding:14px 18px; min-width:0; }
+  .cp-head{ display:flex; gap:12px; align-items:center; margin-bottom:12px; } .cp-head h2{ margin:0; font-size:var(--fs-5,22px); }
+  /* frozen while the details scroll (Athi, 2026-10-17: "header has to freeze … always the rule"): the country's title bar, and the country list beside it */
+  .cp-main > .cp-head{ position:sticky; top:0; z-index:4; margin:-14px -18px 12px; padding:14px 18px 10px; background:var(--paper,#faf8f3); border-bottom:1px solid var(--line,#e7e3d8); }
+  .cp-side .cp-list{ position:sticky; top:12px; }
+  @media (max-width:760px){ .cp-main > .cp-head{ margin:-12px -16px 12px; padding:12px 16px 10px; } }   /* the phone's .cp-main padding */
+  .cp-bigflag{ font-size:40px; line-height:1; }
+  .cp-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:12px; align-items:start; }
+  .cp-card .kv > span:last-child{ text-align:right; min-width:0; overflow-wrap:anywhere; }
+  .cp-card .kv{ align-items:baseline; flex-wrap:wrap; }
+  .cp-card table{ width:100%; margin-top:6px; font-size:var(--fs-2,12.5px); border-collapse:collapse; }
+  .cp-card th, .cp-card td{ padding:3px 4px; border-bottom:1px solid var(--line-2,#efece4); text-align:left; } .cp-card .r{ text-align:right; }
+  .cp-ul{ margin:2px 0 6px 16px; padding:0; font-size:var(--fs-2,12.5px); } .cp-ul li{ margin:0 0 3px; }
+  .cp-i{ padding:0 5px; line-height:1.3; }
+  .mono{ font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+  /* the All countries table: rule names fixed on the left, a header that stays; one country as two columns on a phone */
+  .cp-allwrap{ padding:14px 18px; } .cp-allscroll{ max-height:calc(100vh - 220px); overflow:auto; border:1px solid var(--line,#e7e3d8); border-radius:8px; background:var(--card,#fff); }
+  .cp-all{ border-collapse:separate; border-spacing:0; min-width:100%;   /* min, not width: a dragged column widens the table and it scrolls under the frozen panes */ font-size:var(--fs-2,12.5px); }
+  .cp-all th, .cp-all td{ padding:6px 8px; border-bottom:1px solid var(--line-2,#efece4); text-align:left; vertical-align:top; min-width:120px; overflow-wrap:anywhere; }
+  .cp-all thead th{ position:sticky; top:0; background:var(--card,#fff); z-index:2; white-space:nowrap; }
+  .cp-all .cp-rule{ position:sticky; left:0; background:var(--card,#fff); z-index:1; font-weight:700; min-width:150px; }
+  .cp-all thead .cp-rule{ z-index:3; }
+  /* pivot freeze: the header row and the Rule column stay while the countries scroll under them — each frozen edge drawn, so a cell never just vanishes behind it */
+  .cp-all thead th{ box-shadow:inset 0 -2px 0 var(--line,#e7e3d8); vertical-align:bottom; }
+  .cp-all .cp-rule{ box-shadow:inset -2px 0 0 var(--line,#e7e3d8), 6px 0 8px -6px color-mix(in srgb, var(--ink,#20303b) 25%, transparent); }
+  .cp-all thead .cp-rule{ box-shadow:inset -2px -2px 0 var(--line,#e7e3d8), 6px 0 8px -6px color-mix(in srgb, var(--ink,#20303b) 25%, transparent); }
+  dialog.cp-more{ border:1px solid var(--line,#e7e3d8); border-radius:10px; background:var(--card,#fff); color:var(--ink,#1d2125); padding:14px 18px; width:min(520px, calc(100vw - 32px)); max-height:min(70vh, 640px); }
+  dialog.cp-more.wide{ width:min(980px, calc(100vw - 32px)); max-height:85vh; }   /* a panel (chart, return, statements, invoice, kinds) */
+  dialog.cp-more .cp-chart{ margin:0; border:0; padding:0; background:none; }   /* the dialog is the frame */
+  /* the overlay's title bar (name · ✕) stays frozen while its body scrolls (Athi, 2026-10-17: "header has to freeze") */
+  dialog.cp-more .cp-head:first-child{ position:sticky; top:-14px; z-index:2; margin:-14px -18px 10px; padding:14px 18px 8px; background:var(--card,#fff); border-bottom:1px solid var(--line,#e7e3d8); }
+  dialog.cp-more::backdrop{ background:var(--scrim, color-mix(in srgb, var(--ink,#20303b) 40%, transparent)); }
+  .cp-morelist{ margin:10px 0 0; padding-left:22px; font-size:var(--fs-2,12.5px); columns:2 200px; column-gap:24px; } .cp-morelist li{ break-inside:avoid; padding:2px 0; }
+  .cp-cname{ display:block; white-space:normal; font-weight:400; font-size:var(--fs-1,11px); color:var(--grey-2,#545A61); }
+  .cp-one{ display:none; } .cp-all-pick{ display:none; }
+  .cp-link{ font:inherit; color:var(--blue,#3F66A6); background:none; border:0; padding:0; text-decoration:underline; cursor:pointer; text-align:left; }
+  .cp-chart{ margin-top:14px; background:var(--card,#fff); border:1px solid var(--line,#e7e3d8); border-radius:8px; padding:12px 14px; }
+  .cp-tree{ columns:3 260px; column-gap:24px; margin:8px 0 0; padding-left:18px; font-size:var(--fs-2,12.5px); } .cp-tree > li{ break-inside:avoid; margin-bottom:8px; } .cp-tree ul{ margin:2px 0 0; padding-left:14px; } .cp-tree ul li{ color:var(--grey-2,#545A61); }
+  @media (max-width:760px){ .cp-allscroll{ display:none; } .cp-one{ display:table; border:1px solid var(--line,#e7e3d8); border-radius:8px; background:var(--card,#fff); } .cp-all-pick{ display:block; } .cp-one .cp-rule{ position:static; min-width:0; width:42%; } .cp-one td{ min-width:0; } .cp-allwrap{ padding:12px 16px; } }
+  @media (max-width:760px){ .cp{ grid-template-columns:1fr; } .cp-side{ border-right:0; border-bottom:1px solid var(--line,#e7e3d8); } .cp-list{ display:none; } .cp-select{ display:block; } .cp-main{ padding:12px 16px; } .cp-grid{ grid-template-columns:1fr; } }
+</style>
 </head>
 <body>
 
@@ -162,6 +215,10 @@
 <div id="cl" data-testid="cl-work">
 <!-- ⚠️ THE ENGINES' ABSENCE IS ANNOUNCED (the Conversion lab's rule): a missing engine is a fact, and a fact belongs on the screen. -->
 <div id="nofuel" class="bar" hidden data-testid="cl-nofuel"></div>
+<!-- R6 (2026-10-16): the Countries view — every registered country on the left, all its engine says on the right (app/country-profiles.js) -->
+<div id="cp" data-testid="cp-view"></div>
+<div id="cpall" data-testid="cp-all-view" hidden></div>
+<div id="cmpview" hidden>
 
 <div class="labbar">
   <div><h1>Country lab</h1><div class="sub" data-testid="cl-sub">What registering in another country would look like, read from the packs.</div></div>
@@ -230,6 +287,7 @@
   </section>
 </div>
 </div>
+</div>
 
 <!-- ⚠️ ORDER IS LOAD-BEARING: engine/tax.js is the adopted BUNDLE reg-in + reg-au + reg-ae + regulation + tax-packs + tax-slab + tax, in that
      order; tax-packs reads the registry at load and refuses to load without it. money first, as on the till. -->
@@ -245,6 +303,8 @@
 <script src="/app/kural.js"></script>
 <script src="/app/page-frame.js"></script>
 <script src="/app/country-ready.js"></script>
+<script src="/app/table-resize.js"></script>   <!-- drag a column edge in All countries; remembered -->
+<script src="/app/country-profiles.js"></script>   <!-- R6: the Countries view (CBCountryProfiles), reads CBRegulation + CBCountries only -->
 <script>
 'use strict';
 
@@ -653,9 +713,19 @@ function paintReady() {
 }
 /* CL3 · the standard frame around the lab: header + avatar (Sign in when signed out) + skeleton + kural. Public: no sign-in window. */
 var FRAME = window.CBFrame ? CBFrame.mount({ app: 'country-lab', area: 'labs', signin: false, kural: 'planning', work: document.getElementById('cl'),
-  skeleton: { name: 'Country lab', icon: 'M12 3a9 9 0 1 0 0 18a9 9 0 0 0 0-18zM3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18', active: 'compare',
-    sections: [{ k: 'compare', label: 'Side by side', icon: 'M4 5h7v14H4zM13 5h7v14h-7z' }, { k: 'ready', label: 'Where we are', icon: 'M5 12l4 4 10-10' }],
-    onSection: function (k) { var t = document.getElementById(k === 'ready' ? 'ready-sec' : 'cl'); if (t && t.scrollIntoView) t.scrollIntoView({ block: 'start' }); } } }) : null;
+  skeleton: { name: 'Country lab', icon: 'M12 3a9 9 0 1 0 0 18a9 9 0 0 0 0-18zM3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18', active: labView(),
+    sections: [{ k: 'countries', label: 'Countries', icon: 'M4 5h16M4 12h16M4 19h16' }, { k: 'all', label: 'All countries', icon: 'M3 5h18v14H3zM3 10h18M9 5v14' }, { k: 'compare', label: 'Side by side', icon: 'M4 5h7v14H4zM13 5h7v14h-7z' }, { k: 'ready', label: 'Where we are', icon: 'M5 12l4 4 10-10' }],
+    onSection: function (k) { showView(k === 'countries' || k === 'all' ? k : 'compare'); var t = k === 'ready' ? document.getElementById('ready-sec') : null; if (t && t.scrollIntoView) t.scrollIntoView({ block: 'start' }); } } }) : null;
+/** R6: which view the address asks for — #/compare (the side-by-side tool) or the Countries view (default; #/countries/<CC> picks one) */
+function labView() { return /^#\/compare/.test(location.hash) ? 'compare' : (/^#\/all/.test(location.hash) ? 'all' : 'countries'); }
+function showView(view) {
+  document.getElementById('cp').hidden = view !== 'countries'; document.getElementById('cpall').hidden = view !== 'all'; document.getElementById('cmpview').hidden = view !== 'compare';
+  if (view === 'all' && !/^#\/all/.test(location.hash)) { try { history.replaceState(null, '', '#/all'); } catch (failure) { if (window.cbQuiet) window.cbQuiet('country-lab:hash', failure); } }
+  if (view === 'compare' && !/^#\/compare/.test(location.hash)) { try { history.replaceState(null, '', '#/compare'); } catch (failure) { if (window.cbQuiet) window.cbQuiet('country-lab:hash', failure); } }
+}
+if (window.CBCountryProfiles && CBCountryProfiles.mountAll) CBCountryProfiles.mountAll(document.getElementById('cpall'));
+if (window.CBCountryProfiles) CBCountryProfiles.mount(document.getElementById('cp'), (/^#\/countries\/([A-Za-z]{2})/.exec(location.hash) || [])[1]);
+showView(labView());
 repaint();
 </script>
 </body>

@@ -36,7 +36,7 @@
         ['BKS009', 'payables', 'Payables'], ['BKS010', 'dues', 'Dues', 'To do › a dues item'], ['BKS011', 'bills', 'Unpaid bills'], ['BKS012', 'cheques', 'Cheques'],
         ['BKS013', 'waiting', 'Waiting', 'To do › a posting that failed'], ['BKS014', 'bank', 'Bank'], ['BKS015', 'lock', 'Month lock'],
         ['BKS016', 'closingstock', 'Closing stock'], ['BKS017', 'assets', 'Assets & depreciation'], ['BKS018', 'accruals', 'Accruals & recurring'],
-        ['BKS019', 'gstclose', 'GST close & pay'], ['BKS020', 'yearclose', 'Year close'], ['BKS021', 'packs', 'Packs'], ['BKS022', 'opening', 'Opening balances'],
+        ['BKS019', 'gstclose', 'Tax close & pay'], ['BKS020', 'yearclose', 'Year close'], ['BKS021', 'packs', 'Packs'], ['BKS022', 'opening', 'Opening balances'],
         ['BKS023', 'accounts', 'Shop ledgers'], ['BKS024', 'movein', 'Move in'], ['BKS025', 'rates', 'Rates']] },
       { app: 'finance', name: 'CB Finance', page: '/finance.html', hash: true, rows: [
         ['FIN001', 'collections', 'Collections'], ['FIN002', 'payables', 'Payables'], ['FIN003', 'cash', 'Cash'], ['FIN004', 'terms', 'Terms'], ['FIN005', 'repeat', 'Repeat supply'], ['FIN006', 'cheques', 'Cheques'], ['FIN007', 'returns', 'Returns'], ['FIN008', 'reports', 'Reports']] },   /* FIN006–007: T3-P1-MONEY · FIN008: T3-P4-ACCOUNT */
@@ -57,7 +57,7 @@
       { app: 'catalogue', name: 'Catalogue', page: '/catalogue.html', hash: true, rows: [
         ['CTG001', 'items', 'Items'], ['CTG002', 'categories', 'Categories'], ['CTG003', 'import', 'Import']] },
       { app: 'network', name: 'Network', page: '/network.html', rows: [['NET001', 'mine', 'My network'], ['NET002', 'offers', 'Offers'], ['NET003', 'design', 'Design']] },
-      { app: 'country-lab', name: 'Country lab', page: '/country-lab.html', rows: [['CLB001', 'compare', 'Side by side'], ['CLB002', 'ready', 'Where we are']] },
+      { app: 'country-lab', name: 'Country lab', page: '/country-lab.html', rows: [['CLB001', 'compare', 'Side by side'], ['CLB002', 'ready', 'Where we are'], ['CLB003', 'countries', 'Countries'], ['CLB004', 'all', 'All countries']] },
       { app: 'kyb', name: 'Know your business', page: '/know-your-business.html', rows: [['KYB001', null, 'Know your business']] },
       { app: 'documents', name: 'Documents', page: '/authority-forms.html', rows: [['DOC001', null, 'Documents']] },
       /* SHELL-ONE (2026-10-15): every page wears the frame, so every page has its code — the standards page, the storefront, the shop screen, the labs */

@@ -83,7 +83,10 @@ function csuPack(code) { try { return (window.CBRegulation && code && CBRegulati
 /** the scheme's own word for the tax row: GST · GST · VAT (pack.tax.scheme); 'Tax' when no pack says */
 function csuScheme(code) { var pack = csuPack(code); return (pack && pack.tax && pack.tax.scheme) || tx('Tax'); }
 /** the tax-id the pack names (abn · trn · gstin), for the placeholder; India's GSTIN example until reg-in carries one */
-function csuTaxIdHint(code) { var pack = csuPack(code); if (code === 'IN') return '27AAPFU0939F1ZV'; if (pack && pack.abn) return 'ABN · 11 digits'; if (pack && pack.trn) return 'TRN · 15 digits'; return tx('Registration number'); }
+function csuTaxIdHint(code) {   /* R5: the country registry's example (engines country.js) — no country named here */
+  var id = window.CBCountries && code ? CBCountries.taxId(String(code).toUpperCase()) : null;
+  return (id && id.hint) || tx('Registration number');
+}
 /** CS2: the IANA zones a country's pack names — the server's list for the chosen country; for the shop's own country also the profile's `zones` */
 function csuZones(country) {
   var pk = csuPackOf(country);

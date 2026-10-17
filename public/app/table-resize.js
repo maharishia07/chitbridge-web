@@ -1,5 +1,11 @@
 /* app/table-resize.js — drag a column edge; the width is yours and it is remembered.
  *
+ * OWNS      the column grip on any <table>: drag to a width, double-click to reset, widths in localStorage (cb.colw) keyed by the headings;
+ *           the grip's own CSS (injected once, #cb-colgrip-css).
+ * CALLED BY testing.html (the test board) · app/country-profiles.js (Country Lab, All countries) — tblResizable(root) after every paint.
+ * FLOW      tblResizable(root) → tblStyle() once → for each table: re-apply remembered widths → wire a grip per heading (idempotent)
+ * CARD      29-qa-test-tooling-ux-locale-and-design-system/table-resize
+ *
  * ── ⭐⭐ WHY ─────────────────────────────────────────────────────────────────────────────────────────────────
  *
  * Athi, 2026-09-12: *"provide an adjustable column, so people can adjust if it is not fit. Still the column
@@ -48,11 +54,30 @@ function tblKey(table) {
   return names.length > 1 ? names.join('|') : null;
 }
 
+
+/**
+ * ── ⭐ A CONTROL NOBODY CAN SEE IS NOT A CONTROL ──────────────────────────────────────────────────────────
+ * Athi, 2026-09-12: *"can you give a pipeline in the header and show it is adjustable?"* A visible rule between
+ * every heading — the "pipeline" — reads as a divider whether or not you drag it, and thickens under the pointer.
+ * The look travels WITH the control (moved here from testing.html, 2026-10-17), so every page that loads this
+ * file draws the same grip and none keeps its own copy.
+ */
+function tblStyle() {
+  if (document.getElementById('cb-colgrip-css')) return;
+  var sheet = document.createElement('style'); sheet.id = 'cb-colgrip-css';
+  sheet.textContent = '.colgrip{ position:absolute; inset-block:5px; inset-inline-end:0; width:9px; cursor:col-resize; z-index:3; background:transparent; }'
+    + '.colgrip::before{ content:""; position:absolute; inset-block:0; inset-inline-end:4px; width:1px; background:var(--line); }'
+    + '.colgrip:hover::before{ inset-block:-5px; width:3px; inset-inline-end:3px; background:var(--blue); border-radius:2px; }'
+    + 'th:last-child .colgrip::before{ display:none; }';
+  document.head.appendChild(sheet);
+}
+
 /**
  * Wire every table under `root`, and re-apply whatever the reader has already chosen.
  * ⚠️ Idempotent: paint() calls this on every render, so it must not add a second handle each time.
  */
 function tblResizable(root) {
+  tblStyle();
   var all = tblWidths();
   (root || document).querySelectorAll('table').forEach(function (table) {
     var key = tblKey(table);
@@ -63,11 +88,12 @@ function tblResizable(root) {
     ths.forEach(function (th, i) {
       /* re-apply a remembered width */
       var w = all[key] && all[key][i];
-      if (w) th.style.width = w + 'px';
+      if (w) th.style.width = th.style.minWidth = w + 'px';   /* min too: a cell's width is only a preference to the table, so a widened column would be squeezed back */
 
       if (th.dataset.rs) return;                 /* ⚠ already wired — see the idempotence note */
       th.dataset.rs = '1';
-      th.style.position = th.style.position || 'relative';
+      /* ⚠️ the grip needs a positioned th — but a FROZEN header (sticky) already is one, and relative would unfreeze it */
+      if (getComputedStyle(th).position === 'static') th.style.position = 'relative';
 
       var grip = document.createElement('span');
       grip.className = 'colgrip';
@@ -90,7 +116,7 @@ function tblResizable(root) {
       document.addEventListener('mousemove', function (e) {
         if (!dragging) return;
         var w2 = Math.max(36, Math.round(startW + (e.clientX - startX)));
-        th.style.width = w2 + 'px';
+        th.style.width = th.style.minWidth = w2 + 'px';
       });
 
       document.addEventListener('mouseup', function () {
@@ -107,7 +133,7 @@ function tblResizable(root) {
       /* ⭐ double-click clears THIS column — the way back is the same control as the way in */
       grip.addEventListener('dblclick', function (e) {
         e.preventDefault(); e.stopPropagation();
-        th.style.width = '';
+        th.style.width = th.style.minWidth = '';
         var store = tblWidths();
         if (store[key]) { delete store[key][i]; tblSave(store); }
       });

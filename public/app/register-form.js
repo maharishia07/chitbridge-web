@@ -76,13 +76,15 @@ function regFormatSample(locale){
   } catch (_) { return esc(locale); }
 }
 /** the rows when the server sent its countries: the country (with its source), then what that country's pack applies */
+/** the tax's display name the api sends (countries[].tax.name: Consumption tax, not JCT), else its scheme */
+function taxNameOf(countryRow) { return countryRow.tax && (countryRow.tax.name || countryRow.tax.scheme); }
 function regSpinRows(){
   var c = REG.country, inst = regInstCountry(), pk = regPackOf(c), name = regCountryName(c), out = [];
   var g = govCtx(), from = !c ? tx('you set this after signing in') : c === inst ? txf('This ChitBridge runs in {c}', { c: name })
     : c === regBrowserCountry() ? ((g && g.country && g.country.from) || tx('your browser')) : tx('you chose it');
   out.push({ key: 'country', what: tx('Country'), value: esc(name), from: from, known: !!c });
   if (pk) {
-    var tax = [pk.tax && pk.tax.scheme, pk.tax && pk.tax.id].filter(Boolean).join(' · ');
+    var tax = [taxNameOf(pk), pk.tax && pk.tax.id].filter(Boolean).join(' · ');
     var off = pk.offer || {}, zone = { value: off.timezone || '', from: off.from || tx('you pick it after signing in') };   /* the server's offer (STD2) */
     out.push({ key: 'currency', what: tx('Money'), value: esc(pk.currency || ''), from: '', known: !!pk.currency });
     out.push({ key: 'year', what: tx('Year starts'), value: esc(pk.fy_start_month ? (monthNames('long')[pk.fy_start_month - 1] || String(pk.fy_start_month)) : ''), from: '', known: !!pk.fy_start_month });

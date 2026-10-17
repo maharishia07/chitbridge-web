@@ -106,7 +106,7 @@
     ':where(.cbsh) :where(button,a){font:inherit;color:inherit}:where(.cbsh) :where(button){cursor:pointer}:where(.cbsh) :where(a){text-decoration:none}',
     '.cbsh.full{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--sh-page);z-index:1}',
     /* SHELL-ONE fit:"pane": the shell sits in a page's own main pane (an app with its own sidebar, a CBFrame skeleton) — a block, not the window */
-    '.cbsh.pane{position:static;display:block;background:transparent;--sh-bar:55px}',   /* + its 1px line = 56: the sidebar brand row's height (page-skeleton.css .brand), so the two header lines meet (Round U rule f) */
+    '.cbsh.pane{position:static;display:block;background:transparent;--sh-bar:55px;overflow:visible}',   /* overflow: a host page's own .pane rule (Country Lab: overflow:auto) clipped the Labs menu at the header's edge (17 Oct) */   /* + its 1px line = 56: the sidebar brand row's height (page-skeleton.css .brand), so the two header lines meet (Round U rule f) */
     '.cbsh.pane .cbsh-work:not(:has(.cbsh-signin:not(:empty))):not(:has(.cbsh-slotwork:not(:empty))){display:none}',
     /* ⌂ Home — the one way home on every page (app + bar modes); the switcher's look, so the bar has one kind of button */
     '.cbsh-tohome{display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 10px;border:1px solid var(--sh-line);border-radius:8px;background:var(--sh-card);font-size:13px;font-weight:600;white-space:nowrap}',
