@@ -118,7 +118,7 @@ const walk = async (w) => {
       return { ok: checks.join('|') === X.checks.join('|') && india(cc, sheet), saw: checks.join(' · ') };
     });
     await w.step(cc + '-3', who + ' · the CB Accounts card and the Running area wear the shop\'s money symbol (' + X.symbol + ')', async () => {
-      const card = await txt('[data-testid="shell-card-accounts"] .g'), nav = await txt('[data-testid="shell-nav-running"] .i');
+      const card = await txt('[data-testid="shell-card-accounts"] .g'), nav = await txt('[data-testid="shell-nav-money"] .i');
       return { ok: card === X.symbol && nav === X.symbol, saw: 'card "' + card + '" · area "' + nav + '"' };
     });
     await policy();

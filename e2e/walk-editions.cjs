@@ -41,10 +41,10 @@ const walk = async (w) => {
   const opens = async (hrefs) => { const bad = []; for (const h of [...new Set(hrefs)].filter((h) => /^\//.test(h))) { const r = await page.request.get(base + h.split('#')[0].split('?')[0]); if (r.status() !== 200) bad.push(h + ' ' + r.status()); } return bad; };
 
   await home();
-  await w.step('E1', 'Full Home -> all five areas in the menu; every card is a door that opens, none into app.html', async () => {
+  await w.step('E1', 'Full Home -> all seven areas in the menu; every card is a door that opens, none into app.html', async () => {
     const n = await navs(), cards = await page.$$eval('.cbsh-box', (as) => as.map((a) => a.getAttribute('href'))), chip = await page.locator('[data-testid="shell-edition-chip"]').count();
     const bad = await opens(cards);
-    return { ok: n.length === 5 && !chip && cards.length > 10 && !bad.length && !cards.some((h) => /app\.html/.test(h)), saw: n.join(' ') + ' · ' + cards.length + ' cards' + (bad.length ? ' · BROKEN ' + bad.join() : ' all open') + ' · chip ' + chip };
+    return { ok: n.length === 7 && !chip && cards.length > 10 && !bad.length && !cards.some((h) => /app\.html/.test(h)), saw: n.join(' ') + ' · ' + cards.length + ' cards' + (bad.length ? ' · BROKEN ' + bad.join() : ' all open') + ' · chip ' + chip };
   });
 
   await home('?edition=auditor');
@@ -87,7 +87,7 @@ const walk = async (w) => {
     await Promise.all([page.waitForNavigation({ timeout: 10000 }).catch(() => null), page.click('[data-testid="edition-full"]')]);
     await page.waitForSelector('[data-testid="cbshell"]'); await page.evaluate(() => window.SHELL && window.SHELL.ready); await page.waitForTimeout(500);
     const b = { saved: await page.evaluate(() => localStorage.getItem('cb_edition')), chip: await page.locator('[data-testid="shell-edition-chip"]').count(), n: (await navs()).length };
-    return { ok: a.saved === 'auditor' && a.chip === 1 && a.sent && b.saved === 'full' && !b.chip && b.n === 5, saw: 'auditor: saved ' + a.saved + ', chip ' + a.chip + ', sent ' + a.sent + ' · full: saved ' + b.saved + ', chip ' + b.chip + ', ' + b.n + ' areas' };
+    return { ok: a.saved === 'auditor' && a.chip === 1 && a.sent && b.saved === 'full' && !b.chip && b.n === 7, saw: 'auditor: saved ' + a.saved + ', chip ' + a.chip + ', sent ' + a.sent + ' · full: saved ' + b.saved + ', chip ' + b.chip + ', ' + b.n + ' areas' };
   });
 
   /* E7: rule 13 — the auditor's Home in two themes and two widths */

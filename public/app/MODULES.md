@@ -80,7 +80,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-workforce.js` | lazy · coassists | the CO-ASSIST (workforce) capability: FUNCTIONALITY only |
 | `cap-worklist.js` | lazy · on demand | MY WORK, across every chit. Lazy (ensureCap('worklist')) |
 
-## Shared (49)
+## Shared (48)
 
 | file | loading | what it is |
 |---|---|---|
@@ -95,7 +95,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `catalogue-starter-categories.js` | eager |  |
 | `chit-sheet.js` | eager |  |
 | `core.js` | eager | shared client module for the Task Panel (module 1 of the app split) |
-| `country-profiles.js` | — | OWNS the Country lab's "Countries" view: every registered country on the left, everything its engine says on the right — money · tax · tax I |
+| `country-profiles.js` | — | OWNS the Country lab's "Countries" view: every registered country on the left, everything its engine says on the right — money · tax · tax |
 | `country-ready.js` | — |  |
 | `edition.js` | — |  |
 | `embed-host.js` | — |  |
@@ -135,4 +135,4 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 
 ---
 
-*109 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*108 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
