@@ -1,4 +1,6 @@
 /**
+ * CALLED BY public/app/shell.js (mount, Home only, signed in, when the page loaded this file): index.html and shell-lab.html load it.
+ * CARD 29-qa-test-tooling-ux-locale-and-design-system/shell
  * ── ⭐ CBSides — THE TWO REFERENCE PANELS: "We lean on" (blue, →) and "Leans on us" (green, ←) ──────────────────────────────────
  *
  * Designer handoff: designs-inbox/cb-sides-2026-10-08 (the prototype's business-kind switcher is NOT built). The shell (shell.js) gives this
@@ -6,8 +8,8 @@
  * IF it is there.
  *
  *   CBSides.mount({ left, right, btnL, btnR }, { apiBase, token }) → { refresh(), ready, close() }
- *     left / right   the two <aside> panels (the shell lays them out: beside the work area from 1480 px, drawers below it)
- *     btnL / btnR    the two toolbar buttons ("→ We lean on 8" · "Leans on us ← 6") — one drawer open at a time
+ *     left / right   the two <aside> panels (the shell lays them out as drawers at every width, walk 17 Oct)
+ *     btnL / btnR    the two toolbar buttons (icons with counts: "→8" · "←6", the words on hover) — one drawer open at a time
  *
  * WHAT IT READS: GET /api/entities/sides → { lean:[{key,rows}], use:[{key,rows}], impact }. The server decides every state, version and
  * number (drift = governance/resolver.driftOf, impact = lib/impact, trade proof = the header's 3 of 4). The page paints and computes
@@ -64,7 +66,7 @@
     '.cbsd-imp button{margin-top:7px;height:26px;padding:0 11px;border-radius:8px;border:1px solid var(--sd-line);background:var(--sd-card);font-size:12px;font-weight:700}',
     '.cbsd-who{margin:8px 0 0;padding:0;list-style:none;font-size:12.5px}.cbsd-who[hidden]{display:none}',
     '.cbsd-who li{padding:3px 0;border-bottom:1px solid var(--sd-hair)}.cbsd-who li:last-child{border-bottom:0}.cbsd-who .r{color:var(--sd-muted);font-size:11px;margin-left:6px}',
-    '.cbsd-btn{display:none;height:30px;padding:0 12px;border-radius:9px;border:1px solid var(--sd-line);background:var(--sd-card);font-size:12.5px;font-weight:700;color:var(--sd-muted)}',
+    '.cbsd-btn{display:none;height:30px;padding:0 9px;border-radius:9px;border:1px solid var(--sd-line);background:var(--sd-card);font-size:12.5px;font-weight:700;color:var(--sd-muted)}',
     '.cbsd-btn b{font-family:var(--f-num,"IBM Plex Mono",monospace);margin-left:5px}',
     '.cbsd-btn.l{border-color:var(--sd-blue-b);color:var(--sd-blue-i)}.cbsd-btn.r{border-color:var(--sd-green-b);color:var(--sd-green-d)}',
     '.cbsd-btn[aria-expanded=true]{background:var(--sd-panel)}'
@@ -119,7 +121,9 @@
     function paint() {
       L.innerHTML = panel('L'); R.innerHTML = panel('R');
       var nl = S.data && !S.err ? rowsOf(S.data.lean) : '–', nr = S.data && !S.err ? rowsOf(S.data.use) : '–';
-      bL.innerHTML = '→ ' + esc(W.lean) + '<b>' + nl + '</b>'; bR.innerHTML = esc(W.use) + ' ←<b>' + nr + '</b>';
+      /* an icon and its count; the words are the button's title and its spoken name (walk 2026-10-17) */
+      bL.innerHTML = '→<b>' + nl + '</b>'; bR.innerHTML = '←<b>' + nr + '</b>';
+      bL.title = W.lean; bR.title = W.use; bL.setAttribute('aria-label', W.lean + ' ' + nl); bR.setAttribute('aria-label', W.use + ' ' + nr);
       L.classList.toggle('drawer', S.open === 'L'); R.classList.toggle('drawer', S.open === 'R');
       bL.setAttribute('aria-expanded', S.open === 'L' ? 'true' : 'false'); bR.setAttribute('aria-expanded', S.open === 'R' ? 'true' : 'false');
     }

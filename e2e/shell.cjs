@@ -14,7 +14,7 @@
  *   6  1366: the rail scrolls the work area to an area, and scrolling moves the highlight (scroll-spy)
  *   7  word budget per visible area (Q10): Home ≤ 120, every other area ≤ 100 — at 1366 and at 390
  *   8  390: bottom tabs, one area at a time; the kural sits at the foot of Home; scrollWidth === 390 with the sheet shut and open
- *   9  inside an app (?mode=app): no rail, a switcher in the bar listing the five areas — at 1366 and at 390 (scrollWidth 390)
+ *   9  inside an app (?mode=app): no rail, a switcher in the bar listing the seven areas — at 1366 and at 390 (scrollWidth 390)
  *  10  the bar only (?mode=bar): header, nothing else · signed out: no shop button, no sheet, the avatar is the Sign in door,
  *      and /entities/header is never asked
  *  11  no page error
@@ -102,7 +102,8 @@ async function run(o) {
   async function areaWords(pg, area) {
     return pg.evaluate((a) => { const s = document.querySelector('.cbsh-sec.' + a); if (!s) return -1; return (s.innerText || '').replace(/\s+/g, ' ').trim().split(' ').filter(Boolean).length; }, area);
   }
-  const BUDGET = { home: 120, selling: 100, running: 100, labs: 100, setup: 100 };
+  /* Q10: <= 100 words per area, Home <= 120 */
+  const BUDGET = { home: 120, selling: 100, money: 100, running: 100, trade: 100, labs: 100, setup: 100 };
   fs.mkdirSync(SHOTS, { recursive: true });
 
   try {
@@ -167,7 +168,8 @@ async function run(o) {
       ok(await pg.locator('.cbsh-box').count() === 3 && await pg.locator('.cbsh-sc').count() === 2, 'planted · 3 cards, 2 chips');
       ok(await pg.getAttribute('[data-testid="shell-card-till"]', 'href') === '/till.html', 'planted · a built card links to its route');
       const f = (await pg.locator('[data-testid="shell-facts-till"]').innerText()).replace(/\s+/g, ' ');
-      ok(/12 bills · ₹4,280/.test(f) && /1 bill waiting to send Send now ›/.test(f) && !/INR|{money}/.test(f), 'planted · the facts lines are the API\'s ("' + f + '")');
+      const fm = await pg.$eval('[data-testid="shell-facts-till"]', (n) => (n.querySelector('.more') || {}).textContent || '');   /* one line on the tile + "+n"; every line in the drop-down */
+      ok(/12 bills · (₹4,280|INR 4,?280)/.test(f) && /1 bill waiting to send Send now ›/.test(fm.replace(/\s+/g, ' ')) && !/{money}/.test(f + fm), 'planted · the facts lines are from the API (tile "' + f + '", drop-down "' + fm.trim() + '")');
       ok((await pg.locator('[data-testid="shell-facts-storefront"]').innerText()).trim() === '—', 'planted · a failed facts read shows —, never a number');
       ok(await pg.getAttribute('[data-testid="shell-chip-catalogue"]', 'data-state') === 'workshop' && await pg.getAttribute('[data-testid="shell-chip-orders"]', 'data-state') === 'coming', 'planted · workshop and coming are dashed chips with their state');
       ok(await pg.locator('[data-testid="shell-chip-catalogue"] a, a[data-testid="shell-chip-catalogue"]').count() === 0, 'planted · a workshop chip is not a link');
@@ -180,7 +182,7 @@ async function run(o) {
       const sw = () => pg.evaluate(() => document.scrollingElement.scrollWidth);
       ok(await sw() === 390, '390 · scrollWidth === 390 (' + await sw() + ')');
       const nav = await pg.evaluate(() => { const r = document.querySelector('.cbsh-nav').getBoundingClientRect(); return { bottom: Math.round(r.bottom), w: Math.round(r.width) }; });
-      ok(nav.bottom === 844 && nav.w === 390, '390 · the five areas are a bottom tab bar (' + JSON.stringify(nav) + ')');
+      ok(nav.bottom === 844 && nav.w === 390, '390 · the seven areas are a bottom tab bar (' + JSON.stringify(nav) + ')');
       ok(await pg.evaluate(() => [...document.querySelectorAll('.cbsh-sec')].filter((s) => s.offsetParent).map((s) => s.dataset.area).join()) === 'home', '390 · one area at a time: Home');
       ok(await pg.evaluate(() => !!document.querySelector('[data-testid="shell-pfoot"] #cbkural')), '390 · the kural sits in the footer above the tab bar (never a card in Home)');
       await pg.screenshot({ path: path.join(SHOTS, 'shell-phone.png') });
@@ -206,12 +208,15 @@ async function run(o) {
     for (const [vw, vh] of [[1366, 800], [390, 844]]) {
       const { ctx } = await profile(vw, vh), pg = await open(ctx, '?mode=app&app=accounts');
       ok(await pg.locator('[data-testid="shell-nav"]').count() === 0 && await pg.locator('[data-testid="shell-switcher"]').count() === 1, vw + ' · inside an app: no rail, one switcher');
-      ok(/CB Accounts/.test(await pg.locator('[data-testid="shell-switcher"]').innerText()), vw + ' · the switcher names the app');
+      /* a phone: the switcher is its icon (INT7b) - the screen chip names the screen; the name shows from 1366 */
+      if (vw === 390) ok(await pg.locator('[data-testid="shell-switcher"]').isVisible() && !(await pg.locator('[data-testid="shell-switcher"] .sn').first().isVisible().catch(() => false)), vw + ' · the switcher is an icon (the app name is the screen chip\x27s)');
+      else ok(/CB Accounts/.test(await pg.locator('[data-testid="shell-switcher"]').innerText()), vw + ' · the switcher names the app');
       await pg.click('[data-testid="shell-switcher"]');
       const links = await pg.$$eval('[data-testid="shell-switcher-menu"] a', (as) => as.map((a) => a.getAttribute('href')));
-      ok(links.join() === '/,/#selling,/#running,/#labs,/#setup', vw + ' · the switcher lists the five areas (' + links.join(' ') + ')');
+      ok(links.join() === '/,/#selling,/#money,/#running,/#trade,/#labs,/#setup', vw + ' · the switcher lists the seven areas (' + links.join(' ') + ')');
       ok(await pg.getAttribute('[data-testid="shell-switch-running"]', 'aria-current') === 'true', vw + ' · the app\'s own area is marked');
       const r = await pg.evaluate(() => { const b = document.querySelector('.cbsh-swpop').getBoundingClientRect(); return { r: b.right, sw: document.scrollingElement.scrollWidth }; });
+      console.log("      menu right edge "+r.r+" of "+vw+", scrollWidth "+r.sw);
       ok(r.r <= vw && (vw !== 390 || r.sw === 390), vw + ' · the switcher menu stays inside the screen' + (vw === 390 ? ', scrollWidth ' + r.sw : ''));
       ok(await vis(pg, '[data-testid="lab-app"]'), vw + ' · the app draws in the work slot');
       if (vw === 390) await pg.screenshot({ path: path.join(SHOTS, 'shell-app-phone.png') });

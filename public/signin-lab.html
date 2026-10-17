@@ -1,5 +1,9 @@
 <!doctype html>
 <html lang="en">
+<!-- OWNS  the Sign-in Lab: the sign-in window on a practice shop, roles and access, and the Roadmap tab (every manifest entry by state, with its fits line).
+     CALLED BY the Lab links on Home and Settings; a stranger may open it signed out.
+     FLOW  load → manifest.json → paintRoadmap(); sign-in window → paintAfter() (the app list for the signed-in role)
+     CARD 29-qa-test-tooling-ux-locale-and-design-system/signin-lab -->
 <head>
 <meta charset="utf-8">
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
@@ -55,6 +59,7 @@ body{background:var(--page);color:var(--ink);font:15px/1.45 'IBM Plex Sans','Seg
 .kv dt{color:var(--muted)} .kv dd{margin:0;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:13.5px}
 .row{display:flex;align-items:baseline;gap:8px;padding:5px 0;border-top:1px solid var(--hair);font-size:14px}
 .row:first-of-type{border-top:0}
+.row{flex-wrap:wrap} .row .fits{flex-basis:100%;font-size:12px;color:var(--muted)}
 .row .n{flex:1} .row .s{font-size:12.5px;color:var(--muted)}
 .row.ok .m::before{content:"✓ ";color:var(--green)} .row.no .m::before{content:"✗ ";color:var(--red)} .row.no{color:var(--muted)}
 .row.plan{color:var(--ghost)} .row.plan .m::before{content:"○ "}
@@ -242,7 +247,7 @@ function paintRoadmap() {
     (m.entries || []).forEach(function (e) { (groups[e.state] || (groups[e.state] = [])).push(e); });
     $('roadmap').innerHTML = '<h3>Roadmap — ' + (m.entries || []).length + ' entries (manifest v' + esc(m.version || '') + ')</h3>' + Object.keys(groups).map(function (st) {
       return '<h4 data-testid="roadmap-group" data-state="' + esc(st) + '" data-count="' + groups[st].length + '">' + esc(st) + ' · ' + groups[st].length + '</h4>' + groups[st].map(function (e) {
-        return '<div class="row" data-testid="roadmap-entry" data-state="' + esc(st) + '"><span class="n">' + esc(e.name) + (e.area ? ' <span class="tag">' + esc(e.area) + '</span>' : '') + '</span><span class="s">' + esc(whoCanOpen(e)) + (e.route ? ' · ' + esc(e.route) : '') + '</span></div>';
+        return '<div class="row" data-testid="roadmap-entry" data-state="' + esc(st) + '"><span class="n">' + esc(e.name) + (e.area ? ' <span class="tag">' + esc(e.area) + '</span>' : '') + '</span><span class="s">' + esc(whoCanOpen(e)) + (e.route ? ' · ' + esc(e.route) : '') + '</span>' + (e.fits ? '<small class="fits" data-testid="roadmap-fits">' + esc(e.fits) + '</small>' : '') + '</div>';
       }).join('');
     }).join('');
   }).catch(function (e) { console.warn('Sign-in Lab: the roadmap did not load', e); $('roadmap').textContent = 'The roadmap did not load — reload to try again.'; });
