@@ -236,8 +236,9 @@ W.run('country', async (w) => {
   await w.step('C10', 'A constituted shop (it has products) -> Country and Money greyed with the reason, no Change; Year and tax still open; the rule says never', async () => {
     await p5.goto(base + '/app.html#/login');   /* a page of the origin first: localStorage is unreadable on about:blank */
     await p5.waitForSelector('#root', { timeout: 15000 });
-    await p5.evaluate((s) => { localStorage.setItem('cb_sess', s); }, W.session('Walk Owner', 'Walk Shop'));
-    await p5.goto(base + '/app.html#/country');
+    /* the session AND the address are set without a hashchange, then ONE load reads both: a goto to #/country fired the router while the
+       page had no session yet, and it went to #/login before the reload (a race - green or red by timing) */
+    await p5.evaluate((s) => { localStorage.setItem('cb_sess', s); history.replaceState(null, '', '/app.html#/country'); }, W.session('Walk Owner', 'Walk Shop'));
     await p5.reload();
     await p5.waitForSelector('[data-testid="cs-rows"]', { timeout: 15000 });
     await p5.waitForSelector('[data-testid="cs-row-country"][data-locked="1"]', { timeout: 8000 });

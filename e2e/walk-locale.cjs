@@ -120,6 +120,8 @@ function answer(p, u, m) {
   if (p === '/api/network-design/stores') return STORES;
   if (p === '/api/network-design') return { draft: null };
   if (p === '/api/governance/country-setup') return COUNTRY;
+  /* the counter's plain summary, as routes/till.js sends it (no summary yet: no rows, no counters) - held to the contract's GET /api/till/summary */
+  if (p === '/api/till/summary') return { period: u.searchParams.get('period') || 'day', rows: [], counters: [] };
   if (p === '/api/catalogue/' + SHOP) return SHOP_FIX;
   if (/^\/api\/(assist|integrations)\//.test(p)) return {};
   return m === 'GET' ? {} : { ok: true };
