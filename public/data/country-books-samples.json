@@ -1,6 +1,6 @@
 {
  "generated_by": "tools/country-samples.cjs",
- "engines": "1.62.0",
+ "engines": "1.64.1",
  "note": "A sample shop per country, simulated (tests/helpers/year-any.js) — never a real shop's figures. Amounts in minor units.",
  "prerequisites": [
   "Country setup done — registered for the tax, the number checks out",
@@ -443,7 +443,7 @@
        {
         "code": "1",
         "label": "Standard rated supplies",
-        "amount_minor": 50355926,
+        "amount_minor": 17497226,
         "tax_minor": 876894
        },
        {
@@ -461,13 +461,13 @@
        {
         "code": "4",
         "label": "Zero-rated supplies",
-        "amount_minor": 0,
+        "amount_minor": 18677000,
         "tax_minor": 0
        },
        {
         "code": "5",
         "label": "Exempt supplies",
-        "amount_minor": 0,
+        "amount_minor": 14181700,
         "tax_minor": 0
        },
        {
@@ -559,7 +559,7 @@
        {
         "code": "1",
         "label": "Standard rated supplies",
-        "amount_minor": 53311426,
+        "amount_minor": 17861326,
         "tax_minor": 893069
        },
        {
@@ -577,13 +577,13 @@
        {
         "code": "4",
         "label": "Zero-rated supplies",
-        "amount_minor": 0,
+        "amount_minor": 18202900,
         "tax_minor": 0
        },
        {
         "code": "5",
         "label": "Exempt supplies",
-        "amount_minor": 0,
+        "amount_minor": 17247200,
         "tax_minor": 0
        },
        {
@@ -675,7 +675,7 @@
        {
         "code": "1",
         "label": "Standard rated supplies",
-        "amount_minor": 48050213,
+        "amount_minor": 17704913,
         "tax_minor": 885247
        },
        {
@@ -693,13 +693,13 @@
        {
         "code": "4",
         "label": "Zero-rated supplies",
-        "amount_minor": 0,
+        "amount_minor": 14610600,
         "tax_minor": 0
        },
        {
         "code": "5",
         "label": "Exempt supplies",
-        "amount_minor": 0,
+        "amount_minor": 15734700,
         "tax_minor": 0
        },
        {
