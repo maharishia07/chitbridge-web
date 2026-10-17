@@ -18,6 +18,10 @@
  *
  * Backend: b138 amendment · b142 chit_line · b143 assignment · b144 delivery · b145 cost.
  */
+/* OWNS Design 2, the chit as line-level work (lines carry their own state and assignee)
+ * CALLED BY app.html (ensureCap('chit2'), route #/chit2)
+ * FLOW ensureCap -> c2PaneOrd reads the chit and its lines -> CBCart totals -> money through fmtMoney
+ * CARD 01-rail-core-the-chit/chit-design-2 */
 if (typeof EP !== 'undefined') {
   Object.assign(EP, {
     c2AssignLines: { m: 'POST', p: '/api/chits/:id/assign-lines',  ok: 'y' },
@@ -326,7 +330,7 @@ function c2PaneOrd(d){
     items.push({ item_id: id, item_data: d, tax: tax, _e: e, _i: i, _l: l });
     if (!e.removed) recLines.push(l);
   });
-  var cat = { shop: { bridge_id: 'chit', currency_code: (d.detail && d.detail.currency_code) || 'INR' }, offers: [], items: items };
+  var cat = { shop: { bridge_id: 'chit', currency_code: (d.detail && d.detail.currency_code) }, offers: [], items: items };
   if (C2.cart) { try { C2.cart.destroy(); } catch (_) {} }
   C2.cart = CBCart.create(cat, { renderer: CBCatUI, listEl: 'c2_lines_none', barEl: 'c2_bar_none', barHideEmpty: true });
   items.forEach(function(it){ var q = Number(it._l.quantity != null ? it._l.quantity : it._l.qty) || 0; if (q > 0) C2.cart.setQty(it.item_id, q); });

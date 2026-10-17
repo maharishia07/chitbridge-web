@@ -26,6 +26,10 @@
  * Reuse: api/EP (core.js) · CBAction (accounts-shell.js: the clear is a write) · CBLocale · the Activity wording of app.html's mapNotif.
  * ZERO app.html globals: no UI, paintDetail, modal. The app and the counter keep their own bell until R10 / M62 swap them for this.
  */
+/* OWNS CBBell.mount: the bell, mountable in any header
+ * CALLED BY every page header that mounts the bell (accounts, crm, finance, network, tasks, ...)
+ * FLOW POST /api/events/ticket -> SSE stream -> the dot and the list -> amounts through fmtMoney in the notice's currency
+ * CARD 01-rail-core-the-chit/rail-bell */
 (function (root) {
 'use strict';
 var doc = root.document;
@@ -60,7 +64,7 @@ function line(n) {
     try { var dt = new Date(n.created_at); s = isNaN(dt) ? String(n.created_at).replace('T', ' ').slice(0, 16) : dt.toLocaleString(undefined, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); } catch (_2) { s = String(n.created_at).slice(0, 16); } } }
   /* O3: a NEW incoming order is not a "delivered" - it says what it is, who sent it and what it is worth */
   if (n.purpose === 'order' && n.action === 'delivered' && n.direction === 'received') {
-    var amt = fmtMoney(n.total_value, n.currency_code || 'INR', ''), how = [n.order_channel === 'online' ? '🌐 ' + T('Online') : '', n.order_fulfilment === 'delivery' ? T('Delivery') : ''].filter(Boolean).join(' · ');
+    var amt = fmtMoney(n.total_value, n.currency_code, ''), how = [n.order_channel === 'online' ? '🌐 ' + T('Online') : '', n.order_fulfilment === 'delivery' ? T('Delivery') : ''].filter(Boolean).join(' · ');
     return { i: '🛍️', mine: !!(n.assigned_to_me || n.dispute_for_me), chit: n.chit_id || null, order: true, who: n.action_by_display_name || '', say: T('sent a new order'), subj: '',
       d: [amt, how].filter(Boolean).join(' · '), s: s, id: n.log_id || null };
   }

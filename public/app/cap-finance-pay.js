@@ -10,9 +10,13 @@
  * ⭐ NEW PATHS (rule 4): FP (this tab's state) · fpCols / fpNext (what a supplier row shows and opens to) · fpPay (Pay with the row's offer). Nothing else.
  * ⚠️ Never error.message on a screen. Finance SUGGESTS: the only writes are the pay sheet's own (Record, Record discount) — pressed by the owner.
  */
+/* OWNS CB Finance, Pay: what the shop owes its suppliers
+ * CALLED BY finance.html (after cap-finance.js)
+ * FLOW GET the payables -> FP.cur from the reply, else the books money -> bkMoney for every figure
+ * CARD 16-finance/payables */
 'use strict';
 
-var FP = { gen: 0, rows: [], cur: 'INR', total: null, state: 'loading', api: null };
+var FP = { gen: 0, rows: [], cur: null, total: null, state: 'loading', api: null };
 var FP_OWNER_ONLY = 'Only the owner may see what you owe.';
 var FP_BUCKETS = [['0_30', '0–30 days'], ['31_45', '31–45 days'], ['46_60', '46–60 days'], ['60_plus', 'Over 60 days']];
 var FP_GROUPS = { overdue: 'Overdue', msme: 'MSME at risk', week: 'Due this week', later: 'Later' };

@@ -58,7 +58,7 @@ var CRM_EP = {
   crmSegSend:    { m: 'POST',   p: '/api/crm/segments/:key/send',          ok: 'y' },   // { text, dry? } → dry: who may (by code); real: the one sender per allowed member
 };
 
-var CRM = { gen: 0, loadGen: 0, rows: [], byKey: {}, alerts: {}, currency: 'INR', state: 'loading', err: null, loaded: false, api: null,
+var CRM = { gen: 0, loadGen: 0, rows: [], byKey: {}, alerts: {}, currency: null, state: 'loading', err: null, loaded: false, api: null,
   fu: [], fuState: 'loading', fuErr: null, fuScope: null, fuDone: false, coAssists: [], fuApi: null, may: null, shopDay: null };
 var CRM_PAGE = 300;   /* one page of follow-ups or calls asked of the server (its own max wins) */
 

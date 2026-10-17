@@ -84,7 +84,7 @@ var API=(new URLSearchParams(location.search).get('api'))||(window.CBShell&&CBSh
 var TOK=null,_stage='email',FORMS=[],SEL=null,CTX='',MANUAL={},RESOLVED=null,ISSUED=null,_restored=false,ORDERS=null;
 /* K3: nobody knows a chit id - the shop's own recent orders (the existing chits reads: orders that came in, orders that went out) are PICKED, not typed. */
 function orderLabel(c){
-  var sj=c.summary_json||{}, v=sj.total_value!=null?Number(sj.total_value):null, cur=sj.currency_code||'INR';
+  var sj=c.summary_json||{}, v=sj.total_value!=null?Number(sj.total_value):null, cur=sj.currency_code;
   var who=c.sender_entity_display_name||((Array.isArray(c.all_recipients)&&c.all_recipients[1])?(c.all_recipients[1].display_name||c.all_recipients[1].name):'')||'';
   var d=String(c.created_at||'').slice(0,10), sub=c.manual_subject||c.auto_subject||'Order';
   var money=''; try{ money=v!=null?new Intl.NumberFormat(undefined,{style:'currency',currency:cur}).format(v):''; }catch(e){ money=v!=null?String(v):''; }

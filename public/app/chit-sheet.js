@@ -24,6 +24,10 @@
  * plus what a popup leaves out: the chit's history (state_log, read as held) and the page note (CBPage, app/page.js); it drops the
  * "Open page" icon (you are on it). M53 (docs/design/chit-detail) asks for exactly this: one module, opened as a popup or a full page.
  */
+/* OWNS the chit sheet: one chit opened with its lines, money and thread
+ * CALLED BY accounts.html, app.html, crm.html, finance.html, tasks.html
+ * FLOW open a chit -> header and lines -> money block in the chit's own currency (summary or header), else the shop's
+ * CARD 01-rail-core-the-chit/chit-sheet */
 (function (root) {
   'use strict';
 
@@ -56,7 +60,7 @@
     var live = Array.isArray(r && r.live_set) ? r.live_set.filter(function (e) { return e && !e.removed && e.live; }).map(function (e) { return e.live; })
       : (det.line_items || []);
     var purpose = String(h.purpose || '');
-    var cur = sum.currency_code || h.currency || 'INR';
+    var cur = sum.currency_code || h.currency;
     var bill = bj.bill_no || bj.printed_as || null;
     var log = (r && r.state_log) || [];
     /* ⭐ STD1: WHAT DOCUMENT THIS IS, the SERVER says (the chit read's `doc` — folder-inventory docOf, the Bills folders' own test); never guessed

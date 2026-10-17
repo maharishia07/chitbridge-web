@@ -16,6 +16,10 @@
  * Injected by ensureCap('supplies'). Classic script, shared global scope — uses api, esc, scr, modal/closeModal,
  * toast, money, UI, tx/txf, scrErr.
  */
+/* OWNS Supplies: what the shop buys to use, never to sell
+ * CALLED BY app.html (the Supplies capability)
+ * FLOW list supplies -> price through fmtMoney(moneyCode()) -> add / edit rows
+ * CARD 10-operations/supplies */
 
 var SUP = { rows: null, busy: false, err: null };
 
@@ -90,7 +94,7 @@ function supRow(s){
    */
   /* ⚠️ WX-P2P-05 (2026-10-13, the real stack): the row read "40 · Corner Stores" — a bare number. `money` is not a global in app.html (each
      screen keeps its own local), so the fallback printed the raw figure. The app's one formatter (fmtMoney, M36) in the shop's currency. */
-  var fmt = function (n) { try { return fmtMoney(Number(n), typeof myCur === 'function' ? myCur() : 'INR'); } catch (_) { return typeof money === 'function' ? money(n) : String(n); } };
+  var fmt = function (n) { try { return fmtMoney(Number(n), moneyCode()); } catch (_) { return typeof money === 'function' ? money(n) : String(n); } };
   var last = s.last_cost != null
     ? fmt(s.last_cost) + (s.last_from ? ' · ' + esc(s.last_from) : '')
     : '<span style="color:var(--grey)">' + tx('not bought yet') + '</span>';
