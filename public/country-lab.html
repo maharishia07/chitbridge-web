@@ -191,14 +191,14 @@
   .cp-all thead .cp-rule{ z-index:3; }
   /* pivot freeze: the header row and the Rule column stay while the countries scroll under them — each frozen edge drawn, so a cell never just vanishes behind it */
   .cp-all thead th{ box-shadow:inset 0 -2px 0 var(--line,#e7e3d8); vertical-align:bottom; }
-  .cp-all .cp-rule{ box-shadow:inset -2px 0 0 var(--line,#e7e3d8), 6px 0 8px -6px rgba(0,0,0,.25); }
-  .cp-all thead .cp-rule{ box-shadow:inset -2px -2px 0 var(--line,#e7e3d8), 6px 0 8px -6px rgba(0,0,0,.25); }
+  .cp-all .cp-rule{ box-shadow:inset -2px 0 0 var(--line,#e7e3d8), 6px 0 8px -6px color-mix(in srgb, var(--ink,#20303b) 25%, transparent); }
+  .cp-all thead .cp-rule{ box-shadow:inset -2px -2px 0 var(--line,#e7e3d8), 6px 0 8px -6px color-mix(in srgb, var(--ink,#20303b) 25%, transparent); }
   dialog.cp-more{ border:1px solid var(--line,#e7e3d8); border-radius:10px; background:var(--card,#fff); color:var(--ink,#1d2125); padding:14px 18px; width:min(520px, calc(100vw - 32px)); max-height:min(70vh, 640px); }
   dialog.cp-more.wide{ width:min(980px, calc(100vw - 32px)); max-height:85vh; }   /* a panel (chart, return, statements, invoice, kinds) */
   dialog.cp-more .cp-chart{ margin:0; border:0; padding:0; background:none; }   /* the dialog is the frame */
   /* the overlay's title bar (name · ✕) stays frozen while its body scrolls (Athi, 2026-10-17: "header has to freeze") */
   dialog.cp-more .cp-head:first-child{ position:sticky; top:-14px; z-index:2; margin:-14px -18px 10px; padding:14px 18px 8px; background:var(--card,#fff); border-bottom:1px solid var(--line,#e7e3d8); }
-  dialog.cp-more::backdrop{ background:rgba(0,0,0,.35); }
+  dialog.cp-more::backdrop{ background:var(--scrim, color-mix(in srgb, var(--ink,#20303b) 40%, transparent)); }
   .cp-morelist{ margin:10px 0 0; padding-left:22px; font-size:var(--fs-2,12.5px); columns:2 200px; column-gap:24px; } .cp-morelist li{ break-inside:avoid; padding:2px 0; }
   .cp-cname{ display:block; white-space:normal; font-weight:400; font-size:var(--fs-1,11px); color:var(--grey-2,#545A61); }
   .cp-one{ display:none; } .cp-all-pick{ display:none; }
