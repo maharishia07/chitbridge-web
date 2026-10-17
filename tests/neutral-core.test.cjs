@@ -32,10 +32,16 @@ const bare = run('fmtMoney(1234567.5)');
 ok(!/₹|INR|Rs/.test(bare) && bare === '1,234,567.50', 'N1: an amount with no money stated prints bare, plain grouping (' + bare + ')');
 ok(run('fmtMoney("", null, "-")') === '-', 'N1: the empty marker still works');
 ok(run('cbSumByCurrency([{ amt: 5 }])[0].currency') === '', 'N1: a row with no currency and no shop money is grouped under none, not INR');
+/* N2: no pack is neutral */
+ok(run('packSplitsByState()') === false && run('payHasUpi()') === false && run('packHasHsn()') === false, 'N2: no country, no pack -> no state split, no UPI, no HSN');
 /* an India shop is unchanged */
 run('SESSION.country = "IN"; SESSION.currency = "INR";');
+ok(run('packSplitsByState()') === true && run('payHasUpi()') === true && run('packHasHsn()') === true, 'India shop: state split, UPI and HSN exactly as before');
 ok(run('moneyCode()') === 'INR' && /₹/.test(run('fmtMoney(1234.5)')) && /₹/.test(run('fmtMoney(1234.5, "INR")')), 'India shop: money is INR and prints the rupee sign, as before');
 ok(run('fmtMoney(123456.5, "INR")') === run('CBLocale.money(123456.5, "INR")') && run('fmtMoney(123456.5)') === run('CBLocale.money(123456.5, "INR")'), 'India shop: fmtMoney is CBLocale.money unchanged (lakh grouping)');
+/* a border-pack shop */
+run('SESSION.country = "AU"; SESSION.currency = "AUD";');
+ok(run('packSplitsByState()') === false && run('payHasUpi()') === false && run('moneyCode()') === 'AUD', 'AU shop: no state split, no UPI, its own money');
 ok(run('moneyCode("usd")') === 'USD', 'a row\'s own currency wins over the shop\'s');
 
 

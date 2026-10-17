@@ -55,11 +55,11 @@ function packWord(kind, cc){
 /** the pack's own word for a tax id: GSTIN · ABN · TRN — "Tax number" with no pack. The till reads the server's (snapshot shop.tax_id_word), never a copy */
 function taxIdWord(cc){ return packWord('taxId', cc); }
 /** does the shop's tax turn on the STATE (India's CGST/SGST · IGST, pack.tax.supply 'state')? false under a border pack (Australia, the UAE); N2: false too when no pack is known (neutral, never India) */
-function packSplitsByState(cc){ var p = shopReg(cc); return !p || !p.tax || !p.tax.supply || p.tax.supply === 'state'; }
+function packSplitsByState(cc){ var p = shopReg(cc); return !!p && (!p.tax || !p.tax.supply || p.tax.supply === 'state'); }
 /** UPI is India's payment mode (reg-in chart.paymentModes.upi) — offered only where the shop's pack carries it; N2: false when no pack is known */
-function payHasUpi(){ var p = shopReg(); return !p || !!(p.chart && p.chart.paymentModes && p.chart.paymentModes.upi); }
+function payHasUpi(){ var p = shopReg(); return !!(p && p.chart && p.chart.paymentModes && p.chart.paymentModes.upi); }
 /** does the shop's pack carry India's HSN rule (reg-in tax.hsn_digits)? CX4: the "HSN" words, the exposure switch and the Rule 46 note follow it; N2: false when no pack is known */
-function packHasHsn(){ var p = shopReg(); return !p || !p.tax || !!p.tax.hsn_digits; }
+function packHasHsn(){ var p = shopReg(); return !!p && (!p.tax || !!p.tax.hsn_digits); }
 function payModeOpts(){ return payHasUpi() ? '<option value="upi">UPI</option>' : ''; }
 
 /**
