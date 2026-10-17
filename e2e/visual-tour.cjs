@@ -20,7 +20,7 @@
  *
  *   NODE_PATH=$PWD/e2e/node_modules node e2e/visual-tour.cjs --part a|b [--theme cream|dark] [--width 1366|390] [--shard 1/3]
  *        [--clicks 40] [--ops 7] [--pages index,shop] [--base http://localhost:5173] [--api http://localhost:3000] [--email simstores@test.example]
- *   node e2e/visual-tour.cjs --report      merge every e2e/out/tour/run-*.json → tour.json + TOUR-FINDINGS.md (+ --docs: docs/testing/TOUR-FINDINGS.md)
+ *   node e2e/visual-tour.cjs --report [--fail-on broken]      merge every e2e/out/tour/run-*.json → tour.json + TOUR-FINDINGS.md (+ --docs: docs/testing/TOUR-FINDINGS.md)
  * Output: e2e/out/tour/<nn>-<code>-<page>-<step>.png (never committed — .github/workflows/visual-tour.yml uploads the folder).
  */
 'use strict';
@@ -393,8 +393,10 @@ async function main() {
       const vis = (el) => { const r = el.getBoundingClientRect(); if (r.width < 2 || r.height < 2) return false; for (let n = el; n && n.nodeType === 1; n = n.parentElement) { const cs = getComputedStyle(n); if (cs.display === 'none' || cs.visibility === 'hidden') return false; } return true; };
       const words = (el) => ((el.innerText || el.value || el.getAttribute('aria-label') || el.getAttribute('title') || '') + ' ' + (el.dataset.testid || '')).replace(/\s+/g, ' ').trim();
       const out = []; let i = 0;
+      /* rows on screen: a sort header over 2 rows or fewer cannot show a change, so it is never a dead click */
+      const rowCount = Array.from(document.querySelectorAll('.cbl-row,.cbl-lrec,tbody tr,[data-testid$="-row"]')).filter(vis).length;
       document.querySelectorAll('[data-tour-op]').forEach((e) => e.removeAttribute('data-tour-op'));
-      const add = (kind, el) => { if (!vis(el) || el.closest('.cbsh-hdr,#cb-avatar') || el.disabled) return; if (kind !== 'search' && kind !== 'select' && (DANGER.test(words(el)) || !words(el))) return; el.setAttribute('data-tour-op', String(i)); out.push({ i: i++, kind, label: words(el).slice(0, 50) }); };
+      const add = (kind, el) => { if (!vis(el) || el.closest('.cbsh-hdr,#cb-avatar') || el.disabled) return; if (kind !== 'search' && kind !== 'select' && (DANGER.test(words(el)) || !words(el))) return; el.setAttribute('data-tour-op', String(i)); out.push({ i: i++, kind, label: words(el).slice(0, 50), rows: kind === 'sort' ? rowCount : undefined }); };
       document.querySelectorAll('.cbl-row,.cbl-lrec,tbody tr,[data-testid$="-row"],li[onclick],.row[onclick]').forEach((e) => add('open a row', e));
       document.querySelectorAll('.cbl-hc,th[onclick],th button,[data-sort]').forEach((e) => add('sort', e));
       document.querySelectorAll('input[type=search],input[placeholder*="earch" i],input[placeholder*="ind" i]').forEach((e) => add('search', e));
@@ -433,7 +435,7 @@ async function main() {
       const b = take();
       if (b.pageerr.length && result !== 'error') { result = 'error'; err = b.pageerr[0]; }
       states.push({ nn: n, run: RUN, part: PART, theme: THEME, width: WIDTH, page: file, code: codeOf(file).code, url: u, section, kind: 'op', op: o.kind, element: { label: o.label }, result, error: err,
-        shots: f ? [f] : [], console: b.console.concat(b.pageerr.map((x) => 'pageerror: ' + x)), failed: b.failed, dialogs: b.dialogs, dead: result === 'nothing happened' && o.kind !== 'search' && o.kind !== 'select' });
+        shots: f ? [f] : [], console: b.console.concat(b.pageerr.map((x) => 'pageerror: ' + x)), failed: b.failed, dialogs: b.dialogs, dead: result === 'nothing happened' && o.kind !== 'search' && o.kind !== 'select' && !(o.kind === 'sort' && o.rows < 3) });
       console.log('   op ' + k + ' ' + o.kind + ' "' + o.label.slice(0, 40) + '" → ' + result + (err ? ' (' + err + ')' : ''));
       if (result !== 'nothing happened') await go(u);   /* every operation starts from the screen as it first stood */
     }
@@ -539,7 +541,7 @@ function report() {
       if (fr.bodyFont && idx.bodyFont && fr.bodyFont !== idx.bodyFont) add('inconsistent', s.page + '|frame|font', s.page + ' body font "' + fr.bodyFont + '" ≠ the index\'s "' + idx.bodyFont + '"', s, how(s));
       if (fr.h1Font && idx.h1Font && fr.h1Font !== idx.h1Font) add('cosmetic', s.page + '|frame|h1font', s.page + ' heading font "' + fr.h1Font + '" ≠ the index\'s "' + idx.h1Font + '"', s, how(s));
       if (fr.bodySize && idx.bodySize && fr.bodySize !== idx.bodySize) add('cosmetic', s.page + '|frame|size', s.page + ' body text ' + fr.bodySize + ' ≠ the index\'s ' + idx.bodySize, s, how(s));
-      if (fr.title && !/chitbridge|cb /i.test(fr.title)) add('cosmetic', s.page + '|frame|title', s.page + ' tab title "' + fr.title + '" does not name ChitBridge', s, how(s));
+      /* no tab-title check: the trademark appears in ONE place only (Athi, 17 Oct) */
     }
   }
   /* empty-state wording across pages */
@@ -587,6 +589,11 @@ function report() {
   fs.writeFileSync(path.join(OUT, 'TOUR-FINDINGS.md'), text);
   if (has('docs')) fs.writeFileSync(path.join(ROOT, 'docs', 'testing', 'TOUR-FINDINGS.md'), text);
   console.log('tour.json · TOUR-FINDINGS.md: ' + states.length + ' states · ' + counts.broken + ' broken · ' + counts.inconsistent + ' inconsistent · ' + counts.cosmetic + ' cosmetic' + (has('docs') ? ' (copied to docs/testing/)' : ''));
+  /* --fail-on broken: the run fails (exit 1) when any Broken finding stands — a 4xx/5xx request, a page error, a console error; the rest stay report-only */
+  if (arg('fail-on', '') === 'broken' && counts.broken > 0) {
+    console.log('FAIL: ' + counts.broken + ' broken finding(s) — see TOUR-FINDINGS.md');
+    process.exitCode = 1;
+  }
 }
 
 let saveRun = null;

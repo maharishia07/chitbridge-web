@@ -4,7 +4,12 @@ name: visual-tour
 # shops (scripts/seed-local.cjs · tools/sim-load.cjs simstores, one year), the web served by e2e/lib/stack-local.cjs (its /config.js points
 # at the local api; the harness refuses the production host). On demand only. Output: the `visual-tour` artifact (e2e/out/tour/ —
 # screenshots, tour.json, TOUR-FINDINGS.md). Nothing is committed.
+# NIGHTLY (17 Oct, after api #272: three routes answered 500 for a day, found only by a hand tour): 02:30 IST = 21:00 UTC runs PART B only (signed in,
+# Cream 1366, --ops 6) on api main with the demo month seeded, and FAILS when TOUR-FINDINGS holds a Broken finding (a 4xx/5xx request, a page error,
+# a console error). Inconsistent / cosmetic stay report-only. The repo is public, so Actions minutes are free; the run is held to ~30 min anyway.
 on:
+  schedule:
+    - cron: '0 21 * * *'
   # the round that built it runs it once on its own branch (a dispatch needs the file on main first); main never matches
   push:
     branches: ['round/VTOUR-*']
@@ -22,7 +27,7 @@ on:
 jobs:
   tour:
     runs-on: ubuntu-latest
-    timeout-minutes: 150
+    timeout-minutes: ${{ github.event_name == 'schedule' && 30 || 150 }}
     services:
       postgres:
         image: postgres:16
@@ -56,17 +61,22 @@ jobs:
         run: |
           (cd chitbridge-api && node tools/sim-load.cjs --schema-only --db "$SIM_DB")
           node e2e/lib/stack-local.cjs up
-          (cd chitbridge-api && API_BASE=http://127.0.0.1:3000 node scripts/seed-local.cjs)
+          # the demo month, once seed-local knows the flag; an older seed-local is run without it
+          DEMO=''; grep -q 'demo-month' chitbridge-api/scripts/seed-local.cjs && DEMO='--demo-month'
+          (cd chitbridge-api && API_BASE=http://127.0.0.1:3000 node scripts/seed-local.cjs $DEMO)
           (cd chitbridge-api && node tools/sim-load.cjs --db "$SIM_DB" --shop simstores --years 1 --start 2025-04-01)
       # one command per part × theme × width (each under its own time budget); a page not reached is listed in the findings, never dropped
       - name: Part A — signed out, Cream 1366 (every box clicked, sign-in + New shop)
+        if: github.event_name != 'schedule'
         continue-on-error: true
         run: node e2e/visual-tour.cjs --part a --theme cream --width 1366 --clicks ${{ inputs.clicks || '40' }}
         env: { TOUR_BUDGET_MS: '2400000' }
       - name: Part A — signed out, Dark 1366
+        if: github.event_name != 'schedule'
         continue-on-error: true
         run: node e2e/visual-tour.cjs --part a --theme dark --width 1366 --clicks 0
       - name: Part A — key pages at 390 (Cream, Dark)
+        if: github.event_name != 'schedule'
         continue-on-error: true
         run: |
           node e2e/visual-tour.cjs --part a --theme cream --width 390 --clicks 0 --pages index,settings,shop,store,promo,embed,know-your
@@ -74,19 +84,21 @@ jobs:
       - name: Part B — signed in, Cream 1366 (every section, random safe operations)
         continue-on-error: true
         run: node e2e/visual-tour.cjs --part b --theme cream --width 1366 --ops ${{ inputs.ops || '6' }}
-        env: { TOUR_BUDGET_MS: '3000000' }
+        env: { TOUR_BUDGET_MS: "${{ github.event_name == 'schedule' && '840000' || '3000000' }}" }
       - name: Part B — signed in, Dark 1366
+        if: github.event_name != 'schedule'
         continue-on-error: true
         run: node e2e/visual-tour.cjs --part b --theme dark --width 1366 --ops 0 --sections 8
         env: { TOUR_BUDGET_MS: '1200000' }
       - name: Part B — key pages at 390 (Cream, Dark)
+        if: github.event_name != 'schedule'
         continue-on-error: true
         run: |
           node e2e/visual-tour.cjs --part b --theme cream --width 390 --ops 0 --sections 4 --pages index,accounts,finance,crm,tasks,till,settings
           node e2e/visual-tour.cjs --part b --theme dark --width 390 --ops 0 --sections 4 --pages index,accounts,finance,crm,tasks,till,settings
       - name: The report (tour.json · TOUR-FINDINGS.md · the inventory)
         if: always()
-        run: node e2e/visual-tour.cjs --report
+        run: node e2e/visual-tour.cjs --report ${{ github.event_name == 'schedule' && '--fail-on broken' || '' }}
       - name: Upload the tour
         if: always()
         uses: actions/upload-artifact@v4
