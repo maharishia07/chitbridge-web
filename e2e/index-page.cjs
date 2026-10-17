@@ -8,7 +8,7 @@
  *      the manifest: every built entry routes to a utility page that exists (never app.html); every other entry has no route (a dashed chip)
  *   2  1366 · signed in, the shipped manifest: Home mounts the shell once (data-mode=home); one card per built entry, each linking to its
  *      route; one dashed chip per other entry, none a link, and a click opens nothing; zero app.html hrefs outside the avatar (the allow-list)
- *      + 7 areas in the nav (home · selling · money · running · trade · labs · setup = CBShell.AREAS); every tile is 132px tall
+ *      + 7 areas in the nav (home · selling · money · running · trade · labs · setup = CBShell.AREAS); every tile is 148px tall
  *   3  1366 · every read the page makes is a budgeted one (the API's round-trips.budget.json has a line for it - read from the api checkout
  *      when it is beside this one); a facts URL that is null paints nothing; a facts read that fails paints no figure and no status;
  *      nothing wrong → the alerts slot draws nothing; N19 404 → the sheet's empty state (kept)
@@ -179,7 +179,7 @@ async function run() {
       const heads = await pg.$$eval('.cbsh-ph', (hs) => hs.map((h) => h.textContent.trim()));
       ok(heads.length === 7 && heads[0] === W.areas.home && ['selling', 'money', 'running', 'trade', 'labs', 'setup'].every((a, i) => heads[i + 1] === W.caption[a]), '1366 · the section headings (' + heads.join(' · ') + ')');
       const tiles = await pg.$$eval('.cbsh-box', (bs) => bs.map((b) => Math.round(b.getBoundingClientRect().height)));
-      ok(tiles.length === BUILT.length && tiles.every((h) => h === 132), '1366 · all ' + tiles.length + ' tiles are 132px tall (' + [...new Set(tiles)].join(', ') + ')');
+      ok(tiles.length === BUILT.length && tiles.every((h) => h === 148), '1366 · all ' + tiles.length + ' tiles are 148px tall (' + [...new Set(tiles)].join(', ') + ')');
       ok(await pg.locator('.cbsh-box').count() === BUILT.length && await pg.locator('.cbsh-sc').count() === REST.length, '1366 · ' + BUILT.length + ' cards and ' + REST.length + ' dashed chips — one per manifest row');
       let hrefsOk = true;
       for (const e of BUILT) { const h = await pg.getAttribute('[data-testid="shell-card-' + e.id + '"]', 'href'); if (h !== e.route.replace('{bridge_id}', 'CBTEST1234')) { hrefsOk = false; console.log('      ' + e.id + ' → ' + h); } }
@@ -256,7 +256,7 @@ async function run() {
       const wantNeed = Object.keys(PLANTED_STATE).filter((k) => PLANTED_STATE[k] === 'needs_you').sort();
       ok(!need.hidden && need.ids.join() === wantNeed.join() && need.hrefs.join() === ['/accounts.html', '/till.html'].join(), 'planted · the "Needs you" strip lists exactly the needs_you cards (' + wantNeed.join(', ') + '), each a door (' + need.ids.join(', ') + ')');
       const tiles2 = await pg.$$eval('.cbsh-box', (bs) => bs.map((b) => Math.round(b.getBoundingClientRect().height)));
-      ok(tiles2.length > 0 && tiles2.every((h) => h === 132), 'planted · every tile stays 132px with a status, a +n and a drop-down (' + [...new Set(tiles2)].join(', ') + ')');
+      ok(tiles2.length > 0 && tiles2.every((h) => h === 148), 'planted · every tile stays 148px with a status, a +n and a drop-down (' + [...new Set(tiles2)].join(', ') + ')');
       const yw = await pg.$eval('[data-testid="rail"]', (n) => ({ head: n.querySelector('h3').textContent.trim(), home: !!n.closest('.cbsh-sec.home') }));
       ok(yw.head === 'Your work' && yw.home, 'planted · the "Your work" box sits in Home (' + yw.head + ')');
       ok((await pg.locator('[data-testid="shell-facts-crm"]').innerText()).trim() === '', 'planted · a card with facts null shows nothing');

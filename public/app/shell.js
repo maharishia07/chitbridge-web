@@ -194,11 +194,11 @@
     '.cbsh-box .facts{display:flex;flex-direction:column;gap:2px;margin-top:11px;padding-top:9px;border-top:1px solid var(--sh-hair)}',
     /* walk 17 Oct (Athi: "too much information, the screen will expand"): EVERY TILE IS ONE HEIGHT — one line of purpose, two fact lines reserved
        whether or not they arrive, each line cut with … and said in full on hover (title). A tile never grows; more to say is the app's job. */
-    '.cbsh-box{height:132px;overflow:visible}.cbsh-sec.labs .cbsh-box,.cbsh-sec.setup .cbsh-box{height:132px}',
+    '.cbsh-box{height:148px;overflow:visible}.cbsh-sec.labs .cbsh-box,.cbsh-sec.setup .cbsh-box{height:148px}',
     /* walk 17 Oct (Athi: "text bigger, the name next to the icon"): the icon floats beside the name; purpose and facts read one size up */
     '.cbsh-box .g,.cbsh-sec.labs .cbsh-box .g,.cbsh-sec.setup .cbsh-box .g{float:left;width:32px;height:32px;display:grid;margin:0 10px 6px 0;background:var(--sh-panel);font-size:16px}',
     '.cbsh-box h4,.cbsh-sec.labs .cbsh-box h4,.cbsh-sec.setup .cbsh-box h4{font-size:18px;line-height:32px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:16px}',
-    '.cbsh-box .what{clear:left;font-size:14px}.cbsh-box .f{font-size:13.5px}.cbsh-box .facts{margin-top:9px;padding-top:7px}',
+    '.cbsh-box .what{clear:left;font-size:14px;white-space:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2}.cbsh-box .f{font-size:13.5px}.cbsh-box .facts{margin-top:9px;padding-top:7px}',
     '.cbsh-box .facts{flex-direction:row;align-items:center;gap:6px;height:calc(1.35em + 10px)}.cbsh-box .facts:empty{border-top-color:transparent}',
     '.cbsh-box .f{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.35;min-width:0}.cbsh-box .facts>.f{flex:1}',
     /* the rest DROPS DOWN over the page on hover or keyboard focus — the tile keeps its size and nothing below it moves (Athi: "show as a dropdown") */

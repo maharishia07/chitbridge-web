@@ -6,7 +6,7 @@ Goes with: `docs/design/shop-header/REQUIREMENT.md` (the bar and shop card).
 
 ## Already built on walk/index-1 (design from this, not from older shots)
 - Sections, daily first and set-up last: **Your work · Selling · Money · Running it · Trade · Labs · Setup**. Each has a one-line purpose under its title.
-- Every tile is the **same size (132 px)**: the icon beside the name, one line of purpose, one fact line. If there are more facts, a **+n** badge shows and the full list **drops down over the page** on hover or focus, so nothing moves.
+- Every tile is the **same size (148 px)**: the icon beside the name, up to two lines of purpose (room for longer languages), one fact line. If there are more facts, a **+n** badge shows and the full list **drops down over the page** on hover or focus, so nothing moves.
 - Every tile has a **status** from the server (facts `state`, docs/FIELDS.md): **● Needs you** (amber) · **● In use** (green) · **○ Not started · Set up ›** (grey).
 - **"● Needs you" strip** at the top of Home: only the amber tiles, each one a link. It is hidden when there are none.
 
