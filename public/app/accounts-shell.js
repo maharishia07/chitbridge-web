@@ -115,6 +115,7 @@ var CB_SETTINGS_EP = {
    (cap-admin.js) read the server's measurement through it; MOVED here from cap-admin.js's own EP rows (ep-aliases: one endpoint, one name) ── */
 var CB_MIS_EP = {
   misMetrics:     {m:'GET',    p:'/api/folders/mis',              ok:'y'},   // { overdue_days, since, truncated, all, received, sent } — lib/measure, the rail's overdue rule
+  tillTrend:      {m:'GET',    p:'/api/till/summary',             ok:'y'},   // RPT2 ?compare=1&period=week|month|quarter|year → { period, n, currency, fy_start_month, slots } — rollup.series; Reports › Trend (app/cap-mis-trend.js)
 };
 /* T3-P2-CRM: the policy slice of CB_SETTINGS_EP for crm.html's Shop window — the SAME entries (ep-aliases: one endpoint, one name), never a second declaration */
 var CB_POLICY_EP = { policyGet: CB_SETTINGS_EP.policyGet, policySet: CB_SETTINGS_EP.policySet };

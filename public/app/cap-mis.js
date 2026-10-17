@@ -13,6 +13,7 @@
  *   "✨ Explain" (AI narration over a client sum), the two-pane rail. A statutory tax figure is CB Accounts' GST close, not a report tile.
  * Host globals (finance.html, as cap-finance-cash.js): api · EP (CB_MIS_EP misMetrics) · esc · tx · txn · CBList · CBLocale · ftNav · FIN.
  * Owns: the Reports tab's state (FM) and the two MIS rules both surfaces share — misWindow (period → since) and misReadAt (the read stamp).
+ * RPT2: #/reports/trend hands fmMount/fmLoad to app/cap-mis-trend.js (trMount/trLoad); fmViews links the two views.
  * Called by: finance.html (fmMount) · app/cap-admin.js (misWindow · misReadAt — the workshop's MIS, loaded with this file: app.html CAP_WITH admin).
  * FLOW  Reports tab → fmMount() → fmLoad() → GET /api/folders/mis?since=misWindow(period) → fmPaintTop() (misReadAt) + CBList rows (fmRows) → a figure → ftNav(list)
  * Flow step: R2R · reports (docs/process/flows.json).
@@ -47,6 +48,7 @@ var FM_ROWS = [
 var FM_COLS = ['all', 'received', 'sent'];
 
 async function fmLoad(quiet) {
+  if (trOn()) return trLoad(quiet);   /* RPT2: #/reports/trend is the Trend view (app/cap-mis-trend.js) */
   var g = ++FM.gen;
   if (!quiet) { FM.state = 'loading'; if (FM.api) FM.api.refresh(); }
   try {
@@ -115,14 +117,20 @@ function fmPaintTop() {
   var el = document.getElementById('fm_top'); if (!el) return;
   var pill = function (p, words) { return '<button type="button" class="tab" role="tab" aria-pressed="' + (FM.period === p ? 'true' : 'false') + '" data-testid="fm-period-' + p + '" onclick="fmSetPeriod(\'' + p + '\')">' + esc(words) + '</button>'; };
   var asOf = FM.state === 'ready' && FM.asOf ? '<span class="sub" data-testid="fm-asof" style="margin-inline-start:12px">' + esc(misReadAt(FM.asOf)) + '</span>' : '';
-  el.innerHTML = '<div class="tabs" role="tablist" aria-label="' + esc(tx('Which window')) + '" style="margin:10px 20px 0;display:flex;align-items:center;flex-wrap:wrap">'
+  el.innerHTML = fmViews('measures') + '<div class="tabs" role="tablist" aria-label="' + esc(tx('Which window')) + '" style="margin:10px 20px 0;display:flex;align-items:center;flex-wrap:wrap">'
     + pill('7', txn('{count} day', '{count} days', 7)) + pill('30', txn('{count} day', '{count} days', 30)) + pill('all', tx('All time')) + asOf + '</div>';
+}
+/** RPT2: the two Reports views as links — Measures (this list) · Trend (app/cap-mis-trend.js); the address decides which is drawn */
+function fmViews(current) {
+  var link = function (view, href, words) { return '<a class="tab" href="' + href + '" data-testid="fm-view-' + view + '"' + (current === view ? ' aria-current="page" aria-pressed="true"' : ' aria-pressed="false"') + '>' + esc(tx(words)) + '</a>'; };
+  return '<nav class="tabs" aria-label="' + esc(tx('Reports')) + '" data-testid="fm-views" style="margin:10px 20px 0">' + link('measures', '#/reports', 'Measures') + link('trend', '#/reports/trend', 'Trend') + '</nav>';
 }
 function fmDeniedWords() {
   return FM.state === 'denied' ? { title: tx('This sign-in cannot open the reports.'), sub: (FM.err && FM.err.message) || '' }
     : { title: tx('Could not read the reports.'), sub: tx('Nothing was lost. Try again.') };
 }
 function fmMount(frame) {
+  if (trOn()) return trMount(frame);   /* RPT2: the Trend view (app/cap-mis-trend.js) */
   var s = document.getElementById('screen'); if (!s) return;
   ftNav();
   s.className = 'screen flush';

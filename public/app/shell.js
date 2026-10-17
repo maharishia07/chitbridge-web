@@ -52,7 +52,8 @@
     renew: 'Renew', again: 'Apply again', notAdded: 'not added', registered: 'registered', notRegistered: 'not registered',
     days: ' days', years: ' years', expired: function (d) { return 'expired ' + d + 'd ago'; }, lapsed: 'lapsed',
     notYet: 'Licences and trade checks are not available yet.', loading: '…', noApps: 'The list of apps could not be read.',
-    factsFailed: 'Could not read', state: { needs_you: 'Needs you', in_use: 'In use', not_started: 'Not started' }, setUp: 'Set up', needsYou: 'Needs you', today: 'today', switcher: 'Go to', close: 'Close'
+    factsFailed: 'Could not read', state: { needs_you: 'Needs you', in_use: 'In use', not_started: 'Not started' }, setUp: 'Set up', needsYou: 'Needs you', today: 'today', switcher: 'Go to', close: 'Close',
+    vsLastYear: 'vs last year', salesWeeks: 'Sales, last 8 weeks'   /* RPT2: the Till card's teaser */
   };
   /* one box per pillar inside a section; a manifest entry's `pillar` decides its box and so its section (none: its area's default). Walk 17 Oct (Athi): money is not
      selling — Selling · Money · Running it are pillar sections; Trade, Labs and Setup are a pillar of their own, drawn as one grid. Daily first, set-up last. */
@@ -207,6 +208,8 @@
     '.cbsh-box .more .f{white-space:normal}.cbsh-box:hover .more,.cbsh-box:focus-visible .more{display:flex}',
     '.cbsh-box .f{font-size:12.5px;color:var(--sh-muted);font-family:var(--f-num,"IBM Plex Mono",monospace)}.cbsh-box .f.dn{color:var(--sh-amber-i)}',
     '.cbsh-box .f .act{text-decoration:underline;cursor:pointer;font-weight:600}',
+    /* RPT2: the teaser (a sparkline + "↑ +12% vs last year") is a door to Reports › Trend, drawn as a figure, not a link word; it keeps its width beside the line */
+    '.cbsh-box .f .act.trend{text-decoration:none;font-weight:500;display:inline-flex;align-items:center;gap:6px}.cbsh-box .facts>.f.trendf{flex:none}',
     '.cbsh-box .arw{position:absolute;top:14px;right:15px;color:var(--sh-ghost);font-size:16px}.cbsh-box:hover .arw{color:var(--sh-green)}',
     '.cbsh-sec.labs .cbsh-box,.cbsh-sec.setup .cbsh-box{padding:12px 14px;border-radius:11px}',
     '.cbsh-sec.labs .cbsh-box h4,.cbsh-sec.setup .cbsh-box h4{font-family:inherit;font-size:14px;font-weight:700;letter-spacing:0}',
@@ -240,7 +243,8 @@
     '@media(max-width:700px){',
     /* 390: the app switcher opens inside the screen (e2e/shell.cjs: its right edge was at 440 of 390) */
     '.cbsh-swpop{position:fixed;left:16px;right:16px;top:52px;min-width:0}',
-    '.cbsh-box,.cbsh-sec.labs .cbsh-box,.cbsh-sec.setup .cbsh-box{height:auto}.cbsh-box .facts{height:auto}.cbsh-box .more{position:static;display:flex;border:0;box-shadow:none;padding:0;background:none}.cbsh-box .more-n,.cbsh-box .facts>.f:first-child:not(:only-child){display:none}',
+    /* the tile's own line is hidden where .more lists every line: the status badge is the first child now, so :has(+.more-n) finds it */
+    '.cbsh-box,.cbsh-sec.labs .cbsh-box,.cbsh-sec.setup .cbsh-box{height:auto}.cbsh-box .facts{height:auto}.cbsh-box .more{position:static;display:flex;border:0;box-shadow:none;padding:0;background:none}.cbsh-box .more-n,.cbsh-box .facts>.f:first-child:not(:only-child),.cbsh-box .facts>.f:has(+.more-n){display:none}',
     '.cbsh{--sh-bar:52px}.cbsh-bar{padding:0 13px;gap:6px;container-type:inline-size}.cbsh-who{padding:4px 4px;margin-left:-4px;flex:1 1 auto}.cbsh-who b{font-size:14px}',   /* a pane keeps its 55px on a phone too: its line meets the sidebar's brand row (frame-every-width rule f) */
     /* INT7b-GREEN: a 390 px bar held 405 px (mark · shop · switcher · chip · bell · ⌂ · avatar, 9 px gaps) and cut the shop's name to 55 px. The name takes the slack
        (the spacer gives way to it) at 14 px; a bar narrower than its need (a pane beside the sidebar, ~326 px) shows the whole name or none — never "F…" (the button's aria-label still says it) */
@@ -419,6 +423,19 @@
     strip.innerHTML = '<b>● ' + esc(T(W.needsYou)) + '</b>' + list.map(function (entry) { return '<a href="' + esc(routeOf(entry)) + '" data-testid="shell-needs-' + esc(entry.id) + '">' + esc(T(entry.name)) + '</a>'; }).join('');
     return state;
   }
+  /**
+   * RPT2: the Till card's teaser — the server's figures.trend (8 weeks' sales, the engine's change vs last year) as a sparkline + words, a door
+   * into Reports › Trend. Nothing from the server → nothing drawn (omit, never 0); CBDraw absent (a page without it) → nothing.
+   */
+  function trendHTML(trend) {
+    if (!trend || !root.CBDraw) return '';
+    var change = trend.vs_last_year_pct, locale = root.CBLocale;
+    var amount = change == null ? '' : (locale && locale.number ? locale.number(Math.abs(change), { maximumFractionDigits: 1 }) : String(Math.abs(change)));
+    var words = change == null ? '' : (change > 0 ? '↑ +' : change < 0 ? '↓ −' : '= ') + amount + '% ' + T(W.vsLastYear);
+    var spark = root.CBDraw.spark(trend.spark, { width: 64, height: 16, stroke: 'var(--sh-green-d,#2d6a4f)', aria: T(W.salesWeeks) + (words ? ', ' + words : ''), tid: 'shell-fact-spark' });
+    if (!spark) return '';
+    return '<span class="f trendf"><span class="act trend" role="link" tabindex="0" data-href="/finance.html#/reports/trend/week" data-testid="shell-fact-trend">' + spark + esc(words) + '</span></span>';
+  }
   function mount(el, o) {
     if (!el) return null;
     o = o || {};
@@ -593,7 +610,7 @@
         var spot = $('[data-testid="shell-facts-' + e.id + '"]'); if (!spot) return;
         get(e.facts).then(function (r) {
           var lines = (r && r.lines) || [], state = noteNeeds(e, cardState(r, lines), routeOf);
-          spot.innerHTML = factsHTML(e, lines, state, lineHTML);
+          spot.innerHTML = factsHTML(e, lines, state, lineHTML) + trendHTML(r && r.figures && r.figures.trend);
         }).catch(function () { spot.innerHTML = '<span class="f" title="' + esc(W.factsFailed) + '">—</span>'; });
       });
     }

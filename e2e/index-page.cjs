@@ -62,7 +62,9 @@ const PLANTED = { version: 2,
   ] };
 /* what each planted card's facts answer says: the server's `state` and its lines */
 const FACTS = {
-  '/api/facts/till': { state: 'needs_you', lines: [{ text: '12 bills · {money}', money: { amount: 4280, currency: 'INR' } }, { text: '1 bill waiting to send', tone: 'dn', act: { label: 'Send now', href: '/till.html' } }] },
+  /* RPT2: figures.trend — the teaser (8 weeks' sales in minor units, oldest first; the engine's change vs last year), drawn beside the line */
+  '/api/facts/till': { state: 'needs_you', lines: [{ text: '12 bills · {money}', money: { amount: 4280, currency: 'INR' } }, { text: '1 bill waiting to send', tone: 'dn', act: { label: 'Send now', href: '/till.html' } }],
+    figures: { trend: { spark: [400000, 380000, null, 420000, 450000, 410000, 470000, null], vs_last_year_pct: 12 } } },
   '/api/facts/accounts': { state: 'needs_you', lines: ['Ledger up to 7 Oct'] },
   '/api/facts/finance': { state: 'in_use', lines: ['3 customers owe you', '2 bills to pay', 'Cash is steady'] },
   '/api/facts/marketing': { state: 'not_started', lines: [] },
@@ -219,6 +221,9 @@ async function run() {
       /* a tile shows its status, ONE line and a "+n"; every line is in the drop-down (.more) */
       const tf = await pg.$eval('[data-testid="shell-facts-till"]', (n) => ({ tile: n.innerText.replace(/\s+/g, ' ').trim(), more: (n.querySelector('.more') || {}).textContent || '', n: (n.querySelector('.more-n') || {}).textContent, lines: n.querySelectorAll('.more .f').length }));
       ok(/12 bills · ₹4,280/.test(tf.tile) && tf.n === '+1' && tf.lines === 2 && /1 bill waiting to send Send now ›/.test(tf.more) && !/INR|{money}/.test(tf.tile + tf.more), 'planted · the Till tile shows one line and "+1"; its drop-down holds both lines, from the API ("' + tf.tile + '" / "' + tf.more.trim() + '")');
+      /* RPT2: the Till card's teaser — the sparkline + "↑ +12% vs last year" (arrow + sign + words), a door into Reports › Trend, inside the tile's one row */
+      const teaser = await pg.evaluate(() => { const t = document.querySelector('[data-testid="shell-facts-till"] [data-testid="shell-fact-trend"]'); return t ? { words: t.textContent.replace(/\s+/g, ' ').trim(), href: t.getAttribute('data-href'), svg: !!t.querySelector('svg[role="img"][aria-label]'), h: Math.round(t.getBoundingClientRect().height) } : null; });
+      ok(teaser && teaser.svg && teaser.words === '↑ +12% vs last year' && teaser.href === '/finance.html#/reports/trend/week' && teaser.h <= 24, 'planted · the Till card carries the teaser: a sparkline + "↑ +12% vs last year", opening Reports › Trend, one line high (' + JSON.stringify(teaser) + ')');
       ok(/Ledger up to 7 Oct/.test(await pg.locator('[data-testid="shell-facts-accounts"]').innerText()) && await pg.locator('[data-testid="shell-facts-accounts"] .more-n').count() === 0, 'planted · the CB Accounts tile: one line from the API, no +n');
       const fin = await pg.$eval('[data-testid="shell-facts-finance"]', (n) => ({ tile: n.innerText.replace(/\s+/g, ' ').trim(), n: (n.querySelector('.more-n') || {}).textContent, lines: [...n.querySelectorAll('.more .f')].map((x) => x.textContent.trim()) }));
       ok(/3 customers owe you/.test(fin.tile) && fin.n === '+2' && fin.lines.join('|') === '3 customers owe you|2 bills to pay|Cash is steady', 'planted · three lines → one on the tile, "+2", all three in the drop-down (' + fin.lines.join(' | ') + ')');

@@ -359,6 +359,8 @@ function go(){ signedOut('Your session ended. Please sign in again.'); }
 <script src="/app/cap-repeat.js"></script>   <!-- Repeat supply tab (RI1): the agreements, "Repeat this…", the agreement panel in the chit sheet -->
 <script src="/app/cap-finance-cheques.js"></script>   <!-- Cheques tab (T3-P1-MONEY): the cheques held (cap-books.js's list and steps), the post-dated reminders, the owner's switch -->
 <script src="/app/cap-finance-returns.js"></script>   <!-- Returns tab (T3-P1-MONEY): country-first — India downloads the GSTR files the server builds; AU/AE are told where their return is prepared -->
+<script src="/engine/chart-draw.js"></script>   <!-- CBDraw (RPT2): the one small chart helper — inline SVG bars and sparklines, no library -->
+<script src="/app/cap-mis-trend.js"></script>   <!-- Reports › Trend (RPT2): sales by week · month · quarter · year beside last year — rollup.series on the server, drawn here -->
 <script src="/app/cap-mis.js"></script>   <!-- Reports tab (T3-P4-ACCOUNT): the server's one measurement (lib/measure through GET /api/folders/mis) as one CBList; every number opens the list that holds it -->   <!-- Repeat supply tab (RI1): the agreements, "Repeat this…", the agreement panel in the chit sheet -->
 <script src="/app/kural.js"></script>   <!-- CBKural: the kural footer — one band at the foot, outside the head -->
 <script>
