@@ -353,6 +353,26 @@
     return panelHTML(nameOf('region', code) + ' · chart of accounts', groups.length + ' groups · ' + ledgers.length + ' ledgers · ' + (pack.basis || ''),
       '<ul class="cp-tree">' + groups.map(function (group) { return groupItem(group, ledgers); }).join('') + '</ul>', 'cp-chart');
   }
+  /** a value's items, when it is a list (", " · " · " · "; ") */
+  function listItems(value) { return String(value).split(/, | · |; /).filter(Boolean); }
+  /** a long list shows its first three and "+N more", which opens the whole list in an overlay (Athi, 2026-10-17: "if it is too many, open in a overlay box");
+   *  a short list or a sentence shows whole — never cut */
+  function listCell(ruleKey, code, value) {
+    var items = listItems(value); if (items.length < 4 || String(value).length <= 90) return safe(value);
+    return safe(items.slice(0, 3).join(', ')) + ' <button class="cp-link" type="button" data-more="' + safe(ruleKey) + '" data-cc="' + safe(code) + '" data-testid="cp-more-' + safe(ruleKey) + '-' + safe(code) + '">+' + (items.length - 3) + ' more</button>';
+  }
+  /** the overlay for one long cell: rule · country, every item on its own line (the native dialog: Esc, focus and backdrop come with it) */
+  function openMore(ruleKey, code) {
+    var rule = (ALL.table.rules || []).filter(function (r) { return r.key === ruleKey; })[0]; if (!rule) return;
+    var box = ALL.host.querySelector('dialog.cp-more');
+    if (!box) { box = document.createElement('dialog'); box.className = 'cp-more'; box.setAttribute('data-testid', 'cp-more'); ALL.host.appendChild(box);
+      box.addEventListener('click', function (event) { if (event.target === box || event.target.closest('[data-more-close]')) box.close(); }); }
+    var items = listItems(rule.values[code]);
+    box.innerHTML = '<div class="cp-head"><div><h2>' + safe(rule.name) + ' · ' + safe(nameOf('region', code)) + '</h2><div class="hint">' + items.length + ' items</div></div>'
+      + '<button class="btn x" type="button" data-more-close="1" style="margin-left:auto" aria-label="Close">✕</button></div>'
+      + '<ol class="cp-morelist">' + items.map(function (item) { return '<li>' + safe(item) + '</li>'; }).join('') + '</ol>';
+    box.showModal();
+  }
   /** the table: the rule names fixed on the left, a column per country (⚠ = not yet read by a local accountant) */
   function allTableHTML(table) {
     var head = '<tr><th class="cp-rule">Rule</th>' + table.countries.map(function (country) {
@@ -361,7 +381,7 @@
     }).join('') + '</tr>';
     var body = table.rules.map(function (rule) {
       return '<tr data-rule="' + safe(rule.key) + '"><th class="cp-rule" scope="row">' + safe(rule.name) + '</th>' + table.countries.map(function (country) {
-        var value = rule.values[country.id]; return '<td>' + (value == null ? '<span class="hint">—</span>' : cellValue(rule.key, country.id, value)) + '</td>';
+        var value = rule.values[country.id]; return '<td>' + (value == null ? '<span class="hint">—</span>' : (OPENS[rule.key] ? cellValue(rule.key, country.id, value) : listCell(rule.key, country.id, value))) + '</td>';
       }).join('') + '</tr>';
     }).join('');
     return '<table class="cp-all" data-testid="cp-all-table"><thead>' + head + '</thead><tbody>' + body + '</tbody></table>';
@@ -369,20 +389,23 @@
   /** one country as two columns (the phone): rule · value */
   function oneColumnHTML(table, code) {
     return '<table class="cp-all cp-one" data-testid="cp-all-one"><tbody>' + table.rules.map(function (rule) {
-      var value = rule.values[code]; return '<tr><th class="cp-rule" scope="row">' + safe(rule.name) + '</th><td>' + (value == null ? '<span class="hint">—</span>' : safe(value)) + '</td></tr>';
+      var value = rule.values[code]; return '<tr><th class="cp-rule" scope="row">' + safe(rule.name) + '</th><td>' + (value == null ? '<span class="hint">—</span>' : listCell(rule.key, code, value)) + '</td></tr>';
     }).join('') + '</tbody></table>';
   }
   /** draw the All countries view */
   function paintAll() {
     var host = ALL.host; if (!host) return;
     if (!root.CBCountries || typeof CBCountries.rulesTable !== 'function') { host.innerHTML = '<div class="card nopack" data-testid="cp-all-none">The rules table needs engines v1.60.0.</div>'; return; }
-    var table = CBCountries.rulesTable({ year: new Date().getFullYear() }); if (!ALL.code && table.countries.length) ALL.code = table.countries[0].id;
+    var table = CBCountries.rulesTable({ year: new Date().getFullYear() }); ALL.table = table; if (!ALL.code && table.countries.length) ALL.code = table.countries[0].id;
     var picker = '<select class="cp-select cp-all-pick" data-testid="cp-all-select" aria-label="Country">' + table.countries.map(function (country) { return '<option value="' + safe(country.id) + '"' + (country.id === ALL.code ? ' selected' : '') + '>' + flagOf(country.id) + ' ' + safe(nameOf('region', country.id)) + '</option>'; }).join('') + '</select>';
     host.innerHTML = '<div class="cp-allwrap"><div class="cp-head"><div><h2>All countries · ' + table.countries.length + '</h2><div class="hint">' + table.rules.length + ' accounting rules, read from each country\'s pack</div></div></div>'
       + picker + '<div class="cp-allscroll">' + allTableHTML(table) + '</div>' + oneColumnHTML(table, ALL.code) + '<div class="cp-chartslot"></div></div>';
+    /* every column edge drags to the reader's width, remembered (app/table-resize.js — the one resizer; the grip and its CSS come with it) */
+    if (typeof root.tblResizable === 'function') root.tblResizable(host.querySelector('.cp-allscroll'));
   }
   /** a press in the All countries view: a counted cell opens what it counts under the table; ✕ closes it */
   function onAllClick(event) {
+    var more = event.target.closest('[data-more]'); if (more) { openMore(more.getAttribute('data-more'), more.getAttribute('data-cc')); return; }
     var slot = ALL.host.querySelector('.cp-chartslot'), open = event.target.closest('[data-open]'); if (!slot) return;
     if (event.target.closest('[data-chart-close]')) { slot.innerHTML = ''; return; }
     if (!open) return;

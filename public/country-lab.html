@@ -180,7 +180,7 @@
   .mono{ font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
   /* the All countries table: rule names fixed on the left, a header that stays; one country as two columns on a phone */
   .cp-allwrap{ padding:14px 18px; } .cp-allscroll{ max-height:calc(100vh - 220px); overflow:auto; border:1px solid var(--line,#e7e3d8); border-radius:8px; background:var(--card,#fff); }
-  .cp-all{ border-collapse:separate; border-spacing:0; width:100%; font-size:var(--fs-2,12.5px); }
+  .cp-all{ border-collapse:separate; border-spacing:0; min-width:100%;   /* min, not width: a dragged column widens the table and it scrolls under the frozen panes */ font-size:var(--fs-2,12.5px); }
   .cp-all th, .cp-all td{ padding:6px 8px; border-bottom:1px solid var(--line-2,#efece4); text-align:left; vertical-align:top; min-width:120px; overflow-wrap:anywhere; }
   .cp-all thead th{ position:sticky; top:0; background:var(--card,#fff); z-index:2; white-space:nowrap; }
   .cp-all .cp-rule{ position:sticky; left:0; background:var(--card,#fff); z-index:1; font-weight:700; min-width:150px; }
@@ -189,6 +189,9 @@
   .cp-all thead th{ box-shadow:inset 0 -2px 0 var(--line,#e7e3d8); vertical-align:bottom; }
   .cp-all .cp-rule{ box-shadow:inset -2px 0 0 var(--line,#e7e3d8), 6px 0 8px -6px rgba(0,0,0,.25); }
   .cp-all thead .cp-rule{ box-shadow:inset -2px -2px 0 var(--line,#e7e3d8), 6px 0 8px -6px rgba(0,0,0,.25); }
+  dialog.cp-more{ border:1px solid var(--line,#e7e3d8); border-radius:10px; background:var(--card,#fff); color:var(--ink,#1d2125); padding:14px 18px; width:min(520px, calc(100vw - 32px)); max-height:min(70vh, 640px); }
+  dialog.cp-more::backdrop{ background:rgba(0,0,0,.35); }
+  .cp-morelist{ margin:10px 0 0; padding-left:22px; font-size:var(--fs-2,12.5px); columns:2 200px; column-gap:24px; } .cp-morelist li{ break-inside:avoid; padding:2px 0; }
   .cp-cname{ display:block; white-space:normal; font-weight:400; font-size:var(--fs-1,11px); color:var(--grey-2,#545A61); }
   .cp-one{ display:none; } .cp-all-pick{ display:none; }
   .cp-link{ font:inherit; color:var(--blue,#3F66A6); background:none; border:0; padding:0; text-decoration:underline; cursor:pointer; text-align:left; }
@@ -292,6 +295,7 @@
 <script src="/app/kural.js"></script>
 <script src="/app/page-frame.js"></script>
 <script src="/app/country-ready.js"></script>
+<script src="/app/table-resize.js"></script>   <!-- drag a column edge in All countries; remembered -->
 <script src="/app/country-profiles.js"></script>   <!-- R6: the Countries view (CBCountryProfiles), reads CBRegulation + CBCountries only -->
 <script>
 'use strict';
