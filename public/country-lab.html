@@ -177,6 +177,15 @@
   .cp-ul{ margin:2px 0 6px 16px; padding:0; font-size:var(--fs-2,12.5px); } .cp-ul li{ margin:0 0 3px; }
   .cp-i{ padding:0 5px; line-height:1.3; }
   .mono{ font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+  /* the All countries table: rule names fixed on the left, a header that stays; one country as two columns on a phone */
+  .cp-allwrap{ padding:14px 18px; } .cp-allscroll{ max-height:calc(100vh - 220px); overflow:auto; border:1px solid var(--line,#e7e3d8); border-radius:8px; background:var(--card,#fff); }
+  .cp-all{ border-collapse:separate; border-spacing:0; width:100%; font-size:var(--fs-2,12.5px); }
+  .cp-all th, .cp-all td{ padding:6px 8px; border-bottom:1px solid var(--line-2,#efece4); text-align:left; vertical-align:top; min-width:120px; overflow-wrap:anywhere; }
+  .cp-all thead th{ position:sticky; top:0; background:var(--card,#fff); z-index:2; white-space:nowrap; }
+  .cp-all .cp-rule{ position:sticky; left:0; background:var(--card,#fff); z-index:1; font-weight:700; min-width:150px; }
+  .cp-all thead .cp-rule{ z-index:3; }
+  .cp-one{ display:none; } .cp-all-pick{ display:none; }
+  @media (max-width:760px){ .cp-allscroll{ display:none; } .cp-one{ display:table; border:1px solid var(--line,#e7e3d8); border-radius:8px; background:var(--card,#fff); } .cp-all-pick{ display:block; } .cp-one .cp-rule{ position:static; min-width:0; width:42%; } .cp-one td{ min-width:0; } .cp-allwrap{ padding:12px 16px; } }
   @media (max-width:760px){ .cp{ grid-template-columns:1fr; } .cp-side{ border-right:0; border-bottom:1px solid var(--line,#e7e3d8); } .cp-list{ display:none; } .cp-select{ display:block; } .cp-main{ padding:12px 16px; } .cp-grid{ grid-template-columns:1fr; } }
 </style>
 </head>
@@ -188,6 +197,7 @@
 <div id="nofuel" class="bar" hidden data-testid="cl-nofuel"></div>
 <!-- R6 (2026-10-16): the Countries view — every registered country on the left, all its engine says on the right (app/country-profiles.js) -->
 <div id="cp" data-testid="cp-view"></div>
+<div id="cpall" data-testid="cp-all-view" hidden></div>
 <div id="cmpview" hidden>
 
 <div class="labbar">
@@ -683,14 +693,16 @@ function paintReady() {
 /* CL3 · the standard frame around the lab: header + avatar (Sign in when signed out) + skeleton + kural. Public: no sign-in window. */
 var FRAME = window.CBFrame ? CBFrame.mount({ app: 'country-lab', area: 'labs', signin: false, kural: 'planning', work: document.getElementById('cl'),
   skeleton: { name: 'Country lab', icon: 'M12 3a9 9 0 1 0 0 18a9 9 0 0 0 0-18zM3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18', active: labView(),
-    sections: [{ k: 'countries', label: 'Countries', icon: 'M4 5h16M4 12h16M4 19h16' }, { k: 'compare', label: 'Side by side', icon: 'M4 5h7v14H4zM13 5h7v14h-7z' }, { k: 'ready', label: 'Where we are', icon: 'M5 12l4 4 10-10' }],
-    onSection: function (k) { showView(k === 'countries' ? 'countries' : 'compare'); var t = k === 'ready' ? document.getElementById('ready-sec') : null; if (t && t.scrollIntoView) t.scrollIntoView({ block: 'start' }); } } }) : null;
+    sections: [{ k: 'countries', label: 'Countries', icon: 'M4 5h16M4 12h16M4 19h16' }, { k: 'all', label: 'All countries', icon: 'M3 5h18v14H3zM3 10h18M9 5v14' }, { k: 'compare', label: 'Side by side', icon: 'M4 5h7v14H4zM13 5h7v14h-7z' }, { k: 'ready', label: 'Where we are', icon: 'M5 12l4 4 10-10' }],
+    onSection: function (k) { showView(k === 'countries' || k === 'all' ? k : 'compare'); var t = k === 'ready' ? document.getElementById('ready-sec') : null; if (t && t.scrollIntoView) t.scrollIntoView({ block: 'start' }); } } }) : null;
 /** R6: which view the address asks for — #/compare (the side-by-side tool) or the Countries view (default; #/countries/<CC> picks one) */
-function labView() { return /^#\/compare/.test(location.hash) ? 'compare' : 'countries'; }
+function labView() { return /^#\/compare/.test(location.hash) ? 'compare' : (/^#\/all/.test(location.hash) ? 'all' : 'countries'); }
 function showView(view) {
-  document.getElementById('cp').hidden = view !== 'countries'; document.getElementById('cmpview').hidden = view === 'countries';
+  document.getElementById('cp').hidden = view !== 'countries'; document.getElementById('cpall').hidden = view !== 'all'; document.getElementById('cmpview').hidden = view !== 'compare';
+  if (view === 'all' && !/^#\/all/.test(location.hash)) { try { history.replaceState(null, '', '#/all'); } catch (failure) { if (window.cbQuiet) window.cbQuiet('country-lab:hash', failure); } }
   if (view === 'compare' && !/^#\/compare/.test(location.hash)) { try { history.replaceState(null, '', '#/compare'); } catch (failure) { if (window.cbQuiet) window.cbQuiet('country-lab:hash', failure); } }
 }
+if (window.CBCountryProfiles && CBCountryProfiles.mountAll) CBCountryProfiles.mountAll(document.getElementById('cpall'));
 if (window.CBCountryProfiles) CBCountryProfiles.mount(document.getElementById('cp'), (/^#\/countries\/([A-Za-z]{2})/.exec(location.hash) || [])[1]);
 showView(labView());
 repaint();

@@ -7,13 +7,15 @@
  *   P2 · nothing of another country shows: no other pack's currency code or tax-ID word in the cards
  *   P3 · the tax-ID box refuses "x" with the pack's own check — or says it is checked on save
  *   P4 · rule 13: cream and dark, 1366 and 390 px — AA contrast, no sideways scroll, the phone picker's name fits
+ *   P5 · the Books card: a country whose books build its return shows the filled boxes, the due date and Pay/Refund; the statements balance; India says its return is read from the invoices
+ *   P6 · All countries: one table, a row per rule (CBCountries.rulesTable), a column per country; on a phone one country as two columns
  *   NODE_PATH=$PWD/e2e/node_modules node e2e/walk-country-profiles.cjs [--show]
  */
 const W = require('./lib/walk.cjs');
 const { measure } = require('./lib/theme-measure.cjs');
 const theme = async (page, key) => { await page.evaluate((k) => { CBAvatar.applyTheme(k); }, key); await page.waitForTimeout(120); };
 const contrast = async (page) => { const pairs = await page.evaluate(measure); return { n: pairs.length, bad: pairs.filter((x) => !x.grad && x.ratio < x.need) }; };
-const CARDS = ['money', 'tax', 'taxid', 'documents', 'filing', 'rules', 'locale', 'payments', 'gaps'];
+const CARDS = ['books', 'money', 'tax', 'taxid', 'documents', 'filing', 'rules', 'locale', 'payments', 'gaps'];
 
 const walk = async (w) => {
   const { page, base } = w;
@@ -21,14 +23,14 @@ const walk = async (w) => {
   /* the countries and the words that belong to each, from the page's engines (CBRegulation · CBCountries) */
   const all = await page.evaluate(() => CBRegulation.list().map((p) => ({ id: p.id, cur: p.currency, word: CBCountries.taxId(p).word, hint: CBCountries.taxId(p).hint, check: !!CBCountries.taxId(p).check })));
 
-  await w.step('P1', 'the list holds every registered country; each paints its head and the nine cards', async () => {
+  await w.step('P1', 'the list holds every registered country; each paints its head and the ten cards', async () => {
     const listed = await page.$$eval('[data-testid^="cp-pick-"]', (b) => b.map((x) => x.dataset.cc)), miss = [];
     for (const c of all) {
       await page.click('[data-testid="cp-pick-' + c.id + '"]'); await page.waitForTimeout(150);
       const head = await page.locator('[data-testid="cp-head"]').innerText(), cards = await page.$$eval('.cp-card', (x) => x.map((y) => y.dataset.testid.replace('cp-', '')));
       if (!head.includes(c.id) || CARDS.some((k) => !cards.includes(k))) miss.push(c.id);
     }
-    return { ok: listed.join() === all.map((c) => c.id).join() && !miss.length, saw: listed.join(' · ') + (miss.length ? ' · incomplete ' + miss.join(',') : ' · 9 cards each') };
+    return { ok: listed.join() === all.map((c) => c.id).join() && !miss.length, saw: listed.join(' · ') + (miss.length ? ' · incomplete ' + miss.join(',') : ' · 10 cards each') };
   });
   await w.step('P2', 'no leak: a country\'s cards never show another pack\'s currency code or tax-ID word', async () => {
     const leaks = [];
@@ -52,6 +54,23 @@ const walk = async (w) => {
     }
     return { ok: out.every((s) => /refused|on save true/.test(s)), saw: out.join(' · ') };
   });
+  await w.step('P5', 'the Books card: the filled return (boxes, due, pay or refund) where the books build it; the sample statements balance; India names its rail return', async () => {
+    const out = [];
+    for (const c of all) {
+      await page.click('[data-testid="cp-pick-' + c.id + '"]'); await page.waitForSelector('[data-testid="cp-books"]', { timeout: 8000 }); await page.waitForTimeout(150);
+      const card = await page.locator('[data-testid="cp-books"]').innerText(), boxes = await page.locator('[data-testid="cp-boxes"] tbody tr').count();
+      const due = /Due\s+\d{4}-\d{2}-\d{2}/.test(card), settled = /(Pay|Refund)\s/.test(card), total = /Total assets = equity \+ liabilities/.test(card);
+      out.push({ id: c.id, ok: total && (c.id === 'IN' ? /read from the invoices/.test(card) : boxes > 0 && due && settled), saw: c.id + ' ' + (c.id === 'IN' ? 'rail' : boxes + ' boxes') });
+    }
+    return { ok: out.every((x) => x.ok), saw: out.map((x) => x.saw + (x.ok ? '' : ' ✗')).join(' · ') };
+  });
+  await w.step('P6', 'All countries: a row per rule, a column per country (the rules table) — the currency symbol row among them', async () => {
+    await page.goto(base + '/country-lab.html?view=all#/all'); await page.waitForSelector('[data-testid="cp-all-table"]', { timeout: 15000 });
+    const cols = await page.$$eval('[data-testid="cp-all-table"] thead th', (t) => t.length - 1), rows = await page.$$eval('[data-testid="cp-all-table"] tbody tr', (t) => t.map((x) => x.dataset.rule));
+    const want = await page.evaluate(() => CBCountries.rulesTable({ year: 2026 }).rules.length);
+    return { ok: cols === all.length && rows.length === want && rows.includes('symbol'), saw: rows.length + ' rules × ' + cols + ' countries' };
+  });
+  await page.goto(base + '/country-lab.html'); await page.waitForSelector('[data-testid="cp-side"]', { timeout: 15000 });
   for (const [t, wd] of [['cream', 1366], ['dark', 1366], ['cream', 390], ['dark', 390]]) {
     await w.step('P4·' + t + '·' + wd, 'rule 13 · ' + t + ' · ' + wd + ' px: AA contrast, no sideways scroll, the picker fits', async () => {
       await page.setViewportSize({ width: wd, height: 1000 }); await theme(page, t);

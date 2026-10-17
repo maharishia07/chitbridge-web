@@ -77,6 +77,7 @@ Register: `public/app/screen-id.js` (declared rows, merged into `CBSCREENS`) + `
 | CLB001 | Side by side | Country lab | /country-lab.html | /country-lab.html · Country lab › Side by side |
 | CLB002 | Where we are | Country lab | /country-lab.html | /country-lab.html · Country lab › Where we are |
 | CLB003 | Countries | Country lab | /country-lab.html | /country-lab.html · Country lab › Countries |
+| CLB004 | All countries | Country lab | /country-lab.html | /country-lab.html · Country lab › All countries |
 | KYB001 | Know your business | Know your business | /know-your-business.html | /know-your-business.html |
 | DOC001 | Documents | Documents | /authority-forms.html | /authority-forms.html |
 | STD001 | Standards | Standards | /standards.html | /standards.html · Standards › Standards |

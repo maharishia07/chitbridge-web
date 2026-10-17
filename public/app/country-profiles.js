@@ -9,7 +9,7 @@
 (function (root) {
   'use strict';
   var RUNBOOK = 'C:/dev/docs/15-tax-and-country-packs/RUNBOOK-ADD-A-COUNTRY.md';
-  var STATE = { host: null, code: null };
+  var STATE = { host: null, code: null, samples: null, period: {} };
 
   /** text made safe for HTML — the shared helper when the page has it */
   function safe(value) { return typeof root.esc === 'function' ? root.esc(value) : String(value == null ? '' : value).replace(/[&<>"']/g, function (symbol) { return '&#' + symbol.charCodeAt(0) + ';'; }); }
@@ -174,11 +174,75 @@
       + (leftOut ? '<div class="hint">Left out</div><ul class="cp-ul">' + leftOut + '</ul>' : '') + (partly ? '<div class="hint">Partly done</div><ul class="cp-ul">' + partly + '</ul>' : '')
       + '<div class="hint" data-testid="cp-runbook">How a country is added: ' + safe(RUNBOOK) + '</div>', 'gaps');
   }
-  /** the right side: the country's head and its nine cards */
+  /* ── the Books card (A5): a sample shop's year — the filled return for each period, the statements in the country's own lines, the prerequisites,
+        and downloads. Painted from /data/country-books-samples.json, which engines tools/country-samples.cjs writes from the real engines. ── */
+  /** the sample year of one country, or null until the file is read */
+  function sampleOf(code) { var all = STATE.samples && STATE.samples.countries; return all ? all.filter(function (country) { return country.id === code; })[0] || null : null; }
+  /** an amount held in minor units, in the sample's own currency and the pack's format */
+  function sampleMoney(pack, sample, minor) { return minor == null ? '—' : inCountryMoney(pack, Number(minor) / Math.pow(10, sample.decimals)); }
+  /** the picked period's return as a table: box · label · amount · tax */
+  function returnHTML(pack, sample) {
+    var periods = sample.returns.periods; if (!periods.length) return rowHTML('Return', sample.returns.note ? safe(sample.returns.note) : null);
+    var pick = STATE.period[sample.id] || periods[0].period, chosen = periods.filter(function (x) { return x.period === pick; })[0] || periods[0];
+    var picker = '<select class="cp-periodpick" data-testid="cp-periodpick" aria-label="Period">' + periods.map(function (x) { return '<option value="' + safe(x.period) + '"' + (x.period === chosen.period ? ' selected' : '') + '>' + safe(x.label) + '</option>'; }).join('') + '</select>';
+    var boxes = '<table class="grid cp-boxes" data-testid="cp-boxes"><thead><tr><th>Box</th><th>Label</th><th class="r">Amount</th><th class="r">Tax</th></tr></thead><tbody>' + (chosen.boxes || []).map(function (box) {
+      return '<tr><td>' + safe(box.code) + '</td><td>' + safe(box.label) + '</td><td class="r">' + safe(sampleMoney(pack, sample, box.amount_minor)) + '</td><td class="r">' + safe(sampleMoney(pack, sample, box.tax_minor)) + '</td></tr>';
+    }).join('') + '</tbody></table>';
+    var settle = chosen.refund_minor ? 'Refund ' + sampleMoney(pack, sample, chosen.refund_minor) : 'Pay ' + sampleMoney(pack, sample, chosen.payable_minor);
+    return rowHTML('Return', '<b>' + safe(chosen.name || '') + '</b>') + rowHTML('Period', picker) + rowHTML('Due', '<b>' + safe(chosen.due) + '</b>') + rowHTML('File with', safe([chosen.authority, chosen.portal].filter(Boolean).join(' · '))) + boxes + rowHTML('Result', '<b>' + safe(settle) + '</b>');
+  }
+  /** a statement's lines as a table, its total under it */
+  function statementHTML(title, groups, totalLabel, totalMinor, pack, sample) {
+    return '<div class="hint cp-stmt-title">' + safe(title) + '</div><table class="grid cp-stmt"><tbody>' + groups.map(function (line) { return '<tr><td>' + safe(line.label || line.line || '—') + '</td><td class="r">' + safe(sampleMoney(pack, sample, line.amount_minor)) + '</td></tr>'; }).join('')
+      + '<tr class="cp-total"><td>' + safe(totalLabel) + '</td><td class="r">' + safe(sampleMoney(pack, sample, totalMinor)) + '</td></tr></tbody></table>';
+  }
+  /** the Books card */
+  function booksCard(pack) {
+    var sample = sampleOf(pack.id);
+    if (!STATE.samples) return cardHTML('Books — a sample year', '<span class="hint">Reading the sample…</span>', 'books');
+    if (!sample) return cardHTML('Books — a sample year', rowHTML('Sample', null), 'books');
+    var statements = sample.statements, sheet = statements.balance_sheet, profitLoss = statements.profit_and_loss;
+    var prereq = '<ul class="cp-ul cp-prereq" data-testid="cp-prereq">' + (STATE.samples.prerequisites || []).map(function (line) { return '<li>' + safe(line) + '</li>'; }).join('') + '</ul>';
+    var downloads = '<div class="idck"><button class="btn" type="button" data-dl="return" data-testid="cp-dl-return">⬇ Return (CSV)</button><button class="btn" type="button" data-dl="statements" data-testid="cp-dl-statements">⬇ Statements (CSV)</button><button class="btn" type="button" data-dl="print" data-testid="cp-dl-print">⎙ Print / PDF</button></div>';
+    return cardHTML('Books — a sample year', '<div class="hint">A simulated shop, ' + safe(sample.from) + ' → ' + safe(sample.to) + ' — never a real shop\'s figures</div>'
+      + returnHTML(pack, sample)
+      + statementHTML('Balance sheet at ' + sheet.as_of + ' · ' + (statements.basis || ''), sheet.assets.concat(sheet.equity_and_liabilities), 'Total assets = equity + liabilities', sheet.total_assets_minor, pack, sample)
+      + statementHTML('Profit and loss ' + profitLoss.from + ' → ' + profitLoss.to, profitLoss.income.concat(profitLoss.expenses.map(function (line) { return { label: line.label, line: line.line, amount_minor: -line.amount_minor }; })), 'Profit', profitLoss.profit_minor, pack, sample)
+      + '<div class="hint">Before you download</div>' + prereq + downloads, 'books');
+  }
+  /** a CSV of rows (each an array), quoted where needed */
+  function csvOf(rows) { return rows.map(function (row) { return row.map(function (cellValue) { var text = String(cellValue == null ? '' : cellValue); return /[",\n]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text; }).join(','); }).join('\n'); }
+  /** hand the person a file */
+  function saveFile(name, text) { var blob = new Blob([text], { type: 'text/csv;charset=utf-8' }), link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = name; document.body.appendChild(link); link.click(); setTimeout(function () { URL.revokeObjectURL(link.href); link.remove(); }, 500); }
+  /** a download button pressed: the return, the statements, or the print view */
+  function download(kind) {
+    var pack = packOf(STATE.code), sample = sampleOf(STATE.code); if (!pack || !sample) return;
+    var minorText = function (minor) { return minor == null ? '' : (Number(minor) / Math.pow(10, sample.decimals)).toFixed(sample.decimals); };
+    if (kind === 'print') { window.print(); return; }
+    if (kind === 'return') {
+      var periods = sample.returns.periods; if (!periods.length) return;
+      var pick = STATE.period[sample.id] || periods[0].period, chosen = periods.filter(function (x) { return x.period === pick; })[0] || periods[0];
+      saveFile('sample-' + sample.id + '-' + String(chosen.form || 'return').toLowerCase() + '-' + chosen.period.replace(/\//g, '_') + '.csv', csvOf([['Return', chosen.name], ['Period', chosen.label], ['Due', chosen.due], ['File with', [chosen.authority, chosen.portal].filter(Boolean).join(' · ')], ['Currency', sample.currency], [], ['Box', 'Label', 'Amount', 'Tax']]
+        .concat(chosen.boxes.map(function (box) { return [box.code, box.label, minorText(box.amount_minor), minorText(box.tax_minor)]; }))));
+      return;
+    }
+    var statements = sample.statements, rows = [['Statement', 'Line', 'Amount (' + sample.currency + ')']];
+    statements.balance_sheet.assets.concat(statements.balance_sheet.equity_and_liabilities).forEach(function (line) { rows.push(['Balance sheet ' + statements.balance_sheet.as_of, line.label, minorText(line.amount_minor)]); });
+    statements.profit_and_loss.income.forEach(function (line) { rows.push(['Profit and loss', line.label, minorText(line.amount_minor)]); });
+    statements.profit_and_loss.expenses.forEach(function (line) { rows.push(['Profit and loss', line.label, minorText(-line.amount_minor)]); });
+    rows.push(['Profit and loss', 'Profit', minorText(statements.profit_and_loss.profit_minor)]);
+    saveFile('sample-' + sample.id + '-statements-' + sample.fiscal_year + '.csv', csvOf(rows));
+  }
+  /** read the samples once, then repaint */
+  function loadSamples() {
+    if (STATE.samples || !root.fetch) return;
+    fetch('/data/country-books-samples.json').then(function (reply) { return reply.ok ? reply.json() : null; }).then(function (data) { STATE.samples = data || { countries: [], prerequisites: [] }; paint(); }, function (failure) { quiet('samples', failure); STATE.samples = { countries: [], prerequisites: [] }; paint(); });
+  }
+  /** the right side: the country's head and its cards */
   function detailHTML(pack) {
     if (!pack) return '<div class="card nopack" data-testid="cp-none">No country pack is loaded.</div>';
     return '<div class="cp-head" data-testid="cp-head"><span class="cp-bigflag" aria-hidden="true">' + flagOf(pack.id) + '</span><div><h2>' + safe(nameOf('region', pack.id)) + '</h2><div class="hint">' + safe(pack.name) + ' · ' + safe(pack.id) + '</div></div></div>'
-      + '<div class="cp-grid">' + [moneyCard(pack), taxCard(pack), taxIdCard(pack), documentsCard(pack), filingCard(pack), rulesCard(pack), localeCard(pack), paymentsCard(pack), gapsCard(pack)].join('') + '</div>';
+      + '<div class="cp-grid">' + [booksCard(pack), moneyCard(pack), taxCard(pack), taxIdCard(pack), documentsCard(pack), filingCard(pack), rulesCard(pack), localeCard(pack), paymentsCard(pack), gapsCard(pack)].join('') + '</div>';
   }
 
   /** draw the whole view */
@@ -199,10 +263,46 @@
   }
   /** mount the view in a host, optionally on one country */
   function mount(host, code) {
-    STATE.host = host; STATE.code = code ? String(code).toUpperCase() : null; paint();
+    STATE.host = host; STATE.code = code ? String(code).toUpperCase() : null; paint(); loadSamples();
     host.addEventListener('click', function (event) { var button = event.target.closest('[data-cc]'); if (button) choose(button.getAttribute('data-cc')); });
-    host.addEventListener('change', function (event) { if (event.target.matches('.cp-select')) choose(event.target.value); });
+    host.addEventListener('change', function (event) { if (event.target.matches('.cp-select')) choose(event.target.value); if (event.target.matches('.cp-periodpick')) { STATE.period[STATE.code] = event.target.value; paint(); } });
+    host.addEventListener('click', function (event) { var button = event.target.closest('[data-dl]'); if (button) download(button.getAttribute('data-dl')); });
     host.addEventListener('input', function (event) { if (event.target.matches('.cp-idbox')) checkId(event.target); });
   }
-  root.CBCountryProfiles = { mount: mount };
+  /* ── "All countries": the accounting rules of every country in ONE table — CBCountries.rulesTable, the same function docs/ACCOUNTING-RULES.md is
+        written from (Athi, 17 Oct: "in the country lab we have to present"). Rules down the side, countries across; on a phone, one country at a time. ── */
+  var ALL = { host: null, code: null };
+  /** the table: the rule names fixed on the left, a column per country (⚠ = not yet read by a local accountant) */
+  function allTableHTML(table) {
+    var head = '<tr><th class="cp-rule">Rule</th>' + table.countries.map(function (country) {
+      return '<th title="' + safe(country.name) + '">' + safe(country.id) + (country.verified ? '' : ' <span class="chip warn" title="Not yet read by a local accountant">⚠</span>') + '</th>';
+    }).join('') + '</tr>';
+    var body = table.rules.map(function (rule) {
+      return '<tr data-rule="' + safe(rule.key) + '"><th class="cp-rule" scope="row">' + safe(rule.name) + '</th>' + table.countries.map(function (country) {
+        var value = rule.values[country.id]; return '<td>' + (value == null ? '<span class="hint">—</span>' : safe(value)) + '</td>';
+      }).join('') + '</tr>';
+    }).join('');
+    return '<table class="cp-all" data-testid="cp-all-table"><thead>' + head + '</thead><tbody>' + body + '</tbody></table>';
+  }
+  /** one country as two columns (the phone): rule · value */
+  function oneColumnHTML(table, code) {
+    return '<table class="cp-all cp-one" data-testid="cp-all-one"><tbody>' + table.rules.map(function (rule) {
+      var value = rule.values[code]; return '<tr><th class="cp-rule" scope="row">' + safe(rule.name) + '</th><td>' + (value == null ? '<span class="hint">—</span>' : safe(value)) + '</td></tr>';
+    }).join('') + '</tbody></table>';
+  }
+  /** draw the All countries view */
+  function paintAll() {
+    var host = ALL.host; if (!host) return;
+    if (!root.CBCountries || typeof CBCountries.rulesTable !== 'function') { host.innerHTML = '<div class="card nopack" data-testid="cp-all-none">The rules table needs engines v1.60.0.</div>'; return; }
+    var table = CBCountries.rulesTable({ year: new Date().getFullYear() }); if (!ALL.code && table.countries.length) ALL.code = table.countries[0].id;
+    var picker = '<select class="cp-select cp-all-pick" data-testid="cp-all-select" aria-label="Country">' + table.countries.map(function (country) { return '<option value="' + safe(country.id) + '"' + (country.id === ALL.code ? ' selected' : '') + '>' + flagOf(country.id) + ' ' + safe(nameOf('region', country.id)) + '</option>'; }).join('') + '</select>';
+    host.innerHTML = '<div class="cp-allwrap"><div class="cp-head"><div><h2>All countries · ' + table.countries.length + '</h2><div class="hint">' + table.rules.length + ' accounting rules, read from each country\'s pack</div></div></div>'
+      + picker + '<div class="cp-allscroll">' + allTableHTML(table) + '</div>' + oneColumnHTML(table, ALL.code) + '</div>';
+  }
+  /** mount the All countries view in a host */
+  function mountAll(host) {
+    ALL.host = host; paintAll();
+    host.addEventListener('change', function (event) { if (event.target.matches('.cp-all-pick')) { ALL.code = event.target.value; paintAll(); } });
+  }
+  root.CBCountryProfiles = { mount: mount, mountAll: mountAll };
 })(typeof window !== 'undefined' ? window : this);
