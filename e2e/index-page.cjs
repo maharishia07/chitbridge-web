@@ -55,7 +55,7 @@ const PLANTED = { version: 2,
     { id: 'finance', name: 'Finance', route: '/finance.html', icon: '◐', area: 'money', pillar: 'finance', state: 'built', what: 'Who owes you, who you owe.', facts: '/api/facts/finance' },
     { id: 'accounts', name: 'Accounts', route: '/accounts.html', icon: '¤', area: 'money', pillar: 'accounting', state: 'built', what: 'What the shop made, and what it owes.', facts: '/api/facts/accounts' },
     { id: 'crm', name: 'CRM', route: '/crm.html', icon: '◍', area: 'running', pillar: 'sales', state: 'built', what: 'Who buys, and how often.', facts: null },
-    { id: 'product-lab', name: 'Product Lab', route: '/product-lab.html', icon: '◈', area: 'labs', pillar: 'labs', state: 'built', what: 'Cost, price, and what each one leaves you.', facts: null },
+    { id: 'product-lab', name: 'Price Lab', route: '/product-lab.html', icon: '◈', area: 'labs', pillar: 'labs', state: 'built', what: 'Cost, price, and what each one leaves you.', facts: null },
     { id: 'tax-lab', name: 'Tax Lab', route: null, icon: '§', area: 'labs', pillar: 'labs', state: 'coming' },
     { id: 'standards', name: 'Standards', route: '/standards.html', icon: '≡', area: 'setup', pillar: 'setup', state: 'built', what: 'What a chit must contain.', facts: null },
     { id: 'shop', name: 'Your business', route: null, icon: '⌂', area: 'setup', pillar: 'setup', state: 'workshop' }
@@ -101,7 +101,7 @@ async function run() {
   ok(man.rail && 'route' in man.rail && 'facts' in man.rail && !/app\.html/.test(JSON.stringify(man)), 'manifest · the rail widget is declared (route · facts), and nothing names app.html');
   const eff = (e) => (e.works && e.state === 'workshop' ? 'built' : e.state);   /* the roadmap's reading of a row (manifest `works`) */
   const BUILT = man.entries.filter((e) => e.state === 'built'), REST = man.entries.filter((e) => e.state !== 'built');
-  for (const w of ['Catalogue', 'Accounts', 'Till', 'Standards', 'Suppliers', 'Assist', 'Connectors', 'Your business', 'Counters', 'CRM', 'Product Lab', 'Offer Lab', 'Combo Lab']) {
+  for (const w of ['Catalogue', 'Accounts', 'Till', 'Standards', 'Suppliers', 'Assist', 'Connectors', 'Your business', 'Counters', 'CRM', 'Price Lab', 'Offer Lab', 'Combo Lab']) {
     ok(man.entries.some((e) => e.name === w), 'manifest · the old index\'s "' + w + '" is a manifest row');
   }
 
@@ -130,7 +130,7 @@ async function run() {
     if (p.manifest) await ctx.route('**/app/manifest.json', (r) => J(r, 200, p.manifest));
     await ctx.route('**/api/**', (r) => {
       const u = new URL(r.request().url()); seen.push(u.pathname); calls.push({ m: r.request().method(), p: u.pathname });
-      if (u.pathname === '/api/entities/me' && r.request().method() === 'GET') return J(r, 200, ME);
+      if (u.pathname === '/api/entities/me' && r.request().method() === 'GET') return J(r, 200, p.me || ME);
       if (u.pathname === '/api/entities/sides') return J(r, 200, SIDES);
       if (u.pathname === '/api/entities/header') return J(r, 404, { error: 'not found' });            /* N19 built, not live: the empty state stays */
       if (u.pathname === '/api/books/health') {
@@ -186,10 +186,18 @@ async function run() {
       ok(hrefsOk, '1366 · every built card links to its utility page');
       ok((await offList(pg)).length === 0, '1366 · zero app.html hrefs outside the avatar (the allow-list: CBAvatar\'s own doors)');
       const chips = await pg.$$eval('.cbsh-sc', (cs) => cs.map((c) => ({ id: c.dataset.testid, st: c.dataset.state, link: c.tagName === 'A' || !!c.querySelector('a'), via: c.dataset.via === '1', href: c.getAttribute('href'), tag: (c.querySelector('.tag') || {}).textContent })));
-      ok(chips.length && chips.every((c) => (c.via ? /^\/[a-z-]+\.html$/.test(c.href || '') : !c.link) && (c.st === 'workshop' || c.st === 'coming' || c.st === 'works') && c.tag), '1366 · every chip is dashed, names its state, and is not a link (bar a workshop item that names its closest built page: Catalogue to Product Lab)');
+      ok(chips.length && chips.every((c) => (c.via ? /^\/[a-z-]+\.html$/.test(c.href || '') : !c.link) && (c.st === 'workshop' || c.st === 'coming' || c.st === 'works') && c.tag), '1366 · every chip is dashed, names its state, and is not a link (bar a workshop item that names its closest built page: Catalogue to Price Lab)');
       const before = pg.url(), pages = ctx.pages().length;
       await pg.click('[data-testid="shell-chip-delivery"]'); await pg.waitForTimeout(250);   /* delivery: still a coming chip (Stock became a built card in T3-OPS) */
       ok(pg.url() === before && ctx.pages().length === pages, '1366 · a workshop chip opens nothing');
+      /* NAMES-1 (Athi, 17 Oct): "Running it" is one flat group, like Trade; Stock stands in it; every tile says what it is for */
+      const run = await pg.evaluate(() => { const s = document.querySelector('.cbsh-sec.running'); const ids = (sel) => [...s.querySelectorAll(sel)].map((n) => n.getAttribute('data-testid').replace(/^shell-(card|chip)-/, ''));
+        return { pils: s.querySelectorAll('.cbsh-pil').length, cards: ids('.cbsh-box'), chips: ids('.cbsh-sc'), stock: (s.querySelector('[data-testid="shell-card-stock"] h4') || {}).textContent }; });
+      ok(run.pils === 0 && run.cards.join() === 'operations,stock,tasks,suppliers,counters,employees' && run.chips.join() === 'delivery,people',
+        '1366 · Running it is flat: ' + run.cards.join(' · ') + ', then the later chips ' + run.chips.join(' · ') + ' (' + run.pils + ' sub-panels)');
+      ok(run.stock === 'Stock', '1366 · Stock is a tile under Running it, and a shop with no country reads the neutral word "Stock" (' + run.stock + ')');
+      const bare = await pg.$$eval('.cbsh-box', (bs) => bs.filter((b) => !((b.querySelector('.what') || {}).textContent || '').trim()).map((b) => b.dataset.id));
+      ok(bare.length === 0, '1366 · no tile without its purpose line' + (bare.length ? ' — bare: ' + bare.join(', ') : ''));
       /* reads: only budgeted ones; null facts paint nothing */
       const unbudgeted = [...new Set(calls.filter((c) => !budgeted(c.p, c.m)).map((c) => c.m + ' ' + c.p))];
       ok(unbudgeted.length === 0, '1366 · every read has its budget line in ' + (BUDGET_FILE ? path.basename(path.dirname(BUDGET_FILE)) + '/round-trips.budget.json' : '(api checkout not found - the mirrored list)') + ' (' + [...new Set(seen)].length + ' routes)' + (unbudgeted.length ? ' — not: ' + unbudgeted.join(', ') : ''));
@@ -209,6 +217,16 @@ async function run() {
       for (const a of Object.keys(BUDGET)) { const n = await areaWords(pg, a); ok(n >= 0 && n <= BUDGET[a], '1366 · words in ' + a + ': ' + n + ' ≤ ' + BUDGET[a]); }
       ok(!/accounting|books of account|error|404/i.test(await pg.evaluate(() => document.body.innerText)), '1366 · no forbidden word, no error string on the screen');
       await pg.screenshot({ path: path.join(SHOTS, 'index-laptop.png') });
+      await ctx.close();
+    }
+
+    /* ── 3b · a US shop: the Stock tile is the country's word, Inventory (NAMES-1: helpers.js packWord, the per-country words) ── */
+    {
+      const { ctx } = await profile(1366, 800, { me: { entity: { display_name: 'Main Street Store', currency_code: 'USD', country: 'US' } } }), pg = await open(ctx);
+      await pg.waitForFunction(() => window.CBAvatar && window.CBAvatar.shopCountry && window.CBAvatar.shopCountry() === 'US', null, { timeout: 10000 }).catch(() => {});
+      await pg.waitForTimeout(200);
+      const word = await pg.locator('.cbsh-sec.running [data-testid="shell-card-stock"] h4').innerText().catch(() => '');
+      ok(word === 'Inventory', '1366 · a US shop: the Stock tile under Running it says "Inventory" (' + word + ')');
       await ctx.close();
     }
 

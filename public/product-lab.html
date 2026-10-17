@@ -9,7 +9,7 @@
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
 <script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Product Lab</title>
+<title>Price Lab</title>
 <!--
   ⭐⭐⭐ PRODUCT LAB ([2026-09-27]) — Athi: *"in the product lab, showcase what are the product lists are
   available, there they can choose the synonym language as well... a spread sheet kind of with the checkbox,
@@ -102,7 +102,7 @@ tr.has .whose{color:var(--ok)}
 </head>
 <body>
 <div id="shell" data-testid="plab-shell"></div>
-<script>if (window.CBFrame) CBFrame.mount({ app:'product-lab', bar:true, signin:false, host:document.getElementById('shell'), title:{ icon:'◈', name:'Product Lab' } });</script>
+<script>if (window.CBFrame) CBFrame.mount({ app:'product-lab', bar:true, signin:false, host:document.getElementById('shell'), title:{ icon:'◈', name:'Price Lab' } });</script>
 <div class="tools"><span class="u" id="who">…</span></div>
 <div class="wrap">
   <div class="steps" id="steps"></div>
@@ -470,7 +470,7 @@ load();
 <script src="app/one-person.js"></script>
 <script>
 CBOnePerson.attach({ quiet: true, who: (function(){ var w = CBOnePerson.stored(); return function(){ return w; }; })(),
-  label: function(){ return 'The Product Lab'; },
+  label: function(){ return 'The Price Lab'; },
   onLeave: function(by){ location.replace('/?left=' + encodeURIComponent(by || '')); }, onWipe: function(){ location.replace('/?cleaned=1'); } });
 </script>
 </body>

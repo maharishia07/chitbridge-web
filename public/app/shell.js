@@ -57,7 +57,10 @@
   };
   /* one box per pillar inside a section; a manifest entry's `pillar` decides its box and so its section (none: its area's default). Walk 17 Oct (Athi): money is not
      selling — Selling · Money · Running it are pillar sections; Trade, Labs and Setup are a pillar of their own, drawn as one grid. Daily first, set-up last. */
-  var PILLARS = { selling: ['marketing', 'sales'], money: ['finance', 'accounting'], running: ['operations', 'people'] };
+  var PILLARS = { selling: ['marketing', 'sales'], money: ['finance', 'accounting'] };
+  /* NAMES-1 (Athi, 17 Oct): "Running it" is ONE flat group of tiles, like Trade — its pillars stay on the manifest rows (so People can stand apart
+     again) but draw no sub-panels. A pillar here names its section and nothing else. */
+  var FLAT_PILLARS = { running: ['operations', 'people'] };
   var PNAME = { marketing: 'Marketing', sales: 'Sales', finance: 'Finance', accounting: 'Accounts', operations: 'Operations', people: 'People', trade: 'Trade' };
   var PDEFAULT = { selling: 'sales', running: 'operations', labs: 'labs', setup: 'setup' };
   var AREAS = ['home', 'selling', 'money', 'running', 'trade', 'labs', 'setup'];
@@ -396,6 +399,31 @@
     var symbol = moneySymbol(header);
     Array.prototype.forEach.call(pageDoc.querySelectorAll('[data-glyph="money"]'), function (node) { node.textContent = symbol; });
   }
+  /* ── NAMES-1: a name that is the shop's COUNTRY word (manifest `word`: Stock · Inventory) — the one per-country words reader, helpers.js packWord,
+     with the country of the one /me read (CBAvatar.shopCountry); '' = no such word on this page, so the manifest's own name stands ── */
+  function countryWord(kind) {
+    if (!kind || typeof root.packWord !== 'function') return '';
+    var avatar = root.CBAvatar, countryCode = (avatar && typeof avatar.shopCountry === 'function' && avatar.shopCountry()) || '';
+    return root.packWord(kind, countryCode) || '';
+  }
+  /* an entry's pillar (a missing one falls back to its area) and the Home section it stands in: a boxed area, a flat one, or its own */
+  function pillarOf(entry) { return entry.pillar || PDEFAULT[entry.area] || entry.area; }
+  function sectionOf(entry) {
+    var pillar = pillarOf(entry), area;
+    for (area in PILLARS) if (PILLARS[area].indexOf(pillar) >= 0) return area;
+    for (area in FLAT_PILLARS) if (FLAT_PILLARS[area].indexOf(pillar) >= 0) return area;
+    return pillar;
+  }
+  /** an entry's name as painted: a country word is marked, so the /me answer (cb:me) can re-say it */
+  function entryName(e) {
+    var word = countryWord(e.word);
+    return word ? '<span data-word="' + esc(e.word) + '">' + esc(T(word)) + '</span>' : esc(T(e.name));
+  }
+  function paintCountryWords(pageDoc) {
+    Array.prototype.forEach.call(pageDoc.querySelectorAll('[data-word]'), function (node) {
+      var word = countryWord(node.getAttribute('data-word')); if (word) node.textContent = T(word);
+    });
+  }
 
   /* ── a Home card's STATE (walk 17 Oct, Athi: "represent the status, active / not active") ── the server's facts `state` when it says;
      until every card does, a line marked tone 'dn' is needs_you and any other line in_use; no lines, no state */
@@ -528,8 +556,6 @@
     }
 
     /* ── the five areas (Home) ── */
-    function pillarOf(e) { return e.pillar || PDEFAULT[e.area] || e.area; }
-    function sectionOf(e) { var p = pillarOf(e); for (var a in PILLARS) if (PILLARS[a].indexOf(p) >= 0) return a; return p; }
     function shown() { var m = root.CBEdition && S.manifest ? root.CBEdition.view(S.manifest) : S.manifest; return (m && m.entries) || []; }
     function entriesOf(area) { return shown().filter(function (e) { return e && sectionOf(e) === area; }); }
     /* the areas this showing has: Home always; another area only if the edition draws something in it (the full app: all five) */
@@ -547,15 +573,15 @@
     }
     function card(e) {
       return '<a class="cbsh-box" href="' + esc(routeOf(e)) + '" data-testid="shell-card-' + esc(e.id) + '" data-id="' + esc(e.id) + '">' +
-        '<span class="arw" aria-hidden="true">›</span><span class="g" aria-hidden="true">' + glyph(e.icon) + '</span><h4>' + esc(T(e.name)) + '</h4>' +
+        '<span class="arw" aria-hidden="true">›</span><span class="g" aria-hidden="true">' + glyph(e.icon) + '</span><h4>' + entryName(e) + '</h4>' +
         (e.what ? '<p class="what" title="' + esc(T(e.what)) + '">' + esc(T(e.what)) + '</p>' : '') + '<span class="facts" data-testid="shell-facts-' + esc(e.id) + '"></span></a>';
     }
     function chip(e) {
       /* H14/P2-5: a workshop row whose function WORKS today (manifest `works`, the roadmap's rule) says so - never the word workshop */
       var st = e.state === 'workshop' ? (e.works ? 'works' : 'workshop') : 'coming';
       /* H36: a workshop item with no page of its own may name the closest built page (`via`): the chip becomes a link there, still marked workshop */
-      if (e.via) return '<a class="cbsh-sc" href="' + esc(e.via) + '" data-testid="shell-chip-' + esc(e.id) + '" data-state="' + st + '" data-via="1"' + (e.via_note ? ' title="' + esc(e.via_note) + '"' : '') + '><span class="g" aria-hidden="true">' + glyph(e.icon) + '</span><b>' + esc(T(e.name)) + '</b><span class="tag">' + esc(T(W.tag[st])) + '</span></a>';
-      return '<span class="cbsh-sc" data-testid="shell-chip-' + esc(e.id) + '" data-state="' + st + '"><span class="g" aria-hidden="true">' + glyph(e.icon) + '</span><b>' + esc(T(e.name)) + '</b><span class="tag">' + esc(T(W.tag[st])) + '</span></span>';
+      if (e.via) return '<a class="cbsh-sc" href="' + esc(e.via) + '" data-testid="shell-chip-' + esc(e.id) + '" data-state="' + st + '" data-via="1"' + (e.via_note ? ' title="' + esc(e.via_note) + '"' : '') + '><span class="g" aria-hidden="true">' + glyph(e.icon) + '</span><b>' + entryName(e) + '</b><span class="tag">' + esc(T(W.tag[st])) + '</span></a>';
+      return '<span class="cbsh-sc" data-testid="shell-chip-' + esc(e.id) + '" data-state="' + st + '"><span class="g" aria-hidden="true">' + glyph(e.icon) + '</span><b>' + entryName(e) + '</b><span class="tag">' + esc(T(W.tag[st])) + '</span></span>';
     }
     function paintAreas() {
       var box = $('.cbsh-areas'); if (!box) return;
@@ -738,6 +764,7 @@
 
     var hdrP = person ? get('/api/entities/header').then(function (h) { S.header = h || null; S.headerState = h ? 'ok' : 'none'; }, function () { S.header = null; S.headerState = 'none'; })
       .then(function () { paintBar(); paintSheet(); paintMoneyGlyphs(doc, S.header); }) : Promise.resolve();
+    doc.addEventListener('cb:me', function () { paintCountryWords(doc); });   /* NAMES-1: the shop's country landed — Stock becomes Inventory for a US shop */
 
     var api = {
       el: el, slots: slots, mode: mode,

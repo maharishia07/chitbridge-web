@@ -635,7 +635,7 @@ function catsetBody(k){
       + 'your prices your own; adopting <b>by value</b> takes a copy that stops following them. The screen below '
       + 'asks which.</div>'
       + '<div class="catset-std">⭐ <b>Nobody publishing for your trade?</b> Then start from a <b>product list</b> in the '
-      + 'counter’s Product Lab — that one is a COPY that becomes yours — or use the panels below, which are the step-by-step '
+      + 'counter’s Price Lab — that one is a COPY that becomes yours — or use the panels below, which are the step-by-step '
       + 'way — columns first, then how a price is arrived at, then how customers order from you.</div>',
       '<button class="composebtn pri" data-testid="catset-blueprint" onclick="catsetBlueprint()">'
       + tx('📋 See the catalogues you can follow') + '</button>')

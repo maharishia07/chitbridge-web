@@ -41,7 +41,7 @@ const APPS = [
   ['/know-your-business.html', 'KYB001', 'Know your business'], ['/authority-forms.html', 'DOC001', 'Documents'],
   /* SHELL-ONE: every page wears the frame, so every page shows its code — the standards page, the storefront, the shop screen, the labs */
   ['/standards.html', 'STD001', 'Standards'], ['/shop.html?s=CBWALK0001', 'SHP001', 'Shop'], ['/network-shop.html?bridge=CBWALK0001', 'NSH001', 'Network shop'], ['/store.html?net=CBWALK0001', 'STR001', 'Store'],
-  ['/embed.html?bridge=CBWALK0001', 'EMB001', 'Catalogue embed'], ['/promo.html', 'PRM001', 'Shop screen'], ['/product-lab.html', 'PLB001', 'Product Lab'], ['/offer-lab-next.html', 'OLB001', 'Offer Lab'],
+  ['/embed.html?bridge=CBWALK0001', 'EMB001', 'Catalogue embed'], ['/promo.html', 'PRM001', 'Shop screen'], ['/product-lab.html', 'PLB001', 'Price Lab'], ['/offer-lab-next.html', 'OLB001', 'Offer Lab'],
   ['/offer-lab-next.html?mode=combo', 'OLB002', 'Combo Lab'], ['/conversion-lab.html', 'CVL001', 'Conversion lab'], ['/network-design.html', 'NLB001', 'Network Lab'],
 ];
 const SHEETS = [['tk1', 'TSK005', 'Task details'], ['ch1', 'BIL001', 'Bill'], ['sb1', 'BIL002', 'Supplier bill']];

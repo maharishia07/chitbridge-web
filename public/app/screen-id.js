@@ -67,7 +67,7 @@
       { app: 'store', name: 'Store', page: '/store.html', rows: [['STR001', null, 'Store', '/store.html?net=<network>']] },
       { app: 'embed', name: 'Catalogue embed', page: '/embed.html', rows: [['EMB001', null, 'Catalogue embed', '/embed.html?bridge=<shop> · inside another site']] },
       { app: 'promo', name: 'Shop screen', page: '/promo.html', rows: [['PRM001', null, 'Shop screen', '/promo.html#key=… · the till › Shop screen']] },
-      { app: 'product-lab', name: 'Product Lab', page: '/product-lab.html', rows: [['PLB001', null, 'Product Lab']] },
+      { app: 'product-lab', name: 'Price Lab', page: '/product-lab.html', rows: [['PLB001', null, 'Price Lab']] },
       { app: 'offer-lab', name: 'Offer Lab', page: '/offer-lab-next.html', rows: [['OLB001', 'offer', 'Offer Lab', '/offer-lab-next.html · Home › Labs'], ['OLB002', 'combo', 'Combo Lab', '/offer-lab-next.html?mode=combo · Home › Labs']] },
       { app: 'conversion-lab', name: 'Conversion lab', page: '/conversion-lab.html', rows: [['CVL001', null, 'Conversion lab', '/conversion-lab.html · the Country lab']] },
       { app: 'network-lab', name: 'Network Lab', page: '/network-design.html', rows: [['NLB001', null, 'Network Lab', '/network-design.html · Home › Labs']] }

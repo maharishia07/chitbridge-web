@@ -128,6 +128,9 @@ async function run(o) {
       const built = man.entries.filter((e) => e.state === 'built').length, rest = man.entries.length - built;
       ok(await pg.locator('.cbsh-box').count() === built && await pg.locator('.cbsh-sc').count() === rest, '1366 · ' + built + ' cards and ' + rest + ' dashed chips from the manifest');
       ok(await pg.locator('.cbsh-main a[href*="app.html"]').count() === 0, '1366 · no link into app.html in the working area');
+      /* NAMES-1: Running it draws flat, like Trade — its cards in one grid, no Operations / People sub-panels (the pillars stay on the rows) */
+      ok(await pg.locator('.cbsh-sec.running .cbsh-pil').count() === 0 && await pg.locator('.cbsh-sec.running > .cbsh-grid [data-testid="shell-card-employees"]').count() === 1,
+        '1366 · Running it is one flat group: no sub-panels, Employees a tile in it');
       /* 6 · the rail scrolls; scroll moves the highlight */
       await pg.click('[data-testid="shell-nav-labs"]'); await pg.waitForTimeout(1400);
       const top = await pg.evaluate(() => { const m = document.querySelector('.cbsh-main'), s = document.querySelector('.cbsh-sec.labs'); return Math.abs(m.scrollTop - (s.offsetTop - 6)) < 8 || m.scrollTop + m.clientHeight >= m.scrollHeight - 4; });
