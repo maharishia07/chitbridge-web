@@ -272,6 +272,87 @@
   /* ── "All countries": the accounting rules of every country in ONE table — CBCountries.rulesTable, the same function docs/ACCOUNTING-RULES.md is
         written from (Athi, 17 Oct: "in the country lab we have to present"). Rules down the side, countries across; on a phone, one country at a time. ── */
   var ALL = { host: null, code: null };
+  /** a cell's value — the chart's count opens the chart it counts (Athi, 17 Oct: "if it is a hyperlink, can we showcase what those groups are") */
+  var OPENS = { chart: 'chart', return: 'return', filed: 'return', statements: 'statements', invoice: 'invoice', kinds: 'kinds' };
+  function cellValue(ruleKey, code, value) {
+    var opens = OPENS[ruleKey];
+    return opens ? '<button class="cp-link" type="button" data-open="' + opens + '" data-cc="' + safe(code) + '" data-testid="cp-open-' + opens + '-' + safe(code) + '">' + safe(value) + '</button>' : safe(value);
+  }
+  /** a framed panel under the table: a title, a close, the body */
+  function panelHTML(title, subtitle, body, testid) {
+    return '<div class="cp-chart" data-testid="' + testid + '"><div class="cp-head"><div><h2>' + safe(title) + '</h2><div class="hint">' + safe(subtitle || '') + '</div></div>'
+      + '<button class="btn x" type="button" data-chart-close="1" style="margin-left:auto" aria-label="Close">✕</button></div>' + body + '</div>';
+  }
+  /** the rate a sample line is billed at: the standard rate, else the first rate above nil */
+  function sampleRate(taxRules) { return taxRules.standard_rate != null ? taxRules.standard_rate : ((taxRules.rates || []).filter(function (rate) { return rate > 0; })[0] || 0); }
+  /** the sample cart: two lines at the sample rate, and one of a nil-rated supply kind when the pack names one */
+  function sampleLines(pack) {
+    var taxRules = pack.tax || {}, kinds = taxRules.supplyKinds || {}, rate = sampleRate(taxRules);
+    var lines = [{ name: 'Item A', qty: 2, price: 120, rate: rate }, { name: 'Item B', qty: 1, price: 45, rate: rate }];
+    var nilKind = Object.keys(kinds).filter(function (kind) { return kind !== 'standard' && kinds[kind].rate === 0; })[0];
+    if (nilKind) lines.push({ name: 'Item C (' + (kinds[nilKind].name || nilKind) + ')', qty: 1, price: 30, rate: 0, supply_kind: nilKind });
+    return lines;
+  }
+  /** bill the sample cart with the real tax engine, seller and buyer in the pack's country (a state-split pack needs a state on both) */
+  function billSample(pack, lines) {
+    var party = pack.tax && pack.tax.supply === 'state' ? { Country: pack.id, State: '27', Pos: '27' } : { Country: pack.id };
+    return CBTax.determine({ seller: Object.assign({ LglNm: 'Sample shop', RegType: 'regular' }, party), buyer: Object.assign({ RegType: 'unregistered' }, party), placeOfSupply: party.State, lines: lines });
+  }
+  /** an invoice line as a row: item · qty · price · rate · tax · total */
+  function invoiceRow(pack, item, line) {
+    var priced = function (amount) { return safe(inCountryMoney(pack, amount)); };
+    return '<tr><td>' + safe(line.name) + '</td><td class="r">' + safe(item.Qty) + '</td><td class="r">' + priced(item.UnitPrice) + '</td><td class="r">' + safe(item.GstRt) + '%</td><td class="r">'
+      + priced(item.TaxAmt + item.CgstAmt + item.SgstAmt + item.IgstAmt) + '</td><td class="r">' + priced(item.TotItemVal) + '</td></tr>';
+  }
+  /** the invoice's tax, whatever its heads (one VAT/GST head, or CGST + SGST + IGST) */
+  function taxOfTotals(totals) { return ['CgstVal', 'SgstVal', 'IgstVal', 'TaxVal'].reduce(function (sum, key) { return sum + (totals[key] || 0); }, 0); }
+  /** the lines a tax invoice must show, in words */
+  function requiredWords(pack) { var invoice = root.CBCountries ? CBCountries.meta(pack).invoice : null; return ((invoice && invoice.requiredLines) || []).map(function (line) { return line.replace(/_/g, ' '); }); }
+  /** a sample tax invoice, billed live by the real tax engine under the country's own pack (its currency, rates and kinds) */
+  function invoiceHTML(pack) {
+    if (!root.CBTax || !CBTax.determine) return '<span class="hint">The tax engine is not loaded.</span>';
+    var lines = sampleLines(pack), invoice = billSample(pack, lines), totals = invoice.ValDtls || {};
+    var taxTotal = taxOfTotals(totals), mustShow = requiredWords(pack), notes = (invoice._cb && invoice._cb.notes) || [];
+    return '<div class="hint">' + safe(taxWord(pack)) + ' invoice · seller "Sample shop" · ' + safe(mustShow.join(' · ')) + '</div>'
+      + '<table class="grid cp-boxes"><thead><tr><th>Item</th><th class="r">Qty</th><th class="r">Price</th><th class="r">Rate</th><th class="r">Tax</th><th class="r">Total</th></tr></thead><tbody>'
+      + (invoice.ItemList || []).map(function (item, index) { return invoiceRow(pack, item, lines[index]); }).join('')
+      + '<tr class="cp-total"><td colspan="4">Taxable ' + safe(inCountryMoney(pack, totals.AssVal)) + '</td><td class="r">' + safe(inCountryMoney(pack, taxTotal)) + '</td><td class="r"><b>' + safe(inCountryMoney(pack, totals.TotInvVal)) + '</b></td></tr></tbody></table>'
+      + (notes.length ? '<ul class="cp-ul">' + notes.map(function (note) { return '<li class="hint">' + safe(note) + '</li>'; }).join('') + '</ul>' : '');
+  }
+  /** the tax's own word (Consumption tax · GST · SST) */
+  function taxWord(pack) { return (pack.words && pack.words.taxName) || (pack.tax && pack.tax.scheme) || 'Tax'; }
+  /** the sample statements as one panel: balance sheet, then profit and loss, in the pack's own lines */
+  function statementsPanel(pack, sample, name) {
+    var statements = sample.statements, sheet = statements.balance_sheet, profitLoss = statements.profit_and_loss;
+    return panelHTML(name + ' · sample statements', statements.basis || '', statementHTML('Balance sheet at ' + sheet.as_of, sheet.assets.concat(sheet.equity_and_liabilities), 'Total assets = equity + liabilities', sheet.total_assets_minor, pack, sample)
+      + statementHTML('Profit and loss', profitLoss.income.concat(profitLoss.expenses.map(function (line) { return { label: line.label, amount_minor: -line.amount_minor }; })), 'Profit', profitLoss.profit_minor, pack, sample), 'cp-opened');
+  }
+  /** what each kind of cell opens — the ones that need the sample year say so until it is read */
+  var OPENERS = {
+    chart: function (pack) { return chartHTML(pack.id); },
+    kinds: function (pack, sample, name) { return panelHTML(name + ' · supply kinds', taxWord(pack), kindsTable(pack) || '<span class="hint">Rates by slab (HSN), no supply kinds.</span>', 'cp-opened'); },
+    invoice: function (pack, sample, name) { return panelHTML(name + ' · a sample tax invoice', 'billed now by the tax engine under the ' + pack.name + ' pack', invoiceHTML(pack), 'cp-opened'); },
+    return: function (pack, sample, name) { return sample ? panelHTML(name + ' · a sample filled return', 'a simulated shop, ' + sample.from + ' → ' + sample.to, returnHTML(pack, sample), 'cp-opened') : panelHTML(name, 'reading the sample…', '', 'cp-opened'); },
+    statements: function (pack, sample, name) { return sample ? statementsPanel(pack, sample, name) : panelHTML(name, 'reading the sample…', '', 'cp-opened'); },
+  };
+  /** what a cell opens, for one country */
+  function openedHTML(kind, code) {
+    var pack = packOf(code); if (!pack || !OPENERS[kind]) return '';
+    return OPENERS[kind](pack, sampleOf(code), nameOf('region', code));
+  }
+  /** a group with its ledgers, as one list item */
+  function groupItem(group, ledgers) {
+    var inGroup = ledgers.filter(function (ledger) { return ledger.group === group.code; });
+    return '<li><b>' + safe(group.name || group.code) + '</b>' + (group.nature ? ' <span class="hint">' + safe(group.nature) + '</span>' : '')
+      + (inGroup.length ? '<ul>' + inGroup.map(function (ledger) { return '<li><span class="mono">' + safe(ledger.code || '') + '</span> ' + safe(ledger.name || ledger.role) + '</li>'; }).join('') + '</ul>' : '') + '</li>';
+  }
+  /** the country's chart: every group with its ledgers, in the pack's order */
+  function chartHTML(code) {
+    var pack = packOf(code); if (!pack) return '';
+    var groups = pack.groups || [], ledgers = pack.ledgers || [];
+    return panelHTML(nameOf('region', code) + ' · chart of accounts', groups.length + ' groups · ' + ledgers.length + ' ledgers · ' + (pack.basis || ''),
+      '<ul class="cp-tree">' + groups.map(function (group) { return groupItem(group, ledgers); }).join('') + '</ul>', 'cp-chart');
+  }
   /** the table: the rule names fixed on the left, a column per country (⚠ = not yet read by a local accountant) */
   function allTableHTML(table) {
     var head = '<tr><th class="cp-rule">Rule</th>' + table.countries.map(function (country) {
@@ -279,7 +360,7 @@
     }).join('') + '</tr>';
     var body = table.rules.map(function (rule) {
       return '<tr data-rule="' + safe(rule.key) + '"><th class="cp-rule" scope="row">' + safe(rule.name) + '</th>' + table.countries.map(function (country) {
-        var value = rule.values[country.id]; return '<td>' + (value == null ? '<span class="hint">—</span>' : safe(value)) + '</td>';
+        var value = rule.values[country.id]; return '<td>' + (value == null ? '<span class="hint">—</span>' : cellValue(rule.key, country.id, value)) + '</td>';
       }).join('') + '</tr>';
     }).join('');
     return '<table class="cp-all" data-testid="cp-all-table"><thead>' + head + '</thead><tbody>' + body + '</tbody></table>';
@@ -297,12 +378,25 @@
     var table = CBCountries.rulesTable({ year: new Date().getFullYear() }); if (!ALL.code && table.countries.length) ALL.code = table.countries[0].id;
     var picker = '<select class="cp-select cp-all-pick" data-testid="cp-all-select" aria-label="Country">' + table.countries.map(function (country) { return '<option value="' + safe(country.id) + '"' + (country.id === ALL.code ? ' selected' : '') + '>' + flagOf(country.id) + ' ' + safe(nameOf('region', country.id)) + '</option>'; }).join('') + '</select>';
     host.innerHTML = '<div class="cp-allwrap"><div class="cp-head"><div><h2>All countries · ' + table.countries.length + '</h2><div class="hint">' + table.rules.length + ' accounting rules, read from each country\'s pack</div></div></div>'
-      + picker + '<div class="cp-allscroll">' + allTableHTML(table) + '</div>' + oneColumnHTML(table, ALL.code) + '</div>';
+      + picker + '<div class="cp-allscroll">' + allTableHTML(table) + '</div>' + oneColumnHTML(table, ALL.code) + '<div class="cp-chartslot"></div></div>';
+  }
+  /** a press in the All countries view: a counted cell opens what it counts under the table; ✕ closes it */
+  function onAllClick(event) {
+    var slot = ALL.host.querySelector('.cp-chartslot'), open = event.target.closest('[data-open]'); if (!slot) return;
+    if (event.target.closest('[data-chart-close]')) { slot.innerHTML = ''; return; }
+    if (!open) return;
+    ALL.opened = [open.getAttribute('data-open'), open.getAttribute('data-cc')]; slot.innerHTML = openedHTML(ALL.opened[0], ALL.opened[1]);
+    if (slot.scrollIntoView) slot.scrollIntoView({ block: 'start', behavior: 'smooth' });
   }
   /** mount the All countries view in a host */
   function mountAll(host) {
     ALL.host = host; paintAll();
-    host.addEventListener('change', function (event) { if (event.target.matches('.cp-all-pick')) { ALL.code = event.target.value; paintAll(); } });
+    if (!STATE.samples) { STATE.host = STATE.host || null; loadSamples(); }   /* the return and statements panels read the samples file */
+    host.addEventListener('change', function (event) {
+      if (event.target.matches('.cp-all-pick')) { ALL.code = event.target.value; paintAll(); }
+      if (event.target.matches('.cp-periodpick') && ALL.opened) { STATE.period[ALL.opened[1]] = event.target.value; host.querySelector('.cp-chartslot').innerHTML = openedHTML(ALL.opened[0], ALL.opened[1]); }
+    });
+    host.addEventListener('click', onAllClick);
   }
   root.CBCountryProfiles = { mount: mount, mountAll: mountAll };
 })(typeof window !== 'undefined' ? window : this);

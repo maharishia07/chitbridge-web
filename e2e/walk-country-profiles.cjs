@@ -8,6 +8,7 @@
  *   P3 · the tax-ID box refuses "x" with the pack's own check — or says it is checked on save
  *   P4 · rule 13: cream and dark, 1366 and 390 px — AA contrast, no sideways scroll, the phone picker's name fits
  *   P5 · the Books card: a country whose books build its return shows the filled boxes, the due date and Pay/Refund; the statements balance; India says its return is read from the invoices
+ *   P7 · every counted / named cell opens what it counts (chart · filled return · statements · a sample invoice · supply kinds)
  *   P6 · All countries: one table, a row per rule (CBCountries.rulesTable), a column per country; on a phone one country as two columns
  *   NODE_PATH=$PWD/e2e/node_modules node e2e/walk-country-profiles.cjs [--show]
  */
@@ -69,6 +70,16 @@ const walk = async (w) => {
     const cols = await page.$$eval('[data-testid="cp-all-table"] thead th', (t) => t.length - 1), rows = await page.$$eval('[data-testid="cp-all-table"] tbody tr', (t) => t.map((x) => x.dataset.rule));
     const want = await page.evaluate(() => CBCountries.rulesTable({ year: 2026 }).rules.length);
     return { ok: cols === all.length && rows.length === want && rows.includes('symbol'), saw: rows.length + ' rules × ' + cols + ' countries' };
+  });
+  await w.step('P7', 'every counted or named cell opens what it counts: the chart, the filled return, the statements, a sample invoice billed live, the supply kinds — for every country', async () => {
+    const out = [];
+    for (const c of all) for (const k of ['chart', 'return', 'statements', 'invoice', 'kinds']) {
+      const sel = '[data-testid="cp-open-' + k + '-' + c.id + '"]'; if (!(await page.locator(sel).count())) { out.push(c.id + ' ' + k + ' (no cell)'); continue; }
+      await page.click(sel); await page.waitForSelector('.cp-chartslot .cp-chart', { timeout: 5000 }); const txt = await page.locator('.cp-chartslot').innerText();
+      if (txt.length < 30 || /error:/.test(txt)) out.push(c.id + ' ' + k + ' ✗');
+    }
+    const bad = out.filter((x) => /✗/.test(x));
+    return { ok: !bad.length, saw: (all.length * 5 - out.length) + ' panels opened' + (out.length ? ' · ' + out.join(', ') : '') };
   });
   await page.goto(base + '/country-lab.html'); await page.waitForSelector('[data-testid="cp-side"]', { timeout: 15000 });
   for (const [t, wd] of [['cream', 1366], ['dark', 1366], ['cream', 390], ['dark', 390]]) {
