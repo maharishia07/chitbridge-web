@@ -17,6 +17,10 @@
  * ⚠️ THE SERVER DECIDES WHOSE ROWS THESE ARE. An actor's own id is forced onto the query in routes/folders.js —
  * this screen cannot widen it, and must never look like it can.
  */
+/* OWNS the worklist screen: work to do, per person
+ * CALLED BY app.html (ensureCap('worklist'))
+ * FLOW GET the worklist -> rows -> wlMoney paints amounts in the shop's money (moneyCode)
+ * CARD 05-orders-and-workflow/worklist */
 var WL = { data: null, busy: false, err: null, due: '', view: null,
   /**
    * ⭐ GROUPING IS TWO INDEPENDENT CHOICES — Athi, 2026-08-14: *"under date, if i want to see all without who is
@@ -625,7 +629,7 @@ function wlParties(det){
  */
 function wlMoney(v){
   if (v === null || v === undefined || v === '') return '';
-  var code = (typeof SESSION !== 'undefined' && SESSION.currency) || 'INR';
+  var code = moneyCode();
   return (typeof fmtMoney === 'function') ? fmtMoney(v, code) : (code + ' ' + v);
 }
 /**
@@ -1208,7 +1212,7 @@ function wlLineHTML(loading){
       + '</div>'
       + '<div style="margin-top:8px">'
       +   wlFieldRow(wlInput('wl_amt', { testid: 'wl-amt', type: 'number', grow: 2,
-              placeholder: 'cost in ' + ((typeof SESSION !== 'undefined' && SESSION.currency) || 'INR') }),
+              placeholder: 'cost in ' + (moneyCode()) }),
             wlBtn('Add', 'wl-addcost', 'wlActSave(&quot;cost&quot;)'))
       + '</div>'
       /* ⚠️ Its own quantity field, never the delivery one: 2 hours of labour typed into the goods box is exactly

@@ -2063,7 +2063,7 @@ function acIdPrev(){const e=document.getElementById("ac_idprev"); if(e){ const k
    now live in /app/core.js, loaded just above this script. Panels share that one client. */
 /* ---------------- SESSION + ROUTER ---------------- */
 let SESSION = {token:null, role:null, name:null, entity:null, bridgeId:null};
-function myCur(){ return (typeof SESSION!=='undefined' && SESSION.currency) || (typeof shopReg==='function' && shopReg() && shopReg().currency) || 'INR'; }   /* CX4 (S3): the shop's pack's money before India's */
+function myCur(){ return (typeof SESSION!=='undefined' && SESSION.currency) || (typeof shopReg==='function' && shopReg() && shopReg().currency) || null; }   /* CX4 (S3): the shop's pack's money; N1: none stated -> null (fmtMoney prints the bare amount), never a guessed currency */
 // The SYMBOL for a currency code, taken from Intl rather than a hand-kept table — it covers every currency and
 // cannot drift. Falls back to the code itself (AED shows as 'AED' in many locales, which is correct, not a bug).
 function curSym(code){ return CBLocale.symbol(code || myCur()); }   // ⚠️ was formatting with `undefined` — the OS locale, not the reader's
@@ -2071,7 +2071,7 @@ function curSym(code){ return CBLocale.symbol(code || myCur()); }   // ⚠️ wa
 // across 13 call sites would be churn for no gain; changing what it does fixes all 13 at once.
 const inr=n=>fmtMoney(n,myCur());
 /* CCY_LOCALE + fmtMoney → app/helpers.js */
-const CURRENCIES=[['INR','₹ Indian Rupee · 2dp'],['USD','$ US Dollar · 2dp'],['EUR','€ Euro · 2dp'],['GBP','£ British Pound · 2dp'],['JPY','¥ Japanese Yen · 0dp'],['KRW','₩ Korean Won · 0dp'],['VND','₫ Vietnam Dong · 0dp'],['BHD','Bahraini Dinar · 3dp'],['KWD','Kuwaiti Dinar · 3dp'],['OMR','Omani Rial · 3dp'],['AED','UAE Dirham · 2dp'],['SAR','Saudi Riyal · 2dp'],['CNY','¥ Chinese Yuan · 2dp'],['SGD','$ Singapore Dollar · 2dp'],['AUD','$ Australian Dollar · 2dp'],['CHF','Swiss Franc · 2dp']];
+const CURRENCIES=[['INR','₹ Indian Rupee · 2dp'],['USD','$ US Dollar · 2dp'],['EUR','€ Euro · 2dp'],['GBP','£ British Pound · 2dp'],['JPY','¥ Japanese Yen · 0dp'],['KRW','₩ Korean Won · 0dp'],['VND','₫ Vietnam Dong · 0dp'],['BHD','Bahraini Dinar · 3dp'],['KWD','Kuwaiti Dinar · 3dp'],['OMR','Omani Rial · 3dp'],['AED','UAE Dirham · 2dp'],['SAR','Saudi Riyal · 2dp'],['CNY','¥ Chinese Yuan · 2dp'],['SGD','$ Singapore Dollar · 2dp'],['AUD','$ Australian Dollar · 2dp'],['CHF','Swiss Franc · 2dp']].sort(function(left, right){ return left[0] < right[0] ? -1 : 1; });   /* N1: by code - no currency leads the list (it began with INR) */
 function go(hash){location.hash=hash;}
 /* toast() and toastLevel() live in app/accounts-shell.js (#toast is the host element) */
 /* Message console — tester view of every message/event (info / warning / critical / requests), filterable. */
@@ -6249,7 +6249,7 @@ function ccStepReview(){
     + '</div>'+inner+'</div>'; };
   return card('Lines · '+(CC.items||[]).length,
         (CC.items||[]).map(function(l){ return row((l.qty||1)+' × '+esc(l.unit||'unit'),
-          '<span style="flex:1">'+esc(l.particulars)+'</span><b style="float:inline-end">'+esc(fmtMoney(ccLineTotal(l),'INR'))+'</b>'); }).join('')
+          '<span style="flex:1">'+esc(l.particulars)+'</span><b style="float:inline-end">'+esc(fmtMoney(ccLineTotal(l), moneyCode()))+'</b>'); }).join('')
         /* ONE SOURCE (Athi, 2026-09-05: "look at where else we are invoking cart — same treatment, same UI, same result"): the
            Compose review prints the cart's money rows over the SAME lines the send evaluates (ccOfferLines) — offers, then GST
            where a line carries a rate, then the total incl. tax; a bare Total only when neither applies. */
@@ -6259,13 +6259,13 @@ function ccStepReview(){
               var hasOffers = !!((CC.offers||[]).length), hasTax = (CC.items||[]).some(function(it){ return (it.tax && it.tax.rate != null) || it.gst_rate != null; });
               if (L.length && (hasOffers || hasTax) && typeof CBCart !== 'undefined' && CBCart.money) {
                 var byKey = {}; (CC.items||[]).forEach(function(it, i){ byKey[String(i)] = it; });
-                var M = CBCart.money(L, { offers: CC.offers || [], ctx: { now: new Date(), currency: 'INR', money: function(n){ return fmtMoney(n, 'INR'); } },
+                var M = CBCart.money(L, { offers: CC.offers || [], ctx: { now: new Date(), currency: moneyCode(), money: function(n){ return fmtMoney(n, moneyCode()); } },
                   taxOf: function(id, l){ var it = byKey[String(l && l.key)] || {}; return it.tax && it.tax.rate != null ? it.tax : (it.gst_rate != null ? { rate: Number(it.gst_rate), cess: Number(it.cess_rate) || 0 } : null); } });
                 return '<div data-testid="cc-review-money" style="margin:6px 12px 8px">' + CBCart.moneyRowsHTML(M, { totalTestid: 'cc-review-total', taxTestid: 'cc-review-tax' }) + '</div>';
               }
             } catch (e) { /* fall through to the bare total */ }
             return '<div style="display:flex;padding:10px 12px;border-top:2px solid var(--line);font-size:var(--fs-3);font-weight:800">'
-              + '<span style="flex:1">' + tx('Total') + '</span><span data-testid="cc-review-total">'+esc(fmtMoney(sum,'INR'))+'</span></div>';
+              + '<span style="flex:1">' + tx('Total') + '</span><span data-testid="cc-review-total">'+esc(fmtMoney(sum, moneyCode()))+'</span></div>';
           })(), 0)
     + card('To', row('Recipients', (CC.rcpts||[]).length
         ? (CC.rcpts||[]).map(function(r){ return esc(r.role.toUpperCase())+' '+esc(r.name); }).join(' · ')
@@ -6436,7 +6436,7 @@ function ccSyncOffers(){
     var ev = CBOffers.evaluate({
       lines: lines,
       offers: offers,
-      money: function(n){ return fmtMoney(n, myCur ? myCur() : 'INR'); }
+      money: function(n){ return fmtMoney(n, moneyCode()); }
     });
 
     /* 2 · the discounts, onto the lines they name */
@@ -6493,7 +6493,7 @@ function ccSyncOffers(){
       ev = CBOffers.evaluate({
         lines: lines,
         offers: offers,
-        money: function(n){ return fmtMoney(n, myCur ? myCur() : 'INR'); }
+        money: function(n){ return fmtMoney(n, moneyCode()); }
       });
       CC.items.forEach(function(it){ delete it._offer_off; delete it._offer_why; delete it._offer_id; delete it._offer_label; });
       ccMarkOffers(ev, lines);
@@ -6553,10 +6553,10 @@ function ccRenderTotal(){
   const saved=CBMoney.round(CC.savings||0);
   const owed=Math.max(0, CBMoney.round(gross-saved));
   t.innerHTML = CC.items.length
-    ? esc('Total ' + fmtMoney(owed, myCur ? myCur() : 'INR'))
+    ? esc('Total ' + fmtMoney(owed, moneyCode()))
       + (saved > 0 ? ' <span data-testid="cc-saved" style="color:var(--ok-3);font-weight:700">'
-          + esc('you save ' + fmtMoney(saved, myCur ? myCur() : 'INR')) + '</span>'
-          + ' <s style="color:var(--grey);font-weight:400">' + esc(fmtMoney(gross, myCur ? myCur() : 'INR')) + '</s>'
+          + esc('you save ' + fmtMoney(saved, moneyCode())) + '</span>'
+          + ' <s style="color:var(--grey);font-weight:400">' + esc(fmtMoney(gross, moneyCode())) + '</s>'
         : '')
     : ''; }
 async function submitCompose(isDraft){
@@ -9604,7 +9604,7 @@ function custNamedGroupsHTML(c){
 async function custRewardsLoad(id){
   /* T3-P2-CRM: the pane is app/cap-rewards.js (CBRewards) — ONE copy, painted here and on CB CRM's record; the money is formatted in the shop's locale */
   if(typeof CBRewards==='undefined') return;
-  return CBRewards.load('cu_rw', { id:id, api:api, t:tx, money:function(n){ try{ return CBLocale.money(n, (UI.me&&UI.me.currency)||'INR'); }catch(_){ return String(n); } } });
+  return CBRewards.load('cu_rw', { id:id, api:api, t:tx, money:function(n){ try{ return fmtMoney(n, UI.me&&UI.me.currency); }catch(_){ return String(n); } } });
 }
 async function custSaveNamedGroups(id, groups){ try{ var r=await api('custGroupsSet',{ params:{ id:id }, body:{ groups:groups } }); var c=(UI.custs||[]).find(function(x){return x.customer_list_id===id;}); if(c) c.groups=r.groups||groups; _CUST_GNAMES=undefined; paintCustList(); paintCustDetail(); toast(tx('Groups saved')); }catch(e){ toast((e&&e.message)||tx('Could not save the groups')); } }
 function custToggleNamedGroup(id, g, on){ var c=(UI.custs||[]).find(function(x){return x.customer_list_id===id;}); if(!c) return; var set=(c.groups||[]).filter(function(x){return x!==g;}); if(on) set.push(g); custSaveNamedGroups(id, set); }
@@ -11361,7 +11361,7 @@ function prodListCart(){
   UI._listCartSig=sig;
   const offs=(UI._ctOffers||[]).map(o=>Object.assign({}, o.rules||{}, { id:o.definition_id||o.id, label:o.name, kind:o.sub_kind||(o.rules&&o.rules.kind) }));
   const items=(UI.prods||[]).map(p=>{ const d=pData(p), id=prodId(p); let tax=null; try { const x=prodDeals(d,id); if(x.tax&&x.tax.rate!=null) tax={ rate:x.tax.rate, name:x.tax.name||'GST' }; } catch(_){} return { item_id:id, item_data:d, tax }; });
-  const cat={ shop:{ bridge_id:'self', currency_code:(UI._me&&UI._me.currency_code)||'INR' }, offers:offs, items };
+  const cat={ shop:{ bridge_id:'self', currency_code:(UI._me&&UI._me.currency_code) }, offers:offs, items };
   if(UI._listCart) UI._listCart.setCatalogue(cat); else UI._listCart=CBCart.create(cat, { renderer:CBCatUI, listEl:'cb_list_none', barEl:'cb_bar_none', barHideEmpty:true });
   return UI._listCart;
 }
@@ -12985,13 +12985,13 @@ function prodModifiersTab(d, edit){
                      real variant of this class (the file's own comment above warns exactly against inventing
                      one ad hoc: a colour override with no matching text-colour pairing renders invisibly). */
                   return `<button type="button" class="composebtn${on?'':' ghost'}" data-testid="prod-mod-preview-${gi}-${oi}" onclick="prodModPreviewPick(${gi},${oi})">`
-                    + `${on?'✓ ':''}${esc(o.name)}${o.price?' +'+esc(fmtMoney(o.price, typeof myCur==='function'?myCur():'INR')):''}</button>`;
+                    + `${on?'✓ ':''}${esc(o.name)}${o.price?' +'+esc(fmtMoney(o.price, moneyCode())):''}</button>`;
                 }).join('')
               + `</div></div>`;
           }).join('')
         + `<div style="padding:2px 0 8px;font-size:var(--fs-2)">${(()=>{
             const missing=CBVariant.missing(sellable, MODPREV);
-            const words=CBVariant.words(MODPREV, n=>fmtMoney(n, typeof myCur==='function'?myCur():'INR'));
+            const words=CBVariant.words(MODPREV, n=>fmtMoney(n, moneyCode()));
             return missing.length
               ? `<span style="color:var(--warn-3)">● ${esc(txf('Still needs: {g}', { g: missing.join(', ') }))}</span>`
               : `<b>${esc(tx('Ready to add')+(words?' — ':''))}</b>${words?esc(words):''}`;
@@ -13423,7 +13423,7 @@ function prodInvoiceModel(d, pos){
       const on=(typeof prodOffersOn==='function')?prodOffersOn(d):[];
       if(on.length&&typeof CBOffers!=='undefined'&&typeof cbOfferLine==='function'){
         const pid=UI.prodSel||d.item_id||d.id||''; const lines=[cbOfferLine(0, Object.assign({}, d, { item_id: pid }), qty)];
-        const ev=CBOffers.evaluate({ lines, offers:on.map(o=>o.rules), money:(n)=>fmtMoney(n, (typeof myCur==='function')?myCur():'INR') }); const per=(CBOffers.perLine(ev, lines)||{})['0']||{};
+        const ev=CBOffers.evaluate({ lines, offers:on.map(o=>o.rules), money:(n)=>fmtMoney(n, moneyCode()) }); const per=(CBOffers.perLine(ev, lines)||{})['0']||{};
         off=CBMoney.round(per.off||0); offLabel=per.label||'';
         (ev.adjustments||[]).forEach(function(a){ if(a.scope==='note'){ notes.push({ label:a.label, why:a.why||'' }); } else if(a.scope!=='line'&&Number(a.amount)){ orderAdj.push({ label:a.label, scope:a.scope, amount:Math.abs(Number(a.amount)), why:a.why||'' }); } });
       }
@@ -13439,7 +13439,7 @@ function prodInvoiceModel(d, pos){
     const seller={ State:S, RegType: prodRegType() }; if(!isGST){ delete seller.State; seller.Country=myC; }
     const buyerPos = pos==='other' ? (isGST?OTHER:OTHERC) : (isGST?S:myC);
     const item=CBTax.determine({ seller, buyer:(isGST?{ Pos:buyerPos }:{ Country:buyerPos }), lines:[line] }).ItemList[0]||{};
-    const me=UI._me||{}; const cur=(typeof myCur==='function')?myCur():'INR';
+    const me=UI._me||{}; const cur=moneyCode();
     const party=prodPartyEnsure();
     const their=(Array.isArray(d.xref)?d.xref:[]).find(x=>x&&x.role==='buyer'&&x.id);
     return { item, line, r, off, offLabel, orderAdj, orderOff, notes, cur, isGST, scheme, pos, om,
@@ -13561,7 +13561,7 @@ function prodHistoryTab(d, id){ const grey=function(x){ return '<span style="col
   if(hist===undefined||hist===null){ prodHistoryEnsure(id); return `<div class="sec">${tx('History')}</div><div style="padding:6px 12px;color:var(--grey)">${tx('reading the versions…')}</div>`; }
   if(!hist.length) return `<div class="sec">${tx('History')}</div><div data-testid="prod-history" style="padding:6px 12px;color:var(--grey)">${tx('No versions yet.')}</div>`;
   const F=[['name',tx('Name')],['variant',tx('Variant')],['unit',tx('Unit')],['price',tx('Price')],['sku',tx('SKU')],['status',tx('Status')]];
-  const show=(k,v)=>k==='price'?(v==null?'—':fmtMoney(cbAmount(v), (typeof myCur==='function')?myCur():'INR')):(v==null||v===''?'—':String(v));
+  const show=(k,v)=>k==='price'?(v==null?'—':fmtMoney(cbAmount(v), moneyCode())):(v==null||v===''?'—':String(v));
   const rows=hist.map((v,i)=>{ const prev=hist[i+1]; const diff=prev?F.filter(f=>String(show(f[0],v[f[0]]))!==String(show(f[0],prev[f[0]]))).map(f=>`<div><span style="color:var(--grey)">${esc(f[1])}</span> ${esc(show(f[0],prev[f[0]]))} → <b>${esc(show(f[0],v[f[0]]))}</b></div>`).join(''):`<div>${esc(tx('created'))}</div>`;
     return `<tr data-testid="prod-history-row"><td><b>v${esc(String(v.version_no))}</b></td><td>${esc(fmtDateTime(v.valid_from))}${v.valid_to?'<div style="color:var(--grey);font-size:var(--fs-1)">'+esc(tx('until')+' '+fmtDateTime(v.valid_to))+'</div>':' <span style="color:var(--blue);font-size:var(--fs-1)">'+esc(tx('current'))+'</span>'}</td><td>${diff||grey(tx('no change in the six fields'))}</td><td style="color:var(--grey)">${esc(prodWhoName(v))}</td></tr>`; }).join('');
   const src=(d._source&&(d._source.channel||d._source.kind))?`<div style="padding:6px 12px;font-size:var(--fs-2)">${esc(tx('Came in via'))} <b>${esc(d._source.channel||d._source.kind)}</b>${d._source.at?' · '+esc(fmtDateTime(d._source.at)):''}</div>`:'';
@@ -13840,7 +13840,7 @@ function prodTaxPreviewHTML(d,r){
     if(on.length&&typeof CBOffers!=='undefined'&&typeof cbOfferLine==='function'){
       const pid=UI.prodSel||d.item_id||d.id||'';
       const lines=[cbOfferLine(0, Object.assign({}, d, { item_id: pid }), 1)];
-      const ev=CBOffers.evaluate({ lines: lines, offers: on.map(o=>o.rules), money: (n)=>fmtMoney(n, myCur?myCur():'INR') });
+      const ev=CBOffers.evaluate({ lines: lines, offers: on.map(o=>o.rules), money: (n)=>fmtMoney(n, moneyCode()) });
       off=CBMoney.round(((CBOffers.perLine(ev, lines)||{})['0']||{}).off||0);
       offWhy=(ev.adjustments||[]).map(a=>a.label).join(' · ');
       offRows=(ev.adjustments||[]).map(a=>({ label:a.label, why:a.why||'', amount:(a.scope==='line'&&a.target!=null)?Math.abs(Number(a.amount)||0):null, scope:(typeof CBOffers.scopeLabel==='function')?CBOffers.scopeLabel({ kind:a.kind, scope:a.scope }):'' }));
@@ -14371,7 +14371,7 @@ function chitMarkPaid(id, amount){
   modal(`<div class="mhd"><div class="t">${esc(tx('Mark paid'))}</div><div class="s">${esc(tx('What you received, and the reference on it'))}</div></div><div class="mbody" style="display:grid;gap:8px">
     <select class="inp" id="pay_method" data-testid="pay-method">${payModeOpts()}<option value="cash">${esc(tx('Cash'))}</option><option value="card">${esc(tx('Card'))}</option><option value="bank">${esc(tx('Bank transfer'))}</option><option value="other">${esc(tx('Other'))}</option></select>
     <input class="inp" id="pay_ref" data-testid="pay-ref" placeholder="${esc(tx('UPI transaction id / reference'))}">
-    <span class="cbdef-adorn" style="display:flex;align-items:center;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--on-card);overflow:hidden"><b style="padding:0 10px;color:var(--grey-2);font-size:var(--fs-2)">${esc((typeof CBLocale!=='undefined'&&CBLocale.symbol)?CBLocale.symbol((SESSION&&SESSION.currency)||'INR'):'₹')}</b><input class="inp" id="pay_amount" data-testid="pay-amount" type="number" step="0.01" value="${esc(String(amount||''))}" placeholder="${esc(tx('Amount'))}" style="border:0;margin:0;flex:1;min-width:0;background:transparent"></span></div>
+    <span class="cbdef-adorn" style="display:flex;align-items:center;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--on-card);overflow:hidden"><b style="padding:0 10px;color:var(--grey-2);font-size:var(--fs-2)">${esc((typeof CBLocale!=='undefined'&&CBLocale.symbol&&moneyCode())?CBLocale.symbol(moneyCode()):'')}</b><input class="inp" id="pay_amount" data-testid="pay-amount" type="number" step="0.01" value="${esc(String(amount||''))}" placeholder="${esc(tx('Amount'))}" style="border:0;margin:0;flex:1;min-width:0;background:transparent"></span></div>
     <div class="mfoot"><button onclick="closeModal()">${esc(tx('Cancel'))}</button><button class="pri" id="mok" data-testid="pay-ok" onclick="chitPaySubmit('${id}')">${esc(tx('Record'))}</button></div>`);
 }
 /** what the Mark-paid sheet holds now: the method (UPI where the pack has it, else cash), the reference typed, the amount as a number */
@@ -14399,7 +14399,7 @@ async function chitShowQr(id, amount){
   /* the cached party may predate the id (a sync landed after the screen opened) — read once more when it has none */
   let upi=UI._party&&UI._party.upi_id; if(!upi){ try{ const p=await api('profileGet'); UI._party=(p&&p.invoice_party)||{}; upi=UI._party.upi_id; }catch(_){} }
   if(!upi){ modal(`<div class="mhd"><div class="t">${esc(tx('No UPI id on record'))}</div></div><div class="mbody">${esc(tx('Add your UPI id under Settings › Documents › Business identity (tag upi_id), or let the connector copy it from your system.'))}</div><div class="mfoot"><button onclick="closeModal()">${esc(tx('Close'))}</button></div>`); return; }
-  const link='upi://pay?pa='+encodeURIComponent(upi)+'&pn='+encodeURIComponent(String(SESSION.name||'').slice(0,60))+(amount?'&am='+encodeURIComponent(String(CBMoney.round(amount))):'')+'&cu=INR&tn='+encodeURIComponent('CB-'+String(id).slice(0,8));
+  const link='upi://pay?pa='+encodeURIComponent(upi)+'&pn='+encodeURIComponent(String(SESSION.name||'').slice(0,60))+(amount?'&am='+encodeURIComponent(String(CBMoney.round(amount))):'')+'&cu='+encodeURIComponent(moneyCode()||'')+'&tn='+encodeURIComponent('CB-'+String(id).slice(0,8));
   let img=''; try{ if(typeof qrcode==='function'){ const qr=qrcode(0,'M'); qr.addData(link); qr.make(); img=qr.createImgTag(5,8).replace('<img ','<img data-testid="chit-upi-qr" alt="UPI QR" '); } }catch(_){}
   modal(`<div class="mhd"><div class="t">${esc(tx('Pay by UPI'))}</div><div class="s">${esc(upi)}${amount?' · '+esc(inr(amount)):''} · CB-${esc(String(id).slice(0,8))}</div></div><div class="mbody" style="text-align:center">${img||esc(tx('QR library not loaded'))}<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">${esc(tx('Any UPI app scans this. Then Mark paid with the transaction id.'))}</div></div><div class="mfoot"><button onclick="closeModal()">${esc(tx('Close'))}</button></div>`);
 }
@@ -15171,7 +15171,7 @@ function billRowOf(c){
   var s=(c&&c.summary_json)||{}, b=s.bill_received;
   if(!b || !c || c.purpose!=='invoice') return null;
   var open=/^(pending|delivered|read)$/.test(String(c.current_status||'pending'));
-  return txf('Bill from {from}', { from: b.from || '—' }) + ' · ' + fmtMoney(b.total, s.currency_code || 'INR') + (open ? ' · ' + tx('to accept') : '');
+  return txf('Bill from {from}', { from: b.from || '—' }) + ' · ' + fmtMoney(b.total, s.currency_code) + (open ? ' · ' + tx('to accept') : '');
 }
 /** the change-status picker — a received bill's move is ACCEPTANCE, in its own words; a task keeps Open · Act · Close */
 function statusOptsFor(rows){
@@ -15206,7 +15206,7 @@ function mapApiChit(c){
      * their unsent chit was held by somebody else.
      */
     isDraft:(c.role==='Draft'),
-    kind:c.purpose||'order', amt:sum.total_value||0, currency:sum.currency_code||'INR', state:ST[c.current_status]||'open', _status:c.current_status||'pending',
+    kind:c.purpose||'order', amt:sum.total_value||0, currency:sum.currency_code, state:ST[c.current_status]||'open', _status:c.current_status||'pending',
     assignTo:c.assigned_to_actor_id||null, assignee:c.assigned_to_actor_display_name||null, recips:recips, folder:'task', dispute:Number(c.open_dispute_count||0)>0, dispOpen:Number(c.open_dispute_count||0), dispResolved:Number(c.resolved_dispute_count||0),
     /* ⭐ b195 — SOMEBODY HAS ASKED ME TO CANCEL THIS. Absent until the migration runs, and absent forever on
        the sender's own copy: the route stamps every participant EXCEPT the one who withdrew. */
@@ -15759,7 +15759,7 @@ function selBar(){const ids=UI.selected;const all=`<button onclick="selectAllRow
    * currency belonging to neither. `lib/money.js` THROWS on mixed currencies and cap-folders' own group sum
    * renders them side by side for exactly this reason; this one call site had never been told.
    *
-   * ⚠️ The rows carry their currency already (see the mapper: `currency: sum.currency_code || 'INR'`), so
+   * ⚠️ The rows carry their currency already (see the mapper: `currency: sum.currency_code`), so
    * nothing new had to be fetched — the information was there and was being discarded one line before use.
    */
   const sumBy=cbSumByCurrency(UI.rows.filter(c=>ids.has(c.id)),'amt','currency');const rb=rollupBuckets();/* ⚠️ THE ROLLUP BRANCH STAYS A SINGLE NUMBER — the server groups by STATE, not by currency, so there is no
@@ -15857,7 +15857,7 @@ function chitDesign(c){
    a draft says so; an issued bill shows an error. Never a number worked out from the lines. */
 function frozenMoney(c){
   const bj=(c.business_json||(c.header&&c.header.business_json))||null;
-  try{ return (window.CBSheet&&CBSheet.moneyFor)?CBSheet.moneyFor(bj,c.summary_money||null,c.currency||'INR'):null; }catch(_){ return null; }
+  try{ return (window.CBSheet&&CBSheet.moneyFor)?CBSheet.moneyFor(bj,c.summary_money||null,c.currency):null; }catch(_){ return null; }
 }
 /* ⭐ OLDER BILLS ARE A KNOWN ERROR, NEWER ONES FOLLOW THE RULE (Athi, 2026-10-02: "if the older chits which were computing the value,
    just say as a known error but the newer chits will follow the rule"). Before api #3 went live (one computation at billing,
@@ -15873,7 +15873,7 @@ function frozenMoneyHTML(c,wrapTid,totalTid,bare){
     return older?`<div class="ir" data-testid="chit-money-known" style="margin:8px 12px 10px;color:var(--grey)">${tx('Known error: an older bill — its figures were not stored when it was made')}</div>`
       :`<div class="err" data-testid="chit-money-error" style="margin:8px 12px 10px">${tx('No issued figures for this bill')}</div>`;
   }
-  const html=CBSheet.moneyBlockHTML({money:FM,cur:c.currency||'INR',bj:(c.business_json||(c.header&&c.header.business_json))||{}},totalTid);
+  const html=CBSheet.moneyBlockHTML({money:FM,cur:c.currency,bj:(c.business_json||(c.header&&c.header.business_json))||{}},totalTid);
   return wrapTid?`<div data-testid="${wrapTid}" style="margin:8px 12px 10px">${html}</div>`:html;
 }
 async function openChit(id, silent){
@@ -17502,9 +17502,9 @@ function contentItems(c){
     return { item_id:'l'+x.idx, item_data:{ name:li.particulars||x.it[0]||'Item', unit:li.unit||'unit', price:isFinite(p)?p:null, code:li.sku||li.code||null, hsn:li.hsn||null,
       description:(x.it[4]&&x.it[4].desc)||null, deal_recorded:(unit!=null?{ unit, off, label:(li.offer&&li.offer.label)||'offer', promise:(li.offer&&li.offer.promise)||null, parts:(li.offer&&Array.isArray(li.offer.parts))?li.offer.parts:null }:null) },
       tax:(li.gst_rate!=null?{ rate:Number(li.gst_rate), name:li.tax_name||'GST' }:null) }; });
-  const cat={ shop:{ bridge_id:'chit', currency_code:c.currency||'INR' }, offers:[], items };
+  const cat={ shop:{ bridge_id:'chit', currency_code:c.currency }, offers:[], items };
   if(UI._chitCart){ try{ UI._chitCart.destroy(); }catch(_){} }
-  UI._chitCart=CBCart.create(cat, { renderer:CBCatUI, listEl:'chit_lines_none', barEl:'chit_bar_none', barHideEmpty:true, currency:c.currency||'INR' });
+  UI._chitCart=CBCart.create(cat, { renderer:CBCatUI, listEl:'chit_lines_none', barEl:'chit_bar_none', barHideEmpty:true, currency:c.currency });
   ents.forEach(x=>{ const q=Number(x.li.quantity)||0; if(q>0) UI._chitCart.setQty('l'+x.idx, q); });
   try{ CBCatUI.ensureCss(); }catch(_){}
   return '<div class="plist">'+ents.map(x=>{

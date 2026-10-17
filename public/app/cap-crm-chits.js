@@ -7,6 +7,10 @@
  * Nothing is computed here: the reason a chit is stuck is the server's sentence. A stuck row names its fix by opening the sheet,
  * whose action row offers only what this chit allows (accept · answer · close · cancel).
  * Route: CB CRM  #/chits?tab=stuck|in|out. Needs from cap-crm.js: CRM · crmNav · crmBar · crmGo · esc · tx · api · crmErrWords. */
+/* OWNS the chits behind the Home rail: In, Out, Stuck
+ * CALLED BY crm.html (the Home rail opens it)
+ * FLOW GET /api/facts/rail/chits -> the list -> each value through fmtMoney in the row's own currency
+ * CARD 03-crm-and-parties/home-rail-chits */
 'use strict';
 
 var CHITS = { items: [], state: 'loading', err: null, truncated: false, days: 7, api: null, gen: 0 };
@@ -16,7 +20,7 @@ function chitsWhen(iso) { try { return (CBLocale.date(iso, { day: '2-digit', mon
 function chitsAge(c) { var d = Math.floor(Number(c.age_days) || 0); return d <= 0 ? tx('Today') : d + ' ' + tx('d'); }
 function chitsMoney(c) {
   if (c.value == null) return '';
-  try { return esc(fmtMoney(Number(c.value), c.currency || 'INR')); } catch (_) { return esc(String(c.value)); }
+  try { return esc(fmtMoney(Number(c.value), c.currency)); } catch (_) { return esc(String(c.value)); }
 }
 function chitsWho(c) { return (c.tab === 'in' ? tx('From') : tx('To')) + ' ' + (c.self ? tx('your own shop') : (c.who || tx('a business'))); }
 /** the chit's mini-card (same shape as a party's): the chit · the amount · why it is stuck and what to do; then Open chit */

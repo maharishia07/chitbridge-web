@@ -54,12 +54,12 @@ function packWord(kind, cc){
 }
 /** the pack's own word for a tax id: GSTIN · ABN · TRN — "Tax number" with no pack. The till reads the server's (snapshot shop.tax_id_word), never a copy */
 function taxIdWord(cc){ return packWord('taxId', cc); }
-/** does the shop's tax turn on the STATE (India's CGST/SGST · IGST, pack.tax.supply 'state')? false under a border pack (Australia, the UAE); true when no pack is known */
-function packSplitsByState(cc){ var p = shopReg(cc); return !p || !p.tax || !p.tax.supply || p.tax.supply === 'state'; }
-/** UPI is India's payment mode (reg-in chart.paymentModes.upi) — offered only where the shop's pack carries it; true when no pack is known */
-function payHasUpi(){ var p = shopReg(); return !p || !!(p.chart && p.chart.paymentModes && p.chart.paymentModes.upi); }
-/** does the shop's pack carry India's HSN rule (reg-in tax.hsn_digits)? CX4: the "HSN" words, the exposure switch and the Rule 46 note follow it; true when no pack is known */
-function packHasHsn(){ var p = shopReg(); return !p || !p.tax || !!p.tax.hsn_digits; }
+/** does the shop's tax turn on the STATE (India's CGST/SGST · IGST, pack.tax.supply 'state')? false under a border pack (Australia, the UAE); N2: false too when no pack is known (neutral, never India) */
+function packSplitsByState(cc){ var p = shopReg(cc); return !!p && (!p.tax || !p.tax.supply || p.tax.supply === 'state'); }
+/** UPI is India's payment mode (reg-in chart.paymentModes.upi) — offered only where the shop's pack carries it; N2: false when no pack is known */
+function payHasUpi(){ var p = shopReg(); return !!(p && p.chart && p.chart.paymentModes && p.chart.paymentModes.upi); }
+/** does the shop's pack carry India's HSN rule (reg-in tax.hsn_digits)? CX4: the "HSN" words, the exposure switch and the Rule 46 note follow it; N2: false when no pack is known */
+function packHasHsn(){ var p = shopReg(); return !!p && (!p.tax || !!p.tax.hsn_digits); }
 function payModeOpts(){ return payHasUpi() ? '<option value="upi">UPI</option>' : ''; }
 
 /**
@@ -84,7 +84,7 @@ function cbSumByCurrency(rows, amtKey, curKey){
   (rows || []).forEach(function(r){
     var v = Number((r || {})[amtKey || 'amt'] || 0);
     if (!v) return;
-    var c = ((r || {})[curKey || 'currency']) || (typeof myCur === 'function' ? myCur() : 'INR');
+    var c = ((r || {})[curKey || 'currency']) || moneyCode() || '';
     by[c] = (by[c] || 0) + v;
   });
   /* ⚠️ ORDERED BIGGEST FIRST, so the figure a reader is most likely to want is the one they read first. */
@@ -152,12 +152,26 @@ function loader(label){ return '<div style="padding:40px 16px;text-align:center;
 /* ONE money formatter, and it now asks the localisation layer. See the note above CCY_LOCALE's removal. */
 /* T2-WEBPRIMS (widened, additive): `empty` — what a MISSING amount reads as ('' · '—'); left out, a missing amount formats as zero, as before.
    A page without the locale engine (a lab, a kit page) still gets the currency's own format from Intl — never a hard-coded ₹. */
+/** N1 (NEUTRAL-CORE, 2026-10-17): THE ONE "WHICH MONEY" READER - a row's own 3-letter code, else the shop's (myCur), else null. Never a currency by name; null prints the bare amount (fmtMoney) */
+function moneyCode(code){
+  var ownCode = String(code == null ? '' : code).trim().toUpperCase();
+  if (/^[A-Z]{3}$/.test(ownCode)) return ownCode;
+  var shop = typeof myCur === 'function' ? myCur() : null;
+  return shop ? String(shop).toUpperCase() : null;
+}
+/** an amount with no currency: two decimals, plain grouping, no symbol (N1: an unstated shop is not India's) */
+function bareAmount(amount){
+  var figure = (typeof CBMoney !== 'undefined' && CBMoney.amountOfLoose) ? CBMoney.amountOfLoose(amount) : Number(amount);
+  return (isFinite(figure) ? figure : 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
 function fmtMoney(amount,code,empty){
   if (empty !== undefined && (amount == null || amount === '' || (typeof amount !== 'object' && !isFinite(Number(amount))))) return empty;
-  if (typeof CBLocale !== 'undefined' && CBLocale.money) return CBLocale.money(amount, code);
+  var given = String(code == null ? '' : code).trim(), shown = given ? code : moneyCode();
+  if (!shown) return bareAmount(amount);   /* N1: no money stated anywhere -> the amount alone, no symbol, no lakh grouping */
+  if (typeof CBLocale !== 'undefined' && CBLocale.money) return CBLocale.money(amount, shown);
   var n = Number(amount) || 0;
-  try { return new Intl.NumberFormat(undefined, { style: 'currency', currency: code || 'INR' }).format(n); }
-  catch (e) { return (code ? code + ' ' : '') + n.toFixed(2); }   /* a code Intl does not know: the code and the figure, never a guessed symbol */
+  try { return new Intl.NumberFormat(undefined, { style: 'currency', currency: shown }).format(n); }
+  catch (e) { return shown + ' ' + n.toFixed(2); }   /* a code Intl does not know: the code and the figure, never a guessed symbol */
 }
 /* ⭐ T2-WEBPRIMS: THE TWELVE MONTH WORDS in the reader's language (CBLocale's own date words) — 'short' Jan… · 'long' January…. Three files typed
    their own English Jan…Dec; a list built here follows the reader. Index 0 = January; a fiscal year rotates it at the caller. */

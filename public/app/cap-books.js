@@ -9,6 +9,10 @@
  * ⭐ The two panels Athi named are the way in for parties (Customers / Suppliers): partyBooksHTML and
  * partyDueChipHTML are called from app.html's own row and detail painters, only once this file has loaded.
  */
+/* OWNS the Ledger screens (parties, statements, day book, reports, month lock, packs) and the books money helpers bkMoney / bkCur / bkYearStart
+ * CALLED BY accounts.html, app.html, crm.html, finance.html, tasks.html (ensureCap('books') or a script tag); cap-finance*.js and cap-crm*.js use its bkMoney
+ * FLOW ensureCap('books') -> BK from GET /health (currency, year) -> each tab paints the server's figures -> money through bkMoney -> fmtMoney (no money stated: the bare amount)
+ * CARD 16-finance/cb-finance */
 'use strict';
 if (typeof EP !== 'undefined') { Object.assign(EP, {
   booksAccounts:   { m: 'GET',  p: '/api/books/accounts' },
@@ -139,11 +143,11 @@ function bkCss() {
 bkCss();
 
 /* ── money and dates: through the engines, never by hand ── */
-function bkCur(c) { return c || (typeof SESSION !== 'undefined' && SESSION.currency) || (typeof BK !== 'undefined' && BK.cur) || ((typeof shopReg === 'function' && shopReg()) || {}).currency || 'INR'; }   /* the ledger's own money (BK.cur, GET /health — WX-R2R), else the PACK's (CX0); INR only when no country is known */
+function bkCur(c) { return c || (typeof SESSION !== 'undefined' && SESSION.currency) || (typeof BK !== 'undefined' && BK.cur) || ((typeof shopReg === 'function' && shopReg()) || {}).currency; }   /* N1: none known -> undefined, never INR. the ledger's own money (BK.cur, GET /health — WX-R2R), else the PACK's (CX0); INR only when no country is known */
 function bkDec(c) { try { return CBMoney.decimals(bkCur(c)); } catch (_) { return 2; } }
 function bkMoney(minor, c) {
   var n = Number(minor || 0) / Math.pow(10, bkDec(c));
-  try { return CBLocale.money(n, bkCur(c)); } catch (_) { return n.toFixed(bkDec(c)); }
+  try { return fmtMoney(n, bkCur(c)); } catch (_) { return n.toFixed(bkDec(c)); }
 }
 /** a balance the way a ledger writes it: the amount, then Dr or Cr — never a minus sign (the server's figure is Dr − Cr) */
 function bkDrCr(v, c) { v = Number(v || 0); return bkMoney(Math.abs(v), c) + (v ? ' ' + tx(v > 0 ? 'Dr' : 'Cr') : ''); }
@@ -169,9 +173,11 @@ function bkMoneyClamp(el) {
   if (d === 0) t = t.replace(/\./g, '');
   if (t !== el.value) el.value = t;
 }
+/** the currency's symbol for an input; none stated -> no symbol (N1) */
+function bkSymbol(code) { try { return code ? CBLocale.symbol(code) : ''; } catch (_) { return code || ''; } }
 function bkMoneyInput(o) {
   var c = bkCur(o.cur), tid = o.tid || o.id, v = o.text != null ? o.text : (o.minor != null && o.minor !== '' ? bkMinorText(o.minor, c) : '');
-  var sym = ''; try { sym = CBLocale.symbol(c); } catch (_) { sym = c; }
+  var sym = bkSymbol(c);
   return '<span class="mi"' + (o.w ? ' style="width:' + o.w + '"' : '') + '><span class="mi-sym" aria-hidden="true">' + esc(sym) + '</span>'
     + '<input class="mi-in" id="' + o.id + '" data-testid="' + esc(tid) + '" data-money="1" data-cur="' + esc(c) + '" inputmode="decimal" autocomplete="off" placeholder="' + esc(o.ph != null ? o.ph : bkMinorText(0, c)) + '"'
     + ' value="' + esc(v) + '" oninput="bkMoneyClamp(this);' + (o.on || '') + '"' + (o.extra ? ' ' + o.extra : '') + '></span>';
@@ -1841,7 +1847,8 @@ async function bkDues(body, onlySide) {   /* onlySide 'rcv' | 'pay' (CB Accounts
  * helpers.js); the name is the pack's (split '2026-27' · single '2026'). Period 1 is that first month — what the server numbers.
  */
 function bkFyPack() { return typeof shopReg === 'function' ? shopReg() : null; }
-function bkYearStart() { var r = bkFyPack(), m = Number(BK.year && BK.year.start_month) || (r && r.fiscalYear && r.fiscalYear.startMonth) || 4; return m >= 1 && m <= 12 ? m : 4; }
+/* N4 (NEUTRAL-CORE): the month the shop's year starts - the books setting (BK.year.start_month), else its pack's; no April of our own. Before either has arrived (the books open only after the server's gate) the calendar year (1) stands in, as a shape not a statement */
+function bkYearStart() { var r = bkFyPack(), m = Number(BK.year && BK.year.start_month) || (r && r.fiscalYear && r.fiscalYear.startMonth); return m >= 1 && m <= 12 ? m : 1; }
 function bkFyStartYear(d) { return d.getMonth() + 1 >= bkYearStart() ? d.getFullYear() : d.getFullYear() - 1; }
 function bkFyName(y) { var r = bkFyPack(), single = r && r.fiscalYear && r.fiscalYear.label ? r.fiscalYear.label === 'single' : bkYearStart() === 1; return single ? String(y) : y + '-' + String((y + 1) % 100).padStart(2, '0'); }
 function bkFyNow() { return (BK.year && BK.year.fiscal_year) ? String(BK.year.fiscal_year) : bkFyName(bkFyStartYear(new Date())); }

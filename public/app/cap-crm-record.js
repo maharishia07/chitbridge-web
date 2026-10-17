@@ -372,7 +372,7 @@ async function crmTermsFill(pid, side) {
   var el = document.getElementById('crm_terms'); if (!el) return;
   var r; try { r = await api('booksTerms', { query: { party_id: pid, side: side } }); } catch (_) { return; }   /* ledger off / no read → the record says nothing more */
   el = document.getElementById('crm_terms'); if (!el || !(CRM.route && CRM.route.view === 'party')) return;
-  var cur = (CRMR.p && CRMR.p.currency) || 'INR', eff = r.party && r.party.effective, from = function (x) { return x && x.from === 'shop' ? ' <span class="hint">' + esc(tx('Shop default')) + '</span>' : ''; };
+  var cur = (CRMR.p && CRMR.p.currency), eff = r.party && r.party.effective, from = function (x) { return x && x.from === 'shop' ? ' <span class="hint">' + esc(tx('Shop default')) + '</span>' : ''; };
   var rows = '';
   if (eff) {
     rows = (eff.credit_days.value != null ? crmKV('Credit days', esc(String(eff.credit_days.value)) + from(eff.credit_days)) : '')

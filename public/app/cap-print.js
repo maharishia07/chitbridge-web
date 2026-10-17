@@ -249,7 +249,7 @@ var CBPrint = (function () {
       rates: rates ? Array.prototype.slice.call(rates) : null, id_word: taxIdWord(country) };
   }
   /** the bill's currency for the sample: the shop's, else the pack's, else INR */
-  function previewCurrency(shop, pack) { return shop.currency_code || (pack && pack.currency) || 'INR'; }
+  function previewCurrency(shop, pack) { return shop.currency_code || (pack && pack.currency); }
   /** the renderer's message: the head lines in order, the footer, the paper, the pack's tax words and rate — bill-print.html paints the rest */
   /** the one message: head lines, footer (only when ticked — R25), paper, kind, currency, the pack's tax words, the country and the raw tax id
       (the renderer names India's state from it) */

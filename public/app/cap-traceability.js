@@ -3,6 +3,10 @@
  * ₹-saved number in seconds; start from any node → walk BACKWARD → provenance to source in N hops.
  * Operator lens (TR-6): topology + product only — commercial terms stay per-party, so a rival's deal price is
  * never shown here. Backend: routes/chits.js  GET /api/chits/:id/trace?dir=forward|backward. Self-registers its EP. */
+/* OWNS the traceability screens (batch, lot, trail)
+ * CALLED BY app.html (ensureCap('traceability'))
+ * FLOW read the trail -> _traceRs paints amounts through fmtMoney in the row's currency, else the shop's
+ * CARD 10-operations/traceability */
 if (typeof EP !== 'undefined') {
   Object.assign(EP, {
     traceWalk:    { m:'GET', p:'/api/chits/:id/trace', ok:'y' },
@@ -16,7 +20,7 @@ function _traceNum(v, d){ v = parseInt(v, 10); return (isFinite(v) && v >= 0) ? 
    priced in, and Indian grouping for every reader. A currency symbol is not decoration; printing ₹ on a
    dirham amount states something false about the money. Currency now comes from the value; format from the
    reader. ⚠️ The INR default preserves today's behaviour where a caller passes no currency. */
-function _traceRs(v, ccy){ return CBLocale.money(v || 0, ccy || (typeof myCur === 'function' ? myCur() : 'INR')); }   /* CX0: the SHOP's currency when the caller passes none */
+function _traceRs(v, ccy){ return fmtMoney(v || 0, ccy || moneyCode()); }   /* CX0: the SHOP's currency when the caller passes none */
 function _traceSym(){ try { return typeof curSym === 'function' ? curSym() : '₹'; } catch (_) { return '₹'; } }
 function _traceShort(id){ id = String(id||''); return id.length > 8 ? '…' + id.slice(-6) : id; }
 
