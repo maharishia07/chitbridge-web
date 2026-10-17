@@ -243,7 +243,8 @@
     '@media(max-width:700px){',
     /* 390: the app switcher opens inside the screen (e2e/shell.cjs: its right edge was at 440 of 390) */
     '.cbsh-swpop{position:fixed;left:16px;right:16px;top:52px;min-width:0}',
-    '.cbsh-box,.cbsh-sec.labs .cbsh-box,.cbsh-sec.setup .cbsh-box{height:auto}.cbsh-box .facts{height:auto}.cbsh-box .more{position:static;display:flex;border:0;box-shadow:none;padding:0;background:none}.cbsh-box .more-n,.cbsh-box .facts>.f:first-child:not(:only-child){display:none}',
+    /* the tile's own line is hidden where .more lists every line: the status badge is the first child now, so :has(+.more-n) finds it */
+    '.cbsh-box,.cbsh-sec.labs .cbsh-box,.cbsh-sec.setup .cbsh-box{height:auto}.cbsh-box .facts{height:auto}.cbsh-box .more{position:static;display:flex;border:0;box-shadow:none;padding:0;background:none}.cbsh-box .more-n,.cbsh-box .facts>.f:first-child:not(:only-child),.cbsh-box .facts>.f:has(+.more-n){display:none}',
     '.cbsh{--sh-bar:52px}.cbsh-bar{padding:0 13px;gap:6px;container-type:inline-size}.cbsh-who{padding:4px 4px;margin-left:-4px;flex:1 1 auto}.cbsh-who b{font-size:14px}',   /* a pane keeps its 55px on a phone too: its line meets the sidebar's brand row (frame-every-width rule f) */
     /* INT7b-GREEN: a 390 px bar held 405 px (mark · shop · switcher · chip · bell · ⌂ · avatar, 9 px gaps) and cut the shop's name to 55 px. The name takes the slack
        (the spacer gives way to it) at 14 px; a bar narrower than its need (a pane beside the sidebar, ~326 px) shows the whole name or none — never "F…" (the button's aria-label still says it) */
