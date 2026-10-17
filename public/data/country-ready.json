@@ -2,7 +2,7 @@
  "source": "scripts/country-ready.cjs — public/data/country-matrix.json (engines 1.45.0) × docs/design/standards/COUNTRY-COVERAGE.md §1; never edit by hand",
  "engines": "1.45.0",
  "coverage": {
-  "sha": "2412914ee43982ef"
+  "sha": "3285629301a7daa6"
  },
  "countries": {
   "IN": {
