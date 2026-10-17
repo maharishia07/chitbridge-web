@@ -403,7 +403,10 @@ const navFolded = () => { try { return JSON.parse(localStorage.getItem('cb_acc_n
 /** the period-end item says the shop's own tax (its pack's words, else the scheme): "GST close & pay" in India, "Consumption tax close & pay" in Japan */
 function taxCloseWord(){
   const pack = typeof shopReg === 'function' ? shopReg() : null, word = pack && ((pack.words && pack.words.taxName) || (pack.tax && pack.tax.scheme));
-  const item = NAV.find((entry) => entry[0] === 'gstclose'); if (item && word) item[1] = word + ' close & pay';
+  /* the return's own name wins once the server has answered one (BAS, VAT return — cap-period.js peReturnWord): the specific over the general,
+     or this repaint would put "GST close & pay" back over an Australian shop's BAS */
+  const ret = typeof PE_RET !== 'undefined' ? PE_RET.word || '' : '';
+  const item = NAV.find((entry) => entry[0] === 'gstclose'); if (item && (ret || word)) item[1] = ret || (word + ' close & pay');
 }
 function navPaint(active){
   taxCloseWord();   /* the menu names the shop's own tax: GST · VAT · Consumption tax close & pay ("Tax close & pay" when no pack is known) */

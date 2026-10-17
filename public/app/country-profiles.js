@@ -373,7 +373,7 @@
   }
   /** the overlay for one long cell: rule · country, every item on its own line */
   function openMore(ruleKey, code) {
-    var rule = (ALL.table.rules || []).filter(function (r) { return r.key === ruleKey; })[0]; if (!rule) return;
+    var rule = (ALL.table.rules || []).filter(function (candidate) { return candidate.key === ruleKey; })[0]; if (!rule) return;
     var box = overlay(false), items = listItems(rule.values[code]);
     box.innerHTML = '<div class="cp-head"><div><h2>' + safe(rule.name) + ' · ' + safe(nameOf('region', code)) + '</h2><div class="hint">' + items.length + ' items</div></div>'
       + '<button class="btn x" type="button" data-more-close="1" style="margin-left:auto" aria-label="Close">✕</button></div>'

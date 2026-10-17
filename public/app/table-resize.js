@@ -1,5 +1,11 @@
 /* app/table-resize.js — drag a column edge; the width is yours and it is remembered.
  *
+ * OWNS      the column grip on any <table>: drag to a width, double-click to reset, widths in localStorage (cb.colw) keyed by the headings;
+ *           the grip's own CSS (injected once, #cb-colgrip-css).
+ * CALLED BY testing.html (the test board) · app/country-profiles.js (Country Lab, All countries) — tblResizable(root) after every paint.
+ * FLOW      tblResizable(root) → tblStyle() once → for each table: re-apply remembered widths → wire a grip per heading (idempotent)
+ * CARD      29-qa-test-tooling-ux-locale-and-design-system/table-resize
+ *
  * ── ⭐⭐ WHY ─────────────────────────────────────────────────────────────────────────────────────────────────
  *
  * Athi, 2026-09-12: *"provide an adjustable column, so people can adjust if it is not fit. Still the column
@@ -58,12 +64,12 @@ function tblKey(table) {
  */
 function tblStyle() {
   if (document.getElementById('cb-colgrip-css')) return;
-  var s = document.createElement('style'); s.id = 'cb-colgrip-css';
-  s.textContent = '.colgrip{ position:absolute; inset-block:5px; inset-inline-end:0; width:9px; cursor:col-resize; z-index:3; background:transparent; }'
+  var sheet = document.createElement('style'); sheet.id = 'cb-colgrip-css';
+  sheet.textContent = '.colgrip{ position:absolute; inset-block:5px; inset-inline-end:0; width:9px; cursor:col-resize; z-index:3; background:transparent; }'
     + '.colgrip::before{ content:""; position:absolute; inset-block:0; inset-inline-end:4px; width:1px; background:var(--line); }'
     + '.colgrip:hover::before{ inset-block:-5px; width:3px; inset-inline-end:3px; background:var(--blue); border-radius:2px; }'
     + 'th:last-child .colgrip::before{ display:none; }';
-  document.head.appendChild(s);
+  document.head.appendChild(sheet);
 }
 
 /**
