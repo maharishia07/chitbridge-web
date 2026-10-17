@@ -426,6 +426,12 @@ function csuLinksHTML(e) {
     /* W28(c): "Where ChitBridge is for <country>" is NOT a setup row — it lives under Standards › Country readiness (the same CBCountryReady unit); one link from here */
     + (e.country ? ' · <a href="/standards.html?std=country&ready=' + esc(e.country) + '" data-testid="cs-ready-link" style="font-weight:600;color:var(--blue);cursor:pointer">' + esc(txf('ChitBridge in {c}', { c: csuCountryName(e.country) })) + ' ›</a>' : '') + '</div>';
 }
+/** N0 (Athi, 2026-10-17): a shop b299 filled in as India works, but says so once — one tap to confirm, or change a row below */
+function csuAssumedHTML(e, answer) {
+  if (!(answer && answer.assumed) || CSU.touched || CSU.later) return '';
+  return '<div class="hint" data-testid="cs-assumed" style="color:var(--warn-2)">' + esc(txf('Country: {c} (assumed) — confirm or change', { c: csuCountryName(e.country) }))
+    + ' <button class="btn" data-testid="cs-confirm" onclick="csuSave()">' + esc(tx('Confirm')) + '</button></div>';
+}
 /** the step's body once read: the rows, the pack's refusal or the read failure if any, the one action, the rule, the links */
 function csuBodyHTML(e, answer) {
   var fixed = csuConstituted(), noPack = answer && answer.pack && answer.pack.books === false && answer.pack.why;
@@ -435,7 +441,7 @@ function csuBodyHTML(e, answer) {
     ? '<button class="btn" id="cs-open" data-testid="cs-open" onclick="csuDone()">' + esc(tx(CSU.host ? 'Done' : 'Open the app')) + ' <span class=arw>→</span></button>'
     : '<button class="btn" id="cs-save" data-testid="cs-save">' + esc(first ? tx('Save & continue') : tx('Save')) + (first ? ' <span class=arw>→</span>' : '') + '</button>'
       + (CSU.saved ? ' <span data-testid="cs-saved" role="status" style="color:var(--ok-2,#1d7a3a);font-weight:600;margin-inline-start:8px">' + esc(tx('Saved ✓')) + '</span>' : '');
-  return '<div class="body">'
+  return '<div class="body">' + csuAssumedHTML(e, answer)
     + '<div class="govbox" data-testid="cs-rows">' + csuRowsHTML(e, CSU.src, fixed) + '</div>'
     + (noPack ? '<div class="hint" data-testid="cs-nopack" style="color:var(--warn-2)">' + esc(answer.pack.why) + '</div>' : '')
     + (CSU.readErr ? '<div class="hint" data-testid="cs-readerr">' + esc(tx('Saved values not read — showing this device’s.')) + '</div>' : '')
