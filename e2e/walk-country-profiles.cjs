@@ -80,8 +80,10 @@ const walk = async (w) => {
       const y0 = await page.evaluate(() => document.querySelector('[data-testid="cp-all-table"]').getBoundingClientRect().top);
       await page.click(sel); await page.waitForSelector('dialog.cp-more[open] .cp-chartslot .cp-chart', { timeout: 5000 }); const txt = await page.locator('dialog.cp-more .cp-chartslot').innerText();
       const y1 = await page.evaluate(() => document.querySelector('[data-testid="cp-all-table"]').getBoundingClientRect().top);
+      /* the overlay's title bar is frozen: scrolled to its end, the title is still at its top (Athi, 2026-10-17: "header has to freeze … always the rule") */
+      const frozen = await page.evaluate(() => { const d = document.querySelector('dialog.cp-more'), h = d.querySelector('.cp-head'); d.scrollTop = d.scrollHeight; return Math.abs(h.getBoundingClientRect().top - d.getBoundingClientRect().top) <= 2; });
       await page.keyboard.press('Escape'); const shut = await page.evaluate(() => !document.querySelector('dialog.cp-more').open);
-      if (txt.length < 30 || /error:/.test(txt) || Math.abs(y1 - y0) > 1 || !shut) out.push(c.id + ' ' + k + ' ✗' + (Math.abs(y1 - y0) > 1 ? ' (table moved ' + Math.round(y1 - y0) + 'px)' : '') + (shut ? '' : ' (did not close)'));
+      if (txt.length < 30 || /error:/.test(txt) || Math.abs(y1 - y0) > 1 || !shut || !frozen) out.push(c.id + ' ' + k + ' ✗' + (Math.abs(y1 - y0) > 1 ? ' (table moved ' + Math.round(y1 - y0) + 'px)' : '') + (shut ? '' : ' (did not close)') + (frozen ? '' : ' (title scrolled away)'));
     }
     const bad = out.filter((x) => /✗/.test(x));
     return { ok: !bad.length, saw: (all.length * 5 - out.length) + ' panels opened' + (out.length ? ' · ' + out.join(', ') : '') };
