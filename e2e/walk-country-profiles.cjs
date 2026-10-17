@@ -75,8 +75,13 @@ const walk = async (w) => {
     const out = [];
     for (const c of all) for (const k of ['chart', 'return', 'statements', 'invoice', 'kinds']) {
       const sel = '[data-testid="cp-open-' + k + '-' + c.id + '"]'; if (!(await page.locator(sel).count())) { out.push(c.id + ' ' + k + ' (no cell)'); continue; }
-      await page.click(sel); await page.waitForSelector('.cp-chartslot .cp-chart', { timeout: 5000 }); const txt = await page.locator('.cp-chartslot').innerText();
-      if (txt.length < 30 || /error:/.test(txt)) out.push(c.id + ' ' + k + ' ✗');
+      /* it opens in the overlay, over the table — the table does not move (Athi, 2026-10-17) — and Esc closes it */
+      await page.locator(sel).first().scrollIntoViewIfNeeded();   /* the click's own scroll-into-view is not the overlay moving the table */
+      const y0 = await page.evaluate(() => document.querySelector('[data-testid="cp-all-table"]').getBoundingClientRect().top);
+      await page.click(sel); await page.waitForSelector('dialog.cp-more[open] .cp-chartslot .cp-chart', { timeout: 5000 }); const txt = await page.locator('dialog.cp-more .cp-chartslot').innerText();
+      const y1 = await page.evaluate(() => document.querySelector('[data-testid="cp-all-table"]').getBoundingClientRect().top);
+      await page.keyboard.press('Escape'); const shut = await page.evaluate(() => !document.querySelector('dialog.cp-more').open);
+      if (txt.length < 30 || /error:/.test(txt) || Math.abs(y1 - y0) > 1 || !shut) out.push(c.id + ' ' + k + ' ✗' + (Math.abs(y1 - y0) > 1 ? ' (table moved ' + Math.round(y1 - y0) + 'px)' : '') + (shut ? '' : ' (did not close)'));
     }
     const bad = out.filter((x) => /✗/.test(x));
     return { ok: !bad.length, saw: (all.length * 5 - out.length) + ' panels opened' + (out.length ? ' · ' + out.join(', ') : '') };

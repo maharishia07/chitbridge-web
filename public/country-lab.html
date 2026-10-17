@@ -190,6 +190,8 @@
   .cp-all .cp-rule{ box-shadow:inset -2px 0 0 var(--line,#e7e3d8), 6px 0 8px -6px rgba(0,0,0,.25); }
   .cp-all thead .cp-rule{ box-shadow:inset -2px -2px 0 var(--line,#e7e3d8), 6px 0 8px -6px rgba(0,0,0,.25); }
   dialog.cp-more{ border:1px solid var(--line,#e7e3d8); border-radius:10px; background:var(--card,#fff); color:var(--ink,#1d2125); padding:14px 18px; width:min(520px, calc(100vw - 32px)); max-height:min(70vh, 640px); }
+  dialog.cp-more.wide{ width:min(980px, calc(100vw - 32px)); max-height:85vh; }   /* a panel (chart, return, statements, invoice, kinds) */
+  dialog.cp-more .cp-chart{ margin:0; border:0; padding:0; background:none; }   /* the dialog is the frame */
   dialog.cp-more::backdrop{ background:rgba(0,0,0,.35); }
   .cp-morelist{ margin:10px 0 0; padding-left:22px; font-size:var(--fs-2,12.5px); columns:2 200px; column-gap:24px; } .cp-morelist li{ break-inside:avoid; padding:2px 0; }
   .cp-cname{ display:block; white-space:normal; font-weight:400; font-size:var(--fs-1,11px); color:var(--grey-2,#545A61); }

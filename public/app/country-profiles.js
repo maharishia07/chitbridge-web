@@ -361,13 +361,20 @@
     var items = listItems(value); if (items.length < 4 || String(value).length <= 90) return safe(value);
     return safe(items.slice(0, 3).join(', ')) + ' <button class="cp-link" type="button" data-more="' + safe(ruleKey) + '" data-cc="' + safe(code) + '" data-testid="cp-more-' + safe(ruleKey) + '-' + safe(code) + '">+' + (items.length - 3) + ' more</button>';
   }
-  /** the overlay for one long cell: rule · country, every item on its own line (the native dialog: Esc, focus and backdrop come with it) */
-  function openMore(ruleKey, code) {
-    var rule = (ALL.table.rules || []).filter(function (r) { return r.key === ruleKey; })[0]; if (!rule) return;
+  /** THE overlay of the All countries view — a long list and every "opens what it counts" panel open here, over the table, so the table never
+   *  moves (Athi, 2026-10-17: "instead of showing the details in the bottom, can we make it overlay, otherwise everything moves up").
+   *  The native dialog: Esc, focus and the backdrop come with it; a press on the backdrop or a ✕ closes it. */
+  function overlay(wide) {
     var box = ALL.host.querySelector('dialog.cp-more');
     if (!box) { box = document.createElement('dialog'); box.className = 'cp-more'; box.setAttribute('data-testid', 'cp-more'); ALL.host.appendChild(box);
-      box.addEventListener('click', function (event) { if (event.target === box || event.target.closest('[data-more-close]')) box.close(); }); }
-    var items = listItems(rule.values[code]);
+      box.addEventListener('click', function (event) { if (event.target === box || event.target.closest('[data-more-close], [data-chart-close]')) box.close(); }); }
+    box.classList.toggle('wide', !!wide);
+    return box;
+  }
+  /** the overlay for one long cell: rule · country, every item on its own line */
+  function openMore(ruleKey, code) {
+    var rule = (ALL.table.rules || []).filter(function (r) { return r.key === ruleKey; })[0]; if (!rule) return;
+    var box = overlay(false), items = listItems(rule.values[code]);
     box.innerHTML = '<div class="cp-head"><div><h2>' + safe(rule.name) + ' · ' + safe(nameOf('region', code)) + '</h2><div class="hint">' + items.length + ' items</div></div>'
       + '<button class="btn x" type="button" data-more-close="1" style="margin-left:auto" aria-label="Close">✕</button></div>'
       + '<ol class="cp-morelist">' + items.map(function (item) { return '<li>' + safe(item) + '</li>'; }).join('') + '</ol>';
@@ -399,18 +406,16 @@
     var table = CBCountries.rulesTable({ year: new Date().getFullYear() }); ALL.table = table; if (!ALL.code && table.countries.length) ALL.code = table.countries[0].id;
     var picker = '<select class="cp-select cp-all-pick" data-testid="cp-all-select" aria-label="Country">' + table.countries.map(function (country) { return '<option value="' + safe(country.id) + '"' + (country.id === ALL.code ? ' selected' : '') + '>' + flagOf(country.id) + ' ' + safe(nameOf('region', country.id)) + '</option>'; }).join('') + '</select>';
     host.innerHTML = '<div class="cp-allwrap"><div class="cp-head"><div><h2>All countries · ' + table.countries.length + '</h2><div class="hint">' + table.rules.length + ' accounting rules, read from each country\'s pack</div></div></div>'
-      + picker + '<div class="cp-allscroll">' + allTableHTML(table) + '</div>' + oneColumnHTML(table, ALL.code) + '<div class="cp-chartslot"></div></div>';
+      + picker + '<div class="cp-allscroll">' + allTableHTML(table) + '</div>' + oneColumnHTML(table, ALL.code) + '</div>';
     /* every column edge drags to the reader's width, remembered (app/table-resize.js — the one resizer; the grip and its CSS come with it) */
     if (typeof root.tblResizable === 'function') root.tblResizable(host.querySelector('.cp-allscroll'));
   }
-  /** a press in the All countries view: a counted cell opens what it counts under the table; ✕ closes it */
+  /** a press in the All countries view: a long list or a counted cell opens in the overlay (✕, Esc or the backdrop closes it) */
   function onAllClick(event) {
     var more = event.target.closest('[data-more]'); if (more) { openMore(more.getAttribute('data-more'), more.getAttribute('data-cc')); return; }
-    var slot = ALL.host.querySelector('.cp-chartslot'), open = event.target.closest('[data-open]'); if (!slot) return;
-    if (event.target.closest('[data-chart-close]')) { slot.innerHTML = ''; return; }
-    if (!open) return;
-    ALL.opened = [open.getAttribute('data-open'), open.getAttribute('data-cc')]; slot.innerHTML = openedHTML(ALL.opened[0], ALL.opened[1]);
-    if (slot.scrollIntoView) slot.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    var open = event.target.closest('[data-open]'); if (!open || open.closest('dialog')) return;
+    ALL.opened = [open.getAttribute('data-open'), open.getAttribute('data-cc')];
+    var box = overlay(true); box.innerHTML = '<div class="cp-chartslot">' + openedHTML(ALL.opened[0], ALL.opened[1]) + '</div>'; box.showModal();
   }
   /** mount the All countries view in a host */
   function mountAll(host) {
