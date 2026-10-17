@@ -17,3 +17,4 @@ history — every removal carries a tag or a commit to restore from.
   red; this dev-only set is re-checked by hand. `e2e/` (Playwright toolchain, 9 high, dev-only) is not audited in CI for the
   same reason · restore/re-check: `npm audit` in the repo root and `e2e/`; drop `tailwindcss`, `autoprefixer` and
   `tailwind.config.js` when Athi confirms nothing needs them.
+- 2026-10-17 · `public/app/roadmap.js` (CBRoadmap, Home's roadmap and fit diagram) → the Sign-in Lab Roadmap tab (`public/signin-lab.html`, every manifest entry by state with its `fits` line); the comparison claims live in Standards › Compared with (`public/data/compare.json`) · Athi approved the regroup (docs/walks/ROADMAP-REGROUP-2026-10-17.md): it was our own self-declaration and two of its claims disagreed with the sourced table · restore: `git log --diff-filter=D -- public/app/roadmap.js`, then `git checkout <commit>^ -- public/app/roadmap.js`.

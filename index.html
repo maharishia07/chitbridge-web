@@ -11,7 +11,6 @@
      What this page owns is the HOME area: the alerts (one browser, one shop · the ledger's waiting posts · a counter paired to
      another shop) and "The rail" widget. Every figure is the server's, one budgeted read each (I19); a read that does not exist yet
      paints nothing — never a made-up number. e2e/index-page.cjs proves it at 1366 and 390.
-     The ROADMAP (public/app/roadmap.js) is drawn from the same manifest and reads no session: the page is also the front door before sign-in.
      The earlier design (docs/design/index-page/cb-index.md) is superseded by the shell (designs-inbox/cb-shell-2026-10-07). -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
 <style>
@@ -50,6 +49,7 @@ body{margin:0;background:var(--page);color:var(--ink);font-family:var(--f-ui,'IB
 .node{position:relative;background:var(--card);padding:0 14px;text-align:center;flex:0 0 auto}
 .node .n{display:block;font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:21px;font-weight:700;line-height:1.1}
 .node .k{display:block;font-size:11.5px;color:var(--muted);margin-top:2px}
+.rail .track{justify-content:space-between}.node.hot .n{color:var(--green-d)}   /* Your work: five figures across the box; a figure waiting on you in the accent */
 .flow{position:relative;flex:1;display:flex;justify-content:center;gap:7px;flex-wrap:wrap}
 .pip{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:3px 10px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:700;color:var(--muted);white-space:nowrap}
 .pip.in{border-color:var(--blue-b);background:var(--blue-t);color:var(--blue-i)}
@@ -73,7 +73,6 @@ body{margin:0;background:var(--page);color:var(--ink);font-family:var(--f-ui,'IB
 <script src="/app/signin-ui.js"></script>   <!-- CBSignin.mount: THE ONE SIGN-IN WINDOW (M14) — the door above opens it here, in place -->
 <script src="/app/one-person.js"></script>  <!-- CBOnePerson: one browser, one shop -->
 <script src="/app/kural.js"></script>       <!-- CBKural: the kural band; the shell gives it its place -->
-<script src="/app/roadmap.js"></script>    <!-- CBRoadmap: the roadmap, the fit diagram and the rail table, drawn from the manifest, for a stranger too -->
 <script src="/app/sides.js"></script>      <!-- CBSides: the two reference panels; the shell mounts them -->
 <script src="/app/accounts-shell.js"></script>   <!-- CBAction + CBConfirm: the bell's Clear all is a write, asked first -->
 <script src="/app/rail-bell.js"></script>   <!-- CBBell (R06): the shell mounts it in its bell slot — the dot + the list, from the push stream -->
@@ -117,12 +116,12 @@ function mountShell(){
       /* WALK-REG 2026-10-16 R1: the server says this shop is gone (404/401 on the /me read) -> the avatar clears the saved session and the sign-in shows, with one line */
       onGone: function(){ signedOut(typeof tx === 'function' ? tx('This account is no longer here — sign in again') : 'This account is no longer here — sign in again'); } }
   });
-  /* Home's slot: the rail widget (signed in) above the ROADMAP, which is for everyone, signed in or not, and reads no shop's figure */
+  /* Home's slot: the "Your work" widget (signed in) */
   var home = SHELL.slots.home;
   if (home) {
-    home.innerHTML = '<div id="railbox"></div><div id="roadmap" data-testid="roadmap-host"></div>';
+    home.innerHTML = '<div id="railbox"></div>';
     SHELL.ready.then(function(){ if (ALERTS.length) alertsPaint(); });   /* the edition is known once the manifest is in (rows written straight into the slot — close-first, signed-out — are left alone) */
-    SHELL.ready.then(function(){ if (window.CBRoadmap) CBRoadmap.mount(document.getElementById('roadmap'), SHELL.manifest(), { quiet: !!SESS }); });   /* signed in: the page is the working app, the roadmap one quiet fold (H16) */
+    /* walk 2026-10-17 (Athi): the roadmap is our own self-declaration — it is no longer drawn on Home; roadmap.js is retired (RETIRED.md); the comparison lives in Standards › Compared with */
   }
   return SHELL;
 }
@@ -183,28 +182,27 @@ function booksAlert(){
   });
 }
 
-/* ── THE RAIL: the Home widget. Its one read and its Open target come from the manifest's `rail` (null = not drawn). ── */
+/* ── YOUR WORK: the Home widget (walk 2026-10-17 — it was "Your suppliers and customers", which showed nothing of the rail). Its one read and its
+   Open target come from the manifest's `rail` (null = not drawn): GET /api/work/facts → figures { orders_new, orders_in, orders_out, tasks, tasks_mine, done }
+   (lib/work-rows.facts — the workflow engine's verdicts; a figure the server cannot compute is LEFT OUT, never 0). Each number opens its folder. ── */
 function railPaint(r){
   var host = document.getElementById('railbox'); if (!host) return;
-  var m = SHELL.manifest(), rail = (m && m.rail) || {};
-  var sup = n1(r && r.suppliers), cus = n1(r && r.customers), fin = n1(r && r.in), fout = n1(r && r.out), ftask = n1(r && r.tasks), stuck = n1(r && r.stuck);
-  if (sup == null && cus == null) { host.innerHTML = ''; return; }
-  var pips = [];
-  /* every number is a door to what it counts: the chits (In · Out · Stuck) or the parties of that role, both in CB CRM */
-  var base = rail.route ? String(rail.route).split('#')[0] : '';
-  var door = function (cls, tid, tab, text) { return base ? '<a class="pip ' + cls + '" data-testid="' + tid + '" href="' + esc(base) + '#/chits?tab=' + tab + '">' + text + '</a>' : '<span class="pip ' + cls + '" data-testid="' + tid + '">' + text + '</span>'; };
-  /* TOUR-FIX1: in / out / to do are Tasks & Orders' own folder counts (the server's one reader) — so each opens THAT folder, where the same number is the list */
-  var tasksE = ((m && m.entries) || []).filter(function (e) { return e.id === 'tasks' && e.route; })[0];
-  var folder = function (cls, tid, view, text) { return tasksE ? '<a class="pip ' + cls + '" data-testid="' + tid + '" href="' + esc(String(tasksE.route).split(/[?#]/)[0]) + '?view=' + view + '">' + text + '</a>' : '<span class="pip ' + cls + '" data-testid="' + tid + '">' + text + '</span>'; };
-  if (fin != null) pips.push(folder('in', 'rail-in', 'orders_in', fin + ' in'));
-  if (fout != null) pips.push(folder('out', 'rail-out', 'orders_out', fout + ' out'));
-  if (ftask) pips.push(folder('in', 'rail-tasks', 'tasks', ftask + ' to do'));
-  if (stuck) pips.push(door('stuck', 'rail-stuck', 'stuck', stuck + ' stuck'));
-  var role = function (tid, n, role, word) { var inner = '<b class="n" data-testid="' + tid + '">' + (n == null ? '–' : n) + '</b><span class="k">' + word + '</span>'; return base ? '<a class="node" data-testid="' + tid + '-open" href="' + esc(base) + '#/parties?role=' + role + '">' + inner + '</a>' : '<span class="node">' + inner + '</span>'; };
-  host.innerHTML = '<div class="rail" data-testid="rail"><div class="railtop"><h3>Your suppliers and customers</h3>'
+  var m = SHELL.manifest(), rail = (m && m.rail) || {}, fig = (r && r.figures) || {};
+  if (!r || r.truncated || !Object.keys(fig).length) { host.innerHTML = ''; return; }
+  var base = rail.route ? String(rail.route).split(/[?#]/)[0] : '';
+  var node = function (tid, n, view, word, tone) {
+    var inner = '<b class="n" data-testid="' + tid + '">' + (n == null ? '–' : n) + '</b><span class="k">' + word + '</span>';
+    return base && view ? '<a class="node' + (tone ? ' ' + tone : '') + '" data-testid="' + tid + '-open" href="' + esc(base) + '?view=' + view + '">' + inner + '</a>' : '<span class="node">' + inner + '</span>';
+  };
+  host.innerHTML = '<div class="rail" data-testid="rail"><div class="railtop"><h3>Your work</h3>'
     + (rail.route ? '<a href="' + esc(rail.route) + '" data-testid="rail-open">Open ›</a>' : '') + '</div>'
-    + '<div class="track">' + role('rail-suppliers', sup, 'supplier', 'Suppliers') + role('rail-customers', cus, 'customer', 'Customers')
-    + '<span class="flow">' + pips.join('') + '</span></div></div>';
+    + '<div class="track">'
+    + node('work-new', n1(fig.orders_new), 'orders_in', 'New orders', fig.orders_new ? 'hot' : '')
+    + node('work-in', n1(fig.orders_in), 'orders_in', 'Orders in')
+    + node('work-out', n1(fig.orders_out), 'orders_out', 'Orders out')
+    + node('work-mine', n1(fig.tasks_mine), 'tasks', 'Tasks for you', fig.tasks_mine ? 'hot' : '')
+    + node('work-done', n1(fig.done), 'done', 'Done')
+    + '</div></div>';
 }
 function railRead(){
   var g = GEN;

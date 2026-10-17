@@ -44,26 +44,27 @@
   var doc = root.document;
 
   var W = {
-    areas: { home: 'Home', selling: 'Selling', running: 'Running', labs: 'Labs', setup: 'Setup' },
-    caption: { selling: 'CB Commerce', running: 'Running it', labs: 'Labs', setup: 'What it all stands on' },
-    sub: { labs: 'Work the number out first. Nothing changes until you say so.', setup: 'Set once, rarely touched.' },
+    areas: { home: 'Home', selling: 'Selling', money: 'Money', running: 'Running', trade: 'Trade', labs: 'Labs', setup: 'Setup' },
+    caption: { selling: 'Selling', money: 'Money', running: 'Running it', trade: 'Trade', labs: 'Labs', setup: 'What it all stands on' },
+    sub: { selling: 'Sell at the counter and online, and bring customers back.', money: 'Who owes you, who you owe, and what the shop made.', running: 'Stock, suppliers, tasks and the people who do them.', trade: 'Check a business, file a form, grow your network.', labs: 'Work the number out first. Nothing changes until you say so.', setup: 'Set once, rarely touched.' },
     tag: { coming: 'later', workshop: 'workshop', works: 'works today' },
     yourShop: 'Your business', business: 'The business', licences: 'Licences', trade: 'Trade ready', finish: 'Finish the checks',
     renew: 'Renew', again: 'Apply again', notAdded: 'not added', registered: 'registered', notRegistered: 'not registered',
     days: ' days', years: ' years', expired: function (d) { return 'expired ' + d + 'd ago'; }, lapsed: 'lapsed',
     notYet: 'Licences and trade checks are not available yet.', loading: '…', noApps: 'The list of apps could not be read.',
-    factsFailed: 'Could not read', today: 'today', switcher: 'Go to', close: 'Close'
+    factsFailed: 'Could not read', state: { needs_you: 'Needs you', in_use: 'In use', not_started: 'Not started' }, setUp: 'Set up', needsYou: 'Needs you', today: 'today', switcher: 'Go to', close: 'Close'
   };
-  /* CB Commerce: one box per pillar. The main row sits in the Selling section, the supporting row in the Running section; a manifest entry's `pillar` decides its box (none: its area's default) */
-  var PILLARS = { selling: ['marketing', 'sales', 'finance', 'accounting'], running: ['operations', 'people', 'trade'] };
+  /* one box per pillar inside a section; a manifest entry's `pillar` decides its box and so its section (none: its area's default). Walk 17 Oct (Athi): money is not
+     selling — Selling · Money · Running it are pillar sections; Trade, Labs and Setup are a pillar of their own, drawn as one grid. Daily first, set-up last. */
+  var PILLARS = { selling: ['marketing', 'sales'], money: ['finance', 'accounting'], running: ['operations', 'people'] };
   var PNAME = { marketing: 'Marketing', sales: 'Sales', finance: 'Finance', accounting: 'Accounts', operations: 'Operations', people: 'People', trade: 'Trade' };
-  var PDEFAULT = { selling: 'sales', running: 'accounting', labs: 'labs', setup: 'setup' };
-  var AREAS = ['home', 'selling', 'running', 'labs', 'setup'];
+  var PDEFAULT = { selling: 'sales', running: 'operations', labs: 'labs', setup: 'setup' };
+  var AREAS = ['home', 'selling', 'money', 'running', 'trade', 'labs', 'setup'];
   /* AU-WORDS (15 Oct): a MONEY icon is the SHOP's currency symbol — CBLocale.symbol of the header's business.currency (the pack's money) — never ₹
      for every shop (Athi on live austore1: "CB Accounts ₹"). The manifest and ICON write the neutral currency sign ¤; glyph() swaps it on paint and
      paintMoneyGlyphs() re-swaps what was painted before the header arrived. No currency known → ¤ stays. */
   var MONEY_GLYPH = '¤';
-  var ICON = { home: '⌂', selling: '▤', running: MONEY_GLYPH, labs: '◈', setup: '⚙' };
+  var ICON = { home: '⌂', selling: '▤', money: MONEY_GLYPH, running: '▣', trade: '⇆', labs: '◈', setup: '⚙' };
 
   /* a manifest entry's name and line go through the catalogue (tx, accounts-shell.js — English is the key); a page without it shows the English */
   function T(s) { return typeof root.tx === 'function' ? root.tx(s) : s; }
@@ -185,9 +186,25 @@
     '.cbsh-box:hover{border-color:var(--sh-green)}',
     '.cbsh-box .g{width:32px;height:32px;border-radius:9px;background:var(--sh-panel);display:grid;place-items:center;font-size:15px;color:var(--sh-muted);margin-bottom:9px}',
     '.cbsh-box h4{font-family:"Bricolage Grotesque",sans-serif;font-size:16.5px;font-weight:800;letter-spacing:-.015em;margin:0}',
-    '.cbsh-box .what{font-size:12.5px;color:var(--sh-muted);margin:2px 0 0;line-height:1.35}',
+    '.cbsh-box .what{font-size:12.5px;color:var(--sh-muted);margin:2px 0 0;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:14px}',
     '.cbsh-box .facts{display:flex;flex-direction:column;gap:2px;margin-top:11px;padding-top:9px;border-top:1px solid var(--sh-hair)}',
-    '.cbsh-box .facts:empty{display:none}',
+    /* walk 17 Oct (Athi: "too much information, the screen will expand"): EVERY TILE IS ONE HEIGHT — one line of purpose, two fact lines reserved
+       whether or not they arrive, each line cut with … and said in full on hover (title). A tile never grows; more to say is the app's job. */
+    '.cbsh-box{height:132px;overflow:visible}.cbsh-sec.labs .cbsh-box,.cbsh-sec.setup .cbsh-box{height:132px}',
+    /* walk 17 Oct (Athi: "text bigger, the name next to the icon"): the icon floats beside the name; purpose and facts read one size up */
+    '.cbsh-box .g,.cbsh-sec.labs .cbsh-box .g,.cbsh-sec.setup .cbsh-box .g{float:left;width:32px;height:32px;display:grid;margin:0 10px 6px 0;background:var(--sh-panel);font-size:16px}',
+    '.cbsh-box h4,.cbsh-sec.labs .cbsh-box h4,.cbsh-sec.setup .cbsh-box h4{font-size:18px;line-height:32px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:16px}',
+    '.cbsh-box .what{clear:left;font-size:14px}.cbsh-box .f{font-size:13.5px}.cbsh-box .facts{margin-top:9px;padding-top:7px}',
+    '.cbsh-box .facts{flex-direction:row;align-items:center;gap:6px;height:calc(1.35em + 10px)}.cbsh-box .facts:empty{border-top-color:transparent}',
+    '.cbsh-box .f{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.35;min-width:0}.cbsh-box .facts>.f{flex:1}',
+    /* the rest DROPS DOWN over the page on hover or keyboard focus — the tile keeps its size and nothing below it moves (Athi: "show as a dropdown") */
+    /* walk 17 Oct (Athi: "represent the status, active / not active"): THE SERVER SAYS which of three a card is (facts `state`) — the dot is never colour alone */
+    '.cbsh-box .st{flex:none;font-size:11.5px;font-weight:700;white-space:nowrap}.cbsh-box .st.needs_you{color:var(--sh-amber-i)}.cbsh-box .st.in_use{color:var(--sh-green-d)}.cbsh-box .st.not_started{color:var(--sh-muted)}',
+    '.cbsh-needs{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin:0 0 12px;font-size:13.5px}.cbsh-needs[hidden]{display:none}.cbsh-needs b{color:var(--sh-amber-i)}',
+    '.cbsh-needs a{border:1px solid var(--sh-line);border-radius:999px;padding:3px 10px;background:var(--sh-card);text-decoration:none;color:inherit}.cbsh-needs a:hover{border-color:var(--sh-green)}',
+    '.cbsh-box .more-n{flex:none;font-size:11px;font-weight:700;color:var(--sh-green-d);background:var(--sh-green-t);border-radius:8px;padding:1px 6px}',
+    '.cbsh-box .more{display:none;position:absolute;z-index:6;left:-1px;right:-1px;top:calc(100% - 8px);flex-direction:column;gap:3px;padding:9px 16px 11px;background:var(--sh-card);border:1px solid var(--sh-green);border-top:0;border-radius:0 0 13px 13px;box-shadow:0 10px 22px var(--sh-shadow)}',
+    '.cbsh-box .more .f{white-space:normal}.cbsh-box:hover .more,.cbsh-box:focus-visible .more{display:flex}',
     '.cbsh-box .f{font-size:12.5px;color:var(--sh-muted);font-family:var(--f-num,"IBM Plex Mono",monospace)}.cbsh-box .f.dn{color:var(--sh-amber-i)}',
     '.cbsh-box .f .act{text-decoration:underline;cursor:pointer;font-weight:600}',
     '.cbsh-box .arw{position:absolute;top:14px;right:15px;color:var(--sh-ghost);font-size:16px}.cbsh-box:hover .arw{color:var(--sh-green)}',
@@ -197,7 +214,7 @@
     '.cbsh-labs{background:var(--sh-panel);border:1px solid var(--sh-soft);border-radius:14px;padding:4px 16px 15px}.cbsh-labs .cbsh-cap{background:var(--sh-panel)}',
     '.cbsh-base{border:1px dashed var(--sh-line);border-radius:14px;padding:4px 16px 15px}',
     /* CB Commerce pillar boxes: 4 across (the main row), 3 across (the supporting row), cards stacked inside */
-    '.cbsh-pils{display:grid;gap:12px;align-items:start}.cbsh-pils.n4{grid-template-columns:repeat(4,minmax(0,1fr))}.cbsh-pils.n3{grid-template-columns:repeat(3,minmax(0,1fr))}',
+    '.cbsh-pils{display:grid;gap:12px;align-items:start}.cbsh-pils.n4{grid-template-columns:repeat(4,minmax(0,1fr))}.cbsh-pils.n3{grid-template-columns:repeat(3,minmax(0,1fr))}.cbsh-pils.n2{grid-template-columns:repeat(2,minmax(0,1fr))}',
     '.cbsh-pil{background:var(--sh-panel);border:1px solid var(--sh-soft);border-radius:14px;padding:10px 10px 12px;min-width:0}',
     '.cbsh-pil h3{margin:0 2px 8px;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--sh-muted);font-weight:700}',
     '.cbsh-pil .cbsh-grid{grid-template-columns:1fr;gap:8px}.cbsh-pil .cbsh-chips{margin-top:8px}.cbsh-pil .cbsh-grid:empty{display:none}',
@@ -212,16 +229,18 @@
     '.cbsh-foot{flex:0 0 auto}.cbsh-foot:empty{display:none}.cbsh-pfoot{display:none}',
     '.cbsh-slotwork{min-height:100%}',
     /* TOUR-FIX1: the drawer buttons sit at the top of the work and scroll WITH it — a sticky row covered the cards scrolled under it (shell-card-documents) */
-    /* CB SIDES (public/app/sides.js): two reference panels. From 1480 px they sit beside the work area and scroll on their own; below it they are two drawers behind the toolbar buttons, one open at a time; a phone drawer is full width */
+    /* CB SIDES (public/app/sides.js): two reference panels, closed until asked for — two drawers behind two small icon buttons at EVERY width, one open at a time; a phone drawer is full width (walk 2026-10-17, Athi: "can be just an icon … if someone clicks we can show") */
     '.cbsh-work{position:relative}.cbsh-side,.cbsh-tools{display:none}',
-    '@media(min-width:1480px){.cbsh.has-sides .cbsh-side{display:block;flex:0 0 300px;width:300px;align-self:flex-start;max-height:calc(100% - 24px);margin:12px 0;overflow:auto}.cbsh.has-sides .cbsh-side.l{margin-left:14px}.cbsh.has-sides .cbsh-side.r{margin-right:14px}}',
-    '@media(max-width:1479px){.cbsh.has-sides .cbsh-tools{display:flex;gap:10px;background:var(--sh-page);padding:8px 0;border-bottom:1px solid var(--sh-soft);margin-bottom:10px}.cbsh.has-sides .cbsh-tools .cbsd-btn{display:inline-block}',
+    '.cbsh.has-sides .cbsh-tools{display:flex;justify-content:flex-end;gap:6px;padding:4px 0;margin-bottom:4px}.cbsh.has-sides .cbsh-tools .cbsd-btn{display:inline-block}',
     '.cbsh.has-sides .cbsh-side.drawer{display:block;position:absolute;top:48px;bottom:0;width:min(330px,92vw);z-index:40;margin:0;border-radius:0;overflow:auto;box-shadow:0 0 30px var(--sh-shadow)}',
-    '.cbsh.has-sides .cbsh-side.l.drawer{left:var(--sh-navw)}.cbsh.has-sides .cbsh-side.r.drawer{right:0}.cbsh .cbsd-x{display:inline-block}}',
+    '.cbsh.has-sides .cbsh-side.l.drawer{left:var(--sh-navw)}.cbsh.has-sides .cbsh-side.r.drawer{right:0}.cbsh .cbsd-x{display:inline-block}',
     '@media(max-width:700px){.cbsh.has-sides .cbsh-side.drawer{left:0!important;right:0!important;width:100%}}',
     '@media(max-width:1100px){.cbsh-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.cbsh-sin{grid-template-columns:1fr 1.4fr}.cbsh-sin .cbsh-col:nth-child(3){grid-column:1/-1}}',
     /* PHONE — a different layout: bottom tabs, one area at a time, rows, the sheet drops over the page, the kural once on Home */
     '@media(max-width:700px){',
+    /* 390: the app switcher opens inside the screen (e2e/shell.cjs: its right edge was at 440 of 390) */
+    '.cbsh-swpop{position:fixed;left:16px;right:16px;top:52px;min-width:0}',
+    '.cbsh-box,.cbsh-sec.labs .cbsh-box,.cbsh-sec.setup .cbsh-box{height:auto}.cbsh-box .facts{height:auto}.cbsh-box .more{position:static;display:flex;border:0;box-shadow:none;padding:0;background:none}.cbsh-box .more-n,.cbsh-box .facts>.f:first-child:not(:only-child){display:none}',
     '.cbsh{--sh-bar:52px}.cbsh-bar{padding:0 13px;gap:6px;container-type:inline-size}.cbsh-who{padding:4px 4px;margin-left:-4px;flex:1 1 auto}.cbsh-who b{font-size:14px}',   /* a pane keeps its 55px on a phone too: its line meets the sidebar's brand row (frame-every-width rule f) */
     /* INT7b-GREEN: a 390 px bar held 405 px (mark · shop · switcher · chip · bell · ⌂ · avatar, 9 px gaps) and cut the shop's name to 55 px. The name takes the slack
        (the spacer gives way to it) at 14 px; a bar narrower than its need (a pane beside the sidebar, ~326 px) shows the whole name or none — never "F…" (the button's aria-label still says it) */
@@ -242,10 +261,10 @@
     '.cbsh-nv[aria-current]{background:var(--sh-green-t);box-shadow:none}',
     '.cbsh-inner{padding:12px 13px 20px}.cbsh-main{scroll-behavior:auto}',
     '.cbsh-sec{display:none;margin-bottom:0}',
-    '.cbsh-main[data-tab=home] .cbsh-sec.home,.cbsh-main[data-tab=selling] .cbsh-sec.selling,.cbsh-main[data-tab=running] .cbsh-sec.running,',
+    '.cbsh-main[data-tab=home] .cbsh-sec.home,.cbsh-main[data-tab=selling] .cbsh-sec.selling,.cbsh-main[data-tab=money] .cbsh-sec.money,.cbsh-main[data-tab=running] .cbsh-sec.running,.cbsh-main[data-tab=trade] .cbsh-sec.trade,',
     '.cbsh-main[data-tab=labs] .cbsh-sec.labs,.cbsh-main[data-tab=setup] .cbsh-sec.setup{display:block}',
     '.cbsh-cap{display:none}',
-    '.cbsh-pils.n4,.cbsh-pils.n3{grid-template-columns:1fr;gap:10px}.cbsh-pil{padding:8px 0 0;background:none;border:0}.cbsh-pil h3{margin-left:2px}.cbsh-pil .cbsh-grid{gap:0}',
+    '.cbsh-pils.n4,.cbsh-pils.n3,.cbsh-pils.n2{grid-template-columns:1fr;gap:10px}.cbsh-pil{padding:8px 0 0;background:none;border:0}.cbsh-pil h3{margin-left:2px}.cbsh-pil .cbsh-grid{gap:0}',
     '.cbsh-ph{display:block;font-family:"Bricolage Grotesque",sans-serif;font-size:21px;font-weight:800;letter-spacing:-.02em;margin:2px 2px 10px}',
     '.cbsh-grid{grid-template-columns:1fr;gap:0;border:1px solid var(--sh-line);border-radius:13px;background:var(--sh-card);overflow:hidden}',
     '.cbsh-box,.cbsh-sec.labs .cbsh-box,.cbsh-sec.setup .cbsh-box{border:0;border-radius:0;border-bottom:1px solid var(--sh-hair);padding:13px 38px 13px 14px}',
@@ -374,6 +393,32 @@
     Array.prototype.forEach.call(pageDoc.querySelectorAll('[data-glyph="money"]'), function (node) { node.textContent = symbol; });
   }
 
+  /* ── a Home card's STATE (walk 17 Oct, Athi: "represent the status, active / not active") ── the server's facts `state` when it says;
+     until every card does, a line marked tone 'dn' is needs_you and any other line in_use; no lines, no state */
+  function cardState(answer, lines) {
+    if (answer && W.state[answer.state]) return answer.state;
+    if (!lines.length) return '';
+    return lines.some(function (line) { return line && line.tone === 'dn'; }) ? 'needs_you' : 'in_use';
+  }
+  function stateHTML(state) { return '<span class="st ' + state + '" data-testid="shell-state" data-state="' + state + '">' + (state === 'not_started' ? '○ ' : '● ') + esc(T(W.state[state])) + '</span>'; }
+  /* a card's facts on its tile: NOT STARTED says so and invites (never "No X yet" — the tile is already the link); otherwise ONE line, and
+     two or more → a +n badge with every line in the drop-down (.more) */
+  function factsHTML(card, lines, state, lineHTML) {
+    var badge = state ? stateHTML(state) : '';
+    if (state === 'not_started') return badge + '<span class="f">' + esc(T(W.setUp)) + ' ›</span>';
+    if (lines.length < 2) return badge + lines.map(lineHTML).join('');
+    return badge + lineHTML(lines[0]) + '<span class="more-n" aria-hidden="true">+' + (lines.length - 1) + '</span><span class="more" data-testid="shell-more-' + esc(card.id) + '">' + lines.map(lineHTML).join('') + '</span>';
+  }
+  /* Home's "Needs you" strip: only the cards whose state is needs_you, each a door; hidden when none (every tile stays below it). Returns the state. */
+  var needsByCard = {};
+  function noteNeeds(card, state, routeOf) {
+    if (state === 'needs_you') needsByCard[card.id] = card; else delete needsByCard[card.id];
+    var strip = doc.querySelector('[data-testid="shell-needs"]'); if (!strip) return state;
+    var list = Object.keys(needsByCard).map(function (id) { return needsByCard[id]; });
+    strip.hidden = !list.length;
+    strip.innerHTML = '<b>● ' + esc(T(W.needsYou)) + '</b>' + list.map(function (entry) { return '<a href="' + esc(routeOf(entry)) + '" data-testid="shell-needs-' + esc(entry.id) + '">' + esc(T(entry.name)) + '</a>'; }).join('');
+    return state;
+  }
   function mount(el, o) {
     if (!el) return null;
     o = o || {};
@@ -467,7 +512,7 @@
 
     /* ── the five areas (Home) ── */
     function pillarOf(e) { return e.pillar || PDEFAULT[e.area] || e.area; }
-    function sectionOf(e) { var p = pillarOf(e); return PILLARS.selling.indexOf(p) >= 0 ? 'selling' : PILLARS.running.indexOf(p) >= 0 ? 'running' : p; }
+    function sectionOf(e) { var p = pillarOf(e); for (var a in PILLARS) if (PILLARS[a].indexOf(p) >= 0) return a; return p; }
     function shown() { var m = root.CBEdition && S.manifest ? root.CBEdition.view(S.manifest) : S.manifest; return (m && m.entries) || []; }
     function entriesOf(area) { return shown().filter(function (e) { return e && sectionOf(e) === area; }); }
     /* the areas this showing has: Home always; another area only if the edition draws something in it (the full app: all five) */
@@ -486,7 +531,7 @@
     function card(e) {
       return '<a class="cbsh-box" href="' + esc(routeOf(e)) + '" data-testid="shell-card-' + esc(e.id) + '" data-id="' + esc(e.id) + '">' +
         '<span class="arw" aria-hidden="true">›</span><span class="g" aria-hidden="true">' + glyph(e.icon) + '</span><h4>' + esc(T(e.name)) + '</h4>' +
-        (e.what ? '<p class="what">' + esc(T(e.what)) + '</p>' : '') + '<span class="facts" data-testid="shell-facts-' + esc(e.id) + '"></span></a>';
+        (e.what ? '<p class="what" title="' + esc(T(e.what)) + '">' + esc(T(e.what)) + '</p>' : '') + '<span class="facts" data-testid="shell-facts-' + esc(e.id) + '"></span></a>';
     }
     function chip(e) {
       /* H14/P2-5: a workshop row whose function WORKS today (manifest `works`, the roadmap's rule) says so - never the word workshop */
@@ -500,7 +545,7 @@
       /* Home is drawn ONCE (the page may already have put its alerts and content in the slots); the four areas are redrawn from the manifest */
       if (!$('.cbsh-sec.home')) {
         box.innerHTML = '<section class="cbsh-sec home" data-area="home" data-testid="shell-area-home"><h2 class="cbsh-ph">' + esc(W.areas.home) + '</h2>' +
-          '<div class="cbsh-note" data-testid="shell-edition-line" hidden></div><div class="cbsh-alerts" data-slot="alerts"></div><div class="cbsh-home" data-slot="home"></div><div class="cbsh-note" data-testid="shell-noapps" hidden>' + esc(W.noApps) + '</div>' +
+          '<div class="cbsh-needs" data-testid="shell-needs" hidden></div><div class="cbsh-note" data-testid="shell-edition-line" hidden></div><div class="cbsh-alerts" data-slot="alerts"></div><div class="cbsh-home" data-slot="home"></div><div class="cbsh-note" data-testid="shell-noapps" hidden>' + esc(W.noApps) + '</div>' +
           '</section><div class="cbsh-more"></div>';
         slots.alerts = $('[data-slot="alerts"]'); slots.home = $('[data-slot="home"]');
       }
@@ -547,8 +592,8 @@
         if (!e || e.state !== 'built' || !e.facts) return;
         var spot = $('[data-testid="shell-facts-' + e.id + '"]'); if (!spot) return;
         get(e.facts).then(function (r) {
-          var lines = (r && r.lines) || [];
-          spot.innerHTML = lines.slice(0, 2).map(lineHTML).join('');
+          var lines = (r && r.lines) || [], state = noteNeeds(e, cardState(r, lines), routeOf);
+          spot.innerHTML = factsHTML(e, lines, state, lineHTML);
         }).catch(function () { spot.innerHTML = '<span class="f" title="' + esc(W.factsFailed) + '">—</span>'; });
       });
     }

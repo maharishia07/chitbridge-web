@@ -89,7 +89,6 @@
   "public/app/rail-bell.js": {"score":53,"long40":1,"long80":1,"complex10":5,"complex15":1,"deep3":0,"deep4":0,"cryptic":36,"noWhatLine":3,"emptyCatch":5,"noHeader":1},
   "public/app/rail-thread.js": {"score":119,"long40":1,"long80":0,"complex10":6,"complex15":4,"deep3":0,"deep4":0,"cryptic":95,"noWhatLine":0,"emptyCatch":12,"noHeader":1},
   "public/app/register-form.js": {"score":55,"long40":2,"long80":0,"complex10":5,"complex15":2,"deep3":1,"deep4":0,"cryptic":35,"noWhatLine":3,"emptyCatch":6,"noHeader":1},
-  "public/app/roadmap.js": {"score":36,"long40":1,"long80":1,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":33,"noWhatLine":0,"emptyCatch":0,"noHeader":1},
   "public/app/screen-id.js": {"score":30,"long40":1,"long80":1,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":26,"noWhatLine":0,"emptyCatch":1,"noHeader":1},
   "public/app/screens.js": {"score":8,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":5,"noWhatLine":0,"emptyCatch":2,"noHeader":1},
   "public/app/shell.js": {"score":111,"long40":1,"long80":1,"complex10":4,"complex15":2,"deep3":0,"deep4":0,"cryptic":93,"noWhatLine":5,"emptyCatch":4,"noHeader":1},
