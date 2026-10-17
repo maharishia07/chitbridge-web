@@ -128,6 +128,7 @@
   table.cmp tr.samefold td{ color:var(--grey-2,#545A61); } table.cmp tr.samefold .btn{ margin-right:8px; }
   table.cmp ul{ margin:2px 0 0 14px; padding:0; } table.cmp li{ margin:0 0 2px; }
   table.cmp .chip{ white-space:normal; }   /* a long answer chip ("valid GSTIN · 33AABCK1234F1Z6") wraps in its cell, never runs under the next (truncation is a bug) */
+  #src.chip{ white-space:normal; border-radius:10px; }   /* the packs list grows with every country (7 by 17 Oct): it wraps on a phone, never widens the pane */
   .two{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
   .bill .big{ font-size:var(--fs-5,22px); font-weight:800; letter-spacing:-.01em; }
   .bill .diff{ box-shadow:inset 0 -2px 0 var(--blue,#3F66A6); }   /* a figure that differs from the other side: underlined in the same --blue, never a tint */
