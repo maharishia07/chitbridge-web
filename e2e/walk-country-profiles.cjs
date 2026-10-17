@@ -76,7 +76,8 @@ const walk = async (w) => {
     for (const c of all) for (const k of ['chart', 'return', 'statements', 'invoice', 'kinds']) {
       const sel = '[data-testid="cp-open-' + k + '-' + c.id + '"]'; if (!(await page.locator(sel).count())) { out.push(c.id + ' ' + k + ' (no cell)'); continue; }
       /* it opens in the overlay, over the table — the table does not move (Athi, 2026-10-17) — and Esc closes it */
-      await page.locator(sel).first().scrollIntoViewIfNeeded();   /* the click's own scroll-into-view is not the overlay moving the table */
+      /* the click's own scroll-into-view is not the overlay moving the table — centre the cell, clear of the frozen header row and Rule column */
+      await page.locator(sel).first().evaluate((cell) => cell.scrollIntoView({ block: 'center', inline: 'center' }));
       const y0 = await page.evaluate(() => document.querySelector('[data-testid="cp-all-table"]').getBoundingClientRect().top);
       await page.click(sel); await page.waitForSelector('dialog.cp-more[open] .cp-chartslot .cp-chart', { timeout: 5000 }); const txt = await page.locator('dialog.cp-more .cp-chartslot').innerText();
       const y1 = await page.evaluate(() => document.querySelector('[data-testid="cp-all-table"]').getBoundingClientRect().top);
