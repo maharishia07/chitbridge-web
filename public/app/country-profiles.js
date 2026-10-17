@@ -356,7 +356,8 @@
   /** the table: the rule names fixed on the left, a column per country (⚠ = not yet read by a local accountant) */
   function allTableHTML(table) {
     var head = '<tr><th class="cp-rule">Rule</th>' + table.countries.map(function (country) {
-      return '<th title="' + safe(country.name) + '">' + safe(country.id) + (country.verified ? '' : ' <span class="chip warn" title="Not yet read by a local accountant">⚠</span>') + '</th>';
+      return '<th title="' + safe(country.name) + '">' + safe(country.id) + (country.verified ? '' : ' <span class="chip warn" title="Not yet read by a local accountant">⚠</span>')
+        + '<span class="cp-cname">' + safe(nameOf('region', country.id)) + '</span></th>';
     }).join('') + '</tr>';
     var body = table.rules.map(function (rule) {
       return '<tr data-rule="' + safe(rule.key) + '"><th class="cp-rule" scope="row">' + safe(rule.name) + '</th>' + table.countries.map(function (country) {
