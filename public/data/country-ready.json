@@ -2,7 +2,7 @@
  "source": "scripts/country-ready.cjs — public/data/country-matrix.json (engines 1.45.0) × docs/design/standards/COUNTRY-COVERAGE.md §1; never edit by hand",
  "engines": "1.45.0",
  "coverage": {
-  "sha": "3285629301a7daa6"
+  "sha": "0f8d3e50c0f20417"
  },
  "countries": {
   "IN": {
@@ -57,14 +57,14 @@
      "of": 6
     },
     {
-     "area": "CB Accounts",
+     "area": "Accounts",
      "state": "ok",
      "line": "",
      "works": 11,
      "of": 11
     },
     {
-     "area": "CB Finance",
+     "area": "Finance",
      "state": "partial",
      "line": "\"Interest due\"",
      "works": 6,
@@ -172,14 +172,14 @@
      "of": 6
     },
     {
-     "area": "CB Accounts",
+     "area": "Accounts",
      "state": "partial",
      "line": "bank statement import presets",
      "works": 10,
      "of": 11
     },
     {
-     "area": "CB Finance",
+     "area": "Finance",
      "state": "partial",
      "line": "dues ageing buckets",
      "works": 4,
@@ -287,14 +287,14 @@
      "of": 6
     },
     {
-     "area": "CB Accounts",
+     "area": "Accounts",
      "state": "partial",
      "line": "bank statement import presets",
      "works": 11,
      "of": 12
     },
     {
-     "area": "CB Finance",
+     "area": "Finance",
      "state": "partial",
      "line": "dues ageing buckets",
      "works": 4,

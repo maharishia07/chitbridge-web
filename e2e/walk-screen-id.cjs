@@ -35,13 +35,13 @@ const CHITS = {
 };
 /* each small app, where it opens, and the code its chip must show (the register: public/app/screen-id.js) */
 const APPS = [
-  ['/', 'HOM001', 'Home'], ['/accounts.html', 'BKS001', 'CB Accounts › To do'], ['/finance.html', 'FIN001', 'CB Finance › Collections'],
-  ['/crm.html', 'CRM001', 'CB CRM › Parties'], ['/tasks.html', 'TSK001', 'CB Tasks & Orders › Orders in'], ['/settings.html#/shop', 'SET001', 'Settings › Your shop'],
-  ['/employees.html', 'EMP001', 'CB Employees › People'], ['/network.html', 'NET001', 'Network › My network'], ['/country-lab.html', 'CLB003', 'Country lab › Countries'],
+  ['/', 'HOM001', 'Home'], ['/accounts.html', 'BKS001', 'Accounts › To do'], ['/finance.html', 'FIN001', 'Finance › Collections'],
+  ['/crm.html', 'CRM001', 'CRM › Parties'], ['/tasks.html', 'TSK001', 'Tasks & Orders › Orders in'], ['/settings.html#/shop', 'SET001', 'Settings › Your shop'],
+  ['/employees.html', 'EMP001', 'Employees › People'], ['/network.html', 'NET001', 'Network › My network'], ['/country-lab.html', 'CLB003', 'Country lab › Countries'],
   ['/know-your-business.html', 'KYB001', 'Know your business'], ['/authority-forms.html', 'DOC001', 'Documents'],
   /* SHELL-ONE: every page wears the frame, so every page shows its code — the standards page, the storefront, the shop screen, the labs */
   ['/standards.html', 'STD001', 'Standards'], ['/shop.html?s=CBWALK0001', 'SHP001', 'Shop'], ['/network-shop.html?bridge=CBWALK0001', 'NSH001', 'Network shop'], ['/store.html?net=CBWALK0001', 'STR001', 'Store'],
-  ['/embed.html?bridge=CBWALK0001', 'EMB001', 'Catalogue embed'], ['/promo.html', 'PRM001', 'Shop screen'], ['/product-lab.html', 'PLB001', 'Product Lab'], ['/offer-lab-next.html', 'OLB001', 'Offer Lab'],
+  ['/embed.html?bridge=CBWALK0001', 'EMB001', 'Catalogue embed'], ['/promo.html', 'PRM001', 'Shop screen'], ['/product-lab.html', 'PLB001', 'Price Lab'], ['/offer-lab-next.html', 'OLB001', 'Offer Lab'],
   ['/offer-lab-next.html?mode=combo', 'OLB002', 'Combo Lab'], ['/conversion-lab.html', 'CVL001', 'Conversion lab'], ['/network-design.html', 'NLB001', 'Network Lab'],
 ];
 const SHEETS = [['tk1', 'TSK005', 'Task details'], ['ch1', 'BIL001', 'Bill'], ['sb1', 'BIL002', 'Supplier bill']];
@@ -80,7 +80,7 @@ const walk = async (w) => {
   }
 
   /* ── 2 · a section change: the chip follows the section, never the page it started on ── */
-  await w.step('S1', 'CB Finance: tap Cash in the sidebar -> the chip reads FIN003', async () => {
+  await w.step('S1', 'Finance: tap Cash in the sidebar -> the chip reads FIN003', async () => {
     await open('/finance.html'); await page.click('[data-testid="fin-nav-cash"]'); await page.waitForTimeout(400);
     const c = await chipCode(); return { ok: c === 'FIN003', saw: c };
   });
@@ -88,10 +88,10 @@ const walk = async (w) => {
     await open('/settings.html#/shop'); await page.click('[data-testid="skel-nav-country"]'); await page.waitForTimeout(400);
     const c = await chipCode(); return { ok: c === 'SET002', saw: c };
   });
-  await w.step('S3', 'CB Accounts: open Ledgers by its address -> the chip reads BKS003', async () => {
+  await w.step('S3', 'Accounts: open Ledgers by its address -> the chip reads BKS003', async () => {
     await open('/accounts.html#ledgers'); const c = await chipCode(); return { ok: c === 'BKS003', saw: c };
   });
-  await w.step('S4', 'CB Tasks & Orders: tap Done -> the chip reads TSK004', async () => {
+  await w.step('S4', 'Tasks & Orders: tap Done -> the chip reads TSK004', async () => {
     await open('/tasks.html'); await page.click('[data-testid="skel-nav-done"]'); await page.waitForTimeout(400);
     const c = await chipCode(); return { ok: c === 'TSK004', saw: c };
   });
@@ -119,7 +119,7 @@ const walk = async (w) => {
   }
 
   /* ── 4 · a tap copies the code (for a bug report), on the page chip and on a sheet chip ── */
-  await w.step('C1', 'Tap the header chip on CB CRM -> the clipboard holds CRM001 and the chip says Copied', async () => {
+  await w.step('C1', 'Tap the header chip on CRM -> the clipboard holds CRM001 and the chip says Copied', async () => {
     await open('/crm.html'); await page.click('[data-testid="screen-id"]');
     await page.waitForSelector('[data-testid="screen-id"][data-copied="1"]', { timeout: 3000 }).catch(() => {});   /* the clipboard answers asynchronously */
     const said = await chipText(), clip = await page.evaluate(() => navigator.clipboard.readText());
@@ -160,9 +160,9 @@ const walk = async (w) => {
     await page.evaluate(() => CBAvatar.applyTheme('cream')).catch(() => {});
     await page.setViewportSize({ width: 1366, height: 900 });
   };
-  await r13('R13-own', 'CB Accounts (its own header): the chip', '/accounts.html', '[data-testid="screen-id"]');
-  await r13('R13-frame', 'CB Tasks & Orders (the CBShell bar): the chip', '/tasks.html', '[data-testid="screen-id"]');
-  await r13('R13-sheet', 'Task details over CB Finance: the sheet chip', '/finance.html', '#chitsheet[open] [data-testid="screen-id-sheet"]', true);
+  await r13('R13-own', 'Accounts (its own header): the chip', '/accounts.html', '[data-testid="screen-id"]');
+  await r13('R13-frame', 'Tasks & Orders (the CBShell bar): the chip', '/tasks.html', '[data-testid="screen-id"]');
+  await r13('R13-sheet', 'Task details over Finance: the sheet chip', '/finance.html', '#chitsheet[open] [data-testid="screen-id-sheet"]', true);
 
   await w.step('X1', 'No link to the workshop on the chips (no app.html)', async () => {
     await open('/crm.html');

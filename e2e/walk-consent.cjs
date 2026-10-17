@@ -78,7 +78,7 @@ W.run(REAL ? 'consent-real' : 'consent', async (w) => {
       key = await page.$eval('[data-row][data-testid^="crm-party-"]', (n) => n.getAttribute('data-testid').replace('crm-party-', ''));
     }
     await openRecord(key);
-    await w.step('C1', 'CB CRM › a party → Consent section: one row per channel, Offers "Not asked" (the server’s NO_CONSENT) with a Yes, Their orders "Allowed"', async () => {
+    await w.step('C1', 'CRM › a party → Consent section: one row per channel, Offers "Not asked" (the server’s NO_CONSENT) with a Yes, Their orders "Allowed"', async () => {
       const rows = await page.locator('[data-testid^="crm-consent-row-"]').count();
       const wa = await tc(T('crm-consent-whatsapp-marketing')), svc = await tc(T('crm-consent-whatsapp-service')), code = await page.getAttribute(T('crm-consent-whatsapp-marketing'), 'data-code');
       const fact = await tc(T('crm-sec-fact-consent'));
@@ -120,7 +120,7 @@ W.run(REAL ? 'consent-real' : 'consent', async (w) => {
 
     /* ═══ (b) the register ═══ */
     await page.goto(base + '/crm.html#/privacy'); await page.waitForSelector(T('crm-prv-list'), { timeout: 20000 }); await settle(800);
-    await w.step('P1', 'CB CRM › Privacy: the register as a CBList — Who · Asked for · Due; a late request wears "Late"; the nav shows the late count', async () => {
+    await w.step('P1', 'CRM › Privacy: the register as a CBList — Who · Asked for · Due; a late request wears "Late"; the nav shows the late count', async () => {
       const b = await body(), rows = await page.locator('[data-row][data-testid^="crm-prv-"]').count(), nav = await txt(T('crm-nav-n-privacy'));
       const late = REAL ? true : /Late/.test(b) && nav === '1';
       return { ok: /Privacy requests/.test(b) && (REAL || rows === 1) && late, saw: rows + ' rows · nav late "' + nav + '" · ' + (/Late/.test(b) ? 'a Late chip' : 'no late') };

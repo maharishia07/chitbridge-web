@@ -30,7 +30,7 @@
     edition: 1, since: '2026-10-14',
     apps: [
       { app: 'home', name: 'Home', page: '/', rows: [['HOM001', null, 'Home', 'the address bar: /']] },
-      { app: 'accounts', name: 'CB Accounts', page: '/accounts.html', hash: true, rows: [
+      { app: 'accounts', name: 'Accounts', page: '/accounts.html', hash: true, rows: [
         ['BKS001', 'todo', 'To do'], ['BKS002', 'daybook', 'Day book'], ['BKS003', 'ledgers', 'Ledgers'], ['BKS004', 'tb', 'Trial balance'],
         ['BKS005', 'pl', 'P&L'], ['BKS006', 'bs', 'Balance sheet'], ['BKS007', 'compare', 'Parallel run'], ['BKS008', 'receivables', 'Receivables'],
         ['BKS009', 'payables', 'Payables'], ['BKS010', 'dues', 'Dues', 'To do › a dues item'], ['BKS011', 'bills', 'Unpaid bills'], ['BKS012', 'cheques', 'Cheques'],
@@ -38,13 +38,13 @@
         ['BKS016', 'closingstock', 'Closing stock'], ['BKS017', 'assets', 'Assets & depreciation'], ['BKS018', 'accruals', 'Accruals & recurring'],
         ['BKS019', 'gstclose', 'Tax close & pay'], ['BKS020', 'yearclose', 'Year close'], ['BKS021', 'packs', 'Packs'], ['BKS022', 'opening', 'Opening balances'],
         ['BKS023', 'accounts', 'Shop ledgers'], ['BKS024', 'movein', 'Move in'], ['BKS025', 'rates', 'Rates']] },
-      { app: 'finance', name: 'CB Finance', page: '/finance.html', hash: true, rows: [
+      { app: 'finance', name: 'Finance', page: '/finance.html', hash: true, rows: [
         ['FIN001', 'collections', 'Collections'], ['FIN002', 'payables', 'Payables'], ['FIN003', 'cash', 'Cash'], ['FIN004', 'terms', 'Terms'], ['FIN005', 'repeat', 'Repeat supply'], ['FIN006', 'cheques', 'Cheques'], ['FIN007', 'returns', 'Returns'], ['FIN008', 'reports', 'Reports']] },   /* FIN006–007: T3-P1-MONEY · FIN008: T3-P4-ACCOUNT */
-      { app: 'crm', name: 'CB CRM', page: '/crm.html', hash: true, rows: [
+      { app: 'crm', name: 'CRM', page: '/crm.html', hash: true, rows: [
         ['CRM001', 'parties', 'Parties'], ['CRM002', 'chits', 'Chits'], ['CRM003', 'followups', 'Follow-ups'], ['CRM004', 'leads', 'Leads', 'Parties › Leads'],
         ['CRM005', 'calls', 'Calls', 'Parties › Calls'], ['CRM006', 'party', 'Party', 'Parties › a party'], ['CRM007', 'chit', 'Chit page', 'a sheet › Open page'],
         ['CRM008', 'groups', 'Groups & segments'], ['CRM009', 'showcase', 'Shop window'], ['CRM010', 'privacy', 'Privacy']] },   /* CRM008–009: T3-P2-CRM · CRM010: T3-P3-CONSENT */
-      { app: 'tasks', name: 'CB Tasks & Orders', page: '/tasks.html', rows: [
+      { app: 'tasks', name: 'Tasks & Orders', page: '/tasks.html', rows: [
         ['TSK001', 'orders_in', 'Orders in'], ['TSK002', 'orders_out', 'Orders out'], ['TSK003', 'tasks', 'Tasks'], ['TSK004', 'done', 'Done']] },
       { app: 'settings', name: 'Settings', page: '/settings.html', hash: true, rows: [
         ['SET001', 'shop', 'Your business'], ['SET002', 'country', 'Country'], ['SET003', 'new', 'New shop', 'the sign-in window › New shop? Register'],
@@ -52,8 +52,8 @@
         ['SET004', 'counters', 'Counters'], ['SET005', 'connectors', 'Connectors'], ['SET006', 'policy', 'Policy'], ['SET007', 'plan', 'Plan & usage'], ['SET008', 'account', 'Account'],   /* SET008: T3-P4-ACCOUNT */
         ['SET009', 'print', 'Print setup', 'what prints on the bill — the bill\'s signature, previewed live (SET-WALK1 W27)']] },
       /* T3-OPS (INT6c): CB Operations — Stock + Suppliers */
-      { app: 'operations', name: 'CB Operations', page: '/operations.html', hash: true, rows: [['OPS001', 'stock', 'Stock'], ['OPS002', 'suppliers', 'Suppliers']] },
-      { app: 'employees', name: 'CB Employees', page: '/employees.html', rows: [['EMP001', 'people', 'People']] },
+      { app: 'operations', name: 'Operations', page: '/operations.html', hash: true, rows: [['OPS001', 'stock', 'Stock'], ['OPS002', 'suppliers', 'Suppliers']] },
+      { app: 'employees', name: 'Employees', page: '/employees.html', rows: [['EMP001', 'people', 'People']] },
       { app: 'catalogue', name: 'Catalogue', page: '/catalogue.html', hash: true, rows: [
         ['CTG001', 'items', 'Items'], ['CTG002', 'categories', 'Categories'], ['CTG003', 'import', 'Import']] },
       { app: 'network', name: 'Network', page: '/network.html', rows: [['NET001', 'mine', 'My network'], ['NET002', 'offers', 'Offers'], ['NET003', 'design', 'Design']] },
@@ -67,7 +67,7 @@
       { app: 'store', name: 'Store', page: '/store.html', rows: [['STR001', null, 'Store', '/store.html?net=<network>']] },
       { app: 'embed', name: 'Catalogue embed', page: '/embed.html', rows: [['EMB001', null, 'Catalogue embed', '/embed.html?bridge=<shop> · inside another site']] },
       { app: 'promo', name: 'Shop screen', page: '/promo.html', rows: [['PRM001', null, 'Shop screen', '/promo.html#key=… · the till › Shop screen']] },
-      { app: 'product-lab', name: 'Product Lab', page: '/product-lab.html', rows: [['PLB001', null, 'Product Lab']] },
+      { app: 'product-lab', name: 'Price Lab', page: '/product-lab.html', rows: [['PLB001', null, 'Price Lab']] },
       { app: 'offer-lab', name: 'Offer Lab', page: '/offer-lab-next.html', rows: [['OLB001', 'offer', 'Offer Lab', '/offer-lab-next.html · Home › Labs'], ['OLB002', 'combo', 'Combo Lab', '/offer-lab-next.html?mode=combo · Home › Labs']] },
       { app: 'conversion-lab', name: 'Conversion lab', page: '/conversion-lab.html', rows: [['CVL001', null, 'Conversion lab', '/conversion-lab.html · the Country lab']] },
       { app: 'network-lab', name: 'Network Lab', page: '/network-design.html', rows: [['NLB001', null, 'Network Lab', '/network-design.html · Home › Labs']] }

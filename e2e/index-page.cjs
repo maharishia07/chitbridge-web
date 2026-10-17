@@ -8,7 +8,7 @@
  *      the manifest: every built entry routes to a utility page that exists (never app.html); every other entry has no route (a dashed chip)
  *   2  1366 · signed in, the shipped manifest: Home mounts the shell once (data-mode=home); one card per built entry, each linking to its
  *      route; one dashed chip per other entry, none a link, and a click opens nothing; zero app.html hrefs outside the avatar (the allow-list)
- *      + 7 areas in the nav (home · selling · money · running · trade · labs · setup = CBShell.AREAS); every tile is 132px tall
+ *      + 7 areas in the nav (home · selling · money · running · trade · labs · setup = CBShell.AREAS); every tile is 148px tall
  *   3  1366 · every read the page makes is a budgeted one (the API's round-trips.budget.json has a line for it - read from the api checkout
  *      when it is beside this one); a facts URL that is null paints nothing; a facts read that fails paints no figure and no status;
  *      nothing wrong → the alerts slot draws nothing; N19 404 → the sheet's empty state (kept)
@@ -49,13 +49,13 @@ const PLANTED = { version: 2,
   entries: [
     { id: 'till', name: 'Till', route: '/till.html', icon: '▤', area: 'selling', pillar: 'sales', state: 'built', what: 'Take money at the counter.', facts: '/api/facts/till' },
     { id: 'storefront', name: 'Storefront', route: '/shop.html', icon: '◇', area: 'selling', pillar: 'marketing', state: 'built', what: 'Your shop on the web.', facts: null },
-    { id: 'marketing', name: 'CB Marketing', route: '/crm.html#/groups', icon: '◉', area: 'selling', pillar: 'marketing', state: 'built', what: 'Reach customers and bring them back.', facts: '/api/facts/marketing' },
+    { id: 'marketing', name: 'Marketing', route: '/crm.html#/groups', icon: '◉', area: 'selling', pillar: 'marketing', state: 'built', what: 'Reach customers and bring them back.', facts: '/api/facts/marketing' },
     { id: 'catalogue', name: 'Catalogue', route: null, icon: '▦', area: 'selling', pillar: 'marketing', state: 'workshop' },
     { id: 'orders', name: 'Orders', route: null, icon: '↓', area: 'selling', pillar: 'sales', state: 'coming' },
-    { id: 'finance', name: 'CB Finance', route: '/finance.html', icon: '◐', area: 'money', pillar: 'finance', state: 'built', what: 'Who owes you, who you owe.', facts: '/api/facts/finance' },
-    { id: 'accounts', name: 'CB Accounts', route: '/accounts.html', icon: '¤', area: 'money', pillar: 'accounting', state: 'built', what: 'What the shop made, and what it owes.', facts: '/api/facts/accounts' },
-    { id: 'crm', name: 'CB CRM', route: '/crm.html', icon: '◍', area: 'running', pillar: 'sales', state: 'built', what: 'Who buys, and how often.', facts: null },
-    { id: 'product-lab', name: 'Product Lab', route: '/product-lab.html', icon: '◈', area: 'labs', pillar: 'labs', state: 'built', what: 'Cost, price, and what each one leaves you.', facts: null },
+    { id: 'finance', name: 'Finance', route: '/finance.html', icon: '◐', area: 'money', pillar: 'finance', state: 'built', what: 'Who owes you, who you owe.', facts: '/api/facts/finance' },
+    { id: 'accounts', name: 'Accounts', route: '/accounts.html', icon: '¤', area: 'money', pillar: 'accounting', state: 'built', what: 'What the shop made, and what it owes.', facts: '/api/facts/accounts' },
+    { id: 'crm', name: 'CRM', route: '/crm.html', icon: '◍', area: 'running', pillar: 'sales', state: 'built', what: 'Who buys, and how often.', facts: null },
+    { id: 'product-lab', name: 'Price Lab', route: '/product-lab.html', icon: '◈', area: 'labs', pillar: 'labs', state: 'built', what: 'Cost, price, and what each one leaves you.', facts: null },
     { id: 'tax-lab', name: 'Tax Lab', route: null, icon: '§', area: 'labs', pillar: 'labs', state: 'coming' },
     { id: 'standards', name: 'Standards', route: '/standards.html', icon: '≡', area: 'setup', pillar: 'setup', state: 'built', what: 'What a chit must contain.', facts: null },
     { id: 'shop', name: 'Your business', route: null, icon: '⌂', area: 'setup', pillar: 'setup', state: 'workshop' }
@@ -101,7 +101,7 @@ async function run() {
   ok(man.rail && 'route' in man.rail && 'facts' in man.rail && !/app\.html/.test(JSON.stringify(man)), 'manifest · the rail widget is declared (route · facts), and nothing names app.html');
   const eff = (e) => (e.works && e.state === 'workshop' ? 'built' : e.state);   /* the roadmap's reading of a row (manifest `works`) */
   const BUILT = man.entries.filter((e) => e.state === 'built'), REST = man.entries.filter((e) => e.state !== 'built');
-  for (const w of ['Catalogue', 'CB Accounts', 'Till', 'Standards', 'Suppliers', 'CB Assist', 'Connectors', 'Your business', 'Counters', 'CB CRM', 'Product Lab', 'Offer Lab', 'Combo Lab']) {
+  for (const w of ['Catalogue', 'Accounts', 'Till', 'Standards', 'Suppliers', 'Assist', 'Connectors', 'Your business', 'Counters', 'CRM', 'Price Lab', 'Offer Lab', 'Combo Lab']) {
     ok(man.entries.some((e) => e.name === w), 'manifest · the old index\'s "' + w + '" is a manifest row');
   }
 
@@ -130,7 +130,7 @@ async function run() {
     if (p.manifest) await ctx.route('**/app/manifest.json', (r) => J(r, 200, p.manifest));
     await ctx.route('**/api/**', (r) => {
       const u = new URL(r.request().url()); seen.push(u.pathname); calls.push({ m: r.request().method(), p: u.pathname });
-      if (u.pathname === '/api/entities/me' && r.request().method() === 'GET') return J(r, 200, ME);
+      if (u.pathname === '/api/entities/me' && r.request().method() === 'GET') return J(r, 200, p.me || ME);
       if (u.pathname === '/api/entities/sides') return J(r, 200, SIDES);
       if (u.pathname === '/api/entities/header') return J(r, 404, { error: 'not found' });            /* N19 built, not live: the empty state stays */
       if (u.pathname === '/api/books/health') {
@@ -179,17 +179,25 @@ async function run() {
       const heads = await pg.$$eval('.cbsh-ph', (hs) => hs.map((h) => h.textContent.trim()));
       ok(heads.length === 7 && heads[0] === W.areas.home && ['selling', 'money', 'running', 'trade', 'labs', 'setup'].every((a, i) => heads[i + 1] === W.caption[a]), '1366 · the section headings (' + heads.join(' · ') + ')');
       const tiles = await pg.$$eval('.cbsh-box', (bs) => bs.map((b) => Math.round(b.getBoundingClientRect().height)));
-      ok(tiles.length === BUILT.length && tiles.every((h) => h === 132), '1366 · all ' + tiles.length + ' tiles are 132px tall (' + [...new Set(tiles)].join(', ') + ')');
+      ok(tiles.length === BUILT.length && tiles.every((h) => h === 148), '1366 · all ' + tiles.length + ' tiles are 148px tall (' + [...new Set(tiles)].join(', ') + ')');
       ok(await pg.locator('.cbsh-box').count() === BUILT.length && await pg.locator('.cbsh-sc').count() === REST.length, '1366 · ' + BUILT.length + ' cards and ' + REST.length + ' dashed chips — one per manifest row');
       let hrefsOk = true;
       for (const e of BUILT) { const h = await pg.getAttribute('[data-testid="shell-card-' + e.id + '"]', 'href'); if (h !== e.route.replace('{bridge_id}', 'CBTEST1234')) { hrefsOk = false; console.log('      ' + e.id + ' → ' + h); } }
       ok(hrefsOk, '1366 · every built card links to its utility page');
       ok((await offList(pg)).length === 0, '1366 · zero app.html hrefs outside the avatar (the allow-list: CBAvatar\'s own doors)');
       const chips = await pg.$$eval('.cbsh-sc', (cs) => cs.map((c) => ({ id: c.dataset.testid, st: c.dataset.state, link: c.tagName === 'A' || !!c.querySelector('a'), via: c.dataset.via === '1', href: c.getAttribute('href'), tag: (c.querySelector('.tag') || {}).textContent })));
-      ok(chips.length && chips.every((c) => (c.via ? /^\/[a-z-]+\.html$/.test(c.href || '') : !c.link) && (c.st === 'workshop' || c.st === 'coming' || c.st === 'works') && c.tag), '1366 · every chip is dashed, names its state, and is not a link (bar a workshop item that names its closest built page: Catalogue to Product Lab)');
+      ok(chips.length && chips.every((c) => (c.via ? /^\/[a-z-]+\.html$/.test(c.href || '') : !c.link) && (c.st === 'workshop' || c.st === 'coming' || c.st === 'works') && c.tag), '1366 · every chip is dashed, names its state, and is not a link (bar a workshop item that names its closest built page: Catalogue to Price Lab)');
       const before = pg.url(), pages = ctx.pages().length;
       await pg.click('[data-testid="shell-chip-delivery"]'); await pg.waitForTimeout(250);   /* delivery: still a coming chip (Stock became a built card in T3-OPS) */
       ok(pg.url() === before && ctx.pages().length === pages, '1366 · a workshop chip opens nothing');
+      /* NAMES-1 (Athi, 17 Oct): "Running it" is one flat group, like Trade; Stock stands in it; every tile says what it is for */
+      const run = await pg.evaluate(() => { const s = document.querySelector('.cbsh-sec.running'); const ids = (sel) => [...s.querySelectorAll(sel)].map((n) => n.getAttribute('data-testid').replace(/^shell-(card|chip)-/, ''));
+        return { pils: s.querySelectorAll('.cbsh-pil').length, cards: ids('.cbsh-box'), chips: ids('.cbsh-sc'), stock: (s.querySelector('[data-testid="shell-card-stock"] h4') || {}).textContent }; });
+      ok(run.pils === 0 && run.cards.join() === 'operations,stock,tasks,suppliers,counters,employees' && run.chips.join() === 'delivery,people',
+        '1366 · Running it is flat: ' + run.cards.join(' · ') + ', then the later chips ' + run.chips.join(' · ') + ' (' + run.pils + ' sub-panels)');
+      ok(run.stock === 'Stock', '1366 · Stock is a tile under Running it, and a shop with no country reads the neutral word "Stock" (' + run.stock + ')');
+      const bare = await pg.$$eval('.cbsh-box', (bs) => bs.filter((b) => !((b.querySelector('.what') || {}).textContent || '').trim()).map((b) => b.dataset.id));
+      ok(bare.length === 0, '1366 · no tile without its purpose line' + (bare.length ? ' — bare: ' + bare.join(', ') : ''));
       /* reads: only budgeted ones; null facts paint nothing */
       const unbudgeted = [...new Set(calls.filter((c) => !budgeted(c.p, c.m)).map((c) => c.m + ' ' + c.p))];
       ok(unbudgeted.length === 0, '1366 · every read has its budget line in ' + (BUDGET_FILE ? path.basename(path.dirname(BUDGET_FILE)) + '/round-trips.budget.json' : '(api checkout not found - the mirrored list)') + ' (' + [...new Set(seen)].length + ' routes)' + (unbudgeted.length ? ' — not: ' + unbudgeted.join(', ') : ''));
@@ -212,6 +220,16 @@ async function run() {
       await ctx.close();
     }
 
+    /* ── 3b · a US shop: the Stock tile is the country's word, Inventory (NAMES-1: helpers.js packWord, the per-country words) ── */
+    {
+      const { ctx } = await profile(1366, 800, { me: { entity: { display_name: 'Main Street Store', currency_code: 'USD', country: 'US' } } }), pg = await open(ctx);
+      await pg.waitForFunction(() => window.CBAvatar && window.CBAvatar.shopCountry && window.CBAvatar.shopCountry() === 'US', null, { timeout: 10000 }).catch(() => {});
+      await pg.waitForTimeout(200);
+      const word = await pg.locator('.cbsh-sec.running [data-testid="shell-card-stock"] h4').innerText().catch(() => '');
+      ok(word === 'Inventory', '1366 · a US shop: the Stock tile under Running it says "Inventory" (' + word + ')');
+      await ctx.close();
+    }
+
     /* ── 4 · 1366, a planted manifest and a planted API: facts, the rail, the alerts ── */
     {
       const { ctx } = await profile(1366, 800, { manifest: PLANTED, waiting: [{ id: 1, reason: 'Paid by Points — there is no ledger for Points yet.' }, { id: 2, reason: 'September is locked.' },
@@ -224,7 +242,7 @@ async function run() {
       /* RPT2: the Till card's teaser — the sparkline + "↑ +12% vs last year" (arrow + sign + words), a door into Reports › Trend, inside the tile's one row */
       const teaser = await pg.evaluate(() => { const t = document.querySelector('[data-testid="shell-facts-till"] [data-testid="shell-fact-trend"]'); return t ? { words: t.textContent.replace(/\s+/g, ' ').trim(), href: t.getAttribute('data-href'), svg: !!t.querySelector('svg[role="img"][aria-label]'), h: Math.round(t.getBoundingClientRect().height) } : null; });
       ok(teaser && teaser.svg && teaser.words === '↑ +12% vs last year' && teaser.href === '/finance.html#/reports/trend/week' && teaser.h <= 24, 'planted · the Till card carries the teaser: a sparkline + "↑ +12% vs last year", opening Reports › Trend, one line high (' + JSON.stringify(teaser) + ')');
-      ok(/Ledger up to 7 Oct/.test(await pg.locator('[data-testid="shell-facts-accounts"]').innerText()) && await pg.locator('[data-testid="shell-facts-accounts"] .more-n').count() === 0, 'planted · the CB Accounts tile: one line from the API, no +n');
+      ok(/Ledger up to 7 Oct/.test(await pg.locator('[data-testid="shell-facts-accounts"]').innerText()) && await pg.locator('[data-testid="shell-facts-accounts"] .more-n').count() === 0, 'planted · the Accounts tile: one line from the API, no +n');
       const fin = await pg.$eval('[data-testid="shell-facts-finance"]', (n) => ({ tile: n.innerText.replace(/\s+/g, ' ').trim(), n: (n.querySelector('.more-n') || {}).textContent, lines: [...n.querySelectorAll('.more .f')].map((x) => x.textContent.trim()) }));
       ok(/3 customers owe you/.test(fin.tile) && fin.n === '+2' && fin.lines.join('|') === '3 customers owe you|2 bills to pay|Cash is steady', 'planted · three lines → one on the tile, "+2", all three in the drop-down (' + fin.lines.join(' | ') + ')');
       /* STATUS: shell-state on every card whose facts answered (state, or lines); none on a card with no facts read */
@@ -238,7 +256,7 @@ async function run() {
       const wantNeed = Object.keys(PLANTED_STATE).filter((k) => PLANTED_STATE[k] === 'needs_you').sort();
       ok(!need.hidden && need.ids.join() === wantNeed.join() && need.hrefs.join() === ['/accounts.html', '/till.html'].join(), 'planted · the "Needs you" strip lists exactly the needs_you cards (' + wantNeed.join(', ') + '), each a door (' + need.ids.join(', ') + ')');
       const tiles2 = await pg.$$eval('.cbsh-box', (bs) => bs.map((b) => Math.round(b.getBoundingClientRect().height)));
-      ok(tiles2.length > 0 && tiles2.every((h) => h === 132), 'planted · every tile stays 132px with a status, a +n and a drop-down (' + [...new Set(tiles2)].join(', ') + ')');
+      ok(tiles2.length > 0 && tiles2.every((h) => h === 148), 'planted · every tile stays 148px with a status, a +n and a drop-down (' + [...new Set(tiles2)].join(', ') + ')');
       const yw = await pg.$eval('[data-testid="rail"]', (n) => ({ head: n.querySelector('h3').textContent.trim(), home: !!n.closest('.cbsh-sec.home') }));
       ok(yw.head === 'Your work' && yw.home, 'planted · the "Your work" box sits in Home (' + yw.head + ')');
       ok((await pg.locator('[data-testid="shell-facts-crm"]').innerText()).trim() === '', 'planted · a card with facts null shows nothing');
@@ -247,7 +265,7 @@ async function run() {
       ok(rail.open === '/tasks.html', 'planted · the "Your work" Open goes where the manifest says (rail.route)');
       const rows = await pg.$$eval('[data-slot="alerts"] .al', (els) => els.map((e) => ({ id: e.dataset.testid, lvl: e.className.replace('al ', ''), text: e.textContent.replace(/\s+/g, ' ').trim(), fix: (e.querySelector('.fix') || {}).getAttribute && e.querySelector('.fix').getAttribute('href') })));
       const led = rows.find((r) => r.id === 'ledger-waiting'), pr = rows.find((r) => r.id === 'till-paired');
-      ok(led && /2 waiting to be recorded/.test(led.text) && led.fix === '/accounts.html#waiting', 'planted · "2 waiting to be recorded" — the alert\'s number is the API\'s, its fix opens CB Accounts (' + (led && led.text) + ')');
+      ok(led && /2 waiting to be recorded/.test(led.text) && led.fix === '/accounts.html#waiting', 'planted · "2 waiting to be recorded" — the alert\'s number is the API\'s, its fix opens Accounts (' + (led && led.text) + ')');
       /* FX-F10W: the same counts as Books' To do — each waiting row's `todo`, each kind its own words and door (never "4 waiting for the ledger") */
       const acc = rows.find((r) => r.id === 'ledger-accept'), sup = rows.find((r) => r.id === 'ledger-supplier');
       ok(acc && /\b1 supplier bill to accept/.test(acc.text) && acc.fix === '/accounts.html#waiting', 'planted · "1 supplier bill to accept" with its door (' + (acc && acc.text) + ')');

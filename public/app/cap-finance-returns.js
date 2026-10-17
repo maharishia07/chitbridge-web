@@ -11,6 +11,8 @@
  * ⭐ NEW PATHS (rule 4): FR (this tab's state) · frMonths (the last twelve calendar months as a picker; the workshop's band has one typed month and
  * bkMonths is the fiscal year's names, not a picker) · frPaint.
  * ⚠️ Never error.message on a screen: a failure says what happened and offers Try again.
+ * OWNS the Returns view of Finance: the country's return, the server's figures painted
+ * // CARD 15-tax-and-country-packs/gst-returns-bas-vat
  */
 'use strict';
 
@@ -76,8 +78,8 @@ function frPaint() {
     return;
   }
   if (pk && pk.returns && pk.returns.id) {
-    s.innerHTML = frCard('<h2 data-testid="fr-which">' + esc(pk.returns.short || pk.returns.id) + '</h2><p>' + esc(txf('{name}: prepared in CB Accounts, not here.', { name: pk.returns.name || pk.returns.id })) + '</p>'
-      + '<a class="act" href="/accounts.html#gst" data-testid="fr-accounts">' + esc(tx('Open CB Accounts')) + '</a>', 'fr-elsewhere');
+    s.innerHTML = frCard('<h2 data-testid="fr-which">' + esc(pk.returns.short || pk.returns.id) + '</h2><p>' + esc(txf('{name}: prepared in Accounts, not here.', { name: pk.returns.name || pk.returns.id })) + '</p>'
+      + '<a class="act" href="/accounts.html#gst" data-testid="fr-accounts">' + esc(tx('Open Accounts')) + '</a>', 'fr-elsewhere');
     return;
   }
   s.innerHTML = frCard('<h2>' + esc(tx('No return built yet')) + '</h2><p data-testid="fr-none-why">' + esc(txf('Nothing is built for {country} yet.', { country: (pk && pk.name) || FR.code })) + '</p>', 'fr-none');

@@ -211,7 +211,7 @@ async function route(S, r) {
     const src = fs.readFileSync(path.join(PUB, 'accounts.html'), 'utf8');
     ok(!/\balert\s*\(/.test(src), 'no alert() anywhere in the page');
     ok(!/accounting|books of account/i.test(src), 'the source carries neither forbidden string');
-    ok(/<title>CB Accounts<\/title>/.test(src), 'the page is named CB Accounts');
+    ok(/<title>Accounts<\/title>/.test(src), 'the page is named Accounts');
     ok(/CBOnePerson\.attach\(/.test(src), 'the one-shop gate is attached');
     ok(/CBLedger\.run\(/.test(src) && !/booksEnable/.test(src.replace(/CB_BOOKS_EP/g, '')), 'the Switch on goes through CBLedger — the page holds no copy of the enable call');
   }
@@ -222,7 +222,7 @@ async function route(S, r) {
     const { ctx, p } = await open(S);
     await p.waitForSelector('[data-testid="acc-nav-daybook"]', { timeout: 15000 });
     await p.waitForTimeout(500);
-    ok(/CB Accounts/.test(await p.textContent('.brand')), 'the brand says CB Accounts');
+    ok(/Accounts/.test(await p.textContent('.brand')), 'the brand says Accounts');
     ok(await p.locator('[data-testid="shop-name"]').textContent() === 'Mayur Bhavan', 'the pinned header names the shop');
     const labels = await p.$$eval('#nav .nav-btn', (b) => b.map((x) => x.getAttribute('aria-label')));
     ok(JSON.stringify(labels) === JSON.stringify(VIEWS.map((v) => v[1])), 'the sidebar lists every view, in the menu\'s order: ' + labels.join(' · '));
@@ -248,7 +248,7 @@ async function route(S, r) {
     const cm = await p.evaluate(() => { const m = document.querySelector('[data-testid="cols-menu-daybook"]'), cs = getComputedStyle(m), r = m.getBoundingClientRect(),
       b = m.querySelector('.cbl-mv'); return { pos: cs.position, z: cs.zIndex, w: r.width, h: r.height, vh: innerHeight, mv: b ? b.getBoundingClientRect().width : 0 }; });
     ok(cm.pos === 'absolute' && cm.w > 150 && cm.w < 420 && cm.h <= cm.vh * 0.62 + 2 && cm.mv > 0 && cm.mv <= 26,
-      'CB Accounts › Day book › ⚙ columns opens as a floating panel (position ' + cm.pos + ', ' + Math.round(cm.w) + '×' + Math.round(cm.h) + ', arrow ' + Math.round(cm.mv) + 'px)');
+      'Accounts › Day book › ⚙ columns opens as a floating panel (position ' + cm.pos + ', ' + Math.round(cm.w) + '×' + Math.round(cm.h) + ', arrow ' + Math.round(cm.mv) + 'px)');
     await p.locator('[data-testid="cols-menu-daybook"]').screenshot({ path: path.join(__dirname, 'shots', 'cb-accounts-cols-open.png') }).catch(() => {});
     await p.click('[data-testid="cols-btn-daybook"]');
 
@@ -546,7 +546,7 @@ async function route(S, r) {
     const tabs0 = ctx.pages().length;
     await p.click('[data-testid="bill-ib1"]');
     await p.waitForFunction(() => { const d = document.getElementById('chitsheet'); return !!(d && d.open); }, null, { timeout: 8000 }).catch(() => {});
-    ok(await p.evaluate(() => typeof openChitSheet === 'function' && !!document.getElementById('chitsheet') && document.getElementById('chitsheet').open) && ctx.pages().length === tabs0, 'a bill opens the chit sheet in CB Accounts (openChitSheet is defined here), not a new tab');
+    ok(await p.evaluate(() => typeof openChitSheet === 'function' && !!document.getElementById('chitsheet') && document.getElementById('chitsheet').open) && ctx.pages().length === tabs0, 'a bill opens the chit sheet in Accounts (openChitSheet is defined here), not a new tab');
     await p.keyboard.press('Escape');
 
     /* ── 4 · THE AVATAR MENU, HOME ── */
@@ -578,7 +578,7 @@ async function route(S, r) {
     const S = standIn({ enabled: false });
     const { ctx, p } = await open(S);
     await p.waitForSelector('[data-testid="acc-off"]');
-    ok(/CB Accounts is not switched on/.test(await p.textContent('[data-testid="acc-off"]')), 'off → one card: "CB Accounts is not switched on"');
+    ok(/Accounts is not switched on/.test(await p.textContent('[data-testid="acc-off"]')), 'off → one card: "Accounts is not switched on"');
     ok(await p.locator('[data-testid="acc-card"]').count() === 1 && await p.locator('#nav .nav-btn').count() === 0, 'one card, and no menu to wander into');
     ok(await p.locator('[data-testid="acc-switch-on"]').isVisible(), 'the owner sees Switch on');
     await bad(p, 'ledger off');
@@ -637,7 +637,7 @@ async function route(S, r) {
     await p.waitForSelector('[data-testid="acc-nav-daybook"]', { timeout: 15000 });
     ok(await p.evaluate(() => localStorage.getItem('cb.draft.msg.c1')) === null, 'cleared → the other shop\'s draft is gone');
     for (let i = 0; i < 40 && !S.calls.some((c) => /\/api\/books\/health/.test(c)); i++) await p.waitForTimeout(150);   /* the menu is in the first paint now; the read follows */
-    ok(S.calls.some((c) => /\/api\/books\/health/.test(c)), 'and then CB Accounts opens and reads');
+    ok(S.calls.some((c) => /\/api\/books\/health/.test(c)), 'and then Accounts opens and reads');
     /* a second shop signs in elsewhere while this page is open → this page leaves */
     const other = await ctx.newPage();                       /* the `storage` event reaches OTHER documents: a second tab does the sign-in */
     await other.goto(base + '/no-such-page');
@@ -855,7 +855,7 @@ async function route(S, r) {
 
   /* ── no page error, nothing left the machine ── */
   ok(...C.finish());
-  ok(threw.length === 0, 'no page error from CB Accounts' + (threw.length ? ': ' + threw.slice(0, 3).join(' | ') : ''));
+  ok(threw.length === 0, 'no page error from Accounts' + (threw.length ? ': ' + threw.slice(0, 3).join(' | ') : ''));
   ok(offHost.filter((u) => !/fonts\.g|cdnjs\.cloudflare\.com\/ajax\/libs\/qrcode-generator/.test(u)).length === 0, 'nothing but the stand-in was reachable (the fonts and the QR script of the app page that Sign out opens, are refused)' + (offHost.length ? ' — refused: ' + offHost.join(' ') : ''));
   await b.close(); srv.close();
   console.log('\n  cb-accounts: ' + pass + ' passed, ' + fail + ' failed');

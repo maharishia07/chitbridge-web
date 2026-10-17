@@ -12,9 +12,11 @@
  *   a number invented here. A row's next level lists its batches, earliest expiry first, with expired / expiring said in words.
  *   ⚠️ A product the ledger never moved is ABSENT, never 0 (stock-store.onHand): the empty state says so, not "you have no stock".
  *
- *   CBStock.mount(host) → { refresh }
+ *   CBStock.mount(host) → { refresh } · CBStock.resay() repaints the words (the title is the shop's country word: helpers.js stockWord, NAMES-1)
  * Host globals (as every cap-*.js): api · EP · esc · tx · txf · CBList · CBLocale (optional) · cblog (optional).
  * Loaded by operations.html. Flow step: INV step 2 · stock (docs/process/flows.json).
+ * OWNS the Stock screen of Operations: on hand per product, batches and expiry, painted from the one stock reader
+ * // CARD 13-inventory-stock-and-traceability/on-hand-and-movements
  */
 'use strict';
 var CBStock = (function () {
@@ -84,7 +86,7 @@ var CBStock = (function () {
       empty: function () { return S.notReady ? { title: S.notReady } : { title: t('No stock moved yet.'), sub: t('A product shows here once a delivery is received or a sale is made.') }; },
       head: function () {
         var rows = S.rows || [], below = rows.filter(function (r) { return r.qty < 0; }).length;
-        return { title: t('Stock'), chips: rows.length ? [{ text: tf(rows.length === 1 ? '{n} item' : '{n} items', { n: rows.length }), tid: 'stock-count' }] : [],
+        return { title: t(typeof stockWord === 'function' ? stockWord() : 'Stock'), chips: rows.length ? [{ text: tf(rows.length === 1 ? '{n} item' : '{n} items', { n: rows.length }), tid: 'stock-count' }] : [],
           notices: below ? [{ text: tf(below === 1 ? '{n} below zero — count it' : '{n} below zero — count them', { n: below }), cls: 'bad', tid: 'stock-below-notice' }] : [] };
       },
       search: function (r) { return [nameOf(r), r.unit].concat(r.lots.map(function (l) { return l.lot; })).filter(Boolean).join(' '); },
@@ -111,5 +113,7 @@ var CBStock = (function () {
     if (S.rows === null || S.err) load();
     return { refresh: load };
   }
-  return { mount: mount, load: load };
+  /** the words again, from the rows already held (no read): the shop's country landed after the first paint — NAMES-1, Stock · Inventory */
+  function resay() { if (S.list) S.list.refresh(); }
+  return { mount: mount, load: load, resay: resay };
 })();

@@ -140,7 +140,7 @@ async function route(S, r) {
     await p.waitForSelector('[data-testid="db-src-JV/2026-27/000001"]', { timeout: 15000 });
     await p.locator('[data-testid="db-src-JV/2026-27/000001"]').evaluate((e) => e.click());
     await sheetUp(p);
-    ok(await p.locator('#chitsheet [data-testid="cb-attach-btn"]').count() === 1 && await p.locator('#chitsheet [data-testid="rt-composer"]').count() === 1, 'B · the bill\'s sheet on CB Accounts carries Attach a file + the thread composer');
+    ok(await p.locator('#chitsheet [data-testid="cb-attach-btn"]').count() === 1 && await p.locator('#chitsheet [data-testid="rt-composer"]').count() === 1, 'B · the bill\'s sheet on Accounts carries Attach a file + the thread composer');
     await p.fill('#chitsheet [data-testid="msg-body"]', 'Please send the GST copy');
     await p.click('#chitsheet [data-testid="msg-send"]');
     await p.waitForFunction(() => /Sent/.test((document.querySelector('#chitsheet [data-testid="rt-out"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});

@@ -3485,7 +3485,7 @@ function toCounter(why){
     + '<h2 data-testid="reg-tocounter">Opening the counter</h2>'
     + '<p class="sub">' + esc(why || 'This device is paired as a counter.') + '</p>'
     + '<a class="btn gold" href="/till.html">Open the counter now</a>'
-    + '<p style="margin-top:10px"><a href="#/app" data-testid="reg-stay" onclick="counterStayHere();return false">Stay in ChitBridge instead</a></p>'
+    + '<p style="margin-top:10px"><a href="#/app" data-testid="reg-stay" onclick="counterStayHere();return false">Stay here instead</a></p>'
     + '</div></div></div>';
   /* ⚠️ the timer checks the refusal, not the hash — clicking 'stay' sets it before the hash has moved */
   try { setTimeout(function(){ if (!counterStay()) location.href = '/till.html'; }, 1800); } catch (_) {}
@@ -5415,7 +5415,7 @@ function menuBtn(x){
      link, same tab. A nav to 'ledger' (#/app/ledger, a remembered cb_nav) is redirected there by route(). */
   /* ⭐ BILLS HAS A DOOR TOO (Athi, 2026-10-02): the received and issued bills live in CB Accounts › Bills — the same link, the same tab. */
   if(key==='bills') return `<a class="navlink" href="/accounts.html#bills" data-testid="nav-bills"><span class="ic">${ic}</span>${tx('Bills')} ↗</a>`;
-  if(key==='ledger') return `<a class="navlink" href="/accounts.html" data-testid="nav-ledger"><span class="ic">${ic}</span>${tx('CB Accounts')} ↗</a>`;
+  if(key==='ledger') return `<a class="navlink" href="/accounts.html" data-testid="nav-ledger"><span class="ic">${ic}</span>${tx('Accounts')} ↗</a>`;
   if(key!=='task'&&key!=='order') return `<button class="${on?'on':''}" data-testid="nav-${key}" onclick="${click}"><span class="ic">${ic}</span>${label}</button>`;
   const fs=(UI.folders||[]).filter(f=>(f.scope||'task')===key);
   const open=trackIsOpen(key);
@@ -7825,8 +7825,8 @@ function supListOpts(){
       /* ⭐ "can I actually order from them?" is the question this answers, and it is three different states —
          a catalogue to call, on the rail with nothing on it, and not on ChitBridge at all. */
       { key:'reach', label: tx('How you order'), all: tx('However you order'),
-        options:[{v:'cat',label:tx('📕 Has a catalogue')},{v:'nocat',label:tx('On ChitBridge, no catalogue')},
-                 {v:'off',label:tx('🧾 Not on ChitBridge')}],
+        options:[{v:'cat',label:tx('📕 Has a catalogue')},{v:'nocat',label:tx('On the network, no catalogue')},
+                 {v:'off',label:tx('🧾 Not on the network')}],
         match: function(x,v){ return v==='off' ? x.on_rail===false
           : v==='cat' ? (x.on_rail!==false && !!x.has_catalogue)
           : (x.on_rail!==false && !x.has_catalogue); } },
@@ -7954,7 +7954,7 @@ function supEmptyHTML(){ const rows=supRows();
      tells a shopkeeper their suppliers are gone. CBList's own no-match state tells the two apart. */
   return own + (supKind()==='own_use'
     ? emptyState('🧴', tx('No other suppliers yet'), tx('The shops you buy from to RUN the business — packing, cleaning, stationery, repairs. What arrives from them is never offered to your storefront.'), {label:tx('+ Add one'),onclick:"var i=document.getElementById('sp_add');if(i)i.focus()"})
-    : emptyState('🏭','No suppliers yet','Add one by their User ID or email — or just their name, if they are not on ChitBridge.',{label:'+ Add a supplier',onclick:"var i=document.getElementById('sp_add');if(i)i.focus()"}));
+    : emptyState('🏭','No suppliers yet','Add one by their User ID or email — or just their name, if they are not on the network.',{label:'+ Add a supplier',onclick:"var i=document.getElementById('sp_add');if(i)i.focus()"}));
   /* ⭐ Own stock FIRST, always — not only when the supplier list is empty. Athi: *"if the own catalogue is on
      the top, that would be perfect."* And for a co-assist it is the ONLY door: the actor rail carries
      Rail · Work · Suppliers and has no Catalogue entry, so without this row an employee cannot open the
@@ -9496,7 +9496,7 @@ function crmCols(kind){
           +'<button class="rowinfo" data-testid="sup-details-'+r.supplier_list_id+'" title="Their full record" onclick="event.stopPropagation();supOpenPanel(\''+r.supplier_list_id+'\')">ⓘ</button> '
           +esc(supName(r))+(r.category?' <span class="optchip" style="background:var(--gold-soft);color:var(--warn-3);border-color:var(--gold-line)">'+esc(r.category)+'</span>':'')+crmOneSided(r);
         return esc(r.display_name||custContact(r))+' '+custSeg(r.segment)+crmOneSided(r); } },
-    { key:'cbid', label:tx('ChitBridge ID'), prio:4, sort:'cbid', w:200, html:true, cell:function(r){ var id=r.user_id||r.bridge_id;
+    { key:'cbid', label:tx('Network ID'), prio:4, sort:'cbid', w:200, html:true, cell:function(r){ var id=r.user_id||r.bridge_id;
         return (id && r.on_rail!==false) ? '<span class="mono">'+esc(id)+'</span>' : '<span style="color:var(--grey)" title="'+esc(tx('Your own record of them. Purchases are entered by hand.'))+'">🧾 '+esc(tx('off-rail'))+'</span>'; } },
   ];
   if(crmBooks()) cols.push(
@@ -9515,7 +9515,7 @@ function crmNext(kind, r){
   var pid=kind==='supplier'?r.supplier_entity_id:r.customer_identity_id, list=kind==='supplier'?'suppliers':'customers', muted='color:var(--grey);font-size:var(--fs-1)';
   var head=kind==='customer'
     ? '<div style="'+muted+';padding:2px 0">'+esc(txf((r.txn_count||0)===1?'{n} order':'{n} orders',{n:r.txn_count||0}))+(r.last_txn_at?' · '+esc(tx('last'))+' '+esc(custDate(r.last_txn_at)):'')+'</div>'
-    : '<div style="'+muted+';padding:2px 0">'+(r.on_rail===false?esc(tx('not on ChitBridge')):(r.has_catalogue?esc(tx('📕 catalogue')):esc(tx('On ChitBridge, no catalogue'))))+'</div>'+supForYouHTML(r);
+    : '<div style="'+muted+';padding:2px 0">'+(r.on_rail===false?esc(tx('not on the network')):(r.has_catalogue?esc(tx('📕 catalogue')):esc(tx('On the network, no catalogue'))))+'</div>'+supForYouHTML(r);
   var bills=(pid && typeof bkPartyBillsHTML==='function' && crmBooks()) ? '<div style="'+muted+';text-transform:uppercase;padding:6px 0 2px">'+esc(tx('Bills'))+'</div>'+bkPartyBillsHTML(pid, list, BK.duesCur) : '';
   return '<div data-testid="crm-next-'+esc(pid||'')+'">'+head+bills+'</div>';
 }
@@ -9532,7 +9532,7 @@ function crmSorts(kind){
   var pidOf=function(r){ return kind==='supplier'?r.supplier_entity_id:r.customer_identity_id; }, f=function(r){ return crmFacts(r, pidOf(r)); };
   return [
     { key:'no', label:tx('Party no'), cmp:function(a,b){ return String(f(a).no||'~').localeCompare(String(f(b).no||'~'), undefined, {numeric:true}); } },
-    { key:'cbid', label:tx('ChitBridge ID'), cmp:function(a,b){ return String(a.user_id||a.bridge_id||'~').localeCompare(String(b.user_id||b.bridge_id||'~')); } },
+    { key:'cbid', label:tx('Network ID'), cmp:function(a,b){ return String(a.user_id||a.bridge_id||'~').localeCompare(String(b.user_id||b.bridge_id||'~')); } },
     { key:'bal', label:tx('Balance'), cmp:function(a,b){ return Math.abs(Number(f(b).bal||0))-Math.abs(Number(f(a).bal||0)); } },
     { key:'oldest', label:tx('Oldest due'), cmp:function(a,b){ return String(f(a).oldest||'9999').localeCompare(String(f(b).oldest||'9999')); } },
   ];
@@ -9620,7 +9620,7 @@ async function addCustomer(){ var el=document.getElementById('cu_add'); var h=(e
   /* ⭐ one_sided (2026-10-02): added, but bills to them stay here only — the server says why (inactive, another sandbox, not on ChitBridge) */
   try{ var r=await api('custAdd',{ body:body }); if(el) el.value=''; var pe=document.getElementById('cu_add_phone'); if(pe) pe.value=''; var os=r&&r.customer&&r.customer.one_sided;
     toast(asName&&r&&r.message?tx(r.message):tx('Customer added')+': '+((r&&r.customer&&r.customer.display_name)||h)+(os?' — '+tx('bills to them stay here only')+': '+os.why:'')); await loadCustomers(); if(r&&r.customer) selectCust(r.customer.customer_identity_id); }
-  catch(e){ var m=(e&&e.message)||tx('Could not add'); toast(!asName&&e&&e.status===404&&/^[A-Za-z]+$/.test(h)?m+' — '+tx('to add someone who is not on ChitBridge, type their full name'):m); } }
+  catch(e){ var m=(e&&e.message)||tx('Could not add'); toast(!asName&&e&&e.status===404&&/^[A-Za-z]+$/.test(h)?m+' — '+tx('to add someone who is not on the network, type their full name'):m); } }
 /* ⭐ the seller places a customer in a group (Athi, 2026-09-06: "each customer gets a personalised discount") — the row repaints, the pane stays */
 async function custSetGroup(id,v){ try{ await api('custGroup',{ params:{ id:id }, body:{ segment_override:v } }); var c=(UI.custs||[]).find(function(x){return x.customer_list_id===id;}); if(c) c.segment=v; paintCustList(); paintCustDetail(); toast(tx('Group saved')); }catch(e){ toast(tx('Could not save the group')+': '+(e&&e.message||e)); } }
 async function loadCustomers(){ UI._custLoading=true; var rb=document.getElementById('cu_rows'); if(rb)rb.innerHTML='<div class="loadwrap"><span class="spin"></span> loading…</div>';
@@ -10297,7 +10297,7 @@ function supDetailHTML(){
     const act=function(label,note,fn,tid){ return `<button class="composebtn" data-testid="${tid}" style="width:100%;justify-content:center;margin-top:8px" onclick="${fn}">${label}</button>`
       + `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px;line-height:1.5">${note}</div>`; };
     return `<div class="dh"><button class="dback" onclick="backToList()">‹ ${tx('Suppliers')}</button><div class="dt">${me}</div>`
-      + `<div class="ds">${tx('your own record — they are not on ChitBridge')}</div></div>`
+      + `<div class="ds">${tx('your own record — they are not on the network')}</div></div>`
       + `<div class="db"><div class="supkvs" style="margin-bottom:10px">`
       + `<div class="supkv"><b>${tx('ID')}</b><span class="mono">${esc(x.user_id||'—')}</span></div>`
       + `<div class="supkv"><b>${tx('Buying for')}</b><span>${kind==='own_use'?tx('things we use'):tx('things we sell')}</span></div>`
@@ -10312,7 +10312,7 @@ function supDetailHTML(){
               tx('Goods you bought to sell on. You will be asked which of them to add to your catalogue.'),
               "supRecordDelivery(" + q(supName(x)) + "," + q(x.supplier_entity_id||'') + ")", 'sup-record-delivery'))
       + `<div style="margin-top:14px;font-size:var(--fs-1);color:var(--grey);line-height:1.6">`
-      + tx('⚠️ If they join ChitBridge later, add them again as a business — this record stays as it is, with its own history.')
+      + tx('⚠️ If they join the network later, add them again as a business — this record stays as it is, with its own history.')
       + `</div></div>`;
   }
   const back=`<button class="dback" onclick="backToList()">‹ Suppliers</button>`;
@@ -10439,8 +10439,8 @@ async function addSupplier(){ const x=document.getElementById("sp_err"); if(x)x.
        looking for the missing button. "Not on ChitBridge" is a sentence about capability, not a status badge. */
     confirmAsk(txf('Add {name} as a local supplier?',{name:'<b>'+esc(bid)+'</b>'}),
       (note?('<div style="color:var(--warn-3);margin-bottom:8px">'+note+'</div>'):'')
-      + tx('They are <b>not on ChitBridge</b>, so there is no catalogue to browse and no order to send — you record what you buy from them by hand.')
-      + '<br><br>' + tx('If they <i>are</i> on ChitBridge, cancel and type their User ID or email instead.'),
+      + tx('They are <b>not on the network</b>, so there is no catalogue to browse and no order to send — you record what you buy from them by hand.')
+      + '<br><br>' + tx('If they <i>are</i> on the network, cancel and type their User ID or email instead.'),
       tx('Add supplier'), async function(){
         try{ await api("supAdd",{body:{name:bid, supply_kind:kind}}); toast(tx('Supplier added')+' ✓'); clear(); await loadSuppliers(); }
         catch(e){ if(x)x.textContent=e.message; }
@@ -10454,7 +10454,7 @@ async function addSupplier(){ const x=document.getElementById("sp_err"); if(x)x.
       catch(e){
         /* ⭐ NOT FOUND IS A QUESTION, NOT A DEAD END. A one-word shop name of eight letters looks exactly like a
            handle, and telling the shop "no business with that User ID" answers something they never asked. */
-        if(/not found|no business/i.test((e&&e.message)||'')) { offerLocal(tx('No ChitBridge business with that User ID or email.')); return; }
+        if(/not found|no business/i.test((e&&e.message)||'')) { offerLocal(tx('No business with that User ID or email.')); return; }
         if(x)x.textContent=e.message;
       }
     }); }

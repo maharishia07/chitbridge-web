@@ -135,7 +135,7 @@ function go(){ if (typeof CB_TASKS_ENDED === 'function') CB_TASKS_ENDED(); }
   var ICON = { tasks: 'M9 11l3 3 8-8M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9',
     orders_in: 'M12 3v12M6 9l6 6 6-6M4 21h16', orders_out: 'M12 21V9M6 15l6-6 6 6M4 3h16', done: 'M20 6L9 17l-5-5',
     disputes: 'M5 21V4M5 4h11l-2 4 2 4H5', assist: 'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z' };
-  var EXTRA = [{ k: 'disputes', label: 'Disputes' }, { k: 'assist', label: 'CB Assist' }];   /* T3: the work beside the folders */
+  var EXTRA = [{ k: 'disputes', label: 'Disputes' }, { k: 'assist', label: 'Assist' }];   /* T3: the work beside the folders */
   var panes = { tk: document.getElementById('tk'), dp: document.getElementById('dp'), ca: document.getElementById('ca') }, extraOn = {};
   /** a 401 from the API: the session is no longer good (core.js api() calls go() → this) */
   window.CB_TASKS_ENDED = function () { if (embed) start(null); else CBFrame.ended(); };

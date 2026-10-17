@@ -13,6 +13,8 @@
  *
  * ⭐ REUSE: shop.html's sheet, tokens and classes (.sg · .meta); helpers.js esc (the ONE copy — loaded by shop.html before this file). ⭐ NEW PATH: no storefront screen showed a shopper their data.
  * The server decides: may_consent / may_request carry { may, code, why } — a refused button is greyed WITH its sentence, never hidden.
+ * FLOW shop.html My orders → CBShopPrivacy.open → GET /api/privacy/me → the sheet → POST /me/consent · /me/requests
+ * // CARD 11-crm-and-marketing/consent-and-privacy-requests
  */
 (function (root) {
   'use strict';
@@ -54,7 +56,7 @@
     var kinds = (law.kinds || Object.keys(KIND)).filter(function (k) { return KIND[k]; });
     var ask = '<div style="display:flex;flex-wrap:wrap;gap:6px">' + kinds.map(function (k) { return btn(KIND[k], 'data-priv="request" data-kind="' + k + '"', 'shop-priv-ask-' + k, whyR); }).join('') + '</div>'
       + (whyR ? '<div class="meta" data-testid="shop-priv-ask-why">' + esc(whyR) + '</div>' : '')
-      + '<div class="meta" style="margin-top:6px">' + esc('The shop answers within ' + (law.due_days || 30) + ' days. Erasure runs through ChitBridge’s lifecycle path.') + '</div>';
+      + '<div class="meta" style="margin-top:6px">' + esc('The shop answers within ' + (law.due_days || 30) + ' days. Erasure runs through our lifecycle path.') + '</div>';
     var reqs = ((d.requests && d.requests.requests) || []);
     var made = reqs.length ? reqs.map(function (r) { return '<div style="display:flex;gap:8px;font-size:13px;padding:3px 0;border-top:1px dashed var(--line,#e7e3d8)" data-testid="shop-priv-req"><span style="flex:1">' + esc(KIND[r.kind] || r.kind) + '</span><span style="color:var(--ink-2,#3a4048)">' + esc(r.answered_at ? (OUT[r.outcome] || 'Answered') + ' · ' + day(r.answered_at) : 'Due ' + day(r.due_at)) + '</span></div>'; }).join('') : '';
     var msg = '<div class="meta" id="shop_priv_msg" role="status" data-testid="shop-priv-msg" style="min-height:1em"></div>';

@@ -131,7 +131,7 @@ const walk = async (w) => {
 
   /* ── 1 · GROUPS & SEGMENTS ── */
   await groups();
-  await w.step('G1', 'CB CRM -> Groups: the four segments and the named groups, each with the SERVER\'s member count and its rule in words; the menu marks Groups', async () => {
+  await w.step('G1', 'CRM -> Groups: the four segments and the named groups, each with the SERVER\'s member count and its rule in words; the menu marks Groups', async () => {
     const want = segments(), got = {};
     for (const s of want.segments.concat(want.groups)) got[s.key] = await txt('[data-testid="crm-grp-count-' + s.key.replace(/[^A-Za-z0-9_-]/g, '_') + '"]');
     const okCounts = want.segments.concat(want.groups).every((s) => got[s.key] === String(s.count));
@@ -220,7 +220,7 @@ const walk = async (w) => {
   /* ── 3 · THE SHOP WINDOW ── */
   const showcase = async () => { await page.goto(base + '/crm.html#/showcase'); await page.reload(); await page.waitForSelector('[data-testid="sc-picks"]', { timeout: 20000 }); await page.waitForTimeout(300); };
   await showcase();
-  await w.step('S1', 'CB CRM -> Shop window: the templates as buttons, the current one lit; the preview is the shop\'s OWN page with ?showcase=<current>; pick another -> ONE PATCH, the lit one and the preview follow', async () => {
+  await w.step('S1', 'CRM -> Shop window: the templates as buttons, the current one lit; the preview is the shop\'s OWN page with ?showcase=<current>; pick another -> ONE PATCH, the lit one and the preview follow', async () => {
     const cur = await page.locator('[data-testid="sc-picks"]').getAttribute('data-current'), src0 = await page.locator('[data-testid="sc-preview"]').getAttribute('src');
     const lit0 = await page.locator('[data-sc-pick][aria-pressed="true"]').getAttribute('data-sc-pick');
     await page.click('[data-sc-pick="showcase.paint.specs@1.0"]'); await page.waitForTimeout(600);

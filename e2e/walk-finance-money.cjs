@@ -147,7 +147,7 @@ W.run(REAL ? 'finance-money-real' : 'finance-money', async (w) => {
       const a = await page.locator(T('chq-deposited-' + UUIDS.p1)).count(), b = await page.locator(T('chq-cleared-' + UUIDS.p4)).count(), c = await page.locator(T('chq-bounced-' + UUIDS.p4)).count(), x = await page.locator(T('chq-cleared-' + UUIDS.p1)).count();
       return { ok: a === 1 && b === 1 && c === 1 && x === 0, saw: 'Deposited on Mala ' + a + '; Cleared/Bounced on Sri ' + b + '/' + c + '; Cleared on Mala ' + x };
     });
-    await w.step('Q5', 'Cheques -> Remind me on Mala\'s cheque -> ONE follow-up through CB CRM\'s route: the party, due on the cheque\'s date, naming cheque 000777 and ₹5,000; the cell says Reminder set', async () => {
+    await w.step('Q5', 'Cheques -> Remind me on Mala\'s cheque -> ONE follow-up through CRM\'s route: the party, due on the cheque\'s date, naming cheque 000777 and ₹5,000; the cell says Reminder set', async () => {
       await page.click(T('fq-remind-' + UUIDS.p1)); await page.waitForTimeout(800);
       const fu = S.bodies.find((x) => x.p === '/api/crm/followups'), b = fu && fu.body, cell = await txt(T('fq-due-' + UUIDS.p1));
       return { ok: !!b && b.party_id === MALA && b.due_at === dayN(1) && b.source === 'dues' && /000777/.test(b.what) && /5,000/.test(b.what) && /Mala/.test(b.what) && /Reminder set/.test(cell) && S.writes.length === 1,
@@ -238,12 +238,12 @@ W.run(REAL ? 'finance-money-real' : 'finance-money', async (w) => {
       const out = await txt(T('fr-out')), b = await body(), en = await page.locator(T('fr-gstr1')).isEnabled().catch(() => false); S.gstr = 'ok';
       return { ok: /Could not build the file/.test(out) && !/10\.0\.0\.5|database timeout/.test(b) && en, saw: '"' + out + '"; raw ' + (/10\.0\.0\.5/.test(b) ? 'SHOWING' : 'no') + '; button enabled ' + en };
     });
-    await w.step('R5', 'Returns (an Australian shop) -> which return applies: BAS, prepared in CB Accounts; no download button here', async () => {
+    await w.step('R5', 'Returns (an Australian shop) -> which return applies: BAS, prepared in Accounts; no download button here', async () => {
       S.country = 'AU'; await open('returns', T('fr-elsewhere'));
       const h = await txt(T('fr-which')), p = await txt(T('fr-elsewhere') + ' p'), link = await page.locator(T('fr-accounts')).getAttribute('href').catch(() => ''), b1 = await page.locator(T('fr-gstr1')).count();
-      return { ok: h === 'BAS' && /Business activity statement/.test(p) && /prepared in CB Accounts/.test(p) && link === '/accounts.html#gst' && b1 === 0, saw: '"' + h + '" · "' + p + '" · link ' + link + '; gstr buttons ' + b1 };
+      return { ok: h === 'BAS' && /Business activity statement/.test(p) && /prepared in Accounts/.test(p) && link === '/accounts.html#gst' && b1 === 0, saw: '"' + h + '" · "' + p + '" · link ' + link + '; gstr buttons ' + b1 };
     });
-    await w.step('R6', 'Returns (a UAE shop) -> VAT return, prepared in CB Accounts', async () => {
+    await w.step('R6', 'Returns (a UAE shop) -> VAT return, prepared in Accounts', async () => {
       S.country = 'AE'; await open('returns', T('fr-elsewhere'));
       const h = await txt(T('fr-which')), p = await txt(T('fr-elsewhere') + ' p');
       return { ok: h === 'VAT return' && /VAT201/.test(p), saw: '"' + h + '" · "' + p + '"' };

@@ -3564,7 +3564,7 @@ function standardsSettingsHTML(){
   /* the door to the page: its counts are the register's own (stdCounts), never typed here */
   var n = stdCounts();
   var door = card('<div style="font-size:var(--fs-2);line-height:1.6;color:var(--on-card)">'
-      + '<b>' + tx('What ChitBridge follows, and what is still missing') + '</b> — the laws and standards, each with its status, '
+      + '<b>' + tx('What we follow, and what is still missing') + '</b> — the laws and standards, each with its status, '
       + 'now has its own page.'
       + '<div style="margin-top:6px;font-size:var(--fs-1);color:var(--grey)" data-testid="std-door-counts">'
       + '<b style="color:var(--ok-2)">' + n.live + ' in force</b> · <b style="color:var(--warn-2)">' + n.part + ' partly</b> · ' + n.plan + ' planned.</div>'
@@ -4475,7 +4475,7 @@ function intStreamsHTML(){
             + con.map(function(c){ return '<option value="' + esc(c.id) + '"' + (own[st.id] === c.id ? ' selected' : '') + '>' + esc(nameOf(c.id)) + '</option>'; }).join('')
             + (own[st.id] && !con.find(function(c){ return c.id === own[st.id]; }) ? '<option value="' + esc(own[st.id]) + '" selected>' + esc(own[st.id]) + ' (' + esc(tx('not running')) + ')</option>' : '')
             + '</select>';
-          return '<tr><td style="padding:5px 8px;border-top:1px solid var(--line)"><b>' + esc(tx(st.label)) + '</b><div style="font-size:var(--fs-1);color:var(--grey)">' + esc(st.dir === 'in' ? tx('into ChitBridge') : tx('out to the other system')) + '</div></td>'
+          return '<tr><td style="padding:5px 8px;border-top:1px solid var(--line)"><b>' + esc(tx(st.label)) + '</b><div style="font-size:var(--fs-1);color:var(--grey)">' + esc(st.dir === 'in' ? tx('into the network') : tx('out to the other system')) + '</div></td>'
             + '<td style="padding:5px 8px;border-top:1px solid var(--line);font-size:var(--fs-1);color:var(--grey)">' + esc(tx(st.what)) + '</td>'
             + '<td style="padding:5px 8px;border-top:1px solid var(--line)">' + sel + '</td></tr>';
         }).join('') + '</tbody></table></div>';
@@ -5099,7 +5099,7 @@ function intPairingsHTML(){
     var at = _keySeenAt(k), ip = (k.seen && k.seen.ip) || null, d = k.diag || null;
     var shut = !!(k.till && k.till.closed_at);
     var state = shut ? { c: 'grey', t: tx('closed') + ' ' + _keyAgo(k.till.closed_at) + (k.till.id ? ' · ' + k.till.id : '') }
-              : !at ? { c: 'warn', t: tx('never reached ChitBridge') }
+              : !at ? { c: 'warn', t: tx('never reached us') }
               : (Date.now() - at) < 900000 ? { c: 'ok', t: tx('open now') }
               : { c: (Date.now() - at) > 86400000 ? 'warn' : 'grey', t: _keyAgo(k.seen.at) };
     var armed = (_CLOSE_ARMED === k.jti);
@@ -5124,7 +5124,7 @@ function intPairingsHTML(){
 
   var note = '';
   if (never.length) note += '<div style="color:var(--warn);font-size:var(--fs-2);margin-top:10px" data-testid="int-counter-unreached">'
-    + esc(never.length + ' ' + tx('counter(s) have never reached ChitBridge. They are not being refused — nothing from them has arrived at all, so look at the network or firewall on those PCs rather than at permissions here.')) + '</div>';
+    + esc(never.length + ' ' + tx('counter(s) have never reached us. They are not being refused — nothing from them has arrived at all, so look at the network or firewall on those PCs rather than at permissions here.')) + '</div>';
   if (dupIps.length) note += '<div style="color:var(--warn);font-size:var(--fs-2);margin-top:10px" data-testid="int-counter-dups">'
     + esc(tx('The same PC is paired more than once. Each pairing keeps its own copy of the bills on that machine and only the one in use is sent from.'))
     + ' <button data-testid="int-counter-close-dups" onclick="intCounterCloseDups()">' + tx('Close the unused duplicates') + '</button></div>';
@@ -5195,7 +5195,7 @@ function integrationsSettingsHTML(){
   var _keySeen = function(k){
     var sn = k && k.seen;
     if (!sn || !sn.at) return '<span data-testid="int-key-seen-' + esc(k.jti) + '" style="color:var(--warn)">'
-      + tx('never reached ChitBridge') + '</span>';
+      + tx('never reached us') + '</span>';
     var quiet = (Date.now() - new Date(sn.at).getTime()) > 86400000;
     return '<span data-testid="int-key-seen-' + esc(k.jti) + '" style="color:var(--' + (quiet ? 'warn' : 'ok') + ')">'
       + esc(_keyAgo(sn.at)) + (sn.ip ? ' · ' + esc(sn.ip) : '') + '</span>';

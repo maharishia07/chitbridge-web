@@ -67,7 +67,7 @@ function supPaint(){
 
   if (!rows.length) {
     el.innerHTML = head + supEmpty('🧴', tx('Nothing here yet'),
-      tx('Add what the shop buys for itself, or record a purchase from a shop that is not on ChitBridge.'));
+      tx('Add what the shop buys for itself, or record a purchase from a shop that is not on the network.'));
     return;
   }
 

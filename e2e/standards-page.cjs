@@ -462,7 +462,7 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     const { ctx, p } = await open(SI, { path: '/', noWait: true });
     await p.waitForSelector('[data-testid="shell-card-standards"]', { timeout: 15000 });
     ok(await p.getAttribute('[data-testid="shell-card-standards"]', 'href') === '/standards.html', 'the index page (the shell\'s Home) links Standards');
-    ok(await p.getAttribute('[data-testid="shell-card-crm"]', 'href') === '/crm.html', 'and CB CRM as a Running card');
+    ok(await p.getAttribute('[data-testid="shell-card-crm"]', 'href') === '/crm.html', 'and CRM as a Running card');
     ok(await p.locator('[data-testid="shell-pillar-accounting"] [data-testid="shell-card-standards"]').count() === 1, 'Standards sits in the Accounts pillar (Home pillars, 2026-10-09)');
     await ctx.close();
   }

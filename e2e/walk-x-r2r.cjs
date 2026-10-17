@@ -129,7 +129,7 @@ W.run('x-r2r', async (w) => {
     else { S = await fixture(ctx); await ctx.addInitScript(() => { try { localStorage.setItem('cb_api_base', location.origin); } catch (_) {} }); }
     if (!REAL) await ctx.addInitScript((s) => { try { localStorage.setItem('cb_sess', s); } catch (_) {} }, W.session('Fixture Owner', 'Fixture Shop AU'));
 
-    await w.step('R0', 'sign in as ' + (REAL ? LOGIN : 'the fixture AU owner') + ' → CB Accounts opens on To do', async () => {
+    await w.step('R0', 'sign in as ' + (REAL ? LOGIN : 'the fixture AU owner') + ' → Accounts opens on To do', async () => {
       if (REAL) await signIn(page, base); else await page.goto(base + '/accounts.html#todo');
       await page.waitForSelector('#content', { timeout: 20000 }); await open(page, base, 'todo');
       const t = await content(page);

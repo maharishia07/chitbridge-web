@@ -78,8 +78,8 @@ W.run('compat', async (w) => {
     const ix = (id) => all.find((x) => x.id === id).ix;
     const open = async (id) => { await page.click('[data-testid="std-row-' + ix(id) + '"]'); await page.waitForSelector('[data-testid="std-detail-' + ix(id) + '"]', { timeout: 5000 }); return page.innerText('[data-testid="std-detail-' + ix(id) + '"]'); };
     const xm = await open('xero-move-in'), xs = await open('xero-sync'), bk = await open('beckn');
-    const ok = /From Xero into ChitBridge/.test(xm) && /lib\/move-in\.js/.test(xm) && /tests\/move-in\.test\.cjs/.test(xm) && /Proven on a stand-in/.test(xm)
-      && /From ChitBridge out to Xero/.test(xs) && /Not built yet/.test(xs) && /No test yet/.test(xs)
+    const ok = /From Xero into the network/.test(xm) && /lib\/move-in\.js/.test(xm) && /tests\/move-in\.test\.cjs/.test(xm) && /Proven on a stand-in/.test(xm)
+      && /From the network out to Xero/.test(xs) && /Not built yet/.test(xs) && /No test yet/.test(xs)
       && /lib\/beckn-map\.js/.test(bk) && /tests\/beckn-map\.test\.js/.test(bk) && /Beckn-compatible, not ONDC-registered/.test(bk);
     return { ok, saw: 'xero-move-in "' + xm.replace(/\s+/g, ' ').slice(0, 90) + '…" · xero-sync ' + (/Not built yet/.test(xs) ? 'Not built yet' : '?') + ' · beckn ' + (/beckn-map/.test(bk) ? 'code+test' : '?') };
   });
@@ -96,7 +96,7 @@ W.run('compat', async (w) => {
 
   await w.step('C5', 'Copy for a buyer or CA -> the statement carries Moves, Code and Test', async () => {
     const t = await page.evaluate(() => { const x = ROWS.find((r) => r.r.compat === 'csv'); return statementOf(x.r); });
-    return { ok: /Moves: Both ways between ChitBridge and Any spreadsheet/.test(t) && /Code: chitbridge-api tools\/tally-connector\/adapters\/csv\.js/.test(t) && /Test: chitbridge-api tests\/csv\.test\.js/.test(t), saw: t.split('\n').filter((l) => /^(Moves|Code)/.test(l)).join(' / ') };
+    return { ok: /Moves: Both ways between the network and Any spreadsheet/.test(t) && /Code: chitbridge-api tools\/tally-connector\/adapters\/csv\.js/.test(t) && /Test: chitbridge-api tests\/csv\.test\.js/.test(t), saw: t.split('\n').filter((l) => /^(Moves|Code)/.test(l)).join(' / ') };
   });
 
   await w.step('C6', 'compat.json unreadable -> the Works with tab says it could not be read, with Try again (never "nothing matches")', async () => {

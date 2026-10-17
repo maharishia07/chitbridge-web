@@ -125,7 +125,7 @@ const walk = async (w) => {
 
   /* ── FINANCE › REPORTS ── */
   await go('/finance.html#/reports', '[data-testid="fm-row-open"], [data-testid="cbl-error-fin-reports"]');
-  await w.step('R1', 'Reports: one CBList of the server\'s measures × all · received · sent; Stuck = 3 is a door to CB CRM › Chits › Stuck, Open received opens the In tab, an age is no door; the rule said', async () => {
+  await w.step('R1', 'Reports: one CBList of the server\'s measures × all · received · sent; Stuck = 3 is a door to CRM › Chits › Stuck, Open received opens the In tab, an age is no door; the rule said', async () => {
     const tab = await txt('[data-testid="fin-nav-reports"]'), rule = await txt('[data-testid="fm-rule"]');
     if (REAL) return { ok: /Reports/.test(tab) && /Stuck = open for more than/.test(rule), saw: tab + ' · "' + rule + '"' };
     const stuck = await txt('[data-testid="fm-overdue-all"]'), stuckHref = await attr('[data-testid="fm-overdue-all"]', 'href'), inHref = await attr('[data-testid="fm-open-received"]', 'href');
@@ -140,7 +140,7 @@ const walk = async (w) => {
       const days = since ? (TD.nowMs() - Date.parse(since)) / 864e5 : -1, pressed = await attr('[data-testid="fm-period-7"]', 'aria-pressed'), sent = await txt('[data-testid="fm-closed-sent"]');
       return { ok: g.length === 1 && days > 6.9 && days < 7.1 && pressed === 'true' && sent === '2', saw: g.length + ' read · since ' + days.toFixed(2) + ' days ago · closed sent ' + sent };
     });
-    await w.step('R3', 'a stuck number -> CB CRM › Chits with the Stuck tab preset (the list that holds them), never the workshop', async () => {
+    await w.step('R3', 'a stuck number -> CRM › Chits with the Stuck tab preset (the list that holds them), never the workshop', async () => {
       await page.click('[data-testid="fm-overdue-received"]'); await page.waitForTimeout(800);
       const url = page.url();
       return { ok: /\/crm\.html#\/chits\?tab=stuck/.test(url) && !/app\.html/.test(url), saw: url.replace(base, '') };
@@ -165,11 +165,11 @@ const walk = async (w) => {
   await page.setViewportSize({ width: 1366, height: 900 });
   await go('/settings.html#/account', '[data-testid="sx-ses-list"]');   /* WALK-REG 2026-10-16: the keys card is hidden */
   if (!REAL) await openRow('sx-ses-j-phone');   /* the next level and its action are measured too */
-  await rule13(w, 'R13a', 'CB Settings › Account', 'set');
+  await rule13(w, 'R13a', 'Settings › Account', 'set');
   await page.setViewportSize({ width: 1366, height: 900 });
   await go('/finance.html#/reports', '[data-testid="fm-row-open"], [data-testid="cbl-error-fin-reports"]');
   if (!REAL) await openRow('fm-row-overdue');
-  await rule13(w, 'R13b', 'CB Finance › Reports', 'screen');
+  await rule13(w, 'R13b', 'Finance › Reports', 'screen');
   if (S.stack) S.stack.stop();
   if (w.errs.length) w.note('T99', 'page errors seen during the walk', w.errs.slice(0, 3).join(' | '));
 };

@@ -141,7 +141,7 @@ const walk = async (w) => {
 
   /* ═══ DEPTH — the operations, end to end, both parties ═══════════════════════════════════════════════════════ */
   if (ONLY !== 'W') {
-    await w.step('D01', 'The front door: CB Accounts signed out shows ONE sign-in window; the owner signs in with the code -> the To do opens', async () => {
+    await w.step('D01', 'The front door: Accounts signed out shows ONE sign-in window; the owner signs in with the code -> the To do opens', async () => {
       const fresh = await browser.newContext({ viewport: { width: 1366, height: 768 }, locale: 'en-IN', timezoneId: 'Asia/Kolkata' });
       const p = await fresh.newPage(); await p.goto(WEB + '/accounts.html', { waitUntil: 'load' });
       await p.waitForSelector(T('signin-id'), { timeout: 15000 }).catch(() => {});
@@ -169,7 +169,7 @@ const walk = async (w) => {
       const t = await text(page);
       return { ok: /Packing tape/.test(t) && /counted/.test(t) && /not bought yet/.test(t) && /Used some/.test(t), saw: t.slice(t.indexOf('SUPPLIES'), t.indexOf('SUPPLIES') + 420) };
     });
-    await w.step('D03', 'Supplies -> Record a purchase (a cash bill from a shop not on ChitBridge): Corner Stores · CS-77 · 2 Packing tape at 40 -> Recorded; the row now says what it last cost and who from', async () => {
+    await w.step('D03', 'Supplies -> Record a purchase (a cash bill from a shop not on the network): Corner Stores · CS-77 · 2 Packing tape at 40 -> Recorded; the row now says what it last cost and who from', async () => {
       await page.click(T('supply-buy')); await page.waitForSelector(T('supply-from'), { timeout: 8000 });
       await page.fill(T('supply-from'), 'Corner Stores'); await page.fill(T('supply-ref'), 'CS-77');
       await page.fill(T('supply-l-name'), 'Packing tape ' + RUN); await page.fill(T('supply-l-qty'), '2'); await page.fill(T('supply-l-cost'), '40');
@@ -259,7 +259,7 @@ const walk = async (w) => {
     });
 
     /* ── step 4 · the supplier's bill arrives (the counter's two-sided bill, as the loader sends it) ── */
-    await w.step('D12', 'The SUPPLIER bills the buyer (its counter bill, on credit) -> CB Accounts › Unpaid bills › Received lists "KT/…" from Kumar Trade Co with its amount, step "Received"; the app\'s Task counts it as Open but does not list it (bills are not tasks)', async () => {
+    await w.step('D12', 'The SUPPLIER bills the buyer (its counter bill, on credit) -> Accounts › Unpaid bills › Received lists "KT/…" from Kumar Trade Co with its amount, step "Received"; the app\'s Task counts it as Open but does not list it (bills are not tasks)', async () => {
       const cat = await buyer.get('/api/relationships/suppliers/' + sup.me.identity_id + '/catalogue');
       const items = ((cat.b && cat.b.items) || []).slice(0, 2);
       const lines = items.map((it, i) => { const d = it.item_data || {}; return { particulars: d.name, quantity: i + 2, unit: d.unit || 'piece', price: Number(d.price && d.price.amount || 0), gst_rate: Number(d.gst_rate || 0), hsn: d.hsn || undefined, item_id: it.item_id }; });
@@ -319,13 +319,13 @@ const walk = async (w) => {
     });
 
     /* ── step 6 · posted: CB Accounts ── */
-    await w.step('D16', 'CB Accounts › Unpaid bills › Received (step 6) -> the bill from Kumar Trade Co with its amount and the server\'s step word', async () => {
+    await w.step('D16', 'Accounts › Unpaid bills › Received (step 6) -> the bill from Kumar Trade Co with its amount and the server\'s step word', async () => {
       await open(page, '/accounts.html#bills', T('bills-list'));
       await page.waitForFunction((no) => document.body.innerText.indexOf(no) >= 0, S.bill.no, { timeout: 10000 }).catch(() => {});
       const t = await text(page), row = S.bill.chit_id ? await txt(page, T('bill-' + S.bill.chit_id)) : '', step = S.bill.chit_id ? await txt(page, T('bill-step-' + S.bill.chit_id)) : '';
       return { ok: /Kumar Trade Co/.test(row) && row.indexOf(money(S.bill.total)) >= 0 && /Accepted|accepted/.test(step), saw: t.slice(t.indexOf('Received'), t.indexOf('Received') + 30) + ' … row "' + row.slice(0, 100) + '"; step "' + step + '"' };
     });
-    await w.step('D17', 'CB Accounts › Payables -> Kumar Trade Co · you owe the bill\'s amount, with Pay; Day book -> the PV entry names Kumar Trade Co with Purchases + GST', async () => {
+    await w.step('D17', 'Accounts › Payables -> Kumar Trade Co · you owe the bill\'s amount, with Pay; Day book -> the PV entry names Kumar Trade Co with Purchases + GST', async () => {
       await open(page, '/accounts.html#payables', T('dues-list')); await page.waitForTimeout(1500);
       const tp = await text(page);
       const payable = page.locator(T('dues-' + sup.me.identity_id)); const prow = await payable.count() ? norm(await payable.innerText()) : '';
@@ -336,7 +336,7 @@ const walk = async (w) => {
       S.owed = (prow.match(/₹\s?[\d,]+\.\d\d/) || [''])[0];
       return { ok: /Kumar Trade Co/.test(prow) && !!S.owed && /Pay/.test(prow) && /Kumar Trade Co/.test(pv) && /Purchases/.test(pv) && /GST/.test(pv), saw: 'payables row "' + prow.slice(0, 110) + '"; day book: ' + (pv || td.slice(td.indexOf('shown'), td.indexOf('shown') + 120)) };
     });
-    await w.step('D18', 'CB Accounts › Ledgers › Suppliers › Kumar Trade Co -> the party\'s ledger: Opening · Closing … Cr in the head, the bill as "Purchase · Bill KT/…" with its amount Cr', async () => {
+    await w.step('D18', 'Accounts › Ledgers › Suppliers › Kumar Trade Co -> the party\'s ledger: Opening · Closing … Cr in the head, the bill as "Purchase · Bill KT/…" with its amount Cr', async () => {
       await open(page, '/accounts.html#ledgers', T('lt-tree'));
       await page.click('[data-tn="L:2100"]').catch(() => {}); await page.waitForTimeout(1200);   /* Suppliers: opens the control ledger and unfolds its parties */
       let party = page.locator('[data-tn="P:' + sup.me.identity_id + '"]').first();
@@ -432,7 +432,7 @@ const walk = async (w) => {
     /* ── the refused states, with a view-only login ── */
     if (viewer) {
       const vUI = await ctxFor(browser, viewer);
-      await w.step('D24', 'A VIEW-ONLY co-assist on CB Accounts -> the Ledger opens read-only: Payables › Pay is shown but the record is refused in the server\'s sentence; GST close is refused the same way', async () => {
+      await w.step('D24', 'A VIEW-ONLY co-assist on Accounts -> the Ledger opens read-only: Payables › Pay is shown but the record is refused in the server\'s sentence; GST close is refused the same way', async () => {
         const p = vUI.page;
         await open(p, '/accounts.html#payables', T('dues-list') + ', ' + T('acc-card')); await p.waitForTimeout(1500);
         const t0 = await text(p);
@@ -451,7 +451,7 @@ const walk = async (w) => {
         await p.click(T('pg-close')).catch(() => {}); await p.waitForTimeout(2500);
         const t2 = await text(p), name = await shot(p, 'd23-viewer');
         const payRefused = /view-only/i.test(paySaw) && !/Paid ₹/.test(paySaw);
-        return { ok: /Payables|CB Accounts/.test(t0) && payRefused && /Only the owner may do this/.test(t2), saw: name + ' · opened: ' + t0.slice(0, 60) + '; pay: "' + paySaw.slice(0, 120) + '"' + (payRefused ? '' : ' [a VIEW-ONLY login RECORDED a payment — WX-P2P-15]') + '; gst: ' + (t2.match(/Only the owner may do this\.?/) || ['no refusal sentence'])[0] };
+        return { ok: /Payables|Accounts/.test(t0) && payRefused && /Only the owner may do this/.test(t2), saw: name + ' · opened: ' + t0.slice(0, 60) + '; pay: "' + paySaw.slice(0, 120) + '"' + (payRefused ? '' : ' [a VIEW-ONLY login RECORDED a payment — WX-P2P-15]') + '; gst: ' + (t2.match(/Only the owner may do this\.?/) || ['no refusal sentence'])[0] };
       });
       await vUI.ctx.close();
     } else w.note('D24', 'view-only co-assist', 'no viewer login (' + VIEWER + ') on this stack — see the findings file for how to make one');

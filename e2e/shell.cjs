@@ -45,7 +45,7 @@ const PLANTED = { version: 1, entries: [
   { id: 'storefront', name: 'Storefront', route: '/shop.html', icon: '◇', area: 'selling', state: 'built', what: 'Your shop on the web.', facts: '/api/facts/broken' },
   { id: 'catalogue', name: 'Catalogue', route: null, icon: '▦', area: 'selling', state: 'workshop' },
   { id: 'orders', name: 'Orders', route: null, icon: '↓', area: 'selling', state: 'coming' },
-  { id: 'accounts', name: 'CB Accounts', route: '/accounts.html', icon: '₹', area: 'running', state: 'built', what: 'What the shop made, and what it owes.' }
+  { id: 'accounts', name: 'Accounts', route: '/accounts.html', icon: '₹', area: 'running', state: 'built', what: 'What the shop made, and what it owes.' }
 ] };
 
 async function run(o) {
@@ -128,6 +128,9 @@ async function run(o) {
       const built = man.entries.filter((e) => e.state === 'built').length, rest = man.entries.length - built;
       ok(await pg.locator('.cbsh-box').count() === built && await pg.locator('.cbsh-sc').count() === rest, '1366 · ' + built + ' cards and ' + rest + ' dashed chips from the manifest');
       ok(await pg.locator('.cbsh-main a[href*="app.html"]').count() === 0, '1366 · no link into app.html in the working area');
+      /* NAMES-1: Running it draws flat, like Trade — its cards in one grid, no Operations / People sub-panels (the pillars stay on the rows) */
+      ok(await pg.locator('.cbsh-sec.running .cbsh-pil').count() === 0 && await pg.locator('.cbsh-sec.running > .cbsh-grid [data-testid="shell-card-employees"]').count() === 1,
+        '1366 · Running it is one flat group: no sub-panels, Employees a tile in it');
       /* 6 · the rail scrolls; scroll moves the highlight */
       await pg.click('[data-testid="shell-nav-labs"]'); await pg.waitForTimeout(1400);
       const top = await pg.evaluate(() => { const m = document.querySelector('.cbsh-main'), s = document.querySelector('.cbsh-sec.labs'); return Math.abs(m.scrollTop - (s.offsetTop - 6)) < 8 || m.scrollTop + m.clientHeight >= m.scrollHeight - 4; });
@@ -210,7 +213,7 @@ async function run(o) {
       ok(await pg.locator('[data-testid="shell-nav"]').count() === 0 && await pg.locator('[data-testid="shell-switcher"]').count() === 1, vw + ' · inside an app: no rail, one switcher');
       /* a phone: the switcher is its icon (INT7b) - the screen chip names the screen; the name shows from 1366 */
       if (vw === 390) ok(await pg.locator('[data-testid="shell-switcher"]').isVisible() && !(await pg.locator('[data-testid="shell-switcher"] .sn').first().isVisible().catch(() => false)), vw + ' · the switcher is an icon (the app name is the screen chip\x27s)');
-      else ok(/CB Accounts/.test(await pg.locator('[data-testid="shell-switcher"]').innerText()), vw + ' · the switcher names the app');
+      else ok(/Accounts/.test(await pg.locator('[data-testid="shell-switcher"]').innerText()), vw + ' · the switcher names the app');
       await pg.click('[data-testid="shell-switcher"]');
       const links = await pg.$$eval('[data-testid="shell-switcher-menu"] a', (as) => as.map((a) => a.getAttribute('href')));
       ok(links.join() === '/,/#selling,/#money,/#running,/#trade,/#labs,/#setup', vw + ' · the switcher lists the seven areas (' + links.join(' ') + ')');

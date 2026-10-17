@@ -141,7 +141,7 @@ W.run('tasks', async (w) => {
 
   await openPage();
 
-  await w.step('T1', 'Tasks & Orders -> the standard page: four folders in the sidebar (then Disputes · CB Assist, T3), Orders in first, one row per open order, the count says 3 rows; a row says 🌐 Online · Pick up and the amount; the 3-day-old order wears Stuck (the rail\'s test) and Billed; ＋ New is this page\'s own button (never the workshop)', async () => {
+  await w.step('T1', 'Tasks & Orders -> the standard page: four folders in the sidebar (then Disputes · Assist, T3), Orders in first, one row per open order, the count says 3 rows; a row says 🌐 Online · Pick up and the amount; the 3-day-old order wears Stuck (the rail\'s test) and Billed; ＋ New is this page\'s own button (never the workshop)', async () => {
     const nav = await page.$$eval('[data-testid^="skel-nav-"]', (bs) => bs.map((b) => b.getAttribute('data-sec')));
     const n = await rows(), cnt = await txt('[data-testid="tk-count"]'), list = await txt('[data-testid="tk-list"]');
     const how = await txt('[data-testid="tk-how-c1"]'), stuck = await page.locator('[data-testid="tk-stuck-c2"]').count(), billed = await page.locator('[data-testid="tk-billed-c2"]').count(), stuck4 = await page.locator('[data-testid="tk-stuck-c4"]').count();

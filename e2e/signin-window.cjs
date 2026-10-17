@@ -175,7 +175,7 @@ const fits = (p) => p.evaluate(() => {
     const e1 = await lab(b, WEB, dev, 'who=employee&by=mobile&stage=first', async (r) => { await signIn(r); });
     errs.push(...e1.errs);
     say(D + ' ⭐ employee by mobile, first time: code → ASKED TO SET A PIN → signed in; stored id is bala@mayuri123.br (never typed)', e1.setPin === true && e1.storedId === 'bala@mayuri123.br' && /employee/.test(e1.kind || '') && /then a PIN was set/.test(e1.method || ''), 'setPin=' + e1.setPin + ' id=' + e1.storedId + ' ' + (e1.err || e1.why || ''));
-    say(D + ' employee without costs: CB Accounts and owner-only apps are refused, the till opens', (e1.apps || []).includes('till:true') && (e1.apps || []).includes('accounts:false') && (e1.apps || []).includes('storefront:false') && /\bno\b/.test(e1.costs || ''), (e1.apps || []).join(' '));
+    say(D + ' employee without costs: Accounts and owner-only apps are refused, the till opens', (e1.apps || []).includes('till:true') && (e1.apps || []).includes('accounts:false') && (e1.apps || []).includes('storefront:false') && /\bno\b/.test(e1.costs || ''), (e1.apps || []).join(' '));
     const e2 = await lab(b, WEB, dev, 'who=employee&by=mobile&stage=returning', async (r) => { await signIn(r, { wrongFirst: true }); });
     errs.push(...e2.errs);
     say(D + ' employee returning: the PIN box (4 digits) by mobile; a wrong PIN is a sentence; the right one signs in', e2.needed === 'pin' && /Incorrect PIN|did not match/.test(e2.wrongWhy || '') && e2.storedId === 'bala@mayuri123.br' && /PIN/.test(e2.method || ''), 'needed=' + e2.needed + ' wrong="' + e2.wrongWhy + '" ' + (e2.err || ''));
@@ -227,7 +227,7 @@ const fits = (p) => p.evaluate(() => {
     errs.push(...rd.errs);
   }
 
-  console.log('\n── the apps: CB Accounts and the index mount the same window ' + '─'.repeat(30));
+  console.log('\n── the apps: Accounts and the index mount the same window ' + '─'.repeat(30));
   const api = apiStandIn();
   await new Promise((res) => api.srv.listen(0, '127.0.0.1', res));
   const API = 'http://127.0.0.1:' + api.srv.address().port;
@@ -242,7 +242,7 @@ const fits = (p) => p.evaluate(() => {
     const inCard = await p.locator('[data-testid="acc-card"] [data-testid="signin-window"]').count();
     const bounce = await p.locator('[data-testid="acc-card"] a[href*="app.html"]').count();
     await p.screenshot({ path: path.join(SHOTS, 'signin-' + D.trim() + '-accounts-out.png') });
-    say(D + ' CB Accounts signed out: the window is IN the card; no link to the workshop', inCard === 1 && bounce === 0, 'window=' + inCard + ' bounce=' + bounce);
+    say(D + ' Accounts signed out: the window is IN the card; no link to the workshop', inCard === 1 && bounce === 0, 'window=' + inCard + ' bounce=' + bounce);
     await tap('[data-testid="signin-id"]'); await p.keyboard.type('athi@mayur.test'); await tap('[data-testid="signin-go"]');
     await p.waitForSelector('[data-testid="signin-code"]', { timeout: 10000 });
     const CODE = dev.isMobile ? TESTER : '123456';   /* the phone signs in with the TESTER code: 8+ characters, letters and all */
@@ -252,7 +252,7 @@ const fits = (p) => p.evaluate(() => {
     const sess = await p.evaluate(() => { try { return JSON.parse(localStorage.getItem('cb_sess')); } catch (_) { return null; } });
     const owner = await p.evaluate(() => { try { return JSON.parse(localStorage.getItem('cb_owner')); } catch (_) { return null; } });
     await p.screenshot({ path: path.join(SHOTS, 'signin-' + D.trim() + '-accounts-in.png') });
-    say(D + ' CB Accounts: e-mail + code → the apps\' session (cb_sess: token · role · name · entity · bridgeId) and CBOnePerson claims it', !!(sess && sess.token && sess.role === 'entity' && sess.entity === 'Mayur Bhavan' && sess.bridgeId === 'CB-MAYUR') && !!(owner && owner.ent), JSON.stringify(sess) + ' owner=' + JSON.stringify(owner));
+    say(D + ' Accounts: e-mail + code → the apps\' session (cb_sess: token · role · name · entity · bridgeId) and CBOnePerson claims it', !!(sess && sess.token && sess.role === 'entity' && sess.entity === 'Mayur Bhavan' && sess.bridgeId === 'CB-MAYUR') && !!(owner && owner.ent), JSON.stringify(sess) + ' owner=' + JSON.stringify(owner));
     say(D + ' …the code reached /api/signin/verify exactly as typed (' + (dev.isMobile ? 'a tester code, 12 characters' : 'six digits') + ')', api.calls.some((c) => c.u === '/api/signin/verify' && c.b.otp === CODE), api.calls.filter((c) => c.u === '/api/signin/verify').map((c) => String(c.b.otp || '').length + ' chars').join(' '));
     say(D + ' …and every call went to the sign-in door only', api.calls.filter((c) => /^\/api\/(signin|entities\/register)/.test(c.u)).every((c) => /^\/api\/signin\//.test(c.u)), api.calls.map((c) => c.u).filter((u) => /signin|register/.test(u)).join(' '));
     /* the index: signed out, the avatar's door opens the window in place */

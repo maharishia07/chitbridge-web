@@ -63,7 +63,7 @@
 <body>
 <div class="wrap">
   <h1>📊 Know your business</h1>
-  <div class="sub">What CB can tell you from data you&rsquo;ve already given &mdash; each fact with how much to trust it. Not a governance feature; the outward panel always says &ldquo;verify at the source.&rdquo;</div>
+  <div class="sub">What we can tell you from data you&rsquo;ve already given &mdash; each fact with how much to trust it. Not a governance feature; the outward panel always says &ldquo;verify at the source.&rdquo;</div>
   <div id="app"><div class="card"><div class="empty">Loading…</div></div></div>
 </div>
 <div id="netpill" class="netpill"></div>
@@ -108,7 +108,7 @@ async function load(){
 async function renderYourself(b){
   var r=await api('GET','/api/kyb/yourself'); if(r.status===401){TOK=null;return loginView('Session expired');}
   var f=(r.j&&r.j.facts)||{}, cr=f.credentials||[], s=f.summary||{};
-  var add='<div class="card"><div class="sec" style="margin-top:0">Add a credential CB doesn&rsquo;t know</div><div class="note" style="margin-bottom:6px">A village NOC, a municipal licence &mdash; anything. It lands <b>declared</b>; it rises to <b>documented</b> when you attach a real owned document. The list you add IS the roadmap.</div>'
+  var add='<div class="card"><div class="sec" style="margin-top:0">Add a credential we don&rsquo;t know</div><div class="note" style="margin-bottom:6px">A village NOC, a municipal licence &mdash; anything. It lands <b>declared</b>; it rises to <b>documented</b> when you attach a real owned document. The list you add IS the roadmap.</div>'
     +'<div class="row"><input id="nc_title" placeholder="Credential name (e.g. Village Panchayat NOC)" style="flex:1;min-width:160px" value="'+esc(((window.CBOffline&&CBOffline.loadDraft('kyb.cred'))||{}).title||'')+'" oninput="saveKyb()"><button class="pri" onclick="addCred()">Add</button></div><div id="nc_err" class="err"></div></div>';
   /* K4: what applies to THIS business first; the rest folded under "Other certificates" (the server says which: `applies`) */
   var mine = cr.filter(function(c){ return c.applies !== false; }), other = cr.filter(function(c){ return c.applies === false; });
