@@ -174,14 +174,18 @@ function interaction(b, now) {
  * GET /api/facts/rail → the Home rail card, as lib/home-facts.rail sends it (RAIL-LAB-SRV1, 2026-10-14): the CRM's party counts, the open
  * in / out / stuck, and `may_sample` — the SERVER's may/why for the Rail Lab: a live shop `{ ok: false, why: 'live_shop', say }`, a lab (test)
  * shop `{ ok: true }`. ONE builder: it was hand-drawn in twelve harnesses, and none of them could ever carry a key the api added.
- *   railFacts({ suppliers?, customers?, in?, out?, tasks?, stuck?, lab?: true, truncated?: true })   truncated: in/out/stuck omitted, as the api omits them
+ *   railFacts({ suppliers?, customers?, in?, out?, tasks?, stuck?, lab?: true, truncated?: true, state? })   truncated: in/out/stuck omitted, as the api omits them;
+ *   state: the api's needs_you · in_use · not_started (worked out as the api does unless given)
  */
+const n = (v) => Number(v) || 0;   /* a count the answer left out is none */
 const RAIL_SAY = 'This is a live shop, so a lab chit cannot be sent from it. Try it in a test shop.';
 function railFacts(o) {
   const x = o || {};
   const out = { suppliers: x.suppliers == null ? 0 : x.suppliers, customers: x.customers == null ? 0 : x.customers,
     may_sample: x.lab ? { ok: true } : { ok: false, why: 'live_shop', say: RAIL_SAY } };
   if (!x.truncated) { out.in = x.in == null ? 0 : x.in; out.out = x.out == null ? 0 : x.out; out.tasks = x.tasks == null ? 0 : x.tasks; out.stuck = x.stuck == null ? 0 : x.stuck; }   /* tasks: TOUR-FIX1 — the Tasks folder count the api answers beside in / out */
+  /* the card's status, by the api's own rule (lib/home-facts rail): stuck -> needs_you; nothing counted at all -> not_started; else in_use */
+  out.state = x.state || (n(out.stuck) > 0 ? 'needs_you' : (!out.suppliers && !out.customers && !n(out.in) && !n(out.out) && !n(out.tasks) ? 'not_started' : 'in_use'));
   return out;
 }
 module.exports = { resolve, party, list, listPage, record, prefsBefore, followupOne, followups, entry, timeline, timelinePage, interaction, rolesOf, railFacts, levelOf, mayOf };
