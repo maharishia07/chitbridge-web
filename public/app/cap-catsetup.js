@@ -22,6 +22,8 @@
  * unchanged (declareVariants · startFromStandardSet · checkCatalogueFile · downloadCatalogueTemplate ·
  * exportCatalogueCSV · the face wizard). Moving a control must not become rewriting it — the point of the change
  * is WHERE things live, and a re-implementation would smuggle behaviour changes in under a re-organisation.
+ * CALLED BY app.html (the workshop) · assets.js · cap-cmdb.js · screens.js (the registry rows)
+ * // CARD 06-catalogue-pim/definitions-shelf
  */
 /* ⭐ OPENS ON BLUEPRINT, not Columns — the fastest way in is the one a reader should meet first. Someone with
    no blueprint for their trade reads one card and moves down the rail; someone with one is already there. */

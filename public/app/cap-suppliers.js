@@ -20,6 +20,8 @@
  *
  * Host globals: api · EP · esc · tx · txf · toast · CBList · CBAction · CBConfirm (accounts-shell.js) · taxIdWord (helpers.js, optional) · cblog.
  * Flow step: P2P step 1 · need (who you buy from) — docs/process/flows.json.
+ * CALLED BY operations.html (#/suppliers) · app.html · assets.js
+ * // CARD 12-suppliers-and-procurement/supplier-list
  */
 'use strict';
 /** the name a supplier is shown by: your label first, then their registered name */

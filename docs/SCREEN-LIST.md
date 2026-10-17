@@ -9,53 +9,53 @@ Register: `public/app/screen-id.js` (declared rows, merged into `CBSCREENS`) + `
 | Code | Screen | App | Page | How to reach it |
 |---|---|---|---|---|
 | HOM001 | Home | Home | / | the address bar: / |
-| BKS001 | To do | CB Accounts | /accounts.html | /accounts.html#todo · CB Accounts › To do |
-| BKS002 | Day book | CB Accounts | /accounts.html | /accounts.html#daybook · CB Accounts › Day book |
-| BKS003 | Ledgers | CB Accounts | /accounts.html | /accounts.html#ledgers · CB Accounts › Ledgers |
-| BKS004 | Trial balance | CB Accounts | /accounts.html | /accounts.html#tb · CB Accounts › Trial balance |
-| BKS005 | P&L | CB Accounts | /accounts.html | /accounts.html#pl · CB Accounts › P&L |
-| BKS006 | Balance sheet | CB Accounts | /accounts.html | /accounts.html#bs · CB Accounts › Balance sheet |
-| BKS007 | Parallel run | CB Accounts | /accounts.html | /accounts.html#compare · CB Accounts › Parallel run |
-| BKS008 | Receivables | CB Accounts | /accounts.html | /accounts.html#receivables · CB Accounts › Receivables |
-| BKS009 | Payables | CB Accounts | /accounts.html | /accounts.html#payables · CB Accounts › Payables |
-| BKS010 | Dues | CB Accounts | /accounts.html | To do › a dues item |
-| BKS011 | Unpaid bills | CB Accounts | /accounts.html | /accounts.html#bills · CB Accounts › Unpaid bills |
-| BKS012 | Cheques | CB Accounts | /accounts.html | /accounts.html#cheques · CB Accounts › Cheques |
-| BKS013 | Waiting | CB Accounts | /accounts.html | To do › a posting that failed |
-| BKS014 | Bank | CB Accounts | /accounts.html | /accounts.html#bank · CB Accounts › Bank |
-| BKS015 | Month lock | CB Accounts | /accounts.html | /accounts.html#lock · CB Accounts › Month lock |
-| BKS016 | Closing stock | CB Accounts | /accounts.html | /accounts.html#closingstock · CB Accounts › Closing stock |
-| BKS017 | Assets & depreciation | CB Accounts | /accounts.html | /accounts.html#assets · CB Accounts › Assets & depreciation |
-| BKS018 | Accruals & recurring | CB Accounts | /accounts.html | /accounts.html#accruals · CB Accounts › Accruals & recurring |
-| BKS019 | Tax close & pay | CB Accounts | /accounts.html | /accounts.html#gstclose · CB Accounts › Tax close & pay |
-| BKS020 | Year close | CB Accounts | /accounts.html | /accounts.html#yearclose · CB Accounts › Year close |
-| BKS021 | Packs | CB Accounts | /accounts.html | /accounts.html#packs · CB Accounts › Packs |
-| BKS022 | Opening balances | CB Accounts | /accounts.html | /accounts.html#opening · CB Accounts › Opening balances |
-| BKS023 | Shop ledgers | CB Accounts | /accounts.html | /accounts.html#accounts · CB Accounts › Shop ledgers |
-| BKS024 | Move in | CB Accounts | /accounts.html | /accounts.html#movein · CB Accounts › Move in |
-| BKS025 | Rates | CB Accounts | /accounts.html | /accounts.html#rates · CB Accounts › Rates |
-| FIN001 | Collections | CB Finance | /finance.html | /finance.html#/collections · CB Finance › Collections |
-| FIN002 | Payables | CB Finance | /finance.html | /finance.html#/payables · CB Finance › Payables |
-| FIN003 | Cash | CB Finance | /finance.html | /finance.html#/cash · CB Finance › Cash |
-| FIN004 | Terms | CB Finance | /finance.html | /finance.html#/terms · CB Finance › Terms |
-| FIN005 | Repeat supply | CB Finance | /finance.html | /finance.html#/repeat · CB Finance › Repeat supply |
-| FIN006 | Cheques | CB Finance | /finance.html | /finance.html#/cheques · CB Finance › Cheques |
-| FIN007 | Returns | CB Finance | /finance.html | /finance.html#/returns · CB Finance › Returns |
-| FIN008 | Reports | CB Finance | /finance.html | /finance.html#/reports · CB Finance › Reports |
-| CRM001 | Parties | CB CRM | /crm.html | /crm.html#/parties · CB CRM › Parties |
-| CRM002 | Chits | CB CRM | /crm.html | /crm.html#/chits · CB CRM › Chits |
-| CRM003 | Follow-ups | CB CRM | /crm.html | /crm.html#/followups · CB CRM › Follow-ups |
-| CRM004 | Leads | CB CRM | /crm.html | Parties › Leads |
-| CRM005 | Calls | CB CRM | /crm.html | Parties › Calls |
-| CRM006 | Party | CB CRM | /crm.html | Parties › a party |
-| CRM007 | Chit page | CB CRM | /crm.html | a sheet › Open page |
-| CRM008 | Groups & segments | CB CRM | /crm.html | /crm.html#/groups · CB CRM › Groups & segments |
-| CRM009 | Shop window | CB CRM | /crm.html | /crm.html#/showcase · CB CRM › Shop window |
-| CRM010 | Privacy | CB CRM | /crm.html | /crm.html#/privacy · CB CRM › Privacy |
-| TSK001 | Orders in | CB Tasks & Orders | /tasks.html | /tasks.html · CB Tasks & Orders › Orders in |
-| TSK002 | Orders out | CB Tasks & Orders | /tasks.html | /tasks.html · CB Tasks & Orders › Orders out |
-| TSK003 | Tasks | CB Tasks & Orders | /tasks.html | /tasks.html · CB Tasks & Orders › Tasks |
-| TSK004 | Done | CB Tasks & Orders | /tasks.html | /tasks.html · CB Tasks & Orders › Done |
+| BKS001 | To do | Accounts | /accounts.html | /accounts.html#todo · Accounts › To do |
+| BKS002 | Day book | Accounts | /accounts.html | /accounts.html#daybook · Accounts › Day book |
+| BKS003 | Ledgers | Accounts | /accounts.html | /accounts.html#ledgers · Accounts › Ledgers |
+| BKS004 | Trial balance | Accounts | /accounts.html | /accounts.html#tb · Accounts › Trial balance |
+| BKS005 | P&L | Accounts | /accounts.html | /accounts.html#pl · Accounts › P&L |
+| BKS006 | Balance sheet | Accounts | /accounts.html | /accounts.html#bs · Accounts › Balance sheet |
+| BKS007 | Parallel run | Accounts | /accounts.html | /accounts.html#compare · Accounts › Parallel run |
+| BKS008 | Receivables | Accounts | /accounts.html | /accounts.html#receivables · Accounts › Receivables |
+| BKS009 | Payables | Accounts | /accounts.html | /accounts.html#payables · Accounts › Payables |
+| BKS010 | Dues | Accounts | /accounts.html | To do › a dues item |
+| BKS011 | Unpaid bills | Accounts | /accounts.html | /accounts.html#bills · Accounts › Unpaid bills |
+| BKS012 | Cheques | Accounts | /accounts.html | /accounts.html#cheques · Accounts › Cheques |
+| BKS013 | Waiting | Accounts | /accounts.html | To do › a posting that failed |
+| BKS014 | Bank | Accounts | /accounts.html | /accounts.html#bank · Accounts › Bank |
+| BKS015 | Month lock | Accounts | /accounts.html | /accounts.html#lock · Accounts › Month lock |
+| BKS016 | Closing stock | Accounts | /accounts.html | /accounts.html#closingstock · Accounts › Closing stock |
+| BKS017 | Assets & depreciation | Accounts | /accounts.html | /accounts.html#assets · Accounts › Assets & depreciation |
+| BKS018 | Accruals & recurring | Accounts | /accounts.html | /accounts.html#accruals · Accounts › Accruals & recurring |
+| BKS019 | Tax close & pay | Accounts | /accounts.html | /accounts.html#gstclose · Accounts › Tax close & pay |
+| BKS020 | Year close | Accounts | /accounts.html | /accounts.html#yearclose · Accounts › Year close |
+| BKS021 | Packs | Accounts | /accounts.html | /accounts.html#packs · Accounts › Packs |
+| BKS022 | Opening balances | Accounts | /accounts.html | /accounts.html#opening · Accounts › Opening balances |
+| BKS023 | Shop ledgers | Accounts | /accounts.html | /accounts.html#accounts · Accounts › Shop ledgers |
+| BKS024 | Move in | Accounts | /accounts.html | /accounts.html#movein · Accounts › Move in |
+| BKS025 | Rates | Accounts | /accounts.html | /accounts.html#rates · Accounts › Rates |
+| FIN001 | Collections | Finance | /finance.html | /finance.html#/collections · Finance › Collections |
+| FIN002 | Payables | Finance | /finance.html | /finance.html#/payables · Finance › Payables |
+| FIN003 | Cash | Finance | /finance.html | /finance.html#/cash · Finance › Cash |
+| FIN004 | Terms | Finance | /finance.html | /finance.html#/terms · Finance › Terms |
+| FIN005 | Repeat supply | Finance | /finance.html | /finance.html#/repeat · Finance › Repeat supply |
+| FIN006 | Cheques | Finance | /finance.html | /finance.html#/cheques · Finance › Cheques |
+| FIN007 | Returns | Finance | /finance.html | /finance.html#/returns · Finance › Returns |
+| FIN008 | Reports | Finance | /finance.html | /finance.html#/reports · Finance › Reports |
+| CRM001 | Parties | CRM | /crm.html | /crm.html#/parties · CRM › Parties |
+| CRM002 | Chits | CRM | /crm.html | /crm.html#/chits · CRM › Chits |
+| CRM003 | Follow-ups | CRM | /crm.html | /crm.html#/followups · CRM › Follow-ups |
+| CRM004 | Leads | CRM | /crm.html | Parties › Leads |
+| CRM005 | Calls | CRM | /crm.html | Parties › Calls |
+| CRM006 | Party | CRM | /crm.html | Parties › a party |
+| CRM007 | Chit page | CRM | /crm.html | a sheet › Open page |
+| CRM008 | Groups & segments | CRM | /crm.html | /crm.html#/groups · CRM › Groups & segments |
+| CRM009 | Shop window | CRM | /crm.html | /crm.html#/showcase · CRM › Shop window |
+| CRM010 | Privacy | CRM | /crm.html | /crm.html#/privacy · CRM › Privacy |
+| TSK001 | Orders in | Tasks & Orders | /tasks.html | /tasks.html · Tasks & Orders › Orders in |
+| TSK002 | Orders out | Tasks & Orders | /tasks.html | /tasks.html · Tasks & Orders › Orders out |
+| TSK003 | Tasks | Tasks & Orders | /tasks.html | /tasks.html · Tasks & Orders › Tasks |
+| TSK004 | Done | Tasks & Orders | /tasks.html | /tasks.html · Tasks & Orders › Done |
 | SET001 | Your business | Settings | /settings.html | /settings.html#/shop · Settings › Your business |
 | SET002 | Country | Settings | /settings.html | /settings.html#/country · Settings › Country |
 | SET003 | New shop | Settings | /settings.html | the sign-in window › New shop? Register |
@@ -65,9 +65,9 @@ Register: `public/app/screen-id.js` (declared rows, merged into `CBSCREENS`) + `
 | SET007 | Plan & usage | Settings | /settings.html | /settings.html#/plan · Settings › Plan & usage |
 | SET008 | Account | Settings | /settings.html | /settings.html#/account · Settings › Account |
 | SET009 | Print setup | Settings | /settings.html | what prints on the bill — the bill's signature, previewed live (SET-WALK1 W27) |
-| OPS001 | Stock | CB Operations | /operations.html | /operations.html#/stock · CB Operations › Stock |
-| OPS002 | Suppliers | CB Operations | /operations.html | /operations.html#/suppliers · CB Operations › Suppliers |
-| EMP001 | People | CB Employees | /employees.html | /employees.html · CB Employees › People |
+| OPS001 | Stock | Operations | /operations.html | /operations.html#/stock · Operations › Stock |
+| OPS002 | Suppliers | Operations | /operations.html | /operations.html#/suppliers · Operations › Suppliers |
+| EMP001 | People | Employees | /employees.html | /employees.html · Employees › People |
 | CTG001 | Items | Catalogue | /catalogue.html | /catalogue.html#/items · Catalogue › Items |
 | CTG002 | Categories | Catalogue | /catalogue.html | /catalogue.html#/categories · Catalogue › Categories |
 | CTG003 | Import | Catalogue | /catalogue.html | /catalogue.html#/import · Catalogue › Import |
@@ -87,7 +87,7 @@ Register: `public/app/screen-id.js` (declared rows, merged into `CBSCREENS`) + `
 | STR001 | Store | Store | /store.html | /store.html?net=<network> |
 | EMB001 | Catalogue embed | Catalogue embed | /embed.html | /embed.html?bridge=<shop> · inside another site |
 | PRM001 | Shop screen | Shop screen | /promo.html | /promo.html#key=… · the till › Shop screen |
-| PLB001 | Product Lab | Product Lab | /product-lab.html | /product-lab.html |
+| PLB001 | Price Lab | Price Lab | /product-lab.html | /product-lab.html |
 | OLB001 | Offer Lab | Offer Lab | /offer-lab-next.html | /offer-lab-next.html · Home › Labs |
 | OLB002 | Combo Lab | Offer Lab | /offer-lab-next.html | /offer-lab-next.html?mode=combo · Home › Labs |
 | CVL001 | Conversion lab | Conversion lab | /conversion-lab.html | /conversion-lab.html · the Country lab |
@@ -97,9 +97,9 @@ Register: `public/app/screen-id.js` (declared rows, merged into `CBSCREENS`) + `
 
 | Code | Screen | Painted by | How to reach it | Opened from |
 |---|---|---|---|---|
-| TSK005 | Task details | app/chit-sheet.js | a task, order or invoice row › its sheet | CB Accounts (/accounts.html) · CB Finance (/finance.html) · CB CRM (/crm.html) · CB Tasks & Orders (/tasks.html) · the workshop (/app.html) |
-| BIL001 | Bill | app/chit-sheet.js | a counter bill row › its sheet | CB Accounts (/accounts.html) · CB Finance (/finance.html) · CB CRM (/crm.html) · CB Tasks & Orders (/tasks.html) · the workshop (/app.html) |
-| BIL002 | Supplier bill | app/chit-sheet.js | a bill received › its sheet | CB Accounts (/accounts.html) · CB Finance (/finance.html) · CB CRM (/crm.html) · CB Tasks & Orders (/tasks.html) · the workshop (/app.html) |
+| TSK005 | Task details | app/chit-sheet.js | a task, order or invoice row › its sheet | Accounts (/accounts.html) · Finance (/finance.html) · CRM (/crm.html) · Tasks & Orders (/tasks.html) · the workshop (/app.html) |
+| BIL001 | Bill | app/chit-sheet.js | a counter bill row › its sheet | Accounts (/accounts.html) · Finance (/finance.html) · CRM (/crm.html) · Tasks & Orders (/tasks.html) · the workshop (/app.html) |
+| BIL002 | Supplier bill | app/chit-sheet.js | a bill received › its sheet | Accounts (/accounts.html) · Finance (/finance.html) · CRM (/crm.html) · Tasks & Orders (/tasks.html) · the workshop (/app.html) |
 
 ## Design references — not customer navigation (no Home card, no frame, no code)
 

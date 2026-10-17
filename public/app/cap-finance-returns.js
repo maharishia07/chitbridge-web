@@ -11,6 +11,8 @@
  * ⭐ NEW PATHS (rule 4): FR (this tab's state) · frMonths (the last twelve calendar months as a picker; the workshop's band has one typed month and
  * bkMonths is the fiscal year's names, not a picker) · frPaint.
  * ⚠️ Never error.message on a screen: a failure says what happened and offers Try again.
+ * OWNS the Returns view of Finance: the country's return, the server's figures painted
+ * // CARD 15-tax-and-country-packs/gst-returns-bas-vat
  */
 'use strict';
 

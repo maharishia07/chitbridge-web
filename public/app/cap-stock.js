@@ -15,6 +15,8 @@
  *   CBStock.mount(host) → { refresh } · CBStock.resay() repaints the words (the title is the shop's country word: helpers.js stockWord, NAMES-1)
  * Host globals (as every cap-*.js): api · EP · esc · tx · txf · CBList · CBLocale (optional) · cblog (optional).
  * Loaded by operations.html. Flow step: INV step 2 · stock (docs/process/flows.json).
+ * OWNS the Stock screen of Operations: on hand per product, batches and expiry, painted from the one stock reader
+ * // CARD 13-inventory-stock-and-traceability/on-hand-and-movements
  */
 'use strict';
 var CBStock = (function () {

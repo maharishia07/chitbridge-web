@@ -13,6 +13,8 @@
  *
  * ⭐ REUSE: shop.html's sheet, tokens and classes (.sg · .meta); helpers.js esc (the ONE copy — loaded by shop.html before this file). ⭐ NEW PATH: no storefront screen showed a shopper their data.
  * The server decides: may_consent / may_request carry { may, code, why } — a refused button is greyed WITH its sentence, never hidden.
+ * FLOW shop.html My orders → CBShopPrivacy.open → GET /api/privacy/me → the sheet → POST /me/consent · /me/requests
+ * // CARD 11-crm-and-marketing/consent-and-privacy-requests
  */
 (function (root) {
   'use strict';

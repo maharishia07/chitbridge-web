@@ -18,6 +18,8 @@
  *   ~150 lines a small app needs, on the same three routes. Moving app.html's #/assistreview onto it is the next step (named in the PR).
  *
  *   CBAssistReview.mount(el) → { reload }
+ * CALLED BY tasks.html (?view=assist) · accounts-shell.js (the tile's door)
+ * // CARD 25-ai-cb-assist-and-support-desks/cb-assist-knowledge-base
  */
 (function (root) {
   'use strict';

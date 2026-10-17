@@ -22,6 +22,8 @@
  * ⭐ ON THIS DEVICE: the accept marks, notes and the rules learned from what a person confirmed (CBBankRecon.step / learn) live in localStorage,
  *   beside the statement — undo takes an accept back and keeps the notes; a note never blocks accepting; a learned rule is only ever a suggestion,
  *   shown with where it came from. The count of lines that need a person rides to Accounts Home (bankTodoItem) in the same words.
+ * CALLED BY accounts.html (Daily › Bank) · app.html (the workshop)
+ * // CARD 16-finance/bank-reconciliation-and-bank-rail
  */
 'use strict';
 const BKB = { acct: '', preset: '', file: null, parsed: null, ledger: null, m: null, rows: [], tab: 'lines', bal: '' };
