@@ -46,8 +46,8 @@
   function use(m) { if (m && m.entries) { M = m; P = Promise.resolve(m); } return M; }
   function load() {
     if (P) return P;
-    P = root.fetch('/app/manifest.json').then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-      .then(function (m) { M = m && m.entries ? m : null; return M; }, function () { P = null; return null; });
+    P = root.fetch('/app/manifest.json').then(function (reply) { if (!reply.ok) throw new Error('HTTP ' + reply.status); return reply.json(); })
+      .then(function (reply) { M = reply && reply.entries ? reply : null; return M; }, function () { P = null; return null; });
     return P;
   }
   function row(m, k) { var e = m && m.editions; return e && Object.prototype.hasOwnProperty.call(e, k) ? e[k] : null; }
@@ -58,7 +58,7 @@
   }
   function list(m) {
     m = m || M; var e = (m && m.editions) || {};
-    return Object.keys(e).map(function (k) { return { key: k, name: e[k].name || k }; });
+    return Object.keys(e).map(function (item) { return { key: item, name: e[item].name || item }; });
   }
   function info(m) {
     m = m || M; var k = key(), r = row(m, k);
@@ -68,7 +68,7 @@
   function view(m) {
     m = m || M; if (!m) return m;
     var l = ids(m); if (!l) return m;
-    var out = {}; Object.keys(m).forEach(function (k) { out[k] = m[k]; });
+    var out = {}; Object.keys(m).forEach(function (item) { out[item] = m[item]; });
     out.entries = (m.entries || []).filter(function (e) { return e && l.indexOf(e.id) >= 0; });
     return out;
   }
@@ -79,17 +79,17 @@
     var p = pageOf(href); if (!p || p === '/') return false;
     var off = false, on = false;
     (m.entries || []).forEach(function (e) {
-      [e.route, e.via].forEach(function (r) { if (r && pageOf(r) === p) { if (l.indexOf(e.id) >= 0) on = true; else off = true; } });
+      [e.route, e.via].forEach(function (item) { if (item && pageOf(item) === p) { if (l.indexOf(e.id) >= 0) on = true; else off = true; } });
     });
     return off && !on;
   }
   function prune(el, m) {
     if (!el || !el.querySelectorAll) return 0;
-    var n = 0;
-    [].forEach.call(el.querySelectorAll('a[href],[data-href]'), function (a) {
-      if (hidesHref(a.getAttribute('href') || a.getAttribute('data-href'), m)) { a.hidden = true; a.style.display = 'none'; a.setAttribute('data-edition-hidden', '1'); n++; }
+    var index = 0;
+    [].forEach.call(el.querySelectorAll('a[href],[data-href]'), function (node) {
+      if (hidesHref(node.getAttribute('href') || node.getAttribute('data-href'), m)) { node.hidden = true; node.style.display = 'none'; node.setAttribute('data-edition-hidden', '1'); index++; }
     });
-    return n;
+    return index;
   }
 
   root.CBEdition = { key: key, clearTab: clearTab, use: use, load: load, list: list, info: info, shows: shows, view: view, hidesHref: hidesHref, prune: prune };
