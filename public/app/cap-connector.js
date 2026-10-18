@@ -26,7 +26,7 @@ if (typeof EP !== 'undefined') {
 async function acLoadDevices(id){
   UI.acConnsErr=null;
   var ok=false, lastErr=null;                          // retry once — a cold-start blip must NOT silently show "no devices"
-  for(var i=0;i<2 && !ok;i++){
+  for(var index=0;index<2 && !ok;index++){
     /**
      * ⚠️⚠️ `r` IS THE CONNECTIONS ARRAY, not an envelope around it. api() collapses a response whose array key
      * is on its list, so `r.connections` was undefined and this read `[]` on every successful call — an empty
@@ -34,9 +34,9 @@ async function acLoadDevices(id){
      * e2e/api-envelope.cjs. The two siblings now survive the collapse (SIBS in core.js); the array is taken as
      * itself, with the old shape kept as a fallback so an endpoint that stops collapsing still works.
      */
-    try{ var r=await api('connectorConns',{params:{actorId:id}});
-         UI.acConns=Array.isArray(r)?r:((r&&r.connections)||[]);
-         UI.acHealth=(r&&r.actor_health)||'offline'; UI.acLastSeen=(r&&r.actor_last_seen)||null; ok=true; }
+    try{ var reply=await api('connectorConns',{params:{actorId:id}});
+         UI.acConns=Array.isArray(reply)?reply:((reply&&reply.connections)||[]);
+         UI.acHealth=(reply&&reply.actor_health)||'offline'; UI.acLastSeen=(reply&&reply.actor_last_seen)||null; ok=true; }
     catch(e){ lastErr=e; }
   }
   if(!ok){ UI.acConns=[]; UI.acHealth='offline'; UI.acConnsErr=(lastErr&&lastErr.message)||'Could not load devices'; }
@@ -46,15 +46,15 @@ async function acLoadDevices(id){
   if(((UI._connMap||{})[id])==='erp'){ UI.acReceipts=undefined; UI.acReceiptsErr=null; acLoadReceipts(id); }
 }
 async function acLoadReceipts(id){
-  try{ var r=await api('connectorReceipts',{params:{actorId:id}}); UI.acReceipts=(r&&r.receipts)||[]; UI.acReceiptsErr=null; }
+  try{ var reply=await api('connectorReceipts',{params:{actorId:id}}); UI.acReceipts=(reply&&reply.receipts)||[]; UI.acReceiptsErr=null; }
   catch(e){ UI.acReceipts=[]; UI.acReceiptsErr=(e&&e.message)||'Could not load receipts'; }
   if(UI.acSel===id) paintAcDetail();
 }
 // OWNER-authed test cycle: fire the real process-then-forget loop with a sample doc, then refresh the ledger + health.
 async function acErpTest(id){
-  try{ var r=await api('connectorErpTest',{params:{actorId:id}});
-    var oc=(r&&r.outcome)||'processed';
-    if(typeof toast==='function')toast('Processed '+((r&&r.doc_type)||'document')+' '+((r&&r.doc_ref)||'')+' — receipt kept'+(oc==='processed'?', chit sent':'')+'.');
+  try{ var reply=await api('connectorErpTest',{params:{actorId:id}});
+    var oc=(reply&&reply.outcome)||'processed';
+    if(typeof toast==='function')toast('Processed '+((reply&&reply.doc_type)||'document')+' '+((reply&&reply.doc_ref)||'')+' — receipt kept'+(oc==='processed'?', chit sent':'')+'.');
     UI.acReceipts=undefined; if(UI.acSel===id) paintAcDetail();
     await acLoadReceipts(id); await acLoadDevices(id);
   }catch(e){ if(typeof toast==='function')toast((e&&e.message)||'Test failed'); }
@@ -73,18 +73,18 @@ function acHowItWorks(iot){
 }
 // The ERP receipt ledger — hash + outcome only, NEVER the raw payload. Chit link opens the co-held record.
 function _erpReceiptsHTML(){
-  var rs=UI.acReceipts;
-  var head='<div class="sec" style="margin-top:16px">Receipts'+(Array.isArray(rs)?(' <span style="color:var(--grey);font-weight:400">('+rs.length+')</span>'):'')+'</div>';
-  if(rs===undefined) return head+'<div style="padding:10px 2px;color:var(--grey);font-size:var(--fs-2)">' + tx('Loading…') + '</div>';
+  var list=UI.acReceipts;
+  var head='<div class="sec" style="margin-top:16px">Receipts'+(Array.isArray(list)?(' <span style="color:var(--grey);font-weight:400">('+list.length+')</span>'):'')+'</div>';
+  if(list===undefined) return head+'<div style="padding:10px 2px;color:var(--grey);font-size:var(--fs-2)">' + tx('Loading…') + '</div>';
   if(UI.acReceiptsErr) return head+'<div style="padding:10px 2px;color:var(--disp);font-size:var(--fs-2)">⚠ '+esc(UI.acReceiptsErr)+' <button class="composebtn" style="padding:2px 9px;font-size:var(--fs-1);margin-inline-start:6px" onclick="acLoadReceipts(\''+esc(UI.acSel)+'\')">' + tx('Retry') + '</button></div>';
-  if(!rs.length) return head+'<div style="padding:10px 2px;color:var(--grey);font-size:var(--fs-2)">' + txf('No documents yet. Tap {btn} to run the cycle.', { btn: '<b>' + tx('📄 Send a test document') + '</b>' }) + '</div>';
-  var rows=rs.map(function(r){
-    var oc=r.outcome||'', col=oc==='processed'?'var(--ok-3)':(oc==='failed'?'var(--disp)':(oc==='duplicate'?'var(--warn-2)':'var(--grey-2)'));
+  if(!list.length) return head+'<div style="padding:10px 2px;color:var(--grey);font-size:var(--fs-2)">' + txf('No documents yet. Tap {btn} to run the cycle.', { btn: '<b>' + tx('📄 Send a test document') + '</b>' }) + '</div>';
+  var rows=list.map(function(item){
+    var oc=item.outcome||'', col=oc==='processed'?'var(--ok-3)':(oc==='failed'?'var(--disp)':(oc==='duplicate'?'var(--warn-2)':'var(--grey-2)'));
     return '<div style="display:flex;align-items:center;gap:9px;padding:9px 0;border-bottom:1px dashed var(--line);font-size:var(--fs-2)">'
-      +'<div style="flex:1;min-width:0"><b>'+esc(r.doc_ref||r.doc_type||'document')+'</b>'+(r.doc_type?' <span style="color:var(--grey);font-size:var(--fs-1)">'+esc(r.doc_type)+'</span>':'')
-      +'<div style="color:var(--grey);font-size:var(--fs-1);margin-top:1px;font-family:monospace">#'+esc(String(r.payload_hash||'').slice(0,12))+'… · '+esc((typeof _ago==='function'?_ago(r.received_at):'')||'')+'</div></div>'
+      +'<div style="flex:1;min-width:0"><b>'+esc(item.doc_ref||item.doc_type||'document')+'</b>'+(item.doc_type?' <span style="color:var(--grey);font-size:var(--fs-1)">'+esc(item.doc_type)+'</span>':'')
+      +'<div style="color:var(--grey);font-size:var(--fs-1);margin-top:1px;font-family:monospace">#'+esc(String(item.payload_hash||'').slice(0,12))+'… · '+esc((typeof _ago==='function'?_ago(item.received_at):'')||'')+'</div></div>'
       +'<span style="font-weight:700;font-size:var(--fs-1);color:'+col+'">'+esc(oc)+'</span>'
-      +(r.chit_id?'<button class="composebtn" style="padding:2px 9px;font-size:var(--fs-1)" onclick="openChit(\''+esc(r.chit_id)+'\')">' + tx('Open chit') + '</button>':'')+'</div>';
+      +(item.chit_id?'<button class="composebtn" style="padding:2px 9px;font-size:var(--fs-1)" onclick="openChit(\''+esc(item.chit_id)+'\')">' + tx('Open chit') + '</button>':'')+'</div>';
   }).join('');
   return head+'<div style="font-size:var(--fs-1);color:var(--grey);margin:4px 0 2px">Hash + outcome only — the raw payload is never stored.</div>'+rows;
 }
@@ -103,7 +103,7 @@ function piCockpit(x){
   var offline = health==='offline' ? '<div style="background:var(--danger-tint);border:1px solid #f0c9c6;color:var(--disp);border-radius:9px;padding:9px 11px;font-size:var(--fs-2);font-weight:600;margin:10px 0">⚠ '+(iot?'Gateway':'System')+' OFFLINE — no '+(iot?'device':'endpoint')+' below can signal until it is back.</div>' : '';
   var prov = UI.acProvOpen ? _provPanel(iot, x.id) : '';
   var addf = UI.acAddDev ? _addDeviceForm(x,iot) : '';
-  var _loadingT=(UI.acConns===undefined); var _cn=_loadingT?[]:(UI.acConns||[]); var _live=_cn.filter(function(c){return c.signal==='live';}).length; var _agoT=(typeof _ago==='function'?_ago(UI.acLastSeen):'');
+  var _loadingT=(UI.acConns===undefined); var _cn=_loadingT?[]:(UI.acConns||[]); var _live=_cn.filter(function(item){return item.signal==='live';}).length; var _agoT=(typeof _ago==='function'?_ago(UI.acLastSeen):'');
   var tiles='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:14px 0">'
     +_tile(iot?'Devices':'Endpoints', _loadingT?'—':_cn.length)
     +_tile('Live now', _loadingT?'—':('<span style="display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:middle;background:'+(_live>0?'var(--ok-3)':'var(--disp)')+';color:' + (_live>0 ? 'var(--on-ok)' : 'var(--on-danger)') + ';margin-inline-end:6px"></span>'+_live+' <small style="font-size:var(--fs-2);color:var(--grey-2);font-weight:600">/ '+_cn.length+'</small>'))
@@ -113,8 +113,8 @@ function piCockpit(x){
   if(conns===undefined) list='<div style="padding:16px;color:var(--grey);font-size:var(--fs-2)">' + tx('Loading…') + '</div>';
   else if(UI.acConnsErr) list='<div style="padding:10px 2px;color:var(--disp);font-size:var(--fs-2)">⚠ '+esc(UI.acConnsErr)+' <button class="composebtn" style="padding:2px 9px;font-size:var(--fs-1);margin-inline-start:6px" onclick="acLoadDevices(\''+x.id+'\')">' + tx('Retry') + '</button></div>';
   else if(!conns.length) list='<div style="padding:10px 2px;color:var(--grey);font-size:var(--fs-2)">No '+(iot?'devices':'endpoints')+' yet. Tap ＋ to add one.</div>';
-  else list=conns.map(function(c){ var cfg=c.conn_config||{}; var det=iot?[cfg.folder?('📁 '+cfg.folder):null,(cfg.classes&&cfg.classes.length)?('🏷 '+cfg.classes.join('/')):null,cfg.topic,cfg.device_id].filter(Boolean).join(' · '):(cfg.path||'');
-    return '<div style="display:flex;align-items:center;gap:9px;padding:10px 0;border-bottom:1px dashed var(--line);font-size:var(--fs-2)"><div style="flex:1;min-width:0"><b>'+esc(c.ref)+'</b>'+(c.user_id||c.bridge_id?' <code style="background:var(--card);border:1px solid #eee;border-radius:5px;padding:0 5px;font-size:var(--fs-1);color:var(--grey)">'+esc(c.bridge_id)+'</code>':'')+(det?'<div style="color:var(--grey);font-size:var(--fs-1);margin-top:1px">'+esc(det)+'</div>':'')+'</div>'+_sig(c.enabled===false?'silent':c.signal)+'<button class="composebtn" style="padding:2px 9px;font-size:var(--fs-1)" onclick="acToggleDevice(\''+x.id+'\','+c.connection_id+','+(c.enabled?'false':'true')+')">'+(c.enabled?'Disable':'Enable')+'</button></div>';
+  else list=conns.map(function(item){ var cfg=item.conn_config||{}; var det=iot?[cfg.folder?('📁 '+cfg.folder):null,(cfg.classes&&cfg.classes.length)?('🏷 '+cfg.classes.join('/')):null,cfg.topic,cfg.device_id].filter(Boolean).join(' · '):(cfg.path||'');
+    return '<div style="display:flex;align-items:center;gap:9px;padding:10px 0;border-bottom:1px dashed var(--line);font-size:var(--fs-2)"><div style="flex:1;min-width:0"><b>'+esc(item.ref)+'</b>'+(item.user_id||item.bridge_id?' <code style="background:var(--card);border:1px solid #eee;border-radius:5px;padding:0 5px;font-size:var(--fs-1);color:var(--grey)">'+esc(item.bridge_id)+'</code>':'')+(det?'<div style="color:var(--grey);font-size:var(--fs-1);margin-top:1px">'+esc(det)+'</div>':'')+'</div>'+_sig(item.enabled===false?'silent':item.signal)+'<button class="composebtn" style="padding:2px 9px;font-size:var(--fs-1)" onclick="acToggleDevice(\''+x.id+'\','+item.connection_id+','+(item.enabled?'false':'true')+')">'+(item.enabled?'Disable':'Enable')+'</button></div>';
   }).join('');
   // Obvious, labelled installer button (the bare 📦 header icon was too easy to miss) + an inline caution: this DOWNLOAD
   // reissues the key, so any device already running this gateway goes silent until reflashed. The confirm gates it too.
@@ -126,7 +126,7 @@ function piCockpit(x){
 }
 function _provPanel(iot, aid){
   var p=UI.acProv; if(!p) return '<div style="padding:10px 2px;color:var(--grey);font-size:var(--fs-2)">' + tx('Loading connection string…') + '</div>';
-  var lines = iot ? 'Endpoint = '+esc(p.endpoint||'')+'\nActorKey = ••••••••  (secret — Regenerate to issue a fresh one)\nBridgeIds:\n'+((p.publishes||[]).map(function(z){return '  '+esc(z.user_id||z.bridge_id||'—')+'  '+esc(z.ref||'');}).join('\n')||'  (none yet)') : 'Base URL = '+esc(p.base_url||'—')+'\nAuth = '+esc(p.auth_type||'none')+(p.auth_ref?(' (ref: '+esc(p.auth_ref)+')'):'');
+  var lines = iot ? 'Endpoint = '+esc(p.endpoint||'')+'\nActorKey = ••••••••  (secret — Regenerate to issue a fresh one)\nBridgeIds:\n'+((p.publishes||[]).map(function(item){return '  '+esc(item.user_id||item.bridge_id||'—')+'  '+esc(item.ref||'');}).join('\n')||'  (none yet)') : 'Base URL = '+esc(p.base_url||'—')+'\nAuth = '+esc(p.auth_type||'none')+(p.auth_ref?(' (ref: '+esc(p.auth_ref)+')'):'');
   var fresh = (iot && UI.acFreshKey) ? '<div style="border:1px solid #bfe6c9;background:var(--ok-tint);border-radius:9px;padding:9px 11px;margin-top:9px;color:var(--on-card)"><div style="font-size:var(--fs-1);font-weight:700;color:var(--ok-2);margin-bottom:5px">✅ New ActorKey — copy it to the Pi NOW, it will not be shown again:</div><pre style="background:var(--chrome);color:var(--blue-tint-line);border-radius:6px;padding:9px 11px;font-size:var(--fs-2);overflow:auto;margin:0;user-select:all">'+esc(UI.acFreshKey)+'</pre></div>' : '';
   var regen = (iot && aid) ? '<div style="margin-top:9px"><button class="composebtn" onclick="acRegenKey(\''+esc(aid)+'\')">' + tx('♻ Reissue raw key (advanced)') + '</button><div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">' + txf('For a {dev} that cannot run the installer — shows the raw key once. For a Pi, use {btn} above instead. Either way, reissuing stops any device on the old key until it is reflashed.', {
         dev: '<b>' + tx('direct HTTPS device') + ' (ESP32 etc.)</b>', btn: '<b>' + tx('📦 Get the Pi installer') + '</b>' }) + '</div></div>' : '';
@@ -148,7 +148,7 @@ function acDeleteConnector(id, name){
 }
 function acRegenKey(id){ acReissueGate(id, 'key'); }   // gated: name + one-time code (see acReissueGate)
 function _addDeviceForm(x,iot){
-  var _asgOpts='<option value="">— entity default —</option>'+(UI.acts||[]).filter(function(a){return (typeof acTypeOf!=='function'||acTypeOf(a)==='human') && (typeof hatAssignable!=='function'||hatAssignable(a.hat));}).map(function(a){return '<option value="'+esc(a.id)+'">'+esc(a.name)+'</option>';}).join('');
+  var _asgOpts='<option value="">— entity default —</option>'+(UI.acts||[]).filter(function(item){return (typeof acTypeOf!=='function'||acTypeOf(item)==='human') && (typeof hatAssignable!=='function'||hatAssignable(item.hat));}).map(function(item){return '<option value="'+esc(item.id)+'">'+esc(item.name)+'</option>';}).join('');
   var spec = iot ? '<label class="fl">' + tx('Topic') + '</label><input class="inp" id="ad_topic" data-testid="conn-topic" placeholder="sensors/line1/temp" style="width:100%"><label class="fl">' + tx('Device id') + '</label><input class="inp" id="ad_dev" data-testid="conn-device-id" placeholder="edge-gw-01" style="width:100%">'
                  : '<label class="fl">' + tx('Resource path') + '</label><input class="inp" id="ad_path" data-testid="conn-path" placeholder="/odata/PurchaseOrders" style="width:100%">';
   return '<div style="border:1px dashed #c9d2dd;border-radius:9px;padding:12px;margin:10px 0;background:var(--blue-tint-bg);color:var(--on-card)"><div style="font-weight:700;font-size:var(--fs-2);margin-bottom:2px">Add '+(iot?'device':'endpoint')+'</div>'
@@ -164,7 +164,7 @@ function _addDeviceForm(x,iot){
 async function acAddDevice(id, iot){
   var ref=(val('ad_ref')||'').trim(), err=document.getElementById('ad_err'); if(err)err.textContent='';
   if(!ref){ if(err)err.textContent='A name is required.'; return; }
-  var _cls=(val('ad_classes')||'').split(',').map(function(s){return s.trim();}).filter(Boolean);
+  var _cls=(val('ad_classes')||'').split(',').map(function(item){return item.trim();}).filter(Boolean);
   var config = iot ? {protocol:'mqtts', topic:(val('ad_topic')||'').trim()||undefined, device_id:(val('ad_dev')||'').trim()||undefined, folder:(val('ad_folder')||'').trim()||undefined, classes:_cls.length?_cls:undefined, default_assignee:(val('ad_assignee')||'').trim()||undefined, notify_email:(val('ad_notifyemail')||'').trim()||undefined} : {path:(val('ad_path')||'').trim()||undefined};
   var cp = (val('ad_cp')||'').trim()||undefined;   // counterparty entity id — where this device's signals route as chits
   try{ await api('connectorConnAdd',{params:{actorId:id},body:{ref:ref,direction:'in',config:config,counterparty_entity_id:cp}}); UI.acAddDev=false; if(typeof toast==='function')toast('Added.'); await acLoadDevices(id); }
@@ -182,8 +182,8 @@ async function acPing(id){
 //     bundles endpoint + key + device routing + a long-running AGENT (heartbeat + spool drain w/ store-and-forward) +
 //     a systemd service, all as an install.sh generated in-browser (key never sits at a URL). Run: sudo bash it on the Pi.
 function _download(name, text){
-  try{ var b=new Blob([text],{type:'text/x-shellscript'}); var u=URL.createObjectURL(b); var a=document.createElement('a');
-    a.href=u; a.download=name; document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(u); a.remove(); },600); }
+  try{ var b=new Blob([text],{type:'text/x-shellscript'}); var u=URL.createObjectURL(b); var node=document.createElement('a');
+    node.href=u; node.download=name; document.body.appendChild(node); node.click(); setTimeout(function(){ URL.revokeObjectURL(u); node.remove(); },600); }
   catch(e){ if(typeof toast==='function')toast('Download failed'); }
 }
 function _agentJs(){ return [
@@ -211,42 +211,42 @@ function _agentJs(){ return [
 ].join('\n'); }
 function _buildInstaller(cfg){
   var ndev=(cfg.devices||[]).length, cfgJson=JSON.stringify(cfg,null,2), agent=_agentJs();
-  var L=[];
-  L.push('#!/usr/bin/env bash');
-  L.push('set -e');
-  L.push('echo "== Chit and Bridge IoT agent installer =="');
-  L.push('if ! command -v node >/dev/null 2>&1; then');
-  L.push('  echo "Installing Node.js...";');
-  L.push('  (command -v apt-get >/dev/null 2>&1 && sudo apt-get update -y && sudo apt-get install -y nodejs) || { echo "Please install Node.js manually, then re-run."; exit 1; }');
-  L.push('fi');
-  L.push('DIR=/opt/chitbridge');
-  L.push('sudo mkdir -p "$DIR/spool" "$DIR/sent"');
-  L.push("sudo tee \"$DIR/config.json\" >/dev/null <<'CBCFG'");
-  L.push(cfgJson);
-  L.push('CBCFG');
-  L.push("sudo tee \"$DIR/agent.js\" >/dev/null <<'CBAGENT'");
-  L.push(agent);
-  L.push('CBAGENT');
-  L.push("sudo tee /etc/systemd/system/chitbridge.service >/dev/null <<'CBSVC'");
-  L.push('[Unit]');
-  L.push('Description=Chit and Bridge IoT agent');
-  L.push('After=network-online.target');
-  L.push('Wants=network-online.target');
-  L.push('[Service]');
-  L.push('ExecStart=/usr/bin/env node /opt/chitbridge/agent.js');
-  L.push('Restart=always');
-  L.push('RestartSec=5');
-  L.push('[Install]');
-  L.push('WantedBy=multi-user.target');
-  L.push('CBSVC');
-  L.push('sudo systemctl daemon-reload');
-  L.push('sudo systemctl enable chitbridge >/dev/null 2>&1 || true');
-  L.push('sudo systemctl restart chitbridge');
-  L.push('echo ""');
-  L.push('echo "Installed and running. Devices: '+ndev+'"');
-  L.push('echo "Logs:  journalctl -u chitbridge -f"');
-  L.push('echo "Spool: drop <event>.json (and image) into $DIR/spool to raise an exception"');
-  return L.join('\n')+'\n';
+  var list=[];
+  list.push('#!/usr/bin/env bash');
+  list.push('set -e');
+  list.push('echo "== Chit and Bridge IoT agent installer =="');
+  list.push('if ! command -v node >/dev/null 2>&1; then');
+  list.push('  echo "Installing Node.js...";');
+  list.push('  (command -v apt-get >/dev/null 2>&1 && sudo apt-get update -y && sudo apt-get install -y nodejs) || { echo "Please install Node.js manually, then re-run."; exit 1; }');
+  list.push('fi');
+  list.push('DIR=/opt/chitbridge');
+  list.push('sudo mkdir -p "$DIR/spool" "$DIR/sent"');
+  list.push("sudo tee \"$DIR/config.json\" >/dev/null <<'CBCFG'");
+  list.push(cfgJson);
+  list.push('CBCFG');
+  list.push("sudo tee \"$DIR/agent.js\" >/dev/null <<'CBAGENT'");
+  list.push(agent);
+  list.push('CBAGENT');
+  list.push("sudo tee /etc/systemd/system/chitbridge.service >/dev/null <<'CBSVC'");
+  list.push('[Unit]');
+  list.push('Description=Chit and Bridge IoT agent');
+  list.push('After=network-online.target');
+  list.push('Wants=network-online.target');
+  list.push('[Service]');
+  list.push('ExecStart=/usr/bin/env node /opt/chitbridge/agent.js');
+  list.push('Restart=always');
+  list.push('RestartSec=5');
+  list.push('[Install]');
+  list.push('WantedBy=multi-user.target');
+  list.push('CBSVC');
+  list.push('sudo systemctl daemon-reload');
+  list.push('sudo systemctl enable chitbridge >/dev/null 2>&1 || true');
+  list.push('sudo systemctl restart chitbridge');
+  list.push('echo ""');
+  list.push('echo "Installed and running. Devices: '+ndev+'"');
+  list.push('echo "Logs:  journalctl -u chitbridge -f"');
+  list.push('echo "Spool: drop <event>.json (and image) into $DIR/spool to raise an exception"');
+  return list.join('\n')+'\n';
 }
 function acCreatePackage(id){ acReissueGate(id, 'package'); }
 // ── Reissue step-up (destructive): re-type the gateway name (the QUESTION) + a one-time code emailed to the ENTITY
@@ -261,24 +261,24 @@ function acReissueGate(id, mode){ UI.acReissue={id:id, mode:mode||'package'};
     +'<div style="display:flex;gap:10px"><button class="composebtn" style="flex:1" onclick="closeModal()">' + tx('Cancel') + '</button><button class="composebtn pri" style="flex:1" onclick="acReissueSubmit()">' + tx('Reissue') + '</button></div>'
     +'</div>', false);
 }
-async function acReissueSendCode(){ var m=document.getElementById('rg_msg'); if(m)m.textContent='Sending…';
-  try{ var r=await api('connectorReissueCode',{body:{}});
-    if(m) m.innerHTML='Code sent to <b>'+esc((r&&r.email)||'the account email')+'</b>.'+((r&&r.dev_otp)?(' <span style="color:var(--warn-2)">Dev code <b>'+esc(r.dev_otp)+'</b></span>'):'');
-  }catch(e){ if(m)m.textContent=(e&&e.message)||'Could not send the code.'; }
+async function acReissueSendCode(){ var node=document.getElementById('rg_msg'); if(node)node.textContent='Sending…';
+  try{ var reply=await api('connectorReissueCode',{body:{}});
+    if(node) node.innerHTML='Code sent to <b>'+esc((reply&&reply.email)||'the account email')+'</b>.'+((reply&&reply.dev_otp)?(' <span style="color:var(--warn-2)">Dev code <b>'+esc(reply.dev_otp)+'</b></span>'):'');
+  }catch(e){ if(node)node.textContent=(e&&e.message)||'Could not send the code.'; }
 }
 async function acReissueSubmit(){ var g=UI.acReissue||{}, id=g.id, mode=g.mode;
-  var name=((document.getElementById('rg_name')||{}).value||'').trim(), otp=((document.getElementById('rg_otp')||{}).value||'').trim();
+  var name=((document.getElementById('rg_name')||{}).value||'').trim(), node=((document.getElementById('rg_otp')||{}).value||'').trim();
   var m=document.getElementById('rg_msg');
   if(!name){ if(m)m.textContent='Type the gateway name.'; return; }
-  if(!/^[0-9]{6}$/.test(otp)){ if(m)m.textContent='Enter the 6-digit code.'; return; }
+  if(!/^[0-9]{6}$/.test(node)){ if(m)m.textContent='Enter the 6-digit code.'; return; }
   if(m)m.textContent='Verifying…';
   try{
-    var rk=await api('connectorRegen',{params:{actorId:id},body:{name:name,otp:otp}}); var key=rk&&rk.provision_key;
+    var reply=await api('connectorRegen',{params:{actorId:id},body:{name:name,otp:node}}); var key=reply&&reply.provision_key;
     if(!key){ if(m)m.textContent='No key issued.'; return; }
     closeModal();
     if(mode==='package'){
       var r=await api('connectorConns',{params:{actorId:id}});
-      var devs=(Array.isArray(r)?r:((r&&r.connections)||[]))   /* ⚠️ collapsed to the array — see acLoadDevices */.filter(function(c){return c.enabled!==false;}).map(function(c){ var cf=c.conn_config||{}; return {bridge_id:c.bridge_id, ref:c.ref, folder:cf.folder||null, classes:cf.classes||null}; });
+      var devs=(Array.isArray(r)?r:((r&&r.connections)||[]))   /* ⚠️ collapsed to the array — see acLoadDevices */.filter(function(item){return item.enabled!==false;}).map(function(item){ var cf=item.conn_config||{}; return {bridge_id:item.bridge_id, ref:item.ref, folder:cf.folder||null, classes:cf.classes||null}; });
       _download('chitbridge-install.sh', _buildInstaller({ endpoint:CFG.API_BASE /* HX1: the api this app talks to */, key:key, heartbeat_sec:60, spool_dir:'/opt/chitbridge/spool', devices:devs }));
       UI.acFreshKey=null; if(typeof paintAcDetail==='function')paintAcDetail();   // key is INSIDE the installer — never shown raw
       if(typeof toast==='function')toast('Key reissued — installer downloaded (key is inside it). Reflash the Pi: sudo bash chitbridge-install.sh');
