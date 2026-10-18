@@ -14,6 +14,12 @@
  *   the catalogue import is the Product Lab's own screen for products only). Flow: MVI (Move in) steps 1–4, docs/process/flows.json.
  * ⚠️ Every action is shown; a refused one is greyed WITH the server's sentence (the step guard): an unbalanced trial balance greys Import with
  *    the refusal; a column not confirmed greys Preview with which one.
+ * ── MOVE-IN W1 (2026-10-18, DECISIONS 2026-10-18:62-70) — THE COUNTRY RULE ──────────────────────────────────────────────────────────
+ *   · every call carries source_country: for a file the OWNER states it (one picker, the registered packs only — CBRegulation.list — set to the
+ *     shop's own country, one line saying why); for a connection (miConnect, the practice door) it is the company's own country and its id
+ *   · the server judges it (api lib/move-in-gate): another country is refused WHOLE (422 MOVE_IN_*) — painted here as one line in our words
+ *     with the server's sentence under it; Import stays greyed with that line
+ *   · held rows (action hold · code tax_code | unit | bill_key) are counted and listed as "Held", with the server's sentence; nothing of them is written
  */
 'use strict';
 if (typeof EP !== 'undefined') { Object.assign(EP, {
@@ -25,10 +31,34 @@ if (typeof EP !== 'undefined') { Object.assign(EP, {
 var MIV = { st: null, f: null, pre: null, dec: {}, plan: null, out: null, err: '', busy: false, gen: 0 };
 var MI_SOURCES = [['xero', 'Xero'], ['qbo', 'QuickBooks Online']];
 var MI_KINDS = [['accounts', 'Chart of accounts'], ['contacts', 'Contacts'], ['items', 'Items'], ['trial_balance', 'Trial balance'], ['open_bills', 'Open invoices or bills']];
-var MI_ACTION = { add: 'Will add', merge: 'Will merge', skip: 'Will skip' };
-var MI_TONE = { add: 'green', merge: 'blue', skip: '' };
+var MI_ACTION = { add: 'Will add', merge: 'Will merge', skip: 'Will skip', hold: 'Held' };
+var MI_TONE = { add: 'green', merge: 'blue', skip: '', hold: 'amber' };
+/* the country refusals (api lib/move-in-gate codes) in our words — the server's own sentence is shown under the line */
+var MI_REFUSED = { MOVE_IN_COUNTRY: 'Not moved in: these books are from another country.', MOVE_IN_COUNTRY_UNSTATED: 'Pick the country these books are from.',
+  MOVE_IN_COUNTRY_WORD: 'Pick the country these books are from.', MOVE_IN_FOREIGN: 'Not moved in: this file has another country\'s tax codes.',
+  MOVE_IN_COMPANY: 'Not moved in: this shop already took books from another company.' };
 
-function miFresh() { MIV.f = { source: 'xero', kind: 'accounts', side: 'customer', as_at: '', name: '', csv: null, xlsx: null }; MIV.pre = null; MIV.dec = {}; MIV.plan = null; MIV.out = null; MIV.err = ''; }
+function miFresh() { MIV.f = { source: 'xero', kind: 'accounts', side: 'customer', as_at: '', name: '', csv: null, xlsx: null, country: miShopCountry() }; MIV.pre = null; MIV.dec = {}; MIV.plan = null; MIV.out = null; MIV.err = ''; MIV.refused = null; }
+/** the shop's own country (two letters): the session's, else the books' own (GET /health country, miKnowShop), or '' while unknown */
+function miShopCountry() { return String((typeof SESSION !== 'undefined' && SESSION && SESSION.country) || MIV.shop || '').toUpperCase(); }
+/* the books' country, read once when the session does not carry it; unknown, the picker says "Pick the country" and File stays greyed */
+function miKnowShop() {
+  if (miShopCountry() || MIV.asked) return;
+  MIV.asked = true;
+  api('booksHealth').then(function (health) {
+    var code = health && health.country && health.country.country && health.country.country.code;
+    if (!code) return;
+    MIV.shop = String(code).toUpperCase(); if (MIV.f && !MIV.f.country) MIV.f.country = MIV.shop; miRefresh();
+  }, function (failure) { MIV.asked = false; if (typeof cblog === 'function') cblog('warn', 'move-in: the shop country was not read — ' + ((failure && failure.message) || 'no answer')); });
+}
+/** the countries a file may be stated from: the registered packs only, by name ([code, name]) */
+function miCountries() {
+  var packs = []; try { packs = window.CBRegulation ? CBRegulation.list() : []; } catch (_) { packs = []; }
+  return packs.map(function (p) { return [p.id, String(p.name || p.id).split(' · ')[0]]; });
+}
+function miCountryName(code) { var hit = miCountries().filter(function (c) { return c[0] === code; })[0]; return hit ? hit[1] : code; }
+/** a connection opens the screen: its company's own country and id are sent, and no country is asked (the practice door, CA1) */
+function miConnect(company) { if (!MIV.f) miFresh(); MIV.conn = company && company.country ? { country: String(company.country).toUpperCase(), id: company.id || null } : null; }
 function miNeedsSide(k) { return k === 'contacts' || k === 'open_bills'; }
 function miNeedsDate(k) { return k === 'trial_balance' || k === 'open_bills'; }
 /** the body every move-in call carries: the file, which export, which system, the side, the move date */
@@ -37,13 +67,24 @@ function miBody() {
   if (f.xlsx) b.xlsx = f.xlsx; else b.csv = f.csv || '';
   if (miNeedsSide(f.kind)) b.side = f.kind === 'contacts' ? f.side : (f.side === 'supplier' ? 'payable' : 'receivable');
   if (miNeedsDate(f.kind) && f.as_at) b.as_at = f.as_at;
+  b.source_country = MIV.conn ? MIV.conn.country : f.country;
+  if (MIV.conn && MIV.conn.id) b.source_company = MIV.conn.id;
   return b;
+}
+/* the country row: a connection says its company's country; a file asks, set to the shop's own, with the reason in one line */
+function miCountryRow() {
+  if (MIV.conn) return miRow(tx('Books from'), '<span data-testid="mi-country-read">' + esc(miCountryName(MIV.conn.country)) + '</span>');
+  var shop = miShopCountry(), opts = (MIV.f.country ? [] : [['', 'Pick the country']]).concat(miCountries());
+  return miRow(tx('Books from'), miSel('mi-country', 'country', opts, MIV.f.country)
+    + '<div data-testid="mi-country-why" style="color:var(--grey);font-size:var(--fs-1);margin-top:4px">'
+    + esc(shop ? txf('Only books from {c} — tax rules differ by country.', { c: miCountryName(shop) }) : tx('Tax rules differ by country.')) + '</div>');
 }
 function miDecisions() { return Object.keys(MIV.dec).filter(function (h) { return MIV.dec[h]; }).map(function (h) { return { incoming: h, field: MIV.dec[h] }; }); }
 
 /* ── the view (BK.views.movein) ── */
 function miView(body) {
   if (!MIV.f) miFresh();
+  miKnowShop();
   body.innerHTML = '<div data-testid="mi-steps"><div id="mi_rail"></div><div id="mi_sub" style="color:var(--grey);font-size:var(--fs-1);margin-bottom:8px"></div>'
     + '<div id="mi_body"></div><div id="mi_foot" style="margin-top:12px"></div></div>';
   if (MIV.st) MIV.st.destroy();
@@ -69,6 +110,7 @@ function miRender(k) {
     var sides = f.kind === 'contacts' ? [['customer', 'Customers'], ['supplier', 'Suppliers']] : [['customer', 'Invoices (customers owe you)'], ['supplier', 'Bills (you owe suppliers)']];
     return '<div data-testid="mi-file-step" style="max-width:640px">'
       + miRow(tx('From'), miSel('mi-source', 'source', MI_SOURCES, f.source))
+      + miCountryRow()
       + miRow(tx('Which export'), miSel('mi-kind', 'kind', MI_KINDS, f.kind))
       + (miNeedsSide(f.kind) ? miRow(tx('Which list'), miSel('mi-side', 'side', sides, f.side)) : '')
       + (miNeedsDate(f.kind) ? miRow(tx('As at'), '<input class="inp" type="date" id="mi-asat" data-testid="mi-asat" value="' + esc(f.as_at) + '" onchange="miSet(\'as_at\', this.value)" style="width:auto">') : '')
@@ -95,11 +137,12 @@ function miRender(k) {
       + '</div>';
   }
   if (k === 'preview') {
+    if (MIV.refused) return miRefusedHTML();
     if (!MIV.plan) return '<div data-testid="mi-loading" style="color:var(--grey)">' + esc(MIV.busy ? tx('Checking…') : (MIV.err || tx('Preview first'))) + '</div>';
     var pl = MIV.plan, c = pl.counts || {};
     var big = function (n, w, tid) { return '<div style="min-width:110px"><div class="mono" data-testid="' + tid + '" style="font-size:var(--fs-5,28px);font-weight:800;line-height:1.1">' + esc(String(n || 0)) + '</div><div style="color:var(--grey);font-size:var(--fs-1)">' + esc(w) + '</div></div>'; };
     return '<div data-testid="mi-preview-step">'
-      + '<div style="display:flex;gap:22px;flex-wrap:wrap;margin:4px 0 10px">' + big(c.add, tx('will add'), 'mi-n-add') + big(c.merge, tx('will merge'), 'mi-n-merge') + big(c.skip, tx('will skip'), 'mi-n-skip') + '</div>'
+      + '<div style="display:flex;gap:22px;flex-wrap:wrap;margin:4px 0 10px">' + big(c.add, tx('will add'), 'mi-n-add') + big(c.merge, tx('will merge'), 'mi-n-merge') + big(c.skip, tx('will skip'), 'mi-n-skip') + (c.hold ? big(c.hold, tx('held'), 'mi-n-hold') : '') + '</div>'
       + (pl.refusal ? '<div data-testid="mi-refusal" style="color:var(--warn-2);font-weight:600;margin-bottom:8px">' + esc(pl.refusal) + '</div>' : '')
       + (pl.notes || []).map(function (n) { return '<div data-testid="mi-note" style="color:var(--grey);font-size:var(--fs-1);margin-bottom:6px">' + esc(n) + '</div>'; }).join('')
       + '<div id="mi_rows" data-testid="mi-rows" style="min-height:240px"></div>'
@@ -110,7 +153,7 @@ function miRender(k) {
 function miGuard(k) {
   var f = MIV.f;
   if (MIV.out) return null;
-  if (k === 'file') { if (!f.csv && !f.xlsx) return tx('Pick the file first'); if (miNeedsDate(f.kind) && !f.as_at) return tx('Pick the move date'); return null; }
+  if (k === 'file') { if (!f.csv && !f.xlsx) return tx('Pick the file first'); if (!MIV.conn && !f.country) return tx('Pick the country these books are from'); if (miNeedsDate(f.kind) && !f.as_at) return tx('Pick the move date'); return null; }
   if (k === 'columns') {
     if (!MIV.pre) return MIV.err || tx('Read the file first');
     var picked = miDecisions().map(function (d) { return d.field; });
@@ -118,6 +161,7 @@ function miGuard(k) {
     return miss.length ? txf('Pick the column for {f}', { f: miss.map(function (x) { return x.label; }).join(', ') }) : null;
   }
   if (k === 'preview') {
+    if (MIV.refused) return tx(MI_REFUSED[MIV.refused.code] || 'Not moved in.');
     if (!MIV.plan) return MIV.err || tx('Preview first');
     if (MIV.plan.refusal) return MIV.plan.refusal;
     var c = MIV.plan.counts || {};
@@ -135,7 +179,7 @@ function miFile(input) {
   else { rd.onload = function () { f.csv = String(rd.result || ''); miRefresh(); }; rd.readAsText(file); }
 }
 function miRefresh() { if (MIV.st) { MIV.st.paintBody(); MIV.st.paintFoot(); } }
-function miSet(k, v) { MIV.f[k] = String(v || ''); if (k !== 'as_at') { MIV.pre = null; MIV.dec = {}; MIV.plan = null; } MIV.err = ''; miRefresh(); }
+function miSet(k, v) { MIV.f[k] = String(v || ''); if (k !== 'as_at') { MIV.pre = null; MIV.dec = {}; MIV.plan = null; } MIV.err = ''; MIV.refused = null; miRefresh(); }
 function miPick(h, v) { MIV.dec[h] = v || ''; MIV.plan = null; if (MIV.st) MIV.st.paintFoot(); }
 /* entering a step reads what it needs — once per file (a changed file or column empties the answer) */
 function miOnStep(k) {
@@ -147,13 +191,26 @@ function miOnStep(k) {
 function miRead(ep, body, then) {
   var g = ++MIV.gen; MIV.busy = true; MIV.err = ''; miRefresh();
   api(ep, { body: body }).then(function (r) { if (g !== MIV.gen) return; MIV.busy = false; then(r || {}); miRefresh(); if (ep === 'booksMoveInPreview') miPaintRows(); },
-    function (e) { if (g !== MIV.gen) return; MIV.busy = false; MIV.err = bkWhy(e, tx('Could not read the file')); miRefresh(); });
+    function (e) { if (g !== MIV.gen) return; MIV.busy = false; MIV.refused = miRefusal(e); MIV.err = MIV.refused ? '' : bkWhy(e, tx('Could not read the file')); miRefresh(); });
+}
+/** a country refusal from the server (422 MOVE_IN_*) → { code, why } — anything else is an ordinary error (null) */
+function miRefusal(e) {
+  var data = (e && e.data) || {}, code = String(data.code || '');
+  return /^MOVE_IN_(COUNTRY|FOREIGN|COMPANY)/.test(code) ? { code: code, why: data.message || (e && e.message) || '' } : null;
+}
+/* the refusal painted: our line, the server's sentence under it, and the way back (Back to File, where the country is picked) */
+function miRefusedHTML() {
+  var r = MIV.refused;
+  return '<div data-testid="mi-refused" data-code="' + esc(r.code) + '" style="max-width:640px">'
+    + '<div style="color:var(--warn-2);font-weight:700;margin-bottom:6px">' + esc(tx(MI_REFUSED[r.code] || 'Not moved in.')) + '</div>'
+    + (r.why ? '<div data-testid="mi-refused-why" style="color:var(--grey);font-size:var(--fs-1)">' + esc(r.why) + '</div>' : '')
+    + '</div>';
 }
 /* the preview rows: CBList — line · what · will add / merge / skip · why (the server's sentence) */
 function miPaintRows() {
   var el = document.getElementById('mi_rows'); if (!el || !MIV.plan) return;
   var rows = MIV.plan.rows || [];
-  var opts = [{ v: 'add', label: tx('Will add') }, { v: 'merge', label: tx('Will merge') }, { v: 'skip', label: tx('Will skip') }];
+  var opts = [{ v: 'add', label: tx('Will add') }, { v: 'merge', label: tx('Will merge') }, { v: 'skip', label: tx('Will skip') }, { v: 'hold', label: tx('Held') }];
   CBList.reset('movein');
   CBList.mount(el, {
     key: 'movein', t: tx, rows: function () { return rows; }, id: function (r) { return r.line; }, rowTid: function (r) { return 'mi-row-' + r.line; },
@@ -183,11 +240,11 @@ function miDoneHTML() {
   var ent = o.entry || null, cur = bkCur(), words = '';
   if (ent && ent.entry_no) words = txf('Entered as {no}.', { no: ent.entry_no }) + (ent.suspense_minor ? ' ' + txf('{amt} held in Suspense until the rest arrives.', { amt: bkDrCr(ent.suspense_minor, cur) }) : '');
   return '<div data-testid="mi-done">'
-    + '<div style="display:flex;gap:22px;flex-wrap:wrap;margin:4px 0 10px">' + big(o.added, tx('added'), 'mi-done-add') + big(o.merged, tx('merged'), 'mi-done-merge') + big(o.skipped, tx('skipped'), 'mi-done-skip') + '</div>'
+    + '<div style="display:flex;gap:22px;flex-wrap:wrap;margin:4px 0 10px">' + big(o.added, tx('added'), 'mi-done-add') + big(o.merged, tx('merged'), 'mi-done-merge') + big(o.skipped, tx('skipped'), 'mi-done-skip') + (o.held ? big(o.held, tx('held'), 'mi-done-hold') : '') + '</div>'
     + (words ? '<div data-testid="mi-entry" style="margin-bottom:6px">' + esc(words) + '</div>' : '')
     + (o.notes || []).map(function (n) { return '<div data-testid="mi-note" style="color:var(--grey);font-size:var(--fs-1);margin-bottom:6px">' + esc(n) + '</div>'; }).join('')
     + '<div class="supacts" style="margin:8px 0">'
-    + ((o.rows || []).length ? '<button type="button" data-testid="mi-download" onclick="miDownload()">' + esc(tx('Download skipped rows')) + '</button>' : '')
+    + ((o.rows || []).length ? '<button type="button" data-testid="mi-download" onclick="miDownload()">' + esc(tx('Download rows not moved in')) + '</button>' : '')
     + '<button type="button" data-testid="mi-again" onclick="miAgain()">' + esc(tx('Another file')) + '</button></div>'
     + '<div id="mi_skipped" data-testid="mi-skipped" style="min-height:160px"></div>'
     + '</div>';
@@ -202,7 +259,8 @@ function miPaintSkipped() {
     columns: [
       { key: 'line', label: tx('Line'), prio: 3, sort: 'line', num: true, w: 80, cell: function (r) { return String(r.line); } },
       { key: 'what', label: tx('What'), prio: 1, sort: 'what', w: 260, cell: function (r) { return r.what || ''; } },
-      { key: 'why', label: tx('Why'), prio: 2, sort: 'why', w: 460, cell: function (r) { return r.why || ''; } },
+      { key: 'state', label: tx('Action'), prio: 2, w: 110, html: true, cell: function (r) { var held = !!r.code; return '<span class="step ' + (held ? 'amber' : '') + '" data-testid="mi-state-' + esc(r.line) + '">' + esc(tx(held ? 'Held' : 'Skipped')) + '</span>'; } },
+      { key: 'why', label: tx('Why'), prio: 3, sort: 'why', w: 420, cell: function (r) { return r.why || ''; } },
     ],
     sorts: [{ key: 'line', label: tx('File order'), cmp: function (a, b) { return a.line - b.line; } }],
     search: function (r) { return [r.what, r.why].join(' '); },
