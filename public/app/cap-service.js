@@ -130,7 +130,7 @@ function svcPaint(){
 
   var c = d.clock || {}, r = d.record || {};
   var pauses = d.pauses || [];
-  var iPaused = pauses.some(function(p){ return p.mine && !p.paused_to; });
+  var iPaused = pauses.some(function(item){ return item.mine && !item.paused_to; });
 
   modal('<h3 style="margin:0 0 3px">Service clock'
     + (c.priority ? ' <span style="font-size:var(--fs-2);color:var(--blue-2);font-weight:800">' + esc(c.priority) + '</span>' : '') + '</h3>'
@@ -158,9 +158,9 @@ function svcPickers(d){
 }
 
 async function svcStart(){
-  var i = (document.getElementById('svc_impact') || {}).value;
+  var node = (document.getElementById('svc_impact') || {}).value;
   var u = (document.getElementById('svc_urgency') || {}).value;
-  try { await api('svcSet', { params: { id: SVC.id }, body: { impact: i, urgency: u } }); toast('Service clock started'); await svcReload(); }
+  try { await api('svcSet', { params: { id: SVC.id }, body: { impact: node, urgency: u } }); toast('Service clock started'); await svcReload(); }
   catch (e) { toast(MSG.fail('start the clock', e)); }
 }
 async function svcRespond(){
