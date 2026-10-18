@@ -158,7 +158,7 @@
   "scripts/check-adoption.js": {"score":29,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":28,"noWhatLine":0,"emptyCatch":0,"noHeader":1},
   "scripts/check-app-parses.cjs": {"score":11,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":9,"noWhatLine":1,"emptyCatch":0,"noHeader":1},
   "scripts/check-syntax.js": {"score":7,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":6,"noWhatLine":0,"emptyCatch":0,"noHeader":1},
-  "scripts/country-ready.cjs": {"score":31,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":29,"noWhatLine":1,"emptyCatch":0,"noHeader":1},
+  "scripts/country-ready.cjs": {"score":19,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":17,"noWhatLine":1,"emptyCatch":0,"noHeader":1},
   "scripts/standards-doc.js": {"score":13,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":12,"noWhatLine":0,"emptyCatch":0,"noHeader":1},
   "tools/gen-modules-doc.cjs": {"score":15,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":13,"noWhatLine":1,"emptyCatch":0,"noHeader":1},
   "tools/gen-process-docs.cjs": {"score":21,"long40":1,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":18,"noWhatLine":1,"emptyCatch":0,"noHeader":1},
