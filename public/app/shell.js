@@ -92,7 +92,7 @@
     if (h === 'localhost' || h === '127.0.0.1') return 'http://localhost:3000';
     return root.CB_API || '';
   }
-  function session() { try { var s = JSON.parse(lsGet('cb_sess') || 'null'); return s && s.token ? s : null; } catch (_) { return null; } }
+  function session() { try { var parsed = JSON.parse(lsGet('cb_sess') || 'null'); return parsed && parsed.token ? parsed : null; } catch (_) { return null; } }
 
   /* ── CSS: the prototype's, prefixed, on private tokens that fall back list names → theme names → the design's values ── */
   var CSS = [
@@ -287,8 +287,8 @@
 
   function addCss() {
     if (!doc || doc.getElementById('cbsh-css')) return;
-    var s = doc.createElement('style'); s.id = 'cbsh-css'; s.textContent = CSS;
-    (doc.head || doc.documentElement).appendChild(s);
+    var node = doc.createElement('style'); node.id = 'cbsh-css'; node.textContent = CSS;
+    (doc.head || doc.documentElement).appendChild(node);
   }
   /* SHELL-ONE: the type SYSTEM.md §2 names (Bricolage Grotesque · IBM Plex Sans · IBM Plex Mono) comes WITH the frame, once — a page never links its own face */
   var FONTS_HREF = 'https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap';
@@ -309,9 +309,9 @@
   }
   var WARN = { due: 1, soon: 1, gone: 1 };
   function worstOf(lics) {
-    var c = (lics || []).filter(function (l) { return l && l.core && l.days_left != null && WARN[l.band]; });
-    c.sort(function (a, b) { return a.days_left - b.days_left; });
-    return c[0] || null;
+    var list = (lics || []).filter(function (item) { return item && item.core && item.days_left != null && WARN[item.band]; });
+    list.sort(function (first, second) { return first.days_left - second.days_left; });
+    return list[0] || null;
   }
 
   /* THE FRAME's markup, one template (SHELL-ONE): the header (mark · shop · switcher or title · chip · edition · licence · bell · ⌂ Home · avatar),
@@ -349,8 +349,8 @@
   function workHTML(frame) {
     if (frame.mode === 'bar') return '';
     return '<div class="cbsh-work">' +
-      (frame.mode === 'home' ? '<nav class="cbsh-nav" data-testid="shell-nav" aria-label="Areas">' + AREAS.map(function (a) {
-        return '<button type="button" class="cbsh-nv" data-go="' + a + '" data-testid="shell-nav-' + a + '"><span class="i" aria-hidden="true">' + neutralGlyph(ICON[a]) + '</span><span class="t">' + esc(W.areas[a]) + '</span></button>';
+      (frame.mode === 'home' ? '<nav class="cbsh-nav" data-testid="shell-nav" aria-label="Areas">' + AREAS.map(function (item) {
+        return '<button type="button" class="cbsh-nv" data-go="' + item + '" data-testid="shell-nav-' + item + '"><span class="i" aria-hidden="true">' + neutralGlyph(ICON[item]) + '</span><span class="t">' + esc(W.areas[item]) + '</span></button>';
       }).join('') + '</nav>' : '') +
       (frame.mode === 'home' ? '<div class="cbsh-pfoot" data-testid="shell-pfoot"></div>' : '') +
       (frame.sides ? '<aside class="cbsh-side l" data-slot="sideL"></aside>' : '') +
@@ -514,7 +514,7 @@
     el.innerHTML = frameHTML({ mode: mode, person: person, sheetId: sheetId, title: o.title, appId: appId, homeHref: homeHref, sides: sides });
 
     var $ = function (s) { return el.querySelector(s); };
-    var hdr = $('.cbsh-hdr'), sheet = $('.cbsh-sheet'), who = $('.cbsh-who'), main = $('.cbsh-main');
+    var node = $('.cbsh-hdr'), sheet = $('.cbsh-sheet'), who = $('.cbsh-who'), main = $('.cbsh-main');
     var slots = { bell: $('.cbsh-bell'), alerts: null, home: null, work: $('[data-slot="work"]') };
     /* SCREEN-ID: the app's screen code in the bar — the one chip (CBScreenId); a frame with sections names the section (page-frame.js setActive) */
     if ((mode !== 'bar' || appId) && root.CBScreenId) { root.CBScreenId.here(appId || 'home'); $('.cbsh-sid').appendChild(root.CBScreenId.chip()); }
@@ -550,24 +550,24 @@
       var b = h.business || {}, lics = h.licences || [], w = worstOf(lics), tr = h.trade_ready || {}, checks = tr.checks || [];
       var biz = '<div class="cbsh-ln nm">' + esc(b.name || shopName()) + '</div>' + (b.legal_name ? '<div class="cbsh-ln">' + esc(b.legal_name) + '</div>' : '') +
         (b.address ? '<div class="cbsh-ln">' + esc(b.address) + '</div>' : '') + (b.phone ? '<div class="cbsh-ln mono">' + esc(b.phone) + '</div>' : '');
-      var rows = lics.map(function (l) {
-        var isW = w && l === w, btn = '';
-        if (isW && l.renew_url) btn = '<a class="cbsh-rn ' + l.band + '" data-testid="shell-renew" href="' + esc(l.renew_url) + '">' + esc(l.band === 'gone' ? W.again : W.renew) + '</a>';
-        var tone = l.days_left == null ? (l.registered ? 'ok' : '') : (WARN[l.band] ? l.band : '');
-        return '<div class="cbsh-lrow" data-testid="shell-licence-row"><span class="nm">' + esc(l.label) + (l.number_masked ? '<span class="no">' + esc(l.number_masked) + '</span>' : '') + '</span>' +
-          '<span class="st ' + tone + '">' + esc(daysWord(l)) + '</span><span>' + btn + '</span></div>';
+      var rows = lics.map(function (item) {
+        var isW = w && item === w, btn = '';
+        if (isW && item.renew_url) btn = '<a class="cbsh-rn ' + item.band + '" data-testid="shell-renew" href="' + esc(item.renew_url) + '">' + esc(item.band === 'gone' ? W.again : W.renew) + '</a>';
+        var tone = item.days_left == null ? (item.registered ? 'ok' : '') : (WARN[item.band] ? item.band : '');
+        return '<div class="cbsh-lrow" data-testid="shell-licence-row"><span class="nm">' + esc(item.label) + (item.number_masked ? '<span class="no">' + esc(item.number_masked) + '</span>' : '') + '</span>' +
+          '<span class="st ' + tone + '">' + esc(daysWord(item)) + '</span><span>' + btn + '</span></div>';
       }).join('');
       var why = w && w.note ? '<span class="why ' + w.band + '">' + esc(w.note) + '</span>' : '';
-      var got = checks.filter(function (c) { return c && c.done; }).length;
-      var chk = '<div class="cbsh-checks">' + checks.map(function (c) {
-        return '<div class="cbsh-chk ' + (c.done ? 'y' : 'n') + '" data-testid="shell-check"><span class="m" aria-hidden="true">' + (c.done ? '✓' : '') + '</span>' + esc(c.label) + '</div>';
+      var got = checks.filter(function (item) { return item && item.done; }).length;
+      var chk = '<div class="cbsh-checks">' + checks.map(function (item) {
+        return '<div class="cbsh-chk ' + (item.done ? 'y' : 'n') + '" data-testid="shell-check"><span class="m" aria-hidden="true">' + (item.done ? '✓' : '') + '</span>' + esc(item.label) + '</div>';
       }).join('') + '</div>' + (checks.length && got < checks.length ? '<a class="cbsh-btn" data-testid="shell-finish" href="' + esc(tr.fix_url || '/know-your-business.html') + '">' + esc(W.finish) + '</a>' : '');
       sheet.innerHTML = '<div class="cbsh-sin" data-testid="shell-sheet-full">' + col(W.business, biz) + col(W.licences, rows, why) + col(W.trade, chk) + '</div>';
     }
 
     function setOpen(v) {
       if (!sheet) return;
-      S.open = !!v; hdr.classList.toggle('open', S.open); sheet.hidden = !S.open;
+      S.open = !!v; node.classList.toggle('open', S.open); sheet.hidden = !S.open;
       if (who) who.setAttribute('aria-expanded', S.open ? 'true' : 'false');
     }
 
@@ -575,7 +575,7 @@
     function shown() { var m = root.CBEdition && S.manifest ? root.CBEdition.view(S.manifest) : S.manifest; return (m && m.entries) || []; }
     function entriesOf(area) { return shown().filter(function (e) { return e && sectionOf(e) === area; }); }
     /* the areas this showing has: Home always; another area only if the edition draws something in it (the full app: all five) */
-    function areasShown() { return !S.manifest || !edition() ? AREAS : AREAS.filter(function (a) { return a === 'home' || entriesOf(a).length; }); }
+    function areasShown() { return !S.manifest || !edition() ? AREAS : AREAS.filter(function (item) { return item === 'home' || entriesOf(item).length; }); }
     /* a pillar box: its title, then the cards that have a page, then the dashed chips (coming · workshop) */
     function pillarBox(p, list) {
       var built = list.filter(function (e) { return e.state === 'built' && e.route; }), rest = list.filter(function (e) { return !(e.state === 'built' && e.route); });
@@ -583,9 +583,9 @@
     }
     /* H22/S1: a route may name the shop it opens for ({bridge_id}: the Storefront is THIS shop's page, /shop.html?s=<id>); unresolved, the bare page */
     function routeOf(e) {
-      var r = String(e.route || ''); if (r.indexOf('{bridge_id}') < 0) return r;
+      var text = String(e.route || ''); if (text.indexOf('{bridge_id}') < 0) return text;
       var bid = (person && person.bridgeId) || (sess && sess.bridgeId) || (S.header && S.header.business && S.header.business.bridge_id) || '';
-      return bid ? r.replace('{bridge_id}', encodeURIComponent(bid)) : r.split('?')[0];
+      return bid ? text.replace('{bridge_id}', encodeURIComponent(bid)) : text.split('?')[0];
     }
     function card(e) {
       return '<a class="cbsh-box" href="' + esc(routeOf(e)) + '" data-testid="shell-card-' + esc(e.id) + '" data-id="' + esc(e.id) + '">' +
@@ -611,16 +611,16 @@
       $('[data-testid="shell-noapps"]').hidden = !!S.manifest || S.loadingApps;
       var has = areasShown();
       [].forEach.call(el.querySelectorAll('.cbsh-nv'), function (b) { b.hidden = has.indexOf(b.getAttribute('data-go')) < 0; });
-      $('.cbsh-more').innerHTML = has.slice(1).map(function (a) {
-          var list = entriesOf(a), built = list.filter(function (e) { return e.state === 'built' && e.route; }), rest = list.filter(function (e) { return !(e.state === 'built' && e.route); });
-          var cap = '<div class="cbsh-cap"><b>' + esc(W.caption[a]) + '</b>' + (W.sub[a] ? '<span>' + esc(W.sub[a]) + '</span>' : '') + '<i></i></div>';
-          if (PILLARS[a]) {
-            var boxes = PILLARS[a].map(function (p) { var l = list.filter(function (e) { return pillarOf(e) === p; }); return l.length ? pillarBox(p, l) : ''; }).join('');
-            return '<section class="cbsh-sec ' + a + '" data-area="' + a + '" data-testid="shell-area-' + a + '"><h2 class="cbsh-ph">' + esc(W.caption[a]) + '</h2>' + cap + '<div class="cbsh-pils n' + PILLARS[a].length + '">' + boxes + '</div></section>';
+      $('.cbsh-more').innerHTML = has.slice(1).map(function (item) {
+          var list = entriesOf(item), built = list.filter(function (e) { return e.state === 'built' && e.route; }), rest = list.filter(function (e) { return !(e.state === 'built' && e.route); });
+          var cap = '<div class="cbsh-cap"><b>' + esc(W.caption[item]) + '</b>' + (W.sub[item] ? '<span>' + esc(W.sub[item]) + '</span>' : '') + '<i></i></div>';
+          if (PILLARS[item]) {
+            var boxes = PILLARS[item].map(function (p) { var l = list.filter(function (e) { return pillarOf(e) === p; }); return l.length ? pillarBox(p, l) : ''; }).join('');
+            return '<section class="cbsh-sec ' + item + '" data-area="' + item + '" data-testid="shell-area-' + item + '"><h2 class="cbsh-ph">' + esc(W.caption[item]) + '</h2>' + cap + '<div class="cbsh-pils n' + PILLARS[item].length + '">' + boxes + '</div></section>';
           }
           var inner = cap + '<div class="cbsh-grid">' + built.map(card).join('') + '</div><div class="cbsh-chips">' + rest.map(chip).join('') + '</div>';
-          var wrap = a === 'labs' ? '<div class="cbsh-labs">' + inner + '</div>' : a === 'setup' ? '<div class="cbsh-base">' + inner + '</div>' : inner;
-          return '<section class="cbsh-sec ' + a + '" data-area="' + a + '" data-testid="shell-area-' + a + '"><h2 class="cbsh-ph">' + esc(W.caption[a]) + '</h2>' + wrap + '</section>';
+          var wrap = item === 'labs' ? '<div class="cbsh-labs">' + inner + '</div>' : item === 'setup' ? '<div class="cbsh-base">' + inner + '</div>' : inner;
+          return '<section class="cbsh-sec ' + item + '" data-area="' + item + '" data-testid="shell-area-' + item + '"><h2 class="cbsh-ph">' + esc(W.caption[item]) + '</h2>' + wrap + '</section>';
         }).join('');
       placeKural();
     }
@@ -631,7 +631,7 @@
       var L = root.CBLocale, at = t.at, m = t.money, text = String(t.text == null ? '' : t.text);
       var time = function () { try { return (L && L.time && L.time(at)) || ''; } catch (_) { return ''; } };
       var date = function () { try { return (L && L.date && L.date(at)) || String(at || '').slice(0, 10); } catch (_) { return String(at || '').slice(0, 10); } };
-      var sameDay = function () { var d = new Date(at), n = new Date(); return !isNaN(d) && d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate(); };
+      var sameDay = function () { var date = new Date(at), n = new Date(); return !isNaN(date) && date.getFullYear() === n.getFullYear() && date.getMonth() === n.getMonth() && date.getDate() === n.getDate(); };
       return text.replace(/{(money|time|date|when)}/g, function (_, k) {
         if (k === 'money') return m ? ((L && L.money && L.money(m.amount, m.currency)) || (m.currency + ' ' + m.amount)) : '';
         if (k === 'time') return time();
@@ -650,9 +650,9 @@
       (S.manifest.entries || []).forEach(function (e) {
         if (!e || e.state !== 'built' || !e.facts) return;
         var spot = $('[data-testid="shell-facts-' + e.id + '"]'); if (!spot) return;
-        get(e.facts).then(function (r) {
-          var lines = (r && r.lines) || [], state = noteNeeds(e, cardState(r, lines), routeOf);
-          spot.innerHTML = factsHTML(e, lines, state, lineHTML) + trendHTML(r && r.figures && r.figures.trend);
+        get(e.facts).then(function (reply) {
+          var lines = (reply && reply.lines) || [], state = noteNeeds(e, cardState(reply, lines), routeOf);
+          spot.innerHTML = factsHTML(e, lines, state, lineHTML) + trendHTML(reply && reply.figures && reply.figures.trend);
         }).catch(function () { spot.innerHTML = '<span class="f" title="' + esc(W.factsFailed) + '">—</span>'; });
       });
     }
@@ -693,8 +693,8 @@
       b.innerHTML = '<span aria-hidden="true">' + glyph(icon) + '</span><span class="sn">' + esc(T(name)) + '</span><span class="chev" aria-hidden="true">▼</span>';   /* through the catalogue: an area is a word (walk-locale) */
       b.setAttribute('title', T(name));
       b.setAttribute('aria-label', W.switcher);
-      pop.innerHTML = areasShown().map(function (a) {
-        return '<a href="' + esc(homeHref + (a === 'home' ? '' : '#' + a)) + '" data-testid="shell-switch-' + a + '"' + (a === cur ? ' aria-current="true"' : '') + '><span class="i" aria-hidden="true">' + glyph(ICON[a]) + '</span>' + esc(W.areas[a]) + '</a>';
+      pop.innerHTML = areasShown().map(function (item) {
+        return '<a href="' + esc(homeHref + (item === 'home' ? '' : '#' + item)) + '" data-testid="shell-switch-' + item + '"' + (item === cur ? ' aria-current="true"' : '') + '><span class="i" aria-hidden="true">' + glyph(ICON[item]) + '</span>' + esc(W.areas[item]) + '</a>';
       }).join('');
     }
     function swOpen(v) { var b = $('.cbsh-swb'), pop = $('.cbsh-swpop'); if (!b) return; pop.hidden = !v; b.setAttribute('aria-expanded', v ? 'true' : 'false'); }
@@ -719,15 +719,15 @@
 
     function get(url) {
       var full = /^https?:/.test(url) ? url : base + url;
-      return root.fetch(full, { headers: token ? { Authorization: 'Bearer ' + token } : {} }).then(function (r) {
-        if (!r.ok) { var e = new Error('HTTP ' + r.status); e.status = r.status; throw e; }
-        return r.json();
+      return root.fetch(full, { headers: token ? { Authorization: 'Bearer ' + token } : {} }).then(function (reply) {
+        if (!reply.ok) { var e = new Error('HTTP ' + reply.status); e.status = reply.status; throw e; }
+        return reply.json();
       });
     }
     function loadManifest() {
       var m = o.manifest || '/app/manifest.json';
       if (typeof m === 'object') return Promise.resolve(m);
-      return root.fetch(m).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+      return root.fetch(m).then(function (reply) { if (!reply.ok) throw new Error('HTTP ' + reply.status); return reply.json(); });
     }
 
     /* ── events ── */
@@ -741,7 +741,7 @@
     var nav = $('.cbsh-nav'); if (nav) nav.addEventListener('click', function (e) { var b = e.target.closest('.cbsh-nv'); if (b) go(b.getAttribute('data-go')); });
     if (main && mode === 'home') {
       main.addEventListener('scroll', spy, { passive: true });
-      ['wheel', 'touchstart'].forEach(function (t) { main.addEventListener(t, function () { S.pin = null; S.pinUntil = 0; }, { passive: true }); });
+      ['wheel', 'touchstart'].forEach(function (item) { main.addEventListener(item, function () { S.pin = null; S.pinUntil = 0; }, { passive: true }); });
     }
     var swb = $('.cbsh-swb'); if (swb) swb.addEventListener('click', function () { swOpen($('.cbsh-swpop').hidden); });
     doc.addEventListener('click', function (e) { if (swb && !e.target.closest('.cbsh-sw')) swOpen(false); });
@@ -751,7 +751,7 @@
     /* ── units the page loaded: the avatar (always), the bell, the sign-in window, the kural ── */
     if (root.CBAvatar && root.CBAvatar.mount) {
       var ao = { person: person, items: ['profile', 'support', 'signout'], apiBase: base, token: token };
-      Object.keys(o.avatar || {}).forEach(function (k) { ao[k] = o.avatar[k]; });
+      Object.keys(o.avatar || {}).forEach(function (item) { ao[item] = o.avatar[item]; });
       root.CBAvatar.mount($('.cbsh-av'), ao);
     } else if (root.console) root.console.error('CBShell: load /app/avatar.js before the shell — the avatar is CBAvatar, never drawn here');
     if (root.CBBell && root.CBBell.mount) root.CBBell.mount(slots.bell, { apiBase: base, token: token, person: person });   /* person null = signed out: no bell, even with a token still saved */
@@ -760,7 +760,7 @@
     /* signin:false (FX-UX2) — a public section that loads the sign-in unit for its own use (CB Settings › New shop reads CBSignin.sessionOf): no window over it */
     if (!person && mode !== 'bar' && o.signin !== false && root.CBSignin && typeof root.CBSignin.mount === 'function') {
       var so = { apiBase: base, surface: 'index', need: 'person' };
-      Object.keys(o.signin || {}).forEach(function (k) { so[k] = o.signin[k]; });
+      Object.keys(o.signin || {}).forEach(function (item) { so[item] = o.signin[item]; });
       root.CBSignin.mount($('.cbsh-signin'), so);
     }
 
@@ -775,11 +775,11 @@
     var kuralP = (mode !== 'bar' && o.kural !== false && root.CBKural && root.CBKural.mount)
       ? root.CBKural.mount({ route: o.kural || 'planning', host: phone.matches && mode === 'home' ? $('.cbsh-pfoot') : $('.cbsh-foot') }).then(placeKural).catch(function () {}) : Promise.resolve();
 
-    var manP = loadManifest().then(function (m) { S.manifest = m && m.entries ? m : { entries: [] }; if (root.CBEdition) root.CBEdition.use(S.manifest); }, function () { S.manifest = null; })
+    var manP = loadManifest().then(function (reply) { S.manifest = reply && reply.entries ? reply : { entries: [] }; if (root.CBEdition) root.CBEdition.use(S.manifest); }, function () { S.manifest = null; })
       .then(function () { S.loadingApps = false; })
       .then(function () { paintEdition(); if (mode === 'home') { paintAreas(); if (first !== 'home') go(first); readFacts(); } if (mode === 'app') paintSwitcher(); });
 
-    var hdrP = person ? get('/api/entities/header').then(function (h) { S.header = h || null; S.headerState = h ? 'ok' : 'none'; }, function () { S.header = null; S.headerState = 'none'; })
+    var hdrP = person ? get('/api/entities/header').then(function (reply) { S.header = reply || null; S.headerState = reply ? 'ok' : 'none'; }, function () { S.header = null; S.headerState = 'none'; })
       .then(function () { paintBar(); paintSheet(); paintMoneyGlyphs(doc, S.header); }) : Promise.resolve();
     doc.addEventListener('cb:me', function () { paintCountryWords(doc); });   /* NAMES-1: the shop's country landed — Stock becomes Inventory for a US shop */
 
