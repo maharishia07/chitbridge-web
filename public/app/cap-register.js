@@ -53,11 +53,11 @@ function rgShell(body, right, loading) {
 }
 
 function rgTabs() {
-  var T = [['live', tx('Register')], ['closure', tx('Closure')], ['impact', tx('Impact')]];
+  var list = [['live', tx('Register')], ['closure', tx('Closure')], ['impact', tx('Impact')]];
   return '<div class="raidtoggle" style="padding:0 0 10px">'
-    + T.map(function (t) {
-        return '<button data-testid="register-tab-' + t[0] + '" class="' + (RG.view === t[0] ? 'on' : '') + '"'
-          + ' onclick="rgGo(&quot;' + t[0] + '&quot;)">' + t[1] + '</button>';
+    + list.map(function (item) {
+        return '<button data-testid="register-tab-' + item[0] + '" class="' + (RG.view === item[0] ? 'on' : '') + '"'
+          + ' onclick="rgGo(&quot;' + item[0] + '&quot;)">' + item[1] + '</button>';
       }).join('')
     + '</div>';
 }
@@ -75,10 +75,10 @@ async function rgLoad(force) {
   if (RG.report && !force) return;
   RG.busy = true; RG.err = null;
   try {
-    var r = await api('raidaReport');
-    RG.report = r || { entries: [] };
+    var reply = await api('raidaReport');
+    RG.report = reply || { entries: [] };
     /* Subjects only exist after b185. A phase-0 database answers the report and not this, which is not a fault. */
-    if (r && r.full) {
+    if (reply && reply.full) {
       try { var s = await api('regSubjects'); RG.subjects = (s && s.subjects) || []; } catch (_) { RG.subjects = []; }
       try { var a = await api('regAttachables'); RG.attach = (a && a.attachables) || []; } catch (_) { RG.attach = []; }
     }
@@ -99,12 +99,12 @@ async function openRegister(force) {
 
 /* max-width:94vw on .modal.wide still applies, so this asks for room and never overflows a narrow screen. */
 function rgWiden() {
-  var m = document.querySelector('#modalhost .modal');
-  if (!m) return;
+  var node = document.querySelector('#modalhost .modal');
+  if (!node) return;
   /* ⭐ WIDE ONLY WHEN THERE IS A TABLE. 1240px exists so fifteen columns can be read across; wrapped around a
      560px form it is just empty space, and an empty state that looks broken is its own problem. */
   var wide = rgEntries().length > 0 || (RG.subjects || []).length > 0;
-  m.classList[wide ? 'add' : 'remove']('rg-modal');
+  node.classList[wide ? 'add' : 'remove']('rg-modal');
 }
 
 /**
@@ -153,8 +153,8 @@ function rgEntries() { return (RG.report && RG.report.entries) || []; }
 
 /* Entries on the selected register, or all of them when nothing is selected. */
 function rgScoped() {
-  var es = rgEntries();
-  return RG.sel ? es.filter(function (e) { return e.subject_id === RG.sel; }) : es;
+  var list = rgEntries();
+  return RG.sel ? list.filter(function (e) { return e.subject_id === RG.sel; }) : list;
 }
 function rgSubjectName(id) {
   var s = (RG.subjects || []).find(function (x) { return x.subject_id === id; });
@@ -204,9 +204,9 @@ function rgHeat(entries) {
   var rows = '';
   for (var l = 5; l >= 1; l--) {
     var cells = '';
-    for (var s = 1; s <= 5; s++) {
-      var n = grid[l + ':' + s] || 0;
-      var b = rgBandOf(l * s);
+    for (var count = 1; count <= 5; count++) {
+      var n = grid[l + ':' + count] || 0;
+      var b = rgBandOf(l * count);
       cells += '<td class="rg-hc" style="' + (n ? 'color:' + b.fg + ';font-weight:700' : 'color:var(--line)') + '">'
         + (n || '·') + '</td>';
     }
@@ -218,7 +218,7 @@ function rgHeat(entries) {
     + '</caption>'
     + rows
     + '<tr><th class="rg-hh"></th>'
-    + [1, 2, 3, 4, 5].map(function (s) { return '<th class="rg-hh">' + s + '</th>'; }).join('')
+    + [1, 2, 3, 4, 5].map(function (item) { return '<th class="rg-hh">' + item + '</th>'; }).join('')
     + '</tr></table>'
     + '<div class="rg-hax">' + tx('severity →') + '</div></div>';
 }
@@ -233,9 +233,9 @@ function rgRegisterRail() {
   /* ⚠️ Nothing to choose between, and the form below already offers the only action — a lone "All registers"
      chip beside a + that opens what is on screen is two answers to one question. */
   if (!subs.length) return '';
-  var es = rgEntries();
+  var list = rgEntries();
   var countFor = function (id) {
-    return es.filter(function (e) { return e.subject_id === id && e.open; }).length;
+    return list.filter(function (e) { return e.subject_id === id && e.open; }).length;
   };
   var chip = function (id, name, n, closed) {
     return '<button data-testid="register-subject" class="' + (RG.sel === id ? 'on' : '') + '"'
@@ -245,8 +245,8 @@ function rgRegisterRail() {
       + (closed ? ' ✓' : '') + '</button>';
   };
   return '<div class="raidtoggle" style="padding:0 0 8px">'
-    + chip(null, tx('All registers'), es.filter(function (e) { return e.open; }).length, false)
-    + subs.map(function (s) { return chip(s.subject_id, s.name, countFor(s.subject_id), !!s.closed_at); }).join('')
+    + chip(null, tx('All registers'), list.filter(function (e) { return e.open; }).length, false)
+    + subs.map(function (item) { return chip(item.subject_id, item.name, countFor(item.subject_id), !!item.closed_at); }).join('')
     + '<button onclick="rgQuickAdd()" data-testid="register-new" title="' + esc(tx('Record something in a new register'))
     + '">＋ ' + tx('New') + '</button>'
     + '</div>';
@@ -305,13 +305,13 @@ var RG_COLS = [
   { k: 'status',    w: '100px',               h: 'Status' },
 ];
 
-function rgTpl() { return RG_COLS.map(function (c) { return c.w; }).join(' '); }
+function rgTpl() { return RG_COLS.map(function (item) { return item.w; }).join(' '); }
 
 /* ⚠️ Each heading carries its key, so a spec can assert the header and the cells agree on ORDER and not merely
    on count — a reorder that misaligns every column is otherwise completely silent. */
 function rgHead() {
   return '<div class="lhead" style="grid-template-columns:' + rgTpl() + '">'
-    + RG_COLS.map(function (c) { return '<div data-col="' + c.k + '">' + tx(c.h) + '</div>'; }).join('')
+    + RG_COLS.map(function (item) { return '<div data-col="' + item.k + '">' + tx(item.h) + '</div>'; }).join('')
     + '</div>';
 }
 
@@ -363,9 +363,9 @@ function rgTr(e) {
     + '</div>';
 }
 
-function rgTable(es) {
+function rgTable(list) {
   return '<div class="rg-wrap" data-testid="register-table">'
-    + '<div class="rg-grid">' + rgHead() + es.map(rgTr).join('') + '</div></div>';
+    + '<div class="rg-grid">' + rgHead() + list.map(rgTr).join('') + '</div></div>';
 }
 
 /**
@@ -419,17 +419,17 @@ function rgCss() {
 }
 
 function rgLive() {
-  var es = rgScoped();
-  var open = es.filter(function (e) { return e.open; });
-  var shut = es.filter(function (e) { return !e.open; });
+  var list = rgScoped();
+  var open = list.filter(function (e) { return e.open; });
+  var shut = list.filter(function (e) { return !e.open; });
   /* ⭐ Worst first. Sorted by date, a register buries the thing that should be read first under whatever was
      typed most recently. Unrated entries sort last rather than as zero — an unassessed risk is not a low one. */
-  open.sort(function (a, b) { return (b.score || 0) - (a.score || 0); });
+  open.sort(function (first, second) { return (second.score || 0) - (first.score || 0); });
 
   return rgCss()
     + rgRegisterRail()
     + (RG.report.full ? rgAddBar() : '')
-    + (es.length
+    + (list.length
         ? rgHeat(open)
           + (open.length ? rgBand(tx('Open'), open.length) + rgTable(open) : '')
           /* ⚠️ Closed entries stay, greyed — a register that hides what it settled cannot show it settled
@@ -461,16 +461,16 @@ function rgLive() {
  */
 function rgAddPanel(opt) {
   opt = opt || {};
-  var subs = (RG.subjects || []).filter(function (s) { return !s.closed_at; });
+  var subs = (RG.subjects || []).filter(function (item) { return !item.closed_at; });
   var into = opt.into || RG.sel || (subs.length === 1 ? subs[0].subject_id : '');
-  var kinds = Object.keys(RAIDA_KINDS).map(function (k) {
-    return '<option value="' + k + '"' + (opt.kind === k ? ' selected' : '') + '>'
-      + rgIcon(k) + ' ' + esc(RAIDA_KINDS[k].label) + '</option>';
+  var kinds = Object.keys(RAIDA_KINDS).map(function (item) {
+    return '<option value="' + item + '"' + (opt.kind === item ? ' selected' : '') + '>'
+      + rgIcon(item) + ' ' + esc(RAIDA_KINDS[item].label) + '</option>';
   }).join('');
   var newFields = '<select id="rgNewType" class="inp" data-testid="register-new-type" style="flex:0 0 40%">'
-      + (RG.attach || []).map(function (a) {
-          return '<option value="' + a.type_key + '"' + (a.type_key === 'chit' ? ' selected' : '') + '>'
-            + esc(a.label) + '</option>';
+      + (RG.attach || []).map(function (item) {
+          return '<option value="' + item.type_key + '"' + (item.type_key === 'chit' ? ' selected' : '') + '>'
+            + esc(item.label) + '</option>';
         }).join('')
       + '</select>'
       + '<input id="rgNewName" class="inp" data-testid="register-new-name" style="flex:1"'
@@ -487,9 +487,9 @@ function rgAddPanel(opt) {
   } else {
     where = '<select id="rgInto" class="inp" data-testid="raida-into" onchange="rgIntoChanged()"'
       + ' style="width:100%;margin-bottom:6px">'
-      + subs.map(function (s) {
-          return '<option value="' + s.subject_id + '"' + (s.subject_id === into ? ' selected' : '') + '>'
-            + esc(tx('into')) + ' ' + esc(s.name) + '</option>';
+      + subs.map(function (item) {
+          return '<option value="' + item.subject_id + '"' + (item.subject_id === into ? ' selected' : '') + '>'
+            + esc(tx('into')) + ' ' + esc(item.name) + '</option>';
         }).join('')
       + '<option value="__new">' + esc(tx('a new register…')) + '</option>'
       + '</select>'
@@ -523,8 +523,8 @@ function rgAddPanel(opt) {
 
 /* The register select can ask for a new one; that reveals the two fields rather than sending you elsewhere. */
 function rgIntoChanged() {
-  var w = document.getElementById('rgNewWrap');
-  if (w) w.style.display = (rgVal('rgInto') === '__new') ? 'flex' : 'none';
+  var node = document.getElementById('rgNewWrap');
+  if (node) node.style.display = (rgVal('rgInto') === '__new') ? 'flex' : 'none';
 }
 
 function rgAddBar() {
@@ -551,8 +551,8 @@ function rgRespFields() {
   return '<div id="rgRespWrap" style="display:none;margin-bottom:6px">'
     + '<select id="rgResp" class="inp" data-testid="raida-response" style="width:100%">'
     + '<option value="">' + esc(tx('— response not decided —')) + '</option>'
-    + Object.keys(RG_RESPONSES).map(function (k) {
-        return '<option value="' + k + '">' + esc(RG_RESPONSES[k].label) + ' — ' + esc(RG_RESPONSES[k].hint) + '</option>';
+    + Object.keys(RG_RESPONSES).map(function (item) {
+        return '<option value="' + item + '">' + esc(RG_RESPONSES[item].label) + ' — ' + esc(RG_RESPONSES[item].hint) + '</option>';
       }).join('')
     + '</select></div>';
 }
@@ -565,7 +565,7 @@ function rgRespFields() {
  * ⚠️ SHOWN ONLY FOR A DEPENDENCY. The other five kinds do not point.
  */
 function rgEdgeFields() {
-  var subs = (RG.subjects || []).filter(function (s) { return s.subject_id !== RG.sel && !s.closed_at; });
+  var subs = (RG.subjects || []).filter(function (item) { return item.subject_id !== RG.sel && !item.closed_at; });
   var rels = [['finish_to_start', tx('starts after')], ['start_to_start', tx('starts with')],
               ['finish_to_finish', tx('finishes with')], ['start_to_finish', tx('finishes after')]];
   return '<div id="rgEdge" style="display:none;border-top:1px dashed var(--line);margin-top:6px;padding-top:6px">'
@@ -573,14 +573,14 @@ function rgEdgeFields() {
     + tx('What does it wait on? Leave blank and it stays a note, not a link.') + '</div>'
     + '<select id="rgTo" class="inp" data-testid="raida-to" style="width:100%;margin-bottom:6px">'
     + '<option value="">' + esc(tx('— nothing named —')) + '</option>'
-    + subs.map(function (s) {
-        return '<option value="' + s.subject_id + '|' + s.type_key + '|' + esc(s.name) + '">'
-          + esc(s.name) + '</option>';
+    + subs.map(function (item) {
+        return '<option value="' + item.subject_id + '|' + item.type_key + '|' + esc(item.name) + '">'
+          + esc(item.name) + '</option>';
       }).join('')
     + '</select>'
     + '<div style="display:flex;gap:6px">'
     + '<select id="rgRel" class="inp" style="flex:1">'
-    + rels.map(function (r) { return '<option value="' + r[0] + '">' + r[1] + '</option>'; }).join('')
+    + rels.map(function (item) { return '<option value="' + item[0] + '">' + item[1] + '</option>'; }).join('')
     + '</select>'
     + '<input id="rgNeed" class="inp" type="date" style="flex:1" title="' + esc(tx('Needed by')) + '">'
     + '</div></div>';
@@ -785,8 +785,8 @@ function rgEditPaint(id) {
   var resp = (RG.report && RG.report.resp)
     ? '<select id="rgEResp" class="inp" data-testid="raida-edit-response" style="min-width:150px">'
       + '<option value="">' + esc(tx('response — unchanged')) + '</option>'
-      + Object.keys(RG_RESPONSES).map(function (k) {
-          return '<option value="' + k + '">' + esc(RG_RESPONSES[k].label) + '</option>';
+      + Object.keys(RG_RESPONSES).map(function (item) {
+          return '<option value="' + item + '">' + esc(RG_RESPONSES[item].label) + '</option>';
         }).join('') + '</select>'
     : '';
   var row = document.createElement('div');
@@ -847,9 +847,9 @@ function rgCloseAsk(id) { RG.closing = (RG.closing === id ? null : id); rgPaint(
 function rgClosePaint(id) {
   var el = document.querySelector('[data-rid="' + id + '"]');
   if (!el) return;
-  var moves = (RG.subjects || []).filter(function (s) { return s.subject_id !== RG.sel && !s.closed_at; });
-  var opts = Object.keys(RAIDA_ENDINGS).map(function (k) {
-    return '<option value="' + k + '">' + esc(RAIDA_ENDINGS[k].label) + ' — ' + esc(RAIDA_ENDINGS[k].hint) + '</option>';
+  var moves = (RG.subjects || []).filter(function (item) { return item.subject_id !== RG.sel && !item.closed_at; });
+  var opts = Object.keys(RAIDA_ENDINGS).map(function (item) {
+    return '<option value="' + item + '">' + esc(RAIDA_ENDINGS[item].label) + ' — ' + esc(RAIDA_ENDINGS[item].hint) + '</option>';
   }).join('');
   var row = document.createElement('div');
   row.className = 'rg-editrow';
@@ -863,7 +863,7 @@ function rgClosePaint(id) {
      */
     + '<select id="rgCarry" class="inp" data-testid="raida-carry" style="min-width:190px;display:none">'
     + '<option value="">' + esc(tx('— which register? —')) + '</option>'
-    + moves.map(function (s) { return '<option value="' + s.subject_id + '">' + esc(s.name) + '</option>'; }).join('')
+    + moves.map(function (item) { return '<option value="' + item.subject_id + '">' + esc(item.name) + '</option>'; }).join('')
     + '</select>'
     + '<input id="rgNote" class="inp" data-testid="raida-close-note" style="flex:1;min-width:200px"'
     + ' placeholder="' + esc(tx('What happened? One line.')) + '">'
@@ -921,19 +921,19 @@ var RG_OUTCOME = {
 };
 
 function rgClosure() {
-  var es = rgScoped();
+  var list = rgScoped();
   if (!RG.report.full) {
     return '<div class="rg-body"><div class="msgempty">'
       + tx('Closure needs the full register (b185).') + '</div></div>';
   }
-  if (!es.length) {
+  if (!list.length) {
     return '<div class="rg-body">' + rgRegisterRail() + '<div class="msgempty">'
       + tx('Nothing recorded, so there is nothing to close out.') + '</div></div>';
   }
 
-  var open = es.filter(function (e) { return e.open; });
-  var abandoned = es.filter(function (e) { return e.ending === 'closed_by_order'; });
-  var ended = es.filter(function (e) { return e.ending === 'closed'; });
+  var open = list.filter(function (e) { return e.open; });
+  var abandoned = list.filter(function (e) { return e.ending === 'closed_by_order'; });
+  var ended = list.filter(function (e) { return e.ending === 'closed'; });
   var name = RG.sel ? rgSubjectName(RG.sel) : tx('every register');
 
   var group = function (g) {
@@ -973,7 +973,7 @@ function rgClosure() {
     + rgRegisterRail()
     + '<div style="padding:8px 0;font-size:var(--fs-2);color:var(--grey)">'
     + tx('Closure statement for') + ' <b style="color:var(--on-card)">' + esc(name) + '</b> — '
-    + es.length + ' ' + tx('recorded') + ', ' + ended.length + ' ' + tx('ended')
+    + list.length + ' ' + tx('recorded') + ', ' + ended.length + ' ' + tx('ended')
     + ', ' + open.length + ' ' + tx('open') + '.</div>'
     + group(RG_OUTCOME.work)
     + group(RG_OUTCOME.carried)
@@ -1065,20 +1065,20 @@ function rgGraph(hops) {
     + ' fill="currentColor">' + esc(rgWalkLabel()) + '</text>');
 
   var y = PAD + BOXH;
-  hops.forEach(function (h) {
-    var x = PAD + Math.min(h.depth, 3) * INDENT;
-    var sev = h.severity >= 4 ? 'var(--disp)' : 'currentColor';
+  hops.forEach(function (item) {
+    var x = PAD + Math.min(item.depth, 3) * INDENT;
+    var sev = item.severity >= 4 ? 'var(--disp)' : 'currentColor';
     parts.push('<line x1="' + (x + 14) + '" y1="' + y + '" x2="' + (x + 14) + '" y2="' + (y + GAP)
       + '" stroke="currentColor" stroke-width="1.5" opacity=".55" marker-end="url(#rgarrow)"/>');
     parts.push('<text x="' + (x + 24) + '" y="' + (y + GAP - 10) + '" font-size="10" fill="currentColor"'
-      + ' opacity=".7">' + esc(String(h.rel_type || '').replace(/_/g, ' ')) + '</text>');
+      + ' opacity=".7">' + esc(String(item.rel_type || '').replace(/_/g, ' ')) + '</text>');
     y += GAP;
     parts.push('<rect x="' + x + '" y="' + y + '" width="' + (W - x - PAD) + '" height="' + BOXH
       + '" rx="8" fill="none" stroke="' + sev + '" stroke-width="1.5"/>');
-    var lab = String(h.to_label || h.body || '');
+    var text = String(item.to_label || item.body || '');
     parts.push('<text x="' + (x + 10) + '" y="' + (y + 19) + '" font-size="11" fill="currentColor">'
-      + esc(lab.length > 30 ? lab.slice(0, 30) + '…' : lab) + '</text>');
-    var sub = (h.owner || '') + (h.needed_by ? ' · ' + String(h.needed_by).slice(0, 10) : '');
+      + esc(text.length > 30 ? text.slice(0, 30) + '…' : text) + '</text>');
+    var sub = (item.owner || '') + (item.needed_by ? ' · ' + String(item.needed_by).slice(0, 10) : '');
     if (sub) {
       parts.push('<text x="' + (x + 10) + '" y="' + (y + 34) + '" font-size="10" fill="currentColor"'
         + ' opacity=".65">' + esc(sub) + '</text>');
@@ -1108,9 +1108,9 @@ function rgImpact() {
     return '<div class="rg-body"><div class="msgempty">'
       + tx('The impact walk needs the full register (b185).') + '</div></div>';
   }
-  var es = rgScoped();
-  var edges = es.filter(function (e) { return e.edge; });
-  var dangling = es.filter(function (e) { return e.kind === 'dependency' && !e.edge; });
+  var list = rgScoped();
+  var edges = list.filter(function (e) { return e.edge; });
+  var dangling = list.filter(function (e) { return e.kind === 'dependency' && !e.edge; });
 
   if (!edges.length) {
     return '<div class="rg-body">' + rgRegisterRail()
@@ -1123,7 +1123,7 @@ function rgImpact() {
   var starts = [];
   edges.forEach(function (e) {
     var id = e.line_id || e.subject_id;
-    if (id && !starts.some(function (s) { return s.id === id; })) {
+    if (id && !starts.some(function (item) { return item.id === id; })) {
       starts.push({ id: id, label: e.particulars || e.subject || tx('this register') });
     }
   });
@@ -1137,9 +1137,9 @@ function rgImpact() {
     + '<button class="' + (RG.walkBack ? '' : 'on') + '" onclick="rgWalkDir()">'
     + tx('What waits on this') + '</button></div>'
     + (starts.length > 1
-        ? '<div class="raidtoggle" style="padding:6px 0">' + starts.map(function (s) {
-            return '<button class="' + (RG.walkFrom === s.id ? 'on' : '') + '"'
-              + ' onclick="rgWalkFrom(&quot;' + s.id + '&quot;)">' + esc(s.label) + '</button>';
+        ? '<div class="raidtoggle" style="padding:6px 0">' + starts.map(function (item) {
+            return '<button class="' + (RG.walkFrom === item.id ? 'on' : '') + '"'
+              + ' onclick="rgWalkFrom(&quot;' + item.id + '&quot;)">' + esc(item.label) + '</button>';
           }).join('') + '</div>'
         : '')
     + (hops.length
