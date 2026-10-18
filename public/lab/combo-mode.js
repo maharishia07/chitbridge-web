@@ -58,9 +58,9 @@ function openModLab(){
     tab:'mods'}; MODLABPREV=[];
   var el=document.getElementById('modLabOverlay'); if(!el) return;
   el.classList.add('on');
-  var s=document.getElementById('modLabSearch'); if(s){ s.value=''; }
+  var node=document.getElementById('modLabSearch'); if(node){ node.value=''; }
   paintModLab();
-  if(s) s.focus({preventScroll:true});
+  if(node) node.focus({preventScroll:true});
   comboLibLoad(false).then(paintModLab);   /* background — so the Combos tab's own count is right by the time it's looked at */
 }
 /** ⭐ [2026-09-27] tab switch: MODLAB.tab decides which top-level list paintModLab() shows (see its own
@@ -70,7 +70,7 @@ function openModLab(){
  *  stale query from the OTHER tab never silently keeps filtering this one. */
 function modLabTab(t){
   MODLAB.tab=t; MODLAB.q='';
-  var s=document.getElementById('modLabSearch'); if(s) s.value='';
+  var node=document.getElementById('modLabSearch'); if(node) node.value='';
   if(t==='combos') comboLibLoad(false).then(paintModLab);
   paintModLab();
 }
@@ -78,8 +78,8 @@ function modLabTab(t){
  *  a product with only free options (or none) reads as "no price change", never a misleading ₹0. */
 function modLabMaxUp(p){
   var sum=0;
-  CBVariant.groupsOf({modifiers:p.modifiers}).forEach(function(g){
-    var mx=0; (g.options||[]).forEach(function(o){ var v=Number(o.price)||0; if(v>mx) mx=v; }); sum+=mx;
+  CBVariant.groupsOf({modifiers:p.modifiers}).forEach(function(item){
+    var count=0; (item.options||[]).forEach(function(o){ var v=Number(o.price)||0; if(v>count) count=v; }); sum+=count;
   });
   return sum;
 }
@@ -87,9 +87,9 @@ function modLabMaxUp(p){
  *  '31 rows, every one showing —' ... The list now shows only what HAS something, and names it"). */
 function modLabModsSplit(){
   var q=(MODLAB.q||'').trim().toLowerCase(), withMods=[], bare=[];
-  P.forEach(function(p){
-    if(q && p.name.toLowerCase().indexOf(q)<0) return;
-    (CBVariant.groupsOf({modifiers:p.modifiers}).length ? withMods : bare).push(p);
+  P.forEach(function(item){
+    if(q && item.name.toLowerCase().indexOf(q)<0) return;
+    (CBVariant.groupsOf({modifiers:item.modifiers}).length ? withMods : bare).push(item);
   });
   return {withMods:withMods, bare:bare};
 }
@@ -126,14 +126,14 @@ function modLabBack(){ MODLAB.pid=null; MODLAB.savingAs=false; paintModLab(); }
  *  making these two aware of the draft is the whole reason the builder needed no second set of verbs. */
 function modLabGroups(){
   if(MODLAB.pid){
-    var p=byId(MODLAB.pid); if(!p) return [];
-    return (typeof CBVariant!=='undefined'&&CBVariant.groupsRaw)?CBVariant.groupsRaw({modifiers:p.modifiers}):(Array.isArray(p.modifiers)?p.modifiers:[]);
+    var node=byId(MODLAB.pid); if(!node) return [];
+    return (typeof CBVariant!=='undefined'&&CBVariant.groupsRaw)?CBVariant.groupsRaw({modifiers:node.modifiers}):(Array.isArray(node.modifiers)?node.modifiers:[]);
   }
   return (typeof CBVariant!=='undefined'&&CBVariant.groupsRaw)?CBVariant.groupsRaw({modifiers:MODLAB.draft}):(Array.isArray(MODLAB.draft)?MODLAB.draft:[]);
 }
 /** ⭐ every editing verb funnels through here — one place that writes the draft and clears stale preview picks */
 function modLabSetGroups(newGroups){
-  if(MODLAB.pid){ var p=byId(MODLAB.pid); if(!p) return; p.modifiers=newGroups; }
+  if(MODLAB.pid){ var node=byId(MODLAB.pid); if(!node) return; node.modifiers=newGroups; }
   else { MODLAB.draft=newGroups; }
   MODLABPREV=[];   /* an edited group can invalidate an old pick (a removed option, a group gone) — simplest to restart */
   paintModLab();
@@ -219,7 +219,7 @@ function modLabAttachDraftTo(id){
  * named and saved, and either can later pull a saved combo back in.
  */
 function modLabSaveAsOpen(){ MODLAB.savingAs=true; paintModLab();
-  var i=document.getElementById('modLabSaveName'); if(i) i.focus(); }
+  var node=document.getElementById('modLabSaveName'); if(node) node.focus(); }
 function modLabSaveAsCancel(){ MODLAB.savingAs=false; paintModLab(); }
 async function modLabSaveAsConfirm(){
   var el=document.getElementById('modLabSaveName');
@@ -326,11 +326,11 @@ function modLabAddOption(gi){ modLabSetGroups(CBVariant.addOption(modLabGroups()
 function modLabRemoveOption(gi,oi){ modLabSetGroups(CBVariant.removeOption(modLabGroups(), gi, oi)); }
 function modLabSetOption(gi,oi,patch){ modLabSetGroups(CBVariant.setOption(modLabGroups(), gi, oi, patch)); }
 async function modLabApply(){
-  var p=byId(MODLAB.pid); if(!p) return;
+  var node=byId(MODLAB.pid); if(!node) return;
   var clean=CBVariant.normalize(modLabGroups());
-  p.modifiers=clean;   /* the Lab's own copy — true immediately, whatever the save below does */
+  node.modifiers=clean;   /* the Lab's own copy — true immediately, whatever the save below does */
   if(S.biz==='mine' && savedLive()){
-    toastSay('Saving “'+p.name+'”…');
+    toastSay('Saving “'+node.name+'”…');
     /**
      * ⚠️⚠️ [found live-testing, 2026-09-26] Athi: "not sure whether it reflected in the back office or only
      * in the front end." The bug: apiFetch() never THROWS on a real server refusal (4xx/5xx) — it resolves
@@ -338,7 +338,7 @@ async function modLabApply(){
      * printed "saved to your catalogue" because nothing ever reached it. Checking r.ok/r.queued directly is
      * the fix — and it is also the honest three-way answer: saved for real, only queued (offline), or refused.
      */
-    var r=await apiFetch('PATCH', API+'/api/products/'+p.id, {item_data:{modifiers:clean}, merge:true}, 'modifiers');
+    var r=await apiFetch('PATCH', API+'/api/products/'+node.id, {item_data:{modifiers:clean}, merge:true}, 'modifiers');
     if(r.queued) toastSay('Saved here in the Lab. Offline right now — this reaches your catalogue (and then the till, on its next price refresh) once you’re back online.');
     else if(r.ok) toastSay('Saved — in the Lab and in your catalogue. The till will show it next time it refreshes prices.');
     else toastSay('Saved here in the Lab only — NOT in your catalogue: '+((r.body&&r.body.message)||'the save was refused')+'. The till will not see this.');
@@ -360,26 +360,26 @@ async function modLabApply(){
 function comboGroupsEditorHTML(groups){
   var err=CBVariant.validate(groups).errors;
   var errFor=function(gi){ return err.filter(function(e){return e.at===gi;}).map(function(e){return e.message;}); };
-  return groups.map(function(g,gi){
-    var gerr=errFor(gi);
+  return groups.map(function(item,index){
+    var gerr=errFor(index);
     return '<div class="kv" style="padding:10px 12px;border:1px solid var(--line);border-radius:9px;margin-bottom:8px">'
       + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
-      + '<input class="inp" style="flex:1;min-width:140px;height:38px" value="'+esc(g.name)+'" placeholder="Group name" onchange="modLabSetGroup('+gi+',{name:this.value})">'
-      + '<label style="display:flex;gap:4px;align-items:center;font-size:13px"><input type="checkbox" '+(g.required?'checked':'')+' onchange="modLabSetGroup('+gi+',{required:this.checked})"> Required</label>'
-      + '<label style="display:flex;gap:4px;align-items:center;font-size:13px">Pick up to <input type="number" min="1" value="'+g.max+'" style="width:52px;height:32px" onchange="modLabSetGroup('+gi+',{max:this.value})"></label>'
-      + '<button class="btn sm" onclick="modLabMoveGroup('+gi+',-1)" '+(gi===0?'disabled':'')+'>↑</button>'
-      + '<button class="btn sm" onclick="modLabMoveGroup('+gi+',1)" '+(gi===groups.length-1?'disabled':'')+'>↓</button>'
-      + '<button class="btn sm" onclick="modLabRemoveGroup('+gi+')">✕ Remove</button>'
+      + '<input class="inp" style="flex:1;min-width:140px;height:38px" value="'+esc(item.name)+'" placeholder="Group name" onchange="modLabSetGroup('+index+',{name:this.value})">'
+      + '<label style="display:flex;gap:4px;align-items:center;font-size:13px"><input type="checkbox" '+(item.required?'checked':'')+' onchange="modLabSetGroup('+index+',{required:this.checked})"> Required</label>'
+      + '<label style="display:flex;gap:4px;align-items:center;font-size:13px">Pick up to <input type="number" min="1" value="'+item.max+'" style="width:52px;height:32px" onchange="modLabSetGroup('+index+',{max:this.value})"></label>'
+      + '<button class="btn sm" onclick="modLabMoveGroup('+index+',-1)" '+(index===0?'disabled':'')+'>↑</button>'
+      + '<button class="btn sm" onclick="modLabMoveGroup('+index+',1)" '+(index===groups.length-1?'disabled':'')+'>↓</button>'
+      + '<button class="btn sm" onclick="modLabRemoveGroup('+index+')">✕ Remove</button>'
       + '</div>'
       + (gerr.length?'<div style="color:var(--red);font-size:12px;margin-top:4px">'+gerr.map(function(m){return esc(m);}).join(' · ')+'</div>':'')
       + '<div style="margin-top:8px;display:flex;flex-direction:column;gap:6px">'
-      + g.options.map(function(o,oi){
+      + item.options.map(function(o,oi){
           return '<div style="display:flex;gap:6px;align-items:center">'
-            + '<input class="inp" style="flex:1;height:36px" value="'+esc(o.name)+'" placeholder="Option" onchange="modLabSetOption('+gi+','+oi+',{name:this.value})">'
-            + '<div class="inp" style="width:100px;height:36px"><span>₹</span><input type="number" step="0.01" value="'+o.price+'" onchange="modLabSetOption('+gi+','+oi+',{price:this.value})"></div>'
-            + '<button class="btn sm" onclick="modLabRemoveOption('+gi+','+oi+')">✕</button></div>';
+            + '<input class="inp" style="flex:1;height:36px" value="'+esc(o.name)+'" placeholder="Option" onchange="modLabSetOption('+index+','+oi+',{name:this.value})">'
+            + '<div class="inp" style="width:100px;height:36px"><span>₹</span><input type="number" step="0.01" value="'+o.price+'" onchange="modLabSetOption('+index+','+oi+',{price:this.value})"></div>'
+            + '<button class="btn sm" onclick="modLabRemoveOption('+index+','+oi+')">✕</button></div>';
         }).join('')
-      + '<button class="btn sm" style="align-self:flex-start" onclick="modLabAddOption('+gi+')">+ Add an option</button>'
+      + '<button class="btn sm" style="align-self:flex-start" onclick="modLabAddOption('+index+')">+ Add an option</button>'
       + '</div></div>';
   }).join('');
 }
@@ -428,7 +428,7 @@ var COMBO_TILL_PREVIEW = null;   // {name, price, groups} or null when the popup
 /** ⭐ "👁 Preview like the till" on the builder AND the per-product screen — whichever one is open decides
  * what name/price/groups mean; the popup itself never needs to know which screen sent it. */
 function modLabPreviewLikeTill(){
-  if(MODLAB.pid){ var p=byId(MODLAB.pid); if(!p) return; openComboTillPreview(p.name, p.price, modLabGroups()); }
+  if(MODLAB.pid){ var node=byId(MODLAB.pid); if(!node) return; openComboTillPreview(node.name, node.price, modLabGroups()); }
   else openComboTillPreview(MODLAB.name||'This combo', MODLAB.price===''?null:Number(MODLAB.price), modLabGroups());
 }
 function openComboTillPreview(name, price, groups){
@@ -450,10 +450,10 @@ function comboTillPreviewPick(gi, oi){
 }
 function paintComboTillPreview(){
   var body = document.getElementById('comboTillPreviewBody'), foot = document.getElementById('comboTillPreviewFoot');
-  var ttl = document.getElementById('comboTillPreviewTitle');
+  var node = document.getElementById('comboTillPreviewTitle');
   if (!body || !COMBO_TILL_PREVIEW) return;
   var cv = COMBO_TILL_PREVIEW;
-  if (ttl) ttl.textContent = cv.name || 'Preview';
+  if (node) node.textContent = cv.name || 'Preview';
   /* ⭐ the same "Separately ₹X" banner spot the till's #combohead sits in — here it just names the combo's
    * own price, since a draft has no "separate items" to compare against yet (see PATCHNOTE below). */
   var head = '<div class="combohead">' + esc(cv.name || 'This combo')
@@ -482,8 +482,8 @@ function paintComboTillPreview(){
  */
 function comboLibraryUnsavedProducts(){
   if (!(S.biz==='mine')) return [];
-  var linked = {}; (COMBO_LIB.items||[]).forEach(function(t){ if (t.product_item_id) linked[t.product_item_id]=true; });
-  return P.filter(function(p){ return !linked[p.id] && CBVariant.groupsOf({modifiers:p.modifiers}).length>0; });
+  var linked = {}; (COMBO_LIB.items||[]).forEach(function(item){ if (item.product_item_id) linked[item.product_item_id]=true; });
+  return P.filter(function(item){ return !linked[item.id] && CBVariant.groupsOf({modifiers:item.modifiers}).length>0; });
 }
 /**
  * ⭐ [2026-09-27] SPLIT OUT OF comboLibraryHTML() so the top-level Combos TAB (comboTabHTML(), per Athi's own
@@ -494,10 +494,10 @@ function comboLibraryUnsavedProducts(){
  */
 function comboLibraryRowsHTML(filterQ){
   var q=(filterQ||'').trim().toLowerCase();
-  var items=(COMBO_LIB.items||[]).filter(function(t){return !q || (t.name||'').toLowerCase().indexOf(q)>=0;});
-  var live=comboLibraryUnsavedProducts().filter(function(p){return !q || p.name.toLowerCase().indexOf(q)>=0;});
+  var items=(COMBO_LIB.items||[]).filter(function(item){return !q || (item.name||'').toLowerCase().indexOf(q)>=0;});
+  var live=comboLibraryUnsavedProducts().filter(function(item){return !q || item.name.toLowerCase().indexOf(q)>=0;});
   var rowHTML=function(t){
-    var n=(t.definition||[]).length, opts=(t.definition||[]).reduce(function(s,g){return s+((g&&g.options)||[]).length;},0);
+    var n=(t.definition||[]).length, opts=(t.definition||[]).reduce(function(total,item){return total+((item&&item.options)||[]).length;},0);
     var linkedProduct=t.product_item_id && S.biz==='mine' ? byId(t.product_item_id) : null;
     return '<div class="kv" style="padding:10px 12px;border:1px solid var(--line);border-radius:9px;margin-bottom:8px;display:flex;align-items:center;gap:10px;justify-content:space-between;flex-wrap:wrap">'
       + '<div><div style="font-weight:700">'+esc(t.name)+(t.price!=null?' · '+M0(Number(t.price)):'')+'</div>'
@@ -557,7 +557,7 @@ function comboTabFootHTML(){
  *  modifiers, 12 do not") that stays put while typing, same as Athi's own doc. */
 function modLabModsTotals(){
   var withMods=0, bare=0;
-  P.forEach(function(p){ (CBVariant.groupsOf({modifiers:p.modifiers}).length?withMods++:bare++); });
+  P.forEach(function(item){ (CBVariant.groupsOf({modifiers:item.modifiers}).length?withMods++:bare++); });
   return {withMods:withMods, bare:bare};
 }
 /**
@@ -602,10 +602,10 @@ function modsTabHTML(pendingDraft){
     h+='<div class="empty"><b>Nothing matches</b><span>Try another word.</span></div>';
   } else {
     var byCat={}, order=[];
-    withMods.forEach(function(p){ var c=catName(p.cat)||'—'; if(!byCat[c]){byCat[c]=[];order.push(c);} byCat[c].push(p); });
-    order.forEach(function(c){
-      h+='<div class="grp">'+esc(c)+'</div>';
-      byCat[c].forEach(function(p){
+    withMods.forEach(function(item){ var c=catName(item.cat)||'—'; if(!byCat[c]){byCat[c]=[];order.push(c);} byCat[c].push(item); });
+    order.forEach(function(item){
+      h+='<div class="grp">'+esc(item)+'</div>';
+      byCat[item].forEach(function(p){
         var groups=CBVariant.groupsOf({modifiers:p.modifiers});
         var chips=groups.map(function(g){return '<span class="modchip">'+esc(g.title||g.name||'')+'</span>';}).join('');
         var up=modLabMaxUp(p);
@@ -717,12 +717,12 @@ function paintModLab(){
     }
     return;
   }
-  var p=byId(MODLAB.pid); if(!p){ modLabBack(); return; }
+  var node=byId(MODLAB.pid); if(!node){ modLabBack(); return; }
   var groups=modLabGroups();
   body.innerHTML = '<div style="padding:0 20px 20px">'
     + '<button class="btn sm" onclick="modLabBack()">← All products</button>'
-    + '<h3 style="margin:12px 0 2px">'+esc(p.name)+'</h3>'
-    + '<div style="font-size:13px;color:var(--muted);margin-bottom:12px">'+esc(catName(p.cat)||'—')+' · sells at '+M0(p.price)+'</div>'
+    + '<h3 style="margin:12px 0 2px">'+esc(node.name)+'</h3>'
+    + '<div style="font-size:13px;color:var(--muted);margin-bottom:12px">'+esc(catName(node.cat)||'—')+' · sells at '+M0(node.price)+'</div>'
     + comboGroupsEditorHTML(groups)
     + '<button class="btn sm" onclick="modLabAddGroup()">+ Add a group</button>'
     + ' <button class="btn sm" onclick="modLabOpenLibrary()">📂 Use a saved combo</button>'
@@ -734,7 +734,7 @@ function paintModLab(){
     foot.innerHTML = '<div style="display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap">'
       + '<span>'+(canApply?'Applying writes to your real catalogue.':'Using a sample catalogue — Apply tries it here, not on a real product.')+'</span>'
       + '<div style="display:flex;gap:8px">'+(MODLAB.savingAs?'':'<button class="btn sm" onclick="modLabSaveAsOpen()">💾 Save as…</button>')
-      + '<button class="btn pri sm" onclick="modLabApply()">Apply to '+esc(p.name)+'</button></div></div>';
+      + '<button class="btn pri sm" onclick="modLabApply()">Apply to '+esc(node.name)+'</button></div></div>';
   }
 }
 
