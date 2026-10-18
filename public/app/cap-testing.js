@@ -1278,8 +1278,8 @@ function testPaint() {
       if (groups.length > 1) {
         /* ⭐ the counts on the header, so a folded area still says how far along it is */
         var gn = { pass: 0, bad: 0, todo: 0 };
-        list.forEach(function (c) {
-          var ll = CBTEST.last[c.case_key];
+        list.forEach(function (item) {
+          var ll = CBTEST.last[item.case_key];
           if (!ll) gn.todo++; else if (ll.status === 'fail' || ll.status === 'blocked') gn.bad++; else gn.pass++;
         });
         /**
@@ -1309,8 +1309,8 @@ function testPaint() {
         };
         /* ⭐ the journey position, as the Report shows it — 00 REG, 01 LOG. It is the order somebody walks the
            product in, and without it the list reads as a filing cabinet. */
-        var seqOf = list.reduce(function (total, c) {
-          var q = (typeof c.seq === 'number') ? c.seq : 99; return q < total ? q : total; }, 99);
+        var seqOf = list.reduce(function (total, item) {
+          var q = (typeof item.seq === 'number') ? item.seq : 99; return q < total ? q : total; }, 99);
         var seq = seqOf < 99 ? ('0' + seqOf).slice(-2) : '';
 
         h += '<div data-arearow="1" onclick="testFold(\'' + testJs(item) + '\')" style="display:grid;'
@@ -1375,10 +1375,10 @@ function testPaint() {
         + 'color:var(--grey-2,#545A61);font-weight:700">'
         + '<span>Case</span><span>What it proves</span><span>Kind</span><span>Status</span></div>';
 
-      list.forEach(function (c) {
-      var l = CBTEST.last[c.case_key];
+      list.forEach(function (item) {
+      var l = CBTEST.last[item.case_key];
       var col = l ? STAT[l.status] : null;
-      var isOpen = CBTEST.open === c.case_key;
+      var isOpen = CBTEST.open === item.case_key;
       h += '<div style="border:1px solid var(--line,#e7e3d8);border-left:3px solid ' + (col ? col[0] : 'transparent')
         +  ';border-radius:8px;margin-bottom:6px;background:var(--card,#fff)">'
         /**
@@ -1407,10 +1407,10 @@ function testPaint() {
          * full page. Same information, and the ones that earn the space here are the KIND (a green unit test
          * and a green acceptance test are not the same evidence) and WHAT WOULD MAKE IT GREEN.
          */
-        +  '<div onclick="testOpen(\'' + testJs(c.case_key) + '\')" style="display:grid;'
+        +  '<div onclick="testOpen(\'' + testJs(item.case_key) + '\')" style="display:grid;'
         +    'grid-template-columns:' + TEST_ROW_COLS + ';gap:7px;align-items:baseline;'
         +    'padding:7px 9px;cursor:pointer">'
-        +    '<span title="' + esc(c.case_key) + '" style="font-family:ui-monospace,Menlo,monospace;'
+        +    '<span title="' + esc(item.case_key) + '" style="font-family:ui-monospace,Menlo,monospace;'
         +      'font-size:var(--fs-1);font-weight:700;'
         +      'background:' + (col ? col[1] : 'var(--neutral-tint)') + ';color:' + (col ? col[0] : 'var(--grey-2)')
         +      ';border-radius:4px;padding:2px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'
@@ -1418,16 +1418,16 @@ function testPaint() {
            twenty-two characters on a hundred rows — it identifies nothing and costs the width the title needs.
            ⚠ NOT ellipsised from the left with direction:rtl, which is what I reached for first: that reorders
            the slashes in a path and produces `js.x/stpircs/` — the exact bidi trap already written down. */
-        +      '">' + esc(testShortKey(c.case_key)) + '</span>'
+        +      '">' + esc(testShortKey(item.case_key)) + '</span>'
         +    '<span style="min-width:0;font-size:var(--fs-2);line-height:1.35;overflow:hidden;'
         +      'text-overflow:ellipsis;white-space:nowrap'
         /* ⚠ 244 of the automated files state no claim in their header. Repeating the filename in the title
            column — `akums-demo.js   akums-demo.js` — fills the row with nothing and hides the fact. */
-        +      (c.automated && !c.claim ? ';color:var(--grey-2);font-style:italic' : '') + '">'
+        +      (item.automated && !item.claim ? ';color:var(--grey-2);font-style:italic' : '') + '">'
         /* ⭐ name the FILE and the fix — "no claim written in the file" named neither (Athi, 2026-09-12) */
-        +      esc(c.automated && !c.claim
-                ? '\u26a0 no heading in ' + String(c.case_key).split('/').pop()
-                : (c.title || ''))
+        +      esc(item.automated && !item.claim
+                ? '\u26a0 no heading in ' + String(item.case_key).split('/').pop()
+                : (item.title || ''))
         /**
          * ⭐ WHERE THIS CASE HAPPENS, on the row rather than one click inside it. Athi, 2026-09-12: *"can I
          * see the names of the screen in the test lab?"* The code was already reachable by expanding a case;
@@ -1441,15 +1441,15 @@ function testPaint() {
          * ⚠️ Nothing for a case that is not on a screen: a guard file is not a screen, and a name beside one
          * would be a category error dressed as a hint.
          */
-        +      (c.menu && testScreenName(c.menu)
-        ? '<span style="color:var(--grey-4,#646A72);font-weight:400"> \u00b7 ' + esc(testScreenName(c.menu))
+        +      (item.menu && testScreenName(item.menu)
+        ? '<span style="color:var(--grey-4,#646A72);font-weight:400"> \u00b7 ' + esc(testScreenName(item.menu))
           + '</span>' : '')
         +      '</span>'
 
         /* ⭐ the KIND in its own track — see the note on the grid */
         +    '<span style="font-size:var(--fs-1);color:var(--grey-2);white-space:nowrap;overflow:hidden;'
         +      'text-overflow:ellipsis" title="What kind of test this is">'
-        +      esc(c.test_type || '\u2014') + '</span>'
+        +      esc(item.test_type || '\u2014') + '</span>'
         /* ⭐ the verdict, in its own column, so it is always in the same place on every row */
         +    '<span style="font-size:var(--fs-1);white-space:nowrap;font-weight:' + (l ? '700' : '400') + ';'
         +      'color:' + (col ? col[0] : 'var(--grey-2)') + '">'
@@ -1464,20 +1464,20 @@ function testPaint() {
          */
         +      (typeof testVerdictLabel === 'function' && l && l.status !== 'pass'
                 ? '<span style="display:block;font-weight:400;font-size:var(--fs-1);color:var(--grey-2)" title="'
-                  + esc(testVerdict(c, l).why) + '">' + esc(testVerdictLabel(c, l)) + '</span>'
+                  + esc(testVerdict(item, l).why) + '">' + esc(testVerdictLabel(item, l)) + '</span>'
                 : '')
         +      '</span>'
         /* ⚠️ THE SPEC MOVED, SO THE CASE IS SUSPECT — said on the row, not hidden behind a filter. A green
            case whose clause has changed is the most misleading thing a board can show. */
-        + (CBTEST.stale[c.case_key]
+        + (CBTEST.stale[item.case_key]
             ? '<span title="' + esc('The clause this case proves has changed since it was written — '
-                + 'clause ' + CBTEST.stale[c.case_key].clause + ' is now v' + CBTEST.stale[c.case_key].clause_now
-                + ', this case cites v' + CBTEST.stale[c.case_key].cited_version + '.')
+                + 'clause ' + CBTEST.stale[item.case_key].clause + ' is now v' + CBTEST.stale[item.case_key].clause_now
+                + ', this case cites v' + CBTEST.stale[item.case_key].cited_version + '.')
               + '" style="font-size:var(--fs-1);background:var(--warn-tint);color:var(--warn-2);border-radius:4px;'
               + 'padding:2px 5px;white-space:nowrap">spec moved</span>'
             : '')
         +  '</div>';
-      if (isOpen) h += testCaseBodyHTML(c);
+      if (isOpen) h += testCaseBodyHTML(item);
       h += '</div>';
       });
     });
@@ -2191,8 +2191,8 @@ function testIncHTML() {
       +   esc(item.severity_means || '') + (clock ? ' \u00b7 ' + clock : '') + '</div>'
       /* ⭐ THE CHANGE THAT FIXED IT, as a citation into git — never a copy of the commit message. */
       + ((item.changes || []).length ? '<div style="font-size:var(--fs-1);margin-top:2px">fixed by '
-          + item.changes.map(function (c) { return '<code>' + esc(String(c.sha).slice(0, 8)) + '</code>'
-              + (c.repo ? ' in ' + esc(c.repo) : ''); }).join(' \u00b7 ') + '</div>' : '')
+          + item.changes.map(function (item) { return '<code>' + esc(String(item.sha).slice(0, 8)) + '</code>'
+              + (item.repo ? ' in ' + esc(item.repo) : ''); }).join(' \u00b7 ') + '</div>' : '')
       + (item.why ? '<div style="font-size:var(--fs-1);color:var(--grey-2,#545A61);margin-top:2px">because: '
           + esc(item.why) + '</div>' : '')
       + '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);margin-top:3px">'
@@ -2375,14 +2375,14 @@ function testCtlRowsFor(code) {
     }).map(function (item) {
       var label = String(item.screen).split(' • ').pop();
       /* the control's own cases: same door, and the label quoted in the title — the key the sweep itself used */
-      var mine = cases.filter(function (c) {
-        return String(c.menu || '') === me.path
-          && String(c.title || '').indexOf('“' + label + '”') >= 0;
+      var mine = cases.filter(function (item) {
+        return String(item.menu || '') === me.path
+          && String(item.title || '').indexOf('“' + label + '”') >= 0;
       });
-      var real = mine.filter(function (c) { return !c.generated; });
+      var real = mine.filter(function (item) { return !item.generated; });
       var last = null;
-      mine.forEach(function (c) {
-        var l = (CBTEST.last || {})[c.case_key];
+      mine.forEach(function (item) {
+        var l = (CBTEST.last || {})[item.case_key];
         if (!l) return;
         /* a failure outranks a pass: the worst thing known about a control is what a tester needs first */
         if (!last || (l.status === 'fail' && last.status !== 'fail')) last = l;
@@ -2938,15 +2938,15 @@ function testTechDerive() {
      * moves work; it says nothing about whether the forbidden ones are refused, and a lifecycle that can be
      * jumped is how a chit gets paid before it is sent.
      */
-    st.forEach(function (item, i) {
-      var b = st[i + 1];
+    st.forEach(function (item, index) {
+      var b = st[index + 1];
       if (b) out.push({ do: 'Move it from ' + item + ' to ' + b + '.', see: 'Allowed.' });
     });
-    st.forEach(function (item, i) {
+    st.forEach(function (item, index) {
       st.forEach(function (b, j) {
-        if (j <= i + 1 || j === i) return;      /* forward by more than one step = a skipped state */
+        if (j <= index + 1 || j === index) return;      /* forward by more than one step = a skipped state */
         out.push({ do: 'Try to move it straight from ' + item + ' to ' + b + ', skipping '
-          + st.slice(i + 1, j).join(' and ') + '.', see: 'Refused \u2014 the step cannot be skipped.' });
+          + st.slice(index + 1, j).join(' and ') + '.', see: 'Refused \u2014 the step cannot be skipped.' });
       });
     });
     if (st.length > 1) {
@@ -4677,7 +4677,7 @@ function testBehindOf(code) {
   var mods = [];
   all.forEach(function (item) {
     var a = (rows.filter(function (r) { return r.path === item; })[0] || {});
-    (a.uses || []).forEach(function (u) { if (mods.indexOf(u) < 0) mods.push(u); });
+    (a.uses || []).forEach(function (item) { if (mods.indexOf(item) < 0) mods.push(item); });
   });
 
   var relSet = {}, stemSet = {};
@@ -7031,7 +7031,7 @@ function testWork() {
     var mine = (incBy[key] || []).concat([]);
     var wants = (reqBy[key] || []).concat([]);
     mine.forEach(function (x) { used[x.definition_id] = 1; });
-    wants.forEach(function (q) { used[q.definition_id] = 1; });
+    wants.forEach(function (item) { used[item.definition_id] = 1; });
     rows.push(testWorkRow({
       key: key, title: item.title || '', screen: item.screen_code || item.module_key || '',
       seen: item.observed || null, shot: item.evidence_id || null,
@@ -7842,9 +7842,9 @@ function testMenuHTML(shown) {
         + '</div>';
       if (!dopen) return;
 
-      d.cases.forEach(function (c) {
-        var l = CBTEST.last[c.case_key];
-        var isOpen = CBTEST.open === c.case_key;
+      d.cases.forEach(function (item) {
+        var l = CBTEST.last[item.case_key];
+        var isOpen = CBTEST.open === item.case_key;
         /**
          * ⭐ A LEAF IS THE CASE ITSELF — tapping it opens the same body the list opens, through the same
          * testOpen(). A tree that only NAMED the controls would send a tester back to the list to do anything,
@@ -7852,13 +7852,13 @@ function testMenuHTML(shown) {
          */
         h += '<div style="border-inline-start:2px solid ' + (l ? (l.status === 'fail' || l.status === 'blocked'
               ? 'var(--disp)' : 'var(--ok-2)') : 'var(--line,#e7e3d8)') + ';margin-inline-start:26px">'
-          + '<div onclick="testOpen(\'' + testJs(c.case_key) + '\')" style="display:flex;gap:6px;align-items:baseline;cursor:pointer;padding:3px 6px">'
-          +   '<span style="font-size:var(--fs-2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(c.title || c.case_key) + '</span>'
+          + '<div onclick="testOpen(\'' + testJs(item.case_key) + '\')" style="display:flex;gap:6px;align-items:baseline;cursor:pointer;padding:3px 6px">'
+          +   '<span style="font-size:var(--fs-2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(item.title || item.case_key) + '</span>'
           +   '<span style="flex:1 1 auto"></span>'
-          +   (c.generated ? '<span style="' + q + '">swept ·</span>' : '')
+          +   (item.generated ? '<span style="' + q + '">swept ·</span>' : '')
           +   '<span style="' + q + '">' + (l ? esc(l.status) : 'not run') + '</span>'
           + '</div>'
-          + (isOpen ? testCaseBodyHTML(c) : '')
+          + (isOpen ? testCaseBodyHTML(item) : '')
           + '</div>';
       });
     });
