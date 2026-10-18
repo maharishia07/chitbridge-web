@@ -339,7 +339,7 @@ function countryName(code) {
 function countries() {
   var out = [], seen = {};
   var add = function (c) { c = String(c || '').toUpperCase(); if (c && /^[A-Z]{2}$/.test(c) && !seen[c]) { seen[c] = 1; out.push(c); } };
-  if (FUEL) CBRegulation.list().forEach(function (p) { add(p.id); });
+  if (FUEL) CBRegulation.list().forEach(function (item) { add(item.id); });
   try { Object.keys((window.CBLocale && CBLocale.REGIONS) || {}).forEach(add); } catch (_) {}
   return out;
 }
@@ -390,7 +390,7 @@ function thresholdOf(p) {
     return { words: out.join(' · '), cite: t.cite || null, verified: true };
   }
   var j = CBJurisdiction.registrationRule(p ? p.id : '');
-  if (j && j.bands && j.bands.length) return { words: j.bands.map(function (b) { return b.what + ' ' + b.words; }).join(' · ') + (j.caveat ? ' (' + j.caveat + ')' : ''), cite: j.name + ' · ' + j.as_of, verified: !!j.verified };
+  if (j && j.bands && j.bands.length) return { words: j.bands.map(function (item) { return item.what + ' ' + item.words; }).join(' · ') + (j.caveat ? ' (' + j.caveat + ')' : ''), cite: j.name + ' · ' + j.as_of, verified: !!j.verified };
   return { words: 'the pack names no registration threshold', cite: null, verified: false };
 }
 /** the cart's total in minor units under a pack, for the tax-invoice rule that depends on the amount */
@@ -401,7 +401,7 @@ function cartTotalMinor(p) {
 function factsOf(p) {
   if (!p) return null;
   var t = p.tax || {};
-  var kinds = t.supplyKinds ? Object.keys(t.supplyKinds).map(function (k) { var x = t.supplyKinds[k]; return { id: x.id || k, name: x.name, rate: x.rate, credit: x.credit, at: x.bas || x.box || null, why: x.why, cite: x.cite || null }; }) : [];
+  var kinds = t.supplyKinds ? Object.keys(t.supplyKinds).map(function (item) { var x = t.supplyKinds[item]; return { id: x.id || item, name: x.name, rate: x.rate, credit: x.credit, at: x.bas || x.box || null, why: x.why, cite: x.cite || null }; }) : [];
   var tid = taxIdOf(p);
   var inv = t.taxInvoice || null, must = null, invKind = null;
   if (typeof p.taxInvoice === 'function') {
@@ -411,7 +411,7 @@ function factsOf(p) {
   }
   var ein = t.einvoice && t.einvoice.aato_thresholds ? t.einvoice.aato_thresholds[t.einvoice.aato_thresholds.length - 1] : null;
   var ret = p.returns ? { id: p.returns.id, frequencies: p.returns.frequencies || [], labels: p.returns.labels || {} } : null;
-  var ledgers = {}; (p.ledgers || []).forEach(function (l) { if (l && l.role) ledgers[l.role] = { code: l.code, name: l.name }; });
+  var ledgers = {}; (p.ledgers || []).forEach(function (item) { if (item && item.role) ledgers[item.role] = { code: item.code, name: item.name }; });
   var pres = p.presentation || {};
   var th = thresholdOf(p);
   return {
@@ -424,14 +424,14 @@ function factsOf(p) {
     taxid: { name: tid.name, rule: tid.rule, detail: tid.detail, cite: tid.cite },
     returns: ret,
     ledgers: ledgers,
-    words: { basis: p.basis || null, lines: Object.keys(p.sch3 || {}).length, labels: pres.labels || {}, netting: (pres.taxNetting || []).map(function (n) { return n.creditName + ' / ' + n.payableName; }) },
+    words: { basis: p.basis || null, lines: Object.keys(p.sch3 || {}).length, labels: pres.labels || {}, netting: (pres.taxNetting || []).map(function (item) { return item.creditName + ' / ' + item.payableName; }) },
     setup: { country: countryName(p.id), currency: p.currency, fy: p.fiscalYear.startMonth, taxid: tid.name, threshold: th.words, thresholdCite: th.cite, thresholdVerified: th.verified },
   };
 }
 function same(a, b) { return JSON.stringify(a) === JSON.stringify(b); }
 
 /* ── the rows, painted from the facts ──────────────────────────────────────────────────────────────────────── */
-function list(items) { return items.length ? '<ul>' + items.map(function (s) { return '<li>' + s + '</li>'; }).join('') + '</ul>' : ''; }
+function list(items) { return items.length ? '<ul>' + items.map(function (item) { return '<li>' + item + '</li>'; }).join('') + '</ul>' : ''; }
 /** the "why" fold: closed by default; carries the legal detail and its citation (CL2 #5 — one plain line per cell, the rest behind this) */
 function fold(summary, inner) { return inner ? '<details class="why"><summary>' + esc(summary) + '</summary>' + inner + '</details>' : ''; }
 function cite(s) { return s ? '<div class="hint">' + esc(s) + '</div>' : ''; }
@@ -457,8 +457,8 @@ function cellHTML(key, f) {
     case 'kinds':
       /* CL2 #7 — plain words: "India: each item's own GST rate decides." (a pack with no kinds reads the line's slab rate) */
       if (!f.kinds.length) return esc(countryName(f.id)) + ': each item\'s own ' + esc(f.scheme.scheme) + ' rate decides.';
-      return f.kinds.map(function (k) { return '<b>' + esc(k.name.replace(/ supply$/i, '')) + '</b> ' + esc(k.rate) + '%'; }).join(' · ')
-        + fold('why', list(f.kinds.map(function (k) { return '<b>' + esc(k.name) + '</b> · credit ' + (k.credit ? 'kept' : 'not claimable') + (k.at ? ' · reported at ' + esc(k.at) : '') + '<div class="hint">' + esc(k.why) + '</div>' + cite(k.cite); })));
+      return f.kinds.map(function (item) { return '<b>' + esc(item.name.replace(/ supply$/i, '')) + '</b> ' + esc(item.rate) + '%'; }).join(' · ')
+        + fold('why', list(f.kinds.map(function (item) { return '<b>' + esc(item.name) + '</b> · credit ' + (item.credit ? 'kept' : 'not claimable') + (item.at ? ' · reported at ' + esc(item.at) : '') + '<div class="hint">' + esc(item.why) + '</div>' + cite(item.cite); })));
     case 'invoice': c = f.invoice;
       if (c.thresholds) {
         if (c.thresholds.from_minor != null) why.push('a tax invoice from ' + fromMinor(c.thresholds.from_minor, f.currency.code) + ' (incl. tax)');
@@ -477,10 +477,10 @@ function cellHTML(key, f) {
       return '<b>' + esc(f.taxid.name) + '</b> · ' + esc(f.taxid.rule) + fold('why', (f.taxid.detail ? '<div>' + esc(f.taxid.detail) + '</div>' : '') + cite(f.taxid.cite));
     case 'returns': c = f.returns;
       if (!c) return 'none in the pack' + (f.id === 'IN' ? fold('why', '<div>the pack carries no returns member — its GSTR-3B is the gst-returns engine\'s, which this page does not load</div>') : '');
-      var boxes = Object.keys(c.labels).map(function (k) { return '<b>' + esc(k) + '</b> ' + esc(c.labels[k]); });
+      var boxes = Object.keys(c.labels).map(function (item) { return '<b>' + esc(item) + '</b> ' + esc(c.labels[item]); });
       return '<b>' + esc(c.id) + '</b> · ' + esc(c.frequencies.join(' or ')) + fold('why · ' + boxes.length + ' boxes', list(boxes));
     case 'words': c = f.words;
-      var w = Object.keys(c.labels).map(function (k) { return '<span class="hint">' + esc(k) + '</span> ' + esc(c.labels[k]); });
+      var w = Object.keys(c.labels).map(function (item) { return '<span class="hint">' + esc(item) + '</span> ' + esc(c.labels[item]); });
       if (c.netting.length) why.push('tax on the balance sheet: ' + esc(c.netting.join('; ')));
       if (w.length) why.push(w.length + ' words the statements use:' + list(w));
       return (c.basis ? esc(c.basis) + ' · ' : '') + c.lines + ' statement lines' + fold('why', list(why));
@@ -494,8 +494,8 @@ function cellHTML(key, f) {
 function ledgerDiff(a, b) {
   var added = [], removed = [], renamed = [];
   if (!a || !b) return null;
-  Object.keys(b.ledgers).forEach(function (r) { if (!a.ledgers[r]) added.push(r); else if (a.ledgers[r].name !== b.ledgers[r].name || a.ledgers[r].code !== b.ledgers[r].code) renamed.push(r); });
-  Object.keys(a.ledgers).forEach(function (r) { if (!b.ledgers[r]) removed.push(r); });
+  Object.keys(b.ledgers).forEach(function (item) { if (!a.ledgers[item]) added.push(item); else if (a.ledgers[item].name !== b.ledgers[item].name || a.ledgers[item].code !== b.ledgers[item].code) renamed.push(item); });
+  Object.keys(a.ledgers).forEach(function (item) { if (!b.ledgers[item]) removed.push(item); });
   return { added: added, removed: removed, renamed: renamed };
 }
 function ledgerCell(f, other, side) {
@@ -505,9 +505,9 @@ function ledgerCell(f, other, side) {
   if (!d) return out + ' · nothing to compare against';
   if (side === 'to') {
     out += ' · ' + d.added.length + ' added · ' + d.removed.length + ' removed · ' + d.renamed.length + ' renamed';
-    if (d.added.length) out += fold('added (' + d.added.length + ')', list(d.added.map(function (r) { return esc(f.ledgers[r].code + ' ' + f.ledgers[r].name) + ' <span class="hint">' + esc(r) + '</span>'; })));
-    if (d.renamed.length) out += fold('renamed (' + d.renamed.length + ')', list(d.renamed.map(function (r) { return esc(other.ledgers[r].code + ' ' + other.ledgers[r].name) + ' → ' + esc(f.ledgers[r].code + ' ' + f.ledgers[r].name); })));
-  } else if (d.removed.length) out += fold('not in the other pack (' + d.removed.length + ')', list(d.removed.map(function (r) { return esc(f.ledgers[r].code + ' ' + f.ledgers[r].name) + ' <span class="hint">' + esc(r) + '</span>'; })));
+    if (d.added.length) out += fold('added (' + d.added.length + ')', list(d.added.map(function (item) { return esc(f.ledgers[item].code + ' ' + f.ledgers[item].name) + ' <span class="hint">' + esc(item) + '</span>'; })));
+    if (d.renamed.length) out += fold('renamed (' + d.renamed.length + ')', list(d.renamed.map(function (item) { return esc(other.ledgers[item].code + ' ' + other.ledgers[item].name) + ' → ' + esc(f.ledgers[item].code + ' ' + f.ledgers[item].name); })));
+  } else if (d.removed.length) out += fold('not in the other pack (' + d.removed.length + ')', list(d.removed.map(function (item) { return esc(f.ledgers[item].code + ' ' + f.ledgers[item].name) + ' <span class="hint">' + esc(item) + '</span>'; })));
   return out;
 }
 /* one line per row on what it means for the shop — short, what happens · what to do */
@@ -541,14 +541,14 @@ function paintRows() {
   document.getElementById('th-from').textContent = 'Registered · ' + countryName(LAB.from);
   document.getElementById('th-to').textContent = 'Registering · ' + countryName(LAB.to);
   body.className = LAB.showSame ? 'showsame' : '';
-  body.innerHTML = ROWS.map(function (r) {
-    var key = r[0], v = verdictOf(key, a, b);
-    if (v.same) sameNames.push(r[1]);
+  body.innerHTML = ROWS.map(function (item) {
+    var key = item[0], v = verdictOf(key, a, b);
+    if (v.same) sameNames.push(item[1]);
     var left = key === 'ledgers' ? ledgerCell(a, b, 'from') : cellHTML(key, a);
     var right = key === 'ledgers' ? ledgerCell(b, a, 'to') : cellHTML(key, b);
     if (key === 'taxid') { left += idCheckHTML('from'); right += idCheckHTML('to'); }
     return '<tr data-row="' + key + '" data-testid="cl-row-' + key + '" class="' + (v.same ? 'same' : 'different') + '">'
-      + '<td class="k">' + esc(r[1]) + '</td>'
+      + '<td class="k">' + esc(item[1]) + '</td>'
       + '<td class="v from" data-side="' + esc(countryName(LAB.from)) + '">' + left + '</td>'
       + '<td class="v to" data-side="' + esc(countryName(LAB.to)) + '">' + right + '</td>'
       + '<td class="verdict" data-testid="cl-verdict-' + key + '">' + v.chip + '</td>'
@@ -585,14 +585,14 @@ function kindOptions(cur) {
   return out.join('');
 }
 function paintCart() {
-  document.getElementById('cart-body').innerHTML = LAB.lines.map(function (l, i) {
+  document.getElementById('cart-body').innerHTML = LAB.lines.map(function (item, index) {
     /* data-l names the cell for the stacked (card) layout's labels — see .cart's container query */
-    return '<tr data-testid="cl-cart-line-' + i + '"><td data-l="item"><input type="text" aria-label="item" value="' + esc(l.name) + '" oninput="setVal(' + i + ',\'name\',this.value)"></td>'
-      + '<td class="r" data-l="qty"><input type="number" aria-label="qty" min="0" step="1" value="' + esc(l.qty) + '" oninput="setVal(' + i + ',\'qty\',this.value,true)"></td>'
-      + '<td class="r" data-l="price"><input type="number" aria-label="price" min="0" step="0.01" value="' + esc(l.price) + '" oninput="setVal(' + i + ',\'price\',this.value,true)"></td>'
-      + '<td class="r" data-l="rate"><input type="number" aria-label="rate %" min="0" step="0.01" value="' + esc(l.rate) + '" oninput="setVal(' + i + ',\'rate\',this.value,true)"></td>'
-      + '<td data-l="kind"><select data-testid="cl-kind-' + i + '" aria-label="supply kind" onchange="setVal(' + i + ',\'kind\',this.value)">' + kindOptions(l.kind) + '</select></td>'
-      + '<td data-l="x"><button class="btn x" onclick="delLine(' + i + ')" title="remove">×</button></td></tr>';
+    return '<tr data-testid="cl-cart-line-' + index + '"><td data-l="item"><input type="text" aria-label="item" value="' + esc(item.name) + '" oninput="setVal(' + index + ',\'name\',this.value)"></td>'
+      + '<td class="r" data-l="qty"><input type="number" aria-label="qty" min="0" step="1" value="' + esc(item.qty) + '" oninput="setVal(' + index + ',\'qty\',this.value,true)"></td>'
+      + '<td class="r" data-l="price"><input type="number" aria-label="price" min="0" step="0.01" value="' + esc(item.price) + '" oninput="setVal(' + index + ',\'price\',this.value,true)"></td>'
+      + '<td class="r" data-l="rate"><input type="number" aria-label="rate %" min="0" step="0.01" value="' + esc(item.rate) + '" oninput="setVal(' + index + ',\'rate\',this.value,true)"></td>'
+      + '<td data-l="kind"><select data-testid="cl-kind-' + index + '" aria-label="supply kind" onchange="setVal(' + index + ',\'kind\',this.value)">' + kindOptions(item.kind) + '</select></td>'
+      + '<td data-l="x"><button class="btn x" onclick="delLine(' + index + ')" title="remove">×</button></td></tr>';
   }).join('');
 }
 /**
@@ -605,10 +605,10 @@ function billUnder(p) {
   var split = p.tax && p.tax.supply === 'state';
   var seller = { Country: p.id, LglNm: 'The shop' }, buyer = { Country: LAB.buyer === 'abroad' ? 'XX' : p.id };
   if (split) { seller.State = '33'; buyer.Pos = LAB.buyer === 'other_state' ? '29' : '33'; }
-  var lines = LAB.lines.map(function (l, i) {
-    var line = { id: i, name: l.name, qty: l.qty, unit_price: l.price };
-    if (l.kind) line.supply_kind = l.kind;
-    if (!(p.tax && p.tax.supplyKinds) || !l.kind) line.rate = l.rate;
+  var lines = LAB.lines.map(function (item, index) {
+    var line = { id: index, name: item.name, qty: item.qty, unit_price: item.price };
+    if (item.kind) line.supply_kind = item.kind;
+    if (!(p.tax && p.tax.supplyKinds) || !item.kind) line.rate = item.rate;
     return line;
   });
   try {
@@ -622,10 +622,10 @@ function billHTML(side, b, other) {
   if (b.refused) return '<div class="card nopack" data-testid="cl-bill-' + side + '"><b>' + esc(p.name) + '</b> — the engine refused: ' + esc(b.refused) + '</div>';
   var m = b.money, o = other && other.money, cb = b.inv._cb || {};
   var d = function (k, v) { return (o && JSON.stringify(o[k]) !== JSON.stringify(v)) ? ' class="diff"' : ''; };
-  var heads = (m.heads || []).map(function (h) { return '<span' + ((o && !(o.heads || []).some(function (x) { return x.name === h.name && x.rate === h.rate && x.amount === h.amount; })) ? ' class="diff"' : '') + '>' + esc(h.name) + ' ' + esc(h.rate) + '% on ' + fmt(h.base, p.currency) + ' = <b>' + fmt(h.amount, p.currency) + '</b></span>'; });
-  var lines = (b.inv.ItemList || []).map(function (it, i) {
-    var k = (cb.kinds || []).filter(function (x) { return x.line === i; })[0];
-    return esc(it.PrdDesc || ('line ' + (i + 1))) + ' · ' + esc(it.GstRt) + '% on ' + fmt(it.AssAmt, p.currency) + ' → tax ' + fmt((it.CgstAmt || 0) + (it.SgstAmt || 0) + (it.IgstAmt || 0) + (it.TaxAmt || 0), p.currency) + (k ? ' <span class="chip">' + esc(k.kind) + (k.bas ? ' · ' + esc(k.bas) : '') + (k.box ? ' · Box ' + esc(k.box) : '') + '</span>' : '');
+  var heads = (m.heads || []).map(function (item) { return '<span' + ((o && !(o.heads || []).some(function (x) { return x.name === item.name && x.rate === item.rate && x.amount === item.amount; })) ? ' class="diff"' : '') + '>' + esc(item.name) + ' ' + esc(item.rate) + '% on ' + fmt(item.base, p.currency) + ' = <b>' + fmt(item.amount, p.currency) + '</b></span>'; });
+  var lines = (b.inv.ItemList || []).map(function (item, index) {
+    var k = (cb.kinds || []).filter(function (x) { return x.line === index; })[0];
+    return esc(item.PrdDesc || ('line ' + (index + 1))) + ' · ' + esc(item.GstRt) + '% on ' + fmt(item.AssAmt, p.currency) + ' → tax ' + fmt((item.CgstAmt || 0) + (item.SgstAmt || 0) + (item.IgstAmt || 0) + (item.TaxAmt || 0), p.currency) + (k ? ' <span class="chip">' + esc(k.kind) + (k.bas ? ' · ' + esc(k.bas) : '') + (k.box ? ' · Box ' + esc(k.box) : '') + '</span>' : '');
   });
   var notes = (cb.notes || []).map(esc);
   return '<div class="card" data-testid="cl-bill-' + side + '">'
@@ -634,9 +634,9 @@ function billHTML(side, b, other) {
     + '<div class="kv"><span>goods</span><span>' + fmt(m.net, p.currency) + '</span></div>'
     + '<div class="kv"><span>tax</span><span' + d('tax', m.tax) + ' data-testid="cl-tax-' + side + '">' + fmt(m.tax, p.currency) + '</span></div>'
     + (m.round_off ? '<div class="kv"><span>round off</span><span>' + fmt(m.round_off, p.currency) + '</span></div>' : '')
-    + '<div class="sec" style="margin:8px 0 2px">Tax lines</div>' + (heads.length ? '<ul data-testid="cl-heads-' + side + '">' + heads.map(function (h) { return '<li>' + h + '</li>'; }).join('') + '</ul>' : '<span class="hint">no tax head carries an amount</span>')
-    + '<div class="sec" style="margin:8px 0 2px">Per line</div><ul>' + lines.map(function (l) { return '<li>' + l + '</li>'; }).join('') + '</ul>'
-    + '<div class="sec" style="margin:8px 0 2px">The invoice notes</div>' + (notes.length ? '<ul data-testid="cl-notes-' + side + '">' + notes.map(function (n) { return '<li>' + n + '</li>'; }).join('') + '</ul>' : '<span class="hint" data-testid="cl-notes-' + side + '">the engine added no note</span>')
+    + '<div class="sec" style="margin:8px 0 2px">Tax lines</div>' + (heads.length ? '<ul data-testid="cl-heads-' + side + '">' + heads.map(function (item) { return '<li>' + item + '</li>'; }).join('') + '</ul>' : '<span class="hint">no tax head carries an amount</span>')
+    + '<div class="sec" style="margin:8px 0 2px">Per line</div><ul>' + lines.map(function (item) { return '<li>' + item + '</li>'; }).join('') + '</ul>'
+    + '<div class="sec" style="margin:8px 0 2px">The invoice notes</div>' + (notes.length ? '<ul data-testid="cl-notes-' + side + '">' + notes.map(function (item) { return '<li>' + item + '</li>'; }).join('') + '</ul>' : '<span class="hint" data-testid="cl-notes-' + side + '">the engine added no note</span>')
     + '</div>';
 }
 var BILLS = { from: null, to: null };
@@ -650,7 +650,7 @@ function paintExisting() {
   var el = document.getElementById('existing'), a = FACTS.from, b = FACTS.to;
   var fromName = countryName(LAB.from), toName = countryName(LAB.to);
   if (!LAB.fixed) {
-    var changed = ROWS.filter(function (r) { return !verdictOf(r[0], a, b).same; }).map(function (r) { return r[1]; });
+    var changed = ROWS.filter(function (item) { return !verdictOf(item[0], a, b).same; }).map(function (item) { return item[1]; });
     var inner = !b ? '<b>' + esc(toName) + '</b> has no pack, so nothing can be re-derived: ' + esc(STATUS.to.why)
       : (changed.length ? 'No product or transaction yet, so the country can still be corrected. Registered in <b>' + esc(toName) + '</b> instead, the ' + esc(toName) + ' pack would re-derive:' + list(changed.map(esc)) + '<span class="hint">Nothing else moves: nothing is recorded yet.</span>'
         : 'The two packs agree on every row — nothing would be re-derived.');
@@ -665,9 +665,9 @@ function paintExisting() {
 /* ── the pickers and the repaint ───────────────────────────────────────────────────────────────────────────── */
 var PACKS = { from: null, to: null }, FACTS = { from: null, to: null }, STATUS = { from: null, to: null };
 function optionsHTML(cur) {
-  return countries().map(function (c) {
-    var st = statusOf(c);
-    return '<option value="' + esc(c) + '"' + (c === cur ? ' selected' : '') + '>' + esc(st.name || countryName(c)) + (st.pack ? ' · ' + esc(st.pack) + ' pack ' + esc(st.version) : ' — no pack') + '</option>';
+  return countries().map(function (item) {
+    var st = statusOf(item);
+    return '<option value="' + esc(item) + '"' + (item === cur ? ' selected' : '') + '>' + esc(st.name || countryName(item)) + (st.pack ? ' · ' + esc(st.pack) + ' pack ' + esc(st.version) : ' — no pack') + '</option>';
   }).join('');
 }
 function statusHTML(side) {
@@ -684,7 +684,7 @@ function repaint() {
   document.getElementById('to').innerHTML = optionsHTML(LAB.to);
   document.getElementById('status-from').innerHTML = statusHTML('from');
   document.getElementById('status-to').innerHTML = statusHTML('to');
-  document.getElementById('src').textContent = 'packs: ' + CBRegulation.list().map(function (p) { return p.id + ' ' + p.version; }).join(' · ');
+  document.getElementById('src').textContent = 'packs: ' + CBRegulation.list().map(function (item) { return item.id + ' ' + item.version; }).join(' · ');
   paintCart();
   paintRows();
   paintBill();
@@ -694,7 +694,7 @@ function repaint() {
 /* CL3 · "Where ChitBridge is for <TO country>": the rows CBCountryReady gives, painted in this page's .kv look. Nothing is added up here. */
 var READY = null;
 function paintReady() {
-  var el = document.getElementById('ready'), sec = document.getElementById('ready-sec'), cc = LAB.to, name = countryName(cc);
+  var el = document.getElementById('ready'), node = document.getElementById('ready-sec'), cc = LAB.to, name = countryName(cc);
   if (!READY) {
     el.innerHTML = '<span class="hint">…</span>';
     READY = window.CBCountryReady ? CBCountryReady.load().catch(function () { return null; }) : Promise.resolve(null);
@@ -702,12 +702,12 @@ function paintReady() {
   READY.then(function (data) {
     if (LAB.to !== cc) return;
     var v = data ? CBCountryReady.view(data, cc, name) : null;
-    sec.textContent = v ? v.title : 'Where ChitBridge is';
+    node.textContent = v ? v.title : 'Where ChitBridge is';
     if (!v) { el.innerHTML = '<span class="hint" data-testid="cl-ready-none">Could not read where ChitBridge is for each country.</span>'; return; }
     if (!v.known) { el.innerHTML = '<span class="hint" data-testid="cl-ready-none">' + esc(v.none) + '</span>'; return; }
     el.innerHTML = '<div class="hint" data-testid="cl-ready-pack" style="margin-bottom:4px">' + esc(v.pack) + '</div>'
-      + v.rows.map(function (r) {
-        return '<div class="kv" data-testid="cl-ready-row" data-state="' + esc(r.state) + '"><span><span aria-hidden="true">' + esc(r.sym) + '</span> ' + esc(r.area) + '</span><span>' + esc(r.line) + '</span></div>';
+      + v.rows.map(function (item) {
+        return '<div class="kv" data-testid="cl-ready-row" data-state="' + esc(item.state) + '"><span><span aria-hidden="true">' + esc(item.sym) + '</span> ' + esc(item.area) + '</span><span>' + esc(item.line) + '</span></div>';
       }).join('');
   });
 }
@@ -715,7 +715,7 @@ function paintReady() {
 var FRAME = window.CBFrame ? CBFrame.mount({ app: 'country-lab', area: 'labs', signin: false, kural: 'planning', work: document.getElementById('cl'),
   skeleton: { name: 'Country lab', icon: 'M12 3a9 9 0 1 0 0 18a9 9 0 0 0 0-18zM3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18', active: labView(),
     sections: [{ k: 'countries', label: 'Countries', icon: 'M4 5h16M4 12h16M4 19h16' }, { k: 'all', label: 'All countries', icon: 'M3 5h18v14H3zM3 10h18M9 5v14' }, { k: 'compare', label: 'Side by side', icon: 'M4 5h7v14H4zM13 5h7v14h-7z' }, { k: 'ready', label: 'Where we are', icon: 'M5 12l4 4 10-10' }],
-    onSection: function (k) { showView(k === 'countries' || k === 'all' ? k : 'compare'); var t = k === 'ready' ? document.getElementById('ready-sec') : null; if (t && t.scrollIntoView) t.scrollIntoView({ block: 'start' }); } } }) : null;
+    onSection: function (k) { showView(k === 'countries' || k === 'all' ? k : 'compare'); var node = k === 'ready' ? document.getElementById('ready-sec') : null; if (node && node.scrollIntoView) node.scrollIntoView({ block: 'start' }); } } }) : null;
 /** R6: which view the address asks for — #/compare (the side-by-side tool) or the Countries view (default; #/countries/<CC> picks one) */
 function labView() { return /^#\/compare/.test(location.hash) ? 'compare' : (/^#\/all/.test(location.hash) ? 'all' : 'countries'); }
 function showView(view) {
