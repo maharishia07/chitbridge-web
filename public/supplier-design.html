@@ -165,20 +165,20 @@ function armCart(){
 function pick(id){
   /* ⚠️ Switching supplier empties the cart — an order belongs to ONE party, and Beta's lines mean nothing to Gamma.
      cart-ui does this by itself: a different catalogue signature starts a new cart. */
-  S.sup=SUPS.filter(function(s){return s.id===id;})[0]; S.step=0; CBCart.close('sup'); armCart(); paint();
+  S.sup=SUPS.filter(function(item){return item.id===id;})[0]; S.step=0; CBCart.close('sup'); armCart(); paint();
 }
 function supSearch(v){ S.q=v; paintList(); }
-function go(i){ if(i<0||i>=STEPS.length)return; S.step=i; var b=document.getElementById('rbody'); if(b)b.scrollTop=0; paint(); }
+function go(i){ if(i<0||i>=STEPS.length)return; S.step=i; var node=document.getElementById('rbody'); if(node)node.scrollTop=0; paint(); }
 function openOv(){ document.getElementById('ovc').innerHTML=ovHTML(); document.getElementById('ov').className='ov on'; }
 function closeOv(){ document.getElementById('ov').className='ov'; }
 
 function paintList(){
   var q=S.q.trim().toLowerCase();
-  var list=SUPS.filter(function(s){ return !q||(s.name+' '+s.bid+' '+s.cat).toLowerCase().indexOf(q)>=0; });
-  document.getElementById('supList').innerHTML = list.length ? list.map(function(s){
-    return '<div class="sup'+(S.sup&&S.sup.id===s.id?' on':'')+'" onclick="pick(\''+s.id+'\')">'
-      + '<span class="nm"><b>'+esc(s.name)+'</b><span>'+esc(s.bid)+'</span></span>'
-      + (s.clear&&s.clear.out>s.clear.met?'<span class="pill w">!</span>':'<span class="pill">catalogue</span>')
+  var list=SUPS.filter(function(item){ return !q||(item.name+' '+item.bid+' '+item.cat).toLowerCase().indexOf(q)>=0; });
+  document.getElementById('supList').innerHTML = list.length ? list.map(function(item){
+    return '<div class="sup'+(S.sup&&S.sup.id===item.id?' on':'')+'" onclick="pick(\''+item.id+'\')">'
+      + '<span class="nm"><b>'+esc(item.name)+'</b><span>'+esc(item.bid)+'</span></span>'
+      + (item.clear&&item.clear.out>item.clear.met?'<span class="pill w">!</span>':'<span class="pill">catalogue</span>')
       + '</div>'; }).join('') : '<div class="empty" style="padding:22px 12px">No supplier matches.</div>';
 }
 function chipHTML(){
@@ -191,9 +191,9 @@ function chipHTML(){
 }
 function stepsHTML(){
   if(!S.sup) return '';
-  return '<div class="steps">'+STEPS.map(function(s,i){
-    var cls=i===S.step?'st now':(i<S.step?'st done':'st');
-    return '<div class="'+cls+'"'+(i<S.step?' onclick="go('+i+')"':'')+'>'+(i<S.step?'✓ ':'')+s.n+'</div>';
+  return '<div class="steps">'+STEPS.map(function(item,index){
+    var cls=index===S.step?'st now':(index<S.step?'st done':'st');
+    return '<div class="'+cls+'"'+(index<S.step?' onclick="go('+index+')"':'')+'>'+(index<S.step?'✓ ':'')+item.n+'</div>';
   }).join('')+'</div>';
 }
 function stepItems(){
@@ -210,20 +210,20 @@ function stepDetails(){
     + '<div class="note">Asked for, not agreed — '+esc(S.sup.name)+' confirms the date and the price.</div>';
 }
 function stepReview(){
-  var T=CBCart.total('sup'), sel=CBCart.selected('sup');
+  var T=CBCart.total('sup'), list=CBCart.selected('sup');
   return '<div class="rev"><div class="h">To<span class="e">fixed — this is their order</span></div>'
     + '<div class="r"><b>'+esc(S.sup.name)+'</b>&nbsp;<span class="k" style="min-width:0">'+esc(S.sup.bid)+'</span></div></div>'
-    + '<div class="rev"><div class="h">Items · '+sel.length+'<span class="e" onclick="go(0)">Change</span></div>'
+    + '<div class="rev"><div class="h">Items · '+list.length+'<span class="e" onclick="go(0)">Change</span></div>'
     /* ⚠️ line_total comes FROM THE HELPER. This screen used to recompute it from the catalogue price and so
        ignored the buyer's offer entirely — the review showed the seller's ask on a line that had been offered
        against. Anything that shows money asks cart-ui which price counts. */
-    + sel.map(function(l){
-        return '<div class="r"><span class="k">'+l.qty+' × '+esc(l.unit)+'</span>'
-          + '<span style="flex:1">'+esc(l.name)
-          + (l.offered?'<span style="color:#6a707a;font-size:11.5px"> · your offer '+CBCart.fmt('sup', l.unit_price)
-              +' <span style="text-decoration:line-through;opacity:.6">'+CBCart.fmt('sup', l.asking_price)+'</span></span>':'')
+    + list.map(function(item){
+        return '<div class="r"><span class="k">'+item.qty+' × '+esc(item.unit)+'</span>'
+          + '<span style="flex:1">'+esc(item.name)
+          + (item.offered?'<span style="color:#6a707a;font-size:11.5px"> · your offer '+CBCart.fmt('sup', item.unit_price)
+              +' <span style="text-decoration:line-through;opacity:.6">'+CBCart.fmt('sup', item.asking_price)+'</span></span>':'')
           + '</span>'
-          + '<b>'+(l.line_total==null?'—':CBCart.fmt('sup', l.line_total))+'</b></div>'; }).join('')
+          + '<b>'+(item.line_total==null?'—':CBCart.fmt('sup', item.line_total))+'</b></div>'; }).join('')
     + '<div class="tot"><span style="flex:1">'+(T.offered?'Total at your offer':'Total')+'</span>'
     + '<span>'+(T.amount?CBCart.fmt('sup', T.amount)+(T.partial?'+':''):'—')+'</span></div></div>'
     + (T.offered?'<div class="note">This contains an OFFER — your price, not theirs. They accept or counter; nothing is agreed yet.</div>':'')
@@ -271,7 +271,7 @@ armCart(); paint();
 
 /* ── SMOKE TEST — this screen's own rules. The cart's rules are covered by scripts/cart-ui.test.mjs. ── */
 (function(){
-  var f=0, ok=function(n,c){ console.log((c?'  ok   ':'  FAIL ')+n); if(!c)f++; };
+  var count=0, ok=function(n,c){ console.log((c?'  ok   ':'  FAIL ')+n); if(!c)count++; };
   console.log('%csupplier-design mock','font-weight:bold');
   ok('nothing picked → cannot proceed', blockedBecause()==='Pick a supplier.');
   pick('s1');
@@ -288,7 +288,7 @@ armCart(); paint();
   ok('★★ switching supplier starts an empty cart — an order belongs to one party', CBCart.lines('sup')===0 && S.step===0);
   pick('s3'); ok('a supplier with no catalogue says so', CBCart.rows('sup').length===0);
   pick('s1'); CBCart.search('sup','primer');
-  ok('search narrows their catalogue', CBCart.rows('sup').filter(function(r){return r.type==='line';}).length===1);
+  ok('search narrows their catalogue', CBCart.rows('sup').filter(function(item){return item.type==='line';}).length===1);
   CBCart.search('sup','');
   pick('s4');
   ok('★ the model yard offers one item per order model', CBCart.rows('sup').length===6);
@@ -299,6 +299,6 @@ armCart(); paint();
   ok('★★ pick stays at one however often it is pressed', CBCart.qtyOf('sup','m5')===1);
   CBCart.clear('sup');
   S.sup=null; S.step=0; armCart(); paint();
-  console.log(f?('  '+f+' FAILED'):'  all passed');
+  console.log(count?('  '+count+' FAILED'):'  all passed');
 })();
 </script>
