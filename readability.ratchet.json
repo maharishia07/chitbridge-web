@@ -49,7 +49,7 @@
   "public/app/cap-move-in.js": {"score":88,"long40":1,"long80":0,"complex10":2,"complex15":2,"deep3":0,"deep4":0,"cryptic":77,"noWhatLine":4,"emptyCatch":1,"noHeader":1},
   "public/app/cap-network-member.js": {"score":96,"long40":5,"long80":2,"complex10":6,"complex15":4,"deep3":0,"deep4":0,"cryptic":67,"noWhatLine":10,"emptyCatch":1,"noHeader":1},
   "public/app/cap-network.js": {"score":518,"long40":9,"long80":2,"complex10":27,"complex15":16,"deep3":1,"deep4":1,"cryptic":405,"noWhatLine":34,"emptyCatch":22,"noHeader":1},
-  "public/app/cap-period.js": {"score":269,"long40":0,"long80":0,"complex10":6,"complex15":2,"deep3":0,"deep4":0,"cryptic":235,"noWhatLine":19,"emptyCatch":7,"noHeader":0},
+  "public/app/cap-period.js": {"score":196,"long40":0,"long80":0,"complex10":6,"complex15":2,"deep3":0,"deep4":0,"cryptic":162,"noWhatLine":19,"emptyCatch":7,"noHeader":0},
   "public/app/cap-print.js": {"score":0,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":0,"noWhatLine":0,"emptyCatch":0,"noHeader":0},
   "public/app/cap-readiness.js": {"score":152,"long40":0,"long80":0,"complex10":13,"complex15":6,"deep3":0,"deep4":0,"cryptic":114,"noWhatLine":8,"emptyCatch":10,"noHeader":1},
   "public/app/cap-register.js": {"score":121,"long40":6,"long80":0,"complex10":7,"complex15":3,"deep3":0,"deep4":0,"cryptic":90,"noWhatLine":10,"emptyCatch":4,"noHeader":1},
