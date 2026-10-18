@@ -164,27 +164,27 @@ function adoptReady(r){
 function adoptReadyCount(){ return ((ADO.data && ADO.data.rows) || []).filter(adoptReady).length; }
 
 function adoptRepaintButton(){
-  var b = document.querySelector('[data-testid="adopt-accept"]'); if (!b) return;
+  var node = document.querySelector('[data-testid="adopt-accept"]'); if (!node) return;
   var n = adoptReadyCount();
-  b.disabled = !n;
-  b.textContent = n ? txf('Add {n} to my catalogue', { n: n }) : tx('Nothing ready yet');
+  node.disabled = !n;
+  node.textContent = n ? txf('Add {n} to my catalogue', { n: n }) : tx('Nothing ready yet');
 }
 
 async function adoptAccept(){
   var rows = ((ADO.data && ADO.data.rows) || []).filter(adoptReady);
   if (!rows.length) return;
-  var accept = rows.map(function(r){
-    var e = ADO.edits[r.line] || {};
-    return { line: r.line,
-             name: (e.name != null ? e.name : ((r.seed && r.seed.name) || '')).trim(),
+  var accept = rows.map(function(item){
+    var e = ADO.edits[item.line] || {};
+    return { line: item.line,
+             name: (e.name != null ? e.name : ((item.seed && item.seed.name) || '')).trim(),
              sku: (e.sku || '').trim(),
              price: e.price === '' || e.price == null ? null : Number(e.price),
              override: e.override === true };
   });
   try {
-    var r = await api('adoptAccept', { params: { id: ADO.chit_id }, body: { accept: accept } });
+    var reply = await api('adoptAccept', { params: { id: ADO.chit_id }, body: { accept: accept } });
     closeModal();
-    toast((r && r.says) || tx('Added'));
+    toast((reply && reply.says) || tx('Added'));
     /* the catalogue is the thing that changed — reload it if the person is looking at it */
     if (typeof UI !== 'undefined' && UI.nav === 'catalogue' && typeof loadCatalogue === 'function') loadCatalogue();
   } catch (e) { toast((e && e.message) || tx('Could not add them')); }
