@@ -395,8 +395,8 @@ let SESS = null, MINE = null;
 
 function session(){
   try{
-    const s = JSON.parse(localStorage.getItem('cb_sess') || 'null');
-    return (window.CBOnePerson && CBOnePerson.who(s)) ? s : null;
+    const parsed = JSON.parse(localStorage.getItem('cb_sess') || 'null');
+    return (window.CBOnePerson && CBOnePerson.who(parsed)) ? parsed : null;
   }catch(_){ return null; }
 }
 
@@ -408,12 +408,12 @@ const confirmAsk = CBConfirm;   /* the page's own confirm, as CB Accounts uses i
 
 /* ── a sheet: the app's modal(html) / closeModal() signature on a native <dialog>, so cap-books.js's partyEditOpen opens here unchanged ── */
 function modal(html){
-  const d = $('crm_sheet');
-  d.innerHTML = '<button class="mx" style="position:absolute;right:6px;top:6px" onclick="closeModal()" aria-label="Close" title="Close">✕</button>' + html;
-  if (!d.open) { try { d.showModal(); } catch (_) { d.setAttribute('open', ''); } }
+  const node = $('crm_sheet');
+  node.innerHTML = '<button class="mx" style="position:absolute;right:6px;top:6px" onclick="closeModal()" aria-label="Close" title="Close">✕</button>' + html;
+  if (!node.open) { try { node.showModal(); } catch (_) { node.setAttribute('open', ''); } }
 }
 function closeModal(){
-  const d = $('crm_sheet'); try { d.close(); } catch (_) { d.removeAttribute('open'); } d.innerHTML = '';
+  const node = $('crm_sheet'); try { node.close(); } catch (_) { node.removeAttribute('open'); } node.innerHTML = '';
   /* a sheet opened by its address (#/…/add · /log · /edit) goes back to the screen under it */
   if (/\/(add|log|edit)(\?.*)?$/.test(location.hash)) { try { history.replaceState(null, '', location.hash.replace(/\/(add|log|edit)(\?.*)?$/, '')); } catch (_) {} }
 }
@@ -428,7 +428,7 @@ $('toggleNav').addEventListener('click', () => {
 });
 /* ONE frame at every width (Round U): between 761 and 1100 px the sidebar is the icon rail, so the list's tool row has the room it needs and fits one line; the toggle still opens it */
 const railMq = window.matchMedia('(min-width:761px) and (max-width:1100px)');
-function railFit(){ const s = $('side'), t = $('toggleNav'); s.classList.toggle('collapsed', railMq.matches); const open = !s.classList.contains('collapsed'); t.setAttribute('aria-expanded', String(open)); t.setAttribute('aria-label', open ? 'Collapse sidebar' : 'Expand sidebar'); }
+function railFit(){ const node = $('side'), t = $('toggleNav'); node.classList.toggle('collapsed', railMq.matches); const open = !node.classList.contains('collapsed'); t.setAttribute('aria-expanded', String(open)); t.setAttribute('aria-label', open ? 'Collapse sidebar' : 'Expand sidebar'); }
 if (railMq.addEventListener) railMq.addEventListener('change', railFit); railFit();
 /* SHELL-ONE: the frame, mounted once per session change (the shell mounts the bell and the avatar itself); signed out, the avatar's door scrolls to the sign-in card */
 let FRAME = null;
@@ -452,13 +452,13 @@ function signedOut(why){
 }
 function closeFirst(r){
   $('nav').innerHTML = '';
-  crmCard(r.others.map((o, i) => `<h2 data-testid="close-first">${esc(CBOnePerson.sentence(o))}</h2>
-      <button type="button" class="act" data-testid="close-first-go" data-i="${i}">${esc(CBOnePerson.buttonLabel(o))}</button>`).join(''), true);
-  $('screen').querySelectorAll('[data-testid="close-first-go"]').forEach((b) => {
-    b.onclick = () => {
+  crmCard(r.others.map((item, index) => `<h2 data-testid="close-first">${esc(CBOnePerson.sentence(item))}</h2>
+      <button type="button" class="act" data-testid="close-first-go" data-i="${index}">${esc(CBOnePerson.buttonLabel(item))}</button>`).join(''), true);
+  $('screen').querySelectorAll('[data-testid="close-first-go"]').forEach((item) => {
+    item.onclick = () => {
       $('screen').querySelectorAll('button').forEach((x) => { x.disabled = true; });
-      b.textContent = 'Signing it out…';
-      CBOnePerson.clearOut(r.others[+b.getAttribute('data-i')], MINE.name).then(start, start);
+      item.textContent = 'Signing it out…';
+      CBOnePerson.clearOut(r.others[+item.getAttribute('data-i')], MINE.name).then(start, start);
     };
   });
 }
@@ -486,8 +486,8 @@ async function start(){
   if (g !== CRM.gen || !MINE) return;
   if (t.others.length) return closeFirst(t);
   /* the Ledger's one read: on → the Dues column and the dues alert exist; off (404) → neither is drawn, no blank column */
-  try{ const h = await api('booksHealth'); CRM.ledger = !!(h && h.enabled !== false);
-    if (h && h.country && h.country.country && h.country.country.code) SESSION.country = h.country.country.code; }   /* CX0: the shop's country — the pack's tax-id word (taxIdWord) on the party list and record */
+  try{ const reply = await api('booksHealth'); CRM.ledger = !!(reply && reply.enabled !== false);
+    if (reply && reply.country && reply.country.country && reply.country.country.code) SESSION.country = reply.country.country.code; }   /* CX0: the shop's country — the pack's tax-id word (taxIdWord) on the party list and record */
   catch(e){ CRM.ledger = false; }
   try { localStorage.setItem('cb_crm_ledger', CRM.ledger ? '1' : '0'); } catch (_) {}
   if (g !== CRM.gen) return;
