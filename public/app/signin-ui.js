@@ -103,13 +103,13 @@ var METHODS = {
 };
 function methodsOn(c) {
   var on = (c && c.methods) || {};
-  return typeof (c && c.onMethod) === 'function' ? Object.keys(METHODS).filter(function (k) { return on[k] === true; }) : [];
+  return typeof (c && c.onMethod) === 'function' ? Object.keys(METHODS).filter(function (item) { return on[item] === true; }) : [];
 }
 
 /* ── small helpers ──────────────────────────────────────────────────────────────────────────────────────────────── */
 function jwtClaims(t) {
-  try { var p = String(t || '').split('.')[1]; if (!p) return {}; p = p.replace(/-/g, '+').replace(/_/g, '/'); while (p.length % 4) p += '=';
-    var s = typeof root.atob === 'function' ? root.atob(p) : Buffer.from(p, 'base64').toString('utf8');
+  try { var text = String(t || '').split('.')[1]; if (!text) return {}; text = text.replace(/-/g, '+').replace(/_/g, '/'); while (text.length % 4) text += '=';
+    var s = typeof root.atob === 'function' ? root.atob(text) : Buffer.from(text, 'base64').toString('utf8');
     return JSON.parse(decodeURIComponent(Array.prototype.map.call(s, function (ch) { return '%' + ('00' + ch.charCodeAt(0).toString(16)).slice(-2); }).join(''))) || {};
   } catch (_) { return {}; }
 }
@@ -128,7 +128,7 @@ function httpPost(c) {
     var dev = deviceOf(c);
     if (dev) { h['X-Device-Id'] = dev; body = Object.assign({}, body, { device_id: dev, surface: c.surface || 'web' }); }
     return root.fetch((c.apiBase || '') + path, { method: 'POST', headers: h, body: JSON.stringify(body), cache: 'no-store' })
-      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { status: r.status, body: unwrap(j) }; }); })
+      .then(function (reply) { return reply.json().catch(function () { return {}; }).then(function (j) { return { status: reply.status, body: unwrap(j) }; }); })
       .catch(function () { return { status: 0, body: {} }; });
   };
 }
@@ -178,7 +178,7 @@ function machine(c, io) {
             /* the host's local credential (c.local): the entry found for the typed id; viaLine = the person chose the line instead;
                localPin = the setpin screen is for the LOCAL book, not the server */
             local: null, viaLine: false, localPin: false };
-  var L = (c.local && typeof c.local.find === 'function' && typeof c.local.check === 'function') ? c.local : null;
+  var list = (c.local && typeof c.local.find === 'function' && typeof c.local.check === 'function') ? c.local : null;
   function onLine() { if (typeof c.online !== 'function') return true; try { return !!c.online(); } catch (_) { return true; } }
   /** a person proved by the host's own credential: no token, no session — an identity, exactly what a counter keeps */
   function localSession(p) {
@@ -209,12 +209,12 @@ function machine(c, io) {
     if (!a.ok) { set({ why: a.why }); return Promise.resolve(S); }
     set({ busy: true, why: '' });
     S.asks++;
-    return post('/api/signin/ask', a.body).then(function (r) {
-      var b = r.body || {};
-      if (r.status === 409 && b.code === 'CHOOSE_IDENTITY' && Array.isArray(b.choices) && b.choices.length) {
+    return post('/api/signin/ask', a.body).then(function (reply) {
+      var b = reply.body || {};
+      if (reply.status === 409 && b.code === 'CHOOSE_IDENTITY' && Array.isArray(b.choices) && b.choices.length) {
         return set({ busy: false, at: 'choose', choices: b.choices, said: b.message || '' });
       }
-      if (r.status < 200 || r.status >= 300) return set({ busy: false, why: refusalOf(r) });
+      if (reply.status < 200 || reply.status >= 300) return set({ busy: false, why: refusalOf(reply) });
       var resolved = String(b.id || b.user_id || b.handle || a.body.id || a.body.email || a.body.user_id || typedId);
       return set({ busy: false, at: 'credential', need: needOf(b), kind: kindOf(b), resolved: resolved, local: null,
                    sent: needOf(b) === 'code' ? { id: resolved, typed: String(typedId), kind: kindOf(b), at: Date.now() } : null,
@@ -231,8 +231,8 @@ function machine(c, io) {
     }
     /* ⭐ THE HOST'S OWN CREDENTIAL FIRST (the till's counter PIN, SPEC-counter-identity §3): somebody who set one here signs in
        with it, line or no line — the shift change that happens forty times a day needs no code in a mailbox. Nothing is posted. */
-    if (L && !S.viaLine) {
-      var e = null; try { e = L.find(w.value); } catch (_) { e = null; }
+    if (list && !S.viaLine) {
+      var e = null; try { e = list.find(w.value); } catch (_) { e = null; }
       if (e) return Promise.resolve(set({ at: 'credential', need: 'pin', local: e, kind: e.kind || '', resolved: w.value, why: '', said: '' }));
     }
     return askFor(w.value);
@@ -245,8 +245,8 @@ function machine(c, io) {
      4-digit PIN and a 6-digit code (chitbridge-engines signin.code; widening it is queued for the engines round). Only on the
      code step, never for a PIN or the host's local credential; the SERVER decides whether it is good. */
   function longCode(cred) {
-    var v = String(cred == null ? '' : cred).trim();
-    return S.need === 'code' && !S.local && v.length >= 8 && v.length <= 64 ? { ok: true, value: v, isPin: false } : null;
+    var text = String(cred == null ? '' : cred).trim();
+    return S.need === 'code' && !S.local && text.length >= 8 && text.length <= 64 ? { ok: true, value: text, isPin: false } : null;
   }
   function verify(cred) {
     var code = longCode(cred) || E.code(cred);
@@ -254,26 +254,26 @@ function machine(c, io) {
     if (S.need === 'pin' && !code.isPin) { set({ why: E.pinShape('', W.pinName).why }); return Promise.resolve(S); }
     if (S.need === 'code' && code.isPin) { set({ why: 'A code is six digits.' }); return Promise.resolve(S); }
     /* ⭐ the host judges its own credential (the engine's pinAfter, in the host's book) — no network, whatever the line is doing */
-    if (S.local && L) {
+    if (S.local && list) {
       set({ busy: true, why: '' });
       S.verifies++;
-      return Promise.resolve().then(function () { return L.check(S.local, code.value); }).then(function (a) {
-        a = a || {};
-        if (!a.ok) {
+      return Promise.resolve().then(function () { return list.check(S.local, code.value); }).then(function (reply) {
+        reply = reply || {};
+        if (!reply.ok) {
           /* locked: back to the box — the line is the only way on from here */
-          if (a.locked) return set({ busy: false, at: 'out', local: null, need: '', resolved: '', why: a.why || '' });
-          return set({ busy: false, local: a.entry || S.local, why: a.why || '' });
+          if (reply.locked) return set({ busy: false, at: 'out', local: null, need: '', resolved: '', why: reply.why || '' });
+          return set({ busy: false, local: reply.entry || S.local, why: reply.why || '' });
         }
-        return signedIn(localSession(a.person), null);
+        return signedIn(localSession(reply.person), null);
       }, function (x) { return set({ busy: false, why: (x && x.message) || 'The PIN could not be checked.' }); });
     }
     var body = { id: S.resolved }; body[code.isPin ? 'pin' : 'otp'] = code.value;
     set({ busy: true, why: '' });
     S.verifies++;
-    return post('/api/signin/verify', body).then(function (r) {
-      var b = r.body || {};
-      if (r.status === 409 && b.code === 'CHOOSE_IDENTITY' && Array.isArray(b.choices)) return set({ busy: false, at: 'choose', choices: b.choices });
-      if (r.status < 200 || r.status >= 300 || !b.token) return set({ busy: false, why: refusalOf(r) });
+    return post('/api/signin/verify', body).then(function (reply) {
+      var b = reply.body || {};
+      if (reply.status === 409 && b.code === 'CHOOSE_IDENTITY' && Array.isArray(b.choices)) return set({ busy: false, at: 'choose', choices: b.choices });
+      if (reply.status < 200 || reply.status >= 300 || !b.token) return set({ busy: false, why: refusalOf(reply) });
       var s = sessionOf(b);
       S.sent = null;                                   /* ⚠️ the code is spent: nothing here asks for it again */
       S.answer = b;                                    /* the verify body as it came — handed to onIn beside the session */
@@ -286,14 +286,14 @@ function machine(c, io) {
     if (!p.ok) { set({ why: p.why }); return Promise.resolve(S); }
     set({ busy: true, why: '' });
     /* ⭐ the LOCAL book (offerPin): the host keeps it — a salt and a hash under the shop, never the PIN. Already signed in; no onIn again. */
-    if (S.localPin && L && typeof L.save === 'function') {
-      return Promise.resolve().then(function () { return L.save(S.session, p.value); }).then(function (r) {
-        if (!r || !r.ok) return set({ busy: false, why: (r && r.why) || 'The PIN could not be kept.' });
+    if (S.localPin && list && typeof list.save === 'function') {
+      return Promise.resolve().then(function () { return list.save(S.session, p.value); }).then(function (reply) {
+        if (!reply || !reply.ok) return set({ busy: false, why: (reply && reply.why) || 'The PIN could not be kept.' });
         return set({ busy: false, at: 'in', localPin: false, said: W.signedIn(S.session.name || S.session.person.id || '') });
       }, function (x) { return set({ busy: false, why: (x && x.message) || 'The PIN could not be kept.' }); });
     }
-    return post('/api/signin/pin', { pin: p.value, confirm_pin: p.value }, S.token).then(function (r) {
-      if (r.status < 200 || r.status >= 300) return set({ busy: false, why: refusalOf(r) });
+    return post('/api/signin/pin', { pin: p.value, confirm_pin: p.value }, S.token).then(function (reply) {
+      if (reply.status < 200 || reply.status >= 300) return set({ busy: false, why: refusalOf(reply) });
       return signedIn(S.session, S.answer || null);
     });
   }
@@ -307,8 +307,8 @@ function machine(c, io) {
   function offerPin(given) {
     /* `given` (optional): a person the host already holds as signed in — the till after a reload, whose token went on the key */
     if (given && S.at !== 'in') set({ at: 'in', session: given, token: given.token || null, said: W.signedIn(given.name || (given.person && given.person.id) || '') });
-    if (S.at !== 'in' || !S.session || !L || typeof L.save !== 'function') return Promise.resolve(S);
-    var has = false; try { has = typeof L.has === 'function' ? !!L.has(S.session.person) : false; } catch (_) { has = false; }
+    if (S.at !== 'in' || !S.session || !list || typeof list.save !== 'function') return Promise.resolve(S);
+    var has = false; try { has = typeof list.has === 'function' ? !!list.has(S.session.person) : false; } catch (_) { has = false; }
     if (has) return Promise.resolve(S);
     return Promise.resolve(set({ at: 'setpin', localPin: true, why: '', said: W.localWhy }));
   }
@@ -362,22 +362,22 @@ var CSS = '.cbsi{max-width:420px;margin:0 auto;font:inherit;color:var(--ink,#1D1
   '.cbsi .cbsi-ch b{font-weight:700}.cbsi .cbsi-ch span{color:var(--muted,var(--grey,#5E594D));font-size:13px}' +
   '.cbsi .cbsi-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between}';
 var cssDone = false;
-function addCss() { if (cssDone || !doc) return; cssDone = true; var s = doc.createElement('style'); s.setAttribute('data-cbsi', '1'); s.textContent = CSS; (doc.head || doc.documentElement).appendChild(s); }
+function addCss() { if (cssDone || !doc) return; cssDone = true; var node = doc.createElement('style'); node.setAttribute('data-cbsi', '1'); node.textContent = CSS; (doc.head || doc.documentElement).appendChild(node); }
 
 function paint(host, m, c) {
   var S = m.state(), W = m.words, h = '';
   var why = S.why ? '<p class="cbsi-why" role="alert" data-testid="signin-why">' + esc(S.why) + '</p>' : '';
   var busy = S.busy ? ' disabled' : '';
   if (S.at === 'out') {
-    var slots = m.methods().map(function (k) { return '<button type="button" class="cbsi-m" data-cbsi="method" data-method="' + k + '" data-testid="signin-' + k + '">' + esc(METHODS[k].label) + '</button>'; }).join('');
+    var slots = m.methods().map(function (item) { return '<button type="button" class="cbsi-m" data-cbsi="method" data-method="' + item + '" data-testid="signin-' + item + '">' + esc(METHODS[item].label) + '</button>'; }).join('');
     h = '<h2>' + esc(W.title) + '</h2>' + why +
       '<label>' + esc(W.id) + '<input name="id" data-testid="signin-id" type="text" inputmode="email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="go" value="' + esc(S.typed) + '"></label>' +
       '<button type="submit" class="cbsi-go" data-testid="signin-go"' + busy + '>' + esc(S.busy ? W.working : W.go) + '</button>' + slots +
       (c.registerHref ? '<a class="cbsi-ln" data-cbsi="register" data-testid="signin-register" href="' + esc(c.registerHref) + '">' + esc(W.register) + '</a>' : '');
   } else if (S.at === 'choose') {
     h = '<h2>' + esc(W.which) + '</h2>' + why +
-      S.choices.map(function (ch, i) {
-        return '<button type="button" class="cbsi-ch" data-cbsi="choose" data-i="' + i + '" data-testid="signin-choice"><b>' + esc(ch.name || ch.id) + '</b><span>' + esc((W.kinds[ch.kind] || ch.kind || '') + (ch.shop ? ' ' + W.at + ' ' + ch.shop : '')) + '</span></button>';
+      S.choices.map(function (item, index) {
+        return '<button type="button" class="cbsi-ch" data-cbsi="choose" data-i="' + index + '" data-testid="signin-choice"><b>' + esc(item.name || item.id) + '</b><span>' + esc((W.kinds[item.kind] || item.kind || '') + (item.shop ? ' ' + W.at + ' ' + item.shop : '')) + '</span></button>';
       }).join('') +
       '<button type="button" class="cbsi-ln" data-cbsi="back" data-testid="signin-back">' + esc(W.back) + '</button>';
   } else if (S.at === 'credential') {
@@ -437,16 +437,16 @@ function mount(host, c) {
     else if (S.at === 'setpin') m.setPin(f.pin1 ? f.pin1.value : '', f.pin2 ? f.pin2.value : '');
   }
   function onClick(e) {
-    var t = e.target && e.target.closest ? e.target.closest('[data-cbsi]') : null;
-    if (!t || !host.contains(t)) return;
-    var k = t.getAttribute('data-cbsi');
-    if (k === 'choose') m.choose(Number(t.getAttribute('data-i')));
+    var node = e.target && e.target.closest ? e.target.closest('[data-cbsi]') : null;
+    if (!node || !host.contains(node)) return;
+    var k = node.getAttribute('data-cbsi');
+    if (k === 'choose') m.choose(Number(node.getAttribute('data-i')));
     else if (k === 'again') m.again();
     else if (k === 'back') m.back();
     else if (k === 'line') m.line();
     else if (k === 'later') m.later();
-    else if (k === 'method' && typeof c.onMethod === 'function') c.onMethod(t.getAttribute('data-method'));
-    else if (k === 'register') goRegister(e, t);
+    else if (k === 'method' && typeof c.onMethod === 'function') c.onMethod(node.getAttribute('data-method'));
+    else if (k === 'register') goRegister(e, node);
   }
   function onInput(e) { if (host.contains(e.target) && e.target.name === 'id') m.typed(e.target.value); }
   doc.addEventListener('submit', onSubmit);
