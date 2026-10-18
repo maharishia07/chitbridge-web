@@ -54,7 +54,7 @@ async function crmCallsRead(scope) {
 /* what the first page said, kept once: the rows, the outcome table, the server's may, the late count and the shop's day */
 function crmCallsApply(read) {
   var head = read.head;
-  CALLS.rows = read.rows.map(function (c) { return Object.assign({ id: c.followup_id || 'new-' + c.party_id }, c); });
+  CALLS.rows = read.rows.map(function (item) { return Object.assign({ id: item.followup_id || 'new-' + item.party_id }, item); });
   CALLS.outcomes = head.outcomes || []; CALLS.may = head.may || { ok: true }; CALLS.late = Number(head.late) || 0;
   crmMaySet(head.may); if (head.shop_day) CRM.shopDay = head.shop_day;   /* the server's may.write and its day, kept once for every CRM screen */
 }
@@ -97,8 +97,8 @@ function crmCallWhy(o) {
   };
 }
 function crmCallActions() {
-  return (CALLS.outcomes || []).map(function (o) {
-    return { id: o.key, label: tx(CALL_WORD[o.key] || o.key), icon: CALL_ICO[o.key] || '•', tid: 'crm-call-' + o.key, why: crmCallWhy(o), run: function (c) { crmCallPick(c, o); } };
+  return (CALLS.outcomes || []).map(function (item) {
+    return { id: item.key, label: tx(CALL_WORD[item.key] || item.key), icon: CALL_ICO[item.key] || '•', tid: 'crm-call-' + item.key, why: crmCallWhy(item), run: function (c) { crmCallPick(c, item); } };
   });
 }
 
@@ -107,8 +107,8 @@ function crmCallActions() {
 function crmCallScriptHTML(call) {
   var stage = call.stage || 'lead';
   var lines = (call.script && call.script.length ? call.script : CALL_SCRIPT[stage]) || CALL_SCRIPT.lead;
-  var scriptRows = lines.map(function (line, i) {
-    return '<div class="nx"><span class="tx" data-testid="crm-call-line-' + (i + 1) + '">' + (i + 1) + ' · ' + esc(tx(line)) + '</span></div>';
+  var scriptRows = lines.map(function (line, index) {
+    return '<div class="nx"><span class="tx" data-testid="crm-call-line-' + (index + 1) + '">' + (index + 1) + ' · ' + esc(tx(line)) + '</span></div>';
   }).join('');
   var about = call.what ? esc(tx('Follow-up')) + ': ' + esc(tx(call.what)) : esc(tx('First call'));
   return '<section class="next" aria-label="' + esc(tx('Script')) + '" data-testid="crm-call-script" data-stage="' + esc(stage) + '">'
@@ -120,7 +120,7 @@ function crmCallScriptHTML(call) {
 function crmCallFollowing(rowId) {
   var host = CALLS.api && CALLS.api.el; if (!host) return null;
   var rowEls = [].slice.call(host.querySelectorAll('[data-row]')), at = -1;
-  rowEls.forEach(function (rowEl, i) { if (rowEl.getAttribute('data-row') === String(rowId)) at = i; });
+  rowEls.forEach(function (rowEl, index) { if (rowEl.getAttribute('data-row') === String(rowId)) at = index; });
   var following = at >= 0 ? rowEls[at + 1] : null;
   return following ? following.getAttribute('data-row') : null;
 }
@@ -138,7 +138,7 @@ function crmCallPick(c, o) {
   if (!o.ask) { crmCallSend(c, o, {}, null); return; }
   CALLS.pick = { c: c, o: o };
   modal('<div class="mhd"><div class="t">' + esc(tx(CALL_WORD[o.key] || o.key)) + ' · ' + esc(c.party_name || '') + '</div></div><div class="mbody" data-testid="crm-call-ask">'
-    + '<div class="supacts">' + (o.presets || []).map(function (k) { return '<button type="button" class="act ghost" data-crm="callafter" data-v="' + esc(k) + '" data-testid="crm-call-after-' + esc(k) + '">' + esc(tx(CALL_PRESET[k] || k)) + '</button>'; }).join('') + '</div>'
+    + '<div class="supacts">' + (o.presets || []).map(function (item) { return '<button type="button" class="act ghost" data-crm="callafter" data-v="' + esc(item) + '" data-testid="crm-call-after-' + esc(item) + '">' + esc(tx(CALL_PRESET[item] || item)) + '</button>'; }).join('') + '</div>'
     + '<label>' + esc(tx('Pick a day')) + '<input class="inp" type="date" id="crm_call_day" data-testid="crm-call-day"></label>'
     + '<div id="crm_call_msg" class="hint" role="status" data-testid="crm-call-msg"></div></div>'
     + '<div class="mfoot"><button type="button" onclick="closeModal()">' + esc(tx('Cancel')) + '</button><button type="button" class="pri" data-crm="callday" data-testid="crm-call-day-save">' + esc(tx('Save')) + '</button></div>');
@@ -166,9 +166,9 @@ function crmCallClick(action, target) {
     var extra = {};
     if (action === 'callafter') extra.after = target.getAttribute('data-v');
     else {
-      var day = String((document.getElementById('crm_call_day') || {}).value || ''), msg = document.getElementById('crm_call_msg');
-      if (!day) { if (msg) msg.textContent = tx('Pick a day.'); return true; }
-      extra.due_at = day;
+      var node = String((document.getElementById('crm_call_day') || {}).value || ''), msg = document.getElementById('crm_call_msg');
+      if (!node) { if (msg) msg.textContent = tx('Pick a day.'); return true; }
+      extra.due_at = node;
     }
     crmCallSend(picked.c, picked.o, extra, target); return true;
   }
@@ -178,8 +178,8 @@ function crmCallClick(action, target) {
 /* ═══ THE CALLS TAB ═════════════════════════════════════════════════════════════════════════════════════════════ */
 function crmCalls(frame) {
   crmBar('<strong>' + esc(tx('CRM')) + '</strong>', '', true);
-  var s = document.getElementById('screen'); s.className = 'screen flush';
-  s.innerHTML = '<div id="crm_calls" data-testid="crm-calls"></div>';
+  var node = document.getElementById('screen'); node.className = 'screen flush';
+  node.innerHTML = '<div id="crm_calls" data-testid="crm-calls"></div>';
   /* no destroy() here: the old #crm_calls left the page with the innerHTML above, and CBList.mount prunes every instance whose element is gone (list-ctl.js prune) — the old try/catch was an empty catch */
   var def = crmOwner() ? 'all' : 'mine', el = document.getElementById('crm_calls');
   CALLS.api = CBList.mount(el, {
