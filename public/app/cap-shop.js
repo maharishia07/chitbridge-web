@@ -131,10 +131,10 @@ function vaultCardHTML(vault, encrypted){
     : '<div style="font-size:var(--fs-1);color:var(--warn-2);background:var(--warn-tint);border:1px solid var(--gold-line,#f0dcae);border-radius:9px;padding:7px 10px;margin:6px 0 2px">⚠ <b>' + tx('Encryption not configured') + '</b> — ' + esc(tx('the vault does not save yet.')) + ' <span title="' + esc(tx('The platform must set its encryption key first. Use dummy data only.')) + '" style="cursor:help">ⓘ</span></div>';
   var only=UI._vaultOnly||'';   /* SET1: a small app asks for ONE section type (identity); the workshop's Documents shows them all */
   var secs=(UI._vault&&UI._vault.sections)||[];
-  var shown=secs.map(function(s,i){ return [s,i]; }).filter(function(p){ return (!only||p[0].type===only)&&!VAULT_HIDDEN_TYPES[p[0].type]; });
-  var body=shown.length ? shown.map(function(p){ return vaultSectionHTML(p[0],p[1]); }).join('')
+  var shown=secs.map(function(item,index){ return [item,index]; }).filter(function(item){ return (!only||item[0].type===only)&&!VAULT_HIDDEN_TYPES[item[0].type]; });
+  var body=shown.length ? shown.map(function(item){ return vaultSectionHTML(item[0],item[1]); }).join('')
     : '<div style="color:var(--grey);font-size:var(--fs-2);padding:9px 0" data-testid="vault-empty">' + esc(tx('Nothing here yet.')) + '</div>';
-  var addOpts=Object.keys(VAULT_SECTION_TYPES).filter(function(t){ return (!only||t===only)&&!VAULT_HIDDEN_TYPES[t]; }).map(function(t){ return '<option value="'+t+'">'+esc(VAULT_SECTION_TYPES[t])+'</option>'; }).join('');
+  var addOpts=Object.keys(VAULT_SECTION_TYPES).filter(function(item){ return (!only||item===only)&&!VAULT_HIDDEN_TYPES[item]; }).map(function(item){ return '<option value="'+item+'">'+esc(VAULT_SECTION_TYPES[item])+'</option>'; }).join('');
   if (only) return '<div style="'+_CARD+';margin-top:10px" data-testid="vault-only-'+esc(only)+'">'+(vaultPlain() ? '' : '<div class="sec" style="margin:0">'+esc(VAULT_SECTION_TYPES[only]||only)+'</div>')
     +encBanner+body
     +'<div style="display:flex;gap:7px;align-items:center;margin-top:13px;flex-wrap:wrap"><select class="inp" id="v_addtype" hidden>'+addOpts+'</select>'
@@ -152,7 +152,7 @@ function vaultCardHTML(vault, encrypted){
 }
 /* One section — its type, an optional label that tells two of the same kind apart, and its rows. */
 function vaultSectionHTML(sec, i){
-  var rows=(sec.rows||[]).map(function(r,j){ return vaultRowHTML(r,i,j,sec.type); }).join('');
+  var rows=(sec.rows||[]).map(function(item,index){ return vaultRowHTML(item,i,index,sec.type); }).join('');
   if (vaultPlain()) return '<div style="margin-top:11px" data-testid="vault-plain">'+rows+'</div>';   /* R21 */
   return '<div style="border:1px solid var(--line);border-radius:11px;padding:11px 12px;margin-top:11px;background:var(--paper);color:var(--on-bg)">'
     +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">'
@@ -181,10 +181,10 @@ function vaultRowHTML(r,i,j,type){
     /* ⚠️ Blank stays FIRST and selectable — these are defaults, not answers. An unrecognised stored value is kept
        as its own option and MARKED, never silently dropped: free text saved before this was a list must survive. */
     var known=false;
-    var opts=enums.map(function(g){
-      var o=g[1].map(function(x){ if(x[0]===r.value) known=true;
+    var opts=enums.map(function(item){
+      var o=item[1].map(function(x){ if(x[0]===r.value) known=true;
         return '<option value="'+esc(x[0])+'"'+(x[0]===r.value?' selected':'')+'>'+esc(x[1])+'</option>'; }).join('');
-      return g[0]?'<optgroup label="'+esc(g[0])+'">'+o+'</optgroup>':o; }).join('');
+      return item[0]?'<optgroup label="'+esc(item[0])+'">'+o+'</optgroup>':o; }).join('');
     var keep=(r.value&&!known)?'<option value="'+esc(r.value)+'" selected>'+esc(r.value)+' — not a standard code</option>':'';
     val='<select class="inp" style="flex:1 1 120px;min-width:105px;margin:0" onchange="vaultSetRow('+i+','+j+',\'value\',this.value)">'
       +'<option value=""'+(r.value?'':' selected')+'>— none —</option>'+keep+opts+'</select>';
@@ -207,15 +207,15 @@ function vaultRowHTML(r,i,j,type){
 /* The suggestion lists — one <datalist> per section type, emitted once. A datalist SUGGESTS and never restricts,
    which is exactly the contract we want: type "IFSC code" and get the tag, type anything else and keep it. */
 function vaultDatalists(){
-  return Object.keys(VAULT_SUGGEST).map(function(t){
-    return '<datalist id="vsug_'+t+'">'+vaultSuggest(t).map(function(s){ return '<option value="'+esc(s[0])+'">'; }).join('')+'</datalist>';
+  return Object.keys(VAULT_SUGGEST).map(function(item){
+    return '<datalist id="vsug_'+item+'">'+vaultSuggest(item).map(function(s){ return '<option value="'+esc(s[0])+'">'; }).join('')+'</datalist>';
   }).join('');
 }
 function _vaultSecs(){ UI._vault=UI._vault||{sections:[]}; UI._vault.sections=UI._vault.sections||[]; return UI._vault.sections; }
-function _vaultPaint(){ var h=document.getElementById('vaulthost'); if(h) h.innerHTML=vaultCardHTML(null,UI._vaultEnc)+vaultDatalists()+vaultEnd(); }
+function _vaultPaint(){ var node=document.getElementById('vaulthost'); if(node) node.innerHTML=vaultCardHTML(null,UI._vaultEnc)+vaultDatalists()+vaultEnd(); }
 /** W22: the section the picker holds — remembered as it is chosen (UI._vaultAddType), so a repaint between the choice and the press cannot reset it */
 function vaultPickType(value){ UI._vaultAddType=String(value||''); }
-function vaultAddSection(){ var s=document.getElementById('v_addtype'), type=UI._vaultAddType||(s&&s.value)||(UI._vaultOnly||'other');
+function vaultAddSection(){ var node=document.getElementById('v_addtype'), type=UI._vaultAddType||(node&&node.value)||(UI._vaultOnly||'other');
   _vaultSecs().push({type:VAULT_SECTION_TYPES[type]?type:'other',label:'',rows:vaultStarterRows(type)}); _vaultPaint(); }
 function vaultDelSection(i){ _vaultSecs().splice(i,1); _vaultPaint(); }
 function vaultSetSection(i,v){ var s=_vaultSecs()[i]; if(s) s.label=v; }   // no repaint — would drop focus mid-word
@@ -256,9 +256,9 @@ async function loadVault(){
      a save, an actor profile. See _profSeedIncluded. */
   if (UI._vaultSeeded) UI._vaultSeeded = false;
   else await readVault();
-  var h2=document.getElementById('vaulthost'); if(!h2) return;   // ⚠️ re-query: a repaint may have landed mid-fetch
-  h2.innerHTML=vaultCardHTML(null,UI._vaultEnc)+vaultDatalists()+vaultEnd();
-  if(window.CBOffline)CBOffline.autodraft(h2,'app.vault',{overwrite:true});   // restore unsaved edits over the server copy
+  var node=document.getElementById('vaulthost'); if(!node) return;   // ⚠️ re-query: a repaint may have landed mid-fetch
+  node.innerHTML=vaultCardHTML(null,UI._vaultEnc)+vaultDatalists()+vaultEnd();
+  if(window.CBOffline)CBOffline.autodraft(node,'app.vault',{overwrite:true});   // restore unsaved edits over the server copy
 }
 /* ── ⭐ SET-WALK1 · W25 — THE VAULT IS SAVED AS A MERGE-PATCH WITH A VERSION, NEVER AS A WHOLE ─────────────────────────────────────
  * Athi's walk (15 Oct): a screen opened earlier overwrote a newer legal name because every Save sent { sections: ALL }. Now the model keeps
@@ -419,14 +419,14 @@ var CBShop = (function () {
              : '<button type="button" class="act" id="shop-save" data-testid="shop-save" style="margin-top:8px;display:none">' + esc0(tx('Save')) + '</button>');
   }
   function paint(){
-    var h = H.host; if (!h) return;
+    var node = H.host; if (!node) return;
     UI._vaultOnly = 'identity';
     /* walk 2026-10-16 (R19): "Your business"; the identity heading is "Your identity"; no explanation lines, no doors under the boxes */
-    h.innerHTML = card(tx('Your business'), shopCardHTML(H.me), 'shop-card')
+    node.innerHTML = card(tx('Your business'), shopCardHTML(H.me), 'shop-card')
       + '<h2 class="shop-h" style="margin-top:14px" data-testid="shop-forms-title">' + esc0(tx('Your identity')) + '</h2>'
       + '<div id="vaulthost" data-testid="shop-identity"></div>';
     var b = document.getElementById('shop-save'); if (b) b.onclick = function () { shopSave(b); };
-    if (!h._autosave) { h._autosave = true; h.addEventListener('change', onChange); }
+    if (!node._autosave) { node._autosave = true; node.addEventListener('change', onChange); }
     loadVault().then(prefillIdentity);
   }
   /* ── WALK-REG 2026-10-16 R19: the fields save themselves (the pattern of Print setup, cap-print.js saveSoon): a changed field saves after a short pause,
@@ -483,7 +483,7 @@ var CBShop = (function () {
   }
   function read(){
     if (H.loading) return; H.loading = true;
-    api('me').then(function (r) { H.me = (r && (r.entity || r)) || {}; }, function (e) { H.me = {}; if (e && e.status === 401 && typeof CBFrame !== 'undefined') CBFrame.ended(); })
+    api('me').then(function (reply) { H.me = (reply && (reply.entity || reply)) || {}; }, function (e) { H.me = {}; if (e && e.status === 401 && typeof CBFrame !== 'undefined') CBFrame.ended(); })
       .then(function () { H.loading = false; shopCountry(H.me); paint(); });
   }
   /** the shop's country from /me, kept on THIS card (STD2: never written to the global SESSION.country) — the words above pass it to helpers.js shopReg(cc) */
