@@ -148,7 +148,7 @@
   "public/shop.html": {"score":296,"long40":4,"long80":0,"complex10":19,"complex15":10,"deep3":0,"deep4":0,"cryptic":226,"noWhatLine":25,"emptyCatch":12,"noHeader":0},
   "public/signin-lab.html": {"score":30,"long40":0,"long80":0,"complex10":4,"complex15":2,"deep3":0,"deep4":0,"cryptic":22,"noWhatLine":2,"emptyCatch":0,"noHeader":0},
   "public/standards.html": {"score":91,"long40":0,"long80":0,"complex10":3,"complex15":1,"deep3":0,"deep4":0,"cryptic":74,"noWhatLine":4,"emptyCatch":9,"noHeader":0},
-  "public/store.html": {"score":27,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":24,"noWhatLine":2,"emptyCatch":1,"noHeader":0},
+  "public/store.html": {"score":13,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":10,"noWhatLine":2,"emptyCatch":1,"noHeader":0},
   "public/storefront-design.html": {"score":23,"long40":0,"long80":0,"complex10":1,"complex15":0,"deep3":0,"deep4":0,"cryptic":18,"noWhatLine":3,"emptyCatch":0,"noHeader":1},
   "public/supplier-design.html": {"score":17,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":15,"noWhatLine":1,"emptyCatch":0,"noHeader":1},
   "public/tasks.html": {"score":22,"long40":0,"long80":0,"complex10":1,"complex15":0,"deep3":0,"deep4":0,"cryptic":21,"noWhatLine":0,"emptyCatch":0,"noHeader":0},
