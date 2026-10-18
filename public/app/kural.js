@@ -39,7 +39,7 @@
 
   function lsGet(k) { try { return root.localStorage.getItem(k); } catch (_) { return null; } }
   function lsSet(k, v) { try { root.localStorage.setItem(k, v); } catch (_) {} }
-  function today() { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+  function today() { var date = new Date(); return date.getFullYear() + '-' + ('0' + (date.getMonth() + 1)).slice(-2) + '-' + ('0' + date.getDate()).slice(-2); }
   function hiddenToday() { return lsGet('kural.hidden') === today(); }
 
   var CSS = [
@@ -94,7 +94,7 @@
 
   function css() {
     if (!doc || doc.getElementById('cbk_css')) return;
-    var s = doc.createElement('style'); s.id = 'cbk_css'; s.textContent = CSS; doc.head.appendChild(s);
+    var node = doc.createElement('style'); node.id = 'cbk_css'; node.textContent = CSS; doc.head.appendChild(node);
     /* Noto Serif Tamil — the verse's face (a font the standard adds); a page that cannot reach it falls back to Noto Sans Tamil / the system's */
     if (!doc.getElementById('cbk_font')) {
       var l = doc.createElement('link'); l.id = 'cbk_font'; l.rel = 'stylesheet'; l.href = 'https://fonts.googleapis.com/css2?family=Noto+Serif+Tamil:wght@500;600;700&display=swap'; doc.head.appendChild(l);
@@ -104,7 +104,7 @@
   function load() {
     if (DATA) return Promise.resolve(DATA);
     if (LOADING) return LOADING;
-    LOADING = root.fetch(SRC, { cache: 'no-cache' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) { DATA = j && j.kurals ? j : { kurals: [], excluded: [] }; return DATA; }, function () { DATA = { kurals: [], excluded: [] }; return DATA; });
+    LOADING = root.fetch(SRC, { cache: 'no-cache' }).then(function (reply) { return reply.ok ? reply.json() : null; }).then(function (reply) { DATA = reply && reply.kurals ? reply : { kurals: [], excluded: [] }; return DATA; }, function () { DATA = { kurals: [], excluded: [] }; return DATA; });
     return LOADING;
   }
   /** a route's kural; the kit's `excluded` list (552) can never be returned */
@@ -135,7 +135,7 @@
     return { text: m.en || '', lang: 'en' };
   }
   /** a line breaks only at its middle, the rest indented — the browser never breaks a couplet at random */
-  function kline(s) { var w = String(s).split(' '), m = Math.ceil(w.length / 2); return '<span class="cbk-ln"><span class="cbk-h">' + esc(w.slice(0, m).join(' ')) + '</span> <span class="cbk-h">' + esc(w.slice(m).join(' ')) + '</span></span>'; }
+  function kline(s) { var text = String(s).split(' '), m = Math.ceil(text.length / 2); return '<span class="cbk-ln"><span class="cbk-h">' + esc(text.slice(0, m).join(' ')) + '</span> <span class="cbk-h">' + esc(text.slice(m).join(' ')) + '</span></span>'; }
   var SEAL = '<svg class="cbk-seal" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="29" stroke-width="2.5"/><ellipse cx="32" cy="13" rx="4.4" ry="3.6"/><circle cx="32" cy="22" r="6.4"/><path d="M25.8 23.5Q26 33 32 38.5Q38 33 38.2 23.5Q32 27 25.8 23.5Z"/><path d="M15.5 54Q16.5 41 26 36.8L32 40L38 36.8Q47.5 41 48.5 54Z"/></svg>';
 
   /** what is on screen that the band must not sit beside: a warning, an alert, a bad card, a dialog */
@@ -143,7 +143,7 @@
   var BLOCK_SEL = '.cbl-chip.warn,.cbl-chip.bad,[role="alert"],.card.bad,.pe-bad,.pe-warn,dialog[open],.modalback,#modal.on';
   function blockedNow() {
     var list = doc.querySelectorAll(BLOCK_SEL);
-    for (var i = 0; i < list.length; i++) { var e = list[i]; if (EL && EL.contains(e)) continue; if (e.offsetWidth || e.offsetHeight || e.getClientRects().length) return true; }
+    for (var index = 0; index < list.length; index++) { var e = list[index]; if (EL && EL.contains(e)) continue; if (e.offsetWidth || e.offsetHeight || e.getClientRects().length) return true; }
     return false;
   }
   /** which width class the band is in, and the height it had there last time (so the room kept for it is the right size from the first paint) */
@@ -206,9 +206,9 @@
   }
   function swap() { if (!EL || !EL.clientWidth || EL.clientWidth > 640) return; PAUSED = true; clearInterval(TIMER); TIMER = null; SECOND = !SECOND; EL.classList.toggle('second', SECOND); }
   function onClick(e) {
-    var t = e.target.closest ? e.target.closest('[data-kswap],[data-khide],[data-kshow]') : null; if (!t) return;
-    if (t.hasAttribute('data-khide')) { lsSet('kural.hidden', today()); paint(); var s = EL.querySelector('[data-kshow]'); if (s) s.focus(); return; }
-    if (t.hasAttribute('data-kshow')) { lsSet('kural.hidden', ''); paint(); return; }
+    var node = e.target.closest ? e.target.closest('[data-kswap],[data-khide],[data-kshow]') : null; if (!node) return;
+    if (node.hasAttribute('data-khide')) { lsSet('kural.hidden', today()); paint(); var s = EL.querySelector('[data-kshow]'); if (s) s.focus(); return; }
+    if (node.hasAttribute('data-kshow')) { lsSet('kural.hidden', ''); paint(); return; }
     swap();
   }
 
@@ -218,7 +218,7 @@
     if (OBS || !root.MutationObserver) return;
     OBS = new root.MutationObserver(function (list) {
       if (QUEUED) return;
-      var mine = list.every(function (m) { return EL && EL.contains(m.target); }); if (mine) return;
+      var mine = list.every(function (item) { return EL && EL.contains(item.target); }); if (mine) return;
       QUEUED = true; (root.requestAnimationFrame || root.setTimeout)(function () { QUEUED = false; var b = blockedNow(); if (b !== BLOCKED) paint(); else touch(); });
     });
     OBS.observe(doc.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'hidden', 'open', 'style'] });
