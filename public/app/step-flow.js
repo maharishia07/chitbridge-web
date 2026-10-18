@@ -33,7 +33,7 @@
   'use strict';
 
   var F = {};      // ns -> flow state
-  var SEQ = 0;
+  var count = 0;
 
   function doc(id) { return (typeof document !== 'undefined' && id) ? document.getElementById(id) : null; }
   function opt(s, k, dflt) { var v = s && s.o && s.o[k]; return v === undefined ? dflt : v; }
@@ -55,8 +55,8 @@
     var r = call(s, 'guard', keyAt(s, i), null);
     if (r) return r;
     if (i === s.steps.length - 1) {
-      for (var j = 0; j < s.steps.length - 1; j++) {
-        var e = call(s, 'guard', keyAt(s, j), null);
+      for (var index = 0; index < s.steps.length - 1; index++) {
+        var e = call(s, 'guard', keyAt(s, index), null);
         if (e) return e;
       }
     }
@@ -88,8 +88,8 @@
    */
   function focusFirst(ns) {
     var s = F[ns]; if (!s || typeof document === 'undefined') return;
-    var b = doc(opt(s, 'bodyEl')); if (!b) return;
-    var el = b.querySelector('input:not([type=hidden]):not([disabled]),select:not([disabled]),textarea:not([disabled]),button:not([disabled]),[tabindex]:not([tabindex="-1"])');
+    var node = doc(opt(s, 'bodyEl')); if (!node) return;
+    var el = node.querySelector('input:not([type=hidden]):not([disabled]),select:not([disabled]),textarea:not([disabled]),button:not([disabled]),[tabindex]:not([tabindex="-1"])');
     if (el && typeof el.focus === 'function') { try { el.focus({ preventScroll: false }); } catch (e) {} }
   }
   function go(ns, i) {
@@ -139,13 +139,13 @@
    */
   function railHTML(ns) {
     var s = F[ns]; if (!s) return '';
-    return '<div class="cbst-rail" data-testid="steps-' + esc(ns) + '">' + s.steps.map(function (st, i) {
-      var done = i < s.i, now = i === s.i;
+    return '<div class="cbst-rail" data-testid="steps-' + esc(ns) + '">' + s.steps.map(function (item, index) {
+      var done = index < s.i, now = index === s.i;
       var cls = 'cbst' + (now ? ' now' : (done ? ' done' : ''));
-      var clickable = i !== s.i && canReach(s, i);
-      return '<div class="' + cls + '" data-testid="step-' + esc(st.k || i) + '"'
-        + (clickable ? ' onclick="CBSteps.go(\'' + esc(ns) + '\',' + i + ')" style="cursor:pointer"' : '')
-        + '><span class="n">' + (done ? '✓' : (i + 1)) + '</span>' + esc(st.n || st.k || '') + '</div>';
+      var clickable = index !== s.i && canReach(s, index);
+      return '<div class="' + cls + '" data-testid="step-' + esc(item.k || index) + '"'
+        + (clickable ? ' onclick="CBSteps.go(\'' + esc(ns) + '\',' + index + ')" style="cursor:pointer"' : '')
+        + '><span class="n">' + (done ? '✓' : (index + 1)) + '</span>' + esc(item.n || item.k || '') + '</div>';
     }).join('') + '</div>';
   }
 
@@ -212,12 +212,12 @@
   function paint(ns) {
     var s = F[ns]; if (!s) return;
     paintRail(ns); paintBody(ns); paintFoot(ns);
-    var sub = doc(opt(s, 'subEl'));
-    if (sub) sub.textContent = stepAt(s, s.i).t || '';
+    var node = doc(opt(s, 'subEl'));
+    if (node) node.textContent = stepAt(s, s.i).t || '';
   }
 
   function create(cfg) {
-    var ns = 'cbsteps-' + (++SEQ);
+    var ns = 'cbsteps-' + (++count);
     var o = cfg || {};
     F[ns] = { o: o, steps: (o.steps || []).slice(), i: 0 };
     var h = {
@@ -252,12 +252,12 @@
      cart's popup host: a shared component that makes each caller supply its own styling is not shared. */
   function ensureCSS() {
     if (typeof document === 'undefined' || document.getElementById('cbst_css')) return;
-    var st = document.createElement('style');
-    st.id = 'cbst_css';
+    var node = document.createElement('style');
+    node.id = 'cbst_css';
     /* ⚠️ THE ACCENT IS A TOKEN, not a constant. The storefront is a PUBLIC page in the shop's own colours — a blue
        rail on a red shop is the same mistake as sharing a stylesheet instead of the rules. Any host can set
        `--cbst-accent` (and `--cbst-soft`) on a container; everything else stays shared. */
-    st.textContent =
+    node.textContent =
       '.cbst-rail{display:flex;gap:6px;padding:11px 0 10px;flex-wrap:wrap}'
       + '.cbst{display:flex;align-items:center;gap:7px;padding:5px 11px;border-radius:20px;font-size:var(--fs-2);'
       + 'white-space:nowrap;border:1px solid #e3e6ea;background:var(--card);color:var(--grey-2)}'
@@ -283,7 +283,7 @@
       + '.cbst-foot button.pri{flex:1;background:var(--cbst-accent,var(--blue));color:#fff;border-color:var(--cbst-accent,var(--blue))}'
       + '.cbst-foot button:disabled{opacity:.45;cursor:not-allowed}'
       + '.cbst-why{flex-basis:100%;font-size:var(--fs-1);color:var(--warn-2)}';
-    (document.head || document.documentElement).appendChild(st);
+    (document.head || document.documentElement).appendChild(node);
   }
   var _create = create;
   create = function (cfg) { ensureCSS(); return _create(cfg); };
@@ -295,8 +295,8 @@
    */
   var _down = null;
   if (typeof document !== 'undefined' && document.addEventListener) {
-    ['pointerdown', 'mousedown', 'touchstart'].forEach(function (t) {
-      document.addEventListener(t, function (e) { _down = e.target; }, true);
+    ['pointerdown', 'mousedown', 'touchstart'].forEach(function (item) {
+      document.addEventListener(item, function (e) { _down = e.target; }, true);
     });
   }
   function backdropTap(ev, backdrop) { return !!ev && ev.target === backdrop && _down === backdrop; }
