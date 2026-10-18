@@ -32,14 +32,14 @@ function aiSuggestStandards(){
 }
 function aiSuggestPartner(std, doc){
   if(typeof aiRun!=='function') return;
-  var it=((UI.laneRd&&UI.laneRd.clearances)||(UI.readiness&&UI.readiness.clearances)||[]).filter(function(c){return c.standard===std&&c.doc===doc;})[0];
+  var it=((UI.laneRd&&UI.laneRd.clearances)||(UI.readiness&&UI.readiness.clearances)||[]).filter(function(item){return item.standard===std&&item.doc===doc;})[0];
   aiRun('partner-suggest', { gap:(it&&(it.title||it.doc))||std, standard:std, market:(UI.laneDest||'EU') }, {title:'✨ Suggest a partner'});
 }
 function _aiCtxExporter(){ return { name:((UI.profile&&UI.profile.legal_name)||(UI.profile&&UI.profile.name)||'[to confirm]') }; }
 // clearance path — draft a document from the standard/product the entity holds. Passes an ATTACH target so a document
 // draft can be ACCEPTED → filed as the clearance's evidence on the rail (closes the advise→produce loop).
 async function aiDraftReadiness(std, doc, skill){
-  var it=((UI.laneRd&&UI.laneRd.clearances)||(UI.readiness&&UI.readiness.clearances)||[]).filter(function(c){return c.standard===std&&c.doc===doc;})[0];
+  var it=((UI.laneRd&&UI.laneRd.clearances)||(UI.readiness&&UI.readiness.clearances)||[]).filter(function(item){return item.standard===std&&item.doc===doc;})[0];
   return _aiDraft(skill, std, { standard:std, document:doc, sector:(UI.laneVertical||'paint'),
     origin:(UI.laneOrigin||'IN'), destination:(UI.laneDest||null), product:{ description:doc }, exporter:_aiCtxExporter() },
     { standard:std, doc:doc, title:(it&&it.title)||doc, skill:skill });
@@ -56,15 +56,15 @@ async function aiDraftCommerce(skill, label){
 async function _aiDraft(skill, label, ctx, attach){
   if(typeof modal==='function') modal('<div class="mhd"><div class="t">✨ Draft with AI — '+esc(label)+'</div></div><div class="mbody" style="padding:16px"><div id="aidbody" style="font-size:var(--fs-2);color:var(--grey)">✨ Invoking the co-assist… drafting from what this order/profile holds.</div></div>', true);
   try{
-    var r = await api('aiDraft', {body:{skill_id:skill, context:ctx}});
-    var draft = (r&&r.draft)||'', cost = (r&&r.usage&&r.usage.est_cost_usd);
-    UI._aiLast = { draft:draft, label:label, note:(r&&r.note)||'', cost:cost, attach:attach||null };
+    var reply = await api('aiDraft', {body:{skill_id:skill, context:ctx}});
+    var draft = (reply&&reply.draft)||'', cost = (reply&&reply.usage&&reply.usage.est_cost_usd);
+    UI._aiLast = { draft:draft, label:label, note:(reply&&reply.note)||'', cost:cost, attach:attach||null };
     var bs='font-size:var(--fs-2);font-weight:700;border-radius:9px;padding:9px 13px;cursor:pointer';
     // a DOCUMENT (the actual cert/declaration) can become the clearance's evidence; aids (classify/summarize) cannot.
-    var acceptBtn = (attach && r && r.kind==='document')
+    var acceptBtn = (attach && reply && reply.kind==='document')
       ? '<button onclick="_aiAccept()" title="File as evidence for '+esc(attach.title||attach.doc)+'" style="'+bs+';flex:1;border:1px solid var(--ok-3);background:var(--ok-3);color:var(--on-ok)">✓ Accept &amp; attach as evidence</button>' : '';
     var html = '<style>'+(typeof _AI_MDCSS!=='undefined'?_AI_MDCSS:'')+'</style>'
-      + '<div style="font-size:var(--fs-1);color:var(--purple);background:var(--blue-tint-bg);border:1px solid #ddd4f5;border-radius:9px;padding:8px 11px;margin-bottom:12px;line-height:1.5">🤖 <b>AI proposal — not evidence.</b> '+esc((r&&r.note)||'Review and confirm before you use it.')+(cost!=null?' <span style="color:var(--grey)">· cost $'+cost+'</span>':'')+'</div>'
+      + '<div style="font-size:var(--fs-1);color:var(--purple);background:var(--blue-tint-bg);border:1px solid #ddd4f5;border-radius:9px;padding:8px 11px;margin-bottom:12px;line-height:1.5">🤖 <b>AI proposal — not evidence.</b> '+esc((reply&&reply.note)||'Review and confirm before you use it.')+(cost!=null?' <span style="color:var(--grey)">· cost $'+cost+'</span>':'')+'</div>'
       + '<div class="amddoc" style="background:var(--card);border:1px solid var(--line);border-radius:9px;padding:16px 20px;max-height:52vh;overflow:auto;color:var(--on-card)">'+(typeof _aiMd==='function'?_aiMd(draft):esc(draft))+'</div>'
       + '<div style="display:flex;gap:8px;margin-top:13px;flex-wrap:wrap">'
         + acceptBtn
@@ -72,7 +72,7 @@ async function _aiDraft(skill, label, ctx, attach){
         + '<button onclick="_aiCopy(this)" data-draft="'+esc(encodeURIComponent(draft))+'" style="'+bs+';flex:0 0 auto;border:1px solid var(--line);background:var(--card);color:var(--ink)">' + tx('📋 Copy') + '</button>'
         + '<button onclick="closeModal()" style="'+bs+';flex:0 0 auto;border:1px solid var(--line);background:var(--card);color:var(--ink)">' + tx('Done') + '</button>'
       + '</div>';
-    var b=document.getElementById('aidbody'); if(b) b.innerHTML=html;
+    var node=document.getElementById('aidbody'); if(node) node.innerHTML=html;
   }catch(e){
     var msg=(e&&e.message)||'AI draft failed'; var b2=document.getElementById('aidbody');
     if(b2) b2.innerHTML='<div style="font-size:var(--fs-2);color:var(--warn-2);background:var(--warn-tint);border:1px solid #f0dcae;border-radius:9px;padding:10px 12px">'+esc(String(msg).indexOf('503')>=0||String(msg).indexOf('not connected')>=0?'AI is not connected yet (no key on this environment).':msg)+'</div>';
@@ -85,13 +85,13 @@ async function _aiAccept(){
   var d=UI._aiLast||{}, at=d.attach; if(!d.draft||!at){ if(typeof toast==='function') toast('Nothing to attach'); return; }
   try{
     var subj='Clearance — '+(at.title||at.doc||at.standard)+' (AI-drafted)';
-    var r=await api('createChit',{body:{recipients:[{name:'self',role:'to'}], manual_subject:subj, subject:subj, purpose:'general', line_items:[]}});
-    var chitId=r&&r.chit_id;
+    var reply=await api('createChit',{body:{recipients:[{name:'self',role:'to'}], manual_subject:subj, subject:subj, purpose:'general', line_items:[]}});
+    var chitId=reply&&reply.chit_id;
     if(chitId && typeof attUpload==='function' && typeof File!=='undefined'){
       try{ var f=new File([d.draft], String(at.skill||'draft')+'.md', {type:'text/markdown'}); await attUpload(chitId, f); }catch(_){}
     }
-    var far=new Date(Date.now()+365*86400000).toISOString().slice(0,10);
-    await api('readinessGather',{body:{standard_key:at.standard, doc_key:at.doc, evidence_ref:(chitId||'ai-drafted'), valid_until:far, status:'gathered'}});
+    var date=new Date(Date.now()+365*86400000).toISOString().slice(0,10);
+    await api('readinessGather',{body:{standard_key:at.standard, doc_key:at.doc, evidence_ref:(chitId||'ai-drafted'), valid_until:date, status:'gathered'}});
     if(typeof closeModal==='function') closeModal();
     if(typeof toast==='function') toast('Accepted — filed as evidence on the rail ✓');
     UI.laneMatrix=undefined; UI.laneRd=undefined; if(typeof loadLanes==='function') loadLanes();
@@ -100,7 +100,7 @@ async function _aiAccept(){
 // export the draft as a print-ready A4 document → the browser's "Save as PDF" (no dependency, works offline)
 function _aiPdf(){
   var d=UI._aiLast||{}; if(!d.draft){ if(typeof toast==='function') toast('Nothing to export'); return; }
-  var w=window.open('','_blank'); if(!w){ if(typeof toast==='function') toast('Allow pop-ups to export the PDF'); return; }
+  var node=window.open('','_blank'); if(!node){ if(typeof toast==='function') toast('Allow pop-ups to export the PDF'); return; }
   var pcss='@page{size:A4;margin:18mm}*{box-sizing:border-box}body{margin:0;font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#1e2530}'
     +'.pg{max-width:760px;margin:0 auto;padding:22px}'
     +'.hd{border-bottom:2px solid var(--purple);padding-bottom:12px;margin-bottom:18px}'
@@ -111,12 +111,12 @@ function _aiPdf(){
     +'.foot{margin-top:26px;padding-top:10px;border-top:1px solid #e6eaf0;font-size:var(--fs-1);color:#9aa3b0;text-align:center}'
     +(typeof _AI_MDCSS!=='undefined'?_AI_MDCSS:'')+'.amddoc{font-size:var(--fs-2)}';
   var when=CBLocale.datetime(Date.now());
-  w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+esc(d.label||'AI draft')+'</title><style>'+pcss+'</style></head><body><div class="pg">'
+  node.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+esc(d.label||'AI draft')+'</title><style>'+pcss+'</style></head><body><div class="pg">'
     +'<div class="hd"><div class="brand">CHIT &amp; BRIDGE</div><div class="doctitle">'+esc(d.label||'Draft')+'</div><div class="meta">Drafted by AI co-assist · '+esc(when)+(d.cost!=null?' · est. $'+d.cost:'')+'</div><div class="stamp">AI draft — not evidence until accepted</div></div>'
     +'<div class="amddoc">'+(typeof _aiMd==='function'?_aiMd(d.draft||''):esc(d.draft||''))+'</div>'
     +'<div class="foot">Generated on the Chit &amp; Bridge governance rail · review and confirm before use</div>'
     +'</div></body></html>');
-  w.document.close(); w.focus(); setTimeout(function(){ try{ w.print(); }catch(_){ } }, 350);
+  node.document.close(); node.focus(); setTimeout(function(){ try{ node.print(); }catch(_){ } }, 350);
 }
 // the entity's DECLARATION — which standards it holds. A checkbox = a commitment: it only counts as MET when its
 // evidence is live & valid (status gathered/expiring). rdLoadDeclaration → UI.profile.adopted[]. declareToggle persists it.
@@ -140,9 +140,9 @@ async function rdLoadDeclaration(){
   try{ UI.profile = await api('profileGet'); }
   catch(e){ UI.profile = {trade_mode:'domestic',markets:[],sectors:[],adopted:[]}; }
   // fold the explorer: restore the entity's SAVED lane (sector · destination) so it opens to their real trade
-  try{ var s=localStorage.getItem('cb_rd_lane'); if(s){ var L=JSON.parse(s)||{};
-    if(!UI.laneVertical && L.vert) UI.laneVertical=L.vert;
-    if(!UI.laneDest && L.dest){ UI.laneDest=L.dest; UI.laneRd=undefined; } } }catch(_){}
+  try{ var s=localStorage.getItem('cb_rd_lane'); if(s){ var parsed=JSON.parse(s)||{};
+    if(!UI.laneVertical && parsed.vert) UI.laneVertical=parsed.vert;
+    if(!UI.laneDest && parsed.dest){ UI.laneDest=parsed.dest; UI.laneRd=undefined; } } }catch(_){}
   // ORIGIN = the entity's registered country (not a choice) — fixed home jurisdiction
   /* ⭐ meNow() — the entity's country is almost always already in UI._me by the time the readiness screen
      opens, and this only wants that one field. */
@@ -161,7 +161,7 @@ function _rdRungChip(it){ var r=it&&it.rung, map={verified:['var(--ok-3)','verif
 function saveLane(){
   var vert=UI.laneVertical||'paint', dest=UI.laneDest||'EU', origin=UI.laneOrigin||'IN';
   try{ localStorage.setItem('cb_rd_lane', JSON.stringify({vert:vert,dest:dest,origin:origin})); }catch(_){}
-  try{ api('profilePut',{body:{trade_mode:(dest===origin?'domestic':'export'), markets:[dest], sectors:[vert], adopted:(UI.profile&&UI.profile.adopted)||[]}}).then(function(p){UI.profile=p;}).catch(function(){}); }catch(_){}
+  try{ api('profilePut',{body:{trade_mode:(dest===origin?'domestic':'export'), markets:[dest], sectors:[vert], adopted:(UI.profile&&UI.profile.adopted)||[]}}).then(function(reply){UI.profile=reply;}).catch(function(){}); }catch(_){}
 }
 function _rdStatus(st){
   if(st==='gathered') return {col:'var(--ok-3)',ic:'✓',lbl:'gathered'};
@@ -189,8 +189,8 @@ function _rdSub(t){ return '<div style="font-size:var(--fs-1);font-weight:800;co
 function _rdKv(k,v){ return '<div style="display:flex;gap:8px;padding:3px 0;font-size:var(--fs-2)"><span style="text-transform:uppercase;color:var(--grey);min-width:96px;font-size:var(--fs-1);letter-spacing:.03em;padding-top:1px">'+k+'</span><span style="color:var(--ink);font-weight:500">'+esc(String(v))+'</span></div>'; }
 function _rdExpand(it){
   var L=_life(it.standard, it.status);
-  var steps=L.life.map(function(s){ var c=s[1]; var col=c==='done'?'var(--ok-3)':(c==='now'?'var(--blue)':'var(--blue-tint-bg)'); var ic=c==='done'?'✓':(c==='now'?'●':'○');
-    return '<div style="display:flex;align-items:center;gap:9px;padding:4px 0;font-size:var(--fs-2);color:'+(c==='next'?'var(--grey)':'var(--ink)')+'"><span style="width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-size:var(--fs-1);font-weight:800;color:#fff;background:'+col+';flex:0 0 auto">'+ic+'</span>'+esc(s[0])+(c==='now'?' <span style="font-size:var(--fs-1);color:var(--blue);font-weight:800;text-transform:uppercase;letter-spacing:.04em">you are here</span>':'')+'</div>';
+  var steps=L.life.map(function(item){ var c=item[1]; var col=c==='done'?'var(--ok-3)':(c==='now'?'var(--blue)':'var(--blue-tint-bg)'); var ic=c==='done'?'✓':(c==='now'?'●':'○');
+    return '<div style="display:flex;align-items:center;gap:9px;padding:4px 0;font-size:var(--fs-2);color:'+(c==='next'?'var(--grey)':'var(--ink)')+'"><span style="width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-size:var(--fs-1);font-weight:800;color:#fff;background:'+col+';flex:0 0 auto">'+ic+'</span>'+esc(item[0])+(c==='now'?' <span style="font-size:var(--fs-1);color:var(--blue);font-weight:800;text-transform:uppercase;letter-spacing:.04em">you are here</span>':'')+'</div>';
   }).join('');
   var ev=(it.guidance?'<div data-testid="rd-guidance" style="margin:0 0 8px;padding:8px 10px;background:var(--warn-tint);border:1px solid var(--gold-line);border-radius:9px;font-size:var(--fs-2)">● '+esc(it.guidance)+'</div>':'')+_rdKv('Trust rung', it.rung||'—')+_rdKv('Status', it.status||'—')+(it.valid_until?_rdKv('Valid until', String(it.valid_until).slice(0,10)):'')
     +(it.rung==='verified'&&it.verified_at?_rdKv('Verified at source', String(it.verified_at).slice(0,10)+(it.verified_by?' · '+esc(it.verified_by):'')):'')
@@ -211,7 +211,7 @@ function _rdSelect(std,doc){
   /* ⚠️ ON MOBILE THE DETAIL COVERS THE LIST — see the .rdpanes note in app.html. Record that we are in it so
      the pane and its back button render; on a laptop both stay side by side and this flag is ignored. */
   if(UI.vp==='mob') UI.rdMDetail=true;
-  var sc=document.getElementById('rdlist'); var top=sc?sc.scrollTop:0;
+  var node=document.getElementById('rdlist'); var top=node?node.scrollTop:0;
   UI.rdSel = std+'|'+doc;
   if(typeof renderApp==='function') renderApp();
   var sc2=document.getElementById('rdlist'); if(sc2) sc2.scrollTop=top;   // keep the LIST scroll across the re-render
@@ -268,7 +268,7 @@ async function loadLanes(){
   try{ UI.laneMatrix = await api('lanes', {query:{vertical:'paint', origin:UI.laneOrigin||'IN'}}); }
   catch(e){ UI.laneMatrix = {error:(e&&e.message)||'Could not load', lanes:[]}; }
   if(UI.laneMatrix && UI.laneMatrix.lanes && UI.laneMatrix.lanes.length){
-    if(!UI.laneDest || !UI.laneMatrix.lanes.some(function(l){return l.dest_key===UI.laneDest;})) UI.laneDest = UI.laneMatrix.lanes[0].dest_key;
+    if(!UI.laneDest || !UI.laneMatrix.lanes.some(function(item){return item.dest_key===UI.laneDest;})) UI.laneDest = UI.laneMatrix.lanes[0].dest_key;
     loadLaneReadiness(UI.laneDest);
   }
   if(typeof renderApp==='function') bgRenderApp();
@@ -345,17 +345,17 @@ async function openSectorMatrix(){
      */
   }
   var rows={};
-  for(var i=0;i<secs.length;i++){
-    try{ var rd=await api('readinessOwn',{query:{destination:dest, vertical:secs[i][0], origin:origin}});
-      ((rd&&rd.clearances)||[]).forEach(function(c){ if(!rows[c.standard]) rows[c.standard]={std:c.standard,sectors:{}}; rows[c.standard].sectors[secs[i][0]]=true; });
+  for(var index=0;index<secs.length;index++){
+    try{ var reply=await api('readinessOwn',{query:{destination:dest, vertical:secs[index][0], origin:origin}});
+      ((reply&&reply.clearances)||[]).forEach(function(item){ if(!rows[item.standard]) rows[item.standard]={std:item.standard,sectors:{}}; rows[item.standard].sectors[secs[index][0]]=true; });
     }catch(e){}
   }
-  var list=Object.keys(rows).map(function(k){ var on=secs.map(function(s){return !!rows[k].sectors[s[0]];}); return {std:k,name:STDNAME[k]||k,on:on,n:on.filter(Boolean).length}; });
-  list.sort(function(a,b){ return (b.n-a.n)||a.std.localeCompare(b.std); });
-  var head='<tr><th style="text-align:start;padding:8px 6px;font-size:var(--fs-1);text-transform:uppercase;color:var(--grey);border-bottom:1px solid var(--line)">' + tx('Standard') + '</th>'+secs.map(function(s){return '<th style="padding:8px 4px;font-size:var(--fs-1);border-bottom:1px solid var(--line);color:'+s[3]+';white-space:nowrap">'+s[1]+'<br>'+s[2]+'</th>';}).join('')+'</tr>';
-  var rowH=function(r){ var common=r.n===secs.length; return '<tr'+(common?' style="background:var(--ok-tint);color:var(--on-card)"':'')+'><td style="padding:8px 6px;font-weight:600;font-size:var(--fs-2);border-bottom:1px solid var(--line);color:'+(common?'var(--ok-3)':'var(--ink)')+'">'+esc(r.name)+'</td>'+r.on.map(function(v,i){return _mtxCell(v,common,secs[i][3]);}).join('')+'</tr>'; };
+  var list=Object.keys(rows).map(function(item){ var on=secs.map(function(s){return !!rows[item].sectors[s[0]];}); return {std:item,name:STDNAME[item]||item,on:on,n:on.filter(Boolean).length}; });
+  list.sort(function(first,second){ return (second.n-first.n)||first.std.localeCompare(second.std); });
+  var head='<tr><th style="text-align:start;padding:8px 6px;font-size:var(--fs-1);text-transform:uppercase;color:var(--grey);border-bottom:1px solid var(--line)">' + tx('Standard') + '</th>'+secs.map(function(item){return '<th style="padding:8px 4px;font-size:var(--fs-1);border-bottom:1px solid var(--line);color:'+item[3]+';white-space:nowrap">'+item[1]+'<br>'+item[2]+'</th>';}).join('')+'</tr>';
+  var rowH=function(r){ var common=r.n===secs.length; return '<tr'+(common?' style="background:var(--ok-tint);color:var(--on-card)"':'')+'><td style="padding:8px 6px;font-weight:600;font-size:var(--fs-2);border-bottom:1px solid var(--line);color:'+(common?'var(--ok-3)':'var(--ink)')+'">'+esc(r.name)+'</td>'+r.on.map(function(item,i){return _mtxCell(item,common,secs[i][3]);}).join('')+'</tr>'; };
   var band=function(t){return '<tr><td colspan="'+(secs.length+1)+'" style="padding:11px 6px 3px;font-size:var(--fs-1);font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--grey)">'+t+'</td></tr>';};
-  var common=list.filter(function(r){return r.n===secs.length;}), spec=list.filter(function(r){return r.n!==secs.length;});
+  var common=list.filter(function(item){return item.n===secs.length;}), spec=list.filter(function(item){return item.n!==secs.length;});
   var html='<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:9px">Lane held constant ('+esc(origin)+' <span class=arw>→</span> '+esc(dest)+') — only the sector changes. A full row is the <b>common backbone</b>; a single ✓ is <b>sector-specific</b>.</div>'
     +'<div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;min-width:430px">'+head
     +band('● Common — every sector')+common.map(rowH).join('')
@@ -410,19 +410,19 @@ function _rdComLadder(attestor, top){
   var rungs=[['declared','term agreed'],['documented','instrument drafted'],['attested',(attestor||'a bank')+' issues / confirms'],['verified','confirmed at source']];
   var order={declared:0,documented:1,attested:2,verified:3}, topIx=(order[top]!=null?order[top]:2);
   var cols={declared:'var(--blue-2)',documented:'var(--warn-2)',attested:'var(--blue-2)',verified:'var(--ok-3)'};
-  return rungs.map(function(r){ var ix=order[r[0]], reach=ix<=topIx, c=cols[r[0]];
-    return '<div style="display:flex;align-items:center;gap:9px;padding:3px 0;font-size:var(--fs-2);opacity:'+(reach?'1':'.38')+'"><span style="width:9px;height:9px;border-radius:50%;background:'+c+';flex:0 0 auto"></span><b style="text-transform:uppercase;font-size:var(--fs-1);letter-spacing:.03em;color:'+c+';min-width:82px">'+r[0]+'</b><span style="color:var(--grey)">'+esc(r[1])+'</span></div>';
+  return rungs.map(function(item){ var ix=order[item[0]], reach=ix<=topIx, c=cols[item[0]];
+    return '<div style="display:flex;align-items:center;gap:9px;padding:3px 0;font-size:var(--fs-2);opacity:'+(reach?'1':'.38')+'"><span style="width:9px;height:9px;border-radius:50%;background:'+c+';flex:0 0 auto"></span><b style="text-transform:uppercase;font-size:var(--fs-1);letter-spacing:.03em;color:'+c+';min-width:82px">'+item[0]+'</b><span style="color:var(--grey)">'+esc(item[1])+'</span></div>';
   }).join('');
 }
 function _rdComSteps(life){
-  return (life||[]).map(function(s){ var c=s[1], col=c==='done'?'var(--ok-3)':(c==='now'?'var(--blue)':'var(--blue-tint-bg)'), ic=c==='done'?'✓':(c==='now'?'●':'○');
-    return '<div style="display:flex;align-items:center;gap:9px;padding:4px 0;font-size:var(--fs-2);color:'+(c==='next'?'var(--grey)':'var(--ink)')+'"><span style="width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-size:var(--fs-1);font-weight:800;color:#fff;background:'+col+';flex:0 0 auto">'+ic+'</span>'+esc(s[0])+(c==='now'?' <span style="font-size:var(--fs-1);color:var(--blue);font-weight:800;text-transform:uppercase;letter-spacing:.04em">you are here</span>':'')+'</div>';
+  return (life||[]).map(function(item){ var c=item[1], col=c==='done'?'var(--ok-3)':(c==='now'?'var(--blue)':'var(--blue-tint-bg)'), ic=c==='done'?'✓':(c==='now'?'●':'○');
+    return '<div style="display:flex;align-items:center;gap:9px;padding:4px 0;font-size:var(--fs-2);color:'+(c==='next'?'var(--grey)':'var(--ink)')+'"><span style="width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-size:var(--fs-1);font-weight:800;color:#fff;background:'+col+';flex:0 0 auto">'+ic+'</span>'+esc(item[0])+(c==='now'?' <span style="font-size:var(--fs-1);color:var(--blue);font-weight:800;text-transform:uppercase;letter-spacing:.04em">you are here</span>':'')+'</div>';
   }).join('');
 }
 function _rdComDetail(g){
   if(!g) return '<div style="color:var(--grey);font-size:var(--fs-2);padding:24px;text-align:center">Select a commercial area on the left.</div>';
   var m=COMMETA[g.label]||{};
-  var names=(g.instruments||[]).map(function(i){return esc(i.name);}).join(' · ');
+  var names=(g.instruments||[]).map(function(item){return esc(item.name);}).join(' · ');
   var draftBtn = (m.ai&&m.ai.skill)
     ? '<button onclick="aiDraftCommerce(\''+m.ai.skill+'\',\''+esc(g.label)+'\')" title="AI drafts it — you review and confirm" style="font-size:var(--fs-2);font-weight:700;border:1px solid var(--purple);background:var(--purple-tint);color:var(--purple);border-radius:9px;padding:7px 12px;cursor:pointer">' + tx('✨ Draft with AI') + '</button>' : '';
   var partner = m.partner ? '<div style="margin-top:11px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--warn-tint);color:var(--on-card)"><span style="font-size:var(--fs-1);font-weight:800;color:var(--warn-3);text-transform:uppercase;letter-spacing:.05em">' + tx('Or hand it to a partner') + '</span><div style="font-size:var(--fs-2);margin-top:3px;font-weight:600">'+esc(m.partner)+'</div></div>' : '';
@@ -443,7 +443,7 @@ function _rdComTwoPane(){
   if(UI.commerce===undefined){ if(!UI.commerceLoading){ UI.commerceLoading=true; loadCommerce(); } return '<div style="flex:1;display:grid;place-items:center;color:var(--grey);font-size:var(--fs-2)">' + tx('Loading commercial cover…') + '</div>'; }
   if(UI.commerce.error || !UI.commerce.cluster) return '<div style="flex:1;padding:20px;color:var(--grey);font-size:var(--fs-2)">Could not load commercial cover'+(UI.commerce.error?(' — '+esc(UI.commerce.error)):'')+'.</div>';
   var list=UI.commerce.cluster, sel=(UI.comSel!=null && UI.comSel<list.length)?UI.comSel:0; UI.comSel=sel;
-  var left=list.map(function(g,i){return _rdComRow(g,i,sel);}).join('');
+  var left=list.map(function(item,index){return _rdComRow(item,index,sel);}).join('');
   return '<div class="rdpanes'+(UI.rdMDetail?' showdetail':'')+'" style="flex:1;display:flex;min-height:0;overflow:hidden">'
     +'<div id="comlist" class="rdlist" style="width:300px;flex:0 0 auto;border-inline-end:1px solid var(--line);overflow-y:auto;background:var(--card);padding:8px 6px 30px;color:var(--on-card)">'+left+'</div>'
     +'<div class="rddetail" style="flex:1;min-width:0;overflow-y:auto;background:var(--blue-tint-bg);color:var(--on-card)">'
@@ -452,9 +452,9 @@ function _rdComTwoPane(){
 // a two-pane (list ↔ detail) for one tab's set of items
 function _rdTwoPane(list){
   if(!list.length) return '<div style="flex:1;display:grid;place-items:center;color:var(--grey);font-size:var(--fs-2);padding:20px">Nothing required for this lane.</div>';
-  if(!UI.rdSel || !list.some(function(i){return i.standard+'|'+i.doc===UI.rdSel;})) UI.rdSel = list[0].standard+'|'+list[0].doc;
-  var sel=list.filter(function(i){return i.standard+'|'+i.doc===UI.rdSel;})[0];
-  var left=list.map(function(i){return _rdRow(i,UI.rdSel);}).join('');
+  if(!UI.rdSel || !list.some(function(item){return item.standard+'|'+item.doc===UI.rdSel;})) UI.rdSel = list[0].standard+'|'+list[0].doc;
+  var sel=list.filter(function(item){return item.standard+'|'+item.doc===UI.rdSel;})[0];
+  var left=list.map(function(item){return _rdRow(item,UI.rdSel);}).join('');
   return '<div class="rdpanes'+(UI.rdMDetail?' showdetail':'')+'" style="flex:1;display:flex;min-height:0;overflow:hidden">'
     +'<div id="rdlist" class="rdlist" style="width:300px;flex:0 0 auto;border-inline-end:1px solid var(--line);overflow-y:auto;background:var(--card);padding:8px 6px 30px;color:var(--on-card)">'+left+'</div>'
     +'<div id="rddetail" class="rddetail" style="flex:1;min-width:0;overflow-y:auto;background:var(--blue-tint-bg);color:var(--on-card)">'
@@ -476,7 +476,7 @@ function readinessScreen(){
   var rd=UI.laneRd;
   if(rd.error) return shell('<div style="padding:20px">'+(typeof emptyState==='function'?emptyState('⚠️','Could not load', esc(rd.error)):esc(rd.error))+'</div>');
   var items=(rd.clearances)||[];
-  var list=(tab==='clearance')?items.filter(function(i){return i.scope!=='entity';}):items.filter(function(i){return i.scope==='entity';});
+  var list=(tab==='clearance')?items.filter(function(item){return item.scope!=='entity';}):items.filter(function(item){return item.scope==='entity';});
   return shell(_rdTwoPane(list));
 }
 function verifyReadiness(standard, doc, id_type){
@@ -497,8 +497,8 @@ async function submitVerify(){
   var btn=document.getElementById('vf_btn'), err=document.getElementById('vf_err');
   if(err) err.textContent=''; if(btn){ btn.disabled=true; btn.textContent='Verifying…'; }
   try{
-    var far=new Date(Date.now()+730*86400000).toISOString().slice(0,10);
-    var res = await api('readinessVerify', {body:{standard_key:g.standard, doc_key:g.doc, id_type:g.id_type, id_value:id, valid_until:far}});
+    var date=new Date(Date.now()+730*86400000).toISOString().slice(0,10);
+    var res = await api('readinessVerify', {body:{standard_key:g.standard, doc_key:g.doc, id_type:g.id_type, id_value:id, valid_until:date}});
     if(typeof closeModal==='function') closeModal();
     var vm = res && res.verdict && res.verdict.method;
     if(typeof toast==='function') toast(vm==='registry' ? 'Verified against the registry ✓' : 'Format valid — recorded as a declared claim');
@@ -506,9 +506,9 @@ async function submitVerify(){
   }catch(e){ if(btn){ btn.disabled=false; btn.textContent='🔗 Verify ID'; } if(err) err.textContent=(e&&e.message)||'Verification failed'; }
 }
 function gatherReadiness(standard, doc){
-  var it = ((UI.readiness&&UI.readiness.clearances)||[]).filter(function(c){ return c.standard===standard && c.doc===doc; })[0];
+  var it = ((UI.readiness&&UI.readiness.clearances)||[]).filter(function(item){ return item.standard===standard && item.doc===doc; })[0];
   UI.rdGather = { standard:standard, doc:doc, title:(it&&it.title)||doc };
-  var far = new Date(Date.now()+365*86400000).toISOString().slice(0,10);
+  var date = new Date(Date.now()+365*86400000).toISOString().slice(0,10);
   var inS = 'width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:var(--fs-2);margin:5px 0 13px;box-sizing:border-box';
   var lbl = 'font-size:var(--fs-1);font-weight:700;color:var(--grey)';
   var body = '<div class="mbody" style="padding:16px 18px">'
@@ -518,7 +518,7 @@ function gatherReadiness(standard, doc){
     +'<label style="'+lbl+'">' + tx('Reference / number (optional)') + '</label>'
     +'<input id="gd_ref" placeholder="e.g. certificate no." style="'+inS+'">'
     +'<label style="'+lbl+'">' + tx('Valid until') + '</label>'
-    +'<input id="gd_valid" type="date" value="'+far+'" style="'+inS+'">'
+    +'<input id="gd_valid" type="date" value="'+date+'" style="'+inS+'">'
     +'<div id="gd_err" style="color:var(--disp);font-size:var(--fs-2);margin-bottom:8px"></div>'
     +'<button id="gd_btn" onclick="submitGather()" style="width:100%;background:var(--blue);color:var(--on-accent);border:0;border-radius:9px;padding:11px;font-weight:700;cursor:pointer">' + tx('Record clearance on the rail') + '</button>'
     +'</div>';
@@ -526,7 +526,7 @@ function gatherReadiness(standard, doc){
 }
 async function submitGather(){
   var g = UI.rdGather||{}; if(!g.standard) return;
-  var fe = document.getElementById('gd_file'), file = fe && fe.files && fe.files[0];
+  var node = document.getElementById('gd_file'), file = node && node.files && node.files[0];
   var ref = ((document.getElementById('gd_ref')||{}).value||'').trim();
   var valid = ((document.getElementById('gd_valid')||{}).value||'') || null;
   var btn = document.getElementById('gd_btn'), err = document.getElementById('gd_err');
@@ -534,8 +534,8 @@ async function submitGather(){
   try{
     // 1 · a SELF-CHIT is the evidence record on the rail (governed + provenanced like any chit)
     var subj = 'Clearance — ' + (g.title||g.doc) + (ref?(' ('+ref+')'):'');
-    var r = await api('createChit', {body:{recipients:[{name:'self', role:'to'}], manual_subject:subj, subject:subj, purpose:'general', line_items:[]}});
-    var chitId = r && r.chit_id;
+    var reply = await api('createChit', {body:{recipients:[{name:'self', role:'to'}], manual_subject:subj, subject:subj, purpose:'general', line_items:[]}});
+    var chitId = reply && reply.chit_id;
     // 2 · attach the document to that chit (best-effort — a reference-only clearance is still valid)
     if(chitId && file && typeof attUpload==='function'){ try{ await attUpload(chitId, file); }catch(_){} }
     // 3 · record the clearance, pointing at its evidence chit
