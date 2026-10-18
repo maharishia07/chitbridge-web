@@ -153,16 +153,16 @@ function cbAttachList(atts, opts){
       : '';
   }
   var pad = opts.compact === false ? '5px 10px' : '3px 8px';
-  var html = rows.map(function(a){
+  var html = rows.map(function(item){
     /* The name is truncated for the row but kept whole in the tooltip — a filename is often the only thing that
        distinguishes two invoices, and an ellipsis that eats the distinguishing half is a list that lies. */
-    var short = a.name.length > 26 ? a.name.slice(0, 26) + '…' : a.name;
-    var meta  = (a.t || 'file').toUpperCase() + (a.size ? (' · ' + cbAttachSize(a.size)) : '');
-    return '<span data-testid="cb-attach-item" onclick="cbAttachOpen(\'' + cbAttachSafe(a.id) + '\')"'
-      + ' title="' + esc(a.name + ' — ' + meta) + '"'
+    var short = item.name.length > 26 ? item.name.slice(0, 26) + '…' : item.name;
+    var meta  = (item.t || 'file').toUpperCase() + (item.size ? (' · ' + cbAttachSize(item.size)) : '');
+    return '<span data-testid="cb-attach-item" onclick="cbAttachOpen(\'' + cbAttachSafe(item.id) + '\')"'
+      + ' title="' + esc(item.name + ' — ' + meta) + '"'
       + ' style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;border:1px solid var(--line);'
       + 'border-radius:6px;padding:' + pad + ';margin:0 5px 5px 0;font-size:var(--fs-1);background:var(--card);max-width:100%;color:var(--on-card)">'
-      +   '<span style="font-size:var(--fs-2);flex:none">' + cbAttachIcon(a.t) + '</span>'
+      +   '<span style="font-size:var(--fs-2);flex:none">' + cbAttachIcon(item.t) + '</span>'
       +   '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(short) + '</span>'
       +   '<span style="font-size:var(--fs-1);color:var(--grey);flex:none">' + esc(meta) + '</span>'
       + '</span>';
@@ -252,7 +252,7 @@ CBATT.stageSeq = 0;
 function cbAttachStaged(bucket){ return (CBATT.stage[bucket] || []).slice(); }
 function cbAttachUnstage(bucket, key){
   var list = CBATT.stage[bucket] || [];
-  CBATT.stage[bucket] = list.filter(function (s) { return String(s.key) !== String(key); });
+  CBATT.stage[bucket] = list.filter(function (item) { return String(item.key) !== String(key); });
   try { document.dispatchEvent(new CustomEvent('cb-attach-staged', { detail: { bucket: bucket } })); } catch (_) {}
 }
 
@@ -332,11 +332,11 @@ async function cbAttachFlush(bucket, chit_id, opts){
   opts = opts || {};
   var list = CBATT.stage[bucket] || [];
   if (!list.length) return { uploaded: [], failed: [] };
-  if (!chit_id) return { uploaded: [], failed: list.map(function (s) { return { name: s.name, why: 'no chit to attach to' }; }) };
+  if (!chit_id) return { uploaded: [], failed: list.map(function (item) { return { name: item.name, why: 'no chit to attach to' }; }) };
 
   var uploaded = [], failed = [], kept = [];
-  for (var i = 0; i < list.length; i++) {
-    var s = list[i];
+  for (var index = 0; index < list.length; index++) {
+    var s = list[index];
     try {
       var body = { chit_id: chit_id, name: s.name, mime: s.mime, data_base64: await cbAttachB64(s.file) };
       if (s.line_index != null) body.line_index = s.line_index;
@@ -369,13 +369,13 @@ function cbAttachSafeText(s){
 /* One style tag, injected once — attach-ui had none because every previous caller styled its own chips. */
 function cbAttachCss(){
   if (typeof document === 'undefined' || document.getElementById('cbatt_css')) return;
-  var s = document.createElement('style');
-  s.id = 'cbatt_css';
-  s.textContent = '.cbatt-chip{display:inline-flex;align-items:center;gap:5px;border:1px dashed var(--gold);'
+  var node = document.createElement('style');
+  node.id = 'cbatt_css';
+  node.textContent = '.cbatt-chip{display:inline-flex;align-items:center;gap:5px;border:1px dashed var(--gold);'
     + 'border-radius:9px;padding:3px 8px;margin:2px 5px 2px 0;font-size:var(--fs-1);background:var(--warn-tint);'
     + 'color:var(--ink,var(--ink));max-width:100%}'
     + '.cbatt-chip.sent{border-style:solid;border-color:#e3e6ea;background:var(--card)}';
-  (document.head || document.documentElement).appendChild(s);
+  (document.head || document.documentElement).appendChild(node);
 }
 
 /**
@@ -417,15 +417,15 @@ async function cbAttachPick(ctxJson){
        become null and detach the file from its line, so it is checked here. */
     if (ctx.line_index != null && ctx.line_index !== '' && !isNaN(+ctx.line_index)) body.line_index = +ctx.line_index;
 
-    var att = await api(cbAttachEP(), { body: body });
+    var reply = await api(cbAttachEP(), { body: body });
     CBATT.busy = false;
     toast('Attached "' + file.name + '"');
 
     /* Two ways to hear about it, because the two consumers differ: screens that render HTML strings pass a
        function NAME through the attribute, and anything holding real elements can listen for the event. */
-    try { document.dispatchEvent(new CustomEvent('cb-attach-added', { detail: { ctx: ctx, attachment: att } })); } catch (_) {}
+    try { document.dispatchEvent(new CustomEvent('cb-attach-added', { detail: { ctx: ctx, attachment: reply } })); } catch (_) {}
     if (ctx.after && typeof window[ctx.after] === 'function') { try { window[ctx.after](); } catch (_) {} }
-    return att;
+    return reply;
   } catch (e) {
     CBATT.busy = false;
     toast((e && e.message) || 'Could not attach that file');
@@ -494,14 +494,14 @@ async function cbAttachOpen(id){
       var w = window.open(url, '_blank', 'noopener');
       if (w) return;
     }
-    var a = document.createElement('a');
-    a.href = url;
-    a.download = '';           // the server's Content-Disposition filename does not survive a blob URL; the
+    var node = document.createElement('a');
+    node.href = url;
+    node.download = '';           // the server's Content-Disposition filename does not survive a blob URL; the
                                // browser falls back to a generic name, which is the accepted cost of auth'd bytes
-    a.rel = 'noopener';
-    (document.body || document.documentElement).appendChild(a);
-    a.click();
-    try { a.remove(); } catch (_) {}
+    node.rel = 'noopener';
+    (document.body || document.documentElement).appendChild(node);
+    node.click();
+    try { node.remove(); } catch (_) {}
   } catch (e) {
     toast((e && e.message) || 'Could not open that file');
   }
@@ -527,10 +527,10 @@ var CBAttach = (function () {
       el.innerHTML = '<span data-testid="cb-attach-mount">'
         + cbAttachButton({ chit_id: chit, message_id: o.message_id, line_index: o.line_index, label: o.label, note: o.note })
         + '</span>' + (atts ? cbAttachList(atts, { compact: true }) : '');
-      var b = el.querySelector('[data-testid="cb-attach-btn"]');
-      if (!b) return;
-      b.removeAttribute('onclick');                  // the mount owns the press: one handler, through the action-state helper
-      b.addEventListener('click', press);
+      var node = el.querySelector('[data-testid="cb-attach-btn"]');
+      if (!node) return;
+      node.removeAttribute('onclick');                  // the mount owns the press: one handler, through the action-state helper
+      node.addEventListener('click', press);
     }
     function ctx() {
       var c = { chit_id: chit };
@@ -543,8 +543,8 @@ var CBAttach = (function () {
       try { el.dispatchEvent(new CustomEvent('cb:rail', { bubbles: true, detail: { module: 'attach', chit_id: chit, result: att } })); } catch (_) {}
       if (typeof o.onDone === 'function') { try { o.onDone(att); } catch (_) {} }
     }
-    function press(ev) {
-      var btn = ev.currentTarget;
+    function press(event) {
+      var btn = event.currentTarget;
       if (typeof CBAction === 'undefined' || !CBAction || typeof CBAction.run !== 'function') return cbAttachPick(ctx()).then(done);
       return CBAction.run(btn, function () { return cbAttachPick(ctx()); },
         { key: 'att:' + chit + ':' + (o.message_id || '') + ':' + (o.line_index == null ? '' : o.line_index),
