@@ -54,7 +54,7 @@ function intakeScreen(){
     + '</div><div id="intake_body" style="flex:1;overflow:auto;padding:12px 14px">' + intakeBodyHTML() + '</div></div>';
 }
 function intakeToggleSim(){ _INTAKE.sim = !_INTAKE.sim; paintIntake(); }
-function paintIntake(){ var h=document.getElementById('intake_body'); if(h) h.innerHTML=intakeBodyHTML(); }
+function paintIntake(){ var node=document.getElementById('intake_body'); if(node) node.innerHTML=intakeBodyHTML(); }
 
 function _chn(c){
   var M={ whatsapp:['var(--ok-2)','WhatsApp'], email:['var(--blue)','Email'], web:['var(--purple-2)','Web'], sms:['var(--warn-2)','SMS'] };
@@ -94,7 +94,7 @@ function intakeCtl(){
   /* ⚠️ the channels offered are the ones PRESENT — a shop with no SMS should not be offered an SMS filter that
      can only ever empty its own list. And with one channel there is nothing to choose between, so none is drawn. */
   var chans = [];
-  (_INTAKE.list || []).forEach(function(c){ if (c.channel && chans.indexOf(c.channel) < 0) chans.push(c.channel); });
+  (_INTAKE.list || []).forEach(function(item){ if (item.channel && chans.indexOf(item.channel) < 0) chans.push(item.channel); });
   chans.sort();
   return listCtl('intake', {
     rows: function(){ return _INTAKE.list || []; },
@@ -106,7 +106,7 @@ function intakeCtl(){
         options: [{ v: 'todo', label: tx('Still to read') }, { v: 'done', label: tx('Already drafted') }],
         match: function(c, v){ return v === 'todo' ? !drafted(c) : drafted(c); } },
     ].concat(chans.length > 1 ? [{ key: 'channel', label: tx('Channel'), all: tx('Every channel'),
-        options: chans.map(function(k){ return { v: k, label: k }; }),
+        options: chans.map(function(item){ return { v: item, label: item }; }),
         match: function(c, v){ return c.channel === v; } }] : []),
     sorts: [
       { key: 'new', label: tx('Newest first'),
@@ -181,21 +181,21 @@ function intakeDraftHTML(c, s){
   return '<div style="background:var(--blue-tint-bg);border:1px solid #e4dff6;border-radius:9px;padding:10px 12px;margin-top:8px;font-size:var(--fs-2);color:var(--on-card)">'
     + '<div style="font-weight:700;margin-bottom:4px">✨ AI draft <span style="font-weight:400;color:var(--grey)">— proposed, not evidence. You confirm.</span></div>'
     + (s.subject?'<div style="margin-bottom:4px"><b>Subject:</b> '+esc(s.subject)+'</div>':'')
-    + li.map(function(l){ return '<div style="display:flex;justify-content:space-between;padding:3px 0;border-top:1px dashed var(--line);font-size:var(--fs-2)">'
+    + li.map(function(item){ return '<div style="display:flex;justify-content:space-between;padding:3px 0;border-top:1px dashed var(--line);font-size:var(--fs-2)">'
         /**
          * ⚠️ THE QUALIFIERS RENDER WITH THE LINE. This showed only particulars + qty + unit, so "konjam spiciya"
          * and "periya bottle" were invisible whether the reader had captured them or not — at exactly the moment a
          * person decides whether the reading is right. A confirm step must show what it is asking you to confirm.
          */
-        + '<span>' + esc(l.particulars||'item')
-        + (l.comment ? '<span style="color:var(--warn-3)"> · ' + esc(l.comment) + '</span>' : '') + '</span>'
-        + '<span style="color:var(--grey);white-space:nowrap">' + esc(String(l.qty==null?'':l.qty)) + ' ' + esc(l.unit||'')
-        + (l.unit_size ? ' (' + esc(l.unit_size) + ')' : '')
-        + (l.unit_price ? ' @' + esc(String(l.unit_price)) : '') + '</span></div>'; }).join('')
+        + '<span>' + esc(item.particulars||'item')
+        + (item.comment ? '<span style="color:var(--warn-3)"> · ' + esc(item.comment) + '</span>' : '') + '</span>'
+        + '<span style="color:var(--grey);white-space:nowrap">' + esc(String(item.qty==null?'':item.qty)) + ' ' + esc(item.unit||'')
+        + (item.unit_size ? ' (' + esc(item.unit_size) + ')' : '')
+        + (item.unit_price ? ' @' + esc(String(item.unit_price)) : '') + '</span></div>'; }).join('')
       /* Order-level facts that have no line of their own — and `unplaced` in red, because a fact the reader could
          not place is the single most useful thing on this card when tuning. */
-      + ['delivery_at','delivery_address','notes'].filter(function(k){ return s[k]; }).map(function(k){
-          return '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px">' + esc(k.replace('_',' ')) + ': ' + esc(s[k]) + '</div>'; }).join('')
+      + ['delivery_at','delivery_address','notes'].filter(function(item){ return s[item]; }).map(function(item){
+          return '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px">' + esc(item.replace('_',' ')) + ': ' + esc(s[item]) + '</div>'; }).join('')
       + (s.unplaced ? '<div style="font-size:var(--fs-1);color:var(--disp);margin-top:3px">⚠️ not placed anywhere: ' + esc(s.unplaced) + '</div>' : '')
     + (s.notes?'<div style="margin-top:5px;color:var(--grey)">'+esc(s.notes)+'</div>':'')
     + '</div>';
@@ -205,8 +205,8 @@ function intakeDraftHTML(c, s){
 async function loadIntake(quiet){
   _INTAKE.busy=true; _INTAKE.err=null; paintIntake();
   try{
-    var r=await api('capturePending');
-    _INTAKE.list=(r&&r.captures)||[]; _INTAKE.migrated=true;
+    var reply=await api('capturePending');
+    _INTAKE.list=(reply&&reply.captures)||[]; _INTAKE.migrated=true;
   }catch(e){
     // 503 is the migration gate the route declares, not a fault — tell them apart.
     if(/not migrated|b104|503/i.test((e&&e.message)||'')) { _INTAKE.migrated=false; }
@@ -242,7 +242,7 @@ async function intakeSimulate(){
    * the product is believed to do.
    */
   if(!from){ toast('Say who it is from — a phone number or an email. Without it the job has no customer.', true);
-    var f=document.getElementById('in_from'); if(f)f.focus(); return; }
+    var node=document.getElementById('in_from'); if(node)node.focus(); return; }
   try{
     await api('captureSimulate',{body:{channel:ch, sender_ref:from, sender_name:from, raw_text:text}});
     var t=document.getElementById('in_text'); if(t)t.value='';
@@ -252,8 +252,8 @@ async function intakeSimulate(){
 async function intakeStructure(id){
   _INTAKE.working[id]={busy:true}; paintIntake();
   try{
-    var r=await api('captureStructure',{params:{id:id}});
-    _INTAKE.working[id]={structured:(r&&r.structured)||null};
+    var reply=await api('captureStructure',{params:{id:id}});
+    _INTAKE.working[id]={structured:(reply&&reply.structured)||null};
   }catch(e){ _INTAKE.working[id]={err:(e&&e.message)||'AI could not read that message.'}; }
   paintIntake();
 }
@@ -294,7 +294,7 @@ async function intakeRaise(id){
   try{
     // ⚠️ NO use_catalogue FROM HERE. The entity's trade_side decides it, server-side — a receiving entity must not
     //    be talked into sell-side pricing by a request body.
-    var pay=await api('captureRaise',{params:{id:id}});
+    var reply=await api('captureRaise',{params:{id:id}});
     UI._captureId=id;                     // sendChit files the receipt: this capture became that chit
     /**
      * ⚠️ THE ORIGINAL MESSAGE RIDES ALONG AS EVIDENCE. Athi, 2026-08-09: *"the copy is attached along with the
@@ -306,14 +306,14 @@ async function intakeRaise(id){
      * difference that matters when two readings disagree months later.
      */
     var files=[];
-    if(pay.original && pay.original.text){
-      try{ files.push(new File([pay.original.text], pay.original.filename||'original-message.txt', {type:'text/plain'})); }
+    if(reply.original && reply.original.text){
+      try{ files.push(new File([reply.original.text], reply.original.filename||'original-message.txt', {type:'text/plain'})); }
       catch(_){ /* older engines: a chit with the lines but no evidence beats no chit at all */ }
     }
     var r=await sendChit({
-      recipients:(pay.recipients||[]).map(function(x){ return {name:'', role:x.role||'to', self:!!x.self}; }),
-      subject:pay.subject, line_items:pay.line_items||[], purpose:pay.purpose,
-      business_json:pay.business_json, self_copy:pay.self_copy, files:files,
+      recipients:(reply.recipients||[]).map(function(x){ return {name:'', role:x.role||'to', self:!!x.self}; }),
+      subject:reply.subject, line_items:reply.line_items||[], purpose:reply.purpose,
+      business_json:reply.business_json, self_copy:reply.self_copy, files:files,
       onError:function(m){ _INTAKE.working[id]={err:m}; paintIntake(); } });
     if(!r){ _INTAKE.working[id]=Object.assign({}, _INTAKE.working[id], {busy:false}); paintIntake(); return; }
     /* sendChit already navigates to the Task list and reloads it — the request is on screen where it landed. The
@@ -356,8 +356,8 @@ async function intakeMakeChit(id){
   await compose({ subject: subj, origin:{ kind:'capture', channel:c.channel,
     channelName:CHN[c.channel]||('a '+c.channel+' message'), from:c.sender_name||c.sender_ref||null } });
   if(!UI._ccCart) return;
-  var res=UI._ccCart.load((s.line_items||[]).map(function(l){
-    return { name:l.particulars||l.description, qty:l.qty==null?1:l.qty, unit:l.unit, price:(l.rate!=null?l.rate:l.price) };
+  var res=UI._ccCart.load((s.line_items||[]).map(function(item){
+    return { name:item.particulars||item.description, qty:item.qty==null?1:item.qty, unit:item.unit, price:(item.rate!=null?item.rate:item.price) };
   }));
   if(typeof ccAddPicked==='function') ccAddPicked();     // the placed lines become chit lines, through the one gate
   /* ⚠️ WHAT COULD NOT BE PLACED IS REPORTED, never silently dropped — a refused line is a real request the
