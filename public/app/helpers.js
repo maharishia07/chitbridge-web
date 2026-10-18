@@ -13,7 +13,7 @@ function deepClone(x){ return JSON.parse(JSON.stringify(x)); }
 /* ⭐ T2-WEBPRIMS: THE ONE esc — every page loads this file first and calls it; 43 private copies were deleted, and they disagreed on "'"
    (30 escaped it, this home did not). Text and attribute safe either quote: & < > " '. e2e/prim-homes.cjs fails a second definition. */
 function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function opt(arr,sel){ return arr.map(o=>`<option ${o===sel?'selected':''}>${o}</option>`).join(""); }
+function opt(arr,sel){ return arr.map(item=>`<option ${item===sel?'selected':''}>${item}</option>`).join(""); }
 /**
  * ⚠️ ONE SHAPE FOR "IT DID NOT LOAD", because there were four. Measured across the app: "Couldn't load",
  * "Couldn't load suppliers", "Couldn't load co-assists", "Could not load customers" — three spellings of the
@@ -92,15 +92,15 @@ function payModeOpts(){ return payHasUpi() ? '<option value="upi">UPI</option>' 
  */
 function cbSumByCurrency(rows, amtKey, curKey){
   var by = {};
-  (rows || []).forEach(function(r){
-    var v = Number((r || {})[amtKey || 'amt'] || 0);
+  (rows || []).forEach(function(item){
+    var v = Number((item || {})[amtKey || 'amt'] || 0);
     if (!v) return;
-    var c = ((r || {})[curKey || 'currency']) || moneyCode() || '';
+    var c = ((item || {})[curKey || 'currency']) || moneyCode() || '';
     by[c] = (by[c] || 0) + v;
   });
   /* ⚠️ ORDERED BIGGEST FIRST, so the figure a reader is most likely to want is the one they read first. */
-  return Object.keys(by).map(function(c){ return { currency: c, total: by[c] }; })
-    .sort(function(a, b){ return b.total - a.total; });
+  return Object.keys(by).map(function(item){ return { currency: item, total: by[item] }; })
+    .sort(function(first, second){ return second.total - first.total; });
 }
 
 /**
@@ -142,11 +142,11 @@ function timeAgo(ts){ if(!ts)return ''; var s=Math.floor((Date.now()-new Date(ts
  *
  *   act = { label:'+ New product', onclick:"newProduct()" }
  */
-function emptyState(icon,title,sub,act){
+function emptyState(icon,title,sub,node){
   return '<div class="empty"><div class="big">'+(icon||'✨')+'</div><div class="t">'+esc(title)+'</div>'
     + (sub?'<div>'+sub+'</div>':'')
-    + (act&&act.label ? '<button class="btn pri" data-testid="empty-act" onclick="'+esc(act.onclick||'')
-        +'" style="margin-top:4px">'+esc(act.label)+'</button>' : '')
+    + (node&&node.label ? '<button class="btn pri" data-testid="empty-act" onclick="'+esc(node.onclick||'')
+        +'" style="margin-top:4px">'+esc(node.label)+'</button>' : '')
     + '</div>';
 }
 function loader(label){ return '<div style="padding:40px 16px;text-align:center;color:var(--grey)"><span class="spin" style="display:inline-block;margin-bottom:10px"></span><div>'+esc(label||'Loading…')+'</div></div>'; }
@@ -191,9 +191,9 @@ function fmtMoney(amount,code,empty){
 function monthNames(form){
   var out = [], tag = 'en';
   try { tag = (window.CBLocale && CBLocale.lang && CBLocale.lang()) || 'en'; } catch (failure) { if (window.cbQuiet) window.cbQuiet('helpers:monthNames', failure); /* the language reader is missing: English words, still correct */ }
-  for (var i = 0; i < 12; i++) {
-    try { out.push(new Intl.DateTimeFormat(tag, { month: form === 'long' ? 'long' : 'short', timeZone: 'UTC' }).format(Date.UTC(2000, i, 15, 12))); }
-    catch (failure) { if (window.cbQuiet) window.cbQuiet('helpers:monthNames', failure); out.push(CBLocale.date(Date.UTC(2000, i, 15, 12), { month: form === 'long' ? 'long' : 'short', timeZone: 'UTC' })); }
+  for (var index = 0; index < 12; index++) {
+    try { out.push(new Intl.DateTimeFormat(tag, { month: form === 'long' ? 'long' : 'short', timeZone: 'UTC' }).format(Date.UTC(2000, index, 15, 12))); }
+    catch (failure) { if (window.cbQuiet) window.cbQuiet('helpers:monthNames', failure); out.push(CBLocale.date(Date.UTC(2000, index, 15, 12), { month: form === 'long' ? 'long' : 'short', timeZone: 'UTC' })); }
   }
   return out;
 }
@@ -202,12 +202,12 @@ function monthNames(form){
    named gstr1-YYYY-MM.json / gstr3b-YYYY-MM.json. The workshop's Tax band (cap-admin.js misTaxExport) and CB Finance › Returns (cap-finance-returns.js)
    both call this; neither builds a second. → Promise<filename>; a failure rejects with api()'s error — the caller says its own sentence. */
 function gstrDownload(month, form){
-  return api('taxGstr', { query: { month: month, form: form } }).then(function (j) {
-    var name = form + '-' + month + '.json', url = URL.createObjectURL(new Blob([JSON.stringify(j, null, 2)], { type: 'application/json' }));
-    var a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  return api('taxGstr', { query: { month: month, form: form } }).then(function (reply) {
+    var name = form + '-' + month + '.json', url = URL.createObjectURL(new Blob([JSON.stringify(reply, null, 2)], { type: 'application/json' }));
+    var node = document.createElement('a'); node.href = url; node.download = name; document.body.appendChild(node); node.click(); node.remove();
     setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
     return name;
   });
 }
 
-function jwtPayload(t){ try{ const p=String(t||"").split('.')[1]; if(!p) return null; return JSON.parse(atob(p.replace(/-/g,'+').replace(/_/g,'/'))); }catch(_){ return null; } }
+function jwtPayload(t){ try{ const text=String(t||"").split('.')[1]; if(!text) return null; return JSON.parse(atob(text.replace(/-/g,'+').replace(/_/g,'/'))); }catch(_){ return null; } }
