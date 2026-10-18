@@ -36,9 +36,9 @@
    * refusing identically rather than cleverly.
    */
   function endOf(d) {
-    var t = new Date(d);
-    if (/^\d{4}-\d{2}-\d{2}$/.test(String(d))) t.setUTCHours(23, 59, 59, 999);
-    return t;
+    var date = new Date(d);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(String(d))) date.setUTCHours(23, 59, 59, 999);
+    return date;
   }
 
   /**
@@ -96,10 +96,10 @@
     var list = (entries || []).slice();
     var applied = [], rejected = [];
 
-    list.forEach(function (p, i) {
-      var bad = why(p, c);
-      if (bad) rejected.push({ label: p.label || p.basis || ('entry ' + (i + 1)), why: bad, entry: p });
-      else applied.push({ entry: p, rank: rank(p), i: i });
+    list.forEach(function (item, index) {
+      var bad = why(item, c);
+      if (bad) rejected.push({ label: item.label || item.basis || ('entry ' + (index + 1)), why: bad, entry: item });
+      else applied.push({ entry: item, rank: rank(item), i: index });
     });
 
     if (!applied.length) {
@@ -110,16 +110,16 @@
        */
       return { amount: null, entry: null, rejected: rejected,
                explain: rejected.length
-                 ? 'No price applies here — ' + rejected.map(function (r) { return r.label + ': ' + r.why; }).join('; ')
+                 ? 'No price applies here — ' + rejected.map(function (item) { return item.label + ': ' + item.why; }).join('; ')
                  : 'No price is declared.' };
     }
 
-    applied.sort(function (a, b) {
-      if (b.rank !== a.rank) return b.rank - a.rank;
-      var am = a.entry.minQty == null ? -1 : Number(a.entry.minQty);
-      var bm = b.entry.minQty == null ? -1 : Number(b.entry.minQty);
+    applied.sort(function (first, second) {
+      if (second.rank !== first.rank) return second.rank - first.rank;
+      var am = first.entry.minQty == null ? -1 : Number(first.entry.minQty);
+      var bm = second.entry.minQty == null ? -1 : Number(second.entry.minQty);
       if (bm !== am) return bm - am;
-      return a.i - b.i;
+      return first.i - second.i;
     });
 
     var win = applied[0].entry;
@@ -178,9 +178,9 @@
    * nobody declared.
    */
   function forLines(lines, entriesFor, ctx) {
-    return (lines || []).map(function (l) {
-      var e = typeof entriesFor === 'function' ? entriesFor(l) : entriesFor;
-      return resolve(e, Object.assign({}, ctx, { qty: l.qty }));
+    return (lines || []).map(function (item) {
+      var e = typeof entriesFor === 'function' ? entriesFor(item) : entriesFor;
+      return resolve(e, Object.assign({}, ctx, { qty: item.qty }));
     });
   }
 
