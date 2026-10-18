@@ -80,7 +80,7 @@
   "public/app/embed-host.js": {"score":10,"long40":0,"long80":0,"complex10":1,"complex15":0,"deep3":0,"deep4":0,"cryptic":6,"noWhatLine":0,"emptyCatch":2,"noHeader":1},
   "public/app/helpers.js": {"score":44,"long40":0,"long80":0,"complex10":2,"complex15":0,"deep3":0,"deep4":0,"cryptic":40,"noWhatLine":0,"emptyCatch":2,"noHeader":0},
   "public/app/kural.js": {"score":43,"long40":0,"long80":0,"complex10":2,"complex15":1,"deep3":0,"deep4":0,"cryptic":35,"noWhatLine":0,"emptyCatch":5,"noHeader":0},
-  "public/app/list-ctl.js": {"score":333,"long40":2,"long80":0,"complex10":15,"complex15":10,"deep3":2,"deep4":0,"cryptic":293,"noWhatLine":0,"emptyCatch":11,"noHeader":0},
+  "public/app/list-ctl.js": {"score":332,"long40":2,"long80":0,"complex10":15,"complex15":10,"deep3":2,"deep4":0,"cryptic":292,"noWhatLine":0,"emptyCatch":11,"noHeader":0},
   "public/app/list-legacy.js": {"score":38,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":33,"noWhatLine":0,"emptyCatch":4,"noHeader":1},
   "public/app/network-app.js": {"score":66,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":61,"noWhatLine":0,"emptyCatch":4,"noHeader":1},
   "public/app/one-person.js": {"score":131,"long40":0,"long80":0,"complex10":6,"complex15":1,"deep3":0,"deep4":0,"cryptic":106,"noWhatLine":1,"emptyCatch":16,"noHeader":1},

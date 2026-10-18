@@ -920,7 +920,7 @@
       if (k === 'ArrowDown' || k === 'ArrowUp') {
         event.preventDefault();
         var all = [].slice.call(list.el.querySelectorAll('[data-row]')), i = all.indexOf(rowEl), nx = all[i + (k === 'ArrowDown' ? 1 : -1)];
-        if (nx) { nx.focus(); if (list.o.hl === false) return; list.r.hl = nx.getAttribute('data-row'); [].forEach.call(list.el.querySelectorAll('.cbl-row.sel,.cbl-lrec.sel'), function (n) { n.classList.remove('sel'); }); nx.classList.add('sel'); }
+        if (nx) { nx.focus(); if (list.o.hl === false) return; list.r.hl = nx.getAttribute('data-row'); [].forEach.call(list.el.querySelectorAll('.cbl-row.sel,.cbl-lrec.sel'), function (node) { node.classList.remove('sel'); }); nx.classList.add('sel'); }
       }
     }
   }
