@@ -36,20 +36,20 @@ function cmpView(body) {
 }
 function cmpLoadList(pick) {
   var g = ++CMP.gen;
-  return api('booksCompare').then(function (r) {
+  return api('booksCompare').then(function (reply) {
     if (g !== CMP.gen) return;
-    CMP.list = r || {}; var s = CMP.list.snapshots || [];
+    CMP.list = reply || {}; var s = CMP.list.snapshots || [];
     CMP.id = pick && s.some(function (x) { return x.snapshot_id === pick; }) ? pick : (s[0] ? s[0].snapshot_id : null);
     cmpPaint(); if (CMP.id) cmpRead(CMP.id);
   }, function (e) { if (g !== CMP.gen) return; CMP.list = null; CMP.err = bkWhy(e, tx('Could not be read')); cmpPaint(); });
 }
 function cmpMay() { var m = CMP.list && CMP.list.may && CMP.list.may.load; return m || { may: false, why: CMP.err || null }; }
-function cmpSnap() { return ((CMP.list && CMP.list.snapshots) || []).filter(function (s) { return s.snapshot_id === CMP.id; })[0] || null; }
+function cmpSnap() { return ((CMP.list && CMP.list.snapshots) || []).filter(function (item) { return item.snapshot_id === CMP.id; })[0] || null; }
 function cmpPaint() {
   var bar = document.getElementById('cmp_bar'), main = document.getElementById('cmp_main'); if (!bar || !main) return;
   var snaps = (CMP.list && CMP.list.snapshots) || [], may = cmpMay();
   var pick = snaps.length ? '<select class="inp" data-testid="cmp-pick" aria-label="' + esc(tx('Snapshot')) + '" onchange="cmpPick(this.value)" style="min-width:0;max-width:100%">'
-    + snaps.map(function (s) { return '<option value="' + esc(s.snapshot_id) + '"' + (s.snapshot_id === CMP.id ? ' selected' : '') + '>' + esc(s.label + ' · ' + s.period_to) + '</option>'; }).join('') + '</select>' : '';
+    + snaps.map(function (item) { return '<option value="' + esc(item.snapshot_id) + '"' + (item.snapshot_id === CMP.id ? ' selected' : '') + '>' + esc(item.label + ' · ' + item.period_to) + '</option>'; }).join('') + '</select>' : '';
   bar.innerHTML = '<div class="supacts" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">' + pick
     + '<button type="button" data-testid="cmp-load" onclick="cmpLoadOpen()"' + (may.may ? '' : ' disabled title="' + esc(may.why || '') + '"') + '>' + esc(tx('Load their figures')) + '</button>'
     + (CMP.id ? '<button type="button" data-testid="cmp-csv" onclick="cmpCsv(this)">' + esc(tx('Download CSV')) + '</button><button type="button" data-testid="cmp-print" onclick="window.print()">' + esc(tx('Print')) + '</button>' : '')
@@ -62,21 +62,21 @@ function cmpPaint() {
 function cmpPick(id) { CMP.id = id; CMP.r = null; CMP.part = null; cmpPaint(); cmpRead(id); }
 function cmpRead(id) {
   var g = ++CMP.gen;
-  api('booksCompareRead', { params: { id: id } }).then(function (r) {
+  api('booksCompareRead', { params: { id: id } }).then(function (reply) {
     if (g !== CMP.gen) return;
-    CMP.r = r || {}; var have = CMP_ORDER.filter(function (k) { return CMP.r.parts && CMP.r.parts[k]; });
+    CMP.r = reply || {}; var have = CMP_ORDER.filter(function (item) { return CMP.r.parts && CMP.r.parts[item]; });
     if (!CMP.part || have.indexOf(CMP.part) < 0) CMP.part = have[0] || null;
     cmpPaintCompare();
-  }, function (e) { if (g !== CMP.gen) return; var m = document.getElementById('cmp_main'); if (m) m.innerHTML = '<div class="err" data-testid="cmp-err" style="color:var(--warn-2)">' + esc(bkWhy(e, tx('Could not be read'))) + '</div>'; });
+  }, function (e) { if (g !== CMP.gen) return; var node = document.getElementById('cmp_main'); if (node) node.innerHTML = '<div class="err" data-testid="cmp-err" style="color:var(--warn-2)">' + esc(bkWhy(e, tx('Could not be read'))) + '</div>'; });
 }
 /* the big numbers say how many lines differ, are not mapped, are only ours, are the same — over every part (the server's counts) */
 function cmpBig(n, w, tid) { return '<div style="min-width:96px"><div class="mono" data-testid="' + tid + '" style="font-size:var(--fs-5,28px);font-weight:800;line-height:1.1">' + esc(String(n || 0)) + '</div><div style="color:var(--grey);font-size:var(--fs-1)">' + esc(w) + '</div></div>'; }
 function cmpPaintCompare() {
   var main = document.getElementById('cmp_main'), r = CMP.r; if (!main || !r || CMP.ld) return;
   var c = r.counts || {}, snap = r.snapshot || {}, ef = r.effort || null;
-  var tabs = CMP_ORDER.filter(function (k) { return r.parts && r.parts[k]; }).map(function (k) {
-    var P = r.parts[k], n = P.counts ? (P.counts.different + P.counts.gap + P.counts.only_ours) : null;
-    return '<button type="button" class="optchip" data-testid="cmp-part-' + k + '" aria-pressed="' + (k === CMP.part) + '" onclick="cmpPart(\'' + k + '\')" style="cursor:pointer' + (k === CMP.part ? ';border-color:var(--blue-b);background:var(--blue-t);color:var(--blue-i)' : '') + '">'
+  var tabs = CMP_ORDER.filter(function (item) { return r.parts && r.parts[item]; }).map(function (item) {
+    var P = r.parts[item], n = P.counts ? (P.counts.different + P.counts.gap + P.counts.only_ours) : null;
+    return '<button type="button" class="optchip" data-testid="cmp-part-' + item + '" aria-pressed="' + (item === CMP.part) + '" onclick="cmpPart(\'' + item + '\')" style="cursor:pointer' + (item === CMP.part ? ';border-color:var(--blue-b);background:var(--blue-t);color:var(--blue-i)' : '') + '">'
       + esc(tx(P.title)) + (n ? ' · ' + esc(txf('{n} to check', { n: n })) : P.error ? ' · ⚠' : ' ✓') + '</button>';
   }).join('');
   var P = r.parts[CMP.part] || {};
@@ -98,7 +98,7 @@ function cmpDiff(v) { if (v == null) return '—'; var c = CMP.r && CMP.r.curren
 function cmpPaintList() {
   var el = document.getElementById('cmp_rows'), P = CMP.r && CMP.r.parts && CMP.r.parts[CMP.part]; if (!el || !P) return;
   var rows = P.lines || [], k = CMP.part;
-  var opts = Object.keys(CMP_STATUS).map(function (s) { return { v: s, label: tx(CMP_STATUS[s][0]) }; });
+  var opts = Object.keys(CMP_STATUS).map(function (item) { return { v: item, label: tx(CMP_STATUS[item][0]) }; });
   CBList.reset('compare-' + k);
   CBList.mount(el, {
     key: 'compare-' + k, t: tx, rows: function () { return rows; }, id: function (r) { return r.key; }, rowTid: function (r) { return 'cmp-row-' + r.key.replace(/[^a-z0-9]+/gi, '-'); },
@@ -144,7 +144,7 @@ function cmpCsv(btn) {
     var base = (typeof CFG !== 'undefined' && CFG.API_BASE) || '';
     return fetch(base + EP.booksCompareCsv.p.replace(':id', encodeURIComponent(CMP.id)), { cache: 'no-store', headers: SESSION.token ? { Authorization: 'Bearer ' + SESSION.token } : {} })
       .then(function (res) { if (!res.ok) throw new Error(tx('Could not download it')); return res.blob(); })
-      .then(function (blob) { var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'parallel-run-' + ((cmpSnap() || {}).period_to || 'period') + '.csv'; a.setAttribute('data-testid', 'cmp-csv-link'); document.body.appendChild(a); a.click(); setTimeout(function () { try { URL.revokeObjectURL(a.href); a.remove(); } catch (_) {} }, 1500); return true; });
+      .then(function (blob) { var node = document.createElement('a'); node.href = URL.createObjectURL(blob); node.download = 'parallel-run-' + ((cmpSnap() || {}).period_to || 'period') + '.csv'; node.setAttribute('data-testid', 'cmp-csv-link'); document.body.appendChild(node); node.click(); setTimeout(function () { try { URL.revokeObjectURL(node.href); node.remove(); } catch (_) {} }, 1500); return true; });
   }, { key: 'cmp-csv', busy: tx('Preparing…'), outcome: function () { toast(tx('Downloaded.')); }, onFail: function (w) { toast(w); } });
 }
 
@@ -152,7 +152,7 @@ function cmpCsv(btn) {
 function cmpLoadOpen() {
   var snap = cmpSnap(), have = snap ? snap.parts || [] : [];
   var add = snap && have.length < CMP_ORDER.length;
-  CMP.ld = { add: !!add, source: snap ? snap.source : 'tally', part: add ? CMP_ORDER.filter(function (k) { return have.indexOf(k) < 0; })[0] : 'tb', label: '', from: '', to: '', header_row: '1', name: '', csv: null, xlsx: null, xml: null, pre: null, dec: {}, err: '' };
+  CMP.ld = { add: !!add, source: snap ? snap.source : 'tally', part: add ? CMP_ORDER.filter(function (item) { return have.indexOf(item) < 0; })[0] : 'tb', label: '', from: '', to: '', header_row: '1', name: '', csv: null, xlsx: null, xml: null, pre: null, dec: {}, err: '' };
   var main = document.getElementById('cmp_main'); if (!main) return;
   main.innerHTML = '<div data-testid="cmp-load-steps"><div id="cmp_rail"></div><div id="cmp_lsub" style="color:var(--grey);font-size:var(--fs-1);margin-bottom:8px"></div><div id="cmp_lbody"></div><div id="cmp_lfoot" style="margin-top:12px"></div>'
     + '<div style="margin-top:8px"><button type="button" data-testid="cmp-load-cancel" onclick="cmpLoadCancel()">' + esc(tx('Cancel')) + '</button></div></div>';
@@ -169,14 +169,14 @@ function cmpLoadOpen() {
 function cmpLoadCancel() { CMP.ld = null; if (CMP.st) { CMP.st.destroy(); CMP.st = null; } cmpPaint(); if (CMP.r) cmpPaintCompare(); else if (CMP.id) cmpRead(CMP.id); }
 function cmpLoadSel(id, k, list, cur) {
   return '<select class="inp" id="' + id + '" data-testid="' + id + '" onchange="cmpLoadSet(\'' + k + '\', this.value)" style="min-width:0;max-width:100%">'
-    + list.map(function (o) { return '<option value="' + esc(o.v) + '"' + (o.v === cur ? ' selected' : '') + '>' + esc(tx(o.label)) + '</option>'; }).join('') + '</select>';
+    + list.map(function (item) { return '<option value="' + esc(item.v) + '"' + (item.v === cur ? ' selected' : '') + '>' + esc(tx(item.label)) + '</option>'; }).join('') + '</select>';
 }
 function cmpLoadRender(k) {
   var L = CMP.ld, list = CMP.list || {}; if (!L) return '';
   if (k === 'file') {
     var have = L.add ? ((cmpSnap() || {}).parts || []) : [];
-    var parts = (list.parts || []).filter(function (p) { return have.indexOf(p.part) < 0; }).map(function (p) { return { v: p.part, label: p.label }; });
-    var srcs = (list.sources || []).map(function (s) { return { v: s.source, label: s.label }; });
+    var parts = (list.parts || []).filter(function (item) { return have.indexOf(item.part) < 0; }).map(function (item) { return { v: item.part, label: item.label }; });
+    var srcs = (list.sources || []).map(function (item) { return { v: item.source, label: item.label }; });
     var date = function (id, key) { return '<input class="inp" type="date" id="' + id + '" data-testid="' + id + '" value="' + esc(L[key]) + '" onchange="cmpLoadSet(\'' + key + '\', this.value)" style="width:auto;max-width:100%">'; };
     return '<div data-testid="cmp-file-step" style="max-width:640px">'
       + (L.add ? miRow(tx('Adding to'), '<b data-testid="cmp-adding">' + esc((cmpSnap() || {}).label || '') + '</b> <button type="button" data-testid="cmp-new" onclick="cmpLoadSet(\'add\', \'\')">' + esc(tx('Start a new one')) + '</button>')
@@ -194,9 +194,9 @@ function cmpLoadRender(k) {
   if (L.pre.format === 'tally_xml') return '<div data-testid="cmp-xml-read">' + esc(txf('Read as a Tally export: {n} ledgers.', { n: L.pre.rows_total })) + '</div>' + (L.err ? '<div class="err" data-testid="cmp-load-err" style="color:var(--warn-2);margin-top:8px">' + esc(L.err) + '</div>' : '');
   var opts = [['', tx('not read')]].concat((L.pre.fields || []).map(function (x) { return [x.key, x.label + (x.required ? ' *' : '')]; }));
   return '<div data-testid="cmp-columns-step"><div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:6px">' + esc(txf('{n} rows in {f}', { n: L.pre.rows_total, f: L.name })) + '</div>'
-    + (L.pre.guess || []).map(function (g) {
-      return miRow(g.incoming, '<select class="inp" style="width:100%;max-width:100%" data-testid="cmp-pick-' + esc(g.incoming) + '" onchange="cmpLoadPick(' + JSON.stringify(g.incoming).replace(/"/g, '&quot;') + ', this.value)">'
-        + opts.map(function (o) { return '<option value="' + esc(o[0]) + '"' + (o[0] === (L.dec[g.incoming] || '') ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('') + '</select>');
+    + (L.pre.guess || []).map(function (item) {
+      return miRow(item.incoming, '<select class="inp" style="width:100%;max-width:100%" data-testid="cmp-pick-' + esc(item.incoming) + '" onchange="cmpLoadPick(' + JSON.stringify(item.incoming).replace(/"/g, '&quot;') + ', this.value)">'
+        + opts.map(function (o) { return '<option value="' + esc(o[0]) + '"' + (o[0] === (L.dec[item.incoming] || '') ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('') + '</select>');
     }).join('')
     + (L.err ? '<div class="err" data-testid="cmp-load-err" style="color:var(--warn-2);margin-top:8px">' + esc(L.err) + '</div>' : '') + '</div>';
 }
@@ -210,11 +210,11 @@ function cmpLoadGuard(k) {
   }
   if (!L.pre) return L.err || tx('Read the file first');
   if (L.pre.format === 'tally_xml') return null;
-  var picked = cmpLoadDecisions().map(function (d) { return d.field; });
+  var picked = cmpLoadDecisions().map(function (item) { return item.field; });
   var miss = (L.pre.fields || []).filter(function (x) { return x.required && picked.indexOf(x.key) < 0; });
   return miss.length ? txf('Pick the column for {f}', { f: miss.map(function (x) { return x.label; }).join(', ') }) : null;
 }
-function cmpLoadDecisions() { var d = CMP.ld.dec; return Object.keys(d).filter(function (h) { return d[h]; }).map(function (h) { return { incoming: h, field: d[h] }; }); }
+function cmpLoadDecisions() { var d = CMP.ld.dec; return Object.keys(d).filter(function (item) { return d[item]; }).map(function (item) { return { incoming: item, field: d[item] }; }); }
 function cmpLoadRefresh() { if (CMP.st) { CMP.st.paintBody(); CMP.st.paintFoot(); } }
 function cmpLoadSet(k, v, quiet) {
   var L = CMP.ld; if (!L) return;
@@ -230,7 +230,7 @@ function cmpLoadFile(input) {
   var file = input && input.files && input.files[0], L = CMP.ld; if (!file || !L) return;
   L.name = file.name; L.csv = null; L.xlsx = null; L.xml = null; L.pre = null; L.dec = {}; L.err = '';
   var rd = new FileReader();
-  if (/\.xlsx$/i.test(file.name)) { rd.onload = function () { var b = new Uint8Array(rd.result), s = ''; for (var i = 0; i < b.length; i++) s += String.fromCharCode(b[i]); L.xlsx = btoa(s); cmpLoadRefresh(); }; rd.readAsArrayBuffer(file); }
+  if (/\.xlsx$/i.test(file.name)) { rd.onload = function () { var b = new Uint8Array(rd.result), s = ''; for (var index = 0; index < b.length; index++) s += String.fromCharCode(b[index]); L.xlsx = btoa(s); cmpLoadRefresh(); }; rd.readAsArrayBuffer(file); }
   else { rd.onload = function () { var t = String(rd.result || ''); if (/\.xml$/i.test(file.name) || /^\s*<(\?xml|ENVELOPE)/i.test(t)) L.xml = t; else L.csv = t; cmpLoadRefresh(); }; rd.readAsText(file); }
 }
 function cmpLoadBody() {
@@ -241,8 +241,8 @@ function cmpLoadBody() {
 }
 function cmpLoadOnStep(k) {
   var L = CMP.ld; if (k !== 'columns' || !L || L.pre) return;
-  api('booksComparePreflight', { body: cmpLoadBody() }).then(function (p) {
-    if (CMP.ld !== L) return; L.pre = p || {}; L.dec = {}; (L.pre.guess || []).forEach(function (g) { if (g.field) L.dec[g.incoming] = g.field; }); cmpLoadRefresh();
+  api('booksComparePreflight', { body: cmpLoadBody() }).then(function (reply) {
+    if (CMP.ld !== L) return; L.pre = reply || {}; L.dec = {}; (L.pre.guess || []).forEach(function (item) { if (item.field) L.dec[item.incoming] = item.field; }); cmpLoadRefresh();
   }, function (e) { if (CMP.ld !== L) return; L.err = bkWhy(e, tx('Could not read the file')); cmpLoadRefresh(); });
 }
 /* ⭐ the one write (M64): keep this part of the snapshot; the compare is read again with it */
