@@ -75,7 +75,7 @@ var NET_SOON = {
     have: 'per-copy overlay with per-field provenance, trade-lane confidence, compliance-by-catalogue.',
     need: 'the localisation MAP — which fields a market may override, and which the source freezes.' },
 };
-function _capMeta(k){ for (var i = 0; i < NET_CAPS.length; i++) if (NET_CAPS[i].k === k) return NET_CAPS[i]; return null; }
+function _capMeta(k){ for (var index = 0; index < NET_CAPS.length; index++) if (NET_CAPS[index].k === k) return NET_CAPS[index]; return null; }
 
 /* ---- catalogue spec vocabulary (leg/type vocab lives in the shared model, app/catalogue-model.js) ---- */
 var CAT_TYPES = CBCatalogue.TYPES;
@@ -115,7 +115,7 @@ function _netDirtyKey(){ return 'cb_netdirty_' + (SESSION.entityId || SESSION.en
 function _netLoggedIn(){ return typeof SESSION !== 'undefined' && !!SESSION.token; }
 function _netIsDirty(){ try { return localStorage.getItem(_netDirtyKey()) === '1'; } catch (e) { return false; } }
 function _netSetDirty(on){ try { if (on) localStorage.setItem(_netDirtyKey(), '1'); else localStorage.removeItem(_netDirtyKey()); } catch (e) {} }
-function _netStripView(net){ try { var c = JSON.parse(JSON.stringify(net)); delete c.sel; delete c.tab; delete c.openCap; delete c.catTab; delete c.collapsed; return c; } catch (e) { return net; } }   // don't sync transient view state across devices
+function _netStripView(net){ try { var parsed = JSON.parse(JSON.stringify(net)); delete parsed.sel; delete parsed.tab; delete parsed.openCap; delete parsed.catTab; delete parsed.collapsed; return parsed; } catch (e) { return net; } }   // don't sync transient view state across devices
 var _netPushTimer = null;
 function _netPushServer(){
   if (!_netLoggedIn() || !UI.net) return;
@@ -137,11 +137,11 @@ function _netPullServer(){
   if (!_netLoggedIn() || UI._netPulled || UI._netPulling) return;
   UI._netPulling = true;   // guard concurrent pulls across re-renders (GET is not lock-guarded)
   try {
-    api('netDesignGet').then(function(r){
+    api('netDesignGet').then(function(reply){
       UI._netPulling = false; UI._netPulled = true;          // latch only on success — a failed pull retries next render
       if (_netIsDirty()) { _netPushServer(); return; }       // this device has unpushed edits → local wins; never overwrite with a stale server copy
-      if (r && r.draft && r.draft.nodes) {                   // server holds the shared design → adopt it
-        UI.net = r.draft; _netInit();
+      if (reply && reply.draft && reply.draft.nodes) {                   // server holds the shared design → adopt it
+        UI.net = reply.draft; _netInit();
         try { localStorage.setItem(_netDraftKey(), JSON.stringify(UI.net)); } catch (e) {}
         if (typeof renderApp === 'function') renderApp();
       } else if (UI.net && UI.net.nodes) {                   // server empty but this device has a design → migrate it up once
@@ -160,20 +160,20 @@ function _netMark(){ if (UI.net) UI.net.built = false; _netSave(); }
 function _netLoad(){ try { var s = localStorage.getItem(_netDraftKey()); return s ? JSON.parse(s) : null; } catch (e) { return null; } }
 function _netInit(){
   if (UI.net === undefined || UI.net === null) UI.net = _netLoad() || null;
-  if (UI.net && UI.net.nodes) UI.net.nodes.forEach(function(n){          // upgrade older drafts to the current model
-    if (n.owned === undefined) n.owned = true;
-    if (!n.holds) n.holds = [];
-    if (n.note && n.purpose === undefined) { n.purpose = n.note; delete n.note; }
-    if (n.holds.indexOf('catalogue') >= 0 && !n.catalogue) n.catalogue = { template: 'custom', fields: [] };
-    if (n.holds.indexOf('storefront') >= 0) { _ensureOrder(n); }   // NEVER default exposure to public — an unset choice is private, decided on the node
-    if (n.holds.indexOf('coassist') >= 0) n.coassist = _normCoassist(n.coassist);
-    if (n.holds.indexOf('transact') >= 0 && !n.transact) n.transact = { flow: 'both', copyOperator: true };
-    if (n.holds.indexOf('tradeready') >= 0 && !n.tradeready) n.tradeready = { mode: 'inherit', certs: [] };
-    if (n.holds.indexOf('dispute') >= 0 && !n.dispute) n.dispute = { informed: true };
+  if (UI.net && UI.net.nodes) UI.net.nodes.forEach(function(item){          // upgrade older drafts to the current model
+    if (item.owned === undefined) item.owned = true;
+    if (!item.holds) item.holds = [];
+    if (item.note && item.purpose === undefined) { item.purpose = item.note; delete item.note; }
+    if (item.holds.indexOf('catalogue') >= 0 && !item.catalogue) item.catalogue = { template: 'custom', fields: [] };
+    if (item.holds.indexOf('storefront') >= 0) { _ensureOrder(item); }   // NEVER default exposure to public — an unset choice is private, decided on the node
+    if (item.holds.indexOf('coassist') >= 0) item.coassist = _normCoassist(item.coassist);
+    if (item.holds.indexOf('transact') >= 0 && !item.transact) item.transact = { flow: 'both', copyOperator: true };
+    if (item.holds.indexOf('tradeready') >= 0 && !item.tradeready) item.tradeready = { mode: 'inherit', certs: [] };
+    if (item.holds.indexOf('dispute') >= 0 && !item.dispute) item.dispute = { informed: true };
   });
 }
 function _netKey(){ return 'k' + Date.now().toString(36) + Math.floor(Math.random() * 1e4); }
-function _netNode(key){ return (UI.net && UI.net.nodes || []).find(function(n){ return n.key === key; }); }
+function _netNode(key){ return (UI.net && UI.net.nodes || []).find(function(item){ return item.key === key; }); }
 // netWhereAmI no longer draws anything — it resolves WHO THIS ENTITY IS in the network (operator · member ·
 // standalone), which decides whether the design builder or the read-only member screen is shown.
 function loadNetwork(){ _netInit(); netWhereAmI(); }
@@ -306,7 +306,7 @@ async function netWhereAmI(){
   }catch(e){ UI._netRole = 'alone'; UI._netPlaceBusy = false; UI._netPlaceHtml = ''; host.innerHTML = ''; }
 }
 function _netRerender(){   // keep the detail pane's scroll position stable across re-render (no more jumping)
-  var p = (typeof document !== 'undefined') ? document.getElementById('netDetailPane') : null; var st = p ? p.scrollTop : 0;
+  var node = (typeof document !== 'undefined') ? document.getElementById('netDetailPane') : null; var st = node ? node.scrollTop : 0;
   if (typeof renderApp === 'function') renderApp();
   var p2 = (typeof document !== 'undefined') ? document.getElementById('netDetailPane') : null; if (p2) p2.scrollTop = st;
 }
@@ -360,12 +360,12 @@ function netSetPartnerRef(key, val){ var n = _netNode(key); if (!n) return; n.pa
 /* A claim code lasts 7 days and is shown once. Without this, a store whose code lapsed — or whose owner lost the
    slip of paper — would be permanently unreachable, which is the review's §4 lesson in a new costume. */
 function netReissueKey(userId){
-  api('netReissue', { body: { user_id: userId } }).then(function(r){
+  api('netReissue', { body: { user_id: userId } }).then(function(reply){
     var body = '<div style="padding:16px 20px;font-size:var(--fs-2);line-height:1.7">'
-      + 'New sign-in code for <b style="font-family:ui-monospace,Menlo,monospace">' + esc(r.user_id) + '</b>:'
-      + '<div style="margin:11px 0;font-family:ui-monospace,Menlo,monospace;font-size:var(--fs-5);font-weight:700;letter-spacing:.1em;text-align:center;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:10px;color:var(--on-card)">' + esc(r.claim_code) + '</div>'
+      + 'New sign-in code for <b style="font-family:ui-monospace,Menlo,monospace">' + esc(reply.user_id) + '</b>:'
+      + '<div style="margin:11px 0;font-family:ui-monospace,Menlo,monospace;font-size:var(--fs-5);font-weight:700;letter-spacing:.1em;text-align:center;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:10px;color:var(--on-card)">' + esc(reply.claim_code) + '</div>'
       + '<div style="color:var(--grey);font-size:var(--fs-2)">Expires in 7 days. The previous code no longer works.</div>'
-      + '<button class="pri" onclick="netCopyKey(\'' + esc(r.user_id) + '\',\'' + esc(r.claim_code) + '\')" style="margin-top:12px;width:100%;padding:9px">' + tx('Copy') + '</button></div>';
+      + '<button class="pri" onclick="netCopyKey(\'' + esc(reply.user_id) + '\',\'' + esc(reply.claim_code) + '\')" style="margin-top:12px;width:100%;padding:9px">' + tx('Copy') + '</button></div>';
     if (typeof modal === 'function') modal('<div class="mhd"><div class="t">' + tx('🔑 New code') + '</div></div><div class="mbody" style="padding:0">' + body + '</div>', true);
   }).catch(function(e){ if (typeof toast === 'function') toast((e && e.message) || 'Could not issue a code', true); });
 }
@@ -510,34 +510,34 @@ function _netPlanNarrow(startKey, val){
     if (sv !== val) changes.push({ key: start.key, name: start.name, from: sv, to: val });
   }
   (function walk(parentKey, ceil){
-    (UI.net.nodes || []).filter(function(x){ return x.parent_key === parentKey && !x.root && x.owned; }).forEach(function(c){
-      var cv = c.exposure || 'private';
+    (UI.net.nodes || []).filter(function(x){ return x.parent_key === parentKey && !x.root && x.owned; }).forEach(function(item){
+      var cv = item.exposure || 'private';
       var next = NET_RANK[cv] > NET_RANK[ceil] ? ceil : cv;
-      if (next !== cv) changes.push({ key: c.key, name: c.name, from: cv, to: next });
-      walk(c.key, next);
+      if (next !== cv) changes.push({ key: item.key, name: item.name, from: cv, to: next });
+      walk(item.key, next);
     });
   })(startKey || (_netRootNode() || {}).key || null, val);
   return changes;
 }
-function _netRootNode(){ return (UI.net && (UI.net.nodes || []).filter(function(n){ return n.root; })[0]) || null; }
+function _netRootNode(){ return (UI.net && (UI.net.nodes || []).filter(function(item){ return item.root; })[0]) || null; }
 
 /** The whole map, with the rows that move showing `Public → Network` and the old value struck through. */
 function _netChangeMap(changes){
-  var byKey = {}; changes.forEach(function(c){ byKey[c.key] = c; });
-  var lab = function(k){ return ((NET_EXPOSURE.filter(function(o){ return o.k === k; })[0] || {}).label || k).replace(/^\S+\s/, ''); };
+  var byKey = {}; changes.forEach(function(item){ byKey[item.key] = item; });
+  var lab = function(k){ return ((NET_EXPOSURE.filter(function(item){ return item.k === k; })[0] || {}).label || k).replace(/^\S+\s/, ''); };
   var rows = [];
   (function walk(parentKey, depth){
-    (UI.net.nodes || []).filter(function(x){ return x.parent_key === parentKey; }).sort(_netByName).forEach(function(n){
-      var ch = byKey[n.key];
+    (UI.net.nodes || []).filter(function(x){ return x.parent_key === parentKey; }).sort(_netByName).forEach(function(item){
+      var ch = byKey[item.key];
       var chip = ch
         ? '<span style="font-size:var(--fs-1)"><s style="color:var(--disp-2)">' + esc(lab(ch.from)) + '</s>'
           + ' <b style="color:var(--ok-2)"><span class=arw>→</span> ' + esc(lab(ch.to)) + '</b></span>'
-        : (n.root || !n.owned ? '' : '<span style="font-size:var(--fs-1);color:var(--grey)">' + esc(lab(n.exposure || 'private')) + '</span>');
+        : (item.root || !item.owned ? '' : '<span style="font-size:var(--fs-1);color:var(--grey)">' + esc(lab(item.exposure || 'private')) + '</span>');
       rows.push('<div style="display:flex;gap:9px;align-items:baseline;padding:5px 12px 5px ' + (12 + depth * 18) + 'px;'
         + (ch ? 'background:var(--warn-tint);' : '') + ';color:var(--on-card)">'
-        + '<span style="font-size:var(--fs-2);' + (ch ? 'font-weight:700' : '') + '">' + (depth ? '└ ' : '◆ ') + esc(n.name) + '</span>'
+        + '<span style="font-size:var(--fs-2);' + (ch ? 'font-weight:700' : '') + '">' + (depth ? '└ ' : '◆ ') + esc(item.name) + '</span>'
         + '<span style="margin-inline-start:auto">' + chip + '</span></div>');
-      walk(n.key, depth + 1);
+      walk(item.key, depth + 1);
     });
   })(null, 0);
   return '<div style="border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--card);color:var(--on-card)">' + rows.join('') + '</div>';
@@ -547,7 +547,7 @@ function _netChangeMap(changes){
 function _netConfirmNarrow(title, lead, changes, apply){
   if (!changes.length) return apply();
   UI._netApply = apply;
-  var names = changes.map(function(c){ return c.name; });
+  var names = changes.map(function(item){ return item.name; });
   var body = '<div style="padding:14px 16px;max-height:66vh;overflow:auto">'
     + '<div style="font-size:var(--fs-2);line-height:1.6;margin-bottom:11px">' + lead + '</div>'
     + '<div style="font-size:var(--fs-2);line-height:1.6;margin-bottom:11px"><b>' + names.length + ' store'
@@ -568,9 +568,9 @@ function netRunNarrow(){ var f = UI._netApply; UI._netApply = null; if (typeof c
 function netSetExposure(key, val){
   var n = _netNode(key); if (!n) return;
   var changes = _netPlanNarrow(key, val);
-  var below = changes.filter(function(c){ return c.key !== key; });
+  var below = changes.filter(function(item){ return item.key !== key; });
   var apply = function(){
-    changes.forEach(function(c){ var t = _netNode(c.key); if (t) t.exposure = c.to; });
+    changes.forEach(function(item){ var t = _netNode(item.key); if (t) t.exposure = item.to; });
     if (!changes.length) n.exposure = val;
     _netMark(); _netRerender();
   };
@@ -582,7 +582,7 @@ function netSetExposure(key, val){
     + '</b> closes the stores underneath.', changes, apply);
 }
 /* structure */
-function _netDescendants(key, acc){ acc = acc || []; (UI.net.nodes || []).forEach(function(n){ if (n.parent_key === key){ acc.push(n.key); _netDescendants(n.key, acc); } }); return acc; }
+function _netDescendants(key, list){ list = list || []; (UI.net.nodes || []).forEach(function(item){ if (item.parent_key === key){ list.push(item.key); _netDescendants(item.key, list); } }); return list; }
 function netDelete(key){
   var n = _netNode(key); if (!n) return;
   if (!n.parent_key){ if (typeof toast === 'function') toast('The top node is your entity — it stays.'); return; }
@@ -596,7 +596,7 @@ function netDelete(key){
   // ⚠️ "nothing is lost" is only true for a node that was never built. Removing a LIVE store from the drawing does
   // not remove the store — it keeps trading, keeps its catalogue and keeps its login, and the design simply stops
   // tracking it. Saying otherwise would be the most expensive sentence on the page.
-  var live = _netDescendants(key).concat([key]).filter(function(k){ var x = _netNode(k); return x && x.built; }).length;
+  var live = _netDescendants(key).concat([key]).filter(function(item){ var x = _netNode(item); return x && x.built; }).length;
   var msg = 'Remove <b>' + esc(n.name) + '</b>' + (cnt ? ' and its ' + cnt + ' sub-node' + (cnt === 1 ? '' : 's') : '') + ' from the design?<br><br>'
     + (live ? '<b>' + live + ' of these ' + (live === 1 ? 'is a live store' : 'are live stores')
               + '</b> — they keep trading and keep their logins. This design just stops tracking them, and rebuilding will not adopt them back.'
@@ -654,22 +654,22 @@ function netRevertAll(){
   if (!creates.length && !changes.length) return;
   var go = function(){
     var kill = [];
-    creates.forEach(function(c){ kill.push(c.key); _netDescendants(c.key).forEach(function(k){ kill.push(k); }); });
+    creates.forEach(function(item){ kill.push(item.key); _netDescendants(item.key).forEach(function(k){ kill.push(k); }); });
     if (kill.length) {
       UI.net.nodes = UI.net.nodes.filter(function(x){ return kill.indexOf(x.key) < 0; });
       if (kill.indexOf(UI.net.sel) >= 0) UI.net.sel = (_netRootNode() || {}).key || null;
     }
-    changes.forEach(function(u){
-      var t = _netNode(u.key); if (!t) return;
-      if (u.from) t.exposure = NET_PLAT_TO_DESIGN[u.from] || 'private';
-      if (u.purpose) t.purpose = u.purpose.from || '';
+    changes.forEach(function(item){
+      var t = _netNode(item.key); if (!t) return;
+      if (item.from) t.exposure = NET_PLAT_TO_DESIGN[item.from] || 'private';
+      if (item.purpose) t.purpose = item.purpose.from || '';
     });
     _netMark(); _netRerender();
   };
-  var lines = creates.map(function(c){ return 'remove <b>' + esc(c.name) + '</b> (never created)'; })
-    .concat(changes.map(function(u){
-      return '<b>' + esc(u.name) + '</b> back to '
-        + [u.from ? esc(_netPlatLab[u.from] || u.from) : '', u.purpose ? 'its current wording' : ''].filter(Boolean).join(' and ');
+  var lines = creates.map(function(item){ return 'remove <b>' + esc(item.name) + '</b> (never created)'; })
+    .concat(changes.map(function(item){
+      return '<b>' + esc(item.name) + '</b> back to '
+        + [item.from ? esc(_netPlatLab[item.from] || item.from) : '', item.purpose ? 'its current wording' : ''].filter(Boolean).join(' and ');
     }));
   if (typeof confirmAsk === 'function')
     confirmAsk('Discard the changes you have not applied?',
@@ -679,7 +679,7 @@ function netRevertAll(){
 }
 function netStartOver(){
   var go = function(){ try { localStorage.removeItem(_netDraftKey()); } catch (e) {} UI.net = null; _netRerender(); };
-  var built = (UI.net && (UI.net.nodes || []).filter(function(n){ return n.built; }).length) || 0;
+  var built = (UI.net && (UI.net.nodes || []).filter(function(item){ return item.built; }).length) || 0;
   // ⚠️ Once stores exist, "start over" is no longer harmless. It mints fresh node keys, so the receipts the server
   // re-attaches BY KEY no longer match: the design forgets stores that are still live, and the next Build proposes
   // handles that are already taken. The stores themselves are untouched — which is precisely why this needs saying
@@ -712,20 +712,20 @@ function _buildPlanNode(n){
   if (holds.indexOf('catalogue') >= 0) {
     var c = _ensureCat(n), job = CBCatalogue.deriveComputeJob(c);
     lines.push('catalogue <b>' + esc(c.product || '(unnamed)') + '</b> · ' + (c.variants || []).length + ' variant(s) · base ' + esc(c.baseUnit || '—'));
-    if (job.standards.length) lines.push('· ' + job.standards.length + ' standard(s) <i>by reference</i> (' + job.standards.map(function(s){ return esc(s.scheme); }).join(', ') + ')');
-    if (job.pricing.length) lines.push('· ' + job.pricing.length + ' price(s) in ' + esc([job.context.currency, job.context.region].filter(Boolean).join(' · ') || 'no context') + ' (' + job.pricing.map(function(p){ return p.by; }).join('/') + ')');
+    if (job.standards.length) lines.push('· ' + job.standards.length + ' standard(s) <i>by reference</i> (' + job.standards.map(function(item){ return esc(item.scheme); }).join(', ') + ')');
+    if (job.pricing.length) lines.push('· ' + job.pricing.length + ' price(s) in ' + esc([job.context.currency, job.context.region].filter(Boolean).join(' · ') || 'no context') + ' (' + job.pricing.map(function(item){ return item.by; }).join('/') + ')');
     if (job.feeds.length) lines.push('· bind ' + job.feeds.length + ' <b>system-fed</b> field(s) to connector(s)');
     if (job.computed.length) lines.push('· ' + job.computed.length + ' <b>computed</b> field(s) <span class=arw>→</span> co-assist computes, <b>rail seals</b>');
     if (job.fromCustomer.length) lines.push('· ' + job.fromCustomer.length + ' customer-collected field(s)');
     if (job.stored.length) lines.push('· ' + job.stored.length + ' CB-stored field(s) <i>(the gap)</i>');
     if (job.bom.length) lines.push('· ' + job.bom.length + ' BOM component(s)');
     if (job.triggers.length) lines.push('· wire ' + job.triggers.length + ' <b>loop</b> trigger(s)');
-    if (job.feedback.length) lines.push('· ' + job.feedback.length + ' <b>feed-back adapter(s)</b>: ' + job.feedback.map(function(f){ return esc(f.system) + (f.onRail ? ' (chit)' : ' (' + esc(f.format || '?') + ')'); }).join(', '));
-    (c.fields || []).forEach(function(f){ if ((f.leg === 'system' || f.leg === 'compute') && !_legBacked(n, f)) warns.push('“' + esc(f.name || '?') + '” needs ' + (f.leg === 'compute' ? esc(f.via) + ' (AI/ERP)' : 'a ' + esc(f.via) + ' connector') + ' this node doesn\'t carry'); });
-    CBCatalogue.validate(c).issues.forEach(function(iss){ warns.push(esc(iss)); });
+    if (job.feedback.length) lines.push('· ' + job.feedback.length + ' <b>feed-back adapter(s)</b>: ' + job.feedback.map(function(item){ return esc(item.system) + (item.onRail ? ' (chit)' : ' (' + esc(item.format || '?') + ')'); }).join(', '));
+    (c.fields || []).forEach(function(item){ if ((item.leg === 'system' || item.leg === 'compute') && !_legBacked(n, item)) warns.push('“' + esc(item.name || '?') + '” needs ' + (item.leg === 'compute' ? esc(item.via) + ' (AI/ERP)' : 'a ' + esc(item.via) + ' connector') + ' this node doesn\'t carry'); });
+    CBCatalogue.validate(c).issues.forEach(function(item){ warns.push(esc(item)); });
   }
   if (holds.indexOf('storefront') >= 0) { var o = _ensureOrder(n); lines.push('storefront: ' + esc(n.exposure || 'private') + ' · order ' + esc(o.method || 'cart') + ((o.states || []).length ? ' · ' + o.states.length + ' lifecycle state(s)' : '')); }
-  if (holds.indexOf('coassist') >= 0) { var cc = _normCoassist(n.coassist); var p = []; if (cc.human.count) p.push(cc.human.count + ' human'); if ((cc.iot.connections || []).length) p.push((cc.iot.connections || []).length + ' IoT'); if (cc.erp.connectors.length) p.push(cc.erp.connectors.length + ' ERP'); if (cc.ai.count) p.push(cc.ai.count + ' AI slot'); lines.push('co-assists: ' + (p.join(' · ') || 'none set')); }
+  if (holds.indexOf('coassist') >= 0) { var cc = _normCoassist(n.coassist); var list = []; if (cc.human.count) list.push(cc.human.count + ' human'); if ((cc.iot.connections || []).length) list.push((cc.iot.connections || []).length + ' IoT'); if (cc.erp.connectors.length) list.push(cc.erp.connectors.length + ' ERP'); if (cc.ai.count) list.push(cc.ai.count + ' AI slot'); lines.push('co-assists: ' + (list.join(' · ') || 'none set')); }
   if (holds.indexOf('transact') >= 0) { var tr = n.transact || {}; lines.push('transact: ' + esc(tr.flow || 'both') + (tr.copyOperator ? ' · copy operator (traceability + MIS)' : '')); }
   if (holds.indexOf('tradeready') >= 0) { var tt = n.tradeready || {}; lines.push('trade-ready: ' + (tt.mode === 'own' ? (tt.certs || []).length + ' own cert(s)' : 'inherit network certs')); }
   if (holds.indexOf('dispute') >= 0) { lines.push('dispute: ' + ((n.dispute || {}).informed ? 'informed party (per-party scoping)' : 'not involved')); }
@@ -736,23 +736,23 @@ function netBuild(){
   var nodes = (UI.net.nodes || []);
   var plans = nodes.map(_buildPlanNode);
   var t = { owned: 0, partners: 0, cat: 0, co: 0, trig: 0, adapt: 0, std: 0, price: 0, warn: 0 };
-  plans.forEach(function(p){ if (p.owned) t.owned++; if (p.partner) t.partners++; t.warn += p.warns.length; });
-  nodes.forEach(function(n){ var h = n.holds || []; if (h.indexOf('catalogue') >= 0) { var job = CBCatalogue.deriveComputeJob(_ensureCat(n)); t.cat++; t.trig += job.triggers.length; t.adapt += job.feedback.length; t.std += job.standards.length; t.price += job.pricing.length; } if (h.indexOf('coassist') >= 0) { var cc = _normCoassist(n.coassist); t.co += (cc.human.count ? 1 : 0) + cc.erp.connectors.length + (cc.iot.connections || []).length + (cc.ai.count ? 1 : 0); } });
+  plans.forEach(function(item){ if (item.owned) t.owned++; if (item.partner) t.partners++; t.warn += item.warns.length; });
+  nodes.forEach(function(item){ var h = item.holds || []; if (h.indexOf('catalogue') >= 0) { var job = CBCatalogue.deriveComputeJob(_ensureCat(item)); t.cat++; t.trig += job.triggers.length; t.adapt += job.feedback.length; t.std += job.standards.length; t.price += job.pricing.length; } if (h.indexOf('coassist') >= 0) { var cc = _normCoassist(item.coassist); t.co += (cc.human.count ? 1 : 0) + cc.erp.connectors.length + (cc.iot.connections || []).length + (cc.ai.count ? 1 : 0); } });
   var chip = function(v, label){ return '<span style="display:inline-block;font-size:var(--fs-1);background:var(--blue-tint-bg);border-radius:6px;padding:2px 8px;margin:2px 4px 2px 0;color:var(--on-card)"><b>' + v + '</b> ' + label + '</span>'; };
   var totals = '<div style="padding:12px 16px;border-bottom:1px solid var(--line)">'
     + chip(t.owned, 'entities + keys') + chip(t.partners, 'partner handshake' + (t.partners === 1 ? '' : 's')) + chip(t.cat, 'catalogue' + (t.cat === 1 ? '' : 's')) + chip(t.co, 'co-assists') + chip(t.std, 'standards') + chip(t.price, 'prices') + chip(t.trig, 'triggers') + chip(t.adapt, 'adapters')
     + (t.warn ? '<span style="display:inline-block;font-size:var(--fs-1);background:var(--danger-tint);color:var(--disp-2);border-radius:6px;padding:2px 8px;margin:2px 4px"><b>' + t.warn + '</b> ⚠ to resolve</span>' : '<span style="display:inline-block;font-size:var(--fs-1);color:var(--ok-2);padding:2px 8px">' + tx('✓ no blockers') + '</span>')
     + '</div>';
-  var blocks = plans.filter(function(p){ return !p.node.root || p.lines.length > 1; }).map(function(p){
-    var n = p.node;
+  var blocks = plans.filter(function(item){ return !item.node.root || item.lines.length > 1; }).map(function(item){
+    var n = item.node;
     // BUILT vs DESIGNED, said on every row. Athi: *"how do we differentiate between design and already built
     // network?"* Until now the plan read identically whether a node existed or not, which is the one thing a
     // person needs to know before pressing anything.
-    var badge = n.root ? 'ANCHOR' : (n.built ? 'BUILT' : (p.owned ? 'TO CREATE' : 'PARTNER · invite'));
-    var bcol = n.root ? 'var(--blue-2)' : (n.built ? 'var(--ok-2)' : (p.owned ? 'var(--blue-2)' : 'var(--warn-2)'));
+    var badge = n.root ? 'ANCHOR' : (n.built ? 'BUILT' : (item.owned ? 'TO CREATE' : 'PARTNER · invite'));
+    var bcol = n.root ? 'var(--blue-2)' : (n.built ? 'var(--ok-2)' : (item.owned ? 'var(--blue-2)' : 'var(--warn-2)'));
     var hnd = _netHandleOf(n);
-    var rows = p.lines.map(function(l){ return '<div style="font-size:var(--fs-2);color:var(--ink-2);line-height:1.55;padding:1px 0">' + (l.indexOf('·') === 0 ? '<span style="color:var(--grey);padding-inline-start:12px">' + l + '</span>' : '<span class=arw>▸</span> ' + l) + '</div>'; }).join('');
-    var w = p.warns.length ? '<div style="margin-top:6px;padding:6px 9px;border:1px solid #e6c4bf;border-radius:6px;background:var(--danger-tint);font-size:var(--fs-1);color:var(--disp-2)">' + p.warns.map(function(x){ return '⚠ ' + x; }).join('<br>') + '</div>' : '';
+    var rows = item.lines.map(function(l){ return '<div style="font-size:var(--fs-2);color:var(--ink-2);line-height:1.55;padding:1px 0">' + (l.indexOf('·') === 0 ? '<span style="color:var(--grey);padding-inline-start:12px">' + l + '</span>' : '<span class=arw>▸</span> ' + l) + '</div>'; }).join('');
+    var w = item.warns.length ? '<div style="margin-top:6px;padding:6px 9px;border:1px solid #e6c4bf;border-radius:6px;background:var(--danger-tint);font-size:var(--fs-1);color:var(--disp-2)">' + item.warns.map(function(x){ return '⚠ ' + x; }).join('<br>') + '</div>' : '';
     return '<div style="padding:11px 16px;border-bottom:1px solid var(--line)">'
       + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:2px"><b style="font-size:var(--fs-2)">' + esc(n.name) + '</b><span style="font-size:var(--fs-1);font-weight:700;letter-spacing:.03em;color:' + bcol + ';border:1px solid ' + bcol + '55;border-radius:4px;padding:1px 5px">' + badge + '</span></div>'
       + (hnd ? '<div style="font-family:ui-monospace,Menlo,monospace;font-size:var(--fs-1);color:var(--blue-2);margin-bottom:4px">' + esc(hnd) + '</div>' : '')
@@ -789,28 +789,28 @@ function netMint(){
   api('netDesignPut', { body: { draft: _netStripView(UI.net) } }).then(function(){
     _netSetDirty(false);
     return api('netBuild', { body: { dry_run: true } });
-  }).then(function(p){
-    var create = p.create || [], update = p.update || [], invite = p.invite || [],
-        probs = (p.problems || []).concat([]), notes = p.notes || [];
+  }).then(function(reply){
+    var create = reply.create || [], update = reply.update || [], invite = reply.invite || [],
+        probs = (reply.problems || []).concat([]), notes = reply.notes || [];
     var body = '<div style="max-height:64vh;overflow:auto">'
       + '<div style="padding:12px 16px;border-bottom:1px solid var(--line);font-size:var(--fs-2);line-height:1.6">'
-      + 'Your network is named <b style="font-family:ui-monospace,Menlo,monospace">' + esc(p.root) + '</b>'
-      + (p.root_claimed ? ' — <b>this will become your User ID</b>, and every store below is named from it.' : '. Every store below is named from it.')
+      + 'Your network is named <b style="font-family:ui-monospace,Menlo,monospace">' + esc(reply.root) + '</b>'
+      + (reply.root_claimed ? ' — <b>this will become your User ID</b>, and every store below is named from it.' : '. Every store below is named from it.')
       + '</div>'
       + (create.length ? '<div style="padding:9px 16px 4px;font-size:var(--fs-1);font-weight:700;letter-spacing:.04em;color:var(--grey)">WILL BE CREATED — ' + create.length + '</div>' + create.map(_mintRow).join('') : '')
       // Enhancing an existing network: a store already built whose visibility the design now disagrees with. Shown
       // as a from → to so nobody discovers after the fact that a live shop changed who can see it.
       + (update.length ? '<div style="padding:9px 16px 4px;font-size:var(--fs-1);font-weight:700;letter-spacing:.04em;color:var(--warn-2)">WILL BE CHANGED — ' + update.length + '</div>'
-          + update.map(function(u){ return '<div style="padding:8px 16px;border-bottom:1px solid var(--line)">'
-              + '<b style="font-size:var(--fs-2)">' + esc(u.name) + '</b>'
-              + '<div style="font-family:ui-monospace,Menlo,monospace;font-size:var(--fs-2);color:var(--blue-2);margin-top:2px">' + esc(u.handle) + '</div>'
-              + '<div style="font-size:var(--fs-2);color:var(--warn-2);margin-top:3px">who can see it: <b>' + esc(u.from) + '</b> <span class=arw>→</span> <b>' + esc(u.to) + '</b></div></div>'; }).join('') : '')
+          + update.map(function(item){ return '<div style="padding:8px 16px;border-bottom:1px solid var(--line)">'
+              + '<b style="font-size:var(--fs-2)">' + esc(item.name) + '</b>'
+              + '<div style="font-family:ui-monospace,Menlo,monospace;font-size:var(--fs-2);color:var(--blue-2);margin-top:2px">' + esc(item.handle) + '</div>'
+              + '<div style="font-size:var(--fs-2);color:var(--warn-2);margin-top:3px">who can see it: <b>' + esc(item.from) + '</b> <span class=arw>→</span> <b>' + esc(item.to) + '</b></div></div>'; }).join('') : '')
       + (invite.length ? '<div style="padding:9px 16px 4px;font-size:var(--fs-1);font-weight:700;letter-spacing:.04em;color:var(--grey)">WILL BE INVITED — ' + invite.length + '</div>'
-          + invite.map(function(i){ return '<div style="padding:8px 16px;border-bottom:1px solid var(--line);font-size:var(--fs-2)">🤝 <b>' + esc(i.name) + '</b> <span style="color:var(--grey)"><span class=arw>→</span> ' + esc(i.ref) + '</span><div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">A request they must accept. They are not added to your network by you.</div></div>'; }).join('') : '')
-      + ((p.skip || []).length ? '<div style="padding:9px 16px;font-size:var(--fs-1);color:var(--grey)">' + p.skip.length + ' already built — untouched.</div>' : '')
+          + invite.map(function(item){ return '<div style="padding:8px 16px;border-bottom:1px solid var(--line);font-size:var(--fs-2)">🤝 <b>' + esc(item.name) + '</b> <span style="color:var(--grey)"><span class=arw>→</span> ' + esc(item.ref) + '</span><div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">A request they must accept. They are not added to your network by you.</div></div>'; }).join('') : '')
+      + ((reply.skip || []).length ? '<div style="padding:9px 16px;font-size:var(--fs-1);color:var(--grey)">' + reply.skip.length + ' already built — untouched.</div>' : '')
       + (probs.length ? '<div style="padding:9px 16px 4px;font-size:var(--fs-1);font-weight:700;letter-spacing:.04em;color:var(--disp-2)">NOT BUILT — ' + probs.length + '</div>'
           + probs.map(function(x){ return '<div style="padding:7px 16px;font-size:var(--fs-2);color:var(--disp-2);border-bottom:1px solid var(--line)"><b>' + esc(x.name || '—') + '</b> — ' + esc(x.reason) + '</div>'; }).join('') : '')
-      + (notes.length ? notes.map(function(n){ return '<div style="padding:7px 16px;font-size:var(--fs-2);color:var(--warn-2)">⚠ ' + esc(n) + '</div>'; }).join('') : '')
+      + (notes.length ? notes.map(function(item){ return '<div style="padding:7px 16px;font-size:var(--fs-2);color:var(--warn-2)">⚠ ' + esc(item) + '</div>'; }).join('') : '')
       + '<div style="padding:13px 16px">'
       + (create.length || update.length || invite.length
           ? (create.length ? '<div style="padding:10px 13px;border:1px solid #e0d3b0;border-radius:9px;background:var(--warn-tint);font-size:var(--fs-2);color:var(--warn-3);line-height:1.6">Each new store gets a <b>sign-in code shown once</b> on the next screen. Write them down or hand them over then — you can issue a fresh one later, but you cannot look this one up again.</div>' : '')
@@ -831,7 +831,7 @@ function netMint(){
 }
 function netMintGo(){
   if (typeof toast === 'function') toast('Creating…');
-  api('netBuild', { body: {} }).then(function(r){
+  api('netBuild', { body: {} }).then(function(reply){
     // Take the receipts IMMEDIATELY, not when the person clicks Done. Between the build and that click, autosave
     // could push this page's copy — which has no `built` markers — and the next Build would treat existing stores
     // as new. The server now also refuses to drop them, but the client should not be sending stale state at all.
@@ -840,25 +840,25 @@ function netMintGo(){
       UI._netPlan = null; UI._netPlanSig = null;   // the outstanding list is now stale by definition — re-ask
       UI._netPlaceHtml = null;                     // and so is the live tree above it
     }).catch(function(){ UI._netPlan = null; UI._netPlanSig = null; UI._netPlaceHtml = null; });
-    var created = r.created || [], invited = r.invited || [], updated = r.updated || [], probs = r.problems || [];
+    var created = reply.created || [], invited = reply.invited || [], updated = reply.updated || [], probs = reply.problems || [];
     var body = '<div style="max-height:64vh;overflow:auto">'
       + (created.length ? '<div style="padding:11px 16px;border-bottom:1px solid var(--line);font-size:var(--fs-2);line-height:1.6"><b>' + created.length + ' store' + (created.length === 1 ? '' : 's') + ' created.</b> Each signs in at the login page with the <b>handle</b> and the <b>code</b> below. Codes last 7 days.<br><span style="color:var(--disp-2)">This is the only time these codes are shown.</span></div>' : '')
-      + created.map(function(c){
+      + created.map(function(item){
           return '<div style="padding:10px 16px;border-bottom:1px solid var(--line)">'
-            + '<div style="font-size:var(--fs-2)"><b>' + esc(c.name) + '</b> <span style="font-size:var(--fs-1);color:var(--grey)">' + esc(c.user_id||c.bridge_id) + '</span></div>'
+            + '<div style="font-size:var(--fs-2)"><b>' + esc(item.name) + '</b> <span style="font-size:var(--fs-1);color:var(--grey)">' + esc(item.user_id||item.bridge_id) + '</span></div>'
             + '<div style="display:flex;gap:14px;align-items:center;margin-top:5px;flex-wrap:wrap">'
-            + '<span style="font-family:ui-monospace,Menlo,monospace;font-size:var(--fs-2);color:var(--blue-2)">' + esc(c.handle) + '</span>'
-            + '<span style="font-family:ui-monospace,Menlo,monospace;font-size:var(--fs-3);font-weight:700;letter-spacing:.08em;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:2px 10px;color:var(--on-card)">' + esc(c.claim_code) + '</span>'
-            + '<button onclick="netCopyKey(\'' + esc(c.handle) + '\',\'' + esc(c.claim_code) + '\')" style="padding:4px 10px;font-size:var(--fs-1)">' + tx('Copy') + '</button>'
+            + '<span style="font-family:ui-monospace,Menlo,monospace;font-size:var(--fs-2);color:var(--blue-2)">' + esc(item.handle) + '</span>'
+            + '<span style="font-family:ui-monospace,Menlo,monospace;font-size:var(--fs-3);font-weight:700;letter-spacing:.08em;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:2px 10px;color:var(--on-card)">' + esc(item.claim_code) + '</span>'
+            + '<button onclick="netCopyKey(\'' + esc(item.handle) + '\',\'' + esc(item.claim_code) + '\')" style="padding:4px 10px;font-size:var(--fs-1)">' + tx('Copy') + '</button>'
             + '</div></div>'; }).join('')
       + (updated.length ? '<div style="padding:9px 16px 4px;font-size:var(--fs-1);font-weight:700;letter-spacing:.04em;color:var(--warn-2)">CHANGED — ' + updated.length + '</div>'
-          + updated.map(function(u){ return '<div style="padding:7px 16px;font-size:var(--fs-2);border-bottom:1px solid var(--line)">' + esc(u.name) + ' <span style="color:var(--grey)">' + esc(u.from) + ' <span class=arw>→</span> ' + esc(u.to) + '</span></div>'; }).join('') : '')
+          + updated.map(function(item){ return '<div style="padding:7px 16px;font-size:var(--fs-2);border-bottom:1px solid var(--line)">' + esc(item.name) + ' <span style="color:var(--grey)">' + esc(item.from) + ' <span class=arw>→</span> ' + esc(item.to) + '</span></div>'; }).join('') : '')
       + (invited.length ? '<div style="padding:9px 16px 4px;font-size:var(--fs-1);font-weight:700;letter-spacing:.04em;color:var(--grey)">' + tx('INVITED — awaiting their acceptance') + '</div>'
-          + invited.map(function(i){ return '<div style="padding:7px 16px;font-size:var(--fs-2);border-bottom:1px solid var(--line)">🤝 ' + esc(i.name) + ' <span style="color:var(--grey)">' + esc(i.handle || '') + ' · ' + esc(i.status || '') + '</span></div>'; }).join('') : '')
+          + invited.map(function(item){ return '<div style="padding:7px 16px;font-size:var(--fs-2);border-bottom:1px solid var(--line)">🤝 ' + esc(item.name) + ' <span style="color:var(--grey)">' + esc(item.handle || '') + ' · ' + esc(item.status || '') + '</span></div>'; }).join('') : '')
       + (probs.length ? probs.map(function(x){ return '<div style="padding:7px 16px;font-size:var(--fs-2);color:var(--disp-2)"><b>' + esc(x.name || '—') + '</b> — ' + esc(x.reason) + '</div>'; }).join('') : '')
       + '<div style="padding:13px 16px"><button class="pri" onclick="netMintDone()" style="width:100%;padding:10px;font-size:var(--fs-2)">' + tx('I have the codes — done') + '</button></div>'
       + '</div>';
-    if (typeof modal === 'function') modal('<div class="mhd"><div class="t">✅ ' + esc(r.message || 'Built') + '</div></div><div class="mbody" style="padding:0">' + body + '</div>', true);
+    if (typeof modal === 'function') modal('<div class="mhd"><div class="t">✅ ' + esc(reply.message || 'Built') + '</div></div><div class="mbody" style="padding:0">' + body + '</div>', true);
   }).catch(function(e){
     if (typeof toast === 'function') toast((e && e.message) || 'Build failed', true);
   });
@@ -871,13 +871,13 @@ function netMintDone(){
   // Re-read the design from the server: the build wrote `built` onto each node, and that is what makes a second
   // Build a no-op. Reading it back is also the only honest confirmation that the write landed.
   if (typeof closeModal === 'function') closeModal();
-  api('netDesignGet').then(function(r){
-    if (r && r.draft && r.draft.nodes) { UI.net = r.draft; _netRerender(); }
+  api('netDesignGet').then(function(reply){
+    if (reply && reply.draft && reply.draft.nodes) { UI.net = reply.draft; _netRerender(); }
   }).catch(function(){});
 }
 
 /* ---- render (two panes, same style) ---- */
-function _capDots(n){ return (n.holds || []).map(function(k){ var c = _capMeta(k); return c ? c.icon : ''; }).join(''); }
+function _capDots(n){ return (n.holds || []).map(function(item){ var c = _capMeta(item); return c ? c.icon : ''; }).join(''); }
 /**
  * ONE ORDER, EVERYWHERE.
  *
@@ -922,8 +922,8 @@ function _netPos(n){
 function netMove(key, dir){
   var n = _netNode(key); if (!n) return;
   var sibs = (UI.net.nodes || []).filter(function(x){ return x.parent_key === n.parent_key && !x.root; }).sort(_netByName);
-  sibs.forEach(function(s, i){ s.pos = i; });          // freeze what is on screen, then move within it
-  var i = sibs.findIndex(function(s){ return s.key === key; });
+  sibs.forEach(function(item, index){ item.pos = index; });          // freeze what is on screen, then move within it
+  var i = sibs.findIndex(function(item){ return item.key === key; });
   var j = i + dir;
   if (i < 0 || j < 0 || j >= sibs.length) return;      // already at the end — nothing to do, and no false toast
   var t = sibs[i].pos; sibs[i].pos = sibs[j].pos; sibs[j].pos = t;
@@ -955,27 +955,27 @@ function _netGlobalChip(n){
 }
 
 function _netTree(parentKey, depth){
-  var kids = (UI.net.nodes || []).filter(function(n){ return n.parent_key === (parentKey || null); }).sort(_netByName);
-  return kids.map(function(n){ var sel = UI.net.sel === n.key; var dots = _capDots(n);
-    return '<div onclick="netSelect(\'' + n.key + '\')" style="cursor:pointer;padding:7px 9px;padding-inline-start:' + (9 + depth * 16) + 'px;border-radius:9px;font-size:var(--fs-2);' + (sel ? 'background:var(--blue-tint-bg);color:var(--blue-2);font-weight:700' : 'color:var(--ink-2)') + '">'
-      + (n.parent_key ? '└ ' : '◆ ') + esc(n.name) + (n.owned ? '' : ' <span title="partner">🤝</span>')
+  var kids = (UI.net.nodes || []).filter(function(item){ return item.parent_key === (parentKey || null); }).sort(_netByName);
+  return kids.map(function(item){ var sel = UI.net.sel === item.key; var dots = _capDots(item);
+    return '<div onclick="netSelect(\'' + item.key + '\')" style="cursor:pointer;padding:7px 9px;padding-inline-start:' + (9 + depth * 16) + 'px;border-radius:9px;font-size:var(--fs-2);' + (sel ? 'background:var(--blue-tint-bg);color:var(--blue-2);font-weight:700' : 'color:var(--ink-2)') + '">'
+      + (item.parent_key ? '└ ' : '◆ ') + esc(item.name) + (item.owned ? '' : ' <span title="partner">🤝</span>')
       // The visibility flag, in the tree. It is the decision this whole page exists to make, so it must be
       // readable across the WHOLE network at a glance — not one node at a time. Re-rendered by netSetExposure,
       // so changing it on the right updates here immediately.
-      + (n.root || !n.owned ? '' : _netVisChip(n))
+      + (item.root || !item.owned ? '' : _netVisChip(item))
       + (dots ? '<span style="font-size:var(--fs-1);margin-inline-start:5px;opacity:.9">' + dots + '</span>' : '')
       // WHAT THIS STORE IS FOR, under its name. Athi, 2026-08-08: *"if we can bring the purpose of the store as a
       // comment or readable text under each store, that makes the network tree more meaningful."* The purpose was
       // captured on the first day and then only ever shown on the node you happened to have selected — so the
       // tree read as a list of names, and a name does not tell you why a branch exists. One line, clamped, with
       // the full text on hover: it must add meaning without turning the tree into a document.
-      + (n.purpose ? '<div title="' + esc(n.purpose) + '" style="font-size:var(--fs-1);color:var(--grey-3);line-height:1.4;'
-          + 'margin:2px 0 0 13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(n.purpose) + '</div>' : '')
+      + (item.purpose ? '<div title="' + esc(item.purpose) + '" style="font-size:var(--fs-1);color:var(--grey-3);line-height:1.4;'
+          + 'margin:2px 0 0 13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(item.purpose) + '</div>' : '')
       // ⚠️ SHOW THE EXCEPTION, NOT THE RULE. Athi, 2026-08-08: *"if the currency changes, then we can bring it in
       // the left menu — otherwise only the top node shows the currency and country."* Repeating "INR · IN" on every
       // store says nothing and buries the one store that is different. So it appears only where it DIFFERS.
-      + _netGlobalChip(n)
-      + '</div>' + _netTree(n.key, depth + 1);
+      + _netGlobalChip(item)
+      + '</div>' + _netTree(item.key, depth + 1);
   }).join('');
 }
 /** The Network panel has two jobs: DESIGN the network, and ASK it a question. One strip, at the very top. */
@@ -1060,7 +1060,7 @@ function _netLeftPane(){
   if (!UI.net) return '';
   var tree = _netTree(null, 0) || '<div style="color:var(--grey);font-size:var(--fs-2);padding:8px 6px">No nodes yet.</div>';
   var count = (UI.net.nodes || []).length - 1;
-  var built = (UI.net.nodes || []).filter(function(n){ return n.built; }).length;
+  var built = (UI.net.nodes || []).filter(function(item){ return item.built; }).length;
   _netRefreshPlan();                       // ask the server what is outstanding (debounced by design signature)
   var P = UI._netPlan || {};
   var toCreate = P.create || [], toChange = P.update || [], probs = P.problems || [];
@@ -1071,18 +1071,18 @@ function _netLeftPane(){
     ? '<div style="margin:8px 8px 0;border:1px solid #e0d3b0;border-radius:9px;background:var(--warn-tint);overflow:hidden;color:var(--on-card)">'
       // Each row carries its own ✕ — a decision that cannot be taken back in one click is a decision people avoid
       // making at all. The revert target comes from the plan's `from`, so nobody has to remember what it used to be.
-      + toCreate.map(function(c){ return '<div style="display:flex;gap:6px;align-items:flex-start;padding:6px 9px;font-size:var(--fs-1);border-bottom:1px solid #efe4cc">'
-          + '<div style="flex:1;min-width:0"><b style="color:var(--blue-2)">NEW</b> ' + esc(c.name)
-          + '<div style="font-family:ui-monospace,Menlo,monospace;font-size:var(--fs-1);color:var(--grey)">' + esc(c.handle) + ' · ' + esc(_netPlatLab[c.visibility] || c.visibility) + '</div></div>'
-          + '<span onclick="netRevertOne(\'' + c.key + '\')" title="Remove it — it was never created" style="cursor:pointer;color:var(--grey-3);font-weight:700;padding:0 3px">✕</span></div>'; }).join('')
-      + toChange.map(function(u){ return '<div style="display:flex;gap:6px;align-items:flex-start;padding:6px 9px;font-size:var(--fs-1);border-bottom:1px solid #efe4cc">'
-          + '<div style="flex:1;min-width:0"><b style="color:var(--warn-2)">' + tx('CHANGE') + '</b> ' + esc(u.name)
-          + (u.from ? '<div style="font-size:var(--fs-1);color:var(--grey)"><s>' + esc(_netPlatLab[u.from] || u.from) + '</s> <span class=arw>→</span> <b>' + esc(_netPlatLab[u.to] || u.to) + '</b></div>' : '')
-          + (u.purpose ? '<div style="font-size:var(--fs-1);color:var(--grey)">text: <s>' + esc(u.purpose.from || '(none)') + '</s> <span class=arw>→</span> <b>' + esc(u.purpose.to || '(none)') + '</b></div>' : '')
-          + (u.order ? '<div style="font-size:var(--fs-1);color:var(--grey)">moved in the order</div>' : '')
-          + (u.place ? '<div style="font-size:var(--fs-1);color:var(--grey)">place updated' + ((u.place.to && u.place.to.city) ? ' · ' + esc(u.place.to.city) : '') + '</div>' : '')
+      + toCreate.map(function(item){ return '<div style="display:flex;gap:6px;align-items:flex-start;padding:6px 9px;font-size:var(--fs-1);border-bottom:1px solid #efe4cc">'
+          + '<div style="flex:1;min-width:0"><b style="color:var(--blue-2)">NEW</b> ' + esc(item.name)
+          + '<div style="font-family:ui-monospace,Menlo,monospace;font-size:var(--fs-1);color:var(--grey)">' + esc(item.handle) + ' · ' + esc(_netPlatLab[item.visibility] || item.visibility) + '</div></div>'
+          + '<span onclick="netRevertOne(\'' + item.key + '\')" title="Remove it — it was never created" style="cursor:pointer;color:var(--grey-3);font-weight:700;padding:0 3px">✕</span></div>'; }).join('')
+      + toChange.map(function(item){ return '<div style="display:flex;gap:6px;align-items:flex-start;padding:6px 9px;font-size:var(--fs-1);border-bottom:1px solid #efe4cc">'
+          + '<div style="flex:1;min-width:0"><b style="color:var(--warn-2)">' + tx('CHANGE') + '</b> ' + esc(item.name)
+          + (item.from ? '<div style="font-size:var(--fs-1);color:var(--grey)"><s>' + esc(_netPlatLab[item.from] || item.from) + '</s> <span class=arw>→</span> <b>' + esc(_netPlatLab[item.to] || item.to) + '</b></div>' : '')
+          + (item.purpose ? '<div style="font-size:var(--fs-1);color:var(--grey)">text: <s>' + esc(item.purpose.from || '(none)') + '</s> <span class=arw>→</span> <b>' + esc(item.purpose.to || '(none)') + '</b></div>' : '')
+          + (item.order ? '<div style="font-size:var(--fs-1);color:var(--grey)">moved in the order</div>' : '')
+          + (item.place ? '<div style="font-size:var(--fs-1);color:var(--grey)">place updated' + ((item.place.to && item.place.to.city) ? ' · ' + esc(item.place.to.city) : '') + '</div>' : '')
           + '</div>'
-          + '<span onclick="netRevertOne(\'' + u.key + '\')" title="Leave it as ' + esc(_netPlatLab[u.from] || u.from) + '" style="cursor:pointer;color:var(--grey-3);font-weight:700;padding:0 3px">✕</span></div>'; }).join('')
+          + '<span onclick="netRevertOne(\'' + item.key + '\')" title="Leave it as ' + esc(_netPlatLab[item.from] || item.from) + '" style="cursor:pointer;color:var(--grey-3);font-weight:700;padding:0 3px">✕</span></div>'; }).join('')
       + '<div style="display:flex;gap:8px;align-items:center;padding:6px 9px;font-size:var(--fs-1);color:var(--warn-2)">'
       + '<span style="flex:1">Nothing above has happened yet.</span>'
       + '<span onclick="netRevertAll()" style="cursor:pointer;color:var(--blue);font-weight:600">' + tx('↺ Discard all') + '</span></div></div>'
@@ -1117,23 +1117,23 @@ function _capSummary(n, k){
     return got ? got + ' noted · not enforced' : 'nothing noted yet'; }
   if (k === 'catalogue') { var c = n.catalogue || {}; var nf = (c.fields || []).length; return nf + ' field' + (nf === 1 ? '' : 's') + ' · ' + (c.loadedBy || 'manual'); }
   if (k === 'storefront') { var o = n.order || {}; var ml = (CAT_METHODS.filter(function(x){ return x.k === (o.method || 'cart'); })[0] || {}).label || ''; return (n.exposure || 'private') + ' · ' + ml; }
-  if (k === 'coassist') { var cc = _normCoassist(n.coassist); var p = []; if (cc.human.count) p.push(cc.human.count + ' human'); var iotDev = (cc.iot.connections || []).reduce(function(s, x){ return s + (parseInt(x.devices, 10) || 0); }, 0); if (iotDev || (cc.iot.connections || []).length) p.push(iotDev + ' IoT'); if (cc.erp.connectors.length) p.push(cc.erp.connectors.length + ' ERP'); if (cc.ai.count) p.push(cc.ai.count + ' AI'); return p.length ? p.join(' · ') : 'none set'; }
+  if (k === 'coassist') { var cc = _normCoassist(n.coassist); var list = []; if (cc.human.count) list.push(cc.human.count + ' human'); var iotDev = (cc.iot.connections || []).reduce(function(total, x){ return total + (parseInt(x.devices, 10) || 0); }, 0); if (iotDev || (cc.iot.connections || []).length) list.push(iotDev + ' IoT'); if (cc.erp.connectors.length) list.push(cc.erp.connectors.length + ' ERP'); if (cc.ai.count) list.push(cc.ai.count + ' AI'); return list.length ? list.join(' · ') : 'none set'; }
   if (k === 'transact') { var t = n.transact || {}; var f = t.flow || 'both'; var base = f === 'both' ? 'sends & receives' : (f === 'send' ? 'sends only' : 'receives only'); return base + (t.copyOperator !== false ? ' · HQ copied' : ''); }
   if (k === 'tradeready') { var tr = n.tradeready || {}; return tr.mode === 'own' ? ('own · ' + (tr.certs || []).length + ' cert' + ((tr.certs || []).length === 1 ? '' : 's')) : "network's certs"; }
   if (k === 'dispute') return (n.dispute || {}).informed !== false ? 'informed' : 'not involved';
   return 'set up next';
 }
 function _catFieldRow(n, f, i){
-  var legOpts = CAT_LEGS.map(function(l){ return '<option value="' + l.k + '"' + (f.leg === l.k ? ' selected' : '') + '>' + l.short + '</option>'; }).join('');
-  var typOpts = CAT_TYPES.map(function(t){ return '<option value="' + t + '"' + (f.type === t ? ' selected' : '') + '>' + t + '</option>'; }).join('');
+  var legOpts = CAT_LEGS.map(function(item){ return '<option value="' + item.k + '"' + (f.leg === item.k ? ' selected' : '') + '>' + item.short + '</option>'; }).join('');
+  var typOpts = CAT_TYPES.map(function(item){ return '<option value="' + item + '"' + (f.type === item ? ' selected' : '') + '>' + item + '</option>'; }).join('');
   var viaSel = '';
   if (f.leg === 'system' || f.leg === 'compute') {
     var viaList = _viaFor(f.leg);
-    var viaOpts = viaList.map(function(v){ return '<option value="' + v + '"' + ((f.via || viaList[0]) === v ? ' selected' : '') + '>' + v + '</option>'; }).join('');
+    var viaOpts = viaList.map(function(item){ return '<option value="' + item + '"' + ((f.via || viaList[0]) === item ? ' selected' : '') + '>' + item + '</option>'; }).join('');
     var ok = _legBacked(n, f);
     viaSel = '<select onchange="netSetCatField(\'' + n.key + '\',' + i + ',\'via\',this.value)" title="' + (ok ? 'co-assist present' : 'no matching co-assist on this node') + '" style="font-size:var(--fs-1);padding:4px;border:1px solid ' + (ok ? 'var(--line)' : 'var(--disp)') + ';border-radius:6px;background:' + (ok ? 'var(--card)' : 'var(--danger-tint)') + ';color:' + (ok ? 'var(--on-card)' : 'var(--on-card)') + '">' + viaOpts + '</select>';
   }
-  var col = (CAT_LEGS.filter(function(l){ return l.k === f.leg; })[0] || {}).col || ['var(--blue-2)', 'var(--blue-tint-bg)'];
+  var col = (CAT_LEGS.filter(function(item){ return item.k === f.leg; })[0] || {}).col || ['var(--blue-2)', 'var(--blue-tint-bg)'];
   return '<div style="display:flex;gap:6px;align-items:center;padding:3px 0;border-inline-start:3px solid ' + col[0] + ';padding-inline-start:7px">'
     + '<input value="' + esc(f.name || '') + '" oninput="netSetCatField(\'' + n.key + '\',' + i + ',\'name\',this.value)" placeholder="what you need to know" style="flex:1;min-width:0;font-size:var(--fs-2);padding:5px 7px;border:1px solid var(--line);border-radius:6px">'
     + '<select onchange="netSetCatField(\'' + n.key + '\',' + i + ',\'leg\',this.value)" style="font-size:var(--fs-1);padding:4px;border:1px solid var(--line);border-radius:6px">' + legOpts + '</select>'
@@ -1178,12 +1178,12 @@ function _adoptedPricing(n, c){
     + 'network\'s — a corrected picture or spec reaches every store. Only the <b>price</b> is ever this store\'s, '
     + 'stamped in <b>' + esc(cur) + '</b> and never converted afterwards.</div>'
     + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:9px">'
-    + CAT_PRICE_SRC.map(function(o){
-        var on = v === o.k;
-        return '<div onclick="netSetPriceSrc(\'' + n.key + '\',\'' + o.k + '\')" style="cursor:pointer;flex:1;min-width:210px;'
+    + CAT_PRICE_SRC.map(function(item){
+        var on = v === item.k;
+        return '<div onclick="netSetPriceSrc(\'' + n.key + '\',\'' + item.k + '\')" style="cursor:pointer;flex:1;min-width:210px;'
           + 'padding:10px 12px;border:1px solid ' + (on ? 'var(--blue-2)' : 'var(--line)') + ';border-radius:9px;background:' + (on ? 'var(--blue-tint-bg)' : 'var(--card)') + ';color:' + (on ? 'var(--on-card)' : 'var(--on-card)') + '">'
-          + '<b style="font-size:var(--fs-2);color:' + (on ? 'var(--blue-2)' : 'var(--blue-2)') + '">' + (on ? '● ' : '○ ') + esc(o.label) + '</b>'
-          + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px;line-height:1.5">' + o.hint + '</div></div>';
+          + '<b style="font-size:var(--fs-2);color:' + (on ? 'var(--blue-2)' : 'var(--blue-2)') + '">' + (on ? '● ' : '○ ') + esc(item.label) + '</b>'
+          + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px;line-height:1.5">' + item.hint + '</div></div>';
       }).join('')
     + '</div>'
     // The rollover. This part is NOT speculation — adoption by reference and hiding unpriced adopted lines from a
@@ -1199,14 +1199,14 @@ function _adoptedPricing(n, c){
 
 function _catConfig(n){
   var c = _ensureCat(n);
-  var fields = (c.fields || []).map(function(f, i){ return _catFieldRow(n, f, i); }).join('') || '<div style="font-size:var(--fs-1);color:var(--grey);padding:2px 0">No requirements yet — add what this catalogue must know, then route each to a leg.</div>';
-  var loadOpts = CAT_LOADS.map(function(l){ return '<option value="' + l + '"' + ((c.loadedBy || 'manual') === l ? ' selected' : '') + '>' + l + '</option>'; }).join('');
-  var unbacked = (c.fields || []).filter(function(f){ return (f.leg === 'system' || f.leg === 'compute') && !_legBacked(n, f); });
+  var fields = (c.fields || []).map(function(item, index){ return _catFieldRow(n, item, index); }).join('') || '<div style="font-size:var(--fs-1);color:var(--grey);padding:2px 0">No requirements yet — add what this catalogue must know, then route each to a leg.</div>';
+  var loadOpts = CAT_LOADS.map(function(item){ return '<option value="' + item + '"' + ((c.loadedBy || 'manual') === item ? ' selected' : '') + '>' + item + '</option>'; }).join('');
+  var unbacked = (c.fields || []).filter(function(item){ return (item.leg === 'system' || item.leg === 'compute') && !_legBacked(n, item); });
   var legNote = unbacked.length ? ('<div style="font-size:var(--fs-1);color:var(--disp-2);margin-top:6px;border-top:1px dotted var(--line);padding-top:5px">⚠ ' + unbacked.length + ' field' + (unbacked.length > 1 ? 's' : '') + ' needing a co-assist that this node doesn\'t carry — add the ERP / IoT / AI co-assist, or route ' + (unbacked.length > 1 ? 'them' : 'it') + ' to another leg.</div>') : '';
-  var legLegend = CAT_LEGS.map(function(l){ return '<span style="font-size:var(--fs-1);color:' + l.col[0] + ';background:' + l.col[1] + ';border-radius:4px;padding:1px 6px;margin-inline-end:4px">' + l.short + '</span>'; }).join('');
+  var legLegend = CAT_LEGS.map(function(item){ return '<span style="font-size:var(--fs-1);color:' + item.col[0] + ';background:' + item.col[1] + ';border-radius:4px;padding:1px 6px;margin-inline-end:4px">' + item.short + '</span>'; }).join('');
   var _in = 'font-size:var(--fs-1);padding:5px 7px;border:1px solid var(--line);border-radius:6px';
-  var variantRows = (c.variants || []).map(function(v, i){ return '<div style="display:flex;gap:6px;align-items:center;padding:2px 0"><input value="' + esc(v.name || '') + '" oninput="netSetVariant(\'' + n.key + '\',' + i + ',this.value)" placeholder="variant (e.g. Sunlit Ivory · Matte · 4L)" style="flex:1;min-width:0;' + _in + '"><span onclick="netDelVariant(\'' + n.key + '\',' + i + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>'; }).join('');
-  var altRows = (c.altUnits || []).map(function(u, i){ return '<div style="display:flex;gap:4px;align-items:center;padding:2px 0"><input value="' + esc(u.unit || '') + '" oninput="netSetAltUnit(\'' + n.key + '\',' + i + ',\'unit\',this.value)" placeholder="unit" style="width:66px;' + _in + '"><span style="font-size:var(--fs-1);color:var(--grey)">1=</span><input type="number" min="1" value="' + (u.num || 1) + '" oninput="netSetAltUnit(\'' + n.key + '\',' + i + ',\'num\',this.value)" style="width:48px;' + _in + '"><span style="font-size:var(--fs-1);color:var(--grey)">/</span><input type="number" min="1" value="' + (u.den || 1) + '" oninput="netSetAltUnit(\'' + n.key + '\',' + i + ',\'den\',this.value)" style="width:48px;' + _in + '"><span style="font-size:var(--fs-1);color:var(--grey)">' + esc(c.baseUnit || 'base') + '</span><span onclick="netDelAltUnit(\'' + n.key + '\',' + i + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>'; }).join('');
+  var variantRows = (c.variants || []).map(function(item, index){ return '<div style="display:flex;gap:6px;align-items:center;padding:2px 0"><input value="' + esc(item.name || '') + '" oninput="netSetVariant(\'' + n.key + '\',' + index + ',this.value)" placeholder="variant (e.g. Sunlit Ivory · Matte · 4L)" style="flex:1;min-width:0;' + _in + '"><span onclick="netDelVariant(\'' + n.key + '\',' + index + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>'; }).join('');
+  var altRows = (c.altUnits || []).map(function(item, index){ return '<div style="display:flex;gap:4px;align-items:center;padding:2px 0"><input value="' + esc(item.unit || '') + '" oninput="netSetAltUnit(\'' + n.key + '\',' + index + ',\'unit\',this.value)" placeholder="unit" style="width:66px;' + _in + '"><span style="font-size:var(--fs-1);color:var(--grey)">1=</span><input type="number" min="1" value="' + (item.num || 1) + '" oninput="netSetAltUnit(\'' + n.key + '\',' + index + ',\'num\',this.value)" style="width:48px;' + _in + '"><span style="font-size:var(--fs-1);color:var(--grey)">/</span><input type="number" min="1" value="' + (item.den || 1) + '" oninput="netSetAltUnit(\'' + n.key + '\',' + index + ',\'den\',this.value)" style="width:48px;' + _in + '"><span style="font-size:var(--fs-1);color:var(--grey)">' + esc(c.baseUnit || 'base') + '</span><span onclick="netDelAltUnit(\'' + n.key + '\',' + index + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>'; }).join('');
   var partA = '<div style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);letter-spacing:.05em;margin-top:12px;border-top:1px solid var(--line);padding-top:9px">' + tx('A · IDENTITY + ORDER') + '</div>'
     + '<label style="font-size:var(--fs-1);color:var(--grey);display:block;margin-top:8px">' + tx('Product (browse name)') + '</label>'
     + '<input value="' + esc(c.product || '') + '" oninput="netSetCatProduct(\'' + n.key + '\',this.value)" placeholder="product / family name" style="width:100%;margin-top:4px;box-sizing:border-box;' + _in + '">'
@@ -1217,54 +1217,54 @@ function _catConfig(n){
     + '<label style="font-size:var(--fs-1);color:var(--grey);display:block;margin-top:9px">Alternative units <span style="color:var(--faint,var(--grey-3))">(integer conversion — 1 crate = 20/1 kg)</span></label>'
     + altRows + '<div onclick="netAddAltUnit(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:var(--fs-1);font-weight:600;padding:4px 0">＋ unit</div>'
     + '<div style="font-size:var(--fs-1);color:var(--grey);font-style:italic;margin-top:2px">Orderable unit is resolved by the buyer\'s tier; unit + factor freeze on the chit.</div>';
-  var refRows = (c.refs || []).map(function(r, i){ return '<div style="display:flex;gap:6px;align-items:center;padding:2px 0"><input value="' + esc(r.system || '') + '" oninput="netSetRef(\'' + n.key + '\',' + i + ',\'system\',this.value)" placeholder="system (ERP, Tally, Supplier A)" style="width:150px;' + _in + '"><input value="' + esc(r.code || '') + '" oninput="netSetRef(\'' + n.key + '\',' + i + ',\'code\',this.value)" placeholder="their code / local name" style="flex:1;min-width:0;' + _in + '"><span onclick="netDelRef(\'' + n.key + '\',' + i + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>'; }).join('');
+  var refRows = (c.refs || []).map(function(item, index){ return '<div style="display:flex;gap:6px;align-items:center;padding:2px 0"><input value="' + esc(item.system || '') + '" oninput="netSetRef(\'' + n.key + '\',' + index + ',\'system\',this.value)" placeholder="system (ERP, Tally, Supplier A)" style="width:150px;' + _in + '"><input value="' + esc(item.code || '') + '" oninput="netSetRef(\'' + n.key + '\',' + index + ',\'code\',this.value)" placeholder="their code / local name" style="flex:1;min-width:0;' + _in + '"><span onclick="netDelRef(\'' + n.key + '\',' + index + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>'; }).join('');
   var partB = '<div style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);letter-spacing:.05em;margin-top:14px;border-top:1px solid var(--line);padding-top:9px">B · KNOWN AS <span style="font-weight:500;color:var(--faint,var(--grey-3));letter-spacing:0">(the same item — its name in each system)</span></div>'
     + refRows + '<div onclick="netAddRef(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:var(--fs-1);font-weight:600;padding:4px 0">＋ system name</div>'
     + '<div style="font-size:var(--fs-1);color:var(--grey);font-style:italic;margin-top:2px">CB stores the reference {system · their code}, not their data — so it can gather from, and order in, each system\'s own name.</div>';
-  var bomRows = (c.bom || []).map(function(b, i){ return '<div style="display:flex;gap:6px;align-items:center;padding:2px 0"><input value="' + esc(b.item || '') + '" oninput="netSetBom(\'' + n.key + '\',' + i + ',\'item\',this.value)" placeholder="component / related item" style="flex:1;min-width:0;' + _in + '"><span style="font-size:var(--fs-1);color:var(--grey)">×</span><input type="number" min="0" step="any" value="' + (b.qty != null ? b.qty : 1) + '" oninput="netSetBom(\'' + n.key + '\',' + i + ',\'qty\',this.value)" style="width:64px;' + _in + '"><span style="font-size:var(--fs-1);color:var(--grey)">' + esc(c.baseUnit || 'unit') + '</span><span onclick="netDelBom(\'' + n.key + '\',' + i + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>'; }).join('');
+  var bomRows = (c.bom || []).map(function(b, index){ return '<div style="display:flex;gap:6px;align-items:center;padding:2px 0"><input value="' + esc(b.item || '') + '" oninput="netSetBom(\'' + n.key + '\',' + index + ',\'item\',this.value)" placeholder="component / related item" style="flex:1;min-width:0;' + _in + '"><span style="font-size:var(--fs-1);color:var(--grey)">×</span><input type="number" min="0" step="any" value="' + (b.qty != null ? b.qty : 1) + '" oninput="netSetBom(\'' + n.key + '\',' + index + ',\'qty\',this.value)" style="width:64px;' + _in + '"><span style="font-size:var(--fs-1);color:var(--grey)">' + esc(c.baseUnit || 'unit') + '</span><span onclick="netDelBom(\'' + n.key + '\',' + index + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>'; }).join('');
   var partBOM = '<div style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);letter-spacing:.05em;margin-top:14px;border-top:1px solid var(--line);padding-top:9px">MADE OF <span style="font-weight:500;color:var(--faint,var(--grey-3));letter-spacing:0">(related line items — a reorder cascades to these)</span></div>'
     + bomRows + '<div onclick="netAddBom(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:var(--fs-1);font-weight:600;padding:4px 0">＋ component</div>'
     + '<div style="font-size:var(--fs-1);color:var(--grey);font-style:italic;margin-top:2px">Ordering the parent proposes its components (a BOM), not a full MRP explosion.</div>';
   // Part C · standards (by reference)
-  var stdRows = (c.standards || []).map(function(s, i){ var scOpts = STD_SCHEMES.map(function(x){ return '<option' + (s.scheme === x ? ' selected' : '') + '>' + x + '</option>'; }).join(''); return '<div style="display:flex;gap:6px;align-items:center;padding:2px 0"><select onchange="netSetStd(\'' + n.key + '\',' + i + ',\'scheme\',this.value)" style="font-size:var(--fs-1);padding:4px;border:1px solid var(--line);border-radius:6px">' + scOpts + '</select><input value="' + esc(s.code || '') + '" oninput="netSetStd(\'' + n.key + '\',' + i + ',\'code\',this.value)" placeholder="code (e.g. 8544.49)" style="width:120px;' + _in + '"><input value="' + esc(s.label || '') + '" oninput="netSetStd(\'' + n.key + '\',' + i + ',\'label\',this.value)" placeholder="what it classifies (optional)" style="flex:1;min-width:0;' + _in + '"><span onclick="netDelStd(\'' + n.key + '\',' + i + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>'; }).join('');
+  var stdRows = (c.standards || []).map(function(item, index){ var scOpts = STD_SCHEMES.map(function(x){ return '<option' + (item.scheme === x ? ' selected' : '') + '>' + x + '</option>'; }).join(''); return '<div style="display:flex;gap:6px;align-items:center;padding:2px 0"><select onchange="netSetStd(\'' + n.key + '\',' + index + ',\'scheme\',this.value)" style="font-size:var(--fs-1);padding:4px;border:1px solid var(--line);border-radius:6px">' + scOpts + '</select><input value="' + esc(item.code || '') + '" oninput="netSetStd(\'' + n.key + '\',' + index + ',\'code\',this.value)" placeholder="code (e.g. 8544.49)" style="width:120px;' + _in + '"><input value="' + esc(item.label || '') + '" oninput="netSetStd(\'' + n.key + '\',' + index + ',\'label\',this.value)" placeholder="what it classifies (optional)" style="flex:1;min-width:0;' + _in + '"><span onclick="netDelStd(\'' + n.key + '\',' + index + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>'; }).join('');
   var partStd = '<div style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);letter-spacing:.05em;margin-top:14px;border-top:1px solid var(--line);padding-top:9px">C · STANDARDS <span style="font-weight:500;color:var(--faint,var(--grey-3));letter-spacing:0">(classification — by reference, never mirrored)</span></div>'
     + stdRows + '<div onclick="netAddStd(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:var(--fs-1);font-weight:600;padding:4px 0">＋ standard</div>'
     + '<div style="font-size:var(--fs-1);color:var(--grey);font-style:italic;margin-top:2px">HS / GS1 / Schema.org codes point OUT to the authority; CB holds the reference, not the scheme.</div>';
   // Part D · pricing (governance context + by ref / by value)
   var ctx = c.context || { currency: '', region: '' };
-  var priceRows = (c.pricing || []).map(function(p, i){
-    var basisOpts = PRICE_BASIS.map(function(b){ return '<option' + (p.basis === b ? ' selected' : '') + '>' + b + '</option>'; }).join('');
-    var byOpts = PRICE_BY.map(function(b){ return '<option value="' + b + '"' + (p.by === b ? ' selected' : '') + '>by ' + b + '</option>'; }).join('');
-    var valField = p.by === 'value'
-      ? '<input type="number" step="any" value="' + (p.amount != null ? p.amount : '') + '" oninput="netSetPrice(\'' + n.key + '\',' + i + ',\'amount\',this.value)" placeholder="amount" style="width:88px;' + _in + '"><input value="' + esc(p.currency || '') + '" oninput="netSetPrice(\'' + n.key + '\',' + i + ',\'currency\',this.value)" placeholder="' + esc(ctx.currency || 'ccy') + '" style="width:56px;' + _in + '">'
-      : '<input value="' + esc(p.source || '') + '" oninput="netSetPrice(\'' + n.key + '\',' + i + ',\'source\',this.value)" placeholder="source ref (LBMA fix · SAP ZPR0 · buyer offer)" style="flex:1;min-width:0;' + _in + '">';
+  var priceRows = (c.pricing || []).map(function(item, index){
+    var basisOpts = PRICE_BASIS.map(function(b){ return '<option' + (item.basis === b ? ' selected' : '') + '>' + b + '</option>'; }).join('');
+    var byOpts = PRICE_BY.map(function(b){ return '<option value="' + b + '"' + (item.by === b ? ' selected' : '') + '>by ' + b + '</option>'; }).join('');
+    var valField = item.by === 'value'
+      ? '<input type="number" step="any" value="' + (item.amount != null ? item.amount : '') + '" oninput="netSetPrice(\'' + n.key + '\',' + index + ',\'amount\',this.value)" placeholder="amount" style="width:88px;' + _in + '"><input value="' + esc(item.currency || '') + '" oninput="netSetPrice(\'' + n.key + '\',' + index + ',\'currency\',this.value)" placeholder="' + esc(ctx.currency || 'ccy') + '" style="width:56px;' + _in + '">'
+      : '<input value="' + esc(item.source || '') + '" oninput="netSetPrice(\'' + n.key + '\',' + index + ',\'source\',this.value)" placeholder="source ref (LBMA fix · SAP ZPR0 · buyer offer)" style="flex:1;min-width:0;' + _in + '">';
     return '<div style="border:1px solid var(--line);border-radius:9px;padding:7px 9px;margin-top:6px">'
-      + '<div style="display:flex;gap:6px;align-items:center"><input value="' + esc(p.label || '') + '" oninput="netSetPrice(\'' + n.key + '\',' + i + ',\'label\',this.value)" placeholder="price label (list · trade · spot)" style="flex:1;min-width:0;' + _in + '"><span onclick="netDelPrice(\'' + n.key + '\',' + i + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>'
-      + '<div style="display:flex;gap:6px;align-items:center;margin-top:5px"><select onchange="netSetPrice(\'' + n.key + '\',' + i + ',\'basis\',this.value)" style="font-size:var(--fs-1);padding:4px;border:1px solid var(--line);border-radius:6px">' + basisOpts + '</select><select onchange="netSetPrice(\'' + n.key + '\',' + i + ',\'by\',this.value)" style="font-size:var(--fs-1);padding:4px;border:1px solid var(--line);border-radius:6px">' + byOpts + '</select>' + valField + '</div>'
-      + '<div style="display:flex;gap:6px;align-items:center;margin-top:5px;font-size:var(--fs-1);color:var(--grey)">valid <input type="date" value="' + esc(p.validFrom || '') + '" onchange="netSetPrice(\'' + n.key + '\',' + i + ',\'validFrom\',this.value)" style="' + _in + '"><span class=arw>→</span><input type="date" value="' + esc(p.validTo || '') + '" onchange="netSetPrice(\'' + n.key + '\',' + i + ',\'validTo\',this.value)" style="' + _in + '"> · region <input value="' + esc(p.region || '') + '" oninput="netSetPrice(\'' + n.key + '\',' + i + ',\'region\',this.value)" placeholder="' + esc(ctx.region || 'inherit') + '" style="width:78px;' + _in + '"><span style="margin-inline-start:auto;font-size:var(--fs-1);font-weight:600;color:' + (p.by === 'value' ? 'var(--ok-2)' : 'var(--purple-2)') + '">' + (p.by === 'value' ? 'frozen' : 'loose · resolves at seal') + '</span></div>'
+      + '<div style="display:flex;gap:6px;align-items:center"><input value="' + esc(item.label || '') + '" oninput="netSetPrice(\'' + n.key + '\',' + index + ',\'label\',this.value)" placeholder="price label (list · trade · spot)" style="flex:1;min-width:0;' + _in + '"><span onclick="netDelPrice(\'' + n.key + '\',' + index + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>'
+      + '<div style="display:flex;gap:6px;align-items:center;margin-top:5px"><select onchange="netSetPrice(\'' + n.key + '\',' + index + ',\'basis\',this.value)" style="font-size:var(--fs-1);padding:4px;border:1px solid var(--line);border-radius:6px">' + basisOpts + '</select><select onchange="netSetPrice(\'' + n.key + '\',' + index + ',\'by\',this.value)" style="font-size:var(--fs-1);padding:4px;border:1px solid var(--line);border-radius:6px">' + byOpts + '</select>' + valField + '</div>'
+      + '<div style="display:flex;gap:6px;align-items:center;margin-top:5px;font-size:var(--fs-1);color:var(--grey)">valid <input type="date" value="' + esc(item.validFrom || '') + '" onchange="netSetPrice(\'' + n.key + '\',' + index + ',\'validFrom\',this.value)" style="' + _in + '"><span class=arw>→</span><input type="date" value="' + esc(item.validTo || '') + '" onchange="netSetPrice(\'' + n.key + '\',' + index + ',\'validTo\',this.value)" style="' + _in + '"> · region <input value="' + esc(item.region || '') + '" oninput="netSetPrice(\'' + n.key + '\',' + index + ',\'region\',this.value)" placeholder="' + esc(ctx.region || 'inherit') + '" style="width:78px;' + _in + '"><span style="margin-inline-start:auto;font-size:var(--fs-1);font-weight:600;color:' + (item.by === 'value' ? 'var(--ok-2)' : 'var(--purple-2)') + '">' + (item.by === 'value' ? 'frozen' : 'loose · resolves at seal') + '</span></div>'
       + '</div>';
   }).join('') || '<div style="font-size:var(--fs-1);color:var(--grey);padding:2px 0">No prices — information-only catalogue.</div>';
   var partPricing = '<label style="font-size:var(--fs-1);color:var(--grey);display:block;margin-top:10px"><b style="font-weight:800;color:var(--blue-2);letter-spacing:.05em">' + tx('D · PRICING') + '</b> <span style="color:var(--faint,var(--grey-3))">— governed by context; by ref (loose) or by value (frozen)</span></label>'
     + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px;padding:6px 9px;border:1px dashed var(--line);border-radius:9px;background:var(--blue-tint-bg);color:var(--on-card)"><span style="font-size:var(--fs-1);color:var(--grey)">Context governs <span class=arw>→</span></span><input value="' + esc(ctx.currency || '') + '" oninput="netSetContext(\'' + n.key + '\',\'currency\',this.value)" placeholder="currency (INR)" style="width:108px;' + _in + '"><input value="' + esc(ctx.region || '') + '" oninput="netSetContext(\'' + n.key + '\',\'region\',this.value)" placeholder="region (IN)" style="width:108px;' + _in + '"></div>'
     + priceRows + '<div onclick="netAddPrice(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:var(--fs-1);font-weight:600;padding:5px 0">＋ price</div>'
     + '<div style="font-size:var(--fs-1);color:var(--grey);font-style:italic;margin-top:2px">Currency &amp; region inherit the context unless overridden. A by-ref price (and its FX rate) freezes only when the chit is sealed.</div>';
-  var fbRows = (c.feedback || []).map(function(fb, i){
-    var onRail = !!fb.onRail;
-    var railBtn = '<span onclick="netSetFeedbackFmt(\'' + n.key + '\',' + i + ',\'onRail\')" title="is this party on C&B?" style="cursor:pointer;font-size:var(--fs-1);font-weight:700;padding:3px 9px;border-radius:12px;border:1px solid ' + (onRail ? 'var(--ok-2)' : 'var(--line)') + ';color:' + (onRail ? 'var(--on-accent)' : 'var(--grey)') + ';background:' + (onRail ? 'var(--ok-2)' : 'var(--card)') + '">' + (onRail ? 'on C&B' : 'off-rail') + '</span>';
-    var fmt = onRail ? '<span style="font-size:var(--fs-1);color:var(--ok-2);flex:1">native chit — CB delivers it directly</span>' : '<input value="' + esc(fb.format || '') + '" oninput="netSetFeedbackFmt(\'' + n.key + '\',' + i + ',\'format\',this.value)" placeholder="their format (EDI 850, cXML PO, PDF…)" style="flex:1;min-width:0;' + _in + '">';
-    return '<div style="border:1px solid var(--line);border-radius:9px;padding:6px 8px;margin-top:5px"><div style="display:flex;gap:6px;align-items:center"><input value="' + esc(fb.system || '') + '" oninput="netSetFeedback(\'' + n.key + '\',' + i + ',this.value)" placeholder="system / party to feed back (SAP, Supplier A)" style="flex:1;min-width:0;' + _in + '">' + railBtn + '<span onclick="netDelFeedback(\'' + n.key + '\',' + i + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div><div style="display:flex;gap:6px;align-items:center;margin-top:5px">' + fmt + '</div></div>';
+  var fbRows = (c.feedback || []).map(function(item, index){
+    var onRail = !!item.onRail;
+    var railBtn = '<span onclick="netSetFeedbackFmt(\'' + n.key + '\',' + index + ',\'onRail\')" title="is this party on C&B?" style="cursor:pointer;font-size:var(--fs-1);font-weight:700;padding:3px 9px;border-radius:12px;border:1px solid ' + (onRail ? 'var(--ok-2)' : 'var(--line)') + ';color:' + (onRail ? 'var(--on-accent)' : 'var(--grey)') + ';background:' + (onRail ? 'var(--ok-2)' : 'var(--card)') + '">' + (onRail ? 'on C&B' : 'off-rail') + '</span>';
+    var fmt = onRail ? '<span style="font-size:var(--fs-1);color:var(--ok-2);flex:1">native chit — CB delivers it directly</span>' : '<input value="' + esc(item.format || '') + '" oninput="netSetFeedbackFmt(\'' + n.key + '\',' + index + ',\'format\',this.value)" placeholder="their format (EDI 850, cXML PO, PDF…)" style="flex:1;min-width:0;' + _in + '">';
+    return '<div style="border:1px solid var(--line);border-radius:9px;padding:6px 8px;margin-top:5px"><div style="display:flex;gap:6px;align-items:center"><input value="' + esc(item.system || '') + '" oninput="netSetFeedback(\'' + n.key + '\',' + index + ',this.value)" placeholder="system / party to feed back (SAP, Supplier A)" style="flex:1;min-width:0;' + _in + '">' + railBtn + '<span onclick="netDelFeedback(\'' + n.key + '\',' + index + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div><div style="display:flex;gap:6px;align-items:center;margin-top:5px">' + fmt + '</div></div>';
   }).join('');
-  var trigRows = (c.triggers || []).map(function(t, i){
-    var opSel = ['below', 'above', 'equals'].map(function(o){ return '<option' + (t.op === o ? ' selected' : '') + '>' + o + '</option>'; }).join('');
-    var actSel = ['reorder', 'alert', 'feed back'].map(function(a){ return '<option' + (t.action === a ? ' selected' : '') + '>' + a + '</option>'; }).join('');
+  var trigRows = (c.triggers || []).map(function(item, index){
+    var opSel = ['below', 'above', 'equals'].map(function(o){ return '<option' + (item.op === o ? ' selected' : '') + '>' + o + '</option>'; }).join('');
+    var actSel = ['reorder', 'alert', 'feed back'].map(function(a){ return '<option' + (item.action === a ? ' selected' : '') + '>' + a + '</option>'; }).join('');
     var sm = 'font-size:var(--fs-1);padding:4px 5px;border:1px solid var(--line);border-radius:6px';
     return '<div style="border:1px solid var(--line);border-radius:9px;padding:7px 9px;margin-top:5px;display:flex;gap:5px;align-items:center;flex-wrap:wrap;font-size:var(--fs-1);color:var(--grey)">'
-      + 'When <input value="' + esc(t.watch || '') + '" oninput="netSetTrigger(\'' + n.key + '\',' + i + ',\'watch\',this.value)" placeholder="stock" style="width:78px;' + sm + '">'
-      + ' is <select onchange="netSetTrigger(\'' + n.key + '\',' + i + ',\'op\',this.value)" style="' + sm + '">' + opSel + '</select>'
-      + ' <input value="' + esc(t.value || '') + '" oninput="netSetTrigger(\'' + n.key + '\',' + i + ',\'value\',this.value)" placeholder="EOQ / min" style="width:70px;' + sm + '">'
-      + ' <span class=arw>→</span> <select onchange="netSetTrigger(\'' + n.key + '\',' + i + ',\'action\',this.value)" style="' + sm + '">' + actSel + '</select>'
-      + ' to <input value="' + esc(t.target || '') + '" oninput="netSetTrigger(\'' + n.key + '\',' + i + ',\'target\',this.value)" placeholder="supplier / system" style="width:110px;' + sm + '">'
-      + '<span onclick="netDelTrigger(\'' + n.key + '\',' + i + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px;margin-inline-start:auto">×</span></div>';
+      + 'When <input value="' + esc(item.watch || '') + '" oninput="netSetTrigger(\'' + n.key + '\',' + index + ',\'watch\',this.value)" placeholder="stock" style="width:78px;' + sm + '">'
+      + ' is <select onchange="netSetTrigger(\'' + n.key + '\',' + index + ',\'op\',this.value)" style="' + sm + '">' + opSel + '</select>'
+      + ' <input value="' + esc(item.value || '') + '" oninput="netSetTrigger(\'' + n.key + '\',' + index + ',\'value\',this.value)" placeholder="EOQ / min" style="width:70px;' + sm + '">'
+      + ' <span class=arw>→</span> <select onchange="netSetTrigger(\'' + n.key + '\',' + index + ',\'action\',this.value)" style="' + sm + '">' + actSel + '</select>'
+      + ' to <input value="' + esc(item.target || '') + '" oninput="netSetTrigger(\'' + n.key + '\',' + index + ',\'target\',this.value)" placeholder="supplier / system" style="width:110px;' + sm + '">'
+      + '<span onclick="netDelTrigger(\'' + n.key + '\',' + index + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px;margin-inline-start:auto">×</span></div>';
   }).join('') || '<div style="font-size:var(--fs-1);color:var(--grey);padding:2px 0">No triggers — the catalogue is static (a human decides when to act).</div>';
   // ---- five focused tabs: a human fills a few things at a time (no more one long scroll) ----
   var tab = (UI.net && UI.net.catTab) || 'purpose';
@@ -1278,8 +1278,8 @@ function _catConfig(n){
     { k: 'feedback', label: 'Feed back' + ((c.feedback || []).length ? ' · ' + c.feedback.length : '') },
     { k: 'chain', label: '🔗 Chain' },
   ];
-  var tabBar = '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:9px">' + TABS.map(function(t){ var on = tab === t.k;
-    return '<span onclick="netCatTab(\'' + n.key + '\',\'' + t.k + '\')" style="cursor:pointer;font-size:var(--fs-1);font-weight:600;padding:4px 11px;border-radius:14px;border:1px solid ' + (on ? 'var(--blue-2)' : 'var(--line)') + ';color:' + (on ? 'var(--on-accent)' : 'var(--grey)') + ';background:' + (on ? 'var(--blue-2)' : 'var(--card)') + '">' + t.label + '</span>'; }).join('') + '</div>';
+  var tabBar = '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:9px">' + TABS.map(function(item){ var on = tab === item.k;
+    return '<span onclick="netCatTab(\'' + n.key + '\',\'' + item.k + '\')" style="cursor:pointer;font-size:var(--fs-1);font-weight:600;padding:4px 11px;border-radius:14px;border:1px solid ' + (on ? 'var(--blue-2)' : 'var(--line)') + ';color:' + (on ? 'var(--on-accent)' : 'var(--grey)') + ';background:' + (on ? 'var(--blue-2)' : 'var(--card)') + '">' + item.label + '</span>'; }).join('') + '</div>';
   var body = '';
   if (tab === 'purpose') {
     body = '<label style="font-size:var(--fs-1);color:var(--grey);display:block;margin-top:10px">Purpose <span style="color:var(--faint,var(--grey-3))">(what this catalogue is for — in your words)</span></label>'
@@ -1346,8 +1346,8 @@ function _catChain(n){
   var c = n.catalogue || {}; var fs = c.fields || [];
   var _cx = c.context || {}; var ctxLabel = [_cx.currency, _cx.region].filter(Boolean).map(esc).join(' · ');
   var chip = function(txt, col){ return '<span style="display:inline-block;font-size:var(--fs-1);color:#1c2128;background:' + col[1] + ';border:1px solid ' + col[0] + '55;border-radius:5px;padding:1px 6px;margin:2px 3px 0 0">' + esc(txt) + '</span>'; };
-  var fb = (c.feedback || []).filter(function(x){ return x.system; });
-  if (!fs.length && !c.product && !fb.length) return '';
+  var list = (c.feedback || []).filter(function(x){ return x.system; });
+  if (!fs.length && !c.product && !list.length) return '';
   var fbCol = ['var(--purple-2)', 'var(--purple-tint)'];
   var card = function(head, hint, col, itemsHtml, count){
     return '<div style="flex:1;min-width:118px;border:1px solid var(--line);border-top:3px solid ' + col[0] + ';border-radius:9px;padding:8px 9px;background:var(--card);color:var(--on-card)">'
@@ -1356,23 +1356,23 @@ function _catChain(n){
       + (itemsHtml || '<span style="font-size:var(--fs-1);color:var(--faint,var(--grey-3))">—</span>')
       + '</div>';
   };
-  var cards = CAT_LEGS.map(function(l){
-    var items = fs.filter(function(f){ return f.leg === l.k; }).map(function(f){ return chip((f.name || '—') + ((l.k === 'system' || l.k === 'compute') && f.via ? ' · ' + f.via : ''), l.col); });
-    if (l.k === 'cb') {   // identity + units are always CB-stored (the gap CB fills by definition)
-      if (c.baseUnit) items.unshift(chip('units · ' + c.baseUnit, l.col));
-      if (c.product) items.unshift(chip(c.product + ' (identity)', l.col));
+  var cards = CAT_LEGS.map(function(item){
+    var items = fs.filter(function(f){ return f.leg === item.k; }).map(function(f){ return chip((f.name || '—') + ((item.k === 'system' || item.k === 'compute') && f.via ? ' · ' + f.via : ''), item.col); });
+    if (item.k === 'cb') {   // identity + units are always CB-stored (the gap CB fills by definition)
+      if (c.baseUnit) items.unshift(chip('units · ' + c.baseUnit, item.col));
+      if (c.product) items.unshift(chip(c.product + ' (identity)', item.col));
     }
-    return card(l.short, l.hint, l.col, items.join(''), items.length);
+    return card(item.short, item.hint, item.col, items.join(''), items.length);
   }).join('');
-  cards += card('Feed back', 'record pushed out', fbCol, fb.map(function(x){ return chip(x.system + (x.onRail ? ' · C&B' : (x.format ? ' · ' + x.format : '')), fbCol); }).join(''), fb.length);
-  var trigs = (c.triggers || []).filter(function(t){ return t.watch || t.value; });
-  var loopBanner = trigs.length ? ('<div style="margin-top:8px;padding:6px 10px;border:1px solid #cdbfe6;border-radius:9px;background:var(--purple-tint);font-size:var(--fs-1);color:var(--purple-2)">⟳ ' + trigs.map(function(t){ return 'when <b>' + esc(t.watch || '?') + '</b> ' + esc(t.op || '') + ' <b>' + esc(t.value || '?') + '</b> <span class=arw>→</span> <b>' + esc(t.action || '') + '</b>' + (t.target ? ' to ' + esc(t.target) : ''); }).join(' · ') + '</div>') : '';
+  cards += card('Feed back', 'record pushed out', fbCol, list.map(function(x){ return chip(x.system + (x.onRail ? ' · C&B' : (x.format ? ' · ' + x.format : '')), fbCol); }).join(''), list.length);
+  var trigs = (c.triggers || []).filter(function(item){ return item.watch || item.value; });
+  var loopBanner = trigs.length ? ('<div style="margin-top:8px;padding:6px 10px;border:1px solid #cdbfe6;border-radius:9px;background:var(--purple-tint);font-size:var(--fs-1);color:var(--purple-2)">⟳ ' + trigs.map(function(item){ return 'when <b>' + esc(item.watch || '?') + '</b> ' + esc(item.op || '') + ' <b>' + esc(item.value || '?') + '</b> <span class=arw>→</span> <b>' + esc(item.action || '') + '</b>' + (item.target ? ' to ' + esc(item.target) : ''); }).join(' · ') + '</div>') : '';
   var bomList = (c.bom || []).filter(function(b){ return b.item; });
   var bomBanner = bomList.length ? ('<div style="margin-top:6px;font-size:var(--fs-1);color:var(--grey)">Made of: ' + bomList.map(function(b){ return esc(b.item) + '×' + (b.qty != null ? b.qty : 1); }).join(' · ') + ' <i>(reorder cascades)</i></div>') : '';
-  var stds = (c.standards || []).filter(function(s){ return s.code || s.label; });
-  var stdBanner = stds.length ? ('<div style="margin-top:6px;font-size:var(--fs-1);color:var(--grey)">Standards: ' + stds.map(function(s){ return esc(s.scheme) + ' ' + esc(s.code || s.label); }).join(' · ') + ' <i>(by reference)</i></div>') : '';
-  var prices = (c.pricing || []).filter(function(p){ return p.label || p.amount != null || p.source; });
-  var priceBanner = prices.length ? ('<div style="margin-top:6px;font-size:var(--fs-1);color:var(--grey)">Pricing: ' + prices.map(function(p){ var r = CBCatalogue.resolvePrice(c, p); return esc(r.label) + ' — ' + (p.by === 'value' ? (r.amount != null ? r.amount + ' ' + esc(r.currency || '') : 'value') : esc(p.source || 'ref')) + ' <i>[' + (p.by === 'value' ? 'frozen' : 'ref') + ']</i>'; }).join(' · ') + (ctxLabel ? ' · in ' + ctxLabel : '') + '</div>') : '';
+  var stds = (c.standards || []).filter(function(item){ return item.code || item.label; });
+  var stdBanner = stds.length ? ('<div style="margin-top:6px;font-size:var(--fs-1);color:var(--grey)">Standards: ' + stds.map(function(item){ return esc(item.scheme) + ' ' + esc(item.code || item.label); }).join(' · ') + ' <i>(by reference)</i></div>') : '';
+  var prices = (c.pricing || []).filter(function(item){ return item.label || item.amount != null || item.source; });
+  var priceBanner = prices.length ? ('<div style="margin-top:6px;font-size:var(--fs-1);color:var(--grey)">Pricing: ' + prices.map(function(item){ var r = CBCatalogue.resolvePrice(c, item); return esc(r.label) + ' — ' + (item.by === 'value' ? (r.amount != null ? r.amount + ' ' + esc(r.currency || '') : 'value') : esc(item.source || 'ref')) + ' <i>[' + (item.by === 'value' ? 'frozen' : 'ref') + ']</i>'; }).join(' · ') + (ctxLabel ? ' · in ' + ctxLabel : '') + '</div>') : '';
   return '<div style="margin-top:12px;padding-top:9px;border-top:1px solid var(--line)">'
     + '<div style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);letter-spacing:.05em;margin-bottom:6px">🔗 INFORMATION CHAIN — how this catalogue is completed</div>'
     + '<div style="display:flex;gap:7px;flex-wrap:wrap">' + cards + '</div>'
@@ -1380,14 +1380,14 @@ function _catChain(n){
 }
 /* a first, honest reading of the purpose story — rule-based today, the AI takes this over later */
 function _catInfer(n){
-  var s = ((n.catalogue || {}).story || '').toLowerCase();
-  if (!s.trim()) return '';
-  var systems = ['erp', 'sap', 'oracle', 'netsuite', 'dynamics', 'tally', 'quickbooks', 'zoho'].filter(function(t){ return s.indexOf(t) >= 0; });
-  var feedsBack = /supplier|vendor|purchase order|\bpo\b|reorder|replenish|feed ?back|send.*to my/.test(s);
-  var fromCust = /customer|buyer|client|order from|they send|storefront/.test(s);
+  var text = ((n.catalogue || {}).story || '').toLowerCase();
+  if (!text.trim()) return '';
+  var systems = ['erp', 'sap', 'oracle', 'netsuite', 'dynamics', 'tally', 'quickbooks', 'zoho'].filter(function(item){ return text.indexOf(item) >= 0; });
+  var feedsBack = /supplier|vendor|purchase order|\bpo\b|reorder|replenish|feed ?back|send.*to my/.test(text);
+  var fromCust = /customer|buyer|client|order from|they send|storefront/.test(text);
   var computes = [];
-  if (/eoq|reorder|replenish|economic order|min.?max|stock level/.test(s)) computes.push('reorder / EOQ');
-  if (/combine|combined|consolidat|merge|aggregat/.test(s)) computes.push('combined view');
+  if (/eoq|reorder|replenish|economic order|min.?max|stock level/.test(text)) computes.push('reorder / EOQ');
+  if (/combine|combined|consolidat|merge|aggregat/.test(text)) computes.push('combined view');
   var bits = [];
   if (systems.length) bits.push('<b style="color:var(--warn-2)">' + tx('System feed') + '</b> — ' + systems.map(function(x){ return x.toUpperCase(); }).join(', '));
   if (fromCust) bits.push('<b style="color:var(--blue-2)">' + tx('From customer') + '</b> — order details at request time');
@@ -1405,9 +1405,9 @@ function _catRecordPreview(n){
   var v0 = (c.variants || [])[0];
   var au = (c.altUnits || [])[0];
   var unitLine = c.baseUnit ? ('base ' + esc(c.baseUnit) + (au && au.unit ? ' · 1 ' + esc(au.unit) + ' = ' + (au.num || 1) + '/' + (au.den || 1) + ' ' + esc(c.baseUnit) : '')) : '';
-  var refs = (c.refs || []).filter(function(r){ return r.system && r.code; });
-  var refsLine = refs.length ? refs.map(function(r){ return esc(r.system) + ':' + esc(r.code); }).join(' · ') : '';
-  var rows = fs.map(function(f){ return '<div style="display:flex;align-items:center;gap:8px;padding:2px 0;font-size:var(--fs-1)"><span style="flex:0 0 116px;color:var(--grey);font-family:monospace;overflow:hidden;text-overflow:ellipsis">' + esc(f.name || '—') + '</span><span style="flex:1;color:var(--ink-2)">' + _sampleVal(f.type) + '</span>' + _legBadge(f.leg) + '</div>'; }).join('');
+  var refs = (c.refs || []).filter(function(item){ return item.system && item.code; });
+  var refsLine = refs.length ? refs.map(function(item){ return esc(item.system) + ':' + esc(item.code); }).join(' · ') : '';
+  var rows = fs.map(function(item){ return '<div style="display:flex;align-items:center;gap:8px;padding:2px 0;font-size:var(--fs-1)"><span style="flex:0 0 116px;color:var(--grey);font-family:monospace;overflow:hidden;text-overflow:ellipsis">' + esc(item.name || '—') + '</span><span style="flex:1;color:var(--ink-2)">' + _sampleVal(item.type) + '</span>' + _legBadge(item.leg) + '</div>'; }).join('');
   return '<div style="margin-top:12px;padding:11px 12px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--on-card)">'
     + '<div style="font-size:var(--fs-1);color:var(--faint,var(--grey-3));text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">' + tx('📄 Stored as a record — one item') + '</div>'
     + '<div style="font-weight:700;font-size:var(--fs-2)">' + esc(name) + (v0 && v0.name ? ' <span style="font-weight:500;color:var(--grey);font-size:var(--fs-1)"><span class=arw>▸</span> ' + esc(v0.name) + '</span>' : '') + '</div>'
@@ -1423,12 +1423,12 @@ function _chitPreview(n){
   var e = n.exposure || 'private';
   var name = c.product || 'Item';
   var expBadge = '<span style="font-size:var(--fs-1);font-weight:700;text-transform:uppercase;color:' + (e === 'public' ? 'var(--ok-2)' : 'var(--warn-2)') + ';background:' + (e === 'public' ? 'var(--ok-tint)' : 'var(--warn-tint)') + ';border-radius:4px;padding:1px 5px">' + esc(e) + '</span>';
-  var specRows = fs.slice(0, 6).map(function(f){ return '<div style="display:flex;justify-content:space-between;font-size:var(--fs-1);padding:1px 0"><span style="color:var(--grey)">' + esc(f.name || '—') + '</span><span style="color:var(--faint,var(--grey-3));font-family:monospace">' + _sampleVal(f.type) + '</span></div>'; }).join('') || '<div style="font-size:var(--fs-1);color:var(--grey)">no fields</div>';
+  var specRows = fs.slice(0, 6).map(function(item){ return '<div style="display:flex;justify-content:space-between;font-size:var(--fs-1);padding:1px 0"><span style="color:var(--grey)">' + esc(item.name || '—') + '</span><span style="color:var(--faint,var(--grey-3));font-family:monospace">' + _sampleVal(item.type) + '</span></div>'; }).join('') || '<div style="font-size:var(--fs-1);color:var(--grey)">no fields</div>';
   var cb = (o.collectBack || []).filter(function(x){ return x.name; });
   var collectLine = cb.length ? '<div style="margin-top:7px;font-size:var(--fs-1);color:var(--blue-2)">You provide: <b>' + cb.map(function(x){ return esc(x.name); }).join(', ') + '</b></div>' : '';
   var arrive = ['on the rail'].concat((o.inlets || []).filter(function(x){ return x.channel; }).map(function(x){ return x.channel; })).join(' · ');
-  var st = (o.states || []).filter(function(x){ return x.name; });
-  var stateFlow = st.length ? '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:3px;align-items:center">' + st.map(function(x, i){ return (i ? '<span style="color:var(--faint,var(--grey-3));font-size:var(--fs-1)"><span class=arw>→</span></span>' : '') + '<span style="font-size:var(--fs-1);font-weight:600;color:var(--ink-2);background:var(--blue-tint-bg);border-radius:4px;padding:1px 6px">' + esc(x.name) + '</span>'; }).join('') + '</div>' : '';
+  var list = (o.states || []).filter(function(x){ return x.name; });
+  var stateFlow = list.length ? '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:3px;align-items:center">' + list.map(function(x, index){ return (index ? '<span style="color:var(--faint,var(--grey-3));font-size:var(--fs-1)"><span class=arw>→</span></span>' : '') + '<span style="font-size:var(--fs-1);font-weight:600;color:var(--ink-2);background:var(--blue-tint-bg);border-radius:4px;padding:1px 6px">' + esc(x.name) + '</span>'; }).join('') + '</div>' : '';
   return '<div style="margin-top:12px;border-top:1px solid var(--line);padding-top:9px"><div style="font-size:var(--fs-1);font-weight:800;color:var(--ok-2);letter-spacing:.05em">' + tx('🧾 CHIT — what the customer sees') + '</div>'
     + '<div style="margin-top:7px;max-width:290px;border:1px solid var(--line);border-top:3px solid var(--blue-2);border-radius:12px;box-shadow:0 1px 3px rgba(20,30,45,.08);padding:12px 13px;background:var(--card);color:var(--on-card)">'
       + '<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:700;font-size:var(--fs-2)">' + esc(name) + '</span>' + expBadge + '</div>'
@@ -1452,12 +1452,12 @@ function _storefrontConfig(n){
   var view = '<div style="font-size:var(--fs-1);font-weight:800;color:var(--ok-2);letter-spacing:.05em">' + tx('👁️ WHO SEES IT') + '</div>'
     + '<div style="font-size:var(--fs-2);color:var(--grey);margin-top:5px;line-height:1.55">Currently <b>' + esc(curLabel) + '</b> — set at the top of this node, under <b>Who can see this store\'s catalogue</b>.</div>';
   void opt;
-  var methOpts = CAT_METHODS.map(function(m){ return '<option value="' + m.k + '"' + ((o.method || 'cart') === m.k ? ' selected' : '') + '>' + m.label + '</option>'; }).join('');
-  var mh = (CAT_METHODS.filter(function(m){ return m.k === (o.method || 'cart'); })[0] || {}).hint || '';
-  var inletRows = (o.inlets || []).map(function(il, i){ var chOpts = OFF_RAIL_CHANNELS.map(function(ch){ return '<option value="' + ch + '"' + (il.channel === ch ? ' selected' : '') + '>' + ch + '</option>'; }).join(''); return '<div style="display:flex;gap:6px;align-items:center;padding:3px 0"><select onchange="netSetInlet(\'' + n.key + '\',' + i + ',\'channel\',this.value)" style="font-size:var(--fs-1);padding:4px;border:1px solid var(--line);border-radius:6px">' + chOpts + '</select><input value="' + esc(il.handle || '') + '" oninput="netSetInlet(\'' + n.key + '\',' + i + ',\'handle\',this.value)" placeholder="the number / address customers use" style="flex:1;min-width:0;font-size:var(--fs-1);padding:4px 7px;border:1px solid var(--line);border-radius:6px"><span onclick="netDelInlet(\'' + n.key + '\',' + i + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>'; }).join('');
-  var cbRows = (o.collectBack || []).map(function(cb, i){
-    var cadOpts = COLLECT_CADENCE.map(function(cd){ return '<option value="' + cd + '"' + (cb.cadence === cd ? ' selected' : '') + '>' + cd + '</option>'; }).join('');
-    return '<div style="display:flex;gap:6px;align-items:center;padding:3px 0"><input value="' + esc(cb.name || '') + '" oninput="netSetCollectBack(\'' + n.key + '\',' + i + ',\'name\',this.value)" placeholder="what to collect (e.g. delivery location)" style="flex:1;min-width:0;font-size:var(--fs-1);padding:4px 7px;border:1px solid var(--line);border-radius:6px"><select onchange="netSetCollectBack(\'' + n.key + '\',' + i + ',\'cadence\',this.value)" style="font-size:var(--fs-1);padding:4px;border:1px solid var(--line);border-radius:6px">' + cadOpts + '</select><span onclick="netDelCollectBack(\'' + n.key + '\',' + i + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>';
+  var methOpts = CAT_METHODS.map(function(item){ return '<option value="' + item.k + '"' + ((o.method || 'cart') === item.k ? ' selected' : '') + '>' + item.label + '</option>'; }).join('');
+  var mh = (CAT_METHODS.filter(function(item){ return item.k === (o.method || 'cart'); })[0] || {}).hint || '';
+  var inletRows = (o.inlets || []).map(function(item, index){ var chOpts = OFF_RAIL_CHANNELS.map(function(ch){ return '<option value="' + ch + '"' + (item.channel === ch ? ' selected' : '') + '>' + ch + '</option>'; }).join(''); return '<div style="display:flex;gap:6px;align-items:center;padding:3px 0"><select onchange="netSetInlet(\'' + n.key + '\',' + index + ',\'channel\',this.value)" style="font-size:var(--fs-1);padding:4px;border:1px solid var(--line);border-radius:6px">' + chOpts + '</select><input value="' + esc(item.handle || '') + '" oninput="netSetInlet(\'' + n.key + '\',' + index + ',\'handle\',this.value)" placeholder="the number / address customers use" style="flex:1;min-width:0;font-size:var(--fs-1);padding:4px 7px;border:1px solid var(--line);border-radius:6px"><span onclick="netDelInlet(\'' + n.key + '\',' + index + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>'; }).join('');
+  var cbRows = (o.collectBack || []).map(function(cb, index){
+    var cadOpts = COLLECT_CADENCE.map(function(item){ return '<option value="' + item + '"' + (cb.cadence === item ? ' selected' : '') + '>' + item + '</option>'; }).join('');
+    return '<div style="display:flex;gap:6px;align-items:center;padding:3px 0"><input value="' + esc(cb.name || '') + '" oninput="netSetCollectBack(\'' + n.key + '\',' + index + ',\'name\',this.value)" placeholder="what to collect (e.g. delivery location)" style="flex:1;min-width:0;font-size:var(--fs-1);padding:4px 7px;border:1px solid var(--line);border-radius:6px"><select onchange="netSetCollectBack(\'' + n.key + '\',' + index + ',\'cadence\',this.value)" style="font-size:var(--fs-1);padding:4px;border:1px solid var(--line);border-radius:6px">' + cadOpts + '</select><span onclick="netDelCollectBack(\'' + n.key + '\',' + index + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>';
   }).join('') || '<div style="font-size:var(--fs-1);color:var(--grey);padding:2px 0">Nothing asked back.</div>';
   var order = '<div style="margin-top:12px;border-top:1px solid var(--line);padding-top:9px"><div style="font-size:var(--fs-1);font-weight:800;color:var(--ok-2);letter-spacing:.05em">' + tx('📝 ORDER FORM — what the customer fills in') + '</div>'
     + '<label style="font-size:var(--fs-1);color:var(--grey);display:block;margin-top:8px">' + tx('How they order (commercial method)') + '</label>'
@@ -1478,11 +1478,11 @@ function _storefrontConfig(n){
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px;font-style:italic">De-duplicated automatically — the same scan or message won\'t create a second chit (matched by content).</div>'
     + '<div style="font-size:var(--fs-1);font-weight:800;color:var(--ok-2);letter-spacing:.05em;margin-top:12px;border-top:1px solid var(--line);padding-top:9px">' + tx('🔄 LIFECYCLE — states the chit moves through') + '</div>'
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px">Order the states (e.g. open <span class=arw>→</span> confirmed <span class=arw>→</span> fulfilled <span class=arw>→</span> closed). Each move is a sealed step; a dispute attaches to a state.</div>'
-    + ((o.states || []).map(function(s, i){ var last = i === (o.states.length - 1); return '<div style="display:flex;gap:5px;align-items:center;padding:2px 0"><span style="font-size:var(--fs-1);color:var(--faint,var(--grey-3));width:16px">' + (i + 1) + '</span><input value="' + esc(s.name || '') + '" oninput="netSetState(\'' + n.key + '\',' + i + ',this.value)" placeholder="state name" style="flex:1;min-width:0;font-size:var(--fs-1);padding:4px 7px;border:1px solid var(--line);border-radius:6px">' + (i > 0 ? '<span onclick="netMoveState(\'' + n.key + '\',' + i + ',-1)" style="cursor:pointer;color:var(--grey);padding:0 3px">↑</span>' : '<span style="display:inline-block;width:14px"></span>') + (!last ? '<span onclick="netMoveState(\'' + n.key + '\',' + i + ',1)" style="cursor:pointer;color:var(--grey);padding:0 3px">↓</span>' : '<span style="display:inline-block;width:14px"></span>') + '<span onclick="netDelState(\'' + n.key + '\',' + i + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>'; }).join('') || '<div style="font-size:var(--fs-1);color:var(--grey);padding:2px 0">No states — a one-shot chit (created, done).</div>')
+    + ((o.states || []).map(function(item, index){ var last = index === (o.states.length - 1); return '<div style="display:flex;gap:5px;align-items:center;padding:2px 0"><span style="font-size:var(--fs-1);color:var(--faint,var(--grey-3));width:16px">' + (index + 1) + '</span><input value="' + esc(item.name || '') + '" oninput="netSetState(\'' + n.key + '\',' + index + ',this.value)" placeholder="state name" style="flex:1;min-width:0;font-size:var(--fs-1);padding:4px 7px;border:1px solid var(--line);border-radius:6px">' + (index > 0 ? '<span onclick="netMoveState(\'' + n.key + '\',' + index + ',-1)" style="cursor:pointer;color:var(--grey);padding:0 3px">↑</span>' : '<span style="display:inline-block;width:14px"></span>') + (!last ? '<span onclick="netMoveState(\'' + n.key + '\',' + index + ',1)" style="cursor:pointer;color:var(--grey);padding:0 3px">↓</span>' : '<span style="display:inline-block;width:14px"></span>') + '<span onclick="netDelState(\'' + n.key + '\',' + index + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>'; }).join('') || '<div style="font-size:var(--fs-1);color:var(--grey);padding:2px 0">No states — a one-shot chit (created, done).</div>')
     + '<div onclick="netAddState(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:var(--fs-2);font-weight:600;padding:5px 0">＋ state</div>'
     + '<div style="font-size:var(--fs-1);font-weight:800;color:var(--ok-2);letter-spacing:.05em;margin-top:12px;border-top:1px solid var(--line);padding-top:9px">📎 ATTACHMENTS &amp; NOTES</div>'
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px">Documents the chit carries, and any free-text note.</div>'
-    + ((o.attachments || []).map(function(a, i){ return '<div style="display:flex;gap:6px;align-items:center;padding:3px 0"><input value="' + esc(a.name || '') + '" oninput="netSetAttach(\'' + n.key + '\',' + i + ',this.value)" placeholder="document name (e.g. assay_cert.pdf)" style="flex:1;min-width:0;font-size:var(--fs-1);padding:4px 7px;border:1px solid var(--line);border-radius:6px"><span onclick="netDelAttach(\'' + n.key + '\',' + i + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>'; }).join('') || '<div style="font-size:var(--fs-1);color:var(--grey);padding:2px 0">No attachments.</div>')
+    + ((o.attachments || []).map(function(item, index){ return '<div style="display:flex;gap:6px;align-items:center;padding:3px 0"><input value="' + esc(item.name || '') + '" oninput="netSetAttach(\'' + n.key + '\',' + index + ',this.value)" placeholder="document name (e.g. assay_cert.pdf)" style="flex:1;min-width:0;font-size:var(--fs-1);padding:4px 7px;border:1px solid var(--line);border-radius:6px"><span onclick="netDelAttach(\'' + n.key + '\',' + index + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>'; }).join('') || '<div style="font-size:var(--fs-1);color:var(--grey);padding:2px 0">No attachments.</div>')
     + '<div onclick="netAddAttach(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:var(--fs-2);font-weight:600;padding:5px 0">＋ add attachment</div>'
     + '<textarea oninput="netSetOrderNotes(\'' + n.key + '\',this.value)" placeholder="notes…" style="width:100%;margin-top:6px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2);box-sizing:border-box;min-height:2.4rem;resize:vertical">' + esc(o.notes || '') + '</textarea>'
     + '</div>';
@@ -1496,7 +1496,7 @@ function _normCoassist(ca){
   if (typeof ca.human === 'number') d.human.count = ca.human; else if (ca.human) { d.human.count = ca.human.count || 0; d.human.roles = ca.human.roles || []; }
   if (typeof ca.iot === 'number') { if (ca.iot > 0) d.iot.connections = [{ type: 'Direct sensor', count: 1, devices: ca.iot }]; }
   else if (ca.iot) { if (Array.isArray(ca.iot.connections)) d.iot.connections = ca.iot.connections.map(function(x){ return { type: x.type || 'Raspberry Pi', count: (x.count != null ? x.count : 1), devices: x.devices || 0 }; }); else if (ca.iot.gateways || ca.iot.devices) d.iot.connections = [{ type: 'Raspberry Pi', count: ca.iot.gateways || 1, devices: ca.iot.devices || 0 }]; }
-  if (typeof ca.erp === 'number') { for (var i = 0; i < ca.erp; i++) d.erp.connectors.push({ system: 'SAP', label: '' }); } else if (ca.erp) { d.erp.connectors = ca.erp.connectors || []; }
+  if (typeof ca.erp === 'number') { for (var index = 0; index < ca.erp; index++) d.erp.connectors.push({ system: 'SAP', label: '' }); } else if (ca.erp) { d.erp.connectors = ca.erp.connectors || []; }
   if (typeof ca.ai === 'number') d.ai.count = ca.ai; else if (ca.ai) { d.ai.count = ca.ai.count || 0; d.ai.role = ca.ai.role || ''; d.ai.autonomy = ca.ai.autonomy || 'authorize'; }
   return d;
 }
@@ -1524,25 +1524,25 @@ function netSetDispute(key, informed){ var n = _netNode(key); if (!n) return; n.
 
 function _coassistConfig(n){
   var c = _ca(n);
-  var roleChips = c.human.roles.map(function(r, i){ return '<span style="display:inline-flex;align-items:center;gap:3px;margin:0 5px 4px 0"><input value="' + esc(r) + '" oninput="netCaHumanSetRole(\'' + n.key + '\',' + i + ',this.value)" placeholder="role" style="width:96px;font-size:var(--fs-1);padding:3px 6px;border:1px solid var(--line);border-radius:6px"><span onclick="netCaHumanDelRole(\'' + n.key + '\',' + i + ')" style="cursor:pointer;color:var(--grey);font-weight:700">×</span></span>'; }).join('');
+  var roleChips = c.human.roles.map(function(item, index){ return '<span style="display:inline-flex;align-items:center;gap:3px;margin:0 5px 4px 0"><input value="' + esc(item) + '" oninput="netCaHumanSetRole(\'' + n.key + '\',' + index + ',this.value)" placeholder="role" style="width:96px;font-size:var(--fs-1);padding:3px 6px;border:1px solid var(--line);border-radius:6px"><span onclick="netCaHumanDelRole(\'' + n.key + '\',' + index + ')" style="cursor:pointer;color:var(--grey);font-weight:700">×</span></span>'; }).join('');
   var human = '<div style="padding:9px 0;border-bottom:1px solid var(--line)">'
     + '<div style="display:flex;align-items:center;gap:8px"><span style="flex:1;font-size:var(--fs-2);font-weight:600;color:var(--ink-2)">' + tx('🧑 Human workforce') + '</span>'
       + '<span style="font-size:var(--fs-1);color:var(--grey)">count</span><input type="number" min="0" value="' + (c.human.count || '') + '" oninput="netCaHuman(\'' + n.key + '\',this.value)" placeholder="0" style="width:64px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)"></div>'
     + '<div style="margin-top:6px">' + roleChips + '<span onclick="netCaHumanAddRole(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:var(--fs-1);font-weight:600">＋ role</span></div>'
     + '</div>';
-  var iotRows = c.iot.connections.map(function(io, i){
-    var opts = IOT_TYPES.map(function(t){ return '<option value="' + t + '"' + (io.type === t ? ' selected' : '') + '>' + t + '</option>'; }).join('');
-    return '<div style="display:flex;gap:5px;align-items:center;padding:3px 0;flex-wrap:wrap"><select onchange="netCaSetIot(\'' + n.key + '\',' + i + ',\'type\',this.value)" style="font-size:var(--fs-1);padding:4px;border:1px solid var(--line);border-radius:6px">' + opts + '</select><span style="font-size:var(--fs-1);color:var(--grey)">how many</span><input type="number" min="0" value="' + (io.count || '') + '" oninput="netCaSetIot(\'' + n.key + '\',' + i + ',\'count\',this.value)" placeholder="1" style="width:46px;font-size:var(--fs-1);padding:4px 6px;border:1px solid var(--line);border-radius:6px"><span style="font-size:var(--fs-1);color:var(--grey)">devices</span><input type="number" min="0" value="' + (io.devices || '') + '" oninput="netCaSetIot(\'' + n.key + '\',' + i + ',\'devices\',this.value)" placeholder="0" style="width:54px;font-size:var(--fs-1);padding:4px 6px;border:1px solid var(--line);border-radius:6px"><span onclick="netCaDelIot(\'' + n.key + '\',' + i + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>';
+  var iotRows = c.iot.connections.map(function(item, index){
+    var opts = IOT_TYPES.map(function(t){ return '<option value="' + t + '"' + (item.type === t ? ' selected' : '') + '>' + t + '</option>'; }).join('');
+    return '<div style="display:flex;gap:5px;align-items:center;padding:3px 0;flex-wrap:wrap"><select onchange="netCaSetIot(\'' + n.key + '\',' + index + ',\'type\',this.value)" style="font-size:var(--fs-1);padding:4px;border:1px solid var(--line);border-radius:6px">' + opts + '</select><span style="font-size:var(--fs-1);color:var(--grey)">how many</span><input type="number" min="0" value="' + (item.count || '') + '" oninput="netCaSetIot(\'' + n.key + '\',' + index + ',\'count\',this.value)" placeholder="1" style="width:46px;font-size:var(--fs-1);padding:4px 6px;border:1px solid var(--line);border-radius:6px"><span style="font-size:var(--fs-1);color:var(--grey)">devices</span><input type="number" min="0" value="' + (item.devices || '') + '" oninput="netCaSetIot(\'' + n.key + '\',' + index + ',\'devices\',this.value)" placeholder="0" style="width:54px;font-size:var(--fs-1);padding:4px 6px;border:1px solid var(--line);border-radius:6px"><span onclick="netCaDelIot(\'' + n.key + '\',' + index + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>';
   }).join('');
   var iot = '<div style="padding:9px 0;border-bottom:1px solid var(--line)"><span style="font-size:var(--fs-2);font-weight:600;color:var(--ink-2)">' + tx('📡 IoT connections') + '</span>'
     + '<div style="margin-top:5px">' + iotRows + '<span onclick="netCaAddIot(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:var(--fs-1);font-weight:600">＋ connection</span></div></div>';
-  var erpRows = c.erp.connectors.map(function(e, i){
-    var opts = ERP_SYSTEMS.map(function(s){ return '<option value="' + s + '"' + (e.system === s ? ' selected' : '') + '>' + s + '</option>'; }).join('');
-    return '<div style="display:flex;gap:6px;align-items:center;padding:3px 0"><select onchange="netCaSetErp(\'' + n.key + '\',' + i + ',\'system\',this.value)" style="font-size:var(--fs-1);padding:4px;border:1px solid var(--line);border-radius:6px">' + opts + '</select><input value="' + esc(e.label || '') + '" oninput="netCaSetErp(\'' + n.key + '\',' + i + ',\'label\',this.value)" placeholder="label (e.g. SAP-Prod)" style="flex:1;min-width:0;font-size:var(--fs-1);padding:4px 7px;border:1px solid var(--line);border-radius:6px"><span onclick="netCaDelErp(\'' + n.key + '\',' + i + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>';
+  var erpRows = c.erp.connectors.map(function(e, index){
+    var opts = ERP_SYSTEMS.map(function(item){ return '<option value="' + item + '"' + (e.system === item ? ' selected' : '') + '>' + item + '</option>'; }).join('');
+    return '<div style="display:flex;gap:6px;align-items:center;padding:3px 0"><select onchange="netCaSetErp(\'' + n.key + '\',' + index + ',\'system\',this.value)" style="font-size:var(--fs-1);padding:4px;border:1px solid var(--line);border-radius:6px">' + opts + '</select><input value="' + esc(e.label || '') + '" oninput="netCaSetErp(\'' + n.key + '\',' + index + ',\'label\',this.value)" placeholder="label (e.g. SAP-Prod)" style="flex:1;min-width:0;font-size:var(--fs-1);padding:4px 7px;border:1px solid var(--line);border-radius:6px"><span onclick="netCaDelErp(\'' + n.key + '\',' + index + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>';
   }).join('');
   var erp = '<div style="padding:9px 0;border-bottom:1px solid var(--line)"><span style="font-size:var(--fs-2);font-weight:600;color:var(--ink-2)">' + tx('🔗 ERP connectors') + '</span>'
     + '<div style="margin-top:5px">' + erpRows + '<span onclick="netCaAddErp(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:var(--fs-1);font-weight:600">＋ connector</span></div></div>';
-  var auOpts = AI_AUTONOMY.map(function(a){ return '<option value="' + a + '"' + (c.ai.autonomy === a ? ' selected' : '') + '>' + a + '</option>'; }).join('');
+  var auOpts = AI_AUTONOMY.map(function(item){ return '<option value="' + item + '"' + (c.ai.autonomy === item ? ' selected' : '') + '>' + item + '</option>'; }).join('');
   var ai = '<div style="padding:9px 0 2px">'
     + '<div style="display:flex;align-items:center;gap:8px"><span style="flex:1;font-size:var(--fs-2);font-weight:600;color:var(--ink-2)">' + tx('🤖 AI agents') + '</span>'
       + '<span style="font-size:var(--fs-1);color:var(--grey)">count</span><input type="number" min="0" value="' + (c.ai.count || '') + '" oninput="netCaAiCount(\'' + n.key + '\',this.value)" placeholder="0" style="width:64px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)"></div>'
@@ -1576,7 +1576,7 @@ function _transactConfig(n){
 function _tradereadyConfig(n){
   var tr = n.tradeready || {}; var mode = tr.mode || 'inherit'; var certs = tr.certs || [];
   var certList = mode === 'own' ? '<div style="margin-top:8px">'
-    + (certs.length ? certs.map(function(c, i){ return '<div style="display:flex;gap:6px;align-items:center;padding:3px 0"><input value="' + esc(c) + '" oninput="netSetCert(\'' + n.key + '\',' + i + ',this.value)" placeholder="certification (e.g. FSC, ISO 9001)" style="flex:1;font-size:var(--fs-2);padding:5px 7px;border:1px solid var(--line);border-radius:6px"><span onclick="netDelCert(\'' + n.key + '\',' + i + ')" title="remove" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 4px">×</span></div>'; }).join('') : '<div style="font-size:var(--fs-1);color:var(--grey)">No certifications yet.</div>')
+    + (certs.length ? certs.map(function(item, index){ return '<div style="display:flex;gap:6px;align-items:center;padding:3px 0"><input value="' + esc(item) + '" oninput="netSetCert(\'' + n.key + '\',' + index + ',this.value)" placeholder="certification (e.g. FSC, ISO 9001)" style="flex:1;font-size:var(--fs-2);padding:5px 7px;border:1px solid var(--line);border-radius:6px"><span onclick="netDelCert(\'' + n.key + '\',' + index + ')" title="remove" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 4px">×</span></div>'; }).join('') : '<div style="font-size:var(--fs-1);color:var(--grey)">No certifications yet.</div>')
     + '<div onclick="netAddCert(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:var(--fs-2);font-weight:600;padding:5px 0">＋ add certification</div></div>' : '';
   return '<div style="padding:12px 13px;border:1px solid var(--line);border-inline-start:3px solid #22857a;border-radius:9px;background:var(--ok-tint);color:var(--on-card)">'
     + '<div style="font-size:var(--fs-1);font-weight:800;color:var(--ok-2);letter-spacing:.05em">' + tx('🛡️ TRADE-READY — certifications') + '</div>'
@@ -1737,7 +1737,7 @@ function _soonConfig(n, k){
     + '<div style="font-size:var(--fs-1);font-weight:800;color:var(--on-card);letter-spacing:.05em">' + c.icon + ' ' + esc((c.label || '').toUpperCase())
     + ' <span style="background:var(--blue-tint-bg);border-radius:5px;padding:1px 6px;margin-inline-start:5px;color:var(--on-card)">' + tx('CAPTURED, NOT ENFORCED') + '</span></div>'
     + '<div style="font-size:var(--fs-2);color:var(--ink-2);margin-top:6px;line-height:1.5"><b>' + esc(s.q) + '</b></div>'
-    + form.map(function(f){ return _fieldLabel(f[1]) + _inp(v[f[0]], "netSetSoon('" + n.key + "','" + k + "','" + f[0] + "',this.value)", f[2]); }).join('')
+    + form.map(function(item){ return _fieldLabel(item[1]) + _inp(v[item[0]], "netSetSoon('" + n.key + "','" + k + "','" + item[0] + "',this.value)", item[2]); }).join('')
     + '<div style="margin-top:11px;font-size:var(--fs-1);line-height:1.55;border-top:1px dashed var(--line);padding-top:8px">'
     + '<div><span style="color:var(--ok-2);font-weight:700">' + tx('Have') + '</span> <span style="color:var(--grey)">' + esc(s.have) + '</span></div>'
     + '<div style="margin-top:3px"><span style="color:var(--disp-2);font-weight:700">' + tx('Need') + '</span> <span style="color:var(--grey)">' + esc(s.need) + '</span></div>'
@@ -1782,8 +1782,8 @@ function _netRootHandle(){
   if (!UI._netRootAsked && _netLoggedIn()) {
     UI._netRootAsked = true;                       // once per session; a failed read simply keeps the fallback
     /* ⭐ meNow() — UI._netRootAsked was the third private ask-once latch for one endpoint. */
-    try { meNow().then(function(r){
-      var e = (r && (r.entity || r)) || {};
+    try { meNow().then(function(reply){
+      var e = (reply && (reply.entity || reply)) || {};
       var h = e.user_id || e.handle;
       // The NETWORK's own visibility, which caps every store under it (see netMaxExposure).
       UI._netOwnVis = String(e.catalogue_visibility || '').toLowerCase() || null;
@@ -1863,8 +1863,8 @@ var NET_PLATFORM = { public: 'public', protected: 'network', private: 'private' 
    pressing the button will do — and it covers stores built before receipts carried their visibility, which no
    amount of local comparison could. It saves first, because the plan is computed from the SAVED design. */
 function _netPlanSig(){
-  return JSON.stringify((UI.net && UI.net.nodes || []).map(function(n){
-    return [n.key, n.name, n.exposure || '', n.parent_key || '', n.owned !== false, n.partner_ref || '', !!n.built]; }));
+  return JSON.stringify((UI.net && UI.net.nodes || []).map(function(item){
+    return [item.key, item.name, item.exposure || '', item.parent_key || '', item.owned !== false, item.partner_ref || '', !!item.built]; }));
 }
 function _netRefreshPlan(){
   if (!_netLoggedIn() || !UI.net || UI._netPlanBusy) return;
@@ -1873,9 +1873,9 @@ function _netRefreshPlan(){
   UI._netPlanBusy = true; UI._netPlanSig = sig;
   api('netDesignPut', { body: { draft: _netStripView(UI.net) } })
     .then(function(){ _netSetDirty(false); return api('netBuild', { body: { dry_run: true } }); })
-    .then(function(p){
+    .then(function(reply){
       UI._netPlanBusy = false;
-      UI._netPlan = p || null;
+      UI._netPlan = reply || null;
       // Repaint ONLY the left column. Rebuilding the whole shell for this is what made the page flash after every
       // edit; nothing outside this column depends on the plan.
       var el = (typeof document !== 'undefined') ? document.getElementById('netLeftPane') : null;
@@ -1908,7 +1908,7 @@ function _netPending(n){
   var want = NET_PLATFORM[n.exposure || 'private'] || 'private';
   return n.built.visibility === want ? null : { from: n.built.visibility, to: want };
 }
-var _netLab = function(k){ return ((NET_EXPOSURE.filter(function(o){ return o.k === k; })[0] || {}).label || k).replace(/^\S+\s/, ''); };
+var _netLab = function(k){ return ((NET_EXPOSURE.filter(function(item){ return item.k === k; })[0] || {}).label || k).replace(/^\S+\s/, ''); };
 var _netPlatLab = { public: 'Public', network: 'Network', private: 'Private' };
 
 /**
@@ -1980,7 +1980,7 @@ function netSetNetworkVisibility(v){
     api('saveProfile', { body: { catalogue_visibility: v } }).then(function(){
       UI._netOwnVis = v;
       if (changes.length) {
-        changes.forEach(function(c){ var t = _netNode(c.key); if (t) t.exposure = c.to; });
+        changes.forEach(function(item){ var t = _netNode(item.key); if (t) t.exposure = item.to; });
         _netSave();
       }
       if (typeof toast === 'function') toast(v === 'public' ? 'This network can face customers' : 'This network is closed to the public');
@@ -2025,24 +2025,24 @@ function _netVisibilityBlock(n){
   return '<div style="margin-top:16px;padding:13px 15px;border:1px solid #b9cbe4;border-radius:12px;background:var(--blue-tint-bg);color:var(--on-card)">'
     + '<div style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);letter-spacing:.05em">WHO CAN SEE THIS STORE\'S CATALOGUE</div>'
     + '<div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:9px">'
-    + NET_EXPOSURE.filter(function(o){ return allowed.indexOf(o.k) >= 0 || o.k === cur; }).map(function(o){
-        var on = cur === o.k;
-        var off = allowed.indexOf(o.k) < 0;
-        if (off) return '<button disabled title="Not available while the network is not public" style="padding:7px 13px;border-radius:9px;font-size:var(--fs-2);border:1px dashed var(--line);background:var(--card);color:var(--on-card);cursor:not-allowed">' + o.label + '</button>';
-        return '<button onclick="netSetExposure(\'' + n.key + '\',\'' + o.k + '\')" style="padding:7px 13px;border-radius:9px;font-size:var(--fs-2);font-weight:' + (on ? '700' : '500') + ';border:1px solid ' + (on ? 'var(--blue-2)' : 'var(--line)') + ';background:' + (on ? 'var(--blue-2)' : 'var(--card)') + ';color:' + (on ? 'var(--on-accent)' : 'var(--ink-2)') + '">' + o.label + '</button>';
+    + NET_EXPOSURE.filter(function(item){ return allowed.indexOf(item.k) >= 0 || item.k === cur; }).map(function(item){
+        var on = cur === item.k;
+        var off = allowed.indexOf(item.k) < 0;
+        if (off) return '<button disabled title="Not available while the network is not public" style="padding:7px 13px;border-radius:9px;font-size:var(--fs-2);border:1px dashed var(--line);background:var(--card);color:var(--on-card);cursor:not-allowed">' + item.label + '</button>';
+        return '<button onclick="netSetExposure(\'' + n.key + '\',\'' + item.k + '\')" style="padding:7px 13px;border-radius:9px;font-size:var(--fs-2);font-weight:' + (on ? '700' : '500') + ';border:1px solid ' + (on ? 'var(--blue-2)' : 'var(--line)') + ';background:' + (on ? 'var(--blue-2)' : 'var(--card)') + ';color:' + (on ? 'var(--on-accent)' : 'var(--ink-2)') + '">' + item.label + '</button>';
       }).join('')
     + '</div>'
     + (maxOpen !== 'public'
         ? '<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:8px;line-height:1.55">🔒 '
           + (byParent
               ? '<b>' + esc((_netNode(n.parent_key) || {}).name || 'The department above') + '</b> is '
-                + esc(((NET_EXPOSURE.filter(function(o){ return o.k === maxOpen; })[0] || {}).label || maxOpen)).replace(/^[^ ]+ /, '')
+                + esc(((NET_EXPOSURE.filter(function(item){ return item.k === maxOpen; })[0] || {}).label || maxOpen)).replace(/^[^ ]+ /, '')
                 + ', so this store cannot be more open than that. Move it under the network itself if it should face customers.'
               : '<b>This network is ' + esc(UI._netOwnVis === 'network' ? 'network-only' : 'private') + '</b>, so a store under it can be seen by the network or by nobody — not by the public. Open the network itself first if you want public shops.')
-          + (stale ? ' <b>“' + esc((NET_EXPOSURE.filter(function(o){ return o.k === cur; })[0] || {}).label || cur) + '” is no longer available</b> and will be built as Network only.' : '')
+          + (stale ? ' <b>“' + esc((NET_EXPOSURE.filter(function(item){ return item.k === cur; })[0] || {}).label || cur) + '” is no longer available</b> and will be built as Network only.' : '')
           + '</div>' : '')
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:8px;line-height:1.55">'
-    + esc((NET_EXPOSURE.filter(function(o){ return o.k === cur; })[0] || {}).hint || '') + '</div>'
+    + esc((NET_EXPOSURE.filter(function(item){ return item.k === cur; })[0] || {}).hint || '') + '</div>'
     + (n.built ? '<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:7px;line-height:1.5">⚠ Already built — changing this here updates the design, not the live store. Change it from the store\'s own Settings, within what you allowed it.</div>' : '')
     + '</div>';
 }
@@ -2111,7 +2111,7 @@ var NET_TABS = [
  */
 function _netTab(){
   var t = (UI.net && UI.net.tab) || 'general';
-  for (var i = 0; i < NET_TABS.length; i++) if (NET_TABS[i].k === t) return t;
+  for (var index = 0; index < NET_TABS.length; index++) if (NET_TABS[index].k === t) return t;
   return 'options';
 }
 function netPickTab(t){ if (UI.net) UI.net.tab = t; _netRerender(); }
@@ -2146,19 +2146,19 @@ function _netTabStrip(n){
   return '<div style="display:flex;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;'
     + 'scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;'
     + 'gap:6px;margin-top:16px;padding-bottom:12px;border-bottom:1px solid var(--line)">'
-    + tabs.map(function(c){
-        var on = c.k === cur;
-        var yes = c.k !== 'general' && (n.holds || []).indexOf(c.k) >= 0;
-        return '<span onclick="netPickTab(\'' + c.k + '\')" style="cursor:pointer;display:inline-flex;align-items:center;gap:8px;'
+    + tabs.map(function(item){
+        var on = item.k === cur;
+        var yes = item.k !== 'general' && (n.holds || []).indexOf(item.k) >= 0;
+        return '<span onclick="netPickTab(\'' + item.k + '\')" style="cursor:pointer;display:inline-flex;align-items:center;gap:8px;'
           + 'flex:0 0 auto;scroll-snap-align:start;padding:8px 12px;border-radius:9px;font-size:var(--fs-2);white-space:nowrap;'
           + 'background:' + (on ? 'var(--blue)' : 'transparent') + ';'
           + 'border:1px solid ' + (on ? 'var(--blue)' : 'var(--line)') + ';'
-          + 'color:' + (on ? 'var(--on-accent)' : (yes || c.k === 'general' ? 'var(--blue-2)' : 'var(--blue-2)')) + ';'
+          + 'color:' + (on ? 'var(--on-accent)' : (yes || item.k === 'general' ? 'var(--blue-2)' : 'var(--blue-2)')) + ';'
           + 'font-weight:' + (on ? '700' : '500') + '">'
-          + '<span style="width:16px;text-align:center;font-size:var(--fs-3)">' + c.icon + '</span>' + esc(c.label)
+          + '<span style="width:16px;text-align:center;font-size:var(--fs-3)">' + item.icon + '</span>' + esc(item.label)
           + (yes ? '<span title="on for this store" style="width:6px;height:6px;border-radius:50%;flex:0 0 auto;background:'
               + (on ? 'rgba(255,255,255,.8)' : 'var(--ok-2)') + '"></span>' : '')
-          + (c.soon ? '<span style="font-size:var(--fs-1);font-weight:800;opacity:.75;border:1px solid '
+          + (item.soon ? '<span style="font-size:var(--fs-1);font-weight:800;opacity:.75;border:1px solid '
               + (on ? 'rgba(255,255,255,.5)' : 'var(--line)') + ';border-radius:4px;padding:0 3px">' + tx('N/E') + '</span>' : '')
           + '</span>';
       }).join('')
@@ -2254,8 +2254,8 @@ function _netOptionsTab(n){
   return '<div style="padding-top:14px">'
     + '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.55;margin-bottom:10px">'
     + 'Tick what this store does. Only the ticked ones are set up at Build.</div>'
-    + NET_CAPS.map(function(c){
-        var on = holds.indexOf(c.k) >= 0;
+    + NET_CAPS.map(function(item){
+        var on = holds.indexOf(item.k) >= 0;
         /**
          * ⚠️ PRIVATE RULES OPTIONS OUT (Athi: *"if it is private many capabilities are not applicable"*).
          * A storefront on a node nobody may see is not a setting, it is a contradiction — and offering it as a
@@ -2263,26 +2263,26 @@ function _netOptionsTab(n){
          * reason is named, and it points at the tab that would change it, because "not applicable" without
          * "here is what to change" is just a locked door.
          */
-        var blocked = _netCapBlockedReason(n, c.k);
+        var blocked = _netCapBlockedReason(n, item.k);
         var q = String.fromCharCode(39);   // a single quote — this string is already two levels of quoting deep
-        var call = function(fn){ return fn + '(' + q + esc(n.key) + q + ',' + q + esc(c.k) + q + ')'; };
+        var call = function(fn){ return fn + '(' + q + esc(n.key) + q + ',' + q + esc(item.k) + q + ')'; };
         return '<div style="border:1px solid ' + (on ? 'var(--blue)' : 'var(--line)') + ';border-radius:12px;'
           + 'background:var(--card);color:var(--on-card);margin-bottom:8px;overflow:hidden'
           + (blocked ? ';opacity:.72' : '') + '">'
           + '<label style="display:flex;align-items:center;gap:10px;padding:11px 13px;'
           + (blocked ? 'cursor:not-allowed' : 'cursor:pointer') + '">'
           +   '<input type="checkbox" ' + (on ? 'checked ' : '') + (blocked ? 'disabled ' : '')
-          +     'data-testid="net-cap-' + esc(c.k) + '"'
+          +     'data-testid="net-cap-' + esc(item.k) + '"'
           +     ' onchange="this.checked?' + call('netCapYes') + ':' + call('netCapNo') + '">'
-          +   '<span style="width:18px;text-align:center;font-size:var(--fs-3)">' + c.icon + '</span>'
-          +   '<span style="font-size:var(--fs-3);font-weight:' + (on ? '700' : '500') + '">' + esc(c.label) + '</span>'
-          +   (c.soon ? '<span style="margin-inline-start:auto;font-size:var(--fs-1);font-weight:800;color:var(--warn-2);'
+          +   '<span style="width:18px;text-align:center;font-size:var(--fs-3)">' + item.icon + '</span>'
+          +   '<span style="font-size:var(--fs-3);font-weight:' + (on ? '700' : '500') + '">' + esc(item.label) + '</span>'
+          +   (item.soon ? '<span style="margin-inline-start:auto;font-size:var(--fs-1);font-weight:800;color:var(--warn-2);'
                 + 'background:var(--warn-tint);border-radius:5px;padding:1px 6px">not enabled</span>' : '')
           + '</label>'
           + (blocked ? '<div style="padding:0 13px 11px;font-size:var(--fs-1);color:var(--warn-2);line-height:1.55">'
                 + esc(blocked) + ' <span onclick="netPickTab(' + q + 'visibility' + q + ')"'
                 + ' style="cursor:pointer;color:var(--blue);font-weight:700">Change visibility <span class=arw>→</span></span></div>' : '')
-          + (on && !blocked ? '<div style="border-top:1px solid var(--line);padding:2px 13px 12px">' + _capPanel(n, c.k) + '</div>' : '')
+          + (on && !blocked ? '<div style="border-top:1px solid var(--line);padding:2px 13px 12px">' + _capPanel(n, item.k) + '</div>' : '')
           + '</div>';
       }).join('')
     + '</div>';
