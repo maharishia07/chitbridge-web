@@ -46,24 +46,24 @@ function listCtlS(key) { return LISTCTL[key] || { cfg: null, q: '', sort: 0, f: 
  * the first time somebody adds a customer without telling the cache.
  */
 function listCtlView(key) {
-  var s = listCtlS(key), c = s.cfg;
+  var list = listCtlS(key), c = list.cfg;
   if (!c) return { all: [], matched: [] };
   var all = (c.rows && c.rows()) || [];
-  var q = String(s.q || '').trim().toLowerCase();
+  var q = String(list.q || '').trim().toLowerCase();
   var matched = all.filter(function (row) {
     if (q && String((c.text && c.text(row)) || '').toLowerCase().indexOf(q) < 0) return false;
-    for (var i = 0; i < (c.filters || []).length; i++) {
-      var f = c.filters[i], v = s.f[f.key];
+    for (var index = 0; index < (c.filters || []).length; index++) {
+      var f = c.filters[index], v = list.f[f.key];
       if (v && !f.match(row, v)) return false;
     }
     return true;
   });
   var sorts = c.sorts || [];
-  var srt = sorts[s.sort] || sorts[0];
+  var srt = sorts[list.sort] || sorts[0];
   /* ⚠️ sort a COPY. Sorting `matched` in place is fine, but `matched` is `all` itself when nothing is filtered,
      and reordering the screen's own array is how a list silently changes under everything else reading it. */
   if (srt && srt.cmp) matched = matched.slice().sort(srt.cmp);
-  if (s.rev) matched = matched.slice().reverse();   /* a heading clicked twice (tblSortBy) */
+  if (list.rev) matched = matched.slice().reverse();   /* a heading clicked twice (tblSortBy) */
   return { all: all, matched: matched };
 }
 
@@ -81,30 +81,30 @@ function listCtlRowsHTML(key, rowFn, emptyHTML) {
 
 /** search · filters · sort, in one row. The screen places it; this decides nothing about where. */
 function listCtlToolbarHTML(key) {
-  var s = listCtlS(key), c = s.cfg;
+  var list = listCtlS(key), c = list.cfg;
   if (!c) return '';
   var k = "'" + key + "'";
   /* ⚠️ oninput, NOT onkeydown. Enter-only is how "search is broken" happens: the box takes typing and the list
      does not move, with nothing on screen saying why. The watcher checks for exactly this. */
   var search = '<div class="srch" style="flex:1 1 150px;min-width:130px">🔍 <input data-testid="listctl-search-' + esc(key) + '"'
-    + ' placeholder="' + esc(tx('Search')) + '" value="' + esc(s.q || '') + '"'
+    + ' placeholder="' + esc(tx('Search')) + '" value="' + esc(list.q || '') + '"'
     + ' oninput="listCtlSetQ(' + k + ',this.value)"></div>';
 
-  var filters = (c.filters || []).map(function (f) {
-    var opts = '<option value="">' + esc(f.all || tx('All')) + '</option>'
-      + (f.options || []).map(function (o) {
-        return '<option value="' + esc(o.v) + '"' + (s.f[f.key] === o.v ? ' selected' : '') + '>' + esc(o.label) + '</option>';
+  var filters = (c.filters || []).map(function (item) {
+    var opts = '<option value="">' + esc(item.all || tx('All')) + '</option>'
+      + (item.options || []).map(function (o) {
+        return '<option value="' + esc(o.v) + '"' + (list.f[item.key] === o.v ? ' selected' : '') + '>' + esc(o.label) + '</option>';
       }).join('');
-    return '<select class="inp" data-testid="listctl-filter-' + esc(f.key) + '" title="' + esc(f.label) + '"'
+    return '<select class="inp" data-testid="listctl-filter-' + esc(item.key) + '" title="' + esc(item.label) + '"'
       + ' style="width:auto;padding:3px 6px;font-size:var(--fs-1)"'
-      + ' onchange="listCtlSetFilter(' + k + ',\'' + esc(f.key) + '\',this.value)">' + opts + '</select>';
+      + ' onchange="listCtlSetFilter(' + k + ',\'' + esc(item.key) + '\',this.value)">' + opts + '</select>';
   }).join('');
 
   var sorts = (c.sorts || []).length > 1
     ? '<select class="inp" data-testid="listctl-sort-' + esc(key) + '" title="' + esc(tx('Sort order')) + '"'
       + ' style="width:auto;padding:3px 6px;font-size:var(--fs-1)"'
       + ' onchange="listCtlSetSort(' + k + ',this.value)">'
-      + c.sorts.map(function (o, i) { return '<option value="' + i + '"' + (i === s.sort ? ' selected' : '') + '>' + esc(o.label) + '</option>'; }).join('')
+      + c.sorts.map(function (item, index) { return '<option value="' + index + '"' + (index === list.sort ? ' selected' : '') + '>' + esc(item.label) + '</option>'; }).join('')
       + '</select>'
     : '';
 
@@ -133,7 +133,7 @@ function listCtlCountHTML(key) {
    would draw the whole of a narrower answer at once — and look identical to no filtering having happened. */
 function listCtlSetQ(key, v) { var s = listCtlS(key); s.q = v; listCtlResetRows(key); if (s.cfg && s.cfg.repaint) s.cfg.repaint(); }
 function listCtlSetFilter(key, f, v) { var s = listCtlS(key); s.f[f] = v; listCtlResetRows(key); if (s.cfg && s.cfg.repaint) s.cfg.repaint(); }
-function listCtlSetSort(key, i) { var s = listCtlS(key); s.sort = Number(i) || 0; s.rev = false; listCtlResetRows(key); if (s.cfg && s.cfg.repaint) s.cfg.repaint(); }
+function listCtlSetSort(key, i) { var list = listCtlS(key); list.sort = Number(i) || 0; list.rev = false; listCtlResetRows(key); if (list.cfg && list.cfg.repaint) list.cfg.repaint(); }
 
 /**
  * ⭐ THE EMPTY CASE IS TWO DIFFERENT SENTENCES, and telling them apart is the whole value of saying anything.
@@ -142,7 +142,7 @@ function listCtlSetSort(key, i) { var s = listCtlS(key); s.sort = Number(i) || 0
  */
 function listCtlEmptyHTML(key, icon, title, sub) {
   var s = listCtlS(key), v = listCtlView(key);
-  var narrowed = s.q || Object.keys(s.f || {}).some(function (k) { return s.f[k]; });
+  var narrowed = s.q || Object.keys(s.f || {}).some(function (item) { return s.f[item]; });
   if (v.all.length && narrowed) {
     return emptyState(icon || '🔍', tx('Nothing matches'),
       tx('No row here matches what you have typed or chosen. Clear the search or the filters to see the rest.'));
@@ -198,4 +198,4 @@ function lazyReveal(id){ const s=LAZY[id]; if(!s) return; const sent=document.ge
   if(left<=0){ sent.innerHTML='<div class="listend">'+s.total+' total · end of list</div>'; if(s._io){ try{s._io.disconnect();}catch(_){} s._io=null; } }
   else sent.innerHTML='<div class="listend"><button class="composebtn" onclick="lazyReveal(\''+id+'\')">↓ Show '+Math.min(s.chunk,left)+' more</button> <span style="color:var(--grey)">'+s.shown+' of '+s.total+'</span></div>'; }
 function lazyAttach(id){ const s=LAZY[id]; if(!s || s.shown>=s.total) return; const sent=document.getElementById('lzs_'+id); if(!sent) return;
-  try{ s._io = new IntersectionObserver(function(es){ if(es.some(function(e){return e.isIntersecting;})) lazyReveal(id); }, {rootMargin:'0px'}); s._io.observe(sent); }catch(_){} }
+  try{ s._io = new IntersectionObserver(function(list){ if(list.some(function(e){return e.isIntersecting;})) lazyReveal(id); }, {rootMargin:'0px'}); s._io.observe(sent); }catch(_){} }
