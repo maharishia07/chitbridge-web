@@ -233,7 +233,7 @@ async function route(S, r) {
     ok(JSON.stringify(grps) === JSON.stringify(['Books', 'Outstandings', 'Period end', 'Setup']), 'the menu is grouped: ' + grps.join(' · '));
     ok(await p.$$eval('#nav .nav-sec', (s) => s[1] && Array.from(s[1].querySelectorAll('.nav-btn')).map((b) => b.dataset.view).join(',')) === 'daybook,ledgers,tb,pl,bs,compare,bank', 'Books holds Day book → Balance sheet, Parallel run, Bank');
     ok(await p.$$eval('#nav .nav-sec', (s) => s[2] && Array.from(s[2].querySelectorAll('.nav-btn')).map((b) => b.dataset.view).join(',')) === 'receivables,payables,bills,cheques', 'A1: Outstandings holds Receivables · Payables · Bills · Cheques');
-    ok(await p.locator('[data-testid="acc-nav-waiting"]').count() === 0 && await p.locator('[data-testid="acc-nav-dues"]').count() === 0, 'A1: Waiting and Dues are no longer menu items');
+    ok(await p.locator('[data-testid="acc-nav-waiting"]').count() === 0 && await p.locator('[data-testid="acc-nav-dues"]').count() === 1, 'A1: Waiting is no longer a menu item; Dues is one again, under Outstandings (ACC-175)');
     await p.click('[data-testid="acc-grp-setup"]');
     ok(await p.locator('[data-testid="acc-nav-packs"]').isHidden() && await p.getAttribute('[data-testid="acc-grp-setup"]', 'aria-expanded') === 'false', 'a group folds');
     await p.click('[data-testid="acc-grp-setup"]');

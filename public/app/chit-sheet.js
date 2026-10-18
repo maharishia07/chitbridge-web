@@ -475,6 +475,17 @@
     CS.busy = false; paint();
   }
 
+  /** the ⚑ Dispute button: in the sheet's own section where the page has one, else the page's form, else Tasks › Disputes on this chit (RAIL-86) */
+  function raiseDispute(id) {
+    /* T3: where the dispute capability is on the page (CBDispute), Raise opens IN the sheet's own dispute section — greyed there with the server's why */
+    if (root.CBDispute && root.CBDispute.sheet && CS.disp && CS.disp.id === id) { root.CBDispute.raise(); return; }
+    /* the full page's own dispute form; it opens over the app (not over the sheet), and puts the sheet back when it is raised */
+    if (typeof quickDispute === 'function') { close(); quickDispute(id, { back: true }); return; }
+    /* RAIL-86: a page with no dispute form of its own (Accounts · Finance · CRM) opens Tasks › Disputes on THIS chit, where the server's may/why is shown - never a button that closes the sheet and does nothing */
+    if (typeof disputePageHref === 'function') { close(); window.open(disputePageHref(id), '_blank', 'noopener'); return; }
+    CS.note = T('Raise a dispute from Tasks & Orders › Disputes.'); paint();
+  }
+
   function act(k) {
     var m = CS.view, id = CS.id; if (!m) return;
     if (actsOf(m).indexOf(k) < 0) return;   /* a stale tap on an action this step no longer allows */
@@ -489,14 +500,7 @@
     if (k === 'goodsin') { CS.useAsk = true; CS.note = null; return paint(); }
     if (k === 'print') { try { window.print(); } catch (_) {} return; }
     if (k === 'return') { CS.note = T('Returns are made at the counter, against the bill.'); return paint(); }
-    if (k === 'dispute') {
-      /* T3: where the dispute capability is on the page (CBDispute), Raise opens IN the sheet's own dispute section — greyed there with the server's why */
-      if (root.CBDispute && root.CBDispute.sheet && CS.disp && CS.disp.id === id) { root.CBDispute.raise(); return; }
-      /* the full page's own dispute form; it opens over the app (not over the sheet), and puts the sheet back when it is raised */
-      close();
-      if (typeof quickDispute === 'function') quickDispute(id, { back: true });
-      return;
-    }
+    if (k === 'dispute') return raiseDispute(id);
     if (k === 'repeat') { repeatCap().then(function (rp) { if (rp) rp.start(id, m); else { CS.note = T('Repeat supply is not available on this page.'); paint(); } }); return; }
     if (k === 'page') { close(); var pg = typeof openChitPage === 'function' ? openChitPage : openChit; if (typeof pg === 'function') pg(id); }
   }

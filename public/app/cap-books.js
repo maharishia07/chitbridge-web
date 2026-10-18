@@ -1083,8 +1083,8 @@ function bkDvHead() {
   if (!t.day_closed) notices.push(bkNoCloseNotice(t, q.to));
   if (n.accept) notices.push({ cls: 'warn', tid: 'todo-accept', text: n.accept + ' ' + tx(n.accept === 1 ? 'supplier bill to accept' : 'supplier bills to accept'),
     /* one bill → its sheet over the Day book; several → the Waiting list, whose rows open the sheet. Never Intake. */
-    onOpen: function () { if (n.accept === 1 && (n.acceptIds || []).length === 1) openChitSheet(n.acceptIds[0]); else bkTab('waiting'); } });
-  if (n.supplier) notices.push({ cls: 'warn', tid: 'todo-supplier', text: txn('{count} supplier to add', '{count} suppliers to add', n.supplier), onOpen: function () { bkTab('waiting'); } });
+    onOpen: function () { if (n.accept === 1 && (n.acceptIds || []).length === 1) openChitSheet(n.acceptIds[0]); else bkNoticeGo('accept'); } });
+  if (n.supplier) notices.push({ cls: 'warn', tid: 'todo-supplier', text: txn('{count} supplier to add', '{count} suppliers to add', n.supplier), onOpen: function () { bkNoticeGo('supplier'); } });
   if (n.overdue) notices.push({ cls: 'warn', tid: 'todo-overdue', text: n.overdue + ' ' + tx(n.overdue === 1 ? 'customer overdue' : 'customers overdue'), onOpen: function () { bkTab('dues'); } });
   if (n.cheques) notices.push({ cls: 'warn', tid: 'todo-cheques', text: n.cheques + ' ' + tx(n.cheques === 1 ? 'cheque to deposit / clear' : 'cheques to deposit / clear'), onOpen: function () { bkTab('cheques'); } });
   if (n.waiting) notices.push({ cls: 'warn', tid: 'todo-waiting', text: n.waiting + ' ' + tx('waiting to be recorded'), onOpen: function () { bkTab('waiting'); } });
@@ -2257,6 +2257,8 @@ function bkWaitWho(w) { return bkWaitTodo(w) === 'add_supplier' && w.name ? Stri
  * one), then ask the books to try again: the bill now names a supplier the books know and waits for acceptance. → the sentence to show, or null.
  * "Already on your list" is not a failure here — the retry is what was wanted.
  */
+/** a To do notice's door: the host page (CB Accounts) names where "bills to accept" and "suppliers to add" open (BK.noticeTarget); the workshop's Waiting list otherwise */
+function bkNoticeGo(kind) { if (BK.noticeTarget && BK.noticeTarget[kind]) return BK.noticeTarget[kind](); bkTab('waiting'); }
 async function bkAddSupplier(name) {
   try { await api('supAdd', { body: { name: name, supply_kind: 'resale' } }); }
   catch (e) { if (!(e && (e.status === 409 || /already/i.test(String(e.message || ''))))) return bkWhy(e, tx('Could not add the supplier')); }

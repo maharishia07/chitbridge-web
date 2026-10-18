@@ -21,7 +21,9 @@ var FT_EP = {
 Object.assign(EP, FT_EP);
 var FT_NOT_YET = 'Terms arrive after the next update.';
 
-function finTab() { return /^#\/terms/.test(location.hash) ? 'terms' : /^#\/cash/.test(location.hash) ? 'cash' : /^#\/payables/.test(location.hash) ? 'pay' : /^#\/repeat/.test(location.hash) ? 'repeat' : /^#\/cheques/.test(location.hash) ? 'cheques' : /^#\/returns/.test(location.hash) ? 'returns' : /^#\/reports/.test(location.hash) ? 'reports' : 'collect'; }   /* cash: F3 (cap-finance-cash.js) · pay: F4 (cap-finance-pay.js) · repeat: RI1 (cap-repeat.js) · cheques · returns: T3-P1-MONEY (cap-finance-cheques.js · cap-finance-returns.js) */
+/* UX-93: ONE reader of the address decides the tab - "#/payables" and "#payables" both (the header chip, screen-id.js, reads the same word, so it can never name another tab than the one shown) */
+var FIN_TABS = { terms: 'terms', cash: 'cash', payables: 'pay', repeat: 'repeat', cheques: 'cheques', returns: 'returns', reports: 'reports' };   /* cash: F3 (cap-finance-cash.js) · pay: F4 (cap-finance-pay.js) · repeat: RI1 (cap-repeat.js) · cheques · returns: T3-P1-MONEY (cap-finance-cheques.js · cap-finance-returns.js) */
+function finTab() { return FIN_TABS[(location.hash || '').replace(/^#\/?/, '').split(/[/?&]/)[0]] || 'collect'; }
 function ftNav() {
   var t = finTab();
   [['collect', 'fin-nav-collections'], ['pay', 'fin-nav-payables'], ['cheques', 'fin-nav-cheques'], ['cash', 'fin-nav-cash'], ['terms', 'fin-nav-terms'], ['repeat', 'fin-nav-repeat'], ['returns', 'fin-nav-returns'], ['reports', 'fin-nav-reports']].forEach(function (x) {

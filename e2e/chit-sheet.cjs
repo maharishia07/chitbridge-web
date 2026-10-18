@@ -349,8 +349,8 @@ async function route(S, r) {
     await p.waitForSelector('[data-testid="todo-accept"]', { timeout: 8000 });
     ok(/^2 supplier bills to accept/.test(await p.textContent('[data-testid="todo-accept"]')), 'to-do: 2 supplier bills to accept');
     await p.click('[data-testid="todo-accept"]');
-    await p.waitForSelector('[data-testid="wait-retry"]', { timeout: 8000 }).catch(() => {});
-    ok(!(await sheetOpen(p)) && await p.evaluate(() => UI.nav) !== 'intake' && /Waiting to be recorded/.test(await p.textContent('[data-testid="bk-body"]')), 'the several-bills to-do opens Ledger › Waiting, not a sheet and not Intake');
+    await p.waitForSelector('[data-testid="bills-tab-B-2100"]', { timeout: 8000 }).catch(() => {});
+    ok(!(await sheetOpen(p)) && await p.evaluate(() => UI.nav) !== 'intake' && await p.locator('[data-testid="bills-tab-B-2100"]').count() === 1, 'the several-bills to-do opens the Received bills, not a sheet and not Intake');
     await ctx.close();
   }
   /* ── 3d · THE WAITING LIST IS THE TASK TABLE (docs/design/one-table): Supplier · Bill no · Amount · Date · Step; the bill opens in the popup ── */
