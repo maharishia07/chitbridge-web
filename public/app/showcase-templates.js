@@ -33,11 +33,11 @@
     strip:   function (c) { return '<header class="sc-strip"><span class="sc-logo" aria-hidden="true">' + (c.shop.logo ? '<img src="' + esc(c.shop.logo) + '" alt="" width="36" height="36">' : esc(c.shop.name.charAt(0).toUpperCase())) + '</span><h1 class="sc-name">' + esc(c.shop.name) + '</h1><button type="button" class="sc-ic" data-sc="share" aria-label="Share" title="Share">⤴ Share</button></header>'; },
     facts:   function (c) { var s = c.shop; return '<div class="sc-facts"><span class="sc-line">' + esc([s.line, s.place].filter(Boolean).join(' · ')) + '</span>' + (s.hours ? '<span class="sc-hrs"><span class="sc-open' + (s.open ? ' on' : '') + '" aria-hidden="true">●</span> ' + esc(s.hours) + '</span>' : '')
       + (s.phone ? '<a class="sc-ic" href="tel:' + esc(s.phone) + '" aria-label="Call" title="Call">📞 Call</a>' : '') + (s.whatsapp ? '<a class="sc-ic" href="https://wa.me/' + esc(String(s.whatsapp).replace(/\D/g, '')) + '" aria-label="WhatsApp" title="WhatsApp">💬 WhatsApp</a>' : '') + '</div>'; },
-    find:    function (c) { return '<div class="sc-find"><input type="search" class="sc-q" data-sc="search" aria-label="Search" placeholder="🔍">' + (c.categories.length ? '<div class="sc-chips">' + c.categories.map(function (k) { return '<button type="button" class="sc-chip" data-sc-cat="' + esc(k.id) + '">' + esc(k.name) + '</button>'; }).join('') + '</div>' : '') + '</div>'; },
-    gallery: function (c, t) { return '<main class="sc-grid">' + c.items.map(function (i) { return card(i, c, t); }).join('') + '</main>' + emptyLine(c); },
-    menu:    function (c, t) { return '<main class="sc-menu">' + byCategory(c).map(function (g) { return '<h2 class="sc-h2">' + esc(g.name) + '</h2>' + g.items.map(function (i) { return menuRow(i, c, t); }).join(''); }).join('') + '</main>' + emptyLine(c); },
-    specs:   function (c, t) { return '<main class="sc-specs">' + byCategory(c).map(function (g) { return '<h2 class="sc-h2">' + esc(g.name) + '</h2>' + g.items.map(function (i) { return specRow(i, c, t); }).join(''); }).join('') + '</main>' + emptyLine(c); },
-    services: function (c, t) { return '<main class="sc-services">' + c.items.map(function (i) { return serviceCard(i, c, t); }).join('') + '</main>' + emptyLine(c); },
+    find:    function (c) { return '<div class="sc-find"><input type="search" class="sc-q" data-sc="search" aria-label="Search" placeholder="🔍">' + (c.categories.length ? '<div class="sc-chips">' + c.categories.map(function (item) { return '<button type="button" class="sc-chip" data-sc-cat="' + esc(item.id) + '">' + esc(item.name) + '</button>'; }).join('') + '</div>' : '') + '</div>'; },
+    gallery: function (c, t) { return '<main class="sc-grid">' + c.items.map(function (item) { return card(item, c, t); }).join('') + '</main>' + emptyLine(c); },
+    menu:    function (c, t) { return '<main class="sc-menu">' + byCategory(c).map(function (item) { return '<h2 class="sc-h2">' + esc(item.name) + '</h2>' + item.items.map(function (i) { return menuRow(i, c, t); }).join(''); }).join('') + '</main>' + emptyLine(c); },
+    specs:   function (c, t) { return '<main class="sc-specs">' + byCategory(c).map(function (item) { return '<h2 class="sc-h2">' + esc(item.name) + '</h2>' + item.items.map(function (i) { return specRow(i, c, t); }).join(''); }).join('') + '</main>' + emptyLine(c); },
+    services: function (c, t) { return '<main class="sc-services">' + c.items.map(function (item) { return serviceCard(item, c, t); }).join('') + '</main>' + emptyLine(c); },
     found:   function (c) { return c.owner ? '<aside class="sc-found" data-sc="found"><code>' + esc(c.shop.url || '') + '</code><button type="button" class="sc-ic" data-sc="copy" aria-label="Copy" title="Copy">⧉</button>'
       + '<div class="sc-guide">Google › your Business Profile › Website — paste this link</div><div class="sc-guide">Facebook page › About › Website — paste this link</div></aside>' : ''; }
   };
@@ -70,9 +70,9 @@
   function emptyLine(c) { return c.items.length ? '' : '<div class="sc-empty">Nothing on display yet.</div>'; }
   function byCategory(c) {
     var names = {}, order = [], groups = {};
-    c.categories.forEach(function (k) { names[k.id] = k.name; });
-    c.items.forEach(function (i) { var k = i.category && names[i.category] ? i.category : ''; if (!groups[k]) { groups[k] = []; order.push(k); } groups[k].push(i); });
-    return order.map(function (k) { return { name: k ? names[k] : '', items: groups[k] }; });
+    c.categories.forEach(function (item) { names[item.id] = item.name; });
+    c.items.forEach(function (item) { var k = item.category && names[item.category] ? item.category : ''; if (!groups[k]) { groups[k] = []; order.push(k); } groups[k].push(item); });
+    return order.map(function (item) { return { name: item ? names[item] : '', items: groups[item] }; });
   }
   /* a price only where the shop chose to show one; "showcase only" items carry no price words at all */
   function priceOf(i, c, t) { return i.showcaseOnly || i.price == null ? '' : '<span class="sc-price">' + esc(t.money ? t.money(i.price, c.shop.currency) : i.price) + '</span>'; }
@@ -80,29 +80,29 @@
   function photo(i, cls) { return i.photo ? '<img class="' + cls + '" src="' + esc(i.photo) + '" alt="' + esc(i.name) + '" width="' + (cls === 'sc-ph' ? 320 : 56) + '" height="' + (cls === 'sc-ph' ? 400 : 56) + '" loading="lazy">' : '<span class="' + cls + ' sc-none" aria-hidden="true">' + esc(String(i.name).charAt(0).toUpperCase()) + '</span>'; }
   function card(i, c, t) { return '<article class="sc-card" data-item="' + esc(i.id) + '" data-cat="' + esc(i.category || '') + '">' + photo(i, 'sc-ph') + '<div class="sc-cap"><b>' + esc(i.name) + '</b>' + priceOf(i, c, t) + act(i, t) + '</div></article>'; }
   function menuRow(i, c, t) { return '<div class="sc-row" data-item="' + esc(i.id) + '" data-cat="' + esc(i.category || '') + '">' + (i.photo ? photo(i, 'sc-th') : '') + '<div class="sc-t"><b>' + esc(i.name) + '</b>' + (i.note ? '<small>' + esc(i.note) + '</small>' : '') + '</div>' + priceOf(i, c, t) + act(i, t) + '</div>'; }
-  function specRow(i, c, t) { return '<div class="sc-row" data-item="' + esc(i.id) + '" data-cat="' + esc(i.category || '') + '">' + photo(i, 'sc-th') + '<div class="sc-t"><b>' + esc(i.name) + '</b><div class="sc-spec">' + (i.unit ? '<i>' + esc(i.unit) + '</i>' : '') + (i.sizes || []).map(function (s) { return '<i>' + esc(s) + '</i>'; }).join('') + '</div></div>' + priceOf(i, c, t) + act(i, t) + '</div>'; }
+  function specRow(i, c, t) { return '<div class="sc-row" data-item="' + esc(i.id) + '" data-cat="' + esc(i.category || '') + '">' + photo(i, 'sc-th') + '<div class="sc-t"><b>' + esc(i.name) + '</b><div class="sc-spec">' + (i.unit ? '<i>' + esc(i.unit) + '</i>' : '') + (i.sizes || []).map(function (item) { return '<i>' + esc(item) + '</i>'; }).join('') + '</div></div>' + priceOf(i, c, t) + act(i, t) + '</div>'; }
   function serviceCard(i, c, t) { return '<article class="sc-svc" data-item="' + esc(i.id) + '" data-cat="' + esc(i.category || '') + '">' + (i.photo ? photo(i, 'sc-th') : '') + '<div class="sc-t" style="flex:1;min-width:0"><b>' + esc(i.name) + '</b>' + (i.note ? '<br><small>' + esc(i.note) + '</small>' : '') + '</div>' + priceOf(i, c, t) + act(i, t) + '</article>'; }
 
   /** the ONE data contract. Copies named fields only — nothing else of the catalogue row survives (cost cannot ride along). */
   function contractOf(data, opts) {
     data = data || {}; opts = opts || {};
     var s = data.shop || {}, sh = s.showcase || {};
-    var items = (data.items || []).map(function (it) {
-      var d = (it && it.item_data) || {};
-      var imgs = it.photo || it._photo || d.image_url || (Array.isArray(d.images) && d.images[0]) || (Array.isArray(d.media) && d.media[0] && (d.media[0].url || d.media[0])) || '';
-      var price = it.price != null ? it.price : d.price;
+    var items = (data.items || []).map(function (item) {
+      var d = (item && item.item_data) || {};
+      var imgs = item.photo || item._photo || d.image_url || (Array.isArray(d.images) && d.images[0]) || (Array.isArray(d.media) && d.media[0] && (d.media[0].url || d.media[0])) || '';
+      var price = item.price != null ? item.price : d.price;
       return {
-        id: String(it.item_id || d.item_id || it.id || ''), name: String(it.name || d.name || d.product || ''), photo: typeof imgs === 'string' ? imgs : '',
-        category: it.category || d.category || '', price: price == null || price === '' ? null : price, unit: it.unit || d.unit || '',
+        id: String(item.item_id || d.item_id || item.id || ''), name: String(item.name || d.name || d.product || ''), photo: typeof imgs === 'string' ? imgs : '',
+        category: item.category || d.category || '', price: price == null || price === '' ? null : price, unit: item.unit || d.unit || '',
         note: String(d.description || d.desc || ''), sizes: Array.isArray(d.sizes) ? d.sizes.map(String) : [],
-        showcaseOnly: !!(d.showcase_only || it.showcase_only)
+        showcaseOnly: !!(d.showcase_only || item.showcase_only)
       };
-    }).filter(function (i) { return i.id && i.name; });
+    }).filter(function (item) { return item.id && item.name; });
     return {
       owner: !!opts.owner,
       shop: { name: String(s.display_name || 'Shop'), line: String(s.tagline || s.about || ''), place: String(s.address || ''), hours: String(s.hours || ''), open: (s.business_status || 'open') === 'open',
         phone: String(s.phone || ''), whatsapp: String(s.whatsapp || ''), logo: s.logo_url || '', url: String(opts.url || ''), currency: s.currency_code || null },   /* CART-REG1: none stated → none (the page's money fn prints the bare amount) */
-      categories: (data.categories || []).map(function (k) { return { id: String(k.id || k.definition_id || k.name), name: String(k.name || '') }; }).filter(function (k) { return k.name; }),
+      categories: (data.categories || []).map(function (item) { return { id: String(item.id || item.definition_id || item.name), name: String(item.name || '') }; }).filter(function (item) { return item.name; }),
       items: items,
       choice: { template: sh.template || '', sections: Array.isArray(sh.sections) ? sh.sections : [] }
     };
@@ -112,14 +112,14 @@
   function assemble(name, sections) {
     var t = TEMPLATES[name] || TEMPLATES[DEFAULT];
     var want = Array.isArray(sections) && sections.length ? sections : null;
-    var list = t.sections.filter(function (k) { return SECTIONS[k] && (!want || want.indexOf(k) >= 0 || RANGE[k]); });
+    var list = t.sections.filter(function (item) { return SECTIONS[item] && (!want || want.indexOf(item) >= 0 || RANGE[item]); });
     return list;
   }
 
   /** the template a shop uses: its choice if registered, else the vertical's seed, else gallery */
   function pick(choice, vertical) {
     if (choice && TEMPLATES[choice]) return choice;
-    var hit = Object.keys(TEMPLATES).filter(function (n) { return TEMPLATES[n].vertical === vertical; })[0];
+    var hit = Object.keys(TEMPLATES).filter(function (item) { return TEMPLATES[item].vertical === vertical; })[0];
     return hit || DEFAULT;
   }
 
@@ -128,7 +128,7 @@
     opts = opts || {};
     var name = pick(opts.template || (c.choice && c.choice.template), opts.vertical), t = TEMPLATES[name];
     var ctx = { face: t.face, money: opts.money };
-    var body = assemble(name, opts.sections || (c.choice && c.choice.sections)).map(function (k) { return SECTIONS[k](c, ctx); }).join('');
+    var body = assemble(name, opts.sections || (c.choice && c.choice.sections)).map(function (item) { return SECTIONS[item](c, ctx); }).join('');
     return '<style>' + CSS + '</style><div class="sc" data-template="' + esc(name) + '" data-face="' + esc(t.face) + '">' + body + '</div>';
   }
 
