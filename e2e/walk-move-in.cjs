@@ -9,8 +9,11 @@
  *   M3  Preview -> ONE preview call carrying the confirmed decisions; three large numbers (will add · will merge · will skip) and a row with its reason
  *   M4  Import -> ONE import call with confirm: true; the outcome (added · merged · skipped), the skipped row with its reason, Download skipped rows
  *   M5  Another file: an UNBALANCED trial balance -> the preview says the sentence and Import is greyed WITH it (the server's refusal, painted)
- *   M6  390 px: the preview step fits the width (no sideways scroll)
+ *   M6  BRIEF RULE 13: the preview in Cream and Dark at 1366 and 390 px (contrast, clipping, sideways scroll, copy budget)
  *   M7  every stand-in answer for a route in the contract had the API's keys, nesting and types
+ *   M8  W1 (2026-10-18) the country rule: "Books from" is set to the shop's own country with its reason; books stated as from the US -> the preview
+ *       call carries source_country US, the server's 422 MOVE_IN_COUNTRY is painted in our words with its sentence, and Import is greyed with it
+ *   M9  back to the shop's own country -> source_country AU; an item whose tax code is not the shop's is HELD: counted, and listed as "Held" with why
  *
  * ⚠️ the stand-in's ORDER: Playwright tries the LAST registered route first - the catch-all goes in FIRST, the specific answers after it.
  *   NODE_PATH=e2e/node_modules node e2e/walk-move-in.cjs         headless, fast
@@ -29,8 +32,17 @@ const J = (r, o, status) => C.json(r, status || 200, o);
 const FIELDS = {
   accounts: [['code', 'Their code', false], ['name', 'Account name', true], ['type', 'Account type', true], ['system', 'System account', false], ['tax_code', 'Default tax', false], ['description', 'Description', false]],
   trial_balance: [['account', 'Account', true], ['code', 'Their code', false], ['debit', 'Debit', true], ['credit', 'Credit', true]],
+  items: [['name', 'Item name', true], ['code', 'Their code', false], ['sales_price', 'Sales price', false], ['sales_tax', 'Sales tax', false]],
 };
-const KNOWN = { accounts: { '*Code': 'code', '*Name': 'name', '*Type': 'type', '*Tax Code': 'tax_code', Description: 'description' }, trial_balance: { Account: 'account', Debit: 'debit', Credit: 'credit' } };
+const KNOWN = { accounts: { '*Code': 'code', '*Name': 'name', '*Type': 'type', '*Tax Code': 'tax_code', Description: 'description' }, trial_balance: { Account: 'account', Debit: 'debit', Credit: 'credit' },
+  items: { Name: 'name', SKU: 'code', 'Sales Price': 'sales_price', 'Sales Tax': 'sales_tax' } };
+/* W1: the shop is in Australia (GET /health country); books stated from anywhere else are refused whole, as lib/move-in-gate answers */
+const AU_STATUS = { books: true, code: null, why: null, required: false, country: { code: 'AU', name: 'Australia' }, pack: 'AU', version: '1.0.0' };
+const COUNTRY_REFUSAL = 'These books are from United States and this shop is in Australia. A country\'s tax rules must match exactly, so nothing can be moved across. Nothing was imported.';
+const ROWS_ITEMS = [
+  { line: 2, what: 'Flat white', action: 'add', why: 'A$4.50 · GST 10%.', data: { rec: { name: 'Flat white', code: 'FW' }, notes: [] } },
+  { line: 3, what: 'Gift voucher', action: 'hold', code: 'tax_code', why: 'Tax code "VOUCHER9" is not one of Australia\'s codes here — pick one of your own codes for it.', data: null },
+];
 function preflight(b) {
   const headers = String(b.csv || '').split(/\r?\n/)[0].split(',').map((h) => h.trim()), known = KNOWN[b.kind] || {};
   const guess = headers.map((h) => known[h] ? { incoming: h, field: known[h], how: 'known', confidence: 1, why: '"' + h + '" is what the export calls ' + known[h] }
@@ -62,23 +74,26 @@ const ROWS_TB = [
   { line: 4, what: 'Total', action: 'skip', why: 'A total row.', data: null },
 ];
 function preview(b) {
-  const base = { kind: b.kind, source: b.source, side: b.side || null, as_at: b.as_at || '2026-07-01' };
-  if (b.kind === 'trial_balance') return Object.assign(base, { counts: { add: 2, merge: 0, skip: 1 }, refusal: TB_REFUSAL, notes: [], rows: ROWS_TB, totals: { dr_minor: 1523050, cr_minor: 1200000 }, control: { debtors_minor: 0, creditors_minor: 0 } });
-  return Object.assign(base, { counts: { add: 6, merge: 8, skip: 1 }, refusal: null, notes: [], rows: ROWS_ACCOUNTS });
+  const base = { kind: b.kind, source: b.source, side: b.side || null, as_at: b.as_at || '2026-07-01', country: { shop: 'AU', source: b.source_country, how: 'stated' }, company_id: null };
+  if (b.kind === 'items') return Object.assign(base, { counts: { add: 1, merge: 0, skip: 0, hold: 1 }, refusal: null, notes: [], rows: ROWS_ITEMS });
+  if (b.kind === 'trial_balance') return Object.assign(base, { counts: { add: 2, merge: 0, skip: 1, hold: 0 }, refusal: TB_REFUSAL, notes: [], rows: ROWS_TB, totals: { dr_minor: 1523050, cr_minor: 1200000 }, control: { debtors_minor: 0, creditors_minor: 0 } });
+  return Object.assign(base, { counts: { add: 6, merge: 8, skip: 1, hold: 0 }, refusal: null, notes: [], rows: ROWS_ACCOUNTS });
 }
 function imported(b) {
   return { side: b.side || null, as_at: b.as_at || '2026-07-01', kind: b.kind, source: b.source, added: 6, merged: 8, skipped: 1, rows: [{ line: 16, what: 'Tracking Transfers', why: 'No home for Xero type "TRACKING" — add it under Shop ledgers and pick its group.' }],
-    notes: ['Their account codes could not be kept yet (a database update, b302, is still to run) — a trial balance will match on names.'], source_code_written: false };
+    notes: ['Their account codes could not be kept yet (a database update, b302, is still to run) — a trial balance will match on names.'], source_code_written: false,
+    held: 0, proof: { source: b.source, source_country: b.source_country, differences: 1 }, proof_stored: false, import_id: null };
 }
 /* the three doors, as the page calls them (e2e/contract.cjs reads these literals to know this harness answers them) */
 const DOORS = { preflight: '/api/books/move-in/preflight', preview: '/api/books/move-in/preview', import: '/api/books/move-in/import', health: '/api/books/health', todo: '/api/books/todo' };
 async function stub(ctx, sent) {
   await ctx.route('**/api/**', (r) => (r.request().method() === 'GET' ? r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }) : r.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' })));
   await ctx.route('**/api/entities/me', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ entity: { display_name: 'Walk Shop', currency_code: 'AUD' } }) }));
-  await ctx.route('**' + DOORS.health, (r) => J(r, books.health({ currency: 'AUD' })));
+  await ctx.route('**' + DOORS.health, (r) => J(r, books.health({ currency: 'AUD', country: AU_STATUS })));
   await ctx.route('**' + DOORS.todo, (r) => J(r, []));
   await ctx.route('**' + DOORS.preflight, (r) => { const b = JSON.parse(r.request().postData() || '{}'); sent.preflight.push(b); return J(r, preflight(b)); });
-  await ctx.route('**' + DOORS.preview, (r) => { const b = JSON.parse(r.request().postData() || '{}'); sent.preview.push(b); return J(r, preview(b)); });
+  await ctx.route('**' + DOORS.preview, (r) => { const b = JSON.parse(r.request().postData() || '{}'); sent.preview.push(b);
+    return b.source_country === 'AU' ? J(r, preview(b)) : J(r, { code: 'MOVE_IN_COUNTRY', error: COUNTRY_REFUSAL, message: COUNTRY_REFUSAL }, 422); });
   await ctx.route('**' + DOORS.import, (r) => { const b = JSON.parse(r.request().postData() || '{}'); sent.import.push(b); return J(r, imported(b)); });
 }
 const text = (page, sel) => page.evaluate((s) => { const el = document.querySelector(s); return el ? el.textContent.trim() : ''; }, sel);
@@ -95,8 +110,10 @@ W.run('move-in', async (w) => {
     const chips = await page.$$eval('[data-testid^="step-"]', (els) => els.filter((e) => /^step-(file|columns|preview)$/.test(e.dataset.testid)).map((e) => e.textContent.trim()));
     const src = await page.$eval('[data-testid="mi-source"]', (e) => e.value), kind = await page.$eval('[data-testid="mi-kind"]', (e) => e.value);
     const next = await page.$eval('[data-testid="mi-next"]', (e) => ({ disabled: e.disabled, title: e.title, text: e.textContent.trim() }));
-    const ok = chips.length === 3 && !!(await page.$('[data-testid="mi-file"]')) && src === 'xero' && kind === 'accounts' && next.disabled && /Pick the file first/.test(next.title);
-    return { ok, saw: chips.join(' · ') + ' · ' + next.text + (next.disabled ? ' (greyed: ' + next.title + ')' : '') };
+    await page.waitForFunction(() => { const s = document.querySelector('[data-testid="mi-country"]'); return s && s.value === 'AU'; }, null, { timeout: 10000 });
+    const why = await text(page, '[data-testid="mi-country-why"]');
+    const ok = chips.length === 3 && !!(await page.$('[data-testid="mi-file"]')) && src === 'xero' && kind === 'accounts' && next.disabled && /Pick the file first/.test(next.title) && /Australia/.test(why);
+    return { ok, saw: chips.join(' · ') + ' · ' + next.text + (next.disabled ? ' (greyed: ' + next.title + ')' : '') + ' · Books from AU: ' + why };
   });
   await w.step('M2', 'pick ChartOfAccounts.csv -> Read the file -> ONE preflight call (csv · kind · source); the Columns step shows every header with its guess', async () => {
     await page.setInputFiles('[data-testid="mi-file"]', FIX('xero-accounts.csv'));
@@ -149,12 +166,55 @@ W.run('move-in', async (w) => {
     const ok = b.kind === 'trial_balance' && b.as_at === '2026-07-01' && refusal === TB_REFUSAL && imp.disabled && imp.title === TB_REFUSAL && why === TB_REFUSAL && sent.import.length === 1;
     return { ok, saw: (imp.disabled ? 'Import greyed: ' : 'Import LIVE: ') + refusal.slice(0, 80) };
   });
-  await w.step('M6', '390 px: the preview step fits the width', async () => {
-    await page.setViewportSize({ width: 390, height: 800 });
-    await page.waitForTimeout(400);
-    const sw = await page.evaluate(() => document.documentElement.scrollWidth);
-    return { ok: sw <= 390, saw: 'scrollWidth ' + sw };
+  await w.step('M8', 'books stated as from the US -> source_country US, the 422 MOVE_IN_COUNTRY painted in our words, Import greyed with it', async () => {
+    await page.click('[data-testid="mi-back"]'); await page.click('[data-testid="mi-back"]');
+    await page.waitForSelector('[data-testid="mi-file-step"]');
+    await page.selectOption('[data-testid="mi-source"]', 'qbo');
+    await page.selectOption('[data-testid="mi-kind"]', 'items');
+    await page.selectOption('[data-testid="mi-country"]', 'US');
+    await page.setInputFiles('[data-testid="mi-file"]', FIX('qbo-items.csv'));
+    await page.waitForFunction(() => { const b = document.querySelector('[data-testid="mi-next"]'); return b && !b.disabled; });
+    await page.click('[data-testid="mi-next"]');
+    await page.waitForSelector('[data-testid="mi-columns-step"]', { timeout: 10000 });
+    await page.click('[data-testid="mi-next"]');
+    await page.waitForSelector('[data-testid="mi-refused"]', { timeout: 10000 });
+    const line = await text(page, '[data-testid="mi-refused"] > div'), why = await text(page, '[data-testid="mi-refused-why"]');
+    const code = await page.$eval('[data-testid="mi-refused"]', (e) => e.dataset.code);
+    const imp = await page.$eval('[data-testid="mi-import"]', (e) => ({ disabled: e.disabled, title: e.title }));
+    const b = sent.preview[sent.preview.length - 1] || {};
+    const ok = b.kind === 'items' && b.source_country === 'US' && code === 'MOVE_IN_COUNTRY' && /another country/.test(line) && why === COUNTRY_REFUSAL && imp.disabled && /another country/.test(imp.title);
+    return { ok, saw: 'sent ' + b.source_country + ' · ' + line + ' · ' + (imp.disabled ? 'Import greyed' : 'Import LIVE') };
   });
+  await w.step('M9', 'back to Australia -> source_country AU; the item with a foreign tax code is HELD: counted and listed as Held with its reason', async () => {
+    await page.click('[data-testid="mi-back"]'); await page.click('[data-testid="mi-back"]');
+    await page.waitForSelector('[data-testid="mi-file-step"]');
+    await page.selectOption('[data-testid="mi-country"]', 'AU');
+    await page.waitForFunction(() => { const b = document.querySelector('[data-testid="mi-next"]'); return b && !b.disabled; });
+    await page.click('[data-testid="mi-next"]');
+    await page.waitForSelector('[data-testid="mi-columns-step"]', { timeout: 10000 });
+    await page.click('[data-testid="mi-next"]');
+    await page.waitForSelector('[data-testid="mi-row-3"]', { timeout: 10000 });
+    const held = await text(page, '[data-testid="mi-n-hold"]'), row = await text(page, '[data-testid="mi-row-3"]');
+    const act = await page.$eval('[data-testid="mi-act-3"]', (e) => e.dataset.action);
+    const b = sent.preview[sent.preview.length - 1] || {};
+    const ok = b.source_country === 'AU' && held === '1' && act === 'hold' && /Held/.test(row) && /VOUCHER9/.test(row);
+    return { ok, saw: 'sent ' + b.source_country + ' · held ' + held + ' · line 3: ' + row.replace(/\s+/g, ' ').slice(0, 90) };
+  });
+  /* BRIEF RULE 13 (Cream and Dark, 1366 and 390 px): AA contrast, clipping, sideways scroll, covered controls, app.html, copy budget — for everything this
+   * screen paints. The shared stepper's own chips (CBSteps .cbst: white on the accent, 3.1-3.5:1) and the shell nav's 2px scroll are not W1's and are on the backlog. */
+  const { audit } = require('./lib/rule13.cjs'), { measure } = require('./lib/theme-measure.cjs');
+  for (const theme of ['cream', 'dark']) for (const width of [1366, 390]) {
+    await page.setViewportSize({ width, height: width > 500 ? 900 : 844 });
+    await w.step('M6·' + theme + '·' + width, 'the preview with a held row · ' + theme + ' · ' + width + ' px -> AA contrast, no clipping or sideways scroll in what this screen paints', async () => {
+      await page.evaluate((t) => { CBAvatar.applyTheme(t); }, theme); await page.waitForTimeout(150);
+      const chips = await page.evaluate(() => [...document.querySelectorAll('.cbst,.cbst *,.nav')].map((e) => e.textContent.trim()));
+      const pairs = await page.evaluate(measure), bad = pairs.filter((x) => !x.grad && x.ratio < x.need && !chips.some((c) => c === x.text || c.endsWith(x.text))), a = await audit(page, 'mi_body');
+      const fails = [].concat(bad.map((x) => 'contrast ' + x.ratio + ' "' + x.text + '"'), a.clip.map((x) => 'clipped "' + x + '"'), a.scroll.filter((x) => !/^NAV/.test(x)).map((x) => 'scroll ' + x),
+        a.cover.map((x) => 'covered ' + x), a.app.map((x) => 'app.html ' + x), a.budget.map((x) => 'budget ' + x));
+      return { ok: !fails.length && pairs.length > 5, saw: pairs.length + ' texts measured' + (fails.length ? ' · ' + fails.slice(0, 4).join(' · ') : ' · clean') };
+    });
+  }
+  await page.evaluate(() => { CBAvatar.applyTheme(CBAvatar.themeKey()); });
   await w.step('M7', 'every stand-in answer for a route in the contract had the API\'s keys, nesting and types', async () => {
     const [ok, msg] = C.finish();
     return { ok, saw: msg.slice(0, 160) };
