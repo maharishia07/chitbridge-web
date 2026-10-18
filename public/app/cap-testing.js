@@ -227,7 +227,7 @@ function incidentHere() {
     if (!CBTEST.incs) testIncLoad(); else testPaint();
     /* the box, not the top of the panel: they clicked to write something */
     setTimeout(function () {
-      try { var f = document.getElementById("incWhat"); if (f) f.focus(); } catch (_) {}
+      try { var node = document.getElementById("incWhat"); if (node) node.focus(); } catch (_) {}
     }, 260);
   } catch (e) {}
 }
@@ -309,13 +309,13 @@ async function testLoad(force) {
     var b = await testEvery('testResults', 'results');
     /* ⭐ a third read, and worth its round trip: without it a tester works through cases that were written
        against wording nobody stands behind any more, and records passes that prove nothing. */
-    var st = await api('testStale');
+    var reply = await api('testStale');
     /* ⭐ the gap, ranked. Read on every load because it is what decides where the panel opens. */
     var cv = await api('testCoverage', { query: { run_id: CBTEST.run && CBTEST.run.id } });
     CBTEST.cover = (cv && cv.areas) || [];
     CBTEST.suggest = (cv && cv.suggest) || null;
     CBTEST.stale = {};
-    ((st && st.stale) || []).forEach(function (x) { CBTEST.stale[x.case_key] = x; });
+    ((reply && reply.stale) || []).forEach(function (x) { CBTEST.stale[x.case_key] = x; });
     CBTEST.cases = (a && a.cases) || [];
     /**
      * ── ⚠️⚠️⚠️ THE LAB HAS NEVER SHOWN A SINGLE RESULT ──────────────────────────────────────────────────────
@@ -337,13 +337,13 @@ async function testLoad(force) {
      */
     CBTEST.last = {};
     var rows = Array.isArray(b) ? b : ((b && b.results) || []);
-    rows.forEach(function (r) {
+    rows.forEach(function (item) {
       /* ⭐ THE WORST RESULT WINS, not the newest. A case proved green by a unit test and red at the counter is
          not a green case, and showing the later of the two would let one hide the other. */
       var rank = { fail: 4, blocked: 3, skipped: 2, pass: 1 };
-      var cur = CBTEST.last[r.case_key];
-      if (!cur || rank[r.status] > rank[cur.status]
-          || (rank[r.status] === rank[cur.status] && new Date(r.at) > new Date(cur.at))) CBTEST.last[r.case_key] = r;
+      var cur = CBTEST.last[item.case_key];
+      if (!cur || rank[item.status] > rank[cur.status]
+          || (rank[item.status] === rank[cur.status] && new Date(item.at) > new Date(cur.at))) CBTEST.last[item.case_key] = item;
     });
   } catch (e) {
     /* ⚠️ a toast fades in four seconds; the reason a read failed has to stay until it is dealt with */
@@ -584,17 +584,17 @@ function testAgo(iso) {
  */
 function testAreas() {
   var seen = {}, out = [];
-  CBTEST.cases.forEach(function (c) {
+  CBTEST.cases.forEach(function (item) {
     /* ⚠ the kind filter, applied HERE and not only to the list below — otherwise this dropdown keeps
        offering areas that hold nothing of the chosen kind */
-    if (CBTEST.kind && c.test_type !== CBTEST.kind) return;
-    if (!seen[c.module_key]) {
-      seen[c.module_key] = { key: c.module_key, name: c.module_name || '', n: 0 };
-      out.push(seen[c.module_key]);
+    if (CBTEST.kind && item.test_type !== CBTEST.kind) return;
+    if (!seen[item.module_key]) {
+      seen[item.module_key] = { key: item.module_key, name: item.module_name || '', n: 0 };
+      out.push(seen[item.module_key]);
     }
-    seen[c.module_key].n++;
+    seen[item.module_key].n++;
   });
-  return out.sort(function (a, b) { return a.key < b.key ? -1 : 1; });
+  return out.sort(function (first, second) { return first.key < second.key ? -1 : 1; });
 }
 
 /**
@@ -622,18 +622,18 @@ function testShown() {
   return CBTEST.cases.slice().sort(function (x, y) {
     var d = (x.seq === undefined ? 99 : x.seq) - (y.seq === undefined ? 99 : y.seq);
     return d || (x.case_key < y.case_key ? -1 : 1);
-  }).filter(function (c) {
-    if (CBTEST.kind && c.test_type !== CBTEST.kind) return false;
-    return !CBTEST.area || c.module_key === CBTEST.area;
+  }).filter(function (item) {
+    if (CBTEST.kind && item.test_type !== CBTEST.kind) return false;
+    return !CBTEST.area || item.module_key === CBTEST.area;
   });
 }
 
 /** ⚠️ counts of what the OTHER control has left, so picking a kind narrows the areas rather than lying about them */
 function testKindCounts() {
   var n = {};
-  CBTEST.cases.forEach(function (c) {
-    if (CBTEST.area && c.module_key !== CBTEST.area) return;
-    var k = c.test_type || '—'; n[k] = (n[k] || 0) + 1;
+  CBTEST.cases.forEach(function (item) {
+    if (CBTEST.area && item.module_key !== CBTEST.area) return;
+    var k = item.test_type || '—'; n[k] = (n[k] || 0) + 1;
   });
   return n;
 }
@@ -654,7 +654,7 @@ function testClearFilters() {
 
 /** how many cases the KIND filter alone leaves — the honest number for "All areas" */
 function testKindTotal() {
-  return CBTEST.cases.filter(function (c) { return !CBTEST.kind || c.test_type === CBTEST.kind; }).length;
+  return CBTEST.cases.filter(function (item) { return !CBTEST.kind || item.test_type === CBTEST.kind; }).length;
 }
 
 /**
@@ -770,8 +770,8 @@ function testColDrag(e, i) {
     /* ⭐ keep a flexible track flexible — set its floor, not its width */
     parts[i] = (i <= 1) ? 'minmax(' + w + 'px,' + (i === 1 ? '1fr' : w + 'px') + ')' : w + 'px';
     head.style.gridTemplateColumns = parts.join(' ');
-    [].slice.call(document.querySelectorAll('[data-arearow]')).forEach(function (r) {
-      r.style.gridTemplateColumns = parts.join(' ');
+    [].slice.call(document.querySelectorAll('[data-arearow]')).forEach(function (item) {
+      item.style.gridTemplateColumns = parts.join(' ');
     });
     head.dataset.pending = parts.join(' ');
   };
@@ -879,7 +879,7 @@ function testPaint() {
 
   var shown = testShown();
   var n = { pass: 0, fail: 0, blocked: 0, skipped: 0, todo: 0 };
-  shown.forEach(function (c) { var l = CBTEST.last[c.case_key]; if (!l) n.todo++; else n[l.status]++; });
+  shown.forEach(function (item) { var l = CBTEST.last[item.case_key]; if (!l) n.todo++; else n[l.status]++; });
 
   /**
    * ── ⚠️⚠️ "IN THE LAB, EVERYTHING NOT RUN?" ────────────────────────────────────────────────────────────────
@@ -907,11 +907,11 @@ function testPaint() {
     ? testCounts(CBTEST.cases, CBTEST.last)
     : (function () {
         var t = { pass: 0, fail: 0, blocked: 0, skipped: 0, todo: 0 };
-        CBTEST.cases.forEach(function (c) { var l = CBTEST.last[c.case_key]; if (!l) t.todo++; else t[l.status]++; });
+        CBTEST.cases.forEach(function (item) { var l = CBTEST.last[item.case_key]; if (!l) t.todo++; else t[l.status]++; });
         return t;
       })();
   var filtered = shown.length !== CBTEST.cases.length;
-  var staleN = shown.filter(function (c) { return CBTEST.stale[c.case_key]; }).length;
+  var staleN = shown.filter(function (item) { return CBTEST.stale[item.case_key]; }).length;
 
   /* ── the header: who is recording, into which run, over which area ── */
   /**
@@ -1024,8 +1024,8 @@ function testPaint() {
      * side. This is an extra line above them, never a resequencing of them.
      */
     + (function () {
-        var W = (typeof testWork === 'function') ? testWork() : [];
-        var forMe = W.filter(function (x) { return x.forMe; }).length;
+        var list = (typeof testWork === 'function') ? testWork() : [];
+        var forMe = list.filter(function (x) { return x.forMe; }).length;
         var bits = [];
         if (forMe) {
           bits.push('<button data-testid="hdr-forme" onclick="testSetView(\'work\');testWorkFilter(\'mine\')" '
@@ -1076,17 +1076,17 @@ function testPaint() {
                  + 'gap:2px 18px;justify-content:start;font-variant-numeric:tabular-nums;';
         return '<div style="margin-top:8px;' + grid + '">'
           /* the whole board */
-          + cols.map(function (c) {
-              return '<div><div style="font-size:var(--fs-3);font-weight:700;line-height:1.15;color:' + c[3] + '">'
-                + c[1] + '</div>'
-                + '<div style="font-size:var(--fs-1);color:var(--grey-2,#545A61)">' + c[0] + '</div></div>';
+          + cols.map(function (item) {
+              return '<div><div style="font-size:var(--fs-3);font-weight:700;line-height:1.15;color:' + item[3] + '">'
+                + item[1] + '</div>'
+                + '<div style="font-size:var(--fs-1);color:var(--grey-2,#545A61)">' + item[0] + '</div></div>';
             }).join('')
           /* ⚠️ the slice in the same tracks, only when it IS a slice — never instead of the whole */
           + (filtered
-              ? cols.map(function (c) {
+              ? cols.map(function (item) {
                   return '<div style="font-size:var(--fs-1);color:var(--blue,#3F66A6);border-top:1px solid '
-                    + 'var(--line,#e7e3d8);padding-top:3px;margin-top:2px"><b>' + c[2] + '</b>'
-                    + (c[0] === 'cases' ? ' in view' : '') + '</div>';
+                    + 'var(--line,#e7e3d8);padding-top:3px;margin-top:2px"><b>' + item[2] + '</b>'
+                    + (item[0] === 'cases' ? ' in view' : '') + '</div>';
                 }).join('')
               : '')
           + '</div>'
@@ -1208,9 +1208,9 @@ function testPaint() {
     }
 
     var groups = [], byG = {};
-    shown.forEach(function (c) {
-      if (!byG[c.module_key]) { byG[c.module_key] = []; groups.push(c.module_key); }
-      byG[c.module_key].push(c);
+    shown.forEach(function (item) {
+      if (!byG[item.module_key]) { byG[item.module_key] = []; groups.push(item.module_key); }
+      byG[item.module_key].push(item);
     });
     if (groups.length > 1) {
       /**
@@ -1272,9 +1272,9 @@ function testPaint() {
         + hcell('Failed', 4, 1) + hcell('Not run', 5, 1) + '</div>';
     }
 
-    groups.forEach(function (gk) {
-      var list = byG[gk];
-      var open = testSectionOpen(gk, groups.length);
+    groups.forEach(function (item) {
+      var list = byG[item];
+      var open = testSectionOpen(item, groups.length);
       if (groups.length > 1) {
         /* ⭐ the counts on the header, so a folded area still says how far along it is */
         var gn = { pass: 0, bad: 0, todo: 0 };
@@ -1309,11 +1309,11 @@ function testPaint() {
         };
         /* ⭐ the journey position, as the Report shows it — 00 REG, 01 LOG. It is the order somebody walks the
            product in, and without it the list reads as a filing cabinet. */
-        var seqOf = list.reduce(function (m, c) {
-          var q = (typeof c.seq === 'number') ? c.seq : 99; return q < m ? q : m; }, 99);
+        var seqOf = list.reduce(function (total, c) {
+          var q = (typeof c.seq === 'number') ? c.seq : 99; return q < total ? q : total; }, 99);
         var seq = seqOf < 99 ? ('0' + seqOf).slice(-2) : '';
 
-        h += '<div data-arearow="1" onclick="testFold(\'' + testJs(gk) + '\')" style="display:grid;'
+        h += '<div data-arearow="1" onclick="testFold(\'' + testJs(item) + '\')" style="display:grid;'
           + 'grid-template-columns:' + testAreaCols() + ';gap:6px;align-items:baseline;'
           + 'cursor:pointer;padding:5px 6px;border-bottom:1px solid var(--line,#efece4)">'
           + '<span style="display:flex;gap:5px;align-items:baseline;min-width:0;overflow:hidden">'
@@ -1328,10 +1328,10 @@ function testPaint() {
            * ⭐ min-width:0 lets the flex item shrink at all (it defaults to auto, which is why it did not), and
            * the ellipsis keeps the start of the key, which is the half that identifies it.
            */
-          +   '<span title="' + esc(gk) + '" style="font-family:ui-monospace,Menlo,monospace;'
+          +   '<span title="' + esc(item) + '" style="font-family:ui-monospace,Menlo,monospace;'
           +     'font-size:var(--fs-1);font-weight:700;min-width:0;'
           +     'background:var(--ink,#0F2E3D);color:var(--card,#fff);border-radius:4px;padding:1px 5px;'
-          +     'white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(gk) + '</span>'
+          +     'white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(item) + '</span>'
           + '</span>'
           + '<span style="font-size:var(--fs-2);min-width:0;overflow:hidden;display:flex;gap:6px;'
           + 'align-items:baseline">'
@@ -1342,8 +1342,8 @@ function testPaint() {
            * without it pressing + would also collapse the area you were adding to — the exact double-fire
            * already fixed once on the Report's drill-down numbers.
            */
-          +   '<button title="Add a case to ' + esc(gk) + '" '
-          +     'onclick="event.stopPropagation();testAddOpen(\'' + testJs(gk) + '\')" '
+          +   '<button title="Add a case to ' + esc(item) + '" '
+          +     'onclick="event.stopPropagation();testAddOpen(\'' + testJs(item) + '\')" '
           +     'style="flex:0 0 auto;border:1px solid var(--grey-4,#646A72);background:var(--card,#fff);'
           +     'color:var(--grey-2,#545A61);border-radius:5px;font:inherit;font-size:var(--fs-1);'
           +     'line-height:1;padding:1px 6px;cursor:pointer">+</button>'
@@ -1651,13 +1651,13 @@ function testPgArm(id, slot, key, ep, filterGet) {
     count: function () { return ((CBTEST[slot] || {})[key] || []).length; },
     fetch: function (page, limit) {
       return api(ep, { query: { state: filterGet(), page: page, limit: limit } })
-        .then(function (r) { var a = ((r && r[key]) || []).slice(); a.total = r && r.total; return a; });
+        .then(function (reply) { var a = ((reply && reply[key]) || []).slice(); a.total = reply && reply.total; return a; });
     },
     store: function (rows) { var cur = CBTEST[slot]; if (cur) cur[key] = (cur[key] || []).concat(rows); } });
   var p = PG[id]; p.page = 1; p.total = (d && d.total) || 0; p.done = !d || ((d[key] || []).length >= p.total);
 }
 function testCountAll(d) {
-  return d && d.counts ? Object.keys(d.counts).reduce(function (s, k) { return s + (d.counts[k] || 0); }, 0) : 0;
+  return d && d.counts ? Object.keys(d.counts).reduce(function (total, item) { return total + (d.counts[item] || 0); }, 0) : 0;
 }
 function testReqFilterGet() {
   try { var v = localStorage.getItem('cb_test_reqf'); return v || 'open'; } catch (_) { return 'open'; }
@@ -1741,8 +1741,8 @@ function testReqForm(on) { CBTEST.reqForm = !!on; testPaint(); }
  * would repaint the panel under the cursor, which is how a half-typed sentence is lost. [[feedback-repaint-locally]]
  */
 async function testReqSend() {
-  var g = function (id) { var e = document.getElementById(id); return e ? String(e.value || '').trim() : ''; };
-  var what = g('reqWhat'), seen = g('reqSeen');
+  var node = function (id) { var e = document.getElementById(id); return e ? String(e.value || '').trim() : ''; };
+  var what = node('reqWhat'), seen = node('reqSeen');
   /* ⚠️ said here rather than after a round trip — the server refuses these too, but not before the typing is gone */
   if (!what) { if (typeof toast === 'function') toast('Say what must be true.'); return; }
   if (!seen) { if (typeof toast === 'function') toast('Say what you saw — a requirement with no evidence cannot be judged.'); return; }
@@ -1759,11 +1759,11 @@ async function testReqSend() {
       var pe = document.querySelector('[data-testid="popup-code"]');
       pc = pe ? String(pe.textContent).replace(/[^A-Z0-9]/g, '') : null;
     } catch (_) { pc = null; }
-    var r = await api('testReqRaise', { body: {
-      requirement: what, observed: seen, priority: g('reqPri') || 'Medium', case_key: g('reqCase') || null,
+    var reply = await api('testReqRaise', { body: {
+      requirement: what, observed: seen, priority: node('reqPri') || 'Medium', case_key: node('reqCase') || null,
       screen_code: sc, popup_code: pc } });
     if (typeof toast === 'function') {
-      toast('Raised ' + (r && r.clause ? r.clause : '') + (r && r.cited ? ' — and the case now cites it' : ''));
+      toast('Raised ' + (reply && reply.clause ? reply.clause : '') + (reply && reply.cited ? ' — and the case now cites it' : ''));
     }
     CBTEST.reqForm = false;
     testReqLoad();
@@ -1813,11 +1813,11 @@ function testReqHTML() {
    * re-grade select — everything this row used to draw for itself — as optional parts.
    */
   /* ⭐ the same row as the Bench and the worklist — see the note in testIncHTML */
-  h += list.map(function (q) {
+  h += list.map(function (item) {
     return testWorkRowHTML(testWorkRow({
-      key: q.clause || '', title: q.requirement || '', screen: q.screen_code || '',
-      seen: q.observed || null, by: q.raised_by || null, at: q.raised_at || null,
-      last: null, inc: null, req: q, caseKey: q.raised_from || null,
+      key: item.clause || '', title: item.requirement || '', screen: item.screen_code || '',
+      seen: item.observed || null, by: item.raised_by || null, at: item.raised_at || null,
+      last: null, inc: null, req: item, caseKey: item.raised_from || null,
     }));
   }).join('');
   return h + pgFooter('testReq');   /* T2-PAGING: past the first page — the app's one pager footer */
@@ -1849,7 +1849,7 @@ function testScreenName(menu) {
     if (!menu || !window.CBSCREENS) return '';
     var code = window.CBSCREENS.byPath[String(menu)];
     if (!code) return '';
-    var row = (window.CBSCREENS.rows || []).filter(function (r) { return r.code === code; })[0];
+    var row = (window.CBSCREENS.rows || []).filter(function (item) { return item.code === code; })[0];
     return row ? (row.screen || '') : '';
   } catch (_) { return ''; }
 }
@@ -1990,14 +1990,14 @@ async function testIncLoad() {
 async function testIncSet(id, state) {
   var body = { state: state };
   if (state === 'resolved') {
-    var a = await testAsk('What fixed it?',
+    var text = await testAsk('What fixed it?',
       'Commit sha, or why nothing changed.', 'Mark it fixed');
-    if (a === null) return;
-    a = String(a).trim();
-    if (!a) { if (typeof toast === 'function') toast('A resolution needs the commit, or a reason.'); return; }
+    if (text === null) return;
+    text = String(text).trim();
+    if (!text) { if (typeof toast === 'function') toast('A resolution needs the commit, or a reason.'); return; }
     /* ⭐ a sha is a citation; anything else is an explanation, and both are legitimate answers */
-    if (/^[0-9a-fA-F]{7,40}$/.test(a)) body.change = { sha: a.toLowerCase() };
-    else body.why = a;
+    if (/^[0-9a-fA-F]{7,40}$/.test(text)) body.change = { sha: text.toLowerCase() };
+    else body.why = text;
   }
   if (state === 'closed') {
     var w = await testAsk('Why is this closed?', '', 'Close it');
@@ -2064,20 +2064,20 @@ function testIncForm(on) { CBTEST.incForm = !!on; testPaint(); }
  */
 function testHereScreen() {
   try {
-    var t = document.querySelector('[data-testid="detail-code"]')
+    var node = document.querySelector('[data-testid="detail-code"]')
          || document.querySelector('[data-testid="screen-code"]');
-    return t ? String(t.textContent || '').trim() : '';
+    return node ? String(node.textContent || '').trim() : '';
   } catch (_) { return ''; }
 }
 
 async function testIncSend() {
   var what = (document.getElementById('incWhat') || {}).value || '';
-  var who = (document.getElementById('incWho') || {}).value || '';
+  var node = (document.getElementById('incWho') || {}).value || '';
   var sev = (document.getElementById('incSev') || {}).value || 'Sev-3';
   if (!String(what).trim()) { if (typeof toast === 'function') toast('Say what happened.'); return; }
   try {
     await api('testIncNew', { body: {
-      observed: what, affected: who, severity: sev,
+      observed: what, affected: node, severity: sev,
       /* ⭐ the other half of the clock — see testWhenHTML */
       happened_at: testWhenAt(),
       screen_code: testHereScreen(),
@@ -2108,8 +2108,8 @@ function testIncHTML() {
      severity. ⚠️ It says "none open" rather than showing four zeros — four zeros is a thing to decode. */
   var gate = '';
   if (d && d.open_by_severity) {
-    var bits = TEST_INC_SEV.filter(function (k) { return d.open_by_severity[k]; })
-      .map(function (k) { return '<b>' + d.open_by_severity[k] + '</b> ' + k; });
+    var bits = TEST_INC_SEV.filter(function (item) { return d.open_by_severity[item]; })
+      .map(function (item) { return '<b>' + d.open_by_severity[item] + '</b> ' + item; });
     gate = '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);margin:2px 0 6px">'
       + (bits.length ? 'Open: ' + bits.join(' \u00b7 ') : 'Nothing open.') + '</div>';
   }
@@ -2130,23 +2130,23 @@ function testIncHTML() {
 
   var SEV = { 'Sev-1': 'var(--disp,#B3261E)', 'Sev-2': 'var(--disp,#B3261E)',
               'Sev-3': 'var(--grey-2,#545A61)', 'Sev-4': 'var(--grey-4,#646A72)' };
-  h += list.map(function (q) {
+  h += list.map(function (item) {
     /**
      * ⭐ VERBS, AND THEY SAY WHAT THEY WILL DO. "Resolved" beside a filter that also says "Resolved" is a
      * word, not an instruction. "Mark it fixed" cannot be read as a way of looking at the list.
      */
     var act = function (state, label, title) {
       return '<button data-testid="inc-act-' + state + '" title="' + title + '" '
-        + 'onclick="testIncSet(\'' + q.definition_id + '\',\'' + state + '\')" style="' + TEST_ACT
+        + 'onclick="testIncSet(\'' + item.definition_id + '\',\'' + state + '\')" style="' + TEST_ACT
         + '">' + label + '</button>';
     };
     var acts = '';
-    if (q.state === 'raised') {
+    if (item.state === 'raised') {
       acts = act('investigating', 'I am looking at it', 'Say somebody has picked this up')
            + act('resolved', 'Mark it fixed', 'You believe it is fixed \u2014 the person who raised it is asked to retest');
-    } else if (q.state === 'investigating') {
+    } else if (item.state === 'investigating') {
       acts = act('resolved', 'Mark it fixed', 'You believe it is fixed \u2014 the person who raised it is asked to retest');
-    } else if (q.state === 'resolved') {
+    } else if (item.state === 'resolved') {
       acts = act('closed', '\u2713 Retested \u2014 close it', 'You have looked and it holds. This ends it.')
            + act('raised', '\u2717 Still broken', 'Send it back to whoever fixed it');
     }
@@ -2156,48 +2156,48 @@ function testIncHTML() {
      * who will ever look at it. ⚠️ On a closed row it would silently rewrite history for no purpose: the
      * severity somebody worked to is part of what happened.
      */
-    if (q.state === 'raised' || q.state === 'investigating') {
-      acts += '<select onchange="testIncSev(\'' + q.definition_id + '\', this.value)" '
+    if (item.state === 'raised' || item.state === 'investigating') {
+      acts += '<select onchange="testIncSev(\'' + item.definition_id + '\', this.value)" '
         + 'title="Re-grade it" style="font:inherit;font-size:var(--fs-1);padding:2px 5px;border:1px solid '
         + 'var(--line,#e7e3d8);border-radius:7px;background:var(--card,#fff);margin-inline-end:5px">'
         + TEST_INC_SEV.map(function (x) {
-            return '<option' + (x === q.severity ? ' selected' : '') + '>' + x + '</option>';
+            return '<option' + (x === item.severity ? ' selected' : '') + '>' + x + '</option>';
           }).join('')
         + '</select>';
     }
     /* ⭐ THE TWO DURATIONS, SHOWN ONLY WHEN THEY SAY SOMETHING. "0 min unnoticed" is noise on a row somebody
        recorded while it was happening; an hour unnoticed is the whole story of that incident. */
     var clock = '';
-    if (q.unnoticed_mins) clock += esc(q.unnoticed_mins + ' min before anybody knew');
-    if (q.open_mins) clock += (clock ? ' \u00b7 ' : '') + esc(q.open_mins + ' min to resolve');
+    if (item.unnoticed_mins) clock += esc(item.unnoticed_mins + ' min before anybody knew');
+    if (item.open_mins) clock += (clock ? ' \u00b7 ' : '') + esc(item.open_mins + ' min to resolve');
     var code = function (v) {
       return v ? '<code style="font-family:\'Space Mono\',ui-monospace,monospace;font-size:var(--fs-1);'
         + 'background:var(--neutral-tint);border-radius:5px;padding:0 5px;user-select:all">' + esc(v) + '</code>' : '';
     };
     return '<div style="border-bottom:1px solid var(--line,#e7e3d8);padding:7px 0">'
       + '<div style="display:flex;align-items:baseline;gap:7px;flex-wrap:wrap">'
-      +   '<b style="color:' + (SEV[q.severity] || SEV['Sev-3']) + ';font-size:var(--fs-1)" title="'
-      +     esc(q.severity_means || '') + '">' + esc(q.severity) + '</b>'
-      +   '<code style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + esc(q.ref) + '</code>'
+      +   '<b style="color:' + (SEV[item.severity] || SEV['Sev-3']) + ';font-size:var(--fs-1)" title="'
+      +     esc(item.severity_means || '') + '">' + esc(item.severity) + '</b>'
+      +   '<code style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + esc(item.ref) + '</code>'
       +   '<span style="font-size:var(--fs-1);background:var(--neutral-tint,#f2efe6);border-radius:5px;'
-      +     'padding:1px 6px">' + esc(q.state) + '</span>'
-      +   code(q.screen_code) + code(q.popup_code)
-      +   (q.affected ? '<span style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + esc(q.affected)
+      +     'padding:1px 6px">' + esc(item.state) + '</span>'
+      +   code(item.screen_code) + code(item.popup_code)
+      +   (item.affected ? '<span style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + esc(item.affected)
             + '</span>' : '')
       + '</div>'
-      + '<div style="font-size:var(--fs-2);margin-top:2px">' + esc(q.observed) + '</div>'
+      + '<div style="font-size:var(--fs-2);margin-top:2px">' + esc(item.observed) + '</div>'
       /* ⭐ THE SEVERITY IN WORDS, not only its number: "Sev-2" means whatever the reader assumes. */
       + '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);margin-top:2px">'
-      +   esc(q.severity_means || '') + (clock ? ' \u00b7 ' + clock : '') + '</div>'
+      +   esc(item.severity_means || '') + (clock ? ' \u00b7 ' + clock : '') + '</div>'
       /* ⭐ THE CHANGE THAT FIXED IT, as a citation into git — never a copy of the commit message. */
-      + ((q.changes || []).length ? '<div style="font-size:var(--fs-1);margin-top:2px">fixed by '
-          + q.changes.map(function (c) { return '<code>' + esc(String(c.sha).slice(0, 8)) + '</code>'
+      + ((item.changes || []).length ? '<div style="font-size:var(--fs-1);margin-top:2px">fixed by '
+          + item.changes.map(function (c) { return '<code>' + esc(String(c.sha).slice(0, 8)) + '</code>'
               + (c.repo ? ' in ' + esc(c.repo) : ''); }).join(' \u00b7 ') + '</div>' : '')
-      + (q.why ? '<div style="font-size:var(--fs-1);color:var(--grey-2,#545A61);margin-top:2px">because: '
-          + esc(q.why) + '</div>' : '')
+      + (item.why ? '<div style="font-size:var(--fs-1);color:var(--grey-2,#545A61);margin-top:2px">because: '
+          + esc(item.why) + '</div>' : '')
       + '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);margin-top:3px">'
-      +   esc(q.raised_by || 'someone')
-      +   (q.happened_at ? ' \u00b7 ' + esc(String(q.happened_at).replace('T', ' ').slice(0, 16)) : '')
+      +   esc(item.raised_by || 'someone')
+      +   (item.happened_at ? ' \u00b7 ' + esc(String(item.happened_at).replace('T', ' ').slice(0, 16)) : '')
       + '</div>'
       /* ⚠️ ON ITS OWN LINE. Buried at the end of a grey "who and when" line, an action reads as more
          metadata — and the thing that looked like a button was the filter at the top of the page. */
@@ -2325,16 +2325,16 @@ function testCaseFor(code, name) {
 function testCtlOptions(code, sel) {
   try {
     var rows = (window.CBSCREENS && window.CBSCREENS.rows) || [];
-    var me = rows.filter(function (r) { return r.code === code; })[0];
+    var me = rows.filter(function (item) { return item.code === code; })[0];
     if (!me) return '';
     var want = me.path + ' \u2022 ';                 /* 'Rail \u203a Task \u2022 ' */
-    return rows.filter(function (r) {
-      return r.group === 'Control' && String(r.path).indexOf('Control \u203a ' + want) === 0;
-    }).map(function (r) {
-      var label = String(r.screen).split(' \u2022 ').pop();
+    return rows.filter(function (item) {
+      return item.group === 'Control' && String(item.path).indexOf('Control \u203a ' + want) === 0;
+    }).map(function (item) {
+      var label = String(item.screen).split(' \u2022 ').pop();
       /* \u2b50 the control chosen in the checklist below arrives here already selected, so the two cannot disagree */
-      return '<option value="' + esc(r.code) + '"' + (sel && sel === r.code ? ' selected' : '') + '>'
-        + esc(r.code) + ' \u00b7 ' + esc(label) + '</option>';
+      return '<option value="' + esc(item.code) + '"' + (sel && sel === item.code ? ' selected' : '') + '>'
+        + esc(item.code) + ' \u00b7 ' + esc(label) + '</option>';
     }).join('');
   } catch (_) { return ''; }
 }
@@ -2365,15 +2365,15 @@ function testCtlRowsFor(code) {
   var out = { screen: null, list: [] };
   try {
     var rows = (window.CBSCREENS && window.CBSCREENS.rows) || [];
-    var me = rows.filter(function (r) { return r.code === code; })[0];
+    var me = rows.filter(function (item) { return item.code === code; })[0];
     if (!me) return out;
     out.screen = me;
     var want = 'Control › ' + me.path + ' • ';
     var cases = CBTEST.cases || [];
-    out.list = rows.filter(function (r) {
-      return r.group === 'Control' && String(r.path).indexOf(want) === 0;
-    }).map(function (r) {
-      var label = String(r.screen).split(' • ').pop();
+    out.list = rows.filter(function (item) {
+      return item.group === 'Control' && String(item.path).indexOf(want) === 0;
+    }).map(function (item) {
+      var label = String(item.screen).split(' • ').pop();
       /* the control's own cases: same door, and the label quoted in the title — the key the sweep itself used */
       var mine = cases.filter(function (c) {
         return String(c.menu || '') === me.path
@@ -2393,9 +2393,9 @@ function testCtlRowsFor(code) {
        * uses their title AS the label — and printing "Their bill total → Their bill total" under the name reads
        * as a description that has nothing to add, which is worse than an honest blank.
        */
-      var purpose = String(r.purpose || '');
+      var purpose = String(item.purpose || '');
       if (purpose && purpose.trim().toLowerCase() === String(label).trim().toLowerCase()) purpose = '';
-      return { code: r.code, label: label, cases: mine, real: real, last: last, purpose: purpose };
+      return { code: item.code, label: label, cases: mine, real: real, last: last, purpose: purpose };
     });
 
     /**
@@ -2419,16 +2419,16 @@ function testCtlRowsFor(code) {
     var named = {};
     out.list.forEach(function (x) { named[String(x.label).trim().toLowerCase()] = true; });
     var extra = [];
-    cases.forEach(function (c) {
-      if (String(c.menu || '') !== me.path) return;
-      if (c.generated) return;                      /* a swept case is the register's own, already above */
-      var title = String(c.title || '').trim();
+    cases.forEach(function (item) {
+      if (String(item.menu || '') !== me.path) return;
+      if (item.generated) return;                      /* a swept case is the register's own, already above */
+      var title = String(item.title || '').trim();
       if (!title) return;
       var k = title.toLowerCase();
       if (named[k]) return;
       named[k] = true;
-      var l = (CBTEST.last || {})[c.case_key] || null;
-      extra.push({ code: c.case_key, label: title, cases: [c], real: [c], last: l, purpose: '', written: true });
+      var l = (CBTEST.last || {})[item.case_key] || null;
+      extra.push({ code: item.case_key, label: title, cases: [item], real: [item], last: l, purpose: '', written: true });
     });
     out.list = out.list.concat(extra);
   } catch (_) { /* a register that will not read must not take the panel down with it */ }
@@ -2573,9 +2573,9 @@ async function testShotSend(blob, name) {
       fr.onerror = rej;
       fr.readAsDataURL(blob);
     });
-    var r = await api('testShot', { body: {
+    var reply = await api('testShot', { body: {
       name: name || 'screenshot.png', mime: blob.type || 'image/png', data_base64: b64 } });
-    CBTEST.shot = { id: r.id, name: r.name, size: r.size };
+    CBTEST.shot = { id: reply.id, name: reply.name, size: reply.size };
     testShotThumb(blob);
     screenCasesPaint();
     if (typeof toast === 'function') toast('Screenshot attached');
@@ -2620,14 +2620,14 @@ async function testShotGrab() {
       await new Promise(function (r) { requestAnimationFrame(function () { setTimeout(r, 120); }); });
       if (typeof ImageCapture === 'function') {
         var bmp = await new ImageCapture(track).grabFrame();
-        var cv = document.createElement('canvas');
-        cv.width = bmp.width; cv.height = bmp.height;
-        cv.getContext('2d').drawImage(bmp, 0, 0);
-        blob = await new Promise(function (r) { cv.toBlob(r, 'image/png'); });
+        var node = document.createElement('canvas');
+        node.width = bmp.width; node.height = bmp.height;
+        node.getContext('2d').drawImage(bmp, 0, 0);
+        blob = await new Promise(function (r) { node.toBlob(r, 'image/png'); });
       }
     } finally {
       if (hide) hide.style.visibility = '';
-      try { track.stop(); stream.getTracks().forEach(function (t) { t.stop(); }); } catch (_) {}
+      try { track.stop(); stream.getTracks().forEach(function (item) { item.stop(); }); } catch (_) {}
     }
     if (!blob) {
       if (typeof toast === 'function') toast('Could not grab a frame \u2014 paste one instead.');
@@ -2702,9 +2702,9 @@ function testShotPasteBind() {
     host.addEventListener('paste', function (e) {
       try {
         var items = (e.clipboardData && e.clipboardData.items) || [];
-        for (var i = 0; i < items.length; i++) {
-          if (String(items[i].type || '').indexOf('image/') === 0) {
-            var f = items[i].getAsFile();
+        for (var index = 0; index < items.length; index++) {
+          if (String(items[index].type || '').indexOf('image/') === 0) {
+            var f = items[index].getAsFile();
             if (f) { e.preventDefault(); testShotSend(f, f.name || 'pasted.png'); return; }
           }
         }
@@ -2890,8 +2890,8 @@ function testTechDerive() {
         [day(hiRaw, -1), 'accepted — just inside'],
         [hiRaw, 'accepted — it is the latest allowed'],
         [day(hiRaw, 1), 'refused — it is after the latest allowed'],
-      ].map(function (p) {
-        return { do: 'Put ' + p[0] + ' in ' + field + ' and save.', see: 'It is ' + p[1] + '.' };
+      ].map(function (item) {
+        return { do: 'Put ' + item[0] + ' in ' + field + ' and save.', see: 'It is ' + item[1] + '.' };
       });
       out.push({ do: 'Leave ' + field + ' empty and save.',
                  see: 'Either refused with a reason, or a stated default — never today by accident.' });
@@ -2910,8 +2910,8 @@ function testTechDerive() {
       [hi - 1, 'accepted \u2014 just inside'],
       [hi, 'accepted \u2014 it is the highest allowed'],
       [hi + 1, 'refused \u2014 it is above the highest allowed'],
-    ].map(function (p) {
-      return { do: 'Put ' + p[0] + ' in ' + field + ' and save.', see: 'It is ' + p[1] + '.' };
+    ].map(function (item) {
+      return { do: 'Put ' + item[0] + ' in ' + field + ' and save.', see: 'It is ' + item[1] + '.' };
     });
     /* ⚠ the two everybody forgets, and they are not boundaries — they are the absence of a value */
     out.push({ do: 'Leave ' + field + ' empty and save.',
@@ -2921,12 +2921,12 @@ function testTechDerive() {
   }
 
   if (t.kind === 'classes') {
-    var cs = testTechVal('tqClasses', '').split(',').map(function (x) { return x.trim(); })
+    var list = testTechVal('tqClasses', '').split(',').map(function (x) { return x.trim(); })
       .filter(Boolean);
     /* equivalence partitioning: ONE value from each class, because the class behaves as one */
-    out = cs.map(function (c) {
-      return { do: 'Use ' + (/^[aeiou]/i.test(c) ? 'an ' : 'a ') + c + ' in ' + field + '.',
-               see: 'It behaves as every other ' + c + ' does \u2014 one from the class stands for all of it.' };
+    out = list.map(function (item) {
+      return { do: 'Use ' + (/^[aeiou]/i.test(item) ? 'an ' : 'a ') + item + ' in ' + field + '.',
+               see: 'It behaves as every other ' + item + ' does \u2014 one from the class stands for all of it.' };
     });
   }
 
@@ -2938,14 +2938,14 @@ function testTechDerive() {
      * moves work; it says nothing about whether the forbidden ones are refused, and a lifecycle that can be
      * jumped is how a chit gets paid before it is sent.
      */
-    st.forEach(function (a, i) {
+    st.forEach(function (item, i) {
       var b = st[i + 1];
-      if (b) out.push({ do: 'Move it from ' + a + ' to ' + b + '.', see: 'Allowed.' });
+      if (b) out.push({ do: 'Move it from ' + item + ' to ' + b + '.', see: 'Allowed.' });
     });
-    st.forEach(function (a, i) {
+    st.forEach(function (item, i) {
       st.forEach(function (b, j) {
         if (j <= i + 1 || j === i) return;      /* forward by more than one step = a skipped state */
-        out.push({ do: 'Try to move it straight from ' + a + ' to ' + b + ', skipping '
+        out.push({ do: 'Try to move it straight from ' + item + ' to ' + b + ', skipping '
           + st.slice(i + 1, j).join(' and ') + '.', see: 'Refused \u2014 the step cannot be skipped.' });
       });
     });
@@ -2960,9 +2960,9 @@ function testTechDerive() {
       .filter(Boolean).slice(0, 3);
     /* a decision table: every combination, because a rule that reads two conditions has four answers */
     var n = Math.pow(2, cond.length);
-    for (var i = 0; i < n; i++) {
-      var says = cond.map(function (c, k) {
-        return ((i >> k) & 1) ? c : 'NOT ' + c;
+    for (var index = 0; index < n; index++) {
+      var says = cond.map(function (item, k) {
+        return ((index >> k) & 1) ? item : 'NOT ' + item;
       }).join(' and ');
       out.push({ do: 'Set it up so that ' + says + '.', see: 'The rule gives its answer for this combination.' });
     }
@@ -2982,7 +2982,7 @@ function testTechDerive() {
       ['Save, then press the browser Back button, then save again.', 'No duplicate, no lost edit.'],
       ['Open the same record in two tabs and save both.', 'The second is refused or merged, never silently '
         + 'overwriting the first.'],
-    ].map(function (p) { return { do: p[0], see: p[1] }; });
+    ].map(function (item) { return { do: item[0], see: item[1] }; });
   }
   return out;
 }
@@ -3009,14 +3009,14 @@ function testTechUse(i) {
   try { localStorage.setItem('cb_case_area', 'write'); } catch (_) {}
   if (CBTEST.popupFor) screenCasesPaint(); else testPaint();
 
-  var put = function (id, v) {
+  var node = function (id, v) {
     var el = document.getElementById(id);
     if (!el) return;
     el.value = v;
     try { if (el.tagName === 'TEXTAREA') testGrow(el); } catch (_) {}
   };
-  put('wcDo', d.do);
-  put('wcSee', d.see);
+  node('wcDo', d.do);
+  node('wcSee', d.see);
   var t = document.getElementById('wcTitle');
   if (t && !String(t.value || '').trim()) {
     t.value = d.see.replace(/^It is /, '').replace(/\.$/, '');
@@ -3095,9 +3095,9 @@ function testTechTry(kind) {
   CBTEST.tech.kind = kind;
   if (CBTEST.popupFor) screenCasesPaint(); else testPaint();
   /* ⚠ after the paint: the inputs for this technique only exist once it is the chosen one */
-  var put = function (id, v) { var el = document.getElementById(id); if (el && v != null) el.value = v; };
-  put('tqField', eg.field); put('tqLo', eg.lo); put('tqHi', eg.hi);
-  put('tqClasses', eg.classes); put('tqStates', eg.states); put('tqConds', eg.conds);
+  var node = function (id, v) { var el = document.getElementById(id); if (el && v != null) el.value = v; };
+  node('tqField', eg.field); node('tqLo', eg.lo); node('tqHi', eg.hi);
+  node('tqClasses', eg.classes); node('tqStates', eg.states); node('tqConds', eg.conds);
   testTechGo();
   if (typeof toast === 'function') toast('Filled with an example — change the values to yours.');
 }
@@ -3119,10 +3119,10 @@ function testTechFields() {
   };
   var take = function (obj, from, depth) {
     if (!obj || typeof obj !== 'object' || depth > 2) return;
-    (Array.isArray(obj) ? obj.slice(0, 2) : [obj]).forEach(function (o) {
-      if (!o || typeof o !== 'object') return;
-      Object.keys(o).forEach(function (k) {
-        var v = o[k];
+    (Array.isArray(obj) ? obj.slice(0, 2) : [obj]).forEach(function (item) {
+      if (!item || typeof item !== 'object') return;
+      Object.keys(item).forEach(function (k) {
+        var v = item[k];
         if (v && typeof v === 'object') { take(v, from, depth + 1); return; }
         var kind = kindOf(v);
         if (!kind) return;
@@ -3152,13 +3152,13 @@ function testTechFields() {
     });
   };
 
-  (window.CBCALLS || []).forEach(function (c) {
-    if (here && c.scr && c.scr !== here) return;
-    if (gen && c.gen && c.gen !== gen) return;
-    if (/^\/api\/testing/i.test(String(c.path || ''))) return;
+  (window.CBCALLS || []).forEach(function (item) {
+    if (here && item.scr && item.scr !== here) return;
+    if (gen && item.gen && item.gen !== gen) return;
+    if (/^\/api\/testing/i.test(String(item.path || ''))) return;
     /* the REQUEST first: what a person typed is what a person can vary */
-    try { if (c.sent) take(JSON.parse(c.sent), 'sent', 0); } catch (_) {}
-    try { if (c.body) take(JSON.parse(c.body), 'came back', 0); } catch (_) {}
+    try { if (item.sent) take(JSON.parse(item.sent), 'sent', 0); } catch (_) {}
+    try { if (item.body) take(JSON.parse(item.body), 'came back', 0); } catch (_) {}
   });
   return out.slice(0, 24);
 }
@@ -3256,8 +3256,8 @@ function testTechHTML() {
    */
   var fields = testTechFields();
   if (fields.length) {
-    var fit = fields.filter(function (f) { return testTechFor(f.kind) === t.kind; });
-    var rest = fields.filter(function (f) { return testTechFor(f.kind) !== t.kind; });
+    var list = fields.filter(function (item) { return testTechFor(item.kind) === t.kind; });
+    var rest = fields.filter(function (item) { return testTechFor(item.kind) !== t.kind; });
     var fchip = function (f, strong) {
       return '<button onclick="testTechPick(\'' + testJs(f.key) + '\')" '
         + 'title="' + esc(f.kind + ' · e.g. ' + f.sample + ' · ' + f.from) + '" '
@@ -3269,8 +3269,8 @@ function testTechHTML() {
     };
     h += '<label style="' + lbl + '">Which field? · <span style="font-weight:400;color:var(--grey-4,#646A72)">'
       + 'read from what this screen just sent to the server</span></label>'
-      + '<div>' + fit.map(function (f) { return fchip(f, true); }).join('')
-      + rest.map(function (f) { return fchip(f, false); }).join('') + '</div>';
+      + '<div>' + list.map(function (item) { return fchip(item, true); }).join('')
+      + rest.map(function (item) { return fchip(item, false); }).join('') + '</div>';
   } else {
     h += '<label style="' + lbl + '">Which field?</label>';
   }
@@ -3363,14 +3363,14 @@ function testTechHTML() {
     +   '<th style="' + th + '">Do this</th>'
     +   '<th style="' + th + '">It should</th>'
     +   '<th style="' + th + ';text-align:end">\u2192 Create</th></tr>'
-    + rows.map(function (d, i) {
-        return '<tr><td style="' + td + ';color:var(--grey-4,#646A72)">' + (i + 1) + '</td>'
-          + '<td style="' + td + '">' + esc(d.do) + '</td>'
-          + '<td style="' + td + ';color:var(--grey-2)">' + esc(d.see) + '</td>'
+    + rows.map(function (item, index) {
+        return '<tr><td style="' + td + ';color:var(--grey-4,#646A72)">' + (index + 1) + '</td>'
+          + '<td style="' + td + '">' + esc(item.do) + '</td>'
+          + '<td style="' + td + ';color:var(--grey-2)">' + esc(item.see) + '</td>'
           + '<td style="' + td + ';text-align:end">'
           /* ⚠️ THE PAYOFF OF THE WHOLE FLOW WAS THE FAINTEST CONTROL ON SCREEN: a --card button with a
              --line border, on a --card row — 1.15:1 in light. Every table action takes TEST_BTN_SMALL. */
-          + '<button onclick="testTechUse(' + i + ')" '
+          + '<button onclick="testTechUse(' + index + ')" '
           + 'title="Fill the Create form with this case, ready to save" '
           + 'style="' + TEST_BTN_SMALL + '">Add</button></td></tr>';
       }).join('')
@@ -3475,9 +3475,9 @@ function testWhenHTML() {
 /** ⚠️ an ISO stamp the server can parse; the server clamps anything in the future back to now */
 function testWhenAt() {
   try {
-    var v = Number((document.getElementById('wcWhen') || {}).value || 0);
-    if (!(v > 0)) return null;
-    return new Date(Date.now() - (v * 60000)).toISOString();
+    var node = Number((document.getElementById('wcWhen') || {}).value || 0);
+    if (!(node > 0)) return null;
+    return new Date(Date.now() - (node * 60000)).toISOString();
   } catch (_) { return null; }
 }
 
@@ -3533,12 +3533,12 @@ function testCaseFormHTML() {
   /* ── ⭐ THE TYPE, FIRST, BECAUSE EVERY LABEL BELOW DEPENDS ON IT ── */
   var seg = TUI.seg('4px 13px', 'fs-2');
   var segOn = TUI.on, segOff = TUI.off;
-  var chips = ['case', 'inc', 'req'].map(function (k) {
-    return '<button data-testid="wkind-' + k + '" onclick="testWriteKind(\'' + k + '\')" '
-      + 'title="' + esc(WKIND[k].says) + '" style="' + seg
-      + (kind === k ? segOn : segOff)
-      + (k === 'case' ? '' : ';border-inline-start:1px solid var(--line,#e7e3d8)') + '">'
-      + WKIND[k].label + '</button>';
+  var chips = ['case', 'inc', 'req'].map(function (item) {
+    return '<button data-testid="wkind-' + item + '" onclick="testWriteKind(\'' + item + '\')" '
+      + 'title="' + esc(WKIND[item].says) + '" style="' + seg
+      + (kind === item ? segOn : segOff)
+      + (item === 'case' ? '' : ';border-inline-start:1px solid var(--line,#e7e3d8)') + '">'
+      + WKIND[item].label + '</button>';
   }).join('');
 
   /* ── how bad, or how soon: two different questions, and only one of them belongs to each type ── */
@@ -3690,8 +3690,8 @@ async function testCaseSend(outcome) {
    */
   var kind = (typeof testWriteKindNow === 'function') ? testWriteKindNow() : 'case';
   if (outcome === undefined || outcome === null) outcome = (kind === 'case') ? '' : kind;
-  var g = function (id) { return String((document.getElementById(id) || {}).value || '').trim(); };
-  var title = g('wcTitle'), doIt = g('wcDo'), see = g('wcSee'), got = g('wcGot');
+  var node = function (id) { return String((document.getElementById(id) || {}).value || '').trim(); };
+  var title = node('wcTitle'), doIt = node('wcDo'), see = node('wcSee'), got = node('wcGot');
   if (!title) { if (typeof toast === 'function') toast('Say what must be true.'); return; }
   if (!doIt || !see) { if (typeof toast === 'function') toast('Say what you do, and what you should see.'); return; }
   /* ⚠️ an incident or a requirement without the observation is a report nobody can act on */
@@ -3701,8 +3701,8 @@ async function testCaseSend(outcome) {
     return;
   }
   var n = 1;
-  (CBTEST.cases || []).forEach(function (c) {
-    var m = String(c.case_key || '').match(new RegExp('^' + w.code + '-H(\\d+)$'));
+  (CBTEST.cases || []).forEach(function (item) {
+    var m = String(item.case_key || '').match(new RegExp('^' + w.code + '-H(\\d+)$'));
     if (m) n = Math.max(n, Number(m[1]) + 1);
   });
   var key = w.code + '-H' + String(n).padStart(2, '0');
@@ -3711,15 +3711,15 @@ async function testCaseSend(outcome) {
       case_key: key,
       module_key: w.code, module_name: w.code + ' \u00b7 ' + w.name,
       title: title,
-      priority: g('wcPri') || 'Medium',
+      priority: node('wcPri') || 'Medium',
       test_type: 'screen',
       pre: 'Signed in, and on ' + w.code + ' ' + w.name + '.',
       steps: [[doIt, see]],
       menu: (((window.CBSCREENS && window.CBSCREENS.rows) || [])
-        .filter(function (r) { return r.code === w.code; })[0] || {}).path || '',
+        .filter(function (item) { return item.code === w.code; })[0] || {}).path || '',
       screen_code: w.code,
       /* ⭐ the control this case is about, when it is about one — CTL157, not "the button near the top" */
-      control_code: g('wcCtl') || null,
+      control_code: node('wcCtl') || null,
       /**
        * ── ⚠️⚠️⚠️ THE FOURTH BOX AND THE PICTURE WERE BEING THROWN AWAY ON SAVE ────────────────────────
        *
@@ -3764,7 +3764,7 @@ async function testCaseSend(outcome) {
      * reason it always did: the picture of the last finding must not ride onto the next one.
      */
     var heldShot = CBTEST.shot;
-    var heldSev = g('wcSev') || null;
+    var heldSev = node('wcSev') || null;
     /* ⚠️ read BEFORE the form is repainted, exactly like the severity and the screenshot */
     var heldWhen = testWhenAt();
     CBTEST.shot = null;
@@ -3812,19 +3812,19 @@ function testScrHTML() {
   }
   var cases = CBTEST.cases || [], res = CBTEST.scrRes || [];
   var last = {};
-  res.forEach(function (r) { if (r && r.case_key) last[r.case_key] = r.status; });
+  res.forEach(function (item) { if (item && item.case_key) last[item.case_key] = item.status; });
 
   var byCode = {}, offScreen = 0;
   var incBy = {}, reqBy = {};
   (CBTEST.scrInc || []).forEach(function (x) { if (x.screen_code) incBy[x.screen_code] = (incBy[x.screen_code] || 0) + 1; });
   (CBTEST.scrReq || []).forEach(function (x) { if (x.screen_code) reqBy[x.screen_code] = (reqBy[x.screen_code] || 0) + 1; });
-  cases.forEach(function (c) {
-    var code = testScrOf(c);
+  cases.forEach(function (item) {
+    var code = testScrOf(item);
     if (!code) { offScreen++; return; }
     var b = byCode[code] || (byCode[code] = { code: code, total: 0, pass: 0, fail: 0, notrun: 0,
                                               purpose: null, real: 0, generic: 0 });
     b.total++;
-    var st = last[c.case_key];
+    var st = last[item.case_key];
     if (st === 'pass') b.pass++; else if (st === 'fail') b.fail++; else b.notrun++;
     /**
      * ⭐⭐ WHAT THE SCREEN DOES, AND WHETHER ANYBODY HAS REALLY TESTED IT. Athi, 2026-09-12: *"so we know what
@@ -3835,13 +3835,13 @@ function testScrHTML() {
      * screen whose ONLY case is that one has been named, not tested — and a table that adds them together
      * reports thought that has not happened.
      */
-    if (c.screen_purpose && !b.purpose) b.purpose = c.screen_purpose;
-    if (c.generic) b.generic++; else b.real++;
+    if (item.screen_purpose && !b.purpose) b.purpose = item.screen_purpose;
+    if (item.generic) b.generic++; else b.real++;
   });
 
   /* ⭐ EVERY LIVE SCREEN, not only the ones with cases — a screen the lab has never heard of is the finding */
-  var rows = ((window.CBSCREENS && window.CBSCREENS.rows) || []).filter(function (r) {
-    return r.group !== 'Control' && r.group !== 'Popup';
+  var rows = ((window.CBSCREENS && window.CBSCREENS.rows) || []).filter(function (item) {
+    return item.group !== 'Control' && item.group !== 'Popup';
   });
   if (!rows.length) {
     return '<div style="padding:10px 0;font-size:var(--fs-2);color:var(--grey-4,#646A72)">The register did not load, so '
@@ -3851,12 +3851,12 @@ function testScrHTML() {
   /* ⭐ walk is the register’s own number for where a screen sits in the product — the rail top to bottom
      with each screen followed by whatever you reach from it. A row without one sorts to the end and is
      visibly unplaced, rather than silently landing first. */
-  var list = rows.map(function (r, i) {
-    var b = byCode[r.code] || { total: 0, pass: 0, fail: 0, notrun: 0 };
-    return { at: (r.walk || (10000 + i)), code: r.code, name: r.screen, group: r.group, total: b.total, pass: b.pass,
+  var list = rows.map(function (item, index) {
+    var b = byCode[item.code] || { total: 0, pass: 0, fail: 0, notrun: 0 };
+    return { at: (item.walk || (10000 + index)), code: item.code, name: item.screen, group: item.group, total: b.total, pass: b.pass,
              fail: b.fail, notrun: b.notrun, purpose: b.purpose || null,
              real: b.real || 0, generic: b.generic || 0,
-             inc: incBy[r.code] || 0, req: reqBy[r.code] || 0 };
+             inc: incBy[item.code] || 0, req: reqBy[item.code] || 0 };
   });
   /**
    * ── ⭐⭐⭐ MENU ORDER IS THE DEFAULT, BECAUSE THAT IS HOW A PERSON WALKS THE PRODUCT ─────────────────────────
@@ -3875,14 +3875,14 @@ function testScrHTML() {
    * product, because it reorders itself under them as they record verdicts. So it stays, as a choice.
    */
   if (testScrSortGet() === 'attention') {
-    list.sort(function (a, b) {
-      return (b.fail - a.fail)
-          || ((a.total ? 1 : 0) - (b.total ? 1 : 0))
-          || (b.notrun - a.notrun)
-          || (a.at - b.at);
+    list.sort(function (first, second) {
+      return (second.fail - first.fail)
+          || ((first.total ? 1 : 0) - (second.total ? 1 : 0))
+          || (second.notrun - first.notrun)
+          || (first.at - second.at);
     });
   } else {
-    list.sort(function (a, b) { return a.at - b.at; });
+    list.sort(function (first, second) { return first.at - second.at; });
   }
 
   var naked = list.filter(function (x) { return !x.total; }).length;
@@ -4098,10 +4098,10 @@ function testScreenTally(code) {
     if (!CBTEST._read) return null;
     if (!CBTEST.cases) return { total: 0, pass: 0, fail: 0 };
     var t = { total: 0, pass: 0, fail: 0 };
-    CBTEST.cases.forEach(function (c) {
-      if (testScrOf(c) !== code) return;
+    CBTEST.cases.forEach(function (item) {
+      if (testScrOf(item) !== code) return;
       t.total++;
-      var l = CBTEST.last[c.case_key];
+      var l = CBTEST.last[item.case_key];
       if (l && l.status === 'pass') t.pass++; else if (l && l.status === 'fail') t.fail++;
     });
     return t;
@@ -4220,12 +4220,12 @@ function testCaseDetailHTML(c) {
     + 'border:1px solid var(--line,#efece4);border-radius:8px">';
 
   /* the case as written: every step, not only the first */
-  (c.steps || []).forEach(function (st, i) {
+  (c.steps || []).forEach(function (item, index) {
     h += '<div style="display:flex;gap:6px;' + pad + '">'
-      + '<span style="color:var(--grey-4,#646A72);min-width:12px">' + (i + 1) + '</span>'
-      + '<span style="flex:1">' + esc(Array.isArray(st) ? (st[0] || '') : String(st))
+      + '<span style="color:var(--grey-4,#646A72);min-width:12px">' + (index + 1) + '</span>'
+      + '<span style="flex:1">' + esc(Array.isArray(item) ? (item[0] || '') : String(item))
       +   '<span style="display:block;color:var(--grey-2)">\u2192 '
-      +     esc(Array.isArray(st) ? (st[1] || '') : '') + '</span></span></div>';
+      +     esc(Array.isArray(item) ? (item[1] || '') : '') + '</span></span></div>';
   });
   h += lab('Before you start:', esc(c.pre || ''));
   h += lab('Use:', esc(c.data || ''));
@@ -4298,7 +4298,7 @@ function testCaseDetailHTML(c) {
 }
 
 function testCaseListHTML(code) {
-  var all = (CBTEST.cases || []).filter(function (c) { return testScrOf(c) === code; });
+  var all = (CBTEST.cases || []).filter(function (item) { return testScrOf(item) === code; });
   if (!all.length) {
     return '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);padding:6px 0 2px">'
       + 'No case on this screen yet — Create is the first tab above.</div>';
@@ -4309,7 +4309,7 @@ function testCaseListHTML(code) {
   var f = testCaseFilterGet();
   var mine = f === 'passed' ? all.filter(isPass)
            : f === 'all' ? all
-           : all.filter(function (c) { return !isPass(c); });
+           : all.filter(function (item) { return !isPass(item); });
 
   /**
    * ── ⭐⭐ THE CLOSED ONES ARE HERE, AND ONLY WHEN ASKED FOR ─────────────────────────────────────────────────
@@ -4322,7 +4322,7 @@ function testCaseListHTML(code) {
    * screen could not be read on this screen, at all, by anybody. Hidden and gone are different things, and only
    * one of them is a decision. [[feedback-silence-is-the-bug]]
    */
-  var shutAll = (CBTEST.closedCases || []).filter(function (c) { return testScrOf(c) === code; });
+  var shutAll = (CBTEST.closedCases || []).filter(function (item) { return testScrOf(item) === code; });
   var showShut = testScrShut('case');
   if (!CBTEST.closedCases) testFindLoadClosed();
 
@@ -4343,14 +4343,14 @@ function testCaseListHTML(code) {
   var shutHTML = (showShut && shutAll.length)
     ? '<div style="margin-top:9px;padding-top:7px;border-top:1px solid var(--line,#e7e3d8);opacity:.62">'
       + '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);margin-bottom:3px">Closed on this screen</div>'
-      + shutAll.map(function (c) {
+      + shutAll.map(function (item) {
           return '<div style="padding:5px 0;border-top:1px solid var(--line,#efece4)">'
-            + '<code style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + esc(c.case_key) + '</code> '
-            + '<span style="font-size:var(--fs-2)">' + esc(c.title || '') + '</span>'
-            + (c.closed_note ? '<div style="font-size:var(--fs-1);color:var(--grey-2)">closed: '
-                + esc(c.closed_note) + (c.closed_by ? ' · ' + esc(c.closed_by) : '') + '</div>' : '')
+            + '<code style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + esc(item.case_key) + '</code> '
+            + '<span style="font-size:var(--fs-2)">' + esc(item.title || '') + '</span>'
+            + (item.closed_note ? '<div style="font-size:var(--fs-1);color:var(--grey-2)">closed: '
+                + esc(item.closed_note) + (item.closed_by ? ' · ' + esc(item.closed_by) : '') + '</div>' : '')
             + ' <button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);'
-            + 'padding:1px 8px" onclick="testHandClose(\'' + testJs(c.case_key) + '\',true)">Open again'
+            + 'padding:1px 8px" onclick="testHandClose(\'' + testJs(item.case_key) + '\',true)">Open again'
             + '</button></div>';
         }).join('')
       + '</div>'
@@ -4361,64 +4361,64 @@ function testCaseListHTML(code) {
       + (f === 'todo' ? 'Nothing left to test on this screen.' : 'None in this pile.') + '</div>' + shutHTML;
   }
 
-  return h + mine.map(function (c) {
-    var l = CBTEST.last[c.case_key];
-    var st0 = (c.steps || [])[0];
+  return h + mine.map(function (item) {
+    var l = CBTEST.last[item.case_key];
+    var st0 = (item.steps || [])[0];
     var exp = Array.isArray(st0) ? String(st0[1] || '') : '';
     var col = l && l.status === 'pass' ? 'var(--ok-2,#1B7F4B)'
             : l && l.status === 'fail' ? 'var(--disp,#B3261E)' : 'var(--grey-4,#646A72)';
-    var done = isPass(c) && !((CBTEST.retest || {})[c.case_key]);
+    var done = isPass(item) && !((CBTEST.retest || {})[item.case_key]);
 
     /* ⭐ a passed case: one line, out of the way, and openable again on purpose */
     if (done) {
       return '<div style="display:flex;gap:8px;align-items:baseline;padding:3px 0;'
         +   'border-top:1px solid var(--line,#efece4);opacity:.72">'
-        + '<code style="font-size:var(--fs-1);color:var(--grey-2)">' + esc(c.case_key) + '</code>'
+        + '<code style="font-size:var(--fs-1);color:var(--grey-2)">' + esc(item.case_key) + '</code>'
         + '<span style="font-size:var(--fs-1);flex:1 1 12em;min-width:0;overflow:hidden;'
-        +   'text-overflow:ellipsis;white-space:nowrap">' + esc(c.title || '') + '</span>'
+        +   'text-overflow:ellipsis;white-space:nowrap">' + esc(item.title || '') + '</span>'
         + '<span style="font-size:var(--fs-1);font-weight:700;color:' + col + '">PASS</span>'
         + '<button class="btn" style="font-size:var(--fs-1);padding:0 7px" onclick="testCaseOpen(\''
-        +   esc(c.case_key) + '\')">Open</button>'
+        +   esc(item.case_key) + '\')">Open</button>'
         + '<button class="btn" style="font-size:var(--fs-1);padding:0 7px" onclick="testRetest(\''
-        +   esc(c.case_key) + '\')">Re-test</button>'
-        + (CBTEST.openCase === c.case_key
-            ? '<div style="flex:1 1 100%">' + testCaseDetailHTML(c) + '</div>' : '')
+        +   esc(item.case_key) + '\')">Re-test</button>'
+        + (CBTEST.openCase === item.case_key
+            ? '<div style="flex:1 1 100%">' + testCaseDetailHTML(item) + '</div>' : '')
         + '</div>';
     }
 
     /* ⭐ the key is the handle: it is already the thing a tester points at when they talk about a case */
-    var isOpen = CBTEST.openCase === c.case_key;
+    var isOpen = CBTEST.openCase === item.case_key;
     return '<div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;padding:4px 0;'
       +   'border-top:1px solid var(--line,#efece4)">'
-      + '<button onclick="testCaseOpen(\'' + testJs(c.case_key) + '\')" title="Open it" '
+      + '<button onclick="testCaseOpen(\'' + testJs(item.case_key) + '\')" title="Open it" '
       +   'style="font:inherit;font-size:var(--fs-1);color:var(--grey-2);background:none;border:0;'
       +   'padding:0;cursor:pointer;text-align:start">'
-      +   (isOpen ? '\u25be ' : '\u25b8 ') + '<code>' + esc(c.case_key) + '</code></button>'
+      +   (isOpen ? '\u25be ' : '\u25b8 ') + '<code>' + esc(item.case_key) + '</code></button>'
       /**
        * \u2b50 THE PICTURE IS ANNOUNCED ON THE ROW, not only inside it. Athi, 2026-09-13: *"I attached the
        * screenshot, but it is not appearing in the cases tab?"* \u2014 it WAS attached and it WAS saved; it sat two
        * clicks away behind a caret, which for the most valuable thing on a finding is the same as absent.
        */
-      + (c.evidence_id ? '<button title="See the screenshot" onclick="testShotView(\'' + testJs(c.evidence_id)
+      + (item.evidence_id ? '<button title="See the screenshot" onclick="testShotView(\'' + testJs(item.evidence_id)
           + '\')" style="font-size:var(--fs-1);background:none;border:0;cursor:pointer;padding:0">'
           + '\ud83d\uddbc\ufe0f</button>' : '')
       + '<span style="flex:1 1 16em;min-width:0">'
-      +   '<div style="font-size:var(--fs-2)">' + esc(c.title || '') + '</div>'
+      +   '<div style="font-size:var(--fs-2)">' + esc(item.title || '') + '</div>'
       +   (exp ? '<div style="font-size:var(--fs-1);color:var(--grey-2,#545A61)">should see: '
         + esc(exp) + '</div>' : '')
-      +   '<input id="cbt_n_' + esc(c.case_key) + '" placeholder="what you are seeing instead \u2014 leave '
+      +   '<input id="cbt_n_' + esc(item.case_key) + '" placeholder="what you are seeing instead \u2014 leave '
       +     'empty if it matched" style="width:100%;font:inherit;font-size:var(--fs-1);margin-top:3px;'
       +     'padding:3px 6px;border:1px solid var(--grey-4,#646A72);border-radius:6px;'
       +     'background:var(--card,#fff)">'
-      +   (isOpen ? testCaseDetailHTML(c) : '')
+      +   (isOpen ? testCaseDetailHTML(item) : '')
       + '</span>'
       + '<span style="font-size:var(--fs-1);font-weight:700;color:' + col + '">'
       +   (l ? esc(String(l.status).toUpperCase()) : 'not run') + '</span>'
       + '<span style="display:flex;gap:4px;flex:0 0 auto;align-items:center">'
-      + testMarkBtn(c.case_key, 'pass', 'Pass', 'var(--ok-2)', 'var(--ok-tint)')
-      + '<button class="btn" onclick="testFromCase(\'' + testJs(c.case_key) + '\',\'inc\')" '
+      + testMarkBtn(item.case_key, 'pass', 'Pass', 'var(--ok-2)', 'var(--ok-tint)')
+      + '<button class="btn" onclick="testFromCase(\'' + testJs(item.case_key) + '\',\'inc\')" '
       +   'style="color:var(--disp);background:var(--danger-tint,#fbeceb)">Incident</button>'
-      + '<button class="btn" onclick="testFromCase(\'' + testJs(c.case_key) + '\',\'req\')" '
+      + '<button class="btn" onclick="testFromCase(\'' + testJs(item.case_key) + '\',\'req\')" '
       +   'style="color:var(--grey-2);background:var(--neutral-tint)">Requirement</button>'
       /**
        * ── ⭐⭐ AND THE WAY OUT, WHICH WAS ONLY IN THE LAB ─────────────────────────────────────────────────
@@ -4433,7 +4433,7 @@ function testCaseListHTML(code) {
        * ⚠️ SMALL AND LAST. Pass, Incident and Requirement are what a tester does most; Close is what they do
        * once. Giving it the same weight would put a destructive action beside the three constructive ones.
        */
-      + '<button class="btn" onclick="testHandClose(\'' + testJs(c.case_key) + '\',false)" '
+      + '<button class="btn" onclick="testHandClose(\'' + testJs(item.case_key) + '\',false)" '
       +   'title="Close this case \u2014 it moves to Test lab \u203a Findings \u203a Closed" '
       +   'style="font-size:var(--fs-1);padding:2px 8px;color:var(--grey-4,#646A72);background:none;'
       +   'border:1px solid var(--grey-4,#646A72)">\u2713 Close</button>'
@@ -4487,8 +4487,8 @@ function testFollowTarget() {
       var mc = modalCode();
       if (mc && mc.code) return { code: mc.code, name: (mc.fn ? mc.fn + '()' : 'dialog') };
     }
-    var d = document.querySelector('[data-testid="detail-code"]');
-    if (d) return { code: String(d.textContent || '').trim(), name: codeName(String(d.textContent || '').trim()) };
+    var node = document.querySelector('[data-testid="detail-code"]');
+    if (node) return { code: String(node.textContent || '').trim(), name: codeName(String(node.textContent || '').trim()) };
     var t = document.querySelector('[data-testid="screen-code"]');
     if (t) return { code: String(t.textContent || '').trim(), name: codeName(String(t.textContent || '').trim()) };
     return null;
@@ -4628,7 +4628,7 @@ function testBehindOf(code) {
   var rows = A.rows || [];
   var drawn = (A.drawnBy || {})[code] || '';
   var files = [];
-  String(drawn).split(',').forEach(function (p) { p = p.trim(); if (p) files.push(p); });
+  String(drawn).split(',').forEach(function (item) { item = item.trim(); if (item) files.push(item); });
 
   /**
    * ⭐ WHAT IT ACTUALLY CALLED — the same forty-call log the Speed area reads, no second measurement. But
@@ -4646,10 +4646,10 @@ function testBehindOf(code) {
   try { if (typeof navScreenKey === 'function') here = navScreenKey(); } catch (_) {}
   var gen = window.CBGEN || 0;
   var routes = [], seen = {};
-  (window.CBCALLS || []).forEach(function (c) {
-    if (here && c.scr && c.scr !== here) return;
-    if (gen && c.gen && c.gen !== gen) return;   /* this visit, not every visit ever made */
-    var m = String(c.path || '').match(/^\/api\/([a-z0-9-]+)/i);
+  (window.CBCALLS || []).forEach(function (item) {
+    if (here && item.scr && item.scr !== here) return;
+    if (gen && item.gen && item.gen !== gen) return;   /* this visit, not every visit ever made */
+    var m = String(item.path || '').match(/^\/api\/([a-z0-9-]+)/i);
     if (!m || m[1].toLowerCase() === 'testing') return;
     var f = 'chitbridge-api/routes/' + m[1].toLowerCase() + '.js';
     if (!seen[f]) { seen[f] = 1; routes.push(f); }
@@ -4675,15 +4675,15 @@ function testBehindOf(code) {
    * ⭐ `uses` is a static require edge recorded by assets.cjs — a fact in the source, not a resemblance.
    */
   var mods = [];
-  all.forEach(function (p) {
-    var a = (rows.filter(function (r) { return r.path === p; })[0] || {});
+  all.forEach(function (item) {
+    var a = (rows.filter(function (r) { return r.path === item; })[0] || {});
     (a.uses || []).forEach(function (u) { if (mods.indexOf(u) < 0) mods.push(u); });
   });
 
   var relSet = {}, stemSet = {};
-  all.forEach(function (p) { relSet[rel(p)] = 1; stemSet[stem(p)] = 1; });
+  all.forEach(function (item) { relSet[rel(item)] = 1; stemSet[stem(item)] = 1; });
   var modSet = {};
-  mods.forEach(function (u) { modSet[u] = 1; });
+  mods.forEach(function (item) { modSet[item] = 1; });
 
   /**
    * ⭐⭐ EVERY ROW CARRIES THE REASON IT IS THERE. A list of forty-three engine cases under a screen is only
@@ -4691,19 +4691,19 @@ function testBehindOf(code) {
    * which routes/catalogue.js requires" is checkable; a bare list is something to take on faith.
    */
   var linked = [], named = [];
-  (CBTEST.cases || []).forEach(function (c) {
-    if (c.menu) return;                       /* a screen case belongs on the Cases tab, not underneath it */
-    var key = String(c.case_key || '');
-    var sub = c.subjects || [];
+  (CBTEST.cases || []).forEach(function (item) {
+    if (item.menu) return;                       /* a screen case belongs on the Cases tab, not underneath it */
+    var key = String(item.case_key || '');
+    var list = item.subjects || [];
     var hit = null;
-    sub.forEach(function (x) { if (!hit && relSet[String(x)]) hit = String(x); });
-    if (hit) { linked.push({ c: c, why: 'tests ' + hit }); return; }
-    sub.forEach(function (x) { if (!hit && modSet[String(x)]) hit = String(x); });
-    if (hit) { linked.push({ c: c, why: 'tests ' + hit + ', which this screen\u2019s code requires' }); return; }
-    if (relSet[rel(key)] || all.indexOf(key) >= 0) { linked.push({ c: c, why: 'is that file' }); return; }
+    list.forEach(function (x) { if (!hit && relSet[String(x)]) hit = String(x); });
+    if (hit) { linked.push({ c: item, why: 'tests ' + hit }); return; }
+    list.forEach(function (x) { if (!hit && modSet[String(x)]) hit = String(x); });
+    if (hit) { linked.push({ c: item, why: 'tests ' + hit + ', which this screen\u2019s code requires' }); return; }
+    if (relSet[rel(key)] || all.indexOf(key) >= 0) { linked.push({ c: item, why: 'is that file' }); return; }
     var k = key.toLowerCase();
     var w = Object.keys(stemSet).filter(function (x) { return x.length > 4 && k.indexOf(x) >= 0; })[0];
-    if (w) named.push({ c: c, why: 'named after ' + w });
+    if (w) named.push({ c: item, why: 'named after ' + w });
   });
   return { files: files, routes: routes, mods: mods, linked: linked, named: named,
            booting: (window.CBGEN || 0) <= 1 };
@@ -4764,13 +4764,13 @@ function testBehindCount(code) {
 function testScrControls(code) {
   try {
     var rows = (window.CBSCREENS && CBSCREENS.rows) || [];
-    var me = rows.filter(function (r) { return r.code === code; })[0];
+    var me = rows.filter(function (item) { return item.code === code; })[0];
     if (!me) return [];
     var want = 'Control › ' + me.path + ' • ';
-    return rows.filter(function (r) {
-      return r.group === 'Control' && String(r.path).indexOf(want) === 0;
-    }).map(function (r) {
-      return { code: r.code, label: String(r.screen).split(' • ').pop() };
+    return rows.filter(function (item) {
+      return item.group === 'Control' && String(item.path).indexOf(want) === 0;
+    }).map(function (item) {
+      return { code: item.code, label: String(item.screen).split(' • ').pop() };
     });
   } catch (_) { return []; }
 }
@@ -4778,10 +4778,10 @@ function testScrControls(code) {
 /** every case written on this screen, keyed by the control it names — '' for the ones about the screen itself */
 function testCtlCases(code) {
   var by = {};
-  (CBTEST.cases || []).concat(CBTEST.closedCases || []).forEach(function (c) {
-    if (testScrOf(c) !== code) return;
-    var k = c.control_code || '';
-    (by[k] = by[k] || []).push(c);
+  (CBTEST.cases || []).concat(CBTEST.closedCases || []).forEach(function (item) {
+    if (testScrOf(item) !== code) return;
+    var k = item.control_code || '';
+    (by[k] = by[k] || []).push(item);
   });
   return by;
 }
@@ -4809,15 +4809,15 @@ function testCoverCase(code, ctl, label) {
   CBTEST.caseArea = 'write';
   try { localStorage.setItem('cb_case_area', 'write'); } catch (_) {}
   screenCasesPaint();
-  var put = function (id, v) {
+  var node = function (id, v) {
     var el = document.getElementById(id);
     if (!el) return;
     el.value = v;
     try { if (el.tagName === 'TEXTAREA') testGrow(el); } catch (_) {}
   };
-  put('wcTitle', label + ' on ' + code + ' ' + name + ' must do what it says.');
-  put('wcDo', 'Press ' + label + ' on ' + code + ' ' + name + '.');
-  put('wcSee', '');
+  node('wcTitle', label + ' on ' + code + ' ' + name + ' must do what it says.');
+  node('wcDo', 'Press ' + label + ' on ' + code + ' ' + name + '.');
+  node('wcSee', '');
   /* ⚠ the select is set AFTER the paint, like every other prefill — a repaint restores the empty value */
   try { var sel = document.getElementById('wcCtl'); if (sel) sel.value = ctl; } catch (_) {}
   try { document.getElementById('wcSee').focus(); } catch (_) {}
@@ -4912,11 +4912,11 @@ function testCoverRaise(code) {
   if (!CBTEST.writeFor) CBTEST.writeFor = { code: code, name: name };
   screenCasesPaint();
   /* ⚠ after the paint, or the repaint restores the empty values over these */
-  var put = function (id, v) { var el = document.getElementById(id); if (el) el.value = v; if (el) testGrow(el); };
-  put('wcTitle', 'The code behind ' + code + ' ' + name + ' must be covered by automated tests.');
-  put('wcDo', 'Open ' + code + ' ' + name + ' with test mode on and read the Coverage tab.');
-  put('wcSee', 'Every file that draws or serves this screen is named by at least one automated test.');
-  put('wcGot', n
+  var node = function (id, v) { var el = document.getElementById(id); if (el) el.value = v; if (el) testGrow(el); };
+  node('wcTitle', 'The code behind ' + code + ' ' + name + ' must be covered by automated tests.');
+  node('wcDo', 'Open ' + code + ' ' + name + ' with test mode on and read the Coverage tab.');
+  node('wcSee', 'Every file that draws or serves this screen is named by at least one automated test.');
+  node('wcGot', n
     ? (n + ' test(s) name this code, but the files it actually uses are '
       + (b.files || []).concat(b.routes || []).join(', ') + '.')
     : ('Nothing declares itself a test of ' + ((b.files || []).concat(b.routes || []).join(', ')
@@ -4937,7 +4937,7 @@ function testBehindHTML(code) {
   var A = (window.CBASSETS || {});
   var rows = A.rows || [];
   var b = testBehindOf(code);
-  var asset = function (p) { return rows.filter(function (r) { return r.path === p; })[0] || null; };
+  var asset = function (p) { return rows.filter(function (item) { return item.path === p; })[0] || null; };
 
   var lab = testLab;
   var quiet = function (t) { return '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);padding:2px 0">'
@@ -4957,9 +4957,9 @@ function testBehindHTML(code) {
   /* ⭐ the verdict is the whole point of the ask — one badge, the same three colours as everywhere else */
   var caseRow = function (x, warn) {
     var c = x.c, l = (CBTEST.last || {})[c.case_key];
-    var st = l ? String(l.status) : '';
-    var col = st === 'pass' ? 'var(--ok-2,#1B7F4B)' : st === 'fail' ? 'var(--disp,#B3261E)'
-            : st ? 'var(--warn-2,#8a6d00)' : 'var(--grey-4,#646A72)';
+    var text = l ? String(l.status) : '';
+    var col = text === 'pass' ? 'var(--ok-2,#1B7F4B)' : text === 'fail' ? 'var(--disp,#B3261E)'
+            : text ? 'var(--warn-2,#8a6d00)' : 'var(--grey-4,#646A72)';
     return '<div style="display:flex;gap:8px;align-items:baseline;padding:4px 0;'
       +   'border-top:1px solid var(--line,#efece4)">'
       + '<span style="flex:1 1 auto;min-width:0">'
@@ -4973,7 +4973,7 @@ function testBehindHTML(code) {
       +     esc(x.why) + '</span>'
       + '</span>'
       + '<span style="font-size:var(--fs-1);font-weight:700;flex:0 0 auto;color:' + col + '">'
-      +   (l ? esc(st.toUpperCase()) : 'not run') + '</span>'
+      +   (l ? esc(text.toUpperCase()) : 'not run') + '</span>'
       + '</div>';
   };
 
@@ -5005,8 +5005,8 @@ function testBehindHTML(code) {
   var ctls = testScrControls(code);
   var byCtl = testCtlCases(code);
   var here = (CBTEST.cases || []).concat(CBTEST.closedCases || [])
-    .filter(function (c) { return testScrOf(c) === code; });
-  var red = here.filter(function (c) { return testCaseMark(c)[0] === 'failed'; }).length;
+    .filter(function (item) { return testScrOf(item) === code; });
+  var red = here.filter(function (item) { return testCaseMark(item)[0] === 'failed'; }).length;
   var todo = ctls.filter(function (x) { return !(byCtl[x.code] || []).length; });
   var done = ctls.filter(function (x) { return (byCtl[x.code] || []).length; });
 
@@ -5064,12 +5064,12 @@ function testBehindHTML(code) {
         + 'last run said</button>';
       if (openDone) {
         h += done.map(function (x) {
-          return (byCtl[x.code] || []).map(function (c) {
-            var m = testCaseMark(c);
+          return (byCtl[x.code] || []).map(function (item) {
+            var m = testCaseMark(item);
             return '<div style="display:flex;gap:8px;align-items:baseline;padding:4px 0;'
               + 'border-top:1px solid var(--line,#e7e3d8)">'
               + '<code style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + esc(x.code) + '</code>'
-              + '<span style="flex:1 1 auto;min-width:0;font-size:var(--fs-2)">' + esc(c.title || '')
+              + '<span style="flex:1 1 auto;min-width:0;font-size:var(--fs-2)">' + esc(item.title || '')
               + '</span>'
               + '<span style="font-size:var(--fs-1);font-weight:700;color:' + m[1] + '">' + m[0] + '</span>'
               + '</div>';
@@ -5165,16 +5165,16 @@ function testBehindHTML(code) {
                 ['pass', 'Passed', 'var(--ok-2,#1B7F4B)'],
                 ['other', 'Blocked', 'var(--grey-2,#545A61)']];
     h += '<div style="display:flex;gap:5px;flex-wrap:wrap;margin:2px 0 7px">'
-      + TABS.filter(function (t) { return buckets[t[0]].length; }).map(function (t) {
-          var on = tab === t[0];
+      + TABS.filter(function (item) { return buckets[item[0]].length; }).map(function (item) {
+          var on = tab === item[0];
           /* ⭐ THE NUMBER IS THE TAB, big, above the word — a count you can press, which is what was asked */
-          return '<button onclick="testCovSetTab(\'' + t[0] + '\')" style="font:inherit;cursor:pointer;'
-            + 'border:1px solid ' + (on ? t[2] : 'var(--line,#e7e3d8)') + ';border-radius:9px;'
+          return '<button onclick="testCovSetTab(\'' + item[0] + '\')" style="font:inherit;cursor:pointer;'
+            + 'border:1px solid ' + (on ? item[2] : 'var(--line,#e7e3d8)') + ';border-radius:9px;'
             + 'padding:5px 13px;line-height:1.15;text-align:center;'
             + 'background:' + (on ? 'var(--card,#fff)' : 'transparent') + '">'
-            + '<b style="display:block;font-size:var(--fs-4);color:' + t[2] + '">'
-            + buckets[t[0]].length + '</b>'
-            + '<span style="font-size:var(--fs-1);color:var(--grey-2)">' + t[1] + '</span></button>';
+            + '<b style="display:block;font-size:var(--fs-4);color:' + item[2] + '">'
+            + buckets[item[0]].length + '</b>'
+            + '<span style="font-size:var(--fs-1);color:var(--grey-2)">' + item[1] + '</span></button>';
         }).join('')
       + '</div>';
 
@@ -5199,7 +5199,7 @@ function testBehindHTML(code) {
   if (b.named.length) {
     h += lab('Named after that code \u00b7 ' + b.named.length + ' <span title="Matched by file name, not a declared link \u2014 leads, counted nowhere above"'
       + ' style="font-weight:400;color:var(--warn-2,#8a6100)">(\u26a0 leads)</span>');
-    h += b.named.slice(0, 25).map(function (c) { return caseRow(c, true); }).join('');
+    h += b.named.slice(0, 25).map(function (item) { return caseRow(item, true); }).join('');
     if (b.named.length > 25) h += quiet('\u2026 and ' + (b.named.length - 25) + ' more.');
   }
   }   /* ── end of the code-underneath fold: the automated tests are part of it ── */
@@ -5248,15 +5248,15 @@ function testVisitSave(code, gen, mine) {
     var all = testVisitsGet();
     var list = all[code] || [];
     var worst = {};
-    mine.forEach(function (c) {
-      var k = c.key || (c.m + ' ' + String(c.path || '').split('?')[0]);
-      if (!worst[k] || (c.ms || 0) > worst[k]) worst[k] = (c.ms || 0);
+    mine.forEach(function (item) {
+      var k = item.key || (item.m + ' ' + String(item.path || '').split('?')[0]);
+      if (!worst[k] || (item.ms || 0) > worst[k]) worst[k] = (item.ms || 0);
     });
     var row = {
       gen: gen,
       at: (list.filter(function (x) { return x.gen === gen; })[0] || {}).at || Date.now(),
       n: mine.length,
-      ms: mine.reduce(function (a, c) { return a + (c.ms || 0); }, 0),
+      ms: mine.reduce(function (total, item) { return total + (item.ms || 0); }, 0),
       worst: worst,
     };
     list = list.filter(function (x) { return x.gen !== gen; });
@@ -5283,17 +5283,17 @@ function testSlowerThanBefore(history, gen) {
   var past = (history || []).filter(function (x) { return x.gen !== gen; });
   if (!now || past.length < 2) return [];
   var out = [];
-  Object.keys(now.worst || {}).forEach(function (k) {
+  Object.keys(now.worst || {}).forEach(function (item) {
     var best = null;
     past.forEach(function (p) {
-      var v = (p.worst || {})[k];
+      var v = (p.worst || {})[item];
       if (v != null && (best === null || v < best)) best = v;
     });
     if (best === null || best < 40) return;
-    var mine = now.worst[k];
-    if (mine >= best * 2 && mine - best >= 300) out.push({ key: k, was: best, now: mine });
+    var mine = now.worst[item];
+    if (mine >= best * 2 && mine - best >= 300) out.push({ key: item, was: best, now: mine });
   });
-  return out.sort(function (a, b) { return (b.now - b.was) - (a.now - a.was); });
+  return out.sort(function (first, second) { return (second.now - second.was) - (first.now - first.was); });
 }
 
 /**
@@ -5344,11 +5344,11 @@ function testVisitTouch(code) {
     if (!CBTEST.on || !code) return;
     var gen = window.CBGEN || 0;
     if (!gen) return;
-    var mine = (window.CBCALLS || []).filter(function (c) {
-      return !/^\/api\/testing/i.test(String(c.path || '')) && (!c.gen || c.gen === gen);
+    var mine = (window.CBCALLS || []).filter(function (item) {
+      return !/^\/api\/testing/i.test(String(item.path || '')) && (!item.gen || item.gen === gen);
     });
     if (!mine.length) return;
-    var sig = code + ':' + gen + ':' + mine.length + ':' + mine.reduce(function (a, c) { return a + (c.ms || 0); }, 0);
+    var sig = code + ':' + gen + ':' + mine.length + ':' + mine.reduce(function (total, item) { return total + (item.ms || 0); }, 0);
     if (CBTEST._visitSig === sig) return;
     CBTEST._visitSig = sig;
     testVisitSave(code, gen, mine);
@@ -5367,14 +5367,14 @@ function testDiagByScreen() {
   try { all = testVisitsGet(); } catch (_) { return ''; }
   var codes = Object.keys(all || {});
   if (codes.length < 2) return '';   /* one screen is not a comparison */
-  var rows = codes.map(function (c) {
-    var v = all[c] || [];
+  var rows = codes.map(function (item) {
+    var list = all[item] || [];
     var worst = 0, last = null, calls = 0;
-    v.forEach(function (x) { if ((x.ms || 0) > worst) { worst = x.ms || 0; calls = x.n || 0; } });
-    last = v[v.length - 1] || null;
-    return { code: c, name: (typeof codeName === 'function' && codeName(c)) || '', visits: v.length,
+    list.forEach(function (x) { if ((x.ms || 0) > worst) { worst = x.ms || 0; calls = x.n || 0; } });
+    last = list[list.length - 1] || null;
+    return { code: item, name: (typeof codeName === 'function' && codeName(item)) || '', visits: list.length,
              worst: worst, worstCalls: calls, last: last ? last.ms : null };
-  }).sort(function (a, b) { return b.worst - a.worst; });
+  }).sort(function (first, second) { return second.worst - first.worst; });
 
   var h = testLab('Every screen you have measured');
   h += '<table style="width:100%;border-collapse:collapse;font-size:var(--fs-2)">'
@@ -5383,19 +5383,19 @@ function testDiagByScreen() {
     + '<th style="text-align:end;padding:3px 6px">Visits</th>'
     + '<th style="text-align:end;padding:3px 6px">Worst</th>'
     + '<th style="text-align:end;padding:3px 6px">Last</th></tr>';
-  h += rows.map(function (r) {
-    var hot = r.worst > 8000;
+  h += rows.map(function (item) {
+    var hot = item.worst > 8000;
     return '<tr style="border-top:1px solid var(--line,#efece4)'
-      + (r.code === CBTEST.popupFor ? ';background:var(--paper,#faf8f3)' : '') + '">'
+      + (item.code === CBTEST.popupFor ? ';background:var(--paper,#faf8f3)' : '') + '">'
       + '<td style="padding:4px 6px 4px 0"><code style="font-size:var(--fs-1);color:var(--grey-2)">'
-      +   esc(r.code) + '</code> ' + esc(r.name)
-      +   (r.worstCalls ? ' <span style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + r.worstCalls
+      +   esc(item.code) + '</code> ' + esc(item.name)
+      +   (item.worstCalls ? ' <span style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + item.worstCalls
         + ' calls</span>' : '') + '</td>'
-      + '<td style="text-align:end;padding:4px 6px">' + r.visits + '</td>'
+      + '<td style="text-align:end;padding:4px 6px">' + item.visits + '</td>'
       + '<td style="text-align:end;padding:4px 6px;font-weight:' + (hot ? '700' : '400')
-      +   ';color:' + (hot ? 'var(--disp,#B3261E)' : 'inherit') + '">' + r.worst + '</td>'
+      +   ';color:' + (hot ? 'var(--disp,#B3261E)' : 'inherit') + '">' + item.worst + '</td>'
       + '<td style="text-align:end;padding:4px 6px;color:var(--grey-2)">'
-      +   (r.last == null ? '\u2014' : r.last) + '</td></tr>';
+      +   (item.last == null ? '\u2014' : item.last) + '</td></tr>';
   }).join('');
   return h + '</table>';
 }
@@ -5424,7 +5424,7 @@ function testDiagClear(scope) {
   try {
     var all = testVisitsGet();
     if (everything) {
-      Object.keys(all).forEach(function (k) { hadVisits += ((all[k] || []).length) || 0; });
+      Object.keys(all).forEach(function (item) { hadVisits += ((all[item] || []).length) || 0; });
       localStorage.setItem(testVisitsKey(), '{}');
     } else {
       hadVisits = ((all[code] || []).length) || 0;
@@ -5454,8 +5454,8 @@ function testDiagClear(scope) {
 function testDiagHTML() {
   /* ⚠ the tester’s own tool is not part of what the screen cost — reading the board and saving a verdict
      are the measurement, and a measurement that counts itself is not one */
-  var all = (window.CBCALLS || []).filter(function (c) {
-    return !/^\/api\/testing/i.test(String(c.path || ''));
+  var all = (window.CBCALLS || []).filter(function (item) {
+    return !/^\/api\/testing/i.test(String(item.path || ''));
   });
   if (!all.length) {
     if (testDiagCleared()) {
@@ -5485,12 +5485,12 @@ function testDiagHTML() {
    * the tester arrived on this screen, which is exactly what "what this screen cost" means.
    */
   var gen = window.CBGEN || 0;
-  var mine = gen ? all.filter(function (c) { return !c.gen || c.gen === gen; }) : all.slice();
+  var mine = gen ? all.filter(function (item) { return !item.gen || item.gen === gen; }) : all.slice();
   if (!mine.length) mine = all.slice(0, 1);
 
-  var total = mine.reduce(function (a, c) { return a + (c.ms || 0); }, 0);
-  var slow = mine.slice().sort(function (a, b) { return (b.ms || 0) - (a.ms || 0); })[0] || {};
-  var bad = mine.filter(function (c) { return (c.status || 0) >= 400; });
+  var total = mine.reduce(function (total, item) { return total + (item.ms || 0); }, 0);
+  var slow = mine.slice().sort(function (first, second) { return (second.ms || 0) - (first.ms || 0); })[0] || {};
+  var bad = mine.filter(function (item) { return (item.status || 0) >= 400; });
 
   /* ⭐ the reading in words first: a table of numbers is a thing to interpret, a sentence is a thing to act on */
   /**
@@ -5500,13 +5500,13 @@ function testDiagHTML() {
    * codebase actually has — measured on the Catalogue 2026-09-12: nine calls, 4419 ms, five of them the same
    * list fetched five times. A person scanning a table misses that; a sentence cannot be missed.
    */
-  var seenN = {}, rep = [];
-  mine.forEach(function (c) {
-    var k = c.key || (c.m + ' ' + String(c.path || '').split('?')[0]);
+  var seenN = {}, list = [];
+  mine.forEach(function (item) {
+    var k = item.key || (item.m + ' ' + String(item.path || '').split('?')[0]);
     seenN[k] = (seenN[k] || 0) + 1;
   });
-  Object.keys(seenN).forEach(function (k) {
-    if (seenN[k] > 1) rep.push(k + ' \u00d7' + seenN[k]);
+  Object.keys(seenN).forEach(function (item) {
+    if (seenN[item] > 1) list.push(item + ' \u00d7' + seenN[item]);
   });
 
   /* ⭐ the window, in words and on a clock, because a count with no window is not a measurement */
@@ -5516,9 +5516,9 @@ function testDiagHTML() {
   var clock = began ? began.toTimeString().slice(0, 8) : null;
 
   /* the split the server makes possible: time in the database, and time getting there and back */
-  var srvKnown = mine.filter(function (c) { return c.srv != null; });
-  var srvMs = srvKnown.reduce(function (a, c) { return a + (c.srv || 0); }, 0);
-  var dbTrips = mine.reduce(function (a, c) { return a + (c.trips || 0); }, 0);
+  var srvKnown = mine.filter(function (item) { return item.srv != null; });
+  var srvMs = srvKnown.reduce(function (total, item) { return total + (item.srv || 0); }, 0);
+  var dbTrips = mine.reduce(function (total, item) { return total + (item.trips || 0); }, 0);
 
   /* ⭐ the reset sits ABOVE the numbers: a clear button found under a page of figures is found after
      you have already believed them */
@@ -5549,8 +5549,8 @@ function testDiagHTML() {
    * this one.
    */
   var findings = [];
-  if (rep.length) {
-    findings.push('<b>The same call, repeated:</b> ' + esc(rep.join(' · '))
+  if (list.length) {
+    findings.push('<b>The same call, repeated:</b> ' + esc(list.join(' · '))
       + ' — that is the thing to fix, not the milliseconds.');
   }
   if (bad.length) findings.push('<b>' + bad.length + ' call(s) failed.</b> A failed call is not a slow call.');
@@ -5578,12 +5578,12 @@ function testDiagHTML() {
    */
   try {
     var drop = window.CBDROP || {};
-    var dk = Object.keys(drop).filter(function (k) { return (drop[k] || []).length; });
+    var dk = Object.keys(drop).filter(function (item) { return (drop[item] || []).length; });
     if (dk.length) {
       h += testSec('Dropped by the response envelope', '',
         'These arrived from the server and did not survive unwrap() — harmless unless something needed them');
-      h += testNotes(dk.slice(0, 12).map(function (k) {
-        return '<code>' + esc(k) + '</code> — ' + esc(drop[k].join(', '));
+      h += testNotes(dk.slice(0, 12).map(function (item) {
+        return '<code>' + esc(item) + '</code> — ' + esc(drop[item].join(', '));
       }), 'warn');
     }
   } catch (_) {}
@@ -5599,29 +5599,29 @@ function testDiagHTML() {
     + (srvKnown.length ? '<th style="text-align:end;padding:3px 6px" title="time inside the server, and '
         + 'the database round trips it made">server</th>' : '')
     + '<th style="text-align:end;padding:3px 6px">Status</th></tr>';
-  h += mine.map(function (c) {
-    var ok = (c.status || 0) < 400;
+  h += mine.map(function (item) {
+    var ok = (item.status || 0) < 400;
     return '<tr style="border-top:1px solid var(--line,#efece4)">'
       + '<td style="padding:4px 6px 4px 0">'
-      +   '<button onclick="testCallOpen(' + "'" + testJs(c.rid || '') + "'" + ')" '
+      +   '<button onclick="testCallOpen(' + "'" + testJs(item.rid || '') + "'" + ')" '
       +     'title="See the real call" style="font:inherit;font-size:var(--fs-1);background:none;'
       +     'border:0;padding:0;cursor:pointer;color:var(--grey-2);text-decoration:underline;'
-      +     'text-underline-offset:2px"><code>' + esc(c.key) + '</code></button></td>'
+      +     'text-underline-offset:2px"><code>' + esc(item.key) + '</code></button></td>'
       + '<td style="padding:4px 6px;font-size:var(--fs-1);color:var(--grey-2);max-width:16em;'
-      +   'overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(c.path || '') + '">'
-      +   esc(c.m + ' ' + (c.path || '')) + '</td>'
-      + '<td style="text-align:end;padding:4px 6px;font-weight:' + ((c.ms || 0) > 1500 ? '700' : '400')
-      +   ';color:' + ((c.ms || 0) > 1500 ? 'var(--disp,#B3261E)' : 'inherit') + '">' + (c.ms || 0) + '</td>'
+      +   'overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(item.path || '') + '">'
+      +   esc(item.m + ' ' + (item.path || '')) + '</td>'
+      + '<td style="text-align:end;padding:4px 6px;font-weight:' + ((item.ms || 0) > 1500 ? '700' : '400')
+      +   ';color:' + ((item.ms || 0) > 1500 ? 'var(--disp,#B3261E)' : 'inherit') + '">' + (item.ms || 0) + '</td>'
       + (srvKnown.length
         ? '<td style="text-align:end;padding:4px 6px;color:var(--grey-2);font-size:var(--fs-1)">'
-          + (c.srv == null ? '\u2014' : c.srv + (c.trips ? ' / ' + c.trips + ' trip' : '')) + '</td>'
+          + (item.srv == null ? '\u2014' : item.srv + (item.trips ? ' / ' + item.trips + ' trip' : '')) + '</td>'
         : '')
       + '<td style="text-align:end;padding:4px 6px;color:'
-      +   (ok ? 'var(--ok-2,#1B7F4B)' : 'var(--disp,#B3261E)') + '">' + (c.status || '\u2014') + '</td>'
+      +   (ok ? 'var(--ok-2,#1B7F4B)' : 'var(--disp,#B3261E)') + '">' + (item.status || '\u2014') + '</td>'
       + '</tr>'
       /* ⭐ the detail lands UNDER its own row, spanning the table, so the reading keeps its place */
-      + (CBTEST.openCall && CBTEST.openCall === c.rid
-        ? '<tr><td colspan="' + (srvKnown.length ? 5 : 4) + '">' + testCallDetailHTML(c) + '</td></tr>'
+      + (CBTEST.openCall && CBTEST.openCall === item.rid
+        ? '<tr><td colspan="' + (srvKnown.length ? 5 : 4) + '">' + testCallDetailHTML(item) + '</td></tr>'
         : '');
   }).join('');
   /* ⚠ the correlation id is the thing that joins this to the server's own line — quoted, never invented */
@@ -5637,9 +5637,9 @@ function testDiagHTML() {
   if (past.length) {
     h += testLab('Earlier visits to this screen')
       + '<div style="font-size:var(--fs-1);color:var(--grey-2)">'
-      + past.map(function (p) {
-          return '<span style="white-space:nowrap">' + new Date(p.at).toTimeString().slice(0, 5)
-            + ' \u00b7 <b>' + p.ms + ' ms</b> (' + p.n + ')</span>';
+      + past.map(function (item) {
+          return '<span style="white-space:nowrap">' + new Date(item.at).toTimeString().slice(0, 5)
+            + ' \u00b7 <b>' + item.ms + ' ms</b> (' + item.n + ')</span>';
         }).join(' &nbsp; ')
       + '</div>';
   }
@@ -5787,10 +5787,10 @@ function testCallDetailHTML(c) {
  */
 function testDumpBuild() {
   var gen = window.CBGEN || 0;
-  var all = (window.CBCALLS || []).filter(function (c) {
-    return !/^\/api\/testing/i.test(String(c.path || ''));
+  var all = (window.CBCALLS || []).filter(function (item) {
+    return !/^\/api\/testing/i.test(String(item.path || ''));
   });
-  var mine = gen ? all.filter(function (c) { return !c.gen || c.gen === gen; }) : all.slice();
+  var mine = gen ? all.filter(function (item) { return !item.gen || item.gen === gen; }) : all.slice();
   var env = (typeof testEnv === 'function') ? testEnv() : {};
   var ui = {};
   try {
@@ -5807,10 +5807,10 @@ function testDumpBuild() {
     visit: gen,
     app: ui,
     errors: (window.CBERRS || []).slice(0, 20),
-    calls: mine.map(function (c) {
-      return { at: c.at ? new Date(c.at).toISOString() : null, key: c.key, method: c.m, path: c.path,
-        params: c.q || null, sent: c.sent || null, status: c.status, ms: c.ms,
-        server_ms: c.srv, db_trips: c.trips, correlation_id: c.rid, came_back: c.body || null };
+    calls: mine.map(function (item) {
+      return { at: item.at ? new Date(item.at).toISOString() : null, key: item.key, method: item.m, path: item.path,
+        params: item.q || null, sent: item.sent || null, status: item.status, ms: item.ms,
+        server_ms: item.srv, db_trips: item.trips, correlation_id: item.rid, came_back: item.body || null };
     }),
   };
 }
@@ -5820,11 +5820,11 @@ function testDumpSave() {
   try {
     var blob = new Blob([JSON.stringify(testDumpBuild(), null, 1)], { type: 'application/json' });
     var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url;
-    a.download = 'snapshot-' + (CBTEST.popupFor || 'screen') + '-'
+    var node = document.createElement('a');
+    node.href = url;
+    node.download = 'snapshot-' + (CBTEST.popupFor || 'screen') + '-'
       + new Date().toISOString().slice(0, 19).replace(/[:T]/g, '') + '.json';
-    document.body.appendChild(a); a.click(); a.remove();
+    document.body.appendChild(node); node.click(); node.remove();
     setTimeout(function () { try { URL.revokeObjectURL(url); } catch (_) {} }, 30000);
     if (typeof toast === 'function') toast('Snapshot saved \u2014 attach it to the incident.');
   } catch (e) { if (typeof toast === 'function') toast('Could not build the snapshot.'); }
@@ -5936,7 +5936,7 @@ function testNotes(list, tone) {
   return '<ul style="margin:6px 0 0;padding:7px 9px 7px 26px;list-style:disc;'
     + 'border-inline-start:3px solid ' + t[0] + ';background:' + t[1] + ';color:' + t[2] + ';'
     + 'border-radius:0 8px 8px 0;font-size:var(--fs-1);line-height:1.6">'
-    + rows.map(function (r) { return '<li style="margin:1px 0">' + r + '</li>'; }).join('')
+    + rows.map(function (item) { return '<li style="margin:1px 0">' + item + '</li>'; }).join('')
     + '</ul>';
 }
 
@@ -6016,14 +6016,14 @@ function testDiagBarHTML() {
 function testTraceLoad() {
   if (CBTEST._traceReq) return;
   CBTEST._traceReq = 1;
-  api('testTraceGet').then(function (r) {
+  api('testTraceGet').then(function (reply) {
     CBTEST._traceReq = 0;
     /**
      * ⚠️ THE SERVER SENDS SECONDS REMAINING, WHICH IS TRUE FOR ONE INSTANT. Held as a duration it stops
      * being true the moment it is held, and the chip would go on saying "10 minutes left" an hour later.
      * ⭐ Turned into a DEADLINE here, once, and every reader subtracts from the clock instead.
      */
-    CBTEST.trace = r || { on: false };
+    CBTEST.trace = reply || { on: false };
     if (CBTEST.trace.on) CBTEST.trace.until = Date.now() + ((CBTEST.trace.seconds || 0) * 1000);
     if (CBTEST.popupFor) screenCasesPaint();
   }).catch(function () { CBTEST._traceReq = 0; });
@@ -6031,14 +6031,14 @@ function testTraceLoad() {
 
 function testTraceSet(minutes) {
   var body = minutes ? { minutes: minutes } : { off: true };
-  api('testTraceSet', { body: body }).then(function (r) {
-    CBTEST.trace = r || { on: false };
+  api('testTraceSet', { body: body }).then(function (reply) {
+    CBTEST.trace = reply || { on: false };
     if (CBTEST.trace.on) {
       CBTEST.trace.until = Date.now()
         + (((CBTEST.trace.seconds != null) ? CBTEST.trace.seconds : (CBTEST.trace.minutes || 10) * 60) * 1000);
     }
     if (typeof toast === 'function') {
-      toast(r && r.on ? ('Tracing your calls for ' + (r.minutes || 10) + ' minutes.')
+      toast(reply && reply.on ? ('Tracing your calls for ' + (reply.minutes || 10) + ' minutes.')
                       : 'Tracing off.');
     }
     if (CBTEST.popupFor) screenCasesPaint();
@@ -6095,9 +6095,9 @@ function testTraceChip() {
 
   return '<span data-testid="trace-off-now" style="' + flat + '" '
     + 'title="Show server time and database trips per call; yours only, stops by itself">\u23f1 Timings off</span>'
-    + [10, 15, 30].map(function (m) {
-        return '<button data-testid="trace-' + m + '" onclick="testTraceSet(' + m + ')" style="' + chip
-          + 'background:var(--neutral-tint,#f2efe6);color:var(--grey-2,#545A61)">' + m + ' min</button>';
+    + [10, 15, 30].map(function (item) {
+        return '<button data-testid="trace-' + item + '" onclick="testTraceSet(' + item + ')" style="' + chip
+          + 'background:var(--neutral-tint,#f2efe6);color:var(--grey-2,#545A61)">' + item + ' min</button>';
       }).join('');
 }
 
@@ -6126,16 +6126,16 @@ function testTraceHTML() {
   }
   return '<div style="margin-top:9px;font-size:var(--fs-1);color:var(--grey-2)">'
     + '<b title="Show server time and database trips per call; yours only, stops by itself">\u23f1 Timings off</b> '
-    + [10, 15, 30].map(function (m) {
-        return '<button onclick="testTraceSet(' + m + ')" style="' + btn + ';margin-top:5px">'
-          + m + ' min</button>';
+    + [10, 15, 30].map(function (item) {
+        return '<button onclick="testTraceSet(' + item + ')" style="' + btn + ';margin-top:5px">'
+          + item + ' min</button>';
       }).join('')
     + '</div>';
 }
 
 function testDiagLayersHTML(mine) {
-  var seen = mine.filter(function (c) { return c.rt && !c.rt.blocked; });
-  var blocked = mine.some(function (c) { return c.rt && c.rt.blocked; });
+  var seen = mine.filter(function (item) { return item.rt && !item.rt.blocked; });
+  var blocked = mine.some(function (item) { return item.rt && item.rt.blocked; });
   if (!seen.length) {
     return '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);margin-top:10px">'
       + (blocked
@@ -6145,11 +6145,11 @@ function testDiagLayersHTML(mine) {
         : 'No per-layer timing recorded for this visit yet.') + '</div>';
   }
 
-  var sum = function (f) { return seen.reduce(function (a, c) { return a + (c.rt[f] || 0); }, 0); };
+  var sum = function (f) { return seen.reduce(function (total, item) { return total + (item.rt[f] || 0); }, 0); };
   var setup = sum('dns') + sum('tcp') + sum('tls');
   var wait = sum('wait');
   var down = sum('down');
-  var srv = seen.reduce(function (a, c) { return a + (c.srv || 0); }, 0);
+  var srv = seen.reduce(function (total, item) { return total + (item.srv || 0); }, 0);
   var net = Math.max(0, wait - srv);
   var bytes = sum('bytes');
   var raw = sum('raw');
@@ -6184,28 +6184,28 @@ function testDiagLayersHTML(mine) {
 }
 
 function testDiagByApi() {
-  var all = (window.CBCALLS || []).filter(function (c) {
-    return !/^\/api\/testing/i.test(String(c.path || ''));
+  var all = (window.CBCALLS || []).filter(function (item) {
+    return !/^\/api\/testing/i.test(String(item.path || ''));
   });
   if (!all.length) return '';
 
   var rows = ((window.CBASSETS || {}).rows) || [];
   var byRoute = {};
-  all.forEach(function (c) {
-    var m = String(c.path || '').match(/^\/api\/([a-z0-9-]+)/i);
+  all.forEach(function (item) {
+    var m = String(item.path || '').match(/^\/api\/([a-z0-9-]+)/i);
     var r = m ? m[1].toLowerCase() : 'other';
     var g = byRoute[r] || (byRoute[r] = { route: r, n: 0, ms: 0, worst: 0, bad: 0, screens: {} });
     g.n++;
-    g.ms += (c.ms || 0);
-    if ((c.ms || 0) > g.worst) g.worst = (c.ms || 0);
-    if ((c.status || 0) >= 400) g.bad++;
-    if (c.scr) g.screens[c.scr] = (g.screens[c.scr] || 0) + 1;
+    g.ms += (item.ms || 0);
+    if ((item.ms || 0) > g.worst) g.worst = (item.ms || 0);
+    if ((item.status || 0) >= 400) g.bad++;
+    if (item.scr) g.screens[item.scr] = (g.screens[item.scr] || 0) + 1;
   });
 
   /* ⭐ by TOTAL time, not by the worst single call: forty fast calls cost more than one slow one, and it is
      the total a person feels */
-  var list = Object.keys(byRoute).map(function (k) { return byRoute[k]; })
-    .sort(function (a, b) { return b.ms - a.ms; });
+  var list = Object.keys(byRoute).map(function (item) { return byRoute[item]; })
+    .sort(function (first, second) { return second.ms - first.ms; });
 
   var codeOf = function (r) {
     var a = rows.filter(function (x) {
@@ -6231,44 +6231,44 @@ function testDiagByApi() {
     + '<th style="text-align:end;padding:3px 6px">Total ms</th>'
     + '<th style="text-align:end;padding:3px 6px">Worst</th></tr>';
 
-  h += list.map(function (g) {
-    var who = Object.keys(g.screens).sort(function (a, b) { return g.screens[b] - g.screens[a]; });
-    var code = codeOf(g.route);
+  h += list.map(function (item) {
+    var list = Object.keys(item.screens).sort(function (first, second) { return item.screens[second] - item.screens[first]; });
+    var code = codeOf(item.route);
     return '<tr style="border-top:1px solid var(--line,#efece4)">'
       + '<td style="padding:4px 6px 4px 0">'
       +   (code ? '<code style="font-size:var(--fs-1);color:var(--grey-2)">' + esc(code) + '</code> ' : '')
-      +   '/api/' + esc(g.route)
-      +   (g.bad ? ' <b style="color:var(--disp,#B3261E);font-size:var(--fs-1)">' + g.bad + ' failed</b>' : '')
+      +   '/api/' + esc(item.route)
+      +   (item.bad ? ' <b style="color:var(--disp,#B3261E);font-size:var(--fs-1)">' + item.bad + ' failed</b>' : '')
       +   '<span style="display:block;font-size:var(--fs-1);color:var(--grey-4,#646A72)">'
-      +     (who.length ? 'asked by ' + esc(who.map(function (k) {
-            return scrName(k) + ' \u00d7' + g.screens[k]; }).join(', '))
+      +     (list.length ? 'asked by ' + esc(list.map(function (k) {
+            return scrName(k) + ' \u00d7' + item.screens[k]; }).join(', '))
           : 'no screen recorded')
       +   '</span></td>'
-      + '<td style="text-align:end;padding:4px 6px">' + g.n + '</td>'
-      + '<td style="text-align:end;padding:4px 6px;font-weight:' + (g.ms > 3000 ? '700' : '400')
-      +   ';color:' + (g.ms > 3000 ? 'var(--disp,#B3261E)' : 'inherit') + '">' + g.ms + '</td>'
-      + '<td style="text-align:end;padding:4px 6px;color:var(--grey-2)">' + g.worst + '</td>'
+      + '<td style="text-align:end;padding:4px 6px">' + item.n + '</td>'
+      + '<td style="text-align:end;padding:4px 6px;font-weight:' + (item.ms > 3000 ? '700' : '400')
+      +   ';color:' + (item.ms > 3000 ? 'var(--disp,#B3261E)' : 'inherit') + '">' + item.ms + '</td>'
+      + '<td style="text-align:end;padding:4px 6px;color:var(--grey-2)">' + item.worst + '</td>'
       + '</tr>';
   }).join('');
   return h + '</table>';
 }
 
 function testDiagRaise() {
-  var all = (window.CBCALLS || []).filter(function (c) {
-    return !/^\/api\/testing/i.test(String(c.path || ''));
+  var all = (window.CBCALLS || []).filter(function (item) {
+    return !/^\/api\/testing/i.test(String(item.path || ''));
   });
   var gen = window.CBGEN || 0;
-  var mine = gen ? all.filter(function (c) { return !c.gen || c.gen === gen; }) : all.slice();
+  var mine = gen ? all.filter(function (item) { return !item.gen || item.gen === gen; }) : all.slice();
   if (!mine.length) { if (typeof toast === "function") toast("Nothing measured yet."); return; }
 
-  var total = mine.reduce(function (a, c) { return a + (c.ms || 0); }, 0);
+  var total = mine.reduce(function (total, item) { return total + (item.ms || 0); }, 0);
   var seenN = {};
-  mine.forEach(function (c) {
-    var k = c.key || (c.m + ' ' + String(c.path || '').split('?')[0]);
+  mine.forEach(function (item) {
+    var k = item.key || (item.m + ' ' + String(item.path || '').split('?')[0]);
     seenN[k] = (seenN[k] || 0) + 1;
   });
-  var rep = Object.keys(seenN).filter(function (k) { return seenN[k] > 1; })
-    .map(function (k) { return k + ' \u00d7' + seenN[k]; });
+  var rep = Object.keys(seenN).filter(function (item) { return seenN[item] > 1; })
+    .map(function (item) { return item + ' \u00d7' + seenN[item]; });
   var code = CBTEST.popupFor || '';
   var name = (CBTEST.writeFor && CBTEST.writeFor.name) || codeName(code) || 'this screen';
 
@@ -6277,11 +6277,11 @@ function testDiagRaise() {
   screenCasesPaint();
 
   /* ⚠ after the paint, or the repaint restores the empty values over these */
-  var put = function (id, v) { var el = document.getElementById(id); if (el) el.value = v; };
-  put('wcTitle', 'Opening ' + code + ' ' + name + ' should not cost more than two or three server calls.');
-  put('wcDo', 'Open ' + name + ' from the rail, with test mode on, and read the Speed area.');
-  put('wcSee', 'Two or three round trips, each fetched once.');
-  put('wcGot', mine.length + ' calls, ' + total + ' ms in total'
+  var node = function (id, v) { var el = document.getElementById(id); if (el) el.value = v; };
+  node('wcTitle', 'Opening ' + code + ' ' + name + ' should not cost more than two or three server calls.');
+  node('wcDo', 'Open ' + name + ' from the rail, with test mode on, and read the Speed area.');
+  node('wcSee', 'Two or three round trips, each fetched once.');
+  node('wcGot', mine.length + ' calls, ' + total + ' ms in total'
     + (rep.length ? ' \u2014 the same call repeated: ' + rep.join(', ') : '')
     + '. Correlation id ' + ((mine[0] && mine[0].rid) || '\u2014') + '.');
   try { document.getElementById('wcTitle').focus(); } catch (_) {}
@@ -6364,18 +6364,18 @@ function testScrRows(code, kind) {
         last: null, inc: x, req: null, caseKey: x.found_by_case || null }));
     });
   } else if (kind === 'req') {
-    (CBTEST.scrReq || []).forEach(function (q) {
-      if (q.screen_code !== code) return;
-      out.push(testWorkRow({ key: q.clause || '', title: q.requirement || '', screen: code,
-        seen: q.observed || null, by: q.raised_by || null, at: q.raised_at || null,
-        last: null, inc: null, req: q, caseKey: q.raised_from || null }));
+    (CBTEST.scrReq || []).forEach(function (item) {
+      if (item.screen_code !== code) return;
+      out.push(testWorkRow({ key: item.clause || '', title: item.requirement || '', screen: code,
+        seen: item.observed || null, by: item.raised_by || null, at: item.raised_at || null,
+        last: null, inc: null, req: item, caseKey: item.raised_from || null }));
     });
   }
   /* ⭐ what is waiting on somebody first, then newest — the worklist's order, for the same reason */
-  return out.sort(function (a, b) {
-    var d = TEST_WORK_ORDER.indexOf(a.status) - TEST_WORK_ORDER.indexOf(b.status);
+  return out.sort(function (first, second) {
+    var d = TEST_WORK_ORDER.indexOf(first.status) - TEST_WORK_ORDER.indexOf(second.status);
     if (d) return d;
-    return String(b.at || '') < String(a.at || '') ? -1 : 1;
+    return String(second.at || '') < String(first.at || '') ? -1 : 1;
   });
 }
 
@@ -6581,7 +6581,7 @@ function screenCasesPaint() {
     ['behind', 'Coverage', testBehindCount(code)],
     ['diag', 'Speed', (window.CBCALLS || []).length || null],
   ];
-  var inMore = MORE.some(function (m) { return m[0] === area; });
+  var inMore = MORE.some(function (item) { return item[0] === area; });
   var optS = 'background:var(--card,#fff);color:var(--ink,#20303b)';
   var tabs = '<div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin:10px 0 4px">'
     + '<span style="display:inline-flex;border:1px solid var(--grey-4,#646A72);border-radius:8px;'
@@ -6602,9 +6602,9 @@ function screenCasesPaint() {
        and the dropdown that opens is then white on white in Chrome — invisible, and only when something is
        selected, which is the state a person is in most of the time. [[feedback-silence-is-the-bug]] */
     + '<option value="" disabled' + (inMore ? '' : ' selected') + ' style="' + optS + '">More …</option>'
-    + MORE.map(function (m) {
-        return '<option value="' + m[0] + '"' + (area === m[0] ? ' selected' : '') + ' style="' + optS + '">'
-          + m[1] + (m[2] == null ? '' : ' · ' + m[2]) + '</option>';
+    + MORE.map(function (item) {
+        return '<option value="' + item[0] + '"' + (area === item[0] ? ' selected' : '') + ' style="' + optS + '">'
+          + item[1] + (item[2] == null ? '' : ' · ' + item[2]) + '</option>';
       }).join('')
     + '</select>'
     + '</div>';
@@ -6713,8 +6713,8 @@ function testFindLoadClosed() {
   CBTEST._closedReq = 1;
   testEvery('testCases', 'cases', { all: 1 }).then(function (rows) {
     CBTEST._closedReq = 0;
-    CBTEST.closedCases = rows.filter(function (c) {
-      return c.status === 'retired' && /-H\d+$/.test(String(c.case_key || ''));
+    CBTEST.closedCases = rows.filter(function (item) {
+      return item.status === 'retired' && /-H\d+$/.test(String(item.case_key || ''));
     });
     testPaint();
   }).catch(function () { CBTEST._closedReq = 0; CBTEST.closedCases = CBTEST.closedCases || []; });
@@ -6725,31 +6725,31 @@ function testFindings() {
   if (!CBTEST.closedCases) testFindLoadClosed();
   /* live first, then the closed — one shape, so the renderer never asks which list a row came from */
   var caseRows = (CBTEST.cases || []).concat(CBTEST.closedCases || []);
-  caseRows.forEach(function (c) {
-    if (!/-H\d+$/.test(String(c.case_key || ''))) return;
-    var st0 = (c.steps || [])[0];
+  caseRows.forEach(function (item) {
+    if (!/-H\d+$/.test(String(item.case_key || ''))) return;
+    var st0 = (item.steps || [])[0];
     out.push({
-      kind: 'case', id: c.case_key, key: c.case_key,
-      screen: c.screen_code || c.module_key || '',
-      title: c.title || '',
+      kind: 'case', id: item.case_key, key: item.case_key,
+      screen: item.screen_code || item.module_key || '',
+      title: item.title || '',
       doIt: Array.isArray(st0) ? (st0[0] || '') : '',
       exp: Array.isArray(st0) ? (st0[1] || '') : '',
-      seen: c.observed || null,
-      shot: c.evidence_id || null,
-      by: c.written_by || null, at: c.written_at || null,
-      state: c.status === 'retired' ? 'closed' : 'open',
-      closedNote: c.closed_note || null, closedBy: c.closed_by || null, closedAt: c.closed_at || null,
-      last: (CBTEST.last || {})[c.case_key] || null,
+      seen: item.observed || null,
+      shot: item.evidence_id || null,
+      by: item.written_by || null, at: item.written_at || null,
+      state: item.status === 'retired' ? 'closed' : 'open',
+      closedNote: item.closed_note || null, closedBy: item.closed_by || null, closedAt: item.closed_at || null,
+      last: (CBTEST.last || {})[item.case_key] || null,
     });
   });
-  (CBTEST.scrReq || []).forEach(function (q) {
+  (CBTEST.scrReq || []).forEach(function (item) {
     out.push({
-      kind: 'req', id: q.definition_id, key: q.clause || q.ref || '',
-      screen: q.screen_code || '', title: q.requirement || '',
-      seen: q.observed || null, shot: q.evidence_id || null,
-      by: q.raised_by || q.written_by || null, at: q.raised_at || q.created_at || null,
-      state: (q.state === 'accepted' || q.state === 'rejected') ? 'closed' : 'open',
-      stateWord: q.state || null, closedNote: q.why || null, byId: q.raised_by_id || null,
+      kind: 'req', id: item.definition_id, key: item.clause || item.ref || '',
+      screen: item.screen_code || '', title: item.requirement || '',
+      seen: item.observed || null, shot: item.evidence_id || null,
+      by: item.raised_by || item.written_by || null, at: item.raised_at || item.created_at || null,
+      state: (item.state === 'accepted' || item.state === 'rejected') ? 'closed' : 'open',
+      stateWord: item.state || null, closedNote: item.why || null, byId: item.raised_by_id || null,
     });
   });
   (CBTEST.scrInc || []).forEach(function (x) {
@@ -6783,7 +6783,7 @@ function testFindings() {
     });
   });
   /* ⭐ newest first: the reason to open this page is "what did I just find" */
-  return out.sort(function (a, b) { return String(b.at || '') < String(a.at || '') ? -1 : 1; });
+  return out.sort(function (first, second) { return String(second.at || '') < String(first.at || '') ? -1 : 1; });
 }
 
 /**
@@ -6839,7 +6839,7 @@ async function testHandClose(key, open) {
     if (why === null) return;                     /* cancelled: nothing is closed */
     if (!String(why).trim()) { if (typeof toast === 'function') toast('A closure needs its reason.'); return; }
   }
-  api('testCaseClose', { body: { case_key: key, open: !!open, why: why } }).then(function (r) {
+  api('testCaseClose', { body: { case_key: key, open: !!open, why: why } }).then(function (reply) {
     /* ⚠ reload rather than patch the row: the closed ones are a different query, and guessing what the
        server now holds is how a list and its source drift apart */
     /* ⚠ a thing that disappears without a word is the complaint this feature answers, not a new one */
@@ -6926,8 +6926,8 @@ async function testWaitingLoad() {
     if (localStorage.getItem('cb_testmode') !== '1') { CBTEST.waiting = 0; testWaitingPaint(); return; }
     var meId = testMeId();
     if (!meId) return;
-    var r = await api('testIncList', { query: { state: 'resolved' } });
-    var rows = (r && r.incidents) || [];
+    var reply = await api('testIncList', { query: { state: 'resolved' } });
+    var rows = (reply && reply.incidents) || [];
     CBTEST.waiting = rows.filter(function (x) {
       return String(x.raised_by_id || '') === String(meId);
     }).length;
@@ -7005,10 +7005,10 @@ var TEST_WORK_ORDER = ['retest', 'todo', 'failed', 'change', 'agreed', 'blocked'
  */
 function testWork() {
   var rows = [];
-  var inc = CBTEST.scrInc || [], req = CBTEST.scrReq || [];
+  var list = CBTEST.scrInc || [], req = CBTEST.scrReq || [];
   var incBy = {}, reqBy = {}, used = {};
-  inc.forEach(function (x) { if (x.found_by_case) (incBy[x.found_by_case] = incBy[x.found_by_case] || []).push(x); });
-  req.forEach(function (q) { if (q.raised_from) (reqBy[q.raised_from] = reqBy[q.raised_from] || []).push(q); });
+  list.forEach(function (x) { if (x.found_by_case) (incBy[x.found_by_case] = incBy[x.found_by_case] || []).push(x); });
+  req.forEach(function (item) { if (item.raised_from) (reqBy[item.raised_from] = reqBy[item.raised_from] || []).push(item); });
 
   /**
    * ⚠️⚠️ TWO PLACES HOLD "THE LATEST WORD PER CASE" AND ONLY ONE OF THEM IS ALWAYS LOADED. `CBTEST.last` is
@@ -7018,12 +7018,12 @@ function testWork() {
    * ⭐ Whichever is there; `CBTEST.last` wins because it applies the worst-result rule.
    */
   var lastOf = {};
-  (CBTEST.scrRes || []).forEach(function (r) { if (r && r.case_key) lastOf[r.case_key] = r; });
-  Object.keys(CBTEST.last || {}).forEach(function (k) { lastOf[k] = CBTEST.last[k]; });
+  (CBTEST.scrRes || []).forEach(function (item) { if (item && item.case_key) lastOf[item.case_key] = item; });
+  Object.keys(CBTEST.last || {}).forEach(function (item) { lastOf[item] = CBTEST.last[item]; });
 
   var cases = (CBTEST.cases || []).concat(CBTEST.closedCases || []);
-  cases.forEach(function (c) {
-    var key = c.case_key || '';
+  cases.forEach(function (item) {
+    var key = item.case_key || '';
     /* ⚠️ THE HAND-WRITTEN ONES ONLY. The board also holds 1,455 documented cases; putting them in the worklist
        would bury the nine things a person wrote today under a thousand they have never touched. */
     if (!/-H\d+$/.test(key)) return;
@@ -7033,35 +7033,35 @@ function testWork() {
     mine.forEach(function (x) { used[x.definition_id] = 1; });
     wants.forEach(function (q) { used[q.definition_id] = 1; });
     rows.push(testWorkRow({
-      key: key, title: c.title || '', screen: c.screen_code || c.module_key || '',
-      seen: c.observed || null, shot: c.evidence_id || null,
-      by: c.written_by || null, at: c.written_at || c.changed_at || null,
-      retired: c.status === 'retired', last: last, inc: mine[0] || null, req: wants[0] || null,
+      key: key, title: item.title || '', screen: item.screen_code || item.module_key || '',
+      seen: item.observed || null, shot: item.evidence_id || null,
+      by: item.written_by || null, at: item.written_at || item.changed_at || null,
+      retired: item.status === 'retired', last: last, inc: mine[0] || null, req: wants[0] || null,
       caseKey: key,
     }));
   });
 
   /* the ones raised straight from the box, with no case behind them */
-  inc.forEach(function (x) {
+  list.forEach(function (x) {
     if (used[x.definition_id]) return;
     rows.push(testWorkRow({ key: x.ref || '', title: x.observed || '', screen: x.screen_code || '',
       shot: x.evidence_id || null, by: x.raised_by || null, at: x.raised_at || null,
       last: null, inc: x, req: null, caseKey: null }));
   });
-  req.forEach(function (q) {
-    if (used[q.definition_id]) return;
-    rows.push(testWorkRow({ key: q.clause || '', title: q.requirement || '', screen: q.screen_code || '',
-      by: q.raised_by || null, at: q.raised_at || null,
-      last: null, inc: null, req: q, caseKey: null }));
+  req.forEach(function (item) {
+    if (used[item.definition_id]) return;
+    rows.push(testWorkRow({ key: item.clause || '', title: item.requirement || '', screen: item.screen_code || '',
+      by: item.raised_by || null, at: item.raised_at || null,
+      last: null, inc: null, req: item, caseKey: null }));
   });
 
   /* ⭐ WHAT IS WAITING ON YOU COMES FIRST, then the rest by the order of the status strip, then newest. A
      worklist sorted by date is a diary; sorted by what it is waiting for, it is a worklist. */
-  return rows.sort(function (a, b) {
-    var d = TEST_WORK_ORDER.indexOf(a.status) - TEST_WORK_ORDER.indexOf(b.status);
+  return rows.sort(function (first, second) {
+    var d = TEST_WORK_ORDER.indexOf(first.status) - TEST_WORK_ORDER.indexOf(second.status);
     if (d) return d;
-    if (a.forMe !== b.forMe) return a.forMe ? -1 : 1;
-    return String(b.at || '') < String(a.at || '') ? -1 : 1;
+    if (first.forMe !== second.forMe) return first.forMe ? -1 : 1;
+    return String(second.at || '') < String(first.at || '') ? -1 : 1;
   });
 }
 
@@ -7168,7 +7168,7 @@ function testWorkHTML() {
   }
 
   var n = {};
-  TEST_WORK_ORDER.forEach(function (k) { n[k] = 0; });
+  TEST_WORK_ORDER.forEach(function (item) { n[item] = 0; });
   all.forEach(function (x) { n[x.status] = (n[x.status] || 0) + 1; });
   var live = all.filter(function (x) { return x.status !== 'closed'; });
   var mine = all.filter(function (x) { return x.forMe; });
@@ -7213,8 +7213,8 @@ function testWorkHTML() {
     + '<span style="font-size:var(--fs-1);color:var(--grey-4,#646A72);margin-inline-end:5px">Status:</span>'
     /* ⚠️ Closed is not repeated here — it is a shelf on the row above, and the same word twice on one
        screen is the fault this whole afternoon was about */
-    + TEST_WORK_ORDER.filter(function (k) { return n[k] && k !== 'closed'; }).map(function (k) {
-        return seg(k, TEST_WORK[k].label, n[k], 'workst');
+    + TEST_WORK_ORDER.filter(function (item) { return n[item] && item !== 'closed'; }).map(function (item) {
+        return seg(item, TEST_WORK[item].label, n[item], 'workst');
       }).join('')
     + '</div>';
 
@@ -7289,8 +7289,8 @@ function testWorkRowHTML(x) {
     acts += '<select onchange="testIncSev(\'' + id + '\', this.value)" title="Re-grade it" '
       + 'style="font:inherit;font-size:var(--fs-1);padding:2px 5px;border:1px solid var(--grey-4,#646A72);'
       + 'border-radius:7px;background:var(--card,#fff);margin-inline-end:5px">'
-      + TEST_INC_SEV.map(function (v) {
-          return '<option' + (v === x.sev ? ' selected' : '') + '>' + v + '</option>';
+      + TEST_INC_SEV.map(function (item) {
+          return '<option' + (item === x.sev ? ' selected' : '') + '>' + item + '</option>';
         }).join('') + '</select> ';
   }
   if (x.shot) acts += b('🖼 Screenshot', 'testShotView(\'' + testJs(x.shot) + '\')', null, '');
@@ -7559,7 +7559,7 @@ async function testVerify(id, held) {
 /** take me back to the screen this was written on, with its panel open */
 function testHandOpen(code) {
   try {
-    var row = ((window.CBSCREENS && CBSCREENS.rows) || []).filter(function (r) { return r.code === code; })[0];
+    var row = ((window.CBSCREENS && CBSCREENS.rows) || []).filter(function (item) { return item.code === code; })[0];
     if (row && row.nav && typeof go === 'function') {
       var el = document.querySelector('[data-testid="nav-' + row.nav + '"]');
       if (el) el.click();
@@ -7593,7 +7593,7 @@ var TEST_VIEW_MORE = [
 ];
 function testViewToggleHTML() {
   var v = CBTEST.view;
-  var inMore = TEST_VIEW_MORE.some(function (m) { return m[0] === v; });
+  var inMore = TEST_VIEW_MORE.some(function (item) { return item[0] === v; });
   var seg = TUI.seg('2px 8px');
   var optS = 'background:var(--card,#fff);color:var(--ink,#20303b)';
   /* ⚠️ List is "on" only when nothing else is — it is the fallback view, not a value of its own */
@@ -7618,9 +7618,9 @@ function testViewToggleHTML() {
     +   'background:' + (inMore ? 'var(--ink,#0F2E3D);color:var(--card,#fff)'
                                 : 'var(--card,#fff);color:var(--grey-2,#545A61)') + '">'
     + '<option value="" disabled' + (inMore ? '' : ' selected') + ' style="' + optS + '">More \u2026</option>'
-    + TEST_VIEW_MORE.map(function (m) {
-        return '<option value="' + m[0] + '"' + (v === m[0] ? ' selected' : '') + ' style="' + optS + '" '
-          + 'title="' + esc(m[2]) + '">' + m[1] + '</option>';
+    + TEST_VIEW_MORE.map(function (item) {
+        return '<option value="' + item[0] + '"' + (v === item[0] ? ' selected' : '') + ' style="' + optS + '" '
+          + 'title="' + esc(item[2]) + '">' + item[1] + '</option>';
       }).join('')
     + '</select>'
     + '</span>';
@@ -7655,21 +7655,21 @@ function testSetupHTML() {
     '<select onchange="testSetKind(this.value)" style="' + sel + '">'
     + [['manual', 'Me, by hand'], ['unit', 'An automated run'], ['regression', 'A full regression'],
        ['t0', 'T0 \u00b7 Claude, quick check'], ['t1', 'T1 \u00b7 Claude, one spec'],
-       ['t2', 'T2 \u00b7 Claude, one surface'], ['t3', 'T3 \u00b7 Claude, everything']].map(function (k) {
-        return '<option value="' + k[0] + '"' + (CBTEST.run.kind === k[0] ? ' selected' : '') + '>'
-          + esc(k[1]) + '</option>'; }).join('')
+       ['t2', 'T2 \u00b7 Claude, one surface'], ['t3', 'T3 \u00b7 Claude, everything']].map(function (item) {
+        return '<option value="' + item[0] + '"' + (CBTEST.run.kind === item[0] ? ' selected' : '') + '>'
+          + esc(item[1]) + '</option>'; }).join('')
     + '</select>');
   /* ⭐ FOCUS PINS, IT DOES NOT LOCK. A panel that refuses to show anything but one module is a panel somebody
      closes — and then nothing is tested at all. It makes the gap impossible to miss and counts it down. */
   h += row('Focus \u2014 the area this sitting should cover',
     '<select onchange="testSetFocus(this.value)" style="' + sel + '">'
     + '<option value="">Anywhere</option>'
-    + CBTEST.cover.map(function (a) {
-        var left = a.untested;
-        return '<option value="' + esc(a.module_key) + '"'
-          + ((CBTEST.run.focus === a.module_key) ? ' selected' : '') + '>'
-          + esc(a.module_key) + (left ? ' \u00b7 ' + left + ' left' : ' \u00b7 done')
-          + (a.high_untested ? ' \u26a0' : '') + '</option>'; }).join('')
+    + CBTEST.cover.map(function (item) {
+        var left = item.untested;
+        return '<option value="' + esc(item.module_key) + '"'
+          + ((CBTEST.run.focus === item.module_key) ? ' selected' : '') + '>'
+          + esc(item.module_key) + (left ? ' \u00b7 ' + left + ' left' : ' \u00b7 done')
+          + (item.high_untested ? ' \u26a0' : '') + '</option>'; }).join('')
     + '</select>');
 
   /* ── what the board is showing ── */
@@ -7678,23 +7678,23 @@ function testSetupHTML() {
     '<select onchange="testSetKindFilter(this.value)" style="' + sel + '">'
     + (function () {
         var c = testKindCounts();
-        var tot = Object.keys(c).reduce(function (a, k) { return a + c[k]; }, 0);
+        var tot = Object.keys(c).reduce(function (total, item) { return total + c[item]; }, 0);
         return '<option value=""' + (CBTEST.kind ? '' : ' selected') + '>Every kind \u00b7 ' + tot + '</option>'
-          + TEST_KINDS.map(function (k) {
+          + TEST_KINDS.map(function (item) {
               /* ⚠️ an empty category we KNOW should exist is still offered — "Penetration · 0" states a fact,
                  while leaving it out lets the absence read as "not applicable" */
-              if (!c[k] && k !== 'penetration') return '';
-              return '<option value="' + k + '"' + (CBTEST.kind === k ? ' selected' : '') + '>'
-                + esc(TEST_KIND_LABEL[k]) + ' \u00b7 ' + (c[k] || 0) + '</option>';
+              if (!c[item] && item !== 'penetration') return '';
+              return '<option value="' + item + '"' + (CBTEST.kind === item ? ' selected' : '') + '>'
+                + esc(TEST_KIND_LABEL[item]) + ' \u00b7 ' + (c[item] || 0) + '</option>';
             }).join('');
       })()
     + '</select>');
   h += row('Area',
     '<select onchange="testSetArea(this.value)" style="' + sel + '">'
     + '<option value=""' + (CBTEST.area ? '' : ' selected') + '>All areas \u00b7 ' + testKindTotal() + '</option>'
-    + testAreas().map(function (a) {
-        return '<option value="' + esc(a.key) + '"' + (CBTEST.area === a.key ? ' selected' : '') + '>'
-             + esc(a.key + ' \u00b7 ' + a.name) + ' \u00b7 ' + a.n + '</option>'; }).join('')
+    + testAreas().map(function (item) {
+        return '<option value="' + esc(item.key) + '"' + (CBTEST.area === item.key ? ' selected' : '') + '>'
+             + esc(item.key + ' \u00b7 ' + item.name) + ' \u00b7 ' + item.n + '</option>'; }).join('')
     + '</select>');
 
   /* ── the panel itself ── */
@@ -7704,8 +7704,8 @@ function testSetupHTML() {
   h += row('Size',
     '<select onchange="testSize(this.value)" style="' + sel + '">'
     + [['', 'Size\u2026'], ['normal', 'Normal'], ['wide', 'Wide'], ['tall', 'Tall'],
-       ['large', 'Large'], ['full', 'Full screen']].map(function (o) {
-        return '<option value="' + o[0] + '">' + o[1] + '</option>'; }).join('')
+       ['large', 'Large'], ['full', 'Full screen']].map(function (item) {
+        return '<option value="' + item[0] + '">' + item[1] + '</option>'; }).join('')
     + '</select>');
   h += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:2px">'
     /**
@@ -7776,7 +7776,7 @@ function testMenuHTML(shown) {
      * doors none of which survived the filter needs the filter cleared. Telling a person to clear filters
      * when the data is stale sends them somewhere there is nothing to find.
      */
-    var anyMenu = CBTEST.cases.some(function (c) { return !!c.menu; });
+    var anyMenu = CBTEST.cases.some(function (item) { return !!item.menu; });
     if (!anyMenu) {
       return '<div style="padding:12px;font-size:var(--fs-2);line-height:1.6">'
         + '<b>No door on this board yet.</b>'
@@ -7801,9 +7801,9 @@ function testMenuHTML(shown) {
     + T.doors + '</b> door(s) in ' + T.groups.length + ' menu group(s)'
     + (T.offMenu ? ' <span style="' + q + '">\u00b7 ' + T.offMenu + ' not on the menu</span>' : '') + '</div>';
 
-  T.groups.forEach(function (g) {
-    var gkey = 'menu:' + g.name;
-    var gopen = testSectionOpen(gkey, g.doors.length);
+  T.groups.forEach(function (item) {
+    var gkey = 'menu:' + item.name;
+    var gopen = testSectionOpen(gkey, item.doors.length);
     /**
      * ⚠️ THE FOLD KEYS ARE THE SAME STRINGS THE REPORT USES (`menu:Rail`, `menu:Rail:Task`) but they are
      * stored under this panel’s own key — see testFoldGet. Two surfaces sharing a fold STATE would mean
@@ -7811,23 +7811,23 @@ function testMenuHTML(shown) {
      */
     h += '<div onclick="testFold(\'' + testJs(gkey) + '\')" style="display:flex;gap:6px;align-items:baseline;cursor:pointer;padding:5px 6px;border-bottom:1px solid var(--line,#efece4)">'
       + '<span style="' + q + '">' + (gopen ? '\u25be' : '\u25b8') + '</span>'
-      + '<b style="font-size:var(--fs-2)">' + esc(g.name) + '</b>'
-      + '<span style="' + q + '">' + g.doors.length + ' door(s)</span>'
+      + '<b style="font-size:var(--fs-2)">' + esc(item.name) + '</b>'
+      + '<span style="' + q + '">' + item.doors.length + ' door(s)</span>'
       + '<span style="flex:1 1 auto"></span>'
-      + '<span style="' + q + ';font-variant-numeric:tabular-nums">' + g.run + ' of ' + g.total + ' run</span>'
-      + (g.bad ? '<b style="color:var(--disp);font-size:var(--fs-1)">' + g.bad + ' red</b>' : '')
+      + '<span style="' + q + ';font-variant-numeric:tabular-nums">' + item.run + ' of ' + item.total + ' run</span>'
+      + (item.bad ? '<b style="color:var(--disp);font-size:var(--fs-1)">' + item.bad + ' red</b>' : '')
       + '</div>';
     if (!gopen) return;
 
-    g.doors.forEach(function (d) {
-      var dkey = 'menu:' + g.name + ':' + d.name;
+    item.doors.forEach(function (d) {
+      var dkey = 'menu:' + item.name + ':' + d.name;
       var dopen = testSectionOpen(dkey, d.cases.length);
       h += '<div onclick="testFold(\'' + testJs(dkey) + '\')" style="display:flex;gap:6px;align-items:baseline;cursor:pointer;padding:4px 6px 4px 18px">'
         + '<span style="' + q + '">' + (dopen ? '\u25be' : '\u25b8') + '</span>'
         /* ⭐ THE SCREEN CODE, so a row of metrics can be quoted as 'CAT004 is 0 of 39'. Athi, 2026-09-12:
            *"so can you give the metrics by screen name as well?"* — the figures were already here; what was
            missing was the name to put in front of them. */
-        + testScreenCode(g.name + ' › ' + d.name)
+        + testScreenCode(item.name + ' › ' + d.name)
         + '<span style="font-size:var(--fs-2)">' + esc(d.name) + '</span>'
         + '<span style="flex:1 1 auto"></span>'
         /**
@@ -7888,11 +7888,11 @@ function testCaseBodyHTML(c) {
     + 'swept \u00b7 no expectation</span></div>';
   if (c.pre) h += '<div style="color:var(--grey-2,var(--grey-2));margin-bottom:5px"><b>Before:</b> ' + esc(c.pre) + '</div>';
   if (c.data) h += '<div style="color:var(--grey-2,var(--grey-2));margin-bottom:5px"><b>Use:</b> ' + esc(c.data) + '</div>';
-  (c.steps || []).forEach(function (s, i) {
+  (c.steps || []).forEach(function (item, index) {
     h += '<div style="display:flex;gap:6px;margin:4px 0">'
-      +  '<span style="color:var(--grey);min-width:13px">' + (i + 1) + '</span>'
-      +  '<span style="flex:1">' + esc(s[0])
-      +    '<span style="display:block;color:var(--grey-2,var(--grey-2))">→ ' + esc(s[1]) + '</span></span></div>';
+      +  '<span style="color:var(--grey);min-width:13px">' + (index + 1) + '</span>'
+      +  '<span style="flex:1">' + esc(item[0])
+      +    '<span style="display:block;color:var(--grey-2,var(--grey-2))">→ ' + esc(item[1]) + '</span></span></div>';
   });
   if (c.note) h += '<div style="margin-top:6px;padding:6px 8px;background:var(--paper,#faf8f3);'
     + 'border:1px solid var(--line,#efece4);border-radius:7px;color:var(--grey-2,var(--grey-2))">' + esc(c.note) + '</div>';
@@ -8035,8 +8035,8 @@ function testSize(name) {
   } catch (_) {}
 
   /* the list has to grow with the frame, or the panel gets bigger and shows no more cases */
-  var b = document.getElementById('cbtestbody');
-  if (b) { b.style.maxHeight = 'none'; b.style.flex = '1 1 auto'; b.style.minHeight = '0'; b.style.overflowY = 'auto'; }
+  var node = document.getElementById('cbtestbody');
+  if (node) { node.style.maxHeight = 'none'; node.style.flex = '1 1 auto'; node.style.minHeight = '0'; node.style.overflowY = 'auto'; }
 }
 
 /**
@@ -8126,17 +8126,17 @@ function testOpen(k) {
  */
 function testEnv() {
   try {
-    var ua = String((navigator || {}).userAgent || '');
+    var text = String((navigator || {}).userAgent || '');
     var br = 'browser not named';
-    ['Edg', 'Chrome', 'Firefox', 'Version'].some(function (n) {
-      var m = ua.match(new RegExp(n + '/([0-9]+)'));
+    ['Edg', 'Chrome', 'Firefox', 'Version'].some(function (item) {
+      var m = text.match(new RegExp(item + '/([0-9]+)'));
       if (!m) return false;
-      br = (n === 'Edg' ? 'Edge' : n === 'Version' ? 'Safari' : n) + ' ' + m[1];
+      br = (item === 'Edg' ? 'Edge' : item === 'Version' ? 'Safari' : item) + ' ' + m[1];
       return true;
     });
-    var os = /Windows/.test(ua) ? 'Windows' : /Android/.test(ua) ? 'Android'
-      : /iPhone|iPad|iPod/.test(ua) ? 'iOS' : /Mac OS X/.test(ua) ? 'macOS'
-      : /Linux/.test(ua) ? 'Linux' : 'OS not named';
+    var os = /Windows/.test(text) ? 'Windows' : /Android/.test(text) ? 'Android'
+      : /iPhone|iPad|iPod/.test(text) ? 'iOS' : /Mac OS X/.test(text) ? 'macOS'
+      : /Linux/.test(text) ? 'Linux' : 'OS not named';
     return {
       build: (typeof CB_BUILD !== 'undefined' && CB_BUILD) || null,
       browser: br, os: os,
@@ -8160,8 +8160,8 @@ function testCallsSince() {
     if (!all.length) return '';
     var since = Math.max(0, all.length - (CBTEST.mark || 0));
     if (!since) return '';
-    return all.slice(0, Math.min(since, 6)).map(function (c) {
-      return c.m + ' ' + c.path + ' ' + c.status;
+    return all.slice(0, Math.min(since, 6)).map(function (item) {
+      return item.m + ' ' + item.path + ' ' + item.status;
     }).join(' | ');
   } catch (_) { return ''; }
 }
@@ -8183,13 +8183,13 @@ function testCallsSince() {
  */
 async function testMark(key, status) {
   if (!CBTEST.run || !CBTEST.run.id) testRunLoad();
-  var nb = document.getElementById('cbt_n_' + key), eb = document.getElementById('cbt_e_' + key);
-  var note = nb ? nb.value.trim() : '', ev = eb ? eb.value.trim() : '';
+  var node = document.getElementById('cbt_n_' + key), eb = document.getElementById('cbt_e_' + key);
+  var note = node ? node.value.trim() : '', ev = eb ? eb.value.trim() : '';
   /* ⭐ asked here as well as refused at the server, so the tester is told by the box they must fill and not
      by a red toast after a round trip — the same shape as the observation an incident already demands */
   if (status === 'blocked' && !note) {
     if (typeof toast === 'function') toast('What blocked it?');
-    try { if (nb) nb.focus(); } catch (_) {}
+    try { if (node) node.focus(); } catch (_) {}
     return;
   }
   /* ⭐ what the tester typed comes FIRST; the calls are appended. Their sentence is the evidence that matters,
@@ -8207,7 +8207,7 @@ async function testMark(key, status) {
       var env = testEnvLine();
       if (env) ev = (ev ? ev + ' · ' : '') + env;
     }
-    var r = await api('testRecord', { body: {
+    var reply = await api('testRecord', { body: {
       run_id: CBTEST.run.id, run_label: CBTEST.run.label || null,
       /* ⚠ the column has been there since b219 and nothing ever wrote to it */
       build: (typeof CB_BUILD !== 'undefined' && CB_BUILD) || null,
@@ -8215,7 +8215,7 @@ async function testMark(key, status) {
                   tester_name: testWho() || undefined,
                   layer: c.layer || null, note: note || null, evidence: ev || null }] } });
     /* ⚠️ api() collapses {results:[…]} TO the array, so r.results was undefined and `saved` was always {} */
-    var saved = (Array.isArray(r) ? r : ((r && r.results) || []))[0] || {};
+    var saved = (Array.isArray(reply) ? reply : ((reply && reply.results) || []))[0] || {};
     CBTEST.last[key] = Object.assign({
       case_key: key, status: status, note: note, run_kind: CBTEST.run.kind,
       tester_name: (typeof SESSION !== 'undefined' && SESSION.name) || 'you',
@@ -8245,14 +8245,14 @@ async function testSeed() {
   if (CBTEST.seeding) return;
   CBTEST.seeding = true; testPaint();
   try {
-    var r = await api('testSeed');
+    var reply = await api('testSeed');
     await testLoad(true);
     if (typeof toast === 'function') {
       /* ⚠ SAY WHAT CHANGED, not "done". On a second press `added` is 0 and that is the correct answer — a bare
          success would read as though nothing happened. */
-      toast(r.added + ' cases loaded'
-        + (r.updated ? ', ' + r.updated + ' updated' : '')
-        + (r.unchanged ? ', ' + r.unchanged + ' already current' : ''));
+      toast(reply.added + ' cases loaded'
+        + (reply.updated ? ', ' + reply.updated + ' updated' : '')
+        + (reply.unchanged ? ', ' + reply.unchanged + ' already current' : ''));
     }
   } catch (e) {
     if (typeof toast === 'function') toast(tx('Could not load the test cases') + ' — ' + e.message, true);
@@ -8302,7 +8302,7 @@ function testAddHTML() {
    */
   var chosen = CBTEST.addTo || '';
   var suggested = chosen || CBTEST.area || testAreaGuess() || (areas[0] && areas[0].key) || 'NEW';
-  var named = (areas.filter(function (a) { return a.key === suggested; })[0] || {}).name || '';
+  var named = (areas.filter(function (item) { return item.key === suggested; })[0] || {}).name || '';
   return '<div style="flex:1;overflow:auto;padding:10px 11px;min-height:0;font-size:var(--fs-2)">'
     + '<div style="font-weight:700;margin-bottom:3px">New case</div>'
     + '<div style="font-size:var(--fs-1);color:' + (chosen ? 'var(--blue,#3F66A6)' : 'var(--grey-2,#545A61)')
@@ -8336,9 +8336,9 @@ function testAddHTML() {
 }
 
 async function testAddSave() {
-  var v = function (id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; };
-  var mod = (v('cbt_a_mod') || 'NEW').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 6) || 'NEW';
-  var title = v('cbt_a_title');
+  var node = function (id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; };
+  var mod = (node('cbt_a_mod') || 'NEW').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 6) || 'NEW';
+  var title = node('cbt_a_title');
   if (!title) { if (typeof toast === 'function') toast(tx('Say what should happen first.'), true); return; }
 
   /**
@@ -8346,9 +8346,9 @@ async function testAddSave() {
    * same reason: with 01 and 03 present, a count hands out 03 again and two different cases answer to one key.
    */
   var top = 0;
-  CBTEST.cases.forEach(function (c) {
-    if (c.module_key !== mod) return;
-    var m = String(c.case_key).match(/-(\d+)$/);
+  CBTEST.cases.forEach(function (item) {
+    if (item.module_key !== mod) return;
+    var m = String(item.case_key).match(/-(\d+)$/);
     if (m && Number(m[1]) > top) top = Number(m[1]);
   });
   var key = mod + '-' + String(top + 1).padStart(2, '0');
@@ -8356,10 +8356,10 @@ async function testAddSave() {
   try {
     await api('testCaseAdd', { body: { cases: [{
       case_key: key, module_key: mod,
-      module_name: (testAreas().filter(function (a) { return a.key === mod; })[0] || {}).name || mod,
+      module_name: (testAreas().filter(function (item) { return item.key === mod; })[0] || {}).name || mod,
       title: title, priority: 'High',
-      steps: v('cbt_a_do') ? [[v('cbt_a_do'), v('cbt_a_see') || 'It does what the title says.']] : [],
-      note: v('cbt_a_note') || '', layer: null } ] } });
+      steps: node('cbt_a_do') ? [[node('cbt_a_do'), node('cbt_a_see') || 'It does what the title says.']] : [],
+      note: node('cbt_a_note') || '', layer: null } ] } });
     CBTEST.adding = false;
     CBTEST.area = mod;
     await testLoad(true);
