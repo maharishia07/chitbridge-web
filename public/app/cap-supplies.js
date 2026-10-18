@@ -36,9 +36,9 @@ async function supLoad(){
   if (SUP.busy) return;
   SUP.busy = true;
   try {
-    var r = await api('supplyList');
-    SUP.rows = (r && r.supplies) || [];
-    SUP.notReady = r && r.not_ready ? r.not_ready : null;
+    var reply = await api('supplyList');
+    SUP.rows = (reply && reply.supplies) || [];
+    SUP.notReady = reply && reply.not_ready ? reply.not_ready : null;
     SUP.err = null;
   } catch (e) { SUP.err = e; }
   SUP.busy = false;
@@ -154,7 +154,7 @@ function supBuyModal(from){
    * already said who — retyping it would be the second place the same fact is entered, and the place where the
    * two spellings drift apart.
    */
-  var opts = (SUP.rows || []).map(function(s){ return '<option value="' + esc(s.name) + '">'; }).join('');
+  var opts = (SUP.rows || []).map(function(item){ return '<option value="' + esc(item.name) + '">'; }).join('');
   modal('<div style="padding:2px"><div style="font-weight:800;font-size:var(--fs-4)">' + tx('Record a purchase') + '</div>'
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin:6px 0 12px;line-height:1.6">'
     + tx('Something you bought for the shop from outside ChitBridge — a cash bill from the shop down the road.') + '</div>'
@@ -181,24 +181,24 @@ var SUP_LINE = 0;
 function supAddLine(){
   var box = document.getElementById('sup_lines'); if (!box) return;
   var i = SUP_LINE++;
-  var d = document.createElement('div');
-  d.style.cssText = 'display:flex;gap:6px;margin-bottom:6px';
-  d.innerHTML = '<input class="inp" list="sup_known" data-l="' + i + '" data-f="name" data-testid="supply-l-name" placeholder="' + tx('What') + '" style="flex:1">'
+  var node = document.createElement('div');
+  node.style.cssText = 'display:flex;gap:6px;margin-bottom:6px';
+  node.innerHTML = '<input class="inp" list="sup_known" data-l="' + i + '" data-f="name" data-testid="supply-l-name" placeholder="' + tx('What') + '" style="flex:1">'
     + '<input class="inp" type="number" data-l="' + i + '" data-f="qty" data-testid="supply-l-qty" placeholder="' + tx('Qty') + '" style="width:70px">'
     + '<input class="inp" data-l="' + i + '" data-f="unit" placeholder="' + tx('Unit') + '" style="width:70px">'
     + '<input class="inp" type="number" data-l="' + i + '" data-f="cost" data-testid="supply-l-cost" placeholder="' + tx('Cost each') + '" style="width:90px">';
-  box.appendChild(d);
+  box.appendChild(node);
 }
 
 /** read the line editor back — shared, so the two submits cannot disagree about what an empty line is */
 function supReadLines(){
   var lines = {}, box = document.getElementById('sup_lines');
-  (box ? box.querySelectorAll('input[data-l]') : []).forEach(function(inp){
-    var i = inp.getAttribute('data-l'); lines[i] = lines[i] || {};
-    lines[i][inp.getAttribute('data-f')] = inp.value;
+  (box ? box.querySelectorAll('input[data-l]') : []).forEach(function(item){
+    var i = item.getAttribute('data-l'); lines[i] = lines[i] || {};
+    lines[i][item.getAttribute('data-f')] = item.value;
   });
-  return Object.keys(lines).map(function(k){ return lines[k]; })
-    .filter(function(l){ return (l.name || '').trim() && Number(l.qty) > 0; });
+  return Object.keys(lines).map(function(item){ return lines[item]; })
+    .filter(function(item){ return (item.name || '').trim() && Number(item.qty) > 0; });
 }
 
 /**
@@ -213,16 +213,16 @@ async function supBuy(){
   var body = { from: ((document.getElementById('sup_from') || {}).value || '').trim() || null,
                ref: ((document.getElementById('sup_ref') || {}).value || '').trim(),
                lines: supReadLines()
-                 .map(function(l){ return { name: l.name.trim(), qty: Number(l.qty),
-                                            unit: (l.unit || '').trim() || null,
-                                            cost: l.cost === '' ? null : Number(l.cost) }; }) };
+                 .map(function(item){ return { name: item.name.trim(), qty: Number(item.qty),
+                                            unit: (item.unit || '').trim() || null,
+                                            cost: item.cost === '' ? null : Number(item.cost) }; }) };
   /* ⚠️ A REFERENCE IS REQUIRED. Without one a repeated entry cannot be told from a second purchase, and the same
      cash bill typed twice would double the spend. The message says what to put, not that a field is missing. */
   if (!body.ref) { toast(tx('Give it a reference — the bill number, or the date and the shop')); return; }
   if (!body.lines.length) { toast(tx('Add at least one line with a quantity')); return; }
   try {
-    var r = await api('supplyBuy', { body: body });
-    closeModal(); toast(r && r.says ? r.says : tx('Recorded')); supLoad();
+    var reply = await api('supplyBuy', { body: body });
+    closeModal(); toast(reply && reply.says ? reply.says : tx('Recorded')); supLoad();
   } catch (e) { toast((e && e.message) || tx('Could not record it')); }
 }
 
@@ -277,10 +277,10 @@ function supUseModal(id, name){
 }
 
 async function supUse(id){
-  var q = Number((document.getElementById('sup_use_qty') || {}).value || 0);
-  if (!(q > 0)) { toast(tx('How many?')); return; }
+  var node = Number((document.getElementById('sup_use_qty') || {}).value || 0);
+  if (!(node > 0)) { toast(tx('How many?')); return; }
   try {
-    await api('supplyUse', { params: { id: id }, body: { qty: q } });
+    await api('supplyUse', { params: { id: id }, body: { qty: node } });
     closeModal(); toast(tx('Recorded')); supLoad();
   } catch (e) { toast((e && e.message) || tx('Could not record it')); }
 }
