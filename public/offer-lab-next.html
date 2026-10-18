@@ -1083,7 +1083,7 @@ function labSettingsKey(){
 }
 function labSaveSettings(){
   try{
-    var out={}; SETTINGS_KEYS.forEach(function(k){ out[k]=S[k]; });
+    var out={}; SETTINGS_KEYS.forEach(function(item){ out[item]=S[item]; });
     localStorage.setItem(labSettingsKey(), JSON.stringify(out));
   }catch(_){ /* a settings save that fails costs nothing beyond this one refresh not remembering it */ }
 }
@@ -1091,14 +1091,14 @@ function labLoadSettings(){
   try{
     var raw=localStorage.getItem(labSettingsKey()); if(!raw) return;
     var saved=JSON.parse(raw);
-    SETTINGS_KEYS.forEach(function(k){ if(saved[k]!==undefined) S[k]=saved[k]; });
+    SETTINGS_KEYS.forEach(function(item){ if(saved[item]!==undefined) S[item]=saved[item]; });
   }catch(_){}
 }
 function applyBiz(id){
   var B=BIZ[id];
-  CATS=B.cats.map(function(c){return {id:c[0],name:c[1]};});
+  CATS=B.cats.map(function(item){return {id:item[0],name:item[1]};});
   /* ⭐ modifiers, the 6th tuple slot — [] for every sample/import row, the real shape for a real catalogue */
-  P=B.prods.map(function(p){return {id:p[0],name:p[1],cat:p[2],price:p[3],cost:p[4],modifiers:Array.isArray(p[5])?p[5]:[]};});
+  P=B.prods.map(function(item){return {id:item[0],name:item[1],cat:item[2],price:item[3],cost:item[4],modifiers:Array.isArray(item[5])?item[5]:[]};});
   S=Object.assign({},FRESH,{biz:id,margin:B.margin,cap:B.cap},
     JSON.parse(JSON.stringify(B.d)));
   labLoadSettings();
@@ -1116,8 +1116,8 @@ function applyBiz(id){
 function setBiz(id){var st=S.step; applyBiz(id); S.step=st; S.applied=false; render();}
 function num(v){var n=parseFloat(v); return isFinite(n)?n:0;}
 function R2(n){return Math.round(n*100)/100;}
-function byId(id){for(var i=0;i<P.length;i++) if(P[i].id===id) return P[i]; return null;}
-function catName(id){for(var i=0;i<CATS.length;i++) if(CATS[i].id===id) return CATS[i].name; return '';}
+function byId(id){for(var index=0;index<P.length;index++) if(P[index].id===id) return P[index]; return null;}
+function catName(id){for(var index=0;index<CATS.length;index++) if(CATS[index].id===id) return CATS[index].name; return '';}
 /**
  * ⭐⭐⭐ [found live, 2026-10-01] "the Choose a product picker shows category CHIPS and a middle column of raw
  * category UUIDs (e.g. 55e14791-27cb-…) instead of category names." Real cause: a REAL product's own
@@ -1138,12 +1138,12 @@ function catDisplayName(id){
 }
 async function loadCatNames(){
   try {
-    var r=await fetch(API+'/api/definitions?kind=category&all=1', {headers:{Authorization:'Bearer '+savedToken()}});
-    if(r.ok){
-      var j=await r.json();
+    var reply=await fetch(API+'/api/definitions?kind=category&all=1', {headers:{Authorization:'Bearer '+savedToken()}});
+    if(reply.ok){
+      var j=await reply.json();
       var defs=j.definitions||j.rows||(Array.isArray(j)?j:[]);
       var m={};
-      defs.forEach(function(d){ var id=d.definition_id||d.id; if(id) m[id]=d.name||''; });
+      defs.forEach(function(item){ var id=item.definition_id||item.id; if(id) m[id]=item.name||''; });
       CATNAMES=m;
     }
   } catch(e){ console.warn('Offer Lab: category names did not load — keeping the names already shown', e); }   /* a stale name beats a UUID on screen */
@@ -1191,14 +1191,14 @@ function roundDown(v,cap){
 }
 /* the catalogue's own average margin, as a fraction. Used only where the basket
    is genuinely unknowable, and always labelled as an average when it is. */
-function avgM(){var pb=0,cb=0;
-  P.forEach(function(p){ if(p.cost==null) return; pb+=p.price; cb+=p.cost; });
-  return pb>0?(pb-cb)/pb:0;}
-function catItems(id){return P.filter(function(p){return p.cat===id;});}
+function avgM(){var count=0,cb=0;
+  P.forEach(function(item){ if(item.cost==null) return; count+=item.price; cb+=item.cost; });
+  return count>0?(count-cb)/count:0;}
+function catItems(id){return P.filter(function(item){return item.cat===id;});}
 /* ⭐ scope='item' now means "one or more specific items" — S.itemIds, not S.itemId. items() already returned
  * an array either way, so this is the only line the multi-item picker needed to change in the engine itself. */
 function items(){ return S.scope==='item' ? (S.itemIds||[]).map(byId).filter(Boolean) : catItems(S.catId); }
-function goalOf(id){for(var i=0;i<GOALS.length;i++) if(GOALS[i].id===id) return GOALS[i];}
+function goalOf(id){for(var index=0;index<GOALS.length;index++) if(GOALS[index].id===id) return GOALS[index];}
 
 /**
  * ── ⭐⭐⭐ EVERY NUMBER FIELD REBUILT ITSELF MID-KEYSTROKE (Athi: "couldn't edit loyalty bonus in setting
@@ -1215,7 +1215,7 @@ function goalOf(id){for(var i=0;i<GOALS.length;i++) if(GOALS[i].id===id) return 
  * rebuild, and put the cursor back where it was.
  */
 function edit(k,v){
-  var af=document.activeElement, key=af&&af.getAttribute&&af.getAttribute('data-key'), start=af&&af.selectionStart, end=af&&af.selectionEnd;
+  var node=document.activeElement, key=node&&node.getAttribute&&node.getAttribute('data-key'), start=node&&node.selectionStart, end=node&&node.selectionEnd;
   S[k]=v; S.applied=false;
   if(SETTINGS_KEYS.indexOf(k)>=0) labSaveSettings();   /* margin, cap, loyalty on/off, etc. survive a refresh */
   render();
@@ -1254,9 +1254,9 @@ function dragSheetStart(e){
   var r=sheet.getBoundingClientRect(), offX=e.clientX-r.left, offY=e.clientY-r.top;
   sheet.style.position='fixed'; sheet.style.margin='0';
   sheet.style.left=r.left+'px'; sheet.style.top=r.top+'px';
-  function move(ev){
-    var x=Math.min(Math.max(0,ev.clientX-offX), window.innerWidth-72);
-    var y=Math.min(Math.max(0,ev.clientY-offY), window.innerHeight-48);
+  function move(event){
+    var x=Math.min(Math.max(0,event.clientX-offX), window.innerWidth-72);
+    var y=Math.min(Math.max(0,event.clientY-offY), window.innerHeight-48);
     sheet.style.left=x+'px'; sheet.style.top=y+'px';
   }
   function up(){ document.removeEventListener('pointermove',move); document.removeEventListener('pointerup',up); }
@@ -1287,15 +1287,15 @@ function toggleMarkup(){ SHOW_MARKUP=!SHOW_MARKUP; paintWork(); }
  * correct number without needing its own copy of this check.
  */
 function percentRows(){
-  return items().map(function(p){
-    var pub=priceRow(p, offerFrac(p));
-    var all=(loyMode()==='pct') ? priceRow(p, CBOffers.compound([offerFrac(p)*100, loyFrac()*100])/100) : pub;
+  return items().map(function(item){
+    var pub=priceRow(item, offerFrac(item));
+    var all=(loyMode()==='pct') ? priceRow(item, CBOffers.compound([offerFrac(item)*100, loyFrac()*100])/100) : pub;
     if(all.shown>pub.shown){
       all=Object.assign({},all,{shown:pub.shown,status:pub.status,
-        margin:p.cost==null?null:marginPct(pub.shown,p.cost),
-        profit:p.cost==null?null:R2(pub.shown-p.cost)});
+        margin:item.cost==null?null:marginPct(pub.shown,item.cost),
+        profit:item.cost==null?null:R2(pub.shown-item.cost)});
     }
-    return {p:p, pub:pub, all:all};
+    return {p:item, pub:pub, all:all};
   });
 }
 /** ⭐ the WORST of the two decides — "judged on what a loyalty customer pays, the lower of the two" */
@@ -1309,13 +1309,13 @@ function percentAnswer(r){
   var minP=r.p.cost/(1-target/100), maxOff=Math.floor((1-minP/r.p.price)*100);
   return {cls:'trim', html:'<span class="ans trim">✗ only up to <span class="g">'+Math.max(0,maxOff)+'%</span> off</span>'};
 }
-function percentVerdict(rs){
-  var priced=rs.filter(function(r){return r.p.cost!=null;});
+function percentVerdict(list){
+  var priced=list.filter(function(item){return item.p.cost!=null;});
   var n=priced.length, pass=0, never=0, worst=null;
-  priced.forEach(function(r){
-    var m=percentDecide(r), fullM=marginPct(r.p.price, r.p.cost);
+  priced.forEach(function(item){
+    var m=percentDecide(item), fullM=marginPct(item.p.price, item.p.cost);
     if(m>=num(S.margin)) pass++; else if(fullM<num(S.margin)) never++;
-    if(worst===null||m<worst.m) worst={n:r.p.name, m:m};
+    if(worst===null||m<worst.m) worst={n:item.p.name, m:m};
   });
   if(!n) return {cls:'some', html:'<span class="mk">!</span><span class="tx"><b>No priced items to judge</b><span>Add a cost to see whether this offer clears your margin.</span></span>', save:'Save anyway'};
   if(pass===n) return {cls:'pass', html:'<span class="mk">✓</span><span class="tx"><b>All '+n+' clear your '+num(S.margin)+'%</b>'+
@@ -1340,7 +1340,7 @@ function percentVerdictHTML(rs){
  * is the number most confused with margin" — still true as a DEFAULT, so this stays a click away in the
  * header's own #workPnl pill (SHOW_MARKUP, toggleMarkup()) rather than a column that's always on screen.
  */
-function percentTableHTML(rs){
+function percentTableHTML(list){
   var showLoy=loyMode()==='pct';
   var h='<div class="scroll" style="overflow-x:auto"><table class="vtbl"><thead><tr>'+
       '<th rowspan="2">Item</th><th rowspan="2">Cost</th><th rowspan="2">Price now</th>'+
@@ -1351,33 +1351,33 @@ function percentTableHTML(rs){
       '<th class="grp">after '+num(S.pctOff)+'%</th>'+
       (showLoy?'<th class="grp">after '+(Math.round(CBOffers.compound([num(S.pctOff), loyFrac()*100])*10)/10)+'%</th>':'')+
     '</tr></thead><tbody>'+
-    rs.map(function(r){
-      var ans=percentAnswer(r), ansHtml=(typeof ans==='string')?ans:ans.html;
-      var mk=markupPct(r.p.price, r.p.cost);
+    list.map(function(item){
+      var ans=percentAnswer(item), ansHtml=(typeof ans==='string')?ans:ans.html;
+      var mk=markupPct(item.p.price, item.p.cost);
       return '<tr>'+
-        '<td data-l="">'+esc(r.p.name)+'</td>'+
+        '<td data-l="">'+esc(item.p.name)+'</td>'+
         '<td data-l="Cost"><span class="costin"><span>'+moneySymbol()+'</span><input type="number" min="0" value="'+
-          (r.p.cost==null?'':r.p.cost)+'" placeholder="?" onchange="setCost(\''+r.p.id+'\',this.value)"></span></td>'+
-        '<td data-l="Price now">'+M0(r.p.price)+'</td>'+
+          (item.p.cost==null?'':item.p.cost)+'" placeholder="?" onchange="setCost(\''+item.p.id+'\',this.value)"></span></td>'+
+        '<td data-l="Price now">'+M0(item.p.price)+'</td>'+
         (SHOW_MARKUP?'<td data-l="Markup">'+(mk==null?'—':mk+'%')+'</td>':'')+
-        '<td class="grp" data-l="Everyone pays"><span class="pay">'+M0(r.pub.shown)+'</span>'+
-          (r.pub.margin!=null?'<span class="mgn '+(r.pub.margin<0?'loss':r.pub.margin<num(S.margin)?'bad':'ok')+'">'+r.pub.margin+'% margin</span>':'')+'</td>'+
-        (showLoy?'<td class="grp" data-l="Loyalty pays"><span class="pay">'+M0(r.all.shown)+'</span>'+
-          (r.all.margin!=null?'<span class="mgn '+(r.all.margin<0?'loss':r.all.margin<num(S.margin)?'bad':'ok')+'">'+r.all.margin+'% margin</span>':'')+'</td>':'')+
+        '<td class="grp" data-l="Everyone pays"><span class="pay">'+M0(item.pub.shown)+'</span>'+
+          (item.pub.margin!=null?'<span class="mgn '+(item.pub.margin<0?'loss':item.pub.margin<num(S.margin)?'bad':'ok')+'">'+item.pub.margin+'% margin</span>':'')+'</td>'+
+        (showLoy?'<td class="grp" data-l="Loyalty pays"><span class="pay">'+M0(item.all.shown)+'</span>'+
+          (item.all.margin!=null?'<span class="mgn '+(item.all.margin<0?'loss':item.all.margin<num(S.margin)?'bad':'ok')+'">'+item.all.margin+'% margin</span>':'')+'</td>':'')+
         '<td class="grp" data-l="Meets your '+num(S.margin)+'%">'+ansHtml+'</td></tr>';
     }).join('')+'</tbody>'+
-    percentFootHTML(rs, showLoy)+
+    percentFootHTML(list, showLoy)+
     '</table></div>';
   return h;
 }
-function percentFootHTML(rs, showLoy){
-  var priced=rs.filter(function(r){return r.p.cost!=null;});
-  var tc=0,tp=0,tpub=0,tall=0;
-  priced.forEach(function(r){ tc+=r.p.cost; tp+=r.p.price; tpub+=r.pub.shown; tall+=r.all.shown; });
-  var tmPub=tpub>0?Math.round((tpub-tc)/tpub*100):0, tmAll=tall>0?Math.round((tall-tc)/tall*100):0;
-  var tmk=tc>0?Math.round((tp-tc)/tc*100):null;
+function percentFootHTML(list, showLoy){
+  var priced=list.filter(function(item){return item.p.cost!=null;});
+  var count=0,tp=0,tpub=0,tall=0;
+  priced.forEach(function(item){ count+=item.p.cost; tp+=item.p.price; tpub+=item.pub.shown; tall+=item.all.shown; });
+  var tmPub=tpub>0?Math.round((tpub-count)/tpub*100):0, tmAll=tall>0?Math.round((tall-count)/tall*100):0;
+  var tmk=count>0?Math.round((tp-count)/count*100):null;
   var decide=showLoy?tmAll:tmPub, target=num(S.margin);
-  return '<tfoot><tr><td>All '+rs.length+'</td><td>'+M0(tc)+'</td><td>'+M0(tp)+'</td>'+
+  return '<tfoot><tr><td>All '+list.length+'</td><td>'+M0(count)+'</td><td>'+M0(tp)+'</td>'+
     (SHOW_MARKUP?'<td>'+(tmk==null?'—':tmk+'%')+'</td>':'')+
     '<td class="grp">'+M0(tpub)+' <span class="mgn" style="display:inline">'+tmPub+'%</span></td>'+
     (showLoy?'<td class="grp">'+M0(tall)+' <span class="mgn" style="display:inline">'+tmAll+'%</span></td>':'')+
@@ -1406,22 +1406,22 @@ function percentBillHeadHTML(off,all,showLoy){
     (showLoy?'<span style="min-width:62px;text-align:right;color:var(--blue-i)">'+all+'%</span>':'')+
     '</div>';
 }
-function percentBillHTML(rs){
+function percentBillHTML(list){
   var showLoy=loyMode()==='pct';
   var off=num(S.pctOff), all=Math.round(CBOffers.compound([off, loyFrac()*100])*10)/10;
-  var was=0, pay=0, loyPay=0, lines=percentBillHeadHTML(off,all,showLoy);
-  rs.forEach(function(r){
-    was+=r.p.price; pay+=r.pub.shown; loyPay+=r.all.shown;
-    lines+='<div class="ln"><span class="nm">1 × '+esc(r.p.name)+'</span>'+
-      '<span class="old">'+M0(r.p.price)+'</span><span class="new">'+M0(r.pub.shown)+'</span>'+
-      (showLoy?'<span class="new" style="color:var(--blue-i);font-size:13px">'+M0(r.all.shown)+'</span>':'')+
+  var count=0, pay=0, loyPay=0, lines=percentBillHeadHTML(off,all,showLoy);
+  list.forEach(function(item){
+    count+=item.p.price; pay+=item.pub.shown; loyPay+=item.all.shown;
+    lines+='<div class="ln"><span class="nm">1 × '+esc(item.p.name)+'</span>'+
+      '<span class="old">'+M0(item.p.price)+'</span><span class="new">'+M0(item.pub.shown)+'</span>'+
+      (showLoy?'<span class="new" style="color:var(--blue-i);font-size:13px">'+M0(item.all.shown)+'</span>':'')+
       '</div>';
   });
   return '<div class="billhd"><b>What the customer sees</b>'+
       '<span>Cost and margin are not on this panel — they never leave the last one.</span></div>'+
     '<div class="bill"><div class="rcpt">'+lines+
       '<div class="tot"><span class="nm">They pay</span><span class="new">'+M0(pay)+'</span></div>'+
-      '<div class="sav"><span class="nm">You take off '+num(S.pctOff)+'%</span><span class="new">'+M0(was-pay)+'</span></div>'+
+      '<div class="sav"><span class="nm">You take off '+num(S.pctOff)+'%</span><span class="new">'+M0(count-pay)+'</span></div>'+
       (showLoy?'<div class="loy"><span class="nm">A loyalty customer pays</span><span class="new">'+M0(loyPay)+'</span></div>':'')+
       '</div>'+
       '<div class="billnote">One of each, so the arithmetic is checkable. What a customer actually puts in '+
@@ -1447,9 +1447,9 @@ function workField(key, mkey, val, disabled){
  * source of truth for the same number. `live=false` (loyalty's own presets while the bonus is off) dims and
  * disables them, matching the field they write into. */
 function workQuick(key, vals, live){
-  return vals.map(function(n){
-    return '<button class="'+(live&&num(S[key])===n?'on':'')+'" '+(live?'':'disabled style="opacity:.35"')+
-      ' onclick="edit(\''+key+'\','+n+')">'+n+'%</button>';
+  return vals.map(function(item){
+    return '<button class="'+(live&&num(S[key])===item?'on':'')+'" '+(live?'':'disabled style="opacity:.35"')+
+      ' onclick="edit(\''+key+'\','+item+')">'+item+'%</button>';
   }).join('');
 }
 /**
@@ -1497,7 +1497,7 @@ function workDemoHTML(tail){
 function paintWork(){
   var el=document.getElementById('workScrim'); if(!el) return;
   var l=label();
-  var pnl=document.getElementById('workPnl'), flip=document.getElementById('workFlip'), save=document.getElementById('workSave');
+  var node=document.getElementById('workPnl'), flip=document.getElementById('workFlip'), save=document.getElementById('workSave');
   var demo=document.getElementById('workDemo');
   if(S.goal==='percent'){
     /**
@@ -1518,8 +1518,8 @@ function paintWork(){
     /* ⭐ [found live, 2026-09-26] "mock up toggle on top of the panel, we have space" — the tab-switcher pill
        (#workPnl) went unused once "On a bill" was removed; reused here for a single on/off toggle instead of
        adding new chrome. */
-    pnl.style.display='';
-    pnl.innerHTML='<button class="'+(SHOW_MARKUP?'on':'')+'" onclick="toggleMarkup()" title="Cost-to-price markup, alongside cost">Markup</button>';
+    node.style.display='';
+    node.innerHTML='<button class="'+(SHOW_MARKUP?'on':'')+'" onclick="toggleMarkup()" title="Cost-to-price markup, alongside cost">Markup</button>';
     document.getElementById('workBody').innerHTML = percentTableHTML(rs);
     flip.textContent='Change it'; flip.onclick=closeWork;
     var v=percentVerdict(rs);
@@ -1527,7 +1527,7 @@ function paintWork(){
     document.getElementById('workNote').textContent = showLoy
       ? 'Judged on what a loyalty customer pays — the lower of the two.' : 'Loyalty bonus is off.';
   } else {
-    pnl.style.display='none';
+    node.style.display='none';
     demo.style.display='none'; demo.innerHTML='';
     document.getElementById('workTitle').textContent=l.title;
     document.getElementById('workTag').textContent=l.detail;
@@ -1536,8 +1536,8 @@ function paintWork(){
     save.textContent='Save for review';
     var note='';
     if(S.goal==='amount'){
-      var lrs=lineRows(), under=lrs.filter(function(r){ return r.margin!=null && r.margin<num(S.margin); }).length;
-      note = under ? under+' of '+lrs.length+' fall under your '+num(S.margin)+'%.' : 'All clear your '+num(S.margin)+'%.';
+      var list=lineRows(), under=list.filter(function(item){ return item.margin!=null && item.margin<num(S.margin); }).length;
+      note = under ? under+' of '+list.length+' fall under your '+num(S.margin)+'%.' : 'All clear your '+num(S.margin)+'%.';
     }
     document.getElementById('workNote').textContent=note;
   }
@@ -1552,9 +1552,9 @@ document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ closeWor
  * runs against) — what was missing is that nobody watched it finish. A shopkeeper typing a cost and moving
  * on had no way to tell a real save from a silently dropped one; now every real attempt says which.
  */
-async function setCost(id,v){ var p=byId(id); if(!p) return;
+async function setCost(id,v){ var node=byId(id); if(!node) return;
   var val = (v===''||v==null) ? null : Math.max(0,num(v));
-  p.cost = val; render();
+  node.cost = val; render();
   /* ⭐ the overlay is a SEPARATE div render() never touches ([0,1,2,3].forEach only walks #s0..#s3) — its own
      row list and the "N left" footer need their own repaint, or a cost typed there would look unsaved. */
   if(priceOvOpen()) paintPriceOvBody();
@@ -1562,12 +1562,12 @@ async function setCost(id,v){ var p=byId(id); if(!p) return;
   if(S.biz==='mine' && savedLive()){
     var patch = val==null ? {cost:null} : {cost:{value:val, source:'manual', updated_at:new Date().toISOString()}};
     var r = await apiFetch('PATCH', API+'/api/products/'+id, {item_data:patch, merge:true}, 'cost');
-    if(r.queued) toastSay('Saved here — '+esc(p.name)+'’s cost will reach your catalogue once you’re back online.');
-    else if(!r.ok) toastSay('Could not save '+esc(p.name)+'’s cost: '+((r.body&&r.body.message)||'try again.'));
+    if(r.queued) toastSay('Saved here — '+esc(node.name)+'’s cost will reach your catalogue once you’re back online.');
+    else if(!r.ok) toastSay('Could not save '+esc(node.name)+'’s cost: '+((r.body&&r.body.message)||'try again.'));
     /* a real, successful write says nothing further — the row already shows the value it just saved */
   }
 }
-function setPrice(id,v){ var p=byId(id); if(!p) return; p.price=Math.max(0,num(v)); render(); }
+function setPrice(id,v){ var node=byId(id); if(!node) return; node.price=Math.max(0,num(v)); render(); }
 
 /**
  * ── ⭐⭐⭐ THE PRICE LIST OVERLAY (Athi: "bring the product list as a overlay, so it can be seen separate and
@@ -1594,12 +1594,12 @@ function openOverlay(pickMode,pickFn,picked,onlyIds,titleOverride){
   OVL={q:'',cat:null,noCostOnly:false,pickMode:pickMode||null,pickFn:pickFn||null,picked:picked||[],onlyIds:onlyIds||null};
   var el=document.getElementById('priceOverlay'); if(!el) return;
   el.classList.add('on');
-  var s=document.getElementById('ovlSearch'); if(s) s.value='';
+  var node=document.getElementById('ovlSearch'); if(node) node.value='';
   var t=document.getElementById('ovlTitle');
   if(t) t.textContent = titleOverride || (pickMode==='cat' ? 'Choose a category' : pickMode==='item' ? 'Choose a product'
     : pickMode==='apply' ? 'Apply this offer to' : 'Price list');
   paintPriceOvCats(); paintPriceOvBody();
-  if(s) s.focus();
+  if(node) node.focus();
 }
 function openPriceOverlay(){ openOverlay(null,null); }
 /** ⭐ the "N items linked" row's own opener (renderS3()) — same overlay, same table, narrowed to exactly
@@ -1636,9 +1636,9 @@ function overlayApplyToggle(id){
  * prodPickAll(), verbatim: select every row the CURRENT filter shows if not all are already picked, otherwise
  * clear them, so a person can select-all-in-category then uncheck the odd exception (or the reverse). */
 function overlayApplyToggleAll(){
-  var vis=priceOvList().map(function(p){return p.id;});
-  var every=vis.every(function(id){return OVL.picked.indexOf(id)>=0;});
-  vis.forEach(function(id){
+  var list=priceOvList().map(function(item){return item.id;});
+  var every=list.every(function(id){return OVL.picked.indexOf(id)>=0;});
+  list.forEach(function(id){
     var i=OVL.picked.indexOf(id);
     if(every){ if(i>=0) OVL.picked.splice(i,1); }
     else if(i<0) OVL.picked.push(id);
@@ -1658,11 +1658,11 @@ function overlayApplyDone(){ var picked=OVL.picked.slice(); closePriceOverlay();
 function priceOvToggleNoCost(){ OVL.noCostOnly=!OVL.noCostOnly; paintPriceOvCats(); paintPriceOvBody(); }
 function priceOvList(){
   var q=(OVL.q||'').trim().toLowerCase();
-  return P.filter(function(p){
-    if(OVL.onlyIds && OVL.onlyIds.indexOf(p.id)<0) return false;
-    if(OVL.cat && p.cat!==OVL.cat) return false;
-    if(OVL.noCostOnly && p.cost!=null) return false;
-    if(q && p.name.toLowerCase().indexOf(q)<0) return false;
+  return P.filter(function(item){
+    if(OVL.onlyIds && OVL.onlyIds.indexOf(item.id)<0) return false;
+    if(OVL.cat && item.cat!==OVL.cat) return false;
+    if(OVL.noCostOnly && item.cost!=null) return false;
+    if(q && item.name.toLowerCase().indexOf(q)<0) return false;
     return true;
   });
 }
@@ -1671,7 +1671,7 @@ function priceOvList(){
  * own category_counts). Athi: "in each item list, count should be there." */
 function priceOvCats(){
   var seen={}, out=[], counts={};
-  P.forEach(function(p){ if(!p.cat) return; counts[p.cat]=(counts[p.cat]||0)+1; if(!seen[p.cat]){ seen[p.cat]=1; out.push(p.cat); } });
+  P.forEach(function(item){ if(!item.cat) return; counts[item.cat]=(counts[item.cat]||0)+1; if(!seen[item.cat]){ seen[item.cat]=1; out.push(item.cat); } });
   return out.map(function(id){ return {id:id, name:catName(id), n:counts[id]||0}; });
 }
 function paintPriceOvCats(){
@@ -1684,12 +1684,12 @@ function paintPriceOvCats(){
   /* ⭐ 'cat' mode: the chips ARE the answer — clicking one picks it and closes, same chip list the cost
      editor already filters by, no second "list of categories" built anywhere. */
   if(OVL.pickMode==='cat'){
-    el.innerHTML = cats.map(function(c){ return '<button class="ovlchip" onclick="overlayPick(\''+c.id+'\')">'+esc(c.name)+' ('+c.n+')</button>'; }).join('');
+    el.innerHTML = cats.map(function(item){ return '<button class="ovlchip" onclick="overlayPick(\''+item.id+'\')">'+esc(item.name)+' ('+item.n+')</button>'; }).join('');
     return;
   }
-  var noCostN=P.filter(function(p){return p.cost==null;}).length;
+  var noCostN=P.filter(function(item){return item.cost==null;}).length;
   el.innerHTML='<button class="ovlchip'+(!OVL.cat?' on':'')+'" onclick="priceOvCat(null)">All ('+P.length+')</button>'+
-    cats.map(function(c){ return '<button class="ovlchip'+(OVL.cat===c.id?' on':'')+'" onclick="priceOvCat(\''+c.id+'\')">'+esc(c.name)+' ('+c.n+')</button>'; }).join('')+
+    cats.map(function(item){ return '<button class="ovlchip'+(OVL.cat===item.id?' on':'')+'" onclick="priceOvCat(\''+item.id+'\')">'+esc(item.name)+' ('+item.n+')</button>'; }).join('')+
     (OVL.pickMode==='item'||OVL.pickMode==='apply' ? '' :   /* pick modes still filter by category, never need this toggle */
       '<span style="flex:1"></span>'+
       '<button class="ovlchip'+(OVL.noCostOnly?' on':'')+'" onclick="priceOvToggleNoCost()">Missing cost only ('+noCostN+')</button>');
@@ -1726,18 +1726,18 @@ function paintPriceOvBody(){
     /* ⭐⭐⭐ "select all" is ALL VISIBLE, never the whole catalogue — same rule, same wording as app.html's
        own prodPickAll(): with a category filter on, "select all" means everything in THAT filter, so a few
        can then be unchecked (or checked) as exceptions without hunting through products that aren't shown. */
-    var allOn = list.length>0 && list.every(function(p){ return OVL.picked.indexOf(p.id)>=0; });
+    var allOn = list.length>0 && list.every(function(item){ return OVL.picked.indexOf(item.id)>=0; });
     body.innerHTML = banner + (!list.length
       ? '<div class="hs" style="padding:24px">No products match'+(OVL.q?' "'+esc(OVL.q)+'"':'')+'.</div>'
       : '<table class="ovltbl"><thead><tr><th style="width:30px">'+
           '<span class="cbx'+(allOn?' on':'')+'" onclick="overlayApplyToggleAll()" title="Select everything shown">'+(allOn?'✓':'')+'</span>'+
-          '</th><th colspan="3">Select all shown</th></tr></thead><tbody>'+list.map(function(p){
-          var checked=OVL.picked.indexOf(p.id)>=0, hit=offerCoveringItem(p);
-          return '<tr class="ovlpickrow'+(hit?' ovlinother':'')+'" style="cursor:pointer" onclick="overlayApplyToggle(\''+p.id+'\')">'+
+          '</th><th colspan="3">Select all shown</th></tr></thead><tbody>'+list.map(function(item){
+          var checked=OVL.picked.indexOf(item.id)>=0, hit=offerCoveringItem(item);
+          return '<tr class="ovlpickrow'+(hit?' ovlinother':'')+'" style="cursor:pointer" onclick="overlayApplyToggle(\''+item.id+'\')">'+
             '<td style="width:30px"><span class="cbx'+(checked?' on':'')+'">'+(checked?'✓':'')+'</span></td>'+
-            '<td class="ovlname">'+esc(p.name)+(hit?'<div style="font-size:11.5px;color:var(--amber-i);font-weight:600;margin-top:2px">Already in “'+esc(hit.title)+'”</div>':'')+'</td>'+
-            '<td class="ovlcat">'+esc(catName(p.cat)||'—')+'</td>'+
-            '<td class="ovlprice">'+M0(p.price)+'</td></tr>';
+            '<td class="ovlname">'+esc(item.name)+(hit?'<div style="font-size:11.5px;color:var(--amber-i);font-weight:600;margin-top:2px">Already in “'+esc(hit.title)+'”</div>':'')+'</td>'+
+            '<td class="ovlcat">'+esc(catName(item.cat)||'—')+'</td>'+
+            '<td class="ovlprice">'+M0(item.price)+'</td></tr>';
         }).join('')+'</tbody></table>');
     if(foot) foot.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;gap:10px">'+
       '<span>'+OVL.picked.length+' item'+(OVL.picked.length===1?'':'s')+' checked</span>'+
@@ -1749,10 +1749,10 @@ function paintPriceOvBody(){
   if(OVL.pickMode==='item'){
     body.innerHTML = !list.length
       ? '<div class="hs" style="padding:24px">No products match'+(OVL.q?' "'+esc(OVL.q)+'"':'')+'.</div>'
-      : '<table class="ovltbl"><tbody>'+list.map(function(p){
-          return '<tr class="ovlpickrow" style="cursor:pointer" onclick="overlayPick(\''+p.id+'\')">'+
-            '<td class="ovlname">'+esc(p.name)+'</td><td class="ovlcat">'+esc(catName(p.cat)||'—')+'</td>'+
-            '<td class="ovlprice">'+M0(p.price)+'</td></tr>';
+      : '<table class="ovltbl"><tbody>'+list.map(function(item){
+          return '<tr class="ovlpickrow" style="cursor:pointer" onclick="overlayPick(\''+item.id+'\')">'+
+            '<td class="ovlname">'+esc(item.name)+'</td><td class="ovlcat">'+esc(catName(item.cat)||'—')+'</td>'+
+            '<td class="ovlprice">'+M0(item.price)+'</td></tr>';
         }).join('')+'</tbody></table>';
     if(foot) foot.innerHTML='<div>'+list.length+' of '+P.length+' product'+(P.length===1?'':'s')+' — click one to pick it</div>';
     return;
@@ -1764,22 +1764,22 @@ function paintPriceOvBody(){
   body.innerHTML = !list.length
     ? '<div class="hs" style="padding:24px">No products match'+(OVL.q?' "'+esc(OVL.q)+'"':'')+'.</div>'
     : '<table class="ovltbl"><thead><tr><th>Product</th><th>Category</th><th class="ovlpriceh">Sale price</th><th class="ovlpriceh">Cost</th><th class="ovlpriceh">Markup</th></tr></thead><tbody>'+
-      list.map(function(p){
-        var mk=costBlind?null:markupPct(p.price,p.cost);
-        return '<tr><td class="ovlname">'+esc(p.name)+'</td><td class="ovlcat">'+esc(catName(p.cat)||'—')+'</td>'+
-          '<td class="ovlprice">'+M0(p.price)+'</td>'+
+      list.map(function(item){
+        var mk=costBlind?null:markupPct(item.price,item.cost);
+        return '<tr><td class="ovlname">'+esc(item.name)+'</td><td class="ovlcat">'+esc(catName(item.cat)||'—')+'</td>'+
+          '<td class="ovlprice">'+M0(item.price)+'</td>'+
           '<td>'+(costBlind
             ? '<span style="color:var(--muted)" title="Ask the owner for access">🔒</span>'
             : '<div class="inp"><span>'+moneySymbol()+'</span><input type="number" min="0" placeholder="—" value="'+
-              (p.cost==null?'':p.cost)+'" onchange="setCost(\''+p.id+'\',this.value)"></div>')+'</td>'+
+              (item.cost==null?'':item.cost)+'" onchange="setCost(\''+item.id+'\',this.value)"></div>')+'</td>'+
           '<td class="ovlprice" style="color:'+(mk==null?'inherit':(mk<0?'var(--red-i)':'var(--green-d)'))+'">'+(costBlind?'🔒':(mk==null?'—':mk+'%'))+'</td></tr>';
       }).join('')+'</tbody></table>';
   if(foot){
     /* ⭐ openPriceOverlayForItems()'s own view reads "N of P.length products shown" as if most of the
        catalogue had been filtered OUT by mistake — it's the opposite: every row here IS the offer. Counted
        and worded against just this set, not the whole catalogue. */
-    var base=OVL.onlyIds ? P.filter(function(p){return OVL.onlyIds.indexOf(p.id)>=0;}) : P;
-    var withCost=base.filter(function(p){return p.cost!=null;}).length;
+    var base=OVL.onlyIds ? P.filter(function(item){return OVL.onlyIds.indexOf(item.id)>=0;}) : P;
+    var withCost=base.filter(function(item){return item.cost!=null;}).length;
     /* ⚠️⚠️⚠️ [OFFR-01] SAID HERE TOO, NOT ONLY IN THE MODIFIER LAB'S OWN FOOTER — this overlay is where a
        cost is actually typed, and the modifier lab's "Applying writes to your real catalogue" line never
        appeared on this screen at all. setCost() decides by the SAME test (S.biz==='mine' && savedLive());
@@ -1880,30 +1880,30 @@ function priceRow(p,frac){
     wasMargin: p.cost==null?null:marginPct(base,p.cost)};
 }
 /* "as if one of each" — there is no volume in here, ever */
-function totals(rs){
-  var pb=0,pa=0,cb=0,n=0,blind=0;
-  rs.forEach(function(r){ if(r.p.cost==null){blind++;return;}
-    n++; pb+=r.base; pa+=r.shown; cb+=r.p.cost; });
-  return {n:n, blind:blind, priceBefore:R2(pb), priceAfter:R2(pa), cost:R2(cb),
-    profitBefore:R2(pb-cb), profitAfter:R2(pa-cb),
-    marginBefore: pb>0?Math.round((pb-cb)/pb*100):0,
+function totals(list){
+  var count=0,pa=0,cb=0,index=0,blind=0;
+  list.forEach(function(item){ if(item.p.cost==null){blind++;return;}
+    index++; count+=item.base; pa+=item.shown; cb+=item.p.cost; });
+  return {n:index, blind:blind, priceBefore:R2(count), priceAfter:R2(pa), cost:R2(cb),
+    profitBefore:R2(count-cb), profitAfter:R2(pa-cb),
+    marginBefore: count>0?Math.round((count-cb)/count*100):0,
     marginAfter:  pa>0?Math.round((pa-cb)/pa*100):0};
 }
 function lineRows(){
-  return items().map(function(p){ return priceRow(p, CBOffers.compound([offerFrac(p)*100, loyFrac()*100])/100); }); }
+  return items().map(function(item){ return priceRow(item, CBOffers.compound([offerFrac(item)*100, loyFrac()*100])/100); }); }
 
 /* ── ladders (max three steps, always) ─────────────────────────────────── */
-function tiers(){ return (S.tiers||[]).map(function(t){return {qty:num(t[0]),pct:num(t[1])};}); }
+function tiers(){ return (S.tiers||[]).map(function(item){return {qty:num(item[0]),pct:num(item[1])};}); }
 function setTier(i,which,v){ if(!S.tiers[i]) return; S.tiers[i][which]=Math.max(0,num(v)); S.applied=true; render(); }
 function addTier(){ if(S.tiers.length>=3) return;
   var t=S.tiers[S.tiers.length-1]||[1,0];
   S.tiers.push([num(t[0])*2, Math.min(95,num(t[1])+5)]); S.applied=true; render(); }
 function delTier(i){ if(S.tiers.length<=1) return; S.tiers.splice(i,1); S.applied=true; render(); }
-function tierFault(){ var t=tiers(), bad=[];
-  for(var i=1;i<t.length;i++){
-    if(t[i].qty<=t[i-1].qty) bad.push('Step '+(i+1)+' must be more than '+t[i-1].qty);
-    if(t[i].pct <t[i-1].pct) bad.push('Buying more should not give less than '+t[i-1].pct+'%'); }
-  return bad; }
+function tierFault(){ var t=tiers(), list=[];
+  for(var index=1;index<t.length;index++){
+    if(t[index].qty<=t[index-1].qty) list.push('Step '+(index+1)+' must be more than '+t[index-1].qty);
+    if(t[index].pct <t[index-1].pct) list.push('Buying more should not give less than '+t[index-1].pct+'%'); }
+  return list; }
 /**
  * ⭐⭐⭐ [found live, 2026-09-27] "you are showcasing the percentage, but which offer is to be choosen, how to
  * select the x? either 1 or 2 or 3?" then, more specifically: "need to have a radio button to select the
@@ -1923,8 +1923,8 @@ function setBill(i,v){ S.bills[i]=Math.max(1,num(v)); S.applied=true; render(); 
 
 /* three representative items in the shelf: cheapest, middle, dearest */
 function threeOf(list){
-  var xs=list.filter(function(p){return p.cost!=null;})
-             .sort(function(a,b){return a.price-b.price;});
+  var xs=list.filter(function(item){return item.cost!=null;})
+             .sort(function(first,second){return first.price-second.price;});
   if(!xs.length) return [];
   if(xs.length<3) return xs;
   return [xs[0], xs[Math.floor(xs.length/2)], xs[xs.length-1]];
@@ -1939,9 +1939,9 @@ function mgnClass(m,status){
 }
 function mgnText(m,status){ return (status==='nocost'||m==null)?'N/A':m+'%'; }
 function seg(k,opts,fn){
-  return '<div class="seg">'+opts.map(function(o){
-    return '<button class="'+(String(S[k])===String(o[0])?'on':'')+'" onclick="'+
-      (fn||'edit')+'(\''+k+'\',\''+o[0]+'\')">'+o[1]+'</button>';}).join('')+'</div>';
+  return '<div class="seg">'+opts.map(function(item){
+    return '<button class="'+(String(S[k])===String(item[0])?'on':'')+'" onclick="'+
+      (fn||'edit')+'(\''+k+'\',\''+item[0]+'\')">'+item[1]+'</button>';}).join('')+'</div>';
 }
 /**
  * ── ⭐⭐⭐ SEARCH, NOT A DROPDOWN TO SCROLL (Athi: "the real catalogue, and the search function all should
@@ -1959,13 +1959,13 @@ function seg(k,opts,fn){
  * A/B all open the one overlay, never a picker mechanism of their own.
  */
 function selectOf(list,val,fn){
-  var cur = list.filter(function(o){ return String(o[0])===String(val); })[0];
+  var cur = list.filter(function(item){ return String(item[0])===String(val); })[0];
   return '<button type="button" class="btn" style="width:100%;justify-content:space-between;font-weight:500" '+
     'onclick="openPickOverlay(\''+(fn==='setCat'?'cat':'item')+'\',\''+fn+'\')">'+
     '<span>'+(cur?esc(cur[1]):'Choose…')+'</span><span style="color:var(--faint)">▾</span></button>';
 }
-function prodOpts(list){ return list.map(function(p){
-  return [p.id, p.name+'  —  '+M0(p.price)];}); }
+function prodOpts(list){ return list.map(function(item){
+  return [item.id, item.name+'  —  '+M0(item.price)];}); }
 
 /* ═══ SCREEN 0 · SETTINGS ══════════════════════════════════════════════ */
 /**
@@ -2038,9 +2038,9 @@ function renderS0(){
             click, not a choice and then a separate hunt for where to actually type. */
          '<div class="fld"><span class="lbl">Where cost comes from</span><div class="seg">'+
            [['typed','Typed on each item',1],['purchases','What you last paid',0],
-            ['supplier','A supplier list',0],['rule','A rule you set',0]].map(function(o){
-             return '<button class="'+(S.costSource===o[0]?'on':'')+'" '+(o[2]?'':'disabled')+
-               ' onclick="'+(o[2]?'edit(\'costSource\',\''+o[0]+'\');openPriceOverlay()':'')+'">'+o[1]+(o[2]?'':' · later')+'</button>';
+            ['supplier','A supplier list',0],['rule','A rule you set',0]].map(function(item){
+             return '<button class="'+(S.costSource===item[0]?'on':'')+'" '+(item[2]?'':'disabled')+
+               ' onclick="'+(item[2]?'edit(\'costSource\',\''+item[0]+'\');openPriceOverlay()':'')+'">'+item[1]+(item[2]?'':' · later')+'</button>';
            }).join('')+'</div>'+
            '<div class="sub">Cost is yours alone. No customer or link ever sees it.</div></div>'+
          (S.biz==='mine' && savedLive() && COST_ACCESS.is_owner
@@ -2070,31 +2070,31 @@ function renderS1(){
         '<p class="hs">Eight shapes. Pick one and the next screen does the arithmetic.</p>'+
         '<div class="goals" style="margin-top:16px">';
   var last=null;
-  GOALS.forEach(function(g){
-    if(g.kind!==last){ last=g.kind;
-      h+='<div class="grouphead">'+KINDS[g.kind]+'<i></i></div>'; }
-    h+='<button class="goal '+(S.goal===g.id?'on':'')+'" onclick="pickGoal(\''+g.id+'\')">'+
-       '<span class="gi">'+inShopMoney(g.icon)+'</span><b>'+inShopMoney(g.n)+'</b><span class="ex">'+inShopMoney(g.ex)+'</span></button>';
+  GOALS.forEach(function(item){
+    if(item.kind!==last){ last=item.kind;
+      h+='<div class="grouphead">'+KINDS[item.kind]+'<i></i></div>'; }
+    h+='<button class="goal '+(S.goal===item.id?'on':'')+'" onclick="pickGoal(\''+item.id+'\')">'+
+       '<span class="gi">'+inShopMoney(item.icon)+'</span><b>'+inShopMoney(item.n)+'</b><span class="ex">'+inShopMoney(item.ex)+'</span></button>';
   });
   return h+'</div></div>';
 }
 
 /* ═══ shared view pieces ══════════════════════════════════════════════ */
 function headline(cells){
-  return '<div class="headline">'+cells.map(function(c){
-    if(c===null) return '<span class="sep"></span>';
-    return '<div><span class="hv '+(c[2]||'')+'">'+c[0]+
-      (c[3]?' <small>'+c[3]+'</small>':'')+'</span><span class="hk">'+c[1]+'</span></div>';
+  return '<div class="headline">'+cells.map(function(item){
+    if(item===null) return '<span class="sep"></span>';
+    return '<div><span class="hv '+(item[2]||'')+'">'+item[0]+
+      (item[3]?' <small>'+item[3]+'</small>':'')+'</span><span class="hk">'+item[1]+'</span></div>';
   }).join('')+'</div>';
 }
 /* labels down the left, up to three columns across. The one table shape used by
    every offer that acts on a bill rather than on an item. */
 function g3(heads,rows){
   return '<div style="overflow-x:auto"><table class="g3"><thead><tr><th></th>'+
-    heads.map(function(h){return '<th'+(h[2]?' class="on"':'')+'><b>'+h[0]+'</b>'+(h[1]||'')+'</th>';}).join('')+
-    '</tr></thead><tbody>'+rows.map(function(r){
-      return '<tr'+(r[2]?' class="big"':'')+'><td>'+r[0]+'</td>'+
-        r[1].map(function(c){return '<td>'+c+'</td>';}).join('')+'</tr>';
+    heads.map(function(item){return '<th'+(item[2]?' class="on"':'')+'><b>'+item[0]+'</b>'+(item[1]||'')+'</th>';}).join('')+
+    '</tr></thead><tbody>'+rows.map(function(item){
+      return '<tr'+(item[2]?' class="big"':'')+'><td>'+item[0]+'</td>'+
+        item[1].map(function(c){return '<td>'+c+'</td>';}).join('')+'</tr>';
     }).join('')+'</tbody></table></div>';
 }
 function costCell(p){
@@ -2104,7 +2104,7 @@ function costCell(p){
 }
 function nameCell(p){
   var ini=p.name.replace(/[^A-Za-zऀ-ॿ ]/g,'').split(' ')
-          .filter(Boolean).slice(0,2).map(function(w){return w[0];}).join('').toUpperCase();
+          .filter(Boolean).slice(0,2).map(function(item){return item[0];}).join('').toUpperCase();
   return '<td data-l=""><span class="nm"><span class="tile">'+ini+'</span><b>'+esc(p.name)+'</b></span></td>';
 }
 
@@ -2126,7 +2126,7 @@ function nameCell(p){
 function scopeRow(catOnly){
   if(catOnly){
     return '<div class="f"><span class="lbl">Apply it to</span>'+
-      selectOf(CATS.map(function(c){return [c.id,c.name];}),S.catId,'setCat')+'</div>';
+      selectOf(CATS.map(function(item){return [item.id,item.name];}),S.catId,'setCat')+'</div>';
   }
   var label = S.scope==='cat' ? ('Whole category — '+esc(catName(S.catId)||'—'))
     : (S.itemIds && S.itemIds.length) ? (S.itemIds.length===1 ? esc((byId(S.itemIds[0])||{}).name||'1 item') : S.itemIds.length+' items chosen')
@@ -2279,9 +2279,9 @@ function cfgHTML(){
         '<div class="hint" style="margin-top:0">Edit them in the table headings. Three at most.</div></div>'+
         loyBar()+scopeRow();
     case 'free':
-      var h='<span class="lbl">Which shape?</span><div class="shapes">'+SHAPES.map(function(s){
-        return '<button class="shape '+(S.freeShape===s.id?'on':'')+'" onclick="setShape(\''+s.id+'\')">'+
-          '<b>'+s.n+'</b><span>'+inShopMoney(s.ex)+'</span></button>';}).join('')+'</div>';
+      var h='<span class="lbl">Which shape?</span><div class="shapes">'+SHAPES.map(function(item){
+        return '<button class="shape '+(S.freeShape===item.id?'on':'')+'" onclick="setShape(\''+item.id+'\')">'+
+          '<b>'+item.n+'</b><span>'+inShopMoney(item.ex)+'</span></button>';}).join('')+'</div>';
       if(S.freeShape==='anything')
         h+='<div class="two" style="margin-top:12px"><div class="f"><span class="lbl">What is free</span>'+
           selectOf(prodOpts(P),S.giftId,'setGift')+
@@ -2367,7 +2367,7 @@ function outHTML(){
  * up). Forcing a basket onto them would be a second, weaker way to ask something already answered.
  */
 function cartPreviewItems(){
-  var pool=P.filter(function(p){return p.cost!=null;}); if(pool.length<2) pool=P.slice();
+  var pool=P.filter(function(item){return item.cost!=null;}); if(pool.length<2) pool=P.slice();
   var picked=[];
   function add(p){ if(p && picked.indexOf(p)<0) picked.push(p); }
   if(S.goal==='bundle'){ add(byId(S.bunA)); add(byId(S.bunB)); }
@@ -2387,19 +2387,19 @@ function cartPreviewItems(){
    * as something already picked FIRST (a plausible thing to actually be on the same bill), the rest of the
    * catalogue only as a last resort when a category doesn't have enough else in it.
    */
-  var cats={}; picked.forEach(function(p){ if(p.cat) cats[p.cat]=true; });
-  pool.filter(function(p){return p.cat && cats[p.cat];})
-    .concat(pool.filter(function(p){return !(p.cat && cats[p.cat]);}))
-    .forEach(function(p){ if(picked.length<3) add(p); });
+  var cats={}; picked.forEach(function(item){ if(item.cat) cats[item.cat]=true; });
+  pool.filter(function(item){return item.cat && cats[item.cat];})
+    .concat(pool.filter(function(item){return !(item.cat && cats[item.cat]);}))
+    .forEach(function(item){ if(picked.length<3) add(item); });
   return picked.slice(0,3);
 }
 function cartPreviewLines(items){
-  return items.map(function(p){
+  return items.map(function(item){
     var qty=1;
-    if(S.goal==='qty'){ var ts=tiers(), top=ts[ts.length-1]; if(top && S.scope==='item' && (S.itemIds||[]).indexOf(p.id)>=0) qty=top.qty; }
-    else if(S.goal==='free'&&S.freeShape==='same'&&p.id===S.itemId) qty=(counts()[chosenCount()]||1)+1;
+    if(S.goal==='qty'){ var ts=tiers(), top=ts[ts.length-1]; if(top && S.scope==='item' && (S.itemIds||[]).indexOf(item.id)>=0) qty=top.qty; }
+    else if(S.goal==='free'&&S.freeShape==='same'&&item.id===S.itemId) qty=(counts()[chosenCount()]||1)+1;
     else if(S.goal==='free'&&S.freeShape==='cheapest') qty=Math.max(2,num(S.cheapN));
-    return { key:p.id, item_id:p.id, name:p.name, category:p.cat, qty:qty, unitPrice:p.price, cost:p.cost };
+    return { key:item.id, item_id:item.id, name:item.name, category:item.cat, qty:qty, unitPrice:item.price, cost:item.cost };
   });
 }
 /** ⭐ what THIS screen's offer does to these lines — CBOffers.evaluate() with the kind and rule a save would store.
@@ -2411,14 +2411,14 @@ function cartPreviewHTML(){
   var lines=cartPreviewLines(items);
   var ev; try{ ev=previewEval(lines); }catch(e){ return ''; }
   var costTotal=0, costKnown=true;
-  lines.forEach(function(l){ if(l.cost==null) costKnown=false; else costTotal+=l.cost*l.qty; });
+  lines.forEach(function(item){ if(item.cost==null) costKnown=false; else costTotal+=item.cost*item.qty; });
   var margin=(costKnown && ev.total>0) ? Math.round((ev.total-costTotal)/ev.total*100) : null;
-  var rows=lines.map(function(l){
-    var was=R2(l.unitPrice*l.qty), now=R2(ev.line_net[l.key]!=null?ev.line_net[l.key]:was), moved=Math.abs(was-now)>0.005;
-    return '<tr><td data-l="">'+esc(l.qty)+' × '+esc(l.name)+(moved?' <span class="pill p-appr" style="margin-left:4px">this offer</span>':'')+'</td>'
+  var rows=lines.map(function(item){
+    var was=R2(item.unitPrice*item.qty), now=R2(ev.line_net[item.key]!=null?ev.line_net[item.key]:was), moved=Math.abs(was-now)>0.005;
+    return '<tr><td data-l="">'+esc(item.qty)+' × '+esc(item.name)+(moved?' <span class="pill p-appr" style="margin-left:4px">this offer</span>':'')+'</td>'
       +'<td class="num" data-l="Price">'+(moved?'<span class="was">'+M0(was)+'</span>':'')+M0(now)+'</td></tr>';
   }).join('');
-  var notes=(ev.notes||[]).filter(function(n){return n.why;}).map(function(n){return '<div class="hint">'+esc(n.why)+'</div>';}).join('');
+  var notes=(ev.notes||[]).filter(function(item){return item.why;}).map(function(item){return '<div class="hint">'+esc(item.why)+'</div>';}).join('');
   return '<div class="card pad" style="margin-top:14px">'
     +'<h3 class="h" style="font-size:16px">On a real basket</h3>'
     +'<p class="hs">A sample bill with other everyday items on it too — not just what this offer targets.</p>'
@@ -2432,9 +2432,9 @@ function mgnSpan(m,st){ return '<span class="cm '+mgnClass(m,st)+'">'+mgnText(m,
 
 /* ── a percentage off / rupees off ─────────────────────────────────── */
 function outLine(){
-  var rs=lineRows().sort(function(a,b){
-    var x=a.margin==null?999:a.margin, y=b.margin==null?999:b.margin; return x-y; });
-  var t=totals(rs), lf=loyFrac();
+  var list=lineRows().sort(function(first,second){
+    var x=first.margin==null?999:first.margin, y=second.margin==null?999:second.margin; return x-y; });
+  var t=totals(list), lf=loyFrac();
   var h=headline([
     [M0(t.priceAfter),'they pay, one of each','',M0(t.priceBefore)],
     [M0(t.profitAfter),'your profit','',M0(t.profitBefore)],
@@ -2450,18 +2450,18 @@ function outLine(){
    */
   h+='<div class="card" style="overflow-x:auto"><table class="res"><thead><tr>'+
      '<th>Item</th><th class="hide">Cost</th><th>Off</th><th>Price</th><th>Profit</th><th>Margin</th>'+
-     '</tr></thead><tbody>'+rs.map(function(r){
-       var ch=r.shown!==r.base;
-       var offAmt=R2(r.base-r.shown), offPct=r.base>0?(offAmt/r.base*100):0;
-       return '<tr>'+nameCell(r.p)+costCell(r.p)+
+     '</tr></thead><tbody>'+list.map(function(item){
+       var ch=item.shown!==item.base;
+       var offAmt=R2(item.base-item.shown), offPct=item.base>0?(offAmt/item.base*100):0;
+       return '<tr>'+nameCell(item.p)+costCell(item.p)+
          '<td class="num" data-l="Off">'+(offAmt>0?M0(offAmt)+' <span class="sub">'+PC(offPct)+'</span>':'—')+'</td>'+
-         '<td class="num" data-l="Price">'+(ch?'<span class="was">'+M0(r.base)+'</span>':'')+M0(r.shown)+'</td>'+
-         '<td class="num" data-l="Profit">'+(r.profit==null?'—':
-           (ch&&r.wasProfit!=null?'<span class="was">'+M0(r.wasProfit)+'</span>':'')+M0(r.profit))+'</td>'+
-         '<td data-l="Margin">'+(ch&&r.wasMargin!=null&&r.margin!=null&&r.wasMargin!==r.margin
-             ?'<span class="was">'+r.wasMargin+'%</span>':'')+
-           '<span class="mgn mgn-'+(mgnClass(r.margin,r.status)||'ok')+'">'+
-           mgnText(r.margin,r.status)+'</span></td></tr>';
+         '<td class="num" data-l="Price">'+(ch?'<span class="was">'+M0(item.base)+'</span>':'')+M0(item.shown)+'</td>'+
+         '<td class="num" data-l="Profit">'+(item.profit==null?'—':
+           (ch&&item.wasProfit!=null?'<span class="was">'+M0(item.wasProfit)+'</span>':'')+M0(item.profit))+'</td>'+
+         '<td data-l="Margin">'+(ch&&item.wasMargin!=null&&item.margin!=null&&item.wasMargin!==item.margin
+             ?'<span class="was">'+item.wasMargin+'%</span>':'')+
+           '<span class="mgn mgn-'+(mgnClass(item.margin,item.status)||'ok')+'">'+
+           mgnText(item.margin,item.status)+'</span></td></tr>';
      }).join('')+'</tbody></table></div>';
   if(t.blind) h+='<div class="hint">'+t.blind+' with no cost — left out.</div>';
   return h;
@@ -2469,45 +2469,45 @@ function outLine(){
 
 /* ── the quantity ladder: the headings ARE the control ─────────────── */
 function outQty(){
-  var ts=tiers(), faults=tierFault(), its=items();
+  var ts=tiers(), faults=tierFault(), list=items();
   var h='';
   if(faults.length) h+='<div class="note n-bad"><span class="ic">!</span><div>'+faults.join('. ')+'.</div></div>';
   h+='<div class="phoneOnly"><span class="lbl">Steps</span><div class="stepEd">'+
-     ts.map(function(t,i){
-       return '<span class="inp"><input type="number" min="1" value="'+t.qty+
-         '" onchange="setTier('+i+',0,this.value)"><span>or more</span></span>'+
-         '<span class="inp" style="width:86px"><input type="number" min="0" max="95" value="'+t.pct+
-         '" onchange="setTier('+i+',1,this.value)"><span>%</span></span>';}).join('')+
+     ts.map(function(item,index){
+       return '<span class="inp"><input type="number" min="1" value="'+item.qty+
+         '" onchange="setTier('+index+',0,this.value)"><span>or more</span></span>'+
+         '<span class="inp" style="width:86px"><input type="number" min="0" max="95" value="'+item.pct+
+         '" onchange="setTier('+index+',1,this.value)"><span>%</span></span>';}).join('')+
      (ts.length<3?'<button class="btn sm" onclick="addTier()">+ step</button>':'')+
      (ts.length>1?'<button class="btn sm" onclick="delTier('+(ts.length-1)+')">\u2212 step</button>':'')+
      '</div></div>';
   h+='<div class="card" style="overflow-x:auto"><table class="res"><thead><tr>'+
      '<th>Item</th><th class="hide">Cost</th><th>Price</th>'+
-     ts.map(function(t,i){
+     ts.map(function(item,index){
        return '<th class="slab"><div class="colwrap"><div class="chead">'+
-         '<span class="inp"><input type="number" min="1" value="'+t.qty+
-           '" onchange="setTier('+i+',0,this.value)"><span>or more</span></span>'+
-         '<span class="inp"><input type="number" min="0" max="95" value="'+t.pct+
-           '" onchange="setTier('+i+',1,this.value)"><span>%</span></span></div>'+
-         '<button class="colx" onclick="delTier('+i+')" '+(ts.length<=1?'disabled':'')+'>×</button>'+
+         '<span class="inp"><input type="number" min="1" value="'+item.qty+
+           '" onchange="setTier('+index+',0,this.value)"><span>or more</span></span>'+
+         '<span class="inp"><input type="number" min="0" max="95" value="'+item.pct+
+           '" onchange="setTier('+index+',1,this.value)"><span>%</span></span></div>'+
+         '<button class="colx" onclick="delTier('+index+')" '+(ts.length<=1?'disabled':'')+'>×</button>'+
          '</div></th>';}).join('')+
      (ts.length<3?'<th><button class="colx" onclick="addTier()" title="add a step">+</button></th>':'')+
      '</tr></thead><tbody>'+
-     its.map(function(p){
-       return '<tr>'+nameCell(p)+costCell(p)+'<td class="num" data-l="Price">'+M0(p.price)+'</td>'+
-         ts.map(function(t){ var r=priceRow(p,t.pct/100);
+     list.map(function(item){
+       return '<tr>'+nameCell(item)+costCell(item)+'<td class="num" data-l="Price">'+M0(item.price)+'</td>'+
+         ts.map(function(t){ var r=priceRow(item,t.pct/100);
            return '<td class="slab" data-l="buy '+t.qty+'+"><span class="cell">'+
              '<span class="cp">'+M0(r.shown)+'</span>'+mgnSpan(r.margin,r.status)+'</span></td>';}).join('')+
          (ts.length<3?'<td></td>':'')+'</tr>';}).join('')+
-     '</tbody><tfoot><tr><td colspan="2"><b>All '+its.length+'</b></td><td></td>'+
-     ts.map(function(t){ var tt=totals(its.map(function(p){return priceRow(p,t.pct/100);}));
-       return '<td class="slab" data-l="buy '+t.qty+'+"><span class="cell">'+
+     '</tbody><tfoot><tr><td colspan="2"><b>All '+list.length+'</b></td><td></td>'+
+     ts.map(function(item){ var tt=totals(list.map(function(p){return priceRow(p,item.pct/100);}));
+       return '<td class="slab" data-l="buy '+item.qty+'+"><span class="cell">'+
          '<span class="cm '+(tt.marginAfter<num(S.margin)?'under':'')+'" style="font-size:15px">'+
          tt.marginAfter+'%</span></span></td>';}).join('')+
      (ts.length<3?'<td></td>':'')+'</tr></tfoot></table></div>';
 
   if(loyMode()==='top'&&S.loyOn){
-    var top=ts[ts.length-1], one=its[0];
+    var top=ts[ts.length-1], one=list[0];
     var r=one?priceRow(one,top.pct/100):null;
     h+='<div class="note n-ok"><span class="ic">●</span><div>Loyalty: '+top.pct+'% from the first one'+
        (r?' · '+esc(one.name)+' '+M0(r.shown)+' · '+mgnText(r.margin,r.status):'')+'</div></div>';
@@ -2528,37 +2528,37 @@ function outQty(){
  * itself cost you on top, this is what's left, this is the margin that leaves you with.
  */
 function outGift(){
-  var g=byId(S.giftId); if(!g) return '';
+  var node=byId(S.giftId); if(!node) return '';
   var am=avgM(), bills=(S.bills||[]).map(num);
-  var heads=bills.map(function(b,i){
+  var heads=bills.map(function(item,index){
     return ['<span class="inp" style="width:104px;height:31px"><span>'+moneySymbol()+'</span>'+
-      '<input type="number" min="1" value="'+b+'" onchange="setBill('+i+',this.value)"></span>','',false];});
+      '<input type="number" min="1" value="'+item+'" onchange="setBill('+index+',this.value)"></span>','',false];});
   var rows=[
-    ['Price of '+esc(g.name), bills.map(function(){return M0(g.price);})],
-    ['Everything else costs you', bills.map(function(b){return M0(b*(1-am));})],
-    ['Cost of '+esc(g.name), bills.map(function(){return g.cost==null?'N/A':M0(g.cost);})],
-    ['You keep', bills.map(function(b){return g.cost==null?'N/A':M0(b*am-g.cost);}), true],
-    ['Margin on this bill', bills.map(function(b){
-       if(g.cost==null) return 'N/A';
-       var m=Math.round((am-g.cost/b)*100);
+    ['Price of '+esc(node.name), bills.map(function(){return M0(node.price);})],
+    ['Everything else costs you', bills.map(function(item){return M0(item*(1-am));})],
+    ['Cost of '+esc(node.name), bills.map(function(){return node.cost==null?'N/A':M0(node.cost);})],
+    ['You keep', bills.map(function(item){return node.cost==null?'N/A':M0(item*am-node.cost);}), true],
+    ['Margin on this bill', bills.map(function(item){
+       if(node.cost==null) return 'N/A';
+       var m=Math.round((am-node.cost/item)*100);
        return '<span class="'+(m<num(S.margin)?'':'')+'" style="color:'+
          (m<0?'var(--red-i)':m<num(S.margin)?'var(--amber-i)':'var(--green-d)')+'">'+m+'%</span>'+
          '<span class="sub">'+Math.round(am*100)+'% normally</span>';}), true]
   ];
-  var h=headline([[M0(g.price),'worth to them'],
-                  [g.cost==null?'N/A':M0(g.cost),'costs you','bad'],
+  var h=headline([[M0(node.price),'worth to them'],
+                  [node.cost==null?'N/A':M0(node.cost),'costs you','bad'],
                   [Math.round(am*100)+'%','your average margin']]);
   h+='<p class="hs" style="margin:14px 0 -2px">Three sample bills — the smaller the bill, the more the '+
      'free gift eats into what you’d normally keep from it.</p>';
   h+='<div class="card pad">'+g3(heads,rows)+'</div>';
-  if(g.cost!=null){
-    var be=g.cost/(am-num(S.margin)/100);
+  if(node.cost!=null){
+    var be=node.cost/(am-num(S.margin)/100);
     h+='<div class="note '+(be>0?'n-warn':'n-ok')+'"><span class="ic">●</span><div>'+
-      M0(g.cost)+' every time · '+(be>0?'under your '+num(S.margin)+'% below a '+M0(be)+' bill':
+      M0(node.cost)+' every time · '+(be>0?'under your '+num(S.margin)+'% below a '+M0(be)+' bill':
       'always clears your '+num(S.margin)+'%')+'</div></div>';
   }
-  h+=eitherNote(g.price);
-  h+='<div class="hint">"Everything else costs you" is an estimate, from your average margin — what they actually buy alongside '+esc(g.name)+' is not knowable here.</div>';
+  h+=eitherNote(node.price);
+  h+='<div class="hint">"Everything else costs you" is an estimate, from your average margin — what they actually buy alongside '+esc(node.name)+' is not knowable here.</div>';
   return h;
 }
 
@@ -2571,35 +2571,35 @@ function outGift(){
  * silently always saving whatever sat in column 1.
  */
 function outSame(){
-  var p=byId(S.itemId); if(!p) return '';
-  var cs=counts(), chosen=chosenCount();
-  var heads=cs.map(function(n,i){
+  var node=byId(S.itemId); if(!node) return '';
+  var list=counts(), chosen=chosenCount();
+  var heads=list.map(function(item,index){
     return ['<span class="inp" style="width:104px;height:31px">'+
-        '<input type="number" min="1" value="'+n+'" onchange="setCount('+i+',this.value)"><span>buy</span></span>'+
+        '<input type="number" min="1" value="'+item+'" onchange="setCount('+index+',this.value)"><span>buy</span></span>'+
         '<label style="display:flex;align-items:center;justify-content:center;gap:5px;margin-top:5px;'+
-          'font-size:11.5px;font-weight:700;cursor:pointer;color:'+(i===chosen?'var(--green-d)':'var(--muted)')+'">'+
-          '<input type="radio" name="sameChosen" style="margin:0" '+(i===chosen?'checked':'')+' onchange="chooseCount('+i+')">'+
-          (i===chosen?'Your offer':'Use this')+
+          'font-size:11.5px;font-weight:700;cursor:pointer;color:'+(index===chosen?'var(--green-d)':'var(--muted)')+'">'+
+          '<input type="radio" name="sameChosen" style="margin:0" '+(index===chosen?'checked':'')+' onchange="chooseCount('+index+')">'+
+          (index===chosen?'Your offer':'Use this')+
         '</label>',
-      '<span style="font-family:\'IBM Plex Mono\',monospace">+1 · '+PC(100/(n+1))+'</span>', i===chosen];});
+      '<span style="font-family:\'IBM Plex Mono\',monospace">+1 · '+PC(100/(item+1))+'</span>', index===chosen];});
   /* ⭐ buy_x_get_y, live — the same kind and the same call the till fires when a real N+1 round is rung */
-  var mk=function(n){ var pay=engineBuyGetPay(p.price,n,1), cost=p.cost==null?null:(n+1)*p.cost;
+  var mk=function(n){ var pay=engineBuyGetPay(node.price,n,1), cost=node.cost==null?null:(n+1)*node.cost;
     return {pay:pay,cost:cost,make:cost==null?null:pay-cost,
             m:cost==null?null:marginPct(pay,cost)};};
   var rows=[
-    ['They take', cs.map(function(n){return (n+1);})],
-    ['They pay',  cs.map(function(n){return M0(mk(n).pay);})],
-    ['Costs you', cs.map(function(n){return mk(n).cost==null?'N/A':M0(mk(n).cost);})],
-    ['You make',  cs.map(function(n){var x=mk(n);return x.make==null?'N/A':M0(x.make);}),true],
-    ['Margin',    cs.map(function(n){var x=mk(n); if(x.m==null) return 'N/A';
+    ['They take', list.map(function(item){return (item+1);})],
+    ['They pay',  list.map(function(item){return M0(mk(item).pay);})],
+    ['Costs you', list.map(function(item){return mk(item).cost==null?'N/A':M0(mk(item).cost);})],
+    ['You make',  list.map(function(item){var x=mk(item);return x.make==null?'N/A':M0(x.make);}),true],
+    ['Margin',    list.map(function(item){var x=mk(item); if(x.m==null) return 'N/A';
        return '<span style="color:'+(x.m<0?'var(--red-i)':x.m<num(S.margin)?'var(--amber-i)':'var(--green-d)')+
-         '">'+x.m+'%</span><span class="sub">'+marginPct(p.price,p.cost)+'%</span>';}),true]
+         '">'+x.m+'%</span><span class="sub">'+marginPct(node.price,node.cost)+'%</span>';}),true]
   ];
-  var h=headline([[M0(p.price),esc(p.name)],
-                  [p.cost==null?'N/A':M0(p.cost),'costs you'],
-                  [marginPct(p.price,p.cost)+'%','margin now']]);
+  var h=headline([[M0(node.price),esc(node.name)],
+                  [node.cost==null?'N/A':M0(node.cost),'costs you'],
+                  [marginPct(node.price,node.cost)+'%','margin now']]);
   h+='<div class="card pad">'+g3(heads,rows)+'</div>';
-  var chosenN=cs[chosen], cx=mk(chosenN), clears=cx.m!=null&&cx.m>=num(S.margin);
+  var chosenN=list[chosen], cx=mk(chosenN), clears=cx.m!=null&&cx.m>=num(S.margin);
   h+='<div class="note '+(clears?'n-ok':'n-bad')+'"><span class="ic">'+(clears?'✓':'!')+
      '</span><div>Your offer — buy '+chosenN+' +1 — '+(clears?'clears your '+num(S.margin)+'%':
      'does not clear your '+num(S.margin)+'%')+'</div></div>';
@@ -2613,16 +2613,16 @@ function outSame(){
 
 /* ── buy A, get B free ─────────────────────────────────────────────── */
 function outPair(){
-  var a=byId(S.pairA), b=byId(S.pairB); if(!a||!b) return '';
-  var was=a.price+b.price, cost=(a.cost==null||b.cost==null)?null:a.cost+b.cost;
+  var node=byId(S.pairA), b=byId(S.pairB); if(!node||!b) return '';
+  var was=node.price+b.price, cost=(node.cost==null||b.cost==null)?null:node.cost+b.cost;
   /* ⭐ buy_x_get_y, cross-item, live — the same call the till fires when B's line reads "free — buy A get B" */
-  var pay=engineBuyGetPayCross(a.id,a.price,b.id,1);
+  var pay=engineBuyGetPayCross(node.id,node.price,b.id,1);
   var make=cost==null?null:pay-cost, m=cost==null?null:marginPct(pay,cost);
   var h=headline([[M0(pay),'they pay','',M0(was)],
                   [make==null?'N/A':M0(make),'you make',make!=null&&make<0?'bad':''],
                   [m==null?'N/A':m+'%','margin',m!=null&&m<num(S.margin)?'dn':'up']]);
-  h+='<div class="card pad">'+g3([[esc(a.name)+' + '+esc(b.name),'',true]],[
-     ['Apart',[M0(was)]],['They pay',[M0(a.price)]],
+  h+='<div class="card pad">'+g3([[esc(node.name)+' + '+esc(b.name),'',true]],[
+     ['Apart',[M0(was)]],['They pay',[M0(node.price)]],
      ['Costs you',[cost==null?'N/A':M0(cost)]],
      ['You make',[make==null?'N/A':M0(make)],true],
      ['Margin',[m==null?'N/A':m+'%'],true]])+'</div>';
@@ -2637,9 +2637,9 @@ function outCheap(){
   var n=Math.max(2,num(S.cheapN)), three=threeOf(catItems(S.catId));
   if(!three.length) return '<div class="note n-warn"><span class="ic">!</span><div>No costs on this shelf.</div></div>';
   var labels=['Your cheapest','A middle one','Your dearest'].slice(0,three.length);
-  var heads=three.map(function(p,i){return [esc(p.name),
-    '<span style="font-family:\'IBM Plex Mono\',monospace">'+M0(p.price)+' · '+labels[i]+'</span>',
-    i===three.length-1];});
+  var heads=three.map(function(item,index){return [esc(item.name),
+    '<span style="font-family:\'IBM Plex Mono\',monospace">'+M0(item.price)+' · '+labels[index]+'</span>',
+    index===three.length-1];});
   /**
    * ⭐ mix_and_match, live — each of the three columns asks "if every one of the N were THIS item, what is the
    * cheapest-of-N worth". A single item bought N times has only one price to be cheapest among, so this reads
@@ -2651,12 +2651,12 @@ function outCheap(){
     return {pay:pay,cost:cost,make:pay-cost,m:marginPct(pay,cost)};};
   var rows=[
     ['They take', three.map(function(){return n;})],
-    ['They pay',  three.map(function(p){return M0(mk(p).pay);})],
-    ['Costs you', three.map(function(p){return M0(mk(p).cost);})],
-    ['You make',  three.map(function(p){return M0(mk(p).make);}),true],
-    ['Margin',    three.map(function(p){var x=mk(p);
+    ['They pay',  three.map(function(item){return M0(mk(item).pay);})],
+    ['Costs you', three.map(function(item){return M0(mk(item).cost);})],
+    ['You make',  three.map(function(item){return M0(mk(item).make);}),true],
+    ['Margin',    three.map(function(item){var x=mk(item);
       return '<span style="color:'+(x.m<0?'var(--red-i)':x.m<num(S.margin)?'var(--amber-i)':'var(--green-d)')+
-        '">'+x.m+'%</span><span class="sub">'+marginPct(p.price,p.cost)+'%</span>';}),true]
+        '">'+x.m+'%</span><span class="sub">'+marginPct(item.price,item.cost)+'%</span>';}),true]
   ];
   var worst=three[three.length-1], wx=mk(worst);
   var h=headline([['buy '+n,'cheapest free'],
@@ -2670,15 +2670,15 @@ function outCheap(){
 
 /* ── two things, one price ─────────────────────────────────────────── */
 function outBundle(){
-  var a=byId(S.bunA), b=byId(S.bunB); if(!a||!b) return '';
+  var node=byId(S.bunA), b=byId(S.bunB); if(!node||!b) return '';
   /* ⭐ the engine's bundle_price on the pair — a price not below the two apart gives nothing, and the page says what it charges */
-  var was=a.price+b.price, pay=previewEval([{key:'a',item_id:a.id,qty:1,unitPrice:a.price},{key:'b',item_id:b.id,qty:1,unitPrice:b.price}]).total;
-  var cost=(a.cost==null||b.cost==null)?null:a.cost+b.cost;
+  var was=node.price+b.price, pay=previewEval([{key:'a',item_id:node.id,qty:1,unitPrice:node.price},{key:'b',item_id:b.id,qty:1,unitPrice:b.price}]).total;
+  var cost=(node.cost==null||b.cost==null)?null:node.cost+b.cost;
   var make=cost==null?null:R2(pay-cost), m=cost==null?null:marginPct(pay,cost);
   var h=headline([[M0(pay),'they pay','',M0(was)],
                   [make==null?'N/A':M0(make),'you make',make!=null&&make<0?'bad':''],
                   [m==null?'N/A':m+'%','margin',m!=null&&m<num(S.margin)?'dn':'up']]);
-  h+='<div class="card pad">'+g3([[esc(a.name)+' + '+esc(b.name),'',true]],[
+  h+='<div class="card pad">'+g3([[esc(node.name)+' + '+esc(b.name),'',true]],[
      ['Apart',[M0(was)]],['Together',[M0(pay)]],
      ['That is',[PC((was-pay)/was*100)+' off']],
      ['Break-even',[cost==null?'N/A':M0(cost)]],
@@ -2696,13 +2696,13 @@ function outSpend(){
   var giveAt=function(b){ return -previewEval([{key:'x',qty:1,unitPrice:b}]).goods_adjustment; };
   var at=Math.max(1,num(S.spendAt)), give=giveAt(at), am=avgM();
   var bills=[at,at*2,at*4];
-  var heads=bills.map(function(b,i){return [M0(b),'',i===0];});
+  var heads=bills.map(function(item,index){return [M0(item),'',index===0];});
   var rows=[
-    ['Share', bills.map(function(b){return PC(giveAt(b)/b*100);})],
-    ['Goods', bills.map(function(b){return M0(b*(1-am));})],
-    ['You make', bills.map(function(b){return M0(b*am-giveAt(b));}),true],
-    ['Margin', bills.map(function(b){
-       var m=Math.round((b*am-giveAt(b))/(b-giveAt(b))*100);
+    ['Share', bills.map(function(item){return PC(giveAt(item)/item*100);})],
+    ['Goods', bills.map(function(item){return M0(item*(1-am));})],
+    ['You make', bills.map(function(item){return M0(item*am-giveAt(item));}),true],
+    ['Margin', bills.map(function(item){
+       var m=Math.round((item*am-giveAt(item))/(item-giveAt(item))*100);
        return '<span style="color:'+(m<0?'var(--red-i)':m<num(S.margin)?'var(--amber-i)':'var(--green-d)')+
          '">'+m+'%</span><span class="sub">'+Math.round(am*100)+'%</span>';}),true]
   ];
@@ -2721,13 +2721,13 @@ function outSpend(){
 function outShip(){
   var at=Math.max(1,num(S.shipAt)), c=num(S.shipCost), pay=num(S.shipCharge), am=avgM();
   var absorb=Math.max(0,c-pay), bills=[at,at*2,at*3];
-  var heads=bills.map(function(b,i){return [M0(b),'',i===0];});
+  var heads=bills.map(function(item,index){return [M0(item),'',index===0];});
   var rows=[
-    ['Share', bills.map(function(b){return PC(absorb/b*100);})],
-    ['Goods', bills.map(function(b){return M0(b*(1-am));})],
+    ['Share', bills.map(function(item){return PC(absorb/item*100);})],
+    ['Goods', bills.map(function(item){return M0(item*(1-am));})],
     ['Delivery', bills.map(function(){return M0(absorb);})],
-    ['You make', bills.map(function(b){return M0(b*am-absorb);}),true],
-    ['Margin', bills.map(function(b){ var m=Math.round((am-absorb/b)*100);
+    ['You make', bills.map(function(item){return M0(item*am-absorb);}),true],
+    ['Margin', bills.map(function(item){ var m=Math.round((am-absorb/item)*100);
        return '<span style="color:'+(m<0?'var(--red-i)':m<num(S.margin)?'var(--amber-i)':'var(--green-d)')+
          '">'+m+'%</span><span class="sub">'+Math.round(am*100)+'%</span>';}),true]
   ];
@@ -2773,11 +2773,11 @@ var KEEP=['goal','scope','catId','itemId','itemIds','pctOff','rsOff','tiers','fr
   'freeCounts','freeChosen','bills','cheapN','pairA','pairB','bunA','bunB','bunPrice','spendAt','spendVal',
   'shipAt','shipCharge','shipCost','bandLo','bandHi','margin','cap','belowAct',
   'round','loyOn','loyPct'];
-function snapshot(){ var o={}; KEEP.forEach(function(k){o[k]=JSON.parse(JSON.stringify(S[k]==null?null:S[k]));}); return o; }
-function costPrint(){ var o={}; P.forEach(function(p){o[p.id]=p.cost;}); return o; }
-function costMoved(sv){ var now=costPrint(), n=0;
-  for(var k in sv.costs) if(sv.costs[k]!==now[k]) n++;
-  return n; }
+function snapshot(){ var o={}; KEEP.forEach(function(item){o[item]=JSON.parse(JSON.stringify(S[item]==null?null:S[item]));}); return o; }
+function costPrint(){ var o={}; P.forEach(function(item){o[item.id]=item.cost;}); return o; }
+function costMoved(sv){ var now=costPrint(), index=0;
+  for(var k in sv.costs) if(sv.costs[k]!==now[k]) index++;
+  return index; }
 
 function label(){
   var g=goalOf(S.goal), where = (S.goal==='percent'||S.goal==='amount'||S.goal==='qty')
@@ -2788,7 +2788,7 @@ function label(){
   var what='';
   if(S.goal==='percent') what=num(S.pctOff)+'% off';
   else if(S.goal==='amount') what=M0(num(S.rsOff))+' off each';
-  else if(S.goal==='qty') what=tiers().map(function(t){return t.qty+'+ '+t.pct+'%';}).join(' · ');
+  else if(S.goal==='qty') what=tiers().map(function(item){return item.qty+'+ '+item.pct+'%';}).join(' · ');
   /**
    * ⚠️ [found live, 2026-09-27] "it cannot be general, it has to be buy2 get 1 free or buy 3 get 1 free,
    * depends on which offer is choosen. you are trying to generalise, but it will be confusing" — SHAPES[i].n
@@ -2800,8 +2800,8 @@ function label(){
   else if(S.goal==='free'){
     if(S.freeShape==='same'){ what='Buy '+(counts()[chosenCount()]||1)+', get 1 free'; }
     else if(S.freeShape==='anything'){ var g=byId(S.giftId); what=(g?g.name:'A gift')+' free on any bill'; }
-    else if(S.freeShape==='pair'){ var pa=byId(S.pairA), pb=byId(S.pairB);
-      what='Buy '+(pa?pa.name:'one')+', get '+(pb?pb.name:'another')+' free'; }
+    else if(S.freeShape==='pair'){ var node=byId(S.pairA), pb=byId(S.pairB);
+      what='Buy '+(node?node.name:'one')+', get '+(pb?pb.name:'another')+' free'; }
     else { what='Buy '+Math.max(2,num(S.cheapN))+', cheapest free'; }
   }
   else if(S.goal==='bundle') what=M0(num(S.bunPrice));
@@ -2813,7 +2813,7 @@ function label(){
 function keyNumber(){
   if(S.goal==='percent'||S.goal==='amount'){ var t=totals(lineRows()); return [t.marginAfter+'%','margin']; }
   if(S.goal==='qty'){ var ts=tiers(), top=ts[ts.length-1];
-    var tt=totals(items().map(function(p){return priceRow(p,top.pct/100);})); return [tt.marginAfter+'%','at '+top.qty+'+']; }
+    var tt=totals(items().map(function(item){return priceRow(item,top.pct/100);})); return [tt.marginAfter+'%','at '+top.qty+'+']; }
   return ['—','see it'];
 }
 /**
@@ -2834,7 +2834,7 @@ function keyNumber(){
  * every role that can sign in today, the same way [[project-iam-access-model]]'s viewer/commenter/editor
  * split does not yet reach here. Do not read this check as "authorised to see cost" anywhere it is used below.
  */
-function savedLive(){ try { var s=JSON.parse(localStorage.getItem('cb_sess')||'null'); return !!(s&&s.token); } catch(_){ return false; } }
+function savedLive(){ try { var parsed=JSON.parse(localStorage.getItem('cb_sess')||'null'); return !!(parsed&&parsed.token); } catch(_){ return false; } }
 function savedToken(){ try { return (JSON.parse(localStorage.getItem('cb_sess')||'null')||{}).token||null; } catch(_){ return null; } }
 
 /**
@@ -2881,11 +2881,11 @@ var LabDB = (function(){
  */
 async function apiFetch(method, url, body, queueKind){
   try {
-    var r=await fetch(url, { method:method,
+    var reply=await fetch(url, { method:method,
       headers:Object.assign({'Content-Type':'application/json'}, savedToken()?{Authorization:'Bearer '+savedToken()}:{}),
       body: body?JSON.stringify(body):undefined });
-    var j=null; try{ j=await r.json(); }catch(_){}
-    return {ok:r.ok, status:r.status, body:j||{}, queued:false};
+    var j=null; try{ j=await reply.json(); }catch(_){}
+    return {ok:reply.ok, status:reply.status, body:j||{}, queued:false};
   } catch (e) {
     if (queueKind && method!=='GET') { await LabDB.queuePush({kind:queueKind, method:method, url:url, body:body||null}); labPaintQueue(); }
     return {ok:true, queued:true, body:{}};
@@ -2895,13 +2895,13 @@ async function apiFetch(method, url, body, queueKind){
  * offer would only be refused again, and a queue that never empties is a queue nobody trusts */
 async function labDrainOutbox(){
   var rows = await LabDB.queueAll();
-  for (var i=0;i<rows.length;i++){
-    var row = rows[i];
+  for (var index=0;index<rows.length;index++){
+    var row = rows[index];
     try {
-      var r = await fetch(row.url, { method:row.method,
+      var reply = await fetch(row.url, { method:row.method,
         headers:Object.assign({'Content-Type':'application/json'}, savedToken()?{Authorization:'Bearer '+savedToken()}:{}),
         body: row.body?JSON.stringify(row.body):undefined });
-      if (r.ok || (r.status>=400 && r.status<500)) await LabDB.queueDel(row.id);
+      if (reply.ok || (reply.status>=400 && reply.status<500)) await LabDB.queueDel(row.id);
       else break;   /* still refusing for a server reason — stop, try the rest again next time */
     } catch(_) { break; }   /* still offline — stop, try again on the next drain */
   }
@@ -2910,9 +2910,9 @@ async function labDrainOutbox(){
 }
 function labPaintQueue(){
   LabDB.queueAll().then(function(rows){
-    var n=document.getElementById('labqueue'); if(!n) return;
-    if(!rows.length){ n.hidden=true; return; }
-    n.hidden=false; n.textContent=rows.length+' change'+(rows.length>1?'s':'')+' waiting to sync — will send once the line is back.';
+    var node=document.getElementById('labqueue'); if(!node) return;
+    if(!rows.length){ node.hidden=true; return; }
+    node.hidden=false; node.textContent=rows.length+' change'+(rows.length>1?'s':'')+' waiting to sync — will send once the line is back.';
   });
 }
 window.addEventListener('online', function(){ labDrainOutbox(); });
@@ -2947,8 +2947,8 @@ function defFetch(method,path,body){ return apiFetch(method, API+'/api/definitio
 var COST_ACCESS = { can_see_costs:true, is_owner:false, loaded:false };
 async function loadCostAccess(){
   try {
-    var r=await fetch(API+'/api/entities/me/can-see-costs', {headers:{Authorization:'Bearer '+savedToken()}});
-    if(r.ok){ var j=await r.json(); COST_ACCESS={ can_see_costs:!!j.can_see_costs, is_owner:!!j.is_owner, loaded:true }; }
+    var reply=await fetch(API+'/api/entities/me/can-see-costs', {headers:{Authorization:'Bearer '+savedToken()}});
+    if(reply.ok){ var j=await reply.json(); COST_ACCESS={ can_see_costs:!!j.can_see_costs, is_owner:!!j.is_owner, loaded:true }; }
   } catch(_){ /* stays optimistic; the server-side strip is what actually protects the data */ }
   if(priceOvOpen()) paintPriceOvBody();
   render();
@@ -2960,11 +2960,11 @@ async function labUseMine(quiet){
   loadCostAccess();   /* alongside, not blocking — the catalogue read matters more and must not wait on this */
   var catNamesReady=loadCatNames();   /* same: runs alongside, awaited below, right before names are actually used */
   try {
-    var r=await fetch(API+'/api/products?limit=500', {headers:{Authorization:'Bearer '+savedToken()}});
-    if(!r.ok) throw new Error('HTTP '+r.status);
-    var j=await r.json();
+    var reply=await fetch(API+'/api/products?limit=500', {headers:{Authorization:'Bearer '+savedToken()}});
+    if(!reply.ok) throw new Error('HTTP '+reply.status);
+    var j=await reply.json();
     var amountOf=function(v){ return (v&&typeof v==='object'&&v.amount!=null)?Number(v.amount):Number(v)||0; };
-    var items=(j.items||j.products||j.rows||(Array.isArray(j)?j:[])).filter(function(p){ return p&&p.item_data&&amountOf(p.item_data.price)>0; });
+    var items=(j.items||j.products||j.rows||(Array.isArray(j)?j:[])).filter(function(item){ return item&&item.item_data&&amountOf(item.item_data.price)>0; });
     if(!items.length) return labUseCache(who,'no priced products yet');
     await catNamesReady;   /* CATNAMES must be filled before buildBiz() (inside labApplyCatalogue) reads it */
     await LabDB.set('catalogue', {items:items, who:who, at:Date.now()});
@@ -2985,8 +2985,8 @@ async function labUseCache(who,why){
  * edit() and selectOf() already follow.
  */
 function buildBiz(key, rows, who){
-  var byCat={}; rows.forEach(function(p){ byCat[p[2]]=(byCat[p[2]]||0)+1; });
-  var cats=Object.keys(byCat).map(function(c){ return [c,catDisplayName(c)]; });
+  var byCat={}; rows.forEach(function(item){ byCat[item[2]]=(byCat[item[2]]||0)+1; });
+  var cats=Object.keys(byCat).map(function(item){ return [item,catDisplayName(item)]; });
   var firstItem=(rows[0]||[])[0], secondItem=(rows[1]||rows[0]||[])[0];
   BIZ[key]={ name:who, cats:cats, prods:rows, margin:25, cap:10,
     d:{ catId:(cats[0]||[])[0]||'', itemId:firstItem||'', itemIds:firstItem?[firstItem]:[], pctOff:10, rsOff:10, tiers:[[2,5],[5,10],[10,15]], tierView:2,
@@ -2999,15 +2999,15 @@ function buildBiz(key, rows, who){
 }
 function labApplyCatalogue(items, who, fromCache){
   var amountOf=function(v){ return (v&&typeof v==='object'&&v.amount!=null)?Number(v.amount):Number(v)||0; };
-  var mineP=items.map(function(p){
-    var d=p.item_data||{};
+  var mineP=items.map(function(item){
+    var d=item.item_data||{};
     var cats=Array.isArray(d.categories)?d.categories:(d.category?[String(d.category)]:[]);
     /* ⭐ lib/item-cost.js's shape, read plainly — a malformed or absent cost is unknown, never zero */
     var cost=(d.cost&&typeof d.cost==='object'&&d.cost.value!=null&&isFinite(Number(d.cost.value)))?Number(d.cost.value):null;
     /* ⭐ groupsRaw(), not groupsOf() — a group this product's owner has half-built (a name, no option yet)
        should still turn up here to finish, not vanish the moment the Lab reads the shop. */
     var mods=(typeof CBVariant!=='undefined'&&CBVariant.groupsRaw)?CBVariant.groupsRaw(d):[];
-    return [p.item_id, d.name||'(unnamed)', cats[0]||'other', amountOf(d.price), cost, mods];
+    return [item.item_id, d.name||'(unnamed)', cats[0]||'other', amountOf(d.price), cost, mods];
   });
   buildBiz('mine', mineP, who);
   applyBiz('mine');
@@ -3034,8 +3034,8 @@ var IMPORT_PRICE = ['price','rate','mrp','selling price','sale price'];
 var IMPORT_COST  = ['cost','purchase','purchase price','cost price','buying price'];
 function importField(row, names){
   var keys = Object.keys(row);
-  for (var i=0;i<names.length;i++){
-    for (var k=0;k<keys.length;k++){ if (String(keys[k]).trim().toLowerCase()===names[i]) return row[keys[k]]; }
+  for (var index=0;index<names.length;index++){
+    for (var k=0;k<keys.length;k++){ if (String(keys[k]).trim().toLowerCase()===names[index]) return row[keys[k]]; }
   }
   return null;
 }
@@ -3046,15 +3046,15 @@ function importSpreadsheet(input){
     try {
       var wb = XLSX.read(new Uint8Array(e.target.result), { type:'array' });
       var sheet = wb.Sheets[wb.SheetNames[0]];
-      var raw = XLSX.utils.sheet_to_json(sheet, { defval:null });
-      if (!raw.length) { toastSay('That file has no rows Offer Lab can read.'); return; }
-      var seq = 0, rows = raw.map(function(r){
-        var name = importField(r, IMPORT_NAME); if(!name) return null;
-        var price = num(importField(r, IMPORT_PRICE));
-        var costRaw = importField(r, IMPORT_COST);
+      var list = XLSX.utils.sheet_to_json(sheet, { defval:null });
+      if (!list.length) { toastSay('That file has no rows Offer Lab can read.'); return; }
+      var count = 0, rows = list.map(function(item){
+        var name = importField(item, IMPORT_NAME); if(!name) return null;
+        var price = num(importField(item, IMPORT_PRICE));
+        var costRaw = importField(item, IMPORT_COST);
         var cost = (costRaw==null || costRaw==='') ? null : num(costRaw);
-        var cat = importField(r, IMPORT_CAT) || 'Imported';
-        return ['imp'+(++seq), String(name).trim(), String(cat).trim(), price, cost];
+        var cat = importField(item, IMPORT_CAT) || 'Imported';
+        return ['imp'+(++count), String(name).trim(), String(cat).trim(), price, cost];
       }).filter(Boolean);
       if (!rows.length) { toastSay('No row had a name Offer Lab could read — check the column is called "Name" or "Item".'); return; }
       buildBiz('imported', rows, file.name.replace(/\.(xlsx|xls|csv)$/i,''));
@@ -3068,18 +3068,18 @@ function importSpreadsheet(input){
 }
 /** ⭐ the reverse direction — a plain CSV of what is on screen right now, no library needed to write one */
 function exportCsv(){
-  var rows = [['Item','Category','Price','Cost']].concat(P.map(function(p){
-    return [p.name, p.cat, p.price, p.cost==null?'':p.cost];
+  var rows = [['Item','Category','Price','Cost']].concat(P.map(function(item){
+    return [item.name, item.cat, item.price, item.cost==null?'':item.cost];
   }));
-  var csv = rows.map(function(r){
-    return r.map(function(c){ var s=String(c==null?'':c); return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; }).join(',');
+  var csv = rows.map(function(item){
+    return item.map(function(c){ var text=String(c==null?'':c); return /[",\n]/.test(text) ? '"'+text.replace(/"/g,'""')+'"' : text; }).join(',');
   }).join('\r\n');
   var blob = new Blob([csv], { type:'text/csv;charset=utf-8;' });
-  var a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = (BIZ[S.biz]&&BIZ[S.biz].name||'offer-lab')+'.csv';
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
+  var node = document.createElement('a');
+  node.href = URL.createObjectURL(blob);
+  node.download = (BIZ[S.biz]&&BIZ[S.biz].name||'offer-lab')+'.csv';
+  document.body.appendChild(node); node.click(); document.body.removeChild(node);
+  setTimeout(function(){ URL.revokeObjectURL(node.href); }, 1000);
 }
 /** ⭐ ONE ENGINE KIND PER SCREEN — the same registry lib/offers-engine.js's KINDS already names */
 function subKindOf(st){
@@ -3103,10 +3103,10 @@ function ruleParamsOf(){
   if(S.goal==='spend') return {min_amount:num(S.spendAt), amount:num(S.spendVal), scope:'cart'};
   if(S.goal==='ship') return {min_amount:num(S.shipAt), free:true, scope:'shipping'};
   if(S.goal==='free'){
-    if(S.freeShape==='anything'){ var g=byId(S.giftId);
+    if(S.freeShape==='anything'){ var node=byId(S.giftId);
       /* ⚠️ "any bill" needs SOME stated minimum or the engine reads it as unfinished (verified against the
          real engine before this was written) — a nominal 1 is "any bill that is a bill", not a real threshold */
-      return {min_amount:1, get_item_id:S.giftId, get_item_name:g?g.name:'', get_qty:1, get_percent:100, scope:'cart'}; }
+      return {min_amount:1, get_item_id:S.giftId, get_item_name:node?node.name:'', get_qty:1, get_percent:100, scope:'cart'}; }
     if(S.freeShape==='same'){ var n=counts()[chosenCount()]||1;
       return {buy:n, get:1, get_percent:100, scope:'line', applies_to:{item_ids:[S.itemId]}}; }
     if(S.freeShape==='pair'){ var b=byId(S.pairB);
@@ -3157,11 +3157,11 @@ async function loadSaved(){
      not on the shelf any more, which is the entire point of "Retire" over the old prototype's silent forget. */
   var r=await defFetch('GET','?kind=offer');
   if(!r.ok) return;
-  SAVED=(r.body.definitions||[]).map(function(d){
-    var lab=(d.rules&&d.rules._lab)||{};
-    return { id:d.definition_id, when:new Date(d.created_at), biz:S.biz, remote:true,
-      title:lab.title||d.sub_kind||d.name, detail:lab.detail||'', n:lab.n||'—', k:lab.k||'saved',
-      status:d.status, snap:lab.snap||{}, costs:lab.costs||{} };
+  SAVED=(r.body.definitions||[]).map(function(item){
+    var lab=(item.rules&&item.rules._lab)||{};
+    return { id:item.definition_id, when:new Date(item.created_at), biz:S.biz, remote:true,
+      title:lab.title||item.sub_kind||item.name, detail:lab.detail||'', n:lab.n||'—', k:lab.k||'saved',
+      status:item.status, snap:lab.snap||{}, costs:lab.costs||{} };
   });
   render();
 }
@@ -3169,7 +3169,7 @@ function openSaved(id){
   var sv=SAVED.filter(function(x){return x.id===id;})[0]; if(!sv) return;
   EDITING=sv.id;   /* saveOffer() below updates THIS one in place instead of creating a duplicate */
   if(sv.biz!==S.biz) applyBiz(sv.biz);
-  KEEP.forEach(function(kk){ if(sv.snap[kk]!=null) S[kk]=JSON.parse(JSON.stringify(sv.snap[kk])); });
+  KEEP.forEach(function(item){ if(sv.snap[item]!=null) S[item]=JSON.parse(JSON.stringify(sv.snap[item])); });
   /**
    * ⭐⭐⭐ [found by review, 2026-09-26] an offer saved BEFORE itemIds existed only carries the old singular
    * `itemId` — the KEEP restore above silently skips `S.itemIds` (`sv.snap.itemIds` is `undefined`, so its
@@ -3202,7 +3202,7 @@ async function dropSaved(id){
   if(!r.ok){ toastSay((r.body&&r.body.message)||'That could not be retired.'); return; }
   await loadSaved();
 }
-function toastSay(t){ var n=document.getElementById('labtoast'); if(n){ n.textContent=t; n.hidden=false; } else alert(t); }
+function toastSay(t){ var node=document.getElementById('labtoast'); if(node){ node.textContent=t; node.hidden=false; } else alert(t); }
 
 /**
  * ── ⭐⭐ TWO OFFERS ON ONE SHELF — THE ENGINE'S QUESTION, NOT THIS PAGE'S (T2-LABS, 2026-10-14) ──────────────────
@@ -3226,14 +3226,14 @@ function clashDetail(sv){
   var others=SAVED.filter(function(x){ return x.id!==sv.id && x.biz===sv.biz && !(x.status==='draft'&&sv.status==='draft'); });
   var hits=CBOffers.clashes(engineOfferOf(sv), others.map(engineOfferOf), P.map(engineItemOf));
   if(!hits.length) return null;
-  return hits.map(function(h){ var x=others.filter(function(o){return o.id===h.offer.id;})[0];
-    return {title:x.title, status:x.status, items:h.items.map(function(i){return i.name;})}; });
+  return hits.map(function(item){ var x=others.filter(function(o){return o.id===item.offer.id;})[0];
+    return {title:x.title, status:x.status, items:item.items.map(function(i){return i.name;})}; });
 }
 /** ⭐ Athi, live: "if any of the item is already in the offer it has to highlight, which offer it is already
  * included." CBOffers.covers, asked per PRODUCT, so the picker says so BEFORE a save. First match wins. */
 function offerCoveringItem(p){
-  for(var i=0;i<SAVED.length;i++){
-    var x=SAVED[i];
+  for(var index=0;index<SAVED.length;index++){
+    var x=SAVED[index];
     if(x.biz!==S.biz||x.status==='retired') continue;
     if(['percent','amount','qty'].indexOf(x.snap.goal)<0) continue;
     if(CBOffers.covers(engineOfferOf(x), engineItemOf(p))) return x;
@@ -3272,10 +3272,10 @@ function savedItemIds(sv){
     if(snap.freeShape==='same') return snap.itemId&&byId(snap.itemId)?[snap.itemId]:null;
     if(snap.freeShape==='pair') return [snap.pairA,snap.pairB].filter(function(id){return id&&byId(id);});
     if(snap.freeShape==='anything') return snap.giftId&&byId(snap.giftId)?[snap.giftId]:null;
-    if(snap.freeShape==='cheapest') return catItems(snap.catId).map(function(p){return p.id;});
+    if(snap.freeShape==='cheapest') return catItems(snap.catId).map(function(item){return item.id;});
     return null;
   }
-  if(snap.scope==='cat') return catItems(snap.catId).map(function(p){return p.id;});
+  if(snap.scope==='cat') return catItems(snap.catId).map(function(item){return item.id;});
   if(snap.itemIds && snap.itemIds.length) return snap.itemIds.filter(function(id){return byId(id);});
   if(snap.itemId && byId(snap.itemId)) return [snap.itemId];
   return null;   /* not an item/category-scoped goal kind (bundle, spend, ship, band) */
@@ -3321,10 +3321,10 @@ function historyHTML(sv){
   var body;
   if(sv._history===undefined) body='Loading…';
   else if(!sv._history.length) body='No status changes recorded yet.';
-  else body=sv._history.map(function(h){
-    var who=h.changed_by_name||'someone no longer on this shop';
-    var when=new Date(h.changed_at).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'});
-    var status=h.status?(h.status.charAt(0).toUpperCase()+h.status.slice(1)):h.status;
+  else body=sv._history.map(function(item){
+    var who=item.changed_by_name||'someone no longer on this shop';
+    var when=new Date(item.changed_at).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'});
+    var status=item.status?(item.status.charAt(0).toUpperCase()+item.status.slice(1)):item.status;
     return '<div>'+esc(status)+' — '+esc(who)+' · '+esc(when)+'</div>';
   }).join('');
   return '<div class="hs" style="margin-top:6px;padding:9px 12px;background:var(--panel);border-radius:9px">'+body+'</div>';
@@ -3342,15 +3342,15 @@ function historyHTML(sv){
 var EDITING=null;
 function savedSummaryHTML(){
   var groups={}, order=[];
-  SAVED.forEach(function(sv){
-    if(!groups[sv.title]){ groups[sv.title]={n:0,items:0,hasItems:false}; order.push(sv.title); }
-    var g=groups[sv.title], ic=savedItemCount(sv);
+  SAVED.forEach(function(item){
+    if(!groups[item.title]){ groups[item.title]={n:0,items:0,hasItems:false}; order.push(item.title); }
+    var g=groups[item.title], ic=savedItemCount(item);
     g.n++;
     if(ic!=null){ g.items+=ic; g.hasItems=true; }
   });
-  return '<div class="hs" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px">'+order.map(function(t){
-    var g=groups[t];
-    return '<span class="pill p-type">'+g.n+' '+esc(t)+(g.hasItems?' · '+g.items+' item'+(g.items===1?'':'s')+' linked':'')+'</span>';
+  return '<div class="hs" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px">'+order.map(function(item){
+    var g=groups[item];
+    return '<span class="pill p-type">'+g.n+' '+esc(item)+(g.hasItems?' · '+g.items+' item'+(g.items===1?'':'s')+' linked':'')+'</span>';
   }).join('')+'</div>';
 }
 /**
@@ -3365,38 +3365,38 @@ function renderS3(){
         (SAVED.length?savedSummaryHTML():'')+'</div>';
   if(!SAVED.length) return h+'<div class="card empty">Nothing saved yet.</div>';
   h+='<div class="bucket" style="margin-top:14px">';
-  SAVED.forEach(function(sv){
-    var moved=costMoved(sv), pillClass=sv.status==='live'?'live':sv.status==='paused'?'paused':sv.status==='approved'?'appr':'draft';
-    var names=savedItemNames(sv);
-    var hits=clashDetail(sv), clashOpen=!!SVOPEN[sv.id+':clash'];
+  SAVED.forEach(function(item){
+    var moved=costMoved(item), pillClass=item.status==='live'?'live':item.status==='paused'?'paused':item.status==='approved'?'appr':'draft';
+    var names=savedItemNames(item);
+    var hits=clashDetail(item), clashOpen=!!SVOPEN[item.id+':clash'];
     h+='<div class="sv"><div class="svm">'+
-      '<div class="svt">'+esc(sv.title)+'</div>'+
-      '<div class="svd">'+esc(sv.detail)+' · '+esc(BIZ[sv.biz].name)+'</div>'+
+      '<div class="svt">'+esc(item.title)+'</div>'+
+      '<div class="svd">'+esc(item.detail)+' · '+esc(BIZ[item.biz].name)+'</div>'+
       '<div style="margin-top:7px;display:flex;gap:6px;flex-wrap:wrap">'+
-        '<span class="pill p-'+pillClass+'">'+esc(sv.status)+'</span>'+
+        '<span class="pill p-'+pillClass+'">'+esc(item.status)+'</span>'+
         (moved?'<span class="pill p-stale">'+moved+' cost'+(moved>1?'s':'')+' changed since</span>':'')+
         (hits?'<span class="pill p-stale" style="cursor:pointer" role="button" tabindex="0" '+
-          'onclick="toggleSaved(\''+sv.id+'\',\'clash\')">'+(clashOpen?'▾':'▸')+' overlaps '+hits.length+
+          'onclick="toggleSaved(\''+item.id+'\',\'clash\')">'+(clashOpen?'▾':'▸')+' overlaps '+hits.length+
           ' other'+(hits.length>1?'s':'')+'</span>':'')+
       '</div>'+
       (clashOpen&&hits?'<div class="hs" style="margin-top:6px;padding:9px 12px;background:var(--amber-t);border:1px solid var(--amber-b);border-radius:9px">'+
         hits.map(function(x){ return '<b>'+esc(x.title)+'</b> ('+esc(x.status)+')'+
           (x.items.length?': '+x.items.map(esc).join(', '):' — whole overlapping category'); }).join('<br>')+
         '</div>':'')+
-      (names&&names.length?'<button class="btn sm" style="margin-top:7px" onclick="openSavedItemsOverlay(\''+sv.id+'\')">'+
+      (names&&names.length?'<button class="btn sm" style="margin-top:7px" onclick="openSavedItemsOverlay(\''+item.id+'\')">'+
         names.length+' item'+(names.length===1?'':'s')+' linked ›</button>':'')+
-      (sv.remote?'<button class="btn sm" style="margin-top:7px" onclick="toggleHistory(\''+sv.id+'\')">'+
-        (SVOPEN[sv.id+':history']?'▾':'▸')+' History</button>'+
-        (SVOPEN[sv.id+':history']?historyHTML(sv):''):'')+
+      (item.remote?'<button class="btn sm" style="margin-top:7px" onclick="toggleHistory(\''+item.id+'\')">'+
+        (SVOPEN[item.id+':history']?'▾':'▸')+' History</button>'+
+        (SVOPEN[item.id+':history']?historyHTML(item):''):'')+
       '</div>'+
-      '<div style="text-align:right"><div class="svn">'+esc(sv.n)+'</div><div class="svk">'+esc(sv.k)+'</div></div>'+
+      '<div style="text-align:right"><div class="svn">'+esc(item.n)+'</div><div class="svk">'+esc(item.k)+'</div></div>'+
       '<div style="display:flex;gap:7px;flex-wrap:wrap;width:100%">'+
-        '<button class="btn sm" onclick="openSaved(\''+sv.id+'\')">Edit</button>'+
-        (sv.status==='draft'?'<button class="btn sm" onclick="setStatus(\''+sv.id+'\',\'approved\')">Approve</button>':'')+
-        (sv.status==='approved'?'<button class="btn sm pri" onclick="setStatus(\''+sv.id+'\',\'live\')">Go live</button>':'')+
-        (sv.status==='live'?'<button class="btn sm" onclick="setStatus(\''+sv.id+'\',\'paused\')">Pause</button>':'')+
-        (sv.status==='paused'?'<button class="btn sm pri" onclick="setStatus(\''+sv.id+'\',\'live\')">Resume</button>':'')+
-        '<button class="btn sm" onclick="dropSaved(\''+sv.id+'\')">'+(savedLive()?'Retire':'Delete')+'</button>'+
+        '<button class="btn sm" onclick="openSaved(\''+item.id+'\')">Edit</button>'+
+        (item.status==='draft'?'<button class="btn sm" onclick="setStatus(\''+item.id+'\',\'approved\')">Approve</button>':'')+
+        (item.status==='approved'?'<button class="btn sm pri" onclick="setStatus(\''+item.id+'\',\'live\')">Go live</button>':'')+
+        (item.status==='live'?'<button class="btn sm" onclick="setStatus(\''+item.id+'\',\'paused\')">Pause</button>':'')+
+        (item.status==='paused'?'<button class="btn sm pri" onclick="setStatus(\''+item.id+'\',\'live\')">Resume</button>':'')+
+        '<button class="btn sm" onclick="dropSaved(\''+item.id+'\')">'+(savedLive()?'Retire':'Delete')+'</button>'+
       '</div></div>';
   });
   return h+'</div>';
@@ -3435,20 +3435,20 @@ function render(){
     '<button onclick="labStep(0)">Change</button></div>';
 
   var names=['Settings','Offer','Work it out'];
-  document.getElementById('steps').innerHTML = S.step===3?'' : names.map(function(n,i){
-    return '<button class="stp '+(S.step===i?'on':S.step>i?'done':'')+'" onclick="labStep('+i+')">'+
-      '<span class="n">'+(i+1)+'</span><span><span class="t">'+n+'</span></span></button>';}).join('');
+  document.getElementById('steps').innerHTML = S.step===3?'' : names.map(function(item,index){
+    return '<button class="stp '+(S.step===index?'on':S.step>index?'done':'')+'" onclick="labStep('+index+')">'+
+      '<span class="n">'+(index+1)+'</span><span><span class="t">'+item+'</span></span></button>';}).join('');
 
-  [0,1,2,3].forEach(function(i){
-    var el=document.getElementById('s'+i);
-    el.className='screen'+(S.step===i?' on':'');
-    if(S.step===i) el.innerHTML=[renderS0,renderS1,renderS2,renderS3][i]();
+  [0,1,2,3].forEach(function(item){
+    var el=document.getElementById('s'+item);
+    el.className='screen'+(S.step===item?' on':'');
+    if(S.step===item) el.innerHTML=[renderS0,renderS1,renderS2,renderS3][item]();
   });
   /* ⭐ if the "Work it out" modal is open, keep it in sync — e.g. editing a qty tier's own inline inputs while
    * the result is on screen calls render() the same way every other edit does, and the modal is not one of
    * the four .screen divs render() already repaints above. */
-  var ws=document.getElementById('workScrim');
-  if(ws && ws.classList.contains('on')) paintWork();
+  var node=document.getElementById('workScrim');
+  if(node && node.classList.contains('on')) paintWork();
 }
 applyBiz('hotel');
 render();
