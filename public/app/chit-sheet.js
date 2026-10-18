@@ -51,7 +51,7 @@
   /* ── what the chit read says, in one shape ─────────────────────────────────────────────────────── */
   function model(r) {
     var h = (r && r.header) || r || {}, det = (r && r.detail) || {};
-    var bj = h.business_json || {}, sum = h.summary_json || {}, money_ = sum.money || {};
+    var text = h.business_json || {}, sum = h.summary_json || {}, money_ = sum.money || {};
     var rec = h.all_recipients || [];
     var sender = rec.filter(function (x) { return x.role === 'sender'; })[0] || {};
     var senderName = sender.display_name || h.sender_entity_display_name || '';
@@ -61,14 +61,14 @@
       : (det.line_items || []);
     var purpose = String(h.purpose || '');
     var cur = sum.currency_code || h.currency;
-    var bill = bj.bill_no || bj.printed_as || null;
+    var bill = text.bill_no || text.printed_as || null;
     var log = (r && r.state_log) || [];
     /* ⭐ STD1: WHAT DOCUMENT THIS IS, the SERVER says (the chit read's `doc` — folder-inventory docOf, the Bills folders' own test); never guessed
        here. A bill I received — an invoice sent to me, or MY counter receipt carrying their bill no. AND total (F10: captured) — is accepted
        like one, and its step is my own copy's. */
-    var tb = bj.their_bill, billRx = !!(r && r.doc === 'bill_received'), captured = billRx && purpose === 'receipt';
-    var counterBill = !billRx && !!(bj.till && iSent && !others.length);   /* rung up at a counter and sent to nobody else */
-    var agreement = !!(bj.repeat && bj.repeat.agreement_id);   /* RI1: a repeat-supply agreement (purpose subscription) — its verbs are its own panel's */
+    var tb = text.their_bill, billRx = !!(r && r.doc === 'bill_received'), captured = billRx && purpose === 'receipt';
+    var counterBill = !billRx && !!(text.till && iSent && !others.length);   /* rung up at a counter and sent to nobody else */
+    var agreement = !!(text.repeat && text.repeat.agreement_id);   /* RI1: a repeat-supply agreement (purpose subscription) — its verbs are its own panel's */
     return {
       agreement: agreement,
       /* FX-F10W: a captured receipt IS a bill (folder-inventory bill_received), so its step is MY bill_step too (routes/chits.js writes it there);
@@ -76,13 +76,13 @@
       id: h.chit_id || (r && r.id) || null, status: billRx ? billStepStatus(log, captured ? String(h.current_status || h.status || 'pending') : null) : String(h.current_status || h.status || 'pending'), purpose: purpose, cur: cur,
       iSent: iSent, counterBill: counterBill, billRx: billRx, captured: captured, hasOther: (!iSent) || others.length > 0, hasLines: live.length > 0,
       isTask: !counterBill && !billRx,
-      no: captured && tb ? String(tb.no == null ? '' : tb.no).trim() : (bill || h.manual_subject || h.auto_subject || ''), at: bj.billed_at || h.created_at,
+      no: captured && tb ? String(tb.no == null ? '' : tb.no).trim() : (bill || h.manual_subject || h.auto_subject || ''), at: text.billed_at || h.created_at,
       /* STD1: what the books wait on for this chit, and may I accept it — the SERVER's answers on the read (books_wait · actions.accept) */
       wait: (r && r.books_wait) || null, may: (r && r.actions && r.actions.accept) || null, mayReject: (r && r.actions && r.actions.reject) || null,
-      counter: counterOfBill(bill, bj.till), by: bj.till && bj.till.by && bj.till.by.name || '',
-      who: counterBill ? ((bj.customer && bj.customer.name) || T('Walk-in')) : captured ? ((bj.party && bj.party.name) || T('Not named')) : (billRx ? ((sum.bill_received && sum.bill_received.from) || senderName) : (others.map(function (x) { return x.display_name; }).join(', ') || senderName)),
+      counter: counterOfBill(bill, text.till), by: text.till && text.till.by && text.till.by.name || '',
+      who: counterBill ? ((text.customer && text.customer.name) || T('Walk-in')) : captured ? ((text.party && text.party.name) || T('Not named')) : (billRx ? ((sum.bill_received && sum.bill_received.from) || senderName) : (others.map(function (x) { return x.display_name; }).join(', ') || senderName)),
       /* a captured bill not yet frozen: the money it carries is THEIR total as the door typed it (read; the server taxes the lines when it posts) */
-      lines: live, bj: bj, money: captured && tb && !bj.invoice ? receiptMoney(bj, tb) : moneyFor(bj, money_, cur, sum), rec: rec, order: orderDetails(sum, purpose)
+      lines: live, bj: text, money: captured && tb && !text.invoice ? receiptMoney(text, tb) : moneyFor(text, money_, cur, sum), rec: rec, order: orderDetails(sum, purpose)
     };
   }
   /* ⭐ WHAT THE CHIT IS FROZEN WITH, in one shape (summary_json.money's names + by_rate · heads · lines): the invoice the
@@ -118,7 +118,7 @@
     if (o.when) rows.push(['Asked for', o.when, 'cs-order-when']);
     if (o.remark) rows.push(['Remark', o.remark, 'cs-order-remark']);
     return '<div class="cs-order" data-testid="cs-order">' + (o.online ? '<div class="cs-online" data-testid="cs-order-online">🌐 ' + esc(T('Online order')) + (o.fulfilment === 'delivery' ? ' · ' + esc(T('Delivery')) : '') + '</div>' : '')
-      + rows.map(function (r) { return '<div class="cs-row"><span>' + esc(T(r[0])) + '</span><b data-testid="' + r[2] + '">' + esc(r[1]) + '</b></div>'; }).join('') + '</div>';
+      + rows.map(function (item) { return '<div class="cs-row"><span>' + esc(T(item[0])) + '</span><b data-testid="' + item[2] + '">' + esc(item[1]) + '</b></div>'; }).join('') + '</div>';
   }
   /* ⭐ A BILL I RECEIVED has its own step per shop: since the API's "bills-private" it is a `bill_step` row in the chit's
      state_log (code B-2100, step 'accepted', mine:true) — NOT the shared status, which is the seller's. The latest of mine wins. */
@@ -139,25 +139,25 @@
      closed (cancelled/rejected/completed) → only what still makes sense: Print (counter) · Open page */
   function actionsFor(m) {
     var s = m.status, open = stepIn(s, 'open'), live = stepIn(s, 'live'), dead = stepIn(s, 'dead');
-    var a = [];
+    var list = [];
     /* RI1: a repeat-supply AGREEMENT — Accept · Counter · Decline · Skip (the customer) and Run · Pause · End (the seller) are the panel's,
        answered by the server per verb (may/why); the rail's step buttons would move the copy behind the agreement's back */
-    if (m.agreement) { if (!dead && m.hasOther) a.push('dispute'); a.push('page'); return a; }
-    if (m.counterBill) { a.push('print'); if (!dead) a.push('return'); }
+    if (m.agreement) { if (!dead && m.hasOther) list.push('dispute'); list.push('page'); return list; }
+    if (m.counterBill) { list.push('print'); if (!dead) list.push('return'); }
     /* F10: my receipt of their bill — Accept (the goods were counted at my door: no Goods in; nobody else holds it: no Dispute) */
-    else if (m.captured) { if (open) { a.push('accept'); a.push('reject'); } }
+    else if (m.captured) { if (open) { list.push('accept'); list.push('reject'); } }
     else if (m.billRx) {
-      if (open) { a.push('accept'); a.push('reject'); a.push('dispute'); a.push('goodsin'); }
-      else if (!dead) a.push('dispute');
+      if (open) { list.push('accept'); list.push('reject'); list.push('dispute'); list.push('goodsin'); }
+      else if (!dead) list.push('dispute');
     } else {
-      if (open) a.push('accept');
-      if (!dead && m.hasOther) a.push('dispute');
-      if (live) a.push('done');
+      if (open) list.push('accept');
+      if (!dead && m.hasOther) list.push('dispute');
+      if (live) list.push('done');
     }
     /* RI1: a bill I sent to a ChitBridge customer can become a repeat-supply agreement (cap-repeat.js rpStart) */
-    if (m.purpose === 'invoice' && m.iSent && m.hasOther && !dead && m.hasLines) a.push('repeat');
-    a.push('page');
-    return a;
+    if (m.purpose === 'invoice' && m.iSent && m.hasOther && !dead && m.hasLines) list.push('repeat');
+    list.push('page');
+    return list;
   }
   /**
    * ⭐ F10 · STD1: WHAT THE SERVER SAID ABOUT THIS BILL — the chit read's own `books_wait` (todo · name · why · candidates), painted, never
@@ -184,7 +184,7 @@
   }
   /** STD1: ONE builder for "Is this Sri Ganesh Provisions (P-00001)?" — the sheet and the Waiting row (cap-books) both ask it */
   function isThis(c) { return c && c.party_no ? tf('Is this {name} ({no})?', { name: c.name, no: c.party_no }) : tf('Is this {name}?', { name: c && c.name }); }
-  function actsOf(m) { var a = actionsFor(m), said = serverSaid(m); if (said && said.name) a.splice(Math.max(0, a.length - 1), 0, 'supplier'); return a; }
+  function actsOf(m) { var list = actionsFor(m), said = serverSaid(m); if (said && said.name) list.splice(Math.max(0, list.length - 1), 0, 'supplier'); return list; }
   var ACT = {
     supplier: ['＋', 'Add supplier'],
     accept: ['✓', 'Accept'], reject: ['⊘', 'Reject'], dispute: ['⚑', 'Dispute'], goodsin: ['📥', 'Goods in'], done: ['✔', 'Done'],
@@ -209,14 +209,14 @@
     if (!m.lines.length) return '<div class="cs-mute">' + esc(T('No lines on this chit')) + '</div>';
     var ml = (m.money && m.money.lines) || [];
     return '<table class="cs-lines"><thead><tr><th>' + esc(T('Item')) + '</th><th class="n">' + esc(T('Qty')) + '</th><th class="n">' + esc(T('Price')) + '</th><th class="n">' + esc(T('Total')) + '</th></tr></thead><tbody>'
-      + m.lines.map(function (l, i) {
-        var f = ml[i], offs = (l.offers && l.offers.length) ? l.offers : (l.offer ? [{ label: l.offer.label, off: l.offer.off }] : []);
+      + m.lines.map(function (item, index) {
+        var f = ml[index], offs = (item.offers && item.offers.length) ? item.offers : (item.offer ? [{ label: item.offer.label, off: item.offer.off }] : []);
         /* a frozen invoice line says what it took off; one offer on the line wears that figure, several keep their own recorded amounts */
         if (f && offs.length === 1) offs = f.discount > 0 ? [{ label: offs[0].label, off: f.discount }] : [];
-        return '<tr data-testid="cs-line-' + i + '"><td>' + esc(l.particulars || l.name || '') + offs.map(function (o) {
-          return '<div class="cs-off" data-testid="cs-offer-' + i + '">' + esc(o.label || T('Offer')) + ' −' + esc(fmtMoney(o.off, m.cur, '—')) + '</div>'; }).join('') + '</td>'
-          + '<td class="n">' + esc(l.quantity != null ? l.quantity : (l.qty != null ? l.qty : '')) + (l.unit && l.unit !== 'piece' ? ' ' + esc(l.unit) : '') + '</td>'
-          + '<td class="n">' + esc(fmtMoney(l.price, m.cur, '—')) + '</td><td class="n">' + esc(fmtMoney(f ? f.total : lineTotal(l, m), m.cur, '—')) + '</td></tr>';
+        return '<tr data-testid="cs-line-' + index + '"><td>' + esc(item.particulars || item.name || '') + offs.map(function (o) {
+          return '<div class="cs-off" data-testid="cs-offer-' + index + '">' + esc(o.label || T('Offer')) + ' −' + esc(fmtMoney(o.off, m.cur, '—')) + '</div>'; }).join('') + '</td>'
+          + '<td class="n">' + esc(item.quantity != null ? item.quantity : (item.qty != null ? item.qty : '')) + (item.unit && item.unit !== 'piece' ? ' ' + esc(item.unit) : '') + '</td>'
+          + '<td class="n">' + esc(fmtMoney(item.price, m.cur, '—')) + '</td><td class="n">' + esc(fmtMoney(f ? f.total : lineTotal(item, m), m.cur, '—')) + '</td></tr>';
       }).join('') + '</tbody></table>';
   }
   /* the GST summary as the counter prints it (till.html taxSummaryHTML is the reference shape): the frozen by_rate, as it is held.
@@ -234,7 +234,7 @@
   }
   function gstHTML(m) {
     var mo = m.money || {}, by = mo.by_rate || null;
-    var rates = by ? Object.keys(by).sort(function (a, b) { return Number(a) - Number(b); }) : [];
+    var rates = by ? Object.keys(by).sort(function (first, second) { return Number(first) - Number(second); }) : [];
     if (!rates.length) {
       return '<div class="cs-sec">' + esc(T('GST')) + '</div>' + rcmHTML(m) + (mo.tax != null
         ? '<div class="cs-row"><span>' + esc(T('GST total')) + '</span><b data-testid="cs-gst-total">' + esc(fmtMoney(mo.tax, m.cur, '—')) + '</b></div>'
@@ -244,16 +244,16 @@
     /* ⭐ CX0: a ONE-HEAD scheme (supply 'domestic' — the border decided: GST in Australia, VAT in the UAE) has one tax column named by its head
        (by_rate[rate].gst · .vat — the pack's taxHeads), never a CGST/SGST grid of 0.00 with the tax nowhere. Same shape as the counter's slip. */
     if ((mo.supply || m.bj.supply) === 'domestic') {
-      var head = Object.keys(by[rates[0]] || {}).filter(function (k) { return ['taxable', 'base', 'rate', 'tax', 'cess', 'cgst', 'sgst', 'igst'].indexOf(k) < 0; })[0];
+      var head = Object.keys(by[rates[0]] || {}).filter(function (item) { return ['taxable', 'base', 'rate', 'tax', 'cess', 'cgst', 'sgst', 'igst'].indexOf(item) < 0; })[0];
       var hw = head ? head.toUpperCase() : T('Tax');
-      var rows1 = rates.map(function (rt) { var v = by[rt] || {}, b = v.taxable != null ? v.taxable : v.base, tv = head && v[head] != null ? v[head] : v.tax;
-        return '<tr data-testid="cs-gst-' + esc(rt) + '"><td>' + esc(rt) + '%</td><td class="n">' + esc(fmtMoney(b, m.cur, '—')) + '</td><td class="n">' + esc(fmtMoney(tv, m.cur, '—')) + '</td></tr>'; }).join('');
+      var rows1 = rates.map(function (item) { var v = by[item] || {}, b = v.taxable != null ? v.taxable : v.base, tv = head && v[head] != null ? v[head] : v.tax;
+        return '<tr data-testid="cs-gst-' + esc(item) + '"><td>' + esc(item) + '%</td><td class="n">' + esc(fmtMoney(b, m.cur, '—')) + '</td><td class="n">' + esc(fmtMoney(tv, m.cur, '—')) + '</td></tr>'; }).join('');
       var foot1 = mo.taxable != null ? '<tr class="tot"><td></td><td class="n">' + esc(fmtMoney(mo.taxable, m.cur, '—')) + '</td><td class="n">' + esc(fmtMoney(mo.tax, m.cur, '—')) + '</td></tr>' : '';
       return '<div class="cs-sec">' + esc(hw + ' ' + T('summary')) + '</div>' + rcmHTML(m) + '<table class="cs-lines" data-testid="cs-gst"><thead><tr><th>' + esc(T('Rate')) + '</th><th class="n">' + esc(T('Taxable')) + '</th><th class="n">' + esc(hw) + '</th></tr></thead><tbody>' + rows1 + foot1 + '</tbody></table>';
     }
-    var rows = rates.map(function (rt) {
-      var v = by[rt] || {}, b = v.taxable != null ? v.taxable : v.base;
-      return '<tr data-testid="cs-gst-' + esc(rt) + '"><td>' + esc(rt) + '%</td><td class="n">' + esc(fmtMoney(b, m.cur, '—')) + '</td><td class="n">' + esc(fmtMoney(inter ? v.igst : v.cgst, m.cur, '—')) + '</td><td class="n">' + (inter ? '' : esc(fmtMoney(v.sgst, m.cur, '—'))) + '</td></tr>';
+    var rows = rates.map(function (item) {
+      var v = by[item] || {}, b = v.taxable != null ? v.taxable : v.base;
+      return '<tr data-testid="cs-gst-' + esc(item) + '"><td>' + esc(item) + '%</td><td class="n">' + esc(fmtMoney(b, m.cur, '—')) + '</td><td class="n">' + esc(fmtMoney(inter ? v.igst : v.cgst, m.cur, '—')) + '</td><td class="n">' + (inter ? '' : esc(fmtMoney(v.sgst, m.cur, '—'))) + '</td></tr>';
     }).join('');
     var foot = mo.taxable != null
       ? '<tr class="tot"><td></td><td class="n">' + esc(fmtMoney(mo.taxable, m.cur, '—')) + '</td><td class="n">' + esc(fmtMoney(inter ? mo.igst : mo.cgst, m.cur, '—')) + '</td><td class="n">' + (inter ? '' : esc(fmtMoney(mo.sgst, m.cur, '—'))) + '</td></tr>' : '';
@@ -272,9 +272,9 @@
     var p = m.bj.payment; if (!p) return '';
     var parts = (p.parts && p.parts.length) ? p.parts : (p.mode ? [{ how: p.mode, amount: p.paid }] : []);
     if (!parts.length) return '';
-    return '<div class="cs-sec">' + esc(T('Paid by')) + '</div>' + parts.map(function (x, i) {
+    return '<div class="cs-sec">' + esc(T('Paid by')) + '</div>' + parts.map(function (x, index) {
       var k = String(x.how || '').toLowerCase();
-      return '<div class="cs-row" data-testid="cs-tender-' + i + '"><span>' + esc(T(HOW[k] || x.how || '')) + '</span><b>' + esc(fmtMoney(x.amount, m.cur, '—')) + '</b></div>';
+      return '<div class="cs-row" data-testid="cs-tender-' + index + '"><span>' + esc(T(HOW[k] || x.how || '')) + '</span><b>' + esc(fmtMoney(x.amount, m.cur, '—')) + '</b></div>';
     }).join('') + (p.change > 0 ? '<div class="cs-row cs-mute" data-testid="cs-change"><span>' + esc(T('Change')) + '</span><span>' + esc(fmtMoney(p.change, m.cur, '—')) + '</span></div>' : '');
   }
   var STEP = { pending: 'To accept', delivered: 'To accept', read: 'To accept', accepted: 'Accepted', in_progress: 'In hand', partial: 'Part done', completed: 'Done', cancelled: 'Cancelled', rejected: 'Rejected' };
@@ -292,8 +292,8 @@
   /* R10 - the rail units where the person already is. "Messages and files" is the chit's thread (CBThread, R02) and the picker (CBAttach, R07),
      each mounted with ITS OWN api: the units decide who may post (the engine's `chit.actions`, a refusal with its `why`); this file decides nothing.
      The host is built once per chit and moved into each repaint, so a busy repaint does not remount the unit or lose what was typed. */
-  function railMount(d, m) {
-    var body = d.querySelector('.cs-body'), id = m.id || CS.id;
+  function railMount(node, m) {
+    var body = node.querySelector('.cs-body'), id = m.id || CS.id;
     if (!body || !id || (typeof CBThread === 'undefined' && typeof CBAttach === 'undefined')) return;
     if (!CS.rail || CS.rail.id !== id) {
       var el = document.createElement('div'); el.setAttribute('data-testid', 'cs-rail');
@@ -311,8 +311,8 @@
   /* ⭐ T3-DISPUTES-ASSIST: a page that carries the dispute capability (CBDispute, app/cap-dispute.js — CB Tasks & Orders) gets the chit's disputes
      HERE: each one with whom · why · its room, Raise and Resolve greyed with the server's sentence. The section is the capability's; the sheet only
      gives it a place, built once per chit and moved into each repaint (as railMount above), so a repaint does not re-read it or lose a typed reason. */
-  function dispMount(d, m) {
-    var body = d.querySelector('.cs-body'), id = m.id || CS.id;
+  function dispMount(node, m) {
+    var body = node.querySelector('.cs-body'), id = m.id || CS.id;
     if (!body || !id || !root.CBDispute || !root.CBDispute.sheet) return;   /* a page opts in (tasks.html: CBDispute.sheet = true); the workshop's sheet is unchanged */
     if (!CS.disp || CS.disp.id !== id) {
       var el = document.createElement('div'); el.setAttribute('data-testid', 'cs-disputes');
@@ -327,9 +327,9 @@
   function historyHTML() {
     var log = (CS.chit && CS.chit.state_log) || [];
     if (!log.length) return '';
-    return '<div class="cs-sec">' + esc(T('History')) + '</div>' + log.map(function (e, i) {
+    return '<div class="cs-sec">' + esc(T('History')) + '</div>' + log.map(function (e, index) {
       var a = String(e.action || ''), w = LOGWORD[a] || (a.indexOf('status_') === 0 ? (STEP[a.slice(7)] || a.slice(7)) : (e.new_status ? (STEP[e.new_status] || e.new_status) : (a || 'Event')));
-      return '<div class="cs-row cs-hist" data-testid="cs-hist-' + i + '"><span>' + esc(when(e.created_at || e.at)) + ' · ' + esc(T(w)) + '</span><b>' + esc(e.action_by_display_name || e.by_name || '') + '</b></div>';
+      return '<div class="cs-row cs-hist" data-testid="cs-hist-' + index + '"><span>' + esc(when(e.created_at || e.at)) + ' · ' + esc(T(w)) + '</span><b>' + esc(e.action_by_display_name || e.by_name || '') + '</b></div>';
     }).join('');
   }
   function pageNoteHTML() {
@@ -338,23 +338,23 @@
   function host() { return CS.el && document.body.contains(CS.el) ? CS.el : null; }
 
   function paint() {
-    var d = host(); if (!d) return;
-    var m = CS.view, ttl = d.querySelector('[data-testid="cs-title"]');
+    var node = host(); if (!node) return;
+    var m = CS.view, ttl = node.querySelector('[data-testid="cs-title"]');
     if (ttl) ttl.textContent = T(m ? titleFor(m) : 'Bill');
-    var sid = d.querySelector('[data-testid="cs-screen-id"]');   /* the popup names its own screen; the page form is named by its page's header */
+    var sid = node.querySelector('[data-testid="cs-screen-id"]');   /* the popup names its own screen; the page form is named by its page's header */
     if (sid) sid.innerHTML = m && CS.mode === 'dialog' && root.CBScreenId ? root.CBScreenId.sheetHTML(sheetKind(m)) : '';
-    if (!m) { d.querySelector('.cs-body').innerHTML = CS.err ? '<div class="cs-mute" data-testid="cs-err">' + esc(CS.err) + '</div>' : '<div class="cs-mute">' + esc(T('Reading…')) + '</div>'; d.querySelector('.cs-acts').innerHTML = ''; return; }
-    var head = [T(kindWord(m)), m.no, when(m.at), counterWord(m.counter), m.by].filter(Boolean).map(function (x, i) { return i === 1 ? '<b class="mono" data-testid="cs-no">' + esc(x) + '</b>' : esc(x); }).join(' · ');
-    d.querySelector('.cs-body').innerHTML =
+    if (!m) { node.querySelector('.cs-body').innerHTML = CS.err ? '<div class="cs-mute" data-testid="cs-err">' + esc(CS.err) + '</div>' : '<div class="cs-mute">' + esc(T('Reading…')) + '</div>'; node.querySelector('.cs-acts').innerHTML = ''; return; }
+    var head = [T(kindWord(m)), m.no, when(m.at), counterWord(m.counter), m.by].filter(Boolean).map(function (x, index) { return index === 1 ? '<b class="mono" data-testid="cs-no">' + esc(x) + '</b>' : esc(x); }).join(' · ');
+    node.querySelector('.cs-body').innerHTML =
       '<div class="cs-head" data-testid="cs-head">' + head + '</div>'
       + '<div class="cs-who"><span data-testid="cs-who">' + esc(m.who) + '</span> <span class="cs-step" data-testid="cs-step">' + esc(T(STEP[m.status] || m.status)) + '</span></div>'
       + pageNoteHTML()
       + orderHTML(m) + linesHTML(m) + (m.purpose === 'order' && !m.counterBill && !(m.money && m.money.by_rate) ? '' : gstHTML(m)) + totalHTML(m) + tenderHTML(m)
       + (m.agreement ? (root.CBRepeat ? root.CBRepeat.panelHTML() : '<div class="cs-sec">' + esc(T('Repeat supply')) + '</div><div class="cs-mute" data-testid="rp-panel">' + esc(T('Reading…')) + '</div>') : '')
       + (serverSaid(m) ? '<div class="cs-note" data-testid="cs-why">' + esc(serverSaid(m).why) + '</div>' : '')
-      + (serverSaid(m) && serverSaid(m).cands.length ? '<div class="cs-use" data-testid="cs-pick">' + serverSaid(m).cands.map(function (c, j) {
-          return '<button type="button" class="optchip" data-testid="cs-link-' + j + '" onclick="CBSheet.link(' + j + ')"' + (CS.busy ? ' disabled' : '') + '>'
-            + esc(isThis(c)) + '</button>'; }).join('') + '</div>' : '')
+      + (serverSaid(m) && serverSaid(m).cands.length ? '<div class="cs-use" data-testid="cs-pick">' + serverSaid(m).cands.map(function (item, index) {
+          return '<button type="button" class="optchip" data-testid="cs-link-' + index + '" onclick="CBSheet.link(' + index + ')"' + (CS.busy ? ' disabled' : '') + '>'
+            + esc(isThis(item)) + '</button>'; }).join('') + '</div>' : '')
       + (CS.rejectAsk ? '<div class="cs-use" data-testid="cs-reject"><label class="cs-sec" for="cs_reason">' + esc(T('Why is it refused?')) + '</label>'
         + '<input class="inp" id="cs_reason" data-testid="cs-reason" maxlength="500" autocomplete="off" value="' + esc(CS.reason || '') + '" oninput="CBSheet.reason(this.value)">'
         + '<button type="button" class="optchip" data-testid="cs-reject-go" onclick="CBSheet.reject()"' + (CS.busy ? ' disabled' : '') + '>' + esc(T('Reject — it goes on the bill')) + '</button></div>' : '')
@@ -362,14 +362,14 @@
       + (CS.useAsk ? '<div class="cs-use" data-testid="cs-use">' + billUseChoiceHTML([m], 'CBSheet.use')
         + '<button type="button" class="optchip" data-testid="cs-use-auto" onclick="CBSheet.use(\'\')">' + esc(T('Let my catalogue decide')) + '</button></div>' : '')
       + (CS.mode === 'page' ? historyHTML() : '');
-    dispMount(d, m);
-    railMount(d, m);
-    if (m.agreement) repeatCap().then(function (rp) { if (rp && CS.view === m) { if (!document.getElementById('rp_panel')) paint(); else rp.panel(m); } });
+    dispMount(node, m);
+    railMount(node, m);
+    if (m.agreement) repeatCap().then(function (reply) { if (reply && CS.view === m) { if (!document.getElementById('rp_panel')) paint(); else reply.panel(m); } });
     /* the page form has no "Open page": the person is on it */
     var no = refusedAccept(m), noR = refusedReject(m);
-    d.querySelector('.cs-acts').innerHTML = actsOf(m).filter(function (k) { return !(CS.mode === 'page' && k === 'page'); }).map(function (k) {
-      var why = k === 'accept' ? no : k === 'reject' ? noR : null, refused = !!why;   /* the server's refusal (actions.accept / .reject): shown, greyed, with its sentence */
-      return '<button type="button" class="cs-act" data-testid="cs-act-' + k + '" onclick="CBSheet.act(\'' + k + '\')"' + (CS.busy || refused ? ' disabled' : '') + ' title="' + esc(refused ? why : T(ACT[k][1])) + '"><span class="ic" aria-hidden="true">' + ACT[k][0] + '</span><span>' + esc(T(ACT[k][1])) + '</span></button>';
+    node.querySelector('.cs-acts').innerHTML = actsOf(m).filter(function (item) { return !(CS.mode === 'page' && item === 'page'); }).map(function (item) {
+      var why = item === 'accept' ? no : item === 'reject' ? noR : null, refused = !!why;   /* the server's refusal (actions.accept / .reject): shown, greyed, with its sentence */
+      return '<button type="button" class="cs-act" data-testid="cs-act-' + item + '" onclick="CBSheet.act(\'' + item + '\')"' + (CS.busy || refused ? ' disabled' : '') + ' title="' + esc(refused ? why : T(ACT[item][1])) + '"><span class="ic" aria-hidden="true">' + ACT[item][0] + '</span><span>' + esc(T(ACT[item][1])) + '</span></button>';
     }).join('');
   }
 
@@ -397,17 +397,17 @@
     + '.cs-page{display:flex;flex-direction:column;border:1px solid var(--line,#E7E2D8);border-radius:14px;background:var(--card,var(--surface,#fff));color:var(--ink,#0F2E3D);max-width:100%;overflow:hidden}'
     + '.cs-page .cs-body{overflow:visible}.cs-page .cs-lines{table-layout:fixed}.cs-page .cs-lines td{overflow-wrap:anywhere}.cs-page .cs-hist span{color:var(--grey,#494F56)}.cs-page .cs-hist b{text-align:end;overflow-wrap:anywhere}';
 
-  function ensureCSS() { if (document.getElementById('cs-css')) return; var st = document.createElement('style'); st.id = 'cs-css'; st.textContent = CSS; document.head.appendChild(st); }
+  function ensureCSS() { if (document.getElementById('cs-css')) return; var node = document.createElement('style'); node.id = 'cs-css'; node.textContent = CSS; document.head.appendChild(node); }
   function ensureDlg() {
-    var d = document.getElementById('chitsheet'); if (d) return d;
+    var node = document.getElementById('chitsheet'); if (node) return node;
     ensureCSS();
-    d = document.createElement('dialog'); d.id = 'chitsheet'; d.className = 'cs'; d.setAttribute('aria-label', T('Bill'));
-    d.innerHTML = '<div class="cs-top"><span data-testid="cs-title">' + esc(T('Bill')) + '</span><span class="cs-sid" data-testid="cs-screen-id"></span><button type="button" data-testid="cs-close" aria-label="' + esc(T('Close')) + '" onclick="CBSheet.close()">✕</button></div><div class="cs-body"></div><div class="cs-acts" data-testid="cs-acts"></div>';
+    node = document.createElement('dialog'); node.id = 'chitsheet'; node.className = 'cs'; node.setAttribute('aria-label', T('Bill'));
+    node.innerHTML = '<div class="cs-top"><span data-testid="cs-title">' + esc(T('Bill')) + '</span><span class="cs-sid" data-testid="cs-screen-id"></span><button type="button" data-testid="cs-close" aria-label="' + esc(T('Close')) + '" onclick="CBSheet.close()">✕</button></div><div class="cs-body"></div><div class="cs-acts" data-testid="cs-acts"></div>';
     /* R10-4: a close event is queued; if a new chit was opened meanwhile the sheet is open again and that late event must not wipe it (the read would be dropped and the sheet stay on Reading) */
-    d.addEventListener('close', function () { if (d.open) return; lock(false); if (CS.mode === 'dialog') CS.id = null; });
-    d.addEventListener('click', function (e) { if (e.target === d) CBSheet.close(); });
-    document.body.appendChild(d);
-    return d;
+    node.addEventListener('close', function () { if (node.open) return; lock(false); if (CS.mode === 'dialog') CS.id = null; });
+    node.addEventListener('click', function (e) { if (e.target === node) CBSheet.close(); });
+    document.body.appendChild(node);
+    return node;
   }
   /* the page behind does not scroll while the sheet is open — and it is not touched, so closing returns to the same place */
   function lock(on) { try { document.documentElement.style.overflow = on ? 'hidden' : ''; document.body.classList.toggle('cs-open', !!on); } catch (_) {} }
@@ -427,24 +427,24 @@
   }
 
   async function read(id) {
-    var r = await api('chit', { params: { id: id } });
+    var reply = await api('chit', { params: { id: id } });
     if (CS.id !== id) return;
-    CS.chit = r; CS.view = model(r); CS.err = null;
+    CS.chit = reply; CS.view = model(reply); CS.err = null;
     /* the server's own answer to a move made here wins over a read that still shows the step it left (move) */
     var a = CS.answered[id]; if (a && stepIn(CS.view.status, 'open') && !stepIn(a, 'open')) CS.view.status = a;
     paint();
   }
   async function open(id) {
     if (!id) return;
-    var d = ensureDlg(); CS.mode = 'dialog'; CS.el = d; reset(id);
+    var node = ensureDlg(); CS.mode = 'dialog'; CS.el = node; reset(id);
     paint(); lock(true);
-    if (!d.open) { if (d.showModal) d.showModal(); else d.setAttribute('open', ''); }
+    if (!node.open) { if (node.showModal) node.showModal(); else node.setAttribute('open', ''); }
     try { await read(id); }
     catch (e) { if (CS.id !== id) return; CS.err = readSaid(e); paint(); }
   }
   /* closing the popup hands the painter back to a page form still on screen (it re-reads: the popup may have moved the chit) */
   function close() {
-    var d = document.getElementById('chitsheet'); if (d && d.open) d.close(); lock(false); CS.id = null;
+    var node = document.getElementById('chitsheet'); if (node && node.open) node.close(); lock(false); CS.id = null;
     var pg = CS.page; CS.page = null;
     if (pg && document.body.contains(pg.el)) mount(pg.el, pg.id);
   }
@@ -457,12 +457,12 @@
       if (use && to === 'act' && m.billRx) await api('billUse', { params: { id: id }, body: { use: use } });
       /* FX-F10W2: Reject is the rail's own step word (STEP_TO reject → rejected), with its reason as the note */
       var word = to === 'reject' ? 'rejected' : typeof statusWordFor === 'function' ? statusWordFor(to, { billRx: m.billRx }) : ({ open: 'pending', act: m.billRx ? 'accepted' : 'in_progress', close: 'completed' })[to];
-      var sr = await api('status', { params: { id: id }, body: note ? { status: word, note: note } : { status: word } });
+      var reply = await api('status', { params: { id: id }, body: note ? { status: word, note: note } : { status: word } });
       if (to === 'reject') { CS.rejectAsk = false; CS.reason = ''; }
-      if (sr && sr.warning && typeof toast === 'function') toast(sr.warning);
+      if (reply && reply.warning && typeof toast === 'function') toast(reply.warning);
       /* ⭐ FX-F10W: THE ANSWER IS THE STEP — "pending → accepted" (new_status), or "Already accepted" (a noop's status). The sheet paints it
          now and keeps it over a read that has not caught up, so a second tap is never offered for what the server already did. */
-      var now = sr && (sr.new_status || (sr.noop && sr.status)) || null;
+      var now = reply && (reply.new_status || (reply.noop && reply.status)) || null;
       if (now) CS.answered[id] = String(now);
       try { var i = (UI.rows || []).findIndex(function (x) { return x.id === id; }); if (i >= 0) UI.rows[i].state = to; } catch (_) {}
       await read(id);
@@ -479,7 +479,7 @@
     var m = CS.view, id = CS.id; if (!m) return;
     if (actsOf(m).indexOf(k) < 0) return;   /* a stale tap on an action this step no longer allows */
     if (k === 'accept' && refusedAccept(m)) return;   /* greyed: the server refused it, and said why */
-    if (k === 'reject') { if (refusedReject(m)) return; CS.rejectAsk = true; CS.useAsk = false; CS.note = null; paint(); var ri = document.getElementById('cs_reason'); if (ri) ri.focus(); return; }
+    if (k === 'reject') { if (refusedReject(m)) return; CS.rejectAsk = true; CS.useAsk = false; CS.note = null; paint(); var node = document.getElementById('cs_reason'); if (node) node.focus(); return; }
     if (k === 'supplier') { var nm = serverSaid(m).name; if (typeof root.bkAddSupplier !== 'function') { CS.note = T('Add them on the Suppliers page.'); return paint(); }
       CS.busy = true; paint();
       return root.bkAddSupplier(nm).then(function (said) { CS.busy = false; CS.note = said || null; return read(id); }).catch(fixFailed); }
@@ -497,7 +497,7 @@
       if (typeof quickDispute === 'function') quickDispute(id, { back: true });
       return;
     }
-    if (k === 'repeat') { repeatCap().then(function (rp) { if (rp) rp.start(id, m); else { CS.note = T('Repeat supply is not available on this page.'); paint(); } }); return; }
+    if (k === 'repeat') { repeatCap().then(function (reply) { if (reply) reply.start(id, m); else { CS.note = T('Repeat supply is not available on this page.'); paint(); } }); return; }
     if (k === 'page') { close(); var pg = typeof openChitPage === 'function' ? openChitPage : openChit; if (typeof pg === 'function') pg(id); }
   }
 

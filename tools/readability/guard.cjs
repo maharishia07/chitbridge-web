@@ -27,7 +27,7 @@ const functionKey = (fn) => (fn.name || '') + '(' + fn.params.join(',') + ')';
 const groupBy = (list, keyOf) => { const groups = new Map(); for (const item of list) { const key = keyOf(item); if (key) (groups.get(key) || groups.set(key, []).get(key)).push(item); } return groups; };
 
 /** head function → the same function in the base file: by name + params, the NEAREST line among twins (a route file holds many
- *  `async (req, res) =>` handlers — the first untaken one paired a 120-line handler with a 30-line one, INT7b), else by name alone */
+ *  `async (req, res) =>` handlers — the first untaken one paired a 120-line handler with a 30-line one, INT7b), then by name alone, then (anonymous only) by parameter count */
 function matchBase(headFns, baseFns) {
   const byKey = groupBy(baseFns, functionKey), byName = groupBy(baseFns, (fn) => fn.name);
   const pairs = new Map(), taken = new Set();
@@ -35,6 +35,9 @@ function matchBase(headFns, baseFns) {
   const take = (fn, twins) => { const twin = nearest(fn, twins || []); if (twin) { pairs.set(fn, twin); taken.add(twin); } };
   for (const fn of headFns) take(fn, byKey.get(functionKey(fn)));
   for (const fn of headFns) if (!pairs.has(fn) && fn.name) take(fn, byName.get(fn.name));
+  // an anonymous callback whose parameters were only renamed (MNT-2): same number of parameters, nearest line
+  const byArity = groupBy(baseFns.filter((fn) => !fn.name), (fn) => String(fn.params.length));
+  for (const fn of headFns) if (!pairs.has(fn) && !fn.name) take(fn, byArity.get(String(fn.params.length)));
   return pairs;
 }
 

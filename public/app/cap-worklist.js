@@ -107,11 +107,11 @@ function wlAll(open){
 function wlIds(rows, keys, path){
   if (!keys.length) return [];
   var key = keys[0], buckets = {}, out = [];
-  rows.forEach(function(r){ var k = WLG[key].of(r); (buckets[k] = buckets[k] || []).push(r); });
-  Object.keys(buckets).forEach(function(k){
-    var id = wlId(path, key, k);
+  rows.forEach(function(item){ var k = WLG[key].of(item); (buckets[k] = buckets[k] || []).push(item); });
+  Object.keys(buckets).forEach(function(item){
+    var id = wlId(path, key, item);
     out.push(id);
-    out = out.concat(wlIds(buckets[k], keys.slice(1), (path || []).concat([key, k])));
+    out = out.concat(wlIds(buckets[item], keys.slice(1), (path || []).concat([key, item])));
   });
   return out;
 }
@@ -168,10 +168,10 @@ function wlKeys(mine){
  */
 function wlRows(d){
   var out = [];
-  (d.people || []).forEach(function(p){
-    (p.lines || []).forEach(function(l){
+  (d.people || []).forEach(function(item){
+    (item.lines || []).forEach(function(l){
       if (!WL.showDone && l.state === 'done') return;
-      out.push(Object.assign({}, l, { who: p.name || 'Unassigned', actor_id: p.actor_id || null }));
+      out.push(Object.assign({}, l, { who: item.name || 'Unassigned', actor_id: item.actor_id || null }));
     });
   });
   return out;
@@ -179,9 +179,9 @@ function wlRows(d){
 function wlDone(){ WL.showDone = !WL.showDone; WL.open = {}; wlPaint(); }
 /** How many are hidden right now — stated plainly, because silently dropping rows is its own kind of lying. */
 function wlDoneCount(d){
-  var n = 0;
-  ((d || {}).people || []).forEach(function(p){ (p.lines || []).forEach(function(l){ if (l.state === 'done') n++; }); });
-  return n;
+  var index = 0;
+  ((d || {}).people || []).forEach(function(item){ (item.lines || []).forEach(function(l){ if (l.state === 'done') index++; }); });
+  return index;
 }
 
 function wlDateLabel(d){
@@ -282,13 +282,13 @@ function wlRow(r, ctx, depth){
 function wlRollup(rows){
   var today = new Date(); today.setHours(0, 0, 0, 0);
   var units = {}, overdue = 0, undated = 0;
-  rows.forEach(function(r){
-    var u = r.unit || '';
-    var q = Number(r.quantity);
+  rows.forEach(function(item){
+    var u = item.unit || '';
+    var q = Number(item.quantity);
     if (isFinite(q)) units[u] = (units[u] || 0) + q;
-    if (!r.due_date) { undated++; return; }
-    var t = new Date(String(r.due_date).slice(0, 10) + 'T00:00:00');
-    if (t < today) overdue++;
+    if (!item.due_date) { undated++; return; }
+    var date = new Date(String(item.due_date).slice(0, 10) + 'T00:00:00');
+    if (date < today) overdue++;
   });
   var keys = Object.keys(units);
   var qty = (keys.length === 1) ? (Math.round(units[keys[0]] * 1000) / 1000) + (keys[0] ? ' ' + keys[0] : '') : null;
@@ -457,16 +457,16 @@ function wlOrder(buckets, key){
   var G = WLG[key];
   var soon = function(rows){
     var m = null;
-    rows.forEach(function(r){ if (!r.due_date) return; var d = String(r.due_date).slice(0, 10); if (!m || d < m) m = d; });
+    rows.forEach(function(item){ if (!item.due_date) return; var d = String(item.due_date).slice(0, 10); if (!m || d < m) m = d; });
     return m;
   };
-  return Object.keys(buckets).map(function(k){ return { k: k, first: soon(buckets[k]) }; })
-    .sort(function(a, b){
+  return Object.keys(buckets).map(function(item){ return { k: item, first: soon(buckets[item]) }; })
+    .sort(function(a, second){
       /* "Unassigned" and "No date" are answers about absence — they belong last whatever date they hold. */
-      var la = G.last ? !!G.last(a.k) : false, lb = G.last ? !!G.last(b.k) : false;
+      var la = G.last ? !!G.last(a.k) : false, lb = G.last ? !!G.last(second.k) : false;
       if (la !== lb) return la ? 1 : -1;
-      if (a.first !== b.first) { if (!a.first) return 1; if (!b.first) return -1; return a.first < b.first ? -1 : 1; }
-      return String(a.k).localeCompare(String(b.k));
+      if (a.first !== second.first) { if (!a.first) return 1; if (!second.first) return -1; return a.first < second.first ? -1 : 1; }
+      return String(a.k).localeCompare(String(second.k));
     })
     .map(function(x){ return x.k; });
 }
@@ -499,16 +499,16 @@ function wlRender(rows, keys, depth, path){
   path = path || [];
   /* The path alternates key, value, key, value — so the KEYS a row already inherits from its headings are its even
      positions. wlRow drops exactly those, and reading them off the path keeps one source of truth. */
-  if (!keys.length) return rows.map(function(r){
-    return wlRow(r, path.filter(function(_, i){ return i % 2 === 0; }), depth || 0);
+  if (!keys.length) return rows.map(function(item){
+    return wlRow(item, path.filter(function(_, index){ return index % 2 === 0; }), depth || 0);
   }).join('');
   var key = keys[0], rest = keys.slice(1);
   var G = WLG[key];
   var buckets = {};
-  rows.forEach(function(r){ var k = G.of(r); (buckets[k] = buckets[k] || []).push(r); });
-  var html = wlOrder(buckets, key).map(function(k){
-    var rs = buckets[k];
-    var title = G.label(k, rs), tone = G.tone(k);
+  rows.forEach(function(item){ var k = G.of(item); (buckets[k] = buckets[k] || []).push(item); });
+  var html = wlOrder(buckets, key).map(function(item){
+    var rs = buckets[item];
+    var title = G.label(item, rs), tone = G.tone(item);
     var lv = wlLvl(depth), ind = 16 + depth * 15;
     /**
      * ⭐ EVERY GROUP IS A DISCLOSURE — Athi: *"can we make it expandable … so we can see all at once and can be
@@ -517,7 +517,7 @@ function wlRender(rows, keys, depth, path){
      * ⚠️ THE ID IS THE PATH INCLUDING THIS BRANCH — see wlId. "Raman under Monday" and "Raman under Friday" must
      * not share an id, and a child's id must begin with its parent's or opening a parent cannot open it.
      */
-    var id = wlId(path, key, k);
+    var id = wlId(path, key, item);
     var isOpen = !!WL.open[id];
     var caret = '<span style="display:inline-block;width:13px;color:var(--grey);font-size:var(--fs-1)">' + (isOpen ? '▾' : '<span class=arw>▸</span>') + '</span>';
     /* Every level carries its OWN roll-up: a breakdown that only totals at the top is a total, not a breakdown. */
@@ -527,7 +527,7 @@ function wlRender(rows, keys, depth, path){
         + 'display:flex;justify-content:space-between;align-items:baseline;gap:10px">'
         + '<span style="font-size:' + lv.size + ';font-weight:' + lv.weight + ';color:' + (tone || lv.color) + '">' + caret + title + '</span>'
         + '<span style="font-size:var(--fs-1);color:var(--grey);text-align:end;flex:none">' + wlRollupText(rs) + '</span></div>';
-    return head + (isOpen ? wlRender(rs, rest, depth + 1, path.concat([key, k])) : '');
+    return head + (isOpen ? wlRender(rs, rest, depth + 1, path.concat([key, item])) : '');
   }).join('');
   return html;
 }
@@ -590,20 +590,20 @@ function wlParties(det){
   var _asked = (typeof askedByLine === 'function')
     ? askedByLine((h.summary_json && h.summary_json.via) || null, { at: true }) : '';
   var seen = {}, out = [];
-  list.forEach(function(p){
-    var k = (p.entity_id || p.display_name) + '·' + p.role;
+  list.forEach(function(item){
+    var k = (item.entity_id || item.display_name) + '·' + item.role;
     if (seen[k]) return; seen[k] = 1;
-    out.push(p);
+    out.push(item);
   });
   var mine = function(p){ return typeof ccIsSelf === 'function' && ccIsSelf(p.display_name); };
   var everyoneIsMe = out.every(mine);
   return '<div style="display:flex;gap:14px;flex-wrap:wrap;align-items:baseline;padding:8px 0 2px;border-bottom:1px solid var(--line-soft,#f0efec);margin-bottom:8px">'
-    + out.map(function(p){
+    + out.map(function(item){
         return '<div style="font-size:var(--fs-2)">'
-          + '<span style="color:var(--grey);text-transform:uppercase;font-size:var(--fs-1);font-weight:800;letter-spacing:.06em">' + esc(p.role || '') + '</span> '
-          + '<b>' + esc(p.display_name || '—') + '</b>'
-          + (mine(p) ? ' <span style="color:var(--grey)">(you)</span>' : '')
-          + (p.user_id||p.bridge_id ? ' <span style="color:var(--grey);font-family:ui-monospace,monospace;font-size:var(--fs-1)">' + esc(p.user_id||p.bridge_id) + '</span>' : '')
+          + '<span style="color:var(--grey);text-transform:uppercase;font-size:var(--fs-1);font-weight:800;letter-spacing:.06em">' + esc(item.role || '') + '</span> '
+          + '<b>' + esc(item.display_name || '—') + '</b>'
+          + (mine(item) ? ' <span style="color:var(--grey)">(you)</span>' : '')
+          + (item.user_id||item.bridge_id ? ' <span style="color:var(--grey);font-family:ui-monospace,monospace;font-size:var(--fs-1)">' + esc(item.user_id||item.bridge_id) + '</span>' : '')
           + '</div>';
       }).join('')
     /**
@@ -689,8 +689,8 @@ async function wlLine(line_id){
   try {
     WLL.det = await api('wlChit', { params: { id: r.chit_id } });
     if (!WLL.actors) {
-      var a = await api('wlActors').catch(function(){ return null; });
-      WLL.actors = (a && (a.actors || a.items || (Array.isArray(a) ? a : []))) || [];
+      var reply = await api('wlActors').catch(function(){ return null; });
+      WLL.actors = (reply && (reply.actors || reply.items || (Array.isArray(reply) ? reply : []))) || [];
     }
   } catch (e) {
     /* ⚠️ A FAILED READ IS NOT AN EMPTY ONE. Swallowed silently, the card said "nothing recorded"
@@ -854,12 +854,12 @@ function wlPaintCard(loading){
      and this card's own remembered size with it. Nothing about the card changed; where it asks did. */
   modal(wlLineHTML(loading), !mob, { key: 'cb_wl_line', minW: 320, minH: 240, minimise: true });   // `wide` on a laptop — 360px is what folded "0 kg left" in two
   try {
-    var p = document.querySelector('#modalhost .modal');
-    if (p && cap) p.style.maxWidth = cap + 'px';
+    var node = document.querySelector('#modalhost .modal');
+    if (node && cap) node.style.maxWidth = cap + 'px';
     /* ⚠️ A SAVED WIDTH CAN OUTLIVE THE VIEWPORT IT WAS SET IN. Drag it wide on a laptop, switch to the phone
        preview, and makeMovable restores 820px inside a 440px frame. The cap has to apply AFTER the restore,
        which is why it stayed here rather than moving into the options above. */
-    if (p && cap && parseFloat(p.style.width) > cap) p.style.width = cap + 'px';
+    if (node && cap && parseFloat(node.style.width) > cap) node.style.width = cap + 'px';
   } catch (e) { /* best-effort — a card that will not drag is still a usable card */ }
   /* ⚠️ AFTER everything else. makeMovable can restore geometry and re-lay the panel out; putting values back
      before that runs risks them being wiped by the very repaint they were saved from. */
@@ -1015,14 +1015,14 @@ function wlRaidaRow(e){
     + (WLL.raidaClosing === e.raida_id
         ? '<div style="padding:0 0 9px 30px">'
           + '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">'
-          + Object.keys(RAIDA_ENDINGS).map(function(d){
-              var on = (WLL.raidaDisp || 'resolved') === d;
-              return '<button type="button" data-testid="wl-raida-disp-' + d + '" onclick="wlRaidaDisp(&quot;' + d + '&quot;)"'
-                + ' title="' + esc(RAIDA_ENDINGS[d].hint) + '" aria-pressed="' + (on ? 'true' : 'false') + '"'
+          + Object.keys(RAIDA_ENDINGS).map(function(item){
+              var on = (WLL.raidaDisp || 'resolved') === item;
+              return '<button type="button" data-testid="wl-raida-disp-' + item + '" onclick="wlRaidaDisp(&quot;' + item + '&quot;)"'
+                + ' title="' + esc(RAIDA_ENDINGS[item].hint) + '" aria-pressed="' + (on ? 'true' : 'false') + '"'
                 + ' style="cursor:pointer;font:inherit;font-size:var(--fs-1);font-weight:' + (on ? 800 : 500) + ';'
                 + 'border:' + (on ? '2px solid var(--blue)' : '1px solid var(--line)') + ';border-radius:8px;'
                 + 'padding:3px 8px;background:' + (on ? 'var(--blue-tint-bg)' : 'var(--card)') + ';color:var(--on-card)">'
-                + esc(tx(RAIDA_ENDINGS[d].label)) + '</button>';
+                + esc(tx(RAIDA_ENDINGS[item].label)) + '</button>';
             }).join('')
           + '</div><div style="display:flex;gap:7px">'
           + '<input id="wl_raida_why" data-testid="wl-raida-why" placeholder="' + esc(tx('What happened? (optional)')) + '"'
@@ -1146,11 +1146,11 @@ function wlLineHTML(loading){
           + '<span style="color:var(--grey);font-size:var(--fs-2);flex:1">' + esc(e.reference || e.note || '') + '</span>'
           + '<span style="color:var(--grey);font-size:var(--fs-1)">' + esc(String(e.at || '').slice(0, 10)) + ' · ' + esc(e.by_actor || e.by || '') + '</span></div>';
       }).join('')
-      + added.map(function(a){
+      + added.map(function(item){
         return '<div style="display:flex;gap:10px;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--line-soft,#f0efec);font-size:var(--fs-2)">'
-          + '<span style="color:var(--blue-2);font-weight:700;min-width:82px">' + esc(wlMoney(a.amount)) + '</span>'
-          + '<span style="flex:1">' + esc(a.particulars || '') + (a.quantity ? ' <span style="color:var(--grey)">· ' + esc(String(a.quantity)) + ' ' + esc(a.unit || '') + '</span>' : '') + '</span>'
-          + '<span style="color:var(--grey);font-size:var(--fs-1)">' + esc(String(a.at || '').slice(0, 10)) + '</span></div>';
+          + '<span style="color:var(--blue-2);font-weight:700;min-width:82px">' + esc(wlMoney(item.amount)) + '</span>'
+          + '<span style="flex:1">' + esc(item.particulars || '') + (item.quantity ? ' <span style="color:var(--grey)">· ' + esc(String(item.quantity)) + ' ' + esc(item.unit || '') + '</span>' : '') + '</span>'
+          + '<span style="color:var(--grey);font-size:var(--fs-1)">' + esc(String(item.at || '').slice(0, 10)) + '</span></div>';
       }).join('');
     }
     body += '</div>';
@@ -1231,18 +1231,18 @@ function wlLineHTML(loading){
           ? '<div style="margin-top:12px;border-top:1px solid var(--line);padding-top:9px">'
             + '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:5px">'
             +   esc(txf('Already on this line — {n}', { n: added.length })) + '</div>'
-            + added.map(function(a){
+            + added.map(function(item){
                 return '<div style="display:flex;gap:9px;align-items:baseline;padding:4px 0;font-size:var(--fs-2)">'
-                  + '<span style="flex:1">' + esc(a.particulars || '')
-                  + (a.quantity ? ' <span style="color:var(--grey)">· ' + esc(String(a.quantity)) + ' ' + esc(a.unit || '') + '</span>' : '')
-                  + (a.by_actor ? ' <span style="color:var(--grey);font-size:var(--fs-1)">· ' + esc(a.by_actor) + '</span>' : '')
+                  + '<span style="flex:1">' + esc(item.particulars || '')
+                  + (item.quantity ? ' <span style="color:var(--grey)">· ' + esc(String(item.quantity)) + ' ' + esc(item.unit || '') + '</span>' : '')
+                  + (item.by_actor ? ' <span style="color:var(--grey);font-size:var(--fs-1)">· ' + esc(item.by_actor) + '</span>' : '')
                   + '</span>'
-                  + '<span style="font-variant-numeric:tabular-nums">' + esc(wlMoney(a.amount)) + '</span></div>';
+                  + '<span style="font-variant-numeric:tabular-nums">' + esc(wlMoney(item.amount)) + '</span></div>';
               }).join('')
             + '<div style="display:flex;justify-content:space-between;padding-top:6px;margin-top:3px;'
             +   'border-top:1px solid var(--line);font-size:var(--fs-2)"><b>' + esc(tx('this line, so far')) + '</b>'
             +   '<b style="font-variant-numeric:tabular-nums">'
-            +   esc(wlMoney(added.reduce(function(t, a){ return t + (Number(a.amount) || 0); }, 0))) + '</b></div></div>'
+            +   esc(wlMoney(added.reduce(function(total, item){ return total + (Number(item.amount) || 0); }, 0))) + '</b></div></div>'
           : '')
       + '<div style="margin-top:7px;font-size:var(--fs-1);color:var(--grey);line-height:1.5">This adds to the line, it does not deliver it. Units are never added together — only the money totals.</div>'
       + '</div>';
@@ -1262,10 +1262,10 @@ function wlLineHTML(loading){
      * failed background request the reader never saw. A dropdown that cannot show the current value must not be
      * able to change it by accident.
      */
-    var known = (WLL.actors || []).some(function(a){ return (a.actor_id || a.identity_id) === r.actor_id; });
+    var known = (WLL.actors || []).some(function(item){ return (item.actor_id || item.identity_id) === r.actor_id; });
     var extra = (!known && r.actor_id) ? [{ actor_id: r.actor_id, display_name: r.who }] : [];
-    var opts = '<option value="">' + tx('Unassigned') + '</option>' + extra.concat(WLL.actors || []).map(function(a){
-      var id = a.actor_id || a.identity_id, nm = a.display_name || a.name || '';
+    var opts = '<option value="">' + tx('Unassigned') + '</option>' + extra.concat(WLL.actors || []).map(function(item){
+      var id = item.actor_id || item.identity_id, nm = item.display_name || item.name || '';
       return '<option value="' + esc(id) + '"' + (id === r.actor_id ? ' selected' : '') + '>' + esc(nm) + '</option>';
     }).join('');
     body += '<div style="padding:2px 0 12px">'
@@ -1435,9 +1435,9 @@ async function wlMatRecord(picked){
   var r = WLL.row;
   if (!picked || !picked.length || !r) return;          // null = cancelled
   try {
-    var rows = picked.map(function(l){
-      return { line_id: r.line_id, kind: 'add', particulars: l.name,
-               quantity: l.qty, unit: l.unit, amount: l.amount, reference: l.item_id };
+    var rows = picked.map(function(item){
+      return { line_id: r.line_id, kind: 'add', particulars: item.name,
+               quantity: item.qty, unit: item.unit, amount: item.amount, reference: item.item_id };
     });
     var res = await api('wlDeliver', { params: { id: r.chit_id }, body: { rows: rows } });
     if (res && res.progress && WLL.det) WLL.det.line_delivery = res.progress;
@@ -1459,14 +1459,14 @@ function wlCardClose(){
 
 async function wlActSave(kind){
   var r = WLL.row; if (!r) return;
-  var g = function(id){ var e = document.getElementById(id); return e ? String(e.value).trim() : ''; };
+  var node = function(id){ var e = document.getElementById(id); return e ? String(e.value).trim() : ''; };
   var row = { line_id: r.line_id };
   if (kind === 'cost') {
     row.kind = 'add';
-    row.particulars = g('wl_what');
-    row.quantity = g('wl_cqty') === '' ? 0 : Number(g('wl_cqty'));
-    row.unit = g('wl_cunit') || null;
-    row.amount = g('wl_amt') === '' ? null : Number(g('wl_amt'));
+    row.particulars = node('wl_what');
+    row.quantity = node('wl_cqty') === '' ? 0 : Number(node('wl_cqty'));
+    row.unit = node('wl_cunit') || null;
+    row.amount = node('wl_amt') === '' ? null : Number(node('wl_amt'));
     /* ⭐ The reference is what turns a typed name into a catalogue fact. Only set when the person actually
        picked one — a hand-typed 'brake shoe' must not claim to be a catalogue row. */
     /* ⚠️ No catalogue reference on a HAND-TYPED cost, and that is correct: this form is for the things that
@@ -1475,9 +1475,9 @@ async function wlActSave(kind){
     if (!row.particulars) { toast('Say what the cost was for'); return; }
     if (!row.quantity && !row.amount) { toast('Give a quantity or an amount'); return; }
   } else {
-    row.quantity = Number(g('wl_qty'));
+    row.quantity = Number(node('wl_qty'));
     row.unit = r.unit || null;
-    row.reference = g('wl_ref') || null;
+    row.reference = node('wl_ref') || null;
     if (!isFinite(row.quantity) || row.quantity === 0) { toast('A delivery needs a quantity'); return; }
   }
   try {
@@ -1526,9 +1526,9 @@ async function wlSetState(state){
 }
 async function wlLineSave(){
   var r = WLL.row; if (!r) return;
-  var sel = document.getElementById('wl_who'), due = document.getElementById('wl_due');
-  var id = sel ? sel.value : '';
-  var nm = sel && sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex].text : null;
+  var node = document.getElementById('wl_who'), due = document.getElementById('wl_due');
+  var id = node ? node.value : '';
+  var nm = node && node.selectedIndex >= 0 ? node.options[node.selectedIndex].text : null;
   await wlAssignSave({ state: r.state || 'open', assignee_actor_id: id || null,
     assignee_name: id ? nm : null, due_date: (due && due.value) || null }, 'Updated');
 }
