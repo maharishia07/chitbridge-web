@@ -63,11 +63,11 @@ var CBPick = (function () {
    * so a row keeps its unit, its code and its quantity model.
    */
   function toItems(list) {
-    return (list || []).map(function (p, i) {
-      var d = p.item_data || p;
+    return (list || []).map(function (item, index) {
+      var d = item.item_data || item;
       var pv = priceOf_(d.price), price = (pv === null) ? undefined : pv;   /* absent stays absent, as before */
       return {
-        item_id: p.item_id || d.item_id || ('pk' + i),
+        item_id: item.item_id || d.item_id || ('pk' + index),
         item_data: Object.assign({}, d, {
           name: d.name || d.particulars || '',
           unit: d.unit || 'unit',
@@ -90,20 +90,20 @@ var CBPick = (function () {
    * (`unitPrice`, after any offer), so no caller re-decides what a line costs.
    */
   function linesOf(cart) {
-    return (cart.selected() || []).map(function (l) {
+    return (cart.selected() || []).map(function (item) {
       /* ⭐ `unit_price` is the price that COUNTS — the catalogue's, or an offer's if one beat it. cart-ui
          computes it once precisely so no screen decides again what a line costs. Fall back only for a row
          that predates it. */
-      var raw = (l.unit_price != null) ? l.unit_price
-        : priceOf_(l.price);
+      var raw = (item.unit_price != null) ? item.unit_price
+        : priceOf_(item.price);
       var price = Number(raw) || 0;
-      var qty = Number(l.qty || 1) || 1;
-      var total = (l.line_total != null && isFinite(l.line_total)) ? Number(l.line_total) : qty * price;
+      var qty = Number(item.qty || 1) || 1;
+      var total = (item.line_total != null && isFinite(item.line_total)) ? Number(item.line_total) : qty * price;
       return {
-        item_id: l.item_id || null,
-        name: l.name || '',
-        unit: l.unit || null,
-        code: l.code || null,
+        item_id: item.item_id || null,
+        name: item.name || '',
+        unit: item.unit || null,
+        code: item.code || null,
         price: price,
         qty: qty,
         amount: roundMoney_(total),
