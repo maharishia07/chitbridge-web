@@ -36,7 +36,7 @@ function cbDropNote(key, keys){
     if(!keys || !keys.length) return;
     var k = key || '?';
     var seen = CBDROP[k] || (CBDROP[k] = []);
-    keys.forEach(function(f){ if(seen.indexOf(f) < 0) seen.push(f); });
+    keys.forEach(function(item){ if(seen.indexOf(item) < 0) seen.push(item); });
   }catch(_){}
 }
 /* capped · cap_note (SIBS below) — W2-RAIL R2: a cut list SAYS SO — `capped` (the code) and `cap_note` (the sentence) ride beside the chits array on inbox · sent · folder; pgFooter prints it */
@@ -180,11 +180,11 @@ const _lockKeys = new Set();
  */
 let _netBusyT = null;
 function _netBusy(on){
-  let b = document.getElementById('netbusy');
-  if(!b){
-    b = document.createElement('div'); b.id='netbusy';
-    b.style.cssText='position:fixed;z-index:9999;pointer-events:none;display:none';
-    b.innerHTML='<div id="netbusy-card"><span id="netbusy-ring"></span><span id="netbusy-txt">' + tx('Reading data…') + '</span></div>';
+  let node = document.getElementById('netbusy');
+  if(!node){
+    node = document.createElement('div'); node.id='netbusy';
+    node.style.cssText='position:fixed;z-index:9999;pointer-events:none;display:none';
+    node.innerHTML='<div id="netbusy-card"><span id="netbusy-ring"></span><span id="netbusy-txt">' + tx('Reading data…') + '</span></div>';
     const s=document.createElement('style');
     s.textContent='@keyframes nbspin{to{transform:rotate(360deg)}}'
       +'@keyframes nbin{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}'
@@ -194,7 +194,7 @@ function _netBusy(on){
       +'#netbusy-ring{width:14px;height:14px;border:2px solid rgba(255,255,255,.32);border-top-color:#fff;'
       +'border-radius:50%;animation:nbspin .7s linear infinite;flex:none}'
       +'@media (prefers-reduced-motion:reduce){#netbusy-ring,#netbusy-card{animation:none}}';
-    (document.head||document.documentElement).appendChild(s); (document.body||document.documentElement).appendChild(b);
+    (document.head||document.documentElement).appendChild(s); (document.body||document.documentElement).appendChild(node);
   }
   if(on){
     const paint = function(){
@@ -210,7 +210,7 @@ function _netBusy(on){
       const host = document.getElementById('detailpane') || document.getElementById('panel')
                 || document.getElementById('mainbody') || null;
       const r = host && host.getBoundingClientRect();
-      b.style.display = 'block';
+      node.style.display = 'block';
       /**
        * ⚠️⚠️ CENTRING ON A PANE THAT RUNS OFF THE SCREEN PUTS THE MESSAGE OFF THE SCREEN. Athi, 2026-08-22:
        * *"I have reduced the size of the window much smaller… the messages were overlapping / going away from
@@ -234,17 +234,17 @@ function _netBusy(on){
         if (vr - vl > 60) cx = (vl + vr) / 2;      /* enough of it is on screen to aim at */
         if (vb - vt > 60) cy = (vt + vb) / 2;
       }
-      var hw = Math.min((b.offsetWidth || 120) / 2 + 8, vw / 2);
-      var hh = Math.min((b.offsetHeight || 40) / 2 + 8, vh / 2);
-      b.style.left = Math.round(Math.max(hw, Math.min(vw - hw, cx))) + 'px';
-      b.style.top  = Math.round(Math.max(hh, Math.min(vh - hh, cy))) + 'px';
-      b.style.transform = 'translate(-50%,-50%)';
+      var hw = Math.min((node.offsetWidth || 120) / 2 + 8, vw / 2);
+      var hh = Math.min((node.offsetHeight || 40) / 2 + 8, vh / 2);
+      node.style.left = Math.round(Math.max(hw, Math.min(vw - hw, cx))) + 'px';
+      node.style.top  = Math.round(Math.max(hh, Math.min(vh - hh, cy))) + 'px';
+      node.style.transform = 'translate(-50%,-50%)';
     };
-    if(b.style.display === 'block') paint();                    // already up — just refresh the count
+    if(node.style.display === 'block') paint();                    // already up — just refresh the count
     else if(!_netBusyT) _netBusyT = setTimeout(function(){ _netBusyT = null; if(_inflight > 0) paint(); }, 180);
   } else {
     if(_netBusyT){ clearTimeout(_netBusyT); _netBusyT = null; }
-    b.style.display = 'none';
+    node.style.display = 'none';
   }
 }
 // --- tester message/event log (in-memory ring buffer; surfaced by the in-app Message console) ---
@@ -297,7 +297,7 @@ var CBPrefs = (function(){
       timers[kind] = setTimeout(function(){
         try {
           if (typeof api !== 'function' || !(typeof SESSION !== 'undefined' && SESSION && SESSION.token)) return;
-          api('savePrefs', { params: { kind: kind }, body: obj || {} }).then(function(r){ if (done) done(r); }, function(){ if (done) done(null); });
+          api('savePrefs', { params: { kind: kind }, body: obj || {} }).then(function(reply){ if (done) done(reply); }, function(){ if (done) done(null); });
         } catch(_){}
       }, 400);
     }
@@ -487,12 +487,12 @@ function cbDefsFlush(){
   _defsQueue = [];
   if (!kinds.length) { _defsFlush = null; return Promise.resolve({}); }
   return api('defList', { query: { kind: kinds.join(','), status: 'live' } })
-    .then(function(r){
+    .then(function(reply){
       var by = {};
-      kinds.forEach(function(k){ by[k] = []; });
-      ((r && r.definitions) || []).forEach(function(d){
-        var k = d && d.kind;
-        if (by[k]) by[k].push(d);
+      kinds.forEach(function(item){ by[item] = []; });
+      ((reply && reply.definitions) || []).forEach(function(item){
+        var k = item && item.kind;
+        if (by[k]) by[k].push(item);
       });
       return by;
     })
@@ -518,7 +518,7 @@ function cbDefsLive(kind, force){
    */
   if (force) {
     _defsReq[kind] = api('defList', { query: { kind: kind, status: 'live' } })
-      .then(function(r){ _DEFS[kind] = (r && r.definitions) || []; _defsReq[kind] = null; return _DEFS[kind]; })
+      .then(function(reply){ _DEFS[kind] = (reply && reply.definitions) || []; _defsReq[kind] = null; return _DEFS[kind]; })
       .catch(function(){ _defsReq[kind] = null; return _DEFS[kind] || []; });
     return _defsReq[kind];
   }
@@ -553,10 +553,10 @@ var _catgReq = null;       // in-flight promise, so a form opening twice does no
 async function cbCatgCreate(name){
   name = String(name || '').trim();
   if (name.length < 2) throw new Error('Give the category a name of at least 2 characters.');
-  var dup = (_CATG || []).filter(function(c){ return c.name.toLowerCase() === name.toLowerCase(); })[0];
+  var dup = (_CATG || []).filter(function(item){ return item.name.toLowerCase() === name.toLowerCase(); })[0];
   if (dup) return dup;      // ⚠️ Silently reusing the existing one beats minting a second shelf with one name.
-  var r = await api('defAdd', { body: { kind: 'category', sub_kind: null, name: name, note: '', rules: {} } });
-  var id = r && (r.definition_id || (r.definition && r.definition.definition_id));
+  var reply = await api('defAdd', { body: { kind: 'category', sub_kind: null, name: name, note: '', rules: {} } });
+  var id = reply && (reply.definition_id || (reply.definition && reply.definition.definition_id));
   if (!id) throw new Error('Created, but the server did not return an id.');
   await api('defSave', { params: { id: id }, body: { status: 'live' } });
   await cbCatgLive(true);
@@ -570,7 +570,7 @@ function cbCatgAskNew(onDone){
     hint:'It goes on the shelf as <b>live</b>, so you can use it straight away. Rename it any time under '
        + 'Definitions — your products follow the rename.' },
     function(v){
-      cbCatgCreate(v).then(function(c){ toast('“' + c.name + '” added ✓'); if (onDone) onDone(c); })
+      cbCatgCreate(v).then(function(reply){ toast('“' + reply.name + '” added ✓'); if (onDone) onDone(reply); })
                      .catch(function(e){ toast((e && e.message) || 'Could not create that.'); });
     });
 }
@@ -581,7 +581,7 @@ function cbCatgLive(force){
   if (typeof api !== 'function') return Promise.resolve([]);
   _catgReq = cbDefsLive('category', force)
     .then(function(defs){
-      _CATG = (defs || []).map(function(d){ return { id: d.definition_id, name: d.name }; });
+      _CATG = (defs || []).map(function(item){ return { id: item.definition_id, name: item.name }; });
       /* ⭐ WHEN it was read, so a caller can tell whether re-reading it could possibly say anything new */
       _CATG_AT = Date.now();
       _catgReq = null; return _CATG;
@@ -624,7 +624,7 @@ function cbOrderDecl(order){
   var defs = cbDefsCached('ordermodel');
   if (!defs) { cbOrderLive(); return { ref: o.ref, unresolved: 'loading' }; }
   var d = null;
-  for (var i = 0; i < defs.length; i++) if (defs[i].definition_id === o.ref) { d = defs[i]; break; }
+  for (var index = 0; index < defs.length; index++) if (defs[index].definition_id === o.ref) { d = defs[index]; break; }
   /* ⚠️ A RETIRED definition still resolves if the server returned it — "do not offer this any more" is not
      "this never happened". Only a genuinely missing one is unresolved. */
   if (!d) return { ref: o.ref, unresolved: 'missing' };
@@ -645,11 +645,11 @@ var _push = { es: null, up: false, backoff: 5000, timer: null };
 function cbPushUp(){ return !!_push.up; }
 function cbPushStart(){
   if(_push.es || !window.EventSource || !SESSION.token || (typeof CFG!=='undefined' && CFG.MODE==='demo')) return;
-  api('eventsTicket').then(function(t){
-    if(!t || !t.ticket || !SESSION.token || _push.es) return;
+  api('eventsTicket').then(function(reply){
+    if(!reply || !reply.ticket || !SESSION.token || _push.es) return;
     var base=(typeof CFG!=='undefined'&&CFG.API_BASE)||'';
-    var es=new EventSource(base+'/api/events/stream?t='+encodeURIComponent(t.ticket));
-    _push.es=es;
+    var node=new EventSource(base+'/api/events/stream?t='+encodeURIComponent(reply.ticket));
+    _push.es=node;
     /**
      * ── ⭐⭐⭐ WITH THE BELL UP, THE POLL IS A SAFETY NET AND NOT A CLOCK ────────────────────────────────
      *
@@ -669,9 +669,9 @@ function cbPushStart(){
      * without saying so — which is the only reason it exists. If the stream errors, onerror below puts it
      * straight back to 20 s, so a real outage is still covered in one tick.
      */
-    es.addEventListener('hello', function(){ _push.up=true; _push.backoff=5000; if(typeof _autoRefreshTimer!=='undefined' && _autoRefreshTimer){ clearInterval(_autoRefreshTimer); _autoRefreshTimer=setInterval(autoRefresh,600*1000); } });
-    es.addEventListener('cb', function(ev){ var d={}; try{ d=JSON.parse(ev.data||'{}'); }catch(_){} cbPushArrived(d); });
-    es.onerror=function(){ try{ es.close(); }catch(_){} _push.es=null; _push.up=false;
+    node.addEventListener('hello', function(){ _push.up=true; _push.backoff=5000; if(typeof _autoRefreshTimer!=='undefined' && _autoRefreshTimer){ clearInterval(_autoRefreshTimer); _autoRefreshTimer=setInterval(autoRefresh,600*1000); } });
+    node.addEventListener('cb', function(ev){ var d={}; try{ d=JSON.parse(ev.data||'{}'); }catch(_){} cbPushArrived(d); });
+    node.onerror=function(){ try{ node.close(); }catch(_){} _push.es=null; _push.up=false;
       if(typeof _autoRefreshTimer!=='undefined' && _autoRefreshTimer){ clearInterval(_autoRefreshTimer); _autoRefreshTimer=setInterval(autoRefresh,20*1000); }
       if(!SESSION.token) return; clearTimeout(_push.timer); _push.timer=setTimeout(cbPushStart, _push.backoff); _push.backoff=Math.min(_push.backoff*2, 60000); };
   }).catch(function(){ clearTimeout(_push.timer); _push.timer=setTimeout(cbPushStart, _push.backoff); _push.backoff=Math.min(_push.backoff*2, 60000); });
@@ -795,7 +795,7 @@ function scrollKeep(root){
   var saved=[]; try{ (root||document).querySelectorAll('*').forEach(function(el){ if(el.scrollTop>0||el.scrollLeft>0) saved.push({ key:_scrollKeyOf(el), top:el.scrollTop, left:el.scrollLeft }); }); }catch(_){}
   var wy=window.scrollY||0, wx=window.scrollX||0;
   return function(){
-    var run=function(){ saved.forEach(function(s){ var el=_scrollFind(s.key); if(el){ el.scrollTop=s.top; el.scrollLeft=s.left; } }); if(wy||wx) window.scrollTo(wx, wy); };
+    var run=function(){ saved.forEach(function(item){ var el=_scrollFind(item.key); if(el){ el.scrollTop=item.top; el.scrollLeft=item.left; } }); if(wy||wx) window.scrollTo(wx, wy); };
     run(); if(typeof requestAnimationFrame==='function') requestAnimationFrame(run);
   };
 }
@@ -918,12 +918,12 @@ function api(key, opts) {
   var live = _apiInflight[dk];
   if (live) return live.then(_apiCopy);
 
-  var p = apiOnce(key, opts);
-  _apiInflight[dk] = p;
+  var reply = apiOnce(key, opts);
+  _apiInflight[dk] = reply;
   /* ⚠ cleared on failure too, or one dead request poisons that read for the life of the tab */
-  var done = function () { if (_apiInflight[dk] === p) delete _apiInflight[dk]; };
-  p.then(done, done);
-  return p;
+  var done = function () { if (_apiInflight[dk] === reply) delete _apiInflight[dk]; };
+  reply.then(done, done);
+  return reply;
 }
 
 async function apiOnce(key, {params, query, body}={}){
@@ -1001,12 +1001,12 @@ async function apiOnce(key, {params, query, body}={}){
       try{
         j=await res.json();
         if(j && Array.isArray(j.details) && j.details.length){
-          msg = j.details.map(function(d){
-            var f = d && d.field ? String(d.field).replace(/_/g,' ') : '';
-            var m = (d && d.message) || '';
+          msg = j.details.map(function(item){
+            var text = item && item.field ? String(item.field).replace(/_/g,' ') : '';
+            var m = (item && item.message) || '';
             /* "Invalid value" is express-validator's default and says nothing; name the field at least. */
             if(/^invalid value$/i.test(m)) m = 'is not valid';
-            return f ? (f.charAt(0).toUpperCase()+f.slice(1)+': '+m) : m;
+            return text ? (text.charAt(0).toUpperCase()+text.slice(1)+': '+m) : m;
           }).filter(Boolean).join('  ·  ');
         }
         if(!msg) msg = j.message || j.error || "";
