@@ -654,7 +654,7 @@ function netRevertAll(){
   if (!creates.length && !changes.length) return;
   var go = function(){
     var kill = [];
-    creates.forEach(function(item){ kill.push(item.key); _netDescendants(item.key).forEach(function(k){ kill.push(k); }); });
+    creates.forEach(function(item){ kill.push(item.key); _netDescendants(item.key).forEach(function(item){ kill.push(item); }); });
     if (kill.length) {
       UI.net.nodes = UI.net.nodes.filter(function(x){ return kill.indexOf(x.key) < 0; });
       if (kill.indexOf(UI.net.sel) >= 0) UI.net.sel = (_netRootNode() || {}).key || null;
@@ -751,7 +751,7 @@ function netBuild(){
     var badge = n.root ? 'ANCHOR' : (n.built ? 'BUILT' : (item.owned ? 'TO CREATE' : 'PARTNER · invite'));
     var bcol = n.root ? 'var(--blue-2)' : (n.built ? 'var(--ok-2)' : (item.owned ? 'var(--blue-2)' : 'var(--warn-2)'));
     var hnd = _netHandleOf(n);
-    var rows = item.lines.map(function(l){ return '<div style="font-size:var(--fs-2);color:var(--ink-2);line-height:1.55;padding:1px 0">' + (l.indexOf('·') === 0 ? '<span style="color:var(--grey);padding-inline-start:12px">' + l + '</span>' : '<span class=arw>▸</span> ' + l) + '</div>'; }).join('');
+    var rows = item.lines.map(function(item){ return '<div style="font-size:var(--fs-2);color:var(--ink-2);line-height:1.55;padding:1px 0">' + (item.indexOf('·') === 0 ? '<span style="color:var(--grey);padding-inline-start:12px">' + item + '</span>' : '<span class=arw>▸</span> ' + item) + '</div>'; }).join('');
     var w = item.warns.length ? '<div style="margin-top:6px;padding:6px 9px;border:1px solid #e6c4bf;border-radius:6px;background:var(--danger-tint);font-size:var(--fs-1);color:var(--disp-2)">' + item.warns.map(function(x){ return '⚠ ' + x; }).join('<br>') + '</div>' : '';
     return '<div style="padding:11px 16px;border-bottom:1px solid var(--line)">'
       + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:2px"><b style="font-size:var(--fs-2)">' + esc(n.name) + '</b><span style="font-size:var(--fs-1);font-weight:700;letter-spacing:.03em;color:' + bcol + ';border:1px solid ' + bcol + '55;border-radius:4px;padding:1px 5px">' + badge + '</span></div>'
@@ -835,8 +835,8 @@ function netMintGo(){
     // Take the receipts IMMEDIATELY, not when the person clicks Done. Between the build and that click, autosave
     // could push this page's copy — which has no `built` markers — and the next Build would treat existing stores
     // as new. The server now also refuses to drop them, but the client should not be sending stale state at all.
-    api('netDesignGet').then(function(d){
-      if (d && d.draft && d.draft.nodes) { UI.net = d.draft; _netSetDirty(false); }
+    api('netDesignGet').then(function(reply){
+      if (reply && reply.draft && reply.draft.nodes) { UI.net = reply.draft; _netSetDirty(false); }
       UI._netPlan = null; UI._netPlanSig = null;   // the outstanding list is now stale by definition — re-ask
       UI._netPlaceHtml = null;                     // and so is the live tree above it
     }).catch(function(){ UI._netPlan = null; UI._netPlanSig = null; UI._netPlaceHtml = null; });
