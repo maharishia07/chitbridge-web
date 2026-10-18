@@ -41,9 +41,9 @@ var CBStock = (function () {
   function load() {
     if (S.busy) return; S.busy = true; S.err = null;
     if (S.list) S.list.refresh();
-    return api('stockOnHand', { query: { detail: '1' } }).then(function (r) {
-      var b = (r && r.balances) || {};
-      S.notReady = r && r.not_ready ? (r.says || t('Stock is not switched on for this shop yet.')) : null;
+    return api('stockOnHand', { query: { detail: '1' } }).then(function (reply) {
+      var b = (reply && reply.balances) || {};
+      S.notReady = reply && reply.not_ready ? (reply.says || t('Stock is not switched on for this shop yet.')) : null;
       S.rows = Object.keys(b).map(function (id) { var x = b[id] || {}; return { id: id, name: x.name || null, unit: x.unit || null, qty: Number(x.qty) || 0, lots: Array.isArray(x.lots) ? x.lots : [] }; });
     }).catch(function (e) {
       S.err = e; if (typeof cblog === 'function') cblog('error', 'stock: GET /api/till/stock failed — ' + ((e && e.message) || e));
@@ -69,9 +69,9 @@ var CBStock = (function () {
   /** the next level: every batch, earliest expiry first (the server's order) */
   function next(r) {
     if (!r.lots.length) return '<div class="sub" data-testid="stock-next-' + esc(r.id) + '">' + esc(t('This product is not kept by batch — one count for all of it.')) + '</div>';
-    return '<div data-testid="stock-next-' + esc(r.id) + '">' + r.lots.map(function (l) {
-      var e = expiryWord(l.expires_at);
-      return '<div class="op-lot"><b class="mono">' + esc(l.lot) + '</b> · ' + esc(qtyOf(l.qty)) + (r.unit ? ' ' + esc(r.unit) : '')
+    return '<div data-testid="stock-next-' + esc(r.id) + '">' + r.lots.map(function (item) {
+      var e = expiryWord(item.expires_at);
+      return '<div class="op-lot"><b class="mono">' + esc(item.lot) + '</b> · ' + esc(qtyOf(item.qty)) + (r.unit ? ' ' + esc(r.unit) : '')
         + ' · <span class="' + (e.tone ? 'tag ' + (e.tone === 'bad' ? 'red' : 'amber') : 'sub') + '">' + esc(e.text) + '</span></div>';
     }).join('') + '</div>';
   }
@@ -85,11 +85,11 @@ var CBStock = (function () {
       onRetry: load,
       empty: function () { return S.notReady ? { title: S.notReady } : { title: t('No stock moved yet.'), sub: t('A product shows here once a delivery is received or a sale is made.') }; },
       head: function () {
-        var rows = S.rows || [], below = rows.filter(function (r) { return r.qty < 0; }).length;
+        var rows = S.rows || [], below = rows.filter(function (item) { return item.qty < 0; }).length;
         return { title: t(typeof stockWord === 'function' ? stockWord() : 'Stock'), chips: rows.length ? [{ text: tf(rows.length === 1 ? '{n} item' : '{n} items', { n: rows.length }), tid: 'stock-count' }] : [],
           notices: below ? [{ text: tf(below === 1 ? '{n} below zero — count it' : '{n} below zero — count them', { n: below }), cls: 'bad', tid: 'stock-below-notice' }] : [] };
       },
-      search: function (r) { return [nameOf(r), r.unit].concat(r.lots.map(function (l) { return l.lot; })).filter(Boolean).join(' '); },
+      search: function (r) { return [nameOf(r), r.unit].concat(r.lots.map(function (item) { return item.lot; })).filter(Boolean).join(' '); },
       filters: [{ key: 'state', label: t('How much'), all: t('Any amount'),
         options: [{ v: 'below', label: t('Below zero') }, { v: 'none', label: t('None left') }, { v: 'on', label: t('On the shelf') }],
         match: function (r, v) { return stateOf(r) === v; } },

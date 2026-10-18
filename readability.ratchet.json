@@ -60,7 +60,7 @@
   "public/app/cap-shop.js": {"score":40,"long40":0,"long80":0,"complex10":3,"complex15":1,"deep3":1,"deep4":0,"cryptic":33,"noWhatLine":2,"emptyCatch":0,"noHeader":0},
   "public/app/cap-showcase.js": {"score":12,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":11,"noWhatLine":0,"emptyCatch":0,"noHeader":1},
   "public/app/cap-standards.js": {"score":37,"long40":2,"long80":0,"complex10":2,"complex15":0,"deep3":0,"deep4":0,"cryptic":31,"noWhatLine":2,"emptyCatch":0,"noHeader":0},
-  "public/app/cap-stock.js": {"score":43,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":40,"noWhatLine":3,"emptyCatch":0,"noHeader":0},
+  "public/app/cap-stock.js": {"score":39,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":36,"noWhatLine":3,"emptyCatch":0,"noHeader":0},
   "public/app/cap-suppliers.js": {"score":36,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":33,"noWhatLine":3,"emptyCatch":0,"noHeader":0},
   "public/app/cap-supplies.js": {"score":20,"long40":0,"long80":0,"complex10":2,"complex15":0,"deep3":0,"deep4":0,"cryptic":16,"noWhatLine":2,"emptyCatch":0,"noHeader":0},
   "public/app/cap-tasks.js": {"score":115,"long40":0,"long80":0,"complex10":4,"complex15":2,"deep3":0,"deep4":0,"cryptic":103,"noWhatLine":0,"emptyCatch":6,"noHeader":0},
