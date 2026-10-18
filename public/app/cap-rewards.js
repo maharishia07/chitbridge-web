@@ -42,13 +42,13 @@
     var again = function () { return hostId ? root.document.getElementById(hostId) : el; };
     el.innerHTML = '<div class="kv"><span class="sub">' + _e(T(o, 'Reading…')) + '</span></div>';
     var read = typeof o.read === 'function' ? o.read() : o.api('custRewards', { params: { id: o.id } });
-    return Promise.resolve(read).then(function (r) {
-      var b = again(); if (!b) return;
-      b.innerHTML = html(r, o);
+    return Promise.resolve(read).then(function (reply) {
+      var node = again(); if (!node) return;
+      node.innerHTML = html(reply, o);
     }, function (e) {
-      var b = again(); if (!b) return;
+      var node = again(); if (!node) return;
       if (typeof root.cblog === 'function') root.cblog('error', 'rewards pane: ' + ((e && e.message) || e));
-      b.innerHTML = row(T(o, 'Points'), '<span class="sub" data-testid="rw-error">' + _e(T(o, 'Could not read the points. Try again later.')) + '</span>');
+      node.innerHTML = row(T(o, 'Points'), '<span class="sub" data-testid="rw-error">' + _e(T(o, 'Could not read the points. Try again later.')) + '</span>');
     });
   }
 
