@@ -5096,7 +5096,7 @@ function menuBody(M, role){
      * The guarantee is kept and the restriction dropped: a collapsed group that holds the current screen still
      * shows THAT ONE ITEM under its heading. You lose the five you were not using and keep the one you are on.
      */
-    var here = items.filter(function(it){ return it[0] === UI.nav; });
+    var here = items.filter(function(item){ return item[0] === UI.nav; });
     var shut = navGroupShut(item[0]);
     var shown = shut ? here : items;
     out += '<div class="grp" data-testid="grp-' + item[0].toLowerCase() + '" onclick="toggleNavGroup(\'' + item[0] + '\')"'
@@ -6906,7 +6906,7 @@ const ASSIST_PAGES = {
       ["Proof status","Track the delivery / evidence state."] ]} ]},
 };
 function assistPage(key){ const p=ASSIST_PAGES[key]; if(!p) return menuAssist(key);
-  const groups=p.groups.map(item=>`<div style="${_CARD}"><div style="font-family:'Space Grotesk';font-weight:600;font-size:var(--fs-2);color:var(--ink);display:flex;align-items:center;gap:7px;margin-bottom:6px"><span style="color:var(--blue)"><span class=arw>▸</span></span>${esc(item.title)}</div>${item.rows.map((r,index)=>`<div style="display:flex;gap:9px;align-items:baseline;padding:4px 0;${index?'border-top:0.5px solid #F0ECE2':''}"><span style="font-family:'Space Mono';font-size:var(--fs-1);color:var(--blue);min-width:118px;flex-shrink:0">${esc(r[0])}</span><span style="font-size:var(--fs-2);color:var(--ink);line-height:1.5">${esc(r[1])}</span></div>`).join("")}</div>`).join("");
+  const groups=p.groups.map(item=>`<div style="${_CARD}"><div style="font-family:'Space Grotesk';font-weight:600;font-size:var(--fs-2);color:var(--ink);display:flex;align-items:center;gap:7px;margin-bottom:6px"><span style="color:var(--blue)"><span class=arw>▸</span></span>${esc(item.title)}</div>${item.rows.map((item,index)=>`<div style="display:flex;gap:9px;align-items:baseline;padding:4px 0;${index?'border-top:0.5px solid #F0ECE2':''}"><span style="font-family:'Space Mono';font-size:var(--fs-1);color:var(--blue);min-width:118px;flex-shrink:0">${esc(item[0])}</span><span style="font-size:var(--fs-2);color:var(--ink);line-height:1.5">${esc(item[1])}</span></div>`).join("")}</div>`).join("");
   return `<div style="background:var(--gold-soft);border:0.5px solid var(--gold-line);border-radius:12px;padding:9px 11px;font-size:var(--fs-2);color:var(--warn-3);line-height:1.5;margin-bottom:9px"><b style="font-family:'Space Grotesk'">${key==='order'?'Order':'Task'} — what it is &amp; how to use it</b> <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--card);color:var(--warn-3);border:0.5px solid var(--gold-line);border-radius:5px;padding:1px 6px">assistance page</span><div style="margin-top:4px">${esc(p.intro)}</div></div>${groups}<div style="${_CARD}"><div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:6px">Ask the assistant <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--gold-soft);color:var(--warn-3);border-radius:5px;padding:1px 6px">web demo</span></div><div style="display:flex;gap:8px"><input class="inp" id="m_in_${key}" placeholder="Ask about ${esc(key)}…"><button style="${_BTN}" onclick="mAskFree('${key}')">${tx('Ask')}</button></div><div id="m_ans_${key}" style="font-size:var(--fs-2);color:var(--ink);margin-top:9px;line-height:1.55"></div></div>`;
 }
 function addActorModal(){
@@ -8254,7 +8254,7 @@ function paintSupList(){ const node=document.getElementById('sup_rows');
   else if(node){
     /* our own shelf sits above the table (it is the door to your catalogue, not one of the suppliers) and does not scroll away with them */
     const own = supKind()==='resale' ? supOwnRowHTML() : '';
-    crmPaint('suppliers','supplier',node,{ opts:supListOpts(), skeleton:'<div id="sup_own"></div><div id="tbl_suppliers" style="flex:1;min-height:0"></div>', before:function(){ const o=document.getElementById('sup_own'); if(o)o.innerHTML=own; } });
+    crmPaint('suppliers','supplier',node,{ opts:supListOpts(), skeleton:'<div id="sup_own"></div><div id="tbl_suppliers" style="flex:1;min-height:0"></div>', before:function(){ const node=document.getElementById('sup_own'); if(node)node.innerHTML=own; } });
     const o2=document.getElementById('sup_own'); if(o2 && o2.innerHTML!==own) o2.innerHTML=own;
   }
   /* ⚠️ the tab counts live in .lh, which this does not redraw — without this, adding a supplier leaves "Trade 4"
@@ -9639,7 +9639,7 @@ async function loadSuppliers(){
     if(UI.supSel && !UI.sups.some(item=>item.supplier_list_id===UI.supSel)){ UI.supSel=null; UI.supDet=null; supCartRelease(); }
     if(!UI.supSel && UI.sups.length && UI.vp!=='mob'){ selectSupplier(UI.sups[0].supplier_list_id, true); }
     else paintSupDetail();
-  }catch(e){ UI._supLoading=false; const rb2=document.getElementById('sup_rows'); if(rb2)rb2.innerHTML=scrErr(e,'suppliers','loadSuppliers()'); }
+  }catch(e){ UI._supLoading=false; const node=document.getElementById('sup_rows'); if(node)node.innerHTML=scrErr(e,'suppliers','loadSuppliers()'); }
 }
 /**
  * ── THE SUPPLIER CART, HELD ───────────────────────────────────────────────────────────────────────────────────────
@@ -10099,8 +10099,8 @@ function cbRequirementsLive(force){
     .then(function(reply){
       var keys = {}, out = [];
       ((reply && reply.definitions) || []).forEach(function(item){
-        ((item.rules && item.rules.standards) || []).forEach(function(s){
-          s = String(s || '').trim(); if (!s || keys[s]) return; keys[s] = 1; out.push(s);
+        ((item.rules && item.rules.standards) || []).forEach(function(item){
+          item = String(item || '').trim(); if (!item || keys[item]) return; keys[item] = 1; out.push(item);
         });
       });
       _REQ = out; _reqReq = null; return out;
@@ -10402,7 +10402,7 @@ function supDetailHTML(){
   return `${head}<div class="db">${body}</div><div class="actbar">${bar}</div>`;
 }
 let _spSearchT=null;
-function supSearch(q){ clearTimeout(_spSearchT); q=(q||'').trim(); const node=document.getElementById('sp_sugg'); if(q.length<2){ if(node)node.innerHTML=''; return; } _spSearchT=setTimeout(async function(){ try{ const reply=await api("entitySearch",{query:{q:q}}); supRenderSugg(Array.isArray(reply)?reply:((reply&&reply.results)||[])); }catch(_){ const hh=document.getElementById('sp_sugg'); if(hh)hh.innerHTML=''; } }, 250); }
+function supSearch(q){ clearTimeout(_spSearchT); q=(q||'').trim(); const node=document.getElementById('sp_sugg'); if(q.length<2){ if(node)node.innerHTML=''; return; } _spSearchT=setTimeout(async function(){ try{ const reply=await api("entitySearch",{query:{q:q}}); supRenderSugg(Array.isArray(reply)?reply:((reply&&reply.results)||[])); }catch(_){ const node=document.getElementById('sp_sugg'); if(node)node.innerHTML=''; } }, 250); }
 function supRenderSugg(list){ UI._supSugg=list||[]; const node=document.getElementById('sp_sugg'); if(!node)return; if(!UI._supSugg.length){ node.innerHTML='<div class="ccsugg-empty">' + tx('No matching business found') + '</div>'; return; } node.innerHTML=UI._supSugg.slice(0,8).map(function(e,index){ return '<div class="ccsugg-item" onclick="supPick('+index+')"><span class="ccsugg-nm">'+esc(e.display_name||'')+'</span><span class="ccsugg-id">'+esc(e.user_id||e.bridge_id||'')+'</span></div>'; }).join(''); }
 async function supPick(i){ const e=(UI._supSugg||[])[i]; if(!e)return; const node=document.getElementById('sp_sugg'); if(node)node.innerHTML=''; const err=document.getElementById('sp_err'); if(err)err.textContent=''; const a=document.getElementById('sp_add'); if(a)a.value=e.display_name||'';
   /* ⚠️ confirmAsk, NOT a second confirm helper — this file already had one (line ~2885), and I very nearly wrote
@@ -10428,7 +10428,7 @@ async function supPick(i){ const e=(UI._supSugg||[])[i]; if(!e)return; const nod
  * spend and stock attach to them exactly as they do to anyone else — they simply cannot be sent anything.
  */
 async function addSupplier(){ const x=document.getElementById("sp_err"); if(x)x.textContent=""; const bid=(val("sp_add")||"").trim(); if(!bid){ if(x)x.textContent="Enter a supplier's name, User ID or email."; return; } const node=document.getElementById('sp_sugg'); if(node)node.innerHTML='';
-  const kind=supKind(), clear=function(){ const a=document.getElementById('sp_add'); if(a)a.value=''; };
+  const kind=supKind(), clear=function(){ const node=document.getElementById('sp_add'); if(node)node.value=''; };
   /**
    * ⭐⭐ ONE OFFER, REUSED BY BOTH ROUTES IN. It is the fallback when a lookup finds nobody, which is why it is a
    * function rather than written twice: "we could not find them, shall I write them down instead?" is the same
@@ -10787,7 +10787,7 @@ function prodOfferPaint(){
   el.innerHTML = '<div class="bulklist">' + list.map(function(item){
     const at = (item.rules && item.rules.applies_to) || {};
     const on = Array.isArray(at.item_ids) ? at.item_ids : [];
-    const already = ids.filter(function(i){ return on.indexOf(i) >= 0; }).length;
+    const already = ids.filter(function(item){ return on.indexOf(item) >= 0; }).length;
     /**
      * ⭐⭐ THE WINDOW IS SHOWN BEFORE YOU ATTACH, NOT AFTER. Athi: *"if offer, discounts added it should be time
      * bound?"* — an offer with no end date is a PERMANENT price commitment, and attaching forty products to one
@@ -11225,7 +11225,7 @@ function prodCatgStripHTML(ctx){
   const all=(UI.prods||[]);
   if(!_CATG.length && !all.length) return '';
   const n={}; let none=0;
-  all.forEach(item=>{ const ids=catgIdsOf(pData(item)); if(!ids.length){ none++; return; } ids.forEach(c=>{ n[c]=(n[c]||0)+1; }); });
+  all.forEach(item=>{ const ids=catgIdsOf(pData(item)); if(!ids.length){ none++; return; } ids.forEach(item=>{ n[item]=(n[item]||0)+1; }); });
   const live=_CATG.filter(item=>n[item.id]);            // a category with nothing in it is noise on this row
   if(!live.length && !none) return '';
   const g=(ctx?ctx.catg:UI._prodCatg)||'';
@@ -11437,7 +11437,7 @@ function refFinishRow(it,i){
 function refCatRowsHTML(){ var list=UI.refCat||[]; if(!list.length) return '';
   var groups={}, order=[]; list.forEach(function(item,index){ var s=item._source||'?'; if(!groups[s]){groups[s]=[];order.push(s);} groups[s].push(index); });   // STONE 3: group by SOURCE (each brand distinct)
   var body=order.map(function(item){ var t=(list[groups[item][0]]||{})._sourceTitle||item;
-    return '<div style="padding:9px 13px 4px;font-size:var(--fs-1);color:var(--purple-2);text-transform:uppercase;letter-spacing:.4px;font-weight:800">🎨 '+esc(t)+' · referenced</div>'+groups[item].map(function(i){ return refFinishRow(list[i],i); }).join('');
+    return '<div style="padding:9px 13px 4px;font-size:var(--fs-1);color:var(--purple-2);text-transform:uppercase;letter-spacing:.4px;font-weight:800">🎨 '+esc(t)+' · referenced</div>'+groups[item].map(function(item){ return refFinishRow(list[item],item); }).join('');
   }).join('');
   return body+'<div style="padding:5px 13px 9px;font-size:var(--fs-1);color:var(--grey-4);border-bottom:1px solid var(--line)">Shared design &amp; colour by reference · your prices · each brand runs under its own rules · <span style="color:var(--blue);cursor:pointer;font-weight:600" onclick="navTo(\'catsetup\')">manage your prices for this source</span></div>'; }
 function prodRowsHTML(ctx){ try { CBCatUI.ensureCss(); } catch(_){} const ref=(ctx&&ctx.noRef)?'':refCatRowsHTML(); const r=prodVisible(ctx);
@@ -11620,7 +11620,7 @@ async function _loadCatalogue(force){
        rule as the modal-safe-repaint guard: the list may refresh, the person's work-in-progress may not. */
     const _formOpen = UI.prodMode==='new' || UI.prodMode==='edit';
     if(!_formOpen){ if(!UI.prodSel && UI.prods.length && UI.vp!=='mob'){ selectProduct(prodId(UI.prods[0]), true); } else paintProdDetail(); }
-  }catch(e){ UI._prodLoading=false; const rb2=document.getElementById('ct_rows'); if(rb2)rb2.innerHTML=scrErr(e, tx('the catalogue'), 'loadCatalogue()'); }
+  }catch(e){ UI._prodLoading=false; const node=document.getElementById('ct_rows'); if(node)node.innerHTML=scrErr(e, tx('the catalogue'), 'loadCatalogue()'); }
 }
 /**
  * ⭐⭐ ONE ROW, REPAINTED WHERE IT STANDS (2026-09-08). Athi: *"the view never changes, it is only the data has to move."*
@@ -12044,7 +12044,7 @@ function offersForProduct(d, id){
     const targeted = (Array.isArray(at.item_ids) && at.item_ids.length) || (Array.isArray(at.skus) && at.skus.length) || at.category || (Array.isArray(at.category_ids) && at.category_ids.length);
     if (!targeted) { out.push(Object.assign({}, item, { _via: tx('whole catalogue'), _excluded: prodOfferExcluded(d).indexOf(String(item.id)) >= 0 })); return out; }
     const want = [].concat(at.category ? [String(at.category)] : [], Array.isArray(at.category_ids) ? at.category_ids.map(String) : []);
-    const hit = want.find(function (c) { return cats.indexOf(c) >= 0; });
+    const hit = want.find(function (item) { return cats.indexOf(item) >= 0; });
     if (hit) out.push(Object.assign({}, item, { _via: catName(hit), _excluded: prodOfferExcluded(d).indexOf(String(item.id)) >= 0 }));
     return out;
   }, []);
@@ -12421,11 +12421,11 @@ async function prodAllFields(id){
   const shown = new Set();
   let body = '';
   CAT_GROUPS.forEach(function(item){
-    const rows = item[1].filter(function(k){ return d[k] !== undefined; });
+    const rows = item[1].filter(function(item){ return d[item] !== undefined; });
     if (!rows.length) return;
-    rows.forEach(function(k){ shown.add(k); });
+    rows.forEach(function(item){ shown.add(item); });
     body += '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin:14px 0 2px">' + item[0] + '</div>'
-      + rows.map(function(k){ return catFieldRow(k, d[k]); }).join('');
+      + rows.map(function(item){ return catFieldRow(item, d[item]); }).join('');
   });
   /* ⭐ ANYTHING THE GROUPS DID NOT CLAIM. This is what makes the overlay survive a new field being added. */
   const rest = Object.keys(d).filter(function(item){ return !shown.has(item); });
@@ -12770,8 +12770,8 @@ function prodSheetToggle(el,k){
   const pid=UI.prodSel||''; UI._prodOpen=UI._prodOpen||{};
   if(el.open){
     UI.prodTab=k; UI._prodOpen[pid]=k;
-    const node=document.getElementById('detailpane'); if(node) Array.prototype.forEach.call(node.querySelectorAll('details.ptab-sec'), function(o){ if(o.getAttribute('data-tab')!==k && o.open) o.open=false; });
-    Array.prototype.forEach.call((node||document).querySelectorAll('[data-testid^="prod-tab-"]'), function(b){ b.classList.toggle('on', b.getAttribute('data-testid')==='prod-tab-'+k); });
+    const node=document.getElementById('detailpane'); if(node) Array.prototype.forEach.call(node.querySelectorAll('details.ptab-sec'), function(node){ if(node.getAttribute('data-tab')!==k && node.open) node.open=false; });
+    Array.prototype.forEach.call((node||document).querySelectorAll('[data-testid^="prod-tab-"]'), function(node){ node.classList.toggle('on', node.getAttribute('data-testid')==='prod-tab-'+k); });
     if(k==='pricing'&&typeof prodPricingLoad==='function') prodPricingLoad();
   } else if(UI._prodOpen[pid]===k){ UI._prodOpen[pid]=null; }
 }
@@ -12844,7 +12844,7 @@ function setProdTab(k){
   } else {
     Array.prototype.forEach.call(node.querySelectorAll('.ptab'), function(el){ el.style.display = el.getAttribute('data-tab')===k ? '' : 'none'; });
   }
-  Array.prototype.forEach.call(node.querySelectorAll('[data-testid^="prod-tab-"]'), function(b){ b.classList.toggle('on', b.getAttribute('data-testid')==='prod-tab-'+k); });
+  Array.prototype.forEach.call(node.querySelectorAll('[data-testid^="prod-tab-"]'), function(node){ node.classList.toggle('on', node.getAttribute('data-testid')==='prod-tab-'+k); });
   if(k==='pricing') prodPricingLoad();
 }
 function prodCatgViewHTML(d){
@@ -12922,7 +12922,7 @@ function prodModifiersTab(d, edit){
     return `<div class="sec">${tx('Modifiers')}</div>`
       + (groups.length ? groups.map((item,index)=>`<div class="kv" data-testid="prod-mod-${index}" style="padding:8px 12px;border-top:1px dashed var(--line)">`
           + `<b>${esc(item.name)}</b> <span style="font-size:var(--fs-1);color:var(--grey)">${esc(item.required?tx('required'):tx('optional'))}${item.max>1?' · '+esc(txf('up to {n}', { n:String(item.max) })):''}</span>`
-          + `<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:6px">${item.options.map(o=>`<span class="pill">${esc(o.name)}${o.price?' +'+esc(String(o.price)):''}</span>`).join('')}</div></div>`).join('')
+          + `<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:6px">${item.options.map(item=>`<span class="pill">${esc(item.name)}${item.price?' +'+esc(String(item.price)):''}</span>`).join('')}</div></div>`).join('')
         : `<div style="padding:8px 12px;font-size:var(--fs-2);color:var(--grey)">${tx('No modifiers yet — add spice level, size or extras in Edit › Modifiers.')}</div>`);
   }
   /* ⭐ a different product's Modifiers tab opening must not carry over what was tapped on the last one */
@@ -12974,18 +12974,18 @@ function prodModifiersTab(d, edit){
       : `<div style="padding:0 12px 6px;font-size:var(--fs-1);color:var(--grey)">${tx('Tap through it exactly as a customer would — nothing here is saved.')}</div>`
         + `<div style="padding:0 12px">`
         + sellable.map((item,index)=>{
-            const picked=MODPREV.filter(m=>m.group===item.name).map(m=>m.option);
+            const picked=MODPREV.filter(m=>m.group===item.name).map(item=>item.option);
             return `<div class="kv" data-testid="prod-mod-preview-group-${index}" style="padding:8px 12px;border:1px solid var(--line);border-radius:9px;margin-bottom:6px">`
               + `<div style="display:flex;gap:8px;align-items:baseline"><b>${esc(item.name)}</b>`
               + `<span style="font-size:var(--fs-1);color:var(--grey)">${esc(item.required?tx('required'):tx('optional'))}${item.max>1?' · '+esc(txf('up to {n}', { n:String(item.max) })):''}</span></div>`
               + `<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px">`
-              + item.options.map((o,oi)=>{
-                  const on=picked.indexOf(o.name)>=0;
+              + item.options.map((item,oi)=>{
+                  const on=picked.indexOf(item.name)>=0;
                   /* ⚠️ .ghost for OFF, plain .composebtn (its own default blue fill) for ON — .pri is not a
                      real variant of this class (the file's own comment above warns exactly against inventing
                      one ad hoc: a colour override with no matching text-colour pairing renders invisibly). */
                   return `<button type="button" class="composebtn${on?'':' ghost'}" data-testid="prod-mod-preview-${index}-${oi}" onclick="prodModPreviewPick(${index},${oi})">`
-                    + `${on?'✓ ':''}${esc(o.name)}${o.price?' +'+esc(fmtMoney(o.price, moneyCode())):''}</button>`;
+                    + `${on?'✓ ':''}${esc(item.name)}${item.price?' +'+esc(fmtMoney(item.price, moneyCode())):''}</button>`;
                 }).join('')
               + `</div></div>`;
           }).join('')
@@ -14519,10 +14519,10 @@ function makeMovable(panel, opts){
       + 'display:flex;gap:4px;align-items:center;z-index:6';
     var grip = document.createElement('span'); grip.textContent = '⠿'; grip.title = 'Drag';
     grip.style.cssText = 'cursor:grab;color:var(--grey-4);font-size:var(--fs-3);line-height:1;user-select:none;padding:2px 3px';
-    var btn = function(t, ti, fn){ var b = document.createElement('button'); b.type = 'button'; b.title = ti; b.textContent = t;
-      b.style.cssText = 'border:1px solid rgba(0,0,0,.13);background:rgba(255,255,255,.92);cursor:pointer;border-radius:5px;width:22px;height:22px;font-size:var(--fs-1);font-weight:700;color:#5a6472;line-height:1;padding:0';
-      b.onmousedown = function(e){ e.stopPropagation(); };
-      b.onclick = function(e){ e.stopPropagation(); e.preventDefault(); fn(); }; return b; };
+    var btn = function(t, ti, fn){ var node = document.createElement('button'); node.type = 'button'; node.title = ti; node.textContent = t;
+      node.style.cssText = 'border:1px solid rgba(0,0,0,.13);background:rgba(255,255,255,.92);cursor:pointer;border-radius:5px;width:22px;height:22px;font-size:var(--fs-1);font-weight:700;color:#5a6472;line-height:1;padding:0';
+      node.onmousedown = function(e){ e.stopPropagation(); };
+      node.onclick = function(e){ e.stopPropagation(); e.preventDefault(); fn(); }; return node; };
     bar.appendChild(grip);
     /**
      * ⭐ MINIMISE — Athi, 2026-08-15: *"minimize icon all required."*
@@ -14677,8 +14677,8 @@ function makeMovable(panel, opts){
         head.style.cursor = 'grab';
         head.addEventListener('mousedown', function(e){
           if (e.button !== 0) return;
-          var t = e.target;
-          if (t && t.closest && t.closest('button,select,input,textarea,a,label,[contenteditable]')) return;
+          var node = e.target;
+          if (node && node.closest && node.closest('button,select,input,textarea,a,label,[contenteditable]')) return;
           startDrag(e);
         });
       }
@@ -14831,7 +14831,7 @@ function modalStamp(host){
 function modal(html, wide, opt){ const node=document.getElementById("modalhost"); if(!node)return; UI._composeModal=false; node.style.display=''; node.innerHTML=`<div class="mover" onclick="modalBackdrop()"><div class="modal${wide?' wide':''}" onclick="event.stopPropagation()"><button class="mx" onclick="closeModal()" aria-label="Close" title="Close">✕</button>${html}</div></div>`; mvModal(node, wide, opt); modalStamp(node); }
 function modalBackdrop(){ if(UI._composeModal){ minimiseCompose(); } else { closeModal(); } }
 function minimiseCompose(){ const node=document.getElementById("modalhost"); if(!node)return; node.style.display='none'; UI._composeMin=true; renderComposePill(); toast('Compose minimised — tap “Resume compose” to continue.'); }
-function resumeCompose(){ const node=document.getElementById("modalhost"); if(node)node.style.display=''; UI._composeMin=false; const p=document.getElementById('composepill'); if(p)p.remove(); setTimeout(function(){ var t=document.getElementById('cf_subject'); if(t)t.focus(); },20); }
+function resumeCompose(){ const node=document.getElementById("modalhost"); if(node)node.style.display=''; UI._composeMin=false; const p=document.getElementById('composepill'); if(p)p.remove(); setTimeout(function(){ var node=document.getElementById('cf_subject'); if(node)node.focus(); },20); }
 function renderComposePill(){ var node=document.getElementById('composepill'); if(!node){ node=document.createElement('div'); node.id='composepill'; document.body.appendChild(node); } node.className='composepill'; node.innerHTML='<span onclick="resumeCompose()" style="cursor:pointer">' + tx('✏️ Resume compose') + '</span><span onclick="discardCompose()" title="Discard draft" style="cursor:pointer;opacity:.75;font-weight:800">✕</span>'; }
 function discardCompose(){ var node=document.getElementById('composepill'); if(node)node.remove(); CC={items:[],rcpts:[],fields:{}}; closeModal(); }
 function closeModal(){ const node=document.getElementById("modalhost"); if(node){ node.style.display=''; node.innerHTML=""; }
@@ -16244,7 +16244,7 @@ function clearancesBlock(c){
 function _aiMd(md){
   var text=String(md||'').replace(/\r/g,'').split('\n'),list=[],index=0;
   var sep=function(l){return l.indexOf('-')>=0 && /^\s*\|?[\s:|-]+\|?\s*$/.test(l);};
-  var cl=function(r){return r.trim().replace(/^\|/,'').replace(/\|$/,'').split('|').map(function(item){return item.trim();});};
+  var cl=function(text){return text.trim().replace(/^\|/,'').replace(/\|$/,'').split('|').map(function(item){return item.trim();});};
   var il=function(s){return esc(String(s)).replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/`([^`]+)`/g,'<code>$1</code>');};
   while(index<text.length){var l=text[index];
     if(l.indexOf('|')>=0&&index+1<text.length&&sep(text[index+1])){var th=cl(l).map(function(item){return '<th>'+il(item)+'</th>';}).join('');index+=2;var tr=[];while(index<text.length&&text[index].indexOf('|')>=0&&text[index].trim()!==''){tr.push('<tr>'+cl(text[index]).map(function(item){return '<td>'+il(item)+'</td>';}).join('')+'</tr>');index++;}list.push('<table class="amdt"><thead><tr>'+th+'</tr></thead><tbody>'+tr.join('')+'</tbody></table>');continue;}
@@ -16757,11 +16757,11 @@ function messagesTab(c){
 }
 function busyShow(msg){ var node=document.getElementById('busyhost'); if(!node){ node=document.createElement('div'); node.id='busyhost'; document.body.appendChild(node); } node.innerHTML='<div class="busyov"><div class="busybox"><span class="bspin"></span><span>'+esc(msg||'Working…')+'</span></div></div>'; }
 function busyHide(){ var node=document.getElementById('busyhost'); if(node)node.innerHTML=''; }
-function unreadCount(){ let index=0; (STORE.chits||[]).forEach(item=>{ (item.msgs||[]).forEach(m=>{ if(m.unread && (SESSION.role!=="customer"||m.scope==="external")) index++; }); }); return index; }
+function unreadCount(){ let index=0; (STORE.chits||[]).forEach(item=>{ (item.msgs||[]).forEach(item=>{ if(item.unread && (SESSION.role!=="customer"||item.scope==="external")) index++; }); }); return index; }
 function markChitRead(id){ const c=(STORE.chits||[]).find(x=>x.id==id); if(c)(c.msgs||[]).forEach(item=>item.unread=false); }
 function refreshMsgBadge(){ const n=unreadCount(); const node=document.getElementById('msgcdot'); if(node){ node.textContent=n; node.style.display=n?'flex':'none'; } }
 function openMsgCenter(){ const host=document.getElementById("lbhost"); if(!host)return; if(UI.msgcOpen){ closeMsgCenter(); return; } UI.msgcOpen=true;
-  const items=(STORE.chits||[]).map(item=>{ const ms=(item.msgs||[]).filter(m=>SESSION.role!=="customer"||m.scope==="external"); if(!ms.length)return null; const last=ms[ms.length-1]; const unread=ms.filter(m=>m.unread).length; return {id:item.id,code:item.code,party:item.party,last,unread}; }).filter(Boolean).reverse();
+  const items=(STORE.chits||[]).map(item=>{ const ms=(item.msgs||[]).filter(item=>SESSION.role!=="customer"||item.scope==="external"); if(!ms.length)return null; const last=ms[ms.length-1]; const unread=ms.filter(item=>item.unread).length; return {id:item.id,code:item.code,party:item.party,last,unread}; }).filter(Boolean).reverse();
   host.innerHTML=`<div class="notifover" onclick="closeMsgCenter()"><div class="notifpanel" onclick="event.stopPropagation()"><div class="notifhd">${tx('💬 Messages')}<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">across all chits</span></div><div style="padding:8px 12px;border-bottom:1px solid var(--line)"><button class="msglink" style="width:100%" onclick="openRaidReport()">${tx('📊 RAID report — governance overview')}</button></div>${items.length?items.map(x=>`<div class="notifrow" style="cursor:pointer" onclick="openFromCenter('${x.id}')"><span class="ni">${x.unread?'🔵':'💬'}</span><div style="flex:1;min-width:0"><div class="nt"><b>${x.code}</b> · ${x.party}${x.unread?` <span class="unreadtag">${x.unread} new</span>`:''}</div><div class="ns">${x.last?((x.last.scope==='external'?'↔ ':'🔒 ')+(x.last.body.length>44?x.last.body.slice(0,44)+'…':x.last.body)):''}</div></div></div>`).join(""):'<div class="notiffoot">No messages yet.</div>'}<div class="notiffoot">Tap a chit to open its conversation. External messages also land in the other party's message centre.</div><div class="raidtoggle">⚙ Message types: <button class="${SESSION.msgTypes!=='gov'?'on':''}" onclick="setMsgTypeSet('lean')">${tx('Lean')}</button><button class="${SESSION.msgTypes==='gov'?'on':''}" onclick="setMsgTypeSet('gov')">${tx('Governance (RAID)')}</button><div class="hint">A Settings preview — configurable per entity in production.</div></div></div></div>`;
 }
 function closeMsgCenter(){ UI.msgcOpen=false; const node=document.getElementById("lbhost"); if(node)node.innerHTML=""; }
@@ -18166,7 +18166,7 @@ function chitTermsBlock(c){
         var r = item.rules || {};
         /* The rules, said plainly. ⚠️ Whatever the kind carries is shown — enumerating a fixed set of fields
            here would silently hide a condition the offer actually had. */
-        var parts = Object.keys(r).map(function(k){ return esc(k) + ' ' + esc(r[k]); });
+        var parts = Object.keys(r).map(function(item){ return esc(item) + ' ' + esc(r[item]); });
         return '<div class="ir" style="align-items:flex-start">'
           + '<span><b>' + esc(item.name || item.kind) + '</b>'
           + (item.sub_kind ? ' <span style="font-size:var(--fs-1);color:var(--grey)">' + esc(item.sub_kind) + '</span>' : '')
