@@ -241,7 +241,7 @@ W.run(REAL ? 'finance-money-real' : 'finance-money', async (w) => {
     await w.step('R5', 'Returns (an Australian shop) -> which return applies: BAS, prepared in Accounts; no download button here', async () => {
       S.country = 'AU'; await open('returns', T('fr-elsewhere'));
       const h = await txt(T('fr-which')), p = await txt(T('fr-elsewhere') + ' p'), link = await page.locator(T('fr-accounts')).getAttribute('href').catch(() => ''), b1 = await page.locator(T('fr-gstr1')).count();
-      return { ok: h === 'BAS' && /Business activity statement/.test(p) && /prepared in Accounts/.test(p) && link === '/accounts.html#gst' && b1 === 0, saw: '"' + h + '" · "' + p + '" · link ' + link + '; gstr buttons ' + b1 };
+      return { ok: h === 'BAS' && /Business activity statement/.test(p) && /prepared in Accounts/.test(p) && link === '/accounts.html#gstclose' && b1 === 0, saw: '"' + h + '" · "' + p + '" · link ' + link + '; gstr buttons ' + b1 };
     });
     await w.step('R6', 'Returns (a UAE shop) -> VAT return, prepared in Accounts', async () => {
       S.country = 'AE'; await open('returns', T('fr-elsewhere'));
