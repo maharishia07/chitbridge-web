@@ -72,22 +72,22 @@ function traceabilityScreen(){
 // The batches the signed-in operator can trace — each row prints its id (the "traceability string") and is
 // clickable, so a demo works on any machine without pasting a key. RLS-scoped server-side (you see only yours).
 async function loadTraceBatches(){
-  try { var r = await api('traceBatches'); UI.traceBatches = (r && r.batches) || []; }
+  try { var reply = await api('traceBatches'); UI.traceBatches = (reply && reply.batches) || []; }
   catch(e){ UI.traceBatches = []; }
   if (typeof renderApp === 'function') bgRenderApp();
 }
 function _traceBatchPicker(){
   if (UI.traceBatches === undefined){ loadTraceBatches(); return '<div style="padding:12px 20px;color:var(--grey);font-size:var(--fs-2)">' + tx('Loading your batches…') + '</div>'; }
   if (!UI.traceBatches.length) return '<div style="padding:12px 20px;color:var(--grey);font-size:var(--fs-2)">No traceable batches yet — seed a chain, then reload.</div>';
-  var rows = UI.traceBatches.map(function(b){
-    var name = esc(b.product || b.to_name || 'batch');
-    var meta = [ (b.qty != null ? (esc(String(b.qty)) + esc(b.unit ? (' ' + b.unit) : '')) : ''), (b.sender_name ? ('from ' + esc(b.sender_name)) : '') ].filter(Boolean).join(' · ');
-    return '<div onclick="UI.traceId=\'' + b.chit_id + '\';runTrace(\'forward\')" title="Click to trace this batch" '
+  var rows = UI.traceBatches.map(function(item){
+    var name = esc(item.product || item.to_name || 'batch');
+    var meta = [ (item.qty != null ? (esc(String(item.qty)) + esc(item.unit ? (' ' + item.unit) : '')) : ''), (item.sender_name ? ('from ' + esc(item.sender_name)) : '') ].filter(Boolean).join(' · ');
+    return '<div onclick="UI.traceId=\'' + item.chit_id + '\';runTrace(\'forward\')" title="Click to trace this batch" '
       + 'style="cursor:pointer;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--card);display:flex;flex-direction:column;gap:2px;color:var(--on-card)">'
       + '<div style="display:flex;align-items:center;gap:7px"><b style="font-size:var(--fs-2)">' + name + '</b>'
-        + (b.is_origin ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);background:var(--blue-tint-bg);border-radius:5px;padding:1px 5px">' + tx('ORIGIN') + '</span>' : '') + '</div>'
+        + (item.is_origin ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);background:var(--blue-tint-bg);border-radius:5px;padding:1px 5px">' + tx('ORIGIN') + '</span>' : '') + '</div>'
       + (meta ? '<div style="font-size:var(--fs-1);color:var(--grey)">' + meta + '</div>' : '')
-      + '<div style="font-family:monospace;font-size:var(--fs-1);color:var(--grey-3);word-break:break-all">' + esc(b.chit_id) + '</div>'
+      + '<div style="font-family:monospace;font-size:var(--fs-1);color:var(--grey-3);word-break:break-all">' + esc(item.chit_id) + '</div>'
       + '</div>';
   }).join('');
   return '<div style="padding:10px 18px 4px">'
@@ -158,11 +158,11 @@ function _traceNode(n, isTerm){
     + '</div>';
 }
 function _traceTree(r){
-  var byId = {}; (r.nodes || []).forEach(function(n){ byId[n.chit_id] = n; });
+  var byId = {}; (r.nodes || []).forEach(function(item){ byId[item.chit_id] = item; });
   var kids = {}; (r.edges || []).forEach(function(e){ (kids[e.from] = kids[e.from] || []).push(e.to); });
-  var term = {}; (r.terminals || []).forEach(function(t){ term[t.chit_id] = 1; });
+  var term = {}; (r.terminals || []).forEach(function(item){ term[item.chit_id] = 1; });
   var hasParent = {}; (r.edges || []).forEach(function(e){ hasParent[e.to] = 1; });
-  var roots = (r.nodes || []).filter(function(n){ return !hasParent[n.chit_id]; }).map(function(n){ return n.chit_id; });
+  var roots = (r.nodes || []).filter(function(item){ return !hasParent[item.chit_id]; }).map(function(item){ return item.chit_id; });
   if (!roots.length && r.start) roots = [r.start];   // walk always has a single flagged root; batch-reconstruct may be a forest
   var seen = {};
   function render(id){
@@ -179,14 +179,14 @@ function _traceTree(r){
 
 function _traceBwd(r){
   var path = r.path || [], nodes = r.nodes || [];
-  var byId = {}; nodes.forEach(function(n){ byId[n.chit_id] = n; });
+  var byId = {}; nodes.forEach(function(item){ byId[item.chit_id] = item; });
   var head = '<div style="margin:16px 18px;padding:14px 18px;border:1px solid #a9c6ef;background:var(--blue-tint-bg);border-radius:12px;color:var(--on-card)">'
     + '<div style="font-size:var(--fs-4);font-weight:800;color:var(--blue-2)"><span class=arw>◂</span> Where it came from — back to source</div>'
     + '<div style="font-size:var(--fs-2);color:var(--blue);margin-top:2px">' + r.hops + ' hop' + (r.hops === 1 ? '' : 's') + ' from the flagged node back to origin</div></div>';
-  var steps = path.map(function(cid, i){
-    var n = byId[cid] || { chit_id: cid };
-    var arrow = i < path.length - 1 ? '<div style="color:var(--grey);font-size:var(--fs-3);padding:2px 0 2px 22px">↓</div>' : '';
-    var tag = (i === 0) ? 'SOURCE' : (i === path.length - 1 ? 'FLAGGED' : 'HOP ' + i);
+  var steps = path.map(function(item, index){
+    var n = byId[item] || { chit_id: item };
+    var arrow = index < path.length - 1 ? '<div style="color:var(--grey);font-size:var(--fs-3);padding:2px 0 2px 22px">↓</div>' : '';
+    var tag = (index === 0) ? 'SOURCE' : (index === path.length - 1 ? 'FLAGGED' : 'HOP ' + index);
     return '<div style="padding:2px 18px"><span style="font-size:var(--fs-1);font-weight:800;color:var(--grey);margin-inline-end:8px">' + tag + '</span>' + _traceChip(n, false) + '</div>' + arrow;
   }).join('');
   return head + '<div style="padding:6px 0 18px">' + steps + '</div>';
@@ -197,7 +197,7 @@ function runTrace(dir){
   if (!id){ if (typeof toast === 'function') toast('Paste a batch / chit id to trace.'); return; }
   UI.traceLoading = true; UI.traceResult = undefined; if (typeof renderApp === 'function') renderApp();
   api('traceWalk', { params:{ id:id }, query:{ dir:dir } })
-    .then(function(r){ UI.traceLoading = false; r = r || {}; r.dir = dir; UI.traceResult = r; if (typeof renderApp === 'function') renderApp(); })
+    .then(function(reply){ UI.traceLoading = false; reply = reply || {}; reply.dir = dir; UI.traceResult = reply; if (typeof renderApp === 'function') renderApp(); })
     .catch(function(e){ UI.traceLoading = false; UI.traceResult = { error: (e && e.message) || 'Trace failed — is this a batch you oversee?' }; if (typeof renderApp === 'function') renderApp(); });
 }
 // Reconstruct the chain from a shared batch number instead of the links (proves the graph survives without them).
@@ -206,6 +206,6 @@ function runTraceByBatch(){
   if (!q){ if (typeof toast === 'function') toast('Type a batch number to reconstruct.'); return; }
   UI.traceLoading = true; UI.traceResult = undefined; if (typeof renderApp === 'function') renderApp();
   api('traceByBatch', { query:{ q:q } })
-    .then(function(r){ UI.traceLoading = false; r = r || {}; r.dir = 'forward'; UI.traceResult = r; if (typeof renderApp === 'function') renderApp(); })
+    .then(function(reply){ UI.traceLoading = false; reply = reply || {}; reply.dir = 'forward'; UI.traceResult = reply; if (typeof renderApp === 'function') renderApp(); })
     .catch(function(e){ UI.traceLoading = false; UI.traceResult = { error: (e && e.message) || 'Batch trace failed' }; if (typeof renderApp === 'function') renderApp(); });
 }

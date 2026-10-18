@@ -65,7 +65,7 @@
   "public/app/cap-supplies.js": {"score":20,"long40":0,"long80":0,"complex10":2,"complex15":0,"deep3":0,"deep4":0,"cryptic":16,"noWhatLine":2,"emptyCatch":0,"noHeader":0},
   "public/app/cap-tasks.js": {"score":115,"long40":0,"long80":0,"complex10":4,"complex15":2,"deep3":0,"deep4":0,"cryptic":103,"noWhatLine":0,"emptyCatch":6,"noHeader":0},
   "public/app/cap-testing.js": {"score":703,"long40":43,"long80":22,"complex10":54,"complex15":24,"deep3":3,"deep4":0,"cryptic":372,"noWhatLine":48,"emptyCatch":136,"noHeader":1},
-  "public/app/cap-traceability.js": {"score":45,"long40":1,"long80":0,"complex10":3,"complex15":2,"deep3":0,"deep4":0,"cryptic":30,"noWhatLine":7,"emptyCatch":2,"noHeader":0},
+  "public/app/cap-traceability.js": {"score":34,"long40":1,"long80":0,"complex10":3,"complex15":2,"deep3":0,"deep4":0,"cryptic":19,"noWhatLine":7,"emptyCatch":2,"noHeader":0},
   "public/app/cap-workforce.js": {"score":172,"long40":3,"long80":3,"complex10":15,"complex15":10,"deep3":1,"deep4":1,"cryptic":115,"noWhatLine":12,"emptyCatch":11,"noHeader":1},
   "public/app/cap-worklist.js": {"score":138,"long40":6,"long80":2,"complex10":11,"complex15":4,"deep3":0,"deep4":0,"cryptic":97,"noWhatLine":10,"emptyCatch":8,"noHeader":0},
   "public/app/cart.js": {"score":517,"long40":11,"long80":5,"complex10":36,"complex15":14,"deep3":1,"deep4":0,"cryptic":429,"noWhatLine":0,"emptyCatch":21,"noHeader":0},
