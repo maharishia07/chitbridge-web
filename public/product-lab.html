@@ -162,7 +162,8 @@ async function load(keepStep){
     DATA._have[k] = 1; DATA._mine[k] = m;
   });
   if (!keepStep) STEP = 1;
-  pickList((LIST && LIST.key) || DATA.lists[0].key, keepStep);
+  /* VERT-8: open on the list the shop's trade names (server: govresolve.verticalOf → pick); a restaurant opens on the hotel list */
+  pickList((LIST && LIST.key) || DATA.pick || DATA.lists[0].key, keepStep);
 }
 
 function pickList(k, keep){
