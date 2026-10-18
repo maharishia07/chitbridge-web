@@ -545,7 +545,7 @@ function _lifeTabHtml(){
 
 /* ── THE LIFE OF… tab — the business-narrative reference set (followable stories, not feature ads) ── */
 function _storiesTabHtml(){
-  const S=[
+  const list=[
     { icon:'📜', name:'The Life of a Chit', blurb:'How one obligation travels the governed rail — composed, delivered per-copy, acted, disputed, settled. The conceptual anchor.', url:'https://claude.ai/code/artifact/c4696068-9bfd-4079-a425-6c8d81592bdc?via=auto_preview' },
     { icon:'🏛️', name:'The Life of an Entity', blurb:'DDL → DML: author the source-entities → the boilerplate → mint an entity → its chits. Define the mould once, mint many.', url:'https://claude.ai/code/artifact/93ccd05b-fd3a-4068-a47f-9faa41d6e4b0?via=auto_preview' },
     { icon:'🌍', name:'The Life of a Trade', blurb:'One chemical shipment, buyer → seller: real template evidence moving across the engine. Swap the industry and the standards change; the commercial spine and the rail do not.', url:'/docs/life-of-a-trade.html' },
@@ -555,7 +555,7 @@ function _storiesTabHtml(){
     <div style="font-size:var(--fs-2);color:var(--grey);line-height:1.5">${esc(x.blurb)}</div></a>`;
   return `<div style="padding:12px 13px;overflow:visible">
     <div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:12px">The <b>business narratives</b> — the product told from the value side, followable end-to-end (not feature ads). Open each in a new tab.</div>
-    ${S.map(card).join('')}
+    ${list.map(card).join('')}
     <div style="font-size:var(--fs-1);color:var(--grey);text-align:center;padding-top:2px">Companion set to the ⬢ Capabilities map — the “what it feels like” beside the “what’s built”.</div>
   </div>`;
 }
@@ -712,7 +712,7 @@ function _workTabHtml(){
       flow:'order <span class=arw>→</span> delivery_note <span class=arw>→</span> invoice <span class=arw>→</span> payment <span class=arw>→</span> receipt — each hop\'s <b>output is the next hop\'s input</b>',
       chips:[chain('Purposes today · pattern-ize next')] },
   ];
-  const spine=[['Constitution','base@v1'],['↳ Capability','connector@v1'],['↳ Work-pattern','iot-signal@v1'],['↳ Chit','stamped']].map((s,i)=>`<div style="flex:1 1 118px;min-width:110px;padding:9px 11px;${i?'border-inline-start:1px solid var(--line)':''};${i===3?'background:var(--blue-tint)':''};color:var(--on-card)"><div style="font-family:'Space Mono';font-size:var(--fs-1);letter-spacing:.07em;text-transform:uppercase;color:var(--grey)">${s[0]}</div><div style="font-weight:700;font-size:var(--fs-2);${i===3?'color:'+R:''}">${s[1]}</div></div>`).join('');
+  const spine=[['Constitution','base@v1'],['↳ Capability','connector@v1'],['↳ Work-pattern','iot-signal@v1'],['↳ Chit','stamped']].map((item,index)=>`<div style="flex:1 1 118px;min-width:110px;padding:9px 11px;${index?'border-inline-start:1px solid var(--line)':''};${index===3?'background:var(--blue-tint)':''};color:var(--on-card)"><div style="font-family:'Space Mono';font-size:var(--fs-1);letter-spacing:.07em;text-transform:uppercase;color:var(--grey)">${item[0]}</div><div style="font-weight:700;font-size:var(--fs-2);${index===3?'color:'+R:''}">${item[1]}</div></div>`).join('');
   const notif=[
     ['🏢 Entity','a copy delivered to Task / Order','mailbox lists; entity-scoped RLS'],
     ['🧑 Actor','assigned / visible change — delivery·status·message·dispute','per-actor <b>unread</b> + bell + message centre'],
@@ -720,7 +720,7 @@ function _workTabHtml(){
     ['🔌 ERP','a handoff receipt lands','receipt ledger, per-distributor RLS; process-then-forget'],
     ['🤖 AI','a proposal to authorize','human authorize → confirm (in-loop)'],
     ['🛍️ Customer','order confirmation','OTP on the order — not a full mailbox'],
-  ].map(r=>`<tr style="border-top:1px solid var(--line)"><td style="padding:7px 9px;font-weight:600;white-space:nowrap;vertical-align:top">${r[0]}</td><td style="padding:7px 9px;color:var(--ink);vertical-align:top">${r[1]}</td><td style="padding:7px 9px;color:var(--grey);vertical-align:top">${r[2]}</td></tr>`).join('');
+  ].map(item=>`<tr style="border-top:1px solid var(--line)"><td style="padding:7px 9px;font-weight:600;white-space:nowrap;vertical-align:top">${item[0]}</td><td style="padding:7px 9px;color:var(--ink);vertical-align:top">${item[1]}</td><td style="padding:7px 9px;color:var(--grey);vertical-align:top">${item[2]}</td></tr>`).join('');
   return `<div style="padding:13px 15px;overflow:visible">
     <div style="font-size:var(--fs-2);color:var(--grey);line-height:1.6;margin-bottom:12px">A work pattern isn't a form — it's a <b style="color:var(--ink)">governed journey</b>: a minted, version-frozen blueprint a chit runs end-to-end, stamped with everything that governed it. Each is framed by the <b style="color:var(--ink)">higher objective it achieves</b> — no outcome <span class=arw>→</span> not a work pattern; the flow shows how.</div>
     <div style="display:flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:16px">${spine}</div>
@@ -795,8 +795,8 @@ function _openLegendImpl(){
   const LOADED=(typeof CAP_LOADED!=='undefined')?CAP_LOADED:{};
   const SC={ done:['var(--ok-3)','✅'], partial:['var(--warn-2)','◐'], backlog:['var(--grey-4)','○'] };
   // tallies across every feature
-  let d=0,p=0,b=0,nf=0; CAP_CATALOGUE.forEach(c=>c.features.forEach(f=>{ nf++; if(f.s==='done')d++; else if(f.s==='partial')p++; else b++; }));
-  const built=CAP_CATALOGUE.filter(c=>c.load!=='planned').length;
+  let count=0,p=0,b=0,nf=0; CAP_CATALOGUE.forEach(item=>item.features.forEach(f=>{ nf++; if(f.s==='done')count++; else if(f.s==='partial')p++; else b++; }));
+  const built=CAP_CATALOGUE.filter(item=>item.load!=='planned').length;
   const loadBadge=(c)=>{
     if(c.load==='eager')  return `<span style="font-size:var(--fs-1);font-weight:700;color:var(--ok-3);background:var(--ok-tint);border:1px solid #bfe0cf;border-radius:6px;padding:1px 7px">always on</span>`;
     if(c.load==='planned')return `<span style="font-size:var(--fs-1);font-weight:700;color:var(--warn-3);background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:6px;padding:1px 7px">planned</span>`;
@@ -833,7 +833,7 @@ function _openLegendImpl(){
   const capBody=`
     <div style="padding:11px 13px 6px;font-size:var(--fs-1);color:var(--grey);border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:10px;align-items:center">
       <span><b style="color:var(--ink)">${built}</b> live capabilities · <b style="color:var(--ink)">${nf}</b> features</span>
-      <span style="margin-inline-start:auto">Status: <span style="color:var(--ok-3)">✅ done ${d}</span> · <span style="color:#a9791f">◐ partial ${p}</span> · <span style="color:var(--grey-4)">○ backlog ${b}</span></span>
+      <span style="margin-inline-start:auto">Status: <span style="color:var(--ok-3)">✅ done ${count}</span> · <span style="color:#a9791f">◐ partial ${p}</span> · <span style="color:var(--grey-4)">○ backlog ${b}</span></span>
     </div>
     <div style="padding:12px 13px;overflow:visible">${CAP_CATALOGUE.map(card).join('')}
       <div style="font-size:var(--fs-1);color:var(--grey);text-align:center;padding-top:4px">Load: <b>always on</b> ships with the app · <b>lazy</b> loads on first use · <b>planned</b> not built yet. · <b>${tx('L1–5')}</b> maturity: 1 Proven · 2 Packaged · 3 Itemised · 4 Governed · 5 Productized (<span class=arw>→</span> = target). Kept true to the code.</div>
