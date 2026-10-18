@@ -57,8 +57,8 @@ function cmdbDrawnBy(code) {
 function cmdbRows() {
   try {
     return ((window.CBSCREENS && window.CBSCREENS.rows) || [])
-      .filter(function (r) {
-        return r.group !== 'Popup' && r.group !== 'Control' && r.group !== 'Panel';
+      .filter(function (item) {
+        return item.group !== 'Popup' && item.group !== 'Control' && item.group !== 'Panel';
       });
   } catch (_) { return []; }
 }
@@ -70,7 +70,7 @@ function cmdbRows() {
 function cmdbControls() {
   try {
     return ((window.CBSCREENS && window.CBSCREENS.rows) || [])
-      .filter(function (r) { return r.group === 'Control'; });
+      .filter(function (item) { return item.group === 'Control'; });
   } catch (_) { return []; }
 }
 /**
@@ -80,7 +80,7 @@ function cmdbControls() {
  * screen count wrong and answer a question nobody asked.
  */
 function cmdbPanels() {
-  try { return ((window.CBSCREENS && window.CBSCREENS.rows) || []).filter(function (r) { return r.group === 'Panel'; }); }
+  try { return ((window.CBSCREENS && window.CBSCREENS.rows) || []).filter(function (item) { return item.group === 'Panel'; }); }
   catch (_) { return []; }
 }
 /**
@@ -92,7 +92,7 @@ function cmdbGone() {
   try { return (window.CBSCREENS && window.CBSCREENS.withdrawn) || []; } catch (_) { return []; }
 }
 function cmdbPopups() {
-  try { return ((window.CBSCREENS && window.CBSCREENS.rows) || []).filter(function (r) { return r.group === 'Popup'; }); }
+  try { return ((window.CBSCREENS && window.CBSCREENS.rows) || []).filter(function (item) { return item.group === 'Popup'; }); }
   catch (_) { return []; }
 }
 
@@ -104,8 +104,8 @@ function cmdbSet(on) {
   if (typeof renderApp === 'function') renderApp();
 }
 function cmdbClose() {
-  var h = document.getElementById('cbcmdbhost');
-  if (h && h.parentNode) h.parentNode.removeChild(h);
+  var node = document.getElementById('cbcmdbhost');
+  if (node && node.parentNode) node.parentNode.removeChild(node);
 }
 function cmdbFilter(k, v) { CBCMDB[k] = v; cmdbPaint(); }
 
@@ -146,28 +146,28 @@ function cmdbMinimise() {
 /** the four kinds, with their counts — a switch that cannot say how many is a switch you press to find out */
 var PLURAL = { CAP: 'Capabilities', ENG: 'Engines', API: 'Routes' };
 function cmdbKindsHTML() {
-  var A = cmdbAssets();
+  var list = cmdbAssets();
   var kinds = [['SCREEN', 'Screens', cmdbRows().length]];
   if (cmdbPopups().length) kinds.push(['POPUP', 'Popups', cmdbPopups().length]);
   if (cmdbPanels().length) kinds.push(['PANEL', 'Panels', cmdbPanels().length]);
   if (cmdbControls().length) kinds.push(['CONTROL', 'Controls', cmdbControls().length]);
-  ['CAP', 'ENG', 'API'].forEach(function (k) {
-    var n = A.filter(function (x) { return x.type === k; });
+  ['CAP', 'ENG', 'API'].forEach(function (item) {
+    var n = list.filter(function (x) { return x.type === item; });
     /* ⚠ A PLURAL IS NOT A NOUN PLUS S. It read "Capabilitys" the first time this was shown to Athi — small,
        but a register whose own labels are wrong is not one anybody trusts with a number. Declared per type. */
-    if (n.length) kinds.push([k, PLURAL[k] || (n[0].kind + 's'), n.length]);
+    if (n.length) kinds.push([item, PLURAL[item] || (n[0].kind + 's'), n.length]);
   });
   /* ⚠️ LAST, and only when there are any: withdrawn codes are a lookup, not a list anybody browses. Putting
      them beside the live kinds would suggest they are things you can still open. */
   if (cmdbGone().length) kinds.push(['GONE', 'Withdrawn', cmdbGone().length]);
   var base = 'font:inherit;font-size:var(--fs-1);padding:2px 8px;border:1px solid var(--line,#e7e3d8);'
     + 'border-radius:7px;cursor:pointer;';
-  return kinds.map(function (k) {
-    var on = CBCMDB.kind === k[0];
-    return '<button onclick="cmdbFilter(\'kind\',\'' + k[0] + '\')" style="' + base
+  return kinds.map(function (item) {
+    var on = CBCMDB.kind === item[0];
+    return '<button onclick="cmdbFilter(\'kind\',\'' + item[0] + '\')" style="' + base
       + (on ? 'background:var(--grey-2,#545A61);color:#fff;border-color:var(--grey-2,#545A61)'
             : 'background:var(--card,#fff);color:var(--grey-2,#545A61)') + '">'
-      + esc(k[1]) + ' <b>' + k[2] + '</b></button>';
+      + esc(item[1]) + ' <b>' + item[2] + '</b></button>';
   }).join('');
 }
 
@@ -203,23 +203,23 @@ function cmdbKindsHTML() {
  * appears nowhere on their screen; the sweep says so and so does this.
  */
 function cmdbPanelHTML() {
-  var A = cmdbPanels();
+  var list = cmdbPanels();
   var q = String(CBCMDB.q || '').toLowerCase();
-  if (q) A = A.filter(function (x) { return (x.code + ' ' + x.screen).toLowerCase().indexOf(q) >= 0; });
-  if (!A.length) return '<div style="padding:10px 0;font-size:var(--fs-2);color:var(--note)">Nothing matches.</div>';
+  if (q) list = list.filter(function (x) { return (x.code + ' ' + x.screen).toLowerCase().indexOf(q) >= 0; });
+  if (!list.length) return '<div style="padding:10px 0;font-size:var(--fs-2);color:var(--note)">Nothing matches.</div>';
   var h = '<div style="padding:7px 0 8px;font-size:var(--fs-1);color:var(--grey-2,#545A61);line-height:1.5">'
-    + '<b>' + A.length + '</b> panel(s). A panel floats over whatever screen you are on and stays there \u2014 so '
+    + '<b>' + list.length + '</b> panel(s). A panel floats over whatever screen you are on and stays there \u2014 so '
     + 'you can be on CAT001 with PNL004 open, and both codes are true at once.'
     + '</div>';
   h += '<table style="width:100%;border-collapse:collapse;font-size:var(--fs-2)">'
     + '<tr style="text-align:start;color:var(--grey-2,#545A61);font-size:var(--fs-1)">'
     + '<th style="text-align:start;padding:3px 6px 3px 0">Code</th>'
     + '<th style="text-align:start;padding:3px 6px">Panel</th></tr>';
-  h += A.map(function (r) {
+  h += list.map(function (item) {
     return '<tr style="border-top:1px solid var(--line,#e7e3d8)">'
       + '<td style="padding:4px 6px 4px 0;white-space:nowrap"><code style="font-family:\'Space Mono\','
-      +   'ui-monospace,monospace;user-select:all">' + esc(r.code) + '</code></td>'
-      + '<td style="padding:4px 6px">' + esc(r.screen) + '</td></tr>';
+      +   'ui-monospace,monospace;user-select:all">' + esc(item.code) + '</code></td>'
+      + '<td style="padding:4px 6px">' + esc(item.screen) + '</td></tr>';
   }).join('');
   return h + '</table>';
 }
@@ -232,12 +232,12 @@ function cmdbPanelHTML() {
  * gap in the numbering costs nothing while it can answer for itself; mute, it costs a conversation each time.
  */
 function cmdbGoneHTML() {
-  var A = cmdbGone();
+  var list = cmdbGone();
   var q = String(CBCMDB.q || '').toLowerCase();
-  if (q) A = A.filter(function (x) { return (x.code + ' ' + x.path).toLowerCase().indexOf(q) >= 0; });
-  if (!A.length) return '<div style="padding:10px 0;font-size:var(--fs-2);color:var(--note)">Nothing matches.</div>';
+  if (q) list = list.filter(function (x) { return (x.code + ' ' + x.path).toLowerCase().indexOf(q) >= 0; });
+  if (!list.length) return '<div style="padding:10px 0;font-size:var(--fs-2);color:var(--note)">Nothing matches.</div>';
   var h = '<div style="padding:7px 0 8px;font-size:var(--fs-1);color:var(--grey-2,#545A61);line-height:1.5">'
-    + '<b>' + A.length + '</b> withdrawn code(s). They are reserved for ever and name nothing else \u2014 a case '
+    + '<b>' + list.length + '</b> withdrawn code(s). They are reserved for ever and name nothing else \u2014 a case '
     + 'citing one must never come to mean something built later. The gaps in the numbering are these.'
     + '</div>';
   h += '<table style="width:100%;border-collapse:collapse;font-size:var(--fs-2)">'
@@ -245,25 +245,25 @@ function cmdbGoneHTML() {
     + '<th style="text-align:start;padding:3px 6px 3px 0">Code</th>'
     + '<th style="text-align:start;padding:3px 6px">Was</th>'
     + '<th style="text-align:start;padding:3px 6px">Since</th></tr>';
-  h += A.map(function (r) {
+  h += list.map(function (item) {
     return '<tr style="border-top:1px solid var(--line,#e7e3d8)">'
       + '<td style="padding:4px 6px 4px 0;white-space:nowrap"><code style="font-family:\'Space Mono\','
-      +   'ui-monospace,monospace;user-select:all;color:var(--note)">' + esc(r.code) + '</code></td>'
-      + '<td style="padding:4px 6px">' + esc(r.path)
-      +   (r.why ? '<div style="font-size:var(--fs-1);color:var(--grey-2,#545A61)">' + esc(r.why)
+      +   'ui-monospace,monospace;user-select:all;color:var(--note)">' + esc(item.code) + '</code></td>'
+      + '<td style="padding:4px 6px">' + esc(item.path)
+      +   (item.why ? '<div style="font-size:var(--fs-1);color:var(--grey-2,#545A61)">' + esc(item.why)
             + '</div>' : '') + '</td>'
-      + '<td style="padding:4px 6px;white-space:nowrap;color:var(--note)">' + esc(r.until || '') + '</td></tr>';
+      + '<td style="padding:4px 6px;white-space:nowrap;color:var(--note)">' + esc(item.until || '') + '</td></tr>';
   }).join('');
   return h + '</table>';
 }
 
 function cmdbControlHTML(q2) {
-  var A = cmdbControls();
+  var list = cmdbControls();
   var q = String(CBCMDB.q || '').toLowerCase();
-  if (q) A = A.filter(function (x) { return (x.code + ' ' + x.screen).toLowerCase().indexOf(q) >= 0; });
-  if (!A.length) return '<div style="padding:10px 0;font-size:var(--fs-2);color:var(--note)">Nothing matches.</div>';
+  if (q) list = list.filter(function (x) { return (x.code + ' ' + x.screen).toLowerCase().indexOf(q) >= 0; });
+  if (!list.length) return '<div style="padding:10px 0;font-size:var(--fs-2);color:var(--note)">Nothing matches.</div>';
   var h = '<div style="padding:7px 0 8px;font-size:var(--fs-1);color:var(--grey-2,#545A61);line-height:1.5">'
-    + '<b>' + A.length + '</b> control(s), each named by the screen it is on and the words on it — not by its '
+    + '<b>' + list.length + '</b> control(s), each named by the screen it is on and the words on it — not by its '
     + 'position, so adding a button above one does not rename it.'
     + '<br>⚠️ Controls with no readable name are not listed: they have no code, because a tester cannot '
     + 'record against a label that appears nowhere on their screen.'
@@ -273,7 +273,7 @@ function cmdbControlHTML(q2) {
     + '<th style="text-align:start;padding:3px 6px 3px 0">Code</th>'
     + '<th style="text-align:start;padding:3px 6px">Control</th>'
     + '<th style="text-align:start;padding:3px 0 3px 6px">On</th></tr>';
-  A.forEach(function (x) {
+  list.forEach(function (x) {
     /* the stored name is "Rail › Compose • open the full original" — split it back for reading */
     var bits = String(x.screen).split('•');
     h += '<tr style="border-top:1px solid var(--line,#efece4)">'
@@ -287,14 +287,14 @@ function cmdbControlHTML(q2) {
 }
 
 function cmdbPopupHTML(q2) {
-  var A = cmdbPopups();
+  var list = cmdbPopups();
   var q = String(CBCMDB.q || '').toLowerCase();
-  if (q) A = A.filter(function (x) { return (x.code + ' ' + x.screen).toLowerCase().indexOf(q) >= 0; });
-  if (!A.length) return '<div style="padding:10px 0;font-size:var(--fs-2);color:var(--note)">Nothing matches.</div>';
+  if (q) list = list.filter(function (x) { return (x.code + ' ' + x.screen).toLowerCase().indexOf(q) >= 0; });
+  if (!list.length) return '<div style="padding:10px 0;font-size:var(--fs-2);color:var(--note)">Nothing matches.</div>';
   var byFn = (window.CBSCREENS && window.CBSCREENS.byFn) || {};
-  var amb = A.filter(function (x) { return (byFn[x.screen] || {}).ambiguous; }).length;
+  var amb = list.filter(function (x) { return (byFn[x.screen] || {}).ambiguous; }).length;
   var h = '<div style="padding:7px 0 8px;font-size:var(--fs-1);color:var(--grey-2,#545A61);line-height:1.5">'
-    + '<b>' + A.length + '</b> dialog(s), each named by the function that opens it — a title cannot be the '
+    + '<b>' + list.length + '</b> dialog(s), each named by the function that opens it — a title cannot be the '
     + 'identity, because several are built from the row they were opened from.'
     + (amb ? '<br>⚠️ <b>' + amb + '</b> name a function that opens MORE than one dialog (marked ·): '
       + 'for those the code identifies the opener, not the dialog.' : '')
@@ -304,7 +304,7 @@ function cmdbPopupHTML(q2) {
     + '<th style="text-align:start;padding:3px 6px 3px 0">Code</th>'
     + '<th style="text-align:start;padding:3px 6px">Opened by</th>'
     + '<th style="text-align:start;padding:3px 0 3px 6px">In</th></tr>';
-  A.forEach(function (x) {
+  list.forEach(function (x) {
     var meta = byFn[x.screen] || {};
     h += '<tr style="border-top:1px solid var(--line,#efece4)">'
       + '<td style="padding:4px 6px 4px 0"><code style="font-family:\'Space Mono\',ui-monospace,monospace;'
@@ -318,10 +318,10 @@ function cmdbPopupHTML(q2) {
 }
 
 function cmdbSoftwareHTML(q2) {
-  var A = cmdbAssets().filter(function (x) { return x.type === CBCMDB.kind; });
+  var list = cmdbAssets().filter(function (x) { return x.type === CBCMDB.kind; });
   var q = String(CBCMDB.q || '').toLowerCase();
-  if (q) A = A.filter(function (x) { return (x.code + ' ' + x.name + ' ' + x.path).toLowerCase().indexOf(q) >= 0; });
-  if (!A.length) {
+  if (q) list = list.filter(function (x) { return (x.code + ' ' + x.name + ' ' + x.path).toLowerCase().indexOf(q) >= 0; });
+  if (!list.length) {
     return '<div style="padding:10px 0;font-size:var(--fs-2);color:var(--note)">'
       + (cmdbAssets().length
           ? 'Nothing matches.'
@@ -329,10 +329,10 @@ function cmdbSoftwareHTML(q2) {
             + '<code>node assets.cjs</code> and committed — if it is missing, the build is short of a file.')
       + '</div>';
   }
-  var stated = A.filter(function (x) { return x.stage; }).length;
+  var stated = list.filter(function (x) { return x.stage; }).length;
   var h = '<div style="padding:7px 0 8px;font-size:var(--fs-1);color:var(--grey-2,#545A61);line-height:1.5">'
-    + '<b>' + A.length + '</b> asset(s). <b>' + stated + '</b> declare a lifecycle stage in their own header; '
-    + '<b>' + (A.length - stated) + '</b> say nothing — shown as <i>not stated</i>, never guessed.'
+    + '<b>' + list.length + '</b> asset(s). <b>' + stated + '</b> declare a lifecycle stage in their own header; '
+    + '<b>' + (list.length - stated) + '</b> say nothing — shown as <i>not stated</i>, never guessed.'
     + '</div>';
   h += '<table style="width:100%;border-collapse:collapse;font-size:var(--fs-2)">'
     + '<tr style="text-align:start;color:var(--grey-2,#545A61);font-size:var(--fs-1)">'
@@ -340,7 +340,7 @@ function cmdbSoftwareHTML(q2) {
     + '<th style="text-align:start;padding:3px 6px">Asset</th>'
     + '<th style="text-align:start;padding:3px 6px">Stage</th>'
     + '<th style="text-align:start;padding:3px 0 3px 6px">Draws</th></tr>';
-  A.forEach(function (x) {
+  list.forEach(function (x) {
     h += '<tr style="border-top:1px solid var(--line,#efece4)">'
       + '<td style="padding:4px 6px 4px 0"><code style="font-family:\'Space Mono\',ui-monospace,monospace;'
       +   'user-select:all;color:var(--ink)">' + esc(x.code) + '</code></td>'
@@ -361,13 +361,13 @@ function cmdbPaint() {
   if (!body || !head) return;
   var all = cmdbRows();
   var groups = [];
-  all.forEach(function (r) { if (groups.indexOf(r.group) < 0) groups.push(r.group); });
+  all.forEach(function (item) { if (groups.indexOf(item.group) < 0) groups.push(item.group); });
 
   var q = String(CBCMDB.q || '').toLowerCase();
-  var rows = all.filter(function (r) {
-    if (CBCMDB.group && r.group !== CBCMDB.group) return false;
+  var rows = all.filter(function (item) {
+    if (CBCMDB.group && item.group !== CBCMDB.group) return false;
     if (!q) return true;
-    return (r.code + ' ' + r.path).toLowerCase().indexOf(q) >= 0;
+    return (item.code + ' ' + item.path).toLowerCase().indexOf(q) >= 0;
   });
 
   var ico = 'border:1px solid var(--line,#e7e3d8);background:var(--card,#fff);cursor:pointer;border-radius:7px;'
@@ -387,10 +387,10 @@ function cmdbPaint() {
     +   (CBCMDB.kind === 'SCREEN'
         ? '<select onchange="cmdbFilter(\'group\',this.value)" style="font-size:var(--fs-2);padding:3px 5px">'
     +     '<option value="">Every menu \u00b7 ' + all.length + '</option>'
-    +     groups.map(function (g) {
-            var n = all.filter(function (r) { return r.group === g; }).length;
-            return '<option value="' + esc(g) + '"' + (CBCMDB.group === g ? ' selected' : '') + '>'
-              + esc(g) + ' \u00b7 ' + n + '</option>';
+    +     groups.map(function (item) {
+            var n = all.filter(function (r) { return r.group === item; }).length;
+            return '<option value="' + esc(item) + '"' + (CBCMDB.group === item ? ' selected' : '') + '>'
+              + esc(item) + ' \u00b7 ' + n + '</option>';
           }).join('')
     +   '</select>' : '')
     +   '<input value="' + esc(CBCMDB.q) + '" oninput="cmdbFilter(\'q\',this.value)" placeholder="code or name"'
@@ -428,18 +428,18 @@ function cmdbPaint() {
       + '<th style="text-align:end;padding:3px 6px" title="Cases on the board for this screen. '
     +   'Not coverage of its controls.">Cases</th>'
     + '<th style="text-align:start;padding:3px 0 3px 6px">Drawn by</th></tr>';
-  rows.forEach(function (r) {
+  rows.forEach(function (item) {
     h += '<tr style="border-top:1px solid var(--line,#efece4)">'
       + '<td style="padding:4px 6px 4px 0"><code style="font-family:\'Space Mono\',ui-monospace,monospace;'
-      +   'user-select:all;color:var(--ink)">' + esc(r.code) + '</code></td>'
-      + '<td style="padding:4px 6px;' + q2 + '">' + esc(r.group) + '</td>'
-      + '<td style="padding:4px 6px">' + esc(r.screen) + '</td>'
+      +   'user-select:all;color:var(--ink)">' + esc(item.code) + '</code></td>'
+      + '<td style="padding:4px 6px;' + q2 + '">' + esc(item.group) + '</td>'
+      + '<td style="padding:4px 6px">' + esc(item.screen) + '</td>'
       + '<td style="padding:4px 6px;text-align:end;font-variant-numeric:tabular-nums;'
-      +   (r.cases <= 1 ? q2 : '') + '">' + r.cases + '</td>'
+      +   (item.cases <= 1 ? q2 : '') + '">' + item.cases + '</td>'
       /* ⭐⭐ THE MIDDLE LINK OF THE CHAIN: spec → case → SCREEN → SOFTWARE → result. It existed nowhere until
          today; the sweep computed it to emit controls once per screen and then threw it away. */
       + '<td style="padding:4px 0 4px 6px;' + q2 + '">'
-      +   esc(String(cmdbDrawnBy(r.code) || '').replace('chitbridge-web/public/app/', '')) + '</td>'
+      +   esc(String(cmdbDrawnBy(item.code) || '').replace('chitbridge-web/public/app/', '')) + '</td>'
       + '</tr>';
   });
   h += '</table>';
