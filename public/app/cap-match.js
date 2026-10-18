@@ -34,8 +34,8 @@ async function matchLoad(force) {
   if (MATCH.rows && !force) return;
   MATCH.busy = true;
   try {
-    var r = await api('matchList', { query: { days: MATCH.days } });
-    MATCH.rows = (r && r.orders) || [];
+    var reply = await api('matchList', { query: { days: MATCH.days } });
+    MATCH.rows = (reply && reply.orders) || [];
   } catch (e) { MATCH.rows = []; MATCH.error = (e && e.message) || String(e); }
   MATCH.busy = false;
   /**
@@ -52,8 +52,8 @@ function matchScreen() {
   if (!MATCH.rows && !MATCH.busy) { matchLoad(); }
   var rows = MATCH.rows || [];
   var counts = { differs: 0, open: 0, agreed: 0, awaited: 0 };
-  rows.forEach(function (o) { counts[o.verdict] = (counts[o.verdict] || 0) + 1; });
-  var shown = rows.filter(function (o) { return MATCH.only === 'all' || o.verdict === MATCH.only; });
+  rows.forEach(function (item) { counts[item.verdict] = (counts[item.verdict] || 0) + 1; });
+  var shown = rows.filter(function (item) { return MATCH.only === 'all' || item.verdict === MATCH.only; });
 
   var chip = function (key, label) {
     var on = MATCH.only === key;
@@ -69,7 +69,7 @@ function matchScreen() {
       + chip('awaited', tx('Not arrived')) + chip('all', tx('Everything'))
       + '<span style="flex:1"></span>'
       + '<select class="pill" data-testid="match-days" onchange="MATCH.days=Number(this.value);matchLoad(true)">'
-        + [30, 90, 180, 365].map(function (d) { return '<option value="' + d + '"' + (MATCH.days === d ? ' selected' : '') + '>' + txf('last {n} days', { n: String(d) }) + '</option>'; }).join('')
+        + [30, 90, 180, 365].map(function (item) { return '<option value="' + item + '"' + (MATCH.days === item ? ' selected' : '') + '>' + txf('last {n} days', { n: String(item) }) + '</option>'; }).join('')
       + '</select></div>';
 
   if (MATCH.busy && !MATCH.rows) return '<div class="panel">' + head + '<div style="padding:30px;text-align:center;color:var(--grey)"><span class="spin"></span></div></div>';
@@ -98,15 +98,15 @@ function matchCard(o) {
 }
 
 function matchDetail(o, money) {
-  var rows = o.lines.map(function (l) {
-    var bad = l.difference !== 0;
+  var rows = o.lines.map(function (item) {
+    var bad = item.difference !== 0;
     return '<tr data-testid="match-line">'
-      + '<td style="padding:6px 8px">' + esc(l.name) + '</td>'
-      + '<td style="padding:6px 8px;text-align:right;font-variant-numeric:tabular-nums">' + l.ordered + ' ' + esc(l.unit) + '</td>'
-      + '<td style="padding:6px 8px;text-align:right;font-variant-numeric:tabular-nums">' + l.received + '</td>'
+      + '<td style="padding:6px 8px">' + esc(item.name) + '</td>'
+      + '<td style="padding:6px 8px;text-align:right;font-variant-numeric:tabular-nums">' + item.ordered + ' ' + esc(item.unit) + '</td>'
+      + '<td style="padding:6px 8px;text-align:right;font-variant-numeric:tabular-nums">' + item.received + '</td>'
       + '<td style="padding:6px 8px;color:' + (bad ? 'var(--warn)' : 'var(--ok)') + ';font-weight:' + (bad ? '700' : '400') + '">'
-        + (bad ? (l.difference < 0 ? txf('short {n}', { n: String(-l.difference) }) : txf('excess {n}', { n: String(l.difference) })) : tx('agrees'))
-        + (l.reason ? ' · ' + esc(l.reason) : '') + '</td></tr>';
+        + (bad ? (item.difference < 0 ? txf('short {n}', { n: String(-item.difference) }) : txf('excess {n}', { n: String(item.difference) })) : tx('agrees'))
+        + (item.reason ? ' · ' + esc(item.reason) : '') + '</td></tr>';
   }).join('');
 
   /**
@@ -133,7 +133,7 @@ function matchDetail(o, money) {
       + '<tbody>' + rows + '</tbody></table></div>'
     + (o.receipts.length
       ? '<div style="color:var(--grey);font-size:var(--fs-1);margin-top:10px">' + esc(tx('Receipts:')) + ' '
-        + o.receipts.map(function (r) { return esc(r.no || '') + (r.their_bill_no ? ' (' + esc(tx('their bill')) + ' ' + esc(r.their_bill_no) + ')' : ''); }).join(' · ')
+        + o.receipts.map(function (item) { return esc(item.no || '') + (item.their_bill_no ? ' (' + esc(tx('their bill')) + ' ' + esc(item.their_bill_no) + ')' : ''); }).join(' · ')
         + '</div>' : '')
     + '<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">'
       + (o.verdict === 'differs'
@@ -161,11 +161,11 @@ function matchFig(label, value, note) {
 function matchDispute(chit_id) {
   var o = (MATCH.rows || []).filter(function (x) { return x.chit_id === chit_id; })[0];
   if (!o) return;
-  var bad = o.lines.filter(function (l) { return l.difference !== 0; });
-  var draft = bad.map(function (l) {
-    return l.name + ': ordered ' + l.ordered + ' ' + l.unit + ', received ' + l.received
-         + (l.difference < 0 ? ' (short ' + (-l.difference) + ')' : ' (excess ' + l.difference + ')')
-         + (l.reason ? ' — ' + l.reason : '');
+  var list = o.lines.filter(function (item) { return item.difference !== 0; });
+  var draft = list.map(function (item) {
+    return item.name + ': ordered ' + item.ordered + ' ' + item.unit + ', received ' + item.received
+         + (item.difference < 0 ? ' (short ' + (-item.difference) + ')' : ' (excess ' + item.difference + ')')
+         + (item.reason ? ' — ' + item.reason : '');
   }).join('\n');
   if (o.money_gap) draft += '\n' + (o.money_gap > 0 ? 'We counted ' + inr(o.money_gap) + ' more than billed.' : 'Billed ' + inr(-o.money_gap) + ' more than we counted.');
 
@@ -182,8 +182,8 @@ function matchDispute(chit_id) {
 }
 
 async function matchDisputeSend(chit_id) {
-  var t = document.getElementById('match_reason');
-  var reason = (t && t.value || '').trim();
+  var node = document.getElementById('match_reason');
+  var reason = (node && node.value || '').trim();
   if (reason.length < 10) { toast(tx('Say a little more about what is wrong.')); return; }
   var o = (MATCH.rows || []).filter(function (x) { return x.chit_id === chit_id; })[0];
   try {
