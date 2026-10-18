@@ -106,7 +106,7 @@ W.run('finance-cash', async (w) => {
     /* the page's own day (bkToday, the shop's local day) must be the stand-in's day 0 — it was the UTC day before F3b, a day behind every IST morning */
     const pageDay = await page.evaluate(() => (typeof bkToday === 'function' ? bkToday() : 'no bkToday')).catch(() => 'threw');
     const today = await page.locator('[data-testid^="fc-row-"]:has-text("Today")').count();
-    return { ok: n === 7 && /Today/.test(t0) && today === 1 && pageDay === dayN(0) && /Short/.test(t3) && /15,000(\.00)? Cr/.test(t3) && /50,000(\.00)? Dr/i.test(op), saw: n + ' rows; page day ' + pageDay + ' (fixture ' + dayN(0) + '); ' + today + ' row marked Today "' + t0.slice(0, 60) + '"; day 3 "' + t3.slice(0, 90) + '"; opening "' + op + '"' };
+    return { ok: n === 7 && /Today/.test(t0) && today === 1 && pageDay === dayN(0) && /Short/.test(t3) && /short\s*₹?\s*15,000(\.00)?/.test(t3) && /50,000(\.00)?/.test(op) && !/\b(Dr|Cr)\b/.test(t3 + op), saw: n + ' rows; page day ' + pageDay + ' (fixture ' + dayN(0) + '); ' + today + ' row marked Today "' + t0.slice(0, 60) + '"; day 3 "' + t3.slice(0, 90) + '"; opening "' + op + '"' };
   });
   await w.step('C4', 'Cash -> the bars: one per day, the shortfall day\'s is the red one, the lowest day is labelled (₹15,000 Cr)', async () => {
     const bars = await page.locator('[data-testid^="fc-bar-"]').count(), neg = await page.locator('[data-testid^="fc-bar-"][data-neg="true"]').count(), low = (await page.locator('[data-testid="fc-low-label"]').first().textContent().catch(() => '')) || '';

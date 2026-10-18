@@ -1069,7 +1069,13 @@ function bkDvHead() {
   t.counters.forEach(function (x) { chips.push({ tid: 'strip-counter-' + x.counter, text: x.counter + ' ' + bkMoney(x.amount_minor, c) + ' · ' + txn('{count} bill', '{count} bills', x.bills) }); });
   t.tenders.forEach(function (x) { chips.push({ tid: 'strip-tender-' + x.how, text: tx(x.how) + ' ' + bkMoney(x.amount_minor, c) }); });
   /* ⚠️ walk-in cash/UPI/card reach the Day book only at day close — no walk-in day entry for this day means the strip is not the whole day yet, and says so (the counter holds the fix) */
-  if (!t.day_closed) notices.push({ cls: 'warn', tid: 'strip-noclose', text: tx('Walk-ins not closed yet — close the day on the counter'), onOpen: function () { if (typeof navTo === 'function') navTo('counter'); } });
+  /* WALK2 W31 (ACC-1): the banner says WHICH day (the strip's day, q.to — not "today" by assumption) and, when the books show it, WHICH counter sold and is not closed.
+     A counter that took only cash leaves no entry until it closes, so it cannot be named from the books — then the day alone is said. When it shows is unchanged
+     (no walk-in day entry that day): a counter that closes with no walk-ins may post none, so a per-counter trigger could cry wolf. */
+  var open = t.counters.map(function (x) { return x.counter; }).filter(function (k) { return k !== '—'; });   /* no day closed: every counter in the strip sold by bill and is still open */
+  if (!t.day_closed) notices.push({ cls: 'warn', tid: 'strip-noclose', onOpen: function () { if (typeof navTo === 'function') navTo('counter'); },
+    text: txf(open.length ? 'Walk-ins for {day} not closed yet on {counters} — close the day on the counter' : 'Walk-ins for {day} not closed yet — close the day on the counter',
+      { day: bkDvFmt(q.to, { day: 'numeric', month: 'short' }), counters: open.join(', ') }) });
   if (n.accept) notices.push({ cls: 'warn', tid: 'todo-accept', text: n.accept + ' ' + tx(n.accept === 1 ? 'supplier bill to accept' : 'supplier bills to accept'),
     /* one bill → its sheet over the Day book; several → the Waiting list, whose rows open the sheet. Never Intake. */
     onOpen: function () { if (n.accept === 1 && (n.acceptIds || []).length === 1) openChitSheet(n.acceptIds[0]); else bkTab('waiting'); } });
