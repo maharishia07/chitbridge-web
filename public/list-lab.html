@@ -64,10 +64,10 @@ var PARTIES = ['P-00002 · Tally Test Shop', 'P-00007 · Kumar Spares', 'P-00011
 var KINDS = [['Sales', 'sale'], ['Purchase', 'purchase'], ['Expense', 'expense'], ['Receipts', 'receipt'], ['Payment', 'payment']];
 var TENDERS = ['Cash', 'UPI', 'Card', 'On credit'], PEOPLE = ['Athi', 'Priya', 'Tally Test'];
 function rs(paise) { var neg = paise < 0; paise = Math.abs(paise); return (neg ? '−' : '') + '₹' + (paise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }   /* the unit's lab runs with CBLocale and fmtMoney TRAPPED (e2e/list-unit.cjs) — its sample figures cannot borrow the formatter */
-function dfmt(d, o) { return d.toLocaleDateString('en-IN', o || { day: '2-digit', month: 'short' }); }
+function dfmt(date, o) { return date.toLocaleDateString('en-IN', o || { day: '2-digit', month: 'short' }); }
 var ENTRIES = [];
 (function () {
-  var d = new Date(2026, 6, 1), n = 1;
+  var d = new Date(2026, 6, 1), index = 1;
   for (var i = 0; i < 46; i++) {
     d = new Date(d.getTime() + Math.floor(r() * 3) * 864e5);
     var k = KINDS[Math.floor(r() * KINDS.length)], amt = Math.round((200 + r() * 9000) * 100);
@@ -80,16 +80,16 @@ var ENTRIES = [];
     else if (k[1] === 'purchase' || k[1] === 'expense') lines = [[k[1] === 'purchase' ? '5000' : '6190', k[1] === 'purchase' ? 'Purchases' : 'Sundry expenses', taxable, 0], ['2210', 'Input CGST', half, 0], ['2211', 'Input SGST', tax - half, 0], ['2100', 'Suppliers (Sundry Creditors) · ' + party, 0, amt]];
     else if (k[1] === 'receipt') lines = [['1510', 'UPI collections', amt, 0], ['1300', 'Debtors · ' + party, 0, amt]];
     else lines = [['2100', 'Suppliers (Sundry Creditors) · ' + party, amt, 0], ['1500', 'Bank', 0, amt]];
-    ENTRIES.push({ id: 'e' + i, date: new Date(d), entry: 'JV/2026-27/' + String(n++).padStart(6, '0'), kind: k[0], party: party, bill: bill,
+    ENTRIES.push({ id: 'e' + i, date: new Date(d), entry: 'JV/2026-27/' + String(index++).padStart(6, '0'), kind: k[0], party: party, bill: bill,
       time: String(8 + Math.floor(r() * 12)).padStart(2, '0') + ':' + String(Math.floor(r() * 60)).padStart(2, '0'), tender: tender,
       counter: 'Counter ' + (r() < .6 ? 'C2' : 'C1'), person: PEOPLE[Math.floor(r() * 3)], amount: amt, lines: lines,
-      gist: lines.map(function (l) { return l[1].split(' · ')[0] + ' ' + rs(l[2] || l[3]); }).slice(0, 3).join(' · ') });
+      gist: lines.map(function (item) { return item[1].split(' · ')[0] + ' ' + rs(item[2] || item[3]); }).slice(0, 3).join(' · ') });
   }
 })();
 var DUES = [['P-00007', 'Kumar Spares', 1880000, 47, [520000, 0, 1360000, 0]], ['P-00011', 'Ravi Stores', 612000, 12, [612000, 0, 0, 0]],
   ['P-00014', 'Meena Traders', 0, 0, [0, 0, 0, 0]], ['P-00002', 'Tally Test Shop', 372012, 3, [372012, 0, 0, 0]], ['P-00021', 'Lakshmi Hardware', 955050, 96, [0, 105050, 300000, 550000]],
   ['P-00023', 'Senthil Auto', 128000, 31, [0, 128000, 0, 0]]].map(function (x) { return { id: x[0], party: x[0] + ' · ' + x[1], total: x[2], days: x[3], b: x[4] }; });
-var BIG = []; for (var bi = 0; bi < 600; bi++) BIG.push({ id: 'b' + bi, no: 'SKU-' + String(1000 + bi), name: ['Bolt M8', 'Washer', 'Brake pad', 'Oil filter', 'Chain', 'Spark plug'][bi % 6] + ' #' + bi, stock: (bi * 7) % 90, price: 5000 + (bi * 137) % 90000 });
+var BIG = []; for (var count = 0; count < 600; count++) BIG.push({ id: 'b' + count, no: 'SKU-' + String(1000 + count), name: ['Bolt M8', 'Washer', 'Brake pad', 'Oil filter', 'Chain', 'Spark plug'][count % 6] + ' #' + count, stock: (count * 7) % 90, price: 5000 + (count * 137) % 90000 });
 
 var toastT; function toast(t) { var e = document.getElementById('toast'); e.textContent = t; e.hidden = false; clearTimeout(toastT); toastT = setTimeout(function () { e.hidden = true; }, 2200); }
 var PERIODS = [['today', 'Today'], ['month', 'This month'], ['fy', 'This FY (Apr–Mar)'], ['custom', 'Custom']];
@@ -124,8 +124,8 @@ function daybook() {
         if (mode === 'week') { var m = new Date(d); m.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return ['Week of ' + dfmt(m), m.toDateString()]; }
         return [dfmt(d, { month: 'long', year: 'numeric' }), d.getFullYear() + '-' + d.getMonth()];
       },
-      fig: function (rows) { var t = rows.reduce(function (a, y) { return a + y.amount; }, 0); return rows.length + ' entr' + (rows.length === 1 ? 'y' : 'ies') + ' · Dr ' + rs(t) + ' · Cr ' + rs(t); } },
-    filters: [{ key: 'kind', label: 'Kind', options: KINDS.map(function (k) { return k[0]; }), match: function (e, v) { return e.kind === v; } },
+      fig: function (rows) { var t = rows.reduce(function (total, y) { return total + y.amount; }, 0); return rows.length + ' entr' + (rows.length === 1 ? 'y' : 'ies') + ' · Dr ' + rs(t) + ' · Cr ' + rs(t); } },
+    filters: [{ key: 'kind', label: 'Kind', options: KINDS.map(function (item) { return item[0]; }), match: function (e, v) { return e.kind === v; } },
               { key: 'tender', label: 'Tender', options: TENDERS, match: function (e, v) { return e.tender === v; } },
               { key: 'counter', label: 'Counter', options: ['Counter C1', 'Counter C2'], match: function (e, v) { return e.counter === v; } },
               { key: 'person', label: 'Rung by', options: PEOPLE, match: function (e, v) { return e.person === v; } }],
@@ -134,7 +134,7 @@ function daybook() {
     gist: function (e) { return e.gist; },
     next: function (e) {
       return '<div class="gist">' + esc(e.gist) + '</div><div style="display:grid;grid-template-columns:minmax(0,1fr) 120px 120px;gap:0 12px;max-width:720px;font-size:13.5px"><div class="cbl-dim">Code · Ledger</div><div class="cbl-dim" style="text-align:end">Debit</div><div class="cbl-dim" style="text-align:end">Credit</div>'
-        + e.lines.map(function (l) { return '<div><b>' + esc(l[0]) + '</b> ' + esc(l[1]) + '</div><div style="text-align:end">' + (l[2] ? rs(l[2]) : '') + '</div><div style="text-align:end">' + (l[3] ? rs(l[3]) : '') + '</div>'; }).join('') + '</div>';
+        + e.lines.map(function (item) { return '<div><b>' + esc(item[0]) + '</b> ' + esc(item[1]) + '</div><div style="text-align:end">' + (item[2] ? rs(item[2]) : '') + '</div><div style="text-align:end">' + (item[3] ? rs(item[3]) : '') + '</div>'; }).join('') + '</div>';
     },
     actions: [{ id: 'open', label: 'Open bill', run: function (e) { toast('Opens ' + e.entry + ' in the one detail page'); } },
               { id: 'reverse', label: 'Reverse this entry', run: function (e) { toast('In the product: reverses ' + e.entry); } }],
@@ -194,22 +194,22 @@ function mountCurrent() {
   measure();
 }
 function paintProto() {
-  document.getElementById('pList').innerHTML = Object.keys(LISTS).map(function (k) { return '<button data-plist="' + k + '" aria-pressed="' + (current === k) + '">' + esc(LISTS[k][0]) + '</button>'; }).join('');
+  document.getElementById('pList').innerHTML = Object.keys(LISTS).map(function (item) { return '<button data-plist="' + item + '" aria-pressed="' + (current === item) + '">' + esc(LISTS[item][0]) + '</button>'; }).join('');
   document.getElementById('pState').innerHTML = [['normal', 'Rows'], ['loading', 'Loading'], ['empty', 'Empty'], ['error', 'Could not load']].map(function (x) { return '<button data-pstate="' + x[0] + '" aria-pressed="' + (pstate === x[0]) + '">' + x[1] + '</button>'; }).join('');
   var dark = document.documentElement.getAttribute('data-theme') === 'dark';
   document.getElementById('pTheme').innerHTML = '<button data-theme="light" aria-pressed="' + !dark + '">Light</button><button data-theme="dark" aria-pressed="' + dark + '">Dark</button>';
 }
 function measure() {
-  var list = document.querySelector('.cbl-list'), hdr = document.querySelector('.cbl-hdr'), pr = document.getElementById('proto').offsetHeight;
+  var list = document.querySelector('.cbl-list'), node = document.querySelector('.cbl-hdr'), pr = document.getElementById('proto').offsetHeight;
   if (!list) return;
-  var top = list.getBoundingClientRect().top + (hdr ? hdr.offsetHeight : 0) - pr, pct = Math.round(top / (window.innerHeight - pr) * 100), m = document.getElementById('meter'), lim = window.innerWidth <= 640 ? 30 : 20;
+  var top = list.getBoundingClientRect().top + (node ? node.offsetHeight : 0) - pr, pct = Math.round(top / (window.innerHeight - pr) * 100), m = document.getElementById('meter'), lim = window.innerWidth <= 640 ? 30 : 20;
   m.textContent = 'head ' + pct + '% of the window (limit ' + lim + '%)'; m.className = 'meter ' + (pct <= lim ? 'ok' : 'bad');
 }
 document.addEventListener('click', function (ev) {
-  var t = ev.target.closest('[data-plist],[data-pstate],[data-theme]'); if (!t) return;
-  if (t.dataset.plist) { current = t.dataset.plist; mountCurrent(); }
-  if (t.dataset.pstate) { pstate = t.dataset.pstate; mountCurrent(); }
-  if (t.dataset.theme) { if (t.dataset.theme === 'dark') document.documentElement.setAttribute('data-theme', 'dark'); else document.documentElement.removeAttribute('data-theme'); }
+  var node = ev.target.closest('[data-plist],[data-pstate],[data-theme]'); if (!node) return;
+  if (node.dataset.plist) { current = node.dataset.plist; mountCurrent(); }
+  if (node.dataset.pstate) { pstate = node.dataset.pstate; mountCurrent(); }
+  if (node.dataset.theme) { if (node.dataset.theme === 'dark') document.documentElement.setAttribute('data-theme', 'dark'); else document.documentElement.removeAttribute('data-theme'); }
   paintProto(); setTimeout(measure, 0);
 });
 window.addEventListener('resize', function () { setTimeout(measure, 0); });
