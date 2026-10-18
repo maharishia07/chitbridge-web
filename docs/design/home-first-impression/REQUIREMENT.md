@@ -23,7 +23,7 @@ Goes with: `docs/design/shop-header/REQUIREMENT.md` (the bar and shop card).
 - Text budget: titles ≤ 4 words, buttons ≤ 3, no paragraphs. Write for the shopkeeper.
 - No "CB"/"ChitBridge" in names: Accounts, Finance, Assist… The trademark appears only in the logo (decided 2026-10-17).
 - Never colour alone: every status has its word.
-- Phone 390 px: tiles become a list, the nav shows 7 icons, and the drop-down shows in place.
+- Phone 390 px: tiles become a list, the nav shows 5 tabs (Home, Selling, Money, Running, More; see docs/design/home-phone-bar/REQUIREMENT.md), and the drop-down shows in place.
 - Light and dark, plus the accessibility themes.
 
 ## Shots wanted
