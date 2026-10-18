@@ -27,31 +27,86 @@
   'use strict';
   function session() {
     try {
-      var s = JSON.parse(root.localStorage.getItem('cb_sess') || 'null');
-      return s && root.CBOnePerson && root.CBOnePerson.who(s) ? s : null;
-    } catch (_) { return null; }
+      var parsed = JSON.parse(root.localStorage.getItem('cb_sess') || 'null');
+      return parsed && root.CBOnePerson && root.CBOnePerson.who(parsed) ? parsed : null;
+    } catch (_) {
+      return null;
+    }
   }
   /* the STANDARD PAGE SKELETON (decision 2026-10-09, "one frame style on every app page"): sidebar + main pane, styled by /app/page-skeleton.css.
      skeleton: { name, icon: <svg path d>, sections: [{ k, label, icon: <svg path d> }], active: k, onSection: fn(k) } */
   function skeleton(doc, sk, appId) {
-    var svg = function (d, cls) { return '<svg' + (cls ? ' class="' + cls + '"' : '') + ' viewBox="0 0 24 24" aria-hidden="true"><path d="' + esc(d) + '"/></svg>'; };
-    var app = doc.createElement('div'); app.className = 'app'; app.setAttribute('data-testid', 'skel-app');
-    app.innerHTML = '<aside class="side" id="side" data-testid="skel-side"><div class="brand"><div class="logo">' + svg(sk.icon) + '</div><div class="brand-name label">' + esc(sk.name) + '</div></div>'
-      + '<nav class="nav" id="nav" aria-label="' + esc(sk.name) + '">' + (sk.sections || []).map(function (s) {
-        return '<button type="button" class="nav-btn' + (s.k === sk.active ? ' active' : '') + '" data-sec="' + esc(s.k) + '" data-testid="skel-nav-' + esc(s.k) + '" aria-label="' + esc(s.label) + '">' + svg(s.icon) + '<span class="label">' + esc(s.label) + '</span></button>';
-      }).join('') + '</nav><div class="side-foot"><button type="button" class="nav-btn" id="toggleNav" aria-label="Collapse sidebar" aria-expanded="true">' + svg('M15 6l-6 6 6 6', 'nav-chev') + '<span class="label">Collapse</span></button></div></aside>'
-      + '<main class="main" data-testid="skel-main"><div id="shell"></div><div class="screen flush" id="screen" data-testid="skel-screen"></div></main>';
+    var svg = function (d, cls) {
+      return '<svg' + (cls ? ' class="' + cls + '"' : '') + ' viewBox="0 0 24 24" aria-hidden="true"><path d="' + esc(d) + '"/></svg>';
+    };
+    var app = doc.createElement('div');
+    app.className = 'app';
+    app.setAttribute('data-testid', 'skel-app');
+    app.innerHTML =
+      '<aside class="side" id="side" data-testid="skel-side"><div class="brand"><div class="logo">' +
+      svg(sk.icon) +
+      '</div><div class="brand-name label">' +
+      esc(sk.name) +
+      '</div></div>' +
+      '<nav class="nav" id="nav" aria-label="' +
+      esc(sk.name) +
+      '">' +
+      (sk.sections || [])
+        .map(function (item) {
+          return (
+            '<button type="button" class="nav-btn' +
+            (item.k === sk.active ? ' active' : '') +
+            '" data-sec="' +
+            esc(item.k) +
+            '" data-testid="skel-nav-' +
+            esc(item.k) +
+            '" aria-label="' +
+            esc(item.label) +
+            '">' +
+            svg(item.icon) +
+            '<span class="label">' +
+            esc(item.label) +
+            '</span></button>'
+          );
+        })
+        .join('') +
+      '</nav><div class="side-foot"><button type="button" class="nav-btn" id="toggleNav" aria-label="Collapse sidebar" aria-expanded="true">' +
+      svg('M15 6l-6 6 6 6', 'nav-chev') +
+      '<span class="label">Collapse</span></button></div></aside>' +
+      '<main class="main" data-testid="skel-main"><div id="shell"></div><div class="screen flush" id="screen" data-testid="skel-screen"></div></main>';
     doc.documentElement.classList.add('cbsk');
     doc.body.insertBefore(app, doc.body.firstChild);
-    var side = app.querySelector('#side'), tg = app.querySelector('#toggleNav');
-    function fit(collapsed) { side.classList.toggle('collapsed', collapsed); tg.setAttribute('aria-expanded', String(!collapsed)); tg.setAttribute('aria-label', collapsed ? 'Expand sidebar' : 'Collapse sidebar'); }
-    tg.onclick = function () { fit(!side.classList.contains('collapsed')); };
+    var side = app.querySelector('#side'),
+      node = app.querySelector('#toggleNav');
+    function fit(collapsed) {
+      side.classList.toggle('collapsed', collapsed);
+      node.setAttribute('aria-expanded', String(!collapsed));
+      node.setAttribute('aria-label', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
+    }
+    node.onclick = function () {
+      fit(!side.classList.contains('collapsed'));
+    };
     var mq = root.matchMedia && root.matchMedia('(min-width:761px) and (max-width:1100px)');
-    if (mq) { fit(mq.matches); if (mq.addEventListener) mq.addEventListener('change', function () { fit(mq.matches); }); }
+    if (mq) {
+      fit(mq.matches);
+      if (mq.addEventListener)
+        mq.addEventListener('change', function () {
+          fit(mq.matches);
+        });
+    }
     /* SCREEN-ID: the section on show is the screen the header chip names (app/screen-id.js, if the page loaded it) */
-    function setActive(k) { Array.prototype.forEach.call(app.querySelectorAll('.nav-btn[data-sec]'), function (b) { b.classList.toggle('active', b.getAttribute('data-sec') === k); }); if (root.CBScreenId) root.CBScreenId.here(appId, k); }
-    Array.prototype.forEach.call(app.querySelectorAll('.nav-btn[data-sec]'), function (b) {
-      b.onclick = function () { var k = b.getAttribute('data-sec'); setActive(k); if (sk.onSection) sk.onSection(k); };
+    function setActive(k) {
+      Array.prototype.forEach.call(app.querySelectorAll('.nav-btn[data-sec]'), function (node) {
+        node.classList.toggle('active', node.getAttribute('data-sec') === k);
+      });
+      if (root.CBScreenId) root.CBScreenId.here(appId, k);
+    }
+    Array.prototype.forEach.call(app.querySelectorAll('.nav-btn[data-sec]'), function (node) {
+      node.onclick = function () {
+        var k = node.getAttribute('data-sec');
+        setActive(k);
+        if (sk.onSection) sk.onSection(k);
+      };
     });
     return { host: app.querySelector('#shell'), screen: app.querySelector('#screen'), setActive: setActive };
   }
@@ -59,13 +114,24 @@
   function headerHost(doc, opts, skel) {
     if (skel) return skel.host;
     if (opts.host) return opts.host;
-    var host = doc.createElement('div'); host.id = 'shell'; doc.body.insertBefore(host, doc.body.firstChild);
+    var host = doc.createElement('div');
+    host.id = 'shell';
+    doc.body.insertBefore(host, doc.body.firstChild);
     return host;
   }
   /** the avatar's door: a page with the sign-in window scrolls to it; a public page links to Home's; a page's own extras ride along */
   function avatarOptions(opts, host, open) {
-    var base = open ? { onSignIn: function () { var s = host.querySelector('.cbsh-signin'); if (s && s.scrollIntoView) s.scrollIntoView({ block: 'center' }); } } : { signInHref: opts.homeHref || '/' };
-    Object.keys(opts.avatar || {}).forEach(function (key) { base[key] = opts.avatar[key]; });
+    var base = open
+      ? {
+          onSignIn: function () {
+            var node = host.querySelector('.cbsh-signin');
+            if (node && node.scrollIntoView) node.scrollIntoView({ block: 'center' });
+          }
+        }
+      : { signInHref: opts.homeHref || '/' };
+    Object.keys(opts.avatar || {}).forEach(function (key) {
+      base[key] = opts.avatar[key];
+    });
     return base;
   }
   /** the bar's person: the session's, with the page's level word (editor · view-only) when it has one */
@@ -78,29 +144,52 @@
      sits over it; the avatar's door is "Sign in", a link to Home's one sign-in window. area names the switcher's area when the page has no manifest entry (labs). */
   function shellOptions(opts, sess, skel, host, open) {
     return {
-      host: opts.bar ? { bar: true, app: opts.app } : { app: opts.app }, kural: skel ? false : (opts.kural || false), homeHref: opts.homeHref || '/', area: opts.area,
-      title: opts.title || null, fit: (skel || opts.host) ? 'pane' : undefined,   /* in a page's own pane the header is a block, never the full-window frame */
-      person: personOf(sess, opts.level), token: sess && sess.token,
+      host: opts.bar ? { bar: true, app: opts.app } : { app: opts.app },
+      kural: skel ? false : opts.kural || false,
+      homeHref: opts.homeHref || '/',
+      area: opts.area,
+      title: opts.title || null,
+      fit: skel || opts.host ? 'pane' : undefined /* in a page's own pane the header is a block, never the full-window frame */,
+      person: personOf(sess, opts.level),
+      token: sess && sess.token,
       /* the one sign-in window, in the shell's own slot; signed in -> this page reads again with the session it now holds */
-      signin: open ? { surface: opts.surface || opts.app, need: 'person', registerHref: '/settings.html#/new', onIn: function () { root.location.reload(); } } : false,   /* false: no window at all, even where signin-ui.js is loaded */
+      signin: open
+        ? {
+            surface: opts.surface || opts.app,
+            need: 'person',
+            registerHref: '/settings.html#/new',
+            onIn: function () {
+              root.location.reload();
+            }
+          }
+        : false /* false: no window at all, even where signin-ui.js is loaded */,
       avatar: avatarOptions(opts, host, open)
     };
   }
   /* mounts THE ONE HEADER (CBShell) for this page and hands it the page's work; every page goes through here (SHELL-ONE) */
   function mount(opts) {
     opts = opts || {};
-    var sess = session(), doc = root.document, skel = opts.skeleton ? skeleton(doc, opts.skeleton, opts.app) : null, host = headerHost(doc, opts, skel);
+    var sess = session(),
+      doc = root.document,
+      skel = opts.skeleton ? skeleton(doc, opts.skeleton, opts.app) : null,
+      host = headerHost(doc, opts, skel);
     var open = opts.signin !== false;
     var shell = root.CBShell.mount(host, shellOptions(opts, sess, skel, host, open));
-    if (skel && root.CBScreenId) root.CBScreenId.here(opts.app, opts.skeleton.active);   /* the shell named the app; the skeleton names the section it opened on */
-    if (skel && opts.kural && root.CBKural) { root.CBKural.mount(); root.CBKural.set(opts.kural); }   /* the one kural band at the FOOT, outside the head - as CB Finance / CRM / Accounts */
+    if (skel && root.CBScreenId)
+      root.CBScreenId.here(opts.app, opts.skeleton.active); /* the shell named the app; the skeleton names the section it opened on */
+    if (skel && opts.kural && root.CBKural) {
+      root.CBKural.mount();
+      root.CBKural.set(opts.kural);
+    } /* the one kural band at the FOOT, outside the head - as CB Finance / CRM / Accounts */
     if (opts.work && skel) skel.screen.appendChild(opts.work);
     else if (opts.work && shell && shell.slots && shell.slots.work) shell.slots.work.appendChild(opts.work);
     return { token: sess ? sess.token : null, session: sess, shell: shell, skeleton: skel };
   }
   /** a 401 from the API: the session is no longer good - drop it and show the sign-in window (it is the same window the apps show) */
   function ended() {
-    try { root.localStorage.removeItem('cb_sess'); } catch (_) {}
+    try {
+      root.localStorage.removeItem('cb_sess');
+    } catch (_) {}
     root.location.reload();
   }
   root.CBFrame = { mount: mount, session: session, ended: ended };

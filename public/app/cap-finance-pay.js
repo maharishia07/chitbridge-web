@@ -18,68 +18,210 @@
 
 var FP = { gen: 0, rows: [], cur: null, total: null, state: 'loading', api: null };
 var FP_OWNER_ONLY = 'Only the owner may see what you owe.';
-var FP_BUCKETS = [['0_30', '0–30 days'], ['31_45', '31–45 days'], ['46_60', '46–60 days'], ['60_plus', 'Over 60 days']];
+var FP_BUCKETS = [
+  ['0_30', '0–30 days'],
+  ['31_45', '31–45 days'],
+  ['46_60', '46–60 days'],
+  ['60_plus', 'Over 60 days']
+];
 var FP_GROUPS = { overdue: 'Overdue', msme: 'MSME at risk', week: 'Due this week', later: 'Later' };
 
 async function fpLoad(quiet) {
   var g = ++FP.gen;
-  if (!quiet) { FP.state = 'loading'; if (FP.api) FP.api.refresh(); }
+  if (!quiet) {
+    FP.state = 'loading';
+    if (FP.api) FP.api.refresh();
+  }
   try {
-    var r = await api('booksDues', { query: { asOf: bkToday(), side: 'supplier', finance: '1' } });
+    var reply = await api('booksDues', { query: { asOf: bkToday(), side: 'supplier', finance: '1' } });
     if (g !== FP.gen) return;
-    bkDuesStore(r);
-    FP.cur = (r && r.currency) || bkCur();
-    if (r && r.currency && typeof SESSION !== 'undefined' && SESSION) SESSION.currency = r.currency;   /* the ledger's currency reaches Pay (finance.html sets none) */
-    FP.rows = ((r && r.parties) || []).filter(function (p) { return p.payable && p.payable.bills && p.payable.bills.length; });
-    FP.total = r && r.payables ? r.payables.total_minor : null;
+    bkDuesStore(reply);
+    FP.cur = (reply && reply.currency) || bkCur();
+    if (reply && reply.currency && typeof SESSION !== 'undefined' && SESSION)
+      SESSION.currency = reply.currency; /* the ledger's currency reaches Pay (finance.html sets none) */
+    FP.rows = ((reply && reply.parties) || []).filter(function (item) {
+      return item.payable && item.payable.bills && item.payable.bills.length;
+    });
+    FP.total = reply && reply.payables ? reply.payables.total_minor : null;
     FP.state = 'ready';
   } catch (e) {
     if (g !== FP.gen) return;
-    if (e && e.status === 404) { finOff(); return; }                                    /* the Ledger is off for this shop (M212) */
-    if (e && e.status === 403) { finDenied(FP_OWNER_ONLY, 'Payables'); return; }       /* the server said who may see it */
+    if (e && e.status === 404) {
+      finOff();
+      return;
+    } /* the Ledger is off for this shop (M212) */
+    if (e && e.status === 403) {
+      finDenied(FP_OWNER_ONLY, 'Payables');
+      return;
+    } /* the server said who may see it */
     FP.state = 'error';
   }
   if (FP.api) FP.api.refresh();
 }
-function fpRetry() { fpLoad(); }
-function fpRow(pid) { return FP.rows.filter(function (p) { return p.party_id === pid; })[0] || null; }
+function fpRetry() {
+  fpLoad();
+}
+function fpRow(pid) {
+  return (
+    FP.rows.filter(function (item) {
+      return item.party_id === pid;
+    })[0] || null
+  );
+}
 /** Pay: the one payment path, with the row's best offer (the server's) — the list re-reads after anything is written */
-function fpPay(pid) { var p = fpRow(pid); payOpen('supplier', pid, { offer: p && p.payable ? p.payable.early : null, after: function () { fpLoad(true); } }); }
+function fpPay(pid) {
+  var p = fpRow(pid);
+  payOpen('supplier', pid, {
+    offer: p && p.payable ? p.payable.early : null,
+    after: function () {
+      fpLoad(true);
+    }
+  });
+}
 
 /* ── the columns: every figure is the server's ── */
 function fpCols() {
-  var c = function () { return FP.cur; }, dash = '<span style="color:var(--grey)">—</span>';
+  var c = function () {
+      return FP.cur;
+    },
+    dash = '<span style="color:var(--grey)">—</span>';
   var bucket = function (k, label, prio) {
-    return { key: 'b' + k, label: tx(label), prio: prio, num: true, w: 120, html: true, cell: function (p) { var v = Number(p.payable.buckets[k] || 0); return v ? '<span data-b="' + k + '">' + esc(bkMoney(v, c())) + '</span>' : dash; } };
+    return {
+      key: 'b' + k,
+      label: tx(label),
+      prio: prio,
+      num: true,
+      w: 120,
+      html: true,
+      cell: function (p) {
+        var v = Number(p.payable.buckets[k] || 0);
+        return v ? '<span data-b="' + k + '">' + esc(bkMoney(v, c())) + '</span>' : dash;
+      }
+    };
   };
   return [
-    { key: 'party', label: tx('Supplier'), prio: 1, sort: 'name', w: 220, html: true, cell: function (p) {
-      return esc(bkPartyLabel(p.party_id, p.name)) + (p.payable.msme ? ' <span class="tag" data-b="msme">' + esc(tx('MSME')) + '</span>' : ''); } },
-    { key: 'due', label: tx('To pay'), prio: 2, sort: 'due', num: true, w: 140, html: true, cell: function (p) { return '<b data-b="topay">' + esc(bkMoney(Number(p.payable.total_minor), c())) + '</b>'; } },
-    { key: 'payby', label: tx('Pay by'), prio: 3, sort: 'risk', w: 150, html: true, cell: function (p) {
-      var x = p.payable;
-      return x.pay_by ? '<span data-b="payby">' + esc(bkDate(x.pay_by)) + '</span>' + (x.msme_risk ? ' <span class="tag amber" data-b="risk">⚠ ' + esc(tx('Day 45')) + '</span>' : '') : dash; } },
-    { key: 'offer', label: tx('Early pay'), prio: 4, w: 230, html: true, cell: function (p) { var f = p.payable.early; return f ? '<span data-b="offer">' + esc(f.words) + '</span>' : dash; } },
-    bucket('0_30', '0–30 days', 5), bucket('31_45', '31–45 days', 6), bucket('46_60', '46–60 days', 7), bucket('60_plus', 'Over 60 days', 8),
-    { key: 'act', label: ' ', prio: 1, pin: 'end', w: 100, html: true, cell: function (p) {
-      return '<button type="button" class="cbl-tbtn" data-testid="fp-pay-' + esc(p.party_id) + '" onclick="event.stopPropagation();fpPay(\'' + esc(p.party_id) + '\')">' + esc(tx('Pay')) + '</button>'; } },
+    {
+      key: 'party',
+      label: tx('Supplier'),
+      prio: 1,
+      sort: 'name',
+      w: 220,
+      html: true,
+      cell: function (p) {
+        return esc(bkPartyLabel(p.party_id, p.name)) + (p.payable.msme ? ' <span class="tag" data-b="msme">' + esc(tx('MSME')) + '</span>' : '');
+      }
+    },
+    {
+      key: 'due',
+      label: tx('To pay'),
+      prio: 2,
+      sort: 'due',
+      num: true,
+      w: 140,
+      html: true,
+      cell: function (p) {
+        return '<b data-b="topay">' + esc(bkMoney(Number(p.payable.total_minor), c())) + '</b>';
+      }
+    },
+    {
+      key: 'payby',
+      label: tx('Pay by'),
+      prio: 3,
+      sort: 'risk',
+      w: 150,
+      html: true,
+      cell: function (p) {
+        var x = p.payable;
+        return x.pay_by
+          ? '<span data-b="payby">' +
+              esc(bkDate(x.pay_by)) +
+              '</span>' +
+              (x.msme_risk ? ' <span class="tag amber" data-b="risk">⚠ ' + esc(tx('Day 45')) + '</span>' : '')
+          : dash;
+      }
+    },
+    {
+      key: 'offer',
+      label: tx('Early pay'),
+      prio: 4,
+      w: 230,
+      html: true,
+      cell: function (p) {
+        var f = p.payable.early;
+        return f ? '<span data-b="offer">' + esc(f.words) + '</span>' : dash;
+      }
+    },
+    bucket('0_30', '0–30 days', 5),
+    bucket('31_45', '31–45 days', 6),
+    bucket('46_60', '46–60 days', 7),
+    bucket('60_plus', 'Over 60 days', 8),
+    {
+      key: 'act',
+      label: ' ',
+      prio: 1,
+      pin: 'end',
+      w: 100,
+      html: true,
+      cell: function (p) {
+        return (
+          '<button type="button" class="cbl-tbtn" data-testid="fp-pay-' +
+          esc(p.party_id) +
+          '" onclick="event.stopPropagation();fpPay(\'' +
+          esc(p.party_id) +
+          '\')">' +
+          esc(tx('Pay')) +
+          '</button>'
+        );
+      }
+    }
   ];
 }
 /** what a supplier row opens to: its ages (the server's buckets), then its bills as the server listed them — the MSME sentence and the offer under the bill they belong to */
 function fpNext(p) {
-  var c = FP.cur, bills = (p.payable && p.payable.bills) || [], b0 = (p.payable && p.payable.buckets) || {};
-  var ages = FP_BUCKETS.filter(function (k) { return Number(b0[k[0]]) > 0; }).map(function (k) { return CBList.nextRow(['<span data-b="age-' + k[0] + '">' + esc(tx(k[1])) + '</span>', esc(bkMoney(Number(b0[k[0]]), c))]); }).join('');
+  var c = FP.cur,
+    bills = (p.payable && p.payable.bills) || [],
+    b0 = (p.payable && p.payable.buckets) || {};
+  var ages = FP_BUCKETS.filter(function (item) {
+    return Number(b0[item[0]]) > 0;
+  })
+    .map(function (item) {
+      return CBList.nextRow(['<span data-b="age-' + item[0] + '">' + esc(tx(item[1])) + '</span>', esc(bkMoney(Number(b0[item[0]]), c))]);
+    })
+    .join('');
   /* the bill's line is a nextRow (its date | amount — short, so a phone card stays inside the screen); its age, due day and sentences sit UNDER it on their own
      lines — a nextRow cell is one line, and a sentence must wrap, never clip */
-  var line = function (tid, t, red) { return '<div data-b="' + tid + '" style="font-size:var(--fs-1);padding:0 0 2px;color:' + (red ? 'var(--ink,#2a2418)' : 'var(--grey)') + '">' + esc(t) + '</div>'; };
-  var rows = bills.map(function (b) {
-    var lab = (FP_BUCKETS.filter(function (k) { return k[0] === b.bucket; })[0] || [0, ''])[1];
-    return CBList.nextRow(['<span data-b="bill">' + esc(bkDate(b.date)) + '</span>', '<span class="due give">' + esc(bkMoney(b.open_minor, c)) + '</span>'])
-      + line('due', tx(lab) + ' · ' + (b.overdue ? tx('overdue since') : tx('due')) + ' ' + bkDate(b.due_date))
-      + (b.msme_words ? line('msme', b.msme_words, b.msme_risk) : '') + (b.early ? line('early', b.early.words) : '');
-  }).join('');
-  var sec = function (t) { return '<div style="color:var(--grey);font-size:var(--fs-1);padding:4px 0 2px">' + esc(tx(t)) + '</div>'; };
-  return '<div data-testid="fp-next-' + esc(p.party_id) + '">' + (ages ? sec('Age') + '<div data-testid="fp-ages-' + esc(p.party_id) + '">' + ages + '</div>' + sec('Bills') : '') + (rows || '<div style="color:var(--grey);font-size:var(--fs-1)">' + esc(tx('Nothing to pay')) + '</div>') + '</div>';
+  var line = function (tid, t, red) {
+    return (
+      '<div data-b="' + tid + '" style="font-size:var(--fs-1);padding:0 0 2px;color:' + (red ? 'var(--ink,#2a2418)' : 'var(--grey)') + '">' + esc(t) + '</div>'
+    );
+  };
+  var rows = bills
+    .map(function (item) {
+      var lab = (FP_BUCKETS.filter(function (k) {
+        return k[0] === item.bucket;
+      })[0] || [0, ''])[1];
+      return (
+        CBList.nextRow([
+          '<span data-b="bill">' + esc(bkDate(item.date)) + '</span>',
+          '<span class="due give">' + esc(bkMoney(item.open_minor, c)) + '</span>'
+        ]) +
+        line('due', tx(lab) + ' · ' + (item.overdue ? tx('overdue since') : tx('due')) + ' ' + bkDate(item.due_date)) +
+        (item.msme_words ? line('msme', item.msme_words, item.msme_risk) : '') +
+        (item.early ? line('early', item.early.words) : '')
+      );
+    })
+    .join('');
+  var sec = function (t) {
+    return '<div style="color:var(--grey);font-size:var(--fs-1);padding:4px 0 2px">' + esc(tx(t)) + '</div>';
+  };
+  return (
+    '<div data-testid="fp-next-' +
+    esc(p.party_id) +
+    '">' +
+    (ages ? sec('Age') + '<div data-testid="fp-ages-' + esc(p.party_id) + '">' + ages + '</div>' + sec('Bills') : '') +
+    (rows || '<div style="color:var(--grey);font-size:var(--fs-1)">' + esc(tx('Nothing to pay')) + '</div>') +
+    '</div>'
+  );
 }
 function fpHead() {
   var chips = [];
@@ -87,29 +229,104 @@ function fpHead() {
   return { title: tx('Payables'), chips: chips };
 }
 function fpMount(frame) {
-  var s = document.getElementById('screen'); if (!s) return;
+  var node = document.getElementById('screen');
+  if (!node) return;
   ftNav();
-  s.className = 'screen flush';
-  s.innerHTML = '<div id="fp_list" data-testid="fp-list" style="flex:1 1 auto;min-height:0"></div>';
-  var num = function (g) { return function (a, b) { return Number(g(a) || 0) - Number(g(b) || 0); }; };
+  node.className = 'screen flush';
+  node.innerHTML = '<div id="fp_list" data-testid="fp-list" style="flex:1 1 auto;min-height:0"></div>';
+  var num = function (g) {
+    return function (a, b) {
+      return Number(g(a) || 0) - Number(g(b) || 0);
+    };
+  };
   FP.api = CBList.mount(document.getElementById('fp_list'), {
-    key: 'fin-pay', t: tx, rows: function () { return FP.rows; }, id: function (p) { return p.party_id; }, rowTid: function (p) { return 'fp-row-' + p.party_id; },
-    columns: fpCols(), defaultCols: ['party', 'due', 'payby', 'offer'], cardMax: 4, fill: false,   /* the four age columns are in the ⚙ chooser; a row opens to its ages and bills */
+    key: 'fin-pay',
+    t: tx,
+    rows: function () {
+      return FP.rows;
+    },
+    id: function (p) {
+      return p.party_id;
+    },
+    rowTid: function (p) {
+      return 'fp-row-' + p.party_id;
+    },
+    columns: fpCols(),
+    defaultCols: ['party', 'due', 'payby', 'offer'],
+    cardMax: 4,
+    fill: false /* the four age columns are in the ⚙ chooser; a row opens to its ages and bills */,
     head: fpHead,
-    state: function () { return FP.state; }, error: function () { return { title: tx('Could not read what you owe.'), sub: tx('Nothing was lost. Try again.') }; }, onRetry: fpRetry,
+    state: function () {
+      return FP.state;
+    },
+    error: function () {
+      return { title: tx('Could not read what you owe.'), sub: tx('Nothing was lost. Try again.') };
+    },
+    onRetry: fpRetry,
     empty: { title: tx('You owe no supplier') },
-    group: { default: 'risk', order: ['overdue', 'msme', 'week', 'later'], by: function (p) { return [tx(FP_GROUPS[p.payable.group] || 'Later'), p.payable.group]; },
-      fig: function (rows) { return txn('{count} supplier', '{count} suppliers', rows.length) + ' · ' + bkMoney(rows.reduce(function (t, p) { return t + Number(p.payable.total_minor || 0); }, 0), FP.cur); },
-      headTid: function (k) { return 'fp-group-' + k; } },
-    search: function (p) { return [p.party_no, p.name, bkPartyLabel(p.party_id, p.name)].join(' '); },
+    group: {
+      default: 'risk',
+      order: ['overdue', 'msme', 'week', 'later'],
+      by: function (p) {
+        return [tx(FP_GROUPS[p.payable.group] || 'Later'), p.payable.group];
+      },
+      fig: function (rows) {
+        return (
+          txn('{count} supplier', '{count} suppliers', rows.length) +
+          ' · ' +
+          bkMoney(
+            rows.reduce(function (total, item) {
+              return total + Number(item.payable.total_minor || 0);
+            }, 0),
+            FP.cur
+          )
+        );
+      },
+      headTid: function (k) {
+        return 'fp-group-' + k;
+      }
+    },
+    search: function (p) {
+      return [p.party_no, p.name, bkPartyLabel(p.party_id, p.name)].join(' ');
+    },
     sorts: [
-      { key: 'risk', label: tx('Pay by'), cmp: function (a, b) { return String(a.payable.pay_by || '9999').localeCompare(String(b.payable.pay_by || '9999')); } },
-      { key: 'name', label: tx('Name'), cmp: function (a, b) { return String(a.name || '').localeCompare(String(b.name || '')); } },
-      { key: 'due', label: tx('To pay'), cmp: num(function (p) { return p.payable.total_minor; }) },
+      {
+        key: 'risk',
+        label: tx('Pay by'),
+        cmp: function (a, b) {
+          return String(a.payable.pay_by || '9999').localeCompare(String(b.payable.pay_by || '9999'));
+        }
+      },
+      {
+        key: 'name',
+        label: tx('Name'),
+        cmp: function (a, b) {
+          return String(a.name || '').localeCompare(String(b.name || ''));
+        }
+      },
+      {
+        key: 'due',
+        label: tx('To pay'),
+        cmp: num(function (p) {
+          return p.payable.total_minor;
+        })
+      }
     ],
-    filters: [{ key: 'flag', label: tx('Show'), all: tx('Every supplier'), options: [{ v: 'msme', label: tx('MSME') }, { v: 'early', label: tx('Early pay') }],
-      match: function (p, v) { return v === 'msme' ? !!p.payable.msme : !!p.payable.early; } }],
-    next: fpNext,
+    filters: [
+      {
+        key: 'flag',
+        label: tx('Show'),
+        all: tx('Every supplier'),
+        options: [
+          { v: 'msme', label: tx('MSME') },
+          { v: 'early', label: tx('Early pay') }
+        ],
+        match: function (p, v) {
+          return v === 'msme' ? !!p.payable.msme : !!p.payable.early;
+        }
+      }
+    ],
+    next: fpNext
   });
   if (!frame) fpLoad(FP.rows.length > 0);
 }

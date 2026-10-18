@@ -11,38 +11,71 @@
  * Same origin only. The sign-in is the browser's own saved session; a host that holds a session of its own (the till signs a PERSON in under a
  * shop-scoped store, not cb_sess) passes  session: function () { return token }  and the embed — which asks with { cb, event: 'need-session' } —
  * is answered over postMessage { cb: 'host', event: 'session', token } to THIS iframe only. The token is never put in the address or in storage.
+ 
+ * CALLED BY public/app/attach-ui.js, public/app/cap-crm-groups.js, public/app/cap-readiness.js, public/app/cap-settings.js, public/till.html   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
 (function (root) {
   'use strict';
   function open(o) {
-    var doc = root.document, d = doc.createElement('dialog'), f = doc.createElement('iframe'), x = doc.createElement('button');
+    var doc = root.document,
+      node = doc.createElement('dialog'),
+      f = doc.createElement('iframe'),
+      x = doc.createElement('button');
     var src = '/' + o.app + '.html?embed=1' + (o.view ? '&view=' + encodeURIComponent(o.view) : '');
-    d.setAttribute('data-testid', 'embed-' + o.app);
-    d.style.cssText = 'border:1px solid var(--line,#DDD6C6);border-radius:14px;padding:0;width:min(560px,96vw);height:min(640px,90vh);background:var(--card,#fff);overflow:hidden';
-    f.src = src; f.title = o.title || o.app; f.setAttribute('data-testid', 'embed-frame');
+    node.setAttribute('data-testid', 'embed-' + o.app);
+    node.style.cssText =
+      'border:1px solid var(--line,#DDD6C6);border-radius:14px;padding:0;width:min(560px,96vw);height:min(640px,90vh);background:var(--card,#fff);overflow:hidden';
+    f.src = src;
+    f.title = o.title || o.app;
+    f.setAttribute('data-testid', 'embed-frame');
     f.style.cssText = 'border:0;width:100%;height:100%;display:block';
-    x.type = 'button'; x.textContent = '✕'; x.setAttribute('aria-label', 'Close'); x.title = 'Close';
+    x.type = 'button';
+    x.textContent = '✕';
+    x.setAttribute('aria-label', 'Close');
+    x.title = 'Close';
     x.style.cssText = 'position:absolute;right:8px;top:8px;z-index:2;border:0;background:transparent;font-size:18px;cursor:pointer;color:inherit';
-    d.appendChild(f); d.appendChild(x); doc.body.appendChild(d);
+    node.appendChild(f);
+    node.appendChild(x);
+    doc.body.appendChild(node);
     var closed = false;
     function close() {
-      if (closed) return; closed = true;
+      if (closed) return;
+      closed = true;
       root.removeEventListener('message', heard);
-      try { d.close(); } catch (_) {}
-      d.remove();
+      try {
+        node.close();
+      } catch (_) {}
+      node.remove();
       if (o.onClose) o.onClose();
     }
     function heard(e) {
       if (e.source !== f.contentWindow || e.origin !== root.location.origin) return;
-      var m = e.data; if (!m || m.cb !== o.app) return;
+      var m = e.data;
+      if (!m || m.cb !== o.app) return;
       if (m.event === 'close') return close();
-      if (m.event === 'need-session') { var t = o.session && o.session(); try { f.contentWindow.postMessage({ cb: 'host', event: 'session', token: t || null, api: (o.api ? o.api() : (root.CloudHost && root.CloudHost.api)) || null }, root.location.origin); } catch (_) {} return; }
+      if (m.event === 'need-session') {
+        var t = o.session && o.session();
+        try {
+          f.contentWindow.postMessage(
+            { cb: 'host', event: 'session', token: t || null, api: (o.api ? o.api() : root.CloudHost && root.CloudHost.api) || null },
+            root.location.origin
+          );
+        } catch (_) {}
+        return;
+      }
       if (o.onMessage) o.onMessage(m);
     }
     root.addEventListener('message', heard);
     x.onclick = close;
-    d.addEventListener('cancel', function (e) { e.preventDefault(); close(); });
-    try { d.showModal(); } catch (_) { d.setAttribute('open', ''); }
+    node.addEventListener('cancel', function (e) {
+      e.preventDefault();
+      close();
+    });
+    try {
+      node.showModal();
+    } catch (_) {
+      node.setAttribute('open', '');
+    }
     return { close: close };
   }
   root.CBEmbed = { open: open };

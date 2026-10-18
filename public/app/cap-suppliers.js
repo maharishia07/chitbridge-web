@@ -25,141 +25,405 @@
  */
 'use strict';
 /** the name a supplier is shown by: your label first, then their registered name */
-function supName(x){ return (x&&(x.nickname||x.display_name))||'—'; }
+function supName(x) {
+  return (x && (x.nickname || x.display_name)) || '—';
+}
 /** Trade (resale: goods to sell on) or Other (own_use: what the shop consumes) — the flag decides what a delivery from them does (lib/adopt.js) */
-function supKindOf(x){ return (x&&x.supply_kind==='own_use')?'own_use':'resale'; }
+function supKindOf(x) {
+  return x && x.supply_kind === 'own_use' ? 'own_use' : 'resale';
+}
 /** a User ID (8+ characters, no space) or an email — somebody to look up; anything else is a name to write down */
-function isUserId(v){ v=(v||"").trim(); return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) || (v.length>=8 && !/\s/.test(v)); }
+function isUserId(v) {
+  v = (v || '').trim();
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) || (v.length >= 8 && !/\s/.test(v));
+}
 
 var CBSuppliers = (function () {
   var S = { rows: null, err: null, busy: false, list: null, kind: 'resale', dlg: null };
-  function t(s) { return typeof tx === 'function' ? tx(s) : s; }
-  function tf(s, v) { return typeof txf === 'function' ? txf(s, v) : String(s).replace(/\{(\w+)\}/g, function (_, k) { return v[k]; }); }
-  function log(m) { if (typeof cblog === 'function') cblog('error', 'suppliers: ' + m); }
+  function t(s) {
+    return typeof tx === 'function' ? tx(s) : s;
+  }
+  function tf(s, v) {
+    return typeof txf === 'function'
+      ? txf(s, v)
+      : String(s).replace(/\{(\w+)\}/g, function (_, k) {
+          return v[k];
+        });
+  }
+  function log(m) {
+    if (typeof cblog === 'function') cblog('error', 'suppliers: ' + m);
+  }
 
   /** readiness in three answers + the server's own sentence when it has one */
   function ready(x) {
     if (x.one_sided && x.one_sided.why) return { k: 'one', text: t('Orders stay with you'), why: x.one_sided.why, tone: 'amber' };
     if (x.on_rail === false) return { k: 'off', text: t('Not on the network'), why: t('Record what you buy from them by hand.'), tone: '' };
-    if (x.has_catalogue) return { k: 'cat', text: t('Can order · catalogue'), why: t('Their catalogue is published: order from it in Tasks & Orders.'), tone: 'green' };
-    return { k: 'nocat', text: t('On the network · no catalogue'), why: t('They have published no catalogue, so what they stock is not known.'), tone: 'amber' };
+    if (x.has_catalogue)
+      return { k: 'cat', text: t('Can order · catalogue'), why: t('Their catalogue is published: order from it in Tasks & Orders.'), tone: 'green' };
+    return {
+      k: 'nocat',
+      text: t('On the network · no catalogue'),
+      why: t('They have published no catalogue, so what they stock is not known.'),
+      tone: 'amber'
+    };
   }
   function taxCell(x) {
-    var f = x.facts || {}; if (!f.gstin) return '<span class="sub">—</span>';
+    var f = x.facts || {};
+    if (!f.gstin) return '<span class="sub">—</span>';
     var word = typeof taxIdWord === 'function' ? taxIdWord(f.country || '') : t('Tax number');
-    return '<span class="sub">' + esc(t(word)) + '</span> <span class="mono">' + esc(f.gstin) + '</span>' + (f.gstin_rung ? ' <span class="sub">· ' + esc(t(f.gstin_rung)) + '</span>' : '');
+    return (
+      '<span class="sub">' +
+      esc(t(word)) +
+      '</span> <span class="mono">' +
+      esc(f.gstin) +
+      '</span>' +
+      (f.gstin_rung ? ' <span class="sub">· ' + esc(t(f.gstin_rung)) + '</span>' : '')
+    );
   }
 
   function load() {
-    if (S.busy) return Promise.resolve(); S.busy = true; S.err = null;
+    if (S.busy) return Promise.resolve();
+    S.busy = true;
+    S.err = null;
     if (S.list) S.list.refresh();
-    return api('supList').then(function (r) { S.rows = Array.isArray(r) ? r : ((r && r.suppliers) || []); })
-      .catch(function (e) { S.err = e; log('GET /api/relationships/suppliers failed — ' + ((e && e.message) || e)); })
-      .then(function () { S.busy = false; if (S.list) S.list.refresh(); });
+    return api('supList')
+      .then(function (reply) {
+        S.rows = Array.isArray(reply) ? reply : (reply && reply.suppliers) || [];
+      })
+      .catch(function (e) {
+        S.err = e;
+        log('GET /api/relationships/suppliers failed — ' + ((e && e.message) || e));
+      })
+      .then(function () {
+        S.busy = false;
+        if (S.list) S.list.refresh();
+      });
   }
 
   function cols() {
     return [
-      { key: 'name', label: t('Supplier'), prio: 1, w: 280, sort: 'az', html: true, cell: function (x) {
-          return (x.preferred ? '<span title="' + esc(t('Preferred')) + '" aria-label="' + esc(t('Preferred')) + '">★</span> ' : '') + esc(supName(x))
-            + (x.category ? ' <span class="tag">' + esc(x.category) + '</span>' : '');
-        } },
-      { key: 'ready', label: t('Can you order?'), prio: 2, w: 230, sort: 'ready', html: true, tid: function (x) { return 'sup-ready-' + x.supplier_list_id; }, cell: function (x) {
-          var r = ready(x); return '<span class="tag' + (r.tone ? ' ' + r.tone : '') + '">' + esc(r.text) + '</span>';
-        } },
-      { key: 'cbid', label: t('Network ID'), prio: 3, w: 190, html: true, cell: function (x) {
-          var id = x.user_id || x.bridge_id; return (id && x.on_rail !== false) ? '<span class="mono">' + esc(id) + '</span>' : '<span class="sub">' + esc(t('off-rail')) + '</span>';
-        } },
-      { key: 'tax', label: t('Tax number'), prio: 4, w: 230, html: true, cell: taxCell },
+      {
+        key: 'name',
+        label: t('Supplier'),
+        prio: 1,
+        w: 280,
+        sort: 'az',
+        html: true,
+        cell: function (x) {
+          return (
+            (x.preferred ? '<span title="' + esc(t('Preferred')) + '" aria-label="' + esc(t('Preferred')) + '">★</span> ' : '') +
+            esc(supName(x)) +
+            (x.category ? ' <span class="tag">' + esc(x.category) + '</span>' : '')
+          );
+        }
+      },
+      {
+        key: 'ready',
+        label: t('Can you order?'),
+        prio: 2,
+        w: 230,
+        sort: 'ready',
+        html: true,
+        tid: function (x) {
+          return 'sup-ready-' + x.supplier_list_id;
+        },
+        cell: function (x) {
+          var r = ready(x);
+          return '<span class="tag' + (r.tone ? ' ' + r.tone : '') + '">' + esc(r.text) + '</span>';
+        }
+      },
+      {
+        key: 'cbid',
+        label: t('Network ID'),
+        prio: 3,
+        w: 190,
+        html: true,
+        cell: function (x) {
+          var id = x.user_id || x.bridge_id;
+          return id && x.on_rail !== false ? '<span class="mono">' + esc(id) + '</span>' : '<span class="sub">' + esc(t('off-rail')) + '</span>';
+        }
+      },
+      { key: 'tax', label: t('Tax number'), prio: 4, w: 230, html: true, cell: taxCell }
     ];
   }
   function next(x) {
     var r = ready(x);
-    return '<div data-testid="sup-next-' + esc(x.supplier_list_id) + '"><div>' + esc(r.why) + '</div>'
-      + '<div class="sub">' + esc(t('Required certificates are checked in a later release.')) + '</div>'
-      + (x.notes ? '<div class="sub">' + esc(x.notes) + '</div>' : '') + '</div>';
+    return (
+      '<div data-testid="sup-next-' +
+      esc(x.supplier_list_id) +
+      '"><div>' +
+      esc(r.why) +
+      '</div>' +
+      '<div class="sub">' +
+      esc(t('Required certificates are checked in a later release.')) +
+      '</div>' +
+      (x.notes ? '<div class="sub">' + esc(x.notes) + '</div>' : '') +
+      '</div>'
+    );
   }
 
   /* ── the writes: every one through CBAction, the outcome said in the toast, the server's refusal in its own words ── */
-  function btnOf(id, act) { return document.querySelector('[data-act="' + act + '"][data-actrow="' + id + '"]'); }
+  function btnOf(id, act) {
+    return document.querySelector('[data-act="' + act + '"][data-actrow="' + id + '"]');
+  }
   function patch(x, body, done) {
-    return CBAction.run(btnOf(x.supplier_list_id, Object.keys(body)[0]), function () { return api('supPatch', { params: { id: x.supplier_list_id }, body: body }); },
-      { key: 'sup-' + Object.keys(body)[0] + '-' + x.supplier_list_id, done: done, failed: t('Could not change the supplier — try again') }).then(function (o) { if (o.ok) load(); });
+    return CBAction.run(
+      btnOf(x.supplier_list_id, Object.keys(body)[0]),
+      function () {
+        return api('supPatch', { params: { id: x.supplier_list_id }, body: body });
+      },
+      { key: 'sup-' + Object.keys(body)[0] + '-' + x.supplier_list_id, done: done, failed: t('Could not change the supplier — try again') }
+    ).then(function (reply) {
+      if (reply.ok) load();
+    });
   }
   var ACTIONS = [
-    { id: 'preferred', label: 'Preferred ★', tid: 'sup-pref', run: function (x) { patch(x, { preferred: !x.preferred }, x.preferred ? t('No longer preferred') : t('Marked preferred')); } },
-    { id: 'supply_kind', label: 'Move to the other list', tid: 'sup-move', run: function (x) { patch(x, { supply_kind: supKindOf(x) === 'own_use' ? 'resale' : 'own_use' }, t('Moved')); } },
-    { id: 'remove', label: 'Remove', tid: 'sup-remove', run: function (x) {
-        CBAction.run(btnOf(x.supplier_list_id, 'remove'), function () { return api('supDel', { params: { id: x.supplier_list_id } }); },
-          { key: 'sup-remove-' + x.supplier_list_id, confirm: { title: tf('Remove {name} from your list?', { name: supName(x) }), body: esc(t('Their business and your past bills are untouched — only your list entry goes.')), yes: t('Remove'), danger: true },
-            done: t('Supplier removed'), failed: t('Could not remove the supplier — try again') }).then(function (o) { if (o.ok) load(); });
-      } },
+    {
+      id: 'preferred',
+      label: 'Preferred ★',
+      tid: 'sup-pref',
+      run: function (x) {
+        patch(x, { preferred: !x.preferred }, x.preferred ? t('No longer preferred') : t('Marked preferred'));
+      }
+    },
+    {
+      id: 'supply_kind',
+      label: 'Move to the other list',
+      tid: 'sup-move',
+      run: function (x) {
+        patch(x, { supply_kind: supKindOf(x) === 'own_use' ? 'resale' : 'own_use' }, t('Moved'));
+      }
+    },
+    {
+      id: 'remove',
+      label: 'Remove',
+      tid: 'sup-remove',
+      run: function (x) {
+        CBAction.run(
+          btnOf(x.supplier_list_id, 'remove'),
+          function () {
+            return api('supDel', { params: { id: x.supplier_list_id } });
+          },
+          {
+            key: 'sup-remove-' + x.supplier_list_id,
+            confirm: {
+              title: tf('Remove {name} from your list?', { name: supName(x) }),
+              body: esc(t('Their business and your past bills are untouched — only your list entry goes.')),
+              yes: t('Remove'),
+              danger: true
+            },
+            done: t('Supplier removed'),
+            failed: t('Could not remove the supplier — try again')
+          }
+        ).then(function (reply) {
+          if (reply.ok) load();
+        });
+      }
+    }
   ];
 
   function opts() {
-    return { key: 'ops-suppliers', t: t, hl: false, id: function (x) { return x.supplier_list_id; }, rowTid: function (x) { return 'sup-row-' + x.supplier_list_id; },
-      columns: cols, rows: function () { return S.rows || []; }, next: next, actions: ACTIONS,
-      state: function () { return S.err ? 'error' : (S.rows === null ? 'loading' : null); },
-      error: function () { return { title: t('Could not read your suppliers.'), sub: t('Nothing was changed. Try again in a moment.') }; },
+    return {
+      key: 'ops-suppliers',
+      t: t,
+      hl: false,
+      id: function (x) {
+        return x.supplier_list_id;
+      },
+      rowTid: function (x) {
+        return 'sup-row-' + x.supplier_list_id;
+      },
+      columns: cols,
+      rows: function () {
+        return S.rows || [];
+      },
+      next: next,
+      actions: ACTIONS,
+      state: function () {
+        return S.err ? 'error' : S.rows === null ? 'loading' : null;
+      },
+      error: function () {
+        return { title: t('Could not read your suppliers.'), sub: t('Nothing was changed. Try again in a moment.') };
+      },
       onRetry: load,
       empty: { title: t('No suppliers yet.'), sub: t('Add one by their User ID or email, or just a name.') },
       /* ⭐ Trade / Other are the list's own saved views — the kind decides what a delivery from them does, so the add dialog asks it again */
-      views: { tid: 'sup-view', items: [{ key: 'trade', label: t('To sell'), filt: { kind: 'resale' } }, { key: 'other', label: t('To use'), filt: { kind: 'own_use' } }] },
+      views: {
+        tid: 'sup-view',
+        items: [
+          { key: 'trade', label: t('To sell'), filt: { kind: 'resale' } },
+          { key: 'other', label: t('To use'), filt: { kind: 'own_use' } }
+        ]
+      },
       preset: { filt: { kind: 'resale' } },
-      filters: [{ key: 'kind', label: t('Kind'), all: t('To sell or to use'), options: [{ v: 'resale', label: t('To sell') }, { v: 'own_use', label: t('To use') }], match: function (x, v) { return supKindOf(x) === v; } },
-        { key: 'ready', label: t('Can you order?'), all: t('Any'), options: [{ v: 'cat', label: t('Can order · catalogue') }, { v: 'nocat', label: t('On the network · no catalogue') }, { v: 'off', label: t('Not on the network') }, { v: 'one', label: t('Orders stay with you') }], match: function (x, v) { return ready(x).k === v; } }],
-      search: function (x) { return [x.nickname, x.display_name, x.category, x.user_id, x.bridge_id, x.facts && x.facts.gstin].filter(Boolean).join(' '); },
+      filters: [
+        {
+          key: 'kind',
+          label: t('Kind'),
+          all: t('To sell or to use'),
+          options: [
+            { v: 'resale', label: t('To sell') },
+            { v: 'own_use', label: t('To use') }
+          ],
+          match: function (x, v) {
+            return supKindOf(x) === v;
+          }
+        },
+        {
+          key: 'ready',
+          label: t('Can you order?'),
+          all: t('Any'),
+          options: [
+            { v: 'cat', label: t('Can order · catalogue') },
+            { v: 'nocat', label: t('On the network · no catalogue') },
+            { v: 'off', label: t('Not on the network') },
+            { v: 'one', label: t('Orders stay with you') }
+          ],
+          match: function (x, v) {
+            return ready(x).k === v;
+          }
+        }
+      ],
+      search: function (x) {
+        return [x.nickname, x.display_name, x.category, x.user_id, x.bridge_id, x.facts && x.facts.gstin].filter(Boolean).join(' ');
+      },
       sorts: [
-        { key: 'pref', label: t('★ Preferred first'), cmp: function (a, b) { return (b.preferred ? 1 : 0) - (a.preferred ? 1 : 0) || supName(a).localeCompare(supName(b)); } },
-        { key: 'az', label: t('A–Z'), cmp: function (a, b) { return supName(a).localeCompare(supName(b)); } },
-        { key: 'ready', label: t('Ready to order first'), cmp: function (a, b) { var o = { cat: 0, nocat: 1, one: 2, off: 3 }; return o[ready(a).k] - o[ready(b).k] || supName(a).localeCompare(supName(b)); } },
+        {
+          key: 'pref',
+          label: t('★ Preferred first'),
+          cmp: function (a, b) {
+            return (b.preferred ? 1 : 0) - (a.preferred ? 1 : 0) || supName(a).localeCompare(supName(b));
+          }
+        },
+        {
+          key: 'az',
+          label: t('A–Z'),
+          cmp: function (a, b) {
+            return supName(a).localeCompare(supName(b));
+          }
+        },
+        {
+          key: 'ready',
+          label: t('Ready to order first'),
+          cmp: function (a, b) {
+            var o = { cat: 0, nocat: 1, one: 2, off: 3 };
+            return o[ready(a).k] - o[ready(b).k] || supName(a).localeCompare(supName(b));
+          }
+        }
       ],
       head: function () {
         var n = (S.rows || []).length;
-        return { title: t('Suppliers'), chips: n ? [{ text: tf(n === 1 ? '{n} supplier' : '{n} suppliers', { n: n }), tid: 'sup-count' }] : [],
-          slot: function (el) { el.innerHTML = '<button type="button" class="act" data-testid="sup-add-open">+ ' + esc(t('Add supplier')) + '</button>'; el.firstChild.onclick = openAdd; } };
-      } };
+        return {
+          title: t('Suppliers'),
+          chips: n ? [{ text: tf(n === 1 ? '{n} supplier' : '{n} suppliers', { n: n }), tid: 'sup-count' }] : [],
+          slot: function (el) {
+            el.innerHTML = '<button type="button" class="act" data-testid="sup-add-open">+ ' + esc(t('Add supplier')) + '</button>';
+            el.firstChild.onclick = openAdd;
+          }
+        };
+      }
+    };
   }
 
   /* ── add / link: one dialog, the kind asked, a 404 offers the local add ── */
   function openAdd() {
-    var d = S.dlg; if (!d) { d = S.dlg = document.createElement('dialog'); d.className = 'sheet'; d.setAttribute('data-testid', 'sup-add-dlg'); document.body.appendChild(d); }
+    var node = S.dlg;
+    if (!node) {
+      node = S.dlg = document.createElement('dialog');
+      node.className = 'sheet';
+      node.setAttribute('data-testid', 'sup-add-dlg');
+      document.body.appendChild(node);
+    }
     var listKind = S.kind;
-    d.innerHTML = '<button type="button" class="mx" aria-label="' + esc(t('Close')) + '" data-x>✕</button><h2>' + esc(t('Add a supplier')) + '</h2>'
-      + '<p class="sub">' + esc(t('Their User ID or email links a ChitBridge business. A plain name adds a local one.')) + '</p>'
-      + '<label class="fl" for="sp_q">' + esc(t('Name, User ID or email')) + '</label><input class="inp" id="sp_q" data-testid="sup-add-q" autocomplete="off">'
-      + '<fieldset class="op-kind"><legend class="fl">' + esc(t('What do you buy from them?')) + '</legend>'
-      + '<label><input type="radio" name="sp_kind" value="resale"' + (listKind !== 'own_use' ? ' checked' : '') + ' data-testid="sup-add-trade"> ' + esc(t('Goods to sell')) + '</label>'
-      + '<label><input type="radio" name="sp_kind" value="own_use"' + (listKind === 'own_use' ? ' checked' : '') + ' data-testid="sup-add-other"> ' + esc(t('Things the shop uses')) + '</label></fieldset>'
-      + '<div class="err" id="sp_out" data-testid="sup-add-out" role="status"></div>'
-      + '<div class="op-acts"><button type="button" class="act" data-testid="sup-add-go">' + esc(t('Add')) + '</button><button type="button" class="act quiet" data-x>' + esc(t('Cancel')) + '</button></div>';
-    Array.prototype.forEach.call(d.querySelectorAll('[data-x]'), function (b) { b.onclick = function () { d.close(); }; });
-    d.querySelector('[data-testid="sup-add-go"]').onclick = function () { add(this); };
-    d.querySelector('#sp_q').onkeydown = function (e) { if (e.key === 'Enter') add(d.querySelector('[data-testid="sup-add-go"]')); };
-    if (d.showModal) d.showModal(); else d.setAttribute('open', '');
-    d.querySelector('#sp_q').focus();
+    node.innerHTML =
+      '<button type="button" class="mx" aria-label="' +
+      esc(t('Close')) +
+      '" data-x>✕</button><h2>' +
+      esc(t('Add a supplier')) +
+      '</h2>' +
+      '<p class="sub">' +
+      esc(t('Their User ID or email links a ChitBridge business. A plain name adds a local one.')) +
+      '</p>' +
+      '<label class="fl" for="sp_q">' +
+      esc(t('Name, User ID or email')) +
+      '</label><input class="inp" id="sp_q" data-testid="sup-add-q" autocomplete="off">' +
+      '<fieldset class="op-kind"><legend class="fl">' +
+      esc(t('What do you buy from them?')) +
+      '</legend>' +
+      '<label><input type="radio" name="sp_kind" value="resale"' +
+      (listKind !== 'own_use' ? ' checked' : '') +
+      ' data-testid="sup-add-trade"> ' +
+      esc(t('Goods to sell')) +
+      '</label>' +
+      '<label><input type="radio" name="sp_kind" value="own_use"' +
+      (listKind === 'own_use' ? ' checked' : '') +
+      ' data-testid="sup-add-other"> ' +
+      esc(t('Things the shop uses')) +
+      '</label></fieldset>' +
+      '<div class="err" id="sp_out" data-testid="sup-add-out" role="status"></div>' +
+      '<div class="op-acts"><button type="button" class="act" data-testid="sup-add-go">' +
+      esc(t('Add')) +
+      '</button><button type="button" class="act quiet" data-x>' +
+      esc(t('Cancel')) +
+      '</button></div>';
+    Array.prototype.forEach.call(node.querySelectorAll('[data-x]'), function (b) {
+      b.onclick = function () {
+        node.close();
+      };
+    });
+    node.querySelector('[data-testid="sup-add-go"]').onclick = function () {
+      add(this);
+    };
+    node.querySelector('#sp_q').onkeydown = function (e) {
+      if (e.key === 'Enter') add(node.querySelector('[data-testid="sup-add-go"]'));
+    };
+    if (node.showModal) node.showModal();
+    else node.setAttribute('open', '');
+    node.querySelector('#sp_q').focus();
   }
   function add(btn, asLocal) {
-    var d = S.dlg, q = (d.querySelector('#sp_q').value || '').trim(), out = d.querySelector('#sp_out');
-    var k = (d.querySelector('input[name="sp_kind"]:checked') || {}).value === 'own_use' ? 'own_use' : 'resale';
+    var node = S.dlg,
+      q = (node.querySelector('#sp_q').value || '').trim(),
+      out = node.querySelector('#sp_out');
+    var k = (node.querySelector('input[name="sp_kind"]:checked') || {}).value === 'own_use' ? 'own_use' : 'resale';
     out.textContent = '';
-    if (!q) { out.textContent = t('Type their name, User ID or email.'); return; }
+    if (!q) {
+      out.textContent = t('Type their name, User ID or email.');
+      return;
+    }
     var link = !asLocal && isUserId(q);
     var body = link ? { supplier_bridge_id: q, supply_kind: k } : { name: q, supply_kind: k };
-    CBAction.run(btn, function () { return api('supAdd', { body: body }); }, { key: 'sup-add', busy: t('Adding…'), failed: t('Could not add the supplier — try again'),
-      onFail: function (words, e) {
-        /* ⭐ not found is a question, not a dead end: a one-word shop name of eight letters looks exactly like a handle */
-        if (link && e && e.status === 404) {
-          out.innerHTML = esc(t('No business with that User ID or email.')) + ' <button type="button" class="act quiet" data-testid="sup-add-local">' + esc(t('Add as a local supplier')) + '</button>';
-          out.querySelector('button').onclick = function () { add(this, true); };
-          return;
+    CBAction.run(
+      btn,
+      function () {
+        return api('supAdd', { body: body });
+      },
+      {
+        key: 'sup-add',
+        busy: t('Adding…'),
+        failed: t('Could not add the supplier — try again'),
+        onFail: function (words, e) {
+          /* ⭐ not found is a question, not a dead end: a one-word shop name of eight letters looks exactly like a handle */
+          if (link && e && e.status === 404) {
+            out.innerHTML =
+              esc(t('No business with that User ID or email.')) +
+              ' <button type="button" class="act quiet" data-testid="sup-add-local">' +
+              esc(t('Add as a local supplier')) +
+              '</button>';
+            out.querySelector('button').onclick = function () {
+              add(this, true);
+            };
+            return;
+          }
+          out.textContent = words;
         }
-        out.textContent = words;
-      } }).then(function (o) {
-      if (!o.ok) return;
-      var made = (o.value && o.value.supplier) || {};
-      toast((o.value && o.value.message) || t('Supplier added'));
-      d.close(); S.kind = k;
+      }
+    ).then(function (reply) {
+      if (!reply.ok) return;
+      var made = (reply.value && reply.value.supplier) || {};
+      toast((reply.value && reply.value.message) || t('Supplier added'));
+      node.close();
+      S.kind = k;
       if (made.one_sided && made.one_sided.why) log('added one-sided: ' + made.one_sided.why);
       load();
     });

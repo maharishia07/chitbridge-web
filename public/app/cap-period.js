@@ -16,40 +16,57 @@
  * Never the word "accounting" on a screen.
  */
 'use strict';
-if (typeof EP !== 'undefined') { Object.assign(EP, {
-  perStock:      { m: 'POST',   p: '/api/books/closing-stock' },
-  perAssets:     { m: 'GET',    p: '/api/books/assets' },
-  perAssetAdd:   { m: 'POST',   p: '/api/books/assets' },
-  perAssetSell:  { m: 'POST',   p: '/api/books/assets/:id/dispose' },
-  perDepRun:     { m: 'POST',   p: '/api/books/depreciation/run' },
-  perRecList:    { m: 'GET',    p: '/api/books/recurring' },
-  perRecAdd:     { m: 'POST',   p: '/api/books/recurring' },
-  perRecPatch:   { m: 'PATCH',  p: '/api/books/recurring/:id' },
-  perRecStop:    { m: 'DELETE', p: '/api/books/recurring/:id' },
-  perRecPost:    { m: 'POST',   p: '/api/books/recurring/:id/post' },
-  perRecSkip:    { m: 'POST',   p: '/api/books/recurring/:id/skip' },
-  perAccrue:     { m: 'POST',   p: '/api/books/accruals' },
-  perAccrueRev:  { m: 'POST',   p: '/api/books/accruals/:ref/reverse' },
-  perGstClose:   { m: 'POST',   p: '/api/books/gst/close' },
-  perGstPay:     { m: 'POST',   p: '/api/books/gst/pay' },
-  perReturn:     { m: 'GET',    p: '/api/books/returns' },      /* BAS1: the shop's OWN return (AU BAS · AE VAT201), read from the posted books */
-  perYearStatus: { m: 'GET',    p: '/api/books/year/:fy/status' },
-  perYearClose:  { m: 'POST',   p: '/api/books/year/:fy/close' },
-}); }
+if (typeof EP !== 'undefined') {
+  Object.assign(EP, {
+    perStock: { m: 'POST', p: '/api/books/closing-stock' },
+    perAssets: { m: 'GET', p: '/api/books/assets' },
+    perAssetAdd: { m: 'POST', p: '/api/books/assets' },
+    perAssetSell: { m: 'POST', p: '/api/books/assets/:id/dispose' },
+    perDepRun: { m: 'POST', p: '/api/books/depreciation/run' },
+    perRecList: { m: 'GET', p: '/api/books/recurring' },
+    perRecAdd: { m: 'POST', p: '/api/books/recurring' },
+    perRecPatch: { m: 'PATCH', p: '/api/books/recurring/:id' },
+    perRecStop: { m: 'DELETE', p: '/api/books/recurring/:id' },
+    perRecPost: { m: 'POST', p: '/api/books/recurring/:id/post' },
+    perRecSkip: { m: 'POST', p: '/api/books/recurring/:id/skip' },
+    perAccrue: { m: 'POST', p: '/api/books/accruals' },
+    perAccrueRev: { m: 'POST', p: '/api/books/accruals/:ref/reverse' },
+    perGstClose: { m: 'POST', p: '/api/books/gst/close' },
+    perGstPay: { m: 'POST', p: '/api/books/gst/pay' },
+    perReturn: { m: 'GET', p: '/api/books/returns' } /* BAS1: the shop's OWN return (AU BAS · AE VAT201), read from the posted books */,
+    perYearStatus: { m: 'GET', p: '/api/books/year/:fy/status' },
+    perYearClose: { m: 'POST', p: '/api/books/year/:fy/close' }
+  });
+}
 
 var PE = { ref: {}, accr: [], rec: [], tab: 'rec' };
 const peEl = (id) => document.getElementById(id);
-const peVal = (id) => { const e = peEl(id); return e ? String(e.value || '').trim() : ''; };
+const peVal = (id) => {
+  const e = peEl(id);
+  return e ? String(e.value || '').trim() : '';
+};
 const peOwner = () => typeof bkIsOwner === 'function' && bkIsOwner();
 const peRef = (k) => PE.ref[k] || (PE.ref[k] = bkRef());
-const peYmd = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+const peYmd = (date) => date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
 /** the last day of the month `back` months ago (1 = last month) — a date for a field's default, not money */
-function peMonthEnd(back) { const n = new Date(); return peYmd(new Date(n.getFullYear(), n.getMonth() - back + 1, 0)); }
+function peMonthEnd(back) {
+  const date = new Date();
+  return peYmd(new Date(date.getFullYear(), date.getMonth() - back + 1, 0));
+}
 /** ⭐ WX-R2R: the year a close or a depreciation run is for — last year when the books hold it, else the books' FIRST year (the server's
    GET /periods years). Never a year before the books began: the Year close used to open on it and paint twelve "not locked" crosses. */
-function peLastYear(years) { const prev = bkFyPrev(bkFyNow()); return years.indexOf(prev) >= 0 ? prev : (years.slice().sort()[0] || prev); }
-function peDaysAgo(n) { const d = new Date(); d.setDate(d.getDate() - n); return peYmd(d); }
-function peList(r, k) { return Array.isArray(r) ? r : ((r && r[k]) || []); }
+function peLastYear(years) {
+  const prev = bkFyPrev(bkFyNow());
+  return years.indexOf(prev) >= 0 ? prev : years.slice().sort()[0] || prev;
+}
+function peDaysAgo(n) {
+  const date = new Date();
+  date.setDate(date.getDate() - n);
+  return peYmd(date);
+}
+function peList(r, k) {
+  return Array.isArray(r) ? r : (r && r[k]) || [];
+}
 
 /* ── words: the server's sentence, its one fix button, and the calm line for "not migrated yet" ── */
 function peFix(msg) {
@@ -62,23 +79,68 @@ function peWhy(e, fallback) {
   return { text, calm: false, fix: peFix(text) };
 }
 function peBad(id, e, fallback) {
-  const el = peEl(id); if (!el) return;
+  const el = peEl(id);
+  if (!el) return;
   const w = typeof e === 'string' ? { text: e, calm: false, fix: null } : peWhy(e, fallback);
-  el.innerHTML = '<div class="pe-' + (w.calm ? 'calm' : 'bad') + '" data-testid="pe-refused" role="alert"><span>' + (w.calm ? '⏳ ' : '⚠ ') + esc(w.text) + '</span>'
-    + (w.fix ? '<button type="button" class="pe-fix" data-testid="pe-fix" onclick="show(\'' + w.fix.tab + '\')">' + esc(w.fix.label) + '</button>' : '') + '</div>';
+  el.innerHTML =
+    '<div class="pe-' +
+    (w.calm ? 'calm' : 'bad') +
+    '" data-testid="pe-refused" role="alert"><span>' +
+    (w.calm ? '⏳ ' : '⚠ ') +
+    esc(w.text) +
+    '</span>' +
+    (w.fix ? '<button type="button" class="pe-fix" data-testid="pe-fix" onclick="show(\'' + w.fix.tab + '\')">' + esc(w.fix.label) + '</button>' : '') +
+    '</div>';
 }
-function peOk(id, html) { const el = peEl(id); if (el) el.innerHTML = '<div class="pe-ok" data-testid="pe-ok" role="status">✓ ' + html + '</div>'; }
-function peNote(tid, text) { return '<div class="pe-note" data-testid="' + tid + '">' + esc(tx(text)) + '</div>'; }
+function peOk(id, html) {
+  const el = peEl(id);
+  if (el) el.innerHTML = '<div class="pe-ok" data-testid="pe-ok" role="status">✓ ' + html + '</div>';
+}
+function peNote(tid, text) {
+  return '<div class="pe-note" data-testid="' + tid + '">' + esc(tx(text)) + '</div>';
+}
 const peNoOwner = (what) => peNote('pe-readonly', what);
 const peField = (id, label, inner) => '<label class="pe-f"><span>' + esc(tx(label)) + '</span>' + inner + '</label>';
-const peInput = (id, val, ph, type, extra) => '<input class="inp" id="' + id + '" data-testid="' + id + '"' + (type ? ' type="' + type + '"' : ' inputmode="text"') + (ph ? ' placeholder="' + esc(ph) + '"' : '') + ' value="' + esc(val || '') + '"' + (extra || '') + '>';
-const peAmt = (id, val, ph) => bkMoneyInput({ id: id, text: val || '', ph: ph == null ? undefined : ph });   /* the one money input (cap-books bkMoneyInput) */
-const peSel = (id, opts, cur, extra) => '<select class="inp" id="' + id + '" data-testid="' + id + '"' + (extra || '') + '>' + opts.map((o) => '<option value="' + esc(o[0]) + '"' + (String(o[0]) === String(cur) ? ' selected' : '') + '>' + esc(tx(o[1])) + '</option>').join('') + '</select>';
-const peMODES = [['cash', 'Cash'], ['bank', 'Bank'], ['upi', 'UPI'], ['card', 'Card']];
-const peBtn = (tid, label, fn, cls) => '<button type="button" class="' + (cls || 'supact-pri') + '" data-testid="' + tid + '" onclick="' + fn + '">' + esc(tx(label)) + '</button>';
+const peInput = (id, val, ph, type, extra) =>
+  '<input class="inp" id="' +
+  id +
+  '" data-testid="' +
+  id +
+  '"' +
+  (type ? ' type="' + type + '"' : ' inputmode="text"') +
+  (ph ? ' placeholder="' + esc(ph) + '"' : '') +
+  ' value="' +
+  esc(val || '') +
+  '"' +
+  (extra || '') +
+  '>';
+const peAmt = (id, val, ph) => bkMoneyInput({ id: id, text: val || '', ph: ph == null ? undefined : ph }); /* the one money input (cap-books bkMoneyInput) */
+const peSel = (id, opts, cur, extra) =>
+  '<select class="inp" id="' +
+  id +
+  '" data-testid="' +
+  id +
+  '"' +
+  (extra || '') +
+  '>' +
+  opts
+    .map((item) => '<option value="' + esc(item[0]) + '"' + (String(item[0]) === String(cur) ? ' selected' : '') + '>' + esc(tx(item[1])) + '</option>')
+    .join('') +
+  '</select>';
+const peMODES = [
+  ['cash', 'Cash'],
+  ['bank', 'Bank'],
+  ['upi', 'UPI'],
+  ['card', 'Card']
+];
+const peBtn = (tid, label, fn, cls) =>
+  '<button type="button" class="' + (cls || 'supact-pri') + '" data-testid="' + tid + '" onclick="' + fn + '">' + esc(tx(label)) + '</button>';
 /** a minor amount as the text of an amount field (the field is parsed back with bkToMinor — the same digits) */
-function peText(minor) { return bkMinorText(minor); }
-const peMoney = (minor, c) => bkMoney(minor, c);   /* c: the answer's currency (BAS1: an AU return is in AUD, an AE one in AED) — the India pages pass none, as before */
+function peText(minor) {
+  return bkMinorText(minor);
+}
+const peMoney = (minor, c) =>
+  bkMoney(minor, c); /* c: the answer's currency (BAS1: an AU return is in AUD, an AE one in AED) — the India pages pass none, as before */
 const peHeads = ['cgst', 'sgst', 'igst', 'cess'];
 
 /* ═══ 1 · CLOSING STOCK ═════════════════════════════════════════════════════════════════════════════════════════════════
@@ -86,112 +148,223 @@ const peHeads = ['cgst', 'sgst', 'igst', 'cess'];
    The last counts are the stock ledger's own lines (GET /ledger/stock): date · entry · what it changed · stock after. */
 async function peStockView(body) {
   const own = peOwner();
-  body.innerHTML = (own
-    ? '<div class="pe-card" data-testid="ps-form"><div class="pe-form">'
-      + peField('ps_date', 'Month end', peInput('ps_date', peMonthEnd(1), '', 'date'))
-      + peField('ps_val', 'Stock on hand, at cost', peAmt('ps_val'))
-      + peField('ps_nrv', 'Worth less now? (only if lower)', peAmt('ps_nrv', '', tx('Leave empty if not')))
-      + '</div><div class="supacts">' + peBtn('ps-save', 'Save closing stock', 'peStockSave(this)') + '</div><div id="ps_out" class="pe-slot"></div></div>'
-    : peNoOwner('Only the owner enters the closing stock'))
-    + '<div id="bkl_stock" data-testid="stock-list"></div>';
+  body.innerHTML =
+    (own
+      ? '<div class="pe-card" data-testid="ps-form"><div class="pe-form">' +
+        peField('ps_date', 'Month end', peInput('ps_date', peMonthEnd(1), '', 'date')) +
+        peField('ps_val', 'Stock on hand, at cost', peAmt('ps_val')) +
+        peField('ps_nrv', 'Worth less now? (only if lower)', peAmt('ps_nrv', '', tx('Leave empty if not'))) +
+        '</div><div class="supacts">' +
+        peBtn('ps-save', 'Save closing stock', 'peStockSave(this)') +
+        '</div><div id="ps_out" class="pe-slot"></div></div>'
+      : peNoOwner('Only the owner enters the closing stock')) + '<div id="bkl_stock" data-testid="stock-list"></div>';
   await peStockList();
 }
 /* the counts the list shows - one array, so a count just saved is added here and painted at once (M173) */
 var PE_STOCK = { lines: [], api: null };
 async function peStockList() {
-  const host = peEl('bkl_stock'); if (!host) return;
+  const host = peEl('bkl_stock');
+  if (!host) return;
   let lines = [];
   try {
-    const r = await api('booksLedger', { params: { account: 'stock' }, query: { from: peDaysAgo(400), to: peYmd(new Date()) } });
-    lines = ((r && r.lines) || []).filter((l) => /closing stock/i.test(String(l.what || ''))).map((l, i) => Object.assign({ i }, l)).reverse();
-  } catch (e) { if (!(e && e.status === 404)) { host.innerHTML = '<div class="pe-bad">' + bkErr(e) + '</div>'; return; } }
+    const reply = await api('booksLedger', { params: { account: 'stock' }, query: { from: peDaysAgo(400), to: peYmd(new Date()) } });
+    lines = ((reply && reply.lines) || [])
+      .filter((item) => /closing stock/i.test(String(item.what || '')))
+      .map((item, index) => Object.assign({ i: index }, item))
+      .reverse();
+  } catch (e) {
+    if (!(e && e.status === 404)) {
+      host.innerHTML = '<div class="pe-bad">' + bkErr(e) + '</div>';
+      return;
+    }
+  }
   CBList.reset && CBList.reset('stock');
-  PE_STOCK.lines = lines; if (PE_STOCK.api) { try { PE_STOCK.api.destroy(); } catch (_) {} }
+  PE_STOCK.lines = lines;
+  if (PE_STOCK.api) {
+    try {
+      PE_STOCK.api.destroy();
+    } catch (_) {}
+  }
   PE_STOCK.api = CBList.mount(host, {
-    key: 'stock', t: tx, rows: () => PE_STOCK.lines, id: (l) => String(l.ref) + '#' + l.i, rowTid: (l) => 'stock-' + l.i,
+    key: 'stock',
+    t: tx,
+    rows: () => PE_STOCK.lines,
+    id: (l) => String(l.ref) + '#' + l.i,
+    rowTid: (l) => 'stock-' + l.i,
     columns: [
       { key: 'date', label: tx('Month end'), prio: 1, sort: 'date', w: 150, html: true, cell: (l) => esc(bkDate(l.date)) },
       { key: 'entry', label: tx('Entry'), prio: 3, sort: 'entry', w: 150, html: true, cell: (l) => '<span class="mono">' + esc(l.ref || '') + '</span>' },
-      { key: 'change', label: tx('Changed the stock by'), prio: 2, sort: 'change', num: true, w: 200, html: true, cell: (l) => esc(l.dr_minor ? peMoney(l.dr_minor) + ' ' + tx('Dr') : peMoney(l.cr_minor) + ' ' + tx('Cr')) },
-      { key: 'after', label: tx('Stock after'), prio: 4, sort: 'after', num: true, w: 190, html: true, cell: (l) => esc(bkDrCr(l.running_minor)) },
+      {
+        key: 'change',
+        label: tx('Changed the stock by'),
+        prio: 2,
+        sort: 'change',
+        num: true,
+        w: 200,
+        html: true,
+        cell: (l) => esc(l.dr_minor ? peMoney(l.dr_minor) + ' ' + tx('Dr') : peMoney(l.cr_minor) + ' ' + tx('Cr'))
+      },
+      { key: 'after', label: tx('Stock after'), prio: 4, sort: 'after', num: true, w: 190, html: true, cell: (l) => esc(bkDrCr(l.running_minor)) }
     ],
     search: (l) => [l.date, l.ref, l.what].join(' '),
     sorts: [{ key: 'date', label: tx('Newest first'), cmp: (a, b) => String(b.date).localeCompare(String(a.date)) }],
-    empty: { title: tx('No counts yet') },
+    empty: { title: tx('No counts yet') }
   });
 }
 /** M173: the count just saved goes into the list below at once, from the server's answer (only the difference posted: book_minor is what the ledger held) - no second read */
 function peStockAdd(body, v, r) {
-  const now = body.nrv_minor != null ? Math.min(v, body.nrv_minor) : v, book = Number(r && r.book_minor) || 0, diff = now - book;
-  const i = PE_STOCK.lines.reduce((m, l) => Math.max(m, l.i), -1) + 1;
-  PE_STOCK.lines = [{ i, date: body.date, ref: (r && r.entry_no) || '', what: 'Closing stock ' + body.date, dr_minor: diff > 0 ? diff : 0, cr_minor: diff < 0 ? -diff : 0, running_minor: now }].concat(PE_STOCK.lines);
-  if (PE_STOCK.api) PE_STOCK.api.refresh(); else peStockList();
+  const now = body.nrv_minor != null ? Math.min(v, body.nrv_minor) : v,
+    book = Number(r && r.book_minor) || 0,
+    diff = now - book;
+  const i = PE_STOCK.lines.reduce((total, item) => Math.max(total, item.i), -1) + 1;
+  PE_STOCK.lines = [
+    {
+      i,
+      date: body.date,
+      ref: (r && r.entry_no) || '',
+      what: 'Closing stock ' + body.date,
+      dr_minor: diff > 0 ? diff : 0,
+      cr_minor: diff < 0 ? -diff : 0,
+      running_minor: now
+    }
+  ].concat(PE_STOCK.lines);
+  if (PE_STOCK.api) PE_STOCK.api.refresh();
+  else peStockList();
 }
 async function peStockSave(btn) {
-  const date = peVal('ps_date'), v = bkMoneyMinor(peVal('ps_val'));
+  const date = peVal('ps_date'),
+    v = bkMoneyMinor(peVal('ps_val'));
   if (!date || isNaN(v)) return peBad('ps_out', tx('Enter the month end and the value of the stock on hand.'));
   const body = { date, value_minor: v, method: 'manual', client_ref: peRef('stock') };
-  if (peVal('ps_nrv')) { const n = bkMoneyMinor(peVal('ps_nrv')); if (isNaN(n)) return peBad('ps_out', tx('The lower value must be an amount.')); body.nrv_minor = n; }
+  if (peVal('ps_nrv')) {
+    const n = bkMoneyMinor(peVal('ps_nrv'));
+    if (isNaN(n)) return peBad('ps_out', tx('The lower value must be an amount.'));
+    body.nrv_minor = n;
+  }
   await bkOnce('pe-stock', btn, async () => {
     try {
-      const r = await api('perStock', { body });
+      const reply = await api('perStock', { body });
       PE.ref.stock = null;
-      peOk('ps_out', r && r.entry_no ? esc(txf('Saved · {no}', { no: r.entry_no })) : esc(tx((r && r.why) || 'Saved')));
-      peStockAdd(body, v, r);
-    } catch (e) { peBad('ps_out', e); }
+      peOk('ps_out', reply && reply.entry_no ? esc(txf('Saved · {no}', { no: reply.entry_no })) : esc(tx((reply && reply.why) || 'Saved')));
+      peStockAdd(body, v, reply);
+    } catch (e) {
+      peBad('ps_out', e);
+    }
   });
 }
 
 /* ═══ 2 · ASSETS & DEPRECIATION ═════════════════════════════════════════════════════════════════════════════════════════
    GET /assets → the register; POST /assets (by hand); POST /assets/:id/dispose; POST /depreciation/run { fy } → one entry, and the basis it used.
    The classes are the pack's — the same six keys in IN · AU · AE (the server refuses another and names them). */
-const PE_CLASSES = [['buildings', 'Buildings'], ['plant', 'Plant & machinery'], ['furniture', 'Furniture'], ['vehicles', 'Vehicles'], ['office', 'Office equipment'], ['computers', 'Computers']];
-const PE_CLASS_WORD = PE_CLASSES.reduce((m, c) => { m[c[0]] = c[1]; return m; }, {});
+const PE_CLASSES = [
+  ['buildings', 'Buildings'],
+  ['plant', 'Plant & machinery'],
+  ['furniture', 'Furniture'],
+  ['vehicles', 'Vehicles'],
+  ['office', 'Office equipment'],
+  ['computers', 'Computers']
+];
+const PE_CLASS_WORD = PE_CLASSES.reduce((total, item) => {
+  total[item[0]] = item[1];
+  return total;
+}, {});
 /* CX2 (A5): the basis CODE is the pack's (depreciation.entityBases); its short word is here until a pack carries a label (engines request queued) */
 const PE_BASIS = { it_act_wdv: 'Income-tax WDV', schedule_ii: 'Schedule II', div40: 'Division 40', ias16: 'IAS 16' };
-const PE_ENTITY = { proprietor: 'proprietor', partnership: 'partnership', llp: 'LLP', huf: 'HUF', trust: 'trust', company: 'company', sole_trader: 'sole trader', sole_establishment: 'sole establishment' };
+const PE_ENTITY = {
+  proprietor: 'proprietor',
+  partnership: 'partnership',
+  llp: 'LLP',
+  huf: 'HUF',
+  trust: 'trust',
+  company: 'company',
+  sole_trader: 'sole trader',
+  sole_establishment: 'sole establishment'
+};
 async function peAssetsView(body) {
-  if (!peOwner()) { body.innerHTML = peNoOwner('Only the owner sees the asset register'); return; }
-  body.innerHTML = '<div class="supacts pe-bar">' + peBtn('pa-add-open', '＋ Add an asset', 'peAssetForm()') + peBtn('pa-dep-open', 'Run depreciation', 'peDepForm()', '') + '</div>'
-    + '<div id="pa_form" class="pe-slot"></div><div id="pa_out" class="pe-slot"></div><div id="bkl_assets" data-testid="assets-list"></div>';
+  if (!peOwner()) {
+    body.innerHTML = peNoOwner('Only the owner sees the asset register');
+    return;
+  }
+  body.innerHTML =
+    '<div class="supacts pe-bar">' +
+    peBtn('pa-add-open', '＋ Add an asset', 'peAssetForm()') +
+    peBtn('pa-dep-open', 'Run depreciation', 'peDepForm()', '') +
+    '</div>' +
+    '<div id="pa_form" class="pe-slot"></div><div id="pa_out" class="pe-slot"></div><div id="bkl_assets" data-testid="assets-list"></div>';
   await peAssetsList();
 }
 async function peAssetsList() {
-  const host = peEl('bkl_assets'); if (!host) return;
+  const host = peEl('bkl_assets');
+  if (!host) return;
   let r;
-  try { r = await api('perAssets'); } catch (e) { const w = peWhy(e, tx('Could not be read')); host.innerHTML = '<div class="' + (w.calm ? 'pe-calm' : 'pe-bad') + '" data-testid="pe-refused">' + (w.calm ? '⏳ ' : '') + esc(w.text) + '</div>'; return; }
+  try {
+    r = await api('perAssets');
+  } catch (e) {
+    const w = peWhy(e, tx('Could not be read'));
+    host.innerHTML = '<div class="' + (w.calm ? 'pe-calm' : 'pe-bad') + '" data-testid="pe-refused">' + (w.calm ? '⏳ ' : '') + esc(w.text) + '</div>';
+    return;
+  }
   PE.assets = (r && r.assets) || [];
-  const net = (r && r.net_block) || [];
+  const list = (r && r.net_block) || [];
   CBList.reset && CBList.reset('assets');
   CBList.mount(host, {
-    key: 'assets', t: tx, rows: () => PE.assets, id: (a) => a.asset_id, rowTid: (a) => 'asset-' + a.asset_id,
-    head: () => ({ chips: [{ tid: 'pa-total', text: tx('Written-down value') + ' ' + peMoney(r.total_wdv_minor) }],
-      notices: net.filter((c) => c.agrees === false).map((c) => ({ cls: 'bad', tid: 'pa-differs-' + c.asset_class, text: txf('{c}: the register and the Ledger differ', { c: tx(PE_CLASS_WORD[c.asset_class] || c.asset_class) }) })) }),
+    key: 'assets',
+    t: tx,
+    rows: () => PE.assets,
+    id: (a) => a.asset_id,
+    rowTid: (a) => 'asset-' + a.asset_id,
+    head: () => ({
+      chips: [{ tid: 'pa-total', text: tx('Written-down value') + ' ' + peMoney(r.total_wdv_minor) }],
+      notices: list
+        .filter((item) => item.agrees === false)
+        .map((item) => ({
+          cls: 'bad',
+          tid: 'pa-differs-' + item.asset_class,
+          text: txf('{c}: the register and the Ledger differ', { c: tx(PE_CLASS_WORD[item.asset_class] || item.asset_class) })
+        }))
+    }),
     columns: [
-      { key: 'name', label: tx('Asset'), prio: 1, sort: 'name', w: 240, html: true, cell: (a) => esc(a.name) + (a.disposed_on ? ' <span class="optchip" data-testid="asset-sold-' + esc(a.asset_id) + '">' + esc(tx('Sold')) + '</span>' : '') },
+      {
+        key: 'name',
+        label: tx('Asset'),
+        prio: 1,
+        sort: 'name',
+        w: 240,
+        html: true,
+        cell: (a) =>
+          esc(a.name) + (a.disposed_on ? ' <span class="optchip" data-testid="asset-sold-' + esc(a.asset_id) + '">' + esc(tx('Sold')) + '</span>' : '')
+      },
       { key: 'class', label: tx('Kind'), prio: 4, sort: 'class', w: 170, html: true, cell: (a) => esc(tx(PE_CLASS_WORD[a.asset_class] || a.asset_class)) },
       { key: 'cost', label: tx('Cost'), prio: 3, sort: 'cost', num: true, w: 150, html: true, cell: (a) => esc(peMoney(a.cost_minor)) },
       { key: 'use', label: tx('Put to use'), prio: 5, sort: 'use', w: 140, html: true, cell: (a) => esc(bkDate(a.put_to_use)) },
-      { key: 'wdv', label: tx('Written-down value'), prio: 2, sort: 'wdv', num: true, w: 190, html: true, cell: (a) => esc(peMoney(a.wdv_minor)) },
+      { key: 'wdv', label: tx('Written-down value'), prio: 2, sort: 'wdv', num: true, w: 190, html: true, cell: (a) => esc(peMoney(a.wdv_minor)) }
     ],
     search: (a) => [a.name, a.asset_class, PE_CLASS_WORD[a.asset_class]].join(' '),
-    sorts: [{ key: 'name', label: tx('Name'), cmp: (a, b) => String(a.name).localeCompare(String(b.name)) }, { key: 'cost', label: tx('Cost'), cmp: (a, b) => a.cost_minor - b.cost_minor },
-      { key: 'wdv', label: tx('Written-down value'), cmp: (a, b) => a.wdv_minor - b.wdv_minor }, { key: 'use', label: tx('Put to use'), cmp: (a, b) => String(a.put_to_use).localeCompare(String(b.put_to_use)) },
-      { key: 'class', label: tx('Kind'), cmp: (a, b) => String(a.asset_class).localeCompare(String(b.asset_class)) }],
+    sorts: [
+      { key: 'name', label: tx('Name'), cmp: (a, b) => String(a.name).localeCompare(String(b.name)) },
+      { key: 'cost', label: tx('Cost'), cmp: (a, b) => a.cost_minor - b.cost_minor },
+      { key: 'wdv', label: tx('Written-down value'), cmp: (a, b) => a.wdv_minor - b.wdv_minor },
+      { key: 'use', label: tx('Put to use'), cmp: (a, b) => String(a.put_to_use).localeCompare(String(b.put_to_use)) },
+      { key: 'class', label: tx('Kind'), cmp: (a, b) => String(a.asset_class).localeCompare(String(b.asset_class)) }
+    ],
     actions: [{ id: 'dispose', icon: '↗', label: 'Sold or scrapped', tid: 'pa-dispose', when: (a) => !a.disposed_on, run: (a) => peSellForm(a.asset_id) }],
-    empty: { title: tx('No assets yet') },
+    empty: { title: tx('No assets yet') }
   });
 }
 function peAssetForm() {
   PE.ref.asset = PE.ref.asset || bkRef();
-  peEl('pa_form').innerHTML = '<div class="pe-card" data-testid="pa-form"><div class="pe-form">'
-    + peField('pa_name', 'What is it?', peInput('pa_name', '', tx('e.g. Display fridge')))
-    + peField('pa_class', 'Kind', peSel('pa_class', PE_CLASSES, 'furniture'))
-    + peField('pa_cost', 'Cost', peAmt('pa_cost'))
-    + peField('pa_date', 'Bought on', peInput('pa_date', peYmd(new Date()), '', 'date'))
-    + peField('pa_use', 'Put to use on (if later)', peInput('pa_use', '', '', 'date'))
-    + peField('pa_how', 'Paid from', peSel('pa_how', peMODES, 'bank'))
-    + '</div><div class="supacts">' + peBtn('pa-save', 'Add asset', 'peAssetSave(this)') + peBtn('pa-cancel', 'Cancel', 'peEl(\'pa_form\').innerHTML=\'\'', '') + '</div><div id="pa_fout" class="pe-slot"></div></div>';
+  peEl('pa_form').innerHTML =
+    '<div class="pe-card" data-testid="pa-form"><div class="pe-form">' +
+    peField('pa_name', 'What is it?', peInput('pa_name', '', tx('e.g. Display fridge'))) +
+    peField('pa_class', 'Kind', peSel('pa_class', PE_CLASSES, 'furniture')) +
+    peField('pa_cost', 'Cost', peAmt('pa_cost')) +
+    peField('pa_date', 'Bought on', peInput('pa_date', peYmd(new Date()), '', 'date')) +
+    peField('pa_use', 'Put to use on (if later)', peInput('pa_use', '', '', 'date')) +
+    peField('pa_how', 'Paid from', peSel('pa_how', peMODES, 'bank')) +
+    '</div><div class="supacts">' +
+    peBtn('pa-save', 'Add asset', 'peAssetSave(this)') +
+    peBtn('pa-cancel', 'Cancel', "peEl('pa_form').innerHTML=''", '') +
+    '</div><div id="pa_fout" class="pe-slot"></div></div>';
 }
 async function peAssetSave(btn) {
   const cost = bkMoneyMinor(peVal('pa_cost'));
@@ -200,227 +373,510 @@ async function peAssetSave(btn) {
   if (peVal('pa_use')) body.put_to_use = peVal('pa_use');
   await bkOnce('pe-asset', btn, async () => {
     try {
-      const r = await api('perAssetAdd', { body });
-      PE.ref.asset = null; peEl('pa_form').innerHTML = '';
-      peOk('pa_out', esc(txf('Asset added · {no}', { no: (r && r.entry_no) || '' })));
+      const reply = await api('perAssetAdd', { body });
+      PE.ref.asset = null;
+      peEl('pa_form').innerHTML = '';
+      peOk('pa_out', esc(txf('Asset added · {no}', { no: (reply && reply.entry_no) || '' })));
       peAssetsList();
-    } catch (e) { peBad('pa_fout', e); }
+    } catch (e) {
+      peBad('pa_fout', e);
+    }
   });
 }
 function peSellForm(id) {
   PE.ref['sell' + id] = PE.ref['sell' + id] || bkRef();
   const a = (PE.assets || []).filter((x) => x.asset_id === id)[0] || {};
-  peEl('pa_form').innerHTML = '<div class="pe-card" data-testid="pa-sell-form"><div class="pe-sub">' + esc(a.name || '') + '</div><div class="pe-form">'
-    + peField('pd_date', 'Sold or scrapped on', peInput('pd_date', peYmd(new Date()), '', 'date'))
-    + peField('pd_get', 'What it fetched (empty if scrapped)', peAmt('pd_get', '', tx('Leave empty if scrapped')))
-    + peField('pd_into', 'Money came into', peSel('pd_into', peMODES, 'bank'))
-    + '</div><div class="supacts">' + peBtn('pd-save', 'Save', 'peSellSave(this,\'' + esc(id) + '\')') + peBtn('pd-cancel', 'Cancel', 'peEl(\'pa_form\').innerHTML=\'\'', '') + '</div><div id="pd_out" class="pe-slot"></div></div>';
+  peEl('pa_form').innerHTML =
+    '<div class="pe-card" data-testid="pa-sell-form"><div class="pe-sub">' +
+    esc(a.name || '') +
+    '</div><div class="pe-form">' +
+    peField('pd_date', 'Sold or scrapped on', peInput('pd_date', peYmd(new Date()), '', 'date')) +
+    peField('pd_get', 'What it fetched (empty if scrapped)', peAmt('pd_get', '', tx('Leave empty if scrapped'))) +
+    peField('pd_into', 'Money came into', peSel('pd_into', peMODES, 'bank')) +
+    '</div><div class="supacts">' +
+    peBtn('pd-save', 'Save', "peSellSave(this,'" + esc(id) + "')") +
+    peBtn('pd-cancel', 'Cancel', "peEl('pa_form').innerHTML=''", '') +
+    '</div><div id="pd_out" class="pe-slot"></div></div>';
   peEl('pa_form').scrollIntoView && peEl('pa_form').scrollIntoView({ block: 'nearest' });
 }
 async function peSellSave(btn, id) {
   const body = { date: peVal('pd_date'), into: peVal('pd_into'), client_ref: PE.ref['sell' + id] };
-  if (peVal('pd_get')) { const m = bkMoneyMinor(peVal('pd_get')); if (isNaN(m)) return peBad('pd_out', tx('What it fetched must be an amount.')); body.proceeds_minor = m; }
+  if (peVal('pd_get')) {
+    const m = bkMoneyMinor(peVal('pd_get'));
+    if (isNaN(m)) return peBad('pd_out', tx('What it fetched must be an amount.'));
+    body.proceeds_minor = m;
+  }
   await bkOnce('pe-sell-' + id, btn, async () => {
     try {
-      const r = await api('perAssetSell', { params: { id }, body });
-      PE.ref['sell' + id] = null; peEl('pa_form').innerHTML = '';
-      peOk('pa_out', esc(txf('Saved · {no}', { no: (r && r.entry_no) || '' })));
+      const reply = await api('perAssetSell', { params: { id }, body });
+      PE.ref['sell' + id] = null;
+      peEl('pa_form').innerHTML = '';
+      peOk('pa_out', esc(txf('Saved · {no}', { no: (reply && reply.entry_no) || '' })));
       peAssetsList();
-    } catch (e) { peBad('pd_out', e); }
+    } catch (e) {
+      peBad('pd_out', e);
+    }
   });
 }
 async function peDepForm() {
-  let L; try { L = await bkPeriodsLoad(); } catch (e) { return peBad('pa_out', e); }
-  const years = L.years.slice(), prev = peLastYear(years);
-  peEl('pa_form').innerHTML = '<div class="pe-card" data-testid="pdp-form"><div class="pe-form">'
-    + peField('pdp_fy', 'Financial year', peSel('pdp_fy', years.map((y) => [y, y]), prev, ' onchange="peDepLabel()"'))
-    + '</div><div class="supacts"><button type="button" class="supact-pri" id="pdp_run" data-testid="pdp-run" onclick="peDepRun(this)"></button>'
-    + peBtn('pdp-cancel', 'Cancel', 'peEl(\'pa_form\').innerHTML=\'\'', '') + '</div><div id="pdp_out" class="pe-slot"></div></div>';
+  let L;
+  try {
+    L = await bkPeriodsLoad();
+  } catch (e) {
+    return peBad('pa_out', e);
+  }
+  const years = L.years.slice(),
+    prev = peLastYear(years);
+  peEl('pa_form').innerHTML =
+    '<div class="pe-card" data-testid="pdp-form"><div class="pe-form">' +
+    peField(
+      'pdp_fy',
+      'Financial year',
+      peSel(
+        'pdp_fy',
+        years.map((y) => [y, y]),
+        prev,
+        ' onchange="peDepLabel()"'
+      )
+    ) +
+    '</div><div class="supacts"><button type="button" class="supact-pri" id="pdp_run" data-testid="pdp-run" onclick="peDepRun(this)"></button>' +
+    peBtn('pdp-cancel', 'Cancel', "peEl('pa_form').innerHTML=''", '') +
+    '</div><div id="pdp_out" class="pe-slot"></div></div>';
   peDepLabel();
 }
-function peDepLabel() { const b = peEl('pdp_run'); if (b) b.textContent = txf('Run depreciation for {fy}', { fy: peVal('pdp_fy') }); }
+function peDepLabel() {
+  const node = peEl('pdp_run');
+  if (node) node.textContent = txf('Run depreciation for {fy}', { fy: peVal('pdp_fy') });
+}
 async function peDepRun(btn) {
   const fy = peVal('pdp_fy');
   await bkOnce('pe-dep', btn, async () => {
     try {
-      const r = await api('perDepRun', { body: { fy, client_ref: peRef('dep' + fy) } }) || {};
+      const r = (await api('perDepRun', { body: { fy, client_ref: peRef('dep' + fy) } })) || {};
       PE.ref['dep' + fy] = null;
       const basis = (PE_ENTITY[r.entity_basis] || r.entity_basis || '') + ': ' + tx(PE_BASIS[r.basis_rule] || 'as set for this shop');
       let h = '<div class="pe-basis" data-testid="pdp-basis">' + esc(txf('Basis used — {b}', { b: basis })) + '</div>';
       if (r.entity_note) h += '<div class="pe-warn" data-testid="pdp-note">⚠ ' + esc(r.entity_note) + '</div>';
       if (r.nothing_to_post) h += '<div class="pe-note" data-testid="pdp-nothing">' + esc(r.why || tx('Nothing to depreciate')) + '</div>';
-      else if (r.duplicate) h += '<div class="pe-note" data-testid="pdp-dup">' + esc(txf('Already run for {fy} · {no}', { fy, no: r.entry_no || '' })) + '</div>';
+      else if (r.duplicate)
+        h += '<div class="pe-note" data-testid="pdp-dup">' + esc(txf('Already run for {fy} · {no}', { fy, no: r.entry_no || '' })) + '</div>';
       else h += '<div class="pe-ok" data-testid="pdp-done">✓ ' + esc(txf('Depreciation for {fy} saved · {no}', { fy, no: r.entry_no || '' })) + '</div>';
-      if ((r.by_class || []).length) h += '<div class="pe-rows" data-testid="pdp-classes">' + r.by_class.map((c) => '<div class="pe-row"><span>' + esc(tx(PE_CLASS_WORD[c.class] || c.class)) + '</span><span class="mono">' + esc(c.rate) + '%</span><span class="mono">' + esc(CBLocale.money(Number(c.amount), bkCur())) + '</span></div>').join('') + '</div>';
+      if ((r.by_class || []).length)
+        h +=
+          '<div class="pe-rows" data-testid="pdp-classes">' +
+          r.by_class
+            .map(
+              (item) =>
+                '<div class="pe-row"><span>' +
+                esc(tx(PE_CLASS_WORD[item.class] || item.class)) +
+                '</span><span class="mono">' +
+                esc(item.rate) +
+                '%</span><span class="mono">' +
+                esc(CBLocale.money(Number(item.amount), bkCur())) +
+                '</span></div>'
+            )
+            .join('') +
+          '</div>';
       peEl('pdp_out').innerHTML = h;
       peAssetsList();
-    } catch (e) { peBad('pdp_out', e); }
+    } catch (e) {
+      peBad('pdp_out', e);
+    }
   });
 }
 
 /* ═══ 3 · ACCRUALS & RECURRING ═════════════════════════════════════════════════════════════════════════════════════════
    Repeating entries: CRUD /recurring, post or skip a due one. Accruals: POST /accruals (comes back on the first day of the next month), POST /accruals/:ref/reverse.
    There is no list of accruals on the API yet: the page shows the ones that are DUE to turn back (the To-do feed's own list) and the ones made in this visit. */
-const PE_FREQ = [['monthly', 'Every month'], ['quarterly', 'Every 3 months'], ['yearly', 'Every year']];
-const PE_ACCR = [['outstanding', 'Owed, not yet paid'], ['prepaid', 'Paid in advance'], ['accrued_income', 'Earned, not yet received'], ['income_in_advance', 'Received in advance']];
+const PE_FREQ = [
+  ['monthly', 'Every month'],
+  ['quarterly', 'Every 3 months'],
+  ['yearly', 'Every year']
+];
+const PE_ACCR = [
+  ['outstanding', 'Owed, not yet paid'],
+  ['prepaid', 'Paid in advance'],
+  ['accrued_income', 'Earned, not yet received'],
+  ['income_in_advance', 'Received in advance']
+];
 async function peAccrualsView(body) {
-  if (!peOwner()) { body.innerHTML = peNoOwner('Only the owner sees repeating entries and accruals'); return; }
-  body.innerHTML = '<div class="tabs" role="tablist">'
-    + [['rec', 'Repeating'], ['acc', 'Accruals']].map((t) => '<button type="button" class="pe-tab" role="tab" data-testid="pr-tab-' + t[0] + '" aria-pressed="' + (PE.tab === t[0]) + '" onclick="peAccrTab(\'' + t[0] + '\')">' + esc(tx(t[1])) + '</button>').join('') + '</div>'
-    + '<div id="pr_body"></div>';
+  if (!peOwner()) {
+    body.innerHTML = peNoOwner('Only the owner sees repeating entries and accruals');
+    return;
+  }
+  body.innerHTML =
+    '<div class="tabs" role="tablist">' +
+    [
+      ['rec', 'Repeating'],
+      ['acc', 'Accruals']
+    ]
+      .map(
+        (item) =>
+          '<button type="button" class="pe-tab" role="tab" data-testid="pr-tab-' +
+          item[0] +
+          '" aria-pressed="' +
+          (PE.tab === item[0]) +
+          '" onclick="peAccrTab(\'' +
+          item[0] +
+          '\')">' +
+          esc(tx(item[1])) +
+          '</button>'
+      )
+      .join('') +
+    '</div>' +
+    '<div id="pr_body"></div>';
   peAccrPaint();
 }
-function peAccrTab(t) { PE.tab = t; document.querySelectorAll('[data-testid^="pr-tab-"]').forEach((b) => b.setAttribute('aria-pressed', String(b.getAttribute('data-testid') === 'pr-tab-' + t))); peAccrPaint(); }
-function peAccrPaint() { const b = peEl('pr_body'); if (!b) return; if (PE.tab === 'acc') peAccrBody(b); else peRecBody(b); }
+function peAccrTab(t) {
+  PE.tab = t;
+  document
+    .querySelectorAll('[data-testid^="pr-tab-"]')
+    .forEach((item) => item.setAttribute('aria-pressed', String(item.getAttribute('data-testid') === 'pr-tab-' + t)));
+  peAccrPaint();
+}
+function peAccrPaint() {
+  const b = peEl('pr_body');
+  if (!b) return;
+  if (PE.tab === 'acc') peAccrBody(b);
+  else peRecBody(b);
+}
 
 async function peEntryKinds() {
   if (PE.kinds) return PE.kinds;
-  const r = await api('booksEvents');
-  const picks = (r && r.picks) || {};
+  const reply = await api('booksEvents');
+  const picks = (reply && reply.picks) || {};
   PE.picks = picks;
-  PE.kinds = ((r && r.events) || []).filter((e) => e.preview !== false && !e.route && e.kind !== 'journal' && (e.fields || []).length);
+  PE.kinds = ((reply && reply.events) || []).filter((e) => e.preview !== false && !e.route && e.kind !== 'journal' && (e.fields || []).length);
   return PE.kinds;
 }
 function peKindFields(kind) {
-  const ev = (PE.kinds || []).filter((e) => e.kind === kind)[0]; if (!ev) return '';
-  return (ev.fields || []).map((f) => typeof f === 'string' ? { key: f, kind: f } : f).filter((f) => f.key !== 'date').map((f) => {
-    const id = 'prf_' + f.key, lab = f.label || ({ class: 'What for', paid_from: 'Paid from', into: 'Came into', from: 'Taken from', to: 'Put into', amount: 'How much', narration: 'Note' })[f.key] || f.key;
-    if (f.kind === 'amount') return peField(id, lab, peAmt(id));
-    if (f.kind === 'pick') {
-      const opts = f.pick === 'mode' ? peMODES : ((PE.picks || {})[f.pick] || []).map((o) => [o.role || o.code, o.name]);
-      return peField(id, lab, peSel(id, [['', 'Choose…']].concat(opts), ''));
-    }
-    return peField(id, lab, peInput(id, '', ''));
-  }).join('');
+  const ev = (PE.kinds || []).filter((e) => e.kind === kind)[0];
+  if (!ev) return '';
+  return (ev.fields || [])
+    .map((item) => (typeof item === 'string' ? { key: item, kind: item } : item))
+    .filter((item) => item.key !== 'date')
+    .map((item) => {
+      const id = 'prf_' + item.key,
+        lab =
+          item.label ||
+          { class: 'What for', paid_from: 'Paid from', into: 'Came into', from: 'Taken from', to: 'Put into', amount: 'How much', narration: 'Note' }[
+            item.key
+          ] ||
+          item.key;
+      if (item.kind === 'amount') return peField(id, lab, peAmt(id));
+      if (item.kind === 'pick') {
+        const opts = item.pick === 'mode' ? peMODES : ((PE.picks || {})[item.pick] || []).map((item) => [item.role || item.code, item.name]);
+        return peField(id, lab, peSel(id, [['', 'Choose…']].concat(opts), ''));
+      }
+      return peField(id, lab, peInput(id, '', ''));
+    })
+    .join('');
 }
 function peRecKind() {
-  const k = peVal('pr_kind'); const box = peEl('pr_kfields'); if (box) box.innerHTML = k ? peKindFields(k) : '';
+  const k = peVal('pr_kind');
+  const box = peEl('pr_kfields');
+  if (box) box.innerHTML = k ? peKindFields(k) : '';
 }
-async function peRecBody(b) {
-  b.innerHTML = '<div class="supacts pe-bar">' + peBtn('pr-add-open', '＋ New repeating entry', 'peRecForm()') + '</div><div id="pr_form" class="pe-slot"></div><div id="pr_out" class="pe-slot"></div><div id="bkl_rec" data-testid="recurring-list"></div>';
+async function peRecBody(node) {
+  node.innerHTML =
+    '<div class="supacts pe-bar">' +
+    peBtn('pr-add-open', '＋ New repeating entry', 'peRecForm()') +
+    '</div><div id="pr_form" class="pe-slot"></div><div id="pr_out" class="pe-slot"></div><div id="bkl_rec" data-testid="recurring-list"></div>';
   await peRecList();
 }
 async function peRecList() {
-  const host = peEl('bkl_rec'); if (!host) return;
-  try { PE.rec = peList(await api('perRecList'), 'recurring'); }
-  catch (e) { const w = peWhy(e, tx('Could not be read')); host.innerHTML = '<div class="' + (w.calm ? 'pe-calm' : 'pe-bad') + '" data-testid="pe-refused">' + (w.calm ? '⏳ ' : '') + esc(w.text) + '</div>'; return; }
-  const today = peYmd(new Date()), isDue = (t) => t.active && t.next_on && t.next_on <= today;
+  const host = peEl('bkl_rec');
+  if (!host) return;
+  try {
+    PE.rec = peList(await api('perRecList'), 'recurring');
+  } catch (e) {
+    const w = peWhy(e, tx('Could not be read'));
+    host.innerHTML = '<div class="' + (w.calm ? 'pe-calm' : 'pe-bad') + '" data-testid="pe-refused">' + (w.calm ? '⏳ ' : '') + esc(w.text) + '</div>';
+    return;
+  }
+  const today = peYmd(new Date()),
+    isDue = (t) => t.active && t.next_on && t.next_on <= today;
   CBList.reset && CBList.reset('recurring');
   CBList.mount(host, {
-    key: 'recurring', t: tx, rows: () => PE.rec, id: (t) => t.recurring_id, rowTid: (t) => 'rec-' + t.recurring_id,
+    key: 'recurring',
+    t: tx,
+    rows: () => PE.rec,
+    id: (t) => t.recurring_id,
+    rowTid: (t) => 'rec-' + t.recurring_id,
     head: () => ({ notices: PE.rec.filter(isDue).length ? [{ cls: 'warn', tid: 'pr-due', text: txf('{n} due', { n: PE.rec.filter(isDue).length }) }] : [] }),
     columns: [
-      { key: 'name', label: tx('Name'), prio: 1, sort: 'name', w: 230, html: true, cell: (t) => esc(t.name) + (t.active ? '' : ' <span class="optchip">' + esc(tx('Stopped')) + '</span>') },
-      { key: 'next', label: tx('Next'), prio: 2, sort: 'next', w: 190, html: true, cell: (t) => t.next_on ? esc(bkDate(t.next_on)) + (isDue(t) ? ' <span class="optchip" data-testid="rec-due-' + esc(t.recurring_id) + '">' + esc(tx('Due')) + '</span>' : '') : '—' },
-      { key: 'freq', label: tx('How often'), prio: 3, sort: 'freq', w: 160, html: true, cell: (t) => esc(tx((PE_FREQ.filter((f) => f[0] === t.frequency)[0] || [0, t.frequency])[1])) },
-      { key: 'what', label: tx('What'), prio: 4, sort: 'what', w: 170, html: true, cell: (t) => esc(tx(((t.event || {}).kind || (t.event || {}).type || '').replace(/_/g, ' '))) },
-      { key: 'auto', label: tx('Posts'), prio: 5, sort: 'auto', w: 160, html: true, cell: (t) => esc(tx(t.auto ? 'By itself' : 'When I accept')) },
+      {
+        key: 'name',
+        label: tx('Name'),
+        prio: 1,
+        sort: 'name',
+        w: 230,
+        html: true,
+        cell: (t) => esc(t.name) + (t.active ? '' : ' <span class="optchip">' + esc(tx('Stopped')) + '</span>')
+      },
+      {
+        key: 'next',
+        label: tx('Next'),
+        prio: 2,
+        sort: 'next',
+        w: 190,
+        html: true,
+        cell: (t) =>
+          t.next_on
+            ? esc(bkDate(t.next_on)) +
+              (isDue(t) ? ' <span class="optchip" data-testid="rec-due-' + esc(t.recurring_id) + '">' + esc(tx('Due')) + '</span>' : '')
+            : '—'
+      },
+      {
+        key: 'freq',
+        label: tx('How often'),
+        prio: 3,
+        sort: 'freq',
+        w: 160,
+        html: true,
+        cell: (t) => esc(tx((PE_FREQ.filter((item) => item[0] === t.frequency)[0] || [0, t.frequency])[1]))
+      },
+      {
+        key: 'what',
+        label: tx('What'),
+        prio: 4,
+        sort: 'what',
+        w: 170,
+        html: true,
+        cell: (t) => esc(tx(((t.event || {}).kind || (t.event || {}).type || '').replace(/_/g, ' ')))
+      },
+      { key: 'auto', label: tx('Posts'), prio: 5, sort: 'auto', w: 160, html: true, cell: (t) => esc(tx(t.auto ? 'By itself' : 'When I accept')) }
     ],
     search: (t) => [t.name, t.frequency, t.next_on, (t.event || {}).kind].join(' '),
-    sorts: [{ key: 'next', label: tx('Next due'), cmp: (a, b) => String(a.next_on).localeCompare(String(b.next_on)) }, { key: 'name', label: tx('Name'), cmp: (a, b) => String(a.name).localeCompare(String(b.name)) },
-      { key: 'freq', label: tx('How often'), cmp: (a, b) => String(a.frequency).localeCompare(String(b.frequency)) }],
+    sorts: [
+      { key: 'next', label: tx('Next due'), cmp: (a, b) => String(a.next_on).localeCompare(String(b.next_on)) },
+      { key: 'name', label: tx('Name'), cmp: (a, b) => String(a.name).localeCompare(String(b.name)) },
+      { key: 'freq', label: tx('How often'), cmp: (a, b) => String(a.frequency).localeCompare(String(b.frequency)) }
+    ],
     actions: [
       { id: 'post', icon: '✓', label: 'Post it', tid: 'rec-post', when: isDue, run: (t) => peRecDo('perRecPost', t, 'Posted') },
       { id: 'skip', icon: '⤼', label: 'Skip this one', tid: 'rec-skip', when: isDue, run: (t) => peRecDo('perRecSkip', t, 'Skipped') },
       { id: 'auto', icon: '⚙', label: 'Post by itself / ask me', tid: 'rec-auto', when: (t) => t.active, run: (t) => peRecAuto(t) },
-      { id: 'stop', icon: '■', label: 'Stop it', tid: 'rec-stop', when: (t) => t.active, run: (t) => peRecStop(t) },
+      { id: 'stop', icon: '■', label: 'Stop it', tid: 'rec-stop', when: (t) => t.active, run: (t) => peRecStop(t) }
     ],
-    empty: { title: tx('No repeating entries yet') },
+    empty: { title: tx('No repeating entries yet') }
   });
 }
 async function peRecDo(key, t, word) {
   await bkOnce('pe-rec-' + key + t.recurring_id, null, async () => {
     try {
-      const r = await api(key, { params: { id: t.recurring_id }, body: {} }) || {};
+      const r = (await api(key, { params: { id: t.recurring_id }, body: {} })) || {};
       const no = r.posted && (r.posted.entry_no || r.posted.no);
       peOk('pr_out', esc(tx(word)) + (no ? ' · ' + esc(no) : '') + ' — ' + esc(t.name));
       peRecList();
-    } catch (e) { peBad('pr_out', e); }
+    } catch (e) {
+      peBad('pr_out', e);
+    }
   });
 }
 async function peRecAuto(t) {
   await bkOnce('pe-rec-auto' + t.recurring_id, null, async () => {
-    try { await api('perRecPatch', { params: { id: t.recurring_id }, body: { auto: !t.auto } }); peOk('pr_out', esc(tx(!t.auto ? 'It will post by itself' : 'It will ask you each time'))); peRecList(); }
-    catch (e) { peBad('pr_out', e); }
+    try {
+      await api('perRecPatch', { params: { id: t.recurring_id }, body: { auto: !t.auto } });
+      peOk('pr_out', esc(tx(!t.auto ? 'It will post by itself' : 'It will ask you each time')));
+      peRecList();
+    } catch (e) {
+      peBad('pr_out', e);
+    }
   });
 }
 function peRecStop(t) {
-  confirmAsk(tx('Stop this repeating entry?'), esc(txf('{n} stops. What it already posted stays.', { n: t.name })), tx('Stop it'), async () => {
-    try { await api('perRecStop', { params: { id: t.recurring_id } }); peOk('pr_out', esc(txf('{n} stopped', { n: t.name }))); peRecList(); }
-    catch (e) { peBad('pr_out', e); }
-  }, true);
+  confirmAsk(
+    tx('Stop this repeating entry?'),
+    esc(txf('{n} stops. What it already posted stays.', { n: t.name })),
+    tx('Stop it'),
+    async () => {
+      try {
+        await api('perRecStop', { params: { id: t.recurring_id } });
+        peOk('pr_out', esc(txf('{n} stopped', { n: t.name })));
+        peRecList();
+      } catch (e) {
+        peBad('pr_out', e);
+      }
+    },
+    true
+  );
 }
 async function peRecForm() {
-  try { await peEntryKinds(); } catch (e) { return peBad('pr_out', e); }
+  try {
+    await peEntryKinds();
+  } catch (e) {
+    return peBad('pr_out', e);
+  }
   PE.ref.rec = PE.ref.rec || bkRef();
-  peEl('pr_form').innerHTML = '<div class="pe-card" data-testid="pr-form"><div class="pe-form">'
-    + peField('pr_name', 'Name', peInput('pr_name', '', tx('e.g. Shop rent')))
-    + peField('pr_kind', 'What happens', peSel('pr_kind', [['', 'Choose…']].concat(PE.kinds.map((e) => [e.kind, e.words || e.kind])), '', ' onchange="peRecKind()"'))
-    + '<div id="pr_kfields" class="pe-sub-form"></div>'
-    + peField('pr_freq', 'How often', peSel('pr_freq', PE_FREQ, 'monthly'))
-    + peField('pr_next', 'First one on', peInput('pr_next', peYmd(new Date()), '', 'date'))
-    + peField('pr_end', 'Last one on (optional)', peInput('pr_end', '', '', 'date'))
-    + peField('pr_auto', 'Posts', peSel('pr_auto', [['0', 'When I accept'], ['1', 'By itself']], '0'))
-    + '</div><div class="supacts">' + peBtn('pr-save', 'Save', 'peRecSave(this)') + peBtn('pr-cancel', 'Cancel', 'peEl(\'pr_form\').innerHTML=\'\'', '') + '</div><div id="pr_fout" class="pe-slot"></div></div>';
+  peEl('pr_form').innerHTML =
+    '<div class="pe-card" data-testid="pr-form"><div class="pe-form">' +
+    peField('pr_name', 'Name', peInput('pr_name', '', tx('e.g. Shop rent'))) +
+    peField(
+      'pr_kind',
+      'What happens',
+      peSel('pr_kind', [['', 'Choose…']].concat(PE.kinds.map((e) => [e.kind, e.words || e.kind])), '', ' onchange="peRecKind()"')
+    ) +
+    '<div id="pr_kfields" class="pe-sub-form"></div>' +
+    peField('pr_freq', 'How often', peSel('pr_freq', PE_FREQ, 'monthly')) +
+    peField('pr_next', 'First one on', peInput('pr_next', peYmd(new Date()), '', 'date')) +
+    peField('pr_end', 'Last one on (optional)', peInput('pr_end', '', '', 'date')) +
+    peField(
+      'pr_auto',
+      'Posts',
+      peSel(
+        'pr_auto',
+        [
+          ['0', 'When I accept'],
+          ['1', 'By itself']
+        ],
+        '0'
+      )
+    ) +
+    '</div><div class="supacts">' +
+    peBtn('pr-save', 'Save', 'peRecSave(this)') +
+    peBtn('pr-cancel', 'Cancel', "peEl('pr_form').innerHTML=''", '') +
+    '</div><div id="pr_fout" class="pe-slot"></div></div>';
 }
 async function peRecSave(btn) {
-  const kind = peVal('pr_kind'); if (!peVal('pr_name') || !kind) return peBad('pr_fout', tx('Name it and say what happens each time.'));
+  const kind = peVal('pr_kind');
+  if (!peVal('pr_name') || !kind) return peBad('pr_fout', tx('Name it and say what happens each time.'));
   const ev = { kind };
   const fields = ((PE.kinds || []).filter((e) => e.kind === kind)[0] || {}).fields || [];
   for (const f0 of fields) {
-    const f = typeof f0 === 'string' ? { key: f0, kind: f0 } : f0; if (f.key === 'date') continue;
-    const v = peVal('prf_' + f.key); if (!v) continue;
-    if (f.kind === 'amount') { const m = bkMoneyMinor(v); if (isNaN(m)) return peBad('pr_fout', tx('The amount must be a number.')); ev.amount_minor = m; } else ev[f.key] = v;
+    const f = typeof f0 === 'string' ? { key: f0, kind: f0 } : f0;
+    if (f.key === 'date') continue;
+    const v = peVal('prf_' + f.key);
+    if (!v) continue;
+    if (f.kind === 'amount') {
+      const m = bkMoneyMinor(v);
+      if (isNaN(m)) return peBad('pr_fout', tx('The amount must be a number.'));
+      ev.amount_minor = m;
+    } else ev[f.key] = v;
   }
   const body = { name: peVal('pr_name'), event: ev, frequency: peVal('pr_freq'), next_on: peVal('pr_next'), auto: peVal('pr_auto') === '1' };
   if (peVal('pr_end')) body.end_on = peVal('pr_end');
   await bkOnce('pe-rec-add', btn, async () => {
-    try { await api('perRecAdd', { body }); PE.ref.rec = null; peEl('pr_form').innerHTML = ''; peOk('pr_out', esc(txf('{n} saved', { n: body.name }))); peRecList(); }
-    catch (e) { peBad('pr_fout', e); }
+    try {
+      await api('perRecAdd', { body });
+      PE.ref.rec = null;
+      peEl('pr_form').innerHTML = '';
+      peOk('pr_out', esc(txf('{n} saved', { n: body.name })));
+      peRecList();
+    } catch (e) {
+      peBad('pr_fout', e);
+    }
   });
 }
 
 /* accruals */
-async function peAccrBody(b) {
-  b.innerHTML = '<div class="supacts pe-bar">' + peBtn('pc-add-open', '＋ New accrual', 'peAccrForm()') + '</div><div id="pc_form" class="pe-slot"></div><div id="pc_out" class="pe-slot"></div><div id="bkl_accr" data-testid="accruals-list"></div>';
-  let due = [];
-  try { const t = peList(await api('booksTodo'), 'items').filter((i) => i.kind === 'accrual_reversals_due')[0]; due = (t && t.items) || []; } catch (_) {}
-  const seen = {}; PE.accr.forEach((a) => { seen[a.ref] = 1; });
-  PE.accrDue = due.map((d) => ({ ref: d.ref, kind: '', reverses_on: d.due, posted_on: d.posted_on, due: true }));
-  PE.accrDue.forEach((d) => { if (seen[d.ref]) { const m = PE.accr.filter((a) => a.ref === d.ref)[0]; m.due = true; } });
+async function peAccrBody(node) {
+  node.innerHTML =
+    '<div class="supacts pe-bar">' +
+    peBtn('pc-add-open', '＋ New accrual', 'peAccrForm()') +
+    '</div><div id="pc_form" class="pe-slot"></div><div id="pc_out" class="pe-slot"></div><div id="bkl_accr" data-testid="accruals-list"></div>';
+  let list = [];
+  try {
+    const t = peList(await api('booksTodo'), 'items').filter((item) => item.kind === 'accrual_reversals_due')[0];
+    list = (t && t.items) || [];
+  } catch (_) {}
+  const seen = {};
+  PE.accr.forEach((item) => {
+    seen[item.ref] = 1;
+  });
+  PE.accrDue = list.map((item) => ({ ref: item.ref, kind: '', reverses_on: item.due, posted_on: item.posted_on, due: true }));
+  PE.accrDue.forEach((item) => {
+    if (seen[item.ref]) {
+      const m = PE.accr.filter((a) => a.ref === item.ref)[0];
+      m.due = true;
+    }
+  });
   peAccrList();
 }
-const peAccrRows = () => PE.accr.concat((PE.accrDue || []).filter((d) => !PE.accr.some((a) => a.ref === d.ref)));
+const peAccrRows = () => PE.accr.concat((PE.accrDue || []).filter((item) => !PE.accr.some((a) => a.ref === item.ref)));
 function peAccrList() {
-  const host = peEl('bkl_accr'); if (!host) return;
-  const today = peYmd(new Date()), due = (a) => a.reverses_on && a.reverses_on <= today && !a.reversed;
+  const host = peEl('bkl_accr');
+  if (!host) return;
+  const today = peYmd(new Date()),
+    due = (a) => a.reverses_on && a.reverses_on <= today && !a.reversed;
   CBList.reset && CBList.reset('accruals');
   CBList.mount(host, {
-    key: 'accruals', t: tx, rows: peAccrRows, id: (a) => a.ref, rowTid: (a) => 'accr-' + a.ref,
-    head: () => ({ notices: peAccrRows().filter(due).length ? [{ cls: 'warn', tid: 'pc-due', text: txf('{n} due to turn back', { n: peAccrRows().filter(due).length }) }] : [] }),
+    key: 'accruals',
+    t: tx,
+    rows: peAccrRows,
+    id: (a) => a.ref,
+    rowTid: (a) => 'accr-' + a.ref,
+    head: () => ({
+      notices: peAccrRows().filter(due).length
+        ? [{ cls: 'warn', tid: 'pc-due', text: txf('{n} due to turn back', { n: peAccrRows().filter(due).length }) }]
+        : []
+    }),
     columns: [
       { key: 'ref', label: tx('Reference'), prio: 1, sort: 'ref', w: 200, html: true, cell: (a) => '<span class="mono">' + esc(a.ref) + '</span>' },
-      { key: 'kind', label: tx('Kind'), prio: 3, sort: 'kind', w: 220, html: true, cell: (a) => a.kind ? esc(tx((PE_ACCR.filter((k) => k[0] === a.kind)[0] || [0, a.kind])[1])) : '—' },
-      { key: 'back', label: tx('Turns back on'), prio: 2, sort: 'back', w: 190, html: true, cell: (a) => esc(bkDate(a.reverses_on)) + (a.reversed ? ' <span class="optchip">' + esc(tx('Turned back')) + '</span>' : due(a) ? ' <span class="optchip" data-testid="accr-due-' + esc(a.ref) + '">' + esc(tx('Due')) + '</span>' : '') },
-      { key: 'no', label: tx('Entry'), prio: 4, sort: 'no', w: 150, html: true, cell: (a) => a.entry_no ? '<span class="mono">' + esc(a.entry_no) + '</span>' : '—' },
+      {
+        key: 'kind',
+        label: tx('Kind'),
+        prio: 3,
+        sort: 'kind',
+        w: 220,
+        html: true,
+        cell: (a) => (a.kind ? esc(tx((PE_ACCR.filter((item) => item[0] === a.kind)[0] || [0, a.kind])[1])) : '—')
+      },
+      {
+        key: 'back',
+        label: tx('Turns back on'),
+        prio: 2,
+        sort: 'back',
+        w: 190,
+        html: true,
+        cell: (a) =>
+          esc(bkDate(a.reverses_on)) +
+          (a.reversed
+            ? ' <span class="optchip">' + esc(tx('Turned back')) + '</span>'
+            : due(a)
+              ? ' <span class="optchip" data-testid="accr-due-' + esc(a.ref) + '">' + esc(tx('Due')) + '</span>'
+              : '')
+      },
+      {
+        key: 'no',
+        label: tx('Entry'),
+        prio: 4,
+        sort: 'no',
+        w: 150,
+        html: true,
+        cell: (a) => (a.entry_no ? '<span class="mono">' + esc(a.entry_no) + '</span>' : '—')
+      }
     ],
     search: (a) => [a.ref, a.kind, a.entry_no].join(' '),
-    sorts: [{ key: 'back', label: tx('Turns back on'), cmp: (a, b) => String(a.reverses_on).localeCompare(String(b.reverses_on)) }, { key: 'ref', label: tx('Reference'), cmp: (a, b) => String(a.ref).localeCompare(String(b.ref)) }],
+    sorts: [
+      { key: 'back', label: tx('Turns back on'), cmp: (a, b) => String(a.reverses_on).localeCompare(String(b.reverses_on)) },
+      { key: 'ref', label: tx('Reference'), cmp: (a, b) => String(a.ref).localeCompare(String(b.ref)) }
+    ],
     actions: [{ id: 'rev', icon: '↩', label: 'Turn it back now', tid: 'accr-reverse', when: due, run: (a) => peAccrRev(a) }],
-    empty: { title: tx('Nothing due to turn back') },
+    empty: { title: tx('Nothing due to turn back') }
   });
 }
 async function peAccrForm() {
-  try { await peEntryKinds(); } catch (e) { return peBad('pc_out', e); }
+  try {
+    await peEntryKinds();
+  } catch (e) {
+    return peBad('pc_out', e);
+  }
   PE.ref.accr = PE.ref.accr || bkRef();
-  const cls = ((PE.picks || {}).expense_class || []).map((o) => [o.code || o.role, o.name]).concat(((PE.picks || {}).income_class || []).map((o) => [o.code || o.role, o.name]));
-  peEl('pc_form').innerHTML = '<div class="pe-card" data-testid="pc-form"><div class="pe-form">'
-    + peField('pc_ref', 'Reference', peInput('pc_ref', '', tx('e.g. ELEC-2026-09')))
-    + peField('pc_kind', 'Kind', peSel('pc_kind', PE_ACCR, 'outstanding'))
-    + peField('pc_class', 'Which expense or income', peSel('pc_class', [['', 'Choose…']].concat(cls), ''))
-    + peField('pc_amt', 'How much', peAmt('pc_amt'))
-    + peField('pc_date', 'At month end', peInput('pc_date', peMonthEnd(1), '', 'date'))
-    + '</div><div class="supacts">' + peBtn('pc-save', 'Save', 'peAccrSave(this)') + peBtn('pc-cancel', 'Cancel', 'peEl(\'pc_form\').innerHTML=\'\'', '') + '</div><div id="pc_fout" class="pe-slot"></div></div>';
+  const cls = ((PE.picks || {}).expense_class || [])
+    .map((item) => [item.code || item.role, item.name])
+    .concat(((PE.picks || {}).income_class || []).map((item) => [item.code || item.role, item.name]));
+  peEl('pc_form').innerHTML =
+    '<div class="pe-card" data-testid="pc-form"><div class="pe-form">' +
+    peField('pc_ref', 'Reference', peInput('pc_ref', '', tx('e.g. ELEC-2026-09'))) +
+    peField('pc_kind', 'Kind', peSel('pc_kind', PE_ACCR, 'outstanding')) +
+    peField('pc_class', 'Which expense or income', peSel('pc_class', [['', 'Choose…']].concat(cls), '')) +
+    peField('pc_amt', 'How much', peAmt('pc_amt')) +
+    peField('pc_date', 'At month end', peInput('pc_date', peMonthEnd(1), '', 'date')) +
+    '</div><div class="supacts">' +
+    peBtn('pc-save', 'Save', 'peAccrSave(this)') +
+    peBtn('pc-cancel', 'Cancel', "peEl('pc_form').innerHTML=''", '') +
+    '</div><div id="pc_fout" class="pe-slot"></div></div>';
 }
 async function peAccrSave(btn) {
   const m = bkMoneyMinor(peVal('pc_amt'));
@@ -428,23 +884,30 @@ async function peAccrSave(btn) {
   const body = { ref: peVal('pc_ref'), kind: peVal('pc_kind'), class: peVal('pc_class'), amount_minor: m, date: peVal('pc_date'), client_ref: PE.ref.accr };
   await bkOnce('pe-accr', btn, async () => {
     try {
-      const r = await api('perAccrue', { body }) || {};
-      PE.ref.accr = null; peEl('pc_form').innerHTML = '';
-      PE.accr = PE.accr.filter((a) => a.ref !== body.ref).concat([{ ref: body.ref, kind: body.kind, reverses_on: r.reverses_on, entry_no: r.entry_no }]);
+      const r = (await api('perAccrue', { body })) || {};
+      PE.ref.accr = null;
+      peEl('pc_form').innerHTML = '';
+      PE.accr = PE.accr.filter((item) => item.ref !== body.ref).concat([{ ref: body.ref, kind: body.kind, reverses_on: r.reverses_on, entry_no: r.entry_no }]);
       peOk('pc_out', esc(txf('Saved · {no} · turns back on {d}', { no: r.entry_no || '', d: bkDate(r.reverses_on) })));
       peAccrList();
-    } catch (e) { peBad('pc_fout', e); }
+    } catch (e) {
+      peBad('pc_fout', e);
+    }
   });
 }
 async function peAccrRev(a) {
   await bkOnce('pe-accr-rev' + a.ref, null, async () => {
     try {
-      const r = await api('perAccrueRev', { params: { ref: a.ref }, body: { client_ref: 'accr-rev-' + a.ref } }) || {};
-      PE.accr.forEach((x) => { if (x.ref === a.ref) x.reversed = true; });
+      const r = (await api('perAccrueRev', { params: { ref: a.ref }, body: { client_ref: 'accr-rev-' + a.ref } })) || {};
+      PE.accr.forEach((x) => {
+        if (x.ref === a.ref) x.reversed = true;
+      });
       PE.accrDue = (PE.accrDue || []).filter((x) => x.ref !== a.ref);
       peOk('pc_out', esc(txf('Turned back · {no}', { no: r.entry_no || '' })));
       peAccrList();
-    } catch (e) { peBad('pc_out', e); }
+    } catch (e) {
+      peBad('pc_out', e);
+    }
   });
 }
 
@@ -452,105 +915,232 @@ async function peAccrRev(a) {
    POST /gst/close { fy, period } → { utilised: [{ from, against, amount_minor }], payable_minor{cgst_minor…}, rcm_minor?, cash_minor?, carried_minor, pay_total_minor, entry_no }
    POST /gst/pay { fy, period, amounts, rcm, bank, challan_no } — a slip of the finger is caught by the server against what is owed. */
 async function peGstView(body) {
-  if (!peOwner()) { body.innerHTML = peNoOwner('Only the owner closes and pays GST'); return; }
+  if (!peOwner()) {
+    body.innerHTML = peNoOwner('Only the owner closes and pays GST');
+    return;
+  }
   /* BAS1: the shop's OWN return first — an AU shop sees its BAS, an AE shop its VAT return (the pack's words). India (422 RETURN_FROM_RAIL), or a server
      without the route yet, keeps the GST close & pay below as the whole page. */
   let ret = null;
-  try { PE_RET.q = Object.assign({}, peRetRecall()); ret = await peReturnLoad(); } catch (e) { body.innerHTML = '<div class="pe-bad">' + bkErr(e) + '</div>'; return; }
-  if (ret) { peReturnWord(ret); body.innerHTML = '<div id="pr_host" data-testid="pr-host"></div>'; peReturnPaint(ret); return; }
-  let L; try { L = await bkPeriodsLoad(); } catch (e) { body.innerHTML = '<div class="pe-bad">' + bkErr(e) + '</div>'; return; }
+  try {
+    PE_RET.q = Object.assign({}, peRetRecall());
+    ret = await peReturnLoad();
+  } catch (e) {
+    body.innerHTML = '<div class="pe-bad">' + bkErr(e) + '</div>';
+    return;
+  }
+  if (ret) {
+    peReturnWord(ret);
+    body.innerHTML = '<div id="pr_host" data-testid="pr-host"></div>';
+    peReturnPaint(ret);
+    return;
+  }
+  let L;
+  try {
+    L = await bkPeriodsLoad();
+  } catch (e) {
+    body.innerHTML = '<div class="pe-bad">' + bkErr(e) + '</div>';
+    return;
+  }
   /* last month, in the shop's year (WX-R2R: the server's period row, else its year start — never an April of this file's own) */
-  const last = peMonthEnd(1), lp = bkPeriodOfDay(last, L), lastP = lp.p, lastFy = lp.fy;
-  const years = L.years.slice(); if (years.indexOf(lastFy) < 0) years.push(lastFy); years.sort().reverse();
-  body.innerHTML = (PE_RET.why ? '<div class="pe-note" data-testid="pg-rail-why">' + esc(tx(PE_RET.why)) + '</div>' : '')
-    + '<div class="pe-card" data-testid="pg-form"><div class="pe-form">'
-    + peField('pg_fy', 'Financial year', peSel('pg_fy', years.map((y) => [y, y]), lastFy))
-    + peField('pg_p', 'Month', peSel('pg_p', bkMonths().map((m, i) => [String(i + 1), m]), String(lastP)))
-    + '</div><div class="supacts">' + peBtn('pg-close', 'Close the month', 'peGstClose(this)') + '</div><div id="pg_out" class="pe-slot"></div></div><div id="pg_res"></div>';
+  const last = peMonthEnd(1),
+    lp = bkPeriodOfDay(last, L),
+    lastP = lp.p,
+    lastFy = lp.fy;
+  const years = L.years.slice();
+  if (years.indexOf(lastFy) < 0) years.push(lastFy);
+  years.sort().reverse();
+  body.innerHTML =
+    (PE_RET.why ? '<div class="pe-note" data-testid="pg-rail-why">' + esc(tx(PE_RET.why)) + '</div>' : '') +
+    '<div class="pe-card" data-testid="pg-form"><div class="pe-form">' +
+    peField(
+      'pg_fy',
+      'Financial year',
+      peSel(
+        'pg_fy',
+        years.map((y) => [y, y]),
+        lastFy
+      )
+    ) +
+    peField(
+      'pg_p',
+      'Month',
+      peSel(
+        'pg_p',
+        bkMonths().map((item, index) => [String(index + 1), item]),
+        String(lastP)
+      )
+    ) +
+    '</div><div class="supacts">' +
+    peBtn('pg-close', 'Close the month', 'peGstClose(this)') +
+    '</div><div id="pg_out" class="pe-slot"></div></div><div id="pg_res"></div>';
 }
 /** the heads this close answered — the pack's (the server's `heads`); an older server answered India alone, so its four heads stand in */
 const peGstHeadsOf = (answer) => (answer && Array.isArray(answer.heads) && answer.heads.length ? answer.heads : peHeads);
 const peGstRcmHeadsOf = (answer) => Object.keys((answer && answer.rcm_minor) || {});
 const peHeadWord = (headKey) => esc(String(headKey).toUpperCase());
-const peGstRow = (testId, label, minor) => '<div class="pe-row" data-testid="' + testId + '"><span>' + label + '</span><span class="mono">' + esc(peMoney(minor)) + '</span></div>';
+const peGstRow = (testId, label, minor) =>
+  '<div class="pe-row" data-testid="' + testId + '"><span>' + label + '</span><span class="mono">' + esc(peMoney(minor)) + '</span></div>';
 /** the first half of the set-off card: the credit used, and reverse charge paid in cash where the server named it */
 function peGstUsedHTML(answer) {
-  const used = answer.utilised || [], rcmHeads = peGstRcmHeadsOf(answer);
+  const used = answer.utilised || [],
+    rcmHeads = peGstRcmHeadsOf(answer);
   let html = '<div class="pe-sub">' + esc(tx('Credit used')) + '</div>';
-  html += used.length ? '<div class="pe-rows">' + used.map((u, i) => peGstRow('pg-used-' + i, peHeadWord(u.from) + ' → ' + peHeadWord(u.against), u.amount_minor)).join('') + '</div>'
+  html += used.length
+    ? '<div class="pe-rows">' +
+      used.map((item, index) => peGstRow('pg-used-' + index, peHeadWord(item.from) + ' → ' + peHeadWord(item.against), item.amount_minor)).join('') +
+      '</div>'
     : '<div class="pe-note" data-testid="pg-nouse">' + esc(tx('No credit was used')) + '</div>';
-  if (rcmHeads.length) html += '<div class="pe-sub">' + esc(tx('Reverse charge — paid in cash')) + '</div><div class="pe-rows">' + rcmHeads.filter((headKey) => answer.rcm_minor[headKey]).map((headKey) => peGstRow('pg-rcm-' + headKey, peHeadWord(headKey), answer.rcm_minor[headKey])).join('') + '</div>';
+  if (rcmHeads.length)
+    html +=
+      '<div class="pe-sub">' +
+      esc(tx('Reverse charge — paid in cash')) +
+      '</div><div class="pe-rows">' +
+      rcmHeads
+        .filter((headKey) => answer.rcm_minor[headKey])
+        .map((headKey) => peGstRow('pg-rcm-' + headKey, peHeadWord(headKey), answer.rcm_minor[headKey]))
+        .join('') +
+      '</div>';
   return html;
 }
 /** the second half: what is payable per head, what is carried (the pack's word), the total — every head the server named, nothing summed here */
 function peGstPayableHTML(answer) {
   const heads = peGstHeadsOf(answer);
-  let html = '<div class="pe-sub">' + esc(answer.form ? txf('To pay · {form}', { form: answer.form }) : tx('To pay by challan')) + '</div><div class="pe-rows">'
-    + heads.filter((headKey) => (answer.payable_minor || {})[headKey + '_minor']).map((headKey) => peGstRow('pg-pay-' + headKey, peHeadWord(headKey), answer.payable_minor[headKey + '_minor'])).join('') + '</div>';
+  let html =
+    '<div class="pe-sub">' +
+    esc(answer.form ? txf('To pay · {form}', { form: answer.form }) : tx('To pay by challan')) +
+    '</div><div class="pe-rows">' +
+    heads
+      .filter((headKey) => (answer.payable_minor || {})[headKey + '_minor'])
+      .map((headKey) => peGstRow('pg-pay-' + headKey, peHeadWord(headKey), answer.payable_minor[headKey + '_minor']))
+      .join('') +
+    '</div>';
   const carried = heads.filter((headKey) => (answer.carried_minor || {})[headKey + '_minor']);
-  if (carried.length && answer.carried_word) html += '<div class="pe-sub" data-testid="pg-carried-word">' + esc(answer.carried_word) + '</div><div class="pe-rows">' + carried.map((headKey) => peGstRow('pg-carried-' + headKey, peHeadWord(headKey), answer.carried_minor[headKey + '_minor'])).join('') + '</div>';
-  html += '<div class="pe-total" data-testid="pg-total"><span>' + esc(tx('Payable')) + '</span><span class="mono">' + esc(peMoney(answer.pay_total_minor)) + '</span></div>';
+  if (carried.length && answer.carried_word)
+    html +=
+      '<div class="pe-sub" data-testid="pg-carried-word">' +
+      esc(answer.carried_word) +
+      '</div><div class="pe-rows">' +
+      carried.map((headKey) => peGstRow('pg-carried-' + headKey, peHeadWord(headKey), answer.carried_minor[headKey + '_minor'])).join('') +
+      '</div>';
+  html +=
+    '<div class="pe-total" data-testid="pg-total"><span>' +
+    esc(tx('Payable')) +
+    '</span><span class="mono">' +
+    esc(peMoney(answer.pay_total_minor)) +
+    '</span></div>';
   return html;
 }
 /** the close's answer painted: credit used · reverse charge where owed · what is payable per head · what is carried (the pack's word) */
-function peGstSetOff(answer) { return '<div class="pe-card" data-testid="pg-setoff">' + peGstUsedHTML(answer) + peGstPayableHTML(answer) + '</div>'; }
+function peGstSetOff(answer) {
+  return '<div class="pe-card" data-testid="pg-setoff">' + peGstUsedHTML(answer) + peGstPayableHTML(answer) + '</div>';
+}
 /** one painter for a close's answer wherever it was asked from (the month form · the return): the note on top, the set-off, the pay form when something is payable */
 function peGstPaintClose(answer, resId, outId) {
   let html = peGstSetOff(answer);
-  if (answer.duplicate) html = '<div class="pe-note" data-testid="pg-dup">' + esc(txf('Already closed · {no}', { no: answer.entry_no || '' })) + '</div>' + html;
-  else if (answer.nothing_to_set_off) html = '<div class="pe-note" data-testid="pg-nothing">' + esc(answer.form ? tx('Nothing to set off this period') : tx('Nothing to set off this month')) + '</div>' + html;
-  else html = '<div class="pe-ok" data-testid="pg-closed">✓ ' + esc(txf(answer.form ? 'Period closed · {no}' : 'Month closed · {no}', { no: answer.entry_no || '' })) + '</div>' + html;
+  if (answer.duplicate)
+    html = '<div class="pe-note" data-testid="pg-dup">' + esc(txf('Already closed · {no}', { no: answer.entry_no || '' })) + '</div>' + html;
+  else if (answer.nothing_to_set_off)
+    html =
+      '<div class="pe-note" data-testid="pg-nothing">' +
+      esc(answer.form ? tx('Nothing to set off this period') : tx('Nothing to set off this month')) +
+      '</div>' +
+      html;
+  else
+    html =
+      '<div class="pe-ok" data-testid="pg-closed">✓ ' +
+      esc(txf(answer.form ? 'Period closed · {no}' : 'Month closed · {no}', { no: answer.entry_no || '' })) +
+      '</div>' +
+      html;
   if (answer.pay_total_minor > 0) html += peGstPayForm(answer);
-  peEl(resId).innerHTML = html; peEl(outId).innerHTML = '';
+  peEl(resId).innerHTML = html;
+  peEl(outId).innerHTML = '';
 }
 async function peGstClose(btn) {
-  const fy = peVal('pg_fy'), period = Number(peVal('pg_p'));
+  const fy = peVal('pg_fy'),
+    period = Number(peVal('pg_p'));
   await bkOnce('pe-gst-close', btn, async () => {
     try {
-      const r = await api('perGstClose', { body: { fy, period, client_ref: 'gstclose-' + fy + '-' + period } }) || {};
+      const r = (await api('perGstClose', { body: { fy, period, client_ref: 'gstclose-' + fy + '-' + period } })) || {};
       PE.gst = Object.assign({ fy, period }, r);
       peGstPaintClose(r, 'pg_res', 'pg_out');
-    } catch (e) { peBad('pg_out', e); peEl('pg_res').innerHTML = ''; }
+    } catch (e) {
+      peBad('pg_out', e);
+      peEl('pg_res').innerHTML = '';
+    }
   });
 }
 /** the picks the return was read with (frequency · stagger), handed to the close and the payment exactly as GET /returns took them — the server resolves the period from them */
-const peRetPicks = (returnRead) => { const asked = (returnRead && returnRead.asked) || {}, picks = {}; if (asked.frequency) picks.frequency = asked.frequency; if (asked.stagger != null && asked.stagger !== '') picks.stagger = asked.stagger; return picks; };
+const peRetPicks = (returnRead) => {
+  const asked = (returnRead && returnRead.asked) || {},
+    picks = {};
+  if (asked.frequency) picks.frequency = asked.frequency;
+  if (asked.stagger != null && asked.stagger !== '') picks.stagger = asked.stagger;
+  return picks;
+};
 /** W2-BOOKS: the RETURN's period closed from the return screen (AU BAS · AE VAT201) — the server's own period id; a refusal (PERIOD_NOT_ENDED · RCM_NETTING_NOT_BUILT) is its sentence in the slot */
 async function peGstCloseReturn(btn) {
-  const returnRead = PE_RET.r, period = returnRead && returnRead.period; if (!period) return;
+  const returnRead = PE_RET.r,
+    period = returnRead && returnRead.period;
+  if (!period) return;
   const picks = peRetPicks(returnRead);
   await bkOnce('pe-gst-close', btn, async () => {
     try {
-      const answer = await api('perGstClose', { body: Object.assign({ period: period.period, client_ref: 'gstclose-' + period.period }, picks) }) || {};
+      const answer = (await api('perGstClose', { body: Object.assign({ period: period.period, client_ref: 'gstclose-' + period.period }, picks) })) || {};
       PE.gst = Object.assign({ period: period.period, picks }, answer);
       peGstPaintClose(answer, 'pr_close_res', 'pr_close_out');
-    } catch (e) { peBad('pr_close_out', e); peEl('pr_close_res').innerHTML = ''; }
+    } catch (e) {
+      peBad('pr_close_out', e);
+      peEl('pr_close_res').innerHTML = '';
+    }
   });
 }
 /** the payment form: paid from · the pack's reference (its label and hint come from the server — never "challan" typed for another country) · an amount per head the close left payable */
 function peGstPayForm(r) {
-  const heads = peGstHeadsOf(r).filter((k) => (r.payable_minor || {})[k + '_minor']), rc = peGstRcmHeadsOf(r).filter((k) => r.rcm_minor[k]);
-  const label = r.ref_label || 'Challan number', hint = r.ref_hint || tx('The CPIN on the challan');   /* no ref words: an older server, which answered India alone */
-  return '<div class="pe-card" data-testid="pg-pay-form"><div class="pe-form">'
-    + peField('pgp_bank', 'Paid from', peSel('pgp_bank', peMODES, 'bank'))
-    + peField('pgp_ch', label, peInput('pgp_ch', '', hint))
-    + heads.map((k) => peField('pgp_' + k, k.toUpperCase(), peAmt('pgp_' + k, peText(r.payable_minor[k + '_minor'])))).join('')
-    + rc.map((k) => peField('pgr_' + k, k.toUpperCase() + ' · ' + tx('reverse charge'), peAmt('pgr_' + k, peText(r.rcm_minor[k])))).join('')
-    + '</div><div class="supacts">' + peBtn('pg-pay', 'Pay', 'peGstPay(this)') + '</div><div id="pgp_out" class="pe-slot"></div></div>';
+  const heads = peGstHeadsOf(r).filter((item) => (r.payable_minor || {})[item + '_minor']),
+    list = peGstRcmHeadsOf(r).filter((item) => r.rcm_minor[item]);
+  const label = r.ref_label || 'Challan number',
+    hint = r.ref_hint || tx('The CPIN on the challan'); /* no ref words: an older server, which answered India alone */
+  return (
+    '<div class="pe-card" data-testid="pg-pay-form"><div class="pe-form">' +
+    peField('pgp_bank', 'Paid from', peSel('pgp_bank', peMODES, 'bank')) +
+    peField('pgp_ch', label, peInput('pgp_ch', '', hint)) +
+    heads.map((item) => peField('pgp_' + item, item.toUpperCase(), peAmt('pgp_' + item, peText(r.payable_minor[item + '_minor'])))).join('') +
+    list.map((item) => peField('pgr_' + item, item.toUpperCase() + ' · ' + tx('reverse charge'), peAmt('pgr_' + item, peText(r.rcm_minor[item])))).join('') +
+    '</div><div class="supacts">' +
+    peBtn('pg-pay', 'Pay', 'peGstPay(this)') +
+    '</div><div id="pgp_out" class="pe-slot"></div></div>'
+  );
 }
 /** the payment posted: the heads the close named, the pack's reference; a month close (IN) sends fy · period · challan_no, a return close sends the period id · payment_ref · the picks */
 async function peGstPay(btn) {
-  const g = PE.gst || {}, amounts = {}, rcm = {};
-  const read = (id, into, key) => { const e = peEl(id); if (!e) return true; const m = bkMoneyMinor(e.value); if (isNaN(m)) return false; into[key + '_minor'] = m; return true; };
+  const g = PE.gst || {},
+    amounts = {},
+    rcm = {};
+  const read = (id, into, key) => {
+    const e = peEl(id);
+    if (!e) return true;
+    const m = bkMoneyMinor(e.value);
+    if (isNaN(m)) return false;
+    into[key + '_minor'] = m;
+    return true;
+  };
   for (const k of peGstHeadsOf(g)) if (!read('pgp_' + k, amounts, k)) return peBad('pgp_out', tx('Each amount must be a number.'));
   for (const k of peGstRcmHeadsOf(g)) if (!read('pgr_' + k, rcm, k)) return peBad('pgp_out', tx('Each amount must be a number.'));
   const ref = peVal('pgp_ch');
   if (!ref) return peBad('pgp_out', g.ref_label ? txf('Give the {what}.', { what: g.ref_label.toLowerCase() }) : tx('Give the challan number (the CPIN).'));
-  const body = Object.assign(g.form ? Object.assign({ period: g.period, payment_ref: ref }, g.picks || {}) : { fy: g.fy, period: g.period, challan_no: ref }, { amounts, bank: peVal('pgp_bank') });
+  const body = Object.assign(g.form ? Object.assign({ period: g.period, payment_ref: ref }, g.picks || {}) : { fy: g.fy, period: g.period, challan_no: ref }, {
+    amounts,
+    bank: peVal('pgp_bank')
+  });
   if (Object.keys(rcm).length) body.rcm = rcm;
   await bkOnce('pe-gst-pay', btn, async () => {
-    try { const r = await api('perGstPay', { body }) || {}; peOk('pgp_out', esc(txf('Paid · {no}', { no: r.entry_no || '' }))); }
-    catch (e) { peBad('pgp_out', e); }
+    try {
+      const r = (await api('perGstPay', { body })) || {};
+      peOk('pgp_out', esc(txf('Paid · {no}', { no: r.entry_no || '' })));
+    } catch (e) {
+      peBad('pgp_out', e);
+    }
   });
 }
 
@@ -562,110 +1152,345 @@ async function peGstPay(btn) {
    The FTA stagger and the Emirate are never guessed: until the owner picks the stagger the server says so (`needs`) and no box is drawn; the picks are remembered on this device. */
 var PE_RET = { r: null, q: {}, api: null, block: '', why: '' };
 const peRetKey = () => 'cb_ret_' + ((typeof SESSION !== 'undefined' && SESSION && (SESSION.entityId || SESSION.bridgeId)) || 'shop');
-function peRetRemember() { try { localStorage.setItem(peRetKey(), JSON.stringify({ stagger: PE_RET.q.stagger || null, emirate: PE_RET.q.emirate || null, frequency: PE_RET.q.frequency || null, simpler: PE_RET.q.simpler || null })); } catch (_) {} }
-function peRetRecall() { try { const v = JSON.parse(localStorage.getItem(peRetKey()) || 'null') || {}; Object.keys(v).forEach((k) => { if (v[k] == null) delete v[k]; }); return v; } catch (_) { return {}; } }
+function peRetRemember() {
+  try {
+    localStorage.setItem(
+      peRetKey(),
+      JSON.stringify({
+        stagger: PE_RET.q.stagger || null,
+        emirate: PE_RET.q.emirate || null,
+        frequency: PE_RET.q.frequency || null,
+        simpler: PE_RET.q.simpler || null
+      })
+    );
+  } catch (_) {}
+}
+function peRetRecall() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(peRetKey()) || 'null') || {};
+    Object.keys(parsed).forEach((item) => {
+      if (parsed[item] == null) delete parsed[item];
+    });
+    return parsed;
+  } catch (_) {
+    return {};
+  }
+}
 const peRetDash = () => '<span style="color:var(--grey)">—</span>';
 /** the return for the current picks; null when this shop's return is not read from the ledgers (India: 422 RETURN_FROM_RAIL) or the server predates the route (404) */
 async function peReturnLoad() {
-  const q = {}; ['period', 'frequency', 'simpler', 'stagger', 'emirate'].forEach((k) => { if (PE_RET.q[k] != null && PE_RET.q[k] !== '') q[k] = String(PE_RET.q[k]); });
+  const q = {};
+  ['period', 'frequency', 'simpler', 'stagger', 'emirate'].forEach((item) => {
+    if (PE_RET.q[item] != null && PE_RET.q[item] !== '') q[item] = String(PE_RET.q[item]);
+  });
   /* TOUR-FIX1: the server ANSWERS a shop whose return is not read from the ledgers — 200 { form: null, code: RETURN_FROM_RAIL, why } — and the
      page says `why` above its GST close (the 422 is still read for a server from before) */
   PE_RET.why = '';
-  try { const r = await api('perReturn', { query: q }); if (r && r.form) return r; PE_RET.why = (r && r.code === 'RETURN_FROM_RAIL' && r.why) || ''; return null; }
-  catch (e) { if (e && (e.status === 404 || (e.status === 422 && e.data && e.data.code === 'RETURN_FROM_RAIL'))) return null; throw e; }
+  try {
+    const reply = await api('perReturn', { query: q });
+    if (reply && reply.form) return reply;
+    PE_RET.why = (reply && reply.code === 'RETURN_FROM_RAIL' && reply.why) || '';
+    return null;
+  } catch (e) {
+    if (e && (e.status === 404 || (e.status === 422 && e.data && e.data.code === 'RETURN_FROM_RAIL'))) return null;
+    throw e;
+  }
 }
 /** the menu and the title say what the pack calls it — BAS, VAT return, GST return — instead of the neutral "Tax close & pay" */
 function peReturnWord(r) {
-  const word = r.short || r.form; PE_RET.word = word;   /* accounts.html taxCloseWord() reads it, so its repaint keeps BAS */
-  if (typeof NAV !== 'undefined' && Array.isArray(NAV)) { const n = NAV.find((x) => x[0] === 'gstclose'); if (n && n[1] !== word) { n[1] = word; if (typeof navPaint === 'function') navPaint('gstclose'); } }
-  const t = document.getElementById('title'); if (t && typeof BK !== 'undefined' && BK.tab === 'gstclose') t.textContent = word;
+  const word = r.short || r.form;
+  PE_RET.word = word; /* accounts.html taxCloseWord() reads it, so its repaint keeps BAS */
+  if (typeof NAV !== 'undefined' && Array.isArray(NAV)) {
+    const n = NAV.find((x) => x[0] === 'gstclose');
+    if (n && n[1] !== word) {
+      n[1] = word;
+      if (typeof navPaint === 'function') navPaint('gstclose');
+    }
+  }
+  const node = document.getElementById('title');
+  if (node && typeof BK !== 'undefined' && BK.tab === 'gstclose') node.textContent = word;
 }
 /** a pick changed (period · frequency · labels · stagger · Emirate): ask again, repaint; the server's refusal is one sentence in the slot */
 async function peReturnPick(k, v) {
-  PE_RET.q[k] = v; if (k !== 'period') { delete PE_RET.q.period; peRetRemember(); }
-  const host = peEl('pr_host'); if (!host) return;
-  try { const r = await peReturnLoad(); if (r) peReturnPaint(r); }
-  catch (e) { peBad('pr_out', e, tx('Could not be read')); }
+  PE_RET.q[k] = v;
+  if (k !== 'period') {
+    delete PE_RET.q.period;
+    peRetRemember();
+  }
+  const host = peEl('pr_host');
+  if (!host) return;
+  try {
+    const r = await peReturnLoad();
+    if (r) peReturnPaint(r);
+  } catch (e) {
+    peBad('pr_out', e, tx('Could not be read'));
+  }
 }
 function peReturnPaint(r) {
-  const host = peEl('pr_host'); if (!host) return;
+  const host = peEl('pr_host');
+  if (!host) return;
   PE_RET.r = r;
-  const c = r.currency, P = r.period, isAE = r.form === 'VAT201', asked = r.asked || {};
-  const periods = (r.periods || []).slice().reverse();          /* the latest first — the one to prepare now sits on top */
+  const c = r.currency,
+    P = r.period,
+    isAE = r.form === 'VAT201',
+    asked = r.asked || {};
+  const periods = (r.periods || []).slice().reverse(); /* the latest first — the one to prepare now sits on top */
   const stg = r.staggers || {};
-  const staggerOpts = [['', '—']].concat(Object.keys(stg).map((k) => [stg[k].monthly ? 'monthly' : k, stg[k].monthly ? tx('Monthly') : txf('Stagger {n} · tax year ends {m}', { n: k, m: stg[k].tax_year_end })]));
-  let h = '<div class="pe-card" data-testid="pr-card"><div class="pe-form">'
-    + (periods.length ? peField('pr_p', 'Period', peSel('pr_p', periods.map((p) => [p.period, p.label + ' · ' + tx('due') + ' ' + bkDate(p.due) + (p.ended ? '' : ' · ' + tx('not ended'))]), P ? P.period : '', ' onchange="peReturnPick(\'period\', this.value)"')) : '')
-    + (!isAE ? peField('pr_f', 'How often', peSel('pr_f', [['quarterly', 'Quarterly'], ['monthly', 'Monthly']], asked.frequency || 'quarterly', ' onchange="peReturnPick(\'frequency\', this.value)"')) : '')
-    + (!isAE ? peField('pr_s', 'Labels', peSel('pr_s', [['1', 'Simpler BAS'], ['0', 'Full BAS']], asked.simpler === false ? '0' : '1', ' onchange="peReturnPick(\'simpler\', this.value)"')) : '')
-    + (isAE ? peField('pr_st', 'Tax period', peSel('pr_st', staggerOpts, asked.stagger == null ? '' : String(asked.stagger), ' onchange="peReturnPick(\'stagger\', this.value)"')) : '')
-    + (isAE && !r.needs ? peField('pr_em', 'Emirate', peSel('pr_em', [['', '—']].concat((r.emirates || []).map((e) => [e, e])), asked.emirate || '', ' onchange="peReturnPick(\'emirate\', this.value)"')) : '')
-    + '</div>';
-  if (r.needs) { host.innerHTML = h + '<div class="pe-note" data-testid="pr-needs">' + esc(r.why || '') + '</div></div>'; return; }
-  h += '<div class="supacts">' + peBtn('pr-copy', 'Copy figures', 'peReturnCopy(this)') + '</div><div id="pr_out" class="pe-slot"></div>'
-    + '<div class="pe-total" data-testid="pr-total"><span>' + esc(r.net_minor < 0 ? tx('Refund due') : tx('To pay')) + '</span><span class="mono">' + esc(peMoney(Math.abs(r.net_minor || 0), c)) + '</span></div>'
-    + '<div class="pe-note" data-testid="pr-prepared">' + esc(r.prepared + ' — ' + txf('lodge it in the {who} portal ({portal})', { who: r.authority, portal: r.portal })) + '</div>'
-    + '</div><div id="pr_list" data-testid="pr-list"></div>';
-  if ((r.notes || []).length) h += '<div class="pe-card" data-testid="pr-basis"><div class="pe-sub">' + esc(tx('How it was read')) + '</div>' + r.notes.map((n, i) => '<div class="pe-note" data-testid="pr-note-' + i + '">' + esc(n) + '</div>').join('') + '</div>';
+  const staggerOpts = [['', '—']].concat(
+    Object.keys(stg).map((item) => [
+      stg[item].monthly ? 'monthly' : item,
+      stg[item].monthly ? tx('Monthly') : txf('Stagger {n} · tax year ends {m}', { n: item, m: stg[item].tax_year_end })
+    ])
+  );
+  let h =
+    '<div class="pe-card" data-testid="pr-card"><div class="pe-form">' +
+    (periods.length
+      ? peField(
+          'pr_p',
+          'Period',
+          peSel(
+            'pr_p',
+            periods.map((item) => [item.period, item.label + ' · ' + tx('due') + ' ' + bkDate(item.due) + (item.ended ? '' : ' · ' + tx('not ended'))]),
+            P ? P.period : '',
+            ' onchange="peReturnPick(\'period\', this.value)"'
+          )
+        )
+      : '') +
+    (!isAE
+      ? peField(
+          'pr_f',
+          'How often',
+          peSel(
+            'pr_f',
+            [
+              ['quarterly', 'Quarterly'],
+              ['monthly', 'Monthly']
+            ],
+            asked.frequency || 'quarterly',
+            ' onchange="peReturnPick(\'frequency\', this.value)"'
+          )
+        )
+      : '') +
+    (!isAE
+      ? peField(
+          'pr_s',
+          'Labels',
+          peSel(
+            'pr_s',
+            [
+              ['1', 'Simpler BAS'],
+              ['0', 'Full BAS']
+            ],
+            asked.simpler === false ? '0' : '1',
+            ' onchange="peReturnPick(\'simpler\', this.value)"'
+          )
+        )
+      : '') +
+    (isAE
+      ? peField(
+          'pr_st',
+          'Tax period',
+          peSel('pr_st', staggerOpts, asked.stagger == null ? '' : String(asked.stagger), ' onchange="peReturnPick(\'stagger\', this.value)"')
+        )
+      : '') +
+    (isAE && !r.needs
+      ? peField(
+          'pr_em',
+          'Emirate',
+          peSel('pr_em', [['', '—']].concat((r.emirates || []).map((e) => [e, e])), asked.emirate || '', ' onchange="peReturnPick(\'emirate\', this.value)"')
+        )
+      : '') +
+    '</div>';
+  if (r.needs) {
+    host.innerHTML = h + '<div class="pe-note" data-testid="pr-needs">' + esc(r.why || '') + '</div></div>';
+    return;
+  }
+  h +=
+    '<div class="supacts">' +
+    peBtn('pr-copy', 'Copy figures', 'peReturnCopy(this)') +
+    '</div><div id="pr_out" class="pe-slot"></div>' +
+    '<div class="pe-total" data-testid="pr-total"><span>' +
+    esc(r.net_minor < 0 ? tx('Refund due') : tx('To pay')) +
+    '</span><span class="mono">' +
+    esc(peMoney(Math.abs(r.net_minor || 0), c)) +
+    '</span></div>' +
+    '<div class="pe-note" data-testid="pr-prepared">' +
+    esc(r.prepared + ' — ' + txf('lodge it in the {who} portal ({portal})', { who: r.authority, portal: r.portal })) +
+    '</div>' +
+    '</div><div id="pr_list" data-testid="pr-list"></div>';
+  if ((r.notes || []).length)
+    h +=
+      '<div class="pe-card" data-testid="pr-basis"><div class="pe-sub">' +
+      esc(tx('How it was read')) +
+      '</div>' +
+      r.notes.map((item, index) => '<div class="pe-note" data-testid="pr-note-' + index + '">' + esc(item) + '</div>').join('') +
+      '</div>';
   host.innerHTML = h + peReturnCloseCard(r);
   peReturnList(r);
 }
 /** W2-BOOKS: close and pay THIS period from the return (the same close & pay India has, per return period) — the server decides: a period still running (`ended` false) is greyed with the day it ends */
 function peReturnCloseCard(r) {
-  const period = r.period; if (!period) return '';
+  const period = r.period;
+  if (!period) return '';
   const greyWhy = period.ended ? '' : txf('Ends on {day}', { day: bkDate(period.end) });
-  return '<div class="pe-card" data-testid="pr-close-card"><div class="pe-sub">' + esc(tx('Close and pay')) + '</div>'
-    + '<div class="pe-note">' + esc(txf('Set the period\'s credit against its tax in the books, then record what was paid to the {who}.', { who: r.authority })) + '</div>'
-    + '<div class="supacts">' + (greyWhy ? '<button type="button" class="supact-pri" data-testid="pr-close" disabled title="' + esc(greyWhy) + '">' + esc(txf('Close {period}', { period: period.label })) + '</button>' : peBtn('pr-close', txf('Close {period}', { period: period.label }), 'peGstCloseReturn(this)')) + '</div>'
-    + (greyWhy ? '<div class="pe-note" data-testid="pr-close-why">' + esc(greyWhy) + '</div>' : '')
-    + '<div id="pr_close_out" class="pe-slot"></div></div><div id="pr_close_res"></div>';
+  return (
+    '<div class="pe-card" data-testid="pr-close-card"><div class="pe-sub">' +
+    esc(tx('Close and pay')) +
+    '</div>' +
+    '<div class="pe-note">' +
+    esc(txf("Set the period's credit against its tax in the books, then record what was paid to the {who}.", { who: r.authority })) +
+    '</div>' +
+    '<div class="supacts">' +
+    (greyWhy
+      ? '<button type="button" class="supact-pri" data-testid="pr-close" disabled title="' +
+        esc(greyWhy) +
+        '">' +
+        esc(txf('Close {period}', { period: period.label })) +
+        '</button>'
+      : peBtn('pr-close', txf('Close {period}', { period: period.label }), 'peGstCloseReturn(this)')) +
+    '</div>' +
+    (greyWhy ? '<div class="pe-note" data-testid="pr-close-why">' + esc(greyWhy) + '</div>' : '') +
+    '<div id="pr_close_out" class="pe-slot"></div></div><div id="pr_close_res"></div>'
+  );
 }
 /** the boxes as the Task table (CBList): box · label · amount (· VAT) · the ledgers it counts, each a chip that opens it */
 function peReturnList(r) {
-  const host = peEl('pr_list'); if (!host) return;
-  const c = r.currency, two = (r.columns || []).indexOf('tax') >= 0 || r.form === 'VAT201';
+  const host = peEl('pr_list');
+  if (!host) return;
+  const c = r.currency,
+    two = (r.columns || []).indexOf('tax') >= 0 || r.form === 'VAT201';
   CBList.reset && CBList.reset('return');
-  if (PE_RET.api) { try { PE_RET.api.destroy(); } catch (_) {} }
-  const rows = (r.boxes || []).map((b, i) => Object.assign({ i }, b));
+  if (PE_RET.api) {
+    try {
+      PE_RET.api.destroy();
+    } catch (_) {}
+  }
+  const rows = (r.boxes || []).map((item, index) => Object.assign({ i: index }, item));
   const cols = [
     { key: 'code', label: tx('Box'), prio: 1, w: 90, html: true, cell: (b) => '<b class="mono">' + esc(b.code) + '</b>' },
-    { key: 'label', label: tx('Label'), prio: 2, w: 320, html: true, cell: (b) => esc(b.label) + (b.note ? ' <span style="color:var(--grey)">' + esc(b.note) + '</span>' : '') },
-    { key: 'amount', label: tx('Amount'), prio: 1, num: true, w: 150, html: true, tid: (b) => 'pr-amt-' + b.code, cell: (b) => b.amount_minor == null ? peRetDash() : esc(peMoney(b.amount_minor, c)) },
+    {
+      key: 'label',
+      label: tx('Label'),
+      prio: 2,
+      w: 320,
+      html: true,
+      cell: (b) => esc(b.label) + (b.note ? ' <span style="color:var(--grey)">' + esc(b.note) + '</span>' : '')
+    },
+    {
+      key: 'amount',
+      label: tx('Amount'),
+      prio: 1,
+      num: true,
+      w: 150,
+      html: true,
+      tid: (b) => 'pr-amt-' + b.code,
+      cell: (b) => (b.amount_minor == null ? peRetDash() : esc(peMoney(b.amount_minor, c)))
+    }
   ];
-  if (two) cols.push({ key: 'tax', label: tx('VAT'), prio: 1, num: true, w: 150, html: true, tid: (b) => 'pr-tax-' + b.code, cell: (b) => b.tax_minor == null ? peRetDash() : esc(peMoney(b.tax_minor, c)) });
-  cols.push({ key: 'opens', label: tx('Ledgers'), prio: 3, w: 280, html: true, cell: (b) => (b.accounts || []).map((a) => '<button type="button" class="optchip" data-testid="pr-open-' + esc(b.code) + '-' + esc(a.code) + '" onclick="peReturnOpen(\'' + esc(a.code) + '\')">' + esc(a.code + ' ' + a.name) + '</button>').join(' ') || peRetDash() });
-  PE_RET.api = CBList.mount(host, { key: 'return', t: tx, rows: () => rows, id: (b) => String(b.code), rowTid: (b) => 'pr-box-' + b.code, columns: cols,
-    defaultCols: cols.map((x) => x.key),                                  /* a return is read whole: every column shown (CBList's default keeps three); ⚙ still chooses */
-    onOpen: (b) => { const a = (b.accounts || [])[0]; if (a) peReturnOpen(a.code); } });
+  if (two)
+    cols.push({
+      key: 'tax',
+      label: tx('VAT'),
+      prio: 1,
+      num: true,
+      w: 150,
+      html: true,
+      tid: (b) => 'pr-tax-' + b.code,
+      cell: (b) => (b.tax_minor == null ? peRetDash() : esc(peMoney(b.tax_minor, c)))
+    });
+  cols.push({
+    key: 'opens',
+    label: tx('Ledgers'),
+    prio: 3,
+    w: 280,
+    html: true,
+    cell: (b) =>
+      (b.accounts || [])
+        .map(
+          (item) =>
+            '<button type="button" class="optchip" data-testid="pr-open-' +
+            esc(b.code) +
+            '-' +
+            esc(item.code) +
+            '" onclick="peReturnOpen(\'' +
+            esc(item.code) +
+            '\')">' +
+            esc(item.code + ' ' + item.name) +
+            '</button>'
+        )
+        .join(' ') || peRetDash()
+  });
+  PE_RET.api = CBList.mount(host, {
+    key: 'return',
+    t: tx,
+    rows: () => rows,
+    id: (b) => String(b.code),
+    rowTid: (b) => 'pr-box-' + b.code,
+    columns: cols,
+    defaultCols: cols.map((x) => x.key) /* a return is read whole: every column shown (CBList's default keeps three); ⚙ still chooses */,
+    onOpen: (b) => {
+      const a = (b.accounts || [])[0];
+      if (a) peReturnOpen(a.code);
+    }
+  });
 }
 /** a figure opens what it counts: the Ledgers page on that ledger, the period chip set to the return's period (the same ledger read the box was summed from) */
 function peReturnOpen(code) {
-  const r = PE_RET.r, P = r && r.period; if (!P) return;
+  const r = PE_RET.r,
+    P = r && r.period;
+  if (!P) return;
   if (typeof BK !== 'undefined') {
     BK.lgp = { preset: 'custom', from: P.start, to: P.end };
-    if (BK.lt) { BK.lt.sel = null; BK.lt.last = { code: String(code), party: null }; if (typeof bkLtPrefsSave === 'function') bkLtPrefsSave(); }
+    if (BK.lt) {
+      BK.lt.sel = null;
+      BK.lt.last = { code: String(code), party: null };
+      if (typeof bkLtPrefsSave === 'function') bkLtPrefsSave();
+    }
     BK.lgAcc = String(code);
   }
   if (typeof show === 'function') show('ledgers');
 }
 /** the boxes as one block of text for the portal: code · label · amount (· VAT), plain digits — what a shopkeeper pastes box by box */
 function peReturnBlock(r) {
-  const c = r.currency, P = r.period || {}, lines = [(r.name || r.form) + ' · ' + (P.label || P.period || '') + (P.due ? ' · ' + tx('due') + ' ' + P.due : '')];
-  (r.boxes || []).forEach((b) => {
-    if (b.amount_minor == null && b.tax_minor == null) return;
-    lines.push([b.code, b.label, b.amount_minor == null ? '' : bkMinorText(b.amount_minor, c), b.tax_minor == null ? '' : bkMinorText(b.tax_minor, c)].join('\t').replace(/\t+$/, ''));
+  const c = r.currency,
+    P = r.period || {},
+    lines = [(r.name || r.form) + ' · ' + (P.label || P.period || '') + (P.due ? ' · ' + tx('due') + ' ' + P.due : '')];
+  (r.boxes || []).forEach((item) => {
+    if (item.amount_minor == null && item.tax_minor == null) return;
+    lines.push(
+      [item.code, item.label, item.amount_minor == null ? '' : bkMinorText(item.amount_minor, c), item.tax_minor == null ? '' : bkMinorText(item.tax_minor, c)]
+        .join('\t')
+        .replace(/\t+$/, '')
+    );
   });
   lines.push((r.net_minor < 0 ? tx('Refund due') : tx('To pay')) + '\t' + bkMinorText(Math.abs(r.net_minor || 0), c));
   lines.push(r.prepared + ' · ChitBridge');
   return lines.join('\n');
 }
 async function peReturnCopy(btn) {
-  const r = PE_RET.r; if (!r) return;
-  const text = PE_RET.block = peReturnBlock(r), n = (r.boxes || []).filter((b) => b.amount_minor != null || b.tax_minor != null).length;
+  const r = PE_RET.r;
+  if (!r) return;
+  const text = (PE_RET.block = peReturnBlock(r)),
+    n = (r.boxes || []).filter((item) => item.amount_minor != null || item.tax_minor != null).length;
   let done = false;
-  try { if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(text); done = true; } } catch (_) {}
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+      done = true;
+    }
+  } catch (_) {}
   if (!done) {
-    try { const ta = document.createElement('textarea'); ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); done = !!(document.execCommand && document.execCommand('copy')); document.body.removeChild(ta); } catch (_) {}
+    try {
+      const node = document.createElement('textarea');
+      node.value = text;
+      node.setAttribute('readonly', '');
+      node.style.position = 'fixed';
+      node.style.opacity = '0';
+      document.body.appendChild(node);
+      node.select();
+      done = !!(document.execCommand && document.execCommand('copy'));
+      document.body.removeChild(node);
+    } catch (_) {}
   }
   if (done) peOk('pr_out', esc(txf('Copied {n} boxes · paste them into the {who} portal', { n: n, who: r.authority })));
   else peBad('pr_out', tx('Could not copy — select the figures and copy by hand.'));
@@ -675,9 +1500,28 @@ async function peReturnCopy(btn) {
    GET /year/:fy/status → { fiscal_year, closed, can_close, refusals: [{ name, why }], months: [{ period, status }], next } — what a close would say, nothing written
    POST /year/:fy/close → { ok, next, locked, opening } · refused (422) with the refusals in plain words */
 async function peYearView(body) {
-  let L; try { L = await bkPeriodsLoad(); } catch (e) { body.innerHTML = '<div class="pe-bad">' + bkErr(e) + '</div>'; return; }
-  const years = L.years.slice(), prev = peLastYear(years);
-  body.innerHTML = '<div class="pe-card"><div class="pe-form">' + peField('py_fy', 'Financial year', peSel('py_fy', years.map((y) => [y, y]), prev, ' onchange="peYearStatus()"')) + '</div></div><div id="py_res" data-testid="py-res"></div>';
+  let L;
+  try {
+    L = await bkPeriodsLoad();
+  } catch (e) {
+    body.innerHTML = '<div class="pe-bad">' + bkErr(e) + '</div>';
+    return;
+  }
+  const years = L.years.slice(),
+    prev = peLastYear(years);
+  body.innerHTML =
+    '<div class="pe-card"><div class="pe-form">' +
+    peField(
+      'py_fy',
+      'Financial year',
+      peSel(
+        'py_fy',
+        years.map((y) => [y, y]),
+        prev,
+        ' onchange="peYearStatus()"'
+      )
+    ) +
+    '</div></div><div id="py_res" data-testid="py-res"></div>';
   peYearStatus();
 }
 /** the page's fix for a failing check: where to go (the check's own sentence says what is wrong) */
@@ -689,39 +1533,85 @@ function peYearFix(x) {
   return null;
 }
 async function peYearStatus() {
-  const fy = peVal('py_fy'), host = peEl('py_res'); if (!host) return;
+  const fy = peVal('py_fy'),
+    host = peEl('py_res');
+  if (!host) return;
   host.innerHTML = '<div class="loadwrap"><span class="spin"></span> ' + esc(tx('Reading…')) + '</div>';
   let st;
-  try { st = await api('perYearStatus', { params: { fy } }) || {}; }
-  catch (e) { const w = peWhy(e, tx('Could not be read')); host.innerHTML = '<div class="' + (w.calm ? 'pe-calm' : 'pe-bad') + '" data-testid="pe-refused">' + (w.calm ? '⏳ ' : '') + esc(w.text) + '</div>'; return; }
+  try {
+    st = (await api('perYearStatus', { params: { fy } })) || {};
+  } catch (e) {
+    const w = peWhy(e, tx('Could not be read'));
+    host.innerHTML = '<div class="' + (w.calm ? 'pe-calm' : 'pe-bad') + '" data-testid="pe-refused">' + (w.calm ? '⏳ ' : '') + esc(w.text) + '</div>';
+    return;
+  }
   PE.year = st;
-  const months = st.months || [], open = months.filter((m) => m.status === 'open').length, refs = st.refusals || [];
+  const months = st.months || [],
+    open = months.filter((item) => item.status === 'open').length,
+    refs = st.refusals || [];
   let h = '<div class="pe-card" data-testid="py-checks">';
   if (st.closed) h += '<div class="pe-ok" data-testid="py-closed">✓ ' + esc(txf('{fy} is closed for good', { fy })) + '</div>';
   else {
     const notLocked = open + Math.max(0, 12 - months.length);
-    h += '<div class="pe-check ' + (notLocked ? 'bad' : 'ok') + '" data-testid="py-months"><span>' + (notLocked ? '✗' : '✓') + '</span><span>'
-      + esc(notLocked ? txf('{n} of 12 months are not locked yet', { n: notLocked }) : tx('Every month is locked')) + '</span>'
-      + (notLocked ? '<button type="button" class="pe-fix" data-testid="py-fix-months" onclick="show(\'lock\')">' + esc(tx('Open Month lock')) + '</button>' : '') + '</div>';
-    h += refs.map((x, i) => { const f = peYearFix(x); return '<div class="pe-check bad" data-testid="py-check-' + i + '"><span>✗</span><span>' + esc(x.why) + '</span>'
-      + (f ? '<button type="button" class="pe-fix" data-testid="py-fix-' + i + '" onclick="show(\'' + f.tab + '\')">' + esc(f.label) + '</button>' : '') + '</div>'; }).join('');
+    h +=
+      '<div class="pe-check ' +
+      (notLocked ? 'bad' : 'ok') +
+      '" data-testid="py-months"><span>' +
+      (notLocked ? '✗' : '✓') +
+      '</span><span>' +
+      esc(notLocked ? txf('{n} of 12 months are not locked yet', { n: notLocked }) : tx('Every month is locked')) +
+      '</span>' +
+      (notLocked
+        ? '<button type="button" class="pe-fix" data-testid="py-fix-months" onclick="show(\'lock\')">' + esc(tx('Open Month lock')) + '</button>'
+        : '') +
+      '</div>';
+    h += refs
+      .map((x, index) => {
+        const f = peYearFix(x);
+        return (
+          '<div class="pe-check bad" data-testid="py-check-' +
+          index +
+          '"><span>✗</span><span>' +
+          esc(x.why) +
+          '</span>' +
+          (f ? '<button type="button" class="pe-fix" data-testid="py-fix-' + index + '" onclick="show(\'' + f.tab + '\')">' + esc(f.label) + '</button>' : '') +
+          '</div>'
+        );
+      })
+      .join('');
     if (!refs.length) h += '<div class="pe-check ok" data-testid="py-rest"><span>✓</span><span>' + esc(tx('Nothing else stands in the way')) + '</span></div>';
   }
   h += '</div>';
-  if (!st.closed && peOwner()) h += '<div class="supacts">' + '<button type="button" class="supact-pri" data-testid="py-close"' + (st.can_close ? '' : ' disabled') + ' onclick="peYearClose(this)">' + esc(tx('Close the year')) + '</button></div>';
+  if (!st.closed && peOwner())
+    h +=
+      '<div class="supacts">' +
+      '<button type="button" class="supact-pri" data-testid="py-close"' +
+      (st.can_close ? '' : ' disabled') +
+      ' onclick="peYearClose(this)">' +
+      esc(tx('Close the year')) +
+      '</button></div>';
   if (!st.closed && !peOwner()) h += peNote('pe-readonly', 'Only the owner can close the year');
   h += '<div id="py_out" class="pe-slot"></div>';
   host.innerHTML = h;
 }
 function peYearClose(btn) {
   const fy = peVal('py_fy');
-  confirmAsk(tx('Close the year?'), esc(txf('{fy} is carried forward and locked for good. This cannot be undone.', { fy })), tx('Close the year'), () => {
-    bkOnce('pe-year-' + fy, btn, async () => {
-      try {
-        const r = await api('perYearClose', { params: { fy }, body: {} }) || {};
-        peOk('py_out', esc(txf('{fy} closed · carried to {next}', { fy, next: r.next || '' })));
-        const b = document.querySelector('[data-testid="py-close"]'); if (b) b.remove();
-      } catch (e) { peBad('py_out', e); }
-    });
-  }, true);
+  confirmAsk(
+    tx('Close the year?'),
+    esc(txf('{fy} is carried forward and locked for good. This cannot be undone.', { fy })),
+    tx('Close the year'),
+    () => {
+      bkOnce('pe-year-' + fy, btn, async () => {
+        try {
+          const r = (await api('perYearClose', { params: { fy }, body: {} })) || {};
+          peOk('py_out', esc(txf('{fy} closed · carried to {next}', { fy, next: r.next || '' })));
+          const node = document.querySelector('[data-testid="py-close"]');
+          if (node) node.remove();
+        } catch (e) {
+          peBad('py_out', e);
+        }
+      });
+    },
+    true
+  );
 }

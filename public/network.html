@@ -84,17 +84,43 @@ dialog.sheet .mx{position:absolute;right:8px;top:8px;border:0;background:transpa
 (function () {
   var q = new URLSearchParams(location.search);
   /* the old public link (network.html?bridge=…) keeps working: the shopfront moved to network-shop.html */
-  if (q.get('bridge')) { location.replace('/network-shop.html' + location.search); return; }
+  if (q.get('bridge')) {
+    location.replace('/network-shop.html' + location.search);
+    return;
+  }
   var API = q.get('api') || (window.CBShell && CBShell.apiBase && CBShell.apiBase()) || window.CB_API;
   var host = document.getElementById('nw');
-  var app, frame = CBFrame.mount({ app: 'network', kural: 'network', work: host,
-    skeleton: { name: 'Network', icon: 'M12 5a2 2 0 1 0 0 .01M5 19a2 2 0 1 0 0 .01M19 19a2 2 0 1 0 0 .01M12 7v5M12 12l-6 5M12 12l6 5', active: 'mine',
-      sections: [{ k: 'mine', label: 'My network', icon: 'M12 5a2 2 0 1 0 0 .01M5 19a2 2 0 1 0 0 .01M19 19a2 2 0 1 0 0 .01M12 7v5M12 12l-6 5M12 12l6 5' },
-        { k: 'offers', label: 'Offers', icon: 'M20 12l-8 8-8-8V4h8zM8.5 8.5h.01' },
-        { k: 'design', label: 'Design', icon: 'M4 20l4-1 11-11-3-3L5 16zM14 7l3 3' }],
-      onSection: function (k) { if (app) app.go(k); } } });
-  if (!frame.token) { host.innerHTML = '<div class="empty" data-testid="nw-signin"><div class="t">Sign in above</div></div>'; return; }
-  app = CBNetworkApp.mount(host, { token: frame.token, base: API, sidebar: true, onEnded: function () { CBFrame.ended(); } });
+  var app,
+    frame = CBFrame.mount({
+      app: 'network',
+      kural: 'network',
+      work: host,
+      skeleton: {
+        name: 'Network',
+        icon: 'M12 5a2 2 0 1 0 0 .01M5 19a2 2 0 1 0 0 .01M19 19a2 2 0 1 0 0 .01M12 7v5M12 12l-6 5M12 12l6 5',
+        active: 'mine',
+        sections: [
+          { k: 'mine', label: 'My network', icon: 'M12 5a2 2 0 1 0 0 .01M5 19a2 2 0 1 0 0 .01M19 19a2 2 0 1 0 0 .01M12 7v5M12 12l-6 5M12 12l6 5' },
+          { k: 'offers', label: 'Offers', icon: 'M20 12l-8 8-8-8V4h8zM8.5 8.5h.01' },
+          { k: 'design', label: 'Design', icon: 'M4 20l4-1 11-11-3-3L5 16zM14 7l3 3' }
+        ],
+        onSection: function (k) {
+          if (app) app.go(k);
+        }
+      }
+    });
+  if (!frame.token) {
+    host.innerHTML = '<div class="empty" data-testid="nw-signin"><div class="t">Sign in above</div></div>';
+    return;
+  }
+  app = CBNetworkApp.mount(host, {
+    token: frame.token,
+    base: API,
+    sidebar: true,
+    onEnded: function () {
+      CBFrame.ended();
+    }
+  });
 })();
 </script>
 </body>

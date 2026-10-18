@@ -23,7 +23,6 @@
   if (typeof CBSTR === 'undefined') return;
   var ar = CBSTR.ar || (CBSTR.ar = {});
   var pack = {
-
     /* ── symbol-led actions and states ──────────────────────────────────────────────────────────────────── */
     '↑ accessible / leveling': '↑ يسهل الوصول إليه / التسوية',
     '↑ Your plan · what it entitles you to': '↑ خطتك · وما تخوّلك به',
@@ -289,7 +288,9 @@
 
   /* ⚠️ THE PACK ARRIVES AFTER THE SCREEN IS DRAWN, so it re-renders itself in rather than leaving the caller to
      guess when it landed. */
-  try { if (typeof renderApp === 'function') renderApp(); } catch (_) {}
+  try {
+    if (typeof renderApp === 'function') renderApp();
+  } catch (_) {}
 })();
 
 /**
@@ -487,7 +488,9 @@
     'Notified by': 'أُبلغ بواسطة'
   };
   for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) ar[k] = pack[k];
-  try { if (typeof renderApp === 'function') renderApp(); } catch (_) {}
+  try {
+    if (typeof renderApp === 'function') renderApp();
+  } catch (_) {}
 })();
 
 /**
@@ -680,7 +683,9 @@
     'YOURS': 'لك'
   };
   for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) ar[k] = pack[k];
-  try { if (typeof renderApp === 'function') renderApp(); } catch (_) {}
+  try {
+    if (typeof renderApp === 'function') renderApp();
+  } catch (_) {}
 })();
 
 /**
@@ -699,16 +704,18 @@
   if (typeof CBSTR === 'undefined') return;
   var ar = CBSTR.ar || (CBSTR.ar = {});
   var pack = {
-    'Couldn\'t load': 'تعذّر التحميل',
+    "Couldn't load": 'تعذّر التحميل',
     'Couldn’t load': 'تعذّر التحميل',
-    'I don\'t know': 'لا أعرف',
+    "I don't know": 'لا أعرف',
     'Qty ▢': 'الكمية ▢',
     'Qty ▢ · your price ▢': 'الكمية ▢ · سعرك ▢',
     'Your price ▢': 'سعرك ▢',
     'YOUR ITEMS · 0': 'عناصرك · ٠'
   };
   for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) ar[k] = pack[k];
-  try { if (typeof renderApp === 'function') renderApp(); } catch (_) {}
+  try {
+    if (typeof renderApp === 'function') renderApp();
+  } catch (_) {}
 })();
 
 /**
@@ -750,7 +757,9 @@
     'What is never translated': 'ما لا يُترجم أبدًا'
   };
   for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) ar[k] = pack[k];
-  try { if (typeof renderApp === 'function') renderApp(); } catch (_) {}
+  try {
+    if (typeof renderApp === 'function') renderApp();
+  } catch (_) {}
 })();
 
 /* The worklist screen — the busiest surface, and the least covered because app.html runs --safe. */
@@ -787,7 +796,7 @@
     'MIS': 'لوحة المعلومات',
     'Manager': 'مدير',
     'chits received': 'السندات الواردة',
-    'chits you\'ve sent': 'السندات المرسلة',
+    "chits you've sent": 'السندات المرسلة',
     'unsent chits': 'سندات غير مرسلة',
     'deleted chits': 'سندات محذوفة',
     'archived chits': 'سندات مؤرشفة',
@@ -798,5 +807,7 @@
     'Search my orders': 'ابحث في طلباتي'
   };
   for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) m[k] = pack[k];
-  try { if (typeof renderApp === 'function') renderApp(); } catch (_) {}
+  try {
+    if (typeof renderApp === 'function') renderApp();
+  } catch (_) {}
 })();

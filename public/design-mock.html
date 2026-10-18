@@ -83,54 +83,94 @@
    CB already does both halves without naming them together: catalogue fields carry per-field provenance (owned vs
    referenced), and visibility is a genuine cap. This is the same two ideas applied to a store's settings.        */
 var NET = {
-  name: 'alpha timers', handle: 'alpha-timers',
-  currency: 'EUR', country: 'DE', city: 'Hamburg',
-  certs: 'CE, ISO 9001', priceBand: '12% – 22%', disputes: 'Handled by the network',
+  name: 'alpha timers',
+  handle: 'alpha-timers',
+  currency: 'EUR',
+  country: 'DE',
+  city: 'Hamburg',
+  certs: 'CE, ISO 9001',
+  priceBand: '12% – 22%',
+  disputes: 'Handled by the network'
 };
 /* The ROOT's catalogue — authored once, referenced by every store. Pictures and video live with the SKU. */
 var SKUS = [
-  { sku:'CR-32-4', name:'Vertical multistage pump CR 32-4', eur:1840, img:'🖼️ 4', vid:'🎬 1', unit:'each' },
-  { sku:'MQ3-45',  name:'Booster set MQ3-45',               eur: 620, img:'🖼️ 3', vid:'🎬 0', unit:'each' },
-  { sku:'SEAL-11', name:'Shaft seal kit (11 mm)',           eur:  48, img:'🖼️ 1', vid:'🎬 0', unit:'kit'  },
+  { sku: 'CR-32-4', name: 'Vertical multistage pump CR 32-4', eur: 1840, img: '🖼️ 4', vid: '🎬 1', unit: 'each' },
+  { sku: 'MQ3-45', name: 'Booster set MQ3-45', eur: 620, img: '🖼️ 3', vid: '🎬 0', unit: 'each' },
+  { sku: 'SEAL-11', name: 'Shaft seal kit (11 mm)', eur: 48, img: '🖼️ 1', vid: '🎬 0', unit: 'kit' }
 ];
 /* What a store adds ON TOP of the reference price to reach its own. Percentages, per store. */
 /* ⚠️ A STUB. Athi: *"we don't need to get stuck at currency, it is the stub at the moment."* These numbers are
    invented so the FLOW can be seen. Where the rate comes from, and how often, is a later decision. */
-var LANDED = { rate:{ EUR:1, USD:1.09, INR:98.5, AED:4.0, CNY:7.85 }, importPct:15, taxPct:18, handlePct:4 };
+var LANDED = { rate: { EUR: 1, USD: 1.09, INR: 98.5, AED: 4.0, CNY: 7.85 }, importPct: 15, taxPct: 18, handlePct: 4 };
 var STORES = [
-  { key:'usa',   name:'USA',   vis:'Public',  purpose:'North America', own:{ currency:'USD', country:'US', city:'Chicago' }, mode:'convert' },
-  { key:'india', name:'India', vis:'Public',  purpose:'South Asia',    own:{ currency:'INR', country:'IN', city:'Coimbatore' }, mode:'convert' },
-  { key:'uae',   name:'UAE',   vis:'Public',  purpose:'Gulf',          own:{ currency:'AED', country:'AE', city:'Dubai' }, mode:'own' },
-  { key:'china', name:'China', vis:'Network', purpose:'Assembly + regional supply', own:{ currency:'CNY', country:'CN', city:'Suzhou' }, mode:'own' },
+  { key: 'usa', name: 'USA', vis: 'Public', purpose: 'North America', own: { currency: 'USD', country: 'US', city: 'Chicago' }, mode: 'convert' },
+  { key: 'india', name: 'India', vis: 'Public', purpose: 'South Asia', own: { currency: 'INR', country: 'IN', city: 'Coimbatore' }, mode: 'convert' },
+  { key: 'uae', name: 'UAE', vis: 'Public', purpose: 'Gulf', own: { currency: 'AED', country: 'AE', city: 'Dubai' }, mode: 'own' },
+  { key: 'china', name: 'China', vis: 'Network', purpose: 'Assembly + regional supply', own: { currency: 'CNY', country: 'CN', city: 'Suzhou' }, mode: 'own' }
 ];
 /* The full menu, matching the real app. `soon` = captured on the design, not enforced by the platform yet. */
 var TABS = [
-  ['general','⚙️','General'], ['catalogue','🗂️','Catalogue'], ['storefront','🛒','Storefront'],
-  ['coassist','🧑‍🤝‍🧑','Co-assists'], ['transact','🔄','Transact'], ['tradeready','🛡️','Trade-ready'],
-  ['dispute','⚖️','Dispute'], ['place','📍','Place'],
-  ['territory','🗺️','Territory',1], ['stock','📦','Stock',1], ['fulfil','🚚','Fulfilment',1],
-  ['money','💱','Price policy',1], ['localise','📜','Localisation',1],
+  ['general', '⚙️', 'General'],
+  ['catalogue', '🗂️', 'Catalogue'],
+  ['storefront', '🛒', 'Storefront'],
+  ['coassist', '🧑‍🤝‍🧑', 'Co-assists'],
+  ['transact', '🔄', 'Transact'],
+  ['tradeready', '🛡️', 'Trade-ready'],
+  ['dispute', '⚖️', 'Dispute'],
+  ['place', '📍', 'Place'],
+  ['territory', '🗺️', 'Territory', 1],
+  ['stock', '📦', 'Stock', 1],
+  ['fulfil', '🚚', 'Fulfilment', 1],
+  ['money', '💱', 'Price policy', 1],
+  ['localise', '📜', 'Localisation', 1]
 ];
-var sel = 'india', tab = 'catalogue', view = 'store';
+var sel = 'india',
+  tab = 'catalogue',
+  view = 'store';
 
-function fld(label, value, source, hint){
+function fld(label, value, source, hint) {
   var cls = source === 'own' ? 'own' : source === 'cap' ? 'cap' : 'inh';
   // 'FROM NETWORK' alone would imply the value follows the network live. It does not — it is COPIED at Build.
   // Saying so costs three words and keeps the label from being a small lie until real inheritance is built.
   var word = source === 'own' ? 'SET HERE' : source === 'cap' ? 'CAPPED BY NETWORK' : 'FROM NETWORK · AT BUILD';
-  var act  = source === 'own' ? 'use the network’s' : source === 'cap' ? '' : 'override for this store';
-  return '<div class="fld"><div class="lbl">' + label + '</div>'
-    + '<div class="val"><span>' + value + '</span><span class="src ' + cls + '">' + word + '</span>'
-    + (act ? '<span class="act">' + act + '</span>' : '') + '</div>'
-    + (hint ? '<div class="note">' + hint + '</div>' : '') + '</div>';
+  var act = source === 'own' ? 'use the network’s' : source === 'cap' ? '' : 'override for this store';
+  return (
+    '<div class="fld"><div class="lbl">' +
+    label +
+    '</div>' +
+    '<div class="val"><span>' +
+    value +
+    '</span><span class="src ' +
+    cls +
+    '">' +
+    word +
+    '</span>' +
+    (act ? '<span class="act">' + act + '</span>' : '') +
+    '</div>' +
+    (hint ? '<div class="note">' + hint + '</div>' : '') +
+    '</div>'
+  );
 }
-function visOpts(s){
-  return ['Public','Network only','Private'].map(function(o){
-    var on = (o === 'Network only' ? 'Network' : o) === s.vis;
-    return '<span style="display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:8px;cursor:pointer;'
-      + 'border:1px solid ' + (on ? 'var(--blue)' : 'var(--line)') + ';background:' + (on ? 'var(--blue)' : '#fff')
-      + ';color:' + (on ? '#fff' : 'var(--ink)') + ';font-weight:' + (on ? '700' : '500') + ';font-size:12.5px">' + o + '</span>';
-  }).join(' ');
+function visOpts(s) {
+  return ['Public', 'Network only', 'Private']
+    .map(function (item) {
+      var on = (item === 'Network only' ? 'Network' : item) === s.vis;
+      return (
+        '<span style="display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:8px;cursor:pointer;' +
+        'border:1px solid ' +
+        (on ? 'var(--blue)' : 'var(--line)') +
+        ';background:' +
+        (on ? 'var(--blue)' : '#fff') +
+        ';color:' +
+        (on ? '#fff' : 'var(--ink)') +
+        ';font-weight:' +
+        (on ? '700' : '500') +
+        ';font-size:12.5px">' +
+        item +
+        '</span>'
+      );
+    })
+    .join(' ');
 }
 /* ── THE ROOT'S CATALOGUE, AND WHAT A STORE DOES WITH IT ──────────────────────────────────────────────────────
    Athi, 2026-08-08: *"if we set up a catalogue at the top and cascade it to the stores below as a reference…
@@ -161,131 +201,220 @@ function visOpts(s){
  * A wrong symbol is worse than an ugly one. It does not look broken; it looks like a price.
  * T2-WEBPRIMS: the one formatter (fmtMoney → CBLocale.money) takes the symbol FROM THE CODE (Intl), so no symbol map can default to ₹.
  */
-function landed(eur, cur){
+function landed(eur, cur) {
   var base = eur * (LANDED.rate[cur] || 1);
-  var imp  = base * LANDED.importPct / 100;
-  var hand = (base + imp) * LANDED.handlePct / 100;
-  var tax  = (base + imp + hand) * LANDED.taxPct / 100;
-  return { base:base, imp:imp, hand:hand, tax:tax, total: base + imp + hand + tax };
+  var imp = (base * LANDED.importPct) / 100;
+  var hand = ((base + imp) * LANDED.handlePct) / 100;
+  var tax = ((base + imp + hand) * LANDED.taxPct) / 100;
+  return { base: base, imp: imp, hand: hand, tax: tax, total: base + imp + hand + tax };
 }
-function catalogueTab(s){
+function catalogueTab(s) {
   var cur = val(s, 'currency');
   var mode = s.mode || 'convert';
-  var opt = function(k, title, sub){
+  var opt = function (k, title, sub) {
     var on = mode === k;
-    return '<div onclick="setMode(\'' + k + '\')" style="cursor:pointer;flex:1;min-width:230px;padding:11px 13px;'
-      + 'border:1px solid ' + (on ? 'var(--blue)' : 'var(--line)') + ';border-radius:9px;background:' + (on ? '#eef4fc' : '#fff') + '">'
-      + '<b style="font-size:12.5px;color:' + (on ? 'var(--blue)' : 'var(--ink)') + '">' + (on ? '● ' : '○ ') + title + '</b>'
-      + '<div class="note" style="margin-top:3px">' + sub + '</div></div>';
+    return (
+      '<div onclick="setMode(\'' +
+      k +
+      '\')" style="cursor:pointer;flex:1;min-width:230px;padding:11px 13px;' +
+      'border:1px solid ' +
+      (on ? 'var(--blue)' : 'var(--line)') +
+      ';border-radius:9px;background:' +
+      (on ? '#eef4fc' : '#fff') +
+      '">' +
+      '<b style="font-size:12.5px;color:' +
+      (on ? 'var(--blue)' : 'var(--ink)') +
+      '">' +
+      (on ? '● ' : '○ ') +
+      title +
+      '</b>' +
+      '<div class="note" style="margin-top:3px">' +
+      sub +
+      '</div></div>'
+    );
   };
 
-  var rows = SKUS.map(function(k){
-    var L = landed(k.eur, cur);
-    var priced = mode === 'convert' ? fmtMoney(L.total, cur) : (k.own && k.own[s.key] ? fmtMoney(k.own[s.key], cur) : null);
-    return '<div class="fld"><div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">'
-      + '<b style="font-size:13.5px">' + k.name + '</b>'
-      + '<span style="font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:var(--grey)">' + k.sku + '</span>'
-      + '<span style="font-size:11px;color:var(--grey)">' + k.img + ' · ' + k.vid + '</span>'
-      + '<span class="src inh" style="margin-inline-start:auto">PRODUCT FROM NETWORK</span></div>'
-      + '<div class="val" style="margin-top:6px">'
-      + '<span style="color:var(--grey);font-size:12.5px">reference ' + fmtMoney(k.eur, 'EUR') + '</span>'
-      + '<span style="font-size:12.5px"><span class=arw>→</span></span>'
-      + (priced
-          ? '<b style="font-size:15px">' + priced + '</b><span class="src ' + (mode === 'convert' ? 'inh' : 'own') + '">'
-            + (mode === 'convert' ? 'CONVERTED' : 'SET HERE') + '</span>'
-          : '<b style="font-size:14px;color:#a5382e">no price yet</b><span class="src cap">NEEDS A PRICE</span>')
-      + '</div>'
-      + (mode === 'convert'
-          ? '<div class="note">' + fmtMoney(L.base, cur) + ' converted · +' + LANDED.importPct + '% import · +'
-            + LANDED.handlePct + '% handling · +' + LANDED.taxPct + '% tax</div>'
-          : '<div class="note">This store names its own number. The reference is shown so it has something to price against.</div>')
-      + '</div>';
+  var rows = SKUS.map(function (item) {
+    var L = landed(item.eur, cur);
+    var priced = mode === 'convert' ? fmtMoney(L.total, cur) : item.own && item.own[s.key] ? fmtMoney(item.own[s.key], cur) : null;
+    return (
+      '<div class="fld"><div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">' +
+      '<b style="font-size:13.5px">' +
+      item.name +
+      '</b>' +
+      '<span style="font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:var(--grey)">' +
+      item.sku +
+      '</span>' +
+      '<span style="font-size:11px;color:var(--grey)">' +
+      item.img +
+      ' · ' +
+      item.vid +
+      '</span>' +
+      '<span class="src inh" style="margin-inline-start:auto">PRODUCT FROM NETWORK</span></div>' +
+      '<div class="val" style="margin-top:6px">' +
+      '<span style="color:var(--grey);font-size:12.5px">reference ' +
+      fmtMoney(item.eur, 'EUR') +
+      '</span>' +
+      '<span style="font-size:12.5px"><span class=arw>→</span></span>' +
+      (priced
+        ? '<b style="font-size:15px">' +
+          priced +
+          '</b><span class="src ' +
+          (mode === 'convert' ? 'inh' : 'own') +
+          '">' +
+          (mode === 'convert' ? 'CONVERTED' : 'SET HERE') +
+          '</span>'
+        : '<b style="font-size:14px;color:#a5382e">no price yet</b><span class="src cap">NEEDS A PRICE</span>') +
+      '</div>' +
+      (mode === 'convert'
+        ? '<div class="note">' +
+          fmtMoney(L.base, cur) +
+          ' converted · +' +
+          LANDED.importPct +
+          '% import · +' +
+          LANDED.handlePct +
+          '% handling · +' +
+          LANDED.taxPct +
+          '% tax</div>'
+        : '<div class="note">This store names its own number. The reference is shown so it has something to price against.</div>') +
+      '</div>'
+    );
   }).join('');
 
-  return '<div class="box">'
-    + '<div class="fld"><div class="lbl">WHERE THIS CATALOGUE CAME FROM</div>'
-    + '<div class="val"><span>Adopted from <b>' + NET.name + '</b> · ' + SKUS.length + ' items · reference currency EUR</span>'
-    + '<span class="src inh">BY REFERENCE</span><span class="act">stop following the network</span></div>'
-    + '<div class="note">The product, its pictures and its video stay the network\'s — a correction at the top reaches '
-    + 'every store. Only the <b>price</b> is ever this store\'s own.</div></div></div>'
-
+  return (
+    '<div class="box">' +
+    '<div class="fld"><div class="lbl">WHERE THIS CATALOGUE CAME FROM</div>' +
+    '<div class="val"><span>Adopted from <b>' +
+    NET.name +
+    '</b> · ' +
+    SKUS.length +
+    ' items · reference currency EUR</span>' +
+    '<span class="src inh">BY REFERENCE</span><span class="act">stop following the network</span></div>' +
+    '<div class="note">The product, its pictures and its video stay the network\'s — a correction at the top reaches ' +
+    "every store. Only the <b>price</b> is ever this store's own.</div></div></div>" +
     /* ── THE OPTION, WHICH IS ALL THAT IS BEING PLACED HERE ──────────────────────────────────────────────────
        Athi, 2026-08-08: *"we can give the option at catalogue level — conversion to your currency, or you decide
        the price. These are the options available. Just place the option now, then we will see how to perform the
        same."* So: two choices, set once for the catalogue, and the consequence shown per item.                */
-    + '<div class="box"><div class="fld"><div class="lbl">HOW THIS STORE PRICES WHAT IT ADOPTED</div>'
-    + '<div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:9px">'
-    + opt('convert', 'Convert from the network',
-        'A rate and the local add-ons produce a price. The store confirms it — it is a <b>proposal</b>, not a live formula.')
-    + opt('own', 'This store decides the price',
-        'The reference is shown for context; the number is the store\'s. Nothing is calculated.')
-    + '</div>'
-    + '<div class="note" style="margin-top:9px">Set for the catalogue, and overridable on a single item — one pump may '
-    + 'be a fixed global price while everything else converts.</div></div></div>'
-
-    + '<div class="box">' + rows + '</div>'
-
+    '<div class="box"><div class="fld"><div class="lbl">HOW THIS STORE PRICES WHAT IT ADOPTED</div>' +
+    '<div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:9px">' +
+    opt(
+      'convert',
+      'Convert from the network',
+      'A rate and the local add-ons produce a price. The store confirms it — it is a <b>proposal</b>, not a live formula.'
+    ) +
+    opt('own', 'This store decides the price', "The reference is shown for context; the number is the store's. Nothing is calculated.") +
+    '</div>' +
+    '<div class="note" style="margin-top:9px">Set for the catalogue, and overridable on a single item — one pump may ' +
+    'be a fixed global price while everything else converts.</div></div></div>' +
+    '<div class="box">' +
+    rows +
+    '</div>' +
     /* ── THE ROLLOVER — the part actually worth looking at ──────────────────────────────────────────────────── */
-    + '<div class="box"><div class="fld"><div class="lbl">WHEN THE NETWORK CHANGES THE CATALOGUE</div>'
-    + '<div style="font-size:12.5px;line-height:1.7;margin-top:6px">'
-    + '<b>A new SKU is added at the top</b> <span class=arw>→</span> it appears in every store, because the catalogue is held by reference.<br>'
-    + '&nbsp;&nbsp;· stores on <b>Convert</b> get a proposed price straight away.<br>'
-    + '&nbsp;&nbsp;· stores on <b>Decide</b> get the item <b style="color:#a5382e">unpriced</b>, and it stays out of '
-    + 'their shopfront until someone prices it.<br>'
-    + '<b>The reference price changes</b> <span class=arw>→</span> Convert stores see a new proposal and are asked to confirm; Decide stores '
-    + 'are told the reference moved and left alone.<br>'
-    + '<b>A picture, a video or a spec is corrected</b> <span class=arw>→</span> it reaches every store immediately. Nobody confirms '
-    + 'anything, because nobody had overridden it.<br>'
-    + '<b>The item is withdrawn</b> <span class=arw>→</span> it stops being offered everywhere, and past orders still resolve to the '
-    + 'version they were placed against.</div>'
-    + '<div class="note" style="margin-top:8px">⚠️ An unpriced adopted item being <b>advertised but unsellable</b> is a '
-    + 'defect CB has already had once and fixed — such items are hidden from a shop that shows prices. The rollover '
-    + 'must keep that true rather than re-open it.</div></div></div>'
-
-    + '<div class="legend"><h3>WHAT IS BEING DECIDED HERE — and what is deliberately not</h3>'
-    + '<b>Decided:</b> the product is held <i>by reference</i> and the price is <i>the store\'s</i>. That split is the '
-    + 'whole model — corrections flow down, money never does.<br>'
-    + '<b>Decided:</b> two ways to reach a local price, chosen per catalogue and overridable per item.<br><br>'
-    + '<b>Deliberately not decided:</b> where the rate comes from, how often it is re-read, and who confirms a new '
-    + 'proposal. Those are the maintenance question, and they are a stub here on purpose.<br><br>'
-    + '⚠️ One thing not to lose when it stops being a stub: whichever way a price is reached, <b>the chit must record '
-    + 'the rate it used</b>. A converted price with no record of the rate cannot be disputed, and a number that '
-    + 'cannot be disputed is not a price.'
-    + '</div>';
+    '<div class="box"><div class="fld"><div class="lbl">WHEN THE NETWORK CHANGES THE CATALOGUE</div>' +
+    '<div style="font-size:12.5px;line-height:1.7;margin-top:6px">' +
+    '<b>A new SKU is added at the top</b> <span class=arw>→</span> it appears in every store, because the catalogue is held by reference.<br>' +
+    '&nbsp;&nbsp;· stores on <b>Convert</b> get a proposed price straight away.<br>' +
+    '&nbsp;&nbsp;· stores on <b>Decide</b> get the item <b style="color:#a5382e">unpriced</b>, and it stays out of ' +
+    'their shopfront until someone prices it.<br>' +
+    '<b>The reference price changes</b> <span class=arw>→</span> Convert stores see a new proposal and are asked to confirm; Decide stores ' +
+    'are told the reference moved and left alone.<br>' +
+    '<b>A picture, a video or a spec is corrected</b> <span class=arw>→</span> it reaches every store immediately. Nobody confirms ' +
+    'anything, because nobody had overridden it.<br>' +
+    '<b>The item is withdrawn</b> <span class=arw>→</span> it stops being offered everywhere, and past orders still resolve to the ' +
+    'version they were placed against.</div>' +
+    '<div class="note" style="margin-top:8px">⚠️ An unpriced adopted item being <b>advertised but unsellable</b> is a ' +
+    'defect CB has already had once and fixed — such items are hidden from a shop that shows prices. The rollover ' +
+    'must keep that true rather than re-open it.</div></div></div>' +
+    '<div class="legend"><h3>WHAT IS BEING DECIDED HERE — and what is deliberately not</h3>' +
+    "<b>Decided:</b> the product is held <i>by reference</i> and the price is <i>the store's</i>. That split is the " +
+    'whole model — corrections flow down, money never does.<br>' +
+    '<b>Decided:</b> two ways to reach a local price, chosen per catalogue and overridable per item.<br><br>' +
+    '<b>Deliberately not decided:</b> where the rate comes from, how often it is re-read, and who confirms a new ' +
+    'proposal. Those are the maintenance question, and they are a stub here on purpose.<br><br>' +
+    '⚠️ One thing not to lose when it stops being a stub: whichever way a price is reached, <b>the chit must record ' +
+    'the rate it used</b>. A converted price with no record of the rate cannot be disputed, and a number that ' +
+    'cannot be disputed is not a price.' +
+    '</div>'
+  );
 }
-function setMode(m){ var s = store(); s.mode = m; drawPage(); }
-function store(){ return STORES.filter(function(s){ return s.key === sel; })[0]; }
-function val(s, k){ return (s.own && s.own[k] !== undefined) ? s.own[k] : NET[k]; }
-function src(s, k){ return (s.own && s.own[k] !== undefined) ? 'own' : 'inherited'; }
+function setMode(m) {
+  var s = store();
+  s.mode = m;
+  drawPage();
+}
+function store() {
+  return STORES.filter(function (item) {
+    return item.key === sel;
+  })[0];
+}
+function val(s, k) {
+  return s.own && s.own[k] !== undefined ? s.own[k] : NET[k];
+}
+function src(s, k) {
+  return s.own && s.own[k] !== undefined ? 'own' : 'inherited';
+}
 
-function drawTree(){
+function drawTree() {
   document.getElementById('tree').innerHTML =
-    '<div style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em;padding:2px 8px 3px">NETWORK</div>'
-    + '<div style="font-size:10px;color:#2c7a43;padding:0 8px 10px">✓ your network · ' + STORES.length + ' stores live'
-    + (NET.currency ? ' · ' + NET.currency + ' · ' + NET.country : '') + '</div>'
-    + '<div class="nd">◆ ' + NET.name + '<div class="sub">the top — its settings flow down</div></div>'
-    + STORES.map(function(s){
-        var c = s.vis === 'Public' ? 'background:#e6f4ec;color:#2c7a43' : s.vis === 'Network' ? 'background:#f6ecd8;color:#8a5a1e' : 'background:#eef0f4;color:#6b6f86';
-        var overrides = s.own ? Object.keys(s.own).length : 0;
-        // The searched item, answered IN THE TREE. Green when it is there, struck when it is not — so "who has it"
-        // is legible in the place you were already looking rather than only in a panel on the right.
-        var h = Q ? holders()[s.name] : null;
-        var hit = Q
-          ? (h && h.qty > 0
-              ? '<span class="chip" style="background:#2c7a43;color:#fff">' + h.qty + ' · ' + h.days + 'd</span>'
-              : '<span class="chip" style="background:#f7eceb;color:#a5382e">none</span>')
-          : '';
-        var dim = Q && !(h && h.qty > 0) ? 'opacity:.5;' : '';
-        // A store's own currency shows only where it DIFFERS from the network's — the exception, not the rule.
-        var cur = (s.own && s.own.currency && s.own.currency !== NET.currency) ? s.own.currency : '';
-        return '<div class="nd ' + (s.key === sel ? 'on' : '') + '" onclick="pick(\'' + s.key + '\')" style="margin-inline-start:12px;' + dim + '">'
-          + '└ ' + s.name + '<span class="chip" style="' + c + '">' + s.vis + '</span>' + hit
-          + '<div class="sub">' + s.purpose + (overrides ? ' · ' + overrides + ' set here' : '') + '</div>'
-          + (cur ? '<div class="sub" style="color:#8a5a1e;font-weight:700">🌍 ' + cur + '</div>' : '')
-          + '</div>';
-      }).join('')
-    + (Q ? '<div style="margin-top:12px;padding:9px 10px;border:1px solid #e0d3b0;background:#fdf8ec;border-radius:9px;font-size:11.5px;line-height:1.5">'
-        + 'Searching <b>' + Q + '</b> across the network. Green = has it, with quantity and days to ship.</div>' : '');
+    '<div style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em;padding:2px 8px 3px">NETWORK</div>' +
+    '<div style="font-size:10px;color:#2c7a43;padding:0 8px 10px">✓ your network · ' +
+    STORES.length +
+    ' stores live' +
+    (NET.currency ? ' · ' + NET.currency + ' · ' + NET.country : '') +
+    '</div>' +
+    '<div class="nd">◆ ' +
+    NET.name +
+    '<div class="sub">the top — its settings flow down</div></div>' +
+    STORES.map(function (item) {
+      var c =
+        item.vis === 'Public'
+          ? 'background:#e6f4ec;color:#2c7a43'
+          : item.vis === 'Network'
+            ? 'background:#f6ecd8;color:#8a5a1e'
+            : 'background:#eef0f4;color:#6b6f86';
+      var overrides = item.own ? Object.keys(item.own).length : 0;
+      // The searched item, answered IN THE TREE. Green when it is there, struck when it is not — so "who has it"
+      // is legible in the place you were already looking rather than only in a panel on the right.
+      var h = Q ? holders()[item.name] : null;
+      var hit = Q
+        ? h && h.qty > 0
+          ? '<span class="chip" style="background:#2c7a43;color:#fff">' + h.qty + ' · ' + h.days + 'd</span>'
+          : '<span class="chip" style="background:#f7eceb;color:#a5382e">none</span>'
+        : '';
+      var dim = Q && !(h && h.qty > 0) ? 'opacity:.5;' : '';
+      // A store's own currency shows only where it DIFFERS from the network's — the exception, not the rule.
+      var cur = item.own && item.own.currency && item.own.currency !== NET.currency ? item.own.currency : '';
+      return (
+        '<div class="nd ' +
+        (item.key === sel ? 'on' : '') +
+        '" onclick="pick(\'' +
+        item.key +
+        '\')" style="margin-inline-start:12px;' +
+        dim +
+        '">' +
+        '└ ' +
+        item.name +
+        '<span class="chip" style="' +
+        c +
+        '">' +
+        item.vis +
+        '</span>' +
+        hit +
+        '<div class="sub">' +
+        item.purpose +
+        (overrides ? ' · ' + overrides + ' set here' : '') +
+        '</div>' +
+        (cur ? '<div class="sub" style="color:#8a5a1e;font-weight:700">🌍 ' + cur + '</div>' : '') +
+        '</div>'
+      );
+    }).join('') +
+    (Q
+      ? '<div style="margin-top:12px;padding:9px 10px;border:1px solid #e0d3b0;background:#fdf8ec;border-radius:9px;font-size:11.5px;line-height:1.5">' +
+        'Searching <b>' +
+        Q +
+        '</b> across the network. Green = has it, with quantity and days to ship.</div>'
+      : '');
 }
 /* ── ONE PRODUCT, ACROSS THE WHOLE NETWORK ────────────────────────────────────────────────────────────────────
    Athi, 2026-08-08: *"if there is a query about one product, how can we provide where exactly the product is and
@@ -300,83 +429,125 @@ function drawTree(){
    CB's four-leg model already separates system-fed from stored-in-CB; this is that distinction, shown. */
 var STOCK = {
   'CR-32-4': [
-    { store:'India', city:'Coimbatore', qty:6,  km:0,     days:1, via:'ERP · SAP',      fresh:'live · 4 min ago' },
-    { store:'UAE',   city:'Dubai',      qty:2,  km:2480,  days:4, via:'ERP · Dynamics', fresh:'nightly · 11 h ago' },
-    { store:'China', city:'Suzhou',     qty:41, km:5900,  days:9, via:'IoT · bin count',fresh:'live · 30 s ago' },
-    { store:'USA',   city:'Chicago',    qty:0,  km:13400, days:0, via:'manual',         fresh:'typed · 26 Mar' },
+    { store: 'India', city: 'Coimbatore', qty: 6, km: 0, days: 1, via: 'ERP · SAP', fresh: 'live · 4 min ago' },
+    { store: 'UAE', city: 'Dubai', qty: 2, km: 2480, days: 4, via: 'ERP · Dynamics', fresh: 'nightly · 11 h ago' },
+    { store: 'China', city: 'Suzhou', qty: 41, km: 5900, days: 9, via: 'IoT · bin count', fresh: 'live · 30 s ago' },
+    { store: 'USA', city: 'Chicago', qty: 0, km: 13400, days: 0, via: 'manual', fresh: 'typed · 26 Mar' }
   ],
   'MQ3-45': [
-    { store:'USA',   city:'Chicago',    qty:18, km:13400, days:2, via:'ERP · NetSuite', fresh:'live · 1 min ago' },
-    { store:'UAE',   city:'Dubai',      qty:5,  km:2480,  days:4, via:'ERP · Dynamics', fresh:'nightly · 11 h ago' },
-    { store:'India', city:'Coimbatore', qty:0,  km:0,     days:0, via:'ERP · SAP',      fresh:'live · 4 min ago' },
+    { store: 'USA', city: 'Chicago', qty: 18, km: 13400, days: 2, via: 'ERP · NetSuite', fresh: 'live · 1 min ago' },
+    { store: 'UAE', city: 'Dubai', qty: 5, km: 2480, days: 4, via: 'ERP · Dynamics', fresh: 'nightly · 11 h ago' },
+    { store: 'India', city: 'Coimbatore', qty: 0, km: 0, days: 0, via: 'ERP · SAP', fresh: 'live · 4 min ago' }
   ],
-  'SEAL-11': [
-    { store:'China', city:'Suzhou',     qty:320,km:5900,  days:9, via:'IoT · bin count',fresh:'live · 30 s ago' },
-  ],
+  'SEAL-11': [{ store: 'China', city: 'Suzhou', qty: 320, km: 5900, days: 9, via: 'IoT · bin count', fresh: 'live · 30 s ago' }]
 };
-function locateScreen(){
+function locateScreen() {
   var k = matchSku();
   if (!k) return '<h1>🔎 No product matches “' + Q + '”</h1><div class="kind">The catalogue holds ' + SKUS.length + ' items. Try CR-32, MQ3 or seal.</div>';
   var rows = STOCK[k.sku] || [];
-  var have = rows.filter(function(r){ return r.qty > 0; }).sort(function(a,b){ return a.days - b.days; });
-  var none = rows.filter(function(r){ return r.qty <= 0; });
-  var line = function(r, dim){
+  var have = rows
+    .filter(function (item) {
+      return item.qty > 0;
+    })
+    .sort(function (first, second) {
+      return first.days - second.days;
+    });
+  var none = rows.filter(function (item) {
+    return item.qty <= 0;
+  });
+  var line = function (r, dim) {
     var stale = /typed|nightly/.test(r.fresh);
-    return '<div class="fld" style="' + (dim ? 'opacity:.55' : '') + '">'
-      + '<div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">'
-      + '<b style="font-size:13.5px">' + r.store + '</b>'
-      + '<span style="font-size:12px;color:var(--grey)">' + r.city + '</span>'
-      + '<span style="font-size:12px;color:var(--grey)">' + (r.km ? r.km.toLocaleString() + ' km' : 'here') + '</span>'
-      + '<b style="margin-inline-start:auto;font-size:15px;color:' + (r.qty ? '#2c7a43' : '#a5382e') + '">' + r.qty + ' in stock</b>'
-      + '</div>'
-      + '<div class="val" style="margin-top:4px">'
-      + (r.qty ? '<span style="font-size:12.5px">can ship in <b>' + r.days + ' day' + (r.days === 1 ? '' : 's') + '</b></span>' : '<span style="font-size:12.5px;color:#a5382e">nothing to ship</span>')
-      + '<span class="src ' + (stale ? 'cap' : 'own') + '">' + r.via + ' · ' + r.fresh + '</span>'
-      + '</div>'
-      + (stale ? '<div class="note">⚠ This number is not live. It is the best the connected system offers, and the '
-          + 'screen says so rather than rounding it up to certainty.</div>' : '')
-      + '</div>';
+    return (
+      '<div class="fld" style="' +
+      (dim ? 'opacity:.55' : '') +
+      '">' +
+      '<div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">' +
+      '<b style="font-size:13.5px">' +
+      r.store +
+      '</b>' +
+      '<span style="font-size:12px;color:var(--grey)">' +
+      r.city +
+      '</span>' +
+      '<span style="font-size:12px;color:var(--grey)">' +
+      (r.km ? r.km.toLocaleString() + ' km' : 'here') +
+      '</span>' +
+      '<b style="margin-inline-start:auto;font-size:15px;color:' +
+      (r.qty ? '#2c7a43' : '#a5382e') +
+      '">' +
+      r.qty +
+      ' in stock</b>' +
+      '</div>' +
+      '<div class="val" style="margin-top:4px">' +
+      (r.qty
+        ? '<span style="font-size:12.5px">can ship in <b>' + r.days + ' day' + (r.days === 1 ? '' : 's') + '</b></span>'
+        : '<span style="font-size:12.5px;color:#a5382e">nothing to ship</span>') +
+      '<span class="src ' +
+      (stale ? 'cap' : 'own') +
+      '">' +
+      r.via +
+      ' · ' +
+      r.fresh +
+      '</span>' +
+      '</div>' +
+      (stale
+        ? '<div class="note">⚠ This number is not live. It is the best the connected system offers, and the ' +
+          'screen says so rather than rounding it up to certainty.</div>'
+        : '') +
+      '</div>'
+    );
   };
-  return '<h1>🔎 Where is it?</h1>'
-    + '<div class="hd">' + k.sku + '</div>'
-    + '<div class="kind">' + k.name + ' · asked across <b>' + NET.name + '</b></div>'
-
-    + '<div class="box">'
-    + '<div class="fld"><div class="lbl">CAN BE SENT — soonest first</div></div>'
-    + have.map(function(r){ return line(r, false); }).join('')
-    + none.map(function(r){ return line(r, true); }).join('')
-    + '</div>'
-
-    + '<div class="box"><div class="fld"><div class="lbl">SO THE ANSWER TO THE CUSTOMER IS</div>'
-    + '<div style="font-size:13.5px;margin-top:6px;line-height:1.7">'
-    + '<b>6 available in Coimbatore, tomorrow.</b> Beyond that, 2 in Dubai in 4 days and 41 in Suzhou in 9. '
-    + 'Chicago has none.</div>'
-    + '<div class="note">Distance comes from each store\'s <b>place</b>; the days come from its declared '
-    + '<b>fulfilment routes</b>; the quantity comes from whatever system that store has connected. All three are '
-    + 'per-store declarations — nothing here is central.</div></div></div>'
-
-    + '<div class="box"><div class="fld"><div class="lbl">HOW THE SYSTEMS CONNECT</div>'
-    + '<div style="font-size:12.5px;line-height:1.8;margin-top:6px">'
-    + '<b>India <span class=arw>→</span> SAP</b> over the ERP connector, pushing on change. Live.<br>'
-    + '<b>UAE <span class=arw>→</span> Dynamics</b>, a nightly file. Correct at 2 a.m., a guess by lunchtime.<br>'
-    + '<b>China <span class=arw>→</span> IoT</b>, a bin counter on the rack. Live, and only as good as the sensor.<br>'
-    + '<b>USA <span class=arw>→</span> nobody</b>. Somebody typed it in March and it has been decaying ever since.</div>'
-    + '<div class="note">This is the four-leg model doing its job: each field says which leg it came from — '
-    + '<b>system-fed</b>, <b>from the customer</b>, <b>computed</b>, or <b>stored in CB</b>. A store with no '
-    + 'connector is not excluded from the network; it is included and marked, which is the honest version.</div>'
-    + '</div></div>'
-
-    + '<div class="legend"><h3>WHAT THIS SCREEN NEEDS THAT CB DOES NOT YET HAVE</h3>'
-    + '<b>Place</b> — built (b119). Distances are real.<br>'
-    + '<b>Stock with a freshness stamp</b> — not built. The quantities and timestamps above are invented, and this '
-    + 'is the piece the whole screen rests on.<br>'
-    + '<b>Fulfilment routes and transit days</b> — not built. The "1 day / 4 days / 9 days" are invented too.<br>'
-    + '<b>The ERP and IoT connectors</b> — the rail exists and the four-leg routing exists; what is missing is a '
-    + 'per-store <i>availability record</i> for them to write into.<br><br>'
-    + '⚠️ Note what is NOT needed: a central inventory. Every number above stays in the store that owns it and is '
-    + 'read across the network at the moment of asking. That is the difference between a rail and a database, and '
-    + 'it is the only version a chain of independent businesses would ever agree to.'
-    + '</div>';
+  return (
+    '<h1>🔎 Where is it?</h1>' +
+    '<div class="hd">' +
+    k.sku +
+    '</div>' +
+    '<div class="kind">' +
+    k.name +
+    ' · asked across <b>' +
+    NET.name +
+    '</b></div>' +
+    '<div class="box">' +
+    '<div class="fld"><div class="lbl">CAN BE SENT — soonest first</div></div>' +
+    have
+      .map(function (item) {
+        return line(item, false);
+      })
+      .join('') +
+    none
+      .map(function (item) {
+        return line(item, true);
+      })
+      .join('') +
+    '</div>' +
+    '<div class="box"><div class="fld"><div class="lbl">SO THE ANSWER TO THE CUSTOMER IS</div>' +
+    '<div style="font-size:13.5px;margin-top:6px;line-height:1.7">' +
+    '<b>6 available in Coimbatore, tomorrow.</b> Beyond that, 2 in Dubai in 4 days and 41 in Suzhou in 9. ' +
+    'Chicago has none.</div>' +
+    '<div class="note">Distance comes from each store\'s <b>place</b>; the days come from its declared ' +
+    '<b>fulfilment routes</b>; the quantity comes from whatever system that store has connected. All three are ' +
+    'per-store declarations — nothing here is central.</div></div></div>' +
+    '<div class="box"><div class="fld"><div class="lbl">HOW THE SYSTEMS CONNECT</div>' +
+    '<div style="font-size:12.5px;line-height:1.8;margin-top:6px">' +
+    '<b>India <span class=arw>→</span> SAP</b> over the ERP connector, pushing on change. Live.<br>' +
+    '<b>UAE <span class=arw>→</span> Dynamics</b>, a nightly file. Correct at 2 a.m., a guess by lunchtime.<br>' +
+    '<b>China <span class=arw>→</span> IoT</b>, a bin counter on the rack. Live, and only as good as the sensor.<br>' +
+    '<b>USA <span class=arw>→</span> nobody</b>. Somebody typed it in March and it has been decaying ever since.</div>' +
+    '<div class="note">This is the four-leg model doing its job: each field says which leg it came from — ' +
+    '<b>system-fed</b>, <b>from the customer</b>, <b>computed</b>, or <b>stored in CB</b>. A store with no ' +
+    'connector is not excluded from the network; it is included and marked, which is the honest version.</div>' +
+    '</div></div>' +
+    '<div class="legend"><h3>WHAT THIS SCREEN NEEDS THAT CB DOES NOT YET HAVE</h3>' +
+    '<b>Place</b> — built (b119). Distances are real.<br>' +
+    '<b>Stock with a freshness stamp</b> — not built. The quantities and timestamps above are invented, and this ' +
+    'is the piece the whole screen rests on.<br>' +
+    '<b>Fulfilment routes and transit days</b> — not built. The "1 day / 4 days / 9 days" are invented too.<br>' +
+    '<b>The ERP and IoT connectors</b> — the rail exists and the four-leg routing exists; what is missing is a ' +
+    'per-store <i>availability record</i> for them to write into.<br><br>' +
+    '⚠️ Note what is NOT needed: a central inventory. Every number above stays in the store that owns it and is ' +
+    'read across the network at the moment of asking. That is the difference between a rail and a database, and ' +
+    'it is the only version a chain of independent businesses would ever agree to.' +
+    '</div>'
+  );
 }
 
 /* ── SEARCH ONE PRODUCT, SEE WHO HAS IT ───────────────────────────────────────────────────────────────────────
@@ -387,108 +558,179 @@ function locateScreen(){
    the network has it, and how fast can it get here". Matching stores are highlighted in the tree at the same
    time, so the answer is legible in the place you were already looking. */
 var Q = '';
-function doSearch(v){ Q = String(v || '').trim(); view = Q ? 'locate' : 'store'; drawTree(); drawPage(); }
-function matchSku(){
+function doSearch(v) {
+  Q = String(v || '').trim();
+  view = Q ? 'locate' : 'store';
+  drawTree();
+  drawPage();
+}
+function matchSku() {
   if (!Q) return SKUS[0];
   var q = Q.toLowerCase();
-  return SKUS.filter(function(k){ return (k.sku + ' ' + k.name).toLowerCase().indexOf(q) >= 0; })[0] || null;
+  return (
+    SKUS.filter(function (item) {
+      return (item.sku + ' ' + item.name).toLowerCase().indexOf(q) >= 0;
+    })[0] || null
+  );
 }
 /** Which stores hold the searched item — used by the tree to highlight, and by the locator to answer. */
-function holders(){
-  var k = matchSku(); if (!k) return {};
+function holders() {
+  var k = matchSku();
+  if (!k) return {};
   var out = {};
-  (STOCK[k.sku] || []).forEach(function(r){ out[r.store] = r; });
+  (STOCK[k.sku] || []).forEach(function (item) {
+    out[item.store] = item;
+  });
   return out;
 }
 
-function drawPage(){
-  if (view === 'locate') { document.getElementById('page').innerHTML = locateScreen(); return; }
+function drawPage() {
+  if (view === 'locate') {
+    document.getElementById('page').innerHTML = locateScreen();
+    return;
+  }
   var s = store();
   var body;
   if (tab === 'general') {
-    body = '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">'
-      + '<button>＋ Add owned node</button><button>🤝 Add partner</button><button>✏️ Rename</button>'
-      + '<button>🗑️ Remove</button><button>↑</button><button>↓</button></div>'
+    body =
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">' +
+      '<button>＋ Add owned node</button><button>🤝 Add partner</button><button>✏️ Rename</button>' +
+      '<button>🗑️ Remove</button><button>↑</button><button>↓</button></div>' +
       // Visibility STAYS on General (Athi's call, 2026-08-08). It is the one decision required to build a
       // network, so it belongs on the tab you land on, not one click away behind the shopfront.
-      + '<div class="box">'
-      + '<div class="fld"><div class="lbl">WHO CAN SEE THIS STORE\'S CATALOGUE</div>'
-      + '<div class="val" style="margin-top:7px">' + visOpts(s) + '<span class="src cap">CAPPED BY NETWORK</span></div>'
-      + '<div class="note">The network is <b>Public</b>, so all three are available. If the network closes, only '
-      + '<b>Network only</b> and <b>Private</b> remain — a ceiling, not a default. A store can never be more open '
-      + 'than what contains it.</div></div>'
-      + fld('WHAT IT IS FOR', s.purpose, 'own', 'Shows under the name in the map, and on the store itself.')
-      + '</div>'
-      + '<div class="box">'
-      + fld('COUNTRY', val(s,'country'), src(s,'country'))
-      + fld('CITY', val(s,'city'), src(s,'city'))
-      + fld('CURRENCY', val(s,'currency'), src(s,'currency'))
-      + '</div>';
+      '<div class="box">' +
+      '<div class="fld"><div class="lbl">WHO CAN SEE THIS STORE\'S CATALOGUE</div>' +
+      '<div class="val" style="margin-top:7px">' +
+      visOpts(s) +
+      '<span class="src cap">CAPPED BY NETWORK</span></div>' +
+      '<div class="note">The network is <b>Public</b>, so all three are available. If the network closes, only ' +
+      '<b>Network only</b> and <b>Private</b> remain — a ceiling, not a default. A store can never be more open ' +
+      'than what contains it.</div></div>' +
+      fld('WHAT IT IS FOR', s.purpose, 'own', 'Shows under the name in the map, and on the store itself.') +
+      '</div>' +
+      '<div class="box">' +
+      fld('COUNTRY', val(s, 'country'), src(s, 'country')) +
+      fld('CITY', val(s, 'city'), src(s, 'city')) +
+      fld('CURRENCY', val(s, 'currency'), src(s, 'currency')) +
+      '</div>';
   } else if (tab === 'storefront') {
-    body = '<div class="box">'
-      + '<div class="fld"><div class="lbl">HOW CUSTOMERS ORDER</div>'
-      + '<div class="val"><select><option>Cart (qty + price)</option><option>Quantity only</option><option>Enquiry</option></select>'
-      + '<span class="src inh">FROM NETWORK</span><span class="act">override for this store</span></div></div>'
-      + '</div>';
+    body =
+      '<div class="box">' +
+      '<div class="fld"><div class="lbl">HOW CUSTOMERS ORDER</div>' +
+      '<div class="val"><select><option>Cart (qty + price)</option><option>Quantity only</option><option>Enquiry</option></select>' +
+      '<span class="src inh">FROM NETWORK</span><span class="act">override for this store</span></div></div>' +
+      '</div>';
   } else if (tab === 'money') {
-    body = '<div class="box">'
-      + fld('CURRENCY', val(s,'currency'), src(s,'currency'),
-          src(s,'currency') === 'own'
-            ? 'Overridden because this store trades in another country. Prices here are stamped LKR and are never converted.'
-            : 'Follows the network. Change it at <b>' + NET.name + '</b> and every store that has not overridden it follows.')
-      + fld('PRICE BAND', NET.priceBand, 'cap', 'The network sets the band. A store prices within it, not outside it.')
-      + '</div>';
+    body =
+      '<div class="box">' +
+      fld(
+        'CURRENCY',
+        val(s, 'currency'),
+        src(s, 'currency'),
+        src(s, 'currency') === 'own'
+          ? 'Overridden because this store trades in another country. Prices here are stamped LKR and are never converted.'
+          : 'Follows the network. Change it at <b>' + NET.name + '</b> and every store that has not overridden it follows.'
+      ) +
+      fld('PRICE BAND', NET.priceBand, 'cap', 'The network sets the band. A store prices within it, not outside it.') +
+      '</div>';
   } else if (tab === 'tradeready') {
-    body = '<div class="box">'
-      + fld('CERTIFICATIONS', val(s,'certs'), src(s,'certs'),
-          src(s,'certs') === 'own'
-            ? 'This store holds its own clearances — a different market needs different ones.'
-            : 'The network’s certifications apply here.')
-      + '</div>';
+    body =
+      '<div class="box">' +
+      fld(
+        'CERTIFICATIONS',
+        val(s, 'certs'),
+        src(s, 'certs'),
+        src(s, 'certs') === 'own'
+          ? 'This store holds its own clearances — a different market needs different ones.'
+          : 'The network’s certifications apply here.'
+      ) +
+      '</div>';
   } else if (tab === 'place') {
-    body = '<div class="box">'
-      + fld('CITY', val(s,'city'), src(s,'city'))
-      + fld('COORDINATES', s.own && s.own.city ? 'not set' : '11.0168, 76.9558', 'own',
-          'A place is never inherited — two stores are never in the same spot. The network only passes down the <b>country</b>.')
-      + fld('SERVES', '50 km', 'own')
-      + '</div>';
+    body =
+      '<div class="box">' +
+      fld('CITY', val(s, 'city'), src(s, 'city')) +
+      fld(
+        'COORDINATES',
+        s.own && s.own.city ? 'not set' : '11.0168, 76.9558',
+        'own',
+        'A place is never inherited — two stores are never in the same spot. The network only passes down the <b>country</b>.'
+      ) +
+      fld('SERVES', '50 km', 'own') +
+      '</div>';
   } else if (tab === 'catalogue') {
     body = catalogueTab(s);
   } else {
     // The real app already has rich panels for co-assists, transact and dispute. The mock does not redraw them —
     // it says so, rather than showing a thinner version that would look like a proposal to replace them.
-    var real = { coassist:1, transact:1, dispute:1, tradeready:1 };
-    var lbl = (TABS.filter(function(t){ return t[0] === tab; })[0] || [])[2] || tab;
-    body = '<div class="box"><div class="fld"><div class="lbl">' + lbl.toUpperCase() + '</div>'
-      + '<div class="note">' + (real[tab]
-          ? 'The real app already has this panel, in full. It is <b>not redrawn here</b> — the mock is for layout '
-            + 'and inheritance, and a thinner version would read as a proposal to replace what exists.'
-          : 'Captured on the design, <b>not enforced</b> by the platform yet.')
-      + '</div></div></div>';
+    var real = { coassist: 1, transact: 1, dispute: 1, tradeready: 1 };
+    var text =
+      (TABS.filter(function (item) {
+        return item[0] === tab;
+      })[0] || [])[2] || tab;
+    body =
+      '<div class="box"><div class="fld"><div class="lbl">' +
+      text.toUpperCase() +
+      '</div>' +
+      '<div class="note">' +
+      (real[tab]
+        ? 'The real app already has this panel, in full. It is <b>not redrawn here</b> — the mock is for layout ' +
+          'and inheritance, and a thinner version would read as a proposal to replace what exists.'
+        : 'Captured on the design, <b>not enforced</b> by the platform yet.') +
+      '</div></div></div>';
   }
 
   document.getElementById('page').innerHTML =
-    '<h1>' + s.name + ' <span class="chip" style="background:#e6f4ec;color:#2c7a43">OWNED</span></h1>'
-    + '<div class="hd">' + NET.handle + '.' + s.name.toLowerCase() + '</div>'
-    + '<div class="kind">An owned store · settings not set here come from <b>' + NET.name + '</b></div>'
-    + '<div class="tabs">' + TABS.map(function(t){
-        return '<span class="tab ' + (t[0] === tab ? 'on' : 'has') + '" onclick="pickTab(\'' + t[0] + '\')">'
-          + '<span class="ic">' + t[1] + '</span>' + t[2]
-          + (t[3] ? '<span style="font-size:8.5px;font-weight:800;opacity:.7;border:1px solid currentColor;border-radius:4px;padding:0 3px">N/E</span>' : '')
-          + '</span>'; }).join('') + '</div>'
-    + '<div class="pane">' + body + '</div>'
-    + '<div class="legend"><h3>THE THREE KINDS — this is what the mock is really asking</h3>'
-      + '<b>FROM NETWORK</b> — the network said it and this store has not disagreed. Change it once at the top and '
-      + 'every store that has not overridden it follows. This is how currency, country and certifications should behave.<br>'
-      + '<b>SET HERE</b> — this store overrode it and stops following the network <i>for that one field</i>. It must say '
-      + 'so on the field, or nobody can tell why two stores differ.<br>'
-      + '<b>CAPPED BY NETWORK</b> — not a default but a <i>ceiling</i>. The store may go narrower, never wider. '
-      + 'Visibility already works this way; a price band is the same shape.<br><br>'
-      + '⚠️ The one that does not inherit at all is <b>place</b>. Two stores are never in the same spot, so only the '
-      + '<i>country</i> comes down. A setting that inherits when it should not is worse than one that does not inherit '
-      + 'at all — it looks decided and is wrong.</div>';
+    '<h1>' +
+    s.name +
+    ' <span class="chip" style="background:#e6f4ec;color:#2c7a43">OWNED</span></h1>' +
+    '<div class="hd">' +
+    NET.handle +
+    '.' +
+    s.name.toLowerCase() +
+    '</div>' +
+    '<div class="kind">An owned store · settings not set here come from <b>' +
+    NET.name +
+    '</b></div>' +
+    '<div class="tabs">' +
+    TABS.map(function (item) {
+      return (
+        '<span class="tab ' +
+        (item[0] === tab ? 'on' : 'has') +
+        '" onclick="pickTab(\'' +
+        item[0] +
+        '\')">' +
+        '<span class="ic">' +
+        item[1] +
+        '</span>' +
+        item[2] +
+        (item[3] ? '<span style="font-size:8.5px;font-weight:800;opacity:.7;border:1px solid currentColor;border-radius:4px;padding:0 3px">N/E</span>' : '') +
+        '</span>'
+      );
+    }).join('') +
+    '</div>' +
+    '<div class="pane">' +
+    body +
+    '</div>' +
+    '<div class="legend"><h3>THE THREE KINDS — this is what the mock is really asking</h3>' +
+    '<b>FROM NETWORK</b> — the network said it and this store has not disagreed. Change it once at the top and ' +
+    'every store that has not overridden it follows. This is how currency, country and certifications should behave.<br>' +
+    '<b>SET HERE</b> — this store overrode it and stops following the network <i>for that one field</i>. It must say ' +
+    'so on the field, or nobody can tell why two stores differ.<br>' +
+    '<b>CAPPED BY NETWORK</b> — not a default but a <i>ceiling</i>. The store may go narrower, never wider. ' +
+    'Visibility already works this way; a price band is the same shape.<br><br>' +
+    '⚠️ The one that does not inherit at all is <b>place</b>. Two stores are never in the same spot, so only the ' +
+    '<i>country</i> comes down. A setting that inherits when it should not is worse than one that does not inherit ' +
+    'at all — it looks decided and is wrong.</div>';
 }
-function pick(k){ sel = k; drawTree(); drawPage(); }
-function pickTab(t){ tab = t; drawPage(); }
-drawTree(); drawPage();
+function pick(k) {
+  sel = k;
+  drawTree();
+  drawPage();
+}
+function pickTab(t) {
+  tab = t;
+  drawPage();
+}
+drawTree();
+drawPage();
 </script>

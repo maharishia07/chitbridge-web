@@ -7,7 +7,9 @@
  * Depends on host globals defined in app.html: EP, CFG, SESSION, demoApi, go.
  * Pattern for a NEW panel: add one EP row + one mapper, then a panel module that calls api(). */
 
-function fill(path, params){ return path.replace(/:(\w+)/g, (_, k) => encodeURIComponent((params && params[k]) ?? "")); }
+function fill(path, params) {
+  return path.replace(/:(\w+)/g, (_, k) => encodeURIComponent((params && params[k]) ?? ''));
+}
 
 // Single response envelope. Accepts a real {ok,data,error} envelope, or normalises the legacy
 // wrappers ({chits,…}, {entity}, {messages,…}, …) so feature code uses `data` directly.
@@ -31,18 +33,23 @@ function fill(path, params){ return path.replace(/:(\w+)/g, (_, k) => encodeURIC
  * area shows the list — visible to somebody who is looking for a fault, invisible to everybody else.
  */
 var CBDROP = {};
-function cbDropNote(key, keys){
-  try{
-    if(!keys || !keys.length) return;
+function cbDropNote(key, keys) {
+  try {
+    if (!keys || !keys.length) return;
     var k = key || '?';
     var seen = CBDROP[k] || (CBDROP[k] = []);
-    keys.forEach(function(f){ if(seen.indexOf(f) < 0) seen.push(f); });
-  }catch(_){}
+    keys.forEach(function (item) {
+      if (seen.indexOf(item) < 0) seen.push(item);
+    });
+  } catch (_) {}
 }
 /* capped · cap_note (SIBS below) — W2-RAIL R2: a cut list SAYS SO — `capped` (the code) and `cap_note` (the sentence) ride beside the chits array on inbox · sent · folder; pgFooter prints it */
-function unwrap(j, _key){
-  if(j==null||typeof j!=="object"||Array.isArray(j)) return j;
-  if("ok" in j && ("data" in j || "error" in j)){ if(j.ok===false) throw new Error(j.error||"Request failed"); return j.data; }
+function unwrap(j, _key) {
+  if (j == null || typeof j !== 'object' || Array.isArray(j)) return j;
+  if ('ok' in j && ('data' in j || 'error' in j)) {
+    if (j.ok === false) throw new Error(j.error || 'Request failed');
+    return j.data;
+  }
   /**
    * ⚠️ `has_catalogue` JOINS THIS LIST BECAUSE THE LINE BELOW WAS EATING THE ANSWER (found 2026-08-14, driving the
    * picker under Playwright after three failed attempts by hand).
@@ -70,72 +77,110 @@ function unwrap(j, _key){
    * "which item?" sheet, and this. `supCatalogueFull` bypasses api() entirely for the same reason.
    * ⚠️ IF YOU ADD AN ENDPOINT THAT RETURNS AN ARRAY BESIDE ANY OTHER KEY, IT BELONGS ON THIS LINE.
    */
-  if("token" in j || "my_disputes" in j || "header" in j || "has_catalogue" in j || "searched" in j) return j; // auth / structured / compound -> whole, untouched
-  for(const k of ["chits","messages","connections","requests","suppliers","items","results","actors"]) if(Array.isArray(j[k])){ const a=j[k]; /**
-   * ── ⚠️⚠️⚠️ `truncated` JOINS THIS LIST, AND IT IS THE FIFTH INSTANCE OF THE BUG DESCRIBED ABOVE ────────
-   *
-   * Athi, 2026-09-13: *"when I search cycle from the catalogue in the webapp it is not showing — I guess the
-   * search works only within the data what has been browsed? I could see Cycle Candle from the counter."*
-   * He was exactly right, and the cause is this line.
-   *
-   * ⚠️⚠️ THE SHOP HAS 10,441 PRODUCTS AND THE SCREEN LOADS 500. That is deliberate and fine — the code for
-   * it is already written: `/api/products` returns `truncated`, `prodSearchServer()` exists to search the
-   * whole shelf, and the input calls it with `if(UI.prodTruncated)`. Every piece was in place.
-   *
-   * ⭐ AND THIS LINE THREW THE FLAG AWAY. It carries `total`, `page` and `limit` off a compound response and
-   * silently drops everything else — so `page.truncated` was undefined, `UI.prodTruncated` stayed false, the
-   * server search never fired, and the box searched the 500 rows it happened to be holding. Nine thousand
-   * products could not be found by typing their name, and nothing anywhere said so.
-   *
-   * ⚠️ THE COMMENT ABOVE ALREADY WARNED ABOUT THIS IN CAPITALS — "IF YOU ADD AN ENDPOINT THAT RETURNS AN
-   * ARRAY BESIDE ANY OTHER KEY, IT BELONGS ON THIS LINE" — after it had disabled the catalogue overlay, the
-   * "which item?" sheet, supplier availability and the /me bundle. A warning is not a guard.
-   */
-  /**
-   * ⚠️⚠️⚠️ THIS LIST HAS NOW EATEN THREE FIELDS, AND EACH ONE LOOKED LIKE A DIFFERENT BUG.
-   *   · "truncated" — so the catalogue search never asked the server and answered "no such product"
-   *     about 96 products that exist (2026-09-13, morning).
-   *   · "status_counts" — so the availability chips counted the 500 loaded rows and reported "495 / 5"
-   *     for a shop of 10,441 (2026-09-13, evening). Athi found both.
-   *   · and "counts"/"open", which the incident and requirement boards read for their filter chips.
-   *
-   * ⚠️ THE FAILURE IS ALWAYS SILENT AND ALWAYS FLATTERING: the value reads undefined, the screen shows a
-   * smaller, tidier number, and nothing anywhere says a field was dropped. A named allow-list on a shared
-   * envelope needs a REPORT, the way importCases got one — that is in the backlog now.
-   */
-  /**
-   * ⚠️⚠️⚠️ AND THE FOURTH AND FIFTH: "category_counts" and "uncategorised" (2026-09-16).
-   *
-   * `/api/products` now counts the categories where the rows are — one GROUP BY over every product, in the same
-   * batched round trip. The Categories screen read `r.category_counts`, got undefined, and fell back to counting
-   * the page: "Biscuits 19" for a shop holding 400. THE SERVER WAS RIGHT AND THE SCREEN WAS WRONG, which is the
-   * signature of this line every single time.
-   *
-   * ⚠️ Exactly as the capitals above predicted, on the same day they were re-read. A warning is not a guard —
-   * so `cbDropNote` below records every dropped key by endpoint, and `e2e/api-envelope.cjs` now FAILS when a
-   * route answers with a sibling this list does not carry.
-   */
-  /**
-   * ⚠️⚠️⚠️ AND THE SIXTH: "actor_health" and "actor_last_seen" (2026-09-16), found by e2e/api-envelope.cjs the
-   * hour it was written. `/connectors/:actorId/connections` answers {actor_health, actor_last_seen, connections}
-   * and cap-connector read all three off the result — but the response COLLAPSES to the connections array, so
-   * every one of them was undefined. The connector cockpit has been reading "offline" with an empty device list
-   * no matter what the Pi was actually doing, which is the single thing that screen exists to tell you.
-   */
-  /**
-   * ⚠️ 2026-09-16 — `migrated` is the SEVENTH instance: the product-enquiry thread read it to say "this is not
-   * enabled on this deployment yet", the sibling was dropped, and the banner could never fire. `supplier` and
-   * `groups` join it for a different reason — they ARE read, but only because supCatalogueFull() bypasses this
-   * function entirely to keep them. Carrying them here is what would let that bypass be retired.
-   */
-  var SIBS = ["total","page","limit","next","truncated","count","offset","status_counts","open","counts",   /* next: PERF1 — a keyset list's cursor (chits inbox/sent, books pages) */
-              "category_counts","uncategorised","actor_health","actor_last_seen",
-              "migrated","supplier","groups","project",
-              "late","may_answer","why","capped","cap_note"];   /* late · may_answer · why — T3-P3-CONSENT: GET /api/crm/privacy-requests answers { requests[], total, page, limit, open, late, may_answer, why } — the register greys Answer on may_answer/why. ⚠️ no square bracket INSIDE the array: e2e/api-envelope.cjs reads the list up to the first one */
-  for(const mk of SIBS) if(mk in j){ try{ Object.defineProperty(a, mk, {value:j[mk], enumerable:false, configurable:true, writable:true}); }catch(_){ a[mk]=j[mk]; } }
-  /* ⚠️ everything NOT on the list, and not the array itself, is gone from here on — so it is written down */
-  try{ cbDropNote(_key, Object.keys(j).filter(function(x){ return x !== k && SIBS.indexOf(x) < 0; })); }catch(_){}
-  return a; }
+  if ('token' in j || 'my_disputes' in j || 'header' in j || 'has_catalogue' in j || 'searched' in j) return j; // auth / structured / compound -> whole, untouched
+  for (const k of ['chits', 'messages', 'connections', 'requests', 'suppliers', 'items', 'results', 'actors'])
+    if (Array.isArray(j[k])) {
+      const a = j[k]; /**
+       * ── ⚠️⚠️⚠️ `truncated` JOINS THIS LIST, AND IT IS THE FIFTH INSTANCE OF THE BUG DESCRIBED ABOVE ────────
+       *
+       * Athi, 2026-09-13: *"when I search cycle from the catalogue in the webapp it is not showing — I guess the
+       * search works only within the data what has been browsed? I could see Cycle Candle from the counter."*
+       * He was exactly right, and the cause is this line.
+       *
+       * ⚠️⚠️ THE SHOP HAS 10,441 PRODUCTS AND THE SCREEN LOADS 500. That is deliberate and fine — the code for
+       * it is already written: `/api/products` returns `truncated`, `prodSearchServer()` exists to search the
+       * whole shelf, and the input calls it with `if(UI.prodTruncated)`. Every piece was in place.
+       *
+       * ⭐ AND THIS LINE THREW THE FLAG AWAY. It carries `total`, `page` and `limit` off a compound response and
+       * silently drops everything else — so `page.truncated` was undefined, `UI.prodTruncated` stayed false, the
+       * server search never fired, and the box searched the 500 rows it happened to be holding. Nine thousand
+       * products could not be found by typing their name, and nothing anywhere said so.
+       *
+       * ⚠️ THE COMMENT ABOVE ALREADY WARNED ABOUT THIS IN CAPITALS — "IF YOU ADD AN ENDPOINT THAT RETURNS AN
+       * ARRAY BESIDE ANY OTHER KEY, IT BELONGS ON THIS LINE" — after it had disabled the catalogue overlay, the
+       * "which item?" sheet, supplier availability and the /me bundle. A warning is not a guard.
+       */
+      /**
+       * ⚠️⚠️⚠️ THIS LIST HAS NOW EATEN THREE FIELDS, AND EACH ONE LOOKED LIKE A DIFFERENT BUG.
+       *   · "truncated" — so the catalogue search never asked the server and answered "no such product"
+       *     about 96 products that exist (2026-09-13, morning).
+       *   · "status_counts" — so the availability chips counted the 500 loaded rows and reported "495 / 5"
+       *     for a shop of 10,441 (2026-09-13, evening). Athi found both.
+       *   · and "counts"/"open", which the incident and requirement boards read for their filter chips.
+       *
+       * ⚠️ THE FAILURE IS ALWAYS SILENT AND ALWAYS FLATTERING: the value reads undefined, the screen shows a
+       * smaller, tidier number, and nothing anywhere says a field was dropped. A named allow-list on a shared
+       * envelope needs a REPORT, the way importCases got one — that is in the backlog now.
+       */
+      /**
+       * ⚠️⚠️⚠️ AND THE FOURTH AND FIFTH: "category_counts" and "uncategorised" (2026-09-16).
+       *
+       * `/api/products` now counts the categories where the rows are — one GROUP BY over every product, in the same
+       * batched round trip. The Categories screen read `r.category_counts`, got undefined, and fell back to counting
+       * the page: "Biscuits 19" for a shop holding 400. THE SERVER WAS RIGHT AND THE SCREEN WAS WRONG, which is the
+       * signature of this line every single time.
+       *
+       * ⚠️ Exactly as the capitals above predicted, on the same day they were re-read. A warning is not a guard —
+       * so `cbDropNote` below records every dropped key by endpoint, and `e2e/api-envelope.cjs` now FAILS when a
+       * route answers with a sibling this list does not carry.
+       */
+      /**
+       * ⚠️⚠️⚠️ AND THE SIXTH: "actor_health" and "actor_last_seen" (2026-09-16), found by e2e/api-envelope.cjs the
+       * hour it was written. `/connectors/:actorId/connections` answers {actor_health, actor_last_seen, connections}
+       * and cap-connector read all three off the result — but the response COLLAPSES to the connections array, so
+       * every one of them was undefined. The connector cockpit has been reading "offline" with an empty device list
+       * no matter what the Pi was actually doing, which is the single thing that screen exists to tell you.
+       */
+      /**
+       * ⚠️ 2026-09-16 — `migrated` is the SEVENTH instance: the product-enquiry thread read it to say "this is not
+       * enabled on this deployment yet", the sibling was dropped, and the banner could never fire. `supplier` and
+       * `groups` join it for a different reason — they ARE read, but only because supCatalogueFull() bypasses this
+       * function entirely to keep them. Carrying them here is what would let that bypass be retired.
+       */
+      var SIBS = [
+        'total',
+        'page',
+        'limit',
+        'next',
+        'truncated',
+        'count',
+        'offset',
+        'status_counts',
+        'open',
+        'counts' /* next: PERF1 — a keyset list's cursor (chits inbox/sent, books pages) */,
+        'category_counts',
+        'uncategorised',
+        'actor_health',
+        'actor_last_seen',
+        'migrated',
+        'supplier',
+        'groups',
+        'project',
+        'late',
+        'may_answer',
+        'why',
+        'capped',
+        'cap_note'
+      ]; /* late · may_answer · why — T3-P3-CONSENT: GET /api/crm/privacy-requests answers { requests[], total, page, limit, open, late, may_answer, why } — the register greys Answer on may_answer/why. ⚠️ no square bracket INSIDE the array: e2e/api-envelope.cjs reads the list up to the first one */
+      for (const mk of SIBS)
+        if (mk in j) {
+          try {
+            Object.defineProperty(a, mk, { value: j[mk], enumerable: false, configurable: true, writable: true });
+          } catch (_) {
+            a[mk] = j[mk];
+          }
+        }
+      /* ⚠️ everything NOT on the list, and not the array itself, is gone from here on — so it is written down */
+      try {
+        cbDropNote(
+          _key,
+          Object.keys(j).filter(function (x) {
+            return x !== k && SIBS.indexOf(x) < 0;
+          })
+        );
+      } catch (_) {}
+      return a;
+    }
   /**
    * ⚠️⚠️ `included` IS A SIBLING OF `entity`, AND THIS LINE WAS EATING IT — the fourth instance of the exact bug
    * the comments above describe, and the most expensive one, because nothing looked wrong.
@@ -153,9 +198,16 @@ function unwrap(j, _key){
    * off the flattened entity — `r.display_name`, `r.currency_code` — so returning `j` would change the shape
    * under all of them. Carrying one key across keeps both contracts true.
    */
-  if(j.entity){ if(j.included && j.entity && typeof j.entity === "object"){ try{ j.entity.included = j.included; }catch(_){} } return j.entity; }
-  if(j.settings) return j.settings;
-  if(j.chit) return j.chit;
+  if (j.entity) {
+    if (j.included && j.entity && typeof j.entity === 'object') {
+      try {
+        j.entity.included = j.included;
+      } catch (_) {}
+    }
+    return j.entity;
+  }
+  if (j.settings) return j.settings;
+  if (j.chit) return j.chit;
   return j;
 }
 
@@ -179,27 +231,30 @@ const _lockKeys = new Set();
  * actually perceive get announced.
  */
 let _netBusyT = null;
-function _netBusy(on){
-  let b = document.getElementById('netbusy');
-  if(!b){
-    b = document.createElement('div'); b.id='netbusy';
-    b.style.cssText='position:fixed;z-index:9999;pointer-events:none;display:none';
-    b.innerHTML='<div id="netbusy-card"><span id="netbusy-ring"></span><span id="netbusy-txt">' + tx('Reading data…') + '</span></div>';
-    const s=document.createElement('style');
-    s.textContent='@keyframes nbspin{to{transform:rotate(360deg)}}'
-      +'@keyframes nbin{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}'
-      +'#netbusy-card{display:inline-flex;align-items:center;gap:9px;background:var(--chrome);color:var(--chrome-on);'
-      +'font:600 12.5px/1 "Segoe UI",system-ui,sans-serif;padding:11px 16px;border-radius:22px;'
-      +'box-shadow:0 6px 22px rgba(15,46,61,.30);animation:nbin .14s ease-out}'
-      +'#netbusy-ring{width:14px;height:14px;border:2px solid rgba(255,255,255,.32);border-top-color:#fff;'
-      +'border-radius:50%;animation:nbspin .7s linear infinite;flex:none}'
-      +'@media (prefers-reduced-motion:reduce){#netbusy-ring,#netbusy-card{animation:none}}';
-    (document.head||document.documentElement).appendChild(s); (document.body||document.documentElement).appendChild(b);
+function _netBusy(on) {
+  let node = document.getElementById('netbusy');
+  if (!node) {
+    node = document.createElement('div');
+    node.id = 'netbusy';
+    node.style.cssText = 'position:fixed;z-index:9999;pointer-events:none;display:none';
+    node.innerHTML = '<div id="netbusy-card"><span id="netbusy-ring"></span><span id="netbusy-txt">' + tx('Reading data…') + '</span></div>';
+    const s = document.createElement('style');
+    s.textContent =
+      '@keyframes nbspin{to{transform:rotate(360deg)}}' +
+      '@keyframes nbin{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}' +
+      '#netbusy-card{display:inline-flex;align-items:center;gap:9px;background:var(--chrome);color:var(--chrome-on);' +
+      'font:600 12.5px/1 "Segoe UI",system-ui,sans-serif;padding:11px 16px;border-radius:22px;' +
+      'box-shadow:0 6px 22px rgba(15,46,61,.30);animation:nbin .14s ease-out}' +
+      '#netbusy-ring{width:14px;height:14px;border:2px solid rgba(255,255,255,.32);border-top-color:#fff;' +
+      'border-radius:50%;animation:nbspin .7s linear infinite;flex:none}' +
+      '@media (prefers-reduced-motion:reduce){#netbusy-ring,#netbusy-card{animation:none}}';
+    (document.head || document.documentElement).appendChild(s);
+    (document.body || document.documentElement).appendChild(node);
   }
-  if(on){
-    const paint = function(){
+  if (on) {
+    const paint = function () {
       const t = document.getElementById('netbusy-txt');
-      if(t) t.textContent = _inflight > 1 ? ('Reading data… (' + _inflight + ')') : 'Reading data…';
+      if (t) t.textContent = _inflight > 1 ? 'Reading data… (' + _inflight + ')' : 'Reading data…';
       /**
        * ⚠️ CENTRED ON THE PANE BEING READ (Athi: *"it is coming somewhere in the screen, it has to be in the
        * center of the current panel"*). Pinned top-right it sat among the browser and dev chrome — technically
@@ -207,10 +262,9 @@ function _netBusy(on){
        * detail pane, then the panel, then the main body, and only falling back to the viewport when a screen has
        * none of those (login, onboarding).
        */
-      const host = document.getElementById('detailpane') || document.getElementById('panel')
-                || document.getElementById('mainbody') || null;
+      const host = document.getElementById('detailpane') || document.getElementById('panel') || document.getElementById('mainbody') || null;
       const r = host && host.getBoundingClientRect();
-      b.style.display = 'block';
+      node.style.display = 'block';
       /**
        * ⚠️⚠️ CENTRING ON A PANE THAT RUNS OFF THE SCREEN PUTS THE MESSAGE OFF THE SCREEN. Athi, 2026-08-22:
        * *"I have reduced the size of the window much smaller… the messages were overlapping / going away from
@@ -226,31 +280,49 @@ function _netBusy(on){
        * 102px card centred 20px from the edge still hangs half off. Measured after `display:block`, so the
        * number is the card's real width rather than a guess that rots when the text changes.
        */
-      var vw = window.innerWidth || 0, vh = window.innerHeight || 0;
-      var cx = vw / 2, cy = vh / 2;
-      if (r && r.width > 40 && r.height > 40){
-        var vl = Math.max(0, r.left),  vr = Math.min(vw, r.right);
-        var vt = Math.max(0, r.top),   vb = Math.min(vh, r.bottom);
-        if (vr - vl > 60) cx = (vl + vr) / 2;      /* enough of it is on screen to aim at */
+      var vw = window.innerWidth || 0,
+        vh = window.innerHeight || 0;
+      var cx = vw / 2,
+        cy = vh / 2;
+      if (r && r.width > 40 && r.height > 40) {
+        var vl = Math.max(0, r.left),
+          vr = Math.min(vw, r.right);
+        var vt = Math.max(0, r.top),
+          vb = Math.min(vh, r.bottom);
+        if (vr - vl > 60) cx = (vl + vr) / 2; /* enough of it is on screen to aim at */
         if (vb - vt > 60) cy = (vt + vb) / 2;
       }
-      var hw = Math.min((b.offsetWidth || 120) / 2 + 8, vw / 2);
-      var hh = Math.min((b.offsetHeight || 40) / 2 + 8, vh / 2);
-      b.style.left = Math.round(Math.max(hw, Math.min(vw - hw, cx))) + 'px';
-      b.style.top  = Math.round(Math.max(hh, Math.min(vh - hh, cy))) + 'px';
-      b.style.transform = 'translate(-50%,-50%)';
+      var hw = Math.min((node.offsetWidth || 120) / 2 + 8, vw / 2);
+      var hh = Math.min((node.offsetHeight || 40) / 2 + 8, vh / 2);
+      node.style.left = Math.round(Math.max(hw, Math.min(vw - hw, cx))) + 'px';
+      node.style.top = Math.round(Math.max(hh, Math.min(vh - hh, cy))) + 'px';
+      node.style.transform = 'translate(-50%,-50%)';
     };
-    if(b.style.display === 'block') paint();                    // already up — just refresh the count
-    else if(!_netBusyT) _netBusyT = setTimeout(function(){ _netBusyT = null; if(_inflight > 0) paint(); }, 180);
+    if (node.style.display === 'block')
+      paint(); // already up — just refresh the count
+    else if (!_netBusyT)
+      _netBusyT = setTimeout(function () {
+        _netBusyT = null;
+        if (_inflight > 0) paint();
+      }, 180);
   } else {
-    if(_netBusyT){ clearTimeout(_netBusyT); _netBusyT = null; }
-    b.style.display = 'none';
+    if (_netBusyT) {
+      clearTimeout(_netBusyT);
+      _netBusyT = null;
+    }
+    node.style.display = 'none';
   }
 }
 // --- tester message/event log (in-memory ring buffer; surfaced by the in-app Message console) ---
 const __cblog = [];
-function cblog(level, text){ __cblog.push({ t: Date.now(), level: level || 'info', text: String(text) }); if (__cblog.length > 300) __cblog.shift(); }
-if (typeof window !== 'undefined') { window.__cblog = __cblog; window.cblog = cblog; }
+function cblog(level, text) {
+  __cblog.push({ t: Date.now(), level: level || 'info', text: String(text) });
+  if (__cblog.length > 300) __cblog.shift();
+}
+if (typeof window !== 'undefined') {
+  window.__cblog = __cblog;
+  window.cblog = cblog;
+}
 
 // OUTBOX-SAFE mutations (offline Phase 4.2): fire-and-forget state changes / idempotent overwrites / deletes whose
 // callers ignore the response body. Offline, these are QUEUED (cb-offline.js) and replayed on reconnect — deduped by the
@@ -278,48 +350,101 @@ if (typeof window !== 'undefined') { window.__cblog = __cblog; window.cblog = cb
    rows (const EP = {}) and load this file, so avatar.js handed every push to CBPrefs → api('savePrefs') → "no endpoint" — the edition chosen on
    Tasks stayed pending until Employees (a page without core.js) sent it. api() answers this row on every host (epOf); a page never lists it. */
 var CB_PREFS_EP = {
-  savePrefs:       {m:"PATCH", p:"/api/entities/me/prefs/:kind", ok:"✓"},  // b165/b166 · ONE endpoint for both preference sets; params:{kind:"locale"|"ui"}
+  savePrefs: { m: 'PATCH', p: '/api/entities/me/prefs/:kind', ok: '✓' } // b165/b166 · ONE endpoint for both preference sets; params:{kind:"locale"|"ui"}
 };
 /** the page's row for a name, else core's own (CB_PREFS_EP) — the one lookup api() and apiOnce() share */
-function epOf(key){ return (typeof EP !== 'undefined' && EP[key]) || CB_PREFS_EP[key] || null; }
-var CBPrefs = (function(){
+function epOf(key) {
+  return (typeof EP !== 'undefined' && EP[key]) || CB_PREFS_EP[key] || null;
+}
+var CBPrefs = (function () {
   var timers = {};
   return {
     /* done (optional, FX-UX2): called with the server's answer — {ok:true} landed · {queued:true} offline · null refused/failed; the avatar's pending mark reads it */
-    push: function(kind, obj, done){
+    push: function (kind, obj, done) {
       /* ⚠️ CU3: the server merges (RFC 7386, CU2) — a key not sent is KEPT. CBLocale.push sends prefs(), which leaves out
          cleared keys, so "use my device's zone" / "regional default" never reached the server. snapshot() is the same
          keys with every clear as '' (= remove). Until the locale engine sends snapshot() itself, this door does. */
       if (kind === 'locale' && typeof window !== 'undefined' && window.CBLocale && typeof window.CBLocale.snapshot === 'function') {
-        try { obj = window.CBLocale.snapshot(); } catch(_){}
+        try {
+          obj = window.CBLocale.snapshot();
+        } catch (_) {}
       }
-      if (timers[kind]) { try { clearTimeout(timers[kind]); } catch(_){} }
-      timers[kind] = setTimeout(function(){
+      if (timers[kind]) {
+        try {
+          clearTimeout(timers[kind]);
+        } catch (_) {}
+      }
+      timers[kind] = setTimeout(function () {
         try {
           if (typeof api !== 'function' || !(typeof SESSION !== 'undefined' && SESSION && SESSION.token)) return;
-          api('savePrefs', { params: { kind: kind }, body: obj || {} }).then(function(r){ if (done) done(r); }, function(){ if (done) done(null); });
-        } catch(_){}
+          api('savePrefs', { params: { kind: kind }, body: obj || {} }).then(
+            function (reply) {
+              if (done) done(reply);
+            },
+            function () {
+              if (done) done(null);
+            }
+          );
+        } catch (_) {}
       }, 400);
     }
   };
 })();
-try { if (typeof window !== 'undefined') window.CBPrefs = CBPrefs; } catch(_){}
+try {
+  if (typeof window !== 'undefined') window.CBPrefs = CBPrefs;
+} catch (_) {}
 
 const OUTBOX_KEYS = new Set([
-  'advance','status','setPriority','custFlag','star','voidChit','markUnread','archive','unarchive','restore','delChit','purgeChit','assignBulk',
-  'actorBreak','actorStatus','actorPinReset','actorDelegate','assign','unassign','actorEdit',
+  'advance',
+  'status',
+  'setPriority',
+  'custFlag',
+  'star',
+  'voidChit',
+  'markUnread',
+  'archive',
+  'unarchive',
+  'restore',
+  'delChit',
+  'purgeChit',
+  'assignBulk',
+  'actorBreak',
+  'actorStatus',
+  'actorPinReset',
+  'actorDelegate',
+  'assign',
+  'unassign',
+  'actorEdit',
   'resolveDispute',
   /* ⚠⚠ KEYED BY NAME, NOT BY PATH. `profileSave` was retired in favour of `profilePut` (one endpoint, one
      name — e2e/ep-aliases.cjs); had the survivor not been added here, that write would have quietly stopped
      being queued when the counter is offline, with nothing anywhere to say so. */
-  'saveProfile','shopStatus','saveSettings','vaultSave','profilePut',
-  'savePrefs',      // b165 — an idempotent merge-patch (CU2) of one's own preferences; the caller ignores the body
-  'connRespond','netApprove','netDecline','netSuspend','netResume','netDisconnect',
-  'supDel','supPatch','prodDel','prodEdit','folderRename','folderDelete','folderMove',
-  'connectorDelete','connectorConnToggle',
-  'readinessGather','readinessVerify',
-  'assistResolve','assistPublish',
-  'netDesignPut',   // b111 — whole-document upsert, idempotent → safe to queue + replay offline
+  'saveProfile',
+  'shopStatus',
+  'saveSettings',
+  'vaultSave',
+  'profilePut',
+  'savePrefs', // b165 — an idempotent merge-patch (CU2) of one's own preferences; the caller ignores the body
+  'connRespond',
+  'netApprove',
+  'netDecline',
+  'netSuspend',
+  'netResume',
+  'netDisconnect',
+  'supDel',
+  'supPatch',
+  'prodDel',
+  'prodEdit',
+  'folderRename',
+  'folderDelete',
+  'folderMove',
+  'connectorDelete',
+  'connectorConnToggle',
+  'readinessGather',
+  'readinessVerify',
+  'assistResolve',
+  'assistPublish',
+  'netDesignPut' // b111 — whole-document upsert, idempotent → safe to queue + replay offline
 ]);
 
 /* ══ A PRODUCT'S CATEGORIES ══════════════════════════════════════════════════════════════════════════════════
@@ -337,10 +462,10 @@ const OUTBOX_KEYS = new Set([
  * ⚠️ WRITES ONLY EVER EMIT THE NEW SHAPE, and delete the old keys as they go — so a row upgrades the first time
  * it is saved, without a migration and without a moment where both shapes are true of the same product.
  */
-function catgIdsOf(d){
+function catgIdsOf(d) {
   d = d || {};
   if (Array.isArray(d.categories)) return d.categories.map(String).filter(Boolean);
-  if (d.category) return [String(d.category)];          // legacy single — read, never written again
+  if (d.category) return [String(d.category)]; // legacy single — read, never written again
   return [];
 }
 /**
@@ -351,10 +476,13 @@ function catgIdsOf(d){
  */
 /* ⚠ module-scoped: the guard is about the one READ in flight, not about any one caller */
 var _catgKick = false;
-function catgWithAncestors(ids){
-  var out = (ids || []).map(String).filter(Boolean), seen = {};
-  out.forEach(function (id) { seen[id] = true; });
-  var cats = (typeof cbDefsCached === 'function') ? cbDefsCached('category') : null;
+function catgWithAncestors(ids) {
+  var out = (ids || []).map(String).filter(Boolean),
+    seen = {};
+  out.forEach(function (id) {
+    seen[id] = true;
+  });
+  var cats = typeof cbDefsCached === 'function' ? cbDefsCached('category') : null;
   if (cats === null) {
     /**
      * ── ⚠️⚠️⚠️ THIS RAN 1,600 TIMES IN ONE PAINT ─────────────────────────────────────────────────────────
@@ -378,13 +506,22 @@ function catgWithAncestors(ids){
     if (!_catgKick && typeof cbDefsLive === 'function') {
       _catgKick = true;
       cbDefsLive('category')
-        .then(function(){
-          try { if (typeof ccRenderTotal === 'function') ccRenderTotal(); } catch (_) {}
-          try { if (typeof prodRepaintSection === 'function') { prodRepaintSection('offers'); prodRepaintSection('pricing'); } } catch (_) {}
+        .then(function () {
+          try {
+            if (typeof ccRenderTotal === 'function') ccRenderTotal();
+          } catch (_) {}
+          try {
+            if (typeof prodRepaintSection === 'function') {
+              prodRepaintSection('offers');
+              prodRepaintSection('pricing');
+            }
+          } catch (_) {}
         })
         /* ⚠ cleared either way: a failed read must not leave the shelf permanently un-askable */
-        .catch(function(){})
-        .then(function(){ _catgKick = false; });
+        .catch(function () {})
+        .then(function () {
+          _catgKick = false;
+        });
     }
     return out;
   }
@@ -393,12 +530,19 @@ function catgWithAncestors(ids){
      how this store reads a category. Where catalogue-lines is not loaded (a bare test of this file) the ids stay as
      they are, which is what cart.js already does outside the app — never a second copy of the walk. */
   if (typeof cbCatgAncestors !== 'function') return out;
-  return cbCatgAncestors(out, cats,
-    function (x) { return x && x.rules && x.rules.parent; },
-    function (x) { return x && (x.definition_id || x.id); });
+  return cbCatgAncestors(
+    out,
+    cats,
+    function (x) {
+      return x && x.rules && x.rules.parent;
+    },
+    function (x) {
+      return x && (x.definition_id || x.id);
+    }
+  );
 }
 /** The travelling names, positionally aligned with catgIdsOf. Used only where an id cannot be resolved. */
-function catgNamesOf(d){
+function catgNamesOf(d) {
   d = d || {};
   if (Array.isArray(d.category_names)) return d.category_names.map(String);
   if (d.category_name) return [String(d.category_name)];
@@ -412,25 +556,40 @@ function catgNamesOf(d){
  * resolve my definition_ids and never will — [[reference-cb-core-principle]]. The copy is deliberately not kept
  * in step with a later rename.
  */
-function catgSetOn(d, ids){
+function catgSetOn(d, ids) {
   d = d || {};
-  var live = (typeof _CATG !== 'undefined' && _CATG) ? _CATG : [];
+  var live = typeof _CATG !== 'undefined' && _CATG ? _CATG : [];
   /* ⚠️ SNAPSHOT BEFORE DELETING. My first cut deleted the legacy keys and then tried to read them for the
      unresolved-name fallback below — so the fallback silently found nothing and every unresolved id would have
      been relabelled as its own uuid. Read what is there, THEN clear it. */
-  var wasIds = catgIdsOf(d), wasNames = catgNamesOf(d);
-  var clean = [], seen = {};
-  (ids || []).forEach(function(id){ id = String(id || '').trim(); if (id && !seen[id]) { seen[id] = 1; clean.push(id); } });
-  delete d.category; delete d.category_name;            // the legacy pair never survives a save
-  if (!clean.length) { delete d.categories; delete d.category_names; return d; }
+  var wasIds = catgIdsOf(d),
+    wasNames = catgNamesOf(d);
+  var clean = [],
+    seen = {};
+  (ids || []).forEach(function (id) {
+    id = String(id || '').trim();
+    if (id && !seen[id]) {
+      seen[id] = 1;
+      clean.push(id);
+    }
+  });
+  delete d.category;
+  delete d.category_name; // the legacy pair never survives a save
+  if (!clean.length) {
+    delete d.categories;
+    delete d.category_names;
+    return d;
+  }
   d.categories = clean;
-  d.category_names = clean.map(function(id){
-    var c = live.filter(function(x){ return x.id === id; })[0];
+  d.category_names = clean.map(function (id) {
+    var c = live.filter(function (x) {
+      return x.id === id;
+    })[0];
     /* ⚠️ An id we cannot resolve keeps whatever name it already travelled with, rather than being relabelled as
        its own uuid. Losing the word is worse than holding a slightly stale one. */
     if (c) return c.name;
     var i = wasIds.indexOf(id);
-    return (i >= 0 && wasNames[i]) ? wasNames[i] : id;
+    return i >= 0 && wasNames[i] ? wasNames[i] : id;
   });
   return d;
 }
@@ -448,8 +607,8 @@ function catgSetOn(d, ids){
  * wants its sub-kind and rules — because a shared loader that also imposed a shape would just be two functions
  * with a shared cache and a lie in the middle.
  */
-var _DEFS = {};            // kind → raw definitions, as last read
-var _defsReq = {};         // kind → in-flight promise
+var _DEFS = {}; // kind → raw definitions, as last read
+var _defsReq = {}; // kind → in-flight promise
 /**
  * ── ⭐⭐⭐ EVERY KIND ASKED FOR IN ONE TICK GOES IN ONE JOURNEY ───────────────────────────────────────────────
  *
@@ -473,8 +632,8 @@ var _defsReq = {};         // kind → in-flight promise
  * that HAVE definitions, so splitting it by row alone would leave the empty kinds looking unfetched — and
  * every render would ask again forever. Each requested kind is seeded to [] before the split.
  */
-var _defsQueue = [];       // kinds waiting for the next tick
-var _defsFlush = null;     // the promise that will carry them
+var _defsQueue = []; // kinds waiting for the next tick
+var _defsFlush = null; // the promise that will carry them
 
 /**
  * ⚠️ THE WINDOW STAYS OPEN UNTIL THE ANSWER LANDS. Clearing `_defsFlush` at the START of the flush meant a
@@ -482,26 +641,41 @@ var _defsFlush = null;     // the promise that will carry them
  * already being fetched. On a screen that paints in several passes that is how one shelf gets asked for two
  * and three times, which is the shape Athi spotted in the table.
  */
-function cbDefsFlush(){
+function cbDefsFlush() {
   var kinds = _defsQueue.slice();
   _defsQueue = [];
-  if (!kinds.length) { _defsFlush = null; return Promise.resolve({}); }
-  return api('defList', { query: { kind: kinds.join(','), status: 'live' } })
-    .then(function(r){
-      var by = {};
-      kinds.forEach(function(k){ by[k] = []; });
-      ((r && r.definitions) || []).forEach(function(d){
-        var k = d && d.kind;
-        if (by[k]) by[k].push(d);
-      });
-      return by;
-    })
-    /* whether it answered or failed, the window is closed and the next asker opens a new one */
-    .then(function(by){ _defsFlush = null; return by; },
-          function(e){ _defsFlush = null; throw e; });
+  if (!kinds.length) {
+    _defsFlush = null;
+    return Promise.resolve({});
+  }
+  return (
+    api('defList', { query: { kind: kinds.join(','), status: 'live' } })
+      .then(function (reply) {
+        var by = {};
+        kinds.forEach(function (item) {
+          by[item] = [];
+        });
+        ((reply && reply.definitions) || []).forEach(function (item) {
+          var k = item && item.kind;
+          if (by[k]) by[k].push(item);
+        });
+        return by;
+      })
+      /* whether it answered or failed, the window is closed and the next asker opens a new one */
+      .then(
+        function (by) {
+          _defsFlush = null;
+          return by;
+        },
+        function (e) {
+          _defsFlush = null;
+          throw e;
+        }
+      )
+  );
 }
 
-function cbDefsLive(kind, force){
+function cbDefsLive(kind, force) {
   if (!force && _DEFS[kind]) return Promise.resolve(_DEFS[kind]);
   if (!force && _defsReq[kind]) return _defsReq[kind];
   if (typeof api !== 'function') return Promise.resolve([]);
@@ -518,8 +692,15 @@ function cbDefsLive(kind, force){
    */
   if (force) {
     _defsReq[kind] = api('defList', { query: { kind: kind, status: 'live' } })
-      .then(function(r){ _DEFS[kind] = (r && r.definitions) || []; _defsReq[kind] = null; return _DEFS[kind]; })
-      .catch(function(){ _defsReq[kind] = null; return _DEFS[kind] || []; });
+      .then(function (reply) {
+        _DEFS[kind] = (reply && reply.definitions) || [];
+        _defsReq[kind] = null;
+        return _DEFS[kind];
+      })
+      .catch(function () {
+        _defsReq[kind] = null;
+        return _DEFS[kind] || [];
+      });
     return _defsReq[kind];
   }
 
@@ -528,16 +709,25 @@ function cbDefsLive(kind, force){
   var mine = _defsFlush;
 
   _defsReq[kind] = mine
-    .then(function(by){ _DEFS[kind] = (by && by[kind]) || []; _defsReq[kind] = null; return _DEFS[kind]; })
-    .catch(function(){ _defsReq[kind] = null; return _DEFS[kind] || []; });
+    .then(function (by) {
+      _DEFS[kind] = (by && by[kind]) || [];
+      _defsReq[kind] = null;
+      return _DEFS[kind];
+    })
+    .catch(function () {
+      _defsReq[kind] = null;
+      return _DEFS[kind] || [];
+    });
   return _defsReq[kind];
 }
 /** Synchronous read of whatever was last loaded — for render paths that cannot await. */
-function cbDefsCached(kind){ return _DEFS[kind] || null; }
+function cbDefsCached(kind) {
+  return _DEFS[kind] || null;
+}
 
-var _CATG = null;          // [{id,name}] — the live shelf, as last read
-var _CATG_AT = 0;          // when it was last read — see catgChipsHTML
-var _catgReq = null;       // in-flight promise, so a form opening twice does not fetch twice
+var _CATG = null; // [{id,name}] — the live shelf, as last read
+var _CATG_AT = 0; // when it was last read — see catgChipsHTML
+var _catgReq = null; // in-flight promise, so a form opening twice does not fetch twice
 /**
  * ── ⭐⭐ CREATING A CATEGORY, BESIDE THE CACHE IT UPDATES ───────────────────────────────────────────────────────
  *
@@ -550,41 +740,58 @@ var _catgReq = null;       // in-flight promise, so a form opening twice does no
  * only if you happened to open the wizard earlier in the session — the worst kind of bug, because it works when
  * you test it and not when someone else does."* core.js is eager, so the dance is gone with the wizard.
  */
-async function cbCatgCreate(name){
+async function cbCatgCreate(name) {
   name = String(name || '').trim();
   if (name.length < 2) throw new Error('Give the category a name of at least 2 characters.');
-  var dup = (_CATG || []).filter(function(c){ return c.name.toLowerCase() === name.toLowerCase(); })[0];
-  if (dup) return dup;      // ⚠️ Silently reusing the existing one beats minting a second shelf with one name.
-  var r = await api('defAdd', { body: { kind: 'category', sub_kind: null, name: name, note: '', rules: {} } });
-  var id = r && (r.definition_id || (r.definition && r.definition.definition_id));
+  var dup = (_CATG || []).filter(function (item) {
+    return item.name.toLowerCase() === name.toLowerCase();
+  })[0];
+  if (dup) return dup; // ⚠️ Silently reusing the existing one beats minting a second shelf with one name.
+  var reply = await api('defAdd', { body: { kind: 'category', sub_kind: null, name: name, note: '', rules: {} } });
+  var id = reply && (reply.definition_id || (reply.definition && reply.definition.definition_id));
   if (!id) throw new Error('Created, but the server did not return an id.');
   await api('defSave', { params: { id: id }, body: { status: 'live' } });
   await cbCatgLive(true);
   return { id: id, name: name };
 }
 
-function cbCatgAskNew(onDone){
+function cbCatgAskNew(onDone) {
   if (typeof promptAsk !== 'function') return;
-  promptAsk('New category', { label:'What is it called?', placeholder:'e.g. Fasteners', maxlength:60,
-    okLabel:'Create',
-    hint:'It goes on the shelf as <b>live</b>, so you can use it straight away. Rename it any time under '
-       + 'Definitions — your products follow the rename.' },
-    function(v){
-      cbCatgCreate(v).then(function(c){ toast('“' + c.name + '” added ✓'); if (onDone) onDone(c); })
-                     .catch(function(e){ toast((e && e.message) || 'Could not create that.'); });
-    });
+  promptAsk(
+    'New category',
+    {
+      label: 'What is it called?',
+      placeholder: 'e.g. Fasteners',
+      maxlength: 60,
+      okLabel: 'Create',
+      hint: 'It goes on the shelf as <b>live</b>, so you can use it straight away. Rename it any time under ' + 'Definitions — your products follow the rename.'
+    },
+    function (v) {
+      cbCatgCreate(v)
+        .then(function (reply) {
+          toast('“' + reply.name + '” added ✓');
+          if (onDone) onDone(reply);
+        })
+        .catch(function (e) {
+          toast((e && e.message) || 'Could not create that.');
+        });
+    }
+  );
 }
 
-function cbCatgLive(force){
+function cbCatgLive(force) {
   if (!force && _CATG) return Promise.resolve(_CATG);
   if (!force && _catgReq) return _catgReq;
   if (typeof api !== 'function') return Promise.resolve([]);
   _catgReq = cbDefsLive('category', force)
-    .then(function(defs){
-      _CATG = (defs || []).map(function(d){ return { id: d.definition_id, name: d.name }; });
+    .then(function (defs) {
+      _CATG = (defs || []).map(function (item) {
+        return { id: item.definition_id, name: item.name };
+      });
       /* ⭐ WHEN it was read, so a caller can tell whether re-reading it could possibly say anything new */
       _CATG_AT = Date.now();
-      _catgReq = null; return _CATG;
+      _catgReq = null;
+      return _CATG;
     })
     /**
      * ⚠️ FAILING SOFT IS CORRECT HERE, and it is worth saying why since the opposite rule applies at the mint.
@@ -592,7 +799,10 @@ function cbCatgLive(force){
      * is Uncategorised — visible, chip-counted, fixable. Refusing to let someone add an item because a
      * classification shelf could not be read would be the tail wagging the dog.
      */
-    .catch(function(){ _catgReq = null; return _CATG || []; });
+    .catch(function () {
+      _catgReq = null;
+      return _CATG || [];
+    });
   return _catgReq;
 }
 
@@ -607,7 +817,9 @@ function cbCatgLive(force){
  *   at the mint        → FREEZE the resolved values onto the chit, so a later change cannot rewrite what was
  *                        agreed (POST /api/definitions/freeze already returns exactly that snapshot)
  */
-function cbOrderLive(force){ return cbDefsLive('ordermodel', force); }
+function cbOrderLive(force) {
+  return cbDefsLive('ordermodel', force);
+}
 /**
  * Resolve a stored `order` into the flat declaration cart-ui reads. Synchronous, because every render path that
  * needs it is synchronous; it reads the cache cbOrderLive() fills.
@@ -618,13 +830,20 @@ function cbOrderLive(force){ return cbDefsLive('ordermodel', force); }
  * the model could not be read. Losing a category costs a filter; losing an order model would change what was
  * ordered, and those two failures do not deserve the same softness.
  */
-function cbOrderDecl(order){
+function cbOrderDecl(order) {
   var o = order || {};
-  if (!o.ref) return o;                                  // inline declaration — unchanged, still supported
+  if (!o.ref) return o; // inline declaration — unchanged, still supported
   var defs = cbDefsCached('ordermodel');
-  if (!defs) { cbOrderLive(); return { ref: o.ref, unresolved: 'loading' }; }
+  if (!defs) {
+    cbOrderLive();
+    return { ref: o.ref, unresolved: 'loading' };
+  }
   var d = null;
-  for (var i = 0; i < defs.length; i++) if (defs[i].definition_id === o.ref) { d = defs[i]; break; }
+  for (var index = 0; index < defs.length; index++)
+    if (defs[index].definition_id === o.ref) {
+      d = defs[index];
+      break;
+    }
   /* ⚠️ A RETIRED definition still resolves if the server returned it — "do not offer this any more" is not
      "this never happened". Only a genuinely missing one is unresolved. */
   if (!d) return { ref: o.ref, unresolved: 'missing' };
@@ -642,39 +861,72 @@ function cbOrderDecl(order){
  * two minutes as a fallback; when the stream drops it comes back to 20 s and the client re-tickets with backoff.
  */
 var _push = { es: null, up: false, backoff: 5000, timer: null };
-function cbPushUp(){ return !!_push.up; }
-function cbPushStart(){
-  if(_push.es || !window.EventSource || !SESSION.token || (typeof CFG!=='undefined' && CFG.MODE==='demo')) return;
-  api('eventsTicket').then(function(t){
-    if(!t || !t.ticket || !SESSION.token || _push.es) return;
-    var base=(typeof CFG!=='undefined'&&CFG.API_BASE)||'';
-    var es=new EventSource(base+'/api/events/stream?t='+encodeURIComponent(t.ticket));
-    _push.es=es;
-    /**
-     * ── ⭐⭐⭐ WITH THE BELL UP, THE POLL IS A SAFETY NET AND NOT A CLOCK ────────────────────────────────
-     *
-     * Athi, 2026-09-13, reading the Speed table: *"every attempt, notification takes more time — are we
-     * really calling notification for every request, or every browsing of the data item in the catalogue?"*
-     *
-     * ⭐ MEASURED FIRST, AND HE IS HALF RIGHT. It is NOT per request and not per browse: it is a background
-     * clock. But it was still ticking every 120 s WITH THE PUSH STREAM CONNECTED — and the stream already
-     * calls loadNotifs() on every arrival (cbPushArrived). So a poll that exists to catch what push missed
-     * was running thirty times an hour to catch nothing, at 700–1000 ms a time.
-     *
-     * ⚠️ AND EACH ONE IS EXPENSIVE FOR A BADGE. /api/notifications is two round trips — a plain query for
-     * the dispute handler, then a withEntity transaction — over a DISTINCT ON join of state_log, chit_status
-     * and chit_header, returning up to thirty full rows, to keep ONE NUMBER current.
-     *
-     * ⭐ TEN MINUTES. Long enough that it costs nothing, short enough to catch a stream that has died
-     * without saying so — which is the only reason it exists. If the stream errors, onerror below puts it
-     * straight back to 20 s, so a real outage is still covered in one tick.
-     */
-    es.addEventListener('hello', function(){ _push.up=true; _push.backoff=5000; if(typeof _autoRefreshTimer!=='undefined' && _autoRefreshTimer){ clearInterval(_autoRefreshTimer); _autoRefreshTimer=setInterval(autoRefresh,600*1000); } });
-    es.addEventListener('cb', function(ev){ var d={}; try{ d=JSON.parse(ev.data||'{}'); }catch(_){} cbPushArrived(d); });
-    es.onerror=function(){ try{ es.close(); }catch(_){} _push.es=null; _push.up=false;
-      if(typeof _autoRefreshTimer!=='undefined' && _autoRefreshTimer){ clearInterval(_autoRefreshTimer); _autoRefreshTimer=setInterval(autoRefresh,20*1000); }
-      if(!SESSION.token) return; clearTimeout(_push.timer); _push.timer=setTimeout(cbPushStart, _push.backoff); _push.backoff=Math.min(_push.backoff*2, 60000); };
-  }).catch(function(){ clearTimeout(_push.timer); _push.timer=setTimeout(cbPushStart, _push.backoff); _push.backoff=Math.min(_push.backoff*2, 60000); });
+function cbPushUp() {
+  return !!_push.up;
+}
+function cbPushStart() {
+  if (_push.es || !window.EventSource || !SESSION.token || (typeof CFG !== 'undefined' && CFG.MODE === 'demo')) return;
+  api('eventsTicket')
+    .then(function (reply) {
+      if (!reply || !reply.ticket || !SESSION.token || _push.es) return;
+      var base = (typeof CFG !== 'undefined' && CFG.API_BASE) || '';
+      var node = new EventSource(base + '/api/events/stream?t=' + encodeURIComponent(reply.ticket));
+      _push.es = node;
+      /**
+       * ── ⭐⭐⭐ WITH THE BELL UP, THE POLL IS A SAFETY NET AND NOT A CLOCK ────────────────────────────────
+       *
+       * Athi, 2026-09-13, reading the Speed table: *"every attempt, notification takes more time — are we
+       * really calling notification for every request, or every browsing of the data item in the catalogue?"*
+       *
+       * ⭐ MEASURED FIRST, AND HE IS HALF RIGHT. It is NOT per request and not per browse: it is a background
+       * clock. But it was still ticking every 120 s WITH THE PUSH STREAM CONNECTED — and the stream already
+       * calls loadNotifs() on every arrival (cbPushArrived). So a poll that exists to catch what push missed
+       * was running thirty times an hour to catch nothing, at 700–1000 ms a time.
+       *
+       * ⚠️ AND EACH ONE IS EXPENSIVE FOR A BADGE. /api/notifications is two round trips — a plain query for
+       * the dispute handler, then a withEntity transaction — over a DISTINCT ON join of state_log, chit_status
+       * and chit_header, returning up to thirty full rows, to keep ONE NUMBER current.
+       *
+       * ⭐ TEN MINUTES. Long enough that it costs nothing, short enough to catch a stream that has died
+       * without saying so — which is the only reason it exists. If the stream errors, onerror below puts it
+       * straight back to 20 s, so a real outage is still covered in one tick.
+       */
+      node.addEventListener('hello', function () {
+        _push.up = true;
+        _push.backoff = 5000;
+        if (typeof _autoRefreshTimer !== 'undefined' && _autoRefreshTimer) {
+          clearInterval(_autoRefreshTimer);
+          _autoRefreshTimer = setInterval(autoRefresh, 600 * 1000);
+        }
+      });
+      node.addEventListener('cb', function (ev) {
+        var d = {};
+        try {
+          d = JSON.parse(ev.data || '{}');
+        } catch (_) {}
+        cbPushArrived(d);
+      });
+      node.onerror = function () {
+        try {
+          node.close();
+        } catch (_) {}
+        _push.es = null;
+        _push.up = false;
+        if (typeof _autoRefreshTimer !== 'undefined' && _autoRefreshTimer) {
+          clearInterval(_autoRefreshTimer);
+          _autoRefreshTimer = setInterval(autoRefresh, 20 * 1000);
+        }
+        if (!SESSION.token) return;
+        clearTimeout(_push.timer);
+        _push.timer = setTimeout(cbPushStart, _push.backoff);
+        _push.backoff = Math.min(_push.backoff * 2, 60000);
+      };
+    })
+    .catch(function () {
+      clearTimeout(_push.timer);
+      _push.timer = setTimeout(cbPushStart, _push.backoff);
+      _push.backoff = Math.min(_push.backoff * 2, 60000);
+    });
 }
 /**
  * ── ⭐⭐ WHICH IDENTITY AM I, AS AN ID ────────────────────────────────────────────────────────────────────
@@ -689,24 +941,48 @@ function cbPushStart(){
  * ⚠️ ORDER MATTERS: for a CO-ASSIST, entityId is the parent entity and not this person, so actorId comes
  * first. Falling through to entityId there would tell every co-assist that the entity’s findings were theirs.
  */
-function cbMeId(){
-  try{ if(typeof UI!=='undefined' && UI && UI._me && UI._me.identity_id) return String(UI._me.identity_id); }catch(_){}
-  try{ if(typeof SESSION!=='undefined' && SESSION){ if(SESSION.actorId) return String(SESSION.actorId);
-         if(SESSION.entityId) return String(SESSION.entityId); } }catch(_){}
+function cbMeId() {
+  try {
+    if (typeof UI !== 'undefined' && UI && UI._me && UI._me.identity_id) return String(UI._me.identity_id);
+  } catch (_) {}
+  try {
+    if (typeof SESSION !== 'undefined' && SESSION) {
+      if (SESSION.actorId) return String(SESSION.actorId);
+      if (SESSION.entityId) return String(SESSION.entityId);
+    }
+  } catch (_) {}
   return '';
 }
-function cbPushStop(){ clearTimeout(_push.timer); if(_push.es){ try{ _push.es.close(); }catch(_){} } _push.es=null; _push.up=false; }
+function cbPushStop() {
+  clearTimeout(_push.timer);
+  if (_push.es) {
+    try {
+      _push.es.close();
+    } catch (_) {}
+  }
+  _push.es = null;
+  _push.up = false;
+}
 /** something arrived: refresh only what it touches — the bell badge, and the list on screen if it is a list screen */
-function cbPushArrived(d){
+function cbPushArrived(d) {
   /* ⚠ forced: something genuinely arrived, so the badge must move even if one was fetched a second ago */
-  try{ if(typeof loadNotifs==='function') loadNotifs(true); }catch(_){}
-  try{
-    var listNav=['task','order','drafts','trash','archive','intake','messages'];
-    if(typeof UI!=='undefined' && listNav.indexOf(UI.nav)>=0 && !(UI.detail||UI.mdetail) && typeof loadList==='function') loadList(true);
-  }catch(_){}
+  try {
+    if (typeof loadNotifs === 'function') loadNotifs(true);
+  } catch (_) {}
+  try {
+    var listNav = ['task', 'order', 'drafts', 'trash', 'archive', 'intake', 'messages'];
+    if (typeof UI !== 'undefined' && listNav.indexOf(UI.nav) >= 0 && !(UI.detail || UI.mdetail) && typeof loadList === 'function') loadList(true);
+  } catch (_) {}
   /* ⭐ a books answer is not a new chit: it repaints the Books block of the chit it names, and says nothing else (2026-09-07) */
-  try{ if(typeof booksOnBell==='function' && d && (d.kind==='books'||d.note==='books')){ booksOnBell(d); return; } }catch(_){}
-  try{ if(typeof booksOnBell==='function') booksOnBell(d); }catch(_){}
+  try {
+    if (typeof booksOnBell === 'function' && d && (d.kind === 'books' || d.note === 'books')) {
+      booksOnBell(d);
+      return;
+    }
+  } catch (_) {}
+  try {
+    if (typeof booksOnBell === 'function') booksOnBell(d);
+  } catch (_) {}
   /**
    * ── ⭐⭐⭐ THE REFERENCE SHELVES DROP WHEN THE SERVER SAYS THEY MOVED ─────────────────────────────────────
    *
@@ -726,16 +1002,23 @@ function cbPushArrived(d){
    * on every price change in another tab is the round trips back by a different door. The next reader asks,
    * and by then it is one batched call.
    */
-  try{
-    if(d && d.kind==='shop'){
-      if(typeof _DEFS!=='undefined') for(var k in _DEFS){ if(Object.prototype.hasOwnProperty.call(_DEFS,k)) delete _DEFS[k]; }
-      if(typeof _CATG!=='undefined') _CATG=null;
-      if(typeof UI!=='undefined'){ UI._ctOffers=undefined; UI._party=undefined; UI._prodOffers=null; }
+  try {
+    if (d && d.kind === 'shop') {
+      if (typeof _DEFS !== 'undefined')
+        for (var k in _DEFS) {
+          if (Object.prototype.hasOwnProperty.call(_DEFS, k)) delete _DEFS[k];
+        }
+      if (typeof _CATG !== 'undefined') _CATG = null;
+      if (typeof UI !== 'undefined') {
+        UI._ctOffers = undefined;
+        UI._party = undefined;
+        UI._prodOffers = null;
+      }
       /* only the screen actually showing them repaints — everything else picks it up when it is next opened */
-      if(typeof UI!=='undefined' && UI.nav==='catalogue' && typeof paintProdList==='function') paintProdList();
+      if (typeof UI !== 'undefined' && UI.nav === 'catalogue' && typeof paintProdList === 'function') paintProdList();
       return;
     }
-  }catch(_){}
+  } catch (_) {}
   /**
    * ── ⭐⭐⭐ SOMEBODY FOUND SOMETHING, OR ANSWERED WHAT YOU FOUND ───────────────────────────────────────────
    *
@@ -752,36 +1035,46 @@ function cbPushArrived(d){
    * ⚠️ AND THE EVENT CARRIES NO FINDING — see lib/testnews.js. The board REREADS through the ordinary
    * RLS-guarded endpoint, so what a person sees is what the server would answer, not what a message claimed.
    */
-  try{
-    if(d && d.kind==='test'){
-      var meId=cbMeId();
-      if(d.by && meId && String(d.by)===String(meId)) return;
-      var lab=(typeof CBTEST!=='undefined' && CBTEST.on);
+  try {
+    if (d && d.kind === 'test') {
+      var meId = cbMeId();
+      if (d.by && meId && String(d.by) === String(meId)) return;
+      var lab = typeof CBTEST !== 'undefined' && CBTEST.on;
       /* ⚠️ THE BOARD REREADS, IT DOES NOT PATCH ITSELF FROM THE MESSAGE. The event deliberately carries no
          finding (lib/testnews.js), so what appears is what the server would answer through RLS — never what
          a message claimed. One refresh, and it only touches the lists that are actually loaded. */
-      try{ if(lab && typeof testNewsRefresh==='function') testNewsRefresh(d.what); }catch(_){}
+      try {
+        if (lab && typeof testNewsRefresh === 'function') testNewsRefresh(d.what);
+      } catch (_) {}
       /* ⭐ the badge moves even with the lab SHUT — that is the whole point of it being on the chip */
-      try{ if(typeof testWaitingLoad==='function') testWaitingLoad(); }catch(_){}
-      var what=d.what==='requirement'?tx('requirement'):(d.what==='case'?tx('case'):tx('incident'));
-      var ref=d.ref?(' '+d.ref):''; var byWho=d.who?(' \u00b7 '+d.who):'';
+      try {
+        if (typeof testWaitingLoad === 'function') testWaitingLoad();
+      } catch (_) {}
+      var what = d.what === 'requirement' ? tx('requirement') : d.what === 'case' ? tx('case') : tx('incident');
+      var ref = d.ref ? ' ' + d.ref : '';
+      var byWho = d.who ? ' \u00b7 ' + d.who : '';
       /* ⭐ MINE TO RETEST is a different sentence from somebody else raising something, and it says what to do */
-      if(d['for'] && meId && String(d['for'])===String(meId)){
-        if(typeof toast==='function') toast(tx('Your')+' '+what+ref+' \u2192 '+(d.state||'')+' \u2014 '+tx('retest it')+byWho);
+      if (d.for && meId && String(d.for) === String(meId)) {
+        if (typeof toast === 'function') toast(tx('Your') + ' ' + what + ref + ' \u2192 ' + (d.state || '') + ' \u2014 ' + tx('retest it') + byWho);
         return;
       }
-      if(lab && typeof toast==='function'){
-        toast((d.state==='raised'?tx('New'):tx('Updated'))+' '+what+ref+byWho);
+      if (lab && typeof toast === 'function') {
+        toast((d.state === 'raised' ? tx('New') : tx('Updated')) + ' ' + what + ref + byWho);
       }
       return;
     }
-  }catch(_){}
+  } catch (_) {}
   /**
    * ⚠️ AND ONLY A CHIT SAYS "New chit". Every kind this function did not recognise fell through to this toast,
    * so changing an offer announced a chit that did not exist — a notification that is WRONG is worse than one
    * that is missing, because the reader goes looking.
    */
-  try{ if(typeof toast==='function' && d && (!d.kind || d.kind==='chit' || d.kind==='capture')){ var who=d&&d.who?(' · '+d.who):''; toast((d&&d.kind==='capture')?(tx('New message')+who):(tx('New chit')+who)); } }catch(_){}
+  try {
+    if (typeof toast === 'function' && d && (!d.kind || d.kind === 'chit' || d.kind === 'capture')) {
+      var who = d && d.who ? ' · ' + d.who : '';
+      toast(d && d.kind === 'capture' ? tx('New message') + who : tx('New chit') + who);
+    }
+  } catch (_) {}
 }
 /**
  * ⭐ A REPAINT MUST NOT MOVE THE PAGE. Athi, 2026-09-04: "when I select or unselect, the screen jumps to the top —
@@ -791,23 +1084,54 @@ function cbPushArrived(d){
  *   var k = scrollKeep(); el.innerHTML = html; k();
  * The restore runs at once and again on the next frame, for painters that finish asynchronously.
  */
-function scrollKeep(root){
-  var saved=[]; try{ (root||document).querySelectorAll('*').forEach(function(el){ if(el.scrollTop>0||el.scrollLeft>0) saved.push({ key:_scrollKeyOf(el), top:el.scrollTop, left:el.scrollLeft }); }); }catch(_){}
-  var wy=window.scrollY||0, wx=window.scrollX||0;
-  return function(){
-    var run=function(){ saved.forEach(function(s){ var el=_scrollFind(s.key); if(el){ el.scrollTop=s.top; el.scrollLeft=s.left; } }); if(wy||wx) window.scrollTo(wx, wy); };
-    run(); if(typeof requestAnimationFrame==='function') requestAnimationFrame(run);
+function scrollKeep(root) {
+  var saved = [];
+  try {
+    (root || document).querySelectorAll('*').forEach(function (el) {
+      if (el.scrollTop > 0 || el.scrollLeft > 0) saved.push({ key: _scrollKeyOf(el), top: el.scrollTop, left: el.scrollLeft });
+    });
+  } catch (_) {}
+  var wy = window.scrollY || 0,
+    wx = window.scrollX || 0;
+  return function () {
+    var run = function () {
+      saved.forEach(function (item) {
+        var el = _scrollFind(item.key);
+        if (el) {
+          el.scrollTop = item.top;
+          el.scrollLeft = item.left;
+        }
+      });
+      if (wy || wx) window.scrollTo(wx, wy);
+    };
+    run();
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(run);
   };
 }
-function _scrollKeyOf(el){
-  if(el.id) return '#'+el.id;
-  var t=el.getAttribute&&el.getAttribute('data-testid'); if(t) return '[data-testid="'+t+'"]';
-  var cls=(typeof el.className==='string')?el.className.trim().split(/\s+/).filter(Boolean).join('.'):'';
-  var sel=el.tagName.toLowerCase()+(cls?'.'+cls:''); var idx=0;
-  try{ idx=Array.prototype.indexOf.call(document.querySelectorAll(sel), el); }catch(_){ sel=el.tagName.toLowerCase(); idx=Array.prototype.indexOf.call(document.querySelectorAll(sel), el); }
-  return sel+'@'+idx;
+function _scrollKeyOf(el) {
+  if (el.id) return '#' + el.id;
+  var t = el.getAttribute && el.getAttribute('data-testid');
+  if (t) return '[data-testid="' + t + '"]';
+  var cls = typeof el.className === 'string' ? el.className.trim().split(/\s+/).filter(Boolean).join('.') : '';
+  var sel = el.tagName.toLowerCase() + (cls ? '.' + cls : '');
+  var idx = 0;
+  try {
+    idx = Array.prototype.indexOf.call(document.querySelectorAll(sel), el);
+  } catch (_) {
+    sel = el.tagName.toLowerCase();
+    idx = Array.prototype.indexOf.call(document.querySelectorAll(sel), el);
+  }
+  return sel + '@' + idx;
 }
-function _scrollFind(key){ try{ var at=key.lastIndexOf('@'); if(key[0]==='#'||key[0]==='['||at<0) return document.querySelector(key); return document.querySelectorAll(key.slice(0,at))[Number(key.slice(at+1))]||null; }catch(_){ return null; } }
+function _scrollFind(key) {
+  try {
+    var at = key.lastIndexOf('@');
+    if (key[0] === '#' || key[0] === '[' || at < 0) return document.querySelector(key);
+    return document.querySelectorAll(key.slice(0, at))[Number(key.slice(at + 1))] || null;
+  } catch (_) {
+    return null;
+  }
+}
 /**
  * ── ⭐⭐⭐ THE ERRORS THE PAGE THREW, KEPT ────────────────────────────────────────────────────────────────────
  *
@@ -833,7 +1157,10 @@ function _scrollFind(key){ try{ var at=key.lastIndexOf('@'); if(key[0]==='#'||ke
  */
 function cbVisitTick(nav) {
   if (nav == null) return window.CBGEN || 0;
-  if (window.CBNAV !== nav) { window.CBNAV = nav; window.CBGEN = (window.CBGEN || 0) + 1; }
+  if (window.CBNAV !== nav) {
+    window.CBNAV = nav;
+    window.CBGEN = (window.CBGEN || 0) + 1;
+  }
   return window.CBGEN;
 }
 
@@ -842,8 +1169,7 @@ function cbVisitTick(nav) {
   window.CBERRS = [];
   var keep = function (what, where) {
     try {
-      window.CBERRS.unshift({ at: Date.now(), what: String(what || '').slice(0, 400),
-        where: String(where || '').slice(0, 200) });
+      window.CBERRS.unshift({ at: Date.now(), what: String(what || '').slice(0, 400), where: String(where || '').slice(0, 200) });
       window.CBERRS.length = Math.min(window.CBERRS.length, 20);
     } catch (_) {}
   };
@@ -859,7 +1185,9 @@ function cbVisitTick(nav) {
   try {
     var ce = console.error;
     console.error = function () {
-      try { keep(Array.prototype.map.call(arguments, String).join(' '), 'console'); } catch (_) {}
+      try {
+        keep(Array.prototype.map.call(arguments, String).join(' '), 'console');
+      } catch (_) {}
       return ce.apply(console, arguments);
     };
   } catch (_) {}
@@ -898,8 +1226,12 @@ var _apiInflight = {};
 /** an independent copy, so a joiner can never share mutable state with the caller it joined */
 function _apiCopy(v) {
   if (v === null || typeof v !== 'object') return v;
-  try { if (typeof structuredClone === 'function') return structuredClone(v); } catch (_) {}
-  try { return JSON.parse(JSON.stringify(v)); } catch (_) {}
+  try {
+    if (typeof structuredClone === 'function') return structuredClone(v);
+  } catch (_) {}
+  try {
+    return JSON.parse(JSON.stringify(v));
+  } catch (_) {}
   /* ⚠ uncloneable (a Blob, a stream): hand back the original rather than fail the call, and never dedupe it
      again — said here because a silent share is exactly what this guard exists to prevent */
   return v;
@@ -913,27 +1245,36 @@ function api(key, opts) {
   var dk;
   try {
     dk = key + '|' + JSON.stringify(o.params || null) + '|' + JSON.stringify(o.query || null);
-  } catch (_) { return apiOnce(key, opts); }   /* unserialisable options: never guess, just call */
+  } catch (_) {
+    return apiOnce(key, opts);
+  } /* unserialisable options: never guess, just call */
 
   var live = _apiInflight[dk];
   if (live) return live.then(_apiCopy);
 
-  var p = apiOnce(key, opts);
-  _apiInflight[dk] = p;
+  var reply = apiOnce(key, opts);
+  _apiInflight[dk] = reply;
   /* ⚠ cleared on failure too, or one dead request poisons that read for the life of the tab */
-  var done = function () { if (_apiInflight[dk] === p) delete _apiInflight[dk]; };
-  p.then(done, done);
-  return p;
+  var done = function () {
+    if (_apiInflight[dk] === reply) delete _apiInflight[dk];
+  };
+  reply.then(done, done);
+  return reply;
 }
 
-async function apiOnce(key, {params, query, body}={}){
-  const ep = epOf(key); if(!ep) throw new Error("no endpoint "+key);
+async function apiOnce(key, { params, query, body } = {}) {
+  const ep = epOf(key);
+  if (!ep) throw new Error('no endpoint ' + key);
   cblog('debug', ep.m + ' ' + key);
   // Double-fire guard: block a repeat of the SAME in-flight mutation (same endpoint+params). GETs are free.
-  const lockKey = (ep.m!=='GET') ? (key+':'+JSON.stringify(params||{})) : null;
-  if(lockKey){ if(_lockKeys.has(lockKey)) throw new Error("Already working on that — one moment."); _lockKeys.add(lockKey); }
-  _inflight++; _netBusy(true);
-  const _t0 = (typeof performance !== 'undefined') ? performance.now() : Date.now();   /* for the spec call log */
+  const lockKey = ep.m !== 'GET' ? key + ':' + JSON.stringify(params || {}) : null;
+  if (lockKey) {
+    if (_lockKeys.has(lockKey)) throw new Error('Already working on that — one moment.');
+    _lockKeys.add(lockKey);
+  }
+  _inflight++;
+  _netBusy(true);
+  const _t0 = typeof performance !== 'undefined' ? performance.now() : Date.now(); /* for the spec call log */
   /**
    * ⭐⭐ THE CORRELATION ID, FROM THIS END. The server already mints one when the header is absent and echoes
    * it as `X-Request-Id` — but nothing on the client sent one or kept it, so a person reporting *"it failed
@@ -946,42 +1287,82 @@ async function apiOnce(key, {params, query, body}={}){
    * ⚠️ NOT A UUID AND NOT A SECRET. Sixteen hex characters is plenty to join two logs, and it must carry no
    * meaning: an id built from the entity or the user would leak identity into every proxy log on the path.
    */
-  const _rid = (function(){
+  const _rid = (function () {
     try {
       if (window.crypto && crypto.getRandomValues) {
-        const a = new Uint8Array(8); crypto.getRandomValues(a);
+        const a = new Uint8Array(8);
+        crypto.getRandomValues(a);
         return Array.from(a, (b) => b.toString(16).padStart(2, '0')).join('');
       }
-    } catch(_) {}
+    } catch (_) {}
     return String(Date.now().toString(16)) + Math.floor(Math.random() * 1e6).toString(16);
   })();
-  try{
-    const CB = (typeof window!=='undefined') ? window.CBOffline : null;
-    const outboxSafe = ep.m!=='GET' && OUTBOX_KEYS.has(key);
-    const idemKey = (outboxSafe && CB) ? CB._uuid() : null;
+  try {
+    const CB = typeof window !== 'undefined' ? window.CBOffline : null;
+    const outboxSafe = ep.m !== 'GET' && OUTBOX_KEYS.has(key);
+    const idemKey = outboxSafe && CB ? CB._uuid() : null;
     let pathQ = fill(ep.p, params);
     let url = CFG.API_BASE + pathQ;
-    if(query){const q=new URLSearchParams(Object.entries(query).filter(([,v])=>v!=null&&v!=="")); if([...q].length){const qs="?"+q; url+=qs; pathQ+=qs;}}
+    if (query) {
+      const q = new URLSearchParams(Object.entries(query).filter(([, v]) => v != null && v !== ''));
+      if ([...q].length) {
+        const qs = '?' + q;
+        url += qs;
+        pathQ += qs;
+      }
+    }
     // Offline + queue-safe → capture to the outbox instead of a doomed request; replays (idempotently) on reconnect.
-    if(outboxSafe && CB && !CB.online()){
-      CB.enqueue({method:ep.m, path:pathQ, body, id:idemKey});
-      cblog('warn', ep.m+' '+key+' → queued offline ['+_rid+']'); return {queued:true, offline:true};
+    if (outboxSafe && CB && !CB.online()) {
+      CB.enqueue({ method: ep.m, path: pathQ, body, id: idemKey });
+      cblog('warn', ep.m + ' ' + key + ' → queued offline [' + _rid + ']');
+      return { queued: true, offline: true };
     }
     let res;
-    try{
+    try {
       /* ⚠️ A REQUEST THAT NEVER ANSWERS MUST FAIL, NOT FREEZE. Without a deadline a hung PATCH left the busy overlay and the
          tour caption up forever (2026-09-04). 90 s is longer than any honest round trip (Railway sfo ↔ Mumbai ≈ 2 s). */
-      const _ac = (typeof AbortController !== "undefined") ? new AbortController() : null; const _to = _ac ? setTimeout(function(){ try { _ac.abort(); } catch (_) {} }, 90000) : null;
-      try { res = await fetch(url, {signal: _ac ? _ac.signal : undefined, method:ep.m, cache:"no-store", headers:{"Content-Type":"application/json", "X-Request-Id": _rid, ...(idemKey?{"Idempotency-Key":idemKey}:{}), ...(SESSION.token?{Authorization:"Bearer "+SESSION.token}:{})}, body: body?JSON.stringify(body):undefined}); } finally { if (_to) clearTimeout(_to); }
-    }catch(netErr){
+      const _ac = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      const _to = _ac
+        ? setTimeout(function () {
+            try {
+              _ac.abort();
+            } catch (_) {}
+          }, 90000)
+        : null;
+      try {
+        res = await fetch(url, {
+          signal: _ac ? _ac.signal : undefined,
+          method: ep.m,
+          cache: 'no-store',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Request-Id': _rid,
+            ...(idemKey ? { 'Idempotency-Key': idemKey } : {}),
+            ...(SESSION.token ? { Authorization: 'Bearer ' + SESSION.token } : {})
+          },
+          body: body ? JSON.stringify(body) : undefined
+        });
+      } finally {
+        if (_to) clearTimeout(_to);
+      }
+    } catch (netErr) {
       /* a DEADLINE is not "offline": never queue it, say what happened */
-      if(netErr && netErr.name==="AbortError"){ cblog("error", ep.m+" "+key+" → no answer in 90 s ["+_rid+"]"); throw new Error("No answer from the server in 90 s — try again."); }
+      if (netErr && netErr.name === 'AbortError') {
+        cblog('error', ep.m + ' ' + key + ' → no answer in 90 s [' + _rid + ']');
+        throw new Error('No answer from the server in 90 s — try again.');
+      }
       // network unreachable mid-request: queue if safe, else fail gracefully (the draft has the typed work)
-      if(outboxSafe && CB){ CB.enqueue({method:ep.m, path:pathQ, body, id:idemKey}); cblog('warn', ep.m+' '+key+' → queued, net fail ['+_rid+']'); return {queued:true, offline:true}; }
-      cblog('error', ep.m+' '+key+' → network unreachable ['+_rid+']');
-      throw new Error(ep.m==='GET' ? "You're offline — showing last-loaded data where available." : "You're offline — this needs a connection. Your typed work is saved.");
+      if (outboxSafe && CB) {
+        CB.enqueue({ method: ep.m, path: pathQ, body, id: idemKey });
+        cblog('warn', ep.m + ' ' + key + ' → queued, net fail [' + _rid + ']');
+        return { queued: true, offline: true };
+      }
+      cblog('error', ep.m + ' ' + key + ' → network unreachable [' + _rid + ']');
+      throw new Error(
+        ep.m === 'GET' ? "You're offline — showing last-loaded data where available." : "You're offline — this needs a connection. Your typed work is saved."
+      );
     }
-    if(!res.ok){
+    if (!res.ok) {
       /**
        * ⚠️⚠️ THE SPECIFIC REASON WAS BEING THROWN AWAY. Athi, 2026-08-18: *"Trying to update the profile, it
        * says validation failed, not sure what it is. Need to have explanation so people understand and update
@@ -997,30 +1378,57 @@ async function apiOnce(key, {params, query, body}={}){
        * ⚠️ AND ALL OF THEM ARE SHOWN, not just the first — fixing one error only to be told about the next is
        * the interaction people describe as "fighting the form".
        */
-      let msg="", j=null;
-      try{
-        j=await res.json();
-        if(j && Array.isArray(j.details) && j.details.length){
-          msg = j.details.map(function(d){
-            var f = d && d.field ? String(d.field).replace(/_/g,' ') : '';
-            var m = (d && d.message) || '';
-            /* "Invalid value" is express-validator's default and says nothing; name the field at least. */
-            if(/^invalid value$/i.test(m)) m = 'is not valid';
-            return f ? (f.charAt(0).toUpperCase()+f.slice(1)+': '+m) : m;
-          }).filter(Boolean).join('  ·  ');
+      let msg = '',
+        j = null;
+      try {
+        j = await res.json();
+        if (j && Array.isArray(j.details) && j.details.length) {
+          msg = j.details
+            .map(function (item) {
+              var text = item && item.field ? String(item.field).replace(/_/g, ' ') : '';
+              var m = (item && item.message) || '';
+              /* "Invalid value" is express-validator's default and says nothing; name the field at least. */
+              if (/^invalid value$/i.test(m)) m = 'is not valid';
+              return text ? text.charAt(0).toUpperCase() + text.slice(1) + ': ' + m : m;
+            })
+            .filter(Boolean)
+            .join('  ·  ');
         }
-        if(!msg) msg = j.message || j.error || "";
-      }catch(_){}
-      if(j && j.offline){ throw new Error(ep.m==='GET' ? "You're offline — showing last-loaded data where available." : "You're offline — your work is saved and will sync when you reconnect."); }
-      cblog(res.status>=500?'error':'warn', ep.m+' '+key+' → '+res.status+(msg?' · '+msg:''));
+        if (!msg) msg = j.message || j.error || '';
+      } catch (_) {}
+      if (j && j.offline) {
+        throw new Error(
+          ep.m === 'GET'
+            ? "You're offline — showing last-loaded data where available."
+            : "You're offline — your work is saved and will sync when you reconnect."
+        );
+      }
+      cblog(res.status >= 500 ? 'error' : 'warn', ep.m + ' ' + key + ' → ' + res.status + (msg ? ' · ' + msg : ''));
       /* ⭐ the status rides on the error (e.status): a page that must tell "this shop has the Ledger off" (404) from "the network
          failed" (no status) — CB Accounts — can, without parsing words. The message itself is unchanged. */
       /* e.data = the answer's own body (M27: a 409 ALREADY_PAID carries .warnings the payment form paints) */
-      const _fail=function(m){ const er=new Error(m); er.status=res.status; er.data=j; return er; };
-      if(res.status===401){ SESSION={}; try{localStorage.removeItem("cb_token");localStorage.removeItem("cb_sess");}catch(_){} if(typeof go==="function") go("#/login"); throw _fail(msg||"Session expired — please sign in again."); }
-      if(res.status===422){ throw _fail(msg||"Please check the form and try again."); }          // validation
-      if(res.status>=500){ throw _fail(msg||"Server error — please try again."); }                 // generic
-      throw _fail(msg||("API "+res.status+" "+ep.m+" "+ep.p));
+      const _fail = function (m) {
+        const er = new Error(m);
+        er.status = res.status;
+        er.data = j;
+        return er;
+      };
+      if (res.status === 401) {
+        SESSION = {};
+        try {
+          localStorage.removeItem('cb_token');
+          localStorage.removeItem('cb_sess');
+        } catch (_) {}
+        if (typeof go === 'function') go('#/login');
+        throw _fail(msg || 'Session expired — please sign in again.');
+      }
+      if (res.status === 422) {
+        throw _fail(msg || 'Please check the form and try again.');
+      } // validation
+      if (res.status >= 500) {
+        throw _fail(msg || 'Server error — please try again.');
+      } // generic
+      throw _fail(msg || 'API ' + res.status + ' ' + ep.m + ' ' + ep.p);
     }
     /**
      * ⭐⭐ THE SPEC RECORDS WHAT ACTUALLY HAPPENED. Athi, 2026-08-22: *"possibly we can use spec mode to see
@@ -1034,7 +1442,7 @@ async function apiOnce(key, {params, query, body}={}){
      * response body sitting around in a tab that is merely open. The body is also capped, because the point is
      * to see the SHAPE of the answer, not to build a network log.
      */
-    const _out = unwrap(res.status===204?null:await res.json(), key);
+    const _out = unwrap(res.status === 204 ? null : await res.json(), key);
     try {
       /**
        * ⭐ TEST MODE RECORDS TOO. Athi, 2026-09-13: *"how the API is responding, how many round trips it
@@ -1044,8 +1452,7 @@ async function apiOnce(key, {params, query, body}={}){
        * ⚠️ Still OFF by default: with neither mode on this is one boolean and nothing is kept, so no
        * response body sits around in a tab that is merely open.
        */
-      var _rec = (typeof specOn === 'function' && specOn())
-        || (typeof CBTEST !== 'undefined' && CBTEST && CBTEST.on);
+      var _rec = (typeof specOn === 'function' && specOn()) || (typeof CBTEST !== 'undefined' && CBTEST && CBTEST.on);
       if (_rec) {
         window.CBCALLS = window.CBCALLS || [];
         /**
@@ -1059,7 +1466,9 @@ async function apiOnce(key, {params, query, body}={}){
          * credited every screen’s own load calls to the screen before it.
          */
         var _scr = null;
-        try { if (typeof navScreenKey === 'function') _scr = navScreenKey(); } catch (_) {}
+        try {
+          if (typeof navScreenKey === 'function') _scr = navScreenKey();
+        } catch (_) {}
         /**
          * ⭐⭐ AND WHICH VISIT. The name of the screen is not enough: leave the Catalogue, come back, and both
          * visits pile into one log. The tester panel then reports the Catalogue as depending on ten routes,
@@ -1097,10 +1506,11 @@ async function apiOnce(key, {params, query, body}={}){
         var _rt = null;
         try {
           var _es = performance.getEntriesByName(url);
-          var _e = (_es && _es.length) ? _es[_es.length - 1] : null;
+          var _e = _es && _es.length ? _es[_es.length - 1] : null;
           if (_e && _e.responseEnd) {
-            if (!_e.requestStart) { _rt = { blocked: true }; }
-            else {
+            if (!_e.requestStart) {
+              _rt = { blocked: true };
+            } else {
               var _tlsAt = _e.secureConnectionStart || 0;
               _rt = {
                 dns: Math.max(0, Math.round(_e.domainLookupEnd - _e.domainLookupStart)),
@@ -1109,21 +1519,30 @@ async function apiOnce(key, {params, query, body}={}){
                 wait: Math.max(0, Math.round(_e.responseStart - _e.requestStart)),
                 down: Math.max(0, Math.round(_e.responseEnd - _e.responseStart)),
                 bytes: _e.transferSize || 0,
-                raw: _e.decodedBodySize || 0,
+                raw: _e.decodedBodySize || 0
               };
             }
           }
         } catch (_) {}
-        var _srv = null, _trips = null;
+        var _srv = null,
+          _trips = null;
         try {
           var _h = res.headers;
           _srv = _h && _h.get('X-DB-Ms') != null ? Number(_h.get('X-DB-Ms')) : null;
           _trips = _h && _h.get('X-DB-Trips') != null ? Number(_h.get('X-DB-Trips')) : null;
         } catch (_) {}
-        CBCALLS.unshift({ key, m: ep.m, path: pathQ, status: res.status, rid: _rid, scr: _scr,
-          srv: (isNaN(_srv) ? null : _srv), trips: (isNaN(_trips) ? null : _trips), rt: _rt,
+        CBCALLS.unshift({
+          key,
+          m: ep.m,
+          path: pathQ,
+          status: res.status,
+          rid: _rid,
+          scr: _scr,
+          srv: isNaN(_srv) ? null : _srv,
+          trips: isNaN(_trips) ? null : _trips,
+          rt: _rt,
           gen: window.CBGEN,
-          ms: Math.round((typeof performance!=='undefined'?performance.now():Date.now()) - _t0),
+          ms: Math.round((typeof performance !== 'undefined' ? performance.now() : Date.now()) - _t0),
           /**
            * ── ⭐⭐ WHAT WENT OUT, NOT ONLY WHAT CAME BACK ──────────────────────────────────────────────
            *
@@ -1148,34 +1567,47 @@ async function apiOnce(key, {params, query, body}={}){
                 return SECRET.test(k) ? '[redacted]' : v;
               });
               return JSON.stringify(clean).slice(0, 1200);
-            } catch (_) { return null; }
+            } catch (_) {
+              return null;
+            }
           })(),
-          q: (function () { try { return query ? JSON.parse(JSON.stringify(query)) : null; }
-            catch (_) { return null; } })(),
+          q: (function () {
+            try {
+              return query ? JSON.parse(JSON.stringify(query)) : null;
+            } catch (_) {
+              return null;
+            }
+          })(),
           at: Date.now(),
-          body: JSON.stringify(_out === undefined ? null : _out).slice(0, 1200) });
+          body: JSON.stringify(_out === undefined ? null : _out).slice(0, 1200)
+        });
         CBCALLS.length = Math.min(CBCALLS.length, 40);
         /* ⚠ AND SAY SO. Recording without repainting is what made the spec panel look dead — the rows were
            there and nothing ever asked the bar to draw them again. Athi found it: "an overlay appears, but
            nothing is changing, I guess it is a dead function." */
         if (typeof specCallsRepaint === 'function') specCallsRepaint();
       }
-    } catch(_) {}
+    } catch (_) {}
     /* a product write drops the memoised own-catalogue VIEW (ownCatalogueView) — the next outlet to open reads fresh */
-    try { if (ep.m !== 'GET' && /^prod/.test(key) && typeof ownViewInvalidate === 'function') ownViewInvalidate(); } catch (_) {}
+    try {
+      if (ep.m !== 'GET' && /^prod/.test(key) && typeof ownViewInvalidate === 'function') ownViewInvalidate();
+    } catch (_) {}
     return _out;
   } finally {
-    if(lockKey) _lockKeys.delete(lockKey);
-    if(--_inflight<=0){ _inflight=0; _netBusy(false); }
+    if (lockKey) _lockKeys.delete(lockKey);
+    if (--_inflight <= 0) {
+      _inflight = 0;
+      _netBusy(false);
+    }
   }
 }
 
 /* ── the DEFINITIONS routes (cbDefsLive · cbCatgLive above read them) — MOVED here from app.html's EP (T3-CATALOGUE) so app.html and catalogue.html
    register each ONCE (e2e/ep-aliases.cjs); a page merges them with Object.assign(EP, CB_DEFS_EP) as it merges CB_SHOP_EP ── */
 var CB_DEFS_EP = {
-  defList:         {m:"GET",   p:"/api/definitions",             ok:"y"},   // ?all=1 via defListAll
-  defListAll:      {m:"GET",   p:"/api/definitions?all=1",       ok:"y"},   // the shelf, incl. retired
-  defAdd:          {m:"POST",  p:"/api/definitions",             ok:"y"},
-  defSave:         {m:"PUT",   p:"/api/definitions/:id",         ok:"y"},   // rules change => NEW VERSION
-  defRetire:       {m:"DELETE",p:"/api/definitions/:id",         ok:"y"},   // retires, never deletes
+  defList: { m: 'GET', p: '/api/definitions', ok: 'y' }, // ?all=1 via defListAll
+  defListAll: { m: 'GET', p: '/api/definitions?all=1', ok: 'y' }, // the shelf, incl. retired
+  defAdd: { m: 'POST', p: '/api/definitions', ok: 'y' },
+  defSave: { m: 'PUT', p: '/api/definitions/:id', ok: 'y' }, // rules change => NEW VERSION
+  defRetire: { m: 'DELETE', p: '/api/definitions/:id', ok: 'y' } // retires, never deletes
 };

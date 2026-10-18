@@ -17,6 +17,8 @@
  *
  * ⚠️ RETIRE, NEVER DELETE. The API has no delete for a definition and should not: a chit that cited a category
  * stays explainable. Retiring takes it off the shelf; products that cite it keep the citation and say so.
+ 
+ * CALLED BY public/app.html, public/app/cap-catalogue.js   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
 var CBCAT_UI = { list: null, sel: null, busy: false, err: '', q: '', mode: 'view', form: null, counts: null };
 
@@ -26,21 +28,29 @@ var CBCAT_UI = { list: null, sel: null, busy: false, err: '', q: '', mode: 'view
  * a shelf that silently omits what you retired is how you re-create something you already withdrew. The pickers
  * elsewhere ask for live only; that difference is the point of having a screen.
  */
-async function cbcatLoad(force){
+async function cbcatLoad(force) {
   if (CBCAT_UI.busy) return;
   if (CBCAT_UI.list && !force) return;
-  CBCAT_UI.busy = true; CBCAT_UI.err = ''; cbcatPaint();
+  CBCAT_UI.busy = true;
+  CBCAT_UI.err = '';
+  cbcatPaint();
   try {
-    var r = await api('defList', { query: { kind: 'category', all: 1 } });
-    CBCAT_UI.list = ((r && r.definitions) || []).map(function(d){
+    var reply = await api('defList', { query: { kind: 'category', all: 1 } });
+    CBCAT_UI.list = ((reply && reply.definitions) || []).map(function (item) {
       /* ⭐ `parent` RIDES IN `rules` — free-form jsonb, so a tree costs NO MIGRATION (backlog 22, step 1).
          Same trick that let multi-category ship against live data this morning. */
-      return { id: d.definition_id, name: d.name, note: d.note || '', status: d.status || 'draft',
-               parent: (d.rules && d.rules.parent) || null,
-               /* ⭐ The middle rung of the tax inheritance, riding in `rules` beside `parent` for the same
+      return {
+        id: item.definition_id,
+        name: item.name,
+        note: item.note || '',
+        status: item.status || 'draft',
+        parent: (item.rules && item.rules.parent) || null,
+        /* ⭐ The middle rung of the tax inheritance, riding in `rules` beside `parent` for the same
                   reason: free-form jsonb, so a second attribute on a category costs no migration. */
-               default_slab: (d.rules && d.rules.default_slab) || null,
-               version: d.current_version || 1, created_at: d.created_at };
+        default_slab: (item.rules && item.rules.default_slab) || null,
+        version: item.current_version || 1,
+        created_at: item.created_at
+      };
     });
     cbcatOrder();
     await cbcatCounts();
@@ -72,24 +82,34 @@ async function cbcatLoad(force){
  * for one deploy this may meet a server that does not send the tally. It is marked `partial` when that happens —
  * a wrong number that says it is wrong is recoverable; a wrong number that looks right is not.
  */
-async function cbcatCounts(){
+async function cbcatCounts() {
   try {
-    var r = await api('prodList', { query: { limit: 1 } });
-    if (r && r.category_counts) {
-      CBCAT_UI.counts = { by: r.category_counts, none: Number(r.uncategorised) || 0,
-                          total: Number(r.total) || 0, partial: false };
+    var reply = await api('prodList', { query: { limit: 1 } });
+    if (reply && reply.category_counts) {
+      CBCAT_UI.counts = { by: reply.category_counts, none: Number(reply.uncategorised) || 0, total: Number(reply.total) || 0, partial: false };
       return;
     }
     /* ⚠️ an older server: count what we can reach and SAY that it is a page, not the shop */
-    if (!UI.prods || !UI.prods.length) { var l = await api('prodList'); UI.prods = l || UI.prods || []; }
-    var n = {}, none = 0;
-    (UI.prods || []).forEach(function(p){
-      var ids = catgIdsOf((p && (p.item_data || p)) || {});
-      if (!ids.length) { none++; return; }
-      ids.forEach(function(id){ n[id] = (n[id] || 0) + 1; });
+    if (!UI.prods || !UI.prods.length) {
+      var l = await api('prodList');
+      UI.prods = l || UI.prods || [];
+    }
+    var n = {},
+      none = 0;
+    (UI.prods || []).forEach(function (item) {
+      var ids = catgIdsOf((item && (item.item_data || item)) || {});
+      if (!ids.length) {
+        none++;
+        return;
+      }
+      ids.forEach(function (id) {
+        n[id] = (n[id] || 0) + 1;
+      });
     });
     CBCAT_UI.counts = { by: n, none: none, total: (UI.prods || []).length, partial: true };
-  } catch (e) { CBCAT_UI.counts = null; }
+  } catch (e) {
+    CBCAT_UI.counts = null;
+  }
 }
 
 /**
@@ -127,64 +147,122 @@ async function cbcatCounts(){
  * category still classifies products and must stay reachable, but it is never what somebody is looking for.
  */
 var CBCAT_SORTS = {
-  az:   { label: 'Name A–Z',      cmp: function(a,b){ return a.name.localeCompare(b.name); } },
-  za:   { label: 'Name Z–A',      cmp: function(a,b){ return b.name.localeCompare(a.name); } },
-  most: { label: 'Most products', cmp: function(a,b){ return cbcatCount(b.id) - cbcatCount(a.id); } },
+  az: {
+    label: 'Name A–Z',
+    cmp: function (a, b) {
+      return a.name.localeCompare(b.name);
+    }
+  },
+  za: {
+    label: 'Name Z–A',
+    cmp: function (a, b) {
+      return b.name.localeCompare(a.name);
+    }
+  },
+  most: {
+    label: 'Most products',
+    cmp: function (a, b) {
+      return cbcatCount(b.id) - cbcatCount(a.id);
+    }
+  }
 };
-function cbcatCount(id){ return (CBCAT_UI.counts && CBCAT_UI.counts.by[id]) || 0; }
-function cbcatSortKey(){ return CBCAT_SORTS[CBCAT_UI.sort] ? CBCAT_UI.sort : 'az'; }
-function cbcatCmp(){
+function cbcatCount(id) {
+  return (CBCAT_UI.counts && CBCAT_UI.counts.by[id]) || 0;
+}
+function cbcatSortKey() {
+  return CBCAT_SORTS[CBCAT_UI.sort] ? CBCAT_UI.sort : 'az';
+}
+function cbcatCmp() {
   var inner = CBCAT_SORTS[cbcatSortKey()].cmp;
-  return function(a,b){
+  return function (a, b) {
     if ((a.status === 'retired') !== (b.status === 'retired')) return a.status === 'retired' ? 1 : -1;
-    return inner(a,b);
+    return inner(a, b);
   };
 }
-function cbcatSortSelect(){
-  return '<select class="inp" data-testid="catg-sort" title="' + esc(tx('Sort order — always within each parent, so the tree survives')) + '"'
-    + ' style="width:auto;padding:3px 6px;font-size:var(--fs-1)" onchange="cbcatSetSort(this.value)">'
-    + Object.keys(CBCAT_SORTS).map(function(k){
-        return '<option value="' + k + '"' + (cbcatSortKey() === k ? ' selected' : '') + '>' + esc(tx(CBCAT_SORTS[k].label)) + '</option>'; }).join('')
-    + '</select>';
+function cbcatSortSelect() {
+  return (
+    '<select class="inp" data-testid="catg-sort" title="' +
+    esc(tx('Sort order — always within each parent, so the tree survives')) +
+    '"' +
+    ' style="width:auto;padding:3px 6px;font-size:var(--fs-1)" onchange="cbcatSetSort(this.value)">' +
+    Object.keys(CBCAT_SORTS)
+      .map(function (item) {
+        return '<option value="' + item + '"' + (cbcatSortKey() === item ? ' selected' : '') + '>' + esc(tx(CBCAT_SORTS[item].label)) + '</option>';
+      })
+      .join('') +
+    '</select>'
+  );
 }
 /* ⚠️ cbcatOrder REWRITES CBCAT_UI.list and every row's depth, so the reveal count must go back to the top —
    50 rows of a newly ordered tree are 50 different rows. */
-function cbcatSetSort(v){ CBCAT_UI.sort = v; cbcatOrder(); try{ if(LAZY) delete LAZY['cbcat']; }catch(_){} cbcatPaintList(); }
+function cbcatSetSort(v) {
+  CBCAT_UI.sort = v;
+  cbcatOrder();
+  try {
+    if (LAZY) delete LAZY.cbcat;
+  } catch (_) {}
+  cbcatPaintList();
+}
 
-function cbcatOrder(){
+function cbcatOrder() {
   var all = CBCAT_UI.list || [];
-  var byParent = {}, seen = {};
-  all.forEach(function(c){ var k = c.parent || '_root'; (byParent[k] = byParent[k] || []).push(c); });
-  var ids = {}; all.forEach(function(c){ ids[c.id] = 1; });
+  var byParent = {},
+    seen = {};
+  all.forEach(function (item) {
+    var k = item.parent || '_root';
+    (byParent[k] = byParent[k] || []).push(item);
+  });
+  var ids = {};
+  all.forEach(function (item) {
+    ids[item.id] = 1;
+  });
   /* A parent that no longer exists is a root, so its children stay reachable. */
-  all.forEach(function(c){ if (c.parent && !ids[c.parent]) { (byParent._root = byParent._root || []).push(c); } });
+  all.forEach(function (item) {
+    if (item.parent && !ids[item.parent]) {
+      (byParent._root = byParent._root || []).push(item);
+    }
+  });
   var cmp = cbcatCmp();
   var out = [];
-  (function walk(key, depth){
-    (byParent[key] || []).sort(cmp).forEach(function(c){
-      if (seen[c.id]) return;
-      seen[c.id] = 1; c.depth = depth; out.push(c);
-      walk(c.id, depth + 1);
+  (function walk(key, depth) {
+    (byParent[key] || []).sort(cmp).forEach(function (item) {
+      if (seen[item.id]) return;
+      seen[item.id] = 1;
+      item.depth = depth;
+      out.push(item);
+      walk(item.id, depth + 1);
     });
   })('_root', 0);
   /* Anything still unseen was in a cycle — emit it flat rather than lose it. */
-  all.forEach(function(c){ if (!seen[c.id]) { c.depth = 0; out.push(c); } });
+  all.forEach(function (item) {
+    if (!seen[item.id]) {
+      item.depth = 0;
+      out.push(item);
+    }
+  });
   CBCAT_UI.list = out;
 }
 /** Would making `id` a child of `parentId` create a loop? Walk up from the proposed parent looking for `id`. */
-function cbcatWouldCycle(id, parentId){
-  var by = {}; (CBCAT_UI.list || []).forEach(function(c){ by[c.id] = c; });
-  var hops = 0, p = parentId;
-  while (p && hops++ < 64) { if (p === id) return true; p = by[p] ? by[p].parent : null; }
+function cbcatWouldCycle(id, parentId) {
+  var by = {};
+  (CBCAT_UI.list || []).forEach(function (item) {
+    by[item.id] = item;
+  });
+  var hops = 0,
+    p = parentId;
+  while (p && hops++ < 64) {
+    if (p === id) return true;
+    p = by[p] ? by[p].parent : null;
+  }
   return false;
 }
 /** Every category except the one being edited and its own descendants — the legal parents. */
-function cbcatParentOptions(id){
-  return (CBCAT_UI.list || []).filter(function(c){
+function cbcatParentOptions(id) {
+  return (CBCAT_UI.list || []).filter(function (item) {
     /* ⚠️ ONE direction only. A candidate parent must not be a DESCENDANT of this category (that would loop). The old
        second test also threw out every ANCESTOR — including the category's own current parent — so the dropdown
        could never show the right parent (Athi, 2026-09-05: "it is not showing the right parent"). */
-    return c.status !== 'retired' && c.id !== id && !(id && cbcatWouldCycle(id, c.id));
+    return item.status !== 'retired' && item.id !== id && !(id && cbcatWouldCycle(id, item.id));
   });
 }
 
@@ -200,31 +278,46 @@ function cbcatParentOptions(id){
  * fourth private fetch here is how four screens come to disagree about what is on the shelf.
  * ⚠️ A category in a product's list that names no slab is SKIPPED, not treated as "no tax" — see lib/tax-slab.js.
  */
-function cbcatSlabPickHTML(f){
-  var slabs = (typeof cbDefsCached === 'function') ? cbDefsCached('tax') : null;
+function cbcatSlabPickHTML(f) {
+  var slabs = typeof cbDefsCached === 'function' ? cbDefsCached('tax') : null;
   if (slabs === null) {
-    if (typeof cbDefsLive === 'function') cbDefsLive('tax').then(function(){ if (CBCAT_UI.form) cbcatPaint(); });
+    if (typeof cbDefsLive === 'function')
+      cbDefsLive('tax').then(function () {
+        if (CBCAT_UI.form) cbcatPaint();
+      });
     return '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:8px">' + tx('reading your slabs…') + '</div>';
   }
   /* ⚠️ An empty picker says WHY and where to go. A lone blank option reads as "this category cannot have one". */
-  if (!slabs.length) return '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:8px">'
-    + txf('No live slab yet — name one under {where}.', { where: '<b>' + tx('Catalogue setup') + ' › ' + tx('Tax') + '</b>' })
-    + '</div>';
+  if (!slabs.length)
+    return (
+      '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:8px">' +
+      txf('No live slab yet — name one under {where}.', { where: '<b>' + tx('Catalogue setup') + ' › ' + tx('Tax') + '</b>' }) +
+      '</div>'
+    );
   var cur = f.default_slab || '';
-  return '<select class="inp" data-testid="catg-slab" onchange="cbcatField(\'default_slab\',this.value)">'
-    + '<option value="">— ' + esc(tx('inherit the catalogue default')) + ' —</option>'
-    + cbSlabOptionsHTML(slabs, cur)   /* the jurisdiction's slabs first, then this entity's own — one builder, three pickers */
-    + '</select>'
-    + '<div style="font-size:var(--fs-1);color:var(--grey);margin:-4px 0 8px">'
-    + tx('Products here that name no slab of their own use this.') + '</div>';
+  return (
+    '<select class="inp" data-testid="catg-slab" onchange="cbcatField(\'default_slab\',this.value)">' +
+    '<option value="">— ' +
+    esc(tx('inherit the catalogue default')) +
+    ' —</option>' +
+    cbSlabOptionsHTML(slabs, cur) /* the jurisdiction's slabs first, then this entity's own — one builder, three pickers */ +
+    '</select>' +
+    '<div style="font-size:var(--fs-1);color:var(--grey);margin:-4px 0 8px">' +
+    tx('Products here that name no slab of their own use this.') +
+    '</div>'
+  );
 }
 
 /* ── write ───────────────────────────────────────────────────────────────────────────────────────────────────── */
-async function cbcatSave(){
-  var f = CBCAT_UI.form; if (!f) return;
+async function cbcatSave() {
+  var f = CBCAT_UI.form;
+  if (!f) return;
   var name = (f.name || '').trim();
   var err = document.getElementById('cbcat_err');
-  if (name.length < 2) { if (err) err.textContent = 'Give it a name of at least 2 characters.'; return; }
+  if (name.length < 2) {
+    if (err) err.textContent = 'Give it a name of at least 2 characters.';
+    return;
+  }
   /**
    * ⚠️ A duplicate NAME is refused here rather than merged. Two shelves reading "Grains" is indistinguishable on
    * every screen that shows only the word, and the products under each would look like one set that lost half.
@@ -237,9 +330,13 @@ async function cbcatSave(){
    * `(entity_id, kind, parent, name)`, which is a MIGRATION. Keeping this check global means the client refuses
    * exactly what the server would refuse, instead of offering something that fails on save.
    */
-  var clash = (CBCAT_UI.list || []).filter(function(c){
-    return c.id !== f.id && c.status !== 'retired' && c.name.toLowerCase() === name.toLowerCase(); })[0];
-  if (clash) { if (err) err.textContent = 'You already have a live category called “' + clash.name + '”.'; return; }
+  var clash = (CBCAT_UI.list || []).filter(function (item) {
+    return item.id !== f.id && item.status !== 'retired' && item.name.toLowerCase() === name.toLowerCase();
+  })[0];
+  if (clash) {
+    if (err) err.textContent = 'You already have a live category called “' + clash.name + '”.';
+    return;
+  }
   try {
     if (f.id) {
       /* ⚠️⚠️ EVERY RULE KEY IS RE-SENT, ALWAYS. PUT /definitions/:id replaces `rules` wholesale (it writes a new
@@ -248,46 +345,65 @@ async function cbcatSave(){
       await api('defSave', { params: { id: f.id }, body: { name: name, note: f.note || '', rules: cbcatRules(f) } });
       toast('Renamed — every product that cites it follows.');
     } else {
-      var r = await api('defAdd', { body: { kind: 'category', sub_kind: null, name: name, note: f.note || '', rules: cbcatRules(f) } });
-      var id = r && (r.definition_id || (r.definition && r.definition.definition_id));
+      var reply = await api('defAdd', { body: { kind: 'category', sub_kind: null, name: name, note: f.note || '', rules: cbcatRules(f) } });
+      var id = reply && (reply.definition_id || (reply.definition && reply.definition.definition_id));
       /* Live immediately: a draft category cannot be attached to anything, so it would be a shelf you cannot use. */
       if (id) await api('defSave', { params: { id: id }, body: { status: 'live' } });
       CBCAT_UI.sel = id || CBCAT_UI.sel;
       toast('“' + name + '” added ✓');
     }
-    CBCAT_UI.mode = 'view'; CBCAT_UI.form = null;
-    if (typeof cbCatgLive === 'function') await cbCatgLive(true);     // the shared shelf every picker reads
+    CBCAT_UI.mode = 'view';
+    CBCAT_UI.form = null;
+    if (typeof cbCatgLive === 'function') await cbCatgLive(true); // the shared shelf every picker reads
     await cbcatLoad(true);
   } catch (e) {
     if (err) err.textContent = (e && e.message) || 'Could not save that.';
   }
 }
-function cbcatRetire(id){
-  var c = (CBCAT_UI.list || []).filter(function(x){ return x.id === id; })[0]; if (!c) return;
+function cbcatRetire(id) {
+  var c = (CBCAT_UI.list || []).filter(function (x) {
+    return x.id === id;
+  })[0];
+  if (!c) return;
   var n = (CBCAT_UI.counts && CBCAT_UI.counts.by[id]) || 0;
-  confirmAsk('Retire “' + esc(c.name) + '”?',
-    'It leaves the shelf and cannot be attached to anything new.'
-    + (n ? '<div style="margin-top:7px"><b>' + n + ' product' + (n === 1 ? '' : 's') + '</b> currently cite it. '
-         + 'They keep the citation and will say the category is no longer live — nothing is unlinked and nothing '
-         + 'is deleted.</div>'
+  confirmAsk(
+    'Retire “' + esc(c.name) + '”?',
+    'It leaves the shelf and cannot be attached to anything new.' +
+      (n
+        ? '<div style="margin-top:7px"><b>' +
+          n +
+          ' product' +
+          (n === 1 ? '' : 's') +
+          '</b> currently cite it. ' +
+          'They keep the citation and will say the category is no longer live — nothing is unlinked and nothing ' +
+          'is deleted.</div>'
         : '<div style="margin-top:7px">Nothing cites it, so nothing changes elsewhere.</div>'),
-    'Retire', function(){ _cbcatRetire(id); }, true);
+    'Retire',
+    function () {
+      _cbcatRetire(id);
+    },
+    true
+  );
 }
-async function _cbcatRetire(id){
+async function _cbcatRetire(id) {
   try {
     await api('defRetire', { params: { id: id } });
     toast('Retired.');
     if (typeof cbCatgLive === 'function') await cbCatgLive(true);
     await cbcatLoad(true);
-  } catch (e) { toast((e && e.message) || 'Could not retire that.', true); }
+  } catch (e) {
+    toast((e && e.message) || 'Could not retire that.', true);
+  }
 }
-async function cbcatRelive(id){
+async function cbcatRelive(id) {
   try {
     await api('defSave', { params: { id: id }, body: { status: 'live' } });
     toast('Back on the shelf.');
     if (typeof cbCatgLive === 'function') await cbCatgLive(true);
     await cbcatLoad(true);
-  } catch (e) { toast((e && e.message) || 'Could not change that.', true); }
+  } catch (e) {
+    toast((e && e.message) || 'Could not change that.', true);
+  }
 }
 
 /**
@@ -305,28 +421,53 @@ async function cbcatRelive(id){
  * created, so the run is ordered and maps taxonomy ids → our ids as it goes. Getting this backwards produces a
  * flat list of orphans that LOOKS like a successful seed.
  */
-function cbcatSeedAsk(){
-  if (typeof CB_STARTER_CATEGORIES === 'undefined') { toast('Starter sets are not loaded.', true); return; }
-  var opts = Object.keys(CB_STARTER_CATEGORIES).map(function(v){
-    var s = CB_STARTER_CATEGORIES[v];
-    return '<div class="bulkrow"><span class="bn">' + esc(s.title) + '</span>'
-      + '<span class="bh">' + s.nodes.length + ' categories</span>'
-      /* ⭐ "See these" — Athi, 2026-09-02: *"there is no way of knowing what they are."* The button used to add
+function cbcatSeedAsk() {
+  if (typeof CB_STARTER_CATEGORIES === 'undefined') {
+    toast('Starter sets are not loaded.', true);
+    return;
+  }
+  var opts = Object.keys(CB_STARTER_CATEGORIES)
+    .map(function (item) {
+      var s = CB_STARTER_CATEGORIES[item];
+      return (
+        '<div class="bulkrow"><span class="bn">' +
+        esc(s.title) +
+        '</span>' +
+        '<span class="bh">' +
+        s.nodes.length +
+        ' categories</span>' +
+        /* ⭐ "See these" — Athi, 2026-09-02: *"there is no way of knowing what they are."* The button used to add
          all 26 sight unseen; it now opens the list, which is where the choosing happens. Same testid, because
          the specs address the SET, and which press it takes to finish is not what they are asserting. */
-      + '<button type="button" class="badd" data-testid="catg-seed-' + esc(v) + '"'
-      + ' onclick="cbcatSeedPick(\'' + esc(v) + '\')">' + tx('See these →') + '</button></div>';
-  }).join('');
-  modal('<div class="mhd"><div class="t">' + tx('Start from a standard set') + '</div>'
-    + '<div class="s">real categories from the Google Product Taxonomy</div></div>'
-    + '<div class="mbody"><div style="font-size:var(--fs-2);line-height:1.6;color:var(--ink);margin-bottom:10px">'
-    + 'Pick the trade you are in and its usual categories are added, nested as the standard nests them. '
-    + '<b>Nothing you already have is changed</b> — names that already exist are skipped.'
-    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">⚠️ These are a starting point, not a '
-    + 'ceiling. Rename, retire or add your own afterwards — they are ordinary categories from the moment they '
-    + 'land.</div></div>'
-    + '<div class="bulklist">' + opts + '</div></div>'
-    + '<div class="mfoot"><button onclick="closeModal()">' + tx('Cancel') + '</button></div>');
+        '<button type="button" class="badd" data-testid="catg-seed-' +
+        esc(item) +
+        '"' +
+        ' onclick="cbcatSeedPick(\'' +
+        esc(item) +
+        '\')">' +
+        tx('See these →') +
+        '</button></div>'
+      );
+    })
+    .join('');
+  modal(
+    '<div class="mhd"><div class="t">' +
+      tx('Start from a standard set') +
+      '</div>' +
+      '<div class="s">real categories from the Google Product Taxonomy</div></div>' +
+      '<div class="mbody"><div style="font-size:var(--fs-2);line-height:1.6;color:var(--ink);margin-bottom:10px">' +
+      'Pick the trade you are in and its usual categories are added, nested as the standard nests them. ' +
+      '<b>Nothing you already have is changed</b> — names that already exist are skipped.' +
+      '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">⚠️ These are a starting point, not a ' +
+      'ceiling. Rename, retire or add your own afterwards — they are ordinary categories from the moment they ' +
+      'land.</div></div>' +
+      '<div class="bulklist">' +
+      opts +
+      '</div></div>' +
+      '<div class="mfoot"><button onclick="closeModal()">' +
+      tx('Cancel') +
+      '</button></div>'
+  );
 }
 /**
  * ── ⭐⭐ SEE WHAT IS IN A SET, AND TAKE THE PART YOU WANT ──────────────────────────────────────────────────────
@@ -352,93 +493,142 @@ function cbcatSeedAsk(){
 var CBCAT_SEED = { v: null, sel: null };
 
 /** Children of a node, and their children — used by both cascade directions. */
-function cbcatSeedKids(nodes, gid){
-  var out = [], q = [gid];
-  while (q.length) {
-    var g = q.shift();
-    nodes.forEach(function(n){ if (n.parent === g) { out.push(n.gid); q.push(n.gid); } });
+function cbcatSeedKids(nodes, gid) {
+  var out = [],
+    list = [gid];
+  while (list.length) {
+    var g = list.shift();
+    nodes.forEach(function (item) {
+      if (item.parent === g) {
+        out.push(item.gid);
+        list.push(item.gid);
+      }
+    });
   }
   return out;
 }
 
-function cbcatSeedPick(v){
-  var set = CB_STARTER_CATEGORIES[v]; if (!set) return;
+function cbcatSeedPick(v) {
+  var set = CB_STARTER_CATEGORIES[v];
+  if (!set) return;
   CBCAT_SEED = { v: v, sel: {} };
-  set.nodes.forEach(function(n){ CBCAT_SEED.sel[n.gid] = 1; });   // everything, as "Add these" always did
+  set.nodes.forEach(function (item) {
+    CBCAT_SEED.sel[item.gid] = 1;
+  }); // everything, as "Add these" always did
 
-  var rows = set.nodes.map(function(n){
-    var kid = !!n.parent;
-    return '<label class="bulkrow" style="cursor:pointer' + (kid ? ';padding-inline-start:30px' : '') + '">'
-      + '<input type="checkbox" checked data-seedgid="' + esc(n.gid) + '"'
-      + ' data-testid="catg-seed-node-' + esc(n.gid) + '"'
-      + ' onchange="cbcatSeedTick(\'' + esc(n.gid) + '\', this.checked)">'
-      + '<span class="bn" style="font-weight:' + (kid ? '400' : '700') + '">' + esc(n.name) + '</span>'
-      /**
-       * ⚠️⚠️ THE TAXONOMY ID IS BEHIND 🧾 Spec — Athi, 2026-09-02: *"codes are there, what are those, are we
-       * using it inside… if it is something not useful to the person choosing we may not be required to
-       * showcase."*
-       *
-       * ⭐ MEASURED BEFORE ANSWERING: `gpc` appears in exactly ONE place in the whole codebase — the write, four
-       * lines from here. Nothing reads it, in the web or the API. It is stored so a category can one day carry
-       * its standard code to a feed or a counterparty's system (backlog 22 step 4), and it costs nothing to keep
-       * writing — but today it does nothing, and a category the person adds themselves never gets one at all.
-       *
-       * So on the row it was a bare number, meaning nothing to the reader, on the one screen whose entire job is
-       * choosing which NAMES to adopt. Kept for the reader who wants to verify the seed really is the published
-       * taxonomy — the same reader, and the same decision, as the STD_SCHEMES file path earlier today.
-       */
-      + ((typeof specOn === 'function' && specOn())
-          ? '<span class="bh" title="' + esc(tx('Google Product Taxonomy id — stored with the category, not yet read by anything'))
-            + '">' + esc(n.gid) + '</span>' : '')
-      + '</label>';
-  }).join('');
+  var rows = set.nodes
+    .map(function (item) {
+      var kid = !!item.parent;
+      return (
+        '<label class="bulkrow" style="cursor:pointer' +
+        (kid ? ';padding-inline-start:30px' : '') +
+        '">' +
+        '<input type="checkbox" checked data-seedgid="' +
+        esc(item.gid) +
+        '"' +
+        ' data-testid="catg-seed-node-' +
+        esc(item.gid) +
+        '"' +
+        ' onchange="cbcatSeedTick(\'' +
+        esc(item.gid) +
+        '\', this.checked)">' +
+        '<span class="bn" style="font-weight:' +
+        (kid ? '400' : '700') +
+        '">' +
+        esc(item.name) +
+        '</span>' +
+        /**
+         * ⚠️⚠️ THE TAXONOMY ID IS BEHIND 🧾 Spec — Athi, 2026-09-02: *"codes are there, what are those, are we
+         * using it inside… if it is something not useful to the person choosing we may not be required to
+         * showcase."*
+         *
+         * ⭐ MEASURED BEFORE ANSWERING: `gpc` appears in exactly ONE place in the whole codebase — the write, four
+         * lines from here. Nothing reads it, in the web or the API. It is stored so a category can one day carry
+         * its standard code to a feed or a counterparty's system (backlog 22 step 4), and it costs nothing to keep
+         * writing — but today it does nothing, and a category the person adds themselves never gets one at all.
+         *
+         * So on the row it was a bare number, meaning nothing to the reader, on the one screen whose entire job is
+         * choosing which NAMES to adopt. Kept for the reader who wants to verify the seed really is the published
+         * taxonomy — the same reader, and the same decision, as the STD_SCHEMES file path earlier today.
+         */
+        (typeof specOn === 'function' && specOn()
+          ? '<span class="bh" title="' +
+            esc(tx('Google Product Taxonomy id — stored with the category, not yet read by anything')) +
+            '">' +
+            esc(item.gid) +
+            '</span>'
+          : '') +
+        '</label>'
+      );
+    })
+    .join('');
 
-  modal('<div class="mhd"><div class="t">' + esc(set.title) + '</div>'
-    + '<div class="s">' + tx('real categories from the Google Product Taxonomy') + '</div></div>'
-    + '<div class="mbody">'
-    + '<div style="font-size:var(--fs-2);line-height:1.6;margin-bottom:8px">'
-    + tx('Untick anything you do not want. A child needs its parent, so those two travel together.')
-    + '</div>'
-    /* ⚠️ SMALL PILLS, NOT `.btn ghost` — which is a full-width primary inside a modal footer and rendered these
+  modal(
+    '<div class="mhd"><div class="t">' +
+      esc(set.title) +
+      '</div>' +
+      '<div class="s">' +
+      tx('real categories from the Google Product Taxonomy') +
+      '</div></div>' +
+      '<div class="mbody">' +
+      '<div style="font-size:var(--fs-2);line-height:1.6;margin-bottom:8px">' +
+      tx('Untick anything you do not want. A child needs its parent, so those two travel together.') +
+      '</div>' +
+      /* ⚠️ SMALL PILLS, NOT `.btn ghost` — which is a full-width primary inside a modal footer and rendered these
        two as the loudest things on a screen whose subject is the list below them. The same pill the set rows
        already use (`.bulkrow button`), so the modal has one button vocabulary rather than two. */
-    + '<div style="display:flex;gap:7px;align-items:center;margin-bottom:8px">'
-    + '<button type="button" data-testid="catg-seed-all" onclick="cbcatSeedAll(true)"'
-    + ' style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:20px;'
-    + 'padding:3px 12px;font-size:var(--fs-1);cursor:pointer">' + tx('All') + '</button>'
-    + '<button type="button" data-testid="catg-seed-none" onclick="cbcatSeedAll(false)"'
-    + ' style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:20px;'
-    + 'padding:3px 12px;font-size:var(--fs-1);cursor:pointer">' + tx('None') + '</button>'
-    + '<span id="cbcat_seed_n" style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey);'
-    + 'white-space:nowrap"></span>'
-    + '</div>'
-    + '<div class="bulklist">' + rows + '</div>'
-    /* ⭐ "plus few more of their own" — created alongside, as ordinary top-level categories. They are NOT part of
+      '<div style="display:flex;gap:7px;align-items:center;margin-bottom:8px">' +
+      '<button type="button" data-testid="catg-seed-all" onclick="cbcatSeedAll(true)"' +
+      ' style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:20px;' +
+      'padding:3px 12px;font-size:var(--fs-1);cursor:pointer">' +
+      tx('All') +
+      '</button>' +
+      '<button type="button" data-testid="catg-seed-none" onclick="cbcatSeedAll(false)"' +
+      ' style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:20px;' +
+      'padding:3px 12px;font-size:var(--fs-1);cursor:pointer">' +
+      tx('None') +
+      '</button>' +
+      '<span id="cbcat_seed_n" style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey);' +
+      'white-space:nowrap"></span>' +
+      '</div>' +
+      '<div class="bulklist">' +
+      rows +
+      '</div>' +
+      /* ⭐ "plus few more of their own" — created alongside, as ordinary top-level categories. They are NOT part of
        the standard, so they carry no `gpc` id: claiming a taxonomy code for a name somebody typed would put a
        false citation on the record, and the whole point of the seed is that the codes are real. */
-    + '<div style="margin-top:11px">'
-    + '<label class="fl">' + tx('Add your own as well') + '</label>'
-    + '<input class="inp" id="cbcat_seed_own" data-testid="catg-seed-own"'
-    + ' placeholder="' + esc(tx('one per line, or separated by commas')) + '">'
-    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">'
-    + tx('Yours are created at the top level, with no standard code — they are not part of this taxonomy.')
-    + '</div></div>'
-    + '</div>'
-    + '<div class="mfoot"><button onclick="closeModal()">' + tx('Cancel') + '</button>'
-    + '<button class="pri" id="cbcat_seed_go" data-testid="catg-seed-go" onclick="cbcatSeedGo()"></button></div>', true);
+      '<div style="margin-top:11px">' +
+      '<label class="fl">' +
+      tx('Add your own as well') +
+      '</label>' +
+      '<input class="inp" id="cbcat_seed_own" data-testid="catg-seed-own"' +
+      ' placeholder="' +
+      esc(tx('one per line, or separated by commas')) +
+      '">' +
+      '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">' +
+      tx('Yours are created at the top level, with no standard code — they are not part of this taxonomy.') +
+      '</div></div>' +
+      '</div>' +
+      '<div class="mfoot"><button onclick="closeModal()">' +
+      tx('Cancel') +
+      '</button>' +
+      '<button class="pri" id="cbcat_seed_go" data-testid="catg-seed-go" onclick="cbcatSeedGo()"></button></div>',
+    true
+  );
   cbcatSeedCount();
 }
 
 /** The counter and the primary's label — the only two things a tick changes. */
-function cbcatSeedCount(){
+function cbcatSeedCount() {
   var set = CB_STARTER_CATEGORIES[CBCAT_SEED.v] || { nodes: [] };
-  var n = Object.keys(CBCAT_SEED.sel || {}).length, tot = set.nodes.length;
+  var n = Object.keys(CBCAT_SEED.sel || {}).length,
+    tot = set.nodes.length;
   var el = document.getElementById('cbcat_seed_n');
   if (el) el.textContent = txf('{n} of {tot} selected', { n: n, tot: tot });
-  var go = document.getElementById('cbcat_seed_go');
-  if (go) {
-    go.textContent = n ? txn('Add {count} category', 'Add {count} categories', n) : tx('Add your own only');
-    go.disabled = false;
+  var node = document.getElementById('cbcat_seed_go');
+  if (node) {
+    node.textContent = n ? txn('Add {count} category', 'Add {count} categories', n) : tx('Add your own only');
+    node.disabled = false;
   }
 }
 
@@ -446,40 +636,63 @@ function cbcatSeedCount(){
  * ⚠️ THE DOM IS UPDATED DIRECTLY, NOT BY REPAINTING THE LIST. Re-rendering would throw away whatever has been
  * typed into "add your own" and drop the reader back at the top of a 26-row list mid-decision.
  */
-function cbcatSeedTick(gid, on){
-  var set = CB_STARTER_CATEGORIES[CBCAT_SEED.v]; if (!set) return;
-  var touch = [gid].concat(on
-    ? cbcatSeedAncestors(set.nodes, gid)      // a child needs its parent
-    : cbcatSeedKids(set.nodes, gid));         // a parent's children cannot outlive it
-  touch.forEach(function(g){
-    if (on) CBCAT_SEED.sel[g] = 1; else delete CBCAT_SEED.sel[g];
-    var box = document.querySelector('[data-seedgid="' + g + '"]');
+function cbcatSeedTick(gid, on) {
+  var set = CB_STARTER_CATEGORIES[CBCAT_SEED.v];
+  if (!set) return;
+  var touch = [gid].concat(
+    on
+      ? cbcatSeedAncestors(set.nodes, gid) // a child needs its parent
+      : cbcatSeedKids(set.nodes, gid)
+  ); // a parent's children cannot outlive it
+  touch.forEach(function (item) {
+    if (on) CBCAT_SEED.sel[item] = 1;
+    else delete CBCAT_SEED.sel[item];
+    var box = document.querySelector('[data-seedgid="' + item + '"]');
     if (box) box.checked = !!on;
   });
   cbcatSeedCount();
 }
 
-function cbcatSeedAncestors(nodes, gid){
-  var out = [], by = {};
-  nodes.forEach(function(n){ by[n.gid] = n; });
+function cbcatSeedAncestors(nodes, gid) {
+  var out = [],
+    by = {};
+  nodes.forEach(function (item) {
+    by[item.gid] = item;
+  });
   var cur = by[gid];
-  while (cur && cur.parent) { out.push(cur.parent); cur = by[cur.parent]; }
+  while (cur && cur.parent) {
+    out.push(cur.parent);
+    cur = by[cur.parent];
+  }
   return out;
 }
 
-function cbcatSeedAll(on){
-  var set = CB_STARTER_CATEGORIES[CBCAT_SEED.v]; if (!set) return;
+function cbcatSeedAll(on) {
+  var set = CB_STARTER_CATEGORIES[CBCAT_SEED.v];
+  if (!set) return;
   CBCAT_SEED.sel = {};
-  set.nodes.forEach(function(n){ if (on) CBCAT_SEED.sel[n.gid] = 1; });
-  document.querySelectorAll('[data-seedgid]').forEach(function(b){ b.checked = !!on; });
+  set.nodes.forEach(function (item) {
+    if (on) CBCAT_SEED.sel[item.gid] = 1;
+  });
+  document.querySelectorAll('[data-seedgid]').forEach(function (item) {
+    item.checked = !!on;
+  });
   cbcatSeedCount();
 }
 
-function cbcatSeedGo(){
+function cbcatSeedGo() {
   var el = document.getElementById('cbcat_seed_own');
-  var own = (el ? el.value : '').split(/[\n,]/).map(function(s){ return s.trim(); }).filter(Boolean);
+  var own = (el ? el.value : '')
+    .split(/[\n,]/)
+    .map(function (item) {
+      return item.trim();
+    })
+    .filter(Boolean);
   var sel = Object.assign({}, CBCAT_SEED.sel || {});
-  if (!Object.keys(sel).length && !own.length) { toast(tx('Nothing selected.'), true); return; }
+  if (!Object.keys(sel).length && !own.length) {
+    toast(tx('Nothing selected.'), true);
+    return;
+  }
   cbcatSeedRun(CBCAT_SEED.v, sel, own);
 }
 
@@ -488,33 +701,63 @@ function cbcatSeedGo(){
  *              caller that has not learned about the picker still works exactly as it did.
  * @param own   names the reader typed, created at the top level with no standard code.
  */
-async function cbcatSeedRun(vertical, only, own){
-  var set = CB_STARTER_CATEGORIES[vertical]; if (!set) return;
+async function cbcatSeedRun(vertical, only, own) {
+  var set = CB_STARTER_CATEGORIES[vertical];
+  if (!set) return;
   closeModal();
   /* ⚠️ Filtered BEFORE the count, or the progress line promises rows that were never going to be created. */
-  var picked = only ? set.nodes.filter(function(n){ return !!only[n.gid]; }) : set.nodes.slice();
+  var picked = only
+    ? set.nodes.filter(function (item) {
+        return !!only[item.gid];
+      })
+    : set.nodes.slice();
   var ownNames = (own || []).slice();
   showBusy(txn('Adding {count} category…', 'Adding {count} categories…', picked.length + ownNames.length));
-  var made = {}, added = 0, skipped = 0, failed = 0;
+  var made = {},
+    added = 0,
+    skipped = 0,
+    failed = 0;
   try {
     var have = {};
-    (CBCAT_UI.list || []).forEach(function(c){ have[c.name.toLowerCase()] = c.id; });
+    (CBCAT_UI.list || []).forEach(function (item) {
+      have[item.name.toLowerCase()] = item.id;
+    });
     /* Ordered so a parent always exists before its child asks for it. */
-    var ordered = picked.slice().sort(function(a,b){ return (a.parent ? 1 : 0) - (b.parent ? 1 : 0); });
-    for (var i = 0; i < ordered.length; i++) {
-      var n = ordered[i];
-      if (have[n.name.toLowerCase()]) { made[n.gid] = have[n.name.toLowerCase()]; skipped++; continue; }
-      var parentId = n.parent ? (made[n.parent] || null) : null;
+    var ordered = picked.slice().sort(function (first, second) {
+      return (first.parent ? 1 : 0) - (second.parent ? 1 : 0);
+    });
+    for (var index = 0; index < ordered.length; index++) {
+      var n = ordered[index];
+      if (have[n.name.toLowerCase()]) {
+        made[n.gid] = have[n.name.toLowerCase()];
+        skipped++;
+        continue;
+      }
+      var parentId = n.parent ? made[n.parent] || null : null;
       try {
-        var r = await api('defAdd', { body: { kind: 'category', sub_kind: null, name: n.name, note: '',
-          /* ⚠️ `gpc` keeps the taxonomy id beside the parent, so a category can later carry its standard code
+        var reply = await api('defAdd', {
+          body: {
+            kind: 'category',
+            sub_kind: null,
+            name: n.name,
+            note: '',
+            /* ⚠️ `gpc` keeps the taxonomy id beside the parent, so a category can later carry its standard code
              instead of being re-matched by name. Costs nothing now and is the hook backlog 22 step 4 needs. */
-          rules: { parent: parentId, gpc: n.gid } } });
-        var id = r && (r.definition_id || (r.definition && r.definition.definition_id));
-        if (!id) { failed++; continue; }
+            rules: { parent: parentId, gpc: n.gid }
+          }
+        });
+        var id = reply && (reply.definition_id || (reply.definition && reply.definition.definition_id));
+        if (!id) {
+          failed++;
+          continue;
+        }
         await api('defSave', { params: { id: id }, body: { status: 'live' } });
-        made[n.gid] = id; have[n.name.toLowerCase()] = id; added++;
-      } catch (e) { failed++; }
+        made[n.gid] = id;
+        have[n.name.toLowerCase()] = id;
+        added++;
+      } catch (e) {
+        failed++;
+      }
     }
     /**
      * ⭐ "plus few more of their own" — created in the SAME run so one press does the whole job.
@@ -525,55 +768,103 @@ async function cbcatSeedRun(vertical, only, own){
      * constraint would otherwise fail the row, and silently renaming somebody's category to make room is worse.
      */
     for (var j = 0; j < ownNames.length; j++) {
-      var nm = ownNames[j];
-      if (have[nm.toLowerCase()]) { skipped++; continue; }
+      var text = ownNames[j];
+      if (have[text.toLowerCase()]) {
+        skipped++;
+        continue;
+      }
       try {
-        var ro = await api('defAdd', { body: { kind: 'category', sub_kind: null, name: nm, note: '',
-          rules: { parent: null } } });
+        var ro = await api('defAdd', { body: { kind: 'category', sub_kind: null, name: text, note: '', rules: { parent: null } } });
         var oid = ro && (ro.definition_id || (ro.definition && ro.definition.definition_id));
-        if (!oid) { failed++; continue; }
+        if (!oid) {
+          failed++;
+          continue;
+        }
         await api('defSave', { params: { id: oid }, body: { status: 'live' } });
-        have[nm.toLowerCase()] = oid; added++;
-      } catch (e) { failed++; }
+        have[text.toLowerCase()] = oid;
+        added++;
+      } catch (e) {
+        failed++;
+      }
     }
-  } finally { hideBusy(); }
+  } finally {
+    hideBusy();
+  }
   if (typeof cbCatgLive === 'function') await cbCatgLive(true);
   await cbcatLoad(true);
   /* ⚠️ Report skips and failures. A seed that says "done" while a third of it silently did not land is how
      someone spends an afternoon wondering where their tree went. */
-  toast(added + ' added'
-    + (skipped ? ' · ' + skipped + ' already there' : '')
-    + (failed ? ' · ' + failed + ' could not be created' : ''), failed ? true : false);
+  toast(
+    added + ' added' + (skipped ? ' · ' + skipped + ' already there' : '') + (failed ? ' · ' + failed + ' could not be created' : ''),
+    failed ? true : false
+  );
 }
 
 /* ── interaction ─────────────────────────────────────────────────────────────────────────────────────────────── */
-function cbcatSelect(id){ CBCAT_UI.sel = id; CBCAT_UI.mode = 'view'; CBCAT_UI.form = null;
-  if (UI.vp === 'mob') { UI.mdetail = true; var p = document.getElementById('panel'); if (p) p.classList.add('showdetail'); }
-  cbcatPaint(); }
+function cbcatSelect(id) {
+  CBCAT_UI.sel = id;
+  CBCAT_UI.mode = 'view';
+  CBCAT_UI.form = null;
+  if (UI.vp === 'mob') {
+    UI.mdetail = true;
+    var node = document.getElementById('panel');
+    if (node) node.classList.add('showdetail');
+  }
+  cbcatPaint();
+}
 /** The whole `rules` object a category writes. ⚠️ ONE builder, both call sites — see the note in cbcatSave. */
-function cbcatRules(f){
+function cbcatRules(f) {
   return { parent: f.parent || null, default_slab: f.default_slab || null };
 }
-function cbcatNew(){ CBCAT_UI.mode = 'edit'; CBCAT_UI.sel = null; CBCAT_UI.form = { id: null, name: '', note: '', parent: CBCAT_UI.sel || null, default_slab: null };
-  if (UI.vp === 'mob') { UI.mdetail = true; var p = document.getElementById('panel'); if (p) p.classList.add('showdetail'); }
-  cbcatPaint(); }
-function cbcatEdit(id){
-  var c = (CBCAT_UI.list || []).filter(function(x){ return x.id === id; })[0]; if (!c) return;
-  CBCAT_UI.mode = 'edit'; CBCAT_UI.form = { id: c.id, name: c.name, note: c.note, parent: c.parent || null,
-                                            default_slab: c.default_slab || null }; cbcatPaint();
+function cbcatNew() {
+  CBCAT_UI.mode = 'edit';
+  CBCAT_UI.sel = null;
+  CBCAT_UI.form = { id: null, name: '', note: '', parent: CBCAT_UI.sel || null, default_slab: null };
+  if (UI.vp === 'mob') {
+    UI.mdetail = true;
+    var node = document.getElementById('panel');
+    if (node) node.classList.add('showdetail');
+  }
+  cbcatPaint();
 }
-function cbcatCancel(){ CBCAT_UI.mode = 'view'; CBCAT_UI.form = null; cbcatPaint(); }
-function cbcatField(k, v){ if (CBCAT_UI.form) CBCAT_UI.form[k] = v; }
-function cbcatSearch(v){ CBCAT_UI.q = v; cbcatPaintList(); }
-function cbcatBack(){ UI.mdetail = false; var p = document.getElementById('panel'); if (p) p.classList.remove('showdetail'); }
+function cbcatEdit(id) {
+  var c = (CBCAT_UI.list || []).filter(function (x) {
+    return x.id === id;
+  })[0];
+  if (!c) return;
+  CBCAT_UI.mode = 'edit';
+  CBCAT_UI.form = { id: c.id, name: c.name, note: c.note, parent: c.parent || null, default_slab: c.default_slab || null };
+  cbcatPaint();
+}
+function cbcatCancel() {
+  CBCAT_UI.mode = 'view';
+  CBCAT_UI.form = null;
+  cbcatPaint();
+}
+function cbcatField(k, v) {
+  if (CBCAT_UI.form) CBCAT_UI.form[k] = v;
+}
+function cbcatSearch(v) {
+  CBCAT_UI.q = v;
+  cbcatPaintList();
+}
+function cbcatBack() {
+  UI.mdetail = false;
+  var node = document.getElementById('panel');
+  if (node) node.classList.remove('showdetail');
+}
 
 /* ── render ──────────────────────────────────────────────────────────────────────────────────────────────────── */
-function cbcatVisible(){
+function cbcatVisible() {
   var q = (CBCAT_UI.q || '').trim().toLowerCase();
   var a = CBCAT_UI.list || [];
-  return q ? a.filter(function(c){ return (c.name + ' ' + c.note).toLowerCase().indexOf(q) >= 0; }) : a;
+  return q
+    ? a.filter(function (item) {
+        return (item.name + ' ' + item.note).toLowerCase().indexOf(q) >= 0;
+      })
+    : a;
 }
-function cbcatRowsHTML(){
+function cbcatRowsHTML() {
   if (CBCAT_UI.busy && !CBCAT_UI.list) return '<div class="loadwrap"><span class="spin"></span> loading…</div>';
   if (CBCAT_UI.err) return '<div class="cbcat-err">' + esc(CBCAT_UI.err) + '</div>';
   var rows = cbcatVisible();
@@ -582,142 +873,270 @@ function cbcatRowsHTML(){
        'make a category' is the wrong next step when the real one is 'type a different word'. */
     return CBCAT_UI.q
       ? emptyState('🏷️', tx('Nothing matches that'), tx('Try a different word.'))
-      : emptyState('🏷️', tx('No categories yet'),
-          tx('A category is how a shelf gets sorted. Attach products to it from the Catalogue.'),
-          { label: tx('+ New category'), onclick: 'cbcatNew()' });
+      : emptyState('🏷️', tx('No categories yet'), tx('A category is how a shelf gets sorted. Attach products to it from the Catalogue.'), {
+          label: tx('+ New category'),
+          onclick: 'cbcatNew()'
+        });
   }
   /* ⭐ lazyWrap draws 50 and reveals the rest — a shop with a deep scheme can carry hundreds of shelves. */
-  return lazyWrap('cbcat', rows, function(c){
+  return lazyWrap('cbcat', rows, function (c) {
     var n = (CBCAT_UI.counts && CBCAT_UI.counts.by[c.id]) || 0;
     var ret = c.status === 'retired';
-    return '<div class="row' + (c.id === CBCAT_UI.sel ? ' sel' : '') + '" data-testid="catg-row-' + esc(c.id) + '"'
-      + ' onclick="cbcatSelect(\'' + esc(c.id) + '\')"' + (ret ? ' style="opacity:.72"' : '') + '>'
-      + '<div style="flex:1;min-width:0;padding-inline-start:' + ((c.depth||0)*16) + 'px">'
-      +   '<div style="display:flex;align-items:center;gap:7px">'
-      +     '<b style="font-size:var(--fs-3)' + (ret ? ';text-decoration:line-through' : '') + '">' + esc(c.name) + '</b>'
-      +     (ret ? '<span class="cbcat-badge ret">retired</span>' : '')
-      +   '</div>'
-      +   (c.note ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:1px">' + esc(c.note) + '</div>' : '')
-      +   cbcatOfferLinesHTML(c.id)
-      + '</div>'
+    return (
+      '<div class="row' +
+      (c.id === CBCAT_UI.sel ? ' sel' : '') +
+      '" data-testid="catg-row-' +
+      esc(c.id) +
+      '"' +
+      ' onclick="cbcatSelect(\'' +
+      esc(c.id) +
+      '\')"' +
+      (ret ? ' style="opacity:.72"' : '') +
+      '>' +
+      '<div style="flex:1;min-width:0;padding-inline-start:' +
+      (c.depth || 0) * 16 +
+      'px">' +
+      '<div style="display:flex;align-items:center;gap:7px">' +
+      '<b style="font-size:var(--fs-3)' +
+      (ret ? ';text-decoration:line-through' : '') +
+      '">' +
+      esc(c.name) +
+      '</b>' +
+      (ret ? '<span class="cbcat-badge ret">retired</span>' : '') +
+      '</div>' +
+      (c.note ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:1px">' + esc(c.note) + '</div>' : '') +
+      cbcatOfferLinesHTML(c.id) +
+      '</div>' +
       /* The count is the reason to look at this list at all — which shelves are actually carrying anything. */
-      + cbcatTaxChipHTML(c.id)
-      + '<span class="cbcat-n" title="products in this category">' + n + '</span>'
-      + '</div>';
+      cbcatTaxChipHTML(c.id) +
+      '<span class="cbcat-n" title="products in this category">' +
+      n +
+      '</span>' +
+      '</div>'
+    );
   });
 }
-function cbcatDetailHTML(){
+function cbcatDetailHTML() {
   if (CBCAT_UI.mode === 'edit') {
     var f = CBCAT_UI.form || { name: '', note: '' };
     var editing = !!f.id;
-    return '<div class="dh"><button class="dback" onclick="cbcatBack()">‹ Categories</button>'
+    return (
+      '<div class="dh"><button class="dback" onclick="cbcatBack()">‹ Categories</button>' +
       /* ⭐ "EDIT", NOT "RENAME". Athi, 2026-09-03: *"You are bringing category organization (sits under) under
          rename … Is it renaming? so do we have a proper name for that?"* The form edits three facts — name, PARENT,
          note — and only one of them is a rename. Moving a category is a different act: every product under it
          travels, so the parent field says how many. */
-      + '<div class="dt">' + (editing ? tx('Edit category') : tx('New category')) + '</div>'
-      + '<div class="ds">' + (editing ? tx('name · parent · note — products follow') : tx('goes on the shelf live')) + '</div></div>'
-      + '<div class="db">' + (editing ? cbcatEditTabsHTML(f.id) : '') + ((editing && (CBCAT_UI.etab || 'category') === 'products') ? cbcatProductTicksHTML(f.id) : '') + '<div data-testid="catg-eform"' + ((editing && (CBCAT_UI.etab || 'category') === 'products') ? ' hidden' : '') + '>'
-      + (editing
-          ? '<div class="cbcat-note">'
-            + txf('Renaming is safe — every product follows. ⚠️ A copy of the old name travels with items already in a {other} catalogue, and that copy deliberately does not change.', {
-                other: tx('counterparty’s') })
-            /* ⭐ WHY it is safe is the mechanism: products cite the category by id, not by the word. */
-            + specNote('categories.rename', 'Products cite a category by <b>id</b>, never by its word, so a rename propagates without touching any item.')
-            + '</div>'
-          : '')
-      + '<label class="fl">' + tx('Name') + '</label>'
-      + '<input class="inp" id="cbcat_name" data-testid="catg-name" value="' + esc(f.name || '') + '"'
-      + ' placeholder="Grains" oninput="cbcatField(\'name\',this.value)">'
-      + '<label class="fl">' + tx('Parent category') + '</label>'
-      + cbcatParentPickHTML(f)
-      + (editing
-          ? '<div style="font-size:var(--fs-1);color:var(--grey);margin:-4px 0 8px">'
-            + txf('Changing the parent MOVES this category — {n} product(s) travel with it, and every product under it inherits the new branch.',
-                  { n: String((CBCAT_UI.counts && CBCAT_UI.counts.by && CBCAT_UI.counts.by[f.id]) || 0) })
-            + '</div>'
-          : '')
-      + '<label class="fl">' + tx('Default tax slab') + '</label>'
-      + cbcatSlabPickHTML(f)
+      '<div class="dt">' +
+      (editing ? tx('Edit category') : tx('New category')) +
+      '</div>' +
+      '<div class="ds">' +
+      (editing ? tx('name · parent · note — products follow') : tx('goes on the shelf live')) +
+      '</div></div>' +
+      '<div class="db">' +
+      (editing ? cbcatEditTabsHTML(f.id) : '') +
+      (editing && (CBCAT_UI.etab || 'category') === 'products' ? cbcatProductTicksHTML(f.id) : '') +
+      '<div data-testid="catg-eform"' +
+      (editing && (CBCAT_UI.etab || 'category') === 'products' ? ' hidden' : '') +
+      '>' +
+      (editing
+        ? '<div class="cbcat-note">' +
+          txf(
+            'Renaming is safe — every product follows. ⚠️ A copy of the old name travels with items already in a {other} catalogue, and that copy deliberately does not change.',
+            {
+              other: tx('counterparty’s')
+            }
+          ) +
+          /* ⭐ WHY it is safe is the mechanism: products cite the category by id, not by the word. */
+          specNote('categories.rename', 'Products cite a category by <b>id</b>, never by its word, so a rename propagates without touching any item.') +
+          '</div>'
+        : '') +
+      '<label class="fl">' +
+      tx('Name') +
+      '</label>' +
+      '<input class="inp" id="cbcat_name" data-testid="catg-name" value="' +
+      esc(f.name || '') +
+      '"' +
+      ' placeholder="Grains" oninput="cbcatField(\'name\',this.value)">' +
+      '<label class="fl">' +
+      tx('Parent category') +
+      '</label>' +
+      cbcatParentPickHTML(f) +
+      (editing
+        ? '<div style="font-size:var(--fs-1);color:var(--grey);margin:-4px 0 8px">' +
+          txf('Changing the parent MOVES this category — {n} product(s) travel with it, and every product under it inherits the new branch.', {
+            n: String((CBCAT_UI.counts && CBCAT_UI.counts.by && CBCAT_UI.counts.by[f.id]) || 0)
+          }) +
+          '</div>'
+        : '') +
+      '<label class="fl">' +
+      tx('Default tax slab') +
+      '</label>' +
+      cbcatSlabPickHTML(f) +
       /* ⭐ THE OFFERS SIT BESIDE THE SLAB ON THE EDIT FORM TOO — Athi, 2026-09-05: "the right side shows the tax but not
          the offer attached?" A tick saves to the OFFER straight away (its targets), not with this form's Save. */
-      + (editing ? cbcatOfferTicksHTML(f.id) : '') + '</div>' + (false ? '' : '')
-      + '<label class="fl">' + tx('Note') + '</label>'
-      + '<input class="inp" value="' + esc(f.note || '') + '" placeholder="optional — what belongs here"'
-      + ' oninput="cbcatField(\'note\',this.value)">'
-      + '<div class="err" id="cbcat_err" style="margin-top:8px"></div>'
-      + '</div>'
-      + '<div class="actbar"><button class="pri" data-testid="catg-save" onclick="cbcatSave()">'
-      + (editing ? 'Save' : 'Create') + '</button><button onclick="cbcatCancel()">' + tx('Cancel') + '</button></div>';
+      (editing ? cbcatOfferTicksHTML(f.id) : '') +
+      '</div>' +
+      (false ? '' : '') +
+      '<label class="fl">' +
+      tx('Note') +
+      '</label>' +
+      '<input class="inp" value="' +
+      esc(f.note || '') +
+      '" placeholder="optional — what belongs here"' +
+      ' oninput="cbcatField(\'note\',this.value)">' +
+      '<div class="err" id="cbcat_err" style="margin-top:8px"></div>' +
+      '</div>' +
+      '<div class="actbar"><button class="pri" data-testid="catg-save" onclick="cbcatSave()">' +
+      (editing ? 'Save' : 'Create') +
+      '</button><button onclick="cbcatCancel()">' +
+      tx('Cancel') +
+      '</button></div>'
+    );
   }
 
-  var c = (CBCAT_UI.list || []).filter(function(x){ return x.id === CBCAT_UI.sel; })[0];
+  var c = (CBCAT_UI.list || []).filter(function (x) {
+    return x.id === CBCAT_UI.sel;
+  })[0];
   if (!c) {
     /* ⚠️ THE SCHEMES SHOW HERE TOO. They describe classification in general, not one category — so hanging them
        only off a selected row meant they were invisible on the screen someone lands on. */
     /* ⭐ 'Or make a new one' was prose pointing at a button elsewhere. It is the button now. */
-    return '<div class="db">' + emptyState('🏷️', tx('Pick a category'),
-        tx('Categories sort your catalogue and give buyers a way to narrow it.'),
-        { label: tx('+ New category'), onclick: 'cbcatNew()' })
-      + cbcatSchemesHTML() + '</div>';
+    return (
+      '<div class="db">' +
+      emptyState('🏷️', tx('Pick a category'), tx('Categories sort your catalogue and give buyers a way to narrow it.'), {
+        label: tx('+ New category'),
+        onclick: 'cbcatNew()'
+      }) +
+      cbcatSchemesHTML() +
+      '</div>'
+    );
   }
   var n = (CBCAT_UI.counts && CBCAT_UI.counts.by[c.id]) || 0;
   var ret = c.status === 'retired';
-  var mine = (UI.prods || []).filter(function(p){ return catgIdsOf((p && (p.item_data || p)) || {}).indexOf(c.id) >= 0; });
-  return '<div class="dh"><button class="dback" onclick="cbcatBack()">‹ Categories</button>'
-    + '<div class="dt">' + esc(c.name) + (ret ? ' <span class="cbcat-badge ret">retired</span>' : '') + '</div>'
-    + '<div class="ds">' + (c.note ? esc(c.note) : (n + ' product' + (n === 1 ? '' : 's'))) + '</div></div>'
-    + '<div class="db">'
-    + (ret ? '<div class="cbcat-note warn">This category is <b>retired</b>. It cannot be attached to anything new. '
-           + 'Products that already cite it keep the citation.</div>' : '')
-    + (function(){ var t = cbcatTaxOf(c.id); return '<div class="sec">' + tx('Applied here') + '</div>'
-        + '<div class="cbcat-stat" data-testid="catg-tax-applied"><span class="v">' + (t === null ? '…' : t ? (t.dead ? '⚠️' : (t.rate === null || t.rate === undefined ? '?' : t.rate + '%')) : '—') + '</span>'
-        + '<span class="k">' + (t === null ? tx('reading the slabs…') : t ? (t.dead ? tx('cites a slab that is not active') : esc(t.name || '') + (t.inherited_from ? ' · ' + esc(tx('inherited from') + ' ' + t.inherited_from) : ' · ' + tx('set on this category'))) : tx('no slab here or above — products fall to the catalogue default')) + '</span></div>'; })()
+  var mine = (UI.prods || []).filter(function (item) {
+    return catgIdsOf((item && (item.item_data || item)) || {}).indexOf(c.id) >= 0;
+  });
+  return (
+    '<div class="dh"><button class="dback" onclick="cbcatBack()">‹ Categories</button>' +
+    '<div class="dt">' +
+    esc(c.name) +
+    (ret ? ' <span class="cbcat-badge ret">retired</span>' : '') +
+    '</div>' +
+    '<div class="ds">' +
+    (c.note ? esc(c.note) : n + ' product' + (n === 1 ? '' : 's')) +
+    '</div></div>' +
+    '<div class="db">' +
+    (ret
+      ? '<div class="cbcat-note warn">This category is <b>retired</b>. It cannot be attached to anything new. ' +
+        'Products that already cite it keep the citation.</div>'
+      : '') +
+    (function () {
+      var t = cbcatTaxOf(c.id);
+      return (
+        '<div class="sec">' +
+        tx('Applied here') +
+        '</div>' +
+        '<div class="cbcat-stat" data-testid="catg-tax-applied"><span class="v">' +
+        (t === null ? '…' : t ? (t.dead ? '⚠️' : t.rate === null || t.rate === undefined ? '?' : t.rate + '%') : '—') +
+        '</span>' +
+        '<span class="k">' +
+        (t === null
+          ? tx('reading the slabs…')
+          : t
+            ? t.dead
+              ? tx('cites a slab that is not active')
+              : esc(t.name || '') + (t.inherited_from ? ' · ' + esc(tx('inherited from') + ' ' + t.inherited_from) : ' · ' + tx('set on this category'))
+            : tx('no slab here or above — products fall to the catalogue default')) +
+        '</span></div>'
+      );
+    })() +
     /* ⚠️ the space is written, not left to the flex gap — it read "363products in this category" on the live
        screen, and a number welded to its noun is the kind of small wrongness that makes a figure look unchecked */
-    + '<div class="cbcat-stat"><span class="v">' + n + '</span> <span class="k">product' + (n === 1 ? '' : 's') + ' in this category</span></div>'
+    '<div class="cbcat-stat"><span class="v">' +
+    n +
+    '</span> <span class="k">product' +
+    (n === 1 ? '' : 's') +
+    ' in this category</span></div>' +
     /* ⭐ THE REVERSE VIEW. An offer can target a category ("10% off Paints") and until now only the offer knew.
        Athi, 2026-09-03: *"if we want to manage products at category level, can we add here, like this category is
        under offer."* Same live-offers read the product page uses — one loader, one cache. */
-    + cbcatOffersHereHTML(c.id)
+    cbcatOffersHereHTML(c.id) +
     /* View shows what APPLIES (the line above); the ticks to change it live on Edit — Athi, 2026-09-05 */
-    + '<div class="sec">' + tx('Products') + '</div>'
-    + (mine.length
-        ? '<div class="cbcat-plist">' + mine.slice(0, 60).map(function(p){
-            var d = (p.item_data || p), also = catgIdsOf(d).length - 1;
-            return '<div class="cbcat-prow"><span>' + esc(d.name || d.product || 'item') + '</span>'
+    '<div class="sec">' +
+    tx('Products') +
+    '</div>' +
+    (mine.length
+      ? '<div class="cbcat-plist">' +
+        mine
+          .slice(0, 60)
+          .map(function (item) {
+            var d = item.item_data || item,
+              also = catgIdsOf(d).length - 1;
+            return (
+              '<div class="cbcat-prow"><span>' +
+              esc(d.name || d.product || 'item') +
+              '</span>' +
               /* ⚠️ Say when a product is ALSO elsewhere. Without it this list reads as a partition, and someone
                  retiring a category would think they were emptying a shelf rather than removing one label. */
-              + (also > 0 ? '<span class="cbcat-also">+' + also + ' other categor' + (also === 1 ? 'y' : 'ies') + '</span>' : '')
-              + '</div>'; }).join('')
-          + (mine.length > 60 ? '<div class="cbcat-prow" style="color:var(--grey)">+' + (mine.length - 60) + ' more</div>' : '')
-          /**
-           * ⚠️⚠️ THE COUNT IS THE SHOP'S; THIS LIST IS ONLY WHAT IS LOADED. The tally comes from the server and
-           * is true of every row; the names below come from the catalogue page this screen happens to hold. On a
-           * ten-thousand-product shop those differ by a lot, and a heading reading "400 products" above three
-           * names is the kind of quiet contradiction that makes somebody distrust every other number on the page.
-           */
-          + (n > mine.length
-              ? '<div class="cbcat-prow" style="color:var(--grey)">' + (n - mine.length)
-                + ' more in this category, not loaded on this screen — open '
-                + '<span onclick="navTo(\'catalogue\')" style="color:var(--blue);font-weight:600;cursor:pointer">'
-                + tx('Catalogue') + '</span> to search them.</div>'
-              : '')
-          + '</div>'
-        : (n > 0
-            /* ⚠️ counted but none loaded: "nothing here yet" would be a flat lie */
-            ? '<div class="cbcat-none">' + n + ' product' + (n === 1 ? '' : 's') + ' ' + (n === 1 ? 'is' : 'are')
-              + ' filed here. None of them are loaded on this screen — open '
-              + '<span onclick="navTo(\'catalogue\')" style="color:var(--blue);font-weight:600;cursor:pointer">'
-              + tx('Catalogue') + '</span> to see them.</div>'
-            : '<div class="cbcat-none">Nothing here yet. Attach products from <span onclick="navTo(\'catalogue\')" style="color:var(--blue);font-weight:600;cursor:pointer">' + tx('Catalogue') + '</span> — tick them and press <b>' + tx('Categorise') + '</b>.</div>'))
-    + '<details style="margin-top:8px"><summary style="cursor:pointer;color:var(--grey);font-size:var(--fs-1)">ⓘ ' + tx('About standard sets and codes') + '</summary>' + cbcatSchemesHTML() + '</details>'
-    + '</div>'
-    + '<div class="actbar">'
-    +   (ret ? '<button class="pri" data-testid="catg-relive" onclick="cbcatRelive(\'' + esc(c.id) + '\')">' + tx('Put back on the shelf') + '</button>'
-            : '<button class="pri" data-testid="catg-edit" onclick="cbcatEdit(\'' + esc(c.id) + '\')">' + tx('Edit') + '</button>'
-              + '<button data-testid="catg-retire" onclick="cbcatRetire(\'' + esc(c.id) + '\')">' + tx('Retire') + '</button>')
-    + '</div>';
+              (also > 0 ? '<span class="cbcat-also">+' + also + ' other categor' + (also === 1 ? 'y' : 'ies') + '</span>' : '') +
+              '</div>'
+            );
+          })
+          .join('') +
+        (mine.length > 60 ? '<div class="cbcat-prow" style="color:var(--grey)">+' + (mine.length - 60) + ' more</div>' : '') +
+        /**
+         * ⚠️⚠️ THE COUNT IS THE SHOP'S; THIS LIST IS ONLY WHAT IS LOADED. The tally comes from the server and
+         * is true of every row; the names below come from the catalogue page this screen happens to hold. On a
+         * ten-thousand-product shop those differ by a lot, and a heading reading "400 products" above three
+         * names is the kind of quiet contradiction that makes somebody distrust every other number on the page.
+         */
+        (n > mine.length
+          ? '<div class="cbcat-prow" style="color:var(--grey)">' +
+            (n - mine.length) +
+            ' more in this category, not loaded on this screen — open ' +
+            '<span onclick="navTo(\'catalogue\')" style="color:var(--blue);font-weight:600;cursor:pointer">' +
+            tx('Catalogue') +
+            '</span> to search them.</div>'
+          : '') +
+        '</div>'
+      : n > 0
+        ? /* ⚠️ counted but none loaded: "nothing here yet" would be a flat lie */
+          '<div class="cbcat-none">' +
+          n +
+          ' product' +
+          (n === 1 ? '' : 's') +
+          ' ' +
+          (n === 1 ? 'is' : 'are') +
+          ' filed here. None of them are loaded on this screen — open ' +
+          '<span onclick="navTo(\'catalogue\')" style="color:var(--blue);font-weight:600;cursor:pointer">' +
+          tx('Catalogue') +
+          '</span> to see them.</div>'
+        : '<div class="cbcat-none">Nothing here yet. Attach products from <span onclick="navTo(\'catalogue\')" style="color:var(--blue);font-weight:600;cursor:pointer">' +
+          tx('Catalogue') +
+          '</span> — tick them and press <b>' +
+          tx('Categorise') +
+          '</b>.</div>') +
+    '<details style="margin-top:8px"><summary style="cursor:pointer;color:var(--grey);font-size:var(--fs-1)">ⓘ ' +
+    tx('About standard sets and codes') +
+    '</summary>' +
+    cbcatSchemesHTML() +
+    '</details>' +
+    '</div>' +
+    '<div class="actbar">' +
+    (ret
+      ? '<button class="pri" data-testid="catg-relive" onclick="cbcatRelive(\'' + esc(c.id) + '\')">' + tx('Put back on the shelf') + '</button>'
+      : '<button class="pri" data-testid="catg-edit" onclick="cbcatEdit(\'' +
+        esc(c.id) +
+        '\')">' +
+        tx('Edit') +
+        '</button>' +
+        '<button data-testid="catg-retire" onclick="cbcatRetire(\'' +
+        esc(c.id) +
+        '\')">' +
+        tx('Retire') +
+        '</button>') +
+    '</div>'
+  );
 }
 /**
  * ⭐ WHAT APPLIES TO A CATEGORY — Athi, 2026-09-05: "I applied 5% for the top category — it should reflect the categories
@@ -725,27 +1144,65 @@ function cbcatDetailHTML(){
  * currently applied and the products". The tax: the category's own slab, else the nearest ancestor's (rules.parent),
  * resolved against the same live slab list the product page uses. The offers: scoped to this category or to an ancestor.
  */
-function cbcatById(id){ return (CBCAT_UI.list || []).filter(function (x) { return x.id === id; })[0] || null; }
-function cbcatTaxOf(cid){
+function cbcatById(id) {
+  return (
+    (CBCAT_UI.list || []).filter(function (x) {
+      return x.id === id;
+    })[0] || null
+  );
+}
+function cbcatTaxOf(cid) {
   var slabs = (typeof cbDefsCached === 'function' && cbDefsCached('tax')) || null;
-  if (slabs === null && typeof cbDefsLive === 'function') { cbDefsLive('tax').then(cbcatPaint).catch(function(){}); return null; }
-  var by = {}; (slabs || []).forEach(function (d) { by[String(d.definition_id || d.id)] = d; });
-  var c = cbcatById(cid), hops = 0, from = null;
+  if (slabs === null && typeof cbDefsLive === 'function') {
+    cbDefsLive('tax')
+      .then(cbcatPaint)
+      .catch(function () {});
+    return null;
+  }
+  var by = {};
+  (slabs || []).forEach(function (item) {
+    by[String(item.definition_id || item.id)] = item;
+  });
+  var c = cbcatById(cid),
+    hops = 0,
+    from = null;
   while (c && hops++ < 16) {
     var sid = c.default_slab || c.slab || (c.rules && c.rules.default_slab);
-    if (sid && by[String(sid)]) { var d = by[String(sid)]; return { slab_id: String(sid), name: d.name, rate: (d.rules && d.rules.rate), inherited_from: from }; }
+    if (sid && by[String(sid)]) {
+      var d = by[String(sid)];
+      return { slab_id: String(sid), name: d.name, rate: d.rules && d.rules.rate, inherited_from: from };
+    }
     if (sid && !by[String(sid)]) return { slab_id: String(sid), name: null, rate: null, dead: true, inherited_from: from };
-    from = c.name; c = c.parent ? cbcatById(c.parent) : null;
+    from = c.name;
+    c = c.parent ? cbcatById(c.parent) : null;
   }
   return null;
 }
-function cbcatAncestorIds(cid){ var out = [], c = cbcatById(cid), hops = 0; while (c && c.parent && hops++ < 16) { out.push(c.parent); c = cbcatById(c.parent); } return out; }
-function cbcatTaxChipHTML(cid){
+function cbcatAncestorIds(cid) {
+  var out = [],
+    c = cbcatById(cid),
+    hops = 0;
+  while (c && c.parent && hops++ < 16) {
+    out.push(c.parent);
+    c = cbcatById(c.parent);
+  }
+  return out;
+}
+function cbcatTaxChipHTML(cid) {
   var t = cbcatTaxOf(cid);
   if (t === null) return '';
   if (t.dead) return '<span class="cbcat-badge" data-testid="catg-tax-' + esc(cid) + '" style="color:var(--warn-3)">⚠️ ' + tx('slab not active') + '</span>';
-  return '<span class="cbcat-badge" data-testid="catg-tax-' + esc(cid) + '" title="' + esc(t.name || '') + (t.inherited_from ? ' · ' + tx('inherits') + ' ' + esc(t.inherited_from) : '') + '">'
-    + esc((t.rate === null || t.rate === undefined) ? (t.name || '?') : ('GST ' + t.rate + '%')) + (t.inherited_from ? ' <span style="opacity:.7">↑</span>' : '') + '</span>';
+  return (
+    '<span class="cbcat-badge" data-testid="catg-tax-' +
+    esc(cid) +
+    '" title="' +
+    esc(t.name || '') +
+    (t.inherited_from ? ' · ' + tx('inherits') + ' ' + esc(t.inherited_from) : '') +
+    '">' +
+    esc(t.rate === null || t.rate === undefined ? t.name || '?' : 'GST ' + t.rate + '%') +
+    (t.inherited_from ? ' <span style="opacity:.7">↑</span>' : '') +
+    '</span>'
+  );
 }
 /**
  * ⭐ ATTACH AN OFFER TO A WHOLE CATEGORY, FROM HERE — Athi, 2026-09-05: "how can I attach an offer for that category?
@@ -753,7 +1210,10 @@ function cbcatTaxChipHTML(cid){
  * `applies_to.category_ids` on the offer (many categories per offer; the form's single `category` still counts).
  * The engine (offers.js) honours both; a child category inherits through catgWithAncestors.
  */
-function cbcatOfferCats(rules){ var at = (rules && rules.applies_to) || {}; return [].concat(at.category ? [String(at.category)] : [], Array.isArray(at.category_ids) ? at.category_ids.map(String) : []); }
+function cbcatOfferCats(rules) {
+  var at = (rules && rules.applies_to) || {};
+  return [].concat(at.category ? [String(at.category)] : [], Array.isArray(at.category_ids) ? at.category_ids.map(String) : []);
+}
 /**
  * ⭐ THE REVERSE ATTACH. Athi, 2026-09-04: "we are attaching category from catalogue, this is the other way around —
  * the same multi-select and attach for category, from here". On EDIT (View shows what applies, Edit modifies — his
@@ -762,86 +1222,237 @@ function cbcatOfferCats(rules){ var at = (rules && rules.applies_to) || {}; retu
  * catalogue row and the storefront read the change the same instant; nothing is stored on the category.
  */
 /** The editor's two tabs: Category (name · parent · slab · offers · note) and Products (the catalogue pane, ticks attach). */
-function cbcatEditTab(k){ CBCAT_UI.etab = k; cbcatPaintDetail(); }
-function cbcatEditTabsHTML(cid){
+function cbcatEditTab(k) {
+  CBCAT_UI.etab = k;
+  cbcatPaintDetail();
+}
+function cbcatEditTabsHTML(cid) {
   var k = CBCAT_UI.etab || 'category';
-  var prods = UI.prods || []; var inCat = prods.filter(function(p){ return catgIdsOf((p && (p.item_data || p)) || {}).indexOf(String(cid)) >= 0; }).length;
-  var tab = function(key, label){ return '<button type="button" class="' + (k === key ? 'on' : '') + '" data-testid="catg-etab-' + key + '" onclick="cbcatEditTab(\'' + key + '\')">' + label + '</button>'; };
-  return '<div class="dtabs" data-testid="catg-etabs" style="margin:0 0 10px">' + tab('category', tx('Category')) + tab('products', tx('Products') + (cid ? ' · ' + inCat + ' ' + tx('of') + ' ' + prods.length : '')) + '</div>';
+  var prods = UI.prods || [];
+  var inCat = prods.filter(function (item) {
+    return catgIdsOf((item && (item.item_data || item)) || {}).indexOf(String(cid)) >= 0;
+  }).length;
+  var tab = function (key, label) {
+    return (
+      '<button type="button" class="' +
+      (k === key ? 'on' : '') +
+      '" data-testid="catg-etab-' +
+      key +
+      '" onclick="cbcatEditTab(\'' +
+      key +
+      '\')">' +
+      label +
+      '</button>'
+    );
+  };
+  return (
+    '<div class="dtabs" data-testid="catg-etabs" style="margin:0 0 10px">' +
+    tab('category', tx('Category')) +
+    tab('products', tx('Products') + (cid ? ' · ' + inCat + ' ' + tx('of') + ' ' + prods.length : '')) +
+    '</div>'
+  );
 }
 /** The context the catalogue renderer takes: this category's search · chip · tick · click (see prodRowsHTML(ctx) in app.html). */
-function cbcatProdCtx(cid){
-  return { q: CBCAT_UI.pq || '', catg: CBCAT_UI.pcatg || '', picking: true, noRef: true,
-    isTicked: function(id){ var p = (UI.prods || []).filter(function(x){ return prodId(x) === id; })[0]; return !!p && catgIdsOf(pData(p)).indexOf(String(cid)) >= 0; },
-    onToggle: function(id){ return "cbcatProductToggle('" + cid + "','" + id + "', this)"; },
-    onPick: function(v){ return "cbcatProdCatg('" + v + "')"; } };
+function cbcatProdCtx(cid) {
+  return {
+    q: CBCAT_UI.pq || '',
+    catg: CBCAT_UI.pcatg || '',
+    picking: true,
+    noRef: true,
+    isTicked: function (id) {
+      var p = (UI.prods || []).filter(function (x) {
+        return prodId(x) === id;
+      })[0];
+      return !!p && catgIdsOf(pData(p)).indexOf(String(cid)) >= 0;
+    },
+    onToggle: function (id) {
+      return "cbcatProductToggle('" + cid + "','" + id + "', this)";
+    },
+    onPick: function (v) {
+      return "cbcatProdCatg('" + v + "')";
+    }
+  };
 }
-function cbcatProdCatg(v){ CBCAT_UI.pcatg = (CBCAT_UI.pcatg === v) ? '' : v; cbcatProdTicksRepaint(CBCAT_UI.form && CBCAT_UI.form.id); }
+function cbcatProdCatg(v) {
+  CBCAT_UI.pcatg = CBCAT_UI.pcatg === v ? '' : v;
+  cbcatProdTicksRepaint(CBCAT_UI.form && CBCAT_UI.form.id);
+}
 /**
  * ⭐ THE REVERSE ATTACH = THE CATALOGUE PANE, HERE. Athi, 2026-09-04: "the entire catalogue left pane should be there so
  * we can search and attach … in a separate tab". Same search box, same category chips, same rows as the Catalogue
  * screen — rendered by the same functions with a context — and a click on a row ticks it: the product's categories
  * are written at once (whole record, same PATCH), so the product page, the catalogue row and the storefront follow.
  */
-function cbcatProductTicksHTML(cid){
-  if (!UI.prods) { if (typeof loadCatalogue === 'function') loadCatalogue().then(function(){ if (UI.nav === 'categories' && CBCAT_UI.mode === 'edit') cbcatPaintDetail(); }); return '<div class="cbcat-none">' + tx('reading the catalogue…') + '</div>'; }
+function cbcatProductTicksHTML(cid) {
+  if (!UI.prods) {
+    if (typeof loadCatalogue === 'function')
+      loadCatalogue().then(function () {
+        if (UI.nav === 'categories' && CBCAT_UI.mode === 'edit') cbcatPaintDetail();
+      });
+    return '<div class="cbcat-none">' + tx('reading the catalogue…') + '</div>';
+  }
   var ctx = cbcatProdCtx(cid);
-  return '<div class="catlist" data-testid="catg-prod-pane" style="border:1px solid var(--line);border-radius:10px;overflow:hidden">'
-    + '<div style="padding:8px 10px;border-bottom:1px solid var(--line)"><input class="inp" data-testid="catg-prod-search" placeholder="' + esc(tx('Search name, code, offer, tax')) + '" value="' + esc(CBCAT_UI.pq || '') + '" oninput="CBCAT_UI.pq=this.value; cbcatProdTicksRepaint(\'' + esc(cid) + '\')"></div>'
-    + '<div id="cbcat_prodstrip" style="padding:6px 10px 0">' + (typeof prodCatgStripHTML === 'function' ? prodCatgStripHTML(ctx) : '') + '</div>'
-    + '<div id="cbcat_prodticks" data-testid="catg-prod-ticks" style="max-height:60vh;overflow:auto">' + (typeof prodRowsHTML === 'function' ? prodRowsHTML(ctx) : '') + '</div>'
-    + '</div>'
-    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">' + tx('The same catalogue pane. A click on a row attaches this category to the product at once — the product page, the catalogue row and the storefront follow.') + '</div>';
+  return (
+    '<div class="catlist" data-testid="catg-prod-pane" style="border:1px solid var(--line);border-radius:10px;overflow:hidden">' +
+    '<div style="padding:8px 10px;border-bottom:1px solid var(--line)"><input class="inp" data-testid="catg-prod-search" placeholder="' +
+    esc(tx('Search name, code, offer, tax')) +
+    '" value="' +
+    esc(CBCAT_UI.pq || '') +
+    '" oninput="CBCAT_UI.pq=this.value; cbcatProdTicksRepaint(\'' +
+    esc(cid) +
+    '\')"></div>' +
+    '<div id="cbcat_prodstrip" style="padding:6px 10px 0">' +
+    (typeof prodCatgStripHTML === 'function' ? prodCatgStripHTML(ctx) : '') +
+    '</div>' +
+    '<div id="cbcat_prodticks" data-testid="catg-prod-ticks" style="max-height:60vh;overflow:auto">' +
+    (typeof prodRowsHTML === 'function' ? prodRowsHTML(ctx) : '') +
+    '</div>' +
+    '</div>' +
+    '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">' +
+    tx(
+      'The same catalogue pane. A click on a row attaches this category to the product at once — the product page, the catalogue row and the storefront follow.'
+    ) +
+    '</div>'
+  );
 }
-function cbcatProdTicksRepaint(cid){ var h = document.getElementById('cbcat_prodticks'); if (h && typeof prodRowsHTML === 'function') h.innerHTML = prodRowsHTML(cbcatProdCtx(cid)); var st = document.getElementById('cbcat_prodstrip'); if (st && typeof prodCatgStripHTML === 'function') st.innerHTML = prodCatgStripHTML(cbcatProdCtx(cid)); }
-async function cbcatProductToggle(cid, pid, btn){
-  var p = (UI.prods || []).filter(function(x){ return prodId(x) === pid; })[0]; if (!p) return;
-  var d = Object.assign({}, pData(p)); var ids = catgIdsOf(d).map(String); var on = ids.indexOf(String(cid)) >= 0;
-  ids = on ? ids.filter(function(x){ return x !== String(cid); }) : ids.concat([String(cid)]);
-  d.categories = ids; delete d.category;
+function cbcatProdTicksRepaint(cid) {
+  var node = document.getElementById('cbcat_prodticks');
+  if (node && typeof prodRowsHTML === 'function') node.innerHTML = prodRowsHTML(cbcatProdCtx(cid));
+  var st = document.getElementById('cbcat_prodstrip');
+  if (st && typeof prodCatgStripHTML === 'function') st.innerHTML = prodCatgStripHTML(cbcatProdCtx(cid));
+}
+async function cbcatProductToggle(cid, pid, btn) {
+  var p = (UI.prods || []).filter(function (x) {
+    return prodId(x) === pid;
+  })[0];
+  if (!p) return;
+  var d = Object.assign({}, pData(p));
+  var ids = catgIdsOf(d).map(String);
+  var on = ids.indexOf(String(cid)) >= 0;
+  ids = on
+    ? ids.filter(function (x) {
+        return x !== String(cid);
+      })
+    : ids.concat([String(cid)]);
+  d.categories = ids;
+  delete d.category;
   if (btn) btn.disabled = true;
   try {
-    await api('prodEdit', { params: { id: pid }, body: { item_data: d } });   /* the whole record — the PATCH validates it as one */
+    await api('prodEdit', { params: { id: pid }, body: { item_data: d } }); /* the whole record — the PATCH validates it as one */
     toast(on ? tx('Detached') : tx('Attached ✓'));
     if (typeof loadCatalogue === 'function') await loadCatalogue('fresh');
-    cbcatPaintList(); cbcatProdTicksRepaint(cid); var tb = document.querySelector('[data-testid="catg-etabs"]'); if (tb) tb.outerHTML = cbcatEditTabsHTML(cid);
-  } catch (e) { toast((e && e.message) || tx('Could not change the product'), true); if (btn) btn.disabled = false; }
+    cbcatPaintList();
+    cbcatProdTicksRepaint(cid);
+    var node = document.querySelector('[data-testid="catg-etabs"]');
+    if (node) node.outerHTML = cbcatEditTabsHTML(cid);
+  } catch (e) {
+    toast((e && e.message) || tx('Could not change the product'), true);
+    if (btn) btn.disabled = false;
+  }
 }
-function cbcatOfferTicksHTML(cid){
-  var list = (typeof ctOffersEnsure === 'function') ? ctOffersEnsure(function(){ cbcatPaintDetail(); }) : null;
-  if (!list) return '<div class="sec">' + tx('Offers') + '</div><div style="padding:6px 12px;color:var(--grey);font-size:var(--fs-2)">' + tx('reading…') + '</div>';
-  if (!list.length) return '<div class="sec">' + tx('Offers') + '</div><div style="padding:6px 12px;color:var(--grey);font-size:var(--fs-2)">' + tx('None live. ') + '<span onclick="goCatsetSec(\'offers\')" style="color:var(--blue);font-weight:600;cursor:pointer">' + tx('Author one') + '</span> ' + tx('in Catalogue setup, then attach it here.') + '</div>';
-  return '<div class="sec">' + tx('Offers') + ' <span style="font-weight:400;color:var(--grey);font-size:var(--fs-1)">' + tx('tick to apply to every product in this category and under it') + '</span></div>'
-    + '<div class="ctcatgs" data-testid="catg-offer-ticks" style="padding:4px 12px">'
-    + list.map(function (o) {
-        var on = cbcatOfferCats(o.rules).indexOf(String(cid)) >= 0;
-        var terms = (typeof CBOffers !== 'undefined' && CBOffers.terms) ? (CBOffers.terms(Object.assign({ kind: o.rules && o.rules.kind }, o.rules || {}), { money: function (n) { return (typeof inr === 'function') ? inr(n) : String(n); } }) || '') : '';
-        return '<button type="button" class="ctcatg' + (on ? ' on' : '') + '" data-testid="catg-offer-' + esc(o.id) + '" onclick="cbcatOfferToggle(\'' + esc(cid) + '\',\'' + esc(o.id) + '\',this)">' + (on ? '✓ ' : '') + esc(o.name) + (terms ? ' <span style="color:var(--grey)">· ' + esc(terms) + '</span>' : '') + '</button>';
-      }).join('')
-    + '</div>';
+function cbcatOfferTicksHTML(cid) {
+  var list =
+    typeof ctOffersEnsure === 'function'
+      ? ctOffersEnsure(function () {
+          cbcatPaintDetail();
+        })
+      : null;
+  if (!list)
+    return '<div class="sec">' + tx('Offers') + '</div><div style="padding:6px 12px;color:var(--grey);font-size:var(--fs-2)">' + tx('reading…') + '</div>';
+  if (!list.length)
+    return (
+      '<div class="sec">' +
+      tx('Offers') +
+      '</div><div style="padding:6px 12px;color:var(--grey);font-size:var(--fs-2)">' +
+      tx('None live. ') +
+      '<span onclick="goCatsetSec(\'offers\')" style="color:var(--blue);font-weight:600;cursor:pointer">' +
+      tx('Author one') +
+      '</span> ' +
+      tx('in Catalogue setup, then attach it here.') +
+      '</div>'
+    );
+  return (
+    '<div class="sec">' +
+    tx('Offers') +
+    ' <span style="font-weight:400;color:var(--grey);font-size:var(--fs-1)">' +
+    tx('tick to apply to every product in this category and under it') +
+    '</span></div>' +
+    '<div class="ctcatgs" data-testid="catg-offer-ticks" style="padding:4px 12px">' +
+    list
+      .map(function (item) {
+        var on = cbcatOfferCats(item.rules).indexOf(String(cid)) >= 0;
+        var terms =
+          typeof CBOffers !== 'undefined' && CBOffers.terms
+            ? CBOffers.terms(Object.assign({ kind: item.rules && item.rules.kind }, item.rules || {}), {
+                money: function (n) {
+                  return typeof inr === 'function' ? inr(n) : String(n);
+                }
+              }) || ''
+            : '';
+        return (
+          '<button type="button" class="ctcatg' +
+          (on ? ' on' : '') +
+          '" data-testid="catg-offer-' +
+          esc(item.id) +
+          '" onclick="cbcatOfferToggle(\'' +
+          esc(cid) +
+          "','" +
+          esc(item.id) +
+          '\',this)">' +
+          (on ? '✓ ' : '') +
+          esc(item.name) +
+          (terms ? ' <span style="color:var(--grey)">· ' + esc(terms) + '</span>' : '') +
+          '</button>'
+        );
+      })
+      .join('') +
+    '</div>'
+  );
 }
-async function cbcatOfferToggle(cid, offerId, btn){
+async function cbcatOfferToggle(cid, offerId, btn) {
   var on = btn && btn.className.indexOf('on') >= 0;
   if (btn) btn.disabled = true;
   try {
-    const one = await api('defGet', { params: { id: offerId } });
-    const d = (one && one.definition) || {};
-    const vers = (one && one.versions) || [];
-    const curV = vers.filter(function (v) { return v.version === d.current_version; })[0] || vers[0] || {};
+    const reply = await api('defGet', { params: { id: offerId } });
+    const d = (reply && reply.definition) || {};
+    const vers = (reply && reply.versions) || [];
+    const curV =
+      vers.filter(function (item) {
+        return item.version === d.current_version;
+      })[0] ||
+      vers[0] ||
+      {};
     const rules = Object.assign({ kind: d.sub_kind }, curV.rules || d.rules || {});
-    if (!rules.kind) { toast(tx('Could not read that offer\'s terms, so nothing was changed. Open it in Catalogue setup first.'), true); return; }
+    if (!rules.kind) {
+      toast(tx("Could not read that offer's terms, so nothing was changed. Open it in Catalogue setup first."), true);
+      return;
+    }
     const at = Object.assign({}, rules.applies_to || {});
     /* the form's single `category` joins the array on first touch, so nothing is lost and one shape remains */
-    var ids = cbcatOfferCats(rules).filter(function (x, i, arr) { return arr.indexOf(x) === i; });
+    var ids = cbcatOfferCats(rules).filter(function (x, index, arr) {
+      return arr.indexOf(x) === index;
+    });
     delete at.category;
-    ids = on ? ids.filter(function (x) { return x !== String(cid); }) : ids.concat(ids.indexOf(String(cid)) >= 0 ? [] : [String(cid)]);
-    if (ids.length) at.category_ids = ids; else delete at.category_ids;
-    if (Object.keys(at).length) rules.applies_to = at; else delete rules.applies_to;
+    ids = on
+      ? ids.filter(function (x) {
+          return x !== String(cid);
+        })
+      : ids.concat(ids.indexOf(String(cid)) >= 0 ? [] : [String(cid)]);
+    if (ids.length) at.category_ids = ids;
+    else delete at.category_ids;
+    if (Object.keys(at).length) rules.applies_to = at;
+    else delete rules.applies_to;
     await api('defSave', { params: { id: offerId }, body: { rules: rules } });
     toast(on ? tx('Offer removed from this category') : tx('Offer applies to this category ✓'));
-  } catch (e) { toast((e && e.message) || tx('Could not change that offer'), true); }
-  /* the live shelf too — not only when the bell's "shop changed" happens to arrive first (see prodOfferApply) */
-  finally { UI._ctOffers = undefined; if (typeof _DEFS !== 'undefined') delete _DEFS.offer; if (btn) btn.disabled = false; cbcatPaintDetail(); }
+  } catch (e) {
+    toast((e && e.message) || tx('Could not change that offer'), true);
+  } finally {
+    /* the live shelf too — not only when the bell's "shop changed" happens to arrive first (see prodOfferApply) */
+    UI._ctOffers = undefined;
+    if (typeof _DEFS !== 'undefined') delete _DEFS.offer;
+    if (btn) btn.disabled = false;
+    cbcatPaintDetail();
+  }
 }
 /**
  * ⭐ THE OFFERS THAT REACH A CATEGORY, WITH THEIR TIME — Athi, 2026-09-05: "like how tax is shown in the left side
@@ -850,65 +1461,171 @@ async function cbcatOfferToggle(cid, offerId, btn){
  * <date>; Expired → not shown. The words are the engine's (CBOffers.terms / timeStatus), so the chip cannot disagree
  * with the basket.
  */
-function cbcatOffersReaching(cid){
-  var list = (typeof ctOffersEnsure === 'function') ? ctOffersEnsure(function(){ cbcatPaint(); }) : null;
+function cbcatOffersReaching(cid) {
+  var list =
+    typeof ctOffersEnsure === 'function'
+      ? ctOffersEnsure(function () {
+          cbcatPaint();
+        })
+      : null;
   if (!list) return null;
   var anc = cbcatAncestorIds(cid);
-  return list.map(function (o) {
-    var cs = cbcatOfferCats(o.rules);
-    var own = cs.indexOf(String(cid)) >= 0;
-    var viaId = own ? null : cs.filter(function (c) { return anc.indexOf(c) >= 0; })[0];
-    if (!own && !viaId) return null;
-    var r = o.rules || {};
-    var t = (typeof CBOffers !== 'undefined' && CBOffers.timeStatus) ? CBOffers.timeStatus(r) : 'active';
-    var terms = (typeof CBOffers !== 'undefined' && CBOffers.terms) ? (CBOffers.terms(Object.assign({ kind: r.kind }, r), { money: function (n) { return (typeof inr === 'function') ? inr(n) : String(n); } }) || '') : '';
-    var scope = (typeof CBOffers !== 'undefined' && CBOffers.scopeLabel) ? CBOffers.scopeLabel(Object.assign({ kind: r.kind }, r)) : '';
-    return { id: o.id, name: o.name, terms: terms, scope: scope, time: t, from: r.valid_from || null, to: r.valid_to || null, via: viaId ? ((cbcatById(viaId) || {}).name || null) : null };
-  }).filter(Boolean).filter(function (x) { return x.time !== 'expired'; });
+  return list
+    .map(function (item) {
+      var list = cbcatOfferCats(item.rules);
+      var own = list.indexOf(String(cid)) >= 0;
+      var viaId = own
+        ? null
+        : list.filter(function (item) {
+            return anc.indexOf(item) >= 0;
+          })[0];
+      if (!own && !viaId) return null;
+      var r = item.rules || {};
+      var t = typeof CBOffers !== 'undefined' && CBOffers.timeStatus ? CBOffers.timeStatus(r) : 'active';
+      var terms =
+        typeof CBOffers !== 'undefined' && CBOffers.terms
+          ? CBOffers.terms(Object.assign({ kind: r.kind }, r), {
+              money: function (n) {
+                return typeof inr === 'function' ? inr(n) : String(n);
+              }
+            }) || ''
+          : '';
+      var scope = typeof CBOffers !== 'undefined' && CBOffers.scopeLabel ? CBOffers.scopeLabel(Object.assign({ kind: r.kind }, r)) : '';
+      return {
+        id: item.id,
+        name: item.name,
+        terms: terms,
+        scope: scope,
+        time: t,
+        from: r.valid_from || null,
+        to: r.valid_to || null,
+        via: viaId ? (cbcatById(viaId) || {}).name || null : null
+      };
+    })
+    .filter(Boolean)
+    .filter(function (x) {
+      return x.time !== 'expired';
+    });
 }
 /* ⭐ ONE EXPLICIT LINE PER OFFER, under the category name — Athi, 2026-09-05: "if ₹100 off is on the total bill that
    should be explicit … bring the offer detail below the category name, so if more than one applies it can be shown". */
-function cbcatOfferLinesHTML(cid){
+function cbcatOfferLinesHTML(cid) {
   var here = cbcatOffersReaching(cid);
   if (!here || !here.length) return '';
-  return '<div data-testid="catg-offer-lines-' + esc(cid) + '" style="margin-top:3px;display:flex;flex-direction:column;gap:2px;font-size:var(--fs-1)">'
-    + here.map(function (x) {
+  return (
+    '<div data-testid="catg-offer-lines-' +
+    esc(cid) +
+    '" style="margin-top:3px;display:flex;flex-direction:column;gap:2px;font-size:var(--fs-1)">' +
+    here
+      .map(function (x) {
         var when = x.time === 'scheduled' ? '<span style="color:var(--blue)">📅 ' + esc(tx('from') + ' ' + (x.from || '')) + '</span>' : '<span>🏷️</span>';
-        return '<div data-testid="catg-offer-line" data-time="' + esc(x.time) + '" style="display:flex;gap:6px;flex-wrap:wrap;align-items:baseline">' + when
-          + '<b>' + esc(x.terms || x.name) + '</b><span style="color:var(--grey)">' + esc(tx(x.scope)) + '</span>'
-          + '<span style="color:var(--grey)">· ' + esc(x.name) + (x.to ? ' · ' + esc(tx('to') + ' ' + x.to) : '') + (x.via ? ' · ' + esc(tx('via') + ' ' + x.via) + ' ↑' : '') + '</span></div>';
-      }).join('')
-    + '</div>';
+        return (
+          '<div data-testid="catg-offer-line" data-time="' +
+          esc(x.time) +
+          '" style="display:flex;gap:6px;flex-wrap:wrap;align-items:baseline">' +
+          when +
+          '<b>' +
+          esc(x.terms || x.name) +
+          '</b><span style="color:var(--grey)">' +
+          esc(tx(x.scope)) +
+          '</span>' +
+          '<span style="color:var(--grey)">· ' +
+          esc(x.name) +
+          (x.to ? ' · ' + esc(tx('to') + ' ' + x.to) : '') +
+          (x.via ? ' · ' + esc(tx('via') + ' ' + x.via) + ' ↑' : '') +
+          '</span></div>'
+        );
+      })
+      .join('') +
+    '</div>'
+  );
 }
-function cbcatOffersHereHTML(cid){
-  var list = (typeof ctOffersEnsure === 'function') ? ctOffersEnsure(function(){ cbcatPaintDetail(); }) : null;
+function cbcatOffersHereHTML(cid) {
+  var list =
+    typeof ctOffersEnsure === 'function'
+      ? ctOffersEnsure(function () {
+          cbcatPaintDetail();
+        })
+      : null;
   if (!list) return '';
   var anc = cbcatAncestorIds(cid);
   var reach = cbcatOffersReaching(cid) || [];
-  var here = list.filter(function(o){ return reach.some(function (x) { return x.id === o.id; }); });
+  var here = list.filter(function (item) {
+    return reach.some(function (x) {
+      return x.id === item.id;
+    });
+  });
   if (!here.length) return '';
-  var timeWord = function (o) { var x = reach.filter(function (y) { return y.id === o.id; })[0] || {}; return x.time === 'scheduled' ? ' <span style="color:var(--blue)">' + esc(tx('Scheduled from') + ' ' + (x.from || '')) + '</span>' : ' <span style="color:var(--ok, #2e7d32)">' + esc(tx('Active')) + (x.to ? ' ' + esc(tx('to') + ' ' + x.to) : '') + '</span>'; };
-  return '<div class="cbcat-stat" data-testid="catg-offers-here"><span class="v">' + here.length + '</span><span class="k">offer' + (here.length === 1 ? '' : 's')
-    + ' appl' + (here.length === 1 ? 'ies' : 'y') + ' here — ' + here.map(function(o){ var cs = cbcatOfferCats(o.rules); var viaId = cs.indexOf(String(cid)) >= 0 ? null : cs.filter(function (c) { return anc.indexOf(c) >= 0; })[0]; var viaP = viaId ? (cbcatById(viaId) || {}).name : null; var sc = (reach.filter(function (y) { return y.id === o.id; })[0] || {}); return esc(o.name) + (sc.terms ? ' <b>' + esc(sc.terms) + '</b> <span style="color:var(--grey)">' + esc(tx(sc.scope || '')) + '</span>' : '') + timeWord(o) + (viaP ? ' <span style="color:var(--grey)">(' + esc(tx('via') + ' ' + viaP) + ')</span>' : ''); }).join(' · ') + '</span></div>';
+  var timeWord = function (o) {
+    var x =
+      reach.filter(function (y) {
+        return y.id === o.id;
+      })[0] || {};
+    return x.time === 'scheduled'
+      ? ' <span style="color:var(--blue)">' + esc(tx('Scheduled from') + ' ' + (x.from || '')) + '</span>'
+      : ' <span style="color:var(--ok, #2e7d32)">' + esc(tx('Active')) + (x.to ? ' ' + esc(tx('to') + ' ' + x.to) : '') + '</span>';
+  };
+  return (
+    '<div class="cbcat-stat" data-testid="catg-offers-here"><span class="v">' +
+    here.length +
+    '</span><span class="k">offer' +
+    (here.length === 1 ? '' : 's') +
+    ' appl' +
+    (here.length === 1 ? 'ies' : 'y') +
+    ' here — ' +
+    here
+      .map(function (item) {
+        var list = cbcatOfferCats(item.rules);
+        var viaId =
+          list.indexOf(String(cid)) >= 0
+            ? null
+            : list.filter(function (item) {
+                return anc.indexOf(item) >= 0;
+              })[0];
+        var viaP = viaId ? (cbcatById(viaId) || {}).name : null;
+        var sc =
+          reach.filter(function (y) {
+            return y.id === item.id;
+          })[0] || {};
+        return (
+          esc(item.name) +
+          (sc.terms ? ' <b>' + esc(sc.terms) + '</b> <span style="color:var(--grey)">' + esc(tx(sc.scope || '')) + '</span>' : '') +
+          timeWord(item) +
+          (viaP ? ' <span style="color:var(--grey)">(' + esc(tx('via') + ' ' + viaP) + ')</span>' : '')
+        );
+      })
+      .join(' · ') +
+    '</span></div>'
+  );
 }
 /**
  * ⭐ HOW MANY SHELVES THERE ARE — its own function, because it is its own fact.
  * ⚠️ When a search has narrowed the list, say what it narrowed FROM. "4 categories" with 40 on the shelf reads
  * as a shop that has lost 36 of them. [[feedback-silence-is-the-bug]]
  */
-function cbcatCountHTML(){
-  var n = cbcatVisible().length, all = (CBCAT_UI.list || []).length;
-  return '<span style="font-size:var(--fs-1);color:var(--grey)">' + n + ' categor' + (n === 1 ? 'y' : 'ies')
-    + (n !== all ? ' <span style="color:var(--grey-4)">' + tx('of') + ' ' + all + '</span>' : '') + '</span>';
+function cbcatCountHTML() {
+  var n = cbcatVisible().length,
+    all = (CBCAT_UI.list || []).length;
+  return (
+    '<span style="font-size:var(--fs-1);color:var(--grey)">' +
+    n +
+    ' categor' +
+    (n === 1 ? 'y' : 'ies') +
+    (n !== all ? ' <span style="color:var(--grey-4)">' + tx('of') + ' ' + all + '</span>' : '') +
+    '</span>'
+  );
 }
-function cbcatStatsHTML(){
-  return cbcatCountHTML()
+function cbcatStatsHTML() {
+  return (
+    cbcatCountHTML() +
     /* ⭐ The uncategorised count is a to-do list, so it is a BUTTON — it takes you to the products it is
        counting rather than merely reporting a number you then have to go and find by hand. */
-    + ((CBCAT_UI.counts && CBCAT_UI.counts.none)
-        ? '<button data-testid="catg-uncat" onclick="cbcatGoUncategorised()" style="margin-inline-start:auto;border:1px solid var(--gold-line);background:var(--gold-soft);border-radius:9px;padding:4px 9px;font-size:var(--fs-1);color:var(--warn-3);cursor:pointer">'
-          + CBCAT_UI.counts.none + ' uncategorised <span class=arw>→</span></button>'
-        : '');
+    (CBCAT_UI.counts && CBCAT_UI.counts.none
+      ? '<button data-testid="catg-uncat" onclick="cbcatGoUncategorised()" style="margin-inline-start:auto;border:1px solid var(--gold-line);background:var(--gold-soft);border-radius:9px;padding:4px 9px;font-size:var(--fs-1);color:var(--warn-3);cursor:pointer">' +
+        CBCAT_UI.counts.none +
+        ' uncategorised <span class=arw>→</span></button>'
+      : '')
+  );
 }
 /**
  * ⭐ THE CLASSIFICATION SCHEMES — rehomed here from Definitions (Athi's call, 2026-08-16).
@@ -925,17 +1642,27 @@ function cbcatStatsHTML(){
  * whole difference between citing HS 1006 and inventing a private meaning for it.
  * ⚠️ Rows come from `cbDefRegistries()`, so this is a second READER of one list, never a second copy.
  */
-function cbcatSchemesHTML(){
+function cbcatSchemesHTML() {
   if (typeof cbDefRegistries !== 'function') {
-    ensureCap('definitions').then(function(){ cbcatPaintDetail(); });
+    ensureCap('definitions').then(function () {
+      cbcatPaintDetail();
+    });
     return '';
   }
-  var s = cbDefRegistries().filter(function(x){ return x.key === 'standard'; })[0];
+  var s = cbDefRegistries().filter(function (x) {
+    return x.key === 'standard';
+  })[0];
   if (!s || !(s.rows || []).length) return '';
-  return '<div class="sec" style="margin-top:14px">' + tx('Classification schemes') + '</div>'
-    + '<div class="cbcat-note" style="margin-bottom:8px">' + esc(s.blurb) + '</div>'
-    + '<div class="cbcat-plist">'
-    + s.rows.map(function(r){
+  return (
+    '<div class="sec" style="margin-top:14px">' +
+    tx('Classification schemes') +
+    '</div>' +
+    '<div class="cbcat-note" style="margin-bottom:8px">' +
+    esc(s.blurb) +
+    '</div>' +
+    '<div class="cbcat-plist">' +
+    s.rows
+      .map(function (item) {
         /**
          * ⭐ THE NAME ON ONE LINE, THE EXPLANATION UNDER IT — Athi, 2026-09-01: *"bring the explanation below the
          * HS-, this will give a better look. Ie: customer your own scheme in one line and the explanation can be
@@ -945,12 +1672,14 @@ function cbcatSchemesHTML(){
          * ⚠️ And the name is printed ONCE — `cbDefLabelOnce` drops the `HS — ` the label carries for use
          * elsewhere. That is the *"do we need two HS?"* he asked about.
          */
-        var lab = (typeof cbDefLabelOnce === 'function') ? cbDefLabelOnce(r) : (r.label || '');
-        return '<div class="cbcat-prow" style="display:block">'
-          + '<div><code style="font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:var(--fs-1)">'
-          + esc(r.code) + '</code>'
-          + (lab ? '<span style="margin-inline-start:8px;font-weight:600">' + esc(lab) + '</span>' : '')
-          + '</div>'
+        var lab = typeof cbDefLabelOnce === 'function' ? cbDefLabelOnce(item) : item.label || '';
+        return (
+          '<div class="cbcat-prow" style="display:block">' +
+          '<div><code style="font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:var(--fs-1)">' +
+          esc(item.code) +
+          '</code>' +
+          (lab ? '<span style="margin-inline-start:8px;font-weight:600">' + esc(lab) + '</span>' : '') +
+          '</div>' +
           /**
            * ⚠️ `white-space:normal` AND `margin-inline-start:0` OVERRIDE THE SHARED CLASS ON PURPOSE.
            * `.cbcat-also` was built for the product list above, where it is a SHORT trailing hint pushed to the
@@ -961,10 +1690,17 @@ function cbcatSchemesHTML(){
            * ⭐ Overridden HERE rather than in the class, because the product list still wants the old behaviour.
            * Changing the shared rule would have fixed this box and broken that one.
            */
-          + (r.note ? '<div class="cbcat-also" style="margin-inline-start:0;margin-top:2px;display:block;'
-                    + 'white-space:normal;line-height:1.5;max-width:78ch">' + esc(r.note) + '</div>' : '') + '</div>';
-      }).join('')
-    + '</div>'
+          (item.note
+            ? '<div class="cbcat-also" style="margin-inline-start:0;margin-top:2px;display:block;' +
+              'white-space:normal;line-height:1.5;max-width:78ch">' +
+              esc(item.note) +
+              '</div>'
+            : '') +
+          '</div>'
+        );
+      })
+      .join('') +
+    '</div>' +
     /**
      * ⭐ THE SOURCE LINE MOVED BEHIND 🧾 Spec — Athi: *"read from app/catalogue-model.js · STD_SCHEMES, is it
      * necessary?"* For someone choosing a scheme, no: a file path cannot help anyone decide anything.
@@ -973,60 +1709,107 @@ function cbcatSchemesHTML(){
      * checkable instead of a promise in a comment. Spec mode exists for exactly that reader, so the claim stays
      * verifiable and stops being a footnote on everybody else's screen.
      */
-    + ((typeof specOn === 'function' && specOn())
-        ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px">read from <code>'
-          + esc(s.source) + '</code></div>' : '');
+    (typeof specOn === 'function' && specOn()
+      ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px">read from <code>' + esc(s.source) + '</code></div>'
+      : '')
+  );
 }
 /**
  * The parent picker. ⚠️ Options are indented with the same depth the list uses, so "sits under" is answered by
  * the shape of the dropdown rather than by remembering what the tree looked like a moment ago.
  */
-function cbcatParentPickHTML(f){
+function cbcatParentPickHTML(f) {
   var opts = cbcatParentOptions(f.id);
-  if (!opts.length) return '<div style="font-size:var(--fs-2);color:var(--grey);margin:2px 0 4px">Nothing to sit under yet — this will be a top-level category.</div>';
-  return '<select class="inp" data-testid="catg-parent" onchange="cbcatField(\'parent\', this.value || null)">'
-    + '<option value="">— top level —</option>'
-    + opts.map(function(c){
-        var pad = new Array((c.depth || 0) + 1).join('  ');
-        return '<option value="' + esc(c.id) + '"' + ((f.parent === c.id) ? ' selected' : '') + '>'
-          + pad + esc(c.name) + '</option>';
-      }).join('')
-    + '</select>';
+  if (!opts.length)
+    return '<div style="font-size:var(--fs-2);color:var(--grey);margin:2px 0 4px">Nothing to sit under yet — this will be a top-level category.</div>';
+  return (
+    '<select class="inp" data-testid="catg-parent" onchange="cbcatField(\'parent\', this.value || null)">' +
+    '<option value="">— top level —</option>' +
+    opts
+      .map(function (item) {
+        var pad = new Array((item.depth || 0) + 1).join('  ');
+        return '<option value="' + esc(item.id) + '"' + (f.parent === item.id ? ' selected' : '') + '>' + pad + esc(item.name) + '</option>';
+      })
+      .join('') +
+    '</select>'
+  );
 }
-function cbcatPaintList(){
-  var b = document.getElementById('cbcat_rows'); if (b) b.innerHTML = cbcatRowsHTML();
-  var s = document.getElementById('cbcat_stats'); if (s) s.innerHTML = cbcatStatsHTML();
+function cbcatPaintList() {
+  var node = document.getElementById('cbcat_rows');
+  if (node) node.innerHTML = cbcatRowsHTML();
+  var s = document.getElementById('cbcat_stats');
+  if (s) s.innerHTML = cbcatStatsHTML();
 }
-function cbcatPaintDetail(){ if (typeof UI !== 'undefined' && UI.nav !== 'categories') return; var d = document.getElementById('detailpane'); if (d) { d.className = 'detail'; d.innerHTML = cbcatDetailHTML(); } }
-function cbcatPaint(){ cbcatPaintList(); cbcatPaintDetail(); }
+function cbcatPaintDetail() {
+  if (typeof UI !== 'undefined' && UI.nav !== 'categories') return;
+  var node = document.getElementById('detailpane');
+  if (node) {
+    node.className = 'detail';
+    node.innerHTML = cbcatDetailHTML();
+  }
+}
+function cbcatPaint() {
+  cbcatPaintList();
+  cbcatPaintDetail();
+}
 
-function categoriesScreen(){
+function categoriesScreen() {
   cbcatCss();
-  var list = '<div class="list"><div class="lh">'
-    + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:9px">'
-    +   '<span style="font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-3)">' + tx('🏷️ Categories') + '</span>'
-    + '</div>'
-    + '<button class="composebtn" style="width:100%;justify-content:center" data-testid="catg-new" onclick="cbcatNew()">+ New category</button>'
-    + '<button class="composebtn" style="width:100%;justify-content:center;margin-top:7px;background:var(--card);color:var(--blue);border:1px solid var(--line)" data-testid="catg-seed" onclick="cbcatSeedAsk()">' + tx('📐 Start from a standard set') + '</button>'
-    + '<div class="srch" style="margin-top:8px">🔍 <input data-testid="catg-search" placeholder="Search categories" value="' + esc(CBCAT_UI.q || '') + '" oninput="cbcatSearch(this.value)"></div>'
+  var list =
+    '<div class="list"><div class="lh">' +
+    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:9px">' +
+    '<span style="font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-3)">' +
+    tx('🏷️ Categories') +
+    '</span>' +
+    '</div>' +
+    '<button class="composebtn" style="width:100%;justify-content:center" data-testid="catg-new" onclick="cbcatNew()">+ New category</button>' +
+    '<button class="composebtn" style="width:100%;justify-content:center;margin-top:7px;background:var(--card);color:var(--blue);border:1px solid var(--line)" data-testid="catg-seed" onclick="cbcatSeedAsk()">' +
+    tx('📐 Start from a standard set') +
+    '</button>' +
+    '<div class="srch" style="margin-top:8px">🔍 <input data-testid="catg-search" placeholder="Search categories" value="' +
+    esc(CBCAT_UI.q || '') +
+    '" oninput="cbcatSearch(this.value)"></div>' +
     /* ⚠️ ITS OWN ELEMENT, REPAINTED WITH THE ROWS. The counts arrive AFTER the screen is built, and the header is
        rendered once by categoriesScreen() — so anything derived from counts that lives up here is stale forever.
        The uncategorised button was invisible on the first look for exactly that reason. */
-    + '<div id="cbcat_stats" style="margin-top:8px;display:flex;align-items:center;gap:8px">' + cbcatStatsHTML() + '</div>'
-    + '<div style="margin-top:8px">' + cbcatSortSelect() + '</div>'
-    + '</div><div class="rows" id="cbcat_rows">' + cbcatRowsHTML() + '</div></div>';
+    '<div id="cbcat_stats" style="margin-top:8px;display:flex;align-items:center;gap:8px">' +
+    cbcatStatsHTML() +
+    '</div>' +
+    '<div style="margin-top:8px">' +
+    cbcatSortSelect() +
+    '</div>' +
+    '</div><div class="rows" id="cbcat_rows">' +
+    cbcatRowsHTML() +
+    '</div></div>';
   var detail = '<div class="detail" id="detailpane">' + cbcatDetailHTML() + '</div>';
-  var divider = '<div class="divider" id="divider" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" role="separator" aria-label="Resize panes"><span class="grip"></span></div>';
-  var showDetail = (UI.vp === 'mob') && UI.mdetail;
-  return '<div class="panel ' + (showDetail ? 'showdetail' : '') + '" id="panel" style="--lw:' + UI.lw + 'px;--lh:' + UI.lh + 'px">' + list + divider + detail + '</div>';
+  var divider =
+    '<div class="divider" id="divider" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" role="separator" aria-label="Resize panes"><span class="grip"></span></div>';
+  var showDetail = UI.vp === 'mob' && UI.mdetail;
+  return (
+    '<div class="panel ' +
+    (showDetail ? 'showdetail' : '') +
+    '" id="panel" style="--lw:' +
+    UI.lw +
+    'px;--lh:' +
+    UI.lh +
+    'px">' +
+    list +
+    divider +
+    detail +
+    '</div>'
+  );
 }
 /* Hand off to the Catalogue with its filter already set — the count and the fix live on different screens. */
-function cbcatGoUncategorised(){ UI._prodCatg = '__none'; navTo('catalogue'); }
+function cbcatGoUncategorised() {
+  UI._prodCatg = '__none';
+  navTo('catalogue');
+}
 
-function cbcatCss(){
+function cbcatCss() {
   if (document.getElementById('cbcat_css')) return;
-  var s = document.createElement('style'); s.id = 'cbcat_css';
-  s.textContent = [
+  var node = document.createElement('style');
+  node.id = 'cbcat_css';
+  node.textContent = [
     '.cbcat-n{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:var(--fs-1);color:var(--grey);',
     'background:var(--paper);border:1px solid var(--line);border-radius:20px;padding:1px 9px;flex:0 0 auto}',
     '.cbcat-badge{font-size:var(--fs-1);font-weight:700;border-radius:6px;padding:1px 7px;text-transform:uppercase;letter-spacing:.04em}',
@@ -1043,5 +1826,5 @@ function cbcatCss(){
     '.cbcat-also{margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey);white-space:nowrap}',
     '.cbcat-none{font-size:var(--fs-2);color:var(--grey);line-height:1.6}'
   ].join('');
-  (document.head || document.documentElement).appendChild(s);
+  (document.head || document.documentElement).appendChild(node);
 }

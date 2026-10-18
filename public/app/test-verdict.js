@@ -25,19 +25,19 @@
  * fell out when the others were ruled out — so seven reds were called defects using fields that were simply
  * MISSING, two of them already fixed. A case with no `changed_at` cannot rule out "re-run", so it returns
  * `unknown` and says why. Absence of evidence is not evidence.
+ 
+ * CALLED BY public/app/cap-testing.js, public/testing.html   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
 'use strict';
 
 var TEST_TODO = {
-  'never run':   { icon: '○', tone: 'dim',   say: 'nobody has run it' },
-  'ok':          { icon: '✓', tone: 'ok',    say: 'nothing to do' },
-  're-run':      { icon: '⟳', tone: 'warn',  say: 're-run — the file changed after this result' },
-  'environment': { icon: '⚙', tone: 'warn',  say: 'needs something the run did not have' },
-  'decision':    { icon: '⏸', tone: 'warn',  say: 'a decision nobody has made yet' },
-  'defect':      { icon: '✗', tone: 'bad',
-                   say: 'a defect — unchanged since this result, and it needs nothing it did not have' },
-  'unknown':     { icon: '?',      tone: 'dim',
-                   say: 'cannot tell yet — this board has not been rebuilt since the file facts were added' },
+  'never run': { icon: '○', tone: 'dim', say: 'nobody has run it' },
+  'ok': { icon: '✓', tone: 'ok', say: 'nothing to do' },
+  're-run': { icon: '⟳', tone: 'warn', say: 're-run — the file changed after this result' },
+  'environment': { icon: '⚙', tone: 'warn', say: 'needs something the run did not have' },
+  'decision': { icon: '⏸', tone: 'warn', say: 'a decision nobody has made yet' },
+  'defect': { icon: '✗', tone: 'bad', say: 'a defect — unchanged since this result, and it needs nothing it did not have' },
+  'unknown': { icon: '?', tone: 'dim', say: 'cannot tell yet — this board has not been rebuilt since the file facts were added' }
 };
 
 /**
@@ -92,10 +92,13 @@ function testVerdictLabel(c, last) {
  */
 function testCounts(cases, last) {
   const n = { total: 0, pass: 0, fail: 0, blocked: 0, skipped: 0, todo: 0 };
-  (cases || []).forEach(function (c) {
+  (cases || []).forEach(function (item) {
     n.total++;
-    const l = last && last[c.case_key];
-    if (!l) { n.todo++; return; }
+    const l = last && last[item.case_key];
+    if (!l) {
+      n.todo++;
+      return;
+    }
     if (n[l.status] === undefined) n[l.status] = 0;
     n[l.status]++;
   });

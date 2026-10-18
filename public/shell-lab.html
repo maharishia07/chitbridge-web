@@ -34,7 +34,8 @@ body{margin:0;background:var(--page);color:var(--ink)}
 <script src="/app/shell.js"></script>       <!-- CBShell -->
 <script>
 (function () {
-  var q = new URLSearchParams(location.search), mode = q.get('mode');
+  var q = new URLSearchParams(location.search),
+    mode = q.get('mode');
   var host = mode === 'bar' ? { bar: true } : mode === 'app' ? { app: q.get('app') || 'accounts' } : null;
   window.SHELL = CBShell.mount(document.getElementById('shell'), { host: host });
   /* inside an app, the app draws in the work slot — here, one line standing in for it */

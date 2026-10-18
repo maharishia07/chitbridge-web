@@ -12,37 +12,84 @@
  * COUNTRY-COVERAGE.md §1; the roll-up (all ✅ → ✅ · some → ⚠️ · none → ❌) is done THERE, once. This file adds nothing up.
  * Words go through tx / txf (accounts-shell.js) when the page has them — whole sentences with placeholders, never concatenated.
  * Flow step: Onboarding · Register → Country setup (docs/process/flows.json O0 "country setup") · and the Country lab (Labs).
+ 
+ * CALLED BY public/app/cap-showcase.js, public/country-lab.html, public/standards.html   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
 (function (root) {
   'use strict';
   if (root.CBCountryReady) return;
   var SYM = { ok: '✅', partial: '⚠️', missing: '❌', out: '—' };
-  var t = function (s) { return typeof root.tx === 'function' ? root.tx(s) : s; };
-  var tf = function (s, v) { return typeof root.txf === 'function' ? root.txf(s, v) : String(s).replace(/\{(\w+)\}/g, function (_, k) { return v[k] == null ? '' : v[k]; }); };
+  var t = function (s) {
+    return typeof root.tx === 'function' ? root.tx(s) : s;
+  };
+  var tf = function (s, v) {
+    return typeof root.txf === 'function'
+      ? root.txf(s, v)
+      : String(s).replace(/\{(\w+)\}/g, function (_, k) {
+          return v[k] == null ? '' : v[k];
+        });
+  };
   var cache = null;
   function load() {
-    if (!cache) cache = fetch('/data/country-ready.json', { cache: 'no-cache' }).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-      .catch(function (e) { cache = null; throw e; });
+    if (!cache)
+      cache = fetch('/data/country-ready.json', { cache: 'no-cache' })
+        .then(function (reply) {
+          if (!reply.ok) throw new Error('HTTP ' + reply.status);
+          return reply.json();
+        })
+        .catch(function (e) {
+          cache = null;
+          throw e;
+        });
     return cache;
   }
   function view(data, cc, countryName) {
     var c = data && data.countries && data.countries[String(cc || '').toUpperCase()];
     var name = countryName || cc;
-    if (!c) return { known: false, title: tf('Where ChitBridge is for {country}', { country: name }), pack: '', rows: [],
-      none: tf('No pack for {country} yet — selling and the rail work; the rest is not known yet.', { country: name }) };
+    if (!c)
+      return {
+        known: false,
+        title: tf('Where ChitBridge is for {country}', { country: name }),
+        pack: '',
+        rows: [],
+        none: tf('No pack for {country} yet — selling and the rail work; the rest is not known yet.', { country: name })
+      };
     var p = c.pack;
-    var rows = (c.areas || []).map(function (a) {
-      var line = a.state === 'ok' ? t('Works')
-        : a.state === 'missing' ? (a.line ? tf('Not yet: {what}', { what: a.line }) : t('Not yet'))
-        : (a.line ? tf('{works} of {of} work · next: {what}', { works: a.works, of: a.of, what: a.line }) : tf('{works} of {of} work', { works: a.works, of: a.of }));
-      return { state: a.state, sym: SYM[a.state] || '', area: t(a.area), line: line };   /* the area's name is a catalogue word too (INT5b: walk-locale country-lab) */
-    }).concat((c.out || []).map(function (o) {
-      return { state: 'out', sym: SYM.out, area: t(o.area), line: tf('Not offered in {country}', { country: name }) };
-    }));
+    var rows = (c.areas || [])
+      .map(function (item) {
+        var line =
+          item.state === 'ok'
+            ? t('Works')
+            : item.state === 'missing'
+              ? item.line
+                ? tf('Not yet: {what}', { what: item.line })
+                : t('Not yet')
+              : item.line
+                ? tf('{works} of {of} work · next: {what}', { works: item.works, of: item.of, what: item.line })
+                : tf('{works} of {of} work', { works: item.works, of: item.of });
+        return {
+          state: item.state,
+          sym: SYM[item.state] || '',
+          area: t(item.area),
+          line: line
+        }; /* the area's name is a catalogue word too (INT5b: walk-locale country-lab) */
+      })
+      .concat(
+        (c.out || []).map(function (item) {
+          return { state: 'out', sym: SYM.out, area: t(item.area), line: tf('Not offered in {country}', { country: name }) };
+        })
+      );
     return {
-      known: true, title: tf('Where ChitBridge is for {country}', { country: name }), rows: rows,
-      pack: tf(p.verified ? '{pack} · {ok} of {of} rules ready · checked by a local accountant'
-        : '{pack} · {ok} of {of} rules ready · not yet checked by a local accountant', { pack: p.name, ok: p.ok, of: p.of }), version: p.version
+      known: true,
+      title: tf('Where ChitBridge is for {country}', { country: name }),
+      rows: rows,
+      pack: tf(
+        p.verified
+          ? '{pack} · {ok} of {of} rules ready · checked by a local accountant'
+          : '{pack} · {ok} of {of} rules ready · not yet checked by a local accountant',
+        { pack: p.name, ok: p.ok, of: p.of }
+      ),
+      version: p.version
     };
   }
   root.CBCountryReady = { load: load, view: view, SYM: SYM };

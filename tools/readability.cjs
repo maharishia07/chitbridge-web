@@ -32,7 +32,8 @@ const DEFAULT_ROOTS = 'web=.,api=../chitbridge-api,engines=../chitbridge-engines
 const DEFAULT_BASE = 'origin/main';
 const TRACE_TOOL = path.join(__dirname, 'graph', 'trace.cjs');
 const TRACE_TIMEOUT_MS = 120000;
-const EXIT_FAIL = 1, EXIT_USAGE = 2;
+const EXIT_FAIL = 1,
+  EXIT_USAGE = 2;
 
 const args = process.argv.slice(2);
 /** `--name value` or a bare `--name` (true); `fallback` when absent */
@@ -45,7 +46,12 @@ function flag(name, fallback) {
 
 function parseRoots(spec) {
   const roots = {};
-  String(spec).split(',').forEach((pair) => { const [repo, dir] = pair.split('='); if (repo && dir) roots[repo] = path.resolve(dir); });
+  String(spec)
+    .split(',')
+    .forEach((pair) => {
+      const [repo, dir] = pair.split('=');
+      if (repo && dir) roots[repo] = path.resolve(dir);
+    });
   return roots;
 }
 
@@ -61,10 +67,17 @@ function loadTrace(repo, root) {
   const file = path.join(root, 'trace.json');
   if (fs.existsSync(file)) return { trace: JSON.parse(fs.readFileSync(file, 'utf8')), from: file };
   if (!fs.existsSync(TRACE_TOOL)) return { trace: null, from: 'no trace.json and no tools/graph/trace.cjs' };
-  const built = spawnSync(process.execPath, [TRACE_TOOL, '--repo', repo, '--root', root, '--stdout'], { encoding: 'utf8', maxBuffer: 64 << 20, timeout: TRACE_TIMEOUT_MS });
+  const built = spawnSync(process.execPath, [TRACE_TOOL, '--repo', repo, '--root', root, '--stdout'], {
+    encoding: 'utf8',
+    maxBuffer: 64 << 20,
+    timeout: TRACE_TIMEOUT_MS
+  });
   if (built.status !== 0) return { trace: null, from: 'trace build failed: ' + (built.stderr || '').trim().split('\n').slice(-2).join(' ') };
-  try { return { trace: JSON.parse(built.stdout), from: 'built fresh from KG1' }; }
-  catch (error) { return { trace: null, from: 'trace build gave no JSON: ' + error.message }; }
+  try {
+    return { trace: JSON.parse(built.stdout), from: 'built fresh from KG1' };
+  } catch (error) {
+    return { trace: null, from: 'trace build gave no JSON: ' + error.message };
+  }
 }
 
 // ── --changed
@@ -72,29 +85,50 @@ function loadTrace(repo, root) {
 function judgeChange(repo, root) {
   const trace = flag('trace') === 'none' ? { trace: null, from: '--trace none' } : loadTrace(repo, root);
   const today = flag('today');
-  const result = guard.judgeChange({ repo, root, baseRef: String(flag('base', DEFAULT_BASE)), trace: trace.trace, today: typeof today === 'string' ? today : undefined,
-    ratchetRows: flag('ratchet') ? undefined : null });
-  if (result.error) { console.error('  readability --changed: ' + result.error); process.exit(EXIT_USAGE); }
+  const result = guard.judgeChange({
+    repo,
+    root,
+    baseRef: String(flag('base', DEFAULT_BASE)),
+    trace: trace.trace,
+    today: typeof today === 'string' ? today : undefined,
+    ratchetRows: flag('ratchet') ? undefined : null
+  });
+  if (result.error) {
+    console.error('  readability --changed: ' + result.error);
+    process.exit(EXIT_USAGE);
+  }
   result.traceFrom = trace.from;
   return result;
 }
 
 /** print the judgement (report · --md checklist · --json file), tighten with --write, exit 1 on a failure */
 function runChanged() {
-  const repo = String(flag('repo', 'web')), root = rootFor(repo);
+  const repo = String(flag('repo', 'web')),
+    root = rootFor(repo);
   const result = judgeChange(repo, root);
   const ratchetNote = flag('ratchet') ? '' : ' · ratchet not applied (add --ratchet)';
-  console.log(`\nreadability --changed · ${repo} · base ${result.baseRef} @ ${result.baseSha.slice(0, 7)} · ${result.files.length} own-code file(s) · trace: ${result.traceFrom}${ratchetNote}`);
+  console.log(
+    `\nreadability --changed · ${repo} · base ${result.baseRef} @ ${result.baseSha.slice(0, 7)} · ${result.files.length} own-code file(s) · trace: ${result.traceFrom}${ratchetNote}`
+  );
   console.log(guard.report(result));
   if (flag('md')) console.log('\n' + guard.markdown(result) + '\n');
   if (flag('write')) tightenTouched(root, result);
-  writeJson(flag('json'), { repo, base: result.baseSha, failed: result.failed, findings: result.findings, files: result.files.map((file) => ({ file: file.file, numbers: file.numbers, score: file.score })), markdown: guard.markdown(result) });
+  writeJson(flag('json'), {
+    repo,
+    base: result.baseSha,
+    failed: result.failed,
+    findings: result.findings,
+    files: result.files.map((file) => ({ file: file.file, numbers: file.numbers, score: file.score })),
+    markdown: guard.markdown(result)
+  });
   const warnings = result.warnings ? ' (' + result.warnings + ' warning(s))' : '';
   console.log(result.failed ? '\n  ✗ readability guard: FAIL' : '\n  ✓ readability guard: ok' + warnings);
   process.exit(result.failed ? EXIT_FAIL : 0);
 }
 
-function writeJson(target, value) { if (target && target !== true) fs.writeFileSync(target, JSON.stringify(value, null, 1)); }
+function writeJson(target, value) {
+  if (target && target !== true) fs.writeFileSync(target, JSON.stringify(value, null, 1));
+}
 
 /** --changed --write: tighten only the touched files' rows (a lowered score makes the ratchet lower; a raised one is refused) */
 function tightenTouched(root, result) {
@@ -108,28 +142,37 @@ function tightenTouched(root, result) {
 
 // ── --write (whole ratchet)
 function writeRatchet() {
-  const repo = String(flag('repo', 'web')), root = rootFor(repo);
+  const repo = String(flag('repo', 'web')),
+    root = rootFor(repo);
   const scores = {};
   for (const file of measure.collect(repo, root).files) scores[file.rel] = ratchet.score(measure.fileFacts(file));
   const merged = ratchet.tighten(ratchet.read(root), scores);
   ratchet.write(root, merged.rows);
-  console.log(`${ratchet.RATCHET_FILE} (${repo}): ${Object.keys(merged.rows).length} files · ${merged.lowered.length} lowered · ${merged.refused.length} refused (lower only)`);
+  console.log(
+    `${ratchet.RATCHET_FILE} (${repo}): ${Object.keys(merged.rows).length} files · ${merged.lowered.length} lowered · ${merged.refused.length} refused (lower only)`
+  );
   merged.refused.slice(0, 20).forEach((row) => console.log('  refused ' + row.file + ' ' + row.from + ' → ' + row.to));
 }
 
 // ── the baseline
 function runBaseline() {
-  const roots = parseRoots(flag('roots', DEFAULT_ROOTS)), top = Number(flag('top', 30)) || 30;
+  const roots = parseRoots(flag('roots', DEFAULT_ROOTS)),
+    top = Number(flag('top', 30)) || 30;
   const out = {};
   for (const repo of Object.keys(roots)) {
-    if (!fs.existsSync(roots[repo])) { console.error('skip ' + repo + ' (no dir ' + roots[repo] + ')'); continue; }
+    if (!fs.existsSync(roots[repo])) {
+      console.error('skip ' + repo + ' (no dir ' + roots[repo] + ')');
+      continue;
+    }
     out[repo] = baseline.metrics(repo, roots[repo], top);
   }
-  writeJson(flag('json'), JSON.parse(JSON.stringify(out, (key, value) => (key === '_headers' || key === '_fns') ? undefined : value)));
+  writeJson(flag('json'), JSON.parse(JSON.stringify(out, (key, value) => (key === '_headers' || key === '_fns' ? undefined : value))));
   const detail = flag('detail');
   if (detail && detail !== true) {
     const metric = args[args.indexOf('--detail') + 2] || 'R3';
-    baseline.detailRows(out[detail], metric).forEach((row) => console.log(row.file + (row.line ? ':' + row.line : '') + ' ' + (row.name || '') + ' ' + (row.len || '')));
+    baseline
+      .detailRows(out[detail], metric)
+      .forEach((row) => console.log(row.file + (row.line ? ':' + row.line : '') + ' ' + (row.name || '') + ' ' + (row.len || '')));
     return;
   }
   for (const repoMetrics of Object.values(out)) baseline.print(repoMetrics, top);

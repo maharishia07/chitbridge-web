@@ -106,185 +106,342 @@ var SHOP = {
   line1: '14, Poonamallee High Road',
   line2: 'Chennai 600 126 · Tamil Nadu',
   phone: '044 2259 2632',
-  gstin: '33AABCK1234F1Z6',         /* used only on a tax invoice / bill of supply */
-  tax_id_word: 'GSTIN'              /* the sample shop is Indian: its pack's word; a preview hands the shop's own (tax.id_word) */
+  gstin: '33AABCK1234F1Z6' /* used only on a tax invoice / bill of supply */,
+  tax_id_word: 'GSTIN' /* the sample shop is Indian: its pack's word; a preview hands the shop's own (tax.id_word) */
 };
 var BILL = {
-  currency: 'INR',   /* the sample shop's money — the slip writes it as the till does (fmtMoney · CBLocale.money) */
+  currency: 'INR' /* the sample shop's money — the slip writes it as the till does (fmtMoney · CBLocale.money) */,
   no: 'C1/26-27/0041',
   at: new Date(),
   till: 'Counter 1',
   by: 'Ravi',
   customer: { name: 'Walk-in', phone: '' },
   lines: [
-    { name: 'Grapes',            hsn: '0806', qty: 2,   unit: 'kg',    price: 200, rate: 0  },
-    { name: 'Cooking oil 1L',    hsn: '1512', qty: 1,   unit: 'litre', price: 250, rate: 5  },
-    { name: 'Vegetables (mixed)',hsn: '0709', qty: 1.5, unit: 'kg',    price: 100, rate: 0  },
-    { name: 'Dish wash bar',     hsn: '3401', qty: 3,   unit: 'piece', price: 30,  rate: 5, off: 10 }    /* off = % off this line · soap 5 % from 22-09-2025 */
+    { name: 'Grapes', hsn: '0806', qty: 2, unit: 'kg', price: 200, rate: 0 },
+    { name: 'Cooking oil 1L', hsn: '1512', qty: 1, unit: 'litre', price: 250, rate: 5 },
+    { name: 'Vegetables (mixed)', hsn: '0709', qty: 1.5, unit: 'kg', price: 100, rate: 0 },
+    { name: 'Dish wash bar', hsn: '3401', qty: 3, unit: 'piece', price: 30, rate: 5, off: 10 } /* off = % off this line · soap 5 % from 22-09-2025 */
   ],
   /* 881.00 due: half in cash, the rest on UPI (a card where the pack has no UPI — R47) — a split payment, which every counter takes and no slip should hide */
-  paid: [ { how: 'Cash', amount: 500 }, { how: 'UPI', amount: 381 } ]
+  paid: [
+    { how: 'Cash', amount: 500 },
+    { how: 'UPI', amount: 381 }
+  ]
 };
-BILL.lines.forEach(function (line) { line.sample_rate = line.rate; });   /* the sample's own rate, kept so a pack's rate menu can be checked against it */
+BILL.lines.forEach(function (line) {
+  line.sample_rate = line.rate;
+}); /* the sample's own rate, kept so a pack's rate menu can be checked against it */
 /** R47: the second tender in the pack's own words — UPI where the pack takes UPI (chart.paymentModes), a card everywhere else */
-function tenderFor(country){
+function tenderFor(country) {
   var pack = null;
-  try { pack = country && window.CBRegulation ? CBRegulation.packFor(country) : null; } catch (failure) { pack = null; if (window.cbQuiet) window.cbQuiet('bill-print:tender', failure); }
-  return (!pack || (pack.chart && pack.chart.paymentModes && pack.chart.paymentModes.upi)) ? 'UPI' : 'Card';
+  try {
+    pack = country && window.CBRegulation ? CBRegulation.packFor(country) : null;
+  } catch (failure) {
+    pack = null;
+    if (window.cbQuiet) window.cbQuiet('bill-print:tender', failure);
+  }
+  return !pack || (pack.chart && pack.chart.paymentModes && pack.chart.paymentModes.upi) ? 'UPI' : 'Card';
 }
 
 /* ── money ─────────────────────────────────────────────────────────────────────────────────────────────────── */
-function r2(n){ return Math.round((Number(n)||0)*100)/100; }
+function r2(n) {
+  return Math.round((Number(n) || 0) * 100) / 100;
+}
 /** R12: each line's tax is the tax engine's (CBTax.splitLineTax — the shelf price INCLUDES the tax, as in every Indian shop): its heads (CGST and
     SGST each at half the rate on the same base, or one GST/VAT head) and their sum. The slip only ADDS those heads up; it never halves a total. */
-function lineTax(netAmount, rate, split){
+function lineTax(netAmount, rate, split) {
   if (!rate) return { assessable: netAmount, tax: 0, heads: { cgst: 0, sgst: 0, igst: 0, vat: 0 } };
   var answer = CBTax.splitLineTax({ net: netAmount, rate: rate, priceIncludesTax: true, supply: split ? 'intra' : 'domestic', split: split });
   return { assessable: answer.assessable, tax: answer.tax, heads: answer.heads };
 }
-function calc(kind){
-  var taxed = kind === 'tax', split = !!taxWords().split;
-  var lines = BILL.lines.map(function(l){
-    var gross = r2(l.price * l.qty);
-    var save  = r2(gross * (l.off || 0) / 100);
-    var net   = r2(gross - save);
-    var rate  = taxed ? (l.rate || 0) : 0;
+function calc(kind) {
+  var taxed = kind === 'tax',
+    split = !!taxWords().split;
+  var lines = BILL.lines.map(function (item) {
+    var gross = r2(item.price * item.qty);
+    var save = r2((gross * (item.off || 0)) / 100);
+    var net = r2(gross - save);
+    var rate = taxed ? item.rate || 0 : 0;
     var taxParts = lineTax(net, rate, split);
-    return Object.assign({}, l, { gross: gross, save: save, net: net, base: taxParts.assessable, tax: taxParts.tax, heads: taxParts.heads, rate: rate });
+    return Object.assign({}, item, { gross: gross, save: save, net: net, base: taxParts.assessable, tax: taxParts.tax, heads: taxParts.heads, rate: rate });
   });
-  var sum = function(k){ return r2(lines.reduce(function(a,l){ return a + l[k]; }, 0)); };
+  var sum = function (k) {
+    return r2(
+      lines.reduce(function (total, item) {
+        return total + item[k];
+      }, 0)
+    );
+  };
   var byRate = {};
-  lines.forEach(function(l){ if(!l.rate) return; var k = String(l.rate), slab = byRate[k] = byRate[k] || { base:0, tax:0, cgst:0, sgst:0 };
-    slab.base = r2(slab.base + l.base); slab.tax = r2(slab.tax + l.tax); slab.cgst = r2(slab.cgst + l.heads.cgst); slab.sgst = r2(slab.sgst + l.heads.sgst); });
+  lines.forEach(function (item) {
+    if (!item.rate) return;
+    var k = String(item.rate),
+      slab = (byRate[k] = byRate[k] || { base: 0, tax: 0, cgst: 0, sgst: 0 });
+    slab.base = r2(slab.base + item.base);
+    slab.tax = r2(slab.tax + item.tax);
+    slab.cgst = r2(slab.cgst + item.heads.cgst);
+    slab.sgst = r2(slab.sgst + item.heads.sgst);
+  });
   return { lines: lines, gross: sum('gross'), save: sum('save'), net: sum('net'), base: sum('base'), tax: sum('tax'), byRate: byRate };
 }
 
 /* ── ⭐ SET-WALK1 · W27 (2026-10-15): THIS PAGE IS THE LIVE PREVIEW OF CB SETTINGS › PRINT SETUP. Opened as /bill-print.html?preview=1 in a frame,
    it takes ONE message { cb_preview, head:[{text,big,only_taxed,logo}], footer, paper, kind, currency, tax:{word,split,rate,id_word} } and paints
    the same slip with the shop's signature at its head — the one renderer, never a lookalike. Without a message it is the print test it always was. */
-var PREVIEW = /[?&]preview=1/.test(location.search), signature = null;
+var PREVIEW = /[?&]preview=1/.test(location.search),
+  signature = null;
 if (PREVIEW) document.documentElement.setAttribute('data-preview', '1');
 /** the settings page's one message: keep the signature, then repaint the same slip with it (currency, the pack's rate, the kind, the paper) */
 /** the sample bill's number — composed by the ONE composer the till uses (CBDoc.compose), by the shop's country: India's Apr–Mar year (26-27); a country
  *  whose rule has no year part (the UAE · Australia today) prints none. A preview that has not been told a country is the Indian sample shop. */
-function billNo(){
-  try { if (window.CBDoc && typeof CBDoc.compose === 'function') return CBDoc.compose({ country: (signature && signature.country) || 'IN', prefix: 'C1', seq: 41, at: BILL.at }); }
-  catch (failure) { if (window.cbQuiet) window.cbQuiet('bill-print:billNo', failure); }
+function billNo() {
+  try {
+    if (window.CBDoc && typeof CBDoc.compose === 'function')
+      return CBDoc.compose({ country: (signature && signature.country) || 'IN', prefix: 'C1', seq: 41, at: BILL.at });
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('bill-print:billNo', failure);
+  }
   return BILL.no;
 }
-function onPreviewMessage(event){
-  var message = event.data; if (!message || !message.cb_preview) return;
+function onPreviewMessage(event) {
+  var message = event.data;
+  if (!message || !message.cb_preview) return;
   signature = message;
   if (message.currency) BILL.currency = message.currency;
   /* R47: a taxed sample line keeps its own rate when the pack's menu has it (India's 5 %), else takes the pack's standard rate (AU 10 %, AE 5 %) */
-  var menu = (message.tax && message.tax.rates) ? message.tax.rates.map(Number) : null;
-  if (message.tax && message.tax.rate) BILL.lines.forEach(function (line) { if (!line.sample_rate) return;
-    line.rate = (menu && menu.indexOf(line.sample_rate) >= 0) ? line.sample_rate : (Number(message.tax.rate) || line.sample_rate); });
+  var menu = message.tax && message.tax.rates ? message.tax.rates.map(Number) : null;
+  if (message.tax && message.tax.rate)
+    BILL.lines.forEach(function (line) {
+      if (!line.sample_rate) return;
+      line.rate = menu && menu.indexOf(line.sample_rate) >= 0 ? line.sample_rate : Number(message.tax.rate) || line.sample_rate;
+    });
   BILL.paid[1].how = tenderFor(message.country);
-  var kindBox = document.getElementById('kind'); if (kindBox && message.kind) kindBox.value = message.kind;
-  var paperBox = document.getElementById('w'); if (paperBox && message.paper) paperBox.value = message.paper;
+  var kindBox = document.getElementById('kind');
+  if (kindBox && message.kind) kindBox.value = message.kind;
+  var paperBox = document.getElementById('w');
+  if (paperBox && message.paper) paperBox.value = message.paper;
   setW(message.paper || '80');
 }
 window.addEventListener('message', onPreviewMessage);
 /** one signature head line as the slip draws it: the shop's logo, a big line or a small one (a tax-id-only line is dropped on an untaxed bill) */
-function headLineHTML(line, showTaxId){
+function headLineHTML(line, showTaxId) {
   if (line.only_taxed && !showTaxId) return '';
   if (line.logo) return '<div class="c"><img src="' + esc(line.logo) + '" alt="" style="max-width:60%;max-height:18mm" data-testid="slip-logo"></div>';
   return '<div class="c ' + (line.big ? 'b big' : 'small') + '" data-testid="slip-head-' + esc(line.tag || '') + '">' + esc(line.text) + '</div>';
 }
 /** the paper's head: the signature's lines in the shop's order (a preview), else the sample shop's five lines */
-function headHTML(showTaxId){
-  if (!signature || !signature.head) return '<div class="c b big">' + esc(SHOP.name) + '</div>'
-    + '<div class="c small">' + esc(SHOP.line1) + '</div>' + '<div class="c small">' + esc(SHOP.line2) + '</div>'
-    + '<div class="c small">Ph ' + esc(SHOP.phone) + '</div>' + (showTaxId ? '<div class="c small">' + esc(SHOP.tax_id_word) + ' ' + esc(SHOP.gstin) + '</div>' : '');
-  return signature.head.map(function (line) { return headLineHTML(line, showTaxId); }).join('');
+function headHTML(showTaxId) {
+  if (!signature || !signature.head)
+    return (
+      '<div class="c b big">' +
+      esc(SHOP.name) +
+      '</div>' +
+      '<div class="c small">' +
+      esc(SHOP.line1) +
+      '</div>' +
+      '<div class="c small">' +
+      esc(SHOP.line2) +
+      '</div>' +
+      '<div class="c small">Ph ' +
+      esc(SHOP.phone) +
+      '</div>' +
+      (showTaxId ? '<div class="c small">' + esc(SHOP.tax_id_word) + ' ' + esc(SHOP.gstin) + '</div>' : '')
+    );
+  return signature.head
+    .map(function (line) {
+      return headLineHTML(line, showTaxId);
+    })
+    .join('');
 }
 /** R25: India's tax invoice names the supplier's state — "Maharashtra (27)" from the GSTIN's first two digits (CBProfileMap's table); '' elsewhere */
-function stateLine(){
+function stateLine() {
   if (!taxWords().split || !window.CBProfileMap) return '';
-  var id = signature ? signature.tax_id : SHOP.gstin, code = CBProfileMap.stateOfGstin(id), name = code && CBProfileMap.STATE_NAMES[code];
+  var id = signature ? signature.tax_id : SHOP.gstin,
+    code = CBProfileMap.stateOfGstin(id),
+    name = code && CBProfileMap.STATE_NAMES[code];
   return name ? '<div class="c small" data-testid="slip-state">State: ' + esc(name) + ' (' + esc(code) + ')</div>' : '';
 }
 /** the tax words: the pack's (a preview says GST · VAT, split by state or one line, the id's word); India's words otherwise */
-function taxWords(){ return (signature && signature.tax) || { word: 'GST', split: true, rate: 18, id_word: SHOP.tax_id_word }; }
-/* ── the slip ──────────────────────────────────────────────────────────────────────────────────────────────── */
-function when(d){
-  var p = function(n){ return (n < 10 ? '0' : '') + n; };
-  return p(d.getDate()) + '/' + p(d.getMonth()+1) + '/' + d.getFullYear() + '  ' + p(d.getHours()) + ':' + p(d.getMinutes());
+function taxWords() {
+  return (signature && signature.tax) || { word: 'GST', split: true, rate: 18, id_word: SHOP.tax_id_word };
 }
-function render(){
+/* ── the slip ──────────────────────────────────────────────────────────────────────────────────────────────── */
+function when(date) {
+  var p = function (n) {
+    return (n < 10 ? '0' : '') + n;
+  };
+  return p(date.getDate()) + '/' + p(date.getMonth() + 1) + '/' + date.getFullYear() + '  ' + p(date.getHours()) + ':' + p(date.getMinutes());
+}
+function render() {
   var kind = document.getElementById('kind').value;
   var m = calc(kind);
-  var title = kind === 'tax' ? 'TAX INVOICE' : (kind === 'supply' ? 'BILL OF SUPPLY' : 'CASH MEMO');
+  var title = kind === 'tax' ? 'TAX INVOICE' : kind === 'supply' ? 'BILL OF SUPPLY' : 'CASH MEMO';
   var showGstin = kind !== 'cash';
-  var paid = BILL.paid.reduce(function(a,p){ return r2(a + p.amount); }, 0);
+  var paid = BILL.paid.reduce(function (total, item) {
+    return r2(total + item.amount);
+  }, 0);
   var change = r2(paid - m.net);
 
-  var head = headHTML(showGstin)
-    + '<div class="solid"></div>'
-    + '<div class="c b">' + title + '</div>'
-    + (kind === 'tax' ? stateLine() : '')
-    + '<div class="rule"></div>'
-    + '<div class="row small"><span class="l">No ' + esc(billNo()) + '</span><span class="v">' + esc(when(BILL.at)) + '</span></div>'
-    + '<div class="row small"><span class="l">' + esc(BILL.till) + ' · ' + esc(BILL.by) + '</span><span class="v">' + esc(BILL.customer.name) + '</span></div>'
-    + '<div class="rule"></div>';
+  var head =
+    headHTML(showGstin) +
+    '<div class="solid"></div>' +
+    '<div class="c b">' +
+    title +
+    '</div>' +
+    (kind === 'tax' ? stateLine() : '') +
+    '<div class="rule"></div>' +
+    '<div class="row small"><span class="l">No ' +
+    esc(billNo()) +
+    '</span><span class="v">' +
+    esc(when(BILL.at)) +
+    '</span></div>' +
+    '<div class="row small"><span class="l">' +
+    esc(BILL.till) +
+    ' · ' +
+    esc(BILL.by) +
+    '</span><span class="v">' +
+    esc(BILL.customer.name) +
+    '</span></div>' +
+    '<div class="rule"></div>';
 
-  var items = m.lines.map(function(l){
-    return '<div class="item">'
-      + '<div class="row"><span class="l">' + esc(l.name) + '</span><span class="v">' + fmtMoney(l.net, BILL.currency) + '</span></div>'
-      + '<div class="row small qty"><span class="l">' + l.qty + ' ' + esc(l.unit) + ' x ' + fmtMoney(l.price, BILL.currency)
-        + (l.off ? '   (-' + l.off + '%)' : '')
-        + (kind === 'tax' && l.rate ? '   ' + esc(taxWords().word) + ' ' + l.rate + '%' : '')
-        + '</span><span class="v"></span></div>'
-      + '</div>';
-  }).join('');
+  var items = m.lines
+    .map(function (item) {
+      return (
+        '<div class="item">' +
+        '<div class="row"><span class="l">' +
+        esc(item.name) +
+        '</span><span class="v">' +
+        fmtMoney(item.net, BILL.currency) +
+        '</span></div>' +
+        '<div class="row small qty"><span class="l">' +
+        item.qty +
+        ' ' +
+        esc(item.unit) +
+        ' x ' +
+        fmtMoney(item.price, BILL.currency) +
+        (item.off ? '   (-' + item.off + '%)' : '') +
+        (kind === 'tax' && item.rate ? '   ' + esc(taxWords().word) + ' ' + item.rate + '%' : '') +
+        '</span><span class="v"></span></div>' +
+        '</div>'
+      );
+    })
+    .join('');
 
-  var totals = '<div class="rule"></div>'
-    + (m.save > 0 ? '<div class="row"><span class="l">Items</span><span class="v">' + fmtMoney(m.gross, BILL.currency) + '</span></div>'
-                  + '<div class="row"><span class="l">You saved</span><span class="v">-' + fmtMoney(m.save, BILL.currency) + '</span></div>' : '')
-    + (kind === 'tax'
-        ? '<div class="row"><span class="l">Taxable</span><span class="v">' + fmtMoney(m.base, BILL.currency) + '</span></div>'
-          + Object.keys(m.byRate).sort(function(a,b){ return a-b; }).map(function(k){
-              var slab = m.byRate[k], words = taxWords();
-              if (!words.split) return '<div class="row small"><span class="l">' + esc(words.word) + ' ' + k + '% </span><span class="v">' + fmtMoney(slab.tax, BILL.currency) + '</span></div>';   /* AU · AE: one line, the pack's rate */
-              /* R12: the engine's per-line heads, summed — CGST + SGST is the total by construction */
-              return '<div class="row small"><span class="l">CGST ' + (k/2) + '% </span><span class="v">' + fmtMoney(slab.cgst, BILL.currency) + '</span></div>'
-                   + '<div class="row small"><span class="l">SGST ' + (k/2) + '% </span><span class="v">' + fmtMoney(slab.sgst, BILL.currency) + '</span></div>';
-            }).join('')
-          + '<div class="row"><span class="l">Total ' + esc(taxWords().word) + '</span><span class="v">' + fmtMoney(m.tax, BILL.currency) + '</span></div>'
-        : '')
-    + '<div class="solid"></div>'
-    + '<div class="row big"><span class="l">TOTAL</span><span class="v">' + fmtMoney(m.net, BILL.currency) + '</span></div>'
-    + '<div class="solid"></div>'
-    + BILL.paid.map(function(p){ return '<div class="row small"><span class="l">' + esc(p.how) + '</span><span class="v">' + fmtMoney(p.amount, BILL.currency) + '</span></div>'; }).join('')
-    + (change > 0 ? '<div class="row small b"><span class="l">Change</span><span class="v">' + fmtMoney(change, BILL.currency) + '</span></div>' : '');
+  var totals =
+    '<div class="rule"></div>' +
+    (m.save > 0
+      ? '<div class="row"><span class="l">Items</span><span class="v">' +
+        fmtMoney(m.gross, BILL.currency) +
+        '</span></div>' +
+        '<div class="row"><span class="l">You saved</span><span class="v">-' +
+        fmtMoney(m.save, BILL.currency) +
+        '</span></div>'
+      : '') +
+    (kind === 'tax'
+      ? '<div class="row"><span class="l">Taxable</span><span class="v">' +
+        fmtMoney(m.base, BILL.currency) +
+        '</span></div>' +
+        Object.keys(m.byRate)
+          .sort(function (first, second) {
+            return first - second;
+          })
+          .map(function (item) {
+            var slab = m.byRate[item],
+              words = taxWords();
+            if (!words.split)
+              return (
+                '<div class="row small"><span class="l">' +
+                esc(words.word) +
+                ' ' +
+                item +
+                '% </span><span class="v">' +
+                fmtMoney(slab.tax, BILL.currency) +
+                '</span></div>'
+              ); /* AU · AE: one line, the pack's rate */
+            /* R12: the engine's per-line heads, summed — CGST + SGST is the total by construction */
+            return (
+              '<div class="row small"><span class="l">CGST ' +
+              item / 2 +
+              '% </span><span class="v">' +
+              fmtMoney(slab.cgst, BILL.currency) +
+              '</span></div>' +
+              '<div class="row small"><span class="l">SGST ' +
+              item / 2 +
+              '% </span><span class="v">' +
+              fmtMoney(slab.sgst, BILL.currency) +
+              '</span></div>'
+            );
+          })
+          .join('') +
+        '<div class="row"><span class="l">Total ' +
+        esc(taxWords().word) +
+        '</span><span class="v">' +
+        fmtMoney(m.tax, BILL.currency) +
+        '</span></div>'
+      : '') +
+    '<div class="solid"></div>' +
+    '<div class="row big"><span class="l">TOTAL</span><span class="v">' +
+    fmtMoney(m.net, BILL.currency) +
+    '</span></div>' +
+    '<div class="solid"></div>' +
+    BILL.paid
+      .map(function (item) {
+        return '<div class="row small"><span class="l">' + esc(item.how) + '</span><span class="v">' + fmtMoney(item.amount, BILL.currency) + '</span></div>';
+      })
+      .join('') +
+    (change > 0 ? '<div class="row small b"><span class="l">Change</span><span class="v">' + fmtMoney(change, BILL.currency) + '</span></div>' : '');
 
-  var hsn = (kind === 'tax' && taxWords().split)
-    ? '<div class="rule"></div><table class="hsn"><tr><th>HSN</th><th>Taxable</th><th>Rate</th><th>Tax</th></tr>'
-      + m.lines.filter(function(l){ return l.rate; }).map(function(l){
-          return '<tr><td>' + esc(l.hsn) + '</td><td>' + fmtMoney(l.base, BILL.currency) + '</td><td>' + l.rate + '%</td><td>' + fmtMoney(l.tax, BILL.currency) + '</td></tr>';
-        }).join('') + '</table>'
-    : '';
+  var hsn =
+    kind === 'tax' && taxWords().split
+      ? '<div class="rule"></div><table class="hsn"><tr><th>HSN</th><th>Taxable</th><th>Rate</th><th>Tax</th></tr>' +
+        m.lines
+          .filter(function (item) {
+            return item.rate;
+          })
+          .map(function (item) {
+            return (
+              '<tr><td>' +
+              esc(item.hsn) +
+              '</td><td>' +
+              fmtMoney(item.base, BILL.currency) +
+              '</td><td>' +
+              item.rate +
+              '%</td><td>' +
+              fmtMoney(item.tax, BILL.currency) +
+              '</td></tr>'
+            );
+          })
+          .join('') +
+        '</table>'
+      : '';
 
-  var foot = '<div class="rule"></div>'
-    + (kind === 'supply' ? '<div class="c small">Composition taxable person.<br>Not eligible to collect tax on supplies.</div><div class="rule"></div>' : '')
-    + footerHTML()
-    + '<div class="c small">Billed on ChitBridge</div>'
-    + '<div style="height:10mm"></div>';   /* the cutter takes the last line otherwise */
+  var foot =
+    '<div class="rule"></div>' +
+    (kind === 'supply' ? '<div class="c small">Composition taxable person.<br>Not eligible to collect tax on supplies.</div><div class="rule"></div>' : '') +
+    footerHTML() +
+    '<div class="c small">Billed on ChitBridge</div>' +
+    '<div style="height:10mm"></div>'; /* the cutter takes the last line otherwise */
 
   document.getElementById('slip').innerHTML = head + items + totals + hsn + foot;
 }
 /** R25: the footer — the shop's ticked line, nothing when it is unticked (a preview); the sample's own on the print test */
-function footerHTML(){
-  var words = signature ? (signature.footer || '') : 'Thank you · visit again';
+function footerHTML() {
+  var words = signature ? signature.footer || '' : 'Thank you · visit again';
   return words ? '<div class="c small" data-testid="slip-footer">' + esc(words) + '</div>' : '';
 }
 /** the paper: the slip's width and the one @page rule (a roll is its width × whatever the bill needs; A4 is A4) */
-function setW(w){
+function setW(w) {
   document.body.setAttribute('data-w', w);
   var page = w === 'a4' ? '@page { size: A4; margin: 12mm; }' : '@page { size: ' + (w === '58' ? '48mm' : '72mm') + ' auto; margin: 0; }';
-  var st = document.getElementById('pagesize') || (function(){ var e = document.createElement('style'); e.id = 'pagesize'; document.head.appendChild(e); return e; })();
-  st.textContent = page;
+  var node =
+    document.getElementById('pagesize') ||
+    (function () {
+      var e = document.createElement('style');
+      e.id = 'pagesize';
+      document.head.appendChild(e);
+      return e;
+    })();
+  node.textContent = page;
   render();
 }
 setW('80');

@@ -33,14 +33,40 @@
   if (root.CBKural) return;
   var doc = root.document;
 
-  var RES = null;   /* the room kept for the band until its verse has loaded (UI9): the page's frame does not change height when the band arrives */
-  var DATA = null, LOADING = null, ROUTE = '', LEAD = 'ta', LANG = 'en', HOST = null, EL = null, TIMER = null, SECOND = false, PAUSED = false, OBS = null, BLOCKED = false;
+  var RES = null; /* the room kept for the band until its verse has loaded (UI9): the page's frame does not change height when the band arrives */
+  var DATA = null,
+    LOADING = null,
+    ROUTE = '',
+    LEAD = 'ta',
+    LANG = 'en',
+    HOST = null,
+    EL = null,
+    TIMER = null,
+    SECOND = false,
+    PAUSED = false,
+    OBS = null,
+    BLOCKED = false;
   var SRC = '/app/kurals.json';
 
-  function lsGet(k) { try { return root.localStorage.getItem(k); } catch (_) { return null; } }
-  function lsSet(k, v) { try { root.localStorage.setItem(k, v); } catch (_) {} }
-  function today() { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
-  function hiddenToday() { return lsGet('kural.hidden') === today(); }
+  function lsGet(k) {
+    try {
+      return root.localStorage.getItem(k);
+    } catch (_) {
+      return null;
+    }
+  }
+  function lsSet(k, v) {
+    try {
+      root.localStorage.setItem(k, v);
+    } catch (_) {}
+  }
+  function today() {
+    var date = new Date();
+    return date.getFullYear() + '-' + ('0' + (date.getMonth() + 1)).slice(-2) + '-' + ('0' + date.getDate()).slice(-2);
+  }
+  function hiddenToday() {
+    return lsGet('kural.hidden') === today();
+  }
 
   var CSS = [
     /* TOUR-FIX1: a page without the list token names (settings) fell back to CREAM panel/page while a chosen theme turned --ink light — Dark read pale on cream.
@@ -89,75 +115,158 @@
     '.cbk .cbk-show{min-height:44px}',
     '}',
     '@media (prefers-reduced-motion:reduce){.cbk .cbk-body > *{transition:none}}',
-    'html[data-motion="reduce"] .cbk .cbk-body > *{transition:none}',
+    'html[data-motion="reduce"] .cbk .cbk-body > *{transition:none}'
   ].join('\n');
 
   function css() {
     if (!doc || doc.getElementById('cbk_css')) return;
-    var s = doc.createElement('style'); s.id = 'cbk_css'; s.textContent = CSS; doc.head.appendChild(s);
+    var node = doc.createElement('style');
+    node.id = 'cbk_css';
+    node.textContent = CSS;
+    doc.head.appendChild(node);
     /* Noto Serif Tamil — the verse's face (a font the standard adds); a page that cannot reach it falls back to Noto Sans Tamil / the system's */
     if (!doc.getElementById('cbk_font')) {
-      var l = doc.createElement('link'); l.id = 'cbk_font'; l.rel = 'stylesheet'; l.href = 'https://fonts.googleapis.com/css2?family=Noto+Serif+Tamil:wght@500;600;700&display=swap'; doc.head.appendChild(l);
+      var l = doc.createElement('link');
+      l.id = 'cbk_font';
+      l.rel = 'stylesheet';
+      l.href = 'https://fonts.googleapis.com/css2?family=Noto+Serif+Tamil:wght@500;600;700&display=swap';
+      doc.head.appendChild(l);
     }
   }
 
   function load() {
     if (DATA) return Promise.resolve(DATA);
     if (LOADING) return LOADING;
-    LOADING = root.fetch(SRC, { cache: 'no-cache' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) { DATA = j && j.kurals ? j : { kurals: [], excluded: [] }; return DATA; }, function () { DATA = { kurals: [], excluded: [] }; return DATA; });
+    LOADING = root
+      .fetch(SRC, { cache: 'no-cache' })
+      .then(function (reply) {
+        return reply.ok ? reply.json() : null;
+      })
+      .then(
+        function (reply) {
+          DATA = reply && reply.kurals ? reply : { kurals: [], excluded: [] };
+          return DATA;
+        },
+        function () {
+          DATA = { kurals: [], excluded: [] };
+          return DATA;
+        }
+      );
     return LOADING;
   }
   /** a route's kural; the kit's `excluded` list (552) can never be returned */
   function find(route) {
     if (!DATA || !route) return null;
-    var bad = (DATA.excluded || []).map(function (x) { return x.no; }), k = null;
-    (DATA.kurals || []).forEach(function (x) { if (!k && x.route === route && bad.indexOf(x.no) < 0) k = x; });
+    var bad = (DATA.excluded || []).map(function (x) {
+        return x.no;
+      }),
+      k = null;
+    (DATA.kurals || []).forEach(function (x) {
+      if (!k && x.route === route && bad.indexOf(x.no) < 0) k = x;
+    });
     return k;
   }
   /** W7: does this person want the band? pref `kural` — 'on' · 'off' · 'auto' (on only where Tamil is among the languages read, CBLocale.langs) */
   function wanted() {
     var pref = 'auto';
-    try { pref = (root.CBAvatar && root.CBAvatar.get && root.CBAvatar.get().kural) || 'auto'; } catch (err) { quiet('wanted:pref', err); }
+    try {
+      pref = (root.CBAvatar && root.CBAvatar.get && root.CBAvatar.get().kural) || 'auto';
+    } catch (err) {
+      quiet('wanted:pref', err);
+    }
     if (pref === 'on') return true;
     if (pref === 'off') return false;
-    try { var langs = (root.CBLocale && root.CBLocale.langs && root.CBLocale.langs()) || []; return langs.indexOf('ta') >= 0; } catch (err) { quiet('wanted:langs', err); return false; }
+    try {
+      var langs = (root.CBLocale && root.CBLocale.langs && root.CBLocale.langs()) || [];
+      return langs.indexOf('ta') >= 0;
+    } catch (err) {
+      quiet('wanted:langs', err);
+      return false;
+    }
   }
   /** a failure the band survives (it falls back to the default) — logged through the page's cbQuiet when it has one, never silent */
-  function quiet(where, err) { if (root.cbQuiet) root.cbQuiet('kural:' + where, err); }
+  function quiet(where, err) {
+    if (root.cbQuiet) root.cbQuiet('kural:' + where, err);
+  }
   /** the app's language, when the page has one; Tamil and everything unlisted read the English line (the `meaning.ta` slot stays empty by decision) */
   function lang() {
-    var l = ''; try { l = String((root.CBLocale && root.CBLocale.lang && root.CBLocale.lang()) || doc.documentElement.lang || 'en').toLowerCase().slice(0, 2); } catch (_) { l = 'en'; }
+    var l = '';
+    try {
+      l = String((root.CBLocale && root.CBLocale.lang && root.CBLocale.lang()) || doc.documentElement.lang || 'en')
+        .toLowerCase()
+        .slice(0, 2);
+    } catch (_) {
+      l = 'en';
+    }
     return l;
   }
   function meaning(k) {
-    var l = lang(), m = k.meaning || {};
+    var l = lang(),
+      m = k.meaning || {};
     if (l && l !== 'ta' && l !== 'en' && m[l]) return { text: m[l], lang: l };
     return { text: m.en || '', lang: 'en' };
   }
   /** a line breaks only at its middle, the rest indented — the browser never breaks a couplet at random */
-  function kline(s) { var w = String(s).split(' '), m = Math.ceil(w.length / 2); return '<span class="cbk-ln"><span class="cbk-h">' + esc(w.slice(0, m).join(' ')) + '</span> <span class="cbk-h">' + esc(w.slice(m).join(' ')) + '</span></span>'; }
-  var SEAL = '<svg class="cbk-seal" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="29" stroke-width="2.5"/><ellipse cx="32" cy="13" rx="4.4" ry="3.6"/><circle cx="32" cy="22" r="6.4"/><path d="M25.8 23.5Q26 33 32 38.5Q38 33 38.2 23.5Q32 27 25.8 23.5Z"/><path d="M15.5 54Q16.5 41 26 36.8L32 40L38 36.8Q47.5 41 48.5 54Z"/></svg>';
+  function kline(s) {
+    var text = String(s).split(' '),
+      m = Math.ceil(text.length / 2);
+    return (
+      '<span class="cbk-ln"><span class="cbk-h">' +
+      esc(text.slice(0, m).join(' ')) +
+      '</span> <span class="cbk-h">' +
+      esc(text.slice(m).join(' ')) +
+      '</span></span>'
+    );
+  }
+  var SEAL =
+    '<svg class="cbk-seal" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="29" stroke-width="2.5"/><ellipse cx="32" cy="13" rx="4.4" ry="3.6"/><circle cx="32" cy="22" r="6.4"/><path d="M25.8 23.5Q26 33 32 38.5Q38 33 38.2 23.5Q32 27 25.8 23.5Z"/><path d="M15.5 54Q16.5 41 26 36.8L32 40L38 36.8Q47.5 41 48.5 54Z"/></svg>';
 
   /** what is on screen that the band must not sit beside: a warning, an alert, a bad card, a dialog */
-  var HEAD_SEL = "header,.bar,.topbar,.titlerow,.cbl-title,.cbsh-hdr,[role=banner]";
+  var HEAD_SEL = 'header,.bar,.topbar,.titlerow,.cbl-title,.cbsh-hdr,[role=banner]';
   var BLOCK_SEL = '.cbl-chip.warn,.cbl-chip.bad,[role="alert"],.card.bad,.pe-bad,.pe-warn,dialog[open],.modalback,#modal.on';
   function blockedNow() {
     var list = doc.querySelectorAll(BLOCK_SEL);
-    for (var i = 0; i < list.length; i++) { var e = list[i]; if (EL && EL.contains(e)) continue; if (e.offsetWidth || e.offsetHeight || e.getClientRects().length) return true; }
+    for (var index = 0; index < list.length; index++) {
+      var e = list[index];
+      if (EL && EL.contains(e)) continue;
+      if (e.offsetWidth || e.offsetHeight || e.getClientRects().length) return true;
+    }
     return false;
   }
   /** which width class the band is in, and the height it had there last time (so the room kept for it is the right size from the first paint) */
-  function wclass() { var w = root.innerWidth || 1200; return w > 1100 ? 'wide' : (w > 640 ? 'mid' : 'phone'); }
-  function reserveH() { var n = parseInt(lsGet('kural.h.' + wclass()), 10); return n > 20 ? n : ({ wide: 72, mid: 104, phone: 110 })[wclass()]; }
+  function wclass() {
+    var w = root.innerWidth || 1200;
+    return w > 1100 ? 'wide' : w > 640 ? 'mid' : 'phone';
+  }
+  function reserveH() {
+    var n = parseInt(lsGet('kural.h.' + wclass()), 10);
+    return n > 20 ? n : { wide: 72, mid: 104, phone: 110 }[wclass()];
+  }
   function makeRoom(h, quiet) {
-    if (!RES) { RES = doc.createElement('div'); RES.id = 'cbkural-reserve'; RES.setAttribute('aria-hidden', 'true'); RES.setAttribute('data-testid', 'kural-reserve'); (HOST || doc.body).appendChild(RES); }
-    RES.className = 'cbk-reserve' + (quiet ? ' quiet' : ''); RES.style.height = h + 'px';
+    if (!RES) {
+      RES = doc.createElement('div');
+      RES.id = 'cbkural-reserve';
+      RES.setAttribute('aria-hidden', 'true');
+      RES.setAttribute('data-testid', 'kural-reserve');
+      (HOST || doc.body).appendChild(RES);
+    }
+    RES.className = 'cbk-reserve' + (quiet ? ' quiet' : '');
+    RES.style.height = h + 'px';
   }
   function reserve() {
     if (!doc || !doc.body || RES || EL) return;
-    css(); makeRoom(reserveH(), false); touch();
+    css();
+    makeRoom(reserveH(), false);
+    touch();
   }
-  function unreserve() { if (RES) { try { RES.remove(); } catch (_) {} RES = null; } }
+  function unreserve() {
+    if (RES) {
+      try {
+        RES.remove();
+      } catch (_) {}
+      RES = null;
+    }
+  }
   function touch() {
     var h = (EL && !EL.hidden ? EL.offsetHeight : 0) + (RES ? RES.offsetHeight : 0);
     if (EL && !EL.hidden && EL.offsetHeight > 20) lsSet('kural.h.' + wclass(), String(EL.offsetHeight));
@@ -166,9 +275,19 @@
 
   /** the footer element, once: attached to the host, its click and keyboard handlers wired */
   function createBand() {
-    EL = doc.createElement('footer'); EL.id = 'cbkural'; EL.className = 'cbk'; EL.setAttribute('data-testid', 'kural-footer'); EL.setAttribute('aria-label', 'Thirukkural');
+    EL = doc.createElement('footer');
+    EL.id = 'cbkural';
+    EL.className = 'cbk';
+    EL.setAttribute('data-testid', 'kural-footer');
+    EL.setAttribute('aria-label', 'Thirukkural');
     (HOST || doc.body).appendChild(EL);
-    EL.addEventListener('click', onClick); EL.addEventListener('keydown', function (e) { if ((e.key === 'Enter' || e.key === ' ') && e.target.closest && e.target.closest('[data-kswap]')) { e.preventDefault(); swap(); } });
+    EL.addEventListener('click', onClick);
+    EL.addEventListener('keydown', function (e) {
+      if ((e.key === 'Enter' || e.key === ' ') && e.target.closest && e.target.closest('[data-kswap]')) {
+        e.preventDefault();
+        swap();
+      }
+    });
   }
 
   function paint() {
@@ -183,32 +302,87 @@
     var k = wanted() ? find(ROUTE) : null;
     BLOCKED = blockedNow();
     /* a band that may not be drawn BESIDE a warning keeps its room (quiet, blank): the page does not grow and shrink as warnings come and go (UI9) */
-    if (k && BLOCKED) makeRoom(prevH > 20 ? prevH : reserveH(), true); else unreserve();
-    if (!k || BLOCKED) { clearInterval(TIMER); TIMER = null; EL.hidden = true; EL.innerHTML = ''; EL.removeAttribute('data-kural'); touch(); return; }
-    EL.hidden = false; EL.setAttribute('data-kural', String(k.no));
-    if (hiddenToday()) {
-      clearInterval(TIMER); TIMER = null; EL.className = 'cbk off'; EL.innerHTML = '<button type="button" class="cbk-show" data-kshow="1" data-testid="kural-show" aria-label="Show the kural">குறள் ' + k.no + ' ›</button>'; touch(); return;
+    if (k && BLOCKED) makeRoom(prevH > 20 ? prevH : reserveH(), true);
+    else unreserve();
+    if (!k || BLOCKED) {
+      clearInterval(TIMER);
+      TIMER = null;
+      EL.hidden = true;
+      EL.innerHTML = '';
+      EL.removeAttribute('data-kural');
+      touch();
+      return;
     }
-    var m = meaning(k), verse = '<span class="cbk-v" lang="ta" data-testid="kural-verse">' + kline(k.verse[0]) + kline(k.verse[1]) + '</span>',
+    EL.hidden = false;
+    EL.setAttribute('data-kural', String(k.no));
+    if (hiddenToday()) {
+      clearInterval(TIMER);
+      TIMER = null;
+      EL.className = 'cbk off';
+      EL.innerHTML = '<button type="button" class="cbk-show" data-kshow="1" data-testid="kural-show" aria-label="Show the kural">குறள் ' + k.no + ' ›</button>';
+      touch();
+      return;
+    }
+    var m = meaning(k),
+      verse = '<span class="cbk-v" lang="ta" data-testid="kural-verse">' + kline(k.verse[0]) + kline(k.verse[1]) + '</span>',
       mean = '<span class="cbk-m" lang="' + esc(m.lang) + '" data-testid="kural-meaning">' + esc(m.text) + '</span>';
     EL.className = 'cbk k-' + LEAD + (SECOND ? ' second' : '');
-    EL.innerHTML = SEAL + '<div class="cbk-body" data-kswap="1" data-testid="kural-body">' + (LEAD === 'ta' ? verse + mean : mean + verse) + '</div>'
-      + '<span class="cbk-no" data-testid="kural-no">குறள் ' + k.no + '</span>'
-      + '<button type="button" class="cbk-x" data-khide="1" data-testid="kural-hide" aria-label="Hide the kural for today" title="Hide for today">✕</button>';
-    var phone = EL.clientWidth > 0 && EL.clientWidth <= 640, body = EL.querySelector('.cbk-body');
-    if (phone) { body.setAttribute('role', 'button'); body.setAttribute('tabindex', '0'); body.setAttribute('aria-label', 'Thirukkural ' + k.no + '. Tap to switch the verse and its meaning'); }
-    if (!(phone && !still() && !PAUSED)) { clearInterval(TIMER); TIMER = null; }
-    else if (!TIMER) TIMER = setInterval(function () { SECOND = !SECOND; EL && EL.classList.toggle('second', SECOND); }, 7000);
+    EL.innerHTML =
+      SEAL +
+      '<div class="cbk-body" data-kswap="1" data-testid="kural-body">' +
+      (LEAD === 'ta' ? verse + mean : mean + verse) +
+      '</div>' +
+      '<span class="cbk-no" data-testid="kural-no">குறள் ' +
+      k.no +
+      '</span>' +
+      '<button type="button" class="cbk-x" data-khide="1" data-testid="kural-hide" aria-label="Hide the kural for today" title="Hide for today">✕</button>';
+    var phone = EL.clientWidth > 0 && EL.clientWidth <= 640,
+      body = EL.querySelector('.cbk-body');
+    if (phone) {
+      body.setAttribute('role', 'button');
+      body.setAttribute('tabindex', '0');
+      body.setAttribute('aria-label', 'Thirukkural ' + k.no + '. Tap to switch the verse and its meaning');
+    }
+    if (!(phone && !still() && !PAUSED)) {
+      clearInterval(TIMER);
+      TIMER = null;
+    } else if (!TIMER)
+      TIMER = setInterval(function () {
+        SECOND = !SECOND;
+        EL && EL.classList.toggle('second', SECOND);
+      }, 7000);
     touch();
   }
   function still() {
-    try { return doc.documentElement.getAttribute('data-motion') === 'reduce' || (root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (_) { return false; }
+    try {
+      return doc.documentElement.getAttribute('data-motion') === 'reduce' || (root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    } catch (_) {
+      return false;
+    }
   }
-  function swap() { if (!EL || !EL.clientWidth || EL.clientWidth > 640) return; PAUSED = true; clearInterval(TIMER); TIMER = null; SECOND = !SECOND; EL.classList.toggle('second', SECOND); }
+  function swap() {
+    if (!EL || !EL.clientWidth || EL.clientWidth > 640) return;
+    PAUSED = true;
+    clearInterval(TIMER);
+    TIMER = null;
+    SECOND = !SECOND;
+    EL.classList.toggle('second', SECOND);
+  }
   function onClick(e) {
-    var t = e.target.closest ? e.target.closest('[data-kswap],[data-khide],[data-kshow]') : null; if (!t) return;
-    if (t.hasAttribute('data-khide')) { lsSet('kural.hidden', today()); paint(); var s = EL.querySelector('[data-kshow]'); if (s) s.focus(); return; }
-    if (t.hasAttribute('data-kshow')) { lsSet('kural.hidden', ''); paint(); return; }
+    var node = e.target.closest ? e.target.closest('[data-kswap],[data-khide],[data-kshow]') : null;
+    if (!node) return;
+    if (node.hasAttribute('data-khide')) {
+      lsSet('kural.hidden', today());
+      paint();
+      var s = EL.querySelector('[data-kshow]');
+      if (s) s.focus();
+      return;
+    }
+    if (node.hasAttribute('data-kshow')) {
+      lsSet('kural.hidden', '');
+      paint();
+      return;
+    }
     swap();
   }
 
@@ -218,25 +392,74 @@
     if (OBS || !root.MutationObserver) return;
     OBS = new root.MutationObserver(function (list) {
       if (QUEUED) return;
-      var mine = list.every(function (m) { return EL && EL.contains(m.target); }); if (mine) return;
-      QUEUED = true; (root.requestAnimationFrame || root.setTimeout)(function () { QUEUED = false; var b = blockedNow(); if (b !== BLOCKED) paint(); else touch(); });
+      var mine = list.every(function (item) {
+        return EL && EL.contains(item.target);
+      });
+      if (mine) return;
+      QUEUED = true;
+      (root.requestAnimationFrame || root.setTimeout)(function () {
+        QUEUED = false;
+        var b = blockedNow();
+        if (b !== BLOCKED) paint();
+        else touch();
+      });
     });
     OBS.observe(doc.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'hidden', 'open', 'style'] });
-    root.addEventListener('resize', function () { if (EL && !EL.hidden) { var was = EL.clientWidth <= 640; (root.requestAnimationFrame || root.setTimeout)(function () { if (EL && (EL.clientWidth <= 640) !== was) paint(); else touch(); }); } });
+    root.addEventListener('resize', function () {
+      if (EL && !EL.hidden) {
+        var was = EL.clientWidth <= 640;
+        (root.requestAnimationFrame || root.setTimeout)(function () {
+          if (EL && EL.clientWidth <= 640 !== was) paint();
+          else touch();
+        });
+      }
+    });
   }
 
   root.CBKural = {
     mount: function (o) {
-      o = o || {}; HOST = o.host || null; if (o.lead) LEAD = o.lead; else { var s = lsGet('kural.lang'); if (s === 'en' || s === 'ta') LEAD = s; }
-      ROUTE = o.route || ROUTE; LANG = lang(); watch(); reserve();
-      return load().then(function () { paint(); return root.CBKural; });
+      o = o || {};
+      HOST = o.host || null;
+      if (o.lead) LEAD = o.lead;
+      else {
+        var s = lsGet('kural.lang');
+        if (s === 'en' || s === 'ta') LEAD = s;
+      }
+      ROUTE = o.route || ROUTE;
+      LANG = lang();
+      watch();
+      reserve();
+      return load().then(function () {
+        paint();
+        return root.CBKural;
+      });
     },
-    set: function (route) { ROUTE = route || ''; SECOND = false; PAUSED = false; return load().then(function () { paint(); }); },
-    repaint: function () { if (DATA) paint(); },   /* W7: the avatar's kural pref changed */
+    set: function (route) {
+      ROUTE = route || '';
+      SECOND = false;
+      PAUSED = false;
+      return load().then(function () {
+        paint();
+      });
+    },
+    repaint: function () {
+      if (DATA) paint();
+    } /* W7: the avatar's kural pref changed */,
     wanted: wanted,
-    lead: function (l) { if (l !== 'ta' && l !== 'en') return; LEAD = l; lsSet('kural.lang', l); paint(); },
-    route: function () { return ROUTE; },
-    refresh: function () { paint(); },
-    el: function () { return EL; },
+    lead: function (l) {
+      if (l !== 'ta' && l !== 'en') return;
+      LEAD = l;
+      lsSet('kural.lang', l);
+      paint();
+    },
+    route: function () {
+      return ROUTE;
+    },
+    refresh: function () {
+      paint();
+    },
+    el: function () {
+      return EL;
+    }
   };
 })(typeof window !== 'undefined' ? window : this);

@@ -303,7 +303,7 @@
     'Convert': 'மாற்று',
     'Copy': 'நகலெடு',
     'Cost': 'செலவு',
-    'Couldn\'t load': 'ஏற்ற முடியவில்லை',
+    "Couldn't load": 'ஏற்ற முடியவில்லை',
     'Couldn’t load': 'ஏற்ற முடியவில்லை',
     'Counterparties': 'எதிர்த் தரப்பினர்',
     'Counterparty reliability': 'எதிர்த் தரப்பு நம்பகத்தன்மை',
@@ -381,7 +381,7 @@
     'How they order (commercial method)': 'அவர்கள் எப்படி ஆர்டர் செய்கிறார்கள் (வணிக முறை)',
     'How this looks': 'இது எப்படித் தெரிகிறது',
     'How work arrives': 'வேலை எப்படி வருகிறது',
-    'I don\'t know': 'எனக்குத் தெரியாது',
+    "I don't know": 'எனக்குத் தெரியாது',
     'I don’t know': 'எனக்குத் தெரியாது',
     'Identity': 'அடையாளம்',
     'IDs are identity': 'ID-களே அடையாளம்',
@@ -402,7 +402,8 @@
     'Least-loaded — balance across the team': 'குறைந்த சுமை — குழுவில் சமநிலை',
     'Leave cover': 'விடுப்புப் பதிலீடு',
     'Leave it out': 'விட்டுவிடு',
-    'Leave-cover delegate (covers auto-assigned work while on leave)': 'விடுப்புப் பதிலீட்டுப் பிரதிநிதி (விடுப்பில் இருக்கும்போது தானாக ஒப்படைக்கப்பட்ட வேலையைக் கவனிக்கிறார்)',
+    'Leave-cover delegate (covers auto-assigned work while on leave)':
+      'விடுப்புப் பதிலீட்டுப் பிரதிநிதி (விடுப்பில் இருக்கும்போது தானாக ஒப்படைக்கப்பட்ட வேலையைக் கவனிக்கிறார்)',
     'Legend / key': 'குறியீட்டு விளக்கம்',
     'Licence': 'உரிமம்',
     'Live': 'நேரலை',
@@ -457,7 +458,9 @@
     'Notified by': 'யாரால் அறிவிக்கப்பட்டது'
   };
   for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) ta[k] = pack[k];
-  try { if (typeof renderApp === 'function') renderApp(); } catch (_) {}
+  try {
+    if (typeof renderApp === 'function') renderApp();
+  } catch (_) {}
 })();
 
 /** Batch 2 — the remaining keys, so Tamil matches the shared key set exactly. */
@@ -650,7 +653,9 @@
     'YOURS': 'உங்களது'
   };
   for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) ta[k] = pack[k];
-  try { if (typeof renderApp === 'function') renderApp(); } catch (_) {}
+  try {
+    if (typeof renderApp === 'function') renderApp();
+  } catch (_) {}
 })();
 
 /* The worklist screen — the busiest surface, and the least covered because app.html runs --safe. */
@@ -687,7 +692,7 @@
     'MIS': 'அறிக்கைகள்',
     'Manager': 'மேலாளர்',
     'chits received': 'வந்த சீட்டுகள்',
-    'chits you\'ve sent': 'அனுப்பிய சீட்டுகள்',
+    "chits you've sent": 'அனுப்பிய சீட்டுகள்',
     'unsent chits': 'அனுப்பாத சீட்டுகள்',
     'deleted chits': 'நீக்கிய சீட்டுகள்',
     'archived chits': 'காப்பக சீட்டுகள்',
@@ -698,5 +703,7 @@
     'Search my orders': 'என் ஆர்டர்களைத் தேடு'
   };
   for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) m[k] = pack[k];
-  try { if (typeof renderApp === 'function') renderApp(); } catch (_) {}
+  try {
+    if (typeof renderApp === 'function') renderApp();
+  } catch (_) {}
 })();

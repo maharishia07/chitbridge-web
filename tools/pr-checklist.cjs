@@ -20,17 +20,40 @@ const DEPENDENCY_BOTS = /^(dependabot|renovate|github-actions)(\[bot\])?$/i;
 const DOCS_ONLY = /^(docs\/|.*\.md$|\.github\/pull_request_template\.md$)/i;
 /** the five lines, and what each must carry to count as filled */
 const LINES = [
-  { name: 'Pass 0 · seams', find: /pass 0[^\n]*/i, filled: /(`[^`<]+`|nothing exists)/i, hint: 'the seams word and what was reused / widened, or "nothing exists"' },
-  { name: 'Pass 1 · shrink', find: /pass 1[^\n]*/i, filled: /lines\s*`?\d+\s*(→|->)\s*\d+`?[^\n]*complexity\s*`?\d+\s*(→|->)\s*\d+/i, hint: 'lines N → N · complexity N → N' },
-  { name: 'Pass 2 · humanify', find: /pass 2[^\n]*/i, filled: /cryptic names\s*`?\d+\s*(→|->)\s*\d+`?[^\n]*empty catches\s*`?\d+\s*(→|->)\s*\d+/i, hint: 'cryptic names N → N · empty catches N → N' },
+  {
+    name: 'Pass 0 · seams',
+    find: /pass 0[^\n]*/i,
+    filled: /(`[^`<]+`|nothing exists)/i,
+    hint: 'the seams word and what was reused / widened, or "nothing exists"'
+  },
+  {
+    name: 'Pass 1 · shrink',
+    find: /pass 1[^\n]*/i,
+    filled: /lines\s*`?\d+\s*(→|->)\s*\d+`?[^\n]*complexity\s*`?\d+\s*(→|->)\s*\d+/i,
+    hint: 'lines N → N · complexity N → N'
+  },
+  {
+    name: 'Pass 2 · humanify',
+    find: /pass 2[^\n]*/i,
+    filled: /cryptic names\s*`?\d+\s*(→|->)\s*\d+`?[^\n]*empty catches\s*`?\d+\s*(→|->)\s*\d+/i,
+    hint: 'cryptic names N → N · empty catches N → N'
+  },
   { name: 'Pass 3 · structure', find: /pass 3[^\n]*/i, filled: /module header[^\n]*CARD/i, hint: 'module header · CARD line · TRACE row' },
-  { name: 'Guard green', find: /guard green[^\n]*/i, filled: /readability --changed/i, hint: 'the guard line, from `node tools/readability.cjs --changed --ratchet --md`' }
+  {
+    name: 'Guard green',
+    find: /guard green[^\n]*/i,
+    filled: /readability --changed/i,
+    hint: 'the guard line, from `node tools/readability.cjs --changed --ratchet --md`'
+  }
 ];
 const PLACEHOLDER = /<(before → after[^>]*|word|name|doc|file|files|n)>/i;
 const EXIT_FAIL = 1;
 
 const args = process.argv.slice(2);
-function flag(name) { const at = args.indexOf('--' + name); return at < 0 ? null : args[at + 1]; }
+function flag(name) {
+  const at = args.indexOf('--' + name);
+  return at < 0 ? null : args[at + 1];
+}
 
 function readBody() {
   const file = flag('body-file');
@@ -60,7 +83,10 @@ function problems(body) {
   const found = [];
   for (const line of LINES) {
     const match = line.find.exec(body);
-    if (!match) { found.push(line.name + ': the line is missing (' + line.hint + ')'); continue; }
+    if (!match) {
+      found.push(line.name + ': the line is missing (' + line.hint + ')');
+      continue;
+    }
     const text = match[0];
     if (PLACEHOLDER.test(text)) found.push(line.name + ': a placeholder is still there — ' + PLACEHOLDER.exec(text)[0] + ' (fill it, or write n/a)');
     else if (!line.filled.test(text)) found.push(line.name + ': not filled — needs ' + line.hint);
@@ -70,15 +96,24 @@ function problems(body) {
 
 /** read the body, decide the skips, print the problems; the exit code is the verdict */
 function main() {
-  const body = readBody(), author = flag('author') || process.env.PR_AUTHOR || '';
+  const body = readBody(),
+    author = flag('author') || process.env.PR_AUTHOR || '';
   const files = changedFiles(flag('root') || process.cwd());
   const skip = skipReason(author, files);
-  if (skip) { console.log('  pr-checklist: skipped — ' + skip); return 0; }
+  if (skip) {
+    console.log('  pr-checklist: skipped — ' + skip);
+    return 0;
+  }
   const found = problems(body);
-  if (!found.length) { console.log('  pr-checklist: the §6 checklist is there with its numbers' + (files ? ' (' + files.length + ' file(s) changed)' : '')); return 0; }
+  if (!found.length) {
+    console.log('  pr-checklist: the §6 checklist is there with its numbers' + (files ? ' (' + files.length + ' file(s) changed)' : ''));
+    return 0;
+  }
   console.log('  ✗ pr-checklist: the PR body lacks the §6 checklist with numbers (DISCIPLINES §6; template: .github/pull_request_template.md)');
   found.forEach((problem) => console.log('    · ' + problem));
-  console.log('  fill it from: node tools/readability.cjs --changed --ratchet --md   (api: node ../chitbridge-web/tools/readability.cjs --changed --repo api --root . --ratchet --md)');
+  console.log(
+    '  fill it from: node tools/readability.cjs --changed --ratchet --md   (api: node ../chitbridge-web/tools/readability.cjs --changed --repo api --root . --ratchet --md)'
+  );
   return EXIT_FAIL;
 }
 

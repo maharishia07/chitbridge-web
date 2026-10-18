@@ -45,24 +45,38 @@
 <div id="chapters"></div>
 <footer id="foot">loading…</footer>
 <script>
-  fetch('manifest.json').then(r=>r.json()).then(m=>{
-    const nav=document.getElementById('nav');
-    const host=document.getElementById('chapters');
-    let total=0;
-    m.chapters.forEach((ch,ci)=>{
-      const a=document.createElement('a'); a.href='#'+ch.id; a.textContent=(ci+1)+' · '+ch.title; nav.appendChild(a);
-      const sec=document.createElement('section'); sec.id=ch.id;
-      sec.innerHTML=`<div class="chap"><span class="n">${ci+1}</span><h2>${ch.title}</h2><span class="blurb">${ch.blurb||''}</span></div>
-        <div class="grid">${ch.items.map(x=>`
+fetch('manifest.json')
+  .then((reply) => reply.json())
+  .then((reply) => {
+    const node = document.getElementById('nav');
+    const host = document.getElementById('chapters');
+    let total = 0;
+    reply.chapters.forEach((item, index) => {
+      const a = document.createElement('a');
+      a.href = '#' + item.id;
+      a.textContent = index + 1 + ' · ' + item.title;
+      node.appendChild(a);
+      const sec = document.createElement('section');
+      sec.id = item.id;
+      sec.innerHTML = `<div class="chap"><span class="n">${index + 1}</span><h2>${item.title}</h2><span class="blurb">${item.blurb || ''}</span></div>
+        <div class="grid">${item.items
+          .map(
+            (x) => `
           <div class="card">
             <div class="art"><img src="${x.file}" alt="${x.title}" loading="lazy"></div>
             <div class="meta"><div class="t">${x.title}</div><div class="w">${x.where}</div><div class="f">${x.file}</div></div>
-          </div>`).join('')}</div>`;
+          </div>`
+          )
+          .join('')}</div>`;
       host.appendChild(sec);
-      total += ch.items.length;
+      total += item.items.length;
     });
-    document.getElementById('foot').innerHTML = m.chapters.length+' chapters · '+total+' subjects · '+m.name+' &nbsp;·&nbsp; <a class="top" href="#">back to top ↑</a>';
-  }).catch(e=>{ document.getElementById('foot').textContent='Could not load manifest.json ('+e.message+') — open via the dev server, not file://'; });
+    document.getElementById('foot').innerHTML =
+      reply.chapters.length + ' chapters · ' + total + ' subjects · ' + reply.name + ' &nbsp;·&nbsp; <a class="top" href="#">back to top ↑</a>';
+  })
+  .catch((e) => {
+    document.getElementById('foot').textContent = 'Could not load manifest.json (' + e.message + ') — open via the dev server, not file://';
+  });
 </script>
 </body>
 </html>

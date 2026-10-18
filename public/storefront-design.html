@@ -97,172 +97,336 @@
 <div class="cbcart-ov" id="cartov" onclick="if(event.target===this)CBCart.close('shop')"><div class="ovc" id="cartovc"></div></div>
 
 <script>
-var SHOP={name:'Beta Fresh',bid:'CBVVGJCXHU',city:'Coimbatore',hours:'9am – 7pm, closed Sunday',
-          phone:'+91 98403 48857',terms:'Delivery within 20 km. Payment on delivery.'};
-var CAT={shop:{bridge_id:'CBVVGJCXHU',currency_code:'INR'},
- items:[{item_id:'p1',item_data:{name:'Tussar Emulsion',unit:'L',price:950}},
-        {item_id:'p2',item_data:{name:'Tussar Emulsion',unit:'L',price:3400}},
-        {item_id:'p3',item_data:{name:'Tussar Emulsion',unit:'L',price:7900}},
-        {item_id:'p4',item_data:{name:'Primer Base',unit:'L',price:650}},
-        {item_id:'p5',item_data:{name:'Ikkat Textured',unit:'L',price:1100}},
-        {item_id:'p6',item_data:{name:'Wall putty',unit:'kg',price:38,order:{model:'measure',step:0.5}}},
-        {item_id:'p7',item_data:{name:'Brush set',unit:'pack',price:180,order:{model:'pack',step:6}}},
-        {item_id:'p8',item_data:{name:'Colour consultation',unit:'visit',price:0,order:{model:'pick'}}}],
- groups:[{label:'Tussar Emulsion',options:{Size:['1L','4L','10L']},
-          lines:[{item_id:'p1',variant:'1L'},{item_id:'p2',variant:'4L'},{item_id:'p3',variant:'10L'}]}]};
+var SHOP = {
+  name: 'Beta Fresh',
+  bid: 'CBVVGJCXHU',
+  city: 'Coimbatore',
+  hours: '9am – 7pm, closed Sunday',
+  phone: '+91 98403 48857',
+  terms: 'Delivery within 20 km. Payment on delivery.'
+};
+var CAT = {
+  shop: { bridge_id: 'CBVVGJCXHU', currency_code: 'INR' },
+  items: [
+    { item_id: 'p1', item_data: { name: 'Tussar Emulsion', unit: 'L', price: 950 } },
+    { item_id: 'p2', item_data: { name: 'Tussar Emulsion', unit: 'L', price: 3400 } },
+    { item_id: 'p3', item_data: { name: 'Tussar Emulsion', unit: 'L', price: 7900 } },
+    { item_id: 'p4', item_data: { name: 'Primer Base', unit: 'L', price: 650 } },
+    { item_id: 'p5', item_data: { name: 'Ikkat Textured', unit: 'L', price: 1100 } },
+    { item_id: 'p6', item_data: { name: 'Wall putty', unit: 'kg', price: 38, order: { model: 'measure', step: 0.5 } } },
+    { item_id: 'p7', item_data: { name: 'Brush set', unit: 'pack', price: 180, order: { model: 'pack', step: 6 } } },
+    { item_id: 'p8', item_data: { name: 'Colour consultation', unit: 'visit', price: 0, order: { model: 'pick' } } }
+  ],
+  groups: [
+    {
+      label: 'Tussar Emulsion',
+      options: { Size: ['1L', '4L', '10L'] },
+      lines: [
+        { item_id: 'p1', variant: '1L' },
+        { item_id: 'p2', variant: '4L' },
+        { item_id: 'p3', variant: '10L' }
+      ]
+    }
+  ]
+};
 
-var S={step:0,addr:'',date:'',time:'',remark:'',name:'',contact:'',otp:'',sent:false,done:false};
+var S = { step: 0, addr: '', date: '', time: '', remark: '', name: '', contact: '', otp: '', sent: false, done: false };
 /* ⭐ FOUR steps — and "Who you are" is LAST on purpose. Nobody types a phone number before they know the price. */
-var STEPS=[{n:'Items'},{n:'Delivery'},{n:'Review'},{n:'Who you are'}];
+var STEPS = [{ n: 'Items' }, { n: 'Delivery' }, { n: 'Review' }, { n: 'Who you are' }];
 
-
-function armCart(){
+function armCart() {
   CBCart.init('shop', CAT, {
-    listEl:'list', barEl:'cartbar', popupEl:'cartov', popupBodyEl:'cartovc', popupClass:'cbcart-ov',
-    symbol:'₹', accent:'#c0392b', soft:'#fdf3f2',
-    from:SHOP.name, cartTitle:'Your basket',
-    noCatalogue:'This shop has nothing on display yet.',
-    checkoutLabel:'Check out →',
-    onCheckout:function(){ go(1); }
+    listEl: 'list',
+    barEl: 'cartbar',
+    popupEl: 'cartov',
+    popupBodyEl: 'cartovc',
+    popupClass: 'cbcart-ov',
+    symbol: '₹',
+    accent: '#c0392b',
+    soft: '#fdf3f2',
+    from: SHOP.name,
+    cartTitle: 'Your basket',
+    noCatalogue: 'This shop has nothing on display yet.',
+    checkoutLabel: 'Check out →',
+    onCheckout: function () {
+      go(1);
+    }
   });
 }
-function go(i){ if(i<0||i>=STEPS.length)return; S.step=i; var b=document.getElementById('body'); if(b)b.scrollTop=0; paint(); }
-function openOv(){ document.getElementById('ovc').innerHTML=ovHTML(); document.getElementById('ov').className='ov on'; }
-function closeOv(){ document.getElementById('ov').className='ov'; }
-function sendCode(){ if(!S.contact.trim())return; S.sent=true; paint(); }
-function placeOrder(){ S.done=true; paint(); }
+function go(i) {
+  if (i < 0 || i >= STEPS.length) return;
+  S.step = i;
+  var node = document.getElementById('body');
+  if (node) node.scrollTop = 0;
+  paint();
+}
+function openOv() {
+  document.getElementById('ovc').innerHTML = ovHTML();
+  document.getElementById('ov').className = 'ov on';
+}
+function closeOv() {
+  document.getElementById('ov').className = 'ov';
+}
+function sendCode() {
+  if (!S.contact.trim()) return;
+  S.sent = true;
+  paint();
+}
+function placeOrder() {
+  S.done = true;
+  paint();
+}
 
-function chipHTML(){
-  return '<div class="chipbar"><div class="chip" onclick="openOv()"><b>'+esc(SHOP.name)+'</b>'
-    + '<span class="id">'+esc(SHOP.city)+'</span><span class="go">Shop details ›</span></div></div>';
+function chipHTML() {
+  return (
+    '<div class="chipbar"><div class="chip" onclick="openOv()"><b>' +
+    esc(SHOP.name) +
+    '</b>' +
+    '<span class="id">' +
+    esc(SHOP.city) +
+    '</span><span class="go">Shop details ›</span></div></div>'
+  );
 }
-function stepsHTML(){
-  if(S.done) return '';
-  return '<div class="steps">'+STEPS.map(function(s,i){
-    var cls=i===S.step?'stp0 now':(i<S.step?'stp0 done':'stp0');
-    return '<div class="'+cls+'"'+(i<S.step?' onclick="go('+i+')"':'')+'>'+(i<S.step?'✓ ':'')+s.n+'</div>';
-  }).join('')+'</div>';
+function stepsHTML() {
+  if (S.done) return '';
+  return (
+    '<div class="steps">' +
+    STEPS.map(function (item, index) {
+      var cls = index === S.step ? 'stp0 now' : index < S.step ? 'stp0 done' : 'stp0';
+      return '<div class="' + cls + '"' + (index < S.step ? ' onclick="go(' + index + ')"' : '') + '>' + (index < S.step ? '✓ ' : '') + item.n + '</div>';
+    }).join('') +
+    '</div>'
+  );
 }
-function stepItems(){
-  return '<div id="cartbar">'+CBCart.barHTML('shop')+'</div>'
-    + '<input class="srch" placeholder="Search products…" value="'+esc((CBCart.state('shop')||{}).q||'')+'"'
-    + ' oninput="CBCart.search(\'shop\',this.value)">'
-    + '<div id="list">'+CBCart.listHTML('shop')+'</div>';
+function stepItems() {
+  return (
+    '<div id="cartbar">' +
+    CBCart.barHTML('shop') +
+    '</div>' +
+    '<input class="srch" placeholder="Search products…" value="' +
+    esc((CBCart.state('shop') || {}).q || '') +
+    '"' +
+    ' oninput="CBCart.search(\'shop\',this.value)">' +
+    '<div id="list">' +
+    CBCart.listHTML('shop') +
+    '</div>'
+  );
 }
-function stepDelivery(){
-  return '<div class="sec">Where and when</div>'
-    + '<label class="fl">Delivery address</label>'
-    + '<input class="inp" value="'+esc(S.addr)+'" placeholder="e.g. 16a, Bollenini Hill Side, 641001" oninput="S.addr=this.value;paintFoot()">'
-    + '<div class="two"><div><label class="fl">Delivery date <span style="color:#9aa3a7">· optional</span></label>'
-    + '<input class="inp" type="date" value="'+esc(S.date)+'" oninput="S.date=this.value"></div>'
-    + '<div><label class="fl">Time <span style="color:#9aa3a7">· optional</span></label>'
-    + '<input class="inp" type="time" value="'+esc(S.time)+'" oninput="S.time=this.value"></div></div>'
+function stepDelivery() {
+  return (
+    '<div class="sec">Where and when</div>' +
+    '<label class="fl">Delivery address</label>' +
+    '<input class="inp" value="' +
+    esc(S.addr) +
+    '" placeholder="e.g. 16a, Bollenini Hill Side, 641001" oninput="S.addr=this.value;paintFoot()">' +
+    '<div class="two"><div><label class="fl">Delivery date <span style="color:#9aa3a7">· optional</span></label>' +
+    '<input class="inp" type="date" value="' +
+    esc(S.date) +
+    '" oninput="S.date=this.value"></div>' +
+    '<div><label class="fl">Time <span style="color:#9aa3a7">· optional</span></label>' +
+    '<input class="inp" type="time" value="' +
+    esc(S.time) +
+    '" oninput="S.time=this.value"></div></div>' +
     /* ⚠️ ASKED FOR, NOT BOOKED. A storefront that looks like it confirmed a slot the shop has not seen is
        false certainty, and the customer has no other way to find out. */
-    + '<div class="note">A request, not a confirmed slot — '+esc(SHOP.name)+' will come back to you.</div>'
-    + '<label class="fl">Anything they should know <span style="color:#9aa3a7">· optional</span></label>'
-    + '<input class="inp" value="'+esc(S.remark)+'" placeholder="e.g. ring the bell twice" oninput="S.remark=this.value">';
+    '<div class="note">A request, not a confirmed slot — ' +
+    esc(SHOP.name) +
+    ' will come back to you.</div>' +
+    '<label class="fl">Anything they should know <span style="color:#9aa3a7">· optional</span></label>' +
+    '<input class="inp" value="' +
+    esc(S.remark) +
+    '" placeholder="e.g. ring the bell twice" oninput="S.remark=this.value">'
+  );
 }
-function stepReview(){
-  var T=CBCart.total('shop'), sel=CBCart.selected('shop');
-  return '<div class="rev"><div class="h">Your basket · '+sel.length+'<span class="e" onclick="go(0)">Change</span></div>'
-    + sel.map(function(l){
-        return '<div class="r"><span class="k">'+l.qty+' × '+esc(l.unit)+'</span><span style="flex:1">'+esc(l.name)+'</span>'
-          + '<b>'+(l.line_total==null?'—':CBCart.fmt('shop', l.line_total))+'</b></div>'; }).join('')
-    + '<div class="tot"><span style="flex:1">Total</span><span>'+(T.amount?CBCart.fmt('shop', T.amount)+(T.partial?'+':''):'—')+'</span></div></div>'
+function stepReview() {
+  var T = CBCart.total('shop'),
+    list = CBCart.selected('shop');
+  return (
+    '<div class="rev"><div class="h">Your basket · ' +
+    list.length +
+    '<span class="e" onclick="go(0)">Change</span></div>' +
+    list
+      .map(function (item) {
+        return (
+          '<div class="r"><span class="k">' +
+          item.qty +
+          ' × ' +
+          esc(item.unit) +
+          '</span><span style="flex:1">' +
+          esc(item.name) +
+          '</span>' +
+          '<b>' +
+          (item.line_total == null ? '—' : CBCart.fmt('shop', item.line_total)) +
+          '</b></div>'
+        );
+      })
+      .join('') +
+    '<div class="tot"><span style="flex:1">Total</span><span>' +
+    (T.amount ? CBCart.fmt('shop', T.amount) + (T.partial ? '+' : '') : '—') +
+    '</span></div></div>' +
     /* ⚠️ CJ-07 — the shop's catalogue is the authority and the server reprices every line. On a public page that
        must be SAID: a customer reading a total on their own screen cannot otherwise tell a request from a bill. */
-    + '<div class="note">This is a <b>request</b>, not a bill. '+esc(SHOP.name)+' confirms the price and the date before anything is due. Nothing is charged here.</div>'
-    + '<div class="rev"><div class="h">Delivery<span class="e" onclick="go(1)">Change</span></div>'
-    + '<div class="r"><span class="k">Address</span><span>'+(S.addr?esc(S.addr):'<span style="color:#b4453f">required</span>')+'</span></div>'
-    + '<div class="r"><span class="k">When</span><span>'+((S.date||S.time)?esc((S.date||'')+' '+(S.time||'')):'as soon as possible')+'</span></div>'
-    + '<div class="r"><span class="k">Remark</span><span>'+(S.remark?esc(S.remark):'—')+'</span></div></div>';
+    '<div class="note">This is a <b>request</b>, not a bill. ' +
+    esc(SHOP.name) +
+    ' confirms the price and the date before anything is due. Nothing is charged here.</div>' +
+    '<div class="rev"><div class="h">Delivery<span class="e" onclick="go(1)">Change</span></div>' +
+    '<div class="r"><span class="k">Address</span><span>' +
+    (S.addr ? esc(S.addr) : '<span style="color:#b4453f">required</span>') +
+    '</span></div>' +
+    '<div class="r"><span class="k">When</span><span>' +
+    (S.date || S.time ? esc((S.date || '') + ' ' + (S.time || '')) : 'as soon as possible') +
+    '</span></div>' +
+    '<div class="r"><span class="k">Remark</span><span>' +
+    (S.remark ? esc(S.remark) : '—') +
+    '</span></div></div>'
+  );
 }
-function stepWho(){
-  return '<div class="sec">Who you are</div>'
-    + '<div style="font-size:12.5px;color:var(--grey);margin-bottom:4px">Last step — so the shop can reach you about this order.</div>'
-    + '<label class="fl">Your name <span style="color:#9aa3a7">· optional</span></label>'
-    + '<input class="inp" value="'+esc(S.name)+'" placeholder="optional" oninput="S.name=this.value">'
-    + '<label class="fl">Phone or email</label>'
-    + '<input class="inp" '+(S.sent?'disabled':'')+' value="'+esc(S.contact)+'" placeholder="9876543210 or you@email.com" oninput="S.contact=this.value;paintFoot()">'
-    + (S.sent?('<label class="fl">6-digit code we sent you</label><input class="inp" inputmode="numeric" maxlength="6" value="'+esc(S.otp)+'" oninput="S.otp=this.value;paintFoot()">'):'')
+function stepWho() {
+  return (
+    '<div class="sec">Who you are</div>' +
+    '<div style="font-size:12.5px;color:var(--grey);margin-bottom:4px">Last step — so the shop can reach you about this order.</div>' +
+    '<label class="fl">Your name <span style="color:#9aa3a7">· optional</span></label>' +
+    '<input class="inp" value="' +
+    esc(S.name) +
+    '" placeholder="optional" oninput="S.name=this.value">' +
+    '<label class="fl">Phone or email</label>' +
+    '<input class="inp" ' +
+    (S.sent ? 'disabled' : '') +
+    ' value="' +
+    esc(S.contact) +
+    '" placeholder="9876543210 or you@email.com" oninput="S.contact=this.value;paintFoot()">' +
+    (S.sent
+      ? '<label class="fl">6-digit code we sent you</label><input class="inp" inputmode="numeric" maxlength="6" value="' +
+        esc(S.otp) +
+        '" oninput="S.otp=this.value;paintFoot()">'
+      : '') +
     /* No account, no password. The code IS the identity — the same rail the signed-in app uses, entered once. */
-    + '<div class="note">No account needed. The code confirms it is really you, and your order becomes a record you both hold.</div>';
+    '<div class="note">No account needed. The code confirms it is really you, and your order becomes a record you both hold.</div>'
+  );
 }
-function stepDone(){
-  var T=CBCart.total('shop'), n=CBCart.selected('shop').length;
-  return '<div class="empty" style="padding:40px 12px"><div style="font-size:42px">✓</div>'
-    + '<div style="font-weight:800;font-size:18px;margin-top:8px;color:var(--ink)">Order placed</div>'
-    + '<div style="margin-top:8px;line-height:1.6">Your request for <b>'+n+' item'+(n===1?'':'s')+'</b>'
-    + (T.amount?' ('+CBCart.fmt('shop', T.amount)+')':'')+' reached '+esc(SHOP.name)+'.<br>They will confirm the price and the date.</div></div>';
+function stepDone() {
+  var T = CBCart.total('shop'),
+    n = CBCart.selected('shop').length;
+  return (
+    '<div class="empty" style="padding:40px 12px"><div style="font-size:42px">✓</div>' +
+    '<div style="font-weight:800;font-size:18px;margin-top:8px;color:var(--ink)">Order placed</div>' +
+    '<div style="margin-top:8px;line-height:1.6">Your request for <b>' +
+    n +
+    ' item' +
+    (n === 1 ? '' : 's') +
+    '</b>' +
+    (T.amount ? ' (' + CBCart.fmt('shop', T.amount) + ')' : '') +
+    ' reached ' +
+    esc(SHOP.name) +
+    '.<br>They will confirm the price and the date.</div></div>'
+  );
 }
-function ovHTML(){
-  return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><b style="font-size:17px;flex:1">'+esc(SHOP.name)+'</b>'
-    + '<button onclick="closeOv()" style="border:0;background:none;font-size:22px;color:#8a949c;cursor:pointer">×</button></div>'
-    + '<div class="kv"><b>User ID</b><span style="font-family:ui-monospace,Menlo,monospace">'+esc(SHOP.bid)+'</span></div>'
-    + '<div class="kv"><b>Where</b><span>'+esc(SHOP.city)+'</span></div>'
-    + '<div class="kv"><b>Hours</b><span>'+esc(SHOP.hours)+'</span></div>'
-    + '<div class="kv"><b>Phone</b><span>'+esc(SHOP.phone)+'</span></div>'
-    + '<div class="kv"><b>Terms</b><span>'+esc(SHOP.terms)+'</span></div>';
+function ovHTML() {
+  return (
+    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><b style="font-size:17px;flex:1">' +
+    esc(SHOP.name) +
+    '</b>' +
+    '<button onclick="closeOv()" style="border:0;background:none;font-size:22px;color:#8a949c;cursor:pointer">×</button></div>' +
+    '<div class="kv"><b>User ID</b><span style="font-family:ui-monospace,Menlo,monospace">' +
+    esc(SHOP.bid) +
+    '</span></div>' +
+    '<div class="kv"><b>Where</b><span>' +
+    esc(SHOP.city) +
+    '</span></div>' +
+    '<div class="kv"><b>Hours</b><span>' +
+    esc(SHOP.hours) +
+    '</span></div>' +
+    '<div class="kv"><b>Phone</b><span>' +
+    esc(SHOP.phone) +
+    '</span></div>' +
+    '<div class="kv"><b>Terms</b><span>' +
+    esc(SHOP.terms) +
+    '</span></div>'
+  );
 }
-function blockedBecause(){
-  if(S.step===0 && !CBCart.lines('shop')) return 'Add at least one item.';
-  if(S.step===1 && !S.addr.trim()) return 'A delivery address is needed.';
-  if(S.step===2 && !CBCart.lines('shop')) return 'Your basket is empty.';
-  if(S.step===3){
-    if(!S.contact.trim()) return 'Enter a phone or email.';
-    if(S.sent && S.otp.trim().length!==6) return 'Enter the 6-digit code.';
+function blockedBecause() {
+  if (S.step === 0 && !CBCart.lines('shop')) return 'Add at least one item.';
+  if (S.step === 1 && !S.addr.trim()) return 'A delivery address is needed.';
+  if (S.step === 2 && !CBCart.lines('shop')) return 'Your basket is empty.';
+  if (S.step === 3) {
+    if (!S.contact.trim()) return 'Enter a phone or email.';
+    if (S.sent && S.otp.trim().length !== 6) return 'Enter the 6-digit code.';
   }
   return null;
 }
-function paintFoot(){
-  if(S.done){ document.getElementById('foot').innerHTML=
-    '<button class="pri" onclick="location.reload()">Back to the shop</button>'; return; }
-  var why=blockedBecause(), last=S.step===3;
-  var label = last ? (S.sent?'Place order':'Send me a code') : (S.step===0?'Check out →':'Next: '+STEPS[S.step+1].n+' →');
-  var act   = last ? (S.sent?'placeOrder()':'sendCode()') : 'go('+(S.step+1)+')';
+function paintFoot() {
+  if (S.done) {
+    document.getElementById('foot').innerHTML = '<button class="pri" onclick="location.reload()">Back to the shop</button>';
+    return;
+  }
+  var why = blockedBecause(),
+    last = S.step === 3;
+  var label = last ? (S.sent ? 'Place order' : 'Send me a code') : S.step === 0 ? 'Check out →' : 'Next: ' + STEPS[S.step + 1].n + ' →';
+  var act = last ? (S.sent ? 'placeOrder()' : 'sendCode()') : 'go(' + (S.step + 1) + ')';
   document.getElementById('foot').innerHTML =
-      (S.step?'<button onclick="go('+(S.step-1)+')"><span class=arw>←</span> Back</button>':'')
-    + '<button class="pri"'+(why?' disabled title="'+esc(why)+'"':'')+' onclick="'+act+'">'+esc(label)+'</button>';
+    (S.step ? '<button onclick="go(' + (S.step - 1) + ')"><span class=arw>←</span> Back</button>' : '') +
+    '<button class="pri"' +
+    (why ? ' disabled title="' + esc(why) + '"' : '') +
+    ' onclick="' +
+    act +
+    '">' +
+    esc(label) +
+    '</button>';
 }
-function paint(){
-  document.getElementById('chipbar').innerHTML=S.done?'':chipHTML();
-  document.getElementById('steps').innerHTML=stepsHTML();
-  document.getElementById('body').innerHTML = S.done?stepDone()
-    :(S.step===0?stepItems():S.step===1?stepDelivery():S.step===2?stepReview():stepWho());
+function paint() {
+  document.getElementById('chipbar').innerHTML = S.done ? '' : chipHTML();
+  document.getElementById('steps').innerHTML = stepsHTML();
+  document.getElementById('body').innerHTML = S.done
+    ? stepDone()
+    : S.step === 0
+      ? stepItems()
+      : S.step === 1
+        ? stepDelivery()
+        : S.step === 2
+          ? stepReview()
+          : stepWho();
   paintFoot();
 }
-armCart(); paint();
+armCart();
+paint();
 
 /* ── SMOKE TEST — this screen's own rules; the cart's are in scripts/cart-ui.test.mjs ── */
-(function(){
-  var f=0, ok=function(n,c){ console.log((c?'  ok   ':'  FAIL ')+n); if(!c)f++; };
-  console.log('%cstorefront-design mock','font-weight:bold');
-  ok('★ NO left pane to choose from — there is one shop and you are in it', typeof STORES==='undefined');
-  ok('the catalogue is the first thing on screen', S.step===0 && CBCart.rows('shop').length===9);
-  ok('an empty basket cannot check out', blockedBecause()==='Add at least one item.');
-  CBCart.add('shop','p1'); CBCart.add('shop','p1'); CBCart.add('shop','p4');
-  ok('the shared cart is doing the counting', CBCart.lines('shop')===2 && CBCart.units('shop')===3);
-  ok('the total multiplies out', CBCart.total('shop').amount===950*2+650);
-  ok('★ order models work here too — putty steps by 0.5 kg',
-     (CBCart.add('shop','p6'), CBCart.qtyOf('shop','p6')===0.5));
-  ok('★ …and brushes go in a pack of 6', (CBCart.add('shop','p7'), CBCart.qtyOf('shop','p7')===6));
-  ok('★★ a consultation is one or none, however often it is pressed',
-     (CBCart.add('shop','p8'), CBCart.add('shop','p8'), CBCart.qtyOf('shop','p8')===1));
-  CBCart.setQty('shop','p6',0); CBCart.setQty('shop','p7',0); CBCart.setQty('shop','p8',0);
-  ok('★★ FOUR steps, and "who you are" is LAST', STEPS.length===4 && STEPS[3].n==='Who you are');
+(function () {
+  var count = 0,
+    ok = function (n, c) {
+      console.log((c ? '  ok   ' : '  FAIL ') + n);
+      if (!c) count++;
+    };
+  console.log('%cstorefront-design mock', 'font-weight:bold');
+  ok('★ NO left pane to choose from — there is one shop and you are in it', typeof STORES === 'undefined');
+  ok('the catalogue is the first thing on screen', S.step === 0 && CBCart.rows('shop').length === 9);
+  ok('an empty basket cannot check out', blockedBecause() === 'Add at least one item.');
+  CBCart.add('shop', 'p1');
+  CBCart.add('shop', 'p1');
+  CBCart.add('shop', 'p4');
+  ok('the shared cart is doing the counting', CBCart.lines('shop') === 2 && CBCart.units('shop') === 3);
+  ok('the total multiplies out', CBCart.total('shop').amount === 950 * 2 + 650);
+  ok('★ order models work here too — putty steps by 0.5 kg', (CBCart.add('shop', 'p6'), CBCart.qtyOf('shop', 'p6') === 0.5));
+  ok('★ …and brushes go in a pack of 6', (CBCart.add('shop', 'p7'), CBCart.qtyOf('shop', 'p7') === 6));
+  ok('★★ a consultation is one or none, however often it is pressed', (CBCart.add('shop', 'p8'), CBCart.add('shop', 'p8'), CBCart.qtyOf('shop', 'p8') === 1));
+  CBCart.setQty('shop', 'p6', 0);
+  CBCart.setQty('shop', 'p7', 0);
+  CBCart.setQty('shop', 'p8', 0);
+  ok('★★ FOUR steps, and "who you are" is LAST', STEPS.length === 4 && STEPS[3].n === 'Who you are');
   go(1);
-  ok('★ delivery will not pass without an address', blockedBecause()==='A delivery address is needed.');
-  S.addr='16a Bollenini Hill Side'; go(2);
-  ok('review is reachable', blockedBecause()===null);
+  ok('★ delivery will not pass without an address', blockedBecause() === 'A delivery address is needed.');
+  S.addr = '16a Bollenini Hill Side';
+  go(2);
+  ok('review is reachable', blockedBecause() === null);
   go(3);
-  ok('★ no contact, no code sent', blockedBecause()==='Enter a phone or email.');
-  S.contact='9840348857'; sendCode();
-  ok('★ once the code is sent, it is required', blockedBecause()==='Enter the 6-digit code.');
-  S.otp='123456';
-  ok('and with the code it can be placed', blockedBecause()===null);
+  ok('★ no contact, no code sent', blockedBecause() === 'Enter a phone or email.');
+  S.contact = '9840348857';
+  sendCode();
+  ok('★ once the code is sent, it is required', blockedBecause() === 'Enter the 6-digit code.');
+  S.otp = '123456';
+  ok('and with the code it can be placed', blockedBecause() === null);
   placeOrder();
-  ok('the confirmation says what was sent, not what was charged', S.done===true);
-  console.log(f?('  '+f+' FAILED'):'  all passed');
+  ok('the confirmation says what was sent, not what was charged', S.done === true);
+  console.log(count ? '  ' + count + ' FAILED' : '  all passed');
 })();
 </script>

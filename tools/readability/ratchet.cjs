@@ -19,7 +19,9 @@ const LIMITS = { lines: 40, linesHard: 80, complexity: 10, complexityHard: 15, d
 const COUNTERS = ['long40', 'long80', 'complex10', 'complex15', 'deep3', 'deep4', 'cryptic', 'noWhatLine', 'emptyCatch', 'noHeader'];
 
 /** does the header carry the three things §6 asks for (owns · called by · flow or init line)? */
-function headerComplete(header) { return !!(header && header.owns && header.callers && header.flow); }
+function headerComplete(header) {
+  return !!(header && header.owns && header.callers && header.flow);
+}
 
 /** the breakdown behind one file's score: how many functions/names/catches break each §6 rule */
 function breakdown(facts) {
@@ -44,7 +46,9 @@ function score(facts) {
   return { score: COUNTERS.reduce((total, key) => total + parts[key], 0), ...parts };
 }
 
-function ratchetPath(root) { return path.join(root, RATCHET_FILE); }
+function ratchetPath(root) {
+  return path.join(root, RATCHET_FILE);
+}
 
 /** the ratchet rows, or null when the repo has none yet */
 function read(root) {
@@ -58,10 +62,14 @@ function read(root) {
 /** merge new scores into the ratchet, LOWER ONLY: a file whose score rose keeps its old row and is named in `refused` */
 function tighten(existing, scores) {
   const rows = Object.assign({}, existing || {});
-  const refused = [], lowered = [];
+  const refused = [],
+    lowered = [];
   for (const [file, next] of Object.entries(scores)) {
     const current = rows[file];
-    if (current && next.score > current.score) { refused.push({ file, from: current.score, to: next.score }); continue; }
+    if (current && next.score > current.score) {
+      refused.push({ file, from: current.score, to: next.score });
+      continue;
+    }
     if (current && next.score < current.score) lowered.push({ file, from: current.score, to: next.score });
     rows[file] = next;
   }
@@ -70,7 +78,9 @@ function tighten(existing, scores) {
 
 /** one row per line, files sorted — a diff shows exactly which file moved */
 function write(root, rows) {
-  const about = 'readability ratchet (DISCIPLINES §6): one row per own-code file, score = ' + COUNTERS.join(' + ') +
+  const about =
+    'readability ratchet (DISCIPLINES §6): one row per own-code file, score = ' +
+    COUNTERS.join(' + ') +
     '. A file may score LESS than its row, never more. Lower it with `node tools/readability.cjs --write` (web) / `--repo api --write`; it never raises.';
   const lines = ['  "_about": ' + JSON.stringify(about)];
   for (const file of Object.keys(rows).sort()) lines.push('  ' + JSON.stringify(file) + ': ' + JSON.stringify(rows[file]));

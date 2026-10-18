@@ -64,7 +64,9 @@ var CBATT = {
 if (typeof EP !== 'undefined' && EP && !EP.attUpload) {
   EP.cbAttUpload = { m: 'POST', p: '/api/attachments', ok: 'y' };
 }
-function cbAttachEP(){ return (typeof EP !== 'undefined' && EP && EP.attUpload) ? 'attUpload' : 'cbAttUpload'; }
+function cbAttachEP() {
+  return typeof EP !== 'undefined' && EP && EP.attUpload ? 'attUpload' : 'cbAttUpload';
+}
 
 /**
  * cbAttachType(mime, name) → 'image'|'video'|'pdf'|'text'|'xlsx'|'docx'|'zip'|'doc'
@@ -76,7 +78,7 @@ function cbAttachEP(){ return (typeof EP !== 'undefined' && EP && EP.attUpload) 
  *   ⚠️ THE FILENAME IS CONSULTED, NOT JUST THE MIME. Files arriving off a channel routinely carry
  *      application/octet-stream, so extension is the only signal left.
  */
-function cbAttachType(mime, name){
+function cbAttachType(mime, name) {
   mime = String(mime || '').toLowerCase();
   name = String(name || '').toLowerCase();
   if (mime.indexOf('image/') === 0) return 'image';
@@ -92,12 +94,11 @@ function cbAttachType(mime, name){
 /* The glyph per type. 'text' is present ON PURPOSE — app.html once taught attType about text and forgot this
    map, so a .txt fell through to 📎 and the tile read "attachment" for the one file on the chit that was the
    customer's own words. */
-function cbAttachIcon(t){
-  return ({ image: '🖼️', video: '🎬', pdf: '📄', text: '📄', xlsx: '📊', csv: '📊',
-            docx: '📝', doc: '📝', ppt: '📑', zip: '🗜️' })[t] || '📎';
+function cbAttachIcon(t) {
+  return { image: '🖼️', video: '🎬', pdf: '📄', text: '📄', xlsx: '📊', csv: '📊', docx: '📝', doc: '📝', ppt: '📑', zip: '🗜️' }[t] || '📎';
 }
 
-function cbAttachSize(b){
+function cbAttachSize(b) {
   b = +b || 0;
   if (b < 1024) return b + ' B';
   if (b < 1048576) return Math.round(b / 1024) + ' KB';
@@ -111,11 +112,10 @@ function cbAttachSize(b){
  * without having to know which one it is holding. Nothing is invented: a row with no id is dropped, because a
  * tile that cannot be opened is worse than no tile.
  */
-function cbAttachNorm(a){
+function cbAttachNorm(a) {
   if (!a || a.id == null) return null;
   var name = a.n || a.name || 'file';
-  return { id: a.id, name: name, mime: a.mime || '', size: a.size || 0,
-           t: a.t || cbAttachType(a.mime, name) };
+  return { id: a.id, name: name, mime: a.mime || '', size: a.size || 0, t: a.t || cbAttachType(a.mime, name) };
 }
 
 /**
@@ -126,7 +126,9 @@ function cbAttachNorm(a){
  * uuids/integers: anything outside [A-Za-z0-9_.:-] is stripped. A malformed id then produces a dead control
  * instead of an injection, which is the correct direction to fail in.
  */
-function cbAttachSafe(v){ return String(v == null ? '' : v).replace(/[^A-Za-z0-9_.:-]/g, ''); }
+function cbAttachSafe(v) {
+  return String(v == null ? '' : v).replace(/[^A-Za-z0-9_.:-]/g, '');
+}
 
 /**
  * cbAttachList(atts, opts) → HTML string. Returns '' when there is nothing (and no opts.empty), so a caller can
@@ -144,34 +146,51 @@ function cbAttachSafe(v){ return String(v == null ? '' : v).replace(/[^A-Za-z0-9
  * There is deliberately no control here to widen, re-share or re-post an attachment; see the audience note at
  * the top of this file.
  */
-function cbAttachList(atts, opts){
+function cbAttachList(atts, opts) {
   opts = opts || {};
   var rows = (atts || []).map(cbAttachNorm).filter(Boolean);
   if (!rows.length) {
-    return opts.empty
-      ? '<div style="font-size:var(--fs-1);color:var(--grey);padding:2px 0">' + esc(opts.empty) + '</div>'
-      : '';
+    return opts.empty ? '<div style="font-size:var(--fs-1);color:var(--grey);padding:2px 0">' + esc(opts.empty) + '</div>' : '';
   }
   var pad = opts.compact === false ? '5px 10px' : '3px 8px';
-  var html = rows.map(function(a){
-    /* The name is truncated for the row but kept whole in the tooltip — a filename is often the only thing that
+  var html = rows
+    .map(function (item) {
+      /* The name is truncated for the row but kept whole in the tooltip — a filename is often the only thing that
        distinguishes two invoices, and an ellipsis that eats the distinguishing half is a list that lies. */
-    var short = a.name.length > 26 ? a.name.slice(0, 26) + '…' : a.name;
-    var meta  = (a.t || 'file').toUpperCase() + (a.size ? (' · ' + cbAttachSize(a.size)) : '');
-    return '<span data-testid="cb-attach-item" onclick="cbAttachOpen(\'' + cbAttachSafe(a.id) + '\')"'
-      + ' title="' + esc(a.name + ' — ' + meta) + '"'
-      + ' style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;border:1px solid var(--line);'
-      + 'border-radius:6px;padding:' + pad + ';margin:0 5px 5px 0;font-size:var(--fs-1);background:var(--card);max-width:100%;color:var(--on-card)">'
-      +   '<span style="font-size:var(--fs-2);flex:none">' + cbAttachIcon(a.t) + '</span>'
-      +   '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(short) + '</span>'
-      +   '<span style="font-size:var(--fs-1);color:var(--grey);flex:none">' + esc(meta) + '</span>'
-      + '</span>';
-  }).join('');
+      var short = item.name.length > 26 ? item.name.slice(0, 26) + '…' : item.name;
+      var meta = (item.t || 'file').toUpperCase() + (item.size ? ' · ' + cbAttachSize(item.size) : '');
+      return (
+        '<span data-testid="cb-attach-item" onclick="cbAttachOpen(\'' +
+        cbAttachSafe(item.id) +
+        '\')"' +
+        ' title="' +
+        esc(item.name + ' — ' + meta) +
+        '"' +
+        ' style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;border:1px solid var(--line);' +
+        'border-radius:6px;padding:' +
+        pad +
+        ';margin:0 5px 5px 0;font-size:var(--fs-1);background:var(--card);max-width:100%;color:var(--on-card)">' +
+        '<span style="font-size:var(--fs-2);flex:none">' +
+        cbAttachIcon(item.t) +
+        '</span>' +
+        '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' +
+        esc(short) +
+        '</span>' +
+        '<span style="font-size:var(--fs-1);color:var(--grey);flex:none">' +
+        esc(meta) +
+        '</span>' +
+        '</span>'
+      );
+    })
+    .join('');
 
-  return (opts.title ? '<div style="font-size:var(--fs-1);color:var(--grey);margin:6px 0 4px">' + esc(opts.title)
-                       + ' · ' + rows.length + '</div>' : '')
-    + '<div data-testid="cb-attach-list" style="display:flex;flex-wrap:wrap;align-items:center">' + html + '</div>'
-    + (opts.note ? '<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:2px">' + esc(opts.note) + '</div>' : '');
+  return (
+    (opts.title ? '<div style="font-size:var(--fs-1);color:var(--grey);margin:6px 0 4px">' + esc(opts.title) + ' · ' + rows.length + '</div>' : '') +
+    '<div data-testid="cb-attach-list" style="display:flex;flex-wrap:wrap;align-items:center">' +
+    html +
+    '</div>' +
+    (opts.note ? '<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:2px">' + esc(opts.note) + '</div>' : '')
+  );
 }
 
 /**
@@ -188,9 +207,9 @@ function cbAttachList(atts, opts){
  * (app.html:82) — dropped into a flex row unqualified, that button eats the row and pushes everything below it
  * down by 16px. Every button this file emits overrides both.
  */
-function cbAttachButton(ctx){
+function cbAttachButton(ctx) {
   ctx = ctx || {};
-  if (!ctx.chit_id) return '';                     // nothing to pin to — render no control rather than a dead one
+  if (!ctx.chit_id) return ''; // nothing to pin to — render no control rather than a dead one
   var payload = { chit_id: cbAttachSafe(ctx.chit_id) };
   if (ctx.message_id != null && ctx.message_id !== '') payload.message_id = cbAttachSafe(ctx.message_id);
   if (ctx.line_index != null && ctx.line_index !== '') payload.line_index = cbAttachSafe(ctx.line_index);
@@ -199,22 +218,33 @@ function cbAttachButton(ctx){
      and it is carried inside a single-quoted JS literal. */
   var arg = esc(JSON.stringify(payload));
 
-  return '<button type="button" class="btn" data-testid="cb-attach-btn"'
-    + ' onclick="cbAttachPick(\'' + arg + '\')"'
-    + ' title="' + esc(ctx.title || 'Attach a file (max 6 MB)') + '"'
-    + ' style="width:auto;flex:0 0 auto;margin:0;padding:6px 12px;font-size:var(--fs-1);font-weight:700;'
-    + 'border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink);cursor:pointer">'
-    + esc(ctx.label || '📎 Attach a file') + '</button>'
-    + (ctx.note ? '<span style="font-size:var(--fs-1);color:var(--warn-2);margin-inline-start:8px">' + esc(ctx.note) + '</span>' : '');
+  return (
+    '<button type="button" class="btn" data-testid="cb-attach-btn"' +
+    ' onclick="cbAttachPick(\'' +
+    arg +
+    '\')"' +
+    ' title="' +
+    esc(ctx.title || 'Attach a file (max 6 MB)') +
+    '"' +
+    ' style="width:auto;flex:0 0 auto;margin:0;padding:6px 12px;font-size:var(--fs-1);font-weight:700;' +
+    'border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink);cursor:pointer">' +
+    esc(ctx.label || '📎 Attach a file') +
+    '</button>' +
+    (ctx.note ? '<span style="font-size:var(--fs-1);color:var(--warn-2);margin-inline-start:8px">' + esc(ctx.note) + '</span>' : '')
+  );
 }
 
 /* Read one File to bare base64 (the data: prefix stripped — the server strips it too, but sending it doubles
    nothing and costs bytes). Moved from app.html:5230. */
-function cbAttachB64(file){
-  return new Promise(function(resolve, reject){
+function cbAttachB64(file) {
+  return new Promise(function (resolve, reject) {
     var r = new FileReader();
-    r.onload  = function(){ resolve(String(r.result).replace(/^data:[^;]+;base64,/, '')); };
-    r.onerror = function(){ reject(new Error('Could not read that file')); };
+    r.onload = function () {
+      resolve(String(r.result).replace(/^data:[^;]+;base64,/, ''));
+    };
+    r.onerror = function () {
+      reject(new Error('Could not read that file'));
+    };
     r.readAsDataURL(file);
   });
 }
@@ -246,14 +276,20 @@ function cbAttachB64(file){
  * whole reason the size check lives client-side. Discovering it at flush would mean the chit has ALREADY BEEN
  * SENT and the evidence silently did not go with it — the worst possible moment to find out.
  */
-CBATT.stage = {};      /* bucket -> [{ key, file, line_index, name, size, mime }] */
+CBATT.stage = {}; /* bucket -> [{ key, file, line_index, name, size, mime }] */
 CBATT.stageSeq = 0;
 
-function cbAttachStaged(bucket){ return (CBATT.stage[bucket] || []).slice(); }
-function cbAttachUnstage(bucket, key){
+function cbAttachStaged(bucket) {
+  return (CBATT.stage[bucket] || []).slice();
+}
+function cbAttachUnstage(bucket, key) {
   var list = CBATT.stage[bucket] || [];
-  CBATT.stage[bucket] = list.filter(function (s) { return String(s.key) !== String(key); });
-  try { document.dispatchEvent(new CustomEvent('cb-attach-staged', { detail: { bucket: bucket } })); } catch (_) {}
+  CBATT.stage[bucket] = list.filter(function (item) {
+    return String(item.key) !== String(key);
+  });
+  try {
+    document.dispatchEvent(new CustomEvent('cb-attach-staged', { detail: { bucket: bucket } }));
+  } catch (_) {}
 }
 
 /**
@@ -285,7 +321,10 @@ function cbAttachAccept(file) {
   }
   /* ⚠️ A 0-BYTE FILE IS NOT A SMALL FILE. It uploads happily and produces an attachment that opens to nothing —
      worse than a refusal, because it looks like evidence was sent. */
-  if (!file.size) { toast('"' + file.name + '" is empty'); return false; }
+  if (!file.size) {
+    toast('"' + file.name + '" is empty');
+    return false;
+  }
   return true;
 }
 
@@ -295,21 +334,27 @@ function cbAttachAccept(file) {
  * ⚠️ THE SAME LIMITS AS AN IMMEDIATE UPLOAD, APPLIED HERE. A staged file that is too large is refused at the
  * picker; it must never be discovered at flush, when the chit is already gone.
  */
-async function cbAttachStage(bucket, opts){
+async function cbAttachStage(bucket, opts) {
   opts = opts || {};
   var file = await cbAttachChoose();
-  if (!file) return null;                                  // cancelled — silent, cancelling is not an error
+  if (!file) return null; // cancelled — silent, cancelling is not an error
   if (!cbAttachAccept(file)) return null;
 
-  var entry = { key: 'stg' + (++CBATT.stageSeq), file: file, name: file.name, size: file.size,
-                mime: file.type || 'application/octet-stream',
-                line_index: (opts.line_index == null || opts.line_index === '' || isNaN(+opts.line_index))
-                  ? null : +opts.line_index };
+  var entry = {
+    key: 'stg' + ++CBATT.stageSeq,
+    file: file,
+    name: file.name,
+    size: file.size,
+    mime: file.type || 'application/octet-stream',
+    line_index: opts.line_index == null || opts.line_index === '' || isNaN(+opts.line_index) ? null : +opts.line_index
+  };
   (CBATT.stage[bucket] = CBATT.stage[bucket] || []).push(entry);
   /* ⚠️ The File object is held, NOT its base64. Encoding several photos up front would put three times their
      size in memory for as long as the compose modal is open, for bytes that may never be sent. Encode at flush,
      one at a time. */
-  try { document.dispatchEvent(new CustomEvent('cb-attach-staged', { detail: { bucket: bucket, entry: entry } })); } catch (_) {}
+  try {
+    document.dispatchEvent(new CustomEvent('cb-attach-staged', { detail: { bucket: bucket, entry: entry } }));
+  } catch (_) {}
   return entry;
 }
 
@@ -328,15 +373,23 @@ async function cbAttachStage(bucket, opts){
  * connection is how one of them times out and takes an unrelated one with it. Slower and finishable beats
  * parallel and partly lost.
  */
-async function cbAttachFlush(bucket, chit_id, opts){
+async function cbAttachFlush(bucket, chit_id, opts) {
   opts = opts || {};
   var list = CBATT.stage[bucket] || [];
   if (!list.length) return { uploaded: [], failed: [] };
-  if (!chit_id) return { uploaded: [], failed: list.map(function (s) { return { name: s.name, why: 'no chit to attach to' }; }) };
+  if (!chit_id)
+    return {
+      uploaded: [],
+      failed: list.map(function (item) {
+        return { name: item.name, why: 'no chit to attach to' };
+      })
+    };
 
-  var uploaded = [], failed = [], kept = [];
-  for (var i = 0; i < list.length; i++) {
-    var s = list[i];
+  var uploaded = [],
+    failed = [],
+    kept = [];
+  for (var index = 0; index < list.length; index++) {
+    var s = list[index];
     try {
       var body = { chit_id: chit_id, name: s.name, mime: s.mime, data_base64: await cbAttachB64(s.file) };
       if (s.line_index != null) body.line_index = s.line_index;
@@ -344,38 +397,42 @@ async function cbAttachFlush(bucket, chit_id, opts){
       uploaded.push(await api(cbAttachEP(), { body: body }));
     } catch (e) {
       failed.push({ name: s.name, why: (e && e.message) || 'upload failed' });
-      kept.push(s);                                   /* keep it — a retry must still be possible */
+      kept.push(s); /* keep it — a retry must still be possible */
     }
   }
-  if (kept.length) CBATT.stage[bucket] = kept; else delete CBATT.stage[bucket];
+  if (kept.length) CBATT.stage[bucket] = kept;
+  else delete CBATT.stage[bucket];
 
   /* ⚠️ SAID OUT LOUD. A partial failure that only appears in a return value is a partial failure nobody sees. */
   if (failed.length) {
     toast(failed.length + ' of ' + list.length + ' file(s) did not attach — they are still here, try again.');
   }
-  try { document.dispatchEvent(new CustomEvent('cb-attach-flushed', { detail: { bucket: bucket, chit_id: chit_id, uploaded: uploaded, failed: failed } })); } catch (_) {}
+  try {
+    document.dispatchEvent(new CustomEvent('cb-attach-flushed', { detail: { bucket: bucket, chit_id: chit_id, uploaded: uploaded, failed: failed } }));
+  } catch (_) {}
   return { uploaded: uploaded, failed: failed };
 }
 
 /* ⚠️ NOT cbAttachSafe. That one strips to [A-Za-z0-9_.:-] and is for values going into an ATTRIBUTE or an inline
    handler; using it on a filename would silently mangle "வெங்காயம் bill.pdf" into something unrecognisable. Text
    in the document body needs escaping, not stripping — two different jobs, two different functions. */
-function cbAttachSafeText(s){
+function cbAttachSafeText(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
     return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
   });
 }
 
 /* One style tag, injected once — attach-ui had none because every previous caller styled its own chips. */
-function cbAttachCss(){
+function cbAttachCss() {
   if (typeof document === 'undefined' || document.getElementById('cbatt_css')) return;
-  var s = document.createElement('style');
-  s.id = 'cbatt_css';
-  s.textContent = '.cbatt-chip{display:inline-flex;align-items:center;gap:5px;border:1px dashed var(--gold);'
-    + 'border-radius:9px;padding:3px 8px;margin:2px 5px 2px 0;font-size:var(--fs-1);background:var(--warn-tint);'
-    + 'color:var(--ink,var(--ink));max-width:100%}'
-    + '.cbatt-chip.sent{border-style:solid;border-color:#e3e6ea;background:var(--card)}';
-  (document.head || document.documentElement).appendChild(s);
+  var node = document.createElement('style');
+  node.id = 'cbatt_css';
+  node.textContent =
+    '.cbatt-chip{display:inline-flex;align-items:center;gap:5px;border:1px dashed var(--gold);' +
+    'border-radius:9px;padding:3px 8px;margin:2px 5px 2px 0;font-size:var(--fs-1);background:var(--warn-tint);' +
+    'color:var(--ink,var(--ink));max-width:100%}' +
+    '.cbatt-chip.sent{border-style:solid;border-color:#e3e6ea;background:var(--card)}';
+  (document.head || document.documentElement).appendChild(node);
 }
 
 /**
@@ -388,18 +445,28 @@ function cbAttachCss(){
  * a copy, and an attachment on an internal message stays with that entity alone. Nothing here can change that
  * and nothing here should try; see the top of the file.
  */
-async function cbAttachPick(ctxJson){
+async function cbAttachPick(ctxJson) {
   var ctx;
-  try { ctx = (typeof ctxJson === 'string') ? JSON.parse(ctxJson) : (ctxJson || {}); }
-  catch (e) { toast('Could not start the upload'); return null; }
-  if (!ctx.chit_id) { toast('Nothing to attach this to'); return null; }
+  try {
+    ctx = typeof ctxJson === 'string' ? JSON.parse(ctxJson) : ctxJson || {};
+  } catch (e) {
+    toast('Could not start the upload');
+    return null;
+  }
+  if (!ctx.chit_id) {
+    toast('Nothing to attach this to');
+    return null;
+  }
 
   /* ⚠️ ONE UPLOAD AT A TIME. Two pickers open at once produce two toasts racing over one screen repaint, and the
      second overwrites the first's "done" with its own "uploading…". */
-  if (CBATT.busy) { toast('One file is still uploading — one moment'); return null; }
+  if (CBATT.busy) {
+    toast('One file is still uploading — one moment');
+    return null;
+  }
 
   var file = await cbAttachChoose();
-  if (!file) return null;                       // cancelled — silent, because cancelling is not an error
+  if (!file) return null; // cancelled — silent, because cancelling is not an error
 
   /* ⚠️ REFUSED HERE, NOT AT THE SERVER. base64 inflates by about a third, so a 9 MB file becomes a 12 MB request
      that is read, encoded, and posted in full before the 413 comes back — on a phone connection that is a long
@@ -409,23 +476,27 @@ async function cbAttachPick(ctxJson){
   CBATT.busy = true;
   toast('Attaching "' + file.name + '"…');
   try {
-    var body = { chit_id: ctx.chit_id, name: file.name,
-                 mime: file.type || 'application/octet-stream',
-                 data_base64: await cbAttachB64(file) };
+    var body = { chit_id: ctx.chit_id, name: file.name, mime: file.type || 'application/octet-stream', data_base64: await cbAttachB64(file) };
     if (ctx.message_id != null) body.message_id = ctx.message_id;
     /* line_index arrives as a string through the attribute; the route parseInt's it, but a NaN would silently
        become null and detach the file from its line, so it is checked here. */
     if (ctx.line_index != null && ctx.line_index !== '' && !isNaN(+ctx.line_index)) body.line_index = +ctx.line_index;
 
-    var att = await api(cbAttachEP(), { body: body });
+    var reply = await api(cbAttachEP(), { body: body });
     CBATT.busy = false;
     toast('Attached "' + file.name + '"');
 
     /* Two ways to hear about it, because the two consumers differ: screens that render HTML strings pass a
        function NAME through the attribute, and anything holding real elements can listen for the event. */
-    try { document.dispatchEvent(new CustomEvent('cb-attach-added', { detail: { ctx: ctx, attachment: att } })); } catch (_) {}
-    if (ctx.after && typeof window[ctx.after] === 'function') { try { window[ctx.after](); } catch (_) {} }
-    return att;
+    try {
+      document.dispatchEvent(new CustomEvent('cb-attach-added', { detail: { ctx: ctx, attachment: reply } }));
+    } catch (_) {}
+    if (ctx.after && typeof window[ctx.after] === 'function') {
+      try {
+        window[ctx.after]();
+      } catch (_) {}
+    }
+    return reply;
   } catch (e) {
     CBATT.busy = false;
     toast((e && e.message) || 'Could not attach that file');
@@ -444,17 +515,28 @@ async function cbAttachPick(ctxJson){
  * the caller is not left holding a promise that never settles; browsers without it simply leave the promise
  * pending, which is harmless (the closure is collected with the page).
  */
-function cbAttachChoose(){
-  return new Promise(function(resolve){
+function cbAttachChoose() {
+  return new Promise(function (resolve) {
     var input = document.createElement('input');
     input.type = 'file';
     input.style.cssText = 'position:fixed;inset-inline-start:-9999px;width:1px;height:1px';
     var done = false;
-    function finish(f){ if (done) return; done = true; try { input.remove(); } catch (_) {} resolve(f || null); }
-    input.addEventListener('change', function(){ finish(input.files && input.files[0]); });
-    input.addEventListener('cancel', function(){ finish(null); });
+    function finish(f) {
+      if (done) return;
+      done = true;
+      try {
+        input.remove();
+      } catch (_) {}
+      resolve(f || null);
+    }
+    input.addEventListener('change', function () {
+      finish(input.files && input.files[0]);
+    });
+    input.addEventListener('cancel', function () {
+      finish(null);
+    });
     (document.body || document.documentElement).appendChild(input);
-    input.click();     // inside the button's click handler, so this counts as a user gesture
+    input.click(); // inside the button's click handler, so this counts as a user gesture
   });
 }
 
@@ -470,21 +552,24 @@ function cbAttachChoose(){
  * review. SVG is excluded from "renderable" on both sides, because image/svg+xml can carry inline <script>.
  * This function must never widen that set: the blob URL runs on this origin.
  */
-async function cbAttachOpen(id){
+async function cbAttachOpen(id) {
   if (!id) return;
   try {
     var url = CBATT.urls[id];
     var mime = '';
     if (!url) {
-      var res = await fetch(CFG.API_BASE + '/api/attachments/' + encodeURIComponent(id),
-                            { headers: SESSION.token ? { Authorization: 'Bearer ' + SESSION.token } : {} });
-      if (!res.ok) throw new Error(res.status === 404 ? 'That file is not on your copy of this chit' : ('Could not fetch that file (' + res.status + ')'));
+      var res = await fetch(CFG.API_BASE + '/api/attachments/' + encodeURIComponent(id), {
+        headers: SESSION.token ? { Authorization: 'Bearer ' + SESSION.token } : {}
+      });
+      if (!res.ok) throw new Error(res.status === 404 ? 'That file is not on your copy of this chit' : 'Could not fetch that file (' + res.status + ')');
       var blob = await res.blob();
       mime = String(blob.type || '').toLowerCase();
       url = URL.createObjectURL(blob);
       CBATT.urls[id] = url;
       CBATT.urls[id + ':mime'] = mime;
-    } else { mime = CBATT.urls[id + ':mime'] || ''; }
+    } else {
+      mime = CBATT.urls[id + ':mime'] || '';
+    }
 
     var renderable = /^image\/(png|jpe?g|gif|webp|bmp)$/.test(mime) || mime === 'application/pdf';
     if (renderable) {
@@ -494,14 +579,16 @@ async function cbAttachOpen(id){
       var w = window.open(url, '_blank', 'noopener');
       if (w) return;
     }
-    var a = document.createElement('a');
-    a.href = url;
-    a.download = '';           // the server's Content-Disposition filename does not survive a blob URL; the
-                               // browser falls back to a generic name, which is the accepted cost of auth'd bytes
-    a.rel = 'noopener';
-    (document.body || document.documentElement).appendChild(a);
-    a.click();
-    try { a.remove(); } catch (_) {}
+    var node = document.createElement('a');
+    node.href = url;
+    node.download = ''; // the server's Content-Disposition filename does not survive a blob URL; the
+    // browser falls back to a generic name, which is the accepted cost of auth'd bytes
+    node.rel = 'noopener';
+    (document.body || document.documentElement).appendChild(node);
+    node.click();
+    try {
+      node.remove();
+    } catch (_) {}
   } catch (e) {
     toast((e && e.message) || 'Could not open that file');
   }
@@ -522,15 +609,18 @@ var CBAttach = (function () {
     if (typeof el === 'string') el = document.getElementById(el);
     if (!el || !o || !o.chit_id) return null;
     cbAttachCss();
-    var chit = cbAttachSafe(o.chit_id), atts = o.atts || null;
+    var chit = cbAttachSafe(o.chit_id),
+      atts = o.atts || null;
     function paint() {
-      el.innerHTML = '<span data-testid="cb-attach-mount">'
-        + cbAttachButton({ chit_id: chit, message_id: o.message_id, line_index: o.line_index, label: o.label, note: o.note })
-        + '</span>' + (atts ? cbAttachList(atts, { compact: true }) : '');
-      var b = el.querySelector('[data-testid="cb-attach-btn"]');
-      if (!b) return;
-      b.removeAttribute('onclick');                  // the mount owns the press: one handler, through the action-state helper
-      b.addEventListener('click', press);
+      el.innerHTML =
+        '<span data-testid="cb-attach-mount">' +
+        cbAttachButton({ chit_id: chit, message_id: o.message_id, line_index: o.line_index, label: o.label, note: o.note }) +
+        '</span>' +
+        (atts ? cbAttachList(atts, { compact: true }) : '');
+      var node = el.querySelector('[data-testid="cb-attach-btn"]');
+      if (!node) return;
+      node.removeAttribute('onclick'); // the mount owns the press: one handler, through the action-state helper
+      node.addEventListener('click', press);
     }
     function ctx() {
       var c = { chit_id: chit };
@@ -540,18 +630,42 @@ var CBAttach = (function () {
     }
     function done(att) {
       if (!att) return;
-      try { el.dispatchEvent(new CustomEvent('cb:rail', { bubbles: true, detail: { module: 'attach', chit_id: chit, result: att } })); } catch (_) {}
-      if (typeof o.onDone === 'function') { try { o.onDone(att); } catch (_) {} }
+      try {
+        el.dispatchEvent(new CustomEvent('cb:rail', { bubbles: true, detail: { module: 'attach', chit_id: chit, result: att } }));
+      } catch (_) {}
+      if (typeof o.onDone === 'function') {
+        try {
+          o.onDone(att);
+        } catch (_) {}
+      }
     }
-    function press(ev) {
-      var btn = ev.currentTarget;
+    function press(event) {
+      var btn = event.currentTarget;
       if (typeof CBAction === 'undefined' || !CBAction || typeof CBAction.run !== 'function') return cbAttachPick(ctx()).then(done);
-      return CBAction.run(btn, function () { return cbAttachPick(ctx()); },
-        { key: 'att:' + chit + ':' + (o.message_id || '') + ':' + (o.line_index == null ? '' : o.line_index),
-          outcome: function (att) { done(att); } });     // cbAttachPick has already said the outcome (toast); cancel is silent
+      return CBAction.run(
+        btn,
+        function () {
+          return cbAttachPick(ctx());
+        },
+        {
+          key: 'att:' + chit + ':' + (o.message_id || '') + ':' + (o.line_index == null ? '' : o.line_index),
+          outcome: function (att) {
+            done(att);
+          }
+        }
+      ); // cbAttachPick has already said the outcome (toast); cancel is silent
     }
     paint();
-    var api_ = { el: el, refresh: function (a) { atts = a || null; paint(); }, destroy: function () { el.innerHTML = ''; } };
+    var api_ = {
+      el: el,
+      refresh: function (a) {
+        atts = a || null;
+        paint();
+      },
+      destroy: function () {
+        el.innerHTML = '';
+      }
+    };
     return api_;
   }
   return { mount: mount };

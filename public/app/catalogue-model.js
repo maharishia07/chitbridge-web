@@ -11,27 +11,41 @@
  *     fields:[{name, leg, via, type}],           // leg ∈ system|customer|compute|cb ; via ∈ ERP|IoT|AI
  *     triggers:[{watch,op,value,action,target}], // the loop
  *     feedback:[{system,format,onRail}] }         // outbound adapter
+ 
+ * CALLED BY public/app/cap-catsetup.js, public/app/cap-definitions.js, public/app/cap-network.js, public/app/cart.js, public/app/price-resolve.js (+4 more)   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
 (function (root, factory) {
   var M = factory();
-  if (typeof module !== 'undefined' && module.exports) module.exports = M;   // Node
-  if (root) root.CBCatalogue = M;                                            // browser global
+  if (typeof module !== 'undefined' && module.exports) module.exports = M; // Node
+  if (root) root.CBCatalogue = M; // browser global
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
   // ---- vocabulary (the one place these live) ----
   var LEGS = [
-    { k: 'system',   label: 'Fed by system',          short: 'System feed',   hint: 'already exists in ERP / IoT — sync it in',              col: ['var(--warn-2)', 'var(--warn-tint)'] },
-    { k: 'customer', label: 'Collected from customer', short: 'From customer', hint: 'known only at order time — capture it',                  col: ['var(--blue-2)', 'var(--blue-tint-bg)'] },
-    { k: 'compute',  label: 'Computed by co-assist',   short: 'Computed',      hint: 'a co-assist (AI / ERP) computes it, the rail seals it',  col: ['var(--purple-2)', 'var(--purple-tint)'] },
-    { k: 'cb',       label: 'Stored in CB',            short: 'Store in CB',   hint: 'has no home today — the gap CB fills',                   col: ['var(--ok-2)', 'var(--ok-tint)'] },
+    { k: 'system', label: 'Fed by system', short: 'System feed', hint: 'already exists in ERP / IoT — sync it in', col: ['var(--warn-2)', 'var(--warn-tint)'] },
+    {
+      k: 'customer',
+      label: 'Collected from customer',
+      short: 'From customer',
+      hint: 'known only at order time — capture it',
+      col: ['var(--blue-2)', 'var(--blue-tint-bg)']
+    },
+    {
+      k: 'compute',
+      label: 'Computed by co-assist',
+      short: 'Computed',
+      hint: 'a co-assist (AI / ERP) computes it, the rail seals it',
+      col: ['var(--purple-2)', 'var(--purple-tint)']
+    },
+    { k: 'cb', label: 'Stored in CB', short: 'Store in CB', hint: 'has no home today — the gap CB fills', col: ['var(--ok-2)', 'var(--ok-tint)'] }
   ];
   var TYPES = ['text', 'number', 'choice', 'range', 'date'];
   // Part C · standards — external classification schemes, always BY REFERENCE (link out, never mirror).
   var STD_SCHEMES = ['HS', 'GS1 GPC', 'Schema.org', 'UNSPSC', 'custom'];
   // Part D · pricing — where a price ORIGINATES (basis) and how it is HELD (by ref = loose/resolved at seal · by value = frozen).
-  var PRICE_BASIS = ['global', 'system', 'user', 'manual'];   // global market stage · ERP/system · user choice at order · hand-entered
-  var PRICE_BY = ['ref', 'value'];                            // ref → resolved from source at seal (loose) · value → frozen amount now
+  var PRICE_BASIS = ['global', 'system', 'user', 'manual']; // global market stage · ERP/system · user choice at order · hand-entered
+  var PRICE_BY = ['ref', 'value']; // ref → resolved from source at seal (loose) · value → frozen amount now
   /**
    * ⭐ WHERE A PRICE IS REFERRED FROM — Athi, 2026-08-16: *"can we say where prices are refered from, or accessed
    * from, example, url, website"*.
@@ -49,31 +63,33 @@
    * disputes it deserves to know which day's number this was.
    */
   var PRICE_ORIGIN = ['url', 'publisher', 'exchange', 'system', 'contract', 'manual'];
-  function viaFor(leg) { return leg === 'compute' ? ['AI', 'ERP'] : ['ERP', 'IoT']; }
+  function viaFor(leg) {
+    return leg === 'compute' ? ['AI', 'ERP'] : ['ERP', 'IoT'];
+  }
 
   // ---- THE MAXIMUM DATATYPE PALETTE ----
   // We cannot pre-design every catalogue. So the code fixes the GRAMMAR (the full set of primitives), and an AI
   // composes any catalogue from it in real time. This is that grammar — the maximum datatypes as code.
   var DATATYPES = [
-    { k: 'text',         label: 'Text',                    note: 'a short string' },
-    { k: 'longtext',     label: 'Long text',               note: 'description / notes' },
-    { k: 'number',       label: 'Number',                  note: 'decimal quantity' },
-    { k: 'integer',      label: 'Whole number',            note: 'count' },
-    { k: 'boolean',      label: 'Yes / No',                note: 'a flag' },
-    { k: 'date',         label: 'Date',                    note: 'expiry, harvest' },
-    { k: 'datetime',     label: 'Date & time',             note: 'timestamped event' },
-    { k: 'choice',       label: 'Choice (one)',            note: 'grade, colour — pick one' },
-    { k: 'multichoice',  label: 'Choice (many)',           note: 'tags, effects' },
-    { k: 'range',        label: 'Range (min–max)',         note: 'a band' },
-    { k: 'money',        label: 'Money',                   note: 'amount + currency (from context)' },
-    { k: 'quantity',     label: 'Quantity',                note: 'value + unit' },
-    { k: 'unit',         label: 'Unit + conversions',      note: 'base unit + integer factors' },
-    { k: 'standard_ref', label: 'Standard reference',      note: 'HS / GS1 — by reference' },
-    { k: 'external_ref', label: 'External reference',      note: 'system + id (ERP/PIM code)' },
-    { k: 'media',        label: 'Image / video / file',    note: 'own or inherited from source' },
-    { k: 'url',          label: 'Link',                    note: 'spec sheet, page' },
-    { k: 'geo',          label: 'Location',                note: 'origin, delivery point' },
-    { k: 'formula',      label: 'Computed (formula)',      note: 'derived by a co-assist, then sealed' },
+    { k: 'text', label: 'Text', note: 'a short string' },
+    { k: 'longtext', label: 'Long text', note: 'description / notes' },
+    { k: 'number', label: 'Number', note: 'decimal quantity' },
+    { k: 'integer', label: 'Whole number', note: 'count' },
+    { k: 'boolean', label: 'Yes / No', note: 'a flag' },
+    { k: 'date', label: 'Date', note: 'expiry, harvest' },
+    { k: 'datetime', label: 'Date & time', note: 'timestamped event' },
+    { k: 'choice', label: 'Choice (one)', note: 'grade, colour — pick one' },
+    { k: 'multichoice', label: 'Choice (many)', note: 'tags, effects' },
+    { k: 'range', label: 'Range (min–max)', note: 'a band' },
+    { k: 'money', label: 'Money', note: 'amount + currency (from context)' },
+    { k: 'quantity', label: 'Quantity', note: 'value + unit' },
+    { k: 'unit', label: 'Unit + conversions', note: 'base unit + integer factors' },
+    { k: 'standard_ref', label: 'Standard reference', note: 'HS / GS1 — by reference' },
+    { k: 'external_ref', label: 'External reference', note: 'system + id (ERP/PIM code)' },
+    { k: 'media', label: 'Image / video / file', note: 'own or inherited from source' },
+    { k: 'url', label: 'Link', note: 'spec sheet, page' },
+    { k: 'geo', label: 'Location', note: 'origin, delivery point' },
+    { k: 'formula', label: 'Computed (formula)', note: 'derived by a co-assist, then sealed' },
     /**
      * ⭐ Athi, 2026-08-16: *"under field data type, consists of, means, this item consists of the following item"*.
      *
@@ -85,14 +101,21 @@
      * ⚠️ SAME SHAPE AS THE FACET, ON PURPOSE — `[{item, qty}]`. A second shape for the same idea is how the
      * traceability walk ends up with two things to understand and mass-balance ends up reconciling one of them.
      */
-    { k: 'composition',  label: 'Consists of (bill of materials)',
-      note: 'this item consists of these items, each with a quantity — same shape as the product bom' },
+    {
+      k: 'composition',
+      label: 'Consists of (bill of materials)',
+      note: 'this item consists of these items, each with a quantity — same shape as the product bom'
+    }
   ];
-  var METHODS = [   // how the whole catalogue sells (one per catalogue)
-    { k: 'cart',     label: 'Cart (qty × price)' }, { k: 'qty', label: 'Quantity only' },
-    { k: 'range',    label: 'Price as a range' },   { k: 'qtyprice', label: 'Both negotiable' },
-    { k: 'text',     label: 'Information only' },    { k: 'subscription', label: 'Subscription / recurring' },
-    { k: 'quote',    label: 'Quote / tender' },
+  var METHODS = [
+    // how the whole catalogue sells (one per catalogue)
+    { k: 'cart', label: 'Cart (qty × price)' },
+    { k: 'qty', label: 'Quantity only' },
+    { k: 'range', label: 'Price as a range' },
+    { k: 'qtyprice', label: 'Both negotiable' },
+    { k: 'text', label: 'Information only' },
+    { k: 'subscription', label: 'Subscription / recurring' },
+    { k: 'quote', label: 'Quote / tender' }
   ];
   /**
    * ⭐⭐ WHAT EACH SELLING METHOD CAN ACTUALLY SELL (backlog 18).
@@ -113,14 +136,14 @@
    * ⚠️ `offer` is available wherever commerce is: an offer line is a price mechanism, not a quantity shape.
    */
   var METHOD_MODELS = {
-    cart:         ['count', 'measure', 'pack', 'range', 'pick', 'offer'],
-    qty:          ['count', 'measure', 'pack', 'range', 'pick'],          // no price → no offer
-    range:        ['count', 'measure', 'pack', 'range', 'pick', 'offer'],
-    qtyprice:     ['count', 'measure', 'pack', 'range', 'pick', 'offer'],
-    subscription: ['count', 'measure', 'pack'],                            // a recurring line is a fixed shape
-    quote:        ['count', 'measure', 'pack', 'range', 'pick', 'offer'],  // a quote may ask for anything
-    text:         [],                                                      // payload — nothing to quantify
-    form:         [],                                                      // payload
+    cart: ['count', 'measure', 'pack', 'range', 'pick', 'offer'],
+    qty: ['count', 'measure', 'pack', 'range', 'pick'], // no price → no offer
+    range: ['count', 'measure', 'pack', 'range', 'pick', 'offer'],
+    qtyprice: ['count', 'measure', 'pack', 'range', 'pick', 'offer'],
+    subscription: ['count', 'measure', 'pack'], // a recurring line is a fixed shape
+    quote: ['count', 'measure', 'pack', 'range', 'pick', 'offer'], // a quote may ask for anything
+    text: [], // payload — nothing to quantify
+    form: [] // payload
   };
   /**
    * The models a method supports. ⚠️ FAILS OPEN: an unknown or absent method returns EVERY model, because the
@@ -139,9 +162,11 @@
    * product call and deliberately not made here.
    */
   function orphanModels(method, usedModels) {
-    if (!METHOD_MODELS[method]) return [];        // unknown method → nothing is provably orphaned
+    if (!METHOD_MODELS[method]) return []; // unknown method → nothing is provably orphaned
     var ok = METHOD_MODELS[method];
-    return (usedModels || []).filter(function (u) { return ok.indexOf(u) < 0; });
+    return (usedModels || []).filter(function (item) {
+      return ok.indexOf(item) < 0;
+    });
   }
   var FACETS = ['identity', 'variants', 'units', 'standards', 'media', 'bom', 'pricing', 'loop', 'feedback'];
   var PRICING_MODELS = ['fixed', 'range', 'tiered', 'market-ref', 'negotiated'];
@@ -194,9 +219,22 @@
    * the same rule categories follow — names are labels, ids are identity.
    */
   var UNIT_NAMES = {
-    kg: 'Kilogram', gram: 'Gram', litre: 'Litre', ml: 'Millilitre', piece: 'Piece', count: 'Count',
-    unit: 'Unit', pack: 'Pack', box: 'Box', dozen: 'Dozen', tonne: 'Tonne', barrel: 'Barrel',
-    metre: 'Metre', sqft: 'Square foot', roll: 'Roll', bunch: 'Bunch',
+    kg: 'Kilogram',
+    gram: 'Gram',
+    litre: 'Litre',
+    ml: 'Millilitre',
+    piece: 'Piece',
+    count: 'Count',
+    unit: 'Unit',
+    pack: 'Pack',
+    box: 'Box',
+    dozen: 'Dozen',
+    tonne: 'Tonne',
+    barrel: 'Barrel',
+    metre: 'Metre',
+    sqft: 'Square foot',
+    roll: 'Roll',
+    bunch: 'Bunch'
   };
   /**
    * ⭐⭐ WHAT KIND OF QUANTITY A UNIT MEASURES (Athi, 2026-08-17: *"can be segregated based on weight, liquid,
@@ -211,17 +249,17 @@
    * ⚠️ Two units can never be added across groups at all: 5 kg + 2 litre is not a quantity, it is two quantities.
    */
   var UNIT_KINDS = [
-    { k: 'weight', label: 'Weight',  units: ['kg', 'gram', 'tonne'] },
-    { k: 'volume', label: 'Volume',  units: ['litre', 'ml', 'barrel'] },
-    { k: 'length', label: 'Length',  units: ['metre'] },
-    { k: 'area',   label: 'Area',    units: ['sqft'] },
-    { k: 'count',  label: 'Count',   units: ['piece', 'count', 'unit', 'dozen'] },
+    { k: 'weight', label: 'Weight', units: ['kg', 'gram', 'tonne'] },
+    { k: 'volume', label: 'Volume', units: ['litre', 'ml', 'barrel'] },
+    { k: 'length', label: 'Length', units: ['metre'] },
+    { k: 'area', label: 'Area', units: ['sqft'] },
+    { k: 'count', label: 'Count', units: ['piece', 'count', 'unit', 'dozen'] },
     /* ⚠️ A GROUPING WHOSE SIZE THE SELLER DEFINES — the one group with no universal ratio to anything. */
-    { k: 'pack',   label: 'Pack',    units: ['pack', 'box', 'bunch', 'roll'] },
+    { k: 'pack', label: 'Pack', units: ['pack', 'box', 'bunch', 'roll'] }
   ];
   /** The kind a unit belongs to, or null. Used to group the list and to say what may never be added together. */
   function unitKind(u) {
-    for (var i = 0; i < UNIT_KINDS.length; i++) if (UNIT_KINDS[i].units.indexOf(u) >= 0) return UNIT_KINDS[i];
+    for (var index = 0; index < UNIT_KINDS.length; index++) if (UNIT_KINDS[index].units.indexOf(u) >= 0) return UNIT_KINDS[index];
     return null;
   }
   var UNIT_LANGS = [
@@ -251,30 +289,46 @@
     { code: 'vi', label: 'Tiếng Việt · Vietnamese', group: 'Foreign' },
     { code: 'th', label: 'ไทย · Thai', group: 'Foreign' },
     { code: 'ja', label: '日本語 · Japanese', group: 'Foreign' },
-    { code: 'ko', label: '한국어 · Korean', group: 'Foreign' },
+    { code: 'ko', label: '한국어 · Korean', group: 'Foreign' }
   ];
   var UNIT_ALIASES = {
-    kg:      { ta: ['கிலோ', 'கிலோகிராம்'], hi: ['किलो', 'किलोग्राम'], en: ['kilo', 'kilos', 'kilogram', 'kilograms', 'kgs', 'kilogramme'] },
-    gram:    { ta: ['கிராம்'], hi: ['ग्राम'], en: ['grams', 'gm', 'gms', 'gramme'] },
-    litre:   { ta: ['லிட்டர்'], hi: ['लीटर'], en: ['liter', 'liters', 'litres', 'ltr', 'ltrs'] },
-    ml:      { ta: ['மில்லி'], hi: ['मिलीलीटर'], en: ['millilitre', 'millilitres', 'milliliter', 'mls'] },
-    piece:   { ta: ['பீஸ்'], hi: ['पीस', 'नग'], en: ['pieces', 'pcs', 'pc'] },
-    bunch:   { ta: ['கட்டு', 'kattu'], hi: ['गड्डी', 'गुच्छा'], en: ['bunches'] },
-    pack:    { ta: ['பேக்'], hi: ['पैकेट'], en: ['packet', 'packets', 'pkt', 'pkts', 'packs'] },
-    box:     { ta: ['பாக்ஸ்'], hi: ['डिब्बा', 'बॉक्स'], en: ['boxes'] },
+    kg: { ta: ['கிலோ', 'கிலோகிராம்'], hi: ['किलो', 'किलोग्राम'], en: ['kilo', 'kilos', 'kilogram', 'kilograms', 'kgs', 'kilogramme'] },
+    gram: { ta: ['கிராம்'], hi: ['ग्राम'], en: ['grams', 'gm', 'gms', 'gramme'] },
+    litre: { ta: ['லிட்டர்'], hi: ['लीटर'], en: ['liter', 'liters', 'litres', 'ltr', 'ltrs'] },
+    ml: { ta: ['மில்லி'], hi: ['मिलीलीटर'], en: ['millilitre', 'millilitres', 'milliliter', 'mls'] },
+    piece: { ta: ['பீஸ்'], hi: ['पीस', 'नग'], en: ['pieces', 'pcs', 'pc'] },
+    bunch: { ta: ['கட்டு', 'kattu'], hi: ['गड्डी', 'गुच्छा'], en: ['bunches'] },
+    pack: { ta: ['பேக்'], hi: ['पैकेट'], en: ['packet', 'packets', 'pkt', 'pkts', 'packs'] },
+    box: { ta: ['பாக்ஸ்'], hi: ['डिब्बा', 'बॉक्स'], en: ['boxes'] },
     /* ⚠️ 2026-09-27: carton was filed under box here and nos/no under piece, while lib/units.js — the platform's table —
        has carton and count as units of their own (tests/units-alias: "the two halves of one fact disagree"). A carton is a
        near neighbour of a box, and a near neighbour IS a conversion, not a spelling (lib/ai.js). This view follows the API. */
-    carton:  { en: ['cartons'] },
-    dozen:   { ta: ['டஜன்'], hi: ['दर्जन'], en: ['dozens', 'dzn'] },
-    tonne:   { ta: ['டன்'], hi: ['टन'], en: ['ton', 'tons', 'tonnes', 'mt'] },
-    metre:   { ta: ['மீட்டர்'], hi: ['मीटर'], en: ['meter', 'meters', 'metres', 'mtr'] },
-    count:   { ta: ['எண்ணிக்கை'], en: ['counts', 'nos', 'no'] },
-    unit:    { ta: ['யூனிட்'], hi: ['यूनिट'], en: ['units'] },
+    carton: { en: ['cartons'] },
+    dozen: { ta: ['டஜன்'], hi: ['दर्जन'], en: ['dozens', 'dzn'] },
+    tonne: { ta: ['டன்'], hi: ['टन'], en: ['ton', 'tons', 'tonnes', 'mt'] },
+    metre: { ta: ['மீட்டர்'], hi: ['मीटर'], en: ['meter', 'meters', 'metres', 'mtr'] },
+    count: { ta: ['எண்ணிக்கை'], en: ['counts', 'nos', 'no'] },
+    unit: { ta: ['யூனிட்'], hi: ['यूनिट'], en: ['units'] }
   };
   // the whole grammar, in one place — what the AI composes from
-  function PALETTE(){ return { datatypes: DATATYPES, priceOrigin: PRICE_ORIGIN, legs: LEGS, viaFor: viaFor, methods: METHODS, facets: FACETS, pricingModels: PRICING_MODELS, standards: STD_SCHEMES, priceBy: PRICE_BY, priceBasis: PRICE_BASIS }; }
-  function leg(k) { for (var i = 0; i < LEGS.length; i++) if (LEGS[i].k === k) return LEGS[i]; return null; }
+  function PALETTE() {
+    return {
+      datatypes: DATATYPES,
+      priceOrigin: PRICE_ORIGIN,
+      legs: LEGS,
+      viaFor: viaFor,
+      methods: METHODS,
+      facets: FACETS,
+      pricingModels: PRICING_MODELS,
+      standards: STD_SCHEMES,
+      priceBy: PRICE_BY,
+      priceBasis: PRICE_BASIS
+    };
+  }
+  function leg(k) {
+    for (var index = 0; index < LEGS.length; index++) if (LEGS[index].k === k) return LEGS[index];
+    return null;
+  }
 
   // ---- normalize / migrate a draft to the current shape (moved out of the UI's _ensureCat) ----
   function ensure(c) {
@@ -294,12 +348,12 @@
     if (!c.context) c.context = { currency: '', region: '' };
     if (c.context.currency === undefined) c.context.currency = '';
     if (c.context.region === undefined) c.context.region = '';
-    if (!c.standards) c.standards = [];   // Part C · [{scheme, code, label}] — by reference
-    if (!c.pricing) c.pricing = [];       // Part D · [{label, basis, by, source, amount, currency, region, validFrom, validTo}]
-    c.pricing.forEach(function (p) {
-      if (!p.basis) p.basis = 'global';
-      if (!p.by) p.by = 'ref';
-      if (p.source === undefined) p.source = '';
+    if (!c.standards) c.standards = []; // Part C · [{scheme, code, label}] — by reference
+    if (!c.pricing) c.pricing = []; // Part D · [{label, basis, by, source, amount, currency, region, validFrom, validTo}]
+    c.pricing.forEach(function (item) {
+      if (!item.basis) item.basis = 'global';
+      if (!item.by) item.by = 'ref';
+      if (item.source === undefined) item.source = '';
       /**
        * ⭐ THE PROVENANCE OF THE NUMBER — where it was referred from, and when it was read.
        *
@@ -317,26 +371,36 @@
        * They differ by markup, conversion, rounding — and keeping both is what lets someone audit the step
        * between them instead of taking it on trust. Collapsing them would hide exactly the part worth checking.
        */
-      if (p.origin === undefined)  p.origin = '';
-      if (p.url === undefined)     p.url = '';
-      if (p.ref === undefined)     p.ref = '';
-      if (p.at === undefined)      p.at = '';
-      if (p.as_read === undefined) p.as_read = null;
-      if (p.amount === undefined) p.amount = null;
-      if (p.currency === undefined) p.currency = '';
-      if (p.region === undefined) p.region = '';
-      if (p.validFrom === undefined) p.validFrom = '';
-      if (p.validTo === undefined) p.validTo = '';
+      if (item.origin === undefined) item.origin = '';
+      if (item.url === undefined) item.url = '';
+      if (item.ref === undefined) item.ref = '';
+      if (item.at === undefined) item.at = '';
+      if (item.as_read === undefined) item.as_read = null;
+      if (item.amount === undefined) item.amount = null;
+      if (item.currency === undefined) item.currency = '';
+      if (item.region === undefined) item.region = '';
+      if (item.validFrom === undefined) item.validFrom = '';
+      if (item.validTo === undefined) item.validTo = '';
     });
-    c.fields.forEach(function (f) {
-      if (!f.leg) {                                   // migrate the old {source} shape
-        if (f.source === 'erp') { f.leg = 'system'; f.via = 'ERP'; }
-        else if (f.source === 'iot') { f.leg = 'system'; f.via = 'IoT'; }
-        else { f.leg = 'cb'; }
+    c.fields.forEach(function (item) {
+      if (!item.leg) {
+        // migrate the old {source} shape
+        if (item.source === 'erp') {
+          item.leg = 'system';
+          item.via = 'ERP';
+        } else if (item.source === 'iot') {
+          item.leg = 'system';
+          item.via = 'IoT';
+        } else {
+          item.leg = 'cb';
+        }
       }
-      if ((f.leg === 'system' || f.leg === 'compute') && !f.via) f.via = viaFor(f.leg)[0];
+      if ((item.leg === 'system' || item.leg === 'compute') && !item.via) item.via = viaFor(item.leg)[0];
     });
-    c.feedback.forEach(function (fb) { if (fb.format === undefined) fb.format = ''; if (fb.onRail === undefined) fb.onRail = false; });
+    c.feedback.forEach(function (item) {
+      if (item.format === undefined) item.format = '';
+      if (item.onRail === undefined) item.onRail = false;
+    });
     return c;
   }
 
@@ -344,9 +408,11 @@
   function toBase(c, unit, qty) {
     qty = qty == null ? 1 : qty;
     if (!unit || unit === c.baseUnit) return qty;
-    var u = (c.altUnits || []).filter(function (x) { return x.unit === unit; })[0];
-    if (!u) return null;                              // unknown unit — caller decides
-    return qty * (u.num || 1) / (u.den || 1);
+    var u = (c.altUnits || []).filter(function (x) {
+      return x.unit === unit;
+    })[0];
+    if (!u) return null; // unknown unit — caller decides
+    return (qty * (u.num || 1)) / (u.den || 1);
   }
 
   // ---- resolve a price against the catalogue's governance context (currency/region inherited when blank).
@@ -354,15 +420,22 @@
   function resolvePrice(c, p) {
     c = ensure(c);
     return {
-      label: p.label || (p.basis + ' price'),
-      basis: p.basis, by: p.by, source: p.source,
+      label: p.label || p.basis + ' price',
+      basis: p.basis,
+      by: p.by,
+      source: p.source,
       amount: p.by === 'value' ? p.amount : null,
       currency: p.currency || c.context.currency || '',
       region: p.region || c.context.region || '',
-      validFrom: p.validFrom, validTo: p.validTo,
+      validFrom: p.validFrom,
+      validTo: p.validTo,
       state: p.by === 'value' ? 'frozen (by value)' : 'loose (by ref — resolves at seal)',
       /* Where it came from, carried through so the schema and every consumer see it — not just the editor. */
-      origin: p.origin || '', url: p.url || '', ref: p.ref || '', at: p.at || '', as_read: p.as_read,
+      origin: p.origin || '',
+      url: p.url || '',
+      ref: p.ref || '',
+      at: p.at || '',
+      as_read: p.as_read,
       /**
        * ⭐ ONE LINE A HUMAN CAN READ, and it is the whole point of the feature: a price should be able to say
        * where it came from without anyone opening the JSON.
@@ -410,11 +483,18 @@
   function routeChain(c) {
     c = ensure(c);
     var out = { system: [], customer: [], compute: [], cb: [], feedback: [] };
-    c.fields.forEach(function (f) { (out[f.leg] || out.cb).push({ name: f.name, via: f.via, type: f.type }); });
+    c.fields.forEach(function (item) {
+      (out[item.leg] || out.cb).push({ name: item.name, via: item.via, type: item.type });
+    });
     if (c.product) out.cb.unshift({ name: c.product + ' (identity)', identity: true });
     if (c.baseUnit) out.cb.unshift({ name: 'units · ' + c.baseUnit, identity: true });
-    out.feedback = (c.feedback || []).filter(function (x) { return x.system; })
-      .map(function (x) { return { system: x.system, format: x.format, onRail: !!x.onRail }; });
+    out.feedback = (c.feedback || [])
+      .filter(function (x) {
+        return x.system;
+      })
+      .map(function (x) {
+        return { system: x.system, format: x.format, onRail: !!x.onRail };
+      });
     return out;
   }
 
@@ -422,26 +502,64 @@
   // This is the bridge from a design draft to a runnable co-assist→seal loop.
   function deriveComputeJob(c) {
     c = ensure(c);
-    var feeds = c.fields.filter(function (f) { return f.leg === 'system'; })
-      .map(function (f) { return { name: f.name, via: f.via, type: f.type }; });
-    var computed = c.fields.filter(function (f) { return f.leg === 'compute'; })
-      .map(function (f) { return { name: f.name, via: f.via, type: f.type }; });
-    var fromCustomer = c.fields.filter(function (f) { return f.leg === 'customer'; }).map(function (f) { return f.name; });
-    var stored = c.fields.filter(function (f) { return f.leg === 'cb'; }).map(function (f) { return f.name; });
+    var feeds = c.fields
+      .filter(function (item) {
+        return item.leg === 'system';
+      })
+      .map(function (item) {
+        return { name: item.name, via: item.via, type: item.type };
+      });
+    var computed = c.fields
+      .filter(function (item) {
+        return item.leg === 'compute';
+      })
+      .map(function (item) {
+        return { name: item.name, via: item.via, type: item.type };
+      });
+    var fromCustomer = c.fields
+      .filter(function (item) {
+        return item.leg === 'customer';
+      })
+      .map(function (item) {
+        return item.name;
+      });
+    var stored = c.fields
+      .filter(function (item) {
+        return item.leg === 'cb';
+      })
+      .map(function (item) {
+        return item.name;
+      });
     return {
       product: c.product,
-      context: c.context,           // governance: currency + region prices/refs resolve under
-      known_as: (c.refs || []).filter(function (r) { return r.system && r.code; }),
-      standards: (c.standards || []).filter(function (s) { return s.code || s.label; }),   // Part C · by reference
-      pricing: (c.pricing || []).map(function (p) { return resolvePrice(c, p); }),          // Part D · by ref / by value
-      bom: (c.bom || []).filter(function (b) { return b.item; }),
-      feeds: feeds,                 // inputs to the co-assist (from ERP/IoT)
-      computed: computed,           // what the co-assist outputs (then sealed)
+      context: c.context, // governance: currency + region prices/refs resolve under
+      known_as: (c.refs || []).filter(function (item) {
+        return item.system && item.code;
+      }),
+      standards: (c.standards || []).filter(function (item) {
+        return item.code || item.label;
+      }), // Part C · by reference
+      pricing: (c.pricing || []).map(function (item) {
+        return resolvePrice(c, item);
+      }), // Part D · by ref / by value
+      bom: (c.bom || []).filter(function (b) {
+        return b.item;
+      }),
+      feeds: feeds, // inputs to the co-assist (from ERP/IoT)
+      computed: computed, // what the co-assist outputs (then sealed)
       fromCustomer: fromCustomer,
       stored: stored,
-      triggers: (c.triggers || []).filter(function (t) { return t.watch || t.value; }),
-      feedback: (c.feedback || []).filter(function (x) { return x.system; }),
-      runnable: computed.length > 0 && (c.triggers || []).some(function (t) { return t.action; }),
+      triggers: (c.triggers || []).filter(function (item) {
+        return item.watch || item.value;
+      }),
+      feedback: (c.feedback || []).filter(function (x) {
+        return x.system;
+      }),
+      runnable:
+        computed.length > 0 &&
+        (c.triggers || []).some(function (item) {
+          return item.action;
+        })
     };
   }
 
@@ -449,50 +567,85 @@
   function canonicalInputs(c, feedValues) {
     c = ensure(c);
     var inputs = { product: c.product };
-    c.fields.filter(function (f) { return f.leg === 'system'; }).forEach(function (f) {
-      inputs[f.name] = feedValues && (f.name in feedValues) ? feedValues[f.name] : null;
+    c.fields
+      .filter(function (item) {
+        return item.leg === 'system';
+      })
+      .forEach(function (item) {
+        inputs[item.name] = feedValues && item.name in feedValues ? feedValues[item.name] : null;
+      });
+    (c.refs || []).forEach(function (item) {
+      if (item.system && item.code) {
+        inputs.known_as = inputs.known_as || {};
+        inputs.known_as[item.system] = item.code;
+      }
     });
-    (c.refs || []).forEach(function (r) { if (r.system && r.code) { inputs.known_as = inputs.known_as || {}; inputs.known_as[r.system] = r.code; } });
     return inputs;
   }
 
   // ---- ADOPT the standard: emit the catalogue AS JSON Schema (+ our x-cb-* overlay for the four legs / seal).
   // This is what an AI would emit per purpose (LLMs speak JSON Schema); RJSF / JSON Forms / json-editor render it
   // for free. We only add the CB-unique bits as extension keywords. Our model stays a thin PROFILE over the standard.
-  function _jkey(n){ return (n || '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'field'; }
+  function _jkey(n) {
+    return (
+      (n || '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/^_|_$/g, '') || 'field'
+    );
+  }
   /**
    * ⚠️ AN UNMAPPED TYPE FALLS BACK TO `{type:'string'}` SILENTLY (see toJSONSchema below) — which is fine for the
    * text-ish types and WRONG for any structured one. A `composition` field exported as a string would look valid,
    * validate against nothing useful, and be discovered by whoever consumed the schema rather than by us.
    */
   var TYPE_TO_JSONSCHEMA = {
-    text: { type: 'string' }, number: { type: 'number' }, date: { type: 'string', format: 'date' },
-    choice: { type: 'string' }, range: { type: 'object', properties: { min: { type: 'number' }, max: { type: 'number' } } },
+    text: { type: 'string' },
+    number: { type: 'number' },
+    date: { type: 'string', format: 'date' },
+    choice: { type: 'string' },
+    range: { type: 'object', properties: { min: { type: 'number' }, max: { type: 'number' } } },
     /* ⭐ "consists of" — the same `[{item, qty}]` shape the product-level `bom` facet uses. Deliberately identical:
        one idea, one shape, so the traceability walk and mass-balance have a single thing to understand. */
-    composition: { type: 'array', items: { type: 'object',
-      properties: { item: { type: 'string' }, qty: { type: 'number' }, unit: { type: 'string' } },
-      required: ['item'] } },
+    composition: {
+      type: 'array',
+      items: { type: 'object', properties: { item: { type: 'string' }, qty: { type: 'number' }, unit: { type: 'string' } }, required: ['item'] }
+    }
   };
   function toJSONSchema(c, opts) {
-    c = ensure(c); opts = opts || {};
-    var props = {}, required = [];
+    c = ensure(c);
+    opts = opts || {};
+    var props = {},
+      required = [];
     props.product = { type: 'string', title: 'Product', 'x-cb-role': 'identity', 'x-cb-leg': 'cb' };
     if (c.product) required.push('product');
     if (c.baseUnit) props.unit = { type: 'string', title: 'Unit', default: c.baseUnit, 'x-cb-role': 'unit' };
-    (c.fields || []).forEach(function (f) {
-      var base = JSON.parse(JSON.stringify(TYPE_TO_JSONSCHEMA[f.type] || { type: 'string' }));
-      base.title = f.name; base['x-cb-leg'] = f.leg;            // <-- the four-leg overlay: where this field comes from
-      if (f.via) base['x-cb-via'] = f.via;
-      if (f.leg === 'compute') base.readOnly = true;            // computed by a co-assist, then sealed
-      props[_jkey(f.name)] = base;
+    (c.fields || []).forEach(function (item) {
+      var base = JSON.parse(JSON.stringify(TYPE_TO_JSONSCHEMA[item.type] || { type: 'string' }));
+      base.title = item.name;
+      base['x-cb-leg'] = item.leg; // <-- the four-leg overlay: where this field comes from
+      if (item.via) base['x-cb-via'] = item.via;
+      if (item.leg === 'compute') base.readOnly = true; // computed by a co-assist, then sealed
+      props[_jkey(item.name)] = base;
     });
-    (c.standards || []).forEach(function (s) { if (s.code || s.scheme) props[_jkey(s.scheme || 'std')] = { type: 'string', title: (s.scheme || 'Standard') + ' code', 'x-cb-role': 'standard-ref', 'x-cb-standard': s.scheme, 'x-cb-ref': true }; });
+    (c.standards || []).forEach(function (item) {
+      if (item.code || item.scheme)
+        props[_jkey(item.scheme || 'std')] = {
+          type: 'string',
+          title: (item.scheme || 'Standard') + ' code',
+          'x-cb-role': 'standard-ref',
+          'x-cb-standard': item.scheme,
+          'x-cb-ref': true
+        };
+    });
     var schema = { '$schema': 'https://json-schema.org/draft/2020-12/schema', title: c.product || 'Catalogue item', type: 'object', properties: props };
     if (required.length) schema.required = required;
-    schema['x-cb-method'] = opts.method || 'cart';                // the whole-catalogue overlay
+    schema['x-cb-method'] = opts.method || 'cart'; // the whole-catalogue overlay
     schema['x-cb-currency'] = opts.currency || '(entity)';
-    if (opts.facets) schema['x-cb-facets'] = Object.keys(opts.facets).filter(function (k) { return opts.facets[k]; });
+    if (opts.facets)
+      schema['x-cb-facets'] = Object.keys(opts.facets).filter(function (item) {
+        return opts.facets[item];
+      });
     schema['x-cb-seal'] = 'content-hash on the chit';
     return schema;
   }
@@ -502,9 +655,19 @@
     c = ensure(c);
     var issues = [];
     if (!c.product) issues.push('no product name');
-    c.fields.forEach(function (f) { if (!f.name) issues.push('an unnamed requirement'); });
-    var comp = c.fields.some(function (f) { return f.leg === 'compute'; });
-    if (comp && !c.fields.some(function (f) { return f.leg === 'system'; })) issues.push('a computed field but nothing fed in to compute from');
+    c.fields.forEach(function (item) {
+      if (!item.name) issues.push('an unnamed requirement');
+    });
+    var comp = c.fields.some(function (item) {
+      return item.leg === 'compute';
+    });
+    if (
+      comp &&
+      !c.fields.some(function (item) {
+        return item.leg === 'system';
+      })
+    )
+      issues.push('a computed field but nothing fed in to compute from');
     return { ok: issues.length === 0, issues: issues };
   }
 
@@ -542,7 +705,11 @@
     var reg = register || (typeof STANDARDS !== 'undefined' ? STANDARDS : null) || [];
     return STANDARD_REFS.map(function (ref) {
       var r = null;
-      for (var k = 0; k < reg.length; k++) if (reg[k] && reg[k].id === ref.id) { r = reg[k]; break; }
+      for (var index = 0; index < reg.length; index++)
+        if (reg[index] && reg[index].id === ref.id) {
+          r = reg[index];
+          break;
+        }
       return r ? { id: ref.id, where: ref.where, n: r.n, w: r.w, s: r.s, m: r.m, limit: r.limit } : { id: ref.id, where: ref.where, missing: true };
     });
   }
@@ -571,77 +738,169 @@
    * ========================================================================================================== */
   var FIELD_STANDARDS = {
     // ── identity ──────────────────────────────────────────────────────────────────────────────────────────────
-    name:        { s: 'name',            m: 'Product.title',            n: '' },
-    variant:     { s: '—',               m: 'ProductVariant.title',     n: 'Medusa makes a variant its OWN record keyed by option values; we keep it a field on the item. Ours is flatter and matches how a trader writes a price list.' },
-    grade:       { s: '—',               m: 'ProductOptionValue',       n: 'a variant axis — same idea, named for the trade' },
-    desc:        { s: 'description',     m: 'Product.description',      n: '' },
-    description: { s: 'description',     m: 'Product.description',      n: 'alias of desc — both appear in real imports' },
-    synonyms:    { s: 'alternateName',   m: '—',                        n: '⭐ carries far more weight here than anywhere else: multilingual trade names are the MATCHER INPUT, not decoration. Medusa has no equivalent.' },
-    local_name:  { s: 'alternateName',   m: '—',                        n: '' },
-    botanical:   { s: 'alternateName',   m: '—',                        n: 'the species name — an alternateName with a scheme' },
-    brand:       { s: 'brand',           m: 'ProductCollection',        n: '' },
-    category:    { s: 'category',        m: 'ProductCategory',          o: 'GS1 GPC · UNSPSC', n: 'classification held BY REFERENCE' },
+    name: { s: 'name', m: 'Product.title', n: '' },
+    variant: {
+      s: '—',
+      m: 'ProductVariant.title',
+      n: 'Medusa makes a variant its OWN record keyed by option values; we keep it a field on the item. Ours is flatter and matches how a trader writes a price list.'
+    },
+    grade: { s: '—', m: 'ProductOptionValue', n: 'a variant axis — same idea, named for the trade' },
+    desc: { s: 'description', m: 'Product.description', n: '' },
+    description: { s: 'description', m: 'Product.description', n: 'alias of desc — both appear in real imports' },
+    synonyms: {
+      s: 'alternateName',
+      m: '—',
+      n: '⭐ carries far more weight here than anywhere else: multilingual trade names are the MATCHER INPUT, not decoration. Medusa has no equivalent.'
+    },
+    local_name: { s: 'alternateName', m: '—', n: '' },
+    botanical: { s: 'alternateName', m: '—', n: 'the species name — an alternateName with a scheme' },
+    brand: { s: 'brand', m: 'ProductCollection', n: '' },
+    category: { s: 'category', m: 'ProductCategory', o: 'GS1 GPC · UNSPSC', n: 'classification held BY REFERENCE' },
     // ── canonical codes ───────────────────────────────────────────────────────────────────────────────────────
-    sku:         { s: 'sku',             m: 'ProductVariant.sku',       n: 'merchant identifier — ours, not the world’s' },
-    gtin:        { s: 'gtin',            m: 'ProductVariant.barcode',   o: 'GS1 GTIN-8/12/13/14', n: 'the world’s identifier. Medusa splits ean/upc/barcode; GS1 subsumes all three under GTIN.' },
-    ean:         { s: 'gtin13',          m: 'ProductVariant.ean',       o: 'GS1', n: '' },
-    barcode:     { s: 'gtin',            m: 'ProductVariant.barcode',   o: 'GS1', n: '' },
-    mpn:         { s: 'mpn',             m: '—',                        n: 'manufacturer part number — spares and machinery' },
-    code:        { s: 'sku | —',         m: 'sku | hs_code',            n: '⚠️ AMBIGUOUS IN OUR OWN STARTER SET, labelled "Code / HSN". A merchant SKU and a WCO customs classification are different standards with different owners; both schema.org and Medusa keep them apart. See CONFLICTS.' },
+    sku: { s: 'sku', m: 'ProductVariant.sku', n: 'merchant identifier — ours, not the world’s' },
+    gtin: {
+      s: 'gtin',
+      m: 'ProductVariant.barcode',
+      o: 'GS1 GTIN-8/12/13/14',
+      n: 'the world’s identifier. Medusa splits ean/upc/barcode; GS1 subsumes all three under GTIN.'
+    },
+    ean: { s: 'gtin13', m: 'ProductVariant.ean', o: 'GS1', n: '' },
+    barcode: { s: 'gtin', m: 'ProductVariant.barcode', o: 'GS1', n: '' },
+    mpn: { s: 'mpn', m: '—', n: 'manufacturer part number — spares and machinery' },
+    code: {
+      s: 'sku | —',
+      m: 'sku | hs_code',
+      n: '⚠️ AMBIGUOUS IN OUR OWN STARTER SET, labelled "Code / HSN". A merchant SKU and a WCO customs classification are different standards with different owners; both schema.org and Medusa keep them apart. See CONFLICTS.'
+    },
     // ── customs & trade — the fields that make this a TRADE catalogue rather than a shop one ───────────────────
-    hsn:         { s: '—',               m: 'hs_code',                  o: 'WCO Harmonized System', n: '⭐ schema.org has NO customs classification. Medusa carries hs_code on both product and variant — worth knowing that a serious commerce model treats this as first-class.' },
-    hs_code:     { s: '—',               m: 'hs_code',                  o: 'WCO Harmonized System', n: 'same field, the international spelling' },
-    origin_country: { s: '—',            m: 'origin_country',           o: 'ISO 3166-1 alpha-2',    n: 'country of origin — drives duty and preference' },
-    material:    { s: 'material',        m: 'material',                 n: '' },
-    weight:      { s: 'weight',          m: 'weight',                   o: 'UN/CEFACT Rec 20 (unit code)', n: '' },
+    hsn: {
+      s: '—',
+      m: 'hs_code',
+      o: 'WCO Harmonized System',
+      n: '⭐ schema.org has NO customs classification. Medusa carries hs_code on both product and variant — worth knowing that a serious commerce model treats this as first-class.'
+    },
+    hs_code: { s: '—', m: 'hs_code', o: 'WCO Harmonized System', n: 'same field, the international spelling' },
+    origin_country: { s: '—', m: 'origin_country', o: 'ISO 3166-1 alpha-2', n: 'country of origin — drives duty and preference' },
+    material: { s: 'material', m: 'material', n: '' },
+    weight: { s: 'weight', m: 'weight', o: 'UN/CEFACT Rec 20 (unit code)', n: '' },
     // ── quantity & units ──────────────────────────────────────────────────────────────────────────────────────
-    unit:        { s: '—',               m: '—',                        o: 'UN/CEFACT Rec 20', n: '⭐ THE code list for units in international trade (KGM · LTR · TNE · MTQ · PCE). Neither schema.org nor Medusa models a unit of sale properly — for a bulk-commodity rail this is a real gap in BOTH, and the reason we keep our own unit + conversions.' },
-    unit_size:   { s: 'size',            m: '—',                        n: '' },
-    conversions: { s: '—',               m: '—',                        o: 'UN/CEFACT Rec 20', n: 'integer factors between units — CB-specific, because a sack is 50 kg only in this catalogue' },
-    min_qty:     { s: 'Offer.eligibleQuantity', m: '—',                 n: '' },
+    unit: {
+      s: '—',
+      m: '—',
+      o: 'UN/CEFACT Rec 20',
+      n: '⭐ THE code list for units in international trade (KGM · LTR · TNE · MTQ · PCE). Neither schema.org nor Medusa models a unit of sale properly — for a bulk-commodity rail this is a real gap in BOTH, and the reason we keep our own unit + conversions.'
+    },
+    unit_size: { s: 'size', m: '—', n: '' },
+    conversions: { s: '—', m: '—', o: 'UN/CEFACT Rec 20', n: 'integer factors between units — CB-specific, because a sack is 50 kg only in this catalogue' },
+    min_qty: { s: 'Offer.eligibleQuantity', m: '—', n: '' },
     // ── price ─────────────────────────────────────────────────────────────────────────────────────────────────
-    price:       { s: 'Offer.price',     m: 'Price.amount',             n: '⚠️ schema.org puts price on the OFFER, not the product — the same thing sells at different prices to different people. Our per-copy model already agrees with that; the field placement does not yet.' },
-    currency:    { s: 'Offer.priceCurrency', m: 'Price.currency_code',  o: 'ISO 4217', n: 'stamped from the ENTITY, never from the request' },
-    mrp:         { s: 'Offer.priceSpecification', m: '—',               n: 'list price — a second price with a different role' },
+    price: {
+      s: 'Offer.price',
+      m: 'Price.amount',
+      n: '⚠️ schema.org puts price on the OFFER, not the product — the same thing sells at different prices to different people. Our per-copy model already agrees with that; the field placement does not yet.'
+    },
+    currency: { s: 'Offer.priceCurrency', m: 'Price.currency_code', o: 'ISO 4217', n: 'stamped from the ENTITY, never from the request' },
+    mrp: { s: 'Offer.priceSpecification', m: '—', n: 'list price — a second price with a different role' },
     // ── lifecycle & stock ─────────────────────────────────────────────────────────────────────────────────────
-    status:      { s: 'Offer.availability', m: '✗ NOT ProductStatus',   n: '⚠️ SAME WORD, DIFFERENT QUESTION. Medusa’s status (draft/proposed/published/rejected) is a PUBLICATION workflow — is this listing ready to show. Ours is schema.org ItemAvailability — can this be ordered at all. Mapping one to the other would be wrong in both directions.' },
-    status_until:{ s: '—',               m: '—',                        n: 'CB-specific: what makes "temporarily" mean anything' },
-    status_replaced_by: { s: 'isSimilarTo', m: '—',                     n: 'the successor that makes redundant ≠ retired' },
-    avail:       { s: 'Offer.inventoryLevel', m: 'InventoryLevel',      n: 'the QUANTITY feed — how many are on the shelf. Not the lifecycle.' },
+    status: {
+      s: 'Offer.availability',
+      m: '✗ NOT ProductStatus',
+      n: '⚠️ SAME WORD, DIFFERENT QUESTION. Medusa’s status (draft/proposed/published/rejected) is a PUBLICATION workflow — is this listing ready to show. Ours is schema.org ItemAvailability — can this be ordered at all. Mapping one to the other would be wrong in both directions.'
+    },
+    status_until: { s: '—', m: '—', n: 'CB-specific: what makes "temporarily" mean anything' },
+    status_replaced_by: { s: 'isSimilarTo', m: '—', n: 'the successor that makes redundant ≠ retired' },
+    avail: { s: 'Offer.inventoryLevel', m: 'InventoryLevel', n: 'the QUANTITY feed — how many are on the shelf. Not the lifecycle.' },
     // ── tax — jurisdictional, and deliberately not pretended to be universal ───────────────────────────────────
-    gst_rate:    { s: '—',               m: 'TaxRate (Tax Module)',     n: 'no cross-border standard exists — the HS code drives the rate, and the rate is the jurisdiction’s' },
-    gst:         { s: '—',               m: 'TaxRate (Tax Module)',     n: 'alias' },
-    sac:         { s: '—',               m: '—',                        o: 'India SAC', n: 'services counterpart of HSN' },
-    cess:        { s: '—',               m: '—',                        n: 'India-specific levy' },
+    gst_rate: { s: '—', m: 'TaxRate (Tax Module)', n: 'no cross-border standard exists — the HS code drives the rate, and the rate is the jurisdiction’s' },
+    gst: { s: '—', m: 'TaxRate (Tax Module)', n: 'alias' },
+    sac: { s: '—', m: '—', o: 'India SAC', n: 'services counterpart of HSN' },
+    cess: { s: '—', m: '—', n: 'India-specific levy' },
     // ── media ─────────────────────────────────────────────────────────────────────────────────────────────────
-    image:       { s: 'image',           m: 'Product.thumbnail/images', n: '' },
+    image: { s: 'image', m: 'Product.thumbnail/images', n: '' },
     // ── ⭐ THE INSTANCE — these are NOT catalogue fields, and that is the point ────────────────────────────────
-    tracking:    { s: '—',               m: 'Product.tracking',         o: 'Odoo model', n: '⭐ ON THE PRODUCT: whether movements must carry a lot at all (none · lot · serial). True of every unit ever made, which is the test for belonging on the item.' },
-    shelf_life_days: { s: '—',           m: '—',                        n: 'ON THE PRODUCT: how long it lasts. The expiry DATE this implies belongs to the LOT — confusing the two is how a batch ends up in a catalogue.' },
-    'lot.batch': { s: '—',               m: 'stock.lot.name',           o: 'GS1 AI (10)', n: '⚠️ ON THE LINE, NEVER THE ITEM. `batch_no` used to sit on the pharma catalogue item, and the CSV importer allows it as the identity key — one declaration away from a new catalogue row per consignment, i.e. a lot ledger wearing a catalogue’s name.' },
-    'lot.expiry':{ s: 'Offer.priceValidUntil ✗', m: 'lot expiration_date', o: 'GS1 AI (17)', n: '⚠️ NOT priceValidUntil — that is when an OFFER stops being valid. This is when the GOODS stop being safe. Two unrelated clocks that both look like "a date on a line".' },
-    'lot.serial':{ s: '—',               m: 'stock.lot (serial)',       o: 'GS1 AI (21)', n: 'one individual unit rather than one consignment' },
+    tracking: {
+      s: '—',
+      m: 'Product.tracking',
+      o: 'Odoo model',
+      n: '⭐ ON THE PRODUCT: whether movements must carry a lot at all (none · lot · serial). True of every unit ever made, which is the test for belonging on the item.'
+    },
+    shelf_life_days: {
+      s: '—',
+      m: '—',
+      n: 'ON THE PRODUCT: how long it lasts. The expiry DATE this implies belongs to the LOT — confusing the two is how a batch ends up in a catalogue.'
+    },
+    'lot.batch': {
+      s: '—',
+      m: 'stock.lot.name',
+      o: 'GS1 AI (10)',
+      n: '⚠️ ON THE LINE, NEVER THE ITEM. `batch_no` used to sit on the pharma catalogue item, and the CSV importer allows it as the identity key — one declaration away from a new catalogue row per consignment, i.e. a lot ledger wearing a catalogue’s name.'
+    },
+    'lot.expiry': {
+      s: 'Offer.priceValidUntil ✗',
+      m: 'lot expiration_date',
+      o: 'GS1 AI (17)',
+      n: '⚠️ NOT priceValidUntil — that is when an OFFER stops being valid. This is when the GOODS stop being safe. Two unrelated clocks that both look like "a date on a line".'
+    },
+    'lot.serial': { s: '—', m: 'stock.lot (serial)', o: 'GS1 AI (21)', n: 'one individual unit rather than one consignment' }
   };
 
   /* Standard fields we do NOT carry. Named so the absence is a DECISION with a trigger, not an oversight — the
      list is as much a part of "we follow the standards" as the map above. */
   var FIELD_GAPS = [
-    { key: 'priceValidUntil', from: 'schema.org Offer', why: '⭐ THE TIME ANGLE, and the standard answers it: price validity belongs on the OFFER, not the product. Our design model already has pricing[].validFrom/validTo — items do not. This is the gap to close first.' },
-    { key: 'itemCondition',   from: 'schema.org Offer', why: 'new · used · refurbished · damaged. Matters the moment anyone trades machinery, scrap or seconds.' },
-    { key: 'mid_code',        from: 'Medusa',           why: 'Manufacturer ID code — US customs. Needed only when a lane runs to the US; the trade-lane layer should ask for it, not the catalogue.' },
-    { key: 'length/height/width', from: 'both',         why: 'dimensions — freight cost and container fill. We carry weight and not volume, which is half a shipping answer.' },
-    { key: 'manage_inventory / allow_backorder', from: 'Medusa', why: 'whether stock is tracked at all, and whether you may oversell. We have an availability feed but nothing that says "this item is not stock-tracked", so an empty feed and an untracked item look identical.' },
-    { key: 'handle',          from: 'Medusa',           why: 'URL slug. Only meaningful once a storefront is public.' },
-    { key: 'variant_rank',    from: 'Medusa',           why: 'display order of variants. Cosmetic until a catalogue is large.' },
-    { key: 'is_giftcard · discountable', from: 'Medusa', why: 'NOT adopted — checkout concerns for a B2C shop, not properties of a traded good.' },
+    {
+      key: 'priceValidUntil',
+      from: 'schema.org Offer',
+      why: '⭐ THE TIME ANGLE, and the standard answers it: price validity belongs on the OFFER, not the product. Our design model already has pricing[].validFrom/validTo — items do not. This is the gap to close first.'
+    },
+    {
+      key: 'itemCondition',
+      from: 'schema.org Offer',
+      why: 'new · used · refurbished · damaged. Matters the moment anyone trades machinery, scrap or seconds.'
+    },
+    {
+      key: 'mid_code',
+      from: 'Medusa',
+      why: 'Manufacturer ID code — US customs. Needed only when a lane runs to the US; the trade-lane layer should ask for it, not the catalogue.'
+    },
+    {
+      key: 'length/height/width',
+      from: 'both',
+      why: 'dimensions — freight cost and container fill. We carry weight and not volume, which is half a shipping answer.'
+    },
+    {
+      key: 'manage_inventory / allow_backorder',
+      from: 'Medusa',
+      why: 'whether stock is tracked at all, and whether you may oversell. We have an availability feed but nothing that says "this item is not stock-tracked", so an empty feed and an untracked item look identical.'
+    },
+    { key: 'handle', from: 'Medusa', why: 'URL slug. Only meaningful once a storefront is public.' },
+    { key: 'variant_rank', from: 'Medusa', why: 'display order of variants. Cosmetic until a catalogue is large.' },
+    { key: 'is_giftcard · discountable', from: 'Medusa', why: 'NOT adopted — checkout concerns for a B2C shop, not properties of a traded good.' }
   ];
 
   /* Where our model and a standard genuinely disagree. Recorded, not silently "fixed" — renaming a live field is a
      migration, and the decision is Athi's. */
   var FIELD_CONFLICTS = [
-    { ours: 'code', issue: 'labelled "Code / HSN" in the starter set, so one column is asked to hold either a merchant SKU or a WCO customs code.', standard: 'schema.org (sku vs no HS at all) and Medusa (sku on the variant, hs_code on both) keep them apart.', cost: 'a catalogue exported for customs would carry SKUs in the HS column, and nothing would flag it.', fix: 'split into sku + hs_code in starter-fields; existing rows keep `code` until someone chooses.' },
-    { ours: 'price on the item', issue: 'a single price lives on the product record.', standard: 'schema.org models price on the Offer — the same good sells at different prices to different buyers.', cost: 'per-buyer and time-boxed pricing have nowhere to live, which is the same reason validFrom/validTo never reached items.', fix: 'an offers[] layer over the item, keyed by counterparty and validity window.' },
-    { ours: 'variant as a field', issue: 'name + variant on one flat row.', standard: 'Medusa makes the variant the purchasable record and the product a grouping.', cost: 'none today — flat matches how a trader writes a price list, and the matcher depends on it. Recorded so the difference is deliberate.', fix: 'none proposed.' },
+    {
+      ours: 'code',
+      issue: 'labelled "Code / HSN" in the starter set, so one column is asked to hold either a merchant SKU or a WCO customs code.',
+      standard: 'schema.org (sku vs no HS at all) and Medusa (sku on the variant, hs_code on both) keep them apart.',
+      cost: 'a catalogue exported for customs would carry SKUs in the HS column, and nothing would flag it.',
+      fix: 'split into sku + hs_code in starter-fields; existing rows keep `code` until someone chooses.'
+    },
+    {
+      ours: 'price on the item',
+      issue: 'a single price lives on the product record.',
+      standard: 'schema.org models price on the Offer — the same good sells at different prices to different buyers.',
+      cost: 'per-buyer and time-boxed pricing have nowhere to live, which is the same reason validFrom/validTo never reached items.',
+      fix: 'an offers[] layer over the item, keyed by counterparty and validity window.'
+    },
+    {
+      ours: 'variant as a field',
+      issue: 'name + variant on one flat row.',
+      standard: 'Medusa makes the variant the purchasable record and the product a grouping.',
+      cost: 'none today — flat matches how a trader writes a price list, and the matcher depends on it. Recorded so the difference is deliberate.',
+      fix: 'none proposed.'
+    }
   ];
 
   /* stdFor(key) — the one-line reference a UI can print beside a field. Returns null when nothing maps, so the
@@ -653,22 +912,27 @@
     if (f.s && f.s !== '—') bits.push('schema.org ' + f.s);
     if (f.m && f.m !== '—') bits.push('Medusa ' + f.m);
     if (f.o) bits.push(f.o);
-    return bits.length ? { label: bits.join(' · '), note: f.n || '' } : (f.n ? { label: '', note: f.n } : null);
+    return bits.length ? { label: bits.join(' · '), note: f.n || '' } : f.n ? { label: '', note: f.n } : null;
   }
 
   // RFC 7386 — JSON Merge Patch. Pure, ~10 lines: null deletes a key, object recurses, scalar replaces.
   function mergePatch(target, patch) {
     if (patch === null || typeof patch !== 'object' || Array.isArray(patch)) return patch;
-    var out = (target && typeof target === 'object' && !Array.isArray(target)) ? Object.assign({}, target) : {};
-    Object.keys(patch).forEach(function (k) {
-      if (patch[k] === null) { delete out[k]; }
-      else { out[k] = mergePatch(out[k], patch[k]); }
+    var out = target && typeof target === 'object' && !Array.isArray(target) ? Object.assign({}, target) : {};
+    Object.keys(patch).forEach(function (item) {
+      if (patch[item] === null) {
+        delete out[item];
+      } else {
+        out[item] = mergePatch(out[item], patch[item]);
+      }
     });
     return out;
   }
 
   // GS1-style stable identity — first present of sku/gtin/code, else the name.
-  function itemKey(it) { return (it && (it.sku || it.gtin || it.code || it.product || it.name)) || null; }
+  function itemKey(it) {
+    return (it && (it.sku || it.gtin || it.code || it.product || it.name)) || null;
+  }
 
   // MDM source-priority — higher wins a field conflict; a source only overwrites a field a
   // stronger source already set if it is >= that strength (else it only fills empties).
@@ -677,47 +941,90 @@
   // Upsert a source's contribution into the golden record set (MDM + RFC 7386).
   // Records per-field provenance in _lineage {field: {source, prio}} — that IS the four-leg made concrete.
   function upsertItem(items, incoming, opts) {
-    opts = opts || {}; items = items || [];
+    opts = opts || {};
+    items = items || [];
     var source = opts.source || 'manual';
-    var prio = (opts.priority != null) ? opts.priority : (SOURCE_PRIORITY[source] || 1);
+    var prio = opts.priority != null ? opts.priority : SOURCE_PRIORITY[source] || 1;
     var key = itemKey(incoming);
     var existing = null;
-    for (var i = 0; i < items.length; i++) { if (key && itemKey(items[i]) === key) { existing = items[i]; break; } }
+    for (var index = 0; index < items.length; index++) {
+      if (key && itemKey(items[index]) === key) {
+        existing = items[index];
+        break;
+      }
+    }
     if (!existing) {
       var created = mergePatch({}, incoming);
-      created._src = source; created._lineage = {};
-      Object.keys(incoming).forEach(function (f) { if (f.charAt(0) !== '_') created._lineage[f] = { source: source, prio: prio }; });
+      created._src = source;
+      created._lineage = {};
+      Object.keys(incoming).forEach(function (item) {
+        if (item.charAt(0) !== '_') created._lineage[item] = { source: source, prio: prio };
+      });
       items.push(created);
       return { items: items, item: created, created: true };
     }
     var lin = existing._lineage || (existing._lineage = {});
-    Object.keys(incoming).forEach(function (f) {
-      if (f.charAt(0) === '_') return;
-      var cur = lin[f];
-      var empty = existing[f] == null || existing[f] === '';
+    Object.keys(incoming).forEach(function (item) {
+      if (item.charAt(0) === '_') return;
+      var cur = lin[item];
+      var empty = existing[item] == null || existing[item] === '';
       if (empty || !cur || prio >= cur.prio) {
-        existing[f] = mergePatch(existing[f], incoming[f]);
-        lin[f] = { source: source, prio: prio };
+        existing[item] = mergePatch(existing[item], incoming[item]);
+        lin[item] = { source: source, prio: prio };
       }
     });
     // Carry display-only meta (e.g. _photo, _media) onto an existing record when it lacks it. These are not tracked in
     // _lineage (they are not four-leg fields), so the field loop above skips them — without this a second source hitting
     // the same SKU would silently lose the image.
-    Object.keys(incoming).forEach(function (f) {
-      if (f.charAt(0) === '_' && f !== '_lineage' && f !== '_src' && (existing[f] == null || existing[f] === '')) existing[f] = incoming[f];
+    Object.keys(incoming).forEach(function (item) {
+      if (item.charAt(0) === '_' && item !== '_lineage' && item !== '_src' && (existing[item] == null || existing[item] === ''))
+        existing[item] = incoming[item];
     });
     return { items: items, item: existing, created: false, updated: true };
   }
 
   return {
-    LEGS: LEGS, TYPES: TYPES, viaFor: viaFor, leg: leg,
-    STD_SCHEMES: STD_SCHEMES, PRICE_BASIS: PRICE_BASIS, PRICE_BY: PRICE_BY, PRICE_ORIGIN: PRICE_ORIGIN,
-    priceProvenance: priceProvenance, priceIsCheckable: priceIsCheckable,
-    DATATYPES: DATATYPES, METHODS: METHODS, FACETS: FACETS, PRICING_MODELS: PRICING_MODELS, UNITS: UNITS, UNIT_ALIASES: UNIT_ALIASES, UNIT_LANGS: UNIT_LANGS, UNIT_NAMES: UNIT_NAMES, UNIT_KINDS: UNIT_KINDS, unitKind: unitKind, METHOD_MODELS: METHOD_MODELS, modelsForMethod: modelsForMethod, orphanModels: orphanModels, PALETTE: PALETTE,
-    ensure: ensure, toBase: toBase, resolvePrice: resolvePrice, routeChain: routeChain,
-    deriveComputeJob: deriveComputeJob, canonicalInputs: canonicalInputs, validate: validate,
+    LEGS: LEGS,
+    TYPES: TYPES,
+    viaFor: viaFor,
+    leg: leg,
+    STD_SCHEMES: STD_SCHEMES,
+    PRICE_BASIS: PRICE_BASIS,
+    PRICE_BY: PRICE_BY,
+    PRICE_ORIGIN: PRICE_ORIGIN,
+    priceProvenance: priceProvenance,
+    priceIsCheckable: priceIsCheckable,
+    DATATYPES: DATATYPES,
+    METHODS: METHODS,
+    FACETS: FACETS,
+    PRICING_MODELS: PRICING_MODELS,
+    UNITS: UNITS,
+    UNIT_ALIASES: UNIT_ALIASES,
+    UNIT_LANGS: UNIT_LANGS,
+    UNIT_NAMES: UNIT_NAMES,
+    UNIT_KINDS: UNIT_KINDS,
+    unitKind: unitKind,
+    METHOD_MODELS: METHOD_MODELS,
+    modelsForMethod: modelsForMethod,
+    orphanModels: orphanModels,
+    PALETTE: PALETTE,
+    ensure: ensure,
+    toBase: toBase,
+    resolvePrice: resolvePrice,
+    routeChain: routeChain,
+    deriveComputeJob: deriveComputeJob,
+    canonicalInputs: canonicalInputs,
+    validate: validate,
     toJSONSchema: toJSONSchema,
-    STANDARD_REFS: STANDARD_REFS, standards: standards, mergePatch: mergePatch, itemKey: itemKey, upsertItem: upsertItem, SOURCE_PRIORITY: SOURCE_PRIORITY,
-    FIELD_STANDARDS: FIELD_STANDARDS, FIELD_GAPS: FIELD_GAPS, FIELD_CONFLICTS: FIELD_CONFLICTS, stdFor: stdFor,
+    STANDARD_REFS: STANDARD_REFS,
+    standards: standards,
+    mergePatch: mergePatch,
+    itemKey: itemKey,
+    upsertItem: upsertItem,
+    SOURCE_PRIORITY: SOURCE_PRIORITY,
+    FIELD_STANDARDS: FIELD_STANDARDS,
+    FIELD_GAPS: FIELD_GAPS,
+    FIELD_CONFLICTS: FIELD_CONFLICTS,
+    stdFor: stdFor
   };
 });

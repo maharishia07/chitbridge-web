@@ -17,7 +17,10 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 require('../public/app/catalogue-model.js');
 const M = globalThis.CBCatalogue;
-if (!M || !M.FIELD_STANDARDS) { console.error('catalogue-model.js did not attach CBCatalogue'); process.exit(1); }
+if (!M || !M.FIELD_STANDARDS) {
+  console.error('catalogue-model.js did not attach CBCatalogue');
+  process.exit(1);
+}
 
 const OUT = 'C:\\dev\\CATALOGUE-STANDARDS.md';
 const esc = (s) => String(s == null ? '' : s).replace(/\|/g, '\\|');
@@ -34,7 +37,7 @@ L.push('Medusa field names read from the Product / ProductVariant model referenc
 L.push('Vocabulary alignment only — **no Medusa code is embedded**. Reading a model to name our own fields well is not vendoring it.');
 L.push('');
 
-const byStatus = (st) => M.STANDARDS.filter((s) => s.status === st);
+const byStatus = (st) => M.STANDARDS.filter((item) => item.status === st);
 const group = (title, st) => {
   const rows = byStatus(st);
   if (!rows.length) return;
@@ -42,7 +45,9 @@ const group = (title, st) => {
   L.push('');
   L.push('| standard | body | role | where |');
   L.push('|---|---|---|---|');
-  rows.forEach((s) => L.push('| [' + esc(s.name) + '](' + s.spec + ') | ' + esc(s.body) + ' | ' + esc(s.role) + ' | `' + esc(s.where) + '` |'));
+  rows.forEach((item) =>
+    L.push('| [' + esc(item.name) + '](' + item.spec + ') | ' + esc(item.body) + ' | ' + esc(item.role) + ' | `' + esc(item.where) + '` |')
+  );
   L.push('');
 };
 group('Implemented in code', 'in code');
@@ -54,9 +59,9 @@ L.push('## Field by field — ours → theirs');
 L.push('');
 L.push('| ours | schema.org | Medusa | other | note |');
 L.push('|---|---|---|---|---|');
-Object.keys(M.FIELD_STANDARDS).forEach((k) => {
-  const f = M.FIELD_STANDARDS[k];
-  L.push('| `' + k + '` | ' + esc(f.s || '—') + ' | ' + esc(f.m || '—') + ' | ' + esc(f.o || '—') + ' | ' + esc(f.n || '') + ' |');
+Object.keys(M.FIELD_STANDARDS).forEach((item) => {
+  const f = M.FIELD_STANDARDS[item];
+  L.push('| `' + item + '` | ' + esc(f.s || '—') + ' | ' + esc(f.m || '—') + ' | ' + esc(f.o || '—') + ' | ' + esc(f.n || '') + ' |');
 });
 L.push('');
 
@@ -64,23 +69,34 @@ L.push('## Not carried');
 L.push('');
 L.push('Named so the absence is a decision with a trigger, not an oversight.');
 L.push('');
-M.FIELD_GAPS.forEach((g) => L.push('- **`' + g.key + '`** *(' + g.from + ')* — ' + g.why));
+M.FIELD_GAPS.forEach((item) => L.push('- **`' + item.key + '`** *(' + item.from + ')* — ' + item.why));
 L.push('');
 
 L.push('## Where we differ');
 L.push('');
-L.push('Recorded, not silently changed — renaming a live field is a migration, and that decision is not the code\'s to make.');
+L.push("Recorded, not silently changed — renaming a live field is a migration, and that decision is not the code's to make.");
 L.push('');
-M.FIELD_CONFLICTS.forEach((c) => {
-  L.push('### ' + c.ours);
+M.FIELD_CONFLICTS.forEach((item) => {
+  L.push('### ' + item.ours);
   L.push('');
-  L.push('- **issue** — ' + c.issue);
-  L.push('- **standard** — ' + c.standard);
-  L.push('- **cost** — ' + c.cost);
-  L.push('- **fix** — ' + c.fix);
+  L.push('- **issue** — ' + item.issue);
+  L.push('- **standard** — ' + item.standard);
+  L.push('- **cost** — ' + item.cost);
+  L.push('- **fix** — ' + item.fix);
   L.push('');
 });
 
 writeFileSync(OUT, L.join('\n'), 'utf8');
-console.log('wrote ' + OUT + '  (' + M.STANDARDS.length + ' standards · '
-  + Object.keys(M.FIELD_STANDARDS).length + ' fields · ' + M.FIELD_GAPS.length + ' gaps · ' + M.FIELD_CONFLICTS.length + ' conflicts)');
+console.log(
+  'wrote ' +
+    OUT +
+    '  (' +
+    M.STANDARDS.length +
+    ' standards · ' +
+    Object.keys(M.FIELD_STANDARDS).length +
+    ' fields · ' +
+    M.FIELD_GAPS.length +
+    ' gaps · ' +
+    M.FIELD_CONFLICTS.length +
+    ' conflicts)'
+);

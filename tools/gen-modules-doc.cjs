@@ -18,21 +18,29 @@ const path = require('path');
 const W = path.join(__dirname, '..', 'public');
 const OUT = path.join(W, 'app', 'MODULES.md');
 
-const files = fs.readdirSync(path.join(W, 'app')).filter((f) => f.endsWith('.js')).sort();
+const files = fs
+  .readdirSync(path.join(W, 'app'))
+  .filter((item) => item.endsWith('.js'))
+  .sort();
 const shell = fs.readFileSync(path.join(W, 'app.html'), 'utf8');
 
 /* which capabilities the shell lazy-loads, and under which nav key */
 const capOf = {};
 const m = shell.match(/CAP_OF\s*=\s*\{([^}]*)\}/);
-if (m) for (const pair of m[1].split(',')) {
-  const kv = pair.split(':').map((s) => s.trim().replace(/['"]/g, ''));
-  if (kv.length === 2 && kv[0] && kv[1]) (capOf[kv[1]] = capOf[kv[1]] || []).push(kv[0]);
-}
+if (m)
+  for (const pair of m[1].split(',')) {
+    const kv = pair.split(':').map((item) => item.trim().replace(/['"]/g, ''));
+    if (kv.length === 2 && kv[0] && kv[1]) (capOf[kv[1]] = capOf[kv[1]] || []).push(kv[0]);
+  }
 
 /* a module's first line of comment is its own description — the file says what it is, not this script */
 const firstLine = (f) => {
-  const src = fs.readFileSync(path.join(W, 'app', f), 'utf8').split('\n').slice(0, 6).join(' ');
-  const c = src.match(/\/\*+\s*(?:app\/[a-z0-9-]+\.js\s*[—-]\s*)?([^*\n]{10,150})/i);
+  const text = fs
+    .readFileSync(path.join(W, 'app', f), 'utf8')
+    .split('\n')
+    .slice(0, 6)
+    .join(' ');
+  const c = text.match(/\/\*+\s*(?:app\/[a-z0-9-]+\.js\s*[—-]\s*)?([^*\n]{10,150})/i);
   return c ? c[1].trim().replace(/\s+/g, ' ').replace(/\.$/, '') : '';
 };
 
@@ -50,20 +58,20 @@ for (const f of ['app.html', ...files.map((x) => 'app/' + x)]) {
   for (const c of src.matchAll(/ensureCap\(\s*['"]([a-z0-9-]+)['"]/g)) called.add(c[1]);
 }
 
-const caps = files.filter((f) => f.startsWith('cap-'));
-const rest = files.filter((f) => !f.startsWith('cap-'));
+const caps = files.filter((item) => item.startsWith('cap-'));
+const rest = files.filter((item) => !item.startsWith('cap-'));
 
-const rows = (list) => list.map((f) => {
-  const key = f.replace(/^cap-|\.js$/g, '');
-  const navs = capOf[key];
-  /* ⚠️ EAGER IS CHECKED FIRST, and that ordering is what caught cap-catalogue: it is named `cap-` and its own
+const rows = (list) =>
+  list
+    .map((item) => {
+      const key = item.replace(/^cap-|\.js$/g, '');
+      const navs = capOf[key];
+      /* ⚠️ EAGER IS CHECKED FIRST, and that ordering is what caught cap-catalogue: it is named `cap-` and its own
      header claimed "lazy-loaded", while the shell has a <script src> for it. Trust the shell over the name. */
-  const how = eager.has(f) ? 'eager'
-    : navs ? 'lazy · ' + navs.join(', ')
-    : called.has(key) ? 'lazy · on demand'
-    : '—';
-  return '| `' + f + '` | ' + how + ' | ' + firstLine(f) + ' |';
-}).join('\n');
+      const how = eager.has(item) ? 'eager' : navs ? 'lazy · ' + navs.join(', ') : called.has(key) ? 'lazy · on demand' : '—';
+      return '| `' + item + '` | ' + how + ' | ' + firstLine(item) + ' |';
+    })
+    .join('\n');
 
 const doc = `# app/ — the module map
 
@@ -101,7 +109,10 @@ ${rows(rest)}
 
 if (process.argv.indexOf('--check') >= 0) {
   const on = fs.existsSync(OUT) ? fs.readFileSync(OUT, 'utf8') : '';
-  if (on.replace(/\r\n/g, '\n') === doc) { console.log('  MODULES.md matches the directory'); process.exit(0); }
+  if (on.replace(/\r\n/g, '\n') === doc) {
+    console.log('  MODULES.md matches the directory');
+    process.exit(0);
+  }
   console.error('  ✗ MODULES.md has drifted from public/app/ — run: node tools/gen-modules-doc.cjs');
   process.exit(1);
 }

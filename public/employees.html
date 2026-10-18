@@ -83,7 +83,9 @@ dialog.sheet .mx{position:absolute;right:8px;top:8px;border:0;background:transpa
 <script>
 'use strict';
 (function () {
-  var q = new URLSearchParams(location.search), embed = q.get('embed') === '1', view = q.get('view') || '';
+  var q = new URLSearchParams(location.search),
+    embed = q.get('embed') === '1',
+    view = q.get('view') || '';
   var API = q.get('api') || (window.CBShell && CBShell.apiBase && CBShell.apiBase()) || window.CB_API;
   var host = document.getElementById('emp');
   if (embed) document.body.classList.add('embed');
@@ -91,23 +93,58 @@ dialog.sheet .mx{position:absolute;right:8px;top:8px;border:0;background:transpa
      kept in memory only, never stored - so the form never acts as another shop's saved login. A host that says it has none: refused politely; one that
      does not answer: the browser's own saved session, as before. */
   function start(token, api) {
-    if (!token) { host.innerHTML = '<div class="empty" data-testid="emp-signin"><div class="t">' + (embed ? 'Sign in first' : 'Sign in above') + '</div></div>'; return; }
-    CBEmployees.mount(host, { token: token, base: api == null ? API : api, embed: embed, view: view, onEnded: function () { embed ? start(null) : CBFrame.ended(); } });
+    if (!token) {
+      host.innerHTML = '<div class="empty" data-testid="emp-signin"><div class="t">' + (embed ? 'Sign in first' : 'Sign in above') + '</div></div>';
+      return;
+    }
+    CBEmployees.mount(host, {
+      token: token,
+      base: api == null ? API : api,
+      embed: embed,
+      view: view,
+      onEnded: function () {
+        embed ? start(null) : CBFrame.ended();
+      }
+    });
   }
-  if (!embed) { start(CBFrame.mount({ app: 'employees', kural: 'employees', work: host,
-    skeleton: { name: 'Employees', icon: 'M16 11a3 3 0 1 0-6 0M5 20c0-3.3 3-5 7-5s7 1.7 7 5M18 8a2.5 2.5 0 0 1 0 5', active: 'people',
-      sections: [{ k: 'people', label: 'People', icon: 'M16 11a3 3 0 1 0-6 0M5 20c0-3.3 3-5 7-5s7 1.7 7 5' }] } }).token); return; }
+  if (!embed) {
+    start(
+      CBFrame.mount({
+        app: 'employees',
+        kural: 'employees',
+        work: host,
+        skeleton: {
+          name: 'Employees',
+          icon: 'M16 11a3 3 0 1 0-6 0M5 20c0-3.3 3-5 7-5s7 1.7 7 5M18 8a2.5 2.5 0 0 1 0 5',
+          active: 'people',
+          sections: [{ k: 'people', label: 'People', icon: 'M16 11a3 3 0 1 0-6 0M5 20c0-3.3 3-5 7-5s7 1.7 7 5' }]
+        }
+      }).token
+    );
+    return;
+  }
   var own = (CBFrame.session() || {}).token;
-  if (!window.parent || window.parent === window) { start(own); return; }
+  if (!window.parent || window.parent === window) {
+    start(own);
+    return;
+  }
   var done = false;
-  function give(t, api) { if (done) return; done = true; window.removeEventListener('message', heard); start(t, api); }
+  function give(t, api) {
+    if (done) return;
+    done = true;
+    window.removeEventListener('message', heard);
+    start(t, api);
+  }
   function heard(e) {
     var m = e.data;
-    if (e.source === window.parent && e.origin === location.origin && m && m.cb === 'host' && m.event === 'session') give(m.token || null, String(m.api || '').indexOf('http') === 0 ? m.api : null);
+    if (e.source === window.parent && e.origin === location.origin && m && m.cb === 'host' && m.event === 'session')
+      give(m.token || null, String(m.api || '').indexOf('http') === 0 ? m.api : null);
   }
   window.addEventListener('message', heard);
   window.parent.postMessage({ cb: 'employees', event: 'need-session' }, location.origin);
-  setTimeout(function () { give(own || null); }, 2500);   /* a host that does not answer: the browser's own saved session, as before */
+  setTimeout(function () {
+    give(own || null);
+  }, 2500); /* a host that does not answer: the browser's own saved session, as before */
 })();
 </script>
 </body>
