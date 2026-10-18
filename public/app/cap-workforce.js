@@ -33,7 +33,7 @@ function acTypeInfo(t){ var reg=(window.ACTOR_TYPES||{})[t]||{}, h=(window.AC_TY
   modal('<div style="padding:2px 2px"><div style="font-size:var(--fs-6)">'+(reg.icon||'')+'</div><div style="font-weight:800;font-size:var(--fs-4);margin-top:4px">'+esc(lbl)+' — as a co-assist</div><div style="font-size:var(--fs-2);color:var(--ink-2);line-height:1.6;margin-top:8px">'+esc(h.how)+'</div>'+extra+'<div style="display:flex;margin-top:16px"><button class="composebtn pri" style="flex:1" onclick="closeModal()">' + tx('Got it') + '</button></div></div>', false);
 }
 // GOVERNANCE hook (invisible to end users): merge governed type defs (with their constraints) into the registry — no core change.
-function acMergeTypes(defs){ if(defs&&typeof defs==='object'){ Object.keys(defs).forEach(function(k){ window.ACTOR_TYPES[k]=Object.assign({},window.ACTOR_TYPES[k]||{},defs[k]); }); if(typeof paintAcList==='function')paintAcList(); if(typeof renderApp==='function')renderApp(); } }
+function acMergeTypes(defs){ if(defs&&typeof defs==='object'){ Object.keys(defs).forEach(function(item){ window.ACTOR_TYPES[item]=Object.assign({},window.ACTOR_TYPES[item]||{},defs[item]); }); if(typeof paintAcList==='function')paintAcList(); if(typeof renderApp==='function')renderApp(); } }
 /* ═══ AI ASSISTS — the 🤖 co-assist type. Each AI assist = one SLOT (a work-pattern of the ai@v1 capability), shown
  *     UNDER the AI type the way devices sit under an IoT gateway. The OWNER'S CONTROL lives here (enable + the rule),
  *     because a lit slot is an ACTOR whose every action is a chit you can dispute — Settings just REDIRECTS here.
@@ -110,24 +110,24 @@ function aiRowsHTML(){
      here would promise a power this reader does not have. */
   if(!slots.length) return intro + emptyState('🤖', tx('No AI assists yet'),
     tx('They light up as slots are enabled.'));
-  return intro+slots.map(function(s){ var st=aiSlotState(s), live=s.status==='live', on=st.enabled;
+  return intro+slots.map(function(item){ var st=aiSlotState(item), live=item.status==='live', on=st.enabled;
     var dot=on?(live?'var(--ok-3)':'var(--warn-2)'):'var(--grey-2)';
-    var gateOpts=(s.gates||[]).map(function(g){ return '<option value="'+g+'"'+(st.gate===g?' selected':'')+'>'+g+'</option>'; }).join('');
-    var canInvoke=on&&live&&s.invoke;
+    var gateOpts=(item.gates||[]).map(function(g){ return '<option value="'+g+'"'+(st.gate===g?' selected':'')+'>'+g+'</option>'; }).join('');
+    var canInvoke=on&&live&&item.invoke;
     return '<div class="row" style="cursor:default;align-items:flex-start">'
       +'<div style="width:9px;height:9px;border-radius:50%;flex:0 0 auto;margin-top:6px;background:'+dot+'"></div>'
-      +'<div class="main2" style="width:100%;min-width:0"><div class="l1"><span class="code">'+esc(s.name)+'</span>'
-        +'<span class="optchip" style="background:var(--purple-tint);color:var(--purple-2);border-color:transparent">🤖 '+esc(s.key)+'</span>'
+      +'<div class="main2" style="width:100%;min-width:0"><div class="l1"><span class="code">'+esc(item.name)+'</span>'
+        +'<span class="optchip" style="background:var(--purple-tint);color:var(--purple-2);border-color:transparent">🤖 '+esc(item.key)+'</span>'
         +'<span class="amt" style="margin-inline-start:auto;font-size:var(--fs-1);color:'+(on?(live?'var(--ok-3)':'var(--warn-2)'):'var(--grey)')+';font-weight:600">'+(on?(live?'enabled · live':'enabled · shaped'):'off')+'</span></div>'
-        +'<div class="l2">'+esc(s.desc)+'</div>'
+        +'<div class="l2">'+esc(item.desc)+'</div>'
         +'<div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-top:8px">'
-          +'<button class="composebtn'+(on?' pri':'')+'" style="padding:5px 12px;font-size:var(--fs-2)" onclick="aiToggle(\''+esc(s.key)+'\')">'+(on?'✓ Enabled':'Enable')+'</button>'
-          +'<span class="optchip" style="background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">rung · '+esc(s.rung)+'</span>'
-          +'<label style="font-size:var(--fs-1);color:var(--grey);display:inline-flex;align-items:center;gap:5px">human gate <select onchange="aiSetGate(\''+esc(s.key)+'\',this.value)" style="border:1px solid var(--line);border-radius:6px;padding:3px 6px;font-size:var(--fs-1)"'+(on?'':' disabled')+'>'+gateOpts+'</select></label>'
+          +'<button class="composebtn'+(on?' pri':'')+'" style="padding:5px 12px;font-size:var(--fs-2)" onclick="aiToggle(\''+esc(item.key)+'\')">'+(on?'✓ Enabled':'Enable')+'</button>'
+          +'<span class="optchip" style="background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">rung · '+esc(item.rung)+'</span>'
+          +'<label style="font-size:var(--fs-1);color:var(--grey);display:inline-flex;align-items:center;gap:5px">human gate <select onchange="aiSetGate(\''+esc(item.key)+'\',this.value)" style="border:1px solid var(--line);border-radius:6px;padding:3px 6px;font-size:var(--fs-1)"'+(on?'':' disabled')+'>'+gateOpts+'</select></label>'
         +'</div>'
         +'<div style="margin-top:8px;display:flex;gap:6px;align-items:center">'
-          +(canInvoke?('<button class="composebtn pri" style="padding:6px 12px;font-size:var(--fs-2)" onclick="'+esc(s.invoke)+'()">' + tx('▶ Invoke') + '</button>'):('<button class="composebtn" style="padding:6px 12px;font-size:var(--fs-2);opacity:.55;cursor:not-allowed" disabled title="'+(!on?'Enable it first':(!live?'Shaped — not runnable yet':'Not invokable'))+'">' + tx('▶ Invoke') + '</button>'))
-          +'<button class="composebtn" style="padding:6px 10px;font-size:var(--fs-2)" onclick="aiSlotInfo(\''+esc(s.key)+'\')">' + tx('How it works') + '</button>'
+          +(canInvoke?('<button class="composebtn pri" style="padding:6px 12px;font-size:var(--fs-2)" onclick="'+esc(item.invoke)+'()">' + tx('▶ Invoke') + '</button>'):('<button class="composebtn" style="padding:6px 12px;font-size:var(--fs-2);opacity:.55;cursor:not-allowed" disabled title="'+(!on?'Enable it first':(!live?'Shaped — not runnable yet':'Not invokable'))+'">' + tx('▶ Invoke') + '</button>'))
+          +'<button class="composebtn" style="padding:6px 10px;font-size:var(--fs-2)" onclick="aiSlotInfo(\''+esc(item.key)+'\')">' + tx('How it works') + '</button>'
         +'</div>'
       +'</div></div>';
   }).join('');
@@ -139,7 +139,7 @@ function paneFrame(){
   // FILL the content area (measured) — the #mainbody box: right of the left nav, below the top bar. That box IS both views:
   // laptop = the whole list+detail region → rounded panel; mobile = full-width content → full view, edge-to-edge.
   var mob = (window.UI && UI.vp==='mob');
-  var m=document.getElementById('mainbody'); var mr=m?m.getBoundingClientRect():null;
+  var node=document.getElementById('mainbody'); var mr=node?node.getBoundingClientRect():null;
   if(mr && mr.width>60 && mr.height>120) return {css:'top:'+Math.round(mr.top)+'px;inset-inline-start:'+Math.round(mr.left)+'px;width:'+Math.round(mr.width)+'px;height:'+Math.round(mr.height)+'px', radius: mob?'0':'14px'};
   var bar=document.querySelector('.topbar'); var barH=bar?Math.round(bar.getBoundingClientRect().height):52;
   return {css:'top:'+barH+'px;inset-inline-start:0;inset-inline-end:0;bottom:0', radius:'0'};   // last-resort: full below the top bar
@@ -153,7 +153,7 @@ function openShowcase(url, title){
     +'<iframe src="'+esc(url)+'" title="'+esc(title||'')+'" style="flex:1;width:100%;border:0;display:block;background:var(--card);color:var(--on-card)"></iframe></div>';
   document.body.appendChild(host);
 }
-function closeShowcase(){ var h=document.getElementById('showcaseHost'); if(h) h.remove(); }
+function closeShowcase(){ var node=document.getElementById('showcaseHost'); if(node) node.remove(); }
 function coassistsScreen(){
   const _tf=UI.acTypeF||'all';
   const _treg=(window.ACTOR_TYPES||{})[_tf]||null;
@@ -166,8 +166,8 @@ function coassistsScreen(){
       <div style="display:flex;gap:7px"><input class="inp" id="ac_add" placeholder="New co-assist — person, device, system or agent" style="flex:1" readonly onclick="openActorWiz()"><button class="composebtn" data-testid="coassist-new" onclick="openActorWiz()">+ New</button></div>
       <div class="srch" style="margin-top:8px">🔍 <input placeholder="Search name, role, key" value="${esc(UI.acQ||'')}" oninput="UI.acQ=this.value;paintAcList()"></div>
       <div style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:var(--fs-1);color:var(--grey);flex-wrap:wrap">
-        <span style="display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden">${['active','inactive','all'].map(f=>`<button onclick="setAcFlt('${f}')" style="border:0;background:${acFlt()===f?'var(--blue)':'var(--card)'};color:${acFlt()===f?'var(--on-accent)':'var(--grey)'};font-weight:700;font-size:var(--fs-1);padding:4px 9px;text-transform:capitalize">${f}</button>`).join('')}</span>
-        <span style="display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden">${['all'].concat(Object.keys(window.ACTOR_TYPES||{})).map(t=>{var reg=(window.ACTOR_TYPES||{})[t]||{};var on=(UI.acTypeF||'all')===t;var lbl=t==='all'?'All':((reg.icon?reg.icon+' ':'')+(reg.label||t).split(/[ \/]/)[0]);return `<button onclick="setAcTypeF('${t}')" title="${t==='all'?'all types':(reg.label||t)}${reg.comingSoon?' — coming soon':''}" style="border:0;background:${on?'var(--blue)':'var(--card)'};color:${on?'var(--on-accent)':'var(--grey)'};font-weight:700;font-size:var(--fs-1);padding:4px 9px;white-space:nowrap${reg.comingSoon?';opacity:.55':''}">${lbl}</button>`;}).join('')}</span>
+        <span style="display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden">${['active','inactive','all'].map(item=>`<button onclick="setAcFlt('${item}')" style="border:0;background:${acFlt()===item?'var(--blue)':'var(--card)'};color:${acFlt()===item?'var(--on-accent)':'var(--grey)'};font-weight:700;font-size:var(--fs-1);padding:4px 9px;text-transform:capitalize">${item}</button>`).join('')}</span>
+        <span style="display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden">${['all'].concat(Object.keys(window.ACTOR_TYPES||{})).map(item=>{var reg=(window.ACTOR_TYPES||{})[item]||{};var on=(UI.acTypeF||'all')===item;var lbl=item==='all'?'All':((reg.icon?reg.icon+' ':'')+(reg.label||item).split(/[ \/]/)[0]);return `<button onclick="setAcTypeF('${item}')" title="${item==='all'?'all types':(reg.label||item)}${reg.comingSoon?' — coming soon':''}" style="border:0;background:${on?'var(--blue)':'var(--card)'};color:${on?'var(--on-accent)':'var(--grey)'};font-weight:700;font-size:var(--fs-1);padding:4px 9px;white-space:nowrap${reg.comingSoon?';opacity:.55':''}">${lbl}</button>`;}).join('')}</span>
         <span style="margin-inline-start:auto" id="ac_count">${acCount()}</span>${acSortSelect()}</div>
     </div>
     <div class="rows" id="ac_rows">${(UI._acLoading&&(UI.acTypeF||'all')!=='ai')?'<div class="loadwrap"><span class="spin"></span> loading…</div>':acRowsHTML()}</div>
@@ -194,9 +194,9 @@ function openActorWiz(){ UI.awType=null; UI.awStep=0; UI.awData={}; UI.awErr=nul
   UI.awDocs=null;
   if (typeof ensureCap==='function') ensureCap('iddocs').then(awRender).catch(function(){});
   awRender(); }
-function awClose(){ var h=document.getElementById('actorwiz'); if(h)h.remove(); }
+function awClose(){ var node=document.getElementById('actorwiz'); if(node)node.remove(); }
 function awDownloadPkg(){ try{ if(UI.awInstaller && typeof _download==='function') _download('chitbridge-install.sh', UI.awInstaller); else if(typeof toast==='function') toast('Package not ready — open the gateway and hit 📦 Create package (it re-creates the same installer).'); }catch(_){ } }
-function awHost(){ var h=document.getElementById('actorwiz'); if(!h){ h=document.createElement('div'); h.id='actorwiz'; document.body.appendChild(h); } return h; }
+function awHost(){ var node=document.getElementById('actorwiz'); if(!node){ node=document.createElement('div'); node.id='actorwiz'; document.body.appendChild(node); } return node; }
 function awCapture(){ UI.awData=UI.awData||{};
   ['aw_name','aw_key','aw_hat','aw_site','aw_mode','aw_baseurl','aw_authref','aw_role','aw_under'].forEach(function(id){ var el=document.getElementById(id); if(el) UI.awData[id]=el.value; });
   /* ⚠️⚠️ THE DOCUMENT FIELDS MUST BE CAPTURED HERE OR THEY ARE LOST. awRender rebuilds the whole wizard body
@@ -205,8 +205,8 @@ function awCapture(){ UI.awData=UI.awData||{};
   try {
     if (typeof CBIdDocs !== 'undefined') {
       UI.awDocs = UI.awDocs || {};
-      CBIdDocs.ORDER.forEach(function(sc){ var el=document.getElementById('idoc_'+sc); if(el) UI.awDocs[sc]=el.value; });
-      var c=document.getElementById('idoc_consent'); if(c) UI.awDocs._consent=!!c.checked;
+      CBIdDocs.ORDER.forEach(function(item){ var el=document.getElementById('idoc_'+item); if(el) UI.awDocs[item]=el.value; });
+      var node=document.getElementById('idoc_consent'); if(node) UI.awDocs._consent=!!node.checked;
     }
   } catch(_) {}
 }
@@ -228,9 +228,9 @@ async function awFinish(){
      */
     var _lvl = d.aw_hat || 'editor';
     var _hatCompat = { editor:'act', commenter:'audit', viewer:'view_only' }[_lvl] || 'act';
-    try{ var r=await api('addActor',{body:{display_name:name,actor_key:key,access_level:_lvl,hat:_hatCompat}});
-      var lf=(r&&(r.login_format||(r.actor&&r.actor.login_format)))||(typeof coId==='function'?coId(key):key);
-      var otp=(r&&(r.otp||r.dev_otp))||'';
+    try{ var reply=await api('addActor',{body:{display_name:name,actor_key:key,access_level:_lvl,hat:_hatCompat}});
+      var lf=(reply&&(reply.login_format||(reply.actor&&reply.actor.login_format)))||(typeof coId==='function'?coId(key):key);
+      var otp=(reply&&(reply.otp||reply.dev_otp))||'';
       UI.awResult='<div style="text-align:center"><div style="font-size:var(--fs-7);margin:8px 0 6px">✉️</div><div style="font-weight:700;font-size:var(--fs-4)">' + tx('Invite ready') + '</div><div style="font-size:var(--fs-2);color:var(--ink-2);line-height:1.7;margin-top:10px">User ID <b>'+esc(lf)+'</b><br>one-time code <b>'+esc(otp||'—')+'</b><br><br>Share these — they set a PIN and start on shift.</div></div>';
       /**
        * ⭐⭐ TWO STEPS, AND THEY CANNOT BE ONE. A document is filed AGAINST an identity, and the identity does
@@ -242,13 +242,13 @@ async function awFinish(){
        * reported as an addendum on the success screen rather than thrown, and the person can be fixed up
        * from the edit form.
        */
-      var _newId = r && r.actor && r.actor.identity_id;
+      var _newId = reply && reply.actor && reply.actor.identity_id;
       if (_newId && UI.awDocs) {
         try {
           await ensureCap('iddocs');
           var _sent = 0, _bad = [];
-          for (var _i = 0; _i < CBIdDocs.ORDER.length; _i++) {
-            var _sc = CBIdDocs.ORDER[_i], _v = (UI.awDocs[_sc] || '').trim();
+          for (var count = 0; count < CBIdDocs.ORDER.length; count++) {
+            var _sc = CBIdDocs.ORDER[count], _v = (UI.awDocs[_sc] || '').trim();
             if (!_v) continue;
             var _res = await fetch(CFG.API_BASE + '/api/identity/documents/' + _sc, {
               method: 'PUT',
@@ -307,21 +307,21 @@ function _awPreviewHtml(t){
 function awRender(){
   var d=UI.awData||{};   // render THROUGH the app's shared modal() → same placement/backdrop/responsive as every other dialog
   function fld(id,label,ph){ return '<div style="margin-bottom:20px"><label class="fl" style="display:block;margin-bottom:5px">'+label+'</label><input class="inp" id="'+id+'" data-testid="'+id+'" placeholder="'+ph+'" value="'+esc(d[id]||'')+'" style="width:100%"></div>'; }
-  function selF(id,label,opts){ return '<div style="margin-bottom:20px"><label class="fl" style="display:block;margin-bottom:5px">'+label+'</label><select class="inp" id="'+id+'" style="width:100%">'+opts.map(function(o){ return '<option value="'+o[0]+'"'+(String(d[id])===o[0]?' selected':'')+'>'+o[1]+'</option>'; }).join('')+'</select></div>'; }
+  function selF(id,label,opts){ return '<div style="margin-bottom:20px"><label class="fl" style="display:block;margin-bottom:5px">'+label+'</label><select class="inp" id="'+id+'" style="width:100%">'+opts.map(function(item){ return '<option value="'+item[0]+'"'+(String(d[id])===item[0]?' selected':'')+'>'+item[1]+'</option>'; }).join('')+'</select></div>'; }
   function how(x){ return '<div style="font-size:var(--fs-2);color:var(--grey);background:var(--card);border:1px solid var(--line);border-radius:9px;padding:10px 12px;line-height:1.5;margin-top:12px">'+x+'</div>'; }
   var body='', title='', sub='', dots='', foot='';
   if(UI.awType===null){
     title='Add a co-assist'; sub='What kind of co-assist? People, devices, systems and agents can all act for you.';
     var types=[['human','👤','Human','A person who acts for you'],['iot','🛰️','IoT device','A Pi / gateway that sends signals'],['erp','🔌','ERP / API','Connect a business system'],['ai','🤖','AI agent','An autonomous co-assist']];
-    body='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+types.map(function(t){ var rdy=_awReady(t[0]);
-      return '<div data-testid="coassist-type-'+t[0]+'" onclick="awPick(\''+t[0]+'\')" onmouseover="this.style.borderColor=\'var(--blue)\'" onmouseout="this.style.borderColor=\'#e5e2dd\'" style="border:1px solid #e5e2dd;border-radius:14px;padding:14px;cursor:pointer;'+(rdy?'':'opacity:.72')+'"><div style="font-size:var(--fs-5)">'+t[1]+'</div><div style="font-weight:700;font-size:var(--fs-3);margin-top:6px">'+t[2]+'</div><div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:2px;line-height:1.35">'+t[3]+'</div><span style="display:inline-block;margin-top:9px;font-size:var(--fs-1);font-weight:700;border-radius:20px;padding:1px 9px;'+(rdy?'background:var(--ok-tint);color:var(--ok-2)':'background:var(--blue-tint);color:var(--blue-2)')+'">'+(rdy?'ready':'explore')+'</span></div>';
+    body='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+types.map(function(item){ var rdy=_awReady(item[0]);
+      return '<div data-testid="coassist-type-'+item[0]+'" onclick="awPick(\''+item[0]+'\')" onmouseover="this.style.borderColor=\'var(--blue)\'" onmouseout="this.style.borderColor=\'#e5e2dd\'" style="border:1px solid #e5e2dd;border-radius:14px;padding:14px;cursor:pointer;'+(rdy?'':'opacity:.72')+'"><div style="font-size:var(--fs-5)">'+item[1]+'</div><div style="font-weight:700;font-size:var(--fs-3);margin-top:6px">'+item[2]+'</div><div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:2px;line-height:1.35">'+item[3]+'</div><span style="display:inline-block;margin-top:9px;font-size:var(--fs-1);font-weight:700;border-radius:20px;padding:1px 9px;'+(rdy?'background:var(--ok-tint);color:var(--ok-2)':'background:var(--blue-tint);color:var(--blue-2)')+'">'+(rdy?'ready':'explore')+'</span></div>';
     }).join('')+'</div>';
     foot='<button class="composebtn" style="flex:1" onclick="awClose()">' + tx('Cancel') + '</button>';
   } else {
     var steps=AW_STEPS[UI.awType]||[], rdy=_awReady(UI.awType);
     var icN={human:['👤','Human'],iot:['🛰️','IoT device'],erp:['🔌','ERP / API'],ai:['🤖','AI agent']}[UI.awType];
     title=icN[0]+' '+icN[1]+(rdy?'':' · explore');
-    dots='<div style="display:flex;gap:6px;margin:0 0 14px">'+steps.map(function(s,i){ var st=(UI.awStep==='done'||i<UI.awStep)?'var(--blue-2)':(i===UI.awStep?'var(--blue)':'var(--warn-tint)'); return '<span style="height:4px;flex:1;border-radius:3px;background:'+st+'"></span>'; }).join('')+'<span style="height:4px;flex:1;border-radius:3px;background:'+(UI.awStep==='done'?'var(--blue)':'var(--warn-tint)')+';color:' + (UI.awStep==='done' ? 'var(--on-accent)' : 'var(--on-card)') + '"></span></div>';
+    dots='<div style="display:flex;gap:6px;margin:0 0 14px">'+steps.map(function(item,index){ var st=(UI.awStep==='done'||index<UI.awStep)?'var(--blue-2)':(index===UI.awStep?'var(--blue)':'var(--warn-tint)'); return '<span style="height:4px;flex:1;border-radius:3px;background:'+st+'"></span>'; }).join('')+'<span style="height:4px;flex:1;border-radius:3px;background:'+(UI.awStep==='done'?'var(--blue)':'var(--warn-tint)')+';color:' + (UI.awStep==='done' ? 'var(--on-accent)' : 'var(--on-card)') + '"></span></div>';
     if(UI.awStep==='done'){
       sub=rdy?'Done':'Preview'; body=UI.awResult||'';
       // Guard the duplicate-create: after a REAL create, do NOT offer Back (it would land on a live Create button and
@@ -391,7 +391,7 @@ function awRender(){
  *    selected actor is a connector, acDetailHTML renders this COCKPIT instead of the human profile. Principle:
  *    STATIC stuff (health · connection string · add) lives in the STICKY TOP as icons; the DEVICE LIST scrolls
  *    below (so 15 devices never bury the connection string). Reuses the connector API (b62). ══ */
-function acRefilter(){ UI.acSel=null; UI.acDet=null; UI.acManageOpen=false; UI.acManageLoading=false; UI.acManageErr=null; var mb=document.getElementById('mainbody'); if(mb)mb.innerHTML=mainBody(); if(UI.vp!=='mob'){ var f=(typeof acVisible==='function'?acVisible()[0]:null); if(f) selectActor(f.id, true); } }   // UNIFORM: any filter change resets the detail + lands on the first record header (desktop)
+function acRefilter(){ UI.acSel=null; UI.acDet=null; UI.acManageOpen=false; UI.acManageLoading=false; UI.acManageErr=null; var node=document.getElementById('mainbody'); if(node)node.innerHTML=mainBody(); if(UI.vp!=='mob'){ var f=(typeof acVisible==='function'?acVisible()[0]:null); if(f) selectActor(f.id, true); } }   // UNIFORM: any filter change resets the detail + lands on the first record header (desktop)
 function setAcTypeF(t){ UI.acTypeF=t; acRefilter(); }   // filter by actor TYPE
 function acTypeOf(x){ return ((UI._connMap||{})[x.id]) || (x.type||'human'); }            // connector_type (iot/erp) wins, else the actor type
 /**
@@ -412,18 +412,18 @@ function _acShiftRank(x){ return x.shift==='on_shift' ? 0 : x.shift==='on_break'
 function acSortKey(){ return AC_SORTS[UI.acSort] ? UI.acSort : 'shift'; }
 function acSortSelect(){
   return '<select class="inp" data-testid="coassist-sort" title="' + esc(tx('Sort order')) + '" style="width:auto;padding:3px 6px;font-size:var(--fs-1)" onchange="setAcSort(this.value)">'
-    + Object.keys(AC_SORTS).map(function(k){ return '<option value="'+k+'"'+(acSortKey()===k?' selected':'')+'>'+esc(tx(AC_SORTS[k].label))+'</option>'; }).join('')
+    + Object.keys(AC_SORTS).map(function(item){ return '<option value="'+item+'"'+(acSortKey()===item?' selected':'')+'>'+esc(tx(AC_SORTS[item].label))+'</option>'; }).join('')
     + '</select>';
 }
 function setAcSort(v){ UI.acSort=v; try{ if(LAZY) delete LAZY['ac']; }catch(_){} paintAcList(); }
-function acVisible(){ let a=(UI.acts||[]).filter(x=>acFlt()==='all'?true:(acFlt()==='inactive'?x.status!=='active':x.status==='active'));
-  const tf=UI.acTypeF||'all'; if(tf!=='all')a=a.filter(x=>acTypeOf(x)===tf);
-  const q=(UI.acQ||'').trim().toLowerCase(); if(q)a=a.filter(x=>((x.name||'')+' '+(x.role||'')+' '+(x.key||'')+' '+(x.type||'')).toLowerCase().includes(q));
+function acVisible(){ let list=(UI.acts||[]).filter(x=>acFlt()==='all'?true:(acFlt()==='inactive'?x.status!=='active':x.status==='active'));
+  const tf=UI.acTypeF||'all'; if(tf!=='all')list=list.filter(x=>acTypeOf(x)===tf);
+  const q=(UI.acQ||'').trim().toLowerCase(); if(q)list=list.filter(x=>((x.name||'')+' '+(x.role||'')+' '+(x.key||'')+' '+(x.type||'')).toLowerCase().includes(q));
   /* ⚠️ a COPY. The filters above already return a new array, so today this slice changes nothing — it is here
      for the day somebody adds an "all" fast path that hands back UI.acts itself, at which point sorting in
      place would reorder the screen's own array under everything else reading it. e2e/list-order carries that
      as a LATENT guard and says so, rather than counting it as proven. [[feedback-repaint-locally]] */
-  var _s=AC_SORTS[acSortKey()]; return _s ? a.slice().sort(_s.cmp) : a; }
+  var _s=AC_SORTS[acSortKey()]; return _s ? list.slice().sort(_s.cmp) : list; }
 function _ago(ts){ return timeAgo(ts); }   // shared: helpers.js timeAgo
 // IoT/ERP list row — health + last-active + device count (NOT the human hat/shift/invite/tasks row)
 function _iotRowHTML(x){ var info=(UI._connInfo||{})[x.id]||{}; var t=(info.type||(typeof acTypeOf==='function'&&acTypeOf(x))||'iot'); var iot=t!=='erp';
@@ -457,13 +457,13 @@ function acRowsHTML(){ if((UI.acTypeF||'all')==='ai') return aiRowsHTML(); const
     if(_tf==='iot') return emptyState('🛰️', tx('No IoT devices yet'),
       tx('A Pi on the rail in one drop.') + ' <a href="#" onclick="openShowcase(\'/iot-howitworks.html\',\'How IoT works\');return false" style="color:var(--blue);font-weight:600">' + tx('see how it works') + ' <span class=arw>→</span></a>',
       { label: tx('+ New co-assist'), onclick: 'openActorWiz()' }); return emptyState('🧑‍🤝‍🧑','No co-assists','People, devices and AI that work alongside you.',{label:'+ New co-assist',onclick:'openActorWiz()'}); }
-  const cc={},cn={},nm={}; (UI.acts||[]).forEach(a=>{ const _l=acLbl(a); nm[a.id]=_l; if(a.del){ cc[a.del]=(cc[a.del]||0)+1; (cn[a.del]=cn[a.del]||[]).push(_l); } }); UI._coversCount=cc; UI._coversNames=cn; UI._acNames=nm;   // reverse-delegate maps (name+userid labels), once
+  const cc={},cn={},nm={}; (UI.acts||[]).forEach(item=>{ const _l=acLbl(item); nm[item.id]=_l; if(item.del){ cc[item.del]=(cc[item.del]||0)+1; (cn[item.del]=cn[item.del]||[]).push(_l); } }); UI._coversCount=cc; UI._coversNames=cn; UI._acNames=nm;   // reverse-delegate maps (name+userid labels), once
   /* ⭐ lazyWrap draws 50 and reveals the rest — a shop with a fleet of sensors has hundreds of these. */
   return lazyWrap('ac', r, acRowHTML); }
-function paintAcList(){ const b=document.getElementById('ac_rows'); if(b)b.innerHTML=acRowsHTML(); const c=document.getElementById('ac_count'); if(c)c.textContent=acCount(); }
-function paintAcDetail(){ const dp=document.getElementById('detailpane'); if(dp){ dp.className='detail'; dp.innerHTML=acDetailHTML(); } }
-function selectActor(id, silent){ UI.acSel=id; UI.acMode='view'; UI.acDet=(UI.acts||[]).find(a=>a.id===id)||null;
-  if((UI.vp==='mob') && !silent){ UI.mdetail=true; const p=document.getElementById('panel'); if(p)p.classList.add('showdetail'); }
+function paintAcList(){ const node=document.getElementById('ac_rows'); if(node)node.innerHTML=acRowsHTML(); const c=document.getElementById('ac_count'); if(c)c.textContent=acCount(); }
+function paintAcDetail(){ const node=document.getElementById('detailpane'); if(node){ node.className='detail'; node.innerHTML=acDetailHTML(); } }
+function selectActor(id, silent){ UI.acSel=id; UI.acMode='view'; UI.acDet=(UI.acts||[]).find(item=>item.id===id)||null;
+  if((UI.vp==='mob') && !silent){ UI.mdetail=true; const node=document.getElementById('panel'); if(node)node.classList.add('showdetail'); }
   paintAcList(); paintAcDetail();
   if(UI.acDet && typeof acTypeOf==='function'){ var _st=acTypeOf(UI.acDet); var _sreg=(window.ACTOR_TYPES||{})[_st]||{}; if(_sreg.capability){ UI.acManageOpen=false; UI.acManageLoading=false; UI.acManageErr=null; UI.acConns=undefined; UI.acProv=undefined; UI.acProvOpen=false; UI.acAddDev=false; UI.acFreshKey=null; } }   // connector selected: instant Tier-1, management loads on drill
 }
@@ -472,7 +472,7 @@ function setAcFlt(f){ UI.acFlt=f; acRefilter(); }   // active/inactive filter - 
 /* ═══ TWO-TIER DISPATCHER (view layer) — Tier-1 = instant header summary from flags; Tier-2 = lazy management.
  *     acOpenManage is the invocation: show spinner → ensureCap(module) → per-type data load → render the cockpit. ═══ */
 async function acOpenManage(id){
-  var x=(UI.acts||[]).find(function(a){return a.id===id;})||UI.acDet; if(!x) return;
+  var x=(UI.acts||[]).find(function(item){return item.id===id;})||UI.acDet; if(!x) return;
   UI.acSel=id; UI.acDet=x; UI.acManageOpen=true; UI.acManageErr=null;
   var _t=(typeof acTypeOf==='function'?acTypeOf(x):'human'); var reg=(window.ACTOR_TYPES||{})[_t]||{};
   if(!(window.ACTOR_MANAGE||{})[_t] && reg.module && typeof ensureCap==='function'){
@@ -522,7 +522,7 @@ function acDetailHTML(){ const x=UI.acDet;
       <label class="fl">${tx('Display name')}</label><input class="inp" id="ac_ename" value="${esc(x.name)}">
       <label class="fl">${tx('Role')} <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— ${tx('a label; it grants nothing')}</span></label><input class="inp" id="ac_erole" value="${esc(x.role||'')}" placeholder="e.g. Dispatch, Accounts">
       <label class="fl">Access <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— only an Editor can be assigned work</span></label>
-      <select class="inp" id="ac_ehat" style="max-width:320px">${ACCESS_CHOICES.map(c=>'<option value="'+c[0]+'"'+(accessLevelOf(x)===c[0]?' selected':'')+'>'+esc(c[1])+'</option>').join('')}</select>
+      <select class="inp" id="ac_ehat" style="max-width:320px">${ACCESS_CHOICES.map(item=>'<option value="'+item[0]+'"'+(accessLevelOf(x)===item[0]?' selected':'')+'>'+esc(item[1])+'</option>').join('')}</select>
       ${/* ⭐ REACH IS A SEPARATE SWITCH, NOT A LEVEL. Five hat names could never express "an editor who
             sees every branch" — there was no sixth name, and adding one is how five becomes eight.
 
@@ -536,7 +536,7 @@ function acDetailHTML(){ const x=UI.acDet;
         <input type="checkbox" id="ac_ewhole" ${x.whole_entity?'checked':''} style="width:auto;margin:0">
         <span>Sees the whole business <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— everyone does today; recorded for when branches are scoped</span></span>
       </label>
-      <label class="fl">${tx('Leave-cover delegate (covers auto-assigned work while on leave)')}</label><select class="inp" id="ac_edel" style="max-width:240px"><option value="">— none —</option>${(UI.acts||[]).filter(a=>a.id!==x.id && hatAssignable(a.hat)).map(a=>'<option value="'+esc(a.id)+'"'+(x.del===a.id?' selected':'')+'>'+esc(a.name)+'</option>').join('')}</select>
+      <label class="fl">${tx('Leave-cover delegate (covers auto-assigned work while on leave)')}</label><select class="inp" id="ac_edel" style="max-width:240px"><option value="">— none —</option>${(UI.acts||[]).filter(item=>item.id!==x.id && hatAssignable(item.hat)).map(item=>'<option value="'+esc(item.id)+'"'+(x.del===item.id?' selected':'')+'>'+esc(item.name)+'</option>').join('')}</select>
       <label class="fl">${tx('Max concurrent tasks')}</label><input class="inp" id="ac_emax" inputmode="numeric" value="${x.max||''}" style="width:120px">
       <label class="fl">${tx('Phone')}</label><input class="inp" id="ac_ephone" value="${esc(x.phone||'')}" placeholder="optional">
       ${/* ⭐⭐ THE IDENTITY RECORD, FROM THE SHARED MODULE. Athi, 2026-08-20: *"we have to add as part of
@@ -559,7 +559,7 @@ function acDetailHTML(){ const x=UI.acDet;
     const pct=x.max?Math.min(100,Math.round(x.load/x.max*100)):0;
     const kv=(l,v)=>`<div style="display:flex;gap:10px;padding:9px 13px;border-bottom:1px dashed var(--line);font-size:var(--fs-2);align-items:baseline"><b style="min-width:104px;color:var(--grey);font-weight:600;font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.4px">${l}</b><span style="font-weight:600;flex:1">${(v==null||v==='')?'—':v}</span></div>`;
     const hatV='<span class="optchip" style="background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">'+hatLabel(x.hat)+'</span>'+(hatAssignable(x.hat)?'':' <span style="font-size:var(--fs-1);color:var(--grey)">not assignable</span>');
-    const coversFor=(UI.acts||[]).filter(a=>a.del===x.id).map(a=>acLbl(a));
+    const coversFor=(UI.acts||[]).filter(item=>item.del===x.id).map(item=>acLbl(item));
     const prof=`<div class="sec">${tx('Profile')}</div><div class="itab" style="border:1px solid var(--line);border-radius:12px;overflow:hidden">
       ${kv('Name',esc(x.name))}
       ${kv('Login','<span class="mono">'+acLogin(x)+'</span>')}
@@ -576,7 +576,7 @@ function acDetailHTML(){ const x=UI.acDet;
       ${(x.shift!=='on_shift' && (x.breakSince||x.returnDate)) ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">'+(x.breakSince?('On break since '+acDate(x.breakSince)):'')+(x.returnDate?((x.breakSince?' · ':'')+'returns '+acDate(x.returnDate)):'')+'</div>' : ''}
       <div style="font-size:var(--fs-2);margin-top:9px">Load · <b>${x.load}</b> / ${x.max||'∞'} tasks</div><div style="height:8px;background:var(--blue-tint-bg);border-radius:5px;overflow:hidden;margin-top:6px;color:var(--on-card)"><span style="display:block;height:100%;background:var(--blue);border-radius:5px;width:${pct}%;color:var(--on-accent)"></span></div></div>`;
     const eng=`<div class="sec">${tx('Access / engagement')}</div><div style="font-size:var(--fs-1);color:var(--warn-3);background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;line-height:1.5">Per-co-assist engagement (view-only · act · audit · MIS) is <b>planned, not enforced yet</b> — today a co-assist acts within the entity's scope. Default-deny per node is the roadmap.</div>`;
-    const coverName = x.del?acLbl((UI.acts||[]).find(a=>a.id===x.del)):'';
+    const coverName = x.del?acLbl((UI.acts||[]).find(item=>item.id===x.del)):'';
     const coverSection = '<div class="sec">' + tx('Leave cover') + '</div><div class="itab" style="border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:10px">'
       +'<div style="padding:10px 13px;border-bottom:1px dashed var(--line)"><div style="font-size:var(--fs-1);color:var(--blue-d);text-transform:uppercase;letter-spacing:.4px;font-weight:700">' + tx('🛡 Covered by') + '</div><div style="font-size:var(--fs-2);margin-top:3px;line-height:1.45">'+(x.del?('<b>'+coverName+'</b> takes over <b>'+esc(x.name)+'</b>&rsquo;s work when '+esc(x.name)+' is away.'):'<span style="color:var(--grey)">No cover set — nobody takes '+esc(x.name)+'&rsquo;s work when away.</span>')+'</div></div>'
       +'<div style="padding:10px 13px"><div style="font-size:var(--fs-1);color:var(--ok-2);text-transform:uppercase;letter-spacing:.4px;font-weight:700">' + tx('🤝 Covers for') + '</div><div style="font-size:var(--fs-2);margin-top:3px;line-height:1.45">'+(coversFor.length?('<b>'+esc(x.name)+'</b> takes over <b>'+coversFor.join(', ')+'</b>&rsquo;s work when they&rsquo;re away.'):'<span style="color:var(--grey)">'+esc(x.name)+' isn&rsquo;t anyone&rsquo;s cover yet.</span>')+'</div></div>'
@@ -618,24 +618,24 @@ function acDetailHTML(){ const x=UI.acDet;
   return `${head}<div class="db">${body}</div><div class="actbar">${bar}</div>`;
 }
 /* acShift removed (dead) — entity set-shift used the self-only /break route (400 for entity); actors self-manage shift. Entity set-shift = backlog. */
-async function acReinvite(id){ const x=(UI.acts||[]).find(a=>a.id===id)||{}; try{ const r=await api("actorOtp",{params:{id}}); const otp=(r&&(r.otp||r.dev_otp))||''; const lf=(r&&r.login_format)||acLogin(x); actorInviteModal('✉️ New code — '+(x.name||'co-assist'), x.name, lf, otp, r); }catch(e){ toast(MSG.fail("re-invite", e)); } }
-function acResetPin(id){ const x=(UI.acts||[]).find(a=>a.id===id)||{};
+async function acReinvite(id){ const x=(UI.acts||[]).find(item=>item.id===id)||{}; try{ const reply=await api("actorOtp",{params:{id}}); const otp=(reply&&(reply.otp||reply.dev_otp))||''; const lf=(reply&&reply.login_format)||acLogin(x); actorInviteModal('✉️ New code — '+(x.name||'co-assist'), x.name, lf, otp, reply); }catch(e){ toast(MSG.fail("re-invite", e)); } }
+function acResetPin(id){ const x=(UI.acts||[]).find(item=>item.id===id)||{};
   confirmAsk('Reset PIN', 'Reset <b>'+esc(x.name||'this co-assist')+'</b>&rsquo;s PIN? A new one-time code is issued and they set a new PIN on next login.', 'Reset PIN', async function(){
-    try{ const r=await api("actorPinReset",{params:{id}}); const otp=(r&&(r.otp||r.dev_otp))||''; const lf=(r&&r.login_format)||acLogin(x); actorInviteModal('🔑 PIN reset — '+(x.name||'co-assist'), x.name, lf, otp, r); }catch(e){ toast(MSG.fail("reset the PIN", e)); }
+    try{ const reply=await api("actorPinReset",{params:{id}}); const otp=(reply&&(reply.otp||reply.dev_otp))||''; const lf=(reply&&reply.login_format)||acLogin(x); actorInviteModal('🔑 PIN reset — '+(x.name||'co-assist'), x.name, lf, otp, reply); }catch(e){ toast(MSG.fail("reset the PIN", e)); }
   }); }
-function acStatus(id, action){ const x=(UI.acts||[]).find(a=>a.id===id); if(!x)return;
+function acStatus(id, action){ const x=(UI.acts||[]).find(item=>item.id===id); if(!x)return;
   const routed = x.load>0 ? ' ' + txn('Their {count} active task returns to the pool.',
                                     'Their {count} active tasks return to the pool.', x.load) : '';
   const run=async function(){ const body={action}; if(x.load>0)body.task_action='pool'; if(action==='remove')body.confirm='REMOVE';
-    try{ const r=await api("actorStatus",{params:{id},body}); UI.acSel=null; UI.acDet=null; UI.mdetail=false; await loadCoassists();
-      if(action==='reactivate'){ const otp=(r&&(r.otp||r.dev_otp))||''; const lf=(r&&r.login_format)||acLogin(x); actorInviteModal('↩ '+(x.name||'co-assist')+' reactivated', x.name, lf, otp, r); }
+    try{ const reply=await api("actorStatus",{params:{id},body}); UI.acSel=null; UI.acDet=null; UI.mdetail=false; await loadCoassists();
+      if(action==='reactivate'){ const otp=(reply&&(reply.otp||reply.dev_otp))||''; const lf=(reply&&reply.login_format)||acLogin(x); actorInviteModal('↩ '+(x.name||'co-assist')+' reactivated', x.name, lf, otp, reply); }
       else { const parts=[];
-        if(r&&r.tasks_routed>0) parts.push(r.tasks_routed+' task'+(r.tasks_routed>1?'s':'')+(body.task_action==='actor'?' reassigned to a colleague':' returned to the pool'));
-        if(r&&r.had_cover) parts.push('own leave-cover cleared');
-        if(r&&r.covers_removed>0) parts.push(txn('was leave-cover for {count} — that cover link removed',
-                                         'was leave-cover for {count} — those cover links removed', r.covers_removed));
-        if(r&&r.was_default_assignee) parts.push('was the default auto-assign assignee — cleared');
-        if(r&&r.disputes_cleared>0) parts.push(r.disputes_cleared+' dispute hand-off'+(r.disputes_cleared>1?'s':'')+' cleared');
+        if(reply&&reply.tasks_routed>0) parts.push(reply.tasks_routed+' task'+(reply.tasks_routed>1?'s':'')+(body.task_action==='actor'?' reassigned to a colleague':' returned to the pool'));
+        if(reply&&reply.had_cover) parts.push('own leave-cover cleared');
+        if(reply&&reply.covers_removed>0) parts.push(txn('was leave-cover for {count} — that cover link removed',
+                                         'was leave-cover for {count} — those cover links removed', reply.covers_removed));
+        if(reply&&reply.was_default_assignee) parts.push('was the default auto-assign assignee — cleared');
+        if(reply&&reply.disputes_cleared>0) parts.push(reply.disputes_cleared+' dispute hand-off'+(reply.disputes_cleared>1?'s':'')+' cleared');
         actorCleanupModal(action, x.name, parts); } }
     catch(e){ toast(MSG.fail("update the co-assist", e)); } };
   if(action==='deactivate') confirmAsk('Deactivate co-assist',
@@ -660,18 +660,18 @@ async function saveActor(id){ const err=document.getElementById("ac_ederr"); if(
   const _whole = (function(){ const el = document.getElementById('ac_ewhole'); return el ? !!el.checked : undefined; })();
   const body={ display_name:val("ac_ename")||undefined, actor_role:val("ac_erole")||null, max_tasks:(+val("ac_emax")||undefined), phone:val("ac_ephone")||null,
     access_level:_lvl, hat:_hatCompat, whole_entity:_whole };
-  try{ await api("actorEdit",{params:{id},body}); const x=(UI.acts||[]).find(a=>a.id===id);
+  try{ await api("actorEdit",{params:{id},body}); const x=(UI.acts||[]).find(item=>item.id===id);
     const delEl=document.getElementById("ac_edel");
     if(delEl && delEl.value!==((x&&x.del)||'')){ await api("actorDelegate",{params:{id},body:{delegate_actor_id:delEl.value||null}}); if(x)x.del=delEl.value||null; }
     if(x){ if(body.display_name)x.name=body.display_name; x.role=body.actor_role; if(body.max_tasks)x.max=body.max_tasks; x.phone=body.phone; if(body.hat)x.hat=body.hat; } UI.acMode='view';
     // Action-state discipline: only this record's row + the detail change — the rest of the list is untouched (no reload).
-    const _r=document.querySelector('.row[data-ac="'+id+'"]'); if(_r&&x){ _r.outerHTML=acRowHTML(x); } else { paintAcList(); }
+    const node=document.querySelector('.row[data-ac="'+id+'"]'); if(node&&x){ node.outerHTML=acRowHTML(x); } else { paintAcList(); }
     paintAcDetail(); toast('Co-assist updated ✓'); if(typeof announce==='function')announce(((x&&x.name)||'Co-assist')+' updated'); }
   catch(e){ if(err)err.textContent=e.message; } }
 async function loadCoassists(){
-  UI._acLoading=true; const rb=document.getElementById('ac_rows'); if(rb)rb.innerHTML='<div class="loadwrap"><span class="spin"></span> loading…</div>';
+  UI._acLoading=true; const node=document.getElementById('ac_rows'); if(node)node.innerHTML='<div class="loadwrap"><span class="spin"></span> loading…</div>';
   try{ const actors=((await api("actors",{query:{status:'all'}}))||[]).map(mapApiActor); UI.acts=actors; STORE.actors=actors; UI._acLoading=false; paintAcList();   // fetch ALL — client acFlt tabs categorize (active incl. on-break, inactive=deactivated/removed)
-    if(UI.acSel && !UI.acts.some(a=>a.id===UI.acSel)){ UI.acSel=null; UI.acDet=null; }
+    if(UI.acSel && !UI.acts.some(item=>item.id===UI.acSel)){ UI.acSel=null; UI.acDet=null; }
     if(!UI.acSel && UI.acts.length && UI.vp!=='mob'){ const f=acVisible()[0]; if(f)selectActor(f.id, true); else paintAcDetail(); }
     else paintAcDetail();
     loadConnMap();   // annotate which co-assists are CONNECTORS (graceful; needs the connector capability + b57)
@@ -683,8 +683,8 @@ async function loadConnMap(){
   try{
     if(!((SESSION.capabilities||[]).indexOf('connector')>=0)){ UI._connMap={}; return; }
     if(typeof ensureCap==='function'){ await ensureCap('connector'); }   // registers the connectorList EP + selectConnector for Manage
-    const r=await api('connectorList'); const map={}, info={};
-    ((r&&r.connectors)||[]).forEach(function(c){ map[c.identity_id]=c.connector_type; info[c.identity_id]={type:c.connector_type,health:c.health,count:c.connection_count,last_seen:c.last_seen,site:c.site}; });
+    const reply=await api('connectorList'); const map={}, info={};
+    ((reply&&reply.connectors)||[]).forEach(function(item){ map[item.identity_id]=item.connector_type; info[item.identity_id]={type:item.connector_type,health:item.health,count:item.connection_count,last_seen:item.last_seen,site:item.site}; });
     UI._connMap=map; UI._connInfo=info; paintAcList(); if(UI.acDet)paintAcDetail();
   }catch(_){ UI._connMap=UI._connMap||{}; }   // b57 not applied / capability off -> simply don't annotate
 }
