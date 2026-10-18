@@ -131,7 +131,7 @@ async function addCred(){ var t=((el('nc_title')||{}).value||'').trim(); if(!t){
 
 // ── POSITION (directional selling avenues) ──
 async function renderPosition(b){
-  var r=await api('GET','/api/kyb/position?vertical=paint&origin=IN'); if(r.status===401){TOK=null;return loginView('Session expired');}
+  var r=await api('GET','/api/kyb/position')   /* CMP-1: the server's stated country and trade (readiness.laneOf), never paint / India */; if(r.status===401){TOK=null;return loginView('Session expired');}
   var f=(r.j&&r.j.facts)||{}, reach=f.reach||{}, lanes=f.lanes||[];
   var buckets='<div class="bucket now"><div class="bh" style="color:var(--ok)">✓ Reachable now</div>'+((reach.reachable_now||[]).length?(reach.reachable_now||[]).map(function(x){return '<span class="pill">'+esc(x.dest)+'</span>';}).join(''):'<span class="note">none yet</span>')+'</div>'
     +'<div class="bucket step"><div class="bh" style="color:var(--blue)"><span class=arw>→</span> One step away</div>'+((reach.one_step||[]).length?(reach.one_step||[]).map(function(x){return '<span class="pill">'+esc(x.dest)+' <span class="note">&mdash; needs '+esc(x.needs||'')+'</span></span>';}).join(''):'<span class="note">none</span>')+'</div>'
