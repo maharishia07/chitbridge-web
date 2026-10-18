@@ -100,19 +100,19 @@
 
   /* ── the merge: one register in the browser ── */
   var ROWS = [], BYAPP = {}, BYSHEET = {}, BYCODE = {};
-  DECLARED.apps.forEach(function (a) {
-    BYAPP[a.app] = {};
-    a.rows.forEach(function (r) {
-      var row = { code: r[0], key: r[1], screen: r[2], app: a.app, appName: a.name, page: a.page, kind: r[1] ? 'tab' : 'page',
-        group: a.name, path: a.name + ' › ' + r[2], reach: r[3] || (r[1] ? a.page + (a.hash ? '#' + (a.app === 'accounts' ? '' : '/') + r[1] : '') + ' · ' + a.name + ' › ' + r[2] : a.page),
+  DECLARED.apps.forEach(function (item) {
+    BYAPP[item.app] = {};
+    item.rows.forEach(function (r) {
+      var row = { code: r[0], key: r[1], screen: r[2], app: item.app, appName: item.name, page: item.page, kind: r[1] ? 'tab' : 'page',
+        group: item.name, path: item.name + ' › ' + r[2], reach: r[3] || (r[1] ? item.page + (item.hash ? '#' + (item.app === 'accounts' ? '' : '/') + r[1] : '') + ' · ' + item.name + ' › ' + r[2] : item.page),
         nav: null, since: DECLARED.since, declared: true };
-      ROWS.push(row); BYCODE[row.code] = row; BYAPP[a.app][r[1] || ''] = row.code;
+      ROWS.push(row); BYCODE[row.code] = row; BYAPP[item.app][r[1] || ''] = row.code;
     });
   });
-  DECLARED.sheets.forEach(function (s) {
-    var row = { code: s[0], key: s[1], screen: s[2], app: null, page: null, kind: 'sheet', file: s[3], group: 'Sheet', path: 'Sheet › ' + s[2],
-      reach: s[4] + ' › its sheet', nav: null, since: DECLARED.since, declared: true };
-    ROWS.push(row); BYCODE[row.code] = row; BYSHEET[s[1]] = row.code;
+  DECLARED.sheets.forEach(function (item) {
+    var row = { code: item[0], key: item[1], screen: item[2], app: null, page: null, kind: 'sheet', file: item[3], group: 'Sheet', path: 'Sheet › ' + item[2],
+      reach: item[4] + ' › its sheet', nav: null, since: DECLARED.since, declared: true };
+    ROWS.push(row); BYCODE[row.code] = row; BYSHEET[item[1]] = row.code;
   });
   /* the workshop's register (screens.js) is its own file's global: where a page loaded it, these rows join it; this file never creates it */
   var WS = root.CBSCREENS;
@@ -124,7 +124,7 @@
   function row(app, key) {
     var m = BYAPP[app]; if (!m) return null;
     var c = (key != null && m[key]) || (m[hashKey()]) || m[''] || null;
-    if (!c) { var first = DECLARED.apps.filter(function (a) { return a.app === app; })[0]; c = first && first.rows[0][0]; }
+    if (!c) { var first = DECLARED.apps.filter(function (item) { return item.app === app; })[0]; c = first && first.rows[0][0]; }
     return c ? BYCODE[c] : null;
   }
   function sheet(kind) { var c = BYSHEET[kind]; return c ? BYCODE[c] : null; }
@@ -137,7 +137,7 @@
     + '@media(max-width:700px){.cbsid .cbsid-n,.cbsid .cbsid-d{display:none}}';
   function ensureCss() {
     var d = root.document; if (!d || d.getElementById('cbsid-css')) return;
-    var st = d.createElement('style'); st.id = 'cbsid-css'; st.textContent = CSS; (d.head || d.documentElement).appendChild(st);
+    var node = d.createElement('style'); node.id = 'cbsid-css'; node.textContent = CSS; (d.head || d.documentElement).appendChild(node);
   }
   function inner(r) {
     if (!r) return '';
@@ -154,8 +154,8 @@
   function chip() {
     if (S.el) return S.el;
     ensureCss();
-    var b = root.document.createElement('button'); b.type = 'button'; b.className = 'cbsid'; b.setAttribute('data-testid', 'screen-id');
-    S.el = b; paint(); return b;
+    var node = root.document.createElement('button'); node.type = 'button'; node.className = 'cbsid'; node.setAttribute('data-testid', 'screen-id');
+    S.el = node; paint(); return node;
   }
   function paint() {
     if (!S.el) return;
@@ -168,24 +168,24 @@
   function current() { var r = S.app ? row(S.app, S.key) : null; return r ? r.code : null; }
 
   /* a tap copies the code; the chip says so for a moment. A browser that refuses the clipboard: the code stays on screen to read. */
-  function copied(b, ok) {
-    var n = b.querySelector('.cbsid-c'); if (!n) return;   /* said on the CODE: it is the part every width shows (a phone and a list's title row hide the name) */
+  function copied(node, ok) {
+    var n = node.querySelector('.cbsid-c'); if (!n) return;   /* said on the CODE: it is the part every width shows (a phone and a list's title row hide the name) */
     /* W9: the chip says WHAT was copied and what to do with it, not a bare "Copied" — on the chip for a moment, and as a toast where the page has one */
-    var was = n.textContent; n.textContent = T(ok ? 'Copied' : 'Not copied'); b.setAttribute('data-copied', ok ? '1' : '0');
+    var was = n.textContent; n.textContent = T(ok ? 'Copied' : 'Not copied'); node.setAttribute('data-copied', ok ? '1' : '0');
     var said = T(ok ? 'Screen code copied — paste it when you report a problem' : 'Not copied — read the code off the chip and type it when you report a problem');
-    b.setAttribute('data-copied-says', said);
+    node.setAttribute('data-copied-says', said);
     if (typeof root.toast === 'function') { try { root.toast(said); } catch (e) { console.warn('screen id: the toast failed', (e && e.message) || e); } }
-    setTimeout(function () { n.textContent = was; b.removeAttribute('data-copied'); b.removeAttribute('data-copied-says'); }, 1400);
+    setTimeout(function () { n.textContent = was; node.removeAttribute('data-copied'); node.removeAttribute('data-copied-says'); }, 1400);
   }
   function onTap(e) {
-    var b = e.target && e.target.closest ? e.target.closest('.cbsid[data-cbsid]') : null; if (!b) return;
+    var node = e.target && e.target.closest ? e.target.closest('.cbsid[data-cbsid]') : null; if (!node) return;
     e.preventDefault(); e.stopPropagation();
-    var code = b.getAttribute('data-cbsid');
+    var code = node.getAttribute('data-cbsid');
     var nav = root.navigator;
-    if (!nav || !nav.clipboard || !nav.clipboard.writeText) { console.warn('screen id: no clipboard in this browser - the code ' + code + ' stays on the chip to read'); copied(b, false); return; }
-    nav.clipboard.writeText(code).then(function () { copied(b, true); }, function (err) {
+    if (!nav || !nav.clipboard || !nav.clipboard.writeText) { console.warn('screen id: no clipboard in this browser - the code ' + code + ' stays on the chip to read'); copied(node, false); return; }
+    nav.clipboard.writeText(code).then(function () { copied(node, true); }, function (err) {
       console.warn('screen id: the browser refused the clipboard - the code ' + code + ' stays on the chip to read', (err && err.message) || err);
-      copied(b, false);
+      copied(node, false);
     });
   }
   if (root.document && root.addEventListener) {
