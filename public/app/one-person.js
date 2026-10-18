@@ -41,7 +41,7 @@
   function lsGet(k) { try { return root.localStorage.getItem(k); } catch (_) { return null; } }
   function lsSet(k, v) { try { root.localStorage.setItem(k, v); } catch (_) {} }
   function lsDel(k) { try { root.localStorage.removeItem(k); } catch (_) {} }
-  function lsKeys() { var out = []; try { for (var i = 0; i < root.localStorage.length; i++) out.push(root.localStorage.key(i)); } catch (_) {} return out; }
+  function lsKeys() { var out = []; try { for (var index = 0; index < root.localStorage.length; index++) out.push(root.localStorage.key(index)); } catch (_) {} return out; }
   function json(k) { try { return JSON.parse(lsGet(k) || 'null'); } catch (_) { return null; } }
   function jwt(t) {
     try { return JSON.parse(root.atob(String(t).split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))); } catch (_) { return null; }
@@ -70,7 +70,7 @@
   function dbNames() {
     var idb = root.indexedDB;
     if (!idb || typeof idb.databases !== 'function') return Promise.resolve(null);
-    return idb.databases().then(function (l) { return (l || []).map(function (d) { return d && d.name; }).filter(Boolean); },
+    return idb.databases().then(function (reply) { return (reply || []).map(function (item) { return item && item.name; }).filter(Boolean); },
                                 function () { return null; });
   }
   /** read one store of a database that ALREADY exists: fn(store) → a request; resolves its result, or null */
@@ -106,26 +106,26 @@
   /** how many rows wait in the counter's queues — every counter copy in this browser, IndexedDB and its
    *  localStorage fallback (<slot>-queue-<no>). Read-only. A queued row is a sale not yet at the shop. */
   function counterUnsent() {
-    var mem = lsKeys().filter(function (k) { return k && /^cb-till[A-Za-z0-9_-]*-queue-/.test(k); }).length;
+    var mem = lsKeys().filter(function (item) { return item && /^cb-till[A-Za-z0-9_-]*-queue-/.test(item); }).length;
     return dbNames().then(function (names) {
-      var slots = (names || []).filter(function (n) { return /^cb-till/.test(n); });
-      return Promise.all(slots.map(function (n) { return readExisting(n, 'queue', function (st) { return st.count(); }); }));
-    }).then(function (counts) { return mem + counts.reduce(function (a, c) { return a + (Number(c) || 0); }, 0); },
+      var slots = (names || []).filter(function (item) { return /^cb-till/.test(item); });
+      return Promise.all(slots.map(function (item) { return readExisting(item, 'queue', function (st) { return st.count(); }); }));
+    }).then(function (counts) { return mem + counts.reduce(function (total, item) { return total + (Number(item) || 0); }, 0); },
             function () { return mem; });
   }
   /** the same count, per counter slot: { 'cb-till-<sfx>': rows } — IndexedDB and the localStorage fallback together.
    *  Only slots with rows are listed. Read-only. */
   function counterSlots() {
     var by = {}, add = function (n, c) { c = Number(c) || 0; if (n && c) by[n] = (by[n] || 0) + c; };
-    lsKeys().forEach(function (k) { var m = k && /^(cb-till[A-Za-z0-9_-]*?)-queue-/.exec(k); if (m) add(m[1], 1); });
+    lsKeys().forEach(function (item) { var m = item && /^(cb-till[A-Za-z0-9_-]*?)-queue-/.exec(item); if (m) add(m[1], 1); });
     return dbNames().then(function (names) {
-      var slots = (names || []).filter(function (n) { return /^cb-till/.test(n); });
-      return Promise.all(slots.map(function (n) { return readExisting(n, 'queue', function (st) { return st.count(); }).then(function (c) { add(n, c); }); }));
+      var slots = (names || []).filter(function (item) { return /^cb-till/.test(item); });
+      return Promise.all(slots.map(function (item) { return readExisting(item, 'queue', function (st) { return st.count(); }).then(function (reply) { add(item, reply); }); }));
     }).then(function () { return by; }, function () { return by; });
   }
   /** saves the Labs could not send yet (the 'offerlab' database's outbox, drained by combo-lab.html) — read-only */
   function labUnsent() {
-    return readExisting('offerlab', 'outbox', function (st) { return st.count(); }).then(function (n) { return Number(n) || 0; }, function () { return 0; });
+    return readExisting('offerlab', 'outbox', function (st) { return st.count(); }).then(function (reply) { return Number(reply) || 0; }, function () { return 0; });
   }
   /** { paired:false } or { paired:true, ent, name, counter } — the shop this browser's counter is paired to.
    *  The server's answer (the snapshot) first; then the shop the counter was opened for; then the id the app
@@ -138,8 +138,8 @@
       ent: (sfx && lsGet('cb_till_shop@' + sfx)) || '',
       name: (sfx && lsGet('cb_till_shopname@' + sfx)) || '',
       counter: (sfx && lsGet('cb_till_counter_name@' + sfx)) || lsGet('cb_till_name') || 'Counter 1' };
-    return snapshot(sl).then(function (S) {
-      if (S && S.entity_id) { out.ent = String(S.entity_id); if (S.shop && S.shop.name) out.name = String(S.shop.name); }
+    return snapshot(sl).then(function (reply) {
+      if (reply && reply.entity_id) { out.ent = String(reply.entity_id); if (reply.shop && reply.shop.name) out.name = String(reply.shop.name); }
       if (!out.ent) out.ent = lsGet('cb_till_entity') || '';
       return out;
     });
@@ -169,12 +169,12 @@
   function ask(msg, ms, enough) {
     return new Promise(function (res) {
       if (!bc) return res([]);
-      var q = Math.random().toString(36).slice(2), got = [], t = null;
-      var end = function () { if (!waits[q]) return; delete waits[q]; clearTimeout(t); res(got); };
-      waits[q] = function (m) { got.push(m); if (enough && enough(got)) end(); };
+      var q = Math.random().toString(36).slice(2), list = [], t = null;
+      var end = function () { if (!waits[q]) return; delete waits[q]; clearTimeout(t); res(list); };
+      waits[q] = function (m) { list.push(m); if (enough && enough(list)) end(); };
       t = setTimeout(end, ms);
       msg.q = q; bc.postMessage(msg);
-      if (enough && enough(got)) end();          /* nobody to wait for (no tab answered 'who') — the message still went */
+      if (enough && enough(list)) end();          /* nobody to wait for (no tab answered 'who') — the message still went */
     });
   }
   /** a page says who it holds and what to do when told to leave. quiet: it answers 'leave' but not 'who' (the
@@ -201,18 +201,18 @@
     if (s && s.ent !== ent) { var a = of(s.ent, s.name); a.sess = true; uid(a, s.uid); }
     var own = json(OWNER);
     if (own && own.ent && String(own.ent) !== ent) {
-      var drafts = lsKeys().filter(function (k) { return k && k.indexOf(DRAFT) === 0; }).length;
+      var drafts = lsKeys().filter(function (item) { return item && item.indexOf(DRAFT) === 0; }).length;
       var outbox = (json(OUTBOX) || []).length;
       if (drafts || outbox) {
         var b = of(String(own.ent), own.name); b.drafts = drafts; b.outbox = outbox;
-        (own.ids || []).forEach(function (u) { uid(b, u); });
+        (own.ids || []).forEach(function (item) { uid(b, item); });
       }
     }
-    return Promise.all([ask({ t: 'who' }, ASK_MS), counterPair(), counterSlots()]).then(function (r) {
-      r[0].forEach(function (m) { if (m && m.ent && m.ent !== ent) { var c = of(m.ent, m.name); c.tabs++; uid(c, m.uid); } });
-      var pair = r[1], counter = (pair.paired && pair.ent && pair.ent !== ent) ? pair : null;
+    return Promise.all([ask({ t: 'who' }, ASK_MS), counterPair(), counterSlots()]).then(function (reply) {
+      reply[0].forEach(function (item) { if (item && item.ent && item.ent !== ent) { var c = of(item.ent, item.name); c.tabs++; uid(c, item.uid); } });
+      var pair = reply[1], counter = (pair.paired && pair.ent && pair.ent !== ent) ? pair : null;
       if (counter && by[counter.ent]) { by[counter.ent].counter = true; if (!by[counter.ent].name) by[counter.ent].name = counter.name; }
-      var left = counter ? (r[2][slot()] || 0) : 0;
+      var left = counter ? (reply[2][slot()] || 0) : 0;
       var notice = left ? { ent: counter.ent, name: counter.name, counter: counter.counter, unsent: left } : null;
       return { clean: !list.length, others: list, notice: notice, pair: pair };
     });
@@ -247,10 +247,10 @@
         if (p && String(p.parent_entity_id || p.identity_id || '') === o.ent) lsDel(SESS);
         var own = json(OWNER) || {}, owned = String(own.ent || '') === o.ent;
         var ids = (o.uids || []).concat(owned ? (own.ids || []) : []);
-        lsKeys().forEach(function (k) {
-          if (!k) return;
-          if (owned && k.indexOf(DRAFT) === 0) return lsDel(k);
-          for (var i = 0; i < ids.length; i++) if (ids[i] && k.slice(-(ids[i].length + 1)) === '@' + ids[i]) return lsDel(k);
+        lsKeys().forEach(function (item) {
+          if (!item) return;
+          if (owned && item.indexOf(DRAFT) === 0) return lsDel(item);
+          for (var index = 0; index < ids.length; index++) if (ids[index] && item.slice(-(ids[index].length + 1)) === '@' + ids[index]) return lsDel(item);
         });
         if (owned && !(json(OUTBOX) || []).length) lsDel(OWNER);
       });
@@ -277,7 +277,7 @@
        4  every cb* key in localStorage and sessionStorage, every cache, every service worker
      Resolves { ok:true, counter:'Counter 1' | '', kept:{ name, unsent } | null } or { ok:false, unsent:n | silent:[labels] | blocked:[labels] } */
   var CB_KEY = /^cb[_.\-]/;              /* cb_sess, cb_till_*, cb_nav@<id>, cb.draft.*, cb.outbox.v1, cb-till-*-queue-* … */
-  function cbKeys(store) { var out = []; try { for (var i = 0; i < store.length; i++) { var k = store.key(i); if (k && CB_KEY.test(k)) out.push(k); } } catch (_) {} return out; }
+  function cbKeys(store) { var out = []; try { for (var index = 0; index < store.length; index++) { var k = store.key(index); if (k && CB_KEY.test(k)) out.push(k); } } catch (_) {} return out; }
   function dbLabel(n) { return /^cb-till/.test(n) ? 'the counter tab' : (n === 'offerlab' ? 'a Lab tab' : 'a tab using ' + n); }
   function dropDb(name) {
     return new Promise(function (res) {
@@ -293,31 +293,31 @@
   function sparedKey(k, spared) {
     if (!spared.length) return false;
     if (PAIR_KEYS.test(k)) return true;
-    for (var i = 0; i < spared.length; i++) {
-      if (k.indexOf(spared[i] + '-') === 0) return true;
-      var sfx = spared[i].slice(8);
+    for (var index = 0; index < spared.length; index++) {
+      if (k.indexOf(spared[index] + '-') === 0) return true;
+      var sfx = spared[index].slice(8);
       if (sfx && /^cb_till_/.test(k) && k.slice(-(sfx.length + 1)) === '@' + sfx) return true;
     }
     return false;
   }
   function startClean() {
-    return Promise.all([counterSlots(), labUnsent(), counterPair()]).then(function (u) {
-      if (u[1]) return { ok: false, labUnsent: u[1] };
-      var spared = Object.keys(u[0]), pair = u[2];
-      var held = spared.reduce(function (a, n) { return a + u[0][n]; }, 0);
+    return Promise.all([counterSlots(), labUnsent(), counterPair()]).then(function (reply) {
+      if (reply[1]) return { ok: false, labUnsent: reply[1] };
+      var spared = Object.keys(reply[0]), pair = reply[2];
+      var held = spared.reduce(function (total, item) { return total + reply[0][item]; }, 0);
       return ask({ t: 'roll' }, ASK_MS).then(function (tabs) {
-        return ask({ t: 'wipe' }, LEAVE_MS, function (got) { return got.length >= tabs.length; }).then(function (got) {
-          var silent = tabs.filter(function (t) { return !got.some(function (g) { return g.tab === t.tab; }); }).map(function (t) { return t.label; });
+        return ask({ t: 'wipe' }, LEAVE_MS, function (got) { return got.length >= tabs.length; }).then(function (list) {
+          var silent = tabs.filter(function (item) { return !list.some(function (g) { return g.tab === item.tab; }); }).map(function (item) { return item.label; });
           if (silent.length) return { ok: false, silent: silent };
           var known = [slot(), 'offerlab'].filter(Boolean);
-          return dbNames().then(function (names) { return Promise.all((names || known).filter(function (n) { return spared.indexOf(n) < 0; }).map(dropDb)); }).then(function (blocked) {
-            blocked = blocked.filter(Boolean).filter(function (b, i, a) { return a.indexOf(b) === i; });
+          return dbNames().then(function (names) { return Promise.all((names || known).filter(function (item) { return spared.indexOf(item) < 0; }).map(dropDb)); }).then(function (blocked) {
+            blocked = blocked.filter(Boolean).filter(function (item, index, a) { return a.indexOf(item) === index; });
             if (blocked.length) return { ok: false, blocked: blocked };
-            cbKeys(root.localStorage).filter(function (k) { return !sparedKey(k, spared); }).forEach(lsDel);
-            try { cbKeys(root.sessionStorage).forEach(function (k) { root.sessionStorage.removeItem(k); }); } catch (_) {}
-            var caches = root.caches ? root.caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return root.caches.delete(k); })); }).catch(function () {}) : null;
+            cbKeys(root.localStorage).filter(function (item) { return !sparedKey(item, spared); }).forEach(lsDel);
+            try { cbKeys(root.sessionStorage).forEach(function (item) { root.sessionStorage.removeItem(item); }); } catch (_) {}
+            var caches = root.caches ? root.caches.keys().then(function (ks) { return Promise.all(ks.map(function (item) { return root.caches.delete(item); })); }).catch(function () {}) : null;
             var sw = (root.navigator && root.navigator.serviceWorker && root.navigator.serviceWorker.getRegistrations)
-              ? root.navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister(); })); }).catch(function () {}) : null;
+              ? root.navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.map(function (item) { return item.unregister(); })); }).catch(function () {}) : null;
             return Promise.all([caches, sw]).then(function () {
               return { ok: true, counter: pair.paired ? pair.counter : '',
                        kept: held ? { name: pair.paired ? pair.name : '', unsent: held } : null };
