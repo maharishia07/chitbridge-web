@@ -126,7 +126,7 @@ function armCart(){
     onCheckout:function(){ go(1); }
   });
 }
-function go(i){ if(i<0||i>=STEPS.length)return; S.step=i; var b=document.getElementById('body'); if(b)b.scrollTop=0; paint(); }
+function go(i){ if(i<0||i>=STEPS.length)return; S.step=i; var node=document.getElementById('body'); if(node)node.scrollTop=0; paint(); }
 function openOv(){ document.getElementById('ovc').innerHTML=ovHTML(); document.getElementById('ov').className='ov on'; }
 function closeOv(){ document.getElementById('ov').className='ov'; }
 function sendCode(){ if(!S.contact.trim())return; S.sent=true; paint(); }
@@ -138,9 +138,9 @@ function chipHTML(){
 }
 function stepsHTML(){
   if(S.done) return '';
-  return '<div class="steps">'+STEPS.map(function(s,i){
-    var cls=i===S.step?'stp0 now':(i<S.step?'stp0 done':'stp0');
-    return '<div class="'+cls+'"'+(i<S.step?' onclick="go('+i+')"':'')+'>'+(i<S.step?'✓ ':'')+s.n+'</div>';
+  return '<div class="steps">'+STEPS.map(function(item,index){
+    var cls=index===S.step?'stp0 now':(index<S.step?'stp0 done':'stp0');
+    return '<div class="'+cls+'"'+(index<S.step?' onclick="go('+index+')"':'')+'>'+(index<S.step?'✓ ':'')+item.n+'</div>';
   }).join('')+'</div>';
 }
 function stepItems(){
@@ -164,11 +164,11 @@ function stepDelivery(){
     + '<input class="inp" value="'+esc(S.remark)+'" placeholder="e.g. ring the bell twice" oninput="S.remark=this.value">';
 }
 function stepReview(){
-  var T=CBCart.total('shop'), sel=CBCart.selected('shop');
-  return '<div class="rev"><div class="h">Your basket · '+sel.length+'<span class="e" onclick="go(0)">Change</span></div>'
-    + sel.map(function(l){
-        return '<div class="r"><span class="k">'+l.qty+' × '+esc(l.unit)+'</span><span style="flex:1">'+esc(l.name)+'</span>'
-          + '<b>'+(l.line_total==null?'—':CBCart.fmt('shop', l.line_total))+'</b></div>'; }).join('')
+  var T=CBCart.total('shop'), list=CBCart.selected('shop');
+  return '<div class="rev"><div class="h">Your basket · '+list.length+'<span class="e" onclick="go(0)">Change</span></div>'
+    + list.map(function(item){
+        return '<div class="r"><span class="k">'+item.qty+' × '+esc(item.unit)+'</span><span style="flex:1">'+esc(item.name)+'</span>'
+          + '<b>'+(item.line_total==null?'—':CBCart.fmt('shop', item.line_total))+'</b></div>'; }).join('')
     + '<div class="tot"><span style="flex:1">Total</span><span>'+(T.amount?CBCart.fmt('shop', T.amount)+(T.partial?'+':''):'—')+'</span></div></div>'
     /* ⚠️ CJ-07 — the shop's catalogue is the authority and the server reprices every line. On a public page that
        must be SAID: a customer reading a total on their own screen cannot otherwise tell a request from a bill. */
@@ -236,7 +236,7 @@ armCart(); paint();
 
 /* ── SMOKE TEST — this screen's own rules; the cart's are in scripts/cart-ui.test.mjs ── */
 (function(){
-  var f=0, ok=function(n,c){ console.log((c?'  ok   ':'  FAIL ')+n); if(!c)f++; };
+  var count=0, ok=function(n,c){ console.log((c?'  ok   ':'  FAIL ')+n); if(!c)count++; };
   console.log('%cstorefront-design mock','font-weight:bold');
   ok('★ NO left pane to choose from — there is one shop and you are in it', typeof STORES==='undefined');
   ok('the catalogue is the first thing on screen', S.step===0 && CBCart.rows('shop').length===9);
@@ -263,6 +263,6 @@ armCart(); paint();
   ok('and with the code it can be placed', blockedBecause()===null);
   placeOrder();
   ok('the confirmation says what was sent, not what was charged', S.done===true);
-  console.log(f?('  '+f+' FAILED'):'  all passed');
+  console.log(count?('  '+count+' FAILED'):'  all passed');
 })();
 </script>
