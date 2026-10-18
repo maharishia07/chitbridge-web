@@ -43,8 +43,8 @@ if (typeof EP !== 'undefined') {
 async function loadMessages(){
   RPL.busy = true; RPL.err = null; msgPaint();
   try {
-    var r = await api('msgInbox', RPL.all ? { query: { all: 1 } } : {});
-    RPL.data = (r && (r.messages || r.items || (Array.isArray(r) ? r : []))) || [];
+    var reply = await api('msgInbox', RPL.all ? { query: { all: 1 } } : {});
+    RPL.data = (reply && (reply.messages || reply.items || (Array.isArray(reply) ? reply : []))) || [];
   } catch (e) { RPL.err = (e && e.message) || 'Could not read your messages.'; }
   RPL.busy = false; msgPaint();
   if (typeof loadReplyCount === 'function') loadReplyCount();
@@ -56,7 +56,7 @@ function msgPaint(){
   if (typeof CBThread !== 'undefined') CBThread.mountAll(el, { context: { host: 'replies' }, me: (typeof SESSION !== 'undefined' && (SESSION.entity || SESSION.name)) || '', onDone: function(){ loadMessages(); } });
 }
 function msgShowAll(){ RPL.all = !RPL.all; RPL.data = null; RPL.open = {}; loadMessages(); }
-function msgUnread(){ return (RPL.data || []).filter(function(m){ return !m.read_at; }).length; }
+function msgUnread(){ return (RPL.data || []).filter(function(item){ return !item.read_at; }).length; }
 
 /**
  * ⭐ ONE THREAD PER LINE — and per chit for anything that named no line.
@@ -68,24 +68,24 @@ function msgUnread(){ return (RPL.data || []).filter(function(m){ return !m.read
 function msgKey(m){ return m.chit_id + '␟' + (m.line_id || ''); }
 function msgThreads(){
   var by = {}, order = [];
-  (RPL.data || []).forEach(function(m){
-    var k = msgKey(m);
-    if (!by[k]) { by[k] = { key: k, chit_id: m.chit_id, line_id: m.line_id || null, msgs: [] }; order.push(k); }
-    by[k].msgs.push(m);
+  (RPL.data || []).forEach(function(item){
+    var k = msgKey(item);
+    if (!by[k]) { by[k] = { key: k, chit_id: item.chit_id, line_id: item.line_id || null, msgs: [] }; order.push(k); }
+    by[k].msgs.push(item);
   });
-  return order.filter(function(k){
+  return order.filter(function(item){
     /* The filter applies to the THREAD, not the message — a conversation belongs to one chit and therefore to
        one track, so filtering per message could split an exchange in half. */
-    return !RPL.track || (by[k].msgs[0].track === RPL.track);
-  }).map(function(k){
-    var t = by[k];
+    return !RPL.track || (by[item].msgs[0].track === RPL.track);
+  }).map(function(item){
+    var t = by[item];
     /* The inbox arrives newest-first; a thread reads oldest-first, and its headline is the newest. */
-    t.msgs.sort(function(a, b){ return String(a.created_at).localeCompare(String(b.created_at)); });
+    t.msgs.sort(function(first, second){ return String(first.created_at).localeCompare(String(second.created_at)); });
     t.latest = t.msgs[t.msgs.length - 1];
     t.unread = t.msgs.filter(function(m){ return !m.read_at; }).length;
     t.kept = t.msgs.some(function(m){ return m.kept; });
     return t;
-  }).sort(function(a, b){ return String(b.latest.created_at).localeCompare(String(a.latest.created_at)); });
+  }).sort(function(first, second){ return String(second.latest.created_at).localeCompare(String(first.latest.created_at)); });
 }
 
 /**
@@ -104,10 +104,10 @@ async function msgOpen(key){
   if (!t) return;
 
   /* R02 — the whole conversation is read by CBThread on the open row (msgPaint mounts it); nothing is fetched here */
-  var unread = t.msgs.filter(function(m){ return !m.read_at; });
-  for (var i = 0; i < unread.length; i++) {
-    try { await api('msgMark', { params: { id: unread[i].message_id }, body: { read: true } });
-          unread[i].read_at = new Date().toISOString(); }
+  var unread = t.msgs.filter(function(item){ return !item.read_at; });
+  for (var index = 0; index < unread.length; index++) {
+    try { await api('msgMark', { params: { id: unread[index].message_id }, body: { read: true } });
+          unread[index].read_at = new Date().toISOString(); }
     catch (e) { /* reading is not worth an error toast — the thread is open, which is what was wanted */ }
   }
   msgPaint();
@@ -120,15 +120,15 @@ async function msgOpen(key){
  * ⚠️ Pinning one message of a thread would leave the thread in the list showing one line of a conversation whose
  * other half had dropped out. The unit on this screen is the thread, so the pin is too.
  */
-async function msgKeep(key, ev){
-  if (ev) ev.stopPropagation();
+async function msgKeep(key, event){
+  if (event) event.stopPropagation();
   var t = msgThreads().filter(function(x){ return x.key === key; })[0];
   if (!t) return;
   var to = !t.kept;
   try {
-    for (var i = 0; i < t.msgs.length; i++) {
-      await api('msgMark', { params: { id: t.msgs[i].message_id }, body: { kept: to } });
-      t.msgs[i].kept = to;
+    for (var index = 0; index < t.msgs.length; index++) {
+      await api('msgMark', { params: { id: t.msgs[index].message_id }, body: { kept: to } });
+      t.msgs[index].kept = to;
     }
     msgPaint();
     toast(to ? 'Kept — this conversation stays here' : 'Released');
@@ -157,14 +157,14 @@ function messagesScreen(){
                    : 'Nothing new. Replies from the other party appear here — tick “everything” to see the ones you have already dealt with.')
         + '</div>';
     } else {
-      body = threads.map(function(t){
-        var m = t.latest, open = !!RPL.open[t.key], isNew = t.unread > 0;
+      body = threads.map(function(item){
+        var m = item.latest, open = !!RPL.open[item.key], isNew = item.unread > 0;
         var closed = ['completed', 'cancelled', 'rejected'].indexOf(m.chit_status) >= 0;
         var what = m.particulars ? esc(m.particulars) : esc(m.manual_subject || m.auto_subject || 'this order');
         var sub  = m.particulars ? esc(m.manual_subject || m.auto_subject || 'chit') : 'the order as a whole';
-        var rid  = t.key.replace(/[^a-z0-9]/gi, '');
+        var rid  = item.key.replace(/[^a-z0-9]/gi, '');
         return '<div data-testid="msg-thread" style="border-bottom:1px solid var(--line);' + (isNew ? 'background:var(--blue-tint-bg);' : '') + ';color:var(--on-card)">'
-          + '<div onclick="msgOpen(&quot;' + t.key + '&quot;)" style="cursor:pointer;padding:11px 14px;display:flex;gap:10px;align-items:baseline">'
+          + '<div onclick="msgOpen(&quot;' + item.key + '&quot;)" style="cursor:pointer;padding:11px 14px;display:flex;gap:10px;align-items:baseline">'
           +   '<span style="width:8px;flex:none">' + (isNew ? '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--blue-2);color:var(--on-accent)"></span>' : '') + '</span>'
           +   '<div style="flex:1;min-width:0">'
           +     '<div style="display:flex;gap:8px;align-items:baseline">'
@@ -179,15 +179,15 @@ function messagesScreen(){
           /* ⚠️ THE FULL COUNT ONCE IT IS KNOWN. The inbox only returns unread-or-kept, so this said "3 msgs" over
              a conversation that turned out to hold 5 — a number that disagreed with the thread it labelled the
              moment you opened it. Once the thread is fetched, its own length is the truthful one. */
-          +       (function(){ var n = t.msgs.length;
+          +       (function(){ var n = item.msgs.length;
                     return n > 1 ? '<span style="font-size:var(--fs-1);color:var(--grey);flex:none">' + n + ' msgs</span>' : ''; })()
           +       '<span style="font-size:var(--fs-1);color:var(--grey);flex:none">' + esc(msgWhen(m.created_at)) + '</span>'
           +     '</div>'
           +     '<div style="font-size:var(--fs-2);color:var(--ink-2,#41474e);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'
           +       '<b style="font-weight:600">' + esc(m.sender_display_name || '—') + ':</b> ' + esc(m.message_text || '') + '</div>'
           +   '</div>'
-          +   '<span data-testid="msg-keep" onclick="msgKeep(&quot;' + t.key + '&quot;,event)" title="' + (t.kept ? 'Kept here — click to release' : 'Keep this conversation in the tab') + '"'
-          +     ' style="flex:none;cursor:pointer;font-size:var(--fs-3);opacity:' + (t.kept ? '1' : '.35') + '">📌</span>'
+          +   '<span data-testid="msg-keep" onclick="msgKeep(&quot;' + item.key + '&quot;,event)" title="' + (item.kept ? 'Kept here — click to release' : 'Keep this conversation in the tab') + '"'
+          +     ' style="flex:none;cursor:pointer;font-size:var(--fs-3);opacity:' + (item.kept ? '1' : '.35') + '">📌</span>'
           + '</div>'
           + (open ? '<div style="padding:0 14px 13px 32px">'
               /**
@@ -199,9 +199,9 @@ function messagesScreen(){
                * on the screen from where the eye starts.
                */
               + '<div style="display:flex;gap:10px;align-items:center;padding:2px 0 8px;border-bottom:1px solid var(--line-soft,#f0efec);margin-bottom:6px">'
-              +   (t.line_id ? '<span data-testid="msg-open-line" onclick="rplOpenLine(&quot;' + t.chit_id + '&quot;,&quot;' + t.line_id + '&quot;)"'
+              +   (item.line_id ? '<span data-testid="msg-open-line" onclick="rplOpenLine(&quot;' + item.chit_id + '&quot;,&quot;' + item.line_id + '&quot;)"'
                     + ' style="cursor:pointer;font-size:var(--fs-2);color:var(--blue);font-weight:700">' + tx('↗ Open the line') + '</span>' : '')
-              +   '<span data-testid="msg-open-chit" onclick="rplOpenChit(&quot;' + t.chit_id + '&quot;)" style="cursor:pointer;font-size:var(--fs-2);color:var(--blue)">↗ Open the '
+              +   '<span data-testid="msg-open-chit" onclick="rplOpenChit(&quot;' + item.chit_id + '&quot;)" style="cursor:pointer;font-size:var(--fs-2);color:var(--blue)">↗ Open the '
               +     ((RPLTRACK[m.track] || {}).label || 'order').toLowerCase() + '</span>'
               /* ⚠️ NO SECOND COUNT HERE. This said "2 in this conversation" beside a row reading "3 msgs" — two
                  numbers for one fact, from two different sources, disagreeing in plain sight. The row already
@@ -218,7 +218,7 @@ function messagesScreen(){
                */
               /* ⭐ R02 — the reply box AND the conversation are CBThread (app/rail-thread.js): the line's external thread, composer on top,
                  newest first (Athi, 2026-08-15), mounted by msgPaint after the paint. The reply carries line_id exactly as before. */
-              + '<div data-rt="' + esc(JSON.stringify({ chit_id: t.chit_id, line_id: t.line_id || null, channel: 'external', party: (m.sender_display_name || ''), ids: { text: 'msg-reply', send: 'msg-send' } })) + '" data-testid="rt-reply"></div>'
+              + '<div data-rt="' + esc(JSON.stringify({ chit_id: item.chit_id, line_id: item.line_id || null, channel: 'external', party: (m.sender_display_name || ''), ids: { text: 'msg-reply', send: 'msg-send' } })) + '" data-testid="rt-reply"></div>'
               + '</div>' : '')
           + '</div>';
       }).join('');
@@ -235,12 +235,12 @@ function messagesScreen(){
        ⚠️ THE COUNTS ARE ON THE CHIPS. A filter that does not say how much is behind it makes you click it to find
        out, and clicking to discover there is nothing there is the interaction people remember. */
     + '<div style="display:flex;gap:7px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--line-soft,#eee);flex-wrap:wrap">'
-    +   ['', 'order', 'task'].map(function(k){
-          var on = RPL.track === k;
-          var n = k ? (RPL.data || []).filter(function(m){ return m.track === k; }).length : (RPL.data || []).length;
-          var lbl = k ? ((RPLTRACK[k].icon) + ' ' + RPLTRACK[k].label) : 'All';
-          return '<span data-testid="msg-track-' + (k || 'all') + '" onclick="rplTrack(&quot;' + k + '&quot;)"'
-            + ' title="' + esc(k ? RPLTRACK[k].hint : 'every conversation') + '"'
+    +   ['', 'order', 'task'].map(function(item){
+          var on = RPL.track === item;
+          var n = item ? (RPL.data || []).filter(function(m){ return m.track === item; }).length : (RPL.data || []).length;
+          var lbl = item ? ((RPLTRACK[item].icon) + ' ' + RPLTRACK[item].label) : 'All';
+          return '<span data-testid="msg-track-' + (item || 'all') + '" onclick="rplTrack(&quot;' + item + '&quot;)"'
+            + ' title="' + esc(item ? RPLTRACK[item].hint : 'every conversation') + '"'
             + ' style="cursor:pointer;font-size:var(--fs-2);border:1px solid ' + (on ? 'var(--blue)' : 'var(--line)') + ';'
             + (on ? 'background:var(--blue);color:var(--on-accent);font-weight:700;' : '') + 'border-radius:9px;padding:3px 10px">'
             + lbl + (n ? ' <span style="opacity:.7">' + n + '</span>' : '') + '</span>';
@@ -276,7 +276,7 @@ async function rplOpenLine(chit_id, line_id){
     if (typeof ensureCap === 'function') await ensureCap('worklist');
     if (typeof WL !== 'undefined' && WL.data === null && typeof wlLoad === 'function') await wlLoad();
     var found = (typeof wlRows === 'function' && typeof WL !== 'undefined')
-      ? wlRows(WL.data || {}).filter(function(r){ return r.line_id === line_id; })[0] : null;
+      ? wlRows(WL.data || {}).filter(function(item){ return item.line_id === line_id; })[0] : null;
     if (found && typeof wlLine === 'function') { await wlLine(line_id); return; }
     toast('That line is not on the work list any more — opening the order');
   } catch (e) { /* fall through to the order */ }
