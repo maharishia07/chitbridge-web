@@ -358,7 +358,7 @@
   function rowById(ns, id) {
     var s = C[ns]; if (!s) return null;
     var all = rowsOf(s.cat);
-    for (var i = 0; i < all.length; i++) if (all[i].type === 'line' && all[i].item_id === id) return all[i];
+    for (var index = 0; index < all.length; index++) if (all[index].type === 'line' && all[index].item_id === id) return all[index];
     return null;
   }
 
@@ -406,7 +406,7 @@
   function lines(ns) { var s = C[ns]; return s ? Object.keys(s.sel).length : 0; }
   function units(ns) {
     var s = C[ns]; if (!s) return 0;
-    return Object.keys(s.sel).reduce(function (n, k) { return n + (Number(s.sel[k]) || 0); }, 0);
+    return Object.keys(s.sel).reduce(function (total, item) { return total + (Number(s.sel[item]) || 0); }, 0);
   }
   function qtyOf(ns, id) { var s = C[ns]; return (s && Number(s.sel[id])) || 0; }
   /**
@@ -461,7 +461,7 @@
          simply does not fire here, which is honest. */
       /* decision 3 (industry standard, 2026-09-06 20:0x): the preview, like the row, carries the line's own offers only */
       var off = Math.min(base * q, roundMoney_((p && p.off) || 0));
-      if (off > 0) { var labels = (ev.adjustments || []).filter(function (a) { return a.scope === 'line' && Math.abs(Number(a.amount) || 0) > 0; }).map(function (a) { return a.label || a.kind; }); var uniq = labels.filter(function (x, i) { return x && labels.indexOf(x) === i; });
+      if (off > 0) { var labels = (ev.adjustments || []).filter(function (item) { return item.scope === 'line' && Math.abs(Number(item.amount) || 0) > 0; }).map(function (item) { return item.label || item.kind; }); var uniq = labels.filter(function (x, index) { return x && labels.indexOf(x) === index; });
         return { unit: Math.max(0, roundMoney_(base - off / q)), off: off, label: uniq.join(' + ') || (p && p.label) || 'offer' }; }
     } catch (e) {}
     return null;
@@ -515,12 +515,12 @@
   function total(ns) {
     var s = C[ns]; if (!s) return { amount: 0, partial: false, offered: false };
     var amount = 0, partial = false, offered = false;
-    rowsOf(s.cat).forEach(function (r) {
-      if (r.type !== 'line' || !s.sel[r.item_id]) return;
-      var u = unitPrice(ns, r);
+    rowsOf(s.cat).forEach(function (item) {
+      if (item.type !== 'line' || !s.sel[item.item_id]) return;
+      var u = unitPrice(ns, item);
       if (u.offered) offered = true;
       if (!isFinite(u.amount)) { partial = true; return; }
-      amount += u.amount * (Number(s.sel[r.item_id]) || 0);
+      amount += u.amount * (Number(s.sel[item.item_id]) || 0);
     });
     /* ⭐ A BASKET-LEVEL OFFER IS PART OF THE TOTAL (Athi, 2026-09-06: "cart also didn't consider the offer" — the bar and the pill said
        ₹575.90 while the block said ₹510.80 after a cart-scope 10%). The rows carry line offers; the order-level ones are evaluated here
@@ -553,35 +553,35 @@
     var s = C[ns]; if (!s || !s.cat) return null;
     var offs = Array.isArray(s.cat.offers) ? s.cat.offers : [];
     var EL = engineLines(ns);
-    var key = EL.map(function (l) { return l.key + ':' + l.qty + ':' + l.unitPrice + ':' + (l.tax && l.tax.rate != null ? l.tax.rate : '-'); }).join(',')
-            + '|' + offs.map(function (o) { return o.id; }).join(',') + '|' + viewerGroups(s.cat).join(',');
+    var key = EL.map(function (item) { return item.key + ':' + item.qty + ':' + item.unitPrice + ':' + (item.tax && item.tax.rate != null ? item.tax.rate : '-'); }).join(',')
+            + '|' + offs.map(function (item) { return item.id; }).join(',') + '|' + viewerGroups(s.cat).join(',');
     if (s._M && s._M.key === key) return s._M.M;
     var M = money(EL, { offers: offs, ctx: { now: new Date(), currency: currencyOf(ns), customer_groups: viewerGroups(s.cat), money: function (n) { return fmt(ns, n); } }, taxOf: function (id, l) { return (l && l.tax) || null; } });
     M.per = (offs.length && root.CBOffers && root.CBOffers.perLine) ? (root.CBOffers.perLine(M.ev, EL) || {}) : {};
     M.lines = EL;
     /* ⭐ THE ROW'S WHOLE SHARE (Athi, 2026-09-06 18:50: "it has to reduce both"): the line's own offers plus its share of every basket-level
        offer, split by list value (the rule money() uses for tax and the send path uses to record the line) — and every label, in order */
-    var adj = (M.ev && M.ev.adjustments) || [], gross = Number(M.gross) || 0;
-    var cartAdj = adj.filter(function (a) { return a.scope !== 'line' && a.scope !== 'note' && Math.abs(Number(a.amount) || 0) > 0; });
-    var orderOff = cartAdj.reduce(function (t, a) { return t + Math.abs(Number(a.amount) || 0); }, 0);
+    var list = (M.ev && M.ev.adjustments) || [], gross = Number(M.gross) || 0;
+    var cartAdj = list.filter(function (item) { return item.scope !== 'line' && item.scope !== 'note' && Math.abs(Number(item.amount) || 0) > 0; });
+    var orderOff = cartAdj.reduce(function (total, item) { return total + Math.abs(Number(item.amount) || 0); }, 0);
     M.rowOff = {};
-    EL.forEach(function (l) {
-      var g = (Number(l.unitPrice) || 0) * (Number(l.qty) || 0), p = M.per[String(l.key)] || {}, lineOff = Number(p.off) || 0;
+    EL.forEach(function (item) {
+      var g = (Number(item.unitPrice) || 0) * (Number(item.qty) || 0), p = M.per[String(item.key)] || {}, lineOff = Number(p.off) || 0;
       /* DECISION 3 (Athi, 2026-09-06 20:0x, "industry standard"): the row shows its OWN line offers; a basket-level offer lives in the money block */
       var cartShare = 0;
-      var mine = adj.filter(function (a) { return a.scope === 'line' && String(a.target) === String(l.key) && Math.abs(Number(a.amount) || 0) > 0; })
+      var mine = list.filter(function (a) { return a.scope === 'line' && String(a.target) === String(item.key) && Math.abs(Number(a.amount) || 0) > 0; })
         .concat(cartShare > 0 ? cartAdj : []);
       var labels = mine.map(function (a) { return a.label || a.kind; });
-      var uniq = labels.filter(function (x, i) { return x && labels.indexOf(x) === i; });
-      var ids = mine.map(function (a) { return a.offer_id; }).filter(function (x, i, arr) { return x != null && arr.indexOf(x) === i; });
-      if (lineOff + cartShare > 0) M.rowOff[String(l.key)] = { off: roundMoney_(lineOff + cartShare), line_off: lineOff, cart_off: cartShare, label: uniq.join(' + '), ids: ids };
+      var uniq = labels.filter(function (x, index) { return x && labels.indexOf(x) === index; });
+      var ids = mine.map(function (a) { return a.offer_id; }).filter(function (x, index, arr) { return x != null && arr.indexOf(x) === index; });
+      if (lineOff + cartShare > 0) M.rowOff[String(item.key)] = { off: roundMoney_(lineOff + cartShare), line_off: lineOff, cart_off: cartShare, label: uniq.join(' + '), ids: ids };
     });
     s._M = { key: key, M: M }; return M;
   }
   /** What is in the cart, in the shape a chit line needs. Reads the WHOLE catalogue, never the filtered view. */
   function selected(ns) {
     var s = C[ns]; if (!s) return [];
-    return rowsOf(s.cat).filter(function (r) { return r.type === 'line' && s.sel[r.item_id]; })
+    return rowsOf(s.cat).filter(function (item) { return item.type === 'line' && s.sel[item.item_id]; })
       .map(function (r) {
         var d = dataOf(r);
         var o = declOf(ns, r), u = unitPrice(ns, r), q = Number(s.sel[r.item_id]) || 1;
@@ -669,14 +669,14 @@
        later, on the same async trip as the offers. A captured `null` would stay null for the life of the cart
        and every chip would read as a raw id. A getter is read at paint time, so late is fine. */
     if (typeof m === 'function') { try { m = m(); } catch (e) { m = null; } }
-    if (m && m.length) { for (var i = 0; i < m.length; i++) if (String(m[i].id) === String(id)) return m[i].name; }
+    if (m && m.length) { for (var index = 0; index < m.length; index++) if (String(m[index].id) === String(id)) return m[index].name; }
     var carried = r ? carriedAt() : null;
     return carried ? carried : String(id);
   }
   /** Label without a row to hand — the empty-state message. Reads the tally so it says the same word the chip does. */
   function catgName(ns, id) {
     var t = catgTally(ns);
-    for (var i = 0; i < t.length; i++) if (String(t[i].id) === String(id)) return t[i].name;
+    for (var index = 0; index < t.length; index++) if (String(t[index].id) === String(id)) return t[index].name;
     return String(id);
   }
   /** Counts come from the CATALOGUE, never from the filtered rows — a chip that recounts itself as you filter is
@@ -684,20 +684,20 @@
   function catgTally(ns) {
     var s = C[ns]; if (!s) return [];
     var all = rowsOf(s.cat), seen = {}, label = {}, order = [], none = 0;
-    for (var i = 0; i < all.length; i++) {
-      if (all[i].type === 'product') continue;
-      var cs = catgsOf(all[i]);
+    for (var index = 0; index < all.length; index++) {
+      if (all[index].type === 'product') continue;
+      var cs = catgsOf(all[index]);
       if (!cs.length) { none++; continue; }
       /* ⚠️ One row, several counts — a product in two categories is counted in both. The chip totals therefore
          exceed the catalogue size, and that is the honest arithmetic for memberships. */
       for (var j = 0; j < cs.length; j++) {
         var c = cs[j];
-        if (seen[c] === undefined) { seen[c] = 0; order.push(c); label[c] = catgLabel(ns, all[i], c); }
+        if (seen[c] === undefined) { seen[c] = 0; order.push(c); label[c] = catgLabel(ns, all[index], c); }
         seen[c]++;
       }
     }
-    var out = order.map(function (c) { return { id: c, name: label[c], n: seen[c] }; });
-    out.sort(function (a, b) { return a.name.localeCompare(b.name); });
+    var out = order.map(function (item) { return { id: item, name: label[item], n: seen[item] }; });
+    out.sort(function (first, second) { return first.name.localeCompare(second.name); });
     /* ⭐ Athi, 2026-08-16: *"uncategorised chip when count above zero"*. Below zero it is not a category anyone
        needs to be told about; above zero it is the only chip that tells you there is tidying to do. It sorts LAST
        because it is a gap in the data, not a section of the shelf. */
@@ -713,9 +713,9 @@
    *  caret inside it — with it, which is the same trap documented on pickerHTML. */
   function catgsHTML(ns) {
     var s = C[ns]; if (!s) return '';
-    var t = catgTally(ns);
+    var list = catgTally(ns);
     /* One category is not a choice, and zero is not a strip. Nothing on screen until there is something to pick. */
-    if (t.length < 2) return '';
+    if (list.length < 2) return '';
     var a = accent(ns), sf = soft(ns);
     var chip = function (id, label, n, on) {
       return '<button type="button" class="cbpick-chip' + (on ? ' on' : '') + '"'
@@ -725,7 +725,7 @@
         + esc(label) + (n == null ? '' : ' <span class="cbpick-chipn">' + n + '</span>') + '</button>';
     };
     return chip('', 'All', null, !s.catg)
-      + t.map(function (c) { return chip(c.id, c.name, c.n, s.catg === c.id); }).join('');
+      + list.map(function (item) { return chip(item.id, item.name, item.n, s.catg === item.id); }).join('');
   }
   function paintCatgs(ns) { var el = doc(opt(ns, 'listEl') + '_catg'); if (el) el.innerHTML = catgsHTML(ns); }
 
@@ -752,8 +752,8 @@
     if (onlyOff && !isOff) onlyOff = false;
     if (!q && !g && !onlyOff) return all;                 // the list is ALWAYS the full list — the cart is a popup, not a filter
     var out = [], pend = null, took = false;
-    for (var i = 0; i < all.length; i++) {
-      var r = all[i];
+    for (var index = 0; index < all.length; index++) {
+      var r = all[index];
       if (r.type === 'product') { pend = r; took = false; continue; }
       if (onlyOff && !isOff(r)) continue;
       if (g) {
@@ -1090,8 +1090,8 @@
   }
   function listHTML(ns) {
     var s = C[ns]; if (!s) return '';
-    var rs = rows(ns), a = accent(ns);
-    if (!rs.length) {
+    var list = rows(ns), a = accent(ns);
+    if (!list.length) {
       /* ⚠️ SAY WHICH FILTER EMPTIED IT. "Nothing matches that" beside an active category chip sends someone to
          retype a search term that was never the problem. */
       var why = (s.q && s.catg) ? 'Nothing in ' + esc(catgName(ns, s.catg)) + ' matches that.'
@@ -1103,24 +1103,24 @@
             + ' onclick="CBCart.category(\'' + esc(ns) + '\',\'\')">' + tx('Show everything') + '</button></div>' : '')
         + '</div>';
     }
-    return rs.map(function (r, i) {
-      if (r.type === 'product') {
+    return list.map(function (item, index) {
+      if (item.type === 'product') {
         var ids = [];
-        for (var k = i + 1; k < rs.length && rs[k].type === 'line' && rs[k].gid === r.gid; k++) ids.push(rs[k].item_id);
+        for (var k = index + 1; k < list.length && list[k].type === 'line' && list[k].gid === item.gid; k++) ids.push(list[k].item_id);
         var inCart = ids.filter(function (id) { return s.sel[id]; }).length;
         return '<div style="padding:10px 2px 3px;display:flex;align-items:center;gap:8px">'
-          + '<b style="font-size:var(--fs-3)">' + esc(r.label) + '</b>'
-          + '<span style="font-size:var(--fs-1);color:var(--grey-2)">' + r.count + ' options</span>'
+          + '<b style="font-size:var(--fs-3)">' + esc(item.label) + '</b>'
+          + '<span style="font-size:var(--fs-1);color:var(--grey-2)">' + item.count + ' options</span>'
           + (inCart ? '<span style="font-size:var(--fs-1);color:' + a + ';font-weight:700">' + inCart + ' in cart</span>' : '')
-          + '<span onclick="CBCart.group(\'' + esc(ns) + '\',' + i + ')" style="cursor:pointer;font-size:var(--fs-1);color:' + a + '">'
+          + '<span onclick="CBCart.group(\'' + esc(ns) + '\',' + index + ')" style="cursor:pointer;font-size:var(--fs-1);color:' + a + '">'
           + (inCart === ids.length && ids.length ? 'clear all' : 'add all') + '</span>'
-          + (r.options ? '<span style="font-size:var(--fs-1);color:var(--grey-2);margin-inline-start:auto">' + esc(r.options) + '</span>' : '')
+          + (item.options ? '<span style="font-size:var(--fs-1);color:var(--grey-2);margin-inline-start:auto">' + esc(item.options) + '</span>' : '')
           + '</div>';
       }
-      var d = dataOf(r), q = qtyOf(ns, r.item_id), u = unitPrice(ns, r), p = u.amount;
-      return '<div style="display:flex;align-items:center;gap:10px;padding:8px 2px 8px ' + (r.variant ? '20px' : '2px')
+      var d = dataOf(item), q = qtyOf(ns, item.item_id), u = unitPrice(ns, item), p = u.amount;
+      return '<div style="display:flex;align-items:center;gap:10px;padding:8px 2px 8px ' + (item.variant ? '20px' : '2px')
         + ';border-bottom:1px dashed var(--line);' + (q ? 'background:' + soft(ns) : '') + '">'
-        + '<span style="flex:1"><b style="font-size:var(--fs-3)">' + esc(r.variant || d.name || d.product || 'item') + '</b>'
+        + '<span style="flex:1"><b style="font-size:var(--fs-3)">' + esc(item.variant || d.name || d.product || 'item') + '</b>'
         + (d.unit ? ' <span style="color:var(--grey-2);font-size:var(--fs-1)">' + esc(d.unit) + '</span>' : '')
         + '<div style="font-size:var(--fs-2);color:var(--grey-2);margin-top:1px">'
         // An offer REPLACES the asking price in the maths, so it must replace it on screen too — with the asking
@@ -1129,12 +1129,12 @@
             ? '<span style="text-decoration:line-through;opacity:.55">' + esc(fmt(ns, u.asking)) + '</span> '
               + '<b style="color:' + accent(ns) + ';font-size:var(--fs-3)">' + esc(fmt(ns, p)) + '</b> '
               + '<span data-testid="cart-offer-pill" style="display:inline-block;font-size:var(--fs-1);font-weight:700;color:#fff;background:' + accent(ns) + ';border-radius:9px;padding:1px 7px;margin-inline-start:2px">'
-              + esc(((s.offerLabels || {})[r.item_id]) || 'your offer') + (isFinite(u.asking) && u.asking > p ? ' · save ' + esc(fmt(ns, u.asking - p)) : '') + '</span>'
+              + esc(((s.offerLabels || {})[item.item_id]) || 'your offer') + (isFinite(u.asking) && u.asking > p ? ' · save ' + esc(fmt(ns, u.asking - p)) : '') + '</span>'
             : (isFinite(p) ? esc(fmt(ns, p)) : 'no price'))
         // The line's own total, only once there is a quantity to multiply by — a price × 1 restated is noise.
         + (q && isFinite(p) ? ' <span style="color:var(--ink-2);font-weight:800">· ' + esc(fmt(ns, p * q)) + '</span>' : '')
-        + hintHTML(ns, r) + availHTML(ns, r)
-        + '</div></span>' + stepperHTML(ns, r.item_id, q) + '</div>' + rowExtra(ns, r);
+        + hintHTML(ns, item) + availHTML(ns, item)
+        + '</div></span>' + stepperHTML(ns, item.item_id, q) + '</div>' + rowExtra(ns, item);
     }).join('');
   }
 
@@ -1150,26 +1150,26 @@
    */
   function popupHTML(ns) {
     var s = C[ns]; if (!s) return '';
-    var sel = selected(ns), T = total(ns), a = accent(ns);
+    var list = selected(ns), T = total(ns), a = accent(ns);
     var btn = 'flex:1;height:40px;border-radius:9px;font-size:var(--fs-3);font-weight:700;cursor:pointer;border:1.5px solid ' + a;
     return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">'
       + '<b style="font-size:var(--fs-4);flex:1">🛒 ' + esc(opt(ns, 'cartTitle', 'Your cart')) + '</b>'
       + '<button onclick="CBCart.close(\'' + esc(ns) + '\')" aria-label="Close" title="Close" style="border:0;background:none;font-size:var(--fs-5);color:#8a949c;cursor:pointer">×</button></div>'
       + '<div style="font-size:var(--fs-2);color:var(--grey-2);margin-bottom:10px">'
       + (opt(ns, 'from') ? 'from <b>' + esc(opt(ns, 'from')) + '</b> · ' : '')
-      + sel.length + ' line' + (sel.length === 1 ? '' : 's') + ' · ' + units(ns) + (units(ns) === 1 ? ' unit' : ' units') + '</div>'
-      + (sel.length
-        ? sel.map(function (l) {
-            var p = l.unit_price;
+      + list.length + ' line' + (list.length === 1 ? '' : 's') + ' · ' + units(ns) + (units(ns) === 1 ? ' unit' : ' units') + '</div>'
+      + (list.length
+        ? list.map(function (item) {
+            var p = item.unit_price;
             return '<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px dashed var(--line)">'
-              + '<span style="flex:1"><b style="font-size:var(--fs-3)">' + esc(l.name) + '</b>'
-              + ' <span style="color:var(--grey-2);font-size:var(--fs-1)">' + esc(l.unit) + '</span>'
+              + '<span style="flex:1"><b style="font-size:var(--fs-3)">' + esc(item.name) + '</b>'
+              + ' <span style="color:var(--grey-2);font-size:var(--fs-1)">' + esc(item.unit) + '</span>'
               + '<div style="font-size:var(--fs-2);color:var(--grey-2)">'
-              + (l.offered ? '<span style="text-decoration:line-through;opacity:.55">' + esc(fmt(ns, l.asking_price)) + '</span> ' : '')
-              + (isFinite(p) ? esc(fmt(ns, p)) : 'no price') + (l.offered ? ' <span style="font-size:var(--fs-1)">your offer</span>' : '')
-              + (isFinite(p) ? ' <span style="color:var(--ink-2);font-weight:800">· ' + esc(fmt(ns, p * l.qty)) + '</span>' : '') + '</div></span>'
-              + stepperHTML(ns, l.item_id, l.qty)
-              + '<span onclick="CBCart.setQty(\'' + esc(ns) + '\',\'' + esc(l.item_id) + '\',0)" title="remove"'
+              + (item.offered ? '<span style="text-decoration:line-through;opacity:.55">' + esc(fmt(ns, item.asking_price)) + '</span> ' : '')
+              + (isFinite(p) ? esc(fmt(ns, p)) : 'no price') + (item.offered ? ' <span style="font-size:var(--fs-1)">your offer</span>' : '')
+              + (isFinite(p) ? ' <span style="color:var(--ink-2);font-weight:800">· ' + esc(fmt(ns, p * item.qty)) + '</span>' : '') + '</div></span>'
+              + stepperHTML(ns, item.item_id, item.qty)
+              + '<span onclick="CBCart.setQty(\'' + esc(ns) + '\',\'' + esc(item.item_id) + '\',0)" title="remove"'
               + ' style="cursor:pointer;color:var(--grey-4);font-weight:800;padding:0 3px">×</span></div>';
           }).join('')
           /* ⭐ the same money rows the storefront shows — offers → After offers → GST per rate → Total incl. tax — whenever the
@@ -1177,7 +1177,7 @@
           + (function () {
               try {
                 var st = C[ns], EL = engineLines(ns);
-                var hasOffers = !!(st && st.cat && Array.isArray(st.cat.offers) && st.cat.offers.length), hasTax = EL.some(function (l) { return l.tax && l.tax.rate != null; });
+                var hasOffers = !!(st && st.cat && Array.isArray(st.cat.offers) && st.cat.offers.length), hasTax = EL.some(function (item) { return item.tax && item.tax.rate != null; });
                 if (!T.offered && !T.partial && (hasOffers || hasTax)) {
                   var M = compute(ns);;
                   return '<div data-testid="cart-money" style="padding:11px 2px;border-top:2px solid var(--line);font-size:var(--fs-2)">' + moneyRowsHTML(M, { taxTestid: 'cart-tax', totalTestid: 'cart-total' }) + '</div>';
@@ -1192,8 +1192,8 @@
         : '<div style="padding:26px 8px;color:var(--grey-2);font-size:var(--fs-3);text-align:center">Nothing in the cart yet.</div>')
       + '<div style="display:flex;gap:9px;margin-top:15px">'
       + '<button style="' + btn + ';background:var(--card);color:' + a + '" onclick="CBCart.close(\'' + esc(ns) + '\')">'
-      + (sel.length ? 'Keep shopping' : 'Browse the catalogue') + '</button>'
-      + (sel.length ? '<button data-testid="cart-checkout" style="' + btn + ';background:' + a + ';color:var(--on-card)"'
+      + (list.length ? 'Keep shopping' : 'Browse the catalogue') + '</button>'
+      + (list.length ? '<button data-testid="cart-checkout" style="' + btn + ';background:' + a + ';color:var(--on-card)"'
           + ' onclick="CBCart.checkout(\'' + esc(ns) + '\')">' + esc(opt(ns, 'checkoutLabel', 'Check out <span class=arw>→</span>')) + '</button>' : '')
       + '</div>';
   }
@@ -1286,7 +1286,7 @@
    *  a screen names summaryEl and the cart paints its money block there on every change — the same reviewHTML the Review step prints. */
   function paintSummary(ns) {
     var s = C[ns]; if (!s) return;
-    var tid = opt(ns, 'summaryTestid', 'cart-side-total'), n = lines(ns), h = handleOf(ns);
+    var text = opt(ns, 'summaryTestid', 'cart-side-total'), n = lines(ns), h = handleOf(ns);
     /* ⭐ FLOATING (Athi, 2026-09-06 09:47: "bring it as a floating overlay with a close button rather than static — it occupies space"):
        a small card above the footer, near Check out, that appears once something is in the basket and closes with ✕. Draggable where
        the app's movable-panel primitive is present. The same reviewHTML as the Review step; nothing is reserved on the page. */
@@ -1294,7 +1294,7 @@
       var id = 'cbcart_sum_' + ns, box = doc(id);
       if (!n) { if (box) box.hidden = true; return; }
       if (!box) {
-        box = document.createElement('div'); box.id = id; box.className = 'cbcart-float'; box.setAttribute('data-testid', tid.replace(/-total$/, '') + '-float');
+        box = document.createElement('div'); box.id = id; box.className = 'cbcart-float'; box.setAttribute('data-testid', text.replace(/-total$/, '') + '-float');
         document.body.appendChild(box);
         try { if (typeof root.makeMovable === 'function') root.makeMovable(box, { key: 'cb_cart_float', minW: 260, minH: 120 }); } catch (e) {}
       }
@@ -1305,20 +1305,20 @@
         if (s.sumMin) {
           var T = total(ns);
           box.className = 'cbcart-float cbcart-float-min';
-          box.innerHTML = '<button type="button" class="cbcart-float-pill" data-testid="' + esc(tid.replace(/-total$/, '')) + '-pill" onclick="CBCart.closeSummary(\'' + esc(ns) + '\', false)" title="' + esc('open the summary') + '">🧾 '
+          box.innerHTML = '<button type="button" class="cbcart-float-pill" data-testid="' + esc(text.replace(/-total$/, '')) + '-pill" onclick="CBCart.closeSummary(\'' + esc(ns) + '\', false)" title="' + esc('open the summary') + '">🧾 '
             + esc(opt(ns, 'cartTitle', 'Your basket')) + ' · ' + esc(String(n)) + ' · <b>' + esc(fmt(ns, T.amount)) + '</b> ▾</button>';
           return;
         }
         box.className = 'cbcart-float';
         box.innerHTML = '<div class="cbcart-float-hd"><span>' + esc(opt(ns, 'cartTitle', 'Your basket')) + ' · ' + esc(String(n)) + '</span>'
           + '<button type="button" class="cbcart-float-x" aria-label="minimise" title="' + esc('minimise') + '" onclick="CBCart.closeSummary(\'' + esc(ns) + '\', true)">—</button></div>'
-          + h.reviewHTML({ totalTestid: tid });
+          + h.reviewHTML({ totalTestid: text });
       } catch (e) {}
       return;
     }
     var el = doc(opt(ns, 'summaryEl')); if (!el) return;
     try {
-      el.innerHTML = n ? h.reviewHTML({ totalTestid: tid })
+      el.innerHTML = n ? h.reviewHTML({ totalTestid: text })
         : '<div class="cbcart-side-empty">' + esc(opt(ns, 'emptyHint', 'Press + on what you want')) + '</div>';
     } catch (e) {}
   }
@@ -1359,15 +1359,15 @@
   function ensureHost() {
     ensureChipCss();
     if (typeof document === 'undefined' || document.getElementById('cbcart_ov')) return;
-    var d = document.createElement('div');
-    d.id = 'cbcart_ov'; d.className = 'cbcart-ov';
-    d.onclick = function (e) { if (e.target === d) { for (var k in C) if (C[k] && C[k].open) close(k); } };
-    d.innerHTML = '<div class="cbcart-ovc" id="cbcart_ovc"></div>';
+    var node = document.createElement('div');
+    node.id = 'cbcart_ov'; node.className = 'cbcart-ov';
+    node.onclick = function (e) { if (e.target === node) { for (var k in C) if (C[k] && C[k].open) close(k); } };
+    node.innerHTML = '<div class="cbcart-ovc" id="cbcart_ovc"></div>';
     // ⚠️ `|| documentElement`. create() now runs this, and create() is called from inside a catalogue load whose
     // .catch() reports any exception as "could not read their catalogue" — so a bare document.body.appendChild
     // would turn a missing <body> into a message blaming the supplier's catalogue. There is always somewhere to
     // put it; failing loudly in the wrong words is worse than either failing or working.
-    (document.body || document.documentElement).appendChild(d);
+    (document.body || document.documentElement).appendChild(node);
   }
 
   /**
@@ -1547,7 +1547,7 @@
         o = o || {};
         try {
           var s = C[ns], EL = engineLines(ns); if (!s) return null;
-          var hasOffers = !!(s.cat && Array.isArray(s.cat.offers) && s.cat.offers.length), hasTax = EL.some(function (l) { return l.tax && l.tax.rate != null; });
+          var hasOffers = !!(s.cat && Array.isArray(s.cat.offers) && s.cat.offers.length), hasTax = EL.some(function (item) { return item.tax && item.tax.rate != null; });
           if (!hasOffers && !hasTax) return null;
           var M = compute(ns); if (!M) return null;
           return { html: moneyRowsHTML(M, { taxTestid: o.taxTestid || 'cart-tax', totalTestid: o.totalTestid || 'cart-total' }), grand: M.grand, model: M };
@@ -1562,12 +1562,12 @@
        */
       reviewHTML: function (o) {
         o = o || {};
-        var T = total(ns), tid = o.totalTestid || 'cart-total';
-        var MR = (!T.offered && !T.partial) ? h.moneyRows({ totalTestid: tid, taxTestid: o.taxTestid || 'cart-tax' }) : null;
-        if (MR) return '<div data-testid="' + esc(tid.replace(/-total$/, '')) + '-money" style="margin:6px 12px 8px">' + MR.html + '</div>' + moneyWhyHTML(ns)   /* the frame is the block's own (cbcart-money); the outlet places it */;
+        var T = total(ns), text = o.totalTestid || 'cart-total';
+        var MR = (!T.offered && !T.partial) ? h.moneyRows({ totalTestid: text, taxTestid: o.taxTestid || 'cart-tax' }) : null;
+        if (MR) return '<div data-testid="' + esc(text.replace(/-total$/, '')) + '-money" style="margin:6px 12px 8px">' + MR.html + '</div>' + moneyWhyHTML(ns)   /* the frame is the block's own (cbcart-money); the outlet places it */;
         return '<div style="display:flex;padding:10px 12px;border-top:2px solid var(--line);font-size:var(--fs-3);font-weight:800">'
           + '<span style="flex:1">' + (T.offered ? 'Total at your offer' : 'Total') + '</span>'
-          + '<span data-testid="' + esc(tid) + '">' + (T.amount ? esc(fmt(ns, T.amount)) + (T.partial ? '+' : '') : '—') + '</span></div>'
+          + '<span data-testid="' + esc(text) + '">' + (T.amount ? esc(fmt(ns, T.amount)) + (T.partial ? '+' : '') : '—') + '</span></div>'
           + (T.partial ? '<div style="color:var(--warn-2);font-size:var(--fs-1);padding:0 12px 8px">Some lines have no price — the total covers only the priced ones.</div>' : '')
           + moneyWhyHTML(ns);
       },
@@ -1635,17 +1635,17 @@
       load: function (incoming) {
         var s = C[ns]; if (!s || !Array.isArray(incoming)) return { placed: [], refused: [] };
         var placed = [], refused = [];
-        var all = rowsOf(s.cat).filter(function (r) { return r.type === 'line'; });
+        var all = rowsOf(s.cat).filter(function (item) { return item.type === 'line'; });
         var byId = {}, byName = {};
-        all.forEach(function (r) {
-          byId[r.item_id] = r;
-          byName[String(nameOf(r)).trim().toLowerCase()] = r;
+        all.forEach(function (item) {
+          byId[item.item_id] = item;
+          byName[String(nameOf(item)).trim().toLowerCase()] = item;
         });
-        incoming.forEach(function (ln) {
-          if (!ln) return;
-          var want = ln.qty == null ? 1 : ln.qty;
-          var match = (ln.item_id && byId[ln.item_id])
-                   || (ln.name && byName[String(ln.name).trim().toLowerCase()]);
+        incoming.forEach(function (item) {
+          if (!item) return;
+          var want = item.qty == null ? 1 : item.qty;
+          var match = (item.item_id && byId[item.item_id])
+                   || (item.name && byName[String(item.name).trim().toLowerCase()]);
           if (match) {
             put(ns, match.item_id, want);
             // The model may have refused it outright (below a minimum) or landed it on a legal value.
@@ -1654,10 +1654,10 @@
             else refused.push({ name: nameOf(match), asked: want, why: 'the catalogue refuses that quantity' });
             return;
           }
-          if (!ln.name) { refused.push({ name: null, asked: want, why: 'no name — nothing to put on a chit' }); return; }
-          var id = addAdhoc(ns, { name: ln.name, unit: ln.unit || 'unit', price: ln.price }, want);
-          if (id) placed.push({ item_id: id, name: ln.name, qty: qtyOf(ns, id), asked: want, adhoc: true });
-          else refused.push({ name: ln.name, asked: want, why: 'could not be added' });
+          if (!item.name) { refused.push({ name: null, asked: want, why: 'no name — nothing to put on a chit' }); return; }
+          var id = addAdhoc(ns, { name: item.name, unit: item.unit || 'unit', price: item.price }, want);
+          if (id) placed.push({ item_id: id, name: item.name, qty: qtyOf(ns, id), asked: want, adhoc: true });
+          else refused.push({ name: item.name, asked: want, why: 'could not be added' });
         });
         touched(ns);
         return { placed: placed, refused: refused };
@@ -1680,7 +1680,7 @@
         var next = nextCat || {};
         // Ad-hoc lines are the CALLER'S own, not the shop's — re-reading the shop's catalogue must not delete
         // something a person typed in themselves. Copied, never mutated: the payload belongs to the screen.
-        var mine = ((s.cat && s.cat.items) || []).filter(function (p) { return p && p.adhoc; });
+        var mine = ((s.cat && s.cat.items) || []).filter(function (item) { return item && item.adhoc; });
         var merged = {}; for (var k in next) merged[k] = next[k];
         if (mine.length) merged.items = (next.items || []).concat(mine);
         s.cat = merged; s.sig = sigOf(merged);
@@ -1688,14 +1688,14 @@
         // bar while selected() — which reads the catalogue — never returned it. Two facts about one cart,
         // disagreeing. Dropping it is visible on screen; a phantom in the count is not.
         var live = {};
-        rowsOf(merged).forEach(function (r) { if (r.type === 'line') live[r.item_id] = 1; });
+        rowsOf(merged).forEach(function (item) { if (item.type === 'line') live[item.item_id] = 1; });
         Object.keys(s.sel).forEach(function (id) { if (!live[id]) delete s.sel[id]; });
         touched(ns);
         return h;
       },
 
       /** Let it go. A held cart that is never released is a leak the namespaced API could not even express. */
-      destroy: function () { close(ns); try { var b = doc('cbcart_sum_' + ns); if (b) b.remove(); } catch (e) {} delete C[ns]; }
+      destroy: function () { close(ns); try { var node = doc('cbcart_sum_' + ns); if (node) node.remove(); } catch (e) {} delete C[ns]; }
     };
     /* ⚠️ The handle is kept on the state so paintList/paintBar can hand it to a `renderer` (see rendererOf).
        Everything else in this file works from `ns`; a renderer works from the handle, because a renderer is a
@@ -1732,17 +1732,17 @@
     o = o || {}; var offers = o.offers || [], ctx = o.ctx || { now: new Date(), currency: null, money: function (n) { return String(n); } };
     var taxOf = typeof o.taxOf === 'function' ? o.taxOf : function () { return null; };
     var incl = !!(o.priceIncludesTax != null ? o.priceIncludesTax : ctx.priceIncludesTax);   /* WX-O2C: the shop's shelf prices include tax */
-    var gross = lines.reduce(function (s, l) { return s + (Number(l.unitPrice) || 0) * (Number(l.qty) || 0); }, 0);
+    var gross = lines.reduce(function (total, item) { return total + (Number(item.unitPrice) || 0) * (Number(item.qty) || 0); }, 0);
     var ev = (offers.length && root.CBOffers) ? root.CBOffers.evaluate({ lines: lines, offers: offers, ctx: ctx, money: ctx.money }) : { adjustments: [], notes: [], subtotal: gross, total: gross };
     var per = (offers.length && root.CBOffers && root.CBOffers.perLine) ? (root.CBOffers.perLine(ev, lines) || {}) : {};
-    var orderOff = (ev.adjustments || []).filter(function (a) { return a.scope !== 'line' && a.scope !== 'note'; }).reduce(function (s, a) { return s + Math.abs(Number(a.amount) || 0); }, 0);
+    var orderOff = (ev.adjustments || []).filter(function (item) { return item.scope !== 'line' && item.scope !== 'note'; }).reduce(function (total, item) { return total + Math.abs(Number(item.amount) || 0); }, 0);
     var byRate = {}, taxTotal = 0, untaxed = 0;
-    lines.forEach(function (l, i) {
-      var g = (Number(l.unitPrice) || 0) * (Number(l.qty) || 0);
-      var off = ((per[String(i)] || per[l.key] || {}).off) || 0;
+    lines.forEach(function (item, index) {
+      var g = (Number(item.unitPrice) || 0) * (Number(item.qty) || 0);
+      var off = ((per[String(index)] || per[item.key] || {}).off) || 0;
       /* the engine's own running net per line (percent on percent; basket offers allocated by running net) — the old list-value split stays only for an engine without it */
-      var net = (ev.line_net && ev.line_net[String(l.key)] != null) ? Number(ev.line_net[String(l.key)]) : Math.max(0, g - off - (gross > 0 ? orderOff * g / gross : 0));
-      var t = taxOf(l.item_id, l), tax = (t && t.rate != null) ? taxOfNet_(net, Number(t.rate) + (Number(t.cess) || 0), incl) : null;   /* WX-O2C: an inclusive price's tax comes OUT of it */
+      var net = (ev.line_net && ev.line_net[String(item.key)] != null) ? Number(ev.line_net[String(item.key)]) : Math.max(0, g - off - (gross > 0 ? orderOff * g / gross : 0));
+      var t = taxOf(item.item_id, item), tax = (t && t.rate != null) ? taxOfNet_(net, Number(t.rate) + (Number(t.cess) || 0), incl) : null;   /* WX-O2C: an inclusive price's tax comes OUT of it */
       if (tax != null) {
         var k = (t.name && !/^\d/.test(String(t.name)) ? String(t.name) : (t.scheme || 'GST')) + ' · ' + Number(t.rate) + '%' + (Number(t.cess) ? ' + ' + Number(t.cess) + '% cess' : '');   /* CX0: the slab's scheme word (pack.tax.scheme — VAT in the UAE) */
         byRate[k] = roundMoney_((byRate[k] || 0) + tax); taxTotal += tax;
@@ -1761,19 +1761,19 @@
     ctx = ctx || { now: new Date(), currency: null, money: function (n) { return String(n); } };
     var incl = !!ctx.priceIncludesTax;   /* WX-O2C: the lines were priced tax-inclusive (the chit's invoice says so) */
     var gross = 0, adjustments = [], byRate = {}, taxTotal = 0, untaxed = 0, after = 0, cartParts = {};   /* a cart-scope offer prorated over N lines is ONE row again here */
-    (lines || []).forEach(function (l, i) {
-      if (!l || l.removed || l.kind === 'payload') return;
-      var q = Number(l.quantity != null ? l.quantity : l.qty) || 0, p = Number(l.price) || 0, g = p * q;
-      var off = Number(l.discount) || (l.offer && Number(l.offer.off)) || 0;
-      var net = (l.total != null && isFinite(Number(l.total))) ? Number(l.total) : Math.max(0, g - off);
+    (lines || []).forEach(function (item, index) {
+      if (!item || item.removed || item.kind === 'payload') return;
+      var q = Number(item.quantity != null ? item.quantity : item.qty) || 0, p = Number(item.price) || 0, g = p * q;
+      var off = Number(item.discount) || (item.offer && Number(item.offer.off)) || 0;
+      var net = (item.total != null && isFinite(Number(item.total))) ? Number(item.total) : Math.max(0, g - off);
       gross += g; after += net;
       /* a line that carried two offers (offer.parts, lib/offers-live) makes two rows — the same rows the live cart printed */
-      if (off > 0 && l.offer && Array.isArray(l.offer.parts) && l.offer.parts.length >= 1) l.offer.parts.forEach(function (pt) {   /* one part too: a lone basket-level part must fold to a basket row, not read as a line offer */ if (pt.scope === 'cart') { var ck = String(pt.offer_id || pt.label); if (!cartParts[ck]) { cartParts[ck] = { scope: 'cart', offer_id: pt.offer_id || null, label: pt.label || 'offer', amount: 0 }; adjustments.push(cartParts[ck]); } cartParts[ck].amount = roundMoney_(cartParts[ck].amount - (Number(pt.off) || 0)); } else adjustments.push({ scope: 'line', key: String(i), offer_id: pt.offer_id || null, label: pt.label || 'offer', amount: -(Number(pt.off) || 0) }); });
-      else if (off > 0) adjustments.push({ scope: 'line', key: String(i), offer_id: (l.offer && l.offer.offer_id) || null, label: (l.offer && l.offer.label) || 'offer', amount: -off });
-      var rate = (l.gst_rate != null) ? Number(l.gst_rate) : ((l.tax && l.tax.rate != null) ? Number(l.tax.rate) : null);
-      var cess = Number(l.cess_rate) || 0, tax = (rate != null && isFinite(rate)) ? taxOfNet_(net, rate + cess, incl) : null;   /* WX-O2C */
+      if (off > 0 && item.offer && Array.isArray(item.offer.parts) && item.offer.parts.length >= 1) item.offer.parts.forEach(function (pt) {   /* one part too: a lone basket-level part must fold to a basket row, not read as a line offer */ if (pt.scope === 'cart') { var ck = String(pt.offer_id || pt.label); if (!cartParts[ck]) { cartParts[ck] = { scope: 'cart', offer_id: pt.offer_id || null, label: pt.label || 'offer', amount: 0 }; adjustments.push(cartParts[ck]); } cartParts[ck].amount = roundMoney_(cartParts[ck].amount - (Number(pt.off) || 0)); } else adjustments.push({ scope: 'line', key: String(index), offer_id: pt.offer_id || null, label: pt.label || 'offer', amount: -(Number(pt.off) || 0) }); });
+      else if (off > 0) adjustments.push({ scope: 'line', key: String(index), offer_id: (item.offer && item.offer.offer_id) || null, label: (item.offer && item.offer.label) || 'offer', amount: -off });
+      var rate = (item.gst_rate != null) ? Number(item.gst_rate) : ((item.tax && item.tax.rate != null) ? Number(item.tax.rate) : null);
+      var cess = Number(item.cess_rate) || 0, tax = (rate != null && isFinite(rate)) ? taxOfNet_(net, rate + cess, incl) : null;   /* WX-O2C */
       if (tax != null) {
-        var k = ((l.tax_name || (l.tax && l.tax.name)) && !/^\d/.test(String(l.tax_name || l.tax.name)) ? String(l.tax_name || l.tax.name) : ((l.tax && l.tax.scheme) || 'GST')) + ' · ' + rate + '%' + (cess ? ' + ' + cess + '% cess' : '');   /* CX0: the slab's scheme word */
+        var k = ((item.tax_name || (item.tax && item.tax.name)) && !/^\d/.test(String(item.tax_name || item.tax.name)) ? String(item.tax_name || item.tax.name) : ((item.tax && item.tax.scheme) || 'GST')) + ' · ' + rate + '%' + (cess ? ' + ' + cess + '% cess' : '');   /* CX0: the slab's scheme word */
         byRate[k] = roundMoney_((byRate[k] || 0) + tax); taxTotal += tax;
       } else untaxed += net;
     });
@@ -1797,18 +1797,18 @@
        lines under Flat 10% printed three rows; Amazon prints one promotion line. Line-scope adjustments are summed by offer
        (offer_id, else label) with the item count; cart-scope ones keep their own row and say their scope. */
     var grouped = [], byOffer = {};
-    (ev.adjustments || []).forEach(function (a) {
-      if (a.scope !== 'line') { grouped.push({ label: a.label || a.kind, scope: a.scope, amount: Math.abs(Number(a.amount) || 0), n: 0, offer_id: a.offer_id || null }); return; }
-      var k = String(a.offer_id || a.label || a.kind);
-      if (!byOffer[k]) { byOffer[k] = { label: a.label || a.kind, scope: 'line', amount: 0, n: 0, keys: {}, offer_id: a.offer_id || null }; grouped.push(byOffer[k]); }
-      byOffer[k].amount += Math.abs(Number(a.amount) || 0); if (a.key != null && !byOffer[k].keys[a.key]) { byOffer[k].keys[a.key] = 1; byOffer[k].n++; }
+    (ev.adjustments || []).forEach(function (item) {
+      if (item.scope !== 'line') { grouped.push({ label: item.label || item.kind, scope: item.scope, amount: Math.abs(Number(item.amount) || 0), n: 0, offer_id: item.offer_id || null }); return; }
+      var k = String(item.offer_id || item.label || item.kind);
+      if (!byOffer[k]) { byOffer[k] = { label: item.label || item.kind, scope: 'line', amount: 0, n: 0, keys: {}, offer_id: item.offer_id || null }; grouped.push(byOffer[k]); }
+      byOffer[k].amount += Math.abs(Number(item.amount) || 0); if (item.key != null && !byOffer[k].keys[item.key]) { byOffer[k].keys[item.key] = 1; byOffer[k].n++; }
     });
     /* ⭐ WHAT THIS CUSTOMER GETS BEYOND THE DECLARED OFFERS (Athi, 2026-09-06: "more importantly what additional offer he gets more than declared") — a row from an offer the seller scoped to a group or to this customer says so */
-    var forYou = function (g) { var src = (m.offers || []).filter(function (o) { return g.offer_id && String(o.id) === String(g.offer_id); })[0]; return (src && src.customer_group) ? ' <small data-testid="cbcart-foryou" style="color:var(--ok-2,#1a7f4b);font-weight:700">' + esc('only for you') + '</small>' : ''; };
-    var rows = grouped.map(function (g) { return row('🏷️ ' + esc(g.label) + forYou(g) + (g.scope === 'line' && g.n > 1 ? ' <small style="opacity:.7">' + esc(g.n + ' items') + '</small>' : '') + (g.scope && g.scope !== 'line' ? ' <small style="opacity:.7">' + esc(g.scope) + '</small>' : ''), '<b style="color:var(--danger)">−' + esc(ctx.money(roundMoney_(g.amount))) + '</b>'); }).join('');
-    var notes = (ev.notes || []).map(function (n) { return '<div style="opacity:.75">💡 ' + esc(n.why || n.text || n.label || '') + '</div>'; }).join('');
+    var forYou = function (g) { var src = (m.offers || []).filter(function (item) { return g.offer_id && String(item.id) === String(g.offer_id); })[0]; return (src && src.customer_group) ? ' <small data-testid="cbcart-foryou" style="color:var(--ok-2,#1a7f4b);font-weight:700">' + esc('only for you') + '</small>' : ''; };
+    var rows = grouped.map(function (item) { return row('🏷️ ' + esc(item.label) + forYou(item) + (item.scope === 'line' && item.n > 1 ? ' <small style="opacity:.7">' + esc(item.n + ' items') + '</small>' : '') + (item.scope && item.scope !== 'line' ? ' <small style="opacity:.7">' + esc(item.scope) + '</small>' : ''), '<b style="color:var(--danger)">−' + esc(ctx.money(roundMoney_(item.amount))) + '</b>'); }).join('');
+    var notes = (ev.notes || []).map(function (item) { return '<div style="opacity:.75">💡 ' + esc(item.why || item.text || item.label || '') + '</div>'; }).join('');
     var keys = Object.keys(m.byRate || {});
-    var taxRows = keys.map(function (k) { return '<div data-testid="' + esc(opt.taxTestid || 'cart-tax') + '" style="display:flex;justify-content:space-between;gap:8px;opacity:.85"><span>' + esc(k) + (m.inclusive ? ' <small style="opacity:.7">included</small>' : '') + '</span><span>' + esc(ctx.money(m.byRate[k])) + '</span></div>'; }).join('')
+    var taxRows = keys.map(function (item) { return '<div data-testid="' + esc(opt.taxTestid || 'cart-tax') + '" style="display:flex;justify-content:space-between;gap:8px;opacity:.85"><span>' + esc(item) + (m.inclusive ? ' <small style="opacity:.7">included</small>' : '') + '</span><span>' + esc(ctx.money(m.byRate[item])) + '</span></div>'; }).join('')
       + (m.untaxed > 0 && keys.length ? '<div style="opacity:.6;font-size:12px">' + esc('no tax slab resolves for ' + ctx.money(m.untaxed) + ' of this basket') + '</div>' : '');
     var after = (rows || notes)
       ? rows + notes + '<div style="display:flex;justify-content:space-between;border-top:1px solid #eee;margin-top:6px;padding-top:6px"><span>After offers</span><b>' + esc(ctx.money(ev.total)) + '</b></div>'
@@ -1973,15 +1973,15 @@
    * empty box than the empty box.
    */
   function tileFor(name) {
-    var s = String(name == null ? '' : name).trim();
-    var h = 0;
-    for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
-    var hue = h % 360;
+    var text = String(name == null ? '' : name).trim();
+    var count = 0;
+    for (var index = 0; index < text.length; index++) count = (count * 31 + text.charCodeAt(index)) >>> 0;
+    var hue = count % 360;
     /* 40°–190° is the yellow→green stretch that reads bright at a given lightness; drop it so contrast holds. */
     var light = (hue > 40 && hue < 190) ? 34 : 44;
     return {
       bg: 'hsl(' + hue + ',38%,' + light + '%)',
-      letter: (s.charAt(0) || '?').toUpperCase()
+      letter: (text.charAt(0) || '?').toUpperCase()
     };
   }
 
@@ -2185,19 +2185,19 @@
         var _ctx = { now: new Date(), customer_groups: root.CBCart.viewerGroups(_st && _st.cat), money: function (n) { return money(cart.ns, n); },
           /* the row itself: a quantity break prices per line, so its sentence differs product by product */
           line: { item_id: id, sku: d.sku, categories: catgIds(d), unitPrice: Number(u.base != null ? u.base : u.amount) || 0, excluded: Array.isArray(d.offers_excluded) ? d.offers_excluded.map(String) : [] } };
-        var _srcOf = function (lb) { return _offs.filter(function (o) { return (o.label || '') === lb; })[0] || null; };
+        var _srcOf = function (lb) { return _offs.filter(function (item) { return (item.label || '') === lb; })[0] || null; };
         var _text = function (src, lb) { var pr = null; try { pr = (src && root.CBOffers.promise) ? root.CBOffers.promise(src, _ctx) : null; } catch (e) { pr = null; }
           if (!src) return esc(lb); return (src.customer_group ? esc(lb) + (pr ? ' · ' + esc(pr) : '') : esc(pr || lb)); };
         /* ⭐ THE ROW SAYS ONLY WHAT APPLIES (Athi, 2026-09-06 19:4x: "when exclusive applied, other offers should not showcase, it will mislead").
            A row with a deal (in the basket: compute → M.rowOff; not yet: the single-row preview) names the offers IN that deal — an exclusive
            that fired is the only name. forLine's "what could apply" is for a row no offer has priced (a threshold not yet met, say). */
         if (u.deal && u.deal.label && !u.deal.recorded) {
-          var _byId = (u.deal.ids && u.deal.ids.length) ? u.deal.ids.map(function (oid) { return _offs.filter(function (o) { return String(o.id) === String(oid); })[0] || null; }) : null;
-          var _list = _byId || String(u.deal.label).split(' + ').map(function (lb) { return _srcOf(lb); });
-          offBadge = _list.map(function (src, i) { var lb = (src && src.label) || String(u.deal.label).split(' + ')[i] || 'offer';
-            return '<span class="cbcat-off"' + (src && src.scope === 'cart' ? ' data-testid="cbcat-off-cart"' : '') + ' title="' + esc(lb) + '">' + _text(src, lb) + '</span>'; }).join('');
+          var _byId = (u.deal.ids && u.deal.ids.length) ? u.deal.ids.map(function (item) { return _offs.filter(function (o) { return String(o.id) === String(item); })[0] || null; }) : null;
+          var _list = _byId || String(u.deal.label).split(' + ').map(function (item) { return _srcOf(item); });
+          offBadge = _list.map(function (item, index) { var lb = (item && item.label) || String(u.deal.label).split(' + ')[index] || 'offer';
+            return '<span class="cbcat-off"' + (item && item.scope === 'cart' ? ' data-testid="cbcat-off-cart"' : '') + ' title="' + esc(lb) + '">' + _text(item, lb) + '</span>'; }).join('');
         } else {
-          offBadge = _p.slice(0, 3).map(function (x) { var src = _offs.filter(function (o) { return String(o.id) === String(x.offer_id); })[0]; return '<span class="cbcat-off" title="' + esc(x.label) + '">' + (src && src.customer_group ? esc(x.label) + ' · ' + esc(x.promise) : esc(x.promise)) + '</span>'; }).join('');
+          offBadge = _p.slice(0, 3).map(function (x) { var src = _offs.filter(function (item) { return String(item.id) === String(x.offer_id); })[0]; return '<span class="cbcat-off" title="' + esc(x.label) + '">' + (src && src.customer_group ? esc(x.label) + ' · ' + esc(x.promise) : esc(x.promise)) + '</span>'; }).join('');
         }
       }
     } catch (e) { offBadge = ''; }   /* a badge must never take the catalogue down */
@@ -2346,20 +2346,20 @@
     /* ⭐ SECTIONS (opt-in, 2026-10-09 — the online shop): `opts.sectionOf(row) → {id,label,order}` groups plain lines
        under a heading each, in the order given. Skipped when the list has variant groups, because a group's
        "add all" addresses its row by INDEX in cart.rows() and a reorder would aim it at the wrong row. */
-    var secOf = (typeof opts.sectionOf === 'function' && rows.every(function (r) { return r.type !== 'product'; })) ? opts.sectionOf : null;
+    var secOf = (typeof opts.sectionOf === 'function' && rows.every(function (item) { return item.type !== 'product'; })) ? opts.sectionOf : null;
     if (secOf) {
-      var keyed = rows.map(function (r, n) { var s = secOf(r) || { id: '', label: '', order: 1e9 }; return { r: r, s: s, n: n }; });
-      keyed.sort(function (a, b) { return (a.s.order - b.s.order) || (a.n - b.n); });
-      rows = keyed.map(function (k) { return k.r; });
-      var secs = keyed.map(function (k) { return k.s; });
+      var keyed = rows.map(function (item, n) { var s = secOf(item) || { id: '', label: '', order: 1e9 }; return { r: item, s: s, n: n }; });
+      keyed.sort(function (first, second) { return (first.s.order - second.s.order) || (first.n - second.n); });
+      rows = keyed.map(function (item) { return item.r; });
+      var secs = keyed.map(function (item) { return item.s; });
     }
     var w = windowOf(cart, opts, rows.length);
     var out = '';
-    for (var i = 0; i < w.shown; i++) {
-      if (secOf && secs[i].label && (i === 0 || secs[i - 1].id !== secs[i].id)) {
-        out += '<div class="cbcat-sec" data-testid="shop-cat-head" data-sec="' + esc(secs[i].id) + '">' + esc(secs[i].label) + '</div>';
+    for (var index = 0; index < w.shown; index++) {
+      if (secOf && secs[index].label && (index === 0 || secs[index - 1].id !== secs[index].id)) {
+        out += '<div class="cbcat-sec" data-testid="shop-cat-head" data-sec="' + esc(secs[index].id) + '">' + esc(secs[index].label) + '</div>';
       }
-      out += rows[i].type === 'product' ? groupHTML(cart, rows[i], i) : rowHTML(cart, rows[i], opts);
+      out += rows[index].type === 'product' ? groupHTML(cart, rows[index], index) : rowHTML(cart, rows[index], opts);
     }
     if (w.more) {
       /* The sentinel says how many are left, so a long catalogue is honest about its size rather than just
@@ -2385,10 +2385,10 @@
     opts = opts || {};
     ensureCss();
     var n = Number(opts.rows) || 8, out = '';
-    for (var i = 0; i < n; i++) {
+    for (var index = 0; index < n; index++) {
       out += '<div class="cbcat-row cbcat-skelrow">'
         + '<span class="cbcat-thumb cbcat-skel"></span>'
-        + '<span class="cbcat-meat"><span class="cbcat-skelbar" style="width:' + (44 + (i * 7) % 38) + '%"></span>'
+        + '<span class="cbcat-meat"><span class="cbcat-skelbar" style="width:' + (44 + (index * 7) % 38) + '%"></span>'
         + '<span class="cbcat-skelbar cbcat-skelbar-sm" style="width:18%"></span></span>'
         + '<span class="cbcat-pr"><span class="cbcat-skelbar" style="width:70%"></span></span>'
         + '<span class="cbcat-ctl"><span class="cbcat-skeldot"></span></span>'
@@ -2459,9 +2459,9 @@
     var ev = opt.ev || null;
     try {
       if (!ev) ev = root.CBOffers.evaluate({
-        lines: lines.map(function (l, i) {
-          return { key: String(i), item_id: l.item_id, sku: l.sku, category: l.category, excluded: l.excluded || l.offers_excluded || [],
-                   qty: Number(l.qty || l.quantity || 0), unitPrice: Number(l.price || 0) };
+        lines: lines.map(function (item, index) {
+          return { key: String(index), item_id: item.item_id, sku: item.sku, category: item.category, excluded: item.excluded || item.offers_excluded || [],
+                   qty: Number(item.qty || item.quantity || 0), unitPrice: Number(item.price || 0) };
         }),
         offers: offers,
         money: function (n) { return money(ns, n); }
@@ -2491,14 +2491,14 @@
         + '<td class="cbm-l">' + label + (sub ? '<span class="cbm-sub">' + sub + '</span>' : '') + '</td>'
         + '<td class="cbm-a"><bdi>' + (amt == null ? '' : amt) + '</bdi></td></tr>';
     };
-    var rows = ev.adjustments.map(function (a) {
-      return tr('cbm-offer', esc(a.label), esc(a.why || ''), Number(a.amount) < 0 ? esc(neg(a.amount)) : esc(money(ns, a.amount)));
+    var rows = ev.adjustments.map(function (item) {
+      return tr('cbm-offer', esc(item.label), esc(item.why || ''), Number(item.amount) < 0 ? esc(neg(item.amount)) : esc(money(ns, item.amount)));
     }).join('');
-    var notes = ev.notes.map(function (nte) {
-      return tr('cbm-note', esc(nte.label), esc(nte.why || ''), '');
+    var notes = ev.notes.map(function (item) {
+      return tr('cbm-note', esc(item.label), esc(item.why || ''), '');
     }).join('');
-    var skipped = (opt.skipped ? ev.skipped : []).map(function (s) {
-      return tr('cbm-note', esc(s.label || s.offer_id), esc(tx('not applied — ') + (s.why || '')), '');
+    var skipped = (opt.skipped ? ev.skipped : []).map(function (item) {
+      return tr('cbm-note', esc(item.label || item.offer_id), esc(tx('not applied — ') + (item.why || '')), '');
     }).join('');
     return '<div class="cbcat-offers" data-testid="' + esc(opt.testid || 'cbcat-offers') + '">'
       + '<div class="cbcat-offhd">' + esc(opt.head || tx('How this price was calculated')) + '</div>'
@@ -2516,8 +2516,8 @@
     if (!lines || !lines.length) return '';
     return '<div class="cbcat-onchit" data-testid="cbcat-onchit">'
       + '<div class="cbcat-onchit-t">On the chit · ' + lines.length + ' line' + (lines.length === 1 ? '' : 's') + '</div>'
-      + lines.map(function (l, i) {
-          var q = Number(l.qty || l.quantity || 0), p = Number(l.price || 0);
+      + lines.map(function (item, index) {
+          var q = Number(item.qty || item.quantity || 0), p = Number(item.price || 0);
           /**
            * ⭐⭐ THE CUSTOM MESSAGE — Athi: *"we should add provision to pass custom message like what we get in
            * whatsapp"*.
@@ -2532,11 +2532,11 @@
            * never a question which line it refers to.
            */
           var note = noteFn
-            ? '<input class="cbcat-note" value="' + esc(l.comment || '') + '"'
-              + ' data-testid="cbcat-note-' + i + '"'
+            ? '<input class="cbcat-note" value="' + esc(item.comment || '') + '"'
+              + ' data-testid="cbcat-note-' + index + '"'
               + ' placeholder="add a message for this line — e.g. fresh stock please"'
-              + ' oninput="' + esc(noteFn) + '(' + i + ',this.value)">'
-            : (l.comment ? '<div class="cbcat-noteread">' + esc(l.comment) + '</div>' : '');
+              + ' oninput="' + esc(noteFn) + '(' + index + ',this.value)">'
+            : (item.comment ? '<div class="cbcat-noteread">' + esc(item.comment) + '</div>' : '');
           /**
            * ⭐ A PICTURE ON THE LINE — Athi: *"on the cart data we can add message, picture, attachment etc"*.
            *
@@ -2551,11 +2551,11 @@
            */
           var att = (attachFn ? '<label class="cbcat-clip" title="Attach a picture or file to this line">📎'
               + '<input type="file" multiple style="display:none"'
-              + ' onchange="' + esc(attachFn) + '(' + i + ',this.files);this.value=\'\'"></label>' : '')
-            + (typeof chips === 'function' ? '<span class="cbcat-chips">' + (chips(i) || '') + '</span>' : '');
+              + ' onchange="' + esc(attachFn) + '(' + index + ',this.files);this.value=\'\'"></label>' : '')
+            + (typeof chips === 'function' ? '<span class="cbcat-chips">' + (chips(index) || '') + '</span>' : '');
           return '<div class="cbcat-liwrap">'
-            + '<div class="cbcat-li"><span class="cbcat-li-n">' + esc(l.particulars || l.name || 'item') + '</span>'
-            + '<span class="cbcat-li-q">' + esc(q) + ' ' + esc(l.unit || '') + '</span>'
+            + '<div class="cbcat-li"><span class="cbcat-li-n">' + esc(item.particulars || item.name || 'item') + '</span>'
+            + '<span class="cbcat-li-q">' + esc(q) + ' ' + esc(item.unit || '') + '</span>'
             + '<span class="cbcat-li-p">' + esc(money(ns, q * p)) + '</span></div>'
             + note + (att ? '<div class="cbcat-attrow">' + att + '</div>' : '') + '</div>';
         }).join('')
@@ -2772,9 +2772,9 @@
     if (typeof IntersectionObserver === 'undefined') {
       /* No observer (old browser): fall back to eager, because a catalogue with invisible pictures is worse than
          a catalogue that loaded them. `loading="lazy"` still applies where supported. */
-      (rootEl || document).querySelectorAll('img[data-src]').forEach(function (im) {
-        im.src = im.getAttribute('data-src'); im.removeAttribute('data-src');
-        if (im.parentElement) im.parentElement.classList.remove('cbcat-skel');
+      (rootEl || document).querySelectorAll('img[data-src]').forEach(function (item) {
+        item.src = item.getAttribute('data-src'); item.removeAttribute('data-src');
+        if (item.parentElement) item.parentElement.classList.remove('cbcat-skel');
       });
       return;
     }
@@ -2782,14 +2782,14 @@
       CBCAT.io = new IntersectionObserver(function (entries) {
         entries.forEach(function (e) {
           if (!e.isIntersecting) return;
-          var im = e.target, src = im.getAttribute('data-src');
-          if (src) { im.src = src; im.removeAttribute('data-src'); }
-          if (im.parentElement) im.parentElement.classList.remove('cbcat-skel');
-          CBCAT.io.unobserve(im);
+          var node = e.target, src = node.getAttribute('data-src');
+          if (src) { node.src = src; node.removeAttribute('data-src'); }
+          if (node.parentElement) node.parentElement.classList.remove('cbcat-skel');
+          CBCAT.io.unobserve(node);
         });
       }, { rootMargin: '120px' });
     }
-    (rootEl || document).querySelectorAll('img[data-src]').forEach(function (im) { CBCAT.io.observe(im); });
+    (rootEl || document).querySelectorAll('img[data-src]').forEach(function (item) { CBCAT.io.observe(item); });
     observeMore(rootEl);
   }
 
@@ -2806,9 +2806,9 @@
    * ⚠️ The <img> is REMOVED, not hidden — a broken img left in the DOM keeps its alt box and its own failed
    * layout, and some browsers draw a placeholder glyph over the tile behind it.
    */
-  function fellBack(img, bg, letter) {
-    var box = img && img.parentElement; if (!box) return;
-    img.remove();
+  function fellBack(node, bg, letter) {
+    var box = node && node.parentElement; if (!box) return;
+    node.remove();
     box.className = 'cbcat-thumb cbcat-tile';
     box.style.background = bg;
     box.textContent = letter;
@@ -2828,9 +2828,9 @@
         });
       }, { rootMargin: '300px' });   // grow BEFORE the bottom is reached, so the list never visibly stops
     }
-    sentinels.forEach(function (s) {
-      s.onclick = function () { growWindow(s.getAttribute('data-cbcat-more')); };
-      CBCAT.moreIo.observe(s);
+    sentinels.forEach(function (item) {
+      item.onclick = function () { growWindow(item.getAttribute('data-cbcat-more')); };
+      CBCAT.moreIo.observe(item);
     });
   }
 
@@ -2844,9 +2844,9 @@
   /* ── styles, injected once ───────────────────────────────────────────────────────────────────────────────── */
   function ensureCss() {
     if (typeof document === 'undefined' || document.getElementById('cbcat_css')) return;
-    var s = document.createElement('style');
-    s.id = 'cbcat_css';
-    s.textContent = [
+    var node = document.createElement('style');
+    node.id = 'cbcat_css';
+    node.textContent = [
       /* ⚠️ top:-11px, not 0 — a sticky offset is measured from the scroll container's PADDING edge, and every
          host here pads its scroller (.mbody is 11px 12px). At top:0 the list scrolls through the gap ABOVE the
          header and the rows draw over the cart. --cbcat-gap so a host with different padding can set it. */
@@ -3049,7 +3049,7 @@
       '.cbcat-clip:hover{border-color:var(--blue,var(--blue))}',
       '.cbcat-chips{display:inline-flex;flex-wrap:wrap;gap:2px;align-items:center}'
     ].join('');
-    (document.head || document.documentElement).appendChild(s);
+    (document.head || document.documentElement).appendChild(node);
   }
 
   root.CBCatUI = {
