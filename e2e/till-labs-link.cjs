@@ -59,7 +59,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(46) + '· ' + d 
       return calls;
     }, lab.fn);
     say('window.open was called exactly once', opened.length === 1, JSON.stringify(opened));
-    say('to the same page chitbridge-web already serves', opened[0] && opened[0].url === lab.url, 'url="' + (opened[0] && opened[0].url) + '"');
+    say('to the same page chitbridge-web already serves, on the web root (CTR-145)', opened[0] && opened[0].url.endsWith(lab.url) && /^http/.test(opened[0].url), 'url="' + (opened[0] && opened[0].url) + '"');
     /* ⚠️ MOVED 2026-09-28, not deleted: this asserted '_blank'. Athi, 2026-09-26: "we need to have one window only,
        either we call it from backend app or till app, the same application should respond" — so each lab opens in a
        NAMED window (cb_offer_lab / cb_combo_lab) that is REUSED if already open. What this guards still holds: never
