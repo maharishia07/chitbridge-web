@@ -40,8 +40,8 @@ function polDefsOf(schema, bound){
     out.push({ key:key, label:u.label, type:f.type, options:u.options||f.options, labels:u.labels, def:f.def, level:u.level, gov:u.gov,
                help:u.help, scale:u.scale, suffix:u.suffix, step:u.step, order:u.order }); }
   var s=schema||{}, b=bound||{};
-  Object.keys(s).forEach(function(k){ add(k,s[k]); });
-  Object.keys(b).forEach(function(k){ add(k,b[k]); });
+  Object.keys(s).forEach(function(item){ add(item,s[item]); });
+  Object.keys(b).forEach(function(item){ add(item,b[item]); });
   return out.sort(function(x,y){ return (x.order||0)-(y.order||0); });
 }
 /** a flag's value as a person reads it: a scaled number in its human unit (50 bp → 0.5), an enum's label */
@@ -103,10 +103,10 @@ function ctrOpenTill(key){
 /** the kit, fetched with the session so the key rides inside; saved through a blob like the tax export (misTaxDownload). Throws on a refusal. */
 async function kitDownload(id, adapter){
   var base = (typeof CFG !== 'undefined' && CFG.API_BASE) || '';
-  var r = await fetch(base + '/api/integrations/download/' + encodeURIComponent(id) + '?adapter=' + encodeURIComponent(adapter), { headers: { Authorization: 'Bearer ' + SESSION.token } });
-  if (!r.ok) { var j = await r.json().catch(function () { return {}; }); var e = new Error(j.message || ('download failed (' + r.status + ')')); e.status = r.status; throw e; }
-  var blob = await r.blob();
-  var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'chitbridge-connector-' + id + '.zip'; document.body.appendChild(a); a.click(); a.remove();
+  var reply = await fetch(base + '/api/integrations/download/' + encodeURIComponent(id) + '?adapter=' + encodeURIComponent(adapter), { headers: { Authorization: 'Bearer ' + SESSION.token } });
+  if (!reply.ok) { var j = await reply.json().catch(function () { return {}; }); var e = new Error(j.message || ('download failed (' + reply.status + ')')); e.status = reply.status; throw e; }
+  var blob = await reply.blob();
+  var node = document.createElement('a'); node.href = URL.createObjectURL(blob); node.download = 'chitbridge-connector-' + id + '.zip'; document.body.appendChild(node); node.click(); node.remove();
 }
 
 /* ── CB SETTINGS › the four sections — the page's host mounts one at a time ─────────────────────────────────────────────────────────── */
@@ -152,7 +152,7 @@ var CBSettings = (function () {
    *  call itself (so a route read nowhere else keeps a literal api('…') the api's endpoint-usage scanner counts — T3-P4-ACCOUNT) */
   function load(key, name, opts, paint) {
     H.data[key] = { state: 'loading', rows: [] }; paint();
-    return (typeof name === 'function' ? name() : api(name, opts || {})).then(function (r) { H.data[key] = { state: 'ok', r: r || {} }; paint(); return r; },
+    return (typeof name === 'function' ? name() : api(name, opts || {})).then(function (reply) { H.data[key] = { state: 'ok', r: reply || {} }; paint(); return reply; },
       function (e) { if (typeof cblog === 'function') cblog('error', 'settings ' + key + ': ' + ((e && e.message) || e)); H.data[key] = { state: 'error', err: e }; paint(); });
   }
   function listState(key) { var d = H.data[key] || {}; return d.state === 'loading' ? 'loading' : d.state === 'error' ? 'error' : null; }
@@ -174,12 +174,12 @@ var CBSettings = (function () {
     var manage = function () { var d = H.data.ctr; return (d && d.r && d.r.may && d.r.may.manage) || null; };
     var ctrRows = function () { var d = H.data.ctr; return (d && d.r && d.r.counters) || []; };
     function paintCtrBar() {
-      var rows = ctrRows(), open = rows.filter(function (c) { return c.state === 'open' || c.state === 'break'; }).length;
+      var rows = ctrRows(), open = rows.filter(function (item) { return item.state === 'open' || item.state === 'break'; }).length;
       $('sx_ctr_bar').innerHTML = bar('<span class="sx-count" data-testid="sx-ctr-count"><b>' + rows.length + '</b> ' + esc(T(rows.length === 1 ? 'counter' : 'counters')) + ' · <b>' + open + '</b> ' + esc(T('open')) + '</span>'
         + '<span class="sx-add"><label class="sx-lbl" for="sx_ctr_name">' + esc(T('New counter')) + ' <span class="tag" data-testid="sx-ctr-optional">' + esc(T('Optional')) + '</span></label><input class="inp" id="sx_ctr_name" data-testid="sx-ctr-name" placeholder="' + esc(T('Front desk')) + '" maxlength="40"' + (grey(manage()) ? ' disabled' : '') + '>'
         + btn('sx_ctr_add', T('Add a counter'), manage()) + '</span>');
-      var b = $('sx_ctr_add'); if (b && !grey(manage())) b.onclick = function () {
-        CBAction.run(b, function () { return api('counterAdd', { body: { name: ($('sx_ctr_name').value || '').trim() } }); },
+      var node = $('sx_ctr_add'); if (node && !grey(manage())) node.onclick = function () {
+        CBAction.run(node, function () { return api('counterAdd', { body: { name: ($('sx_ctr_name').value || '').trim() } }); },
           { key: 'sx-ctr-add', failed: T('Could not add the counter'), out: 'sx_ctr_out', outcome: function (r) { $('sx_ctr_out').textContent = T('Counter added') + (r && r.counter ? ': ' + r.counter.id : '') + '.'; readCtr(); } });
       };
     }
@@ -261,8 +261,8 @@ var CBSettings = (function () {
         + '<label class="sx-lbl" for="sx_key_scope">' + esc(T('This key can')) + '</label><select class="inp" id="sx_key_scope" data-testid="sx-key-scope">' + keyKinds().map(function (kind) { return '<option value="' + esc(kind[0]) + '">' + esc(T(kind[1])) + '</option>'; }).join('') + '</select>'
         + btn('sx_key_mint', T('Make a key')) + '</span>');
       $('sx_key_mint').onclick = function () {
-        var b = $('sx_key_mint');
-        CBAction.run(b, function () { return api('keysMint', { body: { name: ($('sx_key_name').value || '').trim() || 'key', scopes: keyScopesOf($('sx_key_scope').value) } }); },
+        var node = $('sx_key_mint');
+        CBAction.run(node, function () { return api('keysMint', { body: { name: ($('sx_key_name').value || '').trim() || 'key', scopes: keyScopesOf($('sx_key_scope').value) } }); },
           { key: 'sx-key-mint', failed: T('Could not make the key'), out: 'sx_key_out', outcome: function (r) {
             $('sx_key_out').innerHTML = '<b>' + esc(T('Copy it now — it is shown once.')) + '</b><div class="mono sx-secret" data-testid="sx-key-value">' + esc(r && r.key || '') + '</div>';
             readKeys(); } });
@@ -328,12 +328,12 @@ var CBSettings = (function () {
       '<h2 class="sx-h2">' + esc(T('Running on your PCs')) + '</h2>', lineOut('sx_run_out'), '<div class="sx-list" id="sx_run_list" data-testid="sx-run-list"></div>',   /* WALK-REG R35: what is RUNNING sits at the top of the page, never under the list */
       '<h2 class="sx-h2">' + esc(T('All connectors')) + '</h2>', lineOut('sx_con_out'), '<div class="sx-list" id="sx_con_list" data-testid="sx-con-list"></div>'].concat(keysHTML()));
     var pol = null;
-    function inUse() { var v = (pol && pol.connectors_in_use) || []; return Array.isArray(v) ? v.filter(function (x) { return x !== 'none'; }) : []; }
+    function inUse() { var list = (pol && pol.connectors_in_use) || []; return Array.isArray(list) ? list.filter(function (x) { return x !== 'none'; }) : []; }
     var catRows = function () { var catData = H.data.cat; return ((catData && catData.r && catData.r.connectors) || []).filter(function (connector) { return connector.id !== 'till'; }); };   /* WALK-REG R51: our own counter lives on Counters › Advanced */
     var cl = null, rl = null;
     function readCat() {
       return Promise.all([load('cat', 'intCatalogue', null, function () { if (cl) cl.refresh(); }),
-        api('policyGet').then(function (r) { pol = (r && r.flags) || {}; H.polMay = (r && r.may) || {}; if (cl) cl.refresh(); },
+        api('policyGet').then(function (reply) { pol = (reply && reply.flags) || {}; H.polMay = (reply && reply.may) || {}; if (cl) cl.refresh(); },
           function (e) { if (typeof cblog === 'function') cblog('error', 'settings connectors in use: ' + ((e && e.message) || e)); $('sx_con_out').textContent = T('Could not read which ones you use.'); })]);
     }
     function useMay() { return (H.polMay && H.polMay.connectors_in_use) || null; }
@@ -358,7 +358,7 @@ var CBSettings = (function () {
       filters: [{ key: 'use', label: T('In use'), all: T('All'), options: [{ v: 'yes', label: T('We use these') }, { v: 'no', label: T('Not used') }],
         match: function (c, v) { var u = inUse().indexOf(c.id) >= 0; return v === 'yes' ? u : !u; } }],
       next: function (c) {
-        var grp = function (title, lines) { return lines && lines.length ? '<div class="sx-grp"><b>' + esc(T(title)) + '</b><ul>' + lines.map(function (l) { return '<li>' + esc(T(l)) + '</li>'; }).join('') + '</ul></div>' : ''; };
+        var grp = function (title, lines) { return lines && lines.length ? '<div class="sx-grp"><b>' + esc(T(title)) + '</b><ul>' + lines.map(function (item) { return '<li>' + esc(T(item)) + '</li>'; }).join('') + '</ul></div>' : ''; };
         return '<div class="sx-next" data-testid="sx-con-next-' + esc(c.id) + '">'
           + (c.may && c.may.ok === false && c.may.why ? '<div class="sub" data-testid="sx-con-why-' + esc(c.id) + '">' + esc(c.may.why) + '</div>' : '')
           + grp('Before you start', c.needs) + grp('What to do', c.steps) + grp('If it does not work', c.watch_out)
@@ -433,13 +433,13 @@ var CBSettings = (function () {
        * trade_side: decided, sell is the default */
       var HIDDEN = { trade_cover: 1, chit_expiry_days: 1, trade_side: 1 };
       /* the rows ARE the server's (schema[key].ui + bound_schema, T2-POLICY) — the same reader the workshop's Business rules card uses */
-      return polDefsOf(r.schema, r.bound_schema || r.bound).filter(function (policyDef) { return !HIDDEN[policyDef.key]; }).map(function (d) {
-        var v = flags[d.key] !== undefined ? flags[d.key] : d.def;
+      return polDefsOf(r.schema, r.bound_schema || r.bound).filter(function (policyDef) { return !HIDDEN[policyDef.key]; }).map(function (item) {
+        var v = flags[item.key] !== undefined ? flags[item.key] : item.def;
         /* the server's answer when it gives one; an older server: the class the list states (bound · protected · inherited are locked) — the PATCH still decides */
-        var m = may[d.key] || ((d.gov === 'bound' || d.gov === 'protected' || d.gov === 'inherited') ? { ok: false, why: T('Set by the platform for every shop.') } : { ok: true });
+        var m = may[item.key] || ((item.gov === 'bound' || item.gov === 'protected' || item.gov === 'inherited') ? { ok: false, why: T('Set by the platform for every shop.') } : { ok: true });
         /* W11: the registration is set in ONE place — Country setup (PUT /governance/country-setup writes the flag); here it is read, with the door */
-        if (d.key === 'gst_registration') m = { ok: false, code: 'SET_IN_COUNTRY', why: T('Set under Country, with the registration number.') };
-        return { key: d.key, def: d, v: v, may: m };
+        if (item.key === 'gst_registration') m = { ok: false, code: 'SET_IN_COUNTRY', why: T('Set under Country, with the registration number.') };
+        return { key: item.key, def: item, v: v, may: m };
       });
     }
     function shown(x) {
@@ -451,8 +451,8 @@ var CBSettings = (function () {
     }
     function control(x) {
       var d = x.def, id = 'sx_pol_' + d.key, dis = grey(x.may) ? ' disabled' : '';
-      if (d.type === 'enum') return '<select class="inp" id="' + id + '" data-testid="sx-pol-in-' + esc(d.key) + '"' + dis + ' aria-label="' + esc(T(d.label)) + '">' + d.options.map(function (o) {
-        return '<option value="' + esc(o) + '"' + (String(x.v) === String(o) ? ' selected' : '') + '>' + esc(T((d.labels && d.labels[o]) || o)) + '</option>'; }).join('') + '</select>';
+      if (d.type === 'enum') return '<select class="inp" id="' + id + '" data-testid="sx-pol-in-' + esc(d.key) + '"' + dis + ' aria-label="' + esc(T(d.label)) + '">' + d.options.map(function (item) {
+        return '<option value="' + esc(item) + '"' + (String(x.v) === String(item) ? ' selected' : '') + '>' + esc(T((d.labels && d.labels[item]) || item)) + '</option>'; }).join('') + '</select>';
       return '<span class="sx-num"><input class="inp" type="number" min="0" id="' + id + '" data-testid="sx-pol-in-' + esc(d.key) + '"' + (d.step ? ' step="' + esc(String(d.step)) + '"' : '') + dis
         + ' value="' + esc(String(polShown(d, x.v))) + '" aria-label="' + esc(T(d.label)) + '">' + (d.suffix ? '<span class="sub">' + esc(T(d.suffix)) + '</span>' : '') + '</span>';
     }
@@ -510,7 +510,7 @@ var CBSettings = (function () {
     var use = function () { var d = H.data.use; return (d && d.r) || null; };
     function quotaRows() {
       var e = ent(); if (!e || !e.quotas) return [];
-      return Object.keys(e.quotas).map(function (k) { var q = e.quotas[k] || {}; return { key: k, state: q.state, limit: q.limit }; });
+      return Object.keys(e.quotas).map(function (item) { var q = e.quotas[item] || {}; return { key: item, state: q.state, limit: q.limit }; });
     }
     function allows(q) { return q.state === 'capped' ? T('Up to') + ' ' + q.limit : q.state === 'unlimited' ? T('No limit') : T('Not decided yet'); }
     function paintHead() {
@@ -616,7 +616,7 @@ var CBSettings = (function () {
 
     /* every device of the shop — the owner's list (GET /signin/devices); anyone else sees it greyed with the server's sentence (may.devices), never hidden */
     function paintDevBar() {
-      var m = devMay(), rows = devRows(), live = rows.filter(function (d) { return !d.revoked_at && Number(d.sessions) > 0; }).length;
+      var m = devMay(), rows = devRows(), live = rows.filter(function (item) { return !item.revoked_at && Number(item.sessions) > 0; }).length;
       $('sx_dev_bar').innerHTML = bar('<span class="sx-count" data-testid="sx-dev-count">' + (m && m.ok === false
         ? '<span class="sx-why" data-testid="sx-dev-why">' + esc(m.why || T('Not allowed for this sign-in.')) + '</span>'
         : '<b>' + rows.length + '</b> ' + esc(T(rows.length === 1 ? 'device' : 'devices')) + ' · <b>' + live + '</b> ' + esc(T('signed in now')) + deviceListLegacyNote()) + '</span>');
@@ -658,7 +658,7 @@ var CBSettings = (function () {
 
     /* keys for other systems: the ONE list lives under Connectors (keysSection; was Counters & keys until WALK-REG R31) — here the count from the same read, and the door; never a second list or minting */
     function paintKeys() {
-      var d = H.data.keys || {}, keys = (d.r && d.r.keys) || [], latest = keys.slice().sort(function (a, b) { return _keySeenAt(b) - _keySeenAt(a); })[0];
+      var d = H.data.keys || {}, keys = (d.r && d.r.keys) || [], latest = keys.slice().sort(function (first, second) { return _keySeenAt(second) - _keySeenAt(first); })[0];
       $('sx_keys_card').innerHTML = '<div class="sx-card">' + (d.state === 'loading' ? '<div class="loadwrap"><span class="spin"></span> ' + esc(T('Reading your keys…')) + '</div>'
         : d.state === 'error' ? '<div class="err" data-testid="sx-keys-err">' + esc(listErr('keys').title) + '</div>'
         : '<div class="sx-big" data-testid="sx-keys-count">' + keys.length + ' ' + esc(T(keys.length === 1 ? 'key' : 'keys')) + '</div>'
@@ -674,7 +674,7 @@ var CBSettings = (function () {
 
   var PAINT = { counters: counters, connectors: connectors, policy: policy, plan: plan, account: account };
   function mount(host, sec) {
-    H.lists.forEach(function (l) { try { l.destroy(); } catch (e) { if (typeof cblog === 'function') cblog('error', 'settings list teardown: ' + ((e && e.message) || e)); } });
+    H.lists.forEach(function (item) { try { item.destroy(); } catch (e) { if (typeof cblog === 'function') cblog('error', 'settings list teardown: ' + ((e && e.message) || e)); } });
     H.lists = []; H.data = {}; H.host = host; H.sec = sec;
     (PAINT[sec] || counters)();
   }
