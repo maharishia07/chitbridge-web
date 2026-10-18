@@ -830,11 +830,11 @@ async function loadProfile(){ const node=document.getElementById("profbody"); if
        while this fetch is in flight — switching viewport, opening the menu — detaches the node captured above.
        Writing to that stale reference paints into a node no longer in the document and the panel stays blank
        with no error anywhere. Every await in this file that is followed by a DOM write has the same hazard. */
-    const h2=document.getElementById("profbody"); if(!h2) return;
-    h2.innerHTML = profSecHTML(profSec(), e);
+    const node=document.getElementById("profbody"); if(!node) return;
+    node.innerHTML = profSecHTML(profSec(), e);
     profSnapshot();
     if (profSec() === 'vault') loadVault();   // the trade documents vault (async — pre-fills authority forms)
-  }catch(e){ const h3=document.getElementById("profbody"); if(h3) h3.innerHTML=scrErr(e); }
+  }catch(e){ const node=document.getElementById("profbody"); if(node) node.innerHTML=scrErr(e); }
   finally { _profBusy = false; } }
 
 /**
@@ -1905,7 +1905,7 @@ function _langName(l){ var n = _LANG_NAME[l]; return n ? (n + ' (' + l + ')') : 
 function _flag(cc){
   var text = String(cc || '').trim().toUpperCase();
   if (!/^[A-Z]{2}$/.test(text)) return '';   // only a 2-letter ISO code makes a flag; "India" does not
-  try { return text.replace(/./g, function(ch){ return String.fromCodePoint(127397 + ch.charCodeAt(0)); }); }
+  try { return text.replace(/./g, function(text){ return String.fromCodePoint(127397 + text.charCodeAt(0)); }); }
   catch (_) { return ''; }
 }
 
@@ -3429,18 +3429,18 @@ function settingsScreen(){
     var row = '<div class="row misrow' + (setSec() === item.key ? ' sel' : '') + '" data-testid="set-sec-' + item.key + '" onclick="setSetSec(\'' + item.key + '\')">'
       + '<div class="main2"><div class="l1"><span class="code">' + esc(item.name) + '</span></div><div class="l2">' + esc(item.q) + '</div></div></div>';
     if (item.key === 'integrations' && setSec() === 'integrations'){
-      row += INT_TABS.map(function(t){
-        return '<div class="row misrow sub' + (intTab() === t.key ? ' sel' : '') + '" data-testid="int-tab-' + t.key + '" onclick="intSetTab(\'' + t.key + '\')">'
-          + '<div class="main2"><div class="l1"><span class="code">' + esc(tx(t.n)) + '</span></div>'
-          + '<div class="l2">' + esc(tx(t.q)) + '</div></div></div>';
+      row += INT_TABS.map(function(item){
+        return '<div class="row misrow sub' + (intTab() === item.key ? ' sel' : '') + '" data-testid="int-tab-' + item.key + '" onclick="intSetTab(\'' + item.key + '\')">'
+          + '<div class="main2"><div class="l1"><span class="code">' + esc(tx(item.n)) + '</span></div>'
+          + '<div class="l2">' + esc(tx(item.q)) + '</div></div></div>';
       }).join('');
     }
     if (item.key === 'governance' && setSec() === 'governance' && typeof GOV !== 'undefined'){
-      row += GOV.map(function(g, index){
+      row += GOV.map(function(item, index){
         var on = ((UI.govTab || 0) === index);
         return '<div class="row misrow sub' + (on ? ' sel' : '') + '" data-testid="gov-layer-' + index + '" onclick="govSetTab(' + index + ')">'
-          + '<div class="main2"><div class="l1"><span class="code">' + esc(g.n) + '</span></div>'
-          + '<div class="l2">' + esc(g.tag || '') + '</div></div></div>';
+          + '<div class="main2"><div class="l1"><span class="code">' + esc(item.n) + '</span></div>'
+          + '<div class="l2">' + esc(item.tag || '') + '</div></div></div>';
       }).join('');
     }
     return row;
@@ -4706,15 +4706,15 @@ function netOffersHTML(){
 
   nets.forEach(function(item){
     var optIn = item.policy !== 'opt_out';
-    var rows = (item.offers || []).map(function(o){
-      var btn = o.applies
-        ? '<button data-testid="neto-out-' + esc(o.id) + '" onclick="netoChoice(\'' + esc(o.id) + '\',\'' + (optIn ? '' : 'out') + '\')">' + tx(optIn ? 'Stop taking it' : 'Decline') + '</button>'
-        : '<button class="pri" data-testid="neto-in-' + esc(o.id) + '" onclick="netoChoice(\'' + esc(o.id) + '\',\'' + (optIn ? 'in' : '') + '\')">' + tx('Take this offer') + '</button>';
-      return '<div data-testid="neto-net-' + esc(o.id) + '" style="display:flex;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--line);flex-wrap:wrap">'
-        + '<span style="flex:1 1 220px;min-width:0"><b>' + esc(o.name) + '</b>'
-        + '<div style="font-size:var(--fs-1);color:var(--' + (o.applies ? 'ok' : 'grey') + ')">'
-        + (o.applies ? tx('applies at your counters') : tx('not applied here')) + ' · ' + esc(_netRelWords({ at: o.at, until: o.until })) + '</div></span>'
-        + (o.live ? btn : '<span style="color:var(--grey);font-size:var(--fs-1)">' + tx('no longer live at the brand') + '</span>')
+    var rows = (item.offers || []).map(function(item){
+      var btn = item.applies
+        ? '<button data-testid="neto-out-' + esc(item.id) + '" onclick="netoChoice(\'' + esc(item.id) + '\',\'' + (optIn ? '' : 'out') + '\')">' + tx(optIn ? 'Stop taking it' : 'Decline') + '</button>'
+        : '<button class="pri" data-testid="neto-in-' + esc(item.id) + '" onclick="netoChoice(\'' + esc(item.id) + '\',\'' + (optIn ? 'in' : '') + '\')">' + tx('Take this offer') + '</button>';
+      return '<div data-testid="neto-net-' + esc(item.id) + '" style="display:flex;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--line);flex-wrap:wrap">'
+        + '<span style="flex:1 1 220px;min-width:0"><b>' + esc(item.name) + '</b>'
+        + '<div style="font-size:var(--fs-1);color:var(--' + (item.applies ? 'ok' : 'grey') + ')">'
+        + (item.applies ? tx('applies at your counters') : tx('not applied here')) + ' · ' + esc(_netRelWords({ at: item.at, until: item.until })) + '</div></span>'
+        + (item.live ? btn : '<span style="color:var(--grey);font-size:var(--fs-1)">' + tx('no longer live at the brand') + '</span>')
         + '</div>';
     }).join('');
     out += '<div style="' + _CARD + '">'
@@ -4784,7 +4784,7 @@ function netCatBrandHTML(c, stores){
   var shared = (c.published || []).map(function(item, index){
     var now = cur[item] || [], want = atSel[item] || null;
     var isOut = function(id){ return want && (id in want) ? !!want[id] : now.indexOf(id) >= 0; };
-    var outCount = storeList.filter(function(s){ return isOut(s.id); }).length;
+    var outCount = storeList.filter(function(item){ return isOut(item.id); }).length;
     var open = _NETC_OPEN === key + '|' + item;
     return '<div data-testid="netc-out-' + index + '" style="padding:3px 0;font-size:var(--fs-2)">'
       + '<label style="display:flex;gap:8px;align-items:center">'
@@ -4798,11 +4798,11 @@ function netCatBrandHTML(c, stores){
           : '')
       + '</label>'
       + (open && !outSel[item] ? '<div data-testid="netc-at-' + index + '" style="display:flex;gap:10px;flex-wrap:wrap;margin:4px 0 4px 26px">'
-          + storeList.map(function(s, j){
-              var changed = want && (s.id in want) && (!!want[s.id] !== (now.indexOf(s.id) >= 0));
+          + storeList.map(function(item, j){
+              var changed = want && (item.id in want) && (!!want[item.id] !== (now.indexOf(item.id) >= 0));
               return '<label data-testid="netc-at-' + index + '-' + j + '" style="display:flex;gap:4px;align-items:center;font-size:var(--fs-1)' + (changed ? ';font-weight:700' : '') + '">'
-                + '<input type="checkbox" ' + (isOut(s.id) ? 'checked ' : '') + 'onchange="netcAt(\'' + esc(key) + '\',' + index + ',' + j + ',this.checked)">'
-                + esc(tx('withdraw at') + ' ' + s.name) + '</label>';
+                + '<input type="checkbox" ' + (isOut(item.id) ? 'checked ' : '') + 'onchange="netcAt(\'' + esc(key) + '\',' + index + ',' + j + ',this.checked)">'
+                + esc(tx('withdraw at') + ' ' + item.name) + '</label>';
             }).join('') + '</div>'
         : '')
       + '</div>';
@@ -5163,7 +5163,7 @@ async function intCounterCloseDups(){
   var kill = [];
   Object.keys(byIp).forEach(function(item){
     byIp[item].slice().sort(function(first, second){ return _keySeenAt(second) - _keySeenAt(first); })
-      .slice(1).forEach(function(k){ if (_keySeenAt(k)) kill.push(k); });
+      .slice(1).forEach(function(item){ if (_keySeenAt(item)) kill.push(item); });
   });
   if (!kill.length) { if (typeof toast === 'function') toast(tx('There are no duplicates that can be closed safely.')); return; }
   if (_CLOSE_ARMED !== 'dups') { _CLOSE_ARMED = 'dups'; if (typeof toast === 'function')
@@ -5510,7 +5510,7 @@ function paintSettings(s, _daOpts){ const node=document.getElementById("setbody"
      not the whole screen, which would throw away anything half-typed in the fields below it. */
   if (setSec() === 'work' && !_WROUTE) {
     workRoutingLoad().then(function(){
-      var p = document.getElementById('wr_pane'); if (p) p.innerHTML = workRoutingHTML();
+      var node = document.getElementById('wr_pane'); if (node) node.innerHTML = workRoutingHTML();
     });
   }
   { const k = setSec();
@@ -5533,7 +5533,7 @@ function paintSettings(s, _daOpts){ const node=document.getElementById("setbody"
         out = _misHead('Standards', '')
             + '<div style="' + _CARD + ';color:var(--grey);font-size:var(--fs-2)">' + tx('Loading the register…') + '</div>';
         ensureCap('standards').then(function(){ if (setSec() === 'standards') { _capShowDetail(); loadSettings(); } })
-          .catch(function(e){ var h=document.getElementById('setbody'); if(h) h.innerHTML = scrErr(e); });
+          .catch(function(e){ var node=document.getElementById('setbody'); if(node) node.innerHTML = scrErr(e); });
       } else out = standardsSettingsHTML();
     }
     else if (k === "work") out = _misHead('Work', '')
@@ -5932,11 +5932,11 @@ async function loadGaps(){ const node=document.getElementById("kbbody"); if(!nod
     : '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:11px 13px;font-size:var(--fs-2);color:var(--warn-3);margin-bottom:11px">This is the help-desk knowledge base. Queries arrive as chits in <b>' + tx('GOV-01-Help') + '</b>\'s Task inbox — operate as GOV-01-Help to answer, close, and publish here.</div>';
   node.innerHTML=form+'<div style="font-size:var(--fs-2);color:var(--grey);margin:12px 0 6px">' + tx('Published answers (') + '<span id="kb_n">…</span>)</div><div id="kb_list"><div class="loadwrap"><span class="spin"></span> loading…</div></div>';
   if(window.CBOffline)CBOffline.autodraft(node,'kb.form');   // draft the question/answer/context you're writing
-  try{ _kbItems=(await api("assistQuestions"))||[]; const n=document.getElementById("kb_n"); if(n)n.textContent=_kbItems.length;
+  try{ _kbItems=(await api("assistQuestions"))||[]; const node=document.getElementById("kb_n"); if(node)node.textContent=_kbItems.length;
     const L=document.getElementById("kb_list"); if(L) L.innerHTML = _kbItems.length ? _kbItems.map(function(e){
       const eb = isHelp ? '<button class="composebtn" style="padding:2px 9px;font-size:var(--fs-1);flex:none" onclick="kbEdit(\''+esc(e.id)+'\')">' + tx('Edit') + '</button>' : '';
       return '<div style="'+_CARD+';padding:9px 11px"><div style="display:flex;gap:8px;align-items:flex-start"><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:var(--fs-2)">'+esc(e.q)+'</div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">'+esc(e.a)+'</div><div style="font-size:var(--fs-1);color:var(--grey-4);margin-top:3px">'+esc(Array.isArray(e.context)?e.context.join(', '):'')+'</div></div>'+eb+'</div></div>'; }).join('') : '<div style="color:var(--grey);font-size:var(--fs-2)">None yet.</div>';
-  }catch(e){ const L=document.getElementById("kb_list"); if(L)L.innerHTML=scrErr(e); } }
+  }catch(e){ const node=document.getElementById("kb_list"); if(node)node.innerHTML=scrErr(e); } }
 function kbEdit(id){ const it=_kbItems.find(function(x){return x.id===id;}); if(!it)return; _kbEditId=id;
   const node=document.getElementById("kb_q"),a=document.getElementById("kb_a"),c=document.getElementById("kb_c"),hd=document.getElementById("kb_formhd"),pb=document.getElementById("kb_pub");
   if(node)node.value=it.q||''; if(a)a.value=it.a||''; if(c)c.value=(Array.isArray(it.context)?it.context.join(', '):'*'); if(hd)hd.textContent='Edit answer'; if(pb)pb.textContent='💾 Update';
