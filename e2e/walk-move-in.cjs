@@ -166,7 +166,7 @@ W.run('move-in', async (w) => {
     const ok = b.kind === 'trial_balance' && b.as_at === '2026-07-01' && refusal === TB_REFUSAL && imp.disabled && imp.title === TB_REFUSAL && why === TB_REFUSAL && sent.import.length === 1;
     return { ok, saw: (imp.disabled ? 'Import greyed: ' : 'Import LIVE: ') + refusal.slice(0, 80) };
   });
-  await w.step('M8', 'books stated as from the US -> source_country US, the 422 MOVE_IN_COUNTRY painted in our words, Import greyed with it', async () => {
+  await w.step('M8', 'books stated as from the US -> source_country US, the 422 MOVE_IN_COUNTRY painted with the server sentence, Import greyed with it', async () => {
     await page.click('[data-testid="mi-back"]'); await page.click('[data-testid="mi-back"]');
     await page.waitForSelector('[data-testid="mi-file-step"]');
     await page.selectOption('[data-testid="mi-source"]', 'qbo');
@@ -182,7 +182,7 @@ W.run('move-in', async (w) => {
     const code = await page.$eval('[data-testid="mi-refused"]', (e) => e.dataset.code);
     const imp = await page.$eval('[data-testid="mi-import"]', (e) => ({ disabled: e.disabled, title: e.title }));
     const b = sent.preview[sent.preview.length - 1] || {};
-    const ok = b.kind === 'items' && b.source_country === 'US' && code === 'MOVE_IN_COUNTRY' && /another country/.test(line) && why === COUNTRY_REFUSAL && imp.disabled && /another country/.test(imp.title);
+    const ok = b.kind === 'items' && b.source_country === 'US' && code === 'MOVE_IN_COUNTRY' && /Not moved in/.test(line) && why === COUNTRY_REFUSAL && imp.disabled && imp.title === COUNTRY_REFUSAL;   // the SERVER says why (MOVE_IN_COUNTRY has three reasons)
     return { ok, saw: 'sent ' + b.source_country + ' · ' + line + ' · ' + (imp.disabled ? 'Import greyed' : 'Import LIVE') };
   });
   await w.step('M9', 'back to Australia -> source_country AU; the item with a foreign tax code is HELD: counted and listed as Held with its reason', async () => {
