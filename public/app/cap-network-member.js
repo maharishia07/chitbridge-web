@@ -23,34 +23,34 @@ function _netMemberScreen(){
   // Sorting the flat list by `path` (which is what the server returns) orders by bridge id, i.e. at random.
   var all = (L.nodes || []).slice();
   var childrenOf = {};
-  all.forEach(function(n){
-    var p = String(n.path || ''); var i = p.lastIndexOf('.');
+  all.forEach(function(item){
+    var p = String(item.path || ''); var i = p.lastIndexOf('.');
     var parent = i < 0 ? '' : p.slice(0, i);
-    (childrenOf[parent] = childrenOf[parent] || []).push(n);
+    (childrenOf[parent] = childrenOf[parent] || []).push(item);
   });
-  Object.keys(childrenOf).forEach(function(k){ childrenOf[k].sort(_netByName); });
+  Object.keys(childrenOf).forEach(function(item){ childrenOf[item].sort(_netByName); });
   var rows = [];
   (function walk(parentPath){
-    (childrenOf[parentPath] || []).forEach(function(n){ rows.push(n); walk(String(n.path || '')); });
+    (childrenOf[parentPath] || []).forEach(function(item){ rows.push(item); walk(String(item.path || '')); });
   })('');
-  var list = rows.map(function(n){
-    var bid = String(n.bridgeId || n.bridge_id || '');
-    var depth = Math.max(0, String(n.path || '').split('.').length - 1);
+  var list = rows.map(function(item){
+    var bid = String(item.bridgeId || item.bridge_id || '');
+    var depth = Math.max(0, String(item.path || '').split('.').length - 1);
     var isMe = bid === mine;
     return '<div style="padding:8px 10px 8px ' + (12 + depth * 18) + 'px;font-size:var(--fs-2);border-bottom:1px solid var(--line);'
       + (isMe ? 'background:var(--purple-tint);border-inline-start:3px solid var(--purple-2);' : '') + ';color:var(--on-card)">'
       + (depth ? '<span style="color:var(--grey)">└ </span>' : '◆ ')
-      + (isMe ? '<b>' + esc(n.name || bid) + '</b> <span style="font-size:var(--fs-1);color:var(--purple-2);font-weight:700"><span class=arw>←</span> you</span>'
-              : esc(n.name || bid))
+      + (isMe ? '<b>' + esc(item.name || bid) + '</b> <span style="font-size:var(--fs-1);color:var(--purple-2);font-weight:700"><span class=arw>←</span> you</span>'
+              : esc(item.name || bid))
       + ' <span style="font-size:var(--fs-1);color:var(--grey);font-family:ui-monospace,Menlo,monospace">' + esc(bid) + '</span>'
       // b117 — carried onto the store at Build, so a MEMBER can read why each branch exists. Until then this tree
       // was a list of names, which tells a new store nothing about the network it just joined.
-      + (n.purpose ? '<div style="font-size:var(--fs-1);color:var(--grey-3);margin-top:2px;line-height:1.4">' + esc(n.purpose) + '</div>' : '')
+      + (item.purpose ? '<div style="font-size:var(--fs-1);color:var(--grey-3);margin-top:2px;line-height:1.4">' + esc(item.purpose) + '</div>' : '')
       // b119 — where it is, for a member reading the network. A store you may be asked to transfer goods to is a
       // place before it is a name.
-      + ((n.city || n.lat != null) ? '<div style="font-size:var(--fs-1);color:var(--grey-3);margin-top:1px">📍 '
-          + esc(n.city || '') + (n.lat != null && n.lng != null ? ' · locatable' : ' · not locatable')
-          + (n.service_km ? ' · serves ' + esc(n.service_km) + ' km' : '') + '</div>' : '')
+      + ((item.city || item.lat != null) ? '<div style="font-size:var(--fs-1);color:var(--grey-3);margin-top:1px">📍 '
+          + esc(item.city || '') + (item.lat != null && item.lng != null ? ' · locatable' : ' · not locatable')
+          + (item.service_km ? ' · serves ' + esc(item.service_km) + ' km' : '') + '</div>' : '')
       + '</div>';
   }).join('');
   var rootName = (rows[0] && (rows[0].name || rows[0].bridge_id)) || 'the network operator';
@@ -85,7 +85,7 @@ function netAvailSearch(v){
   // Debounced: a keystroke is not a question, and this walks every store in the network.
   _avT = setTimeout(function(){
     api('netAvail', { query: { q: q } })
-      .then(function(r){ UI._avBusy = false; UI._avRes = r; _netPaintAvail(); })
+      .then(function(reply){ UI._avBusy = false; UI._avRes = reply; _netPaintAvail(); })
       .catch(function(e){ UI._avBusy = false; UI._avRes = { error: (e && e.message) || 'Search failed' }; _netPaintAvail(); });
   }, 400);
 }
@@ -98,8 +98,8 @@ function _netPaintAvail(){
   if (el) el.innerHTML = _netAvailBody();
 }
 function _netAvailBody(){
-  var q = String(UI._avQ || '').trim();
-  if (q.length < 2) {
+  var text = String(UI._avQ || '').trim();
+  if (text.length < 2) {
     return '<div style="padding:26px 4px;color:var(--grey);font-size:var(--fs-2);line-height:1.7">'
       + 'Type a product name or code. Every store in your network is asked, and each answers with what it has, '
       + '<b>where the number came from</b> and <b>when it was last true</b>.'
@@ -117,7 +117,7 @@ function _netAvailBody(){
   var rows = R.rows || [];
   if (!rows.length) {
     return '<div style="padding:22px 4px;color:var(--grey);font-size:var(--fs-2)">No store in your network carries anything '
-      + 'matching “' + esc(q) + '”.</div>';
+      + 'matching “' + esc(text) + '”.</div>';
   }
   /**
    * ── GROUPED BY PRODUCT, NOT BY ROW ──────────────────────────────────────────────────────────────────────
@@ -133,33 +133,33 @@ function _netAvailBody(){
    * label two stores may spell differently.
    */
   var groups = [], byKey = {};
-  rows.forEach(function(r){
-    var key = (r.code ? 'c:' + String(r.code).toLowerCase() : 'n:' + String(r.name).toLowerCase());
-    if (!byKey[key]) { byKey[key] = { key: key, name: r.name, code: r.code, rows: [] }; groups.push(byKey[key]); }
-    byKey[key].rows.push(r);
+  rows.forEach(function(item){
+    var key = (item.code ? 'c:' + String(item.code).toLowerCase() : 'n:' + String(item.name).toLowerCase());
+    if (!byKey[key]) { byKey[key] = { key: key, name: item.name, code: item.code, rows: [] }; groups.push(byKey[key]); }
+    byKey[key].rows.push(item);
   });
   // Most-answerable product first: the one with stock somewhere, then the one with the most stores holding it.
-  groups.forEach(function(g){
-    g.have = g.rows.filter(function(x){ return x.qty !== null && x.qty !== undefined && x.qty > 0; });
-    g.total = g.have.reduce(function(s, x){ return s + x.qty; }, 0);
-    g.unknown = g.rows.filter(function(x){ return x.qty === null || x.qty === undefined; }).length;
+  groups.forEach(function(item){
+    item.have = item.rows.filter(function(x){ return x.qty !== null && x.qty !== undefined && x.qty > 0; });
+    item.total = item.have.reduce(function(total, x){ return total + x.qty; }, 0);
+    item.unknown = item.rows.filter(function(x){ return x.qty === null || x.qty === undefined; }).length;
   });
-  groups.sort(function(a, b){ return (b.have.length - a.have.length) || (b.total - a.total); });
+  groups.sort(function(first, second){ return (second.have.length - first.have.length) || (second.total - first.total); });
 
   var one = groups.length === 1;
-  var body = groups.map(function(g){
-    var open = one || UI._avOpen === g.key;
-    var head = '<div onclick="netAvailToggle(\'' + g.key + '\')" style="cursor:pointer;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;'
+  var body = groups.map(function(item){
+    var open = one || UI._avOpen === item.key;
+    var head = '<div onclick="netAvailToggle(\'' + item.key + '\')" style="cursor:pointer;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;'
       + 'padding:11px 2px;border-bottom:1px solid var(--line);background:' + (open ? 'transparent' : 'var(--card)') + '">'
       + '<span style="color:var(--grey);font-size:var(--fs-2);width:12px">' + (open ? '▾' : '<span class=arw>▸</span>') + '</span>'
-      + '<b style="font-size:var(--fs-3)">' + esc(g.name) + '</b>'
-      + (g.code ? '<span style="font-family:ui-monospace,Menlo,monospace;font-size:var(--fs-1);color:var(--grey)">' + esc(g.code) + '</span>' : '')
-      + '<span style="margin-inline-start:auto;font-size:var(--fs-2);color:' + (g.have.length ? 'var(--ok-2)' : 'var(--blue-2)') + ';font-weight:700">'
-      + (g.have.length ? g.total + ' across ' + g.have.length + ' store' + (g.have.length === 1 ? '' : 's')
+      + '<b style="font-size:var(--fs-3)">' + esc(item.name) + '</b>'
+      + (item.code ? '<span style="font-family:ui-monospace,Menlo,monospace;font-size:var(--fs-1);color:var(--grey)">' + esc(item.code) + '</span>' : '')
+      + '<span style="margin-inline-start:auto;font-size:var(--fs-2);color:' + (item.have.length ? 'var(--ok-2)' : 'var(--blue-2)') + ';font-weight:700">'
+      + (item.have.length ? item.total + ' across ' + item.have.length + ' store' + (item.have.length === 1 ? '' : 's')
                        : 'nobody has reported any')
-      + (g.unknown ? '<span style="font-weight:400;color:var(--warn-2)"> · ' + g.unknown + ' unknown</span>' : '')
+      + (item.unknown ? '<span style="font-weight:400;color:var(--warn-2)"> · ' + item.unknown + ' unknown</span>' : '')
       + '</span></div>';
-    return head + (open ? g.rows.map(storeRow).join('') : '');
+    return head + (open ? item.rows.map(storeRow).join('') : '');
   }).join('');
 
   function storeRow(r){
@@ -270,8 +270,8 @@ function netAskFor(entityId, storeName, itemName, bridgeId, rowPrice){
      * means "nobody has priced this".
      */
     var match = null, want = String(itemName || '').trim().toLowerCase();
-    (items || []).forEach(function(it){
-      if (!match && String(it.particulars || '').trim().toLowerCase() === want) match = it;
+    (items || []).forEach(function(item){
+      if (!match && String(item.particulars || '').trim().toLowerCase() === want) match = item;
     });
     var price = match && match.price ? match.price
               : (rowPrice !== undefined && rowPrice !== null && rowPrice !== '' ? Number(rowPrice) : 0);
@@ -302,9 +302,9 @@ function netAskFor(entityId, storeName, itemName, bridgeId, rowPrice){
   // supCatalogueFull is a plain function, not an EP key — it bypasses api() on purpose (it needs the sibling
   // fields that unwrap() would drop), and it is the SAME reader the supplier compose uses.
   supCatalogueFull(entityId)
-    .then(function(cat){
-      var items = (((cat && cat.items) || [])).map(function(p){
-        var d = p.item_data || p;
+    .then(function(reply){
+      var items = (((reply && reply.items) || [])).map(function(item){
+        var d = item.item_data || item;
         return { particulars: d.name || d.product || 'item', unit: d.unit || 'unit',
                  price: (typeof cbAmount === 'function') ? cbAmount(d.price) : 0 };
       });
@@ -312,11 +312,11 @@ function netAskFor(entityId, storeName, itemName, bridgeId, rowPrice){
       // Swap the picker's source in place. The composed LINES are untouched — a list arriving late must never
       // rewrite something the person has already started editing.
       if (typeof STORE !== 'undefined') STORE.catalogue = items;
-      var sel = (typeof document !== 'undefined') ? document.getElementById('cc_pick') : null;
-      if (sel) {
-        sel.innerHTML = items.map(function(p, i){
-          return '<option value="' + i + '">' + esc(p.particulars) + ' · '
-            + ((typeof inr === 'function') ? inr(p.price) : p.price) + '/' + esc(p.unit || 'unit') + '</option>';
+      var node = (typeof document !== 'undefined') ? document.getElementById('cc_pick') : null;
+      if (node) {
+        node.innerHTML = items.map(function(item, index){
+          return '<option value="' + index + '">' + esc(item.particulars) + ' · '
+            + ((typeof inr === 'function') ? inr(item.price) : item.price) + '/' + esc(item.unit || 'unit') + '</option>';
         }).join('');
       }
     })
@@ -426,7 +426,7 @@ function _netStepDetails(){
     + 'This goes as an ordinary chit: it lands in their Task list and can be disputed like any other.</div>';
 }
 function _netStepReview(){
-  var o = _netOrderState(), c = UI._netCart, sel = c ? c.selected() : [];   /* the money block is the cart's (reviewHTML) */
+  var o = _netOrderState(), c = UI._netCart, list = c ? c.selected() : [];   /* the money block is the cart's (reviewHTML) */
   /* ⭐ THE CART FORMATS ITS OWN MONEY — see cart-ui's money(). This screen printed String(line_total), copied
      verbatim from the supplier review, so both said an amount with no currency on the last page before an order
      goes out. Athi reported the supplier one; this is the same defect on a screen he had not reached yet. */
@@ -440,9 +440,9 @@ function _netStepReview(){
     + '</div>' + inner + '</div>'; };
   return card('To<span style="margin-inline-start:auto;font-weight:400;text-transform:none;letter-spacing:0">fixed — this is their request</span>',
         '<div style="padding:8px 12px;font-size:var(--fs-2)"><b>' + esc(s.name || '') + '</b> <span style="color:var(--grey);font-size:var(--fs-1)">' + esc(s.user_id||s.bridge_id || '') + '</span></div>')
-    + card('Items · ' + sel.length, sel.map(function(l){
-        return row(l.qty + ' × ' + esc(l.unit), '<span style="flex:1">' + esc(l.name) + '</span>'
-          + '<b style="float:inline-end">' + esc(_netMoney(l.line_total)) + '</b>'); }).join('')
+    + card('Items · ' + list.length, list.map(function(item){
+        return row(item.qty + ' × ' + esc(item.unit), '<span style="flex:1">' + esc(item.name) + '</span>'
+          + '<b style="float:inline-end">' + esc(_netMoney(item.line_total)) + '</b>'); }).join('')
         /* ONE LINE, ONE SOURCE: the cart prints its own money block — see CBCart.reviewHTML */
         + (c ? c.reviewHTML({ totalTestid:'net-total', taxTestid:'net-tax' }) : ''), 0)
     + card('Details', row('Subject', esc(o.subject)) + row('Needed by', o.by ? esc(o.by) : '—')
@@ -460,12 +460,12 @@ function netBrowse(entityId, name, bridgeId){
   _netPaintBrowse();
   if (typeof supCatalogueFull !== 'function') { UI._brBusy = false; _netPaintBrowse(); return; }
   supCatalogueFull(entityId)
-    .then(function(cat){
+    .then(function(reply){
       UI._brBusy = false;
       // The WHOLE payload is kept, not a flattened copy: the picker needs `groups` to put a product's sizes under
       // one heading, and a mapped list would have thrown that away — the same drift catalogue-lines.js exists to stop.
-      UI._brCat = cat || {};
-      UI._brItems = ((cat && cat.items) || []);
+      UI._brCat = reply || {};
+      UI._brItems = ((reply && reply.items) || []);
       /**
        * ⚠️ THE CART IS CREATED HERE, where a catalogue ARRIVES — not in _netBrowseBody, which repaints on every
        * press of + and would hand back a new empty cart each time.
@@ -513,8 +513,8 @@ function netSendCart(isDraft){
     send_as_label: (typeof SESSION !== 'undefined' && SESSION.entity) || '',
     subject: subj,
     schema_values: { subject: subj, delivery_by: o.by || '', deliver_to: o.addr || '', note: o.note || '' },
-    line_items: picked.map(function(p){ return { particulars: p.name, quantity: +p.qty || 0,
-      price: amt(p), total: (+p.qty || 0) * amt(p) }; }),
+    line_items: picked.map(function(item){ return { particulars: item.name, quantity: +item.qty || 0,
+      price: amt(item), total: (+item.qty || 0) * amt(item) }; }),
     priority: 'normal',
     onSent: function(){ _netCartRelease(); netBrowseBack(); },
     onError: function(m){ if (typeof toast === 'function') toast(m, true); }
@@ -527,7 +527,7 @@ function netOpenInCompose(){
   var picked = UI._netCart ? UI._netCart.selected() : [];
   var amt = function(p){ var v = (typeof cbAmount === 'function') ? cbAmount(p.price) : p.price;
                          return (v === null || v === undefined || v === '') ? 0 : Number(v) || 0; };
-  var full = (UI._brItems || []).map(function(p){ var d = p.item_data || p;
+  var full = (UI._brItems || []).map(function(item){ var d = item.item_data || item;
     return { particulars: d.name || d.product || 'item', unit: d.unit || 'unit',
              price: (typeof cbAmount === 'function') ? cbAmount(d.price) : d.price }; });
   compose({
@@ -537,7 +537,7 @@ function netOpenInCompose(){
     catalogue: full,
     // The quantity set at the ROW travels through — it is not re-asked in compose, which would make the stepper a
     // suggestion rather than a decision. Still editable there, as every compose line is.
-    items: picked.map(function(p){ return { particulars: p.name, unit: p.unit, price: amt(p), qty: p.qty || 1 }; }),
+    items: picked.map(function(item){ return { particulars: item.name, unit: item.unit, price: amt(item), qty: item.qty || 1 }; }),
   });
 }
 function _netPaintBrowse(){
@@ -589,16 +589,16 @@ function _netBrowseBody(){
   if (L.not_in_network) return '<div style="padding:20px 2px;color:var(--grey);font-size:var(--fs-2)">This business is not part of a network.</div>';
   var stores = L.stores || [];
   if (!stores.length) return '<div style="padding:20px 2px;color:var(--grey);font-size:var(--fs-2)">No store in this network is visible to you.</div>';
-  return stores.map(function(st){
-    return '<div onclick="netBrowse(\'' + esc(st.entity_id) + '\',\'' + esc(String(st.name).replace(/'/g, '')) + '\',\'' + esc(st.bridge_id || '') + '\')"'
+  return stores.map(function(item){
+    return '<div onclick="netBrowse(\'' + esc(item.entity_id) + '\',\'' + esc(String(item.name).replace(/'/g, '')) + '\',\'' + esc(item.bridge_id || '') + '\')"'
       + ' style="cursor:pointer;padding:11px 2px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">'
-      + '<b style="font-size:var(--fs-3)">' + esc(st.name) + '</b>'
-      + (st.is_me ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--purple-2);background:var(--purple-tint);border-radius:5px;padding:1px 6px">' + tx('YOU') + '</span>' : '')
-      + (st.city ? '<span style="font-size:var(--fs-2);color:var(--grey)">' + esc(st.city) + '</span>' : '')
-      + (st.km !== null && st.km !== undefined ? '<span style="font-size:var(--fs-2);color:var(--grey)">' + st.km + ' km</span>' : '')
-      + (st.currency ? '<span style="font-size:var(--fs-1);color:var(--grey)">' + esc(st.currency) + '</span>' : '')
+      + '<b style="font-size:var(--fs-3)">' + esc(item.name) + '</b>'
+      + (item.is_me ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--purple-2);background:var(--purple-tint);border-radius:5px;padding:1px 6px">' + tx('YOU') + '</span>' : '')
+      + (item.city ? '<span style="font-size:var(--fs-2);color:var(--grey)">' + esc(item.city) + '</span>' : '')
+      + (item.km !== null && item.km !== undefined ? '<span style="font-size:var(--fs-2);color:var(--grey)">' + item.km + ' km</span>' : '')
+      + (item.currency ? '<span style="font-size:var(--fs-1);color:var(--grey)">' + esc(item.currency) + '</span>' : '')
       + '<span style="margin-inline-start:auto;color:var(--blue);font-size:var(--fs-2)">open catalogue ›</span>'
-      + (st.purpose ? '<div style="width:100%;font-size:var(--fs-1);color:var(--grey-3)">' + esc(st.purpose) + '</div>' : '')
+      + (item.purpose ? '<div style="width:100%;font-size:var(--fs-1);color:var(--grey-3)">' + esc(item.purpose) + '</div>' : '')
       + '</div>';
   }).join('');
 }
@@ -606,7 +606,7 @@ function _netBrowseScreen(){
   // The list is fetched ONCE per visit, not per render — the network does not change while you read it.
   if (UI._brStores === undefined && !UI._brBusyList) {
     UI._brBusyList = true;
-    api('netStores').then(function(r){ UI._brStores = r || { stores: [] }; UI._brBusyList = false; _netPaintBrowse(); })
+    api('netStores').then(function(reply){ UI._brStores = reply || { stores: [] }; UI._brBusyList = false; _netPaintBrowse(); })
       .catch(function(){ UI._brStores = null; UI._brBusyList = false; _netPaintBrowse(); });
   }
   return '<div style="padding:18px 22px;max-width:760px">'
