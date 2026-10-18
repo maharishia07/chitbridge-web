@@ -2,6 +2,8 @@
  * brings (chart of accounts · contacts · items · trial balance · open invoices and bills), each the same three steps:
  *   File → Columns (guessed by the server, confirmed here) → Preview (the DRY RUN: will add · will merge · will skip, with the reason) → Import.
  * Phase 1 is files; CA1's practice door will call the same screen later.
+ * CALLED BY accounts.html (the Setup › Move in tab, BK.views.movein); the practice door (CA1) will call miConnect with a company's country
+ * CARD 23-connectors-and-integrations/move-in
  *
  * ── WHAT IS REUSED (CLAUDE.md rule 1) ────────────────────────────────────────────────────────────────────────────────────────────
  *   · the steps ARE CBSteps (app/step-flow.js): the rail, the guard-with-a-reason, the footer, focus — this file supplies only what each step renders
@@ -53,10 +55,12 @@ function miKnowShop() {
 }
 /** the countries a file may be stated from: the registered packs only, by name ([code, name]) */
 function miCountries() {
-  var packs = []; try { packs = window.CBRegulation ? CBRegulation.list() : []; } catch (_) { packs = []; }
-  return packs.map(function (p) { return [p.id, String(p.name || p.id).split(' · ')[0]]; });
+  var packs = [];
+  try { packs = window.CBRegulation ? CBRegulation.list() : []; }
+  catch (failure) { if (typeof cblog === 'function') cblog('warn', 'move-in: the country packs could not be listed, so the picker offers none — ' + ((failure && failure.message) || 'no answer')); }
+  return packs.map(function (pack) { return [pack.id, String(pack.name || pack.id).split(' · ')[0]]; });
 }
-function miCountryName(code) { var hit = miCountries().filter(function (c) { return c[0] === code; })[0]; return hit ? hit[1] : code; }
+function miCountryName(code) { var found = miCountries().filter(function (pair) { return pair[0] === code; })[0]; return found ? found[1] : code; }
 /** a connection opens the screen: its company's own country and id are sent, and no country is asked (the practice door, CA1) */
 function miConnect(company) { if (!MIV.f) miFresh(); MIV.conn = company && company.country ? { country: String(company.country).toUpperCase(), id: company.id || null } : null; }
 function miNeedsSide(k) { return k === 'contacts' || k === 'open_bills'; }
@@ -103,23 +107,25 @@ function miSel(id, k, opts, cur) {
 }
 /* one labelled row; min-width:0 on the cell so a native file input or a long name never pushes the page sideways at 390 px */
 function miRow(label, html) { return '<div style="display:grid;grid-template-columns:minmax(80px,150px) minmax(0,1fr);gap:8px;align-items:center;margin:6px 0"><span style="color:var(--grey);font-size:var(--fs-1)">' + esc(label) + '</span><span style="min-width:0;overflow:hidden">' + html + '</span></div>'; }
-function miRender(k) {
-  var f = MIV.f;
-  if (MIV.out) return miDoneHTML();
-  if (k === 'file') {
-    var sides = f.kind === 'contacts' ? [['customer', 'Customers'], ['supplier', 'Suppliers']] : [['customer', 'Invoices (customers owe you)'], ['supplier', 'Bills (you owe suppliers)']];
-    return '<div data-testid="mi-file-step" style="max-width:640px">'
-      + miRow(tx('From'), miSel('mi-source', 'source', MI_SOURCES, f.source))
+/** step 1: the file, which export, which system, which country, the side and move date (what/why: every choice the server needs before it can read the file) */
+function miFileStepHTML(form) {
+  var sides = form.kind === 'contacts' ? [['customer', 'Customers'], ['supplier', 'Suppliers']] : [['customer', 'Invoices (customers owe you)'], ['supplier', 'Bills (you owe suppliers)']];
+  return '<div data-testid="mi-file-step" style="max-width:640px">'
+      + miRow(tx('From'), miSel('mi-source', 'source', MI_SOURCES, form.source))
       + miCountryRow()
-      + miRow(tx('Which export'), miSel('mi-kind', 'kind', MI_KINDS, f.kind))
-      + (miNeedsSide(f.kind) ? miRow(tx('Which list'), miSel('mi-side', 'side', sides, f.side)) : '')
-      + (miNeedsDate(f.kind) ? miRow(tx('As at'), '<input class="inp" type="date" id="mi-asat" data-testid="mi-asat" value="' + esc(f.as_at) + '" onchange="miSet(\'as_at\', this.value)" style="width:auto">') : '')
+      + miRow(tx('Which export'), miSel('mi-kind', 'kind', MI_KINDS, form.kind))
+      + (miNeedsSide(form.kind) ? miRow(tx('Which list'), miSel('mi-side', 'side', sides, form.side)) : '')
+      + (miNeedsDate(form.kind) ? miRow(tx('As at'), '<input class="inp" type="date" id="mi-asat" data-testid="mi-asat" value="' + esc(form.as_at) + '" onchange="miSet(\'as_at\', this.value)" style="width:auto">') : '')
       + miRow(tx('File'), '<input type="file" id="mi-file" data-testid="mi-file" accept=".csv,.xlsx,text/csv" onchange="miFile(this)" style="max-width:100%;min-width:0;font-size:var(--fs-1)">'
-        + (f.name ? '<div data-testid="mi-file-name" style="font-size:var(--fs-1);margin-top:4px">' + esc(f.name) + '</div>' : ''))
+      + (form.name ? '<div data-testid="mi-file-name" style="font-size:var(--fs-1);margin-top:4px">' + esc(form.name) + '</div>' : ''))
       + '<div style="color:var(--grey);font-size:var(--fs-1);margin-top:8px">' + esc(tx('Order: chart, contacts, items, then balances.')) + '</div>'
       + (MIV.err ? '<div class="err" data-testid="mi-err" style="color:var(--warn-2);margin-top:8px">' + esc(MIV.err) + '</div>' : '')
       + '</div>';
-  }
+}
+function miRender(k) {
+  var f = MIV.f;
+  if (MIV.out) return miDoneHTML();
+  if (k === 'file') return miFileStepHTML(f);
   if (k === 'columns') {
     if (!MIV.pre) return '<div data-testid="mi-loading" style="color:var(--grey)">' + esc(MIV.busy ? tx('Reading…') : (MIV.err || tx('Read the file first'))) + '</div>';
     var p = MIV.pre, fields = p.fields || [];
@@ -150,10 +156,16 @@ function miRender(k) {
   }
   return '';
 }
+/** why Read the file is greyed, or null: no file, no country (a connection states its own) or no move date */
+function miFileGuard(form) {
+  if (!form.csv && !form.xlsx) return tx('Pick the file first');
+  if (!MIV.conn && !form.country) return tx('Pick the country these books are from');
+  if (miNeedsDate(form.kind) && !form.as_at) return tx('Pick the move date');
+  return null;
+}
 function miGuard(k) {
-  var f = MIV.f;
   if (MIV.out) return null;
-  if (k === 'file') { if (!f.csv && !f.xlsx) return tx('Pick the file first'); if (!MIV.conn && !f.country) return tx('Pick the country these books are from'); if (miNeedsDate(f.kind) && !f.as_at) return tx('Pick the move date'); return null; }
+  if (k === 'file') return miFileGuard(MIV.f);
   if (k === 'columns') {
     if (!MIV.pre) return MIV.err || tx('Read the file first');
     var picked = miDecisions().map(function (d) { return d.field; });
@@ -200,10 +212,10 @@ function miRefusal(e) {
 }
 /* the refusal painted: our line, the server's sentence under it, and the way back (Back to File, where the country is picked) */
 function miRefusedHTML() {
-  var r = MIV.refused;
-  return '<div data-testid="mi-refused" data-code="' + esc(r.code) + '" style="max-width:640px">'
-    + '<div style="color:var(--warn-2);font-weight:700;margin-bottom:6px">' + esc(tx(MI_REFUSED[r.code] || 'Not moved in.')) + '</div>'
-    + (r.why ? '<div data-testid="mi-refused-why" style="color:var(--grey);font-size:var(--fs-1)">' + esc(r.why) + '</div>' : '')
+  var refusal = MIV.refused;
+  return '<div data-testid="mi-refused" data-code="' + esc(refusal.code) + '" style="max-width:640px">'
+    + '<div style="color:var(--warn-2);font-weight:700;margin-bottom:6px">' + esc(tx(MI_REFUSED[refusal.code] || 'Not moved in.')) + '</div>'
+    + (refusal.why ? '<div data-testid="mi-refused-why" style="color:var(--grey);font-size:var(--fs-1)">' + esc(refusal.why) + '</div>' : '')
     + '</div>';
 }
 /* the preview rows: CBList — line · what · will add / merge / skip · why (the server's sentence) */
@@ -259,7 +271,7 @@ function miPaintSkipped() {
     columns: [
       { key: 'line', label: tx('Line'), prio: 3, sort: 'line', num: true, w: 80, cell: function (r) { return String(r.line); } },
       { key: 'what', label: tx('What'), prio: 1, sort: 'what', w: 260, cell: function (r) { return r.what || ''; } },
-      { key: 'state', label: tx('Action'), prio: 2, w: 110, html: true, cell: function (r) { var held = !!r.code; return '<span class="step ' + (held ? 'amber' : '') + '" data-testid="mi-state-' + esc(r.line) + '">' + esc(tx(held ? 'Held' : 'Skipped')) + '</span>'; } },
+      { key: 'state', label: tx('Action'), prio: 2, w: 110, html: true, cell: function (row) { var held = !!row.code; return '<span class="step ' + (held ? 'amber' : '') + '" data-testid="mi-state-' + esc(row.line) + '">' + esc(tx(held ? 'Held' : 'Skipped')) + '</span>'; } },
       { key: 'why', label: tx('Why'), prio: 3, sort: 'why', w: 420, cell: function (r) { return r.why || ''; } },
     ],
     sorts: [{ key: 'line', label: tx('File order'), cmp: function (a, b) { return a.line - b.line; } }],
