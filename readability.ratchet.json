@@ -14,7 +14,7 @@
   "public/app/cap-books.js": {"score":968,"long40":2,"long80":1,"complex10":50,"complex15":18,"deep3":2,"deep4":1,"cryptic":842,"noWhatLine":30,"emptyCatch":22,"noHeader":0},
   "public/app/cap-catalogue.js": {"score":178,"long40":1,"long80":1,"complex10":8,"complex15":6,"deep3":0,"deep4":0,"cryptic":157,"noWhatLine":3,"emptyCatch":1,"noHeader":1},
   "public/app/cap-categories.js": {"score":190,"long40":5,"long80":1,"complex10":10,"complex15":6,"deep3":1,"deep4":0,"cryptic":151,"noWhatLine":12,"emptyCatch":3,"noHeader":1},
-  "public/app/cap-catsetup.js": {"score":273,"long40":9,"long80":2,"complex10":17,"complex15":5,"deep3":0,"deep4":0,"cryptic":206,"noWhatLine":27,"emptyCatch":7,"noHeader":0},
+  "public/app/cap-catsetup.js": {"score":191,"long40":9,"long80":2,"complex10":17,"complex15":5,"deep3":0,"deep4":0,"cryptic":124,"noWhatLine":27,"emptyCatch":7,"noHeader":0},
   "public/app/cap-chit2.js": {"score":198,"long40":10,"long80":4,"complex10":14,"complex15":8,"deep3":0,"deep4":0,"cryptic":147,"noWhatLine":9,"emptyCatch":6,"noHeader":0},
   "public/app/cap-cmdb.js": {"score":61,"long40":1,"long80":1,"complex10":1,"complex15":0,"deep3":0,"deep4":0,"cryptic":42,"noWhatLine":6,"emptyCatch":9,"noHeader":1},
   "public/app/cap-compare.js": {"score":100,"long40":0,"long80":0,"complex10":5,"complex15":1,"deep3":0,"deep4":0,"cryptic":88,"noWhatLine":4,"emptyCatch":1,"noHeader":1},

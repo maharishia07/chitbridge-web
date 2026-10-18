@@ -77,12 +77,12 @@ function catsetDefsLoad(kind, force){
   if (!force && CATSET_DEFS[kind]) return Promise.resolve(CATSET_DEFS[kind]);
   if (!force && _catsetDefReq[kind]) return _catsetDefReq[kind];
   _catsetDefReq[kind] = api('defList', { query: { kind: kind, all: 1 } })
-    .then(function(r){
-      CATSET_DEFS[kind] = ((r && r.definitions) || []).map(function(d){
-        return { id: d.definition_id, name: d.name, sub: d.sub_kind || '', status: d.status || 'draft',
-                 note: d.note || '', rules: d.rules || {},
-                 governance: d.governance || null,   // the jurisdiction's, not this entity's — shown, never edited
-                 network: d.network || null };       // a brand's offer: do its stores have it (app.html netRelChip)
+    .then(function(reply){
+      CATSET_DEFS[kind] = ((reply && reply.definitions) || []).map(function(item){
+        return { id: item.definition_id, name: item.name, sub: item.sub_kind || '', status: item.status || 'draft',
+                 note: item.note || '', rules: item.rules || {},
+                 governance: item.governance || null,   // the jurisdiction's, not this entity's — shown, never edited
+                 network: item.network || null };       // a brand's offer: do its stores have it (app.html netRelChip)
       });
       _catsetDefReq[kind] = null; return CATSET_DEFS[kind];
     })
@@ -108,9 +108,9 @@ function catsetDefListHTML(kind, one){
   /* ⭐ THE JURISDICTION'S ROWS ARE LISTED FIRST AND NEVER EDITED. Athi, 2026-09-04: "why each entity should create one
      for them … it has to come from governance layer." A governed slab shows where it comes from and offers no
      Edit / Retire / Make live — to differ from it, a person declares a slab of their own below. */
-  var gov  = rows.filter(function(d){ return d.governance; });
-  var live = rows.filter(function(d){ return !d.governance && d.status !== 'retired'; });
-  var ret  = rows.filter(function(d){ return !d.governance && d.status === 'retired'; });
+  var list  = rows.filter(function(item){ return item.governance; });
+  var live = rows.filter(function(item){ return !item.governance && item.status !== 'retired'; });
+  var ret  = rows.filter(function(item){ return !item.governance && item.status === 'retired'; });
   var row = function(d){
     if (d.governance) {
       var g = d.governance;
@@ -156,10 +156,10 @@ function catsetDefListHTML(kind, one){
   var orphanNote = '';
   if (kind === 'ordermodel' && typeof CBCatalogue !== 'undefined' && CBCatalogue.orphanModels) {
     var meth = (typeof UI !== 'undefined' && UI.catf && UI.catf.method) || null;
-    var used = live.map(function(d){ return d.sub; }).filter(Boolean);
+    var used = live.map(function(item){ return item.sub; }).filter(Boolean);
     var orph = meth ? CBCatalogue.orphanModels(meth, used) : [];
     if (orph.length) {
-      var uniq = orph.filter(function(v, i){ return orph.indexOf(v) === i; });
+      var uniq = orph.filter(function(item, index){ return orph.indexOf(item) === index; });
       orphanNote = '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;font-size:var(--fs-1);color:var(--warn-3);margin-bottom:9px">'
         + '⚠️ <b>' + uniq.length + ' order model' + (uniq.length === 1 ? '' : 's') + ' this catalogue can no longer sell</b> — '
         + uniq.map(function(x){ return '<code>' + esc(x) + '</code>'; }).join(' · ')
@@ -168,16 +168,16 @@ function catsetDefListHTML(kind, one){
         + 'Either change the selling method back, or move those products onto a supported model.</div>';
     }
   }
-  return orphanNote + '<div class="catset-dlist">' + gov.map(row).join('') + live.map(row).join('') + ret.map(row).join('') + '</div>';
+  return orphanNote + '<div class="catset-dlist">' + list.map(row).join('') + live.map(row).join('') + ret.map(row).join('') + '</div>';
 }
 
 function catsetSec(){ if (!CATSET.sec && typeof UI !== 'undefined' && UI.catsetWant) { CATSET.sec = UI.catsetWant; } if (typeof UI !== 'undefined') UI.catsetWant = null; return CATSET.sec || 'blueprint'; }
 function catsetSetSec(k){
   CATSET.sec = k;
-  if (UI.vp === 'mob') { UI.mdetail = true; var p = document.getElementById('panel'); if (p) p.classList.add('showdetail'); }
+  if (UI.vp === 'mob') { UI.mdetail = true; var node = document.getElementById('panel'); if (node) node.classList.add('showdetail'); }
   catsetPaint();
 }
-function catsetBack(){ UI.mdetail = false; var p = document.getElementById('panel'); if (p) p.classList.remove('showdetail'); }
+function catsetBack(){ UI.mdetail = false; var node = document.getElementById('panel'); if (node) node.classList.remove('showdetail'); }
 
 /**
  * ⭐ THE VOCABULARY BLOCKS — rehomed from Definitions, NOT copied out of it.
@@ -201,11 +201,11 @@ function catsetRegistry(keys){
     return '<div class="catset-load">reading the registry…</div>';
   }
   var all = cbDefRegistries(), want = {};
-  keys.forEach(function(k){ want[k] = 1; });
-  var secs = all.filter(function(s){ return want[s.key]; });
+  keys.forEach(function(item){ want[item] = 1; });
+  var secs = all.filter(function(item){ return want[item.key]; });
   if (!secs.length) return '';
-  return secs.map(function(s){
-    var rows = s.rows || [];
+  return secs.map(function(item){
+    var rows = item.rows || [];
     /**
      * ⭐ TICK WHAT THIS ENTITY ACTUALLY USES (Athi, 2026-08-17: *"also the check box wherever required, so those
      * only can be used in the catalogue"*). The registry in code is the MAXIMUM; the ticks are this entity's
@@ -216,15 +216,15 @@ function catsetRegistry(keys){
      * second, independent narrowing could disagree with the first with nothing on screen to say which won. A
      * checkbox that cannot mean anything is worse than no checkbox.
      */
-    var flag = CATSET_SELECTABLE[s.key];
+    var flag = CATSET_SELECTABLE[item.key];
     var sel = flag ? _CATSEL[flag] : null;
     if (flag && sel === undefined) { catsetSelLoad(); }
     var picked = Array.isArray(sel) ? sel : null;
     var n = picked ? picked.length : rows.length;
     return '<div class="catset-reg">'
-      + '<div class="catset-regh">' + s.icon + ' ' + esc(s.title)
+      + '<div class="catset-regh">' + item.icon + ' ' + esc(item.title)
       +   '<span class="catset-regn">' + (picked ? n + ' / ' + rows.length : rows.length) + '</span></div>'
-      + '<div class="catset-regb">' + esc(s.blurb)
+      + '<div class="catset-regb">' + esc(item.blurb)
       +   (flag ? ' <b>' + tx('Tick the ones you use') + '</b> — only those are offered when you build a catalogue.' : '')
       + '</div>'
       + (rows.length
@@ -260,7 +260,7 @@ function catsetRegistry(keys){
           : '<div class="catset-none">not loaded</div>')
       /* Naming the source file is the honest half: it says this list is READ, not authored here, so nobody goes
          looking for an edit button that should not exist. */
-      + '<div class="catset-regsrc">read from <code>' + esc(s.source) + '</code></div>'
+      + '<div class="catset-regsrc">read from <code>' + esc(item.source) + '</code></div>'
       + '</div>';
   }).join('');
 }
@@ -312,18 +312,18 @@ var _catselReq = null;
    would be five round trips for one answer, and they would arrive out of order. */
 async function catsetSelLoad(force){
   if (_catselReq && !force) return _catselReq;
-  _catselReq = api('policyGet').then(function(f){
-    var flags = (f && f.flags) || {};
-    Object.keys(CATSET_SELECTABLE).forEach(function(k){
-      var fl = CATSET_SELECTABLE[k]; _CATSEL[fl] = Array.isArray(flags[fl]) ? flags[fl] : [];
+  _catselReq = api('policyGet').then(function(reply){
+    var flags = (reply && reply.flags) || {};
+    Object.keys(CATSET_SELECTABLE).forEach(function(item){
+      var fl = CATSET_SELECTABLE[item]; _CATSEL[fl] = Array.isArray(flags[fl]) ? flags[fl] : [];
     });
     _catselReq = null; catsetPaintDetail();
   }).catch(function(){ _catselReq = null; });
   return _catselReq;
 }
 async function catsetSelToggle(flag, code, on){
-  var cur = _CATSEL[flag] || [];
-  var next = cur.filter(function(x){ return x !== code; });
+  var list = _CATSEL[flag] || [];
+  var next = list.filter(function(x){ return x !== code; });
   if (on) next.push(code);
   /* ⚠️ Same refusal as units, and for the same reason: an empty set is what an accidental clear-all looks like,
      and honouring it would empty a picker in the product form with nothing on screen to explain why. */
@@ -384,8 +384,8 @@ function catsetLangBar(){
   if (!langs.length) return '';
   var have = {};
   /* Mark the languages we actually hold spellings for, so an empty pick is explained rather than puzzling. */
-  Object.keys((M && M.UNIT_ALIASES) || {}).forEach(function(u){
-    Object.keys(M.UNIT_ALIASES[u] || {}).forEach(function(lg){ if ((M.UNIT_ALIASES[u][lg] || []).length) have[lg] = 1; });
+  Object.keys((M && M.UNIT_ALIASES) || {}).forEach(function(item){
+    Object.keys(M.UNIT_ALIASES[item] || {}).forEach(function(lg){ if ((M.UNIT_ALIASES[item][lg] || []).length) have[lg] = 1; });
   });
   var chip = function(l){
     var on = _LANGSEL.indexOf(l.code) >= 0, fixed = l.code === 'en';
@@ -394,10 +394,10 @@ function catsetLangBar(){
                : ' onclick="catsetLangToggle(\'' + esc(l.code) + '\')"')
       + '>' + (on ? '✓ ' : '') + esc(l.label) + (have[l.code] ? '' : '<span class="lang-none">no words yet</span>') + '</span>';
   };
-  var groups = ['Common', 'Indian', 'Foreign'].map(function(g){
-    var ls = langs.filter(function(l){ return l.group === g; });
-    if (!ls.length) return '';
-    return '<div class="lang-g"><span class="lang-gh">' + esc(g) + '</span>' + ls.map(chip).join('') + '</div>';
+  var groups = ['Common', 'Indian', 'Foreign'].map(function(item){
+    var list = langs.filter(function(l){ return l.group === item; });
+    if (!list.length) return '';
+    return '<div class="lang-g"><span class="lang-gh">' + esc(item) + '</span>' + list.map(chip).join('') + '</div>';
   }).join('');
   return '<div class="lang-bar">' + groups
     + '<div class="lang-note">⚠️ This changes what is <b>listed</b>, not what is <b>understood</b> — every '
@@ -486,8 +486,8 @@ function catsetUnitsHTML(){
   if (_UNITSEL === null) { catsetUnitsLoad(); return catsetCard('⚖️ Units of measure', '<div class="catset-load">reading…</div>'); }
 
   var sel = _UNITSEL, aliases = M.UNIT_ALIASES || {}, names = M.UNIT_NAMES || {};
-  var groups = M.UNIT_KINDS.map(function(g){
-    var rows = g.units.map(function(u){
+  var groups = M.UNIT_KINDS.map(function(item){
+    var rows = item.units.map(function(u){
       var on = sel.indexOf(u) >= 0;
       /* ⭐ THE SPELLINGS GO ON THEIR OWN LINE (Athi: *"each line item below show what the enumerations are"*).
          Squeezed into a right-hand column they were truncated at four and ellipsed — which hid the very thing
@@ -496,7 +496,7 @@ function catsetUnitsHTML(){
          picker is a reading aid; lib/units.js folds all of them regardless. A screen set to Hindi that stopped
          `கிலோ` resolving would be a parsing rule wearing a preference's clothes. */
       var by = aliases[u] || {};
-      var shown = _LANGSEL.reduce(function(a, lg){ return a.concat((by[lg] || []).map(function(w){ return { w: w, lg: lg }; })); }, []);
+      var shown = _LANGSEL.reduce(function(total, lg){ return total.concat((by[lg] || []).map(function(w){ return { w: w, lg: lg }; })); }, []);
       return '<label class="uom-row' + (on ? '' : ' off') + '">'
         + '<div class="ur1">'
         +   '<input type="checkbox" ' + (on ? 'checked' : '') + ' onchange="catsetUnitToggle(\'' + esc(u) + '\',this.checked)">'
@@ -515,10 +515,10 @@ function catsetUnitsHTML(){
          */
         + (on ? catsetUomRuleHTML(u) : '');
     }).join('');
-    return '<div class="uom-g"><div class="uom-gh">' + esc(g.label) + '</div>' + rows + '</div>';
+    return '<div class="uom-g"><div class="uom-gh">' + esc(item.label) + '</div>' + rows + '</div>';
   }).join('');
 
-  var n = sel.length, total = M.UNIT_KINDS.reduce(function(a, g){ return a + g.units.length; }, 0);
+  var n = sel.length, total = M.UNIT_KINDS.reduce(function(total, item){ return total + item.units.length; }, 0);
   return catsetCard('⚖️ Units of measure',
     '<div class="catset-regb">What a quantity is counted in. <b>' + tx('Tick the ones you trade in') + '</b> — the product form '
     + 'and the catalogue wizard offer only those. <b>' + n + ' of ' + total + '</b> selected.</div>'
@@ -533,13 +533,13 @@ function catsetUnitsHTML(){
     + '</div>');
 }
 async function catsetUnitsLoad(){
-  try { var f = await api('policyGet'); var fl = (f && f.flags) || {};
+  try { var reply = await api('policyGet'); var fl = (reply && reply.flags) || {};
         _UNITSEL = fl.units || [];
         _UNITRULES = (fl.unit_rules && typeof fl.unit_rules === 'object') ? fl.unit_rules : {};
         /* ⚠️ English is forced in even if the stored set somehow lacks it — see catsetLangBar(). */
-        var lg = Array.isArray(fl.languages) && fl.languages.length ? fl.languages.slice() : ['en'];
-        if (lg.indexOf('en') < 0) lg.unshift('en');
-        _LANGSEL = lg; }
+        var list = Array.isArray(fl.languages) && fl.languages.length ? fl.languages.slice() : ['en'];
+        if (list.indexOf('en') < 0) list.unshift('en');
+        _LANGSEL = list; }
   catch (e) { _UNITSEL = []; }
   catsetPaintDetail();
 }
@@ -584,7 +584,7 @@ var _catsetFaceGen = 0;
 function catsetFaceLoad(){
   var gen = _catsetFaceGen;
   return api('catFaceGet')
-    .then(function(r){ if (gen === _catsetFaceGen) CATSET_FACE = (r && r.face) || null; })
+    .then(function(reply){ if (gen === _catsetFaceGen) CATSET_FACE = (reply && reply.face) || null; })
     .catch(function(){ if (gen === _catsetFaceGen) CATSET_FACE = null; });
 }
 /**
@@ -831,15 +831,15 @@ async function catcolPick(){
     + '<div class="mbody">'
     + '<label class="fl">' + tx('Trade') + '</label>'
     + '<select class="inp" id="catcol_v" data-testid="catcol-trade" onchange="catcolLoad(this.value)">'
-    + verts.map(function(v){ return '<option value="' + esc(v.key) + '">' + esc(v.title) + ' — '
-        + v.field_count + ' ' + tx('columns') + '</option>'; }).join('')
+    + verts.map(function(item){ return '<option value="' + esc(item.key) + '">' + esc(item.title) + ' — '
+        + item.field_count + ' ' + tx('columns') + '</option>'; }).join('')
     + '</select>'
     + '<div id="catcol_body" style="margin-top:10px">' + tx('loading…') + '</div>'
     + '<div style="margin-top:11px"><label class="fl">' + tx('Add your own as well') + '</label>'
     + '<div style="display:flex;gap:6px"><input class="inp" id="catcol_own" data-testid="catcol-own" style="flex:1"'
     + ' placeholder="' + esc(tx('column name')) + '">'
     + '<select class="inp" id="catcol_owntype" data-testid="catcol-own-type" style="width:120px">'
-    + ['text','number','boolean','date','choice'].map(function(t){ return '<option>' + t + '</option>'; }).join('')
+    + ['text','number','boolean','date','choice'].map(function(item){ return '<option>' + item + '</option>'; }).join('')
     + '</select></div>'
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">'
     + tx('One per line or separated by commas — they all take the type on the right. Nothing guesses it from the name.')
@@ -863,25 +863,25 @@ async function catcolLoad(v){
   CATCOL.starter = fields;
   /* Everything ticked, which is what "Add these columns" always did — the old behaviour is one press away. */
   CATCOL.sel = {};
-  fields.forEach(function(f){ CATCOL.sel[f.field_key] = 1; });
+  fields.forEach(function(item){ CATCOL.sel[item.field_key] = 1; });
 
   var have = {};
-  ((CATSET && CATSET.fields) || []).forEach(function(f){ have[f.field_key] = 1; });
+  ((CATSET && CATSET.fields) || []).forEach(function(item){ have[item.field_key] = 1; });
 
   if (body) {
     body.innerHTML = '<div style="display:flex;gap:7px;align-items:center;margin-bottom:7px">'
       + '<button type="button" data-testid="catcol-all" onclick="catcolAll(true)" style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:20px;padding:3px 12px;font-size:var(--fs-1);cursor:pointer">' + tx('All') + '</button>'
       + '<button type="button" data-testid="catcol-none" onclick="catcolAll(false)" style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:20px;padding:3px 12px;font-size:var(--fs-1);cursor:pointer">' + tx('None') + '</button>'
       + '<span id="catcol_n" style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey);white-space:nowrap"></span></div>'
-      + '<div class="bulklist">' + fields.map(function(f){
-          var already = !!have[f.field_key];
+      + '<div class="bulklist">' + fields.map(function(item){
+          var already = !!have[item.field_key];
           return '<label class="bulkrow" style="cursor:' + (already ? 'default' : 'pointer') + (already ? ';opacity:.6' : '') + '">'
             + '<input type="checkbox" ' + (already ? 'checked disabled' : 'checked')
-            + ' data-colkey="' + esc(f.field_key) + '" data-testid="catcol-f-' + esc(f.field_key) + '"'
-            + ' onchange="catcolTick(\'' + esc(f.field_key) + '\', this.checked)">'
-            + '<span class="bn">' + esc(f.field_name || f.field_key) + '</span>'
+            + ' data-colkey="' + esc(item.field_key) + '" data-testid="catcol-f-' + esc(item.field_key) + '"'
+            + ' onchange="catcolTick(\'' + esc(item.field_key) + '\', this.checked)">'
+            + '<span class="bn">' + esc(item.field_name || item.field_key) + '</span>'
             /* ⭐ The datatype, named — the question Athi asked of this screen. */
-            + '<span class="bh">' + esc(f.field_type || 'text') + (already ? ' · ' + tx('already there') : '') + '</span>'
+            + '<span class="bh">' + esc(item.field_type || 'text') + (already ? ' · ' + tx('already there') : '') + '</span>'
             + '</label>';
         }).join('') + '</div>';
     catcolCount();
@@ -899,8 +899,8 @@ function catcolTick(k, on){
 }
 function catcolAll(on){
   CATCOL.sel = {};
-  (CATCOL.starter || []).forEach(function(f){ if (on) CATCOL.sel[f.field_key] = 1; });
-  document.querySelectorAll('[data-colkey]').forEach(function(b){ if (!b.disabled) b.checked = !!on; });
+  (CATCOL.starter || []).forEach(function(item){ if (on) CATCOL.sel[item.field_key] = 1; });
+  document.querySelectorAll('[data-colkey]').forEach(function(item){ if (!item.disabled) item.checked = !!on; });
   catcolCount();
 }
 
@@ -908,19 +908,19 @@ async function catcolGo(){
   var ownEl = document.getElementById('catcol_own');
   var typeEl = document.getElementById('catcol_owntype');
   var type = (typeEl && typeEl.value) || 'text';
-  var own = ((ownEl && ownEl.value) || '').split(/[\n,]/).map(function(s){ return s.trim(); }).filter(Boolean)
-    .map(function(nm){ return { field_name: nm, field_type: type }; });
+  var own = ((ownEl && ownEl.value) || '').split(/[\n,]/).map(function(item){ return item.trim(); }).filter(Boolean)
+    .map(function(item){ return { field_name: item, field_type: type }; });
   var fields = Object.keys(CATCOL.sel || {});
   if (!fields.length && !own.length) { if (typeof toast === 'function') toast(tx('Nothing selected.'), true); return; }
   var btn = document.getElementById('catcol_go');
   if (btn) { btn.disabled = true; btn.textContent = tx('Adding…'); }
   try {
-    var r = await api('prodStarterAdopt', { body: { vertical: CATCOL.v, fields: fields, custom: own } });
+    var reply = await api('prodStarterAdopt', { body: { vertical: CATCOL.v, fields: fields, custom: own } });
     UI._catFields = null;   // the product form renders declared columns from this; it must not keep the old list
     closeModal();
     if (typeof toast === 'function') {
-      toast((r && r.message) || 'Columns added'
-        + ((r && r.rejected && r.rejected.length) ? ' · ' + r.rejected.length + ' refused' : ''));
+      toast((reply && reply.message) || 'Columns added'
+        + ((reply && reply.rejected && reply.rejected.length) ? ' · ' + reply.rejected.length + ' refused' : ''));
     }
     if (typeof catsetLoad === 'function') await catsetLoad(true); else renderApp();
   } catch (e) {
@@ -934,26 +934,26 @@ async function catcolGo(){
  * took is a panel that invites adopting the same thing twice.
  */
 function catsetAdoptedHTML(){
-  var a = (CATSET && CATSET.adopted) || null;
-  if (a === null) { catsetAdoptedLoad(); return '<div style="font-size:var(--fs-2);color:var(--grey)">' + tx('reading…') + '</div>'; }
-  if (!a.length) {
+  var list = (CATSET && CATSET.adopted) || null;
+  if (list === null) { catsetAdoptedLoad(); return '<div style="font-size:var(--fs-2);color:var(--grey)">' + tx('reading…') + '</div>'; }
+  if (!list.length) {
     return '<div style="font-size:var(--fs-2);color:var(--grey)">'
       + tx('Nothing adopted yet — your catalogue is entirely your own.') + '</div>';
   }
-  return '<div class="bulklist">' + a.map(function(s){
-    return '<div class="bulkrow"><span class="bn">' + esc(s.title || s.source_key || '—') + '</span>'
-      + '<span class="bh">' + ((s.items && s.items.length) || s.item_count || 0) + ' ' + tx('items') + ' · '
-      + esc(s.visible === false ? tx('hidden') : tx('showing')) + '</span></div>';
+  return '<div class="bulklist">' + list.map(function(item){
+    return '<div class="bulkrow"><span class="bn">' + esc(item.title || item.source_key || '—') + '</span>'
+      + '<span class="bh">' + ((item.items && item.items.length) || item.item_count || 0) + ' ' + tx('items') + ' · '
+      + esc(item.visible === false ? tx('hidden') : tx('showing')) + '</span></div>';
   }).join('') + '</div>';
 }
 async function catsetAdoptedLoad(){
   if (CATSET._adoptedBusy) return;
   CATSET._adoptedBusy = true;
   try {
-    var r = await api('catalogueSources');
+    var reply = await api('catalogueSources');
     /* ⚠️ Only what THIS catalogue has taken — the endpoint also answers with what is available to take, and
        showing those here would read as "you have adopted nine things" on a fresh account. */
-    CATSET.adopted = ((r && (r.adopted || r.mine)) || []);
+    CATSET.adopted = ((reply && (reply.adopted || reply.mine)) || []);
   } catch (e) { CATSET.adopted = []; }
   CATSET._adoptedBusy = false;
   catsetPaintDetail();
@@ -1015,17 +1015,17 @@ function catsetColTab(){ return (CATSET && CATSET.colTab) || 'columns'; }
 function catsetSetColTab(k){ CATSET.colTab = k; catsetPaintDetail(); }
 function catsetColTabsHTML(){
   var tabs = [['columns', tx('Columns')], ['types', tx('Types')], ['usage', tx('Usage')]];
-  return '<div class="dtabs" data-testid="catset-col-tabs" style="padding:0;margin-bottom:8px">' + tabs.map(function(t){
-    return '<button type="button" data-testid="catset-coltab-' + t[0] + '" class="' + (catsetColTab() === t[0] ? 'on' : '') + '"'
-      + ' onclick="catsetSetColTab(\'' + t[0] + '\')">' + t[1] + '</button>'; }).join('') + '</div>';
+  return '<div class="dtabs" data-testid="catset-col-tabs" style="padding:0;margin-bottom:8px">' + tabs.map(function(item){
+    return '<button type="button" data-testid="catset-coltab-' + item[0] + '" class="' + (catsetColTab() === item[0] ? 'on' : '') + '"'
+      + ' onclick="catsetSetColTab(\'' + item[0] + '\')">' + item[1] + '</button>'; }).join('') + '</div>';
 }
 /* One write for every attribute a tab can change; the server answers with the count a person needs next. */
 async function catsetFieldPatch(key, patch){
   try {
-    var r = await api('schemaFieldPatch', { params: { key: key }, body: patch });
+    var reply = await api('schemaFieldPatch', { params: { key: key }, body: patch });
     UI._catFields = null;
-    var msg = (r && r.message) || tx('Saved');
-    if (r && r.missing_required) msg += ' — ' + txn('{count} product has no value in it yet', '{count} products have no value in it yet', r.missing_required);
+    var msg = (reply && reply.message) || tx('Saved');
+    if (reply && reply.missing_required) msg += ' — ' + txn('{count} product has no value in it yet', '{count} products have no value in it yet', reply.missing_required);
     if (typeof toast === 'function') toast(msg);
   } catch (e) {
     if (typeof toast === 'function') toast((e && e.message) || tx('Could not update the column.'), true);
@@ -1080,28 +1080,28 @@ function catsetColRow(c, i, n){
     + '</div>';
 }
 function catsetColsHTML(){
-  var f = (CATSET && CATSET.fields) || null;
-  if (f === null) { catsetFieldsLoad(); return '<div style="font-size:var(--fs-2);color:var(--grey)">' + tx('reading…') + '</div>'; }
-  if (!f.length) return '<div style="font-size:var(--fs-2);color:var(--grey)">' + tx('No columns declared yet.') + '</div>';
+  var list = (CATSET && CATSET.fields) || null;
+  if (list === null) { catsetFieldsLoad(); return '<div style="font-size:var(--fs-2);color:var(--grey)">' + tx('reading…') + '</div>'; }
+  if (!list.length) return '<div style="font-size:var(--fs-2);color:var(--grey)">' + tx('No columns declared yet.') + '</div>';
 
   var t = catsetColTab();
-  var rows = f.map(function(c, i){ return catsetColRow(c, i, f.length); }).join('');
+  var rows = list.map(function(item, index){ return catsetColRow(item, index, list.length); }).join('');
   var tabNote = t === 'types'
     ? '<div style="font-size:var(--fs-1);color:var(--grey);margin:0 0 6px">' + esc(tx('Type is fixed once a product records a value. Unit is a UN/ECE Rec 20 code (KGM · LTR · MTK · H87 = piece) so a sheet stays machine-readable.'))
       + (CATSET.attrsReady ? '' : ' <b style="color:var(--warn-3)">' + esc(tx('Unit needs migration b200.')) + '</b>') + '</div>'
-      + '<datalist id="cb-rec20">' + CATSET_REC20.map(function(u){ return '<option value="' + u[0] + '">' + esc(u[1]) + '</option>'; }).join('') + '</datalist>'
+      + '<datalist id="cb-rec20">' + CATSET_REC20.map(function(item){ return '<option value="' + item[0] + '">' + esc(item[1]) + '</option>'; }).join('') + '</datalist>'
     : t === 'usage'
     ? '<div style="font-size:var(--fs-1);color:var(--grey);margin:0 0 6px">' + esc(tx('A column can be removed only while no product records a value in it. Nothing stored is deleted either way.')) + '</div>'
     : '<div style="font-size:var(--fs-1);color:var(--grey);margin:0 0 6px">' + esc(tx('The order here is the order on the product form, the template and the export.')) + '</div>';
 
   /* ⭐ AND THE ONES THE SYSTEM KEEPS, beside them — a product records these too, so a list headed "what every
      product records" that omits them is short by three. Locked, and each says where it IS set. */
-  var sys = ((CATSET && CATSET.system) || []).map(function(c){
-    return '<div class="bulkrow" style="opacity:.72" data-testid="catset-sys-' + esc(c.field_key) + '">'
-      + '<span class="bn">' + esc(c.field_name) + ' <span style="font-weight:400;color:var(--grey)">· '
+  var sys = ((CATSET && CATSET.system) || []).map(function(item){
+    return '<div class="bulkrow" style="opacity:.72" data-testid="catset-sys-' + esc(item.field_key) + '">'
+      + '<span class="bn">' + esc(item.field_name) + ' <span style="font-weight:400;color:var(--grey)">· '
       + esc(tx('kept by the system')) + '</span></span>'
-      + '<span class="bh">' + esc(c.field_type) + '</span>'
-      + '<button type="button" class="badd" disabled title="' + esc(tx('Set in ') + (c.managed_by || '')) + '">🔒</button>'
+      + '<span class="bh">' + esc(item.field_type) + '</span>'
+      + '<button type="button" class="badd" disabled title="' + esc(tx('Set in ') + (item.managed_by || '')) + '">🔒</button>'
       + '</div>';
   }).join('');
 
@@ -1116,10 +1116,10 @@ function catsetColsHTML(){
    * one is data written before that. If it appears, the backfill (migration b198) has not been run — and saying
    * so is far better than a panel that quietly disagrees with the download.
    */
-  var undec = ((CATSET && CATSET.undeclared) || []).map(function(c){
-    return '<div class="bulkrow" style="opacity:.8" data-testid="catset-undeclared-' + esc(c.field_key) + '">'
-      + '<span class="bn">' + esc(c.field_key) + '</span>'
-      + '<span class="bh">' + esc(String(c.used_by || 0)) + ' ' + esc(tx('product(s)')) + '</span>'
+  var undec = ((CATSET && CATSET.undeclared) || []).map(function(item){
+    return '<div class="bulkrow" style="opacity:.8" data-testid="catset-undeclared-' + esc(item.field_key) + '">'
+      + '<span class="bn">' + esc(item.field_key) + '</span>'
+      + '<span class="bh">' + esc(String(item.used_by || 0)) + ' ' + esc(tx('product(s)')) + '</span>'
       + '</div>';
   }).join('');
 
@@ -1139,12 +1139,12 @@ async function catsetFieldsLoad(force){
   if (CATSET.fields && !force) return;
   CATSET._fieldsBusy = true;
   try {
-    var r = await api('schemaFields');
-    CATSET.fields = (r && r.fields) || [];
-    CATSET.system = (r && r.system) || [];
-    CATSET.attrsReady = !!(r && r.attrs_ready);   // unit · source exist only once migration b200 has run
+    var reply = await api('schemaFields');
+    CATSET.fields = (reply && reply.fields) || [];
+    CATSET.system = (reply && reply.system) || [];
+    CATSET.attrsReady = !!(reply && reply.attrs_ready);   // unit · source exist only once migration b200 has run
     /* Empty on any catalogue written since the declare-first writer; non-empty means b198 has not been run. */
-    CATSET.undeclared = (r && r.undeclared) || [];
+    CATSET.undeclared = (reply && reply.undeclared) || [];
   } catch (e) { CATSET.fields = []; CATSET.system = []; CATSET.undeclared = []; }
   CATSET._fieldsBusy = false;
   catsetPaintDetail();
@@ -1156,14 +1156,14 @@ async function catsetFieldsLoad(force){
  * the list means what is on screen and what is stored cannot drift apart by one press.
  */
 async function catsetMove(key, dir){
-  var f = (CATSET.fields || []).slice();
-  var i = f.findIndex(function(x){ return x.field_key === key; });
+  var list = (CATSET.fields || []).slice();
+  var i = list.findIndex(function(x){ return x.field_key === key; });
   var j = i + dir;
-  if (i < 0 || j < 0 || j >= f.length) return;
-  var t = f[i]; f[i] = f[j]; f[j] = t;
-  CATSET.fields = f;
+  if (i < 0 || j < 0 || j >= list.length) return;
+  var t = list[i]; list[i] = list[j]; list[j] = t;
+  CATSET.fields = list;
   catsetPaintDetail();                                    // move first, so the screen answers the press at once
-  try { await api('schemaFieldOrder', { body: { order: f.map(function(x){ return x.field_key; }) } }); UI._catFields = null; }
+  try { await api('schemaFieldOrder', { body: { order: list.map(function(x){ return x.field_key; }) } }); UI._catFields = null; }
   catch (e) {
     if (typeof toast === 'function') toast((e && e.message) || 'Could not save the order.', true);
     await catsetFieldsLoad(true);                         // and put it back if the server disagreed
@@ -1179,9 +1179,9 @@ function catsetDrop(key){
 }
 async function _catsetDrop(key){
   try {
-    var r = await api('schemaFieldDrop', { params: { key: key } });
+    var reply = await api('schemaFieldDrop', { params: { key: key } });
     UI._catFields = null;
-    if (typeof toast === 'function') toast((r && r.message) || 'Column removed');
+    if (typeof toast === 'function') toast((reply && reply.message) || 'Column removed');
     await catsetFieldsLoad(true);
   } catch (e) {
     /* ⚠️ The server's refusal carries the COUNT — pass it through rather than replacing it with a generic
@@ -1239,24 +1239,24 @@ function catsetErpHTML(){
   if (!cols.length) return '<div style="font-size:var(--fs-2);color:var(--grey)">' + tx('Declare some columns first.') + '</div>';
 
   var map = (CATSET_FACE && CATSET_FACE.erpMap) || {};
-  var mapped = Object.keys(map).filter(function(k){ var m = map[k]; return m && m.system && m.system !== '—'; }).length;
+  var mapped = Object.keys(map).filter(function(item){ var m = map[item]; return m && m.system && m.system !== '—'; }).length;
 
-  return '<div class="bulklist">' + cols.map(function(c){
-    var m = map[c.field_key] || {};
+  return '<div class="bulklist">' + cols.map(function(item){
+    var m = map[item.field_key] || {};
     var sys = m.system || '—';
-    return '<div class="bulkrow" data-testid="catset-erp-' + esc(c.field_key) + '">'
-      + '<span class="bn">' + esc(c.field_name || c.field_key) + '</span>'
-      + '<select data-testid="catset-erpsys-' + esc(c.field_key) + '"'
-      + ' onchange="catsetErpSet(\'' + esc(c.field_key) + '\',\'system\',this.value)"'
+    return '<div class="bulkrow" data-testid="catset-erp-' + esc(item.field_key) + '">'
+      + '<span class="bn">' + esc(item.field_name || item.field_key) + '</span>'
+      + '<select data-testid="catset-erpsys-' + esc(item.field_key) + '"'
+      + ' onchange="catsetErpSet(\'' + esc(item.field_key) + '\',\'system\',this.value)"'
       + ' style="font-size:var(--fs-1);padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--on-card)">'
       + CATSET_SYS.map(function(s){ return '<option' + (s === sys ? ' selected' : '') + '>' + esc(s) + '</option>'; }).join('')
       + '</select>'
       /* ⚠️ The name box only appears once a system is named: asking "what is it called there" before "where" is
          a question with no context, and an answer typed against "—" would be stored against nothing. */
       + (sys !== '—'
-          ? '<input class="inp" data-testid="catset-erpref-' + esc(c.field_key) + '" style="width:170px;padding:3px 7px"'
+          ? '<input class="inp" data-testid="catset-erpref-' + esc(item.field_key) + '" style="width:170px;padding:3px 7px"'
             + ' value="' + esc(m.ref || '') + '" placeholder="' + esc(tx('their field name')) + '"'
-            + ' onchange="catsetErpSet(\'' + esc(c.field_key) + '\',\'ref\',this.value)">'
+            + ' onchange="catsetErpSet(\'' + esc(item.field_key) + '\',\'ref\',this.value)">'
           : '<span class="bh">' + tx('not mapped') + '</span>')
       + '</div>';
   }).join('') + '</div>'
@@ -1318,10 +1318,10 @@ function catsetOfferAppliesHTML(rules){
     at = Object.assign({}, at, { category: catId });
     /* the products this category offer reaches — one list, so its applicability is confirmed by looking (Athi, 2026-09-05) */
     var prods = catsetProdsEnsure() || [];
-    var inCat = prods.filter(function (p) { var d = p.item_data || p; return ((typeof catgIdsOf === 'function') ? catgIdsOf(d) : []).indexOf(String(at.category)) >= 0; });
+    var inCat = prods.filter(function (item) { var d = item.item_data || item; return ((typeof catgIdsOf === 'function') ? catgIdsOf(d) : []).indexOf(String(at.category)) >= 0; });
     bits.push('<span class="pill" style="font-size:var(--fs-1)">' + esc(tx('category') + ': ' + (c ? c.name : at.category)) + ' · ' + esc(txf('{n} product(s)', { n: String(inCat.length) })) + '</span>'
       + (inCat.length ? '<details style="display:inline-block;margin-inline-start:6px"><summary style="cursor:pointer;color:var(--blue);font-size:var(--fs-1)">' + tx('which') + '</summary><div data-testid="catset-offer-reach" style="font-size:var(--fs-1);padding:4px 0 0 8px">'
-        + inCat.map(function (p) { var d = p.item_data || p; return '<div>' + esc((d.name || '')) + ' <span style="color:var(--grey)">' + esc(typeof inr === 'function' ? inr(d.price) : '') + '</span></div>'; }).join('') + '</div></details>' : ''));
+        + inCat.map(function (item) { var d = item.item_data || item; return '<div>' + esc((d.name || '')) + ' <span style="color:var(--grey)">' + esc(typeof inr === 'function' ? inr(d.price) : '') + '</span></div>'; }).join('') + '</div></details>' : ''));
   });
   return bits.length ? bits.join(' ') : '<span style="color:var(--grey)">' + tx('every product') + '</span>';
 }
@@ -1356,14 +1356,14 @@ function catsetDefRowDetail(kind, d){
 function catsetOfferPlanHTML(){
   var rows = CATSET_DEFS['offer'];
   if (rows === undefined) return '<div class="catset-load">' + tx('reading…') + '</div>';
-  var live = rows.filter(function (d) { return d.status === 'live'; });
+  var live = rows.filter(function (item) { return item.status === 'live'; });
   var now = new Date(), months = [];
-  for (var i = 0; i < 6; i++) { var m0 = new Date(now.getFullYear(), now.getMonth() + i, 1), m1 = new Date(now.getFullYear(), now.getMonth() + i + 1, 0, 23, 59, 59); months.push({ from: m0, to: m1, label: m0.toLocaleString(undefined, { month: 'short', year: 'numeric' }) }); }
+  for (var index = 0; index < 6; index++) { var date = new Date(now.getFullYear(), now.getMonth() + index, 1), m1 = new Date(now.getFullYear(), now.getMonth() + index + 1, 0, 23, 59, 59); months.push({ from: date, to: m1, label: date.toLocaleString(undefined, { month: 'short', year: 'numeric' }) }); }
   var touches = function (d, m) { var r = d.rules || {}; var f = r.valid_from ? new Date(r.valid_from) : null, t = r.valid_to ? new Date(r.valid_to + 'T23:59:59') : null; if (f && f > m.to) return false; if (t && t < m.from) return false; return true; };
-  var cells = months.map(function (m, i) {
-    var on = live.filter(function (d) { return touches(d, m); });
+  var cells = months.map(function (item, i) {
+    var on = live.filter(function (d) { return touches(d, item); });
     return '<div data-testid="catset-plan-month-' + i + '" style="flex:1 1 130px;border:1px solid var(--line);border-radius:9px;padding:8px 10px;min-height:70px' + (i === 0 ? ';background:var(--paper);color:var(--on-bg)' : '') + '">'
-      + '<div style="font-weight:700;margin-bottom:4px">' + esc(m.label) + (i === 0 ? ' <span style="color:var(--grey);font-weight:400">' + tx('now') + '</span>' : '') + '</div>'
+      + '<div style="font-weight:700;margin-bottom:4px">' + esc(item.label) + (i === 0 ? ' <span style="color:var(--grey);font-weight:400">' + tx('now') + '</span>' : '') + '</div>'
       + (on.length ? on.map(function (d) { return '<div style="font-size:var(--fs-1);cursor:pointer;color:var(--blue)" onclick="catsetDefEdit(\'offer\',\'' + esc(d.id) + '\')">' + esc(d.name) + '</div>'; }).join('') : '<div style="font-size:var(--fs-1);color:var(--grey)">—</div>')
       + '</div>';
   }).join('');
@@ -1376,19 +1376,19 @@ function catsetPlanOpen(){
   catsetProdsEnsure();
   catsetPlanPaint();
 }
-function catsetPlanRow(i){ var d = new Date(); var f = new Date(d.getFullYear(), d.getMonth() + i, 1), t = new Date(d.getFullYear(), d.getMonth() + i + 1, 0); var iso = function (x) { return x.toISOString().slice(0, 10); }; return { name: '', kind: 'percent_off', value: '', product: '', from: iso(f), to: iso(t) }; }
+function catsetPlanRow(i){ var date = new Date(); var f = new Date(date.getFullYear(), date.getMonth() + i, 1), t = new Date(date.getFullYear(), date.getMonth() + i + 1, 0); var iso = function (x) { return x.toISOString().slice(0, 10); }; return { name: '', kind: 'percent_off', value: '', product: '', from: iso(f), to: iso(t) }; }
 function catsetPlanPaint(){
   var kinds = [['percent_off', tx('Percent off')], ['amount_off', tx('Amount off')]];
   var prods = UI.prods || [];
-  var rowsHtml = CATSET_PLAN.map(function (r, i) {
+  var rowsHtml = CATSET_PLAN.map(function (item, index) {
     return '<div data-testid="catset-plan-row" style="display:grid;grid-template-columns:2fr 1.2fr .8fr 1.6fr 1.1fr 1.1fr auto;gap:6px;align-items:center;margin-bottom:6px">'
-      + '<input class="inp" data-testid="plan-name-' + i + '" placeholder="' + esc(tx('Name buyers see')) + '" value="' + esc(r.name) + '" oninput="CATSET_PLAN[' + i + '].name=this.value">'
-      + '<select class="inp" data-testid="plan-kind-' + i + '" onchange="CATSET_PLAN[' + i + '].kind=this.value">' + kinds.map(function (k) { return '<option value="' + k[0] + '"' + (r.kind === k[0] ? ' selected' : '') + '>' + esc(k[1]) + '</option>'; }).join('') + '</select>'
-      + '<input class="inp" data-testid="plan-value-' + i + '" inputmode="decimal" placeholder="10" value="' + esc(r.value) + '" oninput="CATSET_PLAN[' + i + '].value=this.value">'
-      + '<select class="inp" data-testid="plan-product-' + i + '" onchange="CATSET_PLAN[' + i + '].product=this.value"><option value="">' + esc(tx('every product')) + '</option>' + prods.map(function (p) { var id = p.item_id || p.id; return '<option value="' + esc(id) + '"' + (r.product === id ? ' selected' : '') + '>' + esc((p.item_data || p).name || '') + '</option>'; }).join('') + '</select>'
-      + '<input class="inp" type="date" data-testid="plan-from-' + i + '" value="' + esc(r.from) + '" onchange="CATSET_PLAN[' + i + '].from=this.value">'
-      + '<input class="inp" type="date" data-testid="plan-to-' + i + '" value="' + esc(r.to) + '" onchange="CATSET_PLAN[' + i + '].to=this.value">'
-      + '<button class="composebtn" title="' + esc(tx('Remove')) + '" onclick="CATSET_PLAN.splice(' + i + ',1);catsetPlanPaint()">✕</button>'
+      + '<input class="inp" data-testid="plan-name-' + index + '" placeholder="' + esc(tx('Name buyers see')) + '" value="' + esc(item.name) + '" oninput="CATSET_PLAN[' + index + '].name=this.value">'
+      + '<select class="inp" data-testid="plan-kind-' + index + '" onchange="CATSET_PLAN[' + index + '].kind=this.value">' + kinds.map(function (k) { return '<option value="' + k[0] + '"' + (item.kind === k[0] ? ' selected' : '') + '>' + esc(k[1]) + '</option>'; }).join('') + '</select>'
+      + '<input class="inp" data-testid="plan-value-' + index + '" inputmode="decimal" placeholder="10" value="' + esc(item.value) + '" oninput="CATSET_PLAN[' + index + '].value=this.value">'
+      + '<select class="inp" data-testid="plan-product-' + index + '" onchange="CATSET_PLAN[' + index + '].product=this.value"><option value="">' + esc(tx('every product')) + '</option>' + prods.map(function (p) { var id = p.item_id || p.id; return '<option value="' + esc(id) + '"' + (item.product === id ? ' selected' : '') + '>' + esc((p.item_data || p).name || '') + '</option>'; }).join('') + '</select>'
+      + '<input class="inp" type="date" data-testid="plan-from-' + index + '" value="' + esc(item.from) + '" onchange="CATSET_PLAN[' + index + '].from=this.value">'
+      + '<input class="inp" type="date" data-testid="plan-to-' + index + '" value="' + esc(item.to) + '" onchange="CATSET_PLAN[' + index + '].to=this.value">'
+      + '<button class="composebtn" title="' + esc(tx('Remove')) + '" onclick="CATSET_PLAN.splice(' + index + ',1);catsetPlanPaint()">✕</button>'
       + '</div>';
   }).join('');
   modal('<div class="mhd"><div class="t">' + tx('Plan several offers') + '</div><div class="s">' + tx('Each applies only inside its dates — this month one, next month another.') + '</div></div>'
@@ -1401,13 +1401,13 @@ function catsetPlanPaint(){
 }
 async function catsetPlanGo(){
   var err = document.getElementById('plan_err'); if (err) err.textContent = '';
-  var rows = (CATSET_PLAN || []).filter(function (r) { return r.name.trim() || r.value; });
+  var rows = (CATSET_PLAN || []).filter(function (item) { return item.name.trim() || item.value; });
   if (!rows.length) { if (err) err.textContent = tx('Nothing to create.'); return; }
-  for (var i = 0; i < rows.length; i++) {
-    var r = rows[i];
-    if (!r.name.trim()) { if (err) err.textContent = tx('Row {n}: a name buyers will see.').replace('{n}', String(i + 1)); return; }
-    if (!(Number(r.value) > 0)) { if (err) err.textContent = tx('Row {n}: a value above 0.').replace('{n}', String(i + 1)); return; }
-    if (r.from && r.to && r.to < r.from) { if (err) err.textContent = tx('Row {n}: “to” is before “from”.').replace('{n}', String(i + 1)); return; }
+  for (var index = 0; index < rows.length; index++) {
+    var r = rows[index];
+    if (!r.name.trim()) { if (err) err.textContent = tx('Row {n}: a name buyers will see.').replace('{n}', String(index + 1)); return; }
+    if (!(Number(r.value) > 0)) { if (err) err.textContent = tx('Row {n}: a value above 0.').replace('{n}', String(index + 1)); return; }
+    if (r.from && r.to && r.to < r.from) { if (err) err.textContent = tx('Row {n}: “to” is before “from”.').replace('{n}', String(index + 1)); return; }
   }
   var made = 0;
   try {
@@ -1429,22 +1429,22 @@ async function catsetPlanGo(){
 /** The product list this screen's registers read — once, cached where the catalogue keeps it (UI.prods); null while reading. */
 function catsetProdsEnsure(){
   if (Array.isArray(UI.prods)) return UI.prods;
-  if (!UI._catsetProdReq) { UI._catsetProdReq = api('prodList').then(function (r) { UI.prods = r || []; UI._catsetProdReq = null; catsetPaintDetail(); }).catch(function () { UI.prods = []; UI._catsetProdReq = null; catsetPaintDetail(); }); }
+  if (!UI._catsetProdReq) { UI._catsetProdReq = api('prodList').then(function (reply) { UI.prods = reply || []; UI._catsetProdReq = null; catsetPaintDetail(); }).catch(function () { UI.prods = []; UI._catsetProdReq = null; catsetPaintDetail(); }); }
   return null;
 }
 function catsetProdName(id){ var p = (UI.prods || []).filter(function (x) { return String(x.item_id || x.id) === String(id); })[0]; return p ? ((p.item_data || p).name || id) : id; }
 function catsetTaxRows(){
   var prods = catsetProdsEnsure();
   if (prods === null) return null;
-  var slabs = (CATSET_DEFS['tax'] || []).filter(function (d) { return d.status === 'live'; })
-    .map(function (d) { return { definition_id: d.id, name: d.name, status: d.status, rules: d.rules || {} }; });
+  var slabs = (CATSET_DEFS['tax'] || []).filter(function (item) { return item.status === 'live'; })
+    .map(function (item) { return { definition_id: item.id, name: item.name, status: item.status, rules: item.rules || {} }; });
   var cats = (typeof cbDefsCached === 'function' && cbDefsCached('category')) || null;
   if (cats === null && typeof cbDefsLive === 'function') { cbDefsLive('category').then(catsetPaintDetail).catch(function(){}); cats = []; }
   var offers = (typeof UI._ctOffers !== 'undefined' && UI._ctOffers) || null;
   if (offers === null && typeof ctOffersEnsure === 'function') { ctOffersEnsure(function(){ catsetPaintDetail(); }); offers = []; }
   var face = CATSET_FACE || {};
-  return prods.map(function (p) {
-    var d = p.item_data || p, id = p.item_id || p.id;
+  return prods.map(function (item) {
+    var d = item.item_data || item, id = item.item_id || item.id;
     var r = (typeof CBTaxSlab !== 'undefined') ? CBTaxSlab.resolve({ item_data: d, face: face, slabs: slabs, categories: cats || [] }) : { rate: null, source: 'none' };
     var on = (offers || []).filter(function (o) { var at = (o.rules && o.rules.applies_to) || {}; return Array.isArray(at.item_ids) && at.item_ids.indexOf(id) >= 0; });
     return { id: id, name: (typeof pName === 'function') ? pName(d) : (d.name || ''), code: d.hsn || d.code || d.sku || '',
@@ -1467,7 +1467,7 @@ function catsetTaxCatgChipsHTML(rows){
   var chip = function (id, name, n) { var on = CATSET_TAX_CATG === id; return '<span class="pill" data-testid="catset-tax-catg-' + esc(id || 'all') + '" onclick="catsetTaxCatg(\'' + esc(id) + '\')" style="cursor:pointer;' + (on ? 'background:var(--accent);color:#fff;' : 'color:var(--on-bg);') + '">' + esc(name) + (n != null ? ' · ' + n : '') + '</span>'; };
   return '<div data-testid="catset-tax-catgs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;font-size:var(--fs-1)">'
     + chip('', tx('All products'), rows.length)
-    + cats.filter(function (c) { return c.status !== 'retired'; }).map(function (c) { var id = String(c.definition_id || c.id); var slab = c.rules && c.rules.default_slab; return chip(id, c.name + (slab ? ' · ' + tx('slab set') : ''), count[id] || 0); }).join('')
+    + cats.filter(function (item) { return item.status !== 'retired'; }).map(function (item) { var id = String(item.definition_id || item.id); var slab = item.rules && item.rules.default_slab; return chip(id, item.name + (slab ? ' · ' + tx('slab set') : ''), count[id] || 0); }).join('')
     + '</div>';
 }
 function catsetTaxRegisterHTML(){
@@ -1487,11 +1487,11 @@ function catsetTaxRegisterHTML(){
       : '<b><bdi>' + esc(String(r.rate)) + '%</bdi></b> <span style="color:var(--grey)">' + esc(r.name || '') + '</span>';
     var from = '<span class="pill" style="font-size:var(--fs-1)">' + esc(src[r.source] || r.source || '') + (r.source === 'category' && r.via_category_name ? ' · ' + esc(r.via_category_name) : '') + '</span>';
     var warn = isDead ? '<div style="color:var(--warn-3);font-size:var(--fs-1)">⚠️ ' + esc(txf('cites “{s}”, not active', { s: r.cited })) + '</div>' : '';
-    if (Array.isArray(r.conflict) && r.conflict.length > 1) { clash++; warn += '<div data-testid="catset-tax-conflict" style="color:var(--warn-3);font-size:var(--fs-1)">⚠️ ' + esc(tx('categories disagree: ') + r.conflict.map(function (h) { return (h.category_name || h.category_id) + ' ' + (h.rate == null ? '?' : h.rate + '%'); }).join(' vs ')) + '</div>'; }
+    if (Array.isArray(r.conflict) && r.conflict.length > 1) { clash++; warn += '<div data-testid="catset-tax-conflict" style="color:var(--warn-3);font-size:var(--fs-1)">⚠️ ' + esc(tx('categories disagree: ') + r.conflict.map(function (item) { return (item.category_name || item.category_id) + ' ' + (item.rate == null ? '?' : item.rate + '%'); }).join(' vs ')) + '</div>'; }
     return '<tr data-testid="catset-tax-row-' + esc(id(x)) + '" style="cursor:pointer" onclick="catsetOpenProduct(\'' + esc(id(x)) + '\')">'
       + cell('<b>' + esc(x.name) + '</b>' + (x.code ? '<div style="color:var(--grey);font-size:var(--fs-1)"><code>' + esc(x.code) + '</code></div>' : ''))
       + cell(tax + ' ' + from + warn)
-      + cell(x.offers.length ? x.offers.map(function (n) { return '<span class="pill" style="font-size:var(--fs-1)">' + esc(n) + '</span>'; }).join(' ') : '<span style="color:var(--grey)">—</span>')
+      + cell(x.offers.length ? x.offers.map(function (item) { return '<span class="pill" style="font-size:var(--fs-1)">' + esc(item) + '</span>'; }).join(' ') : '<span style="color:var(--grey)">—</span>')
       + cell(x.cats.length ? esc(x.cats.join(' · ')) : '<span style="color:var(--grey)">—</span>')
       + cell('<bdi>' + (typeof inr === 'function' ? inr(typeof cbAmount === 'function' ? cbAmount(x.price) : x.price) : esc(String(x.price || ''))) + '</bdi>', ';text-align:end;white-space:nowrap')
       + '</tr>';
@@ -1509,9 +1509,9 @@ function catsetTaxCountsHTML(){
   var rows = catsetTaxRows(); if (!rows || !rows.length) return '';
   var by = {}; rows.forEach(function (x) { var k = (x.r && x.r.slab_id) || ''; if (k) by[k] = (by[k] || 0) + 1; });
   var keys = Object.keys(by); if (!keys.length) return '';
-  var name = function (k) { var d = (CATSET_DEFS['tax'] || []).filter(function (s) { return s.id === k; })[0]; return d ? d.name : k; };
+  var name = function (k) { var d = (CATSET_DEFS['tax'] || []).filter(function (item) { return item.id === k; })[0]; return d ? d.name : k; };
   return '<div data-testid="catset-tax-counts" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;font-size:var(--fs-1)">'
-    + keys.map(function (k) { return '<span class="pill">' + esc(name(k)) + ' · ' + esc(txf('{n} product(s)', { n: String(by[k]) })) + '</span>'; }).join('') + '</div>';
+    + keys.map(function (item) { return '<span class="pill">' + esc(name(item)) + ' · ' + esc(txf('{n} product(s)', { n: String(by[item]) })) + '</span>'; }).join('') + '</div>';
 }
 /** A register row opens its product on the Pricing & tax tab — the place the row's answer is changed. */
 function catsetOpenProduct(id){
@@ -1525,7 +1525,7 @@ function catsetTaxHTML(){
   var t = (CATSET_FACE && CATSET_FACE.tax) || {};
   if (typeof t === 'string') t = { treatment: t };
   var cur = t.default_slab || '';
-  var live = rows.filter(function(d){ return d.status === 'live'; });
+  var live = rows.filter(function(item){ return item.status === 'live'; });
 
   /* ⚠️ An empty picker EXPLAINS ITSELF rather than rendering one blank option — the same rule the order-model
      form follows. "You have no live slabs" and "this catalogue cannot have a default" look identical otherwise. */
@@ -1571,18 +1571,18 @@ function catsetDetailHTML(){
 }
 /* ⚠️ ONLY WHILE THIS SCREEN IS UP. The section's loaders (slabs, products, the face) call this when they land — and they
    land after a person has moved on: the Catalogue's pane was overwritten with Setup › Tax ([TAX-02], the tour, 2026-09-05). */
-function catsetPaintDetail(){ if (typeof UI !== 'undefined' && UI.nav !== 'catsetup') return; var d = document.getElementById('detailpane'); if (d) { var k = scrollKeep(); d.className = 'detail'; d.innerHTML = catsetDetailHTML(); k(); } }
-function catsetPaintList(){ if (typeof UI !== 'undefined' && UI.nav !== 'catsetup') return; var b = document.getElementById('catset_rows'); if (b) { var k = scrollKeep(); b.innerHTML = catsetRowsHTML(); k(); } }
+function catsetPaintDetail(){ if (typeof UI !== 'undefined' && UI.nav !== 'catsetup') return; var node = document.getElementById('detailpane'); if (node) { var k = scrollKeep(); node.className = 'detail'; node.innerHTML = catsetDetailHTML(); k(); } }
+function catsetPaintList(){ if (typeof UI !== 'undefined' && UI.nav !== 'catsetup') return; var node = document.getElementById('catset_rows'); if (node) { var k = scrollKeep(); node.innerHTML = catsetRowsHTML(); k(); } }
 function catsetPaint(){ catsetPaintList(); catsetPaintDetail(); }
 function catsetRowsHTML(){
   var cur = catsetSec();
-  return CATSET_SECS.map(function(s){
-    return '<div class="row' + (s.key === cur ? ' sel' : '') + '" data-testid="catset-sec-' + s.key + '"'
-      + ' onclick="catsetSetSec(\'' + s.key + '\')">'
+  return CATSET_SECS.map(function(item){
+    return '<div class="row' + (item.key === cur ? ' sel' : '') + '" data-testid="catset-sec-' + item.key + '"'
+      + ' onclick="catsetSetSec(\'' + item.key + '\')">'
       + '<div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:8px">'
-      +   '<span style="font-size:var(--fs-3)">' + s.icon + '</span>'
-      +   '<b style="font-size:var(--fs-3)">' + esc(s.name) + '</b></div>'
-      + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:1px;padding-inline-start:22px">' + esc(s.q) + '</div></div>'
+      +   '<span style="font-size:var(--fs-3)">' + item.icon + '</span>'
+      +   '<b style="font-size:var(--fs-3)">' + esc(item.name) + '</b></div>'
+      + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:1px;padding-inline-start:22px">' + esc(item.q) + '</div></div>'
       + '<div class="rowgo" aria-hidden="true">›</div></div>';
   }).join('');
 }
@@ -1620,8 +1620,8 @@ function catalogueSetupHubScreen(){
 }
 function catsetCss(){
   if (document.getElementById('catset_css')) return;
-  var s = document.createElement('style'); s.id = 'catset_css';
-  s.textContent = [
+  var node = document.createElement('style'); node.id = 'catset_css';
+  node.textContent = [
     '.catset-card{border:1px solid var(--line);border-radius:12px;background:var(--card);margin-bottom:12px;overflow:hidden}',
     '.catset-ct{font-size:var(--fs-3);font-weight:700;padding:11px 14px 0}',
     '.catset-cb{font-size:var(--fs-2);line-height:1.6;color:var(--ink);padding:6px 14px 12px}',
@@ -1744,7 +1744,7 @@ function catsetCss(){
     '.catset-regsrc{font-size:var(--fs-1);color:var(--grey);padding:7px 13px}',
     '.catset-regsrc code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:var(--fs-1)}'
   ].join('');
-  (document.head || document.documentElement).appendChild(s);
+  (document.head || document.documentElement).appendChild(node);
 }
 
 /**
@@ -1780,20 +1780,20 @@ function catsetSfHTML(){
   var facets = (f.facets && typeof f.facets === 'object') ? f.facets : {};
   var defUnit = (f.defaults && f.defaults.unit) || '';
 
-  var methods = (P.METHODS || []).map(function(m){
-    return '<div class="bulkrow' + (method === m.k ? ' on' : '') + '" data-testid="catset-sf-method-' + esc(m.k) + '"'
-      + ' onclick="catsetSfMethod(\'' + esc(m.k) + '\')" style="cursor:pointer">'
-      + '<span class="bn">' + esc(m.label) + '</span>'
-      + '<span class="bh">' + (method === m.k ? esc(tx('in use')) : '') + '</span></div>';
+  var methods = (P.METHODS || []).map(function(item){
+    return '<div class="bulkrow' + (method === item.k ? ' on' : '') + '" data-testid="catset-sf-method-' + esc(item.k) + '"'
+      + ' onclick="catsetSfMethod(\'' + esc(item.k) + '\')" style="cursor:pointer">'
+      + '<span class="bn">' + esc(item.label) + '</span>'
+      + '<span class="bh">' + (method === item.k ? esc(tx('in use')) : '') + '</span></div>';
   }).join('');
 
   /* The catalogue's ALLOWED SET. An item picks from it; with exactly one, nobody is asked per product. */
   var known = (P.UNITS || []).slice();
-  units.forEach(function(u){ if (known.indexOf(u) < 0) known.push(u); });
-  var unitChips = known.map(function(u){
-    var on = units.indexOf(u) >= 0;
+  units.forEach(function(item){ if (known.indexOf(item) < 0) known.push(item); });
+  var unitChips = known.map(function(item){
+    var on = units.indexOf(item) >= 0;
     return '<button type="button" class="cbpick-chip' + (on ? ' on' : '') + '"'
-      + ' data-testid="catset-sf-unit-' + esc(u) + '" onclick="catsetSfUnit(\'' + esc(u) + '\')">' + esc(u) + '</button>';
+      + ' data-testid="catset-sf-unit-' + esc(item) + '" onclick="catsetSfUnit(\'' + esc(item) + '\')">' + esc(item) + '</button>';
   }).join(' ');
 
   /**
@@ -1804,9 +1804,9 @@ function catsetSfHTML(){
   var defRow = '';
   if (units.length > 1) {
     defRow = '<div class="catset-drow" style="margin-top:9px"><span class="dn">' + esc(tx('Default unit'))
-      + '</span><span class="bh">' + units.map(function(u){
-          return '<button type="button" class="cbpick-chip' + (defUnit === u ? ' on' : '') + '"'
-            + ' data-testid="catset-sf-def-' + esc(u) + '" onclick="catsetSfDefUnit(\'' + esc(u) + '\')">' + esc(u) + '</button>';
+      + '</span><span class="bh">' + units.map(function(item){
+          return '<button type="button" class="cbpick-chip' + (defUnit === item ? ' on' : '') + '"'
+            + ' data-testid="catset-sf-def-' + esc(item) + '" onclick="catsetSfDefUnit(\'' + esc(item) + '\')">' + esc(item) + '</button>';
         }).join(' ') + '</span></div>'
       + '<div class="catset-std">' + esc(tx('A product that names no unit uses this one. Change it and every '
       + 'product that never set its own follows.')) + '</div>';
@@ -1814,10 +1814,10 @@ function catsetSfHTML(){
     defRow = '<div class="catset-std">' + esc(tx('One unit, so every product uses it — nothing to choose.')) + '</div>';
   }
 
-  var facetRows = (P.FACETS || []).map(function(k){
-    var on = !!facets[k];
+  var facetRows = (P.FACETS || []).map(function(item){
+    var on = !!facets[item];
     return '<button type="button" class="cbpick-chip' + (on ? ' on' : '') + '"'
-      + ' data-testid="catset-sf-facet-' + esc(k) + '" onclick="catsetSfFacet(\'' + esc(k) + '\')">' + esc(k) + '</button>';
+      + ' data-testid="catset-sf-facet-' + esc(item) + '" onclick="catsetSfFacet(\'' + esc(item) + '\')">' + esc(item) + '</button>';
   }).join(' ');
 
   return catsetCard(tx('How customers order from you'),
