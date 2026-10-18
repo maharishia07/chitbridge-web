@@ -72,7 +72,7 @@
   "public/app/catalogue-lines.js": {"score":30,"long40":1,"long80":0,"complex10":1,"complex15":1,"deep3":0,"deep4":0,"cryptic":25,"noWhatLine":1,"emptyCatch":0,"noHeader":1},
   "public/app/catalogue-model.js": {"score":68,"long40":2,"long80":1,"complex10":5,"complex15":1,"deep3":0,"deep4":0,"cryptic":58,"noWhatLine":0,"emptyCatch":0,"noHeader":1},
   "public/app/catalogue-starter-categories.js": {"score":1,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":0,"noWhatLine":0,"emptyCatch":0,"noHeader":1},
-  "public/app/chit-sheet.js": {"score":155,"long40":0,"long80":0,"complex10":13,"complex15":8,"deep3":0,"deep4":0,"cryptic":128,"noWhatLine":0,"emptyCatch":6,"noHeader":0},
+  "public/app/chit-sheet.js": {"score":125,"long40":0,"long80":0,"complex10":13,"complex15":8,"deep3":0,"deep4":0,"cryptic":98,"noWhatLine":0,"emptyCatch":6,"noHeader":0},
   "public/app/core.js": {"score":157,"long40":6,"long80":3,"complex10":6,"complex15":4,"deep3":3,"deep4":3,"cryptic":81,"noWhatLine":9,"emptyCatch":42,"noHeader":0},
   "public/app/country-profiles.js": {"score":0,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":0,"noWhatLine":0,"emptyCatch":0,"noHeader":0},
   "public/app/country-ready.js": {"score":14,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":13,"noWhatLine":0,"emptyCatch":0,"noHeader":1},
