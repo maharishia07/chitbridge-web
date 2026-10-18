@@ -30,10 +30,10 @@
   function call(method, path, body) {
     return root.fetch((N.o.base || '') + path, { method: method, cache: 'no-store',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + N.o.token }, body: body ? JSON.stringify(body) : undefined })
-      .then(function (r) {
-        return r.json().catch(function () { return {}; }).then(function (j) {
-          if (r.status === 401 && N.o.onEnded) N.o.onEnded();
-          if (!r.ok) { var e = new Error(j.message || j.error || 'API ' + r.status); e.status = r.status; throw e; }
+      .then(function (reply) {
+        return reply.json().catch(function () { return {}; }).then(function (j) {
+          if (reply.status === 401 && N.o.onEnded) N.o.onEnded();
+          if (!reply.ok) { var e = new Error(j.message || j.error || 'API ' + reply.status); e.status = reply.status; throw e; }
           return j;
         });
       });
@@ -41,14 +41,14 @@
 
   /* ── the reads: the member half is ONE call (networks · offers · may_design) and the store list ONE more ── */
   function load() {
-    return Promise.all([call('GET', '/api/network-offers'), call('GET', '/api/network-design/stores').catch(function () { return { stores: [] }; })]).then(function (r) {
-      var s = (r[0] && r[0].store) || {};
-      N.networks = s.networks || []; N.notices = s.price_notices || []; N.may = r[0].may_design || N.may; N.stores = (r[1] && r[1].stores) || [];
+    return Promise.all([call('GET', '/api/network-offers'), call('GET', '/api/network-design/stores').catch(function () { return { stores: [] }; })]).then(function (reply) {
+      var s = (reply[0] && reply[0].store) || {};
+      N.networks = s.networks || []; N.notices = s.price_notices || []; N.may = reply[0].may_design || N.may; N.stores = (reply[1] && reply[1].stores) || [];
     });
   }
   function offers() {
     var out = [];
-    N.networks.forEach(function (n) { (n.offers || []).forEach(function (o) { out.push(Object.assign({ brand: n.brand_name, brand_id: n.brand_id, policy: n.policy }, o)); }); });
+    N.networks.forEach(function (item) { (item.offers || []).forEach(function (o) { out.push(Object.assign({ brand: item.brand_name, brand_id: item.brand_id, policy: item.policy }, o)); }); });
     return out;
   }
   function stand(n) { return T(STAND[(n.membership && n.membership.state) || 'none'] || 'Not yet'); }
@@ -56,18 +56,18 @@
   /* ── frame of the page: the tab strip and the one place a tab draws ── */
   function paint() {
     var tabs = [['mine', T('My network')], ['offers', T('Offers')], ['design', T('Design')]];
-    N.el.innerHTML = (N.o.sidebar ? '' : '<div class="nw-tabs" role="tablist" data-testid="nw-tabs">' + tabs.map(function (t) {
-      var no = t[0] === 'design' && N.may.ok === false;
-      return '<button type="button" role="tab" class="nw-tab' + (N.tab === t[0] ? ' on' : '') + (no ? ' no' : '') + '" data-tab="' + t[0] + '" data-testid="nw-tab-' + t[0] + '" aria-selected="' + (N.tab === t[0]) + '">' + esc(t[1]) + '</button>';
+    N.el.innerHTML = (N.o.sidebar ? '' : '<div class="nw-tabs" role="tablist" data-testid="nw-tabs">' + tabs.map(function (item) {
+      var no = item[0] === 'design' && N.may.ok === false;
+      return '<button type="button" role="tab" class="nw-tab' + (N.tab === item[0] ? ' on' : '') + (no ? ' no' : '') + '" data-tab="' + item[0] + '" data-testid="nw-tab-' + item[0] + '" aria-selected="' + (N.tab === item[0]) + '">' + esc(item[1]) + '</button>';
     }).join('') + '</div>') + '<div class="nw-body" id="nw_body" data-testid="nw-body"></div><dialog class="sheet" id="nw_sheet" data-testid="nw-sheet"></dialog>';
     Array.prototype.forEach.call(N.el.querySelectorAll('.nw-tab'), function (b) { b.onclick = function () { N.tab = b.getAttribute('data-tab'); paint(); }; });
-    var d = $('nw_sheet');
-    d.addEventListener('cancel', function (e) { e.preventDefault(); closeSheet(); });
-    d.addEventListener('click', function (e) { if (e.target === d) closeSheet(); });
+    var node = $('nw_sheet');
+    node.addEventListener('cancel', function (e) { e.preventDefault(); closeSheet(); });
+    node.addEventListener('click', function (e) { if (e.target === node) closeSheet(); });
     ({ mine: paintMine, offers: paintOffers, design: paintDesign })[N.tab]($('nw_body'));
   }
-  function sheet(html) { var d = $('nw_sheet'); d.innerHTML = '<button type="button" class="mx" data-testid="nw-close" aria-label="' + esc(T('Close')) + '">✕</button>' + html; d.querySelector('.mx').onclick = closeSheet; if (!d.open) d.showModal(); }
-  function closeSheet() { var d = $('nw_sheet'); try { d.close(); } catch (_) {} d.innerHTML = ''; }
+  function sheet(html) { var node = $('nw_sheet'); node.innerHTML = '<button type="button" class="mx" data-testid="nw-close" aria-label="' + esc(T('Close')) + '">✕</button>' + html; node.querySelector('.mx').onclick = closeSheet; if (!node.open) node.showModal(); }
+  function closeSheet() { var node = $('nw_sheet'); try { node.close(); } catch (_) {} node.innerHTML = ''; }
   function mountList(host, cfg) {
     if (N.lists[cfg.key]) { try { N.lists[cfg.key].destroy(); } catch (_) {} }
     root.CBList.reset && root.CBList.reset(cfg.key);
@@ -80,9 +80,9 @@
       host.innerHTML = '<div class="empty" data-testid="nw-none"><div class="t">' + esc(T('Not in a network yet')) + '</div><div>' + esc(T('When a brand adds this shop to its network, it shows here.')) + '</div></div>';
       return;
     }
-    host.innerHTML = '<div class="nw-nets" data-testid="nw-nets">' + N.networks.map(function (n) {
-      return '<div class="nw-net" data-testid="nw-net-' + esc(n.brand_id) + '"><b>' + esc(n.brand_name) + '</b> <span class="tag' + ((n.membership || {}).state === 'active' ? ' green' : ' amber') + '">' + esc(stand(n)) + '</span>'
-        + '<div class="sub">' + esc(T('Your parent')) + ': ' + esc(n.brand_name) + '</div></div>';
+    host.innerHTML = '<div class="nw-nets" data-testid="nw-nets">' + N.networks.map(function (item) {
+      return '<div class="nw-net" data-testid="nw-net-' + esc(item.brand_id) + '"><b>' + esc(item.brand_name) + '</b> <span class="tag' + ((item.membership || {}).state === 'active' ? ' green' : ' amber') + '">' + esc(stand(item)) + '</span>'
+        + '<div class="sub">' + esc(T('Your parent')) + ': ' + esc(item.brand_name) + '</div></div>';
     }).join('') + '</div><div class="nw-list" id="nw_stores" data-testid="nw-stores"></div>';
     mountList($('nw_stores'), {
       key: 'network-stores', rows: function () { return N.stores; }, id: function (s) { return s.entity_id; }, rowTid: function (s) { return 'nw-store-' + s.entity_id; },
@@ -123,10 +123,10 @@
       + '<div class="nw-out" id="nw_out" data-testid="nw-out"></div><div class="nw-acts">'
       + '<button type="button" class="act" id="nw_in" data-testid="nw-offer-in">' + esc(T('Use this offer')) + '</button>'
       + '<button type="button" class="act quiet" id="nw_outb" data-testid="nw-offer-out">' + esc(T('Not for us')) + '</button></div>');
-    [['nw_in', 'in', T('Now on at your counter.')], ['nw_outb', 'out', T('Turned off at your counter.')]].forEach(function (a) {
-      $(a[0]).onclick = function () {
-        root.CBAction.run($(a[0]), function () { return call('POST', '/api/network-offers/' + encodeURIComponent(o.id) + '/choice', { choice: a[1] }); },
-          { key: 'nw-choice-' + o.id, failed: T("Couldn't save that"), out: 'nw_out', outcome: function () { $('nw_out').textContent = a[2]; load().then(function () { if (N.tab === 'offers') paint(); }); } });
+    [['nw_in', 'in', T('Now on at your counter.')], ['nw_outb', 'out', T('Turned off at your counter.')]].forEach(function (item) {
+      $(item[0]).onclick = function () {
+        root.CBAction.run($(item[0]), function () { return call('POST', '/api/network-offers/' + encodeURIComponent(o.id) + '/choice', { choice: item[1] }); },
+          { key: 'nw-choice-' + o.id, failed: T("Couldn't save that"), out: 'nw_out', outcome: function () { $('nw_out').textContent = item[2]; load().then(function () { if (N.tab === 'offers') paint(); }); } });
       };
     });
   }
@@ -142,18 +142,18 @@
       + (no ? '<span class="act quiet" aria-disabled="true" data-testid="nw-builder">' + esc(T('Open the builder')) + '</span>'
             : '<a class="act quiet" href="/app.html#/network" data-testid="nw-builder">' + esc(T('Open the builder')) + '</a>') + '</div></div>';
     if (!no) $('nw_check').onclick = function () { check(); };
-    (N.draft !== undefined ? Promise.resolve() : call('GET', '/api/network-design').then(function (j) { N.draft = j.draft || null; }, function () { N.draft = null; })).then(function () { drawTree(); });
+    (N.draft !== undefined ? Promise.resolve() : call('GET', '/api/network-design').then(function (reply) { N.draft = reply.draft || null; }, function () { N.draft = null; })).then(function () { drawTree(); });
   }
   function drawTree() {
-    var t = $('nw_tree'); if (!t) return;
+    var node = $('nw_tree'); if (!node) return;
     var nodes = (N.draft && N.draft.nodes) || [];
-    if (!nodes.length) { t.innerHTML = '<div class="empty"><div class="t">' + esc(T('No design yet')) + '</div><div>' + esc(T('Draw a network in the builder, then check it here.')) + '</div></div>'; return; }
+    if (!nodes.length) { node.innerHTML = '<div class="empty"><div class="t">' + esc(T('No design yet')) + '</div><div>' + esc(T('Draw a network in the builder, then check it here.')) + '</div></div>'; return; }
     function kids(key, depth) {
-      return nodes.filter(function (n) { return (n.parent_key || null) === (key || null) && (key || n.root); }).map(function (n) {
-        return '<div class="nw-node" style="padding-inline-start:' + (depth * 18) + 'px" data-testid="nw-node-' + esc(n.key) + '"><b>' + esc(n.name || '—') + '</b> <span class="tag">' + esc(n.owned === false ? T('Partner') : T('Own')) + '</span></div>' + kids(n.key, depth + 1);
+      return nodes.filter(function (item) { return (item.parent_key || null) === (key || null) && (key || item.root); }).map(function (item) {
+        return '<div class="nw-node" style="padding-inline-start:' + (depth * 18) + 'px" data-testid="nw-node-' + esc(item.key) + '"><b>' + esc(item.name || '—') + '</b> <span class="tag">' + esc(item.owned === false ? T('Partner') : T('Own')) + '</span></div>' + kids(item.key, depth + 1);
       }).join('');
     }
-    t.innerHTML = kids(null, 0) || nodes.map(function (n) { return '<div class="nw-node"><b>' + esc(n.name || '—') + '</b></div>'; }).join('');
+    node.innerHTML = kids(null, 0) || nodes.map(function (item) { return '<div class="nw-node"><b>' + esc(item.name || '—') + '</b></div>'; }).join('');
   }
   function check() {
     root.CBAction.run($('nw_check'), function () { return api('nwValidate', {}); },
