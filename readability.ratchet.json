@@ -128,7 +128,7 @@
   "public/engine/chart-draw.js": {"score":0,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":0,"noWhatLine":0,"emptyCatch":0,"noHeader":0},
   "public/finance.html": {"score":24,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":20,"noWhatLine":1,"emptyCatch":3,"noHeader":0},
   "public/illustrations/index.html": {"score":8,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":7,"noWhatLine":0,"emptyCatch":0,"noHeader":1},
-  "public/intake.html": {"score":33,"long40":0,"long80":0,"complex10":3,"complex15":0,"deep3":0,"deep4":0,"cryptic":26,"noWhatLine":2,"emptyCatch":1,"noHeader":1},
+  "public/intake.html": {"score":23,"long40":0,"long80":0,"complex10":3,"complex15":0,"deep3":0,"deep4":0,"cryptic":16,"noWhatLine":2,"emptyCatch":1,"noHeader":1},
   "public/iot-howitworks.html": {"score":1,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":0,"noWhatLine":0,"emptyCatch":0,"noHeader":1},
   "public/know-your-business.html": {"score":32,"long40":0,"long80":0,"complex10":4,"complex15":2,"deep3":0,"deep4":0,"cryptic":25,"noWhatLine":0,"emptyCatch":1,"noHeader":0},
   "public/lab/combo-mode.js": {"score":68,"long40":1,"long80":1,"complex10":4,"complex15":1,"deep3":0,"deep4":0,"cryptic":56,"noWhatLine":5,"emptyCatch":0,"noHeader":0},
