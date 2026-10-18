@@ -30,8 +30,8 @@ var EN_STEP2 = { party: 1, ledger: 1, bank: 1, asset_class: 1, loan: 1, lines: 1
 
 function enCss() {
   if (document.getElementById('en_css')) return;
-  var s = document.createElement('style'); s.id = 'en_css';
-  s.textContent = '#entrysheet{border:0;padding:0;margin:auto;width:min(620px,100vw);max-width:100vw;height:min(760px,94dvh);border-radius:14px;background:var(--card,#fff);color:var(--ink,#0F2E3D);box-shadow:var(--shadow,0 12px 34px rgba(15,46,61,.2));overflow:hidden}'
+  var node = document.createElement('style'); node.id = 'en_css';
+  node.textContent = '#entrysheet{border:0;padding:0;margin:auto;width:min(620px,100vw);max-width:100vw;height:min(760px,94dvh);border-radius:14px;background:var(--card,#fff);color:var(--ink,#0F2E3D);box-shadow:var(--shadow,0 12px 34px rgba(15,46,61,.2));overflow:hidden}'
     + '#entrysheet[open]{display:flex;flex-direction:column}#entrysheet::backdrop{background:rgba(15,46,61,.45)}'
     + '#entrysheet .en-top{display:flex;align-items:center;gap:6px;padding:6px 6px 6px 14px;border-bottom:1px solid var(--line,#E7E2D8);font-size:var(--fs-3,14px);font-weight:700}#entrysheet .en-top span{flex:1}'
     + '#entrysheet .en-top button{cursor:pointer;min-width:44px;min-height:44px;border:0;background:none;font-size:var(--fs-4,16px);color:inherit}'
@@ -53,30 +53,30 @@ function enCss() {
     + '#entrysheet .en-acts{display:flex;gap:8px;justify-content:space-between;padding:8px 14px calc(8px + env(safe-area-inset-bottom));border-top:1px solid var(--line,#E7E2D8);background:var(--paper,#FAF8F4)}'
     + '#entrysheet .en-btn{cursor:pointer;min-height:44px;padding:0 18px;border:1px solid var(--line,#E7E2D8);border-radius:9px;background:transparent;color:inherit;font:inherit;font-weight:700}'
     + '#entrysheet .en-btn.pri{background:var(--green,#16693F);border-color:var(--green,#16693F);color:#fff}#entrysheet .en-btn:disabled{opacity:.45;cursor:default}';
-  document.head.appendChild(s);
+  document.head.appendChild(node);
 }
 function enDlg() {
-  var d = document.getElementById('entrysheet'); if (d) return d;
+  var node = document.getElementById('entrysheet'); if (node) return node;
   enCss();
-  d = document.createElement('dialog'); d.id = 'entrysheet'; d.setAttribute('aria-label', tx('New entry'));
-  d.innerHTML = '<div class="en-top"><span data-testid="en-title"></span><button type="button" data-testid="en-close" aria-label="' + esc(tx('Close')) + '" onclick="enClose()">✕</button></div><div class="en-dots" id="en_dots"></div><div class="en-body" id="en_body"></div><div class="en-acts" id="en_acts"></div>';
-  d.addEventListener('close', function () { try { document.documentElement.style.overflow = ''; } catch (_) {} });
-  d.addEventListener('click', function (e) { if (e.target === d) enClose(); });
-  document.body.appendChild(d);
-  return d;
+  node = document.createElement('dialog'); node.id = 'entrysheet'; node.setAttribute('aria-label', tx('New entry'));
+  node.innerHTML = '<div class="en-top"><span data-testid="en-title"></span><button type="button" data-testid="en-close" aria-label="' + esc(tx('Close')) + '" onclick="enClose()">✕</button></div><div class="en-dots" id="en_dots"></div><div class="en-body" id="en_body"></div><div class="en-acts" id="en_acts"></div>';
+  node.addEventListener('close', function () { try { document.documentElement.style.overflow = ''; } catch (_) {} });
+  node.addEventListener('click', function (e) { if (e.target === node) enClose(); });
+  document.body.appendChild(node);
+  return node;
 }
-function enClose() { var d = document.getElementById('entrysheet'); if (d && d.open) d.close(); try { document.documentElement.style.overflow = ''; } catch (_) {} }
+function enClose() { var node = document.getElementById('entrysheet'); if (node && node.open) node.close(); try { document.documentElement.style.overflow = ''; } catch (_) {} }
 
 /* ── the one door ── */
 /** enOpen() opens the sheet at "What happened?". enOpen({ kind, v, ref }) opens it with an entry already suggested (Bank → "Add missing"): kind = the event, v = its
  *  answers (date · amount · class · paid_from …), ref = the client_ref the entry will carry. A suggestion with a kind goes straight to the server's preview; the person
  *  still presses Save. One without a kind keeps what it knows (date, amount, note) and asks "What happened?". */
 async function enOpen(preset) {
-  var d = enDlg();
+  var node = enDlg();
   EN.step = 1; EN.ev = null; EN.v = {}; EN.lines = []; EN.pv = null; EN.dateRef = null; EN.saved = null; EN.err = null; EN.denied = false; EN.photo = null; EN.ref = (preset && preset.ref) || bkRef(); EN.pre = (preset && preset.v) || null;
   enPaint();
   try { document.documentElement.style.overflow = 'hidden'; } catch (_) {}
-  if (!d.open) { if (d.showModal) d.showModal(); else d.setAttribute('open', ''); }
+  if (!node.open) { if (node.showModal) node.showModal(); else node.setAttribute('open', ''); }
   try {
     var rr = await Promise.all([api('booksEvents'), api('booksAccounts').catch(function () { return { accounts: [] }; }), typeof booksDuesLoad === 'function' ? booksDuesLoad(false).catch(function () {}) : null]);
     EN.picks = (rr[0] && rr[0].picks) || {}; EN.accounts = (rr[1] && rr[1].accounts) || [];
@@ -96,17 +96,17 @@ function enKind(f) { return f.kind === 'pick' ? (f.pick === 'ledger' ? 'ledger' 
 function enSteps() { return EN.ev && enFields(2).length === 0 ? [1, 3, 4] : [1, 2, 3, 4]; }
 function enFields(step) {
   if (!EN.ev) return [];
-  return (EN.ev.fields || []).map(function (f) { return typeof f === 'string' ? { key: f, kind: f } : f; }).filter(function (f) {
-    return (f.step ? Number(f.step) : (EN_STEP2[enKind(f)] || (f.kind === 'pick' && f.pick !== 'mode') ? 2 : 3)) === step;
+  return (EN.ev.fields || []).map(function (item) { return typeof item === 'string' ? { key: item, kind: item } : item; }).filter(function (item) {
+    return (item.step ? Number(item.step) : (EN_STEP2[enKind(item)] || (item.kind === 'pick' && item.pick !== 'mode') ? 2 : 3)) === step;
   });
 }
 function enStepWord(n) { return { 1: 'What happened?', 2: EN.ev && EN.ev.kind === 'journal' ? 'Which lines?' : 'With whom / what?', 3: EN.ev && EN.ev.kind === 'journal' ? 'When, on what paper?' : 'How much, when, on what paper?', 4: 'Check and save' }[n]; }
 function enPaint() {
   var body = document.getElementById('en_body'), acts = document.getElementById('en_acts'), dots = document.getElementById('en_dots'); if (!body) return;
-  var T = document.querySelector('#entrysheet [data-testid="en-title"]');
-  if (T) T.textContent = EN.saved ? tx('Saved') : EN.ev ? tx(EN.ev.label) : tx('New entry');
+  var node = document.querySelector('#entrysheet [data-testid="en-title"]');
+  if (node) node.textContent = EN.saved ? tx('Saved') : EN.ev ? tx(EN.ev.label) : tx('New entry');
   var order = enSteps();
-  dots.innerHTML = EN.saved || EN.denied ? '' : order.map(function (n) { return '<i class="' + (n <= EN.step ? 'on' : '') + '"></i>'; }).join('');
+  dots.innerHTML = EN.saved || EN.denied ? '' : order.map(function (item) { return '<i class="' + (item <= EN.step ? 'on' : '') + '"></i>'; }).join('');
   if (EN.denied) { body.innerHTML = '<div class="en-warn" data-testid="en-denied">' + esc(tx('Only the owner and co-assists the owner has allowed can add entries. You can read everything.')) + '</div>'; acts.innerHTML = '<button class="en-btn" onclick="enClose()">' + esc(tx('Close')) + '</button>'; return; }
   if (EN.err) { body.innerHTML = '<div class="en-bad" data-testid="en-err">' + esc(EN.err) + '<button type="button" data-testid="en-retry" onclick="enOpen()">' + esc(tx('Try again')) + '</button></div>'; acts.innerHTML = ''; return; }
   if (!EN.events) { body.innerHTML = '<div class="loadwrap"><span class="spin"></span> ' + esc(tx('Reading…')) + '</div>'; acts.innerHTML = ''; return; }
@@ -127,14 +127,14 @@ function enActs() {
 function enCanSave() { var pv = EN.pv; return !!(pv && pv.balanced === true && !(pv.refusals || []).length && !EN.pvBusy && !EN.saving); }
 function enGridHTML() {
   var groups = [], by = {};
-  EN.events.forEach(function (ev) { var g = ev.group || ''; if (!by[g]) { by[g] = []; groups.push(g); } by[g].push(ev); });
+  EN.events.forEach(function (item) { var g = item.group || ''; if (!by[g]) { by[g] = []; groups.push(g); } by[g].push(item); });
   if (!EN.events.some(function (e) { return e.kind === 'journal'; })) { if (!by['']) { by[''] = []; groups.push(''); } by[''].push(enJournalEv()); }
   /* the journal tile is the LAST tile, wherever the server listed it */
   var last = null;
-  groups.forEach(function (g) { by[g] = by[g].filter(function (e) { if (e.kind === 'journal') { last = e; return false; } return true; }); });
-  return groups.map(function (g, gi) {
-    var tiles = by[g].concat(gi === groups.length - 1 && last ? [last] : []);
-    return '<div class="en-sec">' + esc(g ? tx(g) : tx('Your own journal')) + '</div>' + '<div class="en-grid">' + tiles.map(function (ev) {
+  groups.forEach(function (item) { by[item] = by[item].filter(function (e) { if (e.kind === 'journal') { last = e; return false; } return true; }); });
+  return groups.map(function (item, index) {
+    var tiles = by[item].concat(index === groups.length - 1 && last ? [last] : []);
+    return '<div class="en-sec">' + esc(item ? tx(item) : tx('Your own journal')) + '</div>' + '<div class="en-grid">' + tiles.map(function (ev) {
       return '<button type="button" class="en-tile" data-testid="en-event-' + esc(ev.id) + '" onclick="enPick(\'' + esc(ev.id) + '\')"><span class="ic" aria-hidden="true">' + esc(ev.icon || '＋') + '</span><span>' + esc(tx(ev.label)) + '</span></button>';
     }).join('') + '</div>';
   }).join('');
@@ -154,12 +154,12 @@ function enNext() { var o = enSteps(), i = o.indexOf(EN.step); if (!enStepReady(
 
 /* ── the fields ── */
 function enOptions(f) {
-  if (f.kind === 'pick' && f.pick !== 'ledger' && !(f.options && f.options.length)) return ((EN.picks || {})[f.pick] || []).map(function (o) { return { v: o.role || o.code, l: o.name }; });
-  if (f.options && f.options.length) return f.options.map(function (o) { return typeof o === 'object' ? o : { v: o, l: tx(EN_MODE[o] || o) }; }).map(function (o) { return { v: o.v != null ? o.v : o.code, l: o.l || o.label || o.name || o.v }; });
+  if (f.kind === 'pick' && f.pick !== 'ledger' && !(f.options && f.options.length)) return ((EN.picks || {})[f.pick] || []).map(function (item) { return { v: item.role || item.code, l: item.name }; });
+  if (f.options && f.options.length) return f.options.map(function (item) { return typeof item === 'object' ? item : { v: item, l: tx(EN_MODE[item] || item) }; }).map(function (item) { return { v: item.v != null ? item.v : item.code, l: item.l || item.label || item.name || item.v }; });
   if (f.kind === 'party') {
     /* the one /dues read the whole page shares (cap-books.js booksDuesLoad → BK.dues, party_id → party) */
-    var ps = Object.keys(BK.dues || {}).map(function (k) { return BK.dues[k]; });
-    return ps.filter(function (p) { return !f.side || p.side === f.side; }).map(function (p) { return { v: p.party_id, l: bkPartyLabel(p.party_id, p.name) }; });
+    var list = Object.keys(BK.dues || {}).map(function (item) { return BK.dues[item]; });
+    return list.filter(function (item) { return !f.side || item.side === f.side; }).map(function (item) { return { v: item.party_id, l: bkPartyLabel(item.party_id, item.name) }; });
   }
   return [];
 }
@@ -167,10 +167,10 @@ function enOptions(f) {
 function enShopLedger(code) { var a = (EN.accounts || []).filter(function (x) { return String(x.code) === String(code); })[0]; return !!a && !a.role; }
 function enLedgerSelect(id, cur, onch, onlyGroup) {
   var bands = bkLtModel(EN.accounts || []), h = '<option value="">' + esc(tx('Choose…')) + '</option>';
-  bands.forEach(function (b) {
-    var gs = b.groups.filter(function (g) { return !onlyGroup || g.title === onlyGroup; }); var inner = '', own = onlyGroup === 'Stock & advances';
-    gs.forEach(function (g) { g.accts.forEach(function (a) { if (own && !enShopLedger(a.code)) return; inner += '<option value="' + esc(a.code) + '"' + (a.code === cur ? ' selected' : '') + '>' + esc(a.code + ' · ' + a.name) + '</option>'; }); });
-    if (inner) h += '<optgroup label="' + esc(tx(b.title)) + '">' + inner + '</optgroup>';
+  bands.forEach(function (item) {
+    var list = item.groups.filter(function (g) { return !onlyGroup || g.title === onlyGroup; }); var inner = '', own = onlyGroup === 'Stock & advances';
+    list.forEach(function (g) { g.accts.forEach(function (a) { if (own && !enShopLedger(a.code)) return; inner += '<option value="' + esc(a.code) + '"' + (a.code === cur ? ' selected' : '') + '>' + esc(a.code + ' · ' + a.name) + '</option>'; }); });
+    if (inner) h += '<optgroup label="' + esc(tx(item.title)) + '">' + inner + '</optgroup>';
   });
   return '<select id="' + id + '" onchange="' + onch + '">' + h + '</select>';
 }
@@ -193,18 +193,18 @@ function enFieldHTML(f) {
   if (f.kind === 'lines') return enLinesHTML();
   return wrap('<input data-testid="' + tid + '" value="' + esc(v) + '" oninput="' + on + '">');
 }
-function enSelect(id, opts, cur, onch) { return '<select data-testid="' + id + '" onchange="' + onch + '"><option value="">' + esc(tx('Choose…')) + '</option>' + opts.map(function (o) { return '<option value="' + esc(o.v) + '"' + (String(o.v) === String(cur) ? ' selected' : '') + '>' + esc(o.l) + '</option>'; }).join('') + '</select>'; }
+function enSelect(id, opts, cur, onch) { return '<select data-testid="' + id + '" onchange="' + onch + '"><option value="">' + esc(tx('Choose…')) + '</option>' + opts.map(function (item) { return '<option value="' + esc(item.v) + '"' + (String(item.v) === String(cur) ? ' selected' : '') + '>' + esc(item.l) + '</option>'; }).join('') + '</select>'; }
 function enFormHTML(step) { return enFields(step).map(enFieldHTML).join('') || '<div class="en-why">' + esc(tx('Nothing to ask here')) + '</div>'; }
-function enSet(k, v) { EN.v[k] = v; EN.pv = null; var b = document.getElementById('en_next'); if (b) b.disabled = !enStepReady(EN.step); }
+function enSet(k, v) { EN.v[k] = v; EN.pv = null; var node = document.getElementById('en_next'); if (node) node.disabled = !enStepReady(EN.step); }
 function enPaintKeep() { enPaint(); }
 function enStepReady(step) {
-  return enFields(step).every(function (f) {
-    if (f.kind === 'date') return !!EN.v.date && !(EN.dateRef && EN.dateRef.length);
-    if (f.required === false || f.kind === 'photo' || f.kind === 'narration' || f.kind === 'doc_no') return !(f.kind === 'doc_no' && f.required);
-    if (f.kind === 'lines') return EN.lines.length >= 2 && EN.lines.every(function (l) { return l.code && String(l.amt).trim() !== ''; });
-    if (f.kind === 'amount') return String(EN.v[f.key] || '').trim() !== '';
-    if (f.kind === 'paid_by') return !!EN.v.paid_by && (EN.v.paid_by !== 'cheque' || !!EN.v.cheque_no);
-    return String(EN.v[f.key] == null ? '' : EN.v[f.key]).trim() !== '';
+  return enFields(step).every(function (item) {
+    if (item.kind === 'date') return !!EN.v.date && !(EN.dateRef && EN.dateRef.length);
+    if (item.required === false || item.kind === 'photo' || item.kind === 'narration' || item.kind === 'doc_no') return !(item.kind === 'doc_no' && item.required);
+    if (item.kind === 'lines') return EN.lines.length >= 2 && EN.lines.every(function (l) { return l.code && String(l.amt).trim() !== ''; });
+    if (item.kind === 'amount') return String(EN.v[item.key] || '').trim() !== '';
+    if (item.kind === 'paid_by') return !!EN.v.paid_by && (EN.v.paid_by !== 'cheque' || !!EN.v.cheque_no);
+    return String(EN.v[item.key] == null ? '' : EN.v[item.key]).trim() !== '';
   });
 }
 function enPhoto(inp) {
@@ -215,14 +215,14 @@ function enPhoto(inp) {
 
 /* ── the journal's own lines (the CA's door): ledger · Dr/Cr · amount. The server says whether they balance. ── */
 function enLinesHTML() {
-  return '<div class="en-sec">' + esc(tx('Lines')) + '</div>' + EN.lines.map(function (l, i) {
-    return '<div class="en-ln" data-testid="en-line-' + i + '">' + enLedgerSelect('en_lc' + i, l.code, 'enLine(' + i + ',\'code\',this.value)').replace('<select ', '<select data-testid="en-line-code-' + i + '" ')
-      + '<select data-testid="en-line-side-' + i + '" onchange="enLine(' + i + ',\'side\',this.value)"><option value="dr"' + (l.side === 'dr' ? ' selected' : '') + '>Dr</option><option value="cr"' + (l.side === 'cr' ? ' selected' : '') + '>Cr</option></select>'
-      + bkMoneyInput({ id: 'en-line-amt-' + i, text: l.amt == null ? '' : String(l.amt), on: 'enLine(' + i + ',\'amt\',this.value)' })
-      + '<button type="button" class="en-btn" style="padding:0" aria-label="' + esc(tx('Remove')) + '" data-testid="en-line-del-' + i + '" onclick="enLineDel(' + i + ')"' + (EN.lines.length <= 2 ? ' disabled' : '') + '>✕</button></div>';
+  return '<div class="en-sec">' + esc(tx('Lines')) + '</div>' + EN.lines.map(function (item, index) {
+    return '<div class="en-ln" data-testid="en-line-' + index + '">' + enLedgerSelect('en_lc' + index, item.code, 'enLine(' + index + ',\'code\',this.value)').replace('<select ', '<select data-testid="en-line-code-' + index + '" ')
+      + '<select data-testid="en-line-side-' + index + '" onchange="enLine(' + index + ',\'side\',this.value)"><option value="dr"' + (item.side === 'dr' ? ' selected' : '') + '>Dr</option><option value="cr"' + (item.side === 'cr' ? ' selected' : '') + '>Cr</option></select>'
+      + bkMoneyInput({ id: 'en-line-amt-' + index, text: item.amt == null ? '' : String(item.amt), on: 'enLine(' + index + ',\'amt\',this.value)' })
+      + '<button type="button" class="en-btn" style="padding:0" aria-label="' + esc(tx('Remove')) + '" data-testid="en-line-del-' + index + '" onclick="enLineDel(' + index + ')"' + (EN.lines.length <= 2 ? ' disabled' : '') + '>✕</button></div>';
   }).join('') + '<button type="button" class="en-btn" data-testid="en-line-add" onclick="enLineAdd()">＋ ' + esc(tx('Add a line')) + '</button>';
 }
-function enLine(i, k, v) { EN.lines[i][k] = v; EN.pv = null; var b = document.getElementById('en_next'); if (b) b.disabled = !enStepReady(EN.step); }
+function enLine(i, k, v) { EN.lines[i][k] = v; EN.pv = null; var node = document.getElementById('en_next'); if (node) node.disabled = !enStepReady(EN.step); }
 function enLineAdd() { EN.lines.push({ code: '', side: 'dr', amt: '' }); enPaint(); }
 function enLineDel(i) { if (EN.lines.length > 2) EN.lines.splice(i, 1); enPaint(); }
 
@@ -231,23 +231,23 @@ function enLineDel(i) { if (EN.lines.length > 2) EN.lines.splice(i, 1); enPaint(
 function enAsk(body) { var go = function () { return api('booksPreview', { body: body }); }; var p = (EN.q || Promise.resolve()).then(go, go); EN.q = p.catch(function () {}); return p; }
 function enBody() {
   var b = { event: EN.ev.kind || EN.ev.id };
-  Object.keys(EN.v).forEach(function (k) { if (EN.v[k] !== '' && EN.v[k] != null) b[k] = EN.v[k]; });
+  Object.keys(EN.v).forEach(function (item) { if (EN.v[item] !== '' && EN.v[item] != null) b[item] = EN.v[item]; });
   if (EN.v.amount != null && EN.v.amount !== '') { b.amount_minor = bkMoneyMinor(EN.v.amount); delete b.amount; }
-  if (EN.ev.kind === 'journal') b.lines = EN.lines.map(function (l) { var o = { code: l.code }; o[l.side === 'cr' ? 'cr_minor' : 'dr_minor'] = bkMoneyMinor(l.amt); return o; });
+  if (EN.ev.kind === 'journal') b.lines = EN.lines.map(function (item) { var o = { code: item.code }; o[item.side === 'cr' ? 'cr_minor' : 'dr_minor'] = bkMoneyMinor(item.amt); return o; });
   return b;
 }
 /** the server's refusals are plain sentences (and `code` for the first); give each a button back to the form. Nothing here decides anything. */
 function enWords(list, code, dateStep) {
-  return (list || []).map(function (m, i) {
-    var c = i === 0 && code ? code : null, msg = typeof m === 'object' && m ? m.message : m;
-    return { code: c || (typeof m === 'object' && m && m.code) || 'R' + i, message: String(msg), fix: c === 'PERIOD_LOCKED' ? { label: tx('Pick another date'), step: dateStep || 3, focus: 'date' } : { label: tx('Change it'), step: enSteps()[1] } };
+  return (list || []).map(function (item, index) {
+    var c = index === 0 && code ? code : null, msg = typeof item === 'object' && item ? item.message : item;
+    return { code: c || (typeof item === 'object' && item && item.code) || 'R' + index, message: String(msg), fix: c === 'PERIOD_LOCKED' ? { label: tx('Pick another date'), step: dateStep || 3, focus: 'date' } : { label: tx('Change it'), step: enSteps()[1] } };
   });
 }
 function enSeen(r) {
   r = r || {};
   return { balanced: r.balanced === true, voucher: r.voucher ? { series: r.voucher.series, kind: r.voucher.type } : null, narration: (EN.v && EN.v.narration) || '',   /* the API's preview echoes no note and no currency: the note is the one the person typed */
-    lines: (r.lines || []).map(function (l) { return Object.assign({}, l, { name: l.ledger || l.name }); }),
-    refusals: enWords(r.refusals, r.code), warnings: enWords(r.flags || r.warnings, null).map(function (w, i) { return Object.assign(w, { code: 'FLAG' + i }); }) };
+    lines: (r.lines || []).map(function (item) { return Object.assign({}, item, { name: item.ledger || item.name }); }),
+    refusals: enWords(r.refusals, r.code), warnings: enWords(r.flags || r.warnings, null).map(function (item, index) { return Object.assign(item, { code: 'FLAG' + index }); }) };
 }
 async function enPreview() {
   var seq = ++EN.seq; EN.pvBusy = true; EN.err = null; enPaint2();
@@ -255,7 +255,7 @@ async function enPreview() {
   catch (e) { if (seq !== EN.seq) return; EN.pv = { balanced: false, refusals: [{ code: 'READ', message: bkWhy(e, tx('Could not check this entry')), fix: { label: tx('Try again'), retry: true } }], lines: [] }; }
   EN.pvBusy = false; enPaint2();
 }
-function enPaint2() { var b = document.getElementById('en_body'); if (!b) return; if (EN.step === 4) { b.innerHTML = '<h3 data-testid="en-step-4">' + esc(tx(enStepWord(4))) + '</h3>' + enPreviewHTML(); enActs(); } }
+function enPaint2() { var node = document.getElementById('en_body'); if (!node) return; if (EN.step === 4) { node.innerHTML = '<h3 data-testid="en-step-4">' + esc(tx(enStepWord(4))) + '</h3>' + enPreviewHTML(); enActs(); } }
 /* a locked month is refused the moment the date is picked: the server's answer, shown under the date */
 async function enCheckDate() {
   var seq = ++EN.seq, d = EN.v.date; EN.dateRef = null;
@@ -263,21 +263,21 @@ async function enCheckDate() {
   /* the server has no date-only question: it is asked with what is filled in so far, and only its "month is locked" answer is read here */
   try { var r = await enAsk(enBody()); if (seq !== EN.seq) return; EN.dateRef = r && r.code === 'PERIOD_LOCKED' ? enWords(r.refusals, r.code).slice(0, 1) : []; }
   catch (e) { if (seq !== EN.seq) return; EN.dateRef = [{ code: 'READ', message: bkWhy(e, tx('Could not check this date')), fix: { label: tx('Try again'), retry: true } }]; }
-  var el = document.getElementById('en_dateref'); if (el) el.innerHTML = enRefusalHTML(EN.dateRef); var n = document.getElementById('en_next'); if (n) n.disabled = !enStepReady(EN.step);
+  var el = document.getElementById('en_dateref'); if (el) el.innerHTML = enRefusalHTML(EN.dateRef); var node = document.getElementById('en_next'); if (node) node.disabled = !enStepReady(EN.step);
 }
 function enFixGo(i, w) {
-  var list = w === 'date' ? EN.dateRef : (EN.pv && EN.pv[w]); var x = list && list[i]; var f = (x && x.fix) || {};
-  if (f.retry) { if (EN.step === 4) return enPreview(); return enCheckDate(); }
-  EN.pv = null; EN.step = Number(f.step || 3); enPaint();
-  if (f.focus) { var el = document.querySelector('[data-testid="en-f-' + f.focus + '"]'); if (el) el.focus(); }
+  var list = w === 'date' ? EN.dateRef : (EN.pv && EN.pv[w]); var x = list && list[i]; var node = (x && x.fix) || {};
+  if (node.retry) { if (EN.step === 4) return enPreview(); return enCheckDate(); }
+  EN.pv = null; EN.step = Number(node.step || 3); enPaint();
+  if (node.focus) { var el = document.querySelector('[data-testid="en-f-' + node.focus + '"]'); if (el) el.focus(); }
 }
 /* every refusal and every warning carries a button that takes the person to the fix */
 function enRefusalHTML(list, w) {
   w = w || 'date';
-  return (list || []).map(function (x, i) { return '<div class="en-bad" data-testid="en-refusal-' + esc(x.code || i) + '">' + esc(x.message) + '<button type="button" data-testid="en-fix-' + esc(x.code || i) + '" onclick="enFixGo(' + i + ',\'' + w + '\')">' + esc((x.fix && x.fix.label) || tx('Change it')) + '</button></div>'; }).join('');
+  return (list || []).map(function (x, index) { return '<div class="en-bad" data-testid="en-refusal-' + esc(x.code || index) + '">' + esc(x.message) + '<button type="button" data-testid="en-fix-' + esc(x.code || index) + '" onclick="enFixGo(' + index + ',\'' + w + '\')">' + esc((x.fix && x.fix.label) || tx('Change it')) + '</button></div>'; }).join('');
 }
 function enWarnHTML(list) {
-  return (list || []).map(function (x, i) { return '<div class="en-warn" data-testid="en-warning-' + esc(x.code || i) + '">' + esc(x.message) + '<button type="button" data-testid="en-wfix-' + esc(x.code || i) + '" onclick="enFixGo(' + i + ',\'warnings\')">' + esc((x.fix && x.fix.label) || tx('Change it')) + '</button></div>'; }).join('');
+  return (list || []).map(function (x, index) { return '<div class="en-warn" data-testid="en-warning-' + esc(x.code || index) + '">' + esc(x.message) + '<button type="button" data-testid="en-wfix-' + esc(x.code || index) + '" onclick="enFixGo(' + index + ',\'warnings\')">' + esc((x.fix && x.fix.label) || tx('Change it')) + '</button></div>'; }).join('');
 }
 function enLineHTML(l, c) {
   var rate = l.rate != null && l.rate !== '' ? ' ' + esc(String(l.rate)) + '%' : '';
@@ -294,7 +294,7 @@ function enPreviewHTML() {
     + (pv.balanced === true ? '<span class="en-ok" data-testid="en-balanced">✓ ' + esc(tx('Both sides match')) + '</span>' : (pv.refusals || []).length && !(pv.lines || []).length ? '' : '<b data-testid="en-unbalanced" style="color:var(--red-i,#8E3517)">' + esc(tx('The two sides do not match')) + '</b>') + '</div>'
     + enRefusalHTML(pv.refusals, 'refusals') + enWarnHTML(pv.warnings)
     + '<div style="' + grey + '">' + CBList.nextRow([esc(tx('Code')) + ' · ' + esc(tx('Ledger')), esc(tx('Debit')), esc(tx('Credit'))], [110, 110]) + '</div>'
-    + (pv.lines || []).map(function (l) { return enLineHTML(l, c); }).join('')
+    + (pv.lines || []).map(function (item) { return enLineHTML(item, c); }).join('')
     + (pv.narration ? '<div class="en-why" style="border:0;margin-top:8px">' + esc(pv.narration) + '</div>' : '');
 }
 
@@ -305,8 +305,8 @@ async function enSave(btn) {
     EN.saving = true; var body = enBody(); body.client_ref = EN.ref; if (EN.photo) body.attachment = EN.photo;
     var key = 'booksEventPost';
     try {
-      var r = await api(key, { body: body });
-      EN.saved = r || {}; EN.saving = false; EN.ref = null;
+      var reply = await api(key, { body: body });
+      EN.saved = reply || {}; EN.saving = false; EN.ref = null;
       try { if (typeof BK !== 'undefined' && BK.onEntrySaved) BK.onEntrySaved(EN.saved); } catch (_) {}
       try { if (typeof bkHealthLoad === 'function') bkHealthLoad().catch(function () {}); if (typeof BK !== 'undefined' && BK.tab === 'daybook' && typeof bkTab === 'function') bkTab('daybook', true); } catch (_) {}
       enPaint();
@@ -342,12 +342,12 @@ function enReverse(id, no, fromSheet, done) {
     bkOnce('rev-' + id, null, async function () {
       EN.rev[id] = EN.rev[id] || bkRef();
       try {
-        var r = await api('booksReverse', { params: { id: id }, body: { client_ref: EN.rev[id], reason: why } });
-        delete EN.rev[id]; toast((r && r.words) || txf('Reversed — new entry {no}', { no: (r && (r.entry_no || r.no)) || '' }));
+        var reply = await api('booksReverse', { params: { id: id }, body: { client_ref: EN.rev[id], reason: why } });
+        delete EN.rev[id]; toast((reply && reply.words) || txf('Reversed — new entry {no}', { no: (reply && (reply.entry_no || reply.no)) || '' }));
         if (fromSheet) enClose();
-        if (typeof done === 'function') done(r, why);
+        if (typeof done === 'function') done(reply, why);
         /* M175: the Day book repaints its two rows from the answer; only when it cannot does it read the whole book again */
-        if (typeof BK !== 'undefined' && BK.tab === 'daybook' && !(typeof bkDvReversed === 'function' && bkDvReversed(id, r))) bkTab('daybook', true);
+        if (typeof BK !== 'undefined' && BK.tab === 'daybook' && !(typeof bkDvReversed === 'function' && bkDvReversed(id, reply))) bkTab('daybook', true);
       } catch (e) { toast(bkWhy(e, tx('Could not reverse this entry'))); }
     });
   }, true);
