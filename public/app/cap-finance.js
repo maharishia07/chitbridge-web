@@ -17,10 +17,27 @@
  * CARD 16-finance/cb-finance */
 'use strict';
 
-var FIN = { gen: 0, rows: [], cur: null, state: 'loading', err: null, api: null, queue: null, back: null };
+var FIN = { gen: 0, rows: [], cur: null, state: 'loading', err: null, api: null, queue: null, back: null, unbilled: null };
+/* WALK2 W36 (FIN-2): the open orders no bill names yet — GET /api/work/facts?unbilled=1 (lib/work-rows unbilledOf, open-orders' ONE billed test).
+   An order is a promise and never posts, so the ledger's "Nobody owes you" was true and still misled: the promise is said BESIDE the dues, never in them. */
+var FIN_EP = { workFacts: { m: 'GET', p: '/api/work/facts', ok: 'y' } };   /* the Home box's read (manifest rail.facts), with ?unbilled=1 */
+Object.assign(EP, FIN_EP);
 var FIN_OWNER_ONLY = 'Only the owner may see collections.';
 
 function finOwes(p) { return Number(p.balance_minor) > 0; }
+/** the unbilled orders in words: "1 order unpaid, not yet billed ₹420" (no figure when the orders are in two currencies — the server says null) — '' when none */
+function finUnbilledWords(unbilled) {
+  if (!unbilled || !Number(unbilled.n)) return '';
+  return txn('{count} order unpaid, not yet billed', '{count} orders unpaid, not yet billed', Number(unbilled.n))
+    + (unbilled.minor == null ? '' : ' ' + bkMoney(Number(unbilled.minor), unbilled.currency || FIN.cur));
+}
+/** the dues (the server's, finance=1) and, beside them in parallel, the unbilled orders into FIN.unbilled — a failure there leaves the line out, never a guessed 0 */
+async function finDuesRead() {
+  var unbilledAsk = api('workFacts', { query: { unbilled: '1' } }).then(function (facts) { return (facts && facts.figures && facts.figures.unbilled) || null; }, function () { return null; });
+  var dues = await api('booksDues', { query: { finance: '1' } });
+  FIN.unbilled = await unbilledAsk;
+  return dues;
+}
 
 async function finLoad(quiet) {
   if (finTab() === 'terms') return ftLoad(quiet);   /* the Terms tab (cap-finance-terms.js) */
@@ -33,7 +50,7 @@ async function finLoad(quiet) {
   var g = ++FIN.gen;
   if (!quiet) { FIN.state = 'loading'; if (FIN.api) FIN.api.refresh(); }
   try {
-    var r = await api('booksDues', { query: { finance: '1' } });
+    var r = await finDuesRead();
     if (g !== FIN.gen) return;
     bkDuesStore(r);
     FIN.cur = (r && r.currency) || bkCur();
@@ -129,9 +146,12 @@ function finMount(frame) {
   FIN.api = CBList.mount(document.getElementById('fin_list'), {
     key: 'fin-collect', t: tx, rows: function () { return FIN.rows; }, id: function (p) { return p.party_id; }, rowTid: function (p) { return 'fin-row-' + p.party_id; },
     columns: finCols(), defaultCols: ['party', 'due', 'age', 'limit', 'interest', 'last'], cardMax: 4, fill: false,
-    head: function () { return { title: tx('Collections') }; },
+    head: function () {
+      var said = finUnbilledWords(FIN.unbilled);
+      return { title: tx('Collections'), notices: said ? [{ cls: 'warn', tid: 'fin-unbilled', text: said, onOpen: function () { location.href = '/tasks.html'; } }] : [] };
+    },
     state: function () { return FIN.state; }, error: function () { return { title: tx('Could not read who owes you.'), sub: tx('Nothing was lost. Try again.') }; }, onRetry: finRetry,
-    empty: { title: tx('Nobody owes you money') },
+    empty: function () { var said = finUnbilledWords(FIN.unbilled); return { title: tx('Nobody owes you money'), sub: said ? said + ' — ' + tx('bill it to collect') : '' }; },
     group: { default: 'over', order: ['over', 'coll'], by: function (p) { return p.over_limit ? [tx('Over limit'), 'over'] : [tx('To collect'), 'coll']; },
       fig: function (rows) { return txn('{count} party', '{count} parties', rows.length) + ' · ' + bkOwes(rows.reduce(function (t, p) { return t + Number(p.balance_minor || 0); }, 0), FIN.cur); },
       headTid: function (k) { return 'fin-group-' + k; } },

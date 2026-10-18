@@ -2,8 +2,8 @@
  * day it goes below zero — in one sentence on top. Loaded by finance.html after cap-finance.js. docs: C:/dev/CB-FINANCE-PLAN.md §4 F3.
  *
  * ⭐ REUSE (CLAUDE.md rule 1, named in the PR): CBList.mount (the one list — the days ARE the table the chart's numbers live in; a11y) · CBList.nextRow (what
- * a day counts: the dues and cheques behind it) · head.notices (the sentence on top, as the Ledger's To-do strip) · bkMoney / bkDrCr / bkDate / bkToday /
- * bkPartyLabel (cap-books.js — M25 Dr/Cr words, the M36 money unit) · finOff (the ledger-off card with the owner's switch) · finDenied (the owner-only sentence,
+ * a day counts: the dues and cheques behind it) · head.notices (the sentence on top, as the Ledger's To-do strip) · bkMoney / bkDate / bkToday /
+ * bkPartyLabel (cap-books.js — the M36 money unit; no Dr/Cr here: a shopkeeper reads "short", W32) · finOff (the ledger-off card with the owner's switch) · finDenied (the owner-only sentence,
  * greyed) · the page's .tabs/.tab pills (the 7/30 toggle) and .card (the chart's frame) — finance.html's own styles, no new look.
  * ⭐ THE DAY (F3b): "Today" is the row whose date is the server's asOf — the day the server counted from — not the browser's clock (bkToday is the fallback
  * when the answer has no asOf). The walk injects one clock for the page and the stand-in, so the tab reads the same on any day and across midnight.
@@ -13,6 +13,10 @@
  * bar/line; theme tokens only, every figure also in the table beneath) — nothing in the app drew a day-by-day balance before.
  * ⚠️ Never error.message on a screen: a failure says what happened and offers Try again. Finance SUGGESTS: there is no button here that posts.
  */
+/* OWNS CB Finance, Cash: today's money (cash drawer · UPI and bank), day by day for 7 or 30 days, the first short day
+ * CALLED BY cap-finance.js finLoad / finMount on the Cash tab (finance.html loads it after cap-finance.js)
+ * FLOW GET /api/books/cashflow -> FC.r -> the chart + CBList rows -> fcBal / bkMoney
+ * CARD 16-finance/cb-finance */
 'use strict';
 
 var FC = { gen: 0, days: 7, r: null, rows: [], state: 'loading', api: null };
@@ -25,6 +29,14 @@ var FC_OWNER_ONLY = 'Only the owner may see the cash position.';
 var FC_KIND = { due_in: 'Bill due', due_out: 'Bill to pay', cheque_in: 'Cheque in hand', cheque_out: 'Cheque written', gst: 'Return to pay' };
 
 function fcIsIn(it) { return /_in$/.test(String(it && it.kind)); }
+/** WALK2 W32 (FIN-1): a cash balance in a shopkeeper's words — the money, or "short ₹…" below zero; never Dr/Cr, never a minus (bkOwes' rule) */
+function fcBal(minor, currency) { var amount = Number(minor || 0); return amount < 0 ? tx('short') + ' ' + bkMoney(-amount, currency) : bkMoney(amount, currency); }
+/** the two places today's money sits, both the server's (books-cashflow.project drawer_minor · bank_minor): the cash drawer, and UPI and bank — '' on an older server */
+function fcWhere(answer, currency) {
+  if (!answer || answer.drawer_minor == null || answer.bank_minor == null) return '';
+  return '<div class="sub" data-testid="fc-where" style="display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:2px"><span data-testid="fc-drawer">' + esc(tx('Cash drawer') + ' ' + fcBal(answer.drawer_minor, currency)) + '</span>'
+    + '<span data-testid="fc-bank">' + esc(tx('UPI and bank') + ' ' + fcBal(answer.bank_minor, currency)) + '</span></div>';
+}
 
 async function fcLoad(quiet) {
   var g = ++FC.gen;
@@ -75,11 +87,11 @@ function fcChart(r, width) {
     var v = vals[i], x = i * step + (step - bw) / 2, h = Math.max(1, Math.abs(y(v) - y0)), yy = v >= 0 ? y0 - h : y0;
     var neg = v < 0, today = i === 0;
     return '<rect x="' + x.toFixed(1) + '" y="' + yy.toFixed(1) + '" width="' + bw + '" height="' + h.toFixed(1) + '" rx="2" data-testid="fc-bar-' + esc(d.date) + '" data-neg="' + neg + '"'
-      + ' style="fill:' + (neg ? 'var(--red,#C4562F)' : 'var(--accent,#1f5f5b)') + (today ? '' : ';opacity:.82') + '"><title>' + esc(bkDate(d.date) + ' · ' + bkDrCr(v, cur)) + '</title></rect>'
+      + ' style="fill:' + (neg ? 'var(--red,#C4562F)' : 'var(--accent,#1f5f5b)') + (today ? '' : ';opacity:.82') + '"><title>' + esc(bkDate(d.date) + ' · ' + fcBal(v, cur)) + '</title></rect>'
       + ((n <= 7 || i % 5 === 0 || i === n - 1) ? '<text x="' + (i * step + step / 2).toFixed(1) + '" y="' + (H - 6) + '" text-anchor="middle" style="font:10px var(--mono,monospace);fill:var(--muted,#6f6450)">' + esc(String(d.date).slice(8, 10)) + '</text>' : '');
   }).join('');
-  var lowX = lowI * step + step / 2, lowLabel = '<text x="' + lowX.toFixed(1) + '" y="' + (vals[lowI] < 0 ? Math.min(H - bottom - 2, y(vals[lowI]) + 11) : Math.max(10, y(vals[lowI]) - 4)).toFixed(1) + '" text-anchor="' + (lowX > W * 0.8 ? 'end' : lowX < W * 0.2 ? 'start' : 'middle') + '" data-testid="fc-low-label" style="font:600 11px var(--mono,monospace);fill:var(--ink,#2a2418)">' + esc(bkDrCr(vals[lowI], cur)) + '</text>';
-  return '<div class="sec" style="display:flex;justify-content:space-between;gap:8px"><span>' + esc(tx('Running balance')) + '</span><span class="mono" data-testid="fc-opening">' + esc(tx('Today') + ' ' + bkDrCr(r.opening_minor, cur)) + '</span></div>'
+  var lowX = lowI * step + step / 2, lowLabel = '<text x="' + lowX.toFixed(1) + '" y="' + (vals[lowI] < 0 ? Math.min(H - bottom - 2, y(vals[lowI]) + 11) : Math.max(10, y(vals[lowI]) - 4)).toFixed(1) + '" text-anchor="' + (lowX > W * 0.8 ? 'end' : lowX < W * 0.2 ? 'start' : 'middle') + '" data-testid="fc-low-label" style="font:600 11px var(--mono,monospace);fill:var(--ink,#2a2418)">' + esc(fcBal(vals[lowI], cur)) + '</text>';
+  return '<div class="sec" style="display:flex;justify-content:space-between;gap:8px"><span>' + esc(tx('Running balance')) + '</span><span class="mono" data-testid="fc-opening">' + esc(tx('Today') + ' ' + fcBal(r.opening_minor, cur)) + '</span></div>' + fcWhere(r, cur)
     /* inline sizes: the page's icon rule (svg{width:18px;height:18px;stroke:currentColor}) would otherwise shrink the chart to an icon */
     + '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(r.words || '') + '" style="display:block;width:100%;height:' + H + 'px;overflow:visible;stroke:none;fill:none">'
     + '<line x1="0" x2="' + W + '" y1="' + y0.toFixed(1) + '" y2="' + y0.toFixed(1) + '" style="stroke:var(--line-3,#d8ccb0);stroke-width:1"/>' + bars + lowLabel + '</svg>';
@@ -94,7 +106,7 @@ function fcCols() {
     { key: 'out', label: tx('Going out'), prio: 4, num: true, w: 150, html: true, cell: function (d) { return Number(d.out_minor) ? '<span class="due give" data-b="out">' + esc(bkMoney(d.out_minor, c())) + '</span>' : dash; } },
     { key: 'bal', label: tx('Balance'), prio: 2, sort: 'bal', num: true, w: 190, html: true, cell: function (d) {
       var v = Number(d.balance_minor || 0);
-      return '<b data-b="balance">' + esc(bkDrCr(v, c())) + '</b>' + (v < 0 ? ' <span class="tag red" data-b="short">⚠ ' + esc(tx('Short')) + '</span>' : ''); } },
+      return '<b data-b="balance">' + esc(fcBal(v, c())) + '</b>' + (v < 0 ? ' <span class="tag red" data-b="short">⚠ ' + esc(tx('Short')) + '</span>' : ''); } },
     { key: 'what', label: tx('What'), prio: 5, w: 320, html: true, cell: function (d) { return d.items.length ? esc(d.items.map(function (it) { return it.name; }).join(' · ')) : dash; } },
   ];
 }

@@ -1390,7 +1390,7 @@ function chit2Screen(){
     + ((typeof chitSpendStrip === 'function')
         ? '<div style="padding:8px 14px 2px">' + chitSpendStrip({
             id: C2.id, amt: (d.detail && d.detail.total_value) || h.total_value || 0,
-            delivery_summary: sum, line_delivery: d.line_delivery, line_assignment: d.line_assignment,
+            delivery_summary: sum, line_delivery: d.line_delivery, line_assignment: d.line_assignment, order_billed: d.order_billed,   /* W36: "Not billed yet" on an order */
           }) + '</div>'
         : '')
     + '<div style="display:flex;border-bottom:1px solid var(--line);margin-top:10px">' + tabs + '</div>'
