@@ -152,7 +152,7 @@
   "public/storefront-design.html": {"score":23,"long40":0,"long80":0,"complex10":1,"complex15":0,"deep3":0,"deep4":0,"cryptic":18,"noWhatLine":3,"emptyCatch":0,"noHeader":1},
   "public/supplier-design.html": {"score":27,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":25,"noWhatLine":1,"emptyCatch":0,"noHeader":1},
   "public/tasks.html": {"score":22,"long40":0,"long80":0,"complex10":1,"complex15":0,"deep3":0,"deep4":0,"cryptic":21,"noWhatLine":0,"emptyCatch":0,"noHeader":0},
-  "public/testing.html": {"score":504,"long40":23,"long80":9,"complex10":25,"complex15":12,"deep3":0,"deep4":0,"cryptic":393,"noWhatLine":26,"emptyCatch":16,"noHeader":0},
+  "public/testing.html": {"score":371,"long40":23,"long80":9,"complex10":25,"complex15":12,"deep3":0,"deep4":0,"cryptic":260,"noWhatLine":26,"emptyCatch":16,"noHeader":0},
   "public/till-sw.js": {"score":8,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":7,"noWhatLine":0,"emptyCatch":0,"noHeader":1},
   "scripts/action-state-sweep.cjs": {"score":70,"long40":0,"long80":0,"complex10":3,"complex15":1,"deep3":0,"deep4":0,"cryptic":65,"noWhatLine":0,"emptyCatch":0,"noHeader":1},
   "scripts/check-adoption.js": {"score":29,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":28,"noWhatLine":0,"emptyCatch":0,"noHeader":1},
