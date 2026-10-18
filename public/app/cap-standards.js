@@ -1110,30 +1110,30 @@ function stdRecordHTML(opts){
   var o = opts || {};
   var compact = !!o.compact;
   var BADGE = { live:['var(--ok-tint)','var(--ok-2)','in force'], part:['var(--warn-tint)','var(--warn-2)','partly'], plan:['var(--neutral-tint)','var(--grey)','planned'] };
-  var rows = STD_RECORD.map(function(f){
-    var b = BADGE[f.s] || BADGE.plan;
+  var rows = STD_RECORD.map(function(item){
+    var b = BADGE[item.s] || BADGE.plan;
     /* ⚠️ A PLANNED FIELD IS DIMMED, NOT HIDDEN. Hiding it would make the record look complete; showing it at
        full strength would claim something untrue. Dimmed-and-labelled is the only honest third option. Dimmed with the
        theme's muted ink (--grey), NOT with opacity: opacity cannot be measured against a ground, so a dimmed line could
        fall under AA in some theme and no check would see it (e2e/standards-page.cjs measures this one). */
-    var dim = f.s === 'plan';
+    var dim = item.s === 'plan';
     /* ⭐ T4 (M41): on the page each field is a block that opens to WHAT the standard is (the register's own line) and WHY it applies here */
-    var reg = compact ? null : stdRowFor(f.std);
+    var reg = compact ? null : stdRowFor(item.std);
     return (compact ? '<div style="padding:5px 0;border-block-start:1px solid var(--line)">'
         : '<details class="std-fold" data-testid="std-rec-field" style="padding:5px 0;border-block-start:1px solid var(--line)"><summary style="cursor:pointer">')
       + '<div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;font-family:' + "'Space Mono'" + ',ui-monospace,monospace;font-size:var(--fs-1)">'
-      +   '<span style="color:var(--blue-2);min-width:96px">' + esc(f.k) + '</span>'
-      +   '<span style="color:' + (dim ? 'var(--grey)' : 'var(--on-card)') + ';word-break:break-all;flex:1;min-width:0">' + esc(f.v) + '</span>'
+      +   '<span style="color:var(--blue-2);min-width:96px">' + esc(item.k) + '</span>'
+      +   '<span style="color:' + (dim ? 'var(--grey)' : 'var(--on-card)') + ';word-break:break-all;flex:1;min-width:0">' + esc(item.v) + '</span>'
       + '</div>'
       + '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:3px">'
       /* ⚠️ NOT 9px. Sub-11px text is hard for anyone and unusable for some of the readers this register is
          partly about — and being small on the ACCESSIBILITY page is the worst place to be inconsistent. --fs-1 is
          the smallest size the type scale admits, and it moves with the reader's text-size setting. */
-      +   (f.std ? '<span style="font-size:var(--fs-1);font-weight:800;letter-spacing:.04em;text-transform:uppercase;background:' + b[0] + ';color:' + b[1] + ';border-radius:4px;padding:1px 6px">' + esc(f.std) + ' · ' + b[2] + '</span>' : '')
+      +   (item.std ? '<span style="font-size:var(--fs-1);font-weight:800;letter-spacing:.04em;text-transform:uppercase;background:' + b[0] + ';color:' + b[1] + ';border-radius:4px;padding:1px 6px">' + esc(item.std) + ' · ' + b[2] + '</span>' : '')
       + '</div>'
       + (compact ? '</div>' : '</summary>'
         + (reg ? '<div style="font-size:var(--fs-1);color:var(--on-card);margin-top:3px;line-height:1.5"><b>' + esc(reg.n) + '</b> — ' + esc(reg.w) + '</div>' : '')
-        + (f.c ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px;line-height:1.5">' + f.c + '</div>' : '')
+        + (item.c ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px;line-height:1.5">' + item.c + '</div>' : '')
         + '</details>');
   }).join('');
 
@@ -1153,7 +1153,7 @@ function stdRecordHTML(opts){
 function stdRowFor(std){
   var key = String(std || '').split(/ · | \(/)[0].trim();
   if (!key || /^—/.test(key)) return null;
-  for (var i = 0; i < STANDARDS.length; i++) if (STANDARDS[i].n.indexOf(key) === 0) return STANDARDS[i];
+  for (var index = 0; index < STANDARDS.length; index++) if (STANDARDS[index].n.indexOf(key) === 0) return STANDARDS[index];
   for (var j = 0; j < STANDARDS.length; j++) if (STANDARDS[j].n.indexOf(key) >= 0) return STANDARDS[j];
   return null;
 }
@@ -1238,9 +1238,9 @@ var STD_COMPAT_FIT = { 'one-to-one': 'One-to-one', alongside: 'Works alongside',
 var STD_COMPAT_DIR = { 'in': ['↓', 'In', 'From {s} into the network'], out: ['↑', 'Out', 'From the network out to {s}'], both: ['⇅', 'Both ways', 'Both ways between the network and {s}'] };
 function stdCompatRows(json){
   var rows = (json && Array.isArray(json.rows)) ? json.rows : [];
-  var areas = STD_AREAS.map(function(a){ return a[0]; }), ctry = STD_COUNTRIES.map(function(c){ return c[0]; }), pas = STD_PRODUCT_AREAS.map(function(a){ return a[0]; });
+  var areas = STD_AREAS.map(function(item){ return item[0]; }), ctry = STD_COUNTRIES.map(function(item){ return item[0]; }), pas = STD_PRODUCT_AREAS.map(function(item){ return item[0]; });
   return rows.filter(function(x){
-    return x && x.system && x.service && x.p && STD_COMPAT_STATUS[x.status] && areas.indexOf(x.area) >= 0 && pas.indexOf(x.pa) >= 0 && Array.isArray(x.c) && x.c.length && x.c.every(function(c){ return ctry.indexOf(c) >= 0; }) && !!STD_COMPAT_DIR[x.dir];
+    return x && x.system && x.service && x.p && STD_COMPAT_STATUS[x.status] && areas.indexOf(x.area) >= 0 && pas.indexOf(x.pa) >= 0 && Array.isArray(x.c) && x.c.length && x.c.every(function(item){ return ctry.indexOf(item) >= 0; }) && !!STD_COMPAT_DIR[x.dir];
   }).map(function(x){
     var s = STD_COMPAT_STATUS[x.status];
     var proof = (STD_COMPAT_PROOF[x.proof] || 'Not yet') + (x.proof_at ? ' ' + x.proof_at : '') + (x.proof_ref ? ' — ' + x.proof_ref : '');
@@ -1460,14 +1460,14 @@ var STD_GLOSSARY_REF = [
   ['RFC 7644', 'RFC 7644', 'The internet standard for SCIM, creating and removing staff accounts']
 ];
 STD_GLOSSARY = STD_GLOSSARY.concat(STD_GLOSSARY_REF);
-var STD_REF_RE = new RegExp('(?<![A-Za-z0-9])(?:' + STD_GLOSSARY_REF.map(function(g){ return g[0]; }).join('|') + ')(?![A-Za-z0-9])', 'g');   /* the keys hold only letters, digits, a space and a slash — nothing to escape */
+var STD_REF_RE = new RegExp('(?<![A-Za-z0-9])(?:' + STD_GLOSSARY_REF.map(function(item){ return item[0]; }).join('|') + ')(?![A-Za-z0-9])', 'g');   /* the keys hold only letters, digits, a space and a slash — nothing to escape */
 var STD_NOT_ABBR = ['COUNTRY-STANDARD', 'GENERATED', 'BEFORE', 'BETWEEN', 'CAN', 'IS', 'COMMAND', 'DELETES', 'FINER', 'FORCE', 'FORMAT', 'ISSUE', 'MANUAL', 'MEANS', 'MET', 'NOT', 'OTHER', 'PLAN',
   'RUNNER', 'SAME', 'SCHEMA', 'SCHEME', 'SUPERSEDED', 'THIS', 'WAS', 'ZONE', 'UBL-MAPPING-2026-09-05'];
 /* an abbreviation: two or more capitals or digits from a word start, joined by hyphens (GSTR-2B · ECMA-402 · WAI-ARIA); mixed case (JUnit, OAuth) is a name */
 var STD_ABBR_RE = /\b[A-Z][A-Z0-9]+(?:-[A-Z0-9]+)*\b/g;
 var _stdGl = null;
 function stdGlossary(term){
-  if (!_stdGl){ _stdGl = {}; STD_GLOSSARY.forEach(function(g){ _stdGl[g[0]] = g; }); }
+  if (!_stdGl){ _stdGl = {}; STD_GLOSSARY.forEach(function(item){ _stdGl[item[0]] = item; }); }
   return _stdGl[term] || null;
 }
 /** every abbreviation in a text that is not an emphasis word (e2e/standards-page.cjs reads this) */
@@ -1480,18 +1480,18 @@ function stdAbbrs(text){
  * Wrap each known abbreviation in already-escaped HTML in <abbr class="gl" tabindex="0"> with its full name as the title. Text inside a tag,
  * inside <code> and inside an existing <abbr> is left alone. The page shows the meaning on a tap or Enter (a phone has no hover).
  */
-function stdGloss(html, o){
-  var inCode = 0, tab = !(o && o.focus === false) ? ' tabindex="0"' : '';   /* {focus:false}: a list cell — one tab stop per row, not per term */
-  return String(html == null ? '' : html).split(/(<[^>]+>)/).map(function(seg){
-    if (seg.charAt(0) === '<'){ if (/^<(code|abbr)\b/i.test(seg)) inCode++; else if (/^<\/(code|abbr)>/i.test(seg)) inCode = Math.max(0, inCode - 1); return seg; }
-    if (inCode) return seg;
+function stdGloss(html, node){
+  var inCode = 0, tab = !(node && node.focus === false) ? ' tabindex="0"' : '';   /* {focus:false}: a list cell — one tab stop per row, not per term */
+  return String(html == null ? '' : html).split(/(<[^>]+>)/).map(function(item){
+    if (item.charAt(0) === '<'){ if (/^<(code|abbr)\b/i.test(item)) inCode++; else if (/^<\/(code|abbr)>/i.test(item)) inCode = Math.max(0, inCode - 1); return item; }
+    if (inCode) return item;
     function one(m){
       var g = stdGlossary(m); if (!g) return m;
       var t = g[1] + (g[2] ? ' — ' + g[2] : '');
       return '<abbr class="gl"' + tab + ' data-gl="' + m + '" title="' + esc(t) + '">' + m + '</abbr>';
     }
     /* a numbered reference (ISO 4217) first, then the single words in what is left */
-    var parts = seg.split(STD_REF_RE), refs = seg.match(STD_REF_RE) || [];
-    return parts.map(function(p, i){ return p.replace(STD_ABBR_RE, one) + (i < refs.length ? one(refs[i]) : ''); }).join('');
+    var parts = item.split(STD_REF_RE), refs = item.match(STD_REF_RE) || [];
+    return parts.map(function(text, index){ return text.replace(STD_ABBR_RE, one) + (index < refs.length ? one(refs[index]) : ''); }).join('');
   }).join('');
 }
