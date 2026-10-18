@@ -44,7 +44,7 @@ var CBIdDocs = (function () {
   /* CX4 (R3): the documents the SERVER lists for the shop's country (GET's `catalogue`, from identities.country) — an Australian or
      UAE shop is never offered PAN or Aadhaar. null until a GET answered: the full list, as before. */
   var LIST = null;
-  function order() { return LIST ? ORDER.filter(function (sc) { return LIST.indexOf(sc) >= 0; }) : ORDER; }
+  function order() { return LIST ? ORDER.filter(function (item) { return LIST.indexOf(item) >= 0; }) : ORDER; }
 
   var STATUS = {
     verified:   ['✓', 'var(--ok-3)',   'Verified'],
@@ -63,7 +63,7 @@ var CBIdDocs = (function () {
   function html(docs, mode, opts) {
     var o = opts || {};
     var byScheme = {};
-    (docs || []).forEach(function (d) { byScheme[d.scheme] = d; });
+    (docs || []).forEach(function (item) { byScheme[item.scheme] = item; });
     var self = mode !== 'owner';
 
     /**
@@ -114,23 +114,23 @@ var CBIdDocs = (function () {
 
     var rows;
     if (self) {
-      var addable  = order().filter(function (sc) { return HINT[sc].self; });
-      var readonly = order().filter(function (sc) { return !HINT[sc].self; });
+      var addable  = order().filter(function (item) { return HINT[item].self; });
+      var readonly = order().filter(function (item) { return !HINT[item].self; });
       /* ⭐ VIEW FIRST, THEN UPDATE. Athi, 2026-08-20: *"view section, next update section."* The record is
          what you came to read; the fields are what you may do about it. Putting the inputs first makes a page
          that is mostly a statement look like a form. */
       rows = heading('On file')
-           + readonly.map(function (sc) { return row(sc, false); }).join('')
+           + readonly.map(function (item) { return row(item, false); }).join('')
            + '<div class="misnote" style="margin:6px 0 14px;line-height:1.5">'
            +   'Checked against the document itself, so your employer records these.'
            + '</div>'
            + heading('You can update')
-           + addable.map(function (sc) { return row(sc, true); }).join('')
+           + addable.map(function (item) { return row(item, true); }).join('')
            + '<div class="misnote" style="margin-top:6px;line-height:1.5">'
            +   'Confirmed by a code sent to them.'
            + '</div>';
     } else {
-      rows = order().map(function (sc) { return row(sc, true); }).join('');
+      rows = order().map(function (item) { return row(item, true); }).join('');
     }
 
     /* ⚠️⚠️ THE AADHAAR SENTENCE IS NOT REASSURANCE, IT IS THE DESIGN. The Aadhaar Act restricts a private body
@@ -169,11 +169,11 @@ var CBIdDocs = (function () {
   async function load(subjectId) {
     try {
       var q = subjectId ? ('?identity_id=' + encodeURIComponent(subjectId)) : '';
-      var r = await fetch(CFG.API_BASE + '/api/identity/documents' + q,
+      var reply = await fetch(CFG.API_BASE + '/api/identity/documents' + q,
         { headers: { Authorization: 'Bearer ' + SESSION.token } });
-      if (!r.ok) return [];          // 503 before the migration — an empty record, not an error screen
-      var j = await r.json();
-      if (Array.isArray(j.catalogue)) LIST = j.catalogue.map(function (c) { return c.scheme; });
+      if (!reply.ok) return [];          // 503 before the migration — an empty record, not an error screen
+      var j = await reply.json();
+      if (Array.isArray(j.catalogue)) LIST = j.catalogue.map(function (item) { return item.scheme; });
       return j.documents || [];
     } catch (_) { return []; }
   }
@@ -191,23 +191,23 @@ var CBIdDocs = (function () {
     var consent = !!(consentEl && consentEl.checked);
     var failed = [], saved = 0;
 
-    for (var i = 0; i < ORDER.length; i++) {
-      var sc = ORDER[i];
+    for (var index = 0; index < ORDER.length; index++) {
+      var sc = ORDER[index];
       var el = document.getElementById('idoc_' + sc);
       var v = el && el.value ? el.value.trim() : '';
       if (!v) continue;
       try {
         var body = { value: v, consent: consent };
         if (subjectId) body.identity_id = subjectId;
-        var r = await fetch(CFG.API_BASE + '/api/identity/documents/' + sc, {
+        var reply = await fetch(CFG.API_BASE + '/api/identity/documents/' + sc, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + SESSION.token },
           body: JSON.stringify(body)
         });
-        if (r.ok) { saved++; el.value = ''; }
+        if (reply.ok) { saved++; el.value = ''; }
         else {
-          var j = await r.json().catch(function () { return {}; });
-          failed.push(HINT[sc].label + ' — ' + (j.message || r.status));
+          var j = await reply.json().catch(function () { return {}; });
+          failed.push(HINT[sc].label + ' — ' + (j.message || reply.status));
         }
       } catch (e) { failed.push(HINT[sc].label + ' — could not reach the server'); }
     }
