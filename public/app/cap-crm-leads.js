@@ -35,11 +35,11 @@ async function crmLeadsLoad(quiet) {
   var g = ++LEADS.gen;
   if (!quiet || !LEADS.loaded) { LEADS.state = 'loading'; crmLeadsRefresh(); }
   try {
-    var r = await api('crmParties', { query: { view: 'leads' } });
+    var reply = await api('crmParties', { query: { view: 'leads' } });
     if (g !== LEADS.gen) return;
-    LEADS.ready = !(r && r.leads_migrated === false);
-    LEADS.rows = crmNormalize((r && r.parties) || []);
-    await crmFuJoin(LEADS.rows, r);
+    LEADS.ready = !(reply && reply.leads_migrated === false);
+    LEADS.rows = crmNormalize((reply && reply.parties) || []);
+    await crmFuJoin(LEADS.rows, reply);
     if (g !== LEADS.gen) return;
     crmLeadsIndex(); LEADS.state = 'ready'; LEADS.loaded = true; LEADS.err = null;
   } catch (e) {
@@ -52,7 +52,7 @@ async function crmLeadsLoad(quiet) {
 function crmLeadsBar() { crmBar('<strong>' + esc(tx('CRM')) + '</strong>', crmLeadAddBtn() + crmLeadImportBtn(), true); }
 function crmLeadsRefresh() { var a = LEADS.api; if (a && a.el && document.body.contains(a.el)) a.refresh(); }
 /** a lead opens on the same record as any party: its key must resolve (crmIndex calls this after every Parties read too) */
-function crmLeadsIndex() { LEADS.rows.forEach(function (p) { CRM.byKey[p.party_id] = p; if (p.party_no) CRM.byKey[p.party_no] = p; }); }
+function crmLeadsIndex() { LEADS.rows.forEach(function (item) { CRM.byKey[item.party_id] = item; if (item.party_no) CRM.byKey[item.party_no] = item; }); }
 /** the record asks for this when a key is no row: a lead opened from a link before the Leads tab was read */
 async function crmLeadsEnsure() { if (!LEADS.loaded) await crmLeadsLoad(true); }
 
@@ -72,8 +72,8 @@ function crmLeadAddBtn() {
 }
 function crmLeads(frame) {
   crmLeadsBar();
-  var s = document.getElementById('screen'); s.className = 'screen flush';
-  s.innerHTML = '<div id="crm_leads" data-testid="crm-leads"></div>';
+  var node = document.getElementById('screen'); node.className = 'screen flush';
+  node.innerHTML = '<div id="crm_leads" data-testid="crm-leads"></div>';
   if (LEADS.api && LEADS.api.destroy) { try { LEADS.api.destroy(); } catch (_) {} }
   LEADS.api = CBList.mount(document.getElementById('crm_leads'), {
     key: 'crm-leads', t: tx, rows: function () { return LEADS.rows; }, id: function (p) { return p.party_id; }, rowTid: function (p) { return 'crm-lead-' + crmKey(p); },
@@ -82,7 +82,7 @@ function crmLeads(frame) {
     state: function () { return LEADS.state; }, error: function () { return crmErrWords(LEADS.err, 'your leads'); }, onRetry: function () { crmLeadsLoad(); },
     empty: { title: tx(LEADS.ready ? 'No leads yet' : CRM_LEADS_WAIT), sub: tx(LEADS.ready ? 'People you have not traded with yet. Use + Add lead.' : 'Nothing is lost.') },
     search: function (p) { return [p.display_name, p.party_no, p.phone, p.otp_contact].join(' '); }, searchHint: tx('Name or phone'),
-    filters: [{ key: 'stage', label: tx('Stage'), all: tx('All stages'), options: ['lead', 'demo', 'trial', 'parked', 'lost'].map(function (k) { return { v: k, label: tx(CRM_STAGE[k]) }; }), match: function (p, v) { return !!p.lead && p.lead.stage === v; } }],
+    filters: [{ key: 'stage', label: tx('Stage'), all: tx('All stages'), options: ['lead', 'demo', 'trial', 'parked', 'lost'].map(function (item) { return { v: item, label: tx(CRM_STAGE[item]) }; }), match: function (p, v) { return !!p.lead && p.lead.stage === v; } }],
     sorts: [{ key: 'name', label: tx('Name'), cmp: function (a, b) { return String(a.display_name).localeCompare(String(b.display_name), undefined, { sensitivity: 'base' }); } },
       { key: 'next', label: tx('Next follow-up'), cmp: function (a, b) { return String(a.next_followup_at || '9999').localeCompare(String(b.next_followup_at || '9999')); } }],
     onOpen: function (p) { crmGo('#/party/' + encodeURIComponent(crmKey(p))); }
@@ -97,15 +97,15 @@ function crmLeadAddOpen() {
   modal('<div class="mhd"><div class="t">' + esc(tx('Add lead')) + '</div></div><div class="mbody" data-testid="crm-lead-sheet">'
     + '<label>' + esc(tx('Name')) + '<input class="inp" id="crm_lead_name" data-testid="crm-lead-name" autocomplete="off"></label>'
     + '<label>' + esc(tx('Phone')) + '<input class="inp" id="crm_lead_phone" data-testid="crm-lead-phone" type="tel" autocomplete="off"></label>'
-    + '<label>' + esc(tx('Stage')) + '<select class="inp" id="crm_lead_stage" data-testid="crm-lead-stage">' + ['lead', 'demo', 'trial'].map(function (k) { return '<option value="' + k + '">' + esc(tx(CRM_STAGE[k])) + '</option>'; }).join('') + '</select></label>'
+    + '<label>' + esc(tx('Stage')) + '<select class="inp" id="crm_lead_stage" data-testid="crm-lead-stage">' + ['lead', 'demo', 'trial'].map(function (item) { return '<option value="' + item + '">' + esc(tx(CRM_STAGE[item])) + '</option>'; }).join('') + '</select></label>'
     + '<div id="crm_lead_msg" class="hint" role="status" data-testid="crm-lead-msg"></div></div>'
     + '<div class="mfoot"><button type="button" onclick="closeModal()">' + esc(tx('Cancel')) + '</button><button type="button" class="pri" data-crm="leadsave" data-testid="crm-lead-save">' + esc(tx('Save')) + '</button></div>');
-  var n = document.getElementById('crm_lead_name'); if (n) n.focus();
+  var node = document.getElementById('crm_lead_name'); if (node) node.focus();
 }
 function crmLeadSave(btn) {
-  var g = function (id) { return String((document.getElementById(id) || {}).value || '').trim(); }, msg = document.getElementById('crm_lead_msg');
-  if (!g('crm_lead_name')) { msg.textContent = tx('Give the lead a name.'); return; }
-  var body = { name: g('crm_lead_name'), stage: g('crm_lead_stage') || 'lead' }; if (g('crm_lead_phone')) body.phone = g('crm_lead_phone');
+  var node = function (id) { return String((document.getElementById(id) || {}).value || '').trim(); }, msg = document.getElementById('crm_lead_msg');
+  if (!node('crm_lead_name')) { msg.textContent = tx('Give the lead a name.'); return; }
+  var body = { name: node('crm_lead_name'), stage: node('crm_lead_stage') || 'lead' }; if (node('crm_lead_phone')) body.phone = node('crm_lead_phone');
   return CBAction.run(btn, async function () { return api('crmLeadAdd', { body: body }); }, {
     key: 'lead-add', busy: tx('Saving…'),
     onFail: function (words, e) { msg.textContent = crmLeadWords(e); },
@@ -126,7 +126,7 @@ function crmStageBtn(p) {
 function crmStageOpen(p, rec) {
   var lead = (rec && rec.lead) || p.lead; if (!lead) return;
   modal('<div class="mhd"><div class="t">' + esc(tx('Move to…')) + '</div></div><div class="mbody" data-testid="crm-stage-sheet">'
-    + '<div class="supacts">' + (lead.moves || []).map(function (k) { return '<button type="button" class="act ghost" data-crm="stagego" data-v="' + esc(k) + '" data-testid="crm-stage-' + esc(k) + '">' + esc(tx(CRM_STAGE[k] || k)) + '</button>'; }).join('') + '</div>'
+    + '<div class="supacts">' + (lead.moves || []).map(function (item) { return '<button type="button" class="act ghost" data-crm="stagego" data-v="' + esc(item) + '" data-testid="crm-stage-' + esc(item) + '">' + esc(tx(CRM_STAGE[item] || item)) + '</button>'; }).join('') + '</div>'
     + '<div id="crm_stage_msg" class="hint" role="status" data-testid="crm-stage-msg"></div></div>'
     + '<div class="mfoot"><button type="button" onclick="closeModal()">' + esc(tx('Cancel')) + '</button></div>');
 }
@@ -142,12 +142,12 @@ function crmStageGo(stage, btn) {
     }
   });
 }
-function crmLeadClick(a, t) {
+function crmLeadClick(a, node) {
   if (a === 'leadadd') { crmLeadAddOpen(); return true; }
-  if (a === 'leadsave') { crmLeadSave(t); return true; }
+  if (a === 'leadsave') { crmLeadSave(node); return true; }
   if (a === 'leadimport') { crmImportOpen(); return true; }
   if (a === 'rstage') { crmStageOpen(CRMR.p, CRMR.rec); return true; }
-  if (a === 'stagego') { crmStageGo(t.getAttribute('data-v'), t); return true; }
+  if (a === 'stagego') { crmStageGo(node.getAttribute('data-v'), node); return true; }
   return false;
 }
 
@@ -175,9 +175,9 @@ var LIMP_CAP = 'Import up to 500 leads at a time. Split the file.';
 function crmCsvRows(text) {
   var rows = [], row = [], cell = '', q = false, s = String(text || '').replace(/^﻿/, '');
   var end = function () { row.push(cell); if (row.some(function (x) { return String(x).trim(); })) rows.push(row); row = []; cell = ''; };
-  for (var i = 0; i < s.length; i++) {
-    var c = s.charAt(i);
-    if (q) { if (c === '"') { if (s.charAt(i + 1) === '"') { cell += '"'; i++; } else q = false; } else cell += c; continue; }
+  for (var index = 0; index < s.length; index++) {
+    var c = s.charAt(index);
+    if (q) { if (c === '"') { if (s.charAt(index + 1) === '"') { cell += '"'; index++; } else q = false; } else cell += c; continue; }
     if (c === '"') { q = true; continue; }
     if (c === ',') { row.push(cell); cell = ''; continue; }
     if (c === '\r') continue;
@@ -190,12 +190,12 @@ function crmCsvRows(text) {
 /** the header each field is most likely under — a guess the person confirms on Columns */
 function crmImportGuess(head) {
   var map = {}, used = {}, norm = function (h) { return String(h || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); };
-  LIMP_FIELDS.forEach(function (f) {
-    var k = f[0], words = LIMP_GUESS[k];
-    for (var i = 0; i < head.length && map[k] == null; i++) {
-      if (used[i]) continue;
-      var h = norm(head[i]);
-      if (words.indexOf(h) >= 0 || words.some(function (w) { return w.length > 3 && h.indexOf(w) >= 0; })) { map[k] = i; used[i] = true; }
+  LIMP_FIELDS.forEach(function (item) {
+    var k = item[0], words = LIMP_GUESS[k];
+    for (var index = 0; index < head.length && map[k] == null; index++) {
+      if (used[index]) continue;
+      var h = norm(head[index]);
+      if (words.indexOf(h) >= 0 || words.some(function (w) { return w.length > 3 && h.indexOf(w) >= 0; })) { map[k] = index; used[index] = true; }
     }
   });
   return map;
@@ -203,9 +203,9 @@ function crmImportGuess(head) {
 /** the rows as the api takes them: only the mapped columns, trimmed, empty cells left out */
 function crmImportBody() {
   var m = LIMP.map;
-  return LIMP.rows.map(function (r) {
+  return LIMP.rows.map(function (item) {
     var o = {};
-    LIMP_FIELDS.forEach(function (f) { var i = m[f[0]]; if (i != null && r[i] != null && String(r[i]).trim()) o[f[0]] = String(r[i]).trim(); });
+    LIMP_FIELDS.forEach(function (f) { var i = m[f[0]]; if (i != null && item[i] != null && String(item[i]).trim()) o[f[0]] = String(item[i]).trim(); });
     return o;
   });
 }
@@ -251,10 +251,10 @@ function crmImportStep(k) {
       + '<div class="hint" role="status" data-testid="crm-import-filemsg">' + (LIMP.name ? esc(LIMP.name) + ' · ' + esc(crmPlural(n, 'row', 'rows')) + (n > 500 ? ' · ' + esc(tx(LIMP_CAP)) : '') : esc(tx('Name and phone columns, one lead per row.'))) + '</div>';
   }
   if (k === 'map') {
-    return LIMP_FIELDS.map(function (f) {
-      var key = f[0], cur = LIMP.map[key];
-      return '<label>' + esc(tx(f[1])) + (key === 'name' ? ' *' : '') + '<select class="inp" data-testid="crm-import-map-' + key + '" onchange="crmImportMap(\'' + key + '\', this.value)"><option value="">' + esc(tx('Not in the file')) + '</option>'
-        + LIMP.head.map(function (h, i) { return '<option value="' + i + '"' + (cur === i ? ' selected' : '') + '>' + esc(h || (tx('Column') + ' ' + (i + 1))) + '</option>'; }).join('') + '</select></label>';
+    return LIMP_FIELDS.map(function (item) {
+      var key = item[0], cur = LIMP.map[key];
+      return '<label>' + esc(tx(item[1])) + (key === 'name' ? ' *' : '') + '<select class="inp" data-testid="crm-import-map-' + key + '" onchange="crmImportMap(\'' + key + '\', this.value)"><option value="">' + esc(tx('Not in the file')) + '</option>'
+        + LIMP.head.map(function (h, index) { return '<option value="' + index + '"' + (cur === index ? ' selected' : '') + '>' + esc(h || (tx('Column') + ' ' + (index + 1))) + '</option>'; }).join('') + '</select></label>';
     }).join('');
   }
   if (k === 'check') return '<div id="crm_imp_prev" data-testid="crm-import-preview"></div>';
@@ -270,9 +270,9 @@ function crmImportGuard(k) {
 async function crmImportPick(inp) {
   var f = inp.files && inp.files[0]; if (!f) return;
   var text;
-  try { text = await f.text(); } catch (_) { LIMP.rows = []; LIMP.name = ''; var m = document.querySelector('[data-testid="crm-import-filemsg"]'); if (m) m.textContent = tx('That file could not be read.'); return; }
+  try { text = await f.text(); } catch (_) { LIMP.rows = []; LIMP.name = ''; var node = document.querySelector('[data-testid="crm-import-filemsg"]'); if (node) node.textContent = tx('That file could not be read.'); return; }
   var all = crmCsvRows(text);
-  LIMP.name = f.name; LIMP.head = all.length ? all[0].map(function (h) { return String(h || '').trim(); }) : []; LIMP.rows = all.slice(1);
+  LIMP.name = f.name; LIMP.head = all.length ? all[0].map(function (item) { return String(item || '').trim(); }) : []; LIMP.rows = all.slice(1);
   LIMP.map = crmImportGuess(LIMP.head); LIMP.plan = null; LIMP.planErr = null;
   if (LIMP.flow) { LIMP.flow.paintBody(); LIMP.flow.paintFoot(); }
 }
@@ -282,7 +282,7 @@ async function crmImportPlan() {
   var g = ++LIMP.gen, el = document.getElementById('crm_imp_prev'); if (!el) return;
   LIMP.plan = null; LIMP.planErr = null; LIMP.flow.paintFoot();
   el.innerHTML = '<div class="loadwrap" role="status"><span class="spin"></span>' + esc(tx('Checking…')) + '</div>';
-  try { var r = await api('crmLeadImport', { body: { rows: crmImportBody(), dry: true } }); if (g !== LIMP.gen) return; LIMP.plan = r; }
+  try { var reply = await api('crmLeadImport', { body: { rows: crmImportBody(), dry: true } }); if (g !== LIMP.gen) return; LIMP.plan = reply; }
   catch (e) { if (g !== LIMP.gen) return; LIMP.planErr = crmImportWords(e); el.innerHTML = '<div class="hint" role="alert" data-testid="crm-import-planerr">' + esc(LIMP.planErr) + '</div>'; LIMP.flow.paintFoot(); return; }
   crmImportList(el, 'crm-import-preview', LIMP.plan.rows || [], true);
   LIMP.flow.paintFoot();
@@ -300,13 +300,13 @@ function crmImportList(el, key, rows, preview) {
   var p = LIMP.plan, tid = preview ? 'crm-imp-prev-' : 'crm-imp-skip-';
   LIMP.prev = CBList.mount(el, {
     key: key, t: tx, rows: function () { return rows; }, id: function (r) { return r.row; }, rowTid: function (r) { return tid + r.row; },
-    columns: function () { return cols; }, defaultCols: cols.map(function (c) { return c.key; }), cardMax: preview ? 4 : 3, fill: false,
+    columns: function () { return cols; }, defaultCols: cols.map(function (item) { return item.key; }), cardMax: preview ? 4 : 3, fill: false,
     /* the counts are a plain chip (a notice is amber — advisory — and these are facts); the step's own line already says "What will happen" */
     head: function () { return { title: preview ? '' : tx('Skipped rows'), chips: preview && p ? [{ text: crmImportCounts(p), tid: 'crm-import-counts' }] : [] }; },
     state: function () { return 'ready'; },
     empty: { title: preview ? tx('Nothing to check') : tx('Nothing skipped'), sub: '' },
     search: function (r) { return [r.name, r.phone, r.why].join(' '); }, searchHint: tx('Name or phone'),
-    filters: preview ? [{ key: 'will', label: tx('Will'), all: tx('All rows'), options: ['add', 'merge', 'skip'].map(function (k) { return { v: k, label: tx(LIMP_WILL[k]) }; }), match: function (r, v) { return r.outcome === v; } }] : [],
+    filters: preview ? [{ key: 'will', label: tx('Will'), all: tx('All rows'), options: ['add', 'merge', 'skip'].map(function (item) { return { v: item, label: tx(LIMP_WILL[item]) }; }), match: function (r, v) { return r.outcome === v; } }] : [],
     sorts: [{ key: 'row', label: tx('Row'), cmp: function (a, b) { return a.row - b.row; } }]
   });
 }
@@ -320,7 +320,7 @@ function crmImportSend() {
 }
 /** the outcome, where the action happened: the three numbers large, the skipped rows as a list (downloadable), Done */
 function crmImportDone(r) {
-  var sub = document.getElementById('crm_imp_sub'); if (sub) sub.textContent = tx('Imported');
+  var node = document.getElementById('crm_imp_sub'); if (node) node.textContent = tx('Imported');
   var rail = document.getElementById('crm_imp_rail'); if (rail) rail.innerHTML = '';
   var body = document.getElementById('crm_imp_body'); if (!body) return;
   var skipped = r.skipped || [];
