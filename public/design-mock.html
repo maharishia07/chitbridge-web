@@ -125,11 +125,11 @@ function fld(label, value, source, hint){
     + (hint ? '<div class="note">' + hint + '</div>' : '') + '</div>';
 }
 function visOpts(s){
-  return ['Public','Network only','Private'].map(function(o){
-    var on = (o === 'Network only' ? 'Network' : o) === s.vis;
+  return ['Public','Network only','Private'].map(function(item){
+    var on = (item === 'Network only' ? 'Network' : item) === s.vis;
     return '<span style="display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:8px;cursor:pointer;'
       + 'border:1px solid ' + (on ? 'var(--blue)' : 'var(--line)') + ';background:' + (on ? 'var(--blue)' : '#fff')
-      + ';color:' + (on ? '#fff' : 'var(--ink)') + ';font-weight:' + (on ? '700' : '500') + ';font-size:12.5px">' + o + '</span>';
+      + ';color:' + (on ? '#fff' : 'var(--ink)') + ';font-weight:' + (on ? '700' : '500') + ';font-size:12.5px">' + item + '</span>';
   }).join(' ');
 }
 /* ── THE ROOT'S CATALOGUE, AND WHAT A STORE DOES WITH IT ──────────────────────────────────────────────────────
@@ -179,16 +179,16 @@ function catalogueTab(s){
       + '<div class="note" style="margin-top:3px">' + sub + '</div></div>';
   };
 
-  var rows = SKUS.map(function(k){
-    var L = landed(k.eur, cur);
-    var priced = mode === 'convert' ? fmtMoney(L.total, cur) : (k.own && k.own[s.key] ? fmtMoney(k.own[s.key], cur) : null);
+  var rows = SKUS.map(function(item){
+    var L = landed(item.eur, cur);
+    var priced = mode === 'convert' ? fmtMoney(L.total, cur) : (item.own && item.own[s.key] ? fmtMoney(item.own[s.key], cur) : null);
     return '<div class="fld"><div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">'
-      + '<b style="font-size:13.5px">' + k.name + '</b>'
-      + '<span style="font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:var(--grey)">' + k.sku + '</span>'
-      + '<span style="font-size:11px;color:var(--grey)">' + k.img + ' · ' + k.vid + '</span>'
+      + '<b style="font-size:13.5px">' + item.name + '</b>'
+      + '<span style="font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:var(--grey)">' + item.sku + '</span>'
+      + '<span style="font-size:11px;color:var(--grey)">' + item.img + ' · ' + item.vid + '</span>'
       + '<span class="src inh" style="margin-inline-start:auto">PRODUCT FROM NETWORK</span></div>'
       + '<div class="val" style="margin-top:6px">'
-      + '<span style="color:var(--grey);font-size:12.5px">reference ' + fmtMoney(k.eur, 'EUR') + '</span>'
+      + '<span style="color:var(--grey);font-size:12.5px">reference ' + fmtMoney(item.eur, 'EUR') + '</span>'
       + '<span style="font-size:12.5px"><span class=arw>→</span></span>'
       + (priced
           ? '<b style="font-size:15px">' + priced + '</b><span class="src ' + (mode === 'convert' ? 'inh' : 'own') + '">'
@@ -254,7 +254,7 @@ function catalogueTab(s){
     + '</div>';
 }
 function setMode(m){ var s = store(); s.mode = m; drawPage(); }
-function store(){ return STORES.filter(function(s){ return s.key === sel; })[0]; }
+function store(){ return STORES.filter(function(item){ return item.key === sel; })[0]; }
 function val(s, k){ return (s.own && s.own[k] !== undefined) ? s.own[k] : NET[k]; }
 function src(s, k){ return (s.own && s.own[k] !== undefined) ? 'own' : 'inherited'; }
 
@@ -264,12 +264,12 @@ function drawTree(){
     + '<div style="font-size:10px;color:#2c7a43;padding:0 8px 10px">✓ your network · ' + STORES.length + ' stores live'
     + (NET.currency ? ' · ' + NET.currency + ' · ' + NET.country : '') + '</div>'
     + '<div class="nd">◆ ' + NET.name + '<div class="sub">the top — its settings flow down</div></div>'
-    + STORES.map(function(s){
-        var c = s.vis === 'Public' ? 'background:#e6f4ec;color:#2c7a43' : s.vis === 'Network' ? 'background:#f6ecd8;color:#8a5a1e' : 'background:#eef0f4;color:#6b6f86';
-        var overrides = s.own ? Object.keys(s.own).length : 0;
+    + STORES.map(function(item){
+        var c = item.vis === 'Public' ? 'background:#e6f4ec;color:#2c7a43' : item.vis === 'Network' ? 'background:#f6ecd8;color:#8a5a1e' : 'background:#eef0f4;color:#6b6f86';
+        var overrides = item.own ? Object.keys(item.own).length : 0;
         // The searched item, answered IN THE TREE. Green when it is there, struck when it is not — so "who has it"
         // is legible in the place you were already looking rather than only in a panel on the right.
-        var h = Q ? holders()[s.name] : null;
+        var h = Q ? holders()[item.name] : null;
         var hit = Q
           ? (h && h.qty > 0
               ? '<span class="chip" style="background:#2c7a43;color:#fff">' + h.qty + ' · ' + h.days + 'd</span>'
@@ -277,10 +277,10 @@ function drawTree(){
           : '';
         var dim = Q && !(h && h.qty > 0) ? 'opacity:.5;' : '';
         // A store's own currency shows only where it DIFFERS from the network's — the exception, not the rule.
-        var cur = (s.own && s.own.currency && s.own.currency !== NET.currency) ? s.own.currency : '';
-        return '<div class="nd ' + (s.key === sel ? 'on' : '') + '" onclick="pick(\'' + s.key + '\')" style="margin-inline-start:12px;' + dim + '">'
-          + '└ ' + s.name + '<span class="chip" style="' + c + '">' + s.vis + '</span>' + hit
-          + '<div class="sub">' + s.purpose + (overrides ? ' · ' + overrides + ' set here' : '') + '</div>'
+        var cur = (item.own && item.own.currency && item.own.currency !== NET.currency) ? item.own.currency : '';
+        return '<div class="nd ' + (item.key === sel ? 'on' : '') + '" onclick="pick(\'' + item.key + '\')" style="margin-inline-start:12px;' + dim + '">'
+          + '└ ' + item.name + '<span class="chip" style="' + c + '">' + item.vis + '</span>' + hit
+          + '<div class="sub">' + item.purpose + (overrides ? ' · ' + overrides + ' set here' : '') + '</div>'
           + (cur ? '<div class="sub" style="color:#8a5a1e;font-weight:700">🌍 ' + cur + '</div>' : '')
           + '</div>';
       }).join('')
@@ -318,8 +318,8 @@ function locateScreen(){
   var k = matchSku();
   if (!k) return '<h1>🔎 No product matches “' + Q + '”</h1><div class="kind">The catalogue holds ' + SKUS.length + ' items. Try CR-32, MQ3 or seal.</div>';
   var rows = STOCK[k.sku] || [];
-  var have = rows.filter(function(r){ return r.qty > 0; }).sort(function(a,b){ return a.days - b.days; });
-  var none = rows.filter(function(r){ return r.qty <= 0; });
+  var have = rows.filter(function(item){ return item.qty > 0; }).sort(function(first,second){ return first.days - second.days; });
+  var none = rows.filter(function(item){ return item.qty <= 0; });
   var line = function(r, dim){
     var stale = /typed|nightly/.test(r.fresh);
     return '<div class="fld" style="' + (dim ? 'opacity:.55' : '') + '">'
@@ -343,8 +343,8 @@ function locateScreen(){
 
     + '<div class="box">'
     + '<div class="fld"><div class="lbl">CAN BE SENT — soonest first</div></div>'
-    + have.map(function(r){ return line(r, false); }).join('')
-    + none.map(function(r){ return line(r, true); }).join('')
+    + have.map(function(item){ return line(item, false); }).join('')
+    + none.map(function(item){ return line(item, true); }).join('')
     + '</div>'
 
     + '<div class="box"><div class="fld"><div class="lbl">SO THE ANSWER TO THE CUSTOMER IS</div>'
@@ -391,13 +391,13 @@ function doSearch(v){ Q = String(v || '').trim(); view = Q ? 'locate' : 'store';
 function matchSku(){
   if (!Q) return SKUS[0];
   var q = Q.toLowerCase();
-  return SKUS.filter(function(k){ return (k.sku + ' ' + k.name).toLowerCase().indexOf(q) >= 0; })[0] || null;
+  return SKUS.filter(function(item){ return (item.sku + ' ' + item.name).toLowerCase().indexOf(q) >= 0; })[0] || null;
 }
 /** Which stores hold the searched item — used by the tree to highlight, and by the locator to answer. */
 function holders(){
   var k = matchSku(); if (!k) return {};
   var out = {};
-  (STOCK[k.sku] || []).forEach(function(r){ out[r.store] = r; });
+  (STOCK[k.sku] || []).forEach(function(item){ out[item.store] = item; });
   return out;
 }
 
@@ -458,8 +458,8 @@ function drawPage(){
     // The real app already has rich panels for co-assists, transact and dispute. The mock does not redraw them —
     // it says so, rather than showing a thinner version that would look like a proposal to replace them.
     var real = { coassist:1, transact:1, dispute:1, tradeready:1 };
-    var lbl = (TABS.filter(function(t){ return t[0] === tab; })[0] || [])[2] || tab;
-    body = '<div class="box"><div class="fld"><div class="lbl">' + lbl.toUpperCase() + '</div>'
+    var text = (TABS.filter(function(item){ return item[0] === tab; })[0] || [])[2] || tab;
+    body = '<div class="box"><div class="fld"><div class="lbl">' + text.toUpperCase() + '</div>'
       + '<div class="note">' + (real[tab]
           ? 'The real app already has this panel, in full. It is <b>not redrawn here</b> — the mock is for layout '
             + 'and inheritance, and a thinner version would read as a proposal to replace what exists.'
@@ -471,10 +471,10 @@ function drawPage(){
     '<h1>' + s.name + ' <span class="chip" style="background:#e6f4ec;color:#2c7a43">OWNED</span></h1>'
     + '<div class="hd">' + NET.handle + '.' + s.name.toLowerCase() + '</div>'
     + '<div class="kind">An owned store · settings not set here come from <b>' + NET.name + '</b></div>'
-    + '<div class="tabs">' + TABS.map(function(t){
-        return '<span class="tab ' + (t[0] === tab ? 'on' : 'has') + '" onclick="pickTab(\'' + t[0] + '\')">'
-          + '<span class="ic">' + t[1] + '</span>' + t[2]
-          + (t[3] ? '<span style="font-size:8.5px;font-weight:800;opacity:.7;border:1px solid currentColor;border-radius:4px;padding:0 3px">N/E</span>' : '')
+    + '<div class="tabs">' + TABS.map(function(item){
+        return '<span class="tab ' + (item[0] === tab ? 'on' : 'has') + '" onclick="pickTab(\'' + item[0] + '\')">'
+          + '<span class="ic">' + item[1] + '</span>' + item[2]
+          + (item[3] ? '<span style="font-size:8.5px;font-weight:800;opacity:.7;border:1px solid currentColor;border-radius:4px;padding:0 3px">N/E</span>' : '')
           + '</span>'; }).join('') + '</div>'
     + '<div class="pane">' + body + '</div>'
     + '<div class="legend"><h3>THE THREE KINDS — this is what the mock is really asking</h3>'
