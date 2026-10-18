@@ -27,10 +27,10 @@
   function call(method, path, body) {
     return root.fetch((E.o.base || '') + path, { method: method, cache: 'no-store',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + E.o.token }, body: body ? JSON.stringify(body) : undefined })
-      .then(function (r) {
-        return r.json().catch(function () { return {}; }).then(function (j) {
-          if (r.status === 401 && E.o.onEnded) E.o.onEnded();
-          if (!r.ok) { var e = new Error(j.message || j.error || 'API ' + r.status); e.status = r.status; throw e; }
+      .then(function (reply) {
+        return reply.json().catch(function () { return {}; }).then(function (j) {
+          if (reply.status === 401 && E.o.onEnded) E.o.onEnded();
+          if (!reply.ok) { var e = new Error(j.message || j.error || 'API ' + reply.status); e.status = reply.status; throw e; }
           return j;
         });
       });
@@ -61,14 +61,14 @@
     var cls = p.state === 'on' ? 'green' : p.state === 'away' ? 'amber' : '';
     return '<span class="tag ' + cls + '" data-testid="emp-state-' + esc(p.id) + '"><span aria-hidden="true">' + (p.state === 'off' ? '○' : '●') + '</span> ' + esc(T(STATE_WORD[p.state] || 'On')) + '</span>';
   }
-  function byId(id) { return E.people.filter(function (p) { return p.id === id; })[0] || null; }
+  function byId(id) { return E.people.filter(function (item) { return item.id === id; })[0] || null; }
 
   /* ── the read ── */
   function load() {
     /* the Add form (embed view=add) needs only may/why + the picker: the server answers that without reading the list */
-    return call('GET', '/api/people' + (E.o.embed && E.o.view === 'add' ? '?for=add' : '')).then(function (j) {
-      E.people = j.people || []; E.may = j.may || E.may; E.choices = j.access_choices || []; E.counts = j.counts || E.counts; E.payroll = j.payroll || null; E.loaded = true;
-      return j;
+    return call('GET', '/api/people' + (E.o.embed && E.o.view === 'add' ? '?for=add' : '')).then(function (reply) {
+      E.people = reply.people || []; E.may = reply.may || E.may; E.choices = reply.access_choices || []; E.counts = reply.counts || E.counts; E.payroll = reply.payroll || null; E.loaded = true;
+      return reply;
     });
   }
   function reload() {
@@ -110,7 +110,7 @@
       columns: cols(), defaultCols: ['name', 'user_id', 'access', 'state'],   /* On or off shows by default; Last at a counter is in the ⚙ chooser */
       filters: [
         { key: 'state', label: T('On or off'), all: T('All'), options: [{ v: 'on', label: T('On') }, { v: 'off', label: T('Off') }], match: function (p, v) { return v === 'off' ? p.state === 'off' : p.state !== 'off'; } },
-        { key: 'access', label: T('Can do'), all: T('Anything'), options: E.choices.map(function (c) { return { v: c.label, label: c.label }; }), match: function (p, v) { return p.access.label === v; } }
+        { key: 'access', label: T('Can do'), all: T('Anything'), options: E.choices.map(function (item) { return { v: item.label, label: item.label }; }), match: function (p, v) { return p.access.label === v; } }
       ],
       search: function (p) { return [p.name, p.user_id, p.role, p.access.label, p.phone].join(' '); },
       sorts: [{ key: 'name', label: T('Name'), cmp: function (a, b) { return String(a.name).localeCompare(String(b.name)); } },
@@ -121,9 +121,9 @@
   }
 
   function paintBar() {
-    var b = $('emp_bar'); if (!b) return;
+    var node = $('emp_bar'); if (!node) return;
     var add = E.may.add || { ok: false };
-    b.innerHTML = '<span class="emp-count" data-testid="emp-count"><b>' + (E.counts.on || 0) + '</b> ' + esc(T('on')) + (E.counts.off ? ' · <b>' + E.counts.off + '</b> ' + esc(T('off')) : '') + '</span>'
+    node.innerHTML = '<span class="emp-count" data-testid="emp-count"><b>' + (E.counts.on || 0) + '</b> ' + esc(T('on')) + (E.counts.off ? ' · <b>' + E.counts.off + '</b> ' + esc(T('off')) : '') + '</span>'
       + '<span class="emp-add">' + actRow('emp_add', '＋', T('Add a person'), add) + '</span>'
       /* CX6 (E1): payroll is SAID, not silent — the server's one line, shown while the shop's country pack lists payroll as out of scope */
       + (E.payroll && E.payroll.said ? '<div class="sub" data-testid="emp-payroll" style="flex-basis:100%">' + esc(E.payroll.said) + '</div>' : '');
@@ -132,44 +132,44 @@
 
   /* ── the person sheet: four actions (Add is the list's) ── */
   function sheet(html) {
-    var d = $('emp_sheet');
-    d.innerHTML = '<button type="button" class="mx" id="emp_x" aria-label="' + esc(T('Close')) + '" title="' + esc(T('Close')) + '">✕</button>' + html;
-    if (!d.open) { try { d.showModal(); } catch (_) { d.setAttribute('open', ''); } }
+    var node = $('emp_sheet');
+    node.innerHTML = '<button type="button" class="mx" id="emp_x" aria-label="' + esc(T('Close')) + '" title="' + esc(T('Close')) + '">✕</button>' + html;
+    if (!node.open) { try { node.showModal(); } catch (_) { node.setAttribute('open', ''); } }
     $('emp_x').onclick = closeSheet;
   }
   function closeSheet() {
-    var d = $('emp_sheet'); try { d.close(); } catch (_) { d.removeAttribute('open'); } d.innerHTML = '';
+    var node = $('emp_sheet'); try { node.close(); } catch (_) { node.removeAttribute('open'); } node.innerHTML = '';
     if (E.o.embed && E.o.view === 'add') tell('close');
   }
   function openPerson(id) {
-    var p = byId(id); if (!p) return;
-    var m = p.may;
-    var coverNote = p.cover ? '<span class="sub">' + esc(T('Stands in')) + ': ' + esc(p.cover.name) + '</span>' : '';
-    sheet('<h2 data-testid="emp-name">' + esc(p.name) + '</h2>'
-      + '<div class="emp-sub"><span class="mono" data-testid="emp-userid">' + esc(shortId(p.user_id)) + '</span> ' + stateTag(p) + '</div>'
+    var node = byId(id); if (!node) return;
+    var m = node.may;
+    var coverNote = node.cover ? '<span class="sub">' + esc(T('Stands in')) + ': ' + esc(node.cover.name) + '</span>' : '';
+    sheet('<h2 data-testid="emp-name">' + esc(node.name) + '</h2>'
+      + '<div class="emp-sub"><span class="mono" data-testid="emp-userid">' + esc(shortId(node.user_id)) + '</span> ' + stateTag(node) + '</div>'
       + '<div id="emp_out" class="emp-out" role="status" data-testid="emp-out"></div>'
       + '<div class="emp-acts">'
-      + actRow('emp_access', '🔑', T('What they can do'), m.access, '<span class="sub">' + esc(p.access.label) + '</span>')
-      + actRow('emp_email', '✉️', T('E-mail'), m.email || m.access, '<span class="sub" data-testid="emp-email-now">' + esc(p.email || (p.has_email ? T('On file') : T('None yet'))) + '</span>')
+      + actRow('emp_access', '🔑', T('What they can do'), m.access, '<span class="sub">' + esc(node.access.label) + '</span>')
+      + actRow('emp_email', '✉️', T('E-mail'), m.email || m.access, '<span class="sub" data-testid="emp-email-now">' + esc(node.email || (node.has_email ? T('On file') : T('None yet'))) + '</span>')
       + actRow('emp_pin', '🔢', T('Reset code'), m.reset_pin)
       + actRow('emp_switch', '⏻', m.switch.to === 'on' ? T('Switch on') : T('Switch off'), m.switch,
-          p.jobs && m.switch.to === 'off' ? '<span class="sub">' + esc(p.jobs + ' ' + T('open jobs go to the pool')) + '</span>' : '')
+          node.jobs && m.switch.to === 'off' ? '<span class="sub">' + esc(node.jobs + ' ' + T('open jobs go to the pool')) + '</span>' : '')
       + actRow('emp_cover', '🤝', T('Who stands in'), m.cover, coverNote)
       + '</div><div id="emp_more"></div>');
     var q = function (k) { return $(k); };
-    if (m.access.ok !== false) q('emp_access').onclick = function () { accessPanel(p); };
-    if ((m.email || m.access).ok !== false) q('emp_email').onclick = function () { emailPanel(p); };
-    if (m.reset_pin.ok !== false) q('emp_pin').onclick = function () { resetPin(p, q('emp_pin')); };
-    if (m.switch.ok !== false) q('emp_switch').onclick = function () { switchIt(p, q('emp_switch')); };
-    if (m.cover.ok !== false) q('emp_cover').onclick = function () { coverPanel(p); };
+    if (m.access.ok !== false) q('emp_access').onclick = function () { accessPanel(node); };
+    if ((m.email || m.access).ok !== false) q('emp_email').onclick = function () { emailPanel(node); };
+    if (m.reset_pin.ok !== false) q('emp_pin').onclick = function () { resetPin(node, q('emp_pin')); };
+    if (m.switch.ok !== false) q('emp_switch').onclick = function () { switchIt(node, q('emp_switch')); };
+    if (m.cover.ok !== false) q('emp_cover').onclick = function () { coverPanel(node); };
   }
 
   /** after a write: re-read the one list, repaint the sheet on the fresh row, tell the host */
   function changed(id, event) {
     return load().then(function () {
       if (E.list) E.list.refresh(); paintBar();
-      var p = byId(id); if (p) { var out = $('emp_out'), keep = out ? out.textContent : ''; openPerson(id); if (keep && $('emp_out')) $('emp_out').textContent = keep; }
-      tell(event || 'changed', p ? { id: p.id, name: p.name, user_id: p.user_id } : null);
+      var node = byId(id); if (node) { var out = $('emp_out'), keep = out ? out.textContent : ''; openPerson(id); if (keep && $('emp_out')) $('emp_out').textContent = keep; }
+      tell(event || 'changed', node ? { id: node.id, name: node.name, user_id: node.user_id } : null);
     });
   }
 
@@ -198,14 +198,14 @@
 
   function accessPanel(p) {
     var cur = p.access;
-    var cs = E.choices.map(function (c, i) {
-      var on = c.level === cur.level && c.whole_entity === cur.whole_entity && c.can_see_costs === cur.can_see_costs;
-      return '<label class="emp-opt"><input type="radio" name="emp_lvl" value="' + i + '"' + (on ? ' checked' : '') + ' data-testid="emp-level-' + esc(c.key) + '"> <b>' + esc(c.label) + '</b><span class="sub">' + esc(c.why) + '</span></label>';
+    var cs = E.choices.map(function (item, index) {
+      var on = item.level === cur.level && item.whole_entity === cur.whole_entity && item.can_see_costs === cur.can_see_costs;
+      return '<label class="emp-opt"><input type="radio" name="emp_lvl" value="' + index + '"' + (on ? ' checked' : '') + ' data-testid="emp-level-' + esc(item.key) + '"> <b>' + esc(item.label) + '</b><span class="sub">' + esc(item.why) + '</span></label>';
     }).join('');
     $('emp_more').innerHTML = '<div class="emp-panel">' + cs + '<button type="button" class="act" id="emp_access_go" data-testid="emp-access-go">' + esc(T('Save')) + '</button></div>';
     $('emp_access_go').onclick = function () {
-      var sel = root.document.querySelector('input[name="emp_lvl"]:checked'); if (!sel) return;
-      var c = E.choices[+sel.value];
+      var node = root.document.querySelector('input[name="emp_lvl"]:checked'); if (!node) return;
+      var c = E.choices[+node.value];
       root.CBAction.run($('emp_access_go'), function () {
         return call('PATCH', '/api/actors/' + encodeURIComponent(p.id), { access_level: c.level, hat: HAT_OF[c.level] || 'act', whole_entity: c.whole_entity, can_see_costs: c.can_see_costs });
       }, { key: 'emp-access-' + p.id, failed: T("Couldn't save"), out: 'emp_out', outcome: function () { $('emp_out').textContent = T('Saved.'); changed(p.id); } });
@@ -218,29 +218,29 @@
       + '<input class="inp" id="emp_email_in" data-testid="emp-email-in" type="email" autocomplete="off" value="' + esc(p.email || '') + '">'
       + '<button type="button" class="act" id="emp_email_go" data-testid="emp-email-go">' + esc(T('Save')) + '</button></div>';
     $('emp_email_go').onclick = function () {
-      var v = $('emp_email_in').value.trim();
-      root.CBAction.run($('emp_email_go'), function () { return call('PATCH', '/api/actors/' + encodeURIComponent(p.id), { email: v }); },
+      var node = $('emp_email_in').value.trim();
+      root.CBAction.run($('emp_email_go'), function () { return call('PATCH', '/api/actors/' + encodeURIComponent(p.id), { email: node }); },
         { key: 'emp-email-' + p.id, failed: T("Couldn't save"), out: 'emp_out', outcome: function () { $('emp_out').textContent = T('Saved.'); changed(p.id); } });
     };
   }
 
   function coverPanel(p) {
-    var opts = '<option value="">' + esc(T('No one')) + '</option>' + p.cover_options.map(function (o) {
-      return '<option value="' + esc(o.id) + '"' + (p.cover && p.cover.id === o.id ? ' selected' : '') + '>' + esc(o.name) + '</option>';
+    var opts = '<option value="">' + esc(T('No one')) + '</option>' + p.cover_options.map(function (item) {
+      return '<option value="' + esc(item.id) + '"' + (p.cover && p.cover.id === item.id ? ' selected' : '') + '>' + esc(item.name) + '</option>';
     }).join('');
     $('emp_more').innerHTML = '<div class="emp-panel"><label class="sub" for="emp_cover_sel">' + esc(T('Who covers when they are away?')) + '</label>'
       + '<select id="emp_cover_sel" class="inp" data-testid="emp-cover-sel">' + opts + '</select>'
       + '<button type="button" class="act" id="emp_cover_go" data-testid="emp-cover-go">' + esc(T('Save')) + '</button></div>';
     $('emp_cover_go').onclick = function () {
-      var v = $('emp_cover_sel').value || null;
-      root.CBAction.run($('emp_cover_go'), function () { return call('PUT', '/api/actors/' + encodeURIComponent(p.id) + '/delegate', { delegate_actor_id: v }); },
+      var node = $('emp_cover_sel').value || null;
+      root.CBAction.run($('emp_cover_go'), function () { return call('PUT', '/api/actors/' + encodeURIComponent(p.id) + '/delegate', { delegate_actor_id: node }); },
         { key: 'emp-cover-' + p.id, failed: T("Couldn't save"), out: 'emp_out', outcome: function () { $('emp_out').textContent = T('Saved.'); changed(p.id); } });
     };
   }
 
   /* ── add a person ── */
   function openAdd() {
-    var cs = E.choices.map(function (c, i) { return '<option value="' + i + '"' + (c.key === 'counter' ? ' selected' : '') + '>' + esc(c.label) + '</option>'; }).join('');
+    var cs = E.choices.map(function (item, index) { return '<option value="' + index + '"' + (item.key === 'counter' ? ' selected' : '') + '>' + esc(item.label) + '</option>'; }).join('');
     sheet('<h2>' + esc(T('Add a person')) + '</h2><div id="emp_out" class="emp-out" role="status" data-testid="emp-out"></div>'
       + '<div class="emp-form">'
       + '<label for="emp_n">' + esc(T('Name')) + '</label><input class="inp" id="emp_n" data-testid="emp-add-name" autocomplete="off">'
@@ -258,8 +258,8 @@
       var name = $('emp_n').value.trim();
       if (typedKey || name.length < 2) return;
       tm = setTimeout(function () {
-        call('POST', '/api/actors/suggest-key', { display_name: name }).then(function (j) {
-          if (typedKey) return; $('emp_k').value = j.suggested_key || ''; $('emp_kn').textContent = j.login_format ? T('They sign in as') + ' ' + j.login_format : '';
+        call('POST', '/api/actors/suggest-key', { display_name: name }).then(function (reply) {
+          if (typedKey) return; $('emp_k').value = reply.suggested_key || ''; $('emp_kn').textContent = reply.login_format ? T('They sign in as') + ' ' + reply.login_format : '';
         }, function () {});
       }, 300);
     };
@@ -270,11 +270,11 @@
       var body = { display_name: name, actor_key: key, actor_role: $('emp_r').value.trim() || undefined, phone: $('emp_p').value.trim() || undefined,
         email: $('emp_e').value.trim() || undefined, access_level: c.level, hat: HAT_OF[c.level] || 'act', whole_entity: !!c.whole_entity };
       root.CBAction.run($('emp_add_go'), function () {
-        return call('POST', '/api/actors', body).then(function (r) {
-          var id = r && r.actor && r.actor.identity_id;
+        return call('POST', '/api/actors', body).then(function (reply) {
+          var id = reply && reply.actor && reply.actor.identity_id;
           /* the create takes the level and reach; money-sight is the owner's PATCH (b145), so a preset that carries it is one more call */
           var more = id && c.can_see_costs ? call('PATCH', '/api/actors/' + encodeURIComponent(id), { can_see_costs: true }).catch(function () {}) : Promise.resolve();
-          return more.then(function () { return r; });
+          return more.then(function () { return reply; });
         });
       }, { key: 'emp-add', failed: T("Couldn't add them"), out: 'emp_out', outcome: function (r) { added(r); } });
     };
@@ -289,16 +289,16 @@
         + '<div class="mono" data-testid="emp-added-id">' + esc(shortId((p && p.user_id) || (r.actor && r.actor.login_format))) + '</div>'
         + '<div class="emp-out" data-testid="emp-added-code">' + esc(codeSentence(r)) + '</div>'
         + '<button type="button" class="act" id="emp_done" data-testid="emp-done">' + esc(T('Done')) + '</button>');
-      $('emp_done').onclick = function () { var d = $('emp_sheet'); try { d.close(); } catch (_) {} d.innerHTML = ''; if (E.o.view === 'add') tell('close'); };
+      $('emp_done').onclick = function () { var node = $('emp_sheet'); try { node.close(); } catch (_) {} node.innerHTML = ''; if (E.o.view === 'add') tell('close'); };
       tell('added', { id: id, name: (p && p.name) || (r.actor && r.actor.display_name) || '', user_id: (p && p.user_id) || null });
     });
   }
 
   /* ── on duty: a short read-only list for an embed (who is on) ── */
   function onDuty(host) {
-    var on = E.people.filter(function (p) { return p.state === 'on'; });
-    host.innerHTML = '<div class="emp-duty" data-testid="emp-duty">' + (on.length ? on.map(function (p) {
-      return '<div class="emp-duty-row" data-testid="emp-duty-' + esc(p.id) + '"><b>' + esc(p.name) + '</b> <span class="sub">' + esc(p.access.label) + ' · ' + esc(sinceWord(p.last_at)) + '</span></div>';
+    var on = E.people.filter(function (item) { return item.state === 'on'; });
+    host.innerHTML = '<div class="emp-duty" data-testid="emp-duty">' + (on.length ? on.map(function (item) {
+      return '<div class="emp-duty-row" data-testid="emp-duty-' + esc(item.id) + '"><b>' + esc(item.name) + '</b> <span class="sub">' + esc(item.access.label) + ' · ' + esc(sinceWord(item.last_at)) + '</span></div>';
     }).join('') : '<div class="empty"><div class="t">' + esc(T('No one is on')) + '</div></div>') + '</div>';
   }
 
@@ -312,9 +312,9 @@
         return openAdd();
       }
       E.el.innerHTML = '<div class="emp-top" id="emp_bar" data-testid="emp-bar"></div><div class="emp-list" id="emp_list" data-testid="emp-list"></div><dialog class="sheet" id="emp_sheet" data-testid="emp-sheet"></dialog>';
-      var d = $('emp_sheet');
-      d.addEventListener('cancel', function (e) { e.preventDefault(); closeSheet(); });
-      d.addEventListener('click', function (e) { if (e.target === d) closeSheet(); });
+      var node = $('emp_sheet');
+      node.addEventListener('cancel', function (e) { e.preventDefault(); closeSheet(); });
+      node.addEventListener('click', function (e) { if (e.target === node) closeSheet(); });
       paintBar(); mountList($('emp_list'));
     }, function (e) { paintFail(e); });
   }
