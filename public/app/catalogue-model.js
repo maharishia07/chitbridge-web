@@ -141,7 +141,7 @@
   function orphanModels(method, usedModels) {
     if (!METHOD_MODELS[method]) return [];        // unknown method → nothing is provably orphaned
     var ok = METHOD_MODELS[method];
-    return (usedModels || []).filter(function (u) { return ok.indexOf(u) < 0; });
+    return (usedModels || []).filter(function (item) { return ok.indexOf(item) < 0; });
   }
   var FACETS = ['identity', 'variants', 'units', 'standards', 'media', 'bom', 'pricing', 'loop', 'feedback'];
   var PRICING_MODELS = ['fixed', 'range', 'tiered', 'market-ref', 'negotiated'];
@@ -221,7 +221,7 @@
   ];
   /** The kind a unit belongs to, or null. Used to group the list and to say what may never be added together. */
   function unitKind(u) {
-    for (var i = 0; i < UNIT_KINDS.length; i++) if (UNIT_KINDS[i].units.indexOf(u) >= 0) return UNIT_KINDS[i];
+    for (var index = 0; index < UNIT_KINDS.length; index++) if (UNIT_KINDS[index].units.indexOf(u) >= 0) return UNIT_KINDS[index];
     return null;
   }
   var UNIT_LANGS = [
@@ -274,7 +274,7 @@
   };
   // the whole grammar, in one place — what the AI composes from
   function PALETTE(){ return { datatypes: DATATYPES, priceOrigin: PRICE_ORIGIN, legs: LEGS, viaFor: viaFor, methods: METHODS, facets: FACETS, pricingModels: PRICING_MODELS, standards: STD_SCHEMES, priceBy: PRICE_BY, priceBasis: PRICE_BASIS }; }
-  function leg(k) { for (var i = 0; i < LEGS.length; i++) if (LEGS[i].k === k) return LEGS[i]; return null; }
+  function leg(k) { for (var index = 0; index < LEGS.length; index++) if (LEGS[index].k === k) return LEGS[index]; return null; }
 
   // ---- normalize / migrate a draft to the current shape (moved out of the UI's _ensureCat) ----
   function ensure(c) {
@@ -296,10 +296,10 @@
     if (c.context.region === undefined) c.context.region = '';
     if (!c.standards) c.standards = [];   // Part C · [{scheme, code, label}] — by reference
     if (!c.pricing) c.pricing = [];       // Part D · [{label, basis, by, source, amount, currency, region, validFrom, validTo}]
-    c.pricing.forEach(function (p) {
-      if (!p.basis) p.basis = 'global';
-      if (!p.by) p.by = 'ref';
-      if (p.source === undefined) p.source = '';
+    c.pricing.forEach(function (item) {
+      if (!item.basis) item.basis = 'global';
+      if (!item.by) item.by = 'ref';
+      if (item.source === undefined) item.source = '';
       /**
        * ⭐ THE PROVENANCE OF THE NUMBER — where it was referred from, and when it was read.
        *
@@ -317,26 +317,26 @@
        * They differ by markup, conversion, rounding — and keeping both is what lets someone audit the step
        * between them instead of taking it on trust. Collapsing them would hide exactly the part worth checking.
        */
-      if (p.origin === undefined)  p.origin = '';
-      if (p.url === undefined)     p.url = '';
-      if (p.ref === undefined)     p.ref = '';
-      if (p.at === undefined)      p.at = '';
-      if (p.as_read === undefined) p.as_read = null;
-      if (p.amount === undefined) p.amount = null;
-      if (p.currency === undefined) p.currency = '';
-      if (p.region === undefined) p.region = '';
-      if (p.validFrom === undefined) p.validFrom = '';
-      if (p.validTo === undefined) p.validTo = '';
+      if (item.origin === undefined)  item.origin = '';
+      if (item.url === undefined)     item.url = '';
+      if (item.ref === undefined)     item.ref = '';
+      if (item.at === undefined)      item.at = '';
+      if (item.as_read === undefined) item.as_read = null;
+      if (item.amount === undefined) item.amount = null;
+      if (item.currency === undefined) item.currency = '';
+      if (item.region === undefined) item.region = '';
+      if (item.validFrom === undefined) item.validFrom = '';
+      if (item.validTo === undefined) item.validTo = '';
     });
-    c.fields.forEach(function (f) {
-      if (!f.leg) {                                   // migrate the old {source} shape
-        if (f.source === 'erp') { f.leg = 'system'; f.via = 'ERP'; }
-        else if (f.source === 'iot') { f.leg = 'system'; f.via = 'IoT'; }
-        else { f.leg = 'cb'; }
+    c.fields.forEach(function (item) {
+      if (!item.leg) {                                   // migrate the old {source} shape
+        if (item.source === 'erp') { item.leg = 'system'; item.via = 'ERP'; }
+        else if (item.source === 'iot') { item.leg = 'system'; item.via = 'IoT'; }
+        else { item.leg = 'cb'; }
       }
-      if ((f.leg === 'system' || f.leg === 'compute') && !f.via) f.via = viaFor(f.leg)[0];
+      if ((item.leg === 'system' || item.leg === 'compute') && !item.via) item.via = viaFor(item.leg)[0];
     });
-    c.feedback.forEach(function (fb) { if (fb.format === undefined) fb.format = ''; if (fb.onRail === undefined) fb.onRail = false; });
+    c.feedback.forEach(function (item) { if (item.format === undefined) item.format = ''; if (item.onRail === undefined) item.onRail = false; });
     return c;
   }
 
@@ -410,7 +410,7 @@
   function routeChain(c) {
     c = ensure(c);
     var out = { system: [], customer: [], compute: [], cb: [], feedback: [] };
-    c.fields.forEach(function (f) { (out[f.leg] || out.cb).push({ name: f.name, via: f.via, type: f.type }); });
+    c.fields.forEach(function (item) { (out[item.leg] || out.cb).push({ name: item.name, via: item.via, type: item.type }); });
     if (c.product) out.cb.unshift({ name: c.product + ' (identity)', identity: true });
     if (c.baseUnit) out.cb.unshift({ name: 'units · ' + c.baseUnit, identity: true });
     out.feedback = (c.feedback || []).filter(function (x) { return x.system; })
@@ -422,26 +422,26 @@
   // This is the bridge from a design draft to a runnable co-assist→seal loop.
   function deriveComputeJob(c) {
     c = ensure(c);
-    var feeds = c.fields.filter(function (f) { return f.leg === 'system'; })
-      .map(function (f) { return { name: f.name, via: f.via, type: f.type }; });
-    var computed = c.fields.filter(function (f) { return f.leg === 'compute'; })
-      .map(function (f) { return { name: f.name, via: f.via, type: f.type }; });
-    var fromCustomer = c.fields.filter(function (f) { return f.leg === 'customer'; }).map(function (f) { return f.name; });
-    var stored = c.fields.filter(function (f) { return f.leg === 'cb'; }).map(function (f) { return f.name; });
+    var feeds = c.fields.filter(function (item) { return item.leg === 'system'; })
+      .map(function (item) { return { name: item.name, via: item.via, type: item.type }; });
+    var computed = c.fields.filter(function (item) { return item.leg === 'compute'; })
+      .map(function (item) { return { name: item.name, via: item.via, type: item.type }; });
+    var fromCustomer = c.fields.filter(function (item) { return item.leg === 'customer'; }).map(function (item) { return item.name; });
+    var stored = c.fields.filter(function (item) { return item.leg === 'cb'; }).map(function (item) { return item.name; });
     return {
       product: c.product,
       context: c.context,           // governance: currency + region prices/refs resolve under
-      known_as: (c.refs || []).filter(function (r) { return r.system && r.code; }),
-      standards: (c.standards || []).filter(function (s) { return s.code || s.label; }),   // Part C · by reference
-      pricing: (c.pricing || []).map(function (p) { return resolvePrice(c, p); }),          // Part D · by ref / by value
+      known_as: (c.refs || []).filter(function (item) { return item.system && item.code; }),
+      standards: (c.standards || []).filter(function (item) { return item.code || item.label; }),   // Part C · by reference
+      pricing: (c.pricing || []).map(function (item) { return resolvePrice(c, item); }),          // Part D · by ref / by value
       bom: (c.bom || []).filter(function (b) { return b.item; }),
       feeds: feeds,                 // inputs to the co-assist (from ERP/IoT)
       computed: computed,           // what the co-assist outputs (then sealed)
       fromCustomer: fromCustomer,
       stored: stored,
-      triggers: (c.triggers || []).filter(function (t) { return t.watch || t.value; }),
+      triggers: (c.triggers || []).filter(function (item) { return item.watch || item.value; }),
       feedback: (c.feedback || []).filter(function (x) { return x.system; }),
-      runnable: computed.length > 0 && (c.triggers || []).some(function (t) { return t.action; }),
+      runnable: computed.length > 0 && (c.triggers || []).some(function (item) { return item.action; }),
     };
   }
 
@@ -449,10 +449,10 @@
   function canonicalInputs(c, feedValues) {
     c = ensure(c);
     var inputs = { product: c.product };
-    c.fields.filter(function (f) { return f.leg === 'system'; }).forEach(function (f) {
-      inputs[f.name] = feedValues && (f.name in feedValues) ? feedValues[f.name] : null;
+    c.fields.filter(function (item) { return item.leg === 'system'; }).forEach(function (item) {
+      inputs[item.name] = feedValues && (item.name in feedValues) ? feedValues[item.name] : null;
     });
-    (c.refs || []).forEach(function (r) { if (r.system && r.code) { inputs.known_as = inputs.known_as || {}; inputs.known_as[r.system] = r.code; } });
+    (c.refs || []).forEach(function (item) { if (item.system && item.code) { inputs.known_as = inputs.known_as || {}; inputs.known_as[item.system] = item.code; } });
     return inputs;
   }
 
@@ -480,19 +480,19 @@
     props.product = { type: 'string', title: 'Product', 'x-cb-role': 'identity', 'x-cb-leg': 'cb' };
     if (c.product) required.push('product');
     if (c.baseUnit) props.unit = { type: 'string', title: 'Unit', default: c.baseUnit, 'x-cb-role': 'unit' };
-    (c.fields || []).forEach(function (f) {
-      var base = JSON.parse(JSON.stringify(TYPE_TO_JSONSCHEMA[f.type] || { type: 'string' }));
-      base.title = f.name; base['x-cb-leg'] = f.leg;            // <-- the four-leg overlay: where this field comes from
-      if (f.via) base['x-cb-via'] = f.via;
-      if (f.leg === 'compute') base.readOnly = true;            // computed by a co-assist, then sealed
-      props[_jkey(f.name)] = base;
+    (c.fields || []).forEach(function (item) {
+      var base = JSON.parse(JSON.stringify(TYPE_TO_JSONSCHEMA[item.type] || { type: 'string' }));
+      base.title = item.name; base['x-cb-leg'] = item.leg;            // <-- the four-leg overlay: where this field comes from
+      if (item.via) base['x-cb-via'] = item.via;
+      if (item.leg === 'compute') base.readOnly = true;            // computed by a co-assist, then sealed
+      props[_jkey(item.name)] = base;
     });
-    (c.standards || []).forEach(function (s) { if (s.code || s.scheme) props[_jkey(s.scheme || 'std')] = { type: 'string', title: (s.scheme || 'Standard') + ' code', 'x-cb-role': 'standard-ref', 'x-cb-standard': s.scheme, 'x-cb-ref': true }; });
+    (c.standards || []).forEach(function (item) { if (item.code || item.scheme) props[_jkey(item.scheme || 'std')] = { type: 'string', title: (item.scheme || 'Standard') + ' code', 'x-cb-role': 'standard-ref', 'x-cb-standard': item.scheme, 'x-cb-ref': true }; });
     var schema = { '$schema': 'https://json-schema.org/draft/2020-12/schema', title: c.product || 'Catalogue item', type: 'object', properties: props };
     if (required.length) schema.required = required;
     schema['x-cb-method'] = opts.method || 'cart';                // the whole-catalogue overlay
     schema['x-cb-currency'] = opts.currency || '(entity)';
-    if (opts.facets) schema['x-cb-facets'] = Object.keys(opts.facets).filter(function (k) { return opts.facets[k]; });
+    if (opts.facets) schema['x-cb-facets'] = Object.keys(opts.facets).filter(function (item) { return opts.facets[item]; });
     schema['x-cb-seal'] = 'content-hash on the chit';
     return schema;
   }
@@ -502,9 +502,9 @@
     c = ensure(c);
     var issues = [];
     if (!c.product) issues.push('no product name');
-    c.fields.forEach(function (f) { if (!f.name) issues.push('an unnamed requirement'); });
-    var comp = c.fields.some(function (f) { return f.leg === 'compute'; });
-    if (comp && !c.fields.some(function (f) { return f.leg === 'system'; })) issues.push('a computed field but nothing fed in to compute from');
+    c.fields.forEach(function (item) { if (!item.name) issues.push('an unnamed requirement'); });
+    var comp = c.fields.some(function (item) { return item.leg === 'compute'; });
+    if (comp && !c.fields.some(function (item) { return item.leg === 'system'; })) issues.push('a computed field but nothing fed in to compute from');
     return { ok: issues.length === 0, issues: issues };
   }
 
@@ -542,7 +542,7 @@
     var reg = register || (typeof STANDARDS !== 'undefined' ? STANDARDS : null) || [];
     return STANDARD_REFS.map(function (ref) {
       var r = null;
-      for (var k = 0; k < reg.length; k++) if (reg[k] && reg[k].id === ref.id) { r = reg[k]; break; }
+      for (var index = 0; index < reg.length; index++) if (reg[index] && reg[index].id === ref.id) { r = reg[index]; break; }
       return r ? { id: ref.id, where: ref.where, n: r.n, w: r.w, s: r.s, m: r.m, limit: r.limit } : { id: ref.id, where: ref.where, missing: true };
     });
   }
@@ -660,9 +660,9 @@
   function mergePatch(target, patch) {
     if (patch === null || typeof patch !== 'object' || Array.isArray(patch)) return patch;
     var out = (target && typeof target === 'object' && !Array.isArray(target)) ? Object.assign({}, target) : {};
-    Object.keys(patch).forEach(function (k) {
-      if (patch[k] === null) { delete out[k]; }
-      else { out[k] = mergePatch(out[k], patch[k]); }
+    Object.keys(patch).forEach(function (item) {
+      if (patch[item] === null) { delete out[item]; }
+      else { out[item] = mergePatch(out[item], patch[item]); }
     });
     return out;
   }
@@ -682,29 +682,29 @@
     var prio = (opts.priority != null) ? opts.priority : (SOURCE_PRIORITY[source] || 1);
     var key = itemKey(incoming);
     var existing = null;
-    for (var i = 0; i < items.length; i++) { if (key && itemKey(items[i]) === key) { existing = items[i]; break; } }
+    for (var index = 0; index < items.length; index++) { if (key && itemKey(items[index]) === key) { existing = items[index]; break; } }
     if (!existing) {
       var created = mergePatch({}, incoming);
       created._src = source; created._lineage = {};
-      Object.keys(incoming).forEach(function (f) { if (f.charAt(0) !== '_') created._lineage[f] = { source: source, prio: prio }; });
+      Object.keys(incoming).forEach(function (item) { if (item.charAt(0) !== '_') created._lineage[item] = { source: source, prio: prio }; });
       items.push(created);
       return { items: items, item: created, created: true };
     }
     var lin = existing._lineage || (existing._lineage = {});
-    Object.keys(incoming).forEach(function (f) {
-      if (f.charAt(0) === '_') return;
-      var cur = lin[f];
-      var empty = existing[f] == null || existing[f] === '';
+    Object.keys(incoming).forEach(function (item) {
+      if (item.charAt(0) === '_') return;
+      var cur = lin[item];
+      var empty = existing[item] == null || existing[item] === '';
       if (empty || !cur || prio >= cur.prio) {
-        existing[f] = mergePatch(existing[f], incoming[f]);
-        lin[f] = { source: source, prio: prio };
+        existing[item] = mergePatch(existing[item], incoming[item]);
+        lin[item] = { source: source, prio: prio };
       }
     });
     // Carry display-only meta (e.g. _photo, _media) onto an existing record when it lacks it. These are not tracked in
     // _lineage (they are not four-leg fields), so the field loop above skips them — without this a second source hitting
     // the same SKU would silently lose the image.
-    Object.keys(incoming).forEach(function (f) {
-      if (f.charAt(0) === '_' && f !== '_lineage' && f !== '_src' && (existing[f] == null || existing[f] === '')) existing[f] = incoming[f];
+    Object.keys(incoming).forEach(function (item) {
+      if (item.charAt(0) === '_' && item !== '_lineage' && item !== '_src' && (existing[item] == null || existing[item] === '')) existing[item] = incoming[item];
     });
     return { items: items, item: existing, created: false, updated: true };
   }
