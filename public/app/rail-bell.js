@@ -61,12 +61,12 @@ function line(n) {
   var k = KIND[n.action], subj = n.manual_subject || n.auto_subject || T(W.chit), s = '';
   /* O3: the time is the reader's LOCAL time (the feed's created_at is UTC) - never the raw string */
   if (n.created_at) { try { s = root.CBLocale.datetime(n.created_at, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); } catch (_) {
-    try { var dt = new Date(n.created_at); s = isNaN(dt) ? String(n.created_at).replace('T', ' ').slice(0, 16) : dt.toLocaleString(undefined, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); } catch (_2) { s = String(n.created_at).slice(0, 16); } } }
+    try { var date = new Date(n.created_at); s = isNaN(date) ? String(n.created_at).replace('T', ' ').slice(0, 16) : date.toLocaleString(undefined, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); } catch (_2) { s = String(n.created_at).slice(0, 16); } } }
   /* O3: a NEW incoming order is not a "delivered" - it says what it is, who sent it and what it is worth */
   if (n.purpose === 'order' && n.action === 'delivered' && n.direction === 'received') {
-    var amt = fmtMoney(n.total_value, n.currency_code, ''), how = [n.order_channel === 'online' ? '🌐 ' + T('Online') : '', n.order_fulfilment === 'delivery' ? T('Delivery') : ''].filter(Boolean).join(' · ');
+    var amt = fmtMoney(n.total_value, n.currency_code, ''), list = [n.order_channel === 'online' ? '🌐 ' + T('Online') : '', n.order_fulfilment === 'delivery' ? T('Delivery') : ''].filter(Boolean).join(' · ');
     return { i: '🛍️', mine: !!(n.assigned_to_me || n.dispute_for_me), chit: n.chit_id || null, order: true, who: n.action_by_display_name || '', say: T('sent a new order'), subj: '',
-      d: [amt, how].filter(Boolean).join(' · '), s: s, id: n.log_id || null };
+      d: [amt, list].filter(Boolean).join(' · '), s: s, id: n.log_id || null };
   }
   return { i: k ? k[0] : '•', mine: !!(n.assigned_to_me || n.dispute_for_me), chit: n.chit_id || null, who: n.action_by_display_name || '',
     say: k ? k[1] : String(n.action || 'updated').replace(/_/g, ' '), subj: subj,
@@ -87,7 +87,7 @@ var CSS = '.cbb{position:relative;display:inline-block}'
   + '.cbb-clear{margin-inline-start:auto;border:1px solid var(--line,#DDD6C6);background:var(--card,#fff);color:inherit;border-radius:9px;font:inherit;font-size:var(--fs-1,12px);font-weight:700;padding:6px 12px;cursor:pointer;min-height:32px}'
   + '.cbb-clear[disabled]{opacity:.55;cursor:not-allowed}.cbb-out{font-size:var(--fs-1,12px)}.cbb-out[data-tone=error]{color:var(--disp,#8E3517);font-weight:700}';
 var cssDone = false;
-function addCss() { if (cssDone || !doc) return; cssDone = true; var s = doc.createElement('style'); s.setAttribute('data-cbbell', '1'); s.textContent = CSS; (doc.head || doc.documentElement).appendChild(s); }
+function addCss() { if (cssDone || !doc) return; cssDone = true; var node = doc.createElement('style'); node.setAttribute('data-cbbell', '1'); node.textContent = CSS; (doc.head || doc.documentElement).appendChild(node); }
 
 /** the token of a signed-in person of the shop, or null (signed out, or a customer login) */
 /**
@@ -99,16 +99,16 @@ function call(o, name, opts) {
   if (!o.apiBase && typeof api === 'function') return api(name, opts);
   var e = BELL_EP[name], tok = whoToken(o), base = o.apiBase || o.base || (typeof CFG !== 'undefined' && CFG && CFG.API_BASE) || '';
   return root.fetch(base + e.p, { method: e.m, cache: 'no-store', headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' },
-    body: opts && opts.body ? JSON.stringify(opts.body) : undefined }).then(function (r) {
-    return r.json().catch(function () { return {}; }).then(function (j) {
-      if (!r.ok || (j && j.ok === false)) { var er = new Error((j && (j.error && j.error.message || j.error)) || ('HTTP ' + r.status)); er.status = r.status; er.code = j && (j.code || (j.error && j.error.code)); throw er; }
+    body: opts && opts.body ? JSON.stringify(opts.body) : undefined }).then(function (reply) {
+    return reply.json().catch(function () { return {}; }).then(function (j) {
+      if (!reply.ok || (j && j.ok === false)) { var er = new Error((j && (j.error && j.error.message || j.error)) || ('HTTP ' + reply.status)); er.status = reply.status; er.code = j && (j.code || (j.error && j.error.code)); throw er; }
       return (j && 'ok' in j && 'data' in j) ? j.data : j;
     });
   });
 }
 /* every bell on the page; a bell whose element left the page (its header was redrawn) is closed, so a repaint never leaves a second stream open */
 var LIVE = [];
-function sweep() { LIVE.slice().forEach(function (b) { if (!b.el.isConnected) b.destroy(); }); }
+function sweep() { LIVE.slice().forEach(function (item) { if (!item.el.isConnected) item.destroy(); }); }
 
 function whoToken(o) {
   if (Object.prototype.hasOwnProperty.call(o, 'person') && !o.person) return null;   // the host says nobody is signed in (a token may still be saved)
@@ -157,22 +157,22 @@ function mount(el, o) {
   /** ONE read of the feed (never polled) */
   function read() {
     if (m.dead || !whoToken(o)) return Promise.resolve();
-    return call(o, 'notifications').then(function (r) {
-      if (m.dead) return; m.err = false; m.rows = (r && r.notifications) || []; setCount(r && r.count != null ? r.count : m.rows.length); paint();
+    return call(o, 'notifications').then(function (reply) {
+      if (m.dead) return; m.err = false; m.rows = (reply && reply.notifications) || []; setCount(reply && reply.count != null ? reply.count : m.rows.length); paint();
     }).catch(function () { if (m.dead) return; m.err = true; paint(); });
   }
   /* the stream: ticket -> EventSource; an arrival re-reads once; a drop re-tickets with backoff (a reconnect, not a poll) */
   function connect() {
     if (m.dead || m.es || !root.EventSource || !whoToken(o)) return;
-    call(o, 'eventsTicket').then(function (t) {
+    call(o, 'eventsTicket').then(function (reply) {
       if (m.dead || m.es) return;
-      if (!t || !t.ticket) { retry(); return; }
+      if (!reply || !reply.ticket) { retry(); return; }
       var base = o.apiBase || o.base || (typeof CFG !== 'undefined' && CFG && CFG.API_BASE) || '';
-      var es = new root.EventSource(base + '/api/events/stream?t=' + encodeURIComponent(t.ticket));
-      m.es = es;
-      es.addEventListener('hello', function () { m.up = true; m.backoff = 5000; });
-      es.addEventListener('cb', function () { read(); });
-      es.onerror = function () { try { es.close(); } catch (_) {} m.es = null; m.up = false; retry(); };
+      var node = new root.EventSource(base + '/api/events/stream?t=' + encodeURIComponent(reply.ticket));
+      m.es = node;
+      node.addEventListener('hello', function () { m.up = true; m.backoff = 5000; });
+      node.addEventListener('cb', function () { read(); });
+      node.onerror = function () { try { node.close(); } catch (_) {} m.es = null; m.up = false; retry(); };
     }).catch(retry);
   }
   function retry() { if (m.dead || !whoToken(o)) return; clearTimeout(m.timer); m.timer = setTimeout(connect, m.backoff); m.backoff = Math.min(m.backoff * 2, 60000); }
@@ -185,9 +185,9 @@ function mount(el, o) {
   }
   function onClick(ev) {
     ev.__cbbIn = true;    /* this press was ours: its target is repainted away, so the document handler cannot tell by contains() */
-    var t = ev.target; if (!t.closest) return;
-    if (t.closest('[data-testid="bell-btn"]')) { toggle(); return; }
-    var r = t.closest('[data-testid="bell-row"]');
+    var node = ev.target; if (!node.closest) return;
+    if (node.closest('[data-testid="bell-btn"]')) { toggle(); return; }
+    var r = node.closest('[data-testid="bell-row"]');
     if (r && r.getAttribute('data-chit')) {
       var id = r.getAttribute('data-chit'); m.open = false; paint();
       if (typeof o.onOpen === 'function') o.onOpen(id);
@@ -199,7 +199,7 @@ function mount(el, o) {
       else root.location.href = '/crm.html#/chits?open=' + encodeURIComponent(id);
       return;
     }
-    var c = t.closest('[data-testid="bell-clear"]');
+    var c = node.closest('[data-testid="bell-clear"]');
     if (c && !c.disabled) clearAll(c);
   }
   function clearAll(btn) {
