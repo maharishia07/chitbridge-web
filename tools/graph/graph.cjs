@@ -42,7 +42,7 @@ const S = require('./scan.cjs');
 /* ── args ─────────────────────────────────────────────────────────────────────────────────────────────────────────── */
 const argv = process.argv.slice(2);
 const flag = (name, dflt) => { const i = argv.indexOf('--' + name); return i >= 0 ? (argv[i + 1] == null || /^--/.test(argv[i + 1]) ? true : argv[i + 1]) : dflt; };
-const positional = argv.filter((a, i) => !/^--/.test(a) && !(i > 0 && /^--(roots|out|depth|top|repo|endpoint-usage)$/.test(argv[i - 1])));
+const positional = argv.filter((item, index) => !/^--/.test(item) && !(index > 0 && /^--(roots|out|depth|top|repo|endpoint-usage)$/.test(argv[index - 1])));
 const CMD = positional[0];
 const ARG = positional[1];
 const HERE = __dirname;
@@ -50,7 +50,7 @@ const WEB_DEFAULT = path.resolve(HERE, '..', '..');
 const ROOTS = { web: WEB_DEFAULT, api: path.resolve(WEB_DEFAULT, '..', 'chitbridge-api'), engines: path.resolve(WEB_DEFAULT, '..', 'chitbridge-engines') };
 if (process.env.CB_GRAPH_ROOTS) parseRoots(process.env.CB_GRAPH_ROOTS);
 if (flag('roots')) parseRoots(flag('roots'));
-function parseRoots(s) { String(s).split(',').forEach((kv) => { const m = /^(web|api|engines)=(.+)$/.exec(kv.trim()); if (m) ROOTS[m[1]] = path.resolve(m[2]); }); }
+function parseRoots(s) { String(s).split(',').forEach((item) => { const m = /^(web|api|engines)=(.+)$/.exec(item.trim()); if (m) ROOTS[m[1]] = path.resolve(m[2]); }); }
 const OUT = path.resolve(flag('out', path.join(HERE, 'out')));
 const JSON_OUT = !!flag('json', false);
 /* depth of the reverse walk: 4 by default — app.html is one window, so an unlimited walk from any shared helper reaches every
@@ -128,56 +128,56 @@ function build() {
     walk(path.join(W, 'e2e'), (p) => /\.(cjs|js|mjs)$/.test(p) && path.dirname(p) === path.join(W, 'e2e')),
     walk(path.join(W, 'tests'), (p) => /\.(cjs|js|mjs)$/.test(p)),
     walk(path.join(W, 'scripts'), (p) => /\.test\.(cjs|js|mjs)$/.test(p))).sort();
-  webTests.forEach((p) => addFile('web', p, 'test'));
+  webTests.forEach((item) => addFile('web', item, 'test'));
   /* api */
   if (meta.present.api) {
-    ['lib', 'routes', 'src', 'middleware', 'governance', 'tools', 'scripts'].forEach((d) => walk(path.join(A, d), (p) => /\.c?js$/.test(p) && !/\.test\.c?js$/.test(p)).sort().forEach((p) => addFile('api', p, /\/routes\//.test(p) ? 'route-file' : 'api-lib')));
+    ['lib', 'routes', 'src', 'middleware', 'governance', 'tools', 'scripts'].forEach((item) => walk(path.join(A, item), (p) => /\.c?js$/.test(p) && !/\.test\.c?js$/.test(p)).sort().forEach((p) => addFile('api', p, /\/routes\//.test(p) ? 'route-file' : 'api-lib')));
     addFile('api', path.join(A, 'server.js'), 'api-lib');
-    walk(path.join(A, 'tests'), (p) => /\.(test\.)?(cjs|js)$/.test(p) && !/\/(fixtures|support|helpers?)\//.test(p)).sort().forEach((p) => addFile('api', p, 'test'));
+    walk(path.join(A, 'tests'), (p) => /\.(test\.)?(cjs|js)$/.test(p) && !/\/(fixtures|support|helpers?)\//.test(p)).sort().forEach((item) => addFile('api', item, 'test'));
     /* the counter's pages (the till master and promo) are own code with a trace row: screens of the api repo (INT7b) */
     walk(path.join(A, 'tools', 'tally-connector'), (filePath) => /\.html$/.test(filePath) && path.dirname(filePath) === path.join(A, 'tools', 'tally-connector')).sort().forEach((filePath) => addFile('api', filePath, 'page'));
   }
   /* engines */
   if (meta.present.engines) {
-    walk(path.join(E, 'src'), (p) => /\.js$/.test(p)).sort().forEach((p) => addFile('engines', p, /\/reg-[a-z]+\.js$/.test(p) ? 'pack' : 'engine'));
+    walk(path.join(E, 'src'), (p) => /\.js$/.test(p)).sort().forEach((item) => addFile('engines', item, /\/reg-[a-z]+\.js$/.test(item) ? 'pack' : 'engine'));
     addFile('engines', path.join(E, 'index.js'), 'engine');
-    walk(path.join(E, 'tests'), (p) => /\.(cjs|js)$/.test(p) && !/\/fixtures\//.test(p)).sort().forEach((p) => addFile('engines', p, 'test'));
+    walk(path.join(E, 'tests'), (p) => /\.(cjs|js)$/.test(p) && !/\/fixtures\//.test(p)).sort().forEach((item) => addFile('engines', item, 'test'));
   }
 
   /* ── 2 · scan every file ─────────────────────────────────────────────────────────────────────────────────────── */
   const byId = new Map();   // fileId -> record
   for (const f of files) {
     f.id = (f.kind === 'test' ? 'test:' : f.kind === 'page' ? 'screen:' : 'file:') + f.repo + ':' + f.rel;
-    const src = read(f.abs);
-    f.src = src;
+    const text = read(f.abs);
+    f.src = text;
     if (f.kind === 'page') {
-      const h = S.scanHtml(src);
+      const h = S.scanHtml(text);
       f.scripts = h.scripts; f.markupHandlers = h.handlers;
       f.scan = { code: '', strings: [], joinedPaths: [], functions: [], calls: [], requires: [], exports: [], globals: [], apiKeys: [], apiPaths: [], handlers: [] };
       /* a page's code view is the inline blocks laid at their offsets, so positions are page positions */
-      let code = src.replace(/[^\n]/g, ' ');
+      let code = text.replace(/[^\n]/g, ' ');
       for (const b of h.inline) {
         const j = S.scanJs(b.code, { baseLine: b.baseLine });
         code = code.slice(0, b.offset) + j.code + code.slice(b.offset + j.code.length);
         const shift = (arr) => arr.forEach((x) => { if (x.pos != null) x.pos += b.offset; if (x.start != null) x.start += b.offset; if (x.end != null) x.end += b.offset; if (x.paramsAt != null) x.paramsAt += b.offset; if (x.declAt != null) x.declAt += b.offset; });
-        ['strings', 'joinedPaths', 'functions', 'calls', 'requires', 'apiKeys', 'apiPaths', 'handlers'].forEach((k) => { shift(j[k]); f.scan[k] = f.scan[k].concat(j[k]); });
+        ['strings', 'joinedPaths', 'functions', 'calls', 'requires', 'apiKeys', 'apiPaths', 'handlers'].forEach((item) => { shift(j[item]); f.scan[item] = f.scan[item].concat(j[item]); });
         f.scan.exports = f.scan.exports.concat(j.exports); f.scan.globals = f.scan.globals.concat(j.globals);
       }
       f.scan.code = code;
-      f.scan.toLine = S.lineIndex(src);
-      f.scan.functions.sort((a, b) => a.start - b.start || b.end - a.end);
+      f.scan.toLine = S.lineIndex(text);
+      f.scan.functions.sort((first, second) => first.start - second.start || second.end - first.end);
     } else {
-      f.scan = S.scanJs(src);
-      f.scan.toLine = f.scan.toLine || S.lineIndex(src);
+      f.scan = S.scanJs(text);
+      f.scan.toLine = f.scan.toLine || S.lineIndex(text);
     }
     /* the vendored-engine header: "ADOPTED from chitbridge-engines vX · name" */
-    const ad = /ADOPTED from chitbridge-engines v[\d.]+ · ([a-z0-9-]+)/.exec(src.slice(0, 400));
+    const ad = /ADOPTED from chitbridge-engines v[\d.]+ · ([a-z0-9-]+)/.exec(text.slice(0, 400));
     if (ad) f.adopted = ad[1];
     /* a single `module.exports = EXPORTS` where EXPORTS is an object literal */
     if (f.scan.exports.length === 1 && new RegExp('(?:const|var|let)\\s+' + f.scan.exports[0].replace(/\$/g, '\\$') + '\\s*=\\s*\\{').test(f.scan.code)) {
       const m = new RegExp('(?:const|var|let)\\s+' + f.scan.exports[0].replace(/\$/g, '\\$') + '\\s*=\\s*\\{').exec(f.scan.code);
       const open = m.index + m[0].length - 1, close = S.matchBracket(f.scan.code, open);
-      if (close > 0) f.scan.exports = f.scan.code.slice(open + 1, close).split(',').map((p) => (/^\s*([A-Za-z_$][\w$]*)/.exec(p) || [])[1]).filter((x) => x && !S.KEYWORDS.has(x));
+      if (close > 0) f.scan.exports = f.scan.code.slice(open + 1, close).split(',').map((item) => (/^\s*([A-Za-z_$][\w$]*)/.exec(item) || [])[1]).filter((x) => x && !S.KEYWORDS.has(x));
     }
     byId.set(f.id, f);
   }
@@ -203,18 +203,18 @@ function build() {
     /* the sweep above is O(n) per lookup; make it O(log n) with a sorted array of starts + a parent chain */
     const starts = fns.map((x) => x.start);
     const ownerFast = (pos) => {
-      let lo = 0, hi = starts.length - 1, idx = -1;
-      while (lo <= hi) { const mid = (lo + hi) >> 1; if (starts[mid] <= pos) { idx = mid; lo = mid + 1; } else hi = mid - 1; }
+      let count = 0, hi = starts.length - 1, idx = -1;
+      while (count <= hi) { const mid = (count + hi) >> 1; if (starts[mid] <= pos) { idx = mid; count = mid + 1; } else hi = mid - 1; }
       let fn = idx >= 0 ? fns[idx] : null;
       while (fn && fn.end < pos) fn = fn.parent;
       return fn;
     };
     f.owner = fns.length > 400 ? ownerFast : owner;
-    f.scan.calls.forEach((c) => { c.owner = f.owner(c.pos); });
-    f.scan.handlers.forEach((c) => { c.owner = f.owner(c.pos); });
-    f.scan.apiKeys.forEach((c) => { c.owner = f.owner(c.pos); });
-    f.scan.apiPaths.forEach((c) => { c.owner = f.owner(c.pos); });
-    f.scan.strings.forEach((s) => { s.owner = f.owner(s.start); });
+    f.scan.calls.forEach((item) => { item.owner = f.owner(item.pos); });
+    f.scan.handlers.forEach((item) => { item.owner = f.owner(item.pos); });
+    f.scan.apiKeys.forEach((item) => { item.owner = f.owner(item.pos); });
+    f.scan.apiPaths.forEach((item) => { item.owner = f.owner(item.pos); });
+    f.scan.strings.forEach((item) => { item.owner = f.owner(item.start); });
     /* nodes for files (not pages — a page IS its screen node — and not tests, which are test nodes) */
     if (f.kind === 'page') node(f.id, { kind: 'screen', screen: 'page', repo: f.repo, file: f.rel, lab: /-(lab|design|next)\.html$|design-mock|screen-gallery|lifecycle-test|shell-lab/.test(f.rel) });
     else if (f.kind === 'test') node(f.id, { kind: 'test', repo: f.repo, file: f.rel });
@@ -229,8 +229,8 @@ function build() {
   if (meta.present.api && exists(EU)) {
     const r = spawnSync(process.execPath, [EU, '--json'], { encoding: 'utf8', maxBuffer: 64 << 20, env: Object.assign({}, process.env, { CB_API_DIR: A, CB_WEB_DIR: W }) });
     try {
-      const j = JSON.parse(r.stdout);
-      mounts = j.mounts || null; euRows = j.routes || null; registry = j.registry || null;
+      const parsed = JSON.parse(r.stdout);
+      mounts = parsed.mounts || null; euRows = parsed.routes || null; registry = parsed.registry || null;
       if (!registry) meta.notes.push('api tools/endpoint-usage.cjs --json hands back no `registry` (it predates KG1): api(\'key\') calls cannot be joined to routes — update the api');
       if (!mounts) meta.notes.push('api tools/endpoint-usage.cjs --json hands back no `mounts`');
     } catch (e) { meta.notes.push('api tools/endpoint-usage.cjs --json did not answer (' + String(e.message).slice(0, 80) + '): screen→route joins fall back to route-file names'); }
@@ -238,7 +238,7 @@ function build() {
     meta.notes.push('api tools/endpoint-usage.cjs is not in the api checkout: mounts and the client registry are unknown — route paths are guessed from the route file name (/api/<file>) and api(\'key\') calls are not joined');
   }
   meta.endpointUsage = registry ? 'registry+mounts' : mounts ? 'mounts' : 'absent';
-  if (euRows) meta.endpointUsageCounts = { routes: euRows.length, calledByRegistry: euRows.filter((r) => r.calls > 0).length };
+  if (euRows) meta.endpointUsageCounts = { routes: euRows.length, calledByRegistry: euRows.filter((item) => item.calls > 0).length };
   const pathIndex = new Map();   // norm(METHOD path) -> route id
   for (const f of files) {
     if (f.kind !== 'route-file') continue;
@@ -260,7 +260,7 @@ function build() {
       if (!s) continue;
       found.push({ method, tail: s.text, start: m.index, line: f.scan.toLine(m.index) });
     }
-    found.forEach((r, i) => { r.end = i + 1 < found.length ? found[i + 1].start : code.length; });
+    found.forEach((item, index) => { item.end = index + 1 < found.length ? found[index + 1].start : code.length; });
     const base = (mounts && mounts[path.basename(f.rel)]) || '/api/' + path.basename(f.rel, '.js');
     const guessed = !(mounts && mounts[path.basename(f.rel)]);
     for (const r of found) {
@@ -282,9 +282,9 @@ function build() {
     const n = norm(p);
     const out = [];
     for (const [k, id] of pathIndex) {
-      const [mth, np] = [k.slice(0, k.indexOf(' ')), k.slice(k.indexOf(' ') + 1)];
+      const [mth, text] = [k.slice(0, k.indexOf(' ')), k.slice(k.indexOf(' ') + 1)];
       if (mth !== method) continue;
-      if (open ? (np === n + '/:p' || np.startsWith(n + '/:p/') || np.startsWith(n + '/')) : np === n) out.push(id);
+      if (open ? (text === n + '/:p' || text.startsWith(n + '/:p/') || text.startsWith(n + '/')) : text === n) out.push(id);
     }
     return out.slice(0, 6);
   };
@@ -301,24 +301,24 @@ function build() {
         (n.declaredIn = n.declaredIn || []).includes(rel('api', p)) || n.declaredIn.push(rel('api', p));
       }
     }
-    meta.counts.tablesDeclared = [...nodes.values()].filter((n) => n.kind === 'table').length;
+    meta.counts.tablesDeclared = [...nodes.values()].filter((item) => item.kind === 'table').length;
   }
 
   /* ── 6 · scopes and indexes for resolution ──────────────────────────────────────────────────────────────────── */
-  const webFiles = files.filter((f) => f.repo === 'web' && f.kind !== 'test');
-  const webByRel = new Map(webFiles.map((f) => [f.rel, f]));
-  const resolveWebSrc = (page, src) => {
-    if (/^https?:|^\/\//.test(src)) return null;
-    const clean = src.split('?')[0];
+  const webFiles = files.filter((item) => item.repo === 'web' && item.kind !== 'test');
+  const webByRel = new Map(webFiles.map((item) => [item.rel, item]));
+  const resolveWebSrc = (page, text) => {
+    if (/^https?:|^\/\//.test(text)) return null;
+    const clean = text.split('?')[0];
     const relp = clean.startsWith('/') ? 'public' + clean : path.posix.normalize(path.posix.join(path.posix.dirname(page.rel), clean));
     return webByRel.get(relp) || null;
   };
   const pageScope = new Map();   // page -> Set(fileRec)
-  const appScripts = webFiles.filter((f) => /^public\/app\/.+\.js$/.test(f.rel));
-  for (const page of webFiles.filter((f) => f.kind === 'page')) {
+  const appScripts = webFiles.filter((item) => /^public\/app\/.+\.js$/.test(item.rel));
+  for (const page of webFiles.filter((item) => item.kind === 'page')) {
     const set = new Set([page]);
-    (page.scripts || []).forEach((s) => { const f = resolveWebSrc(page, s.src); if (f) set.add(f); });
-    if (page.rel === 'public/app.html') appScripts.forEach((f) => set.add(f));
+    (page.scripts || []).forEach((item) => { const f = resolveWebSrc(page, item.src); if (f) set.add(f); });
+    if (page.rel === 'public/app.html') appScripts.forEach((item) => set.add(item));
     /* files a page (or its scripts) names by path — lazily added scripts */
     for (const f of [...set]) for (const s of f.scan.strings) { const m = /^\/?((?:app|engine)\/[\w.-]+\.js)$/.exec(s.text); if (m) { const g = webByRel.get('public/' + m[1]); if (g) set.add(g); } }
     pageScope.set(page, set);
@@ -326,8 +326,8 @@ function build() {
   const fileScope = new Map();   // fileRec -> Set(fileRec)
   for (const f of webFiles) {
     const set = new Set([f]);
-    for (const [page, scope] of pageScope) if (scope.has(f)) scope.forEach((g) => set.add(g));
-    if (set.size === 1 && /^public\/app\//.test(f.rel)) (pageScope.get(webByRel.get('public/app.html')) || new Set()).forEach((g) => set.add(g));
+    for (const [page, scope] of pageScope) if (scope.has(f)) scope.forEach((item) => set.add(item));
+    if (set.size === 1 && /^public\/app\//.test(f.rel)) (pageScope.get(webByRel.get('public/app.html')) || new Set()).forEach((item) => set.add(item));
     fileScope.set(f, set);
   }
   /* per file: name -> [fn], and top-level name -> [fn] */
@@ -342,8 +342,8 @@ function build() {
   /* api / engines: require resolution */
   const resolveSpec = (f, spec) => {
     if (spec === 'chitbridge-engines' || /^chitbridge-engines\//.test(spec)) {
-      const sub = spec.replace(/^chitbridge-engines\/?/, '') || 'index.js';
-      return byId.get('file:engines:' + (sub.endsWith('.js') ? sub : sub + '.js')) || byId.get('file:engines:index.js') || null;
+      const text = spec.replace(/^chitbridge-engines\/?/, '') || 'index.js';
+      return byId.get('file:engines:' + (text.endsWith('.js') ? text : text + '.js')) || byId.get('file:engines:index.js') || null;
     }
     if (!/^\.\.?\//.test(spec)) return null;
     const base = path.posix.normalize(path.posix.join(path.posix.dirname(f.rel), spec));
@@ -417,7 +417,7 @@ function build() {
       if (targets.length) link(from, targets, c.holder ? 'member' : undefined);
     }
     for (const h of f.scan.handlers) link(fromNode(f, h.owner, h.pos), resolveBare(f, h.name), 'handler');
-    (f.markupHandlers || []).forEach((h) => link(f.id, resolveBare(f, h.name), 'markup'));
+    (f.markupHandlers || []).forEach((item) => link(f.id, resolveBare(f, item.name), 'markup'));
     /* callbacks passed by name — only names shaped like this codebase's functions (camelCase or snake_case, ≥ 6 chars):
        `list`, `read`, `open`, `money` are variable names a thousand times over and would wire everything to everything */
     const names = new Set();
@@ -441,7 +441,7 @@ function build() {
       const from = fromNode(f, p.owner, p.pos);
       let method = p.method;
       /* `call('POST', '/api/…')` — the method sits just BEFORE the path in the api's tests */
-      const before = f.scan.strings.filter((s) => s.start < p.pos && s.start > p.pos - 40 && /^(GET|POST|PUT|PATCH|DELETE)$/.test(s.text));
+      const before = f.scan.strings.filter((item) => item.start < p.pos && item.start > p.pos - 40 && /^(GET|POST|PUT|PATCH|DELETE)$/.test(item.text));
       if (before.length) method = before[before.length - 1].text;
       const ids = resolvePath(method, p.path, p.open);
       for (const id of ids) { if (isTest) edge(id, f.id, 'tested-by', 'http'); else { edge(from, id, 'calls', 'http'); callEdges.push([from, id, 'http']); } }
@@ -452,7 +452,7 @@ function build() {
       for (const s of f.scan.strings) { if (!/\b(FROM|JOIN|INTO|UPDATE|DELETE|TRUNCATE)\b/.test(s.text)) continue; const from = fromNode(f, s.owner, s.start); (groups.get(from) || groups.set(from, []).get(from)).push(s.text); }
       for (const [from, texts] of groups) {
         const text = texts.join('\n');
-        const ctes = new Set([...text.matchAll(/\b([a-z_][\w]*)\s+AS\s*\(/g)].map((m) => m[1]));
+        const ctes = new Set([...text.matchAll(/\b([a-z_][\w]*)\s+AS\s*\(/g)].map((item) => item[1]));
         const { reads, writes } = S.sqlTables(text);
         for (const t of reads) if (!ctes.has(t)) { node('table:' + t, { kind: 'table', name: t }); edge(from, 'table:' + t, 'reads'); }
         for (const t of writes) if (!ctes.has(t)) { node('table:' + t, { kind: 'table', name: t }); edge(from, 'table:' + t, 'writes'); }
@@ -480,14 +480,14 @@ function build() {
   for (const n of nodes.values()) if (n.kind === 'table' && !n.declared) n.declared = false;
 
   /* ── 8 · packs ──────────────────────────────────────────────────────────────────────────────────────────────── */
-  const packs = files.filter((f) => f.kind === 'pack');
+  const packs = files.filter((item) => item.kind === 'pack');
   for (const p of packs) {
     const code = /reg-([a-z]+)\.js$/.exec(p.rel)[1].toUpperCase();
     node('pack:engines:' + p.rel, { kind: 'pack', code, file: p.rel, repo: 'engines' });
     edge('pack:engines:' + p.rel, p.id, 'requires');
     for (const f of files) {
       if (f === p) continue;
-      const mentions = f.scan.strings.some((s) => s.text.includes('reg-' + code.toLowerCase())) || new RegExp('PACKS\\s*(?:\\.' + code + '\\b|\\[\\s*$)').test(f.scan.code) || f.scan.strings.some((s) => s.text === code && f.scan.code.includes('PACKS['));
+      const mentions = f.scan.strings.some((item) => item.text.includes('reg-' + code.toLowerCase())) || new RegExp('PACKS\\s*(?:\\.' + code + '\\b|\\[\\s*$)').test(f.scan.code) || f.scan.strings.some((item) => item.text === code && f.scan.code.includes('PACKS['));
       if (mentions) edge(f.kind === 'test' ? f.id : f.id, 'pack:engines:' + p.rel, f.kind === 'test' ? 'tested-by' : 'uses');
     }
   }
@@ -499,11 +499,11 @@ function build() {
   const app = webByRel.get('public/app.html');
   if (app) {
     const code = app.scan.code;
-    const strAt = new Map(app.scan.strings.map((s) => [s.start, s]));
+    const strAt = new Map(app.scan.strings.map((item) => [item.start, item]));
     const navCalls = new Map();   // nav -> Set(fn id)
     const setFor = (nav) => navCalls.get(nav) || navCalls.set(nav, new Set()).get(nav);
     const screenShaped = (n) => /Screen$|HTML$|Load$|^(load|render|paint|open)[A-Z]/.test(n);
-    const topOnly = (name) => (app.declTop.get(name) || []).concat(...[...(fileScope.get(app) || [])].filter((g) => g !== app).map((g) => g.declTop.get(name) || []));
+    const topOnly = (name) => (app.declTop.get(name) || []).concat(...[...(fileScope.get(app) || [])].filter((item) => item !== app).map((item) => item.declTop.get(name) || []));
     /* (a) `if(UI.nav==="x") return xScreen()` — the calls on that line, and a capScreen("name") string */
     const re = /\bUI\.nav\s*===?\s*(['"])/g;
     let m;
@@ -539,14 +539,14 @@ function build() {
     const folderNavs = new Set();
     for (const fm of code.matchAll(/UI\.folder\s*=\s*(['"])/g)) { const s = strAt.get(fm.index + fm[0].length); if (s && byNav[s.text]) folderNavs.add(s.text); }
     for (const fm of code.matchAll(/\[((?:\s*(['"])\s*\2\s*,?)+)\]\.indexOf\(\s*_deep\[1\]\s*\)/g)) { let k = fm.index; while ((k = code.indexOf('"', k + 1)) >= 0 && k < fm.index + fm[0].length) { const s = strAt.get(k + 1); if (s && byNav[s.text]) folderNavs.add(s.text); } }
-    for (const nav of new Set([...Object.keys(byNav), ...navCalls.keys()])) {
-      const id = 'screen:web:public/app.html#' + nav;
-      const meta2 = byNav[nav] || {};
-      node(id, { kind: 'screen', screen: 'nav', repo: 'web', file: 'public/app.html', nav, code: meta2.code, label: meta2.label, path: meta2.path });
+    for (const text of new Set([...Object.keys(byNav), ...navCalls.keys()])) {
+      const id = 'screen:web:public/app.html#' + text;
+      const meta2 = byNav[text] || {};
+      node(id, { kind: 'screen', screen: 'nav', repo: 'web', file: 'public/app.html', nav: text, code: meta2.code, label: meta2.label, path: meta2.path });
       edge(app.id, id, 'calls', 'nav');
-      let set = navCalls.get(nav) || new Set();
-      if (!set.size) { const cap = nav.replace(/-(\w)/g, (x, c) => c.toUpperCase()); for (const cand of [cap + 'Screen', 'load' + cap[0].toUpperCase() + cap.slice(1), 'render' + cap[0].toUpperCase() + cap.slice(1)]) for (const t of topOnly(cand)) set.add(t.id); }
-      if (!set.size && folderNavs.has(nav) && navCalls.get('task')) { set = navCalls.get('task'); for (const t of set) edge(id, t, 'calls', 'dispatch:folder'); continue; }
+      let set = navCalls.get(text) || new Set();
+      if (!set.size) { const cap = text.replace(/-(\w)/g, (x, c) => c.toUpperCase()); for (const cand of [cap + 'Screen', 'load' + cap[0].toUpperCase() + cap.slice(1), 'render' + cap[0].toUpperCase() + cap.slice(1)]) for (const t of topOnly(cand)) set.add(t.id); }
+      if (!set.size && folderNavs.has(text) && navCalls.get('task')) { set = navCalls.get('task'); for (const t of set) edge(id, t, 'calls', 'dispatch:folder'); continue; }
       for (const t of set) edge(id, t, 'calls', 'dispatch');
     }
   }
@@ -579,7 +579,7 @@ function build() {
   let unresolvedStepRefs = 0, stepCount = 0;
   if (exists(flowsPath)) {
     const MAP = JSON.parse(read(flowsPath));
-    const modulePage = {}; (MAP.modules || []).forEach((m) => { modulePage[m.id] = m.page; });
+    const modulePage = {}; (MAP.modules || []).forEach((item) => { modulePage[item.id] = item.page; });
     const refFn = (ref, fn) => { const m = /^(web|api|engines):(.+)$/.exec(ref || ''); if (!m) return null; const f = byId.get('file:' + m[1] + ':' + m[2]) || byId.get('screen:' + m[1] + ':' + m[2]); if (!f) return meta.present[m[1]] ? null : 'absent'; if (!fn) return f.id; const d = fnsNamed(f, fn, false); return d.length ? d[0].id : null; };
     for (const flow of MAP.flows || []) for (const s of flow.steps || []) {
       stepCount++;
@@ -600,32 +600,32 @@ function build() {
   meta.notes.push('no decisions file exists in web, api or engines (searched for *decision* files and "# Decisions" headings): the decision node kind and decided-by edges are skipped');
 
   /* ── 11 · write ─────────────────────────────────────────────────────────────────────────────────────────────── */
-  const N = [...nodes.values()].sort((a, b) => a.id < b.id ? -1 : 1);
-  const Ed = [...edges.values()].sort((a, b) => (a.from + a.to + a.kind + (a.via || '')) < (b.from + b.to + b.kind + (b.via || '')) ? -1 : 1);
-  const kinds = {}; N.forEach((n) => { kinds[n.kind] = (kinds[n.kind] || 0) + 1; });
+  const list = [...nodes.values()].sort((first, second) => first.id < second.id ? -1 : 1);
+  const Ed = [...edges.values()].sort((first, second) => (first.from + first.to + first.kind + (first.via || '')) < (second.from + second.to + second.kind + (second.via || '')) ? -1 : 1);
+  const kinds = {}; list.forEach((item) => { kinds[item.kind] = (kinds[item.kind] || 0) + 1; });
   const ekinds = {}; Ed.forEach((e) => { ekinds[e.kind] = (ekinds[e.kind] || 0) + 1; });
   meta.counts.nodes = kinds; meta.counts.edges = ekinds; meta.ms = Date.now() - t0;
   fs.mkdirSync(OUT, { recursive: true });
   const calls = {
     generated: meta.generated, meta: { present: meta.present, endpointUsage: meta.endpointUsage },
-    functions: N.filter((n) => n.kind === 'function').map((n) => ({ id: n.id, name: n.name, repo: n.repo, file: n.file, line: n.line, endLine: n.endLine, top: n.top })),
+    functions: list.filter((item) => item.kind === 'function').map((item) => ({ id: item.id, name: item.name, repo: item.repo, file: item.file, line: item.line, endLine: item.endLine, top: item.top })),
     calls: Ed.filter((e) => e.kind === 'calls' && !e.via).map((e) => [e.from, e.to]),
     refs: Ed.filter((e) => e.kind === 'calls' && /^(ref|handler|markup|member)$/.test(e.via || '')).map((e) => [e.from, e.to, e.via]),
-    screenToRoute: screenRoutes(N, Ed),
+    screenToRoute: screenRoutes(list, Ed),
     http: Ed.filter((e) => e.kind === 'calls' && e.via === 'http').map((e) => [e.from, e.to]),
     routeToTable: Ed.filter((e) => /^(reads|writes)$/.test(e.kind) && e.from.startsWith('route:')).map((e) => [e.from, e.to, e.kind]),
     fnToTable: Ed.filter((e) => /^(reads|writes)$/.test(e.kind) && e.from.startsWith('fn:')).map((e) => [e.from, e.to, e.kind]),
   };
   fs.writeFileSync(path.join(OUT, 'calls.json'), JSON.stringify(calls));
-  fs.writeFileSync(path.join(OUT, 'graph.json'), JSON.stringify({ generated: meta.generated, meta, nodes: N, edges: Ed }));
+  fs.writeFileSync(path.join(OUT, 'graph.json'), JSON.stringify({ generated: meta.generated, meta, nodes: list, edges: Ed }));
   if (!JSON_OUT) {
     console.log('\n  graph built in ' + meta.ms + ' ms → ' + path.relative(process.cwd(), OUT) + '/{calls,graph}.json');
     console.log('  nodes ' + Object.entries(kinds).map(([k, v]) => k + ' ' + v).join(' · '));
     console.log('  edges ' + Object.entries(ekinds).map(([k, v]) => k + ' ' + v).join(' · '));
-    meta.notes.forEach((n) => console.log('  ⚠ ' + n));
+    meta.notes.forEach((item) => console.log('  ⚠ ' + item));
     console.log('');
   } else console.log(JSON.stringify({ meta }));
-  return { nodes: N, edges: Ed, meta };
+  return { nodes: list, edges: Ed, meta };
 }
 
 /** screen → route, through the web functions each screen reaches (transitive within web calls) */
@@ -657,12 +657,12 @@ function loadGraph(g) {
     if (!exists(p)) { console.error('  no graph yet — run: node tools/graph/graph.cjs build'); process.exit(2); }
     g = JSON.parse(read(p));
   }
-  const nodes = new Map(g.nodes.map((n) => [n.id, n]));
-  const out = new Map(), inn = new Map();
-  for (const e of g.edges) { (out.get(e.from) || out.set(e.from, []).get(e.from)).push(e); (inn.get(e.to) || inn.set(e.to, []).get(e.to)).push(e); }
+  const nodes = new Map(g.nodes.map((item) => [item.id, item]));
+  const out = new Map(), lookup = new Map();
+  for (const e of g.edges) { (out.get(e.from) || out.set(e.from, []).get(e.from)).push(e); (lookup.get(e.to) || lookup.set(e.to, []).get(e.to)).push(e); }
   const byFile = new Map();
   for (const n of nodes.values()) if (n.kind === 'function') (byFile.get(n.repo + ':' + n.file) || byFile.set(n.repo + ':' + n.file, []).get(n.repo + ':' + n.file)).push(n);
-  return { nodes, out, inn, byFile, meta: g.meta };
+  return { nodes, out, inn: lookup, byFile, meta: g.meta };
 }
 
 /** the nodes an argument names: a function name, repo:path or path suffix, a route path, a table, a step id, a nav key */
@@ -696,36 +696,36 @@ const DEP_KINDS = new Set(['calls', 'reads', 'writes', 'requires', 'vendors', 'u
 /** everything that depends on the seeds (reverse walk), the tests that cover any of it, grouped */
 function impactOf(g, seeds, maxDepth) {
   const reached = new Map();   // id -> depth
-  const q = [...seeds].map((id) => [id, 0]);
-  while (q.length) {
-    const [id, d] = q.shift();
+  const list = [...seeds].map((id) => [id, 0]);
+  while (list.length) {
+    const [id, d] = list.shift();
     if (reached.has(id)) continue;
     reached.set(id, d);
     if (maxDepth && d >= maxDepth) continue;
     /* a step's `implements via module` edge (step → its module's PAGE) is for display: followed in reverse it would make every
        function in app.html touch every Tasks & Orders step */
-    for (const e of g.inn.get(id) || []) if (DEP_KINDS.has(e.kind) && e.via !== 'module' && !reached.has(e.from)) q.push([e.from, d + 1]);
+    for (const e of g.inn.get(id) || []) if (DEP_KINDS.has(e.kind) && e.via !== 'module' && !reached.has(e.from)) list.push([e.from, d + 1]);
     /* a function reached → its file's dependents too (a test that requires the file) */
     const n = g.nodes.get(id);
-    if (n && n.kind === 'function') { const fid = 'file:' + n.repo + ':' + n.file; if (g.nodes.has(fid) && !reached.has(fid)) q.push([fid, d + 1]); }
+    if (n && n.kind === 'function') { const fid = 'file:' + n.repo + ':' + n.file; if (g.nodes.has(fid) && !reached.has(fid)) list.push([fid, d + 1]); }
   }
   const tests = new Map();
   for (const id of reached.keys()) for (const e of g.out.get(id) || []) if (e.kind === 'tested-by') { if (!tests.has(e.to)) tests.set(e.to, id); }
-  const group = (kind) => [...reached.keys()].map((id) => g.nodes.get(id)).filter((n) => n && n.kind === kind).sort((a, b) => (reached.get(a.id) - reached.get(b.id)) || (a.id < b.id ? -1 : 1));
+  const group = (kind) => [...reached.keys()].map((id) => g.nodes.get(id)).filter((item) => item && item.kind === kind).sort((first, second) => (reached.get(first.id) - reached.get(second.id)) || (first.id < second.id ? -1 : 1));
   return { reached, tests, steps: group('step'), screens: group('screen'), routes: group('route'), functions: group('function'), tables: group('table'), files: group('file'), packs: group('pack') };
 }
 
 function printImpact(g, seeds, r) {
   const seedNodes = [...seeds].map((id) => g.nodes.get(id)).filter(Boolean);
-  console.log('\n  seeds (' + seedNodes.length + '): ' + seedNodes.slice(0, 8).map((n) => n.id).join(' · ') + (seedNodes.length > 8 ? ' · …' : ''));
+  console.log('\n  seeds (' + seedNodes.length + '): ' + seedNodes.slice(0, 8).map((item) => item.id).join(' · ') + (seedNodes.length > 8 ? ' · …' : ''));
   console.log('  reached ' + r.reached.size + ' nodes' + (DEPTH ? ' (depth ≤ ' + DEPTH + ')' : '') + ': ' + r.functions.length + ' functions · ' + r.files.length + ' files · ' + r.tables.length + ' tables\n');
-  const show = (title, list, fmt) => { console.log('  ' + title + ' (' + list.length + ')'); list.slice(0, 40).forEach((n) => console.log('    ' + fmt(n) + '   ← depth ' + r.reached.get(n.id))); if (list.length > 40) console.log('    … and ' + (list.length - 40) + ' more'); console.log(''); };
+  const show = (title, list, fmt) => { console.log('  ' + title + ' (' + list.length + ')'); list.slice(0, 40).forEach((item) => console.log('    ' + fmt(item) + '   ← depth ' + r.reached.get(item.id))); if (list.length > 40) console.log('    … and ' + (list.length - 40) + ' more'); console.log(''); };
   show('FLOW STEPS', r.steps, (n) => n.flow + ' step ' + n.n + ' · ' + n.step + ' [' + n.status + ']');
   show('SCREENS', r.screens, (n) => (n.code ? n.code + ' ' : '') + n.id.replace(/^screen:web:/, '') + (n.label ? ' · ' + n.label : ''));
   show('ROUTES', r.routes, (n) => n.method + ' ' + n.path + (n.pathGuessed ? ' (path guessed)' : '') + '  ' + n.file);
   const tests = [...r.tests.entries()].sort();
   console.log('  TESTS to run (' + tests.length + ')');
-  tests.forEach(([t, via]) => console.log('    ' + t.replace(/^test:/, '') + '   ← ' + via.replace(/^(fn|route|screen|file|step):(web|api|engines)?:?/, '')));
+  tests.forEach(([text, via]) => console.log('    ' + text.replace(/^test:/, '') + '   ← ' + via.replace(/^(fn|route|screen|file|step):(web|api|engines)?:?/, '')));
   console.log('');
 }
 
@@ -738,7 +738,7 @@ function impact() {
   if (JSON_OUT) return console.log(JSON.stringify(serialise(r, seeds)));
   printImpact(g, seeds, r);
 }
-const serialise = (r, seeds) => ({ seeds: [...seeds], reached: r.reached.size, steps: r.steps.map((n) => n.id), screens: r.screens.map((n) => n.id), routes: r.routes.map((n) => n.id), tests: [...r.tests.keys()].sort(), functions: r.functions.length, tables: r.tables.map((n) => n.id) });
+const serialise = (r, seeds) => ({ seeds: [...seeds], reached: r.reached.size, steps: r.steps.map((item) => item.id), screens: r.screens.map((item) => item.id), routes: r.routes.map((item) => item.id), tests: [...r.tests.keys()].sort(), functions: r.functions.length, tables: r.tables.map((item) => item.id) });
 
 /* ── changed <git-range> ────────────────────────────────────────────────────────────────────────────────────────── */
 function changed() {
@@ -763,20 +763,20 @@ function changed() {
   }
   const changedTests = [];
   for (const t of touched) {
-    const fileId = ['file', 'screen', 'test'].map((k) => k + ':' + repo + ':' + t.file).find((id) => g.nodes.has(id));
+    const fileId = ['file', 'screen', 'test'].map((item) => item + ':' + repo + ':' + t.file).find((id) => g.nodes.has(id));
     if (fileId) seeds.add(fileId);
     if (fileId && fileId.startsWith('test:')) { t.isTest = true; changedTests.push(fileId); }
     const fns = g.byFile.get(repo + ':' + t.file) || [];
-    let hit = 0;
-    for (const f of fns) for (const [a, b] of t.lines) if (f.line <= b && f.endLine >= a) { seeds.add(f.id); hit++; break; }
-    t.functions = hit;
+    let count = 0;
+    for (const f of fns) for (const [a, b] of t.lines) if (f.line <= b && f.endLine >= a) { seeds.add(f.id); count++; break; }
+    t.functions = count;
     if (!fns.length && !fileId) t.unknown = true;
   }
   const res = impactOf(g, seeds, DEPTH);
   changedTests.forEach((id) => { if (!res.tests.has(id)) res.tests.set(id, 'changed itself'); });   /* a changed test runs */
-  if (JSON_OUT) return console.log(JSON.stringify(Object.assign({ repo, range, touched: touched.map((t) => ({ file: t.file, functions: t.functions, test: t.isTest || undefined, unknown: t.unknown || undefined })) }, serialise(res, seeds))));
+  if (JSON_OUT) return console.log(JSON.stringify(Object.assign({ repo, range, touched: touched.map((item) => ({ file: item.file, functions: item.functions, test: item.isTest || undefined, unknown: item.unknown || undefined })) }, serialise(res, seeds))));
   console.log('\n  ' + repo + ' ' + range + ': ' + touched.length + ' file(s) changed');
-  touched.forEach((t) => console.log('    ' + t.file + (t.unknown ? '   (not in the graph — a doc, a data file, or not scanned)' : t.isTest ? '   (a test — runs)' : '   ' + t.functions + ' function(s) touched')));
+  touched.forEach((item) => console.log('    ' + item.file + (item.unknown ? '   (not in the graph — a doc, a data file, or not scanned)' : item.isTest ? '   (a test — runs)' : '   ' + item.functions + ' function(s) touched')));
   printImpact(g, seeds, res);
   if (!res.tests.size) console.log('  no test in any repo reaches what changed — that is a gap, not a pass\n');
 }
@@ -790,70 +790,70 @@ function gaps() {
   if (!present.api) out.notes.push('api not beside this checkout: routes and tables are unknown, so those two gap kinds are empty by construction');
 
   /* 1 · flow steps with no test: none named in flows.json AND none reaches the step's code (depth 2 forward) */
-  const steps = N.filter((n) => n.kind === 'step' && n.status !== 'missing');
+  const steps = N.filter((item) => item.kind === 'step' && item.status !== 'missing');
   const stepTests = (s) => {
     const explicit = (g.out.get(s.id) || []).filter((e) => e.kind === 'tested-by').map((e) => e.to);
     const implied = new Set();
-    const seen = new Set(); const q = [[s.id, 0]];
-    while (q.length) { const [id, d] = q.shift(); if (seen.has(id)) continue; seen.add(id); for (const e of g.out.get(id) || []) { if (e.kind === 'tested-by' && id !== s.id) implied.add(e.to); if ((e.kind === 'implements' || e.kind === 'calls') && d < 2 && !e.to.startsWith('screen:')) q.push([e.to, d + 1]); } }
+    const seen = new Set(); const list = [[s.id, 0]];
+    while (list.length) { const [id, d] = list.shift(); if (seen.has(id)) continue; seen.add(id); for (const e of g.out.get(id) || []) { if (e.kind === 'tested-by' && id !== s.id) implied.add(e.to); if ((e.kind === 'implements' || e.kind === 'calls') && d < 2 && !e.to.startsWith('screen:')) list.push([e.to, d + 1]); } }
     return { explicit, implied: [...implied] };
   };
   const noTest = [], noExplicit = [];
   for (const s of steps) { const t = stepTests(s); if (!t.explicit.length) noExplicit.push(s); if (!t.explicit.length && !t.implied.length) noTest.push(s); }
-  out.stepsNoTest = { total: steps.length, noExplicitTest: noExplicit.length, noTestAtAll: noTest.length, list: noTest.map((s) => s.flow + ' step ' + s.n + ' · ' + s.step + ' [' + s.status + ']') };
-  out.stepsMissing = N.filter((n) => n.kind === 'step' && n.status === 'missing').map((s) => s.flow + ' step ' + s.n + ' · ' + s.step);
+  out.stepsNoTest = { total: steps.length, noExplicitTest: noExplicit.length, noTestAtAll: noTest.length, list: noTest.map((item) => item.flow + ' step ' + item.n + ' · ' + item.step + ' [' + item.status + ']') };
+  out.stepsMissing = N.filter((item) => item.kind === 'step' && item.status === 'missing').map((item) => item.flow + ' step ' + item.n + ' · ' + item.step);
 
   /* 2 · functions on no flow: not reachable forward from any step over implements/calls */
   const onFlow = new Set();
-  { const q = steps.map((s) => s.id); while (q.length) { const id = q.pop(); if (onFlow.has(id)) continue; onFlow.add(id); for (const e of g.out.get(id) || []) if (e.kind === 'implements' || e.kind === 'calls' || e.kind === 'requires') q.push(e.to); } }
-  const labFiles = new Set(N.filter((n) => n.kind === 'screen' && n.lab).map((n) => 'web:' + n.file));
-  const fns = N.filter((n) => n.kind === 'function' && n.top && !labFiles.has(n.repo + ':' + n.file));
-  const off = fns.filter((n) => !onFlow.has(n.id));
+  { const list = steps.map((item) => item.id); while (list.length) { const id = list.pop(); if (onFlow.has(id)) continue; onFlow.add(id); for (const e of g.out.get(id) || []) if (e.kind === 'implements' || e.kind === 'calls' || e.kind === 'requires') list.push(e.to); } }
+  const labFiles = new Set(N.filter((item) => item.kind === 'screen' && item.lab).map((item) => 'web:' + item.file));
+  const fns = N.filter((item) => item.kind === 'function' && item.top && !labFiles.has(item.repo + ':' + item.file));
+  const off = fns.filter((item) => !onFlow.has(item.id));
   const perRepo = {}, perFile = {};
-  fns.forEach((n) => { perRepo[n.repo] = perRepo[n.repo] || { total: 0, off: 0 }; perRepo[n.repo].total++; });
-  off.forEach((n) => { perRepo[n.repo].off++; const k = n.repo + ':' + n.file; perFile[k] = (perFile[k] || 0) + 1; });
-  out.functionsOnNoFlow = { total: fns.length, off: off.length, perRepo, topFiles: Object.entries(perFile).sort((a, b) => b[1] - a[1]).slice(0, TOP).map(([f, c]) => ({ file: f, functions: c, of: fns.filter((n) => n.repo + ':' + n.file === f).length })) };
+  fns.forEach((item) => { perRepo[item.repo] = perRepo[item.repo] || { total: 0, off: 0 }; perRepo[item.repo].total++; });
+  off.forEach((item) => { perRepo[item.repo].off++; const k = item.repo + ':' + item.file; perFile[k] = (perFile[k] || 0) + 1; });
+  out.functionsOnNoFlow = { total: fns.length, off: off.length, perRepo, topFiles: Object.entries(perFile).sort((first, second) => second[1] - first[1]).slice(0, TOP).map(([f, c]) => ({ file: f, functions: c, of: fns.filter((item) => item.repo + ':' + item.file === f).length })) };
 
   /* 3 · routes no screen calls: no incoming http edge from a web function or screen */
-  const routes = N.filter((n) => n.kind === 'route');
+  const routes = N.filter((item) => item.kind === 'route');
   const webCalled = new Set();
   for (const r of routes) for (const e of g.inn.get(r.id) || []) if (e.kind === 'calls' && e.via === 'http' && /^(fn|screen):web:/.test(e.from)) webCalled.add(r.id);
-  const uncalled = routes.filter((r) => !webCalled.has(r.id));
+  const uncalled = routes.filter((item) => !webCalled.has(item.id));
   const testedRoutes = new Set(); for (const r of routes) if ((g.out.get(r.id) || []).some((e) => e.kind === 'tested-by')) testedRoutes.add(r.id);
-  const perRouteFile = {}; uncalled.forEach((r) => { perRouteFile[r.file] = (perRouteFile[r.file] || 0) + 1; });
-  out.routesNoScreen = { total: routes.length, uncalledByWeb: uncalled.length, uncalledAndUntested: uncalled.filter((r) => !testedRoutes.has(r.id)).length, topFiles: Object.entries(perRouteFile).sort((a, b) => b[1] - a[1]).slice(0, TOP).map(([f, c]) => ({ file: f, routes: c, of: routes.filter((r) => r.file === f).length })), examples: uncalled.filter((r) => !testedRoutes.has(r.id)).slice(0, TOP).map((r) => r.method + ' ' + r.path) };
+  const perRouteFile = {}; uncalled.forEach((item) => { perRouteFile[item.file] = (perRouteFile[item.file] || 0) + 1; });
+  out.routesNoScreen = { total: routes.length, uncalledByWeb: uncalled.length, uncalledAndUntested: uncalled.filter((item) => !testedRoutes.has(item.id)).length, topFiles: Object.entries(perRouteFile).sort((first, second) => second[1] - first[1]).slice(0, TOP).map(([f, c]) => ({ file: f, routes: c, of: routes.filter((item) => item.file === f).length })), examples: uncalled.filter((item) => !testedRoutes.has(item.id)).slice(0, TOP).map((item) => item.method + ' ' + item.path) };
 
   /* 4 · tables no route touches: declared tables with no reads/writes from a route or from api code a route reaches */
-  const tables = N.filter((n) => n.kind === 'table' && n.declared);
+  const tables = N.filter((item) => item.kind === 'table' && item.declared);
   const fromRoutes = new Set();
-  { const q = routes.map((r) => r.id); while (q.length) { const id = q.pop(); if (fromRoutes.has(id)) continue; fromRoutes.add(id); for (const e of g.out.get(id) || []) if (e.kind === 'calls' || e.kind === 'requires') q.push(e.to); } }
+  { const list = routes.map((item) => item.id); while (list.length) { const id = list.pop(); if (fromRoutes.has(id)) continue; fromRoutes.add(id); for (const e of g.out.get(id) || []) if (e.kind === 'calls' || e.kind === 'requires') list.push(e.to); } }
   const touchedByRoute = new Set(), touchedAtAll = new Set();
   for (const t of tables) for (const e of g.inn.get(t.id) || []) if (e.kind === 'reads' || e.kind === 'writes') { touchedAtAll.add(t.id); if (fromRoutes.has(e.from)) touchedByRoute.add(t.id); }
-  const untouched = tables.filter((t) => !touchedByRoute.has(t.id));
-  out.tablesNoRoute = { declared: tables.length, noRouteTouches: untouched.length, noCodeTouchesAtAll: tables.filter((t) => !touchedAtAll.has(t.id)).length, list: untouched.map((t) => t.name + (touchedAtAll.has(t.id) ? ' (api code touches it, no route reaches that code)' : '')).slice(0, 40), undeclaredInCode: N.filter((n) => n.kind === 'table' && !n.declared).length };
+  const untouched = tables.filter((item) => !touchedByRoute.has(item.id));
+  out.tablesNoRoute = { declared: tables.length, noRouteTouches: untouched.length, noCodeTouchesAtAll: tables.filter((item) => !touchedAtAll.has(item.id)).length, list: untouched.map((item) => item.name + (touchedAtAll.has(item.id) ? ' (api code touches it, no route reaches that code)' : '')).slice(0, 40), undeclaredInCode: N.filter((item) => item.kind === 'table' && !item.declared).length };
 
   /* 5 · screens nothing tests · nav screens with no dispatch found */
-  const screens = N.filter((n) => n.kind === 'screen' && !n.lab);
-  const untestedScreens = screens.filter((s) => !(g.out.get(s.id) || []).some((e) => e.kind === 'tested-by'));
-  out.screensNoTest = { total: screens.length, untested: untestedScreens.length, list: untestedScreens.map((s) => (s.code ? s.code + ' ' : '') + s.id.replace(/^screen:web:/, '')).slice(0, 40) };
-  out.navNoDispatch = N.filter((n) => n.kind === 'screen' && n.screen === 'nav' && !(g.out.get(n.id) || []).some((e) => e.via === 'dispatch')).map((n) => n.nav);
+  const screens = N.filter((item) => item.kind === 'screen' && !item.lab);
+  const untestedScreens = screens.filter((item) => !(g.out.get(item.id) || []).some((e) => e.kind === 'tested-by'));
+  out.screensNoTest = { total: screens.length, untested: untestedScreens.length, list: untestedScreens.map((item) => (item.code ? item.code + ' ' : '') + item.id.replace(/^screen:web:/, '')).slice(0, 40) };
+  out.navNoDispatch = N.filter((item) => item.kind === 'screen' && item.screen === 'nav' && !(g.out.get(item.id) || []).some((e) => e.via === 'dispatch')).map((item) => item.nav);
 
   if (JSON_OUT) return console.log(JSON.stringify(out));
   console.log('');
-  out.notes.forEach((n) => console.log('  ⚠ ' + n));
+  out.notes.forEach((item) => console.log('  ⚠ ' + item));
   console.log('  1 · FLOW STEPS WITH NO TEST  — ' + out.stepsNoTest.noTestAtAll + ' of ' + out.stepsNoTest.total + ' built steps have no test named in flows.json AND none reaching their code (' + out.stepsNoTest.noExplicitTest + ' name none)');
-  out.stepsNoTest.list.slice(0, TOP).forEach((s) => console.log('      ' + s));
+  out.stepsNoTest.list.slice(0, TOP).forEach((item) => console.log('      ' + item));
   if (out.stepsMissing.length) console.log('      (+ ' + out.stepsMissing.length + ' steps are MISSING in the code: ' + out.stepsMissing.join(' · ') + ')');
   console.log('\n  2 · FUNCTIONS ON NO FLOW  — ' + out.functionsOnNoFlow.off + ' of ' + out.functionsOnNoFlow.total + ' top-level functions are not reached from any flow step  ' + Object.entries(perRepo).map(([r, v]) => r + ' ' + v.off + '/' + v.total).join(' · '));
-  out.functionsOnNoFlow.topFiles.forEach((f) => console.log('      ' + String(f.functions).padStart(4) + ' of ' + String(f.of).padEnd(4) + ' ' + f.file));
+  out.functionsOnNoFlow.topFiles.forEach((item) => console.log('      ' + String(item.functions).padStart(4) + ' of ' + String(item.of).padEnd(4) + ' ' + item.file));
   const eu = g.meta.endpointUsageCounts;
   console.log('\n  3 · ROUTES NO SCREEN CALLS  — ' + out.routesNoScreen.uncalledByWeb + ' of ' + out.routesNoScreen.total + ' routes have no api()/fetch call from a web screen (' + out.routesNoScreen.uncalledAndUntested + ' of those also have no test)'
     + (eu ? '\n      (api tools/endpoint-usage.cjs, registry keys only: ' + (eu.routes - eu.calledByRegistry) + ' of ' + eu.routes + ' not called — this graph also follows fetch(\'/api/…\') literals in till/shop/accounts)' : ''));
-  out.routesNoScreen.topFiles.forEach((f) => console.log('      ' + String(f.routes).padStart(4) + ' of ' + String(f.of).padEnd(4) + ' ' + f.file));
+  out.routesNoScreen.topFiles.forEach((item) => console.log('      ' + String(item.routes).padStart(4) + ' of ' + String(item.of).padEnd(4) + ' ' + item.file));
   console.log('\n  4 · TABLES NO ROUTE TOUCHES  — ' + out.tablesNoRoute.noRouteTouches + ' of ' + out.tablesNoRoute.declared + ' declared tables are read or written by no route nor by code a route reaches (' + out.tablesNoRoute.noCodeTouchesAtAll + ' by no api code at all; ' + out.tablesNoRoute.undeclaredInCode + ' names in SQL are not in any migration)');
-  out.tablesNoRoute.list.slice(0, TOP).forEach((t) => console.log('      ' + t));
+  out.tablesNoRoute.list.slice(0, TOP).forEach((item) => console.log('      ' + item));
   console.log('\n  5 · SCREENS NO TEST  — ' + out.screensNoTest.untested + ' of ' + out.screensNoTest.total + ' screens (labs excluded) are reached by no web test');
-  out.screensNoTest.list.slice(0, TOP).forEach((s) => console.log('      ' + s));
+  out.screensNoTest.list.slice(0, TOP).forEach((item) => console.log('      ' + item));
   if (out.navNoDispatch.length) console.log('\n  nav keys in CBSCREENS with no dispatch line found in app.html: ' + out.navNoDispatch.join(' · '));
   console.log('');
 }
