@@ -115,7 +115,7 @@ var CSS = '.rt{display:flex;flex-direction:column;gap:8px;font-size:var(--fs-2,1
   + '.rt-tag{border-radius:6px;padding:1px 7px;font-weight:700;font-size:var(--fs-1,12px)}.rt-tag.int{background:var(--blue-tint-bg,#eef4fb);color:var(--grey,#5f7682)}.rt-tag.ext{background:var(--blue-tint-bg,#eef4fb);color:var(--blue,#1f5fa8)}.rt-tag.disp{background:var(--danger-tint,#fbeeec);color:var(--disp,#8E3517)}.rt-tag.ln{background:var(--paper,#f4f1ea);color:var(--grey,#5E594D)}'
   + '.rt-b{white-space:pre-wrap;line-height:1.45}.rt-att{margin-top:6px}.rt-empty{color:var(--grey,#5E594D);padding:8px 2px}';
 var cssDone = false;
-function addCss() { if (cssDone || !doc) return; cssDone = true; var s = doc.createElement('style'); s.setAttribute('data-cbrt', '1'); s.textContent = CSS; (doc.head || doc.documentElement).appendChild(s); }
+function addCss() { if (cssDone || !doc) return; cssDone = true; var node = doc.createElement('style'); node.setAttribute('data-cbrt', '1'); node.textContent = CSS; (doc.head || doc.documentElement).appendChild(node); }
 
 /* ── drafts: the typed text survives a repaint (and a reload when CBOffline is on the page) ── */
 var DRAFTS = {};
@@ -146,8 +146,8 @@ async function load(m) {
   if (o.dispute_id) q.dispute = '1';
   m.err = null;
   try {
-    var r = await api('messages', { params: { id: o.chit_id }, query: q });
-    var list = (r && (r.messages || r.items || (Array.isArray(r) ? r : []))) || [];
+    var reply = await api('messages', { params: { id: o.chit_id }, query: q });
+    var list = (reply && (reply.messages || reply.items || (Array.isArray(reply) ? reply : []))) || [];
     /* ⚠️ FILTERED AGAIN CLIENT-SIDE, the subject's rows only: a line's thread never absorbs the chit's (pre-b155 servers ignore
        line_id); a dispute room shows ITS dispute's rows; the general thread shows NO dispute row — those live in the room, for
        the roster, and a row a non-member was never handed cannot appear here because this list is only what came back. */
@@ -158,7 +158,7 @@ async function load(m) {
       if (ch !== 'both' && x.thread_type !== ch) return false;
       return true;
     });
-    list.sort(function (a, b) { return String(b.created_at || '').localeCompare(String(a.created_at || '')); });   /* newest first (Athi, 2026-08-15) */
+    list.sort(function (first, second) { return String(second.created_at || '').localeCompare(String(first.created_at || '')); });   /* newest first (Athi, 2026-08-15) */
     m.rows = list;
   } catch (e) { m.err = (e && e.message) || 'fail'; }
   paint(m);
@@ -167,7 +167,7 @@ async function load(m) {
 /** the chit's actions when the host did not hand them over — one GET through the page's `chit` row, deduped by core */
 async function readActions(m) {
   if (m.actions || typeof EP === 'undefined' || !EP || !EP.chit) return;
-  try { var r = await api('chit', { params: { id: m.o.chit_id } }); if (r && r.actions) { m.actions = r.actions; paint(m); } } catch (_) {}
+  try { var reply = await api('chit', { params: { id: m.o.chit_id } }); if (reply && reply.actions) { m.actions = reply.actions; paint(m); } } catch (_) {}
 }
 
 /* ── paint ── */
@@ -180,7 +180,7 @@ function rowHTML(m, x) {
   var tag = x.is_dispute ? '<span class="rt-tag disp">' + T('⚑ Dispute') + '</span>'
     : (channels(m).length > 1 || o.dispute_id ? '<span class="rt-tag ' + cls + '">' + T(x.thread_type === 'external' ? W.external : W.internal) + '</span>' : '');
   var ln = '';
-  if (!o.line_id && x.line_id) { var L = (o.lines || []).filter(function (l) { return String(l.line_id) === String(x.line_id); })[0]; ln = '<span class="rt-tag ln">' + esc(L ? L.label : T(W.line)) + '</span>'; }
+  if (!o.line_id && x.line_id) { var L = (o.lines || []).filter(function (item) { return String(item.line_id) === String(x.line_id); })[0]; ln = '<span class="rt-tag ln">' + esc(L ? L.label : T(W.line)) + '</span>'; }
   var atts = (x.attachments && x.attachments.length && typeof cbAttachList === 'function') ? '<div class="rt-att">' + cbAttachList(x.attachments) + '</div>' : '';
   var attBtn = (m.sent && String(m.sent.message_id) === String(x.message_id) && typeof cbAttachButton === 'function' && !o.readOnly)
     ? '<div class="rt-att">' + cbAttachButton({ chit_id: o.chit_id, message_id: x.message_id }) + '</div>' : '';
@@ -190,23 +190,23 @@ function rowHTML(m, x) {
 }
 function composerHTML(m) {
   var o = m.o, ids = o.ids || {};
-  var chs = channels(m), can = chs.filter(function (c) { return allowed(m, c); });
+  var list = channels(m), can = list.filter(function (item) { return allowed(m, item); });
   if (!can.length) {
-    var v = verdict(m, chs[0]);
+    var v = verdict(m, list[0]);
     return '<div class="rt-no" data-testid="rt-no">' + esc(why(v.why, T(W.viewOnly))) + '</div>';
   }
   if (can.indexOf(m.channel) < 0) m.channel = can[0];
   var disp = !!o.dispute_id, ext = m.channel === 'external';
-  var toggle = chs.length > 1 ? '<div class="rt-ch">' + chs.map(function (c) {
-    var ok = allowed(m, c), v = verdict(m, c), on = m.channel === c;
-    return '<button type="button" class="' + (c === 'external' ? 'ext' : 'int') + (on ? ' on' : '') + (ok ? '' : ' off') + '" data-rt-act="ch" data-ch="' + c + '" data-testid="msg-channel-' + c + '"'
-      + (ok ? '' : ' aria-disabled="true" title="' + esc(why(v.why)) + '"') + '>' + esc(T(c === 'external' ? W.external : W.internal)) + '</button>';
+  var toggle = list.length > 1 ? '<div class="rt-ch">' + list.map(function (item) {
+    var ok = allowed(m, item), v = verdict(m, item), on = m.channel === item;
+    return '<button type="button" class="' + (item === 'external' ? 'ext' : 'int') + (on ? ' on' : '') + (ok ? '' : ' off') + '" data-rt-act="ch" data-ch="' + item + '" data-testid="msg-channel-' + item + '"'
+      + (ok ? '' : ' aria-disabled="true" title="' + esc(why(v.why)) + '"') + '>' + esc(T(item === 'external' ? W.external : W.internal)) + '</button>';
   }).join('') + '</div>' : '';
-  var offWhy = chs.filter(function (c) { return !allowed(m, c); }).map(function (c) { return '<span class="rt-why" data-testid="rt-why-' + c + '">' + esc(why(verdict(m, c).why)) + '</span>'; }).join('');
-  var kinds = (o.kinds && o.kinds.length > 1) ? '<span class="rt-row" data-testid="rt-kinds">' + o.kinds.map(function (k) {
-    return '<button type="button" class="rt-k' + (m.kind === k ? ' on' : '') + '" data-rt-act="kind" data-k="' + esc(k) + '">' + esc(T(k.charAt(0).toUpperCase() + k.slice(1))) + '</button>'; }).join('') + '</span>' : '';
+  var offWhy = list.filter(function (item) { return !allowed(m, item); }).map(function (item) { return '<span class="rt-why" data-testid="rt-why-' + item + '">' + esc(why(verdict(m, item).why)) + '</span>'; }).join('');
+  var kinds = (o.kinds && o.kinds.length > 1) ? '<span class="rt-row" data-testid="rt-kinds">' + o.kinds.map(function (item) {
+    return '<button type="button" class="rt-k' + (m.kind === item ? ' on' : '') + '" data-rt-act="kind" data-k="' + esc(item) + '">' + esc(T(item.charAt(0).toUpperCase() + item.slice(1))) + '</button>'; }).join('') + '</span>' : '';
   var lines = (!o.line_id && !disp && o.lines && o.lines.length) ? '<label class="rt-row">' + esc(T(W.about)) + ' <select class="rt-sel" data-rt-act="line" data-testid="rt-line"><option value="">' + esc(T(W.whole)) + '</option>'
-    + o.lines.map(function (l) { return '<option value="' + esc(l.line_id) + '"' + (m.line === String(l.line_id) ? ' selected' : '') + '>' + esc(l.label) + '</option>'; }).join('') + '</select></label>' : '';
+    + o.lines.map(function (item) { return '<option value="' + esc(item.line_id) + '"' + (m.line === String(item.line_id) ? ' selected' : '') + '>' + esc(item.label) + '</option>'; }).join('') + '</select></label>' : '';
   var aud = disp ? T(W.audDispute) : ext ? fill(T(W.audExternal), { party: o.party || T('the other party') }) : T(W.audInternal);
   var tone = disp ? 'disp' : ext ? 'ext' : 'int';
   return '<div class="rt-comp ' + tone + '" data-testid="rt-composer">'
@@ -268,29 +268,29 @@ function mount(el, o) {
     kind: (o.kinds && o.kinds[0]) || 'info', line: '', text: o.text != null ? String(o.text) : draftGet(o) };
   /* first channel: the one asked for when allowed, else external when allowed, else internal */
   var want = o.dispute_id ? 'external' : (o.thread_type || (o.channel && o.channel !== 'both' ? o.channel : 'external'));
-  m.channel = allowed(m, want) ? want : channels(m).filter(function (c) { return allowed(m, c); })[0] || want;
+  m.channel = allowed(m, want) ? want : channels(m).filter(function (item) { return allowed(m, item); })[0] || want;
 
-  function onClick(ev) {
-    var t = ev.target.closest ? ev.target.closest('[data-rt-act]') : null; if (!t || !el.contains(t)) return;
-    var act = t.getAttribute('data-rt-act');
-    if (act === 'ch') { if (t.classList.contains('off')) return; m.channel = t.getAttribute('data-ch'); paint(m); return; }
-    if (act === 'kind') { m.kind = t.getAttribute('data-k'); paint(m); return; }
-    if (act === 'send') { ev.preventDefault(); sendPress(t); }
+  function onClick(event) {
+    var node = event.target.closest ? event.target.closest('[data-rt-act]') : null; if (!node || !el.contains(node)) return;
+    var act = node.getAttribute('data-rt-act');
+    if (act === 'ch') { if (node.classList.contains('off')) return; m.channel = node.getAttribute('data-ch'); paint(m); return; }
+    if (act === 'kind') { m.kind = node.getAttribute('data-k'); paint(m); return; }
+    if (act === 'send') { event.preventDefault(); sendPress(node); }
   }
   function onInput(ev) {
-    var t = ev.target;
-    if (t.getAttribute('data-rt-act') === 'text') { m.text = t.value; draftSet(o, t.value); }
-    if (t.getAttribute('data-rt-act') === 'line') m.line = t.value;
+    var node = ev.target;
+    if (node.getAttribute('data-rt-act') === 'text') { m.text = node.value; draftSet(o, node.value); }
+    if (node.getAttribute('data-rt-act') === 'line') m.line = node.value;
   }
   function out() { return el.querySelector('[data-testid="rt-out"]'); }
   function sendPress(btn) {
     var box = el.querySelector('[data-rt-act="text"]'); var text = String((box ? box.value : m.text) || '').trim();
-    var o2 = out();
-    if (!text) { if (o2) { o2.textContent = T(W.empty); o2.setAttribute('data-tone', 'error'); } return; }
-    if (!allowed(m, m.channel)) { if (o2) { o2.textContent = why(verdict(m, m.channel).why); o2.setAttribute('data-tone', 'error'); } return; }
+    var node = out();
+    if (!text) { if (node) { node.textContent = T(W.empty); node.setAttribute('data-tone', 'error'); } return; }
+    if (!allowed(m, m.channel)) { if (node) { node.textContent = why(verdict(m, m.channel).why); node.setAttribute('data-tone', 'error'); } return; }
     var body = bodyFor(o, text, m.channel, { msg_type: m.kind, line_id: m.line || undefined });
     return post(btn, o, body, {
-      out: o2,
+      out: node,
       outcome: function (v) {
         m.sent = Object.assign({}, v || {}, { message_id: (v && v.message_id) || null });
         draftClear(o); m.text = '';
@@ -321,8 +321,8 @@ function mount(el, o) {
       extra = extra || {};
       var ch = extra.thread_type || m.channel;
       return post(el.querySelector('[data-rt-act="send"]'), o, bodyFor(o, String(text || m.text || '').trim(), ch, extra),
-        { out: out(), outcome: function (v) { m.sent = v; draftClear(o); m.text = ''; var bx = el.querySelector('[data-rt-act="text"]'); if (bx) bx.value = ''; load(m); if (typeof o.onDone === 'function') { try { o.onDone(v, o); } catch (_) {} } },
-          onFail: function (words, e) { var d = e && e.data, ob = out(); if (ob) { ob.textContent = d && d.why ? why(d.why, d.message || words) : words; ob.setAttribute('data-tone', 'error'); } } });
+        { out: out(), outcome: function (v) { m.sent = v; draftClear(o); m.text = ''; var node = el.querySelector('[data-rt-act="text"]'); if (node) node.value = ''; load(m); if (typeof o.onDone === 'function') { try { o.onDone(v, o); } catch (_) {} } },
+          onFail: function (words, e) { var d = e && e.data, node = out(); if (node) { node.textContent = d && d.why ? why(d.why, d.message || words) : words; node.setAttribute('data-tone', 'error'); } } });
     },
   };
   m.api = api_; el.__cbthread = m;
