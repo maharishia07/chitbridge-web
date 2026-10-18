@@ -29,10 +29,10 @@ var CRM_SUPPLY = { intra: 'Same state — CGST and SGST', inter: 'Another state 
 var CRM_ADDED = { counter: 'Your counter', storefront: 'Your online shop', catalogue: 'Your online shop', handle: 'A User ID search', name: 'A name you typed', chit: 'A chit', import: 'An import' };
 var CRM_CHANNEL = { catalogue: 'online shop', storefront: 'online shop', counter: 'counter' };
 /** a title that repeats the entry's own date ("Order · 09 Oct") loses the date: the When column says it once (C17) */
-function crmNoDate(t) {
-  t = String(t || ''); if (!t) return '';
-  var u = t.replace(/\s*[\u00b7,(\-\u2013\u2014]*\s*\b\d{4}-\d{2}-\d{2}\b\)?\s*$/, '').replace(/\s*[\u00b7,(\-\u2013\u2014]*\s*\b\d{1,2}[ \/-](?:[A-Za-z]{3,9}|\d{1,2})\.?(?:[ ,\/-]+\d{2,4})?\)?\s*$/, '').replace(/[\s\u00b7,\-\u2013\u2014]+$/, '');
-  return u || t;
+function crmNoDate(text) {
+  text = String(text || ''); if (!text) return '';
+  var u = text.replace(/\s*[\u00b7,(\-\u2013\u2014]*\s*\b\d{4}-\d{2}-\d{2}\b\)?\s*$/, '').replace(/\s*[\u00b7,(\-\u2013\u2014]*\s*\b\d{1,2}[ \/-](?:[A-Za-z]{3,9}|\d{1,2})\.?(?:[ ,\/-]+\d{2,4})?\)?\s*$/, '').replace(/[\s\u00b7,\-\u2013\u2014]+$/, '');
+  return u || text;
 }
 /** an id that is a machine's, not a person's ("pay:0d102689-…") is never shown (C7) */
 function crmIsRawId(s) { return /^[a-z_]+:[0-9a-f-]{16,}$/i.test(String(s || '')) || /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(String(s || '')); }
@@ -61,7 +61,7 @@ function crmRecordFrom(rec, p) {
   if (r.contacts && Array.isArray(r.contacts.emails)) r.contacts = Object.assign({}, r.contacts, { emails: r.contacts.emails.map(crmRealEmail).filter(Boolean) });
   if (r.gstn_profile === undefined) r.gstn_profile = r.gstin && r.gstin.differs ? r.gstin.theirs : null;   // the API says "differs"; the page offers "Use theirs"
   /* the credit terms come in `terms`, one per side; the painter and the edit sheet read them off the side */
-  ['customer', 'supplier'].forEach(function (s) { if (r[s] && r.terms && r.terms[s]) r[s] = Object.assign({}, r[s], r.terms[s]); });
+  ['customer', 'supplier'].forEach(function (item) { if (r[item] && r.terms && r.terms[item]) r[item] = Object.assign({}, r[item], r.terms[item]); });
   if (r.customer && r.customer.last_bill_at === undefined) r.customer = Object.assign({}, r.customer, { last_bill_at: r.customer.last_txn_at });
   if (!Array.isArray(r.followups)) r.followups = [];
   return r;
@@ -74,7 +74,7 @@ function crmEntryFrom(e, i) {
   var o = { at: at, kind: k, line: '', by: '', id: k + '-' + key + (/^(message|ledger|change|followup_done)$/.test(k) ? '-' + Date.parse(at) : '') };
   if (e.chit_id) o.chit_id = e.chit_id;
   if (e.followup_id) o.followup_id = e.followup_id;
-  var word = function (s) { s = String(s || '').replace(/_/g, ' '); return s ? tx(s.charAt(0).toUpperCase() + s.slice(1)) : ''; };
+  var word = function (text) { text = String(text || '').replace(/_/g, ' '); return text ? tx(text.charAt(0).toUpperCase() + text.slice(1)) : ''; };
   if (k === 'chit') {
     o.kind = e.doc_kind === 'bill' ? 'bill' : 'chit'; o.src = 'chit'; o.purpose = e.purpose || ''; o.line = crmNoDate(e.title) || e.bill_no || word(e.purpose) || tx('Chit');
     if (e.status) o.state = { word: word(e.status) };
@@ -105,8 +105,8 @@ function crmEntriesFrom(r) { return ((r && r.entries) || []).map(crmEntryFrom); 
 var CRM_LONG = 110;
 /** a long call / visit / WhatsApp / note ends "…" and opens in place to its whole text (REQUIREMENT-timeline §4) */
 function crmEntryLine(e) {
-  var l = String(e.line || '');
-  return /^(call|visit|whatsapp|note)$/.test(e.kind) && l.length > CRM_LONG ? l.slice(0, Math.max(l.lastIndexOf(' ', CRM_LONG), 40)) + '…' : l;
+  var text = String(e.line || '');
+  return /^(call|visit|whatsapp|note)$/.test(e.kind) && text.length > CRM_LONG ? text.slice(0, Math.max(text.lastIndexOf(' ', CRM_LONG), 40)) + '…' : text;
 }
 function crmEntryWhat(e) {
   var k = CRM_KIND[e.kind] || CRM_KIND.note, tone = (e.state && e.state.tone) || k[1] || '';
@@ -136,13 +136,13 @@ function crmEntryOpen(e) {
   if (e.chit_id) return openChitSheet(e.chit_id);
   if (e.followup_id) return crmGo('#/followups');
 }
-function crmDayGroup(e) { var d = new Date(e.at); return [crmDayWord(e.at), isNaN(d) ? 'x' : crmLocalISO(d)]; }
+function crmDayGroup(e) { var date = new Date(e.at); return [crmDayWord(e.at), isNaN(date) ? 'x' : crmLocalISO(date)]; }
 
 /* ═══ THE RECORD ═════════════════════════════════════════════════════════════════════════════════════════════════ */
 async function crmRecordOpen(route) {
-  var tok = ++CRMR.tok, s = document.getElementById('screen');
+  var tok = ++CRMR.tok, node = document.getElementById('screen');
   CRMR.menu = false;
-  if (!CRM.loaded) { s.className = 'screen'; s.innerHTML = '<div class="content"><div class="loadwrap" role="status"><span class="spin"></span>' + esc(tx('Reading…')) + '</div></div>'; await crmLoad(true); if (tok !== CRMR.tok) return; }
+  if (!CRM.loaded) { node.className = 'screen'; node.innerHTML = '<div class="content"><div class="loadwrap" role="status"><span class="spin"></span>' + esc(tx('Reading…')) + '</div></div>'; await crmLoad(true); if (tok !== CRMR.tok) return; }
   var p = CRM.byKey[route.key];
   if (!p && typeof crmLeadsEnsure === 'function') { await crmLeadsEnsure(); if (tok !== CRMR.tok) return; p = CRM.byKey[route.key]; }   /* a lead opened from a link: the Leads read first */
   if (!p) return crmRecordFold(route, tok);
@@ -151,9 +151,9 @@ async function crmRecordOpen(route) {
   var back = '<a href="#/parties" data-testid="crm-back">‹ ' + esc(tx('Parties')) + '</a>' + (p.party_no ? ' <span class="sub">/</span> <span class="mono">' + esc(p.party_no) + '</span>' : '');
   crmBar(back, route.sub === 'timeline' ? '' : '');
   if (route.sub === 'timeline') return crmTimelineView(p, tok);
-  s.className = 'screen';
+  node.className = 'screen';
   /* header from the list row at once (no flash); the sections fill as the record read returns */
-  s.innerHTML = '<div class="rec" data-testid="crm-record">' + crmHeaderHTML(p) + '<div class="loadwrap" role="status" data-testid="crm-rec-loading"><span class="spin"></span>' + esc(tx('Reading…')) + '</div></div>';
+  node.innerHTML = '<div class="rec" data-testid="crm-record">' + crmHeaderHTML(p) + '<div class="loadwrap" role="status" data-testid="crm-rec-loading"><span class="spin"></span>' + esc(tx('Reading…')) + '</div></div>';
   var rec, head = null;
   try {
     /* a walk-in is a phone that holds points, not a party: the API has no record of it (its party_id is null) - the row is all there is */
@@ -172,8 +172,8 @@ async function crmRecordOpen(route) {
   } catch (e) {
     /* ANY failure — the read or the paint — ends the spinner: a plain line and Try again, never "Reading…" for good */
     if (tok !== CRMR.tok || CRM.route !== route) return;
-    var w = s.querySelector('.loadwrap'), html = '<div class="empty" data-testid="crm-rec-error"><div class="t">' + esc(tx("Couldn't open this party.")) + '</div><button type="button" class="act ghost" data-crm="recretry" data-testid="crm-rec-retry">' + esc(tx('Try again')) + '</button></div>';
-    if (w) w.outerHTML = html; else { var rr = s.querySelector('.rec'); if (rr) rr.insertAdjacentHTML('beforeend', html); else s.innerHTML = '<div class="content">' + html + '</div>'; }
+    var w = node.querySelector('.loadwrap'), html = '<div class="empty" data-testid="crm-rec-error"><div class="t">' + esc(tx("Couldn't open this party.")) + '</div><button type="button" class="act ghost" data-crm="recretry" data-testid="crm-rec-retry">' + esc(tx('Try again')) + '</button></div>';
+    if (w) w.outerHTML = html; else { var rr = node.querySelector('.rec'); if (rr) rr.insertAdjacentHTML('beforeend', html); else node.innerHTML = '<div class="content">' + html + '</div>'; }
     return;
   }
   if (route.sub === 'log') crmLogOpen(p);
@@ -181,7 +181,7 @@ async function crmRecordOpen(route) {
 }
 /** a key that is no row: a folded party opens its keeper once with "Merged from …" (the server answers the keeper's record) */
 async function crmRecordFold(route, tok) {
-  var s = document.getElementById('screen');
+  var node = document.getElementById('screen');
   try {
     var rec = await api('crmParty', { params: { id: route.key } });
     if (tok !== CRMR.tok) return;
@@ -191,8 +191,8 @@ async function crmRecordFold(route, tok) {
   } catch (_) {}
   if (tok !== CRMR.tok) return;
   crmBar('<a href="#/parties">‹ ' + esc(tx('Parties')) + '</a>', '');
-  s.className = 'screen';
-  s.innerHTML = '<div class="content"><div class="empty" data-testid="crm-rec-missing"><div class="t">' + esc(tx("Couldn't open this party.")) + '</div><a class="act ghost" href="#/parties">' + esc(tx('Back to parties')) + '</a></div></div>';
+  node.className = 'screen';
+  node.innerHTML = '<div class="content"><div class="empty" data-testid="crm-rec-missing"><div class="t">' + esc(tx("Couldn't open this party.")) + '</div><a class="act ghost" href="#/parties">' + esc(tx('Back to parties')) + '</a></div></div>';
 }
 function crmDueChip(p) {
   var u = p.billFacts && p.billFacts.unbilled, said = u && u.n ? crmPlural(u.n, 'order not billed yet', 'orders not billed yet') + ' ' + bkMoney(u.minor, u.currency || CRM.currency) : '';
@@ -220,10 +220,10 @@ function crmIdentityHTML(p, rec) {
 function crmNextHTML(p, rec) {
   var items = [], ed = crmEdit(), key = esc(crmKey(p));
   var btn = function (a, label, pri, extra, tid) { return ed ? '<button type="button" class="act sm' + (pri ? '' : ' ghost') + '" data-crm="' + a + '"' + (extra || '') + ' data-testid="' + tid + '">' + esc(tx(label)) + '</button>' : ''; };
-  (rec.followups || []).forEach(function (f) {
-    if (!f.late && f.today !== true && f.bucket !== 'today' && f.due_today !== true && crmDayWord(f.due_at) !== tx('Today')) return;
-    items.push('<div class="nx" data-testid="crm-next-followup"><span class="ic">' + crmIcon('clock') + '</span><span class="tx"><b>' + (f.late ? esc(tx('Late since')) + ' ' + esc(bkDate(f.due_at)) : esc(tx('Today')) + ' ' + esc(bkTime(f.due_at))) + '</b> · ' + esc(f.what) + '<span class="s">' + esc(f.assignee_name || tx('Unassigned')) + '</span></span>'
-      + '<span class="btns">' + btn('rfudone', 'Done', true, ' data-id="' + esc(f.followup_id) + '"', 'crm-next-done-' + esc(f.followup_id)) + '</span></div>');
+  (rec.followups || []).forEach(function (item) {
+    if (!item.late && item.today !== true && item.bucket !== 'today' && item.due_today !== true && crmDayWord(item.due_at) !== tx('Today')) return;
+    items.push('<div class="nx" data-testid="crm-next-followup"><span class="ic">' + crmIcon('clock') + '</span><span class="tx"><b>' + (item.late ? esc(tx('Late since')) + ' ' + esc(bkDate(item.due_at)) : esc(tx('Today')) + ' ' + esc(bkTime(item.due_at))) + '</b> · ' + esc(item.what) + '<span class="s">' + esc(item.assignee_name || tx('Unassigned')) + '</span></span>'
+      + '<span class="btns">' + btn('rfudone', 'Done', true, ' data-id="' + esc(item.followup_id) + '"', 'crm-next-done-' + esc(item.followup_id)) + '</span></div>');
   });
   if (p.unread) items.push('<div class="nx" data-testid="crm-next-unread"><span class="ic">' + crmIcon('msg') + '</span><span class="tx"><b>' + esc(crmPlural(p.unread, 'unread message', 'unread messages')) + '</b></span><span class="btns"><a class="act sm" href="#/party/' + key + '/timeline?f=messages" data-testid="crm-next-open-msgs">' + esc(tx('Open')) + '</a></span></div>');
   if (CRM.ledger && p.dues_overdue) {
@@ -231,7 +231,7 @@ function crmNextHTML(p, rec) {
     items.push('<div class="nx" data-testid="crm-next-dues"><span class="ic">' + crmIcon('pay') + '</span><span class="tx"><b>' + esc(tx(owes ? 'Late dues' : 'You are late paying')) + '</b> · ' + esc(tx('oldest since')) + ' ' + esc(bkDate(p.oldest_due)) + '</span><span class="btns">'
       + (owes ? btn('rremind', 'Remind', false, '', 'crm-next-remind') + btn('rpay', 'Receive payment', true, '', 'crm-next-pay') : btn('rpay', 'Pay', true, '', 'crm-next-pay')) + '</span></div>');
   }
-  var mine = (p.tax_ids || []).filter(function (t) { return t.scheme === taxIdWord(); })[0];   /* CX0: the pack's tax-id (GSTIN · ABN · TRN) */
+  var mine = (p.tax_ids || []).filter(function (item) { return item.scheme === taxIdWord(); })[0];   /* CX0: the pack's tax-id (GSTIN · ABN · TRN) */
   if (rec.gstn_profile && mine && rec.gstn_profile !== mine.value && CRMR.keep[p.party_id + rec.gstn_profile] !== 1)
     items.push('<div class="nx" data-testid="crm-next-gstin"><span class="ic">' + crmIcon('warn') + '</span><span class="tx"><b>' + esc(tx('GSTIN differs from their profile')) + '</b><span class="s mono">' + esc(tx('Yours')) + ' ' + esc(mine.value) + ' · ' + esc(tx('theirs')) + ' ' + esc(rec.gstn_profile) + '</span></span><span class="btns">'
       + btn('rgtheirs', 'Use theirs', true, '', 'crm-gstin-theirs') + btn('rgmine', 'Keep mine', false, '', 'crm-gstin-mine') + '</span></div>');
@@ -253,17 +253,17 @@ function crmMailBlock(p, rec) {
  * server decides" (the Calls list greys its outcomes the same way). A phone call is not a write, so Call stays live when there is a number.
  */
 function crmViewerActionsHTML(p, rec) {
-  var c = rec.contacts || {}, phone = (c.phones || [])[0], why = crmViewWhy(), b = [];
+  var c = rec.contacts || {}, phone = (c.phones || [])[0], why = crmViewWhy(), list = [];
   var off = function (k, tid, label, cls) { return '<button type="button" class="act ghost' + (cls ? ' ' + cls : '') + '" disabled aria-disabled="true" title="' + esc(why) + '" data-testid="' + tid + '">' + (k ? crmIcon(k) : '') + esc(tx(label)) + '</button>'; };
-  if (phone) b.push('<a class="act" href="tel:' + esc(String(phone).replace(/\s+/g, '')) + '" data-crm="call" data-testid="crm-act-call">' + crmIcon('phone') + esc(tx('Call')) + '</a>');
-  if (p.kind === 'walk-in') b.push(off('plus', 'crm-act-walkin', 'Add to my parties'));
+  if (phone) list.push('<a class="act" href="tel:' + esc(String(phone).replace(/\s+/g, '')) + '" data-crm="call" data-testid="crm-act-call">' + crmIcon('phone') + esc(tx('Call')) + '</a>');
+  if (p.kind === 'walk-in') list.push(off('plus', 'crm-act-walkin', 'Add to my parties'));
   else {
-    if (p.on_chitbridge) b.push(off('msg', 'crm-act-message', 'Message'));
-    var b0 = Number(p.balance_minor || 0); b.push(off('pay', 'crm-act-pay', b0 > 0 ? 'Receive' : b0 < 0 ? 'Pay' : 'Pay / Receive'));
-    b.push(off('note', 'crm-act-log', 'Log'), off('clock', 'crm-act-fu', 'Follow-up', 'wide-only'), off('pencil', 'crm-act-edit', 'Edit', 'wide-only'));
-    if (crmIsLead(p)) b.push(off('', 'crm-act-stage', 'Move to…'));
+    if (p.on_chitbridge) list.push(off('msg', 'crm-act-message', 'Message'));
+    var b0 = Number(p.balance_minor || 0); list.push(off('pay', 'crm-act-pay', b0 > 0 ? 'Receive' : b0 < 0 ? 'Pay' : 'Pay / Receive'));
+    list.push(off('note', 'crm-act-log', 'Log'), off('clock', 'crm-act-fu', 'Follow-up', 'wide-only'), off('pencil', 'crm-act-edit', 'Edit', 'wide-only'));
+    if (crmIsLead(p)) list.push(off('', 'crm-act-stage', 'Move to…'));
   }
-  return '<div class="actbar pin" role="toolbar" aria-label="' + esc(tx('Actions')) + '" data-testid="crm-actions" data-level="viewer">' + b.join('') + '<span class="why" data-testid="crm-actions-why">' + esc(why) + '</span></div>';
+  return '<div class="actbar pin" role="toolbar" aria-label="' + esc(tx('Actions')) + '" data-testid="crm-actions" data-level="viewer">' + list.join('') + '<span class="why" data-testid="crm-actions-why">' + esc(why) + '</span></div>';
 }
 /** W2-CRM: Remove is SHOWN to every login; the SERVER's may.remove greys it with its sentence (owner only), open dues grey it too */
 function crmRemoveItemHTML(party, icon) {
@@ -272,7 +272,7 @@ function crmRemoveItemHTML(party, icon) {
 }
 function crmActionsHTML(p, rec) {
   if (!crmEdit()) return crmViewerActionsHTML(p, rec);
-  var c = rec.contacts || {}, phone = (c.phones || [])[0], mail = (c.emails || []).filter(function (m) { return !(rec.mail_bounced && rec.mail_bounced.to === m); })[0] || (c.emails || [])[0], mb = crmMailBlock(p, rec), primary, inline = [];
+  var c = rec.contacts || {}, phone = (c.phones || [])[0], mail = (c.emails || []).filter(function (item) { return !(rec.mail_bounced && rec.mail_bounced.to === item); })[0] || (c.emails || [])[0], mb = crmMailBlock(p, rec), primary, inline = [];
   var key = esc(crmKey(p)), icon = function (k) { return crmIcon(k); };
   var mailBtn = '<a class="act ghost wide-only" href="mailto:' + esc(mail || '') + '" data-crm="mail" data-testid="crm-act-mail">' + icon('mail') + esc(tx('Mail')) + '</a>';
   var callBtn = function (pri) { return '<a class="act' + (pri ? '' : ' ghost wide-only') + '" href="tel:' + esc(String(phone || '').replace(/\s+/g, '')) + '" data-crm="call" data-testid="crm-act-call">' + icon('phone') + esc(tx('Call')) + '</a>'; };
@@ -299,7 +299,7 @@ function crmActionsHTML(p, rec) {
 }
 /** C25: what is missing and where to set it - never a dead end */
 function crmTaxMissing(p, R, cu, su) {
-  var gst = (R.tax_ids || []).filter(function (t) { return t.scheme === taxIdWord(); })[0], miss = [], where = [];   /* CX0: the pack's tax-id word */
+  var gst = (R.tax_ids || []).filter(function (item) { return item.scheme === taxIdWord(); })[0], miss = [], where = [];   /* CX0: the pack's tax-id word */
   if (!gst) { miss.push(txf('no {id}', { id: taxIdWord() })); where.push(txf('Add their {id} with Edit.', { id: taxIdWord() })); }
   if (!((cu && cu.credit_days != null) || (su && su.credit_days != null))) { miss.push(tx('no credit terms')); where.push(tx('Set them in Finance, under Terms.')); }
   return miss.length ? '<div class="hint" data-testid="crm-tax-missing"><b>' + esc(miss.join(' \u00b7 ')) + '</b> \u2014 ' + esc(where.join(' ')) + '</div>' : '';
@@ -310,7 +310,7 @@ function crmSec(id, title, fact, body, open) {
 function crmKV(l, v) { return v == null || v === '' ? '' : '<div class="kv"><b>' + esc(tx(l)) + '</b><span>' + v + '</span></div>'; }
 function crmRecordPaint(p, rec) {
   var R = Object.assign({}, p, rec, { billFacts: crmBillFacts(rec.timeline_all || rec.timeline_head) }); R.unbilled = R.billFacts.unbilled;
-  var s = document.getElementById('screen'), c = rec.contacts || {}, one = R.roles.length === 1, ed = crmEdit();
+  var node = document.getElementById('screen'), c = rec.contacts || {}, one = R.roles.length === 1, ed = crmEdit();
   var merged = CRMR.mergedNote ? '<div class="banner" data-testid="crm-merged">' + crmIcon('link') + '<span>' + esc(txf('Merged from {no}', { no: CRMR.mergedNote })) + '</span></div>' : ''; CRMR.mergedNote = null;
   var secs = [];
   /* Timeline — the latest five (a CBList mount) and See all */
@@ -319,15 +319,15 @@ function crmRecordPaint(p, rec) {
     + (all > 5 ? '<div style="padding-top:10px"><a class="act sm ghost" href="#/party/' + esc(crmKey(p)) + '/timeline" data-testid="crm-tl-all">' + esc(txf('See all {n}', { n: all })) + '</a></div>' : ''), true));
   /* Who & contact (contact preferences moved to the Consent section — T3-P3-CONSENT, one place) */
   var who = crmKV('Legal name', R.legal_name && R.legal_name !== R.display_name ? esc(R.legal_name) : '')
-    + crmKV('Phone', (c.phones || []).map(esc).join('<br>')) + crmKV('E-mail', (c.emails || []).map(function (m) { return esc(m) + (rec.mail_bounced && rec.mail_bounced.to === m ? ' <span class="tag amber">' + esc(tx('bounced')) + '</span>' : ''); }).join('<br>'))
+    + crmKV('Phone', (c.phones || []).map(esc).join('<br>')) + crmKV('E-mail', (c.emails || []).map(function (item) { return esc(item) + (rec.mail_bounced && rec.mail_bounced.to === item ? ' <span class="tag amber">' + esc(tx('bounced')) + '</span>' : ''); }).join('<br>'))
     + crmKV('Address', esc(c.address || '')) + (p.city ? crmKV('City', esc(p.city)) : '')
     + (!(c.phones || []).length && !(c.emails || []).length && p.kind !== 'walk-in' ? '<div class="kv"><span>' + esc(tx('No phone or e-mail yet')) + '</span></div>' : '');
   secs.push(crmSec('who', 'Who & contact', '', who || '<div class="hint">' + esc(tx('Nothing more is recorded')) + '</div>', true));
   /* Tax & terms */
   var cu = rec.customer, su = rec.supplier, lim = function (x) { return x && x.credit_limit_minor != null ? ' · ' + esc(tx('limit')) + ' ' + esc(bkMoney(x.credit_limit_minor, p.currency)) : ''; };
   var days = function (x) { return x && x.credit_days != null ? esc(txf('{n} days', { n: x.credit_days })) + lim(x) : ''; };
-  var gst = (R.tax_ids || []).filter(function (t) { return t.scheme === taxIdWord(); })[0];   /* CX0: the pack's tax-id word */
-  var tax = crmKV('Tax IDs', (R.tax_ids || []).map(function (t) { return esc(t.scheme) + ' <span class="mono">' + esc(t.value) + '</span>'; }).join('<br>'))
+  var gst = (R.tax_ids || []).filter(function (item) { return item.scheme === taxIdWord(); })[0];   /* CX0: the pack's tax-id word */
+  var tax = crmKV('Tax IDs', (R.tax_ids || []).map(function (item) { return esc(item.scheme) + ' <span class="mono">' + esc(item.value) + '</span>'; }).join('<br>'))
     + crmKV('State', R.state_code ? esc(R.state_code) + (R.supply_type ? ' · ' + esc(tx(CRM_SUPPLY[R.supply_type] || R.supply_type)) : '') : '')
     + (cu ? crmKV('Credit you give', days(cu)) : '') + (su ? crmKV('Credit you get', days(su)) : '');
   secs.push(crmSec('tax', 'Tax & terms', gst ? '<span class="mono">' + esc(gst.value) + '</span>' : '', tax + crmTaxMissing(p, R, cu, su) + '<div id="crm_terms" data-testid="crm-terms"></div>', false));
@@ -336,7 +336,7 @@ function crmRecordPaint(p, rec) {
   var ufact = bf.unbilled.n ? crmPlural(bf.unbilled.n, 'order not billed yet', 'orders not billed yet') + ' \u00b7 ' + bkMoney(bf.unbilled.minor, bf.unbilled.currency || CRM.currency) : '';
   if (cu) secs.push(crmSec('customer', 'Customer', esc(bf.bills ? crmPlural(bf.bills, 'bill', 'bills') : ufact || tx('No bills yet')),
     crmKV('Bills', esc(String(bf.bills))) + crmKV('Last bill', bf.lastBill ? esc(bkDate(bf.lastBill)) : '') + crmKV('Not billed yet', ufact ? esc(ufact) : '') + crmKV('Customer since', cu.since ? esc(bkDate(cu.since)) : '') + crmKV('Added from', cu.added_via ? esc(tx(CRM_ADDED[cu.added_via] || cu.added_via)) : '')
-    + crmKV('Segment', cu.segment && cu.segment !== 'new' ? esc(tx(CRM_SEG[cu.segment] || cu.segment)) + (cu.segment_override ? ' · ' + esc(tx('set by you')) : '') : '') + crmKV('Groups', (cu.groups || []).map(function (g) { return '<span class="tag">' + esc(g) + '</span>'; }).join(' '))
+    + crmKV('Segment', cu.segment && cu.segment !== 'new' ? esc(tx(CRM_SEG[cu.segment] || cu.segment)) + (cu.segment_override ? ' · ' + esc(tx('set by you')) : '') : '') + crmKV('Groups', (cu.groups || []).map(function (item) { return '<span class="tag">' + esc(item) + '</span>'; }).join(' '))
     + crmKV('Points', rec.points ? esc(String(rec.points.balance)) + (rec.points.programme ? ' · ' + esc(rec.points.programme) : '') : ''), one));
   /* T3-P2-CRM: Rewards — the engine's pane (app/cap-rewards.js, ONE copy with the workshop): the fact is the record's own points figure; the pane reads when the fold opens */
   if (cu && p.kind !== 'walk-in') secs.push(crmSec('rewards', 'Rewards', rec.points ? esc(String(rec.points.points != null ? rec.points.points : rec.points.balance)) + ' ' + esc(tx('points')) + (rec.points.programme ? ' · ' + esc(rec.points.programme) : '') : '', '<div id="crm_rw" data-testid="crm-rewards"></div>', false));
@@ -352,8 +352,8 @@ function crmRecordPaint(p, rec) {
     else secs.push(crmSec('ledger', 'Ledger', '', '<p style="margin:8px 0">' + esc(tx('Dues show when Accounts is on')) + '</p>' + (crmOwner() ? '<button type="button" class="act sm" data-crm="ledgeron" data-testid="crm-ledger-on">' + esc(tx('Switch on')) + '</button>' : ''), false));
   }
   if (crmOwner() && (rec.changes || []).length) secs.push(crmSec('changes', 'History of changes', esc(crmPlural(rec.changes.length, 'change', 'changes')), (rec.changes || []).map(function (x) { return '<div class="kv" data-testid="crm-change"><b>' + esc(bkDate(x.at)) + '</b><span>' + esc(x.line) + ' <span class="sub">· ' + esc(x.by || '') + '</span></span></div>'; }).join(''), false));
-  s.className = 'screen';
-  s.innerHTML = '<div class="rec" data-testid="crm-record" data-party="' + esc(p.party_id) + '">' + merged + crmHeaderHTML(R) + crmIdentityHTML(R, rec) + crmNextHTML(R, rec) + crmActionsHTML(R, rec) + secs.join('') + '</div>';
+  node.className = 'screen';
+  node.innerHTML = '<div class="rec" data-testid="crm-record" data-party="' + esc(p.party_id) + '">' + merged + crmHeaderHTML(R) + crmIdentityHTML(R, rec) + crmNextHTML(R, rec) + crmActionsHTML(R, rec) + secs.join('') + '</div>';
   /* the mounts */
   crmEditPrep(p, rec);
   if (typeof crmConsentMount === 'function') crmConsentMount(p);
@@ -391,8 +391,8 @@ function crmLedgerRepaint(pid) {
   if (!p || !rec || p.party_id !== pid || !(CRM.route && CRM.route.view === 'party' && !CRM.route.sub)) return;
   var d = BK.dues && BK.dues[pid]; if (d && d.balance_minor != null) p.balance_minor = d.balance_minor;   /* the same row the Parties list reads */
   /* only the three places the balance shows - never the whole record: a repaint would fold the Ledger section the person is working in */
-  var R = Object.assign({}, p, rec), has = CRM.ledger && p.balance_minor != null, rc = document.querySelector('[data-testid="crm-record"] .rchips');
-  if (rc) rc.innerHTML = crmRoleChips(R) + crmRailChip(R) + (crmIsLead(R) && !Number(p.balance_minor || 0) ? '' : crmDueChip(Object.assign({}, R, { balance_minor: p.balance_minor, billFacts: crmBillFacts(rec.timeline_all || rec.timeline_head) }))) + crmSegChip(R) + crmStageChip(R.lead);
+  var R = Object.assign({}, p, rec), has = CRM.ledger && p.balance_minor != null, node = document.querySelector('[data-testid="crm-record"] .rchips');
+  if (node) node.innerHTML = crmRoleChips(R) + crmRailChip(R) + (crmIsLead(R) && !Number(p.balance_minor || 0) ? '' : crmDueChip(Object.assign({}, R, { balance_minor: p.balance_minor, billFacts: crmBillFacts(rec.timeline_all || rec.timeline_head) }))) + crmSegChip(R) + crmStageChip(R.lead);
   var fact = document.querySelector('[data-testid="crm-sec-fact-ledger"]'); if (fact) fact.innerHTML = has ? crmDueCell(p) : '';
   var led = document.getElementById('crm_ledger');
   if (led) led.innerHTML = partyBooksHTML(rec.customer ? 'customer' : 'supplier', pid, crmLedgerRow(p, rec), true);
@@ -405,7 +405,7 @@ function crmLedgerRow(p, rec) {
 /* ── the party edit: cap-books.js's own sheet (partyEditOpen), fed the record's ids and terms; the CRM list is its one source ── */
 function crmEditPrep(p, rec) {
   var set = function (list, idKey, kind, side, listId) {
-    var row = list.filter(function (r) { return r[idKey] === p.party_id; })[0]; if (!row) return;
+    var row = list.filter(function (item) { return item[idKey] === p.party_id; })[0]; if (!row) return;
     Object.assign(row, { display_name: p.display_name, nickname: p.nickname, legal_name: p.legal_name, tax_ids: p.tax_ids.slice(), state_code: p.state_code, party_no: p.party_no,
       credit_days: side && side.credit_days != null ? side.credit_days : null, credit_limit_minor: side && side.credit_limit_minor != null ? side.credit_limit_minor : null });
     row[kind === 'supplier' ? 'supplier_list_id' : 'customer_list_id'] = side && side.list_id;
@@ -439,28 +439,28 @@ async function crmTlLoad(more) {
   try {
     /* the API pages by time only (?before=<iso>&limit=<n>): it has no kind or text filter and sends no per-kind counts. The page keeps the entries that fit
        the tab and the search, and asks for the next page until it has a screenful or the history ends. */
-    var got = [], next = more ? T.next : '', pages = 0, r;
+    var list = [], next = more ? T.next : '', pages = 0, r;
     do {
       r = await api('crmTimeline', { params: { id: T.p.party_id }, query: { before: next || '', limit: 50 } });
       if (g !== T.gen) return;
-      got = got.concat(crmEntriesFrom(r).filter(function (e) { return crmTlWant(T, e); }));
+      list = list.concat(crmEntriesFrom(r).filter(function (e) { return crmTlWant(T, e); }));
       next = (r && r.next_before) || null; pages++;
-    } while (next && got.length < 30 && pages < 8);
-    T.entries = (more ? T.entries : []).concat(got); T.next = next; T.counts = (r && r.counts) || T.counts || {}; T.state = 'ready';
+    } while (next && list.length < 30 && pages < 8);
+    T.entries = (more ? T.entries : []).concat(list); T.next = next; T.counts = (r && r.counts) || T.counts || {}; T.state = 'ready';
   } catch (e) { if (g !== T.gen) return; T.state = 'error'; T.err = e; }
   T.busy = false;
   if (CRMR.tlApi) CRMR.tlApi.refresh({ filters: crmTlFilters(T) });
 }
 function crmTlFilters(T) {
   return [{ key: 'kind', label: tx('Show'), all: tx('All') + (T.counts.all != null ? ' (' + T.counts.all + ')' : ''), match: function () { return true; },
-    options: CRM_TABS.filter(function (t) { return t[0] !== 'all' && (T.counts[t[0]] == null || T.counts[t[0]] > 0); }).map(function (t) { return { v: t[0], label: tx(t[1]) + (T.counts[t[0]] != null ? ' (' + T.counts[t[0]] + ')' : '') }; }) }];
+    options: CRM_TABS.filter(function (item) { return item[0] !== 'all' && (T.counts[item[0]] == null || T.counts[item[0]] > 0); }).map(function (item) { return { v: item[0], label: tx(item[1]) + (T.counts[item[0]] != null ? ' (' + T.counts[item[0]] + ')' : '') }; }) }];
 }
 function crmTimelineView(p, tok) {
-  var s = document.getElementById('screen'), f = (CRM.route.params || {}).f;
+  var node = document.getElementById('screen'), f = (CRM.route.params || {}).f;
   var T = CRMR.tl = { p: p, kind: 'all', q: '', entries: [], next: null, counts: {}, state: 'loading', gen: 0, err: null, busy: false };
   crmBar('<a href="#/party/' + esc(crmKey(p)) + '" data-testid="crm-back">‹ ' + esc(p.display_name) + '</a>', crmEdit() ? '<button type="button" class="act sm" data-crm="rlog" data-testid="crm-act-log">+ ' + esc(tx('Log a call or note')) + '</button>' : crmViewOnlyBtn('crm-act-log', '+ ' + tx('Log a call or note'), crmViewWhy()), true);
-  s.className = 'screen flush';
-  s.innerHTML = '<div id="crm_tl" data-testid="crm-timeline"></div>';
+  node.className = 'screen flush';
+  node.innerHTML = '<div id="crm_tl" data-testid="crm-timeline"></div>';
   if (CRMR.tlApi) { try { CRMR.tlApi.destroy(); } catch (_) {} }
   var el = document.getElementById('crm_tl');
   CRMR.tlApi = CBList.mount(el, {
@@ -496,12 +496,12 @@ function crmLogOpen(p) {
 }
 async function crmLogSave() {
   if (LOG.busy) return;
-  var g = function (id) { return String((document.getElementById(id) || {}).value || '').trim(); }, msg = document.getElementById('crm_log_msg'), p = LOG.p;
-  if (!g('crm_log_body')) { msg.textContent = tx('Say what happened.'); return; }
+  var node = function (id) { return String((document.getElementById(id) || {}).value || '').trim(); }, msg = document.getElementById('crm_log_msg'), p = LOG.p;
+  if (!node('crm_log_body')) { msg.textContent = tx('Say what happened.'); return; }
   LOG.busy = true;
   try {
-    await api('crmLog', { params: { id: p.party_id }, body: { kind: LOG.kind === 'whatsapp' ? 'message' : LOG.kind, direction: LOG.kind === 'note' ? null : LOG.dir, body: g('crm_log_body') } });
-    if (LOG.fu && g('crm_log_fuwhat') && g('crm_log_fudue')) await api('crmFollowAdd', { body: { party_id: p.party_id, what: g('crm_log_fuwhat'), due_at: new Date(g('crm_log_fudue') + 'T09:00:00').toISOString(), source: 'interaction' } });
+    await api('crmLog', { params: { id: p.party_id }, body: { kind: LOG.kind === 'whatsapp' ? 'message' : LOG.kind, direction: LOG.kind === 'note' ? null : LOG.dir, body: node('crm_log_body') } });
+    if (LOG.fu && node('crm_log_fuwhat') && node('crm_log_fudue')) await api('crmFollowAdd', { body: { party_id: p.party_id, what: node('crm_log_fuwhat'), due_at: new Date(node('crm_log_fudue') + 'T09:00:00').toISOString(), source: 'interaction' } });
     closeModal(); toast(tx('Logged')); crmLoad(true);
     if (CRM.route && CRM.route.view === 'party') crmRecordOpen(CRM.route);
   } catch (e) {
@@ -511,23 +511,23 @@ async function crmLogSave() {
 }
 
 /* ═══ ONE click door for the record's controls (cap-crm.js hands every data-crm it does not own to this) ═══════════ */
-function crmRecordClick(a, t, ev) {
-  var p = CRMR.p, rec = CRMR.rec || {}, v = t.getAttribute('data-v');
-  if (typeof crmPrivacyClick === 'function' && crmPrivacyClick(a, t)) return;   /* consent Yes/No · the register (cap-crm-privacy.js) */
+function crmRecordClick(a, node, ev) {
+  var p = CRMR.p, rec = CRMR.rec || {}, v = node.getAttribute('data-v');
+  if (typeof crmPrivacyClick === 'function' && crmPrivacyClick(a, node)) return;   /* consent Yes/No · the register (cap-crm-privacy.js) */
   if (a === 'rmore') { CRMR.menu = !CRMR.menu; return crmRecordPaint(p, rec); }
   if (a === 'recretry') return crmRecordOpen(CRM.route);
   if (a === 'rlog') return crmLogOpen(p);
   if (a === 'rfu') return crmFuAddOpen(p.party_id, function () { crmRecordOpen(CRM.route); });
   if (a === 'redit' || a === 'fixaddr') return crmEditOpen(p);
-  if (a === 'logkind') { LOG.kind = v; document.querySelectorAll('[data-crm="logkind"]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-v') === v)); }); document.getElementById('crm_logdir').style.display = v === 'note' ? 'none' : ''; return; }
-  if (a === 'logdir') { LOG.dir = v; document.querySelectorAll('[data-crm="logdir"]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-v') === v)); }); return; }
-  if (a === 'logfu') { LOG.fu = t.checked; var bx = document.getElementById('crm_log_fubox'); bx.hidden = !t.checked; bx.style.display = t.checked ? 'flex' : 'none'; return; }
-  if (a === 'logpreset') { var d = new Date(); d.setDate(d.getDate() + (v === 'week' ? 7 : 1)); document.getElementById('crm_log_fudue').value = crmLocalISO(d); return; }
+  if (a === 'logkind') { LOG.kind = v; document.querySelectorAll('[data-crm="logkind"]').forEach(function (item) { item.setAttribute('aria-pressed', String(item.getAttribute('data-v') === v)); }); document.getElementById('crm_logdir').style.display = v === 'note' ? 'none' : ''; return; }
+  if (a === 'logdir') { LOG.dir = v; document.querySelectorAll('[data-crm="logdir"]').forEach(function (item) { item.setAttribute('aria-pressed', String(item.getAttribute('data-v') === v)); }); return; }
+  if (a === 'logfu') { LOG.fu = node.checked; var bx = document.getElementById('crm_log_fubox'); bx.hidden = !node.checked; bx.style.display = node.checked ? 'flex' : 'none'; return; }
+  if (a === 'logpreset') { var date = new Date(); date.setDate(date.getDate() + (v === 'week' ? 7 : 1)); document.getElementById('crm_log_fudue').value = crmLocalISO(date); return; }
   if (a === 'logsave') return crmLogSave();
   if (a === 'call') { setTimeout(function () { if (CRMR.p) crmLogOpen(CRMR.p); }, 400); return; }
   if (a === 'mail') { setTimeout(function () { if (CRMR.p) crmLogOpen(CRMR.p); }, 400); return; }
   if (a === 'message') return crmMessage(p, rec);
-  if (a === 'rfudone') return crmFuAct(t.getAttribute('data-id'), { done: true }, function () { setTimeout(function () { crmRecordOpen(CRM.route); }, 0); });
+  if (a === 'rfudone') return crmFuAct(node.getAttribute('data-id'), { done: true }, function () { setTimeout(function () { crmRecordOpen(CRM.route); }, 0); });
   if (a === 'rremind') return crmFuAddOpen(p.party_id, function () { crmRecordOpen(CRM.route); }, { what: tx('Remind about the overdue dues'), source: 'dues' });
   if (a === 'rpay') return payOpen(rec.customer && rec.supplier ? (p.balance_minor > 0 ? 'customer' : 'supplier') : (rec.customer ? 'customer' : 'supplier'), p.party_id);   /* the side the record has; a party on both sides: by who owes whom */
   if (a === 'rgtheirs') return crmGstinTheirs(p, rec);
@@ -541,7 +541,7 @@ function crmRecordClick(a, t, ev) {
 document.addEventListener('keydown', function (ev) {
   if (ev.key !== 'Escape' || !CRMR.menu) return;
   CRMR.menu = false;
-  if (CRMR.p && CRMR.rec && CRM.route && CRM.route.view === 'party' && !CRM.route.sub) { crmRecordPaint(CRMR.p, CRMR.rec); var mb = document.querySelector('[data-testid="crm-act-more"]'); if (mb) mb.focus(); }
+  if (CRMR.p && CRMR.rec && CRM.route && CRM.route.view === 'party' && !CRM.route.sub) { crmRecordPaint(CRMR.p, CRMR.rec); var node = document.querySelector('[data-testid="crm-act-more"]'); if (node) node.focus(); }
 });
 document.addEventListener('click', function (ev) {
   if (!CRMR.menu) return;
@@ -555,7 +555,7 @@ function crmMessage(p, rec) {
 }
 async function crmGstinTheirs(p, rec) {
   var side = rec.customer || rec.supplier, kind = rec.customer ? 'customer' : 'supplier';
-  var ids = (p.tax_ids || []).map(function (t) { return t.scheme === 'GSTIN' ? { scheme: 'GSTIN', value: rec.gstn_profile } : t; });
+  var ids = (p.tax_ids || []).map(function (item) { return item.scheme === 'GSTIN' ? { scheme: 'GSTIN', value: rec.gstn_profile } : item; });
   try { await api(kind === 'supplier' ? 'supPatch' : 'custGroup', { params: { id: side.list_id }, body: { tax_ids: ids } }); toast(tx('Saved')); await crmLoad(true); crmRecordOpen(CRM.route); }
   catch (e) { toast((e && e.message) || tx("Couldn't save that. Try again.")); }
 }
@@ -566,8 +566,8 @@ function crmLedgerOn() {
 async function crmWalkin(p) {
   try {
     /* the CRM's own door: the phone becomes a local customer and its points move to them (the API names them "Customer 0021" until the shop says otherwise) */
-    var r = await api('crmWalkIn', { body: { phone: p.phone } });
-    var made = (r && r.party) || {}, pts = r && r.points_claimed != null ? r.points_claimed : 0;
+    var reply = await api('crmWalkIn', { body: { phone: p.phone } });
+    var made = (reply && reply.party) || {}, pts = reply && reply.points_claimed != null ? reply.points_claimed : 0;
     toast(tx('Added to your parties') + (pts ? ' — ' + txf('{n} points kept', { n: pts }) : '')); await crmLoad(true);
     var np = made.party_id && CRM.byKey[made.party_id]; crmGo(np ? '#/party/' + encodeURIComponent(crmKey(np)) : '#/parties');
   } catch (e) { toast((e && e.message) || tx("Couldn't add that. Try again.")); }
