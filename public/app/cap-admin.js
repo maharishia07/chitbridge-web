@@ -53,7 +53,7 @@ function pfExposureDefaultsHTML(e){
     + '</div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">' + esc(tx('Any item can differ: product page › Shown to customers. Price and unit always show.')) + '</div>';
 }
 async function pfExposureSet(k, on){
-  try { var r = await api('exposureDefaults', { body: (function(){ var b = {}; b[k] = !!on; return b; })() }); if (UI._me) { UI._me.policy_flags = Object.assign({}, UI._me.policy_flags || {}, { storefront_exposure: r.exposure }); } toast(tx('Saved ✓')); }
+  try { var reply = await api('exposureDefaults', { body: (function(){ var b = {}; b[k] = !!on; return b; })() }); if (UI._me) { UI._me.policy_flags = Object.assign({}, UI._me.policy_flags || {}, { storefront_exposure: reply.exposure }); } toast(tx('Saved ✓')); }
   catch (e) { toast((e && e.message) || tx('Could not save'), true); }
 }
 /* ═══ MIS ═══════════════════════════════════════════════════════════════════════════════════════════════════
@@ -104,23 +104,23 @@ var MIS_DEAD      = { cancelled:1, rejected:1 };
 function _capShowDetail(){
   if (UI.vp !== 'mob') return;
   UI.mdetail = true;
-  var p = document.getElementById('panel'); if (p) p.classList.add('showdetail');
+  var node = document.getElementById('panel'); if (node) node.classList.add('showdetail');
 }
 function misBand(){ return UI.misBand || 'overview'; }
 /* Repaint from the cached model when we have one — switching band is not a reason to re-fetch five endpoints. */
 function misSetBand(k){ UI.misBand = k; renderApp(); _capShowDetail();
-  if (UI._mis){ const h=document.getElementById('misbody'); if (h) h.innerHTML = misBandHTML(k, UI._mis); } else { loadMIS(); } }
+  if (UI._mis){ const node=document.getElementById('misbody'); if (node) node.innerHTML = misBandHTML(k, UI._mis); } else { loadMIS(); } }
 function misPeriod(){ return UI.misPeriod || 'all'; }
 function misSetPeriod(p){ UI.misPeriod = p; renderApp(); loadMIS(true); }   /* ⚠ FORCED: a new window is a new question */   // a new window DOES need the data re-bucketed
 
 function misScreen(){
   var m = UI._mis;
-  var rail = MIS_BANDS.map(function(b){
-    var sel = (misBand() === b.key) ? ' sel' : '';
-    var hv = m ? misHeadline(b.key, m) : { v:'·', s:'' };
-    return '<div class="row misrow' + sel + '" data-testid="mis-band-' + b.key + '" onclick="misSetBand(\'' + b.key + '\')">'
-      + '<div class="main2"><div class="l1"><span class="code">' + esc(b.name) + '</span></div>'
-        + '<div class="l2">' + esc(b.q) + '</div></div>'
+  var rail = MIS_BANDS.map(function(item){
+    var sel = (misBand() === item.key) ? ' sel' : '';
+    var hv = m ? misHeadline(item.key, m) : { v:'·', s:'' };
+    return '<div class="row misrow' + sel + '" data-testid="mis-band-' + item.key + '" onclick="misSetBand(\'' + item.key + '\')">'
+      + '<div class="main2"><div class="l1"><span class="code">' + esc(item.name) + '</span></div>'
+        + '<div class="l2">' + esc(item.q) + '</div></div>'
       + '<div class="misval' + (hv.tone ? ' ' + hv.tone : '') + '">' + hv.v + '<small>' + esc(hv.s) + '</small></div></div>';
   }).join('');
   var seg = function(p, l){ return '<button class="' + (misPeriod() === p ? 'on' : '') + '" onclick="misSetPeriod(\'' + p + '\')">' + l + '</button>'; };
@@ -195,7 +195,7 @@ function misTaxSetMonth(m){ UI._taxMonth = m; UI._taxLedger = null; loadTaxLedge
 async function loadTaxLedger(){
   try { UI._taxLedger = await api('taxLedger', { query: { month: misTaxMonth() } }); }
   catch (e) { UI._taxLedger = { error: (e && e.message) || 'Could not read the ledger.' }; }
-  const h = document.getElementById('misbody'); if (h && misBand() === 'tax') h.innerHTML = misBandHTML('tax', UI._mis || {});
+  const node = document.getElementById('misbody'); if (node && misBand() === 'tax') node.innerHTML = misBandHTML('tax', UI._mis || {});
   const rail = document.getElementById('mis_rail'); if (rail && UI._mis) { const b = MIS_BANDS.find(function(x){ return x.key === 'tax'; }); const hv = misHeadline('tax', UI._mis);
     const el = rail.querySelector('[data-testid="mis-band-tax"] .misval'); if (el) el.innerHTML = hv.v + '<small>' + esc(hv.s) + '</small>'; }
 }
@@ -207,22 +207,22 @@ function misTax(){
   if (L === undefined || L === null) { loadTaxLedger(); return _misHead('Tax', tx('What this month owes, from the chits on the rail.')) + '<div class="misnote">' + tx('reading…') + '</div>'; }
   if (L.error) return _misHead('Tax', '') + '<div class="miswarn">' + esc(L.error) + '</div>';
   const m = misTaxMonth();
-  const prev = (function(){ const d = new Date(m + '-01T00:00:00Z'); d.setUTCMonth(d.getUTCMonth() - 1); return d.toISOString().slice(0, 7); })();
-  const next = (function(){ const d = new Date(m + '-01T00:00:00Z'); d.setUTCMonth(d.getUTCMonth() + 1); return d.toISOString().slice(0, 7); })();
+  const prev = (function(){ const date = new Date(m + '-01T00:00:00Z'); date.setUTCMonth(date.getUTCMonth() - 1); return date.toISOString().slice(0, 7); })();
+  const next = (function(){ const date = new Date(m + '-01T00:00:00Z'); date.setUTCMonth(date.getUTCMonth() + 1); return date.toISOString().slice(0, 7); })();
   const head = (t, x) => '<div class="mistwo"><div>' + t + '</div><div>' + x + '</div></div>';
   const heads = (h) => '<table style="width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:var(--fs-2)">'
     + [['Taxable', h.taxable], ['CGST', h.cgst], ['SGST', h.sgst], ['IGST', h.igst]].concat(h.cess ? [['Cess', h.cess]] : []).concat([['Tax', h.tax]])
-      .map(function(r){ return '<tr><td style="color:var(--grey);padding:2px 0">' + esc(r[0]) + '</td><td style="text-align:end;padding:2px 0"><bdi>' + inr(r[1]) + '</bdi></td></tr>'; }).join('')
+      .map(function(item){ return '<tr><td style="color:var(--grey);padding:2px 0">' + esc(item[0]) + '</td><td style="text-align:end;padding:2px 0"><bdi>' + inr(item[1]) + '</bdi></td></tr>'; }).join('')
     + '</table>';
-  const rows = (L.rows || []).map(function(r){
-    const tone = r.side === 'output' ? 'var(--warn-3)' : r.side === 'itc' ? 'var(--ok-2)' : 'var(--grey)';
-    return '<div class="row" style="cursor:pointer" onclick="openChit(\'' + esc(r.chit_id) + '\')">'
-      + '<div class="main2"><div class="l1"><span class="code">' + esc(r.subject || r.purpose || 'chit') + '</span>'
-      + '<span class="optchip" style="color:' + tone + '">' + esc(r.side === 'output' ? tx('output') : r.side === 'itc' ? tx('input credit') : tx('no credit')) + '</span>'
-      + (r.provisional ? '<span class="optchip">' + tx('provisional') + '</span>' : '<span class="optchip" style="color:var(--ok-2)">' + tx('frozen') + '</span>')
-      + '<span class="amt" style="margin-inline-start:auto"><bdi>' + inr(r.heads.tax) + '</bdi></span></div>'
-      + '<div class="l2">' + esc((r.counterparty || '—') + (r.counterparty_gstin ? ' · ' + r.counterparty_gstin : ' · no GSTIN')) + ' · ' + tx('taxable') + ' ' + inr(r.heads.taxable)
-      + (r.unrated ? ' · <span style="color:var(--warn-3)">' + r.unrated + ' ' + tx('line(s) without a rate') + '</span>' : '') + '</div></div></div>';
+  const rows = (L.rows || []).map(function(item){
+    const tone = item.side === 'output' ? 'var(--warn-3)' : item.side === 'itc' ? 'var(--ok-2)' : 'var(--grey)';
+    return '<div class="row" style="cursor:pointer" onclick="openChit(\'' + esc(item.chit_id) + '\')">'
+      + '<div class="main2"><div class="l1"><span class="code">' + esc(item.subject || item.purpose || 'chit') + '</span>'
+      + '<span class="optchip" style="color:' + tone + '">' + esc(item.side === 'output' ? tx('output') : item.side === 'itc' ? tx('input credit') : tx('no credit')) + '</span>'
+      + (item.provisional ? '<span class="optchip">' + tx('provisional') + '</span>' : '<span class="optchip" style="color:var(--ok-2)">' + tx('frozen') + '</span>')
+      + '<span class="amt" style="margin-inline-start:auto"><bdi>' + inr(item.heads.tax) + '</bdi></span></div>'
+      + '<div class="l2">' + esc((item.counterparty || '—') + (item.counterparty_gstin ? ' · ' + item.counterparty_gstin : ' · no GSTIN')) + ' · ' + tx('taxable') + ' ' + inr(item.heads.taxable)
+      + (item.unrated ? ' · <span style="color:var(--warn-3)">' + item.unrated + ' ' + tx('line(s) without a rate') + '</span>' : '') + '</div></div></div>';
   }).join('');
   return _misHead('Tax', tx('What this month owes, from the chits on the rail. Provisional until a copy is completed; off-rail purchases are not here; this is not a filing.'))
     + '<div class="misbar" style="margin-bottom:8px"><span class="seg">'
@@ -301,14 +301,14 @@ function _misStack(m){
 /* A real series off created_at — no invented shape. Flat line when there is only one bucket, which is honest. */
 function _misSpark(series){
   if (!series || series.length < 2) return '<div class="misnote">Not enough history yet for a trend — one bucket of data.</div>';
-  var max = Math.max.apply(null, series.map(function(p){ return p.n; })) || 1;
-  var pts = series.map(function(p, i){
-    var x = 6 + i * (288 / (series.length - 1));
-    return Math.round(x) + ',' + Math.round(50 - (p.n / max) * 42);
+  var max = Math.max.apply(null, series.map(function(item){ return item.n; })) || 1;
+  var text = series.map(function(item, index){
+    var x = 6 + index * (288 / (series.length - 1));
+    return Math.round(x) + ',' + Math.round(50 - (item.n / max) * 42);
   }).join(' ');
-  var last = pts.split(' ').pop().split(',');
+  var last = text.split(' ').pop().split(',');
   return '<svg class="misspark" viewBox="0 0 300 56" preserveAspectRatio="none" role="img" aria-label="Chits per period, latest ' + series[series.length - 1].n + '">'
-    + '<polyline points="' + pts + '" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
+    + '<polyline points="' + text + '" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
     + '<circle cx="' + last[0] + '" cy="' + last[1] + '" r="4" fill="var(--blue)" stroke="#fff" stroke-width="2"/></svg>';
 }
 
@@ -344,12 +344,12 @@ function misFlow(m){
    worth acting on. An empty bucket renders as a flat rule rather than vanishing, so the scale stays readable. */
 function _misAgeing(m){
   const tot = m.waiting.length; if (!tot) return '';
-  const max = Math.max.apply(null, m.ageing.map(function(b){ return b.n; })) || 1;
-  const cells = m.ageing.map(function(b, i){
-    const warn = (i >= 2 && b.n > 0);
+  const max = Math.max.apply(null, m.ageing.map(function(item){ return item.n; })) || 1;
+  const cells = m.ageing.map(function(item, index){
+    const warn = (index >= 2 && item.n > 0);
     return '<div class="misage' + (warn ? ' warn' : '') + '">'
-      + '<div class="misagebar"><i style="height:' + Math.round((b.n / max) * 100) + '%"></i></div>'
-      + '<div class="misagen">' + b.n + '</div><div class="misagek">' + b.k + '</div></div>';
+      + '<div class="misagebar"><i style="height:' + Math.round((item.n / max) * 100) + '%"></i></div>'
+      + '<div class="misagen">' + item.n + '</div><div class="misagek">' + item.k + '</div></div>';
   }).join('');
   return '<div class="mislbl" style="margin-top:16px">Ageing · how long they have waited</div>'
     + '<div class="misageing">' + cells + '</div>';
@@ -397,10 +397,10 @@ function _misUnattended(m){
     + '</div>';
 }
 function misFriction(m){
-  var rows = m.waiting.slice(0, 12).map(function(w){
-    return '<tr><td>' + esc(w.on) + '</td><td>' + esc(w.subject) + '</td><td class="num">' + esc(w.age) + '</td>'
-      + '<td class="num">' + (w.amt ? inr(w.amt) : '—') + '</td>'
-      + '<td><span class="misclock ' + w.who + '">◷ ' + (w.who === 'mine' ? 'Mine' : 'Theirs') + '</span></td></tr>';
+  var rows = m.waiting.slice(0, 12).map(function(item){
+    return '<tr><td>' + esc(item.on) + '</td><td>' + esc(item.subject) + '</td><td class="num">' + esc(item.age) + '</td>'
+      + '<td class="num">' + (item.amt ? inr(item.amt) : '—') + '</td>'
+      + '<td><span class="misclock ' + item.who + '">◷ ' + (item.who === 'mine' ? 'Mine' : 'Theirs') + '</span></td></tr>';
   }).join('');
   return _misHead('Friction', 'Where time is being lost — and whose clock is running.')
     + '<div class="misstatus">' + (m.open_disputes
@@ -421,7 +421,7 @@ function misFriction(m){
 function misTrust(m){
   var chan = m.byChannel;
   var chanTxt = Object.keys(chan).length
-    ? Object.keys(chan).map(function(c){ return chan[c] + ' by ' + esc(c); }).join(' · ')
+    ? Object.keys(chan).map(function(item){ return chan[item] + ' by ' + esc(item); }).join(' · ')
     : 'none captured — everything entered by hand';
   return _misHead('Trust', 'Who you deal with, and how the work reaches you.')
     + '<div class="mistrust">'
@@ -456,7 +456,7 @@ function misPlan(m){
       + '<div class="misplanbar"><i style="width:'+pct+'%;background:'+tone+'"></i></div></div>';
   };
   var todayStart = new Date(); todayStart.setHours(0,0,0,0);
-  var chitsToday = (UI._misStamps || []).filter(function(t){ return t >= todayStart.getTime(); }).length;
+  var chitsToday = (UI._misStamps || []).filter(function(item){ return item >= todayStart.getTime(); }).length;
   /**
    * The subscription window, when there is one. ⚠️ It says "no period recorded" rather than assuming open-ended —
    * a plan with no dates and a plan valid forever look identical on screen but are not the same claim, and only
@@ -557,8 +557,8 @@ async function _loadMIS(){
       api('misMetrics', { query: { since: _since } }).catch(function(){ return null; })
     ]);
     const seen = {}, chits = [];
-    (inb || []).concat(snt || []).forEach(function(raw){
-      const c = mapApiChit(raw); if (!c || seen[c.id]) return; seen[c.id] = 1;
+    (inb || []).concat(snt || []).forEach(function(item){
+      const c = mapApiChit(item); if (!c || seen[c.id]) return; seen[c.id] = 1;
       c._iSent = !!SESSION.entity && (c.sender || '') === SESSION.entity;
       chits.push(c);
     });
@@ -567,45 +567,45 @@ async function _loadMIS(){
        boundary or the two halves of this screen describe different fortnights. */
     const days = _days;
     const cutoff = _since ? Date.parse(_since) : null;
-    const inWindow = chits.filter(function(c){ return !cutoff || (new Date(c.created_at)).getTime() >= cutoff; });
+    const inWindow = chits.filter(function(item){ return !cutoff || (new Date(item.created_at)).getTime() >= cutoff; });
 
     let committed = 0, forecast = 0, dead = 0;
     const byState = { open:0, act:0, close:0 };
     const byChannel = {}; let captured = 0;
     const parties = {}; const waiting = [];
     const now = Date.now();
-    inWindow.forEach(function(c){
-      const st = c._status || 'pending', amt = c.amt || 0;
+    inWindow.forEach(function(item){
+      const st = item._status || 'pending', amt = item.amt || 0;
       if (MIS_DEAD[st]) dead += amt; else if (MIS_COMMITTED[st]) committed += amt; else if (MIS_FORECAST[st]) forecast += amt;
-      byState[c.state] = (byState[c.state] || 0) + 1;
-      if (c.via && c.via.channel){ captured++; byChannel[c.via.channel] = (byChannel[c.via.channel] || 0) + 1; }
-      const other = c._iSent ? (c.party || '') : (c.sender || c.party || '');
+      byState[item.state] = (byState[item.state] || 0) + 1;
+      if (item.via && item.via.channel){ captured++; byChannel[item.via.channel] = (byChannel[item.via.channel] || 0) + 1; }
+      const other = item._iSent ? (item.party || '') : (item.sender || item.party || '');
       if (other && other !== SESSION.entity) parties[other] = 1;
       if (MIS_FORECAST[st]){
-        const ageMs = now - (new Date(c.created_at)).getTime();
+        const ageMs = now - (new Date(item.created_at)).getTime();
         const d = Math.floor(ageMs / 864e5), h = Math.floor(ageMs / 36e5);
-        waiting.push({ on:'Acceptance', subject:c.code || '—', amt:amt, ageMs:ageMs,
+        waiting.push({ on:'Acceptance', subject:item.code || '—', amt:amt, ageMs:ageMs,
                        age: d >= 1 ? (d + 'd') : (h + 'h'),
                        /* I sent it → they owe the answer. It came to me → the clock is mine. */
-                       who: c._iSent ? 'theirs' : 'mine' });
+                       who: item._iSent ? 'theirs' : 'mine' });
       }
     });
-    waiting.sort(function(a, b){ return b.ageMs - a.ageMs; });
+    waiting.sort(function(first, second){ return second.ageMs - first.ageMs; });
 
     /* Weekly buckets when the span is wide, daily when it is short — a 7-day window has no weeks in it. */
     /* Kept for the Plan band, which counts against a per-DAY limit and so cannot use the period-windowed series. */
-    UI._misStamps = chits.map(function(c){ return (new Date(c.created_at)).getTime(); }).filter(function(t){ return t; });
-    { const _t0 = new Date(); _t0.setHours(0,0,0,0);
-      UI._misToday = UI._misStamps.filter(function(t){ return t >= _t0.getTime(); }).length; }
-    const stamps = inWindow.map(function(c){ return (new Date(c.created_at)).getTime(); }).filter(function(t){ return t; }).sort();
+    UI._misStamps = chits.map(function(item){ return (new Date(item.created_at)).getTime(); }).filter(function(item){ return item; });
+    { const date = new Date(); date.setHours(0,0,0,0);
+      UI._misToday = UI._misStamps.filter(function(item){ return item >= date.getTime(); }).length; }
+    const stamps = inWindow.map(function(item){ return (new Date(item.created_at)).getTime(); }).filter(function(item){ return item; }).sort();
     let series = [], bucketName = 'week';
     if (stamps.length){
       const spanDays = (stamps[stamps.length - 1] - stamps[0]) / 864e5;
       const size = spanDays > 21 ? 7 : 1; bucketName = size === 7 ? 'week' : 'day';
       const buckets = {};
-      stamps.forEach(function(t){ const b = Math.floor((t - stamps[0]) / (size * 864e5)); buckets[b] = (buckets[b] || 0) + 1; });
+      stamps.forEach(function(item){ const b = Math.floor((item - stamps[0]) / (size * 864e5)); buckets[b] = (buckets[b] || 0) + 1; });
       const maxB = Math.max.apply(null, Object.keys(buckets).map(Number));
-      for (let i = 0; i <= maxB; i++) series.push({ n: buckets[i] || 0 });
+      for (let index = 0; index <= maxB; index++) series.push({ n: buckets[index] || 0 });
     }
     const delta = series.length >= 2 ? (series[series.length - 1].n - series[series.length - 2].n) : 0;
 
@@ -623,22 +623,22 @@ async function _loadMIS(){
     const AGE_BUCKETS = [
       { k:'<1d',  max:1 }, { k:'1–3d', max:3 }, { k:'3–7d', max:7 }, { k:'7d+', max:Infinity }
     ];
-    const ageing = AGE_BUCKETS.map(function(b){ return { k:b.k, n:0 }; });
-    waiting.forEach(function(w){
-      const d = w.ageMs / 864e5;
-      for (let i = 0; i < AGE_BUCKETS.length; i++){ if (d < AGE_BUCKETS[i].max){ ageing[i].n++; break; } }
+    const ageing = AGE_BUCKETS.map(function(item){ return { k:item.k, n:0 }; });
+    waiting.forEach(function(item){
+      const d = item.ageMs / 864e5;
+      for (let index = 0; index < AGE_BUCKETS.length; index++){ if (d < AGE_BUCKETS[index].max){ ageing[index].n++; break; } }
     });
 
     const msgs = (msgRaw && (msgRaw.messages || msgRaw.items || (Array.isArray(msgRaw) ? msgRaw : []))) || [];
-    const unattended = msgs.filter(function(m){
+    const unattended = msgs.filter(function(item){
       /* Unread AND not mine — my own outbound message sitting unread is THEIR clock, not a task of mine. */
-      return !m.read_at && m.sender_entity_id !== SESSION.entityId;
-    }).map(function(m){
-      const ms = now - (new Date(m.created_at)).getTime();
+      return !item.read_at && item.sender_entity_id !== SESSION.entityId;
+    }).map(function(item){
+      const ms = now - (new Date(item.created_at)).getTime();
       const d = Math.floor(ms / 864e5), h = Math.floor(ms / 36e5);
-      return { from:m.sender_display_name || '—', text:(m.message_text || '').slice(0, 90),
-               subject:m.manual_subject || m.auto_subject || '—', ageMs:ms, age: d >= 1 ? (d + 'd') : (h + 'h') };
-    }).sort(function(a, b){ return b.ageMs - a.ageMs; });
+      return { from:item.sender_display_name || '—', text:(item.message_text || '').slice(0, 90),
+               subject:item.manual_subject || item.auto_subject || '—', ageMs:ms, age: d >= 1 ? (d + 'd') : (h + 'h') };
+    }).sort(function(first, second){ return second.ageMs - first.ageMs; });
 
     const openDisp = dq.total_open != null ? dq.total_open : (((dq.my_disputes || []).length) + ((dq.other_disputes || []).length));
     /* ⚠ stamped so the freshness guard above has something to measure against */
@@ -649,8 +649,8 @@ async function _loadMIS(){
       open_disputes: openDisp, co_assists: (ac || []).length, suppliers: (sp || []).length,
       parties: Object.keys(parties).length, partyNames: Object.keys(parties),
       captured: captured, byChannel: byChannel,
-      waiting: waiting, waitMine: waiting.filter(function(w){ return w.who === 'mine'; }).length,
-      waitTheirs: waiting.filter(function(w){ return w.who === 'theirs'; }).length,
+      waiting: waiting, waitMine: waiting.filter(function(item){ return item.who === 'mine'; }).length,
+      waitTheirs: waiting.filter(function(item){ return item.who === 'theirs'; }).length,
       ageing: ageing, unattended: unattended,
       series: series, bucketName: bucketName, delta: delta > 0 ? delta : 0,
       /* ⭐ THE SERVER'S MEASUREMENT (backlog 29) — the same lib/measure.js the folder pane and the counterparty
@@ -661,15 +661,15 @@ async function _loadMIS(){
       asOf: misReadAt(Date.now()),   /* "live · 10:32" — the same stamp CB Finance › Reports paints (cap-mis.js, loaded with this capability) */
       currency: moneyCode()
     };
-    const h = document.getElementById('misbody'); if (h) h.innerHTML = misBandHTML(misBand(), UI._mis);
+    const node = document.getElementById('misbody'); if (node) node.innerHTML = misBandHTML(misBand(), UI._mis);
     const r = document.getElementById('mis_rail');
-    if (r) r.innerHTML = MIS_BANDS.map(function(b){
-      const sel = (misBand() === b.key) ? ' sel' : '', hv = misHeadline(b.key, UI._mis);
-      return '<div class="row misrow' + sel + '" data-testid="mis-band-' + b.key + '" onclick="misSetBand(\'' + b.key + '\')">'
-        + '<div class="main2"><div class="l1"><span class="code">' + esc(b.name) + '</span></div><div class="l2">' + esc(b.q) + '</div></div>'
+    if (r) r.innerHTML = MIS_BANDS.map(function(item){
+      const sel = (misBand() === item.key) ? ' sel' : '', hv = misHeadline(item.key, UI._mis);
+      return '<div class="row misrow' + sel + '" data-testid="mis-band-' + item.key + '" onclick="misSetBand(\'' + item.key + '\')">'
+        + '<div class="main2"><div class="l1"><span class="code">' + esc(item.name) + '</span></div><div class="l2">' + esc(item.q) + '</div></div>'
         + '<div class="misval' + (hv.tone ? ' ' + hv.tone : '') + '">' + hv.v + '<small>' + esc(hv.s) + '</small></div></div>';
     }).join('');
-  }catch(e){ const h = document.getElementById('misbody'); if (h) h.innerHTML = scrErr(e); } }
+  }catch(e){ const node = document.getElementById('misbody'); if (node) node.innerHTML = scrErr(e); } }
 
 /* ---- PROFILE ---- */
 /* ═══ PROFILE ═══════════════════════════════════════════════════════════════════════════════════════════════
@@ -774,7 +774,7 @@ function _profSeedIncluded(e){
 
   if (ok(inc.channels)) {
     UI._chans = Array.isArray(inc.channels.channels)
-      ? inc.channels.channels.reduce(function(all, t){ return all.concat(t.bindings || []); }, [])
+      ? inc.channels.channels.reduce(function(all, item){ return all.concat(item.bindings || []); }, [])
       : null;
     UI._chansLoaded = true;
   }
@@ -789,8 +789,8 @@ function _profSeedIncluded(e){
   }
 }
 
-async function loadProfile(){ const h=document.getElementById("profbody"); if(!h)return;
-  if(SESSION.role==='actor') return loadActorProfile(h);   // actors get their own profile, not the entity's
+async function loadProfile(){ const node=document.getElementById("profbody"); if(!node)return;
+  if(SESSION.role==='actor') return loadActorProfile(node);   // actors get their own profile, not the entity's
   /* ⚠️ THE SNAPSHOT IS RE-TAKEN AFTER EVERY PAINT. A baseline captured once at load goes stale the first time
      a section is collapsed, and every later edit then reads as clean. See profSnapshot. */
   /**
@@ -803,7 +803,7 @@ async function loadProfile(){ const h=document.getElementById("profbody"); if(!h
    * on the common one. Measured 2026-09-01: three extra requests (actors, readiness, channels) on a warm
    * open. _profSeedIncluded is defensive — no , or one that errored, simply leaves the latch alone.
    */
-  if(UI._me){ _profSeedIncluded(UI._me); h.innerHTML = profSecHTML(profSec(), UI._me); if(profSec()==='vault') loadVault(); profSnapshot(); return; }
+  if(UI._me){ _profSeedIncluded(UI._me); node.innerHTML = profSecHTML(profSec(), UI._me); if(profSec()==='vault') loadVault(); profSnapshot(); return; }
   if(_profBusy) return;
   _profBusy = true;
   /**
@@ -1011,8 +1011,8 @@ var IAM_PARTY = {
     nav: ["navTo('coassists')", 'Co-assists'],
     rows: function (e, acts) {
       var uid = e.user_id || 'your-user-id';
-      var n = acts.filter(function (a) { return !a.actor_type || a.actor_type === 'human'; }).length;
-      var costs = acts.filter(function (a) { return a.can_see_costs; }).length;
+      var n = acts.filter(function (item) { return !item.actor_type || item.actor_type === 'human'; }).length;
+      var costs = acts.filter(function (item) { return item.can_see_costs; }).length;
       /**
        * ⚠️ THIS COUNTED WRONG THE MOMENT b173 LANDED. It read (a.hat || 'act'), so an actor carrying the new
        * access_level and no hat defaulted to 'act' and was counted as a writer — the tab cheerfully reported
@@ -1020,8 +1020,8 @@ var IAM_PARTY = {
        * order everywhere, and lib/access.js is the order: level first, hat only when the level is absent.
        */
       var LEVEL_OF = { act:'editor', manager:'editor', audit:'commenter', mis:'commenter', view_only:'commenter' };
-      var writes = acts.filter(function (a) {
-        var lvl = a.access_level || LEVEL_OF[a.hat] || 'editor';
+      var writes = acts.filter(function (item) {
+        var lvl = item.access_level || LEVEL_OF[item.hat] || 'editor';
         return lvl === 'editor';
       }).length;
       return [
@@ -1423,8 +1423,8 @@ function iamMeHTML(e){
     + (live
         ? '<label class="fl">' + tx('Customers') + '</label>'
           + '<select class="inp" id="pf_sfaccess" style="max-width:320px">'
-          +   [['browse', tx('Browse first')], ['login', tx('Sign in first')]].map(function(o){
-                return '<option value="' + esc(o[0]) + '"' + ((e.storefront_access || 'browse') === o[0] ? ' selected' : '') + '>' + esc(o[1]) + '</option>';
+          +   [['browse', tx('Browse first')], ['login', tx('Sign in first')]].map(function(item){
+                return '<option value="' + esc(item[0]) + '"' + ((e.storefront_access || 'browse') === item[0] ? ' selected' : '') + '>' + esc(item[1]) + '</option>';
               }).join('')
           + '</select>'
           + pfExposureDefaultsHTML(e)
@@ -1664,9 +1664,9 @@ function iamSelfEmployeeHTML(e){
 
 /** "2 of 6 verified" — the summary an owner or an employee reads before opening the section. */
 function iamDocsHint(){
-  var d = UI._idocs || [];
-  if (!d.length) return '';
-  var ok = d.filter(function(x){ return x.status === 'verified'; }).length;
+  var list = UI._idocs || [];
+  if (!list.length) return '';
+  var ok = list.filter(function(x){ return x.status === 'verified'; }).length;
   return ok + ' of ' + (CBIdDocs ? CBIdDocs.ORDER.length : 6) + ' verified';
 }
 
@@ -1727,7 +1727,7 @@ function iamTradeBody(){
   return rungs
     + (flags.length
         ? '<div class="kv" style="margin-top:10px">'
-          + flags.map(function(f){ return '<span style="color:' + f[2] + ';margin-inline-end:12px">' + f[0] + ' ' + esc(f[1]) + '</span>'; }).join('')
+          + flags.map(function(item){ return '<span style="color:' + item[2] + ';margin-inline-end:12px">' + item[0] + ' ' + esc(item[1]) + '</span>'; }).join('')
           + '</div>'
         : '')
     + iamTradeLink();
@@ -1748,9 +1748,9 @@ async function iamLoadTrade(){
   if (UI._rdSumLoaded) return;
   UI._rdSumLoaded = true;
   try {
-    var r = await fetch(CFG.API_BASE + '/api/governance/readiness',
+    var reply = await fetch(CFG.API_BASE + '/api/governance/readiness',
       { headers: { Authorization: 'Bearer ' + SESSION.token } });
-    UI._rdSum = r.ok ? ((await r.json()).summary || null) : null;
+    UI._rdSum = reply.ok ? ((await reply.json()).summary || null) : null;
   } catch (_) { UI._rdSum = null; }
   bgRenderApp(); _capShowDetail(); loadProfile();
 }
@@ -1815,16 +1815,16 @@ async function iamLoadDocs(){
  */
 function iamChannelRows(){
   var Q0 = String.fromCharCode(39);
-  var cs = UI._chans;
-  if (cs === undefined) return '';                    // not read yet — say nothing rather than "none"
-  if (cs === null) return '';                         // the read failed — same rule as the network count
+  var list = UI._chans;
+  if (list === undefined) return '';                    // not read yet — say nothing rather than "none"
+  if (list === null) return '';                         // the read failed — same rule as the network count
   /**
    * ⚠️⚠️ AN EMPTY LIST STILL RENDERS. It used to return nothing, so an owner who had not bound a number saw no
    * trace of the feature — indistinguishable from "not built". That is the same mistake as hiding a declared
    * channel, applied to the empty case: I reasoned that a business with no channels "has nothing to say here",
    * which is true of the DATA and false of the PERSON, who needs to know the row exists and how to fill it.
    */
-  if (!cs.length) return '<div class="kv" style="margin-top:2px">'
+  if (!list.length) return '<div class="kv" style="margin-top:2px">'
     + '<span style="color:var(--grey)">' + tx('no channel yet') + '</span>'
     + ' <a href="#" onclick="navTo(' + Q0 + 'settings' + Q0 + ');setSetSec(' + Q0 + 'channels' + Q0 + ');return false" style="color:var(--blue);font-size:var(--fs-1);margin-inline-start:6px">'
     + tx('Add one in Channel settings') + ' <span class=arw>→</span></a></div>';
@@ -1832,12 +1832,12 @@ function iamChannelRows(){
   /* ⚠️ NO INNER HEADING. The section is called Channels; repeating it one line down reads as a rendering
      fault — the same reason the Regional block lost its own title when it was promoted. */
   return ''
-    + cs.map(function(c){
-        var ok = c.status === 'verified';
+    + list.map(function(item){
+        var ok = item.status === 'verified';
         return '<div class="kv" style="margin-top:3px">'
           + '<span style="color:' + (ok ? 'var(--ok-3)' : 'var(--grey)') + '">' + (ok ? '✓' : '○') + '</span> '
-          + '<span class="mono">' + esc(c.address || '') + '</span>'
-          + '<span style="color:var(--grey);font-size:var(--fs-1)"> · ' + esc(c.label || c.channel || '')
+          + '<span class="mono">' + esc(item.address || '') + '</span>'
+          + '<span style="color:var(--grey);font-size:var(--fs-1)"> · ' + esc(item.label || item.channel || '')
           + (ok ? '' : ' · ' + tx('not receiving yet')) + '</span></div>';
       }).join('')
     + '<div class="kv" style="margin-top:6px"><a href="#" onclick="navTo(' + Q + 'settings' + Q + ');setSetSec(' + Q + 'channels' + Q + ');return false" style="color:var(--blue);font-size:var(--fs-1)">'
@@ -1849,8 +1849,8 @@ async function iamLoadChannels(){
   if (UI._chansLoaded) return;
   UI._chansLoaded = true;
   try {
-    var r = await fetch(CFG.API_BASE + '/api/channels', { headers: { Authorization: 'Bearer ' + SESSION.token } });
-    var j = r.ok ? await r.json() : null;
+    var reply = await fetch(CFG.API_BASE + '/api/channels', { headers: { Authorization: 'Bearer ' + SESSION.token } });
+    var j = reply.ok ? await reply.json() : null;
     /**
      * ⚠️⚠️ THE BOUND ADDRESSES ARE IN channels[].bindings[], NOT channels[]. I wrote
      *  from memory without reading lib/channels.js:  is the CATALOGUE OF
@@ -1862,7 +1862,7 @@ async function iamLoadChannels(){
      * silently shows nothing.
      */
     UI._chans = j && Array.isArray(j.channels)
-      ? j.channels.reduce(function(all, t){ return all.concat(t.bindings || []); }, [])
+      ? j.channels.reduce(function(all, item){ return all.concat(item.bindings || []); }, [])
       : null;
   } catch (_) { UI._chans = null; }
   bgRenderApp(); _capShowDetail(); loadProfile();
@@ -1903,9 +1903,9 @@ function _langName(l){ var n = _LANG_NAME[l]; return n ? (n + ' (' + l + ')') : 
  * where he expected a picture and nothing where he expected the code.
  */
 function _flag(cc){
-  var c = String(cc || '').trim().toUpperCase();
-  if (!/^[A-Z]{2}$/.test(c)) return '';   // only a 2-letter ISO code makes a flag; "India" does not
-  try { return c.replace(/./g, function(ch){ return String.fromCodePoint(127397 + ch.charCodeAt(0)); }); }
+  var text = String(cc || '').trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(text)) return '';   // only a 2-letter ISO code makes a flag; "India" does not
+  try { return text.replace(/./g, function(ch){ return String.fromCodePoint(127397 + ch.charCodeAt(0)); }); }
   catch (_) { return ''; }
 }
 
@@ -1915,8 +1915,8 @@ function _flag(cc){
  */
 function _curSym(cur){
   try {
-    var p = new Intl.NumberFormat(CBLocale.locale ? CBLocale.locale() : 'en', { style: 'currency', currency: cur }).formatToParts(1);
-    var c = p.find(function(x){ return x.type === 'currency'; });
+    var list = new Intl.NumberFormat(CBLocale.locale ? CBLocale.locale() : 'en', { style: 'currency', currency: cur }).formatToParts(1);
+    var c = list.find(function(x){ return x.type === 'currency'; });
     return (c && c.value && c.value !== cur) ? c.value : '';
   } catch (_) { return ''; }
 }
@@ -2125,8 +2125,8 @@ function iamGovernedRows(e){
      * English. Rendering them as an unordered list would lose the only thing that distinguishes them.
      */
     var _langs = (CBLocale.langs ? CBLocale.langs() : [CBLocale.lang && CBLocale.lang()]).filter(Boolean);
-    _langs.forEach(function(l, i){
-      rows.push([(i === 0 ? tx('Language') : ' ') + ' ' + (i + 1), _langName(l), (i === 0 ? tx('first choice') : tx('then')), false, 'read',
+    _langs.forEach(function(item, index){
+      rows.push([(index === 0 ? tx('Language') : ' ') + ' ' + (index + 1), _langName(item), (index === 0 ? tx('first choice') : tx('then')), false, 'read',
         /**
          * ⚠⚠ 'IS cb_langs SET' IS NOT 'DID YOU CHOOSE IT'. setRegion() WRITES the language list as a side
          * effect — pick India and cb_langs becomes ['en'] without anyone touching a language control. Testing
@@ -2269,7 +2269,7 @@ function iamGovernedRows(e){
       if (CBLocale.workdays) {
         var _D = { 1:'Mon', 2:'Tue', 3:'Wed', 4:'Thu', 5:'Fri', 6:'Sat', 7:'Sun' };
         var _wd = CBLocale.workdays() || [];
-        if (_wd.length) rows.push(['Working week', esc(_wd.map(function(d){ return _D[d] || d; }).join(' ')) + _locLink(tx('Working days'), 'loc-workdays'),
+        if (_wd.length) rows.push(['Working week', esc(_wd.map(function(item){ return _D[item] || item; }).join(' ')) + _locLink(tx('Working days'), 'loc-workdays'),
           '',
           true, 'fmt', (CBLocale.hasWorkdayOverride && CBLocale.hasWorkdayOverride()) ? 'you' : 'def']);
       }
@@ -2365,10 +2365,10 @@ var rowHtml = function(x){ return profRow(x[0], x[1], x[2], !!x[3], x[5]); };
        ['read', tx('How you read it')],
        ['fmt',  tx('How values are written')],
        ['look', tx('How it looks')]]
-      .map(function(g){
+      .map(function(item){
         /* ⚠️ 'biz' MATCHES AN ABSENT KEY TOO — a row pushed without a group must land somewhere visible,
            not vanish because a five-element array was written with four. */
-        return grp(g[1], rows.filter(function(r){ return (r[4] || 'biz') === g[0]; }));
+        return grp(item[1], rows.filter(function(r){ return (r[4] || 'biz') === item[0]; }));
       }).join('')
     /* ⭐ ONE LINK OUT, NOT FOUR. Athi: *"we can take them to settings to change it."* */
     /* ⚠️ TWO DESTINATIONS, BECAUSE THE GROUP HAS TWO OWNERS. Language and formats are set in Localisation;
@@ -2418,8 +2418,8 @@ var rowHtml = function(x){ return profRow(x[0], x[1], x[2], !!x[3], x[5]); };
 function iamLoadUsage(){
   if (UI._usageBusy) return;
   UI._usageBusy = true;
-  api('entityUsage').then(function(r){
-    UI._usage = r || {};
+  api('entityUsage').then(function(reply){
+    UI._usage = reply || {};
   }).catch(function(e){
     /* A read that failed and a ledger that is empty are different claims; say which. */
     UI._usage = { _err: (e && e.message) || 'Could not read your usage.' };
@@ -2479,10 +2479,10 @@ function usageHTML(){
   /* ── by meter ── */
   if ((u.by_meter || []).length) {
     out += '<div class="sec">' + tx('By kind') + '</div><div class="card" style="padding:4px 0">';
-    u.by_meter.forEach(function(m){
+    u.by_meter.forEach(function(item){
       out += '<div style="display:flex;justify-content:space-between;gap:10px;padding:7px 14px;border-bottom:1px solid var(--line)">'
-        + '<span class="mono" style="font-size:var(--fs-2)">' + esc(m.meter) + '</span>'
-        + '<span class="mut" style="font-size:var(--fs-2)">' + m.events + ' × &nbsp;' + _usageMoney(m.cost) + '</span></div>';
+        + '<span class="mono" style="font-size:var(--fs-2)">' + esc(item.meter) + '</span>'
+        + '<span class="mut" style="font-size:var(--fs-2)">' + item.events + ' × &nbsp;' + _usageMoney(item.cost) + '</span></div>';
     });
     out += '</div>';
   }
@@ -2490,10 +2490,10 @@ function usageHTML(){
   /* ── per day: the accumulation Athi described ── */
   if ((u.daily || []).length) {
     out += '<div class="sec">' + tx('Per day') + '</div><div class="card" style="padding:4px 0">';
-    u.daily.slice(0, 14).forEach(function(d){
+    u.daily.slice(0, 14).forEach(function(item){
       out += '<div style="display:flex;justify-content:space-between;gap:10px;padding:6px 14px">'
-        + '<span style="font-size:var(--fs-2)">' + esc(String(d.day).slice(0, 10)) + '</span>'
-        + '<span class="mut" style="font-size:var(--fs-2)">' + d.events + ' × &nbsp;' + _usageMoney(d.cost) + '</span></div>';
+        + '<span style="font-size:var(--fs-2)">' + esc(String(item.day).slice(0, 10)) + '</span>'
+        + '<span class="mut" style="font-size:var(--fs-2)">' + item.events + ' × &nbsp;' + _usageMoney(item.cost) + '</span></div>';
     });
     out += '</div>';
   }
@@ -2501,18 +2501,18 @@ function usageHTML(){
   /* ── the rows, with what they charged FOR and on what basis ── */
   if ((u.recent || []).length) {
     out += '<div class="sec">' + tx('Recent') + '</div><div class="card" style="padding:4px 0">';
-    u.recent.slice(0, 25).forEach(function(r){
-      var meta = r.meta || {};
+    u.recent.slice(0, 25).forEach(function(item){
+      var meta = item.meta || {};
       var rate = meta.rate || {};
       var basis = (meta.basis != null) ? meta.basis : rate.basis;
       out += '<div style="padding:8px 14px;border-bottom:1px solid var(--line)">'
         + '<div style="display:flex;justify-content:space-between;gap:10px">'
-        + '<span class="mono" style="font-size:var(--fs-2)">' + esc(r.meter) + '</span>'
-        + '<span style="font-size:var(--fs-2)">' + _usageMoney(r.cost_usd) + '</span></div>'
+        + '<span class="mono" style="font-size:var(--fs-2)">' + esc(item.meter) + '</span>'
+        + '<span style="font-size:var(--fs-2)">' + _usageMoney(item.cost_usd) + '</span></div>'
         + '<div class="mut" style="font-size:var(--fs-1);margin-top:2px">'
-        + esc(String(r.created_at).slice(0, 16).replace('T', ' '))
+        + esc(String(item.created_at).slice(0, 16).replace('T', ' '))
         /* ⭐ the reference back to the trade — this is what makes the ledger row explainable */
-        + (r.detail ? ' · ' + tx('ref') + ' ' + esc(String(r.detail).slice(0, 8)) : '')
+        + (item.detail ? ' · ' + tx('ref') + ' ' + esc(String(item.detail).slice(0, 8)) : '')
         + (basis != null ? ' · ' + txf('on {v}', { v: basis }) + (meta.basis_currency ? ' ' + esc(meta.basis_currency) : '') : '')
         + (rate.card ? ' · ' + esc(rate.model || '') : '')
         + '</div></div>';
@@ -2568,10 +2568,10 @@ function _profSecBody(k, e){
 function govCardHTML(g){
   if(!g) return '';
   var inst=g.installation||{}, b=g.basics||{}, j=g.jurisdiction||{};
-  var caps=(g.capabilities||[]).map(function(c){return '<span class="optchip" style="background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">'+esc(c)+'</span>';}).join(' ');
-  var allow=(g.allowances||[]).map(function(a){return esc(a.limit+' '+a.resource);}).join(' · ');
+  var caps=(g.capabilities||[]).map(function(item){return '<span class="optchip" style="background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">'+esc(item)+'</span>';}).join(' ');
+  var allow=(g.allowances||[]).map(function(item){return esc(item.limit+' '+item.resource);}).join(' · ');
   var langs=(b.languages||[]).join(', ');
-  var loc=[inst.cloud,inst.region,inst.zone].filter(Boolean).join(' · ');
+  var list=[inst.cloud,inst.region,inst.zone].filter(Boolean).join(' · ');
 
   /* ⚠️ EACH BOX NAMES ITS INK BECAUSE IT PAINTS ITS GROUND — guard check 11. */
   var box=function(label, value, sub){
@@ -2598,7 +2598,7 @@ function govCardHTML(g){
     box(tx('Governed by'),
         esc(g.constitution || '') + (g.constitution_version ? esc('@' + g.constitution_version) : ''),
         tx('Platform set')),
-    box(tx('Installation'), esc(inst.label||inst.key||''), loc),
+    box(tx('Installation'), esc(inst.label||inst.key||''), list),
     box(tx('Basics'), [b.currency, b.timezone, langs].filter(Boolean).map(esc).join(' · '), tx('Platform set')),
     box(tx('Rights'), caps, tx('Cascaded to you')),
     box(tx('Allowances'), allow ? esc(allow) : '', tx('Cascaded to you')),
@@ -2688,8 +2688,8 @@ function setGuard(go){ return profGuard(go, SET_FIELDS, { work: tx('Work'), assi
 function profSnapshot(map){
   map = map || PROF_FIELDS;
   _profSnap = {};
-  Object.keys(map).forEach(function(s){
-    map[s].forEach(function(pair){
+  Object.keys(map).forEach(function(item){
+    map[item].forEach(function(pair){
       var el = document.getElementById(pair[0]);
       if (el) _profSnap[pair[0]] = el.value;
     });
@@ -2700,14 +2700,14 @@ function profSnapshot(map){
 function profDirtySections(map){
   map = map || PROF_FIELDS;
   var out = [];
-  Object.keys(map).forEach(function(s){
-    var dirty = map[s].some(function(pair){
+  Object.keys(map).forEach(function(item){
+    var dirty = map[item].some(function(pair){
       var el = document.getElementById(pair[0]);
       /* ⚠️ A FIELD NOT ON SCREEN IS NOT DIRTY. A collapsed section cannot have been edited, and treating its
          absence as a change would prompt on every single navigation. */
       return el && Object.prototype.hasOwnProperty.call(_profSnap, pair[0]) && el.value !== _profSnap[pair[0]];
     });
-    if (dirty) out.push(s);
+    if (dirty) out.push(item);
   });
   return out;
 }
@@ -2730,7 +2730,7 @@ function profGuard(go, map, nameMap){
   if (!dirty.length) return go();
   var Q = String.fromCharCode(39);
   var names = nameMap || { ident: tx('Identity'), profile: tx('Business'), governed: tx('Storefront') };
-  var what  = dirty.map(function(s){ return names[s] || s; }).join(', ');
+  var what  = dirty.map(function(item){ return names[item] || item; }).join(', ');
 
   UI._profGo = go;
   /**
@@ -2764,10 +2764,10 @@ async function profGuardDo(which){
     var secs = profDirtySections(map);
     /* ⚠️ WHICH SAVER DEPENDS ON WHICH SCREEN ASKED. A single saveProfile() here would have written Profile
        fields in response to a Settings prompt — the map is what tells them apart. */
-    for (var i = 0; i < secs.length; i++) {
-      if (map === PROF_FIELDS) await saveProfile(secs[i]);
-      else if (secs[i] === 'work')   await saveSettings();
-      else if (secs[i] === 'assign') await saveAutoAssign();
+    for (var index = 0; index < secs.length; index++) {
+      if (map === PROF_FIELDS) await saveProfile(secs[index]);
+      else if (secs[index] === 'work')   await saveSettings();
+      else if (secs[index] === 'assign') await saveAutoAssign();
     }
     toast(tx('Saved.'));
   } else {
@@ -2785,7 +2785,7 @@ async function saveProfile(sec){
   if (x) x.textContent = '';
 
   var _b = {};
-  secs.forEach(function(s){ Object.assign(_b, profFieldsBody(PROF_FIELDS[s])); });   /* one rule for "what a section sends" — app/cap-shop.js */
+  secs.forEach(function(item){ Object.assign(_b, profFieldsBody(PROF_FIELDS[item])); });   /* one rule for "what a section sends" — app/cap-shop.js */
 
   if (!Object.keys(_b).length) { if (x) x.textContent = tx('Nothing to save.'); return; }
   try { await api('saveProfile', { body: _b }); toast(MSG.profileSaved()); UI._me = null; loadProfile(); }
@@ -2825,7 +2825,7 @@ async function saveProfile(sec){
  * so that an owner demoting someone takes effect immediately rather than at token expiry. Naming the level
  * therefore costs one round trip, and that is the correct price for the answer being current.
  */
-async function loadActorProfile(h){
+async function loadActorProfile(node){
   /* ⭐ A COLLAPSIBLE SECTION LIKE THE OTHERS. Athi, 2026-08-20: *"pin number again as a collapsable stuff"* and
      *"change your pin is fine"* — so the wording stays and only the container changes. Three sections that
      behave the same way beat two accordions and one loose card sitting under them. */
@@ -2838,7 +2838,7 @@ async function loadActorProfile(h){
   /* Paint immediately from the token so the screen is never blank, then replace once /me lands. */
   const p = (typeof jwtPayload === 'function' && jwtPayload(SESSION.token)) || {};
   if (!UI._me) {
-    h.innerHTML = `<div class="sec">${tx('Your profile')}</div>`
+    node.innerHTML = `<div class="sec">${tx('Your profile')}</div>`
       + `<div class="misnote">${esc(SESSION.name || p.display_name || '')} — loading your access…</div>` + pinCard;
   }
 
@@ -2863,7 +2863,7 @@ async function saveActorPin(){ const x=document.getElementById("pf_err"); if(x)x
   const c=val("pf_cpin"), n=val("pf_npin"), n2=val("pf_npin2");
   if(!/^\d{4}$/.test(n)){ if(x)x.textContent="New PIN must be 4 digits."; return; }
   if(n!==n2){ if(x)x.textContent="New PINs don't match."; return; }
-  try{ await api("changePin",{body:{current_pin:c,new_pin:n,confirm_pin:n2}}); toast("PIN changed ✓"); ['pf_cpin','pf_npin','pf_npin2'].forEach(function(i){ var el=document.getElementById(i); if(el)el.value=''; }); }
+  try{ await api("changePin",{body:{current_pin:c,new_pin:n,confirm_pin:n2}}); toast("PIN changed ✓"); ['pf_cpin','pf_npin','pf_npin2'].forEach(function(item){ var el=document.getElementById(item); if(el)el.value=''; }); }
   catch(e){ if(x)x.textContent=e.message; } }
 /* ---- SETTINGS + governance (7-layer perception stub) ---- */
 /**
@@ -3049,10 +3049,10 @@ function govOwnedElsewhere(where, nav){ return '<button class="govref-go" onclic
    consumer has to know which kind it got. */
 function govVal(v){ try { return (typeof v === 'function') ? v() : v; } catch(_){ return '—'; } }
 function govDecl(label){
-  for (var i=0; i<GOV.length; i++){
-    var rows = GOV[i].rows || [];
+  for (var index=0; index<GOV.length; index++){
+    var rows = GOV[index].rows || [];
     for (var j=0; j<rows.length; j++){
-      if (rows[j][0] === label) return { value:govVal(rows[j][1]), klass:rows[j][2], layer:GOV[i].n, layerIndex:i };
+      if (rows[j][0] === label) return { value:govVal(rows[j][1]), klass:rows[j][2], layer:GOV[index].n, layerIndex:index };
     }
   }
   return null;
@@ -3212,12 +3212,12 @@ function govRowHtml(label,valHtml,klass){
    ("what can I change?") of each one in turn, and re-collapsing on every switch would fight that. */
 function govToggleGrp(k){ UI.govOpen = UI.govOpen || { yours:true, fixed:false, none:false };
   UI.govOpen[k] = !UI.govOpen[k];
-  var h=document.getElementById('govblock'); if(h) h.outerHTML=govLayersBlock(); }
+  var node=document.getElementById('govblock'); if(node) node.outerHTML=govLayersBlock(); }
 function govSetTab(i){ UI.govTab=i;
   if (UI.nav === 'settings'){ if(UI.vp==='mob'){ UI.mdetail=true; } renderApp(); if(typeof loadSettings==='function') loadSettings(); return; }
-  var h=document.getElementById('govblock'); if(h)h.outerHTML=govLayersBlock(); }
+  var node=document.getElementById('govblock'); if(node)node.outerHTML=govLayersBlock(); }
 function govLayersBlock(){ var t=UI.govTab||0; var L=GOV[t];
-  var tabs=GOV.map(function(g,i){ return '<button class="composebtn'+(i===t?' on':'')+'" style="font-size:var(--fs-1);padding:5px 9px" onclick="govSetTab('+i+')">'+esc(g.n)+'</button>'; }).join('');
+  var tabs=GOV.map(function(item,index){ return '<button class="composebtn'+(index===t?' on':'')+'" style="font-size:var(--fs-1);padding:5px 9px" onclick="govSetTab('+index+')">'+esc(item.n)+'</button>'; }).join('');
   /**
    * ⭐ SPLIT BY WHO CONTROLS IT (Athi, 2026-08-16: *"we have to see how we can split between what is static and
    * what can change"*). The distinction already existed — it was encoded in a nine-value class on every row — but
@@ -3273,7 +3273,7 @@ function govLayersBlock(){ var t=UI.govTab||0; var L=GOV[t];
     push('Timezone (inherited)', 'nothing to inherit — not stored', 'free');
     push('Language (inherited)', 'nothing to inherit — not stored', 'free');
   }
-  L.rows.forEach(function(r){ push(r[0],esc(govVal(r[1])),r[2]); });   // literal or live — govVal resolves both
+  L.rows.forEach(function(item){ push(item[0],esc(govVal(item[1])),item[2]); });   // literal or live — govVal resolves both
   /**
    * ⭐ COLLAPSIBLE GROUPS (Athi, 2026-08-16). A layer can run to nineteen rows, and the three groups are not
    * equally interesting: "Yours to set" is the reason you opened the screen, "Fixed above you" is reference, and
@@ -3284,15 +3284,15 @@ function govLayersBlock(){ var t=UI.govTab||0; var L=GOV[t];
    * A collapsed section that hides even its own size is just missing information.
    */
   var grp=function(key,title,note,pick){
-    var hit=_rows.filter(function(r){ return pick(r[2]); });
-    if(!hit.length) return '';
+    var list=_rows.filter(function(item){ return pick(item[2]); });
+    if(!list.length) return '';
     UI.govOpen = UI.govOpen || { yours:true, fixed:false, none:false };
     var open = !!UI.govOpen[key];
     return '<div class="govgrp'+(open?' open':'')+'">'
       + '<button class="govgrp-h" data-testid="gov-grp-'+key+'" onclick="govToggleGrp(\''+key+'\')" aria-expanded="'+open+'">'
         + '<span class="govchev">'+(open?'▾':'<span class=arw>▸</span>')+'</span><span class="govgrp-t">'+title+'</span>'
-        + '<span class="govcount">'+hit.length+'</span><span class="govnote">'+note+'</span></button>'
-      + (open ? ('<div class="govgrp-b">'+hit.map(function(r){ return govRowHtml(r[0],r[1],r[2]); }).join('')+'</div>') : '')
+        + '<span class="govcount">'+list.length+'</span><span class="govnote">'+note+'</span></button>'
+      + (open ? ('<div class="govgrp-b">'+list.map(function(item){ return govRowHtml(item[0],item[1],item[2]); }).join('')+'</div>') : '')
       + '</div>';
   };
   var rowsHtml = grp('yours','Yours to set','you control these', function(k){ return YOURS[k]; })
@@ -3425,20 +3425,20 @@ function settingsScreen(){
    * They appear only while Governance is the open section, so the rail stays five rows when it is not.
    */
   /* P0: a section marked `moved` has its customer home (frozen, not deleted; setSetSec('standards') still opens it) — no rail row. */
-  var rail = SET_SECS.filter(function(s){ return !s.moved; }).map(function(s){
-    var row = '<div class="row misrow' + (setSec() === s.key ? ' sel' : '') + '" data-testid="set-sec-' + s.key + '" onclick="setSetSec(\'' + s.key + '\')">'
-      + '<div class="main2"><div class="l1"><span class="code">' + esc(s.name) + '</span></div><div class="l2">' + esc(s.q) + '</div></div></div>';
-    if (s.key === 'integrations' && setSec() === 'integrations'){
+  var rail = SET_SECS.filter(function(item){ return !item.moved; }).map(function(item){
+    var row = '<div class="row misrow' + (setSec() === item.key ? ' sel' : '') + '" data-testid="set-sec-' + item.key + '" onclick="setSetSec(\'' + item.key + '\')">'
+      + '<div class="main2"><div class="l1"><span class="code">' + esc(item.name) + '</span></div><div class="l2">' + esc(item.q) + '</div></div></div>';
+    if (item.key === 'integrations' && setSec() === 'integrations'){
       row += INT_TABS.map(function(t){
         return '<div class="row misrow sub' + (intTab() === t.key ? ' sel' : '') + '" data-testid="int-tab-' + t.key + '" onclick="intSetTab(\'' + t.key + '\')">'
           + '<div class="main2"><div class="l1"><span class="code">' + esc(tx(t.n)) + '</span></div>'
           + '<div class="l2">' + esc(tx(t.q)) + '</div></div></div>';
       }).join('');
     }
-    if (s.key === 'governance' && setSec() === 'governance' && typeof GOV !== 'undefined'){
-      row += GOV.map(function(g, i){
-        var on = ((UI.govTab || 0) === i);
-        return '<div class="row misrow sub' + (on ? ' sel' : '') + '" data-testid="gov-layer-' + i + '" onclick="govSetTab(' + i + ')">'
+    if (item.key === 'governance' && setSec() === 'governance' && typeof GOV !== 'undefined'){
+      row += GOV.map(function(g, index){
+        var on = ((UI.govTab || 0) === index);
+        return '<div class="row misrow sub' + (on ? ' sel' : '') + '" data-testid="gov-layer-' + index + '" onclick="govSetTab(' + index + ')">'
           + '<div class="main2"><div class="l1"><span class="code">' + esc(g.n) + '</span></div>'
           + '<div class="l2">' + esc(g.tag || '') + '</div></div></div>';
       }).join('');
@@ -3478,17 +3478,17 @@ function goCoassistAI(){ try{ if(typeof UI!=='undefined') UI.acTypeF='ai'; }catc
  * this cache existed every switch fired both again, so the pane sat on its spinner while a round trip completed
  * for data it already had.
  */
-async function loadSettings(){ const h=document.getElementById("setbody"); if(!h)return;
+async function loadSettings(){ const node=document.getElementById("setbody"); if(!node)return;
   if (UI._set){ return (function(){ var r = paintSettings(UI._set.s, UI._set.daOpts); setSnapshot(); return r; })(); }
-  try{ const [s,_acts]=await Promise.all([api("getSettings").then(r=>r||{}), api("actors").then(r=>(r||[]).map(mapApiActor)).catch(()=>[])]);
-    const _assign=_acts.filter(a=>hatAssignable(a.hat));
-    const _daOpts='<option value="">— none (leave in pool) —</option>'+_assign.map(a=>`<option value="${a.id}"${s.default_assignee_actor_id===a.id?' selected':''}>${esc(a.name)}</option>`).join('');
+  try{ const [s,_acts]=await Promise.all([api("getSettings").then(reply=>reply||{}), api("actors").then(reply=>(reply||[]).map(mapApiActor)).catch(()=>[])]);
+    const _assign=_acts.filter(item=>hatAssignable(item.hat));
+    const _daOpts='<option value="">— none (leave in pool) —</option>'+_assign.map(item=>`<option value="${item.id}"${s.default_assignee_actor_id===item.id?' selected':''}>${esc(item.name)}</option>`).join('');
     UI._set={ s:s, daOpts:_daOpts };
     paintSettings(s, _daOpts);
     /* ⚠️ THE BASELINE IS TAKEN AFTER EVERY PAINT — one captured at load goes stale the first time a
        section changes, and every later edit then reads as clean. Same rule as Profile. */
     setSnapshot();
-  }catch(e){ h.innerHTML=scrErr(e); } }
+  }catch(e){ node.innerHTML=scrErr(e); } }
 /**
  * ⭐⭐ THE LOCALISATION SCREEN.
  *
@@ -3532,7 +3532,7 @@ function standardsSettingsHTML(){
   var th = (typeof THEMES !== 'undefined' && THEMES[typeof themeGet === 'function' ? themeGet() : 'cream']) || {};
   var mine = [
     ['Region',        r ? r.name : 'Not set'],
-    ['Languages',     CBLocale.langs().map(function(x, i){ return (i + 1) + '. ' + CBLocale.langName(x); }).join('  ·  ')],
+    ['Languages',     CBLocale.langs().map(function(x, index){ return (index + 1) + '. ' + CBLocale.langName(x); }).join('  ·  ')],
     ['Reading order', CBLocale.dir() === 'rtl' ? 'Right to left ←' : 'Left to right →'],
     ['Locale tag',    '<code>' + esc(CBLocale.tag()) + '</code>'],
     ['Numbers',       esc(CBLocale.number(123456789.5))],
@@ -3540,7 +3540,7 @@ function standardsSettingsHTML(){
     ['Date',          esc(CBLocale.date(Date.now()))],
     ['Time',          esc(CBLocale.time(Date.now()))],
     ['Time zone',     esc(CBLocale.timezone())],
-    ['Working days',  CBLocale.workdays().map(function(d){ return DAY[d]; }).join(' ') + (CBLocale.hasWorkdayOverride() ? '  (you set these)' : '  (regional default)')],
+    ['Working days',  CBLocale.workdays().map(function(item){ return DAY[item]; }).join(' ') + (CBLocale.hasWorkdayOverride() ? '  (you set these)' : '  (regional default)')],
     ['Theme',         esc(th.name || '—') + (th.a11y ? '  · meets WCAG ' + esc(th.a11y.level) : '')],
     ['Text size',     (typeof TEXT_SIZES !== 'undefined' && typeof textSize === 'function')
                         ? (function(){ var m = TEXT_SIZES.filter(function(x){ return x[0] === textSize(); })[0]; return m ? m[1] + ' (' + Math.round(m[2] * 100) + '%)' : '—'; })() : '—'],
@@ -3705,9 +3705,9 @@ function _locSample(kind, code) {
 
 /** [code, name] → [code, 'name — sample'], for the pickers. One place, so every list gets the same treatment. */
 function _locWithSamples(table, kind) {
-  return table.map(function (t) {
-    var s = _locSample(kind, t[0]);
-    return [t[0], s ? t[1] + ' — ' + s : t[1]];
+  return table.map(function (item) {
+    var s = _locSample(kind, item[0]);
+    return [item[0], s ? item[1] + ' — ' + s : item[1]];
   });
 }
 
@@ -3773,7 +3773,7 @@ function _langsAreDefault() {
 }
 
 function _locName(table, code) {
-  var row = table.find(function (t) { return t[0] === code; });
+  var row = table.find(function (item) { return item[0] === code; });
   return row ? String(row[1]).split(' — ')[0] : code;
 }
 
@@ -3817,7 +3817,7 @@ function _curPicker(cur) {
   var mine = (CBLocale.regionCurrencies && CBLocale.regionCurrencies()) || [];
   var top  = mine.slice();
   if (cur && top.indexOf(cur) < 0) top.unshift(cur);        /* what you use is never buried */
-  var rest = (all || []).filter(function (c) { return top.indexOf(c) < 0; });
+  var rest = (all || []).filter(function (item) { return top.indexOf(item) < 0; });
   if (!all) rest = [];                                      /* cannot enumerate → offer what we know, say nothing false */
 
   var label = function (c) {
@@ -3825,8 +3825,8 @@ function _curPicker(cur) {
     return esc(c) + (nm && nm !== c ? ' — ' + esc(nm) : '');
   };
   var optsOf = function (list) {
-    return list.map(function (c) {
-      return '<option value="' + esc(c) + '"' + (c === cur ? ' selected' : '') + '>' + label(c) + '</option>';
+    return list.map(function (item) {
+      return '<option value="' + esc(item) + '"' + (item === cur ? ' selected' : '') + '>' + label(item) + '</option>';
     }).join('');
   };
 
@@ -3865,8 +3865,8 @@ async function localeSetCurrency(code) {
 }
 
 function _locPendingBar() {
-  var st = UI._locStage || [];
-  if (!st.length) return '';
+  var list = UI._locStage || [];
+  if (!list.length) return '';
   var Q = String.fromCharCode(39);
   var rowOf = function (o) {
     /* ⚠️ THE VALUE AS THE PICKER SHOWS IT, not the raw code. 'ca=indian' is the thing Athi could not read;
@@ -3897,7 +3897,7 @@ function _locPendingBar() {
     + 'border:1px solid var(--warn-2);border-radius:9px;padding:10px 12px;margin-bottom:10px">'
     + '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;'
     + 'color:var(--on-card);margin-bottom:6px">' + tx('Not saved yet') + '</div>'
-    + st.map(rowOf).join('')
+    + list.map(rowOf).join('')
     + '<div style="display:flex;gap:8px;margin-top:9px">'
     +   '<button class="btn pri" style="flex:1" onclick="localeSaveLocale()">' + tx('Save') + '</button>'
     +   '<button class="btn" style="flex:1" onclick="localeDiscardLocale()">' + tx('Discard') + '</button>'
@@ -3945,7 +3945,7 @@ function _localeSettingsBody(){
          there closes the attribute and everything after it becomes markup. Every list passed here today is
          ours or the engine's, so nothing is exploitable right now; that is precisely why it would survive
          until the day someone passes a list built from stored data, which is one edit away on this screen. */
-      + list.map(function(o){ return '<option value="' + esc(o[0]) + '"' + (val === o[0] ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('')
+      + list.map(function(item){ return '<option value="' + esc(item[0]) + '"' + (val === item[0] ? ' selected' : '') + '>' + esc(item[1]) + '</option>'; }).join('')
       + '</select>';
   };
   var card = function(inner){ return '<div style="' + _CARD + '">' + inner + '</div>'; };
@@ -3958,15 +3958,15 @@ function _localeSettingsBody(){
      Intl.Locale.weekInfo returns — mixing it with Date.getDay()'s 0 = Sunday moves every due date by one. */
   var DAYFULL = { 1:'Mon', 2:'Tue', 3:'Wed', 4:'Thu', 5:'Fri', 6:'Sat', 7:'Sun' };
   var work = CBLocale.workdays();
-  var dayChips = [1,2,3,4,5,6,7].map(function(n){
-    var on = work.indexOf(n) >= 0;
-    return '<button type="button" data-testid="loc-day-' + n + '" onclick="localeToggleWorkday(' + n + ')"'
+  var dayChips = [1,2,3,4,5,6,7].map(function(item){
+    var on = work.indexOf(item) >= 0;
+    return '<button type="button" data-testid="loc-day-' + item + '" onclick="localeToggleWorkday(' + item + ')"'
       + ' aria-pressed="' + (on ? 'true' : 'false') + '"'
       + ' style="cursor:pointer;font:inherit;border-radius:8px;padding:5px 10px;font-size:var(--fs-2);'
       + 'border:1px solid ' + (on ? 'var(--ok)' : 'var(--line)') + ';'
       + 'background:' + (on ? 'var(--ok-tint)' : 'var(--card)') + ';'
       + 'color:' + (on ? 'var(--ok-2)' : 'var(--grey)') + ';font-weight:' + (on ? 700 : 500) + '">'
-      + DAYFULL[n] + '</button>';
+      + DAYFULL[item] + '</button>';
   }).join('');
 
   /* ⚠️ The zone list comes from the ENGINE (Intl.supportedValuesOf), not a table we would have to edit twice a
@@ -3978,7 +3978,7 @@ function _localeSettingsBody(){
      how one gets missed: the value LOOKS like a constant because it usually reads "Asia/Kolkata". */
   var tzOpts = [['', 'Follow this device — ' + esc(CBLocale.timezone())]].concat(
     (tzAll.length ? tzAll : ['Asia/Kolkata','Asia/Dubai','Asia/Riyadh','Europe/London','Europe/Berlin','America/New_York','UTC'])
-      .map(function(z){ return [z, z.split('/').join(' / ')]; }));
+      .map(function(item){ return [item, item.split('/').join(' / ')]; }));
 
   var myCurCode = moneyCode();
   var wi = CBLocale.weekInfo() || {};
@@ -4002,9 +4002,9 @@ function _localeSettingsBody(){
   var allowed = CBLocale.allowedLangs();
 
   var regionOpts = [['', 'Not set — show me everything']].concat(
-    Object.keys(CBLocale.REGIONS).map(function (k) {
-      var r = CBLocale.REGIONS[k];
-      return [k, r.name + ' — ' + r.format + ' · ' + r.langs.slice(0, 4).map(function (x) { return CBLocale.langName(x); }).join(', ')
+    Object.keys(CBLocale.REGIONS).map(function (item) {
+      var r = CBLocale.REGIONS[item];
+      return [item, r.name + ' — ' + r.format + ' · ' + r.langs.slice(0, 4).map(function (x) { return CBLocale.langName(x); }).join(', ')
         + (r.langs.length > 4 ? ' …' : '')];
     }));
 
@@ -4191,22 +4191,22 @@ function _localeSettingsBody(){
  * replay of all three would be slower and, for setRegion, would prune against the intermediate ones.
  */
 function _locStage(what, fn, args) {
-  UI._locStage = (UI._locStage || []).filter(function (o) {
+  UI._locStage = (UI._locStage || []).filter(function (item) {
     /* setExt is four controls sharing one function — they are the same control only if the subtag matches. */
-    return o.fn !== fn || (fn === 'setExt' && o.args[0] !== args[0]);
+    return item.fn !== fn || (fn === 'setExt' && item.args[0] !== args[0]);
   });
   UI._locStage.push({ what: what, fn: fn, args: args });
   loadSettings();          /* ⚠️ the CARD repaints; renderApp() deliberately does not run — see the wrapper. */
 }
 
 function _locReplay() {
-  (UI._locStage || []).forEach(function (o) { CBLocale[o.fn].apply(CBLocale, o.args); });
+  (UI._locStage || []).forEach(function (item) { CBLocale[item.fn].apply(CBLocale, item.args); });
 }
 
 /** What is waiting, named — so the Save button can say what it is about to do. */
 function _locPending() {
   var seen = [];
-  (UI._locStage || []).forEach(function (o) { if (seen.indexOf(o.what) < 0) seen.push(o.what); });
+  (UI._locStage || []).forEach(function (item) { if (seen.indexOf(item.what) < 0) seen.push(item.what); });
   return seen;
 }
 
@@ -4249,14 +4249,14 @@ function localeSetTz(v){ _locStage(tx('Time zone'), 'setTimezone', [v]); }
  */
 function _locStaged(fn, live) {
   var last = null;
-  (UI._locStage || []).forEach(function (o) { if (o.fn === fn) last = o; });
+  (UI._locStage || []).forEach(function (item) { if (item.fn === fn) last = item; });
   return last ? last.args[0].slice() : live();
 }
 
 function localeToggleWorkday(n){
-  var cur = _locStaged('setWorkdays', function(){ return CBLocale.workdays(); }), at = cur.indexOf(n);
-  if (at >= 0) { if (cur.length > 1) cur.splice(at, 1); } else cur.push(n);
-  _locStage(tx('Working days'), 'setWorkdays', [cur]);
+  var list = _locStaged('setWorkdays', function(){ return CBLocale.workdays(); }), at = list.indexOf(n);
+  if (at >= 0) { if (list.length > 1) list.splice(at, 1); } else list.push(n);
+  _locStage(tx('Working days'), 'setWorkdays', [list]);
 }
 /** Clearing the override returns to CLDR's answer for the region — not to a hardcoded Mon–Fri. */
 function localeResetWorkdays(){ _locStage(tx('Working days'), 'setWorkdays', [[]]); }
@@ -4268,10 +4268,10 @@ function localeSetRegion(v){ _locStage(tx('Region'), 'setRegion', [v]); }
  * ⚠️ The last remaining language cannot be removed: a reader with no languages matches nothing at all.
  */
 function localeToggleLang(code){
-  var cur = _locStaged('setLangs', function(){ return CBLocale.langs(); }), at = cur.indexOf(code);
-  if (at >= 0) { if (cur.length > 1) cur.splice(at, 1); }
-  else if (cur.length < CBLocale.MAX_LANGS) cur.push(code);
-  _locStage(tx('Languages'), 'setLangs', [cur]);
+  var list = _locStaged('setLangs', function(){ return CBLocale.langs(); }), at = list.indexOf(code);
+  if (at >= 0) { if (list.length > 1) list.splice(at, 1); }
+  else if (list.length < CBLocale.MAX_LANGS) list.push(code);
+  _locStage(tx('Languages'), 'setLangs', [list]);
 }
 function localeSetFormat(v){ _locStage(tx('Format'), 'setLocale', [v]); }
 /* One handler shape per subtag — each re-renders so the preview above moves with the choice. */
@@ -4296,14 +4296,14 @@ var _INT_CAT, _INT_RUN, _INT_MAP;   /* the connector catalogue, the connectors t
  * digit is wrong, a PIN in another state). The connector's sync-profile fills it; a higher rung is never overwritten.
  */
 function intProfileMapHTML(){
-  if (_INT_MAP === undefined) { _INT_MAP = null; api('intProfileMap').then(function(r){ _INT_MAP = r || {}; if (setSec() === 'integrations') loadSettings(); }).catch(function(){ _INT_MAP = {}; if (setSec() === 'integrations') loadSettings(); }); }
+  if (_INT_MAP === undefined) { _INT_MAP = null; api('intProfileMap').then(function(reply){ _INT_MAP = reply || {}; if (setSec() === 'integrations') loadSettings(); }).catch(function(){ _INT_MAP = {}; if (setSec() === 'integrations') loadSettings(); }); }
   var m = _INT_MAP; if (!m || !m.fields) return '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('The store, as we know it') + '</div><div style="color:var(--grey)">' + tx(m === null ? 'reading…' : 'no map') + '</div></div>';
   var rungStyle = { declared: 'background:var(--warn-tint);color:var(--warn-2)', copied: 'background:var(--blue-tint);color:var(--blue-2)', checked: 'background:var(--ok-tint);color:var(--ok-2)', verified: 'background:var(--ok-2);color:var(--on-ok)' };   /* ⚠️ was #fff on a THEMED ground — the text vanishes in any theme that lightens --ok-2 (guard-static, 2026-09-27); --on-ok is the token for ink on the ok colour */
-  var rows = (m.order || []).map(function(k){ var f = m.fields[k] || {}; var src = f.source ? String(f.source) : ''; var when = f.as_of ? String(f.as_of).slice(0, 10) : '';
-    return '<tr data-testid="int-map-' + esc(k) + '"><td style="padding:5px 8px;border-top:1px solid var(--line)"><b>' + esc(f.label || k) + '</b><div style="font-size:var(--fs-1);color:var(--grey)">' + esc(f.why || '') + '</div></td>'
+  var rows = (m.order || []).map(function(item){ var f = m.fields[item] || {}; var src = f.source ? String(f.source) : ''; var when = f.as_of ? String(f.as_of).slice(0, 10) : '';
+    return '<tr data-testid="int-map-' + esc(item) + '"><td style="padding:5px 8px;border-top:1px solid var(--line)"><b>' + esc(f.label || item) + '</b><div style="font-size:var(--fs-1);color:var(--grey)">' + esc(f.why || '') + '</div></td>'
       + '<td style="padding:5px 8px;border-top:1px solid var(--line);font-family:monospace">' + (f.value != null ? esc(String(f.value)) : '<span style="color:var(--warn-3)">' + esc(tx('missing')) + '</span>') + (f.issues && f.issues.length ? '<div style="color:var(--warn-3);font-size:var(--fs-1)">⚠ ' + esc(f.issues.join('; ')) + '</div>' : '') + '</td>'
       + '<td style="padding:5px 8px;border-top:1px solid var(--line);font-size:var(--fs-1);color:var(--grey)">' + esc(src) + (when ? ' · ' + esc(when) : '') + '<div>' + esc((f.sources && (f.sources.tally || '')) ? intWhereFrom(f, src) : '') + '</div></td>'
-      + '<td style="padding:5px 8px;border-top:1px solid var(--line)">' + (f.rung ? '<span data-testid="int-map-rung-' + esc(k) + '" style="font-size:var(--fs-1);font-weight:800;border-radius:5px;padding:1px 6px;' + (rungStyle[f.rung] || '') + '">' + esc(f.rung) + '</span>' : '') + '</td></tr>'; }).join('');
+      + '<td style="padding:5px 8px;border-top:1px solid var(--line)">' + (f.rung ? '<span data-testid="int-map-rung-' + esc(item) + '" style="font-size:var(--fs-1);font-weight:800;border-radius:5px;padding:1px 6px;' + (rungStyle[f.rung] || '') + '">' + esc(f.rung) + '</span>' : '') + '</td></tr>'; }).join('');
   return '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('The store, as we know it') + ' <span style="font-weight:400;color:var(--grey);font-size:var(--fs-1)">' + esc(String(m.filled || 0) + ' ' + tx('of') + ' ' + String(m.total || 0) + ' ' + tx('filled')) + (m.state_name ? ' · ' + esc(m.state_name) : '') + '</span></div>'
     + '<div style="font-size:var(--fs-2);margin-bottom:6px">' + tx('What we look for, where it came from, and how far it is trusted: declared (typed) → copied (from your own system, with source and date) → checked (the GSTIN check digit, PAN and state agree) → verified (the registry). A connector fills it with sync-profile; a higher rung is never overwritten.') + '</div>'
     + '<div style="overflow:auto"><table style="border-collapse:collapse;width:100%;font-size:var(--fs-2)"><thead><tr><th style="text-align:start;padding:4px 8px">' + tx('Field') + '</th><th style="text-align:start;padding:4px 8px">' + tx('Value') + '</th><th style="text-align:start;padding:4px 8px">' + tx('Source · when') + '</th><th style="text-align:start;padding:4px 8px">' + tx('Rung') + '</th></tr></thead><tbody>' + rows + '</tbody></table></div></div>';
@@ -4356,41 +4356,41 @@ function intSourceHTML(r){
 function intToSetup(id){ UI.intOpen = id; lsSet('cb_int_open', id); intSetTab('connectors'); }
 function intCarriesHTML(r){
   var d = _INT_STR; if (!d || !d.owner) return '';
-  var mine = (d.streams || []).filter(function(st){ return d.owner[st.id] === r.id; });
+  var mine = (d.streams || []).filter(function(item){ return d.owner[item.id] === r.id; });
   if (!mine.length) return '<div style="width:100%;font-size:var(--fs-1);color:var(--warn-2)" data-testid="int-carries-' + esc(r.id) + '">' + tx('carries nothing — every stream it can carry belongs to another connector') + '</div>';
-  return '<div style="width:100%;font-size:var(--fs-1);color:var(--grey)" data-testid="int-carries-' + esc(r.id) + '">' + esc(tx('carries')) + ': ' + mine.map(function(st){ return esc(tx(st.label)); }).join(' · ') + '</div>';
+  return '<div style="width:100%;font-size:var(--fs-1);color:var(--grey)" data-testid="int-carries-' + esc(r.id) + '">' + esc(tx('carries')) + ': ' + mine.map(function(item){ return esc(tx(item.label)); }).join(' · ') + '</div>';
 }
 function intConnectorsHTML(){
-  if (_INT_CAT === undefined) { _INT_CAT = null; api('intCatalogue').then(function(r){ _INT_CAT = (r && r.connectors) || []; if (setSec() === 'integrations') loadSettings(); }).catch(function(){ _INT_CAT = []; if (setSec() === 'integrations') loadSettings(); }); }
-  if (_INT_RUN === undefined) { _INT_RUN = null; api('intStatus').then(function(r){ _INT_RUN = (r && r.connectors) || []; if (setSec() === 'integrations') loadSettings(); }).catch(function(){ _INT_RUN = []; if (setSec() === 'integrations') loadSettings(); }); }
+  if (_INT_CAT === undefined) { _INT_CAT = null; api('intCatalogue').then(function(reply){ _INT_CAT = (reply && reply.connectors) || []; if (setSec() === 'integrations') loadSettings(); }).catch(function(){ _INT_CAT = []; if (setSec() === 'integrations') loadSettings(); }); }
+  if (_INT_RUN === undefined) { _INT_RUN = null; api('intStatus').then(function(reply){ _INT_RUN = (reply && reply.connectors) || []; if (setSec() === 'integrations') loadSettings(); }).catch(function(){ _INT_RUN = []; if (setSec() === 'integrations') loadSettings(); }); }
   var base = (typeof CFG !== 'undefined' && CFG.API_BASE) || '';
-  var cat = _INT_CAT || [], run = _INT_RUN || [];
+  var list = _INT_CAT || [], run = _INT_RUN || [];
   var use = intInUse();
-  var chosen = use.length ? cat.filter(function(c){ return use.indexOf(c.id) >= 0; }) : cat;
-  var rest = use.length ? cat.filter(function(c){ return use.indexOf(c.id) < 0; }) : [];
-  var cards = cat.length ? chosen.map(function(c){
+  var chosen = use.length ? list.filter(function(item){ return use.indexOf(item.id) >= 0; }) : list;
+  var rest = use.length ? list.filter(function(item){ return use.indexOf(item.id) < 0; }) : [];
+  var cards = list.length ? chosen.map(function(item){
     /* ⭐ through the session, not a bare link: the API mints a connector key INTO the zip's connector.json (Athi, 2026-09-06: "download option should autofill everything") */
     /* CX6 (K1): the SERVER says whether this connector works for the shop's country (may/why from the pack) — a refused one stays shown, greyed WITH its sentence */
-    var may = c.may || { ok: true }, no = may.ok === false;
-    var adapters = (c.adapters || []).map(function(a){ return '<button class="composebtn" data-testid="int-download-' + esc(c.id) + '-' + esc(a) + '"' + (no ? ' disabled aria-disabled="true" title="' + esc(may.why || '') + '" style="opacity:.55;cursor:not-allowed"' : ' onclick="intDownloadKit(\'' + esc(c.id) + '\',\'' + esc(a) + '\')"') + '>⬇ ' + esc(tx('Download')) + ' · ' + esc(a) + '</button>'; }).join(' ');
-    var open = intOpen() === c.id;
-    var more = '<span data-testid="int-card-' + esc(c.id) + '-toggle" onclick="intToggleCard(\'' + esc(c.id) + '\')" style="cursor:pointer;color:var(--blue);font-size:var(--fs-1);user-select:none">' + (open ? '▾ ' + tx('less') : '▸ ' + txf('what to do for {name}', { name: c.name })) + '</span>';
-    var steps = open ? intCardDetailHTML(c) : '';
-    var doc = c.docs ? '<a href="' + esc(base + c.docs) + '" target="_blank" rel="noopener" data-testid="int-docs-' + esc(c.id) + '" style="font-size:var(--fs-1);color:var(--blue)">📄 ' + esc(tx('Instructions')) + '</a>' : '';
-    var tick = '<label style="display:inline-flex;gap:5px;align-items:center;font-size:var(--fs-1);color:var(--grey);cursor:pointer"><input type="checkbox" data-testid="int-use-' + esc(c.id) + '"' + (use.indexOf(c.id) >= 0 ? ' checked' : '') + ' onchange="intUseToggle(\'' + esc(c.id) + '\', this.checked)">' + esc(tx('we use this')) + '</label>';
-    return '<div data-testid="int-connector-' + esc(c.id) + '" style="border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:8px"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b style="flex:1">' + esc(c.name) + '</b>' + tick + ' ' + doc + ' ' + adapters + '</div>'
-      + '<div style="font-size:var(--fs-2);margin-top:6px">' + esc(c.does) + '</div>'
-      + (no ? '<div data-testid="int-why-' + esc(c.id) + '" style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">' + esc(may.why || '') + '</div>' : '')
+    var may = item.may || { ok: true }, no = may.ok === false;
+    var adapters = (item.adapters || []).map(function(a){ return '<button class="composebtn" data-testid="int-download-' + esc(item.id) + '-' + esc(a) + '"' + (no ? ' disabled aria-disabled="true" title="' + esc(may.why || '') + '" style="opacity:.55;cursor:not-allowed"' : ' onclick="intDownloadKit(\'' + esc(item.id) + '\',\'' + esc(a) + '\')"') + '>⬇ ' + esc(tx('Download')) + ' · ' + esc(a) + '</button>'; }).join(' ');
+    var open = intOpen() === item.id;
+    var more = '<span data-testid="int-card-' + esc(item.id) + '-toggle" onclick="intToggleCard(\'' + esc(item.id) + '\')" style="cursor:pointer;color:var(--blue);font-size:var(--fs-1);user-select:none">' + (open ? '▾ ' + tx('less') : '▸ ' + txf('what to do for {name}', { name: item.name })) + '</span>';
+    var steps = open ? intCardDetailHTML(item) : '';
+    var doc = item.docs ? '<a href="' + esc(base + item.docs) + '" target="_blank" rel="noopener" data-testid="int-docs-' + esc(item.id) + '" style="font-size:var(--fs-1);color:var(--blue)">📄 ' + esc(tx('Instructions')) + '</a>' : '';
+    var tick = '<label style="display:inline-flex;gap:5px;align-items:center;font-size:var(--fs-1);color:var(--grey);cursor:pointer"><input type="checkbox" data-testid="int-use-' + esc(item.id) + '"' + (use.indexOf(item.id) >= 0 ? ' checked' : '') + ' onchange="intUseToggle(\'' + esc(item.id) + '\', this.checked)">' + esc(tx('we use this')) + '</label>';
+    return '<div data-testid="int-connector-' + esc(item.id) + '" style="border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:8px"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b style="flex:1">' + esc(item.name) + '</b>' + tick + ' ' + doc + ' ' + adapters + '</div>'
+      + '<div style="font-size:var(--fs-2);margin-top:6px">' + esc(item.does) + '</div>'
+      + (no ? '<div data-testid="int-why-' + esc(item.id) + '" style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">' + esc(may.why || '') + '</div>' : '')
       + '<div style="margin-top:6px">' + more + '</div>'
-      + (open ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">' + esc(tx('Runs on')) + ': ' + esc(c.runs_on) + ' · ' + esc(c.status) + '</div>' : '')
+      + (open ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">' + esc(tx('Runs on')) + ': ' + esc(item.runs_on) + ' · ' + esc(item.status) + '</div>' : '')
       + steps + '</div>';
   }).join('') : '<div style="color:var(--grey)">' + tx(_INT_CAT === null ? 'reading…' : 'No connectors published yet.') + '</div>';
-  var rows = run.length ? run.map(function(r){ var ago = r.last_seen ? Math.round((Date.now() - new Date(r.last_seen).getTime()) / 60000) : null; var c = r.counters || {};
-    return '<div data-testid="int-running-' + esc(r.id) + '" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:6px 0;border-top:1px solid var(--line);font-size:var(--fs-2)"><b style="flex:1">' + esc(r.name) + intEnrolHTML(r) + '</b><span style="color:var(--grey);font-size:var(--fs-1)">' + esc(r.adapter || '') + ' · ' + esc(r.host || '') + ' · ' + (ago == null ? '' : (ago < 1 ? tx('just now') : txf('{n} min ago', { n: String(ago) }))) + ' · ' + esc(tx('products')) + ' ' + esc(String(c.products_ok || 0)) + ' · ' + esc(tx('orders')) + ' ' + esc(String(c.orders_ok || 0)) + (c.receipts_ok ? ' · ' + esc(tx('receipts')) + ' ' + esc(String(c.receipts_ok)) : '') + (c.failed ? ' · <span style="color:var(--warn-3)">' + esc(tx('failed')) + ' ' + esc(String(c.failed)) + '</span>' : '') + (r.note ? ' · ' + esc(r.note) : '') + ' · <span data-testid="int-row-help-' + esc(r.id) + '" onclick="intToSetup(\'' + esc(r.adapter || '') + '\')" style="cursor:pointer;color:var(--blue)">' + esc(txf('what to do for {name}', { name: r.adapter || 'this' })) + '</span></span>' + intSourceHTML(r) + intCarriesHTML(r) + '</div>'; }).join('')
+  var rows = run.length ? run.map(function(item){ var ago = item.last_seen ? Math.round((Date.now() - new Date(item.last_seen).getTime()) / 60000) : null; var c = item.counters || {};
+    return '<div data-testid="int-running-' + esc(item.id) + '" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:6px 0;border-top:1px solid var(--line);font-size:var(--fs-2)"><b style="flex:1">' + esc(item.name) + intEnrolHTML(item) + '</b><span style="color:var(--grey);font-size:var(--fs-1)">' + esc(item.adapter || '') + ' · ' + esc(item.host || '') + ' · ' + (ago == null ? '' : (ago < 1 ? tx('just now') : txf('{n} min ago', { n: String(ago) }))) + ' · ' + esc(tx('products')) + ' ' + esc(String(c.products_ok || 0)) + ' · ' + esc(tx('orders')) + ' ' + esc(String(c.orders_ok || 0)) + (c.receipts_ok ? ' · ' + esc(tx('receipts')) + ' ' + esc(String(c.receipts_ok)) : '') + (c.failed ? ' · <span style="color:var(--warn-3)">' + esc(tx('failed')) + ' ' + esc(String(c.failed)) + '</span>' : '') + (item.note ? ' · ' + esc(item.note) : '') + ' · <span data-testid="int-row-help-' + esc(item.id) + '" onclick="intToSetup(\'' + esc(item.adapter || '') + '\')" style="cursor:pointer;color:var(--blue)">' + esc(txf('what to do for {name}', { name: item.adapter || 'this' })) + '</span></span>' + intSourceHTML(item) + intCarriesHTML(item) + '</div>'; }).join('')
     : '<div style="color:var(--grey);font-size:var(--fs-2)">' + tx(_INT_RUN === null ? 'reading…' : 'None has checked in yet — a connector reports here each time it runs, and every five minutes while it watches.') + '</div>';
   if (intTab() === 'running') return '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('Running connectors') + '</div>'
     + intFold('running', ['One row per connector that has checked in.', 'It reports every run, and every five minutes while it watches.', '"Answered" is the other system. "Live" is only the connector itself.', 'Approve a PC once — a kit is approved for one PC at a time.']) + rows + '</div>';
-  var more = rest.length ? '<div style="margin-top:10px;font-size:var(--fs-1);color:var(--grey)" data-testid="int-rest">' + esc(txf('{n} you do not use: {names}', { n: String(rest.length), names: rest.map(function(c){ return c.name; }).join(', ') })) + ' — ' + tx('tick "we use this" on one to bring it back') + '</div>' : '';
+  var more = rest.length ? '<div style="margin-top:10px;font-size:var(--fs-1);color:var(--grey)" data-testid="int-rest">' + esc(txf('{n} you do not use: {names}', { n: String(rest.length), names: rest.map(function(item){ return item.name; }).join(', ') })) + ' — ' + tx('tick "we use this" on one to bring it back') + '</div>' : '';
   return '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('Connectors') + '</div>'
     + intFold('connectors', ['A small program that runs beside your own system — Tally, Zoho, a folder of files.', 'It carries products and stock up, offers back, and orders down as vouchers.', 'Download, unzip, double-click start.cmd. Your key is already inside.'])
     + cards + more + '</div>';
@@ -4418,7 +4418,7 @@ function intCardDetailHTML(c){
   var group = function(title, lines){
     if (!lines || !lines.length) return '';
     return '<div style="margin-top:8px"><div style="font-size:var(--fs-1);font-weight:700;color:var(--grey);text-transform:uppercase;letter-spacing:.04em">' + esc(tx(title)) + '</div>'
-      + '<ul style="margin:3px 0 0;padding-inline-start:18px;font-size:var(--fs-2)">' + lines.map(function(l){ return '<li style="margin:2px 0">' + esc(tx(l)) + '</li>'; }).join('') + '</ul></div>';
+      + '<ul style="margin:3px 0 0;padding-inline-start:18px;font-size:var(--fs-2)">' + lines.map(function(item){ return '<li style="margin:2px 0">' + esc(tx(item)) + '</li>'; }).join('') + '</ul></div>';
   };
   return '<div data-testid="int-detail-' + esc(c.id) + '" style="border-top:1px solid var(--line);margin-top:8px;padding-top:2px">'
     + group('Before you start', c.needs)
@@ -4427,7 +4427,7 @@ function intCardDetailHTML(c){
     + group('Once it runs, look here', ['Running — is it checked in, and did ' + (c.default_adapter || c.id) + ' answer it', 'Who owns what — which streams this connector carries', 'In the books — whether each order reached it, and what is late'])
     + '</div>';
 }
-function intTab(){ var k = UI.intTab || lsGet('cb_int_tab', 'connectors'); return INT_TABS.some(function(t){ return t.key === k; }) ? k : 'connectors'; }
+function intTab(){ var k = UI.intTab || lsGet('cb_int_tab', 'connectors'); return INT_TABS.some(function(item){ return item.key === k; }) ? k : 'connectors'; }
 /* ⚠️ THE RAIL IS PART OF THE PAINT (Athi, 2026-09-07: "when I click the submenu the details change on the right, but the menu marked
    in a different colour does not change"). loadSettings() repaints the BODY only, so the highlight stayed on the old row — the same
    reason govSetTab calls renderApp() first. Copying that, rather than inventing a second way to move a selection. */
@@ -4435,20 +4435,20 @@ function intSetTab(k){ UI.intTab = k; lsSet('cb_int_tab', k); if (typeof renderA
 /** ⭐ the prose folds, and stays folded — an explanation is worth reading once, not on every visit (2026-09-07) */
 function intFold(key, lines){
   var open = lsGet('cb_fold_' + key, '1') === '1';
-  var list = (Array.isArray(lines) ? lines : [lines]).map(function(l){ return '<li style="margin:2px 0">' + esc(tx(l)) + '</li>'; }).join('');
+  var list = (Array.isArray(lines) ? lines : [lines]).map(function(item){ return '<li style="margin:2px 0">' + esc(tx(item)) + '</li>'; }).join('');
   return '<div style="font-size:var(--fs-2);margin-bottom:6px">'
     + '<span data-testid="int-fold-' + esc(key) + '" onclick="intFoldToggle(\'' + esc(key) + '\')" style="cursor:pointer;color:var(--grey);font-size:var(--fs-1);user-select:none">' + (open ? '▾ ' + tx('less') : '▸ ' + tx('what this is')) + '</span>'
     + (open ? '<ul style="margin:4px 0 0;padding-inline-start:18px">' + list + '</ul>' : '') + '</div>';
 }
 function intFoldToggle(key){ lsSet('cb_fold_' + key, lsGet('cb_fold_' + key, '1') === '1' ? '0' : '1'); loadSettings(); }
 /** ⭐ which systems this account actually runs. A DISPLAY choice, not a connection: it puts them first and folds the rest away. */
-function intInUse(){ var v = ((typeof SESSION !== 'undefined' && SESSION.policy_flags) || {}).connectors_in_use; return Array.isArray(v) ? v.filter(function(x){ return x !== 'none'; }) : []; }
+function intInUse(){ var list = ((typeof SESSION !== 'undefined' && SESSION.policy_flags) || {}).connectors_in_use; return Array.isArray(list) ? list.filter(function(x){ return x !== 'none'; }) : []; }
 async function intUseToggle(id, on){
   var now = intInUse().filter(function(x){ return x !== id; });
   if (on) now.push(id);
   try {
-    var r = await api('policySet', { body: { connectors_in_use: now.length ? now : ['none'] } });
-    if (typeof SESSION !== 'undefined') SESSION.policy_flags = (r && r.flags) || Object.assign({}, SESSION.policy_flags || {}, { connectors_in_use: now });
+    var reply = await api('policySet', { body: { connectors_in_use: now.length ? now : ['none'] } });
+    if (typeof SESSION !== 'undefined') SESSION.policy_flags = (reply && reply.flags) || Object.assign({}, SESSION.policy_flags || {}, { connectors_in_use: now });
     loadSettings();
   } catch (e) { toast(tx('Could not save') + ': ' + (e && e.message || e)); }
 }
@@ -4460,7 +4460,7 @@ async function intUseToggle(id, on){
  */
 var _INT_STR;
 function intStreamsHTML(){
-  if (_INT_STR === undefined) { _INT_STR = null; api('intStreams').then(function(r){ _INT_STR = r || {}; if (setSec() === 'integrations') loadSettings(); }).catch(function(){ _INT_STR = { error: true }; if (setSec() === 'integrations') loadSettings(); }); }
+  if (_INT_STR === undefined) { _INT_STR = null; api('intStreams').then(function(reply){ _INT_STR = reply || {}; if (setSec() === 'integrations') loadSettings(); }).catch(function(){ _INT_STR = { error: true }; if (setSec() === 'integrations') loadSettings(); }); }
   var d = _INT_STR || {}; var list = d.streams || [], own = d.owner || {}, con = d.connectors || [];
   if (_INT_STR === null) return '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('Who owns what') + '</div><div style="color:var(--grey);font-size:var(--fs-2)">' + tx('reading…') + '</div></div>';
   var nameOf = function(id){ var c = con.find(function(x){ return x.id === id; }); return c ? (c.name + ' · ' + (c.adapter || '')) : id; };
@@ -4469,14 +4469,14 @@ function intStreamsHTML(){
   else if (con.length === 1 && Object.keys(own).length) body = '<div style="font-size:var(--fs-2)" data-testid="int-streams-single">' + txf('{name} carries everything.', { name: con[0].name }) + ' ' + tx('A second connector claims only what is still free, and this is where you would hand a stream over.') + '</div>';
   else body = '<div style="overflow:auto"><table style="border-collapse:collapse;width:100%;font-size:var(--fs-2)"><thead><tr>'
       + '<th style="text-align:start;padding:4px 8px">' + tx('Stream') + '</th><th style="text-align:start;padding:4px 8px">' + tx('What travels') + '</th><th style="text-align:start;padding:4px 8px">' + tx('Carried by') + '</th></tr></thead><tbody>'
-      + list.map(function(st){
-          var sel = '<select class="inp" data-testid="int-stream-' + esc(st.id) + '" onchange="intStreamSet(\'' + esc(st.id) + '\', this.value)">'
+      + list.map(function(item){
+          var sel = '<select class="inp" data-testid="int-stream-' + esc(item.id) + '" onchange="intStreamSet(\'' + esc(item.id) + '\', this.value)">'
             + '<option value="">' + esc(tx('nobody')) + '</option>'
-            + con.map(function(c){ return '<option value="' + esc(c.id) + '"' + (own[st.id] === c.id ? ' selected' : '') + '>' + esc(nameOf(c.id)) + '</option>'; }).join('')
-            + (own[st.id] && !con.find(function(c){ return c.id === own[st.id]; }) ? '<option value="' + esc(own[st.id]) + '" selected>' + esc(own[st.id]) + ' (' + esc(tx('not running')) + ')</option>' : '')
+            + con.map(function(c){ return '<option value="' + esc(c.id) + '"' + (own[item.id] === c.id ? ' selected' : '') + '>' + esc(nameOf(c.id)) + '</option>'; }).join('')
+            + (own[item.id] && !con.find(function(c){ return c.id === own[item.id]; }) ? '<option value="' + esc(own[item.id]) + '" selected>' + esc(own[item.id]) + ' (' + esc(tx('not running')) + ')</option>' : '')
             + '</select>';
-          return '<tr><td style="padding:5px 8px;border-top:1px solid var(--line)"><b>' + esc(tx(st.label)) + '</b><div style="font-size:var(--fs-1);color:var(--grey)">' + esc(st.dir === 'in' ? tx('into the network') : tx('out to the other system')) + '</div></td>'
-            + '<td style="padding:5px 8px;border-top:1px solid var(--line);font-size:var(--fs-1);color:var(--grey)">' + esc(tx(st.what)) + '</td>'
+          return '<tr><td style="padding:5px 8px;border-top:1px solid var(--line)"><b>' + esc(tx(item.label)) + '</b><div style="font-size:var(--fs-1);color:var(--grey)">' + esc(item.dir === 'in' ? tx('into the network') : tx('out to the other system')) + '</div></td>'
+            + '<td style="padding:5px 8px;border-top:1px solid var(--line);font-size:var(--fs-1);color:var(--grey)">' + esc(tx(item.what)) + '</td>'
             + '<td style="padding:5px 8px;border-top:1px solid var(--line)">' + sel + '</td></tr>';
         }).join('') + '</tbody></table></div>';
   return '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('Who owns what') + '</div>'
@@ -4535,12 +4535,12 @@ function recPlain(r){
 }
 var _INT_REC;
 function intReconcileHTML(){
-  if (_INT_REC === undefined) { _INT_REC = null; api('intReconcile', { query: { days: 30 } }).then(function(r){ _INT_REC = r || {}; if (setSec() === 'integrations') loadSettings(); }).catch(function(){ _INT_REC = { error: true }; if (setSec() === 'integrations') loadSettings(); }); }
+  if (_INT_REC === undefined) { _INT_REC = null; api('intReconcile', { query: { days: 30 } }).then(function(reply){ _INT_REC = reply || {}; if (setSec() === 'integrations') loadSettings(); }).catch(function(){ _INT_REC = { error: true }; if (setSec() === 'integrations') loadSettings(); }); }
   var d = _INT_REC || {};
   if (_INT_REC === null) return '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('In the books') + '</div><div style="color:var(--grey);font-size:var(--fs-2)">' + tx('reading…') + '</div></div>';
   var c = d.counts || {}, rows = d.rows || [];
   var chip = function(n, label, colour, testid){ return '<span data-testid="' + testid + '" style="display:inline-flex;gap:5px;align-items:center;border:1px solid var(--line);border-radius:999px;padding:2px 9px;font-size:var(--fs-1);' + (colour ? 'color:' + colour + ';font-weight:700' : 'color:var(--grey)') + '"><b>' + esc(String(n || 0)) + '</b> ' + esc(label) + '</span>'; };
-  var bySys = Object.keys(d.by_system || {}).map(function(k){ return esc(k) + ' ' + esc(String(d.by_system[k])); }).join(' · ');
+  var bySys = Object.keys(d.by_system || {}).map(function(item){ return esc(item) + ' ' + esc(String(d.by_system[item])); }).join(' · ');
   var head = (c.overdue || c.refused)
     ? '<div style="font-size:var(--fs-2);color:var(--warn-3);font-weight:700;margin-bottom:4px" data-testid="int-rec-head">' + esc(txf('{n} order(s) need a look — each one below says what to do.', { n: String((c.overdue || 0) + (c.refused || 0)) })) + '</div>'
     : '<div style="font-size:var(--fs-2);color:var(--ok-2);margin-bottom:4px" data-testid="int-rec-head">' + esc(tx('Nothing needs you. Anything on the way lands by itself.')) + '</div>';
@@ -4554,27 +4554,27 @@ function intReconcileHTML(){
     + (c.set_aside ? chip(c.set_aside, tx('set aside'), '', 'int-rec-aside') : '')
     + '</div>';
   /* what a person is being asked about — an order older than the connector, or one set aside, is stated below but asks nothing */
-  var open = rows.filter(function(r){ return r.state === 'overdue' || r.state === 'refused' || r.state === 'due' || r.state === 'before_connector' || r.state === 'set_aside'; });
+  var open = rows.filter(function(item){ return item.state === 'overdue' || item.state === 'refused' || item.state === 'due' || item.state === 'before_connector' || item.state === 'set_aside'; });
   var word = { overdue: tx('overdue'), refused: tx('refused'), due: tx('on the way'), before_connector: tx('older'), set_aside: tx('set aside') };
   var colour = { overdue: 'var(--warn-3)', refused: 'var(--warn-3)', due: 'var(--grey)', before_connector: 'var(--grey)', set_aside: 'var(--grey)' };
   var when = fmtDateTime;
-  var list = open.length ? open.slice(0, 40).map(function(r){
-    var short = String(r.chit_id).slice(0, 8), p = recPlain(r), raw = lsGet('cb_rec_raw_' + short, '0') === '1';
+  var list = open.length ? open.slice(0, 40).map(function(item){
+    var short = String(item.chit_id).slice(0, 8), p = recPlain(item), raw = lsGet('cb_rec_raw_' + short, '0') === '1';
     return '<div data-testid="int-rec-row-' + esc(short) + '" style="display:flex;gap:10px;align-items:baseline;padding:8px 0;border-top:1px solid var(--line);font-size:var(--fs-2)">'
-      + '<span style="font-weight:700;color:' + colour[r.state] + ';flex:0 0 92px">' + esc(word[r.state] || r.state) + '</span>'
+      + '<span style="font-weight:700;color:' + colour[item.state] + ';flex:0 0 92px">' + esc(word[item.state] || item.state) + '</span>'
       + '<span style="flex:1">'
-        + '<b>' + esc(r.subject || tx('Order')) + '</b>' + (r.party ? '<span style="color:var(--grey)"> · ' + esc(r.party) + '</span>' : '')
+        + '<b>' + esc(item.subject || tx('Order')) + '</b>' + (item.party ? '<span style="color:var(--grey)"> · ' + esc(item.party) + '</span>' : '')
         + '<div style="margin-top:2px">' + esc(p.line) + '</div>'
         + (p.todo ? '<div style="color:var(--grey);font-size:var(--fs-1);margin-top:2px">' + esc(p.todo) + '</div>' : '')
-        + '<div style="color:var(--grey-4);font-size:var(--fs-1);margin-top:3px">' + esc(when(r.released_at || r.created_at)) + (r.why ? ' · <span data-testid="int-rec-raw-' + esc(short) + '" onclick="intRecRaw(\'' + esc(short) + '\')" style="cursor:pointer;color:var(--blue)">' + (raw ? esc(tx('hide the technical detail')) : esc(tx('technical detail'))) + '</span>' : '') + '</div>'
-        + (raw && r.why ? '<div style="margin-top:3px;font-family:monospace;font-size:var(--fs-1);color:var(--warn-2);word-break:break-word">' + esc(r.why) + '</div>' : '')
+        + '<div style="color:var(--grey-4);font-size:var(--fs-1);margin-top:3px">' + esc(when(item.released_at || item.created_at)) + (item.why ? ' · <span data-testid="int-rec-raw-' + esc(short) + '" onclick="intRecRaw(\'' + esc(short) + '\')" style="cursor:pointer;color:var(--blue)">' + (raw ? esc(tx('hide the technical detail')) : esc(tx('technical detail'))) + '</span>' : '') + '</div>'
+        + (raw && item.why ? '<div style="margin-top:3px;font-family:monospace;font-size:var(--fs-1);color:var(--warn-2);word-break:break-word">' + esc(item.why) + '</div>' : '')
       + '</span>'
       + '<span style="display:flex;gap:6px;flex:0 0 auto">'
-        + '<button class="btn2" data-testid="int-rec-open-' + esc(short) + '" onclick="intRecOpen(\'' + esc(r.chit_id) + '\',\'' + esc(r.side || '') + '\')">' + tx('Open') + '</button>'
-        + (r.state === 'set_aside'
-            ? '<button class="btn2" data-testid="int-rec-unskip-' + esc(short) + '" onclick="intRecSkip(\'' + esc(r.chit_id) + '\', false)">' + tx('Send after all') + '</button>'
-            : '<button class="btn2" data-testid="int-rec-retry-' + esc(short) + '" onclick="intRecRetry(\'' + esc(r.chit_id) + '\')">' + tx('Ask again') + '</button>'
-              + '<button class="btn2" data-testid="int-rec-skip-' + esc(short) + '" onclick="intRecSkip(\'' + esc(r.chit_id) + '\', true)" title="' + esc(tx('it will not go to the books, and nothing will ask again')) + '">' + tx('Not for the books') + '</button>')
+        + '<button class="btn2" data-testid="int-rec-open-' + esc(short) + '" onclick="intRecOpen(\'' + esc(item.chit_id) + '\',\'' + esc(item.side || '') + '\')">' + tx('Open') + '</button>'
+        + (item.state === 'set_aside'
+            ? '<button class="btn2" data-testid="int-rec-unskip-' + esc(short) + '" onclick="intRecSkip(\'' + esc(item.chit_id) + '\', false)">' + tx('Send after all') + '</button>'
+            : '<button class="btn2" data-testid="int-rec-retry-' + esc(short) + '" onclick="intRecRetry(\'' + esc(item.chit_id) + '\')">' + tx('Ask again') + '</button>'
+              + '<button class="btn2" data-testid="int-rec-skip-' + esc(short) + '" onclick="intRecSkip(\'' + esc(item.chit_id) + '\', true)" title="' + esc(tx('it will not go to the books, and nothing will ask again')) + '">' + tx('Not for the books') + '</button>')
       + '</span></div>';
   }).join('') : '<div style="color:var(--ok-2);font-size:var(--fs-2)" data-testid="int-rec-clear">✓ ' + tx('Everything has reached the books. Nothing for you to do.') + '</div>';
   return '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('In the books') + '</div>'
@@ -4653,7 +4653,7 @@ function _netRelWords(r){
   return w;
 }
 function netOffersHTML(){
-  if (_NETO === undefined) { _NETO = null; api('netOffers').then(function(r){ _NETO = r || {}; if (setSec() === 'integrations') loadSettings(); })
+  if (_NETO === undefined) { _NETO = null; api('netOffers').then(function(reply){ _NETO = reply || {}; if (setSec() === 'integrations') loadSettings(); })
     .catch(function(e){ _NETO = { error: (e && e.message) || true }; if (setSec() === 'integrations') loadSettings(); }); }
   if (_NETO === null) return '<div style="' + _CARD + '">' + tx('reading…') + '</div>';
   if (_NETO.error) return '<div style="' + _CARD + ';color:var(--warn)">' + tx('Could not read network offers.') + '</div>';
@@ -4666,23 +4666,23 @@ function netOffersHTML(){
       return '<button class="' + (pol === k ? 'pri' : '') + '" data-testid="neto-policy-' + k + '" onclick="netoPolicy(\'' + k + '\')"'
         + ' title="' + esc(hint) + '">' + tx(label) + '</button>';
     };
-    var rows = (b.offers || []).map(function(o){
-      var r = o.released, live = o.status === 'live';
+    var rows = (b.offers || []).map(function(item){
+      var r = item.released, live = item.status === 'live';
       var running = r && (!r.until || new Date(r.until).getTime() > Date.now());
-      var armed = _NETO_ARMED === 'now:' + o.id;
-      return '<div data-testid="neto-offer-' + esc(o.id) + '" style="display:flex;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--line);flex-wrap:wrap">'
-        + '<span style="flex:1 1 220px;min-width:0"><b>' + esc(o.name) + '</b>'
-        + '<div style="font-size:var(--fs-1);color:var(--' + (running ? 'ok' : 'grey') + ')" data-testid="neto-state-' + esc(o.id) + '">'
+      var armed = _NETO_ARMED === 'now:' + item.id;
+      return '<div data-testid="neto-offer-' + esc(item.id) + '" style="display:flex;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--line);flex-wrap:wrap">'
+        + '<span style="flex:1 1 220px;min-width:0"><b>' + esc(item.name) + '</b>'
+        + '<div style="font-size:var(--fs-1);color:var(--' + (running ? 'ok' : 'grey') + ')" data-testid="neto-state-' + esc(item.id) + '">'
         + (live ? esc(_netRelWords(r)) : tx('draft — make it live before releasing'))
         /* ⚠️ edited since release: the stores are still on the released version until this goes out */
-        + (o.changed ? ' · <b style="color:var(--warn)" data-testid="neto-changed-' + esc(o.id) + '">' + tx('changed since release — stores still have the released version') + '</b>' : '')
+        + (item.changed ? ' · <b style="color:var(--warn)" data-testid="neto-changed-' + esc(item.id) + '">' + tx('changed since release — stores still have the released version') + '</b>' : '')
         + '</div></span>'
-        + (live && (!running || o.changed)
-            ? '<button class="pri" data-testid="neto-release-' + esc(o.id) + '" onclick="netoRelease(\'' + esc(o.id) + '\',false)">' + tx('Release at next opening') + '</button>'
-              + '<button data-testid="neto-release-now-' + esc(o.id) + '" onclick="netoRelease(\'' + esc(o.id) + '\',true)">'
+        + (live && (!running || item.changed)
+            ? '<button class="pri" data-testid="neto-release-' + esc(item.id) + '" onclick="netoRelease(\'' + esc(item.id) + '\',false)">' + tx('Release at next opening') + '</button>'
+              + '<button data-testid="neto-release-now-' + esc(item.id) + '" onclick="netoRelease(\'' + esc(item.id) + '\',true)">'
               + (armed ? tx('Release NOW — mid-day, every store') : tx('Release now')) + '</button>'
             : '')
-        + (running ? '<button class="warn" data-testid="neto-withdraw-' + esc(o.id) + '" onclick="netoWithdraw(\'' + esc(o.id) + '\')">' + tx('Withdraw at next opening') + '</button>' : '')
+        + (running ? '<button class="warn" data-testid="neto-withdraw-' + esc(item.id) + '" onclick="netoWithdraw(\'' + esc(item.id) + '\')">' + tx('Withdraw at next opening') + '</button>' : '')
         + '</div>';
     }).join('');
     out += '<div style="' + _CARD + '">'
@@ -4698,15 +4698,15 @@ function netOffersHTML(){
       + '</div>'
       + (rows || '<div style="color:var(--grey);padding:6px 0">' + tx('No offers yet — declare them under Offers, make them live, then release them here.') + '</div>')
       + '</div>';
-    (b.catalogue || []).forEach(function(c){ out += netCatBrandHTML(c, b.stores || 0); });
+    (b.catalogue || []).forEach(function(item){ out += netCatBrandHTML(item, b.stores || 0); });
   }
 
   var notes = (_NETO.store && _NETO.store.price_notices) || [];
   if (notes.length) out += netCatNoticesHTML(notes);
 
-  nets.forEach(function(nw){
-    var optIn = nw.policy !== 'opt_out';
-    var rows = (nw.offers || []).map(function(o){
+  nets.forEach(function(item){
+    var optIn = item.policy !== 'opt_out';
+    var rows = (item.offers || []).map(function(o){
       var btn = o.applies
         ? '<button data-testid="neto-out-' + esc(o.id) + '" onclick="netoChoice(\'' + esc(o.id) + '\',\'' + (optIn ? '' : 'out') + '\')">' + tx(optIn ? 'Stop taking it' : 'Decline') + '</button>'
         : '<button class="pri" data-testid="neto-in-' + esc(o.id) + '" onclick="netoChoice(\'' + esc(o.id) + '\',\'' + (optIn ? 'in' : '') + '\')">' + tx('Take this offer') + '</button>';
@@ -4719,8 +4719,8 @@ function netOffersHTML(){
     }).join('');
     out += '<div style="' + _CARD + '">'
       /* ⭐ one card per brand this store sells for — a store can be in several networks, each with its own offers and prices */
-      + netStandingHTML(nw)
-      + (((nw.membership || {}).state || 'active') === 'active'
+      + netStandingHTML(item)
+      + (((item.membership || {}).state || 'active') === 'active'
           ? '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:6px">'
             + tx(optIn ? 'Your network lets each store choose. An offer applies here only if you take it.'
                        : 'Your network applies every released offer. You can decline one for this store.') + '</div>'
@@ -4753,21 +4753,21 @@ function _netFieldWords(f){
 }
 function netCatBrandHTML(c, stores){
   var key = c.source_key, sel = _NETC_ADD[key] || {};
-  var nSel = Object.keys(sel).filter(function(k){ return sel[k]; }).length;
+  var nSel = Object.keys(sel).filter(function(item){ return sel[item]; }).length;
   var outSel = _NETC_OUT[key] || {};
-  var nOut = Object.keys(outSel).filter(function(k){ return outSel[k]; }).length;
+  var nOut = Object.keys(outSel).filter(function(item){ return outSel[item]; }).length;
   var armed = _NETO_ARMED === 'pub:' + key;
-  var changes = (c.changes || []).map(function(ch, i){
-    return '<div data-testid="netc-change-' + i + '" style="padding:6px 0;border-top:1px solid var(--line);font-size:var(--fs-2)">'
-      + '<b>' + esc(ch.name) + '</b>' + (ch.was ? ' <span style="color:var(--grey)">(' + tx('was') + ' ' + esc(ch.was) + ')</span>' : '')
-      + ' — ' + (ch.kind === 'withdrawn' ? tx('withdrawn from your stores') :
-                 ch.kind === 'withdrawn_at' ? tx('withdrawn from') + ' ' + (ch.stores || []).length + ' ' + tx('store(s)') :
-                 ch.kind === 'restored_at' ? tx('offered again at') + ' ' + (ch.stores || []).length + ' ' + tx('store(s)') : (ch.kind === 'added' ? tx('new to your stores') + ' · ' : '') + (ch.fields || []).map(_netFieldWords).join(' · ')) + '</div>';
+  var changes = (c.changes || []).map(function(item, index){
+    return '<div data-testid="netc-change-' + index + '" style="padding:6px 0;border-top:1px solid var(--line);font-size:var(--fs-2)">'
+      + '<b>' + esc(item.name) + '</b>' + (item.was ? ' <span style="color:var(--grey)">(' + tx('was') + ' ' + esc(item.was) + ')</span>' : '')
+      + ' — ' + (item.kind === 'withdrawn' ? tx('withdrawn from your stores') :
+                 item.kind === 'withdrawn_at' ? tx('withdrawn from') + ' ' + (item.stores || []).length + ' ' + tx('store(s)') :
+                 item.kind === 'restored_at' ? tx('offered again at') + ' ' + (item.stores || []).length + ' ' + tx('store(s)') : (item.kind === 'added' ? tx('new to your stores') + ' · ' : '') + (item.fields || []).map(_netFieldWords).join(' · ')) + '</div>';
   }).join('');
-  var cands = (c.candidates || []).map(function(p){
-    return '<label data-testid="netc-add-' + esc(p.item_id) + '" style="display:flex;gap:8px;align-items:center;padding:4px 0;font-size:var(--fs-2)">'
-      + '<input type="checkbox" ' + (sel[p.item_id] ? 'checked ' : '') + 'onchange="netcTick(\'' + esc(key) + '\',\'' + esc(p.item_id) + '\',this.checked)">'
-      + esc(p.name) + ' <span style="color:var(--grey)">' + esc(_netMoney(p.price)) + '</span></label>';
+  var cands = (c.candidates || []).map(function(item){
+    return '<label data-testid="netc-add-' + esc(item.item_id) + '" style="display:flex;gap:8px;align-items:center;padding:4px 0;font-size:var(--fs-2)">'
+      + '<input type="checkbox" ' + (sel[item.item_id] ? 'checked ' : '') + 'onchange="netcTick(\'' + esc(key) + '\',\'' + esc(item.item_id) + '\',this.checked)">'
+      + esc(item.name) + ' <span style="color:var(--grey)">' + esc(_netMoney(item.price)) + '</span></label>';
   }).join('');
   var waiting = c.pending
     ? '<div data-testid="netc-pending" style="padding:8px 0;color:var(--warn-2);font-size:var(--fs-2)">⏳ '
@@ -4776,41 +4776,41 @@ function netCatBrandHTML(c, stores){
     : '';
   var any = (c.changes || []).length || nSel || nOut;
   /* ⭐ WITHDRAW — tick what the stores should stop selling; it goes with the next publish (lib/network-catalogue.diff) */
-  var missing = {}; (c.missing || []).forEach(function(n){ missing[n] = true; });
+  var missing = {}; (c.missing || []).forEach(function(item){ missing[item] = true; });
   /* ⭐ …or from SOME stores: each product opens a row of its stores, ticked where it is (or will be) withdrawn */
   var atSel = _NETC_AT[key] || {}, cur = c.withdrawn_at || {}, storeList = c.stores || [];
   var nAt = netcAtChanges(c).count;
   any = any || nAt;
-  var shared = (c.published || []).map(function(n, i){
-    var now = cur[n] || [], want = atSel[n] || null;
+  var shared = (c.published || []).map(function(item, index){
+    var now = cur[item] || [], want = atSel[item] || null;
     var isOut = function(id){ return want && (id in want) ? !!want[id] : now.indexOf(id) >= 0; };
     var outCount = storeList.filter(function(s){ return isOut(s.id); }).length;
-    var open = _NETC_OPEN === key + '|' + n;
-    return '<div data-testid="netc-out-' + i + '" style="padding:3px 0;font-size:var(--fs-2)">'
+    var open = _NETC_OPEN === key + '|' + item;
+    return '<div data-testid="netc-out-' + index + '" style="padding:3px 0;font-size:var(--fs-2)">'
       + '<label style="display:flex;gap:8px;align-items:center">'
-      + '<input type="checkbox" ' + (outSel[n] ? 'checked ' : '') + 'onchange="netcOut(\'' + esc(key) + '\',' + i + ',this.checked)">'
-      + '<span style="' + (outSel[n] ? 'text-decoration:line-through;color:var(--warn-2)' : '') + '">' + esc(n) + '</span>'
-      + (missing[n] ? ' <span style="color:var(--grey);font-size:var(--fs-1)">' + tx('no longer in your products') + '</span>' : '')
-      + (outSel[n] ? ' <span style="color:var(--warn-2);font-size:var(--fs-1)">' + tx('withdrawn from your stores when you publish') + '</span>' : '')
-      + (!outSel[n] && storeList.length
-          ? ' <span role="button" tabindex="0" data-testid="netc-at-open-' + i + '" onclick="event.preventDefault();netcAtOpen(\'' + esc(key) + '\',' + i + ')"'
+      + '<input type="checkbox" ' + (outSel[item] ? 'checked ' : '') + 'onchange="netcOut(\'' + esc(key) + '\',' + index + ',this.checked)">'
+      + '<span style="' + (outSel[item] ? 'text-decoration:line-through;color:var(--warn-2)' : '') + '">' + esc(item) + '</span>'
+      + (missing[item] ? ' <span style="color:var(--grey);font-size:var(--fs-1)">' + tx('no longer in your products') + '</span>' : '')
+      + (outSel[item] ? ' <span style="color:var(--warn-2);font-size:var(--fs-1)">' + tx('withdrawn from your stores when you publish') + '</span>' : '')
+      + (!outSel[item] && storeList.length
+          ? ' <span role="button" tabindex="0" data-testid="netc-at-open-' + index + '" onclick="event.preventDefault();netcAtOpen(\'' + esc(key) + '\',' + index + ')"'
             + ' style="color:var(--blue);cursor:pointer;font-size:var(--fs-1)">' + esc(outCount ? tx('withdrawn from') + ' ' + outCount + ' ' + tx('store(s)') + ' ▾' : tx('by store') + ' ▸') + '</span>'
           : '')
       + '</label>'
-      + (open && !outSel[n] ? '<div data-testid="netc-at-' + i + '" style="display:flex;gap:10px;flex-wrap:wrap;margin:4px 0 4px 26px">'
+      + (open && !outSel[item] ? '<div data-testid="netc-at-' + index + '" style="display:flex;gap:10px;flex-wrap:wrap;margin:4px 0 4px 26px">'
           + storeList.map(function(s, j){
               var changed = want && (s.id in want) && (!!want[s.id] !== (now.indexOf(s.id) >= 0));
-              return '<label data-testid="netc-at-' + i + '-' + j + '" style="display:flex;gap:4px;align-items:center;font-size:var(--fs-1)' + (changed ? ';font-weight:700' : '') + '">'
-                + '<input type="checkbox" ' + (isOut(s.id) ? 'checked ' : '') + 'onchange="netcAt(\'' + esc(key) + '\',' + i + ',' + j + ',this.checked)">'
+              return '<label data-testid="netc-at-' + index + '-' + j + '" style="display:flex;gap:4px;align-items:center;font-size:var(--fs-1)' + (changed ? ';font-weight:700' : '') + '">'
+                + '<input type="checkbox" ' + (isOut(s.id) ? 'checked ' : '') + 'onchange="netcAt(\'' + esc(key) + '\',' + index + ',' + j + ',this.checked)">'
                 + esc(tx('withdraw at') + ' ' + s.name) + '</label>';
             }).join('') + '</div>'
         : '')
       + '</div>';
   }).join('');
-  var log = (c.log || []).map(function(l){
-    var state = l.cancelled_at ? tx('cancelled') : (l.applied_at ? tx('with your stores since') + ' ' + _netWhen(l.applied_at) : tx('waiting for') + ' ' + _netWhen(l.at));
-    return '<div style="font-size:var(--fs-1);color:var(--grey);padding:2px 0">' + esc(_netWhen(l.published_at)) + ' · '
-      + esc((l.changes || []).length + ' ' + tx('change(s)')) + ' · ' + esc(state) + '</div>';
+  var log = (c.log || []).map(function(item){
+    var state = item.cancelled_at ? tx('cancelled') : (item.applied_at ? tx('with your stores since') + ' ' + _netWhen(item.applied_at) : tx('waiting for') + ' ' + _netWhen(item.at));
+    return '<div style="font-size:var(--fs-1);color:var(--grey);padding:2px 0">' + esc(_netWhen(item.published_at)) + ' · '
+      + esc((item.changes || []).length + ' ' + tx('change(s)')) + ' · ' + esc(state) + '</div>';
   }).join('');
   return '<div style="' + _CARD + '" data-testid="netc-' + esc(key) + '">'
     + '<div class="sec" style="margin:0 0 6px">' + tx('Catalogue') + ' · ' + esc(c.title || key) + ' · ' + (c.items || 0) + ' ' + tx('product(s) with your stores') + '</div>'
@@ -4846,11 +4846,11 @@ function netcAt(key, i, j, on){
 /** what the per-store ticks change against what is already withdrawn → { withdraw_at, restore_at, count } */
 function netcAtChanges(c){
   var sel = (_NETC_AT[c.source_key]) || {}, cur = c.withdrawn_at || {}, w = {}, r = {}, count = 0;
-  Object.keys(sel).forEach(function(n){
-    Object.keys(sel[n]).forEach(function(id){
-      var was = (cur[n] || []).indexOf(id) >= 0;
-      if (sel[n][id] && !was) { (w[n] = w[n] || []).push(id); count++; }
-      if (!sel[n][id] && was) { (r[n] = r[n] || []).push(id); count++; }
+  Object.keys(sel).forEach(function(item){
+    Object.keys(sel[item]).forEach(function(id){
+      var was = (cur[item] || []).indexOf(id) >= 0;
+      if (sel[item][id] && !was) { (w[item] = w[item] || []).push(id); count++; }
+      if (!sel[item][id] && was) { (r[item] = r[item] || []).push(id); count++; }
     });
   });
   return { withdraw_at: w, restore_at: r, count: count };
@@ -4869,12 +4869,12 @@ async function netcPublish(key, now){
   try {
     var outs = _NETC_OUT[key] || {};
     var at = netCatAtFor(key);
-    var r = await api('netCatPublish', { body: { source_key: key, at: now ? 'now' : undefined,
-      add: Object.keys(sel).filter(function(k){ return sel[k]; }),
-      withdraw: Object.keys(outs).filter(function(k){ return outs[k]; }),
+    var reply = await api('netCatPublish', { body: { source_key: key, at: now ? 'now' : undefined,
+      add: Object.keys(sel).filter(function(item){ return sel[item]; }),
+      withdraw: Object.keys(outs).filter(function(item){ return outs[item]; }),
       withdraw_at: at.withdraw_at, restore_at: at.restore_at } });
     delete _NETC_ADD[key]; delete _NETC_OUT[key]; delete _NETC_AT[key]; _NETC_OPEN = null;
-    toast(r && r.applied ? tx('Published — your stores have it now') : tx('Published — your stores get it at the next opening'));
+    toast(reply && reply.applied ? tx('Published — your stores have it now') : tx('Published — your stores get it at the next opening'));
     netoReload();
   } catch (e) { toast((e && e.message) || tx('Could not publish'), true); }
 }
@@ -4885,21 +4885,21 @@ async function netcCancel(key){
 function netCatNoticesHTML(notes){
   return '<div style="' + _CARD + '" data-testid="netc-notices">'
     + '<div class="sec" style="margin:0 0 6px">' + tx('From your brand') + '</div>'
-    + notes.map(function(n, i){
-      if (n.kind === 'restored') return '<div data-testid="netc-notice-' + i + '" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--line)">'
-        + '<span style="flex:1 1 240px;min-width:0"><b>' + esc(n.name) + '</b><div style="font-size:var(--fs-1);color:var(--ok)">'
-        + esc((n.brand_name || tx('Your brand')) + ' ' + tx('offers this to your store again — it is back on your counter and storefront')) + '</div></span>'
-        + '<button data-testid="netc-ok-' + i + '" onclick="netcAnswer(' + i + ',\'ok\')">' + tx('OK') + '</button></div>';
-      if (n.kind === 'withdrawn') return '<div data-testid="netc-notice-' + i + '" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--line)">'
-        + '<span style="flex:1 1 240px;min-width:0"><b>' + esc(n.name) + '</b><div style="font-size:var(--fs-1);color:var(--warn-2)">'
-        + esc((n.brand_name || tx('Your brand')) + ' ' + (n.only_here ? tx('withdrew this from your store — it is off your counter and storefront since')
-                                                                        : tx('no longer offers this — it is off your counter and storefront since')) + ' ' + _netWhen(n.at)) + '</div></span>'
-        + '<button data-testid="netc-ok-' + i + '" onclick="netcAnswer(' + i + ',\'ok\')">' + tx('OK') + '</button></div>';
-      return '<div data-testid="netc-notice-' + i + '" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--line)">'
-        + '<span style="flex:1 1 240px;min-width:0"><b>' + esc(n.name) + '</b><div style="font-size:var(--fs-1);color:var(--grey)">'
-        + esc((n.brand_name || tx('Your brand')) + ' ' + tx('suggests') + ' ' + _netMoney(n.suggested) + ' · ' + tx('you sell at') + ' ' + _netMoney(n.yours)) + '</div></span>'
-        + '<button class="pri" data-testid="netc-use-' + i + '" onclick="netcAnswer(' + i + ',\'use\')">' + esc(tx('Use') + ' ' + _netMoney(n.suggested)) + '</button>'
-        + '<button data-testid="netc-keep-' + i + '" onclick="netcAnswer(' + i + ',\'keep\')">' + esc(tx('Keep') + ' ' + _netMoney(n.yours)) + '</button>'
+    + notes.map(function(item, index){
+      if (item.kind === 'restored') return '<div data-testid="netc-notice-' + index + '" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--line)">'
+        + '<span style="flex:1 1 240px;min-width:0"><b>' + esc(item.name) + '</b><div style="font-size:var(--fs-1);color:var(--ok)">'
+        + esc((item.brand_name || tx('Your brand')) + ' ' + tx('offers this to your store again — it is back on your counter and storefront')) + '</div></span>'
+        + '<button data-testid="netc-ok-' + index + '" onclick="netcAnswer(' + index + ',\'ok\')">' + tx('OK') + '</button></div>';
+      if (item.kind === 'withdrawn') return '<div data-testid="netc-notice-' + index + '" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--line)">'
+        + '<span style="flex:1 1 240px;min-width:0"><b>' + esc(item.name) + '</b><div style="font-size:var(--fs-1);color:var(--warn-2)">'
+        + esc((item.brand_name || tx('Your brand')) + ' ' + (item.only_here ? tx('withdrew this from your store — it is off your counter and storefront since')
+                                                                        : tx('no longer offers this — it is off your counter and storefront since')) + ' ' + _netWhen(item.at)) + '</div></span>'
+        + '<button data-testid="netc-ok-' + index + '" onclick="netcAnswer(' + index + ',\'ok\')">' + tx('OK') + '</button></div>';
+      return '<div data-testid="netc-notice-' + index + '" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--line)">'
+        + '<span style="flex:1 1 240px;min-width:0"><b>' + esc(item.name) + '</b><div style="font-size:var(--fs-1);color:var(--grey)">'
+        + esc((item.brand_name || tx('Your brand')) + ' ' + tx('suggests') + ' ' + _netMoney(item.suggested) + ' · ' + tx('you sell at') + ' ' + _netMoney(item.yours)) + '</div></span>'
+        + '<button class="pri" data-testid="netc-use-' + index + '" onclick="netcAnswer(' + index + ',\'use\')">' + esc(tx('Use') + ' ' + _netMoney(item.suggested)) + '</button>'
+        + '<button data-testid="netc-keep-' + index + '" onclick="netcAnswer(' + index + ',\'keep\')">' + esc(tx('Keep') + ' ' + _netMoney(item.yours)) + '</button>'
         + '</div>';
     }).join('') + '</div>';
 }
@@ -4920,8 +4920,8 @@ async function netoRelease(id, now){
   if (now && _NETO_ARMED !== 'now:' + id) { _NETO_ARMED = 'now:' + id; loadSettings(); return; }
   _NETO_ARMED = null;
   try {
-    var r = await api('netOfferRelease', { params: { id: id }, body: now ? { at: 'now' } : {} });
-    if (typeof toast === 'function') toast(tx('Released') + ' — ' + ((r && r.pushed && r.pushed.stores) || 0) + ' ' + tx('store(s) told'));
+    var reply = await api('netOfferRelease', { params: { id: id }, body: now ? { at: 'now' } : {} });
+    if (typeof toast === 'function') toast(tx('Released') + ' — ' + ((reply && reply.pushed && reply.pushed.stores) || 0) + ' ' + tx('store(s) told'));
     netoReload();
   } catch (e) { if (typeof toast === 'function') toast((e && e.message) || tx('Could not release'), true); }
 }
@@ -4938,25 +4938,25 @@ async function netoWithdraw(id){
  */
 var _NET_STATE = { active: 'in the network', suspended: 'paused', requested: 'waiting' };
 function netMembersHTML(list){
-  var rows = list.map(function(m, i){
+  var rows = list.map(function(item, index){
     var btns = '';
-    if (m.state === 'requested' && m.asked_by === 'store')
-      btns = '<button class="pri" data-testid="netm-approve-' + i + '" onclick="netmAct(\'netApprove\',\'' + esc(m.edge_id) + '\')">' + tx('Approve') + '</button>'
-           + '<button data-testid="netm-decline-' + i + '" onclick="netmAct(\'netDecline\',\'' + esc(m.edge_id) + '\')">' + tx('Decline') + '</button>';
-    else if (m.state === 'requested')
-      btns = '<button data-testid="netm-cancel-' + i + '" onclick="netmAct(\'netDecline\',\'' + esc(m.edge_id) + '\')">' + tx('Cancel invitation') + '</button>';
-    else if (m.state === 'suspended' && m.edge_id)
-      btns = '<button class="pri" data-testid="netm-resume-' + i + '" onclick="netmAct(\'netResume\',\'' + esc(m.edge_id) + '\')">' + tx('Resume') + '</button>';
-    else if (m.state === 'active' && m.via === 'joined')
-      btns = (_NETO_ARMED === 'rm:' + m.edge_id
-               ? '<button class="warn" data-testid="netm-remove-' + i + '" onclick="netmAct(\'netDisconnect\',\'' + esc(m.edge_id) + '\')">' + tx('Remove — their counters stop selling your products') + '</button>'
-               : '<button data-testid="netm-remove-' + i + '" onclick="_NETO_ARMED=\'rm:' + esc(m.edge_id) + '\';loadSettings()">' + tx('Remove') + '</button>');
-    else if (m.state === 'active' && m.edge_id)
-      btns = '<button data-testid="netm-pause-' + i + '" onclick="netmAct(\'netSuspend\',\'' + esc(m.edge_id) + '\')">' + tx('Pause') + '</button>';
-    var words = m.state === 'requested' ? (m.asked_by === 'store' ? tx('asks to join') : tx('invited — waiting for them')) : tx(_NET_STATE[m.state] || m.state);
-    return '<div data-testid="netm-' + i + '" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:5px 0;border-top:1px solid var(--line)">'
-      + '<span style="flex:1 1 200px;min-width:0"><b>' + esc(m.name || m.id) + '</b> <span style="font-size:var(--fs-1);color:var(--'
-      + (m.state === 'active' ? 'ok' : 'warn-2') + ')">' + esc(words) + (m.via === 'built' ? ' · ' + esc(tx('your store')) : '') + '</span></span>' + btns + '</div>';
+    if (item.state === 'requested' && item.asked_by === 'store')
+      btns = '<button class="pri" data-testid="netm-approve-' + index + '" onclick="netmAct(\'netApprove\',\'' + esc(item.edge_id) + '\')">' + tx('Approve') + '</button>'
+           + '<button data-testid="netm-decline-' + index + '" onclick="netmAct(\'netDecline\',\'' + esc(item.edge_id) + '\')">' + tx('Decline') + '</button>';
+    else if (item.state === 'requested')
+      btns = '<button data-testid="netm-cancel-' + index + '" onclick="netmAct(\'netDecline\',\'' + esc(item.edge_id) + '\')">' + tx('Cancel invitation') + '</button>';
+    else if (item.state === 'suspended' && item.edge_id)
+      btns = '<button class="pri" data-testid="netm-resume-' + index + '" onclick="netmAct(\'netResume\',\'' + esc(item.edge_id) + '\')">' + tx('Resume') + '</button>';
+    else if (item.state === 'active' && item.via === 'joined')
+      btns = (_NETO_ARMED === 'rm:' + item.edge_id
+               ? '<button class="warn" data-testid="netm-remove-' + index + '" onclick="netmAct(\'netDisconnect\',\'' + esc(item.edge_id) + '\')">' + tx('Remove — their counters stop selling your products') + '</button>'
+               : '<button data-testid="netm-remove-' + index + '" onclick="_NETO_ARMED=\'rm:' + esc(item.edge_id) + '\';loadSettings()">' + tx('Remove') + '</button>');
+    else if (item.state === 'active' && item.edge_id)
+      btns = '<button data-testid="netm-pause-' + index + '" onclick="netmAct(\'netSuspend\',\'' + esc(item.edge_id) + '\')">' + tx('Pause') + '</button>';
+    var words = item.state === 'requested' ? (item.asked_by === 'store' ? tx('asks to join') : tx('invited — waiting for them')) : tx(_NET_STATE[item.state] || item.state);
+    return '<div data-testid="netm-' + index + '" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:5px 0;border-top:1px solid var(--line)">'
+      + '<span style="flex:1 1 200px;min-width:0"><b>' + esc(item.name || item.id) + '</b> <span style="font-size:var(--fs-1);color:var(--'
+      + (item.state === 'active' ? 'ok' : 'warn-2') + ')">' + esc(words) + (item.via === 'built' ? ' · ' + esc(tx('your store')) : '') + '</span></span>' + btns + '</div>';
   }).join('');
   return '<div data-testid="neto-members" style="margin-bottom:8px">' + rows
     + '<div style="display:flex;gap:6px;align-items:center;margin-top:6px">'
@@ -5004,36 +5004,36 @@ async function netoChoice(id, choice){
 var _CTRS;
 function ctrReload(){ _CTRS = undefined; loadSettings(); }
 function ctrRegisterHTML(){
-  if (_CTRS === undefined) { _CTRS = null; api('counters').then(function(r){ _CTRS = r || { counters: [] }; if (setSec() === 'integrations') loadSettings(); })
+  if (_CTRS === undefined) { _CTRS = null; api('counters').then(function(reply){ _CTRS = reply || { counters: [] }; if (setSec() === 'integrations') loadSettings(); })
     .catch(function(e){ _CTRS = { counters: [], error: (e && e.message) || true }; if (setSec() === 'integrations') loadSettings(); }); }
   if (_CTRS === null) return '<div style="' + _CARD + '">' + tx('reading…') + '</div>';
   var list = (_CTRS && _CTRS.counters) || [];
-  var rows = list.map(function(c){
+  var rows = list.map(function(item){
     /* ⚠️ a counter on break is still HELD by its PC — shown as such, and still releasable only as a last resort */
-    var onBreak = c.state === 'break', open = c.state === 'open' || onBreak, h = c.held_by || {};
+    var onBreak = item.state === 'break', open = item.state === 'open' || onBreak, h = item.held_by || {};
     var where = onBreak
-      ? ('☕ ' + tx('on break') + (c.break_since ? ' ' + tx('since') + ' ' + esc(new Date(c.break_since).toTimeString().slice(0, 5)) : '')
-         + (c.break_by ? ' · ' + esc(c.break_by) : '') + ' · ' + esc(h.name || tx('a PC')))
+      ? ('☕ ' + tx('on break') + (item.break_since ? ' ' + tx('since') + ' ' + esc(new Date(item.break_since).toTimeString().slice(0, 5)) : '')
+         + (item.break_by ? ' · ' + esc(item.break_by) : '') + ' · ' + esc(h.name || tx('a PC')))
       : open
       ? (tx('open on') + ' ' + esc(h.name || tx('a PC')) + (h.seen && h.seen.ip ? ' · ' + esc(h.seen.ip) : '')
          + (h.seen && h.seen.at ? ' · ' + esc(_keyAgo(h.seen.at)) : ''))
-      : (c.state === 'opening' ? tx('opening…') : (c.closed_at ? tx('closed') + ' ' + esc(_keyAgo(c.closed_at)) : tx('not opened yet')));
-    var armed = (_CLOSE_ARMED === 'rel:' + c.id);
-    return '<div data-testid="ctr-' + esc(c.id) + '" style="display:flex;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--line)">'
-      + '<b class="mono" style="font-size:1.15em;min-width:2.4em">' + esc(c.id) + '</b>'
-      + '<span style="flex:1;min-width:0"><span data-testid="ctr-name-' + esc(c.id) + '">' + esc(c.name) + '</span>'
+      : (item.state === 'opening' ? tx('opening…') : (item.closed_at ? tx('closed') + ' ' + esc(_keyAgo(item.closed_at)) : tx('not opened yet')));
+    var armed = (_CLOSE_ARMED === 'rel:' + item.id);
+    return '<div data-testid="ctr-' + esc(item.id) + '" style="display:flex;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--line)">'
+      + '<b class="mono" style="font-size:1.15em;min-width:2.4em">' + esc(item.id) + '</b>'
+      + '<span style="flex:1;min-width:0"><span data-testid="ctr-name-' + esc(item.id) + '">' + esc(item.name) + '</span>'
       + '<div style="color:var(--grey);font-size:var(--fs-1)">'
-        + (c.last_no ? tx('last bill') + ' ' + esc(c.last_no) + ' · ' : '')
-        + (c.next ? tx('next') + ' ' + esc(String(c.next).padStart(4, '0')) + ' · ' : '')
-        + '<span style="color:var(--' + (onBreak ? 'warn' : (open ? 'ok' : 'grey')) + ')" data-testid="ctr-state-' + esc(c.id) + '">' + where + '</span></div>'
+        + (item.last_no ? tx('last bill') + ' ' + esc(item.last_no) + ' · ' : '')
+        + (item.next ? tx('next') + ' ' + esc(String(item.next).padStart(4, '0')) + ' · ' : '')
+        + '<span style="color:var(--' + (onBreak ? 'warn' : (open ? 'ok' : 'grey')) + ')" data-testid="ctr-state-' + esc(item.id) + '">' + where + '</span></div>'
       + (h.diag && h.diag.verdict ? '<div style="color:var(--warn);font-size:var(--fs-1)">🩺 ' + esc(h.diag.verdict) + '</div>' : '')
       + '</span>'
       + (open
-          ? '<button class="warn" data-testid="ctr-release-' + esc(c.id) + '" onclick="ctrRelease(\'' + esc(c.id) + '\')" title="'
+          ? '<button class="warn" data-testid="ctr-release-' + esc(item.id) + '" onclick="ctrRelease(\'' + esc(item.id) + '\')" title="'
             + esc(tx('only for a PC that cannot close the counter itself')) + '">'
             + (armed ? tx('Release — unsent bills stay on that PC') : tx('Release')) + '</button>'
-          : '<button class="pri" data-testid="ctr-open-' + esc(c.id) + '" onclick="ctrOpenHere(\'' + esc(c.id) + '\')"'
-            + (c.state === 'opening' ? ' disabled' : '') + '>' + tx('Open on this PC') + '</button>')
+          : '<button class="pri" data-testid="ctr-open-' + esc(item.id) + '" onclick="ctrOpenHere(\'' + esc(item.id) + '\')"'
+            + (item.state === 'opening' ? ' disabled' : '') + '>' + tx('Open on this PC') + '</button>')
       + '</div>';
   }).join('');
   return '<div style="' + _CARD + '">'
@@ -5060,9 +5060,9 @@ async function ctrAdd(){
  */
 async function ctrOpenHere(id){
   try {
-    var r = await api('counterOpen', { params: { id: id } });
-    if (!r || !r.key) throw new Error(tx('no key came back'));
-    ctrOpenTill(r.key);   /* app/cap-settings.js — the one opener, CB Settings › Counters & keys calls it too */
+    var reply = await api('counterOpen', { params: { id: id } });
+    if (!reply || !reply.key) throw new Error(tx('no key came back'));
+    ctrOpenTill(reply.key);   /* app/cap-settings.js — the one opener, CB Settings › Counters & keys calls it too */
     ctrReload();
   } catch (e) {
     /* ⚠️ held elsewhere is the ordinary refusal — say who has it, in the server's own words */
@@ -5081,43 +5081,43 @@ function intCountersHTML(){
 }
 /* ⚠️ the pairings made before the register existed — still listed, because they may still hold bills */
 function intPairingsHTML(){
-  if (_KEYS === undefined) { _KEYS = null; api('keysList').then(function(r){ _KEYS = r || { keys: [] }; if (typeof setSec === 'function' && setSec() === 'integrations') loadSettings(); }).catch(function(){ _KEYS = { keys: [], error: true }; if (setSec() === 'integrations') loadSettings(); }); }
+  if (_KEYS === undefined) { _KEYS = null; api('keysList').then(function(reply){ _KEYS = reply || { keys: [] }; if (typeof setSec === 'function' && setSec() === 'integrations') loadSettings(); }).catch(function(){ _KEYS = { keys: [], error: true }; if (setSec() === 'integrations') loadSettings(); }); }
   if (_KEYS === null) return '<div style="' + _CARD + '">' + tx('reading…') + '</div>';
-  var tills = ((_KEYS && _KEYS.keys) || []).filter(function(k){ return k && (k.scopes || []).indexOf('till') >= 0; });
+  var tills = ((_KEYS && _KEYS.keys) || []).filter(function(item){ return item && (item.scopes || []).indexOf('till') >= 0; });
   var bridge = (typeof S !== 'undefined' && S && S.bridgeId) || '';
   if (!tills.length) return '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('Counters') + '</div>'
     + '<div style="color:var(--grey)">' + tx('No PC has been paired to this shop yet.') + '</div></div>';
 
-  var live = tills.filter(function(k){ return _keySeenAt(k) && (Date.now() - _keySeenAt(k)) < 900000; });
-  var never = tills.filter(function(k){ return !_keySeenAt(k); });
+  var live = tills.filter(function(item){ return _keySeenAt(item) && (Date.now() - _keySeenAt(item)) < 900000; });
+  var never = tills.filter(function(item){ return !_keySeenAt(item); });
   /* ⭐ two counters reporting the same address are one PC paired twice — much the commonest duplicate */
   var byIp = {};
-  tills.forEach(function(k){ var ip = k.seen && k.seen.ip; if (ip) (byIp[ip] = byIp[ip] || []).push(k); });
-  var dupIps = Object.keys(byIp).filter(function(ip){ return byIp[ip].length > 1; });
+  tills.forEach(function(item){ var ip = item.seen && item.seen.ip; if (ip) (byIp[ip] = byIp[ip] || []).push(item); });
+  var dupIps = Object.keys(byIp).filter(function(item){ return byIp[item].length > 1; });
 
-  var rows = tills.slice().sort(function(a, b){ return _keySeenAt(b) - _keySeenAt(a); }).map(function(k){
-    var at = _keySeenAt(k), ip = (k.seen && k.seen.ip) || null, d = k.diag || null;
-    var shut = !!(k.till && k.till.closed_at);
-    var state = shut ? { c: 'grey', t: tx('closed') + ' ' + _keyAgo(k.till.closed_at) + (k.till.id ? ' · ' + k.till.id : '') }
+  var rows = tills.slice().sort(function(first, second){ return _keySeenAt(second) - _keySeenAt(first); }).map(function(item){
+    var at = _keySeenAt(item), ip = (item.seen && item.seen.ip) || null, d = item.diag || null;
+    var shut = !!(item.till && item.till.closed_at);
+    var state = shut ? { c: 'grey', t: tx('closed') + ' ' + _keyAgo(item.till.closed_at) + (item.till.id ? ' · ' + item.till.id : '') }
               : !at ? { c: 'warn', t: tx('never reached us') }
               : (Date.now() - at) < 900000 ? { c: 'ok', t: tx('open now') }
-              : { c: (Date.now() - at) > 86400000 ? 'warn' : 'grey', t: _keyAgo(k.seen.at) };
-    var armed = (_CLOSE_ARMED === k.jti);
-    return '<div data-testid="int-counter-' + esc(k.jti) + '" style="display:flex;gap:10px;align-items:baseline;padding:8px 0;border-top:1px solid var(--line)">'
-      + '<span style="flex:1"><b>' + esc(k.name || 'counter') + '</b>'
+              : { c: (Date.now() - at) > 86400000 ? 'warn' : 'grey', t: _keyAgo(item.seen.at) };
+    var armed = (_CLOSE_ARMED === item.jti);
+    return '<div data-testid="int-counter-' + esc(item.jti) + '" style="display:flex;gap:10px;align-items:baseline;padding:8px 0;border-top:1px solid var(--line)">'
+      + '<span style="flex:1"><b>' + esc(item.name || 'counter') + '</b>'
       + (ip && byIp[ip].length > 1 ? ' <span style="color:var(--warn);font-size:var(--fs-1)">' + tx('same PC as another counter') + '</span>' : '')
       + '<div style="color:var(--grey);font-size:var(--fs-1)">'
-        + esc(bridge || tx('no bridge id')) + ' · …' + esc(k.last4 || '')
-        + ' · ' + tx('paired') + ' ' + esc(String(k.created_at || '').slice(0, 10))
+        + esc(bridge || tx('no bridge id')) + ' · …' + esc(item.last4 || '')
+        + ' · ' + tx('paired') + ' ' + esc(String(item.created_at || '').slice(0, 10))
         + (ip ? ' · ' + esc(ip) : '')
-        + ((k.seen && k.seen.agent) ? ' · ' + esc(_agentName(k.seen.agent)) : '')
+        + ((item.seen && item.seen.agent) ? ' · ' + esc(_agentName(item.seen.agent)) : '')
       + '</div>'
       /* ⭐ what the counter itself last said — it can see things this side never will */
-      + (d && d.verdict ? '<div style="color:var(--warn);font-size:var(--fs-1)" data-testid="int-counter-said-' + esc(k.jti) + '">🩺 ' + esc(d.verdict) + '</div>' : '')
+      + (d && d.verdict ? '<div style="color:var(--warn);font-size:var(--fs-1)" data-testid="int-counter-said-' + esc(item.jti) + '">🩺 ' + esc(d.verdict) + '</div>' : '')
       + '</span>'
       + '<span style="color:var(--' + state.c + ');font-size:var(--fs-1);white-space:nowrap">' + esc(state.t) + '</span>'
       /* ⚠️ two presses, and the second one SAYS WHAT IT COSTS — closing strands whatever that PC has not sent */
-      + '<button class="warn" data-testid="int-counter-close-' + esc(k.jti) + '" onclick="intCounterClose(\'' + esc(k.jti) + '\')">'
+      + '<button class="warn" data-testid="int-counter-close-' + esc(item.jti) + '" onclick="intCounterClose(\'' + esc(item.jti) + '\')">'
       + (armed ? tx('Really close — unsent bills stay on that PC') : tx('Close')) + '</button>'
       + '</div>';
   }).join('');
@@ -5157,23 +5157,23 @@ async function intCounterClose(jti){
  * somebody is most likely to be trying to fix.
  */
 async function intCounterCloseDups(){
-  var tills = (((_KEYS && _KEYS.keys) || []).filter(function(k){ return k && (k.scopes || []).indexOf('till') >= 0; }));
+  var tills = (((_KEYS && _KEYS.keys) || []).filter(function(item){ return item && (item.scopes || []).indexOf('till') >= 0; }));
   var byIp = {};
-  tills.forEach(function(k){ var ip = k.seen && k.seen.ip; if (ip) (byIp[ip] = byIp[ip] || []).push(k); });
+  tills.forEach(function(item){ var ip = item.seen && item.seen.ip; if (ip) (byIp[ip] = byIp[ip] || []).push(item); });
   var kill = [];
-  Object.keys(byIp).forEach(function(ip){
-    byIp[ip].slice().sort(function(a, b){ return _keySeenAt(b) - _keySeenAt(a); })
+  Object.keys(byIp).forEach(function(item){
+    byIp[item].slice().sort(function(first, second){ return _keySeenAt(second) - _keySeenAt(first); })
       .slice(1).forEach(function(k){ if (_keySeenAt(k)) kill.push(k); });
   });
   if (!kill.length) { if (typeof toast === 'function') toast(tx('There are no duplicates that can be closed safely.')); return; }
   if (_CLOSE_ARMED !== 'dups') { _CLOSE_ARMED = 'dups'; if (typeof toast === 'function')
     toast(tx('Press again to close') + ' ' + kill.length + ' ' + tx('duplicate counter(s). The newest on each PC is kept.')); return; }
   _CLOSE_ARMED = null;
-  for (var i = 0; i < kill.length; i++) { try { await api('keysRevoke', { params: { jti: kill[i].jti } }); } catch (_) {} }
+  for (var index = 0; index < kill.length; index++) { try { await api('keysRevoke', { params: { jti: kill[index].jti } }); } catch (_) {} }
   _KEYS = undefined; loadSettings();
 }
 function integrationsSettingsHTML(){
-  if (_KEYS === undefined) { _KEYS = null; api('keysList').then(function(r){ _KEYS = r || { keys: [] }; if (typeof setSec === 'function' && setSec() === 'integrations') loadSettings(); }).catch(function(){ _KEYS = { keys: [], error: true }; if (setSec() === 'integrations') loadSettings(); }); }
+  if (_KEYS === undefined) { _KEYS = null; api('keysList').then(function(reply){ _KEYS = reply || { keys: [] }; if (typeof setSec === 'function' && setSec() === 'integrations') loadSettings(); }).catch(function(){ _KEYS = { keys: [], error: true }; if (setSec() === 'integrations') loadSettings(); }); }
   var keys = (_KEYS && _KEYS.keys) || [];
   var base = (typeof CFG !== 'undefined' && CFG.API_BASE) || '';
   /**
@@ -5200,9 +5200,9 @@ function integrationsSettingsHTML(){
     return '<span data-testid="int-key-seen-' + esc(k.jti) + '" style="color:var(--' + (quiet ? 'warn' : 'ok') + ')">'
       + esc(_keyAgo(sn.at)) + (sn.ip ? ' · ' + esc(sn.ip) : '') + '</span>';
   };
-  var rows = keys.length ? keys.map(function(k){ return '<div class="row" data-testid="int-key-' + esc(k.jti) + '" style="display:flex;gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--line)"><b style="flex:1">' + esc(k.name) + '</b><span style="color:var(--grey);font-size:var(--fs-1)">' + esc((k.scopes||[]).join(', ')) + ' · …' + esc(k.last4||'') + ' · ' + esc(String(k.created_at||'').slice(0,10)) + ' · ' + _keySeen(k) + '</span><button class="warn" data-testid="int-key-revoke-' + esc(k.jti) + '" onclick="intKeyRevoke(\'' + esc(k.jti) + '\')">' + tx('Revoke') + '</button></div>'; }).join('') : '<div style="color:var(--grey)">' + tx(_KEYS === null ? 'reading…' : 'No keys yet.') + '</div>';
+  var rows = keys.length ? keys.map(function(item){ return '<div class="row" data-testid="int-key-' + esc(item.jti) + '" style="display:flex;gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--line)"><b style="flex:1">' + esc(item.name) + '</b><span style="color:var(--grey);font-size:var(--fs-1)">' + esc((item.scopes||[]).join(', ')) + ' · …' + esc(item.last4||'') + ' · ' + esc(String(item.created_at||'').slice(0,10)) + ' · ' + _keySeen(item) + '</span><button class="warn" data-testid="int-key-revoke-' + esc(item.jti) + '" onclick="intKeyRevoke(\'' + esc(item.jti) + '\')">' + tx('Revoke') + '</button></div>'; }).join('') : '<div style="color:var(--grey)">' + tx(_KEYS === null ? 'reading…' : 'No keys yet.') + '</div>';
   var tab = intTab();
-  var head = _misHead('Integrations', tx((INT_TABS.filter(function(t){ return t.key === tab; })[0] || {}).q || 'Connectors, services and the keys they use'));
+  var head = _misHead('Integrations', tx((INT_TABS.filter(function(item){ return item.key === tab; })[0] || {}).q || 'Connectors, services and the keys they use'));
   if (tab === 'connectors' || tab === 'running') return head + intConnectorsHTML();
   if (tab === 'streams') return head + intStreamsHTML();
   if (tab === 'books')   return head + intReconcileHTML();
@@ -5214,15 +5214,15 @@ function integrationsSettingsHTML(){
     + '<div style="font-size:var(--fs-2)">' + tx('Another system sends lines and gets back the governed answer — the unit price at a quantity, what comes off and why, the tax, the whole invoice — from the same engines the storefront, compose and the chit use.') + '</div>'
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px"><code>/api/offers</code> · <code>/api/pricing</code> · <code>/api/tax</code> · <code>/api/invoice</code> — <a href="' + esc(base) + '/api/openapi.json" target="_blank" rel="noopener">' + tx('the contract (openapi.json)') + '</a></div></div>'
     + '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('Your keys') + '</div>' + rows
-    + '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><input class="inp" id="int_key_name" data-testid="int-key-name" placeholder="' + esc(tx('Name — which system')) + '" style="flex:1 1 200px"><select class="inp" id="int_key_scope" data-testid="int-key-scope" style="flex:0 0 220px">' + KEY_SCOPES.map(function(o){ return '<option value="' + esc(o[0]) + '">' + esc(tx(o[1])) + '</option>'; }).join('') + '</select><button class="pri" data-testid="int-key-mint" onclick="intKeyMint()">' + tx('Mint a key') + '</button></div>'
+    + '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><input class="inp" id="int_key_name" data-testid="int-key-name" placeholder="' + esc(tx('Name — which system')) + '" style="flex:1 1 200px"><select class="inp" id="int_key_scope" data-testid="int-key-scope" style="flex:0 0 220px">' + KEY_SCOPES.map(function(item){ return '<option value="' + esc(item[0]) + '">' + esc(tx(item[1])) + '</option>'; }).join('') + '</select><button class="pri" data-testid="int-key-mint" onclick="intKeyMint()">' + tx('Mint a key') + '</button></div>'
     + '<div id="int_key_out">' + (_KEY_SHOWN || '') + '</div></div>';
 }
 async function intKeyMint(){
-  var nm = (document.getElementById('int_key_name') || {}).value || '';
+  var node = (document.getElementById('int_key_name') || {}).value || '';
   var sc = (document.getElementById('int_key_scope') || {}).value || 'offers';
   /* a connector key also evaluates offers — the scope names the larger surface (routes/keys.js · middleware/auth.js KEY_ROUTES) */
-  try { var r = await api('keysMint', { body: { name: nm || 'key', scopes: keyScopesOf(sc) } });
-    _KEY_SHOWN = '<div data-testid="int-key-shown" style="margin-top:10px;padding:10px;border:1px dashed var(--warn-3);border-radius:9px;font-size:var(--fs-1)"><b>' + tx('Copy it now — it is shown once.') + '</b><div style="word-break:break-all;font-family:monospace;margin-top:6px" data-testid="int-key-value">' + esc(r.key) + '</div><div style="color:var(--grey);margin-top:6px">' + tx('Send it as') + ' <code>X-Api-Key: …</code> ' + tx('or') + ' <code>Authorization: Bearer …</code></div></div>';
+  try { var reply = await api('keysMint', { body: { name: node || 'key', scopes: keyScopesOf(sc) } });
+    _KEY_SHOWN = '<div data-testid="int-key-shown" style="margin-top:10px;padding:10px;border:1px dashed var(--warn-3);border-radius:9px;font-size:var(--fs-1)"><b>' + tx('Copy it now — it is shown once.') + '</b><div style="word-break:break-all;font-family:monospace;margin-top:6px" data-testid="int-key-value">' + esc(reply.key) + '</div><div style="color:var(--grey);margin-top:6px">' + tx('Send it as') + ' <code>X-Api-Key: …</code> ' + tx('or') + ' <code>Authorization: Bearer …</code></div></div>';
     _KEYS = undefined; if (typeof toast === 'function') toast(tx('Key minted ✓'));
     loadSettings();   /* the list repaints; the shown key rides _KEY_SHOWN into the repaint */
   } catch (e) { if (typeof toast === 'function') toast((e && e.message) || tx('Could not mint'), true); }
@@ -5265,19 +5265,19 @@ var BIZ_LIST = [
 ];
 
 function bizChoice(group, val, cur, rows){
-  return rows.map(function(r){
-    var on = String(cur) === r[0];
-    return '<label data-testid="biz-' + group + '-' + r[0] + '" style="display:flex;gap:10px;align-items:flex-start;'
+  return rows.map(function(item){
+    var on = String(cur) === item[0];
+    return '<label data-testid="biz-' + group + '-' + item[0] + '" style="display:flex;gap:10px;align-items:flex-start;'
       + 'padding:11px 13px;border-bottom:1px solid var(--line-soft);cursor:pointer;'
       /* ⚠️ THE CHOSEN ROW NEEDS MORE THAN A TINT. --wash against --card is nearly invisible in a dark theme
          — on Athi's screenshot the radio dot was carrying the selection on its own. A left bar in --blue is
          a border, not a background, so it survives every one of the fifteen themes at full strength. */
       + (on ? 'background:var(--wash);box-shadow:inset 3px 0 0 var(--blue)' : 'box-shadow:inset 3px 0 0 transparent')
       + '">'
-      + '<input type="radio" name="biz_' + group + '" value="' + esc(r[0]) + '"' + (on ? ' checked' : '')
+      + '<input type="radio" name="biz_' + group + '" value="' + esc(item[0]) + '"' + (on ? ' checked' : '')
       + ' onchange="bizSave(\'' + group + '\', this.value)" style="margin-top:3px;flex:none">'
-      + '<span style="flex:1"><span style="font-weight:650;font-size:var(--fs-2)">' + esc(tx(r[1])) + '</span>'
-      + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px;line-height:1.45">' + esc(tx(r[2])) + '</div></span></label>';
+      + '<span style="flex:1"><span style="font-weight:650;font-size:var(--fs-2)">' + esc(tx(item[1])) + '</span>'
+      + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px;line-height:1.45">' + esc(tx(item[2])) + '</div></span></label>';
   }).join('');
 }
 
@@ -5332,8 +5332,8 @@ function businessSettingsHTML(s){
 async function bizLedgerLoad(){
   var box = document.getElementById('biz_ledger'); if (!box) return;
   try {
-    var r = await api('booksStatus');
-    box.innerHTML = bizLedgerHTML(r || {});
+    var reply = await api('booksStatus');
+    box.innerHTML = bizLedgerHTML(reply || {});
   } catch (e) { box.innerHTML = esc(tx('Could not read the Ledger’s state.')); }
 }
 function bizLedgerHTML(r){
@@ -5437,26 +5437,26 @@ function workRoutingHTML(){
       + 'style="min-width:132px;padding:4px 7px;font-size:var(--fs-1);border-radius:var(--r-sm)" '
       + 'onchange="workRoutingSet(\'' + kind + '\',\'' + field + '\',this.value)">'
       + '<option value="">' + esc(tx(none)) + '</option>'
-      + list.map(function(o){
-          return '<option value="' + esc(o[0]) + '"' + (String(cur || '') === String(o[0]) ? ' selected' : '')
-            + '>' + esc(o[1]) + '</option>'; }).join('')
+      + list.map(function(item){
+          return '<option value="' + esc(item[0]) + '"' + (String(cur || '') === String(item[0]) ? ' selected' : '')
+            + '>' + esc(item[1]) + '</option>'; }).join('')
       + '</select>';
   };
-  var folders = (d.folders || []).map(function(f){ return [f.folder_id, f.name]; });
-  var people  = (d.people  || []).map(function(p){ return [p.identity_id, p.display_name]; });
-  var teams   = (d.teams   || []).map(function(t){ return [t.identity_id, t.display_name]; });
+  var folders = (d.folders || []).map(function(item){ return [item.folder_id, item.name]; });
+  var people  = (d.people  || []).map(function(item){ return [item.identity_id, item.display_name]; });
+  var teams   = (d.teams   || []).map(function(item){ return [item.identity_id, item.display_name]; });
 
-  var rows = (d.kinds || []).map(function(k){
+  var rows = (d.kinds || []).map(function(item){
     return '<tr>'
       + '<td style="padding:7px 9px;border-bottom:1px solid var(--line-soft);white-space:nowrap">'
-      + '<b style="font-weight:650">' + esc(tx(k.label)) + '</b>'
-      + '<div style="font-size:var(--fs-1);color:var(--grey);font-weight:400">' + esc(tx(k.hint)) + '</div></td>'
+      + '<b style="font-weight:650">' + esc(tx(item.label)) + '</b>'
+      + '<div style="font-size:var(--fs-1);color:var(--grey);font-weight:400">' + esc(tx(item.hint)) + '</div></td>'
       + '<td style="padding:7px 9px;border-bottom:1px solid var(--line-soft)">'
-      + sel('', k.kind, 'folder', k.folder_id, folders, 'no folder') + '</td>'
+      + sel('', item.kind, 'folder', item.folder_id, folders, 'no folder') + '</td>'
       + '<td style="padding:7px 9px;border-bottom:1px solid var(--line-soft)">'
-      + sel('', k.kind, 'person', k.assignee_actor_id, people, 'nobody in particular') + '</td>'
+      + sel('', item.kind, 'person', item.assignee_actor_id, people, 'nobody in particular') + '</td>'
       + '<td style="padding:7px 9px;border-bottom:1px solid var(--line-soft)">'
-      + (teams.length ? sel('', k.kind, 'team', k.route_to_entity_id, teams, 'keep it here')
+      + (teams.length ? sel('', item.kind, 'team', item.route_to_entity_id, teams, 'keep it here')
          /* ⚠️ absent rather than empty: an enabled dropdown with one option teaches nothing, and a disabled one
             with no explanation reads as broken. */
          : '<span style="font-size:var(--fs-1);color:var(--grey-4)">' + esc(tx('no teams yet')) + '</span>')
@@ -5481,22 +5481,22 @@ function workRoutingHTML(){
 
 /** ⭐ saved on change, and it SAYS so — a silent save is one people repeat because they cannot tell. */
 async function workRoutingSet(kind, field, value){
-  var say = document.getElementById('wr_say');
-  var cur = ((_WROUTE && _WROUTE.kinds) || []).find(function(k){ return k.kind === kind; }) || {};
+  var node = document.getElementById('wr_say');
+  var cur = ((_WROUTE && _WROUTE.kinds) || []).find(function(item){ return item.kind === kind; }) || {};
   var body = { kind: kind,
     folder_id: field === 'folder' ? value : (cur.folder_id || ''),
     assignee_actor_id: field === 'person' ? value : (cur.assignee_actor_id || ''),
     route_to_entity_id: field === 'team' ? value : (cur.route_to_entity_id || '') };
-  if (say) say.textContent = tx('Saving…');
+  if (node) node.textContent = tx('Saving…');
   try {
     await api('workRoutingSet', { body: body });
     /* keep the local copy in step, or the next change on the same row would send the stale two fields back */
     if (field === 'folder') cur.folder_id = value || null;
     if (field === 'person') cur.assignee_actor_id = value || null;
     if (field === 'team')   cur.route_to_entity_id = value || null;
-    if (say) say.textContent = tx('Saved.');
+    if (node) node.textContent = tx('Saved.');
   } catch (e) {
-    if (say) say.textContent = '';
+    if (node) node.textContent = '';
     toast(String((e && e.message) || tx('Could not save it')), true);
     /* ⚠️ put the control back to what the SERVER has: a dropdown showing a value that was refused is a lie the
        reader will act on. */
@@ -5505,7 +5505,7 @@ async function workRoutingSet(kind, field, value){
   }
 }
 
-function paintSettings(s, _daOpts){ const h=document.getElementById("setbody"); if(!h)return;
+function paintSettings(s, _daOpts){ const node=document.getElementById("setbody"); if(!node)return;
   /* fetched when the Work section is actually opened, and the pane repainted in place when it arrives -
      not the whole screen, which would throw away anything half-typed in the fields below it. */
   if (setSec() === 'work' && !_WROUTE) {
@@ -5603,7 +5603,7 @@ function paintSettings(s, _daOpts){ const h=document.getElementById("setbody"); 
     else if (k === "blueprints") out = _misHead('Work patterns', '') + blueprintSettingsHTML();
     /* One assignment, so the end marker is appended in one place rather than five — and cannot be forgotten on a
        branch added later. */
-    h.innerHTML = out + (out ? _capEnd() : '');
+    node.innerHTML = out + (out ? _capEnd() : '');
     if (k === 'business') bizLedgerLoad();   /* the Ledger card reads its state after it is on the screen */
   } }
 async function saveSettings(){ const x=document.getElementById("st_err"); if(x)x.textContent="";
@@ -5633,7 +5633,7 @@ function _polLocked(gov){ return gov==='bound'||gov==='protected'||gov==='inheri
    dropdown, whatever happened afterwards — which is the exact habit that let a dead setting look alive for months.
    The card repaints from what the SERVER returns, so what is on screen is what is stored. */
 async function setPolFlag(key, v){
-  var def=polDefs().filter(function(d){return d.key===key;})[0];
+  var def=polDefs().filter(function(item){return item.key===key;})[0];
   /**
    * ⚠️ A SCALED FIELD IS STORED IN ITS OWN UNIT, NOT THE ONE ON SCREEN. 0.50% is shown, 50 is stored — and the
    * rounding is deliberate: the flag type truncates, so 0.505% would land as 50 either way, and doing it here
@@ -5643,8 +5643,8 @@ async function setPolFlag(key, v){
   _POL.busy=true; _POL.err=null; paintPolicy();
   try{
     var body={}; body[key]=v;
-    var r=await api('policySet',{body:body});
-    _POL.flags=(r&&r.flags)||_POL.flags;
+    var reply=await api('policySet',{body:body});
+    _POL.flags=(reply&&reply.flags)||_POL.flags;
     toast((def?def.label:'Flag')+' saved');
   }catch(e){
     _POL.err=(e&&e.message)||'Could not save that setting.';
@@ -5654,11 +5654,11 @@ async function setPolFlag(key, v){
 }
 async function loadPolicy(){
   _POL.busy=true; _POL.err=null; paintPolicy();
-  try{ var r=await api('policyGet'); _POL.flags=(r&&r.flags)||{}; _POL.schema=(r&&r.schema)||null; _POL.bound=(r&&r.bound_schema)||null; _POL.migrated=!(_POL.flags._migrated===false); }
+  try{ var reply=await api('policyGet'); _POL.flags=(reply&&reply.flags)||{}; _POL.schema=(reply&&reply.schema)||null; _POL.bound=(reply&&reply.bound_schema)||null; _POL.migrated=!(_POL.flags._migrated===false); }
   catch(e){ _POL.err=(e&&e.message)||'Could not read your policy flags.'; }
   _POL.busy=false; paintPolicy();
 }
-function paintPolicy(){ var h=document.getElementById('polflags'); if(h) h.innerHTML=policyFlagsInner(); }
+function paintPolicy(){ var node=document.getElementById('polflags'); if(node) node.innerHTML=policyFlagsInner(); }
 function _polControl(def){ var v=_polVal(def);
   if(_polLocked(def.gov)) return '<span style="font-weight:700;font-size:var(--fs-2)">'+esc(String(v))+'</span> <span style="font-size:var(--fs-1)" title="locked / inherited — cannot change here">🔒</span>';
   var dis=_POL.busy?' disabled':'';
@@ -5670,7 +5670,7 @@ function _polControl(def){ var v=_polVal(def);
    * control should have been speaking it.
    * ⚠️ `value` stays the code, so what is SENT is unchanged. Only the words move.
    */
-  if(def.type==='enum') return '<select'+dis+' data-testid="pol-'+esc(def.key)+'" onchange="setPolFlag(\''+def.key+'\',this.value)" style="padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)">'+def.options.map(function(o){ var lbl=(def.labels&&def.labels[o])||o; return '<option value="'+esc(o)+'"'+(String(v)===String(o)?' selected':'')+'>'+esc(lbl)+'</option>'; }).join('')+'</select>';
+  if(def.type==='enum') return '<select'+dis+' data-testid="pol-'+esc(def.key)+'" onchange="setPolFlag(\''+def.key+'\',this.value)" style="padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)">'+def.options.map(function(item){ var lbl=(def.labels&&def.labels[item])||item; return '<option value="'+esc(item)+'"'+(String(v)===String(item)?' selected':'')+'>'+esc(lbl)+'</option>'; }).join('')+'</select>';
   if(def.type==='number'){
     /* ⭐ shown in the unit a person thinks in; `setPolFlag` puts it back into the unit the flag is stored in */
     var shown = polShown(def, v);
@@ -5727,7 +5727,7 @@ function _chRow(c){
   /* ⚠️ RECEIVING NEEDS A VERIFIED BINDING, not just any binding (b124). A claim is not a permission: until the
      platform confirms the number is yours, it resolves to nothing and messages sent there reach nobody. Counting a
      declared claim as "receiving" would be the panel telling the exact lie the migration exists to stop. */
-  var verified=(c.bindings||[]).filter(function(b){ return b.status==='verified'; }).length;
+  var verified=(c.bindings||[]).filter(function(item){ return item.status==='verified'; }).length;
   var live = c.provider_configured && verified;
   var pill = live ? ['var(--ok-2)','var(--ok-tint)','receiving']
            : (bound && !verified) ? ['var(--warn-2)','var(--warn-tint)','claimed — awaiting confirmation']
@@ -5749,15 +5749,15 @@ function _chRow(c){
             ? '↩ replies on — status changes go back to the customer, within their 24-hour window'
             : '↩ replies off — needs WHATSAPP_TOKEN. Messages still arrive; nothing goes back.')
         + '</div>' : '')
-    + (c.bindings||[]).map(function(b){
+    + (c.bindings||[]).map(function(item){
         return '<div style="display:flex;align-items:center;gap:8px;margin-top:6px;font-size:var(--fs-2)">'
-          + '<span style="font-family:ui-monospace,Menlo,monospace">'+esc(b.address)+'</span>'
-          + (b.label?'<span style="color:var(--grey)">'+esc(b.label)+'</span>':'')
+          + '<span style="font-family:ui-monospace,Menlo,monospace">'+esc(item.address)+'</span>'
+          + (item.label?'<span style="color:var(--grey)">'+esc(item.label)+'</span>':'')
           /* declared vs verified — asserted is not confirmed, and the difference is visible. */
           /* declared vs verified — and what DECLARED actually costs you, said in the row rather than in a footnote:
              a claim that has not been confirmed receives nothing at all. */
-          + '<span style="font-size:var(--fs-1);font-weight:800;color:'+(b.status==='verified'?'var(--ok-2)':'var(--warn-2)')+';background:'+(b.status==='verified'?'var(--ok-tint)':'var(--warn-tint)')+';border-radius:5px;padding:1px 6px" title="'+(b.status==='verified'?'confirmed by the platform — messages sent here reach you':'not confirmed yet — messages sent to this number reach nobody')+'">'+esc(b.status==='verified'?'verified'+(b.verified_via?' · '+b.verified_via:''):'declared — not receiving yet')+'</span>'
-          + '<span style="margin-inline-start:auto;cursor:pointer;color:var(--grey-4)" title="Unbind" data-testid="ch-del" onclick="chUnbind(\''+esc(b.id)+'\')">✕</span></div>'
+          + '<span style="font-size:var(--fs-1);font-weight:800;color:'+(item.status==='verified'?'var(--ok-2)':'var(--warn-2)')+';background:'+(item.status==='verified'?'var(--ok-tint)':'var(--warn-tint)')+';border-radius:5px;padding:1px 6px" title="'+(item.status==='verified'?'confirmed by the platform — messages sent here reach you':'not confirmed yet — messages sent to this number reach nobody')+'">'+esc(item.status==='verified'?'verified'+(item.verified_via?' · '+item.verified_via:''):'declared — not receiving yet')+'</span>'
+          + '<span style="margin-inline-start:auto;cursor:pointer;color:var(--grey-4)" title="Unbind" data-testid="ch-del" onclick="chUnbind(\''+esc(item.id)+'\')">✕</span></div>'
           /**
            * ⚠️ HANDS-FREE, PER LINE (b131). Athi: *"no one will sit and create a chit from whatsapp, it has to be
            * automatic without anyone's presence."*
@@ -5766,23 +5766,23 @@ function _chRow(c){
            * verification" rather than "on", because a binding that receives nothing cannot raise anything either.
            * Two independent conditions, and a toggle that claimed otherwise would be the lie.
            */
-          + (b.auto_raise===undefined ? '' :
+          + (item.auto_raise===undefined ? '' :
              '<label style="display:flex;align-items:center;gap:6px;margin:5px 0 0 10px;font-size:var(--fs-1);color:var(--grey);cursor:pointer">'
-             + '<input type="checkbox" data-testid="ch-autoraise" '+(b.auto_raise?'checked':'')+' onchange="chSetAutoRaise(\''+esc(b.id)+'\',this.checked)">'
+             + '<input type="checkbox" data-testid="ch-autoraise" '+(item.auto_raise?'checked':'')+' onchange="chSetAutoRaise(\''+esc(item.id)+'\',this.checked)">'
              + '<span>Raise messages on this line <b>automatically</b>'
-             + (b.auto_raise && b.status!=='verified' ? ' <span style="color:var(--warn-2);font-weight:700">— waiting on verification</span>' : '')
+             + (item.auto_raise && item.status!=='verified' ? ' <span style="color:var(--warn-2);font-weight:700">— waiting on verification</span>' : '')
              + '<br><span style="font-size:var(--fs-1)">' + txf('A chit appears in your Task list with nobody present. It is still an {inquiry} — a record, not an obligation — and anything the co-assist cannot read stays here in Intake.',
                  { inquiry: '<b>' + tx('inquiry') + '</b>' }) + '</span></span></label>')
           /* ⚠️ TEMPLATES ARE PER-NUMBER, so they hang off the BINDING and not the channel. Meta approves for one
              WhatsApp account; another business's approval says nothing about this one. */
           + (c.key==='whatsapp' ? (c.templates||[]).map(function(t){
-              var state=((b.templates||{})[t.name])||'none';
+              var state=((item.templates||{})[t.name])||'none';
               var col=state==='approved'?['var(--ok-2)','var(--ok-tint)']:state==='pending'?['var(--warn-2)','var(--warn-tint)']:['var(--grey-2)','var(--blue-tint-bg)'];
               return '<div style="margin:5px 0 0 10px;padding:7px 9px;border-inline-start:2px solid var(--line);font-size:var(--fs-1)">'
                 + '<div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><span style="font-family:ui-monospace,Menlo,monospace">'+esc(t.name)+'</span>'
                 + '<span style="font-size:var(--fs-1);font-weight:800;color:'+col[0]+';background:'+col[1]+';border-radius:5px;padding:1px 6px">'+esc(state==='none'?'not approved':state)+'</span>'
                 + '<span style="color:var(--grey)">'+esc(t.category)+' · '+esc(t.language)+'</span>'
-                + '<span style="margin-inline-start:auto;color:var(--blue);cursor:pointer;font-weight:600" data-testid="ch-tpl-toggle" onclick="chSetTemplate(\''+esc(b.id)+'\',\''+esc(t.name)+'\',\''+(state==='approved'?'pending':'approved')+'\')">'
+                + '<span style="margin-inline-start:auto;color:var(--blue);cursor:pointer;font-weight:600" data-testid="ch-tpl-toggle" onclick="chSetTemplate(\''+esc(item.id)+'\',\''+esc(t.name)+'\',\''+(state==='approved'?'pending':'approved')+'\')">'
                 + (state==='approved'?'mark not approved':'mark approved')+'</span></div>'
                 /* Show the submission text VERBATIM. Describing it would guarantee a mismatch with what Meta
                    approved, and a template whose text differs from the approved one is simply rejected. */
@@ -5799,7 +5799,7 @@ function _chRow(c){
         : '')
     + '</div>';
 }
-function chPaint(){ var h=document.getElementById('ch_card'); if(h) h.innerHTML=channelsInner(); }
+function chPaint(){ var node=document.getElementById('ch_card'); if(node) node.innerHTML=channelsInner(); }
 async function loadChannels(){
   _CH.busy=true; _CH.err=null; _CH.notDeployed=false; chPaint();
   try{ _CH.data=await api('channelsList'); }
@@ -5860,18 +5860,18 @@ function showcaseCard(){
   return '<div style="'+_CARD+';margin-top:10px" id="scard"><div class="sec" style="margin:0 0 6px">'+tx('Your shop window')+'</div>'
     +(typeof CBShowcasePick!=='undefined'?CBShowcasePick.html({ current:cur, shopId:id, t:tx, cls:'btn', clsOn:'btn primary', origin:'' }):'')+'</div>';
 }
-document.addEventListener('click', function(ev){ var t=ev.target.closest&&ev.target.closest('#scard [data-sc-pick]'); if(t&&!t.disabled) scPick(t.getAttribute('data-sc-pick')); });
+document.addEventListener('click', function(ev){ var node=ev.target.closest&&ev.target.closest('#scard [data-sc-pick]'); if(node&&!node.disabled) scPick(node.getAttribute('data-sc-pick')); });
 async function scPick(n){ await setPolFlag('showcase_template',n); paintShowcase(); }
-function paintShowcase(){ var h=document.getElementById('scard'); if(h) h.outerHTML=showcaseCard(); }
+function paintShowcase(){ var node=document.getElementById('scard'); if(node) node.outerHTML=showcaseCard(); }
 function policyFlagsCard(){ loadPolicy(); return '<div style="'+_CARD+';margin-top:10px" id="polflags">'+policyFlagsInner()+'</div>'; }
 function policyFlagsInner(){
-  var rows=polDefs().map(function(def){ return '<div style="display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)">'
-    +'<div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><span style="font-weight:600;font-size:var(--fs-2)">'+esc(def.label)+'</span>'+govKlass(def.gov)+'<span style="font-size:var(--fs-1);font-family:\'Space Mono\';background:var(--neutral-tint);color:var(--grey-2);border-radius:5px;padding:1px 6px">'+esc(def.level)+'</span></div>'
+  var rows=polDefs().map(function(item){ return '<div style="display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)">'
+    +'<div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><span style="font-weight:600;font-size:var(--fs-2)">'+esc(item.label)+'</span>'+govKlass(item.gov)+'<span style="font-size:var(--fs-1);font-family:\'Space Mono\';background:var(--neutral-tint);color:var(--grey-2);border-radius:5px;padding:1px 6px">'+esc(item.level)+'</span></div>'
     /* ⚠️ AN EMPTY help RENDERS NOTHING, NOT AN EMPTY DIV. Four of these were trimmed to direction today and
        one removed outright; without this each would leave a 2px-margined empty element under its control —
        a gap that reads as a rendering fault. Same fix as _misHead when its subtitle went. */
-    +(def.help ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px;line-height:1.45">'+esc(def.help)+'</div>' : '')+'</div>'
-    +'<div style="flex:none;text-align:end;min-width:120px">'+_polControl(def)+'</div></div>'; }).join('');
+    +(item.help ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px;line-height:1.45">'+esc(item.help)+'</div>' : '')+'</div>'
+    +'<div style="flex:none;text-align:end;min-width:120px">'+_polControl(item)+'</div></div>'; }).join('');
   /* A setting that cannot be stored must SAY so rather than accept a change it will lose — that is the whole
      failure this card is being rebuilt out of. */
   var warn = !_POL.migrated ? pendingNote('not available on this environment — changes will not save')+'<div style="height:7px"></div>' : '';
@@ -5916,7 +5916,7 @@ async function saveAutoAssign(){ const x=document.getElementById("st_aerr"); if(
    one new atom: Publish-to-catalogue. loadGaps() name kept (renderApp dispatch) — it now loads the KB screen. */
 function assistReviewScreen(){ return scr("🧠 Assistant — knowledge base","kbbody","assistreview"); }
 var _kbItems=[], _kbEditId='';
-async function loadGaps(){ const h=document.getElementById("kbbody"); if(!h)return;
+async function loadGaps(){ const node=document.getElementById("kbbody"); if(!node)return;
   const me=(typeof SESSION!=='undefined')?SESSION:{}; const isHelp=(me.name==='GOV-01-Help'||me.isHelpdesk);
   const form = isHelp
     ? '<div style="'+_CARD+'"><div class="sec" id="kb_formhd" style="margin:0 0 6px">' + tx('Publish an answer') + '</div>'
@@ -5930,21 +5930,21 @@ async function loadGaps(){ const h=document.getElementById("kbbody"); if(!h)retu
       + specNote('assist.answers.projection', 'Answers are served to the assistant instantly (catalogue <span class=arw>→</span> projection).')
       + '</div>'
     : '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:11px 13px;font-size:var(--fs-2);color:var(--warn-3);margin-bottom:11px">This is the help-desk knowledge base. Queries arrive as chits in <b>' + tx('GOV-01-Help') + '</b>\'s Task inbox — operate as GOV-01-Help to answer, close, and publish here.</div>';
-  h.innerHTML=form+'<div style="font-size:var(--fs-2);color:var(--grey);margin:12px 0 6px">' + tx('Published answers (') + '<span id="kb_n">…</span>)</div><div id="kb_list"><div class="loadwrap"><span class="spin"></span> loading…</div></div>';
-  if(window.CBOffline)CBOffline.autodraft(h,'kb.form');   // draft the question/answer/context you're writing
+  node.innerHTML=form+'<div style="font-size:var(--fs-2);color:var(--grey);margin:12px 0 6px">' + tx('Published answers (') + '<span id="kb_n">…</span>)</div><div id="kb_list"><div class="loadwrap"><span class="spin"></span> loading…</div></div>';
+  if(window.CBOffline)CBOffline.autodraft(node,'kb.form');   // draft the question/answer/context you're writing
   try{ _kbItems=(await api("assistQuestions"))||[]; const n=document.getElementById("kb_n"); if(n)n.textContent=_kbItems.length;
     const L=document.getElementById("kb_list"); if(L) L.innerHTML = _kbItems.length ? _kbItems.map(function(e){
       const eb = isHelp ? '<button class="composebtn" style="padding:2px 9px;font-size:var(--fs-1);flex:none" onclick="kbEdit(\''+esc(e.id)+'\')">' + tx('Edit') + '</button>' : '';
       return '<div style="'+_CARD+';padding:9px 11px"><div style="display:flex;gap:8px;align-items:flex-start"><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:var(--fs-2)">'+esc(e.q)+'</div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">'+esc(e.a)+'</div><div style="font-size:var(--fs-1);color:var(--grey-4);margin-top:3px">'+esc(Array.isArray(e.context)?e.context.join(', '):'')+'</div></div>'+eb+'</div></div>'; }).join('') : '<div style="color:var(--grey);font-size:var(--fs-2)">None yet.</div>';
   }catch(e){ const L=document.getElementById("kb_list"); if(L)L.innerHTML=scrErr(e); } }
 function kbEdit(id){ const it=_kbItems.find(function(x){return x.id===id;}); if(!it)return; _kbEditId=id;
-  const q=document.getElementById("kb_q"),a=document.getElementById("kb_a"),c=document.getElementById("kb_c"),hd=document.getElementById("kb_formhd"),pb=document.getElementById("kb_pub");
-  if(q)q.value=it.q||''; if(a)a.value=it.a||''; if(c)c.value=(Array.isArray(it.context)?it.context.join(', '):'*'); if(hd)hd.textContent='Edit answer'; if(pb)pb.textContent='💾 Update';
-  if(q&&q.scrollIntoView)q.scrollIntoView({behavior:'smooth',block:'center'}); }
-function kbNew(){ if(window.CBOffline)CBOffline.clearDraft('kb.form'); _kbEditId=''; const q=document.getElementById("kb_q"),a=document.getElementById("kb_a"),c=document.getElementById("kb_c"),hd=document.getElementById("kb_formhd"),pb=document.getElementById("kb_pub"),x=document.getElementById("kb_err");
-  if(q)q.value=''; if(a)a.value=''; if(c)c.value='*'; if(hd)hd.textContent='Publish an answer'; if(pb)pb.textContent='📣 Publish to catalogue'; if(x)x.textContent=''; }
+  const node=document.getElementById("kb_q"),a=document.getElementById("kb_a"),c=document.getElementById("kb_c"),hd=document.getElementById("kb_formhd"),pb=document.getElementById("kb_pub");
+  if(node)node.value=it.q||''; if(a)a.value=it.a||''; if(c)c.value=(Array.isArray(it.context)?it.context.join(', '):'*'); if(hd)hd.textContent='Edit answer'; if(pb)pb.textContent='💾 Update';
+  if(node&&node.scrollIntoView)node.scrollIntoView({behavior:'smooth',block:'center'}); }
+function kbNew(){ if(window.CBOffline)CBOffline.clearDraft('kb.form'); _kbEditId=''; const node=document.getElementById("kb_q"),a=document.getElementById("kb_a"),c=document.getElementById("kb_c"),hd=document.getElementById("kb_formhd"),pb=document.getElementById("kb_pub"),x=document.getElementById("kb_err");
+  if(node)node.value=''; if(a)a.value=''; if(c)c.value='*'; if(hd)hd.textContent='Publish an answer'; if(pb)pb.textContent='📣 Publish to catalogue'; if(x)x.textContent=''; }
 async function publishAnswer(){ const x=document.getElementById("kb_err"); if(x)x.textContent="";
-  const q=val("kb_q"), a=val("kb_a"); const c=(val("kb_c")||"").split(',').map(function(s){return s.trim();}).filter(Boolean);
+  const q=val("kb_q"), a=val("kb_a"); const c=(val("kb_c")||"").split(',').map(function(item){return item.trim();}).filter(Boolean);
   if(!q||!a){ if(x)x.textContent="Question and answer are both required."; return; }
   try{ await api("assistPublish",{body:{question:q, answer:a, context:c, qa_id:_kbEditId||undefined}}); toast(_kbEditId?"Updated ✓ — live":"Published ✓ — live in the assistant"); kbNew(); loadGaps(); }
   catch(e){ if(x)x.textContent=(e&&e.message)||"Could not publish"; } }
