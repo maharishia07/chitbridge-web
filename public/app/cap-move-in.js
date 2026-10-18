@@ -35,8 +35,10 @@ var MI_SOURCES = [['xero', 'Xero'], ['qbo', 'QuickBooks Online']];
 var MI_KINDS = [['accounts', 'Chart of accounts'], ['contacts', 'Contacts'], ['items', 'Items'], ['trial_balance', 'Trial balance'], ['open_bills', 'Open invoices or bills']];
 var MI_ACTION = { add: 'Will add', merge: 'Will merge', skip: 'Will skip', hold: 'Held' };
 var MI_TONE = { add: 'green', merge: 'blue', skip: '', hold: 'amber' };
-/* the country refusals (api lib/move-in-gate codes) in our words — the server's own sentence is shown under the line */
-var MI_REFUSED = { MOVE_IN_COUNTRY: 'Not moved in: these books are from another country.', MOVE_IN_COUNTRY_UNSTATED: 'Pick the country these books are from.',
+/* the country refusals (api lib/move-in-gate codes) in our words — the server's own sentence is shown under the line.
+   ⚠️ MOVE_IN_COUNTRY has NO words here: the server sends it for three reasons (no pack · "not ready for <country> yet" · another country),
+   so only the server can say which — the line is "Not moved in." and the server's sentence says why (show-action rule). */
+var MI_REFUSED = { MOVE_IN_COUNTRY_UNSTATED: 'Pick the country these books are from.',
   MOVE_IN_COUNTRY_WORD: 'Pick the country these books are from.', MOVE_IN_FOREIGN: 'Not moved in: this file has another country\'s tax codes.',
   MOVE_IN_COMPANY: 'Not moved in: this shop already took books from another company.' };
 
@@ -173,7 +175,7 @@ function miGuard(k) {
     return miss.length ? txf('Pick the column for {f}', { f: miss.map(function (x) { return x.label; }).join(', ') }) : null;
   }
   if (k === 'preview') {
-    if (MIV.refused) return tx(MI_REFUSED[MIV.refused.code] || 'Not moved in.');
+    if (MIV.refused) return miRefusedWhy(MIV.refused);
     if (!MIV.plan) return MIV.err || tx('Preview first');
     if (MIV.plan.refusal) return MIV.plan.refusal;
     var c = MIV.plan.counts || {};
@@ -210,11 +212,15 @@ function miRefusal(e) {
   var data = (e && e.data) || {}, code = String(data.code || '');
   return /^MOVE_IN_(COUNTRY|FOREIGN|COMPANY)/.test(code) ? { code: code, why: data.message || (e && e.message) || '' } : null;
 }
+/** the refusal's headline: our words for a code that has one reason, else "Not moved in." (the server's sentence goes under it) */
+function miRefusedLine(refusal) { return tx(MI_REFUSED[refusal.code] || 'Not moved in.'); }
+/** why Import is greyed: our words when the code has one reason, else the server's own sentence */
+function miRefusedWhy(refusal) { return MI_REFUSED[refusal.code] ? tx(MI_REFUSED[refusal.code]) : (refusal.why || tx('Not moved in.')); }
 /* the refusal painted: our line, the server's sentence under it, and the way back (Back to File, where the country is picked) */
 function miRefusedHTML() {
   var refusal = MIV.refused;
   return '<div data-testid="mi-refused" data-code="' + esc(refusal.code) + '" style="max-width:640px">'
-    + '<div style="color:var(--warn-2);font-weight:700;margin-bottom:6px">' + esc(tx(MI_REFUSED[refusal.code] || 'Not moved in.')) + '</div>'
+    + '<div style="color:var(--warn-2);font-weight:700;margin-bottom:6px">' + esc(miRefusedLine(refusal)) + '</div>'
     + (refusal.why ? '<div data-testid="mi-refused-why" style="color:var(--grey);font-size:var(--fs-1)">' + esc(refusal.why) + '</div>' : '')
     + '</div>';
 }
