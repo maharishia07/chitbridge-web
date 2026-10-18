@@ -77,7 +77,7 @@ var CSS = '.ra{display:flex;flex-direction:column;gap:6px;font-size:var(--fs-1,1
   + '.ra-why{color:var(--grey,#5E594D)}.ra-st{color:var(--grey,#5E594D);font-weight:700}'
   + '.ra-out{min-height:1em}.ra-out[data-tone=error]{color:var(--disp,#8E3517);font-weight:700}.ra-out[data-tone=ok]{color:var(--ok-2,#16693F);font-weight:700}';
 var cssDone = false;
-function addCss() { if (cssDone || !doc) return; cssDone = true; var s = doc.createElement('style'); s.setAttribute('data-cbra', '1'); s.textContent = CSS; (doc.head || doc.documentElement).appendChild(s); }
+function addCss() { if (cssDone || !doc) return; cssDone = true; var node = doc.createElement('style'); node.setAttribute('data-cbra', '1'); node.textContent = CSS; (doc.head || doc.documentElement).appendChild(node); }
 
 /* ── eligibility: the server's verdict, as handed ── */
 function may(m, k) { var a = m.a && m.a.may; return (a && a[k]) || { ok: false, why: 'unknown', say: T(W.reading) }; }
@@ -125,7 +125,7 @@ function needAction() {
   if (typeof CBAction === 'undefined' || !CBAction || typeof CBAction.run !== 'function') throw new Error('CBAdvice needs CBAction (app/accounts-shell.js) on the page — every press goes through the action-state helper');
 }
 function out(m) { return m.el.querySelector('[data-testid="adv-out"]'); }
-function say(m, words, tone) { m.outWords = words; m.tone = tone; var o = out(m); if (o) { o.textContent = words; o.setAttribute('data-tone', tone); } }
+function say(m, words, tone) { m.outWords = words; m.tone = tone; var node = out(m); if (node) { node.textContent = words; node.setAttribute('data-tone', tone); } }
 function settle(m, result, words, tone) {
   m.a = Object.assign({}, m.a, { advice: Object.assign({}, m.a && m.a.advice, result), body: null,
     may: Object.assign({}, m.a && m.a.may, { send_advice: { ok: false, why: 'already_sent', say: T('An advice is already sent for this payment.') } }) });
@@ -155,8 +155,8 @@ function sendPress(m, btn) {
       if (!chit_id) throw new Error('no chit id');
       m.sentChit = chit_id;
     }
-    var r = await api('booksPayPatch', { params: { id: m.o.payment_id }, body: { advice_chit_id: chit_id } });
-    return Object.assign({ chit_id: chit_id }, (r && r.advice) || { state: 'sent', shared_at: null });
+    var reply = await api('booksPayPatch', { params: { id: m.o.payment_id }, body: { advice_chit_id: chit_id } });
+    return Object.assign({ chit_id: chit_id }, (reply && reply.advice) || { state: 'sent', shared_at: null });
   }, { key: 'adv:' + m.o.payment_id, busy: T(W.sending), out: out(m), failed: T(W.notSent),
     outcome: function (res) { m.failed = false; settle(m, { chit_id: res.chit_id, state: res.state || 'sent', shared_at: res.shared_at || null }, fill(T(W.sent), { party: party }), 'ok'); },
     onFail: function (words, e) {
@@ -176,8 +176,8 @@ function sharePress(m, btn, how) {
   var party = (a.party && a.party.name) || m.o.party || T('the other party');
   if (how === 'copy') { try { if (root.navigator && root.navigator.clipboard) root.navigator.clipboard.writeText(a.share.text).catch(function () {}); } catch (_) {} }
   return CBAction.run(how === 'copy' ? btn : null, async function () {
-    var r = await api('booksPayPatch', { params: { id: m.o.payment_id }, body: { advice_shared_at: true } });
-    return (r && r.advice) || { chit_id: null, state: 'shared', shared_at: new Date().toISOString() };
+    var reply = await api('booksPayPatch', { params: { id: m.o.payment_id }, body: { advice_shared_at: true } });
+    return (reply && reply.advice) || { chit_id: null, state: 'shared', shared_at: new Date().toISOString() };
   }, { key: 'adv-share:' + m.o.payment_id, out: out(m), failed: T(W.notSent),
     outcome: function (res) { settle(m, { chit_id: res.chit_id || null, state: res.state || 'shared', shared_at: res.shared_at || null }, how === 'copy' ? fill(T(W.copied), { party: party }) : T(W.shared), 'ok'); },
     onFail: function (words, e) { var d = e && e.data; say(m, e && e.status >= 400 && e.status < 500 && d && d.message ? d.message : words, 'error'); } });
@@ -190,12 +190,12 @@ function mount(el, o) {
   addCss(); ensureEP();
   if (el.__cbadvice) el.__cbadvice.api.destroy();
   var m = { el: el, o: o, a: o.advice || null, err: null, failed: false, outWords: '', tone: '' };
-  function onClick(ev) {
-    var t = ev.target.closest ? ev.target.closest('[data-ra-act]') : null; if (!t || !el.contains(t)) return;
-    var act = t.getAttribute('data-ra-act');
-    if (act === 'send') { ev.preventDefault(); if (t.classList.contains('off')) { say(m, may(m, 'send_advice').say || '', 'error'); return; } sendPress(m, t); return; }
-    if (act === 'copy') { ev.preventDefault(); sharePress(m, t, 'copy'); return; }
-    if (act === 'shared') { sharePress(m, t, t.getAttribute('data-testid') === 'adv-wa' ? 'wa' : 'mail'); return; }   /* the link opens; the patch rides beside it */
+  function onClick(event) {
+    var node = event.target.closest ? event.target.closest('[data-ra-act]') : null; if (!node || !el.contains(node)) return;
+    var act = node.getAttribute('data-ra-act');
+    if (act === 'send') { event.preventDefault(); if (node.classList.contains('off')) { say(m, may(m, 'send_advice').say || '', 'error'); return; } sendPress(m, node); return; }
+    if (act === 'copy') { event.preventDefault(); sharePress(m, node, 'copy'); return; }
+    if (act === 'shared') { sharePress(m, node, node.getAttribute('data-testid') === 'adv-wa' ? 'wa' : 'mail'); return; }   /* the link opens; the patch rides beside it */
   }
   el.addEventListener('click', onClick);
   var api_ = {
