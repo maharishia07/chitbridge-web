@@ -41,13 +41,13 @@
     }
 
     var byId = {};
-    items.forEach(function (p) { byId[p.item_id] = p; });
+    items.forEach(function (item) { byId[item.item_id] = item; });
 
     var rows = [];
     var shown = {};
     groups.forEach(function (g) {
       var lines = (g.lines || [])
-        .map(function (l) { return { l: l, p: byId[l.item_id] }; })
+        .map(function (item) { return { l: item, p: byId[item.item_id] }; })
         .filter(function (x) { return x.p; });
       if (!lines.length) return;
       lines.forEach(function (x) { shown[x.l.item_id] = true; });
@@ -64,7 +64,7 @@
       var gid = 'g' + rows.length;
       rows.push({
         type: 'product', label: g.label || '', count: lines.length, gid: gid,
-        options: Object.keys(g.options || {}).map(function (k) { return (g.options[k] || []).join(' · '); }).join('  '),
+        options: Object.keys(g.options || {}).map(function (item) { return (g.options[item] || []).join(' · '); }).join('  '),
       });
       lines.forEach(function (x) {
         rows.push({ type: 'line', item: x.p, item_id: x.l.item_id, variant: x.l.variant || '', gid: gid });
@@ -98,11 +98,11 @@ root.cbMediaEmbed = function (m) {
 };
 root.cbMediaGallery = function (d, o) {
   o = o || {};
-  var m = Array.isArray(d && d.media) ? d.media : [];
+  var list = Array.isArray(d && d.media) ? d.media : [];
   var pic = function (x) { return x.key ? ((o.apiBase || '') + '/api/products/media/' + encodeURIComponent(o.itemId || '') + '/' + encodeURIComponent(x.id)) : (x.url || ''); };
   var phone = o.size === 'phone';
   var w = phone ? '100%' : '140px', h = phone ? '190px' : '100px';
-  var tiles = m.map(function (x) {
+  var tiles = list.map(function (x) {
     var inner;
     if (x.kind === 'video') {
       var src = root.cbMediaEmbed(x);
@@ -124,12 +124,12 @@ root.cbMediaGallery = function (d, o) {
   /* the count first — '3 pictures · 1 video' — then, on a phone, ONE ROW that swipes sideways (scroll-snap, like every
      product gallery a customer already knows); on the product page the tiles wrap. Athi, 2026-09-04: 'scrollable, not
      vertically, horizontally, and it has to show how many images, videos'. */
-  var nImg = m.filter(function (x) { return x.kind === 'image'; }).length + (tiles.length && !m.length ? 1 : 0);
-  var nVid = m.filter(function (x) { return x.kind === 'video'; }).length;
+  var nImg = list.filter(function (x) { return x.kind === 'image'; }).length + (tiles.length && !list.length ? 1 : 0);
+  var nVid = list.filter(function (x) { return x.kind === 'video'; }).length;
   var count = [nImg ? nImg + (nImg === 1 ? ' picture' : ' pictures') : '', nVid ? nVid + (nVid === 1 ? ' video' : ' videos') : ''].filter(Boolean).join(' · ');
   var head = '<div data-testid="prod-media-count" style="font-size:11.5px;color:#777;padding:2px 0 4px">' + esc(count) + (phone && tiles.length > 1 ? ' · swipe ›' : '') + '</div>';
   if (phone) {
-    var strip = tiles.map(function (t) { return t.replace('style="position:relative;width:' + w, 'style="position:relative;flex:0 0 88%;scroll-snap-align:start;width:' + w).replace('style="width:' + w, 'style="flex:0 0 88%;scroll-snap-align:start;width:' + w); }).join('');
+    var strip = tiles.map(function (item) { return item.replace('style="position:relative;width:' + w, 'style="position:relative;flex:0 0 88%;scroll-snap-align:start;width:' + w).replace('style="width:' + w, 'style="flex:0 0 88%;scroll-snap-align:start;width:' + w); }).join('');
     return head + '<div data-testid="prod-media" style="display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;padding:2px 0 8px;scrollbar-width:thin">' + strip + '</div>';
   }
   return head + '<div data-testid="prod-media" style="display:flex;gap:8px;flex-wrap:wrap;padding:6px 0">' + tiles.join('') + '</div>';
@@ -150,7 +150,7 @@ function cbCatgAncestors(ids, cats, parentOf, idOf) {
   if (!cats || !cats.length) return out;
   var pOf = parentOf || function (c) { return c && c.parent; };
   var iOf = idOf || function (c) { return c && (c.id != null ? c.id : c.definition_id); };
-  var by = {}; cats.forEach(function (c) { var k = iOf(c); if (k != null) by[String(k)] = c; });
+  var by = {}; cats.forEach(function (item) { var k = iOf(item); if (k != null) by[String(k)] = item; });
   out.slice().forEach(function (id) {
     var p = pOf(by[id]), hops = 0;
     while (p != null && p !== '' && !seen[String(p)] && hops++ < 16) {
