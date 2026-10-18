@@ -34,10 +34,10 @@
 
   /* ── the read ── */
   function load() {
-    var who = call('assistWhoami').then(function (j) { return (j && j.actions && j.actions.publish) || { ok: false, say: T('Could not check who may publish. Try again.') }; },
+    var who = call('assistWhoami').then(function (reply) { return (reply && reply.actions && reply.actions.publish) || { ok: false, say: T('Could not check who may publish. Try again.') }; },
       function (e) { say('error', 'Assist: who may publish could not be read — ' + ((e && e.message) || e)); return { ok: false, say: T('Could not check who may publish. Try again.') }; });
-    return Promise.all([who, call('assistQuestions')]).then(function (r) {
-      A.may = r[0]; A.items = Array.isArray(r[1]) ? r[1] : ((r[1] && r[1].data) || []);
+    return Promise.all([who, call('assistQuestions')]).then(function (reply) {
+      A.may = reply[0]; A.items = Array.isArray(reply[1]) ? reply[1] : ((reply[1] && reply[1].data) || []);
     });
   }
   function fail(e) {
@@ -111,11 +111,11 @@
         { key: 'where', label: T('Where it shows'), prio: 3, w: 160, cell: function (e) { return whereWord(e.context); } }
       ],
       defaultCols: ['q', 'a', 'where'],
-      filters: [{ key: 'where', label: T('Where it shows'), all: T('Anywhere'), options: wheres.map(function (w) { return { v: w, label: w }; }), match: function (e, v) { return whereWord(e.context) === v; } }],
+      filters: [{ key: 'where', label: T('Where it shows'), all: T('Anywhere'), options: wheres.map(function (item) { return { v: item, label: item }; }), match: function (e, v) { return whereWord(e.context) === v; } }],
       search: function (e) { return [e.q, e.a, whereWord(e.context)].join(' '); },
       sorts: [{ key: 'as', label: T('As Assist lists them'), cmp: function () { return 0; } },
               { key: 'q', label: T('Question A–Z'), cmp: function (x, y) { return String(x.q || '').localeCompare(String(y.q || '')); } }],
-      onOpen: function (e) { A.qa = { id: e.id, q: e.q, a: e.a, context: Array.isArray(e.context) && e.context.length ? e.context : ['*'] }; A.drafted = false; paintReview(); var q = $('ca_q'); if (q && q.scrollIntoView) q.scrollIntoView({ block: 'center' }); },
+      onOpen: function (e) { A.qa = { id: e.id, q: e.q, a: e.a, context: Array.isArray(e.context) && e.context.length ? e.context : ['*'] }; A.drafted = false; paintReview(); var node = $('ca_q'); if (node && node.scrollIntoView) node.scrollIntoView({ block: 'center' }); },
       empty: { title: T('No answers published yet') }
     });
   }
