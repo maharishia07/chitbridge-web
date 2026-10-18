@@ -194,10 +194,10 @@ function cbDefRegistries(){
     blurb: 'How a line is quantified. The catalogue declares it per item; every screen obeys.',
     source: 'app/cart.js · MODELS',
     rows: (typeof CBCart !== 'undefined' && CBCart.models)
-      ? Object.keys(CBCart.models).map(function (k) {
-          var m = CBCart.models[k];
-          return { code: k, label: m.label || k,
-                   note: cbDefModelNote(k) };
+      ? Object.keys(CBCart.models).map(function (item) {
+          var m = CBCart.models[item];
+          return { code: item, label: m.label || item,
+                   note: cbDefModelNote(item) };
         })
       : null
   });
@@ -208,9 +208,9 @@ function cbDefRegistries(){
     blurb: 'The shapes an offer can take. A definition picks a kind and sets its rules.',
     source: 'engine/offers.js · KINDS',
     rows: (typeof CBOffers !== 'undefined' && CBOffers.KINDS)
-      ? Object.keys(CBOffers.KINDS).map(function (k) {
-          return { code: k, label: cbDefOfferLabel(k),
-                   note: 'scope: ' + (CBOffers.KINDS[k].scope || '—') };
+      ? Object.keys(CBOffers.KINDS).map(function (item) {
+          return { code: item, label: cbDefOfferLabel(item),
+                   note: 'scope: ' + (CBOffers.KINDS[item].scope || '—') };
         })
       : null
   });
@@ -233,9 +233,9 @@ function cbDefRegistries(){
          + 'what a point converts into, and whether points expire. We only carry the mechanism.',
     source: 'lib/rewards.js · EARN_KINDS',
     rows: (typeof CBRewards !== 'undefined' && CBRewards.EARN_KINDS)
-      ? Object.keys(CBRewards.EARN_KINDS).map(function (k) {
-          var kind = CBRewards.EARN_KINDS[k];
-          return { code: k, label: cbDefRewardLabel(k),
+      ? Object.keys(CBRewards.EARN_KINDS).map(function (item) {
+          var kind = CBRewards.EARN_KINDS[item];
+          return { code: item, label: cbDefRewardLabel(item),
                    /* ⚠️ THE PARAMETERS IT CANNOT WORK WITHOUT — a rule missing one earns nothing rather than
                       guessing, and a screen that hid that would make the refusal look like a fault. */
                    note: 'needs: ' + (kind.needs || []).join(' · ') };
@@ -262,8 +262,8 @@ function cbDefRegistries(){
          + 'of the slab and is declared per slab, because it varies by product within one rate.',
     source: tp ? 'engines reg-' + String(tp.id || '').toLowerCase() + ' · tax.rates' : 'engine/tax.js · GST_SLAB_RATES',
     rows: trates
-      ? trates.map(function (r) {
-          return { code: String(r) + '%', label: tsch + ' ' + r + '%', note: tsch === 'GST' && tp && tp.id === 'IN' ? cbDefSlabNote(r) : '' }; })
+      ? trates.map(function (item) {
+          return { code: String(item) + '%', label: tsch + ' ' + item + '%', note: tsch === 'GST' && tp && tp.id === 'IN' ? cbDefSlabNote(item) : '' }; })
       : null
   });
 
@@ -289,8 +289,8 @@ function cbDefRegistries(){
     blurb: 'How a price is arrived at. A catalogue can declare several — a list price, a bulk tier, a regional '
          + 'or time-boxed one — and the resolver picks the MOST SPECIFIC that applies, never the cheapest.',
     source: 'app/catalogue-model.js · PRICING_MODELS',
-    rows: P && P.pricingModels ? P.pricingModels.map(function (k) {
-      return { code: k, label: cbDefPricingLabel(k), note: cbDefPricingNote(k) }; }) : null
+    rows: P && P.pricingModels ? P.pricingModels.map(function (item) {
+      return { code: item, label: cbDefPricingLabel(item), note: cbDefPricingNote(item) }; }) : null
   });
   /**
    * ⭐ WHERE A PRICE IS REFERRED FROM — Athi, 2026-08-16: *"can we say where prices are refered from, or accessed
@@ -302,14 +302,14 @@ function cbDefRegistries(){
     blurb: 'Where a price was referred from — and when it was read. A price with a named source, a link and a '
          + 'reading date is evidence; one without is an assertion. Both are allowed; they must not look alike.',
     source: 'app/catalogue-model.js · PRICE_ORIGIN',
-    rows: P && P.priceOrigin ? P.priceOrigin.map(function (o) {
-      return { code: o, label: cbDefOriginLabel(o), note: cbDefOriginNote(o) }; }) : null
+    rows: P && P.priceOrigin ? P.priceOrigin.map(function (item) {
+      return { code: item, label: cbDefOriginLabel(item), note: cbDefOriginNote(item) }; }) : null
   });
   out.push({
     key: 'method', icon: '🧾', title: 'Selling methods',
     blurb: 'How a whole catalogue sells. One per catalogue.',
     source: 'app/catalogue-model.js · METHODS',
-    rows: P && P.methods ? P.methods.map(function (m) { return { code: m.k, label: m.label }; }) : null
+    rows: P && P.methods ? P.methods.map(function (item) { return { code: item.k, label: item.label }; }) : null
   });
   out.push({
     /**
@@ -321,7 +321,7 @@ function cbDefRegistries(){
     blurb: 'What a quantity is counted in — the same list the catalogue wizard offers on every item.',
     source: 'app/catalogue-model.js · UNITS',
     rows: (typeof CBCatalogue !== 'undefined' && CBCatalogue.UNITS)
-      ? CBCatalogue.UNITS.map(function (u) { return { code: u, label: u }; }) : null
+      ? CBCatalogue.UNITS.map(function (item) { return { code: item, label: item }; }) : null
   });
   out.push({
     key: 'datatype', icon: '🔤', title: 'Field datatypes',
@@ -330,8 +330,8 @@ function cbDefRegistries(){
     /* ⚠️ The palette carries a `note` per datatype and this screen was dropping it — the note is the half that
        says what the type is FOR ("expiry, harvest", "value + unit"), which is exactly what someone reading this
        list needs. Showing the code and the label alone made the list look like jargon. */
-    rows: P && P.datatypes ? P.datatypes.map(function (d) {
-      return { code: d.k || d, label: d.label || d.k || d, note: d.note || '' }; }) : null
+    rows: P && P.datatypes ? P.datatypes.map(function (item) {
+      return { code: item.k || item, label: item.label || item.k || item, note: item.note || '' }; }) : null
   });
   /**
    * ⭐ EXAMPLES AND LINKS — Athi, 2026-08-16: *"what we may need is an example where possible, a link to its
@@ -349,9 +349,9 @@ function cbDefRegistries(){
     blurb: 'Classification schemes a product can cite. You cite the code; the issuing body owns the scheme '
          + 'and keeps it current.',
     source: 'app/catalogue-model.js · STD_SCHEMES',
-    rows: P && P.standards ? P.standards.map(function (s) {
-      var e = CBDEF_EG[s] || {};
-      return { code: s, label: e.label || s, note: e.note, eg: e.eg, url: e.url, who: e.who }; }) : null
+    rows: P && P.standards ? P.standards.map(function (item) {
+      var e = CBDEF_EG[item] || {};
+      return { code: item, label: e.label || item, note: e.note, eg: e.eg, url: e.url, who: e.who }; }) : null
   });
   /**
    * ⭐ FACETS GET THEIR MEANING SPELLED OUT — Athi, 2026-08-16: *"under field data type, consists of, means, this
@@ -369,8 +369,8 @@ function cbDefRegistries(){
     key: 'facet', icon: '🧩', title: 'Catalogue facets',
     blurb: 'The parts a catalogue definition is made of. A catalogue declares which of these it uses.',
     source: 'app/catalogue-model.js · FACETS',
-    rows: P && P.facets ? P.facets.map(function (f) {
-      return { code: f, label: cbDefFacetLabel(f), note: cbDefFacetNote(f) }; }) : null
+    rows: P && P.facets ? P.facets.map(function (item) {
+      return { code: item, label: cbDefFacetLabel(item), note: cbDefFacetNote(item) }; }) : null
   });
 
   return out;
@@ -502,8 +502,8 @@ async function cbDefLoad(force){
     /* ⚠️ `defListAll`, not defList with params — api() substitutes PATH tokens and silently drops leftover
        params, so `{all:1}` never reached the server. The shelf was therefore hiding retired definitions by
        accident rather than by request, which happened to look right. */
-    var r = await api('defListAll');
-    CBDEF.mine = (r && r.definitions) || [];
+    var reply = await api('defListAll');
+    CBDEF.mine = (reply && reply.definitions) || [];
   } catch (e) {
     /* ⚠️ A LOAD FAILURE IS SAID, NOT SWALLOWED INTO AN EMPTY SHELF. "you have none" and "we could not ask" look
        identical as an empty list and mean opposite things — the same rule the "not loaded" registry rows follow.
@@ -526,10 +526,10 @@ function cbDefRewardLabel(k){
             on_items:        'Points on chosen products — a reward instead of a discount' })[k] || k;
 }
 function cbDefMineOf(kind){
-  return (CBDEF.mine || []).filter(function (d) { return d.kind === kind && d.status !== 'retired'; });
+  return (CBDEF.mine || []).filter(function (item) { return item.kind === kind && item.status !== 'retired'; });
 }
 function cbDefRetiredOf(kind){
-  return (CBDEF.mine || []).filter(function (d) { return d.kind === kind && d.status === 'retired'; });
+  return (CBDEF.mine || []).filter(function (item) { return item.kind === kind && item.status === 'retired'; });
 }
 
 /** The rule fields a kind offers — read from the registries, never listed here. */
@@ -578,12 +578,12 @@ function cbDefRuleFields(kind, sub){
   }
   if (kind === 'pricing') {
     /* the names the engine reads (pricing.js copyOf): amount · tiers · min · max */
-    var pf = [];
-    if (sub === 'fixed')  pf.push({ k: 'amount', label: 'Amount (blank = the product\'s list price)', ph: '1000', num: true, money: true });
-    if (sub === 'tiered') pf.push({ k: 'tiers', label: 'Price breaks', tiers: true, area: true, ph: '10 = 950\n50 = 900',
+    var list = [];
+    if (sub === 'fixed')  list.push({ k: 'amount', label: 'Amount (blank = the product\'s list price)', ph: '1000', num: true, money: true });
+    if (sub === 'tiered') list.push({ k: 'tiers', label: 'Price breaks', tiers: true, area: true, ph: '10 = 950\n50 = 900',
                                     hint: 'One per line: from this quantity = price each. Below the first break the list price applies.' });
-    if (sub === 'range')  { pf.push({ k: 'min', label: 'Lowest', ph: '900', num: true, money: true, half: true }); pf.push({ k: 'max', label: 'Highest', ph: '1100', num: true, money: true, half: true }); }
-    return pf;
+    if (sub === 'range')  { list.push({ k: 'min', label: 'Lowest', ph: '900', num: true, money: true, half: true }); list.push({ k: 'max', label: 'Highest', ph: '1100', num: true, money: true, half: true }); }
+    return list;
   }
   if (kind === 'ordermodel') {
     /* The shape each model actually uses. ⚠️ cart-ui's MODELS decide behaviour; these are the inputs those
@@ -730,7 +730,7 @@ function cbDefSubKinds(kind){
     var method = (typeof UI !== 'undefined' && UI.catf && UI.catf.method) || null;
     if (!method || typeof CBCatalogue === 'undefined' || !CBCatalogue.modelsForMethod) return all;
     var ok = CBCatalogue.modelsForMethod(method);
-    var narrowed = all.filter(function(m){ return ok.indexOf(m) >= 0; });
+    var narrowed = all.filter(function(item){ return ok.indexOf(item) >= 0; });
     /* ⚠️ A method that supports NOTHING still returns nothing — that is the point for `text`/`form`, and the
        caller shows why rather than rendering an empty picker with no explanation. */
     return narrowed;
@@ -842,9 +842,9 @@ function cbDefPickHTML(x, v){
     var cur = (v === undefined || v === null || v === '') ? String(x.pick[0][0]) : String(v);
     return '<select class="inp" data-testid="cbdef-pick-' + esc(x.k) + '"'
       + ' onchange="cbDefSetRule(\'' + x.k + '\',this.value)">'
-      + x.pick.map(function (p) {
-          return '<option value="' + esc(p[0]) + '"' + (cur === String(p[0]) ? ' selected' : '') + '>'
-            + esc(p[1]) + '</option>'; }).join('')
+      + x.pick.map(function (item) {
+          return '<option value="' + esc(item[0]) + '"' + (cur === String(item[0]) ? ' selected' : '') + '>'
+            + esc(item[1]) + '</option>'; }).join('')
       + '</select>';
   }
   var list = (typeof _CATG !== 'undefined' && _CATG) ? _CATG : null;
@@ -859,9 +859,9 @@ function cbDefPickHTML(x, v){
   return '<select class="inp" data-testid="cbdef-pick-' + esc(x.k) + '"'
     + ' onchange="cbDefSetRule(\'' + x.k + '\',this.value)">'
     + '<option value="">— everything —</option>'
-    + list.map(function (c) {
-        return '<option value="' + esc(c.id) + '"' + (String(v) === String(c.id) ? ' selected' : '') + '>'
-          + esc(c.name) + '</option>'; }).join('')
+    + list.map(function (item) {
+        return '<option value="' + esc(item.id) + '"' + (String(v) === String(item.id) ? ' selected' : '') + '>'
+          + esc(item.name) + '</option>'; }).join('')
     + '</select>';
 }
 /**
@@ -882,12 +882,12 @@ function cbDefProdsLive(){
   if (_CBDEF_PRODS_P) return _CBDEF_PRODS_P;   /* the same one-read rule as the customers (see cbDefCustsLive) */
   _CBDEF_PRODS = null;
   _CBDEF_PRODS_P = api('prodList')
-    .then(function (r) {
-      var arr = Array.isArray(r) ? r : ((r && (r.items || r.products)) || []);
-      _CBDEF_PRODS = arr.map(function (p) {
-        var d = p.item_data || p;
-        return { id: p.item_id || p.id, name: d.name || d.particulars || 'item' };
-      }).filter(function (p) { return p.id; });
+    .then(function (reply) {
+      var arr = Array.isArray(reply) ? reply : ((reply && (reply.items || reply.products)) || []);
+      _CBDEF_PRODS = arr.map(function (item) {
+        var d = item.item_data || item;
+        return { id: item.item_id || item.id, name: d.name || d.particulars || 'item' };
+      }).filter(function (item) { return item.id; });
       return _CBDEF_PRODS;
     })
     .catch(function () { _CBDEF_PRODS = []; return _CBDEF_PRODS; });
@@ -903,9 +903,9 @@ function cbDefPickProductHTML(x, v){
   return '<select class="inp" data-testid="cbdef-pick-' + esc(x.k) + '"'
     + ' onchange="cbDefSetReward(this.value)">'
     + '<option value="">— one of the qualifying items —</option>'
-    + _CBDEF_PRODS.map(function (p) {
-        return '<option value="' + esc(p.id) + '"' + (String(v) === String(p.id) ? ' selected' : '') + '>'
-          + esc(p.name) + '</option>'; }).join('')
+    + _CBDEF_PRODS.map(function (item) {
+        return '<option value="' + esc(item.id) + '"' + (String(v) === String(item.id) ? ' selected' : '') + '>'
+          + esc(item.name) + '</option>'; }).join('')
     + '</select>'
     /* ⚠️ ONE LINE. This was three sentences of engine reasoning; the outcome strip below now SHOWS the same
        thing ("earned 1 × Sunflower Oil free — added to your order"), so the paragraph was explaining a
@@ -932,7 +932,7 @@ function cbDefCustsLive(){
   if (_CBDEF_CUSTS_P) return _CBDEF_CUSTS_P;
   _CBDEF_CUSTS = null;
   _CBDEF_CUSTS_P = Promise.all([api('custList'), api('custGroupNames').catch(function () { return { names: [] }; })])
-    .then(function (rr) { var r = rr[0]; _CBDEF_GNAMES = ((rr[1] && rr[1].names) || []); _CBDEF_CUSTS = ((r && r.customers) || []).map(function (c) { return { id: c.customer_identity_id, name: c.display_name || c.user_id || c.bridge_id || 'customer', segment: c.segment }; }); return _CBDEF_CUSTS; })
+    .then(function (reply) { var r = reply[0]; _CBDEF_GNAMES = ((reply[1] && reply[1].names) || []); _CBDEF_CUSTS = ((r && r.customers) || []).map(function (item) { return { id: item.customer_identity_id, name: item.display_name || item.user_id || item.bridge_id || 'customer', segment: item.segment }; }); return _CBDEF_CUSTS; })
     .catch(function () { _CBDEF_CUSTS = []; return _CBDEF_CUSTS; });
   return _CBDEF_CUSTS_P;
 }
@@ -943,11 +943,11 @@ function cbDefPickCustomerHTML(x, v){
   return '<select class="inp" data-testid="cbdef-pick-' + esc(x.k) + '" onchange="cbDefSetCustomer(this.value)">'
     + '<option value="">' + tx('— everyone —') + '</option>'
     + '<optgroup label="' + tx('A group of customers') + '">'
-    + CBDEF_GROUPS.map(function (g) { return '<option value="' + g[0] + '"' + (cur === g[0] ? ' selected' : '') + '>' + tx(g[1]) + '</option>'; }).join('')
+    + CBDEF_GROUPS.map(function (item) { return '<option value="' + item[0] + '"' + (cur === item[0] ? ' selected' : '') + '>' + tx(item[1]) + '</option>'; }).join('')
     + '</optgroup>'
-    + (_CBDEF_GNAMES.length ? '<optgroup label="' + tx('Your named groups') + '">' + _CBDEF_GNAMES.map(function (g) { var val = 'group:' + g; return '<option value="' + esc(val) + '"' + (cur === val ? ' selected' : '') + '>' + esc(g) + '</option>'; }).join('') + '</optgroup>' : '')
+    + (_CBDEF_GNAMES.length ? '<optgroup label="' + tx('Your named groups') + '">' + _CBDEF_GNAMES.map(function (item) { var val = 'group:' + item; return '<option value="' + esc(val) + '"' + (cur === val ? ' selected' : '') + '>' + esc(item) + '</option>'; }).join('') + '</optgroup>' : '')
     + (_CBDEF_CUSTS.length ? '<optgroup label="' + tx('One customer') + '">'
-        + _CBDEF_CUSTS.map(function (c) { var val = 'customer:' + c.id; return '<option value="' + esc(val) + '"' + (cur === val ? ' selected' : '') + '>' + esc(c.name) + '</option>'; }).join('')
+        + _CBDEF_CUSTS.map(function (item) { var val = 'customer:' + item.id; return '<option value="' + esc(val) + '"' + (cur === val ? ' selected' : '') + '>' + esc(item.name) + '</option>'; }).join('')
         + '</optgroup>' : '')
     + '</select>'
     + '<div class="cbdef-hint">' + tx('Never on the public storefront. Reaches them on Suppliers, in the cart and on the order.') + '</div>';
@@ -957,14 +957,14 @@ function cbDefSetCustomer(val){
   var name = '';
   if (val) { var g = CBDEF_GROUPS.filter(function (x) { return x[0] === val; })[0]; if (g) name = g[1];
     else if (/^group:/.test(val)) name = val.slice(6);
-    else { var c = (_CBDEF_CUSTS || []).filter(function (q) { return 'customer:' + q.id === val; })[0]; name = c ? c.name : ''; } }
+    else { var c = (_CBDEF_CUSTS || []).filter(function (item) { return 'customer:' + item.id === val; })[0]; name = c ? c.name : ''; } }
   cbDefSetRule('customer_group', val || '');
   cbDefSetRule('customer_name', name);
 }
 
 /** Sets the id AND the name in one act, so the two can never be written apart. */
 function cbDefSetReward(id){
-  var p = (_CBDEF_PRODS || []).filter(function (q) { return String(q.id) === String(id); })[0];
+  var p = (_CBDEF_PRODS || []).filter(function (item) { return String(item.id) === String(id); })[0];
   cbDefSetRule('get_item_id', id || '');
   cbDefSetRule('get_item_name', p ? p.name : '');
 }
@@ -988,8 +988,8 @@ function cbDefSubLabel(kind, sub){
    under it. The picker gets the name; the line beneath gets the rest, where it can be read rather than truncated. */
 function cbDefSubHead(kind, sub){ return String(cbDefSubLabel(kind, sub)).split(' — ')[0]; }
 function cbDefSubTail(kind, sub){
-  var p = String(cbDefSubLabel(kind, sub)).split(' — ');
-  return p.length > 1 ? p.slice(1).join(' — ') : '';
+  var text = String(cbDefSubLabel(kind, sub)).split(' — ');
+  return text.length > 1 ? text.slice(1).join(' — ') : '';
 }
 
 /**
@@ -1001,14 +1001,14 @@ function cbDefSubTail(kind, sub){
  * the tier table sets the price of record, and a zero in it is a free product nobody agreed to.
  */
 function cbDefTiersText(v){
-  return (Array.isArray(v) ? v : []).map(function (t) {
-    return (t && t.qty != null ? t.qty : '') + ' = ' + (t && t.price != null ? t.price : ''); }).join('\n');
+  return (Array.isArray(v) ? v : []).map(function (item) {
+    return (item && item.qty != null ? item.qty : '') + ' = ' + (item && item.price != null ? item.price : ''); }).join('\n');
 }
 function cbDefSetTiers(text){
-  var rows = String(text || '').split('\n').map(function (ln) {
-    var m = /^\s*([0-9.]+)\s*[=:x×]\s*([0-9.]+)\s*$/.exec(ln);
+  var rows = String(text || '').split('\n').map(function (item) {
+    var m = /^\s*([0-9.]+)\s*[=:x×]\s*([0-9.]+)\s*$/.exec(item);
     return m ? { qty: Number(m[1]), price: Number(m[2]) } : null;
-  }).filter(Boolean).sort(function (a, b) { return a.qty - b.qty; });
+  }).filter(Boolean).sort(function (first, second) { return first.qty - second.qty; });
   cbDefSetRule('tiers', rows.length ? rows : '');
   cbDefPaintPreview();
 }
@@ -1026,9 +1026,9 @@ function cbDefFieldHTML(x, v){
   }
   if (x.sel) {
     return '<select class="inp" data-testid="' + id + '" onchange="cbDefSetRule(\'' + x.k + '\',this.value);cbDefPaintPreview()">'
-      + x.sel.map(function (o) {
-          return '<option value="' + esc(o.v) + '"' + (String(v) === String(o.v) ? ' selected' : '') + '>'
-            + esc(tx(o.label)) + '</option>'; }).join('') + '</select>';
+      + x.sel.map(function (item) {
+          return '<option value="' + esc(item.v) + '"' + (String(v) === String(item.v) ? ' selected' : '') + '>'
+            + esc(tx(item.label)) + '</option>'; }).join('') + '</select>';
   }
   if (x.tiers) {
     return '<textarea class="inp" rows="3" data-testid="' + id + '" placeholder="' + esc(x.ph || '') + '"'
@@ -1088,9 +1088,9 @@ function cbDefFormHTML(){
     + (subs.length
         ? '<label class="fl cbdef-w2">' + tx('Kind') + '</label>'
           + '<select class="inp cbdef-w2" data-testid="cbdef-sub" onchange="cbDefSetSub(this.value)">'
-          + subs.map(function (s) {
-              return '<option value="' + esc(s) + '"' + (s === f.sub ? ' selected' : '') + '>'
-                + esc(cbDefSubHead(f.kind, s)) + '</option>'; }).join('') + '</select>'
+          + subs.map(function (item) {
+              return '<option value="' + esc(item) + '"' + (item === f.sub ? ' selected' : '') + '>'
+                + esc(cbDefSubHead(f.kind, item)) + '</option>'; }).join('') + '</select>'
           /* ⚠️ THE KEY IS STILL SHOWN, small. It is what the rules are stored under and what a spec drives; a
              screen that hides its own identifiers costs the next person an hour finding them. */
           + '<div class="cbdef-hint cbdef-w2"><code>' + esc(f.sub) + '</code>' + (tail ? ' · ' + esc(tail) : '') + '</div>'
@@ -1172,13 +1172,13 @@ function cbDefStdsLoad(){
   /* ⚠️ ensureCap FIRST. `readinessOwn` is registered by cap-readiness.js, which is LAZY — calling api() without
      it throws "no endpoint readinessOwn". Registering a second copy of the alias here would satisfy the call and
      break the guard's one-global-one-owner rule, which is the wrong trade. */
-  _cbdefStdReq = ensureCap('readiness').then(function(){ return api('readinessOwn'); }).then(function(d){
+  _cbdefStdReq = ensureCap('readiness').then(function(){ return api('readinessOwn'); }).then(function(reply){
     var seen = {}, out = [];
-    ((d && d.clearances) || []).forEach(function(c){
-      if (!c.standard || seen[c.standard]) return;
-      seen[c.standard] = 1; out.push({ key: c.standard, title: c.title || c.standard });
+    ((reply && reply.clearances) || []).forEach(function(item){
+      if (!item.standard || seen[item.standard]) return;
+      seen[item.standard] = 1; out.push({ key: item.standard, title: item.title || item.standard });
     });
-    out.sort(function(a,b){ return a.key.localeCompare(b.key); });
+    out.sort(function(first,second){ return first.key.localeCompare(second.key); });
     _CBDEF_STDS = out; _cbdefStdReq = null; return out;
   }).catch(function(){ _cbdefStdReq = null; return (_CBDEF_STDS = []); });
   return _cbdefStdReq;
@@ -1189,21 +1189,21 @@ function cbDefStdChipsHTML(){
   if (list === null) return '<div class="cbdef-stdhint">' + tx('Reading the standards list…') + '</div>';
   if (!list.length) return '<div class="cbdef-stdhint">Could not read the standards list — type the keys directly, '
     + 'one per line.</div>';
-  var chosen = {}; (f.rules.standards || []).forEach(function(s){ chosen[String(s).trim()] = 1; });
+  var chosen = {}; (f.rules.standards || []).forEach(function(item){ chosen[String(item).trim()] = 1; });
   return '<div class="cbdef-stdhint">Tap to add or remove. ' + list.length + ' available.</div>'
-    + '<div class="cbdef-stds">' + list.map(function(s){
-        var on = !!chosen[s.key];
+    + '<div class="cbdef-stds">' + list.map(function(item){
+        var on = !!chosen[item.key];
         return '<button type="button" class="cbdef-stdchip' + (on ? ' on' : '') + '"'
-          + ' title="' + esc(s.title) + '"'
-          + ' onclick="cbDefToggleStd(\'' + esc(s.key) + '\')">' + (on ? '✓ ' : '') + esc(s.key) + '</button>';
+          + ' title="' + esc(item.title) + '"'
+          + ' onclick="cbDefToggleStd(\'' + esc(item.key) + '\')">' + (on ? '✓ ' : '') + esc(item.key) + '</button>';
       }).join('') + '</div>';
 }
 function cbDefToggleStd(key){
   var f = CBDEF_FORM; if (!f) return;
-  var cur = (f.rules.standards || []).map(function(s){ return String(s).trim(); }).filter(Boolean);
-  var i = cur.indexOf(key);
-  if (i >= 0) cur.splice(i, 1); else cur.push(key);
-  f.rules.standards = cur;
+  var list = (f.rules.standards || []).map(function(item){ return String(item).trim(); }).filter(Boolean);
+  var i = list.indexOf(key);
+  if (i >= 0) list.splice(i, 1); else list.push(key);
+  f.rules.standards = list;
   cbDefPaintForm();
 }
 /**
@@ -1249,10 +1249,10 @@ function cbDefPreviewHTML(){
                  ? tx('no badge on a product row — this applies in the basket')
                  : tx('no badge yet — the terms are incomplete')) + '</span>')
           + '</div>')
-    + [one, many].map(function (r) {
-        return '<div class="cbdef-prevrow"><span class="q">' + r.qty + ' × ' + esc(inr(CBDEF_SAMPLE)) + '</span>'
-          + '<span class="m">' + esc(inr(r.was)) + ' → <b>' + esc(inr(r.now)) + '</b></span>'
-          + '<span class="w">' + esc(r.why) + '</span></div>';
+    + [one, many].map(function (item) {
+        return '<div class="cbdef-prevrow"><span class="q">' + item.qty + ' × ' + esc(inr(CBDEF_SAMPLE)) + '</span>'
+          + '<span class="m">' + esc(inr(item.was)) + ' → <b>' + esc(inr(item.now)) + '</b></span>'
+          + '<span class="w">' + esc(item.why) + '</span></div>';
       }).join('')
     + '<div class="cbdef-hint">' + tx('A sample product at ') + esc(inr(CBDEF_SAMPLE))
     + (cat ? tx(', in the category this offer targets') : '')
@@ -1284,8 +1284,8 @@ function cbDefPreviewRow(o, qty, cat, money){
  * never repainted anything. Only the outcome block is replaced.
  */
 function cbDefPaintPreview(){
-  var h = document.getElementById('cbdef_prev');
-  if (h) h.innerHTML = cbDefPreviewHTML();
+  var node = document.getElementById('cbdef_prev');
+  if (node) node.innerHTML = cbDefPreviewHTML();
 }
 function cbDefPaintForm(){
   /**
@@ -1433,8 +1433,8 @@ function cbDefRetire(id, name){
 async function _cbDefRetire(id, takeover){
   /* Same after-change path as save and status: refresh both lists AND drop the product page's live-offers cache —
      [OFF-01] RETIRE found the retired offer still listed on the product until a reload. */
-  try { var r = await api('defRetire', { params: { id: id }, query: takeover ? { takeover: takeover } : undefined });
-        toast(r && r.moved && (r.moved.products || r.moved.categories) ? txf('Retired — {p} product(s) and {c} category(ies) now cite the takeover slab.', { p: String(r.moved.products), c: String(r.moved.categories) }) : 'Retired.');
+  try { var reply = await api('defRetire', { params: { id: id }, query: takeover ? { takeover: takeover } : undefined });
+        toast(reply && reply.moved && (reply.moved.products || reply.moved.categories) ? txf('Retired — {p} product(s) and {c} category(ies) now cite the takeover slab.', { p: String(reply.moved.products), c: String(reply.moved.categories) }) : 'Retired.');
         await cbDefAfterChange(null, id); }
   catch (e) {
     /* ⭐ A SLAB DOES NOT GO DARK UNDER ITS PRODUCTS. The API refuses (409 "cited") until a takeover slab is named —
@@ -1461,9 +1461,9 @@ async function _cbDefRetire(id, takeover){
  * ⚠️ Read scrollTop BEFORE the innerHTML swap — after it the element has been rebuilt and reports 0.
  */
 function cbDefScroller(){
-  var w = document.querySelector('.cbdef-wrap');
+  var node = document.querySelector('.cbdef-wrap');
   /* The scroller may be the wrap or an ancestor, depending on the shell — walk up to whichever actually scrolls. */
-  var n = w;
+  var n = node;
   while (n && n !== document.body){ if (n.scrollHeight > n.clientHeight + 1) return n; n = n.parentElement; }
   return document.scrollingElement || document.documentElement;
 }
@@ -1495,11 +1495,11 @@ function cbDefToggle(k){ CBDEF.open[k] = !CBDEF.open[k]; cbDefRepaint(); }
  * whichever screen was in front of me would have fixed one of them and left the other saying HS twice.
  */
 function cbDefLabelOnce(r){
-  var lab = String((r && r.label) == null ? '' : r.label);
+  var text = String((r && r.label) == null ? '' : r.label);
   var code = String((r && r.code) == null ? '' : r.code);
-  if (!code) return lab;
-  if (lab === code) return '';
-  return lab.replace(new RegExp('^' + code.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*[—–:-]\\s*'), '');
+  if (!code) return text;
+  if (text === code) return '';
+  return text.replace(new RegExp('^' + code.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*[—–:-]\\s*'), '');
 }
 
 function cbDefSectionHTML(s){
@@ -1520,9 +1520,9 @@ function cbDefSectionHTML(s){
     body += '<div class="cbdef-empty">This registry has not loaded on this page, so its kinds cannot be listed. '
           + 'It is not that there are none.</div>';
   } else {
-    body += s.rows.map(function (r) {
-      var lab = cbDefLabelOnce(r);
-      var code = String(r.code == null ? '' : r.code);
+    body += s.rows.map(function (item) {
+      var lab = cbDefLabelOnce(item);
+      var code = String(item.code == null ? '' : item.code);
       return '<div class="cbdef-row">'
         /* ⭐ THE NAME IS ITS OWN LINE and everything that explains it sits underneath — Athi: *"bring the
            explanation below the HS-, this will give a better look… your own scheme in one line and the
@@ -1532,13 +1532,13 @@ function cbDefSectionHTML(s){
         + '<code class="cbdef-code">' + esc(code) + '</code>'
         + (lab ? '<span class="cbdef-lab">' + esc(lab) + '</span>' : '')
         + '</div>'
-        + (r.who ? '<div class="cbdef-who">' + esc(r.who) + '</div>' : '')
-        + (r.note ? '<div class="cbdef-note">' + esc(r.note) + '</div>' : '')
+        + (item.who ? '<div class="cbdef-who">' + esc(item.who) + '</div>' : '')
+        + (item.note ? '<div class="cbdef-note">' + esc(item.note) + '</div>' : '')
         /* ⭐ A worked example is what turns a scheme name into something someone can act on. */
-        + (r.eg ? '<div class="cbdef-eg"><span class="cbdef-eglab">e.g.</span> ' + esc(r.eg) + '</div>' : '')
+        + (item.eg ? '<div class="cbdef-eg"><span class="cbdef-eglab">e.g.</span> ' + esc(item.eg) + '</div>' : '')
         /* ⚠️ rel="noopener" — a target=_blank link without it hands the opened page a handle on ours. */
-        + (r.url ? '<div class="cbdef-link"><a href="' + esc(r.url) + '" target="_blank" rel="noopener noreferrer">'
-                 + esc(r.url.replace(/^https?:\/\//, '')) + ' ↗</a></div>' : '')
+        + (item.url ? '<div class="cbdef-link"><a href="' + esc(item.url) + '" target="_blank" rel="noopener noreferrer">'
+                 + esc(item.url.replace(/^https?:\/\//, '')) + ' ↗</a></div>' : '')
         + '</div>';
     }).join('');
   }
@@ -1575,10 +1575,10 @@ function cbDefKindsInline(kind){
   if (!s || !s.rows || !s.rows.length) return '';
   return '<div class="cbdef-kindsin">'
     + '<div class="cbdef-kindshd">Built from — ' + s.rows.length + ' kind' + (s.rows.length === 1 ? '' : 's') + '</div>'
-    + s.rows.map(function (r) {
-        return '<div class="cbdef-kindrow"><code class="cbdef-code">' + esc(r.code) + '</code>'
-          + '<span class="cbdef-kindlbl">' + esc(r.label) + '</span>'
-          + (r.note ? '<span class="cbdef-kindnote">' + esc(r.note) + '</span>' : '') + '</div>';
+    + s.rows.map(function (item) {
+        return '<div class="cbdef-kindrow"><code class="cbdef-code">' + esc(item.code) + '</code>'
+          + '<span class="cbdef-kindlbl">' + esc(item.label) + '</span>'
+          + (item.note ? '<span class="cbdef-kindnote">' + esc(item.note) + '</span>' : '') + '</div>';
       }).join('')
     + '</div>';
 }
@@ -1588,8 +1588,8 @@ function cbDefMineHTML(){
   var out = Object.keys(CBDEF_AUTHORABLE).map(function (kind) {
     var A = CBDEF_AUTHORABLE[kind];
     var mine = cbDefMineOf(kind), retired = cbDefRetiredOf(kind);
-    var rows = mine.map(function (d) {
-      var live = d.status === 'live';
+    var rows = mine.map(function (item) {
+      var live = item.status === 'live';
       /**
        * ⚠️ THREE STATES, NOT TWO (backlog 19; Athi: *"if the offer are retired then that has to be shown as
        * retired as well"*). This was `live ? 'live' : 'draft'` — a boolean for a column with THREE values, so a
@@ -1597,23 +1597,23 @@ function cbDefMineHTML(){
        * publish it*, when the truth is *withdrawn, and it can never be adopted again* — so someone reads the badge
        * and tries to publish it.
        */
-      var st = d.status === 'live' ? 'live' : d.status === 'retired' ? 'retired' : 'draft';
-      return '<div class="cbdef-mine-row' + (st === 'retired' ? ' is-retired' : '') + '" data-testid="cbdef-mine-' + esc(d.definition_id) + '">'
-        + '<span class="cbdef-mine-n">' + esc(d.name) + '</span>'
-        + (d.sub_kind ? '<code class="cbdef-code">' + esc(d.sub_kind) + '</code>' : '')
+      var st = item.status === 'live' ? 'live' : item.status === 'retired' ? 'retired' : 'draft';
+      return '<div class="cbdef-mine-row' + (st === 'retired' ? ' is-retired' : '') + '" data-testid="cbdef-mine-' + esc(item.definition_id) + '">'
+        + '<span class="cbdef-mine-n">' + esc(item.name) + '</span>'
+        + (item.sub_kind ? '<code class="cbdef-code">' + esc(item.sub_kind) + '</code>' : '')
         + '<span class="cbdef-badge ' + st + '">' + st + '</span>'
         /* ⭐ THE VERSION IS ON SCREEN. It is the thing a stamped chit points at, so hiding it would make the
            freeze rule invisible in the one place someone might need to check it. */
-        + '<span class="cbdef-ver">v' + esc(d.current_version) + '</span>'
+        + '<span class="cbdef-ver">v' + esc(item.current_version) + '</span>'
         + '<span class="cbdef-acts">'
-        +   '<span onclick="cbDefEdit(\'' + esc(d.definition_id) + '\')">' + tx('Edit') + '</span>'
-        +   '<span onclick="cbDefSetStatus(\'' + esc(d.definition_id) + '\',\'' + (live ? 'draft' : 'live') + '\')">'
+        +   '<span onclick="cbDefEdit(\'' + esc(item.definition_id) + '\')">' + tx('Edit') + '</span>'
+        +   '<span onclick="cbDefSetStatus(\'' + esc(item.definition_id) + '\',\'' + (live ? 'draft' : 'live') + '\')">'
         +   (live ? 'Unpublish' : 'Publish') + '</span>'
-        +   '<span onclick="cbDefRetire(\'' + esc(d.definition_id) + '\',\'' + esc(d.name) + '\')">' + tx('Retire') + '</span>'
+        +   '<span onclick="cbDefRetire(\'' + esc(item.definition_id) + '\',\'' + esc(item.name) + '\')">' + tx('Retire') + '</span>'
         + '</span>'
         /* ⚠️ The author's note, same as the Catalogue setup row — it was saved by the form and displayed by
            nothing, on either list. See cbDefFormHTML's Note field. */
-        + (d.note ? '<div class="cbdef-mine-note">' + esc(d.note) + '</div>' : '')
+        + (item.note ? '<div class="cbdef-mine-note">' + esc(item.note) + '</div>' : '')
         + '</div>';
     }).join('');
 
@@ -1704,7 +1704,7 @@ function cbDefHTML(){
      */
     + cbDefMineHTML()
     + (function(){
-        var rest = secs.filter(function(s){ return !CBDEF_AUTHORABLE[s.key]; });
+        var rest = secs.filter(function(item){ return !CBDEF_AUTHORABLE[item.key]; });
         if (!rest.length) return '';
         return '<div class="cbdef-shelfhd">' + tx('What the system knows — the shapes available to you') + '</div>'
              + rest.map(cbDefSectionHTML).join('');
@@ -1721,9 +1721,9 @@ function definitionsScreen(){ cbDefCss(); return cbDefHTML(); }
 
 function cbDefCss(){
   if (document.getElementById('cbdef_css')) return;
-  var s = document.createElement('style');
-  s.id = 'cbdef_css';
-  s.textContent = [
+  var node = document.createElement('style');
+  node.id = 'cbdef_css';
+  node.textContent = [
     /**
      * ⚠️⚠️ THE SCREEN MUST OWN ITS OWN SCROLLING. `#mainbody` is `flex:1; display:flex; flex-direction:column;
      * min-height:0` — a flex COLUMN that does not scroll. A screen that just returns tall HTML gets clipped in
@@ -1849,7 +1849,7 @@ function cbDefCss(){
     '.cbdef-stdchip:hover{border-color:#c6ccd4}',
     '.cbdef-stdchip.on{background:var(--blue-tint-bg);border-color:var(--blue,var(--blue));color:var(--blue,var(--blue));font-weight:700}'
   ].join('');
-  (document.head || document.documentElement).appendChild(s);
+  (document.head || document.documentElement).appendChild(node);
 }
 
 /* ══ TEST THIS OFFER (Athi, 2026-09-05: "shall we create a test here itself using one of the products to find issues with the
@@ -1869,15 +1869,15 @@ function cbDefTestHTML(f){
     + '<div id="cbdef_test_out" data-testid="cbdef-test-out" style="margin-top:8px"></div></div>';
 }
 function cbDefTestOptions(){
-  var P = CBDEF_TEST.prods;
-  if (!P) return '<option value="">' + esc(tx('Pick a product…')) + '</option>';
-  return '<option value="">' + esc(tx('Pick a product…')) + '</option>' + P.map(function(p){ var d = p.item_data || {}; var id = p.item_id || p.id; return '<option value="' + esc(id) + '"' + (id === CBDEF_TEST.pid ? ' selected' : '') + '>' + esc(d.name || id) + '</option>'; }).join('');
+  var list = CBDEF_TEST.prods;
+  if (!list) return '<option value="">' + esc(tx('Pick a product…')) + '</option>';
+  return '<option value="">' + esc(tx('Pick a product…')) + '</option>' + list.map(function(item){ var d = item.item_data || {}; var id = item.item_id || item.id; return '<option value="' + esc(id) + '"' + (id === CBDEF_TEST.pid ? ' selected' : '') + '>' + esc(d.name || id) + '</option>'; }).join('');
 }
 async function cbDefTestLoad(){
   if (CBDEF_TEST.prods) return;
-  try { var r = await api('prodList', { query: { limit: 200 } }); CBDEF_TEST.prods = (r && (r.items || r.products || r.rows)) || (Array.isArray(r) ? r : []); }
+  try { var reply = await api('prodList', { query: { limit: 200 } }); CBDEF_TEST.prods = (reply && (reply.items || reply.products || reply.rows)) || (Array.isArray(reply) ? reply : []); }
   catch (_) { CBDEF_TEST.prods = []; }
-  var sel = document.querySelector('[data-testid="cbdef-test-product"]'); if (sel) sel.innerHTML = cbDefTestOptions();
+  var node = document.querySelector('[data-testid="cbdef-test-product"]'); if (node) node.innerHTML = cbDefTestOptions();
 }
 function cbDefTestRun(){
   var f = CBDEF_FORM, out = document.getElementById('cbdef_test_out'); if (!f || !out) return;
@@ -1903,7 +1903,7 @@ function cbDefTestRun(){
     var skipped = (ev && ev.skipped) || [];
     if (!(per.off > 0) && !(ev && ev.claims && ev.claims.length)) {
       why = '<div data-testid="cbdef-test-why" style="margin-top:6px;padding:8px 10px;border-radius:8px;background:var(--warn-tint);color:var(--warn-2);font-size:var(--fs-2)">'
-          + esc(missing || (skipped.length ? skipped.map(function(s){ return s.why || s.reason || ''; }).filter(Boolean).join(' · ') : tx('Nothing comes off this product at this quantity — the rule does not reach it (scope, dates, minimum, or an empty value).')))
+          + esc(missing || (skipped.length ? skipped.map(function(item){ return item.why || item.reason || ''; }).filter(Boolean).join(' · ') : tx('Nothing comes off this product at this quantity — the rule does not reach it (scope, dates, minimum, or an empty value).')))
           + '</div>';
     } else {
       why = '<div data-testid="cbdef-test-why" style="margin-top:6px;font-size:var(--fs-2);color:var(--ok-2);font-weight:700">' + esc((per.off > 0 ? fmtMoney(per.off, moneyCode()) + ' ' + tx('off') : '') + (ev.claims && ev.claims.length ? ' · ' + ev.claims.length + ' ' + tx('free item(s)') : '')) + '</div>';
