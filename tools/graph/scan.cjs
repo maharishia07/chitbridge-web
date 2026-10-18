@@ -38,9 +38,9 @@ function lex(src) {
   const n = src.length;
   const out = new Array(n);
   const strings = [];
-  let i = 0;
+  let index = 0;
   /* template nesting: each entry is the brace depth at which the `${` opened */
-  const tpl = [];
+  const list = [];
   let depth = 0;
   const isIdent = (c) => /[A-Za-z0-9_$]/.test(c);
   const lastSig = (upto) => { let k = upto - 1; while (k >= 0 && /\s/.test(out[k] || src[k])) k--; return k; };
@@ -48,18 +48,18 @@ function lex(src) {
   const blankTo = (from, to) => { for (let k = from; k < to; k++) out[k] = src[k] === '\n' ? '\n' : ' '; };
   const keep = (k) => { out[k] = src[k]; };
 
-  while (i < n) {
-    const c = src[i], d = src[i + 1];
-    if (c === '/' && d === '/') { const e = src.indexOf('\n', i); const end = e < 0 ? n : e; blankTo(i, end); i = end; continue; }
-    if (c === '/' && d === '*') { let e = src.indexOf('*/', i + 2); e = e < 0 ? n : e + 2; blankTo(i, e); i = e; continue; }
+  while (index < n) {
+    const c = src[index], d = src[index + 1];
+    if (c === '/' && d === '/') { const e = src.indexOf('\n', index); const end = e < 0 ? n : e; blankTo(index, end); index = end; continue; }
+    if (c === '/' && d === '*') { let e = src.indexOf('*/', index + 2); e = e < 0 ? n : e + 2; blankTo(index, e); index = e; continue; }
     if (c === '\'' || c === '"') {
-      keep(i); let k = i + 1;
+      keep(index); let k = index + 1;
       while (k < n && src[k] !== c && src[k] !== '\n') { if (src[k] === '\\') k++; k++; }
-      strings.push({ start: i + 1, end: k, text: src.slice(i + 1, k), q: c });
-      blankTo(i + 1, k); if (k < n) keep(k); i = k + 1; continue;
+      strings.push({ start: index + 1, end: k, text: src.slice(index + 1, k), q: c });
+      blankTo(index + 1, k); if (k < n) keep(k); index = k + 1; continue;
     }
     if (c === '`') {
-      keep(i); let k = i + 1, segStart = k;
+      keep(index); let k = index + 1, segStart = k;
       while (k < n) {
         if (src[k] === '\\') { k += 2; continue; }
         if (src[k] === '`') break;
@@ -68,16 +68,16 @@ function lex(src) {
       }
       strings.push({ start: segStart, end: Math.min(k, n), text: src.slice(segStart, Math.min(k, n)), q: '`' });
       blankTo(segStart, Math.min(k, n));
-      if (k < n && src[k] === '`') { keep(k); i = k + 1; continue; }
-      if (k < n) { keep(k); keep(k + 1); tpl.push(depth); depth++; i = k + 2; continue; }
-      i = k; continue;
+      if (k < n && src[k] === '`') { keep(k); index = k + 1; continue; }
+      if (k < n) { keep(k); keep(k + 1); list.push(depth); depth++; index = k + 2; continue; }
+      index = k; continue;
     }
-    if (c === '{') { keep(i); depth++; i++; continue; }
+    if (c === '{') { keep(index); depth++; index++; continue; }
     if (c === '}') {
-      if (tpl.length && depth - 1 === tpl[tpl.length - 1]) {
+      if (list.length && depth - 1 === list[list.length - 1]) {
         /* end of a `${…}` — back into the template's literal text */
-        keep(i); depth--; tpl.pop();
-        let k = i + 1, segStart = k;
+        keep(index); depth--; list.pop();
+        let k = index + 1, segStart = k;
         while (k < n) {
           if (src[k] === '\\') { k += 2; continue; }
           if (src[k] === '`') break;
@@ -86,19 +86,19 @@ function lex(src) {
         }
         strings.push({ start: segStart, end: Math.min(k, n), text: src.slice(segStart, Math.min(k, n)), q: '`' });
         blankTo(segStart, Math.min(k, n));
-        if (k < n && src[k] === '`') { keep(k); i = k + 1; continue; }
-        if (k < n) { keep(k); keep(k + 1); tpl.push(depth); depth++; i = k + 2; continue; }
-        i = k; continue;
+        if (k < n && src[k] === '`') { keep(k); index = k + 1; continue; }
+        if (k < n) { keep(k); keep(k + 1); list.push(depth); depth++; index = k + 2; continue; }
+        index = k; continue;
       }
-      keep(i); depth--; i++; continue;
+      keep(index); depth--; index++; continue;
     }
     if (c === '/') {
-      const p = lastSig(i);
+      const p = lastSig(index);
       const pc = p >= 0 ? src[p] : '';
       let regex = p < 0 || !(isIdent(pc) || pc === ')' || pc === ']' || pc === '}' || pc === '\'' || pc === '"' || pc === '`');
       if (!regex && isIdent(pc) && REGEX_AFTER.has(prevWord(p))) regex = true;
       if (regex) {
-        let k = i + 1, cls = false;
+        let k = index + 1, cls = false;
         while (k < n && src[k] !== '\n') {
           if (src[k] === '\\') { k += 2; continue; }
           if (cls) { if (src[k] === ']') cls = false; k++; continue; }
@@ -106,34 +106,34 @@ function lex(src) {
           if (src[k] === '/') break;
           k++;
         }
-        if (k < n && src[k] === '/') { keep(i); blankTo(i + 1, k); keep(k); k++; while (k < n && /[a-z]/.test(src[k])) { keep(k); k++; } i = k; continue; }
+        if (k < n && src[k] === '/') { keep(index); blankTo(index + 1, k); keep(k); k++; while (k < n && /[a-z]/.test(src[k])) { keep(k); k++; } index = k; continue; }
         /* not a regex after all (an unterminated one) — treat as division */
       }
-      keep(i); i++; continue;
+      keep(index); index++; continue;
     }
-    keep(i); i++;
+    keep(index); index++;
   }
   return { code: out.join(''), strings };
 }
 
 /* ── 2 · helpers over the blanked code ───────────────────────────────────────────────────────────────────────────── */
-function lineAt(src, pos) { let l = 1; for (let i = 0; i < pos && i < src.length; i++) if (src.charCodeAt(i) === 10) l++; return l; }
+function lineAt(text, pos) { let count = 1; for (let index = 0; index < pos && index < text.length; index++) if (text.charCodeAt(index) === 10) count++; return count; }
 
 /** a line index that turns an offset into a line number in O(log n) */
-function lineIndex(src) {
+function lineIndex(text) {
   const starts = [0];
-  for (let i = 0; i < src.length; i++) if (src.charCodeAt(i) === 10) starts.push(i + 1);
-  return (pos) => { let lo = 0, hi = starts.length - 1; while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (starts[mid] <= pos) lo = mid; else hi = mid - 1; } return lo + 1; };
+  for (let index = 0; index < text.length; index++) if (text.charCodeAt(index) === 10) starts.push(index + 1);
+  return (pos) => { let count = 0, hi = starts.length - 1; while (count < hi) { const mid = (count + hi + 1) >> 1; if (starts[mid] <= pos) count = mid; else hi = mid - 1; } return count + 1; };
 }
 
 /** index of the bracket that closes the one at `open` (code is blanked, so strings cannot fool it); -1 if none */
 function matchBracket(code, open) {
   const o = code[open], c = o === '{' ? '}' : o === '(' ? ')' : ']';
-  let d = 0;
+  let count = 0;
   for (let i = open; i < code.length; i++) {
     const ch = code[i];
-    if (ch === o) d++;
-    else if (ch === c) { d--; if (!d) return i; }
+    if (ch === o) count++;
+    else if (ch === c) { count--; if (!count) return i; }
   }
   return -1;
 }
@@ -147,12 +147,12 @@ function bodyAfterParams(code, paren) {
   if (code.slice(k, k + 2) === '=>') { k += 2; while (k < code.length && /\s/.test(code[k])) k++; }
   if (code[k] === '{') { const e = matchBracket(code, k); return e < 0 ? null : { bodyStart: k, bodyEnd: e }; }
   /* an expression-bodied arrow: to the end of the statement (`;` or a newline at depth 0) */
-  let d = 0, i = k;
+  let count = 0, i = k;
   for (; i < code.length; i++) {
     const ch = code[i];
-    if (ch === '(' || ch === '[' || ch === '{') d++;
-    else if (ch === ')' || ch === ']' || ch === '}') { if (d === 0) break; d--; }
-    else if ((ch === ';' || ch === '\n' || ch === ',') && d === 0) break;
+    if (ch === '(' || ch === '[' || ch === '{') count++;
+    else if (ch === ')' || ch === ']' || ch === '}') { if (count === 0) break; count--; }
+    else if ((ch === ';' || ch === '\n' || ch === ',') && count === 0) break;
   }
   return { bodyStart: k, bodyEnd: i };
 }
@@ -285,12 +285,12 @@ function scanJs(src, opts) {
     let k = arrowAt + 2; while (k < code.length && /\s/.test(code[k])) k++;
     let b;
     if (code[k] === '{') { const e = matchBracket(code, k); if (e < 0) return; b = { bodyStart: k, bodyEnd: e }; }
-    else { let d = 0, i = k; for (; i < code.length; i++) { const ch = code[i]; if ('([{'.includes(ch)) d++; else if (')]}'.includes(ch)) { if (!d) break; d--; } else if ((ch === ';' || ch === '\n' || ch === ',') && !d) break; } b = { bodyStart: k, bodyEnd: i }; }
+    else { let count = 0, i = k; for (; i < code.length; i++) { const ch = code[i]; if ('([{'.includes(ch)) count++; else if (')]}'.includes(ch)) { if (!count) break; count--; } else if ((ch === ';' || ch === '\n' || ch === ',') && !count) break; } b = { bodyStart: k, bodyEnd: i }; }
     const key = name + '@' + b.bodyStart; if (seenAt.has(key)) return; seenAt.add(key);
     functions.push({ name, kind, start: b.bodyStart, end: b.bodyEnd, line: L(declAt), endLine: L(b.bodyEnd), paramsAt: arrowAt, declAt });
   }
-  functions.sort((a, b) => a.start - b.start || b.end - a.end);
-  const declPos = new Set(functions.map((f) => f.paramsAt));
+  functions.sort((first, second) => first.start - second.start || second.end - first.end);
+  const declPos = new Set(functions.map((item) => item.paramsAt));
 
   /* calls: name( and holder.name( — never a declaration, never a keyword, never `new X(` */
   const calls = [];
@@ -318,7 +318,7 @@ function scanJs(src, opts) {
     let alias = null, names = [];
     let mm;
     if ((mm = new RegExp('(?:const|let|var)\\s+(' + NAME + ')\\s*=').exec(stmt))) alias = mm[1];
-    else if ((mm = /(?:const|let|var)\s*\{([^}]*)\}\s*=/.exec(stmt))) names = mm[1].split(',').map((x) => x.trim().split(/\s*:\s*/)).filter((p) => p[0]).map((p) => ({ exported: p[0], local: p[1] || p[0] }));
+    else if ((mm = /(?:const|let|var)\s*\{([^}]*)\}\s*=/.exec(stmt))) names = mm[1].split(',').map((x) => x.trim().split(/\s*:\s*/)).filter((item) => item[0]).map((item) => ({ exported: item[0], local: item[1] || item[0] }));
     else if ((mm = new RegExp('(' + NAME + ')\\s*=\\s*$').exec(stmt))) alias = mm[1];
     requires.push({ spec, alias, names, pos: m.index });   /* const { a } = require('x').sub — rare; ignored */
   }
