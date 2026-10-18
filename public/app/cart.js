@@ -571,9 +571,9 @@
       var cartShare = 0;
       var mine = list.filter(function (a) { return a.scope === 'line' && String(a.target) === String(item.key) && Math.abs(Number(a.amount) || 0) > 0; })
         .concat(cartShare > 0 ? cartAdj : []);
-      var labels = mine.map(function (a) { return a.label || a.kind; });
+      var labels = mine.map(function (item) { return item.label || item.kind; });
       var uniq = labels.filter(function (x, index) { return x && labels.indexOf(x) === index; });
-      var ids = mine.map(function (a) { return a.offer_id; }).filter(function (x, index, arr) { return x != null && arr.indexOf(x) === index; });
+      var ids = mine.map(function (item) { return item.offer_id; }).filter(function (x, index, arr) { return x != null && arr.indexOf(x) === index; });
       if (lineOff + cartShare > 0) M.rowOff[String(item.key)] = { off: roundMoney_(lineOff + cartShare), line_off: lineOff, cart_off: cartShare, label: uniq.join(' + '), ids: ids };
     });
     s._M = { key: key, M: M }; return M;
@@ -1768,7 +1768,7 @@
       var net = (item.total != null && isFinite(Number(item.total))) ? Number(item.total) : Math.max(0, g - off);
       gross += g; after += net;
       /* a line that carried two offers (offer.parts, lib/offers-live) makes two rows — the same rows the live cart printed */
-      if (off > 0 && item.offer && Array.isArray(item.offer.parts) && item.offer.parts.length >= 1) item.offer.parts.forEach(function (pt) {   /* one part too: a lone basket-level part must fold to a basket row, not read as a line offer */ if (pt.scope === 'cart') { var ck = String(pt.offer_id || pt.label); if (!cartParts[ck]) { cartParts[ck] = { scope: 'cart', offer_id: pt.offer_id || null, label: pt.label || 'offer', amount: 0 }; adjustments.push(cartParts[ck]); } cartParts[ck].amount = roundMoney_(cartParts[ck].amount - (Number(pt.off) || 0)); } else adjustments.push({ scope: 'line', key: String(index), offer_id: pt.offer_id || null, label: pt.label || 'offer', amount: -(Number(pt.off) || 0) }); });
+      if (off > 0 && item.offer && Array.isArray(item.offer.parts) && item.offer.parts.length >= 1) item.offer.parts.forEach(function (item) {   /* one part too: a lone basket-level part must fold to a basket row, not read as a line offer */ if (item.scope === 'cart') { var ck = String(item.offer_id || item.label); if (!cartParts[ck]) { cartParts[ck] = { scope: 'cart', offer_id: item.offer_id || null, label: item.label || 'offer', amount: 0 }; adjustments.push(cartParts[ck]); } cartParts[ck].amount = roundMoney_(cartParts[ck].amount - (Number(item.off) || 0)); } else adjustments.push({ scope: 'line', key: String(index), offer_id: item.offer_id || null, label: item.label || 'offer', amount: -(Number(item.off) || 0) }); });
       else if (off > 0) adjustments.push({ scope: 'line', key: String(index), offer_id: (item.offer && item.offer.offer_id) || null, label: (item.offer && item.offer.label) || 'offer', amount: -off });
       var rate = (item.gst_rate != null) ? Number(item.gst_rate) : ((item.tax && item.tax.rate != null) ? Number(item.tax.rate) : null);
       var cess = Number(item.cess_rate) || 0, tax = (rate != null && isFinite(rate)) ? taxOfNet_(net, rate + cess, incl) : null;   /* WX-O2C */
@@ -2348,7 +2348,7 @@
        "add all" addresses its row by INDEX in cart.rows() and a reorder would aim it at the wrong row. */
     var secOf = (typeof opts.sectionOf === 'function' && rows.every(function (item) { return item.type !== 'product'; })) ? opts.sectionOf : null;
     if (secOf) {
-      var keyed = rows.map(function (item, n) { var s = secOf(item) || { id: '', label: '', order: 1e9 }; return { r: item, s: s, n: n }; });
+      var keyed = rows.map(function (item, index) { var s = secOf(item) || { id: '', label: '', order: 1e9 }; return { r: item, s: s, n: index }; });
       keyed.sort(function (first, second) { return (first.s.order - second.s.order) || (first.n - second.n); });
       rows = keyed.map(function (item) { return item.r; });
       var secs = keyed.map(function (item) { return item.s; });
