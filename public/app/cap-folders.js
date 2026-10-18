@@ -40,10 +40,10 @@ function _foldersFrom(r){
   var all=(r&&r.folders)||[];
   var view=function(f){ return !!(f.system || f.kind==='view'); };
   UI.sysFolders=all.filter(view);
-  return all.filter(function(f){ return !view(f); });
+  return all.filter(function(item){ return !view(item); });
 }
 async function loadFolders(){
-  try{ var r=await api('foldersList'); UI.folders=_foldersFrom(r); }catch(e){ UI.folders=[]; }
+  try{ var reply=await api('foldersList'); UI.folders=_foldersFrom(reply); }catch(e){ UI.folders=[]; }
   /* ⚠️ bgRenderApp, NOT renderApp. This runs on STARTUP as well as after a user action, and renderApp rebuilds
      the shell — including the empty #modalhost — so a folder list arriving while someone is in Compose deleted
      their draft. Measured 2026-08-18: this was the last of seven such callers. The user-initiated callers
@@ -56,8 +56,8 @@ async function loadFolders(){
  * very same node: `o.depth` · `o.sel` · `o.onclick` (JS body) · `o.icon` · `o.label` (HTML) · `o.tail` (HTML, the far end) ·
  * `o.tid` (data-testid) · `o.style` (extra style, e.g. a taller tap target on a phone).
  */
-function _folderNode(o){
-  return '<div'+(o.cls?' class="'+o.cls+'"':'')+(o.tid?' data-testid="'+o.tid+'"':'')+' style="display:flex;align-items:center;gap:6px;padding:6px 8px;padding-inline-start:'+(8+(o.depth||0)*15)+'px;border-radius:9px;cursor:pointer;font-size:var(--fs-2);'+(o.sel?'background:var(--blue-tint-bg);color:var(--blue-2);font-weight:700':'color:var(--ink-2)')+(o.style?';'+o.style:'')+'" onclick="'+o.onclick+'">'+o.icon+' '+o.label+'<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">'+o.tail+'</span></div>';
+function _folderNode(node){
+  return '<div'+(node.cls?' class="'+node.cls+'"':'')+(node.tid?' data-testid="'+node.tid+'"':'')+' style="display:flex;align-items:center;gap:6px;padding:6px 8px;padding-inline-start:'+(8+(node.depth||0)*15)+'px;border-radius:9px;cursor:pointer;font-size:var(--fs-2);'+(node.sel?'background:var(--blue-tint-bg);color:var(--blue-2);font-weight:700':'color:var(--ink-2)')+(node.style?';'+node.style:'')+'" onclick="'+node.onclick+'">'+node.icon+' '+node.label+'<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">'+node.tail+'</span></div>';
 }
 /**
  * ⭐ THE TWO-PANE LAYOUT OF A FOLDER SCREEN — tree on the left (250px), the chosen thing on the right — taking its two halves
@@ -71,9 +71,9 @@ function _folderPanes(treeHTML, rightHTML, o){
 }
 // recursive tree render — parent_id makes it nestable (same pattern as the Network tree)
 function _folderTree(parentId, depth){
-  var kids=(UI.folders||[]).filter(function(f){ return (f.parent_id||null)===(parentId||null); });
-  return kids.map(function(f){
-    return _folderNode({ depth:depth, sel:UI.folderSel===f.folder_id, onclick:"selectFolder('"+f.folder_id+"')", icon:'📁', label:esc(f.name), tail:String(f.count||0) })+_folderTree(f.folder_id, depth+1);
+  var kids=(UI.folders||[]).filter(function(item){ return (item.parent_id||null)===(parentId||null); });
+  return kids.map(function(item){
+    return _folderNode({ depth:depth, sel:UI.folderSel===item.folder_id, onclick:"selectFolder('"+item.folder_id+"')", icon:'📁', label:esc(item.name), tail:String(item.count||0) })+_folderTree(item.folder_id, depth+1);
   }).join('');
 }
 function foldersScreen(){
@@ -85,12 +85,12 @@ function foldersScreen(){
       +'<div style="font-size:var(--fs-2);color:var(--blue);padding:9px 8px 4px;cursor:pointer" onclick="newFolder()">＋ New folder</div>', right);
 }
 function selectFolder(id){ UI.folderSel=id; UI.folderArch=false; UI.folderChits=undefined; if(typeof renderApp==='function')renderApp(); loadFolderChits(); }
-function setFolderArch(a){ UI.folderArch=a; UI.folderChits=undefined; var dp=document.getElementById('detailpane'); if(dp)dp.innerHTML=_folderView(); loadFolderChits(); }
+function setFolderArch(a){ UI.folderArch=a; UI.folderChits=undefined; var node=document.getElementById('detailpane'); if(node)node.innerHTML=_folderView(); loadFolderChits(); }
 async function loadFolderChits(){
   var id=UI.folderSel; if(!id) return;
-  try{ var r=await api('folderChits',{params:{id:id}, query:{archived:UI.folderArch?1:0}}); UI.folderChits=Array.isArray(r)?r:((r&&(r.chits||r.rows||r.data))||[]);   /* ⚠️ api() collapses {chits:[…]} TO the array — r.chits was undefined, so a folder showed no chits at all */ }
+  try{ var reply=await api('folderChits',{params:{id:id}, query:{archived:UI.folderArch?1:0}}); UI.folderChits=Array.isArray(reply)?reply:((reply&&(reply.chits||reply.rows||reply.data))||[]);   /* ⚠️ api() collapses {chits:[…]} TO the array — r.chits was undefined, so a folder showed no chits at all */ }
   catch(e){ UI.folderChits=[]; }
-  var dp=document.getElementById('detailpane'); if(dp)dp.innerHTML=_folderView();
+  var node=document.getElementById('detailpane'); if(node)node.innerHTML=_folderView();
 }
 function _folderView(){
   var f=(UI.folders||[]).find(function(x){return x.folder_id===UI.folderSel;})||{name:'Folder'};
@@ -107,15 +107,15 @@ function _folderView(){
   var list;
   if(UI.folderChits===undefined) list='<div style="padding:16px;color:var(--grey);font-size:var(--fs-2)">' + tx('Loading…') + '</div>';
   else if(!UI.folderChits.length) list='<div style="padding:22px 18px;color:var(--grey);font-size:var(--fs-2)">Nothing '+(arch?'in Archive':'here')+' yet. From Task, use 📁 Move to file a chit into this folder.</div>';
-  else list=UI.folderChits.map(function(c){
-    var bj=c.business_json; if(typeof bj==='string'){ try{ bj=JSON.parse(bj); }catch(e){ bj=null; } }
+  else list=UI.folderChits.map(function(item){
+    var bj=item.business_json; if(typeof bj==='string'){ try{ bj=JSON.parse(bj); }catch(e){ bj=null; } }
     var isDev=!!(bj&&bj.kind==='device_signal');
-    var subj=esc(c.manual_subject||c.auto_subject||'(no subject)');
-    var raiser=esc(c.raiser_name||(isDev&&bj.device_id)||c.sender_entity_display_name||'—');
-    var line2 = isDev ? ('🛰️ '+esc(bj.sub_type||bj.signal||'signal')+((bj.value!=null&&bj.value!=='')?(' = '+esc(String(bj.value))+esc(bj.unit||'')):'')+' · raised by <b>'+raiser+'</b>') : ('from '+esc(c.sender_entity_display_name||raiser));
-    var when=(typeof fmtAt==='function'?esc(fmtAt(c.created_at)):'');
-    var openA=(typeof openChit==='function')?('openChit(\''+c.chit_id+'\')'):'';
-    return '<div style="display:flex;gap:11px;padding:12px 18px;border-bottom:1px solid #f0f2f4;cursor:pointer" onclick="'+openA+'"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:var(--fs-3)">'+(isDev?'🛢️ ':'')+subj+'</div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">'+line2+'</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:0 0 auto"><span style="font-size:var(--fs-1);color:var(--grey)">'+when+'</span><span style="font-size:var(--fs-1);color:var(--blue);border:1px solid var(--blue-tint-line);background:var(--blue-tint-bg);border-radius:9px;padding:2px 8px" onclick="event.stopPropagation();moveChit(\''+c.chit_id+'\')">' + tx('📁 Move') + '</span></div></div>';
+    var subj=esc(item.manual_subject||item.auto_subject||'(no subject)');
+    var raiser=esc(item.raiser_name||(isDev&&bj.device_id)||item.sender_entity_display_name||'—');
+    var line2 = isDev ? ('🛰️ '+esc(bj.sub_type||bj.signal||'signal')+((bj.value!=null&&bj.value!=='')?(' = '+esc(String(bj.value))+esc(bj.unit||'')):'')+' · raised by <b>'+raiser+'</b>') : ('from '+esc(item.sender_entity_display_name||raiser));
+    var when=(typeof fmtAt==='function'?esc(fmtAt(item.created_at)):'');
+    var openA=(typeof openChit==='function')?('openChit(\''+item.chit_id+'\')'):'';
+    return '<div style="display:flex;gap:11px;padding:12px 18px;border-bottom:1px solid #f0f2f4;cursor:pointer" onclick="'+openA+'"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:var(--fs-3)">'+(isDev?'🛢️ ':'')+subj+'</div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">'+line2+'</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:0 0 auto"><span style="font-size:var(--fs-1);color:var(--grey)">'+when+'</span><span style="font-size:var(--fs-1);color:var(--blue);border:1px solid var(--blue-tint-line);background:var(--blue-tint-bg);border-radius:9px;padding:2px 8px" onclick="event.stopPropagation();moveChit(\''+item.chit_id+'\')">' + tx('📁 Move') + '</span></div></div>';
   }).join('');
   // The chit list is now ONE of three panes; metrics and rules render themselves.
   if(_FLD.tab==='metrics') return head+_folderMetricsPane();
@@ -149,8 +149,8 @@ function deleteFolder(id){
   else if(window.confirm('Delete folder? Its chits return to the mailbox.')) run();
 }
 async function moveChit(chitId){
-  if(UI.folders===undefined){ try{ var rr=await api('foldersList'); UI.folders=_foldersFrom(rr); }catch(e){ UI.folders=[]; } }   /* the filed folders only — a view is not a place to move into */   // self-load so Move works from Task, not just the Folders screen
-  var opts=(UI.folders||[]).map(function(f){ return '<div style="padding:9px 12px;border-bottom:1px solid #f0f2f4;cursor:pointer" onclick="_doMove(\''+chitId+'\',\''+f.folder_id+'\')">📁 '+esc(f.name)+'</div>'; }).join('');
+  if(UI.folders===undefined){ try{ var reply=await api('foldersList'); UI.folders=_foldersFrom(reply); }catch(e){ UI.folders=[]; } }   /* the filed folders only — a view is not a place to move into */   // self-load so Move works from Task, not just the Folders screen
+  var opts=(UI.folders||[]).map(function(item){ return '<div style="padding:9px 12px;border-bottom:1px solid #f0f2f4;cursor:pointer" onclick="_doMove(\''+chitId+'\',\''+item.folder_id+'\')">📁 '+esc(item.name)+'</div>'; }).join('');
   var body='<div style="max-height:320px;overflow:auto">'+(opts||'<div style="padding:12px;color:var(--grey);font-size:var(--fs-2)">No folders yet — create one first.</div>')+'<div style="padding:10px 12px;color:var(--disp);cursor:pointer;border-top:1px solid var(--line)" onclick="_doMove(\''+chitId+'\',null)">' + tx('↩ Remove from folder (back to mailbox)') + '</div></div>';
   if(typeof modal==='function') modal('<div class="mhd"><div class="t">' + tx('📁 Move to folder') + '</div></div><div class="mbody" style="padding:0">'+body+'</div>');
 }
@@ -178,7 +178,7 @@ var _FLD = { tab: 'chits', metrics: null, recon: null, rules: null, rulesNote: n
 
 function setFolderTab(t){
   _FLD.tab = t; _FLD.err = null;
-  var dp = document.getElementById('detailpane'); if (dp) dp.innerHTML = _folderView();
+  var node = document.getElementById('detailpane'); if (node) node.innerHTML = _folderView();
   if (t === 'metrics' && !_FLD.metrics) loadFolderMetrics();
   if (t === 'rules'   && !_FLD.rules)   loadFolderRules();
 }
@@ -188,7 +188,7 @@ function setFolderTab(t){
 function _fldPaint(){
   var host = document.getElementById('fld_pane');
   if (host) { host.innerHTML = (_FLD.tab === 'rules') ? _folderRulesPane() : (_FLD.tab === 'groupsum') ? _groupSumPane() : _folderMetricsPane(); return; }
-  var dp = document.getElementById('detailpane'); if (dp) dp.innerHTML = _folderView();
+  var node = document.getElementById('detailpane'); if (node) node.innerHTML = _folderView();
 }
 
 /* The track (Task / Order) is the folder you are always in. `_FLD.track` is set when the panes were opened from
@@ -199,16 +199,16 @@ function _fldTrack(){ return UI.folderSel ? null : (UI.folder === 'order' ? 'ord
    ⚠️ `migrated` is ANDed, not taken from the last response: if any folder reports the rules table missing, the
    pane must say so rather than show a confidently short list. */
 async function _allRulesPerFolder(track){
-  var mine = (UI.folders || []).filter(function(f){ return (f.scope || 'task') === track; });
+  var mine = (UI.folders || []).filter(function(item){ return (item.scope || 'task') === track; });
   var out = [], migrated = true;
-  for (var i = 0; i < mine.length; i++) {
+  for (var index = 0; index < mine.length; index++) {
     try {
-      var r = await api('folderRules', { params: { id: mine[i].folder_id } });
-      if (r && r.migrated === false) migrated = false;
-      (r && r.rules || []).forEach(function(x){ out.push(x); });
+      var reply = await api('folderRules', { params: { id: mine[index].folder_id } });
+      if (reply && reply.migrated === false) migrated = false;
+      (reply && reply.rules || []).forEach(function(x){ out.push(x); });
     } catch (e) { /* one unreadable folder must not blank the whole pane */ }
   }
-  out.sort(function(a, b){ return (a.sort - b.sort) || String(a.created_at).localeCompare(String(b.created_at)); });
+  out.sort(function(first, second){ return (first.sort - second.sort) || String(first.created_at).localeCompare(String(second.created_at)); });
   return { rules: out, migrated: migrated };
 }
 
@@ -221,13 +221,13 @@ async function _allRulesPerFolder(track){
  */
 async function _allRulesForSort(){
   var fs = UI.folders || [], out = [];
-  for (var i = 0; i < fs.length; i++) {
+  for (var index = 0; index < fs.length; index++) {
     try {
-      var r = await api('folderRules', { params: { id: fs[i].folder_id } });
-      (r && r.rules || []).forEach(function(x){ out.push(x); });
+      var reply = await api('folderRules', { params: { id: fs[index].folder_id } });
+      (reply && reply.rules || []).forEach(function(x){ out.push(x); });
     } catch (e) { /* one unreadable folder must not scramble the rest — it simply keeps its place */ }
   }
-  out.sort(function(a, b){ return (a.sort - b.sort) || String(a.created_at).localeCompare(String(b.created_at)); });
+  out.sort(function(first, second){ return (first.sort - second.sort) || String(first.created_at).localeCompare(String(second.created_at)); });
   return out;
 }
 /**
@@ -240,9 +240,9 @@ async function _allRulesForSort(){
  */
 async function ruleMove(id, dir){
   var vis = _FLD.rules || [];
-  var vi = -1; for (var k = 0; k < vis.length; k++) if (vis[k].rule_id === id) vi = k;
-  var ti = vi + dir;
-  if (vi < 0 || ti < 0 || ti >= vis.length) return;           // at the end — the button is disabled anyway
+  var count = -1; for (var index = 0; index < vis.length; index++) if (vis[index].rule_id === id) count = index;
+  var ti = count + dir;
+  if (count < 0 || ti < 0 || ti >= vis.length) return;           // at the end — the button is disabled anyway
   var neighbour = vis[ti].rule_id;
 
   _FLD.busy = true; _FLD.err = ''; _fldPaint();
@@ -258,8 +258,8 @@ async function ruleMove(id, dir){
     all.splice(dir < 0 ? ni : ni + 1, 0, moved);
 
     var writes = [];
-    all.forEach(function(r, i){
-      if (r.sort !== i) writes.push(api('folderRuleUpdate', { params: { rule_id: r.rule_id }, body: { sort: i } }));
+    all.forEach(function(item, i){
+      if (item.sort !== i) writes.push(api('folderRuleUpdate', { params: { rule_id: item.rule_id }, body: { sort: i } }));
     });
     await Promise.all(writes);
     _FLD.rules = null; await loadFolderRules();
@@ -278,11 +278,11 @@ async function loadFolderMetrics(){
          so the whole pane below renders unchanged — plus the per-folder split and the assertion that they add up.
          Asking a metrics endpoint and a reconcile endpoint separately would let the two disagree, which is exactly
          the failure the reconciliation exists to catch. */
-      var r = await api('folderReconcile', { query: { scope: track } });
+      var reply = await api('folderReconcile', { query: { scope: track } });
       /* `overall` is measured over every row on the track, so overall.count IS the total. Used as-is rather than
          overwritten with r.total: if those two ever disagree it is a bug worth seeing, not one worth papering. */
-      _FLD.metrics = (r && r.overall) || null;
-      _FLD.recon = r;
+      _FLD.metrics = (reply && reply.overall) || null;
+      _FLD.recon = reply;
     } else {
       _FLD.metrics = await api('folderMetrics', { params: { id: UI.folderSel } });
     }
@@ -324,7 +324,7 @@ async function loadGroupSum(){
      for that total sum irrespective of the folders."*  Inside a folder both readings are reasonable — this pile,
      or the whole track — so the pane offers them instead of picking one silently. */
   var fid = (UI.folderSel && !_FLD.gsAll) ? UI.folderSel : null;
-  var scope = UI.folderSel ? ((UI.folders || []).find(function(f){ return f.folder_id === UI.folderSel; }) || {}).scope || 'task'
+  var scope = UI.folderSel ? ((UI.folders || []).find(function(item){ return item.folder_id === UI.folderSel; }) || {}).scope || 'task'
                            : (UI.folder === 'order' ? 'order' : 'task');
   /* ⭐ A TICKED SELECTION WINS OVER THE FOLDER (backlog 31). `_FLD.gsIds` is set only by the select bar's
      🧮 button, so the ordinary folder/track reading is untouched when nothing is ticked.
@@ -370,9 +370,9 @@ function mvBtn(glyph, ok, title, js){
 }
 /* the Group sum's drill-down block: an indented block on the card colour under its row */
 function _gsNext(inner){ return '<div style="padding:2px 0 8px 16px;background:var(--card);color:var(--on-card)">' + inner + '</div>'; }
-function _gsMoney(v, mixed){
-  if (!v || !v.length) return '<span style="color:var(--grey)">—</span>';
-  return cbMoneyList(v.map(function(x){ return { currency: x.currency, total: x.total }; }),
+function _gsMoney(list, mixed){
+  if (!list || !list.length) return '<span style="color:var(--grey)">—</span>';
+  return cbMoneyList(list.map(function(x){ return { currency: x.currency, total: x.total }; }),
     { quiet: !mixed });
 }
 
@@ -438,10 +438,10 @@ function _groupSumPane(){
   var req = g.requirement || [];
   if (req.length) {
     out += '<div style="display:flex;font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);padding:0 0 4px"><span style="flex:1">' + tx('Item') + '</span><span style="width:110px;text-align:end">' + tx('Quantity') + '</span><span style="width:130px;text-align:end">' + tx('Cost') + '</span><span style="width:74px;text-align:end">' + tx('Parties') + '</span></div>';
-    out += req.map(function(l, i){
-      var open = !!(_FLD.gsOpen || {})[i];
+    out += req.map(function(l, index){
+      var open = !!(_FLD.gsOpen || {})[index];
       var name = esc(l.item) + (l.variant ? ' <span style="color:var(--grey);font-weight:600">· ' + esc(l.variant) + '</span>' : '');
-      var head = '<div onclick="gsToggle(' + i + ')" style="display:flex;align-items:center;cursor:pointer;padding:7px 0;border-top:1px solid var(--line);font-size:var(--fs-2)">'
+      var head = '<div onclick="gsToggle(' + index + ')" style="display:flex;align-items:center;cursor:pointer;padding:7px 0;border-top:1px solid var(--line);font-size:var(--fs-2)">'
         + '<span style="flex:1;min-width:0">' + (open ? '▾' : '<span class=arw>▸</span>') + ' ' + name
         + (l.matched_by_spelling ? ' <span title="matched through a misspelling" style="font-size:var(--fs-1);color:var(--warn-2)">≈</span>' : '') + '</span>'
         /**
@@ -479,7 +479,7 @@ function _groupSumPane(){
           }).join('')
         ) : '';
       var partial = (open && l.value_partial) ? '<div style="font-size:var(--fs-1);color:var(--warn-2);padding:0 0 8px 16px">⚠️ ' + l.value_partial.unpriced + ' of ' + (l.value_partial.priced + l.value_partial.unpriced) + ' have no price yet — ' + txf('the cost above is the priced part only, {not} the cost of this line.', { not: '<b>' + tx('not') + '</b>' }) + '</div>' : '';
-      var split = l.unit_split ? '<div style="font-size:var(--fs-1);color:var(--disp);padding:0 0 8px 16px">⚠️ ' + esc(l.flagged || 'unit split') + ' — ' + l.unit_split.map(function(u){ return esc(u.qty + ' ' + u.unit); }).join(' + ') + '</div>' : '';
+      var split = l.unit_split ? '<div style="font-size:var(--fs-1);color:var(--disp);padding:0 0 8px 16px">⚠️ ' + esc(l.flagged || 'unit split') + ' — ' + l.unit_split.map(function(item){ return esc(item.qty + ' ' + item.unit); }).join(' + ') + '</div>' : '';
       return head + rows + partial + split;
     }).join('');
   } else {
@@ -492,12 +492,12 @@ function _groupSumPane(){
   var blocks = [
     ['unmatched', '🚫 Not totalled — no catalogue match', f.unmatched, function(x){ return esc(x.phrase) + ' · ' + esc(x.store_name) + ' · ' + esc(String(x.qty) + ' ' + (x.unit || '')) + (x.reason ? ' — ' + esc(x.reason) : ''); }],
     ['variant_unspecified', '⚠️ Not totalled — a grade was never named', f.variant_unspecified, function(x){ return esc(x.item) + ' · ' + esc(x.store_name) + ' — catalogue has ' + esc((x.variants || []).join(' / ')) + '; picking one silently would be inventing the order'; }],
-    ['unit_split', '⚠️ Units that cannot be added', f.unit_split, function(x){ return esc(x.item) + ' — ' + (x.split || []).map(function(u){ return esc(u.qty + ' ' + u.unit); }).join(' + ') + '; no conversion is defined, and guessing one sources the wrong quantity'; }],
+    ['unit_split', '⚠️ Units that cannot be added', f.unit_split, function(x){ return esc(x.item) + ' — ' + (x.split || []).map(function(item){ return esc(item.qty + ' ' + item.unit); }).join(' + ') + '; no conversion is defined, and guessing one sources the wrong quantity'; }],
   ];
-  blocks.forEach(function(bk){
-    var arr = bk[2] || []; if (!arr.length) return;
-    out += '<div style="margin-top:12px"><div style="font-size:var(--fs-1);font-weight:800;color:var(--warn-2);margin-bottom:3px">' + bk[1] + ' (' + arr.length + ')</div>'
-      + arr.slice(0, 25).map(function(x){ return '<div style="font-size:var(--fs-1);color:var(--grey);padding:2px 0">· ' + bk[3](x) + '</div>'; }).join('')
+  blocks.forEach(function(item){
+    var arr = item[2] || []; if (!arr.length) return;
+    out += '<div style="margin-top:12px"><div style="font-size:var(--fs-1);font-weight:800;color:var(--warn-2);margin-bottom:3px">' + item[1] + ' (' + arr.length + ')</div>'
+      + arr.slice(0, 25).map(function(x){ return '<div style="font-size:var(--fs-1);color:var(--grey);padding:2px 0">· ' + item[3](x) + '</div>'; }).join('')
       + (arr.length > 25 ? '<div style="font-size:var(--fs-1);color:var(--grey)">…and ' + (arr.length - 25) + ' more</div>' : '') + '</div>';
   });
 
@@ -534,21 +534,21 @@ function _mBox(label, value, hint, tone){
  */
 function _reconStrip(){
   var r = _FLD.recon; if (!r) return '';
-  var fs = (r.folders || []).filter(function(f){ return f.own || f.tree; })
-    .sort(function(a, b){ return (b.tree || b.own) - (a.tree || a.own); });
+  var fs = (r.folders || []).filter(function(item){ return item.own || item.tree; })
+    .sort(function(first, second){ return (second.tree || second.own) - (first.tree || first.own); });
   var sums = '<b>' + r.total + '</b> total &nbsp;=&nbsp; <b>' + r.unfiled + '</b> unfiled &nbsp;+&nbsp; <b>' + r.filed + '</b> in folders';
   var verdict = r.reconciles
     ? '<span style="color:var(--ok-3);font-weight:800">' + tx('✓ adds up') + '</span>'
     : '<span style="color:var(--disp);font-weight:800">✗ ' + Math.abs(((r.discrepancy || {}).missing) || 0) + ' unaccounted for</span>';
   /* ⚠️ `own` AND `tree` BOTH, never one. A parent showing only its own rows makes the tree look smaller than its
      branches; showing only the roll-up makes a parent look full when everything is actually one level down. */
-  var rows = fs.length ? fs.map(function(f){
-    var s = f.segments || {};
+  var rows = fs.length ? fs.map(function(item){
+    var s = item.segments || {};
     return '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-top:1px solid var(--line);font-size:var(--fs-2)">'
-      + '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📁 ' + esc(f.name) + '</span>'
+      + '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📁 ' + esc(item.name) + '</span>'
       + '<span style="color:var(--grey);font-size:var(--fs-1)">' + (s.open || 0) + ' open · ' + (s.unassigned || 0) + ' unassigned</span>'
-      + '<span style="font-weight:800;min-width:34px;text-align:end">' + f.own + '</span>'
-      + (f.tree !== f.own ? '<span style="color:var(--grey);font-size:var(--fs-1);min-width:52px;text-align:end">' + f.tree + ' w/ sub</span>' : '<span style="min-width:52px"></span>')
+      + '<span style="font-weight:800;min-width:34px;text-align:end">' + item.own + '</span>'
+      + (item.tree !== item.own ? '<span style="color:var(--grey);font-size:var(--fs-1);min-width:52px;text-align:end">' + item.tree + ' w/ sub</span>' : '<span style="min-width:52px"></span>')
       + '</div>';
   }).join('') : '<div style="font-size:var(--fs-1);color:var(--grey);padding:5px 0">No folders on this track yet — everything is unfiled, which is why the two numbers match trivially.</div>';
 
@@ -567,7 +567,7 @@ function _folderMetricsPane(){
   var dash = function(v, suffix){ return (v === null || v === undefined) ? '—' : (v + (suffix || '')); };
 
   var money = (mo.by_currency || []).length
-    ? (mo.by_currency || []).map(function(b){ return '<span style="display:inline-block;border:1px solid var(--line);border-radius:9px;padding:3px 9px;margin:0 6px 6px 0;font-size:var(--fs-2)"><b>' + esc(b.currency) + '</b> ' + esc(String(b.total)) + ' <span style="color:var(--grey)">· ' + b.chits + ' chit' + (b.chits === 1 ? '' : 's') + '</span></span>'; }).join('')
+    ? (mo.by_currency || []).map(function(item){ return '<span style="display:inline-block;border:1px solid var(--line);border-radius:9px;padding:3px 9px;margin:0 6px 6px 0;font-size:var(--fs-2)"><b>' + esc(item.currency) + '</b> ' + esc(String(item.total)) + ' <span style="color:var(--grey)">· ' + item.chits + ' chit' + (item.chits === 1 ? '' : 's') + '</span></span>'; }).join('')
     : '<span style="font-size:var(--fs-2);color:var(--grey)">nothing with an agreed value</span>';
   /* ⚠️ NEVER ONE TOTAL ACROSS CURRENCIES, and the reason is said on screen rather than left as a design note. */
   var moneyNote = (mo.mixed ? '<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:2px">' + txf('⚠️ More than one currency — these are {not} added together. A single total across currencies is a number that means nothing.', { not: '<b>' + tx('not') + '</b>' }) + '</div>' : '')
@@ -661,7 +661,7 @@ function _fldFolderName(id){ var f = (UI.folders || []).find(function(x){ return
    who can see that rule 1 beats rule 3 can fix the conflict by rewriting a condition, which they cannot do while
    the precedence is guesswork. */
 function _ruleRow(r, i, n){
-  var terms = Object.keys(r.when || {}).map(function(k){ return '<span style="font-family:ui-monospace,Menlo,monospace;font-size:var(--fs-1)">' + esc(k) + '</span> <b>' + esc(String(r.when[k])) + '</b>'; }).join(' <span style="color:var(--grey)">and</span> ');
+  var terms = Object.keys(r.when || {}).map(function(item){ return '<span style="font-family:ui-monospace,Menlo,monospace;font-size:var(--fs-1)">' + esc(item) + '</span> <b>' + esc(String(r.when[item])) + '</b>'; }).join(' <span style="color:var(--grey)">and</span> ');
   return '<div style="border:1px solid var(--line);border-radius:9px;padding:11px 13px;margin-bottom:8px;background:var(--card);color:var(--on-card)">'
     + '<div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">'
     + '<span title="Runs ' + (i === 0 ? 'first' : 'after the ' + i + ' above') + '" style="flex:0 0 auto;min-width:20px;height:20px;border-radius:5px;background:var(--paper);border:1px solid var(--line);color:var(--grey);font-size:var(--fs-1);font-weight:700;display:inline-flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums">' + (i + 1) + '</span>'
@@ -705,7 +705,7 @@ function _folderRulesPane(){
   if (_FLD.rulesNote) out += '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;font-size:var(--fs-1);color:var(--warn-3);margin-bottom:9px">' + esc(_FLD.rulesNote) + '</div>';
   if (_FLD.err) out += '<div style="color:var(--disp);font-size:var(--fs-2);margin-bottom:8px">' + esc(_FLD.err) + '</div>';
 
-  out += rules.length ? rules.map(function(r, i){ return _ruleRow(r, i, rules.length); }).join('') : '<div style="color:var(--grey);font-size:var(--fs-2);padding:6px 0 12px">No rules yet. Everything arrives unfiled until you add one.</div>';
+  out += rules.length ? rules.map(function(item, index){ return _ruleRow(item, index, rules.length); }).join('') : '<div style="color:var(--grey);font-size:var(--fs-2);padding:6px 0 12px">No rules yet. Everything arrives unfiled until you add one.</div>';
 
   /* ⚠️ NO "ADD A RULE" AT TRACK LEVEL, and this is a real constraint rather than an omission: a rule's whole
      definition is "file into THIS folder", so from the track there is no destination to write down. Offering the
@@ -715,7 +715,7 @@ function _folderRulesPane(){
   } else if (!d) {
     out += '<button class="composebtn" data-testid="rule-new" onclick="ruleDraftNew()">+ Add a rule</button>';
   } else {
-    var opts = Object.keys(_RULE_HELP).map(function(k){ return '<option value="' + k + '"' + (d.term === k ? ' selected' : '') + '>' + esc(k) + '</option>'; }).join('');
+    var opts = Object.keys(_RULE_HELP).map(function(item){ return '<option value="' + item + '"' + (d.term === item ? ' selected' : '') + '>' + esc(item) + '</option>'; }).join('');
     out += '<div style="border:1px solid var(--line);border-radius:12px;padding:12px 13px;background:var(--paper);color:var(--on-bg)">'
       + '<div style="font-weight:700;font-size:var(--fs-2);margin-bottom:8px">' + tx('New rule') + '</div>'
       + '<input class="inp" data-testid="rule-name" placeholder="Name it (optional) — e.g. Ramesh invoices" value="' + esc(d.name || '') + '" oninput="ruleDraftSet(\'name\',this.value)" style="margin-bottom:8px">'
@@ -738,8 +738,8 @@ function _folderRulesPane(){
       var p = _FLD.preview;
       out += '<div style="margin-top:11px;border-top:1px dashed var(--line);padding-top:9px">'
         + '<div style="font-size:var(--fs-2);font-weight:700">' + p.matched + ' of your last ' + p.scanned + ' chits would have been filed here</div>'
-        + (p.matched ? '<div style="margin-top:5px">' + p.sample.map(function(s){
-            return '<div style="font-size:var(--fs-1);padding:3px 0;border-top:1px solid #f0f2f4"><b>' + esc(s.subject || '(no subject)') + '</b> <span style="color:var(--grey)">· ' + esc(s.counterparty || '—') + ' · ' + esc(String(s.created_at || '').slice(0, 10)) + '</span></div>'; }).join('')
+        + (p.matched ? '<div style="margin-top:5px">' + p.sample.map(function(item){
+            return '<div style="font-size:var(--fs-1);padding:3px 0;border-top:1px solid #f0f2f4"><b>' + esc(item.subject || '(no subject)') + '</b> <span style="color:var(--grey)">· ' + esc(item.counterparty || '—') + ' · ' + esc(String(item.created_at || '').slice(0, 10)) + '</span></div>'; }).join('')
           + (p.matched > p.sample.length ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">…and ' + (p.matched - p.sample.length) + ' more</div>' : '') + '</div>'
           : '<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:4px">⚠️ Nothing matched. A rule that catches nothing looks enabled and does nothing — check the term before saving.</div>')
         + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">' + txf('This is a preview only. Saving affects {new}; nothing already filed moves.', { new: '<b>' + tx('new arrivals') + '</b>' }) + '</div></div>';
