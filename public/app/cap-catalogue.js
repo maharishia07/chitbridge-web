@@ -78,7 +78,7 @@ function ctField(k,label,v,extra){ return `<label class="fl">${label}</label><in
  */
 const CT_FIXED_KEYS = ['name','unit','price','code','hsn','sku','desc','description','note','highlight'];
 function ctDeclaredList(){
-  return (UI._catFields||[]).filter(function(f){ return f && f.field_key && CT_FIXED_KEYS.indexOf(f.field_key) < 0; });
+  return (UI._catFields||[]).filter(function(item){ return item && item.field_key && CT_FIXED_KEYS.indexOf(item.field_key) < 0; });
 }
 /**
  * ⚠️⚠️ THE HOST ALWAYS EXISTS. With no columns declared this returned '' — no #ct_declared in the form — and the
@@ -94,52 +94,52 @@ function ctDeclaredFields(d){
 }
 function ctDeclaredRows(d){
   const list = ctDeclaredList(); if(!list.length) return '';
-  const rows = list.map(function(f){
-    const k = f.field_key, v = d ? d[k] : undefined, isNum = f.field_type === 'number';
-    const label = esc(f.field_name || k) + (f.required ? ' <span style="color:var(--disp)">*</span>' : '');
+  const rows = list.map(function(item){
+    const k = item.field_key, v = d ? d[k] : undefined, isNum = item.field_type === 'number';
+    const label = esc(item.field_name || k) + (item.required ? ' <span style="color:var(--disp)">*</span>' : '');
     if (v != null && typeof v === 'object') {
       return `<label class="fl">${label}</label><div class="inp" style="color:var(--grey)" data-testid="cat-field-${esc(k)}" title="${esc(tx('imported as structured data — edit it through the spreadsheet'))}">${esc(JSON.stringify(v))}</div>`;
     }
-    return `<label class="fl">${label}</label><input class="inp" id="ct_f_${esc(k)}" data-testid="cat-field-${esc(k)}" data-key="${esc(k)}" data-type="${esc(f.field_type||'text')}"${isNum ? ' inputmode="decimal"' : ''} value="${esc(v==null?'':v)}">`;
+    return `<label class="fl">${label}</label><input class="inp" id="ct_f_${esc(k)}" data-testid="cat-field-${esc(k)}" data-key="${esc(k)}" data-type="${esc(item.field_type||'text')}"${isNum ? ' inputmode="decimal"' : ''} value="${esc(v==null?'':v)}">`;
   }).join('');
   return rows;
 }
 /** The declared columns that carry a value, as view rows. Only scalars: an object is a record, not a value. */
 function ctDeclaredViewRows(d, kv){
-  return ctDeclaredList().filter(function(f){ const v = d[f.field_key]; return v != null && v !== '' && typeof v !== 'object'; })
-    .map(function(f){ return kv(esc(f.field_name || f.field_key), d[f.field_key]); }).join('');
+  return ctDeclaredList().filter(function(item){ const v = d[item.field_key]; return v != null && v !== '' && typeof v !== 'object'; })
+    .map(function(item){ return kv(esc(item.field_name || item.field_key), d[item.field_key]); }).join('');
 }
 const catDeclared = async function(){
   if (UI._catFields) return UI._catFields;                 // once per session — this is a definition, not data
-  try { const r = await api('schemaFields'); UI._catFields = (r && r.fields) || []; }
+  try { const reply = await api('schemaFields'); UI._catFields = (reply && reply.fields) || []; }
   catch (_) { UI._catFields = []; }                        // no definition is not an error; it just means no hints
   return UI._catFields;
 };
 /** the RFC 7386 diff a Save sends: only the keys whose value changed (merge:true on PATCH /products/:id) */
-function prodDiff(cur, next){ const out={}; Object.keys(next||{}).forEach(k=>{ if(JSON.stringify((cur||{})[k])!==JSON.stringify(next[k])) out[k]=next[k]; }); return out; }
+function prodDiff(cur, next){ const out={}; Object.keys(next||{}).forEach(item=>{ if(JSON.stringify((cur||{})[item])!==JSON.stringify(next[item])) out[item]=next[item]; }); return out; }
 
 /* ══ MOVED FROM app.html — the template and the import (preflight → decisions → import) ══ */
 async function downloadCatalogueTemplate(btn){
   const was = btn ? btn.textContent : null;
   if(btn){ btn.disabled = true; btn.textContent = '📄 …'; }
   try{
-    const t = await api('prodTemplate');
-    const blob = new Blob(['﻿' + t.csv], { type: 'text/csv;charset=utf-8' });   // BOM: Excel mangles ₹ without it
+    const reply = await api('prodTemplate');
+    const blob = new Blob(['﻿' + reply.csv], { type: 'text/csv;charset=utf-8' });   // BOM: Excel mangles ₹ without it
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = t.filename || 'catalogue-template.csv';
-    document.body.appendChild(a); a.click(); a.remove();
+    const node = document.createElement('a');
+    node.href = url; node.download = reply.filename || 'catalogue-template.csv';
+    document.body.appendChild(node); node.click(); node.remove();
     setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
 
-    const cols = (t.columns||[]).map(function(c){
-      const opt = (t.optional||[]).indexOf(c) >= 0;
+    const cols = (reply.columns||[]).map(function(item){
+      const opt = (reply.optional||[]).indexOf(item) >= 0;
       return '<span style="display:inline-block;border:1px solid var(--line);border-radius:6px;padding:2px 7px;margin:0 4px 4px 0;font-size:var(--fs-1);font-family:ui-monospace,monospace;'
-        + (opt ? 'color:var(--grey);border-style:dashed' : 'font-weight:600') + '">' + esc(c) + '</span>';
+        + (opt ? 'color:var(--grey);border-style:dashed' : 'font-weight:600') + '">' + esc(item) + '</span>';
     }).join('');
-    var body = '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:9px">Downloaded as <b>' + esc(t.filename||'') + '</b> — these are the columns your catalogue accepts. Dashed ones are optional.</div>'
+    var body = '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:9px">Downloaded as <b>' + esc(reply.filename||'') + '</b> — these are the columns your catalogue accepts. Dashed ones are optional.</div>'
       + '<div style="margin-bottom:10px">' + cols + '</div>'
       + '<ul style="font-size:var(--fs-2);line-height:1.65;padding-inline-start:18px;margin:0">'
-      + (t.notes||[]).map(function(n){ return '<li>' + esc(n) + '</li>'; }).join('')
+      + (reply.notes||[]).map(function(item){ return '<li>' + esc(item) + '</li>'; }).join('')
       + '</ul>';
     /* the workshop shows the columns in its modal; a page with no modal() (catalogue.html) has a slot for them under the button */
     var slot = document.getElementById('cat_tpl_out');
@@ -193,27 +193,27 @@ async function _cfRun(btn){
       empty:         ['—','var(--grey-2)','this column has no heading']
     };
     var accepted = res.accepted || [];
-    var rowsHtml = (r.mapping||[]).map(function(m, i){
-      var h = HOW[m.how] || ['?','var(--grey-2)',m.how];
+    var rowsHtml = (r.mapping||[]).map(function(item, index){
+      var h = HOW[item.how] || ['?','var(--grey-2)',item.how];
       var control;
-      if(m.how === 'blocked' || m.how === 'empty'){
+      if(item.how === 'blocked' || item.how === 'empty'){
         control = '<span style="font-size:var(--fs-1);color:'+h[1]+'">not importable</span>';
       } else {
         var opts = ['<option value="ignore">' + tx('Leave it out') + '</option>'];
         accepted.forEach(function(f){
-          var sel = (m.canonical === f) ? ' selected' : '';
+          var sel = (item.canonical === f) ? ' selected' : '';
           opts.push('<option value="map:'+esc(f)+'"'+sel+'>Use as '+esc(f)+'</option>');
         });
         // Only offer to CREATE where nothing in the catalogue claimed it — otherwise the obvious click is the one
         // that grows a second column meaning the same thing.
-        if(!m.canonical) opts.push('<option value="create" selected>' + tx('Add as a new column') + '</option>');
-        control = '<select data-cfcol="'+esc(m.incoming||'')+'" data-testid="cf-decide-'+i+'" class="inp" style="font-size:var(--fs-2);padding:3px 6px;width:100%">'+opts.join('')+'</select>';
+        if(!item.canonical) opts.push('<option value="create" selected>' + tx('Add as a new column') + '</option>');
+        control = '<select data-cfcol="'+esc(item.incoming||'')+'" data-testid="cf-decide-'+index+'" class="inp" style="font-size:var(--fs-2);padding:3px 6px;width:100%">'+opts.join('')+'</select>';
       }
       return '<tr>'
-        + '<td style="padding:5px 8px;border-bottom:1px dashed var(--line);font-family:ui-monospace,monospace;font-size:var(--fs-2)">'+esc(m.incoming||'(blank)')+'</td>'
+        + '<td style="padding:5px 8px;border-bottom:1px dashed var(--line);font-family:ui-monospace,monospace;font-size:var(--fs-2)">'+esc(item.incoming||'(blank)')+'</td>'
         + '<td style="padding:5px 8px;border-bottom:1px dashed var(--line);color:'+h[1]+';font-weight:700;text-align:center">'+h[0]+'</td>'
         + '<td style="padding:5px 8px;border-bottom:1px dashed var(--line);min-width:150px">'+control+'</td>'
-        + '<td style="padding:5px 8px;border-bottom:1px dashed var(--line);font-size:var(--fs-1);color:var(--grey)">'+esc(m.conflict||m.why||h[2])+'</td>'
+        + '<td style="padding:5px 8px;border-bottom:1px dashed var(--line);font-size:var(--fs-1);color:var(--grey)">'+esc(item.conflict||item.why||h[2])+'</td>'
         + '</tr>';
     }).join('');
 
@@ -224,17 +224,17 @@ async function _cfRun(btn){
       : (r.ready
         ? '<span style="background:var(--ok-tint);color:var(--disp);border-radius:6px;padding:3px 9px;font-size:var(--fs-1);font-weight:700">' + tx('Every column is placed') + '</span>'
         : '<span style="background:var(--warn-tint);color:var(--warn-3);border-radius:6px;padding:3px 9px;font-size:var(--fs-1);font-weight:700">' + tx('Check the choices below, then import') + '</span>');
-    var issues = (r.issues||[]).slice(0,25).map(function(i){
-      var c = i.severity==='error' ? 'var(--disp)' : (i.severity==='info' ? 'var(--grey-2)' : 'var(--warn-2)');
-      return '<li style="color:'+c+'">line '+i.row+' · <b>'+esc(i.column)+'</b> — '+esc(i.message)+'</li>';
+    var issues = (r.issues||[]).slice(0,25).map(function(item){
+      var c = item.severity==='error' ? 'var(--disp)' : (item.severity==='info' ? 'var(--grey-2)' : 'var(--warn-2)');
+      return '<li style="color:'+c+'">line '+item.row+' · <b>'+esc(item.column)+'</b> — '+esc(item.message)+'</li>';
     }).join('');
 
     out.innerHTML = badge
       + '<div style="font-size:var(--fs-2);margin:9px 0 6px">'+s.rows+' row(s) read · <b>'+s.importable+'</b> would import · '+s.errors+' error(s) · '+s.warnings+' warning(s)</div>'
       + '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead><tr>'
-      + ['In your file','','What to do with it','Why'].map(function(h){ return '<th style="text-align:start;padding:5px 8px;font-size:var(--fs-1);text-transform:uppercase;color:var(--grey);border-bottom:1px solid var(--line)">'+h+'</th>'; }).join('')
+      + ['In your file','','What to do with it','Why'].map(function(item){ return '<th style="text-align:start;padding:5px 8px;font-size:var(--fs-1);text-transform:uppercase;color:var(--grey);border-bottom:1px solid var(--line)">'+item+'</th>'; }).join('')
       + '</tr></thead><tbody>'+rowsHtml+'</tbody></table></div>'
-      + ((r.notes||[]).length ? '<ul style="font-size:var(--fs-2);line-height:1.6;padding-inline-start:18px;margin:10px 0 0">'+r.notes.map(function(n){ return '<li>'+esc(n)+'</li>'; }).join('')+'</ul>' : '')
+      + ((r.notes||[]).length ? '<ul style="font-size:var(--fs-2);line-height:1.6;padding-inline-start:18px;margin:10px 0 0">'+r.notes.map(function(item){ return '<li>'+esc(item)+'</li>'; }).join('')+'</ul>' : '')
       + (issues ? '<div style="font-size:var(--fs-1);text-transform:uppercase;color:var(--grey);margin:10px 0 4px">' + tx('Rows') + '</div><ul style="font-size:var(--fs-2);line-height:1.6;padding-inline-start:18px;margin:0">'+issues+'</ul>'
           + ((r.issues||[]).length>25 ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px">…and '+((r.issues||[]).length-25)+' more.</div>' : '') : '')
       + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:11px;border-top:1px solid var(--line);padding-top:8px">' + txf('Reading the file changed nothing. {import} applies the choices above — it adds and updates products, and never deletes one.', {
@@ -242,9 +242,9 @@ async function _cfRun(btn){
 
     // The Import button is enabled only when the file itself is sound. Row errors are not a warning to click past:
     // the server refuses them too, and offering the button anyway teaches people to ignore it.
-    var ib = document.getElementById('cf_import');
-    if(ib){ ib.disabled = blocking; ib.style.opacity = blocking ? '.5' : '1';
-      ib.title = blocking ? 'Fix the row problems first' : 'Apply these choices to your catalogue'; }
+    var node = document.getElementById('cf_import');
+    if(node){ node.disabled = blocking; node.style.opacity = blocking ? '.5' : '1';
+      node.title = blocking ? 'Fix the row problems first' : 'Apply these choices to your catalogue'; }
   }catch(e){
     out.innerHTML = '<div style="font-size:var(--fs-2);color:var(--disp)">'+esc((e&&e.message)||'Could not read the file.')+'</div>';
   }finally{ if(btn){ btn.disabled = false; btn.textContent = was; } }
@@ -265,8 +265,8 @@ function _cfImport(btn){
     if(v.indexOf('map:') === 0) return { incoming: el.getAttribute('data-cfcol'), action: 'map', field: v.slice(4) };
     return { incoming: el.getAttribute('data-cfcol'), action: 'ignore' };
   });
-  var creating = decisions.filter(function(d){ return d.action === 'create'; }).length;
-  var using = decisions.filter(function(d){ return d.action !== 'ignore'; }).length;
+  var creating = decisions.filter(function(item){ return item.action === 'create'; }).length;
+  var using = decisions.filter(function(item){ return item.action !== 'ignore'; }).length;
   if(!using){ if(typeof toast==='function') toast('Every column is set to be left out.'); return; }
   confirmAsk('Import using ' + using + ' column' + (using===1?'':'s') + '?',
     (creating ? 'It also adds <b>' + creating + ' new column' + (creating===1?'':'s') + '</b> to your catalogue.<div style="margin-top:7px">' : '<div>')
@@ -276,17 +276,17 @@ function _cfImport(btn){
 async function _cfImportRun(btn, decisions, out){
   var was = btn.textContent; btn.disabled = true; btn.textContent = 'Importing…';
   try{
-    var r = await api('prodImport', { body: Object.assign(UI._cf.xlsx ? { xlsx: UI._cf.xlsx } : { csv: UI._cf.csv }, { decisions: decisions, confirm: true }) });   /* the SAME file the preflight read */
-    var sum = r.summary || {};
-    out.innerHTML = '<div style="background:var(--ok-tint);color:var(--ok-2);border-radius:6px;padding:8px 10px;font-size:var(--fs-2);font-weight:700">'+esc(r.message||'Imported')+'</div>'
-      + ((r.created_columns||[]).length ? '<div style="font-size:var(--fs-2);color:var(--grey);margin-top:8px">Your catalogue now also has: '+r.created_columns.map(esc).join(', ')+'. The next template you download will include them.</div>' : '')
+    var reply = await api('prodImport', { body: Object.assign(UI._cf.xlsx ? { xlsx: UI._cf.xlsx } : { csv: UI._cf.csv }, { decisions: decisions, confirm: true }) });   /* the SAME file the preflight read */
+    var sum = reply.summary || {};
+    out.innerHTML = '<div style="background:var(--ok-tint);color:var(--ok-2);border-radius:6px;padding:8px 10px;font-size:var(--fs-2);font-weight:700">'+esc(reply.message||'Imported')+'</div>'
+      + ((reply.created_columns||[]).length ? '<div style="font-size:var(--fs-2);color:var(--grey);margin-top:8px">Your catalogue now also has: '+reply.created_columns.map(esc).join(', ')+'. The next template you download will include them.</div>' : '')
       + '<ul style="font-size:var(--fs-2);line-height:1.6;padding-inline-start:18px;margin:10px 0 0">'
-      + (r.outcome||[]).slice(0,40).map(function(o){
-          var c = o.action==='failed' ? 'var(--disp)' : 'var(--ink)';
-          return '<li style="color:'+c+'">line '+o.line+' · '+esc(o.name||'')+' — '+esc(o.action)+(o.message?': '+esc(o.message):'')+'</li>';
+      + (reply.outcome||[]).slice(0,40).map(function(item){
+          var c = item.action==='failed' ? 'var(--disp)' : 'var(--ink)';
+          return '<li style="color:'+c+'">line '+item.line+' · '+esc(item.name||'')+' — '+esc(item.action)+(item.message?': '+esc(item.message):'')+'</li>';
         }).join('')
       + '</ul>'
-      + ((r.outcome||[]).length>40 ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px">…and '+((r.outcome||[]).length-40)+' more.</div>' : '');
+      + ((reply.outcome||[]).length>40 ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px">…and '+((reply.outcome||[]).length-40)+' more.</div>' : '');
     btn.disabled = true; btn.style.opacity = '.5';
     if(typeof loadProducts === 'function') loadProducts();                                        /* the workshop's list */
     if(typeof CBCatalogueApp !== 'undefined' && CBCatalogueApp.changed) CBCatalogueApp.changed();   /* the small app's list and the live shelf */
@@ -324,7 +324,7 @@ var CBCatalogueApp = (function () {
   function catNames(d) { var ids = catgIdsOf(d), live = (typeof _CATG !== 'undefined' && _CATG) || []; return ids.map(function (id) { var c = live.filter(function (x) { return String(x.id) === String(id); })[0]; return c ? c.name : null; }).filter(Boolean); }
   function el(id) { return document.getElementById(id); }
   /** the outcome line beside a control (what CBAction paints when it runs; this is the same box for a check that never reached the server) */
-  function say(id, msg, tone) { var o = el(id); if (!o) { toast(msg); return; } o.textContent = msg; o.setAttribute('data-tone', tone || 'ok'); }
+  function say(id, msg, tone) { var node = el(id); if (!node) { toast(msg); return; } node.textContent = msg; node.setAttribute('data-tone', tone || 'ok'); }
   function seesCosts() { return !!(S.cost && S.cost.can_see_costs); }
   /** the one sentence for a cost-blind login — the server's field decides; the words are the gate's own (routes/products.js) */
   function costWhy() { return S.cost === null ? T('Checking who may see prices…') : T('Your access does not include cost or price. The owner grants “Sees costs” in Employees.'); }
@@ -341,12 +341,12 @@ var CBCatalogueApp = (function () {
       var q = { limit: S.limit, offset: S.offset };
       if (S.q) q.q = S.q;
       if (S.status) q.status = S.status === 'unavailable' ? 'not-available' : S.status;   /* the api's negation word for the chip's status (the workshop's note) */
-      var r = await api('prodList', { query: q });
+      var reply = await api('prodList', { query: q });
       /* core.js unwrap() collapses {items:[…]} into the array and carries total · truncated · status_counts · category_counts · uncategorised on it (SIBS) — the workshop reads both shapes, so does this */
-      S.items = Array.isArray(r) ? r : ((r && r.items) || []);
-      S.total = r && r.total != null ? Number(r.total) : S.items.length;
-      S.truncated = !!(r && r.truncated);
-      S.counts = (r && r.status_counts) || null; S.catCounts = (r && r.category_counts) || null; S.uncat = Number(r && r.uncategorised) || 0;
+      S.items = Array.isArray(reply) ? reply : ((reply && reply.items) || []);
+      S.total = reply && reply.total != null ? Number(reply.total) : S.items.length;
+      S.truncated = !!(reply && reply.truncated);
+      S.counts = (reply && reply.status_counts) || null; S.catCounts = (reply && reply.category_counts) || null; S.uncat = Number(reply && reply.uncategorised) || 0;
       S.state = 'ready';
     } catch (e) {
       S.state = 'error'; S.err = (e && e.status >= 400 && e.status < 500 && e.message) ? e.message : T('Your items could not be read. Nothing was lost — try again.');
@@ -365,12 +365,12 @@ var CBCatalogueApp = (function () {
       + '<dialog class="sheet" id="cat_sheet" data-testid="cat-sheet"></dialog>';
   }
   function paintCount() {
-    var c = el('cat_count'); if (!c) return;
-    if (S.state === 'error') { c.innerHTML = '<span class="err" data-testid="cat-read-err">' + esc(S.err) + '</span>'; return; }
-    if (S.total == null) { c.innerHTML = '<span class="sub">' + esc(T('Reading your items…')) + '</span>'; return; }
+    var node = el('cat_count'); if (!node) return;
+    if (S.state === 'error') { node.innerHTML = '<span class="err" data-testid="cat-read-err">' + esc(S.err) + '</span>'; return; }
+    if (S.total == null) { node.innerHTML = '<span class="sub">' + esc(T('Reading your items…')) + '</span>'; return; }
     var n = S.total, word = n === 1 ? T('item') : T('items');
     var na = S.counts ? (Number(S.counts.unavailable) || 0) + (Number(S.counts.redundant) || 0) + (Number(S.counts.retired) || 0) : 0;
-    c.innerHTML = '<b>' + esc(String(n)) + '</b> ' + esc(word)
+    node.innerHTML = '<b>' + esc(String(n)) + '</b> ' + esc(word)
       + (S.q || S.status ? ' <span class="sub">' + esc(T('matching')) + '</span>' : '')
       + (na && !S.q && !S.status ? ' <span class="tag amber" data-testid="cat-count-na">' + esc(String(na)) + ' ' + esc(T('not available')) + '</span>' : '')
       + (S.uncat && !S.q && !S.status ? ' <span class="tag" data-testid="cat-count-uncat">' + esc(String(S.uncat)) + ' ' + esc(T('without a category')) + '</span>' : '');
@@ -404,19 +404,19 @@ var CBCatalogueApp = (function () {
       error: function () { return { title: T('Your items could not be read.'), sub: S.err }; },
       empty: function () { return { title: S.q || S.status ? T('Nothing matches.') : T('No items yet.'), sub: S.q || S.status ? T('Clear the search or the status filter.') : T('Add one with ＋ New item, or import a sheet.') }; },
       /* the SERVER filters by status: this filter's only job is to say which status, and to be a chip a person can clear */
-      filters: [{ key: 'status', label: T('Status'), all: T('Any status'), options: Object.keys(STATUS_WORDS).map(function (k) { return { v: k, label: T(STATUS_WORDS[k]) }; }), match: function () { return true; } }],
+      filters: [{ key: 'status', label: T('Status'), all: T('Any status'), options: Object.keys(STATUS_WORDS).map(function (item) { return { v: item, label: T(STATUS_WORDS[item]) }; }), match: function () { return true; } }],
       search: function (p) { return pName(pData(p)); }, searchHint: T('Search name or code'),
       remote: { total: function () { return S.total; }, foot: footHTML,
         onQuery: function (q) { var st = (q.filt && q.filt.status) || ''; if (Array.isArray(st)) st = st[0] || ''; var nq = String(q.q || '').trim(); if (nq === S.q && st === S.status) return; S.q = nq; S.status = st; S.offset = 0; readItems(); } },
       onOpen: function (p) { openItem(prodId(p)); }
     });
-    var nb = el('cat_new'); if (nb) nb.onclick = function () { openItem(null); };
+    var node = el('cat_new'); if (node) node.onclick = function () { openItem(null); };
   }
 
   /* ── the item sheet ── */
-  function itemOf(id) { return S.items.filter(function (p) { return String(prodId(p)) === String(id); })[0] || null; }
-  function openItem(id) { S.sel = id; S.mode = id ? 'view' : 'new'; paintSheet(); var d = el('cat_sheet'); if (d && !d.open) { try { d.showModal(); } catch (_) { d.setAttribute('open', ''); } } if (S.mode === 'new') catDeclared().then(function () { var h = el('ct_declared'); if (h && S.mode === 'new') { h.innerHTML = ctDeclaredRows({}); var w = el('ct_declared_wrap'); if (w) w.hidden = !h.innerHTML; } }); }
-  function closeSheet() { var d = el('cat_sheet'); if (!d) return; try { d.close(); } catch (_) { d.removeAttribute('open'); } d.innerHTML = ''; S.sel = null; S.mode = 'view'; }
+  function itemOf(id) { return S.items.filter(function (item) { return String(prodId(item)) === String(id); })[0] || null; }
+  function openItem(id) { S.sel = id; S.mode = id ? 'view' : 'new'; paintSheet(); var node = el('cat_sheet'); if (node && !node.open) { try { node.showModal(); } catch (_) { node.setAttribute('open', ''); } } if (S.mode === 'new') catDeclared().then(function () { var h = el('ct_declared'); if (h && S.mode === 'new') { h.innerHTML = ctDeclaredRows({}); var w = el('ct_declared_wrap'); if (w) w.hidden = !h.innerHTML; } }); }
+  function closeSheet() { var node = el('cat_sheet'); if (!node) return; try { node.close(); } catch (_) { node.removeAttribute('open'); } node.innerHTML = ''; S.sel = null; S.mode = 'view'; }
   function kv(l, v) { return '<div class="cat-kv"><b>' + l + '</b><span>' + (v === '' || v == null ? '—' : esc(v)) + '</span></div>'; }
   function priceField(d) {
     var may = seesCosts();
@@ -434,9 +434,9 @@ var CBCatalogueApp = (function () {
   /** the form → the item's next shape. Only what is on screen is read; a disabled price is never read (the server would refuse it, and it is not a change) */
   function readForm(orig) {
     var next = Object.assign({}, orig || {}, { name: (val('ct_name') || '').trim(), unit: (val('ct_unit') || '').trim() || 'unit', code: (val('ct_code') || '').trim(), desc: (val('ct_desc') || '').trim() });
-    var pe = el('ct_price');
-    if (pe && !pe.disabled) {
-      var t = String(pe.value || '').replace(/[,\s]/g, ''), had = cbHasPrice(orig && orig.price) ? cbAmount(orig.price) : null;
+    var node = el('ct_price');
+    if (node && !node.disabled) {
+      var t = String(node.value || '').replace(/[,\s]/g, ''), had = cbHasPrice(orig && orig.price) ? cbAmount(orig.price) : null;
       if (t === '') delete next.price;
       else if (had !== null && Number(t) === had) next.price = orig.price;   /* the same amount: the stored {amount,currency} is kept, so the diff carries no price */
       else next.price = Number(t);                                            /* a bare number, as the workshop sends it — the server stamps the shop's currency (money.stampPrice) */
@@ -467,9 +467,9 @@ var CBCatalogueApp = (function () {
       + '<div class="cat-out" id="cat_sheet_out" data-testid="cat-sheet-out"></div></form>';
   }
   function paintSheet() {
-    var d = el('cat_sheet'); if (!d) return;
-    d.innerHTML = sheetHTML();
-    var x = d.querySelector('[data-testid="cat-sheet-close"]'); if (x) x.onclick = closeSheet;
+    var node = el('cat_sheet'); if (!node) return;
+    node.innerHTML = sheetHTML();
+    var x = node.querySelector('[data-testid="cat-sheet-close"]'); if (x) x.onclick = closeSheet;
     var e = el('cat_edit'); if (e) e.onclick = function () { S.mode = 'edit'; paintSheet(); catDeclared().then(function () { if (S.mode !== 'edit') return; var h = el('ct_declared'); var p = itemOf(S.sel); if (h) { h.innerHTML = ctDeclaredRows(p ? pData(p) : {}); var w = el('ct_declared_wrap'); if (w) w.hidden = !h.innerHTML; } }); };
     var c = el('cat_cancel'); if (c) c.onclick = function () { if (S.mode === 'new') return closeSheet(); S.mode = 'view'; paintSheet(); };
     var s = el('cat_save'); if (s) s.onclick = function () { save(s); };
@@ -485,7 +485,7 @@ var CBCatalogueApp = (function () {
         { out: out, busy: T('Adding…'), outcome: function () { toast(T('“{n}” added', { n: next.name })); closeSheet(); S.offset = 0; readItems(); if (typeof cbcatCounts === 'function') cbcatCounts(); } });
     }
     var patch = prodDiff(cur, next);
-    Object.keys(cur).forEach(function (k) { if (!(k in next) && CT_FIXED_KEYS.indexOf(k) >= 0) patch[k] = null; });   /* a fixed field emptied on screen → null removes it (RFC 7386) */
+    Object.keys(cur).forEach(function (item) { if (!(item in next) && CT_FIXED_KEYS.indexOf(item) >= 0) patch[item] = null; });   /* a fixed field emptied on screen → null removes it (RFC 7386) */
     if (!Object.keys(patch).length) { say(out, T('Nothing changed.'), 'ok'); return; }
     return CBAction.run(btn, function () { return api('prodEdit', { params: { id: S.sel }, body: { item_data: patch, merge: true } }); },
       { out: out, busy: T('Saving…'), outcome: function (r) { if (r && r.item) { var i = S.items.indexOf(p); if (i >= 0) S.items[i] = r.item; } S.mode = 'view'; paintSheet(); if (S.list) S.list.refresh(); toast(T('Saved')); } });
@@ -508,10 +508,10 @@ var CBCatalogueApp = (function () {
   function catgRows() { return CBCAT_UI.list || []; }
   function catgParentName(c) { var p = c.parent ? cbcatById(c.parent) : null; return p ? p.name : ''; }
   function paintCatgCount() {
-    var c = el('catg_count'); if (!c) return;
-    if (CBCAT_UI.err) { c.innerHTML = '<span class="err" data-testid="catg-read-err">' + esc(CBCAT_UI.err) + '</span>'; return; }
+    var node = el('catg_count'); if (!node) return;
+    if (CBCAT_UI.err) { node.innerHTML = '<span class="err" data-testid="catg-read-err">' + esc(CBCAT_UI.err) + '</span>'; return; }
     var live = catgRows().filter(function (x) { return x.status !== 'retired'; }).length;
-    c.innerHTML = '<b>' + esc(String(live)) + '</b> ' + esc(live === 1 ? T('category') : T('categories'))
+    node.innerHTML = '<b>' + esc(String(live)) + '</b> ' + esc(live === 1 ? T('category') : T('categories'))
       + (CBCAT_UI.counts && CBCAT_UI.counts.none ? ' <span class="tag" data-testid="catg-count-none">' + esc(String(CBCAT_UI.counts.none)) + ' ' + esc(T('items without a category')) + '</span>' : '');
   }
   async function readCatgs() {
@@ -543,25 +543,25 @@ var CBCatalogueApp = (function () {
       ],
       onOpen: function (c) { openCatg(c.id); }
     });
-    var nb = el('catg_new'); if (nb) nb.onclick = function () { openCatg(null); };
+    var node = el('catg_new'); if (node) node.onclick = function () { openCatg(null); };
   }
   /** cbcatRetire asks first and writes on yes — the list re-reads once its own re-read has run (cbcatLoad sets busy false) */
   function afterCatgWrite() { var tries = 0; var t = setInterval(function () { if (++tries > 40 || !CBCAT_UI.busy) { clearInterval(t); readCatgs(); } }, 250); }
   function openCatg(id) {
     var c = id ? cbcatById(id) : null;
     CBCAT_UI.form = { id: id, name: c ? c.name : '', note: c ? c.note : '', parent: c ? c.parent : null, default_slab: c ? c.default_slab : null };
-    var d = el('catg_sheet'); if (!d) return;
-    var opts = cbcatParentOptions(id).map(function (p) { return '<option value="' + esc(p.id) + '"' + (c && c.parent === p.id ? ' selected' : '') + '>' + esc(p.name) + '</option>'; }).join('');
-    d.innerHTML = '<button type="button" class="mx" data-testid="catg-sheet-close" aria-label="' + esc(T('Close')) + '">✕</button><h2 data-testid="catg-sheet-title">' + esc(c ? T('Rename “{n}”', { n: c.name }) : T('New category')) + '</h2>'
+    var node = el('catg_sheet'); if (!node) return;
+    var opts = cbcatParentOptions(id).map(function (item) { return '<option value="' + esc(item.id) + '"' + (c && c.parent === item.id ? ' selected' : '') + '>' + esc(item.name) + '</option>'; }).join('');
+    node.innerHTML = '<button type="button" class="mx" data-testid="catg-sheet-close" aria-label="' + esc(T('Close')) + '">✕</button><h2 data-testid="catg-sheet-title">' + esc(c ? T('Rename “{n}”', { n: c.name }) : T('New category')) + '</h2>'
       + '<label class="fl" for="catg_name">' + esc(T('Name')) + '</label><input class="inp" id="catg_name" data-testid="catg-name" value="' + esc(CBCAT_UI.form.name) + '" oninput="cbcatField(\'name\', this.value)">'
       + '<label class="fl" for="catg_parent">' + esc(T('Under')) + '</label><select class="inp" id="catg_parent" data-testid="catg-parent" onchange="cbcatField(\'parent\', this.value || null)"><option value="">' + esc(T('— top level —')) + '</option>' + opts + '</select>'
       + '<label class="fl" for="catg_note">' + esc(T('Note')) + '</label><input class="inp" id="catg_note" data-testid="catg-note" value="' + esc(CBCAT_UI.form.note || '') + '" oninput="cbcatField(\'note\', this.value)">'
       + '<div class="cat-sheet-acts"><button type="button" class="act" data-testid="catg-save" id="catg_save">' + esc(c ? T('Save') : T('Add category')) + '</button><button type="button" class="act quiet" data-testid="catg-cancel" id="catg_cancel">' + esc(T('Cancel')) + '</button></div>'
       + '<div class="cat-out" id="cbcat_err" data-tone="error" data-testid="catg-err"></div>';   /* cbcatSave writes its refusal here, by this id */
-    var close = function () { try { d.close(); } catch (_) { d.removeAttribute('open'); } d.innerHTML = ''; CBCAT_UI.form = null; CBCAT_UI.mode = 'view'; };
-    d.querySelector('[data-testid="catg-sheet-close"]').onclick = close; el('catg_cancel').onclick = close;
-    el('catg_save').onclick = function (ev) { CBAction.once('catg-save', ev.currentTarget, async function () { await cbcatSave(); if (CBCAT_UI.form) return; /* a refusal keeps the form open with its sentence */ close(); await readCatgs(); }); };
-    if (!d.open) { try { d.showModal(); } catch (_) { d.setAttribute('open', ''); } }
+    var close = function () { try { node.close(); } catch (_) { node.removeAttribute('open'); } node.innerHTML = ''; CBCAT_UI.form = null; CBCAT_UI.mode = 'view'; };
+    node.querySelector('[data-testid="catg-sheet-close"]').onclick = close; el('catg_cancel').onclick = close;
+    el('catg_save').onclick = function (event) { CBAction.once('catg-save', event.currentTarget, async function () { await cbcatSave(); if (CBCAT_UI.form) return; /* a refusal keeps the form open with its sentence */ close(); await readCatgs(); }); };
+    if (!node.open) { try { node.showModal(); } catch (_) { node.setAttribute('open', ''); } }
   }
 
   /* ── IMPORT ── */
@@ -581,12 +581,12 @@ var CBCatalogueApp = (function () {
   /* ── the frame's sections ── */
   function show(k) {
     S.sec = k === 'categories' || k === 'import' ? k : 'items';
-    var h = S.host; if (!h) return;
+    var node = S.host; if (!node) return;
     if (S.list) { S.list.destroy(); S.list = null; }
     if (S.catList) { S.catList.destroy(); S.catList = null; }
-    if (S.sec === 'items') { h.innerHTML = itemsHTML(); mountItems(); paintCount(); readItems(); }
-    else if (S.sec === 'categories') { h.innerHTML = categoriesHTML(); mountCatgs(); paintCatgCount(); readCatgs(); }
-    else { UI._cf = null; UI._cfXlsx = null; h.innerHTML = importHTML(); }
+    if (S.sec === 'items') { node.innerHTML = itemsHTML(); mountItems(); paintCount(); readItems(); }
+    else if (S.sec === 'categories') { node.innerHTML = categoriesHTML(); mountCatgs(); paintCatgCount(); readCatgs(); }
+    else { UI._cf = null; UI._cfXlsx = null; node.innerHTML = importHTML(); }
     if (S.onSection) S.onSection(S.sec);
   }
   /** an import landed (the _cfImportRun painter calls this) — the list and the counts re-read */
