@@ -44,7 +44,7 @@ function govCtx(){
  */
 function regPackOf(code){
   var l = (REG.spin && Array.isArray(REG.spin.countries)) ? REG.spin.countries : [];
-  for (var i = 0; i < l.length; i++) if (l[i] && l[i].code === code) return l[i];
+  for (var index = 0; index < l.length; index++) if (l[index] && l[index].code === code) return l[index];
   return null;
 }
 function regInstCountry(){ return (REG.spin && REG.spin.installation && REG.spin.installation.country) || ''; }
@@ -63,10 +63,10 @@ function regFirstCountry(){
 /** a language's English name, and its own name beside it — isolated in <bdi lang dir=auto> so the browser's bidi gives a right-to-left script its
     direction and the row never flips ([[project-arabic-rtl]]). STD2: no hand-kept RTL list here (CBLocale.dir answers only for the page's own language) */
 function regLangHTML(code){
-  var en = code, own = '';
-  try { en = new Intl.DisplayNames(['en'], { type: 'language' }).of(code) || code; } catch (_) {}
+  var text = code, own = '';
+  try { text = new Intl.DisplayNames(['en'], { type: 'language' }).of(code) || code; } catch (_) {}
   try { own = new Intl.DisplayNames([code], { type: 'language' }).of(code) || ''; } catch (_) {}
-  return esc(en) + (own && own.toLowerCase() !== en.toLowerCase() ? ' <bdi dir="auto" lang="' + esc(code) + '">' + esc(own) + '</bdi>' : '');
+  return esc(text) + (own && own.toLowerCase() !== text.toLowerCase() ? ' <bdi dir="auto" lang="' + esc(code) + '">' + esc(own) + '</bdi>' : '');
 }
 /** how numbers and dates print in the pack's format — the browser's own Intl: one fixed number, today's date (R4: never a hard-coded day) */
 function regFormatSample(locale){
@@ -84,17 +84,17 @@ function regSpinRows(){
     : c === regBrowserCountry() ? ((g && g.country && g.country.from) || tx('your browser')) : tx('you chose it');
   out.push({ key: 'country', what: tx('Country'), value: esc(name), from: from, known: !!c });
   if (pk) {
-    var tax = [taxNameOf(pk), pk.tax && pk.tax.id].filter(Boolean).join(' · ');
+    var list = [taxNameOf(pk), pk.tax && pk.tax.id].filter(Boolean).join(' · ');
     var off = pk.offer || {}, zone = { value: off.timezone || '', from: off.from || tx('you pick it after signing in') };   /* the server's offer (STD2) */
     out.push({ key: 'currency', what: tx('Money'), value: esc(pk.currency || ''), from: '', known: !!pk.currency });
     out.push({ key: 'year', what: tx('Year starts'), value: esc(pk.fy_start_month ? (monthNames('long')[pk.fy_start_month - 1] || String(pk.fy_start_month)) : ''), from: '', known: !!pk.fy_start_month });
-    out.push({ key: 'tax', what: tx('Tax'), value: esc(tax), from: (pk.tax && pk.tax.return) ? txf('returns: {r}', { r: pk.tax.return }) : '', known: !!tax });
+    out.push({ key: 'tax', what: tx('Tax'), value: esc(list), from: (pk.tax && pk.tax.return) ? txf('returns: {r}', { r: pk.tax.return }) : '', known: !!list });
     out.push({ key: 'format', what: tx('Format'), value: pk.locale ? regFormatSample(pk.locale) : '', from: '', known: !!pk.locale });
     out.push({ key: 'language', what: tx('Language'), value: (pk.languages || []).slice(0, 2).map(regLangHTML).join(' · '), from: '', known: !!(pk.languages && pk.languages.length) });
     out.push({ key: 'timezone', what: tx('Time zone'), value: esc(zone.value), from: zone.from, known: !!zone.value });
   }
   /* the device row as the browser reads it (CBGov.rows) — the rest above replace its guesses */
-  govRows().forEach(function (r) { if (r.key === 'device') out.push({ key: r.key, what: r.what, value: esc(r.value), from: r.from, known: r.known }); });
+  govRows().forEach(function (item) { if (item.key === 'device') out.push({ key: item.key, what: item.what, value: esc(item.value), from: item.from, known: item.known }); });
   return out;
 }
 /** the line beside the country: the browser's differing guess, the choice the server allows, or why there is none */
@@ -104,7 +104,7 @@ function regCountryChoice(){
   if (list.length > 1) {
     h += '<label style="display:block;margin-top:4px">' + esc(tx('Another country')) + ' <select class="inp" data-testid="reg-country" style="width:auto;max-width:100%;display:inline-block;padding:4px 8px" onchange="REG.country=this.value;REG.agreed=false;renderRegister()">'
       + (REG.country ? '' : '<option value="" selected>' + esc(tx('Pick one')) + '</option>')
-      + list.map(function (c) { return '<option value="' + esc(c.code) + '"' + (c.code === REG.country ? ' selected' : '') + '>' + esc(c.name || c.code) + '</option>'; }).join('')
+      + list.map(function (item) { return '<option value="' + esc(item.code) + '"' + (item.code === REG.country ? ' selected' : '') + '>' + esc(item.name || item.code) + '</option>'; }).join('')
       + '</select></label>';
   } else if (inst && br && br !== inst) {
     h += '<div data-testid="reg-gov-why">' + esc(txf('This ChitBridge serves {c} only.', { c: regCountryName(inst) })) + '</div>';
@@ -113,18 +113,18 @@ function regCountryChoice(){
 }
 function govPanel(){
   var spin = !!(REG.spin && Array.isArray(REG.spin.countries) && REG.spin.countries.length);
-  var rows = spin ? regSpinRows() : govRows().map(function (r) { return { key: r.key, what: r.what, value: esc(r.value), from: r.from, known: r.known }; });
+  var rows = spin ? regSpinRows() : govRows().map(function (item) { return { key: item.key, what: item.what, value: esc(item.value), from: item.from, known: item.known }; });
   if (!rows.length) return '';
   /* walk 2026-10-16: ONE heading; what it means (and that a "not known" row is set after sign-in) behind ⓘ — never a line under every row */
   var reason = regInstCountry() ? tx('They set your tax and money. Set any “not known” one after you sign in.') : tx('Filled in from your browser. Change any of them after you sign in.');
   return '<div class="govbox" data-testid="reg-gov">'
     + '<div class="govhd">' + esc(tx('Check these')) + ' <span title="' + esc(reason) + '" style="cursor:help;font-weight:400">ⓘ</span></div>'
-    + rows.map(function(r){
-        return '<div class="govrow' + (r.known ? '' : ' unknown') + '" data-testid="reg-gov-' + r.key + '">'
-          + '<span class="gw">' + esc(r.what) + '</span>'
-          + '<span class="gv">' + (r.known ? r.value : esc(tx('not known'))) + '</span>'
-          + (r.known && r.from ? '<span class="gf">' + esc(r.from) + '</span>' : '')   /* R4: a row with no note of its own paints none; "set it after sign-in" is the heading's ⓘ, once */
-          + (spin && r.key === 'country' ? '<div class="gf">' + regCountryChoice() + '</div>' : '')
+    + rows.map(function(item){
+        return '<div class="govrow' + (item.known ? '' : ' unknown') + '" data-testid="reg-gov-' + item.key + '">'
+          + '<span class="gw">' + esc(item.what) + '</span>'
+          + '<span class="gv">' + (item.known ? item.value : esc(tx('not known'))) + '</span>'
+          + (item.known && item.from ? '<span class="gf">' + esc(item.from) + '</span>' : '')   /* R4: a row with no note of its own paints none; "set it after sign-in" is the heading's ⓘ, once */
+          + (spin && item.key === 'country' ? '<div class="gf">' + regCountryChoice() + '</div>' : '')
           + '</div>';
       }).join('')
     + '</div>'
@@ -188,7 +188,7 @@ function renderRegister(){
       <div class="swap">Already registered? <a onclick="go('#/login')">${tx('Sign in')}</a></div>
     </div>
   </div></div>`;
-  const b=document.getElementById("r_go"); if(b) b.onclick=doRegister;
+  const node=document.getElementById("r_go"); if(node) node.onclick=doRegister;
 }
 async function doRegister(){
   const R=REG;
@@ -236,21 +236,21 @@ async function doRegister(){
      * identity becomes real rather than as a second call that can fail on its own.
      * ⚠️ `agreed_at` IS THE EVIDENCE, not the tick. A boolean says somebody ticked a box; a timestamp says when.
      */
-    const r=await api("ownerVerify",{body:{email:R.email, otp:v_otp, constitution:R.constitution||undefined,
+    const reply=await api("ownerVerify",{body:{email:R.email, otp:v_otp, constitution:R.constitution||undefined,
       context:regPayload(), agreed_at:new Date().toISOString()}});
     R.busy=false;
     /* the host's next step: app.html's regIn (the session · a paired counter · #/country) or CB Settings' (keep the session, open Home) */
-    if(REG_AT.onDone) return REG_AT.onDone(r, R.name);
+    if(REG_AT.onDone) return REG_AT.onDone(reply, R.name);
   }catch(e){ R.busy=false; R.err="Could not register: "+e.message; renderRegister(); }
 }
 /* The vertical/blueprint chooser at sign-up — showcases the available constitutions (verticals) so the registrant
    picks one; their entity is minted onto it (verify → entity_governance). "None fits" → tailor / contact the team. */
 function regVerticalChooser(){
-  const vs=(REG.verticals)||[];
-  if(!vs.length) return '';
+  const list=(REG.verticals)||[];
+  if(!list.length) return '';
   return '<div style="margin:10px 0 4px"><div class="fl">' + esc(tx('Choose your setup')) + ' <span style="font-weight:400;color:var(--grey);cursor:help" title="' + esc(tx('You can change it later.')) + '">ⓘ</span></div>'
-    + vs.map(function(v){ const sel=(REG.constitution||'')===v.key; const caps=(v.capabilities||[]).join(' · ');
-        return '<div data-testid="reg-vertical-'+esc(v.key)+'" onclick="REG.constitution=\''+esc(v.key)+'\';renderRegister()" style="border:1px solid '+(sel?'var(--blue)':'var(--line)')+';background:'+(sel?'var(--blue-tint)':'var(--card)')+';color:var(--on-card);border-radius:9px;padding:9px 11px;margin-bottom:7px;cursor:pointer"><div style="font-weight:700;font-size:var(--fs-2);color:var(--ink)">'+(sel?'● ':'○ ')+esc(regSetupLabel(v))
+    + list.map(function(item){ const sel=(REG.constitution||'')===item.key; const caps=(item.capabilities||[]).join(' · ');
+        return '<div data-testid="reg-vertical-'+esc(item.key)+'" onclick="REG.constitution=\''+esc(item.key)+'\';renderRegister()" style="border:1px solid '+(sel?'var(--blue)':'var(--line)')+';background:'+(sel?'var(--blue-tint)':'var(--card)')+';color:var(--on-card);border-radius:9px;padding:9px 11px;margin-bottom:7px;cursor:pointer"><div style="font-weight:700;font-size:var(--fs-2);color:var(--ink)">'+(sel?'● ':'○ ')+esc(regSetupLabel(item))
           +' <span data-testid="reg-vertical-why" style="font-weight:400;color:var(--grey);cursor:help" title="'+esc(txf('Includes: {caps}', { caps: caps || 'core' }))+'">ⓘ</span></div></div>';
       }).join('')
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin:2px 0 4px">' + txf('None fits? {tailor} · {contact}', {
