@@ -33,7 +33,7 @@ function fxView(body) {
 }
 function fxLoad() {
   var g = ++FXV.gen;
-  return api('booksFxRates').then(function (r) { if (g !== FXV.gen) return; FXV.r = r || {}; FXV.err = ''; fxPaint(); },
+  return api('booksFxRates').then(function (reply) { if (g !== FXV.gen) return; FXV.r = reply || {}; FXV.err = ''; fxPaint(); },
     function (e) { if (g !== FXV.gen) return; FXV.r = null; FXV.err = bkWhy(e, tx('Could not be read')); fxPaint(); });
 }
 function fxMay() { return (FXV.r && FXV.r.may && FXV.r.may.add) || { may: false, why: FXV.err || null }; }
@@ -65,7 +65,7 @@ function fxList() {
       { key: 'ref', label: tx('Reference'), prio: 3, w: 220, cell: function (x) { return x.source_ref || ''; } },
     ],
     defaultCols: ['date', 'from', 'rate', 'source', 'ref'],
-    filters: [{ key: 'source', label: tx('Source'), all: tx('Every source'), options: Object.keys(FX_SOURCE).map(function (k) { return { v: k, label: tx(FX_SOURCE[k]) }; }), match: function (x, v) { return x.source === v; } }],
+    filters: [{ key: 'source', label: tx('Source'), all: tx('Every source'), options: Object.keys(FX_SOURCE).map(function (item) { return { v: item, label: tx(FX_SOURCE[item]) }; }), match: function (x, v) { return x.source === v; } }],
     sorts: [{ key: 'date', label: tx('Newest first'), cmp: function () { return 0; } }, { key: 'from', label: tx('Currency'), cmp: function (a, b) { return String(a.from).localeCompare(String(b.from)) || String(b.date).localeCompare(String(a.date)); } }],
     search: function (x) { return [x.date, x.from, x.rate, x.source, x.source_ref].join(' '); },
     empty: { title: tx('No rates yet. Add the day\'s rate.') },
@@ -74,10 +74,10 @@ function fxList() {
 
 /* ── add one rate (the one write, M64) ── */
 function fxAddOpen() {
-  var f = document.getElementById('fx_form'); if (!f) return;
+  var node = document.getElementById('fx_form'); if (!node) return;
   FXV.add = { err: '' };
   var today = bkToday();
-  f.innerHTML = '<div data-testid="fx-form" style="max-width:420px;margin-bottom:10px">'
+  node.innerHTML = '<div data-testid="fx-form" style="max-width:420px;margin-bottom:10px">'
     + miRow(tx('Day'), '<input class="inp" type="date" id="fx_date" data-testid="fx-date" value="' + esc(today) + '" style="width:auto;max-width:100%">')
     + miRow(tx('Currency'), '<input class="inp" id="fx_cur" data-testid="fx-cur" maxlength="3" placeholder="USD" style="width:6em;text-transform:uppercase">')
     + miRow(txf('Rate in {c}', { c: (FXV.r && FXV.r.currency) || '' }), '<input class="inp" id="fx_rate" data-testid="fx-rate" inputmode="decimal" placeholder="83.25" style="width:9em">')
@@ -87,7 +87,7 @@ function fxAddOpen() {
     + '<div style="display:flex;gap:8px;margin-top:6px"><button type="button" class="supact-pri" data-testid="fx-save" onclick="fxAddSave(this)">' + esc(tx('Save rate')) + '</button>'
     + '<button type="button" data-testid="fx-cancel" onclick="fxAddCancel()">' + esc(tx('Cancel')) + '</button></div></div>';
 }
-function fxAddCancel() { FXV.add = null; var f = document.getElementById('fx_form'); if (f) f.innerHTML = ''; }
+function fxAddCancel() { FXV.add = null; var node = document.getElementById('fx_form'); if (node) node.innerHTML = ''; }
 function fxVal(id) { var el = document.getElementById(id); return el ? String(el.value || '').trim() : ''; }
 function fxAddSave(btn) {
   var body = { date: fxVal('fx_date'), currency: fxVal('fx_cur').toUpperCase(), rate: fxVal('fx_rate'), source: fxVal('fx_src') || 'manual' };
@@ -118,7 +118,7 @@ function fxImport(input) {
 /* ── Month lock: the foreign balances of the month to lock next — revalue first, then lock (cap-books bkLockRowsPaint calls this) ── */
 function fxLockMonth() {
   var L = (typeof BK !== 'undefined' && BK.lk) || {}, info = L.info || {};
-  for (var p = 1; p <= 12; p++) { var x = info[L.fy + '|' + p]; if (x && x.lock && x.lock.may && (L.rows || {})[L.fy + '|' + p] !== 'soft_locked' && (L.rows || {})[L.fy + '|' + p] !== 'hard_locked') return { fy: L.fy, p: p }; }
+  for (var count = 1; count <= 12; count++) { var x = info[L.fy + '|' + count]; if (x && x.lock && x.lock.may && (L.rows || {})[L.fy + '|' + count] !== 'soft_locked' && (L.rows || {})[L.fy + '|' + count] !== 'hard_locked') return { fy: L.fy, p: count }; }
   return null;
 }
 function fxLockLine() {
@@ -126,7 +126,7 @@ function fxLockLine() {
   if (!m || !bkIsOwner()) { host.innerHTML = ''; return; }
   var k = m.fy + '|' + m.p; if (FXV.lk && FXV.lk.k === k && FXV.lk.r) return fxLockPaint(host, FXV.lk.r);
   FXV.lk = { k: k, r: null };
-  api('booksFxRevalue', { query: { fiscal_year: m.fy, period: m.p } }).then(function (r) { if (FXV.lk && FXV.lk.k === k) { FXV.lk.r = r || {}; fxLockPaint(host, FXV.lk.r); } },
+  api('booksFxRevalue', { query: { fiscal_year: m.fy, period: m.p } }).then(function (reply) { if (FXV.lk && FXV.lk.k === k) { FXV.lk.r = reply || {}; fxLockPaint(host, FXV.lk.r); } },
     function () { host.innerHTML = ''; });
 }
 function fxLockPaint(host, r) {
