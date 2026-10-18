@@ -261,8 +261,8 @@ function say(s) { document.getElementById('src').textContent = s; }
 /* ── editing ───────────────────────────────────────────────────────────────────────────────────────────────── */
 function setMode(m) {
   LAB.mode = m;
-  if (m === 'value' && !LAB.lines.some(function (l) { return l.price == null; })) sampleBullion();
-  if (m === 'convert' && !LAB.lines.some(function (l) { return l.price != null; })) samplePriced();
+  if (m === 'value' && !LAB.lines.some(function (item) { return item.price == null; })) sampleBullion();
+  if (m === 'convert' && !LAB.lines.some(function (item) { return item.price != null; })) samplePriced();
   repaint();
 }
 function addLine() { LAB.lines.push(LAB.mode === 'value' ? { name: '', qty: 1, unit: 'gram' } : { name: '', qty: 1, unit: '', price: 0, currency: 'INR' }); repaint(); }
@@ -286,7 +286,7 @@ function setVal(what, i, field, v, num) { LAB[what][i][field] = num ? Number(v) 
 function provSelect(what, i, cur) {
   var opts = (window.CBConvert && CBConvert.PROVENANCE) || ['unknown'];
   return '<select onchange="setVal(\'' + what + '\',' + i + ',\'provenance\',this.value)">'
-    + opts.map(function (p) { return '<option value="' + p + '"' + (p === cur ? ' selected' : '') + '>' + p + '</option>'; }).join('')
+    + opts.map(function (item) { return '<option value="' + item + '"' + (item === cur ? ' selected' : '') + '>' + item + '</option>'; }).join('')
     + '</select>';
 }
 function txt(what, i, field, v, w) {
@@ -313,46 +313,46 @@ function paintInputs() {
   document.getElementById('prices-wrap').hidden = !valuing;
   document.getElementById('add-price').hidden = !valuing;
 
-  document.getElementById('lines-body').innerHTML = LAB.lines.map(function (l, i) {
-    return '<tr><td>' + txt('lines', i, 'name', l.name) + '</td>'
-      + '<td class="r">' + num('lines', i, 'qty', l.qty) + '</td>'
-      + '<td>' + txt('lines', i, 'unit', l.unit, '84px') + '</td>'
+  document.getElementById('lines-body').innerHTML = LAB.lines.map(function (item, index) {
+    return '<tr><td>' + txt('lines', index, 'name', item.name) + '</td>'
+      + '<td class="r">' + num('lines', index, 'qty', item.qty) + '</td>'
+      + '<td>' + txt('lines', index, 'unit', item.unit, '84px') + '</td>'
       + (valuing
         ? '<td class="r hint" colspan="2">from the market price below</td>'
-        : '<td class="r">' + num('lines', i, 'price', l.price) + '</td><td>' + txt('lines', i, 'currency', l.currency, '58px') + '</td>')
-      + '<td>' + del('lines', i) + '</td></tr>';
+        : '<td class="r">' + num('lines', index, 'price', item.price) + '</td><td>' + txt('lines', index, 'currency', item.currency, '58px') + '</td>')
+      + '<td>' + del('lines', index) + '</td></tr>';
   }).join('') || '<tr><td colspan="6" class="hint">no lines — add one, or read a catalogue or a chit</td></tr>';
 
-  document.getElementById('prices-body').innerHTML = LAB.prices.map(function (p, i) {
-    return '<tr><td>' + txt('prices', i, 'name', p.name) + '</td>'
-      + '<td>' + txt('prices', i, 'per_unit', p.per_unit, '78px') + '</td>'
-      + '<td class="r">' + num('prices', i, 'price', p.price) + '</td>'
-      + '<td>' + txt('prices', i, 'currency', p.currency, '58px') + '</td>'
-      + '<td><input type="date" value="' + esc(p.as_of || '') + '" oninput="setVal(\'prices\',' + i + ',\'as_of\',this.value)"></td>'
-      + '<td>' + txt('prices', i, 'source', p.source) + '</td>'
-      + '<td>' + provSelect('prices', i, p.provenance) + '</td>'
-      + '<td>' + del('prices', i) + '</td></tr>';
+  document.getElementById('prices-body').innerHTML = LAB.prices.map(function (item, index) {
+    return '<tr><td>' + txt('prices', index, 'name', item.name) + '</td>'
+      + '<td>' + txt('prices', index, 'per_unit', item.per_unit, '78px') + '</td>'
+      + '<td class="r">' + num('prices', index, 'price', item.price) + '</td>'
+      + '<td>' + txt('prices', index, 'currency', item.currency, '58px') + '</td>'
+      + '<td><input type="date" value="' + esc(item.as_of || '') + '" oninput="setVal(\'prices\',' + index + ',\'as_of\',this.value)"></td>'
+      + '<td>' + txt('prices', index, 'source', item.source) + '</td>'
+      + '<td>' + provSelect('prices', index, item.provenance) + '</td>'
+      + '<td>' + del('prices', index) + '</td></tr>';
   }).join('') || '<tr><td colspan="8" class="hint">no market prices</td></tr>';
 
-  document.getElementById('rates-body').innerHTML = LAB.rates.map(function (r, i) {
-    return '<tr><td>' + txt('rates', i, 'from', r.from, '58px') + '</td>'
-      + '<td>' + txt('rates', i, 'to', r.to, '58px') + '</td>'
-      + '<td class="r">' + num('rates', i, 'rate', r.rate) + '</td>'
-      + '<td><input type="date" value="' + esc(r.as_of || '') + '" oninput="setVal(\'rates\',' + i + ',\'as_of\',this.value)"></td>'
-      + '<td>' + txt('rates', i, 'source', r.source) + '</td>'
-      + '<td>' + provSelect('rates', i, r.provenance) + '</td>'
-      + '<td>' + del('rates', i) + '</td></tr>';
+  document.getElementById('rates-body').innerHTML = LAB.rates.map(function (item, index) {
+    return '<tr><td>' + txt('rates', index, 'from', item.from, '58px') + '</td>'
+      + '<td>' + txt('rates', index, 'to', item.to, '58px') + '</td>'
+      + '<td class="r">' + num('rates', index, 'rate', item.rate) + '</td>'
+      + '<td><input type="date" value="' + esc(item.as_of || '') + '" oninput="setVal(\'rates\',' + index + ',\'as_of\',this.value)"></td>'
+      + '<td>' + txt('rates', index, 'source', item.source) + '</td>'
+      + '<td>' + provSelect('rates', index, item.provenance) + '</td>'
+      + '<td>' + del('rates', index) + '</td></tr>';
   }).join('') || '<tr><td colspan="7" class="hint">no rates — nothing can cross a currency</td></tr>';
 }
 
 /* ── ⭐ THE RUN: everything below is the ENGINE's answer, read out ──────────────────────────────────────────── */
 function buildRates() {
   var rows = [];
-  LAB.rates.forEach(function (r) {
-    if (!r.from || !r.to) return;
+  LAB.rates.forEach(function (item) {
+    if (!item.from || !item.to) return;
     /* ⚠️ rate() THROWS on a number that is not positive. A half-typed row must not take the page down with it —
        it is simply not in the table yet, and the answer says a rate is missing, which is the truth. */
-    try { rows.push(CBConvert.rate(r.from, r.to, r.rate, { as_of: r.as_of || null, source: r.source || null, provenance: r.provenance })); }
+    try { rows.push(CBConvert.rate(item.from, item.to, item.rate, { as_of: item.as_of || null, source: item.source || null, provenance: item.provenance })); }
     catch (_) {}
   });
   return CBConvert.table(rows);
@@ -360,28 +360,28 @@ function buildRates() {
 
 function run() {
   var to = (document.getElementById('to').value || '').toUpperCase();
-  var dp = Number(document.getElementById('dp').value);
-  var opts = { to: to, dp: isFinite(dp) ? dp : 2, invert: document.getElementById('invert').checked };
+  var node = Number(document.getElementById('dp').value);
+  var opts = { to: to, dp: isFinite(node) ? node : 2, invert: document.getElementById('invert').checked };
   var rates = buildRates();
 
   if (LAB.mode === 'convert') {
-    var lines = LAB.lines.map(function (l) {
+    var lines = LAB.lines.map(function (item) {
       var m = null;
       /* a blank currency stays blank — make() would be handed undefined and the engine must see the absence */
-      if (l.currency) { try { m = CBMoney.make(Number(l.price), String(l.currency).toUpperCase()); } catch (_) { m = null; } }
-      return { item_id: l.name || '(unnamed)', qty: Number(l.qty), price: m };
+      if (item.currency) { try { m = CBMoney.make(Number(item.price), String(item.currency).toUpperCase()); } catch (_) { m = null; } }
+      return { item_id: item.name || '(unnamed)', qty: Number(item.qty), price: m };
     });
     return CBConvert.convertLines(lines, to, rates, opts);
   }
 
   var prices = {};
-  LAB.prices.forEach(function (p) {
-    if (!p.name) return;
+  LAB.prices.forEach(function (item) {
+    if (!item.name) return;
     var m = null;
-    if (p.currency) { try { m = CBMoney.make(Number(p.price), String(p.currency).toUpperCase()); } catch (_) { m = null; } }
-    prices[String(p.name).toLowerCase()] = { per_unit: p.per_unit, price: m, as_of: p.as_of || null, source: p.source || null, provenance: p.provenance };
+    if (item.currency) { try { m = CBMoney.make(Number(item.price), String(item.currency).toUpperCase()); } catch (_) { m = null; } }
+    prices[String(item.name).toLowerCase()] = { per_unit: item.per_unit, price: m, as_of: item.as_of || null, source: item.source || null, provenance: item.provenance };
   });
-  var qlines = LAB.lines.map(function (l) { return { item_id: String(l.name || '').toLowerCase(), name: l.name, qty: Number(l.qty), unit: l.unit }; });
+  var qlines = LAB.lines.map(function (item) { return { item_id: String(item.name || '').toLowerCase(), name: item.name, qty: Number(item.qty), unit: item.unit }; });
   return CBConvert.valueLines(qlines, prices, rates, opts);
 }
 
@@ -395,8 +395,8 @@ function run() {
 function trustOf(r) {
   var order = CBConvert.PROVENANCE;
   var worst = null, oldest = null, undated = 0, steps = 0;
-  (r.priced || []).forEach(function (p) {
-    (p.workings || []).forEach(function (w) {
+  (r.priced || []).forEach(function (item) {
+    (item.workings || []).forEach(function (w) {
       if (!w.provenance && !w.as_of && w.step === 'line') return;     /* the qty multiplication is ours, not evidence */
       steps++;
       if (w.provenance) { var i = order.indexOf(w.provenance); if (worst === null || i > worst) worst = i; }
@@ -443,18 +443,18 @@ function paintOutcome() {
     return '<div><b>' + esc(x.line && (x.line.name || x.line.item_id) || 'a line') + '</b> — ' + esc(x.why) + '</div>';
   }).join('');
 
-  document.getElementById('perline-body').innerHTML = (r.priced || []).map(function (p) {
-    var l = p.line || {};
+  document.getElementById('perline-body').innerHTML = (r.priced || []).map(function (item) {
+    var l = item.line || {};
     return '<tr><td>' + esc(l.name || l.item_id || '') + '</td>'
-      + '<td class="r">' + esc(p.qty != null ? p.qty : (l.qty != null ? l.qty : '')) + ' ' + esc(l.unit || '') + '</td>'
-      + '<td class="r">' + esc(fmtM(p.amount)) + '</td></tr>';
+      + '<td class="r">' + esc(item.qty != null ? item.qty : (l.qty != null ? l.qty : '')) + ' ' + esc(l.unit || '') + '</td>'
+      + '<td class="r">' + esc(fmtM(item.amount)) + '</td></tr>';
   }).join('') || '<tr><td colspan="3" class="hint">nothing valued yet</td></tr>';
 
-  document.getElementById('workings').innerHTML = (r.priced || []).map(function (p) {
-    var l = p.line || {};
+  document.getElementById('workings').innerHTML = (r.priced || []).map(function (item) {
+    var l = item.line || {};
     return '<div class="grp"><div class="h"><span>' + esc(l.name || l.item_id || '') + '</span>'
-      + '<span class="amt">' + esc(fmtM(p.amount)) + '</span></div><ul class="work">'
-      + (p.workings || []).map(function (w) {
+      + '<span class="amt">' + esc(fmtM(item.amount)) + '</span></div><ul class="work">'
+      + (item.workings || []).map(function (w) {
         /* ⚠️ EVERY PIECE IS ITS OWN ELEMENT. Raw strings in a flex row are text nodes, and `gap` does not separate
            text nodes — "LBMA pm" and "as of 2026-09-15" rendered as "LBMA pmas of 2026-09-15". */
         var meta = [];
@@ -484,13 +484,13 @@ async function loadCatalogue() {
     /* ⚠️ A PRICE IS A STAMPED VALUE, not a number — amountOfLoose is the one reader, and offer-lab learned this
        the hard way: Number(price) is NaN for every real product, which looks exactly like an empty catalogue. */
     var rows = [];
-    items.forEach(function (p) {
-      var d = p && p.item_data; if (!d) return;
+    items.forEach(function (item) {
+      var d = item && item.item_data; if (!d) return;
       var amt = CBMoney.amountOfLoose(d.price);
       if (!isFinite(amt) || amt <= 0) return;
       var cur = null;
       try { cur = CBMoney.currencyOf(d.price); } catch (_) { cur = null; }
-      rows.push({ name: d.name || p.item_id, qty: 1, unit: d.unit || '', price: amt, currency: cur || (s.currency || '') });
+      rows.push({ name: d.name || item.item_id, qty: 1, unit: d.unit || '', price: amt, currency: cur || (s.currency || '') });
     });
     if (!rows.length) { say((s.entity || 'your shop') + ' — no priced products to read'); return; }
     LAB.lines = rows.slice(0, 40);
@@ -498,7 +498,7 @@ async function loadCatalogue() {
     document.querySelector('input[name=mode][value=convert]').checked = true;
     /* ⚠️ a product with no stamped currency is left BLANK, never defaulted — the engine then refuses that line by
        name, which is the honest outcome. Filling in a guess would price it in a currency nobody chose. */
-    var blank = rows.filter(function (r) { return !r.currency; }).length;
+    var blank = rows.filter(function (item) { return !item.currency; }).length;
     say((s.entity || 'your shop') + ' — ' + LAB.lines.length + ' products'
       + (rows.length > 40 ? ' (first 40 of ' + rows.length + ')' : '')
       + (blank ? ' · ' + blank + ' with no stamped currency' : ''));
@@ -518,17 +518,17 @@ async function loadChit() {
     var h = j.header || {}, d = j.detail || {};
     var sj = d.summary_json || {};
     var cur = h.currency_code || sj.currency_code || d.currency_code || null;
-    var raw = (Array.isArray(j.live_set) ? j.live_set.map(function (e) { return e && e.live; }).filter(Boolean) : null)
+    var list = (Array.isArray(j.live_set) ? j.live_set.map(function (e) { return e && e.live; }).filter(Boolean) : null)
       || sj.line_items || d.line_items || [];
-    if (!raw.length) { say('that chit has no lines to read'); return; }
+    if (!list.length) { say('that chit has no lines to read'); return; }
     /**
      * ⚠️ AND IF THE CHIT DOES NOT SAY WHAT CURRENCY IT IS IN, THE LAB DOES NOT GUESS. It loads the lines with the
      * currency blank, the engine refuses each one by name, and the reason is on screen. A defaulted INR here
      * would be a rupee answer to a dirham chit, arrived at silently.
      */
-    LAB.lines = raw.map(function (l) {
-      return { name: l.particulars || l.name || '(line)', qty: Number(l.quantity != null ? l.quantity : l.qty) || 1,
-               unit: l.unit || '', price: Number(l.price) || 0, currency: cur || '' };
+    LAB.lines = list.map(function (item) {
+      return { name: item.particulars || item.name || '(line)', qty: Number(item.quantity != null ? item.quantity : item.qty) || 1,
+               unit: item.unit || '', price: Number(item.price) || 0, currency: cur || '' };
     });
     LAB.mode = 'convert';
     document.querySelector('input[name=mode][value=convert]').checked = true;
