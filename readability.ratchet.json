@@ -173,5 +173,5 @@
   "tools/readability/measure.cjs": {"score":0,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":0,"noWhatLine":0,"emptyCatch":0,"noHeader":0},
   "tools/readability/ratchet.cjs": {"score":0,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":0,"noWhatLine":0,"emptyCatch":0,"noHeader":0},
   "tools/screen-list.cjs": {"score":20,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":18,"noWhatLine":2,"emptyCatch":0,"noHeader":0},
-  "tools/sig-stars.cjs": {"score":58,"long40":0,"long80":0,"complex10":2,"complex15":1,"deep3":1,"deep4":0,"cryptic":53,"noWhatLine":1,"emptyCatch":0,"noHeader":0}
+  "tools/sig-stars.cjs": {"score":24,"long40":0,"long80":0,"complex10":2,"complex15":1,"deep3":1,"deep4":0,"cryptic":19,"noWhatLine":1,"emptyCatch":0,"noHeader":0}
 }

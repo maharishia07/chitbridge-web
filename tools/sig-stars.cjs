@@ -59,13 +59,13 @@ function listFiles(root) {
   } catch (e) {
     process.stderr.write('sig-stars: ' + root + ' is not a git checkout (' + e.message.split('\n')[0] + ') — walking the folder\n');
     const out = [];
-    const walk = (dir) => fs.readdirSync(path.join(root, dir), { withFileTypes: true }).forEach((ent) => {
-      const rel = path.posix.join(dir, ent.name);
-      if (ent.name === '.git' || ent.name === 'node_modules') return;
-      if (ent.isDirectory()) walk(rel); else out.push(rel);
+    const walk = (dir) => fs.readdirSync(path.join(root, dir), { withFileTypes: true }).forEach((item) => {
+      const rel = path.posix.join(dir, item.name);
+      if (item.name === '.git' || item.name === 'node_modules') return;
+      if (item.isDirectory()) walk(rel); else out.push(rel);
     });
     walk('.');
-    return out.map((rel) => rel.replace(/^\.\//, ''));
+    return out.map((item) => item.replace(/^\.\//, ''));
   }
 }
 
@@ -78,7 +78,7 @@ function readScope(root) {
     let text;
     try { text = fs.readFileSync(path.join(root, rel), 'utf8'); } catch (e) { process.stderr.write('sig-stars: cannot read ' + rel + ': ' + e.message + '\n'); continue; }
     if (VENDOR_MARKER.test(text.slice(0, 1500))) { skipped.vendored.push(rel); continue; }
-    const scripts = rel.endsWith('.html') ? scanHtml(text).inline.map((s) => ({ src: s.code, baseLine: s.baseLine })) : [{ src: text, baseLine: 1 }];
+    const scripts = rel.endsWith('.html') ? scanHtml(text).inline.map((item) => ({ src: item.code, baseLine: item.baseLine })) : [{ src: text, baseLine: 1 }];
     files.push({ rel, isTest: TEST_PATH.test(rel), scripts });
   }
   return { files, skipped };
@@ -89,10 +89,10 @@ function readScope(root) {
 function countCodeLines(text, code) {
   const orig = text.split('\n'), blank = code.split('\n');
   let count = 0;
-  for (let i = 0; i < orig.length; i++) {
-    const raw = orig[i].trim();
+  for (let index = 0; index < orig.length; index++) {
+    const raw = orig[index].trim();
     if (!raw) continue;
-    if (!blank[i].trim() && /^(\/\/|\/\*|\*)/.test(raw)) continue;
+    if (!blank[index].trim() && /^(\/\/|\/\*|\*)/.test(raw)) continue;
     count++;
   }
   return count;
@@ -113,7 +113,7 @@ function countParams(code, paren) {
 
 // the functions of one script with their OWN text (nested functions are separate units, as in Java inner methods)
 function unitsOf(scan, src, file) {
-  const fns = scan.functions.slice().sort((a, b) => a.start - b.start || b.end - a.end);
+  const fns = scan.functions.slice().sort((first, second) => first.start - second.start || second.end - first.end);
   const stack = [], units = [];
   for (const fn of fns) {
     while (stack.length && fn.start > stack[stack.length - 1].end) stack.pop();
@@ -122,11 +122,11 @@ function unitsOf(scan, src, file) {
     stack.push(unit); units.push(unit);
   }
   for (const unit of units) {
-    let own = '', origOwn = '', cursor = unit.start;
-    for (const kid of unit.kids) { own += scan.code.slice(cursor, kid.start); origOwn += src.slice(cursor, kid.start); cursor = kid.end + 1; }
-    own += scan.code.slice(cursor, unit.end + 1); origOwn += src.slice(cursor, unit.end + 1);
-    unit.lines = countCodeLines(origOwn, own);
-    unit.complexity = 1 + (own.match(DECISION) || []).length;
+    let text = '', origOwn = '', cursor = unit.start;
+    for (const kid of unit.kids) { text += scan.code.slice(cursor, kid.start); origOwn += src.slice(cursor, kid.start); cursor = kid.end + 1; }
+    text += scan.code.slice(cursor, unit.end + 1); origOwn += src.slice(cursor, unit.end + 1);
+    unit.lines = countCodeLines(origOwn, text);
+    unit.complexity = 1 + (text.match(DECISION) || []).length;
     unit.params = countParams(scan.code, unit.paramsAt);
   }
   return units;
@@ -138,7 +138,7 @@ const bandOf = (value, edges) => (value <= edges[0] ? 0 : value <= edges[1] ? 1 
 
 // rating symbol for "share of code at or above each band" against a table of max shares
 function rateShares(shares, table) {
-  for (const rating of BAND_ORDER) if (shares.every((share, i) => share <= table[rating][i])) return rating;
+  for (const rating of BAND_ORDER) if (shares.every((share, index) => share <= table[rating][index])) return rating;
   return '--';
 }
 
@@ -146,8 +146,8 @@ function rateShares(shares, table) {
 function profile(units, valueOf, edges, table, weight) {
   const totals = [0, 0, 0, 0];
   for (const unit of units) totals[bandOf(valueOf(unit), edges)] += weight(unit);
-  const sum = totals.reduce((a, b) => a + b, 0) || 1;
-  const shares = [totals[1] + totals[2] + totals[3], totals[2] + totals[3], totals[3]].map((n) => +(100 * n / sum).toFixed(1));
+  const sum = totals.reduce((total, item) => total + item, 0) || 1;
+  const shares = [totals[1] + totals[2] + totals[3], totals[2] + totals[3], totals[3]].map((item) => +(100 * item / sum).toFixed(1));
   return { shares, bands: totals, rating: rateShares(shares, table) };
 }
 
@@ -161,10 +161,10 @@ function duplication(prodLines) {
   let total = 0;
   for (const { file, lines } of prodLines) {
     total += lines.length;
-    for (let i = 0; i + DUP_WINDOW_LINES <= lines.length; i++) {
-      const window = lines.slice(i, i + DUP_WINDOW_LINES).join('\n');
+    for (let index = 0; index + DUP_WINDOW_LINES <= lines.length; index++) {
+      const window = lines.slice(index, index + DUP_WINDOW_LINES).join('\n');
       if (window.length < DUP_MIN_CHARS) continue;
-      if (seen.has(window)) { for (let k = i; k < i + DUP_WINDOW_LINES; k++) redundant.add(file + ':' + k); } else seen.add(window);
+      if (seen.has(window)) { for (let k = index; k < index + DUP_WINDOW_LINES; k++) redundant.add(file + ':' + k); } else seen.add(window);
     }
   }
   return { percent: total ? +(100 * redundant.size / total).toFixed(1) : 0, redundantLines: redundant.size };
@@ -179,7 +179,7 @@ function normalisedLines(scan) {
 function resolveSpec(fromRel, spec, known) {
   if (!spec.startsWith('.')) return null;
   const base = path.posix.normalize(path.posix.join(path.posix.dirname(fromRel), spec));
-  return ['', '.js', '.cjs', '.mjs', '/index.js'].map((ext) => base + ext).find((candidate) => known.has(candidate)) || null;
+  return ['', '.js', '.cjs', '.mjs', '/index.js'].map((item) => base + item).find((candidate) => known.has(candidate)) || null;
 }
 
 // fan-in per production file: distinct other files that require it or call one of its uniquely-defined functions
@@ -199,17 +199,17 @@ function fanIn(prod) {
 function componentBalance(prod) {
   const byTop = new Map();
   for (const entry of prod) { const top = entry.rel.split('/')[0]; byTop.set(top, (byTop.get(top) || 0) + entry.lines); }
-  const grand = [...byTop.values()].reduce((a, b) => a + b, 0) || 1;
-  const [bigName, bigLines] = [...byTop].sort((a, b) => b[1] - a[1])[0] || ['', 0];
-  const keyOf = (rel) => { const parts = rel.split('/'); return bigLines / grand > 0.5 && parts[0] === bigName && parts.length > 2 ? parts.slice(0, 2).join('/') : parts[0]; };
+  const grand = [...byTop.values()].reduce((total, item) => total + item, 0) || 1;
+  const [bigName, bigLines] = [...byTop].sort((first, second) => second[1] - first[1])[0] || ['', 0];
+  const keyOf = (text) => { const parts = text.split('/'); return bigLines / grand > 0.5 && parts[0] === bigName && parts.length > 2 ? parts.slice(0, 2).join('/') : parts[0]; };
   const sizes = new Map();
   for (const entry of prod) sizes.set(keyOf(entry.rel), (sizes.get(keyOf(entry.rel)) || 0) + entry.lines);
-  const values = [...sizes.values()].sort((a, b) => a - b);
-  const n = values.length, sum = values.reduce((a, b) => a + b, 0) || 1;
-  const gini = n < 2 ? 1 : values.reduce((acc, v, i) => acc + (2 * (i + 1) - n - 1) * v, 0) / (n * sum);
+  const values = [...sizes.values()].sort((first, second) => first - second);
+  const n = values.length, sum = values.reduce((total, item) => total + item, 0) || 1;
+  const gini = n < 2 ? 1 : values.reduce((total, item, i) => total + (2 * (i + 1) - n - 1) * item, 0) / (n * sum);
   const countStars = n >= 6 && n <= 12 ? 5 : (n >= 4 && n <= 16) ? 4 : (n === 3 || (n >= 17 && n <= 24)) ? 3 : n === 2 || n > 24 ? 2 : 1;
   const evenStars = gini <= 0.25 ? 5 : gini <= 0.35 ? 4 : gini <= 0.45 ? 3 : gini <= 0.6 ? 2 : 1;
-  return { components: n, gini: +gini.toFixed(2), stars: Math.round((countStars + evenStars) / 2), biggest: [...sizes].sort((a, b) => b[1] - a[1]).slice(0, 3) };
+  return { components: n, gini: +gini.toFixed(2), stars: Math.round((countStars + evenStars) / 2), biggest: [...sizes].sort((first, second) => second[1] - first[1]).slice(0, 3) };
 }
 
 /* ── one repo ──────────────────────────────────────────────────────────────────────────────────────────────────────── */
@@ -250,7 +250,7 @@ function measureRepo(name, root) {
     moduleCoupling: { ...profile(modules, (m) => m.fanIn, UNIT_BANDS.coupling, SHARE_EDGES.coupling, (m) => m.lines), unit: '% LOC ≥mod/≥high/vhigh' },
   };
   const balance = componentBalance(prod);
-  props.componentBalance = { value: balance.components + ' components, Gini ' + balance.gini, rating: Object.keys(STAR_FOR).find((k) => STAR_FOR[k] === balance.stars), detail: balance };
+  props.componentBalance = { value: balance.components + ' components, Gini ' + balance.gini, rating: Object.keys(STAR_FOR).find((item) => STAR_FOR[item] === balance.stars), detail: balance };
   const ratio = prodLines ? tests.lines / prodLines : 0;
   props.testRatio = { value: +ratio.toFixed(2), unit: 'test LOC ÷ prod LOC', rating: rateHigh(ratio, TEST_RATIO) };
   return { name, root, prodFiles: prod.length, prodLines, testLines: tests.lines, testFiles: tests.files, units: units.length, skipped, props, stars: rollUp(props), worst: worstUnits(units) };
@@ -258,12 +258,12 @@ function measureRepo(name, root) {
 
 // the ten largest-complexity units — where the next shrink pays most
 function worstUnits(units) {
-  return units.slice().sort((a, b) => b.complexity - a.complexity).slice(0, 10).map((u) => ({ name: u.name, file: u.file, line: u.line, lines: u.lines, complexity: u.complexity, params: u.params }));
+  return units.slice().sort((first, second) => second.complexity - first.complexity).slice(0, 10).map((item) => ({ name: item.name, file: item.file, line: item.line, lines: item.lines, complexity: item.complexity, params: item.params }));
 }
 
 /* ── stars ─────────────────────────────────────────────────────────────────────────────────────────────────────────── */
 const star = (prop) => STAR_FOR[prop.rating];
-const mean = (list) => list.reduce((a, b) => a + b, 0) / list.length;
+const mean = (list) => list.reduce((total, item) => total + item, 0) / list.length;
 
 // ISO 25010 sub-characteristics as SIG maps them, then the overall (mean of the five)
 function rollUp(p) {
@@ -283,10 +283,10 @@ const PROP_LABEL = { volume: 'Volume', duplication: 'Duplication', unitSize: 'Un
 const cell = (prop) => '★'.repeat(star(prop)) + '☆'.repeat(5 - star(prop)) + ' ' + star(prop) + ' (' + prop.rating + ')';
 
 function toMarkdown(results) {
-  const head = '| property | ' + results.map((r) => r.name).join(' | ') + ' |\n|---|' + results.map(() => '---|').join('') + '\n';
-  const rows = Object.keys(PROP_LABEL).map((key) => '| ' + PROP_LABEL[key] + ' | ' + results.map((r) => cell(r.props[key]) + ' · ' + (r.props[key].shares ? r.props[key].shares.join('/') + '%' : r.props[key].value)).join(' | ') + ' |');
-  const overall = '| **Overall** | ' + results.map((r) => '**' + r.stars.overall + '**').join(' | ') + ' |';
-  const facts = results.map((r) => '- ' + r.name + ': ' + r.prodFiles + ' prod files · ' + r.prodLines + ' prod LOC · ' + r.testFiles + ' test files · ' + r.testLines + ' test LOC · ' + r.units + ' units · vendored/generated left out: ' + r.skipped.vendored.length + '/' + r.skipped.generated).join('\n');
+  const head = '| property | ' + results.map((item) => item.name).join(' | ') + ' |\n|---|' + results.map(() => '---|').join('') + '\n';
+  const rows = Object.keys(PROP_LABEL).map((key) => '| ' + PROP_LABEL[key] + ' | ' + results.map((item) => cell(item.props[key]) + ' · ' + (item.props[key].shares ? item.props[key].shares.join('/') + '%' : item.props[key].value)).join(' | ') + ' |');
+  const overall = '| **Overall** | ' + results.map((item) => '**' + item.stars.overall + '**').join(' | ') + ' |';
+  const facts = results.map((item) => '- ' + item.name + ': ' + item.prodFiles + ' prod files · ' + item.prodLines + ' prod LOC · ' + item.testFiles + ' test files · ' + item.testLines + ' test LOC · ' + item.units + ' units · vendored/generated left out: ' + item.skipped.vendored.length + '/' + item.skipped.generated).join('\n');
   return head + rows.join('\n') + '\n' + overall + '\n\n' + facts + '\n';
 }
 
