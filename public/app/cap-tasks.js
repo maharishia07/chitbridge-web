@@ -102,11 +102,11 @@
   }
   /** the marks the server keeps beside the stage word: billed (the counter bill exists) · sent out (despatched) · stuck (the rail's overdue test, with its why) */
   function marksHTML(r) {
-    var m = [];
-    if (r.stuck) m.push('<span class="tag red" data-testid="tk-stuck-' + esc(r.chit_id) + '" title="' + esc(r.stuck_why || '') + '">' + esc(T('Stuck')) + '</span>');
-    if (r.billed) m.push('<span class="tag" data-testid="tk-billed-' + esc(r.chit_id) + '">' + esc(T('Billed')) + '</span>');
-    if (r.despatched && r.stage !== 'delivered' && r.stage !== 'closed') m.push('<span class="tag">' + esc(T('Sent out')) + '</span>');
-    return m.join(' ');
+    var list = [];
+    if (r.stuck) list.push('<span class="tag red" data-testid="tk-stuck-' + esc(r.chit_id) + '" title="' + esc(r.stuck_why || '') + '">' + esc(T('Stuck')) + '</span>');
+    if (r.billed) list.push('<span class="tag" data-testid="tk-billed-' + esc(r.chit_id) + '">' + esc(T('Billed')) + '</span>');
+    if (r.despatched && r.stage !== 'delivered' && r.stage !== 'closed') list.push('<span class="tag">' + esc(T('Sent out')) + '</span>');
+    return list.join(' ');
   }
   function toneOf(r) { return r.stage === 'new' ? 'amber' : r.stage === 'closed' ? '' : 'green'; }
   function wordTag(r) { return '<span class="tag ' + toneOf(r) + '" data-testid="tk-word-' + esc(r.chit_id) + '">' + esc(T(r.word || '')) + '</span>'; }
@@ -121,14 +121,14 @@
     return r.lines_open_n ? r.lines_open_n + ' ' + T('of') + ' ' + r.lines_n + ' ' + T('open') : r.lines_n + ' ' + T('delivered');
   }
   function sayOf(v) { return v ? (v.say || v.why || '') : ''; }
-  function byId(id) { return K.rows.filter(function (r) { return r.chit_id === id; })[0] || null; }
+  function byId(id) { return K.rows.filter(function (item) { return item.chit_id === id; })[0] || null; }
 
   /* ── the read ── */
   function load() {
-    return call('workList', { query: { view: K.view, limit: LIMIT } }).then(function (j) {
-      j = j || {};
-      K.rows = Array.isArray(j.rows) ? j.rows : []; K.counts = j.counts || null; K.total = j.total == null ? K.rows.length : j.total; K.truncated = !!j.truncated;
-      return markStuck().then(function () { return j; });
+    return call('workList', { query: { view: K.view, limit: LIMIT } }).then(function (reply) {
+      reply = reply || {};
+      K.rows = Array.isArray(reply.rows) ? reply.rows : []; K.counts = reply.counts || null; K.total = reply.total == null ? K.rows.length : reply.total; K.truncated = !!reply.truncated;
+      return markStuck().then(function () { return reply; });
     });
   }
   /**
@@ -138,10 +138,10 @@
    */
   function markStuck() {
     if (K.view !== 'orders_in' && K.view !== 'orders_out') return Promise.resolve();
-    return call('railChits').then(function (j) {
-      var by = {}, items = Array.isArray(j) ? j : ((j && j.items) || []);   /* core.js unwrap() collapses the reply to its array, as cap-crm-chits reads it */
+    return call('railChits').then(function (reply) {
+      var by = {}, items = Array.isArray(reply) ? reply : ((reply && reply.items) || []);   /* core.js unwrap() collapses the reply to its array, as cap-crm-chits reads it */
       items.forEach(function (x) { if (x && x.stuck) by[x.chit_id] = x.why || T('Waiting too long'); });
-      K.rows.forEach(function (r) { r.stuck = !!by[r.chit_id]; r.stuck_why = by[r.chit_id] || null; });
+      K.rows.forEach(function (item) { item.stuck = !!by[item.chit_id]; item.stuck_why = by[item.chit_id] || null; });
     }, function () {});
   }
   function reload() { return load().then(function () { paintBar(); mountList($('tk_list')); }, function (e) { paintFail(e); }); }
@@ -185,19 +185,19 @@
     if (!host) return;
     if (K.list) { try { K.list.destroy(); } catch (_) {} }
     var names = [];
-    K.rows.forEach(function (r) { var n = r.assignee && r.assignee.name; if (n && names.indexOf(n) < 0) names.push(n); });
-    var stages = (WF() ? WF().STAGES : ['new', 'accepted', 'delivered', 'closed']).filter(function (s) { return K.rows.some(function (r) { return r.stage === s; }); });
+    K.rows.forEach(function (item) { var n = item.assignee && item.assignee.name; if (n && names.indexOf(n) < 0) names.push(n); });
+    var stages = (WF() ? WF().STAGES : ['new', 'accepted', 'delivered', 'closed']).filter(function (item) { return K.rows.some(function (r) { return r.stage === item; }); });
     var stageLabel = { new: 'New', accepted: 'Accepted', delivered: 'Delivered', closed: 'Closed' };
-    var kinds = Object.keys(KIND_WORD).filter(function (k) { return K.rows.some(function (r) { return r.kind === k; }); });
-    var stateOpts = stages.map(function (s) { return { v: s, label: T(stageLabel[s] || s) }; });
-    if (K.rows.some(function (r) { return r.stuck; })) stateOpts.push({ v: 'stuck', label: T('Stuck') });
+    var kinds = Object.keys(KIND_WORD).filter(function (item) { return K.rows.some(function (r) { return r.kind === item; }); });
+    var stateOpts = stages.map(function (item) { return { v: item, label: T(stageLabel[item] || item) }; });
+    if (K.rows.some(function (item) { return item.stuck; })) stateOpts.push({ v: 'stuck', label: T('Stuck') });
     K.list = root.CBList.mount(host, {
       key: 'tasks-' + K.view, t: T, rows: tkList, id: function (r) { return r.chit_id; }, rowTid: function (r) { return 'tk-row-' + r.chit_id; },
       columns: cols(), defaultCols: defaultCols(),
       filters: [
-        { key: 'kind', label: T('Kind'), all: T('Any kind'), options: kinds.map(function (k) { return { v: k, label: T(KIND_WORD[k]) }; }), match: function (r, v) { return r.kind === v; } },
+        { key: 'kind', label: T('Kind'), all: T('Any kind'), options: kinds.map(function (item) { return { v: item, label: T(KIND_WORD[item]) }; }), match: function (r, v) { return r.kind === v; } },
         { key: 'state', label: T('Where it is'), all: T('Anywhere'), options: stateOpts, match: function (r, v) { return v === 'stuck' ? !!r.stuck : r.stage === v; } },
-        { key: 'assignee', label: T('Who has it'), all: T('Anyone'), options: [{ v: 'none', label: T('No one') }].concat(names.map(function (n) { return { v: n, label: n }; })),
+        { key: 'assignee', label: T('Who has it'), all: T('Anyone'), options: [{ v: 'none', label: T('No one') }].concat(names.map(function (item) { return { v: item, label: item }; })),
           match: function (r, v) { return v === 'none' ? !(r.assignee && r.assignee.name) && !r.lines_assigned_n : !!(r.assignee && r.assignee.name === v); } }
       ],
       search: function (r) { return [r.subject, r.party, r.ref, r.word, r.assignee && r.assignee.name, r.remark, r.address, howWord(r)].join(' '); },
@@ -215,20 +215,20 @@
     return T(t ? t.label : v);
   }
   function paintBar() {
-    var b = $('tk_bar'); if (!b) return;
+    var node = $('tk_bar'); if (!node) return;
     var n = K.total, more = K.rows.length < n ? ' · ' + T('first') + ' ' + K.rows.length + ' ' + T('shown') : '';
     var count = K.truncated ? T('Too many to count') : '<b>' + n + '</b> ' + esc(T(n === 1 ? 'row' : 'rows')) + esc(more);
     var pick = '';
     if (K.o.embed) {
-      pick = '<select class="inp tk-pick" id="tk_view" data-testid="tk-view" aria-label="' + esc(T('Folder')) + '">' + VIEWS.map(function (v) {
-        var c = K.counts && K.counts[v] != null ? ' (' + K.counts[v] + ')' : '';
-        return '<option value="' + v + '"' + (v === K.view ? ' selected' : '') + '>' + esc(viewLabel(v) + c) + '</option>';
+      pick = '<select class="inp tk-pick" id="tk_view" data-testid="tk-view" aria-label="' + esc(T('Folder')) + '">' + VIEWS.map(function (item) {
+        var c = K.counts && K.counts[item] != null ? ' (' + K.counts[item] + ')' : '';
+        return '<option value="' + item + '"' + (item === K.view ? ' selected' : '') + '>' + esc(viewLabel(item) + c) + '</option>';
       }).join('') + '</select>';
     }
     /* ＋ New (TOUR-FIX1): a task, started HERE in this page's own sheet — never the workshop (index-not-app). An order to a supplier waits for the
        compose route outside app.html (docs/design/tasks-orders/REQUIREMENT.md §＋ New). */
     var fresh = K.o.embed ? '' : '<button type="button" class="act quiet" id="tk_new" data-testid="tk-new">' + esc(T('＋ New')) + '</button>';
-    b.innerHTML = '<span class="tk-count" data-testid="tk-count">' + count + '</span>' + pick + fresh;
+    node.innerHTML = '<span class="tk-count" data-testid="tk-count">' + count + '</span>' + pick + fresh;
     var sel = $('tk_view'); if (sel) sel.onchange = function () { show(sel.value); };
     var nb = $('tk_new'); if (nb) nb.onclick = tkNew;
     if (typeof K.o.onCounts === 'function') { try { K.o.onCounts(K.counts); } catch (_) {} }
@@ -236,24 +236,24 @@
 
   /* ── the sheet: header · next steps · who has it · the lines · the thread ── */
   function sheet(html) {
-    var d = $('tk_sheet'); if (!d) return;
-    d.innerHTML = '<button type="button" class="mx" id="tk_x" aria-label="' + esc(T('Close')) + '" title="' + esc(T('Close')) + '">✕</button>' + html;
-    if (!d.open) { try { d.showModal(); } catch (_) { d.setAttribute('open', ''); } }
+    var node = $('tk_sheet'); if (!node) return;
+    node.innerHTML = '<button type="button" class="mx" id="tk_x" aria-label="' + esc(T('Close')) + '" title="' + esc(T('Close')) + '">✕</button>' + html;
+    if (!node.open) { try { node.showModal(); } catch (_) { node.setAttribute('open', ''); } }
     $('tk_x').onclick = closeSheet;
   }
   function closeSheet() {
-    var d = $('tk_sheet'); if (!d) return;
+    var node = $('tk_sheet'); if (!node) return;
     if (K.thread) { try { K.thread.destroy(); } catch (_) {} K.thread = null; }
-    try { d.close(); } catch (_) { d.removeAttribute('open'); } d.innerHTML = ''; K.open = null;
+    try { node.close(); } catch (_) { node.removeAttribute('open'); } node.innerHTML = ''; K.open = null;
   }
   /** a row → its sheet, read fresh (the lines, the verdicts); the list row stays the row */
   function tkOpen(id) {
-    var r0 = byId(id);
-    sheet('<h2 data-testid="tk-subject">' + esc((r0 && r0.subject) || T('Order')) + '</h2><div class="loadwrap"><span class="spin"></span> ' + esc(T('Loading')) + '</div>');
-    return call('workOne', { params: { id: id } }).then(function (c) {
-      K.open = c; paintSheet(c); tell('open', { chit_id: c.chit_id, kind: c.kind, stage: c.stage, word: c.word });
+    var node = byId(id);
+    sheet('<h2 data-testid="tk-subject">' + esc((node && node.subject) || T('Order')) + '</h2><div class="loadwrap"><span class="spin"></span> ' + esc(T('Loading')) + '</div>');
+    return call('workOne', { params: { id: id } }).then(function (reply) {
+      K.open = reply; paintSheet(reply); tell('open', { chit_id: reply.chit_id, kind: reply.kind, stage: reply.stage, word: reply.word });
     }, function (e) {
-      sheet('<h2>' + esc((r0 && r0.subject) || T('Order')) + '</h2><div class="empty" data-testid="tk-sheet-fail"><div class="t">' + esc(T("Couldn't read this one")) + '</div>'
+      sheet('<h2>' + esc((node && node.subject) || T('Order')) + '</h2><div class="empty" data-testid="tk-sheet-fail"><div class="t">' + esc(T("Couldn't read this one")) + '</div>'
         + '<button type="button" class="act" id="tk_sheet_retry">' + esc(T('Try again')) + '</button></div>');
       $('tk_sheet_retry').onclick = function () { tkOpen(id); };
     });
@@ -309,8 +309,8 @@
   function paintSheet(c) {
     var acts = c.actions || {};
     var keep = $('tk_out') ? $('tk_out').textContent : '';
-    var r0 = byId(c.chit_id); if (r0) { c.stuck = !!r0.stuck; c.stuck_why = r0.stuck_why || null; }   /* the rail's stuck mark rides the list row; the sheet paints it */
-    var steps = STEPS.map(function (a) { return actRow('tk_do_' + a, stepLabel(a, c), acts[a], '', a === 'accept' || a === 'complete' ? '' : 'quiet'); });
+    var node = byId(c.chit_id); if (node) { c.stuck = !!node.stuck; c.stuck_why = node.stuck_why || null; }   /* the rail's stuck mark rides the list row; the sheet paints it */
+    var steps = STEPS.map(function (item) { return actRow('tk_do_' + item, stepLabel(item, c), acts[item], '', item === 'accept' || item === 'complete' ? '' : 'quiet'); });
     steps.splice(1, 0, billRow(c));   /* Accept → Bill it → Delivered, the brief's order */
     steps = steps.join('');
     /* the whole task's holder (the list column prefers the lines' summary, b143's rule; the sheet shows both: the task's, then the lines held) */
@@ -321,16 +321,16 @@
       + '<div id="tk_out" class="tk-out" role="status" data-testid="tk-out">' + esc(keep) + '</div>'
       + '<div class="tk-block"><div class="tk-h">' + esc(T('Next step')) + '</div><div class="tk-steps" data-testid="tk-steps">' + steps + '</div><div id="tk_more"></div></div>'
       + '<div class="tk-block"><div class="tk-h">' + esc(T('Who has it')) + '</div>' + actRow('tk_assign', T('Assign'), acts.assign_task, '<span class="sub" data-testid="tk-who">' + esc(who) + '</span>') + '<div id="tk_amore"></div></div>'
-      + '<div class="tk-block"><div class="tk-h">' + esc(T('Lines')) + '</div><div class="tk-lines" data-testid="tk-lines">' + ((c.lines || []).length ? c.lines.map(function (l) { return lineHTML(l, c); }).join('') : '<div class="sub">' + esc(T('No lines on this one')) + '</div>') + '</div></div>'
+      + '<div class="tk-block"><div class="tk-h">' + esc(T('Lines')) + '</div><div class="tk-lines" data-testid="tk-lines">' + ((c.lines || []).length ? c.lines.map(function (item) { return lineHTML(item, c); }).join('') : '<div class="sub">' + esc(T('No lines on this one')) + '</div>') + '</div></div>'
       + '<div class="tk-block"><div class="tk-h">' + esc(T('Messages')) + '</div><div id="tk_thread" data-testid="tk-thread"></div></div>');
-    STEPS.forEach(function (a) { var b = $('tk_do_' + a); if (b && acts[a] && acts[a].ok !== false) b.onclick = function () { tkMove(c, a, b); }; });
+    STEPS.forEach(function (item) { var b = $('tk_do_' + item); if (b && acts[item] && acts[item].ok !== false) b.onclick = function () { tkMove(c, item, b); }; });
     var bill = $('tk_do_bill'); if (bill && !bill.disabled) bill.onclick = function () { tkBill(c); };
     if (acts.assign_task && acts.assign_task.ok !== false) $('tk_assign').onclick = function () { assignPanel(c, null); };
-    (c.lines || []).forEach(function (l) {
-      var k = l.line_id, la = $('tk_la_' + k), ld = $('tk_ld_' + k), lv = $('tk_lv_' + k);
-      if (la && !la.disabled) la.onclick = function () { assignPanel(c, l); };
-      if (ld && !ld.disabled) ld.onclick = function () { tkAssignLine(c, l, { state: (l.settings && l.settings.state) === 'done' ? 'open' : 'done' }, ld); };
-      if (lv && !lv.disabled) lv.onclick = function () { deliverPanel(c, l); };
+    (c.lines || []).forEach(function (item) {
+      var k = item.line_id, la = $('tk_la_' + k), ld = $('tk_ld_' + k), lv = $('tk_lv_' + k);
+      if (la && !la.disabled) la.onclick = function () { assignPanel(c, item); };
+      if (ld && !ld.disabled) ld.onclick = function () { tkAssignLine(c, item, { state: (item.settings && item.settings.state) === 'done' ? 'open' : 'done' }, ld); };
+      if (lv && !lv.disabled) lv.onclick = function () { deliverPanel(c, item); };
     });
     mountThread(c);
   }
@@ -338,15 +338,15 @@
     var el = $('tk_thread'); if (!el || !root.CBThread) return;
     if (K.thread) { try { K.thread.destroy(); } catch (_) {} }
     K.thread = root.CBThread.mount(el, { chit_id: c.chit_id, party: c.party || undefined, kinds: ['info'], context: { host: 'tasks' },
-      lines: (c.lines || []).map(function (l) { return { line_id: l.line_id, label: l.particulars }; }) });
+      lines: (c.lines || []).map(function (item) { return { line_id: item.line_id, label: item.particulars }; }) });
   }
 
   /** after a write: re-read the one row's sheet and the folder (a step may move it to Done), repaint, tell the host */
   function changed(id, event, more) {
-    return call('workOne', { params: { id: id } }).then(function (c) {
-      K.open = c;
-      if ($('tk_sheet') && $('tk_sheet').open) paintSheet(c);
-      tell(event, Object.assign({ chit_id: c.chit_id, kind: c.kind, stage: c.stage, word: c.word, status: c.status }, more || {}));
+    return call('workOne', { params: { id: id } }).then(function (reply) {
+      K.open = reply;
+      if ($('tk_sheet') && $('tk_sheet').open) paintSheet(reply);
+      tell(event, Object.assign({ chit_id: reply.chit_id, kind: reply.kind, stage: reply.stage, word: reply.word, status: reply.status }, more || {}));
       return load().then(function () { paintBar(); mountList($('tk_list')); });
     }, function () { return load().then(function () { paintBar(); mountList($('tk_list')); }); });
   }
@@ -365,9 +365,9 @@
         + '<button type="button" class="act" id="tk_reason_go" data-testid="tk-reason-go">' + esc(stepLabel(action, c)) + '</button></div>';
       $('tk_reason').focus();
       $('tk_reason_go').onclick = function () {
-        var why = $('tk_reason').value.trim();
-        if (!why) { $('tk_out').textContent = T('Type the reason first.'); return; }
-        root.CBAction.run($('tk_reason_go'), function () { return run(why); }, opts);
+        var node = $('tk_reason').value.trim();
+        if (!node) { $('tk_out').textContent = T('Type the reason first.'); return; }
+        root.CBAction.run($('tk_reason_go'), function () { return run(node); }, opts);
       };
       return;
     }
@@ -379,7 +379,7 @@
 
   function loadPeople() {
     if (K.people) return Promise.resolve(K.people);
-    return call('people').then(function (j) { K.people = ((j && j.people) || []).filter(function (p) { return p.state !== 'off'; }); return K.people; }, function () { K.people = []; return K.people; });
+    return call('people').then(function (reply) { K.people = ((reply && reply.people) || []).filter(function (item) { return item.state !== 'off'; }); return K.people; }, function () { K.people = []; return K.people; });
   }
   /** the picker, for the whole task (line null) or one line: the shop's people, "No one" to take it off someone */
   function assignPanel(c, line) {
@@ -387,15 +387,15 @@
     host.innerHTML = '<div class="tk-panel"><span class="sub">' + esc(T('Loading')) + '</span></div>';
     loadPeople().then(function (people) {
       var cur = line ? (line.assignment && line.assignment.assignee_actor_id) : (c.assignee && c.assignee.id);
-      var opts = '<option value="">' + esc(T('No one')) + '</option>' + people.map(function (p) { return '<option value="' + esc(p.id) + '"' + (p.id === cur ? ' selected' : '') + '>' + esc(p.name) + '</option>'; }).join('');
+      var opts = '<option value="">' + esc(T('No one')) + '</option>' + people.map(function (item) { return '<option value="' + esc(item.id) + '"' + (item.id === cur ? ' selected' : '') + '>' + esc(item.name) + '</option>'; }).join('');
       var tid = line ? 'tk-line-pick' : 'tk-pick';
       host.innerHTML = '<div class="tk-panel"><label class="sub" for="tk_who_sel">' + esc(T('Who does this?')) + '</label>'
         + '<select id="tk_who_sel" class="inp" data-testid="' + tid + '">' + opts + '</select>'
         + '<button type="button" class="act" id="tk_who_go" data-testid="' + tid + '-go">' + esc(T('Save')) + '</button></div>';
       $('tk_who_go').onclick = function () {
-        var v = $('tk_who_sel').value || null, p = people.filter(function (x) { return x.id === v; })[0] || null;
-        if (line) return tkAssignLine(c, line, { who: v, name: p ? p.name : null }, $('tk_who_go'));
-        return tkAssignTask(c, v, p ? p.name : null, $('tk_who_go'));
+        var node = $('tk_who_sel').value || null, p = people.filter(function (x) { return x.id === node; })[0] || null;
+        if (line) return tkAssignLine(c, line, { who: node, name: p ? p.name : null }, $('tk_who_go'));
+        return tkAssignTask(c, node, p ? p.name : null, $('tk_who_go'));
       };
     });
   }
@@ -445,8 +445,8 @@
       + '<input class="inp" id="tk_new_what" data-testid="tk-new-what" maxlength="200" autocomplete="off">'
       + '<button type="button" class="act" id="tk_new_go" data-testid="tk-new-go">' + esc(T('Add task')) + '</button></div>'
       + '<div id="tk_out" class="tk-out" role="status" data-testid="tk-out"></div>');
-    var inp = $('tk_new_what'); inp.focus();
-    inp.onkeydown = function (e) { if (e.key === 'Enter') { e.preventDefault(); $('tk_new_go').click(); } };
+    var node = $('tk_new_what'); node.focus();
+    node.onkeydown = function (e) { if (e.key === 'Enter') { e.preventDefault(); $('tk_new_go').click(); } };
     $('tk_new_go').onclick = function () {
       var what = String($('tk_new_what').value || '').trim();
       if (!what) { $('tk_out').textContent = T('Type what needs doing first.'); return; }
@@ -469,9 +469,9 @@
     K.el.innerHTML = '<div class="loadwrap"><span class="spin"></span> ' + esc(T('Loading')) + '</div>';
     return load().then(function () {
       K.el.innerHTML = '<div class="tk-top" id="tk_bar" data-testid="tk-bar"></div><div class="tk-list" id="tk_list" data-testid="tk-list"></div><dialog class="sheet tk-sheet" id="tk_sheet" data-testid="tk-sheet"></dialog>';
-      var d = $('tk_sheet');
-      d.addEventListener('cancel', function (e) { e.preventDefault(); closeSheet(); });
-      d.addEventListener('click', function (e) { if (e.target === d) closeSheet(); });
+      var node = $('tk_sheet');
+      node.addEventListener('cancel', function (e) { e.preventDefault(); closeSheet(); });
+      node.addEventListener('click', function (e) { if (e.target === node) closeSheet(); });
       paintBar(); mountList($('tk_list'));
       /* a host may name the row to open (?open=<chit_id>): the sheet, over the list */
       if (K.o.open) { var id = K.o.open; K.o.open = null; tkOpen(id); }
