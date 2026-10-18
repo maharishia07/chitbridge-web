@@ -27,18 +27,18 @@ var CRM_OFFER_WHY = 'Offer Lab cannot pick a group yet.';
 
 /* ═══ THE READ — one answer: segments + groups, counts, offers, reach, may ═══════════════════════════════════════════ */
 function crmGroupsRows(r) {
-  var segs = ((r && r.segments) || []).map(function (s) { return Object.assign({ kind: 'segment' }, s); });
-  var grs = ((r && r.groups) || []).map(function (g) { return Object.assign({ kind: 'group' }, g); });
+  var segs = ((r && r.segments) || []).map(function (item) { return Object.assign({ kind: 'segment' }, item); });
+  var grs = ((r && r.groups) || []).map(function (item) { return Object.assign({ kind: 'group' }, item); });
   return segs.concat(grs);
 }
 async function crmGroupsLoad(quiet) {
   var g = ++GROUPS.gen;
   if (!quiet || !GROUPS.loaded) { GROUPS.state = 'loading'; crmGroupsRefresh(); }
   try {
-    var r = await api('crmSegments');
+    var reply = await api('crmSegments');
     if (g !== GROUPS.gen) return;
-    GROUPS.rows = crmGroupsRows(r); GROUPS.may = (r && r.may) || null; GROUPS.channel = (r && r.channel) || 'whatsapp'; GROUPS.purpose = (r && r.purpose) || 'marketing';
-    GROUPS.consent = !(r && r.consent_migrated === false); GROUPS.migrated = !(r && r.groups_migrated === false);
+    GROUPS.rows = crmGroupsRows(reply); GROUPS.may = (reply && reply.may) || null; GROUPS.channel = (reply && reply.channel) || 'whatsapp'; GROUPS.purpose = (reply && reply.purpose) || 'marketing';
+    GROUPS.consent = !(reply && reply.consent_migrated === false); GROUPS.migrated = !(reply && reply.groups_migrated === false);
     GROUPS.state = 'ready'; GROUPS.loaded = true; GROUPS.err = null;
   } catch (e) {
     if (g !== GROUPS.gen) return;
@@ -57,9 +57,9 @@ function crmGroupsMay(k) {
 }
 /** the members of a row, from the Parties list in memory (never a lead, never a walk-in — the same rule the server counts with) */
 function crmGroupMembers(row) {
-  return CRM.rows.filter(function (p) {
-    if (p.kind === 'walk-in' || (p.roles || []).indexOf('customer') < 0 || crmIsLead(p)) return false;
-    return row.kind === 'segment' ? p.segment === row.key : (p.groups || []).indexOf(row.name) >= 0;
+  return CRM.rows.filter(function (item) {
+    if (item.kind === 'walk-in' || (item.roles || []).indexOf('customer') < 0 || crmIsLead(item)) return false;
+    return row.kind === 'segment' ? item.segment === row.key : (item.groups || []).indexOf(row.name) >= 0;
   });
 }
 function crmReachWords(reach) {
@@ -86,15 +86,15 @@ function crmGroupsBar() {
   crmBar('<strong>' + esc(tx('CRM')) + '</strong>', btn, true);
 }
 function crmGroupsNotices() {
-  var n = [];
-  if (!GROUPS.migrated) n.push({ text: tx('Named groups need one database step (b205). Segments still count.'), cls: 'warn', tid: 'crm-grp-nomig' });
-  if (!GROUPS.consent) n.push({ text: tx('Consent records are not set up yet (b306). Nobody can be sent offers until they are.'), cls: 'warn', tid: 'crm-grp-noconsent' });
-  return n;
+  var list = [];
+  if (!GROUPS.migrated) list.push({ text: tx('Named groups need one database step (b205). Segments still count.'), cls: 'warn', tid: 'crm-grp-nomig' });
+  if (!GROUPS.consent) list.push({ text: tx('Consent records are not set up yet (b306). Nobody can be sent offers until they are.'), cls: 'warn', tid: 'crm-grp-noconsent' });
+  return list;
 }
 /** ▸ the mini-card: members · reach · offers — the same three-box shape as a party's */
 function crmGroupMini(r) {
   var ms = crmGroupMembers(r), key = crmGroupTid(r), w = crmReachWords(r.reach);
-  var names = ms.slice(0, 6).map(function (p) { return crmMiniRow('person', '<a href="#/party/' + esc(encodeURIComponent(crmKey(p))) + '" data-testid="crm-grp-member-' + esc(crmKey(p)) + '">' + esc(p.display_name) + '</a>'); }).join('');
+  var names = ms.slice(0, 6).map(function (item) { return crmMiniRow('person', '<a href="#/party/' + esc(encodeURIComponent(crmKey(item))) + '" data-testid="crm-grp-member-' + esc(crmKey(item)) + '">' + esc(item.display_name) + '</a>'); }).join('');
   var more = ms.length > 6 ? crmMiniRow('', '<a href="' + crmGroupsParamsHref(r) + '" data-testid="crm-grp-seeall-' + key + '">' + esc(txf('See all {n} in Parties', { n: ms.length })) + '</a>') : '';
   var members = ms.length ? names + more : '<div class="mc-r sub" style="white-space:normal">' + esc(r.kind === 'group' ? tx('Nobody is in this group yet. Use Members.') : tx('Nobody is in this segment right now.')) + '</div>';
   var reach = [crmMiniRow('msg', '<b data-testid="crm-grp-may-' + key + '">' + esc(w.may) + '</b>'), w.not ? '<div class="mc-r sub" style="white-space:normal;min-height:0" data-testid="crm-grp-not-' + key + '">' + esc(w.not) + '</div>' : '',
@@ -119,8 +119,8 @@ function crmGroupsActions() {
 }
 function crmGroups(frame) {
   crmGroupsBar();
-  var s = document.getElementById('screen'); s.className = 'screen flush';
-  s.innerHTML = '<div id="crm_groups" data-testid="crm-groups"></div>';
+  var node = document.getElementById('screen'); node.className = 'screen flush';
+  node.innerHTML = '<div id="crm_groups" data-testid="crm-groups"></div>';
   if (GROUPS.api && GROUPS.api.destroy) { try { GROUPS.api.destroy(); } catch (_) {} }
   GROUPS.api = CBList.mount(document.getElementById('crm_groups'), {
     key: 'crm-groups', t: tx, rows: function () { return GROUPS.rows; }, id: function (r) { return r.key; }, rowTid: function (r) { return 'crm-grp-' + crmGroupTid(r); },
@@ -144,7 +144,7 @@ function crmGroups(frame) {
 var GSHEET = { name: '', fixed: false, orig: {}, on: {}, q: '' };
 function crmGroupOpen(name) {
   GSHEET = { name: name || '', fixed: !!name, orig: {}, on: {}, q: '' };
-  if (name) CRM.rows.forEach(function (p) { if ((p.groups || []).indexOf(name) >= 0) { GSHEET.orig[p.party_id] = 1; GSHEET.on[p.party_id] = 1; } });
+  if (name) CRM.rows.forEach(function (item) { if ((item.groups || []).indexOf(name) >= 0) { GSHEET.orig[item.party_id] = 1; GSHEET.on[item.party_id] = 1; } });
   modal('<div class="mhd"><div class="t">' + esc(name ? txf('Members of {name}', { name: name }) : tx('New group')) + '</div></div><div class="mbody" data-testid="crm-grp-sheet">'
     + '<label>' + esc(tx('Name')) + '<input class="inp" id="crm_grp_name" data-testid="crm-grp-name" maxlength="40" autocomplete="off" value="' + esc(name || '') + '"' + (name ? ' readonly' : '') + '></label>'
     + '<label>' + esc(tx('Find a customer')) + '<input class="inp" id="crm_grp_q" data-testid="crm-grp-q" placeholder="' + esc(tx('Name, ID, phone')) + '" autocomplete="off" oninput="crmGroupPick(this.value)"></label>'
@@ -152,20 +152,20 @@ function crmGroupOpen(name) {
     + '<div id="crm_grp_msg" class="hint" role="status" data-testid="crm-grp-msg"></div></div>'
     + '<div class="mfoot"><span class="sub" id="crm_grp_n" data-testid="crm-grp-n" style="margin-right:auto;align-self:center"></span><button type="button" onclick="closeModal()">' + esc(tx('Cancel')) + '</button><button type="button" class="pri" data-crm="grpsave" data-testid="crm-grp-save">' + esc(tx('Save')) + '</button></div>');
   crmGroupPick('');
-  var n = document.getElementById(name ? 'crm_grp_q' : 'crm_grp_name'); if (n) n.focus();
+  var node = document.getElementById(name ? 'crm_grp_q' : 'crm_grp_name'); if (node) node.focus();
 }
-function crmGroupCands() { return CRM.rows.filter(function (p) { return p.kind !== 'walk-in' && (p.roles || []).indexOf('customer') >= 0 && !crmIsLead(p); }); }
+function crmGroupCands() { return CRM.rows.filter(function (item) { return item.kind !== 'walk-in' && (item.roles || []).indexOf('customer') >= 0 && !crmIsLead(item); }); }
 function crmGroupPick(q) {
   GSHEET.q = String(q || '').trim().toLowerCase();
   var box = document.getElementById('crm_grp_list'); if (!box) return;
-  var all = crmGroupCands(), m = all.filter(function (p) { return !GSHEET.q || [p.display_name, p.nickname, p.party_no, p.phone, p.user_id].join(' ').toLowerCase().indexOf(GSHEET.q) >= 0; });
-  var ticked = all.filter(function (p) { return GSHEET.on[p.party_id]; });
-  box.innerHTML = (m.length ? m.slice(0, 60).map(function (p) {
-    return '<label class="grp-row" data-testid="crm-grp-cand-' + esc(crmKey(p)) + '"><input type="checkbox" data-crm="grptick" data-k="' + esc(p.party_id) + '"' + (GSHEET.on[p.party_id] ? ' checked' : '') + '><span class="nm">' + esc(p.display_name) + '</span><span class="sub">' + esc(p.party_no || p.phone || '') + '</span></label>';
-  }).join('') + (m.length > 60 ? '<div class="hint">' + esc(txf('{n} more — type to narrow', { n: m.length - 60 })) + '</div>' : '') : '<div class="hint">' + esc(all.length ? tx('Nobody matches.') : tx('No customers yet. They appear when you bill them.')) + '</div>');
-  var n = document.getElementById('crm_grp_n'); if (n) n.textContent = crmPlural(ticked.length, 'member', 'members');
+  var all = crmGroupCands(), text = all.filter(function (item) { return !GSHEET.q || [item.display_name, item.nickname, item.party_no, item.phone, item.user_id].join(' ').toLowerCase().indexOf(GSHEET.q) >= 0; });
+  var ticked = all.filter(function (item) { return GSHEET.on[item.party_id]; });
+  box.innerHTML = (text.length ? text.slice(0, 60).map(function (item) {
+    return '<label class="grp-row" data-testid="crm-grp-cand-' + esc(crmKey(item)) + '"><input type="checkbox" data-crm="grptick" data-k="' + esc(item.party_id) + '"' + (GSHEET.on[item.party_id] ? ' checked' : '') + '><span class="nm">' + esc(item.display_name) + '</span><span class="sub">' + esc(item.party_no || item.phone || '') + '</span></label>';
+  }).join('') + (text.length > 60 ? '<div class="hint">' + esc(txf('{n} more — type to narrow', { n: text.length - 60 })) + '</div>' : '') : '<div class="hint">' + esc(all.length ? tx('Nobody matches.') : tx('No customers yet. They appear when you bill them.')) + '</div>');
+  var node = document.getElementById('crm_grp_n'); if (node) node.textContent = crmPlural(ticked.length, 'member', 'members');
 }
-function crmGroupTick(k, on) { if (on) GSHEET.on[k] = 1; else delete GSHEET.on[k]; var n = document.getElementById('crm_grp_n'); if (n) n.textContent = crmPlural(Object.keys(GSHEET.on).length, 'member', 'members'); }
+function crmGroupTick(k, on) { if (on) GSHEET.on[k] = 1; else delete GSHEET.on[k]; var node = document.getElementById('crm_grp_n'); if (node) node.textContent = crmPlural(Object.keys(GSHEET.on).length, 'member', 'members'); }
 function crmGroupWords(e) {
   var code = e && e.data && e.data.code;
   if (e && e.status === 403) return (e.data && (e.data.why || e.data.message)) || tx('Your login can only view.');
@@ -179,7 +179,7 @@ function crmGroupWords(e) {
 function crmGroupSave(btn) {
   var name = String((document.getElementById('crm_grp_name') || {}).value || '').replace(/\s+/g, ' ').trim(), msg = document.getElementById('crm_grp_msg');
   if (!name) { msg.textContent = tx('Name the group.'); return; }
-  var add = Object.keys(GSHEET.on).filter(function (k) { return !GSHEET.orig[k]; }), remove = Object.keys(GSHEET.orig).filter(function (k) { return !GSHEET.on[k]; });
+  var add = Object.keys(GSHEET.on).filter(function (item) { return !GSHEET.orig[item]; }), remove = Object.keys(GSHEET.orig).filter(function (item) { return !GSHEET.on[item]; });
   if (!add.length && !remove.length) { msg.textContent = tx('Tick at least one customer.'); return; }
   return CBAction.run(btn, async function () { return api('crmGroupSet', { body: { name: name, add: add, remove: remove } }); }, {
     key: 'group-save', busy: tx('Saving…'),
@@ -211,7 +211,7 @@ function crmSendOpen(r, pre) {
     + '<div id="crm_send_out" data-testid="crm-send-out"></div></div>'
     + '<div class="mfoot"><button type="button" onclick="closeModal()">' + esc(tx('Close')) + '</button><button type="button" data-crm="sendcheck" data-testid="crm-send-check">' + esc(tx('Who may be sent?')) + '</button>'
     + '<button type="button" class="pri" data-crm="sendgo" data-testid="crm-send-go" disabled title="' + esc(tx('Check first')) + '">' + esc(tx('Send')) + '</button></div>');
-  var t = document.getElementById('crm_send_text'); if (t) t.focus();
+  var node = document.getElementById('crm_send_text'); if (node) node.focus();
 }
 function crmSendWords(e) {
   var code = e && e.data && e.data.code, m = e && e.data && (e.data.why || e.data.message);
@@ -224,15 +224,15 @@ function crmSendWords(e) {
 }
 function crmSendBody(dry) { return { channel: GROUPS.channel, purpose: GROUPS.purpose, text: String((document.getElementById('crm_send_text') || {}).value || '').trim(), dry: !!dry }; }
 function crmSendCheck(btn) {
-  var who = document.getElementById('crm_send_who'), go = document.getElementById('crm_send_go') || document.querySelector('[data-testid="crm-send-go"]');
-  var body = crmSendBody(true); if (!body.text) { who.textContent = tx('Write the message.'); return; }
+  var node = document.getElementById('crm_send_who'), go = document.getElementById('crm_send_go') || document.querySelector('[data-testid="crm-send-go"]');
+  var body = crmSendBody(true); if (!body.text) { node.textContent = tx('Write the message.'); return; }
   return CBAction.run(btn, async function () { return api('crmSegSend', { params: { key: SEND.row.key }, body: body }); }, {
     key: 'send-check', busy: tx('Checking…'),
-    onFail: function (words, e) { who.textContent = crmSendWords(e); },
+    onFail: function (words, e) { node.textContent = crmSendWords(e); },
     outcome: function (r) {
       SEND.dry = r;
       var w = crmReachWords({ may: r.may, not: r.refused_n, refused_by: r.refused_by });
-      who.innerHTML = '<b data-testid="crm-send-may">' + esc(w.may) + '</b>' + (w.not ? ' · ' + esc(w.not) : '') + (r.refused && r.refused.length ? '<div class="sub" data-testid="crm-send-refused">' + r.refused.slice(0, 5).map(function (x) { return esc(x.name) + ' — ' + esc(x.why); }).join('<br>') + (r.refused.length > 5 ? '<br>…' : '') + '</div>' : '');
+      node.innerHTML = '<b data-testid="crm-send-may">' + esc(w.may) + '</b>' + (w.not ? ' · ' + esc(w.not) : '') + (r.refused && r.refused.length ? '<div class="sub" data-testid="crm-send-refused">' + r.refused.slice(0, 5).map(function (x) { return esc(x.name) + ' — ' + esc(x.why); }).join('<br>') + (r.refused.length > 5 ? '<br>…' : '') + '</div>' : '');
       if (go) { go.disabled = !(r.may > 0); go.title = r.may > 0 ? '' : tx('Nobody may be sent this'); go.textContent = r.may > 0 ? txf('Send to {n}', { n: r.may }) : tx('Send'); }
     }
   });
@@ -246,11 +246,11 @@ function crmSendGo(btn) {
     outcome: function (r) {
       SEND.done = r;
       /* three facts, never one number: sent · not sent (the sender refused or failed — its reason is on each line) · not asked (no consent — the server's codes) */
-      var notSent = (r.sent || []).filter(function (x) { return x.status !== 'sent'; }).length, notAsked = (r.refused_by || []).reduce(function (a, x) { return a + (Number(x.n) || 0); }, 0);
+      var notSent = (r.sent || []).filter(function (x) { return x.status !== 'sent'; }).length, notAsked = (r.refused_by || []).reduce(function (total, x) { return total + (Number(x.n) || 0); }, 0);
       var line = [txf('{n} sent', { n: r.sent_n || 0 }), notSent ? txf('{n} not sent', { n: notSent }) : '', notAsked ? txf('{n} not asked — no consent', { n: notAsked }) : ''].filter(Boolean).join(' · ');
       out.innerHTML = '<div class="result" data-testid="crm-send-done"><span><span class="k">' + esc(tx('Outcome')) + '</span><b>' + esc(line) + '</b></span></div>'
         + ((r.sent || []).length ? '<div class="sub" data-testid="crm-send-lines">' + r.sent.slice(0, 8).map(function (x) { return esc(x.name || x.party_id) + ' — ' + esc(tx(x.status)) + (x.reason ? ': ' + esc(x.reason) : ''); }).join('<br>') + (r.sent.length > 8 ? '<br>…' : '') + '</div>' : '');
-      var go = document.querySelector('[data-testid="crm-send-go"]'); if (go) { go.disabled = true; go.title = tx('Sent'); }
+      var node = document.querySelector('[data-testid="crm-send-go"]'); if (node) { node.disabled = true; node.title = tx('Sent'); }
     }
   });
 }
@@ -260,8 +260,8 @@ var SHOW = { flags: null, state: 'loading', err: null, gen: 0, party: null, rec:
 function crmShopUrl() { var id = SESSION.bridgeId || SESSION.userId || ''; return location.origin + '/shop.html?s=' + encodeURIComponent(id); }
 function crmShowcase(frame) {
   crmBar('<strong>' + esc(tx('CRM')) + '</strong>', '', false);
-  var s = document.getElementById('screen'); s.className = 'screen';
-  s.innerHTML = '<div class="content" data-testid="crm-showcase"><div class="rsec" style="padding:14px"><div class="sec">' + esc(tx('Shop window')) + '</div>'
+  var node = document.getElementById('screen'); node.className = 'screen';
+  node.innerHTML = '<div class="content" data-testid="crm-showcase"><div class="rsec" style="padding:14px"><div class="sec">' + esc(tx('Shop window')) + '</div>'
     + '<p class="hint" style="margin:0 0 10px">' + esc(tx('Your customers see this page. Pick its look, then share the link with those who agreed to hear from you.')) + '</p>'
     + '<div id="crm_sc_pick" data-testid="crm-sc-pick"><div class="loadwrap"><span class="spin"></span>' + esc(tx('Reading…')) + '</div></div></div>'
     + '<div class="rsec" style="padding:14px"><div class="sec">' + esc(tx('Share')) + '</div>'
@@ -276,7 +276,7 @@ function crmShowcase(frame) {
 }
 async function crmShowcaseLoad() {
   var g = ++SHOW.gen;
-  try { var r = await api('policyGet'); if (g !== SHOW.gen) return; SHOW.flags = (r && r.flags) || {}; SHOW.state = 'ready'; }
+  try { var reply = await api('policyGet'); if (g !== SHOW.gen) return; SHOW.flags = (reply && reply.flags) || {}; SHOW.state = 'ready'; }
   catch (e) { if (g !== SHOW.gen) return; SHOW.flags = {}; SHOW.state = 'error'; SHOW.err = e; }
   crmShowcasePaint();
 }
@@ -299,8 +299,8 @@ function crmShowcasePick(name, btn) {
 function crmSharePick(q) {
   var box = document.getElementById('crm_sc_res'); if (!box) return;
   q = String(q || '').trim().toLowerCase(); if (!q) { box.innerHTML = ''; return; }
-  var m = CRM.rows.filter(function (p) { return p.kind !== 'walk-in' && [p.display_name, p.nickname, p.party_no, p.phone, p.user_id].join(' ').toLowerCase().indexOf(q) >= 0; }).slice(0, 5);
-  box.innerHTML = m.map(function (p) { return '<button type="button" class="result" style="text-align:left;background:var(--surface);width:100%;margin-top:6px" data-crm="scparty" data-k="' + esc(p.party_id) + '" data-testid="crm-sc-pick-' + esc(crmKey(p)) + '"><span><b>' + esc(p.display_name) + '</b> <span class="sub">' + esc(p.party_no || p.phone || '') + '</span></span></button>'; }).join('')
+  var list = CRM.rows.filter(function (item) { return item.kind !== 'walk-in' && [item.display_name, item.nickname, item.party_no, item.phone, item.user_id].join(' ').toLowerCase().indexOf(q) >= 0; }).slice(0, 5);
+  box.innerHTML = list.map(function (item) { return '<button type="button" class="result" style="text-align:left;background:var(--surface);width:100%;margin-top:6px" data-crm="scparty" data-k="' + esc(item.party_id) + '" data-testid="crm-sc-pick-' + esc(crmKey(item)) + '"><span><b>' + esc(item.display_name) + '</b> <span class="sub">' + esc(item.party_no || item.phone || '') + '</span></span></button>'; }).join('')
     || '<div class="hint">' + esc(tx('Nobody matches.')) + '</div>';
 }
 async function crmShareParty(k) {
@@ -345,25 +345,25 @@ function crmShareGroup() {
   var rows = GROUPS.rows;
   if (!rows.length) { toast(tx('No groups yet. Make one under Groups.')); return; }
   modal('<div class="mhd"><div class="t">' + esc(tx('Share with a group')) + '</div></div><div class="mbody" data-testid="crm-sc-groups">'
-    + rows.map(function (r) { return '<button type="button" class="result" style="text-align:left;background:var(--surface)" data-crm="scgrouppick" data-k="' + esc(r.key) + '" data-testid="crm-sc-grp-' + crmGroupTid(r) + '"><span><b>' + esc(r.name) + '</b> <span class="sub">' + esc(crmPlural(r.count, 'member', 'members')) + ' · ' + esc(crmReachWords(r.reach).may) + '</span></span></button>'; }).join('')
+    + rows.map(function (item) { return '<button type="button" class="result" style="text-align:left;background:var(--surface)" data-crm="scgrouppick" data-k="' + esc(item.key) + '" data-testid="crm-sc-grp-' + crmGroupTid(item) + '"><span><b>' + esc(item.name) + '</b> <span class="sub">' + esc(crmPlural(item.count, 'member', 'members')) + ' · ' + esc(crmReachWords(item.reach).may) + '</span></span></button>'; }).join('')
     + '</div><div class="mfoot"><button type="button" onclick="closeModal()">' + esc(tx('Cancel')) + '</button></div>');
 }
 
 /* ═══ the clicks this module answers (cap-crm.js's one listener asks) ═══════════════════════════════════════════════ */
-function crmGroupsClick(a, t) {
+function crmGroupsClick(a, node) {
   if (a === 'grpnew') { crmGroupOpen(null); return true; }
-  if (a === 'grptick') { crmGroupTick(t.getAttribute('data-k'), t.checked); return true; }
-  if (a === 'grpsave') { crmGroupSave(t); return true; }
-  if (a === 'sendcheck') { crmSendCheck(t); return true; }
-  if (a === 'sendgo') { crmSendGo(t); return true; }
+  if (a === 'grptick') { crmGroupTick(node.getAttribute('data-k'), node.checked); return true; }
+  if (a === 'grpsave') { crmGroupSave(node); return true; }
+  if (a === 'sendcheck') { crmSendCheck(node); return true; }
+  if (a === 'sendgo') { crmSendGo(node); return true; }
   if (a === 'sccopy') { var u = crmShopUrl(); (navigator.clipboard ? navigator.clipboard.writeText(u) : Promise.reject(new Error('no clipboard'))).then(function () { toast(tx('Link copied')); }, function () { toast(u); }); return true; }
   if (a === 'scgroup') { crmShareGroup(); return true; }
-  if (a === 'scgrouppick') { var r = GROUPS.rows.filter(function (x) { return x.key === t.getAttribute('data-k'); })[0]; closeModal(); if (r) crmSendOpen(r, { text: txf('Have a look at our shop window: {url}', { url: crmShopUrl() }) }); return true; }
-  if (a === 'scparty') { crmShareParty(t.getAttribute('data-k')); return true; }
-  if (a === 'scshare') { crmShareGo(t); return true; }
+  if (a === 'scgrouppick') { var r = GROUPS.rows.filter(function (x) { return x.key === node.getAttribute('data-k'); })[0]; closeModal(); if (r) crmSendOpen(r, { text: txf('Have a look at our shop window: {url}', { url: crmShopUrl() }) }); return true; }
+  if (a === 'scparty') { crmShareParty(node.getAttribute('data-k')); return true; }
+  if (a === 'scshare') { crmShareGo(node); return true; }
   return false;
 }
 document.addEventListener('click', function (ev) {
-  var t = ev.target.closest && ev.target.closest('[data-sc-pick]'); if (!t || t.disabled) return;
-  if (CRM.route && CRM.route.view === 'showcase') crmShowcasePick(t.getAttribute('data-sc-pick'), t);
+  var node = ev.target.closest && ev.target.closest('[data-sc-pick]'); if (!node || node.disabled) return;
+  if (CRM.route && CRM.route.view === 'showcase') crmShowcasePick(node.getAttribute('data-sc-pick'), node);
 });
