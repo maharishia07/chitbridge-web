@@ -53,7 +53,7 @@ var CBSuppliers = (function () {
   function load() {
     if (S.busy) return Promise.resolve(); S.busy = true; S.err = null;
     if (S.list) S.list.refresh();
-    return api('supList').then(function (r) { S.rows = Array.isArray(r) ? r : ((r && r.suppliers) || []); })
+    return api('supList').then(function (reply) { S.rows = Array.isArray(reply) ? reply : ((reply && reply.suppliers) || []); })
       .catch(function (e) { S.err = e; log('GET /api/relationships/suppliers failed — ' + ((e && e.message) || e)); })
       .then(function () { S.busy = false; if (S.list) S.list.refresh(); });
   }
@@ -84,7 +84,7 @@ var CBSuppliers = (function () {
   function btnOf(id, act) { return document.querySelector('[data-act="' + act + '"][data-actrow="' + id + '"]'); }
   function patch(x, body, done) {
     return CBAction.run(btnOf(x.supplier_list_id, Object.keys(body)[0]), function () { return api('supPatch', { params: { id: x.supplier_list_id }, body: body }); },
-      { key: 'sup-' + Object.keys(body)[0] + '-' + x.supplier_list_id, done: done, failed: t('Could not change the supplier — try again') }).then(function (o) { if (o.ok) load(); });
+      { key: 'sup-' + Object.keys(body)[0] + '-' + x.supplier_list_id, done: done, failed: t('Could not change the supplier — try again') }).then(function (reply) { if (reply.ok) load(); });
   }
   var ACTIONS = [
     { id: 'preferred', label: 'Preferred ★', tid: 'sup-pref', run: function (x) { patch(x, { preferred: !x.preferred }, x.preferred ? t('No longer preferred') : t('Marked preferred')); } },
@@ -92,7 +92,7 @@ var CBSuppliers = (function () {
     { id: 'remove', label: 'Remove', tid: 'sup-remove', run: function (x) {
         CBAction.run(btnOf(x.supplier_list_id, 'remove'), function () { return api('supDel', { params: { id: x.supplier_list_id } }); },
           { key: 'sup-remove-' + x.supplier_list_id, confirm: { title: tf('Remove {name} from your list?', { name: supName(x) }), body: esc(t('Their business and your past bills are untouched — only your list entry goes.')), yes: t('Remove'), danger: true },
-            done: t('Supplier removed'), failed: t('Could not remove the supplier — try again') }).then(function (o) { if (o.ok) load(); });
+            done: t('Supplier removed'), failed: t('Could not remove the supplier — try again') }).then(function (reply) { if (reply.ok) load(); });
       } },
   ];
 
@@ -123,9 +123,9 @@ var CBSuppliers = (function () {
 
   /* ── add / link: one dialog, the kind asked, a 404 offers the local add ── */
   function openAdd() {
-    var d = S.dlg; if (!d) { d = S.dlg = document.createElement('dialog'); d.className = 'sheet'; d.setAttribute('data-testid', 'sup-add-dlg'); document.body.appendChild(d); }
+    var node = S.dlg; if (!node) { node = S.dlg = document.createElement('dialog'); node.className = 'sheet'; node.setAttribute('data-testid', 'sup-add-dlg'); document.body.appendChild(node); }
     var listKind = S.kind;
-    d.innerHTML = '<button type="button" class="mx" aria-label="' + esc(t('Close')) + '" data-x>✕</button><h2>' + esc(t('Add a supplier')) + '</h2>'
+    node.innerHTML = '<button type="button" class="mx" aria-label="' + esc(t('Close')) + '" data-x>✕</button><h2>' + esc(t('Add a supplier')) + '</h2>'
       + '<p class="sub">' + esc(t('Their User ID or email links a ChitBridge business. A plain name adds a local one.')) + '</p>'
       + '<label class="fl" for="sp_q">' + esc(t('Name, User ID or email')) + '</label><input class="inp" id="sp_q" data-testid="sup-add-q" autocomplete="off">'
       + '<fieldset class="op-kind"><legend class="fl">' + esc(t('What do you buy from them?')) + '</legend>'
@@ -133,15 +133,15 @@ var CBSuppliers = (function () {
       + '<label><input type="radio" name="sp_kind" value="own_use"' + (listKind === 'own_use' ? ' checked' : '') + ' data-testid="sup-add-other"> ' + esc(t('Things the shop uses')) + '</label></fieldset>'
       + '<div class="err" id="sp_out" data-testid="sup-add-out" role="status"></div>'
       + '<div class="op-acts"><button type="button" class="act" data-testid="sup-add-go">' + esc(t('Add')) + '</button><button type="button" class="act quiet" data-x>' + esc(t('Cancel')) + '</button></div>';
-    Array.prototype.forEach.call(d.querySelectorAll('[data-x]'), function (b) { b.onclick = function () { d.close(); }; });
-    d.querySelector('[data-testid="sup-add-go"]').onclick = function () { add(this); };
-    d.querySelector('#sp_q').onkeydown = function (e) { if (e.key === 'Enter') add(d.querySelector('[data-testid="sup-add-go"]')); };
-    if (d.showModal) d.showModal(); else d.setAttribute('open', '');
-    d.querySelector('#sp_q').focus();
+    Array.prototype.forEach.call(node.querySelectorAll('[data-x]'), function (b) { b.onclick = function () { node.close(); }; });
+    node.querySelector('[data-testid="sup-add-go"]').onclick = function () { add(this); };
+    node.querySelector('#sp_q').onkeydown = function (e) { if (e.key === 'Enter') add(node.querySelector('[data-testid="sup-add-go"]')); };
+    if (node.showModal) node.showModal(); else node.setAttribute('open', '');
+    node.querySelector('#sp_q').focus();
   }
   function add(btn, asLocal) {
-    var d = S.dlg, q = (d.querySelector('#sp_q').value || '').trim(), out = d.querySelector('#sp_out');
-    var k = (d.querySelector('input[name="sp_kind"]:checked') || {}).value === 'own_use' ? 'own_use' : 'resale';
+    var node = S.dlg, q = (node.querySelector('#sp_q').value || '').trim(), out = node.querySelector('#sp_out');
+    var k = (node.querySelector('input[name="sp_kind"]:checked') || {}).value === 'own_use' ? 'own_use' : 'resale';
     out.textContent = '';
     if (!q) { out.textContent = t('Type their name, User ID or email.'); return; }
     var link = !asLocal && isUserId(q);
@@ -155,11 +155,11 @@ var CBSuppliers = (function () {
           return;
         }
         out.textContent = words;
-      } }).then(function (o) {
-      if (!o.ok) return;
-      var made = (o.value && o.value.supplier) || {};
-      toast((o.value && o.value.message) || t('Supplier added'));
-      d.close(); S.kind = k;
+      } }).then(function (reply) {
+      if (!reply.ok) return;
+      var made = (reply.value && reply.value.supplier) || {};
+      toast((reply.value && reply.value.message) || t('Supplier added'));
+      node.close(); S.kind = k;
       if (made.one_sided && made.one_sided.why) log('added one-sided: ' + made.one_sided.why);
       load();
     });
