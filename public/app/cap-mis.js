@@ -52,9 +52,9 @@ async function fmLoad(quiet) {
   var g = ++FM.gen;
   if (!quiet) { FM.state = 'loading'; if (FM.api) FM.api.refresh(); }
   try {
-    var r = await api('misMetrics', { query: { since: misWindow(FM.period) } });
+    var reply = await api('misMetrics', { query: { since: misWindow(FM.period) } });
     if (g !== FM.gen) return;
-    FM.r = r || null; FM.asOf = Date.now(); FM.state = 'ready'; FM.err = null;
+    FM.r = reply || null; FM.asOf = Date.now(); FM.state = 'ready'; FM.err = null;
     ftNav();
   } catch (e) {
     if (g !== FM.gen) return;
@@ -68,9 +68,9 @@ function fmRetry() { fmLoad(); }
 
 function fmRows() {
   var r = FM.r; if (!r || FM.state !== 'ready') return [];
-  return FM_ROWS.map(function (d) {
-    var row = { key: d.key, label: d.label, door: d.door, opens: d.opens };
-    FM_COLS.forEach(function (c) { var m = r[c] || {}; var v = d.pick(m); row[c] = (v === null || v === undefined) ? null : Number(v); });
+  return FM_ROWS.map(function (item) {
+    var row = { key: item.key, label: item.label, door: item.door, opens: item.opens };
+    FM_COLS.forEach(function (c) { var m = r[c] || {}; var v = item.pick(m); row[c] = (v === null || v === undefined) ? null : Number(v); });
     return row;
   });
 }
@@ -131,10 +131,10 @@ function fmDeniedWords() {
 }
 function fmMount(frame) {
   if (trOn()) return trMount(frame);   /* RPT2: the Trend view (app/cap-mis-trend.js) */
-  var s = document.getElementById('screen'); if (!s) return;
+  var node = document.getElementById('screen'); if (!node) return;
   ftNav();
-  s.className = 'screen flush';
-  s.innerHTML = '<div id="fm_top" data-testid="fm-top"></div><div id="fm_list" data-testid="fm-list" style="flex:1 1 auto;min-height:0"></div>';
+  node.className = 'screen flush';
+  node.innerHTML = '<div id="fm_top" data-testid="fm-top"></div><div id="fm_list" data-testid="fm-list" style="flex:1 1 auto;min-height:0"></div>';
   fmPaintTop();
   FM.api = CBList.mount(document.getElementById('fm_list'), {
     key: 'fin-reports', t: tx, rows: fmRows, id: function (row) { return row.key; }, rowTid: function (row) { return 'fm-row-' + row.key; },
