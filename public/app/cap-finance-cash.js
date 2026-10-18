@@ -13,6 +13,10 @@
  * bar/line; theme tokens only, every figure also in the table beneath) — nothing in the app drew a day-by-day balance before.
  * ⚠️ Never error.message on a screen: a failure says what happened and offers Try again. Finance SUGGESTS: there is no button here that posts.
  */
+/* OWNS CB Finance, Cash: today's money (cash drawer · UPI and bank), day by day for 7 or 30 days, the first short day
+ * CALLED BY cap-finance.js finLoad / finMount on the Cash tab (finance.html loads it after cap-finance.js)
+ * FLOW GET /api/books/cashflow -> FC.r -> the chart + CBList rows -> fcBal / bkMoney
+ * CARD 16-finance/cb-finance */
 'use strict';
 
 var FC = { gen: 0, days: 7, r: null, rows: [], state: 'loading', api: null };
@@ -26,12 +30,12 @@ var FC_KIND = { due_in: 'Bill due', due_out: 'Bill to pay', cheque_in: 'Cheque i
 
 function fcIsIn(it) { return /_in$/.test(String(it && it.kind)); }
 /** WALK2 W32 (FIN-1): a cash balance in a shopkeeper's words — the money, or "short ₹…" below zero; never Dr/Cr, never a minus (bkOwes' rule) */
-function fcBal(v, c) { v = Number(v || 0); return v < 0 ? tx('short') + ' ' + bkMoney(-v, c) : bkMoney(v, c); }
+function fcBal(minor, currency) { var amount = Number(minor || 0); return amount < 0 ? tx('short') + ' ' + bkMoney(-amount, currency) : bkMoney(amount, currency); }
 /** the two places today's money sits, both the server's (books-cashflow.project drawer_minor · bank_minor): the cash drawer, and UPI and bank — '' on an older server */
-function fcWhere(r, c) {
-  if (!r || r.drawer_minor == null || r.bank_minor == null) return '';
-  return '<div class="sub" data-testid="fc-where" style="display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:2px"><span data-testid="fc-drawer">' + esc(tx('Cash drawer') + ' ' + fcBal(r.drawer_minor, c)) + '</span>'
-    + '<span data-testid="fc-bank">' + esc(tx('UPI and bank') + ' ' + fcBal(r.bank_minor, c)) + '</span></div>';
+function fcWhere(answer, currency) {
+  if (!answer || answer.drawer_minor == null || answer.bank_minor == null) return '';
+  return '<div class="sub" data-testid="fc-where" style="display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:2px"><span data-testid="fc-drawer">' + esc(tx('Cash drawer') + ' ' + fcBal(answer.drawer_minor, currency)) + '</span>'
+    + '<span data-testid="fc-bank">' + esc(tx('UPI and bank') + ' ' + fcBal(answer.bank_minor, currency)) + '</span></div>';
 }
 
 async function fcLoad(quiet) {

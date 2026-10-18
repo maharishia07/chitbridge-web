@@ -26,9 +26,17 @@ var FIN_OWNER_ONLY = 'Only the owner may see collections.';
 
 function finOwes(p) { return Number(p.balance_minor) > 0; }
 /** the unbilled orders in words: "1 order unpaid, not yet billed ₹420" (no figure when the orders are in two currencies — the server says null) — '' when none */
-function finUnbilledWords(u) {
-  if (!u || !Number(u.n)) return '';
-  return txn('{count} order unpaid, not yet billed', '{count} orders unpaid, not yet billed', Number(u.n)) + (u.minor == null ? '' : ' ' + bkMoney(Number(u.minor), u.currency || FIN.cur));
+function finUnbilledWords(unbilled) {
+  if (!unbilled || !Number(unbilled.n)) return '';
+  return txn('{count} order unpaid, not yet billed', '{count} orders unpaid, not yet billed', Number(unbilled.n))
+    + (unbilled.minor == null ? '' : ' ' + bkMoney(Number(unbilled.minor), unbilled.currency || FIN.cur));
+}
+/** the dues (the server's, finance=1) and, beside them in parallel, the unbilled orders into FIN.unbilled — a failure there leaves the line out, never a guessed 0 */
+async function finDuesRead() {
+  var unbilledAsk = api('workFacts', { query: { unbilled: '1' } }).then(function (facts) { return (facts && facts.figures && facts.figures.unbilled) || null; }, function () { return null; });
+  var dues = await api('booksDues', { query: { finance: '1' } });
+  FIN.unbilled = await unbilledAsk;
+  return dues;
 }
 
 async function finLoad(quiet) {
@@ -41,11 +49,8 @@ async function finLoad(quiet) {
   if (finTab() === 'reports') return fmLoad(quiet); /* the Reports tab (cap-mis.js, T3-P4-ACCOUNT) */
   var g = ++FIN.gen;
   if (!quiet) { FIN.state = 'loading'; if (FIN.api) FIN.api.refresh(); }
-  /* asked beside the dues, in parallel; a failure leaves the line out (the dues still paint) — never a guessed 0 */
-  var ub = api('workFacts', { query: { unbilled: '1' } }).then(function (x) { return (x && x.figures && x.figures.unbilled) || null; }, function () { return null; });
   try {
-    var r = await api('booksDues', { query: { finance: '1' } });
-    FIN.unbilled = await ub;
+    var r = await finDuesRead();
     if (g !== FIN.gen) return;
     bkDuesStore(r);
     FIN.cur = (r && r.currency) || bkCur();
