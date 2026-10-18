@@ -74,3 +74,28 @@ side only") · loading · could not load (plain words plus Try again; never `err
 ## Not in scope
 The counter's own slip (`till.html`, vendored). The list (that's the one list control, web #21). The receive-a-bill
 queue (its own requirement).
+
+
+---
+
+## Update 19 Oct 2026 (cb-ux-locale, against NAV-MAP and the current API): UX-11, UX-17, "already asked"
+
+**Checked:** this brief is still right on content (frozen invoice only, never recompute). What moved is the count and the doors. Today there are THREE looks, not two (NAV-MAP D15):
+the chit sheet (`public/app/chit-sheet.js`, opened from Accounts Day book, Ledgers, Bills, Waiting, Receivables, Finance Collections and Repeat, CRM Record and Chits, Tasks Disputes: 10 ways in), the CRM chit page (`crm.html#/chit/<id>`, reached only from the sheet's "Open page", in a new tab) and the Tasks and Orders sheet (`tasks.html?open=<id>`, from the Home bell and Orders in). The Dispute button closes the sheet and does nothing on Accounts, Finance and CRM (`cap-dispute.js` is not loaded there).
+
+### WAYS IN (all open the SAME page: popup, side pane or full page, one design)
+Every list row that names a chit (Day book, Ledgers, Bills, Waiting, Receivables, Collections, Repeat, CRM Chits, a party's Record, Disputes, Orders in and out) · the Home bell and the "Needs you" strip · a task or order sheet · a link in a message. Taps from Home: Money > Accounts > a row = 3.
+### WAYS OUT
+Close (back to the exact list row, scroll kept) · "Open page" opens the full page in the SAME tab with a back arrow (NAV-MAP item 13), never a new CRM tab · the other party's name opens their Record (CRM) · Goods in (Operations) · Pay or Mark paid (Finance) · Dispute opens Tasks > Disputes on that chit, or is greyed with its sentence, never a silent close (item 12; the server answers may/why) · the page has its own URL, `#/chit/<id>`, so the browser's back works.
+
+### Current fields to read (real API: `GET /api/work/:chit_id`, fixture `e2e/fixtures/web-api.contract.json`)
+`chit_id` · `kind` · `tab` · `stage` · `word` (the step in words) · `status` · `side` (sell or buy) · `subject` · `ref` · `party` · `party_id` · `channel` · `fulfilment` · `address` · `requested_for` · `remark` · `total_minor` · `currency` · `lines_n` · `lines_open_n` · `billed` · `despatched` · `assignee{id,name}` · `created_at` · `age_days` · `actions{accept, reject, complete, cancel, reopen, assign_task, assign_line, deliver_line, amend}`, each `{ok, why, say, needs[]}` · `lines[]` = `line_id` · `particulars` · `qty` · `unit` · `price_minor` · `delivered` · `remaining` · `assignment{assignee_name, history[]}` · `settings{due, task, note, state}` · `actions{assign_line, deliver_line, amend}`.
+The money sections still come from the frozen invoice through `CBTax.moneyOf` (list above). `particulars` can hold an id ("Item 2000...") for a line with no name: the page must show the item's name, so the designer draws the line with a name slot and cb-orders fixes the source. Money is `*_minor` integers painted through the one money unit.
+**Actions are the server's:** draw every action in `actions{}` as a button; `ok:false` is greyed WITH `say`; `needs:["reason"]` opens a one-line reason box first. Never hide one (show action, enable by role).
+
+### Sample (label "Sample"; from the work fixture)
+Order SO-1 "Order 1", from Meena, online, pickup on 12 Oct, remark "Ring first", 1,200.50 INR, 2 lines (one open; 5 kg at 100.00, delivered 5, assigned to Asha), step "New". Actions: Accept (already done), Reject, Cancel and Complete (ask for a reason), Reopen greyed "This chit cannot move to that step from where it is now."; assign and amend greyed for a view-only login: "Your access is view-only. You can read this chit but not change it."
+
+### Added states
+A chit with no stored figures (an error line, not a number) · the Dispute unit not loaded (the button routes to Tasks > Disputes) · opened from a notification whose chit is not yours ("We can't find that bill" + Back; the 404 of `GET /api/work/:chit_id`) · phone: the action bar is fixed at the bottom with the primary action first, tabs become folds, one scroll for the page.
+**Open questions for Athi:** 1. Popup, side pane or full page by default on a desktop list? Recommend side pane, full page on a phone. 2. Does the buyer see the seller's internal task and assignee, or only the bill and its status? Recommend only the bill.
