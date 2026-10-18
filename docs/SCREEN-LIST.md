@@ -21,7 +21,6 @@ Register: `public/app/screen-id.js` (declared rows, merged into `CBSCREENS`) + `
 | BKS010 | Dues | Accounts | /accounts.html | To do › a dues item |
 | BKS011 | Unpaid bills | Accounts | /accounts.html | /accounts.html#bills · Accounts › Unpaid bills |
 | BKS012 | Cheques | Accounts | /accounts.html | /accounts.html#cheques · Accounts › Cheques |
-| BKS013 | Waiting | Accounts | /accounts.html | To do › a posting that failed |
 | BKS014 | Bank | Accounts | /accounts.html | /accounts.html#bank · Accounts › Bank |
 | BKS015 | Month lock | Accounts | /accounts.html | /accounts.html#lock · Accounts › Month lock |
 | BKS016 | Closing stock | Accounts | /accounts.html | /accounts.html#closingstock · Accounts › Closing stock |

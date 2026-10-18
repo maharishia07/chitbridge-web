@@ -34,7 +34,7 @@
         ['BKS001', 'todo', 'To do'], ['BKS002', 'daybook', 'Day book'], ['BKS003', 'ledgers', 'Ledgers'], ['BKS004', 'tb', 'Trial balance'],
         ['BKS005', 'pl', 'P&L'], ['BKS006', 'bs', 'Balance sheet'], ['BKS007', 'compare', 'Parallel run'], ['BKS008', 'receivables', 'Receivables'],
         ['BKS009', 'payables', 'Payables'], ['BKS010', 'dues', 'Dues', 'To do › a dues item'], ['BKS011', 'bills', 'Unpaid bills'], ['BKS012', 'cheques', 'Cheques'],
-        ['BKS013', 'waiting', 'Waiting', 'To do › a posting that failed'], ['BKS014', 'bank', 'Bank'], ['BKS015', 'lock', 'Month lock'],
+        ['BKS014', 'bank', 'Bank'], ['BKS015', 'lock', 'Month lock'],
         ['BKS016', 'closingstock', 'Closing stock'], ['BKS017', 'assets', 'Assets & depreciation'], ['BKS018', 'accruals', 'Accruals & recurring'],
         ['BKS019', 'gstclose', 'Tax close & pay'], ['BKS020', 'yearclose', 'Year close'], ['BKS021', 'packs', 'Packs'], ['BKS022', 'opening', 'Opening balances'],
         ['BKS023', 'accounts', 'Shop ledgers'], ['BKS024', 'movein', 'Move in'], ['BKS025', 'rates', 'Rates']] },

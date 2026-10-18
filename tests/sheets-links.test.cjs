@@ -36,10 +36,12 @@ assert.strictEqual(SID.row('tasks', 'disputes').screen, 'Disputes');
 assert.strictEqual(SID.row('tasks', 'assist').screen, 'Assist');
 assert.strictEqual(SID.row('tasks', 'orders_in').screen, 'Orders in');
 
-/* ACC-175 · every view of the Accounts NAV that the To do rows open has a button; Waiting shows its badge */
+/* ACC-175 · every view of the Accounts NAV has a menu button; Dues is one; Waiting is retired (DECISIONS 2026-10 line 397): no button, no badge, an old link lands on To do */
 const acc = P('accounts.html');
 const groups = acc.slice(acc.indexOf('const NAV_GROUPS'), acc.indexOf('const navFolded'));
-['dues', 'waiting'].forEach((id) => assert(new RegExp("'" + id + "'").test(groups), id + ' is in a menu group'));
+assert(/'dues'/.test(groups), 'dues is in a menu group');
+assert(!/'waiting'/.test(groups) && !/acc-waiting-n/.test(acc) && acc.indexOf("['waiting', 'Waiting'") < 0, 'Waiting has no button and no badge');
+assert(/waiting: 'todo'/.test(acc) && acc.indexOf('waiting: (body) => accTodo(body)') >= 0, 'Waiting links land on To do');
 const navIds = [...acc.slice(acc.indexOf('const NAV = ['), acc.indexOf('const KURAL_OF')).matchAll(/^\s*\['(\w+)', '/gm)].map((m) => m[1]);
 navIds.forEach((id) => assert(new RegExp("'" + id + "'").test(groups), 'NAV view ' + id + ' has a menu button'));
 
