@@ -33,15 +33,15 @@ function chitsMini(c) {
         ? '<div class="mc-r" data-testid="chits-why" style="align-items:flex-start;min-height:0"><span class="v" style="white-space:normal;color:var(--red-text,#8E3517)">' + esc(tx(c.why)) + '</span></div><div class="mc-r sub" style="white-space:normal;min-height:0;margin-top:6px">' + esc(tx('Open it to answer, close or cancel it.')) + '</div>'
         : '<div class="mc-r sub" style="white-space:normal">' + esc(tx('Nothing is waiting on you here.')) + '</div>'], 'chits-mini-why-' + key) + '</div>';
 }
-function chitsStuckCount() { return CHITS.items.filter(function (c) { return c.stuck; }).length; }
+function chitsStuckCount() { return CHITS.items.filter(function (item) { return item.stuck; }).length; }
 
 async function chitsLoad() {
   var g = ++CHITS.gen;
   CHITS.state = 'loading'; chitsRefresh();
   try {
-    var r = await api('railChits');
+    var reply = await api('railChits');
     if (g !== CHITS.gen) return;
-    CHITS.items = Array.isArray(r) ? r : ((r && r.items) || []); CHITS.truncated = !!(r && r.truncated); CHITS.days = (r && r.overdue_days) || 7;   /* core.js unwrap() collapses a reply to its array when it carries no 'truncated' key */
+    CHITS.items = Array.isArray(reply) ? reply : ((reply && reply.items) || []); CHITS.truncated = !!(reply && reply.truncated); CHITS.days = (reply && reply.overdue_days) || 7;   /* core.js unwrap() collapses a reply to its array when it carries no 'truncated' key */
     CHITS.state = 'ready'; CHITS.err = null;
   } catch (e) {
     if (g !== CHITS.gen) return;
@@ -82,8 +82,8 @@ function chitsNotices() {
 
 function chitsHome(params, frame) {
   crmBar('<strong>' + esc(tx('Chits')) + '</strong>', '', true);
-  var s = document.getElementById('screen'); s.className = 'screen flush';
-  s.innerHTML = '<div id="chits_list" data-testid="chits-list"></div>';
+  var node = document.getElementById('screen'); node.className = 'screen flush';
+  node.innerHTML = '<div id="chits_list" data-testid="chits-list"></div>';
   if (CHITS.api && CHITS.api.destroy) { try { CHITS.api.destroy(); } catch (_) {} }
   var tab = params && /^(stuck|in|out|orders)$/.test(params.tab || '') ? params.tab : null;
   CHITS.api = CBList.mount(document.getElementById('chits_list'), {
@@ -109,8 +109,8 @@ function chitsHome(params, frame) {
    files · history — no second painter, no money worked out here. The crumb leads back to Chits. O2C step 5 · invoice. */
 function chitPage(id, frame) {
   crmBar('<a href="#/chits" data-testid="chit-page-back">' + esc(tx('Chits')) + '</a> › <strong>' + esc(tx('Chit')) + '</strong>', '', false);
-  var s = document.getElementById('screen'); s.className = 'screen';
-  s.innerHTML = '<div class="content"><div id="chit_page"></div></div>';
+  var node = document.getElementById('screen'); node.className = 'screen';
+  node.innerHTML = '<div class="content"><div id="chit_page"></div></div>';
   if (frame || !window.CBSheet) return;
   CBSheet.mount(document.getElementById('chit_page'), id);
 }
