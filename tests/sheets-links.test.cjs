@@ -37,11 +37,17 @@ assert.strictEqual(SID.row('tasks', 'assist').screen, 'Assist');
 assert.strictEqual(SID.row('tasks', 'orders_in').screen, 'Orders in');
 
 /* ACC-175 · every view of the Accounts NAV has a menu button; Dues is one; Waiting is retired (DECISIONS 2026-10 line 397): no button, no badge, an old link lands on To do */
-const acc = P('accounts.html');
+const acc = P('accounts.html'), shell = P('app/accounts-shell.js');
 const groups = acc.slice(acc.indexOf('const NAV_GROUPS'), acc.indexOf('const navFolded'));
 assert(/'dues'/.test(groups), 'dues is in a menu group');
 assert(!/'waiting'/.test(groups) && !/acc-waiting-n/.test(acc) && acc.indexOf("['waiting', 'Waiting'") < 0, 'Waiting has no button and no badge');
-assert(/waiting: 'todo'/.test(acc) && acc.indexOf('waiting: (body) => accTodo(body)') >= 0, 'Waiting links land on To do');
+/* the To do notices open real places, never a tap that does nothing: bills to accept -> Received bills; suppliers to add -> the CRM supplier list */
+const books = P('app/cap-books.js');
+
+assert(acc.indexOf("accept: () => { ACC.billTab = 'B-2100'; show('bills'); }") >= 0, 'accept opens the Received bills');
+assert(acc.indexOf('supplier: () => { location.href = CB_HOMES.suppliers; }') >= 0 && shell.indexOf("suppliers: '/crm.html#/parties?role=supplier'") >= 0, 'suppliers to add opens the CRM supplier list');
+assert(acc.indexOf("waiting: 'waiting'") >= 0 && acc.indexOf('waiting: (body)') < 0, 'the failed-posting list stays reachable from its To do row only');
+assert(books.split("bkNoticeGo('accept')").length === 2 && books.indexOf("bkNoticeGo('supplier')") >= 0 && books.indexOf("text: n.waiting + ' ' + tx('waiting to be recorded'), onOpen: function () { bkTab('waiting')") >= 0, 'accept and supplier go through bkNoticeGo; waiting keeps its list');
 const navIds = [...acc.slice(acc.indexOf('const NAV = ['), acc.indexOf('const KURAL_OF')).matchAll(/^\s*\['(\w+)', '/gm)].map((m) => m[1]);
 navIds.forEach((id) => assert(new RegExp("'" + id + "'").test(groups), 'NAV view ' + id + ' has a menu button'));
 
@@ -50,7 +56,7 @@ assert(/href="\/accounts\.html#gstclose"/.test(P('app/cap-finance-returns.js')) 
 assert(navIds.indexOf('gstclose') >= 0, 'Accounts has #gstclose');
 
 /* RAIL-86 / ORD-62 · the Dispute button has somewhere to go; Tasks opens the chit page, not itself */
-const shell = P('app/accounts-shell.js'), sheet = P('app/chit-sheet.js'), tasks = P('tasks.html');
+const sheet = P('app/chit-sheet.js'), tasks = P('tasks.html');
 assert(/function disputePageHref\(id\)/.test(shell) && /disputes: '\/tasks\.html\?view=disputes&chit='/.test(shell));
 assert(/disputePageHref\(id\)/.test(sheet) && /Raise a dispute from Tasks/.test(sheet), 'no form here: go to Tasks, or say so');
 assert(/window\.openChitPage = function/.test(tasks) && /chitPageHref\(id\)/.test(tasks), 'Tasks has its own Open page');
