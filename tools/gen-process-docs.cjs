@@ -27,111 +27,111 @@ const joinOr = (list, fn) => (list && list.length ? list.map(fn).join('<br>') : 
 /* a flow's page name: Windows cannot check out a file called CON · PRN · AUX · NUL · COM1–9 · LPT1–9 (any case, any extension),
    so such an id gets `<id>-flow.md` (FIX-INT5a: docs/process/PRN.md broke the owner's checkout). e2e/guard-static.cjs §18 holds every tracked path to it. */
 const pageOf = (id) => (/^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(id) ? id + '-flow' : id) + '.md';
-const moduleOf = (id) => (MAP.modules.find((m) => m.id === id) || { name: id }).name;
+const moduleOf = (id) => (MAP.modules.find((item) => item.id === id) || { name: id }).name;
 
 /* ── one flow page ─────────────────────────────────────────────────────────────────────────────────────────────── */
 function diagram(flow) {
   const out = ['```mermaid', 'flowchart LR'];
-  flow.steps.forEach((s) => {
-    const label = s.n + '. ' + s.step + '<br/><i>' + moduleOf(s.module) + '</i>' + (s.status === 'missing' ? '<br/>MISSING' : s.status === 'warn' ? '<br/>⚠' : '');
-    out.push('  S' + s.n + '["' + label.replace(/"/g, "'") + '"]');
+  flow.steps.forEach((item) => {
+    const label = item.n + '. ' + item.step + '<br/><i>' + moduleOf(item.module) + '</i>' + (item.status === 'missing' ? '<br/>MISSING' : item.status === 'warn' ? '<br/>⚠' : '');
+    out.push('  S' + item.n + '["' + label.replace(/"/g, "'") + '"]');
   });
-  out.push('  ' + flow.steps.map((s) => 'S' + s.n).join(' --> '));
+  out.push('  ' + flow.steps.map((item) => 'S' + item.n).join(' --> '));
   out.push('  classDef ok fill:#e8f5e9,stroke:#2e7d32,color:#1b1b1b');
   out.push('  classDef warn fill:#fff8e1,stroke:#f9a825,color:#1b1b1b');
   out.push('  classDef missing fill:#fafafa,stroke:#9e9e9e,stroke-dasharray:5 5,color:#616161');
-  ['ok', 'warn', 'missing'].forEach((st) => {
-    const ids = flow.steps.filter((s) => s.status === st).map((s) => 'S' + s.n);
-    if (ids.length) out.push('  class ' + ids.join(',') + ' ' + st);
+  ['ok', 'warn', 'missing'].forEach((item) => {
+    const ids = flow.steps.filter((s) => s.status === item).map((s) => 'S' + s.n);
+    if (ids.length) out.push('  class ' + ids.join(',') + ' ' + item);
   });
   out.push('```');
   return out.join('\n');
 }
 
 function flowPage(flow) {
-  const L = [];
-  L.push('# ' + flow.id + ' · ' + flow.name + ' — the process map from the code');
-  L.push('');
-  L.push(STAMP);
-  L.push('');
-  L.push('SAP picture: **' + flow.sap + '**. One row per step: who does it · the screen · the engine function · the API route · the chit kind · the ledger entry · the test · status. ' +
+  const list = [];
+  list.push('# ' + flow.id + ' · ' + flow.name + ' — the process map from the code');
+  list.push('');
+  list.push(STAMP);
+  list.push('');
+  list.push('SAP picture: **' + flow.sap + '**. One row per step: who does it · the screen · the engine function · the API route · the chit kind · the ledger entry · the test · status. ' +
          'A file is `repo:path` (web = this repo · api = chitbridge-api · engines = chitbridge-engines). ' +
          'A step marked **MISSING** has nothing in the code that does it — the evidence is in its row, nothing is invented. Generated ' + MAP.generated + '.');
-  L.push('');
-  L.push(diagram(flow));
-  L.push('');
-  L.push('| # | step | module | who | screen (file · function) | engine function | API route | chit kind | ledger entry | test | status |');
-  L.push('|---|---|---|---|---|---|---|---|---|---|---|');
-  flow.steps.forEach((s) => {
-    const status = ICON[s.status] + (s.note ? ' — ' + cell(s.note) : '');
-    L.push('| ' + [s.n, cell(s.step), moduleOf(s.module), cell(s.who), joinOr(s.screen, fileRef), joinOr(s.engine, fileRef), joinOr(s.route, routeRef),
-      cell(s.chit), cell(s.ledger), joinOr(s.test, code), status].join(' | ') + ' |');
+  list.push('');
+  list.push(diagram(flow));
+  list.push('');
+  list.push('| # | step | module | who | screen (file · function) | engine function | API route | chit kind | ledger entry | test | status |');
+  list.push('|---|---|---|---|---|---|---|---|---|---|---|');
+  flow.steps.forEach((item) => {
+    const status = ICON[item.status] + (item.note ? ' — ' + cell(item.note) : '');
+    list.push('| ' + [item.n, cell(item.step), moduleOf(item.module), cell(item.who), joinOr(item.screen, fileRef), joinOr(item.engine, fileRef), joinOr(item.route, routeRef),
+      cell(item.chit), cell(item.ledger), joinOr(item.test, code), status].join(' | ') + ' |');
   });
-  L.push('');
-  const missing = flow.steps.filter((s) => s.status !== 'ok');
-  L.push('## The backlog this map leaves');
-  L.push('');
-  if (!missing.length) L.push('Every step is built and tested.');
-  missing.forEach((s) => L.push('- **step ' + s.n + ' · ' + s.step + '** — ' + ICON[s.status] + ' — ' + s.note));
-  L.push('');
-  return L.join('\n');
+  list.push('');
+  const missing = flow.steps.filter((item) => item.status !== 'ok');
+  list.push('## The backlog this map leaves');
+  list.push('');
+  if (!missing.length) list.push('Every step is built and tested.');
+  missing.forEach((item) => list.push('- **step ' + item.n + ' · ' + item.step + '** — ' + ICON[item.status] + ' — ' + item.note));
+  list.push('');
+  return list.join('\n');
 }
 
 /* ── the index: flows × modules ────────────────────────────────────────────────────────────────────────────────── */
 function indexPage() {
-  const L = [];
-  L.push('# ChitBridge process maps — flows × modules (the SAP SD / MM / FI picture)');
-  L.push('');
-  L.push(STAMP);
-  L.push('');
-  L.push('Athi, 2026-10-12: *"for each function we are building we need to have a SAP kind of flow and its module linked etc."* ' +
+  const list = [];
+  list.push('# ChitBridge process maps — flows × modules (the SAP SD / MM / FI picture)');
+  list.push('');
+  list.push(STAMP);
+  list.push('');
+  list.push('Athi, 2026-10-12: *"for each function we are building we need to have a SAP kind of flow and its module linked etc."* ' +
          'Every function named here sits on a flow step; a function on no flow is either missing its flow or should not exist. ' +
          'The machine form is [flows.json](flows.json) (the CMDB round reads it); `e2e/process-map.cjs` fails the build when a file or function named here has moved.');
-  L.push('');
-  L.push('## The flows');
-  L.push('');
-  L.push('| flow | what it is | SAP | steps | ' + ICON.ok + ' | ' + ICON.warn + ' | ' + ICON.missing + ' |');
-  L.push('|---|---|---|---|---|---|---|');
-  MAP.flows.forEach((f) => {
-    const c = (st) => f.steps.filter((s) => s.status === st).length;
-    L.push('| [' + f.id + '](' + pageOf(f.id) + ') | ' + f.name + ' | ' + f.sap + ' | ' + f.steps.map((s) => s.step).join(' → ') + ' | ' + c('ok') + ' | ' + c('warn') + ' | ' + c('missing') + ' |');
+  list.push('');
+  list.push('## The flows');
+  list.push('');
+  list.push('| flow | what it is | SAP | steps | ' + ICON.ok + ' | ' + ICON.warn + ' | ' + ICON.missing + ' |');
+  list.push('|---|---|---|---|---|---|---|');
+  MAP.flows.forEach((item) => {
+    const c = (st) => item.steps.filter((s) => s.status === st).length;
+    list.push('| [' + item.id + '](' + pageOf(item.id) + ') | ' + item.name + ' | ' + item.sap + ' | ' + item.steps.map((s) => s.step).join(' → ') + ' | ' + c('ok') + ' | ' + c('warn') + ' | ' + c('missing') + ' |');
   });
-  L.push('');
-  L.push('## Flows × modules — which module owns which step');
-  L.push('');
-  L.push('| flow | ' + MAP.modules.map((m) => m.name).join(' | ') + ' |');
-  L.push('|---|' + MAP.modules.map(() => '---').join('|') + '|');
-  MAP.flows.forEach((f) => {
-    const cells = MAP.modules.map((m) => f.steps.filter((s) => s.module === m.id).map((s) => s.n + ' ' + s.step + (s.status === 'missing' ? ' (MISSING)' : s.status === 'warn' ? ' ⚠️' : '')).join('<br>') || '');
-    L.push('| ' + f.id + ' | ' + cells.join(' | ') + ' |');
+  list.push('');
+  list.push('## Flows × modules — which module owns which step');
+  list.push('');
+  list.push('| flow | ' + MAP.modules.map((item) => item.name).join(' | ') + ' |');
+  list.push('|---|' + MAP.modules.map(() => '---').join('|') + '|');
+  MAP.flows.forEach((item) => {
+    const cells = MAP.modules.map((m) => item.steps.filter((s) => s.module === m.id).map((s) => s.n + ' ' + s.step + (s.status === 'missing' ? ' (MISSING)' : s.status === 'warn' ? ' ⚠️' : '')).join('<br>') || '');
+    list.push('| ' + item.id + ' | ' + cells.join(' | ') + ' |');
   });
-  L.push('');
-  L.push('## The modules');
-  L.push('');
-  L.push('| module | page | SAP |');
-  L.push('|---|---|---|');
-  MAP.modules.forEach((m) => L.push('| ' + m.name + ' | `' + m.page + '` | ' + m.sap + ' |'));
-  L.push('');
-  L.push('## The backlog — every step the code does not have');
-  L.push('');
-  MAP.flows.forEach((f) => f.steps.filter((s) => s.status === 'missing').forEach((s) => L.push('- **' + f.id + ' step ' + s.n + ' · ' + s.step + '** — ' + s.note)));
-  L.push('');
-  L.push('## Built, with a gap named');
-  L.push('');
-  MAP.flows.forEach((f) => f.steps.filter((s) => s.status === 'warn').forEach((s) => L.push('- **' + f.id + ' step ' + s.n + ' · ' + s.step + '** — ' + s.note)));
-  L.push('');
-  L.push('## How a new function joins the map');
-  L.push('');
-  L.push('1. Say its step in the PR report (`O2C step 4 · delivery`), or add the row to `flows.json` in the same PR.');
-  L.push('2. Run `node tools/gen-process-docs.cjs` — the pages are written from the JSON, never edited by hand.');
-  L.push('3. `node e2e/process-map.cjs` must pass: every file and function the map names exists (the API and engines rows are checked when those repos sit beside this one).');
-  L.push('');
-  return L.join('\n');
+  list.push('');
+  list.push('## The modules');
+  list.push('');
+  list.push('| module | page | SAP |');
+  list.push('|---|---|---|');
+  MAP.modules.forEach((item) => list.push('| ' + item.name + ' | `' + item.page + '` | ' + item.sap + ' |'));
+  list.push('');
+  list.push('## The backlog — every step the code does not have');
+  list.push('');
+  MAP.flows.forEach((item) => item.steps.filter((s) => s.status === 'missing').forEach((s) => list.push('- **' + item.id + ' step ' + s.n + ' · ' + s.step + '** — ' + s.note)));
+  list.push('');
+  list.push('## Built, with a gap named');
+  list.push('');
+  MAP.flows.forEach((item) => item.steps.filter((s) => s.status === 'warn').forEach((s) => list.push('- **' + item.id + ' step ' + s.n + ' · ' + s.step + '** — ' + s.note)));
+  list.push('');
+  list.push('## How a new function joins the map');
+  list.push('');
+  list.push('1. Say its step in the PR report (`O2C step 4 · delivery`), or add the row to `flows.json` in the same PR.');
+  list.push('2. Run `node tools/gen-process-docs.cjs` — the pages are written from the JSON, never edited by hand.');
+  list.push('3. `node e2e/process-map.cjs` must pass: every file and function the map names exists (the API and engines rows are checked when those repos sit beside this one).');
+  list.push('');
+  return list.join('\n');
 }
 
 /* ── write or check ────────────────────────────────────────────────────────────────────────────────────────────── */
 const pages = {};
-MAP.flows.forEach((f) => { pages[pageOf(f.id)] = flowPage(f); });
+MAP.flows.forEach((item) => { pages[pageOf(item.id)] = flowPage(item); });
 pages['INDEX.md'] = indexPage();
 
 const check = process.argv.includes('--check');

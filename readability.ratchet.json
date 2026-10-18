@@ -161,7 +161,7 @@
   "scripts/country-ready.cjs": {"score":31,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":29,"noWhatLine":1,"emptyCatch":0,"noHeader":1},
   "scripts/standards-doc.js": {"score":13,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":12,"noWhatLine":0,"emptyCatch":0,"noHeader":1},
   "tools/gen-modules-doc.cjs": {"score":15,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":13,"noWhatLine":1,"emptyCatch":0,"noHeader":1},
-  "tools/gen-process-docs.cjs": {"score":37,"long40":1,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":34,"noWhatLine":1,"emptyCatch":0,"noHeader":1},
+  "tools/gen-process-docs.cjs": {"score":21,"long40":1,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":18,"noWhatLine":1,"emptyCatch":0,"noHeader":1},
   "tools/graph/graph.cjs": {"score":184,"long40":2,"long80":1,"complex10":9,"complex15":5,"deep3":6,"deep4":2,"cryptic":155,"noWhatLine":3,"emptyCatch":1,"noHeader":0},
   "tools/graph/scan.cjs": {"score":73,"long40":2,"long80":2,"complex10":5,"complex15":3,"deep3":3,"deep4":2,"cryptic":55,"noWhatLine":1,"emptyCatch":0,"noHeader":0},
   "tools/graph/trace.cjs": {"score":0,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":0,"noWhatLine":0,"emptyCatch":0,"noHeader":0},
