@@ -44,7 +44,7 @@ const BKB_ORDER = ['bank-only', 'check', 'suggested', 'told', 'asked', 'settled'
 /* ── ON THIS DEVICE: the marks (accept · note · file) of a bank account, and the rules learned — keyed by the shop, never uploaded ── */
 const bkbShop = () => { try { return (typeof SESSION !== 'undefined' && SESSION && SESSION.entityId) || 'shop'; } catch (_) { return 'shop'; } };
 const bkbKey = (what) => 'cb_bankrec:' + bkbShop() + ':' + what;
-function bkbLoad(what, dflt) { try { const v = JSON.parse(localStorage.getItem(bkbKey(what)) || 'null'); return v == null ? dflt : v; } catch (_) { return dflt; } }
+function bkbLoad(what, dflt) { try { const parsed = JSON.parse(localStorage.getItem(bkbKey(what)) || 'null'); return parsed == null ? dflt : parsed; } catch (_) { return dflt; } }
 function bkbSave(what, v) { try { localStorage.setItem(bkbKey(what), JSON.stringify(v)); } catch (_) {} }
 const bkbRec = () => (BKB.rec = BKB.rec || bkbLoad('marks:' + BKB.acct, {}));
 const bkbRules = () => (BKB.rules = BKB.rules || bkbLoad('rules', []));
@@ -62,8 +62,8 @@ function bkbLearn(line, x) {
 }
 const bkbIsBank = (a, groupCode) => !a.is_group && (a.role === 'bank' || (groupCode != null && a.parent_code === groupCode));
 function bkbBanks(accts) {
-  const main = accts.filter((a) => a.role === 'bank')[0], g = main ? main.parent_code : null;
-  return accts.filter((a) => bkbIsBank(a, g) && a.active !== false);
+  const main = accts.filter((item) => item.role === 'bank')[0], g = main ? main.parent_code : null;
+  return accts.filter((item) => bkbIsBank(item, g) && item.active !== false);
 }
 const bkbMinorText = (m) => bkMinorText(m);
 /** the payment mode of the ledger a statement belongs to (its own role: 1520 Card settlements is 'card'); null when the ledger has no mode, so nothing is posted to another account by guess */
@@ -76,21 +76,21 @@ function bkbModeOf(accts, code) {
 async function bkbHash(text) {
   try {
     const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
-    return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('');
-  } catch (_) { let h = 5381; for (let i = 0; i < text.length; i++) h = ((h << 5) + h + text.charCodeAt(i)) | 0; return ('00000000' + (h >>> 0).toString(16)).slice(-8).repeat(8); }
+    return Array.from(new Uint8Array(buf)).map((item) => item.toString(16).padStart(2, '0')).join('');
+  } catch (_) { let h = 5381; for (let index = 0; index < text.length; index++) h = ((h << 5) + h + text.charCodeAt(index)) | 0; return ('00000000' + (h >>> 0).toString(16)).slice(-8).repeat(8); }
 }
 
 async function bankView(body) {
   let accts = [];
-  try { const r = await api('booksAccounts'); accts = (r && r.accounts) || []; } catch (e) { body.innerHTML = '<div class="pe-bad">' + bkErr(e) + '</div>'; return; }
+  try { const reply = await api('booksAccounts'); accts = (reply && reply.accounts) || []; } catch (e) { body.innerHTML = '<div class="pe-bad">' + bkErr(e) + '</div>'; return; }
   BKB.accts = accts;
   const banks = bkbBanks(accts);
   if (!banks.length) { body.innerHTML = '<div class="pe-note" data-testid="bank-none">' + bkbE(tx('There is no bank ledger yet. Add one under Shop ledgers.')) + '</div>'; return; }
-  if (!banks.some((a) => a.code === BKB.acct)) BKB.acct = banks[0].code;
+  if (!banks.some((item) => item.code === BKB.acct)) BKB.acct = banks[0].code;
   const presets = Object.keys((window.CBBankRecon && CBBankRecon.PRESETS) || {});
   body.innerHTML = '<div class="pe-bank"><div class="pe-card" data-testid="bank-form"><div class="pe-form">'
-    + peField('bk_acct', 'Bank account', peSel('bk_acct', banks.map((a) => [a.code, a.name]), BKB.acct, ' onchange="BKB.acct=this.value"'))
-    + peField('bk_preset', 'Which bank', peSel('bk_preset', [['', 'Find out from the file']].concat(presets.map((k) => [k, CBBankRecon.PRESETS[k].bank])), BKB.preset, ' onchange="BKB.preset=this.value"'))
+    + peField('bk_acct', 'Bank account', peSel('bk_acct', banks.map((item) => [item.code, item.name]), BKB.acct, ' onchange="BKB.acct=this.value"'))
+    + peField('bk_preset', 'Which bank', peSel('bk_preset', [['', 'Find out from the file']].concat(presets.map((item) => [item, CBBankRecon.PRESETS[item].bank])), BKB.preset, ' onchange="BKB.preset=this.value"'))
     + peField('bk_file', 'Statement file (CSV or JSON)', '<input class="inp" type="file" id="bk_file" data-testid="bank-file" accept=".csv,.json,.txt,text/csv,application/json" onchange="bankPick(this)">')
     + '</div><div class="pe-note" data-testid="bank-private">🔒 ' + bkbE(tx('The file is read on this device and is never uploaded.')) + '</div><div id="bk_out" class="pe-slot"></div></div>'
     + '<div id="bk_res" data-testid="bank-res"></div></div>';
@@ -106,7 +106,7 @@ async function bankPick(inp) {
   const parsed = CBBankRecon.parse(text, { format: 'auto', preset: BKB.preset || undefined });
   if (!parsed || !parsed.ok) { BKB.parsed = null; BKB.rows = []; bkbEl('bk_res').innerHTML = ''; return peBad('bk_out', (parsed && parsed.why) || tx('That file could not be read as a bank statement.')); }
   BKB.file = { name: f.name, hash: hash.slice(0, 16) }; BKB.parsed = parsed; BKB.bal = '';
-  const dates = parsed.lines.map((l) => l.date).sort();
+  const dates = parsed.lines.map((item) => item.date).sort();
   BKB.from = parsed.from || dates[0]; BKB.to = parsed.to || dates[dates.length - 1];
   if (!parsed.lines.length) return peBad('bk_out', tx('There are no transactions in that file.'));
   await bankRun();
@@ -114,10 +114,10 @@ async function bankPick(inp) {
 
 /** the shop's own bank lines for the statement's dates → the engine's ledger lines */
 async function bankLedger() {
-  const r = await api('booksLedger', { params: { account: BKB.acct }, query: { from: BKB.from, to: BKB.to } });
-  BKB.ledgerRaw = r || {};
-  return ((r && r.lines) || []).map((l, i) => ({ id: String(l.ref) + '#' + i, date: l.date, dr_minor: Number(l.dr_minor) || 0, cr_minor: Number(l.cr_minor) || 0,
-    ref: (l.source && l.source.how_ref) || null, narration: l.what || '', entry_no: l.ref, chit_id: l.source_chit_id || null }));
+  const reply = await api('booksLedger', { params: { account: BKB.acct }, query: { from: BKB.from, to: BKB.to } });
+  BKB.ledgerRaw = reply || {};
+  return ((reply && reply.lines) || []).map((item, index) => ({ id: String(item.ref) + '#' + index, date: item.date, dr_minor: Number(item.dr_minor) || 0, cr_minor: Number(item.cr_minor) || 0,
+    ref: (item.source && item.source.how_ref) || null, narration: item.what || '', entry_no: item.ref, chit_id: item.source_chit_id || null }));
 }
 /** BR1: what the other parties already told us for the statement's dates — their advices and my questions. A failure is said, never a blank: the lines still match the books */
 async function bankRail() {
@@ -135,16 +135,16 @@ async function bankRun() {
 }
 /** the engine puts every line against the party's chit and the books; the page only names the states (no money is computed here) */
 function bankExplain() {
-  const P = BKB.parsed, chits = (BKB.rail.chits || []).map((c) => Object.assign({}, c, { party: c.party && c.party.id ? c.party : null }));
+  const P = BKB.parsed, chits = (BKB.rail.chits || []).map((item) => Object.assign({}, item, { party: item.party && item.party.id ? item.party : null }));
   /* my own advice names its entry: the ledger line of that entry is the third leg (an id join, not a sum) */
-  const own = {}; chits.forEach((c) => { const pa = (c.business_json || {}).payment_advice; if (c.direction === 'sent' && pa && pa.adviser_entry_no && pa.adviser_payment_id) own[pa.adviser_entry_no] = pa.adviser_payment_id; });
-  BKB.ledger.forEach((l) => { if (own[l.entry_no]) l.payment_id = own[l.entry_no]; });
+  const own = {}; chits.forEach((item) => { const pa = (item.business_json || {}).payment_advice; if (item.direction === 'sent' && pa && pa.adviser_entry_no && pa.adviser_payment_id) own[pa.adviser_entry_no] = pa.adviser_payment_id; });
+  BKB.ledger.forEach((item) => { if (own[item.entry_no]) item.payment_id = own[item.entry_no]; });
   const pays = CBBankRecon.railPayments(chits), byChit = {}; pays.forEach((x) => { byChit[x.chit_id] = x; });
-  const asks = chits.filter((c) => c.direction === 'sent' && (c.business_json || {}).kind === 'bank_query' && c.business_json.bank_query)
-    .map((c) => ({ key: c.business_json.bank_query.key, chit_id: c.chit_id, party: c.party, at: c.created_at }));
+  const asks = chits.filter((item) => item.direction === 'sent' && (item.business_json || {}).kind === 'bank_query' && item.business_json.bank_query)
+    .map((item) => ({ key: item.business_json.bank_query.key, chit_id: item.chit_id, party: item.party, at: item.created_at }));
   const M = CBBankRecon.explain(P.lines, BKB.ledger, pays, { window_days: 3, asks, learned: bkbRules(), bank: BKB.preset || undefined });
-  BKB.m = { unmatched_ledger: M.unmatched_ledger || [], unmatched_stmt: M.rows.filter((r) => !r.ledger.length).map((r) => Object.assign({ i: r.i }, P.lines[r.i])) };
-  const byLedger = {}; BKB.ledger.forEach((l) => { byLedger[l.id] = l; });
+  BKB.m = { unmatched_ledger: M.unmatched_ledger || [], unmatched_stmt: M.rows.filter((item) => !item.ledger.length).map((item) => Object.assign({ i: item.i }, P.lines[item.i])) };
+  const byLedger = {}; BKB.ledger.forEach((item) => { byLedger[item.id] = item; });
   const marks = bkbRec().accepted || {}, rows = [];
   M.rows.forEach((x) => {
     const l = P.lines[x.i], st = x.state === 'unexplained' ? 'bank-only' : x.state;
@@ -153,8 +153,8 @@ function bankExplain() {
       status, was: st, how: x.how, x, chits: x.chits.map((id) => byChit[id]).filter(Boolean), party: x.party || (x.asked && x.asked.party) || null,
       books: (x.state === 'check' ? (x.candidates || []) : x.ledger).map((id) => byLedger[id]).filter(Boolean), sugg: x.suggestion, asked: x.asked });
   });
-  (M.unmatched_ledger || []).forEach((l) => rows.push({ id: 'l' + l.id, status: 'missing', date: l.date, narration: l.narration, ref: l.entry_no, in: (+l.dr_minor || 0) > 0, amount_minor: (+l.dr_minor || 0) || (+l.cr_minor || 0), books: [l] }));
-  (M.rail_only || []).forEach((r) => rows.push({ id: 'r' + r.chit_id, status: 'told-only', date: r.date, narration: r.words || '', ref: r.ref || '', in: r.side === 'in', amount_minor: r.amount_minor, chits: [r], party: r.party, books: [] }));
+  (M.unmatched_ledger || []).forEach((item) => rows.push({ id: 'l' + item.id, status: 'missing', date: item.date, narration: item.narration, ref: item.entry_no, in: (+item.dr_minor || 0) > 0, amount_minor: (+item.dr_minor || 0) || (+item.cr_minor || 0), books: [item] }));
+  (M.rail_only || []).forEach((item) => rows.push({ id: 'r' + item.chit_id, status: 'told-only', date: item.date, narration: item.words || '', ref: item.ref || '', in: item.side === 'in', amount_minor: item.amount_minor, chits: [item], party: item.party, books: [] }));
   BKB.rows = rows; BKB.counts = M.counts;
   /* the Home count: what needs a person, from the last statement read on this device */
   bkbSave('todo', { n: M.counts.needs_you, acct: BKB.acct, to: BKB.to });
@@ -175,32 +175,32 @@ function bankPaint() {
   const res = bkbEl('bk_res'); if (!res) return;
   const P = BKB.parsed; if (!P) { res.innerHTML = ''; return; }
   /* the engine's note that a bank's format is not confirmed is for its builders: the shop is told what to do about it */
-  const ws = (P.warnings || []).map((w) => /verify against a real file/i.test(w) ? tx('Check the lines against your statement — this bank format is not confirmed yet.') : w);
+  const ws = (P.warnings || []).map((item) => /verify against a real file/i.test(item) ? tx('Check the lines against your statement — this bank format is not confirmed yet.') : item);
   const warn = ws.length ? '<div class="pe-warn" data-testid="bank-warn">⚠ ' + bkbE(ws.slice(0, 3).join(' · ')) + (ws.length > 3 ? ' …' : '') + '</div>' : '';
-  res.innerHTML = warn + '<div class="tabs" role="tablist">' + [['lines', 'Lines'], ['brs', 'Statement']].map((t) => '<button type="button" class="pe-tab" role="tab" data-testid="bank-tab-' + t[0] + '" aria-pressed="' + (BKB.tab === t[0]) + '" onclick="BKB.tab=\'' + t[0] + '\';bankPaint()">' + bkbE(tx(t[1])) + '</button>').join('') + '</div>'
+  res.innerHTML = warn + '<div class="tabs" role="tablist">' + [['lines', 'Lines'], ['brs', 'Statement']].map((item) => '<button type="button" class="pe-tab" role="tab" data-testid="bank-tab-' + item[0] + '" aria-pressed="' + (BKB.tab === item[0]) + '" onclick="BKB.tab=\'' + item[0] + '\';bankPaint()">' + bkbE(tx(item[1])) + '</button>').join('') + '</div>'
     + (BKB.tab === 'brs' ? '<div id="bk_brs" data-testid="bank-brs"></div>' : '<div id="bkl_bank" data-testid="bank-list"></div>');
   if (BKB.tab === 'brs') bankBrsPaint(); else bankList();
 }
 
 function bankList() {
   const host = bkbEl('bkl_bank'); if (!host) return;
-  const own = peOwner(), count = (st) => BKB.rows.filter((r) => r.status === st).length, need = (BKB.counts || {}).needs_you || 0;
+  const own = peOwner(), count = (st) => BKB.rows.filter((item) => item.status === st).length, need = (BKB.counts || {}).needs_you || 0;
   const may = (BKB.rail && BKB.rail.may && BKB.rail.may.ask) || { ok: false, say: tx('Asking starts after an update') };
   const notices = [];
   if (need) notices.push({ cls: 'warn', tid: 'bank-notice', text: txn('{count} line needs you', '{count} lines need you', need) });
   if (BKB.rail && BKB.rail.failed) notices.push({ cls: 'warn', tid: 'bank-rail-failed', text: tx('Could not read what parties told you. Lines are matched to your books only.') });
   CBList.reset && CBList.reset('bank');
   CBList.mount(host, {
-    key: 'bank', t: tx, rows: () => BKB.rows.slice().sort((a, b) => BKB_ORDER.indexOf(a.status) - BKB_ORDER.indexOf(b.status) || String(a.date).localeCompare(String(b.date))), id: (r) => r.id, rowTid: (r) => 'bank-row-' + r.id,
-    head: () => ({ chips: BKB_ORDER.filter((st) => count(st)).map((st) => ({ tid: 'bank-count-' + st, text: tx(bkbStatus[st][1]) + ' ' + count(st) })), notices }),
+    key: 'bank', t: tx, rows: () => BKB.rows.slice().sort((first, second) => BKB_ORDER.indexOf(first.status) - BKB_ORDER.indexOf(second.status) || String(first.date).localeCompare(String(second.date))), id: (r) => r.id, rowTid: (r) => 'bank-row-' + r.id,
+    head: () => ({ chips: BKB_ORDER.filter((item) => count(item)).map((item) => ({ tid: 'bank-count-' + item, text: tx(bkbStatus[item][1]) + ' ' + count(item) })), notices }),
     columns: [
       { key: 'status', label: tx('Status'), prio: 1, sort: 'status', w: 190, html: true, cell: (r) => '<span class="step ' + bkbStatus[r.status][0] + '" data-testid="bank-chip-' + bkbE(r.id) + '" data-status="' + r.status + '">' + bkbE(tx(bkbStatus[r.status][1])) + '</span>' },
       { key: 'line', label: tx('Line'), prio: 2, sort: 'line', w: 340, html: true, cell: (r) => '<div>' + bkbE(r.narration || '') + '</div><div style="color:var(--muted);font-size:var(--fs-1)">' + bkbE(bkDate(r.date)) + (r.ref ? ' · <span class="mono">' + bkbE(r.ref) + '</span>' : '') + '</div>' },
       { key: 'amount', label: tx('Amount'), prio: 3, sort: 'amount', num: true, w: 160, html: true, cell: (r) => bkbE(tx(r.in ? 'In' : 'Out') + ' ' + bkMoney(r.amount_minor)) },
-      { key: 'party', label: tx('Told by'), prio: 4, w: 170, html: true, cell: (r) => r.chits && r.chits.length ? bkbE(r.chits.map((c) => (c.party && c.party.name) || tx('A party')).filter((v, k, a) => a.indexOf(v) === k).join(', ')) : r.asked ? bkbE(txf('Asked {party}', { party: (r.asked.party && r.asked.party.name) || tx('the party') })) : '—' },
-      { key: 'entry', label: tx('In your books'), prio: 5, sort: 'entry', w: 170, html: true, cell: (r) => (r.books || []).length && r.status !== 'check' ? '<span class="mono">' + bkbE(r.books.map((b) => b.entry_no).join(', ')) + '</span>' : '—' },
+      { key: 'party', label: tx('Told by'), prio: 4, w: 170, html: true, cell: (r) => r.chits && r.chits.length ? bkbE(r.chits.map((item) => (item.party && item.party.name) || tx('A party')).filter((item, index, a) => a.indexOf(item) === index).join(', ')) : r.asked ? bkbE(txf('Asked {party}', { party: (r.asked.party && r.asked.party.name) || tx('the party') })) : '—' },
+      { key: 'entry', label: tx('In your books'), prio: 5, sort: 'entry', w: 170, html: true, cell: (r) => (r.books || []).length && r.status !== 'check' ? '<span class="mono">' + bkbE(r.books.map((item) => item.entry_no).join(', ')) + '</span>' : '—' },
     ],
-    filters: [{ key: 'status', label: tx('Status'), all: tx('Every status'), options: BKB_ORDER.map((k) => ({ v: k, label: tx(bkbStatus[k][1]) })), match: (r, v) => r.status === v }],
+    filters: [{ key: 'status', label: tx('Status'), all: tx('Every status'), options: BKB_ORDER.map((item) => ({ v: item, label: tx(bkbStatus[item][1]) })), match: (r, v) => r.status === v }],
     search: (r) => [r.narration, r.ref, r.date, bkbStatus[r.status][1], bkMoney(r.amount_minor), (r.party && r.party.name) || ''].join(' '),
     sorts: [{ key: 'date', label: tx('Date'), cmp: (a, b) => String(a.date).localeCompare(String(b.date)) }, { key: 'status', label: tx('Status'), cmp: (a, b) => BKB_ORDER.indexOf(a.status) - BKB_ORDER.indexOf(b.status) },
       { key: 'amount', label: tx('Amount'), cmp: (a, b) => a.amount_minor - b.amount_minor }],
@@ -223,7 +223,7 @@ const bankIsParty = (r) => !!(r.sugg && r.sugg.event && /^(payment_received|paym
 
 /* ── the actions: device marks (accept · undo · note), the ONE books writer (record), the rail (ask) ── */
 function bankAccept(r) {
-  if (!bkbStep({ act: 'accept', key: r.key, how: r.how, chits: (r.chits || []).map((c) => c.chit_id), ledger: (r.books || []).map((b) => b.entry_no) })) return;
+  if (!bkbStep({ act: 'accept', key: r.key, how: r.how, chits: (r.chits || []).map((item) => item.chit_id), ledger: (r.books || []).map((item) => item.entry_no) })) return;
   const c = (r.chits || [])[0]; if (c && c.party && c.party.id) bkbLearn(r.stmt, { party: c.party.id, party_name: c.party.name });
   bankExplain(); bankPaint(); toast(tx('Accepted. Undo keeps your notes.'));
 }
@@ -257,7 +257,7 @@ function bankAsk(r) {
   const parties = (BKB.rail && BKB.rail.parties) || [], pre = (r.sugg && r.sugg.event && r.sugg.event.party) || '';
   BKB.asking = r.id;
   modal('<div class="mhd"><div class="t" data-testid="bank-ask-title">' + bkbE(tx('Ask the party about this line')) + '</div></div><div class="mbody" style="display:flex;flex-direction:column;gap:8px">'
-    + peField('bk_askto', 'Who to ask', peSel('bk_askto', [['', 'Choose a party']].concat(parties.map((p) => [p.party_id, p.name || p.party_id])), parties.some((p) => p.party_id === pre) ? pre : '', ' onchange="bankAskWords()"'))
+    + peField('bk_askto', 'Who to ask', peSel('bk_askto', [['', 'Choose a party']].concat(parties.map((item) => [item.party_id, item.name || item.party_id])), parties.some((item) => item.party_id === pre) ? pre : '', ' onchange="bankAskWords()"'))
     + '<div class="pe-note" data-testid="bank-ask-words" id="bk_askwords"></div>'
     + '<div class="pe-note">' + bkbE(tx('Only the date, the amount and the reference are sent. Their payment advice settles it in both books.')) + '</div><div id="bk_askout" class="pe-slot"></div></div>'
     + '<div class="mfoot"><button type="button" onclick="closeModal()">' + bkbE(tx('Cancel')) + '</button><button type="button" class="pri" data-testid="bank-ask-send" onclick="bankAskSend(this)">' + bkbE(tx('Send')) + '</button></div>');
@@ -286,11 +286,11 @@ function bankAskSend(btn) {
 function bankNext(r) {
   const row = (k, v) => '<div style="display:flex;flex-wrap:wrap;gap:4px 10px;padding:2px 0"><span style="color:var(--muted);min-width:110px">' + bkbE(tx(k)) + '</span><span style="min-width:0;overflow-wrap:anywhere">' + v + '</span></div>';
   const HOW = { ref: 'the same reference', 'amount+date': 'the same amount and date', 'one-to-many': 'several together', 'many-to-one': 'several lines together' };
-  const books = () => (r.books || []).map((b) => row('In your books', '<span class="mono">' + bkbE(b.entry_no) + '</span> · ' + bkbE(bkDate(b.date)) + ' · ' + bkbE(bkMoney(b.dr_minor || b.cr_minor)) + ' · ' + bkbE(b.narration))).join('');
+  const books = () => (r.books || []).map((item) => row('In your books', '<span class="mono">' + bkbE(item.entry_no) + '</span> · ' + bkbE(bkDate(item.date)) + ' · ' + bkbE(bkMoney(item.dr_minor || item.cr_minor)) + ' · ' + bkbE(item.narration))).join('');
   /* the party's own chit: who, what they said, the bills it settles — the chit opens in the one popup */
-  const told = () => (r.chits || []).map((c) => row('Told by', bkbE((c.party && c.party.name) || tx('A party')) + (c.words ? ' · ' + bkbE(c.words) : '')
-      + ' <button type="button" class="cbl-btn" data-testid="bank-open-chit-' + bkbE(c.chit_id) + '" onclick="openChitSheet(\'' + bkbE(c.chit_id) + '\')">' + bkbE(tx('Open the chit')) + '</button>')
-    + ((c.bills || []).length ? row('Bills', (c.bills || []).map((b) => '<span class="mono">' + bkbE(b.bill_no || b.ref_chit_id) + '</span>' + (b.applied_minor != null ? ' ' + bkbE(bkMoney(b.applied_minor)) : '')).join(' · ')) : '')).join('');
+  const told = () => (r.chits || []).map((item) => row('Told by', bkbE((item.party && item.party.name) || tx('A party')) + (item.words ? ' · ' + bkbE(item.words) : '')
+      + ' <button type="button" class="cbl-btn" data-testid="bank-open-chit-' + bkbE(item.chit_id) + '" onclick="openChitSheet(\'' + bkbE(item.chit_id) + '\')">' + bkbE(tx('Open the chit')) + '</button>')
+    + ((item.bills || []).length ? row('Bills', (item.bills || []).map((b) => '<span class="mono">' + bkbE(b.bill_no || b.ref_chit_id) + '</span>' + (b.applied_minor != null ? ' ' + bkbE(bkMoney(b.applied_minor)) : '')).join(' · ')) : '')).join('');
   let h = '<div data-testid="bank-next-' + bkbE(r.id) + '">';
   if (r.status === 'settled' || (r.status === 'accepted' && r.was === 'settled')) h += told() + books() + row('Next', bkbE(tx('Their chit and your books agree. Accept it.')));
   else if (r.status === 'told') h += told() + row('Next', bkbE(tx('Not in your books yet. Record from the chit fills in their amount and bills.')));
@@ -300,11 +300,11 @@ function bankNext(r) {
   else if (r.status === 'suggested') h += row('Looks like', bkbE(bkbEventWord(r.sugg.event))) + row('Why', bkbE(r.sugg.why || ''))
     + (r.sugg.rule === 'learned' && r.sugg.source ? row('Learned from', bkbE(txf('{n} on {d}', { n: r.sugg.source.narration || '', d: bkDate(r.sugg.source.date) }))) : '')
     + (bankIsParty(r) ? row('Next', bkbE(tx('Record it as a payment in Dues, or ask the party which bill.'))) : row('Next', bkbE(tx('Add missing opens the entry for you to check.'))));
-  else if (r.status === 'check') h += row('Why', bkbE(tx('More than one entry fits this line'))) + (r.books || []).map((b) => row('Could be', '<span class="mono">' + bkbE(b.entry_no) + '</span> · ' + bkbE(bkMoney(b.dr_minor || b.cr_minor)))).join('');
+  else if (r.status === 'check') h += row('Why', bkbE(tx('More than one entry fits this line'))) + (r.books || []).map((item) => row('Could be', '<span class="mono">' + bkbE(item.entry_no) + '</span> · ' + bkbE(bkMoney(item.dr_minor || item.cr_minor)))).join('');
   else if (r.status === 'missing') h += row('Why', bkbE(tx('In your books but not on this statement yet — a cheque not presented, or a later date')));
   else h += row('Why', bkbE((r.sugg && r.sugg.why) ? tx(r.sugg.why) : tx('Nobody told you about it and nothing in your books matches it'))) + row('Next', bkbE(tx('Ask the party which bill, or add it in your books.')));
   const notes = r.key ? ((bkbRec().notes || {})[r.key] || []) : [];
-  if (notes.length) h += '<div data-testid="bank-notes-' + bkbE(r.id) + '">' + notes.map((n) => row('Note', bkbE(n.text) + (n.at ? ' · ' + bkbE(bkDate(String(n.at).slice(0, 10))) : ''))).join('') + '</div>';
+  if (notes.length) h += '<div data-testid="bank-notes-' + bkbE(r.id) + '">' + notes.map((item) => row('Note', bkbE(item.text) + (item.at ? ' · ' + bkbE(bkDate(String(item.at).slice(0, 10))) : ''))).join('') + '</div>';
   return h + '</div>';
 }
 
@@ -343,7 +343,7 @@ function bankBrsPaint() {
   if (!b.ok) { host.innerHTML = '<div class="pe-bad" data-testid="bank-brs-bad">' + bkbE(b.why) + '</div>'; return; }
   const items = (title, list, tid) => list.length ? '<div class="pe-sub">' + bkbE(tx(title)) + '</div><div class="pe-rows" data-testid="' + tid + '">' + list.map((x) => '<div class="pe-row"><span>' + bkbE(bkDate(x.date)) + ' · ' + bkbE(x.name || '') + (x.ref ? ' · ' + bkbE(x.ref) : '') + '</span><span class="mono">' + bkbE(bkMoney(x.amount_minor)) + '</span></div>').join('') + '</div>' : '';
   host.innerHTML = '<div class="pe-card" data-testid="bank-brs-card"><div class="pe-sub">' + bkbE(txf('Bank statement as at {d}', { d: bkDate(b.asOf) })) + '</div><div class="pe-rows">'
-    + b.rows.map((x, i) => '<div class="pe-row" data-testid="brs-row-' + i + '"><span>' + bkbE(tx(x.label)) + '</span><span class="mono">' + bkbE(x.sign === '+' || x.sign === '-' ? bkMoney(Math.abs(x.minor)) : bkDrCr(x.minor)) + '</span></div>').join('') + '</div>'
+    + b.rows.map((x, index) => '<div class="pe-row" data-testid="brs-row-' + index + '"><span>' + bkbE(tx(x.label)) + '</span><span class="mono">' + bkbE(x.sign === '+' || x.sign === '-' ? bkMoney(Math.abs(x.minor)) : bkDrCr(x.minor)) + '</span></div>').join('') + '</div>'
     + (b.tied ? '<div class="pe-ok" data-testid="brs-tied">✓ ' + bkbE(tx('The books reconcile to the bank: every difference is a named item.')) + '</div>'
       : '<div class="pe-warn" data-testid="brs-untied">⚠ ' + bkbE(b.note || '') + '</div>')
     + items('Cheques issued, not yet presented', b.issued_not_presented || [], 'brs-issued') + items('Cheques deposited, not yet credited', b.deposited_not_credited || [], 'brs-deposited')
