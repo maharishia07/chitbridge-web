@@ -38,14 +38,14 @@ var CSU = { taxErr: '', pmLoading: false, p: null, loading: false, readErr: fals
 function csuPackOf(code) {
   code = String(code || '').toUpperCase();
   var list = CSU.p && Array.isArray(CSU.p.countries) ? CSU.p.countries : [];
-  for (var i = 0; i < list.length; i++) if (list[i] && String(list[i].code).toUpperCase() === code) return list[i];
+  for (var index = 0; index < list.length; index++) if (list[index] && String(list[index].code).toUpperCase() === code) return list[index];
   return null;
 }
 /** the country's name a person reads — the server's pack list, the locale engine's served list, else the browser's own region names, else the code (never a guess) */
 function csuCountryName(code, list) {
   if (!code) return '';
   /* STD2 (additive): `list` = another holder of the server's pack rows (the register panel's REG.spin.countries) — the one name reader, never a copy */
-  var pk = null; if (Array.isArray(list)) { for (var i = 0; i < list.length; i++) if (list[i] && String(list[i].code).toUpperCase() === String(code).toUpperCase()) pk = list[i]; } else pk = csuPackOf(code);
+  var pk = null; if (Array.isArray(list)) { for (var index = 0; index < list.length; index++) if (list[index] && String(list[index].code).toUpperCase() === String(code).toUpperCase()) pk = list[index]; } else pk = csuPackOf(code);
   if (pk && pk.name) return pk.name;
   try { var R = window.CBLocale && CBLocale.REGIONS; if (R && R[code] && R[code].name) return R[code].name; } catch (_) {}
   try { var n = new Intl.DisplayNames([navigator.language || 'en'], { type: 'region' }).of(code); if (n && n !== code && !/unknown/i.test(n)) return n; } catch (_) {}
@@ -59,7 +59,7 @@ function csuCountries() {
   var out = [], seen = {};
   var add = function (c) { c = String(c || '').toUpperCase(); if (c && /^[A-Z]{2}$/.test(c) && !seen[c]) { seen[c] = 1; out.push(c); } };
   var served = CSU.p && Array.isArray(CSU.p.countries) && CSU.p.countries.length ? CSU.p.countries : null;
-  if (served) served.forEach(function (c) { add(c && c.code); });
+  if (served) served.forEach(function (item) { add(item && item.code); });
   else {
     try { Object.keys((window.CBLocale && CBLocale.REGIONS) || {}).forEach(add); } catch (_) {}
     try { var g = govCtx(); if (g && g.country) { add(g.country.value); add(g.country.unserved); } } catch (_) {}
@@ -115,9 +115,9 @@ function csuZoneFor(country, held) {
 }
 /** CS2: the words for what fixed the country — the server's `constituted_by`, in shopkeeper words */
 function csuFixedBy() {
-  var by = (CSU.p && CSU.p.constituted_by) || {}, w = [];
-  if (by.products) w.push(tx('products')); if (by.chits) w.push(tx('chits')); if (by.entries) w.push(tx('books entries'));
-  return w.join(', ') || tx('transactions');
+  var by = (CSU.p && CSU.p.constituted_by) || {}, list = [];
+  if (by.products) list.push(tx('products')); if (by.chits) list.push(tx('chits')); if (by.entries) list.push(tx('books entries'));
+  return list.join(', ') || tx('transactions');
 }
 function csuConstituted() { return !!(CSU.p && CSU.p.constituted); }
 /** the values the server stored (what registration wrote) into the edit record */
@@ -353,7 +353,7 @@ function csuRow(key, what, valueHtml, from, editHtml, locked, lockHtml) {
 }
 function csuSel(id, k, opts, cur) {
   return '<select class="inp" id="' + id + '" data-testid="' + id + '" onchange="csuSet(\'' + k + '\', this.value)">'
-    + opts.map(function (o) { return '<option value="' + esc(o.v) + '"' + (o.title ? ' title="' + esc(o.title) + '"' : '') + (o.off ? ' disabled' : '') + (String(o.v) === String(cur) && !o.off ? ' selected' : '') + '>' + esc(o.t) + '</option>'; }).join('') + '</select>';
+    + opts.map(function (item) { return '<option value="' + esc(item.v) + '"' + (item.title ? ' title="' + esc(item.title) + '"' : '') + (item.off ? ' disabled' : '') + (String(item.v) === String(cur) && !item.off ? ' selected' : '') + '>' + esc(item.t) + '</option>'; }).join('') + '</select>';
 }
 /**
  * WALK-REG R46: the zones a person knows by city and state, first; every other zone the pack names stays below a divider. The value is always the
@@ -475,7 +475,7 @@ function csuSave() {
   var first = csuFirstSetup();
   CSU.err = ''; CSU.saved = false;
   var body = csuSaveBody(e);
-  CBAction.run(btn, function () { return api('countrySetupSave', { body: body }).then(function (p) { return csuSaveBeside(e).then(function () { return p; }); }); }, {
+  CBAction.run(btn, function () { return api('countrySetupSave', { body: body }).then(function (reply) { return csuSaveBeside(e).then(function () { return reply; }); }); }, {
     key: 'cs-save', busy: tx('Saving…'),
     outcome: function (p) {
       CSU.touched = false;
@@ -499,7 +499,7 @@ function csuSave() {
 /** W28 · W27(a): the two facts beside the step, each through its ONE writer, only when it moved — the words (policy_flags.number_words) and the supplies (identities.supplies) */
 function csuSaveBeside(e) {
   var jobs = [];
-  if (e.words !== ((CSU.flags && CSU.flags.number_words) || 'pack')) jobs.push(api('policySet', { body: { number_words: e.words } }).then(function (r) { CSU.flags = (r && r.flags) || CSU.flags; }));
+  if (e.words !== ((CSU.flags && CSU.flags.number_words) || 'pack')) jobs.push(api('policySet', { body: { number_words: e.words } }).then(function (reply) { CSU.flags = (reply && reply.flags) || CSU.flags; }));
   /* WALK-REG R10: what the picker SHOWS is what is saved — a shop with no stored answer saves the shown Goods too (it read "not said yet" after Continue) */
   if (e.supplies !== csuStoredSupplies()) jobs.push(api('saveProfile', { body: { supplies: e.supplies } }).then(function () { CSU.me = Object.assign({}, CSU.me, { supplies: e.supplies }); }));
   return Promise.all(jobs);
@@ -509,12 +509,12 @@ function csuDone(){ if (CSU.onDone) CSU.onDone(); }
 /** CB Settings › Country (settings.html): the same rows, painted in the page's pane. Re-mounting re-reads nothing the server already answered. */
 var CBCountry = { mount: function (host, onDone) {
   CSU.host = host; CSU.onDone = onDone || null; CSU.touched = false;
-  if (window.CBUnsaved) CBUnsaved.form({ dirty: function () { return !!CSU.touched; }, save: function () { return new Promise(function (ok, no) { var b = document.getElementById('cs-save'); if (!b) return ok(); csuSaveThen(ok, no); }); } });   /* W24 */
+  if (window.CBUnsaved) CBUnsaved.form({ dirty: function () { return !!CSU.touched; }, save: function () { return new Promise(function (ok, no) { var node = document.getElementById('cs-save'); if (!node) return ok(); csuSaveThen(ok, no); }); } });   /* W24 */
   renderCountrySetup();
 } };
 /** W24: the same save as the button, awaited by CBUnsaved (resolve on the outcome, reject on a refusal) */
 function csuSaveThen(ok, no) {
   var e = CSU.edit; if (!e) return ok();
   var body = csuSaveBody(e);
-  api('countrySetupSave', { body: body }).then(function (p) { CSU.p = p || CSU.p; return csuSaveBeside(e); }).then(function () { CSU.touched = false; ok(); }, no);
+  api('countrySetupSave', { body: body }).then(function (reply) { CSU.p = reply || CSU.p; return csuSaveBeside(e); }).then(function () { CSU.touched = false; ok(); }, no);
 }
