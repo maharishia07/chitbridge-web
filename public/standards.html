@@ -232,39 +232,39 @@ function apiBase(){
 }
 function session(){ try{ return JSON.parse(localStorage.getItem('cb_sess') || 'null'); }catch(_){ return null; } }
 function store(k, v){ try{ if (v === undefined) return localStorage.getItem('cb.standards.' + k); localStorage.setItem('cb.standards.' + k, v); }catch(_){ return null; } }
-function lab(list, id, at){ for (var i = 0; i < list.length; i++) if (list[i][0] === id) return list[i][at == null ? 1 : at]; return id; }
+function lab(list, id, at){ for (var index = 0; index < list.length; index++) if (list[index][0] === id) return list[index][at == null ? 1 : at]; return id; }
 function plain(s){ return String(s == null ? '' : s).replace(/<[^>]+>/g, ''); }
 /* the register's own prose carries <b> and <code>; keep exactly those, escape everything else (the ⭐ ⚠️ markers are the code comments' voice, not the reader's) */
 function rich(s){ return esc(String(s == null ? '' : s).replace(/⭐\s*/g, '').replace(/⚠️\s*/g, '')).replace(/&lt;(\/?)(b|code)&gt;/g, '<$1$2>'); }
 function checkedLabel(){ try{ return new Date(STD_CHECKED + 'T12:00:00Z').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }); }catch(_){ return STD_CHECKED; } }
 
 /* a row of the register, as the list holds it: the register's row itself (never a copy of its words) and its place */
-const ROWS = STANDARDS.map((r, i) => ({ ix: i, r: r }));
+const ROWS = STANDARDS.map((item, index) => ({ ix: index, r: item }));
 /* ⭐ the 4th Kind, Compatibility (M41): ONE file, public/data/compat.json, shared with the Compatibility lab (N04); stdCompatRows maps it onto the register's shape */
 let COMPAT_ERR = '';
-function addCompat(json){ stdCompatRows(json).forEach((r) => ROWS.push({ ix: ROWS.length, r: r })); }
+function addCompat(json){ stdCompatRows(json).forEach((item) => ROWS.push({ ix: ROWS.length, r: item })); }
 /* ⭐ STD-COMPARE: the "Compared with" tab's rows — ONE file, public/data/compare.json, mapped by stdCompareRows (cap-standards.js). Not standards, so never in ROWS,
    the matrix or the All view: the view carries them itself (CBList views[].rows). ix 'c<n>' keeps their ids and test ids apart from the register's. */
 let CMP_ROWS = [], CMP_ERR = '';
 function addCompare(json){ CMP_ROWS = stdCompareRows(json).map((row, index) => ({ ix: 'c' + index, r: row })); }
 const CMP_STATUS_ORDER = { ahead: 0, level: 1, behind: 2, 'n/a': 3 };
 const CMP_COUNTRY_FALLBACK = 'IN';   /* no shop country known (not signed in, or /me not landed yet): India, the first pack */
-const AREA = (r) => lab(STD_AREAS, r.a), PAREA = (r) => lab(STD_PRODUCT_AREAS, r.pa), KIND = (r) => lab(STD_KINDS, r.k), COUNTRY = (r) => r.c.map((c) => lab(STD_COUNTRIES, c)).join(' · '), STATUS = (r) => lab(STD_STATUS, r.s);
+const AREA = (r) => lab(STD_AREAS, r.a), PAREA = (r) => lab(STD_PRODUCT_AREAS, r.pa), KIND = (r) => lab(STD_KINDS, r.k), COUNTRY = (r) => r.c.map((item) => lab(STD_COUNTRIES, item)).join(' · '), STATUS = (r) => lab(STD_STATUS, r.s);
 const SORD = { live: 0, part: 1, plan: 2 };
-function countOf(rows){ var n = { live: 0, part: 0, plan: 0 }; rows.forEach((r) => { n[r.s]++; }); return n; }
+function countOf(rows){ var n = { live: 0, part: 0, plan: 0 }; rows.forEach((item) => { n[item.s]++; }); return n; }
 /* STD-COMPARE: a group head's figure on the Compared with tab — ahead · level · behind (n/a rows are in the count, not in the three) */
 function cmpFig(rows){ var counts = { ahead: 0, level: 0, behind: 0, 'n/a': 0 }; rows.forEach((x) => { counts[x.r.cs]++; }); return rows.length + ' · ▲ ' + counts.ahead + ' = ' + counts.level + ' ▼ ' + counts.behind; }
 
 /* ═════ THE DECLARATION — what this page tells CBList ═════ */
 const FILTERS = [
-  { key: 'status', label: 'Status', all: 'Any', options: STD_STATUS.map((s) => ({ v: s[0], label: s[1] })), match: (x, v) => x.r.s === v },
-  { key: 'area', label: 'Area', all: 'Any', options: STD_AREAS.map((a) => ({ v: a[0], label: a[1] })), match: (x, v) => x.r.a === v },
+  { key: 'status', label: 'Status', all: 'Any', options: STD_STATUS.map((item) => ({ v: item[0], label: item[1] })), match: (x, v) => x.r.s === v },
+  { key: 'area', label: 'Area', all: 'Any', options: STD_AREAS.map((item) => ({ v: item[0], label: item[1] })), match: (x, v) => x.r.a === v },
   /* STDREG1: the PRODUCT area (`pa`, STD_PRODUCT_AREAS) — the part of the product a row lives in, beside the business Area. A filter, a column (⚙) and a
      sort; not a Group by button — a fifth button wraps the toolbar past the head's 20% (the walk measures it) */
-  { key: 'parea', label: 'Product area', all: 'Any', options: STD_PRODUCT_AREAS.filter((a) => STANDARDS.some((r) => r.pa === a[0])).map((a) => ({ v: a[0], label: a[1] })), match: (x, v) => x.r.pa === v },
+  { key: 'parea', label: 'Product area', all: 'Any', options: STD_PRODUCT_AREAS.filter((item) => STANDARDS.some((r) => r.pa === item[0])).map((item) => ({ v: item[0], label: item[1] })), match: (x, v) => x.r.pa === v },
   /* STD-COMPARE: 'compare' is the Compared-with view's own key — a choice in this popover is the tab, said twice; it is not a Kind of the register (STD_KINDS), so the matrix never counts it */
   { key: 'kind', label: 'Kind', all: 'Any', options: STD_KINDS.map((kind) => ({ v: kind[0], label: kind[1] })).concat([{ v: 'compare', label: 'Compared with' }]), match: (x, value) => x.r.k === value },
-  { key: 'country', label: 'Applies in', all: 'Any', options: STD_COUNTRIES.map((c) => ({ v: c[0], label: c[1] })), match: (x, v) => x.r.c.indexOf(v) >= 0 },
+  { key: 'country', label: 'Applies in', all: 'Any', options: STD_COUNTRIES.map((item) => ({ v: item[0], label: item[1] })), match: (x, v) => x.r.c.indexOf(v) >= 0 },
 ];
 /* STD-COMPARE: the Package filter — its choices are the packages compare.json names (read before the first paint), so it joins FILTERS in start() */
 function packageFilter(){
@@ -281,14 +281,14 @@ function groupBy(x, mode){
 }
 /* the Country group's words: one country alone by its name (India · Australia · UAE), "<country> and global", Global; a row that applies in several
    countries names them (CPS1: India, Australia, UAE). Widened in INT4 for the compliance rows (CO1–CO3) that apply in Australia or the UAE alone. */
-function countryGroup(c){
-  if (c.length === 1) return lab(STD_COUNTRIES, c[0]);
-  var own = c.filter((x) => x !== 'GLOBAL');
-  if (own.length < c.length) return own.map((x) => lab(STD_COUNTRIES, x)).join(', ') + ' and global';
-  return c.map((x) => lab(STD_COUNTRIES, x)).join(', ');   /* commas: the group head's own " · " separates the label from its count */
+function countryGroup(list){
+  if (list.length === 1) return lab(STD_COUNTRIES, list[0]);
+  var own = list.filter((x) => x !== 'GLOBAL');
+  if (own.length < list.length) return own.map((x) => lab(STD_COUNTRIES, x)).join(', ') + ' and global';
+  return list.map((x) => lab(STD_COUNTRIES, x)).join(', ');   /* commas: the group head's own " · " separates the label from its count */
 }
-const GROUP_ORDER = STD_AREAS.map((a) => a[0]).concat(STD_KINDS.map((k) => k[0]), STD_COUNTRIES.filter((c) => c[0] !== 'GLOBAL').map((c) => c[1]),
-  STD_COUNTRIES.filter((c) => c[0] !== 'GLOBAL').map((c) => c[1] + ' and global'), ['Global', STD_COUNTRIES.filter((c) => c[0] !== 'GLOBAL').map((c) => c[1]).join(', ')]);   /* STDREG1: any "<country> and global" (Xero: Australia and global) */
+const GROUP_ORDER = STD_AREAS.map((item) => item[0]).concat(STD_KINDS.map((item) => item[0]), STD_COUNTRIES.filter((item) => item[0] !== 'GLOBAL').map((item) => item[1]),
+  STD_COUNTRIES.filter((item) => item[0] !== 'GLOBAL').map((item) => item[1] + ' and global'), ['Global', STD_COUNTRIES.filter((item) => item[0] !== 'GLOBAL').map((item) => item[1]).join(', ')]);   /* STDREG1: any "<country> and global" (Xero: Australia and global) */
 /* T3-COMPAT: the "Works with" tab is a saved view of THIS list (CBList views) — Kind = Compatibility, nothing else; #works-with opens it (Home's Compatibility card) */
 const WORKS = { key: 'works-with', label: 'Works with', filt: { kind: 'compat' }, tip: 'Every outside system we work with: what moves, which way, and its proof' };
 function worksOn(){ var f = nowFilt(), k = Object.keys(f).filter((x) => f[x]); return k.length === 1 && f.kind === 'compat'; }
@@ -414,36 +414,36 @@ let CMX = null, CMX_ERR = '';
 const CMX_SYM = { ok: '✅', partial: '⚠️', missing: '❌', out: '—' };
 function countryMatrixHTML(){
   if (!CMX) return '<span class="miss" data-testid="std-country-matrix-err">' + esc(CMX_ERR || 'The country matrix could not be read (data/country-matrix.json). The standard itself is chitbridge-engines docs/COUNTRY-STANDARD.md.') + '</span>';
-  var ids = CMX.packs.map((p) => p.id), tpl = 'grid-template-columns:minmax(0,1fr) repeat(' + ids.length + ',minmax(52px,max-content))';
+  var ids = CMX.packs.map((item) => item.id), tpl = 'grid-template-columns:minmax(0,1fr) repeat(' + ids.length + ',minmax(52px,max-content))';
   var h = '<div class="mx" role="table" aria-label="Country matrix" style="' + tpl + '"><div class="mx-r mx-h" role="row"><span role="columnheader" class="mx-ch">member</span>'
-    + CMX.packs.map((p) => '<span role="columnheader" class="mx-ch" title="' + esc(p.name + ' · pack ' + p.version + (p.verified ? ' · read by a local accountant' : ' · not yet read by a local accountant')) + '">' + esc(p.id) + '</span>').join('') + '</div>';
+    + CMX.packs.map((item) => '<span role="columnheader" class="mx-ch" title="' + esc(item.name + ' · pack ' + item.version + (item.verified ? ' · read by a local accountant' : ' · not yet read by a local accountant')) + '">' + esc(item.id) + '</span>').join('') + '</div>';
   /* the counts first: what each pack has, partly has, lacks, leaves out */
-  [['ok', 'present'], ['partial', 'partly'], ['missing', 'missing'], ['out', 'out of scope']].forEach((s) => {
-    h += '<div class="mx-r" role="row"><span role="rowheader" class="mx-rh">' + CMX_SYM[s[0]] + ' ' + s[1] + '</span>' + ids.map((id) => '<span role="cell" class="mx-c' + (CMX.counts[id][s[0]] ? '' : ' nil') + '" data-testid="std-cmx-' + esc(id) + '-' + s[0] + '">' + (CMX.counts[id][s[0]] || '—') + '</span>').join('') + '</div>';
+  [['ok', 'present'], ['partial', 'partly'], ['missing', 'missing'], ['out', 'out of scope']].forEach((item) => {
+    h += '<div class="mx-r" role="row"><span role="rowheader" class="mx-rh">' + CMX_SYM[item[0]] + ' ' + item[1] + '</span>' + ids.map((id) => '<span role="cell" class="mx-c' + (CMX.counts[id][item[0]] ? '' : ' nil') + '" data-testid="std-cmx-' + esc(id) + '-' + item[0] + '">' + (CMX.counts[id][item[0]] || '—') + '</span>').join('') + '</div>';
   });
   var sec = '';
-  CMX.rows.forEach((r) => {
-    if (r.section !== sec){ sec = r.section; h += '<div class="mx-r mx-all" role="row"><span role="rowheader" class="mx-rh">' + esc(sec) + '</span>' + ids.map(() => '<span role="cell" class="mx-c nil"></span>').join('') + '</div>'; }
-    h += '<div class="mx-r" role="row"><span role="rowheader" class="mx-rh"><code>' + esc(r.member) + '</code><span class="mx-sub">' + esc(r.level) + ' · ' + esc(r.home) + '</span></span>'
-      + ids.map((id) => { var c = r.cells[id]; return '<span role="cell" class="mx-c' + (c.state === 'missing' || c.state === 'out' ? ' nil' : '') + '" title="' + esc(c.note || (c.state === 'missing' ? 'missing' : 'present')) + '" aria-label="' + esc(id + ' ' + r.member + ': ' + c.state + (c.note ? ' — ' + c.note : '')) + '">' + CMX_SYM[c.state] + '</span>'; }).join('') + '</div>';
+  CMX.rows.forEach((item) => {
+    if (item.section !== sec){ sec = item.section; h += '<div class="mx-r mx-all" role="row"><span role="rowheader" class="mx-rh">' + esc(sec) + '</span>' + ids.map(() => '<span role="cell" class="mx-c nil"></span>').join('') + '</div>'; }
+    h += '<div class="mx-r" role="row"><span role="rowheader" class="mx-rh"><code>' + esc(item.member) + '</code><span class="mx-sub">' + esc(item.level) + ' · ' + esc(item.home) + '</span></span>'
+      + ids.map((id) => { var c = item.cells[id]; return '<span role="cell" class="mx-c' + (c.state === 'missing' || c.state === 'out' ? ' nil' : '') + '" title="' + esc(c.note || (c.state === 'missing' ? 'missing' : 'present')) + '" aria-label="' + esc(id + ' ' + item.member + ': ' + c.state + (c.note ? ' — ' + c.note : '')) + '">' + CMX_SYM[c.state] + '</span>'; }).join('') + '</div>';
   });
   h += '</div>';
-  h += '<p class="mx-note">❌ per pack: ' + ids.map((id) => esc(id) + ' — ' + (CMX.missing[id].length ? CMX.missing[id].map((m) => '<code>' + esc(m) + '</code>').join(' · ') : 'none')).join('<br>') + '</p>';
+  h += '<p class="mx-note">❌ per pack: ' + ids.map((id) => esc(id) + ' — ' + (CMX.missing[id].length ? CMX.missing[id].map((item) => '<code>' + esc(item) + '</code>').join(' · ') : 'none')).join('<br>') + '</p>';
   return h;
 }
 /* the statement a buyer or a CA pastes into an e-mail: the standard, the clause, the status, and what is missing — in the register's words */
 function statementOf(r){
   if (r.cmp) return compareStatement(r);   /* STD-COMPARE */
-  var t = [r.n + ' — ' + r.p, 'Kind: ' + KIND(r) + ' (' + lab(STD_KINDS, r.k, 2) + ') · Applies in: ' + COUNTRY(r), 'Status: ' + STATUS(r) + (r.limit ? ' · Limit: ' + r.limit : '')];
-  if (r.ex && plain(r.ex) !== '—') t.push('Clause or example: ' + plain(r.ex));
-  if (r.m) t.push('Missing: ' + r.m);
-  if (r.note && r.s !== 'live') t.push('In full: ' + plain(r.note));
-  if (r.eq) t.push('Elsewhere: ' + r.eq);
-  if (r.dirWords) t.push('Moves: ' + r.dirWords);
-  if (r.proof) t.push('Proof: ' + r.proof);
-  if (r.k === 'compat') t.push('Code: ' + (r.code ? 'chitbridge-api ' + r.code : 'not built yet') + ' · Test: ' + (r.test ? 'chitbridge-api ' + r.test : 'none yet'));
-  t.push('Checked ' + checkedLabel() + ' (ChitBridge standards register)');
-  return t.join('\n');
+  var list = [r.n + ' — ' + r.p, 'Kind: ' + KIND(r) + ' (' + lab(STD_KINDS, r.k, 2) + ') · Applies in: ' + COUNTRY(r), 'Status: ' + STATUS(r) + (r.limit ? ' · Limit: ' + r.limit : '')];
+  if (r.ex && plain(r.ex) !== '—') list.push('Clause or example: ' + plain(r.ex));
+  if (r.m) list.push('Missing: ' + r.m);
+  if (r.note && r.s !== 'live') list.push('In full: ' + plain(r.note));
+  if (r.eq) list.push('Elsewhere: ' + r.eq);
+  if (r.dirWords) list.push('Moves: ' + r.dirWords);
+  if (r.proof) list.push('Proof: ' + r.proof);
+  if (r.k === 'compat') list.push('Code: ' + (r.code ? 'chitbridge-api ' + r.code : 'not built yet') + ' · Test: ' + (r.test ? 'chitbridge-api ' + r.test : 'none yet'));
+  list.push('Checked ' + checkedLabel() + ' (ChitBridge standards register)');
+  return list.join('\n');
 }
 /* STD-COMPARE: the comparison a buyer or CA pastes — both sides, the status word, how it was verified, every source */
 function compareStatement(row){
@@ -463,8 +463,8 @@ function copyText(t){
   fallbackCopy(t, done);
 }
 function fallbackCopy(t, done){
-  var a = document.createElement('textarea'); a.value = t; a.setAttribute('readonly', ''); a.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(a); a.select();
-  var ok = false; try{ ok = document.execCommand('copy'); }catch(_){} a.remove();
+  var node = document.createElement('textarea'); node.value = t; node.setAttribute('readonly', ''); node.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(node); node.select();
+  var ok = false; try{ ok = document.execCommand('copy'); }catch(_){} node.remove();
   if (ok) done(); else toast('Could not copy. Select the text in the row and copy it.');
 }
 
@@ -516,29 +516,29 @@ function mountList(){
    and the lit cell are the same state shown twice, and the Filters popover can undo it. The matrix counts the whole register. */
 /* ONE grouping choice: the left table counts by whatever the list's Group by says (Area · Country · Kind; None = the whole register only) */
 const DIMS = [['area', 'Area'], ['country', 'Country'], ['kind', 'Kind']];
-function curDim(){ var g = LIST && LIST.state().group; return DIMS.some((d) => d[0] === g) ? g : (g === 'none' ? 'none' : 'area'); }
+function curDim(){ var g = LIST && LIST.state().group; return DIMS.some((item) => item[0] === g) ? g : (g === 'none' ? 'none' : 'area'); }
 let DIM = 'area';
 function mxRows(){
   if (DIM === 'none') return [];
-  if (DIM === 'country') return STD_COUNTRIES.map((c) => ({ id: c[0], label: c[1], has: (r) => r.c.indexOf(c[0]) >= 0 }));
-  if (DIM === 'kind') return STD_KINDS.map((k) => ({ id: k[0], label: k[1], sub: k[2], has: (r) => r.k === k[0] }));
-  return STD_AREAS.map((a) => ({ id: a[0], label: a[1], has: (r) => r.a === a[0] }));
+  if (DIM === 'country') return STD_COUNTRIES.map((item) => ({ id: item[0], label: item[1], has: (r) => r.c.indexOf(item[0]) >= 0 }));
+  if (DIM === 'kind') return STD_KINDS.map((item) => ({ id: item[0], label: item[1], sub: item[2], has: (r) => r.k === item[0] }));
+  return STD_AREAS.map((item) => ({ id: item[0], label: item[1], has: (r) => r.a === item[0] }));
 }
 function nowFilt(){ var s = LIST && LIST.state(); return (s && s.filt) || {}; }
 function paintMatrix(){
   DIM = curDim(); GLAST = DIM;
   var f = nowFilt(), fk = DIM, rowsAll = ROWS.map((x) => x.r);
-  var other = Object.keys(f).filter((k) => f[k] && k !== 'status' && k !== fk).length || (LIST && LIST.state().q.trim());
+  var other = Object.keys(f).filter((item) => f[item] && item !== 'status' && item !== fk).length || (LIST && LIST.state().q.trim());
   var h = '<div class="mx-tools"><span class="mx-lab" id="mxLab" data-testid="std-mx-by">' + (DIM === 'none' ? 'Counted: all together' : 'Counted by ' + esc(lab(DIMS, DIM))) + '</span><span class="mx-hint">follows Group by</span></div>';
   h += '<div class="mx" role="table" aria-label="Standards by ' + DIM + ' and status"><div class="mx-r mx-h" role="row"><span role="columnheader"></span>'
-    + STD_STATUS.map((t) => { var on = f.status === t[0] && !f[fk];
-      return '<button type="button" role="columnheader" class="mx-ch c-' + t[0] + '" data-mxs="' + t[0] + '" data-testid="std-mx-col-' + t[0] + '" aria-pressed="' + on + '" title="Show every ' + t[1].toLowerCase() + ' standard"><span class="sym" aria-hidden="true">' + t[2] + '</span>' + t[1] + '</button>'; }).join('') + '</div>';
-  mxRows().concat([{ id: '*', label: 'All', has: () => true }]).forEach((r) => {
-    var n = countOf(rowsAll.filter((x) => r.has(x))), all = r.id === '*', rowOn = all ? !f[fk] && !f.status : f[fk] === r.id && !f.status;
-    h += '<div class="mx-r' + (all ? ' mx-all' : '') + '" role="row"><button type="button" role="rowheader" class="mx-rh" data-mxr="' + esc(r.id) + '" data-testid="std-mx-row-' + esc(r.id) + '" aria-pressed="' + rowOn + '">' + esc(r.label) + (r.sub ? '<span class="mx-sub">' + esc(r.sub) + '</span>' : '') + '</button>'
-      + STD_STATUS.map((t) => { var c = n[t[0]], on = f.status === t[0] && (all ? !f[fk] : f[fk] === r.id);
-        return c ? '<button type="button" role="cell" class="mx-c c-' + t[0] + '" data-mxr="' + esc(r.id) + '" data-mxs="' + t[0] + '" data-testid="std-cell-' + esc(r.id) + '-' + t[0] + '" aria-pressed="' + on + '" aria-label="' + esc(r.label) + ', ' + t[1] + ': ' + c + '">' + c + '</button>'
-          : '<span role="cell" class="mx-c nil" aria-label="' + esc(r.label) + ', ' + t[1] + ': none">—</span>'; }).join('') + '</div>';
+    + STD_STATUS.map((item) => { var on = f.status === item[0] && !f[fk];
+      return '<button type="button" role="columnheader" class="mx-ch c-' + item[0] + '" data-mxs="' + item[0] + '" data-testid="std-mx-col-' + item[0] + '" aria-pressed="' + on + '" title="Show every ' + item[1].toLowerCase() + ' standard"><span class="sym" aria-hidden="true">' + item[2] + '</span>' + item[1] + '</button>'; }).join('') + '</div>';
+  mxRows().concat([{ id: '*', label: 'All', has: () => true }]).forEach((item) => {
+    var n = countOf(rowsAll.filter((x) => item.has(x))), all = item.id === '*', rowOn = all ? !f[fk] && !f.status : f[fk] === item.id && !f.status;
+    h += '<div class="mx-r' + (all ? ' mx-all' : '') + '" role="row"><button type="button" role="rowheader" class="mx-rh" data-mxr="' + esc(item.id) + '" data-testid="std-mx-row-' + esc(item.id) + '" aria-pressed="' + rowOn + '">' + esc(item.label) + (item.sub ? '<span class="mx-sub">' + esc(item.sub) + '</span>' : '') + '</button>'
+      + STD_STATUS.map((t) => { var c = n[t[0]], on = f.status === t[0] && (all ? !f[fk] : f[fk] === item.id);
+        return c ? '<button type="button" role="cell" class="mx-c c-' + t[0] + '" data-mxr="' + esc(item.id) + '" data-mxs="' + t[0] + '" data-testid="std-cell-' + esc(item.id) + '-' + t[0] + '" aria-pressed="' + on + '" aria-label="' + esc(item.label) + ', ' + t[1] + ': ' + c + '">' + c + '</button>'
+          : '<span role="cell" class="mx-c nil" aria-label="' + esc(item.label) + ', ' + t[1] + ': none">—</span>'; }).join('') + '</div>';
   });
   h += '</div>';
   if (COMPAT_ERR) h += '<p class="mx-note" data-testid="std-compat-err">' + esc(COMPAT_ERR) + '</p>';
@@ -559,7 +559,7 @@ function fit(){
   host.toggleAttribute('data-works', worksOn() || comparedOn());   /* T3-COMPAT · STD-COMPARE: the two data-file tabs are short lists with long cells — they wrap, so no word is cut to … */
   if (key === FITKEY) return; FITKEY = key;
   if (mine){ host.removeAttribute('data-fill'); return; }
-  host.style.setProperty('--std-tpl', keys.map((k) => 'minmax(0,' + (WEIGHT[k] || 1.5) + 'fr)').join(' ')); host.setAttribute('data-fill', '1');
+  host.style.setProperty('--std-tpl', keys.map((item) => 'minmax(0,' + (WEIGHT[item] || 1.5) + 'fr)').join(' ')); host.setAttribute('data-fill', '1');
 }
 /* the column keys on screen for the lit view: the unit's chosen columns are the register's while a data-file view shows its own (stale keys fall to that view's defaults) */
 function shownKeysNow(state){
@@ -571,25 +571,25 @@ function shownKeysNow(state){
    select that carries data-filt, which the unit's delegated listener handles (set the filter, repaint the tools and the rows). */
 function setFilters(want){
   var host = $('std_list'), cur = nowFilt();
-  FILTERS.forEach((fl) => {
-    var v = want[fl.key] || '';
-    if ((cur[fl.key] || '') === v) return;
-    var sel = document.createElement('select'); sel.setAttribute('data-filt', fl.key); sel.hidden = true;
-    sel.innerHTML = '<option value=""></option><option value="' + esc(v) + '"></option>'; sel.value = v;
-    host.appendChild(sel); sel.dispatchEvent(new Event('change', { bubbles: true })); sel.remove();
+  FILTERS.forEach((item) => {
+    var v = want[item.key] || '';
+    if ((cur[item.key] || '') === v) return;
+    var node = document.createElement('select'); node.setAttribute('data-filt', item.key); node.hidden = true;
+    node.innerHTML = '<option value=""></option><option value="' + esc(v) + '"></option>'; node.value = v;
+    host.appendChild(node); node.dispatchEvent(new Event('change', { bubbles: true })); node.remove();
   });
 }
 function clearSearch(){
-  var q = $('std_list').querySelector('[data-cbl-q]'); if (q && q.value){ q.value = ''; q.dispatchEvent(new Event('input', { bubbles: true })); }
+  var node = $('std_list').querySelector('[data-cbl-q]'); if (node && node.value){ node.value = ''; node.dispatchEvent(new Event('input', { bubbles: true })); }
 }
 function mxPick(rowId, status){
   var f = nowFilt(), cell = rowId && rowId !== '*' ? rowId : null;
-  var same = (f.status || null) === (status || null) && (f[DIM] || null) === cell && !FILTERS.some((fl) => fl.key !== 'status' && fl.key !== DIM && f[fl.key]);
+  var same = (f.status || null) === (status || null) && (f[DIM] || null) === cell && !FILTERS.some((item) => item.key !== 'status' && item.key !== DIM && f[item.key]);
   var want = {};
   if (!same){ if (status) want.status = status; if (cell) want[DIM] = cell; }
   clearSearch(); setFilters(want);
   $('app').setAttribute('data-view', 'list'); paintMatrix();
-  var l = $('std_list').querySelector('.cbl-list'); if (l) l.scrollTop = 0;
+  var node = $('std_list').querySelector('.cbl-list'); if (node) node.scrollTop = 0;
 }
 
 /* the matrix follows the list: a filter changed in the Filters popover moves the lit cell too */
@@ -626,43 +626,43 @@ window.addEventListener('hashchange', () => {
 
 /* ═════ the two sheets — their content is the register's own renderers, called once ═════ */
 function openSheet(which){
-  var d = $('sheet'), W = which === 'why';
-  d.innerHTML = '<div class="sh-head"><h2>' + (W ? 'Why follow standards' : 'One record, every standard') + '</h2><button type="button" class="sh-x" data-act="sheetx" data-testid="std-sheet-x" aria-label="Close">✕</button></div>'
+  var node = $('sheet'), W = which === 'why';
+  node.innerHTML = '<div class="sh-head"><h2>' + (W ? 'Why follow standards' : 'One record, every standard') + '</h2><button type="button" class="sh-x" data-act="sheetx" data-testid="std-sheet-x" aria-label="Close">✕</button></div>'
     + '<div class="sh-body" data-testid="std-sheet-' + which + '">' + stdGloss(W ? stdWhyHTML({ compact: false }) : stdRecordHTML({ compact: false })) + '</div>';
-  if (!d.open){ try{ d.showModal(); }catch(_){ d.setAttribute('open', ''); } }
+  if (!node.open){ try{ node.showModal(); }catch(_){ node.setAttribute('open', ''); } }
   try{ history.replaceState(null, '', '?sheet=' + which + location.hash); }catch(_){}
 }
 function closeSheet(){
-  var d = $('sheet'); try{ d.close(); }catch(_){ d.removeAttribute('open'); } d.innerHTML = '';
+  var node = $('sheet'); try{ node.close(); }catch(_){ node.removeAttribute('open'); } node.innerHTML = '';
   try{ history.replaceState(null, '', location.pathname + location.hash); }catch(_){}
 }
 $('sheet').addEventListener('cancel', (e) => { e.preventDefault(); closeSheet(); });
 $('sheet').addEventListener('click', (e) => { if (e.target === $('sheet')) closeSheet(); });
 
 document.addEventListener('click', (ev) => {
-  var t = ev.target.closest && ev.target.closest('[data-mxr],[data-mxs],[data-sheet],[data-act]'); if (!t) return;
-  if (t.hasAttribute('data-mxr') || t.hasAttribute('data-mxs')){ mxPick(t.getAttribute('data-mxr'), t.getAttribute('data-mxs')); return; }
-  if (t.hasAttribute('data-sheet')){ openSheet(t.getAttribute('data-sheet')); return; }
-  var a = t.getAttribute('data-act');
+  var node = ev.target.closest && ev.target.closest('[data-mxr],[data-mxs],[data-sheet],[data-act]'); if (!node) return;
+  if (node.hasAttribute('data-mxr') || node.hasAttribute('data-mxs')){ mxPick(node.getAttribute('data-mxr'), node.getAttribute('data-mxs')); return; }
+  if (node.hasAttribute('data-sheet')){ openSheet(node.getAttribute('data-sheet')); return; }
+  var a = node.getAttribute('data-act');
   if (a === 'back') $('app').setAttribute('data-view', 'matrix');
   else if (a === 'sheetx') closeSheet();
 });
 
 /* ═════ the glossary pop — one element, moved into an open sheet (a modal dialog's top layer would hide it otherwise) ═════ */
-function glHide(){ var p = $('glpop'); if (p) p.hidden = true; }
+function glHide(){ var node = $('glpop'); if (node) node.hidden = true; }
 function glShow(el){
   var g = stdGlossary(el.getAttribute('data-gl')); if (!g) return;
-  var p = $('glpop'); if (!p){ p = document.createElement('div'); p.id = 'glpop'; p.className = 'glpop'; p.setAttribute('role', 'status'); p.setAttribute('data-testid', 'std-gloss-pop'); }
-  (el.closest('dialog') || document.body).appendChild(p);
-  p.innerHTML = '<b>' + esc(g[0]) + ' — ' + esc(g[1]) + '</b>' + esc(g[2] || ''); p.hidden = false;
+  var node = $('glpop'); if (!node){ node = document.createElement('div'); node.id = 'glpop'; node.className = 'glpop'; node.setAttribute('role', 'status'); node.setAttribute('data-testid', 'std-gloss-pop'); }
+  (el.closest('dialog') || document.body).appendChild(node);
+  node.innerHTML = '<b>' + esc(g[0]) + ' — ' + esc(g[1]) + '</b>' + esc(g[2] || ''); node.hidden = false;
   var r = el.getBoundingClientRect(), w = Math.min(320, window.innerWidth - 32), left = Math.max(16, Math.min(r.left, window.innerWidth - 16 - w));
-  p.style.left = left + 'px'; p.style.top = (r.bottom + 6 + 80 > window.innerHeight ? Math.max(8, r.top - 6 - p.offsetHeight) : r.bottom + 6) + 'px';
+  node.style.left = left + 'px'; node.style.top = (r.bottom + 6 + 80 > window.innerHeight ? Math.max(8, r.top - 6 - node.offsetHeight) : r.bottom + 6) + 'px';
 }
 /* capture. ⚠️ A ROW'S OWN LINE STAYS A ROW: a tap anywhere on a closed row opens it (on a phone most of a row is abbreviations, and a row that
    would not open is a dead row) — there the term only shows its name on hover. Inside the opened row and the sheets, a tap explains the term. */
-function glLive(a){ return !!a && (!!a.closest('dl.sd') || !!a.closest('dialog') || !a.closest('[data-testid^="std-row-"]')); }
-document.addEventListener('click', (ev) => { var a = ev.target.closest && ev.target.closest('abbr.gl'); if (glLive(a)){ ev.stopPropagation(); ev.preventDefault(); glShow(a); return; } if (!(ev.target.closest && ev.target.closest('#glpop'))) glHide(); }, true);
-document.addEventListener('keydown', (ev) => { var a = ev.target.closest && ev.target.closest('abbr.gl'); if (glLive(a) && (ev.key === 'Enter' || ev.key === ' ')){ ev.preventDefault(); ev.stopPropagation(); glShow(a); } else if (ev.key === 'Escape') glHide(); }, true);
+function glLive(node){ return !!node && (!!node.closest('dl.sd') || !!node.closest('dialog') || !node.closest('[data-testid^="std-row-"]')); }
+document.addEventListener('click', (event) => { var node = event.target.closest && event.target.closest('abbr.gl'); if (glLive(node)){ event.stopPropagation(); event.preventDefault(); glShow(node); return; } if (!(event.target.closest && event.target.closest('#glpop'))) glHide(); }, true);
+document.addEventListener('keydown', (event) => { var node = event.target.closest && event.target.closest('abbr.gl'); if (glLive(node) && (event.key === 'Enter' || event.key === ' ')){ event.preventDefault(); event.stopPropagation(); glShow(node); } else if (event.key === 'Escape') glHide(); }, true);
 window.addEventListener('scroll', glHide, true);
 
 /* ═══ START ═══ — the register is here already; Compatibility is read first so the list and the matrix hold it from the first paint */
@@ -679,7 +679,7 @@ function start(){
   if (location.hash === '#works-with') openWorks();   /* T3-COMPAT */
   if (location.hash === '#compared-with') openCompared();   /* STD-COMPARE: Home's Compatibility card, the Auditor view */
   /* CPS1: ?std=country (from Country setup) — the list, searched down to the Country Standard's row through the unit's own search box */
-  if (q.get('std') === 'country'){ var cq = $('std_list').querySelector('[data-cbl-q]'); if (cq){ cq.value = 'Country Standard'; cq.dispatchEvent(new Event('input', { bubbles: true })); } $('app').setAttribute('data-view', 'list'); }
+  if (q.get('std') === 'country'){ var node = $('std_list').querySelector('[data-cbl-q]'); if (node){ node.value = 'Country Standard'; node.dispatchEvent(new Event('input', { bubbles: true })); } $('app').setAttribute('data-view', 'list'); }
   /* SET-WALK1 · W28(c): ?ready=<cc> — "Where ChitBridge is for <country>" as the Country readiness sheet (moved OUT of Country setup; CBCountryReady is the one unit) */
   if (q.get('ready')) openReady(String(q.get('ready')).toUpperCase().slice(0, 2));
 }
@@ -704,14 +704,14 @@ if (window.CBKural) CBKural.mount({ route: 'planning' });
 /* three files are read before the first paint: the Compatibility rows (M41), the comparison rows (STD-COMPARE) and the country matrix (CPS1) — each failure is said in its place, never silent */
 Promise.all([
   fetch('/data/compat.json', { cache: 'no-store' })
-    .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-    .then((j) => { addCompat(j); }, () => { COMPAT_ERR = 'Compatibility rows could not be read — the standards below are complete; reload to try again.'; }),
+    .then((reply) => { if (!reply.ok) throw new Error('HTTP ' + reply.status); return reply.json(); })
+    .then((reply) => { addCompat(reply); }, () => { COMPAT_ERR = 'Compatibility rows could not be read — the standards below are complete; reload to try again.'; }),
   fetch('/data/compare.json', { cache: 'no-store' })
     .then((response) => { if (!response.ok) throw new Error('HTTP ' + response.status); return response.json(); })
     .then((json) => { addCompare(json); }, () => { CMP_ERR = 'The country comparison could not be read (data/compare.json) — the standards are complete; reload to try again.'; }),
   fetch('/data/country-matrix.json', { cache: 'no-store' })
-    .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-    .then((j) => { if (j && Array.isArray(j.rows) && Array.isArray(j.packs) && j.counts && j.missing) CMX = j; else throw new Error('not a matrix'); }, (e) => { CMX_ERR = 'The country matrix could not be read (data/country-matrix.json' + (e && e.message ? ': ' + e.message : '') + ') — reload to try again. The standard itself is chitbridge-engines docs/COUNTRY-STANDARD.md.'; }),
+    .then((reply) => { if (!reply.ok) throw new Error('HTTP ' + reply.status); return reply.json(); })
+    .then((reply) => { if (reply && Array.isArray(reply.rows) && Array.isArray(reply.packs) && reply.counts && reply.missing) CMX = reply; else throw new Error('not a matrix'); }, (e) => { CMX_ERR = 'The country matrix could not be read (data/country-matrix.json' + (e && e.message ? ': ' + e.message : '') + ') — reload to try again. The standard itself is chitbridge-engines docs/COUNTRY-STANDARD.md.'; }),
 ]).then(start);
 </script>
 </body>
