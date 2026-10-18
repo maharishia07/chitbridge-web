@@ -32,10 +32,10 @@
   function writeQ(q) { set(LSK, JSON.stringify(q)); paint(); }
   function pending() { return readQ().length; }
   function enqueue(req) {
-    var q = readQ();
+    var list = readQ();
     req.id = req.id || req.idem || uuid();
-    if (q.some(function (x) { return x.id === req.id; })) return req.id;   // idempotent enqueue
-    req.queued_at = Date.now(); req.tries = 0; q.push(req); writeQ(q); return req.id;
+    if (list.some(function (x) { return x.id === req.id; })) return req.id;   // idempotent enqueue
+    req.queued_at = Date.now(); req.tries = 0; list.push(req); writeQ(list); return req.id;
   }
   function rawSend(req) {
     var h = { 'Content-Type': 'application/json', 'Idempotency-Key': req.id };
@@ -64,9 +64,9 @@
   function flush() {
     if (flushing || !online()) return Promise.resolve({ sent: 0, pending: pending() });
     flushing = true;
-    var q = readQ(), still = [], rejected = [], sent = 0;
-    return q.reduce(function (p, req) {
-      return p.then(function () {
+    var list = readQ(), still = [], rejected = [], sent = 0;
+    return list.reduce(function (total, req) {
+      return total.then(function () {
         return sendAndClassify(req).then(function (result) {
           if (result.kind === 'done') { sent++; }
           else if (result.kind === 'reject') { req.tries++; req.error = 'rejected ' + result.response.status; rejected.push(req); }
@@ -120,11 +120,11 @@
       return o;
     };
     var saved = loadDraft(key) || {}, restored = false, fs = container.querySelectorAll('input,textarea,select');
-    for (var i = 0; i < fs.length; i++) {
-      var id = eligible(fs[i]); if (!id) continue;
-      if (saved[id] != null && (opts.overwrite || fs[i].value === '' || fs[i].value == null)) { fs[i].value = saved[id]; restored = true; }
+    for (var index = 0; index < fs.length; index++) {
+      var id = eligible(fs[index]); if (!id) continue;
+      if (saved[id] != null && (opts.overwrite || fs[index].value === '' || fs[index].value == null)) { fs[index].value = saved[id]; restored = true; }
       var h = function () { saveDraft(key, collect()); };
-      fs[i].addEventListener('input', h); fs[i].addEventListener('change', h);
+      fs[index].addEventListener('input', h); fs[index].addEventListener('change', h);
     }
     return restored;
   }
