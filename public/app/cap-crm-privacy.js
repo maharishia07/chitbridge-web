@@ -37,17 +37,17 @@ function crmConsentBtn(ch, pu, allowed, label, why, tid) {
 function crmConsentFact(cp) {
   if (!cp) return '';
   if (!cp.migrated) return esc(tx('Not set up yet'));
-  var on = CRM_CONSENT_CH.filter(function (c) { return cp.may[c] && cp.may[c].marketing && cp.may[c].marketing.may; }).map(function (c) { return tx(CRM_CHAN[c]); });
+  var on = CRM_CONSENT_CH.filter(function (item) { return cp.may[item] && cp.may[item].marketing && cp.may[item].marketing.may; }).map(function (item) { return tx(CRM_CHAN[item]); });
   return esc(on.length ? tx('Offers') + ': ' + on.join(', ') : tx('No consent for offers'));
 }
 /** one row per channel: Offers (consent) and Messages (about their own orders) — the chip from the code; the button that CHANGES the state only */
 function crmConsentRows(cp) {
   var why = crmConsentWhyNot(cp), may = (cp && cp.may) || {};
-  return CRM_CONSENT_CH.map(function (c) {
-    var m = (may[c] || {}).marketing || { code: 'NO_CONSENT' }, s = (may[c] || {}).service || { code: 'LEGITIMATE_USE' };
-    var offers = crmConsentChip(m, 'crm-consent-' + c + '-marketing') + ' ' + (m.may ? crmConsentBtn(c, 'marketing', false, 'No', why, 'crm-consent-no-' + c) : crmConsentBtn(c, 'marketing', true, 'Yes', why, 'crm-consent-yes-' + c));
-    var msgs = crmConsentChip(s, 'crm-consent-' + c + '-service') + ' ' + (s.may ? crmConsentBtn(c, 'service', false, 'Stop', why, 'crm-consent-stop-' + c) : crmConsentBtn(c, 'service', true, 'Allow', why, 'crm-consent-allow-' + c));
-    return '<div class="kv" data-testid="crm-consent-row-' + c + '"><b>' + esc(tx(CRM_CHAN[c] || c)) + '</b><span class="consent-cells"><span class="cc"><i>' + esc(tx('Offers')) + '</i> ' + offers + '</span><span class="cc"><i>' + esc(tx('Their orders')) + '</i> ' + msgs + '</span></span></div>';
+  return CRM_CONSENT_CH.map(function (item) {
+    var m = (may[item] || {}).marketing || { code: 'NO_CONSENT' }, s = (may[item] || {}).service || { code: 'LEGITIMATE_USE' };
+    var offers = crmConsentChip(m, 'crm-consent-' + item + '-marketing') + ' ' + (m.may ? crmConsentBtn(item, 'marketing', false, 'No', why, 'crm-consent-no-' + item) : crmConsentBtn(item, 'marketing', true, 'Yes', why, 'crm-consent-yes-' + item));
+    var msgs = crmConsentChip(s, 'crm-consent-' + item + '-service') + ' ' + (s.may ? crmConsentBtn(item, 'service', false, 'Stop', why, 'crm-consent-stop-' + item) : crmConsentBtn(item, 'service', true, 'Allow', why, 'crm-consent-allow-' + item));
+    return '<div class="kv" data-testid="crm-consent-row-' + item + '"><b>' + esc(tx(CRM_CHAN[item] || item)) + '</b><span class="consent-cells"><span class="cc"><i>' + esc(tx('Offers')) + '</i> ' + offers + '</span><span class="cc"><i>' + esc(tx('Their orders')) + '</i> ' + msgs + '</span></span></div>';
   }).join('');
 }
 /** the section (crmSec): the rows now, the law line + the history when opened, a Privacy request door */
@@ -66,7 +66,7 @@ function crmConsentHTML(p, rec) {
 }
 /** on open: the history (what · when · how given · withdrawn) and the law's words — one GET, a CBList mount; could-not-read in words */
 async function crmConsentOpen(p) {
-  var hist = document.getElementById('crm_consent_hist'), law = document.getElementById('crm_consent_law');
+  var hist = document.getElementById('crm_consent_hist'), node = document.getElementById('crm_consent_law');
   if (!hist || hist.getAttribute('data-loaded')) return;
   hist.setAttribute('data-loaded', '1');
   var r; try { r = await api('crmPrefs', { params: { id: p.party_id } }); }
@@ -75,10 +75,10 @@ async function crmConsentOpen(p) {
     hist.innerHTML = '<div class="hint" data-testid="crm-consent-hist-err">' + esc(e && e.status === 503 ? tx('Consent records start after an update. Nothing is lost.') : tx("Couldn't read the consent history.")) + ' <button type="button" class="crm-mini" data-crm="consentretry">' + esc(tx('Try again')) + '</button></div>';
     return;
   }
-  hist = document.getElementById('crm_consent_hist'); law = document.getElementById('crm_consent_law'); if (!hist) return;
-  if (law && r.law) law.innerHTML = r.law.known ? '<b>' + esc(r.law.short || r.law.law) + '</b> · ' + esc(r.law.consent) : esc(r.law.note || '');
+  hist = document.getElementById('crm_consent_hist'); node = document.getElementById('crm_consent_law'); if (!hist) return;
+  if (node && r.law) node.innerHTML = r.law.known ? '<b>' + esc(r.law.short || r.law.law) + '</b> · ' + esc(r.law.consent) : esc(r.law.note || '');
   var me = (window.SESSION && (SESSION.actorId || SESSION.entityId)) || null;
-  var rows = (r.history || []).map(function (h, i) { return Object.assign({ _i: i }, h); });
+  var rows = (r.history || []).map(function (item, index) { return Object.assign({ _i: index }, item); });
   var how = function (h) { return h.withdrawn_at ? tx('Withdrawn') : h.noted_by && h.noted_by === p.party_id ? tx('By them, online') : h.noted_by && me && h.noted_by === me ? tx('Noted by you') : h.noted_by ? tx('Noted by the shop') : tx('Noted'); };
   var what = function (h) { return tx(CRM_CHAN[h.channel] || h.channel) + ' · ' + (h.purpose === 'marketing' ? tx('offers') : tx('their orders')) + ' · ' + (h.allowed ? tx('yes') : tx('no')); };
   if (CRMR.consentApi) { try { CRMR.consentApi.destroy(); } catch (_) {} }
@@ -106,32 +106,32 @@ async function crmConsentSet(p, ch, pu, allowed) {
   } finally { PRV.busy = false; }
 }
 /** the click door the record hands here (crmRecordClick → crmPrivacyClick): true when handled */
-function crmPrivacyClick(a, t) {
+function crmPrivacyClick(a, node) {
   var p = CRMR.p;
-  if (a === 'consent' && p) { crmConsentSet(p, t.getAttribute('data-ch'), t.getAttribute('data-pu'), t.getAttribute('data-v') === '1'); return true; }
+  if (a === 'consent' && p) { crmConsentSet(p, node.getAttribute('data-ch'), node.getAttribute('data-pu'), node.getAttribute('data-v') === '1'); return true; }
   if (a === 'consentretry' && p) { crmConsentOpen(p); return true; }
   if (a === 'privreq' && p) { crmGo('#/privacy?party=' + encodeURIComponent(p.party_id) + '&who=' + encodeURIComponent(p.display_name || '') + '&add=1'); return true; }
   if (a === 'prvadd') { crmPrivReqOpen(PRV.params); return true; }
   if (a === 'prvsave') { crmPrivReqSave(); return true; }
-  if (a === 'prvanswer') { crmPrivAnswerOpen(t.getAttribute('data-id')); return true; }
-  if (a === 'prvanswersave') { crmPrivAnswerSave(t.getAttribute('data-id')); return true; }
-  if (a === 'prvpage') { PRV.page = Math.max(1, Number(t.getAttribute('data-v')) || 1); crmPrivLoad(); return true; }
+  if (a === 'prvanswer') { crmPrivAnswerOpen(node.getAttribute('data-id')); return true; }
+  if (a === 'prvanswersave') { crmPrivAnswerSave(node.getAttribute('data-id')); return true; }
+  if (a === 'prvpage') { PRV.page = Math.max(1, Number(node.getAttribute('data-v')) || 1); crmPrivLoad(); return true; }
   if (a === 'prvretry') { crmPrivLoad(); return true; }
   return false;
 }
 /** wired by crmRecordPaint's mounts: the Consent <details> loads its history the first time it opens (and stays open after a Yes/No) */
 function crmConsentMount(p) {
-  var d = document.querySelector('[data-testid="crm-sec-consent"]'); if (!d) return;
-  d.addEventListener('toggle', function () { if (d.open) crmConsentOpen(p); });
-  if (CRMR.keep.consentOpen) { CRMR.keep.consentOpen = false; d.open = true; }
+  var node = document.querySelector('[data-testid="crm-sec-consent"]'); if (!node) return;
+  node.addEventListener('toggle', function () { if (node.open) crmConsentOpen(p); });
+  if (CRMR.keep.consentOpen) { CRMR.keep.consentOpen = false; node.open = true; }
 }
 
 /* ═══ 2 · THE REGISTER — #/privacy: every request to see, correct, erase, withdraw, nominate or complain, on the law's clock ═══ */
 function crmPrivacy(frame, params) {
   PRV.params = params || {};
   crmBar('<a href="#/parties" data-testid="crm-back">‹ ' + esc(tx('Parties')) + '</a>', crmEdit() ? '<button type="button" class="act sm" data-crm="prvadd" data-testid="crm-prv-add">+ ' + esc(tx('Log a request')) + '</button>' : crmViewOnlyBtn('crm-prv-add', '+ ' + tx('Log a request'), crmViewWhy()), true);
-  var s = document.getElementById('screen'); s.className = 'screen flush';
-  s.innerHTML = '<div id="crm_prv" data-testid="crm-prv-list"></div>';
+  var node = document.getElementById('screen'); node.className = 'screen flush';
+  node.innerHTML = '<div id="crm_prv" data-testid="crm-prv-list"></div>';
   if (PRV.api && PRV.api.destroy) { try { PRV.api.destroy(); } catch (_) {} }
   var el = document.getElementById('crm_prv');
   var due = function (r) {
@@ -175,10 +175,10 @@ async function crmPrivLoad() {
   PRV.state = 'loading'; crmPrivRefresh();
   try {
     var q = { page: PRV.page, limit: PRV.limit }; if (PRV.openOnly) q.open = '1';
-    var r = await api('crmPrivReqs', { query: q });
+    var reply = await api('crmPrivReqs', { query: q });
     /* core.js api() collapses { requests[], … } to the array and carries total · page · limit · open · late · may_answer · why on it (SIBS) */
-    PRV.rows = Array.isArray(r) ? r : (r.requests || []); PRV.total = Number(r.total) || PRV.rows.length; PRV.open = Number(r.open) || 0; PRV.late = Number(r.late) || 0;
-    PRV.mayAnswer = !!r.may_answer; PRV.why = r.why || null; PRV.limit = Number(r.limit) || PRV.limit; PRV.state = 'ready'; PRV.err = null;
+    PRV.rows = Array.isArray(reply) ? reply : (reply.requests || []); PRV.total = Number(reply.total) || PRV.rows.length; PRV.open = Number(reply.open) || 0; PRV.late = Number(reply.late) || 0;
+    PRV.mayAnswer = !!reply.may_answer; PRV.why = reply.why || null; PRV.limit = Number(reply.limit) || PRV.limit; PRV.state = 'ready'; PRV.err = null;
   } catch (e) { PRV.state = e && e.status === 503 ? 'notyet' : 'error'; PRV.err = e; }
   crmPrivRefresh();
 }
@@ -187,7 +187,7 @@ function crmPrivRefresh() { var a = PRV.api; if (a && document.getElementById('c
 /* ── Log a request (who · what · when · which law) — the owner or staff; the date the law sets is the SERVER's ── */
 function crmPrivReqOpen(pre) {
   pre = pre || {};
-  var kinds = Object.keys(CRM_REQ_KIND).map(function (k) { return '<option value="' + k + '">' + esc(tx(CRM_REQ_KIND[k])) + '</option>'; }).join('');
+  var kinds = Object.keys(CRM_REQ_KIND).map(function (item) { return '<option value="' + item + '">' + esc(tx(CRM_REQ_KIND[item])) + '</option>'; }).join('');
   modal('<div class="mhd"><div class="t">' + esc(tx('Log a privacy request')) + '</div></div><div class="mbody" data-testid="crm-prv-sheet">'
     + '<label>' + esc(tx('Who asked?')) + '<input class="inp" id="crm_prv_who" data-testid="crm-prv-who" value="' + esc(pre.who || '') + '" placeholder="' + esc(tx('Name, phone or e-mail')) + '"></label>'
     + '<label>' + esc(tx('Asked for')) + '<select class="inp" id="crm_prv_kind" data-testid="crm-prv-kind">' + kinds + '</select></label>'
@@ -200,12 +200,12 @@ function crmPrivReqOpen(pre) {
 }
 async function crmPrivReqSave() {
   if (PRV.busy) return;
-  var g = function (id) { return String((document.getElementById(id) || {}).value || '').trim(); }, msg = document.getElementById('crm_prv_msg');
-  if (!g('crm_prv_who')) { msg.textContent = tx('Who asked? A name, phone or e-mail.'); return; }
+  var node = function (id) { return String((document.getElementById(id) || {}).value || '').trim(); }, msg = document.getElementById('crm_prv_msg');
+  if (!node('crm_prv_who')) { msg.textContent = tx('Who asked? A name, phone or e-mail.'); return; }
   PRV.busy = true;
   try {
-    var body = { who: g('crm_prv_who'), kind: g('crm_prv_kind'), received_at: new Date(g('crm_prv_when') + 'T09:00:00').toISOString() };
-    if (g('crm_prv_party')) body.party_id = g('crm_prv_party');
+    var body = { who: node('crm_prv_who'), kind: node('crm_prv_kind'), received_at: new Date(node('crm_prv_when') + 'T09:00:00').toISOString() };
+    if (node('crm_prv_party')) body.party_id = node('crm_prv_party');
     await api('crmPrivReqAdd', { body: body });
     closeModal(); toast(tx('Logged')); PRV.page = 1; crmPrivLoad();
   } catch (e) { msg.textContent = crmPrivWhy(e); } finally { PRV.busy = false; }
@@ -217,7 +217,7 @@ function crmPrivAnswerOpen(id) {
   modal('<div class="mhd"><div class="t">' + esc(tx('Answer')) + ' · ' + esc(r.who) + '</div></div><div class="mbody" data-testid="crm-prv-answer-sheet">'
     + '<div class="kv"><b>' + esc(tx('Asked for')) + '</b><span>' + esc(tx(CRM_REQ_KIND[r.kind] || r.kind)) + ' · ' + esc(tx('due')) + ' ' + esc(bkDate(r.due_at)) + '</span></div>'
     + (r.kind === 'erase' ? '<div class="hint" data-testid="crm-prv-erase-note">' + esc(tx('Erasure runs through the platform’s lifecycle path. Record the outcome here.')) + '</div>' : '')
-    + '<label>' + esc(tx('Outcome')) + '<select class="inp" id="crm_prv_out" data-testid="crm-prv-out">' + Object.keys(CRM_REQ_OUT).map(function (k) { return '<option value="' + k + '">' + esc(tx(CRM_REQ_OUT[k])) + '</option>'; }).join('') + '</select></label>'
+    + '<label>' + esc(tx('Outcome')) + '<select class="inp" id="crm_prv_out" data-testid="crm-prv-out">' + Object.keys(CRM_REQ_OUT).map(function (item) { return '<option value="' + item + '">' + esc(tx(CRM_REQ_OUT[item])) + '</option>'; }).join('') + '</select></label>'
     + '<label>' + esc(tx('What was done, or why not')) + '<textarea class="inp" id="crm_prv_ans" data-testid="crm-prv-ans" rows="3"></textarea></label>'
     + '<div id="crm_prv_amsg" class="hint" role="status" data-testid="crm-prv-amsg"></div></div>'
     + '<div class="mfoot"><button type="button" onclick="closeModal()">' + esc(tx('Cancel')) + '</button><button type="button" class="pri" data-crm="prvanswersave" data-id="' + esc(id) + '" data-testid="crm-prv-answer-save">' + esc(tx('Answer')) + '</button></div>');
@@ -225,10 +225,10 @@ function crmPrivAnswerOpen(id) {
 }
 async function crmPrivAnswerSave(id) {
   if (PRV.busy) return;
-  var g = function (k) { return String((document.getElementById(k) || {}).value || '').trim(); }, msg = document.getElementById('crm_prv_amsg');
-  if (!g('crm_prv_ans')) { msg.textContent = tx('Write what was done, or why not.'); return; }
+  var node = function (k) { return String((document.getElementById(k) || {}).value || '').trim(); }, msg = document.getElementById('crm_prv_amsg');
+  if (!node('crm_prv_ans')) { msg.textContent = tx('Write what was done, or why not.'); return; }
   PRV.busy = true;
-  try { await api('crmPrivReqAnswer', { params: { id: id }, body: { outcome: g('crm_prv_out'), answer: g('crm_prv_ans') } }); closeModal(); toast(tx('Answered')); crmPrivLoad(); }
+  try { await api('crmPrivReqAnswer', { params: { id: id }, body: { outcome: node('crm_prv_out'), answer: node('crm_prv_ans') } }); closeModal(); toast(tx('Answered')); crmPrivLoad(); }
   catch (e) { msg.textContent = crmPrivWhy(e); } finally { PRV.busy = false; }
 }
 /** the server's refusal in the shop's words (its `why` or `message` when it is a sentence; never a raw error) */
