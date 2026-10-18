@@ -149,24 +149,24 @@ async function load(keepStep){
     return;
   }
   try {
-    var r = await fetch(API + '/api/products/lists', { headers: { Authorization: 'Bearer ' + token() } });
-    if (!r.ok) { say('Could not read the product lists (' + r.status + ').', true); return; }
-    DATA = await r.json();
+    var reply = await fetch(API + '/api/products/lists', { headers: { Authorization: 'Bearer ' + token() } });
+    if (!reply.ok) { say('Could not read the product lists (' + reply.status + ').', true); return; }
+    DATA = await reply.json();
   } catch (e) { say('Could not reach ChitBridge. ' + e.message, true); return; }
 
   document.getElementById('who').textContent = DATA.have + ' products in your catalogue today · prices in '
     + (DATA.currency || 'INR');
   DATA._have = {}; DATA._mine = {};
-  (DATA.mine || []).forEach(function(m){
-    var k = keyOf({ name: m.name, unit: m.unit });
-    DATA._have[k] = 1; DATA._mine[k] = m;
+  (DATA.mine || []).forEach(function(item){
+    var k = keyOf({ name: item.name, unit: item.unit });
+    DATA._have[k] = 1; DATA._mine[k] = item;
   });
   if (!keepStep) STEP = 1;
   pickList((LIST && LIST.key) || DATA.lists[0].key, keepStep);
 }
 
 function pickList(k, keep){
-  LIST = DATA.lists.filter(function(l){ return l.key === k; })[0] || DATA.lists[0];
+  LIST = DATA.lists.filter(function(item){ return item.key === k; })[0] || DATA.lists[0];
   BUILT = null;   /* a different list has different shelves and units — those controls must be rebuilt */
   if (!keep) { PICKED = {}; LANGS = []; OFFUNITS = {}; OWN = ''; }
   paint();
@@ -198,28 +198,28 @@ function priceOf(r){
 }
 /** ⭐ the units this list actually uses, counted — asked of the ROWS, never the declared list */
 function unitCounts(){
-  var out = {}; (LIST.rows || []).forEach(function(r){ out[r.unit] = (out[r.unit] || 0) + 1; }); return out;
+  var out = {}; (LIST.rows || []).forEach(function(item){ out[item.unit] = (out[item.unit] || 0) + 1; }); return out;
 }
 function shown(){
-  var q = (document.getElementById('q') || {}).value || '';
-  q = q.trim().toLowerCase();
+  var node = (document.getElementById('q') || {}).value || '';
+  node = node.trim().toLowerCase();
   var c = (document.getElementById('cat') || {}).value || '';
-  return (LIST.rows || []).filter(function(r){
-    if (c && r.category !== c) return false;
-    if (OWN === 'mine' && !have(r)) return false;
-    if (OWN === 'new' && have(r)) return false;
-    if (OFFUNITS[r.unit]) return false;
-    if (!q) return true;
-    if (r.name.toLowerCase().indexOf(q) >= 0) return true;
-    if ((r.category || '').toLowerCase().indexOf(q) >= 0) return true;
-    var n = r.names || {};
-    for (var l in n) if (n[l].join(' ').toLowerCase().indexOf(q) >= 0) return true;
+  return (LIST.rows || []).filter(function(item){
+    if (c && item.category !== c) return false;
+    if (OWN === 'mine' && !have(item)) return false;
+    if (OWN === 'new' && have(item)) return false;
+    if (OFFUNITS[item.unit]) return false;
+    if (!node) return true;
+    if (item.name.toLowerCase().indexOf(node) >= 0) return true;
+    if ((item.category || '').toLowerCase().indexOf(node) >= 0) return true;
+    var n = item.names || {};
+    for (var l in n) if (n[l].join(' ').toLowerCase().indexOf(node) >= 0) return true;
     return false;
   });
 }
 function localOf(r){
   var n = tableFits() ? (r.names || {}) : {}, out = [];
-  (LANGS.length ? LANGS : Object.keys(n)).forEach(function(l){ (n[l] || []).forEach(function(w){
+  (LANGS.length ? LANGS : Object.keys(n)).forEach(function(item){ (n[item] || []).forEach(function(w){
     if (out.indexOf(w) < 0) out.push(w); }); });
   return out.join(', ');
 }
@@ -248,19 +248,19 @@ function paint(){
 /** ⭐ the state of the filter pills, without touching the boxes beside them */
 function paintPills(){
   var each = function(sel, on){ Array.prototype.forEach.call(document.querySelectorAll(sel), on); };
-  each('#lists .pill', function(b){ b.classList.toggle('on', b.getAttribute('data-testid') === 'pl-list-' + LIST.key); });
-  each('#langs .pill', function(b){
-    b.classList.toggle('on', LANGS.indexOf((b.getAttribute('data-testid') || '').replace('pl-lang-', '')) >= 0); });
-  each('#own .pill', function(b){ b.classList.toggle('on', (b.getAttribute('data-own') || '') === OWN); });
-  each('#units .pill', function(b){ b.classList.toggle('on', !OFFUNITS[b.getAttribute('data-unit')]); });
+  each('#lists .pill', function(node){ node.classList.toggle('on', node.getAttribute('data-testid') === 'pl-list-' + LIST.key); });
+  each('#langs .pill', function(node){
+    node.classList.toggle('on', LANGS.indexOf((node.getAttribute('data-testid') || '').replace('pl-lang-', '')) >= 0); });
+  each('#own .pill', function(node){ node.classList.toggle('on', (node.getAttribute('data-own') || '') === OWN); });
+  each('#units .pill', function(node){ node.classList.toggle('on', !OFFUNITS[node.getAttribute('data-unit')]); });
 }
 function paintSteps(){
   var n = nPicked();
   var names = [['Choose', n ? n + ' chosen from ' + LIST.label : 'what this shop sells'],
                ['Price & shelf', n ? 'set what you charge' : 'after you have chosen']];
   /* ⚠️ step 2 is not reachable by clicking it with nothing chosen — a step that opens empty is a dead end */
-  document.getElementById('steps').innerHTML = names.map(function(x, i){
-    var at = i + 1, on = STEP === at, done = STEP > at;
+  document.getElementById('steps').innerHTML = names.map(function(x, index){
+    var at = index + 1, on = STEP === at, done = STEP > at;
     return '<button class="stp ' + (on ? 'on' : done ? 'done' : '') + '" data-testid="pl-step-' + at + '"'
       + (at === 2 && !n ? ' disabled' : '') + ' onclick="goStep(' + at + ')">'
       + '<span class="n">' + at + '</span><span><span class="t">' + esc(x[0]) + '</span>'
@@ -270,16 +270,16 @@ function paintSteps(){
 function goStep(n){ if (n === 2 && !nPicked()) return; STEP = n; say(''); paint(); }
 
 function buildChoose(){
-  var c = unitCounts(), units = Object.keys(c).sort(function(a, b){ return c[b] - c[a]; });
+  var c = unitCounts(), units = Object.keys(c).sort(function(first, second){ return c[second] - c[first]; });
   document.getElementById('stage').innerHTML =
-      '<div class="row" id="lists" data-testid="pl-lists">' + DATA.lists.map(function(l){
-        return '<button class="pill ' + (l.key === LIST.key ? 'on' : '') + '" data-testid="pl-list-' + esc(l.key)
-          + '" onclick="pickList(\'' + esc(l.key) + '\')">' + esc(l.label) + ' <b>' + l.count + '</b></button>';
+      '<div class="row" id="lists" data-testid="pl-lists">' + DATA.lists.map(function(item){
+        return '<button class="pill ' + (item.key === LIST.key ? 'on' : '') + '" data-testid="pl-list-' + esc(item.key)
+          + '" onclick="pickList(\'' + esc(item.key) + '\')">' + esc(item.label) + ' <b>' + item.count + '</b></button>';
       }).join('') + '</div>'
     + '<div class="row" id="langs" data-testid="pl-langs">' + (!tableFits() ? '' : LIST.languages.length
-        ? '<span class="note">Also carry the local name:</span> ' + LIST.languages.map(function(l){
-            return '<button class="pill ' + (LANGS.indexOf(l) >= 0 ? 'on' : '') + '" data-testid="pl-lang-' + esc(l)
-              + '" onclick="toggleLang(\'' + esc(l) + '\')">' + esc((DATA.language_names || {})[l] || l) + '</button>';
+        ? '<span class="note">Also carry the local name:</span> ' + LIST.languages.map(function(item){
+            return '<button class="pill ' + (LANGS.indexOf(item) >= 0 ? 'on' : '') + '" data-testid="pl-lang-' + esc(item)
+              + '" onclick="toggleLang(\'' + esc(item) + '\')">' + esc((DATA.language_names || {})[item] || item) + '</button>';
           }).join('')
         : '<span class="note">No local names on this list yet.</span>') + '</div>'
     + '<div class="row">'
@@ -291,17 +291,17 @@ function buildChoose(){
       + '</div>'
     /* ⭐ three states, because "show me only what I do NOT have" is the question somebody adding products has */
     + '<div class="row" id="own" data-testid="pl-own">'
-      + ['', 'mine', 'new'].map(function(v, i){
-          return '<button class="pill ' + (OWN === v ? 'on' : '') + '" data-own="' + v + '"'
-            + (v ? ' data-testid="pl-own-' + v + '"' : '') + ' onclick="setOwn(\'' + v + '\')">'
-            + ['Everything', '✓ In my catalogue', 'Not yet'][i] + '</button>';
+      + ['', 'mine', 'new'].map(function(item, index){
+          return '<button class="pill ' + (OWN === item ? 'on' : '') + '" data-own="' + item + '"'
+            + (item ? ' data-testid="pl-own-' + item + '"' : '') + ' onclick="setOwn(\'' + item + '\')">'
+            + ['Everything', '✓ In my catalogue', 'Not yet'][index] + '</button>';
         }).join('') + '</div>'
     /* ⭐ one row per unit is what makes a list long, so the unit is the sharpest way to shorten one */
     + '<div class="row" id="units" data-testid="pl-units">' + (units.length < 2 ? '' :
-        '<span class="note">Sold by:</span> ' + units.map(function(u){
-          return '<button class="pill ' + (OFFUNITS[u] ? '' : 'on') + '" data-unit="' + esc(u) + '"'
-            + ' data-testid="pl-unit-' + esc(u) + '" onclick="toggleUnit(\'' + esc(u) + '\')">'
-            + esc(u) + ' <b>' + c[u] + '</b></button>';
+        '<span class="note">Sold by:</span> ' + units.map(function(item){
+          return '<button class="pill ' + (OFFUNITS[item] ? '' : 'on') + '" data-unit="' + esc(item) + '"'
+            + ' data-testid="pl-unit-' + esc(item) + '" onclick="toggleUnit(\'' + esc(item) + '\')">'
+            + esc(item) + ' <b>' + c[item] + '</b></button>';
         }).join('')) + '</div>'
     + '<div id="tablewrap"></div>'
     + '<p class="note">Choosing does not set a price or put anything on the shelf — that is the next step.</p>';
@@ -309,12 +309,12 @@ function buildChoose(){
 
 function paintRows(){
   var rows = shown(), out = [], lastCat = null;
-  rows.forEach(function(r){
-    if (r.category !== lastCat) {
-      lastCat = r.category;
-      out.push('<tr class="catrow"><td colspan="6">' + esc(r.category || 'Everything else') + '</td></tr>');
+  rows.forEach(function(item){
+    if (item.category !== lastCat) {
+      lastCat = item.category;
+      out.push('<tr class="catrow"><td colspan="6">' + esc(item.category || 'Everything else') + '</td></tr>');
     }
-    var k = keyOf(r), got = have(r), pr = priceOf(r);
+    var k = keyOf(item), got = have(item), pr = priceOf(item);
     out.push('<tr class="' + (got ? 'has' : '') + '">'
       /**
        * ⚠️⚠️⚠️ DATA ATTRIBUTES, NOT STRINGS INTERPOLATED INTO THE HANDLER. The first cut wrote
@@ -327,14 +327,14 @@ function paintRows(){
        * rather than escaping around it.
        */
       + '<td><input type="checkbox" ' + (PICKED[k] ? 'checked' : '') + (got ? ' disabled' : '')
-        + ' data-name="' + esc(r.name) + '" data-unit="' + esc(r.unit) + '"'
+        + ' data-name="' + esc(item.name) + '" data-unit="' + esc(item.unit) + '"'
         + ' onchange="pick(this.checked, this.dataset.name, this.dataset.unit)"></td>'
-      + '<td>' + esc(r.name) + (got ? ' <span class="note">· you sell this</span>' : '') + '</td>'
-      + '<td class="loc">' + esc(localOf(r)) + '</td>'
-      + '<td>' + esc(r.unit) + '</td>'
+      + '<td>' + esc(item.name) + (got ? ' <span class="note">· you sell this</span>' : '') + '</td>'
+      + '<td class="loc">' + esc(localOf(item)) + '</td>'
+      + '<td>' + esc(item.unit) + '</td>'
       + '<td class="num">' + fmtMoney(pr.n, DATA.currency || 'INR', '—')
         + (pr.whose ? '<div class="whose">' + (pr.whose === 'yours' ? 'yours' : 'suggested') + '</div>' : '') + '</td>'
-      + '<td class="loc">' + esc(r.category || '') + '</td></tr>');
+      + '<td class="loc">' + esc(item.category || '') + '</td></tr>');
   });
   document.getElementById('tablewrap').innerHTML = rows.length
     ? '<table data-testid="pl-table"><thead><tr><th></th><th>Product</th><th>Local name</th><th>Unit</th>'
@@ -358,14 +358,14 @@ function paintReview(){
         + 'and combos are set afterwards — so by default these go in <b>off the shelf</b>, and you switch each '
         + 'on at the counter when it is ready to sell.</div>'
       + '<div class="row" style="margin:0" data-testid="pl-shelf">'
-      + [['unavailable', 'Not yet — set tax and offers first'], ['available', 'Yes, sell them now']].map(function(o){
-          return '<button class="pill ' + (SHELF === o[0] ? 'on' : '') + '" data-testid="pl-shelf-' + o[0] + '"'
-            + ' onclick="setShelf(\'' + o[0] + '\')">' + o[1] + '</button>';
+      + [['unavailable', 'Not yet — set tax and offers first'], ['available', 'Yes, sell them now']].map(function(item){
+          return '<button class="pill ' + (SHELF === item[0] ? 'on' : '') + '" data-testid="pl-shelf-' + item[0] + '"'
+            + ' onclick="setShelf(\'' + item[0] + '\')">' + item[1] + '</button>';
         }).join('') + '</div></div>'
     + '<table data-testid="pl-review"><thead><tr><th>Product</th><th>Unit</th>'
       + '<th class="num">Your price</th><th>Shelf</th><th></th></tr></thead><tbody>'
-      + keys.map(function(k){
-          var p = PICKED[k];
+      + keys.map(function(item){
+          var p = PICKED[item];
           return '<tr><td>' + esc(p.name) + '</td><td>' + esc(p.unit) + '</td>'
             + '<td class="num"><input type="number" min="0" step="0.01" value="' + (p.price == null ? '' : p.price)
               + '" data-testid="pl-price-' + esc(p.name) + '"'
@@ -405,7 +405,7 @@ function toggleUnit(u){
   if (OFFUNITS[u]) delete OFFUNITS[u];
   else {
     OFFUNITS[u] = 1;
-    Object.keys(PICKED).forEach(function(k){ if (PICKED[k].unit === u) delete PICKED[k]; });
+    Object.keys(PICKED).forEach(function(item){ if (PICKED[item].unit === u) delete PICKED[item]; });
   }
   paint();
 }
@@ -413,16 +413,16 @@ function pick(on, name, unit){
   var k = name + SEP + unit;
   if (on) {
     /* ⭐ the ROW is the source of the price and shelf — not the handler, which now carries only identity */
-    var row = (LIST.rows || []).filter(function(r){ return r.name === name && r.unit === unit; })[0] || {};
+    var row = (LIST.rows || []).filter(function(item){ return item.name === name && item.unit === unit; })[0] || {};
     PICKED[k] = { name: name, unit: unit, price: suggestedOf(row), category: row.category || null };
   } else delete PICKED[k];
   paintFoot(); paintSteps();
 }
 function pickAll(on){
-  shown().forEach(function(r){
-    if (have(r)) return;
-    var k = keyOf(r);
-    if (on) PICKED[k] = { name: r.name, unit: r.unit, price: suggestedOf(r), category: r.category || null };
+  shown().forEach(function(item){
+    if (have(item)) return;
+    var k = keyOf(item);
+    if (on) PICKED[k] = { name: item.name, unit: item.unit, price: suggestedOf(item), category: item.category || null };
     else delete PICKED[k];
   });
   paint();
@@ -440,8 +440,8 @@ function drop(name, unit){ delete PICKED[name + SEP + unit]; if (!nPicked()) STE
 async function adopt(){
   var keys = Object.keys(PICKED); if (!keys.length || BUSY) return;
   BUSY = true; paintFoot(); say('');
-  var names = keys.map(function(k){
-    var p = PICKED[k];
+  var names = keys.map(function(item){
+    var p = PICKED[item];
     return p.price == null ? { name: p.name, unit: p.unit } : { name: p.name, unit: p.unit, price: p.price };
   });
   var r = null;
