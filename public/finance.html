@@ -371,8 +371,8 @@ let SESS = null, MINE = null;
 
 function session(){
   try{
-    const s = JSON.parse(localStorage.getItem('cb_sess') || 'null');
-    return (window.CBOnePerson && CBOnePerson.who(s)) ? s : null;
+    const parsed = JSON.parse(localStorage.getItem('cb_sess') || 'null');
+    return (window.CBOnePerson && CBOnePerson.who(parsed)) ? parsed : null;
   }catch(_){ return null; }
 }
 /* the SMALL APP a screen key hands over to (CB_HOMES, accounts-shell.js) — never the workshop (IX0) */
@@ -383,12 +383,12 @@ const confirmAsk = CBConfirm;
 
 /* ── a sheet: the app's modal(html) / closeModal() signature on a native <dialog> (payOpen and Remind open here unchanged) ── */
 function modal(html){
-  const d = $('fin_sheet');
-  d.innerHTML = '<button class="mx" style="position:absolute;right:6px;top:6px" onclick="closeModal()" aria-label="Close" title="Close">✕</button>' + html;
-  if (!d.open) { try { d.showModal(); } catch (_) { d.setAttribute('open', ''); } }
+  const node = $('fin_sheet');
+  node.innerHTML = '<button class="mx" style="position:absolute;right:6px;top:6px" onclick="closeModal()" aria-label="Close" title="Close">✕</button>' + html;
+  if (!node.open) { try { node.showModal(); } catch (_) { node.setAttribute('open', ''); } }
 }
 function closeModal(){
-  const d = $('fin_sheet'); try { d.close(); } catch (_) { d.removeAttribute('open'); } d.innerHTML = '';
+  const node = $('fin_sheet'); try { node.close(); } catch (_) { node.removeAttribute('open'); } node.innerHTML = '';
   const paid = typeof PAY !== 'undefined' && PAY && PAY.id;   /* a receipt was recorded: the list reads again, quietly */
   if (paid) { PAY = null; finLoad(true); }
   if (FIN.back) { const f = FIN.back; FIN.back = null; setTimeout(f, 0); }
@@ -403,7 +403,7 @@ $('toggleNav').addEventListener('click', () => {
   $('toggleNav').setAttribute('aria-label', open ? 'Collapse sidebar' : 'Expand sidebar');
 });
 const railMq = window.matchMedia('(min-width:761px) and (max-width:1100px)');
-function railFit(){ const s = $('side'), t = $('toggleNav'); s.classList.toggle('collapsed', railMq.matches); const open = !s.classList.contains('collapsed'); t.setAttribute('aria-expanded', String(open)); t.setAttribute('aria-label', open ? 'Collapse sidebar' : 'Expand sidebar'); }
+function railFit(){ const node = $('side'), t = $('toggleNav'); node.classList.toggle('collapsed', railMq.matches); const open = !node.classList.contains('collapsed'); t.setAttribute('aria-expanded', String(open)); t.setAttribute('aria-label', open ? 'Collapse sidebar' : 'Expand sidebar'); }
 if (railMq.addEventListener) railMq.addEventListener('change', railFit); railFit();
 /* SHELL-ONE: the frame, mounted once per session change (the shell mounts the bell and the avatar itself); signed out, the avatar's door scrolls to the sign-in card */
 let FRAME = null;
@@ -424,13 +424,13 @@ function signedOut(why){
   CBSignin.mount($('signin-host'), { apiBase: CFG.API_BASE, surface: 'finance', need: 'person', onIn: function(){ start(); } });
 }
 function closeFirst(r){
-  finCard(r.others.map((o, i) => `<h2 data-testid="close-first">${esc(CBOnePerson.sentence(o))}</h2>
-      <button type="button" class="act" data-testid="close-first-go" data-i="${i}">${esc(CBOnePerson.buttonLabel(o))}</button>`).join(''), true);
-  $('screen').querySelectorAll('[data-testid="close-first-go"]').forEach((b) => {
-    b.onclick = () => {
+  finCard(r.others.map((item, index) => `<h2 data-testid="close-first">${esc(CBOnePerson.sentence(item))}</h2>
+      <button type="button" class="act" data-testid="close-first-go" data-i="${index}">${esc(CBOnePerson.buttonLabel(item))}</button>`).join(''), true);
+  $('screen').querySelectorAll('[data-testid="close-first-go"]').forEach((item) => {
+    item.onclick = () => {
       $('screen').querySelectorAll('button').forEach((x) => { x.disabled = true; });
-      b.textContent = 'Signing it out…';
-      CBOnePerson.clearOut(r.others[+b.getAttribute('data-i')], MINE.name).then(start, start);
+      item.textContent = 'Signing it out…';
+      CBOnePerson.clearOut(r.others[+item.getAttribute('data-i')], MINE.name).then(start, start);
     };
   });
 }
