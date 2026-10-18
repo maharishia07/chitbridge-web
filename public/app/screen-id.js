@@ -45,7 +45,8 @@
         ['CRM005', 'calls', 'Calls', 'Parties › Calls'], ['CRM006', 'party', 'Party', 'Parties › a party'], ['CRM007', 'chit', 'Chit page', 'a sheet › Open page'],
         ['CRM008', 'groups', 'Groups & segments'], ['CRM009', 'showcase', 'Shop window'], ['CRM010', 'privacy', 'Privacy']] },   /* CRM008–009: T3-P2-CRM · CRM010: T3-P3-CONSENT */
       { app: 'tasks', name: 'Tasks & Orders', page: '/tasks.html', rows: [
-        ['TSK001', 'orders_in', 'Orders in'], ['TSK002', 'orders_out', 'Orders out'], ['TSK003', 'tasks', 'Tasks'], ['TSK004', 'done', 'Done']] },
+        ['TSK001', 'orders_in', 'Orders in'], ['TSK002', 'orders_out', 'Orders out'], ['TSK003', 'tasks', 'Tasks'], ['TSK004', 'done', 'Done'],
+        ['TSK006', 'disputes', 'Disputes'], ['TSK007', 'assist', 'Assist']] },   /* UX-93: the two sections beside the folders had no row, so the chip fell back to "Orders in" */
       { app: 'settings', name: 'Settings', page: '/settings.html', hash: true, rows: [
         ['SET001', 'shop', 'Your business'], ['SET002', 'country', 'Country'], ['SET003', 'new', 'New shop', 'the sign-in window › New shop? Register'],
         /* T3-SETTINGS (INT6c): the four CB Settings sections */

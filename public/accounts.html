@@ -354,7 +354,7 @@ const NAV = [
   ['compare', 'Parallel run', 'M4 6h7v12H4zM13 6h7v12h-7zM6 10h3M15 10h3M6 14h3M15 14h3'],   /* PR1: their Tally / Xero period beside ours, line by line (the auditor edition's entry) */
   ['receivables', 'Receivables', 'M12 4v12M7 11l5 5 5-5M5 20h14'],
   ['payables', 'Payables', 'M12 20V8M7 13l5-5 5 5M5 4h14'],
-  ['dues', 'Dues', 'M7 3h10M7 21h10M8 3c0 5 8 6 8 9s-8 4-8 9M16 3c0 5-8 6-8 9'],   /* kept as a door (To do opens it) - not in the menu: Receivables and Payables are its two sides */
+  ['dues', 'Dues', 'M7 3h10M7 21h10M8 3c0 5 8 6 8 9s-8 4-8 9M16 3c0 5-8 6-8 9'],   /* both sides together: To do opens it, and the Outstandings group holds its button (ACC-175) */
   ['bills', 'Unpaid bills', 'M6 3h9l3 3v15H6zM9 9h6M9 13h6M9 17h4'],
   ['cheques', 'Cheques', 'M3 6h18v12H3zM7 14h5M15 10h2'],
   ['waiting', 'Waiting', 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18M12 7v5l3 2'],
@@ -395,9 +395,10 @@ const isOwner = () => SESSION.role === 'entity';   /* the shop's own session is 
 /* the menu's groups (Athi, 2026-10-03; the page never names the trade, so the first group is Books): To do alone, then four folds; the open view's group is never folded. A folded group is remembered on this device. */
 const NAV_GROUPS = [
   ['', ['todo']],
-  ['Books', ['daybook', 'ledgers', 'tb', 'pl', 'bs', 'compare', 'bank']],
-  /* Athi, 2026-10-03 (T20/T21): Outstandings > Receivables · Payables · Bills · Cheques. Waiting is not a menu item any more: a posting that failed is a To do item (its notice opens the same list). */
-  ['Outstandings', ['receivables', 'payables', 'bills', 'cheques']],
+  /* ACC-175 (18 Oct): Waiting (a posting that failed; its count shows on the button) and Dues (both sides together) are views the To do rows open - each has its button, lit while open */
+  ['Books', ['daybook', 'ledgers', 'tb', 'pl', 'bs', 'compare', 'bank', 'waiting']],
+  /* Athi, 2026-10-03 (T20/T21): Outstandings > Receivables · Payables · Bills · Cheques; Dues is the two sides together (ACC-175) */
+  ['Outstandings', ['dues', 'receivables', 'payables', 'bills', 'cheques']],
   ['Period end', ['lock', 'closingstock', 'assets', 'accruals', 'gstclose', 'yearclose']],
   ['Setup', ['packs', 'opening', 'accounts', 'movein', 'rates']],
 ];

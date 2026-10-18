@@ -461,6 +461,13 @@
       + '</div>';
   }
 
+  /** did the person narrow the list (a search, or a filter beyond the page's own starting view)? UX-94: a page whose starting filter IS its normal view
+   *  (Disputes opens on "Still open", opts.presetIsDefault) says it is empty, not "Nothing matches" */
+  function isNarrowed(list) {
+    var starting = (list.o.presetIsDefault && list.o.preset && list.o.preset.filt) || {};
+    var beyondStart = activeFilters(list).filter(function (filter) { return list.r.filt[filter.key] !== starting[filter.key]; });
+    return (list.r.q && String(list.r.q).trim()) || beyondStart.length;
+  }
   function activeFilters(I) { return (I.o.filters || []).filter(function (f) { return I.r.filt[f.key]; }); }
   function countText(I, m) {
     var t = T(I, '{n} shown', { n: m.rows.length });
@@ -601,7 +608,7 @@
     }
     var m = matched(I), items = itemsOf(I, m.rows);
     if (!m.rows.length) {
-      var narrowed = (R.q && String(R.q).trim()) || activeFilters(I).length;
+      var narrowed = isNarrowed(I);
       if (m.all.length && narrowed && !remote(I)) {
         box.innerHTML = '<div class="cbl-state" data-testid="cbl-nomatch-' + esc(I.key) + '"><div class="big">' + esc(T(I, 'Nothing matches.')) + '</div>' + esc(R.q ? '“' + R.q + '” ' + T(I, 'matches nothing here.') : T(I, 'These filters match nothing here.')) + '<br><button type="button" class="cbl-btn" data-cbl-clear>' + esc(T(I, 'Clear search and filters')) + '</button></div>';
       } else if (remote(I) && narrowed) {

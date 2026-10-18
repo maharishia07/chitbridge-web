@@ -140,6 +140,8 @@ function go(){ if (typeof CB_TASKS_ENDED === 'function') CB_TASKS_ENDED(); }
   /** a 401 from the API: the session is no longer good (core.js api() calls go() → this) */
   window.CB_TASKS_ENDED = function () { if (embed) start(null); else CBFrame.ended(); };
   /** the bell's row opens THAT order HERE (REQUIREMENT §6; rail-bell.js presses openChit when the page has one) — the same sheet, over whichever folder is open */
+  /** the sheet's "Open page" (ORD-62): the chit PAGE in CB CRM in its own tab - this page keeps its place; without it the sheet fell back to openChit and re-opened itself under Orders in */
+  window.openChitPage = function (id) { if (id) window.open(chitPageHref(id), '_blank', 'noopener'); };
   window.openChit = function (id) {
     if (!id) return;
     if (embed || (app && !panes.tk.hidden)) { if (app) app.open(String(id)); return; }
@@ -156,6 +158,13 @@ function go(){ if (typeof CB_TASKS_ENDED === 'function') CB_TASKS_ENDED(); }
     if (extraOn[k]) return;
     extraOn[k] = true;
     if (k === 'disputes') CBDispute.mount(panes.dp); else CBAssistReview.mount(panes.ca);
+  }
+  /** RAIL-86: ?view=disputes&chit=<id> (the sheet's Dispute button on Accounts · Finance · CRM) opens that chit's sheet here, once - the address then forgets it */
+  function openDisputeChit() {
+    var chit = q.get('chit');
+    if (!chit || view !== 'disputes' || !window.CBDispute || !CBDispute.open) return;
+    CBDispute.open({ chit_id: chit });
+    try { var here = new URL(location.href); here.searchParams.delete('chit'); history.replaceState(null, '', here.pathname + here.search + here.hash); } catch (e) { if (window.cblog) cblog('warn', 'tasks: the address bar kept the chit - ' + e.message); }
   }
   function start(token, api, v, oid) {
     if (!token) { host.innerHTML = '<div class="empty" data-testid="tk-signin"><div class="t">' + (embed ? 'Sign in first' : 'Sign in above') + '</div></div>'; return; }
@@ -187,7 +196,9 @@ function go(){ if (typeof CB_TASKS_ENDED === 'function') CB_TASKS_ENDED(); }
     if (frame.session) SESSION = Object.assign({}, SESSION, frame.session);
     if (!frame.token) { start(null); return; }
     SESSION.token = frame.token;
-    pane(first); return;
+    pane(first);
+    openDisputeChit();
+    return;
   }
   /* embed: no frame. A host page (the till, signed in under its own shop-scoped store) is asked for its person's token over postMessage -
      kept in memory only, never stored - so the frame never acts as another shop's saved login. A host that does not answer: the browser's own saved session. */

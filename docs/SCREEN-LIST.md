@@ -56,6 +56,8 @@ Register: `public/app/screen-id.js` (declared rows, merged into `CBSCREENS`) + `
 | TSK002 | Orders out | Tasks & Orders | /tasks.html | /tasks.html · Tasks & Orders › Orders out |
 | TSK003 | Tasks | Tasks & Orders | /tasks.html | /tasks.html · Tasks & Orders › Tasks |
 | TSK004 | Done | Tasks & Orders | /tasks.html | /tasks.html · Tasks & Orders › Done |
+| TSK006 | Disputes | Tasks & Orders | /tasks.html | /tasks.html · Tasks & Orders › Disputes |
+| TSK007 | Assist | Tasks & Orders | /tasks.html | /tasks.html · Tasks & Orders › Assist |
 | SET001 | Your business | Settings | /settings.html | /settings.html#/shop · Settings › Your business |
 | SET002 | Country | Settings | /settings.html | /settings.html#/country · Settings › Country |
 | SET003 | New shop | Settings | /settings.html | the sign-in window › New shop? Register |
