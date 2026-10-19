@@ -48,10 +48,10 @@
   var THEMES = K.APP_THEMES || {};
   var has = function (o, k) { return Object.prototype.hasOwnProperty.call(o, k); };
 
-  /* H34 (Athi's black-box, 2026-10-09): a utility page never sends a customer into the workshop (app.html). There is no customer Profile or Support page yet
-     (BACKLOG), so the items point at the closest customer pages: Profile -> Know your business (its "Yourself" tab is the business's own facts),
-     Support -> Home. A page with its own handler (onProfile / onSupport) or href still wins; the workshop itself passes its own. */
-  var PROFILE_HREF = '/know-your-business.html', SUPPORT_HREF = '/';
+  /* H34 (Athi's black-box, 2026-10-09): a utility page never sends a customer into the workshop (app.html). UX-96 (NAV-MAP §6 item 10, 2026-10-19):
+     Profile opens Settings › Your business, the owner has Settings on every page, and Support is NOT drawn until a support page exists (it used to
+     loop to Home) — a page that has one passes onSupport or supportHref and the item appears. A page's own handler or href still wins; the workshop passes its own. */
+  var PROFILE_HREF = '/settings.html#/shop', SETTINGS_HREF = '/settings.html';
   /* ── the facts (moved from app.html: FS_BASE · TEXT_SIZES · FONTS) ── */
   var FS_BASE = { '--fs-1': 11, '--fs-2': 12.5, '--fs-3': 14, '--fs-4': 16, '--fs-5': 20, '--fs-6': 28, '--fs-7': 36, '--fs-8': 46 };
   var TEXT_SIZES = [['s', 'Small', 0.92], ['m', 'Medium', 1], ['l', 'Large', 1.15], ['xl', 'Extra large', 1.32]];
@@ -406,14 +406,14 @@
     if (has_('profile')) up.push(o.onProfile
       ? '<button type="button" data-testid="nav-profile" data-av="profile">Profile</button>'
       : '<a data-testid="nav-profile" data-av="profile" href="' + esc(o.profileHref || PROFILE_HREF) + '">Profile<span aria-hidden="true">↗</span></a>');
-    /* IX0: Settings is drawn only where the page says where it goes (onSettings — the workshop's own — or settingsHref, a settings page when
-       one exists). No default door into app.html: a utility page never sends a customer into the workshop (H34). */
-    if (showSettings && (o.onSettings || o.settingsHref)) up.push(o.onSettings
+    /* UX-96: the OWNER has Settings on every page — the workshop's own handler, else the Settings page (never a door into app.html, H34) */
+    if (showSettings) up.push(o.onSettings
       ? '<button type="button" data-testid="nav-settings" data-av="settings">Settings</button>'
-      : '<a data-testid="nav-settings" data-av="settings" href="' + esc(o.settingsHref) + '">Settings<span aria-hidden="true">↗</span></a>');
-    if (has_('support')) down.push(o.onSupport
+      : '<a data-testid="nav-settings" data-av="settings" href="' + esc(o.settingsHref || SETTINGS_HREF) + '">Settings<span aria-hidden="true">↗</span></a>');
+    /* UX-96: Support only where there is somewhere to go (no support page yet → no item, no loop to Home) */
+    if (has_('support') && (o.onSupport || o.supportHref)) down.push(o.onSupport
       ? '<button type="button" data-testid="av-support" data-av="support">Support</button>'
-      : '<a data-testid="av-support" data-av="support" href="' + esc(o.supportHref || SUPPORT_HREF) + '">Support<span aria-hidden="true">↗</span></a>');
+      : '<a data-testid="av-support" data-av="support" href="' + esc(o.supportHref) + '">Support<span aria-hidden="true">↗</span></a>');
     if (has_('signout')) down.push('<button type="button" data-testid="nav-signout" data-av="signout">Sign out</button>');
 
     var fsNow = pref('fs'), w = pref('weight'), f = pref('font');
@@ -584,6 +584,6 @@
   /* FX-QA1: a choice made offline goes up when the connection comes back — not only on the next page's pull (the mark, F9, says what is still owed) */
   if (root.addEventListener) root.addEventListener('online', function () { if (Object.keys(pendGet()).length) push(); });
 
-  root.CBAvatar = { mount: mount, apply: apply, hydrate: hydrate, set: set, get: get, personOf: personOf, sessionPerson: sessionPerson, themeKey: themeKey, applyTheme: themeApply, push: push, pending: pendGet, themeBase: themeBase, isOpen: function () { return openNow; }, close: close, signOut: signOut,
+  root.CBAvatar = { mount: mount, apply: apply, hydrate: hydrate, set: set, get: get, personOf: personOf, sessionPerson: sessionPerson, themeKey: themeKey, applyTheme: themeApply, push: push, pending: pendGet, themeBase: themeBase, menuHtml: menuHtml, isOpen: function () { return openNow; }, close: close, signOut: signOut,
     THEMES: THEMES, FONTS: FONTS, TEXT_SIZES: TEXT_SIZES, FS_BASE: FS_BASE, fontStack: fontStack, shopCountry: shopCountry };
 })(typeof window !== 'undefined' ? window : this);

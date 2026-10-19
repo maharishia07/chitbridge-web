@@ -453,7 +453,7 @@ function whoPaint(){
 }
 /* the SMALL APP a screen key hands over to (CB_HOMES, accounts-shell.js) — never the workshop (IX0); no home yet → said, not a dead door */
 function navTo(k){ var h = CB_HOMES[k]; if (h) location.href = h; else toast(tx('Not built outside the workshop yet.')); }
-function openChitPage(id){ window.open(chitPageHref(id), '_blank', 'noopener'); }   /* the sheet's "Open page": the chit page in CB CRM (CRM2), this page keeps its place */
+function openChitPage(id){ location.href = chitPageHref(id); }   /* the sheet's "Open page": the chit page in CB CRM (CRM2), the same tab - Back returns (NAV-MAP 13) */
 function openChit(id){ openChitSheet(id); }   /* every other chit link opens the sheet here: Messages and files are on it (R10) */
 
 /* the page's own confirm — the same <dialog> the index tile uses (accounts-shell.js); cap-books.js asks through this name */
