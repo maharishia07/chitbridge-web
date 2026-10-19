@@ -271,7 +271,7 @@ function route(S, r) {
   const VIEWPORTS = [{ w: 1280, label: '1280' }, { w: 390, label: '390' }];
   const STATES = [{ signedOut: false, label: 'in' }, { signedOut: true, label: 'out' }];
 
-  /* ═══ index + the Tax Lab chip: every viewport, signed in AND signed out ═══════════════════════════════════
+  /* ═══ index + the Dispute Lab chip: every viewport, signed in AND signed out ═══════════════════════════════════
    * N18: tax-lab.html does not exist, so the manifest says `coming` and the shell draws a dashed chip that names its
    * state ("later") and is never a link — in both states, at both widths. */
   for (const st of STATES) {
@@ -281,13 +281,13 @@ function route(S, r) {
       const label = vp.label + 'px-' + st.label;
       await p.goto(base + '/');
       await settle(p);
-      if (vp.w < 700) await p.click('[data-testid="shell-nav-labs"]').catch(() => {});   /* a phone shows one area at a time */
-      const tax = await p.locator('[data-testid="shell-chip-tax-lab"]').first();
+      if (vp.w < 700) { await p.click('[data-testid="shell-nav-more"]').catch(() => {}); await p.click('[data-testid="shell-row-labs"]').catch(() => {}); }   /* a phone: More, then the Labs row */
+      const tax = await p.locator('[data-testid="shell-chip-rail-lab"]').first();
       const taxTag = await tax.evaluate((el) => el.tagName).catch(() => '?');
       const taxHref = await tax.getAttribute('href').catch(() => null);
       const taxText = (await tax.locator('.tag').textContent().catch(() => '')) || '';
-      ok('index', taxTag !== 'A' && !taxHref, 'Tax Lab chip is not a link (' + label + ')', 'tagName=' + taxTag + ' href=' + taxHref);
-      ok('index', /^later$/.test(taxText.trim()), 'Tax Lab chip names its state, "later" (' + label + ')', 'got "' + taxText.trim() + '"');
+      ok('index', taxTag !== 'A' && !taxHref, 'Dispute Lab chip is not a link (' + label + ')', 'tagName=' + taxTag + ' href=' + taxHref);
+      ok('index', /^later$/.test(taxText.trim()), 'Dispute Lab chip names its state, "later" (' + label + ')', 'got "' + taxText.trim() + '"');
       const sw = await scrollWidthOk(p, vp.w);
       ok('index', sw, 'no horizontal scroll (' + label + ')', 'document.scrollWidth exceeded ' + vp.w);
       await p.screenshot({ path: path.join(SHOTS, 'labs-flow-index-' + label + '.png'), fullPage: true });
@@ -308,7 +308,7 @@ function route(S, r) {
           await p.goto(base + '/');
           await settle(p);
           let factText = '';
-          if (vp.w < 700) await p.click('[data-testid="shell-nav-labs"]').catch(() => {});   /* a phone shows one area at a time */
+          if (vp.w < 700) { await p.click('[data-testid="shell-nav-more"]').catch(() => {}); await p.click('[data-testid="shell-row-labs"]').catch(() => {}); }   /* a phone: More, then the Labs row */
           if (!st.signedOut) {
             /* N18: a card's facts come from its manifest `facts` URL; the Labs have no facts read yet (named in the N18 PR), so the spot is empty by design */
             factText = (await p.textContent('[data-testid="' + lab.fact + '"]').catch(() => '')) || '';

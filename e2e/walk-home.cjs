@@ -100,7 +100,7 @@ W.run('home', async (w) => {
   const BOXED = ['marketing', 'sales', 'finance', 'accounting'];
   await w.step('P1', 'Manifest -> every entry has a pillar, and the pillars are the nine known words', async () => {
     const known = PIL.concat(['labs', 'setup']), bad = man.entries.filter((e) => known.indexOf(e.pillar) < 0).map((e) => e.id);
-    const need = ['marketing', 'finance', 'operations', 'people', 'trade'].filter((id) => { const e = man.entries.find((x) => x.id === id); return !e || e.state === 'built' && !e.route || !e.what && id !== 'trade'; });   /* marketing: built since T3-P2-CRM (route + facts) */
+    const need = ['marketing', 'finance', 'operations'].filter((id) => { const e = man.entries.find((x) => x.id === id); return !e || e.state === 'built' && !e.route || !e.what && id !== 'trade'; });   /* marketing: built since T3-P2-CRM (route + facts) */
     return { ok: !bad.length && !need.length, saw: bad.length ? 'no/odd pillar: ' + bad.join() : need.length ? 'missing box: ' + need.join() : man.entries.length + ' entries, all placed; the coming boxes exist' };
   });
   const reqs = []; const onReq = (rq) => { const u = new URL(rq.url()); if (u.pathname.indexOf('/api/') === 0) reqs.push(u.pathname); };
@@ -111,7 +111,7 @@ W.run('home', async (w) => {
     const r = await page.evaluate(() => {
       const ps = [...document.querySelectorAll('.cbsh-pil')].map((p) => p.dataset.pillar);
       const ids = [...document.querySelectorAll('[data-testid^="shell-card-"],[data-testid^="shell-chip-"]')].map((e) => e.dataset.id || e.getAttribute('data-testid').replace(/^shell-(card|chip)-/, ''));
-      const comingFacts = ['operations', 'people', 'trade'].map((id) => { const c = document.querySelector('[data-testid="shell-chip-' + id + '"]'); return c ? c.innerText.replace(/\s+/g, ' ').trim() : 'MISSING ' + id; });   /* marketing (T3-P2-CRM) and finance are cards now */
+      const comingFacts = ['operations', 'delivery'].map((id) => { const c = document.querySelector('[data-testid="shell-chip-' + id + '"]'); return c ? c.innerText.replace(/\s+/g, ' ').trim() : 'MISSING ' + id; });   /* marketing (T3-P2-CRM) and finance are cards now */
       const cap = (document.querySelector('.cbsh-sec.selling .cbsh-cap b') || {}).textContent;
       const rows = ['selling', 'money'].map((a) => [...document.querySelectorAll('.cbsh-sec.' + a + ' .cbsh-pil')].map((p) => Math.round(p.getBoundingClientRect().top)).filter((v, i, x) => x.indexOf(v) === i).length);
       return { ps, dup: ids.filter((v, i) => ids.indexOf(v) !== i), comingFacts, cap, rows };
