@@ -121,7 +121,7 @@ async function run(site, o) {
         const txt = (await menu.innerText()).replace(/\s+/g, ' ');
         const q = (id) => menu.locator('[data-testid="' + id + '"]').count();
         ok(/Books Shop/.test(txt) && /Owner/.test(txt), pg.id + ' · the header names the person and the role (name · role)');
-        ok(await q('nav-profile') === 1 && await q('av-support') === 1 && await q('nav-signout') === 1, pg.id + ' · Profile · Support · Sign out are in the menu');
+        ok(await q('nav-profile') === 1 && await q('av-support') === (pg.id === 'app' ? 1 : 0) && await q('nav-signout') === 1, pg.id + ' · Profile · Sign out are in the menu; Support only where a support page exists (UX-96)');
         ok(/appearance/i.test(txt) && /My device/.test(txt) && /Terminal/.test(txt) && await menu.locator('[data-av-theme]').count() === 17, pg.id + ' · Appearance: My device + the 16 engine themes (Terminal among them) — ' + await menu.locator('[data-av-theme]').count() + ' dots');
         ok(await menu.locator('[data-av-fs]').count() === 4 && await menu.locator('[data-av-weight]').count() === 2 && await q('motion-switch') === 1, pg.id + ' · four growing A\'s · Normal / Bold · one Less motion switch');
         const sizes = await menu.locator('[data-av-fs]').evaluateAll((els) => els.map((e) => parseFloat(getComputedStyle(e).fontSize)));
@@ -130,8 +130,8 @@ async function run(site, o) {
         ok(faces.length === 5 && new Set(faces).size === 5, pg.id + ' · five reading fonts, each in its own face');
         ok(txt.split(' ').length < 95 && !/[.!?] [A-Z]/.test(txt.replace(/e\.g\./g, '')), pg.id + ' · no explanatory text (' + txt.split(' ').length + ' words, no sentence)');
         const settings = await q('nav-settings');
-        if (pg.id === 'app') ok(settings === 1, 'app · Settings is in the owner\'s menu'); else ok(settings === 0, pg.id + ' · no Settings here (it stays in the app)');
-        if (pg.id === 'accounts') ok((await menu.locator('[data-testid="nav-profile"]').getAttribute('href')) === '/know-your-business.html', 'accounts · Profile opens a customer page (Know your business), never the workshop');
+        ok(settings === 1, pg.id + ' · Settings is in the owner menu on every page (UX-96)');
+        if (pg.id === 'accounts') ok((await menu.locator('[data-testid="nav-profile"]').getAttribute('href')) === '/settings.html#/shop', 'accounts · Profile opens Settings › Your business, never the workshop');
         await p.keyboard.press('Escape');
         ok(!(await p.locator('[data-testid="avatar-menu"]').isVisible().catch(() => false)), pg.id + ' · Escape closes the menu');
         if (pg.id === 'app') {

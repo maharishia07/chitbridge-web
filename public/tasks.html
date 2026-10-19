@@ -141,7 +141,7 @@ function go(){ if (typeof CB_TASKS_ENDED === 'function') CB_TASKS_ENDED(); }
   window.CB_TASKS_ENDED = function () { if (embed) start(null); else CBFrame.ended(); };
   /** the bell's row opens THAT order HERE (REQUIREMENT §6; rail-bell.js presses openChit when the page has one) — the same sheet, over whichever folder is open */
   /** the sheet's "Open page" (ORD-62): the chit PAGE in CB CRM in its own tab - this page keeps its place; without it the sheet fell back to openChit and re-opened itself under Orders in */
-  window.openChitPage = function (id) { if (id) window.open(chitPageHref(id), '_blank', 'noopener'); };
+  window.openChitPage = function (id) { if (id) location.href = chitPageHref(id); };   /* NAV-MAP §6 item 13: the same tab, Back returns */
   window.openChit = function (id) {
     if (!id) return;
     if (embed || (app && !panes.tk.hidden)) { if (app) app.open(String(id)); return; }
