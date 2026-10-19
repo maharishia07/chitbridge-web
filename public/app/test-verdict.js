@@ -102,3 +102,23 @@ function testCounts(cases, last) {
   n.noResults = n.total > 0 && n.todo === n.total;
   return n;
 }
+
+/* ── QUAL-1 (K-BOARD, 19 Oct 2026): what a case is held to, and whether its file can fail a run ───────────────
+ * QA-24 + CAT-50: the traceability line. Order: the clause the case cites (`cites`), then the requirement a test
+ * header names with `@covers` (`covers`), else the words "Not cited". A requirement is NEVER inferred from a file
+ * name: the only thing a path proves is that a file exists.
+ * QA-72: a file that cannot fail a run (a seed, a demo, a narrated proof, the engine manifest, the walkthrough
+ * fixture) is shown as "not evidence", so a green tick from it is never read as proof.
+ * Both are plain functions, called by the Test panel (cap-testing.js) and tested in tests/board-trace.test.cjs. */
+const TEST_NOT_EVIDENCE = /(^|[/\\])(seed[^/\\]*|[^/\\]*[-_.]seed[^/\\]*|[^/\\]*demo[^/\\]*|[^/\\]*narrat[^/\\]*|[^/\\]*proof-?walk[^/\\]*|engine-manifest\.js|walkthrough\.js)$/i;
+function testIsEvidence(caseKey) { return !TEST_NOT_EVIDENCE.test(String(caseKey || '')); }
+function testCiteLine(c) {
+  const q = c && c.cites;
+  if (q && (q.clause || q.standard)) {
+    return { cited: true, source: 'clause', text: [q.standard, q.clause ? '\u00a7' + q.clause : null, q.chapter, q.level ? 'level ' + q.level : null].filter(Boolean).join(' \u00b7 ') };
+  }
+  const cov = c && (c.covers || (c.rules && c.rules.covers));
+  if (cov && String(cov).trim()) return { cited: true, source: 'covers', text: String(cov).trim() };
+  return { cited: false, source: 'none', text: 'Not cited' };
+}
+if (typeof module !== 'undefined' && module.exports) module.exports = { testIsEvidence, testCiteLine, testCounts };
