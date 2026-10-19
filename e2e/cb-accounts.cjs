@@ -552,7 +552,7 @@ async function route(S, r) {
     /* ── 4 · THE AVATAR MENU, HOME ── */
     await p.click('[data-testid="avatar"]');
     ok(await p.locator('[data-testid="avatar-menu"]').isVisible(), 'the avatar opens the menu');
-    ok(await p.getAttribute('[data-testid="nav-profile"]', 'href') === '/know-your-business.html', 'Profile → a customer page (Know your business), never the workshop');
+    ok(await p.getAttribute('[data-testid="nav-profile"]', 'href') === '/settings.html#/shop', 'Profile → Settings › Your business, never the workshop (UX-96)');
     ok(await p.locator('[data-testid="nav-signout"]').isVisible(), 'Sign out is in the menu');
     ok(await p.evaluate(() => { const m = document.querySelector('[data-testid="avatar-menu"]'), r = m.getBoundingClientRect(), miss = [];
       for (let y = r.top + 6; y < Math.min(r.bottom, innerHeight) - 6; y += 24) for (let x = r.left + 6; x < r.right - 6; x += 40) { const e = document.elementFromPoint(x, y); if (e && !m.contains(e)) miss.push(e.className); }
