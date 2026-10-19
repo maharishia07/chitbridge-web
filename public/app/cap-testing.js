@@ -1,4 +1,7 @@
 /**
+ * OWNS the Test panel on top of the app (cases, verdicts, incidents, requirements) · CALLED BY the app.html capability loader
+ * FLOW  open panel → testLoad → pick area → testMark (verdict) → api testRecord → repaint
+ * CARD 29-qa-test-tooling-ux-locale-and-design-system/test-board
  * ── app/cap-testing.js · THE TEST PANEL, ON TOP OF THE APP ────────────────────────────────────────────────────
  *
  * Athi, 2026-09-11: *"this will be good so we can bring the test suite on top of the application to read the test
@@ -4199,15 +4202,20 @@ function testCaseOpen(key) {
  * one.
  */
 function testCiteHTML(c) {
-  var q = c && c.cites;
-  if (!q) return '';
-  var bits = [q.standard, q.clause ? '\u00a7' + q.clause : null, q.chapter,
-              q.level ? 'level ' + q.level : null].filter(Boolean);
-  return '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:4px;padding:3px 7px;'
-    + 'background:var(--paper,#faf8f3);border-inline-start:2px solid var(--line,#e7e3d8);border-radius:0 6px 6px 0">'
-    + '<span title="A published clause. If it changes, '
-    + 'recheck every case that cites it">Required by <b>'
-    + esc(bits.join(' \u00b7 ')) + '</b></span></div>';
+  /* QUAL-1 (QA-24, CAT-50): the line is always printed. "Not cited" is an honest answer; a blank reads as "nothing to cite".
+     The reading order (clause, then @covers, then "Not cited") lives in test-verdict.js testCiteLine. */
+  var q = (typeof testCiteLine === 'function') ? testCiteLine(c) : { cited: false, text: 'Not cited' };
+  var box = 'font-size:var(--fs-1);color:var(--grey-2);margin-top:4px;padding:3px 7px;'
+    + 'background:var(--paper,#faf8f3);border-inline-start:2px solid var(--line,#e7e3d8);border-radius:0 6px 6px 0';
+  var out = q.cited
+    ? '<div style="' + box + '"><span title="A published clause or a named requirement. If it changes, '
+      + 'recheck every case that cites it">Required by <b>' + esc(q.text) + '</b></span></div>'
+    : '<div style="' + box + '"><span title="No clause or requirement is named for this case">Not cited</span></div>';
+  /* QA-72: a seed, demo or narrated proof cannot fail a run, so its tick is not evidence */
+  if (typeof testIsEvidence === 'function' && c && !testIsEvidence(c.case_key)) {
+    out += '<div style="' + box + '"><span title="A seed, demo or narrated proof cannot fail a run">Not evidence \u2014 this file cannot fail a run.</span></div>';
+  }
+  return out;
 }
 
 function testCaseDetailHTML(c) {
@@ -8166,6 +8174,17 @@ function testCallsSince() {
   } catch (_) { return ''; }
 }
 
+/* ACC-97: a lost verdict must not be lost. A toast fades in four seconds; the verdict stays in the notice until it is sent
+   again, and the note and evidence boxes still hold what was typed. Called by testMark when the server did not answer. */
+function testMarkLost(key, status, err) {
+  CBTEST.unsent = CBTEST.unsent || {};
+  CBTEST.unsent[key] = { status: status };
+  CBTEST.notice = { tone: 'bad', text: esc(tx('Not recorded') + ' — ' + key + ' (' + status + '). ' + ((err && err.message) || ''))
+    + ' <a href="#" onclick="testRetryUnsent();return false" style="color:inherit;font-weight:700">Send again</a>' };
+  testPaint();
+  if (typeof toast === 'function') toast(tx('Not recorded') + ' — ' + ((err && err.message) || ''), true);
+}
+
 /**
  * ⚠️⚠️ THE RUN IS ENSURED HERE, AND THAT IS THE FIX FOR "cannot read properties of null (reading id)".
  *
@@ -8227,9 +8246,15 @@ async function testMark(key, status) {
     /* ⭐ and the in-screen panel, when it is the thing the person is looking at — it holds the same counts,
        and a tally that does not move when you press Pass reads as a press that did not land. */
     if (CBTEST.popupFor) { try { screenCasesPaint(); } catch (_) {} }
-  } catch (e) {
-    if (typeof toast === 'function') toast(tx('Not recorded') + ' — ' + e.message, true);
-  }
+  } catch (e) { testMarkLost(key, status, e); }
+}
+
+/* ACC-97: send every verdict that did not reach the server. */
+async function testRetryUnsent() {
+  var pending = CBTEST.unsent || {};
+  CBTEST.unsent = {}; CBTEST.notice = null;
+  for (var k of Object.keys(pending)) await testMark(k, pending[k].status);
+  if (!Object.keys(CBTEST.unsent).length) { CBTEST.notice = null; testPaint(); }
 }
 
 /* ── ⭐ THE PLUS: write a case for what you just found, without leaving the screen ─────────────────────────────
