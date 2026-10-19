@@ -345,9 +345,9 @@ const CFG = {
     return window.CB_API;
   })()
 };
-const SESSION = { token: null, role: null, name: null, entity: null, bridgeId: null };
+let SESSION = { token: null, role: null, name: null, entity: null, bridgeId: null };
 const EP = {}; /* the Ledger's boot rows come from accounts-shell.js, the CRM's from cap-crm.js */
-const UI = { vp: 'lap', lw: 340, custs: [], sups: [] }; /* custs/sups: the rows cap-books.js's party editor reads (cap-crm.js fills them from the CRM list) */
+let UI = { vp: 'lap', lw: 340, custs: [], sups: [] }; /* custs/sups: the rows cap-books.js's party editor reads (cap-crm.js fills them from the CRM list) */
 function go() {
   signedOut('Your session ended. Please sign in again.');
 } /* api()'s 401 → this page's own sign-in card (CBSignin), not the app's (R10) */

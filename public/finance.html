@@ -324,9 +324,9 @@ const CFG = {
     return window.CB_API;
   })()
 };
-const SESSION = { token: null, role: null, name: null, entity: null, bridgeId: null };
+let SESSION = { token: null, role: null, name: null, entity: null, bridgeId: null };
 const EP = {};
-const UI = { vp: 'lap', lw: 340, custs: [], sups: [] }; /* the rows cap-books.js's party editor reads — empty here: Finance edits no party */
+let UI = { vp: 'lap', lw: 340, custs: [], sups: [] }; /* the rows cap-books.js's party editor reads — empty here: Finance edits no party */
 function go() {
   signedOut('Your session ended. Please sign in again.');
 }

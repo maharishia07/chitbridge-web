@@ -2488,7 +2488,7 @@ function blueprintSettingsHTML() {
 // ASSIST_LIB is now DB-served (GET /api/assist/questions), fetched per-screen + cached for the session —
 // nothing static in the frontend. loadAssistQ() fills it before render; it is also the AI grounding feed.
 let ASSIST_LIB = []; // current-context Q&A set (from the DB)
-const _assistCache = {}; // per-context session cache (runtime only — NOT a source of truth)
+let _assistCache = {}; // per-context session cache (runtime only — NOT a source of truth)
 let _assistLoading = false;
 function loadAssistQ(ctx) {
   ctx = ctx || '*';
@@ -4130,7 +4130,7 @@ function route() {
 /* SCREEN: Welcome (#/welcome) · module target: auth.js · pre-register flow: preview -> select (role + vertical/Blueprint) -> register.
    Source: Drive "Landing->choose->register mock". JUNCTURE (design later): Blueprint -> settings/schema cascade.
    For now the selection is CAPTURED and DEFAULTS to one Blueprint (J-BLUEPRINT / feeds J-FIELDTYPES). */
-const ONB = { role: null, bp: null };
+let ONB = { role: null, bp: null };
 let WSTEP = 'intro'; // intro | select
 const ONB_BP = {
   business: [
@@ -22456,7 +22456,7 @@ function needTarget() {
   if (!nestedT.length) toast('Open a chit — or tick some in Select — first.');
   return nestedT;
 }
-const MODALS = {};
+let MODALS = {};
 
 /* ===== movable panels (drag / resize / font, persisted) ===== */
 /* makeMovable(panel, opts) — make a panel draggable + resizable, geometry persisted per opts.key.

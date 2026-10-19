@@ -302,9 +302,9 @@ const CFG = {
     return window.CB_API;
   })()
 };
-const SESSION = { token: null, role: null, name: null, entity: null, bridgeId: null };
+let SESSION = { token: null, role: null, name: null, entity: null, bridgeId: null };
 const EP = {}; /* the Ledger's boot rows come from accounts-shell.js; cap-folders.js and cap-books.js add the rest */
-const UI = { vp: 'lap', lw: 340 }; /* the two fields cap-books.js reads */
+let UI = { vp: 'lap', lw: 340 }; /* the two fields cap-books.js reads */
 function go() {
   signedOut('Your session ended. Please sign in again.');
 } /* api()'s 401 → this page's own sign-in card (CBSignin), not the app's (R10) */

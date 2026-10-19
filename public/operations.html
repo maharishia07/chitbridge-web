@@ -76,7 +76,7 @@ dialog.sheet .mx{position:absolute;right:8px;top:8px;border:0;background:transpa
 'use strict';
 /* ── the host globals core.js and the modules expect (as tasks.html / settings.html declare them) ── */
 const CFG = { API_BASE: window.CB_API };
-const SESSION = { token: null, role: null, name: null, entity: null, bridgeId: null };
+let SESSION = { token: null, role: null, name: null, entity: null, bridgeId: null };
 const EP = {};
 function go() {
   if (window.CBFrame) CBFrame.ended();

@@ -99,9 +99,9 @@ dialog.sheet .mx{position:absolute;right:8px;top:8px;border:0;background:transpa
 'use strict';
 /* ── the host globals the workshop's own files expect (app.html declares these with let/const; so does this page — as settings.html does) ── */
 const CFG = { API_BASE: (window.CBShell && CBShell.apiBase && CBShell.apiBase()) || window.CB_API }; /* HX1: the deploy's api address from /config.js */
-const SESSION = { token: null, role: null, name: null, entity: null, bridgeId: null };
+let SESSION = { token: null, role: null, name: null, entity: null, bridgeId: null };
 const EP = {}; /* CB_SHOP_EP (accounts-shell.js) + CB_DEFS_EP (core.js) + CB_CATALOGUE_EP (cap-catalogue.js) */
-const UI = {
+let UI = {
   vp: 'lap',
   lw: 340,
   mdetail: false,
