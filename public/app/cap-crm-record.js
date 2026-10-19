@@ -195,7 +195,7 @@ async function crmRecordFold(route, tok) {
   s.innerHTML = '<div class="content"><div class="empty" data-testid="crm-rec-missing"><div class="t">' + esc(tx("Couldn't open this party.")) + '</div><a class="act ghost" href="#/parties">' + esc(tx('Back to parties')) + '</a></div></div>';
 }
 function crmDueChip(p) {
-  var u = p.billFacts && p.billFacts.unbilled, said = u && u.n ? crmPlural(u.n, 'order not billed yet', 'orders not billed yet') + ' ' + bkMoney(u.minor, u.currency || CRM.currency) : '';
+  var said = crmUnbilledSaid(p.billFacts && p.billFacts.unbilled, CRM.currency);
   if (!CRM.ledger || p.balance_minor == null) return said ? '<span class="tag amber" data-testid="crm-unbilled">' + esc(said) + '</span>' : '';
   if (!Number(p.balance_minor || 0) && said) return '<span class="due settled" data-testid="party-due-' + esc(p.party_id) + '">' + esc(tx('Settled')) + ' \u00b7 <span data-testid="crm-unbilled">' + esc(said) + '</span></span>';
   return crmDueCell(p) + (said ? ' <span class="tag amber" data-testid="crm-unbilled">' + esc(said) + '</span>' : '');
