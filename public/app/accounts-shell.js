@@ -29,7 +29,7 @@ var CB_HOMES = {
   task: '/tasks.html', order: '/tasks.html',           /* CB Tasks & Orders */
   customers: '/crm.html#/parties?role=customer', suppliers: '/crm.html#/parties?role=supplier',
   ledger: '/accounts.html', network: '/network.html', coassists: '/employees.html',
-  profile: '/know-your-business.html',                 /* the avatar's own choice for Profile (avatar.js, H34) */
+  profile: '/settings.html#/shop',                       /* the avatar's own choice for Profile: Settings › Your business (avatar.js, UX-96) */
   shop: '/settings.html#/shop', country: '/settings.html#/country', settings: '/settings.html',  /* CB Settings (SET1): Your shop · Country setup */
   integrations: '/settings.html#/connectors', counters: '/settings.html#/counters', policy: '/settings.html#/policy', plan: '/settings.html#/plan',  /* CB Settings (T3-SETTINGS) */
   disputes: '/tasks.html?view=disputes&chit=',        /* + the chit id: Tasks › Disputes with that chit's sheet open (RAIL-86) */
