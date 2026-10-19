@@ -54,7 +54,7 @@ function list(rows, opt) {
     if (p.merged_into) return;                       /* the API never sends a party that was merged away */
     const k = p.party_id;
     if (!o.careless && by.has(k)) { const a = by.get(k); const r = rolesOf(p.roles); a.roles.customer = a.roles.customer || r.customer; a.roles.supplier = a.roles.supplier || r.supplier; return; }
-    const a = party(p, o.records && o.records[p.party_id]); by.set(k, a); out.push(a);
+    const a = party(p, o.records && o.records[p.party_id]); if (p.unbilled) a.unbilled = p.unbilled; by.set(k, a); out.push(a);
   });
   /* a party's sides follow its merged roles: re-derive the nested sides for a both-roles party */
   out.forEach((a) => {
@@ -70,7 +70,9 @@ function list(rows, opt) {
 /** GET /parties' envelope around any party rows (the golden list, a leads view, an imported list): T2-PAGING's total · page · limit beside
  *  count · truncated · walk_ins, and the API's own count of late dues — the parties it marked (lib/crm markLate) — so the banner and the rows
  *  are one number. INT6d-GREEN: every stand-in wraps through here; three of them hand-built the envelope and drifted from the contract. */
-function listPage(parties, extra) {
+function listPage(rows, extra) {
+  /* CRM-32: every list row carries the server's "not billed yet" figure (n 0 = none), whoever built the row */
+  const parties = rows.map((a) => (a.unbilled ? a : Object.assign({}, a, { unbilled: { n: 0, minor: 0, currency: null } })));
   return Object.assign({ parties, walk_ins: [], count: parties.length, total: parties.length, page: 1, limit: 5000, truncated: false, may: mayOf(null),   /* W2-CRM: the owner's may unless the handler hands the request's in */
     alerts: { dues_overdue: parties.filter((a) => a.dues && a.dues.overdue).length } }, extra || {});
 }
