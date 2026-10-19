@@ -5,8 +5,10 @@ const manifest = require('./eslint.globals.json');
 /* the shared names are declared by the page's own scripts, so redeclaring/assigning them is not an error here */
 const RULES = { 'no-undef': 'warn', 'no-redeclare': ['warn', { builtinGlobals: false }], 'no-global-assign': 'off' };
 const asGlobals = (names) => Object.fromEntries(names.map((name) => [name, 'writable']));
+/* manifest.files[x] = the pages that load x (or "*" = all pages); its names are the union of those pages' names */
+const namesOf = (owners) => { const union = new Set(); (owners === '*' ? Object.keys(manifest.pages) : owners).forEach((page) => manifest.pages[page].globals.forEach((name) => union.add(name))); return [...union].sort(); };
 const groups = new Map();
-for (const [file, names] of Object.entries(manifest.files)) { const key = names.join(','); if (!groups.has(key)) groups.set(key, { names, files: [] }); groups.get(key).files.push(file); }
+for (const [file, owners] of Object.entries(manifest.files)) { const names = namesOf(owners); const key = names.join(','); if (!groups.has(key)) groups.set(key, { names, files: [] }); groups.get(key).files.push(file); }
 const blocks = [...groups.values()].map((group) => ({ files: group.files, languageOptions: { globals: asGlobals(group.names) }, rules: RULES }));
 for (const [page, info] of Object.entries(manifest.pages)) blocks.push({ files: [page + '.inline*.js'], languageOptions: { globals: asGlobals(info.globals) }, rules: RULES });
 /* the Node side of the repo (no shared page scope: no-undef is exact there) */
