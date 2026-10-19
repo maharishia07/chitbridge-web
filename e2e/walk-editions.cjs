@@ -36,7 +36,7 @@ const walk = async (w) => {
   await ctx.addInitScript((s) => { try { localStorage.setItem('cb_api_base', location.origin); localStorage.setItem('cb_sess', s); if (!localStorage.getItem('cb_theme')) localStorage.setItem('cb_theme', 'cream'); } catch (_) {} }, W.session('Fixture Owner', 'Fixture Shop'));
   const home = async (q) => { await page.goto(base + '/' + (q || '')); await page.waitForSelector('[data-testid="cbshell"]', { timeout: 20000 }); await page.evaluate(() => window.SHELL && window.SHELL.ready); await page.waitForTimeout(400); };
   const drawn = () => page.$$eval('[data-testid^="shell-card-"],[data-testid^="shell-chip-"]', (es) => es.map((e) => e.getAttribute('data-testid').replace(/^shell-(card|chip)-/, '')));
-  const navs = () => page.$$eval('.cbsh-nv', (bs) => bs.filter((b) => !b.hidden).map((b) => b.getAttribute('data-go')));
+  const navs = () => page.$$eval('.cbsh-nv', (bs) => bs.filter((b) => !b.hidden && b.offsetParent).map((b) => b.getAttribute('data-go')));
   const links = () => page.$$eval('a[href],[data-href]', (as) => as.filter((a) => a.offsetParent !== null || a.closest('details')).map((a) => a.getAttribute('href') || a.getAttribute('data-href')));
   const opens = async (hrefs) => { const bad = []; for (const h of [...new Set(hrefs)].filter((h) => /^\//.test(h))) { const r = await page.request.get(base + h.split('#')[0].split('?')[0]); if (r.status() !== 200) bad.push(h + ' ' + r.status()); } return bad; };
 
