@@ -3192,7 +3192,10 @@ function govRowHtml(label,valHtml,klass){
                 'Assignment model':     ['Settings → Work',      "setSetSec('work')"],
                 'Interface language':   ['Settings → Localisation', "setSetSec('locale')"],
                 'Date / number format': ['Settings → Localisation', "setSetSec('locale')"],
-                'Reading direction':    ['Settings → Localisation', "setSetSec('locale')"] };
+                'Reading direction':    ['Settings → Localisation', "setSetSec('locale')"],
+                /* CAT-162: units and code standards are read here, set in Catalogue setup (Definitions) — one place per setting */
+                'Units of measure':     ['Catalogue setup → Definitions', "navTo('catsetup')"],
+                'Code standards (HSN / SKU)': ['Catalogue setup → Definitions', "navTo('catsetup')"] };
   var own = OWNER[label];
   var why = (label === 'Catalogue visibility') ? govCatVisWhy() : '';
   return '<div class="govrow"><span class="govrow-k">'+esc(label)+'</span>'
