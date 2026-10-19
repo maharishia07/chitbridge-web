@@ -80,6 +80,8 @@
   }
   function apiBaseDefault() { return root.CBShell && root.CBShell.apiBase ? root.CBShell.apiBase() : ''; }
 
+  /* a word through the catalogue when the page has it (tx), else as written */
+  function say(word) { return typeof root.tx === 'function' ? root.tx(word) : word; }
   function mount(slots, o) {
     o = o || {};
     addCss();
@@ -124,7 +126,7 @@
       L.innerHTML = panel('L'); R.innerHTML = panel('R');
       var nl = S.data && !S.err ? rowsOf(S.data.lean) : '–', nr = S.data && !S.err ? rowsOf(S.data.use) : '–';
       /* an icon and its count; the words are the button's title and its spoken name (walk 2026-10-17) */
-      bL.innerHTML = '→<span class="w">' + esc(W.lean) + '</span><b>' + nl + '</b>'; bR.innerHTML = '←<span class="w">' + esc(W.use) + '</span><b>' + nr + '</b>';   /* UX-2: the mark says its words beside the count (a phone keeps the icon: title + aria-label) */
+      bL.innerHTML = '→<span class="w">' + esc(say(W.lean)) + '</span><b>' + nl + '</b>'; bR.innerHTML = '←<span class="w">' + esc(say(W.use)) + '</span><b>' + nr + '</b>';   /* UX-2: the mark says its words beside the count (a phone keeps the icon: title + aria-label) */
       bL.title = W.lean; bR.title = W.use; bL.setAttribute('aria-label', W.lean + ' ' + nl); bR.setAttribute('aria-label', W.use + ' ' + nr);
       L.classList.toggle('drawer', S.open === 'L'); R.classList.toggle('drawer', S.open === 'R');
       bL.setAttribute('aria-expanded', S.open === 'L' ? 'true' : 'false'); bR.setAttribute('aria-expanded', S.open === 'R' ? 'true' : 'false');
