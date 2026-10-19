@@ -1,4 +1,7 @@
 /**
+ * OWNS the Test panel on top of the app (cases, verdicts, incidents, requirements) · CALLED BY the app.html capability loader
+ * FLOW  open panel → testLoad → pick area → testMark (verdict) → api testRecord → repaint
+ * CARD 29-qa-test-tooling-ux-locale-and-design-system/test-board
  * ── app/cap-testing.js · THE TEST PANEL, ON TOP OF THE APP ────────────────────────────────────────────────────
  *
  * Athi, 2026-09-11: *"this will be good so we can bring the test suite on top of the application to read the test
@@ -8171,6 +8174,17 @@ function testCallsSince() {
   } catch (_) { return ''; }
 }
 
+/* ACC-97: a lost verdict must not be lost. A toast fades in four seconds; the verdict stays in the notice until it is sent
+   again, and the note and evidence boxes still hold what was typed. Called by testMark when the server did not answer. */
+function testMarkLost(key, status, err) {
+  CBTEST.unsent = CBTEST.unsent || {};
+  CBTEST.unsent[key] = { status: status };
+  CBTEST.notice = { tone: 'bad', text: esc(tx('Not recorded') + ' — ' + key + ' (' + status + '). ' + ((err && err.message) || ''))
+    + ' <a href="#" onclick="testRetryUnsent();return false" style="color:inherit;font-weight:700">Send again</a>' };
+  testPaint();
+  if (typeof toast === 'function') toast(tx('Not recorded') + ' — ' + ((err && err.message) || ''), true);
+}
+
 /**
  * ⚠️⚠️ THE RUN IS ENSURED HERE, AND THAT IS THE FIX FOR "cannot read properties of null (reading id)".
  *
@@ -8232,16 +8246,7 @@ async function testMark(key, status) {
     /* ⭐ and the in-screen panel, when it is the thing the person is looking at — it holds the same counts,
        and a tally that does not move when you press Pass reads as a press that did not land. */
     if (CBTEST.popupFor) { try { screenCasesPaint(); } catch (_) {} }
-  } catch (e) {
-    /* ACC-97: a lost verdict must not be lost. A toast fades in four seconds; the verdict stays in the notice
-       until it is sent again. The note and evidence boxes still hold what was typed. */
-    CBTEST.unsent = CBTEST.unsent || {};
-    CBTEST.unsent[key] = { status: status };
-    CBTEST.notice = { tone: 'bad', text: esc(tx('Not recorded') + ' — ' + key + ' (' + status + '). ' + ((e && e.message) || ''))
-      + ' <a href="#" onclick="testRetryUnsent();return false" style="color:inherit;font-weight:700">Send again</a>' };
-    testPaint();
-    if (typeof toast === 'function') toast(tx('Not recorded') + ' — ' + e.message, true);
-  }
+  } catch (e) { testMarkLost(key, status, e); }
 }
 
 /* ACC-97: send every verdict that did not reach the server. */

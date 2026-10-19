@@ -1,4 +1,7 @@
 /* app/test-verdict.js — what would make this red green. ONE judgement, two surfaces.
+ * OWNS the verdict judgement, the shared counts, the cite line and the not-evidence mark · CALLED BY app/cap-testing.js (the Test panel) and testing.html
+ * FLOW  case + last result → testCounts / testCiteLine / testIsEvidence → the panel row
+ * CARD 29-qa-test-tooling-ux-locale-and-design-system/test-board
  *
  * ── ⭐⭐ WHY THIS IS ITS OWN FILE ────────────────────────────────────────────────────────────────────────────
  *
@@ -112,13 +115,14 @@ function testCounts(cases, last) {
  * Both are plain functions, called by the Test panel (cap-testing.js) and tested in tests/board-trace.test.cjs. */
 const TEST_NOT_EVIDENCE = /(^|[/\\])(seed[^/\\]*|[^/\\]*[-_.]seed[^/\\]*|[^/\\]*demo[^/\\]*|[^/\\]*narrat[^/\\]*|[^/\\]*proof-?walk[^/\\]*|engine-manifest\.js|walkthrough\.js)$/i;
 function testIsEvidence(caseKey) { return !TEST_NOT_EVIDENCE.test(String(caseKey || '')); }
-function testCiteLine(c) {
-  const q = c && c.cites;
-  if (q && (q.clause || q.standard)) {
-    return { cited: true, source: 'clause', text: [q.standard, q.clause ? '\u00a7' + q.clause : null, q.chapter, q.level ? 'level ' + q.level : null].filter(Boolean).join(' \u00b7 ') };
+function testCiteLine(boardCase) {
+  const clause = boardCase && boardCase.cites;
+  if (clause && (clause.clause || clause.standard)) {
+    const bits = [clause.standard, clause.clause ? '§' + clause.clause : null, clause.chapter, clause.level ? 'level ' + clause.level : null];
+    return { cited: true, source: 'clause', text: bits.filter(Boolean).join(' · ') };
   }
-  const cov = c && (c.covers || (c.rules && c.rules.covers));
-  if (cov && String(cov).trim()) return { cited: true, source: 'covers', text: String(cov).trim() };
+  const covers = boardCase && (boardCase.covers || (boardCase.rules && boardCase.rules.covers));
+  if (covers && String(covers).trim()) return { cited: true, source: 'covers', text: String(covers).trim() };
   return { cited: false, source: 'none', text: 'Not cited' };
 }
 if (typeof module !== 'undefined' && module.exports) module.exports = { testIsEvidence, testCiteLine, testCounts };
