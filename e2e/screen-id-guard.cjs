@@ -71,7 +71,7 @@ ok('the chit sheet names its kinds in ONE function (sheetKind: ' + kinds.join(' 
 const noKind = kinds.filter((k) => !REG.bySheet[k]);
 ok('every sheet kind has a code' + (noKind.length ? ': ' + noKind.join(' · ') : ''), noKind.length === 0);
 ok('the popup has a chip slot in its title row and fills it from CBScreenId.sheetHTML(sheetKind(m))',
-  /class="cs-top"><span data-testid="cs-title">[^\n]*data-testid="cs-screen-id"/.test(cs) && cs.indexOf('CBScreenId.sheetHTML(sheetKind(m))') > 0);
+  /class="cs-top">(?:<button[^\n]*?<\/button>)?<span class="cs-ttl" data-testid="cs-title">[^\n]*data-testid="cs-screen-id"/.test(cs) && cs.indexOf('CBScreenId.sheetHTML(sheetKind(m))') > 0);
 
 /* ── 4 · the codes: AAA###, one screen each, never a workshop code or prefix ── */
 const rows = REG.rows;
