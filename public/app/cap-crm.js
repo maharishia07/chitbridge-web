@@ -115,9 +115,9 @@ function crmWhen(iso) {
 function crmLocalISO(d) { var p = function (n) { return String(n).padStart(2, '0'); }; return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); }
 function crmPlural(n, one, many) { return n + ' ' + (n === 1 ? tx(one) : tx(many)); }
 /** "2 orders not billed yet ₹840" - the ONE sentence for the server's { n, minor, currency } (the record's chip says the same words); '' when nothing is waiting. minor is null across two currencies: the count alone. */
-function crmUnbilledSaid(u, cur) {
-  if (!u || !u.n) return '';
-  return crmPlural(u.n, 'order not billed yet', 'orders not billed yet') + (u.minor == null ? '' : ' ' + bkMoney(u.minor, u.currency || cur));
+function crmUnbilledSaid(unbilled, currency) {
+  if (!unbilled || !unbilled.n) return '';
+  return crmPlural(unbilled.n, 'order not billed yet', 'orders not billed yet') + (unbilled.minor == null ? '' : ' ' + bkMoney(unbilled.minor, unbilled.currency || currency));
 }
 
 var CRM_ICON = {
@@ -169,13 +169,13 @@ function crmDueCell(p) {
     : '<span class="due give"' + tid + ' title="' + esc(tx('You owe them') + oldest) + '"><span aria-hidden="true">↑</span> ' + esc(bkMoney(Math.abs(b), CRM.currency)) + ' <span class="w">' + esc(tx("you'll give")) + '</span>' + late + '</span>';
 }
 /** CRM-32: the Dues column. An order that is unpaid but NOT BILLED YET is not "Settled" (walk W41): the server's per-party figure (`p.unbilled`, the Tasks Billed tag's own test) is said instead of Settled, or beside what is owed. */
-function crmDueListCell(p) {
-  var said = crmUnbilledSaid(p.unbilled, CRM.currency);
-  if (!said) return crmDueCell(p);
-  var tag = '<span class="tag amber" data-testid="crm-unbilled-' + esc(p.party_id) + '">' + esc(said) + '</span>';
-  if (!CRM.ledger || p.balance_minor == null) return tag;
-  if (!Number(p.balance_minor || 0)) return '<span class="due" data-testid="party-due-' + esc(p.party_id) + '">' + tag + '</span>';
-  return crmDueCell(p) + ' ' + tag;
+function crmDueListCell(party) {
+  var said = crmUnbilledSaid(party.unbilled, CRM.currency);
+  if (!said) return crmDueCell(party);
+  var tag = '<span class="tag amber" data-testid="crm-unbilled-' + esc(party.party_id) + '">' + esc(said) + '</span>';
+  if (!CRM.ledger || party.balance_minor == null) return tag;
+  if (!Number(party.balance_minor || 0)) return '<span class="due" data-testid="party-due-' + esc(party.party_id) + '">' + tag + '</span>';
+  return crmDueCell(party) + ' ' + tag;
 }
 /** the next follow-up is ALWAYS on the row; an overdue one is red, says Late, and carries its date */
 function crmFuCell(p) {
