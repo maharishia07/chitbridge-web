@@ -19,6 +19,11 @@
  *
  * Phone first. The sheet scrolls; the page behind does not move, so closing returns to the same place.
  *
+ * ── ONE DETAIL VIEW, THREE PLACES (Athi, 2026-10-19; UX-11 / UX-17) ── open() seats the same dialog by width (placeFor): a SIDE PANE beside the list on
+ * a wide page (a flex sibling in the page's .app row, nothing covered), a FULL PAGE on a phone or tablet, the old popup only on a wide page with no
+ * pane seat. All three wear the same Back arrow and the same sections; the phone's Back button closes it (one history step). openChitSheet('sample')
+ * or ?cs=sample on any page shows a labelled Sample bill from fixed figures, so the whole look can be walked before it is wired.
+ *
  * ── TWO HOSTS, ONE PAINTER (CRM2, 2026-10-13) ── the same sections also paint FULL-PAGE: CBSheet.mount(el, id) draws them into a
  * page's own element (CB CRM › Chits › crm.html#/chit/<id> — where "Open page" lands, never the workshop). The page form is the popup
  * plus what a popup leaves out: the chit's history (state_log, read as held) and the page note (CBPage, app/page.js); it drops the
@@ -214,6 +219,11 @@
     if (t == null && m.purpose === 'order' && l.price != null && !isNaN(Number(l.price))) { var q = Number(l.quantity != null ? l.quantity : (l.qty != null ? l.qty : 1)); if (!isNaN(q) && root.CBMoney && root.CBMoney.round) t = root.CBMoney.round(Number(l.price) * q); }   /* the one money engine rounds; without it, no figure rather than a hand-rounded one */
     return t;
   }
+  /** the line's own tax as the frozen invoice holds it (CBTax.moneyOf lines[i].tax) — read, never worked out; a nil-tax line says nothing */
+  function lineTaxHTML(frozenLine, index, currency) {
+    if (!frozenLine || frozenLine.tax == null || Number(frozenLine.tax) === 0) return '';
+    return '<div class="cs-tax" data-testid="cs-tax-' + index + '">' + esc(T('Tax')) + ' ' + esc(fmtMoney(frozenLine.tax, currency, '—')) + '</div>';
+  }
   function linesHTML(m) {
     if (!m.lines.length) return '<div class="cs-mute">' + esc(T('No lines on this chit')) + '</div>';
     var ml = (m.money && m.money.lines) || [];
@@ -222,10 +232,8 @@
         var f = ml[i], offs = (l.offers && l.offers.length) ? l.offers : (l.offer ? [{ label: l.offer.label, off: l.offer.off }] : []);
         /* a frozen invoice line says what it took off; one offer on the line wears that figure, several keep their own recorded amounts */
         if (f && offs.length === 1) offs = f.discount > 0 ? [{ label: offs[0].label, off: f.discount }] : [];
-        /* the line's own tax as the frozen invoice holds it (CBTax.moneyOf lines[i].tax) — read, never worked out; a nil-tax line says nothing */
-        var taxLine = f && f.tax != null && Number(f.tax) !== 0 ? '<div class="cs-tax" data-testid="cs-tax-' + i + '">' + esc(T('Tax')) + ' ' + esc(fmtMoney(f.tax, m.cur, '—')) + '</div>' : '';
         return '<tr data-testid="cs-line-' + i + '"><td>' + esc(l.particulars || l.name || '') + offs.map(function (o) {
-          return '<div class="cs-off" data-testid="cs-offer-' + i + '">' + esc(o.label || T('Offer')) + ' −' + esc(fmtMoney(o.off, m.cur, '—')) + '</div>'; }).join('') + taxLine + '</td>'
+          return '<div class="cs-off" data-testid="cs-offer-' + i + '">' + esc(o.label || T('Offer')) + ' −' + esc(fmtMoney(o.off, m.cur, '—')) + '</div>'; }).join('') + lineTaxHTML(f, i, m.cur) + '</td>'
           + '<td class="n">' + esc(l.quantity != null ? l.quantity : (l.qty != null ? l.qty : '')) + (l.unit && l.unit !== 'piece' ? ' ' + esc(l.unit) : '') + '</td>'
           + '<td class="n">' + esc(fmtMoney(l.price, m.cur, '—')) + '</td><td class="n">' + esc(fmtMoney(f ? f.total : lineTotal(l, m), m.cur, '—')) + '</td></tr>';
       }).join('') + '</tbody></table>';
@@ -335,6 +343,8 @@
 
   /* the page form only: the chit's history as the state_log holds it — when · what · who. Read, never worked out; the step words are the sheet's own. */
   var LOGWORD = { created: 'Created', delivered: 'Delivered', message_sent: 'Message sent', amended: 'Amended', bill_step: 'Step', assigned: 'Assigned', dispute_opened: 'Disputed', dispute_resolved: 'Dispute closed' };
+  /** the chit's history shows on the page form and in the pane / full page — the workshop's small popup leaves it out */
+  function showsHistory() { return CS.mode === 'page' || CS.place !== 'popup'; }
   function historyHTML() {
     var log = (CS.chit && CS.chit.state_log) || [];
     if (!log.length) return '';
@@ -372,13 +382,17 @@
       + (CS.note ? '<div class="cs-note" data-testid="cs-note">' + esc(CS.note) + '</div>' : '')
       + (CS.useAsk ? '<div class="cs-use" data-testid="cs-use">' + billUseChoiceHTML([m], 'CBSheet.use')
         + '<button type="button" class="optchip" data-testid="cs-use-auto" onclick="CBSheet.use(\'\')">' + esc(T('Let my catalogue decide')) + '</button></div>' : '')
-      + (CS.mode === 'page' || CS.place !== 'popup' ? historyHTML() : '');
+      + (showsHistory() ? historyHTML() : '');
     dispMount(d, m);
     railMount(d, m);
     if (m.agreement) repeatCap().then(function (rp) { if (rp && CS.view === m) { if (!document.getElementById('rp_panel')) paint(); else rp.panel(m); } });
     /* the page form has no "Open page": the person is on it */
-    var no = refusedAccept(m), noR = refusedReject(m);
-    d.querySelector('.cs-acts').innerHTML = actsOf(m).filter(function (k) { return !(CS.mode === 'page' && k === 'page'); }).map(function (k) {
+    d.querySelector('.cs-acts').innerHTML = actsHTML(m);
+  }
+  /** the action row: only what this step allows; a refused action is greyed WITH the server's sentence (a sample's are all greyed, and say so) */
+  function actsHTML(view) {
+    var no = refusedAccept(view), noR = refusedReject(view);
+    return actsOf(view).filter(function (k) { return !(CS.mode === 'page' && k === 'page'); }).map(function (k) {
       var why = CS.sample ? T(SAMPLE_SAY) : k === 'accept' ? no : k === 'reject' ? noR : null, refused = !!why;   /* the server's refusal (actions.accept / .reject): shown, greyed, with its sentence */
       return '<button type="button" class="cs-act" data-testid="cs-act-' + k + '" onclick="CBSheet.act(\'' + k + '\')"' + (CS.busy || refused ? ' disabled' : '') + ' title="' + esc(refused ? why : T(ACT[k][1])) + '"><span class="ic" aria-hidden="true">' + ACT[k][0] + '</span><span>' + esc(T(ACT[k][1])) + '</span></button>';
     }).join('');
@@ -417,12 +431,12 @@
   var SAMPLE_SAY = 'This is a sample. Nothing here is saved.';
   function sampleBannerHTML() { return CS.sample ? '<div class="cs-sample" data-testid="cs-sample">' + esc(T('Sample — not a real bill')) + '</div>' : ''; }
   function sampleRead() {
-    var by5 = { taxable: 1076, cgst: 26.9, sgst: 26.9, tax: 53.8 };
+    var fivePercent = { taxable: 1076, cgst: 26.9, sgst: 26.9, tax: 53.8 };
     return { header: { chit_id: 'sample', purpose: 'order', current_status: 'pending', created_at: '2026-10-12T09:10:00Z', manual_subject: 'SO-1',
         all_recipients: [{ role: 'sender', display_name: 'Meena', entity_id: 'sample-meena' }],
         summary_json: { currency_code: 'INR', total_value: 1129.8,
           order_details: { channel: 'online', fulfilment: 'pickup', address: 'Pick up at the shop', requested_delivery: { date: '12 Oct' }, remark: 'Ring first' },
-          money: { total: 1129.8, taxable: 1076, tax: 53.8, cgst: 26.9, sgst: 26.9, supply: 'intra', by_rate: { 5: by5 },
+          money: { total: 1129.8, taxable: 1076, tax: 53.8, cgst: 26.9, sgst: 26.9, supply: 'intra', by_rate: { 5: fivePercent },
             lines: [{ total: 525, tax: 25, discount: 0 }, { total: 604.8, tax: 28.8, discount: 64 }] } } },
       detail: { line_items: [{ particulars: 'Rice', quantity: 5, unit: 'kg', price: 100 }, { particulars: 'Groundnut oil', quantity: 2, unit: 'L', price: 320, offers: [{ label: 'Festival 10% off', off: 64 }] }] },
       state_log: [{ action: 'created', created_at: '2026-10-12T09:10:00Z', by_name: 'Meena' }, { action: 'delivered', created_at: '2026-10-12T09:10:05Z', by_name: 'ChitBridge' }] };
@@ -479,10 +493,10 @@
   }
   async function open(id) {
     if (!id) return;
-    var d = ensureDlg(); CS.mode = 'dialog'; CS.el = d; reset(id);
-    seat(d, placeFor(root.innerWidth || 0, !!paneSlot()));
+    var dialog = ensureDlg(); CS.mode = 'dialog'; CS.el = dialog; reset(id);
+    seat(dialog, placeFor(root.innerWidth || 0, !!paneSlot()));
     paint(); lock(CS.place !== 'pane');
-    if (!d.open) { if (CS.place === 'pane' && d.show) d.show(); else if (d.showModal) d.showModal(); else d.setAttribute('open', ''); }
+    if (!dialog.open) { if (CS.place === 'pane' && dialog.show) dialog.show(); else if (dialog.showModal) dialog.showModal(); else dialog.setAttribute('open', ''); }
     if (CS.place === 'page') pushPageState();
     try { await read(id); }
     catch (e) { if (CS.id !== id) return; CS.err = readSaid(e); paint(); }
@@ -536,7 +550,6 @@
   function act(k) {
     var m = CS.view, id = CS.id; if (!m) return;
     if (actsOf(m).indexOf(k) < 0) return;   /* a stale tap on an action this step no longer allows */
-    if (CS.sample) { CS.note = T(SAMPLE_SAY); return paint(); }
     if (k === 'accept' && refusedAccept(m)) return;   /* greyed: the server refused it, and said why */
     if (k === 'reject') { if (refusedReject(m)) return; CS.rejectAsk = true; CS.useAsk = false; CS.note = null; paint(); var ri = document.getElementById('cs_reason'); if (ri) ri.focus(); return; }
     if (k === 'supplier') { var nm = serverSaid(m).name; if (typeof root.bkAddSupplier !== 'function') { CS.note = T('Add them on the Suppliers page.'); return paint(); }
