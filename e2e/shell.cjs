@@ -190,10 +190,11 @@ async function run(o) {
       ok(await pg.evaluate(() => !!document.querySelector('[data-testid="shell-pfoot"] #cbkural')), '390 · the kural sits in the footer above the tab bar (never a card in Home)');
       await pg.screenshot({ path: path.join(SHOTS, 'shell-phone.png') });
       for (const a of Object.keys(BUDGET)) {
-        await pg.click('[data-testid="shell-nav-' + a + '"]'); await pg.waitForTimeout(120);
+        const isMore = ['trade', 'labs', 'setup'].includes(a);
+        await pg.click('[data-testid="shell-nav-' + (isMore ? 'more' : a) + '"]'); if (isMore) await pg.click('[data-testid="shell-row-' + a + '"]'); await pg.waitForTimeout(120);   /* five tabs: Trade, Labs and Setup are rows on More */
         const shown = await pg.evaluate(() => [...document.querySelectorAll('.cbsh-sec')].filter((s) => s.offsetParent).map((s) => s.dataset.area).join());
         const n = await areaWords(pg, a);
-        ok(shown === a && n <= BUDGET[a] && await sw() === 390, '390 · tab ' + a + ' shows only ' + a + ', ' + n + ' words ≤ ' + BUDGET[a] + ', no sideways scroll');
+        ok((isMore ? shown === 'trade,labs,setup' : shown === a) && n <= BUDGET[a] && await sw() === 390, '390 · tab ' + a + ' shows only ' + a + ', ' + n + ' words ≤ ' + BUDGET[a] + ', no sideways scroll');
         if (a === 'selling') await pg.screenshot({ path: path.join(SHOTS, 'shell-phone-selling.png') });
       }
       await pg.click('[data-testid="shell-nav-home"]');

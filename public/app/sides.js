@@ -69,7 +69,9 @@
     '.cbsd-btn{display:none;height:30px;padding:0 9px;border-radius:9px;border:1px solid var(--sd-line);background:var(--sd-card);font-size:12.5px;font-weight:700;color:var(--sd-muted)}',
     '.cbsd-btn b{font-family:var(--f-num,"IBM Plex Mono",monospace);margin-left:5px}',
     '.cbsd-btn.l{border-color:var(--sd-blue-b);color:var(--sd-blue-i)}.cbsd-btn.r{border-color:var(--sd-green-b);color:var(--sd-green-d)}',
-    '.cbsd-btn[aria-expanded=true]{background:var(--sd-panel)}'
+    '.cbsd-btn[aria-expanded=true]{background:var(--sd-panel)}',
+    '.cbsd-btn .w{margin-left:5px}.cbsd-btn .w+b{margin-left:6px}',
+    '@media(max-width:700px){.cbsd-btn .w{display:none}}'
   ].join('');
   function addCss() {
     if (!doc || doc.getElementById('cbsd-css')) return;
@@ -122,7 +124,7 @@
       L.innerHTML = panel('L'); R.innerHTML = panel('R');
       var nl = S.data && !S.err ? rowsOf(S.data.lean) : '–', nr = S.data && !S.err ? rowsOf(S.data.use) : '–';
       /* an icon and its count; the words are the button's title and its spoken name (walk 2026-10-17) */
-      bL.innerHTML = '→<b>' + nl + '</b>'; bR.innerHTML = '←<b>' + nr + '</b>';
+      bL.innerHTML = '→<span class="w">' + esc(W.lean) + '</span><b>' + nl + '</b>'; bR.innerHTML = '←<span class="w">' + esc(W.use) + '</span><b>' + nr + '</b>';   /* UX-2: the mark says its words beside the count (a phone keeps the icon: title + aria-label) */
       bL.title = W.lean; bR.title = W.use; bL.setAttribute('aria-label', W.lean + ' ' + nl); bR.setAttribute('aria-label', W.use + ' ' + nr);
       L.classList.toggle('drawer', S.open === 'L'); R.classList.toggle('drawer', S.open === 'R');
       bL.setAttribute('aria-expanded', S.open === 'L' ? 'true' : 'false'); bR.setAttribute('aria-expanded', S.open === 'R' ? 'true' : 'false');

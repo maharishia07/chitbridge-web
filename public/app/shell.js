@@ -44,7 +44,7 @@
   var doc = root.document;
 
   var W = {
-    areas: { home: 'Home', selling: 'Selling', money: 'Money', running: 'Running', trade: 'Trade', labs: 'Labs', setup: 'Setup' },
+    areas: { home: 'Home', selling: 'Selling', money: 'Money', running: 'Running', trade: 'Trade', labs: 'Labs', setup: 'Setup', more: 'More' },
     caption: { selling: 'Selling', money: 'Money', running: 'Running it', trade: 'Trade', labs: 'Labs', setup: 'What it all stands on' },
     sub: { selling: 'Sell at the counter and online, and bring customers back.', money: 'Who owes you, who you owe, and what the shop made.', running: 'Stock, suppliers, tasks and the people who do them.', trade: 'Check a business, file a form, grow your network.', labs: 'Work the number out first. Nothing changes until you say so.', setup: 'Set once, rarely touched.' },
     tag: { coming: 'later', workshop: 'workshop', works: 'works today' },
@@ -52,6 +52,7 @@
     renew: 'Renew', again: 'Apply again', notAdded: 'not added', registered: 'registered', notRegistered: 'not registered',
     days: ' days', years: ' years', expired: function (d) { return 'expired ' + d + 'd ago'; }, lapsed: 'lapsed',
     notYet: 'Licences and trade checks are not available yet.', loading: '…', noApps: 'The list of apps could not be read.',
+    needsHand: 'need you', moreWord: 'more', noShop: 'No shop yet. Add your business first.', signInShop: 'Sign in to open your shop.',
     factsFailed: 'Could not read', state: { needs_you: 'Needs you', in_use: 'In use', not_started: 'Not started' }, setUp: 'Set up', needsYou: 'Needs you', today: 'today', switcher: 'Go to', close: 'Close',
     vsLastYear: 'vs last year', salesWeeks: 'Sales, last 8 weeks'   /* RPT2: the Till card's teaser */
   };
@@ -64,11 +65,15 @@
   var PNAME = { marketing: 'Marketing', sales: 'Sales', finance: 'Finance', accounting: 'Accounts', operations: 'Operations', people: 'People', trade: 'Trade' };
   var PDEFAULT = { selling: 'sales', running: 'operations', labs: 'labs', setup: 'setup' };
   var AREAS = ['home', 'selling', 'money', 'running', 'trade', 'labs', 'setup'];
+  /* HOME-PHONE-BAR (19 Oct): a phone shows FIVE tabs - Home, Selling, Money, Running, More. More is a page of three rows (these areas); a laptop keeps the seven-button rail. */
+  var PHONE_MORE = ['trade', 'labs', 'setup'];
+  var PHONE_TABS = AREAS.filter(function (area) { return PHONE_MORE.indexOf(area) < 0; }).concat(['more']);   /* the five, in order */
+  function tabOf(area, onPhone) { return onPhone && PHONE_MORE.indexOf(area) >= 0 ? 'more' : area; }
   /* AU-WORDS (15 Oct): a MONEY icon is the SHOP's currency symbol — CBLocale.symbol of the header's business.currency (the pack's money) — never ₹
      for every shop (Athi on live austore1: "CB Accounts ₹"). The manifest and ICON write the neutral currency sign ¤; glyph() swaps it on paint and
      paintMoneyGlyphs() re-swaps what was painted before the header arrived. No currency known → ¤ stays. */
   var MONEY_GLYPH = '¤';
-  var ICON = { home: '⌂', selling: '▤', money: MONEY_GLYPH, running: '▣', trade: '⇆', labs: '◈', setup: '⚙' };
+  var ICON = { home: '⌂', selling: '▤', money: MONEY_GLYPH, running: '▣', trade: '⇆', labs: '◈', setup: '⚙', more: '⋯' };
 
   /* a manifest entry's name and line go through the catalogue (tx, accounts-shell.js — English is the key); a page without it shows the English */
   function T(s) { return typeof root.tx === 'function' ? root.tx(s) : s; }
@@ -183,6 +188,11 @@
     '.cbsh-cap b{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--sh-muted);font-weight:700}',
     '.cbsh-cap i{flex:1;height:1px;background:var(--sh-soft);font-style:normal}.cbsh-cap span{font-size:12.5px;color:var(--sh-muted)}',
     '.cbsh-ph{display:none}',
+    /* the phone bar's fifth tab (More) exists only on a phone; a tab's badge counts the tiles that Need you */
+    '.cbsh-nv{position:relative}.cbsh-nv[data-go=more]{display:none}',
+    '.cbsh-nv .bd{position:absolute;top:1px;left:calc(50% + 6px);min-width:16px;height:16px;padding:0 4px;box-sizing:border-box;border-radius:8px;background:var(--sh-amber-t);border:1px solid var(--sh-amber-b);color:var(--sh-amber-i);font-size:10px;font-weight:700;line-height:14px;text-align:center}',
+    '.cbsh-nv .bd.dot{min-width:10px;width:10px;height:10px;padding:0;top:3px}',
+    '.cbsh-box.off{border-style:dashed;background:var(--sh-panel);color:var(--sh-muted);cursor:default}.cbsh-box.off:hover{border-color:var(--sh-line)}.cbsh-box.off .no{display:block;clear:left;font-size:13px;margin-top:9px;padding-top:7px;border-top:1px solid var(--sh-hair)}',
     '.cbsh-note{font-size:13px;color:var(--sh-muted);padding:6px 0}',
     /* cards (max three columns, DECISIONS.md) */
     '.cbsh-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}',
@@ -265,7 +275,16 @@
     '.cbsh-work{flex-direction:column-reverse}',
     '.cbsh-nav{flex:0 0 auto;flex-direction:row;justify-content:space-around;gap:0;border-right:0;border-top:1px solid var(--sh-line);padding:5px 4px calc(5px + env(safe-area-inset-bottom,0px));background:var(--sh-card)}',
     '.cbsh-nv{flex:1;width:auto;padding:6px 0 4px;border-radius:9px}.cbsh-nv .i{font-size:19px}.cbsh-nv .t{font-size:10.5px}',
-    '.cbsh-nv[aria-current]{background:var(--sh-green-t);box-shadow:none}',
+    '.cbsh-nv[aria-current]{background:var(--sh-green-t);box-shadow:inset 0 3px 0 var(--sh-green)}',
+    /* five tabs: Trade, Labs and Setup live behind More; 44 px to hit, 11 px words */
+    '.cbsh-nv[data-go=trade],.cbsh-nv[data-go=labs],.cbsh-nv[data-go=setup]{display:none}.cbsh-nv[data-go=more]{display:flex}.cbsh-nv[data-go=more][hidden]{display:none}',
+    '.cbsh-nv{min-height:44px;justify-content:center}.cbsh-nv .t{font-size:11px}.cbsh-nv .bd{left:calc(50% + 4px)}',
+    '.cbsh-main[data-tab=more] .cbsh-sec.trade,.cbsh-main[data-tab=more] .cbsh-sec.labs,.cbsh-main[data-tab=more] .cbsh-sec.setup{display:block;margin-bottom:10px}',
+    '.cbsh-sec.trade .cbsh-ph,.cbsh-sec.labs .cbsh-ph,.cbsh-sec.setup .cbsh-ph{margin:0 0 8px}',
+    '.cbsh-row{display:flex;align-items:center;gap:10px;width:100%;min-height:56px;padding:8px 14px;border:1px solid var(--sh-line);border-radius:13px;background:var(--sh-card);color:inherit;font:inherit;text-align:left}',
+    '.cbsh-row .rt{flex:1;min-width:0;display:flex;flex-direction:column}.cbsh-row .rn{font-size:17px;font-weight:800}.cbsh-row .rs{font-size:12.5px;font-weight:400;color:var(--sh-muted)}',
+    '.cbsh-row .chev{transition:transform .12s}.cbsh-row[aria-expanded=true] .chev{transform:rotate(90deg)}',
+    '.cbsh-sec.trade:not(.open)>*:not(.cbsh-ph),.cbsh-sec.labs:not(.open)>*:not(.cbsh-ph),.cbsh-sec.setup:not(.open)>*:not(.cbsh-ph){display:none}',
     '.cbsh-inner{padding:12px 13px 20px}.cbsh-main{scroll-behavior:auto}',
     '.cbsh-sec{display:none;margin-bottom:0}',
     '.cbsh-main[data-tab=home] .cbsh-sec.home,.cbsh-main[data-tab=selling] .cbsh-sec.selling,.cbsh-main[data-tab=money] .cbsh-sec.money,.cbsh-main[data-tab=running] .cbsh-sec.running,.cbsh-main[data-tab=trade] .cbsh-sec.trade,',
@@ -351,7 +370,7 @@
     return '<div class="cbsh-work">' +
       (frame.mode === 'home' ? '<nav class="cbsh-nav" data-testid="shell-nav" aria-label="Areas">' + AREAS.map(function (a) {
         return '<button type="button" class="cbsh-nv" data-go="' + a + '" data-testid="shell-nav-' + a + '"><span class="i" aria-hidden="true">' + neutralGlyph(ICON[a]) + '</span><span class="t">' + esc(W.areas[a]) + '</span></button>';
-      }).join('') + '</nav>' : '') +
+      }).join('') + '<button type="button" class="cbsh-nv" data-go="more" data-testid="shell-nav-more"><span class="i" aria-hidden="true">' + ICON.more + '</span><span class="t">' + esc(W.areas.more) + '</span></button></nav>' : '') +
       (frame.mode === 'home' ? '<div class="cbsh-pfoot" data-testid="shell-pfoot"></div>' : '') +
       (frame.sides ? '<aside class="cbsh-side l" data-slot="sideL"></aside>' : '') +
       '<main class="cbsh-main" data-testid="shell-main" data-tab="home"><div class="cbsh-inner">' +
@@ -455,7 +474,7 @@
     var badge = state ? stateHTML(state) : '';
     if (state === 'not_started') return badge + '<span class="f">' + esc(T(W.setUp)) + ' ›</span>';
     if (lines.length < 2) return badge + lines.map(lineHTML).join('');
-    return badge + lineHTML(lines[0]) + '<span class="more-n" aria-hidden="true">+' + (lines.length - 1) + '</span><span class="more" data-testid="shell-more-' + esc(card.id) + '">' + lines.map(lineHTML).join('') + '</span>';
+    return badge + lineHTML(lines[0]) + '<span class="more-n" aria-hidden="true">+' + (lines.length - 1) + ' ' + esc(T(W.moreWord)) + '</span><span class="more" data-testid="shell-more-' + esc(card.id) + '">' + lines.map(lineHTML).join('') + '</span>';
   }
   /* Home's "Needs you" strip: only the cards whose state is needs_you, each a door; hidden when none (every tile stays below it). Returns the state. */
   var needsByCard = {};
@@ -479,6 +498,79 @@
     var spark = root.CBDraw.spark(trend.spark, { width: 64, height: 16, stroke: 'var(--sh-green-d,#2d6a4f)', aria: T(W.salesWeeks) + (words ? ', ' + words : ''), tid: 'shell-fact-spark' });
     if (!spark) return '';
     return '<span class="f trendf"><span class="act trend" role="link" tabindex="0" data-href="/finance.html#/reports/trend/week" data-testid="shell-fact-trend">' + spark + esc(words) + '</span></span>';
+  }
+  /* a fact line's words: the server names an amount or a moment ({money} {time} {date} {when}) and sends it as data (money:{amount,currency}, at: ISO);
+     the reader's locale words it — "₹420", "09:33", "today 09:40" — never "INR 420.00" or an ISO date */
+  function lineWords(t) {
+    var L = root.CBLocale, at = t.at, m = t.money, text = String(t.text == null ? '' : t.text);
+    var time = function () { try { return (L && L.time && L.time(at)) || ''; } catch (_) { return ''; } };
+    var date = function () { try { return (L && L.date && L.date(at)) || String(at || '').slice(0, 10); } catch (_) { return String(at || '').slice(0, 10); } };
+    var sameDay = function () { var d = new Date(at), n = new Date(); return !isNaN(d) && d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate(); };
+    return text.replace(/{(money|time|date|when)}/g, function (_, k) {
+      if (k === 'money') return m ? ((L && L.money && L.money(m.amount, m.currency)) || (m.currency + ' ' + m.amount)) : '';
+      if (k === 'time') return time();
+      if (k === 'date') return date();
+      return (sameDay() ? W.today : date()) + ' ' + time();
+    }).trim();
+  }
+  /* each built entry's facts: GET its URL → { lines:[ 'text' | { text, tone:'dn', money?, at?, act?:{ label, href } } ] }, at most two lines; act = the button that clears the line */
+  function lineHTML(l) {
+    var t = typeof l === 'string' ? { text: l } : (l || {});
+    var act = t.act && t.act.label && t.act.href ? ' <span class="act" role="link" tabindex="0" data-href="' + esc(t.act.href) + '" data-testid="shell-fact-act">' + esc(t.act.label) + ' ›</span>' : '';
+    return '<span class="f' + (t.tone === 'dn' ? ' dn' : '') + '">' + esc(lineWords(t)) + act + '</span>';
+  }
+  /* each tab's badge = how many of its tiles Need you; More shows a dot when any tile behind it does (tabOf maps a tile's section to the phone's tab) */
+  function paintBadges(shellEl) {
+    var countByTab = {};
+    Object.keys(needsByCard).forEach(function (cardId) {
+      var section = sectionOf(needsByCard[cardId]);
+      countByTab[section] = (countByTab[section] || 0) + 1;
+      if (tabOf(section, true) === 'more') countByTab.more = (countByTab.more || 0) + 1;
+    });
+    [].forEach.call(shellEl.querySelectorAll('.cbsh-nv'), function (button) {
+      var oldBadge = button.querySelector('.bd'); if (oldBadge) button.removeChild(oldBadge);
+      var tabId = button.getAttribute('data-go'), count = countByTab[tabId]; if (!count) return;
+      var isDot = tabId === 'more';
+      button.insertAdjacentHTML('beforeend', '<b class="bd' + (isDot ? ' dot' : '') + '" role="img" aria-label="' + count + ' ' + esc(T(W.needsHand)) + '">' + (isDot ? '' : count) + '</b>');
+    });
+  }
+  /* More's rows: one open at a time; force = open it (a tap on an open row closes it) */
+  function openRow(shellEl, area, force) {
+    [].forEach.call(shellEl.querySelectorAll('.cbsh-sec.trade,.cbsh-sec.labs,.cbsh-sec.setup'), function (section) {
+      var isOpen = section.getAttribute('data-area') === area && (force || !section.classList.contains('open'));
+      section.classList.toggle('open', isOpen);
+      var rowButton = section.querySelector('.cbsh-row'); if (rowButton) rowButton.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    });
+  }
+  /* a section's phone heading: Selling and Money are a title; Trade, Labs and Setup are the three ROWS of the More page (a tap opens the row's tiles) */
+  function sectionHeadingHTML(area) {
+    var name = esc(T(W.caption[area]));
+    if (PHONE_MORE.indexOf(area) < 0) return '<h2 class="cbsh-ph">' + name + '</h2>';
+    return '<h2 class="cbsh-ph"><button type="button" class="cbsh-row" data-row="' + area + '" aria-expanded="false" data-testid="shell-row-' + area + '"><span class="rt"><span class="rn">' + name + '</span><span class="rs">' + esc(T(W.sub[area] || '')) + '</span></span><span class="chev" aria-hidden="true">›</span></button></h2>';
+  }
+  /* NAV-MAP 8: a tile that needs THIS shop's id and has none is greyed with its sentence (show the action, say why) - never a link to a blank page */
+  function greyedTileHTML(entry, iconHTML, signedIn) {
+    return '<div class="cbsh-box off" aria-disabled="true" data-testid="shell-card-' + esc(entry.id) + '" data-id="' + esc(entry.id) + '"><span class="g" aria-hidden="true">' + iconHTML + '</span><h4>' + entryName(entry) + '</h4>' +
+      (entry.what ? '<p class="what">' + esc(T(entry.what)) + '</p>' : '') + '<span class="no" data-testid="shell-off-' + esc(entry.id) + '">' + esc(T(signedIn ? W.noShop : W.signInShop)) + '</span></div>';
+  }
+  /* the area a go() asks for, made real: More is the phone's tab (a laptop shows the three areas themselves); an area this showing does not draw is Home */
+  function resolveArea(areaId, onPhone, drawn) {
+    if (areaId === 'more') return onPhone ? 'more' : 'trade';
+    return drawn.indexOf(areaId) < 0 ? 'home' : areaId;
+  }
+  /* the area Home opens on: the page's choice, else the address's #area (More only on a phone), else Home */
+  function startArea(wanted, hashArea, onPhone) {
+    var area = wanted || (AREAS.indexOf(hashArea) >= 0 || hashArea === 'more' ? hashArea : 'home');
+    return area === 'more' && !onPhone ? 'trade' : area;
+  }
+  /* the greyed shop tiles whose entry the manifest can now open */
+  function greyedEntries(shellEl, manifest) {
+    var wanted = [].map.call(shellEl.querySelectorAll('.cbsh-box.off[data-id]'), function (tile) { return tile.getAttribute('data-id'); });
+    return ((manifest && manifest.entries) || []).filter(function (entry) { return entry && wanted.indexOf(entry.id) >= 0; });
+  }
+  /* the nav buttons an edition leaves out: an area it does not draw; More only when none of its three areas is drawn */
+  function navHidden(navId, drawn) {
+    return navId === 'more' ? !PHONE_MORE.some(function (area) { return drawn.indexOf(area) >= 0; }) : drawn.indexOf(navId) < 0;
   }
   function mount(el, o) {
     if (!el) return null;
@@ -582,12 +674,14 @@
       return '<div class="cbsh-pil" data-pillar="' + p + '" data-testid="shell-pillar-' + p + '"><h3>' + esc(PNAME[p]) + '</h3><div class="cbsh-grid">' + built.map(card).join('') + '</div><div class="cbsh-chips">' + rest.map(chip).join('') + '</div></div>';
     }
     /* H22/S1: a route may name the shop it opens for ({bridge_id}: the Storefront is THIS shop's page, /shop.html?s=<id>); unresolved, the bare page */
+    function shopIdOf() { return (person && person.bridgeId) || (sess && sess.bridgeId) || (S.header && S.header.business && S.header.business.bridge_id) || ''; }
     function routeOf(e) {
       var r = String(e.route || ''); if (r.indexOf('{bridge_id}') < 0) return r;
-      var bid = (person && person.bridgeId) || (sess && sess.bridgeId) || (S.header && S.header.business && S.header.business.bridge_id) || '';
+      var bid = shopIdOf();
       return bid ? r.replace('{bridge_id}', encodeURIComponent(bid)) : r.split('?')[0];
     }
     function card(e) {
+      if (String(e.route || '').indexOf('{bridge_id}') >= 0 && !shopIdOf()) return greyedTileHTML(e, glyph(e.icon), !!person);
       return '<a class="cbsh-box" href="' + esc(routeOf(e)) + '" data-testid="shell-card-' + esc(e.id) + '" data-id="' + esc(e.id) + '">' +
         '<span class="arw" aria-hidden="true">›</span><span class="g" aria-hidden="true">' + glyph(e.icon) + '</span><h4>' + entryName(e) + '</h4>' +
         (e.what ? '<p class="what" title="' + esc(T(e.what)) + '">' + esc(T(e.what)) + '</p>' : '') + '<span class="facts" data-testid="shell-facts-' + esc(e.id) + '"></span></a>';
@@ -610,48 +704,34 @@
       }
       $('[data-testid="shell-noapps"]').hidden = !!S.manifest || S.loadingApps;
       var has = areasShown();
-      [].forEach.call(el.querySelectorAll('.cbsh-nv'), function (b) { b.hidden = has.indexOf(b.getAttribute('data-go')) < 0; });
+      [].forEach.call(el.querySelectorAll('.cbsh-nv'), function (b) { b.hidden = navHidden(b.getAttribute('data-go'), has); });
       $('.cbsh-more').innerHTML = has.slice(1).map(function (a) {
           var list = entriesOf(a), built = list.filter(function (e) { return e.state === 'built' && e.route; }), rest = list.filter(function (e) { return !(e.state === 'built' && e.route); });
-          var cap = '<div class="cbsh-cap"><b>' + esc(W.caption[a]) + '</b>' + (W.sub[a] ? '<span>' + esc(W.sub[a]) + '</span>' : '') + '<i></i></div>';
+          var cap = '<div class="cbsh-cap"><b>' + esc(T(W.caption[a])) + '</b>' + (W.sub[a] ? '<span>' + esc(T(W.sub[a])) + '</span>' : '') + '<i></i></div>';
           if (PILLARS[a]) {
             var boxes = PILLARS[a].map(function (p) { var l = list.filter(function (e) { return pillarOf(e) === p; }); return l.length ? pillarBox(p, l) : ''; }).join('');
-            return '<section class="cbsh-sec ' + a + '" data-area="' + a + '" data-testid="shell-area-' + a + '"><h2 class="cbsh-ph">' + esc(W.caption[a]) + '</h2>' + cap + '<div class="cbsh-pils n' + PILLARS[a].length + '">' + boxes + '</div></section>';
+            return '<section class="cbsh-sec ' + a + '" data-area="' + a + '" data-testid="shell-area-' + a + '">' + sectionHeadingHTML(a) + cap + '<div class="cbsh-pils n' + PILLARS[a].length + '">' + boxes + '</div></section>';
           }
           var inner = cap + '<div class="cbsh-grid">' + built.map(card).join('') + '</div><div class="cbsh-chips">' + rest.map(chip).join('') + '</div>';
           var wrap = a === 'labs' ? '<div class="cbsh-labs">' + inner + '</div>' : a === 'setup' ? '<div class="cbsh-base">' + inner + '</div>' : inner;
-          return '<section class="cbsh-sec ' + a + '" data-area="' + a + '" data-testid="shell-area-' + a + '"><h2 class="cbsh-ph">' + esc(W.caption[a]) + '</h2>' + wrap + '</section>';
+          return '<section class="cbsh-sec ' + a + '" data-area="' + a + '" data-testid="shell-area-' + a + '">' + sectionHeadingHTML(a) + wrap + '</section>';
         }).join('');
       placeKural();
     }
 
-    /* a fact line's words: the server names an amount or a moment ({money} {time} {date} {when}) and sends it as data (money:{amount,currency}, at: ISO);
-       the reader's locale words it — "₹420", "09:33", "today 09:40" — never "INR 420.00" or an ISO date */
-    function lineWords(t) {
-      var L = root.CBLocale, at = t.at, m = t.money, text = String(t.text == null ? '' : t.text);
-      var time = function () { try { return (L && L.time && L.time(at)) || ''; } catch (_) { return ''; } };
-      var date = function () { try { return (L && L.date && L.date(at)) || String(at || '').slice(0, 10); } catch (_) { return String(at || '').slice(0, 10); } };
-      var sameDay = function () { var d = new Date(at), n = new Date(); return !isNaN(d) && d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate(); };
-      return text.replace(/{(money|time|date|when)}/g, function (_, k) {
-        if (k === 'money') return m ? ((L && L.money && L.money(m.amount, m.currency)) || (m.currency + ' ' + m.amount)) : '';
-        if (k === 'time') return time();
-        if (k === 'date') return date();
-        return (sameDay() ? W.today : date()) + ' ' + time();
-      }).trim();
+    /* the header lands after the tiles: a shop tile that was greyed for want of an id opens now */
+    function reopenShopTile() {
+      if (mode !== 'home' || !S.manifest || !shopIdOf()) return;
+      greyedEntries(el, S.manifest).forEach(function (entry) { el.querySelector('.cbsh-box.off[data-id="' + entry.id + '"]').outerHTML = card(entry); readFacts(entry.id); });
     }
-    /* each built entry's facts: GET its URL → { lines:[ 'text' | { text, tone:'dn', money?, at?, act?:{ label, href } } ] }, at most two lines; act = the button that clears the line */
-    function lineHTML(l) {
-      var t = typeof l === 'string' ? { text: l } : (l || {});
-      var act = t.act && t.act.label && t.act.href ? ' <span class="act" role="link" tabindex="0" data-href="' + esc(t.act.href) + '" data-testid="shell-fact-act">' + esc(t.act.label) + ' ›</span>' : '';
-      return '<span class="f' + (t.tone === 'dn' ? ' dn' : '') + '">' + esc(lineWords(t)) + act + '</span>';
-    }
-    function readFacts() {
+    function readFacts(onlyId) {
       if (!person || !S.manifest) return;
       (S.manifest.entries || []).forEach(function (e) {
-        if (!e || e.state !== 'built' || !e.facts) return;
+        if (!e || e.state !== 'built' || !e.facts || (onlyId && e.id !== onlyId)) return;
         var spot = $('[data-testid="shell-facts-' + e.id + '"]'); if (!spot) return;
         get(e.facts).then(function (r) {
           var lines = (r && r.lines) || [], state = noteNeeds(e, cardState(r, lines), routeOf);
+          paintBadges(el);
           spot.innerHTML = factsHTML(e, lines, state, lineHTML) + trendHTML(r && r.figures && r.figures.trend);
         }).catch(function () { spot.innerHTML = '<span class="f" title="' + esc(W.factsFailed) + '">—</span>'; });
       });
@@ -662,9 +742,13 @@
       [].forEach.call(el.querySelectorAll('.cbsh-nv'), function (b) { if (b.getAttribute('data-go') === id) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current'); });
     }
     function go(id) {
-      if (areasShown().indexOf(id) < 0) id = 'home';
+      id = resolveArea(id, phone.matches, areasShown());
       if (mode !== 'home') { root.location.href = homeHref + (id === 'home' ? '' : '#' + id); return; }
-      if (phone.matches) { main.setAttribute('data-tab', id); main.scrollTop = 0; mark(id); placeKural(); return; }
+      if (phone.matches) {
+        var phoneTab = tabOf(id, true);
+        if (phoneTab === 'more' && id !== 'more') openRow(el, id, true);
+        main.setAttribute('data-tab', phoneTab); main.scrollTop = 0; mark(phoneTab); placeKural(); return;
+      }
       var sec = $('.cbsh-sec.' + id);
       /* the chosen area stays lit while the scroll it started runs, and at the end of the page (where Labs cannot reach the top) */
       S.pin = id; S.pinUntil = Date.now() + 1200;
@@ -704,7 +788,7 @@
       if (homeWord) homeWord.textContent = T(W.areas.home); if (homeLink) homeLink.setAttribute('aria-label', T(W.areas.home));
       if (titleWord && o.title) titleWord.textContent = T(o.title.name || '');
       paintSwitcher();
-      AREAS.forEach(function (area) { var label = $('.cbsh-nv[data-go="' + area + '"] .t'); if (label) label.textContent = T(W.areas[area]); });
+      AREAS.concat(['more']).forEach(function (area) { var label = $('.cbsh-nv[data-go="' + area + '"] .t'); if (label) label.textContent = T(W.areas[area]); });
       if (mode === 'home') resayTiles(el, S.manifest);
     };
 
@@ -739,13 +823,14 @@
     var onKey = function (e) { if (e.key === 'Escape') { if (S.open) setOpen(false); swOpen(false); } };
     doc.addEventListener('keydown', onKey);
     var nav = $('.cbsh-nav'); if (nav) nav.addEventListener('click', function (e) { var b = e.target.closest('.cbsh-nv'); if (b) go(b.getAttribute('data-go')); });
+    el.addEventListener('click', function (e) { var rowButton = e.target.closest && e.target.closest('.cbsh-row'); if (rowButton) openRow(el, rowButton.getAttribute('data-row')); });
     if (main && mode === 'home') {
       main.addEventListener('scroll', spy, { passive: true });
       ['wheel', 'touchstart'].forEach(function (t) { main.addEventListener(t, function () { S.pin = null; S.pinUntil = 0; }, { passive: true }); });
     }
     var swb = $('.cbsh-swb'); if (swb) swb.addEventListener('click', function () { swOpen($('.cbsh-swpop').hidden); });
     doc.addEventListener('click', function (e) { if (swb && !e.target.closest('.cbsh-sw')) swOpen(false); });
-    var onMedia = function () { if (mode === 'home') { main.setAttribute('data-tab', S.area); if (!phone.matches) go(S.area); } placeKural(); setOpen(false); };
+    var onMedia = function () { if (mode === 'home') { var shownTab = tabOf(S.area, phone.matches); main.setAttribute('data-tab', shownTab); mark(shownTab); if (!phone.matches) go(S.area); } placeKural(); setOpen(false); };
     if (phone.addEventListener) phone.addEventListener('change', onMedia);
 
     /* ── units the page loaded: the avatar (always), the bell, the sign-in window, the kural ── */
@@ -769,8 +854,8 @@
     paintBar(); paintSheet();
     if (mode === 'home') paintAreas();
     var hashArea = (root.location && (root.location.hash || '').replace('#', '')) || '';
-    var first = o.area || (AREAS.indexOf(hashArea) >= 0 ? hashArea : 'home');
-    if (mode === 'home') { main.setAttribute('data-tab', first); mark(first); }
+    var first = startArea(o.area, hashArea, phone.matches);
+    if (mode === 'home') { var firstTab = tabOf(first, phone.matches); main.setAttribute('data-tab', firstTab); mark(firstTab); }
 
     var kuralP = (mode !== 'bar' && o.kural !== false && root.CBKural && root.CBKural.mount)
       ? root.CBKural.mount({ route: o.kural || 'planning', host: phone.matches && mode === 'home' ? $('.cbsh-pfoot') : $('.cbsh-foot') }).then(placeKural).catch(function () {}) : Promise.resolve();
@@ -780,7 +865,7 @@
       .then(function () { paintEdition(); if (mode === 'home') { paintAreas(); if (first !== 'home') go(first); readFacts(); } if (mode === 'app') paintSwitcher(); });
 
     var hdrP = person ? get('/api/entities/header').then(function (h) { S.header = h || null; S.headerState = h ? 'ok' : 'none'; }, function () { S.header = null; S.headerState = 'none'; })
-      .then(function () { paintBar(); paintSheet(); paintMoneyGlyphs(doc, S.header); }) : Promise.resolve();
+      .then(function () { paintBar(); paintSheet(); paintMoneyGlyphs(doc, S.header); reopenShopTile(); }) : Promise.resolve();
     doc.addEventListener('cb:me', function () { paintCountryWords(doc); });   /* NAMES-1: the shop's country landed — Stock becomes Inventory for a US shop */
 
     var api = {
@@ -795,5 +880,5 @@
     return api;
   }
 
-  root.CBShell = { mount: mount, apiBase: apiBase, WORDS: W, AREAS: AREAS.slice() };
+  root.CBShell = { mount: mount, apiBase: apiBase, WORDS: W, AREAS: AREAS.slice(), PHONE_TABS: PHONE_TABS.slice(), PHONE_MORE: PHONE_MORE.slice(), sectionOf: sectionOf };
 })(typeof window !== 'undefined' ? window : this);

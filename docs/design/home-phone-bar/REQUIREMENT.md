@@ -1,6 +1,6 @@
 # Home on a phone: the 5-tab bottom bar (REQUIREMENT for the designer, 19 Oct 2026)
 
-**Status:** requirement only. Do not build. The designer draws; Athi reviews the whole flow; wiring comes later.
+**Status:** PLACED in the real Home on 19 Oct 2026 (branch design/home: shell.js five tabs + More page, manifest places and words, greyed shop tile, one waiting row, Labs tiles). Wiring of the remaining facts comes later; Athi walks the flow first. Test: `node tests/home-phone-bar.test.cjs`.
 **Pass mark:** `docs/design/SYSTEM.md` (§3 rules 8-9, §3c one frame). **Map:** `C:/dev/docs/design/NAV-MAP.md` §6 item 6, §7 row "Home".
 **Replaces:** the line "the nav shows 7 icons" in `docs/design/home-first-impression/REQUIREMENT.md` (Rules) and `docs/design/phone/REQUIREMENT.md` P6.
 **Code today:** `public/app/shell.js` (`.cbsh-nav`, `.cbsh-nv`, phone block `@media(max-width:700px)`, about 55 px per tab at 390) · `public/app/manifest.json` (`entries[].area`).

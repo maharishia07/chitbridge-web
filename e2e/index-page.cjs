@@ -265,11 +265,9 @@ async function run() {
       ok(rail.open === '/tasks.html', 'planted · the "Your work" Open goes where the manifest says (rail.route)');
       const rows = await pg.$$eval('[data-slot="alerts"] .al', (els) => els.map((e) => ({ id: e.dataset.testid, lvl: e.className.replace('al ', ''), text: e.textContent.replace(/\s+/g, ' ').trim(), fix: (e.querySelector('.fix') || {}).getAttribute && e.querySelector('.fix').getAttribute('href') })));
       const led = rows.find((r) => r.id === 'ledger-waiting'), pr = rows.find((r) => r.id === 'till-paired');
-      ok(led && /2 waiting to be recorded/.test(led.text) && led.fix === '/accounts.html#waiting', 'planted · "2 waiting to be recorded" — the alert\'s number is the API\'s, its fix opens Accounts (' + (led && led.text) + ')');
+      ok(led && /things? (is|are) waiting for you/.test(led.text) && led.fix === '/accounts.html#waiting', 'planted · ONE waiting row with ONE count (NAV-MAP 7) - its number is the API sum, its fix opens Accounts (' + (led && led.text) + ')');
       /* FX-F10W: the same counts as Books' To do — each waiting row's `todo`, each kind its own words and door (never "4 waiting for the ledger") */
-      const acc = rows.find((r) => r.id === 'ledger-accept'), sup = rows.find((r) => r.id === 'ledger-supplier');
-      ok(acc && /\b1 supplier bill to accept/.test(acc.text) && acc.fix === '/accounts.html#waiting', 'planted · "1 supplier bill to accept" with its door (' + (acc && acc.text) + ')');
-      ok(sup && /\b1 supplier to add/.test(sup.text) && sup.fix === '/accounts.html#waiting', 'planted · "1 supplier to add" with its door (' + (sup && sup.text) + ')');
+      ok(!rows.some((r) => r.id === 'ledger-accept' || r.id === 'ledger-supplier'), 'planted · the three waiting rows are ONE row');
       ok(!rows.some((r) => /waiting for the ledger/.test(r.text)), 'planted · no row says "waiting for the ledger"');
       ok(pr && pr.lvl === 'warn' && /Counter 1 · paired to Mayuri123, not this shop/.test(pr.text) && (pr.fix || '') === '/till.html#shop=ent-idx&as=Mayur%20Bhavan', 'planted · a counter paired to another shop earns an amber row whose button pairs it here (' + (pr && pr.text) + ' → ' + (pr && pr.fix) + ')');
       ok(rows.every((r) => r.fix), 'planted · every alert carries the button that fixes it');
@@ -282,10 +280,10 @@ async function run() {
       const page = Array.from({ length: 50 }, (_, i) => ({ id: i + 1, todo: 'accept', reason: 'Waiting for you to confirm the goods (bill B' + i + ')' }));
       const { ctx } = await profile(1366, 800, { manifest: PLANTED, waiting: page, health: { total: 211, todo: { accept: 120, add_supplier: 90, record: 1 } } });
       const pg = await open(ctx);
-      await pg.waitForSelector('[data-testid="ledger-accept"]', { timeout: 8000 }).catch(() => {});
+      await pg.waitForSelector('[data-testid="ledger-waiting"]', { timeout: 8000 }).catch(() => {});
       const t = (id) => pg.evaluate((x) => ((document.querySelector('[data-testid="' + x + '"]') || {}).textContent || '').replace(/\s+/g, ' '), id);
-      ok(/\b120 supplier bills to accept/.test(await t('ledger-accept')) && /\b90 suppliers to add/.test(await t('ledger-supplier')) && /\b1 waiting to be recorded/.test(await t('ledger-waiting')),
-        'STD1 · > 50 rows: Home says the server\'s count (120 · 90 · 1), not the page of 50 (' + (await t('ledger-accept')) + ')');
+      ok(/211 things are waiting for you/.test(await t('ledger-waiting')),
+        'STD1 · > 50 rows: Home says the server count (120 + 90 + 1 = 211) in one row, not the page of 50 (' + (await t('ledger-waiting')) + ')');
       await ctx.close();
     }
 
@@ -304,10 +302,11 @@ async function run() {
       ok(await pg.evaluate(() => !!document.querySelector('[data-testid="shell-pfoot"] #cbkural')), '390 · the kural sits in the footer above the tab bar (never a card in Home)');
       await pg.screenshot({ path: path.join(SHOTS, 'index-phone.png') });
       for (const a of Object.keys(BUDGET)) {
-        await pg.click('[data-testid="shell-nav-' + a + '"]'); await pg.waitForTimeout(120);
+        const isMore = ['trade', 'labs', 'setup'].includes(a);
+        await pg.click('[data-testid="shell-nav-' + (isMore ? 'more' : a) + '"]'); if (isMore) await pg.click('[data-testid="shell-row-' + a + '"]'); await pg.waitForTimeout(120);   /* five tabs: Trade, Labs and Setup are rows on More */
         const shown = await pg.evaluate(() => [...document.querySelectorAll('.cbsh-sec')].filter((s) => s.offsetParent).map((s) => s.dataset.area).join());
         const n = await areaWords(pg, a);
-        ok(shown === a && n <= BUDGET[a] && await sw() === 390, '390 · tab ' + a + ' shows only ' + a + ', ' + n + ' words ≤ ' + BUDGET[a] + ', no sideways scroll');
+        ok((isMore ? shown === 'trade,labs,setup' : shown === a) && n <= BUDGET[a] && await sw() === 390, '390 · tab ' + a + ' shows only ' + a + ', ' + n + ' words ≤ ' + BUDGET[a] + ', no sideways scroll');
         if (a === 'selling') await pg.screenshot({ path: path.join(SHOTS, 'index-phone-selling.png') });
       }
       ok((await offList(pg)).length === 0, '390 · zero app.html hrefs outside the avatar');

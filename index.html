@@ -171,11 +171,10 @@ function booksAlert(){
     /* FX-F10W · STD1: the same counts as Books' To do and the Accounts card — /health `todo`, the server's ONE count (GROUP BY over every
        waiting row, never this 50-row page), each kind with its own words and door, never "2 waiting for the ledger". */
     var t = (r && r.todo) || {}, n = { accept: Number(t.accept) || 0, add_supplier: Number(t.add_supplier) || 0, record: Number(t.record) || 0 };
-    var pl = function(k, one, many){ return n[k] + ' ' + (n[k] === 1 ? one : many); };
-    ['ledger-accept', 'ledger-supplier', 'ledger-waiting'].forEach(alertDrop);
-    if (n.accept) alert_('ledger-accept', 'warn', '🕗', pl('accept', 'supplier bill to accept', 'supplier bills to accept'), '', 'Open the bills', '/accounts.html#waiting');
-    if (n.add_supplier) alert_('ledger-supplier', 'warn', '＋', pl('add_supplier', 'supplier to add', 'suppliers to add'), '', 'Add them', '/accounts.html#waiting');
-    if (n.record) alert_('ledger-waiting', 'warn', '🕗', n.record + ' waiting to be recorded', '', 'See them', '/accounts.html#waiting');
+    /* NAV-MAP 7: the three kinds of waiting post are ONE row with ONE count; Accounts > Waiting says which is which */
+    var waiting = n.accept + n.add_supplier + n.record;
+    alertDrop('ledger-waiting');
+    if (waiting) alert_('ledger-waiting', 'warn', '🕗', waiting + (waiting === 1 ? ' thing is' : ' things are') + ' waiting for you', '', 'See them', '/accounts.html#waiting');
   }).catch(function(e){
     if (g !== GEN || !e || e.status !== 422 || !e.data) return;
     if (/^(COUNTRY_SETUP_PENDING|NO_COUNTRY)$/.test(String(e.data.code || '')) && (e.data.message || e.data.error))
